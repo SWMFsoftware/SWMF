@@ -14,6 +14,10 @@ module ModWaves
   integer :: AlfvenSpeedMinusLast_  = 1
   real :: AlfvenSpeed  !Auxiliary variable
   
+  real :: FreqMin = 0.0
+  real :: FreqMax = 0.0
+  real :: FreqInertialRange = 0.0
+
   !To swotch this option, set UseAlfvenSpeed = .true. in the user routines 
   !and modify accordingly the named indexes to set the state variables for
   !which the advection with \pm V_A should be applied
@@ -68,4 +72,12 @@ contains
     !--------------------------------------------------------------------------
     call read_var('UseWavePressure',UseWavePressure)
   end subroutine read_wave_pressure
+  !============================================================================
+  subroutine read_freq_grid
+    use ModReadParam, ONLY: read_var
+    !--------------------------------------------------------------------------
+    call read_var('FreqMin',FreqMin)
+    call read_var('FreqMax',FreqMax)
+    call read_var('FreqInertialRange',FreqInertialRange)
+  end subroutine read_freq_grid
 end module ModWaves
