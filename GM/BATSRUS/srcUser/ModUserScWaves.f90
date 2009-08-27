@@ -899,7 +899,7 @@ contains
 
     use ModVarIndexes
     use ModNumConst, ONLY: cPi
-    use ModWaves,    ONLY: FreqMin,FreqMax
+    use ModWaves,    ONLY: FreqMinSI,FreqMaxSI
     implicit none
     
     integer,intent(in)         :: nFreqPlus, nFreqMinus
@@ -908,10 +908,10 @@ contains
     character(len=*),parameter :: NameSub='set_freq_grid'
     !-----------------------------------------------------------------
     ! Minimal frequency in frequency grid
-    LogFreqMin = log(2*cPi*FreqMin) 
+    LogFreqMin = log(2*cPi*FreqMinSI) 
 
     ! Maximal frequency in frequency grid
-    LogFreqMax = log(2*cPi*FreqMax) 
+    LogFreqMax = log(2*cPi*FreqMaxSI) 
 
     ! calculate frequency interval on a natural logarithmic scale 
     dLogFreq = (LogFreqMax-LogFreqMin)/(nFreqPlus-1) 
