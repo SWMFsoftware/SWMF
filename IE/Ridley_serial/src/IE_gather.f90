@@ -20,8 +20,8 @@ subroutine IE_gather
 
   if (iProc == nProc-1) then
      IONO_phi(IONO_nTheta:2*IONO_nTheta-1,:) = IONO_SOUTH_Phi
-     IONO_IonNumFlux(1:IONO_nTheta,:) = IONO_SOUTH_IonNumFlux
-     IONO_Joule(1:IONO_nTheta,:) = IONO_SOUTH_Joule
+     IONO_IonNumFlux(IONO_nTheta:2*IONO_nTheta-1,:) = IONO_SOUTH_IonNumFlux
+     IONO_Joule(IONO_nTheta:2*IONO_nTheta-1,:) = IONO_SOUTH_Joule
   endif
 
   if (nProc > 1) then
