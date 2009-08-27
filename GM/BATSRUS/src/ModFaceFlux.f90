@@ -2004,13 +2004,8 @@ contains
       B0B1    = B0x*Bx + B0y*By + B0z*Bz
       pTotal  = p + 0.5*B2 + B0B1
 
-      if(UseWavePressure)then
-         WaveEnergy = 0.0
-         do iVar = WaveFirst_,WaveLast_
-            WaveEnergy = WaveEnergy + State_V(iVar)
-         end do
-         pTotal = pTotal + (GammaWave-1.0) * WaveEnergy
-      end if
+      if(UseWavePressure) &
+           pTotal = pTotal + (GammaWave-1.0) * sum(State_V(WaveFirst_:WaveLast_))
 
       ! Normal direction
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
@@ -2203,13 +2198,8 @@ contains
 
       pTotal = p
 
-      if(UseWavePressure)then
-         WaveEnergy = 0.0
-         do iVar = WaveFirst_, WaveLast_
-            WaveEnergy = WaveEnergy + State_V(iVar)
-         end do
-         pTotal = pTotal + (GammaWave - 1)*WaveEnergy
-      end if
+      if(UseWavePressure) &
+           pTotal = pTotal + (GammaWave-1.0) * sum(State_V(WaveFirst_:WaveLast_))
 
       ! Normal velocity
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
@@ -2428,13 +2418,10 @@ contains
       else
          Sound2 = g*p*InvRho
       end if
-      if(UseWavePressure)then
-         WaveEnergy = 0.0
-         do iVar = WaveFirst_,WaveLast_
-            WaveEnergy = WaveEnergy + State_V(iVar)
-         end do
-         Sound2 = Sound2 + GammaWave * InvRho * (GammaWave-1.0) * WaveEnergy
-      end if
+      if(UseWavePressure)&
+         Sound2 = Sound2 + GammaWave * (GammaWave - 1)*&
+         sum(State_V(WaveFirst_:WaveLast_))*InvRho
+     
       Un     = InvRho*sum( RhoU_D*Normal_D )
 
       FullBx = State_V(Bx_) + B0x
@@ -2582,14 +2569,10 @@ contains
          call stop_mpi(NameSub//' negative soundspeed squared')
       end if
 
-      if(UseWavePressure)then
-         WaveEnergy = 0.0
-         do iVar = WaveFirst_, WaveLast_
-            WaveEnergy = WaveEnergy + State_V(iVar)
-         end do
-         Sound2 = Sound2 + GammaWave*(GammaWave - 1)*WaveEnergy*InvRho
-      end if
-
+      if(UseWavePressure) &
+           Sound2 = Sound2 + GammaWave* (GammaWave-1.0) * &
+           sum(State_V(WaveFirst_:WaveLast_)) * InvRho
+      
       Sound = sqrt(Sound2)
       Un    = sum(State_V(iUx:iUz)*Normal_D)
 
