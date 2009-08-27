@@ -65,7 +65,7 @@ module ModUser
 
   ! Treat cells near material interface as a mixture
   logical :: UseMixedCell = .false.
-  
+
   ! Mixed material cell is assumed if the ratio of dominant to total
   ! atomic concentration is below MixLimit
   real :: MixLimit = 0.97
@@ -91,7 +91,7 @@ module ModUser
   integer           :: iTrHyades       = -1      ! index of rad. temperature
   integer           :: iMaterialHyades = -1      ! index of material type
 
- 
+
 
   ! Opacity scale factor for sensitivity studies on opacities
   real :: RosselandScaleFactor_I(0:nMaterial-1) = 1.0
@@ -99,9 +99,7 @@ module ModUser
 
   ! Indexes for lookup tables
   integer:: iTablePPerE = -1, iTableEPerP = -1, iTableThermo = -1
-  integer:: iTableElectron = -1
   integer, parameter:: Cv_=1, Gamma_=2, Cond_=3, Te_=4, nThermo=4
-  integer, parameter:: PeEos_=1, EeEos_=2, Cve_=3, TeTi_=4, nElectron=4
 
   integer:: iTableOpacity = -1
 
@@ -235,7 +233,7 @@ contains
 
           State_VGB(:, 0,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
           State_VGB(:,-1,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
-       
+
           State_VGB(Erad_,0,:,:,iBlock) = &
                ( (DistBc1 - 0.5*Dx)*State_VGB(Erad_,1,:,:,iBlock) &
                + Dx*EradBc1 ) / (DistBc1 + 0.5*Dx)
@@ -282,14 +280,13 @@ contains
     use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
-         ExtraEint_, LevelBe_, LevelXe_, LevelPl_, Erad_, &
-         UseElectronEnergy, Ee_
+         ExtraEint_, LevelBe_, LevelXe_, LevelPl_, Erad_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModConst,       ONLY: cPi
     use CRASH_ModEos,   ONLY: eos
 
-    real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi, EeSi
+    real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi
     real    :: DxyGold = -1.0
 
     integer :: iBlock, i, j, k
@@ -324,7 +321,7 @@ contains
        else
           r = abs(y)
        end if
-       
+
        if(UseTube)then
           ! Distance from plastic wall: 
           ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
@@ -360,7 +357,7 @@ contains
                 State_VGB(LevelPl_,i,j,k,iBlock) =  rOuterTube - r
              end if
           end if
-             
+
           ! Set the Xe state inside the tube for x > xUniformXe if it is set
           if(xUniformXe > 0.0 .and. x > xUniformXe .and. r < rInnerTube)then
              State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitRho_)
@@ -462,16 +459,14 @@ contains
 
        ! Calculate internal energy
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-            i, j, k, iBlock, EinternalSiOut=EinternalSi, EeSiOut=EeSi)
+            i, j, k, iBlock, EinternalSiOut=EinternalSi)
 
        State_VGB(ExtraEint_,i,j,k,iBlock) = &
             EinternalSi*Si2No_V(UnitEnergyDens_) &
             - inv_gm1*State_VGB(P_,i,j,k,iBlock)
 
-       if(UseElectronEnergy) &
-            State_VGB(Ee_,i,j,k,iBlock) = EeSi*Si2No_V(UnitEnergyDens_)
-
     end do; end do; end do
+
   contains
     !==========================================================================
     subroutine set_small_radiation_energy
@@ -612,6 +607,7 @@ contains
        Hyades2No_V(iTeHyades)= cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
        Hyades2No_V(iTrHyades)= cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
     end if
+
     if(nDimHyades > 1)then
        Hyades2No_V(iRHyades)  = 0.01 * Si2No_V(UnitX_)   ! cm    -> m
        Hyades2No_V(iUrHyades) = 0.01 * Si2No_V(UnitU_)   ! cm/s  -> m/s
@@ -718,15 +714,15 @@ contains
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          Erad_
     use ModGeometry, ONLY: x_BLK
-    use ModPhysics,  ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
-         cRadiationNo
+    use ModPhysics,  ONLY: Si2No_V, No2Si_V, UnitEnergyDens_, &
+         UnitTemperature_, UnitP_, UnitN_, cRadiationNo
     use ModMain,     ONLY: UseGrayDiffusion
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k, iCell
     real :: x, Weight1, Weight2
-    real :: Tr
+    real :: Tr, Te, TeSi
     character(len=*), parameter :: NameSub='interpolate_hyades1d'
     !-------------------------------------------------------------------------
     do i = -1, nI+2
@@ -795,7 +791,8 @@ contains
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, y2
     use ModTriangulate, ONLY: calc_triangulation, find_triangle
     use ModMain,        ONLY: UseGrayDiffusion
-    use ModPhysics,     ONLY: cRadiationNo
+    use ModPhysics,     ONLY: cRadiationNo, No2Si_V, Si2No_V, &
+         UnitTemperature_, UnitN_, UnitP_, UnitEnergyDens_
 
     integer, intent(in) :: iBlock
 
@@ -807,6 +804,7 @@ contains
     integer :: i, j, k, iNode1, iNode2, iNode3
     real    :: x, y, z, r, Weight1, Weight2, Weight3
     real    :: WeightNode_I(3), WeightMaterial_I(0:nMaterial-1), Weight
+    real    :: Te, TeSi
 
     integer :: iMaterial, iMaterial_I(1), iMaterialNode_I(3)
 
@@ -907,7 +905,7 @@ contains
 
        State_VGB(Rho_,i,j,k,iBlock)  = DataHyades_V(iRhoHyades)
 
-       State_VGB(p_,i,j,k,iBlock)    = DataHyades_V(iPHyades)
+       State_VGB(p_,i,j,k,iBlock)  = DataHyades_V(iPHyades)
 
        State_VGB(RhoUx_,i,j,k,iBlock) = &
             DataHyades_V(iRhoHyades) * DataHyades_V(iUxHyades)
@@ -984,7 +982,7 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
                EinternalSiIn=EinternalSi, PressureSiOut=PressureSi)
-      
+
           ! Set true pressure
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
        else
@@ -1009,13 +1007,12 @@ contains
 
     use ModMain,     ONLY: nI, nJ, nK, GlobalBlk
     use ModAdvance,  ONLY: State_VGB, LevelXe_, LevelPl_, &
-         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
-         UseElectronEnergy, Ee_
+         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
     use ModGeometry, ONLY: vInv_CB
-    use ModPhysics,  ONLY: Si2No_V, UnitP_
+    use ModPhysics,  ONLY: Si2No_V, No2Si_V, UnitP_, UnitEnergyDens_
 
     integer :: i, j, k, iBlock
-    real :: DivU, PeSi, Pe
+    real :: DivU
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !-------------------------------------------------------------------
 
@@ -1023,7 +1020,7 @@ contains
 
     ! Add Level*div(u) as a source term so level sets beome advected scalars
     ! Note that all levels use the velocity of the first (and only) fluid
-    
+
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        DivU = vInv_CB(i,j,k,iBlock) &
             *(uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
@@ -1034,12 +1031,6 @@ contains
             Source_VC(LevelXe_:LevelPl_,i,j,k) &
             + State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock)*DivU
 
-       if(UseElectronEnergy)then
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, PeSiOut=PeSi)
-          Pe = PeSi*Si2No_V(UnitP_)
-          Source_VC(Ee_,i,j,k) = Source_VC(Ee_,i,j,k) - Pe*DivU
-       end if
     end do; end do; end do
 
   end subroutine user_calc_sources
@@ -1055,7 +1046,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Rho_, p_, LevelXe_, LevelBe_, LevelPl_, &
          WaveFirst_, WaveLast_, nOpacity
     use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
-         UnitTemperature_, cRadiationNo
+         UnitTemperature_, cRadiationNo, No2Si_V, UnitEnergyDens_
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK, TypeGeometry
     use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_
@@ -1102,8 +1093,8 @@ contains
              WaveEnergy = WaveEnergy + State_VGB(iWave,i,j,k,iBlock)
           end do
           PlotVar_G(i,j,k) = sign(1.0,WaveEnergy) &
-            *sqrt(sqrt(abs(WaveEnergy)/cRadiationNo))&
-            * No2Si_V(UnitTemperature_) * cKToKev
+               *sqrt(sqrt(abs(WaveEnergy)/cRadiationNo))&
+               * No2Si_V(UnitTemperature_) * cKToKev
        end do; end do; end do
     case('planck')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
@@ -1163,7 +1154,7 @@ contains
 
     UsePlotVarBody = .false.
     PlotVarBody    = 0.0
-    
+
   end subroutine user_set_plot_var
 
   !===========================================================================
@@ -1196,11 +1187,10 @@ contains
     iTableEPerP    = i_lookup_table('ePerP(rho,p/rho)')
     iTableThermo   = i_lookup_table('Thermo(rho,p/rho)')
     iTableOpacity  = i_lookup_table('Opacity(rho,T)')
-    iTableElectron = i_lookup_table('Electron(rho,p/rho)')
 
     if(iProc==0) write(*,*) NameSub, &
          ' iTablePPerE, EPerP, Thermo, Opacity, Electron = ', &
-         iTablePPerE, iTableEPerP, iTableThermo, iTableOpacity, iTableElectron
+         iTablePPerE, iTableEPerP, iTableThermo, iTableOpacity
 
     if(iTablePPerE > 0) &
          call make_lookup_table(iTablePPerE, calc_table_value, iComm)
@@ -1208,8 +1198,6 @@ contains
          call make_lookup_table(iTableEPerP, calc_table_value, iComm)
     if(iTableThermo > 0) &
          call make_lookup_table(iTableThermo, calc_table_value, iComm)
-    if(iTableElectron > 0) &
-         call make_lookup_table(iTableElectron, calc_table_value, iComm)
 
   end subroutine user_init_session
 
@@ -1223,7 +1211,7 @@ contains
     real, intent(in)   :: Arg1, Arg2
     real, intent(out)  :: Value_V(:)
 
-    real:: Rho, p, e, Cv, Gamma, HeatCond, Te, Pe, Ee, Cve
+    real:: Rho, p, e, Cv, Gamma, HeatCond, Te
     integer:: iMaterial
     character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
     !-----------------------------------------------------------------------
@@ -1278,29 +1266,6 @@ contains
              Value_V(Te_   +iMaterial*nThermo) = p/Rho*cProtonMass/cBoltzmann
           end if
        end do
-    elseif(iTable == iTableElectron)then
-       ! Calculate Pe, Ee, Cve, and TeTiRelaxation for Xe_, Be_ and Plastic_ 
-       ! for given Rho and p/Rho
-       Rho = Arg1
-       p   = Arg2*Rho
-       do iMaterial = 0, nMaterial-1
-          call eos(iMaterial, Rho, PtotalIn=p, TeOut = Te, &
-               pElectronOut=Pe, eElectronOut=Ee, CvElectronOut=Cve)
-
-          ! Note that material index starts from 0
-          if(Te > 0.0)then
-             Value_V(PeEos_+iMaterial*nElectron) = Pe
-             Value_V(EeEos_+iMaterial*nElectron) = Ee
-             Value_V(Cve_  +iMaterial*nElectron) = Cve
-             Value_V(TeTi_ +iMaterial*nElectron) = 0.0
-          else
-             ! The eos() function returned impossible values, take defaults
-             Value_V(PeEos_+iMaterial*nElectron) = 0.0 ! not so great defaults
-             Value_V(EeEos_+iMaterial*nElectron) = 0.0
-             Value_V(Cve_  +iMaterial*nElectron) = 0.0
-             Value_V(TeTi_ +iMaterial*nElectron) = 0.0
-          end if
-       end do
     else
        write(*,*)NameSub,' iTable=', iTable
        call stop_mpi(NameSub//' invalid value for iTable')
@@ -1319,7 +1284,7 @@ contains
 
     use CRASH_ModEos,  ONLY: eos, Xe_, Be_, Plastic_
     use ModMain,       ONLY: nI, nJ, nK
-    use ModAdvance,    ONLY: State_VGB, UseElectronEnergy, nOpacity
+    use ModAdvance,    ONLY: State_VGB, nOpacity
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_
     use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_
     use ModLookupTable,ONLY: interpolate_lookup_table
@@ -1347,8 +1312,7 @@ contains
     logical :: IsMix
     integer :: iMaterial, iMaterial_I(1)
     real    :: pSi, RhoSi, TeSi, LevelSum
-    real    :: Value_V(nMaterial*nThermo), Opacity_V(2*nMaterial), &
-         Electron_V(nMaterial*nElectron)
+    real    :: Value_V(nMaterial*nThermo), Opacity_V(2*nMaterial)
     real, dimension(0:nMaterial-1) :: &
          pPerE_I, EperP_I, RhoToARatioSi_I, Weight_I
 
@@ -1419,15 +1383,11 @@ contains
           if(IsMix)then
              call eos(RhoToARatioSi_I, eTotalIn=EinternalSiIn, &
                   pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvSiOut, &
-                  GammaOut=GammaOut, HeatCond=HeatCondSiOut, &
-                  pElectronOut=PeSiOut, eElectronOut=EeSiOut, &
-                  CvElectronOut=CveSiOut)
+                  GammaOut=GammaOut, HeatCond=HeatCondSiOut)
           else
              call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalSiIn, &
                   pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvSiOut, &
-                  GammaOut=GammaOut, HeatCond=HeatCondSiOut, &
-                  pElectronOut=PeSiOut, eElectronOut=EeSiOut, &
-                  CvElectronOut=CveSiOut)
+                  GammaOut=GammaOut, HeatCond=HeatCondSiOut)
           end if
        end if
     elseif(present(TeSiIn))then
@@ -1435,17 +1395,16 @@ contains
        TeSi = TeSiIn
        if( IsMix ) then
           call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
-               eTotalOut=EinternalSiOut, pTotalOut=pSi, CvTotalOut=CvSiOut, &
-               GammaOut=GammaOut, HeatCond=HeatCondSiOut, &
-               pElectronOut=PeSiOut, eElectronOut=EeSiOut, &
-               CvElectronOut=CveSiOut)
+               eTotalOut=EinternalSiOut, pTotalOut=pSi, &
+               CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+               HeatCond=HeatCondSiOut)
        else
           call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, &
-               eTotalOut=EinternalSiOut, pTotalOut=pSi, CvTotalOut=CvSiOut, &
-               GammaOut=GammaOut, HeatCond=HeatCondSiOut, &
-               pElectronOut=PeSiOut, eElectronOut=EeSiOut, &
-               CvElectronOut=CveSiOut)
+               eTotalOut=EinternalSiOut, pTotalOut=pSi, &
+               CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+               HeatCond=HeatCondSiOut)
        end if
+
     else
        ! Pressure is simply part of State_V
        pSi = State_V(p_)*No2Si_V(UnitP_)
@@ -1459,16 +1418,14 @@ contains
           else
              if(IsMix)then
                 call eos(RhoToARatioSi_I, pTotalIn=pSi, &
-                     EtotalOut=EinternalSiOut, TeOut=TeSi, CvTotalOut=CvSiOut,&
-                     GammaOut=GammaOut, HeatCond=HeatCondSiOut, &
-                     pElectronOut=PeSiOut, eElectronOut=EeSiOut, &
-                     CvElectronOut=CveSiOut)
+                     EtotalOut=EinternalSiOut, TeOut=TeSi, &
+                     CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+                     HeatCond=HeatCondSiOut)
              else
                 call eos(iMaterial,RhoSi,pTotalIn=pSi, &
-                     EtotalOut=EinternalSiOut, TeOut=TeSi, CvTotalOut=CvSiOut,&
-                     GammaOut=GammaOut, HeatCond=HeatCondSiOut, &
-                     pElectronOut=PeSiOut, eElectronOut=EeSiOut, &
-                     CvElectronOut=CveSiOut)
+                     EtotalOut=EinternalSiOut, TeOut=TeSi, &
+                     CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+                     HeatCond=HeatCondSiOut)
              end if
           end if
        end if
@@ -1477,8 +1434,7 @@ contains
     if(present(PressureSiOut)) PressureSiOut = pSi
 
     if(present(TeSiOut) .or. present(CvSiOut) .or. present(GammaOut) .or. &
-         present(HeatCondSiOut) .or. present(PeSiOut) .or. &
-         present(EeSiOut) .or. present(CveSiOut) .or. &
+         present(HeatCondSiOut) .or. &
          iTableOpacity>0 .and. (present(AbsorptionOpacitySiOut_I) &
          .or.                   present(DiffusionOpacitySiOut_I)) )then
        if(iTableThermo > 0)then
@@ -1502,49 +1458,16 @@ contains
              TeSi                           = Value_V(Te_   +iMaterial*nThermo)
           end if
 
-          if(UseElectronEnergy)then
-             if(iTableElectron > 0)then
-                call interpolate_lookup_table(iTableElectron, RhoSi, &
-                     pSi/RhoSi, Electron_V, DoExtrapolate = .false.)
-
-                if(UseVolumeFraction)then
-                   if(present(PeSiOut))  PeSiOut  = sum(Weight_I &
-                        *Electron_V(PeEos_:nMaterial*nElectron:nElectron))
-                   if(present(EeSiOut))  EeSiOut  = sum(Weight_I &
-                        *Electron_V(EeEos_:nMaterial*nElectron:nElectron))
-                   if(present(CveSiOut)) CveSiOut = sum(Weight_I &
-                        *Electron_V(Cve_  :nMaterial*nElectron:nElectron))
-                else
-                   if(present(PeSiOut))  PeSiOut  = &
-                        Electron_V(PeEos_+iMaterial*nElectron)
-                   if(present(EeSiOut))  EeSiOut  = &
-                        Electron_V(EeEos_+iMaterial*nElectron)
-                   if(present(CveSiOut)) CveSiOut = &
-                        Electron_V(Cve_  +iMaterial*nElectron)
-                end if
-             else
-                call stop_mpi(NameSub//" electron gas table is missing")
-             end if
-          else
-             if(present(PeSiOut))  PeSiOut  = 0.0
-             if(present(EeSiOut))  EeSiOut  = 0.0
-             if(present(CveSiOut)) CveSiOut = 0.0
-          end if
-
        elseif(TeSi < 0.0) then
           ! If TeSi is not set yet then we need to calculate things here
           if(IsMix) then
              call eos(RhoToARatioSi_I, pTotalIn=pSi, &
                   TeOut=TeSi, eTotalOut = EinternalSiOut, CvTotalOut=CvSiOut, &
-                  GammaOut=GammaOut, HeatCond=HeatCondSiOut, &
-                  pElectronOut=PeSiOut, eElectronOut=EeSiOut, &
-                  CvElectronOut=CveSiOut)
+                  GammaOut=GammaOut, HeatCond=HeatCondSiOut)
           else
              call eos(iMaterial, RhoSi, pTotalIn=pSi, &
                   TeOut=TeSi, eTotalOut = EinternalSiOut, CvTotalOut=CvSiOut, &
-                  GammaOut=GammaOut, HeatCond=HeatCondSiOut, &
-                  pElectronOut=PeSiOut, eElectronOut=EeSiOut, &
-                  CvElectronOut=CveSiOut)
+                  GammaOut=GammaOut, HeatCond=HeatCondSiOut)
           end if
        end if
     end if
@@ -1572,10 +1495,12 @@ contains
                   = Opacity_V(2*iMaterial + 2) * RhoSi
           end if
        else
-         
+
        end if
     end if
 
+    if(present(PeSiOut)) PeSiOut = 0.0
+    if(present(EeSiOut)) EeSiOut = 0.0
     if(present(TeTiRelaxSiOut)) TeTiRelaxSiOut = 0.0
 
   end subroutine user_material_properties
