@@ -1,8 +1,8 @@
 module ModVarIndexes
 
   use ModSingleFluid, Redefine => ExtraEInt_,&
+       Redefine3 => nWave, &
        Redefine1 => WaveFirst_, Redefine2 => WaveLast_
-  use ModWaves, ONLY: NameNumber_I
   implicit none
 
   save
