@@ -132,7 +132,7 @@ contains
        TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
-       HeatCond, iError)
+       HeatCond, TeTiRelax, iError)
 
     ! Eos function for single material
 
@@ -166,6 +166,7 @@ contains
     real,    optional, intent(out) :: CvElectronOut! specific heat / unit volume
 
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
+    real,    optional, intent(out) :: TeTiRelax    ! electron-ion interaction rate (SI)
     integer, optional, intent(out) :: iError       ! error flag
 
     real   :: Natomic
@@ -190,7 +191,7 @@ contains
          TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
          TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
          eElectronOut, pElectronOut, GammaEOut, CvElectronOut, & 
-         HeatCond, iError)
+         HeatCond, TeTiRelax, iError)
 
   end subroutine eos_material
 
@@ -200,7 +201,7 @@ contains
        TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut,& 
-       HeatCond, iError)
+       HeatCond, TeTiRelax, iError)
     !\
     !!   WARNING !!!
     !You cannot use total pressure and total energy density as input or output
@@ -233,6 +234,7 @@ contains
 
 
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
+    real,    optional, intent(out) :: TeTiRelax    ! electron-ion interaction rate (SI)
     integer, optional, intent(out) :: iError       ! error flag
 
     real :: RhoToATotal, Natomic
@@ -265,7 +267,7 @@ contains
          TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
          TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
          eElectronOut, pElectronOut, GammaEOut, CvElectronOut,& 
-         HeatCond, iError)
+         HeatCond, TeTiRelax, iError)
 
   end subroutine eos_mixture
 
@@ -275,8 +277,8 @@ contains
        TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut,& 
-       HeatCond, iError)
-    use CRASH_ModTransport, ONLY: electron_heat_conductivity
+       HeatCond, TeTiRelax, iError)
+    use CRASH_ModTransport, ONLY: electron_heat_conductivity, te_ti_relaxation
 
     !\
     !!   WARNING !!!
@@ -307,6 +309,7 @@ contains
 
 
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
+    real,    optional, intent(out) :: TeTiRelax    ! electron-ion interaction rate (SI)
     integer, optional, intent(out) :: iError       ! error flag
 
     real :: ePerAtom, pPerAtom,TeInEV  !All in eV
@@ -362,6 +365,7 @@ contains
     if(present(GammaEOut))   call get_gamma(GammaSeOut=GammaOut)
 
     if(present(HeatCond))   HeatCond = electron_heat_conductivity()
+    if(present(TeTiRelax))  TeTiRelax = te_ti_relaxation()
     if(present(CvTotalOut)) CvTotalOut = (Natomic*cBoltzmann)*heat_capacity()
     if(present(CvElectronOut)) CvElectronOut = (Natomic*cBoltzmann)*heat_capacity_e()
 
