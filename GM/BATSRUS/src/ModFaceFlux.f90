@@ -1580,14 +1580,14 @@ contains
       use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
       use ModPhysics,  ONLY: inv_gm1,g
       use ModVarIndexes
-      use ModWaves,    ONLY: UseWavePressure
+      use ModWaves,    ONLY: UseWavePressure, GammaWave
 
       real::Rho, Un, p, pTotal, e, StateStar_V(nVar)
       real::RhoSide,UnSide
 
-      !The radiation pressure: in the left state, right state and at the wall
-      real::pRadL=0.0,pRadR=0.0, pRadStar=0.0, pRadSide=0.0
-      real :: eRadL, eRadR, Factor
+      !The wave pressure: in the left state, right state and at the wall
+      real::pWaveL=0.0,pWaveR=0.0, pWaveStar=0.0, pWaveSide=0.0
+      real :: GammaRatio, Factor
       integer::iVar
       !-----------------------------------------------------------------------
       ! Scalar variables
@@ -1600,21 +1600,16 @@ contains
       UnR  = sum( StateRight_V(Ux_:Uz_)*Normal_D )
 
       if(UseWavePressure)then
-         ! Increase maximum speed due to isotropic radiation pressure
+         ! Increase maximum speed due to isotropic wave pressure
          ! To achieve this the pressure is increased by the value of the
-         ! radiation pressure
-         eRadL = 0.0; eRadR = 0.0
-         do iVar = WaveFirst_, WaveLast_
-            eRadL = eRadL + StateLeft_V(iVar)
-            eRadR = eRadR + StateRight_V(iVar)
-         end do
-         pRadL = eRadL/3.0
-         pL    = pL + pRadL
-         pRadR = eRadR/3.0
-         pR    = pR + pRadR
+         ! wave pressure
+         pWaveL = (GammaWave - 1)*sum(StateLeft_V(WaveFirst_:WaveLast_))
+         pWaveR = (GammaWave - 1)*sum(StateRight_V(WaveFirst_:WaveLast_))
+         pL    = pL + pWaveL
+         pR    = pR + pWaveR
       else
          !It is easier to add zero than using if(UseWavePressure)
-         pRadL = 0.0; pRadR = 0.0
+         pWaveL = 0.0; pWaveR = 0.0
       end if
 
       !Take the parameters at the Contact Discontinuity (CD)
@@ -1640,29 +1635,29 @@ contains
          RhoSide     = RhoL
          UnSide      = UnL
          StateStar_V = StateLeft_V
-         pRadSide    = pRadL
+         pWaveSide   = pWaveL
       else
          ! The CD is to the left from the face
          ! The Right gas passes through the face
          RhoSide     = RhoR
          UnSide      = UnR
          StateStar_V = StateRight_V
-         pRadSide    = pRadR
+         pWaveSide    = pWaveR
       end if
 
       ! Take the parameters at the face
       call sample(0.0, Rho, Un, p)
 
       ! In order the Riemann problem solution to be governed by the
-      ! total pressure, the radiation pressure should behave 
+      ! total pressure, the wave pressure should behave 
       ! adiabatically, with the same polytropic index as that for the gas
 
-      pRadStar             = pRadSide * (Rho/RhoSide)**g
+      pWaveStar             = pWaveSide * (Rho/RhoSide)**g
 
       ! Since the total pressure is not less than the adiabatic one
       ! the difference below is positive
       pTotal               = p
-      p                    = pTotal - pRadStar
+      p                    = pTotal - pWaveStar
 
       StateStar_V(Rho_)    = Rho
       StateStar_V(Ux_:Uz_) = StateStar_V(Ux_:Uz_) + (Un-UnSide)*Normal_D
@@ -1690,7 +1685,8 @@ contains
       Unormal_I = Un
 
       if(UseWavePressure)then
-         Factor = 0.5*(1.0 + (Rho/RhoSide)**(g - 1))
+         GammaRatio = inv_gm1*(GammaWave - 1)
+         Factor = (1.0 - GammaRatio) + GammaRatio*(Rho/RhoSide)**(g - 1)
          do iVar = WaveFirst_, WaveLast_
             Flux_V(iVar) = Factor*StateStar_V(iVar)*Un
          end do

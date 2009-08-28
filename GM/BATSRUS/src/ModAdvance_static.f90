@@ -27,7 +27,7 @@ Module ModAdvance
   logical, parameter:: UseElectronEnergy = Ee_ > 1
 
   ! Number of Rosseland, Planck opacities used for radiation diffusion
-  integer, parameter:: nOpacity = max(1, WaveLast_ - WaveFirst_ + 1)
+  integer, parameter:: nOpacity = max(1, nWave)
 
   !\ One of the two possible ways to treat the MHD-like systems
   !  (oartially symmetrizable, following the Godunov definition).

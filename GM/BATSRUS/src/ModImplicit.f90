@@ -279,17 +279,15 @@ contains
   subroutine init_mod_implicit
 
     use ModUtilities,  ONLY: check_allocate
-    use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
+    use ModVarIndexes, ONLY: nWave
 
-    integer :: iError, nWave
+    integer :: iError
 
     character(len=*), parameter:: NameSub = 'init_mod_implicit'
     !----------------------------------------------------------------------
     if(allocated(Impl_VGB)) return
 
     if(UseSemiImplicit)then
-       nWave = WaveLast_ - WaveFirst_ + 1
-
        select case(TypeSemiImplicit)
        case('radiation')
           nw = nWave
