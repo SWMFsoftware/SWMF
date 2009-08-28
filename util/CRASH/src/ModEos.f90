@@ -345,7 +345,7 @@ contains
 
        call u_e_to_temperature(ePerAtom, Natomic, iError)
 
-    elseif(present(pTotalIn))then
+    elseif(present(pElectronIn))then
        ! Divide pressure by Na , express in eV
        pPerAtom = pElectronIn / (cEV * Natomic)
 
