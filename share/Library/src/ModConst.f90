@@ -41,9 +41,6 @@ Module ModConst
   ! Speed of light [m/s]
   real, parameter :: cLightSpeed =  2.9979E+8
 
-  !Planck constant  [J*s]
-  real,parameter  :: cPlanckH    = 6.626069311E-34        !J * s
-  real,parameter  :: cPlanckHBar = cPlanckH /cTwoPi
 
   ! Vacuum permeability [H/m]
   real, parameter :: cMu = cPi*4E-7
@@ -56,6 +53,17 @@ Module ModConst
 
   ! Fundamental charge [Coulomb]
   real, parameter :: cElectronCharge  = 1.6022E-19
+
+  !Planck constant  [J*s]
+  real,parameter  :: cPlanckH    = 6.626069311E-34        !J * s
+  real,parameter  :: cPlanckHBar = cPlanckH /cTwoPi
+
+  !       hplank  -  4.136e-15   Planck's constant (eV sec)
+  ! The coefficient to convert the wave frequency, in Herz,
+  ! to the photon energy, in eV.
+
+  real,parameter:: cHPlanckEV = cPlanckH/cElectronCharge
+
 
   ! Bohr radius =5.29e-11 [m]
   real,parameter :: cBohrRadius = &
@@ -114,6 +122,7 @@ Module ModConst
   real, parameter :: cRyToEV = (0.50/cElectronMass)*&
        (cPlanckHBar/cBohrRadius)**2/cEV 
 
+  
   !\
   ! Here RME stands for Rest Mass Energy.
   !/
