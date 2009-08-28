@@ -7,6 +7,7 @@ program abs
   use CRASH_ModExcitation
   use CRASH_ModAtomicDataMix
   use CRASH_ModExcitationData,ONLY : n_ground, cExcitationN_III
+  use ModConst
   implicit NONE
 
   integer, parameter :: unit = 24
@@ -78,7 +79,7 @@ program abs
      end do
   end do
   close(unit)
-  call set_default_multigroup
+  call set_multigroup(100, 0.1/cHPlanckEV, 1000.0/cHPlanckEV)
   call meshhv
   call abscon
   

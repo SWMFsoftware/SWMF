@@ -1165,8 +1165,9 @@ contains
     use ModVarIndexes,  ONLY: LevelXe_, LevelPl_, Rho_, UnitUser_V
     use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
     use ModPhysics,     ONLY: cRadiationNo, Si2No_V, UnitTemperature_
-    use ModConst,       ONLY: cKevToK
-
+    use ModConst,       ONLY: cKevToK, cHPlanckEV
+    use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI
+    use CRASH_ModMultiGroup, ONLY: set_multigroup
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
 
@@ -1198,6 +1199,24 @@ contains
          call make_lookup_table(iTableEPerP, calc_table_value, iComm)
     if(iTableThermo > 0) &
          call make_lookup_table(iTableThermo, calc_table_value, iComm)
+    !\
+    !Set the photon energy range
+    !/
+    !First, check if the values of FreqMinSI and FreqSI are set:
+    
+    if(FreqMinSI <= 0) then
+       !Reset the minimum photon enrgy to be 0.1 eV
+       FreqMinSI = 0.1 /cHPlanckEV
+    end if
+
+    if(FreqMaxSI <= 0) then
+       !Reset the maximum photon enrgy to be 1 keV
+       FreqMaxSI = 1000.0 /cHPlanckEV
+    end if
+
+    !If the frequency range IN HERZ has been alredy set, the previous commands are skiped
+    !Now set the number of groups and the frequency range:
+    call set_multigroup(nWave, FreqMinSI, FreqMaxSI)
 
   end subroutine user_init_session
 

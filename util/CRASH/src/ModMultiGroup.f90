@@ -13,9 +13,11 @@ module CRASH_ModMultiGroup
   use CRASH_ModPartition,   ONLY : Na, Te, zAv
   use CRASH_ModPartition,   ONLY : iZMin_I !(1:nMixMax)
   use CRASH_ModPartition,   ONLY : iZMax_I !(1:nMixMax)
+  use ModConst,ONLY: cHPlanckEV
   implicit none
   SAVE
   PRIVATE !Except
+
 
   !Public members
   public :: meshhv !Creates the grid of photon energies
@@ -23,7 +25,7 @@ module CRASH_ModMultiGroup
   public :: abscon !Calculates the absorption, emission, and scattering 
   
   !For test:
-  public :: PhotonEnergy_I, abscfs, nPhoton, set_default_multigroup
+  public :: PhotonEnergy_I, abscfs, nPhoton, set_multigroup
 
 
   !       nPhotonMax  - photon energy mesh points                                    
@@ -76,12 +78,21 @@ module CRASH_ModMultiGroup
   logical,public :: UseScattering      = .false.
 contains
   !======================================================================
-  subroutine set_default_multigroup
+  subroutine set_multigroup(nGroupIn, FreqMinSI, FreqMaxSI)
+    !\
+    !Set the values of PHOTON ENERGY grid
+    !/
+    integer, intent(in) :: nGroupIn  !The number of photon energy groups
+    
+    real,    intent(in) :: FreqMinSI, FreqMaxSI  !Min and max FREQUENCIES [Hz]
     real:: elnmin,elnmax,delog,elog
     integer:: iGroup
     !-----------------------
-    EnergyGroup_I(0) = 0.010 * Te                       
-    EnergyGroup_I(nGroup) = 100.0 * Te                
+    nGroup = nGroupIn
+    EnergyGroup_I(0) = FreqMinSI * cHPlanckEV !Photon energy
+                     
+    EnergyGroup_I(nGroup) = FreqMaxSI * cHPlanckEV  !Photon energy
+         
     if ( nGroup <=1 ) return                              
     elnmin = log( EnergyGroup_I(0) )                            
     elnmax = log( EnergyGroup_I(nGroup) )                    
@@ -92,7 +103,7 @@ contains
        EnergyGroup_I(iGroup) = exp( elog )                         
     end do
              
-  end subroutine set_default_multigroup
+  end subroutine set_multigroup
   !======================================================================
   real function oscillator_strength(nI,nF)
     integer,intent(in):: nI,nF
@@ -236,8 +247,6 @@ contains
   contains
     !=============================================================
     subroutine abslin   
-      use ModConst,ONLY: cPlanckH,cEV
-
       ! ... computes the absorption coefficient from a particular            
       !     bound-bound transition from quantum state "n" to "np".           
       !                                                                      
@@ -275,8 +284,7 @@ contains
 
       real:: DeltaNu 
       
-      !       hplank  -  4.136e-15   Planck's constant (eV sec)
-      real,parameter:: cHPlanckEV = cPlanckH/cEV
+     
 
       !The oscillator strength
       real :: OscillatorStrength
