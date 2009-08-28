@@ -18,8 +18,8 @@ module ModWaves
 
   real :: AlfvenSpeed  !Auxiliary variable
   
-  real :: FreqMinSI = 0.0
-  real :: FreqMaxSI = 0.0
+  real :: FreqMinSI = -1.0
+  real :: FreqMaxSI = -1.0
 
   !To switch this option, set UseAlfvenSpeed = .true. in the user routines 
   !and modify accordingly the named indexes to set the state variables for
