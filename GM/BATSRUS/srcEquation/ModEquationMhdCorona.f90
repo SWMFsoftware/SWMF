@@ -1,6 +1,7 @@
 module ModVarIndexes
 
-  use ModSingleFluid,Redefine => ExtraEInt_
+  use ModSingleFluid
+  use ModExtraVariables,Redefine => ExtraEInt_
 
   implicit none
 

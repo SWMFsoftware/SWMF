@@ -1,9 +1,11 @@
 module ModVarIndexes
 
-  use ModSingleFluid, &
-       Redefine => nWave, &
-       Redefine1 => WaveFirst_, Redefine2 => WaveLast_, &
-       Redefine3 => Erad_
+  use ModSingleFluid
+  use ModExtraVariables, &
+       Redefine1 => nWave, &
+       Redefine2 => WaveFirst_, &
+       Redefine3 => WaveLast_, &
+       Redefine4 => Erad_
 
   implicit none
 

@@ -1,5 +1,8 @@
 module ModVarIndexes
+
   use ModSingleFluid, Redefine => IsMhd
+  use ModExtraVariables
+
   implicit none
 
   save

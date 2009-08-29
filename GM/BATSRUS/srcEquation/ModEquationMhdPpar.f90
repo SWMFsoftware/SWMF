@@ -1,6 +1,7 @@
 module ModVarIndexes
 
-  use ModSingleFluid, Redefine => Ppar_
+  use ModSingleFluid
+  use ModExtraVariables, Redefine => Ppar_
 
   implicit none
 

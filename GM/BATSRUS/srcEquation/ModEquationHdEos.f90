@@ -1,5 +1,8 @@
 module ModVarIndexes
-  use ModSingleFluid, Redefine1 => IsMhd, Redefine2 => ExtraEint_
+
+  use ModSingleFluid,    Redefine1 => IsMhd
+  use ModExtraVariables, Redefine2 => ExtraEint_
+
   implicit none
 
   save

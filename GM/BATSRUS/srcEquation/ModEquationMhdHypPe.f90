@@ -1,6 +1,7 @@
 module ModVarIndexes
 
-  use ModSingleFluid, Redefine1 => Pe_, Redefine2 => Hyp_
+  use ModSingleFluid
+  use ModExtraVariables, Redefine1 => Pe_, Redefine2 => Hyp_
 
   implicit none
 

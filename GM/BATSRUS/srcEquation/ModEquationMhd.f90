@@ -1,6 +1,7 @@
 module ModVarIndexes
 
   use ModSingleFluid
+  use ModExtraVariables
 
   implicit none
 
