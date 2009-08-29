@@ -1,7 +1,5 @@
 module ModSingleFluid
 
-use ModExtraVariables
-
   ! Define single fluid values for multifluid parameters 
 
   implicit none
