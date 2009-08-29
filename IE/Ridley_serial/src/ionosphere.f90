@@ -283,6 +283,11 @@ subroutine ionosphere_init
   IONO_SOUTH_im_AveE = 0.00
   IsFilledWithIm = .false.
 
+  IONO_NORTH_Joule = 0.0
+  IONO_NORTH_IonNumFlux = 0.0
+  IONO_SOUTH_Joule = 0.0
+  IONO_SOUTH_IonNumFlux = 0.0
+
 end subroutine ionosphere_init
 
 !*************************************************************************
