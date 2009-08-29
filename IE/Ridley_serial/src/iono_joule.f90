@@ -16,8 +16,8 @@ subroutine ionosphere_jouleheating_ionflux(iBlock, ETh, EPs, SigmaP, &
   integer, intent(in) :: iBlock
 
   real, dimension(1:IONO_nTheta, 1:IONO_nPsi) :: &
-       Joule, SigmaP, ETh, EPs, IonNumFlux_tmp
-  real, dimension(1:IONO_nTheta, 1:IONO_nPsi) :: IonNumFlux
+        SigmaP, ETh, EPs, IonNumFlux_tmp
+  real, intent(out), dimension(1:IONO_nTheta, 1:IONO_nPsi) ::Joule, IonNumFlux
 
   integer            :: i, j, iHemisphere
   real, dimension(3) :: B_D, bIono_D, XyzIono_D, Xyz_tmp  
@@ -34,6 +34,8 @@ subroutine ionosphere_jouleheating_ionflux(iBlock, ETh, EPs, SigmaP, &
   ! J * E = S in this code.
   !/
 
+	Joule(:,:) =0.0 
+	IonNumFlux(:,:) = 0.0
   ! Joule heating (or Poynting flux) at ionosphere altitude
   Joule = SigmaP * (ETh**2+EPs**2) 
 
