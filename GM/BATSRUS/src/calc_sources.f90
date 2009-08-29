@@ -33,6 +33,7 @@ subroutine calc_sources
 
   integer :: i, j, k, iDim, iVar
   logical :: UseRzGeometry
+  real :: Pe
   real :: Coef
 
   ! Variable for div B diffusion
@@ -124,6 +125,25 @@ subroutine calc_sources
         ! NOTE: here we have to use signed radial distance!
         if(UseRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
              + (GammaWave - 1)*WaveEnergy/y_BLK(i,j,k,iBlock)
+     end do; end do; end do
+  end if
+
+  if(UseElectronEnergy)then
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        DivU = vInv_CB(i,j,k,iBlock) &
+             *(uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
+             + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
+             + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
+        Pe = (g - 1)*State_VGB(Ee_,i,j,k,iBlock)
+
+        Source_VC(Ee_,i,j,k) = Source_VC(Ee_,i,j,k) - Pe*DivU
+        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Pe*DivU
+
+        ! Add "geometrical source term" p/r to the radial momentum equation
+        ! The "radial" direction is along the Y axis
+        ! NOTE: here we have to use signed radial distance!
+        if(UseRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+             + Pe/y_BLK(i,j,k,iBlock)
      end do; end do; end do
   end if
 

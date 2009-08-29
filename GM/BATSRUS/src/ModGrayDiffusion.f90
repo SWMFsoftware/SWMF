@@ -112,10 +112,13 @@ contains
     if(UseSemiImplicit)then
 
        ! Default to zero, unless reset
-       iTeImpl = 0
+       iTeImpl = 0; iEradImpl = 0
 
        select case(TypeSemiImplicit)
        case('radiation')
+          if(UseElectronEnergy)then
+             call stop_mpi(NameSub//": Te/=Ti requires heat conduction")
+          end if
           iEradImpl = 1
           nDiff = 1
           allocate(iDiff_I(nDiff))
@@ -325,12 +328,14 @@ contains
   subroutine get_impl_gray_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
     use ModAdvance,  ONLY: Erad_, State_VGB, UseElectronEnergy, nOpacity
+    use ModConst,    ONLY: cBoltzmann
     use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, TypeSemiImplicit, &
          iEradImpl, iTeImpl, ImplCoeff
     use ModMain,     ONLY: nDim, x_, y_, nI, nJ, nK, MaxImplBlk, Dt
     use ModNumConst, ONLY: i_DD
-    use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, &
-         Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_
+    use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, UnitN_, UnitP_, &
+         Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_, &
+         No2Si_V
     use ModUser,     ONLY: user_material_properties
     use ModTemperature, ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, &
@@ -343,10 +348,12 @@ contains
 
     integer :: iImplBlock, iBlock, i, j, k
     real :: PlanckOpacitySi_I(nOpacity), DiffusionOpacitySi_I(nOpacity)
-    real :: DiffusionOpacity, PlanckOpacity, CvSi, Cv, TeSi, Te, CveSi, Cve
+    real :: DiffusionOpacity, PlanckOpacity, CvSi, Cv, TeSi, Te
     real :: HeatCondSi, HeatCond, TeTiRelaxSi, TeTiRelax
     real :: Grad2ByErad2, DiffRad, InvDx2, InvDy2, InvDz2
     real :: InvDx, InvDy
+    real :: NatomicSi, CveSi, Cve, CviSi, Cvi, PiSi, TiSi, Ti, PeSi
+    real :: TeTiCoefSi, TeTiCoef, TeTiCoefPrime
 
     integer :: iDim, Di, Dj, Dk, iDiff, nDimInUse
     real :: Coeff, Dxyz_D(3)
@@ -387,18 +394,36 @@ contains
 
        ! calculate coefficients for linearized energy exchange and diffusion
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, &
-               AbsorptionOpacitySiOut_I = PlanckOpacitySi_I, &
-               DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
-               CvSiOut = CvSi, CveSiOut=CveSi, TeSiOut = TeSi, &
-               HeatCondSiOut = HeatCondSi, TeTiRelaxSiOut = TeTiRelaxSi)
+          if(UseElectronEnergy)then
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, &
+                  AbsorptionOpacitySiOut_I = PlanckOpacitySi_I, &
+                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
+                  CvSiOut=CveSi, TeSiOut = TeSi, NatomicSiOut=NatomicSi, &
+                  HeatCondSiOut = HeatCondSi, TeTiRelaxSiOut = TeTiRelaxSi)
 
-          PlanckOpacity = PlanckOpacitySi_I(1)/Si2No_V(UnitX_)
-          Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
-          Cve = CveSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
-          Te = TeSi*Si2No_V(UnitTemperature_)
-          TeTiRelax = TeTiRelaxSi/Si2No_V(UnitT_)
+             PlanckOpacity = PlanckOpacitySi_I(1)/Si2No_V(UnitX_)
+             Te = TeSi*Si2No_V(UnitTemperature_)
+             Cve = CveSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+             PiSi = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
+             TiSi = PiSi/(cBoltzmann*NatomicSi)
+             Ti = TiSi*Si2No_V(UnitTemperature_)
+             CviSi = inv_gm1*cBoltzmann*NatomicSi
+             Cvi = CviSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+             TeTiCoefSi = TeTiRelaxSi*cBoltzmann*NatomicSi
+             TeTiCoef = TeTiCoefSi*Si2No_V(UnitEnergyDens_) &
+                  /(Si2No_V(UnitTemperature_)*Si2No_V(UnitT_))
+          else
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, &
+                  AbsorptionOpacitySiOut_I = PlanckOpacitySi_I, &
+                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
+                  CvSiOut = CvSi, TeSiOut = TeSi, HeatCondSiOut = HeatCondSi)
+
+             PlanckOpacity = PlanckOpacitySi_I(1)/Si2No_V(UnitX_)
+             Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+             Te = TeSi*Si2No_V(UnitTemperature_)
+          end if
 
           select case(TypeSemiImplicit)
           case('radiation')
@@ -410,15 +435,12 @@ contains
              ! This is just the Planck function at time level * saved
              PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = cRadiationNo*Te**4
           case('radcond')
-             RelaxCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity
 
              if(UseElectronEnergy)then
-                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
-                     Cve/(4.0*cRadiationNo*Te**3)
-
-                PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = 0.0
-                PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = 0.0
+                ! not implemented yet
              else
+                RelaxCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity
+
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
                      Cv/(4.0*cRadiationNo*Te**3)
              end if
@@ -426,8 +448,9 @@ contains
              if(UseElectronEnergy)then
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
 
-                PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = 0.0
-                PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = 0.0
+                PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = TeTiCoef &
+                     /(1.0 + ImplCoeff*Dt*TeTiCoef/Cvi)
+                PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = Ti
              else
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
              end if
@@ -768,18 +791,17 @@ contains
 
   subroutine set_gray_outflow_bc(iSide, iBlock, State_VG)
 
-    use ModAdvance,  ONLY: nOpacity
     use ModImplicit, ONLY: nw, iTeImpl
-    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB
+    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
     use ModMain,     ONLY: nI, nJ, nK
-    use ModPhysics,  ONLY: Clight, Si2No_V, UnitX_
+    use ModPhysics,  ONLY: Clight
     use ModUser,     ONLY: user_material_properties
 
     integer, intent(in) :: iSide, iBlock
     real, intent(inout) :: State_VG(nw,-1:nI+2,-1:nJ+2,-1:nK+2)
 
     integer :: iVar, i, j, k, iDiff
-    real :: Coef, OpacitySi_I(nOpacity)
+    real :: Coef
     character(len=*), parameter :: NameSub='set_gray_outflow_bc'
     !--------------------------------------------------------------------------
     select case(iSide)
@@ -1122,12 +1144,13 @@ contains
 
   subroutine update_impl_gray_diff(iBlock, iImplBlock, StateImpl_VG)
 
-    use ModAdvance,  ONLY: State_VGB, Rho_, p_, ExtraEint_
+    use ModAdvance,  ONLY: State_VGB, Rho_, p_, ExtraEint_, &
+         UseElectronEnergy, Ee_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
     use ModMain,     ONLY: nI, nJ, nK, Dt
-    use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_,&
-         UnitRho_, UnitTemperature_
+    use ModPhysics,  ONLY: inv_gm1, g, No2Si_V, Si2No_V, UnitEnergyDens_, &
+         UnitP_, UnitRho_, UnitTemperature_
     use ModUser,     ONLY: user_material_properties
 
     integer, intent(in) :: iBlock, iImplBlock
@@ -1135,6 +1158,7 @@ contains
 
     integer :: i, j, k, iImplToState, iVarImpl, iVar
     real :: Einternal, EinternalSi, PressureSi
+    real :: PeSi, Ee, EeSi
     real :: DelEnergy, Relaxation
 
     character(len=*), parameter :: NameSub = 'update_impl_gray_diff'
@@ -1159,12 +1183,19 @@ contains
                State_VGB(iVar,i,j,k,iBlock) + DelEnergy
        end do
 
-       Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-            + State_VGB(ExtraEint_,i,j,k,iBlock)
+       if(UseElectronEnergy)then
+          ! ion pressure -> Einternal
+          Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
+       else
+          ! ion + electron pressure -> Einternal
+          Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
+               + State_VGB(ExtraEint_,i,j,k,iBlock)
 
-       if(iTeImpl>0)then
-          Einternal = Einternal + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-               *(StateImpl_VG(iTeImpl,i,j,k)-ImplOld_VCB(iTeImpl,i,j,k,iBlock))
+          if(iTeImpl>0)then
+             Einternal = Einternal + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+                  *(StateImpl_VG(iTeImpl,i,j,k) &
+                  - ImplOld_VCB(iTeImpl,i,j,k,iBlock))
+          end if
        end if
 
        if(nPoint>0)then
@@ -1189,16 +1220,38 @@ contains
           call stop_mpi(NameSub//' negative Eint')
        end if
 
-       EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
+       if(UseElectronEnergy)then
+          ! ions
+          State_VGB(p_,i,j,k,iBlock) = (g - 1)*Einternal
 
-       call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-            i, j, k, iBlock, &
-            EinternalSiIn = EinternalSi, PressureSiOut = PressureSi)
+          ! electrons
+          Ee = State_VGB(Ee_,i,j,k,iBlock) + State_VGB(ExtraEint_,i,j,k,iBlock)
+          EeSi = Ee*No2Si_V(UnitEnergyDens_)
 
-       State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, &
+               EinternalSiIn = EeSi, PressureSiOut = PeSi)
 
-       State_VGB(ExtraEint_,i,j,k,iBlock) = &
-            Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock)
+          ! use true electron pressure
+          State_VGB(Ee_,i,j,k,iBlock) = inv_gm1*PeSi*Si2No_V(UnitP_)
+
+          ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
+          State_VGB(ExtraEint_,i,j,k,iBlock) = &
+               Ee - State_VGB(Ee_,i,j,k,iBlock)
+
+       else
+          ! ions + electrons
+          EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
+
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, &
+               EinternalSiIn = EinternalSi, PressureSiOut = PressureSi)
+
+          State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+
+          State_VGB(ExtraEint_,i,j,k,iBlock) = &
+               Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock)
+       end if
 
     end do; end do; end do
 

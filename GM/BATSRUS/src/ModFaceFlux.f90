@@ -1574,7 +1574,7 @@ contains
     !==========================================================================
 
     subroutine godunov_flux
-      use ModAdvance,  ONLY: Erad_,WaveFirst_,WaveLast_
+      use ModAdvance,  ONLY: Erad_,WaveFirst_,WaveLast_, UseElectronEnergy, Ee_
       use ModExactRS,  ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
            pL, pR, UnL, UnR, UnStar, pStar
       use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
@@ -1587,7 +1587,8 @@ contains
 
       !The wave pressure: in the left state, right state and at the wall
       real::pWaveL=0.0,pWaveR=0.0, pWaveStar=0.0, pWaveSide=0.0
-      real :: GammaRatio, Factor
+      real :: PeL, PeR, PeStar, PeSide
+      real :: Adiabatic, Isothermal, GammaRatio, Factor
       integer::iVar
       !-----------------------------------------------------------------------
       ! Scalar variables
@@ -1605,11 +1606,19 @@ contains
          ! wave pressure
          pWaveL = (GammaWave - 1)*sum(StateLeft_V(WaveFirst_:WaveLast_))
          pWaveR = (GammaWave - 1)*sum(StateRight_V(WaveFirst_:WaveLast_))
-         pL    = pL + pWaveL
-         pR    = pR + pWaveR
+         pL = pL + pWaveL
+         pR = pR + pWaveR
       else
          !It is easier to add zero than using if(UseWavePressure)
          pWaveL = 0.0; pWaveR = 0.0
+      end if
+      if(UseElectronEnergy)then
+         PeL = (g - 1)*StateLeft_V(Ee_)
+         PeR = (g - 1)*StateRight_V(Ee_)
+         pL = pL + PeL
+         pR = pR + PeR
+      else
+         PeL = 0.0; PeR = 0.0
       end if
 
       !Take the parameters at the Contact Discontinuity (CD)
@@ -1636,13 +1645,15 @@ contains
          UnSide      = UnL
          StateStar_V = StateLeft_V
          pWaveSide   = pWaveL
+         PeSide      = PeL
       else
          ! The CD is to the left from the face
          ! The Right gas passes through the face
          RhoSide     = RhoR
          UnSide      = UnR
          StateStar_V = StateRight_V
-         pWaveSide    = pWaveR
+         pWaveSide   = pWaveR
+         PeSide      = PeR
       end if
 
       ! Take the parameters at the face
@@ -1652,12 +1663,15 @@ contains
       ! total pressure, the wave pressure should behave 
       ! adiabatically, with the same polytropic index as that for the gas
 
-      pWaveStar             = pWaveSide * (Rho/RhoSide)**g
+      Isothermal           = Rho/RhoSide
+      Adiabatic            = Isothermal**g
+      pWaveStar            = pWaveSide*Adiabatic
+      PeStar               = PeSide*Adiabatic
 
       ! Since the total pressure is not less than the adiabatic one
       ! the difference below is positive
       pTotal               = p
-      p                    = pTotal - pWaveStar
+      p                    = pTotal - pWaveStar - PeStar
 
       StateStar_V(Rho_)    = Rho
       StateStar_V(Ux_:Uz_) = StateStar_V(Ux_:Uz_) + (Un-UnSide)*Normal_D
@@ -1686,11 +1700,13 @@ contains
 
       if(UseWavePressure)then
          GammaRatio = inv_gm1*(GammaWave - 1)
-         Factor = (1.0 - GammaRatio) + GammaRatio*(Rho/RhoSide)**(g - 1)
+         Factor = (1.0 - GammaRatio) + GammaRatio*Adiabatic/Isothermal
          do iVar = WaveFirst_, WaveLast_
             Flux_V(iVar) = Factor*StateStar_V(iVar)*Un
          end do
       end if
+      if(UseElectronEnergy) &
+           Flux_V(Ee_) = (Adiabatic/Isothermal)*StateStar_V(Ee_)*Un
 
       !^CFG IF IMPLICIT BEGIN
       if(.not.UseSemiImplicit)then
@@ -2160,7 +2176,8 @@ contains
     !==========================================================================
     subroutine get_hd_flux(Gamma,EPerRhoExtra)
 
-      use ModPhysics, ONLY: inv_gm1
+      use ModAdvance, ONLY: UseElectronEnergy, Ee_
+      use ModPhysics, ONLY: inv_gm1, g
       use ModVarIndexes
       use ModWaves
 
@@ -2195,7 +2212,8 @@ contains
       pTotal = p
 
       if(UseWavePressure) &
-           pTotal = pTotal + (GammaWave-1.0) * sum(State_V(WaveFirst_:WaveLast_))
+           pTotal = pTotal + (GammaWave-1.0)*sum(State_V(WaveFirst_:WaveLast_))
+      if(UseElectronEnergy) pTotal = pTotal + (g - 1)*State_V(Ee_)
 
       ! Normal velocity
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
@@ -2539,6 +2557,7 @@ contains
     !========================================================================
     subroutine get_hd_speed
 
+      use ModAdvance, ONLY: UseElectronEnergy, Ee_
       use ModVarIndexes
       use ModPhysics, ONLY: g
 
@@ -2568,6 +2587,7 @@ contains
       if(UseWavePressure) &
            Sound2 = Sound2 + GammaWave* (GammaWave-1.0) * &
            sum(State_V(WaveFirst_:WaveLast_)) * InvRho
+      if(UseElectronEnergy) Sound2 = Sound2 + g*(g - 1)*State_V(Ee_)*InvRho
       
       Sound = sqrt(Sound2)
       Un    = sum(State_V(iUx:iUz)*Normal_D)

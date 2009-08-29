@@ -389,12 +389,11 @@ contains
                i, j, k, iBlock, &
                AbsorptionOpacitySiOut_I = PlanckOpacitySi_I, &
                DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
-               CvSiOut = CvSi, CveSiOut=CveSi, TeSiOut = TeSi, &
+               CvSiOut = CvSi, TeSiOut = TeSi, &
                HeatCondSiOut = HeatCondSi, TeTiRelaxSiOut = TeTiRelaxSi)
 
           PlanckOpacity = PlanckOpacitySi_I(1)/Si2No_V(UnitX_)
           Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
-          Cve = CveSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
           Te = TeSi*Si2No_V(UnitTemperature_)
           TeTiRelax = TeTiRelaxSi/Si2No_V(UnitT_)
 
@@ -410,25 +409,10 @@ contains
           case('radcond')
              RelaxCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity
 
-             if(UseElectronEnergy)then
-                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
-                     Cve/(4.0*cRadiationNo*Te**3)
-
-                PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = 0.0
-                PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = 0.0
-             else
-                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
-                     Cv/(4.0*cRadiationNo*Te**3)
-             end if
+             DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
+                  Cv/(4.0*cRadiationNo*Te**3)
           case('cond')
-             if(UseElectronEnergy)then
-                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
-
-                PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = 0.0
-                PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = 0.0
-             else
-                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
-             end if
+             DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
           end select
 
           call get_diffusion_coef

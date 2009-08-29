@@ -741,9 +741,9 @@ contains
   !============================================================================
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
-       EinternalSiIn, TeSiIn, &
-       EinternalSiOut, TeSiOut, PeSiOut, EeSiOut, PressureSiOut, &
-       CvSiOut, CveSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
+       EinternalSiIn, TeSiIn, NatomicSiOut, &
+       EinternalSiOut, TeSiOut, PressureSiOut, &
+       CvSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
        AbsorptionOpacitySiOut_I, DiffusionOpacitySiOut_I)
 
     ! The State_V vector is in normalized units
@@ -758,13 +758,11 @@ contains
     integer, optional, intent(in):: i, j, k, iBlock, iDir    ! cell/face index
     real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
     real, optional, intent(in)  :: TeSiIn                    ! [K]
+    real, optional, intent(out) :: NatomicSiOut              ! [1/m^3]
     real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
-    real, optional, intent(out) :: PeSiOut                   ! [Pa]
-    real, optional, intent(out) :: EeSiOut                   ! [J/m^3]
     real, optional, intent(out) :: PressureSiOut             ! [Pa]
     real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: CveSiOut                  ! [J/(K*m^3)]
     real, optional, intent(out) :: GammaOut                  ! dimensionless
     real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxSiOut            ! [1/s]
@@ -842,7 +840,6 @@ contains
     if(present(AbsorptionOpacitySiOut_I)) AbsorptionOpacitySiOut_I = 0.0
     if(present(DiffusionOpacitySiOut_I)) DiffusionOpacitySiOut_I = 0.0
 
-    if(present(CveSiOut)) CveSiOut = 0.0
     if(present(TeTiRelaxSiOut)) TeTiRelaxSiOut = 0.0
 
   end subroutine user_material_properties
