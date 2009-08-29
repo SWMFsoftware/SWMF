@@ -11,7 +11,9 @@ subroutine IE_gather
   integer :: iError, iSize
   !--------------------------------------------------------------------------
   IONO_phi = -1.0e32
-
+  IONO_IonNumFlux = -1.0e32
+  IONO_Joule = -1.0e32
+  
   if (iProc == 0) then
      IONO_phi(1:IONO_nTheta,:) = IONO_NORTH_Phi
      IONO_IonNumFlux(1:IONO_nTheta,:) = IONO_NORTH_IonNumFlux
