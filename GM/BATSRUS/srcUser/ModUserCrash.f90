@@ -1090,6 +1090,14 @@ contains
 
          ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
          State_VGB(ExtraEint_,i,j,k,iBlock) = Ee - State_VGB(Ee_,i,j,k,iBlock)
+
+         if(State_VGB(ExtraEint_,i,j,k,iBlock)<0.0)then
+            write(*,*)NameSub,': ERROR extra internal energy =', &
+                 State_VGB(ExtraEint_,i,j,k,iBlock)
+            write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
+            call stop_mpi(NameSub//': ERROR negative extra internal energy')
+         end if
+
       end do; end do; end do
 
     end subroutine update_states_electron
@@ -1414,7 +1422,14 @@ contains
        CvSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
        AbsorptionOpacitySiOut_I, DiffusionOpacitySiOut_I)
 
-    ! The State_V vector is in normalized units, output is in SI units
+    ! The State_V vector is in normalized units, all other physical
+    ! quantities are in SI.
+    !
+    ! If the electron energy is used, then EinternalSiIn, EinternalSiOut,
+    ! PressureSiOut, CvSiOut refer to the electron internal energies,
+    ! electron pressure, and electron specific heat, respectively.
+    ! Otherwise they refer to the total (electron + ion) internal energies,
+    ! total (electron + ion) pressure, and the total specific heat.
 
     use CRASH_ModEos,  ONLY: eos, Xe_, Be_, Plastic_
     use ModMain,       ONLY: nI, nJ, nK
@@ -1669,7 +1684,7 @@ contains
         end if
 
         ! Obtain the pressure from EinternalSiIn or TeSiIn or State_V
-        ! Do this for various cases: mixed cell or not, lookup tables or not
+        ! Do this for mixed cell or not
         if(present(EinternalSiIn))then
            ! Pe = (g-1)*Ee with ideal gamma, use this Pe to get the
            ! thrue electron internal energy.

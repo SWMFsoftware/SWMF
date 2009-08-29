@@ -1239,6 +1239,13 @@ contains
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
                Ee - State_VGB(Ee_,i,j,k,iBlock)
 
+          if(State_VGB(ExtraEint_,i,j,k,iBlock)<0.0)then
+             write(*,*)NameSub,': ERROR extra internal energy =', &
+                  State_VGB(ExtraEint_,i,j,k,iBlock)
+             write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
+             call stop_mpi(NameSub//': ERROR negative extra internal energy')
+          end if
+
        else
           ! ions + electrons
           EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
@@ -1251,6 +1258,7 @@ contains
 
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
                Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock)
+
        end if
 
     end do; end do; end do
