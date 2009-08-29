@@ -195,8 +195,10 @@ contains
     DiffCoef_VFDB = 0.0 ! make sure all elements are initialized
 
     ! Setup for wave infrastructure
-    UseWavePressure = .true.
-    GammaWave = GammaRel
+    if(UseGrayDiffusion)then
+       UseWavePressure = .true.
+       GammaWave = GammaRel
+    end if
 
   end subroutine init_gray_diffusion
 
