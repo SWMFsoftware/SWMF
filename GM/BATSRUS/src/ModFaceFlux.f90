@@ -1613,11 +1613,15 @@ contains
          pWaveL = 0.0; pWaveR = 0.0
       end if
       if(UseElectronEnergy)then
+         ! StateLeft_V(p_) and StateRight_V(p_) are the ion pressure
+         ! Add the electron pressure to the total pressure
          PeL = (g - 1)*StateLeft_V(Ee_)
          PeR = (g - 1)*StateRight_V(Ee_)
          pL = pL + PeL
          pR = pR + PeR
       else
+         ! StateLeft_V(p_) and StateRight_V(p_) already include the electron
+         ! pressure
          PeL = 0.0; PeR = 0.0
       end if
 
@@ -1626,7 +1630,7 @@ contains
 
       ! At strong shocks use the artificial wind scheme
       if((pStar > 2*pL .and. wL < 0.0).or.(pStar > 2*pR .and. wR > 0.0))then
-         ! Temparary solution, should be the monotone numerical flux with 
+         ! Temporary solution, should be the monotone numerical flux with 
          ! modified StateLeft_V and/or StateRight_V
          call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
               StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft)
@@ -1688,9 +1692,11 @@ contains
       Flux_V(1:nVar) = StateStar_V * Un 
 
       ! (3) add the pressure gradient
+      ! also add the force due to the radiation and electron pressure gradient
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + pTotal*Normal_D
 
       ! (4) energy flux: (e + p)*u
+      ! also add the work done by the radiation and electron pressure gradient
       e = inv_gm1*p + 0.5*sum(StateStar_V(RhoUx_:RhoUz_)**2)/Rho
       Flux_V(Energy_) = (e + pTotal)*Un
 

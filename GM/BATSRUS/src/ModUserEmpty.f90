@@ -245,7 +245,14 @@ contains
        CvSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
        AbsorptionOpacitySiOut_I, DiffusionOpacitySiOut_I)
 
-    ! The State_V vector is in normalized units
+    ! The State_V vector is in normalized units, all other physical
+    ! quantities are in SI.
+    !
+    ! If the electron energy is used, then EinternalSiIn, EinternalSiOut,
+    ! PressureSiOut, CvSiOut refer to the electron internal energies,
+    ! electron pressure, and electron specific heat, respectively.
+    ! Otherwise they refer to the total (electron + ion) internal energies,
+    ! total (electron + ion) pressure, and the total specific heat.
 
     use ModAdvance,    ONLY: nOpacity
     use ModVarIndexes, ONLY: nVar
