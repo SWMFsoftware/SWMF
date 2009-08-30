@@ -83,7 +83,7 @@ module ModVarIndexes
        1.0 /) ! Energy_ 
  
   ! The names of the variables used in i/o
-  character(len=*), parameter :: NameVar_V(nVar+1) = (/ &
+  character(len=3) :: NameVar_V(nVar+1) = (/ &
        'Rho', & ! Rho_
        'Mx ', & ! RhoUx_
        'My ', & ! RhoUy_
@@ -92,9 +92,9 @@ module ModVarIndexes
        'By ', & ! By_
        'Bz ', & ! Bz_
        'Ew ', & ! ExtraEInt_  
-       ('I'//NameNumber_I(iWave), iWave=1,nWave), & ! Waves
+       ('I??', iWave=1,nWave), & ! Waves to be reset
        'p  ', & ! p_
-       'e  '/) ! Energy_        
+       'e  '/)  ! Energy_        
   
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVarPref = &
@@ -148,6 +148,7 @@ module ModVarIndexes
   real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)
 
 contains
+
   subroutine init_mod_equation
     ! Initialize user units and names for the MHD variables
 
@@ -155,8 +156,9 @@ contains
 
     ! Create variable name strings for plotting
     
-    do iWave=1,nWave
+    do iWave = 1, nWave
        write(NameWaveVar_I(iWave),'(a,i2.2)') 'I',iWave
+       NameVar_V(WaveFirst_+iWave-1) = NameWaveVar_I(iWave)
        NameConservativeVar=trim(NameConservativeVar)//&
             ' '//trim(NameWaveVar_I(iWave))
        NamePrimitiveVar=trim(NamePrimitiveVar)//&

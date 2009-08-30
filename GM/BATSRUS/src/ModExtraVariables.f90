@@ -12,11 +12,4 @@ module ModExtraVariables
   integer, parameter :: nWave = 0
   integer, parameter :: WaveFirst_ = 1, WaveLast_ = 0
   
-
-  integer,private :: i
-
-  character(len=*),dimension(0:99), parameter :: NameNumber_I=(/ &
-       ( ACHAR(IACHAR('0')+i/10)//ACHAR(IACHAR('0')+mod(i,10)),i=0,99)&
-       /)
-
 end module ModExtraVariables
