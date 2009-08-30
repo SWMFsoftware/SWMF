@@ -2643,7 +2643,7 @@ subroutine roe_solver(Flux_V)
   real,    intent(out):: Flux_V(nFlux)
 
   ! Number of MHD waves including the divB wave
-  integer, parameter :: nWave=8
+  integer, parameter :: nWaveMhd=8
 
   ! Named MHD wave indexes
   integer, parameter :: EntropyW_=1, AlfvenRW_=2, AlfvenLW_=3, &
@@ -2670,14 +2670,14 @@ subroutine roe_solver(Flux_V)
        RhoInvSqrtH, RhoInvSqrtL, RhoInvSqrtR
 
   ! Jump in the conservative state
-  real, dimension(nWave) :: dCons_V
+  real, dimension(nWaveMhd) :: dCons_V
 
   ! Eigenvalues and jumps in characteristic variable
-  real, dimension(nWave) :: Eigenvalue_V, DeltaWave_V 
+  real, dimension(nWaveMhd) :: Eigenvalue_V, DeltaWave_V 
 
   ! Eigenvectors
-  real, dimension(nWave, nWave)   :: EigenvectorL_VV  ! Left  eigenvectors
-  real, dimension(nWave, nFluxMhd):: EigenvectorR_VV  ! Right eigenvectors
+  real, dimension(nWaveMhd, nWaveMhd):: EigenvectorL_VV  ! Left  eigenvectors
+  real, dimension(nWaveMhd, nFluxMhd):: EigenvectorR_VV  ! Right eigenvectors
 
   ! Fluxes
   real, dimension(nFluxMhd)       :: Diffusion_V      ! Diffusive fluxes
@@ -2919,7 +2919,7 @@ subroutine roe_solver(Flux_V)
 
   ! At inner BC replace all eigenvalues with the enhanced eigenvalue
   ! of divB, which is the maximum eigenvalue
-  if(IsBoundary) Eigenvalue_V(1:nWave) = Eigenvalue_V(DivBW_)
+  if(IsBoundary) Eigenvalue_V(1:nWaveMhd) = Eigenvalue_V(DivBW_)
 
   !\
   ! Eigenvectors
@@ -3137,7 +3137,7 @@ subroutine roe_solver(Flux_V)
   !/
   ! matmul is slower than the loop for the NAG F95 compiler
   ! DeltaWave_V = matmul(dCons_V, EigenvectorL_VV)
-  do iWave = 1, nWave
+  do iWave = 1, nWaveMhd
      DeltaWave_V(iWave) = sum(dCons_V*EigenvectorL_VV(:,iWave))
   end do
   !\
