@@ -1675,6 +1675,7 @@ contains
         real :: PeSi, EeSi
         !----------------------------------------------------------------------
 
+        ! get the atomic concentration
         if(present(NatomicSiOut))then
            if(IsMix)then
               NatomicSiOut = sum(RhoToARatioSi_I)/cAtomicMass
@@ -1686,36 +1687,42 @@ contains
         ! Obtain the pressure from EinternalSiIn or TeSiIn or State_V
         ! Do this for mixed cell or not
         if(present(EinternalSiIn))then
-           ! Pe = (g-1)*Ee with ideal gamma, use this Pe to get the
-           ! thrue electron internal energy.
+           ! Obtain electron pressure from the true electron internal energy
            EeSi = EinternalSiIn
            if(IsMix)then
               call eos(RhoToARatioSi_I, eElectronIn=EeSi, &
-                   pElectronOut=PeSi)
+                   pElectronOut=PeSi, CvElectronOut=CvSiOut, &
+                   HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
            else
               call eos(iMaterial, Rho=RhoSi, eElectronIn=EeSi, &
-                   pElectronOut=PeSi)
+                   pElectronOut=PeSi, CvElectronOut=CvSiOut, &
+                   HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
            end if
         elseif(present(TeSiIn))then
-           ! Calculate electron pressure and electron energy from TeSiIn
+           ! Calculate electron pressure from electron temperature
            TeSi = TeSiIn
            if(IsMix) then
               call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
-                   pElectronOut=PeSi)
+                   pElectronOut=PeSi, CvElectronOut=CvSiOut, &
+                   HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
            else
               call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, &
-                   pElectronOut=PeSi)
+                   pElectronOut=PeSi, CvElectronOut=CvSiOut, &
+                   HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
            end if
         else
            ! electron pressure is (g - 1)*State_V(Ee_)
+           ! Use this pressure to calculate the true electron internal energy
            PeSi = (g - 1)*State_V(Ee_)*No2Si_V(UnitP_)
            if(present(EinternalSiOut))then
               if(IsMix)then
                  call eos(RhoToARatioSi_I, pElectronIn=PeSi, &
-                      TeOut=TeSi, eElectronOut=EeSi)
+                      TeOut=TeSi, eElectronOut=EeSi, CvElectronOut=CvSiOut, &
+                      HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
               else
                  call eos(iMaterial, RhoSi, pElectronIn=PeSi, &
-                      TeOut=TeSi, eElectronOut=EeSi)
+                      TeOut=TeSi, eElectronOut=EeSi, CvElectronOut=CvSiOut, &
+                      HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
               end if
               EinternalSiOut = EeSi
            end if
@@ -1727,6 +1734,7 @@ contains
              present(HeatCondSiOut) .or. present(TeTiRelaxSiOut) .or. &
              iTableOpacity>0 .and. (present(AbsorptionOpacitySiOut_I) &
              .or.                   present(DiffusionOpacitySiOut_I)) )then
+
            if(TeSi < 0.0) then
               ! If TeSi is not set yet then we need to calculate things here
               if(IsMix) then
