@@ -18,7 +18,7 @@ module ModVarIndexes
 
 
   ! loop variable over spectrum
-  integer :: iWave
+  integer, private :: iWave
 
   ! Number of frequency bins in spectrum
   integer, parameter :: nWave =1

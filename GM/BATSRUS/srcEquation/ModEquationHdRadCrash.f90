@@ -20,7 +20,7 @@ module ModVarIndexes
   logical, parameter :: IsMhd = .false.
 
   ! loop variable for implied do-loop over spectrum
-  integer :: iWave
+  integer, private :: iWave
 
   ! Number of wave bins in spectrum
   integer, parameter :: nWave = 1

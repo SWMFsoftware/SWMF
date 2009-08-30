@@ -15,7 +15,7 @@ module ModVarIndexes
   character (len=*), parameter :: NameEquation='MHD+waves'
 
   ! loop variable for implied do-loop over spectrum
-  integer :: iWave
+  integer, private :: iWave
 
   ! Number of wave bins in spectrum
   integer, parameter :: nWave = 2

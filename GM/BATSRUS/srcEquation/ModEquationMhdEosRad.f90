@@ -1,7 +1,13 @@
 module ModVarIndexes
+
   use ModSingleFluid
-  use ModExtraVariables, Redefine1 => Erad_, Redefine2 => ExtraEint_, &
-       Redefine3 => WaveFirst_, Redefine4 => WaveLast_
+  use ModExtraVariables, &
+       Redefine1 => Erad_, &
+       Redefine2 => nWave, &
+       Redefine3 => WaveFirst_, &
+       Redefine4 => WaveLast_, &
+       Redefine5 => ExtraEint_
+
   implicit none
 
   save
@@ -11,7 +17,7 @@ module ModVarIndexes
   character (len=*), parameter :: NameEquation='MHD+eos+waves'
 
   ! loop variable for implied do-loop over spectrum
-  integer :: iWave
+  integer, private :: iWave
 
   ! Number of wave bins in spectrum
   integer, parameter :: nWave = 1
