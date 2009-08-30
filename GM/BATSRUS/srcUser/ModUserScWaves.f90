@@ -27,9 +27,8 @@ module ModUser
 
   !Global variables - frequency grid
   logical                       :: IsInitWave = .false.
-  integer                       :: nFreq
   real,dimension(nWave)         :: LogFreq_I ! frequency grid
-  real                          :: LogFreqInertial, dLogFreq ! frequency grid spacing (uniform)
+  real                          :: FreqInertial, LogFreqInertial, dLogFreq
   !WaveDissip_CB=0.0 ! for plotting only
 
 contains
@@ -79,6 +78,9 @@ contains
 
        case("#FREQUENCY")
           call read_frequency
+
+       case("#FREQINERTIAL")
+          call read_var('FreqInertial',FreqInertial)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -598,7 +600,7 @@ contains
     !\
     !Divide each Ixx_ state variables by its frequency
     !/
-    do iFreq = 1,nFreq
+    do iFreq = 1,nWave
        wEnergy_G(iFreq)=State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock)* &
             exp(-LogFreq_I(iFreq))
     end do
@@ -619,12 +621,12 @@ contains
     ! Set BC's
     !/
     wEnergy_G(-1:0) = 0.0
-    wEnergy_G(nFreq+1:nFreq+2) = wEnergy_G(nFreq)
+    wEnergy_G(nWave+1:nWave+2) = wEnergy_G(nWave)
    
     !\
     ! Calculate MC slope limiter
     !/
-    do iFreq=0,nFreq+1
+    do iFreq=0,nWave+1
        SlopeR = wEnergy_G(iFreq+1)-wEnergy_G(iFreq)
        SlopeL = wEnergy_G(iFreq)-wEnergy_G(iFreq-1)
        
@@ -647,29 +649,29 @@ contains
     ! Advance the solution over one time step
     !/
     if (MyCfl > 0.0) then ! use left BC (0 ghost cell) 
-       do iFreq=0,nFreq
-         ! calculate numerical flux through right (downwind) edges
-         FluxR_I(iFreq) = wEnergy_G(iFreq)+cHalf*(1-MyCfl)*Limiter_I(iFreq)
-      end do
-      ! calculate numerical flux through left (upwind) edges
-      FluxL_I(1:nFreq+1)=FluxR_I(0:nFreq)
+       do iFreq=0,nWave
+          ! calculate numerical flux through right (downwind) edges
+          FluxR_I(iFreq) =wEnergy_G(iFreq)+cHalf*(1-MyCfl)*Limiter_I(iFreq)
+       end do
+       ! calculate numerical flux through left (upwind) edges
+       FluxL_I(1:nWave+1)=FluxR_I(0:nWave)
 
    else ! MyCfl <0, use right BC (n+1 ghost cell)
-      do iFreq=1, nFreq+1
+      do iFreq=1, nWave+1
          ! calculate numerical flux through right (downwind) edges
          FluxL_I(iFreq) = wEnergy_G(iFreq)-cHalf*(1+MyCfl)*Limiter_I(iFreq)
       end do
       ! calculate numerical flux through left (upwind) edges
-      FluxR_I(0:nFreq)=FluxL_I(1:nFreq+1)
+      FluxR_I(0:nWave)=FluxL_I(1:nWave+1)
    end if
 
    ! advance solution
-   wEnergy_G(1:nFreq)=wEnergy_G(1:nFreq)+MyCfl*(FluxL_I(1:nFreq)-FluxR_I(1:nFreq))
+   wEnergy_G(1:nWave)=wEnergy_G(1:nWave)+MyCfl*(FluxL_I(1:nWave)-FluxR_I(1:nWave))
    !\
    ! Update state variables
    !/
    !Multiply wEnergy by frequency
-   do iFreq = 1,nFreq
+   do iFreq = 1,nWave
       State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock)=wEnergy_G(iFreq)* &
            exp(LogFreq_I(iFreq))
       if(State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock)<0.0) then
@@ -725,7 +727,7 @@ contains
           end if
        end do; end do ; end do
     end do
-    nRow=nCell*nFreq/2
+    nRow=nCell*nWave/2
     !\
     ! Allocate plot arrays
     !/
@@ -746,7 +748,7 @@ contains
              dx=dx_BLK(iBLK)
              dz=dz_BLK(iBLK)
              if((z< dz) .and. (z >=0.0) .and. (x<dx) .and. (x>=0.0)) then
-                do iFreq=1,nFreq/2
+                do iFreq=1,nWave/2
                    IwPlusSi  = No2Si_V(UnitP_)*State_VGB(AlfvenSpeedPlusFirst_+iFreq-1,i,j,k,iBLK)
                    IwMinusSi = No2Si_V(UnitP_)*State_VGB(AlfvenSpeedMinusFirst_+iFreq-1,i,j,k,iBLK)
                    Cut_II(iRow,1) = y
@@ -788,7 +790,7 @@ contains
     !if (iProc==0) then
        write(iUnit,'(a)') 'Title: BATSRUS SC Spectrogram'
        write(iUnit,'(a)') 'Variables = "Y[R]", "w","I+[Jm-3]", "I-[Jm-3]" '
-       write(HeaderText,'(a,i2.2,a,i6.6,a)') 'Zone I= ',nFreq/2,', J= ',nCell,',F=point'
+       write(HeaderText,'(a,i2.2,a,i6.6,a)') 'Zone I= ',nWave/2,', J= ',nCell,',F=point'
        write(iUnit,'(a)') trim(HeaderText)
     !end if
     do iRow=1,nRow
@@ -895,14 +897,14 @@ contains
 
   end subroutine calc_poynt_flux
   !====================================================================
-  subroutine set_freq_grid(nFreqPlus,nFreqMinus)
+  subroutine set_freq_grid
 
     use ModVarIndexes
     use ModNumConst, ONLY: cPi
     use ModWaves,    ONLY: FreqMinSI,FreqMaxSI
     implicit none
     
-    integer,intent(in)         :: nFreqPlus, nFreqMinus
+    integer                    :: nWaveHalf=max(2,nWave/2)
     integer                    :: iFreq
     real                       :: LogFreqMin, LogFreqMax
     character(len=*),parameter :: NameSub='set_freq_grid'
@@ -914,16 +916,16 @@ contains
     LogFreqMax = log(2*cPi*FreqMaxSI) 
 
     ! calculate frequency interval on a natural logarithmic scale 
-    dLogFreq = (LogFreqMax-LogFreqMin)/(nFreqPlus-1) 
+    dLogFreq = (LogFreqMax-LogFreqMin)/(nWaveHalf-1) 
  
     ! Divide the spectrum into frequncy groups on a log scale
     ! Plus waves (+Va)
-    do iFreq = 1,nFreqPlus
+    do iFreq = 1,nWaveHalf
        LogFreq_I(iFreq)=LogFreqMin+(iFreq-1)*dLogFreq
     end do
     ! Minus waves (-Va)
-    do iFreq = 1, nFreqMinus
-       LogFreq_I(nFreqPlus+iFreq)=LogFreqMin+(iFreq-1)*dLogFreq
+    do iFreq = 1,nWaveHalf
+       LogFreq_I(nWaveHalf+iFreq)=LogFreqMin+(iFreq-1)*dLogFreq
     end do
   end subroutine set_freq_grid
   !===================================================================
@@ -954,7 +956,6 @@ contains
     real                         :: vAlfvenSi, PointingFluxNo
     ! 1D Frequency grid variables
     integer                       :: iFreq
-    integer                       :: nFreqPlus, nFreqMinus
     real, dimension(nWave)        :: WaveEnergy_I !=w'I(logw')
     real,dimension(nI,nJ,nK)      :: FreqCutOff_C
 
@@ -974,21 +975,10 @@ contains
     ! Set frequency grid
     ! /
 
-    ! Get number of freq. groups for Plus(+Va) and Minus(-Va) Alfven waves
-    ! Uses ModWaves indexes which are set in user_init_session
-    AlfvenSpeedPlusLast_  = AlfvenSpeedPlusLast_  + WaveFirst_-1
-    AlfvenSpeedPlusFirst_ = AlfvenSpeedPlusFirst_ + WaveFirst_-1
-    AlfvenSpeedMinusFirst_= AlfvenSpeedMinusFirst_+ WaveFirst_-1
-    AlfvenSpeedMinusLast_ = AlfvenSpeedMinusLast_ + WaveFirst_-1
-
-    nFreqPlus  = AlfvenSpeedPlusLast_  - AlfvenSpeedPlusFirst_+1
-    nFreqMinus = AlfvenSpeedMinusLast_ - AlfvenSpeedMinusFirst_+1
-    nFreq=nFreqPlus+nFreqMinus
-
-    call set_freq_grid(nFreqPlus, nFreqMinus)
+    call set_freq_grid
     ! minimal frequency of non-zero energy (inertial range lower bound)
-    ! FreqInertialRange is set in input command #FREQ_GRID
-    LogFreqInertial = log(2*cPi*FreqInertialRange)
+    ! FreqInertial set in input command #FREQINERTIAL
+    LogFreqInertial = log(2*cPi*FreqInertial)
    
     ! \
     ! Calculate wave spectrum energy  coefficients in all cells 
@@ -1029,7 +1019,7 @@ contains
                (vAlfvenSi)**(-FreqPower)
  
           ! Start filling frequency groups
-          do iFreq=1,nFreq
+          do iFreq=1,nWave
              if ((LogFreq_I(iFreq) .ge. log(FreqCutOff_C(i,j,k))) .or. &
                   (LogFreq_I(iFreq) .le. LogFreqInertial)) then
                 WaveEnergy_I(iFreq) = 0.0
