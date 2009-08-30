@@ -7,7 +7,6 @@ module ModFaceFlux
        UseParallelConduction
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
-  use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, nFluid
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, true_cell
@@ -37,16 +36,22 @@ module ModFaceFlux
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
 
-  use ModGrayDiffusion, ONLY: IsNewBlockGrayDiffusion, &   !^CFG IF IMPLICIT
-       get_radiation_energy_flux                           !^CFG IF IMPLICIT
-  use ModMultiGroupDiffusion, ONLY: IsNewBlockRadDiffusion, get_rad_energy_flux                           !^CFG IF IMPLICIT
-  use ModHeatConduction, ONLY: IsNewBlockHeatConduction, & !^CFG IF IMPLICIT
-       get_heat_flux                                       !^CFG IF IMPLICIT
+  !^CFG IF IMPLICIT BEGIN
+  use ModGrayDiffusion, ONLY: IsNewBlockGrayDiffusion, &
+       get_radiation_energy_flux
+  use ModMultiGroupDiffusion, ONLY: &
+       IsNewBlockRadDiffusion, get_rad_energy_flux
+  use ModHeatConduction, ONLY: IsNewBlockHeatConduction, get_heat_flux
+  !^CFG END IMPLICIT
+
   use ModTemperature, ONLY: UseTemperatureDiffusion
 
   use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
+
+  use ModVarIndexes
   use ModMultiFluid
   use ModNumConst
+
   implicit none
 
   ! Number of fluxes including pressure and energy fluxes
@@ -469,7 +474,8 @@ contains
     !==========================================================================
 
     subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax)
-      use ModAdvance,ONLY:Bx_,Bz_,State_VGB
+
+      use ModAdvance, ONLY: State_VGB
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
       call set_block_values(iBlock, x_)
@@ -522,7 +528,8 @@ contains
     !==========================================================================
 
     subroutine get_flux_y(iMin,iMax,jMin,jMax,kMin,kMax)
-      use ModAdvance,ONLY:Bx_,Bz_,State_VGB
+
+      use ModAdvance, ONLY: State_VGB
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !------------------------------------------------------------------------
       call set_block_values(iBlock, y_)
@@ -576,7 +583,8 @@ contains
     !==========================================================================
 
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax)
-      use ModAdvance,ONLY:Bx_,Bz_,State_VGB
+
+      use ModAdvance, ONLY: State_VGB
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
       !------------------------------------------------------------------------
       call set_block_values(iBlock, z_)
@@ -840,9 +848,7 @@ contains
 
   subroutine get_numerical_flux(Flux_V)
 
-    use ModVarIndexes, ONLY: Bx_, By_, Bz_, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, &
-         Hyp_, UseMultiSpecies, SpeciesFirst_, SpeciesLast_
-    use ModAdvance, ONLY: DoReplaceDensity,State_VGB
+    use ModAdvance, ONLY: DoReplaceDensity, State_VGB
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
@@ -1092,8 +1098,6 @@ contains
     !==========================================================================
     subroutine modify_flux(Flux_V,Un)
 
-      use ModVarIndexes, ONLY:RhoUx_,RhoUz_,Energy_
-
       real, intent(in)   :: Un
       real, intent(inout):: Flux_V(nFlux)
       !----------------------------------------------------------------------
@@ -1251,7 +1255,6 @@ contains
     !==========================================================================
     subroutine hlld_flux
 
-      use ModVarIndexes
       use ModPhysics, ONLY: Inv_Gm1, gm1
       use ModNumConst, ONLY: cTiny
 
@@ -1574,12 +1577,12 @@ contains
     !==========================================================================
 
     subroutine godunov_flux
-      use ModAdvance,  ONLY: Erad_,WaveFirst_,WaveLast_, UseElectronEnergy, Ee_
+
+      use ModAdvance,  ONLY: UseElectronEnergy
       use ModExactRS,  ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
            pL, pR, UnL, UnR, UnStar, pStar
       use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
       use ModPhysics,  ONLY: inv_gm1,g
-      use ModVarIndexes
       use ModWaves,    ONLY: UseWavePressure, GammaWave
 
       real::Rho, Un, p, pTotal, e, StateStar_V(nVar)
@@ -1725,7 +1728,6 @@ contains
     !==========================================================================
 
     subroutine write_test_info
-      use ModVarIndexes
       integer :: iVar
       !--------------------------------------------------------------------
       write(*,*)'Hat state for face=',iDimFace,&
@@ -1764,7 +1766,6 @@ contains
 
     use ModMultiFluid
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
-    use ModAdvance,  ONLY: Hyp_, Erad_
     use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
@@ -1899,7 +1900,6 @@ contains
     subroutine get_boris_flux
 
       use ModPhysics, ONLY: inv_gm1, Inv_C2light, InvClight
-      use ModVarIndexes
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e
@@ -1984,8 +1984,7 @@ contains
     subroutine get_mhd_flux
 
       use ModPhysics, ONLY: inv_gm1, inv_c2LIGHT
-      use ModVarIndexes
-      use ModAdvance, ONLY: Pe_, UseElectronPressure
+      use ModAdvance, ONLY: UseElectronPressure
       use ModWaves
 
       ! Variables for conservative state and flux calculation
@@ -2182,9 +2181,8 @@ contains
     !==========================================================================
     subroutine get_hd_flux(Gamma,EPerRhoExtra)
 
-      use ModAdvance, ONLY: UseElectronEnergy, Ee_
+      use ModAdvance, ONLY: UseElectronEnergy
       use ModPhysics, ONLY: inv_gm1, g
-      use ModVarIndexes
       use ModWaves
 
       real, optional::Gamma,EPerRhoExtra
@@ -2254,7 +2252,6 @@ contains
     use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, iP
     use ModMain, ONLY: Climit
     use ModWaves, ONLY: UseWavePressure, GammaWave, WaveEnergy
-    use ModAdvance,ONLY: WaveFirst_, WaveLast_
 
     real,    intent(in) :: State_V(nVar)
     real,    intent(in) :: B0x, B0y, B0z
@@ -2332,7 +2329,6 @@ contains
     !========================================================================
     subroutine get_boris_speed
 
-      use ModVarIndexes
       use ModPhysics, ONLY: g, inv_c2LIGHT
 
       real :: InvRho, Sound2, FullBx, FullBy, FullBz
@@ -2397,10 +2393,9 @@ contains
     subroutine get_mhd_speed
 
       use ModMain,    ONLY: UseCurlB0
-      use ModVarIndexes
       use ModPhysics, ONLY: g, Inv_C2Light, ElectronTemperatureRatio
       use ModNumConst, ONLY: cPi
-      use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure, Pe_
+      use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure
 
       real :: RhoU_D(3)
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn
@@ -2563,8 +2558,7 @@ contains
     !========================================================================
     subroutine get_hd_speed
 
-      use ModAdvance, ONLY: UseElectronEnergy, Ee_
-      use ModVarIndexes
+      use ModAdvance, ONLY: UseElectronEnergy
       use ModPhysics, ONLY: g
 
       real :: InvRho, Sound2, Sound, Un
