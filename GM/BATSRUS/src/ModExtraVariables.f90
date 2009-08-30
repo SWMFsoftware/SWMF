@@ -10,6 +10,6 @@ module ModExtraVariables
 
   ! The named index range for frequency bins in multi-group
   integer, parameter :: nWave = 0
-  integer, parameter :: WaveFirst_ = 1, WaveLast_ = 0
+  integer, parameter :: WaveFirst_ = 1, WaveLast_ = 1
   
 end module ModExtraVariables
