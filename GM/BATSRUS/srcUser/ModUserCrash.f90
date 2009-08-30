@@ -1691,11 +1691,11 @@ contains
            EeSi = EinternalSiIn
            if(IsMix)then
               call eos(RhoToARatioSi_I, eElectronIn=EeSi, &
-                   pElectronOut=PeSi, CvElectronOut=CvSiOut, &
+                   pElectronOut=PeSi, TeOut=TeSi, CvElectronOut=CvSiOut, &
                    HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
            else
               call eos(iMaterial, Rho=RhoSi, eElectronIn=EeSi, &
-                   pElectronOut=PeSi, CvElectronOut=CvSiOut, &
+                   pElectronOut=PeSi, TeOut=TeSi, CvElectronOut=CvSiOut, &
                    HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
            end if
         elseif(present(TeSiIn))then
