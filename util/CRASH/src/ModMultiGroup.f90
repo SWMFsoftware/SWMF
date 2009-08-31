@@ -25,7 +25,7 @@ module CRASH_ModMultiGroup
   public :: abscon !Calculates the absorption, emission, and scattering 
   
   !For test:
-  public :: PhotonEnergy_I, abscfs, nPhoton, set_multigroup
+  public :: PhotonEnergy_I, AbsorptionCoefficient_I, nPhoton, set_multigroup
 
 
   !       nPhotonMax  - photon energy mesh points                                    
@@ -46,11 +46,17 @@ module CRASH_ModMultiGroup
   real ::PhotonEnergy_I(nPhotonMax)
 
   ! The absorption coefficients
-  !       abscfs  -  array of absorption coefficients (cm**-1)            
+  !       AbsorptionCoefficient_I  -  array of absorption coefficients (cm**-1)            
   !       emscfs  -  array of emission coefficients (cm**-1)         
-  !       sctcfs  -  array of scattering coefficients (cm**-1) 
+  !       ScatteringCoefficient_I  -  array of scattering coefficients (cm**-1) 
 
-  real,dimension(nPhotonMax) ::abscfs,sctcfs,emscfs
+  
+  real,dimension(nPhotonMax) ::AbsorptionCoefficient_I,ScatteringCoefficient_I
+
+  !\
+  !The opacities averaged over photon groups
+  !/
+  real :: OpacityPlanck_I(nGroupMax),OpacityRosseland_I(nGroupMax)   
 
   !\
   ! LOGICALS
@@ -781,9 +787,9 @@ contains
     !       nPhoton   -  number of elements in the "PhotonEnergy_I" array   
     !                                                                      
     ! ... output variables:                                                 
-    !       abscfs  -  array of absorption coefficients (cm**-1)            
+    !       AbsorptionCoefficient_I  -  array of absorption coefficients (cm**-1)            
     !       emscfs  -  array of emission coefficients (cm**-1)         
-    !       sctcfs  -  array of scattering coefficients (cm**-1)          
+    !       ScatteringCoefficient_I  -  array of scattering coefficients (cm**-1)          
     !                                                                      
 
     real:: DensNN, DensNe    ![cm -3]
@@ -849,9 +855,8 @@ contains
 
     !Initialization
 
-    abscfs  = 0.0  !-  array of absorption coefficients (cm**-1)            
-    emscfs  = 0.0  !-  array of emission coefficients (cm**-1)         
-    sctcfs  = 0.0  !-  array of scattering coefficients (cm**-1)     
+    AbsorptionCoefficient_I  = 0.0  !-  array of absorption coefficients (cm**-1)                    
+    ScatteringCoefficient_I  = 0.0  !-  array of scattering coefficients (cm**-1)     
 
     DensNN = Na * 1.0e-6
     DensNe = DensNN * zAv
@@ -1075,20 +1080,17 @@ contains
           pscatt = 0.                                                 
        endif
 
-       if ( UseScattering) sctcfs(iphot) = tscatt + pscatt            
+       if ( UseScattering) ScatteringCoefficient_I(iphot) = tscatt + pscatt            
 
        !\
        !Sum up al the contributions                                                               
-       abscfs(iphot) = 0.0                                            
-       emscfs(iphot) = 0.0                                             
+       AbsorptionCoefficient_I(iphot) = 0.0                                                                                      
        if(UseBremsstrahlung)then                                         
-          abscfs(iphot) = abscfs(iphot)+sum(brems(1:nMix)) 
-          emscfs(iphot) = emscfs(iphot)+sum(brems(1:nMix))
+          AbsorptionCoefficient_I(iphot) = AbsorptionCoefficient_I(iphot)+sum(brems(1:nMix)) 
        end if
        if(UsePhotoionization)then
 
-          abscfs(iphot) = abscfs(iphot)+sum(fotiza(1:nMix)) 
-          emscfs(iphot) = emscfs(iphot)+sum(fotize(1:nMix)) 
+          AbsorptionCoefficient_I(iphot) = AbsorptionCoefficient_I(iphot)+sum(fotiza(1:nMix))  
        end if
 
 
@@ -1100,13 +1102,417 @@ contains
 
        call lines ( PhotonEnergy_I(iphot), abslns,emslns )      
 
-       abscfs(iphot) = abscfs(iphot) + abslns              
-       emscfs(iphot) = emscfs(iphot) + emslns                                                             
+       AbsorptionCoefficient_I(iphot) = AbsorptionCoefficient_I(iphot) + abslns                                                            
 
 
     end do  !over iphot                                                         
   end subroutine abscon
+  !====================
 
+
+
+  subroutine opacys (opatot, ortot, TRadIn )                    
+                                                                        
+    ! ... this routine computes the Planck and Rosseland opacities for      
+    !     the photon energy group "EnergyGroup_I".  "opacpm" and "OpacityRosseland_Im" are the  
+    !     Planck and Rosseland mean opacities (integrated over frequency).  
+    
+     
+    real, optional, intent(in) :: TRadIn
+
+    ! ... input variables:                                                  
+    !       Te     - plasma temperature (eV)                                
+    !       densnn - number density of all nuclei (cm**-3)                 
+    !       densne - electron density (cm**-3)                              
+    !       photen - photon energies (eV)                                   
+    !       nphot  - number of elements in "photen" array                   
+    !       AbsorptionCoefficient_I - array of absorption coefficients (cm**-1)              
+    !       emscfs - array of emission coefficients (cm**-1)                
+    !       ScatteringCoefficient_I - array of scattering coefficients (cm**-1)              
+    !       EnergyGroup_I - photon energy group boundaries (eV) (nGroup+1)  
+    !       nGroup - number of energy bins                                  
+    !       ntrad  - number of radiation temperatures                       
+    !       trad   - array of radiation temperatures (eV)                   
+    
+    real, intent(out) :: opatot, ortot
+
+    ! ... output variables:                                                 
+    !       OpacityPlanck_I - Planck group opacities for absorption (cm-1)        
+    !       OpacityRosseland_I  - Rosseland group opacity (cm-1)                      
+    !       opatot - Planck mean opacity for absorption (cm-1)                        
+    !       ortot  - Rosseland mean opacity (cm-1)                       
+    !       culrat - plasma cooling rate (erg cm**3/sec)                    
+    !       op2tp  - Planck 2-temperature opacities (cm**2/g)               
+    !       op2tr  - Rosseland 2-temperature opacities (cm**2/g)            
+    !                                                                       
+                   
+    real :: DensNE, DensNN
+    real :: TRad
+    !\
+    !Loop Variables
+    !/
+    integer:: iGroup
+
+    real :: XGroupMin, XGroupMax, LineCoreOpacity
+    !---------------------
+    DensNN = Na * 1.0e-6  !To convert to cm-3
+    DensNe = DensNN * zAv !Electron density, in cm-3
+    if(present(TRadIn))then
+       TRad = TRadIn
+    else
+       TRad = Te
+    end if
+   
+                                     
+                                                                        
+    ! ... compute the Planck and Rosseland opacities for each photon        
+    !     energy group                                                      
+    
+    opatot = 0.0                                                                                                           
+    ortot = 0.0                                                        
+    do iGroup = 1, nGroup                                                 
+       XGroupMin = EnergyGroup_I(iGroup-1) / TRad                                
+       XGroupMax = EnergyGroup_I(iGroup  ) / TRad                                  
+                                                          
+       call opacgp (OpacityPlanck_I(iGroup),OpacityRosseland_I(iGroup) )  
+           if ( DoNotAddLineCore ) then                                     
+              ! ...       use analytic solution to bound-bound opacities 
+              call opacbb (LineCoreOpacity)  
+              OpacityPlanck_I(iGroup) = OpacityPlanck_I(iGroup) + LineCoreOpacity                                                            
+         endif                                                          
+                                                                        
+         opatot = opatot + gint(5,XGroupMin,XGroupMax) * OpacityPlanck_I(iGroup)                         
+         ortot  = ortot  + gint(6,XGroupMin,XGroupMax) / OpacityRosseland_I(iGroup)               
+      end do
+      ! ... compute the total opacities based on the group opacities         
+      opatot = opatot / 6.4939                                                                                  
+      ortot = 25.976 / ortot                                            
+      
+  
+    contains
+
+    subroutine opacgp ( OpacityPlanck, OpacityRosseland ) 
+      !... this routine computes the Planck and Rosseland opacities for
+      !     the photon energy group from "XGroupMin" to "XGroupMax".
+      !
+      ! ... input variables:
+      !       Te     - plasma temperature (eV)                         
+      !       rho    - mass density (g/cm**3)                                 
+      !       trad   - radiation temperature (eV)                             
+      !       PhotonEnergy_I - photon energies at which the absorption coefficients   
+      !                were calculated                                        
+      !       nphot  - number of photon energy mesh points                    
+      !       AbsorptionCoefficient_I - array of absorption coefficients (cm**-1) (w/o scatt)  
+      !       emscfs - array of emission coefficients (cm**-1) (w/o scatt)    
+      !       ScatteringCoefficient_I - array of scattering coefficients (cm**-1)             
+      !       XGroupMin  - minimum photon energy (in units of kT)                
+      !       XGroupMax  - maximum photon energy (in units of kT)   
+      
+   
+              
+      !                                                                      
+      ! ... output variables:                                                 
+      !       OpacityPlanck - Planck opacity for absorption (cm**-1)                                
+      !       OpacityRosseland  - Rosseland opacity (cm**-1)                             
+      !                                                                       
+                                                                    
+      real, intent(out) :: OpacityPlanck, OpacityRosseland
+      !\
+      !Loop variables
+      !/
+      integer :: iPhot, iPhot0
+
+      !\
+      !Partial sums
+      !/
+      real :: dsumpa, dsmpa0, dsumr, dsumr0
+
+      !Misc:
+      real :: xg1,xg2, emx, fpa2,fpa20,fr2, fr20,sumpa,sumpa0,sumr,sumr0
+      real :: fpa1, fpa10,fr1, fr10, dxg, g5, g6
+      !-----------------------------                                     
+                                                  
+                                                                        
+      ! ... find the index where the photon energy equals the lower group     
+      !     boundary (note: mesh pts should be placed at each boundary)      
+      do iPhot=1,nPhoton                                                   
+         if ( PhotonEnergy_I(iPhot) >= XGroupMin * Trad * 0.99999 ) then
+            iPhot0 = iPhot
+            EXIT
+         end if
+      end do
+                                                                        
+      ! ... integrate to get the group opacities                              
+      !     ------------------------------------                              
+      
+      ! ... initialize values for the first point                             
+                                                                        
+      xg2 = PhotonEnergy_I(iphot0) / trad                                       
+      emx = exp( -xg2 )                                                 
+                                                                        
+      fpa2 = xg2**3 * emx * AbsorptionCoefficient_I(iphot0) / ( 1.-emx )                 
+      fpa20 = AbsorptionCoefficient_I(iphot0)
+                                                           
+      fr2 = xg2**4 * emx / (1.-emx)**2 / &
+           ( AbsorptionCoefficient_I(iphot0) + ScatteringCoefficient_I(iphot0) )                         
+      fr20 = 1. / ( AbsorptionCoefficient_I(iphot0) + ScatteringCoefficient_I(iphot0) )                   
+                                                                        
+      ! ... loop over photon energy mesh points                              
+                                                                       
+      sumpa  = 0.0                                                      
+      sumpa0 = 0.0                                                      
+                                                           
+      sumr   = 0.0                                                      
+      sumr0  = 0.0                                                      
+                                                                                                                            
+      do iPhot = iPhot0 + 1, nPhoton
+                                                                        
+         if ( PhotonEnergy_I(iPhot) > XGroupMax * trad  * 1.00001 ) EXIT
+                                                                        
+         xg1 = xg2                                                      
+         xg2 = PhotonEnergy_I(iPhot) / TRad                                     
+                                                                        
+         fpa1  = fpa2                                                   
+         fpa10 = fpa20                                                  
+                                                           
+         fr1   = fr2                                                    
+         fr10  = fr20                                                   
+                                                                        
+         if ( xg2 .lt. 1.e20 ) then                                     
+                                                                        
+            emx = exp( -xg2 )                                           
+                                                                        
+            fpa2  = xg2**3 * emx * AbsorptionCoefficient_I(iphot) / ( 1.-emx )           
+            fpa20 = AbsorptionCoefficient_I(iphot)                                      
+               
+            fr2   = xg2**4 * emx / (1.-emx)**2 / &                       
+                   ( AbsorptionCoefficient_I(iPhot) + ScatteringCoefficient_I(iPhot) )                   
+            fr20  = 1. / ( AbsorptionCoefficient_I(iphot) + ScatteringCoefficient_I(iphot) )              
+                                                                        
+            dxg = xg2 - xg1                                             
+                                                                        
+            ! ...       integrate using a logarithmic interpolation scheme   
+                                                                        
+            ! ...       Planck mean absorption opacities                     
+            if ( abs( fpa1-fpa2 ) .gt. 1.e-3*fpa2 ) then                
+              if ( fpa2 .ne. 0. ) then                                  
+                dsumpa = dxg * ( fpa2-fpa1 ) / log( fpa2/fpa1 )         
+              else                                                      
+                dsumpa = 0.                                             
+              endif                                                    
+            else                                                       
+              dsumpa = dxg * fpa1                                       
+            endif                                                       
+
+            ! ...       mean (non-weighted) absorption opacities                 
+            if ( abs( fpa10-fpa20 ) .gt. 1.e-3*fpa20 ) then             
+              if ( fpa20 .ne. 0. ) then                                 
+                dsmpa0 = dxg * ( fpa20-fpa10 ) / log( fpa20/fpa10 )     
+              else                                                      
+                dsmpa0 = 0.                                             
+              endif                                                     
+            else                                                        
+              dsmpa0 = dxg * fpa10                                      
+            endif                                                       
+            
+            !NON-LTE part 
+            ! ...       Planck mean emission opacities                              
+            !if ( abs( fpe1-fpe2 ) .gt. 1.e-3*fpe2 ) then                
+            !  if ( fpe2 .ne. 0. ) then                                  
+            !    dsumpe = dxg * ( fpe2-fpe1 ) / log( fpe2/fpe1 )         
+            !  else                                                      
+            !    dsumpe = 0.                                             
+            !  endif                                                     
+            !else                                                        
+            !  dsumpe = dxg * fpe1                                      
+            !endif                                                      
+                                                                        
+            ! ...       Rosseland mean opacities                                 
+            if ( abs( fr1-fr2 ) .gt. 1.e-3*fr2 ) then                   
+              if ( fr2 .ne. 0. ) then                                   
+                dsumr = dxg * ( fr2-fr1 ) / log( fr2/fr1 )              
+              else                                                      
+                dsumr = 0.                                              
+              endif                                                     
+            else                                                        
+              dsumr = dxg * fr1                                         
+            endif                                                       
+                                                                        
+            ! ...       mean (non-weighted) "transport" opacities                   
+            if ( abs( fr10-fr20 ) .gt. 1.e-3*fr20 ) then                
+               if ( fr20 .ne. 0. ) then                                  
+                  dsumr0 = dxg * ( fr20-fr10 ) / log( fr20/fr10 )        
+               else                                                      
+                  dsumr0 = 0.                                             
+               endif
+            else                                                        
+               dsumr0 = dxg * fr10                                       
+            endif
+
+            sumpa  = sumpa + dsumpa                                    
+            sumpa0 = sumpa0 + dsmpa0                                    
+                              
+            sumr   = sumr + dsumr                                       
+            sumr0  = sumr0 + dsumr0                                     
+                                                                        
+         endif                                                          
+      end do
+      ! ... normalize to get the group opacities                  
+
+      g5 = gint(5,XGroupMin,XGroupMax)                                          
+      g6 = gint(6,XGroupMin,XGroupMax)                                          
+      if ( XGroupMax.ge.1./con(7) .and. XGroupMin.le.con(7) .and. &              
+          g5.gt.0. ) then                                              
+         ! ...    weight absorption coef. by Planck function          
+         OpacityPlanck = sumpa  / g5                                                                            
+      else                                                             
+         ! ...    use straight average of absorption coef.                       
+         OpacityPlanck = sumpa0  / ( XGroupMax-XGroupMin )                        
+      endif                                                            
+                                                                        
+      if ( XGroupMax.ge.1./con(7) .and. XGroupMin.le.con(7) .and. &              
+           sumr.gt.0. .and. g6.gt.0. ) then                             
+         ! ...    weight absorption and scattering coefs. by Planck function 
+         !        derivative wrt temperature                                     
+         OpacityRosseland = g6  / sumr                                        
+      else if ( sumr0.gt.0. ) then                                      
+         ! ...    use straight average of absorption plus scattering coefs.      
+         OpacityRosseland = ( XGroupMax-XGroupMin )  / sumr0                          
+      else                                                              
+         ! ...    in the very high PhotonEnergy_I energy limit, this just becomes equal 
+         !        to Thomson scattering contribution (assuming the absorption  
+         !        is much less)                                            
+         OpacityRosseland = ( ScatteringCoefficient_I(nPhoton) + AbsorptionCoefficient_I(nPhoton) )                 
+      endif                                                             
+                                                                        
+ 
+    end subroutine opacgp
+    !=============================
+    subroutine opacbb (OpacityPlanck)  
+      !                                                                       
+      ! ... compute the contribution to the group opacity from                
+      !     all lines (bound-bound transitions)                               
+      !                                                                       
+      ! ... input variables:                                             
+      !       Te      -  plasma temperature (eV)                    
+      !       densnn  -  number density of all nuclei (cm**-3)       
+      !       densne  -  electron density (cm**-3)                
+      !       trad    -  radiation temperature (eV)                  
+      !       XGroupMin   -  minimum photon energy of group (in units of kT) 
+      !       XGroupMax   -  maximum photon energy of group (in units of kT) 
+
+  
+
+      !                                                                
+      ! ... output variables:                                  
+      !       OpacityPlanck   -  Planck absorption due to lines (cm^-1)                   
+      !       OpacityRosseland  -  Rosseland opacity due to lines (cm^)            
+      !---------------------------------------------                                                                
+
+      real, intent(out) :: OpacityPlanck           
+
+
+      !\
+      ! Loop variables
+      !/
+      integer :: iMix, & !runs over the mixture component
+           iZ,   & !runs over the charge number
+           iN,   & ! runs over the quntum principal number for the lower level
+           iNUpper,& !the same, for upper level 
+           nBound, &!Number of bound electrons
+           nGround  !For a given iZ, the principal number of the ground state.
+
+      real :: TransitionEnergy, Energy2TRadRatio 
+      real :: ExpOfEnergy2TRadRatio, ExpOfEnergy2TeRatio
+      !Misc:
+      real :: g5, const, const1, opacij, fnnp
+
+
+      !----------------------------
+
+
+      OpacityPlanck = 0.0                                                                                                           
+                                                            
+      g5  = gint(5,XGroupMin, XGroupMax )                                      
+
+      if ( g5 .eq. 0.0 ) return                                         
+
+      const = 1.10e-16 * DensNN / ( Te * g5 )                     
+
+      ! ... loop over gas species                                             
+      IMIXLOOP: do iMix = 1,nMix                                              
+         if ( Concentration_I(iMix) .lt. con(2) ) CYCLE IMIXLOOP
+
+         ! ...    loop over ionization states                                  
+         IZLOOP:   do iZ = 0, nZ_I(iMix)                                                                             
+            if ( Concentration_I(iMix) * Population_II(iZ,iMix) .lt. con(3)) &
+                 CYCLE IZLOOP  
+
+            ! ...       find the principal quantum number of the valence electrons  
+            !           in their ground state                                                                            
+
+            const1 = const * Concentration_I(iMix) * Population_II(iZ,iMix)       
+
+
+            ! ...       loop over initial quantum states 
+
+            INITIAL: do iN = n_ground(iZ, nZ_I(iMix)) , nExcitation -1
+               if ( Concentration_I(iMix) * Population_II(iZ,iMix) * Partition_III(iN, iZ, iMix)&
+                    .lt. con(4) ) CYCLE INITIAL                             
+
+               ! ... calculate opacity due to "delta n" = 0 transitions       
+
+               !call bbneq0 ( Te,izgas(lgas),nbound,&
+               !     enn,fnn,gnn )        
+               !if ( isw(11).ne.0 ) enn = 0.                             
+               !Energy2TRadRatio = enn / trad                                          
+               !if ( Energy2TRadRatio.gt.XGroupMin .and. Energy2TRadRatio.le.XGroupMax ) then                
+               !   ExpOfEnergy2TRadRatio = exp( -Energy2TRadRatio )                                      
+               !   opacnn = const1 * fnn * fraclv(lgas,izp1,n) *&
+               !        ExpOfEnergy2TRadRatio * Energy2TRadRatio**3
+               ! ...  correct for the "effective" stimulated emission to    
+               !      give the proper form for the cooling rate             
+               !xnjoni = gnn * densne * ExpOfEnergy2TRadRatio / &
+               !   ( gnn * densne + enn**3 * sqrt(Te) * 2.74e12 ) 
+               !   corsee = xnjoni / ExpOfEnergy2TRadRatio                                 
+               !   corsea = ( 1.-xnjoni ) / ( 1.-ExpOfEnergy2TRadRatio )                   
+               !   OpacityPlanck = OpacityPlanck + opacnn * corsea                       
+               !   opems = opems + opacnn * corsee                      
+               !endif
+               ! ...          loop over final quantum states
+
+               FINAL: do iNUpper = iN+1, nExcitation                               
+
+                  ! ...            compute the transition energy     
+                  TransitionEnergy = ExcitationEnergy_III(iNUpper, iZ,iMix)- &
+                       ExcitationEnergy_III(iN, iZ,iMix)
+                  Energy2TRadRatio = TransitionEnergy / TRad                                       
+                  if ( Energy2TRadRatio .le. XGroupMin .or. Energy2TRadRatio .gt. XGroupMax ) CYCLE FINAL    
+
+                  ExpOfEnergy2TRadRatio = exp( -Energy2TRadRatio )                                      
+                  fnnp = oscillator_strength(iN, iNUpper)
+
+                  opacij = const1 * fnnp * Partition_III(iN, iZ, iMix)  * &
+                       ExpOfEnergy2TRadRatio * Energy2TRadRatio**3                                  
+
+                  !\
+                  !Account for the stimulated emission
+                  !/
+                  ! ...            note that in LTE, "ExpOfEnergy2TeRatio" = "ExpOfEEnergy2TRadRatio0"      
+                  
+                  ExpOfEnergy2TeRatio = iN * iN * Partition_III(iNUpper, iZ, iMix)  / &                 
+                       ( iNUpper * iNUpper * Partition_III(iN, iZ, iMix)  )                    
+                                                   
+
+                  OpacityPlanck = OpacityPlanck  +  &
+                    opacij * ( 1.-ExpOfEnergy2TeRatio ) / ( 1.-ExpOfEnergy2TRadRatio )
+
+               end do FINAL
+            end do INITIAL
+         end do IZLOOP
+      end do IMIXLOOP
+    end subroutine opacbb
+  end subroutine opacys
   !====================
 end module CRASH_ModMultiGroup
 

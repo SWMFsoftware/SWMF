@@ -89,7 +89,8 @@ program abs
   do iPlot = 1, nPhoton
      if(PhotonEnergy_I(iPlot)< 0.01*Te.or.PhotonEnergy_I(iPlot)>100.0*Te)&
           CYCLE
-     write(unit,*)log10(PhotonEnergy_I(iPlot)),log10(abscfs(iPlot))
+     write(unit,*)log10(PhotonEnergy_I(iPlot)),&
+          log10(AbsorptionCoefficient_I(iPlot))
   end do
   close(unit)
 end program abs

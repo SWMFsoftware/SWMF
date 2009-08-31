@@ -3290,7 +3290,7 @@ c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT3282
                                                                         ABJT3283
       subroutine meshhv ( tp,densnn,densne,engrup,ngrups,nptspg,        ABJT3284
      &                                                  photen,nphot )  ABJT3285
-c  MOVED TO ModMultiGroup.f90                                           ABJT3286
+c  COPIED TO ModMultiGroup.f90                                          ABJT3286
 c ... set a mesh of photon energies at which we would like to evaluate  ABJT3287
 c     absorption coefficients                                           ABJT3288
 c                                                                       ABJT3289
@@ -3490,6 +3490,7 @@ c ... format statements                                                 ABJT3478
   902 format ('  nphot =',i5,4x,'photen:'/50(1p10e11.3/))               ABJT3483
 c END OF THE MOVED FRAGMENT                                             ABJT3484
       end                                                               ABJT3485
+c COPIED TO ModMultiGroup
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT3486
                                                                         ABJT3487
       subroutine opacbb ( tp,densnn,densne,trad,xgmin,xgmax,            ABJT3488
@@ -4102,6 +4103,7 @@ c ... format statements                                                 ABJT4088
                                                                         ABJT4095
       end                                                               ABJT4096
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT4097
+c END OF THE COPIED FRAGMENT
                                                                         ABJT4098
       subroutine owt1 ( tp,densnn,densne,enrgy,heatcp,dzdt,dedden,      ABJT4099
      &                  oppat,oppet,oprt,ngrups,                        ABJT4100
@@ -4894,7 +4896,7 @@ c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT4886
                                                                         ABJT4887
       subroutine sort ( npts,                                           ABJT4888
      &                            xin )                                 ABJT4889
-c MOVED TO ModMultiGroup                                                ABJT4890
+c COPIED TO ModMultiGroup                                               ABJT4890
 c ... puts the elements of "xin" into ascending order                   ABJT4891
                                                                         ABJT4892
       dimension xin(npts)                                               ABJT4893
@@ -4953,7 +4955,7 @@ c ... format statements                                                 ABJT4940
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT4946
                                                                         ABJT4947
       function voigt ( a,vv )                                           ABJT4948
-c MOVED TO ModOpacityVoigt                                              ABJT4949
+c COPIED TO ModOpacityVoigt                                             ABJT4949
 c ... this subroutine computes the Voigt function "h" as a function     ABJT4950
 c     of "a" and "v".  See Mihalas, "Stellar Atmospheres", 1978, for    ABJT4951
 c     definitions and details.                                          ABJT4952
