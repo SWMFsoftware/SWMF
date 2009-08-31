@@ -1337,9 +1337,11 @@ contains
        FreqMaxSI = 1000.0 /cHPlanckEV
     end if
 
-    !If the frequency range IN HERZ has been alredy set, the previous commands are skiped
+    !If the frequency range IN HERZ has been alredy set, the previous
+    !commands are skiped
     !Now set the number of groups and the frequency range:
-    call set_multigroup(nWave, FreqMinSI, FreqMaxSI)
+    if(.not.(nWave==1 .and. iTableOpacity>0)) &
+         call set_multigroup(nWave, FreqMinSI, FreqMaxSI)
 
   end subroutine user_init_session
 
@@ -1437,7 +1439,7 @@ contains
          ExtraEint_, Ee_
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, UnitEnergyDens_, &
          inv_gm1, g, Si2No_V
-    use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_
+    use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_, nWave
     use ModLookupTable,ONLY: interpolate_lookup_table
     use ModConst,      ONLY: cAtomicMass
 
@@ -1528,7 +1530,8 @@ contains
 
     if(present(AbsorptionOpacitySiOut_I) &
          .or. present(DiffusionOpacitySiOut_I))then
-       if(iTableOpacity > 0)then
+
+       if(iTableOpacity > 0 .and. nWave==1)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
                Opacity_V, DoExtrapolate = .false.)
           Opacity_V(1:2*nMaterial:2) = Opacity_V(1:2*nMaterial:2) &
@@ -1546,210 +1549,223 @@ contains
              if(present(DiffusionOpacitySiOut_I)) DiffusionOpacitySiOut_I &
                   = Opacity_V(2*iMaterial + 2) * RhoSi
           end if
+
        else
+          if(IsMix)then
+             call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
+                  OpacityPlanckOut_I=AbsorptionOpacitySiOut_I, &
+                  OpacityRosselandOut_I=DiffusionOpacitySiOut_I)
+          else
+             call eos(iMaterial, RhoSi, TeIn=TeSiIn, &
+                  OpacityPlanckOut_I=AbsorptionOpacitySiOut_I, &
+                  OpacityRosselandOut_I=DiffusionOpacitySiOut_I)
+          end if
 
        end if
     end if
 
-    contains
+  contains
 
-      !========================================================================
+    !========================================================================
 
-      subroutine get_thermo
+    subroutine get_thermo
 
-        !----------------------------------------------------------------------
+      !----------------------------------------------------------------------
 
-        ! Obtain the pressure from EinternalSiIn or TeSiIn or State_V
-        ! Do this for various cases: mixed cell or not, lookup tables or not
-        if(present(EinternalSiIn))then
-           ! Obtain the pressure from EinternalSiIn
-           if(iTablePPerE > 0)then
-              ! Use lookup table
-              call interpolate_lookup_table(iTablePPerE, RhoSi, &
-                   EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
-              ! Use a number density weighted average
-              pSi = EinternalSiIn*sum(Weight_I*pPerE_I)
-           else
-              ! Use EOS function
-              if(IsMix)then
-                 call eos(RhoToARatioSi_I, eTotalIn=EinternalSiIn, &
-                      pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvSiOut, &
-                      GammaOut=GammaOut, HeatCond=HeatCondSiOut)
-              else
-                 call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalSiIn, &
-                      pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvSiOut, &
-                      GammaOut=GammaOut, HeatCond=HeatCondSiOut)
-              end if
-           end if
-        elseif(present(TeSiIn))then
-           ! Calculate pressure from electron temperature
-           TeSi = TeSiIn
-           if( IsMix ) then
-              call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
-                   eTotalOut=EinternalSiOut, pTotalOut=pSi, &
-                   CvTotalOut=CvSiOut, GammaOut=GammaOut, &
-                   HeatCond=HeatCondSiOut)
-           else
-              call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, &
-                   eTotalOut=EinternalSiOut, pTotalOut=pSi, &
-                   CvTotalOut=CvSiOut, GammaOut=GammaOut, &
-                   HeatCond=HeatCondSiOut)
-           end if
-        else
-           ! Pressure is simply part of State_V
-           pSi = State_V(p_)*No2Si_V(UnitP_)
-           if(present(EinternalSiOut))then
-              ! Obtain the internal energy from pressure
-              if(iTableEPerP > 0)then
-                 call interpolate_lookup_table(iTableEPerP, RhoSi, &
-                      pSi/RhoSi, EPerP_I, DoExtrapolate = .false.)
-                 ! Use a number density weighted average
-                 EinternalSiOut = pSi*sum(Weight_I*EPerP_I)
-              else
-                 if(IsMix)then
-                    call eos(RhoToARatioSi_I, pTotalIn=pSi, &
-                         EtotalOut=EinternalSiOut, TeOut=TeSi, &
-                         CvTotalOut=CvSiOut, GammaOut=GammaOut, &
-                         HeatCond=HeatCondSiOut)
-                 else
-                    call eos(iMaterial,RhoSi,pTotalIn=pSi, &
-                         EtotalOut=EinternalSiOut, TeOut=TeSi, &
-                         CvTotalOut=CvSiOut, GammaOut=GammaOut, &
-                         HeatCond=HeatCondSiOut)
-                 end if
-              end if
-           end if
-        end if
+      ! Obtain the pressure from EinternalSiIn or TeSiIn or State_V
+      ! Do this for various cases: mixed cell or not, lookup tables or not
+      if(present(EinternalSiIn))then
+         ! Obtain the pressure from EinternalSiIn
+         if(iTablePPerE > 0)then
+            ! Use lookup table
+            call interpolate_lookup_table(iTablePPerE, RhoSi, &
+                 EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
+            ! Use a number density weighted average
+            pSi = EinternalSiIn*sum(Weight_I*pPerE_I)
+         else
+            ! Use EOS function
+            if(IsMix)then
+               call eos(RhoToARatioSi_I, eTotalIn=EinternalSiIn, &
+                    pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvSiOut, &
+                    GammaOut=GammaOut, HeatCond=HeatCondSiOut)
+            else
+               call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalSiIn, &
+                    pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvSiOut, &
+                    GammaOut=GammaOut, HeatCond=HeatCondSiOut)
+            end if
+         end if
+      elseif(present(TeSiIn))then
+         ! Calculate pressure from electron temperature
+         TeSi = TeSiIn
+         if( IsMix ) then
+            call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
+                 eTotalOut=EinternalSiOut, pTotalOut=pSi, &
+                 CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+                 HeatCond=HeatCondSiOut)
+         else
+            call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, &
+                 eTotalOut=EinternalSiOut, pTotalOut=pSi, &
+                 CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+                 HeatCond=HeatCondSiOut)
+         end if
+      else
+         ! Pressure is simply part of State_V
+         pSi = State_V(p_)*No2Si_V(UnitP_)
+         if(present(EinternalSiOut))then
+            ! Obtain the internal energy from pressure
+            if(iTableEPerP > 0)then
+               call interpolate_lookup_table(iTableEPerP, RhoSi, &
+                    pSi/RhoSi, EPerP_I, DoExtrapolate = .false.)
+               ! Use a number density weighted average
+               EinternalSiOut = pSi*sum(Weight_I*EPerP_I)
+            else
+               if(IsMix)then
+                  call eos(RhoToARatioSi_I, pTotalIn=pSi, &
+                       EtotalOut=EinternalSiOut, TeOut=TeSi, &
+                       CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+                       HeatCond=HeatCondSiOut)
+               else
+                  call eos(iMaterial,RhoSi,pTotalIn=pSi, &
+                       EtotalOut=EinternalSiOut, TeOut=TeSi, &
+                       CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+                       HeatCond=HeatCondSiOut)
+               end if
+            end if
+         end if
+      end if
 
-        if(present(PressureSiOut)) PressureSiOut = pSi
+      if(present(PressureSiOut)) PressureSiOut = pSi
 
-        if(present(TeSiOut) .or. present(CvSiOut) .or. present(GammaOut) .or. &
-             present(HeatCondSiOut) .or. &
-             iTableOpacity>0 .and. (present(AbsorptionOpacitySiOut_I) &
-             .or.                   present(DiffusionOpacitySiOut_I)) )then
-           if(iTableThermo > 0)then
-              call interpolate_lookup_table(iTableThermo, RhoSi, pSi/RhoSi, &
-                   Value_V, DoExtrapolate = .false.)
+      if(present(TeSiOut) .or. present(CvSiOut) .or. present(GammaOut) .or. &
+           present(HeatCondSiOut) .or. &
+           present(AbsorptionOpacitySiOut_I) .or. &
+           present(DiffusionOpacitySiOut_I) )then
 
-              ! Value_V: elements 1,4,7 are Cv, 2,5,8 are Gamma, 3,6,9 are Te
-              if(UseVolumeFraction)then
-                 if(present(CvSiOut))  CvSiOut  &
-                      = sum(Weight_I*Value_V(Cv_   :nMaterial*nThermo:nThermo))
-                 if(present(GammaOut)) GammaOut &
-                      = sum(Weight_I*Value_V(Gamma_:nMaterial*nThermo:nThermo))
-                 if(present(HeatCondSiOut)) HeatCondSiOut &
-                      = sum(Weight_I*Value_V(Cond_:nMaterial*nThermo:nThermo))
-                 TeSi = sum(Weight_I*Value_V(Te_  :nMaterial*nThermo:nThermo))
-              else
-                 if(present(CvSiOut))  &
-                      CvSiOut       = Value_V(Cv_   +iMaterial*nThermo)
-                 if(present(GammaOut)) &
-                      GammaOut      = Value_V(Gamma_+iMaterial*nThermo)
-                 if(present(HeatCondSiOut)) &
-                      HeatCondSiOut = Value_V(Cond_ +iMaterial*nThermo)
-                 TeSi               = Value_V(Te_   +iMaterial*nThermo)
-              end if
+         if(iTableThermo > 0)then
+            call interpolate_lookup_table(iTableThermo, RhoSi, pSi/RhoSi, &
+                 Value_V, DoExtrapolate = .false.)
 
-           elseif(TeSi < 0.0) then
-              ! If TeSi is not set yet then we need to calculate things here
-              if(IsMix) then
-                 call eos(RhoToARatioSi_I, pTotalIn=pSi, &
-                      TeOut=TeSi, eTotalOut = EinternalSiOut, &
-                      CvTotalOut=CvSiOut, GammaOut=GammaOut, &
-                      HeatCond=HeatCondSiOut)
-              else
-                 call eos(iMaterial, RhoSi, pTotalIn=pSi, &
-                      TeOut=TeSi, eTotalOut = EinternalSiOut, &
-                      CvTotalOut=CvSiOut, GammaOut=GammaOut, &
-                      HeatCond=HeatCondSiOut)
-              end if
-           end if
-        end if
+            ! Value_V: elements 1,4,7 are Cv, 2,5,8 are Gamma, 3,6,9 are Te
+            if(UseVolumeFraction)then
+               if(present(CvSiOut))  CvSiOut  &
+                    = sum(Weight_I*Value_V(Cv_   :nMaterial*nThermo:nThermo))
+               if(present(GammaOut)) GammaOut &
+                    = sum(Weight_I*Value_V(Gamma_:nMaterial*nThermo:nThermo))
+               if(present(HeatCondSiOut)) HeatCondSiOut &
+                    = sum(Weight_I*Value_V(Cond_:nMaterial*nThermo:nThermo))
+               TeSi = sum(Weight_I*Value_V(Te_  :nMaterial*nThermo:nThermo))
+            else
+               if(present(CvSiOut))  &
+                    CvSiOut       = Value_V(Cv_   +iMaterial*nThermo)
+               if(present(GammaOut)) &
+                    GammaOut      = Value_V(Gamma_+iMaterial*nThermo)
+               if(present(HeatCondSiOut)) &
+                    HeatCondSiOut = Value_V(Cond_ +iMaterial*nThermo)
+               TeSi               = Value_V(Te_   +iMaterial*nThermo)
+            end if
 
-      end subroutine get_thermo
+         elseif(TeSi < 0.0) then
+            ! If TeSi is not set yet then we need to calculate things here
+            if(IsMix) then
+               call eos(RhoToARatioSi_I, pTotalIn=pSi, &
+                    TeOut=TeSi, eTotalOut = EinternalSiOut, &
+                    CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+                    HeatCond=HeatCondSiOut)
+            else
+               call eos(iMaterial, RhoSi, pTotalIn=pSi, &
+                    TeOut=TeSi, eTotalOut = EinternalSiOut, &
+                    CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+                    HeatCond=HeatCondSiOut)
+            end if
+         end if
+      end if
 
-      !========================================================================
+    end subroutine get_thermo
 
-      subroutine get_electron_thermo
+    !========================================================================
 
-        real :: PeSi, EeSi
-        !----------------------------------------------------------------------
+    subroutine get_electron_thermo
 
-        ! get the atomic concentration
-        if(present(NatomicSiOut))then
-           if(IsMix)then
-              NatomicSiOut = sum(RhoToARatioSi_I)/cAtomicMass
-           else
-              NatomicSiOut = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial))
-           end if
-        end if
+      real :: PeSi, EeSi
+      !----------------------------------------------------------------------
 
-        ! Obtain the pressure from EinternalSiIn or TeSiIn or State_V
-        ! Do this for mixed cell or not
-        if(present(EinternalSiIn))then
-           ! Obtain electron pressure from the true electron internal energy
-           EeSi = EinternalSiIn
-           if(IsMix)then
-              call eos(RhoToARatioSi_I, eElectronIn=EeSi, &
-                   pElectronOut=PeSi, TeOut=TeSi, CvElectronOut=CvSiOut, &
-                   HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
-           else
-              call eos(iMaterial, Rho=RhoSi, eElectronIn=EeSi, &
-                   pElectronOut=PeSi, TeOut=TeSi, CvElectronOut=CvSiOut, &
-                   HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
-           end if
-        elseif(present(TeSiIn))then
-           ! Calculate electron pressure from electron temperature
-           TeSi = TeSiIn
-           if(IsMix) then
-              call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
-                   pElectronOut=PeSi, CvElectronOut=CvSiOut, &
-                   HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
-           else
-              call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, &
-                   pElectronOut=PeSi, CvElectronOut=CvSiOut, &
-                   HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
-           end if
-        else
-           ! electron pressure is (g - 1)*State_V(Ee_)
-           ! Use this pressure to calculate the true electron internal energy
-           PeSi = (g - 1)*State_V(Ee_)*No2Si_V(UnitP_)
-           if(present(EinternalSiOut))then
-              if(IsMix)then
-                 call eos(RhoToARatioSi_I, pElectronIn=PeSi, &
-                      TeOut=TeSi, eElectronOut=EeSi, CvElectronOut=CvSiOut, &
-                      HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
-              else
-                 call eos(iMaterial, RhoSi, pElectronIn=PeSi, &
-                      TeOut=TeSi, eElectronOut=EeSi, CvElectronOut=CvSiOut, &
-                      HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
-              end if
-              EinternalSiOut = EeSi
-           end if
-        end if
+      ! get the atomic concentration
+      if(present(NatomicSiOut))then
+         if(IsMix)then
+            NatomicSiOut = sum(RhoToARatioSi_I)/cAtomicMass
+         else
+            NatomicSiOut = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial))
+         end if
+      end if
 
-        if(present(PressureSiOut)) PressureSiOut = PeSi
+      ! Obtain the pressure from EinternalSiIn or TeSiIn or State_V
+      ! Do this for mixed cell or not
+      if(present(EinternalSiIn))then
+         ! Obtain electron pressure from the true electron internal energy
+         EeSi = EinternalSiIn
+         if(IsMix)then
+            call eos(RhoToARatioSi_I, eElectronIn=EeSi, &
+                 pElectronOut=PeSi, TeOut=TeSi, CvElectronOut=CvSiOut, &
+                 HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
+         else
+            call eos(iMaterial, Rho=RhoSi, eElectronIn=EeSi, &
+                 pElectronOut=PeSi, TeOut=TeSi, CvElectronOut=CvSiOut, &
+                 HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
+         end if
+      elseif(present(TeSiIn))then
+         ! Calculate electron pressure from electron temperature
+         TeSi = TeSiIn
+         if(IsMix) then
+            call eos(RhoToARatioSi_I, TeIn=TeSiIn, eElectronOut=EeSi, &
+                 pElectronOut=PeSi, CvElectronOut=CvSiOut, &
+                 HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
+         else
+            call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, eElectronOut=EeSi, &
+                 pElectronOut=PeSi, CvElectronOut=CvSiOut, &
+                 HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
+         end if
+         EinternalSiOut = EeSi
+      else
+         ! electron pressure is (g - 1)*State_V(Ee_)
+         ! Use this pressure to calculate the true electron internal energy
+         PeSi = (g - 1)*State_V(Ee_)*No2Si_V(UnitP_)
+         if(present(EinternalSiOut))then
+            if(IsMix)then
+               call eos(RhoToARatioSi_I, pElectronIn=PeSi, &
+                    TeOut=TeSi, eElectronOut=EinternalSiOut, &
+                    CvElectronOut=CvSiOut, HeatCond=HeatCondSiOut, &
+                    TeTiRelax=TeTiRelaxSiOut)
+            else
+               call eos(iMaterial, RhoSi, pElectronIn=PeSi, &
+                    TeOut=TeSi, eElectronOut=EinternalSiOut, &
+                    CvElectronOut=CvSiOut, HeatCond=HeatCondSiOut, &
+                    TeTiRelax=TeTiRelaxSiOut)
+            end if
+         end if
+      end if
 
-        if(present(TeSiOut) .or. present(CvSiOut) .or. &
-             present(HeatCondSiOut) .or. present(TeTiRelaxSiOut) .or. &
-             iTableOpacity>0 .and. (present(AbsorptionOpacitySiOut_I) &
-             .or.                   present(DiffusionOpacitySiOut_I)) )then
+      if(present(PressureSiOut)) PressureSiOut = PeSi
 
-           if(TeSi < 0.0) then
-              ! If TeSi is not set yet then we need to calculate things here
-              if(IsMix) then
-                 call eos(RhoToARatioSi_I, pElectronIn=PeSi, &
-                      TeOut=TeSi, CvElectronOut=CvSiOut, &
-                      HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
-              else
-                 call eos(iMaterial, RhoSi, pElectronIn=PeSi, &
-                      TeOut=TeSi, CvElectronOut=CvSiOut, &
-                      HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
-              end if
-           end if
-        end if
+      if(present(TeSiOut) .or. present(CvSiOut) .or. &
+           present(HeatCondSiOut) .or. present(TeTiRelaxSiOut) .or. &
+           present(AbsorptionOpacitySiOut_I) .or. &
+           present(DiffusionOpacitySiOut_I) )then
 
-      end subroutine get_electron_thermo
+         if(TeSi < 0.0) then
+            ! If TeSi is not set yet then we need to calculate things here
+            if(IsMix) then
+               call eos(RhoToARatioSi_I, pElectronIn=PeSi, &
+                    TeOut=TeSi, CvElectronOut=CvSiOut, &
+                    HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
+            else
+               call eos(iMaterial, RhoSi, pElectronIn=PeSi, &
+                    TeOut=TeSi, CvElectronOut=CvSiOut, &
+                    HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
+            end if
+         end if
+      end if
+
+    end subroutine get_electron_thermo
 
   end subroutine user_material_properties
 
