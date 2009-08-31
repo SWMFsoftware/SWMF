@@ -65,6 +65,7 @@ OBJECTS = \
 	advance_vertical.o\
 	advance_horizontal.o\
 	set_vertical_bcs.o\
+	set_horizontal_bcs.o\
 	output.o\
 	output_common.o\
 	logfile.o\

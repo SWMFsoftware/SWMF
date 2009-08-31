@@ -4,7 +4,7 @@ subroutine advance_horizontal(iBlock)
   use ModSizeGitm
   use ModPlanet, only : nSpecies, nIonsAdvect, OmegaBody
   use ModGITM
-  use ModInputs, only : UseIonAdvection, iDebugLevel, UseTopography
+  use ModInputs
   use ModSources, only : HorizontalTempSource
   
   implicit none
@@ -39,6 +39,9 @@ subroutine advance_horizontal(iBlock)
   MaxDiff = 0.0
 
   call report("advance_horizontal",2)
+
+  if (.not. IsFullSphere) &
+       call set_horizontal_bcs(iBlock)
 
   do iAlt=1,nAlts
 

@@ -15,11 +15,12 @@ subroutine init_grid
 
   integer :: iBlock
 
-  logical :: IsOk, IsDone
+  logical :: IsOk, IsDone, DoTouchSouth, DoTouchNorth
 
   call report("init_grid",1)
 
   if (.not. Is1D) then
+
      if (IsFullSphere) then
         call UAM_module_setup(iCommGITM, &
              nLons, nLats, nAlts, &
@@ -30,11 +31,24 @@ subroutine init_grid
              RBody+AltMin, 5000.0, &
              ok=IsOk)
      else
+
+        DoTouchNorth = .false.
+        DoTouchSouth = .false.
+
+        if (LatEnd >= pi/2) then
+           LatEnd = pi/2
+           DoTouchNorth = .true.
+        endif
+        if (LatStart <= -pi/2) then
+           LatStart = -pi/2
+           DoTouchSouth = .true.
+        endif
+
         call UAM_module_setup(iCommGITM, &
              nLons, nLats, nAlts, &
              nBlocksLon, nBlocksLat, &
              LatStart, LatEnd, &
-             .false., .false., &
+             DoTouchSouth, DoTouchNorth, &
              0.0, 0.0, 0.0, &
              RBody+AltMin, 5000.0, &
              ok=IsOk)
