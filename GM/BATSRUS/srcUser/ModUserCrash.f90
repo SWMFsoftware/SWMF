@@ -1552,11 +1552,11 @@ contains
 
        else
           if(IsMix)then
-             call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
+             call eos(RhoToARatioSi_I, TeIn=TeSi, &
                   OpacityPlanckOut_I=AbsorptionOpacitySiOut_I, &
                   OpacityRosselandOut_I=DiffusionOpacitySiOut_I)
           else
-             call eos(iMaterial, RhoSi, TeIn=TeSiIn, &
+             call eos(iMaterial, RhoSi, TeIn=TeSi, &
                   OpacityPlanckOut_I=AbsorptionOpacitySiOut_I, &
                   OpacityRosselandOut_I=DiffusionOpacitySiOut_I)
           end if
