@@ -56,12 +56,6 @@ module ModGrayDiffusion
   ! radiation has gamma of 4/3
   real, parameter :: GammaRel = 4.0/3.0
 
-  ! Indices indicating which semi-implicit vars are mapped to which
-  ! State_VGB variables. The total gas pressure and energy are excluded
-  ! from this list, since they taken care of separately.
-  integer :: nImplToState
-  integer, allocatable :: iFromImpl_I(:), iToState_I(:)
-
   ! If we solve for the temperature, then ImplStateMin indicates the minimum
   ! allowed temperature that is used in the update from the implicit state
   ! variables to State_VGB.
@@ -79,11 +73,12 @@ contains
     use ModMain,        ONLY: UseGrayDiffusion
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
-         TypeSemiImplicit, iEradImpl, iTeImpl
+         TypeSemiImplicit, iEradImpl, iTeImpl, iTrImplFirst, iTrImplLast
     use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, cRadiationNo
     use ModTemperature, ONLY: TradMinSi
     use ModWaves,       ONLY: UseWavePressure, GammaWave
 
+    integer :: iVarImpl
     real :: EradMin
 
     character(len=*), parameter :: NameSub = "init_gray_diffusion"
@@ -112,47 +107,37 @@ contains
     if(UseSemiImplicit)then
 
        ! Default to zero, unless reset
-       iTeImpl = 0; iEradImpl = 0
+       iTeImpl = 0; iTrImplFirst = 0; iTrImplLast = 0; iEradImpl = 0
 
        select case(TypeSemiImplicit)
        case('radiation')
           if(UseElectronEnergy)then
              call stop_mpi(NameSub//": Te/=Ti requires heat conduction")
           end if
+          iTrImplFirst = 1; iTrImplLast = 1
           iEradImpl = 1
-          nDiff = 1
+          nDiff = 1 + iTrImplLast - iTrImplFirst
           allocate(iDiff_I(nDiff))
-          iDiff_I(1) = iEradImpl
+          iDiff_I = (/ (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
           nRelax = 0
           nPoint = 2
-          iVarPoint = iEradImpl
-          nImplToState = 1
-          allocate(iFromImpl_I(nImplToState), iToState_I(nImplToState))
-          iFromImpl_I = iEradImpl
-          iToState_I  = Erad_
+          iVarPoint = iTrImplFirst
           ImplStateMin = EradMin
 
        case('radcond')
-          iTeImpl = 1; iEradImpl = 2
-          nDiff = 2
+          iTeImpl = 1; iTrImplFirst = 2; iTrImplLast = 2
+          iEradImpl = 2
+          nDiff = 2 + iTrImplLast - iTrImplFirst
           allocate(iDiff_I(nDiff))
-          iDiff_I = (/ iTeImpl, iEradImpl /)
-          nRelax = 1
+          iDiff_I = (/ iTeImpl, (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
+          nRelax = 1 + iTrImplLast - iTrImplFirst
           allocate(iRelax_I(nRelax))
-          iRelax_I(1) = iEradImpl
+          iRelax_I = (/ (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
           if(UseElectronEnergy)then
              nPoint = 2
              iVarPoint = iTeImpl
-             nImplToState = 2
-             allocate(iFromImpl_I(nImplToState), iToState_I(nImplToState))
-             iFromImpl_I = (/ iTeImpl, iEradImpl /)
-             iToState_I  = (/ Ee_, Erad_ /)
           else
              nPoint = 0
-             nImplToState = 1
-             allocate(iFromImpl_I(nImplToState), iToState_I(nImplToState))
-             iFromImpl_I = iEradImpl
-             iToState_I  = Erad_
           end if
           ImplStateMin = EradMin
 
@@ -160,18 +145,13 @@ contains
           iTeImpl = 1
           nDiff = 1
           allocate(iDiff_I(nDiff))
-          iDiff_I(1) = iTeImpl
+          iDiff_I = iTeImpl
           nRelax = 0
           if(UseElectronEnergy)then
              nPoint = 2
              iVarPoint = iTeImpl
-             nImplToState = 1
-             allocate(iFromImpl_I(nImplToState), iToState_I(nImplToState))
-             iFromImpl_I = iTeImpl
-             iToState_I  = Ee_
           else
              nPoint = 0
-             nImplToState = 0
           end if
           ImplStateMin = 0.0
 
@@ -1158,10 +1138,11 @@ contains
   subroutine update_impl_gray_diff(iBlock, iImplBlock, StateImpl_VG)
 
     use ModAdvance,  ONLY: State_VGB, Rho_, p_, ExtraEint_, &
-         UseElectronEnergy, Ee_
+         UseElectronEnergy, Ee_, WaveFirst_
     use ModEnergy,   ONLY: calc_energy_cell
-    use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
-    use ModMain,     ONLY: nI, nJ, nK, Dt
+    use ModImplicit, ONLY: nw, iTeImpl, iTrImplFirst, iTrImplLast, &
+         DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
+    use ModMain,     ONLY: nI, nJ, nK, Dt, UseGrayDiffusion
     use ModPhysics,  ONLY: inv_gm1, g, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, UnitRho_, UnitTemperature_
     use ModUser,     ONLY: user_material_properties
@@ -1169,10 +1150,10 @@ contains
     integer, intent(in) :: iBlock, iImplBlock
     real, intent(inout) :: StateImpl_VG(nw,nI,nJ,nK)
 
-    integer :: i, j, k, iImplToState, iVarImpl, iVar
+    integer :: i, j, k, iVarImpl, iVar
     real :: Einternal, EinternalSi, PressureSi
     real :: PeSi, Ee, EeSi
-    real :: DelEnergy, Relaxation
+    real :: Relaxation
 
     character(len=*), parameter :: NameSub = 'update_impl_gray_diff'
     !--------------------------------------------------------------------------
@@ -1184,19 +1165,23 @@ contains
                max(ImplStateMin, StateImpl_VG(iVarImpl,i,j,k))
        end do
 
-       do iImplToState = 1, nImplToState
-          iVarImpl = iFromImpl_I(iImplToState)
-          iVar     = iToState_I(iImplToState)
+       if(UseGrayDiffusion)then
+          do iVarImpl = iTrImplFirst, iTrImplLast
+             iVar = WaveFirst_ + iVarImpl - iTrImplFirst
 
-          DelEnergy = DconsDsemi_VCB(iVarImpl,i,j,k,iImplBlock) &
-               *(StateImpl_VG(iVarImpl,i,j,k) &
-               - ImplOld_VCB(iVarImpl,i,j,k,iBlock))
-
-          State_VGB(iVar,i,j,k,iBlock) = &
-               State_VGB(iVar,i,j,k,iBlock) + DelEnergy
-       end do
+             State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock) &
+                  + DconsDsemi_VCB(iVarImpl,i,j,k,iImplBlock) &
+                  *(StateImpl_VG(iVarImpl,i,j,k) &
+                  - ImplOld_VCB(iVarImpl,i,j,k,iBlock))
+          end do
+       end if
 
        if(UseElectronEnergy)then
+          ! electrons
+          State_VGB(Ee_,i,j,k,iBlock) = State_VGB(Ee_,i,j,k,iBlock) &
+               + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+               *(StateImpl_VG(iTeImpl,i,j,k)-ImplOld_VCB(iTeImpl,i,j,k,iBlock))
+
           ! ion pressure -> Einternal
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
        else

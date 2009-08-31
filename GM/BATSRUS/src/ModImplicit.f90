@@ -40,7 +40,7 @@ module ModImplicit
   character(len=40) :: TypeSemiImplicit = 'radiation'
 
   ! Named indices for semi-implicit variables
-  integer :: iTeImpl, iEradImpl
+  integer :: iTeImpl=0, iTrImplFirst=0, iTrImplLast=0, iEradImpl=0
 
   !\
   ! Parameters for selecting implicit blocks
