@@ -436,16 +436,27 @@ contains
 
              ! This is just the Planck function at time level * saved
              PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = cRadiationNo*Te**4
-          case('radcond')
 
+          case('radcond')
              if(UseElectronEnergy)then
-                ! not implemented yet
+                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
+                     Cve/(4.0*cRadiationNo*Te**3)
+
+                RelaxCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity
+
+                TeTiCoefPrime = TeTiCoef*4.0*Ti**3/Cvi &
+                     /((Te+Ti)*(Te**2+Ti**2))
+                PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = &
+                     TeTiCoefPrime*Cvi/(4.0*cRadiationNo*Ti**3) &
+                     /(1.0 + ImplCoeff*Dt*TeTiCoefPrime)
+                PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = cRadiationNo*Ti**4
              else
                 RelaxCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity
 
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
                      Cv/(4.0*cRadiationNo*Te**3)
              end if
+
           case('cond')
              if(UseElectronEnergy)then
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
