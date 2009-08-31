@@ -15,7 +15,6 @@ subroutine set_horizontal_bcs(iBlock)
 
   if ( LatStart > -pi/2.0 .and. &
        minval(Latitude(:,iBlock)) < LatStart) then
-     write(*,*) "iBlock, Appling Down : ", iBlock
 
      do iAlt = -1, nAlts+2
         do iLat = 0,-1,-1
@@ -57,8 +56,6 @@ subroutine set_horizontal_bcs(iBlock)
 
   if (LatEnd < pi/2.0 .and. &
        maxval(Latitude(:,iBlocK)) > LatEnd) then
-
-     write(*,*) "iBlock, Appling Up : ", iBlock
 
      do iAlt = -1, nAlts+2
         do iLat = nLats+1, nLats+2
