@@ -16,6 +16,20 @@ pro harmonics
 ; 2) File_tec.dat - Tecplot file containing the original magnetogram
 ;                   map.
 ; 3) File.dat - file containing the spherical harmonics coefficients.
+; This Module reads a raw (RADIAL, not LOS!!!) magnetogram data file and
+; generates a magnetogram file in the form of spherical
+; harmonics to be use by SWMF. 
+  
+; ************************ Data Links ********************************
+; * MDI:   http://soi.stanford.edu/magnetic/index6.html              *
+; * WSO:   http://wso.stanford.edu/forms/prgs.html                   *  
+; * GONG:  http://gong.nso.edu/data/magmap/QR/mqs/                   *
+; * SOLIS: ftp://solis.nso.edu/synoptic/level3/vsm/merged/carr-rot   *
+; * MWO:   ftp://howard.astro.ucla.edu/pub/obs/synoptic_charts       *
+; ********************************************************************
+; * Field in Gauss: MDI,GONG,SOLIS                                   *
+; * Field in microTesla(0.01Gs): WSO, MWO                            *
+; ********************************************************************
 
 nMax=180
 CR=2029
@@ -214,7 +228,15 @@ for iPhi=0,nPhi-1 do begin
 endfor
 
 for n=0L,nHarmonics do begin
-   for m=0L,n do begin       
+   for m=0L,n do begin 
+      ; Comment on normalization!!!!
+      ;
+      ; The analytic normalization factor in the solution of Laplace's eq. is (2n+1)/R_n, 
+      ; where R_n=n+1+n(1/Rs)^(2n+1).
+      ; However, in this code the coefficients are normalized only with 2n+1 to reproduce 
+      ; the coefficients provided by Stanford. The division by R_n is done after
+      ; the coefficients are been read in ModMagnetogram.f90.
+      
       NormalizationFactor=2.*float(n)+1.0
       for iTheta=0,nTheta-1 do begin
          if (UseSineLatGrid eq 1)then begin
