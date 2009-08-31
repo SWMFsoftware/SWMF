@@ -72,6 +72,8 @@ module CRASH_ModEos
   use CRASH_ModAtomicMass
   use CRASH_ModPowerLawEos
   use CRASH_ModFermiGas, ONLY: UseFermiGas, LogGeMinBoltzmann, LogGeMinFermi
+  use CRASH_ModMultiGroup, ONLY: meshhv, abscon, nGroup, &
+       OpacityPlanck_I, OpacityRosseland_I, opacys
 
   implicit none
 
@@ -132,6 +134,7 @@ contains
        TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
+       OpacityPlanckOut_I, OpacityRosselandOut_I,            &
        HeatCond, TeTiRelax, iError)
 
     ! Eos function for single material
@@ -165,6 +168,9 @@ contains
     real,    optional, intent(out) :: GammaEOut    ! polytropic index
     real,    optional, intent(out) :: CvElectronOut! specific heat / unit volume
 
+    real,    optional, intent(out), &              ! Opacities
+                   dimension(nGroup) :: OpacityPlanckOut_I, OpacityRosselandOut_I
+
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
     real,    optional, intent(out) :: TeTiRelax    ! electron-ion interaction rate (SI)
     integer, optional, intent(out) :: iError       ! error flag
@@ -191,6 +197,7 @@ contains
          TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
          TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
          eElectronOut, pElectronOut, GammaEOut, CvElectronOut, & 
+         OpacityPlanckOut_I, OpacityRosselandOut_I,            &
          HeatCond, TeTiRelax, iError)
 
   end subroutine eos_material
@@ -200,7 +207,8 @@ contains
   subroutine eos_mixture(RhoToARatio_I,&
        TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
-       eElectronOut, pElectronOut, GammaEOut, CvElectronOut,& 
+       eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
+       OpacityPlanckOut_I, OpacityRosselandOut_I,            & 
        HeatCond, TeTiRelax, iError)
     !\
     !!   WARNING !!!
@@ -231,6 +239,9 @@ contains
     real,    optional, intent(out) :: eElectronOut ! internal energy density
     real,    optional, intent(out) :: GammaEOut    ! polytropic index
     real,    optional, intent(out) :: CvElectronOut! specific heat / unit volume
+
+    real,    optional, intent(out), &              !Opacities m^-1
+                   dimension(nGroup) :: OpacityPlanckOut_I, OpacityRosselandOut_I
 
 
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
@@ -266,7 +277,8 @@ contains
     call eos_generic(Natomic, &
          TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
          TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
-         eElectronOut, pElectronOut, GammaEOut, CvElectronOut,& 
+         eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
+         OpacityPlanckOut_I, OpacityRosselandOut_I,            & 
          HeatCond, TeTiRelax, iError)
 
   end subroutine eos_mixture
@@ -276,7 +288,8 @@ contains
   subroutine eos_generic(Natomic, &
        TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
-       eElectronOut, pElectronOut, GammaEOut, CvElectronOut,& 
+       eElectronOut, pElectronOut, GammaEOut, CvElectronOut, & 
+       OpacityPlanckOut_I, OpacityRosselandOut_I,            &
        HeatCond, TeTiRelax, iError)
     use CRASH_ModTransport, ONLY: electron_heat_conductivity, te_ti_relaxation
 
@@ -306,6 +319,9 @@ contains
     real,    optional, intent(out) :: eElectronOut ! internal energy density
     real,    optional, intent(out) :: GammaEOut    ! polytropic index
     real,    optional, intent(out) :: CvElectronOut! specific heat / unit volume
+
+    real,    optional, intent(out), &              ! Opacities m^-1
+                   dimension(nGroup) :: OpacityPlanckOut_I, OpacityRosselandOut_I
 
 
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
@@ -363,6 +379,13 @@ contains
     if(present(eElectronOut)) eElectronOut = Natomic*cEV*internal_energy_e()
     if(present(pElectronOut))  pElectronOut = pressure_e()
     if(present(GammaEOut))   call get_gamma(GammaSeOut=GammaOut)
+    if(present(OpacityPlanckOut_I).and.present(OpacityRosselandOut_I))then
+       call meshhv
+       call abscon
+       call opacys(TRadIn = Te)
+       OpacityPlanckOut_I = OpacityPlanck_I * 100.0 ![m^-1]
+       OpacityRosselandOut_I = OpacityRosseland_I   ![m^-1]
+    end if
 
     if(present(HeatCond))   HeatCond = electron_heat_conductivity()
     if(present(TeTiRelax))  TeTiRelax = te_ti_relaxation()
