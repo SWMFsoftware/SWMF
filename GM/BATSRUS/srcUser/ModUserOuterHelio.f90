@@ -16,6 +16,7 @@
 !July 20-WORKED! 
 !July 28-4 neutral fluids
 !September 28 - source terms as McNutt
+! April 24, 2009 Tilted Dipole
 !==============================================================================
 module ModUser
 
@@ -35,7 +36,8 @@ module ModUser
        IMPLEMENTED4  => user_set_outerbcs,              &
        IMPLEMENTED5  => user_set_ics,                   &
        IMPLEMENTED6  => user_initial_perturbation,      &
-       IMPLEMENTED8  => user_write_progress,            & 
+       IMPLEMENTED7  => user_write_progress,            & 
+       IMPLEMENTED8  => user_amr_criteria,                       &
        IMPLEMENTED9  => user_io_units,                  &
        IMPLEMENTED10 => user_set_plot_var,              &
        IMPLEMENTED11 => user_calc_sources,              &
@@ -263,18 +265,56 @@ contains
     use ModFaceBc, ONLY: iBoundary, FaceCoords_D, VarsTrueFace_V, &
          iFace, jFace, kFace, iBlockBc
 
-    use ModCoordTransform, ONLY: rot_xyz_sph
+    use ModCoordTransform, ONLY: rot_xyz_sph, rot_matrix_z, rot_matrix_y
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
     ! local variables
     real:: xFace, yFace, zFace
     real:: SinTheta
-    real:: Bsph_D(3), Vsph_D(3)
+    real:: Bsph_D(3), Vsph_D(3), Bparker
 
     real :: pSolarWind, Pmag, PmagEquator
 
     real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD, Sph_D)
+
+   ! Tilted Dipole declarations
+  
+  ! Magnetic field and velocity vectors in spherical coordinates
+   real :: bParker_D(3), vSolar_D(3)
+
+   ! Tilt of the rotation axis in degrees
+   real :: ThetaTiltDeg, THETAtilt
+
+  ! Rotation matrix between solar(solar means tilted coordinates) and simulation coordinates
+  ! This matrix is to rotate between the intertial to the tilted coordinates
+  real, save :: RotMatrix_DD(3,3)
+
+  ! I included an extra matrix to rotate between tilted and intertial coordinates
+  real, save :: RotMatrix_Inv(3,3)   !teste
+
+  ! Position vector in solar coordinates
+  real, dimension(3) :: Xyz_D
+
+  ! The last time the rotation matrix was calculated
+  real :: TimeLast = -1.0
+ 
+  ! Initialize only once
+  logical :: IsUninitialized = .true.
+
+  ! Velocity and magnetic field in Cartesian coordinates
+  real :: Vxyz_D(3), Bxyz_D(3)
+
+  real :: SignZ, Xy2
+!!teste
+ real :: rot_period_dim, OmegaBody
+!\
+  real :: Phi, Theta, SinThetaP, RFace, cosTheta, cosPhi, sinPhi
+  integer :: i,j,k
+!/
+
+ 
+ ! end of declarations for tilted
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub='user_face_bcs'
@@ -291,6 +331,63 @@ contains
 
     ! Make sure that OmegaSun and ParkerTilt are set
     if(OmegaSun == 0.0) call set_omega_parker_tilt
+
+    !Tilted stuff
+   if(IsUninitialized)then
+     ! Initialize some constants
+
+     THETAtiltDeg = 7.0
+
+!     THETAtiltDeg = 30.0
+
+     ! Convert to radians :
+     THETAtilt = cTwoPi*THETAtiltDeg/360.00     
+     rot_period_dim = 26.0*24.0                   ! rotation period in hours
+     OmegaBody = cTwoPi/(rot_period_dim*3600.00)
+
+     IsUninitialized = .false.
+   endif
+  
+   if(Time_Simulation /= TimeLast)then
+
+!      THETAtiltDeg = 30.0
+     THETAtiltDeg = 7.0
+
+     ! Convert to radians :
+     THETAtilt = cTwoPi*THETAtiltDeg/360.00
+     rot_period_dim = 26.0*24.0                   ! rotation period in hours
+     OmegaBody = cTwoPi/(rot_period_dim*3600.00)
+
+     ! Calculate the rotation matrix for the current time
+
+!!!     RotMatrix_DD = rot_matrix_y(THETAtilt)
+
+     ! to perform the negative rotation from TILTED -> INERTIAL
+
+!!!     RotMatrix_Inv = rot_matrix_y(-THETAtilt)
+
+      RotMatrix_DD = matmul(&
+         rot_matrix_y(THETAtilt), &        ! rotate around y axis by tilt
+         rot_matrix_z(OmegaBody*Time_Simulation))
+
+      RotMatrix_Inv = matmul(&
+         rot_matrix_y(-THETAtilt), &        ! rotate around y axis by tilt
+         rot_matrix_z(-OmegaBody*Time_Simulation))
+
+    TimeLast = Time_Simulation
+    end if
+
+  !************* Calculate the hemisphere info and the colatitude in TILTED frame *******
+  ! Rotate the location of the face center into the TILTED frame
+
+!  Xyz_D = matmul( (/xFace, yFace, zFace/), RotMatrix_DD)
+
+ !SinThetaP is the angles in the TILTED frame
+  SignZ        = sign(1.0, Xyz_D(3))
+  Xy2          = Xyz_D(1)**2 + Xyz_D(2)**2
+  SinThetaP     =  sqrt(Xy2/(Xy2 + Xyz_D(3)**2))
+
+  !****************parker solution in the TILTED frame ************************
 
     XyzSph_DD = rot_xyz_sph(FaceCoords_D)
     
@@ -309,6 +406,17 @@ contains
     Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi
 
     Vsph_D    = (/ SWH_Ux, 0.0, 0.0 /)           ! Vr, Vtheta, Vphi
+
+    ! tilted
+     bParker_D(1) = Bsph_D(1) !Radial component
+     bParker_D(2) = Bsph_D(2) !Theta component
+     bParker_D(3) = Bsph_D(3) !Phi component
+     
+     vSolar_D(1) = vSph_D(1) !Radial velocity
+     vSolar_D(2) = vSph_D(2)
+!!!     vSolar_D(3) = vSph_D(3) !VERIFY THAT!! 
+     rBody = 30.
+     vSolar_D(3) = (OmegaBody*(6.96E5)*SinTheta/No2Io_V(UnitU_))/30.
 
     ! This is wrong:
     ! VphiSolar = OMEGAbody*(6.96E5)*sinTheta/unitUSER_U
@@ -349,6 +457,14 @@ contains
     !/
     !!test      VrSolarWind = SWH_Ux
 
+   ! *************Rotate the Parker solution to the INERTIAL frame with -THETAtilt********
+   ! ******Doing it with Inverse Rotation************************************
+
+   bParker_D    = matmul(RotMatrix_Inv, bParker_D)
+!teste   vSolar_D     = matmul(RotMatrix_Inv, vSolar_D)
+
+   ! *********************To have pressure equilibrium ****************************
+
     ! Calculate pressure (equilibrium, but why? It is supersonic!)
     Pmag = sum(Bsph_D**2) / 2.0
 
@@ -359,8 +475,8 @@ contains
     ! Apply boundary conditions for ions
     VarsGhostFace_V(Rho_)    = SWH_rho
     VarsGhostFace_V(p_)      = SWH_p !!! pSolarWind
-    VarsGhostFace_V(Ux_:Uz_) = matmul(XyzSph_DD, Vsph_D)
-    VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, Bsph_D)
+    VarsGhostFace_V(Ux_:Uz_) = matmul(XyzSph_DD, vSolar_D)
+    VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, bParker_D)
 
     ! NeuRho is PopI; NeuIIRho is PopII and NeuIIIRho is PopIII
     !
@@ -527,7 +643,7 @@ contains
     use ModVarIndexes    
     use ModAdvance,  ONLY: State_VGB    
     use ModPhysics,  ONLY: rBody
-    use ModCoordTransform, ONLY: rot_xyz_sph
+    use ModCoordTransform, ONLY: rot_xyz_sph, rot_matrix_y, rot_matrix_z
 
     implicit none    
     integer :: iBlock    
@@ -544,6 +660,33 @@ contains
     ! real :: thetaN, sinthetaN, lambda, RhoSolarW
     ! real :: sin2Theta_fast_wind
 
+! tilted declarations
+  ! Magnetic field and velocity vectors in spherical coordinates
+  real :: bParker_D(3), vSolar_D(3)
+
+  ! Rotation matrix between solar (solar means tilted coordinates) and simulation coordinates
+  real, save :: RotMatrix_DD(3,3)
+
+ ! I included an extra matrix to rotate between tilted and intertial coordinates
+  real, save :: RotMatrix_Inv(3,3)   !teste
+
+  ! Position vector in solar coordinates (merav) at the grid point 
+  real, dimension(3) :: XyzS_D
+
+  ! The last time the rotation matrix was calculated
+   real :: TimeLast = -1.0
+
+  ! Initialize only once
+  logical :: IsUninitialized = .true.
+
+  ! Velocity and magnetic field in Cartesian coordinates
+  real :: Vxyz_D(3), Bxyz_D(3)
+
+   ! Tilt of the rotation axis in degrees
+   real :: ThetaTiltDeg, THETAtilt, rot_period_dim
+
+! end of tilt declarations
+
     character(len=*), parameter:: NameSub = 'user_set_ics'
     logical :: DoTest, DoTestMe, DoTestCell
     !--------------------------------------------------------------------------
@@ -557,6 +700,50 @@ contains
 
     ! Make sure that OmegaSun and ParkerTilt are set
     if(OmegaSun == 0.0)call set_omega_parker_tilt
+
+  if(IsUninitialized)then
+     ! Initialize some constants
+
+!     THETAtiltDeg = 30.0
+    THETAtiltDeg = 7.0
+     ! Convert to radians :
+     THETAtilt = cTwoPi*THETAtiltDeg/360.00
+
+     ! Defining the rotation components of the Sun
+     rot_period_dim = 26.0*24.0                   ! rotation period in hours
+     OmegaBody = cTwoPi/(rot_period_dim*3600.00)
+
+     IsUninitialized = .false.
+  endif
+   if(Time_Simulation /= TimeLast)then
+!      Calculate the rotation matrix for the current time
+!      The order and the signs should be carefully checked and verified
+
+     THETAtiltDeg = 7.0
+     ! Convert to radians :
+     THETAtilt = cTwoPi*THETAtiltDeg/360.00
+
+     ! Defining the rotation components of the Sun
+     rot_period_dim = 26.0*24.0                   ! rotation period in hours
+     OmegaBody = cTwoPi/(rot_period_dim*3600.00)
+
+!!!     RotMatrix_DD = rot_matrix_y(THETAtilt)
+
+     ! to perform the negative rotation from TILTED -> INERTIAL
+
+!!!     RotMatrix_Inv = rot_matrix_y(-THETAtilt)
+
+
+     RotMatrix_DD = matmul(&
+         rot_matrix_y(THETAtilt), &        ! rotate around y axis by tilt
+         rot_matrix_z(OMEGAbody*Time_Simulation))  ! rotate around z axis by rotation
+
+    RotMatrix_Inv = matmul(&
+         rot_matrix_y(-THETAtilt), &        ! rotate around y axis by tilt
+         rot_matrix_z(-OmegaBody*Time_Simulation))
+
+     TimeLast = Time_Simulation
+  end if
 
     do i=1-gcn,nI+gcn; do j=1-gcn,nJ+gcn; do k=1-gcn,nK+gcn
 
@@ -615,6 +802,19 @@ contains
        !! I still need to impemenet that the density 
        !! varies between slow and fast solar wind
        !!
+! tilted
+       ! Rotate parker solution into the simulation frame
+!!tes      bParker_D    = matmul(RotMatrix_DD, bParker_D)
+!!tes      vSolar_D     = matmul(RotMatrix_DD, vSolar_D)
+
+     vSolar_D(1) = vSph_D(1) !Radial velocity
+     vSolar_D(2) = vSph_D(2)
+!!     vSolar_D(3) = vSph_D(3) !VERIFY THAT!!
+     rBody = 30.
+     vSolar_D(3) = (OmegaBody*(6.96E5)*SinTheta/No2Io_V(UnitU_))/(r+1.E-10)
+
+      bParker_D    = matmul(RotMatrix_Inv, bParker_D)
+!teste      vSolar_D     = matmul(RotMatrix_Inv, vSolar_D)
 
        ! magnetic field components in cartesian coordinates
        b_D = matmul(XyzSph_DD, Bsph_D)
@@ -770,6 +970,117 @@ contains
 
   end subroutine user_write_progress
 
+  !========================================================================
+  !  SUBROUTINE user_amr_criteria
+  !========================================================================
+  !
+  !\
+  ! This subroutine allows the user to add a refinement type
+  ! based on a geometric criteria or physical criteria.  The `case'
+  ! specified in the #AMRCRITERIA file will be read here.
+  !/
+  subroutine user_amr_criteria(iBLK, userCriteria, TypeCriteria, IsFound)
+    use ModMain
+    use ModAdvance
+    use ModGeometry, ONLY:x_BLK,y_BLK,z_BLK,R_BLK,&
+         dx_BLK,dy_BLK,dz_BLK,true_cell
+    use ModPhysics
+    use ModConst
+    !\
+    ! Variables required by this user subroutine::
+    !/
+    integer, intent(in):: iBLK
+    logical, intent(out):: IsFound
+    real, intent(out):: userCriteria
+    character (len=20),intent(in):: TypeCriteria
+    !\
+    ! Local variables::
+    !/
+    logical:: IsInRange
+    integer:: i,j,k
+    real:: dsMin,dsMax,dsTwo
+    real:: XCell,YCell,ZCell,RCell,RCenter
+    real:: B0xCell,B0yCell,B0zCell,MinB,MaxB
+    real:: BIxCell,BIyCell,BIzCell
+    real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: B_D
+    logical,dimension(3)::IsGhostCell_D
+    !\
+    ! Find the radial location of the center of the block and
+    ! the min/max cell size::
+    !/
+    RCenter = 1.0*&
+         (R_BLK( 1, 1, 1,iBLK)+R_BLK( 1, 1,nK,iBLK)+&
+         R_BLK( 1,nJ, 1,iBLK)+R_BLK( 1,nJ,nK,iBLK)+&
+         R_BLK(nI, 1, 1,iBLK)+R_BLK(nI, 1,nK,iBLK)+&
+         R_BLK(nI,nJ, 1,iBLK)+R_BLK(nI,nJ,nK,iBLK))
+    dsMin = min(dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK))
+    dsMax = max(dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK))
+    dsTwo = dsMin*dsMax
+
+    select case (TypeCriteria)
+    case('UserCS','USERCS','usercs')
+       !\
+       ! Get the total magnetic field in iBLK::
+       !/
+       do k=1-gcn,nK+gcn
+          IsGhostCell_D(3)=k<1.or.k>nK
+          do j=1-gcn,nJ+gcn
+             IsGhostCell_D(2)=j<1.or.j>nJ
+             do i=1-gcn,nI+gcn
+                IsGhostCell_D(1)=i<1.or.i>nI
+                if (count(IsGhostCell_D)>1) then
+                   B_D(i,j,k) = huge(cOne)
+                   CYCLE
+                end if
+                XCell   = x_BLK(i,j,k,iBLK)
+                YCell   = y_BLK(i,j,k,iBLK)
+                ZCell   = z_BLK(i,j,k,iBLK)
+                RCell   = R_BLK(i,j,k,iBLK)
+!                B0xCell = B0_DGB(x_,i,j,k,iBLK)
+!                B0yCell = B0_DGB(y_,i,j,k,iBLK)
+!                B0zCell = B0_DGB(z_,i,j,k,iBLK)
+               B0xCell = B0xCell_BLK(i,j,k,iBLK)
+               B0yCell = B0yCell_BLK(i,j,k,iBLK)
+               B0zCell = B0zCell_BLK(i,j,k,iBLK)
+                BIxCell = State_VGB(Bx_,i,j,k,iBLK)
+                BIyCell = State_VGB(By_,i,j,k,iBLK)
+                BIzCell = State_VGB(Bz_,i,j,k,iBLK)
+!!                Br_D(i,j,k) = abs(&
+!!                     (XCell*(B0xCell+BIxCell)+ &
+!!                     YCell*(B0yCell+BIyCell)+ &
+!!                     ZCell*(B0zCell+BIzCell))/&
+!!                     RCell)
+               B_D(i,j,k) = abs(&
+                     ((B0xCell+BIxCell)+ &
+                     (B0yCell+BIyCell)+ &
+                     (B0zCell+BIzCell)))
+
+             end do
+          end do
+       end do
+       !\
+       ! Find the minimum of abs(B) in iBLK::
+       !/
+       MinB = minval(B_D)
+       !\
+       ! Construct refine criteria based on ds2, RCenter, and MinBr::
+       !/
+!!       IsInRange = (RCenter<1.50*Rs_PFSSM).and.&
+!!            (MinBr<3.0E-05)
+!       IsInRange = (xCell < -30.).and. (zCell < 50.).and. &
+!            (zCell> -50.).and.(yCell < -50.).and.(yCell >50.).and. &
+!            (MinB<3.0E-05)
+        IsInRange = (RCenter < 80.).and.&
+             (MinB<3.0E-05)
+       if (IsInRange) then
+          userCriteria = dsTwo*RCenter*exp(-MinB)
+       else
+          userCriteria = dsTwo*RCenter*exp(-MinB)/1.E6
+       end if
+       IsFound = .true.
+    endselect
+  end subroutine user_amr_criteria
+
   !=====================================================================
   subroutine user_io_units
 
@@ -812,6 +1123,12 @@ contains
     VLISW_rho = VLISW_rho_dim*Io2No_V(UnitRho_)
     VLISW_p1   = VLISW_p_dim1*Io2No_V(UnitP_)
     VLISW_p    = 2.*VLISW_T_dim*Io2No_V(UnitTemperature_)*VLISW_rho
+   
+    !merav
+    !write(*,*) 'VLISW_p1',VLISW_p1
+    !write(*,*) 'VLISW_p',VLISW_p
+    !merav
+
     VLISW_Ux  = VLISW_Ux_dim*Io2No_V(UnitU_)
     VLISW_Uy  = VLISW_Uy_dim*Io2No_V(UnitU_)
     VLISW_Uz  = VLISW_Uz_dim*Io2No_V(UnitU_)
@@ -831,6 +1148,13 @@ contains
     
     SWH_p1   = SWH_T_dim*Io2No_V(UnitTemperature_)*SWH_rho
     SWH_p   = 2.*SWH_T_dim*Io2No_V(UnitTemperature_)*SWH_rho
+    
+    !merav
+    !write(*,*) 'SWH_p1',SWH_p1
+    !write(*,*) 'SWH_p',SWH_p
+    !merav
+
+
     SWH_Ux  = SWH_Ux_dim*Io2No_V(UnitU_)
     SWH_Uy  = SWH_Uy_dim*Io2No_V(UnitU_)
     SWH_Uz  = SWH_Uz_dim*Io2No_V(UnitU_)
@@ -858,7 +1182,11 @@ contains
     UzNeutralsISW  = UzNeutralsISW_dim*Io2No_V(UnitU_)
     mNeutrals    = mNeutralsmp*cProtonMass
 
-    !
+    !merav
+    !write(*,*) 'PNeutralsISW',PNeutralsISW
+    !write(*,*) 'PNeutralsISW1',PNeutralsISW1
+    !merav
+
     ! set strings for writing Tecplot output
     !/
     NameTecUnit_V(UnitX_)            = 'AU'
@@ -1097,6 +1425,7 @@ contains
        ! Maher and Tinsley cross section Sigma 
        ! UStar has to have units of cm/s so the factor 100 is to pass m to cm
        ! Sigma has units of units of m^2
+
       !! Sigma_I =((1.64E-7 - (6.95E-9)*log(UStarM_I*100.))**2)*(1.E-4)
       !! SigmaN_I =((1.64E-7 - (6.95E-9)*log(UStar_I*100.))**2)*(1.E-4)       
 
@@ -1443,3 +1772,4 @@ contains
   end subroutine user_init_point_implicit
 
 end module ModUser
+
