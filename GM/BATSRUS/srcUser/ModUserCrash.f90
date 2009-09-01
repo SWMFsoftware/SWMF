@@ -93,10 +93,18 @@ module ModUser
   integer           :: iMaterialHyades = -1      ! index of material type
 
 
-
-  ! Opacity scale factor for sensitivity studies on opacities
+  ! Opacity scale factor for sensitivity studies on opacities (UQ only !)
   real :: RosselandScaleFactor_I(0:nMaterial-1) = 1.0
   real :: PlanckScaleFactor_I(0:nMaterial-1) = 1.0
+
+  ! Gamma law per material (UQ only !)
+  logical :: UseGammaLaw = .false.
+  real :: Gamma_I(0:nMaterial-1) = 5.0/3.0
+
+  ! Fixed average ion charge per material (UQ only !)
+  logical :: UseFixedIonCharge = .false.
+  real :: IonCharge_I(0:nMaterial-1) = 1.0
+
 
   ! Indexes for lookup tables
   integer:: iTablePPerE = -1, iTableEPerP = -1, iTableThermo = -1
@@ -167,13 +175,27 @@ contains
           end if
        case("#EOS")
           call read_eos_parameters
-       case("#OPACITYSCALEFACTOR")
+
+       case("#OPACITYSCALEFACTOR") ! UQ only
           call read_var('PlanckScaleFactorXe', PlanckScaleFactor_I(0))
           call read_var('PlanckScaleFactorBe', PlanckScaleFactor_I(1))
           call read_var('PlanckScaleFactorPl', PlanckScaleFactor_I(2))
           call read_var('RosselandScaleFactorXe', RosselandScaleFactor_I(0))
           call read_var('RosselandScaleFactorBe', RosselandScaleFactor_I(1))
           call read_var('RosselandScaleFactorPl', RosselandScaleFactor_I(2))
+
+       case("#GAMMALAW") ! UQ only
+          call read_var('UseGammaLaw', UseGammaLaw)
+          call read_var('GammaXe', Gamma_I(0))
+          call read_var('GammaBe', Gamma_I(1))
+          call read_var('GammaPl', Gamma_I(2))
+
+       case("#FIXEDIONCHARGE") ! UQ only
+          call read_var('UseFixedIonCharge', UseFixedIonCharge)
+          call read_var('IonChargeXe', IonCharge_I(0))
+          call read_var('IonChargeBe', IonCharge_I(1))
+          call read_var('IonChargePl', IonCharge_I(2))
+
        case("#THREEDIM")
           call read_var('IsThreeDim', IsThreeDim)
        case("#NOZZLE")
@@ -1359,6 +1381,15 @@ contains
     integer:: iMaterial
     character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
     !-----------------------------------------------------------------------
+
+    if(UseGammaLaw)then
+       ! UQ only
+       call calc_table_gammalaw
+
+       RETURN
+    end if
+
+
     if(iTable == iTablePPerE)then
        ! Calculate p/e for Xe_, Be_ and Plastic_ for given Rho and e/Rho
        Rho = Arg1
@@ -1414,6 +1445,53 @@ contains
        write(*,*)NameSub,' iTable=', iTable
        call stop_mpi(NameSub//' invalid value for iTable')
     endif
+
+  contains
+
+    subroutine calc_table_gammalaw
+
+      use ModConst, ONLY: cAtomicMass
+
+      real :: NatomicSi
+      !------------------------------------------------------------------------
+      if(iTable == iTablePPerE)then
+         ! Calculate p/e for Xe_, Be_ and Plastic_ for given Rho and e/Rho
+         Rho = Arg1
+         e   = Arg2*Rho
+         do iMaterial = 0, nMaterial-1
+            Value_V(iMaterial+1) = Gamma_I(iMaterial) - 1.0
+         end do
+      elseif(iTable == iTableEPerP)then
+         ! Calculate e/p for Xe_, Be_ and Plastic_ for given Rho and p/Rho
+         Rho = Arg1
+         p   = Arg2*Rho
+         do iMaterial = 0, nMaterial-1
+            Value_V(iMaterial+1) = 1.0/(Gamma_I(iMaterial) - 1.0)
+         end do
+      elseif(iTable == iTableThermo)then
+         ! Calculate cV, gamma, HeatCond and Te for Xe_, Be_ and Plastic_
+         ! for given Rho and p/Rho
+         Rho = Arg1
+         p   = Arg2*Rho
+         do iMaterial = 0, nMaterial-1
+            if(UseFixedIonCharge)then
+               NatomicSi = Rho/(cAtomicMass*MassMaterial_I(iMaterial))
+               Te = p/( (1.0+IonCharge_I(iMaterial))*NatomicSi*cBoltzmann )
+            else
+               call eos(iMaterial, Rho, PtotalIn=p, TeOut=Te)
+            end if
+
+            Value_V(Cv_   +iMaterial*nThermo) = p/Te/(Gamma_I(iMaterial)-1)
+            Value_V(Gamma_+iMaterial*nThermo) = Gamma_I(iMaterial)
+            Value_V(Cond_ +iMaterial*nThermo) = 0.0
+            Value_V(Te_   +iMaterial*nThermo) = Te
+         end do
+      else
+         write(*,*)NameSub,' iTable=', iTable
+         call stop_mpi(NameSub//' invalid value for iTable')
+      endif
+
+    end subroutine calc_table_gammalaw
 
   end subroutine calc_table_value
   !===========================================================================
