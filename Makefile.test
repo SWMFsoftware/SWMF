@@ -494,15 +494,15 @@ test_ramscb_run:
 test_ramscb_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-3 -a=1e-15 			\
 		${TESTDIR}/IM/output_ram/Dsbnd/dssep_05_0000_h.dat	\
-		${IMDIR}/output/dssep_05_0000_h.dat.ref 		\
+		${IMDIR}/output/test1/dssep_05_0000_h.dat.ref 		\
 		> test_ramscb.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5		\
 		${TESTDIR}/IM/output_ram/ram000_h.l  	\
-		${IMDIR}/output/ram000_h.l.ref  	\
+		${IMDIR}/output/test1/ram000_h.l.ref  	\
 		>> test_ramscb.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-3		\
 		${TESTDIR}/IM/output_ram/ram000_h.t 	\
-		${IMDIR}/output/ram000_h.t.ref 		\
+		${IMDIR}/output/test1/ram000_h.t.ref 		\
 		>> test_ramscb.diff)
 	ls -l test_ramscb.diff
 
