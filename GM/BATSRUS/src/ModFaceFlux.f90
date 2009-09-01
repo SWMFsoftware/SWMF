@@ -1886,7 +1886,7 @@ contains
        Flux_V(Hyp_)    = SpeedHyp2*FullBn
 
        if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) + Bn*Hyp
-    elseif(NameVar_V(Hyp_) == 'Hyp')then
+    elseif(Hyp_ > 1)then
        Flux_V(Hyp_) = 0.0
     end if
 
@@ -1983,8 +1983,8 @@ contains
 
     subroutine get_mhd_flux
 
-      use ModPhysics, ONLY: inv_gm1, inv_c2LIGHT
-      use ModAdvance, ONLY: UseElectronPressure
+      use ModPhysics, ONLY: inv_gm1, g, inv_c2LIGHT
+      use ModAdvance, ONLY: UseElectronPressure, UseElectronEnergy
       use ModWaves
 
       ! Variables for conservative state and flux calculation
@@ -2022,7 +2022,8 @@ contains
       pTotal  = p + 0.5*B2 + B0B1
 
       if(UseWavePressure) &
-           pTotal = pTotal + (GammaWave-1.0) * sum(State_V(WaveFirst_:WaveLast_))
+           pTotal = pTotal + (GammaWave-1.0)*sum(State_V(WaveFirst_:WaveLast_))
+      if(UseElectronEnergy) pTotal = pTotal + (g - 1)*State_V(Ee_)
 
       ! Normal direction
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
@@ -2395,7 +2396,8 @@ contains
       use ModMain,    ONLY: UseCurlB0
       use ModPhysics, ONLY: g, Inv_C2Light, ElectronTemperatureRatio
       use ModNumConst, ONLY: cPi
-      use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure
+      use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure, &
+           UseElectronEnergy
 
       real :: RhoU_D(3)
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn
@@ -2436,6 +2438,7 @@ contains
       if(UseWavePressure)&
          Sound2 = Sound2 + GammaWave * (GammaWave - 1)*&
          sum(State_V(WaveFirst_:WaveLast_))*InvRho
+      if(UseElectronEnergy) Sound2 = Sound2 + g*(g - 1)*State_V(Ee_)*InvRho
      
       Un     = InvRho*sum( RhoU_D*Normal_D )
 
