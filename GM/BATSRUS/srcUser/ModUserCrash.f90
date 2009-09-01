@@ -1260,6 +1260,11 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, HeatCondSiOut = PlotVar_G(i,j,k))
        end do; end do; end do
+    case('teti')
+       do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, TeTiRelaxSiOut = PlotVar_G(i,j,k))
+       end do; end do; end do
     case('usersphere')
        ! Test function for LOS images: sphere with "density" 
        !    100 - r^2 inside r=10, and 0 outside.
@@ -1794,15 +1799,16 @@ contains
          ! Calculate electron pressure from electron temperature
          TeSi = TeSiIn
          if(IsMix) then
-            call eos(RhoToARatioSi_I, TeIn=TeSiIn, eElectronOut=EeSi, &
+            call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
+                 eElectronOut=EinternalSiOut, &
                  pElectronOut=PeSi, CvElectronOut=CvSiOut, &
                  HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
          else
-            call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, eElectronOut=EeSi, &
+            call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, &
+                 eElectronOut=EinternalSiOut, &
                  pElectronOut=PeSi, CvElectronOut=CvSiOut, &
                  HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
          end if
-         EinternalSiOut = EeSi
       else
          ! electron pressure is (g - 1)*State_V(Ee_)
          ! Use this pressure to calculate the true electron internal energy
