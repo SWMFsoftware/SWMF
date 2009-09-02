@@ -1948,10 +1948,10 @@ contains
       Un     = Ux*NormalX + Uy*NormalY + Uz*NormalZ
       En     = Ex*NormalX + Ey*NormalY + Ez*NormalZ
 
-      ! f_i[rho]=m_i
+      ! f_i[rho] = rho*u_i
       Flux_V(Rho_)   = Rho*Un
 
-      ! f_i[m_k]=m_i*m_k/rho - b_k*b_i -B0_k*b_i - B0_i*b_k - E_i*E_k
+      ! f_i[rhou_k] = u_i*u_k*rho - b_k*b_i - B0_k*b_i - B0_i*b_k - E_i*E_k
       !          +n_i*[p + B0_j*b_j + 0.5*(b_j*b_j + E_j*E_j)]
       Flux_V(RhoUx_) = Un*Rho*Ux - Bn*FullBx - B0n*Bx - En*Ex + pTotal2*Normalx
       Flux_V(RhoUy_) = Un*Rho*Uy - Bn*FullBy - B0n*By - En*Ey + pTotal2*Normaly
@@ -2054,10 +2054,15 @@ contains
          UnPlus = Un
       end if
 
-      ! f_i[rho]=m_i
-      Flux_V(Rho_)   = Rho*Un
+      ! f_i[rho] = Rho*U_i
+      Flux_V(Rho_) = Rho*Un
 
-      ! f_i[m_k]=m_i*m_k/rho - b_k*b_i -B0_k*b_i - B0_i*b_k + n_i*[ptotal]
+      ! f_i[scalar] = Un*scalar
+      do iVar = ScalarFirst_, ScalarLast_
+         Flux_V(iVar) = Un*State_V(iVar)
+      end do
+
+      ! f_i[rhou_k] = u_i*u_k*rho - b_k*b_i -B0_k*b_i - B0_i*b_k + Ptotal*n_i
       Flux_V(RhoUx_) = Un*Rho*Ux - Bn*FullBx - B0n*Bx + pTotal*NormalX
       Flux_V(RhoUy_) = Un*Rho*Uy - Bn*FullBy - B0n*By + pTotal*NormalY
       Flux_V(RhoUz_) = Un*Rho*Uz - Bn*FullBz - B0n*Bz + pTotal*NormalZ
@@ -2085,8 +2090,8 @@ contains
       ! f_i[Pe] = u_e,i*p_e
       if(UseElectronPressure)Flux_V(Pe_) = HallUn*State_V(Pe_)
 
-      ! f_i[p]=u_i*p
-      Flux_V(p_)  = Un*p
+      ! f_i[p] = u_i*p
+      Flux_V(p_) = Un*p
 
       ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
       if(HallCoeff > 0.0) then
@@ -2103,11 +2108,6 @@ contains
          Flux_V(Energy_) = &
               Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
       end if
-
-      ! f_i[scalar] = Un*scalar
-      do iVar = ScalarFirst_, ScalarLast_
-         Flux_V(iVar) = Un*State_V(iVar)
-      end do
 
       if(UseAlfvenSpeed)then
          AlfvenSpeed = FullBn/sqrt(Rho)
@@ -2224,15 +2224,15 @@ contains
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
       RhoUn  = Rho*Un
 
-      ! f_i[rho]=m_i
+      ! f_i[rho] = rho*u_i
       Flux_V(iRho)   = RhoUn
 
-      ! f_i[m_k]=u_i*rho*u_k + n_i*[ptotal]
+      ! f_i[rhou_k] = u_i*rho*u_k + n_i*[ptotal]
       Flux_V(iRhoUx) = RhoUn*Ux + pTotal*NormalX
       Flux_V(iRhoUy) = RhoUn*Uy + pTotal*NormalY
       Flux_V(iRhoUz) = RhoUn*Uz + pTotal*NormalZ
 
-      ! f_i[p]=u_i*p
+      ! f_i[p] = u_i*p
       Flux_V(iP)  = Un*p
 
       Flux_V(iEnergy) = Un*(pTotal + e)
@@ -3214,5 +3214,6 @@ subroutine calc_electric_field(iBlock)
        + Flux_VX(By_,2:nI+1,1:nJ  ,1:nK)) / fAx_BLK(iBlock) - &
        ( Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                      &
        + Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK)) / fAy_BLK(iBlock))
+
 end subroutine calc_electric_field
 
