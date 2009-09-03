@@ -303,8 +303,9 @@ contains
     use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
-         ExtraEint_, LevelBe_, LevelXe_, LevelPl_, Erad_, &
+         ExtraEint_, LevelBe_, LevelXe_, LevelPl_, &
          Ee_, UseElectronEnergy
+    use ModVarIndexes,  ONLY: Erad_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModConst,       ONLY: cPi
@@ -508,7 +509,6 @@ contains
 
       use ModMain,ONLY: UseGrayDiffusion
       use ModPhysics,ONLY: cRadiationNo, Si2No_V, UnitTemperature_
-      use ModAdvance,ONLY: Erad_
       !----------------------------------------------------------------------
       if(.not.UseGrayDiffusion)RETURN
 
