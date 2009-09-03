@@ -5,29 +5,29 @@ module ModLogAdvection
   !Present version: Sokolov& Roussev, Jan,2008
 
   !DESCRIPTION
-!============================================================================!
-! In space physics applications one often needs to solve the "log-advection" !
-! equations of the kind of:                                                  !
-!         f_t+A*f_lnp=0             (NC)                                     !
-! or                                                                         !
-!         f_t+A*(pf)_p=0 .          (C)                                      !
-! The latter equation which is a CONSERVATION LAW can be also written as     !
-!         f_t+A*f_lnp+ A*f=0,                                                !
-! which is the total of the NONCONSERVATIVE equation plus Af                 !
-! Both equations propagate the initial values of f along the lines           !
-!         p=p_0*exp(At),                                                     !
-! which results in a uniform expansion (A>0) or shrinking (A<0) of the       !
-! distribution, keeping its shape unchanged. For the conservative equation   !
-! the solution also scales accordingly, keeping unchanged the integral       !
-!\int{f dp}                                                                  !
-!                                                                            !
-! EXAMPLES: Non-conservative formulation: first-order Fermi acceleration,    !
-!           Alfven-wave turbulence evolution in the solar wind               !
-!           Conservative formulation: Kolmogorov-type cascade, wave-particle !
-!           interactions                                                     !
-! In all these applications, A does not depend on the phase coordinate, p    !
-!                                                                            !
-!============================================================================!
+  !============================================================================!
+  ! In space physics applications one often needs to solve the "log-advection" !
+  ! equations of the kind of:                                                  !
+  !         f_t+A*f_lnp=0             (NC)                                     !
+  ! or                                                                         !
+  !         f_t+A*(pf)_p=0 .          (C)                                      !
+  ! The latter equation which is a CONSERVATION LAW can be also written as     !
+  !         f_t+A*f_lnp+ A*f=0,                                                !
+  ! which is the total of the NONCONSERVATIVE equation plus Af                 !
+  ! Both equations propagate the initial values of f along the lines           !
+  !         p=p_0*exp(At),                                                     !
+  ! which results in a uniform expansion (A>0) or shrinking (A<0) of the       !
+  ! distribution, keeping its shape unchanged. For the conservative equation   !
+  ! the solution also scales accordingly, keeping unchanged the integral       !
+  !\int{f dp}                                                                  !
+  !                                                                            !
+  ! EXAMPLES: Non-conservative formulation: first-order Fermi acceleration,    !
+  !           Alfven-wave turbulence evolution in the solar wind               !
+  !           Conservative formulation: Kolmogorov-type cascade, wave-particle !
+  !           interactions                                                     !
+  ! In all these applications, A does not depend on the phase coordinate, p    !
+  !                                                                            !
+  !============================================================================!
 
 contains
   !===========advance_log_advection==========================================!
@@ -88,7 +88,7 @@ contains
     ! f^n_(i-1/2)=f^n_(i  )*(1-(1/2)*A*Delta t)-cHalf*(cOne+CFL)*df_lim^n_(i  )!
     !--------------------------------------------------------------------------!
 
-    
+
 
     if(IsConservative)then
        HalfADtIfNeeded=0.50*CFLIn*DeltaLnP
@@ -131,7 +131,7 @@ contains
           !\
           ! Update the solution from f^(n) to f^(n+1):
           !/
-          
+
           F_I(1:nP) = F_I(1:nP)+CFL*(FSemiintDown_I(1:nP)-FSemiintUp_I(1:nP))+&
                HalfADtIfNeeded*(FSemiintDown_I(1:nP)+FSemiintUp_I(1:nP))
        end do
@@ -181,5 +181,5 @@ contains
       !---------------------------------- DONE --------------------------------!
     end function df_lim
   end subroutine advance_log_advection
-!============================================================================!
+  !============================================================================!
 end module ModLogAdvection

@@ -23,6 +23,7 @@ MODULES = \
 	ModInterpolate.o\
 	ModIoUnit.o\
 	ModKind.o\
+	ModLinearAdvection.o\
 	ModLinearSolver.o\
 	ModLookupTable.o\
 	ModMpiConstants.o\

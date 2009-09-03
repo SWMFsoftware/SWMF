@@ -7,7 +7,6 @@ include Makefile.DEPEND
 
 
 OBJECTS = ModLogAdvection.o \
-	ModLinAdvection.o \
 	SP_ModTurbulence.o \
 	SP_main.o \
 	read_ihdata_for_sp.o \
@@ -17,7 +16,6 @@ OBJECTS = ModLogAdvection.o \
 
 SEPEXE = ${BINDIR}/SEP.exe
 
-SEP: ${SEPEXE}
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 
@@ -28,6 +26,9 @@ MY_LIB = libFLAMPA.a
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} \
 		${MODULES} ${OBJECTS} SP_stand_alone.o
+
+SEP:		DEPEND
+		make ${SEPEXE}
 
 LIB:	DEPEND
 	make ${MY_LIB}
