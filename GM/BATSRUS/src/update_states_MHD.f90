@@ -169,7 +169,7 @@ contains
     end if
 
     if(iStage == nStage.and. UseWavePressure.and.nWave>=2)&
-         call advect_group_advection(iBLK) 
+         call update_wave_group_advection(iBLK) 
 
     if(boris_correction) then                 !^CFG IF BORISCORR BEGIN
        if(UseB0)then
