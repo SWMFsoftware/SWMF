@@ -1,0 +1,185 @@
+% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
+% Do not edit unless you really know what you are doing.
+\documentclass[english,12pt]{revtex4}
+\usepackage[T1]{fontenc}
+\usepackage[latin9]{inputenc}
+\usepackage{nicefrac}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{array}
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+%% Because html converters don't know tabularnewline
+\providecommand{\tabularnewline}{\\}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+
+
+
+\usepackage{nicefrac}
+
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+%% Because html converters don't know tabularnewline
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+
+
+
+\usepackage{nicefrac}
+
+
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+%% Because html converters don't know tabularnewline
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+
+
+
+\usepackage{nicefrac}
+
+\begin{document}
+\section{Multi-group diffusion}
+{\bf Governing equation} to describe the radiation transport in the multigrop diffusion 
+approximation may be written as the partial differential equation for the spectral 
+energy density, $E_{\varepsilon}$, which is related to the unit ov volume and the unit
+interval of the photon energy, $\varepsilon$. The energy is assumed to be integrated 
+over the solid angle of directions of the photon propagation. Once  the spectral energy
+is integrated 
+density over photon energies, the total radiation energy density is obtained:
+\begin{equation}\label{eq:mg0}
+E=\int_0^\infty{E_\varepsilon d\varepsilon}.
+\end{equation}
+
+The governing equation for the spectral energy density is as follows:
+\begin{equation}\label{eq:mg1}
+\frac{\partial E_\varepsilon}{\partial t}+\nabla\cdot({\bf u}E_\varepsilon)-(\gamma_R-1)(\nabla\cdot{\bf u})\varepsilon\frac{\partial E_\varepsilon}{\partial \varepsilon}=
+{\rm diffusion + emission - absorption}.
+\end{equation}
+The second and third terms in the left hand side of Eq.(\ref{eq:mg1}) express the time evolution of the spectral energy density resulting from: (1) the radiation 
+advection and comression with the background, which moves with the velocity, ${\bf u}$; as well as (2) the photon systematic blue (red) shift in the convergent (divergent) 
+motions, which is analogous to the first order Fermi acceleration of chanrged particles in a moving plasma with the frozen in magnetic field. 
+Herwith $\gamma_R=4/3$ is the adiabat index of a relativistic (photon) gas. The processes described by the symbolic terms in the right hand side of Eq.(\ref{eq:mg1})
+are described below.
+
+{\bf A set of multi-group equations} may be indroduced when we choose a set of frequency groups. Here we enumerate groups with the index, $g=1, G$. The interval of the 
+photon energies, relating to the $g$th group is denoted as $[\varepsilon_{g-1/2},\varepsilon_{g+1/2}]$. The discrete set of unknowns, $E_g$, is introduced in terms of the
+integrals of the spectral energy density of the frequency group interval:
+\begin{equation}\label{eq:mg2}
+E_g=\int_{\varepsilon_{g-1/2}}^{\varepsilon_{g+1/2}}{E_\varepsilon d\varepsilon}. 
+\end{equation}
+Note that according to Eqs.(\ref{eq:mg0},\ref{eq:mg2})
+\begin{equation}
+E=\sum_g{E_g}.
+\end{equation}
+
+Although some of the formulae below are not sensitive to the choice of the group set, here we specify the boundaries of the frequency groups to be such that 
+{\it the frequency logarithm} is equally spaced (rather than the frequency itself):
+\begin{equation}\label{eq:mg3}
+\log(\varepsilon_{g+1/2}) - \log(\varepsilon_{g-1/2}) = \Delta(\log \varepsilon) = const.
+\end{equation} 
+Note that as long as the number of groups, $G$, tends to infinity, the ratio $E_g/\Delta(\log \varepsilon)$ tends to the local value of 
+$\varepsilon E_\varepsilon$, rather than to $E_\varepsilon$. Therefore, the grequency integrals on the equally spaced logarithmic frequency 
+grid allow us to approximate not
+a spectral energy density, but its product by the photon energy:
+\begin{equation}\label{eq:mg4}
+\frac{E_g}{ \Delta(\log \varepsilon)}\approx \varepsilon E_\varepsilon.
+\end{equation}
+
+Now we can integrate Eq.(\ref{eq:mg1}) to arrive at the desired set of the multigroup equations:
+\begin{eqnarray}
+\frac{\partial E_q}
+{\partial t}&+&
+\nabla\cdot({\bf u}E_g)+
+(\gamma_R-1)(\nabla\cdot{\bf u})E_g+\nonumber\\
+&+&\left[-(\gamma_R-1)(\nabla\cdot{\bf u})\right]\left[
+\varepsilon_{g+1/2} E_\varepsilon
+(\varepsilon_{g+1/2})-
+\varepsilon_{g-1/2} E_\varepsilon(\varepsilon_{g-1/2})\right]
+=\nonumber\\
+&=&
+\int_{\varepsilon_{g-1/2}}^{\varepsilon_{g+1/2}}
+{
+{\rm (diffusion + emission - absorption)}
+d\varepsilon}.\label{eq:mg5}
+\end{eqnarray}
+If the number of frequency groups, $G$ is sufficiently large, we employ the approximation as in Eq.(\ref{eq:mg4}), which allows us to close Eq.(\ref{eq:mg5}) in the 
+following form:
+\begin{eqnarray}
+\frac{\partial E_q}
+{\partial t}&+&
+\nabla\cdot({\bf u}E_g)+
+(\gamma_R-1)(\nabla\cdot{\bf u})E_g+
+%\nonumber\\&+&
+\frac{-(\gamma_R-1)(\nabla\cdot{\bf u})}{ \Delta(\log \varepsilon)}\left[
+E_{g+1/2}- E_{g-1/2})\right]
+=\nonumber\\
+&=&
+\int_{\varepsilon_{g-1/2}}^{\varepsilon_{g+1/2}}
+{
+{\rm (diffusion + emission - absorption)}
+d\varepsilon}.\label{eq:mg6}
+\end{eqnarray}
+where the values $E_{g\pm1/2}$ should be interpolated from the mesh-centered values $E_g$ towards the frequency values corresponding to the inter-group boundary.
+
+Note that we arrived to difference-differential equation, with the left-hand side including: (1) the conservative advection of the radiation energy density with
+the velocity ${\bf u}$; the work done by the radiation pressure $P_g=(\gamma_R-1)E_g$; (3) and, as a new element, a linear conservative advection with respect to
+the log-frequency coordinate. The flux-to-control-volume ratio for the latter effect equals 
+$$F_{g-1/2}=-(\gamma_R-1)(\nabla\cdot{\bf u})E_{g-1/2}/ \Delta(\log \varepsilon).$$ 
+Eq.(\ref{eq:mg6}) provides us a ready numerical scheme to solve this advection numerically. The recipi to construct a numerical flux for a linear advection equation
+are well-known. Specifically, we apply a limited reconstruction procedure, with the 
+'superbee' limiter function,
+$$L(a,b)=\frac12[{\rm sign}(a)+{\rm sign}(b)]\min(\max(|a|,|b|),2|a|,2|b|),$$ to obtain left and right interpolated values, 
+$$E^{(L)}_{g-1/2}=E_{g-1}+\frac12L(E_g-E_{g-1},E_{g-1}-E_{g-2}),$$
+$$ E^{(R)}_{g-1/2}=E_g-\frac12L(E_{g+1}-E_{g},E_{g}-E_{g-1})$$. 
+With these interpolated values  the upwinded numerical flux is constructed as 
+follows:
+\begin{eqnarray}
+F_{g-1/2}&=&-(\gamma_R-1)(\nabla\cdot{\bf u})E^{(R)}_{g-1/2}/ \Delta(\log \varepsilon),\qquad (\nabla\cdot{\bf u})\ge0,\nonumber\\
+F_{g-1/2}&=&-(\gamma_R-1)(\nabla\cdot{\bf u})E^{(L)}_{g-1/2}/ \Delta(\log \varepsilon),\qquad (\nabla\cdot{\bf u})\le0.\label{eq:mg7}
+\end{eqnarray}
+Eqs.(\ref{eq:mg6}) with the numerical fluxes as in Eq.(\ref{eq:mg7}) may be further 
+discretized using the control volume methods and solved numerically, assuming the 
+right hand side to be zero, as the coupled element of the system of hydrodynamic 
+(or magneto-hydro-dynamic) equations involving the ratiation pressure contributions. 
+Note, that suming up Eqs.(\ref{eq:mg6}) we obtain the equation of the gray radiation
+diffusion:
+\begin{equation}\label{eq:mg8}
+\frac{\partial E}{\partial t}+\nabla\cdot({\bf u}E)+(\gamma_R-1)(\nabla\cdot{\bf u}) E=\int_0^\infty{
+{(\rm diffusion + emission - absorption)}d\varepsilon}.
+\end{equation}
+If, again, we assume the right hand side of Eq.(\ref{eq:mg8}) to be zero, then only Eq.(\ref{eq:mg8}) is two-way coupled to the system of equation of the plasma motion,
+since in these equations the radiation effects the plasma motion only via the total radiation pressure:
+\begin{equation}
+P=(\gamma_R-1)E.
+\end{equation}
+On advancing the solution of this coupled system through the time step, the numerical solution of each of Eqs.(\ref{eq:mg6}) may be also advanced through the time step, 
+$\Delta t$, as 
+long as ${\bf u}$ is known. Depending on the value of $\Delta(\log \varepsilon)$ one may prefer to treat the advection over frequency as: (1) an extra flux (the control
+volume in this case is treated as the four-dimentional rectangular box $\Delta x*\Delta y*\Delta z*\Delta (\log \varepsilon)$); or (2) an extra advance operator, which can be
+split out and hanled separately. In the second case the second order of accuracy, $o((\Delta t)^2)$, may be achieved with the choice of the numerical flux as follows: 
+\begin{eqnarray}
+\Delta t F_{g-1/2}&=&-{\rm CFL}\left[E_g-\frac{1-{\rm CFL}}2L(E_{g+1}-E_{g},E_{g}-E_{g-1})\right],\qquad (\nabla\cdot{\bf u})\ge0,\nonumber\\
+\Delta t F_{g-1/2}&=&{\rm CFL}\left[E_{g-1}+\frac{1-{\rm CFL}}2L(E_g-E_{g-1},E_{g-1}-E_{g-2})\right],\qquad (\nabla\cdot{\bf u})\le0.\label{eq:mg9}
+\end{eqnarray}
+where
+\begin{equation}
+{\rm CFL}=\frac{(\gamma_R-1)\Delta t}{\Delta(\log \varepsilon)}|\nabla\cdot{\bf u}|\ge 0
+\end{equation}
+is the Courant-Friedrichs-Levi number.
+\end{document}

@@ -13,7 +13,7 @@ subroutine update_states_MHD(iStage,iBLK)
   use ModMultiIon, ONLY: multi_ion_source_impl, multi_ion_init_point_impl, &
        multi_ion_set_restrict, multi_ion_update, DoRestrictMultiIon
   use ModEnergy
-
+  use ModWaves, ONLY: nWave, UseWavePressure, update_wave_group_advection
   implicit none
 
   integer, intent(in) :: iStage, iBLK
@@ -167,6 +167,9 @@ contains
             Energy_GBI(iTest,jTest,kTest,iBlk,1)
 
     end if
+
+    if(iStage == nStage.and. UseWavePressure.and.nWave>=2)&
+         call advect_group_advection(iBLK) 
 
     if(boris_correction) then                 !^CFG IF BORISCORR BEGIN
        if(UseB0)then

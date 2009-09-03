@@ -27,13 +27,13 @@ subroutine calc_sources
   use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
   use ModCovariant,     ONLY: UseCovariant 
   use ModCurrent,       ONLY: get_current
-  use ModWaves,         ONLY: UseWavePressure, GammaWave, WaveEnergy, DivU
+  use ModWaves,         ONLY: UseWavePressure, GammaWave, WaveEnergy, DivU_C
 
   implicit none
 
   integer :: i, j, k, iDim, iVar
   logical :: UseRzGeometry
-  real :: Pe
+  real :: Pe, DivU
   real :: Coef
 
   ! Variable for div B diffusion
@@ -107,18 +107,18 @@ subroutine calc_sources
 
   if(UseWavePressure)then
      do k=1,nK; do j=1,nJ; do i=1,nI
-        DivU = vInv_CB(i,j,k,iBlock)*&
+        DivU_C(i,j,k) = vInv_CB(i,j,k,iBlock)*&
              (uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
              +uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
              +uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
         WaveEnergy = 0.0
         do iVar = WaveFirst_,WaveLast_
            Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) - &
-                DivU * (GammaWave - 1.0) * State_VGB(iVar,i,j,k,iBlock)
+                DivU_C(i,j,k) * (GammaWave - 1.0) * State_VGB(iVar,i,j,k,iBlock)
            WaveEnergy = WaveEnergy + State_VGB(iVar,i,j,k,iBlock)
         end do
         Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
-             DivU * (GammaWave - 1.0) * WaveEnergy
+             DivU_C(i,j,k) * (GammaWave - 1.0) * WaveEnergy
 
         ! Add "geometrical source term" p/r to the radial momentum equation
         ! The "radial" direction is along the Y axis
