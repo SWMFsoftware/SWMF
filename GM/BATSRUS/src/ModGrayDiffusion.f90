@@ -127,7 +127,7 @@ contains
              call stop_mpi(NameSub//": Te/=Ti requires Te,Ti relaxation")
           end if
           if(nWave == 1)then
-             UseT4 = .true.
+             UseT4 = .true.   ! backward compatibility
              iTrImplFirst = 1; iTrImplLast = 1
              nRelax = 0
              nPoint = 2
@@ -180,6 +180,8 @@ contains
           ImplStateMin = 0.0
 
        end select
+
+       iEradImpl = iTrImplFirst
 
        if(nPoint>0)then
           allocate(PointSemiCoef_VCB(nPoint,nI,nJ,nK,MaxBlock))
@@ -375,21 +377,25 @@ contains
        IsNewBlockGrayDiffusion = .true.
 
        if(iTeImpl > 0)then
-          do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, TeSiOut = TeSi)
-             StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
-                  TeSi*Si2No_V(UnitTemperature_)
+             Te = TeSi*Si2No_V(UnitTemperature_)
+             if(UseT4)then
+                StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = cRadiationNo*Te**4
+             else
+                StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = Te
+             end if
           end do; end do; end do
        end if
        if(iTrImplFirst > 0)then
           if(UseT4)then
-             do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 StateImpl_VGB(iTrImplFirst:iTrImplLast,i,j,k,iImplBlock) = &
                      State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
              end do; end do; end do
           else
-             do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 do iVarImpl = iTrImplFirst, iTrImplLast
                    iVar = WaveFirst_ + iVarImpl - iTrImplFirst
 
@@ -754,7 +760,6 @@ contains
       use ModAdvance,      ONLY: nOpacity
       use ModFaceGradient, ONLY: set_block_field
 
-      integer :: iWave
       real :: OpacityRosseland_I(nOpacity), DiffRad_I(nOpacity)
       real :: Grad2ByErad2_I(nOpacity)
       !------------------------------------------------------------------------
@@ -785,6 +790,7 @@ contains
          end if
 
          ! Store it for message passing
+         ! Need to be multiplied by Cvr in n-temperature model
          DiffSemiCoef_VGB(iDiffRadFirst:iDiffRadLast,i,j,k,iBlock) = DiffRad_I
       end if
 
@@ -794,6 +800,7 @@ contains
               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
          if(UseT4)then
+            Te = TeSi*Si2No_V(UnitTemperature_)
             DiffSemiCoef_VGB(iDiffHeat,i,j,k,iBlock) = HeatCond &
                  /(4.0*cRadiationNo*Te**3)
          else
