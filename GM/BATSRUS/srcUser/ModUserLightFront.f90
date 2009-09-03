@@ -289,9 +289,9 @@ contains
     real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxSiOut            ! [1/s]
     real, optional, intent(out) :: &
-         AbsorptionOpacitySiOut_I(nWave)                     ! [1/m]
+         AbsorptionOpacitySiOut_W(nWave)                     ! [1/m]
     real, optional, intent(out) :: &
-         DiffusionOpacitySiOut_I(nWave)                      ! [1/m]
+         DiffusionOpacitySiOut_W(nWave)                      ! [1/m]
 
     real :: Rho, Pressure, Temperature
     real :: RhoSi, pSi, TemperatureSi
