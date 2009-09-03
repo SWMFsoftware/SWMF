@@ -26,9 +26,6 @@ Module ModAdvance
   logical, parameter:: UseIdealEos = ExtraEint_ == 1
   logical, parameter:: UseElectronEnergy = Ee_ > 1
 
-  ! Number of Rosseland, Planck opacities used for radiation diffusion
-  integer, parameter:: nOpacity = max(1, nWave)
-
   !\ One of the two possible ways to treat the MHD-like systems
   !  (oartially symmetrizable, following the Godunov definition).
   !  If the UseRS7=.true. then the 7 waves Riemann Solver (RS) with 

@@ -464,8 +464,7 @@ end subroutine BC_solar_wind_buffer
 subroutine set_radiation_outflow_bc(iVarFirst, iVarLast, iSide)
 
   use ModSetOuterBC
-  use ModVarIndexes
-  use ModAdvance,  ONLY: State_VGB, nI, nJ, nK, nOpacity
+  use ModAdvance,  ONLY: State_VGB, nI, nJ, nK, nWave
   use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
   use ModPhysics,  ONLY: Si2No_V, UnitX_
   use ModUser,     ONLY: user_material_properties
@@ -473,20 +472,20 @@ subroutine set_radiation_outflow_bc(iVarFirst, iVarLast, iSide)
 
   integer, intent(in) :: iVarFirst, iVarLast, iSide
 
-  integer :: iVar, i, j, k, iOpacity
-  real :: OpacitySi_I(nOpacity), Coef
+  integer :: iVar, i, j, k, iWave
+  real :: OpacityRosselandSi_W(nWave), Coef
   !----------------------------------------------------------------------------
 
   select case(iSide)
   case(1,2)
      do k = 1, nK; do j = 1, nJ
         call user_material_properties(State_VGB(:,imin1p,j,k,iBLK), &
-             imin1p, j, k, iBLK, DiffusionOpacitySiOut_I=OpacitySi_I)
+             imin1p, j, k, iBLK, DiffusionOpacitySiOut_W=OpacityRosselandSi_W)
 
         do iVar = iVarFirst, iVarLast
-           iOpacity = iVar - iVarFirst + 1
-           Coef = 2/sqrt( &
-                (3*OpacitySi_I(iOpacity)/Si2No_V(UnitX_) * dx_BLK(iBLK))**2 &
+           iWave = iVar - iVarFirst + 1
+           Coef = 2/sqrt( (3*OpacityRosselandSi_W(iWave) &
+                /          Si2No_V(UnitX_) * dx_BLK(iBLK))**2 &
                 + ((State_VGB(iVar,imin2p,j,k,iBLK) &
                 -   State_VGB(iVar,imin1p,j,k,iBLK)) &
                 /  State_VGB(iVar,imin1p,j,k,iBLK))**2)
@@ -501,12 +500,12 @@ subroutine set_radiation_outflow_bc(iVarFirst, iVarLast, iSide)
   case(3,4)
      do k = 1, nK; do i = 1, nI
         call user_material_properties(State_VGB(:,i,jmin1p,k,iBLK), &
-             i, jmin1p, k, iBLK, DiffusionOpacitySiOut_I=OpacitySi_I)
+             i, jmin1p, k, iBLK, DiffusionOpacitySiOut_W=OpacityRosselandSi_W)
 
         do iVar = iVarFirst, iVarLast
-           iOpacity = iVar - iVarFirst + 1
-           Coef = 2/sqrt( &
-                (3*OpacitySi_I(iOpacity)/Si2No_V(UnitX_) * dy_BLK(iBLK))**2 &
+           iWave = iVar - iVarFirst + 1
+           Coef = 2/sqrt( (3*OpacityRosselandSi_W(iWave) &
+                /          Si2No_V(UnitX_) * dy_BLK(iBLK))**2 &
                 + ((State_VGB(iVar,i,jmin2p,k,iBLK) &
                 -   State_VGB(iVar,i,jmin1p,k,iBLK)) &
                 /  State_VGB(iVar,i,jmin1p,k,iBLK))**2)
@@ -521,12 +520,12 @@ subroutine set_radiation_outflow_bc(iVarFirst, iVarLast, iSide)
   case(5,6)
      do j = 1, nJ; do i = 1, nI
         call user_material_properties(State_VGB(:,i,j,kmin1p,iBLK), &
-             i, j, kmin1p, iBLK, DiffusionOpacitySiOut_I=OpacitySi_I)
+             i, j, kmin1p, iBLK, DiffusionOpacitySiOut_W=OpacityRosselandSi_W)
 
         do iVar = iVarFirst, iVarLast
-           iOpacity = iVar - iVarFirst + 1
-           Coef = 2/sqrt( &
-                (3*OpacitySi_I(iOpacity)/Si2No_V(UnitX_) * dz_BLK(iBLK))**2 &
+           iWave = iVar - iVarFirst + 1
+           Coef = 2/sqrt( (3*OpacityRosselandSi_W(iWave) &
+                /          Si2No_V(UnitX_) * dz_BLK(iBLK))**2 &
                 + ((State_VGB(iVar,i,j,kmin2p,iBLK) &
                 -   State_VGB(iVar,i,j,kmin1p,iBLK)) &
                 /  State_VGB(iVar,i,j,kmin1p,iBLK))**2)
@@ -541,4 +540,3 @@ subroutine set_radiation_outflow_bc(iVarFirst, iVarLast, iSide)
 
 end subroutine set_radiation_outflow_bc
 !==============================================================================
-

@@ -1168,7 +1168,7 @@ contains
     use ModConst,   ONLY: cKtoKev, cBoltzmann
     use ModSize,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Rho_, p_, LevelXe_, LevelBe_, LevelPl_, &
-         WaveFirst_, WaveLast_, nOpacity, UseElectronEnergy
+         nWave, WaveFirst_, WaveLast_, UseElectronEnergy
     use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
          UnitTemperature_, cRadiationNo, No2Si_V, UnitEnergyDens_
     use ModLookupTable, ONLY: interpolate_lookup_table
@@ -1190,8 +1190,8 @@ contains
 
     real    :: p, Rho, pSi, RhoSi, TeSi, WaveEnergy
     real    :: PiSi, TiSi, NatomicSi
-    real    :: AbsorptionOpacitySi_I(nOpacity)
-    real    :: DiffusionOpacitySi_I(nOpacity)
+    real    :: AbsorptionOpacitySi_W(nWave)
+    real    :: DiffusionOpacitySi_W(nWave)
     integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel, iWave
     real    :: Value_V(nMaterial*nThermo) ! Cv,Gamma,Kappa,Te for 3 materials
     !------------------------------------------------------------------------  
@@ -1245,15 +1245,15 @@ contains
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
-               AbsorptionOpacitySiOut_I = AbsorptionOpacitySi_I)
-          PlotVar_G(i,j,k) = AbsorptionOpacitySi_I(1)
+               AbsorptionOpacitySiOut_W = AbsorptionOpacitySi_W)
+          PlotVar_G(i,j,k) = AbsorptionOpacitySi_W(1)
        end do; end do; end do
     case('ross')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
-               DiffusionOpacitySiOut_I = DiffusionOpacitySi_I)
-          PlotVar_G(i,j,k) = DiffusionOpacitySi_I(1)
+               DiffusionOpacitySiOut_W = DiffusionOpacitySi_W)
+          PlotVar_G(i,j,k) = DiffusionOpacitySi_W(1)
        end do; end do; end do
     case('cond')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
@@ -1505,7 +1505,7 @@ contains
        EinternalSiIn, TeSiIn, NatomicSiOut, &
        EinternalSiOut, TeSiOut, PressureSiOut, &
        CvSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
-       AbsorptionOpacitySiOut_I, DiffusionOpacitySiOut_I)
+       AbsorptionOpacitySiOut_W, DiffusionOpacitySiOut_W)
 
     ! The State_V vector is in normalized units, all other physical
     ! quantities are in SI.
@@ -1518,8 +1518,7 @@ contains
 
     use CRASH_ModEos,  ONLY: eos, Xe_, Be_, Plastic_
     use ModMain,       ONLY: nI, nJ, nK
-    use ModAdvance,    ONLY: State_VGB, UseElectronEnergy, nOpacity, &
-         ExtraEint_, Ee_
+    use ModAdvance,    ONLY: State_VGB, UseElectronEnergy, ExtraEint_, Ee_
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, UnitEnergyDens_, &
          inv_gm1, g, Si2No_V
     use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_, nWave
@@ -1539,9 +1538,9 @@ contains
     real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxSiOut            ! [1/s]
     real, optional, intent(out) :: &
-         AbsorptionOpacitySiOut_I(nOpacity)                  ! [1/m]
+         AbsorptionOpacitySiOut_W(nWave)                     ! [1/m]
     real, optional, intent(out) :: &
-         DiffusionOpacitySiOut_I(nOpacity)                   ! [1/m]
+         DiffusionOpacitySiOut_W(nWave)                      ! [1/m]
 
     logical :: IsMix
     integer :: iMaterial, iMaterial_I(1)
@@ -1611,8 +1610,8 @@ contains
 
     if(present(TeSiOut)) TeSiOut = TeSi
 
-    if(present(AbsorptionOpacitySiOut_I) &
-         .or. present(DiffusionOpacitySiOut_I))then
+    if(present(AbsorptionOpacitySiOut_W) &
+         .or. present(DiffusionOpacitySiOut_W))then
 
        if(iTableOpacity > 0 .and. nWave==1)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
@@ -1622,26 +1621,26 @@ contains
           Opacity_V(2:2*nMaterial:2) = Opacity_V(2:2*nMaterial:2) &
                *RosselandScaleFactor_I
           if(UseVolumeFraction)then
-             if(present(AbsorptionOpacitySiOut_I)) AbsorptionOpacitySiOut_I &
+             if(present(AbsorptionOpacitySiOut_W)) AbsorptionOpacitySiOut_W &
                   = sum(Weight_I*Opacity_V(1:2*nMaterial:2)) * RhoSi
-             if(present(DiffusionOpacitySiOut_I)) DiffusionOpacitySiOut_I &
+             if(present(DiffusionOpacitySiOut_W)) DiffusionOpacitySiOut_W &
                   = sum(Weight_I*Opacity_V(2:2*nMaterial:2)) * RhoSi
           else
-             if(present(AbsorptionOpacitySiOut_I)) AbsorptionOpacitySiOut_I &
+             if(present(AbsorptionOpacitySiOut_W)) AbsorptionOpacitySiOut_W &
                   = Opacity_V(2*iMaterial + 1) * RhoSi
-             if(present(DiffusionOpacitySiOut_I)) DiffusionOpacitySiOut_I &
+             if(present(DiffusionOpacitySiOut_W)) DiffusionOpacitySiOut_W &
                   = Opacity_V(2*iMaterial + 2) * RhoSi
           end if
 
        else
           if(IsMix)then
              call eos(RhoToARatioSi_I, TeIn=TeSi, &
-                  OpacityPlanckOut_I=AbsorptionOpacitySiOut_I, &
-                  OpacityRosselandOut_I=DiffusionOpacitySiOut_I)
+                  OpacityPlanckOut_I=AbsorptionOpacitySiOut_W, &
+                  OpacityRosselandOut_I=DiffusionOpacitySiOut_W)
           else
              call eos(iMaterial, RhoSi, TeIn=TeSi, &
-                  OpacityPlanckOut_I=AbsorptionOpacitySiOut_I, &
-                  OpacityRosselandOut_I=DiffusionOpacitySiOut_I)
+                  OpacityPlanckOut_I=AbsorptionOpacitySiOut_W, &
+                  OpacityRosselandOut_I=DiffusionOpacitySiOut_W)
           end if
 
        end if
@@ -1721,8 +1720,8 @@ contains
 
       if(present(TeSiOut) .or. present(CvSiOut) .or. present(GammaOut) .or. &
            present(HeatCondSiOut) .or. &
-           present(AbsorptionOpacitySiOut_I) .or. &
-           present(DiffusionOpacitySiOut_I) )then
+           present(AbsorptionOpacitySiOut_W) .or. &
+           present(DiffusionOpacitySiOut_W) )then
 
          if(iTableThermo > 0)then
             call interpolate_lookup_table(iTableThermo, RhoSi, pSi/RhoSi, &
@@ -1832,8 +1831,8 @@ contains
 
       if(present(TeSiOut) .or. present(CvSiOut) .or. &
            present(HeatCondSiOut) .or. present(TeTiRelaxSiOut) .or. &
-           present(AbsorptionOpacitySiOut_I) .or. &
-           present(DiffusionOpacitySiOut_I) )then
+           present(AbsorptionOpacitySiOut_W) .or. &
+           present(DiffusionOpacitySiOut_W) )then
 
          if(TeSi < 0.0) then
             ! If TeSi is not set yet then we need to calculate things here

@@ -334,7 +334,7 @@ contains
 
   subroutine set_frozen_coefficients
 
-    use ModAdvance,  ONLY: State_VGB, nOpacity
+    use ModAdvance,  ONLY: State_VGB, nWave
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBlk, &
          UseHeatConduction, UseGrayDiffusion, UseRadDiffusion
@@ -344,7 +344,7 @@ contains
     use ModUser,     ONLY: user_material_properties
 
     integer :: i, j, k, iBlock
-    real :: PlanckOpacitySi_I(nOpacity), DiffusionOpacitySi_I(nOpacity)
+    real :: PlanckOpacitySi_W(nWave), DiffusionOpacitySi_W(nWave)
     real :: HeatCondSi
     real :: PlanckOpacity, DiffusionOpacity, HeatConductionCoef
     real :: CvSi, Cv, TeSi, Te, Trad, DiffRad
@@ -373,12 +373,12 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               AbsorptionOpacitySiOut_I = PlanckOpacitySi_I, &
-               DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
+               AbsorptionOpacitySiOut_W = PlanckOpacitySi_W, &
+               DiffusionOpacitySiOut_W = DiffusionOpacitySi_W, &
                CvSiOut = CvSi, TeSiOut = TeSi, HeatCondSiOut = HeatCondSi)
 
-          DiffusionOpacity = DiffusionOpacitySi_I(1)/Si2No_V(UnitX_)
-          PlanckOpacity = PlanckOpacitySi_I(1)/Si2No_V(UnitX_)
+          DiffusionOpacity = DiffusionOpacitySi_W(1)/Si2No_V(UnitX_)
+          PlanckOpacity = PlanckOpacitySi_W(1)/Si2No_V(UnitX_)
           HeatConductionCoef = HeatCondSi &
                *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
                *Si2No_V(UnitU_)*Si2No_V(UnitX_)

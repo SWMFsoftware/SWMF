@@ -243,7 +243,7 @@ contains
        EinternalSiIn, TeSiIn, NatomicSiOut, &
        EinternalSiOut, TeSiOut, PressureSiOut, &
        CvSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
-       AbsorptionOpacitySiOut_I, DiffusionOpacitySiOut_I)
+       AbsorptionOpacitySiOut_W, DiffusionOpacitySiOut_W)
 
     ! The State_V vector is in normalized units, all other physical
     ! quantities are in SI.
@@ -254,7 +254,7 @@ contains
     ! Otherwise they refer to the total (electron + ion) internal energies,
     ! total (electron + ion) pressure, and the total specific heat.
 
-    use ModAdvance,    ONLY: nOpacity
+    use ModAdvance,    ONLY: nWave
     use ModVarIndexes, ONLY: nVar
 
     real, intent(in) :: State_V(nVar)
@@ -270,9 +270,9 @@ contains
     real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxSiOut            ! [1/s]
     real, optional, intent(out) :: &
-         AbsorptionOpacitySiOut_I(nOpacity)                  ! [1/m]
+         AbsorptionOpacitySiOut_W(nWave)                     ! [1/m]
     real, optional, intent(out) :: &
-         DiffusionOpacitySiOut_I(nOpacity)                   ! [1/m]
+         DiffusionOpacitySiOut_W(nWave)                      ! [1/m]
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !------------------------------------------------------------------------

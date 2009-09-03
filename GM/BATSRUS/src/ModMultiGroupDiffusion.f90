@@ -232,7 +232,7 @@ contains
 
     subroutine get_diffusion_coef(State_V, DiffCoef)
 
-      use ModAdvance,     ONLY: nOpacity
+      use ModAdvance,     ONLY: nWave
       use ModPhysics,     ONLY: Si2No_V, UnitX_, Clight
       use ModTemperature, ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
       use ModUser,        ONLY: user_material_properties
@@ -240,13 +240,13 @@ contains
       real, intent(in) :: State_V(nVar)
       real, intent(out):: DiffCoef
 
-      real :: DiffusionOpacitySi_I(nOpacity), DiffusionOpacity, Grad2ByErad2
+      real :: DiffusionOpacitySi_W(nWave), DiffusionOpacity, Grad2ByErad2
       !------------------------------------------------------------------------
 
       call user_material_properties(State_V, i, j, k, iBlock, iDir, &
-           DiffusionOpacitySiOut_I = DiffusionOpacitySi_I)
+           DiffusionOpacitySiOut_W = DiffusionOpacitySi_W)
 
-      DiffusionOpacity = DiffusionOpacitySi_I(1)/Si2No_V(UnitX_)
+      DiffusionOpacity = DiffusionOpacitySi_W(1)/Si2No_V(UnitX_)
 
       if(UseRadFluxLimiter)then
          Grad2ByErad2 = sum(FaceGrad_D**2)/State_V(Erad_)**2
@@ -271,7 +271,7 @@ contains
 
   subroutine calc_source_rad_diffusion(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB, Source_VC, Erad_, nOpacity
+    use ModAdvance,    ONLY: State_VGB, Source_VC, Erad_, nWave
     use ModConst,      ONLY: cLightSpeed
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
     use ModMain,       ONLY: nI, nJ, nK
@@ -282,7 +282,7 @@ contains
 
     integer :: i, j, k
     real :: TeSi, Te
-    real :: AbsorptionEmission, PlanckOpacitySi_I(nOpacity)
+    real :: AbsorptionEmission, PlanckOpacitySi_W(nWave)
     character(len=*), parameter:: NameSub = "calc_source_rad_diffusion"
     !------------------------------------------------------------------------
 
@@ -290,10 +290,10 @@ contains
 
        if(IsNewTimestepRadDiffusion)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, AbsorptionOpacitySiOut_I = PlanckOpacitySi_I)
+               i, j, k, iBlock, AbsorptionOpacitySiOut_W = PlanckOpacitySi_W)
 
           RelaxCoef_VCB(1,i,j,k,iBlock) = &
-               PlanckOpacitySi_I(1)*cLightSpeed/Si2No_V(UnitT_)
+               PlanckOpacitySi_W(1)*cLightSpeed/Si2No_V(UnitT_)
        end if
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
@@ -322,7 +322,7 @@ contains
 
   subroutine get_impl_rad_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
-    use ModAdvance,  ONLY: Erad_, State_VGB, UseElectronEnergy, nOpacity
+    use ModAdvance,  ONLY: Erad_, State_VGB, UseElectronEnergy, nWave
     use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, TypeSemiImplicit, &
          iEradImpl, iTeImpl, ImplCoeff
     use ModMain,     ONLY: nDim, x_, y_, nI, nJ, nK, MaxImplBlk, Dt
@@ -340,7 +340,7 @@ contains
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
     integer :: iImplBlock, iBlock, i, j, k
-    real :: PlanckOpacitySi_I(nOpacity), DiffusionOpacitySi_I(nOpacity)
+    real :: PlanckOpacitySi_W(nWave), DiffusionOpacitySi_W(nWave)
     real :: DiffusionOpacity, PlanckOpacity, CvSi, Cv, TeSi, Te, CveSi, Cve
     real :: HeatCondSi, HeatCond, TeTiRelaxSi, TeTiRelax
     real :: Grad2ByErad2, DiffRad, InvDx2, InvDy2, InvDz2
@@ -387,12 +387,12 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
-               AbsorptionOpacitySiOut_I = PlanckOpacitySi_I, &
-               DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
+               AbsorptionOpacitySiOut_W = PlanckOpacitySi_W, &
+               DiffusionOpacitySiOut_W = DiffusionOpacitySi_W, &
                CvSiOut = CvSi, TeSiOut = TeSi, &
                HeatCondSiOut = HeatCondSi, TeTiRelaxSiOut = TeTiRelaxSi)
 
-          PlanckOpacity = PlanckOpacitySi_I(1)/Si2No_V(UnitX_)
+          PlanckOpacity = PlanckOpacitySi_W(1)/Si2No_V(UnitX_)
           Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
           Te = TeSi*Si2No_V(UnitTemperature_)
           TeTiRelax = TeTiRelaxSi/Si2No_V(UnitT_)
@@ -424,7 +424,7 @@ contains
           do k = 1, nK; do j = 1, nJ
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
+                  DiffusionOpacitySiOut_W = DiffusionOpacitySi_W, &
                   HeatCondSiOut = HeatCondSi, &
                   TeSiOut = TeSi)
              call get_diffusion_coef
@@ -435,7 +435,7 @@ contains
           do k = 1, nK; do j = 1, nJ
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
+                  DiffusionOpacitySiOut_W = DiffusionOpacitySi_W, &
                   HeatCondSiOut = HeatCondSi, &
                   TeSiOut = TeSi)
              call get_diffusion_coef
@@ -446,7 +446,7 @@ contains
           do k = 1, nK; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
+                  DiffusionOpacitySiOut_W = DiffusionOpacitySi_W, &
                   HeatCondSiOut = HeatCondSi, &
                   TeSiOut = TeSi)
              call get_diffusion_coef
@@ -457,7 +457,7 @@ contains
           do k = 1, nK; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
+                  DiffusionOpacitySiOut_W = DiffusionOpacitySi_W, &
                   HeatCondSiOut = HeatCondSi, &
                   TeSiOut = TeSi)
              call get_diffusion_coef
@@ -468,7 +468,7 @@ contains
           do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
+                  DiffusionOpacitySiOut_W = DiffusionOpacitySi_W, &
                   HeatCondSiOut = HeatCondSi, &
                   TeSiOut = TeSi)
              call get_diffusion_coef
@@ -479,7 +479,7 @@ contains
           do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
+                  DiffusionOpacitySiOut_W = DiffusionOpacitySi_W, &
                   HeatCondSiOut = HeatCondSi, &
                   TeSiOut = TeSi)
              call get_diffusion_coef
@@ -692,7 +692,7 @@ contains
       !------------------------------------------------------------------------
 
       if(TypeSemiImplicit=='radiation' .or. TypeSemiImplicit=='radcond')then
-         DiffusionOpacity = DiffusionOpacitySi_I(1)/Si2No_V(UnitX_)
+         DiffusionOpacity = DiffusionOpacitySi_W(1)/Si2No_V(UnitX_)
 
          ! Calculate the cell centered diffusion coefficients
          if(UseRadFluxLimiter)then
@@ -750,7 +750,7 @@ contains
 
   subroutine set_rad_outflow_bc(iSide, iBlock, iVar, nVar, State_VG)
 
-    use ModAdvance,  ONLY: nOpacity
+    use ModAdvance,  ONLY: nWave
     use ModImplicit, ONLY: nw
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB
     use ModMain,     ONLY: nI, nJ, nK
@@ -761,7 +761,7 @@ contains
     real, intent(inout) :: State_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2)
 
     integer :: i, j, k, iDiff
-    real :: Coef, OpacitySi_I(nOpacity)
+    real :: Coef, OpacitySi_W(nWave)
     logical :: IsFullState
     character(len=*), parameter :: NameSub='set_rad_outflow_bc'
     !--------------------------------------------------------------------------
@@ -774,9 +774,9 @@ contains
        do k = 1, nK; do j = 1, nJ
           if(IsFullState)then
              call user_material_properties(State_VG(:,1,j,k), &
-                  1, j, k, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
+                  1, j, k, iBlock, DiffusionOpacitySiOut_W=OpacitySi_W)
              Coef = 2/sqrt( &
-                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
+                  (3 * OpacitySi_W(1)/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
                   + ((State_VG(iVar,2,j,k) - State_VG(iVar,1,j,k)) &
                   /  State_VG(iVar,1,j,k))**2)
           else
@@ -791,9 +791,9 @@ contains
        do k = 1, nK; do j = 1, nJ
           if(IsFullState)then
              call user_material_properties(State_VG(:,nI,j,k), &
-                  nI, j, k, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
+                  nI, j, k, iBlock, DiffusionOpacitySiOut_W=OpacitySi_W)
              Coef = 2/sqrt( &
-                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
+                  (3 * OpacitySi_W(1)/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
                   + ((State_VG(iVar,nI,j,k)-State_VG(iVar,nI-1,j,k)) &
                   /   State_VG(iVar,nI,j,k))**2)
           else
@@ -810,9 +810,9 @@ contains
        do k = 1, nK; do i = 1, nI
           if(IsFullState)then
              call user_material_properties(State_VG(:,i,1,k), &
-                  i, 1, k, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
+                  i, 1, k, iBlock, DiffusionOpacitySiOut_W=OpacitySi_W)
              Coef = 2/sqrt( &
-                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
+                  (3 * OpacitySi_W(1)/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
                   + ((State_VG(iVar,i,2,k) - State_VG(iVar,i,1,k)) &
                   /  State_VG(iVar,i,1,k))**2)
           else
@@ -827,9 +827,9 @@ contains
        do k = 1, nK; do i = 1, nI
           if(IsFullState)then
              call user_material_properties(State_VG(:,i,nJ,k), &
-                  i, nJ, k, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
+                  i, nJ, k, iBlock, DiffusionOpacitySiOut_W=OpacitySi_W)
              Coef = 2/sqrt( &
-                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
+                  (3 * OpacitySi_W(1)/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
                   + ((State_VG(iVar,i,nJ,k)-State_VG(iVar,i,nJ-1,k)) &
                   /   State_VG(iVar,i,nJ,k))**2)
           else
@@ -846,9 +846,9 @@ contains
        do j = 1, nJ; do i = 1, nI
           if(IsFullState)then
              call user_material_properties(State_VG(:,i,j,1), &
-                  i, j, 1, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
+                  i, j, 1, iBlock, DiffusionOpacitySiOut_W=OpacitySi_W)
              Coef = 2/sqrt( &
-                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
+                  (3 * OpacitySi_W(1)/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
                   + ((State_VG(iVar,i,j,2) - State_VG(iVar,i,j,1)) &
                   /  State_VG(iVar,i,j,1))**2)
           else
@@ -863,9 +863,9 @@ contains
        do k = j, nJ; do i = 1, nI
           if(IsFullState)then
              call user_material_properties(State_VG(:,i,j,nK), &
-                  i, j, nK, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
+                  i, j, nK, iBlock, DiffusionOpacitySiOut_W=OpacitySi_W)
              Coef = 2/sqrt( &
-                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
+                  (3 * OpacitySi_W(1)/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
                   + ((State_VG(iVar,i,j,nK)-State_VG(iVar,i,j,nK-1)) &
                   /   State_VG(iVar,i,j,nK))**2)
           else
