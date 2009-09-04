@@ -13,7 +13,7 @@ module CRASH_ModMultiGroup
   use CRASH_ModPartition,   ONLY : Na, Te, zAv
   use CRASH_ModPartition,   ONLY : iZMin_I !(1:nMixMax)
   use CRASH_ModPartition,   ONLY : iZMax_I !(1:nMixMax)
-  use ModConst,ONLY: cHPlanckEV
+  use ModConst
   implicit none
   SAVE
   PRIVATE !Except
@@ -40,6 +40,10 @@ module CRASH_ModMultiGroup
   !Radiation frequency groups:
   integer :: nGroup = nGroupMax 
   real :: EnergyGroup_I(0:nGroupMax)
+  real :: DeltaLogFrequency
+
+  public:: get_energy_g_from_temperature, get_temperature_from_energy_g
+
 
   integer,parameter::nptspg = 30
 
@@ -64,6 +68,11 @@ module CRASH_ModMultiGroup
   !the same, averaged over the whole frequency range
   !/
   real :: OpacityPlanckTotal, OpacityRosselandTotal  
+
+  !\
+  ! Normalization parameters
+  !/                    \approx  1/ 6.4939     \approx 1/ 25.976 
+  real,parameter :: cNormG5 = 15.0/(cPi**4), cNormG6 = 0.250 * cNormG5
 
   !\
   ! LOGICALS
@@ -91,6 +100,79 @@ module CRASH_ModMultiGroup
   logical,public :: UseScattering      = .false.
 contains
   !======================================================================
+  subroutine get_energy_g_from_temperature(iGroup, TgSI, EgSI, CgSI)
+    !\
+    !Input parameters
+    !/
+    integer,intent(in):: iGroup
+    real,   intent(in):: TgSI    !Group temperature [K]
+
+    !\
+    !Output parameters
+    !/
+    real, optional, intent(out) :: EgSI    !Radiation energy per group, J/m3
+    real, optional, intent(out) :: CgSI    !Radiation specific heat per group, J/(K.m3)
+    real :: xMin, xMax
+    !---------------------------------
+    xMin = EnergyGroup_I(iGroup - 1)/(TgSI * cKToEV)
+    xMax = EnergyGroup_I(iGroup    )/(TgSI * cKToEV)
+    
+    if(present(EgSI))EgSI = cNormG5 * gint(5,xMin,xMax) * (      cRadiation * TgSI**4)
+    if(present(CgSI))CgSI = cNormG6 * gint(6,xMin,xMax) * (4.0 * cRadiation * TgSI**3)
+    
+  end subroutine get_energy_g_from_temperature
+  !======================================================================
+  subroutine get_temperature_from_energy_g(iGroup, EgSI, TgSIOut, CgSIOut)
+    !\
+    !Input parameters
+    !/
+    integer,intent(in):: iGroup
+    real,   intent(in):: EgSI    !Group temperature [K]
+
+    !\
+    !Output parameters
+    !/
+    real, optional, intent(out) :: TgSIOut    !Radiation energy per group, J/m3
+    real, optional, intent(out) :: CgSIOut    !Radiation specific heat per group, J/(K.m3)
+
+
+    real :: xMin, xMax, FreqMin, FreqMax
+    real :: TgSI, CgSI, ToleranceEg, DeltaEg
+
+    real, parameter:: cTolerance = 1.0E-3
+    
+    integer, parameter :: nIter = 10
+    integer :: iIter
+    !--------------------------------------------------
+    FreqMin = EnergyGroup_I(iGroup - 1) * cEVToK 
+    FreqMax = EnergyGroup_I(iGroup    ) * cEVToK
+    !\
+    !Approximation to start:
+    !/
+    TgSI = sqrt(xMin*xMax)/log(1.0 + cRadiation * xMin**2 * xMax**2 * cNormG5 * &
+         DeltaLogFrequency / EgSI)
+    
+    ToleranceEg = cTolerance * EgSI
+
+    iIter = 0
+    DeltaEg = 2.0 * ToleranceEg !To start Newton-Rapson iterations
+    do while (abs(DeltaEg) > ToleranceEg.and.iIter < nIter)
+       xMin = FreqMin /TgSI
+       xMax = FreqMax /TgSI
+
+       DeltaEg = EgSI -  cNormG5 * gint(5, xMin, xMax) * cRadiation * TgSI**4
+       CgSI    =         cNormG6 * gint(6,xMin,xMax) * (4.0 * cRadiation * TgSI**3)
+
+       TgSI = TgSI + DeltaEg/CgSI
+
+       iIter = iIter + 1
+    end do
+
+    
+    if(present(TgSIOut))TgSIOut = TgSI
+    if(present(CgSIOut))CgSIOut = CgSI
+  end subroutine get_temperature_from_energy_g
+  !======================================================================
   subroutine set_multigroup(nGroupIn, FreqMinSI, FreqMaxSI)
     !\
     !Set the values of PHOTON ENERGY grid
@@ -98,7 +180,7 @@ contains
     integer, intent(in) :: nGroupIn  !The number of photon energy groups
 
     real,    intent(in) :: FreqMinSI, FreqMaxSI  !Min and max FREQUENCIES [Hz]
-    real:: elnmin,elnmax,delog,elog
+    real:: elnmin,elnmax,elog
     integer:: iGroup
     !-----------------------
     nGroup = nGroupIn
@@ -109,10 +191,10 @@ contains
     if ( nGroup <=1 ) return                              
     elnmin = log( EnergyGroup_I(0) )                            
     elnmax = log( EnergyGroup_I(nGroup) )                    
-    delog = ( elnmax-elnmin ) / nGroup                   
+    DeltaLogFrequency = ( elnmax-elnmin ) / nGroup                   
     elog = elnmin                                        
     do iGroup=1,nGroup-1                                  
-       elog = elog + delog                               
+       elog = elog + DeltaLogFrequency                               
        EnergyGroup_I(iGroup) = exp( elog )                         
     end do
 
@@ -1191,8 +1273,8 @@ contains
        OpacityRosselandTotal  = OpacityRosselandTotal  + gint(6,XGroupMin,XGroupMax) / OpacityRosseland_I(iGroup)               
     end do
     ! ... compute the total opacities based on the group opacities         
-    OpacityPlanckTotal = OpacityPlanckTotal / 6.4939                                                                                  
-    OpacityRosselandTotal = 25.976 / OpacityRosselandTotal                                            
+    OpacityPlanckTotal = OpacityPlanckTotal * cNormG5                                                                                 
+    OpacityRosselandTotal = 1.0/ (OpacityRosselandTotal * cNormG6)                                            
 
 
   contains

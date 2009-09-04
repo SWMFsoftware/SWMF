@@ -182,4 +182,161 @@ where
 {\rm CFL}=\frac{(\gamma_R-1)\Delta t}{\Delta(\log \varepsilon)}|\nabla\cdot{\bf u}|\ge 0
 \end{equation}
 is the Courant-Friedrichs-Levi number.
+\section{Absroption, emission and stimulated emission}
+An account of the stimuated emission is not less important in the context of the multi-group radiation diffusion than the use of the locat 
+termodynamic equailibrium assumption. As long as the stimulated emission is not often discussed in books regarding the diffisive radiation 
+transport, the code developer may meet a problem while bridging from the absorption coefficient, $a_\varepsilon$, 
+which is calculated from single-photon diagrams of Quantum ElectroDynamics (QED), describing an absorption of a single photon, to the absorption 
+coefficient which is to be used in the radiation trasport simulations. Below we follow \cite{ZR}, in which this subject is presented quite 
+transparently.
+
+Consider a part of the radiation spectrum, of a small width of $\Delta\varepsilon$, about the photon energy, $\varepsilon$, which is resonant with some 
+bound-bound transition, that is 
+\begin{equation}\label{eq:mg10}
+\varepsilon={\cal E}_E - {\cal E}_A,
+\end{equation}
+where ${\cal E}_A$ and ${\cal E}_E$ are some energy states of an atom (or ion, below we refer the system in these states to as an Emitter or an Absorber). For 
+the sake of simplicity, assume for a while that the degeneracy
+(multiplicity) is equal to one for both upper and lower level:
+$$
+g_E = 1,\qquad g_A = 1,
+$$  
+the use of the same denotation for the degeneracy as for the group index should not confuse the reader.
+
+Assume there is no photon in the initial state. The only radiation process which can occur in this case is the spontaneous emission. Introduce 
+the probability, $dw_p/d{\bf o}$, for the spontaneous emission from a single emitter, into the element of a solid andgle, with a given polarization 
+of the photon, $p$, per a unit of time.  The total spontaneous emission from the unit of volume is, hence, 
+$$N_E\frac{dw_p}{d{\bf o}}d{\bf o},$$ 
+where $N_{E,A}$ are the abundancies of the emitters and the absorbers correspondingly. The contribution from the 
+spontaneous emission to Eq.(\ref{eq:mg2}) should have an extra factor of $4\pi$ (due to the integration over the photon directions) 
+times $2$ (summation by polarizations) times $\varepsilon$ (an emitted energy per a photon) divided by $\Delta\varepsilon$.
+
+Now assume that there are $N_p$ photons in the considered unit volume of plasma, which are in the same as the emitted photon. The rules to express the 
+probability of stimulated emission and absorption may be found in any textbook on QED,
+particularly, we follow \cite{lp}. The probability of a total emission (spontaneous plus stimilated) equals 
+$$(1+N_p)\frac{dw_p}{d{\bf o}}$$ 
+while the number of the absorbed photons from the same photon state, per an absorber, equals
+$$
+(1+N_p)\frac{dw_p}{d{\bf o}}
+$$
+On integrating the total absorbtion and emission by $d{\bf o}$ and suming the result up by polarizations, we arrive at the following expression for
+the emission and absoption terms in Eq.(\ref{eq:mg2}):
+$$
+{\rm emission - absortion}=\frac{8\pi\varepsilon}{\Delta\varepsilon}\frac{dw_p}{d{\bf o}}(N_E(1+N_p)-N_AN_p)
+$$
+Now we may abandon the assumption about non-degeneracy of the emeitter and absorber states. The extra freedom of the ssytem in its {\it final} state to occupy any 
+of $g_f$ final states simply multiplies the transition probability by a factor of $g_f$. Properly applying the factors $g_f=g_E$ and $g_f=g_A$, we find:
+$$
+{\rm emission - absortion}=\frac{8\pi\varepsilon}{\Delta\varepsilon}\frac{dw_p}{d{\bf o}}(N_Eg_A(1+N_p)-N_Ag_EN_p).
+$$
+
+The population of the photon state, $N_p$, may be related to the spectral energy density. A radiation energy in the unit volume within the interval of 
+the photon energies, $d{\varepsilon}$, may be written as $E_\varepsilon d\varepsilon$. The same energy may be obtained if we multiply $2N_p\varepsilon$ 
+(the factor of two accounts for two polarizations of the photon) by the number of photon states within $d\varepsilon$. In the unit volume the number of photon states
+per the pase volume of $dk_xdk_ydk_z$ equals $dk_xdk_ydk_z/(2\pi)^3$, with $k_x$, $k_y$, $k_z$ being the three components of the wave vector. The number of photon states 
+per the interval of $dk$ is, hence, $4\pi k^2dk/(2\pi)^3=4\pi \varepsilon^2d\varepsilon/(hc)^3$. We find:
+$$
+E_\varepsilon=\frac{8\pi N_p\varepsilon^3}{h^3c^3},
+$$
+and
+\begin{equation}
+{\rm emission - absorption}=
+ca_\varepsilon\left[\frac{N_Eg_A}{N_Ag_E}\left(\frac{8\pi\varepsilon^3}{h^3c^3}+E_\varepsilon\right) -E_\varepsilon\right].
+\end{equation}
+where the absorption coefficient is introduced (the radiation energy dissipation per a unit of length), which is related to the emission probability as follows:
+\begin{equation}
+a_\varepsilon=\frac{h^3c^2N_Ag_E}{8\pi \varepsilon^2}\frac{dw_p}{d{\bf o}\Delta\varepsilon}.
+\end{equation}
+
+Under the condition of a local thermodynamic equilibrium, the partition function of atoms and ions in different charge and energy states is governed by the Boltzmann 
+statistics, so that the abundance of each excited level is proportianal to its mutiplicity and to the Boltzbann factor, $\exp(-E/(k_BT))$. Therefore, under these 
+circumstances, using Eq.(\ref{eq:mg10}), we find
+\begin{equation}\label{eq:mg11}
+N_{E,A}\propto g_{E,A}\exp[-E_{E,A}/(k_BT)],\qquad \frac{N_Eg_A}{N_Ag_E}=\exp\left[\frac{E_A-E_E}{k_BT}\right]=\exp[-\varepsilon/(k_BT)]
+\end{equation}  
+and
+\begin{equation}
+{\rm emission - absorption}=
+ca^\prime_\varepsilon\left(\frac{8\pi}{h^3c^3}\frac{\varepsilon^3}{\exp[\varepsilon/(k_BT)]-1} -E_\varepsilon\right).
+\end{equation}
+where the effective absorption coefficient, $a^\prime_\varepsilon$, is indroduced, which is corrected to account for stimulated emission:
+\begin{equation}
+a^\prime_\varepsilon = a_\varepsilon\left(1-\exp\left[-\frac{\varepsilon}{k_BT}\right]\right)
+\end{equation}
+Following \cite{ZR} we can make now two important conclusions. First, the assoption 
+coefficient to be used in simulationg the radiation transport should be corrected for 
+the stimulated emission, by means of applying a simple correction factor. Second, the 
+spontaneous emission from a plasma with the equilibrium distribution over the energy 
+states is related to the corrected absorption coefficient in sunch a way that their ratio,
+\begin{equation}\label{eq:mg12}
+E_\varepsilon^{(Pl)}(T,\varepsilon)=\frac{8\pi}{h^3c^3}\frac{\varepsilon^3}{\exp[\varepsilon/(k_BT)]-1},
+\end{equation}
+is the spectral energy density distribution of the black body radiation (the Planckian). We will also
+apply it in a normalized form as follows:
+\begin{equation}\label{eq:mg13}
+E_\varepsilon^{(Pl)}(T,\varepsilon)=\alpha T^4 \frac{15}{\pi^4}\frac{x^3}{\exp(x)-1}\frac{1}{k_BT}, \qquad \alpha=\frac{8\pi^5 k_B^4}{15 h^3c^3},\qquad x=\frac{\varepsilon}{k_BT}.
+\end{equation} 
+The spectral function in (\ref{eq:mg12}) is normalized by a unity:
+$$
+\int_0^\infty{\frac{15}{\pi^4}\frac{x^3}{\exp(x)-1}\frac{d\varepsilon}{k_BT}}=\frac{15}{\pi^4}\int_0^\infty{\frac{x^3dx}{\exp(x)-1}}=1,
+$$
+about the intregrals like this see \S58 in \cite{ll}. Therefore the total energu density in the Planck spectrum equals $\alpha T^4$, as it should.
+
+Comment about the case in which Emitter or Absorber is an electron, obeying the Fermi statistics.
+\section{Spectral temperature and group spectral temperatures}
+In \cite{ll} it was mentioned that for any known spectral energy distribution , $E_\varepsilon$ at any value of $\varepsilon$, the local 
+spectral temperature, $T^{Spectral}(E_\varepsilon(\varepsilon),\varepsilon)$ may be introduced, such that the spectral energy density 
+$E_\varepsilon(\varepsilon)$ is locally equal to the Planckian spectral energy density at the temperature $T^{Spectral}$:
+\begin{equation}
+E_\varepsilon(\varepsilon)=E_\varepsilon^{(Pl)}(T^{Spectral},\varepsilon).
+\end{equation}
+Of course, if the radiation spectrum differs from that for equilibrium black-body radiation, the values of $T^{Spectral}$ are different at different energies, 
+generally speaking.
+
+In other words, for non-equilibrium spectrum, the distribution of spectral temperature may be used instead of the spectral energy density, as the spctrum characteristics.
+The relationship between the spectral temperature and spectrum energy density is one-to-one mapping. For a given spectral temperature, the spectral energy density is given
+by Eq.(\ref{eq:mg12}). For a given spectral energy density the spectral temperature amy be found using Eq.(63.26) from \cite{ll} which in our denotations may be written as 
+follows:
+\begin{equation}\label{eq:mg14}
+T^{Spectral}=\frac{
+\varepsilon/k_B}
+{
+\log\left(1+\frac{8\pi}{h^3c^3}\frac{\varepsilon^3}{E_\varepsilon}\right)
+}
+\end{equation} 
+
+Now we introduce the discrete analog of a spectral temperature. Specifically, we introduce {\it a group temperature}, $T_g$, such that the spectral energy of a black-body 
+radiation, once integrated over the photon energy within a given group, would equal the given value of $E_g$:
+\begin{equation}\label{eq:mg15}
+E_g(T_g)=\int_{\varepsilon_{g-1/2}}^{\varepsilon_{g+1/2}}{E_\varepsilon^{(Pl)}(T_g,\varepsilon)d\varepsilon}=\alpha T_g^4\frac{15}{\pi^4}\int_{\varepsilon_{g-1/2}/(k_BT_g)}^{\varepsilon_{g+1/2}/(k_BT_g)}{\frac{x^3dx}{\exp(x)-1}}.
+\end{equation}
+We will also need an expression for the group specific heat of the radiation, per a unit of volume:
+\begin{equation}
+C_g=\frac{dE_g}{dT_g}=4\alpha T_g^3\frac{15}{4\pi^4}\int_{\varepsilon_{g-1/2}/(k_BT_g)}^{\varepsilon_{g+1/2}/(k_BT_g)}{\frac{x^3\exp(x)dx}{[\exp(x)-1]^2}}.
+\end{equation}
+The procedure which allows us to obtain the radiation energy density per group and radiation specific heat per group from the given group temperature is 
+straightforward. However, the inverse procedure is not that simple, because Eq.(\ref{eq:mg14}) now only holds as an approximate one:
+\begin{equation}\label{eq:mg16}
+T^g\approx\frac{
+\sqrt{\varepsilon_{g-1/2}\varepsilon_{g+1/2}}/k_B}
+{
+\log\left(
+1+\frac{\alpha\varepsilon_{g-1/2}^2\varepsilon_{g+1/2}^2}{k_B^4}\frac{15}{\pi^4}\frac{\Delta(\log \varepsilon)}{E_g}\right)
+}
+\end{equation}
+To satisfy Eq.(\ref{eq:mg15}), one needs to improve the accuracy using Newton-Rapson procedure:
+\begin{equation}
+T_g^{n+1}=T_g^n+ (E_g-E_g(T_g^n))/C_g(T_g^n).
+\end{equation}
+
+ 
+\begin{thebibliography}{99}
+\bibitem{ZR}
+Ya.B.Zel'dovich and Yu.P.Raizer, Physics of Shock Waves and High Temperature Hydrodynamic Phenomena,
+\bibitem{lp}
+V. B. Berestetskii, E. M. Lifshitz, and L. P. Pitaevskii, Quantum Electrodynamics 
+(Pergamon, Oxford, 1982).
+\bibitem{ll}
+L.D.Landau and E.M.Lifshitz, Theoretical Physics. Vol.5. Statistical Physics, Part 1. 3rd Edition. Pergamon Press, NY, 1980.
+\end{thebibliography}
 \end{document}
