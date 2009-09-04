@@ -12,6 +12,7 @@ my %Compiler = (
 		"cfe"       => "ifort",
 		"pfe"       => "ifort",
 		"sysx"      => "xlf90",
+		"nyx-login" => "pgf90",
 		"hera"      => "mpiifort",
 		);
 
@@ -26,6 +27,7 @@ my %MpiVersion = (
 		  "cfe"       => "Altix",
 		  "pfe"       => "Altix",
 		  "grendel"   => "openmpi",
+		  "nyx-login" => "openmpi",
 		  "hera"      => "mvapich",
 		  );
 
