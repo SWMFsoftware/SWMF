@@ -1505,7 +1505,8 @@ contains
        EinternalSiIn, TeSiIn, NatomicSiOut, &
        EinternalSiOut, TeSiOut, PressureSiOut, &
        CvSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
-       AbsorptionOpacitySiOut_W, DiffusionOpacitySiOut_W)
+       AbsorptionOpacitySiOut_W, DiffusionOpacitySiOut_W, &
+       PlanckSiOut_W, CgTeSiOut_W, CgTgSiOut_W, TgSiOut_W)
 
     ! The State_V vector is in normalized units, all other physical
     ! quantities are in SI.
@@ -1517,11 +1518,14 @@ contains
     ! total (electron + ion) pressure, and the total specific heat.
 
     use CRASH_ModEos,  ONLY: eos, Xe_, Be_, Plastic_
+    use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature, &
+         get_temperature_from_energy_g
     use ModMain,       ONLY: nI, nJ, nK
-    use ModAdvance,    ONLY: State_VGB, UseElectronEnergy, ExtraEint_, Ee_
+    use ModAdvance,    ONLY: State_VGB, UseElectronEnergy
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, UnitEnergyDens_, &
          inv_gm1, g, Si2No_V
-    use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_, nWave
+    use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_, nWave, &
+         WaveFirst_, ExtraEint_, Ee_
     use ModLookupTable,ONLY: interpolate_lookup_table
     use ModConst,      ONLY: cAtomicMass
 
@@ -1542,14 +1546,28 @@ contains
     real, optional, intent(out) :: &
          DiffusionOpacitySiOut_W(nWave)                      ! [1/m]
 
+    ! Multi-group specific interface. The variables are respectively:
+    !  Group Planckian spectral energy density
+    !  Derivative of group Planckian by electron temperature
+    !  Group specific heat of the radiation
+    !  Group radiation temperature
+    real, optional, intent(out) :: PlanckSiOut_W(nWave)      ! [J/m^3]
+    real, optional, intent(out) :: CgTeSiOut_W(nWave)        ! [J/(m^3*K)]
+    real, optional, intent(out) :: CgTgSiOut_W(nWave)        ! [J/(m^3*K)]
+    real, optional, intent(out) :: TgSiOut_W(nWave)          ! [K]
+
     logical :: IsMix
     integer :: iMaterial, iMaterial_I(1)
     real    :: pSi, RhoSi, TeSi, LevelSum
     real    :: Value_V(nMaterial*nThermo), Opacity_V(2*nMaterial)
     real, dimension(0:nMaterial-1) :: &
          pPerE_I, EperP_I, RhoToARatioSi_I, Weight_I
-
     real :: Level_I(3), LevelLeft, LevelRight
+
+    ! multi-group variables
+    integer :: iWave, iVar
+    real :: EgSi
+
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !-------------------------------------------------------------------------
     ! Density, transformed to SI
@@ -1633,6 +1651,7 @@ contains
           end if
 
        else
+          ! multi-group opacities
           if(IsMix)then
              call eos(RhoToARatioSi_I, TeIn=TeSi, &
                   OpacityPlanckOut_I=AbsorptionOpacitySiOut_W, &
@@ -1644,6 +1663,22 @@ contains
           end if
 
        end if
+    end if
+
+    if(present(PlanckSiOut_W) .or. present(CgTeSiOut_W))then
+       do iWave = 1, nWave
+          call get_energy_g_from_temperature( &
+               iWave, TeSi, EgSI=PlanckSiOut_W(iWave), CgSI=CgTeSiOut_W(iWave))
+       end do
+    end if
+
+    if(present(TgSiOut_W) .or. present(CgTgSiOut_W))then
+       do iWave = 1, nWave
+          iVar = WaveFirst_ + iWave - 1
+          EgSi = State_V(iVar)*No2Si_V(UnitEnergyDens_)
+          call get_temperature_from_energy_g(iWave, EgSI=EgSi, &
+               TgSIOut=TgSiOut_W(iWave), CgSIOut=CgTgSiOut_W(iWave))
+       end do
     end if
 
   contains
@@ -1721,7 +1756,8 @@ contains
       if(present(TeSiOut) .or. present(CvSiOut) .or. present(GammaOut) .or. &
            present(HeatCondSiOut) .or. &
            present(AbsorptionOpacitySiOut_W) .or. &
-           present(DiffusionOpacitySiOut_W) )then
+           present(DiffusionOpacitySiOut_W) .or. &
+           present(PlanckSiOut_W) .or. present(CgTeSiOut_W))then
 
          if(iTableThermo > 0)then
             call interpolate_lookup_table(iTableThermo, RhoSi, pSi/RhoSi, &
@@ -1832,7 +1868,8 @@ contains
       if(present(TeSiOut) .or. present(CvSiOut) .or. &
            present(HeatCondSiOut) .or. present(TeTiRelaxSiOut) .or. &
            present(AbsorptionOpacitySiOut_W) .or. &
-           present(DiffusionOpacitySiOut_W) )then
+           present(DiffusionOpacitySiOut_W) .or. &
+           present(PlanckSiOut_W) .or. present(CgTeSiOut_W))then
 
          if(TeSi < 0.0) then
             ! If TeSi is not set yet then we need to calculate things here
