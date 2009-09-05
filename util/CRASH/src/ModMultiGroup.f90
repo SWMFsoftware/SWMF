@@ -13,6 +13,7 @@ module CRASH_ModMultiGroup
   use CRASH_ModPartition,   ONLY : Na, Te, zAv
   use CRASH_ModPartition,   ONLY : iZMin_I !(1:nMixMax)
   use CRASH_ModPartition,   ONLY : iZMax_I !(1:nMixMax)
+  use CRASH_ModFermiGas,    ONLY : LogGe
   use ModConst
   implicit none
   SAVE
@@ -243,7 +244,7 @@ contains
   end function oscillator_strength
 
   !======================================================================
-  subroutine lines (ephot,abstot,emstot )       
+  subroutine lines (ephot,abstot)       
 
     !                                                                       
     ! ... compute the contribution to the absorption coefficient from       
@@ -262,7 +263,7 @@ contains
     !       emstot  -  emission coefficient due to lines (cm**-1)           
     !   
 
-    real,intent(out)::absTot,emsTot                            
+    real,intent(out) :: absTot   !!$ ,emsTot                            
 
     integer:: iSav !Integer to count the total number of lines involved
     integer,parameter:: nSavMax = 200 !The upper bound for iSav
@@ -281,15 +282,15 @@ contains
     real:: denlqn !The same, for the ion in the lower state, for a given transition
     real:: dnlqnp !The same, for the ion in the upper state.
 
-    !The controbutions to the total absorption and the total emission,
+    !The controbutions to the total absorption,
     !calculated by the 'abslin' subroutine
-    real:: abscof, emscof 
+    real:: abscof  
     !-------------------
 
 
     iSav = 0                                                          
     abstot = 0.                                                       
-    emstot = 0.                      
+                         
 
     DensNN = Na * 1.0e-6  !To convert to cm-3
     DensNe = DensNN * zAv !Electron density, in cm-3
@@ -329,7 +330,7 @@ contains
                 call abslin   
                 if ( abscof .ne. 0. ) then                            
                    abstot = abstot + abscof                           
-                   emstot = emstot + emscof                           
+                           
                    isav = isav + 1                                    
                    if ( isav==nSavMax ) then                            
                       call CON_stop(' you are keeping track of too many lines') 
@@ -393,7 +394,8 @@ contains
       !\
       !Coefficients to account for stimulated emission
       !/
-      real::corsea,corsee,corrse
+      real::corsea 
+      real::corrse
 
       !Mics:
       real::ex1
@@ -412,7 +414,6 @@ contains
          ! ...    some transitions are not allowed                               
          if ( ennp.le.0) then
             abscof = 0.0
-            emscof = 0.0
             return
          end if
       else                                                              
@@ -429,8 +430,7 @@ contains
       DeltaNu = ( ennp-ephot ) / cHPlanckEV                                  
       if ( abs( deltaNu ) > con(5)*gamma ) then 
          !Line is too far, ignore it
-         abscof = 0.                                                    
-         emscof = 0.                                                    
+         abscof = 0.                                                                                                       
          return
       endif
 
@@ -457,52 +457,33 @@ contains
       !case only
 
       ex1 = exp( -ephot/Te )                                         
-      !non-LTE: ex2 = exp( - ennp/Te )                                         
+                                           
 
-      if ( iN==iNUpper) then                                            
+      if ( iN==iNUpper) then   
+                                         
          call CON_stop('Inappropriate')
+
          alpha = 2.65e-2 * fnn * shape * denlqn * ( 1.-ex1 )         
 
-         ! ...       correct for the "effective" stimulated emission to          
-         !           give the proper form for the cooling rate                   
-         !non-LTE:if ( isw(6) .ne. 1 ) then                                   
-         ! ...          general form                                             
-         !non-LTE:   xnjoni = gnn * densne * ex2 /    &                        
-         !non-LTE        ( gnn * densne + ennp**3 * sqrt(Te) * 2.74e12 )   
-         !non-LTE   corsee = gnn * densne /          &                       
-         !non-LTE        ( gnn * densne + ennp**3 * sqrt(Te) * 2.74e12 )   
-         !non-LTE   corsea = ( 1.-xnjoni ) / ( 1.-ex2 )  
-         !non-LTE else                                                        
-         ! ...          LTE assumed                                              
+                                                      
          corsea = 1.0                                            
-         corsee = 1.0                                             
-         !non-LTE: endif
-
-
          abscof = alpha * corsea                                     
-         emscof = alpha * corsee                                     
+                                     
 
       else                                                          
 
          OscillatorStrength = oscillator_strength ( iN, iNUpper) 
 
-         !non-LTE: dum = ( iN * iN * dnlqnp ) / ( np*np*denlqn )
-         !in LTE dum=ex2                     
+                         
 
          ! ...       correct for stimulated emission  
-
-         !non-LTE: corrse = ( 1.-dum ) * ( 1.-ex1 ) / ( 1.-ex2 ) 
 
          corrse = 1.0 - ex1
 
          alpha  = 2.65e-2 * OscillatorStrength * shape * denlqn                    
          abscof = alpha * corrse   
 
-         !non-LTE: if ( ex2 .gt. 0. ) then                                     
-         !non-LTE:   emscof = alpha * dum * ( 1.-ex1 ) / ex2                   
-         !non-LTE: else                                                        
-         emscof = abscof                                           
-         !non-LTE: endif
+        
 
       endif
 
@@ -883,7 +864,10 @@ contains
 
     real:: DensNN, DensNe    ![cm -3]
 
-    real,dimension(nMixMax) :: brems = 0.0, fotiza = 0.0, fotize = 0.0
+    !\
+    !Arrays to collect contributions from different effects for a given component
+    real,dimension(nMixMax) :: BremsStrahlung_I = 0.0
+    real,dimension(nMixMax) :: PhotoIonizationAbs_I = 0.0
 
 
     !\
@@ -893,21 +877,20 @@ contains
          iZ,   & !runs over the charge number
          iN,   & ! runs over the quntum principal number for the lower level
          nBound, &!Number of bound electrons
-         nGround  !For a given iZ, the principal number of the ground state.
+         nGround,&!For a given iZ, the principal number of the ground state.
+         iPhoton
 
-    integer::iPhot
-
-    real :: eTransition, ennpot
+    real :: eTransition, ETransitionPerTe
 
     !\
     !Partial sums
     !/
-    real:: sum1a, sum2a, sum1e, sum2e
+    real:: SumOverZ, SumOverN 
 
     !\
     ! Bound-bound contributions
     !/
-    real :: abslns,emslns
+    real :: abslns
 
     !\
     ! Cutoff energy for the photon with the frequency correspondent to
@@ -916,7 +899,7 @@ contains
     real :: HNuCut
 
     !Misc: functions of the photon energy
-    real :: exhvot,  photn3
+    real :: ExpMinusHNuPerT,  PhotonEnergyCubed
 
     !Misc: Density times Z2
     real :: DensityZ2
@@ -928,7 +911,7 @@ contains
     integer :: nScreened, nValence, iZEff, iQ
 
     ! densities to calculate photoionization
-    real :: deni, eqdeni, dumden, conpi
+    real :: AbsorberDensity, eqdeni, dumden, ExpMuPerT
 
     !\
     !Coefficients to account for stimulated emission
@@ -939,7 +922,8 @@ contains
     real :: ScatNe, tScatt, pScatt
 
     !Misc: Photoionization parameters
-    real:: Const, XSec
+    real :: PhotoIonizationConst
+    
     !---------------------------------------------------
 
     !Initialization
@@ -951,18 +935,24 @@ contains
     DensNe = DensNN * zAv
 
     ! ... loop over photon energies
-    do iphot=1,nPhoton                                              
+    do iPhoton = 1,nPhoton                                              
+       !\
+       !The dependence of the cross-sections \propto (Photon Energy)^{-3} is typical
+       !Therefore, introduce:
+       !/                           
+       PhotonEnergyCubed = PhotonEnergy_I(iPhoton)**3
 
-       exhvot = exp( -PhotonEnergy_I(iphot) / Te )                            
-       photn3 = PhotonEnergy_I(iphot)**3                                   
+       !\
+       !The factor needed to account for the stimulated emission:
+       !/
+       ExpMinusHNuPerT = exp( -PhotonEnergy_I(iPhoton) / Te )                                    
 
        ! ...    loop over gas species                                          
 
        IMIXLOOP: do iMix = 1,nMix                                           
 
-          brems(iMix) = 0.0                                            
-          fotiza(iMix) = 0.0                                           
-          fotize(iMix) = 0.0                                           
+          BremsStrahlung_I(iMix) = 0.0                                            
+                                                  
 
           ! ...       Bremsstrahlung                                              
           !           --------------                                              
@@ -978,8 +968,8 @@ contains
           Log10OfGamma2 = log10( 13.6 * Z2_I(iMix) / Te )                           
           GauntFactorBrems  = 1. + 0.44 * exp( -0.25*(Log10OfGamma2+0.25)**2 )          
 
-          brems(iMix) = 2.4e-21 * DensityZ2 * GauntFactorBrems * densne * &          
-               (1.-exhvot) / ( sqrt( Te ) * photn3 )
+          BremsStrahlung_I(iMix) = 2.4e-21 * DensityZ2 * GauntFactorBrems * densne * &          
+               (1.-ExpMinusHNuPerT) / ( sqrt( Te ) * PhotonEnergyCubed )
           !!NOTE: there is a more accurate calculation of the Gaunt factor in 
           !ggff.f file from HYADES
 
@@ -990,9 +980,10 @@ contains
           ! ...       sum over ionization levels for the transition from          
           !           "iZ" to "iZ+1"                                      
 
-          sum1a = 0.0                                                  
-          sum1e = 0.0                                                  
-          conpi = 1.66e-22 * densne / Te**1.5                         
+          PhotoIonizationAbs_I(iMix) = 0.0                                            
+          SumOverZ = 0.0                                                  
+                                                  
+          ExpMuPerT = 1.66e-22 * densne / Te**1.5                         
 
           IZLOOP: do iZ = iZMin_I(iMix), min( iZMax_I(iMix), nZ_I(iMix) - 1)                               
 
@@ -1008,8 +999,7 @@ contains
              ! ...          first, consider the contibution from valence shell       
              !              electrons                                                
 
-             sum2a = 0.0                                               
-             sum2e = 0.0
+             SumOverN = 0.0                                               
 
              if ( Concentration_I(iMix) * Population_II(iZ,iMix)< con(3) ) &
                   CYCLE IZLOOP     
@@ -1025,61 +1015,45 @@ contains
 
                 ! ...  the photon energy must exceed the binding energy     
 
-                if ( PhotonEnergy_I(iphot) <  eTransition ) CYCLE            
+                if ( PhotonEnergy_I(iPhoton) <  eTransition ) CYCLE  
+          
 
-                ! ... find the number of "screening" electrons "nscren"    
+                ! ... find the number of "screening" electrons     
                 !     and the number of electrons in the outermost shell   
-                !     "nvalen"                                             
+                !                 
 
                 if ( iN == nGround ) then                          
                    ! ...ground state ion                                   
                    nScreened = n_screened(iZ, nZ_I(iMix))                           
                    nValence = nBound - nScreened                           
                 else                                                 
-                   ! ...                ion is excited                                     
+                   ! ...ion is excited                                     
                    nScreened = nbound - 1                                
                    nValence = 1                                         
                 endif
 
-                ennpot = eTransition / Te                                   
+                ETransitionPerTe = eTransition / Te                                   
 
 
-                ! ... use an "effective charge" seen by the electron,      
-                !     corrected for screening                              
-                iZEff = nZ_I(iMix) - nScreened                        
+                AbsorberDensity = Population_II(iZ,iMix) * Partition_III(iN, iZ, iMix)     
+               
 
-                deni = Population_II(iZ,iMix) * Partition_III(iN, iZ, iMix)     
-                if ( ennpot .lt. 50. ) then                          
-                   eqdeni = iN**2 * conpi * exp( ennpot ) *  &     
-                        Population_II(iZ+1,iMix)*Partition_III(nGround,iZ+1,iMix)  
-                else                                                 
-                   eqdeni = 0.0                                       
-                endif
-
-                ! ...  the degeneracy level of the fully stripped ion       
-                !      is 1, while a value of 2 is used for other ions.     
-                if ( iZ +1== nZ_I(iMix) ) eqdeni = eqdeni * 2.    
-
-                ! ... correction for stimulated emission; do not allow     
-                !       this to be < 0 for the abs. coef.
-                !
-
+                                        
                 !\
-                ! Below lines for non_LTE are commented out  
-                !/                  
-                !non-LTE:if ( isw(6) .ne. 1 ) then                            
-                ! ...                 non-LTE correction                                
-                !non-LTE:   dumden = deni                                     
-                !non-LTE: else                                                 
-                ! ... LTE correction                                    
-                dumden = eqdeni                                   
-                !non-LTE: endif
-
-                stcorr = max ( 0., dumden - eqdeni * exhvot )        
-
-                xsec = nValence * iZEff**4 /iN**5                        
-                sum2a = sum2a + stcorr * xsec                        
-                sum2e = sum2e + eqdeni*(1.-exhvot) * xsec            
+                ! The version more close to that implemented in
+                ! Emilio Minguez et al. With this approach we substitute
+                ! eTransition for the combination Ry * Z_eff^3/iN^2, which
+                ! is implied in the ionmix.f.
+                ! By this account, our factor PhotoIonizationConst
+                ! differs from the version in the ionmix by a foctor of
+                ! (1/13.6)**3 where 13.6 = cRyEV.
+                ! The last multiplier accounts for effects of the Fermi
+                ! statistics in an electron gas. The formula is available in
+                ! PhotoIonization.pdf document. Note, that our LogGe = -\mu/T
+                !/         
+                SumOverN = SumOverN + nValence * iN/(real(iZ+1)**2) * AbsorberDensity&
+                      * (1.-ExpMinusHNuPerT) * (eTransition**3)/&
+                      (1.0 + ExpMinusHNuPerT*exp(ETransitionPerTe - LogGe))
 
              end do
 
@@ -1107,7 +1081,7 @@ contains
                 !    nscren = nscrsh( ishell )                            
                 !    izeff = izgas(iMix) - nscren                         
                 !    enpi = pot(iMix,izgas(iMix)+1-nscrsh(ishell+1))      
-                !    if ( PhotonEnergy_I(iphot) .ge. enpi ) then                  
+                !    if ( PhotonEnergy_I(iPhoton) .ge. enpi ) then                  
                 !       sum1ac = sum1ac + nocc * izeff**4 / ishell**5      
                 !    endif
 
@@ -1117,14 +1091,21 @@ contains
 
              endif
 
-             sum1a = sum1a + sum2a                                    
-             sum1e = sum1e + sum2e                                    
+             SumOverZ = SumOverZ + SumOverN                                                                       
 
           end do IZLOOP
-
-          const = (1.99e-14*densnn) * Concentration_I(iMix) / photn3           
-          fotiza(iMix) = const * sum1a
-          fotize(iMix) = const * sum1e                                
+          !\
+          ! Commented out version from the ionmix:
+          ! const = (1.99e-14*densnn) * Concentration_I(iMix) / PhotonEnergyCubed
+          ! Insetad we use here the expression from Zel'dovich and Raizer, Eq.5.34,
+          ! which differs by a factor of (1/13.6)**3, es we explained above.
+          ! The exact espression for the photoionization cross-section is:
+          ! 7.9e-18 cm^2= \frac{64\pi}{3\sqrt{3}}\alpha a_0^2, where \alpha is the fine
+          ! structure constant and a_0 is the Bohr radius
+          !/
+          PhotoIonizationConst = 7.9e-18 * Concentration_I(iMix) / PhotonEnergyCubed   
+          PhotoIonizationAbs_I(iMix) = PhotoIonizationConst * SumOverZ
+                 
        end do IMIXLOOP   !Over iMix                                                                    
 
 
@@ -1140,7 +1121,7 @@ contains
           iq = 0                                                      
           do  iZ = 0,nZ_I(iMix) -1                              
 
-             if ( PhotonEnergy_I(iphot) > IonizPotential_II(iZ+1,iMix)) then            
+             if ( PhotonEnergy_I(iPhoton) > IonizPotential_II(iZ+1,iMix)) then            
                 iq = iq + 1                                           
                 scatne = scatne + Concentration_I(iMix)
              else
@@ -1163,23 +1144,23 @@ contains
        ! ...    contribution from plasma oscillations                          
        hnucut = sqrt( densne / 7.25e20 )      
 
-       if ( PhotonEnergy_I(iphot) .lt. hnucut ) then                          
-          pscatt = 5.05e4 * sqrt( hnucut**2 - PhotonEnergy_I(iphot)**2 )      
+       if ( PhotonEnergy_I(iPhoton) .lt. hnucut ) then                          
+          pscatt = 5.05e4 * sqrt( hnucut**2 - PhotonEnergy_I(iPhoton)**2 )      
        else                                                           
           pscatt = 0.                                                 
        endif
 
-       if ( UseScattering) ScatteringCoefficient_I(iphot) = tscatt + pscatt            
+       if ( UseScattering) ScatteringCoefficient_I(iPhoton) = tscatt + pscatt            
 
        !\
        !Sum up al the contributions                                                               
-       AbsorptionCoefficient_I(iphot) = 0.0                                                                                      
+       AbsorptionCoefficient_I(iPhoton) = 0.0                                                                                      
        if(UseBremsstrahlung)then                                         
-          AbsorptionCoefficient_I(iphot) = AbsorptionCoefficient_I(iphot)+sum(brems(1:nMix)) 
+          AbsorptionCoefficient_I(iPhoton) = AbsorptionCoefficient_I(iPhoton)+sum(BremsStrahlung_I(1:nMix)) 
        end if
        if(UsePhotoionization)then
 
-          AbsorptionCoefficient_I(iphot) = AbsorptionCoefficient_I(iphot)+sum(fotiza(1:nMix))  
+          AbsorptionCoefficient_I(iPhoton) = AbsorptionCoefficient_I(iPhoton)+sum(PhotoIonizationAbs_I(1:nMix))  
        end if
 
 
@@ -1189,12 +1170,12 @@ contains
 
        ! ...    add in the contribution from bound-bound transitions           
 
-       call lines ( PhotonEnergy_I(iphot), abslns,emslns )      
+       call lines ( PhotonEnergy_I(iPhoton), abslns)      
 
-       AbsorptionCoefficient_I(iphot) = AbsorptionCoefficient_I(iphot) + abslns                                                            
+       AbsorptionCoefficient_I(iPhoton) = AbsorptionCoefficient_I(iPhoton) + abslns                                                            
 
 
-    end do  !over iphot                                                         
+    end do  !over iPhoton                                                         
   end subroutine abscon
   !====================
 
