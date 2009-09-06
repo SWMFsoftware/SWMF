@@ -243,7 +243,8 @@ contains
        EinternalSiIn, TeSiIn, NatomicSiOut, &
        EinternalSiOut, TeSiOut, PressureSiOut, &
        CvSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
-       AbsorptionOpacitySiOut_W, DiffusionOpacitySiOut_W)
+       AbsorptionOpacitySiOut_W, DiffusionOpacitySiOut_W, &
+       PlanckSiOut_W, CgTeSiOut_W, CgTgSiOut_W, TgSiOut_W)
 
     ! The State_V vector is in normalized units
 
@@ -269,6 +270,16 @@ contains
          AbsorptionOpacitySiOut_W(nWave)                     ! [1/m]
     real, optional, intent(out) :: &
          DiffusionOpacitySiOut_W(nWave)                      ! [1/m]
+
+    ! Multi-group specific interface. The variables are respectively:
+    !  Group Planckian spectral energy density
+    !  Derivative of group Planckian by electron temperature
+    !  Group specific heat of the radiation
+    !  Group radiation temperature
+    real, optional, intent(out) :: PlanckSiOut_W(nWave)      ! [J/m^3]
+    real, optional, intent(out) :: CgTeSiOut_W(nWave)        ! [J/(m^3*K)]
+    real, optional, intent(out) :: CgTgSiOut_W(nWave)        ! [J/(m^3*K)]
+    real, optional, intent(out) :: TgSiOut_W(nWave)          ! [K]
 
     real :: Rho, Pressure, Temperature
     real :: RhoSi, pSi, TemperatureSi
