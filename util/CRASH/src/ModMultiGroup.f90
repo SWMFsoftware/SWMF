@@ -1,4 +1,5 @@
-module CRASH_ModMultiGroup
+
+  module CRASH_ModMultiGroup
   use CRASH_ModIonMix
   use CRASH_ModOpacityVoigt, ONLY : line_width, voigt_profile, UseVoigt
   use CRASH_ModAtomicDataMix,ONLY : nMix, nZ_I, nExcitation, nMixMax
@@ -28,7 +29,7 @@ module CRASH_ModMultiGroup
   public :: nGroup, OpacityPlanck_I, OpacityRosseland_I
 
   !For test:
-  public :: PhotonEnergy_I, AbsorptionCoefficient_I, nPhoton, set_multigroup
+  public :: PhotonEnergy_I, AbsorptionCoefficient_I, nPhoton, set_multigroup,EnergyGroup_I
 
 
   !       nPhotonMax  - photon energy mesh points                                    
@@ -70,10 +71,6 @@ module CRASH_ModMultiGroup
   !/
   real :: OpacityPlanckTotal, OpacityRosselandTotal  
 
-  !\
-  ! Normalization parameters
-  !/                    \approx  1/ 6.4939     \approx 1/ 25.976 
-  real,parameter :: cNormG5 = 15.0/(cPi**4), cNormG6 = 0.250 * cNormG5
 
   !\
   ! LOGICALS
@@ -150,8 +147,10 @@ contains
     !\
     !Approximation to start:
     !/
-    TgSI = sqrt(xMin*xMax)/log(1.0 + cRadiation * xMin**2 * xMax**2 * cNormG5 * &
+    TgSI = sqrt(FreqMin*FreqMax)&
+         /log(1.0 + cRadiation * FreqMin**2 * FreqMax**2 * cNormG5 * &
          DeltaLogFrequency / EgSI)
+   
     
     ToleranceEg = cTolerance * EgSI
 
@@ -162,8 +161,7 @@ contains
        xMax = FreqMax /TgSI
 
        DeltaEg = EgSI -  cNormG5 * gint(5, xMin, xMax) * cRadiation * TgSI**4
-       CgSI    =         cNormG6 * gint(6,xMin,xMax) * (4.0 * cRadiation * TgSI**3)
-
+       CgSI    =         cNormG6 * gint(6,xMin,xMax) * (4.0 * cRadiation * TgSI**3) 
        TgSI = TgSI + DeltaEg/CgSI
 
        iIter = iIter + 1

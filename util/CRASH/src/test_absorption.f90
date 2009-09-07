@@ -7,6 +7,7 @@ program abs
   use CRASH_ModExcitation
   use CRASH_ModAtomicDataMix
   use CRASH_ModExcitationData,ONLY : n_ground, cExcitationN_III
+  use CRASH_ModIonMix
   use ModConst
   implicit NONE
 
@@ -15,9 +16,9 @@ program abs
   real:: vTe = 10.0 !eV
   real::NaTrial = 1.0e22
   integer:: iPlot,iError
-  integer :: iL, iN, iZ, iMix
-  integer :: nGround
-
+  integer :: iL, iN, iZ, iMix, i
+  integer :: nGround, iGroup
+  real :: TSI, Eg_W(100), CFromT_W(100),cFromE,TOutSI
   real,dimension(1:nZMax) :: IonizPotential_I
   !---------------
 
@@ -57,8 +58,18 @@ program abs
 
   write(unit,'(a)')'\end{tabular}'
   close(unit)
-
-
+  open(unit,file='../doc/normalized_planckian.dat',status='replace')
+  write(unit,*)'Notmalized integral Planckian, \int_0^x{Planckian(y)dy}'
+  do i=1,300
+     write(unit,*)0.1*i,gint5(0.1*i)*cNormG5
+  end do
+  close(unit)
+  open(unit,file='../doc/normalized_planckian_derivative.dat',status='replace')
+  write(unit,*)'Notmalized integral of the Planckian derivative, \int_0^x{(d Planckian(y)/dT)dy}'
+  do i=1,300
+     write(unit,*)0.1*i,gint6(0.1*i)*cNormG6
+  end do
+  close(unit)
 
   UseExcitation = .true.
   call set_mixture(nPolyimide, nZPolyimide_I, CPolyimide_I)
@@ -93,6 +104,21 @@ program abs
           log10(AbsorptionCoefficient_I(iPlot))
   end do
   close(unit)
+  open(unit,file='.dat')
+  write(*,*)'nGroup=',nGroup
+  TSI = 1.0e5   !\approx 9 eV
+  open(unit,file='conversion_report.txt') 
+  write(unit,*)'TSI=', TSI, '  Total Radiation=',cRadiation * TSI**4, '  Total specific heat=', 4*cRadiation * TSI**3
+  write(unit,*)'log10(hv) [eV]      log10(Eg) [J/m^3]  Tg  CFromT CFromE'
+  do iGroup = 1, 90
+
+     call get_energy_g_from_temperature(iGroup,TSI,Eg_W(iGroup),CFromT_W(iGroup))
+     call get_temperature_from_energy_g(iGroup, Eg_W(iGroup), TOutSI,CFromE)
+     write(unit,'(5e10.3)') sqrt(EnergyGroup_I(iGroup - 1)*EnergyGroup_I(iGroup)),Eg_w(iGroup),TOutSI,CFromT_W(iGroup),CFromE
+  end do
+  write(unit,*)'Energy sum up:',sum(Eg_W(1:90)), ' Total specific heat:=', sum(CFromT_W(1:90))
+  close(unit)
+  
 end program abs
 !============================================================================
 ! The following subroutines are here so that we can use SWMF library routines
