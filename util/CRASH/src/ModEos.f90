@@ -379,12 +379,14 @@ contains
     if(present(eElectronOut)) eElectronOut = Natomic*cEV*internal_energy_e()
     if(present(pElectronOut))  pElectronOut = pressure_e()
     if(present(GammaEOut))   call get_gamma(GammaSeOut=GammaOut)
-    if(present(OpacityPlanckOut_I).and.present(OpacityRosselandOut_I))then
+    if(present(OpacityPlanckOut_I).or.present(OpacityRosselandOut_I))then
        call meshhv
        call abscon
        call opacys(TRadIn = Te)
-       OpacityPlanckOut_I = OpacityPlanck_I * 100.0 ![m^-1]
-       OpacityRosselandOut_I = OpacityRosseland_I * 100.0  ![m^-1]
+       if(present(OpacityPlanckOut_I)) &
+            OpacityPlanckOut_I = OpacityPlanck_I * 100.0        ![m^-1]
+       if(present(OpacityRosselandOut_I)) &
+            OpacityRosselandOut_I = OpacityRosseland_I * 100.0  ![m^-1]
     end if
 
     if(present(HeatCond))   HeatCond = electron_heat_conductivity()
