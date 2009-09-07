@@ -110,13 +110,13 @@ program abs
   open(unit,file='conversion_report.txt') 
   write(unit,*)'TSI=', TSI, '  Total Radiation=',cRadiation * TSI**4, '  Total specific heat=', 4*cRadiation * TSI**3
   write(unit,*)'log10(hv) [eV]      log10(Eg) [J/m^3]  Tg  CFromT CFromE'
-  do iGroup = 1, 90
+  do iGroup = 1,nGroup
 
      call get_energy_g_from_temperature(iGroup,TSI,Eg_W(iGroup),CFromT_W(iGroup))
      call get_temperature_from_energy_g(iGroup, Eg_W(iGroup), TOutSI,CFromE)
      write(unit,'(5e10.3)') sqrt(EnergyGroup_I(iGroup - 1)*EnergyGroup_I(iGroup)),Eg_w(iGroup),TOutSI,CFromT_W(iGroup),CFromE
   end do
-  write(unit,*)'Energy sum up:',sum(Eg_W(1:90)), ' Total specific heat:=', sum(CFromT_W(1:90))
+  write(unit,*)'Energy sum up:',sum(Eg_W(1:nGroup)), ' Total specific heat:=', sum(CFromT_W(1:nGroup))
   close(unit)
   
 end program abs

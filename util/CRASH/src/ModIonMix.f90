@@ -52,9 +52,17 @@ contains
 
     select case(igint)                             
     case(5)
-       gint = gint5(xEnd) - gint5(xStart)                               
+       if(xStart > xMax) then
+          gint = gint2(xEnd) - gint2(xStart)
+       else
+          gint = gint5(xEnd) - gint5(xStart)
+       end if
     case(6)   
-       gint = gint6(xEnd) - gint6(xStart)                                 
+       if(xStart > xMax) then
+          gint = gint1(xEnd) - gint1(xStart)
+       else
+          gint = gint6(xEnd) - gint6(xStart)   
+       end if
     case default
        call CON_stop('Error in g_int')                                                        
     end select
