@@ -1513,7 +1513,7 @@ contains
          if ( Concentration_I(iMix) .lt. con(2) ) CYCLE IMIXLOOP
 
          ! ...    loop over ionization states                                  
-         IZLOOP:   do iZ = 0, nZ_I(iMix)                                                                             
+         IZLOOP:   do iZ = iZMin_I(iMix), min( iZMax_I(iMix), nZ_I(iMix) - 1)                                                                              
             if ( Concentration_I(iMix) * Population_II(iZ,iMix) .lt. con(3)) &
                  CYCLE IZLOOP  
 
