@@ -384,9 +384,9 @@ contains
        call abscon
        call opacys(TRadIn = Te)
        if(present(OpacityPlanckOut_I)) &
-            OpacityPlanckOut_I = OpacityPlanck_I * 100.0        ![m^-1]
+            OpacityPlanckOut_I = OpacityPlanck_I(1:nGroup)*100.0       ![m^-1]
        if(present(OpacityRosselandOut_I)) &
-            OpacityRosselandOut_I = OpacityRosseland_I * 100.0  ![m^-1]
+            OpacityRosselandOut_I = OpacityRosseland_I(1:nGroup)*100.0 ![m^-1]
     end if
 
     if(present(HeatCond))   HeatCond = electron_heat_conductivity()
