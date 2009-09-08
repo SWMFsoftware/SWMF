@@ -175,11 +175,11 @@ subroutine advance_expl(DoCalcTimestep)
 
      if(DoTestMe)write(*,*)NameSub,' finished stage=',istage
 
-     do iBlock = 1, nBlock
-        if(.not.UnusedBlk(iBlock)) call set_block_data(iBlock)
-     end do
-
   end do STAGELOOP  ! Multi-stage solution update loop.
+
+  do iBlock = 1, nBlock
+     if(.not.UnusedBlk(iBlock)) call set_block_data(iBlock)
+  end do
 
   if(UsePartImplicit)call timing_stop('advance_expl') !^CFG IF IMPLICIT
 
