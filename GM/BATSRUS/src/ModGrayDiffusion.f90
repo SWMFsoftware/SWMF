@@ -30,7 +30,8 @@ module ModGrayDiffusion
   real, allocatable :: DiffCoef_VFDB(:,:,:,:,:,:)
   real, allocatable :: RelaxCoef_VCB(:,:,:,:,:)
   real, allocatable :: DiffSemiCoef_VGB(:,:,:,:,:)
-  real, allocatable :: PointSemiCoef_VCB(:,:,:,:,:)
+  real, allocatable :: PointCoef_VCB(:,:,:,:,:)
+  real, allocatable :: PointImpl_CB(:,:,:,:)
 
   ! Index indicating which implicit variables involve diffusion
   integer, allocatable :: iDiff_I(:)
@@ -38,17 +39,15 @@ module ModGrayDiffusion
   ! which one are heat conduction, which one radiation diffusion
   integer :: iDiffHeat = 0, iDiffRadFirst = 0, iDiffRadLast = 0
 
-  ! Index indicating which implicit variables involve energy exchange
+  ! Index indicating which nRelax implicit variables involve energy exchange
   ! with the electrons
   integer, allocatable :: iRelax_I(:)
   integer :: nRelax
 
-  ! Number of point implicit coefficients
+  ! Index which nPoint variables involve point implicit energy exchange
+  ! with the state variable stored in PointImpl_CB
+  integer, allocatable :: iPoint_I(:)
   integer :: nPoint
-  ! Index which variable involve point implicit calculation
-  integer :: iVarPoint
-  ! Named indices for point implicit coefficients
-  integer, parameter :: Relax_ = 1, Planck_ = 2
 
   ! radiation energy used for calculating radiative energy flux
   real, allocatable :: Erad_WG(:,:,:,:)
@@ -125,10 +124,11 @@ contains
           end if
           if(nWave == 1)then
              UseT4 = .true.   ! backward compatibility
-             iTrImplFirst = 1; iTrImplLast = 1
+             iTrImplFirst = 1; iTrImplLast = nWave
              nRelax = 0
-             nPoint = 2
-             iVarPoint = iTrImplFirst
+             nPoint = nWave
+             allocate(iPoint_I(nPoint))
+             iPoint_I = (/ (iVarImpl,iVarImpl=1,nWave) /)
              ImplStateMin = EradMin
           else
              iTeImpl = 1; iTrImplFirst = 2; iTrImplLast = nWave +1
@@ -159,8 +159,9 @@ contains
           allocate(iRelax_I(nRelax))
           iRelax_I = (/ (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
           if(UseElectronEnergy)then
-             nPoint = 2
-             iVarPoint = iTeImpl
+             nPoint = 1
+             allocate(iPoint_I(nPoint))
+             iPoint_I = iTeImpl
           else
              nPoint = 0
           end if
@@ -173,8 +174,9 @@ contains
           iDiffHeat = 1; iDiffRadFirst = 0; iDiffRadLast = 0
           nRelax = 0
           if(UseElectronEnergy)then
-             nPoint = 2
-             iVarPoint = iTeImpl
+             nPoint = 1
+             allocate(iPoint_I(nPoint))
+             iPoint_I = iTeImpl
           else
              nPoint = 0
           end if
@@ -185,8 +187,10 @@ contains
        iEradImpl = iTrImplFirst
 
        if(nPoint>0)then
-          allocate(PointSemiCoef_VCB(nPoint,nI,nJ,nK,MaxBlock))
-          PointSemiCoef_VCB = 0.0
+          allocate(PointCoef_VCB(nPoint,nI,nJ,nK,MaxBlock))
+          PointCoef_VCB = 0.0
+          allocate(PointImpl_CB(nI,nJ,nK,MaxBlock))
+          PointImpl_CB = 0.0
        end if
 
        allocate(DiffSemiCoef_VGB(nDiff,-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock))
@@ -501,12 +505,11 @@ contains
           case('radiation')
              if(nWave == 1)then
                 ! This coefficient is cR'' = cR/(1+dt*cR*dPlanck/dEint)
-                PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = &
-                     Clight*OpacityPlanck_W(1) &
+                PointCoef_VCB(1,i,j,k,iBlock) = Clight*OpacityPlanck_W(1) &
                      /(1 + ImplCoeff*Dt*Clight*OpacityPlanck_W(1) / Cv)
 
                 ! This is just the Planck function at time level * saved
-                PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = cRadiationNo*Te**4
+                PointImpl_CB(i,j,k,iBlock) = cRadiationNo*Te**4
              else
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
                 RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W*CgTe_W
@@ -517,13 +520,13 @@ contains
                 if(UseT4)then
                    TeTiCoefPrime = TeTiCoef/Cvi &
                         /(cRadiationNo*(Te+Ti)*(Te**2+Ti**2))
-                   PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = &
+                   PointCoef_VCB(1,i,j,k,iBlock) = &
                         TeTiCoefPrime*Cvi/(1.0 + ImplCoeff*Dt*TeTiCoefPrime)
-                   PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = cRadiationNo*Ti**4
+                   PointImpl_CB(i,j,k,iBlock) = cRadiationNo*Ti**4
                 else
-                   PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = TeTiCoef &
+                   PointCoef_VCB(1,i,j,k,iBlock) = TeTiCoef &
                         /(1.0 + ImplCoeff*Dt*TeTiCoef/Cvi)
-                   PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = Ti
+                   PointImpl_CB(i,j,k,iBlock) = Ti
                 end if
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
              else
@@ -540,9 +543,9 @@ contains
              if(UseElectronEnergy)then
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
 
-                PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = TeTiCoef &
+                PointCoef_VCB(1,i,j,k,iBlock) = TeTiCoef &
                      /(1.0 + ImplCoeff*Dt*TeTiCoef/Cvi)
-                PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = Ti
+                PointImpl_CB(i,j,k,iBlock) = Ti
              else
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
              end if
@@ -976,7 +979,7 @@ contains
     logical, intent(in) :: IsLinear
 
     real :: Te, EnergyExchange
-    integer :: i, j, k, iDiff, iRelax, iVar
+    integer :: i, j, k, iDiff, iRelax, iPoint, iVar
     character(len=*), parameter :: NameSub='get_gray_diffusion_rhs'
     !--------------------------------------------------------------------------
 
@@ -1043,7 +1046,7 @@ contains
     end if
 
     ! Source terms due to energy exchange
-    if(nRelax>0)then
+    if(nRelax > 0)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           do iRelax = 1, nRelax
              iVar = iRelax_I(iRelax)
@@ -1061,20 +1064,27 @@ contains
     end if
        
     ! Point implicit source terms due to energy exchange
-    if(nPoint>0)then
+    if(nPoint > 0)then
        if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Rhs_VC(iVarPoint,i,j,k) = Rhs_VC(iVarPoint,i,j,k) &
-                  - PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
-                  *StateImpl_VG(iVarPoint,i,j,k)
+             do iPoint = 1, nPoint
+                iVar = iPoint_I(iPoint)
+
+                Rhs_VC(iVar,i,j,k) = Rhs_VC(iVar,i,j,k) &
+                     - PointCoef_VCB(iPoint,i,j,k,iBlock) &
+                     *StateImpl_VG(iVar,i,j,k)
+             end do
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             EnergyExchange = PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
-                  * (PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-                  -  StateImpl_VG(iVarPoint,i,j,k))
+             do iPoint = 1, nPoint
+                iVar = iPoint_I(iPoint)
 
-             Rhs_VC(iVarPoint,i,j,k) = Rhs_VC(iVarPoint,i,j,k) + EnergyExchange
+                EnergyExchange = PointCoef_VCB(iPoint,i,j,k,iBlock) &
+                     *(PointImpl_CB(i,j,k,iBlock) - StateImpl_VG(iVar,i,j,k))
+
+                Rhs_VC(iVar,i,j,k) = Rhs_VC(iVar,i,j,k) + EnergyExchange
+             end do
           end do; end do; end do
        end if
     end if
@@ -1153,21 +1163,25 @@ contains
     integer, intent(in) :: iBlock, nVar
     real, intent(inout) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
 
-    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax
+    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax, iPoint
     real :: DiffLeft, DiffRight, RelaxCoef
     real :: Dxyz_D(nDim), Area_D(nDim), Coeff
     !--------------------------------------------------------------------------
 
     if(UseSemiImplicit)then
-       if(nPoint>0)then
+       if(nPoint > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             ! dSvar/dVar (diagonal)
-             Jacobian_VVCI(iVarPoint,iVarPoint,i,j,k,1) = &
-                  -PointSemiCoef_VCB(Relax_,i,j,k,iBlock)
+             do iPoint = 1, nPoint
+                iVar = iPoint_I(iPoint)
+
+                ! dSvar/dVar (diagonal)
+                Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
+                     -PointCoef_VCB(iPoint,i,j,k,iBlock)
+             end do
           end do; end do; end do
        end if
 
-       if(nRelax>0)then
+       if(nRelax > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              do iRelax = 1, nRelax
                 iVar = iRelax_I(iRelax)
@@ -1243,7 +1257,7 @@ contains
     integer, intent(in) :: iBlock, iImplBlock
     real, intent(inout) :: StateImpl_VG(nw,nI,nJ,nK)
 
-    integer :: i, j, k, iVarImpl, iVar
+    integer :: i, j, k, iVarImpl, iVar, iPoint
     real :: Einternal, EinternalSi, PressureSi
     real :: PeSi, Ee, EeSi
     real :: Relaxation
@@ -1289,15 +1303,17 @@ contains
           end if
        end if
 
-       if(nPoint>0)then
-          Relaxation = PointSemiCoef_VCB(Relax_,i,j,k,iBlock)*( &
-               + ImplCoeff*(StateImpl_VG(iVarPoint,i,j,k) &
-               -            PointSemiCoef_VCB(Planck_,i,j,k,iBlock)) &
-               + (1.0 - ImplCoeff)*(ImplOld_VCB(iVarPoint,i,j,k,iBlock) &
-               -            PointSemiCoef_VCB(Planck_,i,j,k,iBlock)) )
+       do iPoint = 1, nPoint
+          iVar = iPoint_I(iPoint)
+
+          Relaxation = PointCoef_VCB(iPoint,i,j,k,iBlock)*( &
+               + ImplCoeff*(StateImpl_VG(iVar,i,j,k) &
+               -            PointImpl_CB(i,j,k,iBlock)) &
+               + (1.0 - ImplCoeff)*(ImplOld_VCB(iVar,i,j,k,iBlock) &
+               -            PointImpl_CB(i,j,k,iBlock)) )
 
           Einternal = Einternal + Dt*Relaxation
-       end if
+       end do
 
        if(Einternal < 0.0)then
           write(*,*)NameSub,': ERROR Rho, p, TOrigSi=', &
