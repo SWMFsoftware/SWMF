@@ -1367,8 +1367,7 @@ contains
     !If the frequency range IN HERZ has been alredy set, the previous
     !commands are skiped
     !Now set the number of groups and the frequency range:
-    if(.not.(nWave==1 .and. iTableOpacity>0)) &
-         call set_multigroup(nWave, FreqMinSI, FreqMaxSI)
+    call set_multigroup(nWave, FreqMinSI, FreqMaxSI)
 
   end subroutine user_init_session
 
@@ -1523,7 +1522,7 @@ contains
     use ModMain,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, UseElectronEnergy
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, UnitEnergyDens_, &
-         inv_gm1, g, Si2No_V
+         inv_gm1, g, Si2No_V, cRadiationNo, UnitTemperature_
     use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_, nWave, &
          WaveFirst_, ExtraEint_, Ee_
     use ModLookupTable,ONLY: interpolate_lookup_table
@@ -1566,7 +1565,7 @@ contains
 
     ! multi-group variables
     integer :: iWave, iVar
-    real :: EgSi, PlanckSi, CgTeSi, TgSi, CgTgSi
+    real :: EgSi, PlanckSi, CgTeSi, TgSi, CgTgSi, Tg
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !-------------------------------------------------------------------------
@@ -1676,15 +1675,22 @@ contains
     end if
 
     if(present(TgSiOut_W) .or. present(CgTgSiOut_W))then
-       do iWave = 1, nWave
-          iVar = WaveFirst_ + iWave - 1
-          EgSi = State_V(iVar)*No2Si_V(UnitEnergyDens_)
-          call get_temperature_from_energy_g(iWave, EgSI=EgSi, &
-               TgSIOut=TgSi, CgSIOut=CgTgSi)
+       if(nWave == 1)then
+          Tg = sqrt(sqrt(State_V(WaveFirst_)/cRadiationNo))
+          if(present(TgSiOut_W)) TgSiOut_W = Tg*No2Si_V(UnitTemperature_)
+          if(present(CgTgSiOut_W)) CgTgSiOut_W = 4.0*cRadiationNo*Tg**3 &
+               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+       else
+          do iWave = 1, nWave
+             iVar = WaveFirst_ + iWave - 1
+             EgSi = State_V(iVar)*No2Si_V(UnitEnergyDens_)
+             call get_temperature_from_energy_g(iWave, EgSI=EgSi, &
+                  TgSIOut=TgSi, CgSIOut=CgTgSi)
 
-          if(present(TgSiOut_W)) TgSiOut_W(iWave) = TgSi
-          if(present(CgTgSiOut_W)) CgTgSiOut_W(iWave) = CgTgSi
-       end do
+             if(present(TgSiOut_W)) TgSiOut_W(iWave) = TgSi
+             if(present(CgTgSiOut_W)) CgTgSiOut_W(iWave) = CgTgSi
+          end do
+       end if
     end if
 
   contains
