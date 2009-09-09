@@ -1566,7 +1566,7 @@ contains
 
     ! multi-group variables
     integer :: iWave, iVar
-    real :: EgSi
+    real :: EgSi, PlanckSi, CgTeSi, TgSi, CgTgSi
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !-------------------------------------------------------------------------
@@ -1668,7 +1668,10 @@ contains
     if(present(PlanckSiOut_W) .or. present(CgTeSiOut_W))then
        do iWave = 1, nWave
           call get_energy_g_from_temperature( &
-               iWave, TeSi, EgSI=PlanckSiOut_W(iWave), CgSI=CgTeSiOut_W(iWave))
+               iWave, TeSi, EgSI=PlanckSi, CgSI=CgTeSi)
+
+          if(present(PlanckSiOut_W)) PlanckSiOut_W(iWave) = PlanckSi
+          if(present(CgTeSiOut_W)) CgTeSiOut_W(iWave) = CgTeSi
        end do
     end if
 
@@ -1677,7 +1680,10 @@ contains
           iVar = WaveFirst_ + iWave - 1
           EgSi = State_V(iVar)*No2Si_V(UnitEnergyDens_)
           call get_temperature_from_energy_g(iWave, EgSI=EgSi, &
-               TgSIOut=TgSiOut_W(iWave), CgSIOut=CgTgSiOut_W(iWave))
+               TgSIOut=TgSi, CgSIOut=CgTgSi)
+
+          if(present(TgSiOut_W)) TgSiOut_W(iWave) = TgSi
+          if(present(CgTgSiOut_W)) CgTgSiOut_W(iWave) = CgTgSi
        end do
     end if
 
