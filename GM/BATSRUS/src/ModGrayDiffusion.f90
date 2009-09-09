@@ -373,7 +373,7 @@ contains
     integer :: iDim, Di, Dj, Dk, iDiff, nDimInUse
     real :: Coeff, Dxyz_D(3)
 
-    real :: TgSi_W(nWave), CgTgSi_W(nWave), CgTg_W(nWave)
+    real :: Tg, TgSi_W(nWave), CgTgSi_W(nWave), CgTg_W(nWave)
     real :: CgTeSi_W(nWave), CgTe_W(nWave)
 
     character(len=*), parameter:: NameSub='get_impl_gray_diff_state'
@@ -435,16 +435,13 @@ contains
        ! calculate coefficients for linearized energy exchange and diffusion
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseElectronEnergy)then
-             if(nWave == 1)then
+             if(UseT4)then
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, &
                      AbsorptionOpacitySiOut_W = OpacityPlanckSi_W, &
                      DiffusionOpacitySiOut_W = OpacityRosselandSi_W, &
                      CvSiOut=CveSi, TeSiOut = TeSi, NatomicSiOut=NatomicSi, &
                      HeatCondSiOut = HeatCondSi, TeTiRelaxSiOut = TeTiRelaxSi)
-
-                Te = TeSi*Si2No_V(UnitTemperature_)
-                CgTe_W = 4.0*cRadiationNo*Te**3
              else
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, &
@@ -454,7 +451,6 @@ contains
                      HeatCondSiOut = HeatCondSi, TeTiRelaxSiOut = TeTiRelaxSi,&
                      CgTeSiOut_W=CgTeSi_W)
 
-                Te = TeSi*Si2No_V(UnitTemperature_)
                 CgTe_W = CgTeSi_W*Si2No_V(UnitEnergyDens_) &
                      /Si2No_V(UnitTemperature_)
              end if
@@ -464,6 +460,7 @@ contains
              Ti = TiSi*Si2No_V(UnitTemperature_)
              CviSi = inv_gm1*cBoltzmann*NatomicSi
              Cvi = CviSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+             Te = TeSi*Si2No_V(UnitTemperature_)
              Cve = CveSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
              if(UseT4)then
                 Cvi = Cvi/(4.0*cRadiationNo*Ti**3)
@@ -473,15 +470,12 @@ contains
              TeTiCoef = TeTiCoefSi*Si2No_V(UnitEnergyDens_) &
                   /(Si2No_V(UnitTemperature_)*Si2No_V(UnitT_))
           else
-             if(nWave == 1)then
+             if(UseT4)then
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, &
                      AbsorptionOpacitySiOut_W = OpacityPlanckSi_W, &
                      DiffusionOpacitySiOut_W = OpacityRosselandSi_W, &
                      CvSiOut = CvSi, TeSiOut = TeSi, HeatCondSiOut=HeatCondSi)
-
-                Te = TeSi*Si2No_V(UnitTemperature_)
-                CgTe_W = 4.0*cRadiationNo*Te**3
              else
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, &
@@ -490,11 +484,11 @@ contains
                      CvSiOut = CvSi, TeSiOut = TeSi, HeatCondSiOut=HeatCondSi,&
                      CgTeSiOut_W=CgTeSi_W)
 
-                Te = TeSi*Si2No_V(UnitTemperature_)
                 CgTe_W = CgTeSi_W*Si2No_V(UnitEnergyDens_) &
                      /Si2No_V(UnitTemperature_)
              end if
 
+             Te = TeSi*Si2No_V(UnitTemperature_)
              Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
              if(UseT4) Cv = Cv/(4.0*cRadiationNo*Te**3)
           end if
@@ -503,7 +497,7 @@ contains
 
           select case(TypeSemiImplicit)
           case('radiation')
-             if(nWave == 1)then
+             if(useT4)then
                 ! This coefficient is cR'' = cR/(1+dt*cR*dPlanck/dEint)
                 PointCoef_VCB(1,i,j,k,iBlock) = Clight*OpacityPlanck_W(1) &
                      /(1 + ImplCoeff*Dt*Clight*OpacityPlanck_W(1) / Cv)
@@ -512,7 +506,14 @@ contains
                 PointImpl_CB(i,j,k,iBlock) = cRadiationNo*Te**4
              else
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
-                RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W*CgTe_W
+                if(nWave == 1)then
+                   Tg = StateImpl_VGB(iTrImplFirst,i,j,k,iImplBlock)
+                   RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W &
+                        *cRadiationNo*(Te+Tg)*(Te**2+Tg**2)
+                else
+                   RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W &
+                        *CgTe_W
+                end if
              end if
 
           case('radcond')
@@ -525,7 +526,7 @@ contains
                    PointImpl_CB(i,j,k,iBlock) = cRadiationNo*Ti**4
                 else
                    PointCoef_VCB(1,i,j,k,iBlock) = TeTiCoef &
-                        /(1.0 + ImplCoeff*Dt*TeTiCoef/Cvi)
+                        /(1.0 + Dt*TeTiCoef/Cvi)
                    PointImpl_CB(i,j,k,iBlock) = Ti
                 end if
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
@@ -533,10 +534,17 @@ contains
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
              end if
 
-             if(nWave == 1)then
+             if(UseT4)then
                 RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
              else
-                RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W*CgTe_W
+                if(nWave == 1)then
+                   Tg = StateImpl_VGB(iTrImplFirst,i,j,k,iImplBlock)
+                   RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W &
+                        *cRadiationNo*(Te+Tg)*(Te**2+Tg**2)
+                else
+                   RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W &
+                        *CgTe_W
+                end if
              end if
 
           case('cond')
@@ -1370,7 +1378,8 @@ contains
 
                 ! dSvar/dVar (diagonal)
                 Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
-                     -PointCoef_VCB(iPoint,i,j,k,iBlock)
+                     Jacobian_VVCI(iVar,iVar,i,j,k,1) &
+                     - PointCoef_VCB(iPoint,i,j,k,iBlock)
              end do
           end do; end do; end do
        end if
@@ -1383,16 +1392,20 @@ contains
                 RelaxCoef = RelaxCoef_VCB(iRelax,i,j,k,iBlock)
 
                 ! dSvar/dVar (diagonal)
-                Jacobian_VVCI(iVar,iVar,i,j,k,1) = -RelaxCoef
+                Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
+                     Jacobian_VVCI(iVar,iVar,i,j,k,1) - RelaxCoef
 
                 ! dSe/dVar (off diagonal)
-                Jacobian_VVCI(iTeImpl,iVar,i,j,k,1) = +RelaxCoef
+                Jacobian_VVCI(iTeImpl,iVar,i,j,k,1) = &
+                     Jacobian_VVCI(iTeImpl,iVar,i,j,k,1) + RelaxCoef
 
                 ! dSe/daTe^4 (diagonal)
-                Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = -RelaxCoef
+                Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &
+                     Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) - RelaxCoef
 
                 ! dSvar/daTe^4 (off diagonal)
-                Jacobian_VVCI(iVar,iTeImpl,i,j,k,1) = +RelaxCoef
+                Jacobian_VVCI(iVar,iTeImpl,i,j,k,1) = &
+                     Jacobian_VVCI(iVar,iTeImpl,i,j,k,1) + RelaxCoef
              end do
           end do; end do; end do
        end if
