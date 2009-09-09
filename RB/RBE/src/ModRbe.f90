@@ -77,6 +77,7 @@ module rbe_cread2
   logical :: UseMcLimiter = .false.,UseCentralDiff = .false.
   real    :: BetaLimiter  = 2.0
 
+  logical :: UseMhdBoundary = .false.
 end module rbe_cread2
 !=============================================================================
 module rbe_cgrid
@@ -152,7 +153,7 @@ Module ModGmRb
   use rbe_grid,ONLY: nLat => ir, nLon => ip
   real, allocatable :: StateLine_VI(:,:),StateIntegral_IIV(:,:,:)
   integer :: iLineIndex_II(nLon,1:nLat),nPoint
-  
+  integer, parameter :: AveDens_=4, AveP_=5
 end Module ModGmRb
 !=============================================================================
 Module ModChorusIntensity

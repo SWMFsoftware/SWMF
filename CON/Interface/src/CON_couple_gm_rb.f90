@@ -95,7 +95,7 @@ contains
     !/
 
     ! Number of integrals to pass
-    integer, parameter :: nIntegral=4
+    integer, parameter :: nIntegral=6
 
     ! Names of variables to pass
     character (len=*), parameter :: NameVar='Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF'

@@ -1879,10 +1879,11 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
      vswb0,xnswb0,itype,ibset,irm,irm0,iba)
   
   use rbe_cboundary
-  use rbe_cread2,  ONLY:js,tsw,xnswa,vswa,nsw,UseGm,tint 
+  use rbe_cread2,  ONLY:js,tsw,xnswa,vswa,nsw,UseGm,tint, UseMhdBoundary
   use ModIoUnit,   ONLY: UnitTmp_
   use ModNumConst, ONLY: pi => cPi
   use rbe_cread1
+  use ModGmRb,     ONLY: StateIntegral_IIV,AveDens_,AveP_
   real v(ir,ip,iw,ik),xjac(ir,iw),p(ir,ip,iw,ik),&
        xmass(ns),f2(ir,ip,iw,ik)
   integer iba(ip),irm(ip),irm0(ip)
@@ -1936,6 +1937,19 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
      ib=iba(j)
      ib1=ib+1
      if (ib1.gt.irm(j)) ib1=irm(j)
+     
+     ! If using MHD values for boundary, set factors
+     if (UseMhdBoundary) then
+         xktn = &
+             StateIntegral_IIV(irm(j),j,AveP_)&
+             / StateIntegral_IIV(irm(j),j,AveDens_) *6.2415e15 !J-->KeV 
+        xnn  = StateIntegral_IIV(irm(j),j,AveDens_)
+        !  Assume a Maxwellian at nightside when ibset=3 and Kappa when ibset=4
+        if (ibset.eq.3) factorn=xnn/(2.*pi*xmass(js)*xktn*1.6e-16)**1.5  
+        if (ibset.eq.4) factorn=xnn*exp(gammln(xk1))/exp(gammln(xk2))/&
+             (2.*pi*xkappa*xmass(js)*xktn*1.6e-16)**1.5
+     endif
+     
      do m=1,ik
         do k=1,iw
            if (ibset.eq.3) then               ! Maxwellian

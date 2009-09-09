@@ -115,11 +115,14 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
      MHD_Xeq     = NoValue
      MHD_Yeq     = NoValue
-     MHD_SUM_vol = 0.0
+     MHD_SUM_vol = -1.0
      MHD_SUM_rho = 0.0
      MHD_SUM_p   = 0.0
      MHD_Beq     = NoValue
   end where
+  
+  ! Put impossible value for volume when inside inner boundary
+  where(MHD_SUM_vol == 0.0) MHD_SUM_vol = -1.0
 
   ! Put the extracted data into BufferLine_VI
 
@@ -158,20 +161,22 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   Buffer_IIV(:,:,1)  = MHD_Xeq
   Buffer_IIV(:,:,2)  = MHD_Yeq
   Buffer_IIV(:,:,3)  = MHD_Beq * No2Si_V(UnitB_)
-  
+  Buffer_IIV(:,:,4)  = MHD_SUM_rho / MHD_SUM_vol * No2Si_V(UnitN_) 
+  Buffer_IIV(:,:,5)  = MHD_SUM_p   / MHD_SUM_vol * No2Si_V(UnitP_)
+ 
   ! Send solar wind values in the array of the extra integral
   ! This is a temporary solution. RB should use MHD_SUM_rho and MHD_SUM_p
 
   call get_solar_wind_point(Time_Simulation, (/x2, 0.0, 0.0/), SolarWind_V)
 
-  Buffer_IIV(1,:,4) = SolarWind_V(Rho_)/MassFluid_I(IonFirst_)*No2Si_V(UnitN_)
-  Buffer_IIV(2,:,4) = SolarWind_V(RhoUx_) * No2Si_V(UnitU_)
-  Buffer_IIV(3,:,4) = SolarWind_V(RhoUy_) * No2Si_V(UnitU_)
-  Buffer_IIV(4,:,4) = SolarWind_V(RhoUz_) * No2Si_V(UnitU_)
-  Buffer_IIV(5,:,4) = SolarWind_V(Bx_) * No2Si_V(UnitB_)
-  Buffer_IIV(6,:,4) = SolarWind_V(By_) * No2Si_V(UnitB_)
-  Buffer_IIV(7,:,4) = SolarWind_V(Bz_) * No2Si_V(UnitB_)
-  Buffer_IIV(8,:,4) = SolarWind_V(p_)  * No2Si_V(UnitP_)
+  Buffer_IIV(1,:,6) = SolarWind_V(Rho_)/MassFluid_I(IonFirst_)*No2Si_V(UnitN_)
+  Buffer_IIV(2,:,6) = SolarWind_V(RhoUx_) * No2Si_V(UnitU_)
+  Buffer_IIV(3,:,6) = SolarWind_V(RhoUy_) * No2Si_V(UnitU_)
+  Buffer_IIV(4,:,6) = SolarWind_V(RhoUz_) * No2Si_V(UnitU_)
+  Buffer_IIV(5,:,6) = SolarWind_V(Bx_) * No2Si_V(UnitB_)
+  Buffer_IIV(6,:,6) = SolarWind_V(By_) * No2Si_V(UnitB_)
+  Buffer_IIV(7,:,6) = SolarWind_V(Bz_) * No2Si_V(UnitB_)
+  Buffer_IIV(8,:,6) = SolarWind_V(p_)  * No2Si_V(UnitP_)
 
   !^CFG END RAYTRACE
 end subroutine GM_get_for_rb

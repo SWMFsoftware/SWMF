@@ -122,7 +122,10 @@ subroutine RB_set_parameters(NameAction)
      
      case('#INPUTDATA')
         call read_var('NameStorm',storm)
-     
+
+     case('#BOUNDARY')
+        call read_var('UseMhdBoundary',UseMhdBoundary) 
+
      case('#PLASMASPHERE')
         call read_var('UsePlasmaSphere',UsePlasmaSphere)
         if(UsePlasmaSphere)then

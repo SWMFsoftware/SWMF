@@ -230,11 +230,11 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
      !write(*,*)NameSub,' Integral_IIV(21,1,:)=',Integral_IIV(21,1,:)
      write(*,*)NameSub,' BufferLine_VI(:,1) =',BufferLine_VI(:,1)
      write(*,*)NameSub,' BufferLine_VI(:,2) =',BufferLine_VI(:,2)
-     write(*,*)NameSub,' IMF: Density  = ',Integral_IIV(1,1,4)
-     write(*,*)NameSub,' IMF: Velocity = ',Integral_IIV(2,1,4)
-     write(*,*)NameSub,' IMF: Bx       = ',Integral_IIV(5,1,4)
-     write(*,*)NameSub,' IMF: By       = ',Integral_IIV(6,1,4)
-     write(*,*)NameSub,' IMF: Bz       = ',Integral_IIV(7,1,4)
+     write(*,*)NameSub,' IMF: Density  = ',Integral_IIV(1,1,6)
+     write(*,*)NameSub,' IMF: Velocity = ',Integral_IIV(2,1,6)
+     write(*,*)NameSub,' IMF: Bx       = ',Integral_IIV(5,1,6)
+     write(*,*)NameSub,' IMF: By       = ',Integral_IIV(6,1,6)
+     write(*,*)NameSub,' IMF: Bz       = ',Integral_IIV(7,1,6)
   end if
   
   if (allocated(StateLine_VI)) then
@@ -256,8 +256,8 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
 
   !Solar wind values
   if(IsFirstCall .or. (.not. UseSmooth)) then
-     xnswa(1) = Integral_IIV(1,1,4)*1.0e-6                   !m^-3 -->/cc
-     vswa (1) = sqrt(sum(Integral_IIV(2:4,1,4)**2.0))*1.0e-3 !m/s-->km/s
+     xnswa(1) = Integral_IIV(1,1,6)*1.0e-6                   !m^-3 -->/cc
+     vswa (1) = sqrt(sum(Integral_IIV(2:4,1,6)**2.0))*1.0e-3 !m/s-->km/s
   else
      ! Update Solar wind value, but do not let them change more than 5 percent 
      ! per update
@@ -265,14 +265,14 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
      SwDensMin = 0.95*xnswa(1)
      SwVelMax  = 1.05*vswa(1)
      SwVelMin  = 0.95*vswa(1)
-     xnswa(1) = min(SwDensMax,Integral_IIV(1,1,4)*1.0e-6)
+     xnswa(1) = min(SwDensMax,Integral_IIV(1,1,6)*1.0e-6)
      xnswa(1) = max(SwDensMin,xnswa(1))
-     vswa(1)  = min(SwVelMax,sqrt(sum(Integral_IIV(2:4,1,4)**2.0))*1.0e-3)
+     vswa(1)  = min(SwVelMax,sqrt(sum(Integral_IIV(2:4,1,6)**2.0))*1.0e-3)
      vswa(1)  = max(SwVelMin,vswa(1))
   endif
-  bxw(1) = Integral_IIV(5,1,4)*1.0e9      !T --> nT
-  byw(1) = Integral_IIV(6,1,4)*1.0e9      !T --> nT
-  bzw(1) = Integral_IIV(7,1,4)*1.0e9      !T --> nT
+  bxw(1) = Integral_IIV(5,1,6)*1.0e9      !T --> nT
+  byw(1) = Integral_IIV(6,1,6)*1.0e9      !T --> nT
+  bzw(1) = Integral_IIV(7,1,6)*1.0e9      !T --> nT
 
   nsw = 1
   
