@@ -1684,7 +1684,7 @@ contains
           do iWave = 1, nWave
              iVar = WaveFirst_ + iWave - 1
              EgSi = State_V(iVar)*No2Si_V(UnitEnergyDens_)
-             call get_temperature_from_energy_g(iWave, EgSI=EgSi, &
+             call get_temperature_from_energy_g(iWave, EgSi, &
                   TgSIOut=TgSi, CgSIOut=CgTgSi)
 
              if(present(TgSiOut_W)) TgSiOut_W(iWave) = TgSi
