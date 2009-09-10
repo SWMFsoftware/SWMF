@@ -96,22 +96,29 @@
   logical,public :: UseBremsstrahlung = .true.
   logical,public :: UsePhotoionization = .true.
   logical,public :: UseScattering      = .false.
+
+  real,parameter :: TRadMin = 500   !K 
+  real           :: ERadMin = CRadiation * TRadMin**4
+  real           :: TgMin_W( nGroupMax )
 contains
   !======================================================================
-  subroutine get_energy_g_from_temperature(iGroup, TgSI, EgSI, CgSI)
+  subroutine get_energy_g_from_temperature(iGroup, TgSIIn, EgSI, CgSI)
     !\
     !Input parameters
     !/
     integer,intent(in):: iGroup
-    real,   intent(in):: TgSI    !Group temperature [K]
+    real,   intent(in):: TgSIIn    !Group temperature [K]
 
     !\
     !Output parameters
     !/
     real, optional, intent(out) :: EgSI    !Radiation energy per group, J/m3
     real, optional, intent(out) :: CgSI    !Radiation specific heat per group, J/(K.m3)
-    real :: xMin, xMax
+    real :: xMin, xMax, TgSI
     !---------------------------------
+
+    TgSI = max(TGSIIn , TgMin_W(iGroup))
+
     xMin = EnergyGroup_I(iGroup - 1)/(TgSI * cKToEV)
     xMax = EnergyGroup_I(iGroup    )/(TgSI * cKToEV)
     
@@ -120,12 +127,12 @@ contains
     
   end subroutine get_energy_g_from_temperature
   !======================================================================
-  subroutine get_temperature_from_energy_g(iGroup, EgSI, TgSIOut, CgSIOut)
+  subroutine get_temperature_from_energy_g(iGroup, EgSIIn, TgSIOut, CgSIOut)
     !\
     !Input parameters
     !/
     integer,intent(in):: iGroup
-    real,   intent(in):: EgSI    !Group temperature [K]
+    real,   intent(in):: EgSIIn    !Group temperature [K]
 
     !\
     !Output parameters
@@ -135,15 +142,18 @@ contains
 
 
     real :: xMin, xMax, FreqMin, FreqMax
-    real :: TgSI, CgSI, ToleranceEg, DeltaEg
+    real :: TgSI, CgSI, ToleranceEg, DeltaEg, EgSI
 
     real, parameter:: cTolerance = 1.0E-3
     
     integer, parameter :: nIter = 10
     integer :: iIter
     !--------------------------------------------------
+    EgSI = max(EgSIIn, ERadMin)
+    
     FreqMin = EnergyGroup_I(iGroup - 1) * cEVToK 
     FreqMax = EnergyGroup_I(iGroup    ) * cEVToK
+
     !\
     !Approximation to start:
     !/
@@ -195,6 +205,12 @@ contains
     do iGroup=1,nGroup-1                                  
        elog = elog + DeltaLogFrequency                               
        EnergyGroup_I(iGroup) = exp( elog )                         
+    end do
+    !\
+    !Set ERadMin and TgMin_W
+    ERadMin = (cRadiation * TRadMin**4) / nGroup
+    do iGroup = 1, nGroup
+       call get_temperature_from_energy_g(iGroup, ERadMin, TgMin_W(iGroup))
     end do
 
   end subroutine set_multigroup
