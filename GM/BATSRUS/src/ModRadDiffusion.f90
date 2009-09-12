@@ -90,11 +90,17 @@ contains
 
     ! Make sure that Erad_ is correct
     if(UseRadDiffusion)then
-       if(nWave == 0) call stop_mpi(NameSub// &
+       if(nWave < 1) call stop_mpi(NameSub// &
             ": the number of wave bins should be 1 or more")
 
-       TradMin = TradMinSi*Si2No_V(UnitTemperature_)
-       EradMin = cRadiationNo*TradMin**4
+       if(nWave == 1)then
+          TradMin = TradMinSi*Si2No_V(UnitTemperature_)
+          EradMin = cRadiationNo*TradMin**4
+       else
+          ! The EOS solver takes care of the minimum allowed spectral
+          ! temperatures, radiation energies, and radiation specific heats
+          TradMin = 0.0; EradMin = 0.0
+       end if
     end if
 
     if(UseFullImplicit)then
