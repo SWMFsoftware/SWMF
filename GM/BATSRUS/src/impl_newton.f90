@@ -6,11 +6,11 @@ subroutine impl_newton_init
 
   use ModProcMH
   use ModMain, ONLY : Itest,Jtest,Ktest,VARtest,n_step,dt,nOrder, &
-       UseGrayDiffusion
+       UseRadDiffusion
   use ModAdvance, ONLY : FluxType
   use ModImplicit
   use ModMpi
-  use ModGrayDiffusion, ONLY: IsNewTimestepGrayDiffusion
+  use ModRadDiffusion, ONLY: IsNewTimestepRadDiffusion
   implicit none
 
   integer :: i,j,k,n,iw,implBLK,iBLK, iError
@@ -28,13 +28,13 @@ subroutine impl_newton_init
      !!! We don't really need ResImpl_VCB, but it is easier if it is set
      ResImpl_VCB(:,:,:,:,1:nImplBLK) = ResExpl_VCB(:,:,:,:,1:nImplBLK)
   else
-     if(UseGrayDiffusion) IsNewTimestepGrayDiffusion = .true.
+     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .true.
 
      !                not low,  dt,  subtract
      call get_residual(.false.,.true.,.true., &
           Impl_VGB(:,1:nI,1:nJ,1:nK,:),ResExpl_VCB)
 
-     if(UseGrayDiffusion) IsNewTimestepGrayDiffusion = .false.
+     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .false.
 
      if (nOrder==nOrder_Impl .and. FluxType==FluxTypeImpl) then
         ! If R_low=R then ResImpl_VCB = ResExpl_VCB

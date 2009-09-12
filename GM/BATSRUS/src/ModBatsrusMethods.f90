@@ -234,15 +234,14 @@ end subroutine BATS_setup
 subroutine BATS_init_session
 
   use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation, &
-       UseGrayDiffusion, UseRadDiffusion, UseParallelConduction
+       UseRadDiffusion, UseParallelConduction
   use ModMain, ONLY: UseProjection                 !^CFG IF PROJECTION
   use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
   use ModCT,   ONLY: DoInitConstrainB              !^CFG IF CONSTRAINB
   use ModHallResist, ONLY: UseHallResist, init_hall_resist,test_face_current
   use ModImplicit, ONLY: UseSemiImplicit, &                !^CFG IF IMPLICIT
        TypeSemiImplicit, UseFullImplicit                   !^CFG IF IMPLICIT
-  use ModGrayDiffusion, ONLY: init_gray_diffusion          !^CFG IF IMPLICIT
-  use ModMultiGroupDiffusion, ONLY: init_rad_diffusion     !^CFG IF IMPLICIT
+  use ModRadDiffusion, ONLY: init_rad_diffusion            !^CFG IF IMPLICIT
   use ModHeatConduction, ONLY: init_heat_conduction        !^CFG IF IMPLICIT
   use ModTemperature, ONLY: UseTemperatureDiffusion, init_temperature_diffusion
   use ModUser, ONLY: user_initial_perturbation
@@ -284,14 +283,10 @@ subroutine BATS_init_session
   if(UseSemiImplicit)then
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        if(UseRadDiffusion)then
-           call init_rad_diffusion
-        else
-           call init_gray_diffusion
-        end if
+        call init_rad_diffusion
      end select
-  elseif(UseFullImplicit.and.UseGrayDiffusion)then
-     call init_gray_diffusion
+  elseif(UseFullImplicit.and.UseRadDiffusion)then
+     call init_rad_diffusion
   end if                                              !^CFG END IMPLICIT
 
   ! Make sure that ghost cells are up to date

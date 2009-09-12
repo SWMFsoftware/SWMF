@@ -1647,11 +1647,14 @@ but some of them are evaluated implicitly.
 
 The TypeSemiImplicit parameter determines which terms and corresponding 
 variables are done semi-implicitly. The "radiation" option solves for the 
-gray diffusion radiation energy density and it sets the the internal energy 
+gray diffusion energy density and it sets the the internal energy 
 and pressure in a point implicit manner. The "radcond" option solves 
-implicitly the gray diffusion and electron heat conduction together with
+implicitly the radiation diffusion and electron heat conduction together with
 the radiation and internal energy densities being the unknowns.
-The electron heat conduction is not yet implemented in ModGrayDiffusion.
+To use gray diffusion configure BATSRUS with the default:
+Config.pl -setvar=nWave=1
+To use the multi-group radiation select nWave larger than one.
+The multi-group radiation diffusion is not yet verified.
 
 The default is UseSemiImplicit false.
 </command>
@@ -4880,8 +4883,8 @@ if the Hall effect is switched on in the #HALLRESISTIVITY command.
 
 
 <command name="RADIATION">
-	<parameter name="UseGrayDiffusion" type="logical" default="F"/>
-	<if expr="$UseGrayDiffusion">
+	<parameter name="UseRadDiffusion" type="logical" default="F"/>
+	<if expr="$UseRadDiffusion">
 		<parameter name="UseRadFluxLimiter" type="logical" 
 								default="F"/>
 		<parameter name="TypeRadFluxLimiter" type="string" 
@@ -4894,15 +4897,15 @@ if the Hall effect is switched on in the #HALLRESISTIVITY command.
 	 </if>
 
 #RADIATION
-T		UseGrayDiffusion  (rest of parameters read only if true)
+T		UseRadDiffusion    (rest of parameters read only if true)
 T		UseRadFluxLimiter 
 larsen		TypeRadFluxLimiter (read only if UseRadFluxLimiter is true)
 300.0		TradMinSi
 
-If UseGrayDiffusion is true the radiation hydrodynamics with
-gray nonequilibrium diffusion approximation is used.
+If UseRadDiffusion is true the radiation hydrodynamics with
+radiation nonequilibrium diffusion approximation is used.
 
-If the UseGrayDiffusion is set to true, then optionally a non-linear 
+If the UseRadDiffusion is set to true, then optionally a non-linear 
 flux limiter can be invoked via UseRadFluxLimiter set to true. 
 This limits the radiation diffusion flux so that it does not 
 exceed the optically thin streaming limit, the speed of light. 

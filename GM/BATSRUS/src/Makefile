@@ -13,7 +13,7 @@ include Makefile.RULES
 # CONFIGURABLE MODULES
 
 MOD1 = ModCT.o       #^CFG IF CONSTRAINB
-MOD2 = ModImplicit.o ModGrayDiffusion.o ModMultiGroupDiffusion.o ModHeatConduction.o #^CFG IF IMPLICIT
+MOD2 = ModImplicit.o ModRadDiffusion.o ModHeatConduction.o #^CFG IF IMPLICIT
 MOD3 = ModRaytrace.o #^CFG IF RAYTRACE
 MOD4 = ModProject.o  #^CFG IF PROJECTION
 

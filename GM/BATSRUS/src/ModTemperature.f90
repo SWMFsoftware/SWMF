@@ -110,8 +110,7 @@ contains
 
   subroutine read_temperature_param(NameCommand)
 
-    use ModMain,      ONLY: UseGrayDiffusion, UseRadDiffusion, & 
-         UseHeatConduction
+    use ModMain,      ONLY: UseRadDiffusion, UseHeatConduction
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
@@ -140,25 +139,6 @@ contains
        call read_var('UseHeatConduction', UseHeatConduction)
 
     case("#RADIATION")
-       call read_var('UseGrayDiffusion', UseGrayDiffusion)
-
-       if(UseGrayDiffusion)then
-          call read_var('UseRadFluxLimiter', UseRadFluxLimiter)
-          if(UseRadFluxLimiter)then
-             call read_var('TypeRadFluxLimiter', TypeRadFluxLimiter, &
-                  IsLowerCase=.true.)
-
-             select case(TypeRadFluxLimiter)
-             case("larsen","sum","max")
-             case default
-                call stop_mpi(NameSub//': unknown TypeRadFluxLimiter='&
-                     //TypeRadFluxLimiter)
-             end select
-          end if
-          call read_var('TradMinSi', TradMinSi)
-       end if
-
-    case("#MULTIGROUPRADIATION")
        call read_var('UseRadDiffusion', UseRadDiffusion)
 
        if(UseRadDiffusion)then
@@ -187,8 +167,7 @@ contains
 
   subroutine init_temperature_diffusion
 
-    use ModMain,       ONLY: UseHeatConduction, UseGrayDiffusion, &
-         useRadDiffusion
+    use ModMain,       ONLY: UseHeatConduction, UseRadDiffusion
     use ModProcMH,     ONLY: iProc
     use ModSize,       ONLY: nI, nJ, nK, nBlk, nDim
     use ModVarIndexes, ONLY: NameVar_V, nVar
@@ -199,7 +178,7 @@ contains
     character(len=*), parameter :: NameSub = "init_temperature_diffusion"
     !--------------------------------------------------------------------------
 
-    if(UseGrayDiffusion)then
+    if(UseRadDiffusion)then
        TradMin = TradMinSi*Si2No_V(UnitTemperature_)
        EradMin = cRadiationNo*TradMin**4
     end if
@@ -242,7 +221,7 @@ contains
     ! count the number of temperature variables that involve "heat conduction"
     nCond = 0
     if(UseHeatConduction) nCond = nCond + 1
-    if(UseGrayDiffusion)  nCond = nCond + 1
+    if(UseRadDiffusion)   nCond = nCond + 1
 
     if(.not.allocated(SpecificHeat_VCB))then
        allocate( &
@@ -275,7 +254,7 @@ contains
 
     ! Select which temperature variables involve "heat conduction"
     if(UseHeatConduction) iCond_I(1) = Te_
-    if(UseGrayDiffusion)  iCond_I(nCond) = Trad_
+    if(UseRadDiffusion)   iCond_I(nCond) = Trad_
 
   end subroutine init_temperature_diffusion
 
@@ -337,7 +316,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, nWave
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBlk, &
-         UseHeatConduction, UseGrayDiffusion, UseRadDiffusion
+         UseHeatConduction, UseRadDiffusion
     use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitEnergyDens_, &
          UnitTemperature_, cRadiationNo, Clight, UnitU_
     use ModProcMH,   ONLY: iProc
@@ -388,7 +367,7 @@ contains
           if(UseTemperatureVariable)then
              SpecificHeat_VCB(Te_,i,j,k,iBlock) = Cv
 
-             if(UseGrayDiffusion)then
+             if(UseRadDiffusion)then
                 Trad = max(Temperature_VGB(Trad_,i,j,k,iBlock),TradMin)
                 SpecificHeat_VCB(Trad_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
                 RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = Clight*PlanckOpacity &
@@ -405,7 +384,7 @@ contains
           else
              SpecificHeat_VCB(aTe4_,i,j,k,iBlock) = Cv/(4.0*cRadiationNo*Te**3)
 
-             if(UseGrayDiffusion)then
+             if(UseRadDiffusion)then
                 SpecificHeat_VCB(aTrad4_,i,j,k,iBlock) = 1.0
                 RelaxationCoef_VCB(aTrad4_,i,j,k,iBlock) = Clight*PlanckOpacity
 
@@ -504,7 +483,7 @@ contains
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI
     use ModGeometry,   ONLY: vInv_CB, TypeGeometry, y_BLK
-    use ModMain,       ONLY: nI, nJ, nK, UseGrayDiffusion, UseRadDiffusion
+    use ModMain,       ONLY: nI, nJ, nK, UseRadDiffusion
     use ModVarIndexes, ONLY: Energy_, RhoUy_
 
     integer, intent(in) :: iBlock
@@ -536,7 +515,7 @@ contains
 
     end do; end do; end do
 
-    if(TypeGeometry=='rz' .and. UseGrayDiffusion)then
+    if(TypeGeometry=='rz' .and. UseRadDiffusion)then
        ! Add "geometrical source term" p/r to the radial momentum equation
        ! The "radial" direction is along the Y axis
        ! NOTE: here we have to use signed radial distance!

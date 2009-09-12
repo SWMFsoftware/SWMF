@@ -3,8 +3,7 @@ module ModFaceFlux
   use ModProcMH,     ONLY: iProc
   use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit, &
        iTest, jTest, kTest, ProcTest, BlkTest, DimTest
-  use ModMain,       ONLY: UseGrayDiffusion, UseRadDiffusion, &
-       UseParallelConduction
+  use ModMain,       ONLY: UseRadDiffusion, UseParallelConduction
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
@@ -37,10 +36,7 @@ module ModFaceFlux
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
 
   !^CFG IF IMPLICIT BEGIN
-  use ModGrayDiffusion, ONLY: IsNewBlockGrayDiffusion, &
-       get_radiation_energy_flux
-  use ModMultiGroupDiffusion, ONLY: &
-       IsNewBlockRadDiffusion, get_rad_energy_flux
+  use ModRadDiffusion, ONLY: IsNewBlockRadDiffusion, get_radiation_energy_flux
   use ModHeatConduction, ONLY: IsNewBlockHeatConduction, get_heat_flux
   !^CFG END IMPLICIT
 
@@ -113,7 +109,7 @@ module ModFaceFlux
   logical :: UseHallGradPe = .false., IsNewBlockGradPe = .true.
   real :: GradXPeNe, GradYPeNe, GradZPeNe
 
-  ! Variables for diffusion solvers (gray radiation, heat conduction)
+  ! Variables for diffusion solvers (radiation diffusion, heat conduction)
   real :: DiffCoef, EradFlux, RadDiffCoef, HeatFlux, HeatCondCoefNormal
 
   ! These are variables for pure MHD solvers (Roe and HLLD)
@@ -366,7 +362,6 @@ contains
     ! in the current block that will be used for the Hall term
     IsNewBlockHall   = .true.
     IsNewBlockGradPe = .true.
-    IsNewBlockGrayDiffusion = .true.     !^CFG IF IMPLICIT
     IsNewBlockRadDiffusion = .true.      !^CFG IF IMPLICIT
     IsNewBlockHeatConduction = .true.    !^CFG IF IMPLICIT
 
@@ -930,7 +925,7 @@ contains
        ! Initialize diffusion coefficient for time step restriction
        DiffCoef = 0.0
 
-       if(UseGrayDiffusion)then
+       if(UseRadDiffusion)then
           call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
                iBlockFace, StateLeft_V, StateRight_V, Normal_D, &
                RadDiffCoef, EradFlux)
@@ -1084,7 +1079,7 @@ contains
     ! Increase maximum speed with diffusion speed if necessary
     !^CFG IF IMPLICIT BEGIN
     if(.not. UseSemiImplicit)then
-       if(UseParallelConduction .or. UseGrayDiffusion) &
+       if(UseParallelConduction .or. UseRadDiffusion) &
             CmaxDt = CmaxDt + 2.0*DiffCoef*InvDxyz
     end if
     !^CFG END IMPLICIT
@@ -1719,7 +1714,7 @@ contains
 
       !^CFG IF IMPLICIT BEGIN
       if(.not.UseSemiImplicit)then
-         if(UseGrayDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
+         if(UseRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
       end if
       !^CFG END IMPLICIT
 
@@ -1874,7 +1869,7 @@ contains
 
     !^CFG IF  IMPLICIT BEGIN
     if(.not.UseSemiImplicit)then
-       if(UseGrayDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
+       if(UseRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
        if(UseParallelConduction) Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
     end if
     !^CFG END IMPLICIT

@@ -494,7 +494,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var("DrInnerHall", DrInnerHall)
 
      case("#RADIATION", &
-          "#MULTIGROUPRADIATION", &
           "#HEATCONDUCTION", &
           "#IMPLICITTEMPERATURE")
         call read_temperature_param(NameCommand)
@@ -2149,7 +2148,8 @@ contains
        optimize_message_pass = 'all'
     endif
 
-    if ( UseGrayDiffusion &                        !^CFG IF IMPLICIT BEGIN
+    !^CFG IF IMPLICIT BEGIN
+    if ( UseRadDiffusion &
          .and. (UseFullImplicit.or.UseSemiImplicit) &  
          .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
@@ -2160,20 +2160,8 @@ contains
           write(*,*)NameSub//' setting optimize_message_pass = all'
        end if
        optimize_message_pass = 'all'
-    endif                                          !^CFG END IMPLICIT
-
-    if ( UseRadDiffusion &                        !^CFG IF IMPLICIT BEGIN
-         .and. (UseFullImplicit.or.UseSemiImplicit) &  
-         .and. index(optimize_message_pass,'opt') > 0) then
-       if(iProc==0 .and. optimize_message_pass /= 'allopt') then
-          write(*,'(a)')NameSub//&
-               ' WARNING: Radiation Flux Limiter does not work for'// &
-               ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
-          if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting optimize_message_pass = all'
-       end if
-       optimize_message_pass = 'all'
-    endif                                          !^CFG END IMPLICIT
+    endif
+    !^CFG END IMPLICIT
 
     if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
          call stop_mpi(NameSub// &

@@ -59,8 +59,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
   use ModAdvance, ONLY : State_VGB, Energy_GBI, nVar
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   use ModImplicit
-  use ModGrayDiffusion, ONLY: get_impl_gray_diff_state
-  use ModMultiGroupDiffusion, ONLY: get_impl_rad_diff_state
+  use ModRadDiffusion, ONLY: get_impl_rad_diff_state
   use ModHeatConduction, ONLY: get_impl_heat_cond_state
   implicit none
 
@@ -85,11 +84,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        if(UseRadDiffusion)then
-           call get_impl_rad_diff_state(Var_VGB, DconsDsemi_VCB)
-        else
-           call get_impl_gray_diff_state(Var_VGB, DconsDsemi_VCB)
-          end if
+        call get_impl_rad_diff_state(Var_VGB, DconsDsemi_VCB)
      case('parcond')
         call get_impl_heat_cond_state(Var_VGB, DconsDsemi_VCB)
      case default
@@ -156,11 +151,10 @@ end subroutine impl2expl
 
 subroutine implicit2explicit(Var_VCB)
 
-  use ModMain, ONLY: nI,nJ,nK,MaxImplBLK, UseRadDiffusion
+  use ModMain, ONLY: nI,nJ,nK,MaxImplBLK
   use ModImplicit, ONLY: nw, nImplBLK, impl2iBLK, &
        UseSemiImplicit, TypeSemiImplicit
-  use ModGrayDiffusion, ONLY: update_impl_gray_diff
-  use ModMultiGroupDiffusion, ONLY: update_impl_rad_diff
+  use ModRadDiffusion, ONLY: update_impl_rad_diff
   use ModHeatConduction, ONLY: update_impl_heat_cond
   implicit none
 
@@ -175,13 +169,7 @@ subroutine implicit2explicit(Var_VCB)
      if(UseSemiImplicit)then
         select case(TypeSemiImplicit)
         case('radiation', 'radcond', 'cond')
-           if(UseRadDiffusion)then
-              call update_impl_rad_diff(iBLK, implBLK, &
-                   Var_VCB(:,:,:,:,implBLK))
-           else
-              call update_impl_gray_diff(iBLK, implBLK, &
-                   Var_VCB(:,:,:,:,implBLK))
-           end if
+           call update_impl_rad_diff(iBLK, implBLK, Var_VCB(:,:,:,:,implBLK))
         case('parcond')
            call update_impl_heat_cond(iBLK, implBLK, Var_VCB(:,:,:,:,implBLK))
         case default
@@ -285,10 +273,9 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModProcMH, ONLY: iProc
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
        TypeSemiImplicit
-  use ModMain, ONLY: dt, UseRadDiffusion
+  use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
-  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
-  use ModMultiGroupDiffusion, ONLY: get_rad_diffusion_rhs
+  use ModRadDiffusion, ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
@@ -330,13 +317,8 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        if(UseRadDiffusion)then
-           call get_rad_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
-              Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
-        else
-           call get_gray_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
-                Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
-        end if
+        call get_rad_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
+             Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
      case('parcond')
         call get_heat_conduction_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
              Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
@@ -360,10 +342,9 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
        TypeSemiImplicit, ImplCoeff, DconsDsemi_VCB !!!, wnrm
-  use ModMain, ONLY: dt, UseRadDiffusion
+  use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
-  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
-  use ModMultiGroupDiffusion, ONLY: get_rad_diffusion_rhs
+  use ModRadDiffusion, ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
@@ -416,13 +397,8 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        if(UseRadDiffusion)then
-           call get_rad_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
-                Rhs_VC, IsLinear = .true.)
-        else
-           call get_gray_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
-                Rhs_VC, IsLinear = .true.)
-        end if
+        call get_rad_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
+             Rhs_VC, IsLinear = .true.)
      case('parcond')
         call get_heat_conduction_rhs(iBlock, &
              StateSemi_VGB(:,:,:,:,iBlock), Rhs_VC, IsLinear = .true.)
@@ -448,10 +424,9 @@ subroutine get_semi_impl_jacobian
 
   use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, &
        nStencil, MAT, ImplCoeff, DconsDsemi_VCB !!!, wnrm
-  use ModGrayDiffusion, ONLY: add_jacobian_gray_diff
-  use ModMultiGroupDiffusion, ONLY: add_jacobian_rad_diff
+  use ModRadDiffusion, ONLY: add_jacobian_rad_diff
   use ModHeatConduction, ONLY: add_jacobian_heat_cond
-  use ModMain, ONLY: nI, nJ, nK, nDim, Dt, UseRadDiffusion
+  use ModMain, ONLY: nI, nJ, nK, nDim, Dt
   use ModGeometry, ONLY: vInv_CB
 
   implicit none
@@ -470,11 +445,7 @@ subroutine get_semi_impl_jacobian
      ! Get dR/dU
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        if(UseRadDiffusion)then
-           call add_jacobian_rad_diff(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
-        else
-           call add_jacobian_gray_diff(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
-        end if
+        call add_jacobian_rad_diff(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
      case('parcond')
         call add_jacobian_heat_cond(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
      case default
@@ -504,10 +475,9 @@ end subroutine get_semi_impl_jacobian
 
 subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
 
-  use ModGrayDiffusion, ONLY: set_gray_outflow_bc
-  use ModMultiGroupDiffusion, ONLY: set_rad_outflow_bc
+  use ModRadDiffusion, ONLY: set_rad_outflow_bc
   use ModImplicit, ONLY: StateSemi_VGB, iTrImplFirst, iTrImplLast, iEradImpl,nw
-  use ModMain,     ONLY: nI, nJ, nK, TypeBc_I, UseRadDiffusion
+  use ModMain,     ONLY: nI, nJ, nK, TypeBc_I
   use ModParallel, ONLY: NOBLK, NeiLev
   use ModUser,     ONLY: user_set_outerbcs
 
@@ -525,13 +495,10 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
      if(TypeBc_I(1) == 'outflow' .or. TypeBc_I(1) == 'float')then
         do iVar = 1, nw
            if(iVar == iTrImplFirst)then
-              call set_gray_outflow_bc(1,iBlock, iImplBlock, &
+              call set_rad_outflow_bc(1,iBlock, iImplBlock, &
                    StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
            elseif(iVar > iTrImplFirst .and. iVar <= iTrImplLast)then
               ! bc already set
-           elseif((iVar == iEradImpl).and.(UseRadDiffusion))then
-              call set_rad_outflow_bc(1, iBlock, iEradImpl, nw, &
-                   StateSemi_VGB(:,:,:,:,iBlock))
            else
               if(IsLinear)then
                  StateSemi_VGB(iVar,0,:,:,iBlock) = 0.0
@@ -561,13 +528,10 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
      if(TypeBc_I(2) == 'outflow' .or. TypeBc_I(2) == 'float')then
         do iVar = 1, nw
            if(iVar == iTrImplFirst)then
-              call set_gray_outflow_bc(2, iBlock, iImplBlock, &
+              call set_rad_outflow_bc(2, iBlock, iImplBlock, &
                    StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
            elseif(iVar > iTrImplFirst .and. iVar <= iTrImplLast)then
               ! bc already set
-           elseif((iVar == iEradImpl).and.(UseRadDiffusion))then
-              call set_rad_outflow_bc(2, iBlock, iEradImpl, nw, &
-                   StateSemi_VGB(:,:,:,:,iBlock))
            else
               if(IsLinear)then
                  StateSemi_VGB(iVar,nI+1,:,:,iBlock) = 0.0
@@ -597,13 +561,10 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
      if(TypeBc_I(3) == 'outflow' .or. TypeBc_I(3) == 'float')then
         do iVar = 1, nw
            if(iVar == iTrImplFirst)then
-              call set_gray_outflow_bc(3, iBlock, iImplBlock, &
+              call set_rad_outflow_bc(3, iBlock, iImplBlock, &
                    StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
            elseif(iVar > iTrImplFirst .and. iVar <= iTrImplLast)then
               ! bc already set
-           elseif((iVar == iEradImpl).and.(UseRadDiffusion))then
-              call set_rad_outflow_bc(3, iBlock, iEradImpl, nw, &
-                   StateSemi_VGB(:,:,:,:,iBlock))
            else
               if(IsLinear)then
                  StateSemi_VGB(iVar,:,0,:,iBlock) = 0.0
@@ -635,13 +596,10 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
      if(TypeBc_I(4) == 'outflow' .or. TypeBc_I(4) == 'float')then
         do iVar = 1, nw
            if(iVar == iTrImplFirst)then
-              call set_gray_outflow_bc(4, iBlock, iImplBlock, &
+              call set_rad_outflow_bc(4, iBlock, iImplBlock, &
                    StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
            elseif(iVar > iTrImplFirst .and. iVar <= iTrImplLast)then
               ! bc already set
-           elseif((iVar == iEradImpl).and.(UseRadDiffusion))then
-              call set_rad_outflow_bc(4, iBlock, iEradImpl, nw, &
-                   StateSemi_VGB(:,:,:,:,iBlock))
            else
               if(IsLinear)then
                  StateSemi_VGB(iVar,:,nJ+1,:,iBlock) = 0.0
@@ -673,13 +631,10 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
      if(TypeBc_I(5) == 'outflow' .or. TypeBc_I(5) == 'float')then
         do iVar = 1, nw
            if(iVar == iTrImplFirst)then
-              call set_gray_outflow_bc(5, iBlock, iImplBlock, &
+              call set_rad_outflow_bc(5, iBlock, iImplBlock, &
                    StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
            elseif(iVar > iTrImplFirst .and. iVar <= iTrImplLast)then
               ! bc already set
-           elseif((iVar == iEradImpl).and.(UseRadDiffusion))then
-              call set_rad_outflow_bc(5, iBlock, iEradImpl, nw, &
-                   StateSemi_VGB(:,:,:,:,iBlock))
            else
               if(IsLinear)then
                  StateSemi_VGB(iVar,:,:,0,iBlock) = 0.0
@@ -709,13 +664,10 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
      if(TypeBc_I(6) == 'outflow' .or. TypeBc_I(6) == 'float')then
         do iVar = 1, nw
            if(iVar == iTrImplFirst)then
-              call set_gray_outflow_bc(6, iBlock, iImplBlock, &
+              call set_rad_outflow_bc(6, iBlock, iImplBlock, &
                    StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
            elseif(iVar > iTrImplFirst .and. iVar <= iTrImplLast)then
               ! bc already set
-           elseif((iVar == iEradImpl).and.(UseRadDiffusion))then
-              call set_rad_outflow_bc(6, iBlock, iEradImpl, nw, &
-                   StateSemi_VGB(:,:,:,:,iBlock))
            else
               if(IsLinear)then
                  StateSemi_VGB(iVar,:,:,nK+1,iBlock) = 0.0

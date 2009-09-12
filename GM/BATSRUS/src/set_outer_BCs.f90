@@ -121,7 +121,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
      case('float','outflow')
         call BC_cont(1,nVar)
         !^CFG IF IMPLICIT BEGIN
-        if(UseGrayDiffusion.or.UseRadDiffusion) &
+        if(UseRadDiffusion) &
              call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
         !^CFG END IMPLICIT
      case('raeder')
