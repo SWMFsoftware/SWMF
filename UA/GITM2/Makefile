@@ -112,7 +112,8 @@ test_earth:
 	make test_earth_check
 
 test_earth_compile:
-	./Config.pl -Earth -g=9,9,50,4
+	./Config.pl -Earth
+	./Config.pl -g=9,9,50,4
 	make GITM
 
 test_earth_rundir:
@@ -140,7 +141,8 @@ test_mars:
 	make test_mars_check
 
 test_mars_compile:
-	./Config.pl -Mars -g=1,1,60,1
+	./Config.pl -Mars
+	./Config.pl -g=1,1,120,1
 	make GITM
 
 test_mars_rundir:
