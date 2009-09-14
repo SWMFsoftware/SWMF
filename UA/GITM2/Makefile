@@ -142,7 +142,7 @@ test_mars:
 
 test_mars_compile:
 	./Config.pl -Mars
-	./Config.pl -g=1,1,120,1
+	./Config.pl -g=1,1,90,1
 	make GITM
 
 test_mars_rundir:
