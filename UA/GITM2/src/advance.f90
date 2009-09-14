@@ -87,6 +87,7 @@ contains
     do iBlock = 1, nBlocks
 
        call calc_rates(iBlock)
+       call calc_viscosity(iBlock)
 
        do iLon = 1, nLons ; do iLat = 1, nLats
           call advance_vertical(iLon,iLat,iBlock)

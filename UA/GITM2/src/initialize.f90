@@ -391,8 +391,8 @@ subroutine initialize_gitm(TimeIn)
 
   do iBlock = 1, nBlocks
     call calc_eddy_diffusion_coefficient(iBlock)
-    call calc_viscosity(iBlock)
     call calc_rates(iBlock)
+!    call calc_viscosity(iBlock)
   enddo
 
 !  do iBlock = 1, nBlocks
