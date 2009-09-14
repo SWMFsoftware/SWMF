@@ -167,9 +167,6 @@ subroutine calc_viscosity(iBlock)
 
   integer, intent(in) :: iBlock
 
-  write(*,*) minval(Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock)), &
-       minval(TempUnit(1:nLons,1:nLats,0:nAlts+1))
-
   ! This is Earth-based, and 
   ViscCoef = 4.5e-5 * &
        (Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock)*&
