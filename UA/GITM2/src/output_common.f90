@@ -190,7 +190,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('3DION')
 
-     nvars_to_write = 8+nIons
+     nvars_to_write = 8+nIons+6
      call output_3dion(iBlock)
 
   case ('3DTHM')
@@ -484,22 +484,35 @@ contains
        write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "V!Di!N (up)"
 
        iOff = iOff + 5
-       write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "N2 Mixing Ratio"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "CH4 Mixing Ratio"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "Ar Mixing Ratio"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "HCN Mixing Ratio"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "H2 Mixing Ratio"
+
+       if (cType(3:5) == "ALL") then
+
+          write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "N2 Mixing Ratio"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "CH4 Mixing Ratio"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "Ar Mixing Ratio"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "HCN Mixing Ratio"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "H2 Mixing Ratio"
 
 !       write(iOutputUnit_,"(I7,A1,a)") iOff+6, " ", "15N2 Mixing Ratio"
 !       write(iOutputUnit_,"(I7,A1,a)") iOff+7, " ", "13CH4 Mixing Ratio"
 
-       iOff = iOff + nSpecies
-       write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "RadCooling"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "EuvHeating"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "Conduction"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "Heat Balance Total"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "Heaing Efficiency"
+          iOff = iOff + nSpecies
+          write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "RadCooling"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "EuvHeating"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "Conduction"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "Heat Balance Total"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "Heaing Efficiency"
 
+       else
+
+          write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "B0 East"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "B0 North"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "B0 Vertical"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "B0 Magnitude"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "Magnetic Latitude"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+6, " ", "Magnetic Longitude"
+
+       endif
 
     endif
 
@@ -819,11 +832,8 @@ subroutine output_3dion(iBlock)
   integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon
 
   do iAlt=-1,nAlts+2
-     iiAlt = max(min(iAlt,nAlts),1)
      do iLat=-1,nLats+2
-        iiLat = min(max(iLat,1),nLats)
         do iLon=-1,nLons+2
-           iiLon = min(max(iLon,1),nLons)
            write(iOutputUnit_)          &
                 Longitude(iLon,iBlock),               &
                 Latitude(iLat,iBlock),                &
@@ -831,7 +841,10 @@ subroutine output_3dion(iBlock)
                 IDensityS(iLon,iLat,iAlt,:,iBlock),   &
                 eTemperature(iLon,iLat,iAlt,iBlock),  &
                 ITemperature(iLon,iLat,iAlt,iBlock),  &
-                Ivelocity(iLon,iLat,iAlt,:,iBlock)
+                Ivelocity(iLon,iLat,iAlt,:,iBlock),   &
+                B0(iLon,iLat,iAlt,:,iBlock), &
+                mLatitude(iLon,iLat,iAlt,iBlock), &
+                mLongitude(iLon,iLat,iAlt,iBlock)
         enddo
      enddo
   enddo

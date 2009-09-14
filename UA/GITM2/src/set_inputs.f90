@@ -528,6 +528,34 @@ subroutine set_inputs
 !              IsDone = .true.
 !           endif
 
+        case ("#DIPOLE")
+
+           call read_in_real(MagneticPoleRotation, iError)
+           call read_in_real(MagneticPoleTilt    , iError)
+           call read_in_real(xDipoleCenter       , iError)
+           call read_in_real(yDipoleCenter       , iError)
+           call read_in_real(zDipoleCenter       , iError)
+
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #DIPOLE:'
+              write(*,*) '#DIPOLE'
+              write(*,*) 'MagneticPoleRotation   (real)'
+              write(*,*) 'MagneticPoleTilt       (real)'
+              write(*,*) 'xDipoleCenter          (real)'
+              write(*,*) 'yDipoleCenter          (real)'
+              write(*,*) 'zDipoleCenter          (real)'
+              IsDone = .true.
+
+           else
+
+              MagneticPoleRotation = MagneticPoleRotation * pi / 180.0
+              MagneticPoleTilt     = MagneticPoleTilt     * pi / 180.0
+              xDipoleCenter = xDipoleCenter * 1000.0
+              yDipoleCenter = yDipoleCenter * 1000.0
+              zDipoleCenter = zDipoleCenter * 1000.0
+
+           endif
+
         case ("#APEX")
 
            if (IsFramework .and. UseApex) then
