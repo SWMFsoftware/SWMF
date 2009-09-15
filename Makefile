@@ -132,6 +132,10 @@ install: ENV_CHECK mkdir
 			then cp GM/BATSRUS/Config.pl SC/BATSRUS; \
 			     perl -i -pe 's/GM/SC/' SC/BATSRUS/Config.pl; \
 		fi; \
+		if([ -d "LC/BATSRUS" ]); \
+			then cp GM/BATSRUS/Config.pl LC/BATSRUS; \
+			     perl -i -pe 's/GM/LC/' LC/BATSRUS/Config.pl; \
+		fi; \
 		if([ -d "OH/BATSRUS" ]); \
 			then cp GM/BATSRUS/Config.pl OH/BATSRUS; \
 			     perl -i -pe 's/GM/OH/' OH/BATSRUS/Config.pl; \
@@ -358,6 +362,7 @@ rundir: ENV_CHECK
 	cd ${PWDIR}; make rundir                 #^CMP IF PW
 	cd ${RBDIR}; make rundir                 #^CMP IF RB
 	cd ${SCDIR}; make rundir                 #^CMP IF SC
+	cd ${LCDIR}; make rundir		 #^CMP IF LC
 	cd ${SPDIR}; make rundir                 #^CMP IF SP
 	cd ${UADIR}; make rundir                 #^CMP IF UA
 	@touch share/JobScripts/TMP_${MACHINE}
@@ -532,5 +537,49 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 		./Config.pl -install=c -u=Sc -e=MhdCorona
 
 #^CMP END SC
+
+#^CMP IF LC BEGIN
+#
+# configure and collect source files for LC/BATSRUS component
+#
+LC/BATSRUS/src/Makefile:
+	rm -rf \
+		LC/BATSRUS/src \
+		LC/BATSRUS/srcUser \
+		LC/BATSRUS/srcEquation \
+		LC/BATSRUS/srcInterface/LC_wrapper.f90 \
+		LC/BATSRUS/srcInterface/LC_get_for_sp.f90
+	cd GM/BATSRUS; \
+		cp -f Makefile.conf ../../LC/BATSRUS; \
+		make COMP=LC DREL=TMP relax_src
+	cd GM/BATSRUS/TMP; \
+		mv Config.pl PARAM.XML src srcUser srcEquation \
+			../../../LC/BATSRUS;\
+		mv srcInterface/*.f90 ../../../LC/BATSRUS/srcInterface
+	rm -rf GM/BATSRUS/TMP
+	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
+		LC/BATSRUS/srcInterface/LC_wrapper.f90
+	cp -f IH/BATSRUS_share/src/IH_get_for_sp.f90 \
+		LC/BATSRUS/srcInterface/LC_get_for_sp.f90
+	cd LC/BATSRUS/srcInterface/; perl -i -pe \
+	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
+		LC_wrapper.f90 lC_get_for_sp.f90
+	cd LC/BATSRUS/src; rm -f main.f90
+
+# rename LC source files to avoid name conflicts
+LC_SRC = src/*.f90 src/*.h srcInterface/*.f90 srcUser/*.f90 srcEquation/*.f90
+
+LCBATSRUS: LC/BATSRUS/src/Makefile \
+		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
+	cd LC/BATSRUS; \
+		${SCRIPTDIR}/Methods.pl LC ${LC_SRC}; \
+		${SCRIPTDIR}/Rename.pl -w -r -common=LC ${LC_SRC}
+	touch LC/BATSRUS/srcInterface/Makefile.DEPEND
+	cd LC/BATSRUS; \
+		perl -i -pe 's/GM/LC/' Config.pl; \
+		./Config.pl -install=c -u=Sc -e=MhdCorona
+
+#^CMP END LC
+
 
 include Makefile.test #^CMP IF TESTING
