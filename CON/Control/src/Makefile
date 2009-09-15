@@ -64,6 +64,8 @@ LIBPW = ${LIBDIR}/libPW.a       #^CMP IF PW
 
 LIBRB = ${LIBDIR}/libRB.a	#^CMP IF RB
 
+LIBLC = ${LIBDIR}/libLC.a       #^CMP IF LC
+
 LIBSC = ${LIBDIR}/libSC.a       #^CMP IF SC
 
 LIBSP = ${LIBDIR}/libSP.a       #^CMP IF SP
@@ -168,6 +170,7 @@ LIB:
 	@cd ${PSDIR};                make LIB	#^CMP IF PS
 	@cd ${PWDIR};                make LIB	#^CMP IF PW
 	@cd ${RBDIR};                make LIB	#^CMP IF RB
+	@cd ${LCDIR};		     make LIB   #^CMP IF LC
 	@cd ${SCDIR};                make LIB   #^CMP IF SC
 	@cd ${SPDIR};                make LIB   #^CMP IF SP
 	@cd ${UADIR};                make LIB	#^CMP IF UA
@@ -213,6 +216,7 @@ TMP_DIRS: LIB
 	mkdir Tmp_LIBPS;       cd Tmp_LIBPS;     ${AR_X} ${LIBPS} #^CMP IF PS
 	mkdir Tmp_LIBPW;       cd Tmp_LIBPW;     ${AR_X} ${LIBPW} #^CMP IF PW
 	mkdir Tmp_LIBRB;       cd Tmp_LIBRB;     ${AR_X} ${LIBRB} #^CMP IF RB
+	mkdir Tmp_LIBLC;       cd Tmp_LIBLC;     ${AR_X} ${LIBLC} #^CMP IF LC
 	mkdir Tmp_LIBSC;       cd Tmp_LIBSC;     ${AR_X} ${LIBSC} #^CMP IF SC
 	mkdir Tmp_LIBSP;       cd Tmp_LIBSP;     ${AR_X} ${LIBSP} #^CMP IF SP
 	mkdir Tmp_LIBUA;       cd Tmp_LIBUA;     ${AR_X} ${LIBUA} #^CMP IF UA
