@@ -74,6 +74,11 @@ if($Installed){
     # Create SC/BATSRUS if needed
     &shell_command("make SCBATSRUS")
 	if $Version{"SC"} eq "BATSRUS" and not -f "SC/BATSRUS/src/Makefile";
+
+    # Create LC/BATSRUS if needed
+    &shell_command("make LCBATSRUS")
+	if $Version{"LC"} eq "BATSRUS" and not -f "LC/BATSRUS/src/Makefile";
+
 }
 
 &set_grid_size if $GridSize;
