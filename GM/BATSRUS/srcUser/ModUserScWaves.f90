@@ -39,7 +39,7 @@ contains
     use ModMain
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
-    use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
+    use ModIO,          ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
     use ModMagnetogram, ONLY: set_parameters_magnetogram
     use ModWaves,       ONLY: read_alfven_speed,read_wave_pressure,read_frequency
     implicit none
@@ -61,7 +61,7 @@ contains
        case("#PFSSM")
           call read_var('UseUserB0'  ,UseUserB0)
           if(UseUserB0)then
-             call set_parameters_magnetogram
+             call set_parameters_magnetogram(NamePlotDir)
              call read_var('dt_UpdateB0',dt_UpdateB0)
              DoUpdateB0 = dt_updateb0 > 0.0
           end if
