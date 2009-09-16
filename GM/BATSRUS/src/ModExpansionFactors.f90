@@ -659,16 +659,22 @@ end subroutine get_total_wave_energy_dens
 !====================================================================
 subroutine write_expansion_tec
   use ModExpansionFactors
+  use ModIO, ONLY: NamePlotDir
+
   implicit none
 
   real :: GammaR0, GammaRS
   integer :: iError,iPhi,iTheta,iUnit
   real :: xx,yy,zz,rLatitude
+  character(len=32) :: FileNameDat
+
+  !-----------------------------------------------------------------
+  FileNameDat= trim(NamePlotDir)//'PFSSM_Factors.dat'
 
   iUnit=io_unit_new()
   call write_prefix;write(iUnitOut,*)'Writing PFSSM factors  output&
        & file'
-  open(unit = iUnit, file = 'SC/IO2/PFSSM_Factors.dat', form =&
+  open(unit = iUnit, file = FileNameDat , form =&
        & 'formatted', access = 'sequential', status = 'replace',&
        & iostat = iError )
   ! Tecplot file header  
