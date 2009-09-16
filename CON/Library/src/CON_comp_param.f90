@@ -29,6 +29,7 @@
 !\item[RB] Radiation Belts
 !\item[RT] Radiative Transfer
 !\item[SC] Solar Corona
+!\item[LC] Lower Solar Corona
 !\item[SP] Solar Energetic Particles
 !\item[UA] Upper Atmosphere
 !\end{itemize}
@@ -41,18 +42,18 @@ module CON_comp_param
 
   !PUBLIC DATA MEMBERS:
 
-  integer, parameter :: MaxComp   = 14 ! maximum number of components
+  integer, parameter :: MaxComp   = 15 ! maximum number of components
   integer, parameter :: lNameComp =  2 ! length of component names
 
   ! Convert component index to component name
   character(len=lNameComp), parameter :: NameComp_I(MaxComp) = (/ & 
        "EE", "GM", "IE", "IH", "IM", "LA", "OH", "PS", "PW", &
-       "RB", "RT", "SP", "SC", "UA"/)
+       "RB", "RT", "SP", "SC", "LC", "UA"/)
 
   ! Named indexes for the components
   integer, parameter :: &
        EE_=1, GM_=2, IE_=3, IH_=4 , IM_=5 ,LA_=6, OH_=7, PS_=8, PW_=9, &
-       RB_=10 ,RT_=11, SP_=12 ,SC_=13 ,UA_=14
+       RB_=10 ,RT_=11, SP_=12 ,SC_=13 ,LC_=14, UA_=15
 
   ! Length of the version name of the component
   integer, parameter :: lNameVersion=40 
@@ -80,7 +81,8 @@ module CON_comp_param
   !REVISION HISTORY: 
   !
   !  June    2003 - O. Volberg <volov@umich.edu> - initial version
-  !  July 12 2003 - G. Toth    <gtoth@umich.edt> - rewrite
+  !  July 12 2003 - G. Toth    <gtoth@umich.edu> - rewrite
+  !  Sep  16 2009 - R. Oran    <oran@umich.edu>  - add LC component
   !
   !EOP ------------------------------------------------------------------------
 
