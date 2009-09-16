@@ -182,7 +182,8 @@ end subroutine PW_save_restart
 subroutine PW_run(TimeSimulation,TimeSimulationLimit)
 
   use ModPWOM, ONLY: iLine, nLine, Time, nStep, DtHorizontalOrig, &
-       DtHorizontal, DtOutput, DoPlotElectrodynamics, DtPlotElectrodynamics
+       DtHorizontal, DtOutput, DoPlotElectrodynamics, DtPlotElectrodynamics, &
+       Tmax
 
   implicit none
 
@@ -200,6 +201,8 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
        Time,TimeSimulation,TimeSimulationLimit
 
   DtHorizontal = min(DtHorizontalOrig, TimeSimulationLimit - Time)
+
+  Tmax = TimeSimulationLimit
 
   if(DoTestMe)write(*,*) NameSub,': DtHorizontalOrig,DtHorizontal=',&
        DtHorizontalOrig,DtHorizontal
