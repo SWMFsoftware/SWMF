@@ -87,7 +87,7 @@ contains
 
   subroutine user_init_session
     use EEE_ModMain,    ONLY: EEE_initialize
-    use ModIO,          ONLY: write_prefix, iUnitOut
+    use ModIO,          ONLY: write_prefix, iUnitOut,NamePlotDir
     use ModMagnetogram, ONLY: read_magnetogram_file
     use ModMain,        ONLY: UseUserB0
     use ModPhysics,     ONLY: BodyNDim_I,BodyTDim_I,g
@@ -105,8 +105,9 @@ contains
        write(*,*) 'In session 1, a magnetogram file has to be read via #PFSSM'
        call stop_mpi('ERROR: Correct PARAM.in!')
     end if
+    write(*,*) 'NamePlotDir = ',NamePlotDir
     if(i_line_command("#PFSSM") > 0)then
-       call read_magnetogram_file
+       call read_magnetogram_file(NamePlotDir)
     end if
 
     if(i_line_command("#EMPIRICALSW", iSessionIn = 1) < 0)then
