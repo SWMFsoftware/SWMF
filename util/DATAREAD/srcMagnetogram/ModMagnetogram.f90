@@ -26,6 +26,9 @@ module ModMagnetogram
   ! Name of the input file
   character (LEN=32):: File_PFSSM='mf.dat'
 
+  ! Name of output directory
+  character(len=32):: NameOutDir
+
   ! Rs - radius of outer source surface where field is taken to be 0.
   ! Ro - radius of inner boundary for the potential
   ! H  - height of ??
@@ -174,9 +177,10 @@ contains
 
   !============================================================================
 
-  subroutine read_magnetogram_file
+  subroutine read_magnetogram_file(NamePlotDir)
     implicit none
-
+    
+    character(len=*),intent(in) :: NamePlotDir
     integer :: iError
     !--------------------------------------------------------------------------
     iComm = MPI_COMM_WORLD
@@ -192,6 +196,7 @@ contains
     ! Initialize once g(n+1,m+1) & h(n+1,m+1) by reading a file
     ! created from Web data::
     !/ 
+    NameOutDir = NamePlotDir
 
     call read_harmonics
 
@@ -325,8 +330,7 @@ contains
     ! Therefore, she performs an initial correction to the g(n,m) and h(n,m) to 
     ! make them consistent with the the expansion. There is no reference for this
     ! correction.
-    !---------------------------------------------------------------------------
-
+    !--------------------------------------------------------------------------  
     integer:: i,n,m,iTheta,iPhi,iR
     real:: c_n
     real:: SinPhi,CosPhi
@@ -535,8 +539,7 @@ contains
          stuff3         = Sqrt_I((n-1)**2-m**2)/Sqrt_I(2*n-3)
          p_nm(n+1,m+1)  = stuff1*(stuff2*CosTheta*p_nm(n,m+1)-  &
               stuff3*p_nm(n-1,m+1))
-         !\
-         ! Eq.(32) from Altschuler et al. 1976::
+         !\         ! Eq.(32) from Altschuler et al. 1976::
          !/
          dp_nm(n+1,m+1) = stuff1*(stuff2*(CosTheta*dp_nm(n,m+1)-&
               SinTheta*p_nm(n,m+1))-stuff3*dp_nm(n-1,m+1))
@@ -574,16 +577,23 @@ contains
          end do
       end do
     end subroutine calc_radial_functions
+  !=====================================================================
     subroutine write_Br_plot
       use ModPlotFile, ONLY: save_plot_file
+
       integer :: iError,iPhi,iTheta,iUnit
-      real,dimension(2,0:nPhi,0:nTheta)::Coord_DII,State_VII
+      real,dimension(2,0:nPhi,0:nTheta):: Coord_DII,State_VII
+      character(len=32)                :: FileNameDat
+      character(len=32)                :: FileNameOut
       !-----------------------------------------------------
+      FileNameDat = trim(NameOutDir)//'PFSSM_Br.dat'
+      FileNameOut = trim(NameOutDir)//'PFSSM_Br.out'
+      
       write(*,*) prefix, 'Writing PFSSM_Br output file, named'
+      write(*,*) prefix, FileNameDat
       iUnit = io_unit_new()
-      write(*,*) prefix, 'SC/IO2/PFSSM_Br.dat'
       open ( unit = iUnit, &
-           file = 'SC/IO2/PFSSM_Br.dat', &
+           file = FileNameDat, &
            form = 'formatted', &
            access = 'sequential', &
            status = 'replace', iostat = iError )
@@ -616,7 +626,7 @@ contains
          end do
       end do
       close(iUnit)
-      call save_plot_file('SC/IO2/PFSSM_Br.out',TypeFileIn='ascii',&
+      call save_plot_file(FileNameOut,TypeFileIn='ascii',&
            StringHeaderIn=&
            'Longitude [Deg], Latitude [Deg], Br_0 [G], Br_SS [G]',&
            nDimIn=2, CoordIn_DII=Coord_DII,VarIn_VII=State_VII)
