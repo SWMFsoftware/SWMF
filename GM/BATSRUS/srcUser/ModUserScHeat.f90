@@ -110,7 +110,7 @@ contains
   subroutine user_init_session
 
     use ModAdvance,     ONLY: WaveFirst_, WaveLast_
-    use ModIO,          ONLY: write_prefix, iUnitOut
+    use ModIO,          ONLY: write_prefix, iUnitOut,NamePlotDir
     use ModMagnetogram, ONLY: read_magnetogram_file
     use ModMultiFluid,  ONLY: MassIon_I
     use ModPhysics,     ONLY: Si2No_V, UnitP_, UnitEnergyDens_, UnitT_, &
@@ -131,7 +131,7 @@ contains
        call stop_mpi('ERROR: Correct PARAM.in!')
     end if
     if(i_line_command("#PFSSM") > 0)then
-       call read_magnetogram_file
+       call read_magnetogram_file(NamePlotDir)
     end if
 
     if(TypeCoronalHeating == 'exponential')then
