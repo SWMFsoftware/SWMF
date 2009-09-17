@@ -234,7 +234,17 @@ contains
      mPlanet_I(Io_)                      = 0.0                     ! [kg]
      OrbitalPeriodPlanet_I(Io_)          = 0.0                     ! [ s]
      RotationPeriodPlanet_I(Io_)         = 0.0                     ! [ s]
-   
+
+     !\
+     ! Europa (52)
+     !/
+     NamePlanet_I(Europa_)               = 'EUROPA'
+
+     rPlanet_I(Europa_)                  = 1569.0e+3               ! [ m]
+     mPlanet_I(Europa_)                  = 4.80e22                 ! [kg]
+     OrbitalPeriodPlanet_I(Europa_)      = 3.551 * cDay            ! [ s]
+     RotationPeriodPlanet_I(Europa_)     = 3.551 * cDay            ! [ s]
+     
      !\
      ! Titan (61)
      !/
