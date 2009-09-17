@@ -2411,7 +2411,7 @@ subroutine xyz_to_ijk(XyzIn_D,IjkOut_D,iBlock,XyzRef_D,GenRef_D,dGen_D)
   case('cartesian')
      Gen_D=XyzIn_D
 
-  case('spherical','spherical_lnr')   
+  case('spherical','spherical_lnr','spherical_genr')   
      call xyz_to_gen(XyzIn_D,Gen_D)
 
      ! Did I cross the pole?
