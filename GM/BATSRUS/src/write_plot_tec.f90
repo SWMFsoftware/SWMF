@@ -246,8 +246,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
                  end if
               end if
            end do
-        else if(TypeGeometry == 'spherical_lnr' .or. & 
-             TypeGeometry == 'spherical') then 
+        else if(index(TypeGeometry,'spherical') > 0) then 
            ! First loop to count nodes and cells        
            do iBlockALL  = 1, nBlockALL
               iBLK = iBlock_A(iBlockALL)
@@ -381,7 +380,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
               end if
            end do
         else if(TypeGeometry == 'spherical_lnr' .or. & 
-             TypeGeometry == 'spherical') then 
+             TypeGeometry == 'spherical' .or. TypeGeometry == 'spherical_genr') then 
            ! First loop to count nodes and cells
            do iBlockALL  = 1, nBlockALL
               iBLK = iBlock_A(iBlockALL)
