@@ -1,8 +1,8 @@
 <!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
 
-<commandList name="BATSRUS: GM, SC, IH and OH Components">
+<commandList name="BATSRUS: GM, LC, SC, IH and OH Components">
 
-List of MH (GM, IH, OH and SC) commands used in the PARAM.in file
+List of MH (GM, IH, OH, SC and LC) commands used in the PARAM.in file
 
 <!-- Grid size array is transformed into scalars to simplify rules -->
 <set name="MaxBlock"     type="integer" value="$_GridSize[3]" />
@@ -25,6 +25,7 @@ List of MH (GM, IH, OH and SC) commands used in the PARAM.in file
 	<parameter name="NameComp" type="string" input="select">
 		<option name="GM" default="T" />
 		<option name="SC" />
+		,option name="LC" />
 		<option name="IH" />
 		<option name="OH" />
 	</parameter>
@@ -36,9 +37,9 @@ List of MH (GM, IH, OH and SC) commands used in the PARAM.in file
 GM			NameComp
 
 This command can be used in the stand-alone mode to make BATSRUS behave as
-if it was the Global Magnetosphere (GM), Solar Corona (SC), 
-Inner Heliosphere (IH) or Outer Heliosphere (OH) component of the SWMF. The NameComp variable 
-contains the two-character component ID of the selected component.
+if it was the Global Magnetosphere (GM), Solar Corona (SC), Lower Corona (LC), 
+Inner Heliosphere (IH) or Outer Heliosphere (OH) component of the SWMF. The NameComp
+variable contains the two-character component ID of the selected component.
 If NameComp is different from the default component value, then
 the default values for all parameters (including the component dependent 
 defaults, like coordinate system) are reset, therefore it should occur 
@@ -869,7 +870,7 @@ restart header file so that one continues with the same I/O units
 after restart.
 
 The default is "PLANETARY" unit if BATSRUS is used as the GM component
-and "HELIOSPHERIC" otherwise (SC, IH or OH). 
+and "HELIOSPHERIC" otherwise (LC, SC, IH or OH). 
 </command>
 
 <command name="RESTARTINDIR" if="$_IsFirstSession">
@@ -1045,7 +1046,7 @@ Possible values for TypeBcInner are:
                     float B, fix rho, fix P
 'ionospherefloat' - set V as if ionosphere gave V_iono=0
                     float B, float rho, float P
-'coronatoih'      - IH component obtains inner boundary from the SC component
+'coronatoih'      - IH(OH) component obtains inner boundary from the SC(IH) component
 'polarwind'       - GM component obtains the inner boundary from PW component
 'ionosphereoutflow' - empirical inner boundary setup in (Hp,Op,All) multifluid
 'user'            - user defined
@@ -1054,8 +1055,8 @@ For 'ionosphere' and 'ionospherefloat' types and a coupled GM-IE run,
 the velocity at the inner boundary is determined by the ionosphere model.
 
 Default value for TypeBcInner is 'ionosphere' for the GM component,
-and 'unknown' for the SC and IH components, so the inner boundary must be set
-for the SC and IH components.
+and 'unknown' for the LC, SC, IH and OH components, so the inner boundary must be set
+for these components.
 </command>
 
 <command name="EXTRABOUNDARY">
@@ -1206,6 +1207,7 @@ first session (even if the component is switched off in the first session!).
 	<parameter name="TypeCoordSystem" type="string" input="select">
 		<option name="GSM" default="$NameComp eq 'GM'"/>
 		<option name="HGR" default="$NameComp eq 'SC'"/>
+		<option name-"HGR" default="$NameComp eq 'LC'"/>
 		<option name="HGI" default="$NameComp eq 'IH'"/>
 		<option name="HGI" default="$NameComp eq 'OH'"/>
 		<option name="HGC" 		               />
@@ -1223,7 +1225,7 @@ is available: "GSM" which is aligned with the (moving) magnetic axis.
 In the future the essentially inertial "GSE" system should also be an option 
 (necessary for Uranus and Neptune).
 
-For SC (Solar Corona) one should always use the corotating HGR 
+For SC (Solar Corona) and LC (Lower Corona) one should always use the corotating HGR 
 system to get an accurate solution even for complicated active regions. 
 Using an inertial frame would result in huge numerical errors near the Sub.
 
@@ -2795,7 +2797,7 @@ the lines of sight and the grid position and resolution are the
 following:
 \begin{verbatim}
  ObsPosX,ObsPosY,ObsPosZ - the position of the observer in (rotated) 
-                           HGI coordinates (SC and IH) or the GM coordinates
+                           HGI coordinates (LC,SC,IH and OH) or the GM coordinates
  rSizeImage             - the radius of the LOS image
  xOffset, yOffset       - offset relative to the observer projected onto 
                           the image plane 
@@ -2827,7 +2829,7 @@ plane size, the resolution, and the radio frequencies at which
 the plasma emissivity is integrated:
 \begin{verbatim}
  ObsPosX,ObsPosY,ObsPosZ - the position of the observer in (rotated) 
-                           HGI coordinates (SC and IH) or the GM coordinates
+                           HGI coordinates (LC, SC, IH and OH) or the GM coordinates
  StringRadioFrequency    - set of frequencies. The number of frequencies
 			   determines the number of plots, one for each
 			   frequency. A frequency is specified as a number 
@@ -3563,7 +3565,7 @@ select cells which use the non-conservative scheme if ALL of them are true:
 \end{verbatim}
 For the GM component with a planet the default values are nConservCrit = 1 
 with TypeConservCrit = 'r' and rConserv=6. If there is no planet
-(PLANET="NONE") or for the SC and IH components, the default is to
+(PLANET="NONE") or for the LC, SC, IH and OH components, the default is to
 have no conservative criteria: nConservCrit = 0.
 </command>
 
@@ -4714,7 +4716,7 @@ on the settings in the #INNERBOUNDARY command.
 
 The default values depend on the component: 
 For GM rBody=3, rCurrents=4, BodyNDim = 5/cc and BodyTDim = 25000 K. 
-For SC/IH: rBody=1, BodyNDim = 1.5e8/cc, BodyTDim = 2.8e6 K.
+For LC/SC/IH/OH: rBody=1, BodyNDim = 1.5e8/cc, BodyTDim = 2.8e6 K.
 The rBody and rCurrents are given in normalized units (usually
 planetary or solar radii).
 </command>
