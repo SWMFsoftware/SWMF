@@ -495,6 +495,7 @@ Components which are not used in a session can be switched off.
 		<option name="SC" default="T"/>
 		<option name="IH" />
 		<option name="OH" />
+		<option name="LC" />
 		<option name="SP" />
 		<option name="GM" />
 		<option name="IM" />
@@ -530,6 +531,7 @@ file are used.
 		<option name="SC" default="T"/>
 		<option name="IH" />
 		<option name="OH" />
+		<option name="LC" />
 		<option name="SP" />
 		<option name="GM" />
 		<option name="IM" />
@@ -803,6 +805,7 @@ The default is no shifting.
 		<option name="SC" default="T"/>
 		<option name="IH" />
 		<option name="OH" />
+		<option name="LC" />
 		<option name="SP" />
 		<option name="GM" />
 		<option name="IM" />
