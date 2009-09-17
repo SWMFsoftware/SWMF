@@ -252,7 +252,9 @@ contains
     real,dimension(OH_nDim),intent(out)::OH_Xyz_D
     logical,intent(out)::IsInterfacePoint
 
-    OH_Xyz_D = matmul(IhToOh_DD, IH_Xyz_D)
+    OH_Xyz_D = matmul(IhToOh_DD, IH_Xyz_D)*&
+         Grid_C(IH_)%UnitX/Grid_C(OH_)%UnitX
+
     IsInterfacePoint=.true.
 
   end subroutine map_ih_oh
