@@ -1666,7 +1666,7 @@ subroutine MH_set_parameters(TypeAction)
                    ' ERROR: cannot handle coordinate system '&
                    //TypeCoordSystem)
            end select
-       case('SC')
+       case('SC','LC')
            select case(TypeCoordSystem)
            case('HGR','HGC')
               UseRotatingFrame = .true.
@@ -1675,7 +1675,7 @@ subroutine MH_set_parameters(TypeAction)
               end if
            case('HGI')
               if(iProc==0) write(*,*) NameSub,&
-                   ' WARNING: inertial SC is less accurate'
+                   ' WARNING: inertial SC/LC is less accurate'
               UseRotatingFrame = .false.
            case default
               call stop_mpi(NameSub// &
@@ -1731,7 +1731,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#HELIOBUFFERGRID")
         if(.not.is_first_session())CYCLE READPARAM
-        if(NameThisComp == 'SC') &
+        if(NameThisComp == 'SC'.or. NameThisComp == 'LC') &
              call stop_mpi(NameSub//' ERROR:'// &
              ' #HELIOBUFFERGRID command can be used in IH,OH components only')
         call read_var('rBuffMin',  rBuffMin)
@@ -1797,7 +1797,7 @@ contains
        ! Do not start line with Type... to avoid an Emacs indentation bug
        UseRotatingFrame  = .false.
        UseRotatingBc     = .false.; TypeCoordSystem   = 'HGI'
-    case('SC')
+    case('SC','LC')
        UseRotatingFrame  = .true.
        UseRotatingBc     = .false.; TypeCoordSystem   = 'HGR'
     case('GM')
@@ -1812,7 +1812,7 @@ contains
        UseB0=.false.
     end if
 
-    ! Do not update B0 for SC or IH by default
+    ! Do not update B0 for LC, SC or IH by default
     if(NameThisComp /= 'GM')then
        DoUpdateB0 = .false.
        Dt_UpdateB0 = -1.0
@@ -1919,7 +1919,7 @@ contains
     if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
 
     select case(NameThisComp)
-    case('IH','SC','OH')
+    case('LC','SC','IH','OH')
        ! Body parameters
        UseGravity=.true.
        body1      =.true.
