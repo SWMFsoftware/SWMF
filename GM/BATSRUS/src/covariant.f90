@@ -13,7 +13,8 @@ subroutine gen_to_xyz_arr(&
   !in the space of GENERALIZED COORDINATES to the cartesian space xyz
 
   use ModNumConst
-  use ModCovariant,ONLY:TypeGeometry,rTorusLarge,rTorusSmall
+  use ModCovariant,ONLY:TypeGeometry,rTorusLarge,rTorusSmall,&
+                        gen_to_r, r_to_gen
   use ModMain,     ONLY:nDim,R_,Phi_,Theta_,x_,y_,z_
   implicit none
   real,intent(in):: GenCoord111_D(nDim),dGen1,dGen2,dGen3
@@ -22,7 +23,7 @@ subroutine gen_to_xyz_arr(&
        intent(out)::X_C,Y_C,Z_C
 
   integer::i,j,k
-  real::R,Theta,Phi,sinTheta,cosTheta,sinPhi,cosPhi
+  real::R,Theta,Phi,sinTheta,cosTheta,sinPhi,cosPhi,Gen1
   real::PoloidalAngle,Z,StretchCoef
   real,external::wall_radius
   !----------------------------------------------------------
@@ -70,6 +71,26 @@ subroutine gen_to_xyz_arr(&
            cosPhi  =  cos(Phi)
            do i = iStart, iMax
               R    =   exp((i-1)*dGen1 + GenCoord111_D(R_))
+
+              X_C(i,j,k) = R*cosTheta*cosPhi                      
+              Y_C(i,j,k) = R*cosTheta*sinPhi                      
+              Z_C(i,j,k) = R*sinTheta
+           end do
+        end do
+     end do
+  case('spherical_genr')
+     ! Gen1=general variable from 0 to 1, Gen2=Phi, Gen3=Latitude
+     do k = kStart, kMax
+        Theta      =      (k-1)*dGen3 + GenCoord111_D(Theta_)
+        sinTheta   =  sin(Theta)
+        cosTheta   =  cos(Theta)
+        do j = jStart, jMax
+           Phi     =      (j-1)*dGen2 + GenCoord111_D(Phi_)
+           sinPhi  =  sin(Phi)
+           cosPhi  =  cos(Phi)
+           do i = iStart, iMax
+              Gen1 = (i-1)*dGen1 + GenCoord111_D(R_)
+              R    =   gen_to_r(Gen1)
 
               X_C(i,j,k) = R*cosTheta*cosPhi                      
               Y_C(i,j,k) = R*cosTheta*sinPhi                      
@@ -138,13 +159,15 @@ subroutine xyz_to_gen(XyzIn_D,GenOut_D)
   select case(TypeGeometry)           
   case('cartesian','rz')                   
      GenOut_D=XyzIn_D
-  case('spherical','spherical_lnr')   
+  case('spherical','spherical_lnr','spherical_genr')   
      call xyz_to_spherical(XyzIn_D(x_),XyzIn_D(y_),XyzIn_D(z_),&
           GenOut_D(R_),GenOut_D(Phi_),GenOut_D(Theta_))
      !From colatitude to latitude:
      GenOut_D(Theta_)=cHalfPi-GenOut_D(Theta_)
      if(TypeGeometry=='spherical_lnr')&
           GenOut_D(R_)=log(max(GenOut_D(R_),cTiny))
+     if(TypeGeometry=='spherical_genr')&
+          GenOut_D(R_)=r_to_gen(GenOut_D(R_))
 
   case('cylindrical')
      GenOut_D(R_)   = sqrt(sum(XyzIn_D(x_:y_)**2))

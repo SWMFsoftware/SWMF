@@ -9,7 +9,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModGeometry, ONLY : init_mod_geometry, &
        TypeGeometry,UseCovariant,UseVertexBasedGrid,is_axial_geometry,  & 
        allocate_face_area_vectors,allocate_old_levels,rTorusLarge,rTorusSmall,& 
-       x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary
+       x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary,r_to_gen
   use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
   use ModPhysics
@@ -770,6 +770,16 @@ subroutine MH_set_parameters(TypeAction)
               plot_dimensional(ifile) = index(plot_string,'SOL')>0
               plot_vars(ifile)='wl pb' ! white light
               plot_pars(ifile)='mu'
+           elseif(index(plot_string,'EUV')>0.or.index(plot_string,'euv')>0)then
+              plot_var='euv'
+              plot_dimensional(ifile) = index(plot_string,'EUV')>0
+              plot_vars(ifile)='euv171 euv195 euv284' ! main euv bands
+              plot_pars(ifile)=''
+           elseif(index(plot_string,'SXR')>0.or.index(plot_string,'sxr')>0)then
+              plot_var='sxr'
+              plot_dimensional(ifile) = index(plot_string,'SXR')>0
+              plot_vars(ifile)='sxr' ! soft x-ray band
+              plot_pars(ifile)=''
            elseif(index(plot_string,'RWI')>0.or.index(plot_string,'rwi')>0)then 
               plot_var='rwi'
               plot_dimensional(ifile) = .false.
@@ -2430,13 +2440,14 @@ contains
        !            X,  Y,  Z
        XyzMin_D = (/x1, y1, z1/)
        XyzMax_D = (/x2, y2, z2/)
-    case('spherical', 'spherical_lnr')
+    case('spherical', 'spherical_lnr', 'spherical_genr')
        !             R,   Phi, Latitude
        XyzMin_D = (/ 0.0, 0.0, -cHalfPi/)
        XyzMax_D = (/ &
             sqrt(max(x1**2,x2**2) + max(y1**2,y2**2) + max(z1**2,z2**2)), &
             cTwoPi, cHalfPi /)
        if(TypeGeometry == 'spherical_lnr') XyzMax_D(R_)=log(XyzMax_D(R_))
+       if(TypeGeometry == 'spherical_genr') XyzMax_D(R_)=1.0
     case('cylindrical')
        !            R,   Phi, Z
        XyzMin_D = (/0.0, 0.0, z1/) 
@@ -2464,6 +2475,7 @@ contains
        ! Set inner boundary to match rBody for spherical coordinates
        if(TypeGeometry == 'spherical'    ) XyzMin_D(1) = rBody
        if(TypeGeometry == 'spherical_lnr') XyzMin_D(1) = log(rBody)
+       if(TypeGeometry == 'spherical_genr') XyzMin_D(1) = 0.0
     end if
 
     ! No resolution change along symmetry axis 
@@ -2551,10 +2563,12 @@ contains
              plot_range(4,ifile)= 90.0 + 0.5*plot_dx(2,ifile)
              plot_range(5,ifile)= 0.   - 0.5*plot_dx(3,ifile)
              plot_range(6,ifile)= 360.0- 0.5*plot_dx(3,ifile)
-          case('spherical', 'spherical_lnr')
+          case('spherical', 'spherical_lnr', 'spherical_genr')
              plot_dx(1,ifile) = -1.0
              if(TypeGeometry == 'spherical_lnr') &
                   plot_range(1,ifile) = log(plot_range(1,ifile))
+             if(TypeGeometry == 'spherical_genr') &
+                  plot_range(1,ifile) = r_to_gen(plot_range(1,ifile))
              plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
              do i=Phi_,Theta_
                 plot_range(2*i-1,ifile) = XyzMin_D(i)

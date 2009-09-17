@@ -4,7 +4,8 @@ subroutine fix_axis_cells
   use ModMain, ONLY: nI, nJ, nK, nBlock, UnusedBlk
   use ModAdvance, ONLY: nVar, State_VGB, rFixAxis, r2FixAxis
   use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
-       x_Blk, y_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB
+       x_Blk, y_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB,&
+       r_to_gen, r_to_gen
   use ModEnergy, ONLY: calc_energy_point
   use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   use ModMpi
@@ -58,6 +59,7 @@ subroutine fix_axis_cells
      do i=1,nI
         r = r_Blk(i,1,1,iBlock)
         if(TypeGeometry == 'spherical_lnr') r = alog(r)
+        if(TypeGeometry == 'spherical_genr') r = r_to_gen(r)
         iR = ceiling( (r - XyzMin_D(1))/MinDxValue + 0.1)
 
         do k=kMin, kMax; 
@@ -119,6 +121,7 @@ subroutine fix_axis_cells
      do i=1,nI
         r = r_Blk(i,1,1,iBlock)
         if(TypeGeometry == 'spherical_lnr') r = alog(r)
+        if(TypeGeometry == 'spherical_genr') r = r_to_gen(r)
         iR = ceiling( (r - XyzMin_D(1))/MinDxValue + 0.1)
 
         InvVolume= 1.0/SumBuffer_VIII(Volume_,iR,Geom_,iHemisphere)
