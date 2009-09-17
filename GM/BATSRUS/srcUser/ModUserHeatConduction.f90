@@ -8,7 +8,8 @@ module ModUser
        IMPLEMENTED4 => user_set_outerbcs,               &
        IMPLEMENTED5 => user_update_states,              &
        IMPLEMENTED6 => user_set_plot_var,               &
-       IMPLEMENTED7 => user_material_properties
+       IMPLEMENTED7 => user_material_properties,        &
+       IMPLEMENTED8 => user_normalization
 
   include 'user_module.h' !list of public methods
 
@@ -19,22 +20,27 @@ module ModUser
   character(len=20) :: TypeProblem
   real :: HeatConductionCoef, AmplitudeTemperature, Tmin
   real :: Bx, By, Time0
+  real :: u0, x0
 
-  integer :: nCellRef
   integer :: &
-       iRhoRef  = 1, &
-       iTmatRef = 2, &
-       iUrRef   = 3, &
-       nVarRef  = 3
+       nCellRef = -1, &
+       nVarRef  = -1, &
+       iRhoRef  = -1, &
+       iUxRef   = -1, &
+       iUrRef   = -1, &
+       iTeRef   = -1, &
+       iTiRef   = -1
   real, allocatable :: rRef_C(:), StateRef_VC(:,:)
 
   integer :: nCellFin
   integer :: &
-       iRhoFin  = 1, &
-       iTmatFin = 2, &
-       iUrFin   = 3, &
-       nVarFin  = 3
+       iRhoFin = 1, &
+       iTeFin  = 2, &
+       iUrFin  = 3, &
+       nVarFin = 3
   real, allocatable :: rFin_C(:), StateFin_VC(:,:)
+
+  real, parameter :: GammaRel = 4.0/3.0
 
 contains
 
@@ -44,6 +50,7 @@ contains
 
     use ModIoUnit,  ONLY: UnitTmp_
     use ModMain,    ONLY: Time_Simulation
+    use ModPhysics, ONLY: g
     use ModProcMH,  ONLY: iProc
 
     integer :: iCell, iError
@@ -95,6 +102,9 @@ contains
        read(UnitTmp_,*) GammaRef
        read(UnitTmp_,'(a)') NameVarRef
 
+       iRhoRef = 1; iTeRef = 2; iUrRef = 3
+       nVarRef = 3
+
        allocate( rRef_C(nCellRef), StateRef_VC(nVarRef,nCellRef) )
 
        do iCell = 1, nCellRef
@@ -104,8 +114,8 @@ contains
        close(UnitTmp_)
 
        do iCell = 1, nCellRef
-          StateRef_VC(iTmatRef,iCell) = &
-               max(StateRef_VC(iTmatRef,iCell),Tmin)
+          StateRef_VC(iTeRef,iCell) = &
+               max(StateRef_VC(iTeRef,iCell),Tmin)
        end do
 
        NameFinFile = 'rmtv_final.out'
@@ -130,9 +140,44 @@ contains
        close(UnitTmp_)
 
        do iCell = 1, nCellFin
-          StateFin_VC(iTmatFin,iCell) = &
-               max(StateFin_VC(iTmatFin,iCell),Tmin)
+          StateFin_VC(iTeFin,iCell) = &
+               max(StateFin_VC(iTeFin,iCell),Tmin)
        end do
+
+    case('lowrie')
+       ! Mach 5 test with non-linear heat conduction and electron-ion
+       ! interaction rate. This test is based one of Lowrie's non-equilibrium
+       ! gray radiation diffusion tests.
+       NameRefFile = 'lowrie3.out'
+
+       open(UnitTmp_, FILE=NameRefFile, STATUS="old", IOSTAT=iError)
+
+       if(iError /= 0)call stop_mpi(NameSub // &
+            " could not open reference file="//NameRefFile)
+
+       read(UnitTmp_,'(a)') StringHeaderRef
+       read(UnitTmp_,*) nStepRef, TimeRef, nDimRef, nParamRef, nVarRef
+       read(UnitTmp_,*) nCellRef
+       read(UnitTmp_,*) GammaRef
+       read(UnitTmp_,'(a)') NameVarRef
+
+       iRhoRef = 1; iUxRef = 2; iTiRef = 3; iTeRef = 4
+       nVarRef = 4
+
+       allocate( rRef_C(nCellRef), StateRef_VC(nVarRef,nCellRef) )
+
+       do iCell = 1, nCellRef
+          read(UnitTmp_,*) rRef_C(iCell), StateRef_VC(:,iCell)
+       end do
+
+       close(UnitTmp_)
+
+       ! The reference solutions use p=rho*T/gamma
+       StateRef_VC(iTiRef,:) = StateRef_VC(iTiRef,:)/g
+       StateRef_VC(iTeRef,:) = StateRef_VC(iTeRef,:)/g
+
+       u0 = -5.0  ! veloxity added to lowrie's solution
+       x0 = 0.02  ! shift in x-direction
 
     case('parcond')
        AmplitudeTemperature = 9.0
@@ -156,15 +201,42 @@ contains
 
   !============================================================================
 
+  subroutine user_normalization
+
+    use ModConst,   ONLY: cRadiation, cProtonMass, cBoltzmann
+    use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitU_, g
+
+    character (len=*), parameter :: NameSub = 'user_normalization'
+    !--------------------------------------------------------------------------
+
+    if(TypeProblem == 'lowrie')then
+       No2Si_V = 1.0
+       ! The following density unit is needed to get a normalized radiation
+       ! constant  with value 1.0e-4. The gamma dependence is needed since
+       ! the reference solution uses p=rho*T/gamma
+       No2Si_V(UnitRho_) = 1.0e+4*cRadiation*(cProtonMass/cBoltzmann)**4 &
+            *No2Si_V(UnitU_)**6/g**4
+    end if
+
+  end subroutine user_normalization
+
+  !============================================================================
+
   subroutine user_update_states(iStage, iBlock)
 
-    use ModAdvance,  ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC
+    use ModAdvance,  ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
+         UseElectronEnergy
     use ModImplicit, ONLY: UseSemiImplicit
 
     integer, intent(in) :: iStage, iBlock
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
+    if(UseElectronEnergy)then
+       call update_states_electron
+
+       RETURN
+    end if
 
     ! No call to update_states_MHD to nullify the effect of the hydro solver
     ! call update_states_MHD(iStage,iBlock)
@@ -177,6 +249,50 @@ contains
 
        call update_states_MHD(iStage,iBlock)
     end if
+
+  contains
+
+    subroutine update_states_electron
+
+      use ModAdvance,    ONLY: State_VGB
+      use ModMain,       ONLY: nI, nJ, nK
+      use ModPhysics,    ONLY: inv_gm1, Si2No_V, No2Si_V, UnitEnergyDens_, &
+           UnitP_
+      use ModVarIndexes, ONLY: Ee_, ExtraEint_
+
+      integer :: i, j, k
+      real :: PeSi, Ee, EeSi
+      !------------------------------------------------------------------------
+
+      call update_states_MHD(iStage,iBlock)
+
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI
+         ! At this point Pe=(g-1)*Ee with the ideal gamma g.
+         ! Use this Pe to get electron internal energy density.
+
+         Ee = State_VGB(Ee_,i,j,k,iBlock) + State_VGB(ExtraEint_,i,j,k,iBlock)
+         EeSi = Ee*No2Si_V(UnitEnergyDens_)
+
+         call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+              i, j, k, iBlock, &
+              EinternalSiIn=EeSi, PressureSiOut=PeSi)
+
+         ! use true electron pressure
+         State_VGB(Ee_,i,j,k,iBlock) = inv_gm1*PeSi*Si2No_V(UnitP_)
+
+         ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
+         State_VGB(ExtraEint_,i,j,k,iBlock) = Ee - State_VGB(Ee_,i,j,k,iBlock)
+
+         if(State_VGB(ExtraEint_,i,j,k,iBlock)<0.0)then
+            write(*,*)NameSub,': ERROR extra internal energy =', &
+                 State_VGB(ExtraEint_,i,j,k,iBlock)
+            write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
+            call stop_mpi(NameSub//': ERROR negative extra internal energy')
+         end if
+
+      end do; end do; end do
+
+    end subroutine update_states_electron
 
   end subroutine user_update_states
 
@@ -229,14 +345,16 @@ contains
 
   subroutine user_set_ics
 
-    use ModAdvance,    ONLY: State_VGB, ExtraEint_
+    use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: x_Blk, y_Blk
-    use ModMain,       ONLY: GlobalBlk, nI, nJ, nK, Time_Simulation
-    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, p_
+    use ModMain,       ONLY: GlobalBlk, nI, nJ, nK, Time_Simulation, x_, y_
+    use ModPhysics,    ONLY: ShockSlope, cRadiationNo, inv_gm1
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, p_, ExtraEint_, Ee_
 
     integer :: iBlock, i, j, k, iCell
     real :: x, y
-    real :: r, Weight1, Weight2, Rho, Tmat, Ur, p, RhoU_D(2)
+    real :: r, Weight1, Weight2, Rho, Te, Ur, p, RhoU_D(2)
+    real :: SinSlope, CosSlope, Rot_II(2,2), Ee, Pe, Ti, Ux
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !--------------------------------------------------------------------------
@@ -269,7 +387,7 @@ contains
              ! Cell is beyond the last point of Reference input: use last cell
 
              Rho = 1.0/r**(19.0/9.0)
-             Tmat = StateRef_VC(iTmatRef,nCellRef)
+             Te = StateRef_VC(iTeRef,nCellRef)
              Ur = StateRef_VC(iUrRef,nCellRef)
           else
              ! Assign weights for linear interpolation between
@@ -280,8 +398,8 @@ contains
 
              Rho  = ( Weight1*StateRef_VC(iRhoRef, iCell-1) &
                   +   Weight2*StateRef_VC(iRhoRef, iCell) )
-             Tmat = ( Weight1*StateRef_VC(iTmatRef, iCell-1) &
-                  +   Weight2*StateRef_VC(iTmatRef, iCell) )
+             Te =   ( Weight1*StateRef_VC(iTeRef, iCell-1) &
+                  +   Weight2*StateRef_VC(iTeRef, iCell) )
              Ur   = ( Weight1*StateRef_VC(iUrRef, iCell-1) &
                   +   Weight2*StateRef_VC(iUrRef, iCell) )
           end if
@@ -289,7 +407,7 @@ contains
           RhoU_D(1) = Rho*Ur*x/r
           RhoU_D(2) = Rho*Ur*y/r
 
-          p = Rho*Tmat
+          p = Rho*Te
 
           do k=-1,nK+2
              State_VGB(Rho_,i,j,k,iBlock) = Rho
@@ -298,6 +416,64 @@ contains
              State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
              State_VGB(p_,i,j,k,iBlock) = p
           end do
+       end do; end do
+
+    case('lowrie')
+       ! Calculate sin and cos from the tangent = ShockSlope
+       SinSlope = ShockSlope/sqrt(1.0+ShockSlope**2)
+       CosSlope =        1.0/sqrt(1.0+ShockSlope**2)
+       ! Set rotational matrix
+       Rot_II = reshape( (/CosSlope, SinSlope, -SinSlope, CosSlope/), (/2,2/) )
+
+       do j = -1, nJ + 2; do i = -1, nI+2
+
+          x = x_Blk(i,j,0,iBlock)*CosSlope + y_Blk(i,j,0,iBlock)*SinSlope - x0
+
+          do iCell = 1, nCellRef
+             if(rRef_C(iCell) >= x) EXIT
+          end do
+          if(iCell == 1) call stop_mpi(NameSub // &
+               " Reference solution does not cover the left boundary")
+
+          if(iCell > nCellRef)then
+             ! Cell is beyond the last point of reference input: use last cell
+             iCell   = nCellRef
+             Weight1 = 0.0
+             Weight2 = 1.0
+          else
+             ! Assign weights for linear interpolation between
+             ! iCell-1 and iCell
+             Weight1 = (rRef_C(iCell) - x) &
+                  /    (rRef_C(iCell) - rRef_C(iCell-1))
+             Weight2 = 1.0 - Weight1
+          end if
+
+          Rho = ( Weight1*StateRef_VC(iRhoRef, iCell-1) &
+               +  Weight2*StateRef_VC(iRhoRef, iCell) )
+          Ux  = ( Weight1*StateRef_VC(iUxRef, iCell-1) &
+               +  Weight2*StateRef_VC(iUxRef, iCell) )
+          Ti  = ( Weight1*StateRef_VC(iTiRef, iCell-1) &
+               +  Weight2*StateRef_VC(iTiRef, iCell) )
+          Te  = ( Weight1*StateRef_VC(iTeRef, iCell-1) &
+               +  Weight2*StateRef_VC(iTeRef, iCell) )
+
+          p = Rho*Ti
+          Ee = cRadiationNo*Te**4
+          Pe = (GammaRel - 1)*Ee
+          RhoU_D(1) = Rho*(Ux + U0)
+          RhoU_D(2) = 0.0
+
+          do k = -1, nk+2
+             State_VGB(Rho_,i,j,k,iBlock) = Rho
+             State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = &
+                  matmul(Rot_II,RhoU_D(x_:y_))
+             State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
+             State_VGB(Ee_,i,j,k,iBlock) = inv_gm1*Pe
+             State_VGB(ExtraEint_,i,j,k,iBlock) = &
+                  Ee - State_VGB(Ee_,i,j,k,iBlock)
+             State_VGB(p_,i,j,k,iBlock) = p
+          end do
+
        end do; end do
 
     case('parcond', 'parcondsemi')
@@ -313,7 +489,7 @@ contains
 
   !============================================================================
 
-  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
+  subroutine user_set_outerbcs(iBlock, iSide, TypeBc, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: x_Blk, y_Blk
@@ -418,6 +594,7 @@ contains
              StateSemi_VGB(1,:,nJ+1,:,iBlock) = Tmin
           end select
        end select
+
     case('parcond', 'parcondsemi')
        select case(TypeBc)
        case('user')
@@ -463,6 +640,7 @@ contains
              end do
           end select
        end select
+
     case default
        call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
     end select
@@ -618,7 +796,7 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: x_Blk, y_Blk
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation
-    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_
+    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, UnitT_, ShockSlope
     use ModVarIndexes, ONLY: p_, Rho_
 
     integer,          intent(in)   :: iBlock
@@ -634,6 +812,7 @@ contains
 
     real :: r, Temperature, Weight1, Weight2, x, y
     real :: Rho, Ur, U_D(2)
+    real :: SinSlope, CosSlope, Ux, Te, Ti, TeSi
     integer :: i, j, k, iCell
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
@@ -683,7 +862,7 @@ contains
              ! Cell is beyond the last point of Reference input: use last cell
 
              Rho = 1.0/r**(19.0/9.0)
-             Temperature = StateFin_VC(iTmatFin,nCellFin)
+             Temperature = StateFin_VC(iTeFin,nCellFin)
              Ur = StateFin_VC(iUrFin,nCellFin)
           else
              ! Assign weights for linear interpolation between
@@ -694,8 +873,8 @@ contains
 
              Rho  = ( Weight1*StateFin_VC(iRhoFin, iCell-1) &
                   +   Weight2*StateFin_VC(iRhoFin, iCell) )
-             Temperature = ( Weight1*StateFin_VC(iTmatFin, iCell-1) &
-                  +          Weight2*StateFin_VC(iTmatFin, iCell) )
+             Temperature = ( Weight1*StateFin_VC(iTeFin, iCell-1) &
+                  +          Weight2*StateFin_VC(iTeFin, iCell) )
              Ur   = ( Weight1*StateFin_VC(iUrFin, iCell-1) &
                   +   Weight2*StateFin_VC(iUrFin, iCell) )
           end if
@@ -716,6 +895,82 @@ contains
              IsFound = .false.
           end select
        end do; end do
+
+    case('lowrie')
+       select case(NameVar)
+       case('ti')
+          PlotVar_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
+
+       case('te')
+          do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  TeSiOut=TeSi)
+             PlotVar_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+          end do; end do; end do
+
+       case('rho0','ux0','uy0','ti0','te0')
+          ! Calculate sin and cos from the tangent = ShockSlope
+          SinSlope = ShockSlope/sqrt(1.0+ShockSlope**2)
+          CosSlope =        1.0/sqrt(1.0+ShockSlope**2)
+
+          do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+
+             x = x_Blk(i,j,k,iBlock)*CosSlope + y_Blk(i,j,k,iBlock)*SinSlope
+             x = x - u0*Time_Simulation*Si2No_V(UnitT_) - x0
+
+             do iCell = 1, nCellRef
+                if(rRef_C(iCell) >= x) EXIT
+             end do
+             if(iCell == 1) call stop_mpi(NameSub // &
+                  " Reference solution does not cover the left boundary")
+
+             if(iCell > nCellRef)then
+                ! Cell is beyond the last point of reference input:
+                ! use last cell
+                iCell   = nCellRef
+                Weight1 = 0.0
+                Weight2 = 1.0
+             else
+                ! Assign weights for linear interpolation between
+                ! iCell-1 and iCell
+                Weight1 = (rRef_C(iCell) - x) &
+                     /    (rRef_C(iCell) - rRef_C(iCell-1))
+                Weight2 = 1.0 - Weight1
+             end if
+
+             select case(NameVar)
+             case('rho0')
+                PlotVar_G(i,j,k) = &
+                     ( Weight1*StateRef_VC(iRhoRef, iCell-1) &
+                     + Weight2*StateRef_VC(iRhoRef, iCell) )
+
+             case('ux0','uy0')
+                Ux = ( Weight1*StateRef_VC(iUxRef, iCell-1) &
+                     + Weight2*StateRef_VC(iUxRef, iCell) )
+
+                select case(NameVar)
+                case('ux0')
+                   PlotVar_G(i,j,k) = (Ux+u0)*CosSlope
+                case('uy0')
+                   PlotVar_G(i,j,k) = (Ux+u0)*SinSlope
+                end select
+
+             case('ti0')
+                Ti = ( Weight1*StateRef_VC(iTiRef, iCell-1) &
+                     + Weight2*StateRef_VC(iTiRef, iCell) )
+
+                PlotVar_G(i,j,k) = Ti
+
+             case('te0')
+                Te = ( Weight1*StateRef_VC(iTeRef, iCell-1) &
+                     + Weight2*StateRef_VC(iTeRef, iCell) )
+
+                PlotVar_G(i,j,k) = Te
+
+             end select
+          end do; end do; end do
+
+       end select
 
     case('parcond', 'parcondsemi')
        select case(NameVar)
@@ -750,10 +1005,11 @@ contains
     ! The State_V vector is in normalized units
 
     use ModAdvance,    ONLY: nWave
+    use ModConst,      ONLY: cBoltzmann
     use ModPhysics,    ONLY: gm1, inv_gm1, No2Si_V, Si2No_V, &
          UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
-         UnitX_, UnitT_, UnitU_
-    use ModVarIndexes, ONLY: nVar, Rho_, p_
+         UnitX_, UnitT_, UnitU_, UnitN_, cRadiationNo, g, Clight
+    use ModVarIndexes, ONLY: nVar, Rho_, p_, Ee_, ExtraEint_
 
     real, intent(in) :: State_V(nVar)
     integer, optional, intent(in):: i, j, k, iBlock, iDir    ! cell/face index
@@ -782,9 +1038,10 @@ contains
     real, optional, intent(out) :: CgTgSiOut_W(nWave)        ! [J/(m^3*K)]
     real, optional, intent(out) :: TgSiOut_W(nWave)          ! [K]
 
-    real :: Rho, Pressure, Te
+    real :: Rho, Pressure, Te, Ti
     real :: RhoSi, pSi, TeSi
     real :: Cv, HeatCond
+    real :: EeSi, Ee, NatomicSi
 
     character(len=*), parameter :: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
@@ -793,10 +1050,14 @@ contains
     RhoSi = Rho*No2Si_V(Rho_)
 
     if(present(EinternalSiIn))then
-       if(TypeProblem=='parcondsemi')then
+       if(TypeProblem == 'parcondsemi')then
           Te = (3.5*EinternalSiIn*Si2No_V(UnitEnergyDens_))**(1.0/3.5)
           Pressure = Rho*Te
           pSi = Pressure*No2Si_V(UnitP_)
+       elseif(TypeProblem == 'lowrie')then
+          Ee = EinternalSiIn*Si2No_V(UnitEnergyDens_)
+          Te = sqrt(sqrt(Ee/cRadiationNo))
+          pSi = (GammaRel - 1)*EinternalSiIn
        else
           pSi = EinternalSiIn*gm1
           Pressure = pSi*Si2No_V(UnitP_)
@@ -806,18 +1067,31 @@ contains
     elseif(present(TeSiIn))then
        TeSi = TeSiIn
        Te = TeSi*Si2No_V(UnitTemperature_)
-       Pressure = Rho*Te
-       pSi = Pressure*No2Si_V(UnitP_)
+       if(TypeProblem == 'lowrie')then
+          Ee = cRadiationNo*Te**4
+          pSi = (GammaRel - 1)*Ee*No2Si_V(UnitP_)
+       else
+          Pressure = Rho*Te
+          pSi = Pressure*No2Si_V(UnitP_)
+       end if
     else
-       Pressure = State_V(p_)
-       pSi = Pressure*No2Si_V(UnitP_)
-       Te = Pressure/Rho
+       if(TypeProblem == 'lowrie')then
+          pSi = (g - 1)*State_V(Ee_)*No2Si_V(UnitP_)
+          Ee = State_V(Ee_) + State_V(ExtraEint_)
+          Te = sqrt(sqrt(Ee/cRadiationNo))
+       else
+          Pressure = State_V(p_)
+          pSi = Pressure*No2Si_V(UnitP_)
+          Te = Pressure/Rho
+       end if
        TeSi = Te*No2Si_V(UnitTemperature_)
     end if
 
     if(present(EinternalSiOut))then
        if(TypeProblem=='parcondsemi')then
           EinternalSiOut = Te**3.5*No2Si_V(UnitEnergyDens_)/3.5
+       elseif(TypeProblem == 'lowrie')then
+          EinternalSiOut = cRadiationNo*Te**4*No2Si_V(UnitEnergyDens_)
        else
           EinternalSiOut = pSi*inv_gm1
        end if
@@ -826,10 +1100,11 @@ contains
     if(present(TeSiOut)) TeSiOut = TeSi
     if(present(PressureSiOut)) PressureSiOut = pSi
 
-
     if(present(CvSiOut))then
        if(TypeProblem == 'parcondsemi')then
           Cv = Te**2.5
+       elseif(TypeProblem == 'lowrie')then
+          Cv = 4.0*cRadiationNo*Te**3
        else
           Cv = inv_gm1*Rho
        end if
@@ -840,18 +1115,34 @@ contains
        select case(TypeProblem)
        case('rmtv')
           HeatCond = Te**6.5/Rho**2
+       case('lowrie')
+          Ti = State_V(p_)/State_V(Rho_)
+          HeatCond = 0.00175*(g*Ti)**3.5/State_V(Rho_)*4.0*cRadiationNo*Te**3
        case default
           HeatCond = HeatConductionCoef
        end select
-        HeatCondSiOut = HeatCond &
-             *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
-             *No2Si_V(UnitU_)*No2Si_V(UnitX_)
+       HeatCondSiOut = HeatCond &
+            *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
+            *No2Si_V(UnitU_)*No2Si_V(UnitX_)
     end if
 
+    if(present(TeTiRelaxSiOut))then
+       if(TypeProblem == 'lowrie')then
+          NatomicSi = State_V(Rho_)*No2Si_V(UnitN_)
+          Ti = State_V(p_)/State_V(Rho_)
+          TeTiRelaxSiOut = 1.0E6/(0.00175*(g*Ti)**3.5/State_V(Rho_)) &
+               *cRadiationNo*(Te + Ti)*(Te**2 + Ti**2) &
+               /(cBoltzmann*NatomicSi)*No2Si_V(UnitEnergyDens_) &
+               /(No2Si_V(UnitTemperature_)*No2Si_V(UnitT_))
+       else
+          TeTiRelaxSiOut = 0.0
+       end if
+    end if
+
+    if(present(NatomicSiOut)) NatomicSiOut = State_V(Rho_)*No2Si_V(UnitN_)
     if(present(AbsorptionOpacitySiOut_W)) AbsorptionOpacitySiOut_W = 0.0
     if(present(DiffusionOpacitySiOut_W)) DiffusionOpacitySiOut_W = 0.0
-
-    if(present(TeTiRelaxSiOut)) TeTiRelaxSiOut = 0.0
+    if(present(CgTeSiOut_W)) CgTeSiOut_W = 0.0
 
   end subroutine user_material_properties
 
