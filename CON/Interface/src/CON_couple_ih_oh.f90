@@ -77,10 +77,6 @@ contains
     
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
-   ! if(is_proc(IH_))&
-   !       call IH_inquire_if_spherical(IsSphericalIh)
-   ! call MPI_Bcast(IsSphericalIh,1,MPI_Logical,i_proc0(IH_),i_comm(),iError)
-
     call init_coupler(              &    
        iCompSource=OH_,             & ! component index for source
        iCompTarget=IH_,             & ! component index for target

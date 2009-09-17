@@ -229,6 +229,8 @@ contains
     real,dimension(GM_nDim),intent(in)::GM_Xyz_D
     real,dimension(IH_nDim),intent(out)::IH_Xyz_D
     logical,intent(out)::IsInterfacePoint
+    !In each mapping the corrdinates of the TARGET grid point (GM)
+    !shoud be be transformed to the SOURCE (IH) generalized coords.
 
     IH_Xyz_D = XyzPlanetIh_D + matmul(GmToIh_DD, GM_Xyz_D)*&
          Grid_C(GM_)%UnitX/Grid_C(IH_)%UnitX
