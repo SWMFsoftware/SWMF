@@ -61,6 +61,7 @@ my %PlotDir = (
     "PW"     => "PW/plots",
     "RB"     => "RB/plots",
     "SC"     => "SC/IO2",
+    "LC"     => "LC/IO2",
     "UA"     => "UA/Output,UA/data",
     "STDOUT" => "STDOUT",
 	    );
@@ -99,7 +100,7 @@ REPEAT:{
 	    }else{
 		&shell("./pION");
 	    }
-	}elsif( $Dir =~ /^SC|IH|OH|GM$/ ){
+	}elsif( $Dir =~ /^SC|LC|IH|OH|GM$/ ){
 	    &shell("./pIDL $MovieFlag");
 	    if($Gzip){
 		&shell("./pTEC A g");
@@ -136,7 +137,7 @@ REPEAT:{
 	    my $PlotDir = $PlotDir{$Dir};
 	    next unless -d $PlotDir;
 	    my $command = $rsync;
-	    $command .= $exclude if $Dir =~ /GM|SC|IH|OH/;
+	    $command .= $exclude if $Dir =~ /GM|SC|LC|IH|OH/;
 	    &shell("$command $PlotDir/ $Rsync/$Dir") if -d $PlotDir;
 	}
 	&shell("$rsync $ParamIn $Rsync/")          if -f $ParamIn;

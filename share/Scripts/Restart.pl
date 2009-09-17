@@ -52,8 +52,10 @@ my $nStep          = -1;           # Number of steps
 # Alternative names should be separated by commas without space.
 my %RestartOutDir = (
 		     GM => "GM/restartOUT",
-		     SC => "SC/restartOUT",
+                     LC => "LC/restartOUT", 
+                     SC => "SC/restartOUT",
 		     IH => "IH/restartOUT",
+                     OH => "OH/restartOUT",
 		     IM => "IM/restartOUT",
 		     PW => "PW/restartOUT",
 		     RB => "RB/restartOUT",
@@ -61,8 +63,10 @@ my %RestartOutDir = (
 
 my %RestartInDir =  (
 		     GM => "GM/restartIN",
+                     LC => "LC/restartIN",
 		     SC => "SC/restartIN",
 		     IH => "IH/restartIN",
+                     OH => "OH/restartIN",
 		     IM => "IM/restartIN",
 		     PW => "PW/restartIN",
 		     RB => "RB/restartIN",
@@ -75,7 +79,9 @@ my %RestartInDirFound;
 # The name of the restart header file (if any) for each component.
 my %HeaderFile   =  (
 		     GM => "restart.H",
+                     LC => "restart.H",
 		     SC => "restart.H",
+                     OH => "restart.H",
 		     IH => "restart.H" );
 
 # List possible time units and corresponding number of seconds
