@@ -10,7 +10,7 @@ subroutine specify_refinement(DoRefine_B)
        BlkTest, Test_String, r_, Phi_, Theta_, x_, y_, z_,UseB0
   use ModAMR,      ONLY: nArea, AreaType, Area_I, lNameArea
   use ModGeometry, ONLY: dx_BLK, UseCovariant, x_BLK, y_BLK, z_BLK, &
-       TypeGeometry
+       TypeGeometry,gen_to_r
   use ModNodes,    ONLY: NodeX_NB, NodeY_NB, NodeZ_NB
   use ModUser,     ONLY: user_specify_refinement
 
@@ -146,6 +146,15 @@ subroutine specify_refinement(DoRefine_B)
 
            case('spherical_lnr')
               Corner_DI(r_,:)     = exp(Corner_DI(r_,:))
+              Corner_DI(Phi_,:)   = modulo(Corner_DI(Phi_,:)*cRadToDeg, 360.0)
+              where(Corner_DI(Phi_,3:4) < cTiny) Corner_DI(Phi_,3:4) = 360.0
+              where(Corner_DI(Phi_,7:8) < cTiny) Corner_DI(Phi_,7:8) = 360.0
+              Corner_DI(Theta_,:) = Corner_DI(Theta_,:)*cRadToDeg
+
+           case('spherical_genr')
+              do iCorner = 1, nCorner
+                 Corner_DI(r_,nCorner)     = gen_to_r(Corner_DI(r_,nCorner))
+              end do
               Corner_DI(Phi_,:)   = modulo(Corner_DI(Phi_,:)*cRadToDeg, 360.0)
               where(Corner_DI(Phi_,3:4) < cTiny) Corner_DI(Phi_,3:4) = 360.0
               where(Corner_DI(Phi_,7:8) < cTiny) Corner_DI(Phi_,7:8) = 360.0
