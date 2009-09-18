@@ -21,7 +21,7 @@ subroutine write_plot_los(iFile)
   !           January  2002 modified for improved image plane
   !           December 2003 fixed sign error in scattering coefficient b_los
   !           January  2004 fix to accept 0 in LOS vector
-  !           January  2004 fixed declaration for norm_los(3), r_Pix(3) 
+  !           January  2004 fixed declaration for norm_los(3), XYZPix_D(3) 
   !           February 2004 fix integration and make 2nd order accurate
   !                         fix save_file in main.f90 update ghost cells
   !                         include forgotten plot_pars1=plot_pars(ifile)
@@ -45,18 +45,22 @@ subroutine write_plot_los(iFile)
 
   use ModProcMH
   use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, unusedBLK, &
-       time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem
+       time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem, &
+       x_,y_,z_,R_,Phi_,Theta_
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK, &
        TypeGeometry
-  use ModPhysics, ONLY : No2Io_V, UnitX_
+  use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, UnitTemperature_
   use ModIO
-  use ModAdvance, ONLY : rho_, State_VGB
-  use ModNumConst, ONLY : cTiny, cUnit_DD, cTolerance
+  use ModAdvance, ONLY : rho_, State_VGB,P_
+  use ModNumConst, ONLY : cTiny, cUnit_DD, cTolerance,cZero,cOne
   use ModMpi
   use CON_axes, ONLY : transform_matrix
   use ModCoordTransform, ONLY : rot_matrix_z, cross_product
   use ModUtilities, ONLY: lower_case, split_string
   use ModPlotFile, ONLY: save_plot_file
+  use ModNodes, ONLY: NodeX_NB,NodeY_NB,NodeZ_NB
+  use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
+  use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
   implicit none
 
   ! Arguments
@@ -116,6 +120,20 @@ subroutine write_plot_los(iFile)
   logical :: oktest,oktest_me,DoTiming,DoTimingMe, DoCheckBlock
   logical :: UseScattering, UseRho
 
+  ! variables added for sph geometry
+  logical :: IsSphGeometry = .false.
+  logical :: UseEUV,UseSXR
+  real,dimension(3,8) :: Xyz_DN, BBoxVertex_DN
+
+  integer :: iMid1,iMid2,iMid3,ii,jj,kk
+  real :: dlength
+  real :: FixedXyzBlockCenter_D(3) ! XyzBlockcenter changes, so need fixed one
+
+  real :: rFac,rNodeMax,rNodeMin,CosAngle,CosAngleMin !BBox stuff
+  logical :: AlignedZ = .false.
+
+  integer :: iTableEUV = -1, iTableSXR= -1
+
   character(len=*), parameter :: NameSub = 'write_plot_los'
   !---------------------------------------------------------------------------
 
@@ -127,9 +145,14 @@ subroutine write_plot_los(iFile)
 
   select case(TypeGeometry)
   case('cartesian')
-     IsRzGeometry = .false.
+     IsRzGeometry  = .false.
+     IsSphGeometry = .false.
   case('rz')
      IsRzGeometry = .true.
+     IsSphGeometry = .false.
+  case('spherical','spherical_lnr','spherical_genr')
+     IsRzGeometry  = .false.
+     IsSphGeometry = .true.
   case default
      call stop_mpi(NameSub//' is not implemented for TypeGeometry=' &
           //TypeGeometry)
@@ -138,7 +161,7 @@ subroutine write_plot_los(iFile)
   ! Set rInner and rOuter depending on component
   select case(NameThisComp)
   case('SC')
-     rInner = 0.5 
+     rInner = 1.0   ! take surface at 1.0 (could have this check rBody instead) 
      rOuter = rBuffMax
   case('IH')
      rInner = rBuffMax
@@ -146,6 +169,11 @@ subroutine write_plot_los(iFile)
   case('GM')
      rInner = 0.0 ! needed for comet applications
      rOuter = 1e30
+  case('LC')
+     rInner = 1.01  ! (if want to go to the surface, need to add a call to BC routine
+     ! to fill in the ghostcells with chromo/TR temps and
+     ! densities!! 
+     rOuter = rBuffMax
   end select
   rInner2 = rInner**2
   rOuter2 = rOuter**2
@@ -238,6 +266,7 @@ subroutine write_plot_los(iFile)
   ! a = LOS x (0,1,0), b = a x LOS ensures that b is roughly aligned with +Y
   if(abs(Los_D(3)) < maxval(abs(Los_D(1:2))))then
      aUnit_D = cross_product(Los_D, (/0.,0.,1./))
+     AlignedZ = .true.
   else
      ! Viewing along the Z axis more or less
      aUnit_D = cross_product(Los_D, (/0.,1.,0./))
@@ -266,8 +295,20 @@ subroutine write_plot_los(iFile)
   UseScattering = any(plotvarnames(1:nPlotVar) == 'wl') &
        .or.       any(plotvarnames(1:nPlotVar) == 'pb')
 
+  ! Do we need to calc EUV response?
+  UseEUV = any(plotvarnames(1:nPlotVar) == 'euv171') &
+       .or.       any(plotvarnames(1:nPlotVar) == 'euv195') &
+       .or.       any(plotvarnames(1:nPlotVar) == 'euv284')
+
+  ! Do we need to calc Soft X-Ray response? 
+  UseSXR = any(plotvarnames(1:nPlotVar) == 'sxr')
+
+  ! if EUV or SXR calc, then get lookup table info
+  if (UseEUV) iTableEUV  = i_lookup_table('euv')
+  if (UseSXR) iTableSXR  = i_lookup_table('sxr')
+
   ! Do we need to calculate density (also for white light and polarization)
-  UseRho = UseScattering .or. any(plotvarnames(1:nPlotVar) == 'rho')
+  UseRho = UseScattering .or. any(plotvarnames(1:nPlotVar) == 'rho') .or. UseEUV
 
   if(DoTiming)call timing_start('los_block_loop')
 
@@ -278,23 +319,84 @@ subroutine write_plot_los(iFile)
 
      CellSize_D = (/ dx_BLK(iBlk), dy_BLK(iBlk), dz_BLK(iBlk) /)
 
-     if(IsRzGeometry)then
-        ! Exclude blocks that do not intersect the Z=0 plane (from above)
-        if(.not. (z_BLK(1,1,0,iBLK)<0 .and. z_BLK(1,1,nK,iBLK)>0)) CYCLE
-        ! Exclude blocks below the Y=0 plane
-        if(y_BLK(1,nJ,1,iBLK)<0) CYCLE
-     end if
+     if(.not.IsSphGeometry) then      
 
-     rBlockSize = 0.5*sqrt(&
-          ((nI+1)*dx_BLK(iBLK))**2 + &
-          ((nJ+1)*dy_BLK(iBLK))**2 + &
-          ((nK+1)*dz_BLK(iBLK))**2)
+        if(IsRzGeometry)then
+           ! Exclude blocks that do not intersect the Z=0 plane (from above)
+           if(.not. (z_BLK(1,1,0,iBLK)<0 .and. z_BLK(1,1,nK,iBLK)>0)) CYCLE
+           ! Exclude blocks below the Y=0 plane
+           if(y_BLK(1,nJ,1,iBLK)<0) CYCLE
+        end if
 
-     !position of the block center
-     XyzBlockCenter_D(1) = 0.50*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
-     XyzBlockCenter_D(2) = 0.50*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
-     XyzBlockCenter_D(3) = 0.50*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
-     rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
+        rBlockSize = 0.5*sqrt(&
+             ((nI+1)*dx_BLK(iBLK))**2 + &
+             ((nJ+1)*dy_BLK(iBLK))**2 + &
+             ((nK+1)*dz_BLK(iBLK))**2)
+
+        !position of the block center
+        XyzBlockCenter_D(1) = 0.50*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
+        XyzBlockCenter_D(2) = 0.50*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
+        XyzBlockCenter_D(3) = 0.50*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
+        rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
+
+     else ! need to do additional things to check sph blocks
+
+        call generate_vertex_vectors(1,nI+1,1,nJ+1,1,nK+1,Xyz_DN)
+
+        ! want middle node indexes to find center
+        iMid1 = nI/2 + 1; iMid2 = nJ/2 + 1; iMid3 = nK/2 + 1         
+
+        XyzBlockCenter_D(x_) = NodeX_NB(iMid1,iMid2,iMid3,iBLK)
+        XyzBlockCenter_D(y_) = NodeY_NB(iMid1,iMid2,iMid3,iBLK)
+        XyzBlockCenter_D(z_) = NodeZ_NB(iMid1,iMid2,iMid3,iBLK)
+        rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
+
+
+        ! Main idea behind this method is to avoid r-curvature problems by
+        ! extending top (high r) block bounding vertexes by a factor such
+        ! that the entire curved volume is contained in a planar volume.
+        !
+        ! This way only need to find the planar intersections.
+        !
+        ! Then in the actual integration part, can discount any points that
+        ! are outside curved volume
+        !
+        ! The factor comes from finding the radius where the plane tangent to 
+        ! the point at the center of the top curved sphere intersects the 
+        ! bounding radial lines. (reduces to simple 90 degree triangle calc)
+
+        BBoxVertex_DN = Xyz_DN
+        rNodeMax = sqrt(sum(Xyz_DN(:, 8)**2))
+        rNodeMin = sqrt(sum(Xyz_DN(:, 1)**2))
+
+
+        ! Now want to find the maximum angular seperation between center of
+        ! bounding sphere and bounding lines that intersect it
+        ! check all 4 in case have non-uniform phi/theta
+        ! (would still need to check 2 values if had fixed dPhi/dTheta)
+
+        CosAngleMin=cOne
+        do ii=5,8 ! 5-8 are max r bounding vertexes
+           CosAngle = sum(XyzBlockCenter_D *  Xyz_DN(:, ii))/( rBlockCenter * rNodeMax)
+           CosAngleMin = min(CosAngle,CosAngleMin)
+        enddo
+
+        ! now extend each top vertex along r by this factor   
+        BBoxVertex_DN(:,5:8) = BBoxVertex_DN(:, 5:8)/CosAngleMin
+
+
+        !--- note that now blocks can have odd shapes, so take maximum of
+        !distances from XyzBlockCenter to corners to calc rBlockSize
+        rBlockSize = cZero        
+        do ii=1,8
+           dlength = sqrt(sum( (XyzBlockCenter_D(:) - BBoxVertex_DN(:, ii))**2))
+           rBlockSize = max(dlength,rBlockSize)
+        enddo
+        rBlockSize = rBlockSize + cTiny !-- just to make sure...
+
+     end if 
+
+     FixedXyzBlockCenter_D = XyzBlockCenter_D
 
      if(rBlockCenter < rInner - rBlockSize) CYCLE
 
@@ -342,6 +444,11 @@ subroutine write_plot_los(iFile)
            ! X position of the pixel on the image plane
            aPix = (iPix - 1) * SizePix - rSizeImage
 
+
+           ! if los is on pole, will have block degeneracy ---> offset a 'tiny' bit
+           ! (will always have this problem if nPix is odd)
+           if (IsSphGeometry.and.AlignedZ) aPix = aPix + cTiny
+
            ! Check if block can intersect this pixel
            if(DoCheckBlock)then
               if( (aPix - aBlockCenter)**2 + (bPix - bBlockCenter)**2 > &
@@ -367,11 +474,15 @@ subroutine write_plot_los(iFile)
            where(LosPix_D ==0.0) LosPix_D = cTiny
 
            ! Calculate contribution of this block to this pixel
-           if(IsRzGeometry)then
-              call integrate_los_block_rz
-           else
-              call integrate_los_block
+           if (.not.IsSphGeometry) then
+              if(IsRzGeometry)then
+                 call integrate_los_block_rz
+              else
+                 call integrate_los_block
+              end if
            end if
+
+           if (IsSphGeometry) call integrate_los_block_sph
 
         end do ! jPix loop
      end do    ! iPix loop
@@ -462,9 +573,9 @@ subroutine write_plot_los(iFile)
              CoordMinIn_D = (/-aPix, -aPix/), &
              CoordMaxIn_D = (/+aPix, +aPix/), &
              VarIn_VII = Image_VII)
-        
+
      end select
-     
+
   end if  !iProc ==0
   if(DoTiming)call timing_stop('los_save_plot')
 
@@ -522,8 +633,8 @@ contains
 
     logical, parameter :: DoTestPix = .false.
     !------------------------------------------------------------------------
-    
-    !!! DoTestPix = iPix == 26 .and. jPix == 26
+
+!!! DoTestPix = iPix == 26 .and. jPix == 26
 
     ! Calculate the closest approach to the origin in the Y-Z plane
     ! Normalize the Y-Z components of the LOS vector to unity
@@ -621,8 +732,8 @@ contains
 
        call integrate_segment(Intersect_D, Intersect2_D)
     end do
-
   end subroutine integrate_los_block_rz
+
   !===========================================================================
 
   subroutine integrate_los_block
@@ -803,6 +914,63 @@ contains
 
   !===========================================================================
 
+  subroutine integrate_los_block_sph
+
+    ! Local variables
+    
+ 
+    real :: Xyz1_D(3), Xyz2_D(3)
+   
+ 
+    !
+    logical, dimension(2) :: IsPoleNS
+    logical :: IsIntersect
+    real, dimension(8,3) :: cell_vertex_V
+
+
+
+    !------------------------------------------------------------------------
+
+
+    ! essentially a more general version of the cartesian version
+    ! except this time made each part into its own subroutine
+
+    !  note, the 3D location of the pixel is XYZPix_D
+
+    ! need to make sure you discount the non-zero face on a polar block 
+    ! use same check as fix_axis routines
+    IsIntersect=.false.
+    IsPoleNS = .false.
+    IsPoleNS(1) = (NeiLTop(iBLK) == NOBLK)     
+    IsPoleNS(2) = (NeiLBot(iBLK) == NOBLK)
+
+    ! Block level intersection call
+    ! note BBoxVertex_V is calculated in main routine block loop and is 8 vertex locations
+    ! of the smallest 6 sided planar volume that bounds the curved block
+    ! (slightly larger than the block itself)
+    !
+    ! this function finds the points where the los intersects this volume
+    !
+    call find_intersect_general(BBoxVertex_DN,IsPoleNS,IsIntersect,Xyz1_D,Xyz2_D)
+
+    ! NOW CALL SERIES OF NESTED ROUTINES that trim the LOS integral to 
+    ! the correct limits within the blocks.
+    !
+    ! the order is as follows:
+    !
+    ! a) los_cut_backside  **trim if los hits sun, only take half of domain facing observer
+    ! b) los_cut_boundary  **trim if los is within rInner and rOuter (can branch if double cut)
+    ! c) los_cut_rmin      **trim if los is los is below block rmin (node r boundary) 
+    ! d) los_cut_rmax      **trim if los is los is outside block rmax (node r boundary)
+    ! e) integrate_segment **now go into integrate segment 
+
+    if (IsIntersect) call los_cut_backside(Xyz1_D,Xyz2_D)
+
+    RETURN
+
+  end subroutine integrate_los_block_sph
+  !===========================================================================
+
   subroutine integrate_segment(XyzStart_D, XyzEnd_D)
 
     ! Integrate variables from XyzStart_D to XyzEnd_D
@@ -832,12 +1000,31 @@ contains
     character(len=1):: NameTecVar, NameTecUnit, NameIdlUnit
     real    :: ValueBody
     real, allocatable, save:: PlotVar_GV(:,:,:,:)
+
+    ! Added for EUV synth and sph geometry
+    real :: GenStart_D(3), GenEnd_D(3),GenLos_D(3)
+    real :: Temp            ! Electron Temp at the point
+    real :: mu_gas = 0.5    ! mean molecular wieght of plasma
+    real :: LogTemp, LogNe, rConv, Aux, EUVResponse(3), SXRResponse(2)
     !------------------------------------------------------------------------
 
-    !if(DoTiming)call timing_start('los_integral')
 
     ! Number of segments for an accurate integral
-    nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D)/CellSize_D)
+    if (.not.IsSphGeometry) &
+         nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D)/CellSize_D)
+
+    if (IsSphGeometry) then
+
+       call xyz_to_gen(XyzStart_D,GenStart_D)
+       call xyz_to_gen(XyzEnd_D,GenEnd_D)
+
+       ! in gen coords, hard to think of equally weighted length
+       ! (along all 3 axes), so choose n=10 for now, note that
+       ! CellSize_D has gencoord deltas
+
+       nSegment = 10
+       !nSegment = 1 + sum(abs(GenEnd_D - GenStart_D)/CellSize_D)
+    endif
 
     ! Length of a segment
     Ds = sqrt(sum((XyzEnd_D - XyzStart_D)**2)) / nSegment
@@ -880,14 +1067,24 @@ contains
 
        ! Calculate normalized position
        ! XyzStart contains the coordinates of cell 1,1,1, hence add 1
-       if(IsRzGeometry)then
-          ! Radial distance is sqrt(yLos**2+zLos**2)
-          CoordNorm_D(1:2) = ( (/xLos, sqrt(yLos**2+zLos**2) /) &
-               - XyzStart_BLK(1:2,iBlk))/CellSize_D(1:2) + 1
-          CoordNorm_D(3) = 0.0
-       else
-          CoordNorm_D = (XyzLos_D - XyzStart_BLK(:,iBlk))/CellSize_D + 1
+       if(.not.IsSphGeometry) then
+          if(IsRzGeometry)then
+             ! Radial distance is sqrt(yLos**2+zLos**2)
+             CoordNorm_D(1:2) = ( (/xLos, sqrt(yLos**2+zLos**2) /) &
+                  - XyzStart_BLK(1:2,iBlk))/CellSize_D(1:2) + 1
+             CoordNorm_D(3) = 0.0
+          else
+             CoordNorm_D = (XyzLos_D - XyzStart_BLK(:,iBlk))/CellSize_D + 1
+          end if
        end if
+
+       if(IsSphGeometry) then
+          ! get gen coord of los (note XyzStart_BLK will already be in Gencoord)
+          call xyz_to_gen(XyzLos_D,GenLos_D)
+          CoordNorm_D = (GenLos_D - XyzStart_BLK(:,iBLK))/CellSize_D + 1
+       end if
+
+
        ! interpolate density if it is needed by any of the plot variables
        if(UseRho)then
           if(IsRzGeometry)then
@@ -897,6 +1094,50 @@ contains
              Rho = trilinear(State_VGB(Rho_,:,:,:,iBlk), &
                   -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
           end if
+       end if
+
+       if(UseEUV.or.UseSXR)then
+
+          ! need to calculate electron temperature. Should really be calling
+          ! user_material_properties, but would need user to have implemented
+          ! this. Instead assume a fixed mu and electron/ion Temperature equilibrium
+          ! for now.
+
+          if(IsRzGeometry)then
+             Temp = bilinear(State_VGB(P_,:,:,1,iBlk)/State_VGB(Rho_,:,:,1,iBlk), &
+                  -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
+          else
+             Temp = trilinear(State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk), &
+                  -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
+          end if
+
+          ! Note this is log base 10!!
+          LogTemp = log10(Temp * mu_gas * No2Si_V(UnitTemperature_))
+
+          ! Here calc log base 10 of electron density, the -6 is to convert to CGS
+          LogNe = log10(Rho*No2Si_V(UnitN_)) - 6*cOne
+
+          ! rconv converts solar radii units to CGS for response function
+          ! exponent      
+          rConv = log10(6.96) + 10*cOne
+
+          ! calculates response function normalization exponent
+          Aux = 2*cOne*LogNe + log10(Ds) + rConv - 26*cOne
+
+          if (UseEUV) then
+             ! now interpolate EUV response values from a lookup table
+             if (iTableEUV <=0) call stop_mpi('Need to load #LOOKUPTABLE for EUV response!')
+             call interpolate_lookup_table(iTableEUV,LogTemp,LogNe,EUVResponse,&
+                  DoExtrapolate=.true.)
+          end if
+
+          if (UseSXR) then
+             ! now interpolate SXR response values from a lookup table
+             if (iTableSXR <=0) call stop_mpi('Need to load #LOOKUPTABLE for SXR response!')
+             call interpolate_lookup_table(iTableSXR,LogTemp,LogNe,SXRResponse,&
+                  DoExtrapolate=.true.)
+          end if
+
        end if
 
        do iVar = 1, nPlotvar
@@ -917,6 +1158,22 @@ contains
              ! Polarization brightness
              if(rLos > 1.0) Value = &
                   Rho*( (1.0 - mu_los)*a_los + mu_los*b_los)*Cos2Theta
+
+          case('euv171')
+             ! EUV 171
+             Value = EUVResponse(1)*10.0**Aux
+
+          case('euv195')
+             ! EUV 195
+             Value = EUVResponse(2)*10.0**Aux
+
+          case('euv284')
+             ! EUV 284
+             Value = EUVResponse(3)*10.0**Aux
+
+          case('sxt3')
+             ! Soft X-Ray (Only one channel for now, can add others later)
+             Value = SXRResponse(1)*10.0**Aux
 
           case('rho')
              ! Simple density integral
@@ -984,6 +1241,8 @@ contains
                *No2Si_V(UnitRho_)*No2Si_V(UnitX_)
        case('wl','pb')
           ! do nothing for backwards compatibility
+       case('euv171','euv195','euv284','sxr3')
+          ! do nothing since already taken care of
        case default
           ! User defined functions are already dimensional, but integral
           ! requires a multiplication by length unit
@@ -994,174 +1253,731 @@ contains
 
   end subroutine dimensionalize_plotvar_los
 
+  !==========================================================================
+
+  subroutine generate_vertex_vectors(i1,i2,j1,j2,k1,k2,Vertex_DN)
+
+    ! build an array containing the 8 vertex vectors bounding a cell/block
+    ! made a routine to make the interesct routine simpler
+    ! also wrote it explicitly so its easy to see which vertex is which
+
+    integer, intent(in) :: i1,i2,j1,j2,k1,k2
+    integer :: i,j,k
+    real, dimension(3,8), intent(out) :: Vertex_DN
+
+    i=i1; j=j1; k=k1
+    Vertex_DN(:, 1) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
+    i=i1; j=j1; k=k2
+    Vertex_DN(:, 2) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
+    i=i1; j=j2; k=k1
+    Vertex_DN(:, 3) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
+    i=i1; j=j2; k=k2
+    Vertex_DN(:, 4) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
+    i=i2; j=j1; k=k1
+    Vertex_DN(:, 5) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
+    i=i2; j=j1; k=k2
+    Vertex_DN(:, 6) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
+    i=i2; j=j2; k=k1
+    Vertex_DN(:, 7) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
+    i=i2; j=j2; k=k2
+    Vertex_DN(:, 8) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
+
+  end subroutine generate_vertex_vectors
+
+  !==========================================================================
+
+  subroutine find_intersect_general(Vertex_DN,IsPoleNS,IsIntersect,Xyz1_D,Xyz2_D)
+
+    ! subroutine to find general plane interections for finding if los interescts
+    ! a block
+
+    !--- in covariant geometry the face normals do not have only one
+    !--- component so need to use a more general intersection
+    !--- calculation, do this here
+
+    !--- calc normals first... look at xyzC definitions to see locations of
+    !--- vertices. Sign (pointing in or out) and length cancel/divide out later
+
+    real,dimension(3, 8), intent(in) :: Vertex_DN ! 8 vertexes in XYZ
+    logical, intent(in) :: IsPoleNS(2) ! array to take out zero-area face on the pole
+
+    logical, intent(out) :: IsIntersect ! Flag to see if intersection is on the cell/block
+    real, dimension(3), intent(out) :: Xyz1_D, Xyz2_D ! points that intersect on the cell/block
+
+    real, dimension(3,6) :: FaceNormal_DS, NewIntersect_DN
+    integer,parameter,dimension(3,2,6) :: TriIndex_DIS=reshape((/&
+                                                          1,2,3,& ! :,1,1
+                                                          4,2,3,& ! :,2,1
+                                                          1,2,5,& ! :,1,2
+                                                          6,2,5,& ! :,2,2
+                                                          1,3,5,& ! :,1,3
+                                                          7,3,5,& ! :,2,3
+                                                          8,7,6,& ! :,1,4
+                                                          5,7,6,& ! :,2,4
+                                                          8,7,4,& ! :,1,5
+                                                          3,7,4,& ! :,2,5
+                                                          8,6,4,& ! :,1,6
+                                                          2,6,4 & ! :,2,6
+                                                          /),(/3,2,6/))
+    integer :: iSide, j, iCounter, iFace
+    logical, dimension(6) :: IsBadFace_S
+    real :: Coeff1
+  
+    logical :: IsOnTriangle
+
+    ! REST OF VARIBLES HERE ARE DEFINED IN parent write_plot_los subroutine!
+    ! (eg LosPix_D etc.)
+
+    FaceNormal_DS(:,1)=cross_product((Vertex_DN(:, 2)-Vertex_DN(:, 1)),(Vertex_DN(:, 3)-Vertex_DN(:, 1)))
+    FaceNormal_DS(:,2)=cross_product((Vertex_DN(:, 2)-Vertex_DN(:, 1)),(Vertex_DN(:, 5)-Vertex_DN(:, 1)))
+    FaceNormal_DS(:,3)=cross_product((Vertex_DN(:, 3)-Vertex_DN(:, 1)),(Vertex_DN(:, 5)-Vertex_DN(:, 1)))
+    FaceNormal_DS(:,4)=cross_product((Vertex_DN(:, 7)-Vertex_DN(:, 8)),(Vertex_DN(:, 6)-Vertex_DN(:, 8)))
+    FaceNormal_DS(:,5)=cross_product((Vertex_DN(:, 7)-Vertex_DN(:, 8)),(Vertex_DN(:, 4)-Vertex_DN(:, 8)))
+    FaceNormal_DS(:,6)=cross_product((Vertex_DN(:, 6)-Vertex_DN(:, 8)),(Vertex_DN(:, 4)-Vertex_DN(:, 8)))
+
+    LosPix_D = ObsPos_D - XYZPix_D
+    LosPix_D = LosPix_D/sqrt(sum(LosPix_D**2))
+    where(LosPix_D ==0.0) LosPix_D = cTiny
+
+    IsBadFace_S(:) = .false.
+
+    do iSide = 1,6 !-- loop over faces
+       !-- this is a simple vector geometry formua for calculating the
+       !intersection of a plane (specified by a normal and a point on
+       !the plane) with a line (LosPix_D in this case)
+       !-- used this form from numerical recipes 3rd edition eq 21.4.14
+       ! and 21.4.15
+
+       if (iSide < 4) iFace = 1  !-- specify a point on these planes (either pt 1 or 8) 
+       if (iSide > 3) iFace = 8
+
+       ! SouthPole
+       if ((iSide == 3) .and. (IsPoleNS(2))) then
+          IsBadFace_S(iSide) = .true.
+          CYCLE
+       endif
+       ! NorthPole
+       if ((iSide == 6) .and. (IsPoleNS(1))) then
+          IsBadFace_S(iSide) = .true.
+          CYCLE
+       endif
+
+       coeff1 = sum(LosPix_D(:) * FaceNormal_DS(:, iSide))
+
+       if (abs(coeff1) < cTolerance) then 
+          IsBadFace_S(iSide) = .true.
+          CYCLE
+       endif
+
+       !--- calc the 3D point of intersection with the line and this plane
+       NewIntersect_DN(:, iSide) = &
+            XYZPix_D(:) + LosPix_D(:) * &
+            (sum(Vertex_DN(:, iFace) * FaceNormal_DS(:,iSide)) -&
+            sum(XYZPix_D * FaceNormal_DS(:,iSide))           ) / coeff1
+
+    end do
+
+  
+
+    IsIntersect = .false.
+
+    !which of the 6 points are on the block?
+    iCounter = 0
+    CHECK3: do iSide = 1,6 
+       do j=1,2
+
+
+          !This Method checks intersection with face the faces by dividing
+          !them into 2 triangles and calculating if the los intersects them
+          !
+          !This is completely general xyz method, do not have to check with
+          !block coordinate min and maxes... However need to be careful
+          !if generalized coordinate is defining parallel planes. If a bounding
+          !surface is curved (e.g. constant r surface) then planes defined by
+          !the block corners may actually bound OUTSIDE the block limits 
+          !(including ghost cells). This will only happen if there is a high 
+          !degree of relative curvature (i.e. transition region grid)
+          ! 
+          ! To circumvent this problem, need to make bounding planes contain
+          ! the ENTIRE volume (i.e. extend R for top vertexes) and then cut 
+          ! the los to be within the general coordinate range (in later
+          ! routines)
+
+          if (IsBadFace_S(iSide)) CYCLE
+
+          IsOnTriangle = is_on_triangle(NewIntersect_DN(:, iSide),&
+               Vertex_DN(:, TriIndex_DIS(1,j,iSide)),&
+               Vertex_DN(:, TriIndex_DIS(2,j,iSide)),&
+               Vertex_DN(:, TriIndex_DIS(3,j,iSide)) )
+          if (IsOnTriangle) then
+             iCounter = iCounter + 1
+             if(iCounter == 1) Xyz1_D = NewIntersect_DN(:, iSide)
+             if(iCounter == 2) then
+                Xyz2_D = NewIntersect_DN(:, iSide)
+                ! If point 2 is different from point 1, we are done
+                if(sum(abs(Xyz1_D - Xyz2_D)) > cTolerance) EXIT CHECK3
+                ! Ignore the second point, keep checking
+                iCounter = 1
+             end if
+          end if
+       end do !--- end j loop
+    end do CHECK3 
+
+    if (iCounter == 2) IsIntersect = .true.
+
+  end subroutine find_intersect_general
+
+  !==========================================================================
+
+  logical function is_on_triangle(XyzIn_D,aXyz_D,bXyz_D,cXyz_D)
+
+    real, dimension(3), intent(in) :: XyzIn_D,aXyz_D,bXyz_D,cXyz_D
+    real, dimension(3) :: A1_D,B1_D,Q1_D
+    real :: A2, B2, ACrossB2, Alpha, Beta, Gamma
+    !--------------------------------------------
+
+
+    !--- this function is for calclating if point on plane defined by a triangle
+    !--- is within the triangle
+
+    is_on_triangle = .false.
+
+    if(sum(abs(aXyz_D - bXyz_D))<cTolerance) RETURN
+    if(sum(abs(aXyz_D - cXyz_D))<cTolerance) RETURN
+    if(sum(abs(bXyz_D - cXyz_D))<cTolerance) RETURN
+
+    !\
+    !A1, B1, Q1 are the radius vectors with respect to C vertex
+    !/
+    A1_D =  aXyz_D - cXyz_D
+    B1_D =  bXyz_D - cXyz_D
+    Q1_D = XyzIn_D - cXyz_D
+
+    A2  = sum(A1_D**2)
+    B2  = sum(B1_D**2)
+
+    !\
+    !Calculate [a\times b]^2
+    !/
+
+    ACrossB2 = A2*B2 - sum(A1_D*B1_D)**2
+
+    Alpha = (B2 * sum(A1_D * Q1_D)-sum(A1_D * B1_D)*sum(B1_D * Q1_D) ) / ACrossB2
+    Beta  = (A2 * sum(B1_D * Q1_D)-sum(A1_D * B1_D)*sum(A1_D * Q1_D) ) / ACrossB2
+    Gamma = 1.0 - Alpha - Beta
+
+    is_on_triangle = Alpha >= 0.0 .and.Beta >= 0.0 .and.Gamma >= 0.0
+
+  end function is_on_triangle
+
+  !==========================================================================
+
+  subroutine los_cut_backside(Xyz1In_D,Xyz2In_D)
+
+    real, dimension(3), intent(in) :: Xyz1In_D,Xyz2In_D
+    real, dimension(3) :: Xyz1_D, Xyz2_D
+    real :: dot1,dot2
+    logical :: IsBehind1, IsBehind2
+
+    ! *** NOTE XYZPix_D is the 3D position along the pixel LOS that lies 
+    ! on the plane intersecting the sun center and perp to observer
+    ! ---> perfect for defining backside of sun
+
+    Xyz1_D = Xyz1In_D
+    Xyz2_D = Xyz2In_D
+
+    if (r2Pix < rInner2) then
+
+       dot1 = sum(Xyz1_D * ObsPos_D)
+       dot2 = sum(Xyz2_D * ObsPos_D)
+
+       ! check if both are behind the sun
+       IsBehind1 = (dot1 < 0.0)
+       IsBehind2 = (dot2 < 0.0)
+
+       if (IsBehind1.and.IsBehind2) RETURN
+
+       if (IsBehind1) Xyz1_D = XYZPix_D
+
+       if (IsBehind2) Xyz2_D = XYZPix_D
+
+    endif
+
+    call los_cut_boundary(Xyz1_D,Xyz2_D)
+
+  end subroutine los_cut_backside
+
+  !==========================================================================
+
+  subroutine los_cut_boundary(Xyz1In_D,Xyz2In_D)
+
+
+    real, dimension(3), intent(in) :: Xyz1In_D,Xyz2In_D
+
+    real, dimension(3) :: Xyz1_D, Xyz2_D
+    real :: R2Point1, R2Point2,rLine_D(3),rLine2
+    real :: Coeff1,Coeff2,Coeff3
+    real :: Discr
+    real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
+    logical :: IsOuter, IsGoodSolution1, IsGoodSolution2
+    !----------------------------------------------------
+
+    Xyz1_D = Xyz1In_D
+    Xyz2_D = Xyz2In_D
+
+    R2Point1 = sum(Xyz1_D**2)
+    R2Point2 = sum(Xyz2_D**2)
+
+    ! Check if the whole segment is inside rInner
+    if( R2Point1 <= rInner2 .and. R2Point2 <= rInner2) RETURN
+
+    ! Check if the whole segment is outside rOuter
+    rLine_D = XYZPix_D - LosPix_D*dot_product(LosPix_D, XYZPix_D)
+    rLine2  = sum(rLine_D**2)
+    if( rLine2 > rOuter2 ) RETURN
+
+    ! Check if there is a need to calculate an intersection
+
+    ! Do we intersect the outer sphere
+    IsOuter = R2Point1 > rOuter2 .or. R2Point2 > rOuter2
+
+    ! Do we intersect the inner or outer spheres
+    if( IsOuter .or. &
+         (rLine2 < rInner2 .and. rBlockCenter < rInner+rBlockSize) ) then
+
+       coeff1 = sum((Xyz2_D - Xyz1_D)**2)
+       coeff2 = 2 * sum(Xyz1_D *(Xyz2_D - Xyz1_D))
+
+       if( IsOuter ) then
+          Coeff3 = R2Point1 - rOuter2
+       else
+          Coeff3 = R2Point1 - rInner2
+       end if
+
+       Discr = Coeff2**2 - 4 * Coeff1 * Coeff3
+
+       if(Discr < 0.0)then
+          write(*,*)'Warning: Discr=',Discr
+          !   call SC_stop_mpi("Negative discriminant")
+          RETURN
+       end if
+
+       ! Line of sight tangent to the outer sphere
+       if(IsOuter.AND.Discr==0.0)RETURN
+
+       ! Find the two intersections (distance from point1 towards point2)
+       Discr = sqrt(Discr)
+       Solution1 = (-Coeff2 - Discr)/(2 * Coeff1)
+       Solution2 = (-Coeff2 + Discr)/(2 * Coeff1)
+
+       Solution1_D = Xyz1_D + (Xyz2_D - Xyz1_D) * Solution1
+       Solution2_D = Xyz1_D + (Xyz2_D - Xyz1_D) * Solution2
+
+
+       ! Check if the solutions are within the segment
+       IsGoodSolution1 = (Solution1 >= 0.0 .and. Solution1 <= 1.0)
+       IsGoodSolution2 = (Solution2 >= 0.0 .and. Solution2 <= 1.0)
+
+       if(IsOuter)then
+          ! For outer sphere replace
+          ! outlying point1 with solution1 and
+          ! outlying point2 with solution2
+          if(R2Point1 > rOuter2) then
+             if(IsGoodSolution1)then
+                Xyz1_D = Solution1_D
+             else
+                RETURN
+             end if
+          end if
+          if(R2Point2 > rOuter2) then
+             if(IsGoodSolution2)then
+                Xyz2_D = Solution2_D
+             else
+                RETURN
+             end if
+          end if
+       else
+          ! For inner sphere replace 
+          ! internal point1 with solution2 and 
+          ! internal point2 with solution1
+          if(R2Point1 < rInner2) Xyz1_D = Solution2_D
+          if(R2Point2 < rInner2) Xyz2_D = Solution1_D
+          ! Weird case: the segment cuts the inner sphere
+          if(IsGoodSolution1 .and. IsGoodSolution2)then
+             ! Need to do two integrals:
+             ! from point1 to solution1 and
+             ! from point2 to solution2
+             if(Discr > 0.0)then
+                if(Solution1>cTiny) &
+                     call los_cut_rmin(Xyz1_D, Solution1_D,rNodeMin)
+                if(solution2<cOne-cTiny) &
+                     call los_cut_rmin(Xyz2_D, Solution2_D,rNodeMin)
+                RETURN
+             end if
+          end if
+
+       end if
+    end if
+
+    call los_cut_rmin(Xyz1_D, Xyz2_D,rNodeMin)
+
+  end subroutine los_cut_boundary
+
+  !==========================================================================
+
+  subroutine los_cut_rmin(Xyz1In_D,Xyz2In_D,rInside)
+
+    !Input parameters: coordinates for two points of intersection of
+    !the given LOS with the block boundary
+    real, dimension(3), intent(in) :: Xyz1In_D,Xyz2In_D
+    real, intent(in) :: rInside
+
+    real, dimension(3) :: Xyz1_D, Xyz2_D
+    real :: R2Point1, R2Point2,rLine_D(3),rLine2
+    real :: Coeff1,Coeff2,Coeff3
+    real :: Discr
+    real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
+    logical :: IsOuter, IsGoodSolution1, IsGoodSolution2
+    real :: rInside2
+    !----------------------------
+
+    rInside2 = rInside**2
+
+    Xyz1_D = Xyz1In_D
+    Xyz2_D = Xyz2In_D
+
+    R2Point1 = sum(Xyz1_D**2)
+    R2Point2 = sum(Xyz2_D**2)
+
+    ! Check if the whole segment is inside rInside
+    if( R2Point1 <= rInside2 .and. R2Point2 <= rInside2) RETURN
+
+    rLine_D = XYZPix_D - LosPix_D * sum(LosPix_D * XYZPix_D)
+    rLine2  = sum(rLine_D**2)
+
+    ! Check if there is a need to calculate an intersection
+
+    ! Do we intersect the inner sphere
+    if( rLine2 < rInside2 ) then
+
+       Coeff1 = sum((Xyz2_D - Xyz1_D)**2)
+       Coeff2 = 2 *sum(Xyz1_D * (Xyz2_D - Xyz1_D))
+
+       Coeff3 = R2Point1 - rInside2
+
+       Discr = Coeff2**2 - 4 * Coeff1 * Coeff3
+
+       if(Discr < 0.0)then
+          write(*,*)'Warning: Discr=',Discr
+          !   call SC_stop_mpi("Negative discriminant")
+          RETURN
+       end if
+
+       ! Find the two intersections (distance from point1 towards point2)
+       Discr = sqrt(Discr)
+       Solution1 = (-Coeff2 - Discr)/(2 * Coeff1)
+       Solution2 = (-Coeff2 + Discr)/(2 * Coeff1)
+
+       Solution1_D = Xyz1_D + (Xyz2_D - Xyz1_D) * Solution1
+       Solution2_D = Xyz1_D + (Xyz2_D - Xyz1_D) * Solution2
+
+
+       ! Check if the solutions are within the segment
+       IsGoodSolution1 = (Solution1 >= 0.0 .and. Solution1 <= 1.0)
+       IsGoodSolution2 = (Solution2 >= 0.0 .and. Solution2 <= 1.0)
+
+       ! For inner sphere replace 
+       ! internal point1 with solution2 and 
+       ! internal point2 with solution1
+       if(R2Point1 < rInside2) Xyz1_D = Solution2_D
+       if(R2Point2 < rInside2) Xyz2_D = Solution1_D
+
+       ! Weird case: the segment cuts the inner sphere
+       if(IsGoodSolution1 .and. IsGoodSolution2)then
+          ! Need to do two integrals:
+          ! from point1 to solution1 and
+          ! from point2 to solution2
+          if(Discr > 0.0)then
+             if(Solution1>cTiny) &
+                  call los_cut_rmax(Xyz1_D, Solution1_D,rNodeMax)
+             if(solution2<cOne-cTiny) &
+                  call los_cut_rmax(Xyz2_D, Solution2_D,rNodeMax)
+             RETURN
+          end if
+       end if
+
+    end if
+
+    call los_cut_rmax(Xyz1_D, Xyz2_D,rNodeMax)
+
+  end subroutine los_cut_rmin
+
+  !==========================================================================
+
+  subroutine los_cut_rmax(Xyz1In_D,Xyz2In_D,rOutside)
+
+    !Input parameters: coordinates for two points of intersection of
+    !the given LOS with the block boundary
+    real, dimension(3), intent(in) :: Xyz1In_D,Xyz2In_D
+
+    !The cutoff radius
+    real, intent(in) :: rOutside
+
+    !Copies of the input parameters:
+    real, dimension(3)::Xyz1_D, Xyz2_D
+
+    real :: R2Point1, R2Point2,rLine_D(3),rLine2
+    real :: Coeff1, Coeff2,Coeff3
+    real :: Discr
+    real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
+    logical :: IsOuter, IsGoodSolution1, IsGoodSolution2
+   
+    real :: rOutside2
+    !------------------------------------------
+
+    rOutside2 = rOutside**2
+
+    Xyz1_D = Xyz1In_D
+    Xyz2_D = Xyz2In_D
+
+    R2Point1 = sum(Xyz1_D**2)
+    R2Point2 = sum(Xyz2_D**2)
+
+    ! Check if the whole segment is outside rOutside
+    rLine_D = XYZPix_D - LosPix_D * sum(LosPix_D * XYZPix_D)
+    rLine2  = sum(rLine_D**2)
+
+    if( rLine2 > rOutside2 ) RETURN
+
+    ! Check if there is a need to calculate an intersection
+
+    ! Do we intersect the outer sphere
+    IsOuter = R2Point1 > rOutside2 .or. R2Point2 > rOutside2
+
+    ! Do we intersect the inner or outer spheres
+    if( IsOuter ) then
+
+       Coeff1 = sum((Xyz2_D - Xyz1_D)**2)
+       Coeff2 = 2 * sum(Xyz1_D *( Xyz2_D - Xyz1_D))
+
+       Coeff3 = R2Point1 - rOutside2
+
+       Discr = Coeff2**2 - 4 * Coeff1 * Coeff3
+
+       if(Discr < 0.0)then
+          write(*,*)'Warning: Discr=',Discr
+          return
+       end if
+
+       ! Line of sight tangent to the outer sphere
+       if( Discr==0.0 )return
+
+       ! Find the two intersections (distance from point1 towards point2)
+       Discr = sqrt(Discr)
+       Solution1 = (-Coeff2 - Discr) / (2.0 * coeff1)
+       Solution2 = (-Coeff2 + Discr) / (2.0 * coeff1)
+
+       Solution1_D = Xyz1_D + (Xyz2_D - Xyz1_D) * Solution1
+       Solution2_D = Xyz1_D + (Xyz2_D - Xyz1_D) * Solution2
+
+
+       ! Check if the solutions are within the segment
+       IsGoodSolution1 = (Solution1 >= 0.0 .and. Solution1 <= 1.0)
+       IsGoodSolution2 = (Solution2 >= 0.0 .and. Solution2 <= 1.0)
+
+       ! For outer sphere replace
+       ! outlying point1 with solution1 and
+       ! outlying point2 with solution2
+       if(R2Point1 > rOutside2) then
+          if(IsGoodSolution1)then
+             Xyz1_D = Solution1_D
+          else
+             RETURN
+          end if
+       end if
+       if(R2Point2 > rOutside2) then
+          if(IsGoodSolution2)then
+             Xyz2_D = Solution2_D
+          else
+             RETURN
+          end if
+       end if
+    end if
+
+    call integrate_segment(Xyz1_D, Xyz2_D)
+
+  end subroutine los_cut_rmax
+
+  !==========================================================================
+
 end subroutine write_plot_los
 
 !==============================================================================
 
 subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
 
-  use ModPhysics, ONLY : NameTecUnit_V, UnitX_, UnitU_
-  use ModIO, ONLY: plot_dimensional
-  implicit none
+use ModPhysics, ONLY : NameTecUnit_V, UnitX_, UnitU_
+use ModIO, ONLY: plot_dimensional
+implicit none
 
-  ! Arguments
+! Arguments
 
-  integer, intent(in) :: Nplotvar,iFile
-  character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-  character (len=500), intent(out) :: unitstr_TEC 
-  character (len=10) :: s
+integer, intent(in) :: Nplotvar,iFile
+character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
+character (len=500), intent(out) :: unitstr_TEC 
+character (len=10) :: s
 
-  integer :: iVar
-  !--------------------------------------------------------------------------
+integer :: iVar
+!--------------------------------------------------------------------------
 
-  !\
-  ! This routine takes the plot_var information and loads the header file with
-  ! the appropriate string of variable names and units
-  !/
+!\
+! This routine takes the plot_var information and loads the header file with
+! the appropriate string of variable names and units
+!/
+
+if (plot_dimensional(ifile)) then
+  write(unitstr_TEC,'(a)') 'VARIABLES = '
+  write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"X '//&
+       trim(NameTecUnit_V(UnitX_))
+  write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Y '//&
+       trim(NameTecUnit_V(UnitX_))
+else
+  write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y'
+end if
+
+do iVar = 1, nplotvar
+
+  write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "'
+
+  s=plotvarnames(iVar)
 
   if (plot_dimensional(ifile)) then
-     write(unitstr_TEC,'(a)') 'VARIABLES = '
-     write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"X '//&
-          trim(NameTecUnit_V(UnitX_))
-     write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Y '//&
-          trim(NameTecUnit_V(UnitX_))
+
+     select case(s)
+     case ('len')
+        write(unitstr_TEC,'(a)') & 
+             trim(unitstr_TEC)//'len'//' '//&
+             trim(NameTecUnit_V(UnitX_))
+     case('rho')
+        write(unitstr_TEC,'(a)') & 
+             trim(unitstr_TEC)//'`r [m^-^2]'
+     case('vlos','Vlos','ulos','Ulos')
+        write(unitstr_TEC,'(a)') & 
+             trim(unitstr_TEC)//'u.s'//' '//&
+             trim(NameTecUnit_V(UnitU_))
+     case('wl')
+        write(unitstr_TEC,'(a)') & 
+             trim(unitstr_TEC)//'`wl [m^-^2]'//' '
+     case('pb')
+        write(unitstr_TEC,'(a)') & 
+             trim(unitstr_TEC)//'`pb [m^-^2]'//' '
+
+        ! DEFAULT FOR A BAD SELECTION
+     case default
+        write(unitstr_TEC,'(a)') & 
+             trim(unitstr_TEC)//'Default'
+
+     end select
+
   else
-     write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y'
+
+     select case(s)
+     case ('len')
+        write(unitstr_TEC,'(a)') & 
+             trim(unitstr_TEC)//'len'
+     case('rho')
+        write(unitstr_TEC,'(a)') & 
+             trim(unitstr_TEC)//'`r'
+     case('vlos','Vlos','ulos','Ulos')
+        write(unitstr_TEC,'(a)') & 
+             trim(unitstr_TEC)//'u.s'
+     case('wl')
+        write(unitstr_TEC,'(a)') & 
+             trim(unitstr_TEC)//'wl'
+     case('pb')
+        write(unitstr_TEC,'(a)') & 
+             trim(unitstr_TEC)//'pb'
+
+        ! DEFAULT FOR A BAD SELECTION
+     case default
+        write(unitstr_TEC,'(a)') & 
+             trim(unitstr_TEC)//'Default'
+
+     end select
+
   end if
 
-  do iVar = 1, nplotvar
+end do
 
-     write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "'
-
-     s=plotvarnames(iVar)
-
-     if (plot_dimensional(ifile)) then
-
-        select case(s)
-        case ('len')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'len'//' '//&
-                trim(NameTecUnit_V(UnitX_))
-        case('rho')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'`r [m^-^2]'
-        case('vlos','Vlos','ulos','Ulos')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'u.s'//' '//&
-                trim(NameTecUnit_V(UnitU_))
-        case('wl')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'`wl [m^-^2]'//' '
-        case('pb')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'`pb [m^-^2]'//' '
-
-           ! DEFAULT FOR A BAD SELECTION
-        case default
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'Default'
-
-        end select
-
-     else
-
-        select case(s)
-        case ('len')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'len'
-        case('rho')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'`r'
-        case('vlos','Vlos','ulos','Ulos')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'u.s'
-        case('wl')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'wl'
-        case('pb')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'pb'
-
-           ! DEFAULT FOR A BAD SELECTION
-        case default
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'Default'
-
-        end select
-
-     end if
-
-  end do
-
-  write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"'
+write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"'
 
 end subroutine get_TEC_los_variables
 
 !==============================================================================
 subroutine get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
 
-  use ModPhysics, ONLY : NameIdlUnit_V, UnitX_, UnitU_
-  use ModIO, ONLY : plot_dimensional
+use ModPhysics, ONLY : NameIdlUnit_V, UnitX_, UnitU_
+use ModIO, ONLY : plot_dimensional
 
-  implicit none
+implicit none
 
-  ! Arguments
+! Arguments
 
-  integer, intent(in) :: iFile,Nplotvar
-  character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-  character (len=79), intent(out) :: unitstr_IDL 
-  character (len=10) :: s
+integer, intent(in) :: iFile,Nplotvar
+character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
+character (len=79), intent(out) :: unitstr_IDL 
+character (len=10) :: s
 
-  integer :: iVar
-  !----------------------------------------------------------------------------
+integer :: iVar
+!----------------------------------------------------------------------------
 
-  !\
-  ! This routine takes the plot_var information and loads the header file with
-  ! the appropriate string of unit values
-  !/
+!\
+! This routine takes the plot_var information and loads the header file with
+! the appropriate string of unit values
+!/
 
-  if (plot_dimensional(ifile)) then
-     write(unitstr_IDL,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
-          trim(NameIdlUnit_V(UnitX_))//' '//&
-          trim(NameIdlUnit_V(UnitX_))
-  else
-     write(unitstr_IDL,'(a)') 'normalized variables'
-  end if
+if (plot_dimensional(ifile)) then
+  write(unitstr_IDL,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
+       trim(NameIdlUnit_V(UnitX_))//' '//&
+       trim(NameIdlUnit_V(UnitX_))
+else
+  write(unitstr_IDL,'(a)') 'normalized variables'
+end if
 
-  if (plot_dimensional(ifile)) then
+if (plot_dimensional(ifile)) then
 
-     do iVar = 1, nplotvar
+  do iVar = 1, nplotvar
 
-        s=plotvarnames(iVar)
+     s=plotvarnames(iVar)
 
-        select case(s)
-        case ('len')
-           write(unitstr_IDL,'(a)') & 
-                trim(unitstr_IDL)//' '//&
-                trim(NameIdlUnit_V(UnitX_))
-        case('rho')
-           write(unitstr_IDL,'(a)') & 
-                trim(unitstr_IDL)//' '//'[m^-^2]'
-        case('vlos','Vlos','ulos','Ulos')
-           write(unitstr_IDL,'(a)') & 
-                trim(unitstr_IDL)//' '//&
-                trim(NameIdlUnit_V(UnitU_))
-        case('wl')
-           write(unitstr_IDL,'(a)') & 
-                trim(unitstr_IDL)//' '//'[m^-^2]'
-        case('pb')
-           write(unitstr_IDL,'(a)') & 
-                trim(unitstr_IDL)//' '//'[m^-^2]'
-           ! DEFAULT FOR A BAD SELECTION
-        case default
-           write(unitstr_IDL,'(a)') & 
-                trim(unitstr_IDL)//'" Dflt"'
+     select case(s)
+     case ('len')
+        write(unitstr_IDL,'(a)') & 
+             trim(unitstr_IDL)//' '//&
+             trim(NameIdlUnit_V(UnitX_))
+     case('rho')
+        write(unitstr_IDL,'(a)') & 
+             trim(unitstr_IDL)//' '//'[m^-^2]'
+     case('vlos','Vlos','ulos','Ulos')
+        write(unitstr_IDL,'(a)') & 
+             trim(unitstr_IDL)//' '//&
+             trim(NameIdlUnit_V(UnitU_))
+     case('wl')
+        write(unitstr_IDL,'(a)') & 
+             trim(unitstr_IDL)//' '//'[m^-^2]'
+     case('pb')
+        write(unitstr_IDL,'(a)') & 
+             trim(unitstr_IDL)//' '//'[m^-^2]'
+        ! DEFAULT FOR A BAD SELECTION
+     case default
+        write(unitstr_IDL,'(a)') & 
+             trim(unitstr_IDL)//'" Dflt"'
 
-        end select
+     end select
 
-     end do
+  end do
 
-  end if
+end if
 
 end subroutine get_IDL_los_units
 !==============================================================================
