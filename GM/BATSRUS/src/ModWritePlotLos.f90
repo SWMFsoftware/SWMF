@@ -394,7 +394,7 @@ subroutine write_plot_los(iFile)
         enddo
         rBlockSize = rBlockSize + cTiny !-- just to make sure...
 
-     end if 
+     end if
 
      FixedXyzBlockCenter_D = XyzBlockCenter_D
 
@@ -917,11 +917,11 @@ contains
   subroutine integrate_los_block_sph
 
     ! Local variables
-    
- 
+
+
     real :: Xyz1_D(3), Xyz2_D(3)
-   
- 
+
+
     !
     logical, dimension(2) :: IsPoleNS
     logical :: IsIntersect
@@ -1306,23 +1306,23 @@ contains
 
     real, dimension(3,6) :: FaceNormal_DS, NewIntersect_DN
     integer,parameter,dimension(3,2,6) :: TriIndex_DIS=reshape((/&
-                                                          1,2,3,& ! :,1,1
-                                                          4,2,3,& ! :,2,1
-                                                          1,2,5,& ! :,1,2
-                                                          6,2,5,& ! :,2,2
-                                                          1,3,5,& ! :,1,3
-                                                          7,3,5,& ! :,2,3
-                                                          8,7,6,& ! :,1,4
-                                                          5,7,6,& ! :,2,4
-                                                          8,7,4,& ! :,1,5
-                                                          3,7,4,& ! :,2,5
-                                                          8,6,4,& ! :,1,6
-                                                          2,6,4 & ! :,2,6
-                                                          /),(/3,2,6/))
+         1,2,3,& ! :,1,1
+         4,2,3,& ! :,2,1
+         1,2,5,& ! :,1,2
+         6,2,5,& ! :,2,2
+         1,3,5,& ! :,1,3
+         7,3,5,& ! :,2,3
+         8,7,6,& ! :,1,4
+         5,7,6,& ! :,2,4
+         8,7,4,& ! :,1,5
+         3,7,4,& ! :,2,5
+         8,6,4,& ! :,1,6
+         2,6,4 & ! :,2,6
+         /),(/3,2,6/))
     integer :: iSide, j, iCounter, iFace
     logical, dimension(6) :: IsBadFace_S
     real :: Coeff1
-  
+
     logical :: IsOnTriangle
 
     ! REST OF VARIBLES HERE ARE DEFINED IN parent write_plot_los subroutine!
@@ -1377,7 +1377,7 @@ contains
 
     end do
 
-  
+
 
     IsIntersect = .false.
 
@@ -1421,7 +1421,7 @@ contains
              end if
           end if
        end do !--- end j loop
-    end do CHECK3 
+    end do CHECK3
 
     if (iCounter == 2) IsIntersect = .true.
 
@@ -1731,7 +1731,7 @@ contains
     real :: Discr
     real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
     logical :: IsOuter, IsGoodSolution1, IsGoodSolution2
-   
+
     real :: rOutside2
     !------------------------------------------
 
@@ -1816,168 +1816,168 @@ end subroutine write_plot_los
 
 subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
 
-use ModPhysics, ONLY : NameTecUnit_V, UnitX_, UnitU_
-use ModIO, ONLY: plot_dimensional
-implicit none
+  use ModPhysics, ONLY : NameTecUnit_V, UnitX_, UnitU_
+  use ModIO, ONLY: plot_dimensional
+  implicit none
 
-! Arguments
+  ! Arguments
 
-integer, intent(in) :: Nplotvar,iFile
-character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-character (len=500), intent(out) :: unitstr_TEC 
-character (len=10) :: s
+  integer, intent(in) :: Nplotvar,iFile
+  character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
+  character (len=500), intent(out) :: unitstr_TEC 
+  character (len=10) :: s
 
-integer :: iVar
-!--------------------------------------------------------------------------
+  integer :: iVar
+  !--------------------------------------------------------------------------
 
-!\
-! This routine takes the plot_var information and loads the header file with
-! the appropriate string of variable names and units
-!/
-
-if (plot_dimensional(ifile)) then
-  write(unitstr_TEC,'(a)') 'VARIABLES = '
-  write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"X '//&
-       trim(NameTecUnit_V(UnitX_))
-  write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Y '//&
-       trim(NameTecUnit_V(UnitX_))
-else
-  write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y'
-end if
-
-do iVar = 1, nplotvar
-
-  write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "'
-
-  s=plotvarnames(iVar)
+  !\
+  ! This routine takes the plot_var information and loads the header file with
+  ! the appropriate string of variable names and units
+  !/
 
   if (plot_dimensional(ifile)) then
-
-     select case(s)
-     case ('len')
-        write(unitstr_TEC,'(a)') & 
-             trim(unitstr_TEC)//'len'//' '//&
-             trim(NameTecUnit_V(UnitX_))
-     case('rho')
-        write(unitstr_TEC,'(a)') & 
-             trim(unitstr_TEC)//'`r [m^-^2]'
-     case('vlos','Vlos','ulos','Ulos')
-        write(unitstr_TEC,'(a)') & 
-             trim(unitstr_TEC)//'u.s'//' '//&
-             trim(NameTecUnit_V(UnitU_))
-     case('wl')
-        write(unitstr_TEC,'(a)') & 
-             trim(unitstr_TEC)//'`wl [m^-^2]'//' '
-     case('pb')
-        write(unitstr_TEC,'(a)') & 
-             trim(unitstr_TEC)//'`pb [m^-^2]'//' '
-
-        ! DEFAULT FOR A BAD SELECTION
-     case default
-        write(unitstr_TEC,'(a)') & 
-             trim(unitstr_TEC)//'Default'
-
-     end select
-
+     write(unitstr_TEC,'(a)') 'VARIABLES = '
+     write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"X '//&
+          trim(NameTecUnit_V(UnitX_))
+     write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Y '//&
+          trim(NameTecUnit_V(UnitX_))
   else
-
-     select case(s)
-     case ('len')
-        write(unitstr_TEC,'(a)') & 
-             trim(unitstr_TEC)//'len'
-     case('rho')
-        write(unitstr_TEC,'(a)') & 
-             trim(unitstr_TEC)//'`r'
-     case('vlos','Vlos','ulos','Ulos')
-        write(unitstr_TEC,'(a)') & 
-             trim(unitstr_TEC)//'u.s'
-     case('wl')
-        write(unitstr_TEC,'(a)') & 
-             trim(unitstr_TEC)//'wl'
-     case('pb')
-        write(unitstr_TEC,'(a)') & 
-             trim(unitstr_TEC)//'pb'
-
-        ! DEFAULT FOR A BAD SELECTION
-     case default
-        write(unitstr_TEC,'(a)') & 
-             trim(unitstr_TEC)//'Default'
-
-     end select
-
+     write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y'
   end if
 
-end do
+  do iVar = 1, nplotvar
 
-write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"'
+     write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "'
+
+     s=plotvarnames(iVar)
+
+     if (plot_dimensional(ifile)) then
+
+        select case(s)
+        case ('len')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'len'//' '//&
+                trim(NameTecUnit_V(UnitX_))
+        case('rho')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'`r [m^-^2]'
+        case('vlos','Vlos','ulos','Ulos')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'u.s'//' '//&
+                trim(NameTecUnit_V(UnitU_))
+        case('wl')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'`wl [m^-^2]'//' '
+        case('pb')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'`pb [m^-^2]'//' '
+
+           ! DEFAULT FOR A BAD SELECTION
+        case default
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'Default'
+
+        end select
+
+     else
+
+        select case(s)
+        case ('len')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'len'
+        case('rho')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'`r'
+        case('vlos','Vlos','ulos','Ulos')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'u.s'
+        case('wl')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'wl'
+        case('pb')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'pb'
+
+           ! DEFAULT FOR A BAD SELECTION
+        case default
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'Default'
+
+        end select
+
+     end if
+
+  end do
+
+  write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"'
 
 end subroutine get_TEC_los_variables
 
 !==============================================================================
 subroutine get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
 
-use ModPhysics, ONLY : NameIdlUnit_V, UnitX_, UnitU_
-use ModIO, ONLY : plot_dimensional
+  use ModPhysics, ONLY : NameIdlUnit_V, UnitX_, UnitU_
+  use ModIO, ONLY : plot_dimensional
 
-implicit none
+  implicit none
 
-! Arguments
+  ! Arguments
 
-integer, intent(in) :: iFile,Nplotvar
-character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-character (len=79), intent(out) :: unitstr_IDL 
-character (len=10) :: s
+  integer, intent(in) :: iFile,Nplotvar
+  character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
+  character (len=79), intent(out) :: unitstr_IDL 
+  character (len=10) :: s
 
-integer :: iVar
-!----------------------------------------------------------------------------
+  integer :: iVar
+  !----------------------------------------------------------------------------
 
-!\
-! This routine takes the plot_var information and loads the header file with
-! the appropriate string of unit values
-!/
+  !\
+  ! This routine takes the plot_var information and loads the header file with
+  ! the appropriate string of unit values
+  !/
 
-if (plot_dimensional(ifile)) then
-  write(unitstr_IDL,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
-       trim(NameIdlUnit_V(UnitX_))//' '//&
-       trim(NameIdlUnit_V(UnitX_))
-else
-  write(unitstr_IDL,'(a)') 'normalized variables'
-end if
+  if (plot_dimensional(ifile)) then
+     write(unitstr_IDL,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
+          trim(NameIdlUnit_V(UnitX_))//' '//&
+          trim(NameIdlUnit_V(UnitX_))
+  else
+     write(unitstr_IDL,'(a)') 'normalized variables'
+  end if
 
-if (plot_dimensional(ifile)) then
+  if (plot_dimensional(ifile)) then
 
-  do iVar = 1, nplotvar
+     do iVar = 1, nplotvar
 
-     s=plotvarnames(iVar)
+        s=plotvarnames(iVar)
 
-     select case(s)
-     case ('len')
-        write(unitstr_IDL,'(a)') & 
-             trim(unitstr_IDL)//' '//&
-             trim(NameIdlUnit_V(UnitX_))
-     case('rho')
-        write(unitstr_IDL,'(a)') & 
-             trim(unitstr_IDL)//' '//'[m^-^2]'
-     case('vlos','Vlos','ulos','Ulos')
-        write(unitstr_IDL,'(a)') & 
-             trim(unitstr_IDL)//' '//&
-             trim(NameIdlUnit_V(UnitU_))
-     case('wl')
-        write(unitstr_IDL,'(a)') & 
-             trim(unitstr_IDL)//' '//'[m^-^2]'
-     case('pb')
-        write(unitstr_IDL,'(a)') & 
-             trim(unitstr_IDL)//' '//'[m^-^2]'
-        ! DEFAULT FOR A BAD SELECTION
-     case default
-        write(unitstr_IDL,'(a)') & 
-             trim(unitstr_IDL)//'" Dflt"'
+        select case(s)
+        case ('len')
+           write(unitstr_IDL,'(a)') & 
+                trim(unitstr_IDL)//' '//&
+                trim(NameIdlUnit_V(UnitX_))
+        case('rho')
+           write(unitstr_IDL,'(a)') & 
+                trim(unitstr_IDL)//' '//'[m^-^2]'
+        case('vlos','Vlos','ulos','Ulos')
+           write(unitstr_IDL,'(a)') & 
+                trim(unitstr_IDL)//' '//&
+                trim(NameIdlUnit_V(UnitU_))
+        case('wl')
+           write(unitstr_IDL,'(a)') & 
+                trim(unitstr_IDL)//' '//'[m^-^2]'
+        case('pb')
+           write(unitstr_IDL,'(a)') & 
+                trim(unitstr_IDL)//' '//'[m^-^2]'
+           ! DEFAULT FOR A BAD SELECTION
+        case default
+           write(unitstr_IDL,'(a)') & 
+                trim(unitstr_IDL)//'" Dflt"'
 
-     end select
+        end select
 
-  end do
+     end do
 
-end if
+  end if
 
 end subroutine get_IDL_los_units
 !==============================================================================
