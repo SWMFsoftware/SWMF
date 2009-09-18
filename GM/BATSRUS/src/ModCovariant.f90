@@ -47,6 +47,7 @@ module ModCovariant
 
   !-- ADDED BY COOPER FOR general r grid in spherical geometry!
   integer, parameter :: nGrid = 400
+  real,parameter :: DeltaGen = 1.0/(nGrid -1)
   real, dimension(nGrid) :: xR_I,yR_I
   logical :: IsFirstCallR = .true.
 
@@ -154,9 +155,22 @@ contains
   end function is_axial_geometry
 
   !-------------------------------------------------------------!
-  function gen_to_r(gR)
-    real,intent(in) :: gR
-    real :: gen_to_r,tmp
+  real function gen_to_r(Gen)
+    real,intent(in) :: Gen
+    
+    real :: LogR   ! Logarithm of R
+
+    ! Weight coefficient to be used in interpolation
+    real :: Weight 
+
+    ! While Gen passes the span from 0.0 to 1.0,
+    ! RealIndex passes the values from 1.0 to nGrid -1
+
+    real :: RealIndex
+
+    !i passes the values from 1 to nGrid -1 
+    integer :: i
+    !----------------------------
 
     if (IsFirstCallR) then
        call coop_read_function('SC/grid_r_____.dat',xR_I,yR_I)
@@ -164,92 +178,71 @@ contains
     endif
 
     !---- go from general to R if dir flag is zero
-    tmp=grid_interpolate(gR,xR_I,yR_I)
-    gen_to_r = exp(tmp)
-  contains
-    !-------------------------------------------------------------!
-    real function grid_interpolate(ValIn,xVals_I,yVals_I)
 
-      real, intent(in) :: ValIn, xVals_I(nGrid), yVals_I(nGrid)
-      real :: wx,xmin,xmax,ymin,ymax,x0,x1,y0,y1,X,m
-      real,dimension(nGrid) :: xArray
-      integer :: i
+    RealIndex = Gen / DeltaGen
 
-      x=ValIn
+    
 
-      xmin=xVals_I(1)
-      xmax=xVals_I(nGrid)
-      ymin=yVals_I(1)
-      ymax=yVals_I(nGrid)
+    i = floor(1.0 + RealIndex)
 
-      !--- if less than minimum, use linear slope of 2st pnts
-      if (x<=xmin) then 
-         m = (yVals_I(2)-yVals_I(1))/(xVals_I(2)-xVals_I(1))
-         grid_interpolate = m*(x-xmin)+ymin
-      elseif (x>=xmax) then 
-         m = (yVals_I(nGrid) - yVals_I(nGrid-1))/&
-              (xVals_I(nGrid) - xVals_I(nGrid-1))
-         grid_interpolate = m*(x-xmax)+ymax
-      else
-         !make it an array to make sure
-         !xArray(:) = x
-         xArray = -xVals_I(:)+x 
-         i = maxloc(xVals_I, DIM=1, MASK=( xVals_I <= X) )
-         wx = (x-xVals_I(i))/(xVals_I(i+1)-xVals_I(i))
+    !--- if less than minimum, use linear slope of first 2 pnts
+    if (i <=  1) then 
 
-         grid_interpolate = (cOne-wx)*yVals_I(i) + wx*yVals_I(i+1)
-      end if
-    end function grid_interpolate
+       LogR = RealIndex * (yR_I(2) - yR_I(1))  + yR_I(1)
+
+    !--- if more than maximum, use linear slope of last 2 pnts
+    elseif (i >= nGrid ) then 
+        LogR = (RealIndex - (nGrid -1)) * (yR_I(nGrid) - yR_I(nGrid-1)) &
+              + yR_I(nGrid)
+    else
+       
+       Weight = RealIndex - (i -1)
+       
+       LogR = (cOne - Weight) * yR_I(i) + Weight * yR_I(i+1)
+    end if
+
+    gen_to_r = exp(LogR)
   end function gen_to_r
  !-------------------------------------------------------------!
-  function r_to_gen(gR)
-    real,intent(in) :: gR
-    real :: r_to_gen,tmp
+  real function r_to_gen(R)
+    !Input parameters:
+    real,intent(in) :: R !The value of radial coordinate
+    
+    real :: LogR   ! Logarithm of R
+
+    ! Weight coefficient to be used in interpolation
+    real :: Weight 
+
+    ! While Gen passes the span from 0.0 to 1.0,
+
+    !i passes the values from 1 to nGrid -1 
+    integer :: i
+    !----------------------------
 
     if (IsFirstCallR) then
        call coop_read_function('SC/grid_r_____.dat',xR_I,yR_I)
        IsFirstCallR = .false.
     endif
-
+    if(R <= 0.0) call stop_mpi('Negative R in r_to_gen')
+    LogR = log(R)
    
+    i = maxloc(yR_I, DIM=1, MASK=( yR_I <= LogR) )
+    
+    !--- if less than minimum, use linear slope of 2st pnts
+    if (i <= 1) then 
 
-    !---- going other direction, need to log the r_value first
-    tmp = alog(gR)
-    r_to_gen = grid_interpolate(tmp,yR_I,xR_I)
-  contains
-    !-------------------------------------------------------------!
-    real function grid_interpolate(ValIn,xVals_I,yVals_I)
-      
-      real, intent(in) :: ValIn, xVals_I(nGrid), yVals_I(nGrid)
-      real :: wx,xmin,xmax,ymin,ymax,x0,x1,y0,y1,X,m
-      real,dimension(nGrid) :: xArray
-      integer :: i
-      
-      x=ValIn
+       r_to_gen = DeltaGen / (yR_I(2) - yR_I(1)) * (LogR - yR_I(1)) + yR_I(1)
 
-      xmin=xVals_I(1)
-      xmax=xVals_I(nGrid)
-      ymin=yVals_I(1)
-      ymax=yVals_I(nGrid)
+    elseif (i == ngrid) then 
+       r_to_gen = DeltaGen / (yR_I(nGrid) - yR_I(nGrid-1)) * (LogR - yR_I(ngrid))&
+                  + yR_I(ngrid)
+    else
+       
+       Weight = (LogR - yR_I(i)) / (yR_I(i+1) - yR_I(i))
 
-      !--- if less than minimum, use linear slope of 2st pnts
-      if (x<=xmin) then 
-         m = (yVals_I(2)-yVals_I(1))/(xVals_I(2)-xVals_I(1))
-         grid_interpolate = m*(x-xmin)+ymin
-      elseif (x>=xmax) then 
-         m = (yVals_I(nGrid) - yVals_I(nGrid-1))/&
-              (xVals_I(nGrid) - xVals_I(nGrid-1))
-         grid_interpolate = m*(x-xmax)+ymax
-      else
-         !make it an array to make sure
-         !xArray(:) = x
-         xArray = -xVals_I(:)+x 
-         i = maxloc(xVals_I, DIM=1, MASK=( xVals_I <= X) )
-         wx = (x-xVals_I(i))/(xVals_I(i+1)-xVals_I(i))
+       r_to_gen = DeltaGen * (Weight + (i - 1))
+    end if
 
-         grid_interpolate = (cOne-wx)*yVals_I(i) + wx*yVals_I(i+1)
-      end if
-    end function grid_interpolate
   end function r_to_gen
   !-------------------------------------------------------------!
   subroutine coop_read_function(FileName,xDat,yDat)
