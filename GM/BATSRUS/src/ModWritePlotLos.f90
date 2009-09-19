@@ -1024,6 +1024,7 @@ contains
     real :: Temp            ! Electron Temp at the point
     real :: mu_gas = 0.5    ! mean molecular wieght of plasma
     real :: LogTemp, LogNe, rConv, Aux, EUVResponse(3), SXRResponse(2)
+    real :: Temp_GB(-1:nI+2, -1:nJ+2, -1:nK+2)
     ! this is so can modify amount of block sent to interpolation routine
     integer :: iMin, iMax
     logical :: IsNoBlockInner = .false.
@@ -1051,6 +1052,8 @@ contains
     ! Length of a segment
     Ds = sqrt(sum((XyzEnd_D - XyzStart_D)**2)) / nSegment
 
+    ! Don't want to divide block states repeatedly in nSegment loop
+    if(UseEUV .or. UseSXR) Temp_GB = State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
 
     do iSegment = 1, nSegment
        XyzLos_D = XyzStart_D &
@@ -1128,21 +1131,18 @@ contains
 
        if(UseEUV.or.UseSXR)then
 
-          ! need to calculate electron temperature. Should really be calling
+          ! need to interpolate electron temperature. Should really be calling
           ! user_material_properties, but would need user to have implemented
           ! this. Instead assume a fixed mu and electron/ion Temperature equilibrium
           ! for now.
 
           if(IsRzGeometry)then
-             Temp = bilinear(State_VGB(P_,:,:,1,iBlk)/State_VGB(Rho_,:,:,1,iBlk), &
-                  -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
+             Temp = bilinear(Temp_GB(:,:,1), -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
           else if (IsSphGeometry) then
-             Temp = trilinear(State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk), &
-                             iMin, iMax, -1, nJ+2, -1, nK+2,&
-                             CoordNorm_D,DoExtrapolate=.true.)
+             Temp = trilinear(Temp_GB(iMin:iMax,:,:), iMin, iMax, -1, nJ+2, -1, nK+2, &
+                              CoordNorm_D,DoExtrapolate=.true.)
           else
-             Temp = trilinear(State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk), &
-                  -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
+             Temp = trilinear(Temp_GB(:,:,:), -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
           end if
         
 
