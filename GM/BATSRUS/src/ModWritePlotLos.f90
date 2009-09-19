@@ -46,10 +46,11 @@ subroutine write_plot_los(iFile)
   use ModProcMH
   use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, unusedBLK, &
        time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem, &
-       x_,y_,z_,R_,Phi_,Theta_
+       x_,y_,z_,R_,Phi_,Theta_,Body1,body1_
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK, &
-       TypeGeometry
-  use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, UnitTemperature_
+       TypeGeometry,IsBoundaryBlock_IB
+  use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
+       UnitTemperature_
   use ModIO
   use ModAdvance, ONLY : rho_, State_VGB,P_
   use ModNumConst, ONLY : cTiny, cUnit_DD, cTolerance,cZero,cOne
@@ -161,7 +162,7 @@ subroutine write_plot_los(iFile)
   ! Set rInner and rOuter depending on component
   select case(NameThisComp)
   case('SC')
-     rInner = 1.0   ! take surface at 1.0 (could have this check rBody instead) 
+     rInner = rBody 
      rOuter = rBuffMax
   case('IH')
      rInner = rBuffMax
@@ -170,9 +171,7 @@ subroutine write_plot_los(iFile)
      rInner = 0.0 ! needed for comet applications
      rOuter = 1e30
   case('LC')
-     rInner = 1.01  ! (if want to go to the surface, need to add a call to BC routine
-     ! to fill in the ghostcells with chromo/TR temps and
-     ! densities!! 
+     rInner = rBody
      rOuter = rBuffMax
   end select
   rInner2 = rInner**2
@@ -308,7 +307,8 @@ subroutine write_plot_los(iFile)
   if (UseSXR) iTableSXR  = i_lookup_table('sxr')
 
   ! Do we need to calculate density (also for white light and polarization)
-  UseRho = UseScattering .or. any(plotvarnames(1:nPlotVar) == 'rho') .or. UseEUV
+  UseRho = UseScattering .or. any(plotvarnames(1:nPlotVar) == 'rho') &
+           .or. UseEUV .or. UseSXR
 
   if(DoTiming)call timing_start('los_block_loop')
 
@@ -338,6 +338,23 @@ subroutine write_plot_los(iFile)
         XyzBlockCenter_D(2) = 0.50*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
         XyzBlockCenter_D(3) = 0.50*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
         rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
+
+        if(.not.IsRzGeometry .and. (UseEUV .or. UseSXR)) then 
+           ! in cartesian grid, the rBody boundary cuts through blocks
+           ! and, since EUV plots are integrating to surface, need to make sure that
+           ! interpolation does not interpolate to ghost cells filled with
+           ! garbage body values. So make sure that rInner is equal to rBody + cell
+           ! diagonal width. This way, 8 cells bounding a point along the los
+           ! are guaranteed to be true_cells. Only do this for blocks on the
+           ! body (doesn't affect others). Also, changing it within block loop
+           ! means rInner depends on block resolution (which you want).
+
+           rInner = rBody ! reset it with every block
+           if(Body1) then
+                if(IsBoundaryBlock_IB(body1_,iBLK)) rInner = rBody + &
+                   sqrt(sum(CellSize_D**2))
+           end if
+        end if
 
      else ! need to do additional things to check sph blocks
 
@@ -979,6 +996,7 @@ contains
     use ModGeometry,    ONLY: XyzStart_BLK
     use ModInterpolate, ONLY: bilinear, trilinear
     use ModUser,        ONLY: user_set_plot_var
+    use ModParallel,    ONLY: NeiLWest, NeiLEast, NOBLK
 
     real, intent(in) :: XyzStart_D(3), XyzEnd_D(3)
 
@@ -1006,6 +1024,10 @@ contains
     real :: Temp            ! Electron Temp at the point
     real :: mu_gas = 0.5    ! mean molecular wieght of plasma
     real :: LogTemp, LogNe, rConv, Aux, EUVResponse(3), SXRResponse(2)
+    ! this is so can modify amount of block sent to interpolation routine
+    integer :: iMin, iMax
+    logical :: IsNoBlockInner = .false.
+    logical :: IsNoBlockOuter = .false.
     !------------------------------------------------------------------------
 
 
@@ -1019,10 +1041,10 @@ contains
        call xyz_to_gen(XyzEnd_D,GenEnd_D)
 
        ! in gen coords, hard to think of equally weighted length
-       ! (along all 3 axes), so choose n=10 for now, note that
+       ! (along all 3 axes), so choose n=nI+nJ+nK for now, note that
        ! CellSize_D has gencoord deltas
 
-       nSegment = 10
+       nSegment = nI+nJ+nK
        !nSegment = 1 + sum(abs(GenEnd_D - GenStart_D)/CellSize_D)
     endif
 
@@ -1067,29 +1089,37 @@ contains
 
        ! Calculate normalized position
        ! XyzStart contains the coordinates of cell 1,1,1, hence add 1
-       if(.not.IsSphGeometry) then
-          if(IsRzGeometry)then
-             ! Radial distance is sqrt(yLos**2+zLos**2)
-             CoordNorm_D(1:2) = ( (/xLos, sqrt(yLos**2+zLos**2) /) &
-                  - XyzStart_BLK(1:2,iBlk))/CellSize_D(1:2) + 1
-             CoordNorm_D(3) = 0.0
-          else
-             CoordNorm_D = (XyzLos_D - XyzStart_BLK(:,iBlk))/CellSize_D + 1
-          end if
-       end if
+       if(IsRzGeometry)then
+          ! Radial distance is sqrt(yLos**2+zLos**2)
+          CoordNorm_D(1:2) = ( (/xLos, sqrt(yLos**2+zLos**2) /) &
+               - XyzStart_BLK(1:2,iBlk))/CellSize_D(1:2) + 1
+          CoordNorm_D(3) = 0.0
 
-       if(IsSphGeometry) then
+       else if(IsSphGeometry) then
           ! get gen coord of los (note XyzStart_BLK will already be in Gencoord)
           call xyz_to_gen(XyzLos_D,GenLos_D)
           CoordNorm_D = (GenLos_D - XyzStart_BLK(:,iBLK))/CellSize_D + 1
-       end if
 
+          ! need to know if no block neighbor (ghost cells along this edge will be wrong)
+          IsNoBlockInner = (NeiLEast(iBLK) == NOBLK)     
+          IsNoBlockOuter = (NeiLWest(iBLK) == NOBLK)
+
+       else
+          CoordNorm_D = (XyzLos_D - XyzStart_BLK(:,iBlk))/CellSize_D + 1
+       end if
 
        ! interpolate density if it is needed by any of the plot variables
        if(UseRho)then
           if(IsRzGeometry)then
              Rho = bilinear(State_VGB(Rho_,:,:,1,iBlk), &
                   -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
+          else if (IsSphGeometry) then
+             iMin = -1; iMax = nI+2
+             if (IsNoBlockInner) iMin=1
+             if (IsNoBlockOuter) iMax=nI
+             Rho = trilinear(State_VGB(Rho_,:,:,:,iBlk), &
+                             iMin, iMax, -1, nJ+2, -1, nK+2,&
+                             CoordNorm_D,DoExtrapolate=.true.)
           else
              Rho = trilinear(State_VGB(Rho_,:,:,:,iBlk), &
                   -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
@@ -1106,23 +1136,28 @@ contains
           if(IsRzGeometry)then
              Temp = bilinear(State_VGB(P_,:,:,1,iBlk)/State_VGB(Rho_,:,:,1,iBlk), &
                   -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
+          else if (IsSphGeometry) then
+             Temp = trilinear(State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk), &
+                             iMin, iMax, -1, nJ+2, -1, nK+2,&
+                             CoordNorm_D,DoExtrapolate=.true.)
           else
              Temp = trilinear(State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk), &
                   -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
           end if
+        
 
           ! Note this is log base 10!!
           LogTemp = log10(Temp * mu_gas * No2Si_V(UnitTemperature_))
 
           ! Here calc log base 10 of electron density, the -6 is to convert to CGS
-          LogNe = log10(Rho*No2Si_V(UnitN_)) - 6*cOne
+          LogNe = log10(Rho*No2Si_V(UnitN_)) - 6.0
 
           ! rconv converts solar radii units to CGS for response function
           ! exponent      
-          rConv = log10(6.96) + 10*cOne
+          rConv = log10(6.96) + 10.0
 
-          ! calculates response function normalization exponent
-          Aux = 2*cOne*LogNe + log10(Ds) + rConv - 26*cOne
+          ! calculates response function normalization (10 ^ an exponent)
+          Aux = 10.0**(2.0*LogNe + log10(Ds) + rConv - 26.0)
 
           if (UseEUV) then
              ! now interpolate EUV response values from a lookup table
@@ -1161,19 +1196,19 @@ contains
 
           case('euv171')
              ! EUV 171
-             Value = EUVResponse(1)*10.0**Aux
+             Value = EUVResponse(1)*Aux
 
           case('euv195')
              ! EUV 195
-             Value = EUVResponse(2)*10.0**Aux
+             Value = EUVResponse(2)*Aux
 
           case('euv284')
              ! EUV 284
-             Value = EUVResponse(3)*10.0**Aux
+             Value = EUVResponse(3)*Aux
 
-          case('sxt3')
+          case('sxr')
              ! Soft X-Ray (Only one channel for now, can add others later)
-             Value = SXRResponse(1)*10.0**Aux
+             Value = SXRResponse(1)*Aux
 
           case('rho')
              ! Simple density integral
@@ -1241,7 +1276,7 @@ contains
                *No2Si_V(UnitRho_)*No2Si_V(UnitX_)
        case('wl','pb')
           ! do nothing for backwards compatibility
-       case('euv171','euv195','euv284','sxr3')
+       case('euv171','euv195','euv284','sxr')
           ! do nothing since already taken care of
        case default
           ! User defined functions are already dimensional, but integral
@@ -1392,7 +1427,7 @@ contains
           !
           !This is completely general xyz method, do not have to check with
           !block coordinate min and maxes... However need to be careful
-          !if generalized coordinate is defining parallel planes. If a bounding
+          !if generalized coordinate is defining non-parallel surfaces. If a bounding
           !surface is curved (e.g. constant r surface) then planes defined by
           !the block corners may actually bound OUTSIDE the block limits 
           !(including ghost cells). This will only happen if there is a high 
@@ -1871,6 +1906,18 @@ subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
         case('pb')
            write(unitstr_TEC,'(a)') & 
                 trim(unitstr_TEC)//'`pb [m^-^2]'//' '
+        case('euv171')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'`euv171 [DN/S]'//' '
+        case('euv195')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'`euv195 [DN/S]'//' '
+        case('euv284')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'`euv284 [DN/S]'//' '
+        case('sxr')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'`sxr [DN/S]'//' '
 
            ! DEFAULT FOR A BAD SELECTION
         case default
@@ -1897,6 +1944,18 @@ subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
         case('pb')
            write(unitstr_TEC,'(a)') & 
                 trim(unitstr_TEC)//'pb'
+        case('euv171')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'euv171'
+        case('euv195')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'euv195'
+        case('euv284')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'euv284'
+        case('sxr')
+           write(unitstr_TEC,'(a)') & 
+                trim(unitstr_TEC)//'sxr'
 
            ! DEFAULT FOR A BAD SELECTION
         case default
@@ -1968,6 +2027,19 @@ subroutine get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
         case('pb')
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//'[m^-^2]'
+        case('euv171')
+           write(unitstr_IDL,'(a)') & 
+                trim(unitstr_IDL)//' '//'euv171 [DN/S]'
+        case('euv195')
+           write(unitstr_IDL,'(a)') & 
+                trim(unitstr_IDL)//' '//'euv195 [DN/S]'
+        case('euv284')
+           write(unitstr_IDL,'(a)') & 
+                trim(unitstr_IDL)//' '//'euv284 [DN/S]'
+        case('sxr')
+           write(unitstr_IDL,'(a)') & 
+                trim(unitstr_IDL)//' '//'sxr [DN/S]'
+
            ! DEFAULT FOR A BAD SELECTION
         case default
            write(unitstr_IDL,'(a)') & 
