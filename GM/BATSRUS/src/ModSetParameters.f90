@@ -2447,7 +2447,7 @@ contains
             sqrt(max(x1**2,x2**2) + max(y1**2,y2**2) + max(z1**2,z2**2)), &
             cTwoPi, cHalfPi /)
        if(TypeGeometry == 'spherical_lnr') XyzMax_D(R_)=log(XyzMax_D(R_))
-       if(TypeGeometry == 'spherical_genr') XyzMax_D(R_)=1.0
+       if(TypeGeometry == 'spherical_genr') XyzMax_D(R_)=r_to_gen(XyzMax_D(R_))
     case('cylindrical')
        !            R,   Phi, Z
        XyzMin_D = (/0.0, 0.0, z1/) 
@@ -2467,6 +2467,9 @@ contains
                ' Coord1Min must be positive in #LIMITRADIUS command!')
           XyzMin_D(1) = log(Coord1Min)
           XyzMax_D(1) = log(Coord1Max)
+       else if (index(TypeGeometry,'genr')>0)then
+          XyzMin_D(1) = r_to_gen(Coord1Min)
+          XyzMax_D(1) = r_to_gen(Coord1Max)
        else
           XyzMin_D(1) = Coord1Min
           XyzMax_D(1) = Coord1Max
@@ -2475,7 +2478,7 @@ contains
        ! Set inner boundary to match rBody for spherical coordinates
        if(TypeGeometry == 'spherical'    ) XyzMin_D(1) = rBody
        if(TypeGeometry == 'spherical_lnr') XyzMin_D(1) = log(rBody)
-       if(TypeGeometry == 'spherical_genr') XyzMin_D(1) = 0.0
+       if(TypeGeometry == 'spherical_genr') XyzMin_D(1) = r_to_gen(rBody)
     end if
 
     ! No resolution change along symmetry axis 
