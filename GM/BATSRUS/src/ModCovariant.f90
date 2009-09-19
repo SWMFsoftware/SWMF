@@ -231,11 +231,11 @@ contains
     !--- if less than minimum, use linear slope of 2st pnts
     if (i <= 1) then 
 
-       r_to_gen = DeltaGen / (yR_I(2) - yR_I(1)) * (LogR - yR_I(1)) + yR_I(1)
+       r_to_gen = DeltaGen / (yR_I(2) - yR_I(1)) * (LogR - yR_I(1))
 
     elseif (i == ngrid) then 
        r_to_gen = DeltaGen / (yR_I(nGrid) - yR_I(nGrid-1)) * (LogR - yR_I(ngrid))&
-                  + yR_I(ngrid)
+                  + 1.0
     else
        
        Weight = (LogR - yR_I(i)) / (yR_I(i+1) - yR_I(i))
