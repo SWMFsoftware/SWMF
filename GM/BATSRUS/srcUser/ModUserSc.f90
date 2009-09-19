@@ -366,6 +366,8 @@ contains
        Rmax = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
     case('spherical_lnr')
        Rmax = max(2.1E+01,exp(XyzMax_D(1)))
+    case('spherical_genr')
+       Rmax = max(2.1E+01,gen_to_r(XyzMax_D(1)))
     end select
 
     ! The sqrt is for backward compatibility with older versions of the Sc
