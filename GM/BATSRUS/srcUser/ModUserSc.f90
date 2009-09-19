@@ -105,7 +105,7 @@ contains
        write(*,*) 'In session 1, a magnetogram file has to be read via #PFSSM'
        call stop_mpi('ERROR: Correct PARAM.in!')
     end if
-    write(*,*) 'NamePlotDir = ',NamePlotDir
+   
     if(i_line_command("#PFSSM") > 0)then
        call read_magnetogram_file(NamePlotDir)
     end if
