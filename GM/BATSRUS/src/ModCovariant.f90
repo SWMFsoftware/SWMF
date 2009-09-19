@@ -45,11 +45,14 @@ module ModCovariant
   real,dimension(0:nToroidalBoundaryPoints)::TorusSurface_I
   logical::IsInitializedTorusGeometry=.false.
 
-  !-- ADDED BY COOPER FOR general r grid in spherical geometry!
-  integer, parameter :: nGrid = 400
-  real,parameter :: DeltaGen = 1.0/(nGrid -1)
-  real, dimension(nGrid) :: xR_I,yR_I
-  logical :: IsFirstCallR = .true.
+  !-- ADDED FOR general r grid in spherical geometry!
+  !-- Main Idea is to have a tabulated function that maps
+  !-- a general coordinate to log(r). This way, r resolution can 
+  !-- arbitrarily defined. Gen coord is taken to be 0 to 1.0
+  !-- but will linearly extrapolate outside of this domain
+  integer :: nGrid
+  real :: DeltaGen 
+  real, pointer, dimension(:) :: yR_I
 
 contains
   subroutine allocate_face_area_vectors
@@ -172,16 +175,8 @@ contains
     integer :: i
     !----------------------------
 
-    if (IsFirstCallR) then
-       call coop_read_function('SC/grid_r_____.dat',xR_I,yR_I)
-       IsFirstCallR = .false.
-    endif
-
-    !---- go from general to R if dir flag is zero
 
     RealIndex = Gen / DeltaGen
-
-    
 
     i = floor(1.0 + RealIndex)
 
@@ -219,10 +214,6 @@ contains
     integer :: i
     !----------------------------
 
-    if (IsFirstCallR) then
-       call coop_read_function('SC/grid_r_____.dat',xR_I,yR_I)
-       IsFirstCallR = .false.
-    endif
     if(R <= 0.0) call stop_mpi('Negative R in r_to_gen')
     LogR = log(R)
    
@@ -245,33 +236,42 @@ contains
 
   end function r_to_gen
   !-------------------------------------------------------------!
-  subroutine coop_read_function(FileName,xDat,yDat)
+  subroutine read_grid_file(NameFile)
     use ModIoUnit, ONLY: io_unit_new
     use ModIO, ONLY: iUnitOut
 
-    character (LEN=18), intent(in) :: FileName
-    real, intent(out) :: xDat(nGrid),yDat(nGrid)
+    character (LEN=*), intent(in) :: NameFile
 
     integer :: iUnit,i,iError
-    real :: xtemp,ytemp  
-    ! This function is for reading in the general grid functions I want to use
+    real :: ytemp  
+    ! This function is for reading in the general grid function.
     ! For simplicity the files Must be in a fixed format that is read by this
     ! routine.
 
-    ! number of points is specified at the top of ModCovariant
-    ! file is a single line for each x,y pair
+    ! The formate is a single column with number of points in the 
+    ! first row, and the folling rows the log(r) value from gen = 0 to 1
 
     iUnit = io_unit_new()
-    open(iUnit,file=FileName,status='old',iostat=iError)
+    open(iUnit,file=trim(NameFile),status='old',iostat=iError)
+    if(iError /= 0) call CON_stop('read_grid_file' // &
+       'could not open grid file = ' // trim(NameFile))
 
+    ! read in nGrid and then define yR_I, and DeltaGen
+    read(iUnit,*,iostat=iError) nGrid
+
+    nullify(yR_I)
+    allocate(yR_I(nGrid),stat=iError)    
+
+    DeltaGen = 1.0/(nGrid-1)
+
+    ! read in tabulated logR as a function of gen
     do i=1,nGrid
-       read(iUnit,*,iostat=iError) xtemp,ytemp
-       xDat(i) = xtemp
-       yDat(i) = ytemp
+       read(iUnit,*,iostat=iError) ytemp
+       yR_I(i) = ytemp
     enddo
     close(iUnit)
 
-  end subroutine coop_read_function
+  end subroutine read_grid_file
 
 end module ModCovariant
 
