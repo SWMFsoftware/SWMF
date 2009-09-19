@@ -9,7 +9,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModGeometry, ONLY : init_mod_geometry, &
        TypeGeometry,UseCovariant,UseVertexBasedGrid,is_axial_geometry,  & 
        allocate_face_area_vectors,allocate_old_levels,rTorusLarge,rTorusSmall,& 
-       x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary,r_to_gen
+       x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary,r_to_gen,&
+       read_grid_file
   use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
   use ModPhysics
@@ -101,6 +102,10 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Variables for #LIMITGENCOORD1 or #LIMITRADIUS
   real :: Coord1Min = -1.0, Coord1Max = -1.0
+  
+  ! Variables for #GRIDGEOMETRY command
+  character(len=lStringLine):: NameGridFile
+  
 
   ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
   character(len=lStringLine):: NameArea='all'
@@ -1474,7 +1479,12 @@ subroutine MH_set_parameters(TypeAction)
      case("#GRIDGEOMETRY", "#COVARIANTGEOMETRY")
         if(.not.is_first_session())CYCLE READPARAM
         UseCovariant=.true.
-        call read_var('TypeGeometry', TypeGeometry)      
+        call read_var('TypeGeometry', TypeGeometry)
+        ! need to read in the general grid file      
+        if(TypeGeometry == 'spherical_genr') then
+           call read_var('NameGridFile',NameGridFile)
+           call read_grid_file(NameGridFile)
+        end if
 
      case("#LIMITRADIUS", "#LIMITGENCOORD1")
         if(.not.is_first_session())CYCLE READPARAM
