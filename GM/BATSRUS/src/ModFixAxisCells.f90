@@ -5,7 +5,7 @@ subroutine fix_axis_cells
   use ModAdvance, ONLY: nVar, State_VGB, rFixAxis, r2FixAxis
   use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
        x_Blk, y_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB,&
-       r_to_gen, r_to_gen
+       r_to_gen
   use ModEnergy, ONLY: calc_energy_point
   use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   use ModMpi
