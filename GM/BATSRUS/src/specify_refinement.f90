@@ -153,7 +153,7 @@ subroutine specify_refinement(DoRefine_B)
 
            case('spherical_genr')
               do iCorner = 1, nCorner
-                 Corner_DI(r_,nCorner)     = gen_to_r(Corner_DI(r_,nCorner))
+                 Corner_DI(r_,iCorner)     = gen_to_r(Corner_DI(r_,iCorner))
               end do
               Corner_DI(Phi_,:)   = modulo(Corner_DI(Phi_,:)*cRadToDeg, 360.0)
               where(Corner_DI(Phi_,3:4) < cTiny) Corner_DI(Phi_,3:4) = 360.0
