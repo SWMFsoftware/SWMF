@@ -160,11 +160,4 @@ subroutine SC_get_a_line_point(&
 
   call CON_stop(NameSub//': SC_ERROR: empty version cannot be used!')
 end subroutine SC_get_a_line_point
-!===================================================================!
-subroutine SC_inquire_if_spherical(IsSphericalSc)
-  logical,intent(out)::IsSphericalSc
-  character(len=*), parameter :: NameSub='SC_inquire_if_spherical'
 
-  call CON_stop(NameSub//': SC_ERROR: empty version cannot be used!')
-end subroutine SC_inquire_if_spherical
-!===================================================================!
