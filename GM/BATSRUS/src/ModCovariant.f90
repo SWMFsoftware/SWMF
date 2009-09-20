@@ -260,7 +260,8 @@ contains
     read(iUnit,*,iostat=iError) nGrid
 
     nullify(yR_I)
-    allocate(yR_I(nGrid),stat=iError)    
+    allocate(yR_I(nGrid),stat=iError) 
+    yR_I = 0.0
 
     DeltaGen = 1.0/(nGrid-1)
 
@@ -272,6 +273,13 @@ contains
     close(iUnit)
 
   end subroutine read_grid_file
+  !----------------------------!
+  subroutine set_fake_grid_file
+    !Set the
+    nullify(yR_I)
+    allocate(yR_I(1))  
+    yR_I = 0.0 
+  end subroutine set_fake_grid_file
 
 end module ModCovariant
 

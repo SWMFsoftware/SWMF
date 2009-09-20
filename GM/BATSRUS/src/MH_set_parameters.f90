@@ -10,7 +10,7 @@ subroutine MH_set_parameters(TypeAction)
        TypeGeometry,UseCovariant,UseVertexBasedGrid,is_axial_geometry,  & 
        allocate_face_area_vectors,allocate_old_levels,rTorusLarge,rTorusSmall,& 
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary,r_to_gen,&
-       read_grid_file
+       read_grid_file, set_fake_grid_file
   use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
   use ModPhysics
@@ -1484,6 +1484,8 @@ subroutine MH_set_parameters(TypeAction)
         if(TypeGeometry == 'spherical_genr') then
            call read_var('NameGridFile',NameGridFile)
            call read_grid_file(NameGridFile)
+        else 
+           call set_fake_grid_file
         end if
 
      case("#LIMITRADIUS", "#LIMITGENCOORD1")
