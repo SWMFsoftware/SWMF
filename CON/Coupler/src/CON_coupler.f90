@@ -25,10 +25,14 @@ module CON_coupler
   !PUBLIC TYPES:
   public :: CoordSystemType ! Extend grid descriptor type with coordinate info
   integer, parameter :: lTypeCoord=3
+
+  integer, parameter :: lTypeGeometry = 15
+
   type CoordSystemType    
-     real, dimension(:),pointer :: Coord1_I, Coord2_I, Coord3_I
-     integer, dimension(3)      :: nCoord_D
-     character (len=lTypeCoord) :: TypeCoord
+     real, dimension(:),pointer    :: Coord1_I, Coord2_I, Coord3_I
+     integer, dimension(3)         :: nCoord_D
+     character (len=lTypeCoord)    :: TypeCoord
+     character (len=lTypeGeometry) :: TypeGeometry
      real::UnitX
   end type CoordSystemType
 
@@ -117,6 +121,7 @@ contains
        GridID_,       &! Grid ID
        TypeCoord,     &! Coordinate system type (MAG,GEO,..)
        UnitX,         &! Unit of length, in SI (meters)
+       TypeGeometry,  &! Geometry type (cartesian, spherical_lnr, etc) 
        Coord1_I,      &! Non-uniform coords in 1st dim (optional)
        Coord2_I,      &! Non-uniform coords in 2nd dim (optional)
        Coord3_I,      &! Non-uniform coords in 3rd dim (optional)
@@ -129,10 +134,18 @@ contains
     character(len=lTypeCoord), intent(in)  :: TypeCoord
 
     ! Optional parameters
+
+    character(len=lTypeGeometry), optional, intent(in)  :: &
+         TypeGeometry
+
     real,    intent(in), optional :: &
          Coord1_I(:), Coord2_I(:), Coord3_I(:)
     integer,intent(in),optional:: iProc0In,iCommIn
     real,intent(in),optional::UnitX
+
+    character(LEN=lTypeGeometry), parameter :: &
+         TypeGeometryBlanck = '               '  ! 15 spaces
+
     integer :: iProc0, iComm, iError
     logical :: IsRoot
     type(CoordSystemType), pointer :: ThisGrid
@@ -148,8 +161,11 @@ contains
     end if
 
     ThisGrid => Grid_C(GridID_)
+
     IsRoot=is_proc0(compid_grid(GridID_))
+
     if(IsRoot)Thisgrid%TypeCoord=TypeCoord
+
     ! Broadcast the coordinate type
     call MPI_bcast(ThisGrid%TypeCoord,lTypeCoord,MPI_CHARACTER,&
          iProc0,iComm,iError)
@@ -160,10 +176,23 @@ contains
          iProc0,iComm,iError)
     end if
        
+    if(IsRoot)then
+       if(present(TypeGeometry))then
+          Thisgrid%TypeGeometry = TypeGeometryBlanck
+          Thisgrid%TypeGeometry(1:len_trim(TypeGeometry)) = &
+               trim(TypeGeometry)
+       else
+          Thisgrid%TypeGeometry = 'cartesian      '
+       end if
+    end if
+
+    ! Broadcast the geometry type
+    call MPI_bcast(ThisGrid%TypeGeometry,lTypeGeometry,MPI_CHARACTER,&
+         iProc0,iComm,iError)
 
     ! Get the size of the coordinate arrays
     if(IsRoot)then
-       ThisGrid%nCoord_D = 0
+       ThisGrid%nCoord_D = 1
        if(present(Coord1_I)) ThisGrid%nCoord_D(1)=size(Coord1_I)
        if(present(Coord2_I)) ThisGrid%nCoord_D(2)=size(Coord2_I)
        if(present(Coord3_I)) ThisGrid%nCoord_D(3)=size(Coord3_I)
@@ -172,7 +201,7 @@ contains
     call MPI_bcast(ThisGrid%nCoord_D,3,MPI_INTEGER,iProc0,&
          iComm,iError)
 
-    if(ThisGrid%nCoord_D(1)>0)then 
+    if(ThisGrid%nCoord_D(1)>1)then 
        if(associated(ThisGrid%Coord1_I))deallocate(ThisGrid%Coord1_I)
        allocate(ThisGrid%Coord1_I(&
             ThisGrid%nCoord_D(1)),stat=iError)
@@ -185,7 +214,7 @@ contains
             iProc0,iComm,iError)
     end if
 
-    if(ThisGrid%nCoord_D(2)>0) then
+    if(ThisGrid%nCoord_D(2)>1) then
        if(associated(ThisGrid%Coord2_I))deallocate(ThisGrid%Coord2_I)
        allocate(ThisGrid%Coord2_I(&
             ThisGrid%nCoord_D(2)),stat=iError)
@@ -197,7 +226,7 @@ contains
             MPI_REAL,iProc0,iComm,iError)
     end if
 
-    if(ThisGrid%nCoord_D(3)>0)then
+    if(ThisGrid%nCoord_D(3)>1)then
        if(associated(ThisGrid%Coord3_I))deallocate(ThisGrid%Coord3_I)
        allocate(ThisGrid%Coord3_I(&
             ThisGrid%nCoord_D(3)),stat=iError)

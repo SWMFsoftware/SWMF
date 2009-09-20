@@ -56,10 +56,11 @@ module CON_couple_ih_sc
   logical :: DoInitialize=.true., DoTest, DoTestMe
   real :: tNow
   character(len=*), parameter :: NameMod='couple_ih_sc'
-  logical::IsSphericalSc=.false.
+  logical::IsSphericalSc=.false. , UseGenRSc = .false., UseLogRSc = .false.
   integer::iError
-contains
 
+   
+contains
   !===============================================================!
   subroutine couple_ih_sc_init
     interface
@@ -76,9 +77,9 @@ contains
     
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
-    if(is_proc(SC_))&
-          call SC_inquire_if_spherical(IsSphericalSc)
-    call MPI_Bcast(IsSphericalSc,1,MPI_Logical,i_proc0(SC_),i_comm(),iError)
+    IsSphericalSc = index(Grid_C(SC_) % TypeGeometry,'spherical') > 0 
+    UseLogRSc     = index(Grid_C(SC_) % TypeGeometry,'lnr'      ) > 0
+    UseGenRSc     = index(Grid_C(SC_) % TypeGeometry,'genr'     ) > 0
 
     call init_coupler(              &    
        iCompSource=IH_,             & ! component index for source
@@ -196,14 +197,24 @@ contains
          SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
     !For spherical domain
     is_boundary_block=IsBoundary_D(R_).and.IsSphericalSc
+    
+    !Now if IsSphericalSc ==.true. then is_boundary_block is .true.
+    !only if the right block boundary along the radial coordinate
+    !is the SC domain boundary.
+    !Else is_boundary_block = .false.
 
     !For cartesian box   
      IsBoundary_D= IsBoundary_D.or.&
          is_left_boundary_d(&
          SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
+     !Now IsBoundary_D(iDim) is true if any of the boundaries along 
+     !the direction iDim is the SC boundary
 
     is_boundary_block=is_boundary_block.or. &
          (any(IsBoundary_D).and.(.not.IsSphericalSc))
+    !Now if IsSphericalSc = .true. the value of is_boundary_block does
+    !not change. Otherwise is_boundary_block is true if any of the
+    !block boundaries is the boundary of the SC domain
    
     
   end function is_boundary_block
@@ -244,14 +255,38 @@ contains
   end subroutine outer_cells 
   !========================================================!
   subroutine map_sc_ih(&
-       SC_nDim,SC_Xyz_D,IH_nDim,IH_Xyz_D,IsInterfacePoint)
+       SC_nDim,SC_XyzIn_D,IH_nDim,IH_Xyz_D,IsInterfacePoint)
 
     integer,intent(in)::IH_nDim,SC_nDim
-    real,dimension(SC_nDim),intent(in)::SC_Xyz_D
+    real,dimension(SC_nDim),intent(in)::SC_XyzIn_D
     real,dimension(IH_nDim),intent(out)::IH_Xyz_D
     logical,intent(out)::IsInterfacePoint
+    
+    real, dimension(SC_nDim) :: SC_Xyz_D
+    integer, parameter :: R_ = 1, Phi_=2, Theta_ = 3, x_ = 1, y_ = 2, z_ = 3
+    real :: R, Gen, Phi, Theta, rSinTheta
+    !--------------------------------------- 
+    !In each mapping the corrdinates of the TARGET grid point (SC)
+    !shoud be be transformed to the SOURCE (IH) generalized coords.
+    if(.not.IsSphericalSc)then
+       SC_Xyz_D = SC_XyzIn_D
+    else
+       !transform to dimensionless cartesian Xyz
+       R = SC_Xyz_D(R_)
+       if(UseLogRSc)R = exp(R)
+      
+       Phi = SC_Xyz_D(Phi_) 
+       Theta = SC_Xyz_D(Theta_)
+       rSinTheta = R *sin(Theta)
+       
+       SC_Xyz_D(x_) = rSinTheta * cos(Phi) 
+       SC_Xyz_D(y_) = rSinTheta * sin(Phi) 
+       SC_Xyz_D(z_) = R * cos(Theta)
+    end if
+    
 
-    IH_Xyz_D = matmul(ScToIh_DD, SC_Xyz_D)
+    IH_Xyz_D = matmul(ScToIh_DD, SC_Xyz_D)*&
+         Grid_C(SC_)%UnitX/Grid_C(IH_)%UnitX
     IsInterfacePoint=.true.
 
   end subroutine map_sc_ih
@@ -353,24 +388,52 @@ contains
   end subroutine couple_sc_ih
   !======================================================!
   subroutine buffer_grid_point(&
-       nDimFrom,Sph_D,nDimTo,SC_Xyz_D,IsInterfacePoint)         
+       nDimFrom,Sph_D,nDimTo,SC_Coord_D,IsInterfacePoint)         
 
     ! Transform from the spherical buffer grid to the Cartesian SC grid
 
     integer,intent(in)                    :: nDimFrom, nDimTo       
     real,dimension(nDimFrom), intent(in)  :: Sph_D
-    real,dimension(nDimTo),   intent(out) :: SC_Xyz_D
+    real,dimension(nDimTo),   intent(out) :: SC_Coord_D
     logical,intent(out)::IsInterfacePoint
 
     ! The order of spherical indexes as in BATSRUS
-    ! This is a left handed system !!! should be replaced !!!
+    ! This is a left handed system 
     integer,parameter::r_=1,Psi_=2,Theta_=3,x_=1,y_=2,z_=3
-    real :: rSinTheta
+    
+    real :: rSinTheta, BuffXyz_D(x_:z_)
     !-----------------------------------------------------------------------
-    RSinTheta    = Sph_D(r_)*sin(Sph_D(Theta_))!To be modified
-    SC_Xyz_D(x_) = RSinTheta*cos(Sph_D(Psi_))  !\if SC grid
-    SC_Xyz_D(y_) = RSinTheta*sin(Sph_D(Psi_))  !/is spherical
-    SC_Xyz_D(z_) = Sph_D(r_)*cos(Sph_D(Theta_))!To be modified
+    !In each mapping the corrdinates of the TARGET grid point (Buffer)
+    !shoud be be transformed to the SOURCE (SC) generalized coords.
+    
+    if(.not.IsSphericalSc)then
+   
+       RSinTheta    = Sph_D(r_)*sin(Sph_D(Theta_))!To be modified
+    
+       BuffXyz_D(x_) = RSinTheta*cos(Sph_D(Psi_))  
+       BuffXyz_D(y_) = RSinTheta*sin(Sph_D(Psi_))  
+       BuffXyz_D(z_) = Sph_D(r_)*cos(Sph_D(Theta_))
+    
+       !\
+       ! The buffer grid coordinates are normalized by the unit of length
+       ! of IH. Therefore,
+       !/
+       SC_Coord_D = BuffXyz_D *&
+            Grid_C(IH_)%UnitX/Grid_C(SC_)%UnitX
+    else
+       !\
+       ! The buffer grid coordinates are normalized by the unit of length
+       ! of IH. Therefore,
+       !/
+       Sc_Coord_D(R_) =  Sph_D(r_) *&
+            Grid_C(IH_)%UnitX/Grid_C(SC_)%UnitX
+       
+       if(UseLogRSc) then
+          Sc_Coord_D(R_) = log(Sc_Coord_D(R_))
+       end if
+       Sc_Coord_D(Psi_:Theta_) = Sph_D(Psi_:Theta_) 
+    
+    end if
 
     IsInterfacePoint=.true.
   end subroutine buffer_grid_point
