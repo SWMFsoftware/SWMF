@@ -12,7 +12,6 @@ OBJECTS = \
 	ModGridDescriptor.o\
 	SC_get_for_ih.o\
 	SC_get_for_sp.o\
-	SC_inquire_if_spherical.o\
 	SC_put_from_ih.o\
 	SC_wrapper.o\
 	update_lagrangian_grid.o\
