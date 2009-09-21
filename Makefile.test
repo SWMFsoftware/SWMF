@@ -21,6 +21,7 @@ test_help:
 	@echo "    test2                      (run SC-IH test only )"
 	@echo "    test3                      (run GM-IE-IM test only )"
 	@echo "    test4                      (run GM-RIM-HEIDI test only )"
+	@echo "    test_lc		      (run LC/BATSRUS only)"
 test:
 	@rm -f *.diff
 	-@(make test_comp)
@@ -31,6 +32,7 @@ test:
 	-@(make test2)
 	-@(make test3)
 	-@(make test4)
+	-@(make test_lc)
 	-@(make test_check)
 
 test_check:
@@ -354,6 +356,41 @@ test4_check:
                 output/test4/IM_test1_h_prs.002\
                 > test4_im.diff)
 	ls -l test4*.diff
+
+### test_lc: Lower Corona test ###
+
+test_lc:
+	@echo "test_lc_compile..." > test_lc.diff
+	make test_lc_compile
+	@echo "test_lc_rundir..." >> test_lc.diff
+	make test_lc_rundir
+	@echo "test_lc_run..." >> test_lc.diff
+	make test_lc_run
+	@echo "test_lc_check..." >> test_lc.diff
+	make test_lc_check
+
+test_lc_compile:
+	./Config.pl -v=Empty,LC/BATSRUS
+	./Config.pl -g=LC:4,4,4,3000
+	cd LC/BATSRUS; ./Config.pl -dynamic; cd ../..
+	make SWMF PIDL
+
+test_lc_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.LC ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.LC ${TESTDIR}/LAYOUT.in
+
+test_lc_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test_lc_check:
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/LC/log_n000001.log \
+		output/test_lc/LC_log_n000001.log \
+		> test_lc.diff)
+	ls -l test_lc.diff
 
 
 ### ESMF test ###
