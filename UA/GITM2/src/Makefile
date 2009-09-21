@@ -17,8 +17,8 @@ MODULES = \
 	ModGITM.o\
 	ModSources.o\
 	ModVertical.o\
-	ModSphereInterface.o\
 	ModInputs.o\
+	ModSphereInterface.o\
 	ModTimingGITM.o\
 	ModRates.o\
 	ModEUV.o\

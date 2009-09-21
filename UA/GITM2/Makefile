@@ -42,8 +42,8 @@ GITM2 = ${DIR}/UA/GITM2
 
 LIB:
 	cd $(ABDIR)     ; make                                         LIB
-	cd $(GLDIR)     ; make LIBPREV=${GITM2}/${IODIR}/libABIEEDIO.a LIBADD
-	cd $(MAINDIR)   ; make LIBPREV=${GITM2}/${ABDIR}/libSphere.a   LIBADD
+	cd $(GLDIR)     ; make LIBPREV=${GITM2}/${ABDIR}/libSphere.a   LIBADD
+	cd $(MAINDIR)   ; make LIBPREV=${GITM2}/${GLDIR}/libUPTOGL.a   libGITM.a
 	cd srcInterface ; make LIBPREV=${GITM2}/${MAINDIR}/libUA.a     LIB
 
 nompirun:

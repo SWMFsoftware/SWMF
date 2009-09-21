@@ -45,7 +45,7 @@ LIBADD:
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${LIBPREV} ${MF} ${MODULES} ${OBJECTS}
+${MY_LIB}: ${MF} ${MODULES} ${OBJECTS}
 	cp -f ${LIBPREV} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS} ${MODULES}
 
