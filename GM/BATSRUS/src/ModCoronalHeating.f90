@@ -13,7 +13,8 @@ module ModCoronalHeating
   public :: get_coronal_heat_factor
   public :: get_coronal_heating
 
-  logical, public :: UseCoronalHeating = .false.
+  !Bill Abbet model, if .true.
+  logical, public :: UseUnsignedFluxModel = .false.
 
   real :: HeatFactor = 0.0
 

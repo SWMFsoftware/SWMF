@@ -167,11 +167,11 @@ contains
     real :: Weight 
 
     ! While Gen passes the span from 0.0 to 1.0,
-    ! RealIndex passes the values from 1.0 to nGrid -1
+    ! RealIndex passes the values from 0.0 to nGrid -1
 
     real :: RealIndex
 
-    !i passes the values from 1 to nGrid -1 
+    !i passes the values from 1 to nGrid 
     integer :: i
     !----------------------------
 
@@ -210,25 +210,23 @@ contains
 
     ! While Gen passes the span from 0.0 to 1.0,
 
-    !i passes the values from 1 to nGrid -1 
+    !i passes the values from 1 to nGrid 
     integer :: i
     !----------------------------
 
     if(R <= 0.0) call stop_mpi('Negative R in r_to_gen')
     LogR = log(R)
-   
-    i = maxloc(yR_I, DIM=1, MASK=( yR_I <= LogR) )
     
     !--- if less than minimum, use linear slope of 2st pnts
-    if (i <= 1) then 
+    if (LogR <= yR_I(1)) then 
 
        r_to_gen = DeltaGen / (yR_I(2) - yR_I(1)) * (LogR - yR_I(1))
 
-    elseif (i == ngrid) then 
+    elseif (LogR >= yR_I(nGrid)) then 
        r_to_gen = DeltaGen / (yR_I(nGrid) - yR_I(nGrid-1)) * (LogR - yR_I(ngrid))&
                   + 1.0
     else
-       
+       i = maxloc(yR_I, DIM=1, MASK=( yR_I <= LogR) )    
        Weight = (LogR - yR_I(i)) / (yR_I(i+1) - yR_I(i))
 
        r_to_gen = DeltaGen * (Weight + (i - 1))

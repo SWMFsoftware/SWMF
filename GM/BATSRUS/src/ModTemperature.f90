@@ -170,7 +170,7 @@ contains
     use ModMain,       ONLY: UseHeatConduction, UseRadDiffusion
     use ModProcMH,     ONLY: iProc
     use ModSize,       ONLY: nI, nJ, nK, nBlk, nDim
-    use ModVarIndexes, ONLY: NameVar_V, nVar
+    use ModVarIndexes, ONLY: NameVar_V, nVar, WaveFirst_
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_
 
     integer :: iVar
@@ -191,11 +191,11 @@ contains
 
     ! Based on the energy variable, check if the radiation and ion
     ! temperatures are needed.
+    if(WaveFirst_ > 1)then
+       UseTrad = .true.
+       iErad = WaveFirst_
+    end if
     do iVar = 1, nVar
-       if(trim(NameVar_V(iVar)) == "Erad")then
-          UseTrad = .true.
-          iErad = iVar
-       end if
        if(trim(NameVar_V(iVar)) == "Ee")then
           !!! Ee should be changed if a different NameVar will be used.
           ! The electron and ion temperature are not combined
@@ -485,14 +485,16 @@ contains
     use ModGeometry,   ONLY: vInv_CB, TypeGeometry, y_BLK
     use ModMain,       ONLY: nI, nJ, nK, UseRadDiffusion
     use ModVarIndexes, ONLY: Energy_, RhoUy_
-
+    use ModWaves,      ONLY: UseWavePressure
+    
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
     real :: vInv, DivU, RadCompression
     character(len=*), parameter :: NameSub = "calc_source_temperature_diff"
     !--------------------------------------------------------------------------
-    
+
+    if(UseWavePressure)return
     do k=1,nK; do j=1,nJ; do i=1,nI
 
        vInv = vInv_CB(i,j,k,iBlock)

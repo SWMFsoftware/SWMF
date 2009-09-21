@@ -35,7 +35,7 @@ contains
 
   subroutine user_read_inputs
 
-    use ModCoronalHeating, ONLY: UseCoronalHeating
+    use ModCoronalHeating, ONLY: UseUnsignedFluxModel
     use ModMain
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
@@ -72,12 +72,12 @@ contains
           call read_var('TypeCoronalHeating', TypeCoronalHeating)
           select case(TypeCoronalHeating)
           case('exponential')
-             UseCoronalHeating = .false.
+             UseUnsignedFluxModel = .false.
              UseExponentialHeating = .true.
              call read_var('DecayLength', DecayLength)
              call read_var('HeatingAmplitudeCgs', HeatingAmplitudeCgs)
           case('unsignedflux')
-             UseCoronalHeating = .true.
+             UseUnsignedFluxModel = .true.
              UseExponentialHeating = .false.
           case default
              call stop_mpi(NameSub//': unknown TypeCoronalHeating = ' &
@@ -350,7 +350,7 @@ contains
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, Rho_, p_, Energy_, &
          UseNonConservative
-    use ModCoronalHeating, ONLY: UseCoronalHeating, get_coronal_heating
+    use ModCoronalHeating, ONLY: UseUnsignedFluxModel, get_coronal_heating
     use ModGeometry,       ONLY: r_BLK
     use ModMain,           ONLY: nI, nJ, nK, GlobalBlk
     use ModPhysics,        ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
@@ -365,7 +365,7 @@ contains
     iBlock = globalBlk
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(UseCoronalHeating)then
+       if(UseUnsignedFluxModel)then
           call get_coronal_heating(i, j, k, iBlock, CoronalHeating)
        elseif(UseExponentialHeating)then
           CoronalHeating = HeatingAmplitude &
