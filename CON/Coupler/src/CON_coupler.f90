@@ -192,7 +192,7 @@ contains
 
     ! Get the size of the coordinate arrays
     if(IsRoot)then
-       ThisGrid%nCoord_D = 1
+       ThisGrid%nCoord_D = 0
        if(present(Coord1_I)) ThisGrid%nCoord_D(1)=size(Coord1_I)
        if(present(Coord2_I)) ThisGrid%nCoord_D(2)=size(Coord2_I)
        if(present(Coord3_I)) ThisGrid%nCoord_D(3)=size(Coord3_I)
