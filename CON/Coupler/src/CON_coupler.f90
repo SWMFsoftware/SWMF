@@ -173,9 +173,9 @@ contains
        if(IsRoot)Thisgrid%UnitX=UnitX
        ! Broadcast the unit of length
        call MPI_bcast(ThisGrid%UnitX,1,MPI_REAL,&
-         iProc0,iComm,iError)
+            iProc0,iComm,iError)
     end if
-       
+
     if(IsRoot)then
        if(present(TypeGeometry))then
           Thisgrid%TypeGeometry = TypeGeometryBlanck
@@ -201,7 +201,7 @@ contains
     call MPI_bcast(ThisGrid%nCoord_D,3,MPI_INTEGER,iProc0,&
          iComm,iError)
 
-    if(ThisGrid%nCoord_D(1)>1)then 
+    if(ThisGrid%nCoord_D(1)>0)then 
        if(associated(ThisGrid%Coord1_I))deallocate(ThisGrid%Coord1_I)
        allocate(ThisGrid%Coord1_I(&
             ThisGrid%nCoord_D(1)),stat=iError)
@@ -214,7 +214,7 @@ contains
             iProc0,iComm,iError)
     end if
 
-    if(ThisGrid%nCoord_D(2)>1) then
+    if(ThisGrid%nCoord_D(2)>0) then
        if(associated(ThisGrid%Coord2_I))deallocate(ThisGrid%Coord2_I)
        allocate(ThisGrid%Coord2_I(&
             ThisGrid%nCoord_D(2)),stat=iError)
@@ -226,7 +226,7 @@ contains
             MPI_REAL,iProc0,iComm,iError)
     end if
 
-    if(ThisGrid%nCoord_D(3)>1)then
+    if(ThisGrid%nCoord_D(3)>0)then
        if(associated(ThisGrid%Coord3_I))deallocate(ThisGrid%Coord3_I)
        allocate(ThisGrid%Coord3_I(&
             ThisGrid%nCoord_D(3)),stat=iError)
@@ -238,33 +238,45 @@ contains
             MPI_REAL,iProc0,iComm,iError)
     end if
   contains
-      subroutine init_coord_system_all
-        integer :: iComp
-        DoInit=.false.
-        do iComp=1,MaxComp+3
-           nullify(&
-                Grid_C(iComp)%Coord1_I, &
-                Grid_C(iComp)%Coord2_I, &
-                Grid_C(iComp)%Coord3_I)
-           Grid_C(iComp)%nCoord_D = 0
-           Grid_C(iComp)%UnitX=cOne
-        end do
-      end subroutine init_coord_system_all
+    subroutine init_coord_system_all
+      integer :: iComp
+      DoInit=.false.
+      do iComp=1,MaxComp+3
+         nullify(&
+              Grid_C(iComp)%Coord1_I, &
+              Grid_C(iComp)%Coord2_I, &
+              Grid_C(iComp)%Coord3_I)
+         Grid_C(iComp)%nCoord_D = 0
+         Grid_C(iComp)%UnitX=cOne
+      end do
+    end subroutine init_coord_system_all
   end subroutine set_coord_system
   !=============================================================!
   !BOP
   !IROUTINE: gen_to_stretched - transform coords for structured non-uniform grid 
   !INTERFACE:
-  subroutine gen_to_stretched(XyzGen_D,XyzStretched_D,nDim,GridID_)
+  subroutine gen_to_stretched(XyzGen_D,XyzStretched_D,nDim,GridID_,DoExtrapolate)
     !INPUT ARGUMENTS:
     integer,intent(in)::nDim,GridID_
     real,dimension(nDim),intent(in)::XyzGen_D
+
+    !Note, that the PRESENCE of this parameter means to do extrapolation means 
+    !to do extrapolation, while the VALUE of it, if present, is meaningless
+    logical, OPTIONAL, intent(in):: DoExtrapolate 
     !OUTPUT ARGUMENTS:
     real,dimension(nDim),intent(out)::XyzStretched_D
     !DESCRIPTION:
     !   Trasforms generalized coordinates (which for the stretched grids are usually
     !   nothing but the grid point index) to streched coordinates
-  !EOP
+    !EOP
+    real:: OneIfExtrapolate = 1.0
+    !------------------------------!
+    if(present(DoExtrapolate))then
+       OneIfExtrapolate = 1.0
+    else
+       OneIfExtrapolate = 0.0
+    end if
+
     XyzStretched_D=XyzGen_D
     if(associated(Grid_C(GridID_)%Coord1_I))&
          call stretch(1,Grid_C(GridID_)%Coord1_I)
@@ -278,35 +290,55 @@ contains
       real,dimension(:),intent(in)::Coord_I
       integer::iL,iU,Number
       real::Fraction
-       iL=lbound(Coord_I,1)
-       iU=ubound(Coord_I,1)
-       if(XyzStretched_D(iDim)<=real(iL))then
-          XyzStretched_D(iDim)=Coord_I(iL)
-       elseif(XyzStretched_D(iDim)>=real(iU))then
-          XyzStretched_D(iDim)=Coord_I(iU)
-       else
-          Number=floor(XyzStretched_D(iDim))
-          Fraction=XyzStretched_D(iDim)-real(Number)
-          XyzStretched_D(iDim)=Coord_I(Number)*(cOne-Fraction)+&
-               Coord_I(Number+1)*Fraction
-       end if
-     end subroutine stretch
-   end subroutine gen_to_stretched
+      !--------------!
+
+      iL=lbound(Coord_I,1)
+      iU=ubound(Coord_I,1)
+
+      if(XyzStretched_D(iDim)<=real(iL))then
+         XyzStretched_D(iDim)=Coord_I(iL) &
+              + OneIfExtrapolate * (XyzStretched_D(iDim) - real(iL)) *&
+              (Coord_I(iL+1) - Coord_I(iL))
+      elseif(XyzStretched_D(iDim)>=real(iU))then
+         XyzStretched_D(iDim)=Coord_I(iU)  &
+              + OneIfExtrapolate * (XyzStretched_D(iDim) - real(iU)) *&
+              (Coord_I(iU) - Coord_I(iU-1))
+      else
+         Number=floor(XyzStretched_D(iDim))
+         Fraction=XyzStretched_D(iDim)-real(Number)
+         XyzStretched_D(iDim)=Coord_I(Number)*(cOne-Fraction)+&
+              Coord_I(Number+1)*Fraction
+      end if
+    end subroutine stretch
+  end subroutine gen_to_stretched
   !=============================================================!
   !BOP
   !IROUTINE: stretched_to_gen - transform coords for structured non-uniform grid 
   !INTERFACE:
-  subroutine stretched_to_gen(XyzStretched_D,XyzGen_D,nDim,GridID_)
+  subroutine stretched_to_gen(XyzStretched_D,XyzGen_D,nDim,GridID_,DoExtrapolate)
     !INPUT ARGUMENTS:
     integer,intent(in)::nDim,GridID_
     real,dimension(nDim),intent(in)::XyzStretched_D
+
+    !Note, that the PRESENCE of this parameter means to do extrapolation means 
+    !to do extrapolation, while the VALUE of it, if present, is meaningless
+    logical, OPTIONAL, intent(in):: DoExtrapolate 
     !OUTPUT ARGUMENTS:
     real,dimension(nDim),intent(out)::XyzGen_D
     !DESCRIPTION:
     !   Trasforms stretched coordinates  to  generalized coordinates 
     !   (which for the stretched grids are usually
     !   nothing but the grid point index)
-  !EOP
+    !EOP
+    
+    real:: OneIfExtrapolate = 1.0
+    !------------------------------!
+    if(present(DoExtrapolate))then
+       OneIfExtrapolate = 1.0
+    else
+       OneIfExtrapolate = 0.0
+    end if
+
     XyzGen_D=XyzStretched_D
     if(associated(Grid_C(GridID_)%Coord1_I))&
          call gen(1,Grid_C(GridID_)%Coord1_I)
@@ -322,9 +354,13 @@ contains
       iL=lbound(Coord_I,1)
       iU=ubound(Coord_I,1)
       if(XyzGen_D(iDim)<=Coord_I(iL))then
-         XyzGen_D(iDim)=real(iL)
+         XyzGen_D(iDim)=real(iL) +&
+              OneIfExtrapolate * (XyzGen_D(iDim) - Coord_I(iL))/&
+              (Coord_I(iL+1) - Coord_I(iL))
       elseif(XyzGen_D(iDim)>=Coord_I(iU))then
-         XyzGen_D(iDim)=real(iU)
+         XyzGen_D(iDim)=real(iU) +&
+              OneIfExtrapolate * (XyzGen_D(iDim) - Coord_I(iU))/&
+              (Coord_I(iU) - Coord_I(iU-1))
       else
          Number=maxloc(Coord_I,1,MASK=Coord_I<=XyzGen_D(iDim))
          XyzGen_D(iDim)=real(Number)+(XyzGen_D(iDim)-Coord_I(Number))/&
@@ -395,7 +431,7 @@ contains
          IsPeriodic_D)
     call bcast_decomposition(GridID)
     if(DoTest)&
-       call test_global_message_pass(GridID)
+         call test_global_message_pass(GridID)
   end subroutine set_grid_descriptor
 
 
@@ -513,7 +549,7 @@ contains
     logical, intent(out), optional   :: UseMe
     integer, intent(inout), optional :: iProc
     integer :: iGroup1, iGroup2, iGroupUnion, iProcUnion, iError
-    
+
     logical :: DoTest, DoTestMe
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
