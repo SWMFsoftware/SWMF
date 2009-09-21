@@ -1,0 +1,150 @@
+#ECHO
+T			DoEcho
+
+#DESCRIPTION
+Input file for creating a steady state solar corona
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#STARTTIME
+1998			iYear
+5			iMonth
+1			iDay
+0			iHour
+0			iMinute
+0			iSecond
+0.0 			FracSecond
+
+#SAVERESTART
+F			DoSaveRestart
+2000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#BEGIN_COMP LC --------------------------------------------------------------
+
+#COORDSYSTEM
+HGR                     TypeCoordSystem
+
+#USER_FLAGS
+T			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F			UseUserOuterBcs
+T			UseUserICs
+T			UseUserSpecifyRefinement
+F			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+T			UseUserB0
+T			UseUserInitSession
+T			UseUserUpdateStates
+
+#USERINPUTBEGIN ------------------------
+
+#PFSSM
+T			UseUserB0
+1.0			Ro_PFSSM
+2.5			Rs_PFSSM
+0.0			H_PFSSM
+LC/Param/CR1935_WSO.dat
+12			iHead_PFSSM
+-1.0			PhiShift
+0.01			UnitB
+-1.0			dt_UpdateB0
+
+#EMPIRICALSW
+WSA			NameModel
+
+#USERINPUTEND ----------------------------
+
+#BODY
+T			Usebody
+1.0			rBody
+3.0E+8			BodyNDim
+3.5E+6			BodyTDim
+
+#GAMMA
+1.5000E+00		Gamma
+
+#OUTERBOUNDARY
+float	                TypeBcEast
+float   	        TypeBcWest
+float	                TypeBcSouth
+float	  		TypeBcNorth
+float	 	        TypeBcBot
+float	   		TypeBcTop
+
+#INCLUDE
+LC/Param/Grid
+
+#GRIDLEVEL
+2			nLevelArea
+initial			NameArea
+
+#USECURLB0
+T			UseCurlB0
+2.5			rCurrentFreeB0
+
+#AMR
+30			DnRefine
+F			DoAutomaticRefinement 
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc                      TypeLimiter
+1.2			LimiterBeta
+
+#TVDRESCHANGE
+T                       UseTvdResChange
+
+#RESCHANGEBOUNDARY
+T
+
+#TIMESTEPPING
+2                       nStage
+0.80                    CflExpl
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+3			nPlotFiles
+y=0 MHD idl		StringPlot
+1000                   	DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+y=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+z=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+
+#END_COMP LC ----------------------------------------------------------------
+
+#STOP
+100			MaxIteration
+-1.0			tSimulationMax
+
+#RUN ########################################################################
+
+#BEGIN_COMP LC --------------------------------------------------------------
+
+#AMR
+-1			DnRefine
+
+#END_COMP LC -----------------------------------------------------------------
+
+#STOP
+200
+-1.0
+
+#END
