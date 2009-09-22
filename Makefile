@@ -568,7 +568,7 @@ LC/BATSRUS/src/Makefile:
 		LC/BATSRUS/srcInterface/LC_get_for_sp.f90
 	cd LC/BATSRUS/srcInterface/; perl -i -pe \
 	's/IH/LC/g;s/BATSRUS/LC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
-		LC_wrapper.f90 lC_get_for_sp.f90
+		LC_wrapper.f90 LC_get_for_sp.f90
 	cd LC/BATSRUS/src; rm -f main.f90
 
 # rename LC source files to avoid name conflicts
