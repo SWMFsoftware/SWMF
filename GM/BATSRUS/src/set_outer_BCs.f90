@@ -21,7 +21,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   real,    intent(in) :: time_now
   logical, intent(in) :: DoSetEnergy
 
-  integer :: iStart, iVar, iSide
+  integer :: iStart, iLast, iVar, iSide
 
   integer :: iGhost, jGhost, kGhost, iGhost2, jGhost2, kGhost2
 
@@ -71,14 +71,20 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   end if
 
   iStart=max(MaxBoundary+1,1)
-  do iSide = iStart, Top_
+  ! Do not apply cell boundary conditions at the pole 
+  ! This is either handled by message passing or supercell
+  if(TypeGeometry(1:9) == 'spherical') then
+     iLast = West_
+  else
+     iLast = Top_
+  end if
+  do iSide = iStart, iLast
 
      ! Check if this side of the block is indeed an outer boundary
      if(neiLEV(iSide,iBLK)/=NOBLK) CYCLE
 
      ! Do not apply cell boundary conditions at the pole 
      ! This is either handled by message passing or supercell
-     if(TypeGeometry(1:9) == 'spherical' .and. iSide >= Bot_) CYCLE
      if(TypeGeometry      == 'cylindrical' .and. &
           XyzMin_D(1) == 0.0 .and. iSide == 1) CYCLE
 
