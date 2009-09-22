@@ -14,6 +14,7 @@ subroutine advance_expl(DoCalcTimestep)
   use ModImplicit,  ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   use ModPhysics,   ONLY: No2Si_V, UnitT_
   use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux
+  use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
   implicit none
 
   logical, intent(in) :: DoCalcTimestep
@@ -33,6 +34,9 @@ subroutine advance_expl(DoCalcTimestep)
   STAGELOOP: do iStage = 1, nStage
 
      if(DoTestMe)write(*,*)NameSub,' starting stage=',iStage
+
+     ! If heating model depends on global B topology, update here
+     if(UseUnsignedFluxModel) call get_coronal_heat_factor
 
      call barrier_mpi2('expl1')
 
