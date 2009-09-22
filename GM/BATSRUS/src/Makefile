@@ -34,6 +34,7 @@ MODULES = \
 	ModEnergy.o\
 	ModEquation.o\
 	ModCharacteristic.o\
+	ModCoronalHeating.o\
 	ModCovariant.o\
 	ModCurrent.o\
 	ModExpansionFactors.o \
