@@ -549,14 +549,19 @@ LC/BATSRUS/src/Makefile:
 		LC/BATSRUS/srcEquation \
 		LC/BATSRUS/srcInterface/LC_wrapper.f90 \
 		LC/BATSRUS/srcInterface/LC_get_for_sp.f90
+	mkdir -p LC/BATSRUS/src LC/BATSRUS/srcUser LC/BATSRUS/srcEquation
+	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../LC/BATSRUS/src
+	cp GM/BATSRUS/srcUser/*.f90 LC/BATSRUS/srcUser/	  
+	cp GM/BATSRUS/srcEquation/*.f90 LC/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
-		cp -f Makefile.conf ../../LC/BATSRUS; \
-		make COMP=LC DREL=TMP relax_src
-	cd GM/BATSRUS/TMP; \
-		mv Config.pl PARAM.XML src srcUser srcEquation \
-			../../../LC/BATSRUS;\
-		mv srcInterface/*.f90 ../../../LC/BATSRUS/srcInterface
-	rm -rf GM/BATSRUS/TMP
+		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
+			../../OH/BATSRUS/
+	cd GM/BATSRUS/srcInterface/; \
+		cp ModGridDescriptor.f90 ModBuffer.f90 \
+		update_lagrangian_grid.f90 \
+		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
+		ModDensityAndGradient.f90\
+		../../../LC/BATSRUS/srcInterface
 	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
 		LC/BATSRUS/srcInterface/LC_wrapper.f90
 	cp -f IH/BATSRUS_share/src/IH_get_for_sp.f90 \
