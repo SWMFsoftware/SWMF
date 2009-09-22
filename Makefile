@@ -582,7 +582,7 @@ LCBATSRUS: LC/BATSRUS/src/Makefile \
 	touch LC/BATSRUS/srcInterface/Makefile.DEPEND
 	cd LC/BATSRUS; \
 		perl -i -pe 's/GM/LC/' Config.pl; \
-		./Config.pl -install=c -u=Sc -e=MhdCorona
+		./Config.pl -install=c -u=Lc -e=Mhd
 
 #^CMP END LC
 
