@@ -62,7 +62,7 @@ exponential		TypeCoronalHeating
 #TRBOUNDARY
 coronal			TypeTRBoundary
 3.0E+8			BoundaryNeCgs
-1.5E+4			BoundaryTeCgs
+1.5E+6			BoundaryTeCgs
 
 #MODIFYHEAT
 T			DoModHeatConduction
@@ -75,7 +75,7 @@ T			DoModHeatConduction
 T			Usebody
 1.0			rBody
 3.0E+8			BodyNDim
-3.5E+6			BodyTDim
+3.0E+6			BodyTDim
 
 #GAMMA
 1.6666E+00		Gamma
@@ -119,11 +119,11 @@ LC/Param/grid_TR.dat	NameGridFile
 12.0			rMax
 
 #GRIDLEVEL
-4			nLevelArea
+2			nLevelArea
 all			NameArea
 
 #GRIDLEVEL
-5			nLevelArea
+4			nLevelArea
 box_gen			NameArea
 1.0			rMin
 0.0			LonMin
@@ -133,11 +133,11 @@ box_gen			NameArea
 65.0			LatMax
 
 #GRIDLEVEL
-5			nLevelArea
+4			nLevelArea
 currentsheet		NameArea
 
 #GRIDLEVEL
-5			nLevelArea
+2			nLevelArea
 initial			NameArea
 
 #FIXAXIS
@@ -216,10 +216,10 @@ RAW			StringLogfile
 #SAVEPLOT
 3			nPlotFiles
 x=0 MHD tec		StringPlot
-100			DnSavePlot
+200			DnSavePlot
 -1			DtSavePlot
 los euv tec		StringPlot
-100			DnSavePlot
+200			DnSavePlot
 -1			DtSavePlot
 -43.227			ObsPosX
 -209.23			ObsPosY
@@ -230,7 +230,7 @@ los euv tec		StringPlot
 0.			yOffset
 0.			rOccult
 0.			MuLimbDarkening
-512			nPix
+50			nPix
 los sxr tec		StringPlot
 1000			DnSavePlot
 -1			DtSavePlot
