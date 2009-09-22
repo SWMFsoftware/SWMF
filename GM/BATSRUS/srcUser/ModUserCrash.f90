@@ -12,7 +12,8 @@ module ModUser
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_init_session,               &
        IMPLEMENTED7 => user_set_ics,                    &
-       IMPLEMENTED8 => user_material_properties
+       IMPLEMENTED8 => user_material_properties,        &
+       IMPLEMENTED9 => user_amr_criteria
 
   use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, VarTest, &
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates
@@ -1900,6 +1901,49 @@ contains
     end subroutine get_electron_thermo
 
   end subroutine user_material_properties
+
+  !===========================================================================
+  subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
+
+    use ModSize,     ONLY: nI, nJ, nK
+    use ModAdvance,  ONLY: State_VGB, LevelBe_, LevelXe_, LevelPl_, Rho_
+    use ModAMR,      ONLY: RefineCritMin_I, CoarsenCritMax
+    use ModPhysics,  ONLY: Io2No_V, UnitRho_
+
+    ! Variables required by this user subroutine
+    integer, intent(in)          :: iBlock
+    real, intent(out)            :: UserCriteria
+    character (len=*),intent(in) :: TypeCriteria
+    logical ,intent(inout)       :: IsFound
+
+    real, parameter:: RhoMinAmrDim = 20.0
+
+    real :: RhoMin
+    integer:: i, j, k
+    !------------------------------------------------------------------
+
+    ! Location of sound wave edges and the tangential discontinuity
+
+    RhoMin = RhoMinAmrDim*Io2No_V(UnitRho_)
+
+    UserCriteria = 0.0
+    LOOPCELL: do k = 1, nK; do j=1, nJ; do i = -1, nI+2
+       if(State_VGB(LevelXe_,i,j,k,iBlock) > &
+            maxval(State_VGB(LevelBe_:LevelPl_,i,j,k,iBlock)) &
+            .and. State_VGB(Rho_,i,j,k,iBlock) > RhoMin)then
+          UserCriteria = 1.0
+          EXIT LOOPCELL
+       end if
+    end do; end do; end do LOOPCELL
+
+    ! Do not refine blocks far from discontinuity (crit=0.0)
+    ! Do not coarsen blocks near discontinuity    (crit=1.0)
+    RefineCritMin_I = 0.5
+    CoarsenCritMax  = 0.5
+
+    IsFound = .true.
+
+  end subroutine user_amr_criteria
 
   !===========================================================================
 
