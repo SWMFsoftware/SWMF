@@ -4,8 +4,8 @@ SHELL=/bin/sh
 
 #
 #	Space Weather Modeling Framework (SWMF) 
-#	Intel Fortran (ifort) Compiler
-#       Linux/machine specific part of Makefile as needed at hera.llnl.gov
+#	Intel Fortran 8.0 (ifort) Compiler
+#       Linux specific part of Makefile
 #
 
 COMPILE.f77     = ${CUSTOMPATH_F}ifort
