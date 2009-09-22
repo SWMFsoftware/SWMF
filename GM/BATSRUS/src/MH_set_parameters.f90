@@ -2439,8 +2439,10 @@ contains
     end if
 
     if(product(proc_dims) > nBLK*nProc .and. iProc==0)then
-       write(*,*)'Root blocks will not fit on 1 processor, check nBLK'
-       call stop_mpi('product(proc_dims) > nBLK!')
+       write(*,*)'Root blocks will not fit on all processors, check nBLK'
+       write(*,*)'product(proc_dims)   =',product(proc_dims)
+       write(*,*)'nBLK,nProc,nBLK*nProc=',nBLK,nProc,nBLK*nProc
+       call stop_mpi('product(proc_dims) > nBLK*nProc!')
     end if
 
     ! Set XyzMin_D, XyzMax_D based on 
