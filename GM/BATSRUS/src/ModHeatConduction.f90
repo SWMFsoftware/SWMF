@@ -23,7 +23,7 @@ module ModHeatConduction
   ! Variables for setting the field-aligned heat conduction coefficient
   character(len=20), public :: TypeHeatConduction = 'test'
   logical :: DoModifyHeatConduction, DoTestHeatConduction
-  
+
   real :: HeatConductionParSi = 1.23e-11  ! taken from calc_heat_flux
   real :: TmodifySi = 3.0e5, DeltaTmodifySi = 2.0e4
   real :: HeatConductionPar, Tmodify, DeltaTmodify
@@ -35,7 +35,9 @@ module ModHeatConduction
   ! electron temperature used for calculating heat flux
   real, allocatable :: Te_G(:,:,:)
 
-  ! ratio of Te Te+T used for ideal EOS
+  ! Used for ideal EOS: p = n*T + ne*Te (dimensionless) and n=rho/ionmass
+  ! so that p=rho/massion *T*(1+ne/n Te/T)
+  ! TeFraction is defined such that Te = p/rho * TeFraction
   real :: TeFraction
 
   ! Heat flux for operator split scheme
@@ -102,14 +104,18 @@ contains
     character(len=*), parameter :: NameSub = 'init_heat_conduction'
     !--------------------------------------------------------------------------
 
-    write(*,*) "The field aligned heat conduction is under construction"
-    write(*,*) "It is currently guaranteed to give wrong results !!!"
-    
+    if(UseSemiImplicit)then
+       write(*,*) "The field aligned heat conduction is under construction"
+       write(*,*) "It is currently guaranteed to give wrong results !!!"
+    end if
+
     if(allocated(Te_G)) RETURN
 
     allocate(Te_G(-1:nI+2,-1:nJ+2,-1:nK+2))
 
-    ! Get TeFraction=Te/(Te+T) from P = n*k*T + ne*k*Te for ideal EOS
+    ! Used for ideal EOS: p = n*T + ne*Te (dimensionless) and n=rho/ionmass
+    ! so that p=rho/massion *T*(1+ne/n Te/T)
+    ! TeFraction is defined such that Te = p/rho * TeFraction
     TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
          /(1 + AverageIonCharge*ElectronTemperatureRatio)
 
@@ -195,7 +201,7 @@ contains
          Normal_D, HeatCondR_D)
 
     HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
-    
+
     HeatFlux = -sum(HeatCond_D*FaceGrad_D)
 
     ! get the heat conduction coefficient normal to the face for
@@ -296,8 +302,8 @@ contains
   subroutine get_impl_heat_cond_state(StateImpl_VGB, DconsDsemi_VCB)
 
     use ModAdvance,    ONLY: State_VGB, UseIdealEos, &
-       LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
-       RightState_VX, RightState_VY, RightState_VZ
+         LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
+         RightState_VX, RightState_VY, RightState_VZ
     use ModFaceValue,  ONLY: calc_face_value
     use ModGeometry,   ONLY: UseCovariant
     use ModImplicit,   ONLY: nw, nImplBLK, impl2iBlk, iTeImpl
@@ -583,7 +589,7 @@ contains
       end do
 
     end subroutine add_jacobian_covariant
-    
+
   end subroutine add_jacobian_heat_cond
 
   !============================================================================
