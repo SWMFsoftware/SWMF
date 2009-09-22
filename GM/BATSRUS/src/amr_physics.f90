@@ -173,7 +173,8 @@ subroutine amr_physics
         SortP(1,k)=j-1
         SortC(1,k)=0.
         do n=1,nRefineCrit
-           SortC(1,k)=SortC(1,k)+refine_criteria_list(n,i,j)/SortC(n,nSort+1)
+           if(refine_criteria_list(n,i,j) /= 0.0) SortC(1,k) = SortC(1,k) &
+                + refine_criteria_list(n,i,j)/SortC(n,nSort+1)
         end do
      end if
   end do; end do
