@@ -1484,8 +1484,6 @@ subroutine MH_set_parameters(TypeAction)
         if(TypeGeometry == 'spherical_genr') then
            call read_var('NameGridFile',NameGridFile)
            call read_grid_file(NameGridFile)
-        else 
-           call set_fake_grid_file
         end if
 
      case("#LIMITRADIUS", "#LIMITGENCOORD1")
@@ -2527,6 +2525,9 @@ contains
     end if
     MaxBoundary = min(MaxBoundary, Top_)
     MinBoundary = max(MinBoundary, body2_)
+
+    if(TypeGeometry /= 'spherical_genr') &
+         call set_fake_grid_file
 
   end subroutine correct_grid_geometry
 
