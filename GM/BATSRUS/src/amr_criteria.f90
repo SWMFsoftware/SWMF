@@ -192,7 +192,7 @@ subroutine amr_criteria(ref_criteria)
               ref_criteria(iCrit,iBLK) = AMRsort_2*ref_criteria(iCrit,iBLK)
            end if
         case default
-           if (UseUserAMR) then
+           if (UseUserAMR .or. index(RefineCrit(iCrit),'user')>0) then
               IsFound=.false.
               call user_amr_criteria(iBLK, userCriteria, RefineCrit(iCrit), IsFound)
               if (IsFound) then
