@@ -1362,7 +1362,7 @@ contains
     iTableOpacity  = i_lookup_table('Opacity(rho,T)')
 
     if(iProc==0) write(*,*) NameSub, &
-         ' iTablePPerE, EPerP, Thermo, Opacity, Electron = ', &
+         ' iTablePPerE, EPerP, Thermo, Opacity = ', &
          iTablePPerE, iTableEPerP, iTableThermo, iTableOpacity
 
     if(iTablePPerE > 0) &
