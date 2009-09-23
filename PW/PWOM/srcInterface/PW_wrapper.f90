@@ -260,10 +260,10 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
   if(.not.allocated(Phi_G))then
      nThetaIono = Grid_C(IE_) % nCoord_D(1)
      nPhiIono   = Grid_C(IE_) % nCoord_D(2)
-     if(nThetaIono /= 2*iSize - 1 .or. nPhiIono /= jSize)then
+     if(nThetaIono /= iSize .or. nPhiIono /= jSize)then
         write(*,*)NameSub,': Grid_C(IE_)%nCoord_D(1:2)=',&
              Grid_C(IE_) % nCoord_D(1:2)
-        write(*,*)NameSub,': iSize,2*iSize-1,jSize=',iSize,2*iSize-1,jSize
+        write(*,*)NameSub,': iSize,jSize=',iSize,jSize
         call CON_stop(NameSub//' ERROR: Inconsistent IE grid sizes')
      endif
 
@@ -290,14 +290,14 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
         IsPotFound = .true.
         do i=1,iSize
            do j=1,jSize
-              Potential_G(j,i) = Buffer_IIV(iSize+1-i, j, iVar)
+              Potential_G(j,i) = Buffer_IIV(i, j, iVar)
            end do
         end do
         case('Jr')
         IsJrFound = .true.
         do i=1,iSize
            do j=1,jSize
-              Jr_G(j,i) = Buffer_IIV(iSize+1-i, j, iVar)
+              Jr_G(j,i) = Buffer_IIV(i, j, iVar)
            end do
         end do
      end select

@@ -53,8 +53,11 @@ contains
     call set_router_comm(IE_,PW_,iCommIePw,UseMe,iProc0Pw)
 
     ! This works for a NODE BASED regular IE grid only
-    nCells_D = ncells_decomposition_d(IE_) + 1
-    iSize=nCells_D(1); jSize=nCells_D(2)
+    iSize = Grid_C(IE_) % nCoord_D(1)
+    jSize = Grid_C(IE_) % nCoord_D(2)
+
+!    nCells_D = ncells_decomposition_d(IE_) + 1
+!    iSize=nCells_D(1); jSize=nCells_D(2)
 
   end subroutine couple_ie_pw_init
 
@@ -144,13 +147,15 @@ contains
       if(DoTest)write(*,*)NameSubSub,', variables allocated',&
            ', iProc:',iProcWorld
 
-      do iBlock = South_, North_
+!      do iBlock = South_, North_
+
+      iBlock = North_
 
          !\
          ! Get potential from IE
          !/
 
-         if(is_proc(IE_))  &
+         if(is_proc0(IE_))  &
               call IE_get_for_pw(Buffer_IIV, iSize, jSize, &
               nVar, NameVar_V, NameHem_B(iBlock), tSimulation)
 
@@ -158,7 +163,7 @@ contains
          ! Transfer variables from IE to PW
          !/ 
 
-         iProcFrom = pe_decomposition(IE_,iBlock)
+         iProcFrom = i_proc0(IE_)
 
          nSize = iSize*jSize*nVar
 
@@ -189,7 +194,7 @@ contains
                  iProcWorld,Buffer_IIV(1,1,:)
          end if
 
-      enddo
+!      enddo
       !\
       ! Deallocate buffer to save memory
       !/

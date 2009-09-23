@@ -52,7 +52,7 @@ module ModIonosphere
   !/
   real, dimension(2*IONO_nTheta-1, IONO_nPsi) :: &
        IONO_Phi = 0.0, IONO_IonNumFlux = 0.0, &
-       IONO_Joule = 0.0
+       IONO_Joule = 0.0, Iono_Jr = 0.0
 
   !\
   ! Ionosphere solution array definitions

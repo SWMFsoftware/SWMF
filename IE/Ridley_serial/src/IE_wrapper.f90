@@ -381,7 +381,7 @@ subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
   integer :: iVar
   real    :: tSimulationTmp
   !--------------------------------------------------------------------------
-  if(iSize /= IONO_nTheta .or. jSize /= IONO_nPsi)then
+  if(iSize /= 2*IONO_nTheta-1 .or. jSize /= IONO_nPsi)then
      write(*,*)NameSub//' incorrect buffer size=',iSize,jSize,&
           ' IONO_nTheta,IONO_nPsi=',IONO_nTheta, IONO_nPsi
      call CON_stop(NameSub//' SWMF_ERROR')
@@ -391,41 +391,18 @@ subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
   tSimulationTmp = tSimulation
   call IE_run(tSimulationTmp,tSimulation)
 
-  select case(NameHem)
+  if(iProc /= 0) RETURN
 
-  case('North')
-
-     if(iProc /= 0) RETURN
-     do iVar = 1, nVar
-        select case(Name_V(iVar))
-        case('Pot')
-           Buffer_IIV(:,:,iVar) = IONO_NORTH_Phi
-        case('Jr')
-           Buffer_IIV(:,:,iVar) = IONO_NORTH_Jr
-        case default
-           call CON_stop(NameSub//' invalid NameVar='//Name_V(iVar))
-        end select
-     end do
-
-  case('South')
-
-     if(iProc /= nProc - 1) RETURN
-     do iVar = 1, nVar
-        select case(Name_V(iVar))
-        case('Pot')
-           Buffer_IIV(:,:,iVar) = IONO_SOUTH_Phi
-        case('Jr')
-           Buffer_IIV(:,:,iVar) = IONO_SOUTH_Jr
-        case default
-           call CON_stop(NameSub//' invalid NameVar='//Name_V(iVar))
-        end select
-     end do
-
-  case default
-
-     call CON_stop(NameSub//' invalid NameHem='//NameHem)
-
-  end select
+  do iVar = 1, nVar
+     select case(Name_V(iVar))
+     case('Pot')
+        Buffer_IIV(:,:,iVar) = IONO_Phi
+     case('Jr')
+        Buffer_IIV(:,:,iVar) = IONO_Jr
+     case default
+        call CON_stop(NameSub//' invalid NameVar='//Name_V(iVar))
+     end select
+  end do
 
 end subroutine IE_get_for_pw
 !==============================================================================
