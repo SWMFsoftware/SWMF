@@ -155,7 +155,7 @@ contains
          ! Get potential from IE
          !/
 
-         if(is_proc0(IE_))  &
+         if(is_proc(IE_))  &
               call IE_get_for_pw(Buffer_IIV, iSize, jSize, &
               nVar, NameVar_V, NameHem_B(iBlock), tSimulation)
 
