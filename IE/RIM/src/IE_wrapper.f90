@@ -516,6 +516,9 @@ end subroutine IE_get_for_rb
 subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
      tSimulation)
 
+  use ModRIM
+  use ModProcIE
+
   implicit none
   character (len=*),parameter :: NameSub='IE_get_for_pw'
 
@@ -525,7 +528,36 @@ subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
   character (len=*),intent(in)  :: Name_V(nVar)
   real,             intent(in)  :: tSimulation
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  integer :: iVar
+  real    :: tSimulationTmp
+  !--------------------------------------------------------------------------
+  if(iSize /= nLats+2 .or. jSize /= nLonsAll+1)then
+     write(*,*)NameSub//' incorrect buffer size=',iSize,jSize,&
+          ' nLats+2,nLonsAll=',nLats+3, nLonsAll+2
+     call CON_stop(NameSub//' SWMF_ERROR')
+  end if
+
+  ! Make sure that the most recent result is provided
+  tSimulationTmp = tSimulation
+  call IE_run(tSimulationTmp,tSimulation)
+
+  if(iProc /= 0) RETURN
+  do iVar = 1, nVar
+     select case(Name_V(iVar))
+     case('Pot')
+        Buffer_IIV(:,:,iVar) = PotentialAll
+     case('Jr')
+        Buffer_IIV(:,:,iVar) = 0.0
+        if (maxval(OuterMagJrAll) > -1.0e31) &
+             Buffer_IIV(:,:,iVar) = OuterMagJrAll
+        if (maxval(InnerMagJrAll) > -1.0e31) &
+             Buffer_IIV(:,:,iVar) = Buffer_IIV(:,:,iVar) + InnerMagJrAll
+        if (maxval(IonoJrAll) > -1.0e31) &
+             Buffer_IIV(:,:,iVar) = Buffer_IIV(:,:,iVar) + IonoJrAll
+     case default
+        call CON_stop(NameSub//' invalid NameVar='//Name_V(iVar))
+     end select
+  end do
 
 end subroutine IE_get_for_pw
 
