@@ -93,6 +93,10 @@ module ModUser
   integer           :: iTrHyades       = -1      ! index of rad. temperature
   integer           :: iMaterialHyades = -1      ! index of material type
 
+  ! Variables for Hyades multi-group file
+  logical           :: UseHyadesGroupFile = .false.! read Hyades multi-group ?
+  character(len=100):: NameHyadesGroupFile         ! name of multi-group file
+  real, allocatable :: EradHyades_VC(:,:)          ! Hyades group energies
 
   ! Opacity scale factor for sensitivity studies on opacities (UQ only !)
   real :: RosselandScaleFactor_I(0:nMaterial-1) = 1.0
@@ -149,6 +153,11 @@ contains
        case("#HYADES")
           call read_var('UseHyadesFile', UseHyadesFile)
           call read_var('NameHyadesFile',NameHyadesFile)
+
+       case("#HYADESGROUP")
+          call read_var('UseHyadesGroupFile', UseHyadesGroupFile)
+          call read_var('NameHyadesGroupFile',NameHyadesGroupFile)
+
        case("#TUBE")
           UseTube = .true.
           call read_var('xEndTube',   xEndTube)
@@ -522,16 +531,16 @@ contains
 
   subroutine read_hyades_file
 
-    use ModAdvance,   ONLY: UseElectronEnergy
-    use ModIoUnit,    ONLY: UnitTmp_
-    use ModPhysics,   ONLY: Si2No_V, Io2No_V, UnitX_, UnitRho_, UnitU_, &
-         UnitP_, UnitTemperature_
-    use ModPlotFile,  ONLY: read_plot_file
-    use ModUtilities, ONLY: split_string
-    use CRASH_ModEos, ONLY: Xe_, Be_, Plastic_
-    use ModConst,     ONLY: cKevToK
-    use ModMain,      ONLY: UseRadDiffusion, Time_Simulation
-
+    use ModAdvance,    ONLY: UseElectronEnergy
+    use ModIoUnit,     ONLY: UnitTmp_
+    use ModPhysics,    ONLY: Si2No_V, Io2No_V, UnitX_, UnitRho_, UnitU_, &
+         UnitP_, UnitTemperature_, UnitEnergyDens_
+    use ModPlotFile,   ONLY: read_plot_file
+    use ModUtilities,  ONLY: split_string
+    use CRASH_ModEos,  ONLY: Xe_, Be_, Plastic_
+    use ModConst,      ONLY: cKevToK, cKev
+    use ModMain,       ONLY: UseRadDiffusion, Time_Simulation
+    use ModVarIndexes, ONLY: nWave
     integer:: nCellHyades_D(3)
     real                :: TimeHyades
     real, allocatable   :: Hyades2No_V(:)
@@ -543,14 +552,18 @@ contains
     integer           :: nString
 
     ! Variables for reading in coordinates and variables
-    real, allocatable:: Coord_I(:), Var_VI(:,:)          ! 1D
-    real, allocatable:: Coord_DII(:,:,:), Var_VII(:,:,:) ! 2D
+    real, allocatable:: Coord_DI(:,:), Var_VI(:,:)
 
     ! Variables for setting level set functions
-    integer :: i, j, iCell, iMaterial, jMaterial
+    integer :: i, iCell, iMaterial, jMaterial
     real    :: x, r
     integer, allocatable:: iMaterial_C(:)
     real,    allocatable:: Distance2_C(:)
+
+    ! variables for HYADES multi-group
+    integer, parameter :: nGroupMax = 100
+    integer :: nGroupHyades, iGroup
+    real :: EnergyGroupHyades_I(0:nGroupMax) ! Photon energy
 
     character(len=*), parameter :: NameSub = "ModUser::read_hyades_file"
     !-------------------------------------------------------------------------
@@ -656,40 +669,24 @@ contains
     end if
 
     ! Read in the data
-    allocate(DataHyades_VC(nDimHyades + nVarHyades, nCellHyades))
-    select case(nDimHyades)
-    case(1)
-       allocate(Coord_I(nCellHyades_D(1)), Var_VI(nVarHyades,nCellHyades_D(1)))
+    allocate( &
+         DataHyades_VC(nDimHyades + nVarHyades, nCellHyades), &
+         Coord_DI(nDimHyades,nCellHyades), &
+         Var_VI(nVarHyades,nCellHyades) )
 
-       call read_plot_file(NameHyadesFile, &
-            CoordOut_I = Coord_I, VarOut_VI = Var_VI)
+    call read_plot_file(NameHyadesFile, &
+         CoordOut_DI = Coord_DI, VarOut_VI = Var_VI)
 
-       ! Convert from CGS to normalized units and store in DataHyades_VC
-       do iCell = 1, nCellHyades_D(1)
-          DataHyades_VC(1,iCell)  = Coord_I(iCell)*Hyades2No_V(1)
-          DataHyades_VC(2:,iCell) = Var_VI(:,iCell)*Hyades2No_V(2:)
-       end do
+    ! Convert from CGS to normalized units and store in DataHyades_VC
+    do iCell = 1, nCellHyades
+       DataHyades_VC(:nDimHyades,iCell) = &
+            Coord_DI(:,iCell)*Hyades2No_V(:nDimHyades)
+       DataHyades_VC(nDimHyades+1:,iCell) = &
+            Var_VI(:,iCell)*Hyades2No_V(nDimHyades+1:)
+    end do
 
-       deallocate(Coord_I, Var_VI)
+    deallocate(Coord_DI, Var_VI)
 
-    case(2)
-       allocate(Coord_DII(nDimHyades,nCellHyades_D(1),nCellHyades_D(2)), &
-            Var_VII(nVarHyades,nCellHyades_D(1),nCellHyades_D(2)) )
-
-       call read_plot_file(NameHyadesFile, &
-            CoordOut_DII = Coord_DII, VarOut_VII = Var_VII)
-
-       ! Convert from CGS to normalized units and store in DataHyades_VC
-       iCell = 0
-       do j = 1, nCellHyades_D(2); do i = 1, nCellHyades_D(1)
-          iCell = iCell + 1
-          DataHyades_VC(:2,iCell) = Coord_DII(:,i,j)*Hyades2No_V(:2)
-          DataHyades_VC(3:,iCell) = Var_VII(:,i,j)*Hyades2No_V(3:)
-       end do; end do
-
-       deallocate(Coord_DII, Var_VII)
-    end select
-       
     if(iMaterialHyades > 0)then
        ! Convert material indexes to the 3 values used in CRASH
        ! Gold (3), Acrylic (4), Vacuum (5) --> Polyimid
@@ -769,6 +766,40 @@ contains
           deallocate(Distance2_C, iMaterial_C)
        end if
     end if
+
+
+    if(.not.UseHyadesGroupFile) RETURN
+
+    ! read HYADES multi-group file
+    call read_plot_file(NameHyadesGroupFile, nVarOut = nGroupHyades, &
+         ParamOut_I = EnergyGroupHyades_I)
+
+    ! find maximum group index for which EnergyGroupHyades_I(iGroup)< 1 keV
+    do iGroup = 1, nGroupHyades
+       if(EnergyGroupHyades_I(iGroup) > cKev) EXIT
+    end do
+    iGroup = iGroup - 1
+
+    if(iGroup /= nWave)then
+       write(*,*)NameSub, 'nWave should be reset to', iGroup
+       call stop_mpi(NameSub//' reconfigure and recompile !')
+    end if
+
+    ! Read in the data
+    ! The HYADES file contains monochromatic radiation energy density
+    allocate(EradHyades_VC(nWave,nCellHyades), &
+         Var_VI(nGroupHyades,nCellHyades) )
+
+    call read_plot_file(NameHyadesGroupFile, VarOut_VI = Var_VI)
+
+    ! Convert from CGS to normalized units and store in EradHyades_VC
+    do iCell = 1, nCellHyades
+       EradHyades_VC(:,iCell) = Var_VI(1:nWave,iCell) &
+            *(EnergyGroupHyades_I(1:nWave) - EnergyGroupHyades_I(0:nWave-1)) &
+            *0.1*Si2No_V(UnitEnergyDens_)   ! erg/cm^3 -> J/m^3
+    end do
+
+    deallocate(Var_VI)
 
   end subroutine read_hyades_file
 
@@ -1353,6 +1384,8 @@ contains
 
     EradBc1 = cRadiationNo*(TrkevBc1*cKeVtoK*Si2No_V(UnitTemperature_))**4
     EradBc2 = cRadiationNo*(TrkevBc2*cKeVtoK*Si2No_V(UnitTemperature_))**4
+
+    if(iProc==0) write(*,*) NameSub, 'EradBc1,EradBc2=', EradBc1, EradBc2
 
     iTablePPerE    = i_lookup_table('pPerE(rho,e/rho)')
     iTableEPerP    = i_lookup_table('ePerP(rho,p/rho)')
