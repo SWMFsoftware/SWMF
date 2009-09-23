@@ -1354,8 +1354,6 @@ contains
     EradBc1 = cRadiationNo*(TrkevBc1*cKeVtoK*Si2No_V(UnitTemperature_))**4
     EradBc2 = cRadiationNo*(TrkevBc2*cKeVtoK*Si2No_V(UnitTemperature_))**4
 
-    if(iProc==0) write(*,*) NameSub, 'EradBc1,EradBc2=', EradBc1, EradBc2
-
     iTablePPerE    = i_lookup_table('pPerE(rho,e/rho)')
     iTableEPerP    = i_lookup_table('ePerP(rho,p/rho)')
     iTableThermo   = i_lookup_table('Thermo(rho,p/rho)')
