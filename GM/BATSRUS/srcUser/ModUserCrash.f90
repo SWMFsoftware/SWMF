@@ -1948,7 +1948,7 @@ contains
     RhoMin = RhoMinAmrDim*Io2No_V(UnitRho_)
 
     UserCriteria = 0.0
-    LOOPCELL: do k = 1, nK; do j=1, nJ; do i = -1, nI+2
+    LOOPCELL: do k = -1, nK+2; do j=-1, nJ+2; do i = -1, nI+2
        if(State_VGB(LevelXe_,i,j,k,iBlock) > &
             maxval(State_VGB(LevelBe_:LevelPl_,i,j,k,iBlock)) &
             .and. State_VGB(Rho_,i,j,k,iBlock) > RhoMin)then
