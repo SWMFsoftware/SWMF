@@ -321,10 +321,13 @@ contains
        n1Out, n2Out, n3Out, nOut_D, &
        ParamOut_I, NameVarOut, &
        CoordMinOut_D, CoordMaxOut_D, &
+       CoordOut_DI, &
        Coord1Out_I, Coord2Out_I, Coord3Out_I, &
        CoordOut_I, CoordOut_DII, CoordOut_DIII, &
        VarOut_VI, VarOut_VII, VarOut_VIII,&
        VarOut_IV, VarOut_IIV, VarOut_IIIV)
+
+    ! Both VarOut_VI and CoordOut_DI can be used in 1D, 2D, and 3D
 
     character(len=*),           intent(in) :: NameFile
     integer,          optional, intent(in) :: iUnitIn
@@ -342,18 +345,19 @@ contains
     real,             optional, intent(out):: ParamOut_I(:)  ! parameters
     real,             optional, intent(out):: CoordMinOut_D(:)
     real,             optional, intent(out):: CoordMaxOut_D(:)
-    real,             optional, intent(out):: CoordOut_I(:)
+    real,             optional, intent(out):: CoordOut_DI(:,:) ! for 1D, 2D, 3D
     real,             optional, intent(out):: Coord1Out_I(:)
     real,             optional, intent(out):: Coord2Out_I(:)
     real,             optional, intent(out):: Coord3Out_I(:)
-    real,             optional, intent(out):: CoordOut_DII(:,:,:)
-    real,             optional, intent(out):: CoordOut_DIII(:,:,:,:)
+    real,             optional, intent(out):: CoordOut_I(:)          ! 1D
+    real,             optional, intent(out):: CoordOut_DII(:,:,:)    ! 2D
+    real,             optional, intent(out):: CoordOut_DIII(:,:,:,:) ! 3D
     real,             optional, intent(out):: VarOut_VI(:,:) ! variables in 1D
     real,             optional, intent(out):: VarOut_VII(:,:,:)    !        2D
     real,             optional, intent(out):: VarOut_VIII(:,:,:,:) !        3D
-    real,             optional, intent(out):: VarOut_IV(:,:)    !        1D
-    real,             optional, intent(out):: VarOut_IIV(:,:,:)   !        2D
-    real,             optional, intent(out):: VarOut_IIIV(:,:,:,:)  !        3D
+    real,             optional, intent(out):: VarOut_IV(:,:)       !        1D
+    real,             optional, intent(out):: VarOut_IIV(:,:,:)    !        2D
+    real,             optional, intent(out):: VarOut_IIIV(:,:,:,:) !        3D
 
     integer            :: iUnit
     character(len=20)  :: TypeFile
@@ -429,6 +433,7 @@ contains
        do k = 1, n3; do j = 1, n2; do i = 1, n1
           n = n + 1
           Coord = Coord_ID(n, iDim)
+          if(present(CoordOut_DI))   CoordOut_DI(iDim,n)       = Coord
           if(present(CoordOut_I))    CoordOut_I(i)             = Coord
           if(present(CoordOut_DII))  CoordOut_DII(iDim,i,j)    = Coord
           if(present(CoordOut_DIII)) CoordOut_DIII(iDim,i,j,k) = Coord
@@ -446,7 +451,7 @@ contains
        n = 0
        do k = 1, n3; do j = 1, n2; do i = 1, n1
           n = n + 1
-          if(present(VarOut_VI))   VarOut_VI(iVar, i)      = Var_IV(n, iVar)
+          if(present(VarOut_VI))   VarOut_VI(iVar, n)      = Var_IV(n, iVar)
           if(present(VarOut_VII))  VarOut_VII(iVar,i,j)    = Var_IV(n, iVar)
           if(present(VarOut_VIII)) VarOut_VIII(iVar,i,j,k) = Var_IV(n, iVar)
           if(present(VarOut_IV))   VarOut_IV(i,iVar)       = Var_IV(n, iVar)
