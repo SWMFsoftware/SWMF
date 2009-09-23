@@ -12,12 +12,13 @@ module ModUser
 
   include 'user_module.h' !list of public methods
 
-  real,              parameter :: VersionUserModule = 1.0
+  real,              parameter :: VersionUserModule = 0.9
   character (len=*), parameter :: NameUserModule = &
-       'Europa Magnetosphere, Rubin, Sep, 2009'
+       'Rubin single species Europa MHD module, Sep. 2009'
 
   real, public, dimension(1:nI, 1:nJ, 1:nK, nBLK) :: Neutral_BLK
   real :: n0, H, v, alpha, mi_mean, kin
+  real :: vNorm, alphaNorm, kinNorm, nNorm
 
 contains
 
@@ -79,17 +80,23 @@ contains
   !========================================================================
   subroutine user_set_ICs
 
-    use ModMain, ONLY: globalBLK, iTest, jTest, kTest, BLKTest
+    use ModMain, ONLY: globalBLK
     use ModPhysics
     use ModNumConst
-    use ModGeometry,ONLY: R_BLK, true_cell
+    use ModGeometry,ONLY: R_BLK
     integer :: i,j,k
 
-    ! neutral density
+    ! neutral density in SI units
     do k=1,nK; do j=1,nJ; do i=1,nI
-       Neutral_BLK(i,j,k,globalBLK) = n0 * exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
+       Neutral_BLK(i,j,k,globalBLK) = n0*exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
             /(H/rPlanetSi))
+
     end do;  end do;  end do
+
+    vNorm=1/Si2No_V(UnitT_)                           !! conversion to unitless
+    alphaNorm=1E-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)    !! conversion to SI to unitless
+    kinNorm=1E-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)      !! conversion to SI to unitless
+    nNorm=Si2No_V(UnitN_)                             !! conversion to unitless
 
   end subroutine user_set_ICs
 
@@ -99,24 +106,17 @@ contains
   !========================================================================
   subroutine user_calc_sources
 
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, iTest, jTest, kTest, BLKTest
+    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, p_, Energy_
-    use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK,R_BLK, true_cell
+    use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModPhysics
     use ModProcMH
 
     real, dimension(1:nI,1:nJ,1:nK) :: ux, uy, uz, uxyz, ne !!, Te
     real, dimension(1:nI,1:nJ,1:nK) :: Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,Sp,SE 
 
-    real :: vNorm, alphaNorm, kinNorm, nNorm
-
     integer :: i,j,k
-
-    vNorm=1/Si2No_V(UnitT_)                           !! conversion to unitless
-    alphaNorm=1E-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)    !! conversion to SI to unitless
-    kinNorm=1E-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)      !! conversion to SI to unitless
-    nNorm=Si2No_V(UnitN_)                             !! conversion to unitless
 
     ux=State_VGB(rhoUx_,1:nI,1:nJ,1:nK,globalBLK) / &
           State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)
@@ -127,11 +127,11 @@ contains
 
     uxyz = ux*ux+uy*uy+uz*uz
 
-    ! ne is the dimensionless electron density
-    ne = State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)*NO2SI_V(UnitN_)/mi_mean
+    ! ne is the electron density in SI units
+    ne = State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)*No2SI_V(UnitN_)/mi_mean
 
     ! Electron temperature calculated from pressure assuming Te=Ti to calculate a more 
-    ! appropriate ion-electron recombination rate. p=nkT with n=ne+ni and ne=ni (quasi neutrality)
+    ! appropriate ion-electron recombination rate. p=nkT with n=ne+ni and ne=ni (quasi-neutrality)
     !Te=State_VGB(p_,1:nI,1:nJ,1:nK,globalBLK) * NO2SI_V(UnitP_) * mi_mean * cProtonMass / &
     !     ( 2.0 * NO2SI_V(UnitRho_) * cBoltzmann * State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK) )
 
@@ -147,31 +147,31 @@ contains
     SE     = 0.0
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       Srho(i,j,k) = Neutral_BLK(i,j,k,globalBLK) * nNorm * mi_mean * v * vNorm & !! newly ionized neutrals
-            - alpha * alphaNorm * State_VGB(rho_,i,j,k,globalBLK) * ne(i,j,k)     !! loss due to recombination
+       Srho(i,j,k) = Neutral_BLK(i,j,k,globalBLK)*nNorm*mi_mean*v*vNorm &   !! newly ionized neutrals
+            - alpha*alphaNorm*State_VGB(rho_,i,j,k,globalBLK)*ne(i,j,k)*Si2No_V(UnitN_) !! loss due to recombination
        
-       SrhoUx(i,j,k) = - State_VGB(rho_,i,j,k,globalBLK) * ( &
-            Neutral_BLK(i,j,k,globalBLK) * nNorm * kin * kinNorm  &               !! loss due to charge exchange
-            + alpha * alphaNorm * ne(i,j,k)) * ux(i,j,k)                          !! loss due to recombination
+       SrhoUx(i,j,k) = - State_VGB(rho_,i,j,k,globalBLK)*( &
+            Neutral_BLK(i,j,k,globalBLK)*nNorm*kin*kinNorm  &               !! loss due to charge exchange
+            + alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_))*ux(i,j,k)          !! loss due to recombination
 
-       SrhoUy(i,j,k) = - State_VGB(rho_,i,j,k,globalBLK) * ( &
-            Neutral_BLK(i,j,k,globalBLK) * nNorm * kin * kinNorm  &               !! loss due to charge exchange
-            + alpha * alphaNorm * ne(i,j,k)) * uy(i,j,k)                          !! loss due to recombination
+       SrhoUy(i,j,k) = - State_VGB(rho_,i,j,k,globalBLK)*( &
+            Neutral_BLK(i,j,k,globalBLK)*nNorm*kin*kinNorm  &               !! loss due to charge exchange
+            + alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_))*uy(i,j,k)          !! loss due to recombination
 
-       SrhoUz(i,j,k) = - State_VGB(rho_,i,j,k,globalBLK) * ( &
-            Neutral_BLK(i,j,k,globalBLK) * nNorm * kin * kinNorm  &               !! loss due to charge exchange
-            + alpha * alphaNorm * ne(i,j,k)) * uz(i,j,k)                          !! loss due to recombination
+       SrhoUz(i,j,k) = - State_VGB(rho_,i,j,k,globalBLK)*( &
+            Neutral_BLK(i,j,k,globalBLK)*nNorm*kin*kinNorm  &               !! loss due to charge exchange
+            + alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_))*uz(i,j,k)          !! loss due to recombination
 
-       SP(i,j,k) = 1/3 * (v * vNorm + kin * kinNorm * State_VGB(rho_,i,j,k,globalBLK)) * &
-            Neutral_BLK(i,j,k,globalBLK) * nNorm * uxyz(i,j,k) &                  !! newly generated ions
-            - State_VGB(p_,i,j,k,globalBLK) * kin  * kinNorm * &
-            Neutral_BLK(i,j,k,globalBLK) * nNorm &                                !! loss due to charge exchange
-            - State_VGB(p_,i,j,k,globalBLK) * alpha * alphaNorm * ne(i,j,k)       !! loss due to recombination
+       SP(i,j,k) = 1/3*(v*vNorm*mi_mean + kin*kinNorm*State_VGB(rho_,i,j,k,globalBLK))* &
+            Neutral_BLK(i,j,k,globalBLK)*nNorm*uxyz(i,j,k)  &               !! newly generated ions
+            - State_VGB(p_,i,j,k,globalBLK)*kin *kinNorm* &
+            Neutral_BLK(i,j,k,globalBLK)*nNorm &                            !! loss due to charge exchange
+            - State_VGB(p_,i,j,k,globalBLK)*alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_) !! loss due to recombination
 
-       SE(i,j,k) = - 0.5 * State_VGB(rho_,i,j,k,globalBLK) * ( &
-            kin  * kinNorm * Neutral_BLK(i,j,k,globalBLK) * nNorm &               !! loss due to charge exchange
-            + alpha  * alphaNorm * ne(i,j,k)) * uxyz(i,j,k) &                     !! loss due to recombination
-            - inv_gm1 * (kin * kinNorm - alpha  * alphaNorm) * State_VGB(p_,i,j,k,globalBLK)
+       SE(i,j,k) = - 0.5*State_VGB(rho_,i,j,k,globalBLK)*( &
+            kin *kinNorm*Neutral_BLK(i,j,k,globalBLK)*nNorm &               !! loss due to charge exchange
+            + alpha *alphaNorm*ne(i,j,k)*Si2No_V(UnitN_))*uxyz(i,j,k) &     !! loss due to recombination
+            - inv_gm1*(kin*kinNorm - alpha *alphaNorm)*State_VGB(p_,i,j,k,globalBLK)
     end do;  end do;  end do
 
     Source_VC(rho_   ,:,:,:) = Srho   + Source_VC(rho_   ,:,:,:)
