@@ -25,7 +25,7 @@ List of MH (GM, IH, OH, SC and LC) commands used in the PARAM.in file
 	<parameter name="NameComp" type="string" input="select">
 		<option name="GM" default="T" />
 		<option name="SC" />
-		,option name="LC" />
+		<option name="LC" />
 		<option name="IH" />
 		<option name="OH" />
 	</parameter>
@@ -1207,7 +1207,7 @@ first session (even if the component is switched off in the first session!).
 	<parameter name="TypeCoordSystem" type="string" input="select">
 		<option name="GSM" default="$NameComp eq 'GM'"/>
 		<option name="HGR" default="$NameComp eq 'SC'"/>
-		<option name-"HGR" default="$NameComp eq 'LC'"/>
+		<option name="HGR" default="$NameComp eq 'LC'"/>
 		<option name="HGI" default="$NameComp eq 'IH'"/>
 		<option name="HGI" default="$NameComp eq 'OH'"/>
 		<option name="HGC" 		               />
@@ -3341,13 +3341,9 @@ Default for DnRefine is -1, i.e. no run time refinement.
 			<option name="curl B"		value="curlB/curlb"  />
 			<option name="div U"		value="divu"	     />
 			<option name="divB"		value="divb"	     />
-			<option name="Alfven speed"	value="valfven" />
-			<option name="heliospheric beta" value="heliobeta"   />
-			<option name="flux"				     />
-			<option name="heliospheric current sheet"
-						 value="heliocurrentsheet"   />
 			<option name="rCurrents" value="rcurrents"	     />
 			<option name="Transient" value="transient" />
+			<option name="User defined" value="user" />
 		</parameter>
 		<if expr="$TypeRefine =~ /transient/">
 			<parameter name="TypeTransient" type="string"
@@ -3402,11 +3398,8 @@ then the criteria can be chosen from the following list:
   'curlB'		- magnitude of current
   'divU', 'divV'	- divergence of velocity
   'divB'		- div B
-  'vAlfven','Valfven'	- Alfven speed
-  'heliobeta' 		- special function for heliosphere $R^2 B^2/rho$
-  'flux'		- radial mass flux
-  'heliocurrentsheet'	- refinement in the currentsheet of the heliosphere
   'Rcurrents'		- refinement near Rcurrents value
+  'user'                - criteria defined in the user module
 \end{verbatim}
 All the names can also be spelled with all small case letters.\\
 
