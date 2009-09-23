@@ -158,7 +158,7 @@ gamma
 
 #STOP
 -1			MaxIteration
-2.0e-8			tSimulationMax
+2.110038e-8		tSimulationMax
 
 End session: 1
 

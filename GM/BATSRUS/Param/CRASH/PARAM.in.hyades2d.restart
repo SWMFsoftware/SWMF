@@ -101,13 +101,13 @@ nanosecond		NameMaxTimeUnit
 1			nPlotfile
 z=0 VAR idl		PlotString
 -1                      DnSavePlot
-1.0e-9                  DtSavePlot
+2.10038e-9              DtSavePlot
 0.0			DxSavePlot
 rho ux uy uz Eint p Xe Be Pl level tekev trkev planck ross
 gamma
 
 #STOP
 -1			MaxIteration
-2.0e-9			 tSimulationMax
+3.10038e-9		tSimulationMax
 
 #END

@@ -169,7 +169,7 @@ gamma
 
 #STOP
 -1			MaxIteration
-1.0e-9                  tSimulationMax
+2.10038e-9              tSimulationMax
 
 #END
 
@@ -177,6 +177,6 @@ gamma
 
 #STOP
 -1			MaxIteration
-2.0e-9			 tSimulationMax
+3.10038e-9		tSimulationMax
 
 #END

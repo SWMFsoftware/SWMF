@@ -323,9 +323,7 @@ contains
     iBlock = GlobalBlk
 
     if(UseHyadesFile)then
-       ! Read in and interpolate Hyades output
-       if(.not.allocated(DataHyades_VC)) call read_hyades_file
-
+       ! interpolate Hyades output
        if(nDimHyades == 1)then
           call interpolate_hyades1d(iBlock)
        else
@@ -528,53 +526,47 @@ contains
     use ModIoUnit,    ONLY: UnitTmp_
     use ModPhysics,   ONLY: Si2No_V, Io2No_V, UnitX_, UnitRho_, UnitU_, &
          UnitP_, UnitTemperature_
+    use ModPlotFile,  ONLY: read_plot_file
     use ModUtilities, ONLY: split_string
     use CRASH_ModEos, ONLY: Xe_, Be_, Plastic_
     use ModConst,     ONLY: cKevToK
-    use ModMain,      ONLY: UseRadDiffusion
+    use ModMain,      ONLY: UseRadDiffusion, Time_Simulation
 
-    integer             :: nStepHyades, nEqparHyades
-    integer, allocatable:: nCellHyades_D(:)
+    integer:: nCellHyades_D(3)
     real                :: TimeHyades
-    real, allocatable   :: EqparHyades_I(:), Hyades2No_V(:)
-    character(len=100)  :: StringHeadHyades, NameVarHyades
+    real, allocatable   :: Hyades2No_V(:)
+    character(len=100)  :: NameVarHyades
 
-    ! Variables for reading in variable names
+    ! Variables for variable names
     integer, parameter:: MaxString = 20
     character(len=10) :: String_I(MaxString)
     integer           :: nString
 
+    ! Variables for reading in coordinates and variables
+    real, allocatable:: Coord_I(:), Var_VI(:,:)          ! 1D
+    real, allocatable:: Coord_DII(:,:,:), Var_VII(:,:,:) ! 2D
+
     ! Variables for setting level set functions
-    integer :: iError, i, iCell, iMaterial, jMaterial
+    integer :: i, j, iCell, iMaterial, jMaterial
     real    :: x, r
     integer, allocatable:: iMaterial_C(:)
     real,    allocatable:: Distance2_C(:)
 
     character(len=*), parameter :: NameSub = "ModUser::read_hyades_file"
     !-------------------------------------------------------------------------
-    open(UnitTmp_, FILE=NameHyadesFile, STATUS="old", IOSTAT=iError)
 
-    if(iError /= 0)call stop_mpi(NameSub // &
-         " could not open Hyades file="//NameHyadesFile)
+    nCellHyades_D = 1
+    call read_plot_file(NameHyadesFile, &
+         TimeOut = TimeHyades, nDimOut = nDimHyades, nVarOut = nVarHyades, &
+         nOut_D = nCellHyades_D, NameVarOut = NameVarHyades)
 
-    read(UnitTmp_, "(a)") StringHeadHyades
-    read(UnitTmp_, *) &
-         nStepHyades, TimeHyades, nDimHyades, nEqparHyades, nVarHyades
+    ! reset simulation time to HYADES time
+    Time_Simulation = TimeHyades
 
-    ! Ignore negative value (signaling distorted grid)
-    nDimHyades = abs(nDimHyades)
-
-    ! Read grid size
-    allocate(nCellHyades_D(nDimHyades))
-    read(UnitTmp_,*) nCellHyades_D
+    ! total number of cells
     nCellHyades = product(nCellHyades_D)
 
-    ! Read equation parameters
-    allocate(EqparHyades_I(nEqparHyades))
-    read(UnitTmp_,*) EqparHyades_I
-
-    ! Read coordinate, variable and eqpar names
-    read(UnitTmp_, "(a)") NameVarHyades
+    ! extract coordinate, variable and eqpar names
     call split_string(NameVarHyades, MaxString, String_I, nString)
 
     ! Find the columns for the coordinates and variables
@@ -665,13 +657,39 @@ contains
 
     ! Read in the data
     allocate(DataHyades_VC(nDimHyades + nVarHyades, nCellHyades))
-    do iCell = 1, nCellHyades
-       read(UnitTmp_, *) DataHyades_VC(:, iCell)
-       ! Convert from CGS to normalized units
-       DataHyades_VC(:, iCell) = DataHyades_VC(:, iCell) * Hyades2No_V
-    end do
-    close(UnitTmp_)
+    select case(nDimHyades)
+    case(1)
+       allocate(Coord_I(nCellHyades_D(1)), Var_VI(nVarHyades,nCellHyades_D(1)))
 
+       call read_plot_file(NameHyadesFile, &
+            CoordOut_I = Coord_I, VarOut_VI = Var_VI)
+
+       ! Convert from CGS to normalized units and store in DataHyades_VC
+       do iCell = 1, nCellHyades_D(1)
+          DataHyades_VC(1,iCell)  = Coord_I(iCell)*Hyades2No_V(1)
+          DataHyades_VC(2:,iCell) = Var_VI(:,iCell)*Hyades2No_V(2:)
+       end do
+
+       deallocate(Coord_I, Var_VI)
+
+    case(2)
+       allocate(Coord_DII(nDimHyades,nCellHyades_D(1),nCellHyades_D(2)), &
+            Var_VII(nVarHyades,nCellHyades_D(1),nCellHyades_D(2)) )
+
+       call read_plot_file(NameHyadesFile, &
+            CoordOut_DII = Coord_DII, VarOut_VII = Var_VII)
+
+       ! Convert from CGS to normalized units and store in DataHyades_VC
+       iCell = 0
+       do j = 1, nCellHyades_D(2); do i = 1, nCellHyades_D(1)
+          iCell = iCell + 1
+          DataHyades_VC(:2,iCell) = Coord_DII(:,i,j)*Hyades2No_V(:2)
+          DataHyades_VC(3:,iCell) = Var_VII(:,i,j)*Hyades2No_V(3:)
+       end do; end do
+
+       deallocate(Coord_DII, Var_VII)
+    end select
+       
     if(iMaterialHyades > 0)then
        ! Convert material indexes to the 3 values used in CRASH
        ! Gold (3), Acrylic (4), Vacuum (5) --> Polyimid
@@ -751,8 +769,6 @@ contains
           deallocate(Distance2_C, iMaterial_C)
        end if
     end if
-
-    deallocate(EqparHyades_I)
 
   end subroutine read_hyades_file
 
@@ -1321,6 +1337,11 @@ contains
     use CRASH_ModMultiGroup, ONLY: set_multigroup
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
+
+    if(UseHyadesFile)then
+       ! Read in and interpolate Hyades output
+       if(.not.allocated(DataHyades_VC)) call read_hyades_file
+    end if
 
     if(UseUserSource)then
        UnitUser_V(LevelXe_:LevelPl_) = 1.e-6 ! = No2Io_V(UnitX_) = micron
