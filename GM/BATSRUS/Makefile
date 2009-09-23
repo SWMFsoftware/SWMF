@@ -2,7 +2,7 @@
 # List the default target first for stand alone mode
 #
 DEFAULT_TARGET = BATSRUS
-DEFAULT_EXE    = BATSRUS.exe
+DEFAULT_EXE    = ${DEFAULT_TARGET}.exe
 
 default : ${DEFAULT_TARGET}
 
