@@ -828,13 +828,14 @@ contains
 
   subroutine interpolate_hyades1d(iBlock)
 
-    use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
+    use ModSize,       ONLY: nI, nJ, nK
+    use ModAdvance,    ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          Erad_, UseElectronEnergy, Ee_
-    use ModGeometry, ONLY: x_BLK
-    use ModPhysics,  ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
+    use ModGeometry,   ONLY: x_BLK
+    use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
          UnitP_, UnitN_, cRadiationNo, UnitEnergyDens_, inv_gm1
-    use ModMain,     ONLY: UseRadDiffusion
+    use ModMain,       ONLY: UseRadDiffusion
+    use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_
 
     integer, intent(in) :: iBlock
 
@@ -900,12 +901,22 @@ contains
           ! Set transverse momentum to zero
           State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = 0.0
 
-          ! Radiation energy = cRadiation*Trad**4
           if(UseRadDiffusion)then
-             Tr = ( Weight1*DataHyades_VC(iTrHyades, iCell-1) &
-                  + Weight2*DataHyades_VC(iTrHyades, iCell) )
+             if(UseHyadesGroupFile)then
+                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
+                     ( Weight1*EradHyades_VC(:,iCell-1) &
+                     + Weight2*EradHyades_VC(:,iCell) )
+             else
+                ! Radiation energy = cRadiation*Trad**4
+                if(nWave == 1)then
+                   Tr = ( Weight1*DataHyades_VC(iTrHyades, iCell-1) &
+                        + Weight2*DataHyades_VC(iTrHyades, iCell) )
 
-             State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Tr**4
+                   State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Tr**4
+                else
+                   call stop_mpi(NameSub//' Need HYADES multi-group file')
+                end if
+             end if
           end if
 
        end do; end do
@@ -919,14 +930,15 @@ contains
 
     ! Use Delaunay triangulation to interpolate Hyades grid onto CRASH grid
 
-    use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
+    use ModSize,        ONLY: nI, nJ, nK
+    use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          LevelXe_, LevelPl_, Erad_, UseElectronEnergy, Ee_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, y2
     use ModTriangulate, ONLY: calc_triangulation, find_triangle
     use ModMain,        ONLY: UseRadDiffusion
     use ModPhysics,     ONLY: cRadiationNo, No2Si_V, Si2No_V, &
          UnitTemperature_, UnitN_, UnitP_, UnitEnergyDens_, inv_gm1
+    use ModVarIndexes,  ONLY: nWave, WaveFirst_, WaveLast_
 
     integer, intent(in) :: iBlock
 
@@ -934,6 +946,7 @@ contains
     integer, allocatable, save :: iNodeTriangle_II(:,:)
     real, allocatable,    save :: DataHyades_V(:)
     real                       :: LevelHyades_V(0:nMaterial-1)
+    real                       :: EradHyades_V(nWave)
 
     integer :: i, j, k, iNode1, iNode2, iNode3
     real    :: x, y, z, r, Weight1, Weight2, Weight3
@@ -1033,6 +1046,14 @@ contains
                WeightNode_I(1)*LevelHyades_VC(:, iNode1) + &
                WeightNode_I(2)*LevelHyades_VC(:, iNode2) + &
                WeightNode_I(3)*LevelHyades_VC(:, iNode3)
+
+          if(UseHyadesGroupFile)then
+             EradHyades_V = &
+                  WeightNode_I(1)*EradHyades_VC(:,iNode1) + &
+                  WeightNode_I(2)*EradHyades_VC(:,iNode2) + &
+                  WeightNode_I(3)*EradHyades_VC(:,iNode3)
+          end if
+                  
        end if
 
        ! Interpolate density, momentum and pressure
@@ -1064,9 +1085,19 @@ contains
        ! Interpolate level set functions
        State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = LevelHyades_V
 
-       ! Radiation energy = cRadiation*Trad**4
-       if(UseRadDiffusion) State_VGB(Erad_,i,j,k,iBlock) = &
-            cRadiationNo * DataHyades_V(iTrHyades)**4
+       if(UseRadDiffusion)then
+          if(UseHyadesGroupFile)then
+             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = EradHyades_V
+          else
+             ! Radiation energy = cRadiation*Trad**4
+             if(nWave == 1)then
+                State_VGB(Erad_,i,j,k,iBlock) = &
+                     cRadiationNo * DataHyades_V(iTrHyades)**4
+             else
+                call stop_mpi(NameSub//' Need HYADES multi-group file')
+             end if
+          end if
+       end if
 
     end do; end do; end do
 
