@@ -36,8 +36,17 @@ module CRASH_ModPartition
   !The combination of fundamental constants, used to calculate the electron
   !statistical weight: electron statistical weight at the temperature of 1eV
   !and the conscentration of 1 particle per m^3
-  real :: eWight1eV1m3           ! 2/(Lambda^3)
+  ! eWeight1eV1m3 = 2/(Lambda^3)
+  ! where 1/Lambda = sqrt(cTwoPi * (cElectronMass/cPlanckH) * (cEV/cPlanckH)),
+  ! so that
+  ! 1/Lambda * sqrt(cBoltzmann/cEV * T)/Ne**(1/3) would be the inverse of
+  ! the DeBroigle wavelength         
+  !\
+  ! Numerical value: eWeight = 6.0372842638557644E+27 [1/(m^3eV^{3/2})]   
+  !                1/eWeight = 1.6563738864953516E-28 [m^3eV^{3/2}]
+  !/
 
+  real :: eWeight1eV1m3  
 
   !Input parameters (note though that the temperature may be not
   !directly assigned and should be found from the internal energy 
@@ -164,8 +173,8 @@ Contains
     DeBroglieInv = sqrt(cTwoPi * (cElectronMass/cPlanckH) * (cEV/cPlanckH)) 
     !*sqrt(cBoltzmann/cEV * T) - temperature in eV
 
-    eWight1eV1m3 = 2*DeBroglieInv**3 ! 2/(Lambda^3)
-
+    eWeight1eV1m3 = 2*DeBroglieInv**3 ! 2/(Lambda^3)
+   
     if(UseFermiGas) call init_Fermi_function
 
     DoInit=.false.
@@ -324,7 +333,7 @@ Contains
     end if
 
     TeInv = cOne / TeIn        ! 1/kT; units: [1/eV]
-    lnC1  = log( eWight1eV1m3  * sqrt(TeIn)*TeIn / Na)
+    lnC1  = log( eWeight1eV1m3  * sqrt(TeIn)*TeIn / Na)
 
     call set_Z
     call set_averages_and_deviators(DoZOnly=.false.)
