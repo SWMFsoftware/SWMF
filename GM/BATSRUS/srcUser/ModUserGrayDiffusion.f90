@@ -9,7 +9,8 @@ module ModUser
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_material_properties,        &
        IMPLEMENTED7 => user_update_states,              &
-       IMPLEMENTED8 => user_set_outerbcs
+       IMPLEMENTED8 => user_set_outerbcs,               &
+       IMPLEMENTED9 => user_amr_criteria
 
   include 'user_module.h' !list of public methods
 
@@ -570,5 +571,62 @@ contains
     if(present(TeTiRelaxSiOut)) TeTiRelaxSiOut = 0.0
 
   end subroutine user_material_properties
+
+  !============================================================================
+
+  subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
+
+    use ModSize,       ONLY: nI, nJ, nK
+    use ModAdvance,    ONLY: State_VGB, Rho_, p_
+    use ModAMR,        ONLY: RefineCritMin_I, CoarsenCritMax
+    use ModGeometry,   ONLY: y_Blk, Dy_BLK, Dx_BLK
+    use ModPhysics,    ONLY: cRadiationNo
+    use ModVarIndexes, ONLY: Rho_, p_, Erad_
+
+    ! Variables required by this user subroutine
+    integer, intent(in)          :: iBlock
+    real, intent(out)            :: UserCriteria
+    character (len=*),intent(in) :: TypeCriteria
+    logical ,intent(inout)       :: IsFound
+
+    real, parameter:: TemperatureMin = 5.2, DTradDxMin = 1e3
+    real:: Temperature, DTradDx, TradL, TradR
+    integer:: i, j, k
+    !--------------------------------------------------------------------------
+
+    ! Location of sound wave edges and the tangential discontinuity
+
+    UserCriteria = 0.0
+
+    ! capture the embedded hydro shock
+    LOOPCELL: do k = -1, nK+2; do j=-1, nJ+2; do i = -1, nI+2
+       Temperature = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+       if(Temperature > TemperatureMin  &
+            .and. abs(y_Blk(i,j,k,iBlock)) < Dy_BLK(iBlock))then
+          UserCriteria = 1.0
+          EXIT LOOPCELL
+       end if
+    end do; end do; end do LOOPCELL
+
+    ! capture the precursor
+    LOOPCELL2: do k = -1, nK+2; do j=-1, nJ+2; do i = 0, nI+1
+       TradL = sqrt(sqrt(State_VGB(Erad_,i-1,j,k,iBlock)/cRadiationNo))
+       TradR = sqrt(sqrt(State_VGB(Erad_,i+1,j,k,iBlock)/cRadiationNo))
+       DTradDx = (TradR - TradL)*0.5/Dx_Blk(iBlock)
+       if(DTradDx > DTradDxMin &
+            .and. abs(y_Blk(i,j,k,iBlock)) < Dy_BLK(iBlock))then
+          UserCriteria = 1.0
+          EXIT LOOPCELL2
+       end if
+    end do; end do; end do LOOPCELL2
+
+    ! Do not refine blocks far from discontinuity (crit=0.0)
+    ! Do not coarsen blocks near discontinuity    (crit=1.0)
+    RefineCritMin_I = 0.5
+    CoarsenCritMax  = 0.5
+
+    IsFound = .true.
+
+  end subroutine user_amr_criteria
 
 end module ModUser
