@@ -538,9 +538,11 @@ contains
     use ModPlotFile,   ONLY: read_plot_file
     use ModUtilities,  ONLY: split_string
     use CRASH_ModEos,  ONLY: Xe_, Be_, Plastic_
-    use ModConst,      ONLY: cKevToK, cKev
+    use ModConst,      ONLY: cKevToK, cHPlanckEV
     use ModMain,       ONLY: UseRadDiffusion, Time_Simulation
     use ModVarIndexes, ONLY: nWave
+    use ModWaves,      ONLY: FreqMinSi, FreqMaxSi
+
     integer:: nCellHyades_D(3)
     real                :: TimeHyades
     real, allocatable   :: Hyades2No_V(:)
@@ -562,8 +564,9 @@ contains
 
     ! variables for HYADES multi-group
     integer, parameter :: nGroupMax = 100
-    integer :: nGroupHyades, iGroup
+    integer :: nGroupHyades, nGroup
     real :: EnergyGroupHyades_I(0:nGroupMax) ! Photon energy
+    real :: DeltaLogEnergy
 
     character(len=*), parameter :: NameSub = "ModUser::read_hyades_file"
     !-------------------------------------------------------------------------
@@ -774,32 +777,50 @@ contains
     call read_plot_file(NameHyadesGroupFile, nVarOut = nGroupHyades, &
          ParamOut_I = EnergyGroupHyades_I)
 
-    ! find maximum group index for which EnergyGroupHyades_I(iGroup)< 1 keV
-    do iGroup = 1, nGroupHyades
-       if(EnergyGroupHyades_I(iGroup) > cKev) EXIT
+    ! Truncate the number of group supplied by HYADES:
+    ! find maximum group index for which EnergyGroupHyades_I(nGroup)< 1 keV
+    ! The unit of the HYADES group bounds is keV
+    do nGroup = 1, nGroupHyades
+       if(EnergyGroupHyades_I(nGroup) > 1.0) EXIT
     end do
-    iGroup = iGroup - 1
+    nGroup = nGroup - 1
 
-    if(iGroup /= nWave)then
-       write(*,*)NameSub, 'nWave should be reset to', iGroup
+    if(nGroup /= nWave)then
+       write(*,*)NameSub, 'nWave should be reset to ', nGroup
        call stop_mpi(NameSub//' reconfigure and recompile !')
     end if
 
+    if(nWave <= 1) call stop_mpi(NameSub//' nWave should be at least 2')
+
     ! Read in the data
     ! The HYADES file contains monochromatic radiation energy density
-    allocate(EradHyades_VC(nWave,nCellHyades), &
+    allocate(EradHyades_VC(nGroup,nCellHyades), &
          Var_VI(nGroupHyades,nCellHyades) )
 
     call read_plot_file(NameHyadesGroupFile, VarOut_VI = Var_VI)
 
+    ! Convert from monochromatic radiation energy density to
+    ! radiation energy density.
     ! Convert from CGS to normalized units and store in EradHyades_VC
     do iCell = 1, nCellHyades
-       EradHyades_VC(:,iCell) = Var_VI(1:nWave,iCell) &
-            *(EnergyGroupHyades_I(1:nWave) - EnergyGroupHyades_I(0:nWave-1)) &
+       EradHyades_VC(:,iCell) = Var_VI(1:nGroup,iCell) &
+            *(EnergyGroupHyades_I(1:nGroup) - EnergyGroupHyades_I(0:nGroup-1))&
             *0.1*Si2No_V(UnitEnergyDens_)   ! erg/cm^3 -> J/m^3
     end do
 
     deallocate(Var_VI)
+
+    ! Reset the minimum group energy (minimum group energy of HYADES does
+    ! not follow a logarithmic scale)
+    DeltaLogEnergy = &
+         (log(EnergyGroupHyades_I(nGroup)) - log(EnergyGroupHyades_I(1))) &
+         /(nGroup - 1)
+    EnergyGroupHyades_I(0) = &
+         exp(log(EnergyGroupHyades_I(nGroup)) - DeltaLogEnergy*nGroup)
+
+    ! convert minimum and maximum photon energy in keV to frequencies in Herz
+    FreqMinSi = EnergyGroupHyades_I(0)*1e3/cHPlanckEV
+    FreqMaxSi = EnergyGroupHyades_I(nGroup)*1e3/cHPlanckEV
 
   end subroutine read_hyades_file
 
