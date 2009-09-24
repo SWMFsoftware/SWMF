@@ -2010,9 +2010,10 @@ contains
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
     use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, LevelBe_, LevelXe_, LevelPl_, Rho_
+    use ModAdvance,  ONLY: State_VGB, LevelBe_, LevelXe_, LevelPl_, &
+         Rho_, RhoUx_
     use ModAMR,      ONLY: RefineCritMin_I, CoarsenCritMax
-    use ModPhysics,  ONLY: Io2No_V, UnitRho_
+    use ModPhysics,  ONLY: Io2No_V, UnitRho_, UnitU_
 
     ! Variables required by this user subroutine
     integer, intent(in)          :: iBlock
@@ -2020,21 +2021,25 @@ contains
     character (len=*),intent(in) :: TypeCriteria
     logical ,intent(inout)       :: IsFound
 
-    real, parameter:: RhoMinAmrDim = 20.0
+    real, parameter:: RhoMinAmrDim = 20.0 ! 20kg/m3
+    real, parameter:: UxMinAmrDim  = 10e3 ! 10km/s
 
-    real :: RhoMin
+    real :: RhoMin, UxMin
     integer:: i, j, k
     !------------------------------------------------------------------
 
     ! Location of sound wave edges and the tangential discontinuity
 
     RhoMin = RhoMinAmrDim*Io2No_V(UnitRho_)
+    UxMin  = UxMinAmrDim*Io2No_V(UnitU_)
 
     UserCriteria = 0.0
     LOOPCELL: do k = -1, nK+2; do j=-1, nJ+2; do i = -1, nI+2
        if(State_VGB(LevelXe_,i,j,k,iBlock) > &
             maxval(State_VGB(LevelBe_:LevelPl_,i,j,k,iBlock)) &
-            .and. State_VGB(Rho_,i,j,k,iBlock) > RhoMin)then
+            .and. State_VGB(Rho_,i,j,k,iBlock) > RhoMin &
+            .and. State_VGB(RhoUx_,i,j,k,iBlock) > &
+            UxMin*State_VGB(Rho_,i,j,k,iBlock))then
           UserCriteria = 1.0
           EXIT LOOPCELL
        end if
