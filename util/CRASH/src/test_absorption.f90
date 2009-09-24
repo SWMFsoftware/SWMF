@@ -76,8 +76,8 @@ program abs
   UsePreviousTe = .false.
 
   DoNotAddLineCore = .false.
-  UseBremsstrahlung = .false.
-  UsePhotoionization = .false.
+  UseBremsstrahlung = .true.
+  UsePhotoionization = .true.
  
   UseCoulombCorrection = .true.
   call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
@@ -90,7 +90,7 @@ program abs
      end do
   end do
   close(unit)
-  call set_multigroup(100, 0.1/cHPlanckEV, 1000.0/cHPlanckEV)
+  call set_multigroup(100, 1.0/cHPlanckEV, 10000.0/cHPlanckEV)
   call meshhv
   call abscon
   
@@ -98,14 +98,14 @@ program abs
   write(unit,'(a,i6,a)') &
        'Photon energy [eV]  Absorbtion Coeff cm-1, in ',nPhoton,' points' 
   do iPlot = 1, nPhoton
-     if(PhotonEnergy_I(iPlot)< 0.01*Te.or.PhotonEnergy_I(iPlot)>100.0*Te)&
+     if(PhotonEnergy_I(iPlot)< 0.1*Te.or.PhotonEnergy_I(iPlot)>1000.0*Te)&
           CYCLE
      write(unit,*)log10(PhotonEnergy_I(iPlot)),&
           log10(AbsorptionCoefficient_I(iPlot))
   end do
   close(unit)
   open(unit,file='.dat')
-  write(*,*)'nGroup=',nGroup
+ 
   TSI = 1.0e5   !\approx 9 eV
   open(unit,file='conversion_report.txt') 
   write(unit,*)'TSI=', TSI, '  Total Radiation=',cRadiation * TSI**4, '  Total specific heat=', 4*cRadiation * TSI**3
