@@ -1157,7 +1157,7 @@ contains
           rConv = log10(6.96) + 10.0
 
           ! calculates response function normalization (10 ^ an exponent)
-          Aux = 10.0**(2.0*LogNe + log10(Ds) + rConv - 26.0)
+          Aux = 10.0**(2.0*LogNe + rConv - 26.0)
 
           if (UseEUV) then
              ! now interpolate EUV response values from a lookup table
