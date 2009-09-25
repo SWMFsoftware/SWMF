@@ -2556,7 +2556,7 @@ contains
     !========================================================================
     subroutine get_hd_speed
 
-      use ModAdvance, ONLY: UseElectronEnergy
+      use ModAdvance, ONLY: UseElectronEnergy, State_VGB
       use ModPhysics, ONLY: g
 
       real :: InvRho, Sound2, Sound, Un
@@ -2570,23 +2570,37 @@ contains
       InvRho = 1.0/State_V(iRho)
       Sound2 = g*State_V(iP)*InvRho
 
-      if(Sound2 < 0.0)then
+      if(UseWavePressure) &
+           Sound2 = Sound2 + GammaWave* (GammaWave-1.0) * &
+           sum(State_V(WaveFirst_:WaveLast_)) * InvRho
+      if(UseElectronEnergy) Sound2 = Sound2 + g*(g - 1)*State_V(Ee_)*InvRho
+
+      if(Sound2 <= 0.0)then
          write(*,*)NameSub,' negative Sound2=',Sound2
-         write(*,*)NameSub,' iFluid, rho, p =',iFluid, State_V(iRho), State_V(iP)
+         write(*,*)NameSub,' iFluid, rho, p(face) =', &
+              iFluid, State_V(iRho), State_V(iP)
+
+         if(UseWavePressure)write(*,*)NameSub,' GammaWave, State(Waves):',&
+              GammaWave, State_V(WaveFirst_:WaveLast_)
+
+         if(UseElectronEnergy)write(*,*)NameSub,' g,State_V(Ee_)=',&
+              g,State_V(Ee_)
+
+         write(*,*)NameSub,' rho, p(left) =', &
+              State_VGB( (/Rho_,p_/),iLeft,jLeft,kLeft,iBlockFace)
+         write(*,*)NameSub,' rho, p(right)=', &
+              State_VGB( (/Rho_,p_/),iRight,jRight,kRight,iBlockFace)
+
+
          write(*,*)NameSub,' idim,i,j,k,BlockFace,iProc=', &
               iDimFace, iFace, jFace, kFace, iBlockFace, iProc
-         write(*,*)NameSub,' xyzLeft=', &
+         write(*,*)NameSub,' xyz(right)=', &
               x_BLK(iFace,jFace,kFace,iBlockFace), &
               y_BLK(iFace,jFace,kFace,iBlockFace), &
               z_BLK(iFace,jFace,kFace,iBlockFace)
          call stop_mpi(NameSub//' negative soundspeed squared')
       end if
 
-      if(UseWavePressure) &
-           Sound2 = Sound2 + GammaWave* (GammaWave-1.0) * &
-           sum(State_V(WaveFirst_:WaveLast_)) * InvRho
-      if(UseElectronEnergy) Sound2 = Sound2 + g*(g - 1)*State_V(Ee_)*InvRho
-      
       Sound = sqrt(Sound2)
       Un    = sum(State_V(iUx:iUz)*Normal_D)
 
