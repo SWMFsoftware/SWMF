@@ -565,7 +565,9 @@ contains
     ! variables for HYADES multi-group
     integer, parameter :: nGroupMax = 100
     integer :: nGroupHyades, nGroup
-    real :: EnergyGroupHyades_I(0:nGroupMax) ! Photon energy
+    integer :: iGroup, iGroupFirst, iGroupLast
+    real :: EnergyGroupHyades_I(0:nGroupMax) ! Photon energy (unit of keV)
+    real :: EnergyGroupMin, EnergyGroupMax   ! unit of keV
     real :: DeltaLogEnergy
 
     character(len=*), parameter :: NameSub = "ModUser::read_hyades_file"
@@ -777,50 +779,75 @@ contains
     call read_plot_file(NameHyadesGroupFile, nVarOut = nGroupHyades, &
          ParamOut_I = EnergyGroupHyades_I)
 
-    ! Truncate the number of group supplied by HYADES:
-    ! find maximum group index for which EnergyGroupHyades_I(nGroup)< 1 keV
-    ! The unit of the HYADES group bounds is keV
-    do nGroup = 1, nGroupHyades
-       if(EnergyGroupHyades_I(nGroup) > 1.0) EXIT
+    ! Read in the data
+    ! The HYADES file contains monochromatic radiation energy density
+    allocate(Var_VI(nGroupHyades,nCellHyades))
+
+    call read_plot_file(NameHyadesGroupFile, VarOut_VI = Var_VI)
+
+    ! Convert the monochromatic radiation energy density to
+    ! radiation energy density and convert from CGS to normalized units
+    do iCell = 1, nCellHyades
+       Var_VI(:,iCell) = Var_VI(:,iCell) &
+            *(EnergyGroupHyades_I(1:nGroupHyades) &
+            - EnergyGroupHyades_I(0:nGroupHyades-1)) &
+            *0.1*Si2No_V(UnitEnergyDens_)   ! erg/cm^3 -> J/m^3
     end do
-    nGroup = nGroup - 1
+
+    ! Based on FreqMinSi and FreqMaxSi determine which Hyades groups
+    ! are to be used.
+    ! Initial minimum and maximum photon energy is in keV
+    EnergyGroupMin = FreqMinSi*cHPlanckEV*1e-3
+    EnergyGroupMax = FreqMaxSi*cHPlanckEV*1e-3
+
+    ! Reset the minimum group energy (minimum group energy of HYADES does
+    ! not follow a logarithmic scale)
+    DeltaLogEnergy = &
+         (log(EnergyGroupHyades_I(nGroupHyades))-log(EnergyGroupHyades_I(1))) &
+         /(nGroupHyades - 1)
+    EnergyGroupHyades_I(0) = &
+         exp(log(EnergyGroupHyades_I(nGroupHyades)) &
+         -   DeltaLogEnergy*nGroupHyades)
+
+    ! Truncate the number of groups supplied by HYADES depending
+    ! on the user supplied FreqMaxSi.
+    ! Find maximum group index for which EnergyGroupHyades_I(nGroup)
+    ! < EnergyGroupMax (units of keV)
+    do iGroup = 1, nGroupHyades
+       if(EnergyGroupHyades_I(iGroup) > EnergyGroupMax)then
+          iGroupLast = iGroup - 1
+          EXIT
+       end if
+       iGroupLast = iGroup
+    end do
+
+    ! Truncate from below according to FreqMinSi
+    do iGroup = iGroupLast, 1, -1
+       if(EnergyGroupHyades_I(iGroup-1) < EnergyGroupMin)then
+          iGroupFirst = iGroup + 1
+          EXIT
+       end if
+       iGroupFirst = iGroup
+    end do
+
+    nGroup = iGroupLast - iGroupFirst + 1
 
     if(nGroup /= nWave)then
        write(*,*)NameSub, 'nWave should be reset to ', nGroup
        call stop_mpi(NameSub//' reconfigure and recompile !')
     end if
 
-    if(nWave <= 1) call stop_mpi(NameSub//' nWave should be at least 2')
+    allocate(EradHyades_VC(nGroup,nCellHyades))
 
-    ! Read in the data
-    ! The HYADES file contains monochromatic radiation energy density
-    allocate(EradHyades_VC(nGroup,nCellHyades), &
-         Var_VI(nGroupHyades,nCellHyades) )
-
-    call read_plot_file(NameHyadesGroupFile, VarOut_VI = Var_VI)
-
-    ! Convert from monochromatic radiation energy density to
-    ! radiation energy density.
-    ! Convert from CGS to normalized units and store in EradHyades_VC
     do iCell = 1, nCellHyades
-       EradHyades_VC(:,iCell) = Var_VI(1:nGroup,iCell) &
-            *(EnergyGroupHyades_I(1:nGroup) - EnergyGroupHyades_I(0:nGroup-1))&
-            *0.1*Si2No_V(UnitEnergyDens_)   ! erg/cm^3 -> J/m^3
+       EradHyades_VC(:,iCell) = Var_VI(iGroupFirst:iGroupLast,iCell)
     end do
 
     deallocate(Var_VI)
 
-    ! Reset the minimum group energy (minimum group energy of HYADES does
-    ! not follow a logarithmic scale)
-    DeltaLogEnergy = &
-         (log(EnergyGroupHyades_I(nGroup)) - log(EnergyGroupHyades_I(1))) &
-         /(nGroup - 1)
-    EnergyGroupHyades_I(0) = &
-         exp(log(EnergyGroupHyades_I(nGroup)) - DeltaLogEnergy*nGroup)
-
     ! convert minimum and maximum photon energy in keV to frequencies in Herz
-    FreqMinSi = EnergyGroupHyades_I(0)*1e3/cHPlanckEV
-    FreqMaxSi = EnergyGroupHyades_I(nGroup)*1e3/cHPlanckEV
+    FreqMinSi = EnergyGroupHyades_I(iGroupFirst-1)*1e3/cHPlanckEV
+    FreqMaxSi = EnergyGroupHyades_I(iGroupLast)*1e3/cHPlanckEV
 
   end subroutine read_hyades_file
 
@@ -1421,10 +1448,27 @@ contains
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
 
-    if(UseHyadesFile)then
-       ! Read in and interpolate Hyades output
-       if(.not.allocated(DataHyades_VC)) call read_hyades_file
+    !\
+    !Set the photon energy range
+    !/
+    !First, check if the values of FreqMinSI and FreqSI are set:
+    
+    !If the frequency range IN HERZ has been alredy set, then skip
+    if(FreqMinSI <= 0) then
+       !Reset the minimum photon enrgy to be 0.1 eV
+       FreqMinSI = 0.1 /cHPlanckEV
     end if
+
+    if(FreqMaxSI <= 0) then
+       !Reset the maximum photon enrgy to be 1 keV
+       FreqMaxSI = 1000.0 /cHPlanckEV
+    end if
+
+    ! Read in Hyades output
+    if(UseHyadesFile) call read_hyades_file
+
+    !Now set the number of groups and the frequency range:
+    call set_multigroup(nWave, FreqMinSI, FreqMaxSI)
 
     if(UseUserSource)then
        UnitUser_V(LevelXe_:LevelPl_) = 1.e-6 ! = No2Io_V(UnitX_) = micron
@@ -1454,25 +1498,6 @@ contains
          call make_lookup_table(iTableEPerP, calc_table_value, iComm)
     if(iTableThermo > 0) &
          call make_lookup_table(iTableThermo, calc_table_value, iComm)
-    !\
-    !Set the photon energy range
-    !/
-    !First, check if the values of FreqMinSI and FreqSI are set:
-    
-    if(FreqMinSI <= 0) then
-       !Reset the minimum photon enrgy to be 0.1 eV
-       FreqMinSI = 0.1 /cHPlanckEV
-    end if
-
-    if(FreqMaxSI <= 0) then
-       !Reset the maximum photon enrgy to be 1 keV
-       FreqMaxSI = 1000.0 /cHPlanckEV
-    end if
-
-    !If the frequency range IN HERZ has been alredy set, the previous
-    !commands are skiped
-    !Now set the number of groups and the frequency range:
-    call set_multigroup(nWave, FreqMinSI, FreqMaxSI)
 
   end subroutine user_init_session
 
