@@ -44,6 +44,7 @@
   real :: EnergyGroup_I(0:nGroupMax)
   real :: DeltaLogFrequency
 
+  public:: read_excitation_parameters
   public:: get_energy_g_from_temperature, get_temperature_from_energy_g
 
 
@@ -101,6 +102,16 @@
   real           :: ERadMin = CRadiation * TRadMin**4
   real           :: TgMin_W( nGroupMax )
 contains
+  !============================================================================
+  subroutine read_excitation_parameters
+
+    use CRASH_ModAtomicDataMix, ONLY: UseExcitation
+    use ModReadParam, ONLY: read_var
+
+    !--------------------------------------------------------------------------
+    call read_var('UseExcitation', UseExcitation)
+
+  end subroutine read_excitation_parameters
   !======================================================================
   subroutine get_energy_g_from_temperature(iGroup, TgSIIn, EgSI, CgSI)
     !\

@@ -133,7 +133,8 @@ contains
   subroutine user_read_inputs
 
     use ModReadParam
-    use CRASH_ModEos,      ONLY: read_eos_parameters
+    use CRASH_ModEos,        ONLY: read_eos_parameters
+    use CRASH_ModMultiGroup, ONLY: read_excitation_parameters
     use ModGeometry, ONLY: TypeGeometry, UseCovariant
 
     logical :: IsCylindrical
@@ -185,6 +186,9 @@ contains
           end if
        case("#EOS")
           call read_eos_parameters
+
+       case("#EXCITATION")
+          call read_excitation_parameters
 
        case("#OPACITYSCALEFACTOR") ! UQ only
           call read_var('PlanckScaleFactorXe', PlanckScaleFactor_I(0))
