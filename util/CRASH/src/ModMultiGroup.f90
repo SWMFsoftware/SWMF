@@ -696,7 +696,7 @@ contains
     ! Cutoff energy for the photon with the frequency correspondent to
     ! the plasma electron frequency
     !/
-    !real :: HNuCut
+    real :: HNuCut
 
     !Misc: functions of the photon energy
     real :: ExpMinusHNuPerT,  PhotonEnergyCubed
