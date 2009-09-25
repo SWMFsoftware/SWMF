@@ -258,7 +258,7 @@ contains
   end function oscillator_strength
 
   !======================================================================
-  subroutine lines (ephot,abstot)       
+  subroutine lines (PhotonEnergy,AbsorptionBB)       
 
     !                                                                       
     ! ... compute the contribution to the absorption coefficient from       
@@ -268,16 +268,15 @@ contains
     !       Te      -  plasma temperature (eV)                             
     !       densnn  -  number density of all nuclei (cm**-3)               
     !       densne  -  electron density (cm**-3)                            
-    !       ephot   -  photon energy (eV)                                   
-    real,intent(in) :: ephot
+    !       PhotonEnergy   -  photon energy (eV)                                   
+    real,intent(in) :: PhotonEnergy
     real :: densnn,densne
     !                                                                       
     ! ... output variables:                                                 
-    !       abstot  -  absorption coefficient due to lines (cm**-1)         
-    !       emstot  -  emission coefficient due to lines (cm**-1)           
+    !       AbsorptionBB  -  absorption coefficient due to lines (cm**-1)                    
     !   
 
-    real,intent(out) :: absTot   !!$ ,emsTot                            
+    real,intent(out) :: AbsorptionBB                            
 
     integer:: iSav !Integer to count the total number of lines involved
     integer,parameter:: nSavMax = 200 !The upper bound for iSav
@@ -294,17 +293,28 @@ contains
 
     real:: denlq  !Density of ions of a given sort, [cm-3]
     real:: denlqn !The same, for the ion in the lower state, for a given transition
-    real:: dnlqnp !The same, for the ion in the upper state.
+
 
     !The controbutions to the total absorption,
     !calculated by the 'abslin' subroutine
-    real:: abscof  
+    real:: abscof
+
+    real:: TransitionEnergy
+    real:: gamma,avoigt,dnudop,vvoigt  !Line width parameters
+
+    !Difference between the line center and the photon energy, 
+    !for which to calculate the absorption
+
+    real:: DeltaNu 
+
+    !The line height at a given frequency (the line shape)
+    real:: Shape  
     !-------------------
 
 
     iSav = 0                                                          
-    abstot = 0.                                                       
-                         
+    AbsorptionBB = 0.                                                       
+
 
     DensNN = Na * 1.0e-6  !To convert to cm-3
     DensNe = DensNN * zAv !Electron density, in cm-3
@@ -337,284 +347,66 @@ contains
              !             in state "n"                                             
              denlqn = denlq * Partition_III(iN,iZ,iMix)                  
 
-             !         loop over final quantum states                           
-             do iNUpper=iN,nExcitation                                 
+             !         loop over final quantum states      
 
-                dnlqnp = denlq * Partition_III(iNUpper,iZ,iMix)                 
-                call abslin   
-                if ( abscof .ne. 0. ) then                            
-                   abstot = abstot + abscof                           
-                           
-                   isav = isav + 1                                    
-                   if ( isav==nSavMax ) then                            
-                      call CON_stop(' you are keeping track of too many lines') 
-                   endif
+             do iNUpper=iN+1,nExcitation                                 
+
+                TransitionEnergy = ExcitationEnergy_III(iNUpper,iZ,iMix) - ExcitationEnergy_III(iN,iZ,iMix)                  
+
+
+                ! ... compute the line widths for natural, Doppler, and pressure        
+                !     broadening to be used with Lorentzian line shape 
+
+                call line_width ( Te, densnn, TransitionEnergy, cAtomicMass_I(nZ_I(iMix)),  &                            
+                     gamma, avoigt, dnudop )        
+
+                ! ... compute this contribution if the photon energy is not far         
+                !     from the line center   
+
+                DeltaNu = ( TransitionEnergy - PhotonEnergy ) / cHPlanckEV                                  
+                if ( abs( deltaNu ) > con(5)*gamma ) then 
+                   !Line is too far, ignore it
+                   abscof = 0.                                                                                                       
+                   CYCLE
                 endif
+
+                ! ...    if the contribution from line "cores" will be added            
+                !        elsewhere (-opacbb-), then use the value at the                
+                !        line core boundary.                                            
+
+                if (DoNotAddLineCore .and. abs(DeltaNu).lt.con(6)*gamma ) then     
+                   DeltaNu = con(6)*gamma                                       
+                endif
+
+                if(UseVoigt)then
+                   ! ...       use Voigt profile                                           
+                   vvoigt = deltaNu / dnudop                                    
+                   shape = voigt_profile ( avoigt,vvoigt ) / dnudop / 1.7725           
+                else                                                           
+                   ! ...       use Lorentzian profile                                      
+                   shape = (gamma/39.48) / (DeltaNu**2 + (gamma/12.57)**2)      
+                endif
+
+
+
+                AbsorptionBB = AbsorptionBB + &
+                     
+                     2.65e-2 * oscillator_strength ( iN, iNUpper) * shape * denlqn    
+
+
+
+
              end do
           end do INLOOP
        end do IZLOOP
     end do IMIXLOOP
-  contains
-    !=============================================================
-    subroutine abslin   
-      ! ... computes the absorption coefficient from a particular            
-      !     bound-bound transition from quantum state "n" to "np".           
-      !                                                                      
-      ! ... input variables                                                  
-      !       Te      =  plasma temperature (eV)                              
-      !       densnn  =  number density of all nuclei (cm**-3)                
-      !       densne  =  electron density (cm**-3)                            
-      !       denlqn  =  number density of nuclei of the "l"th gas, in        
-      !                  the "q"th ionization state, with an electron in     
-      !                  the "n"th quantum state                             
-      !       dnlqnp  =  number density of nuclei of the "l"th gas, in       
-      !                  the "q"th ionization state, with an electron in     
-      !                  the "np"th quantum state                             
-      !       ephot   =  photon energy (eV)                                   
-      !       potiz   =  ionization potential for the ion in its ground      
-      !                  state (eV)                                          
-      !       atomwt  =  atomic weight of the ion (amu)                       
-      !       iN       =  initial principal quantum number for transition     
-      !       iNUpper  =  final principal quantum number                      
-      !       nprin0  =  principal quantum number of the valence electrons   
-      !                  in their ground state                              
-      !       nbound  =  number of electrons bound to the ion                
-      !       izgas   =  atomic number of the ion                           
-      !                                                                     
-      ! ... output variable                                                  
-      !       abscof  =  absorption coefficient (cm**-1)                     
-      !       emscof  =  emission coefficient (cm**-1)                       
 
-
-      real:: ennp !The transition energy
-      real:: gamma,avoigt,dnudop,vvoigt  !Line width parameters
-
-      !Difference between the line center and the photon energy, 
-      !for which to calculate the absorption
-
-      real:: DeltaNu 
-
-
-
-      !The oscillator strength
-      real :: OscillatorStrength
-
-      !The line height at a given frequency (the line shape)
-      real:: Shape
-
-      !The absorption coefficient, to be corrected for stimulated emission
-      real:: Alpha
-
-      !\
-      !Coefficients to account for stimulated emission
-      !/
-      real::corsea 
-      real::corrse
-
-      !Mics:
-      real::ex1
-
-      !Misc, are not used at the time
-      real:: fnn,gnn
-      !-------------------------
-
-
-
-      ! ... compute the transition energy                                     
-      if ( iN.eq.iNUpper ) then    
-         nBound = nZ_I(iMix) - iZ                                            
-         call bbneq0 (iZ,nbound, &                                
-              ennp,fnn,gnn )                 
-         ! ...    some transitions are not allowed                               
-         if ( ennp.le.0) then
-            abscof = 0.0
-            return
-         end if
-      else                                                              
-         ennp = ExcitationEnergy_III(iNUpper,iZ,iMix) - ExcitationEnergy_III(iN,iZ,iMix)                  
-      endif
-
-      ! ... compute the line widths for natural, Doppler, and pressure        
-      !     broadening to be used with Lorentzian line shape                  
-      call line_width ( Te,densnn,ennp,cAtomicMass_I(nZ_I(iMix)),  &                            
-           gamma,avoigt,dnudop )        
-
-      ! ... compute this contribution if the photon energy is not far         
-      !     from the line center                                              
-      DeltaNu = ( ennp-ephot ) / cHPlanckEV                                  
-      if ( abs( deltaNu ) > con(5)*gamma ) then 
-         !Line is too far, ignore it
-         abscof = 0.                                                                                                       
-         return
-      endif
-
-      ! ...    if the contribution from line "cores" will be added            
-      !        elsewhere (-opacbb-), then use the value at the                
-      !        line core boundary.                                            
-      if (DoNotAddLineCore .and. abs(DeltaNu).lt.con(6)*gamma ) then     
-         DeltaNu = con(6)*gamma                                       
-      endif
-
-      ! isw(14):Voigt or Lorentzian line profile (0=>V
-      ! if ( isw(14).eq.0 ) then     
-
-      if(UseVoigt)then
-         ! ...       use Voigt profile                                           
-         vvoigt = deltaNu / dnudop                                    
-         shape = voigt_profile ( avoigt,vvoigt ) / dnudop / 1.7725           
-      else                                                           
-         ! ...       use Lorentzian profile                                      
-         shape = (gamma/39.48) / (DeltaNu**2 + (gamma/12.57)**2)      
-      endif
-
-      !Commented out lines below are relevant to non-LTE
-      !case only
-
-      ex1 = exp( -ephot/Te )                                         
-                                           
-
-      if ( iN==iNUpper) then   
-                                         
-         call CON_stop('Inappropriate')
-
-         alpha = 2.65e-2 * fnn * shape * denlqn * ( 1.-ex1 )         
-
-                                                      
-         corsea = 1.0                                            
-         abscof = alpha * corsea                                     
-                                     
-
-      else                                                          
-
-         OscillatorStrength = oscillator_strength ( iN, iNUpper) 
-
-                         
-
-         ! ...       correct for stimulated emission  
-
-         corrse = 1.0 - ex1
-
-         alpha  = 2.65e-2 * OscillatorStrength * shape * denlqn                    
-         abscof = alpha * corrse   
-
-        
-
-      endif
-
-
-    end subroutine abslin
-    !===================
+    !Correct for stimulated emission)
+    AbsorptionBB = AbsorptionBB * (1.0 - exp( -PhotonEnergy/Te ))
+ 
+    !====================================
   end subroutine lines
-  !=============================================
-  subroutine bbneq0 (iZGas,nBound, enn,fnn,gnn )              
-
-    ! ... calculates the effective energy, oscillator strength, and         
-    !     gaunt factor for bound-bound transitions in which the             
-    !     principal quantum number does not change.  This approximation     
-    !     was taken from Post, et.al., Atomic & Nuclear Data Tables,       
-    !     vol. 20, p.397 (1977).                                            
-
-    ! ... input variables                                            
-    !       Te      -  plasma temperature (eV)                              
-    !       izgas   -  nuclear charge of the ion                            
-    !       nbound  -  number of electrons bound to the ion
-
-    integer,intent(in) :: iZGas !nZ
-    integer,intent(in) :: nBound
-
-    !                                                                       
-    ! ... output variable                                                   
-    !       enn  -  effective energy of the transition (eV)                 
-    !       fnn  -  effective oscillator strength                          
-    !       gnn  -  effective gaunt factor                                  
-
-    real, intent(out) :: enn, fnn, gnn
-
-    !       bbnton  -  constants for bound-bound transitions in which       
-    !                  the principal quantum number does not change         
-
-    ! ... parameters for bound-bound transitions when "delta n" = 0.      
-    !     these values are taken from Post, et.al., Atomic and Nuclear     
-    !     Data Tables, Vol. 20, p.397 (1977).                              
-
-    real,parameter:: bbnton(55,6) = reshape( (/&                                       
-         0.,  0.,-.02,-.01,-.04, .04,-.01,-.01, .01,  0., &           
-         .01, .10, .25, .17, .08,-.02,-.14,-.27,-.29,-.30, &           
-         -.30,-.29,-.27,-.24,-.20,-.14,-.08,  0., .97,1.96, &            
-         1.92,1.89,1.86,1.83,1.78,1.73,1.41,1.05, .67, .26, &          
-         -.17,-.64,-1.14,-1.67,-2.26,-2.88,-2.90,-2.83,-2.72,-2.61,&
-         -2.45,-2.27,-2.05,-1.81,-1.55,&
-         0.,  0.,2.00,4.33,4.68,3.60,2.85,2.40,1.30,  0., &  
-         10.5,20.0,16.4,24.7,34.1,44.8,56.8,70.3,68.6,65.8, & 
-         61.9,56.9,50.7,45.5,34.4,24.2,12.8,  0.,-25.8,-53.1,&  
-         -28.1,-2.97,23.0,50.3,79.1,109.,142.,176.,214.,257.,&         
-         300.,348.,401.,457.,518.,584.,572.,551.,525.,497.,  &          
-         463.,427.,385.,340.,291.,&
-         0.,  0.,2.04,4.49,6.80,8.16,6.80,10.6,13.1,  0.,  &         
-         2.30,3.88,5.71,5.44,8.16,6.80,8.30,4.32,5.11,6.04,  &         
-         7.08,8.12,9.69,11.3,13.7,14.9,17.1,  0.,.015,.019,  &         
-         .056,.120,.213,.334,.466,.666,.910,1.25,1.69,1.98,  &         
-         3.03,3.92,5.19,6.40,8.05,9.80,10.8,11.9,13.2,14.7,  &         
-         15.9,18.1,19.2,21.0,23.3, &
-         1.,  1., 1.0, .93, .86, .80, .87, .77, .77,  1.,  &         
-         .99, .90, .83, .87, .77, .82, .79,1.06,1.03,1.00,  &         
-         .07, .94, .91, .88, .85, .83, .80,  1.,2.46,2.40,  &         
-         2.14,1.96,1.83,1.72,1.64,1.57,1.49,1.41,1.34,1.30,  &         
-         1.19,1.13,1.06,1.01, .95, .91, .89, .87, .85, .83,  &         
-         .82, .80, .78, .76, .74, &
-         0.,  0., 1.2, .91, .89, .92, .86, .87, .85,  0.,  &         
-         .72, .78, .76, .78, .75, .70, .68, .65, .65, .70,  &         
-         .7,  .7,  .7,  .7,  .7,  .7,  .7,  .7,  .7,  .7,  &         
-         .7,  .7,  .7,  .7,  .7,  .7,  .7,  .7,  .7,  .7,  &         
-         .7,  .7,  .7,  .7,  .7,  .7,  .7,  .7,  .7,  .7,  &         
-         .7,  .7,  .7,  .7,  .7, & 
-         0.,  0., .54, .77, .58, .57, .41, .63, .66,  0.,  &         
-         .97, .96, .88, .86, .87, .85, .83, .81, .80, .80,  &         
-         .8,  .8,  .8,  .8,  .8,  .8,  .8,  .8,  .8,  .8,  &         
-         .8,  .8,  .8,  .8,  .8,  .8,  .8,  .8,  .8,  .8,  &        
-         .8,  .8,  .8,  .8,  .8,  .8,  .8,  .8,  .8,  .8,  &         
-         .8,  .8,  .8,  .8,  .8 /),(/55,6/))                                   
-
-    integer:: nb !Limited from above nBound
-    integer:: iZ 
-
-    !Misc
-    real :: c, ExpInt, xnn
-    !----------------------------------
-    if(.not.UseDeltaNEq0Transition)then
-       enn = -1.0
-       return
-    end if
-
-    iZ =izgas - nbound                                            
-    nb = min( nbound , 55 )                                           
-
-    fnn = bbnton(nb,1) + bbnton(nb,2) / izgas                         
-    enn = bbnton(nb,3) * (iZ+1)**bbnton(nb,4)                             
-
-    if ( enn .le. 0. ) return                                         
-
-    xnn = enn / Te                                                   
-    if ( iZ == 0 ) then                                               
-       c = 0.06 * (sqrt( xnn )-2.) / (1.+xnn)                         
-    else                                                              
-       c = bbnton(nb,5) * ( 1. - bbnton(nb,6)/iZ )                
-    endif
-
-    ! ... compute the exponential integral (see Abramowitz & Stegun), and   
-    !     multiply by exp(xnn)                                              
-    if ( xnn .ge. 1. ) then                                           
-       expint = (xnn**2+2.3347*xnn+0.25062) / &                        
-            (xnn**2+3.3306*xnn+1.6815) / xnn                      
-    else                                                              
-       expint = -log( xnn ) - 0.57722 + 0.99999*xnn - 0.24991*xnn**2 &
-            + 0.05520*xnn**3 - 0.00976*xnn**4 + 0.00108*xnn**5    
-       expint = expint * exp( xnn )                                   
-    endif
-
-    gnn = c + 0.276 * expint                                          
-
-  end subroutine bbneq0
+  
   !==========================================
   subroutine meshhv  
     !                                                                       
@@ -748,16 +540,10 @@ contains
                   Partition_III(iN, iZ, iMix)& 
                   < con(4) )CYCLE
              if(.not.DoNotAddLineCore)then        
-                do  iNUpper = iN, nExcitation                              
-                   ! ... calculate the energy of the transition             
-                   if ( iN == iNUpper ) then                               
-                      call bbneq0 ( nZ_I(iMix),nbound, &            
-                           ennp,dum1,dum2 )  
-                      if ( ennp.le.0) CYCLE
-                   else                                                
-                      ennp = ExcitationEnergy_III(iNUpper, iZ,iMix)- &
-                           ExcitationEnergy_III(iN, iZ,iMix)
-                   endif
+                do  iNUpper = iN + 1, nExcitation                              
+                                                                 
+                   ennp = ExcitationEnergy_III(iNUpper, iZ,iMix)- &
+                        ExcitationEnergy_III(iN, iZ,iMix)
                    if ( ennp .gt. EnergyGroup_I(0) .and. &                     
                         ennp .lt. EnergyGroup_I(nGroup) ) then              
 
@@ -910,7 +696,7 @@ contains
     ! Cutoff energy for the photon with the frequency correspondent to
     ! the plasma electron frequency
     !/
-    real :: HNuCut
+    !real :: HNuCut
 
     !Misc: functions of the photon energy
     real :: ExpMinusHNuPerT,  PhotonEnergyCubed
@@ -925,12 +711,8 @@ contains
     integer :: nScreened, nValence, iZEff, iQ
 
     ! densities to calculate photoionization
-    real :: AbsorberDensity, eqdeni, dumden, ExpMuPerT
+    real :: AbsorberDensity 
 
-    !\
-    !Coefficients to account for stimulated emission
-    !/
-    real :: stcorr
 
     !Misc: Scattering parameters
     real :: ScatNe, tScatt, pScatt
@@ -983,7 +765,7 @@ contains
           GauntFactorBrems  = 1. + 0.44 * exp( -0.25*(Log10OfGamma2+0.25)**2 )          
 
           BremsStrahlung_I(iMix) = 2.4e-21 * DensityZ2 * GauntFactorBrems * densne * &          
-               (1.-ExpMinusHNuPerT) / ( sqrt( Te ) * PhotonEnergyCubed )
+               (1.0 - ExpMinusHNuPerT) / ( sqrt( Te ) * PhotonEnergyCubed )
           !!NOTE: there is a more accurate calculation of the Gaunt factor in 
           !ggff.f file from HYADES
 
@@ -995,9 +777,7 @@ contains
           !           "iZ" to "iZ+1"                                      
 
           PhotoIonizationAbs_I(iMix) = 0.0                                            
-          SumOverZ = 0.0                                                  
-                                                  
-          ExpMuPerT = 1.66e-22 * densne / Te**1.5                         
+          SumOverZ = 0.0                                                                        
 
           IZLOOP: do iZ = iZMin_I(iMix), min( iZMax_I(iMix), nZ_I(iMix) - 1)                               
 
@@ -1015,7 +795,7 @@ contains
 
              SumOverN = 0.0                                               
 
-             if ( Concentration_I(iMix) * Population_II(iZ,iMix)< con(3) ) &
+             if ( Concentration_I(iMix) * Population_II(iZ,iMix) < con(3) ) &
                   CYCLE IZLOOP     
 
              ! ...            sum over quantum states                                
@@ -1050,7 +830,6 @@ contains
 
 
                 AbsorberDensity = Population_II(iZ,iMix) * Partition_III(iN, iZ, iMix)     
-               
 
                                         
                 !\
@@ -1078,8 +857,7 @@ contains
              ! ...          loop over inner shells (K,L,M,...); each inner shell     
              !              is assume to be full                                     
 
-             !sum1ac = 0.0                                              
-             ! nshels = nGround - 1                    
+                                
              if ( & !nshels > 0 .and. 
                   UseCoreElectron ) then
                 call CON_stop('UseCoreElectron should be set to .false.')
@@ -1117,7 +895,7 @@ contains
           ! 7.9e-18 cm^2= \frac{64\pi}{3\sqrt{3}}\alpha a_0^2, where \alpha is the fine
           ! structure constant and a_0 is the Bohr radius
           !/
-          PhotoIonizationConst = 7.9e-18 * Concentration_I(iMix) / PhotonEnergyCubed   
+          PhotoIonizationConst = 7.9e-18 * Densnn * Concentration_I(iMix) / PhotonEnergyCubed   
           PhotoIonizationAbs_I(iMix) = PhotoIonizationConst * SumOverZ
                  
        end do IMIXLOOP   !Over iMix                                                                    
@@ -1135,7 +913,7 @@ contains
           iq = 0                                                      
           do  iZ = 0,nZ_I(iMix) -1                              
 
-             if ( PhotonEnergy_I(iPhoton) > IonizPotential_II(iZ+1,iMix)) then            
+             if ( PhotonEnergy_I(iPhoton) > IonizPotential_II(iZ+1, iMix)) then            
                 iq = iq + 1                                           
                 scatne = scatne + Concentration_I(iMix)
              else
@@ -1398,18 +1176,7 @@ contains
                dsmpa0 = dxg * fpa10                                      
             endif
 
-            !NON-LTE part 
-            ! ...       Planck mean emission opacities                              
-            !if ( abs( fpe1-fpe2 ) .gt. 1.e-3*fpe2 ) then                
-            !  if ( fpe2 .ne. 0. ) then                                  
-            !    dsumpe = dxg * ( fpe2-fpe1 ) / log( fpe2/fpe1 )         
-            !  else                                                      
-            !    dsumpe = 0.                                             
-            !  endif                                                     
-            !else                                                        
-            !  dsumpe = dxg * fpe1                                      
-            !endif                                                      
-
+          
             ! ...       Rosseland mean opacities                                 
             if ( abs( fr1-fr2 ) .gt. 1.e-3*fr2 ) then                   
                if ( fr2 .ne. 0. ) then                                   
