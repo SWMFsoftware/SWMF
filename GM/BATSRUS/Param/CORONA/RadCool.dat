@@ -2,7 +2,7 @@ Radiative losses of optically thin Coronal plasma, cor_ext.abund (CHIANTI 5): [l
 0 0.0 2 1 2
 500 2
 0.0
-log10Te log10Ne lamdaT dummy
+l10Te l10Ne lamdaT dummy
        4.0000000       5.0000000      0.14318638       0.0000000
        4.0080161       5.0000000      0.19141662       0.0000000
        4.0160322       5.0000000      0.23964687       0.0000000
