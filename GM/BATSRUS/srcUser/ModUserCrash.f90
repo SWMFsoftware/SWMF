@@ -939,14 +939,11 @@ contains
                      + Weight2*EradHyades_VC(:,iCell) )
              else
                 ! Radiation energy = cRadiation*Trad**4
-                if(nWave == 1)then
-                   Tr = ( Weight1*DataHyades_VC(iTrHyades, iCell-1) &
-                        + Weight2*DataHyades_VC(iTrHyades, iCell) )
+                Tr = ( Weight1*DataHyades_VC(iTrHyades, iCell-1) &
+                     + Weight2*DataHyades_VC(iTrHyades, iCell) )
 
-                   State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Tr**4
-                else
-                   call stop_mpi(NameSub//' Need HYADES multi-group file')
-                end if
+                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
+                     cRadiationNo*Tr**4/nWave
              end if
           end if
 
@@ -1121,12 +1118,8 @@ contains
              State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = EradHyades_V
           else
              ! Radiation energy = cRadiation*Trad**4
-             if(nWave == 1)then
-                State_VGB(Erad_,i,j,k,iBlock) = &
-                     cRadiationNo * DataHyades_V(iTrHyades)**4
-             else
-                call stop_mpi(NameSub//' Need HYADES multi-group file')
-             end if
+             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
+                  cRadiationNo * DataHyades_V(iTrHyades)**4/nWave
           end if
        end if
 
@@ -1138,15 +1131,17 @@ contains
 
   subroutine user_update_states(iStage,iBlock)
 
-    use ModSize,    ONLY: nI, nJ, nK
-    use ModAdvance, ONLY: State_VGB, p_, ExtraEint_, &
+    use ModSize,     ONLY: nI, nJ, nK
+    use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, &
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
          UseElectronEnergy
     use ModGeometry, ONLY: vInv_CB
     use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_
-    use ModEnergy,  ONLY: calc_energy_cell
+    use ModEnergy,   ONLY: calc_energy_cell
+    use ModVarIndexes, ONLY: nWave
+    use ModWaves,    ONLY: UseWavePressure
 
     implicit none
 
@@ -1155,6 +1150,7 @@ contains
     integer:: i, j, k
     real   :: PressureSi, EinternalSi, GammaEos
     logical:: IsConserv
+    logical:: UseWavePressureOrig
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
@@ -1178,7 +1174,13 @@ contains
        end do; end do; end do
     end if
 
+    UseWavePressureOrig = UseWavePressure
+    ! multi-group test mode (uniform spectral temperature)
+    if(nWave > 1 .and. .not.UseHyadesGroupFile) UseWavePressure = .false.
+
     call update_states_MHD(iStage,iBlock)
+
+    UseWavePressure = UseWavePressureOrig
 
     ! update of pressure, ionization and total energies
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -1225,7 +1227,13 @@ contains
       real :: PeSi, Ee, EeSi
       !------------------------------------------------------------------------
 
+      UseWavePressureOrig = UseWavePressure
+      ! multi-group test mode (uniform spectral temperature)
+      if(nWave > 1 .and. .not.UseHyadesGroupFile) UseWavePressure = .false.
+
       call update_states_MHD(iStage,iBlock)
+
+      UseWavePressure = UseWavePressureOrig
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          ! At this point Pe=(g-1)*Ee with the ideal gamma g.
@@ -1658,7 +1666,7 @@ contains
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, UnitEnergyDens_, &
          inv_gm1, g, Si2No_V, cRadiationNo, UnitTemperature_
     use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_, nWave, &
-         WaveFirst_, ExtraEint_, Ee_
+         WaveFirst_, WaveLast_, ExtraEint_, Ee_
     use ModLookupTable,ONLY: interpolate_lookup_table
     use ModConst,      ONLY: cAtomicMass
 
@@ -1699,7 +1707,7 @@ contains
 
     ! multi-group variables
     integer :: iWave, iVar
-    real :: EgSi, PlanckSi, CgTeSi, TgSi, CgTgSi, Tg
+    real :: EgSi, PlanckSi, CgTeSi, TgSi, CgTgSi, Tg, Te
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !-------------------------------------------------------------------------
@@ -1764,7 +1772,7 @@ contains
     if(present(AbsorptionOpacitySiOut_W) &
          .or. present(DiffusionOpacitySiOut_W))then
 
-       if(iTableOpacity > 0 .and. nWave==1)then
+       if(iTableOpacity > 0 .and. .not. UseHyadesGroupFile)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
                Opacity_V, DoExtrapolate = .false.)
           Opacity_V(1:2*nMaterial:2) = Opacity_V(1:2*nMaterial:2) &
@@ -1799,22 +1807,28 @@ contains
     end if
 
     if(present(PlanckSiOut_W) .or. present(CgTeSiOut_W))then
-       do iWave = 1, nWave
-          call get_energy_g_from_temperature( &
-               iWave, TeSi, EgSI=PlanckSi, CgSI=CgTeSi)
+       if(UseHyadesGroupFile)then
+          do iWave = 1, nWave
+             call get_energy_g_from_temperature( &
+                  iWave, TeSi, EgSI=PlanckSi, CgSI=CgTeSi)
 
-          if(present(PlanckSiOut_W)) PlanckSiOut_W(iWave) = PlanckSi
-          if(present(CgTeSiOut_W)) CgTeSiOut_W(iWave) = CgTeSi
-       end do
+             if(present(PlanckSiOut_W)) PlanckSiOut_W(iWave) = PlanckSi
+             if(present(CgTeSiOut_W)) CgTeSiOut_W(iWave) = CgTeSi
+          end do
+       else
+          ! multi-group test mode (uniform spectral temperature)
+          Te = TeSi*Si2No_V(UnitTemperature_)
+          Tg = sqrt(sqrt(sum(State_V(WaveFirst_:WaveLast_))/cRadiationNo))
+          if(present(PlanckSiOut_W)) PlanckSiOut_W = cRadiationNo*Te**4/nWave &
+               *No2Si_V(UnitEnergyDens_)
+          if(present(CgTeSiOut_W)) CgTeSiOut_W = &
+               cRadiationNo*(Te + Tg)*(Te**2 + Tg**2)/nWave &
+               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+       end if
     end if
 
     if(present(TgSiOut_W) .or. present(CgTgSiOut_W))then
-       if(nWave == 1)then
-          Tg = sqrt(sqrt(State_V(WaveFirst_)/cRadiationNo))
-          if(present(TgSiOut_W)) TgSiOut_W = Tg*No2Si_V(UnitTemperature_)
-          if(present(CgTgSiOut_W)) CgTgSiOut_W = 4.0*cRadiationNo*Tg**3 &
-               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
-       else
+       if(UseHyadesGroupFile)then
           do iWave = 1, nWave
              iVar = WaveFirst_ + iWave - 1
              EgSi = State_V(iVar)*No2Si_V(UnitEnergyDens_)
@@ -1824,6 +1838,12 @@ contains
              if(present(TgSiOut_W)) TgSiOut_W(iWave) = TgSi
              if(present(CgTgSiOut_W)) CgTgSiOut_W(iWave) = CgTgSi
           end do
+       else
+          ! multi-group test mode (uniform spectral temperature)
+          Tg = sqrt(sqrt(sum(State_V(WaveFirst_:WaveLast_))/cRadiationNo))
+          if(present(TgSiOut_W)) TgSiOut_W = Tg*No2Si_V(UnitTemperature_)
+          if(present(CgTgSiOut_W)) CgTgSiOut_W = 4.0*cRadiationNo*Tg**3/nWave &
+               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
        end if
     end if
 
