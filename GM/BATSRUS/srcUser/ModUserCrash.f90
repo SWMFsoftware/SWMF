@@ -502,7 +502,7 @@ contains
 
        ! Calculate internal energy
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-            i, j, k, iBlock, EinternalSiOut=EinternalSi)
+            i, j, k, iBlock, EinternalOut=EinternalSi)
 
        if(UseElectronEnergy)then
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
@@ -918,8 +918,8 @@ contains
 
              TeSi = Te*No2Si_V(UnitTemperature_)
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  i, j, k, iBlock, TeSiIn=TeSi, &
-                  PressureSiOut=PeSi, NatomicSiOut=NatomicSi)
+                  i, j, k, iBlock, TeIn=TeSi, &
+                  PressureOut=PeSi, NatomicOut=NatomicSi)
 
              Natomic = NatomicSi*Si2No_V(UnitN_)
              State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti
@@ -1095,8 +1095,8 @@ contains
 
           TeSi = Te*No2Si_V(UnitTemperature_)
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, TeSiIn=TeSi, &
-               PressureSiOut=PeSi, NatomicSiOut=NatomicSi)
+               i, j, k, iBlock, TeIn=TeSi, &
+               PressureOut=PeSi, NatomicOut=NatomicSi)
 
           Natomic = NatomicSi*Si2No_V(UnitN_)
           State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti
@@ -1201,13 +1201,13 @@ contains
                State_VGB(ExtraEint_,i,j,k,iBlock))
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
-               EinternalSiIn=EinternalSi, PressureSiOut=PressureSi)
+               EinternalIn=EinternalSi, PressureOut=PressureSi)
 
           ! Set true pressure
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
        else
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, EinternalSiOut=EinternalSi)
+               i, j, k, iBlock, EinternalOut=EinternalSi)
        end if
 
        ! Set ExtraEint = Total internal energy - P/(gamma -1)
@@ -1245,7 +1245,7 @@ contains
 
          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
               i, j, k, iBlock, &
-              EinternalSiIn=EeSi, PressureSiOut=PeSi)
+              EinternalIn=EeSi, PressureOut=PeSi)
 
          ! use true electron pressure
          State_VGB(Ee_,i,j,k,iBlock) = inv_gm1*PeSi*Si2No_V(UnitP_)
@@ -1330,8 +1330,8 @@ contains
 
     real    :: p, Rho, pSi, RhoSi, TeSi, WaveEnergy
     real    :: PiSi, TiSi, NatomicSi
-    real    :: AbsorptionOpacitySi_W(nWave)
-    real    :: DiffusionOpacitySi_W(nWave)
+    real    :: PlanckOpacitySi_W(nWave)
+    real    :: RosselandOpacitySi_W(nWave)
     integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel, iWave
     real    :: Value_V(nMaterial*nThermo) ! Cv,Gamma,Kappa,Te for 3 materials
     !------------------------------------------------------------------------  
@@ -1346,7 +1346,7 @@ contains
        NameIdlUnit = 'KeV'
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, TeSiOut = PlotVar_G(i,j,k))
+               i, j, k, iBlock, TeOut = PlotVar_G(i,j,k))
           PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * cKToKev
        end do; end do; end do
     case('tikev', 'TiKev')
@@ -1354,7 +1354,7 @@ contains
        if(UseElectronEnergy)then
           do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  i, j, k, iBlock, NatomicSiOut=NatomicSi)
+                  i, j, k, iBlock, NatomicOut=NatomicSi)
              PiSi = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
              TiSi = PiSi/(cBoltzmann*NatomicSi)
              PlotVar_G(i,j,k) = TiSi*cKToKev
@@ -1363,7 +1363,7 @@ contains
           ! Te = Ti at all times, use Te
           do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  i, j, k, iBlock, TeSiOut = PlotVar_G(i,j,k))
+                  i, j, k, iBlock, TeOut = PlotVar_G(i,j,k))
              PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * cKToKev
           end do; end do; end do
        end if
@@ -1385,25 +1385,25 @@ contains
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
-               AbsorptionOpacitySiOut_W = AbsorptionOpacitySi_W)
-          PlotVar_G(i,j,k) = AbsorptionOpacitySi_W(1)
+               PlanckOpacityOut_W = PlanckOpacitySi_W)
+          PlotVar_G(i,j,k) = PlanckOpacitySi_W(1)
        end do; end do; end do
     case('ross')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
-               DiffusionOpacitySiOut_W = DiffusionOpacitySi_W)
-          PlotVar_G(i,j,k) = DiffusionOpacitySi_W(1)
+               RosselandOpacityOut_W = RosselandOpacitySi_W)
+          PlotVar_G(i,j,k) = RosselandOpacitySi_W(1)
        end do; end do; end do
     case('cond')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, HeatCondSiOut = PlotVar_G(i,j,k))
+               i, j, k, iBlock, HeatCondOut = PlotVar_G(i,j,k))
        end do; end do; end do
     case('teti')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, TeTiRelaxSiOut = PlotVar_G(i,j,k))
+               i, j, k, iBlock, TeTiRelaxOut = PlotVar_G(i,j,k))
        end do; end do; end do
     case('usersphere')
        ! Test function for LOS images: sphere with "density" 
@@ -1693,17 +1693,17 @@ contains
   !===========================================================================
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
-       EinternalSiIn, TeSiIn, NatomicSiOut, &
-       EinternalSiOut, TeSiOut, PressureSiOut, &
-       CvSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
-       AbsorptionOpacitySiOut_W, DiffusionOpacitySiOut_W, &
-       PlanckSiOut_W, CgTeSiOut_W, CgTgSiOut_W, TgSiOut_W)
+       EinternalIn, TeIn, NatomicOut, &
+       EinternalOut, TeOut, PressureOut, &
+       CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
+       PlanckOpacityOut_W, RosselandOpacityOut_W, &
+       PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
 
     ! The State_V vector is in normalized units, all other physical
     ! quantities are in SI.
     !
-    ! If the electron energy is used, then EinternalSiIn, EinternalSiOut,
-    ! PressureSiOut, CvSiOut refer to the electron internal energies,
+    ! If the electron energy is used, then EinternalIn, EinternalOut,
+    ! PressureOut, CvOut refer to the electron internal energies,
     ! electron pressure, and electron specific heat, respectively.
     ! Otherwise they refer to the total (electron + ion) internal energies,
     ! total (electron + ion) pressure, and the total specific heat.
@@ -1721,31 +1721,31 @@ contains
     use ModConst,      ONLY: cAtomicMass
 
     real, intent(in) :: State_V(nVar)
-    integer, optional, intent(in):: i, j, k, iBlock, iDir    ! cell/face index
-    real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
-    real, optional, intent(in)  :: TeSiIn                    ! [K]
-    real, optional, intent(out) :: NatomicSiOut              ! [1/m^3]
-    real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
-    real, optional, intent(out) :: TeSiOut                   ! [K]
-    real, optional, intent(out) :: PressureSiOut             ! [Pa]
-    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: GammaOut                  ! dimensionless
-    real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
-    real, optional, intent(out) :: TeTiRelaxSiOut            ! [1/s]
+    integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
+    real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
+    real, optional, intent(in)  :: TeIn                    ! [K]
+    real, optional, intent(out) :: NatomicOut              ! [1/m^3]
+    real, optional, intent(out) :: EinternalOut            ! [J/m^3]
+    real, optional, intent(out) :: TeOut                   ! [K]
+    real, optional, intent(out) :: PressureOut             ! [Pa]
+    real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]
+    real, optional, intent(out) :: GammaOut                ! dimensionless
+    real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
+    real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: &
-         AbsorptionOpacitySiOut_W(nWave)                     ! [1/m]
+         PlanckOpacityOut_W(nWave)                         ! [1/m]
     real, optional, intent(out) :: &
-         DiffusionOpacitySiOut_W(nWave)                      ! [1/m]
+         RosselandOpacityOut_W(nWave)                      ! [1/m]
 
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
     !  Derivative of group Planckian by electron temperature
     !  Group specific heat of the radiation
     !  Group radiation temperature
-    real, optional, intent(out) :: PlanckSiOut_W(nWave)      ! [J/m^3]
-    real, optional, intent(out) :: CgTeSiOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: CgTgSiOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: TgSiOut_W(nWave)          ! [K]
+    real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
+    real, optional, intent(out) :: CgTeOut_W(nWave)        ! [J/(m^3*K)]
+    real, optional, intent(out) :: CgTgOut_W(nWave)        ! [J/(m^3*K)]
+    real, optional, intent(out) :: TgOut_W(nWave)          ! [K]
 
     logical :: IsMix
     integer :: iMaterial, jMaterial, iMaterial_I(1)
@@ -1818,10 +1818,10 @@ contains
        call get_thermo
     end if
 
-    if(present(TeSiOut)) TeSiOut = TeSi
+    if(present(TeOut)) TeOut = TeSi
 
-    if(present(AbsorptionOpacitySiOut_W) &
-         .or. present(DiffusionOpacitySiOut_W))then
+    if(present(PlanckOpacityOut_W) &
+         .or. present(RosselandOpacityOut_W))then
 
        if(iTableOpacity > 0 .and. nWave == 1)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
@@ -1831,76 +1831,76 @@ contains
           Opacity_V(2:2*nMaterial:2) = Opacity_V(2:2*nMaterial:2) &
                *RosselandScaleFactor_I
           if(UseVolumeFraction)then
-             if(present(AbsorptionOpacitySiOut_W)) AbsorptionOpacitySiOut_W &
+             if(present(PlanckOpacityOut_W)) PlanckOpacityOut_W &
                   = sum(Weight_I*Opacity_V(1:2*nMaterial:2)) * RhoSi
-             if(present(DiffusionOpacitySiOut_W)) DiffusionOpacitySiOut_W &
+             if(present(RosselandOpacityOut_W)) RosselandOpacityOut_W &
                   = sum(Weight_I*Opacity_V(2:2*nMaterial:2)) * RhoSi
           else
-             if(present(AbsorptionOpacitySiOut_W)) AbsorptionOpacitySiOut_W &
+             if(present(PlanckOpacityOut_W)) PlanckOpacityOut_W &
                   = Opacity_V(2*iMaterial + 1) * RhoSi
-             if(present(DiffusionOpacitySiOut_W)) DiffusionOpacitySiOut_W &
+             if(present(RosselandOpacityOut_W)) RosselandOpacityOut_W &
                   = Opacity_V(2*iMaterial + 2) * RhoSi
           end if
 
        elseif(all(iTableOpacity_I > 0))then
           if(UseVolumeFraction)then
-             if(present(AbsorptionOpacitySiOut_W)) AbsorptionOpacitySiOut_W = 0
-             if(present(DiffusionOpacitySiOut_W)) DiffusionOpacitySiOut_W = 0
+             if(present(PlanckOpacityOut_W)) PlanckOpacityOut_W = 0
+             if(present(RosselandOpacityOut_W)) RosselandOpacityOut_W = 0
              do jMaterial = 0, nMaterial-1
                 call interpolate_lookup_table(iTableOpacity_I(jMaterial), &
                      RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
-                if(present(AbsorptionOpacitySiOut_W)) &
-                     AbsorptionOpacitySiOut_W = AbsorptionOpacitySiOut_W &
+                if(present(PlanckOpacityOut_W)) &
+                     PlanckOpacityOut_W = PlanckOpacityOut_W &
                      + Weight_I(jMaterial)*GroupOpacity_W(1:nWave) * RhoSi
-                if(present(DiffusionOpacitySiOut_W)) &
-                     DiffusionOpacitySiOut_W =  DiffusionOpacitySiOut_W &
+                if(present(RosselandOpacityOut_W)) &
+                     RosselandOpacityOut_W =  RosselandOpacityOut_W &
                      + Weight_I(jMaterial)*GroupOpacity_W(nWave+1:)*RhoSi
              end do
           else
              call interpolate_lookup_table(iTableOpacity_I(iMaterial), &
                   RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
-             if(present(AbsorptionOpacitySiOut_W)) AbsorptionOpacitySiOut_W &
+             if(present(PlanckOpacityOut_W)) PlanckOpacityOut_W &
                   = GroupOpacity_W(1:nWave)*RhoSi
-             if(present(DiffusionOpacitySiOut_W)) DiffusionOpacitySiOut_W &
+             if(present(RosselandOpacityOut_W)) RosselandOpacityOut_W &
                   = GroupOpacity_W(nWave+1:)*RhoSi
           end if
        else
           ! inline opacities
           if(IsMix)then
              call eos(RhoToARatioSi_I, TeIn=TeSi, &
-                  OpacityPlanckOut_I=AbsorptionOpacitySiOut_W, &
-                  OpacityRosselandOut_I=DiffusionOpacitySiOut_W)
+                  OpacityPlanckOut_I=PlanckOpacityOut_W, &
+                  OpacityRosselandOut_I=RosselandOpacityOut_W)
           else
              call eos(iMaterial, RhoSi, TeIn=TeSi, &
-                  OpacityPlanckOut_I=AbsorptionOpacitySiOut_W, &
-                  OpacityRosselandOut_I=DiffusionOpacitySiOut_W)
+                  OpacityPlanckOut_I=PlanckOpacityOut_W, &
+                  OpacityRosselandOut_I=RosselandOpacityOut_W)
           end if
 
        end if
     end if
 
-    if(present(PlanckSiOut_W) .or. present(CgTeSiOut_W))then
+    if(present(PlanckOut_W) .or. present(CgTeOut_W))then
        if(UseHyadesGroupFile)then
           do iWave = 1, nWave
              call get_energy_g_from_temperature( &
                   iWave, TeSi, EgSI=PlanckSi, CgSI=CgTeSi)
 
-             if(present(PlanckSiOut_W)) PlanckSiOut_W(iWave) = PlanckSi
-             if(present(CgTeSiOut_W)) CgTeSiOut_W(iWave) = CgTeSi
+             if(present(PlanckOut_W)) PlanckOut_W(iWave) = PlanckSi
+             if(present(CgTeOut_W)) CgTeOut_W(iWave) = CgTeSi
           end do
        else
           ! multi-group test mode (uniform spectral temperature)
           Te = TeSi*Si2No_V(UnitTemperature_)
           Tg = sqrt(sqrt(sum(State_V(WaveFirst_:WaveLast_))/cRadiationNo))
-          if(present(PlanckSiOut_W)) PlanckSiOut_W = cRadiationNo*Te**4/nWave &
+          if(present(PlanckOut_W)) PlanckOut_W = cRadiationNo*Te**4/nWave &
                *No2Si_V(UnitEnergyDens_)
-          if(present(CgTeSiOut_W)) CgTeSiOut_W = &
+          if(present(CgTeOut_W)) CgTeOut_W = &
                cRadiationNo*(Te + Tg)*(Te**2 + Tg**2)/nWave &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
        end if
     end if
 
-    if(present(TgSiOut_W) .or. present(CgTgSiOut_W))then
+    if(present(TgOut_W) .or. present(CgTgOut_W))then
        if(UseHyadesGroupFile)then
           do iWave = 1, nWave
              iVar = WaveFirst_ + iWave - 1
@@ -1908,14 +1908,14 @@ contains
              call get_temperature_from_energy_g(iWave, EgSi, &
                   TgSIOut=TgSi, CgSIOut=CgTgSi)
 
-             if(present(TgSiOut_W)) TgSiOut_W(iWave) = TgSi
-             if(present(CgTgSiOut_W)) CgTgSiOut_W(iWave) = CgTgSi
+             if(present(TgOut_W)) TgOut_W(iWave) = TgSi
+             if(present(CgTgOut_W)) CgTgOut_W(iWave) = CgTgSi
           end do
        else
           ! multi-group test mode (uniform spectral temperature)
           Tg = sqrt(sqrt(sum(State_V(WaveFirst_:WaveLast_))/cRadiationNo))
-          if(present(TgSiOut_W)) TgSiOut_W = Tg*No2Si_V(UnitTemperature_)
-          if(present(CgTgSiOut_W)) CgTgSiOut_W = 4.0*cRadiationNo*Tg**3/nWave &
+          if(present(TgOut_W)) TgOut_W = Tg*No2Si_V(UnitTemperature_)
+          if(present(CgTgOut_W)) CgTgOut_W = 4.0*cRadiationNo*Tg**3/nWave &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
        end if
     end if
@@ -1928,75 +1928,75 @@ contains
 
       !----------------------------------------------------------------------
 
-      ! Obtain the pressure from EinternalSiIn or TeSiIn or State_V
+      ! Obtain the pressure from EinternalIn or TeIn or State_V
       ! Do this for various cases: mixed cell or not, lookup tables or not
-      if(present(EinternalSiIn))then
-         ! Obtain the pressure from EinternalSiIn
+      if(present(EinternalIn))then
+         ! Obtain the pressure from EinternalIn
          if(iTablePPerE > 0)then
             ! Use lookup table
             call interpolate_lookup_table(iTablePPerE, RhoSi, &
-                 EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
+                 EinternalIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
             ! Use a number density weighted average
-            pSi = EinternalSiIn*sum(Weight_I*pPerE_I)
+            pSi = EinternalIn*sum(Weight_I*pPerE_I)
          else
             ! Use EOS function
             if(IsMix)then
-               call eos(RhoToARatioSi_I, eTotalIn=EinternalSiIn, &
-                    pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvSiOut, &
-                    GammaOut=GammaOut, HeatCond=HeatCondSiOut)
+               call eos(RhoToARatioSi_I, eTotalIn=EinternalIn, &
+                    pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
+                    GammaOut=GammaOut, HeatCond=HeatCondOut)
             else
-               call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalSiIn, &
-                    pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvSiOut, &
-                    GammaOut=GammaOut, HeatCond=HeatCondSiOut)
+               call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
+                    pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
+                    GammaOut=GammaOut, HeatCond=HeatCondOut)
             end if
          end if
-      elseif(present(TeSiIn))then
+      elseif(present(TeIn))then
          ! Calculate pressure from electron temperature
-         TeSi = TeSiIn
+         TeSi = TeIn
          if( IsMix ) then
-            call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
-                 eTotalOut=EinternalSiOut, pTotalOut=pSi, &
-                 CvTotalOut=CvSiOut, GammaOut=GammaOut, &
-                 HeatCond=HeatCondSiOut)
+            call eos(RhoToARatioSi_I, TeIn=TeIn, &
+                 eTotalOut=EinternalOut, pTotalOut=pSi, &
+                 CvTotalOut=CvOut, GammaOut=GammaOut, &
+                 HeatCond=HeatCondOut)
          else
-            call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, &
-                 eTotalOut=EinternalSiOut, pTotalOut=pSi, &
-                 CvTotalOut=CvSiOut, GammaOut=GammaOut, &
-                 HeatCond=HeatCondSiOut)
+            call eos(iMaterial, Rho=RhoSi, TeIn=TeIn, &
+                 eTotalOut=EinternalOut, pTotalOut=pSi, &
+                 CvTotalOut=CvOut, GammaOut=GammaOut, &
+                 HeatCond=HeatCondOut)
          end if
       else
          ! Pressure is simply part of State_V
          pSi = State_V(p_)*No2Si_V(UnitP_)
-         if(present(EinternalSiOut))then
+         if(present(EinternalOut))then
             ! Obtain the internal energy from pressure
             if(iTableEPerP > 0)then
                call interpolate_lookup_table(iTableEPerP, RhoSi, &
                     pSi/RhoSi, EPerP_I, DoExtrapolate = .false.)
                ! Use a number density weighted average
-               EinternalSiOut = pSi*sum(Weight_I*EPerP_I)
+               EinternalOut = pSi*sum(Weight_I*EPerP_I)
             else
                if(IsMix)then
                   call eos(RhoToARatioSi_I, pTotalIn=pSi, &
-                       EtotalOut=EinternalSiOut, TeOut=TeSi, &
-                       CvTotalOut=CvSiOut, GammaOut=GammaOut, &
-                       HeatCond=HeatCondSiOut)
+                       EtotalOut=EinternalOut, TeOut=TeSi, &
+                       CvTotalOut=CvOut, GammaOut=GammaOut, &
+                       HeatCond=HeatCondOut)
                else
                   call eos(iMaterial,RhoSi,pTotalIn=pSi, &
-                       EtotalOut=EinternalSiOut, TeOut=TeSi, &
-                       CvTotalOut=CvSiOut, GammaOut=GammaOut, &
-                       HeatCond=HeatCondSiOut)
+                       EtotalOut=EinternalOut, TeOut=TeSi, &
+                       CvTotalOut=CvOut, GammaOut=GammaOut, &
+                       HeatCond=HeatCondOut)
                end if
             end if
          end if
       end if
 
-      if(present(PressureSiOut)) PressureSiOut = pSi
+      if(present(PressureOut)) PressureOut = pSi
 
-      if(present(TeSiOut) .or. present(CvSiOut) .or. present(GammaOut) .or. &
-           present(HeatCondSiOut) .or. &
-           present(AbsorptionOpacitySiOut_W) .or. &
-           present(DiffusionOpacitySiOut_W) .or. &
-           present(PlanckSiOut_W) .or. present(CgTeSiOut_W))then
+      if(present(TeOut) .or. present(CvOut) .or. present(GammaOut) .or. &
+           present(HeatCondOut) .or. &
+           present(PlanckOpacityOut_W) .or. &
+           present(RosselandOpacityOut_W) .or. &
+           present(PlanckOut_W) .or. present(CgTeOut_W))then
 
          if(iTableThermo > 0)then
             call interpolate_lookup_table(iTableThermo, RhoSi, pSi/RhoSi, &
@@ -2004,35 +2004,35 @@ contains
 
             ! Value_V: elements 1,4,7 are Cv, 2,5,8 are Gamma, 3,6,9 are Te
             if(UseVolumeFraction)then
-               if(present(CvSiOut))  CvSiOut  &
+               if(present(CvOut))  CvOut  &
                     = sum(Weight_I*Value_V(Cv_   :nMaterial*nThermo:nThermo))
                if(present(GammaOut)) GammaOut &
                     = sum(Weight_I*Value_V(Gamma_:nMaterial*nThermo:nThermo))
-               if(present(HeatCondSiOut)) HeatCondSiOut &
+               if(present(HeatCondOut)) HeatCondOut &
                     = sum(Weight_I*Value_V(Cond_:nMaterial*nThermo:nThermo))
                TeSi = sum(Weight_I*Value_V(Te_  :nMaterial*nThermo:nThermo))
             else
-               if(present(CvSiOut))  &
-                    CvSiOut       = Value_V(Cv_   +iMaterial*nThermo)
+               if(present(CvOut))  &
+                    CvOut       = Value_V(Cv_   +iMaterial*nThermo)
                if(present(GammaOut)) &
-                    GammaOut      = Value_V(Gamma_+iMaterial*nThermo)
-               if(present(HeatCondSiOut)) &
-                    HeatCondSiOut = Value_V(Cond_ +iMaterial*nThermo)
-               TeSi               = Value_V(Te_   +iMaterial*nThermo)
+                    GammaOut    = Value_V(Gamma_+iMaterial*nThermo)
+               if(present(HeatCondOut)) &
+                    HeatCondOut = Value_V(Cond_ +iMaterial*nThermo)
+               TeSi             = Value_V(Te_   +iMaterial*nThermo)
             end if
 
          elseif(TeSi < 0.0) then
             ! If TeSi is not set yet then we need to calculate things here
             if(IsMix) then
                call eos(RhoToARatioSi_I, pTotalIn=pSi, &
-                    TeOut=TeSi, eTotalOut = EinternalSiOut, &
-                    CvTotalOut=CvSiOut, GammaOut=GammaOut, &
-                    HeatCond=HeatCondSiOut)
+                    TeOut=TeSi, eTotalOut = EinternalOut, &
+                    CvTotalOut=CvOut, GammaOut=GammaOut, &
+                    HeatCond=HeatCondOut)
             else
                call eos(iMaterial, RhoSi, pTotalIn=pSi, &
-                    TeOut=TeSi, eTotalOut = EinternalSiOut, &
-                    CvTotalOut=CvSiOut, GammaOut=GammaOut, &
-                    HeatCond=HeatCondSiOut)
+                    TeOut=TeSi, eTotalOut = EinternalOut, &
+                    CvTotalOut=CvOut, GammaOut=GammaOut, &
+                    HeatCond=HeatCondOut)
             end if
          end if
       end if
@@ -2047,79 +2047,79 @@ contains
       !----------------------------------------------------------------------
 
       ! get the atomic concentration
-      if(present(NatomicSiOut))then
+      if(present(NatomicOut))then
          if(IsMix)then
-            NatomicSiOut = sum(RhoToARatioSi_I)/cAtomicMass
+            NatomicOut = sum(RhoToARatioSi_I)/cAtomicMass
          else
-            NatomicSiOut = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial))
+            NatomicOut = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial))
          end if
       end if
 
-      ! Obtain the pressure from EinternalSiIn or TeSiIn or State_V
+      ! Obtain the pressure from EinternalIn or TeIn or State_V
       ! Do this for mixed cell or not
-      if(present(EinternalSiIn))then
+      if(present(EinternalIn))then
          ! Obtain electron pressure from the true electron internal energy
-         EeSi = EinternalSiIn
+         EeSi = EinternalIn
          if(IsMix)then
             call eos(RhoToARatioSi_I, eElectronIn=EeSi, &
-                 pElectronOut=PeSi, TeOut=TeSi, CvElectronOut=CvSiOut, &
-                 HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
+                 pElectronOut=PeSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                 HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
          else
             call eos(iMaterial, Rho=RhoSi, eElectronIn=EeSi, &
-                 pElectronOut=PeSi, TeOut=TeSi, CvElectronOut=CvSiOut, &
-                 HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
+                 pElectronOut=PeSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                 HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
          end if
-      elseif(present(TeSiIn))then
+      elseif(present(TeIn))then
          ! Calculate electron pressure from electron temperature
-         TeSi = TeSiIn
+         TeSi = TeIn
          if(IsMix) then
-            call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
-                 eElectronOut=EinternalSiOut, &
-                 pElectronOut=PeSi, CvElectronOut=CvSiOut, &
-                 HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
+            call eos(RhoToARatioSi_I, TeIn=TeIn, &
+                 eElectronOut=EinternalOut, &
+                 pElectronOut=PeSi, CvElectronOut=CvOut, &
+                 HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
          else
-            call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, &
-                 eElectronOut=EinternalSiOut, &
-                 pElectronOut=PeSi, CvElectronOut=CvSiOut, &
-                 HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
+            call eos(iMaterial, Rho=RhoSi, TeIn=TeIn, &
+                 eElectronOut=EinternalOut, &
+                 pElectronOut=PeSi, CvElectronOut=CvOut, &
+                 HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
          end if
       else
          ! electron pressure is (g - 1)*State_V(Ee_)
          ! Use this pressure to calculate the true electron internal energy
          PeSi = (g - 1)*State_V(Ee_)*No2Si_V(UnitP_)
-         if(present(EinternalSiOut))then
+         if(present(EinternalOut))then
             if(IsMix)then
                call eos(RhoToARatioSi_I, pElectronIn=PeSi, &
-                    TeOut=TeSi, eElectronOut=EinternalSiOut, &
-                    CvElectronOut=CvSiOut, HeatCond=HeatCondSiOut, &
-                    TeTiRelax=TeTiRelaxSiOut)
+                    TeOut=TeSi, eElectronOut=EinternalOut, &
+                    CvElectronOut=CvOut, HeatCond=HeatCondOut, &
+                    TeTiRelax=TeTiRelaxOut)
             else
                call eos(iMaterial, RhoSi, pElectronIn=PeSi, &
-                    TeOut=TeSi, eElectronOut=EinternalSiOut, &
-                    CvElectronOut=CvSiOut, HeatCond=HeatCondSiOut, &
-                    TeTiRelax=TeTiRelaxSiOut)
+                    TeOut=TeSi, eElectronOut=EinternalOut, &
+                    CvElectronOut=CvOut, HeatCond=HeatCondOut, &
+                    TeTiRelax=TeTiRelaxOut)
             end if
          end if
       end if
 
-      if(present(PressureSiOut)) PressureSiOut = PeSi
+      if(present(PressureOut)) PressureOut = PeSi
 
-      if(present(TeSiOut) .or. present(CvSiOut) .or. &
-           present(HeatCondSiOut) .or. present(TeTiRelaxSiOut) .or. &
-           present(AbsorptionOpacitySiOut_W) .or. &
-           present(DiffusionOpacitySiOut_W) .or. &
-           present(PlanckSiOut_W) .or. present(CgTeSiOut_W))then
+      if(present(TeOut) .or. present(CvOut) .or. &
+           present(HeatCondOut) .or. present(TeTiRelaxOut) .or. &
+           present(PlanckOpacityOut_W) .or. &
+           present(RosselandOpacityOut_W) .or. &
+           present(PlanckOut_W) .or. present(CgTeOut_W))then
 
          if(TeSi < 0.0) then
             ! If TeSi is not set yet then we need to calculate things here
             if(IsMix) then
                call eos(RhoToARatioSi_I, pElectronIn=PeSi, &
-                    TeOut=TeSi, CvElectronOut=CvSiOut, &
-                    HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
+                    TeOut=TeSi, CvElectronOut=CvOut, &
+                    HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             else
                call eos(iMaterial, RhoSi, pElectronIn=PeSi, &
-                    TeOut=TeSi, CvElectronOut=CvSiOut, &
-                    HeatCond=HeatCondSiOut, TeTiRelax=TeTiRelaxSiOut)
+                    TeOut=TeSi, CvElectronOut=CvOut, &
+                    HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             end if
          end if
       end if

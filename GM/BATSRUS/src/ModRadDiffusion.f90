@@ -269,7 +269,7 @@ contains
       !------------------------------------------------------------------------
 
       call user_material_properties(State_V, i, j, k, iBlock, iDir, &
-           DiffusionOpacitySiOut_W = OpacityRosselandSi_W)
+           RosselandOpacityOut_W = OpacityRosselandSi_W)
 
       OpacityRosseland = OpacityRosselandSi_W(1)/Si2No_V(UnitX_)
 
@@ -315,14 +315,14 @@ contains
 
        if(IsNewTimestepRadDiffusion)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, AbsorptionOpacitySiOut_W = OpacityPlanckSi_W)
+               i, j, k, iBlock, PlanckOpacityOut_W = OpacityPlanckSi_W)
 
           RelaxCoef_VCB(1,i,j,k,iBlock) = &
                OpacityPlanckSi_W(1)*cLightSpeed/Si2No_V(UnitT_)
        end if
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-            i, j, k, iBlock, TeSiOut = TeSi)
+            i, j, k, iBlock, TeOut = TeSi)
 
        Te = TeSi*Si2No_V(UnitTemperature_)
 
@@ -393,7 +393,7 @@ contains
        if(iTeImpl > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  i, j, k, iBlock, TeSiOut = TeSi)
+                  i, j, k, iBlock, TeOut = TeSi)
              Te = TeSi*Si2No_V(UnitTemperature_)
              if(UseT4)then
                 StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = cRadiationNo*Te**4
@@ -421,8 +421,8 @@ contains
              else
                 do k = 1, nK; do j = 1, nJ; do i = 1, nI
                    call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                        i, j, k, iBlock, TgSiOut_W = TgSi_W, &
-                        CgTgSiOut_W = CgTgSi_W)
+                        i, j, k, iBlock, TgOut_W = TgSi_W, &
+                        CgTgOut_W = CgTgSi_W)
 
                    StateImpl_VGB(iTrImplFirst:iTrImplLast,i,j,k,iImplBlock) = &
                         TgSi_W*Si2No_V(UnitTemperature_)
@@ -444,18 +444,18 @@ contains
              if(UseT4)then
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, &
-                     AbsorptionOpacitySiOut_W = OpacityPlanckSi_W, &
-                     DiffusionOpacitySiOut_W = OpacityRosselandSi_W, &
-                     CvSiOut=CveSi, TeSiOut = TeSi, NatomicSiOut=NatomicSi, &
-                     HeatCondSiOut = HeatCondSi, TeTiRelaxSiOut = TeTiRelaxSi)
+                     PlanckOpacityOut_W = OpacityPlanckSi_W, &
+                     RosselandOpacityOut_W = OpacityRosselandSi_W, &
+                     CvOut=CveSi, TeOut = TeSi, NatomicOut=NatomicSi, &
+                     HeatCondOut = HeatCondSi, TeTiRelaxOut = TeTiRelaxSi)
              else
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, &
-                     AbsorptionOpacitySiOut_W = OpacityPlanckSi_W, &
-                     DiffusionOpacitySiOut_W = OpacityRosselandSi_W, &
-                     CvSiOut=CveSi, TeSiOut = TeSi, NatomicSiOut=NatomicSi, &
-                     HeatCondSiOut = HeatCondSi, TeTiRelaxSiOut = TeTiRelaxSi,&
-                     CgTeSiOut_W=CgTeSi_W)
+                     PlanckOpacityOut_W = OpacityPlanckSi_W, &
+                     RosselandOpacityOut_W = OpacityRosselandSi_W, &
+                     CvOut=CveSi, TeOut = TeSi, NatomicOut=NatomicSi, &
+                     HeatCondOut = HeatCondSi, TeTiRelaxOut = TeTiRelaxSi,&
+                     CgTeOut_W=CgTeSi_W)
 
                 CgTe_W = CgTeSi_W*Si2No_V(UnitEnergyDens_) &
                      /Si2No_V(UnitTemperature_)
@@ -479,16 +479,16 @@ contains
              if(UseT4)then
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, &
-                     AbsorptionOpacitySiOut_W = OpacityPlanckSi_W, &
-                     DiffusionOpacitySiOut_W = OpacityRosselandSi_W, &
-                     CvSiOut = CvSi, TeSiOut = TeSi, HeatCondSiOut=HeatCondSi)
+                     PlanckOpacityOut_W = OpacityPlanckSi_W, &
+                     RosselandOpacityOut_W = OpacityRosselandSi_W, &
+                     CvOut = CvSi, TeOut = TeSi, HeatCondOut=HeatCondSi)
              else
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, &
-                     AbsorptionOpacitySiOut_W = OpacityPlanckSi_W, &
-                     DiffusionOpacitySiOut_W = OpacityRosselandSi_W, &
-                     CvSiOut = CvSi, TeSiOut = TeSi, HeatCondSiOut=HeatCondSi,&
-                     CgTeSiOut_W=CgTeSi_W)
+                     PlanckOpacityOut_W = OpacityPlanckSi_W, &
+                     RosselandOpacityOut_W = OpacityRosselandSi_W, &
+                     CvOut = CvSi, TeOut = TeSi, HeatCondOut=HeatCondSi,&
+                     CgTeOut_W=CgTeSi_W)
 
                 CgTe_W = CgTeSi_W*Si2No_V(UnitEnergyDens_) &
                      /Si2No_V(UnitTemperature_)
@@ -879,8 +879,8 @@ contains
       if(nWave == 1)then
          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
               i, j, k, iBlock, &
-              DiffusionOpacitySiOut_W = OpacityRosselandSi_W, &
-              HeatCondSiOut = HeatCondSi, TeSiOut = TeSi)
+              RosselandOpacityOut_W = OpacityRosselandSi_W, &
+              HeatCondOut = HeatCondSi, TeOut = TeSi)
 
          if(.not.UseT4)then
             Tg = sqrt(sqrt(State_VGB(WaveFirst_,i,j,k,iBlock)/cRadiationNo))
@@ -888,9 +888,9 @@ contains
          end if
       else
          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-              i, j, k, iBlock, CgTgSiOut_W = CgTgSi_W, &
-              DiffusionOpacitySiOut_W = OpacityRosselandSi_W, &
-              HeatCondSiOut = HeatCondSi, TeSiOut = TeSi)
+              i, j, k, iBlock, CgTgOut_W = CgTgSi_W, &
+              RosselandOpacityOut_W = OpacityRosselandSi_W, &
+              HeatCondOut = HeatCondSi, TeOut = TeSi)
 
          CgTg_W = CgTgSi_W*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
       end if
@@ -1076,7 +1076,7 @@ contains
                         State_VGB(iVar,1,j,k,iBlock)*(Coef - 0.5)/(Coef + 0.5)
                 end do
                 call user_material_properties(State_VGB(:,0,j,k,iBlock), &
-                     0, j, k, iBlock, TgSiOut_W = TgSi_W)
+                     0, j, k, iBlock, TgOut_W = TgSi_W)
                 State_VG(iTrImplFirst:iTrImplLast,0,j,k) = &
                      TgSi_W*Si2No_V(UnitTemperature_)
              end do; end do
@@ -1093,7 +1093,7 @@ contains
                         State_VGB(iVar,nI,j,k,iBlock)*(Coef-0.5)/(Coef + 0.5)
                 end do
                 call user_material_properties(State_VGB(:,nI+1,j,k,iBlock), &
-                     nI+1, j, k, iBlock, TgSiOut_W = TgSi_W)
+                     nI+1, j, k, iBlock, TgOut_W = TgSi_W)
                 State_VG(iTrImplFirst:iTrImplLast,nI+1,j,k) = &
                      TgSi_W*Si2No_V(UnitTemperature_)
              end do; end do
@@ -1110,7 +1110,7 @@ contains
                         State_VGB(iVar,i,1,k,iBlock)*(Coef - 0.5)/(Coef + 0.5)
                 end do
                 call user_material_properties(State_VGB(:,i,0,k,iBlock), &
-                     i, 0, k, iBlock, TgSiOut_W = TgSi_W)
+                     i, 0, k, iBlock, TgOut_W = TgSi_W)
                 State_VG(iTrImplFirst:iTrImplLast,i,0,k) = &
                      TgSi_W*Si2No_V(UnitTemperature_)
              end do; end do
@@ -1127,7 +1127,7 @@ contains
                         State_VGB(iVar,i,nJ,k,iBlock)*(Coef-0.5)/(Coef + 0.5)
                 end do
                 call user_material_properties(State_VGB(:,i,nJ+1,k,iBlock), &
-                     i, nJ+1, k, iBlock, TgSiOut_W = TgSi_W)
+                     i, nJ+1, k, iBlock, TgOut_W = TgSi_W)
                 State_VG(iTrImplFirst:iTrImplLast,i,nJ+1,k) = &
                      TgSi_W*Si2No_V(UnitTemperature_)
              end do; end do
@@ -1144,7 +1144,7 @@ contains
                         State_VGB(iVar,i,j,1,iBlock)*(Coef-0.5)/(Coef + 0.5)
                 end do
                 call user_material_properties(State_VGB(:,i,j,0,iBlock), &
-                     i, j, 0, iBlock, TgSiOut_W = TgSi_W)
+                     i, j, 0, iBlock, TgOut_W = TgSi_W)
                 State_VG(iTrImplFirst:iTrImplLast,i,j,0) = &
                      TgSi_W*Si2No_V(UnitTemperature_)
              end do; end do
@@ -1161,7 +1161,7 @@ contains
                         State_VGB(iVar,i,j,nK,iBlock)*(Coef-0.5)/(Coef + 0.5)
                 end do
                 call user_material_properties(State_VGB(:,i,j,nK+1,iBlock), &
-                     i, j, nK+1, iBlock, TgSiOut_W = TgSi_W)
+                     i, j, nK+1, iBlock, TgOut_W = TgSi_W)
                 State_VG(iTrImplFirst:iTrImplLast,i,j,nK+1) = &
                      TgSi_W*Si2No_V(UnitTemperature_)
              end do; end do
@@ -1550,7 +1550,7 @@ contains
 
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
-               EinternalSiIn = EeSi, PressureSiOut = PeSi)
+               EinternalIn = EeSi, PressureOut = PeSi)
 
           ! use true electron pressure
           State_VGB(Ee_,i,j,k,iBlock) = inv_gm1*PeSi*Si2No_V(UnitP_)
@@ -1572,7 +1572,7 @@ contains
 
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
-               EinternalSiIn = EinternalSi, PressureSiOut = PressureSi)
+               EinternalIn = EinternalSi, PressureOut = PressureSi)
 
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
 

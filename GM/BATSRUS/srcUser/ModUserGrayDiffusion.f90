@@ -347,13 +347,13 @@ contains
                (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
                State_VGB(ExtraEint_,i,j,k,iBlock))
           call user_material_properties(State_VGB(:,i,j,k,iBlock),&
-               EinternalSiIn=EinternalSi, PressureSiOut=PressureSi)
+               EinternalIn=EinternalSi, PressureOut=PressureSi)
       
           ! Set true pressure
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
        else
           call user_material_properties(State_VGB(:,i,j,k,iBlock),&
-               EinternalSiOut=EinternalSi)
+               EinternalOut=EinternalSi)
        end if
 
        ! Set ExtraEint = Total internal energy - P/(gamma -1)
@@ -486,11 +486,11 @@ contains
   !==========================================================================
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
-       EinternalSiIn, TeSiIn, NatomicSiOut, &
-       EinternalSiOut, TeSiOut, PressureSiOut, &
-       CvSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
-       AbsorptionOpacitySiOut_W, DiffusionOpacitySiOut_W, &
-       PlanckSiOut_W, CgTeSiOut_W, CgTgSiOut_W, TgSiOut_W)
+       EinternalIn, TeIn, NatomicOut, &
+       EinternalOut, TeOut, PressureOut, &
+       CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
+       PlanckOpacityOut_W, RosselandOpacityOut_W, &
+       PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
 
     ! The State_V vector is in normalized units
 
@@ -501,74 +501,74 @@ contains
     use ModVarIndexes, ONLY: nVar, Rho_, p_
 
     real, intent(in) :: State_V(nVar)
-    integer, optional, intent(in):: i, j, k, iBlock, iDir    ! cell/face index
-    real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
-    real, optional, intent(in)  :: TeSiIn                    ! [K]
-    real, optional, intent(out) :: NatomicSiOut              ! [1/m^3]
-    real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
-    real, optional, intent(out) :: TeSiOut                   ! [K]
-    real, optional, intent(out) :: PressureSiOut             ! [Pa]
-    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: GammaOut                  ! dimensionless
-    real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
-    real, optional, intent(out) :: TeTiRelaxSiOut            ! [1/s]
+    integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
+    real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
+    real, optional, intent(in)  :: TeIn                    ! [K]
+    real, optional, intent(out) :: NatomicOut              ! [1/m^3]
+    real, optional, intent(out) :: EinternalOut            ! [J/m^3]
+    real, optional, intent(out) :: TeOut                   ! [K]
+    real, optional, intent(out) :: PressureOut             ! [Pa]
+    real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]
+    real, optional, intent(out) :: GammaOut                ! dimensionless
+    real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
+    real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: &
-         AbsorptionOpacitySiOut_W(nWave)                     ! [1/m]
+         PlanckOpacityOut_W(nWave)                         ! [1/m]
     real, optional, intent(out) :: &
-         DiffusionOpacitySiOut_W(nWave)                      ! [1/m]
+         RosselandOpacityOut_W(nWave)                      ! [1/m]
 
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
     !  Derivative of group Planckian by electron temperature
     !  Group specific heat of the radiation
     !  Group radiation temperature
-    real, optional, intent(out) :: PlanckSiOut_W(nWave)      ! [J/m^3]
-    real, optional, intent(out) :: CgTeSiOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: CgTgSiOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: TgSiOut_W(nWave)          ! [K]
+    real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
+    real, optional, intent(out) :: CgTeOut_W(nWave)        ! [J/(m^3*K)]
+    real, optional, intent(out) :: CgTgOut_W(nWave)        ! [J/(m^3*K)]
+    real, optional, intent(out) :: TgOut_W(nWave)          ! [K]
 
-    real :: Temperature, AbsorptionOpacity, DiffusionRad
+    real :: Temperature, PlanckOpacity, DiffusionRad
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !-------------------------------------------------------------------
 
-    if(present(EinternalSiIn))then
-       Temperature = EinternalSiIn*Si2No_V(UnitEnergyDens_) &
+    if(present(EinternalIn))then
+       Temperature = EinternalIn*Si2No_V(UnitEnergyDens_) &
             *(Gamma - 1.0)/State_V(Rho_)
     else
        Temperature = State_V(p_)/State_V(Rho_)
     end if
 
-    if(present(EinternalSiOut)) EinternalSiOut = &
+    if(present(EinternalOut)) EinternalOut = &
          State_V(Rho_)*Temperature/(Gamma - 1.0) *No2Si_V(UnitEnergyDens_)
 
-    if(present(PressureSiOut)) &
-         PressureSiOut = State_V(Rho_)*Temperature*No2Si_V(UnitP_)
+    if(present(PressureOut)) &
+         PressureOut = State_V(Rho_)*Temperature*No2Si_V(UnitP_)
 
-    if(present(CvSiOut)) CvSiOut = State_V(Rho_)/(Gamma - 1.0) &
+    if(present(CvOut)) CvOut = State_V(Rho_)/(Gamma - 1.0) &
          *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
 
     select case(iLowrieTest)
     case(1,2)
        DiffusionRad = 1.0
-       AbsorptionOpacity = 1.0E6
+       PlanckOpacity = 1.0E6
     case(3)
        DiffusionRad = 0.00175*(Gamma*Temperature)**3.5/State_V(Rho_)
-       AbsorptionOpacity = 1.0E6/DiffusionRad
+       PlanckOpacity = 1.0E6/DiffusionRad
     end select
 
     if(present(GammaOut)) GammaOut = Gamma
 
-    if(present(TeSiOut)) TeSiOut = Temperature*No2Si_V(UnitTemperature_)
+    if(present(TeOut)) TeOut = Temperature*No2Si_V(UnitTemperature_)
 
-    if(present(AbsorptionOpacitySiOut_W)) AbsorptionOpacitySiOut_W = &
-         AbsorptionOpacity/No2Si_V(UnitT_)/cLightSpeed
+    if(present(PlanckOpacityOut_W)) PlanckOpacityOut_W = &
+         PlanckOpacity/No2Si_V(UnitT_)/cLightSpeed
 
-    if(present(DiffusionOpacitySiOut_W)) DiffusionOpacitySiOut_W = &
+    if(present(RosselandOpacityOut_W)) RosselandOpacityOut_W = &
          cLightSpeed/(3.0*DiffusionRad*No2Si_V(UnitU_)*No2Si_V(UnitX_))
 
-    if(present(HeatCondSiOut)) HeatCondSiOut = 0.0
-    if(present(TeTiRelaxSiOut)) TeTiRelaxSiOut = 0.0
+    if(present(HeatCondOut)) HeatCondOut = 0.0
+    if(present(TeTiRelaxOut)) TeTiRelaxOut = 0.0
 
   end subroutine user_material_properties
 

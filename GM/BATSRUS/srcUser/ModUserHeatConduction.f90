@@ -275,7 +275,7 @@ contains
 
          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
               i, j, k, iBlock, &
-              EinternalSiIn=EeSi, PressureSiOut=PeSi)
+              EinternalIn=EeSi, PressureOut=PeSi)
 
          ! use true electron pressure
          State_VGB(Ee_,i,j,k,iBlock) = inv_gm1*PeSi*Si2No_V(UnitP_)
@@ -904,7 +904,7 @@ contains
        case('te')
           do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  TeSiOut=TeSi)
+                  TeOut=TeSi)
              PlotVar_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
 
@@ -982,7 +982,7 @@ contains
        case('te')
           do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  TeSiOut = PlotVar_G(i,j,k))
+                  TeOut = PlotVar_G(i,j,k))
              PlotVar_G(i,j,:) = PlotVar_G(i,j,k)*Si2No_V(UnitTemperature_)
           end do; end do; end do
        case default
@@ -996,11 +996,11 @@ contains
   !============================================================================
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
-       EinternalSiIn, TeSiIn, NatomicSiOut, &
-       EinternalSiOut, TeSiOut, PressureSiOut, &
-       CvSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
-       AbsorptionOpacitySiOut_W, DiffusionOpacitySiOut_W, &
-       PlanckSiOut_W, CgTeSiOut_W, CgTgSiOut_W, TgSiOut_W)
+       EinternalIn, TeIn, NatomicOut, &
+       EinternalOut, TeOut, PressureOut, &
+       CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
+       PlanckOpacityOut_W, RosselandOpacityOut_W, &
+       PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
 
     ! The State_V vector is in normalized units
 
@@ -1012,31 +1012,31 @@ contains
     use ModVarIndexes, ONLY: nVar, Rho_, p_, Ee_, ExtraEint_
 
     real, intent(in) :: State_V(nVar)
-    integer, optional, intent(in):: i, j, k, iBlock, iDir    ! cell/face index
-    real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
-    real, optional, intent(in)  :: TeSiIn                    ! [K]
-    real, optional, intent(out) :: NatomicSiOut              ! [1/m^3]
-    real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
-    real, optional, intent(out) :: TeSiOut                   ! [K]
-    real, optional, intent(out) :: PressureSiOut             ! [Pa]
-    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: GammaOut                  ! dimensionless
-    real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
-    real, optional, intent(out) :: TeTiRelaxSiOut            ! [1/s]
+    integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
+    real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
+    real, optional, intent(in)  :: TeIn                    ! [K]
+    real, optional, intent(out) :: NatomicOut              ! [1/m^3]
+    real, optional, intent(out) :: EinternalOut            ! [J/m^3]
+    real, optional, intent(out) :: TeOut                   ! [K]
+    real, optional, intent(out) :: PressureOut             ! [Pa]
+    real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]
+    real, optional, intent(out) :: GammaOut                ! dimensionless
+    real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
+    real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: &
-         AbsorptionOpacitySiOut_W(nWave)                     ! [1/m]
+         PlanckOpacityOut_W(nWave)                         ! [1/m]
     real, optional, intent(out) :: &
-         DiffusionOpacitySiOut_W(nWave)                      ! [1/m]
+         RosselandOpacityOut_W(nWave)                      ! [1/m]
 
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
     !  Derivative of group Planckian by electron temperature
     !  Group specific heat of the radiation
     !  Group radiation temperature
-    real, optional, intent(out) :: PlanckSiOut_W(nWave)      ! [J/m^3]
-    real, optional, intent(out) :: CgTeSiOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: CgTgSiOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: TgSiOut_W(nWave)          ! [K]
+    real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
+    real, optional, intent(out) :: CgTeOut_W(nWave)        ! [J/(m^3*K)]
+    real, optional, intent(out) :: CgTgOut_W(nWave)        ! [J/(m^3*K)]
+    real, optional, intent(out) :: TgOut_W(nWave)          ! [K]
 
     real :: Rho, Pressure, Te, Ti
     real :: RhoSi, pSi, TeSi
@@ -1049,23 +1049,23 @@ contains
     Rho = State_V(Rho_)
     RhoSi = Rho*No2Si_V(Rho_)
 
-    if(present(EinternalSiIn))then
+    if(present(EinternalIn))then
        if(TypeProblem == 'parcondsemi')then
-          Te = (3.5*EinternalSiIn*Si2No_V(UnitEnergyDens_))**(1.0/3.5)
+          Te = (3.5*EinternalIn*Si2No_V(UnitEnergyDens_))**(1.0/3.5)
           Pressure = Rho*Te
           pSi = Pressure*No2Si_V(UnitP_)
        elseif(TypeProblem == 'lowrie')then
-          Ee = EinternalSiIn*Si2No_V(UnitEnergyDens_)
+          Ee = EinternalIn*Si2No_V(UnitEnergyDens_)
           Te = sqrt(sqrt(Ee/cRadiationNo))
-          pSi = (GammaRel - 1)*EinternalSiIn
+          pSi = (GammaRel - 1)*EinternalIn
        else
-          pSi = EinternalSiIn*gm1
+          pSi = EinternalIn*gm1
           Pressure = pSi*Si2No_V(UnitP_)
           Te = Pressure/Rho
        end if
        TeSi = Te*No2Si_V(UnitTemperature_)
-    elseif(present(TeSiIn))then
-       TeSi = TeSiIn
+    elseif(present(TeIn))then
+       TeSi = TeIn
        Te = TeSi*Si2No_V(UnitTemperature_)
        if(TypeProblem == 'lowrie')then
           Ee = cRadiationNo*Te**4
@@ -1087,20 +1087,20 @@ contains
        TeSi = Te*No2Si_V(UnitTemperature_)
     end if
 
-    if(present(EinternalSiOut))then
+    if(present(EinternalOut))then
        if(TypeProblem=='parcondsemi')then
-          EinternalSiOut = Te**3.5*No2Si_V(UnitEnergyDens_)/3.5
+          EinternalOut = Te**3.5*No2Si_V(UnitEnergyDens_)/3.5
        elseif(TypeProblem == 'lowrie')then
-          EinternalSiOut = cRadiationNo*Te**4*No2Si_V(UnitEnergyDens_)
+          EinternalOut = cRadiationNo*Te**4*No2Si_V(UnitEnergyDens_)
        else
-          EinternalSiOut = pSi*inv_gm1
+          EinternalOut = pSi*inv_gm1
        end if
     end if
 
-    if(present(TeSiOut)) TeSiOut = TeSi
-    if(present(PressureSiOut)) PressureSiOut = pSi
+    if(present(TeOut)) TeOut = TeSi
+    if(present(PressureOut)) PressureOut = pSi
 
-    if(present(CvSiOut))then
+    if(present(CvOut))then
        if(TypeProblem == 'parcondsemi')then
           Cv = Te**2.5
        elseif(TypeProblem == 'lowrie')then
@@ -1108,10 +1108,10 @@ contains
        else
           Cv = inv_gm1*Rho
        end if
-       CvSiOut = Cv*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+       CvOut = Cv*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
     end if
 
-    if(present(HeatCondSiOut))then
+    if(present(HeatCondOut))then
        select case(TypeProblem)
        case('rmtv')
           HeatCond = Te**6.5/Rho**2
@@ -1121,28 +1121,28 @@ contains
        case default
           HeatCond = HeatConductionCoef
        end select
-       HeatCondSiOut = HeatCond &
+       HeatCondOut = HeatCond &
             *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
             *No2Si_V(UnitU_)*No2Si_V(UnitX_)
     end if
 
-    if(present(TeTiRelaxSiOut))then
+    if(present(TeTiRelaxOut))then
        if(TypeProblem == 'lowrie')then
           NatomicSi = State_V(Rho_)*No2Si_V(UnitN_)
           Ti = State_V(p_)/State_V(Rho_)
-          TeTiRelaxSiOut = 1.0E6/(0.00175*(g*Ti)**3.5/State_V(Rho_)) &
+          TeTiRelaxOut = 1.0E6/(0.00175*(g*Ti)**3.5/State_V(Rho_)) &
                *cRadiationNo*(Te + Ti)*(Te**2 + Ti**2) &
                /(cBoltzmann*NatomicSi)*No2Si_V(UnitEnergyDens_) &
                /(No2Si_V(UnitTemperature_)*No2Si_V(UnitT_))
        else
-          TeTiRelaxSiOut = 0.0
+          TeTiRelaxOut = 0.0
        end if
     end if
 
-    if(present(NatomicSiOut)) NatomicSiOut = State_V(Rho_)*No2Si_V(UnitN_)
-    if(present(AbsorptionOpacitySiOut_W)) AbsorptionOpacitySiOut_W = 0.0
-    if(present(DiffusionOpacitySiOut_W)) DiffusionOpacitySiOut_W = 0.0
-    if(present(CgTeSiOut_W)) CgTeSiOut_W = 0.0
+    if(present(NatomicOut)) NatomicOut = State_V(Rho_)*No2Si_V(UnitN_)
+    if(present(PlanckOpacityOut_W)) PlanckOpacityOut_W = 0.0
+    if(present(RosselandOpacityOut_W)) RosselandOpacityOut_W = 0.0
+    if(present(CgTeOut_W)) CgTeOut_W = 0.0
 
   end subroutine user_material_properties
 

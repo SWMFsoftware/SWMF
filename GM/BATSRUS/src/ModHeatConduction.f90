@@ -186,7 +186,7 @@ contains
        else
           do kk = -1, nK+2; do jj = -1, nJ+2; do ii = -1, nI+2
              call user_material_properties( &
-                  State_VGB(:,ii,jj,kk,iBlock), TeSiOut=TeSi)
+                  State_VGB(:,ii,jj,kk,iBlock), TeOut=TeSi)
              Te_G(ii,jj,kk) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
        end if
@@ -210,9 +210,9 @@ contains
        CvL = inv_gm1*StateLeft_V(Rho_)/TeFraction
        CvR = inv_gm1*StateRight_V(Rho_)/TeFraction
     else
-       call user_material_properties(StateLeft_V, CvSiOut = CvSi)
+       call user_material_properties(StateLeft_V, CvOut = CvSi)
        CvL = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
-       call user_material_properties(StateRight_V, CvSiOut = CvSi)
+       call user_material_properties(StateRight_V, CvOut = CvSi)
        CvR = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
     end if
     HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
@@ -263,7 +263,7 @@ contains
     else
        ! Note we assume that the heat conduction formula for the
        ! ideal state is still applicable for the non-ideal state
-       call user_material_properties(State_V, TeSiOut=TeSi)
+       call user_material_properties(State_V, TeOut=TeSi)
        Te = TeSi*Si2No_V(UnitTemperature_)
     end if
 
@@ -335,7 +335,7 @@ contains
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call user_material_properties( &
-                  State_VGB(:,i,j,k,iBlock), TeSiOut=TeSi, CvSiOut = CvSi)
+                  State_VGB(:,i,j,k,iBlock), TeOut=TeSi, CvOut = CvSi)
              StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
                   TeSi*Si2No_V(UnitTemperature_)
              DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
@@ -631,7 +631,7 @@ contains
           EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               EinternalSiIn = EinternalSi, PressureSiOut = PressureSi)
+               EinternalIn = EinternalSi, PressureOut = PressureSi)
 
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
           State_VGB(ExtraEint_,i,j,k,iBlock) = &

@@ -240,17 +240,17 @@ contains
   !===========================================================================
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
-       EinternalSiIn, TeSiIn, NatomicSiOut, &
-       EinternalSiOut, TeSiOut, PressureSiOut, &
-       CvSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
-       AbsorptionOpacitySiOut_W, DiffusionOpacitySiOut_W, &
-       PlanckSiOut_W, CgTeSiOut_W, CgTgSiOut_W, TgSiOut_W)
+       EinternalIn, TeIn, NatomicOut, &
+       EinternalOut, TeOut, PressureOut, &
+       CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
+       PlanckOpacityOut_W, RosselandOpacityOut_W, &
+       PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
 
     ! The State_V vector is in normalized units, all other physical
     ! quantities are in SI.
     !
-    ! If the electron energy is used, then EinternalSiIn, EinternalSiOut,
-    ! PressureSiOut, CvSiOut refer to the electron internal energies,
+    ! If the electron energy is used, then EinternalIn, EinternalOut,
+    ! PressureOut, CvOut refer to the electron internal energies,
     ! electron pressure, and electron specific heat, respectively.
     ! Otherwise they refer to the total (electron + ion) internal energies,
     ! total (electron + ion) pressure, and the total specific heat.
@@ -259,31 +259,31 @@ contains
     use ModVarIndexes, ONLY: nVar
 
     real, intent(in) :: State_V(nVar)
-    integer, optional, intent(in):: i, j, k, iBlock, iDir    ! cell/face index
-    real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
-    real, optional, intent(in)  :: TeSiIn                    ! [K]
-    real, optional, intent(out) :: NatomicSiOut              ! [1/m^3]
-    real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
-    real, optional, intent(out) :: TeSiOut                   ! [K]
-    real, optional, intent(out) :: PressureSiOut             ! [Pa]
-    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: GammaOut                  ! dimensionless
-    real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
-    real, optional, intent(out) :: TeTiRelaxSiOut            ! [1/s]
+    integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
+    real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
+    real, optional, intent(in)  :: TeIn                    ! [K]
+    real, optional, intent(out) :: NatomicOut              ! [1/m^3]
+    real, optional, intent(out) :: EinternalOut            ! [J/m^3]
+    real, optional, intent(out) :: TeOut                   ! [K]
+    real, optional, intent(out) :: PressureOut             ! [Pa]
+    real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]
+    real, optional, intent(out) :: GammaOut                ! dimensionless
+    real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
+    real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: &
-         AbsorptionOpacitySiOut_W(nWave)                     ! [1/m]
+         PlanckOpacityOut_W(nWave)                         ! [1/m]
     real, optional, intent(out) :: &
-         DiffusionOpacitySiOut_W(nWave)                      ! [1/m]
+         RosselandOpacityOut_W(nWave)                      ! [1/m]
 
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
     !  Derivative of group Planckian by electron temperature
     !  Group specific heat of the radiation
     !  Group radiation temperature
-    real, optional, intent(out) :: PlanckSiOut_W(nWave)      ! [J/m^3]
-    real, optional, intent(out) :: CgTeSiOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: CgTgSiOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: TgSiOut_W(nWave)          ! [K]
+    real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
+    real, optional, intent(out) :: CgTeOut_W(nWave)        ! [J/(m^3*K)]
+    real, optional, intent(out) :: CgTgOut_W(nWave)        ! [J/(m^3*K)]
+    real, optional, intent(out) :: TgOut_W(nWave)          ! [K]
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !------------------------------------------------------------------------

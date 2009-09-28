@@ -282,7 +282,7 @@ contains
           if(State_VGB(p_,i,j,k,iBlock) <= 0.0)&
                call stop_mpi('Negative pressure in set_temperature')
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               TeSiOut = TeSi)
+               TeOut = TeSi)
 
           Te = TeSi*Si2No_V(UnitTemperature_)
           if(Te <= 0.0)call stop_mpi('negative temperature in set_temperature')
@@ -323,9 +323,9 @@ contains
     use ModUser,     ONLY: user_material_properties
 
     integer :: i, j, k, iBlock
-    real :: PlanckOpacitySi_W(nWave), DiffusionOpacitySi_W(nWave)
+    real :: PlanckOpacitySi_W(nWave), RosselandOpacitySi_W(nWave)
     real :: HeatCondSi
-    real :: PlanckOpacity, DiffusionOpacity, HeatConductionCoef
+    real :: PlanckOpacity, RosselandOpacity, HeatConductionCoef
     real :: CvSi, Cv, TeSi, Te, Trad, DiffRad
 
     character(len=*), parameter:: NameSub = 'set_frozen_coefficients'
@@ -352,11 +352,11 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               AbsorptionOpacitySiOut_W = PlanckOpacitySi_W, &
-               DiffusionOpacitySiOut_W = DiffusionOpacitySi_W, &
-               CvSiOut = CvSi, TeSiOut = TeSi, HeatCondSiOut = HeatCondSi)
+               PlanckOpacityOut_W = PlanckOpacitySi_W, &
+               RosselandOpacityOut_W = RosselandOpacitySi_W, &
+               CvOut = CvSi, TeOut = TeSi, HeatCondOut = HeatCondSi)
 
-          DiffusionOpacity = DiffusionOpacitySi_W(1)/Si2No_V(UnitX_)
+          RosselandOpacity = RosselandOpacitySi_W(1)/Si2No_V(UnitX_)
           PlanckOpacity = PlanckOpacitySi_W(1)/Si2No_V(UnitX_)
           HeatConductionCoef = HeatCondSi &
                *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
@@ -431,14 +431,14 @@ contains
 
          select case(TypeRadFluxLimiter)
          case("sum")
-            DiffRad = Clight/(3.0*DiffusionOpacity + sqrt(Grad2ByErad2))
+            DiffRad = Clight/(3.0*RosselandOpacity + sqrt(Grad2ByErad2))
          case("max")
-            DiffRad = Clight/max(3.0*DiffusionOpacity,sqrt(Grad2ByErad2))
+            DiffRad = Clight/max(3.0*RosselandOpacity,sqrt(Grad2ByErad2))
          case("larsen")
-            DiffRad = Clight/sqrt((3.0*DiffusionOpacity)**2 + Grad2ByErad2)
+            DiffRad = Clight/sqrt((3.0*RosselandOpacity)**2 + Grad2ByErad2)
          end select
       else
-         DiffRad = Clight/(3.0*DiffusionOpacity)
+         DiffRad = Clight/(3.0*RosselandOpacity)
       end if
 
     end subroutine get_radiation_diffusion_coef
@@ -722,13 +722,13 @@ contains
           TeSi = Temperature_VGB(Te_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
           if(TeSi <= 0.0)call stop_mpi('Negative temperature')
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               TeSiIn = TeSi, EinternalSiOut = EinternalSi, &
-               PressureSiOut = PressureSi)
+               TeIn = TeSi, EinternalOut = EinternalSi, &
+               PressureOut = PressureSi)
           Einternal = EInternalSi*Si2No_V(UnitEnergyDens_)
        else
 
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               EinternalSiIn = EinternalSi, PressureSiOut = PressureSi)
+               EinternalIn = EinternalSi, PressureOut = PressureSi)
        end if
        State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
 
