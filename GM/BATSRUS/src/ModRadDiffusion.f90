@@ -269,7 +269,7 @@ contains
       !------------------------------------------------------------------------
 
       call user_material_properties(State_V, i, j, k, iBlock, iDir, &
-           RosselandOpacityOut_W = OpacityRosselandSi_W)
+           OpacityRosselandOut_W = OpacityRosselandSi_W)
 
       OpacityRosseland = OpacityRosselandSi_W(1)/Si2No_V(UnitX_)
 
@@ -315,7 +315,7 @@ contains
 
        if(IsNewTimestepRadDiffusion)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, PlanckOpacityOut_W = OpacityPlanckSi_W)
+               i, j, k, iBlock, OpacityPlanckOut_W = OpacityPlanckSi_W)
 
           RelaxCoef_VCB(1,i,j,k,iBlock) = &
                OpacityPlanckSi_W(1)*cLightSpeed/Si2No_V(UnitT_)
@@ -444,15 +444,15 @@ contains
              if(UseT4)then
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, &
-                     PlanckOpacityOut_W = OpacityPlanckSi_W, &
-                     RosselandOpacityOut_W = OpacityRosselandSi_W, &
+                     OpacityPlanckOut_W = OpacityPlanckSi_W, &
+                     OpacityRosselandOut_W = OpacityRosselandSi_W, &
                      CvOut=CveSi, TeOut = TeSi, NatomicOut=NatomicSi, &
                      HeatCondOut = HeatCondSi, TeTiRelaxOut = TeTiRelaxSi)
              else
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, &
-                     PlanckOpacityOut_W = OpacityPlanckSi_W, &
-                     RosselandOpacityOut_W = OpacityRosselandSi_W, &
+                     OpacityPlanckOut_W = OpacityPlanckSi_W, &
+                     OpacityRosselandOut_W = OpacityRosselandSi_W, &
                      CvOut=CveSi, TeOut = TeSi, NatomicOut=NatomicSi, &
                      HeatCondOut = HeatCondSi, TeTiRelaxOut = TeTiRelaxSi,&
                      CgTeOut_W=CgTeSi_W)
@@ -479,14 +479,14 @@ contains
              if(UseT4)then
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, &
-                     PlanckOpacityOut_W = OpacityPlanckSi_W, &
-                     RosselandOpacityOut_W = OpacityRosselandSi_W, &
+                     OpacityPlanckOut_W = OpacityPlanckSi_W, &
+                     OpacityRosselandOut_W = OpacityRosselandSi_W, &
                      CvOut = CvSi, TeOut = TeSi, HeatCondOut=HeatCondSi)
              else
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, &
-                     PlanckOpacityOut_W = OpacityPlanckSi_W, &
-                     RosselandOpacityOut_W = OpacityRosselandSi_W, &
+                     OpacityPlanckOut_W = OpacityPlanckSi_W, &
+                     OpacityRosselandOut_W = OpacityRosselandSi_W, &
                      CvOut = CvSi, TeOut = TeSi, HeatCondOut=HeatCondSi,&
                      CgTeOut_W=CgTeSi_W)
 
@@ -879,7 +879,7 @@ contains
       if(nWave == 1)then
          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
               i, j, k, iBlock, &
-              RosselandOpacityOut_W = OpacityRosselandSi_W, &
+              OpacityRosselandOut_W = OpacityRosselandSi_W, &
               HeatCondOut = HeatCondSi, TeOut = TeSi)
 
          if(.not.UseT4)then
@@ -889,7 +889,7 @@ contains
       else
          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
               i, j, k, iBlock, CgTgOut_W = CgTgSi_W, &
-              RosselandOpacityOut_W = OpacityRosselandSi_W, &
+              OpacityRosselandOut_W = OpacityRosselandSi_W, &
               HeatCondOut = HeatCondSi, TeOut = TeSi)
 
          CgTg_W = CgTgSi_W*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)

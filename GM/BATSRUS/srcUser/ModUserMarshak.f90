@@ -243,7 +243,7 @@ contains
        EinternalIn, TeIn, NatomicOut, &
        EinternalOut, TeOut, PressureOut, &
        CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
-       PlanckOpacityOut_W, RosselandOpacityOut_W, &
+       OpacityPlanckOut_W, OpacityRosselandOut_W, &
        PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
 
     ! The State_V vector is in normalized units
@@ -267,9 +267,9 @@ contains
     real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: &
-         PlanckOpacityOut_W(nWave)                         ! [1/m]
+         OpacityPlanckOut_W(nWave)                         ! [1/m]
     real, optional, intent(out) :: &
-         RosselandOpacityOut_W(nWave)                      ! [1/m]
+         OpacityRosselandOut_W(nWave)                      ! [1/m]
 
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
@@ -317,10 +317,10 @@ contains
     if(present(CvOut)) CvOut = 4.0*cRadiationNo*Temperature**3/Epsilon &
          *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
 
-    if(present(PlanckOpacityOut_W)) &
-         PlanckOpacityOut_W = SpecificOpacity*Rho/No2Si_V(UnitX_)
-    if(present(RosselandOpacityOut_W)) &
-         RosselandOpacityOut_W = SpecificOpacity*Rho/No2Si_V(UnitX_)
+    if(present(OpacityPlanckOut_W)) &
+         OpacityPlanckOut_W = SpecificOpacity*Rho/No2Si_V(UnitX_)
+    if(present(OpacityRosselandOut_W)) &
+         OpacityRosselandOut_W = SpecificOpacity*Rho/No2Si_V(UnitX_)
 
     if(present(HeatCondOut)) HeatCondOut = 0.0
     if(present(TeTiRelaxOut)) TeTiRelaxOut = 0.0

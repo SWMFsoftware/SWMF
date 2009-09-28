@@ -486,7 +486,7 @@ subroutine set_radiation_outflow_bc(iVarFirst, iVarLast, iSide)
   case(1,2)
      do k = 1, nK; do j = 1, nJ
         call user_material_properties(State_VGB(:,imin1p,j,k,iBLK), &
-             imin1p, j, k, iBLK, RosselandOpacityOut_W=OpacityRosselandSi_W)
+             imin1p, j, k, iBLK, OpacityRosselandOut_W=OpacityRosselandSi_W)
 
         do iVar = iVarFirst, iVarLast
            iWave = iVar - iVarFirst + 1
@@ -506,7 +506,7 @@ subroutine set_radiation_outflow_bc(iVarFirst, iVarLast, iSide)
   case(3,4)
      do k = 1, nK; do i = 1, nI
         call user_material_properties(State_VGB(:,i,jmin1p,k,iBLK), &
-             i, jmin1p, k, iBLK, RosselandOpacityOut_W=OpacityRosselandSi_W)
+             i, jmin1p, k, iBLK, OpacityRosselandOut_W=OpacityRosselandSi_W)
 
         do iVar = iVarFirst, iVarLast
            iWave = iVar - iVarFirst + 1
@@ -526,7 +526,7 @@ subroutine set_radiation_outflow_bc(iVarFirst, iVarLast, iSide)
   case(5,6)
      do j = 1, nJ; do i = 1, nI
         call user_material_properties(State_VGB(:,i,j,kmin1p,iBLK), &
-             i, j, kmin1p, iBLK, RosselandOpacityOut_W=OpacityRosselandSi_W)
+             i, j, kmin1p, iBLK, OpacityRosselandOut_W=OpacityRosselandSi_W)
 
         do iVar = iVarFirst, iVarLast
            iWave = iVar - iVarFirst + 1

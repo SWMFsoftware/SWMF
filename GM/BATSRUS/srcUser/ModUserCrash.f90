@@ -943,8 +943,7 @@ contains
                 Tr = ( Weight1*DataHyades_VC(iTrHyades, iCell-1) &
                      + Weight2*DataHyades_VC(iTrHyades, iCell) )
 
-                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
-                     cRadiationNo*Tr**4/nWave
+                State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Tr**4
              end if
           end if
 
@@ -1119,8 +1118,8 @@ contains
              State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = EradHyades_V
           else
              ! Radiation energy = cRadiation*Trad**4
-             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
-                  cRadiationNo * DataHyades_V(iTrHyades)**4/nWave
+             State_VGB(Erad_,i,j,k,iBlock) = &
+                  cRadiationNo * DataHyades_V(iTrHyades)**4
           end if
        end if
 
@@ -1142,7 +1141,6 @@ contains
          UnitP_, UnitEnergyDens_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModVarIndexes, ONLY: nWave
-    use ModWaves,    ONLY: UseWavePressure
 
     implicit none
 
@@ -1151,7 +1149,6 @@ contains
     integer:: i, j, k
     real   :: PressureSi, EinternalSi, GammaEos
     logical:: IsConserv
-    logical:: UseWavePressureOrig
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
@@ -1175,13 +1172,7 @@ contains
        end do; end do; end do
     end if
 
-    UseWavePressureOrig = UseWavePressure
-    ! multi-group test mode (uniform spectral temperature)
-    if(nWave > 1 .and. .not.UseHyadesGroupFile) UseWavePressure = .false.
-
     call update_states_MHD(iStage,iBlock)
-
-    UseWavePressure = UseWavePressureOrig
 
     ! update of pressure, ionization and total energies
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -1228,13 +1219,7 @@ contains
       real :: PeSi, Ee, EeSi
       !------------------------------------------------------------------------
 
-      UseWavePressureOrig = UseWavePressure
-      ! multi-group test mode (uniform spectral temperature)
-      if(nWave > 1 .and. .not.UseHyadesGroupFile) UseWavePressure = .false.
-
       call update_states_MHD(iStage,iBlock)
-
-      UseWavePressure = UseWavePressureOrig
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          ! At this point Pe=(g-1)*Ee with the ideal gamma g.
@@ -1330,8 +1315,8 @@ contains
 
     real    :: p, Rho, pSi, RhoSi, TeSi, WaveEnergy
     real    :: PiSi, TiSi, NatomicSi
-    real    :: PlanckOpacitySi_W(nWave)
-    real    :: RosselandOpacitySi_W(nWave)
+    real    :: OpacityPlanckSi_W(nWave)
+    real    :: OpacityRosselandSi_W(nWave)
     integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel, iWave
     real    :: Value_V(nMaterial*nThermo) ! Cv,Gamma,Kappa,Te for 3 materials
     !------------------------------------------------------------------------  
@@ -1385,15 +1370,15 @@ contains
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
-               PlanckOpacityOut_W = PlanckOpacitySi_W)
-          PlotVar_G(i,j,k) = PlanckOpacitySi_W(1)
+               OpacityPlanckOut_W = OpacityPlanckSi_W)
+          PlotVar_G(i,j,k) = OpacityPlanckSi_W(1)
        end do; end do; end do
     case('ross')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
-               RosselandOpacityOut_W = RosselandOpacitySi_W)
-          PlotVar_G(i,j,k) = RosselandOpacitySi_W(1)
+               OpacityRosselandOut_W = OpacityRosselandSi_W)
+          PlotVar_G(i,j,k) = OpacityRosselandSi_W(1)
        end do; end do; end do
     case('cond')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
@@ -1541,7 +1526,7 @@ contains
     real, intent(out)  :: Value_V(:)
 
     real:: Rho, p, e, Cv, Gamma, HeatCond, Te
-    real:: PlanckOpacity_W(nWave), RosselandOpacity_W(nWave)
+    real:: OpacityPlanck_W(nWave), OpacityRosseland_W(nWave)
     integer:: iMaterial
     character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
     !-----------------------------------------------------------------------
@@ -1612,10 +1597,10 @@ contains
        Te  = Arg2
        do iMaterial = 0, nMaterial-1
           call eos(iMaterial, Rho, TeIn=Te, &
-               OpacityPlanckOut_I=PlanckOpacity_W, &
-               OpacityRosselandOut_I=RosselandOpacity_W)
-          Value_V(1 + iMaterial*2) = PlanckOpacity_W(1)/Rho
-          Value_V(2 + iMaterial*2) = RosselandOpacity_W(1)/Rho
+               OpacityPlanckOut_I=OpacityPlanck_W, &
+               OpacityRosselandOut_I=OpacityRosseland_W)
+          Value_V(1 + iMaterial*2) = OpacityPlanck_W(1)/Rho
+          Value_V(2 + iMaterial*2) = OpacityRosseland_W(1)/Rho
        end do
     elseif(any(iTable == iTableOpacity_I))then
 
@@ -1633,10 +1618,10 @@ contains
           if(iTable == iTableOpacity_I(iMaterial)) EXIT
        end do
        call eos(iMaterial, Rho, TeIn=Te, &
-            OpacityPlanckOut_I=PlanckOpacity_W, &
-            OpacityRosselandOut_I=RosselandOpacity_W)
-       Value_V(1:nWave)         = PlanckOpacity_W/Rho
-       Value_V(nWave+1:2*nWave) = RosselandOpacity_W/Rho
+            OpacityPlanckOut_I=OpacityPlanck_W, &
+            OpacityRosselandOut_I=OpacityRosseland_W)
+       Value_V(1:nWave)         = OpacityPlanck_W/Rho
+       Value_V(nWave+1:2*nWave) = OpacityRosseland_W/Rho
     else
        write(*,*)NameSub,' iTable=', iTable
        call stop_mpi(NameSub//' invalid value for iTable')
@@ -1696,7 +1681,7 @@ contains
        EinternalIn, TeIn, NatomicOut, &
        EinternalOut, TeOut, PressureOut, &
        CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
-       PlanckOpacityOut_W, RosselandOpacityOut_W, &
+       OpacityPlanckOut_W, OpacityRosselandOut_W, &
        PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
 
     ! The State_V vector is in normalized units, all other physical
@@ -1733,9 +1718,9 @@ contains
     real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: &
-         PlanckOpacityOut_W(nWave)                         ! [1/m]
+         OpacityPlanckOut_W(nWave)                         ! [1/m]
     real, optional, intent(out) :: &
-         RosselandOpacityOut_W(nWave)                      ! [1/m]
+         OpacityRosselandOut_W(nWave)                      ! [1/m]
 
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
@@ -1820,8 +1805,8 @@ contains
 
     if(present(TeOut)) TeOut = TeSi
 
-    if(present(PlanckOpacityOut_W) &
-         .or. present(RosselandOpacityOut_W))then
+    if(present(OpacityPlanckOut_W) &
+         .or. present(OpacityRosselandOut_W))then
 
        if(iTableOpacity > 0 .and. nWave == 1)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
@@ -1831,93 +1816,74 @@ contains
           Opacity_V(2:2*nMaterial:2) = Opacity_V(2:2*nMaterial:2) &
                *RosselandScaleFactor_I
           if(UseVolumeFraction)then
-             if(present(PlanckOpacityOut_W)) PlanckOpacityOut_W &
+             if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
                   = sum(Weight_I*Opacity_V(1:2*nMaterial:2)) * RhoSi
-             if(present(RosselandOpacityOut_W)) RosselandOpacityOut_W &
+             if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
                   = sum(Weight_I*Opacity_V(2:2*nMaterial:2)) * RhoSi
           else
-             if(present(PlanckOpacityOut_W)) PlanckOpacityOut_W &
+             if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
                   = Opacity_V(2*iMaterial + 1) * RhoSi
-             if(present(RosselandOpacityOut_W)) RosselandOpacityOut_W &
+             if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
                   = Opacity_V(2*iMaterial + 2) * RhoSi
           end if
 
        elseif(all(iTableOpacity_I > 0))then
           if(UseVolumeFraction)then
-             if(present(PlanckOpacityOut_W)) PlanckOpacityOut_W = 0
-             if(present(RosselandOpacityOut_W)) RosselandOpacityOut_W = 0
+             if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = 0
+             if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W = 0
              do jMaterial = 0, nMaterial-1
                 call interpolate_lookup_table(iTableOpacity_I(jMaterial), &
                      RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
-                if(present(PlanckOpacityOut_W)) &
-                     PlanckOpacityOut_W = PlanckOpacityOut_W &
+                if(present(OpacityPlanckOut_W)) &
+                     OpacityPlanckOut_W = OpacityPlanckOut_W &
                      + Weight_I(jMaterial)*GroupOpacity_W(1:nWave) * RhoSi
-                if(present(RosselandOpacityOut_W)) &
-                     RosselandOpacityOut_W =  RosselandOpacityOut_W &
+                if(present(OpacityRosselandOut_W)) &
+                     OpacityRosselandOut_W =  OpacityRosselandOut_W &
                      + Weight_I(jMaterial)*GroupOpacity_W(nWave+1:)*RhoSi
              end do
           else
              call interpolate_lookup_table(iTableOpacity_I(iMaterial), &
                   RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
-             if(present(PlanckOpacityOut_W)) PlanckOpacityOut_W &
+             if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
                   = GroupOpacity_W(1:nWave)*RhoSi
-             if(present(RosselandOpacityOut_W)) RosselandOpacityOut_W &
+             if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
                   = GroupOpacity_W(nWave+1:)*RhoSi
           end if
        else
           ! inline opacities
           if(IsMix)then
              call eos(RhoToARatioSi_I, TeIn=TeSi, &
-                  OpacityPlanckOut_I=PlanckOpacityOut_W, &
-                  OpacityRosselandOut_I=RosselandOpacityOut_W)
+                  OpacityPlanckOut_I=OpacityPlanckOut_W, &
+                  OpacityRosselandOut_I=OpacityRosselandOut_W)
           else
              call eos(iMaterial, RhoSi, TeIn=TeSi, &
-                  OpacityPlanckOut_I=PlanckOpacityOut_W, &
-                  OpacityRosselandOut_I=RosselandOpacityOut_W)
+                  OpacityPlanckOut_I=OpacityPlanckOut_W, &
+                  OpacityRosselandOut_I=OpacityRosselandOut_W)
           end if
 
        end if
     end if
 
     if(present(PlanckOut_W) .or. present(CgTeOut_W))then
-       if(UseHyadesGroupFile)then
-          do iWave = 1, nWave
-             call get_energy_g_from_temperature( &
-                  iWave, TeSi, EgSI=PlanckSi, CgSI=CgTeSi)
+       do iWave = 1, nWave
+          call get_energy_g_from_temperature( &
+               iWave, TeSi, EgSI=PlanckSi, CgSI=CgTeSi)
 
-             if(present(PlanckOut_W)) PlanckOut_W(iWave) = PlanckSi
-             if(present(CgTeOut_W)) CgTeOut_W(iWave) = CgTeSi
-          end do
-       else
-          ! multi-group test mode (uniform spectral temperature)
-          Te = TeSi*Si2No_V(UnitTemperature_)
-          Tg = sqrt(sqrt(sum(State_V(WaveFirst_:WaveLast_))/cRadiationNo))
-          if(present(PlanckOut_W)) PlanckOut_W = cRadiationNo*Te**4/nWave &
-               *No2Si_V(UnitEnergyDens_)
-          if(present(CgTeOut_W)) CgTeOut_W = &
-               cRadiationNo*(Te + Tg)*(Te**2 + Tg**2)/nWave &
-               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
-       end if
+          if(present(PlanckOut_W)) PlanckOut_W(iWave) = PlanckSi
+          if(present(CgTeOut_W)) CgTeOut_W(iWave) = CgTeSi
+       end do
     end if
 
     if(present(TgOut_W) .or. present(CgTgOut_W))then
-       if(UseHyadesGroupFile)then
-          do iWave = 1, nWave
-             iVar = WaveFirst_ + iWave - 1
-             EgSi = State_V(iVar)*No2Si_V(UnitEnergyDens_)
-             call get_temperature_from_energy_g(iWave, EgSi, &
-                  TgSIOut=TgSi, CgSIOut=CgTgSi)
+       do iWave = 1, nWave
+          iVar = WaveFirst_ + iWave - 1
+          EgSi = State_V(iVar)*No2Si_V(UnitEnergyDens_)
+          call get_temperature_from_energy_g(iWave, EgSi, &
+               TgSIOut=TgSi, CgSIOut=CgTgSi)
 
-             if(present(TgOut_W)) TgOut_W(iWave) = TgSi
-             if(present(CgTgOut_W)) CgTgOut_W(iWave) = CgTgSi
-          end do
-       else
-          ! multi-group test mode (uniform spectral temperature)
-          Tg = sqrt(sqrt(sum(State_V(WaveFirst_:WaveLast_))/cRadiationNo))
-          if(present(TgOut_W)) TgOut_W = Tg*No2Si_V(UnitTemperature_)
-          if(present(CgTgOut_W)) CgTgOut_W = 4.0*cRadiationNo*Tg**3/nWave &
-               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
-       end if
+          if(present(TgOut_W)) TgOut_W(iWave) = TgSi
+          if(present(CgTgOut_W)) CgTgOut_W(iWave) = CgTgSi
+       end do
     end if
 
   contains
@@ -1994,8 +1960,8 @@ contains
 
       if(present(TeOut) .or. present(CvOut) .or. present(GammaOut) .or. &
            present(HeatCondOut) .or. &
-           present(PlanckOpacityOut_W) .or. &
-           present(RosselandOpacityOut_W) .or. &
+           present(OpacityPlanckOut_W) .or. &
+           present(OpacityRosselandOut_W) .or. &
            present(PlanckOut_W) .or. present(CgTeOut_W))then
 
          if(iTableThermo > 0)then
@@ -2106,8 +2072,8 @@ contains
 
       if(present(TeOut) .or. present(CvOut) .or. &
            present(HeatCondOut) .or. present(TeTiRelaxOut) .or. &
-           present(PlanckOpacityOut_W) .or. &
-           present(RosselandOpacityOut_W) .or. &
+           present(OpacityPlanckOut_W) .or. &
+           present(OpacityRosselandOut_W) .or. &
            present(PlanckOut_W) .or. present(CgTeOut_W))then
 
          if(TeSi < 0.0) then

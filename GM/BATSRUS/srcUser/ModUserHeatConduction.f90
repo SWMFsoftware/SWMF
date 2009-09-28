@@ -999,7 +999,7 @@ contains
        EinternalIn, TeIn, NatomicOut, &
        EinternalOut, TeOut, PressureOut, &
        CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
-       PlanckOpacityOut_W, RosselandOpacityOut_W, &
+       OpacityPlanckOut_W, OpacityRosselandOut_W, &
        PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
 
     ! The State_V vector is in normalized units
@@ -1024,9 +1024,9 @@ contains
     real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: &
-         PlanckOpacityOut_W(nWave)                         ! [1/m]
+         OpacityPlanckOut_W(nWave)                         ! [1/m]
     real, optional, intent(out) :: &
-         RosselandOpacityOut_W(nWave)                      ! [1/m]
+         OpacityRosselandOut_W(nWave)                      ! [1/m]
 
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
@@ -1140,8 +1140,8 @@ contains
     end if
 
     if(present(NatomicOut)) NatomicOut = State_V(Rho_)*No2Si_V(UnitN_)
-    if(present(PlanckOpacityOut_W)) PlanckOpacityOut_W = 0.0
-    if(present(RosselandOpacityOut_W)) RosselandOpacityOut_W = 0.0
+    if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = 0.0
+    if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W = 0.0
     if(present(CgTeOut_W)) CgTeOut_W = 0.0
 
   end subroutine user_material_properties

@@ -489,7 +489,7 @@ contains
        EinternalIn, TeIn, NatomicOut, &
        EinternalOut, TeOut, PressureOut, &
        CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
-       PlanckOpacityOut_W, RosselandOpacityOut_W, &
+       OpacityPlanckOut_W, OpacityRosselandOut_W, &
        PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
 
     ! The State_V vector is in normalized units
@@ -513,9 +513,9 @@ contains
     real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: &
-         PlanckOpacityOut_W(nWave)                         ! [1/m]
+         OpacityPlanckOut_W(nWave)                         ! [1/m]
     real, optional, intent(out) :: &
-         RosselandOpacityOut_W(nWave)                      ! [1/m]
+         OpacityRosselandOut_W(nWave)                      ! [1/m]
 
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
@@ -527,7 +527,7 @@ contains
     real, optional, intent(out) :: CgTgOut_W(nWave)        ! [J/(m^3*K)]
     real, optional, intent(out) :: TgOut_W(nWave)          ! [K]
 
-    real :: Temperature, PlanckOpacity, DiffusionRad
+    real :: Temperature, OpacityPlanck, DiffusionRad
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !-------------------------------------------------------------------
@@ -551,20 +551,20 @@ contains
     select case(iLowrieTest)
     case(1,2)
        DiffusionRad = 1.0
-       PlanckOpacity = 1.0E6
+       OpacityPlanck = 1.0E6
     case(3)
        DiffusionRad = 0.00175*(Gamma*Temperature)**3.5/State_V(Rho_)
-       PlanckOpacity = 1.0E6/DiffusionRad
+       OpacityPlanck = 1.0E6/DiffusionRad
     end select
 
     if(present(GammaOut)) GammaOut = Gamma
 
     if(present(TeOut)) TeOut = Temperature*No2Si_V(UnitTemperature_)
 
-    if(present(PlanckOpacityOut_W)) PlanckOpacityOut_W = &
-         PlanckOpacity/No2Si_V(UnitT_)/cLightSpeed
+    if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = &
+         OpacityPlanck/No2Si_V(UnitT_)/cLightSpeed
 
-    if(present(RosselandOpacityOut_W)) RosselandOpacityOut_W = &
+    if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W = &
          cLightSpeed/(3.0*DiffusionRad*No2Si_V(UnitU_)*No2Si_V(UnitX_))
 
     if(present(HeatCondOut)) HeatCondOut = 0.0

@@ -323,9 +323,9 @@ contains
     use ModUser,     ONLY: user_material_properties
 
     integer :: i, j, k, iBlock
-    real :: PlanckOpacitySi_W(nWave), RosselandOpacitySi_W(nWave)
+    real :: OpacityPlanckSi_W(nWave), OpacityRosselandSi_W(nWave)
     real :: HeatCondSi
-    real :: PlanckOpacity, RosselandOpacity, HeatConductionCoef
+    real :: OpacityPlanck, OpacityRosseland, HeatConductionCoef
     real :: CvSi, Cv, TeSi, Te, Trad, DiffRad
 
     character(len=*), parameter:: NameSub = 'set_frozen_coefficients'
@@ -352,12 +352,12 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               PlanckOpacityOut_W = PlanckOpacitySi_W, &
-               RosselandOpacityOut_W = RosselandOpacitySi_W, &
+               OpacityPlanckOut_W = OpacityPlanckSi_W, &
+               OpacityRosselandOut_W = OpacityRosselandSi_W, &
                CvOut = CvSi, TeOut = TeSi, HeatCondOut = HeatCondSi)
 
-          RosselandOpacity = RosselandOpacitySi_W(1)/Si2No_V(UnitX_)
-          PlanckOpacity = PlanckOpacitySi_W(1)/Si2No_V(UnitX_)
+          OpacityRosseland = OpacityRosselandSi_W(1)/Si2No_V(UnitX_)
+          OpacityPlanck = OpacityPlanckSi_W(1)/Si2No_V(UnitX_)
           HeatConductionCoef = HeatCondSi &
                *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
                *Si2No_V(UnitU_)*Si2No_V(UnitX_)
@@ -370,7 +370,7 @@ contains
              if(UseRadDiffusion)then
                 Trad = max(Temperature_VGB(Trad_,i,j,k,iBlock),TradMin)
                 SpecificHeat_VCB(Trad_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
-                RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = Clight*PlanckOpacity &
+                RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = Clight*OpacityPlanck &
                      *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
 
                 call get_radiation_diffusion_coef
@@ -386,7 +386,7 @@ contains
 
              if(UseRadDiffusion)then
                 SpecificHeat_VCB(aTrad4_,i,j,k,iBlock) = 1.0
-                RelaxationCoef_VCB(aTrad4_,i,j,k,iBlock) = Clight*PlanckOpacity
+                RelaxationCoef_VCB(aTrad4_,i,j,k,iBlock) = Clight*OpacityPlanck
 
                 call get_radiation_diffusion_coef
                 HeatConductionCoef_IGB(nCond,i,j,k,iBlock) = DiffRad
@@ -431,14 +431,14 @@ contains
 
          select case(TypeRadFluxLimiter)
          case("sum")
-            DiffRad = Clight/(3.0*RosselandOpacity + sqrt(Grad2ByErad2))
+            DiffRad = Clight/(3.0*OpacityRosseland + sqrt(Grad2ByErad2))
          case("max")
-            DiffRad = Clight/max(3.0*RosselandOpacity,sqrt(Grad2ByErad2))
+            DiffRad = Clight/max(3.0*OpacityRosseland,sqrt(Grad2ByErad2))
          case("larsen")
-            DiffRad = Clight/sqrt((3.0*RosselandOpacity)**2 + Grad2ByErad2)
+            DiffRad = Clight/sqrt((3.0*OpacityRosseland)**2 + Grad2ByErad2)
          end select
       else
-         DiffRad = Clight/(3.0*RosselandOpacity)
+         DiffRad = Clight/(3.0*OpacityRosseland)
       end if
 
     end subroutine get_radiation_diffusion_coef
