@@ -33,7 +33,7 @@ module ModLookupTable
      character(len=100):: NameFile         ! file name containing the table
      character(len=10) :: TypeFile         ! file type (ascii, real4, real8)
      character(len=100):: StringDescription! description of table
-     character(len=100):: NameVar          ! name of indexes and values
+     character(len=500):: NameVar          ! name of indexes and values
      integer:: nValue                      ! number of values in each element
      integer:: nIndex_I(2)                 ! number of columns and rows
      real   :: IndexMin_I(2)               ! minimum values for indexes
@@ -47,7 +47,8 @@ module ModLookupTable
   type(TableType), target :: Table_I(MaxTable)
 
   ! Array for variable names
-  integer, parameter:: MaxVar=20
+  integer, parameter:: MaxVar = 200
+  character(len=500):: NameVar
   character(len=20):: NameVar_I(MaxVar)
 
 contains
@@ -60,6 +61,10 @@ contains
     character(len=100):: NameTable
     integer :: iTable, iIndex
     type(TableType), pointer:: Ptr
+
+    character(len=10):: StringFormat
+    character(len=20):: Name ! name of repeated variable
+    integer:: i, j, k, lName, lNum, nNum, iNum
 
     character(len=*), parameter:: NameSub = 'read_lookup_table_param'
     !-----------------------------------------------------------------------
@@ -101,7 +106,45 @@ contains
     end select
 
     call read_var('StringDescription', Ptr%StringDescription)
-    call read_var('NameVar',           Ptr%NameVar)
+    call read_var('NameVar',           NameVar)
+
+    ! Expand " varZ(21)" to " varZ01 varZ02 ... varZ21"
+    do
+       ! Find left paren in varX varY varZ(21) ...
+       j = index(NameVar,'(')
+       if(j<1) EXIT
+       ! Find the space before the name (varZ)
+       i     = index(NameVar(1:j),' ',BACK=.true.)
+
+       ! Set the name string and its length
+       lName = j - i      ! includes leading space and variable name
+       Name  = NameVar(i:j-1)
+
+       ! Find the closing paren, and read the number of repetitions
+       k = index(NameVar,')')
+       read(NameVar(j+1:k-1),*) nNum
+
+       ! Set length of numerical part and the format string
+       lNum = k - j - 1
+       if(nNum < 10)then
+          StringFormat = "(i1)"
+       else
+          StringFormat = "(i2.2)"
+       end if
+
+       ! Move end of string far enough for inserting expanded varnames
+       NameVar(i+nNum*(lName+lNum):500) = NameVar(k+1:len_trim(NameVar))
+
+       ! Expand variable names by repating name and adding numerical value
+       do iNum = 1, nNum
+          NameVar(i:i+lName-1) = Name
+          i = i + lName
+          write(NameVar(i:i+lNum),StringFormat) iNum
+          i = i + lNum
+       end do
+    end do
+    Ptr%NameVar = NameVar
+
     call split_string(Ptr%NameVar, MaxVar, NameVar_I, Ptr%nValue)
     ! Do not count the names of the indexes
     Ptr%nValue = Ptr%nValue - 2
