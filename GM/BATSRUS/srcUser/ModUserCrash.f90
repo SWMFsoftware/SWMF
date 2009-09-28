@@ -1510,6 +1510,8 @@ contains
          call make_lookup_table(iTableEPerP, calc_table_value, iComm)
     if(iTableThermo > 0) &
          call make_lookup_table(iTableThermo, calc_table_value, iComm)
+    if(iTableOpacity > 0) &
+         call make_lookup_table(iTableOpacity, calc_table_value, iComm)
 
   end subroutine user_init_session
 
@@ -1518,12 +1520,14 @@ contains
 
     use CRASH_ModEos, ONLY: eos
     use ModConst,ONLY: cProtonMass, cBoltzmann
+    use ModVarIndexes, ONLY: nWave
 
     integer, intent(in):: iTable
     real, intent(in)   :: Arg1, Arg2
     real, intent(out)  :: Value_V(:)
 
     real:: Rho, p, e, Cv, Gamma, HeatCond, Te
+    real:: PlanckOpacity_W(nWave), RosselandOpacity_W(nWave)
     integer:: iMaterial
     character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
     !-----------------------------------------------------------------------
@@ -1586,6 +1590,18 @@ contains
              Value_V(Cond_ +iMaterial*nThermo) = 0.0
              Value_V(Te_   +iMaterial*nThermo) = p/Rho*cProtonMass/cBoltzmann
           end if
+       end do
+    elseif(iTable == iTableOpacity)then
+       ! Calculate gray or multigroup specific opacities for Xe_, Be_ and Plastic_
+       ! for given Rho and Te
+       Rho = Arg1
+       Te  = Arg2
+       do iMaterial = 0, nMaterial-1
+          call eos(iMaterial, Rho, TeIn=Te, &
+               OpacityPlanckOut_I=PlanckOpacity_W, &
+               OpacityRosselandOut_I=RosselandOpacity_W)
+          Value_V(1 + iMaterial*2) = PlanckOpacity_W(1)/Rho
+          Value_V(2 + iMaterial*2) = RosselandOpacity_W(1)/Rho
        end do
     else
        write(*,*)NameSub,' iTable=', iTable
