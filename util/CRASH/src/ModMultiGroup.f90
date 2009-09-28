@@ -1296,7 +1296,7 @@ contains
 
       g5  = gint(5,XGroupMin, XGroupMax )                                      
 
-      if ( g5 .eq. 0.0 ) return                                         
+      if ( g5 < 1e-30 ) return
 
       const = 1.10e-16 * DensNN / ( Te * g5 )                     
 
