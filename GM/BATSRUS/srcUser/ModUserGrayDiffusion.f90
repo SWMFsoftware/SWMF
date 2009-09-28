@@ -579,7 +579,7 @@ contains
     use ModSize,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, Rho_, p_
     use ModAMR,        ONLY: RefineCritMin_I, CoarsenCritMax
-    use ModGeometry,   ONLY: y_Blk, Dy_BLK, Dx_BLK
+    use ModGeometry,   ONLY: y_Blk, Dy_BLK, Dx_BLK, y1, y2
     use ModPhysics,    ONLY: cRadiationNo
     use ModVarIndexes, ONLY: Rho_, p_, Erad_
 
@@ -590,31 +590,30 @@ contains
     logical ,intent(inout)       :: IsFound
 
     real, parameter:: TemperatureMin = 5.2, DTradDxMin = 1e3
-    real:: Temperature, DTradDx, TradL, TradR
+    real:: Temperature, DTradDx, TradL, TradR, DyRefine
     integer:: i, j, k
     !--------------------------------------------------------------------------
 
-    ! Location of sound wave edges and the tangential discontinuity
+    DyRefine = (y2 - y1)/8
 
     UserCriteria = 0.0
 
     ! capture the embedded hydro shock
-    LOOPCELL: do k = -1, nK+2; do j=-1, nJ+2; do i = -1, nI+2
+    LOOPCELL: do k = -1, nK+2; do j=1, nJ; do i = -1, nI+2
        Temperature = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-       if(Temperature > TemperatureMin  &
-            .and. abs(y_Blk(i,j,k,iBlock)) < Dy_BLK(iBlock))then
+       if(Temperature > TemperatureMin &
+            .and. abs(y_Blk(i,j,k,iBlock)) < DyRefine)then
           UserCriteria = 1.0
           EXIT LOOPCELL
        end if
     end do; end do; end do LOOPCELL
 
     ! capture the precursor
-    LOOPCELL2: do k = -1, nK+2; do j=-1, nJ+2; do i = 0, nI+1
+    LOOPCELL2: do k = -1, nK+2; do j=1, nJ; do i = 0, nI+1
        TradL = sqrt(sqrt(State_VGB(Erad_,i-1,j,k,iBlock)/cRadiationNo))
        TradR = sqrt(sqrt(State_VGB(Erad_,i+1,j,k,iBlock)/cRadiationNo))
        DTradDx = (TradR - TradL)*0.5/Dx_Blk(iBlock)
-       if(DTradDx > DTradDxMin &
-            .and. abs(y_Blk(i,j,k,iBlock)) < Dy_BLK(iBlock))then
+       if(DTradDx > DTradDxMin .and. abs(y_Blk(i,j,k,iBlock)) < DyRefine)then
           UserCriteria = 1.0
           EXIT LOOPCELL2
        end if
