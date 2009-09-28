@@ -87,7 +87,7 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag2} -extend_source $<
 
 clean:	
-	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex
+	rm -f *~ core *.o *.mod fort.* a.out *.exe *.a *.so *.protex
 
 distclean: clean
 

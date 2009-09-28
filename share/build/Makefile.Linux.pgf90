@@ -157,7 +157,7 @@ BLAS  = lapack.o blas.o
 # production of documentation, etc. Put here all extensions relevant for the OS and COMPILER.
 #
 clean:	
-	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex
+	rm -f *~ core *.o *.mod fort.* a.out *.exe *.a *.so *.protex
 
 #EOC
 # keep this line
