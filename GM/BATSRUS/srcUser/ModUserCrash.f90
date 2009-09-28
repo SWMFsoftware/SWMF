@@ -1748,9 +1748,10 @@ contains
     real, optional, intent(out) :: TgSiOut_W(nWave)          ! [K]
 
     logical :: IsMix
-    integer :: iMaterial, iMaterial_I(1)
+    integer :: iMaterial, jMaterial, iMaterial_I(1)
     real    :: pSi, RhoSi, TeSi, LevelSum
     real    :: Value_V(nMaterial*nThermo), Opacity_V(2*nMaterial)
+    real    :: GroupOpacity_W(2*nWave)
     real, dimension(0:nMaterial-1) :: &
          pPerE_I, EperP_I, RhoToARatioSi_I, Weight_I
     real :: Level_I(3), LevelLeft, LevelRight
@@ -1822,7 +1823,7 @@ contains
     if(present(AbsorptionOpacitySiOut_W) &
          .or. present(DiffusionOpacitySiOut_W))then
 
-       if(iTableOpacity > 0 .and. .not. UseHyadesGroupFile)then
+       if(iTableOpacity > 0 .and. nWave == 1)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
                Opacity_V, DoExtrapolate = .false.)
           Opacity_V(1:2*nMaterial:2) = Opacity_V(1:2*nMaterial:2) &
@@ -1841,8 +1842,30 @@ contains
                   = Opacity_V(2*iMaterial + 2) * RhoSi
           end if
 
+       elseif(all(iTableOpacity_I > 0))then
+          if(UseVolumeFraction)then
+             if(present(AbsorptionOpacitySiOut_W)) AbsorptionOpacitySiOut_W = 0
+             if(present(DiffusionOpacitySiOut_W)) DiffusionOpacitySiOut_W = 0
+             do jMaterial = 0, nMaterial-1
+                call interpolate_lookup_table(iTableOpacity_I(jMaterial), &
+                     RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
+                if(present(AbsorptionOpacitySiOut_W)) &
+                     AbsorptionOpacitySiOut_W = AbsorptionOpacitySiOut_W &
+                     + Weight_I(jMaterial)*GroupOpacity_W(1:nWave) * RhoSi
+                if(present(DiffusionOpacitySiOut_W)) &
+                     DiffusionOpacitySiOut_W =  DiffusionOpacitySiOut_W &
+                     + Weight_I(jMaterial)*GroupOpacity_W(nWave+1:)*RhoSi
+             end do
+          else
+             call interpolate_lookup_table(iTableOpacity_I(iMaterial), &
+                  RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
+             if(present(AbsorptionOpacitySiOut_W)) AbsorptionOpacitySiOut_W &
+                  = GroupOpacity_W(1:nWave)*RhoSi
+             if(present(DiffusionOpacitySiOut_W)) DiffusionOpacitySiOut_W &
+                  = GroupOpacity_W(nWave+1:)*RhoSi
+          end if
        else
-          ! multi-group opacities
+          ! inline opacities
           if(IsMix)then
              call eos(RhoToARatioSi_I, TeIn=TeSi, &
                   OpacityPlanckOut_I=AbsorptionOpacitySiOut_W, &
