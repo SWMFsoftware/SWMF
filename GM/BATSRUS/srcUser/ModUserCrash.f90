@@ -116,6 +116,7 @@ module ModUser
   integer, parameter:: Cv_=1, Gamma_=2, Cond_=3, Te_=4, nThermo=4
 
   integer:: iTableOpacity = -1
+  integer:: iTableOpacity_I(0:nMaterial-1) = -1
 
   ! Variables for the left and right boundary conditions
   real :: DistBc1 = 200.0, TrkevBc1=0.0, EradBc1 = 0.0
@@ -1457,6 +1458,9 @@ contains
     use ModConst,       ONLY: cKevToK, cHPlanckEV
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI
     use CRASH_ModMultiGroup, ONLY: set_multigroup
+    use CRASH_ModEos,   ONLY: Xe_, Be_, Plastic_
+
+    integer:: iMaterial
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
 
@@ -1495,14 +1499,18 @@ contains
 
     if(iProc==0) write(*,*) NameSub, 'EradBc1,EradBc2=', EradBc1, EradBc2
 
-    iTablePPerE    = i_lookup_table('pPerE(rho,e/rho)')
-    iTableEPerP    = i_lookup_table('ePerP(rho,p/rho)')
-    iTableThermo   = i_lookup_table('Thermo(rho,p/rho)')
-    iTableOpacity  = i_lookup_table('Opacity(rho,T)')
+    iTablePPerE     = i_lookup_table('pPerE(rho,e/rho)')
+    iTableEPerP     = i_lookup_table('ePerP(rho,p/rho)')
+    iTableThermo    = i_lookup_table('Thermo(rho,p/rho)')
+    iTableOpacity   = i_lookup_table('Opacity(rho,T)')
+    iTableOpacity_I(Xe_)      = i_lookup_table('OpacityXe(rho,T)')
+    iTableOpacity_I(Be_)      = i_lookup_table('OpacityBe(rho,T)')
+    iTableOpacity_I(Plastic_) = i_lookup_table('OpacityPl(rho,T)')
 
     if(iProc==0) write(*,*) NameSub, &
-         ' iTablePPerE, EPerP, Thermo, Opacity = ', &
-         iTablePPerE, iTableEPerP, iTableThermo, iTableOpacity
+         ' iTablePPerE, EPerP, Thermo, Opacity, Opacity_I = ', &
+         iTablePPerE, iTableEPerP, iTableThermo, iTableOpacity, &
+         iTableOpacity_I
 
     if(iTablePPerE > 0) &
          call make_lookup_table(iTablePPerE, calc_table_value, iComm)
@@ -1512,14 +1520,20 @@ contains
          call make_lookup_table(iTableThermo, calc_table_value, iComm)
     if(iTableOpacity > 0) &
          call make_lookup_table(iTableOpacity, calc_table_value, iComm)
+    do iMaterial = 0, nMaterial-1
+       if(iTableOpacity_I(iMaterial) > 0) &
+            call make_lookup_table(iTableOpacity_I(iMaterial), &
+            calc_table_value, iComm)
+    end do
 
   end subroutine user_init_session
 
   !===========================================================================
   subroutine calc_table_value(iTable, Arg1, Arg2, Value_V)
 
-    use CRASH_ModEos, ONLY: eos
-    use ModConst,ONLY: cProtonMass, cBoltzmann
+    use ModProcMH,     ONLY: iProc
+    use CRASH_ModEos,  ONLY: eos
+    use ModConst,      ONLY: cProtonMass, cBoltzmann
     use ModVarIndexes, ONLY: nWave
 
     integer, intent(in):: iTable
@@ -1592,7 +1606,7 @@ contains
           end if
        end do
     elseif(iTable == iTableOpacity)then
-       ! Calculate gray or multigroup specific opacities for Xe_, Be_ and Plastic_
+       ! Calculate gray specific opacities for Xe_, Be_ and Plastic_
        ! for given Rho and Te
        Rho = Arg1
        Te  = Arg2
@@ -1603,6 +1617,26 @@ contains
           Value_V(1 + iMaterial*2) = PlanckOpacity_W(1)/Rho
           Value_V(2 + iMaterial*2) = RosselandOpacity_W(1)/Rho
        end do
+    elseif(any(iTable == iTableOpacity_I))then
+
+       if(iProc == 0 .and. size(Value_V) /= 2*nWave)then
+          write(*,*) 'ERROR ',NameSub, &
+               ' number of table elements=', size(Value_V),&
+               ' does not agree with 2*nWave=', 2*nWave
+          call stop_mpi(NameSub//': Config.pl -setvar=nWave=..; make CRASH')
+       end if
+       ! Calculate multigroup specific opacities for one material
+       ! for given Rho and Te
+       Rho = Arg1
+       Te  = Arg2
+       do iMaterial = 0, nMaterial-1
+          if(iTable == iTableOpacity_I(iMaterial)) EXIT
+       end do
+       call eos(iMaterial, Rho, TeIn=Te, &
+            OpacityPlanckOut_I=PlanckOpacity_W, &
+            OpacityRosselandOut_I=RosselandOpacity_W)
+       Value_V(1:nWave)         = PlanckOpacity_W/Rho
+       Value_V(nWave+1:2*nWave) = RosselandOpacity_W/Rho
     else
        write(*,*)NameSub,' iTable=', iTable
        call stop_mpi(NameSub//' invalid value for iTable')
