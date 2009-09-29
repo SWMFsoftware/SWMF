@@ -1557,14 +1557,7 @@ contains
 
           ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               Ee - State_VGB(Ee_,i,j,k,iBlock)
-
-          if(State_VGB(ExtraEint_,i,j,k,iBlock)<0.0)then
-             write(*,*)NameSub,': ERROR extra internal energy =', &
-                  State_VGB(ExtraEint_,i,j,k,iBlock)
-             write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
-             call stop_mpi(NameSub//': ERROR negative extra internal energy')
-          end if
+               max(0.0, Ee - State_VGB(Ee_,i,j,k,iBlock))
 
        else
           ! ions + electrons
@@ -1577,7 +1570,7 @@ contains
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
 
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock)
+               max(0.0, Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock))
 
        end if
 

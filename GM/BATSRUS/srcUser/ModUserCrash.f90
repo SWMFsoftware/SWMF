@@ -506,12 +506,12 @@ contains
 
        if(UseElectronEnergy)then
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - State_VGB(Ee_,i,j,k,iBlock)
+               max(0.0, EinternalSi*Si2No_V(UnitEnergyDens_) &
+               - State_VGB(Ee_,i,j,k,iBlock))
        else
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - inv_gm1*State_VGB(P_,i,j,k,iBlock)
+               max(0.0, EinternalSi*Si2No_V(UnitEnergyDens_) &
+               - inv_gm1*State_VGB(P_,i,j,k,iBlock))
        end if
 
     end do; end do; end do
@@ -1136,7 +1136,7 @@ contains
          UseNonConservative, IsConserv_CB, &
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
          UseElectronEnergy
-    use ModGeometry, ONLY: vInv_CB
+    use ModGeometry, ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
     use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_
     use ModEnergy,   ONLY: calc_energy_cell
@@ -1203,8 +1203,8 @@ contains
 
        ! Set ExtraEint = Total internal energy - P/(gamma -1)
        State_VGB(ExtraEint_,i,j,k,iBlock) = &
-            Si2No_V(UnitEnergyDens_)*EinternalSi &
-            - inv_gm1*State_VGB(p_,i,j,k,iBlock)
+            max(0.0, Si2No_V(UnitEnergyDens_)*EinternalSi &
+            - inv_gm1*State_VGB(p_,i,j,k,iBlock))
 
     end do; end do; end do
 
@@ -1236,14 +1236,8 @@ contains
          State_VGB(Ee_,i,j,k,iBlock) = inv_gm1*PeSi*Si2No_V(UnitP_)
 
          ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
-         State_VGB(ExtraEint_,i,j,k,iBlock) = Ee - State_VGB(Ee_,i,j,k,iBlock)
-
-         if(State_VGB(ExtraEint_,i,j,k,iBlock)<0.0)then
-            write(*,*)NameSub,': ERROR extra internal energy =', &
-                 State_VGB(ExtraEint_,i,j,k,iBlock)
-            write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
-            call stop_mpi(NameSub//': ERROR negative extra internal energy')
-         end if
+         State_VGB(ExtraEint_,i,j,k,iBlock) = &
+              max(0.0, Ee - State_VGB(Ee_,i,j,k,iBlock))
 
       end do; end do; end do
 
@@ -1552,11 +1546,7 @@ contains
           end if
 
           ! Material index starts from 0 :-( hence the +1
-          if(p > 0.0)then
-             Value_V(iMaterial+1) = p/e
-          else
-             Value_V(iMaterial+1) = 2./3.
-          end if
+          Value_V(iMaterial+1) = min(2./3., p/e)
        end do
     elseif(iTable == iTableEPerP)then
        ! Calculate e/p for Xe_, Be_ and Plastic_ for given Rho and p/Rho
@@ -1570,11 +1560,7 @@ contains
           end if
 
           ! Material index starts from 0 :-( hence the +1
-          if(e > 0.0)then
-             Value_V(iMaterial+1) = e/p
-          else
-             Value_V(iMaterial+1) = 1.5
-          end if
+          Value_V(iMaterial+1) = max(1.5, e/p)
        end do
     elseif(iTable == iTableThermo)then
        ! Calculate cV, gamma, HeatCond and Te for Xe_, Be_ and Plastic_ 
@@ -1598,7 +1584,7 @@ contains
              ! Note that material index starts from 0
              if(Te > 0.0)then
                 Value_V(Cv_   +iMaterial*nThermo) = Cv
-                Value_V(Gamma_+iMaterial*nThermo) = Gamma
+                Value_V(Gamma_+iMaterial*nThermo) = min(5./3., Gamma)
                 Value_V(Cond_ +iMaterial*nThermo) = HeatCond
                 Value_V(Te_   +iMaterial*nThermo) = Te
              else
