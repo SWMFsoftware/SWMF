@@ -113,7 +113,7 @@ module ModUser
 
   ! Indexes for lookup tables
   integer:: iTablePPerE = -1, iTableEPerP = -1, iTableThermo = -1
-  integer, parameter:: Cv_=1, Gamma_=2, Cond_=3, Te_=4, nThermo=4
+  integer, parameter:: Cv_=1, Gamma_=2, TeTi_=2, Cond_=3, Te_=4, nThermo=4
 
   integer:: iTableOpacity = -1
   integer:: iTableOpacity_I(0:nMaterial-1) = -1
@@ -1516,6 +1516,7 @@ contains
   !===========================================================================
   subroutine calc_table_value(iTable, Arg1, Arg2, Value_V)
 
+    use ModAdvance,    ONLY: UseElectronEnergy
     use ModProcMH,     ONLY: iProc
     use CRASH_ModEos,  ONLY: eos
     use ModConst,      ONLY: cProtonMass, cBoltzmann
@@ -1525,7 +1526,7 @@ contains
     real, intent(in)   :: Arg1, Arg2
     real, intent(out)  :: Value_V(:)
 
-    real:: Rho, p, e, Cv, Gamma, HeatCond, Te
+    real:: Rho, p, e, Cv, Gamma, HeatCond, Te, TeTiRelax
     real:: OpacityPlanck_W(nWave), OpacityRosseland_W(nWave)
     integer:: iMaterial
     character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
@@ -1544,7 +1545,11 @@ contains
        Rho = Arg1
        e   = Arg2*Rho
        do iMaterial = 0, nMaterial-1
-          call eos(iMaterial, Rho, EtotalIn=e, pTotalOut=p)
+          if(UseElectronEnergy)then
+             call eos(iMaterial, Rho, eElectronIn=e, pElectronOut=p)
+          else
+             call eos(iMaterial, Rho, EtotalIn=e, pTotalOut=p)
+          end if
 
           ! Material index starts from 0 :-( hence the +1
           if(p > 0.0)then
@@ -1558,7 +1563,11 @@ contains
        Rho = Arg1
        p   = Arg2*Rho
        do iMaterial = 0, nMaterial-1
-          call eos(iMaterial, Rho, PtotalIn=p, eTotalOut=e)
+          if(UseElectronEnergy)then
+             call eos(iMaterial, Rho, pElectronIn=p, eElectronOut=e)
+          else
+             call eos(iMaterial, Rho, PtotalIn=p, eTotalOut=e)
+          end if
 
           ! Material index starts from 0 :-( hence the +1
           if(e > 0.0)then
@@ -1573,21 +1582,33 @@ contains
        Rho = Arg1
        p   = Arg2*Rho
        do iMaterial = 0, nMaterial-1
-          call eos(iMaterial, Rho, PtotalIn=p, &
-               CvTotalOut=Cv, GammaOut=Gamma, HeatCond=HeatCond, TeOut=Te)
+          if(UseElectronEnergy)then
+             call eos(iMaterial, Rho, pElectronIn=p, CvElectronOut=Cv, &
+                  TeTiRelax=TeTiRelax, HeatCond=HeatCond, TeOut=Te)
 
-          ! Note that material index starts from 0
-          if(Te > 0.0)then
-             Value_V(Cv_   +iMaterial*nThermo) = Cv
-             Value_V(Gamma_+iMaterial*nThermo) = Gamma
-             Value_V(Cond_ +iMaterial*nThermo) = HeatCond
-             Value_V(Te_   +iMaterial*nThermo) = Te
+             Value_V(Cv_  +iMaterial*nThermo) = Cv
+             Value_V(TeTi_+iMaterial*nThermo) = TeTiRelax
+             Value_v(Cond_+iMaterial*nThermo) = HeatCond
+             Value_V(Te_  +iMaterial*nThermo) = Te
           else
-             ! The eos() function returned impossible values, take ideal gas
-             Value_V(Cv_   +iMaterial*nThermo) = 1.5*Rho
-             Value_V(Gamma_+iMaterial*nThermo) = 5./3.
-             Value_V(Cond_ +iMaterial*nThermo) = 0.0
-             Value_V(Te_   +iMaterial*nThermo) = p/Rho*cProtonMass/cBoltzmann
+
+             call eos(iMaterial, Rho, PtotalIn=p, &
+                  CvTotalOut=Cv, GammaOut=Gamma, HeatCond=HeatCond, TeOut=Te)
+
+             ! Note that material index starts from 0
+             if(Te > 0.0)then
+                Value_V(Cv_   +iMaterial*nThermo) = Cv
+                Value_V(Gamma_+iMaterial*nThermo) = Gamma
+                Value_V(Cond_ +iMaterial*nThermo) = HeatCond
+                Value_V(Te_   +iMaterial*nThermo) = Te
+             else
+                ! The eos() function returned impossible values, take ideal gas
+                Value_V(Cv_   +iMaterial*nThermo) = 1.5*Rho
+                Value_V(Gamma_+iMaterial*nThermo) = 5./3.
+                Value_V(Cond_ +iMaterial*nThermo) = 0.0
+                Value_V(Te_   +iMaterial*nThermo) = &
+                     p/Rho*cProtonMass/cBoltzmann
+             end if
           end if
        end do
     elseif(iTable == iTableOpacity)then
@@ -2009,7 +2030,6 @@ contains
 
     subroutine get_electron_thermo
 
-      real :: PeSi, EeSi
       !----------------------------------------------------------------------
 
       ! get the atomic concentration
@@ -2022,18 +2042,26 @@ contains
       end if
 
       ! Obtain the pressure from EinternalIn or TeIn or State_V
-      ! Do this for mixed cell or not
+      ! Do this for mixed cell or not, lookup tables or not
       if(present(EinternalIn))then
          ! Obtain electron pressure from the true electron internal energy
-         EeSi = EinternalIn
-         if(IsMix)then
-            call eos(RhoToARatioSi_I, eElectronIn=EeSi, &
-                 pElectronOut=PeSi, TeOut=TeSi, CvElectronOut=CvOut, &
-                 HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+         if(iTablePPerE > 0)then
+            ! Use lookup table
+            call interpolate_lookup_table(iTablePPerE, RhoSi, &
+                 EinternalIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
+            ! Use a number density weighted average
+            pSi = EinternalIn*sum(Weight_I*pPerE_I)
          else
-            call eos(iMaterial, Rho=RhoSi, eElectronIn=EeSi, &
-                 pElectronOut=PeSi, TeOut=TeSi, CvElectronOut=CvOut, &
-                 HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+            ! Use inline electron EOS
+            if(IsMix)then
+               call eos(RhoToARatioSi_I, eElectronIn=EinternalIn, &
+                    pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                    HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+            else
+               call eos(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
+                    pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                    HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+            end if
          end if
       elseif(present(TeIn))then
          ! Calculate electron pressure from electron temperature
@@ -2041,34 +2069,41 @@ contains
          if(IsMix) then
             call eos(RhoToARatioSi_I, TeIn=TeIn, &
                  eElectronOut=EinternalOut, &
-                 pElectronOut=PeSi, CvElectronOut=CvOut, &
+                 pElectronOut=pSi, CvElectronOut=CvOut, &
                  HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
          else
             call eos(iMaterial, Rho=RhoSi, TeIn=TeIn, &
                  eElectronOut=EinternalOut, &
-                 pElectronOut=PeSi, CvElectronOut=CvOut, &
+                 pElectronOut=pSi, CvElectronOut=CvOut, &
                  HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
          end if
       else
          ! electron pressure is (g - 1)*State_V(Ee_)
          ! Use this pressure to calculate the true electron internal energy
-         PeSi = (g - 1)*State_V(Ee_)*No2Si_V(UnitP_)
+         pSi = (g - 1)*State_V(Ee_)*No2Si_V(UnitP_)
          if(present(EinternalOut))then
-            if(IsMix)then
-               call eos(RhoToARatioSi_I, pElectronIn=PeSi, &
-                    TeOut=TeSi, eElectronOut=EinternalOut, &
-                    CvElectronOut=CvOut, HeatCond=HeatCondOut, &
-                    TeTiRelax=TeTiRelaxOut)
+            if(iTableEPerP > 0)then
+               call interpolate_lookup_table(iTableEPerP, RhoSi, &
+                    pSi/RhoSi, EPerP_I, DoExtrapolate = .false.)
+               ! Use a number density weighted average
+               EinternalOut = pSi*sum(Weight_I*EPerP_I)
             else
-               call eos(iMaterial, RhoSi, pElectronIn=PeSi, &
-                    TeOut=TeSi, eElectronOut=EinternalOut, &
-                    CvElectronOut=CvOut, HeatCond=HeatCondOut, &
-                    TeTiRelax=TeTiRelaxOut)
+               if(IsMix)then
+                  call eos(RhoToARatioSi_I, pElectronIn=pSi, &
+                       TeOut=TeSi, eElectronOut=EinternalOut, &
+                       CvElectronOut=CvOut, HeatCond=HeatCondOut, &
+                       TeTiRelax=TeTiRelaxOut)
+               else
+                  call eos(iMaterial, RhoSi, pElectronIn=pSi, &
+                       TeOut=TeSi, eElectronOut=EinternalOut, &
+                       CvElectronOut=CvOut, HeatCond=HeatCondOut, &
+                       TeTiRelax=TeTiRelaxOut)
+               end if
             end if
          end if
       end if
 
-      if(present(PressureOut)) PressureOut = PeSi
+      if(present(PressureOut)) PressureOut = pSi
 
       if(present(TeOut) .or. present(CvOut) .or. &
            present(HeatCondOut) .or. present(TeTiRelaxOut) .or. &
@@ -2076,14 +2111,36 @@ contains
            present(OpacityRosselandOut_W) .or. &
            present(PlanckOut_W) .or. present(CgTeOut_W))then
 
-         if(TeSi < 0.0) then
+         if(iTableThermo > 0)then
+            call interpolate_lookup_table(iTableThermo, RhoSi, pSi/RhoSi, &
+                 Value_V, DoExtrapolate = .false.)
+
+            if(UseVolumeFraction)then
+               if(present(CvOut))  CvOut  &
+                    = sum(Weight_I*Value_V(Cv_  :nMaterial*nThermo:nThermo))
+               if(present(TeTiRelaxOut)) TeTiRelaxOut &
+                    = sum(Weight_I*Value_V(TeTi_:nMaterial*nThermo:nThermo))
+               if(present(HeatCondOut)) HeatCondOut &
+                    = sum(Weight_I*Value_V(Cond_:nMaterial*nThermo:nThermo))
+               TeSi = sum(Weight_I*Value_V(Te_  :nMaterial*nThermo:nThermo))
+            else
+               if(present(CvOut))  &
+                    CvOut       = Value_V(Cv_   +iMaterial*nThermo)
+               if(present(TeTiRelaxOut)) &
+                    TeTiRelaxOut= Value_V(TeTi_ +iMaterial*nThermo)
+               if(present(HeatCondOut)) &
+                    HeatCondOut = Value_V(Cond_ +iMaterial*nThermo)
+               TeSi             = Value_V(Te_   +iMaterial*nThermo)
+            end if
+
+         elseif(TeSi < 0.0) then
             ! If TeSi is not set yet then we need to calculate things here
             if(IsMix) then
-               call eos(RhoToARatioSi_I, pElectronIn=PeSi, &
+               call eos(RhoToARatioSi_I, pElectronIn=pSi, &
                     TeOut=TeSi, CvElectronOut=CvOut, &
                     HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             else
-               call eos(iMaterial, RhoSi, pElectronIn=PeSi, &
+               call eos(iMaterial, RhoSi, pElectronIn=pSi, &
                     TeOut=TeSi, CvElectronOut=CvOut, &
                     HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             end if
