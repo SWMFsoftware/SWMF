@@ -84,9 +84,9 @@ program abs
   open(unit,file='report.txt')
   do iMix = 1,nMix
      write(unit,*)'iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)',iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)
-     do iZ = 0, nZ_I(iMix)
+     do iZ = iZMin_I(iMix), iZMax_I(iMix)
         write(unit,*)' iZ = ', iZ
-        write(unit,*)Partition_III(:,iZ,iMix)
+        write(unit,*)Partition_III(:,iZ,iMix)*Population_II(iZ,iMix)
      end do
   end do
   close(unit)
@@ -104,8 +104,57 @@ program abs
           log10(AbsorptionCoefficient_I(iPlot))
   end do
   close(unit)
-  open(unit,file='.dat')
+  call set_element(54)
+  UsePreviousTe = .false.
+
+  DoNotAddLineCore = .false.
+  UseBremsstrahlung = .true.
+  UsePhotoionization = .true.
  
+  UseCoulombCorrection = .true.
+  call set_ionization_equilibrium(vTe,3.0e25,iError)
+  open(unit,file='report_xe.txt')
+  do iMix = 1,nMix
+     write(unit,*)'iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)',iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)
+     do iZ = iZMin_I(iMix),iZMax_I(iMix)
+        write(unit,*)' iZ = ', iZ
+        write(unit,*)Partition_III(:,iZ,iMix)*Population_II(iZ,iMix)
+     end do
+  end do
+  close(unit)
+  call set_multigroup(100, 1.0/cHPlanckEV, 10000.0/cHPlanckEV)
+  UseScattering = .true.
+  DoNotAddLineCore =.false.
+  call meshhv
+  call abscon
+  
+ 
+  open(unit,file='../doc/xenon_absorption.dat')
+  write(unit,'(a,i6,a)') &
+       'Photon energy [eV]  Absorbtion Coeff cm-1, in ',nPhoton,' points' 
+  do iPlot = 1, nPhoton
+     if(PhotonEnergy_I(iPlot)< 0.1*Te.or.PhotonEnergy_I(iPlot)>1000.0*Te)&
+          CYCLE
+     write(unit,*)log10(PhotonEnergy_I(iPlot)),&
+          log10(AbsorptionCoefficient_I(iPlot)),log10(ScatteringCoefficient_I(iPlot))
+  end do
+  close(unit)
+
+  DoNotAddLineCore =.true.
+  call meshhv
+  call abscon
+  
+  call opacys(TRadIn = Te)
+  open(unit,file='../doc/xenon_opacities.dat')
+  do iGroup = 1, nGroup 
+     write(unit,*)0.5*log10(EnergyGroup_I(iGroup))&
+     +0.5*log10(EnergyGroup_I(iGroup-1)),&
+          log10(OpacityPlanck_I(iGroup)),&
+          log10(OpacityRosseland_I(iGroup))
+  end do
+  close(unit)
+  write(*,*)'OpacityPlanckTotal=',OpacityPlanckTotal,&
+      '    OpacityRosselandTotal=',OpacityRosselandTotal, '   Z=',ZAv
   TSI = 1.0e5   !\approx 9 eV
   open(unit,file='conversion_report.txt') 
   write(unit,*)'TSI=', TSI, '  Total Radiation=',cRadiation * TSI**4, '  Total specific heat=', 4*cRadiation * TSI**3
@@ -128,6 +177,8 @@ end program abs
 subroutine CON_stop(StringError)
   implicit none
   character (len=*), intent(in) :: StringError
+  write(*,*)StringError
+  stop
 end subroutine CON_stop
 !============================================================================
 subroutine CON_set_do_test(String,DoTest,DoTestMe)

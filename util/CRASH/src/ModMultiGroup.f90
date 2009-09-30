@@ -1,5 +1,4 @@
-
-  module CRASH_ModMultiGroup
+module CRASH_ModMultiGroup
   use CRASH_ModIonMix
   use CRASH_ModOpacityVoigt, ONLY : line_width, voigt_profile, UseVoigt
   use CRASH_ModAtomicDataMix,ONLY : nMix, nZ_I, nExcitation, nMixMax
@@ -23,14 +22,13 @@
 
   !Public members
   public :: meshhv !Creates the grid of photon energies
-  public :: lines  !Calculates the absorption and emission in lines
   public :: abscon !Calculates the absorption, emission, and scattering 
   public :: opacys !Calculates opacities
   public :: nGroup, OpacityPlanck_I, OpacityRosseland_I
 
   !For test:
   public :: PhotonEnergy_I, AbsorptionCoefficient_I, nPhoton, set_multigroup,EnergyGroup_I
-
+  public :: OpacityPlanckTotal, OpacityRosselandTotal,ScatteringCoefficient_I
 
   !       nPhotonMax  - photon energy mesh points                                    
   !       nGroupMax  - opacity groups     
@@ -96,6 +94,13 @@
 
   logical,public :: UseBremsstrahlung = .true.
   logical,public :: UsePhotoionization = .true.
+
+  !If the logical below is set to .true. then the
+  !photoionization from EXCITED states accounts for both the
+  !process in which the EXCITED electron is detached and that in
+  !which the VALENCE electron is
+  !
+  logical,public :: UseBoundValence2Free=.false.
   logical,public :: UseScattering      = .false.
 
   real,parameter :: TRadMin = 500   !K 
@@ -132,10 +137,10 @@ contains
 
     xMin = EnergyGroup_I(iGroup - 1)/(TgSI * cKToEV)
     xMax = EnergyGroup_I(iGroup    )/(TgSI * cKToEV)
-    
+
     if(present(EgSI))EgSI = cNormG5 * gint(5,xMin,xMax) * (      cRadiation * TgSI**4)
     if(present(CgSI))CgSI = cNormG6 * gint(6,xMin,xMax) * (4.0 * cRadiation * TgSI**3)
-    
+
   end subroutine get_energy_g_from_temperature
   !======================================================================
   subroutine get_temperature_from_energy_g(iGroup, EgSIIn, TgSIOut, CgSIOut)
@@ -156,12 +161,12 @@ contains
     real :: TgSI, CgSI, ToleranceEg, DeltaEg, EgSI
 
     real, parameter:: cTolerance = 1.0E-3
-    
+
     integer, parameter :: nIter = 10
     integer :: iIter
     !--------------------------------------------------
     EgSI = max(EgSIIn, ERadMin)
-    
+
     FreqMin = EnergyGroup_I(iGroup - 1) * cEVToK 
     FreqMax = EnergyGroup_I(iGroup    ) * cEVToK
 
@@ -171,8 +176,8 @@ contains
     TgSI = sqrt(FreqMin*FreqMax)&
          /log(1.0 + cRadiation * FreqMin**2 * FreqMax**2 * cNormG5 * &
          DeltaLogFrequency / EgSI)
-   
-    
+
+
     ToleranceEg = cTolerance * EgSI
 
     iIter = 0
@@ -188,7 +193,7 @@ contains
        iIter = iIter + 1
     end do
 
-    
+
     if(present(TgSIOut))TgSIOut = TgSI
     if(present(CgSIOut))CgSIOut = CgSI
   end subroutine get_temperature_from_energy_g
@@ -268,156 +273,8 @@ contains
     end if
   end function oscillator_strength
 
-  !======================================================================
-  subroutine lines (PhotonEnergy,AbsorptionBB)       
-
-    !                                                                       
-    ! ... compute the contribution to the absorption coefficient from       
-    !     all lines (bound-bound transitions)                               
-    !                                                                       
-    ! ... input variables:                                                 
-    !       Te      -  plasma temperature (eV)                             
-    !       densnn  -  number density of all nuclei (cm**-3)               
-    !       densne  -  electron density (cm**-3)                            
-    !       PhotonEnergy   -  photon energy (eV)                                   
-    real,intent(in) :: PhotonEnergy
-    real :: densnn,densne
-    !                                                                       
-    ! ... output variables:                                                 
-    !       AbsorptionBB  -  absorption coefficient due to lines (cm**-1)                    
-    !   
-
-    real,intent(out) :: AbsorptionBB                            
-
-    integer:: iSav !Integer to count the total number of lines involved
-    integer,parameter:: nSavMax = 200 !The upper bound for iSav
-
-    !\
-    ! Loop variables
-    !/
-    integer :: iMix, & !runs over the mixture component
-         iZ,   & !runs over the charge number
-         iN,   & ! runs over the quntum principal number for the lower level
-         iNUpper,& !the same, for upper level 
-         nBound, &!Number of bound electrons
-         nGround  !For a given iZ, the principal number of the ground state.
-
-    real:: denlq  !Density of ions of a given sort, [cm-3]
-    real:: denlqn !The same, for the ion in the lower state, for a given transition
 
 
-    !The controbutions to the total absorption,
-    !calculated by the 'abslin' subroutine
-    real:: abscof
-
-    real:: TransitionEnergy
-    real:: gamma,avoigt,dnudop,vvoigt  !Line width parameters
-
-    !Difference between the line center and the photon energy, 
-    !for which to calculate the absorption
-
-    real:: DeltaNu 
-
-    !The line height at a given frequency (the line shape)
-    real:: Shape  
-    !-------------------
-
-
-    iSav = 0                                                          
-    AbsorptionBB = 0.                                                       
-
-
-    DensNN = Na * 1.0e-6  !To convert to cm-3
-    DensNe = DensNN * zAv !Electron density, in cm-3
-
-    ! ... loop over gas species                                             
-    IMIXLOOP: do iMix =1,nMix                                              
-       if (Concentration_I(iMix) .lt. con(2) ) CYCLE IMIXLOOP
-
-       ! ...    loop over ionization states                         
-       IZLOOP: do  iZ=iZMin_I(iMix), min(iZMax_I(iMix), nZ_I(iMix) - 1)
-
-          if ( Concentration_I(iMix)*Population_II(iZ,iMix) .lt. con(3))&
-               CYCLE IZLOOP
-
-          ! ... find the principal quantum number of the valence electrons  
-          !           in their ground state                                       
-
-          nGround = n_ground(iZ,nZ_I(iMix))                                   
-
-          denlq  = densnn * Concentration_I(iMix) * Population_II(iZ,iMix)          
-
-          ! ...  loop over initial quantum states                            
-          INLOOP: do iN=nGround,nExcitation-1                              
-             if ( Concentration_I(iMix) * &
-                  Population_II(iZ,iMix)* &
-                  Partition_III(iN,iZ,iMix)  &
-                  <  con(4) ) CYCLE  INLOOP                           
-
-             ! ... compute the density of ions with an electron in          
-             !             in state "n"                                             
-             denlqn = denlq * Partition_III(iN,iZ,iMix)                  
-
-             !         loop over final quantum states      
-
-             do iNUpper=iN+1,nExcitation                                 
-
-                TransitionEnergy = ExcitationEnergy_III(iNUpper,iZ,iMix) - ExcitationEnergy_III(iN,iZ,iMix)                  
-
-
-                ! ... compute the line widths for natural, Doppler, and pressure        
-                !     broadening to be used with Lorentzian line shape 
-
-                call line_width ( Te, densnn, TransitionEnergy, cAtomicMass_I(nZ_I(iMix)),  &                            
-                     gamma, avoigt, dnudop )        
-
-                ! ... compute this contribution if the photon energy is not far         
-                !     from the line center   
-
-                DeltaNu = ( TransitionEnergy - PhotonEnergy ) / cHPlanckEV                                  
-                if ( abs( deltaNu ) > con(5)*gamma ) then 
-                   !Line is too far, ignore it
-                   abscof = 0.                                                                                                       
-                   CYCLE
-                endif
-
-                ! ...    if the contribution from line "cores" will be added            
-                !        elsewhere (-opacbb-), then use the value at the                
-                !        line core boundary.                                            
-
-                if (DoNotAddLineCore .and. abs(DeltaNu).lt.con(6)*gamma ) then     
-                   DeltaNu = con(6)*gamma                                       
-                endif
-
-                if(UseVoigt)then
-                   ! ...       use Voigt profile                                           
-                   vvoigt = deltaNu / dnudop                                    
-                   shape = voigt_profile ( avoigt,vvoigt ) / dnudop / 1.7725           
-                else                                                           
-                   ! ...       use Lorentzian profile                                      
-                   shape = (gamma/39.48) / (DeltaNu**2 + (gamma/12.57)**2)      
-                endif
-
-
-
-                AbsorptionBB = AbsorptionBB + &
-                     
-                     2.65e-2 * oscillator_strength ( iN, iNUpper) * shape * denlqn    
-
-
-
-
-             end do
-          end do INLOOP
-       end do IZLOOP
-    end do IMIXLOOP
-
-    !Correct for stimulated emission)
-    AbsorptionBB = AbsorptionBB * (1.0 - exp( -PhotonEnergy/Te ))
- 
-    !====================================
-  end subroutine lines
-  
   !==========================================
   subroutine meshhv  
     !                                                                       
@@ -552,7 +409,7 @@ contains
                   < con(4) )CYCLE
              if(.not.DoNotAddLineCore)then        
                 do  iNUpper = iN + 1, nExcitation                              
-                                                                 
+
                    ennp = ExcitationEnergy_III(iNUpper, iZ,iMix)- &
                         ExcitationEnergy_III(iN, iZ,iMix)
                    if ( ennp .gt. EnergyGroup_I(0) .and. &                     
@@ -719,7 +576,7 @@ contains
     real :: Log10OfGamma2, GauntFactorBrems
 
     !Number of screened and valence electrons, as well as iZEff
-    integer :: nScreened, nValence, iZEff, iQ
+    integer :: nValence, iQ
 
     ! densities to calculate photoionization
     real :: AbsorberDensity 
@@ -730,7 +587,7 @@ contains
 
     !Misc: Photoionization parameters
     real :: PhotoIonizationConst
-    
+
     !---------------------------------------------------
 
     !Initialization
@@ -740,6 +597,7 @@ contains
 
     DensNN = Na * 1.0e-6
     DensNe = DensNN * zAv
+   
 
     ! ... loop over photon energies
     do iPhoton = 1,nPhoton                                              
@@ -759,7 +617,7 @@ contains
        IMIXLOOP: do iMix = 1,nMix                                           
 
           BremsStrahlung_I(iMix) = 0.0                                            
-                                                  
+
 
           ! ...       Bremsstrahlung                                              
           !           --------------                                              
@@ -810,54 +668,93 @@ contains
                   CYCLE IZLOOP     
 
              ! ...            sum over quantum states                                
-             do  iN = nGround, nExcitation                       
+             do  iN = nGround, nExcitation  
 
-                !  calculate the energy to excite the electron into     
-                !  the continuum 
+                AbsorberDensity = Population_II(iZ,iMix) * Partition_III(iN, iZ, iMix)                      
+
+                !  calculate the energy to excite the outermost electron 
+                !  into  the continuum 
 
                 eTransition = IonizPotential_II(iZ+1, iMix) - &
                      ExcitationEnergy_III(iN, iZ, iMix)         
 
                 ! ...  the photon energy must exceed the binding energy     
 
-                if ( PhotonEnergy_I(iPhoton) <  eTransition ) CYCLE  
-          
-
-                ! ... find the number of "screening" electrons     
-                !     and the number of electrons in the outermost shell   
-                !                 
-
-                if ( iN == nGround ) then                          
-                   ! ...ground state ion                                   
-                   nScreened = n_screened(iZ, nZ_I(iMix))                           
-                   nValence = nBound - nScreened                           
-                else                                                 
-                   ! ...ion is excited                                     
-                   nScreened = nbound - 1                                
-                   nValence = 1                                         
-                endif
-
-                ETransitionPerTe = eTransition / Te                                   
+                if ( PhotonEnergy_I(iPhoton) >=  eTransition ) then  
 
 
-                AbsorberDensity = Population_II(iZ,iMix) * Partition_III(iN, iZ, iMix)     
+                   ! ... find the number of "screening" electrons     
+                   !     and the number of electrons in the outermost shell   
+                   !                 
+                   
+                   if ( iN == nGround ) then                          
+                      ! ...ground state ion                                                              
+                      nValence = nBound - n_screened(iZ, nZ_I(iMix))
+                   else                                                 
+                      ! ...ion is excited                                                                    
+                      nValence = 1                                         
+                   endif
+                   
+                   ETransitionPerTe = eTransition / Te                                   
 
-                                        
-                !\
-                ! The version more close to that implemented in
-                ! Emilio Minguez et al. With this approach we substitute
-                ! eTransition for the combination Ry * Z_eff^3/iN^2, which
-                ! is implied in the ionmix.f.
-                ! By this account, our factor PhotoIonizationConst
-                ! differs from the version in the ionmix by a foctor of
-                ! (1/13.6)**3 where 13.6 = cRyEV.
-                ! The last multiplier accounts for effects of the Fermi
-                ! statistics in an electron gas. The formula is available in
-                ! PhotoIonization.pdf document. Note, that our LogGe = -\mu/T
-                !/         
-                SumOverN = SumOverN + nValence * iN/(real(iZ+1)**2) * AbsorberDensity&
-                      * (1.-ExpMinusHNuPerT) * (eTransition**3)/&
-                      (1.0 + ExpMinusHNuPerT*exp(ETransitionPerTe - LogGe))
+                   !\
+                   ! The version more close to that implemented in
+                   ! Emilio Minguez et al. With this approach we substitute
+                   ! eTransition for the combination Ry * Z_eff^3/iN^2, which
+                   ! is implied in the ionmix.f.
+                   ! By this account, our factor PhotoIonizationConst
+                   ! differs from the version in the ionmix by a foctor of
+                   ! (1/13.6)**3 where 13.6 = cRyEV.
+                   ! The last multiplier accounts for effects of the Fermi
+                   ! statistics in an electron gas. The formula is available in
+                   ! PhotoIonization.pdf document. Note, that our LogGe = -\mu/T
+                   !/         
+                   SumOverN = SumOverN + nValence * iN/(real(iZ+1)**2) * AbsorberDensity&
+                        * (1.-ExpMinusHNuPerT) * (eTransition**3)/&
+                        (1.0 + ExpMinusHNuPerT*exp(ETransitionPerTe - LogGe))
+                end if
+                !  calculate the energy to excite the valence electron 
+                !  into  the continuum 
+                if(UseBoundValence2Free .and. &
+                     iZ <= nZ_I(iMix) - 2 .and. &
+                     iN > nGround) then
+                   eTransition = eTransition + &
+                        ExcitationEnergy_III(iN, iZ+1, iMix)         
+
+                   ! ...  the photon energy must exceed the binding energy     
+
+                   if ( PhotonEnergy_I(iPhoton) <  eTransition ) CYCLE  
+
+
+                   ! ... find the number of "screening" electrons     
+                   !     and the number of electrons in the outermost shell   
+                   !                 
+                   
+                                             
+                   nValence = nBound - 1 - n_screened(iZ+1, nZ_I(iMix))                         
+                  
+                   
+                   ETransitionPerTe = eTransition / Te                                   
+
+
+                   !\
+                   ! The version more close to that implemented in
+                   ! Emilio Minguez et al. With this approach we substitute
+                   ! eTransition for the combination Ry * Z_eff^3/iN^2, which
+                   ! is implied in the ionmix.f.
+                   ! By this account, our factor PhotoIonizationConst
+                   ! differs from the version in the ionmix by a foctor of
+                   ! (1/13.6)**3 where 13.6 = cRyEV.
+                   ! The last multiplier accounts for effects of the Fermi
+                   ! statistics in an electron gas. The formula is available in
+                   ! PhotoIonization.pdf document. Note, that our LogGe = -\mu/T
+                   !/         
+                   SumOverN = SumOverN + nValence * n_ground(iZ+1,nZ_I(iMix))&
+                        /(real(iZ+2)**2) * AbsorberDensity&
+                        * (1.-ExpMinusHNuPerT) * (eTransition**3)/&
+                        (1.0 + ExpMinusHNuPerT*exp(ETransitionPerTe - LogGe))
+                end if
+
 
              end do
 
@@ -868,7 +765,7 @@ contains
              ! ...          loop over inner shells (K,L,M,...); each inner shell     
              !              is assume to be full                                     
 
-                                
+
              if ( & !nshels > 0 .and. 
                   UseCoreElectron ) then
                 call CON_stop('UseCoreElectron should be set to .false.')
@@ -908,7 +805,7 @@ contains
           !/
           PhotoIonizationConst = 7.9e-18 * Densnn * Concentration_I(iMix) / PhotonEnergyCubed   
           PhotoIonizationAbs_I(iMix) = PhotoIonizationConst * SumOverZ
-                 
+
        end do IMIXLOOP   !Over iMix                                                                    
 
 
@@ -978,7 +875,157 @@ contains
        AbsorptionCoefficient_I(iPhoton) = AbsorptionCoefficient_I(iPhoton) + abslns                                                            
 
 
-    end do  !over iPhoton                                                         
+    end do  !over iPhoton
+  contains
+    !======================================================================
+    subroutine lines (PhotonEnergy,AbsorptionBB)       
+
+      !                                                                       
+      ! ... compute the contribution to the absorption coefficient from       
+      !     all lines (bound-bound transitions)                               
+      !                                                                       
+      ! ... input variables:                                                 
+      !       Te      -  plasma temperature (eV)                             
+      !       densnn  -  number density of all nuclei (cm**-3)               
+      !       densne  -  electron density (cm**-3)                            
+      !       PhotonEnergy   -  photon energy (eV)                                   
+      real,intent(in) :: PhotonEnergy
+      real :: densnn,densne
+      !                                                                       
+      ! ... output variables:                                                 
+      !       AbsorptionBB  -  absorption coefficient due to lines (cm**-1)                    
+      !   
+
+      real,intent(out) :: AbsorptionBB                            
+
+      integer:: iSav !Integer to count the total number of lines involved
+      integer,parameter:: nSavMax = 200 !The upper bound for iSav
+
+      !\
+      ! Loop variables
+      !/
+      integer :: iMix, & !runs over the mixture component
+           iZ,   & !runs over the charge number
+           iN,   & ! runs over the quntum principal number for the lower level
+           iNUpper,& !the same, for upper level 
+           nBound, &!Number of bound electrons
+           nGround  !For a given iZ, the principal number of the ground state.
+
+      real:: denlq  !Density of ions of a given sort, [cm-3]
+      real:: denlqn !The same, for the ion in the lower state, for a given transition
+
+
+      !The controbutions to the total absorption,
+      !calculated by the 'abslin' subroutine
+      real:: abscof
+
+      real:: TransitionEnergy
+      real:: gamma,avoigt,dnudop,vvoigt  !Line width parameters
+
+      !Difference between the line center and the photon energy, 
+      !for which to calculate the absorption
+
+      real:: DeltaNu 
+
+      !The line height at a given frequency (the line shape)
+      real:: Shape  
+      !-------------------
+
+
+      iSav = 0                                                          
+      AbsorptionBB = 0.                                                       
+
+
+      DensNN = Na * 1.0e-6  !To convert to cm-3
+      DensNe = DensNN * zAv !Electron density, in cm-3
+
+      ! ... loop over gas species                                             
+      IMIXLOOP: do iMix =1,nMix                                              
+         if (Concentration_I(iMix) .lt. con(2) ) CYCLE IMIXLOOP
+
+         ! ...    loop over ionization states                         
+         IZLOOP: do  iZ=iZMin_I(iMix), min(iZMax_I(iMix), nZ_I(iMix) - 1)
+
+            if ( Concentration_I(iMix)*Population_II(iZ,iMix) .lt. con(3))&
+                 CYCLE IZLOOP
+
+            ! ... find the principal quantum number of the valence electrons  
+            !           in their ground state                                       
+
+            nGround = n_ground(iZ,nZ_I(iMix))                                   
+
+            denlq  = densnn * Concentration_I(iMix) * Population_II(iZ,iMix)          
+
+            ! ...  loop over initial quantum states                            
+            INLOOP: do iN=nGround,nExcitation-1                              
+               if ( Concentration_I(iMix) * &
+                    Population_II(iZ,iMix)* &
+                    Partition_III(iN,iZ,iMix)  &
+                    <  con(4) ) CYCLE  INLOOP                           
+
+               ! ... compute the density of ions with an electron in          
+               !             in state "n"                                             
+               denlqn = denlq * Partition_III(iN,iZ,iMix)                  
+
+               !         loop over final quantum states      
+
+               do iNUpper=iN+1,nExcitation                                 
+
+                  TransitionEnergy = ExcitationEnergy_III(iNUpper,iZ,iMix) - ExcitationEnergy_III(iN,iZ,iMix)                  
+
+
+                  ! ... compute the line widths for natural, Doppler, and pressure        
+                  !     broadening to be used with Lorentzian line shape 
+
+                  call line_width ( Te, densnn, TransitionEnergy, cAtomicMass_I(nZ_I(iMix)),  &                            
+                       gamma, avoigt, dnudop )        
+
+                  ! ... compute this contribution if the photon energy is not far         
+                  !     from the line center   
+
+                  DeltaNu = ( TransitionEnergy - PhotonEnergy ) / cHPlanckEV                                  
+                  if ( abs( deltaNu ) > con(5)*gamma ) then 
+                     !Line is too far, ignore it
+                     abscof = 0.                                                                                                       
+                     CYCLE
+                  end if
+
+                  ! ...    if the contribution from line "cores" will be added            
+                  !        elsewhere (-opacbb-), then use the value at the                
+                  !        line core boundary.                                            
+
+                  if (DoNotAddLineCore .and. abs(DeltaNu).lt.con(6)*gamma ) then     
+                     DeltaNu = con(6)*gamma                                       
+                  endif
+
+                  if(UseVoigt)then
+                     ! ...       use Voigt profile                                           
+                     vvoigt = deltaNu / dnudop                                    
+                     shape = voigt_profile ( avoigt,vvoigt ) / dnudop / 1.7725           
+                  else                                                           
+                     ! ...       use Lorentzian profile                                      
+                     shape = (gamma/39.48) / (DeltaNu**2 + (gamma/12.57)**2)      
+                  endif
+
+
+
+                  AbsorptionBB = AbsorptionBB + &
+                       
+                       2.65e-2 * oscillator_strength ( iN, iNUpper) * shape * denlqn    
+
+
+
+
+               end do
+            end do INLOOP
+         end do IZLOOP
+      end do IMIXLOOP
+
+      !Correct for stimulated emission)
+      AbsorptionBB = AbsorptionBB * (1.0 - exp( -PhotonEnergy/Te ))
+
+      !====================================
+    end subroutine lines
   end subroutine abscon
   !====================
 
@@ -1047,12 +1094,17 @@ contains
        XGroupMax = EnergyGroup_I(iGroup  ) / TRad                                  
 
        call opacgp (OpacityPlanck_I(iGroup),OpacityRosseland_I(iGroup) )  
+       
        if ( DoNotAddLineCore ) then                                     
           ! ...       use analytic solution to bound-bound opacities 
-          call opacbb (LineCoreOpacity)  
+          call opacbb (LineCoreOpacity)
+          if(LineCoreOpacity<0.0)then
+             write(*,*)'iGroup =',iGroup
+             write(*,*)'LineCoreOpacity =', LineCoreOpacity
+             call CON_stop('Negative contribution in opacbb')
+          end if
           OpacityPlanck_I(iGroup) = OpacityPlanck_I(iGroup) + LineCoreOpacity                                                            
        endif
-
        OpacityPlanckTotal = OpacityPlanckTotal + gint(5,XGroupMin,XGroupMax) * OpacityPlanck_I(iGroup)                         
        OpacityRosselandTotal  = OpacityRosselandTotal  + gint(6,XGroupMin,XGroupMax) / OpacityRosseland_I(iGroup)               
     end do
@@ -1187,7 +1239,7 @@ contains
                dsmpa0 = dxg * fpa10                                      
             endif
 
-          
+
             ! ...       Rosseland mean opacities                                 
             if ( abs( fr1-fr2 ) .gt. 1.e-3*fr2 ) then                   
                if ( fr2 .ne. 0. ) then                                   
@@ -1284,7 +1336,7 @@ contains
            nGround  !For a given iZ, the principal number of the ground state.
 
       real :: TransitionEnergy, Energy2TRadRatio 
-      real :: ExpOfEnergy2TRadRatio, ExpOfEnergy2TeRatio
+      real :: ExpOfEnergy2TRadRatio
       !Misc:
       real :: g5, const, const1, opacij, fnnp
 
@@ -1359,14 +1411,11 @@ contains
                   !\
                   !Account for the stimulated emission
                   !/
-                  ! ...            note that in LTE, "ExpOfEnergy2TeRatio" = "ExpOfEEnergy2TRadRatio0"      
-
-                  ExpOfEnergy2TeRatio = iN * iN * Partition_III(iNUpper, iZ, iMix)  / &                 
-                       ( iNUpper * iNUpper * Partition_III(iN, iZ, iMix)  )                    
+                  ! ...                             
 
 
                   OpacityPlanck = OpacityPlanck  +  &
-                       opacij * ( 1.-ExpOfEnergy2TeRatio ) / ( 1.-ExpOfEnergy2TRadRatio )
+                       opacij * ( 1.-ExpOfEnergy2TRadRatio )
 
                end do FINAL
             end do INITIAL
