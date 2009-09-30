@@ -61,7 +61,7 @@ contains
        case("#PFSSM")
           call read_var('UseUserB0'  ,UseUserB0)
           if(UseUserB0)then
-             call set_parameters_magnetogram(NamePlotDir)
+             call set_parameters_magnetogram
              call read_var('dt_UpdateB0',dt_UpdateB0)
              DoUpdateB0 = dt_updateb0 > 0.0
           end if
@@ -105,7 +105,7 @@ contains
   !============================================================================
   subroutine user_init_session
     use EEE_ModMain,    ONLY: EEE_initialize
-    use ModIO,          ONLY: write_prefix, iUnitOut
+    use ModIO,          ONLY: write_prefix, iUnitOut,NamePlotDir
     use ModMagnetogram, ONLY: read_magnetogram_file
     use ModMain,        ONLY: UseUserB0
     use ModPhysics,     ONLY: BodyNDim_I,BodyTDim_I,g
@@ -124,7 +124,7 @@ contains
        call stop_mpi('ERROR: Correct PARAM.in!')
     end if
     if(i_line_command("#PFSSM") > 0)then
-       call read_magnetogram_file
+       call read_magnetogram_file(NamePlotDir)
     end if
 
     if(i_line_command("#EMPIRICALSW", iSessionIn = 1) < 0)then
