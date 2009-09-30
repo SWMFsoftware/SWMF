@@ -271,13 +271,13 @@ contains
     IsFound = .true.
     select case(NameVar)
     case('erad1')
-       NameIdlUnit = 'erg/cm3'
+!       NameIdlUnit = 'erg/cm3'
        PlotVar_G = &
-            State_VGB(WaveFirst_,:,:,:,iBlock)*No2Si_V(UnitEnergyDens_)
+            State_VGB(WaveFirst_,:,:,:,iBlock) !*No2Si_V(UnitEnergyDens_)
     case('erad2')
-       NameIdlUnit = 'erg/cm3'
+!       NameIdlUnit = 'erg/cm3'
        PlotVar_G = &
-            State_VGB(WaveLast_,:,:,:,iBlock)*No2Si_V(UnitEnergyDens_)
+            State_VGB(WaveLast_,:,:,:,iBlock) !*No2Si_V(UnitEnergyDens_)
     case default
        IsFound = .false.
     end select
