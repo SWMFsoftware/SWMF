@@ -87,11 +87,25 @@ module ModPlanet
   integer, parameter :: iVernalMinute =    0
   integer, parameter :: iVernalSecond =    0
 
-  real, parameter :: SunOrbit_A = 1.000110
-  real, parameter :: SunOrbit_B = 0.034221
-  real, parameter :: SunOrbit_C = 0.001280
-  real, parameter :: SunOrbit_D = 0.000719
-  real, parameter :: SunOrbit_E = 0.000077
+  ! Old orbital parameters
+ !real, parameter :: SunOrbit_A = 1.000110
+ !real, parameter :: SunOrbit_B = 0.034221
+ !real, parameter :: SunOrbit_C = 0.001280
+ !real, parameter :: SunOrbit_D = 0.000719
+ !real, parameter :: SunOrbit_E = 0.000077
+
+  !New Orbital Parameters
+  !A: semi-major axis in AU
+  !B: eccentricity
+  !C: Longitude of perihelion
+  !D: Mean Longitude
+  !E: For calulating actual Longitude
+ real, parameter :: SunOrbit_A = 1.0000001124
+ real, parameter :: SunOrbit_B = 0.0167
+ real, parameter :: SunOrbit_C = 102.94719
+ real, parameter :: SunOrbit_D = 100.46435
+ real, parameter :: SunOrbit_E = 129597740.63
+
 
   logical :: IsEarth = .true.
   logical :: IsMars = .false.
@@ -111,11 +125,11 @@ module ModPlanet
  real, parameter, dimension(5, 5) :: Diff0 = 1.0e4 * reshape( (/ &
        ! 0      02     N2      N     NO
        !---------------------------------+
-       0.00,  0.260, 0.260, 0.300, 0.181/2.0,&            ! O
-       0.26,  0.000, 0.181, 0.220, 0.181/2.,&            ! O2
-       0.26,  0.181, 0.000, 0.220, 0.181/2.,&            ! N2
-       0.30,  0.220, 0.220, 0.000, .181/2., &
-       0.181/2.,  0.181/2., 0.181/2., 0.181/2., 0.00 /), (/5,5/) )  ! N
+       0.00,  0.260, 0.260, 0.300, 0.181/1.0,&            ! O
+       0.26,  0.000, 0.181, 0.220, 0.181/1.,&            ! O2
+       0.26/4,  0.181, 0.000, 0.220, 0.181/1.,&            ! N2
+       0.30,  0.220, 0.220, 0.000, .181/1., &
+       0.181/1.,  0.181/1., 0.181/1., 0.181/1., 0.00 /), (/5,5/) )  ! N
 
   ! These are the exponents
   real, parameter, dimension(5, 5) :: DiffExp = reshape( (/ &

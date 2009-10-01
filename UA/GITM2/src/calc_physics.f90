@@ -17,6 +17,12 @@ subroutine calc_physics(iBlock)
   real :: JulianDayEq, DaysInYear, OrbitAngle
   real :: SunDeclination, SinDec, CosDec
 
+  real :: DayNumber,TimeHour,Cy
+  real :: MeanAnomaly,RMeanAnomaly,DMeanAnomaly
+  real :: EccAnomaly1,EccAnomaly2,REccAnomaly1,REccAnomlay2
+  real :: TrueAnomaly,RTrueAnomaly
+  
+  integer :: i
   integer :: iLon, iLat, iAlt
 
   call report("calc_physics",2)
@@ -25,13 +31,65 @@ subroutine calc_physics(iBlock)
   ! Solar Things
   !/
 
-  OrbitAngle = 2.*pi*(CurrentTime - VernalTime)/SecondsPerYear
+!\
+! Orbital Elements procedure taken from 
+! http://home.att.net/~srschmitt/planetorbits.html
+!/
 
-  SunOrbitEccentricity = SunOrbit_A                     + &
-                         SunOrbit_B*cos(OrbitAngle)    + &
-                         SunOrbit_C*sin(OrbitAngle)    + &
-                         SunOrbit_D*cos(2.*OrbitAngle) + &
-                         SunOrbit_E*sin(2.*OrbitAngle)
+  TimeHour = iTimeArray(4)+iTimeArray(5)/60.0+iTimeArray(6)/3600.0
+  
+  DayNumber = 367*iTimeArray(1)-7*(iTimeArray(1)+(iTimeArray(2)+9)/12)/4 &
+	   +275*iTimeArray(2)/9+iTimeArray(3)-730531.5+TimeHour/24.0
+ 
+  CY = DayNumber/36525.0
+  
+  MeanAnomaly =(SunOrbit_D+((SunOrbit_E*CY)/3600.0)) - SunOrbit_C
+  RMeanAnomaly = pi/180.0*MeanAnomaly
+  DMeanAnomaly = RMeanAnomaly/(2.0*pi)
+  
+  if (DMeanAnomaly > 0.0) then
+	 RMeanAnomaly = (2.0*pi)*(DMeanAnomaly-floor(DMeanAnomaly))
+  else
+	 RMeanAnomaly = (2.0*pi)*(DMeanAnomaly-ceiling(DMeanAnomaly))
+  endif
+  
+  if (RMeanAnomaly < 0.0) then
+	 RMeanAnomaly = (2.0*pi)+RMeanAnomaly
+  endif
+  
+  EccAnomaly1 = RMeanAnomaly + SunOrbit_B*sin(RMeanAnomaly)*(1.0+ &
+	 SunOrbit_B*cos(RMeanAnomaly))
+  
+  !  Calculate true anomaly  
+  do i=1,10
+	 EccAnomaly2 = EccAnomaly1
+	 
+	 EccAnomaly1 = EccAnomaly2 - ((EccAnomaly2-SunOrbit_B* &
+		sin(EccAnomaly2)-RMeanAnomaly)/(1.0-SunOrbit_B* &
+		cos(EccAnomaly2)))
+
+  enddo
+
+  TrueAnomaly = 2.0*atan(sqrt((1.0+SunOrbit_B)/ &
+	 (1.0-SunOrbit_B))*tan(0.5*EccAnomaly1))
+ 
+  if (TrueAnomaly < 0) then
+	 TrueAnomaly = TrueAnomaly + (2.0*pi)
+  endif
+  
+ !!!!!!! General SunOrbitEccentricity 
+  SunOrbitEccentricity = SunOrbit_A*(1.0-SunOrbit_B**2.0)/(1.0+ &
+	   SunOrbit_B*cos(TrueAnomaly))
+
+ OrbitAngle = 2.*pi*(CurrentTime - VernalTime)/SecondsPerYear
+
+ !!!!!!! Old SunOrbitEccentricity
+!  SunOrbitEccentricity = SunOrbit_A                     + &
+!                         SunOrbit_B*cos(OrbitAngle)    + &
+!                         SunOrbit_C*sin(OrbitAngle)    + &
+!                         SunOrbit_D*cos(2.*OrbitAngle) + &
+!                         SunOrbit_E*sin(2.*OrbitAngle)
+
 
   SunDeclination = atan(tan(Tilt*pi/180.)*sin(OrbitAngle))
 
