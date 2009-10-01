@@ -56,6 +56,9 @@ module ModLinearSolver
   public :: implicit_solver ! implicit solver in 1D with 3 point stencil
   public :: test_linear_solver
 
+  ! Use an effectively 16byte real accuracy for global sums
+  logical, public:: UseAccurateSum = .true.
+
   ! Named indexes for various preconditioner options
   integer, public, parameter:: &
        Jacobi_=5, BlockJacobi_=4, GaussSeidel_=3, Dilu_=2, Bilu_=1, Mbilu_=0
@@ -908,8 +911,10 @@ contains
     integer :: iError
     !--------------------------------------------------------------------------
 
-    !dot_product_mpi = accurate_sum(a_I*b_I, iComm=iComm)
-    !RETURN
+    if(UseAccurateSum)then
+       dot_product_mpi = accurate_sum(a_I*b_I, iComm=iComm)
+       RETURN
+    end if
 
     DotProduct = dot_product(a_I, b_I)
 
