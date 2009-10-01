@@ -389,9 +389,11 @@ contains
   !by their charge state
   subroutine get_excitation_energy(nExcitation, nZ, ExcitationEnergy_III)
     use ModConst, ONLY: cRyToEV
-    integer :: nExcitation
-    integer :: nZ
+    integer,intent(in) :: nExcitation
+    integer,intent(in) :: nZ
+
     real,dimension(0:nExcitation-1,nExcitation,0:nZ-1),intent(out) :: ExcitationEnergy_III
+
     real,dimension(1:nZ) :: IonizPotential_I
 
     integer :: iL, iN, iZ, nGround
