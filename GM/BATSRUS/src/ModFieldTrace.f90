@@ -1941,7 +1941,15 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   ! Clean data except on processor 0
   if(iProc /= 0)call line_clean
 
-  ! Collect the ray mapping info to processor 0
+  ! Some procs never have their RayMap arrays allocated.
+  if(.not.allocated(RayMap_DSII)) then
+     allocate(RayMap_DSII(3,nRay_D(1),nRay_D(2),nRay_D(3)))
+     allocate(RayMapLocal_DSII(3,nRay_D(1),nRay_D(2),nRay_D(3)))
+     RayMapLocal_DSII = 0.0
+     RayMap_DSII = 0.0
+  end if
+
+  ! Collect the ray mapping info to processor 0  
   call MPI_reduce(RayMapLocal_DSII, RayMap_DSII, size(RayMap_DSII), MPI_REAL, &
        MPI_SUM, 0, iComm, iError)
   deallocate(RayMapLocal_DSII)
