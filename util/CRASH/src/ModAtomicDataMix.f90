@@ -77,18 +77,17 @@ contains
        call get_ioniz_potential(nZ_I(iMix),IonizPotential_II(1:nZ_I(iMix),iMix))
 
 
-       if (UseExcitation) then
-          call get_excitation_energy(nExcitation,nZ_I(iMix),&
-               ExcitationEnergy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
+      
+       call get_excitation_energy(nExcitation,nZ_I(iMix),&
+            ExcitationEnergy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
+       
+       call get_degeneracy(nExcitation,nZ_I(iMix),&
+            Degeneracy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
+    
+       if (UsePressureIonization)&
+            call get_virial_coeff4_energy(nExcitation,nZ_I(iMix),&
+            VirialCoeff4Energy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
 
-          call get_degeneracy(nExcitation,nZ_I(iMix),&
-               Degeneracy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
-
-          if (UsePressureIonization)&
-               call get_virial_coeff4_energy(nExcitation,nZ_I(iMix),&
-               VirialCoeff4Energy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
-
-       end if
     end do
    
   end subroutine set_data_for_mixture
