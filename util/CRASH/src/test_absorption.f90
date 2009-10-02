@@ -180,13 +180,7 @@ program abs
   UseExcitation = .true.
   UseGroundStatWeight = .false.
   call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
-  do iZ = iZMin_I(1),iZMax_I(1)
-     write(*,*)'iZ=',iZ
-     write(*,*)'Degeneracy'
-     write(*,*)Degeneracy_IIII(:,:,iZ,1)
-     write(*,*)'Excitation Energy'
-     write(*,*)ExcitationEnergy_IIII(:,:,iZ,1)
-  end do
+ 
   call save_report('report_be.txt')
  
   DoNotAddLineCore =.false.
@@ -223,7 +217,7 @@ contains
          '    OpacityRosselandTotal=',OpacityRosselandTotal/RhoAl, '   Z=',ZAv
     open(unit,file=NameFile)
     do iGroup = 1, nGroup 
-       write(unit,*)1.0e-3*EnergyGroup_I(iGroup-1),&
+       write(unit,*)1.0e-3 * EnergyGroup_I(iGroup-1),&
             OpacityRosseland_I(iGroup)/RhoAl,&
             OpacityPlanck_I(iGroup)/RhoAl
     end do
