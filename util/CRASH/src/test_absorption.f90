@@ -20,6 +20,7 @@ program abs
   integer :: nGround, iGroup
   real :: TSI, Eg_W(100), CFromT_W(100),cFromE,TOutSI
   real,dimension(1:nZMax) :: IonizPotential_I
+  real::RhoAl = 0.1 ![g/cm3]
   !---------------
 
   open(unit,file='../doc/excited_levels.tex',status='replace')
@@ -58,6 +59,7 @@ program abs
 
   write(unit,'(a)')'\end{tabular}'
   close(unit)
+
   open(unit,file='../doc/normalized_planckian.dat',status='replace')
   write(unit,*)'Notmalized integral Planckian, \int_0^x{Planckian(y)dy}'
   do i=1,300
@@ -81,15 +83,8 @@ program abs
  
   UseCoulombCorrection = .true.
   call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
-  open(unit,file='report.txt')
-  do iMix = 1,nMix
-     write(unit,*)'iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)',iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)
-     do iZ = iZMin_I(iMix), iZMax_I(iMix)
-        write(unit,*)' iZ = ', iZ
-        write(unit,*)Partition_III(:,iZ,iMix)*Population_II(iZ,iMix)
-     end do
-  end do
-  close(unit)
+  call save_report('report.txt')
+
   call set_multigroup(100, 1.0/cHPlanckEV, 10000.0/cHPlanckEV)
   call meshhv
   call abscon
@@ -113,32 +108,15 @@ program abs
  
   UseCoulombCorrection = .true.
   call set_ionization_equilibrium(vTe,3.0e25,iError)
-  open(unit,file='report_xe.txt')
-  do iMix = 1,nMix
-     write(unit,*)'iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)',iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)
-     do iZ = iZMin_I(iMix),iZMax_I(iMix)
-        write(unit,*)' iZ = ', iZ
-        write(unit,*)Partition_III(:,iZ,iMix)*Population_II(iZ,iMix)
-     end do
-  end do
-  close(unit)
+  call save_report('report_xe.txt')
+ 
   call set_multigroup(100, 1.0/cHPlanckEV, 10000.0/cHPlanckEV)
   UseScattering = .true.
   DoNotAddLineCore =.false.
   call meshhv
   call abscon
   
- 
-  open(unit,file='../doc/xenon_absorption.dat')
-  write(unit,'(a,i6,a)') &
-       'Photon energy [eV]  Absorbtion Coeff cm-1, in ',nPhoton,' points' 
-  do iPlot = 1, nPhoton
-     if(PhotonEnergy_I(iPlot)< 0.1*Te.or.PhotonEnergy_I(iPlot)>1000.0*Te)&
-          CYCLE
-     write(unit,*)log10(PhotonEnergy_I(iPlot)),&
-          log10(AbsorptionCoefficient_I(iPlot)),log10(ScatteringCoefficient_I(iPlot))
-  end do
-  close(unit)
+  call save_absorption_coef('../doc/xenon_absorption.dat')
 
   DoNotAddLineCore =.true.
   call meshhv
@@ -153,6 +131,7 @@ program abs
           log10(OpacityRosseland_I(iGroup))
   end do
   close(unit)
+ 
   write(*,*)'OpacityPlanckTotal=',OpacityPlanckTotal,&
       '    OpacityRosselandTotal=',OpacityRosselandTotal, '   Z=',ZAv
   TSI = 1.0e5   !\approx 9 eV
@@ -163,11 +142,108 @@ program abs
 
      call get_energy_g_from_temperature(iGroup,TSI,Eg_W(iGroup),CFromT_W(iGroup))
      call get_temperature_from_energy_g(iGroup, Eg_W(iGroup), TOutSI,CFromE)
-     write(unit,'(5e10.3)') sqrt(EnergyGroup_I(iGroup - 1)*EnergyGroup_I(iGroup)),Eg_w(iGroup),TOutSI,CFromT_W(iGroup),CFromE
+     write(unit,'(5e10.3)') sqrt(EnergyGroup_I(iGroup - 1)*&
+          EnergyGroup_I(iGroup)),Eg_w(iGroup),TOutSI,CFromT_W(iGroup),CFromE
   end do
-  write(unit,*)'Energy sum up:',sum(Eg_W(1:nGroup)), ' Total specific heat:=', sum(CFromT_W(1:nGroup))
+  write(unit,*)'Energy sum up:',sum(Eg_W(1:nGroup)), ' Total specific heat:=', &
+       sum(CFromT_W(1:nGroup))
   close(unit)
+  !====================ALUMINIUM TEST====================================!
+
+  call set_element(13)
+
+  NaTrial = RhoAl/(1.0e3*cAtomicMass * cAtomicMass_I(13))
   
+  
+  vTe = 100.0 ![eV]=0.1 keV
+  UseCoulombCorrection = .false.
+  call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
+  
+  DoNotAddLineCore =.false.
+  DoEnhancePhotoIonization = .true.
+  
+  call meshhv
+  call abscon
+  call save_absorption_coef('../doc/al_absoprtion.dat')
+  call opacys(TRadIn = Te)
+  call save_opacity_sesame('../doc/al_opacities.dat')
+ 
+
+  !====================BE TEST====================================!
+
+  call set_element(4)
+
+  NaTrial = RhoAl/(1.0e3*cAtomicMass * cAtomicMass_I(4))
+  
+  vTe = 100.0 ![eV]=0.1 keV
+  UseCoulombCorrection = .true.
+  UseExcitation = .true.
+  UseGroundStatWeight = .false.
+  call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
+  do iZ = iZMin_I(1),iZMax_I(1)
+     write(*,*)'iZ=',iZ
+     write(*,*)'Degeneracy'
+     write(*,*)Degeneracy_IIII(:,:,iZ,1)
+     write(*,*)'Excitation Energy'
+     write(*,*)ExcitationEnergy_IIII(:,:,iZ,1)
+  end do
+  call save_report('report_be.txt')
+ 
+  DoNotAddLineCore =.false.
+  DoEnhancePhotoIonization = .true.
+  
+  call meshhv
+  call abscon
+  call save_absorption_coef('../doc/Be_absoprtion.dat')
+  call opacys(TRadIn = Te)
+  call save_opacity_sesame('../doc/Be_opacities.dat')
+  
+ 
+contains
+  !========================
+  subroutine save_report(NameFile)
+    character(LEN=*),intent(in)::NameFile
+    !------------------------------------
+    open(unit,file=NameFile)
+    do iMix = 1,nMix
+       write(unit,*)'iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)',&
+            iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)
+       do iZ = iZMin_I(iMix), iZMax_I(iMix)
+          write(unit,*)' iZ = ', iZ
+          write(unit,*)Partition_III(:,iZ,iMix)*Population_II(iZ,iMix)
+       end do
+    end do
+    close(unit)
+  end subroutine save_report
+  !=========================
+  subroutine save_opacity_sesame(NameFile)
+    character(LEN=*),intent(in)::NameFile
+    !------------------------------------
+    write(*,*)'OpacityPlanckTotal=',OpacityPlanckTotal/RhoAl,&
+         '    OpacityRosselandTotal=',OpacityRosselandTotal/RhoAl, '   Z=',ZAv
+    open(unit,file=NameFile)
+    do iGroup = 1, nGroup 
+       write(unit,*)1.0e-3*EnergyGroup_I(iGroup-1),&
+            OpacityRosseland_I(iGroup)/RhoAl,&
+            OpacityPlanck_I(iGroup)/RhoAl
+    end do
+    close(unit)
+  end subroutine save_opacity_sesame
+  !=========================
+  subroutine  save_absorption_coef(NameFile)
+    character(LEN=*),intent(in)::NameFile
+    !------------------------------------
+    open(unit,file=NameFile)
+    write(unit,'(a,i6,a)') &
+         'Photon energy [eV]  Absorbtion Coeff cm-1, in ',nPhoton,' points' 
+    do iPlot = 1, nPhoton
+       if(PhotonEnergy_I(iPlot)< 0.1*Te.or.PhotonEnergy_I(iPlot)>1000.0*Te)&
+            CYCLE
+       write(unit,*)log10(PhotonEnergy_I(iPlot)),&
+            log10(AbsorptionCoefficient_I(iPlot)),log10(ScatteringCoefficient_I(iPlot))
+    end do
+    close(unit)
+  end subroutine save_absorption_coef
 end program abs
 !============================================================================
 ! The following subroutines are here so that we can use SWMF library routines
