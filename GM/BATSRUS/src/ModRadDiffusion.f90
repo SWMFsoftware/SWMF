@@ -1556,8 +1556,7 @@ contains
           State_VGB(Ee_,i,j,k,iBlock) = inv_gm1*PeSi*Si2No_V(UnitP_)
 
           ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
-          State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               max(0.0, Ee - State_VGB(Ee_,i,j,k,iBlock))
+          State_VGB(ExtraEint_,i,j,k,iBlock) = Ee - State_VGB(Ee_,i,j,k,iBlock)
 
        else
           ! ions + electrons
