@@ -1570,7 +1570,7 @@ contains
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
 
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               max(0.0, Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock))
+               Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock)
 
        end if
 
