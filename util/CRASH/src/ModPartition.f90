@@ -294,8 +294,12 @@ Contains
          ( (4.0 * cPi/3.0) * cBohrRadius**3 * NaIn)**(1.0/3)
     Na = NaIn
 
-    if(UseCoulombCorrection)IonizationPotentialLowering_I = 1.80 * rIonoSphereInv *&
+    if(UseCoulombCorrection)then
+       IonizationPotentialLowering_I = 1.80 * rIonoSphereInv *&
          cRyToEv * (2.0 * N_I + 1.0)
+    else
+       IonizationPotentialLowering_I = 0.0
+    end if
 
   end subroutine init_madelung
 
