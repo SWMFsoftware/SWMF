@@ -343,7 +343,8 @@ contains
     !with I electrons
 
     ! Works for H through Ar, Xe and Au (to work with gold uncomment the line with if)
-    integer,parameter :: nGround_I(79) = (/ &
+    integer,parameter :: nGround_I(0:79) = (/ &
+         0, &                                                                 ! For fully stripped ion
          1, 1, &                                                              !  2
          2, 2, 2, 2, 2, 2, 2, 2, &                                            !  8
          3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, &              ! 18
@@ -375,7 +376,7 @@ contains
     integer,intent(in) :: iZ, nZ
     
     integer :: nGround
-    integer,parameter :: nScreenedShell_I(6)  = (/ 0,2,10,28,46,78 /)
+    integer,parameter :: nScreenedShell_I(0:6)  = (/0,0,2,10,28,46,78 /)
     !---------------------
 
     nGround = n_ground(iZ, nZ)
