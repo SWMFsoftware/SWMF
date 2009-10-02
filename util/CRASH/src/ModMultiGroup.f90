@@ -46,7 +46,7 @@ module CRASH_ModMultiGroup
   public:: get_energy_g_from_temperature, get_temperature_from_energy_g
 
 
-  integer,parameter::nptspg = 30
+  integer,parameter :: nptspg = 30
 
   ! Meshs to evaluate the absorption coefficients
   integer::nPhoton
@@ -94,15 +94,19 @@ module CRASH_ModMultiGroup
 
   logical,public :: UseBremsstrahlung = .true.
   logical,public :: UsePhotoionization = .true.
+  
 
   !If the logical below is set to .true. then the
   !photoionization from EXCITED states accounts for both the
   !process in which the EXCITED electron is detached and that in
   !which the VALENCE electron is
   !
-  logical,public :: UseBoundValence2Free=.false.
-  logical,public :: UseScattering      = .false.
+  logical,public :: DoEnhancePhotoIonization =.true.
+  logical,public :: UseScattering      = .true.
+  logical,public :: UseAveragedRosselandOpacity = .true.
 
+  !Correction factor for the Photoionization from the ground state:
+  real,parameter :: BoundFreeCorrection = 2.0
   real,parameter :: TRadMin = 500   !K 
   real           :: ERadMin = CRadiation * TRadMin**4
   real           :: TgMin_W( nGroupMax )
@@ -586,7 +590,7 @@ contains
     real :: ScatNe, tScatt, pScatt
 
     !Misc: Photoionization parameters
-    real :: PhotoIonizationConst
+    real :: PhotoIonizationConst, BoundFreeGauntFactor
 
     !---------------------------------------------------
 
@@ -622,22 +626,22 @@ contains
           ! ...       Bremsstrahlung                                              
           !           --------------                                              
 
+          if(Z2_I(iMix) > 1.0e-30)then
 
+             DensityZ2 = Z2_I(iMix) * Concentration_I(iMix) * densnn * 1.e-16               
 
-          DensityZ2 = Z2_I(iMix) * Concentration_I(iMix) * densnn * 1.e-16               
-
-          ! ...       the free-free gaunt factor is a simple fit to the results   
-          !           of Karzas and Latter (Ap. J. Suppl., 6, 167 (1961))         
-
-          !
-          Log10OfGamma2 = log10( 13.6 * Z2_I(iMix) / Te )                           
-          GauntFactorBrems  = 1. + 0.44 * exp( -0.25*(Log10OfGamma2+0.25)**2 )          
-
-          BremsStrahlung_I(iMix) = 2.4e-21 * DensityZ2 * GauntFactorBrems * densne * &          
-               (1.0 - ExpMinusHNuPerT) / ( sqrt( Te ) * PhotonEnergyCubed )
-          !!NOTE: there is a more accurate calculation of the Gaunt factor in 
-          !ggff.f file from HYADES
-
+             ! ...       the free-free gaunt factor is a simple fit to the results   
+             !           of Karzas and Latter (Ap. J. Suppl., 6, 167 (1961))         
+             
+             !
+             Log10OfGamma2 = log10( 13.6 * Z2_I(iMix) / Te )                           
+             GauntFactorBrems  = 1. + 0.44 * exp( -0.25*(Log10OfGamma2+0.25)**2 )          
+             
+             BremsStrahlung_I(iMix) = 2.4e-21 * DensityZ2 * GauntFactorBrems * densne * &          
+                  (1.0 - ExpMinusHNuPerT) / ( sqrt( Te ) * PhotonEnergyCubed )
+             !!NOTE: there is a more accurate calculation of the Gaunt factor in 
+             !ggff.f file from HYADES
+          end if
 
           ! ...       photoionization                                             
           !           ----------------                                            
@@ -690,9 +694,11 @@ contains
                    if ( iN == nGround ) then                          
                       ! ...ground state ion                                                              
                       nValence = nBound - n_screened(iZ, nZ_I(iMix))
+                      BoundFreeGauntFactor = BoundFreeCorrection
                    else                                                 
                       ! ...ion is excited                                                                    
-                      nValence = 1                                         
+                      nValence = 1    
+                      BoundFreeGauntFactor = 1.0                                     
                    endif
                    
                    ETransitionPerTe = eTransition / Te                                   
@@ -710,12 +716,13 @@ contains
                    ! PhotoIonization.pdf document. Note, that our LogGe = -\mu/T
                    !/         
                    SumOverN = SumOverN + nValence * iN/(real(iZ+1)**2) * AbsorberDensity&
+                        * BoundFreeGauntFactor &
                         * (1.-ExpMinusHNuPerT) * (eTransition**3)/&
                         (1.0 + ExpMinusHNuPerT*exp(ETransitionPerTe - LogGe))
                 end if
                 !  calculate the energy to excite the valence electron 
                 !  into  the continuum 
-                if(UseBoundValence2Free .and. &
+                if(DoEnhancePhotoIonization .and. &
                      iZ <= nZ_I(iMix) - 2 .and. &
                      iN > nGround) then
                    eTransition = eTransition + &
@@ -751,6 +758,7 @@ contains
                    !/         
                    SumOverN = SumOverN + nValence * n_ground(iZ+1,nZ_I(iMix))&
                         /(real(iZ+2)**2) * AbsorberDensity&
+                        * BoundFreeCorrection &
                         * (1.-ExpMinusHNuPerT) * (eTransition**3)/&
                         (1.0 + ExpMinusHNuPerT*exp(ETransitionPerTe - LogGe))
                 end if
@@ -1094,7 +1102,10 @@ contains
        XGroupMax = EnergyGroup_I(iGroup  ) / TRad                                  
 
        call opacgp (OpacityPlanck_I(iGroup),OpacityRosseland_I(iGroup) )  
-       
+       if(UseAveragedRosselandOpacity)&
+            OpacityRosseland_I(iGroup) = sqrt(&
+            OpacityPlanck_I(iGroup)*&
+            OpacityRosseland_I(iGroup)       )
        if ( DoNotAddLineCore ) then                                     
           ! ...       use analytic solution to bound-bound opacities 
           call opacbb (LineCoreOpacity)
