@@ -72,7 +72,10 @@ Usage: CreateRestart.pl nCircle
 
 Where nCircle is the number of circles of points filling the space between 
 90 and 50 degrees latitude. nCircle default and minimum is 6. 
-The points are chosen to ensure uniform layout.
+The points are chosen to ensure uniform layout. The total number of lines 
+can be determined from nCircles according to:
+
+3*nCircle(1+nCircle)
  
 The script must be run in a restart directory with a seed line 
 restart_iline0001.out
