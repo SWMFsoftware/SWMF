@@ -18,6 +18,10 @@ module ModUser
 
   character(len=20) :: TypeProblem
 
+  real :: EphotonMin = 0.1 ! eV
+  real :: EphotonMax = 2e4 ! eV
+  real :: TeFinalSi
+
 contains
 
   !============================================================================
@@ -98,9 +102,9 @@ contains
        if(nWave > 1)then
           TradMin = 1.0; EradMin = cRadiation*TradMin**4
           ! Reset the minimum photon energy to be 0.1 eV
-          FreqMinSi = 0.1/cHPlanckEV
+          FreqMinSi = EphotonMin/cHPlanckEV
           ! Reset the maximum photon energy to be 10 keV
-          FreqMaxSi = 10000.0/cHPlanckEV
+          FreqMaxSi = EphotonMax/cHPlanckEV
           call set_multigroup(nWave, FreqMinSi, FreqMaxSi)
        end if
     end select
@@ -135,7 +139,8 @@ contains
     case('infinitemedium')
        ! initial zero radiation, at time=infinity Erad(final)=a*te(final)**4
        ! so that inv_gm1*rho*te(final)+a*te(final)**4 = inv_gm1*rho*te(initial)
-       TeFinal = cKEVToK*Si2No_V(UnitTemperature_)
+       TeFinalSi = cKEVToK
+       TeFinal = TeFinalSi*Si2No_V(UnitTemperature_)
        Rho = cRadiationNo*TeFinal**3
        Temperature = (Rho*TeFinal + (g - 1)*cRadiationNo*TeFinal**4)/Rho
        Erad = 0.0
@@ -331,11 +336,15 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
+    use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
     use ModAdvance,    ONLY: State_VGB
-    use ModConst,      ONLY: cKtoKev
+    use ModConst,      ONLY: cKtoKev, cKEV
     use ModGeometry,   ONLY: dy_BLK, dz_BLK
-    use ModMain,       ONLY: nI, nJ, nK
-    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, cRadiationNo
+    use ModIo,         ONLY: NamePlotDir
+    use ModIoUnit,     ONLY: io_unit_new
+    use ModMain,       ONLY: nI, nJ, nK, Time_Simulation, n_step
+    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, &
+         cRadiationNo
     use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_
 
     integer,          intent(in)   :: iBlock
@@ -350,7 +359,11 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k, iVar, iWave
-    character(len=10) :: NameWave, NameFormat
+    real :: DelLogEphoton, Coord_W(nWave), Tg_W(nWave), PlanckSi
+    integer :: iUnit, iError
+    character(len=10) :: NameWave, NameFormat, TypeStatus
+    character(len=100):: NameFile = 'planckian.outs'
+    character(len=10) :: TypePosition = 'rewind'
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -398,6 +411,42 @@ contains
           EXIT
        end if
     end do
+
+    if(TypeProblem == 'infinitemedium')then
+       DelLogEphoton = (log(EphotonMax) - log(EphotonMin))/nWave
+       do iWave = 1, nWave
+          Coord_W(iWave) = exp(log(EphotonMin) + (iWave - 0.5)*DelLogEphoton)
+       end do
+
+       iUnit = io_unit_new()
+
+       TypeStatus = 'replace'
+       if(TypePosition == 'append')TypeStatus = 'unknown'
+       open(iUnit, file=trim(NamePlotDir)//NameFile, &
+            position = TypePosition, status=TypeStatus, iostat=iError)
+       if(iError /= 0)call CON_stop(NameSub // &
+            ' could not open ascii file=' // trim(NamePlotDir)//NameFile)
+
+       write(iUnit, "(a)")             'group energy'
+       write(iUnit, "(i7,es13.5,3i3)") n_step, Time_Simulation, 1, 1, 3
+       write(iUnit, "(3i8)")           nWave
+       write(iUnit, "(100es13.5)")     0.0
+       write(iUnit, "(a)")             'Ephoton Egroup Tgroup Bgroup'
+
+       call user_material_properties(State_VGB(:,1,1,1,1), TgOut_W=Tg_W)
+       do iWave = 1, nWave
+          call get_energy_g_from_temperature(iWave, TeFinalSi, EgSI=PlanckSi)
+          iVar = WaveFirst_ + iWave - 1
+          write(iUnit, "(100es18.10)") Coord_W(iWave), &
+               State_VGB(iVar,1,1,1,1)*No2Si_V(UnitEnergyDens_)*cKEV, &
+               Tg_W(iWave)*cKToKEV, &
+               PlanckSi*cKEV
+       end do
+
+       close(iUnit)
+
+       TypePosition = 'append'
+    end if
 
   end subroutine user_set_plot_var
 
@@ -507,7 +556,7 @@ contains
 
     case('infinitemedium')
        if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = &
-            1.0/No2Si_V(UnitX_)
+            2.0/No2Si_V(UnitX_)
 
        if(present(OpacityRosselandOut_W)) &
             OpacityRosselandOut_W = 1.0e20/No2Si_V(UnitX_)
