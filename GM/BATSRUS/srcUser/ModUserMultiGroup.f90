@@ -120,7 +120,7 @@ contains
          WaveFirst_, WaveLast_
 
     integer :: i, j, k, iBlock
-    real :: Rho, Temperature, Pressure
+    real :: Rho, Temperature, Pressure, Erad
     real :: TeFinal
 
     character(len=*), parameter :: NameSub = "user_set_ics"
@@ -131,12 +131,14 @@ contains
     case('lightfront')
        Rho = 1.0
        Temperature = 1.0e-16
+       Erad = 1.0e-12
     case('infinitemedium')
        ! initial zero radiation, at time=infinity Erad(final)=a*te(final)**4
        ! so that inv_gm1*rho*te(final)+a*te(final)**4 = inv_gm1*rho*te(initial)
        TeFinal = cKEVToK*Si2No_V(UnitTemperature_)
        Rho = cRadiationNo*TeFinal**3
        Temperature = (Rho*TeFinal + (g - 1)*cRadiationNo*TeFinal**4)/Rho
+       Erad = 0.0
     end select
 
     Pressure = Rho*Temperature
@@ -144,7 +146,7 @@ contains
     do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
        State_VGB(Rho_,i,j,k,iBlock) = Rho
        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-       State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 0.0
+       State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = Erad
        State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
        State_VGB(p_,i,j,k,iBlock) = Pressure
     end do; end do; end do
@@ -159,7 +161,7 @@ contains
     use ModImplicit,   ONLY: StateSemi_VGB, iTrImplFirst, iTrImplLast
     use ModMain,       ONLY: nI, nJ, nK
     use ModPhysics,    ONLY: cRadiationNo
-    use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
+    use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
@@ -183,12 +185,20 @@ contains
           State_VGB(WaveFirst_,-1:0,:,:,iBlock) = 1.0
        case('usersemi')
           ! bin 1 starts on the left
-          do k = 1, nK; do j = 1, nJ
-             StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = &
-                  sqrt(sqrt(1.0/cRadiationNo))
-             StateSemi_VGB(iTrImplLast,0,j,k,iBlock) = &
-                  StateSemi_VGB(iTrImplLast,1,j,k,iBlock)
-          end do; end do
+          if(nWave == 1)then
+             ! set Erad
+             do k = 1, nK; do j = 1, nJ
+                StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = 1.0
+             end do; end do
+          else
+             ! set group temperature
+             do k = 1, nK; do j = 1, nJ
+                StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = &
+                     sqrt(sqrt(1.0/cRadiationNo))
+                StateSemi_VGB(iTrImplLast,0,j,k,iBlock) = &
+                     StateSemi_VGB(iTrImplLast,1,j,k,iBlock)
+             end do; end do
+          end if
        end select
     case(2)
        select case(TypeBc)
@@ -197,15 +207,22 @@ contains
           State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
           State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
           ! bin 2 starts on the right
-          State_VGB(WaveLast_,nI+1:nI+2,:,:,iBlock) = 1.0
+           if(nWave > 1) State_VGB(WaveLast_,nI+1:nI+2,:,:,iBlock) = 1.0
        case('usersemi')
-          ! bin 2 starts on the right
-          do k = 1, nK; do j = 1, nJ
-             StateSemi_VGB(iTrImplFirst,nI+1,j,k,iBlock) = &
-                  StateSemi_VGB(iTrImplFirst,nI,j,k,iBlock)
-             StateSemi_VGB(iTrImplLast,nI+1,j,k,iBlock) = &
-                  sqrt(sqrt(1.0/cRadiationNo))
-          end do; end do
+          if(nWave == 1)then
+             do k = 1, nK; do j = 1, nJ
+                StateSemi_VGB(iTrImplFirst,nI+1,j,k,iBlock) = &
+                     StateSemi_VGB(iTrImplFirst,nI,j,k,iBlock)
+             end do; end do
+          else
+             ! bin 2 starts on the right
+             do k = 1, nK; do j = 1, nJ
+                StateSemi_VGB(iTrImplFirst,nI+1,j,k,iBlock) = &
+                     StateSemi_VGB(iTrImplFirst,nI,j,k,iBlock)
+                StateSemi_VGB(iTrImplLast,nI+1,j,k,iBlock) = &
+                     sqrt(sqrt(1.0/cRadiationNo))
+             end do; end do
+          end if
        end select
     case(3)
        select case(TypeBc)
@@ -216,13 +233,19 @@ contains
           ! bin 1 starts on the left
           State_VGB(WaveFirst_,:,-1:0,:,iBlock) = 1.0
        case('usersemi')
-          ! bin 1 starts on the left
-          do k = 1, nK; do i = 1, nI
-             StateSemi_VGB(iTrImplFirst,i,0,k,iBlock) = &
-                  sqrt(sqrt(1.0/cRadiationNo))
-             StateSemi_VGB(iTrImplLast,i,0,k,iBlock) = &
-                  StateSemi_VGB(iTrImplLast,i,1,k,iBlock)
-          end do; end do
+          if(nWave == 1)then
+             do k = 1, nK; do i = 1, nI
+                StateSemi_VGB(iTrImplFirst,i,0,k,iBlock) = 1.0
+             end do; end do
+          else
+             ! bin 1 starts on the left
+             do k = 1, nK; do i = 1, nI
+                StateSemi_VGB(iTrImplFirst,i,0,k,iBlock) = &
+                     sqrt(sqrt(1.0/cRadiationNo))
+                StateSemi_VGB(iTrImplLast,i,0,k,iBlock) = &
+                     StateSemi_VGB(iTrImplLast,i,1,k,iBlock)
+             end do; end do
+          end if
        end select
     case(4)
        select case(TypeBc)
@@ -231,15 +254,22 @@ contains
           State_VGB(:,:,nJ+1,:,iBlock) = State_VGB(:,:,nJ,:,iBlock)
           State_VGB(:,:,nJ+2,:,iBlock) = State_VGB(:,:,nJ,:,iBlock)
           ! bin 2 starts on the right
-          State_VGB(WaveLast_,:,nJ+1:nJ+2,:,iBlock) = 1.0
+          if(nWave > 1) State_VGB(WaveLast_,:,nJ+1:nJ+2,:,iBlock) = 1.0
        case('usersemi')
-          ! bin 2 starts on the right
-          do k = 1, nK; do i = 1, nI
-             StateSemi_VGB(iTrImplFirst,i,nJ+1,k,iBlock) = &
-                  StateSemi_VGB(iTrImplFirst,i,nJ,k,iBlock)
-             StateSemi_VGB(iTrImplLast,i,nJ+1,k,iBlock) = &
-                  sqrt(sqrt(1.0/cRadiationNo))
-          end do; end do
+          if(nWave == 1)then
+             do k = 1, nK; do i = 1, nI
+                StateSemi_VGB(iTrImplFirst,i,nJ+1,k,iBlock) = &
+                     StateSemi_VGB(iTrImplFirst,i,nJ,k,iBlock)
+             end do; end do
+          else
+             ! bin 2 starts on the right
+             do k = 1, nK; do i = 1, nI
+                StateSemi_VGB(iTrImplFirst,i,nJ+1,k,iBlock) = &
+                     StateSemi_VGB(iTrImplFirst,i,nJ,k,iBlock)
+                StateSemi_VGB(iTrImplLast,i,nJ+1,k,iBlock) = &
+                     sqrt(sqrt(1.0/cRadiationNo))
+             end do; end do
+          end if
        end select
     case(5)
        select case(TypeBc)
@@ -251,12 +281,18 @@ contains
           State_VGB(WaveFirst_,:,:,-1:0,iBlock) = 1.0
        case('usersemi')
           ! bin 1 starts on the left
-          do j = 1, nJ; do i = 1, nI
-             StateSemi_VGB(iTrImplFirst,i,j,0,iBlock) = &
-                  sqrt(sqrt(1.0/cRadiationNo))
-             StateSemi_VGB(iTrImplLast,i,j,0,iBlock) = &
-                  StateSemi_VGB(iTrImplLast,i,j,1,iBlock)
-          end do; end do
+          if(nWave == 1)then
+             do j = 1, nJ; do i = 1, nI
+                StateSemi_VGB(iTrImplFirst,i,j,0,iBlock) = 1.0
+             end do; end do
+          else
+             do j = 1, nJ; do i = 1, nI
+                StateSemi_VGB(iTrImplFirst,i,j,0,iBlock) = &
+                     sqrt(sqrt(1.0/cRadiationNo))
+                StateSemi_VGB(iTrImplLast,i,j,0,iBlock) = &
+                     StateSemi_VGB(iTrImplLast,i,j,1,iBlock)
+             end do; end do
+          end if
        end select
     case(6)
        select case(TypeBc)
@@ -265,15 +301,22 @@ contains
           State_VGB(:,:,:,nK+1,iBlock) = State_VGB(:,:,:,nK,iBlock)
           State_VGB(:,:,:,nK+2,iBlock) = State_VGB(:,:,:,nK,iBlock)
           ! bin 2 starts on the right
-          State_VGB(WaveLast_,:,:,nK+1:nK+2,iBlock) = 1.0
+          if(nWave > 1) State_VGB(WaveLast_,:,:,nK+1:nK+2,iBlock) = 1.0
        case('usersemi')
-          ! bin 2 starts on the right
-          do j = 1, nJ; do i = 1, nI
-             StateSemi_VGB(iTrImplFirst,i,j,nK+1,iBlock) = &
-                  StateSemi_VGB(iTrImplFirst,i,j,nK,iBlock)
-             StateSemi_VGB(iTrImplLast,i,j,nK+1,iBlock) = &
-                  sqrt(sqrt(1.0/cRadiationNo))
-          end do; end do
+          if(nWave == 1)then
+             do j = 1, nJ; do i = 1, nI
+                StateSemi_VGB(iTrImplFirst,i,j,nK+1,iBlock) = &
+                     StateSemi_VGB(iTrImplFirst,i,j,nK,iBlock)
+             end do; end do
+          else
+             ! bin 2 starts on the right
+             do j = 1, nJ; do i = 1, nI
+                StateSemi_VGB(iTrImplFirst,i,j,nK+1,iBlock) = &
+                     StateSemi_VGB(iTrImplFirst,i,j,nK,iBlock)
+                StateSemi_VGB(iTrImplLast,i,j,nK+1,iBlock) = &
+                     sqrt(sqrt(1.0/cRadiationNo))
+             end do; end do
+          end if
        end select
     case default
        write(*,*) NameSub//' : user boundary not defined at iSide = ', iSide
@@ -289,9 +332,11 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
+    use ModConst,      ONLY: cKtoKev
+    use ModGeometry,   ONLY: dy_BLK, dz_BLK
     use ModMain,       ONLY: nI, nJ, nK
-    use ModPhysics,    ONLY: cRadiationNo
-    use ModVarIndexes, ONLY: Rho_, p_, WaveFirst_, WaveLast_
+    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, cRadiationNo
+    use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -304,7 +349,8 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    integer :: i, j, k
+    integer :: i, j, k, iVar, iWave
+    character(len=10) :: NameWave, NameFormat
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -314,20 +360,44 @@ contains
 
     IsFound = .true.
     select case(NameVar)
-    case('te')
-       PlotVar_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
-    case('trad')
+    case('tkev')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-          PlotVar_G(i,j,k) = sqrt(sqrt( &
-               sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))/cRadiationNo))
+          PlotVar_G(i,j,k) = &
+               State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock) &
+               *No2Si_V(UnitTemperature_)*cKToKev
        end do; end do; end do
-    case('erad1')
-       PlotVar_G = State_VGB(WaveFirst_,:,:,:,iBlock)
-    case('erad2')
-       PlotVar_G = State_VGB(WaveLast_,:,:,:,iBlock)
+    case('trkev')
+       NameIdlUnit = 'KeV'
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          PlotVar_G(i,j,k) = sqrt(sqrt(sum( &
+               State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))/cRadiationNo)) &
+               *No2Si_V(UnitTemperature_)*cKToKev
+       end do; end do; end do
+    case('dy')
+       PlotVar_G(:,:,:) = dy_BLK(iBlock)
+    case('dz')
+       PlotVar_G(:,:,:) = dz_BLK(iBlock)
     case default
        IsFound = .false.
     end select
+
+    if(nWave < 10)then
+       NameFormat = "(a,i1)"
+    else
+       NameFormat = "(a,i2.2)"
+    end if
+
+    do iWave = 1, nWave
+       write(NameWave, NameFormat) 'erad', iWave
+       if(NameVar == NameWave)then
+          iVar = WaveFirst_ + iWave -1
+          do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+             PlotVar_G(i,j,k) = State_VGB(iVar,i,j,k,iBlock)
+          end do; end do; end do
+          IsFound = .true.
+          EXIT
+       end if
+    end do
 
   end subroutine user_set_plot_var
 
