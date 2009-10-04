@@ -7,7 +7,8 @@ module ModUser
        IMPLEMENTED4 => user_set_outerbcs,               &
        IMPLEMENTED5 => user_update_states,              &
        IMPLEMENTED6 => user_set_plot_var,               &
-       IMPLEMENTED7 => user_material_properties
+       IMPLEMENTED7 => user_material_properties,        &
+       IMPLEMENTED8 => user_init_session
 
   include 'user_module.h' !list of public methods
 
@@ -80,28 +81,70 @@ contains
 
   !============================================================================
 
+  subroutine user_init_session
+
+    use CRASH_ModMultiGroup, ONLY: TradMin, EradMin, set_multigroup
+    use ModConst,            ONLY: cHPlanckEV, cRadiation
+    use ModVarIndexes,       ONLY: nWave
+
+    real ::  FreqMinSi, FreqMaxSi
+
+    character (len=*), parameter :: NameSub = 'user_init_session'
+    !--------------------------------------------------------------------------
+
+    select case(TypeProblem)
+    case('lightfront')
+    case('infinitemedium')
+       if(nWave > 1)then
+          TradMin = 1.0; EradMin = cRadiation*TradMin**4
+          ! Reset the minimum photon energy to be 0.1 eV
+          FreqMinSi = 0.1/cHPlanckEV
+          ! Reset the maximum photon energy to be 10 keV
+          FreqMaxSi = 10000.0/cHPlanckEV
+          call set_multigroup(nWave, FreqMinSi, FreqMaxSi)
+       end if
+    end select
+
+  end subroutine user_init_session
+
+  !============================================================================
+
   subroutine user_set_ics
 
     use ModAdvance,    ONLY: State_VGB
-    use ModConst,      ONLY: cKevToK
+    use ModConst,      ONLY: cKEVToK
     use ModMain,       ONLY: GlobalBlk, nI, nJ, nK
-    use ModPhysics,    ONLY: inv_gm1, cRadiationNo, Si2No_V, UnitTemperature_
+    use ModPhysics,    ONLY: cRadiationNo, g, No2Si_V, Si2No_V, &
+         UnitTemperature_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, ExtraEint_, p_, &
          WaveFirst_, WaveLast_
 
     integer :: i, j, k, iBlock
-    real :: Temperature, Pressure
+    real :: Rho, Temperature, Pressure
+    real :: TeFinal
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !--------------------------------------------------------------------------
     iBlock = GlobalBlk
 
-    Temperature = 1.0e-16
-    Pressure = Temperature
+    select case(TypeProblem)
+    case('lightfront')
+       Rho = 1.0
+       Temperature = 1.0e-16
+    case('infinitemedium')
+       ! initial zero radiation, at time=infinity Erad(final)=a*te(final)**4
+       ! so that inv_gm1*rho*te(final)+a*te(final)**4 = inv_gm1*rho*te(initial)
+       TeFinal = cKEVToK*Si2No_V(UnitTemperature_)
+       Rho = cRadiationNo*TeFinal**3
+       Temperature = (Rho*TeFinal + (g - 1)*cRadiationNo*TeFinal**4)/Rho
+    end select
+
+    Pressure = Rho*Temperature
+
     do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-       State_VGB(Rho_,i,j,k,iBlock) = 1.0
+       State_VGB(Rho_,i,j,k,iBlock) = Rho
        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-       State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 1.0d-12
+       State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 0.0
        State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
        State_VGB(p_,i,j,k,iBlock) = Pressure
     end do; end do; end do
@@ -136,10 +179,10 @@ contains
           ! float, just for the sake of having filled in ghost cells
           State_VGB(:,0,:,:,iBlock)  = State_VGB(:,1,:,:,iBlock)
           State_VGB(:,-1,:,:,iBlock)  = State_VGB(:,1,:,:,iBlock)
-          ! bin 1 is starts on the left
+          ! bin 1 starts on the left
           State_VGB(WaveFirst_,-1:0,:,:,iBlock) = 1.0
        case('usersemi')
-          ! bin 1 is starts on the left
+          ! bin 1 starts on the left
           do k = 1, nK; do j = 1, nJ
              StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = &
                   sqrt(sqrt(1.0/cRadiationNo))
@@ -170,10 +213,10 @@ contains
           ! float, just for the sake of having filled in ghost cells
           State_VGB(:,:,0,:,iBlock)  = State_VGB(:,:,1,:,iBlock)
           State_VGB(:,:,-1,:,iBlock)  = State_VGB(:,:,1,:,iBlock)
-          ! bin 1 is starts on the left
+          ! bin 1 starts on the left
           State_VGB(WaveFirst_,:,-1:0,:,iBlock) = 1.0
        case('usersemi')
-          ! bin 1 is starts on the left
+          ! bin 1 starts on the left
           do k = 1, nK; do i = 1, nI
              StateSemi_VGB(iTrImplFirst,i,0,k,iBlock) = &
                   sqrt(sqrt(1.0/cRadiationNo))
@@ -204,10 +247,10 @@ contains
           ! float, just for the sake of having filled in ghost cells
           State_VGB(:,:,:,0,iBlock)  = State_VGB(:,:,:,1,iBlock)
           State_VGB(:,:,:,-1,iBlock)  = State_VGB(:,:,:,1,iBlock)
-          ! bin 1 is starts on the left
+          ! bin 1 starts on the left
           State_VGB(WaveFirst_,:,:,-1:0,iBlock) = 1.0
        case('usersemi')
-          ! bin 1 is starts on the left
+          ! bin 1 starts on the left
           do j = 1, nJ; do i = 1, nI
              StateSemi_VGB(iTrImplFirst,i,j,0,iBlock) = &
                   sqrt(sqrt(1.0/cRadiationNo))
@@ -246,10 +289,9 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModConst,      ONLY: cKToEv
     use ModMain,       ONLY: nI, nJ, nK
-    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_
-    use ModVarIndexes, ONLY: p_, Rho_, WaveFirst_, WaveLast_
+    use ModPhysics,    ONLY: cRadiationNo
+    use ModVarIndexes, ONLY: Rho_, p_, WaveFirst_, WaveLast_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -262,6 +304,8 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
+    integer :: i, j, k
+
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
 
@@ -270,14 +314,17 @@ contains
 
     IsFound = .true.
     select case(NameVar)
+    case('te')
+       PlotVar_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
+    case('trad')
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          PlotVar_G(i,j,k) = sqrt(sqrt( &
+               sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))/cRadiationNo))
+       end do; end do; end do
     case('erad1')
-!       NameIdlUnit = 'erg/cm3'
-       PlotVar_G = &
-            State_VGB(WaveFirst_,:,:,:,iBlock) !*No2Si_V(UnitEnergyDens_)
+       PlotVar_G = State_VGB(WaveFirst_,:,:,:,iBlock)
     case('erad2')
-!       NameIdlUnit = 'erg/cm3'
-       PlotVar_G = &
-            State_VGB(WaveLast_,:,:,:,iBlock) !*No2Si_V(UnitEnergyDens_)
+       PlotVar_G = State_VGB(WaveLast_,:,:,:,iBlock)
     case default
        IsFound = .false.
     end select
@@ -295,6 +342,8 @@ contains
 
     ! The State_V vector is in normalized units
 
+    use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature, &
+         get_temperature_from_energy_g
     use ModPhysics,    ONLY: gm1, inv_gm1, No2Si_V, Si2No_V, &
          UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
          UnitX_, UnitT_, UnitU_, cRadiationNo, Clight
@@ -327,8 +376,10 @@ contains
     real, optional, intent(out) :: CgTgOut_W(nWave)        ! [J/(m^3*K)]
     real, optional, intent(out) :: TgOut_W(nWave)          ! [K]
 
+    integer :: iVar, iWave
     real :: Rho, Pressure, Te, Tg_W(nWave)
     real :: RhoSi, pSi, TeSi
+    real :: PlanckSi, CgTeSi, EgSi, TgSi, CgTgSi
 
     character(len=*), parameter :: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
@@ -360,26 +411,69 @@ contains
     if(present(CvOut)) CvOut = inv_gm1*Rho &
          *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
 
-    if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = 0.0
-
-    if(present(OpacityRosselandOut_W)) &
-         OpacityRosselandOut_W = 1.0e-16/No2Si_V(UnitX_)
-
     if(present(HeatCondOut)) HeatCondOut = 0.0
     if(present(TeTiRelaxOut)) TeTiRelaxOut = 0.0
 
-    Tg_W = sqrt(sqrt(State_V(WaveFirst_:WaveLast_)/cRadiationNo))
+    select case(TypeProblem)
+    case('lightfront')
+       if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = 0.0
 
-    if(present(PlanckOut_W)) PlanckOut_W = cRadiationNo*Te**4 &
-         *No2Si_V(UnitEnergyDens_)
+       if(present(OpacityRosselandOut_W)) &
+            OpacityRosselandOut_W = 1.0e-16/No2Si_V(UnitX_)
 
-    if(present(CgTeOut_W)) CgTeOut_W = cRadiationNo*(Te+Tg_W)*(Te**2+Tg_W**2) &
-         *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+       Tg_W = sqrt(sqrt(State_V(WaveFirst_:WaveLast_)/cRadiationNo))
 
-    if(present(TgOut_W)) TgOut_W = Tg_W*No2Si_V(UnitTemperature_)
+       if(present(PlanckOut_W)) PlanckOut_W = cRadiationNo*Te**4 &
+            *No2Si_V(UnitEnergyDens_)
 
-    if(present(CgTgOut_W)) CgTgOut_W = 4.0*cRadiationNo*Tg_W**3 &
-         *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+       if(present(CgTeOut_W)) CgTeOut_W = &
+            cRadiationNo*(Te+Tg_W)*(Te**2+Tg_W**2) &
+            *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+
+       if(present(TgOut_W)) TgOut_W = Tg_W*No2Si_V(UnitTemperature_)
+
+       if(present(CgTgOut_W)) CgTgOut_W = 4.0*cRadiationNo*Tg_W**3 &
+            *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+
+    case('infinitemedium')
+       if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = &
+            1.0/No2Si_V(UnitX_)
+
+       if(present(OpacityRosselandOut_W)) &
+            OpacityRosselandOut_W = 1.0e20/No2Si_V(UnitX_)
+
+       if(nWave == 1)then
+          if(present(PlanckOut_W)) PlanckOut_W = 0.0
+          if(present(CgTeOut_W)) CgTeOut_W = 0.0
+          if(present(TgOut_W)) TgOut_W = 0.0
+          if(present(CgTgOut_W)) CgTgOut_W = 0.0
+       else
+
+          if(present(PlanckOut_W) .or. present(CgTeOut_W))then
+             do iWave = 1, nWave
+                call get_energy_g_from_temperature( &
+                     iWave, TeSi, EgSI=PlanckSi, CgSI=CgTeSi)
+
+                if(present(PlanckOut_W)) PlanckOut_W(iWave) = PlanckSi
+                if(present(CgTeOut_W)) CgTeOut_W(iWave) = CgTeSi
+             end do
+          end if
+
+          if(present(TgOut_W) .or. present(CgTgOut_W))then
+             do iWave = 1, nWave
+                iVar = WaveFirst_ + iWave - 1
+                EgSi = State_V(iVar)*No2Si_V(UnitEnergyDens_)
+                call get_temperature_from_energy_g(iWave, EgSi, &
+                     TgSIOut=TgSi, CgSIOut=CgTgSi)
+
+                if(present(TgOut_W)) TgOut_W(iWave) = TgSi
+                if(present(CgTgOut_W)) CgTgOut_W(iWave) = CgTgSi
+             end do
+          end if
+
+       end if
+
+    end select
 
   end subroutine user_material_properties
 

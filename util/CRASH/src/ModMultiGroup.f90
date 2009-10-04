@@ -107,8 +107,8 @@ module CRASH_ModMultiGroup
 
   !Correction factor for the Photoionization from the ground state:
   real,parameter :: BoundFreeCorrection = 2.0
-  real,parameter :: TRadMin = 500   !K 
-  real           :: ERadMin = CRadiation * TRadMin**4
+  real,public    :: TRadMin = 500   !K 
+  real,public    :: ERadMin = CRadiation * 500.0**4
   real           :: TgMin_W( nGroupMax )
 contains
   !============================================================================
