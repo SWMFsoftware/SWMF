@@ -877,8 +877,8 @@ contains
              Maximum = MaximumAll
           end if
        endif
-       ! we could use the intrinsic function "exponent" here !!!
-       Limit = 2.0**nint(alog(Ratio*Maximum)/alog(2.0))
+       ! Formulate an integer power of 2 near Ratio*Maximum
+       Limit = 2.0**exponent(Ratio*Maximum)
     end if
 
     SumPart_I = 0.0
