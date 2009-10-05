@@ -43,10 +43,11 @@ contains
              transform_matrix(TimeSimulation, NamePwCoord, 'GEO')
     
     ! Transform xyzPw_D to XyzGg_DI
+    write(*,*) PwGg_DD
     XyzGg_D = matmul( PwGg_DD, XyzPw_D)
     
     ! Calculate GeoLat and GeoLon 
     GeoLon = modulo(atan2(XyzGg_D(2), XyzGg_D(1)), cTwoPi) * cRadToDeg
-    GeoLat = acos(max(-1.0,min(1.0, XyzGg_D(3))))   * cRadToDeg
+    GeoLat = 90.0 - (acos(max(-1.0,min(1.0, XyzGg_D(3))))*cRadToDeg)
   end subroutine convert_lat_lon
 end Module ModLatLon
