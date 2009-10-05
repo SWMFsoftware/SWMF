@@ -106,11 +106,11 @@ contains
       character (len=*), parameter, dimension(2) :: &
            NameHem_B=(/'North','South'/)
 
-      integer, parameter :: nVar = 2
-      integer, parameter :: South_ = 1, North_ = 2
+      integer, parameter :: nVar = 4
+      integer, parameter :: South_ = 2, North_ = 1
 
       character (len=*), parameter, dimension(nVar) :: &
-           NameVar_V=(/'Pot','Jr '/)
+           NameVar_V=(/'Pot','Jr ','Ave','Tot'/)
 
       ! Buffer for the potential on the 2D IE grid
       real, dimension(:,:,:), allocatable :: Buffer_IIV
