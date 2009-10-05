@@ -399,6 +399,10 @@ subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
         Buffer_IIV(:,:,iVar) = IONO_Phi
      case('Jr')
         Buffer_IIV(:,:,iVar) = IONO_Jr
+     case('Ave')
+        Buffer_IIV(:,:,iVar) = IONO_Ave_E
+     case('Tot')
+        Buffer_IIV(:,:,iVar) = IONO_EFlux*1.0e3 !J/m^2 --> ergs/cm^2
      case default
         call CON_stop(NameSub//' invalid NameVar='//Name_V(iVar))
      end select
