@@ -204,7 +204,7 @@ if(-f "runlog"){
 }
 
 print "$INFO: Restart.pl -o $NameOutput/RESTART\n";
-&shell("Restart.pl -o $NameOutput/RESTART");
+&shell("./Restart.pl -o $NameOutput/RESTART");
 
 if($Rsync){
     print "$INFO: rsync -avz $NameOutput $Rsync\n";
