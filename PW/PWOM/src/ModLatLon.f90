@@ -36,14 +36,13 @@ contains
     ! Get xyzPw_D from PwLat and PwLon
     xyzPw_D(1) = sin(theta)*cos(phi)
     xyzPw_D(2) = sin(theta)*sin(phi)
-    xyzPw_D(1) = cos(theta)
+    xyzPw_D(3) = cos(theta)
 
     ! Get transform matrix 
     PwGg_DD = &
              transform_matrix(TimeSimulation, NamePwCoord, 'GEO')
     
     ! Transform xyzPw_D to XyzGg_DI
-    write(*,*) PwGg_DD
     XyzGg_D = matmul( PwGg_DD, XyzPw_D)
     
     ! Calculate GeoLat and GeoLon 
