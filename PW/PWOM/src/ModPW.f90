@@ -40,7 +40,7 @@ module ModPWOM
        BmagnitudeSquared_G, &
        Ephi_C,Etheta_C,Er_C, uExBtheta_C,&
        uExBphi_C,uExBr_C,ElectronEnergyFlux_C,&
-       ElectronAverageEnergy_C
+       ElectronAverageEnergy_C, AvE_G, Eflux_G
 
 
   real, dimension(:), allocatable ::            &
@@ -51,7 +51,7 @@ module ModPWOM
        UthetaLine_I,UphiLine_I,          &
        UxLine_I,UyLine_I,UzLine_I,       &
        OmegaLine_I,                      &
-       JrLine_I
+       JrLine_I,EfluxLine_I,AvELine_I
   
   integer :: nStep=0
   
@@ -108,6 +108,8 @@ contains
          Phi_G(0:iSize+1, 0:jSize+1), &
          Potential_G(0:iSize+1, 0:jSize+1), &
          Jr_G(0:iSize+1, 0:jSize+1), &
+         AvE_G(0:iSize+1, 0:jSize+1), &
+         Eflux_G(0:iSize+1, 0:jSize+1), &
          SigmaH_G(0:iSize+1, 0:jSize+1), &
          SigmaP_G(0:iSize+1, 0:jSize+1), &
          Br_G(0:iSize+1, 0:jSize+1), &

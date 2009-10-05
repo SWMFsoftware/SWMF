@@ -37,7 +37,7 @@ subroutine polar_wind
        iLine=iLine, Time=Time,MaxLineTime=Tmax,                    &
        TypeSolver=TypeSolver,                                      &
        DToutput=DToutput,DoLog=DoLog,&
-       nStep=nStep,Dt=DtVariable)
+       nStep=nStep,Dt=DtVariable,AvE=AveIE,Eflux=EfluxIE)
   
   ! If using variable timestep, then set Dt=Dt(Last line call)
   if (IsVariableDt) then
@@ -47,7 +47,7 @@ subroutine polar_wind
   endif
   
   CURR(1) = Jr
-  
+
   NTS = 1
   NCL = 60
     

@@ -201,11 +201,11 @@ C
  9995  FORMAT(1X,I7,8(1X,F8.2),2X,I2,4X,F7.2,4X,F7.2,5X,F7.2)
 C     
 C     
-       if (GMLAT .GE. 75.0) then 
+!       if (GMLAT .GE. 75.0) then 
           call PRECIP(IDMX,ALTMIN,PHOTOTP)
-       else
-          PHOTOTP(:) =0.0
-       endif
+!       else
+!          PHOTOTP(:) =0.0
+!       endif
 C     
 C     DO 109 J=291,391
 C     PHOTOTP(J)=PHOTOTP(290)

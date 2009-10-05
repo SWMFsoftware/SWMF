@@ -11,7 +11,7 @@ module ModFieldLine
 
   logical :: DoLogPW
   real    :: TimePW,MaxLineTimePW,DToutputPW, DtPw,GeoMagLatPW,&
-       GeoMagLonPW,JrPW,nDimPW,uJoule2PW
+       GeoMagLonPW,JrPW,nDimPW,uJoule2PW, AvEPW, EfluxPW
   real    :: wHorizontalPW
   integer :: nStepPw,iUnitInputPW,      &
        iUnitOutputPW,                 &
@@ -30,7 +30,7 @@ contains
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,uJoule2,                  &
        iUnitOutput, NameRestart,iLine,Time,   &
        MaxLineTime,TypeSolver,DToutput,DoLog,&
-       nStep,r_C,Dt)
+       nStep,r_C,Dt,AvE,Eflux)
 
     use ModParameters
     use ModCommonPlanet,ONLY: nVar
@@ -43,7 +43,7 @@ contains
     character*100,optional,intent(in):: NameRestart
     character(7),optional,intent(in)::TypeSolver
     logical,optional,intent(in) :: DoLog
-    real,optional,intent(in) :: Dt
+    real,optional,intent(in) :: Dt, AvE, Eflux
     !-------------------------------------------------------------------------
     if (.not. allocated(PassState_CV)) allocate(PassState_CV(nAlt,nVar))
     if (.not. allocated(rPW_C))        allocate(rPW_C(nAlt))
@@ -65,7 +65,8 @@ contains
     if (present(nStep))         nStepPW        = nStep
     if (present(r_c))           rPw_C(:)       = r_C(:)
     if (present(uJoule2))       uJoule2PW      = uJoule2
-    if (present(Dt))            DtPw           = Dt
+    if (present(Dt))            AvEPw          = AvE
+    if (present(Dt))            EfluxPw        = Eflux
 
   end subroutine put_field_line
 
@@ -77,7 +78,7 @@ contains
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,uJoule2,                  &
        iUnitOutput, NameRestart,iLine,Time,   &
        MaxLineTime,TypeSolver,DToutput,DoLog,&
-       nStep,r_C,Dt)
+       nStep,r_C,Dt,AvE,Eflux)
 
     use ModParameters
     use ModCommonPlanet, ONLY: nVar
@@ -91,7 +92,7 @@ contains
     character(7),optional,intent(out):: TypeSolver
     logical,optional,intent(out)      :: DoLog
     real, optional, intent(out)       :: Time,MaxLineTime,DToutput,uJoule2
-    real, optional, intent(out)        :: r_C(nAlt),Dt
+    real, optional, intent(out)        :: r_C(nAlt),Dt,AvE,Eflux
     integer, optional,intent(out)     :: iUnitOutput,iLine,nStep
     !--------------------------------------------------------------------------
     if (.not. allocated(PassState_CV)) allocate(PassState_CV(nAlt,nVar))
@@ -117,6 +118,8 @@ contains
     if (present(r_C))           r_C(:)       = rPw_C(:)
     if (present(uJoule2))       uJoule2      = uJoule2PW
     if (present(Dt))            Dt           = DtPw
+    if (present(AvE))            AvE          = AvEPW
+    if (present(Eflux))            Eflux        = EfluxPw
   end subroutine get_field_line
 
 end module ModFieldLine

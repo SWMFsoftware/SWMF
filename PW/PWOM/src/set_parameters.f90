@@ -3,7 +3,9 @@ subroutine PW_set_parameters(NameAction)
   use ModIoUnit, ONLY: UnitTmp_, io_unit_new
   use ModPwom
   use ModReadParam
-  use ModCommonVariables, ONLY: F107,F107A,AP,UseStaticAtmosphere,DrBnd
+  use ModCommonVariables, ONLY: F107,F107A,AP,UseStaticAtmosphere,DrBnd,&
+                                UsePhotoElectronHeatFlux,UseAuroralHeatFlux, &
+                                UseCuspHeatFlux
   use ModPwTime
   implicit none
   
@@ -122,7 +124,10 @@ subroutine PW_set_parameters(NameAction)
            UseExplicitHeat = .false.
         endif
         
-        
+     case('#HEATFLUX')
+        call read_var('UsePhotoElectronHeatFlux',UsePhotoElectronHeatFlux)
+        call read_var('UseAuroralHeatFlux',UseAuroralHeatFlux)
+        call read_var('UseCuspHeatFlux',UseCuspHeatFlux)
      case ("#MHD_INDICES")
         cTempLines(1) = NameCommand
         call read_var('UpstreamFile',cTempLine)

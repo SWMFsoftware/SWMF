@@ -7,7 +7,7 @@ C**********************************************************************C
 C                                                                      C
       SUBROUTINE MODATM (ALT,XNO2,XNN2,XNO,XNH,XNHE,TEMP)
       use ModCommonVariables
-      
+      use ModLatLon,   ONLY: convert_lat_lon
       use EUA_ModMsis90, ONLY: GTD6
 
 
@@ -22,7 +22,8 @@ C
 C CONVERT INPUT ALT (CM) TO KM VALUES FOR MSIS.
 C
       ALT1 = ALT/1.E+05
-      CALL GGM_PLANET(IART,GLONG,GLAT,GMLONG,GMLAT)
+!      CALL GGM_PLANET(IART,GLONG,GLAT,GMLONG,GMLAT)
+      CALL convert_lat_lon(Time,GMLAT,GMLONG,GLAT,GLONG)
       MASS=48.
       IYR=IYD/1000.
       IDAY=IYD-1000.*IYR

@@ -9,6 +9,7 @@ subroutine PW_initialize
   use ModTimeConvert, ONLY: time_int_to_real
   use ModPwTime
   use ModAurora, ONLY: init_aurora
+  use CON_axes,         ONLY: init_axes
   implicit none
 
   ! Temporary variables
@@ -48,6 +49,10 @@ subroutine PW_initialize
   call time_int_to_real(iStartTime,CurrentTime)
   StartTime=CurrentTime
   
+  !\
+  ! Set axes for coord transform when in standalone mode
+  !/
+  if (IsStandAlone) call init_axes(StartTime)
 
   !\
   ! Allocate arrays for simulation
@@ -61,7 +66,8 @@ subroutine PW_initialize
        UthetaLine_I(nLine),UphiLine_I(nLine),          &
        UxLine_I(nLine),UyLine_I(nLine),UzLine_I(nLine),       &
        OmegaLine_I(nLine),                      &
-       JrLine_I(nLine), iThetaLine_I(nLine),iPhiLine_I(nLine), &
+       JrLine_I(nLine),EfluxLine_I(nLine),AvELine_I(nLine), &
+       iThetaLine_I(nLine),iPhiLine_I(nLine), &
        NameRestartIn(nLine), NameRestart(nLine), NameGraphics(nLine),&
        NameOutput(nLine),  iUnitRestart(nLine),iUnitRestartIn(nLine),&
        iUnitGraphics(nLine),iUnitOutput(nLine), iLineGlobal(nLine), &

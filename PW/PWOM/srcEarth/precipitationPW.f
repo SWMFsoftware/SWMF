@@ -1,8 +1,8 @@
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       SUBROUTINE PRECIP(IDMX,ALTMIN,PHOTOTP)
       use ModAurora, only: get_eflux,get_eAverageE
-      use ModPWOM, ONLY: UseAurora
-      use ModCommonVariables, ONLY: GMLAT,GMLONG
+      use ModPWOM, ONLY: UseAurora,UseIE
+      use ModCommonVariables, ONLY: GMLAT,GMLONG,AveIE,EfluxIE
 C THIS SUBROUTINE CALCULATES IONIZATION FREQUENCIES FOR ATOMIC OXYGEN
 C BASED ON USER-SPECIFIED ELECTRON PRECIPITATION
        REAL MO,MD,NO,NN2,NO2,NH,NHE,TN,GEE
@@ -28,8 +28,21 @@ C      DEFINE A CHARACTERISTIC PRECIPITATING ELECTRON FLUX (ERGS/CM2/SEC)
 !             ALF  = get_eAverageE(GMLAT,GMLON)
 !             FLUX = (get_eflux(GMLAT,GMLON)*1.602E9)/(2.*ALF)
 !          else
-             ALF  = ALF1(1)  
-             FLUX = (FLUX1(1)*1.602E9)/(2.*ALF)
+       if (UseIE .and. GmLat > 65.0) then
+          ALF  = max(AveIE,ALF1(1))
+          FLUX = max((EfluxIE*1.602E9)/(2.0*ALF),(FLUX1(1)*1.602E9)/(2.*ALF))
+       else
+          ALF  = ALF1(1)  
+          FLUX = (FLUX1(1)*1.602E9)/(2.*ALF)
+          if (GmLat < 75.0) then
+             PHOTOTP(:)=0.0
+             return
+          endif
+       endif
+
+
+
+
 !          endif
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C USE KM FOR ALT ARRAY GENERATION!!! ALTMIN COMES IN AS CM!!!!!

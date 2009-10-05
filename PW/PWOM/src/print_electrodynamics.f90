@@ -86,8 +86,7 @@ subroutine PW_print_electrodynamics
        'PW/Electrodynamics_Time',TimeOut,'.dat'
   open(UnitTmp_,FILE=NameElectrodynamics)
   write(UnitTmp_,*) &
-     'VARIABLES = "X", "Y", "Z", "Ux", "Uy", "Uz", "V", "Ex", "Ey", "Ez", "Jr", "Etop"'
-  
+     'VARIABLES = "X", "Y", "Z", "Ux", "Uy", "Uz", "V", "Ex", "Ey", "Ez", "Jr", "Eflux", "AvE"'
   write(UnitTmp_,*) 'Zone I=', nPhi, ', J=', nTheta,', DATAPACKING=POINT'
   
   do iTheta=1,nTheta
@@ -97,7 +96,7 @@ subroutine PW_print_electrodynamics
              ux(iPhi,iTheta),uy(iPhi,iTheta),uz(iPhi,iTheta),  &
              Potential_G(iPhi,iTheta),                         &
              Ex(iPhi,iTheta), Ey(iPhi,iTheta), Ez(iPhi,iTheta),&
-             Jr_G(iPhi,iTheta),Etop_C(iPhi,iTheta)
+             Jr_G(iPhi,iTheta),Eflux_G(iPhi,iTheta),AvE_G(iPhi,iTheta)
         
      enddo
   enddo

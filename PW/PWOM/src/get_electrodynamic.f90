@@ -115,13 +115,26 @@ subroutine PW_get_electrodynamics
      Potential_G(iPhi,0) = Potential_G(mod(iPhi+floor(nPhi/2.0),nPhi-1),2)
   enddo
 
-
+  ! Fill ghost cells for AvE and Eflux from IE when UseIE=T, else set to 0
+  if (UseIE) then
+     AvE_G  (nPhi+1,1:nTheta)  = AvE_G  (2,1:nTheta)     
+     Eflux_G(nPhi+1,1:nTheta)  = Eflux_G(2,1:nTheta)     
+     AvE_G  (0,1:nTheta)       = AvE_G  (nPhi-1,1:nTheta)
+     Eflux_G(0,1:nTheta)       = Eflux_G(nPhi-1,1:nTheta)
+     AvE_G  (0:nPhi+1,nTheta+1)= AvE_G  (0:nPhi+1,nTheta)
+     Eflux_G(0:nPhi+1,nTheta+1)= Eflux_G(0:nPhi+1,nTheta)
+     do iPhi=1,nPhi
+        AvE_G  (iPhi,0) = AvE_G  (mod(iPhi+floor(nPhi/2.0),nPhi-1),2)
+        Eflux_G(iPhi,0) = Eflux_G(mod(iPhi+floor(nPhi/2.0),nPhi-1),2)
+     enddo
+  else
+     AvE_G (:,:) = 0.0
+     Eflux_G(:,:) = 0.0
+  endif
 
 !******************************************************************************
 !  Calc electric field from E=-grad Potential
 !******************************************************************************
- 
-  
   do iPhi=1,nPhi
      do iTheta=1,nTheta
         DTheta1=abs(Theta_G(iPhi,iTheta)-Theta_G(iPhi,iTheta-1))

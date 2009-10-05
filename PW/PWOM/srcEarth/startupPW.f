@@ -13,10 +13,13 @@ C
       use ModGlow, ONLY: get_ionization
 C
       use ModConst ,ONLY: cBoltzmann
-      use ModPWOM  ,ONLY: UseAurora,UseIndicies
+      use ModPWOM  ,ONLY: UseAurora,UseIndicies, UseIE
       use ModAurora,ONLY: get_aurora,AuroralIonRateO_C
-      use ModPwTime,ONLY: CurrentTime,StartTime
+      use ModPwTime,ONLY: CurrentTime,StartTime,iStartTime,
+     &                    Hour_,Minute_,Second_
       use ModIndicesInterfaces
+      use ModNumConst, ONLY: cDegToRad
+      use ModLatLon,   ONLY: convert_lat_lon
 C     
       CurrentTime=StartTime+Time
       NPT1=14
@@ -153,7 +156,8 @@ CALEX IYD=year_day of year
 !      GMLONG=0.
 !      GMLAT=80.
 C END
-      CALL GGM_PLANET(IART,GLONG,GLAT,GMLONG,GMLAT)
+!      CALL GGM_PLANET(IART,GLONG,GLAT,GMLONG,GMLAT)
+      CALL convert_lat_lon(Time,GMLAT,GMLONG,GLAT,GLONG)
       
       if (.not.UseStaticAtmosphere) then
          iDay  = mod(IYD,1000)+floor(Time/24.0/3600.0)
@@ -166,7 +170,8 @@ C END
             IYD = iYear*1000+iDay
          endif
          
-         SEC=mod(Time,24.0*3600.0)
+         SEC=mod(iStartTime(Hour_)*3600.0 + iStartTime(Minute_)*60.0 
+     &        + iStartTime(Second_) + Time, 24.0*3600.0)
          !mod((STL-GLONG/15.)*3600.,24.*3600.)
       else
          SEC=0.0
@@ -279,7 +284,17 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ (5,2) ETOP,ELFXIN
 c      ETOP=5.0E-3
-      ETOP=10.0E-3
+
+      if (UseIE .and. GmLat < 85.0 .and. UseAuroralHeatFlux) then
+         ETOP = max (EfluxIE/EfluxRef * EtopAurora, EtopMin)
+      else
+         ETOP = EtopMin
+      endif
+      
+      if (UsePhotoElectronHeatFlux) then
+         call SOLZEN (IYD, SEC, GLAT, GLONG, SZA)
+         ETOP = ETOP+EtopPhotoElectrons*max(cos(SZA*cDegToRad),0.0)
+      endif
 
       ELFXIN=0.
 C

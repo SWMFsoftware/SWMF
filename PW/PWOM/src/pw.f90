@@ -170,7 +170,11 @@ subroutine move_line
 
   JrLine_I(iLine)     = bilinear(Jr_G, 0,nPhi+1,0,nTheta+1, &
        (/ PhiLine_I(iLine)/Dphi+1.0,ThetaLine_I(iLine)/Dtheta+1.0 /) )
- 
+  AvELine_I(iLine)     = bilinear(AvE_G, 0,nPhi+1,0,nTheta+1, &
+       (/ PhiLine_I(iLine)/Dphi+1.0,ThetaLine_I(iLine)/Dtheta+1.0 /) )
+  EfluxLine_I(iLine)     = bilinear(Eflux_G, 0,nPhi+1,0,nTheta+1, &
+       (/ PhiLine_I(iLine)/Dphi+1.0,ThetaLine_I(iLine)/Dtheta+1.0 /) )
+
   ! save ExB velocity to get joule heating
   if (UseJouleHeating .and. DoMoveLine) then
      uJoule2 = (&
@@ -294,7 +298,6 @@ subroutine PW_advance_line
      call set_auroral_rates
   endif
 
-
   call put_field_line(nAlt,&
        State_CVI(:,:,iLine),&
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),              &
@@ -302,7 +305,8 @@ subroutine PW_advance_line
        NameRestart=NameRestart(iLine),  &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,TypeSolver=TypeSolver,&
        DToutput=DToutput,    &
-       DoLog=DoLog,nStep=nStep,Dt=Dt_I(iLine))
+       DoLog=DoLog,nStep=nStep,Dt=Dt_I(iLine),&
+       AvE=AvELine_I(iLine),Eflux=EfluxLine_I(iLine))
     
   call polar_wind
   
