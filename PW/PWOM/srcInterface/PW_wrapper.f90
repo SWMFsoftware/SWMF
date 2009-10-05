@@ -237,7 +237,8 @@ end subroutine PW_run
 subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
                  Name_V, iBlock)
 
-  use ModPWOM, ONLY: allocate_ie_variables, Phi_G, Theta_G, Potential_G, Jr_G
+  use ModPWOM, ONLY: allocate_ie_variables, Phi_G, Theta_G, Potential_G, Jr_G,&
+                     AvE_G, Eflux_G
   use CON_coupler, ONLY: Grid_C, IE_
   implicit none
 
@@ -248,10 +249,10 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
   real, intent(in) :: Buffer_IIV(iSize, jSize, nVarIn)
   character(len=*), intent(in) :: Name_V(nVarIn)
 
-  integer, parameter :: nVar = 2
-  integer, parameter :: South_ = 1, North_ = 2
+  integer, parameter :: nVar = 4
+  integer, parameter :: South_ = 2, North_ = 1
 
-  logical :: IsPotFound, IsJrFound
+  logical :: IsPotFound, IsJrFound, IsAveFound, IsEfluxFound
 
   integer :: i, j, iVar, nThetaIono, nPhiIono
   !----------------------------------------------------------------------------
@@ -300,13 +301,28 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
               Jr_G(j,i) = Buffer_IIV(i, j, iVar)
            end do
         end do
+     case('Ave')
+        IsAveFound = .true.
+        do i=1,iSize
+           do j=1,jSize
+              AvE_G(j,i) = Buffer_IIV(i, j, iVar)
+           end do
+        end do
+     case('Tot')
+        IsEfluxFound = .true.
+        do i=1,iSize
+           do j=1,jSize
+              Eflux_G(j,i) = Buffer_IIV(i, j, iVar)
+           end do
+        end do
      end select
 
   end do
 
-  if(.not.IsPotFound .or. .not.IsJrFound)then
+  if(.not.IsPotFound .or. .not.IsJrFound .or. .not. IsAveFound &
+       .or. .not.IsEfluxFound)then
      write(*,*)NameSub,': Name_V=',Name_V
-     call CON_stop(NameSub//' could not find Pot or Jr')
+     call CON_stop(NameSub//' could not find Pot, Jr, Ave, or Tot')
   end if
 
   call PW_get_electrodynamics
@@ -357,11 +373,11 @@ subroutine PW_get_for_gm(Buffer_VI, nVar, nLineTotal, Name_V, tSimulation)
         SendBuffer_VI(iVar,:)=PhiLine_I(1:nLine)
      case('Density1')
         ! g/cm^3 = 1000 * kg/m^3
-        SendBuffer_VI(iVar,:)=State_CVI(nAlt,RhoH_ ,1:nLine)*1000.0
+        SendBuffer_VI(iVar,:)=max(State_CVI(nAlt,RhoH_ ,1:nLine)*1000.0,1.0e-25)
      case('Density2')
-        SendBuffer_VI(iVar,:)=State_CVI(nAlt,RhoO_ ,1:nLine)*1000.0
+        SendBuffer_VI(iVar,:)=max(State_CVI(nAlt,RhoO_ ,1:nLine)*1000.0,1.0e-25)
      case('Density3')
-        SendBuffer_VI(iVar,:)=State_CVI(nAlt,RhoHe_,1:nLine)*1000.0
+        SendBuffer_VI(iVar,:)=max(State_CVI(nAlt,RhoHe_,1:nLine)*1000.0,1.0e-25)
      case('Velocity1')
         ! cm/s = 0.01*m/s
         SendBuffer_VI(iVar,:)=State_CVI(nAlt,uH_ ,1:nLine)*0.01
