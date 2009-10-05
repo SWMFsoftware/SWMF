@@ -20,6 +20,7 @@ MODULES = \
 	ModGmPressure.o\
 	ModAurora.o\
 	ModPwTime.o\
+	ModLatLon.o\
 	${MODULES_PLANET}
 
 METHODS = \
