@@ -65,7 +65,7 @@ contains
     real,intent(in) :: rIonoSphereInv
 
     integer :: iMix, iZ, iN, iL
-    integer :: nGround
+    integer :: nGround, iCount
     real :: Gin
     real,dimension(0:nExcitation-1,nExcitation,0:nZMax,nMixMax) :: ExtraEnergy_IIII = 0.0
     !------------
@@ -93,9 +93,10 @@ contains
           Partition_IIII(0,nGround,iZ,iMix) = 1.0
           Partition_III(nGround,iZ,iMix) = 1.0
           LogGi_II(iZ,iMix) = 0.0
-          do iN = nGround, nExcitation
+          
+          PRINCIPAL:do iN = nGround, nExcitation
              Gin = 0.0
-
+             iCount = 0
              do iL = 0, iN-1
 
                 if(DoStateElimination.and.(ExcitationEnergy_IIII(iL,iN,iZ,iMix) + &
@@ -109,16 +110,21 @@ contains
                      Degeneracy_IIII(iL,iN,iZ,iMix) * ExtraEnergy_IIII(iL,iN,iZ,iMix)
 
                 Gin = Gin + Degeneracy_IIII(iL,iN,iZ,iMix)
-
+                iCount = iCount + 1
              end do
 
              if (Gin /= 0) &
                 ExcitationEnergy_III(iN,iZ,iMix) = &
                   ExcitationEnergy_III(iN,iZ,iMix) / Gin
    
-          end do
+             if(iCount == 0)then
+                !Eliminate the whole shell:
+                nExcitation_II(iZ, iMix) = iN - 1
+                EXIT PRINCIPAL
+             end if
+          end do PRINCIPAL
           if(UseGroundStatWeight .and. GIn > 0.5 .and. iN==nGround)&
-             LogGi_II(iZ,iMix) = log(GIn)      
+               LogGi_II(iZ,iMix) = log(GIn)      
        end do
     end do
 
