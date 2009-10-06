@@ -1,22 +1,18 @@
 #!/bin/sh
 #PBS -V
-#PBS -q csem
+#PBS -A csem
+#PBS -q route
 #PBS -N SWMF
 #PBS -l nodes=4:ppn=4
+#PBS -l pmem=500mb
 #PBS -l walltime=2:00:00
 
 # cd to job submission directory
 cd $PBS_O_WORKDIR
 
 #get queue status
-qstat -q csem
 qstat -u $USER -n
 
-# run job (number of CPUs is 4 times the number of nodes specified above)
-mpirun -np 16 ./SWMF.exe > runlog_`date +%y%m%d%H%M`
+# run job
+mpirun ./SWMF.exe > runlog_`date +%y%m%d%H%M`
 
-# clean hanging processes
-for x in `cat $PBS_NODEFILE | uniq`
-do
-        ssh $x /home/software/rhel4/mpich/1.2.7-nag/sbin/cleanipcs
-done
