@@ -99,6 +99,7 @@ contains
     select case(TypeProblem)
     case('lightfront')
     case('infinitemedium')
+    case('planckian')
        if(nWave > 1)then
           TradMin = 1.0; EradMin = cRadiation*TradMin**4
           ! Reset the minimum photon energy to be 0.1 eV
@@ -121,10 +122,10 @@ contains
     use ModPhysics,    ONLY: cRadiationNo, g, No2Si_V, Si2No_V, &
          UnitTemperature_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, ExtraEint_, p_, &
-         WaveFirst_, WaveLast_
+         nWave, WaveFirst_, WaveLast_
 
     integer :: i, j, k, iBlock
-    real :: Rho, Temperature, Pressure, Erad
+    real :: Rho, Temperature, Pressure, Erad, Trad
     real :: TeFinal
 
     character(len=*), parameter :: NameSub = "user_set_ics"
@@ -137,6 +138,13 @@ contains
        Temperature = 1.0e-16
        Erad = 1.0e-12
     case('infinitemedium')
+       TeFinalSi = cKEVToK
+       TeFinal = TeFinalSi*Si2No_V(UnitTemperature_)
+       Rho = cRadiationNo*TeFinal**3 *1.0e18
+       Trad = 0.01*cKEVToK*Si2No_V(UnitTemperature_)
+       Erad = cRadiationNo*Trad**4
+       Temperature = TeFinal
+    case('planckian')
        ! initial zero radiation, at time=infinity Erad(final)=a*te(final)**4
        ! so that inv_gm1*rho*te(final)+a*te(final)**4 = inv_gm1*rho*te(initial)
        TeFinalSi = cKEVToK
@@ -344,7 +352,7 @@ contains
     use ModIoUnit,     ONLY: io_unit_new
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation, n_step
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, &
-         cRadiationNo
+         cRadiationNo, inv_gm1
     use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_
 
     integer,          intent(in)   :: iBlock
@@ -373,6 +381,11 @@ contains
 
     IsFound = .true.
     select case(NameVar)
+    case('planck')
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          PlotVar_G(i,j,k) = cRadiationNo &
+               *(State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock))**4
+       end do; end do; end do
     case('tkev')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
           PlotVar_G(i,j,k) = &
@@ -385,6 +398,11 @@ contains
           PlotVar_G(i,j,k) = sqrt(sqrt(sum( &
                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))/cRadiationNo)) &
                *No2Si_V(UnitTemperature_)*cKToKev
+       end do; end do; end do
+    case('etotal')
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          PlotVar_G(i,j,k) = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))&
+               + inv_gm1*State_VGB(p_,i,j,k,iBlock)
        end do; end do; end do
     case('dy')
        PlotVar_G(:,:,:) = dy_BLK(iBlock)
@@ -412,7 +430,7 @@ contains
        end if
     end do
 
-    if(TypeProblem == 'infinitemedium')then
+    if(TypeProblem == 'planckian')then
        DelLogEphoton = (log(EphotonMax) - log(EphotonMin))/nWave
        do iWave = 1, nWave
           Coord_W(iWave) = exp(log(EphotonMin) + (iWave - 0.5)*DelLogEphoton)
@@ -555,6 +573,26 @@ contains
             *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
 
     case('infinitemedium')
+       if(present(OpacityPlanckOut_W))OpacityPlanckOut_W = 2.0/No2Si_V(UnitX_)
+
+       if(present(OpacityRosselandOut_W)) &
+            OpacityRosselandOut_W = 1.0e20/No2Si_V(UnitX_)
+
+       Tg_W = sqrt(sqrt(State_V(WaveFirst_:WaveLast_)/cRadiationNo))
+
+       if(present(PlanckOut_W)) PlanckOut_W = cRadiationNo*Te**4 &
+            *No2Si_V(UnitEnergyDens_)
+
+       if(present(CgTeOut_W)) CgTeOut_W = &
+            cRadiationNo*(Te+Tg_W)*(Te**2+Tg_W**2) &
+            *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+
+       if(present(TgOut_W)) TgOut_W = Tg_W*No2Si_V(UnitTemperature_)
+
+       if(present(CgTgOut_W)) CgTgOut_W = 4.0*cRadiationNo*Tg_W**3 &
+            *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+
+    case('planckian')
        if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = &
             2.0/No2Si_V(UnitX_)
 
