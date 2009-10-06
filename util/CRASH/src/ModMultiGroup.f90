@@ -1,7 +1,7 @@
 module CRASH_ModMultiGroup
   use CRASH_ModIonMix
   use CRASH_ModOpacityVoigt, ONLY : line_width, voigt_profile, UseVoigt
-  use CRASH_ModAtomicDataMix,ONLY : nMix, nZ_I, nExcitation, nMixMax
+  use CRASH_ModAtomicDataMix,ONLY : nMix, nZ_I, nMixMax
   use CRASH_ModAtomicDataMix,ONLY : Concentration_I !(1:nMixMax)
   use CRASH_ModAtomicDataMix,ONLY : IonizPotential_II !(1:nZMax,1:nMixMax)
   use CRASH_ModAtomicMass,   ONLY : cAtomicMass_I !(1:nZMax)
@@ -10,6 +10,8 @@ module CRASH_ModMultiGroup
   use CRASH_ModExcitationData, ONLY:n_screened !(iZ,nZ)
   use CRASH_ModExcitation,   ONLY : Partition_III !(nExcitation,0:nZMax  ,nMixMax)
   use CRASH_ModExcitation,   ONLY : ExcitationEnergy_III !nExcitation,0:nZMax-1,nMixMax)
+  use CRASH_ModExcitation,   ONLY : IonizationPotentialLowering_I! (0:nZMax
+  use CRASH_ModExcitation,   ONLY : nExcitation_II!(0:nZMax,nMixMax)
   use CRASH_ModPartition,   ONLY : Na, Te, zAv
   use CRASH_ModPartition,   ONLY : iZMin_I !(1:nMixMax)
   use CRASH_ModPartition,   ONLY : iZMax_I !(1:nMixMax)
@@ -106,7 +108,7 @@ module CRASH_ModMultiGroup
   logical,public :: UseAveragedRosselandOpacity = .true.
 
   !Correction factor for the Photoionization from the ground state:
-  real,parameter :: BoundFreeCorrection = 2.0
+  real,public    :: BoundFreeCorrection = 2.0
   real,public    :: TRadMin = 500   !K 
   real,public    :: ERadMin = CRadiation * 500.0**4
   real           :: TgMin_W( nGroupMax )
@@ -405,14 +407,14 @@ contains
           nbound = nZ_I(iMix) - iZ                               
           nGround = n_ground(iZ,nZ_I(iMix))                                     
 
-          do iN = nGround, nExcitation-1     
+          do iN = nGround, nExcitation_II(iZ,iMix)-1     
 
              if (Concentration_I(iMix) * &
                   Population_II(iZ,iMix) * &
                   Partition_III(iN, iZ, iMix)& 
                   < con(4) )CYCLE
              if(.not.DoNotAddLineCore)then        
-                do  iNUpper = iN + 1, nExcitation                              
+                do  iNUpper = iN + 1, nExcitation_II(iZ,iMix)                              
 
                    ennp = ExcitationEnergy_III(iNUpper, iZ,iMix)- &
                         ExcitationEnergy_III(iN, iZ,iMix)
@@ -672,7 +674,7 @@ contains
                   CYCLE IZLOOP     
 
              ! ...            sum over quantum states                                
-             do  iN = nGround, nExcitation  
+             do  iN = nGround, nExcitation_II(iZ,iMix)  
 
                 AbsorberDensity = Population_II(iZ,iMix) * Partition_III(iN, iZ, iMix)                      
 
@@ -682,9 +684,14 @@ contains
                 eTransition = IonizPotential_II(iZ+1, iMix) - &
                      ExcitationEnergy_III(iN, iZ, iMix)         
 
-                ! ...  the photon energy must exceed the binding energy     
+                ! ...  the photon energy must exceed the binding energy 
+                !Acc ount for the ionization potential lowering while 
+                !treating the photoionization     
 
-                if ( PhotonEnergy_I(iPhoton) >=  eTransition ) then  
+                if ( PhotonEnergy_I(iPhoton) >=  eTransition &
+                     .or. (iN==nGround .and.                 &
+                     PhotonEnergy_I(iPhoton) >=  eTransition &
+                      - IonizationPotentialLowering_I(iZ) )) then  
 
 
                    ! ... find the number of "screening" electrons     
@@ -965,7 +972,7 @@ contains
             denlq  = densnn * Concentration_I(iMix) * Population_II(iZ,iMix)          
 
             ! ...  loop over initial quantum states                            
-            INLOOP: do iN=nGround,nExcitation-1                              
+            INLOOP: do iN=nGround,nExcitation_II(iZ,iMix)-1                              
                if ( Concentration_I(iMix) * &
                     Population_II(iZ,iMix)* &
                     Partition_III(iN,iZ,iMix)  &
@@ -977,7 +984,7 @@ contains
 
                !         loop over final quantum states      
 
-               do iNUpper=iN+1,nExcitation                                 
+               do iNUpper=iN+1,nExcitation_II(iZ,iMix)                                 
 
                   TransitionEnergy = ExcitationEnergy_III(iNUpper,iZ,iMix) - ExcitationEnergy_III(iN,iZ,iMix)                  
 
@@ -1380,7 +1387,7 @@ contains
 
             ! ...       loop over initial quantum states 
 
-            INITIAL: do iN = n_ground(iZ, nZ_I(iMix)) , nExcitation -1
+            INITIAL: do iN = n_ground(iZ, nZ_I(iMix)) , nExcitation_II(iZ,iMix) -1
                if ( Concentration_I(iMix) * Population_II(iZ,iMix) * Partition_III(iN, iZ, iMix)&
                     .lt. con(4) ) CYCLE INITIAL                             
 
@@ -1405,7 +1412,7 @@ contains
                !endif
                ! ...          loop over final quantum states
 
-               FINAL: do iNUpper = iN+1, nExcitation                               
+               FINAL: do iNUpper = iN+1, nExcitation_II(iZ,iMix)                               
 
                   ! ...            compute the transition energy     
                   TransitionEnergy = ExcitationEnergy_III(iNUpper, iZ,iMix)- &

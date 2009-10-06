@@ -99,6 +99,8 @@ program abs
           log10(AbsorptionCoefficient_I(iPlot))
   end do
   close(unit)
+  !==================  Xeonon test===============
+  DoStateElimination = .true.
   call set_element(54)
   UsePreviousTe = .false.
 
@@ -153,12 +155,13 @@ program abs
   call set_element(13)
 
   NaTrial = RhoAl/(1.0e3*cAtomicMass * cAtomicMass_I(13))
-  
+  DoStateElimination = .true.
   
   vTe = 100.0 ![eV]=0.1 keV
   UseCoulombCorrection = .false.
   call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
   
+  call save_report('report_al.txt')
   DoNotAddLineCore =.false.
   DoEnhancePhotoIonization = .true.
   
@@ -179,6 +182,7 @@ program abs
   UseCoulombCorrection = .true.
   UseExcitation = .true.
   UseGroundStatWeight = .false.
+  BoundFreeCorrection = 1.0
   call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
  
   call save_report('report_be.txt')
