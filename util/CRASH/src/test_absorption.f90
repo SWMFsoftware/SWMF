@@ -83,6 +83,24 @@ program abs
  
   UseCoulombCorrection = .true.
   call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
+  do iZ = 0, 0
+     write(*,'(a,i3,a)') '\multirow{4}{*}{', iZ, '} '
+
+     do iN = 1, 10
+
+        nGround = n_ground(iZ, 1)
+
+        write(*,'(a,i3,a,f6.1,5(a,f6.1),a)') ' & ', iN, ' & ', &
+             max(IonizPotential_II(iZ+1,2) - &
+             cRyToEV * (real(iZ+1)/iN)**2, 0.0), &
+             ' & ', ExcitationEnergy_III(iN, iZ,2), &
+             ' \tabularnewline'
+
+     end do
+
+     write(*,'(a)')'\hline'
+
+  end do
   call save_report('report.txt')
 
   call set_multigroup(100, 1.0/cHPlanckEV, 10000.0/cHPlanckEV)
@@ -195,7 +213,52 @@ program abs
   call save_absorption_coef('../doc/Be_absoprtion.dat')
   call opacys(TRadIn = Te)
   call save_opacity_sesame('../doc/Be_opacities.dat')
+  !=================ZERO temperature====================!
+  UseExcitation = .true.
+  call set_mixture(nPolyimide, nZPolyimide_I, CPolyimide_I)
+  UsePreviousTe = .false.
+
+  DoNotAddLineCore = .false.
+  UseBremsstrahlung = .true.
+  UsePhotoionization = .true.
+ 
+  UseCoulombCorrection = .true.
+  call set_ionization_equilibrium(0.1,NaTrial*1000000.0,iError)
+  call save_report('report_zero.txt')
+  do iMix = 1, 0!nMix
+     write(*,*)'iMix,nZ)I(iMix)',iMix,nZ_I(iMix)
+  do iZ = iZMin_I(iMix),iZMax_I(iMix) 
+     write(*,'(a,i3,a)') '\multirow{4}{*}{', iZ, '} '
+
+     do iN = 1, 10
+
+        nGround = n_ground(iZ, nZ_I(iMix))
+
+        write(*,'(a,i3,a,f6.1,5(a,f6.1),a)') ' & ', iN, ' & ', &
+             max(IonizPotential_II(iZ+1,iMix) - &
+             cRyToEV * (real(iZ+1)/iN)**2, 0.0), &
+             ' & ', ExcitationEnergy_III(iN, iZ,iMix), &
+             ' \tabularnewline'
+
+     end do
+
+     write(*,'(a)')'\hline'
+
+  end do
+end do
+  call set_multigroup(100, 1.0/cHPlanckEV, 10000.0/cHPlanckEV)
+  call meshhv
+  call abscon
   
+  open(unit,file='../doc/polyimide_absorption_zero.dat')
+  write(unit,'(a,i6,a)') &
+       'Photon energy [eV]  Absorbtion Coeff cm-1, in ',nPhoton,' points' 
+  do iPlot = 1, nPhoton
+     if(PhotonEnergy_I(iPlot)< 0.1*Te.or.PhotonEnergy_I(iPlot)>1000.0*Te)&
+          CYCLE
+     write(unit,*)log10(max(PhotonEnergy_I(iPlot),1e-10)),&
+          log10(max(AbsorptionCoefficient_I(iPlot),1e-10))
+  end do
  
 contains
   !========================
