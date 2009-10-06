@@ -257,7 +257,8 @@ Contains
 
     if(Te>0.0)LogGe = 99.0
 
-
+    iZMin_I(1:nMix) = 0
+    iZMax_I(1:nMix) = 0
     call get_excitation_levels_zero(rIonoSphereInv)
 
 
