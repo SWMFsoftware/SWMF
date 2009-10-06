@@ -20,7 +20,7 @@ module ModUser
 
   real :: EphotonMin = 0.1 ! eV
   real :: EphotonMax = 2e4 ! eV
-  real :: TeFinalSi
+  real :: TeFinalSi, TeFinal, TeInit
 
 contains
 
@@ -104,7 +104,7 @@ contains
           TradMin = 1.0; EradMin = cRadiation*TradMin**4
           ! Reset the minimum photon energy to be 0.1 eV
           FreqMinSi = EphotonMin/cHPlanckEV
-          ! Reset the maximum photon energy to be 10 keV
+          ! Reset the maximum photon energy to be 20 keV
           FreqMaxSi = EphotonMax/cHPlanckEV
           call set_multigroup(nWave, FreqMinSi, FreqMaxSi)
        end if
@@ -119,14 +119,13 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModConst,      ONLY: cKEVToK
     use ModMain,       ONLY: GlobalBlk, nI, nJ, nK
-    use ModPhysics,    ONLY: cRadiationNo, g, No2Si_V, Si2No_V, &
+    use ModPhysics,    ONLY: cRadiationNo, inv_gm1, g, No2Si_V, Si2No_V, &
          UnitTemperature_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, ExtraEint_, p_, &
          nWave, WaveFirst_, WaveLast_
 
     integer :: i, j, k, iBlock
-    real :: Rho, Temperature, Pressure, Erad, Trad
-    real :: TeFinal
+    real :: Rho, Temperature, Pressure, Erad, Trad, ExtraEint
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !--------------------------------------------------------------------------
@@ -137,32 +136,45 @@ contains
        Rho = 1.0
        Temperature = 1.0e-16
        Erad = 1.0e-12
+       Pressure = Rho*Temperature
+       ExtraEint = 0.0
     case('infinitemedium')
+       ! initial zero radiation, at time=infinity Erad(final)=a*te(final)**4,
+       ! where a is the radiation constant. Set Cv = 4*a*Te**3,
+       ! so that a*te(final)**4 + Erad(final)= a*te(initial)**4
+       ! or Te(initial)**4 = 2*Te(final)**4
        TeFinalSi = cKEVToK
        TeFinal = TeFinalSi*Si2No_V(UnitTemperature_)
-       Rho = cRadiationNo*TeFinal**3 *1.0e18
+       Rho = 1.0 ! fake, it is not used
+       TeInit = sqrt(sqrt(1.0+nWave))*TeFinal
+       Temperature = TeInit
        Trad = 0.01*cKEVToK*Si2No_V(UnitTemperature_)
        Erad = cRadiationNo*Trad**4
-       Temperature = TeFinal
+       Pressure = Rho*Temperature
+       ExtraEint = cRadiationNo*Temperature**4 - inv_gm1*Pressure
     case('planckian')
-       ! initial zero radiation, at time=infinity Erad(final)=a*te(final)**4
-       ! so that inv_gm1*rho*te(final)+a*te(final)**4 = inv_gm1*rho*te(initial)
+       ! initial zero radiation, at time=infinity Erad(final)=a*te(final)**4,
+       ! where a is the radiation constant. Set Cv = 4*a*Te**3,
+       ! so that a*te(final)**4 + Erad(final)= a*te(initial)**4
+       ! or Te(initial)**4 = 2*Te(final)**4
        TeFinalSi = cKEVToK
        TeFinal = TeFinalSi*Si2No_V(UnitTemperature_)
-       Rho = cRadiationNo*TeFinal**3
-       Temperature = (Rho*TeFinal + (g - 1)*cRadiationNo*TeFinal**4)/Rho
+       Rho = 1.0 ! fake, it is not used
+       TeInit = sqrt(sqrt(2.0))*TeFinal
+       Temperature = TeInit
        Erad = 0.0
+       Pressure = Rho*Temperature
+       ExtraEint = cRadiationNo*Temperature**4 - inv_gm1*Pressure
     end select
-
-    Pressure = Rho*Temperature
 
     do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
        State_VGB(Rho_,i,j,k,iBlock) = Rho
        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
        State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = Erad
-       State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
+       State_VGB(ExtraEint_,i,j,k,iBlock) = ExtraEint
        State_VGB(p_,i,j,k,iBlock) = Pressure
     end do; end do; end do
+
 
   end subroutine user_set_ics
 
@@ -352,7 +364,7 @@ contains
     use ModIoUnit,     ONLY: io_unit_new
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation, n_step
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, &
-         cRadiationNo, inv_gm1
+         cRadiationNo, inv_gm1, Si2No_V
     use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_
 
     integer,          intent(in)   :: iBlock
@@ -367,7 +379,7 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k, iVar, iWave
-    real :: DelLogEphoton, Coord_W(nWave), Tg_W(nWave), PlanckSi
+    real :: DelLogEphoton, Coord_W(nWave), Tg_W(nWave), PlanckSi, EinternalSi
     integer :: iUnit, iError
     character(len=10) :: NameWave, NameFormat, TypeStatus
     character(len=100):: NameFile = 'planckian.outs'
@@ -386,6 +398,10 @@ contains
           PlotVar_G(i,j,k) = cRadiationNo &
                *(State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock))**4
        end do; end do; end do
+    case('bfinal')
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          PlotVar_G(i,j,k) = cRadiationNo*TeFinal**4
+       end do; end do; end do
     case('tkev')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
           PlotVar_G(i,j,k) = &
@@ -401,8 +417,10 @@ contains
        end do; end do; end do
     case('etotal')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               EinternalOut = EinternalSi)
           PlotVar_G(i,j,k) = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))&
-               + inv_gm1*State_VGB(p_,i,j,k,iBlock)
+               + EinternalSi*Si2No_V(UnitEnergyDens_)
        end do; end do; end do
     case('dy')
        PlotVar_G(:,:,:) = dy_BLK(iBlock)
@@ -525,9 +543,16 @@ contains
     RhoSi = Rho*No2Si_V(Rho_)
 
     if(present(EinternalIn))then
-       pSi = EinternalIn*gm1
-       Pressure = pSi*Si2No_V(UnitP_)
-       Te = Pressure/Rho
+       select case(TypeProblem)
+       case('infinitemedium','planckian')
+          Te = sqrt(sqrt(EinternalIn*Si2No_V(UnitEnergyDens_)/cRadiationNo))
+          Pressure = Rho*Te
+          pSi = Pressure*No2Si_V(UnitP_)
+       case default
+          pSi = EinternalIn*gm1
+          Pressure = pSi*Si2No_V(UnitP_)
+          Te = Pressure/Rho
+       end select
        TeSi = Te*No2Si_V(UnitTemperature_)
     elseif(present(TeIn))then
        TeSi = TeIn
@@ -541,12 +566,27 @@ contains
        TeSi = Te*No2Si_V(UnitTemperature_)
     end if
 
-    if(present(EinternalOut)) EinternalOut = pSi*inv_gm1
+    if(present(EinternalOut))then
+       select case(TypeProblem)
+       case('infinitemedium','planckian')
+          EinternalOut = cRadiationNo*Te**4*No2Si_V(UnitEnergyDens_)
+       case default
+          EinternalOut = pSi*inv_gm1
+       end select
+    end if
     if(present(TeOut)) TeOut = TeSi
     if(present(PressureOut)) PressureOut = pSi
 
-    if(present(CvOut)) CvOut = inv_gm1*Rho &
-         *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+    if(present(CvOut))then
+       select case(TypeProblem)
+       case('lightfront')
+          CvOut = inv_gm1*Rho &
+               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+       case('infinitemedium','planckian')
+          CvOut = 4.0*cRadiationNo*Te**3 &
+               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+       end select
+    end if
 
     if(present(HeatCondOut)) HeatCondOut = 0.0
     if(present(TeTiRelaxOut)) TeTiRelaxOut = 0.0
