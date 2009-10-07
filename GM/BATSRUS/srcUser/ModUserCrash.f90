@@ -2153,7 +2153,7 @@ contains
     logical ,intent(inout)       :: IsFound
 
     real, parameter:: RhoMinAmrDim = 20.0   ! kg/m3
-    real, parameter:: xMinAmr      = 1500.0 ! microns
+    real, parameter:: xMinAmr      = 2500.0 ! microns
 
     logical:: IsXe_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     real   :: RhoMin
