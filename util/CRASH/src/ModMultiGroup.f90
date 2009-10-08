@@ -121,16 +121,17 @@ contains
     ! #OPACITY
     ! T                     UseExcitation
     ! T                     UseCoulombCorrection
-    ! F                     DoNotAddLineCore
+    ! T                     DoStateElimination
 
     use CRASH_ModAtomicDataMix, ONLY: UseExcitation
     use CRASH_ModPartition,     ONLY: UseCoulombCorrection
+    use CRASH_ModExcitation,    ONLY: DoStateElimination
     use ModReadParam,           ONLY: read_var
 
     !--------------------------------------------------------------------------
     call read_var('UseExcitation', UseExcitation)
     call read_var('UseCoulombCorrection', UseCoulombCorrection)
-    call read_var('DoNotAddLineCore',DoNotAddLineCore)
+    call read_var('DoStateElimination',DoStateElimination)
 
   end subroutine read_opacity_parameters
   !======================================================================
