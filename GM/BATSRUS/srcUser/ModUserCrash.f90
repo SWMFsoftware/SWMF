@@ -135,9 +135,12 @@ contains
 
     use ModReadParam
     use CRASH_ModEos,        ONLY: read_eos_parameters
-    use CRASH_ModMultiGroup, ONLY: read_excitation_parameters
+    use CRASH_ModMultiGroup, ONLY: read_opacity_parameters
     use ModGeometry, ONLY: TypeGeometry, UseCovariant
+    use ModWaves,    ONLY: FreqMinSI, FreqMaxSI
+    use ModConst,    ONLY: cHPlanckEV
 
+    real :: EnergyPhotonMin, EnergyPhotonMax
     logical :: IsCylindrical
     character (len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
@@ -159,6 +162,15 @@ contains
        case("#HYADESGROUP")
           call read_var('UseHyadesGroupFile', UseHyadesGroupFile)
           call read_var('NameHyadesGroupFile',NameHyadesGroupFile)
+
+       case("#OPACITY")
+          call read_opacity_parameters
+
+       case("#GROUPRANGE")
+          call read_var('EnergyPhotonMin', EnergyPhotonMin)  ! in eV
+          call read_var('EnergyPhotonMax', EnergyPhotonMax)  ! in eV
+          FreqMinSi = EnergyPhotonMin/cHPlanckEV
+          FreqMaxSi = EnergyPhotonMax/cHPlanckEV
 
        case("#TUBE")
           UseTube = .true.
@@ -187,9 +199,6 @@ contains
           end if
        case("#EOS")
           call read_eos_parameters
-
-       case("#EXCITATION")
-          call read_excitation_parameters
 
        case("#OPACITYSCALEFACTOR") ! UQ only
           call read_var('PlanckScaleFactorXe', PlanckScaleFactor_I(0))
@@ -1306,11 +1315,12 @@ contains
 
     character (len=*), parameter :: Name='user_set_plot_var'
 
+    character(len=10) :: NameWave
     real    :: p, Rho, pSi, RhoSi, TeSi, WaveEnergy
     real    :: PiSi, TiSi, NatomicSi
     real    :: OpacityPlanckSi_W(nWave)
     real    :: OpacityRosselandSi_W(nWave)
-    integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel, iWave
+    integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel, iWave, iVar
     real    :: Value_V(nMaterial*nThermo) ! Cv,Gamma,Kappa,Te for 3 materials
     !------------------------------------------------------------------------  
     IsFound = .true.
@@ -1420,6 +1430,22 @@ contains
        IsFound = .false.
     end select
 
+    do iWave = 1, nWave
+       write(NameWave, "(a,i2.2)") 'erad', iWave
+       if(NameVar == NameWave)then
+          iVar = WaveFirst_ + iWave -1
+
+          do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+             NameIdlUnit = 'J/m^3'
+             PlotVar_G(i,j,k) = State_VGB(iVar,i,j,k,iBlock) &
+                  *No2Si_V(UnitEnergyDens_)
+          end do; end do; end do
+
+          IsFound = .true.
+          EXIT
+       end if
+    end do
+
     UsePlotVarBody = .false.
     PlotVarBody    = 0.0
 
@@ -1449,13 +1475,13 @@ contains
     
     !If the frequency range IN HERZ has been alredy set, then skip
     if(FreqMinSI <= 0) then
-       !Reset the minimum photon enrgy to be 0.1 eV
+       !Reset the minimum photon energy to be 0.1 eV
        FreqMinSI = 0.1 /cHPlanckEV
     end if
 
     if(FreqMaxSI <= 0) then
-       !Reset the maximum photon enrgy to be 1 keV
-       FreqMaxSI = 1000.0 /cHPlanckEV
+       !Reset the maximum photon energy to be 10 keV
+       FreqMaxSI = 10000.0 /cHPlanckEV
     end if
 
     ! Read in Hyades output

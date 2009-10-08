@@ -44,7 +44,7 @@ module CRASH_ModMultiGroup
   real :: EnergyGroup_I(0:nGroupMax)
   real :: DeltaLogFrequency
 
-  public:: read_excitation_parameters
+  public:: read_opacity_parameters
   public:: get_energy_g_from_temperature, get_temperature_from_energy_g
 
 
@@ -114,15 +114,25 @@ module CRASH_ModMultiGroup
   real           :: TgMin_W( nGroupMax )
 contains
   !============================================================================
-  subroutine read_excitation_parameters
+  subroutine read_opacity_parameters
+
+    ! Usage (with recommended values shown):
+    !
+    ! #OPACITY
+    ! T                     UseExcitation
+    ! T                     UseCoulombCorrection
+    ! F                     DoNotAddLineCore
 
     use CRASH_ModAtomicDataMix, ONLY: UseExcitation
-    use ModReadParam, ONLY: read_var
+    use CRASH_ModPartition,     ONLY: UseCoulombCorrection
+    use ModReadParam,           ONLY: read_var
 
     !--------------------------------------------------------------------------
     call read_var('UseExcitation', UseExcitation)
+    call read_var('UseCoulombCorrection', UseCoulombCorrection)
+    call read_var('DoNotAddLineCore',DoNotAddLineCore)
 
-  end subroutine read_excitation_parameters
+  end subroutine read_opacity_parameters
   !======================================================================
   subroutine get_energy_g_from_temperature(iGroup, TgSIIn, EgSI, CgSI)
     !\
