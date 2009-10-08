@@ -72,11 +72,17 @@ module ModPlanet
   integer, parameter :: iVernalMinute =    0
   integer, parameter :: iVernalSecond =    0
 
-  real, parameter :: SunOrbit_A = 1.52
-  real, parameter :: SunOrbit_B = 0.04
-  real, parameter :: SunOrbit_C = 0.15
-  real, parameter :: SunOrbit_D = 0.00
-  real, parameter :: SunOrbit_E = 0.00
+! real, parameter :: SunOrbit_A = 1.52
+! real, parameter :: SunOrbit_B = 0.04
+! real, parameter :: SunOrbit_C = 0.15
+! real, parameter :: SunOrbit_D = 0.00
+! real, parameter :: SunOrbit_E = 0.00
+
+ real, parameter :: SunOrbit_A = 1.52369
+  real, parameter :: SunOrbit_B = 0.093379
+  real, parameter :: SunOrbit_C = 335.538
+  real, parameter :: SunOrbit_D = 355.45332
+  real, parameter :: SunOrbit_E = 68905103.78
 
   real, parameter :: DaysPerYear = 670.0
   real, parameter :: SecondsPerYear = DaysPerYear * Rotation_Period
