@@ -614,14 +614,13 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         plotvar_inBody(iVar) = BodyRho_I(iFluid)
         ! If Body2 is used, then see if it is in block and use other those values
         if(UseBody2)then
-           if(  (xBody2+rBody2)>x_BLK(   0,   0,   0,iBLK) .and. &
-                (xBody2-rBody2)<x_BLK(nI+1,nJ+1,nK+1,iBLK) .and. &
-                (ybody2+rBody2)>y_BLK(   0,   0,   0,iBLK) .and. &
-                (ybody2-rBody2)<y_BLK(nI+1,nJ+1,nK+1,iBLK) .and. &
-                (zBody2+rBody2)>x_BLK(0   ,   0,   0,iBLK) .and. &
-                (zBody2-rBody2)<z_BLK(nI+1,nJ+1,nK+1,iBLK) )then
-              plotvar_inBody(iVar) = RhoBody2
-           end if
+           if( x_BLK(   0,   0,   0,iBLK)>(xBody2-rBody2) .and. &
+               x_BLK(nI+1,nJ+1,nK+1,iBLK)<(xBody2+rBody2) .and. &
+               y_BLK(   0,   0,   0,iBLK)>(yBody2-rBody2) .and. &
+               y_BLK(nI+1,nJ+1,nK+1,iBLK)<(yBody2+rBody2) .and. &
+               z_BLK(   0,   0,   0,iBLK)>(zBody2-rBody2) .and. &
+               z_BLK(nI+1,nJ+1,nK+1,iBLK)<(zBody2+rBody2) ) &
+               plotvar_inBody(iVar) = RhoBody2
         end if
      case('rhoux','mx')
         if (UseRotatingFrame) then
