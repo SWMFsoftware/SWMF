@@ -6,11 +6,14 @@ include ${DIR}/share/build/Makefile.doc
 # Note that the ionization_table*.tex files were produced
 # by the util/CRASH/src/IONIZ.exe code
 
-PDF: ionization_equilibrium.pdf \
-     GreyDiffusion.pdf \
-     EvidenceFile.pdf \
-     NTemperature.pdf \
-     HEDP.pdf
+PDF: \
+	ionization_equilibrium.pdf \
+	EvidenceFile.pdf \
+	GrayDiffusion.pdf   \
+	HEDP.pdf \
+	MultiGroup.pdf \
+	NTemperature.pdf \
+	PhotoIonization.pdf
 
 clean:
 	rm -f *.log *.aux *~

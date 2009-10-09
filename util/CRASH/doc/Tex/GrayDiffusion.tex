@@ -7,8 +7,8 @@
 
 
 \begin{document}
-\section{Solution Method for the Radiation Hydrodynamcs with Grey-Diffusion approximation}  
-The governing equations of radiation hydrodynamics with grey-diffusion 
+\section{Solution Method for the Radiation Hydrodynamcs with Gray-Diffusion approximation}  
+The governing equations of radiation hydrodynamics with gray-diffusion 
 approximation can be obtained in the first approximation in u/c. They 
 express the near conservation of mass, momentum, total energy, and 
 radiation energy: 
@@ -23,7 +23,7 @@ radiation energy:
 \right]   = \nabla\cdot\left[ \frac{c}{ 3 \overline{\chi} } \nabla \Erad 
 \right], 
 \end{equation}\label{eq:energy} 
-\begin{equation}\label{eq:grey}   \frac{\partial \Erad}{\partial t} + 
+\begin{equation}\label{eq:gray}   \frac{\partial \Erad}{\partial t} + 
 \nabla\cdot \left[ \Erad {\bf u} \right]   + \prad\nabla\cdot{\bf u} 
 =    \nabla\cdot\left[ \frac{c}{ 3\overline{\chi} } \nabla \Erad \right]   
 -\kappaP c (\Erad - \frac{4\sigma}{c} T^4), 
@@ -40,7 +40,7 @@ pressure can be obtained from the radiation energy density $\Erad$:
 \prad = \frac{1}{3}\Erad. 
 \end{equation} 
 The radiation is treated as a fluid that carries momentum and energy. 
-In essence, equations (\ref{eq:density})--(\ref{eq:grey}) describe a two 
+In essence, equations (\ref{eq:density})--(\ref{eq:gray}) describe a two 
 temperature fluid. Two cross-sections have been introduced, namely the 
 Planck mean opacity $\kappa_{\rm P}$ and an averaged opacity 
 $\overline{\chi}$ that appears in the radiation diffusion coeffient.  
@@ -66,7 +66,7 @@ energy of the plasma
 which we need to solve together with the other radiation hydrodynamics 
 equations.  The problem will be solved using the shock-capturing schemes of 
 the BATSRUS code. The left hand side of equations 
-(\ref{eq:density})--(\ref{eq:grey}) are in a form that resembles the pure 
+(\ref{eq:density})--(\ref{eq:gray}) are in a form that resembles the pure 
 hydro equations. We will fully exploit this feature, so that we can solve 
 this with the hydro solvers of BATSRUS. For the analogy with the hydro 
 equations with have to re-interpret in the hydro solver the pressure with 
@@ -79,8 +79,8 @@ energy is now given by the total gas and radiation energy
 where we have fixed $\gamma=5/3$. This indicates that we have to solve yet 
 nother advection equation for $3\prad/2=\Erad/2$. This is however 
 already accomplished by the left hand side of the radiation energy equation 
-(\ref{eq:grey}).  The solution of our radiation hydrodynamics equations with 
-grey diffusion approximation is obtained as follows: 
+(\ref{eq:gray}).  The solution of our radiation hydrodynamics equations with 
+gray diffusion approximation is obtained as follows: 
 \begin{itemize} 
 \item First solve the hyperbolic part of the equations, which now read 
 \begin{equation}\label{eq:hydro1} \frac{\partial\rho}{\partial t} +
