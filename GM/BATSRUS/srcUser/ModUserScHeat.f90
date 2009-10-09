@@ -146,11 +146,6 @@ contains
     BcAlfvenWavePressure = BcAlfvenWavePressureCgs*0.1*Si2No_V(UnitP_)
 
     UseAlfvenSpeed = .true.
-    AlfvenSpeedPlusFirst_ = WaveFirst_
-    AlfvenSpeedPlusLast_  = WaveFirst_
-    AlfvenSpeedMinusFirst_ = WaveLast_
-    AlfvenSpeedMinusLast_  = WaveLast_
-
     UseWavePressure = .true.
 
     TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
