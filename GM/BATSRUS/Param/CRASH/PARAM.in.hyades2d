@@ -1,6 +1,54 @@
 #ECHO
 T			DoEcho
 
+#LOOKUPTABLE
+pPerE(rho,e/rho)        NameTable
+save                    NameCommand
+table_pPerE.out         NameFile
+real8                   TypeFile
+pPerE(rho,e/rho) for Xe, Be, Plastic
+logrho logE/Rho pPerEXe pPerEBe pPerEPl
+20                      nIndex1
+0.01                    Index1Min
+1e6                     Index1Max
+20                      nIndex2
+1e5                     Index2Min
+1e14                    Index2Max
+
+#LOOKUPTABLE
+ePerP(rho,p/rho)        NameTable
+save                    NameCommand
+table_ePerP.out         NameFile
+real8                   TypeFile
+ePerP(rho,p/rho) for Xe, Be, Plastic
+logrho logpPerRho ePerPXe ePerPBe ePerPPl
+20                      nIndex1
+0.01                    Index1Min
+1e6                     Index1Max
+20                      nIndex2
+1e5                     Index2Min
+1e13                    Index2Max
+
+#LOOKUPTABLE
+Thermo(rho,p/rho)    NameTable
+save                    NameCommand
+table_thermo.out     NameFile
+real8                   TypeFile
+Thermo(rho,p/rho) for Xe, Be, Plastic
+logrho logpPerRho CvXe GammaXe CondXe TeXe CvBe GammaBe CondBe TeBe CvPl GammaPl CondPl TePl
+20                      nIndex1
+0.01                    Index1Min
+1e6                     Index1Max
+20                      nIndex2
+1e5                     Index2Min
+1e13                    Index2Max
+
+#LOOKUPTABLE
+Opacity(rho,T)          NameTable
+load                    NameCommand
+table_opacities.out     NameFile
+ascii                   TypeFile
+
 #TEST
 krylov			StringTest
 
@@ -79,55 +127,6 @@ T                       UseRadFluxLimiter
 larsen                  TypeRadFluxLimiter
 300.0			TradMinSi
 
-Save double precision lookup table for a more accurate restart
-#LOOKUPTABLE
-pPerE(rho,e/rho)        NameTable
-save                    NameCommand
-table_pPerE.out         NameFile
-real8                   TypeFile
-pPerE(rho,e/rho) for Xe, Be, Plastic
-logrho logE/Rho pPerEXe pPerEBe pPerEPl
-200                     nIndex1
-0.01                    Index1Min
-1e6                     Index1Max
-200                     nIndex2
-1e5                     Index2Min
-1e14                    Index2Max
-
-#LOOKUPTABLE
-ePerP(rho,p/rho)        NameTable
-save                    NameCommand
-table_ePerP.out         NameFile
-real8                   TypeFile
-ePerP(rho,p/rho) for Xe, Be, Plastic
-logrho logpPerRho ePerPXe ePerPBe ePerPPl
-200                     nIndex1
-0.01                    Index1Min
-1e6                     Index1Max
-200                     nIndex2
-1e5                     Index2Min
-1e13                    Index2Max
-
-#LOOKUPTABLE
-Thermo(rho,p/rho)    NameTable
-save                    NameCommand
-table_thermo.out     NameFile
-real8                   TypeFile
-Thermo(rho,p/rho) for Xe, Be, Plastic
-logrho logpPerRho CvXe GammaXe CondXe TeXe CvBe GammaBe CondBe TeBe CvPl GammaPl CondPl TePl
-200                     nIndex1
-0.01                    Index1Min
-1e6                     Index1Max
-200                     nIndex2
-1e5                     Index2Min
-1e13                    Index2Max
-
-#LOOKUPTABLE
-Opacity(rho,T)          NameTable
-load                    NameCommand
-table_opacities.out     NameFile
-ascii                   TypeFile
-
 #UPDATECHECK
 F			DoUpdateCheck
 
@@ -169,7 +168,7 @@ gamma
 
 #STOP
 -1			MaxIteration
-2.10038e-9              tSimulationMax
+2e-9			tSimulationMax
 
 #END
 
@@ -177,6 +176,6 @@ gamma
 
 #STOP
 -1			MaxIteration
-3.10038e-9		tSimulationMax
+3e-9			tSimulationMax
 
 #END
