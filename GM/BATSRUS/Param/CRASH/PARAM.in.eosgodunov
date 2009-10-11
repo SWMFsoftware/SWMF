@@ -1,17 +1,17 @@
 #ECHO
-T
+T			DoEcho
 
 #PLANET
-NONE
+NONE			NamePlanet
 
 #IOUNITS
-SI
+SI			TypeIoUnit
 
 #NORMALIZATION
 READ
-1.0e-6                         Micron
-1.0e+3                         km/s
-1000.0                         g/cm^3
+1.0e-6			No2SiUnitX Micron
+1.0e+3			No2SiUnitU km/s
+1000.0			No2SiUnitRho g/cm^3
 
 #USER_FLAGS
 F			UseUserInnerBcs
@@ -28,101 +28,90 @@ F			UseUserB0
 F			UseUserInitSession
 T			UseUserUpdateStates
 
-
 #TIMEACCURATE
-T
+T			IsTimeAccurate
 
 #CHECKGRIDSIZE
-400                             nI
-2                               nJ
-2                               nK
-1                               MinBlockALL
+10			nI
+2			nJ
+2			nK
+1			MinBlockALL
 
 #GRID
-1
-1
-1
-0.0
-5.0e+3
--26.2e+1
- 26.2e+1
--26.2e+1
- 26.2e+1
+8			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+   0.0			xMin
+5000.0			xMax
+-500.0			yMin
+ 500.0			yMax
+-500.0			zMin
+ 500.0			zMax
 
 #UPDATECHECK
-F
-
-#SHOCKPOSITION
-0.0
-0.0
+F			UseUpdateCheck
 
 #SHOCKTUBE
-100.		rho !~30 times the normal density
--3.0e4		Ux  !Piston speed
-0.0		Uy
-0.0		Uz
-0.0
-2.04e+7		P   !3000 K of temperature
-100.		rho (right state)
--3.0e4		Ux
-0.0		Uy
-0.0		Uz
-0.0
-2.04e+7		P
-
+100.			rho !~30 times the normal density
+-3.0e4			Ux  !Piston speed
+0.0			Uy
+0.0			Uz
+0.0			Eint
+2.04e+7			P   !3000 K of temperature
+100.			rho (right state)
+-3.0e4			Ux
+0.0			Uy
+0.0			Uz
+0.0			Eint
+2.04e+7			P
 
 #NONCONSERVATIVE
-F		UseNonConservative
+F			UseNonConservative
 
-Sheared boundary condition is used for non-zero shock slope
-
+Reflective boundary at the left
 #OUTERBOUNDARY
-reflect		xMinBc
-float		xMaxBc
-float		yMinBc
-float		yMaxBc
-float		zMinBc
-float		zMaxBc
+reflect			TypeBcxMin
+float			TypeBcxMax
+float			TypeBcyMin
+float			TypeBcyMax
+float			TypeBczMin
+float			TypeBczMax
 
 
 #TIMESTEPPING
-2		nStage
-0.8		CflExpl
+2			nStage
+0.8			CflExpl
 
 #SCHEME
-2		nOrder
-Godunov		TypeFlux
-beta
-1.2
+2			nOrder
+Godunov			TypeFlux
+beta			TypeLimiter
+1.2			BetaLimiter
 
 #LIMITER
-F
-F
-T
-EInt
+F			UseLogRhoLimiter
+F       	        UseLogPLimiter
+T               	UseRhoRatioLimiter
+EInt			NameVarLimitRatio
 
 #SAVERESTART
-F		DoSaverestart
-
-This is set only for sake of the test_shocktube test
-#SAVEBINARY
-F		UseBinary
+F			DoSaverestart
 
 #SAVEPLOT
-1		nPlotfile
-cut HD idl	PlotString
--1              DnSavePlot
-5.0e-7          DtSavePlot
-0.0		xMinCut
-5.0e3		xMaxCut
-20.		yMinCut
-22.		yMaxCut
-20.0    	zMinCut
-22.0		zMaxCut
-0.0             DxSavePlot
+1			nPlotfile
+cut HD idl_ascii	PlotString
+-1			DnSavePlot
+1.0e-8			DtSavePlot
+0.0			xMinCut
+5.0e3			xMaxCut
+-1.0			yMinCut
++1.0			yMaxCut
+-1.0			zMinCut
++1.0			zMaxCut
+0.0			DxSavePlot
 
 #STOP
--1
-5.0e-7
+-1			MaxIteration
+5.0e-7			tSimulationMax
 
 #END
