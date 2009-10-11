@@ -108,6 +108,6 @@ gamma
 
 #STOP
 -1			MaxIteration
-3.10038e-9		tSimulationMax
+3e-9			tSimulationMax
 
 #END
