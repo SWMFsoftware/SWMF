@@ -300,7 +300,7 @@ test_eosgodunov:
 	make test_eosgodunov_check
 
 test_eosgodunov_compile:
-	./Config.pl -e=HdEos -u=Eos -g=400,2,2,10,1
+	./Config.pl -e=HdEos -u=Eos -g=10,2,2,100,1
 	make CRASH
 	make PIDL
 
@@ -310,13 +310,12 @@ test_eosgodunov_rundir: test_rundir
 
 test_eosgodunov_run:
 	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_eosgodunov_check:
-	cat ${TESTDIR}/GM/IO2/cut_hd_1_t00000000_n0001618_pe*.idl \
-		> ${TESTDIR}/IO2/cut_500_ns.idl
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
-	  Param/CRASH/TestOutput/cut_eosgodunov.idl \
-	  ${TESTDIR}/IO2/cut_500_ns.idl > test_eosgodunov.diff
+	  Param/CRASH/TestOutput/eosgodunov.out \
+	  ${TESTDIR}/RESULT/GM/cut_*0341.out > test_eosgodunov.diff
 	ls -l test_eosgodunov.diff
 
 ### LEVELSET TEST ###
