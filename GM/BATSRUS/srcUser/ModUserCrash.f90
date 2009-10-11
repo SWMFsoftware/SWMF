@@ -1468,6 +1468,9 @@ contains
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
 
+    ! Initialize in the first session only
+    UseUserInitSession = .false.
+
     !\
     !Set the photon energy range
     !/
