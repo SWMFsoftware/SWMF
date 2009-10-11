@@ -20,55 +20,52 @@
 
 
 
-\usepackage{nicefrac}
+%\usepackage{nicefrac}
 
-
-\makeatletter
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
-%% Because html converters don't know tabularnewline
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
-%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
-%% Do not edit unless you really know what you are doing.
-
-
-
-\usepackage{nicefrac}
-
-
-
-\makeatletter
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
-%% Because html converters don't know tabularnewline
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
-%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
-%% Do not edit unless you really know what you are doing.
-
-
-
-\usepackage{nicefrac}
 
 \begin{document}
+\title{Thermodynamics and radiation transport in dense plasmas}
+\maketitle
 
-\input{FermiStatistics}
-\input{Coulomb}
-\input{DebyeHuekel}
-\input{Excitation}
-\input{PressureIonization}
-\input{FermiFunction}
-\input{PartitionFunction}
+\section{Introduction}
+The development of theoretical models to simulate the Equation Of State (EOS) for dense plasmas 
+had been mostly finished in 40s-50s. In principle, the material presented in \cite{ZR} is sufficient 
+to solve numerically the thermodynamic parameters and radiation transport in high-temperature plasmas, 
+if: (1) the researcher is perfectly familiar 
+with atomic physics, quantum mechanics and quantum electrodynamics and (2) he/she has an unlimited access 
+to databases for atomic and ion "parameters" such as all ionization potentials, an excitation energy for 
+all levels, as well as the degeneracy for both ground and energy levels). Even in this hypothetic case the 
+researcher may be tempted to solve the coupled system of {\it the Saha equations}, which relate the 
+populations of ions with different cherge numbers. The latter approach appears to be inoptimal, if 
+plausible at all.
 
+Of course, there are tabulated EOS as well as the opacity tables. However, it is intereting to summarize
+here the methods which allows researchers to compute both the EOS functions and opacities for the radiation
+transport, at least under some simplifying assumptions. 
 
+Particularly, here we employ the assumption of a Local
+Thermodynamic Equilibrium. This means that we assume the popolation of all atomic and ionic states to be excatly 
+the same as those calculated using the methods of statistical physics \cite{ll}.
+
+The paper is split to two parts, the first of them being entirely devoted to the thermodynamic analisys applied to
+LTE dense plasmas. It is more focused on the EOS function calculation, however, the obtained populations and partition 
+function are also used in the second part, to find opacities. This makes the overall aproach to the radiation hydrodynamics 
+to be consistent. 
+
+The second part describes the way to apply the
+results of the first part to a problem of the radiation transport in plasmas. This transport is treated in the framework of 
+Multi-Group Diffusion (MGD). The assumtions of LTE and MGD are key points of the presented paper.
+\include{Part1}
+\include{Part2}
+\include{Appendixes}
 \begin{thebibliography}{99}
 \bibitem{ZR}
 Ya.B.Zel'dovich and Yu.P.Raizer, Physics of Shock Waves and High Temperature Hydrodynamic Phenomena,
 \bibitem{ll}
 L.D.Landau and E.M.Lifshitz, Theoretical Physics. Vol.5. Statistical Physics, Part 1. 3rd Edition. Pergamon Press, NY, 1980.
+\bibitem{lp}
+V. B. Berestetskii, E. M. Lifshitz, and L. P. Pitaevskii, Quantum Electrodynamics 
+(Pergamon, Oxford, 1982).
 \bibitem{gradshtein}
 I.S.Gradshteyn and I.M.Ryzhik, Table of Integrals, Series and Products. Academic Press, NY, 1965.
 \bibitem{mcleod}

@@ -1,16 +1,17 @@
-\documentclass[12pt]{revtex4}
-\usepackage{graphicx}
-\begin{document}
-\title{ N-temperature model}
-\begin{abstract}
+%\documentclass[12pt]{revtex4}
+%\usepackage{graphicx}
+%\begin{document}
+%\title{ N-temperature model}
+%\begin{abstract}
+\section{Appendix D: How to solve coupled system of N temperature equations.} 
 The numerical solution of the non-linear heat conduction problem in the
 coupled system of the energy equations (say, for internal energy of radiation, 
 electrons and/or ions) is reduced to a numerical solution of the system of linear 
 equations with a sparse matrix, which is symmetric, definite positive and 
 diagonal-dominant.
-\end{abstract}
-\maketitle 
-\section{Governing equations and their symmetry}
+%\end{abstract}
+%\maketitle 
+\subsection{Governing equations and their symmetry}
 Consider the coupled system of the energy equations as follows:
 \begin{equation}\label{gov}
 \frac{\partial {\cal E}_\alpha}{\partial t}=
@@ -52,7 +53,7 @@ In particular, Eq.(\ref{sym}) ensures the total energy conservation:
 $\frac{d}{dt}\sum_\alpha{\int{{\cal E}dV}}=0$, 
 because on the right hand side of Eq.(\ref{gov}) the divergence of the heat flux vanishes in integrating
 over a volume, while the energy exchange rates cancel each other locally on suming by $\alpha$.
-\section{Discretization}
+\subsection{Discretization}
 %Leaving for the further discussion the issue of dscretizating the time derivatives in 
 %Eq.(\ref{gov}), 
 Consider the semi-discrete set of equations, obtained by 
@@ -161,7 +162,7 @@ the iteration convergence rate.
 }
 \label{fig_1}
 \end{figure}  
-\section{Generalizations: $N+M$ temperatures, and temperature powered $n$.}
+\subsection{Generalizations: $N+M$ temperatures, and temperature powered $n$.}
 Note some more or less trivial generalizations of the developed approach. 
 
 {\bf Non-linear temperature.} So far we considered only the temperaature values for different components of the physical system, as the unknowns to be solved 
@@ -233,8 +234,8 @@ On excluding ${\bf \Theta}^{n+1}_i$ Eq.(\ref{NM}) again takes the form of Eq.(\r
 {\bf diag}\{C_\alpha\}_i\cdot{\bf T}^{n}_i+\|R_{\alpha M}\|_i\cdot{\bf B}_i^{-1}\cdot {\bf diag}\{C_M\}_i\cdot{\bf \Theta}^{n}_i.\label{solveN}
 \end{eqnarray}
 So, the detailed algorithm in this case may be as follows: (1) in each point, $i$, find the inverted matrix ${\bf B}_i^{-1}$; (2) modify the matrix of the equation
-for heat-condicting components using (\ref{solveN}); (3) solve Eq.(\ref{alg}), with the modified relaxation matrices and changed right hand side, througout the
-whole computational domain; (4) at each point solve temperatures for non-heat-condicting components, using (\ref{solveM}). The symmetry of the modified matrix ${\bf R}$ is
+for heat-condicting components using (166); (3) solve Eq.(\ref{alg}), with the modified relaxation matrices and changed right hand side, througout the
+whole computational domain; (4) at each point solve temperatures for non-heat-condicting components, using (165). The symmetry of the modified matrix ${\bf R}$ is
 evident, less evident is its diagonal domination. The latter is a consequence of the above mentioned contributions from the cross interactions, into the diagonal elements of 
 ${\bf R}$ and ${\bf r}$ matrices.
 
@@ -243,5 +244,6 @@ ${\bf R}$ and ${\bf r}$ matrices.
 Thus, to update the conservative system of non-linear heat conduction equations one needs: (1) to calculate coeffecients in the matrix ${\bf A}$, 
 (2) solve the predicted values of temperature from the system of linear equations with symmetric, positive definite and diagonal-dominant matrix, 
 (3) update the energy using Eq.(\ref{con})
-\end{document}
+
+%\end{document}
 

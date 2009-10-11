@@ -1,60 +1,23 @@
 % LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
-% Do not edit unless you really know what you are doing.
-\documentclass[english,12pt]{revtex4}
-\usepackage[T1]{fontenc}
-\usepackage[latin9]{inputenc}
-\usepackage{nicefrac}
-\usepackage{graphicx}
-\usepackage{multirow}
-\usepackage{array}
-
-\makeatletter
-
+%% Do not edit unless you really know what you are doing.
+%\documentclass[english,12pt]{revtex4}
+%\usepackage[T1]{fontenc}
+%\usepackage[latin9]{inputenc}
+%\usepackage{nicefrac}
+%\usepackage{graphicx}
+%\usepackage{multirow}
+%\usepackage{array}
+%\makeatletter
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
 %% Because html converters don't know tabularnewline
-\providecommand{\tabularnewline}{\\}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
 %% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
 %% Do not edit unless you really know what you are doing.
-
-
-
-\usepackage{nicefrac}
-
-
-\makeatletter
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
-%% Because html converters don't know tabularnewline
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
-%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
-%% Do not edit unless you really know what you are doing.
-
-
-
-\usepackage{nicefrac}
-
-
-
-\makeatletter
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
-%% Because html converters don't know tabularnewline
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
-%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
-%% Do not edit unless you really know what you are doing.
-
-
-
-\usepackage{nicefrac}
-
-\begin{document}
-\section{Multi-group diffusion}
+%\usepackage{nicefrac}
+\large{\bf PART 2. RADIATION TARNSPORT IN DENSE PLASMAS}
+%\begin{document}
+\section{Multi-group diffusion: governing equations and general ralationships}
 {\bf Governing equation} to describe the radiation transport in the multigrop diffusion 
 approximation may be written as the partial differential equation for the spectral 
 energy density, $E_{\varepsilon}$, which is related to the unit ov volume and the unit
@@ -280,63 +243,7 @@ The spectral function in (\ref{eq:mg12}) is normalized by a unity:
 $$
 \int_0^\infty{\frac{15}{\pi^4}\frac{x^3}{\exp(x)-1}\frac{d\varepsilon}{k_BT}}=\frac{15}{\pi^4}\int_0^\infty{\frac{x^3dx}{\exp(x)-1}}=1,
 $$
-about the intregrals like this see \S58 in \cite{ll}. Therefore the total energu density in the Planck spectrum equals $\alpha T^4$, as it should.
+about the intregrals like this see \S58 in \cite{ll}. Therefore the total energy density in the Planck spectrum equals $\alpha T^4$, as it should.
 
-Comment about the case in which Emitter or Absorber is an electron, obeying the Fermi statistics.
-\section{Spectral temperature and group spectral temperatures}
-In \cite{ll} it was mentioned that for any known spectral energy distribution , $E_\varepsilon$ at any value of $\varepsilon$, the local 
-spectral temperature, $T^{Spectral}(E_\varepsilon(\varepsilon),\varepsilon)$ may be introduced, such that the spectral energy density 
-$E_\varepsilon(\varepsilon)$ is locally equal to the Planckian spectral energy density at the temperature $T^{Spectral}$:
-\begin{equation}
-E_\varepsilon(\varepsilon)=E_\varepsilon^{(Pl)}(T^{Spectral},\varepsilon).
-\end{equation}
-Of course, if the radiation spectrum differs from that for equilibrium black-body radiation, the values of $T^{Spectral}$ are different at different energies, 
-generally speaking.
-
-In other words, for non-equilibrium spectrum, the distribution of spectral temperature may be used instead of the spectral energy density, as the spctrum characteristics.
-The relationship between the spectral temperature and spectrum energy density is one-to-one mapping. For a given spectral temperature, the spectral energy density is given
-by Eq.(\ref{eq:mg12}). For a given spectral energy density the spectral temperature amy be found using Eq.(63.26) from \cite{ll} which in our denotations may be written as 
-follows:
-\begin{equation}\label{eq:mg14}
-T^{Spectral}=\frac{
-\varepsilon/k_B}
-{
-\log\left(1+\frac{8\pi}{h^3c^3}\frac{\varepsilon^3}{E_\varepsilon}\right)
-}
-\end{equation} 
-
-Now we introduce the discrete analog of a spectral temperature. Specifically, we introduce {\it a group temperature}, $T_g$, such that the spectral energy of a black-body 
-radiation, once integrated over the photon energy within a given group, would equal the given value of $E_g$:
-\begin{equation}\label{eq:mg15}
-E_g(T_g)=\int_{\varepsilon_{g-1/2}}^{\varepsilon_{g+1/2}}{E_\varepsilon^{(Pl)}(T_g,\varepsilon)d\varepsilon}=\alpha T_g^4\frac{15}{\pi^4}\int_{\varepsilon_{g-1/2}/(k_BT_g)}^{\varepsilon_{g+1/2}/(k_BT_g)}{\frac{x^3dx}{\exp(x)-1}}.
-\end{equation}
-We will also need an expression for the group specific heat of the radiation, per a unit of volume:
-\begin{equation}
-C_g=\frac{dE_g}{dT_g}=4\alpha T_g^3\frac{15}{4\pi^4}\int_{\varepsilon_{g-1/2}/(k_BT_g)}^{\varepsilon_{g+1/2}/(k_BT_g)}{\frac{x^3\exp(x)dx}{[\exp(x)-1]^2}}.
-\end{equation}
-The procedure which allows us to obtain the radiation energy density per group and radiation specific heat per group from the given group temperature is 
-straightforward. However, the inverse procedure is not that simple, because Eq.(\ref{eq:mg14}) now only holds as an approximate one:
-\begin{equation}\label{eq:mg16}
-T^g\approx\frac{
-\sqrt{\varepsilon_{g-1/2}\varepsilon_{g+1/2}}/k_B}
-{
-\log\left(
-1+\frac{\alpha\varepsilon_{g-1/2}^2\varepsilon_{g+1/2}^2}{k_B^4}\frac{15}{\pi^4}\frac{\Delta(\log \varepsilon)}{E_g}\right)
-}
-\end{equation}
-To satisfy Eq.(\ref{eq:mg15}), one needs to improve the accuracy using Newton-Rapson procedure:
-\begin{equation}
-T_g^{n+1}=T_g^n+ (E_g-E_g(T_g^n))/C_g(T_g^n).
-\end{equation}
-
- 
-\begin{thebibliography}{99}
-\bibitem{ZR}
-Ya.B.Zel'dovich and Yu.P.Raizer, Physics of Shock Waves and High Temperature Hydrodynamic Phenomena,
-\bibitem{lp}
-V. B. Berestetskii, E. M. Lifshitz, and L. P. Pitaevskii, Quantum Electrodynamics 
-(Pergamon, Oxford, 1982).
-\bibitem{ll}
-L.D.Landau and E.M.Lifshitz, Theoretical Physics. Vol.5. Statistical Physics, Part 1. 3rd Edition. Pergamon Press, NY, 1980.
-\end{thebibliography}
-\end{document}
+\section{Bound-bound absroption}
+TBC

@@ -10,10 +10,7 @@ PDF: \
 	ionization_equilibrium.pdf \
 	EvidenceFile.pdf \
 	GrayDiffusion.pdf   \
-	HEDP.pdf \
-	MultiGroup.pdf \
-	NTemperature.pdf \
-	PhotoIonization.pdf
+	HEDP.pdf
 
 clean:
 	rm -f *.log *.aux *~

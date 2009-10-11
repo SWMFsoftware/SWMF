@@ -1,21 +1,22 @@
-\section{Debye-Huekel approximation of electrostatic energy}
+\section{Appendix C: Debye-Huekel approximation of electrostatic energy}
 {\bf The Debye-Huekel approximation} may also be used to account for Coulomb interactions.
 This model considers the coupled free electrons to be distributed according to
 the Boltzmann distribution with respect to the electrostatic field of the corresponding ion.
 
 {\bf Helmholtz free energy.} The extra term in the free energy, which accounts for the
-potential of the Coulomb field created in the point of the given particle location
-by all the particles, except for the given one, is as follows (see Eq.(78.11) in \cite{ll}):
+potential of the Coulomb field created in the location of a given particle
+by all other particles, is as follows (see Eq.(78.11) in \cite{ll}):
 \begin{equation}\label{DH}
 F_{DH}=-\frac{VT}{12\pi R_D^3},\,\,\,\frac1{R_D^2} = \frac{4\pi q_e^2(N_e+\sum_i{i^2N_i})}{VT}.
 \end{equation}
 Accordingly, in Eq.(\ref{equili}) the term $\partial F_{DH}/\partial N_i -\partial F_{DH}/\partial N_{i+1}-\partial F_{DH}/\partial N_e$ will 
-give the contribution of $(i+1)q^2_e/(TR_D)$ to the left hand side. The partition function with the Coulomb interaction, thus becomes:
+contribute $(i+1)q^2_e/(TR_D)$ to the left hand side. The partition function with the Coulomb interaction, thus becomes:
 \begin{equation}\label{pfDH}
 \frac{N_{i}}{g_{i}}=\frac{N_0}{g_0}(g_e)^ie^{\frac{(i^2+i)}{2R_DT}-\frac{\sum_{j=0}^{i-1}I_j}T}.
 \end{equation}
 This may be interpreted as the ionization potential lowering, which results from the Coulomb interaction: each of the potentials, $I_i$, is reduced
-by $(i+1)q_e^2/R_D$. The total reduction in the energy of the ion of sort $i$ is, therefore, $(i^2+i)q_e^2/2R_D$, where the terms proprotional to $i^2$ and $i$ 
+by $(i+1)q_e^2/R_D$. The total reduction in the energy of the ion of charge state $i$ is, therefore, $(i^2+i)q_e^2/2R_D$, where the terms
+proportional to $i^2$ and $i$ 
 stand for ion and electrons electrostatic energy correspondingly. This effect shifts the ionization equilibrium towards higher ionization degrees, for a given 
 temperature and atomic density. 
 
@@ -68,11 +69,11 @@ Z=\langle i\rangle=g_{e1}{\rm Fe}_{1/2}(g_e).
 \end{equation}
 Both the averages and the statistical sum
 should be calculated with the partition functions as in
-Eq.(\ref{pfDH}), which depend not only on $T,g_e$, but also on $R_D$.
-Again, it is easy to check that the partial derivatives of
+Eq.(\ref{pfDH}), which depend not only on $T$ and $g_e$, but also on $R_D$.
+Again, it is easy to check the partial derivatives of
 Eq.(\ref{FDH}) over $g_e$ and over $1/R_D$ to confirm that
  both vanish.
-To simplify further formulas derivation and to make them independent of system of units,
+To simplify further formula derivations and to make them independent of system of units,
 we introduce a dimensionless variable $L$:
 \begin{equation}
 L_{CGS} = \frac{q_e^2}{6 R_D T},\qquad
