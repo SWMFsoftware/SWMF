@@ -137,6 +137,10 @@ subroutine PW_set_parameters(NameAction)
         
         call IO_set_inputs(cTempLines)
         call read_MHDIMF_Indices(iError)
+        ! When reading solar wind data, use the Weimer potential
+        UseWeimer = .true.
+        UseConstantIMF = .false.
+
      case ("#SOLARWIND")
         call read_var('bx',bx)
         call read_var('by',by)
@@ -145,7 +149,10 @@ subroutine PW_set_parameters(NameAction)
         call IO_set_imf_by_single(by)
         call IO_set_imf_bz_single(bz)
         call IO_set_sw_v_single(abs(vx))
-        
+        ! When using fixed solar wind data, use the Weimer potential
+        UseWeimer = .true.
+        UseConstantIMF = .true.
+
      case ("#HPI")
         call read_var('HemisphericPower', HPI)
         call IO_set_hpi_single(HPI)
@@ -171,6 +178,17 @@ subroutine PW_set_parameters(NameAction)
         
         call IO_set_inputs(cTempLines)
         call read_NGDC_Indices(iError)
+
+        ! F107 file                                                            
+        cTempLines(1) = "#NGDC_INDICES"
+        call read_var('NameNgdcFile',cTempLine)
+        cTempLines(2) = cTempLine
+        cTempLines(3) = " "
+        cTempLines(4) = "#END"
+
+        call IO_set_inputs(cTempLines)
+        call read_NGDC_Indices(iError)
+        
         UseIndicies = .true.
     
         if (iError /= 0) then
