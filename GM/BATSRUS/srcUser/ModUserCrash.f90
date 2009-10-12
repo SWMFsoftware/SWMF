@@ -869,6 +869,7 @@ contains
 
   subroutine interpolate_hyades1d(iBlock)
 
+    use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
     use ModSize,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          Erad_, UseElectronEnergy, Ee_
@@ -880,9 +881,10 @@ contains
 
     integer, intent(in) :: iBlock
 
-    integer :: i, j, k, iCell
+    integer :: i, j, k, iCell, iWave
     real :: x, Weight1, Weight2
     real :: Tr, Te, TeSi, PeSi, Ti, Natomic, NatomicSi
+    real :: TrSi, EgSi
     character(len=*), parameter :: NameSub='interpolate_hyades1d'
     !-------------------------------------------------------------------------
     do i = -1, nI+2
@@ -948,11 +950,21 @@ contains
                      ( Weight1*EradHyades_VC(:,iCell-1) &
                      + Weight2*EradHyades_VC(:,iCell) )
              else
-                ! Radiation energy = cRadiation*Trad**4
+                ! Start from hyades radiation temperature
+                ! Total radiation energy = cRadiation*Trad**4
                 Tr = ( Weight1*DataHyades_VC(iTrHyades, iCell-1) &
                      + Weight2*DataHyades_VC(iTrHyades, iCell) )
 
-                State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Tr**4
+                if(nWave ==1)then
+                   State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Tr**4
+                else
+                   TrSi = Tr*No2Si_V(UnitTemperature_)
+                   do iWave = 1, nWave
+                      call get_energy_g_from_temperature(iWave, TrSi,EgSI=EgSi)
+                      State_VGB(WaveFirst_+iWave-1,i,j,k,iBlock) = &
+                           EgSi*Si2No_V(UnitEnergyDens_)
+                   end do
+                end if
              end if
           end if
 
@@ -967,6 +979,7 @@ contains
 
     ! Use Delaunay triangulation to interpolate Hyades grid onto CRASH grid
 
+    use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
     use ModSize,        ONLY: nI, nJ, nK
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          LevelXe_, LevelPl_, Erad_, UseElectronEnergy, Ee_
@@ -985,10 +998,11 @@ contains
     real                       :: LevelHyades_V(0:nMaterial-1)
     real                       :: EradHyades_V(nWave)
 
-    integer :: i, j, k, iNode1, iNode2, iNode3
+    integer :: i, j, k, iNode1, iNode2, iNode3, iWave
     real    :: x, y, z, r, Weight1, Weight2, Weight3
     real    :: WeightNode_I(3), WeightMaterial_I(0:nMaterial-1), Weight
     real    :: Te, TeSi, PeSi, Ti, Natomic, NatomicSi
+    real    :: TrSi, EgSi
 
     integer :: iMaterial, iMaterial_I(1), iMaterialNode_I(3)
 
@@ -1126,9 +1140,19 @@ contains
           if(UseHyadesGroupFile)then
              State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = EradHyades_V
           else
-             ! Radiation energy = cRadiation*Trad**4
-             State_VGB(Erad_,i,j,k,iBlock) = &
-                  cRadiationNo * DataHyades_V(iTrHyades)**4
+             ! Start from hyades radiation temperature
+             ! Total radiation energy = cRadiation*Trad**4
+             if(nWave == 1)then
+                State_VGB(Erad_,i,j,k,iBlock) = &
+                     cRadiationNo * DataHyades_V(iTrHyades)**4
+             else
+                TrSi = DataHyades_V(iTrHyades)*No2Si_V(UnitTemperature_)
+                do iWave = 1, nWave
+                   call get_energy_g_from_temperature(iWave, TrSi, EgSI = EgSi)
+                   State_VGB(WaveFirst_+iWave-1,i,j,k,iBlock) = &
+                        EgSi*Si2No_V(UnitEnergyDens_)
+                end do
+             end if
           end if
        end if
 
@@ -1729,7 +1753,7 @@ contains
     ! total (electron + ion) pressure, and the total specific heat.
 
     use CRASH_ModEos,  ONLY: eos, Xe_, Be_, Plastic_
-    use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature, &
+    use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature, &
          get_temperature_from_energy_g
     use ModMain,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, UseElectronEnergy
@@ -1901,7 +1925,7 @@ contains
 
     if(present(PlanckOut_W) .or. present(CgTeOut_W))then
        do iWave = 1, nWave
-          call get_energy_g_from_temperature( &
+          call get_planck_g_from_temperature( &
                iWave, TeSi, EgSI=PlanckSi, CgSI=CgTeSi)
 
           if(present(PlanckOut_W)) PlanckOut_W(iWave) = PlanckSi

@@ -46,7 +46,7 @@ module CRASH_ModMultiGroup
 
   public:: read_opacity_parameters
   public:: get_energy_g_from_temperature, get_temperature_from_energy_g
-
+  public:: get_planck_g_from_temperature
 
   integer,parameter :: nptspg = 30
 
@@ -134,6 +134,29 @@ contains
     call read_var('DoStateElimination',DoStateElimination)
 
   end subroutine read_opacity_parameters
+  !======================================================================
+  subroutine get_planck_g_from_temperature(iGroup, TeIn, EgSI, CgSI)
+    !\
+    !Input parameters
+    !/
+    integer,intent(in):: iGroup
+    real,   intent(in):: TeIn    ! electron temperature [K]
+
+    !\
+    !Output parameters
+    !/
+    real, optional, intent(out) :: EgSI    !Radiation energy per group, J/m3
+    real, optional, intent(out) :: CgSI    !Radiation specific heat per group, J/(K.m3)
+    real :: xMin, xMax
+    !---------------------------------
+
+    xMin = EnergyGroup_I(iGroup - 1)/(TeIn * cKToEV)
+    xMax = EnergyGroup_I(iGroup    )/(TeIn * cKToEV)
+
+    if(present(EgSI))EgSI = cNormG5*gint(5,xMin,xMax)*(    cRadiation*TeIn**4)
+    if(present(CgSI))CgSI = cNormG6*gint(6,xMin,xMax)*(4.0*cRadiation*TeIn**3)
+
+  end subroutine get_planck_g_from_temperature
   !======================================================================
   subroutine get_energy_g_from_temperature(iGroup, TgSIIn, EgSI, CgSI)
     !\
