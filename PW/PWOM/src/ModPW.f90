@@ -60,6 +60,7 @@ module ModPWOM
   real, allocatable   ::  Dt_I(:)
   logical::  DoMoveLine=.true., UseJr=.true., UseCentrifugal=.true.
   logical::  UseIE=.false.,UseAurora=.false.
+  logical::  UseWeimer = .false., UseConstantIMF = .false.
   logical::  DoPlotElectrodynamics=.false.
   logical::  DoSavePlot=.true.
   character(len=100) :: NamePhiNorth, NamePhiSouth
