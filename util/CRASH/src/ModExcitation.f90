@@ -160,10 +160,10 @@ contains
     real,dimension(0:nExcitation-1,nExcitation,0:nZMax,nMixMax) :: VirialCoeff_IIII = 0.0
     !------------
 
-    if (.not.UseExcitation) then
-       call get_excitation_levels_zero(rIonoSphereInv)
-       return
-    end if
+    if (.not.UseExcitation) return
+ !      call get_excitation_levels_zero(rIonoSphereInv)
+ !      return
+ !   end if
 
     Partition_IIII(     :,:,:,iMix) = 0.0
     DeltaEnergyAv_II(       :,iMix) = 0.0
