@@ -13,7 +13,7 @@ subroutine PW_get_electrodynamics
 
   character (len=100), dimension(100):: Lines_I
   integer :: iError
-  logical,save :: IsFirst = .true., UseWeimer=.false.
+  logical,save :: IsFirst = .true.
   real :: dTheta1, dPhi1
   !---------------------------------------------------------------------------
   
@@ -75,9 +75,9 @@ subroutine PW_get_electrodynamics
   Bcoef          = MagMoment/(rLowerBoundary)**3 
   do iPhi=1,nPhi
      do iTheta=1,nTheta
-        Br_G(iPhi,iTheta)     = -Bcoef*2.0*sin(Theta_G(iPhi,iTheta))
-        Btheta_G(iPhi,iTheta) = Bcoef*cos(Theta_G(iPhi,iTheta))
-     enddo
+        Br_G(iPhi,iTheta)     = -Bcoef*2.0*cos(Theta_G(iPhi,iTheta))
+        Btheta_G(iPhi,iTheta) = -Bcoef*sin(Theta_G(iPhi,iTheta))
+    enddo
   enddo
   
   BmagnitudeSquared_G(1:nPhi,1:nTheta) = &
