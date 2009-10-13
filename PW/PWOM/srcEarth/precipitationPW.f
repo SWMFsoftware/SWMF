@@ -28,7 +28,7 @@ C      DEFINE A CHARACTERISTIC PRECIPITATING ELECTRON FLUX (ERGS/CM2/SEC)
 !             ALF  = get_eAverageE(GMLAT,GMLON)
 !             FLUX = (get_eflux(GMLAT,GMLON)*1.602E9)/(2.*ALF)
 !          else
-       if (UseIE .and. GmLat > 65.0) then
+       if ( (UseIE .and. GmLat > 65.0) .or. (UseIE .and. GmLat < -65.0)) then
           ALF  = max(AveIE,ALF1(1))
           FLUX = max((EfluxIE*1.602E9)/(2.0*ALF),(FLUX1(1)*1.602E9)/(2.*ALF))
        else
