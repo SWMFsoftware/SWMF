@@ -116,8 +116,8 @@ subroutine calc_planet_sources(iBlock)
 
   ! SunOrbitEccentricity = sqrt(2.64236)
   do NW=1,L_NSPECTV
-     !SOL(nw) = SOLARF(NW)/(SunOrbitEccentricity**2)
-     SOL(nw) = SOLARF(NW)/(2.64236)
+     SOL(nw) = SOLARF(NW)/(SunOrbitEccentricity**2)
+     !SOL(nw) = SOLARF(NW)/(2.64236)
   end do
   
   !##############################################################
