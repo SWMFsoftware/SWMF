@@ -238,10 +238,30 @@ c      AP(I)=50.
          AP(7) = AP(7)/24.0
 !     check for errors when reading ap
          if (iError /= 0) then
-            write(*,*) 'PW_ERROR: get_ap failed in get_weimer_potential'
+            write(*,*) 'PW_ERROR: get_ap failed in startupPW_planet'
             call con_stop()
          endif              
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!                     
+!            Update F107 for current time 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!                        
+         call get_f107(CurrentTime, TempF107, iError)
+         F107 = TempF107
+         if(iError /=0) then
+            write(*,*) 'PW_ERROR: get_f107 failed in startupPW_planet'
+            call con_stop()
+         endif
+         
+         call get_f107a(CurrentTime, TempF107a, iError)
+         F107A = TempF107a
+         
+         if(iError /=0) then
+!write(*,*) 'PW_ERROR: get_f107a failed in startupPW_planet'
+            call con_stop()
+         endif
+         
       endif
+        
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC 
 C                                                                      C
       cBoltzmannCGS = 1.0e7*cBoltzmann
