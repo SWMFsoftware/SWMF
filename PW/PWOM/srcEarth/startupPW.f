@@ -305,7 +305,8 @@ C                                                                      C
 C      READ (5,2) ETOP,ELFXIN
 c      ETOP=5.0E-3
 
-      if (UseIE .and. GmLat < 85.0 .and. UseAuroralHeatFlux) then
+      if (UseIE .and. (GmLat < 85.0 .and. GmLat > -85.0)
+     &     .and. UseAuroralHeatFlux) then
          ETOP = max (EfluxIE/EfluxRef * EtopAurora, EtopMin)
       else
          ETOP = EtopMin
