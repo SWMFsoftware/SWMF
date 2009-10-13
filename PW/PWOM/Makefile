@@ -100,8 +100,8 @@ test_check:
 		output/${PLANET}/restart_iline0004.dat \
 		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
-		${TESTDIR}/PW/plots/plots_iline0001.out \
-		output/${PLANET}/plots_iline0001.out \
+		${TESTDIR}/PW/plots/north_plots_iline0001.out \
+		output/${PLANET}/north_plots_iline0001.out \
 		> test_${PLANET}${MYTEST}_plots.diff)
 	ls -l *.diff
 
@@ -126,10 +126,10 @@ test_restart_read:
 	cd ${TESTDIR}/PW; \
 	rm -rf plots_read; mv plots plots_read; mv plots_save plots
 	cd ${TESTDIR}/PW; \
-	cat plots_read/plots_iline0001.out >> plots/plots_iline0001.out;\
-	cat plots_read/plots_iline0002.out >> plots/plots_iline0002.out;\
-	cat plots_read/plots_iline0003.out >> plots/plots_iline0003.out;\
-	cat plots_read/plots_iline0004.out >> plots/plots_iline0004.out
+	cat plots_read/north_plots_iline0001.out >> plots/north_plots_iline0001.out;\
+	cat plots_read/north_plots_iline0002.out >> plots/north_plots_iline0002.out;\
+	cat plots_read/north_plots_iline0003.out >> plots/north_plots_iline0003.out;\
+	cat plots_read/north_plots_iline0004.out >> plots/north_plots_iline0004.out
 
 rundir:
 	mkdir -p ${RUNDIR}/PW
