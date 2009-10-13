@@ -7,7 +7,7 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitU_, rCurrents
   use ModPwGrid
   use ModPhysics, ONLY: rBody
-  use ModNumConst, ONLY: cTwoPi
+  use ModNumConst, ONLY: cTwoPi,cHalfPi
   use ModTriangulate,ONLY:calc_triangulation
   use CON_axes, ONLY: transform_matrix
   use ModCoordTransform, ONLY: dir_to_xyz
@@ -25,8 +25,9 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   logical, save :: DoInitialize = .true.
 
   integer :: i, iLine, iHemisphere
-  real    :: SinThetaOuter, GmPw_DD(3,3), Theta, Phi, XyzPw_D(3), Factor
-
+  real    :: SinThetaOuter, GmPw_DD(3,3), Theta, Phi, XyzPw_D(3), Factor, &
+       SinThetaOuter1,SinThetaOuter2,tmp1_array(nFieldLine),tmp2_array(nFieldLine)
+  integer :: Tmp_array(nFieldLine)
   logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
 
@@ -69,6 +70,16 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
      nLinePw = nFieldLine
      nPoint = nLinePw + nOuterPoint
 
+     Tmp_array = 0
+     where(Buffer_VI(Theta_,:)<cHalfPi)
+        Tmp_array = 1
+     end where
+     nLinePw1 = sum(Tmp_array)
+     nPoint1 = nLinePw1 + nOuterPoint    
+
+     nLinePw2 = nLinePw - nLinePw1
+     nPoint2 = nLinePw2 + nOuterPoint
+
      ! Subtract 2 coords and half of the remaining variables are velocities
      nSpeciesPw = (nVar-2)/2
      ! First 2 variables are coordinates, 
@@ -102,46 +113,92 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
         iUGmFirst   = 2
         iUGmLast    = 2
      end if
-     allocate(StateGm_VI(1:iUGmLast, nPoint))
-     allocate(CoordXyPw_DI(nCoord, nPoint), iNodeTriangle_II(3, 2*nPoint))
 
+     allocate(StateGm1_VI(1:iUGmLast, nPoint), CoordXyPw1_DI(nCoord, nPoint), &
+          iNodeTriangle1_II(3, 2*nPoint1))
+     if(nLinePw2 /=0)then
+        allocate(StateGm2_VI(1:iUGmLast, nPoint), CoordXyPw2_DI(nCoord, nPoint), &
+             iNodeTriangle2_II(3, 2*nPoint2))
+     end if
   end if
 
-  if(nLinePw /= nFieldLine .or. nVarPw /= nVar)then
-     write(*,*)NameSub,' ERROR: nLinePw=',nLinePw,'/= nFieldLine=',nFieldLine,&
+  if(nLinePw1+nLinePw2 /= nFieldLine .or. nVarPw /= nVar)then
+     write(*,*)NameSub,' ERROR: nLinePw=',nLinePw1,'/= nFieldLine=',nFieldLine,&
           ' or nVarPw=',nVarPw,' /= nVar=',nVar
      call CON_stop(NameSub,' nFieldLine or nVar has changed')
   end if
 
   ! Convert to X, Y on a unit sphere (this will be used for triangulation)
-  CoordXyPw_DI(x_,1:nLinePw) =  &
-         sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
-  CoordXyPw_DI(y_,1:nLinePw) =  &
-         sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
+
+  where(Buffer_VI(Theta_,:) > cHalfPi)
+     CoordXyPw2_DI(x_,:) =  &
+          sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
+     CoordXyPw2_DI(y_,:) =  &
+          sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
+  elsewhere
+     CoordXyPw1_DI(x_,:) =  &
+          sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
+     CoordXyPw1_DI(y_,:) =  &
+          sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
+  end where
 
   if(UseMultiIon)then
-     StateGm_VI(iRhoGmFirst:iRhoGmLast, 1:nLinePw) &
-          = Buffer_VI(iRhoPwFirst:iRhoPwLast,:)*Si2No_V(UnitRho_)
-
-     StateGm_VI(iUGmFirst:iUGmLast, 1:nLinePw) &
-          = Buffer_VI(iUPwFirst:iUPwLast,:) * Si2No_V(UnitU_)
+     do i = iRhoGmFirst, iRhoGmLast
+        where(Buffer_VI(Theta_,:)< cHalfPi)
+           StateGm1_VI(i,1:nLinePw1) &
+          = Buffer_VI(i,:)*Si2No_V(UnitRho_)
+        elsewhere
+           StateGm2_VI(i,:) &
+          = Buffer_VI(i,:)*Si2No_V(UnitRho_)
+        end where
+     end do
+     
+     do i = iUGmFirst, iUGmLast
+        where(Buffer_VI(Theta_,:)< cHalfPi)
+           StateGm1_VI(i, 1:nLinePw1) &
+                = Buffer_VI(i, :) * Si2No_V(UnitU_)
+        elsewhere
+           StateGm2_VI(i, :) &
+                = Buffer_VI(i,:) * Si2No_V(UnitU_)
+        end where
+     end do
   else
      ! Set total 
      if(UseMultiSpecies)then
-        StateGm_VI(iRhoGmFirst:iRhoGmLast, 1:nLinePw) &
-             = Buffer_VI(iRhoPwFirst:iRhoPwLast,:) * Si2No_V(UnitRho_)
+        do i=iRhoGmFirst, iRhoGmLast
+           where(Buffer_VI(Theta_,:)< cHalfPi)
+              StateGm1_VI(i, 1:nLinePw1) &
+                   = Buffer_VI(i,:) * Si2No_V(UnitRho_)
+           elsewhere
+              StateGm2_VI(i, :) &
+                   = Buffer_VI(i,:) * Si2No_V(UnitRho_)
+           end where
+        end do
      else
         ! Total density in normalized units
-        StateGm_VI(iRhoGmFirst, 1:nLinePw) &
-             = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:),dim=1) * Si2No_V(UnitRho_)
+        where(Buffer_VI(Theta_,:)< cHalfPi)
+           StateGm1_VI(iRhoGmFirst, 1:nLinePw1) &
+                = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:),dim=1) * Si2No_V(UnitRho_)
+        elsewhere
+           StateGm2_VI(iRhoGmFirst, :) &
+                = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:),dim=1) * Si2No_V(UnitRho_)
+        end where
      end if
 
      ! Field aligned velocity = total moment/total density
-     StateGm_VI(iUGmFirst,1:nLinePw) &
-          = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
-          *     Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
-          / sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:), dim=1) &
-          * Si2No_V(UnitU_) 
+      where(Buffer_VI(Theta_,:)< cHalfPi)
+         StateGm1_VI(iUGmFirst,1:nLinePw1) &
+              = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
+              *     Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
+              / sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:), dim=1) &
+              * Si2No_V(UnitU_) 
+      elsewhere
+         StateGm2_VI(iUGmFirst,:)&
+              = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
+              *     Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
+              / sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:), dim=1) &
+              * Si2No_V(UnitU_)
+      end where
   end if
 
   ! Reduce densities according to a 1/r3 law based on magnetic field strength
@@ -151,28 +208,54 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   !     StateGm_VI(iRhoGmFirst:iRhoGmLast,1:nLinePw)*Factor
 
   ! Set coordinates for the outer points
-  SinThetaOuter = sin(maxval(Buffer_VI(Theta_,:)+dThetaOuter))
+  tmp1_array = cTwoPi
+  where(Buffer_VI(Theta_,:)>cHalfPi)
+     tmp1_array = Buffer_VI(Theta_,:)
+  end where
+  SinThetaOuter2 = sin(minval(tmp1_array)-dThetaOuter)
+
+  tmp1_array = 0.0
+  where(Buffer_VI(Theta_,:)<cHalfPi)
+     tmp1_array = Buffer_VI(Theta_,:)
+  end where  
+  SinThetaOuter1 = sin(maxval(tmp1_array)+dThetaOuter)
 
   do i = 1, nOuterPoint
-     CoordXyPw_DI(x_,nLinePw+i) = SinThetaOuter * cos(i*cTwoPi/nOuterPoint)
-     CoordXyPw_DI(y_,nLinePw+i) = SinThetaOuter * sin(i*cTwoPi/nOuterPoint)
+     CoordXyPw1_DI(x_,nLinePw1+i) = &
+          SinThetaOuter1 * cos(i*cTwoPi/nOuterPoint)
+     CoordXyPw1_DI(y_,nLinePw1+i) = &
+          SinThetaOuter1 * sin(i*cTwoPi/nOuterPoint)
+
+     if(nLinePw2 /=0)then
+        CoordXyPw2_DI(x_,nLinePw1+nLinePw2+i) = &
+             SinThetaOuter2 * cos(i*cTwoPi/nOuterPoint)
+        CoordXyPw2_DI(y_,nLinePw1+nLinePw2+i) = &
+             SinThetaOuter2 * sin(i*cTwoPi/nOuterPoint)
+     end if
   end do
 
-  call calc_triangulation(nPoint, CoordXyPw_DI, iNodeTriangle_II, nTriangle)
+  call calc_triangulation(nPoint1, CoordXyPw1_DI(:,1:nPoint1), &
+       iNodeTriangle1_II, nTriangle1)
+  
+  if(nLinePw2 /=0)then
+     call calc_triangulation(nPoint2, CoordXyPw2_DI(:,nLinePw1+1:nLinePw1+nPoint2),&
+          iNodeTriangle2_II, nTriangle2)
+  end if
 
   if(DoTestMe)then
      write(*,*)NameSub,': nVarPw, nLinePw, nSpeciesPw=',&
-          nVarPw, nLinePw, nSpeciesPw
-     write(*,*)NameSub,': nPoint, nTriangle=',nPoint, nTriangle
+          nVarPw, nLinePw2, nSpeciesPw
+     write(*,*)NameSub,': nPoint2, nTriangle2=',nPoint2, nTriangle2
      write(*,*)NameSub,': CoordXyPw_DI'
-     do i=1,nPoint
-        write(*,*) i, CoordXyPw_DI(:,i)
+     do i=nLinePw1+1,nLinePw1+nPoint2
+        write(*,*) i, CoordXyPw2_DI(:,i)
      end do
-     write(*,*)NameSub,': iNodeTriangle_II'
-     do i=1,nTriangle
-        write(*,*) i, iNodeTriangle_II(:,i)
+     do i=1,nPoint1
+        write(*,*) i, CoordXyPw1_DI(:,i)
      end do
   end if
+
+
 
 end subroutine GM_put_from_pw
 
@@ -220,17 +303,31 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   if(DoInitialize)then
      DoInitialize = .false.
      ! Fill in outer points with body values coming in via State_V
-     do iPoint=nLinePw+1, nPoint
-        StateGm_VI(iUGmFirst:iUGmLast, iPoint) = 0.0
+     do iPoint=nLinePw1+1, nPoint1
+        StateGm1_VI(iUGmFirst:iUGmLast, iPoint) = 0.0
         if(UseMultiSpecies)then
-           StateGm_VI(iRhoGmFirst:iRhoGmLast, iPoint) = &
+           StateGm1_VI(iRhoGmFirst:iRhoGmLast, iPoint) = &
                 State_V(SpeciesFirst_:SpeciesLast_)
         elseif(UseMultiIon)then
-           StateGm_VI(iRhoGmFirst:iRhoGmLast, iPoint) = State_V(iRhoIon_I)
+           StateGm1_VI(iRhoGmFirst:iRhoGmLast, iPoint) = State_V(iRhoIon_I)
         else
-           StateGm_VI(iRhoGmFirst, iPoint) = State_V(Rho_)
+           StateGm1_VI(iRhoGmFirst, iPoint) = State_V(Rho_)
         end if
      end do
+     
+      if (nLinePw2 /=0) then                                                                                            
+        do iPoint=nLinePw2+1, nPoint2
+            StateGm2_VI(iUGmFirst:iUGmLast, nLinePw1+iPoint) = 0.0
+            if(UseMultiSpecies)then
+               StateGm2_VI(iRhoGmFirst:iRhoGmLast, nLinePw1+iPoint) = &
+                    State_V(SpeciesFirst_:SpeciesLast_)
+            elseif(UseMultiIon)then
+               StateGm2_VI(iRhoGmFirst:iRhoGmLast, nLinePw1+iPoint) = State_V(iRhoIon_I)
+            else
+               StateGm2_VI(iRhoGmFirst, nLinePw1+iPoint) = State_V(Rho_)
+            end if
+        end do
+     end if
 
      NamePwCoord = Grid_C(PW_) % TypeCoord
   end if
@@ -258,11 +355,17 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   !Find triangle containing point Xy_D
 
-  call find_triangle(&
-       nPoint, nTriangle, Xy_D, CoordXyPw_DI, &
-       iNodeTriangle_II(:,1:nTriangle), &
-       iNode1, iNode2, iNode3, Area1, Area2, Area3, IsTriangleFound)
-
+  if(Xyz_D(3) < 0..and. nLinePw2 /=0)then
+     call find_triangle(&
+          nPoint2, nTriangle2, Xy_D, CoordXyPw2_DI(:,nLinePw1+1:nLinePw1+nPoint2), &
+          iNodeTriangle2_II(:,1:nTriangle2), &
+          iNode1, iNode2, iNode3, Area1, Area2, Area3, IsTriangleFound)
+  else
+     call find_triangle(&
+          nPoint1, nTriangle1, Xy_D, CoordXyPw1_DI(:,1:nPoint1), &
+          iNodeTriangle1_II(:,1:nTriangle1), &
+          iNode1, iNode2, iNode3, Area1, Area2, Area3, IsTriangleFound)
+  end if
   ! Point is not covered: leave the input state variables alone
   if (.not.IsTriangleFound) RETURN
 
@@ -272,6 +375,15 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   ! Make sure unit vector is pointing outward
   if(sum(B0_D*CoordIn_D) < 0.)B0_D = -B0_D
+
+  ! Put into a temporary array StateGm_VI                                                                            
+  if(Xyz_D(3) < 0 .and. nLinePw2 /=0) then
+     allocate(StateGm_VI(1:iUGmLast, nPoint2))
+     StateGm_VI = StateGm2_VI(:,nLinePw1+1:nLinePw1+nPoint2)
+  else
+     allocate(StateGm_VI(1:iUGmLast, nPoint1))
+     StateGm_VI = StateGm1_VI(:,1:nPoint1)
+  end if
 
   ! interpolate values
   if(UseMultiIon)then
@@ -315,6 +427,8 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
           Area1*StateGm_VI(iUGmFirst, iNode1) + &
           Area2*StateGm_VI(iUGmFirst, iNode2) + &
           Area3*StateGm_VI(iUGmFirst, iNode3))
+
+     deallocate(StateGm_VI)
 
   end if
   if(DoTestMe)then
