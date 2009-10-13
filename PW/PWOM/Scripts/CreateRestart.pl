@@ -62,18 +62,45 @@ for $iFile (0..($nLine-1)){
     close FILE;
 }
 
+# Do Southern Hemisphere
+$Lat = -90.0;
+$Lon = 0.0;
+$i   = 0;
+for my $iCircle (1..$nCircle){
+    $Lat=$Lat+$dLat;
+    my $dLon = 360.0/($iCircle * 6.0);
+    for my $iPoint (0..($iCircle * 6.0-1.0)){
+	$Lon = $iPoint*$dLon;
+	$LatLon[$i] = "$Lat $Lon\n";
+	$i++;
+    }
+}
+for $iFile (0..($nLine-1)){
+    my $iFileString = "0" x (4 - length($iFile+1+$nLine)) . ($iFile+1+$nLine);
+    $File = $InputFile1;
+    $File =~ s/0001/$iFileString/
+	or die "First input file name $InputFile1 does not contain 0001!\n";
+
+    print "File = $File\n";
+
+    open(FILE, ">$File")
+	or die "Could not open file $File for writing!\n";
+    $Lines[1] = $LatLon[$iFile];
+    print FILE @Lines;
+    close FILE;
+}
 exit;
 
 #############################################################################
 
 sub print_help{
-    print "
+    die("
 Usage: CreateRestart.pl nCircle
 
 Where nCircle is the number of circles of points filling the space between 
 90 and 50 degrees latitude. nCircle default and minimum is 6. 
 The points are chosen to ensure uniform layout. The total number of lines 
-can be determined from nCircles according to:
+per hemisphere can be determined from nCircles according to:
 
 3*nCircle(1+nCircle)
  
@@ -82,5 +109,6 @@ restart_iline0001.out
 
 where the Latitude Longitude (degrees) pairs define the footpoint 
 for the field lines.
-"
+");
+
 }
