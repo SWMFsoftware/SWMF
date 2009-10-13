@@ -95,19 +95,6 @@ subroutine PW_initialize
           'PW/restartIN/restart_iline',iLineGlobal(iLine),'.dat'
      write(NameRestart(iLine),"(a,i4.4,a)") &
           'PW/restartOUT/restart_iline',iLineGlobal(iLine),'.dat'
-
-  ! The output plot files
-     if(ThetaLine_I(iLine) <= 90 * cDegToRad)then
-        write(NameGraphics(iLine),"(a,i4.4,a)") &
-             'PW/plots/north_plots_iline',iLineGlobal(iLine),'.out'
-     else
-        write(NameGraphics(iLine),"(a,i4.4,a)") &
-             'PW/plots/south_plots_iline',iLineGlobal(iLine),'.out'
-     endif
-     
-     open(UnitTmp_,FILE=NameGraphics(iLine),STATUS='replace')
-     close(UnitTmp_)
-
      
      !Setup log files
      if (nLog == -1) then
@@ -144,6 +131,20 @@ subroutine PW_initialize
   endif
   
   CurrentTime=StartTime+Time
+  
+  ! Set the output plot files
+  do iLine =1, nLine
+     if(ThetaLine_I(iLine) <= 90 * cDegToRad)then
+        write(NameGraphics(iLine),"(a,i4.4,a)") &
+             'PW/plots/north_plots_iline',iLineGlobal(iLine),'.out'
+     else
+        write(NameGraphics(iLine),"(a,i4.4,a)") &
+             'PW/plots/south_plots_iline',iLineGlobal(iLine),'.out'
+     endif
+     
+     open(UnitTmp_,FILE=NameGraphics(iLine),STATUS='replace')
+     close(UnitTmp_)
+  enddo
   !****************************************************************************
   ! Set vertical field-line grid
   !****************************************************************************
