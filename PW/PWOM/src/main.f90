@@ -4,6 +4,7 @@ program pw
   use ModFieldLine
   use ModMpi
   use ModReadParam
+  use CON_planet, ONLY: init_planet_const, set_planet_defaults
   implicit none
 
   !****************************************************************************
@@ -28,6 +29,13 @@ program pw
 
   call PW_set_parameters('READ')
   ! call PW_set_parameters('CHECK')
+
+  !\
+  ! Initialize the planetary constant library and set Earth
+  ! as the default planet.
+  !/
+  call init_planet_const
+  call set_planet_defaults
 
   call PW_initialize
 
