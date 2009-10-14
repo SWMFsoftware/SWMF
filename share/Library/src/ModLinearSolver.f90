@@ -798,6 +798,9 @@ contains
        if(UsePDotADotP)then
           call MPI_ALLREDUCE(pDotADotPPe, pDotADotP, 1, MPI_REAL, MPI_SUM, &
                iComm, iError)
+          UsePDotADotP = .false.
+          if(DoTest)write(*,*)'Use pDotADotP=', pDotADotP,&
+               '  instead of mpi_dot_product ', dot_product_mpi(Vec_I, aDotVec_I, iComm)
           Beta = 1.0/pDotADotP
        else
           
