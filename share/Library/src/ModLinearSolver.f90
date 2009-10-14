@@ -56,6 +56,11 @@ module ModLinearSolver
   public :: implicit_solver ! implicit solver in 1D with 3 point stencil
   public :: test_linear_solver
 
+  !To accurately calculate the quadratic form p\cdot A \cdot p used in conjugated gradients
+  real,public    :: pDotADotPPe = 0.0  
+  logical,public :: UsePDotADotP = .false.
+
+
   ! Use an effectively 16byte real accuracy for global sums
   logical, public:: UseAccurateSum = .true.
 
@@ -786,10 +791,18 @@ contains
           Vec_I = Vec_I + Alpha * Rhs_I
        end if
 
+       UsePDotADotP = .false.
+
        call matvec(Vec_I, aDotVec_I, n)
 
-       Beta = 1.0/dot_product_mpi(Vec_I, aDotVec_I, iComm)
-
+       if(UsePDotADotP)then
+          call MPI_ALLREDUCE(pDotADotPPe, pDotADotP, 1, MPI_REAL, MPI_SUM, &
+               iComm, iError)
+          Beta = 1.0/pDotADotP
+       else
+          
+          Beta = 1.0/dot_product_mpi(Vec_I, aDotVec_I, iComm)
+       end if
        Rhs_I = Rhs_I - Beta * aDotVec_I
        Sol_I = Sol_I + Beta * Vec_I
 

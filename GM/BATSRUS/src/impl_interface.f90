@@ -273,6 +273,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModProcMH, ONLY: iProc
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
        TypeSemiImplicit
+  use ModLinearSolver, ONLY: UsePDotADotP
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModRadDiffusion, ONLY: get_rad_diffusion_rhs
@@ -317,6 +318,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
+        UsePDotADotP = .false.
         call get_rad_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
              Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
      case('parcond')
@@ -348,6 +350,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
+  use ModLinearSolver, ONLY: UsePDotADotP, pDotADotPPe
 
   implicit none
 
@@ -389,6 +392,8 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
           //TypeSemiImplicit)
   end select
 
+  pDotADotPPe = 0.0
+
   n=0
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
@@ -397,6 +402,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
+        UsePDotADotP = .true.
         call get_rad_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
              Rhs_VC, IsLinear = .true.)
      case('parcond')
@@ -412,11 +418,14 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
         do iVar = 1, nw
            n = n + 1
            y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVar,i,j,k,iImplBlock)/dt &
-                - ImplCoeff*Rhs_VC(iVar,i,j,k))
+                - ImplCoeff * Rhs_VC(iVar,i,j,k))
+           pDotADotPPe = pDotADotPPe +  &
+                Volume * x_I(n)**2 * DconsDsemi_VCB(iVar,i,j,k,iImplBlock)/(dt * ImplCoeff)
         enddo
      enddo; enddo; enddo
 
   end do
+  pDotADotPPe = pDotADotPPe * ImplCoeff
 
 end subroutine get_semi_impl_matvec
 !==============================================================================
