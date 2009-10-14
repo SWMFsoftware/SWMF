@@ -213,7 +213,8 @@ contains
       character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
 
       ! Variable to pass is potential on the 2D IE grid
-      real, dimension(:,:), allocatable :: Potential_II
+      real, dimension(:,:),  allocatable :: Potential_II
+      real, dimension(:,:,:),allocatable :: Buffer_IIV
 
       ! MPI status variable
       integer :: iStatus_I(MPI_STATUS_SIZE)
@@ -230,9 +231,12 @@ contains
 
       ! Allocate buffers both on IM and IE root processors
       allocate(Potential_II(nTheta,nPhi), stat=iError)
+      allocate(Buffer_IIV(nTheta,nPhi,2), stat=iError)
 
-      if(is_proc0(IE_))  &
-           call IE_get_for_gm(Potential_II, nTheta, nPhi, tSimulation)
+      if(is_proc0(IE_)) then
+         call IE_get_for_gm(Buffer_IIV, nTheta, nPhi, tSimulation)
+         Potential_II = Buffer_IIV(:,:,1) ! IM wants only potential.
+      end if
 
       ! Transfer variables from IE to IM
       if(iProc0Ie /= iProc0Im)then
@@ -251,6 +255,7 @@ contains
 
       ! Deallocate buffer to save memory
       deallocate(Potential_II)
+      deallocate(Buffer_IIV)
 
       if(DoTest)write(*,*)NameSubSub,' finished, iProc=',i_proc()
 
