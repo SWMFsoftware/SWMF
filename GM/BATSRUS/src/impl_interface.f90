@@ -343,7 +343,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   ! Calculate y_I = A.x_I where A is the linearized sem-implicit operator
 
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
-       TypeSemiImplicit, ImplCoeff, DconsDsemi_VCB !!!, wnrm
+       TypeSemiImplicit, ImplCoeff, DconsDsemi_VCB, KrylovType !!!, wnrm
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModRadDiffusion, ONLY: get_rad_diffusion_rhs
@@ -382,6 +382,13 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   ! Message pass to fill in ghost cells 
   select case(TypeSemiImplicit)
   case('radiation', 'radcond', 'cond')
+
+     !\
+     ! Initialize the computation of (p \cdot A \cdot P) form
+     UsePDotADotP = KrylovType == 'CG'
+
+     pDotADotPPe = 0.0
+
      call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
           ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB,restrictface=.true.)
   case('parcond')
@@ -392,7 +399,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
           //TypeSemiImplicit)
   end select
 
-  pDotADotPPe = 0.0
+
 
   n=0
   do iImplBlock = 1, nImplBLK
@@ -402,7 +409,6 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        UsePDotADotP = .true.
         call get_rad_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
              Rhs_VC, IsLinear = .true.)
      case('parcond')
@@ -425,8 +431,11 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
      enddo; enddo; enddo
 
   end do
-  pDotADotPPe = pDotADotPPe * ImplCoeff
-
+  if (UsePDotADotP)then
+     pDotADotPPe = pDotADotPPe * ImplCoeff
+  else
+     pDotADotPPe = 0.0
+  end if
 end subroutine get_semi_impl_matvec
 !==============================================================================
 subroutine get_semi_impl_jacobian

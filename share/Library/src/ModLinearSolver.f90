@@ -795,17 +795,16 @@ contains
 
        call matvec(Vec_I, aDotVec_I, n)
 
+       pDotADotP = dot_product_mpi(Vec_I, aDotVec_I, iComm)
        if(UsePDotADotP)then
+          if(DoTest)write(*,*)'The Vakue of pDotADotP=', pDotADotP
           call MPI_ALLREDUCE(pDotADotPPe, pDotADotP, 1, MPI_REAL, MPI_SUM, &
                iComm, iError)
+          if(DoTest)write(*,*)'...is overwritten with ', pDotADotP
           UsePDotADotP = .false.
-          if(DoTest)write(*,*)'Use pDotADotP=', pDotADotP,&
-               '  instead of mpi_dot_product ', dot_product_mpi(Vec_I, aDotVec_I, iComm)
-          Beta = 1.0/pDotADotP
-       else
-          
-          Beta = 1.0/dot_product_mpi(Vec_I, aDotVec_I, iComm)
        end if
+       Beta = 1.0/pDotADotP
+      
        Rhs_I = Rhs_I - Beta * aDotVec_I
        Sol_I = Sol_I + Beta * Vec_I
 
