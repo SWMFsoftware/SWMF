@@ -1189,9 +1189,7 @@ contains
 
     real :: Te, EnergyExchange
     integer :: i, j, k, iDiff, iRelax, iPoint, iVar
-    real    :: Coef_FX(1:nI+1,1:nJ,1:nK)
-    real    :: Coef_FY(1:nI,1:nJ+1,1:nK)
-    real    :: Coef_FZ(1:nI,1:nJ,1:nK+1)
+   
     character(len=*), parameter :: NameSub='get_rad_diffusion_rhs'
     !--------------------------------------------------------------------------
 
@@ -1202,17 +1200,7 @@ contains
 
     if(.not.UsePDotADotP)pDotADotPPe = 0.0
     
-    Coef_FX = 0.50
-    if(NeiLev(1,iBlock)==NOBLK)Coef_FX(1   ,:,:) = 1.0
-    if(NeiLev(2,iBlock)==NOBLK)Coef_FX(nI+1,:,:) = 1.0
-
-    Coef_FY = 0.50
-    if(NeiLev(3,iBlock)==NOBLK)Coef_FY(:,1   ,:) = 1.0
-    if(NeiLev(4,iBlock)==NOBLK)Coef_FY(:,nJ+1,:) = 1.0
-
-    Coef_FZ = 0.50
-    if(NeiLev(5,iBlock)==NOBLK)Coef_FZ(:,:,1   ) = 1.0
-    if(NeiLev(6,iBlock)==NOBLK)Coef_FZ(:,:,nK+1) = 1.0
+   
     if(TypeGeometry /= 'rz')then
        if(NeiLev(5,iBlock)==1) call correct_left_ghostcell(3,1,nI,1,nJ,0,0)
        if(NeiLev(6,iBlock)==1) &
@@ -1241,23 +1229,19 @@ contains
                   (   StateImpl_VG(iVar,i,j  ,k)   &
                   -   StateImpl_VG(iVar,i,j-1,k)) )
 
-             pDotADotPPe = pDotADotPPe  &
-                  + DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)* &
-                  Coef_FX(i+1,j,k) *&
+             pDotADotPPe = pDotADotPPe  + 0.5 *(&
+                    DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)* &
                   (   StateImpl_VG(iVar,i+1,j,k)   &
                   -   StateImpl_VG(iVar,i  ,j,k))**2  &
                   + DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
-                  Coef_FX(i  ,j,k) *&
                   (   StateImpl_VG(iVar,i  ,j,k)   &
                   -   StateImpl_VG(iVar,i-1,j,k))**2  &
                   + DiffCoef_VFDB(iDiff,i,j+1,k,2,iBlock)* &
-                  Coef_FY(i,j+1,k) *&
                   (   StateImpl_VG(iVar,i,j+1,k)   &
                   -   StateImpl_VG(iVar,i,j  ,k))**2  &
                   + DiffCoef_VFDB(iDiff,i,j  ,k,2,iBlock)* &
-                  Coef_FY(i,j  ,k) *&
                   (   StateImpl_VG(iVar,i,j  ,k)   &
-                  -   StateImpl_VG(iVar,i,j-1,k))**2 
+                  -   StateImpl_VG(iVar,i,j-1,k))**2 )
           end do
        end do; end do; end do
     else
@@ -1285,36 +1269,103 @@ contains
                   (   StateImpl_VG(iVar,i,j,k  )   &
                   -   StateImpl_VG(iVar,i,j,k-1)) )
 
-             pDotADotPPe = pDotADotPPe &
-                  + DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)*   &
-                  Coef_FX(i+1,j,k) *&
+             pDotADotPPe = pDotADotPPe + 0.5 *(&
+                    DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)*   &
                   (   StateImpl_VG(iVar,i+1,j,k)   &
                   -   StateImpl_VG(iVar,i  ,j,k))**2  &
                   + DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
-                  Coef_FX(i  ,j,k) *&
                   (   StateImpl_VG(iVar,i  ,j,k)   &
                   -   StateImpl_VG(iVar,i-1,j,k))**2  &
                   + DiffCoef_VFDB(iDiff,i,j+1,k,2,iBlock)* &
-                  Coef_FY(i,j+1,k) *&
                   (   StateImpl_VG(iVar,i,j+1,k)   &
                   -   StateImpl_VG(iVar,i,j  ,k))**2  &
                   + DiffCoef_VFDB(iDiff,i,j  ,k,2,iBlock)* &
-                  Coef_FY(i,j  ,k) *&
                   (   StateImpl_VG(iVar,i,j  ,k)   &
                   -   StateImpl_VG(iVar,i,j-1,k))**2  &
                   + DiffCoef_VFDB(iDiff,i,j,k+1,3,iBlock)* &
-                  Coef_FZ(i,j,k+1) *&
                   (   StateImpl_VG(iVar,i,j,k+1)   &
                   -   StateImpl_VG(iVar,i,j,k  ))**2  &
                   + DiffCoef_VFDB(iDiff,i,j,k  ,3,iBlock)* &
-                  Coef_FZ(i,j,k  ) *&
                   (   StateImpl_VG(iVar,i,j,k  )   &
-                  -   StateImpl_VG(iVar,i,j,k-1))**2 
-
+                  -   StateImpl_VG(iVar,i,j,k-1))**2 )
           end do
        end do; end do; end do
 
+       !\
+       ! Correct the contributions to the quadratic form 
+       ! from the boundary faces
+       !/
+       if(NeiLev(5,iBlock)==NOBLK)then
+          k = 1
+          do j=1,nJ; do i=1,nI;  do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             pDotADotPPe = pDotADotPPe + 0.5 *&
+                  DiffCoef_VFDB(iDiff,i,j,k  ,3,iBlock)* &
+                  (   StateImpl_VG(iVar,i,j,k  )**2  &
+                  -   StateImpl_VG(iVar,i,j,k-1)**2)
+          end do;end do; end do
+       end if
+  
+       if(NeiLev(6,iBlock)==NOBLK)then
+          k = nK
+          do j=1,nJ; do i=1,nI;  do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             pDotADotPPe = pDotADotPPe + 0.5 *&
+                  DiffCoef_VFDB(iDiff,i,j,k+1,3,iBlock)* &
+                  (  - StateImpl_VG(iVar,i,j,k+1)**2   &
+                  +   StateImpl_VG(iVar,i,j,k  )**2  )
+
+          end do;end do; end do  
+       end if
+       
     end if
+    if(NeiLev(1,iBlock)==NOBLK)then
+       i = 1
+       do k = 1, nK; do j = 1, nJ; do iDiff = 1, nDiff
+          iVar = iDiff_I(iDiff)
+          pDotADotPPe = pDotADotPPe + 0.5 *&
+               DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
+               (   StateImpl_VG(iVar,i  ,j,k)**2   &
+               -   StateImpl_VG(iVar,i-1,j,k)**2 )
+       end do;end do; end do  
+       
+    end if
+    if(NeiLev(2,iBlock)==NOBLK)then
+       i = nI
+       do k = 1, nK; do j = 1, nJ; do iDiff = 1, nDiff
+          iVar = iDiff_I(iDiff)
+          pDotADotPPe = pDotADotPPe + 0.5 *&
+               DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)*   &
+               ( - StateImpl_VG(iVar,i+1,j,k)**2   &
+               +   StateImpl_VG(iVar,i  ,j,k)**2 ) 
+       end do;end do; end do  
+    end if
+
+  
+    if(NeiLev(3,iBlock)==NOBLK)then
+       j = 1
+       do k = 1, nK; do i = 1, nI; do iDiff = 1, nDiff
+          iVar = iDiff_I(iDiff)
+          pDotADotPPe = pDotADotPPe + 0.5 *&
+               DiffCoef_VFDB(iDiff,i,j  ,k,2,iBlock)* &
+               (   StateImpl_VG(iVar,i,j  ,k)**2   &
+               -   StateImpl_VG(iVar,i,j-1,k)**2 ) 
+       end do;end do; end do  
+    end if
+
+    if(NeiLev(4,iBlock)==NOBLK)then
+       j = nJ
+       do k = 1, nK; do i = 1, nI; do iDiff = 1, nDiff
+          iVar = iDiff_I(iDiff)
+          pDotADotPPe = pDotADotPPe + 0.5 *&
+               DiffCoef_VFDB(iDiff,i,j+1,k,2,iBlock)* &
+               ( - StateImpl_VG(iVar,i,j+1,k)**2   &
+               +   StateImpl_VG(iVar,i,j  ,k)**2 )
+       end do;end do; end do 
+
+    end if
+
+
 
     ! Source terms due to energy exchange
     if(nRelax > 0)then
@@ -1349,6 +1400,11 @@ contains
                 Rhs_VC(iVar,i,j,k) = Rhs_VC(iVar,i,j,k) &
                      - PointCoef_VCB(iPoint,i,j,k,iBlock) &
                      *StateImpl_VG(iVar,i,j,k)
+
+                pDotADotPPe = pDotADotPPe + &
+                     PointCoef_VCB(iPoint,i,j,k,iBlock) &
+                     *StateImpl_VG(iVar,i,j,k)**2 &
+                     /vInv_CB(i,j,k,iBlock)
              end do
           end do; end do; end do
        else
