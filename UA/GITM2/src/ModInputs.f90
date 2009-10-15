@@ -214,6 +214,17 @@ module ModInputs
 ! and where radcool begins
   real, parameter :: PLONG = 4.0E-1
 
+! Ls Variables
+	  real, dimension(7) :: Ls_a
+	  real, dimension(7) :: Ls_tau
+	  real, dimension(7) :: Ls_phi
+	  
+	  DATA Ls_a / 0.007, 0.006, 0.004, 0.004, 0.002, 0.002, 0.002 /
+	  DATA Ls_tau / 2.2353, 2.7543, 1.1177, 15.7866, 2.1354, &
+	             2.4694, 32.8493 /
+	  DATA Ls_phi / 49.409, 168.173, 191.837, 21.736, 15.704, &
+				 95.528, 49.095 /
+
 contains
 
   ! -------------------------------------------------------------
