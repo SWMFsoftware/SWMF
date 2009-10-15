@@ -94,6 +94,30 @@ ABS_for_Darwin:
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
 
+opacity.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+
+OPAC:  DEPEND 
+	make OPAC.exe
+	OPAC.exe
+	tar -czvf opacities.tgz Xe_*.dat Be_*.dat Pl_*.dat
+	rm -f Xe_*.dat Be_*.dat Pl_*.dat
+
+OPAC.exe: opacity.o
+	@(if [ ${OS} = "Darwin" ];         then make OPAC_for_Darwin; \
+	else                                    make OPAC_general; fi)
+
+OPAC_general:
+	${LINK.f90} -o OPAC.exe opacity.o \
+		-L${LIBDIR} -lCRASH  -lSHARE -lTIMING \
+		${Lflag1}
+
+OPAC_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_ ;
+	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
+	${LINK.f90} -o OPAC.exe opacity.o Tmp_/*.o \
+		${Lflag1}    ; 
+	rm -rf Tmp_ 
+
 
 test_godunov.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
