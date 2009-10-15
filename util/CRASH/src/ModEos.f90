@@ -98,11 +98,18 @@ module CRASH_ModEos
   ! test material with the EOS e \propto T^4, p \propto T^4
   integer, parameter:: Test_ = 90 
   integer, parameter :: nZ_I(Xe_:Au_)=(/54, 4, 6, 79 /)
+
+  real, parameter, dimension(Xe_:Au_),public :: cAtomicMassCRASH_I=&
+       (/cAtomicMass_I(54),   &!  Xe
+         cAtomicMass_I(4),    &!  Be
+         cAPolyimide,         &!  Pl
+         cAtomicMass_I(79)     /)
+  character(LEN=*),parameter,public,dimension(Xe_:Au_)::&
+       NameMaterial_I = (/'Xe','Be','Pl','Au'/)
   
   !For better efficiency the if statments to treat gold are commented
   !out in ModExcitationData
 
-  ! integer, parameter:: C_=3, H_=4, N_=5, O_=6 !Composition elements
 
 contains
 
