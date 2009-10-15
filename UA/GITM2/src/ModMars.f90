@@ -177,6 +177,8 @@ module ModPlanet
        integer, PARAMETER :: LL_NLAYRAD  = LL_LAYERS+1   
        integer, PARAMETER :: LL_NLEVRAD  = LL_LAYERS+2
 
+!      Ls variable
+       real :: ell_s
 !C======================================================================C
 !C
 !C     RADINC.H    RADiation INCludes
