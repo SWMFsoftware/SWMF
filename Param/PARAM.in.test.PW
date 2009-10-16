@@ -22,9 +22,6 @@ T                       DoSaveRestart
 0			iSecond
 0.0			FracSecond
 
-#ROTATION
-F			UseRotation
-
 #BEGIN_COMP PW #############################################################
 
 #ROTATION
