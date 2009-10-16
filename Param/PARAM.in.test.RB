@@ -124,9 +124,10 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
+Avoid exactly zero By so that ray tracing is more reproducible
 #UPSTREAM_INPUT_FILE
-T                                                     UseUpstreamInputFile
-GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat   NameUpstreamFile
+T                                                          UseUpstreamInputFile
+GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT_tilt.dat   NameUpstreamFile
 
 #SCHEME
 2			nOrder
