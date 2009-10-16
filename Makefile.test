@@ -87,8 +87,8 @@ test_pw_run:
 
 test_pw_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
-		${TESTDIR}/PW/plots/plots_iline0001.out \
-		${PWDIR}/output/Earth/plots_iline0001.out \
+		${TESTDIR}/PW/plots/north_plots_iline0001.out \
+		${PWDIR}/output/Earth/north_plots_iline0001.out \
 		> test_pw.diff)
 	ls -ltr test_pw*.diff
 
