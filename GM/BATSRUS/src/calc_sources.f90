@@ -5,7 +5,7 @@ subroutine calc_sources
   use ModMain
   use ModVarIndexes
   use ModGeometry,      ONLY: dx_BLK, dy_BLK, dz_BLK, R_BLK,&
-       body_BLK, Rmin_BLK, vInv_CB, TypeGeometry, y_BLK
+       body_BLK, Rmin_BLK, vInv_CB, TypeGeometry, y_BLK, true_cell
   use ModGeometry,      ONLY: R2_BLK                   !^CFG IF SECONDBODY
   use ModAdvance
   use ModParallel,      ONLY: NOBLK, neiLEV, &
@@ -33,7 +33,7 @@ subroutine calc_sources
   integer :: i, j, k, iDim, iVar
   logical :: UseRzGeometry
   real :: Pe, DivU
-  real :: Coef
+  real :: Coef, Alpha
 
   ! Variable for div B diffusion
   real :: Dr
@@ -46,6 +46,9 @@ subroutine calc_sources
 
   ! Variables needed for Joule heating
   real :: Current_D(3), JouleHeating, HeatExchange
+
+  ! Varibles needed for anisotropic pressure
+  real :: b_D(3), GradU_DD(3,3), bDotGradparU
 
   integer:: iBlock
 
@@ -69,15 +72,52 @@ subroutine calc_sources
      do iFluid = 1, nFluid
         call select_fluid
         ! Adiabatic heating: -(g-1)*P*Div(U)
+        Alpha = g - 1
+        if(UseAnisoPressure)then
+           ! Source terms for anisotropic pressure equations
+           do k=1,nK; do j=1,nJ; do i=1,nI
+              if(.not.true_cell(i,j,k,iBlock)) CYCLE
+              ! Calculate bDotGradparU = b dot (b matmul GradU)
+              b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)/ &
+                   sqrt(max(1e-30,sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)))
+              GradU_DD(x_,:) = (0.5*(LeftState_VX(Ux_:Uz_,i+1,j,k) &
+                   + RightState_VX(Ux_:Uz_,i+1,j,k)) &
+                   - 0.5*(LeftState_VX(Ux_:Uz_,i,j,k) &
+                   + RightState_VX(Ux_:Uz_,i,j,k)))/dx_BLK(iBlock)
+              GradU_DD(y_,:) = (0.5*(LeftState_VY(Ux_:Uz_,i,j+1,k) &
+                   + RightState_VY(Ux_:Uz_,i,j+1,k)) &
+                   - 0.5*(LeftState_VY(Ux_:Uz_,i,j,k) &
+                   + RightState_VY(Ux_:Uz_,i,j,k)))/dy_BLK(iBlock)
+              GradU_DD(z_,:) = (0.5*(LeftState_VZ(Ux_:Uz_,i,j,k+1) &
+                   + RightState_VZ(Ux_:Uz_,i,j,k+1)) &
+                   - 0.5*(LeftState_VZ(Ux_:Uz_,i,j,k) &
+                   + RightState_VZ(Ux_:Uz_,i,j,k)))/dz_BLK(iBlock)
+              bDotGradparU = dot_product(b_D, matmul(b_D, GradU_DD))
+              ! p parallel: -Ppar*bDot(bDot(GradU))
+              Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
+                   - 2*State_VGB(Ppar_,i,j,k,iBlock)*bDotGradparU
+              ! p perpendicular: Pperp*bDot(bDot(GradU))
+              Source_VC(Pperp_,i,j,k) = Source_VC(Pperp_,i,j,k) &
+                   + State_VGB(Pperp_,i,j,k,iBlock)*bDotGradparU
+           end do; end do; end do
+
+           if(DoTestMe .and. (VarTest == Ppar_ .or. VarTest == Pperp_)) &
+                call write_source('After bDotGradparU')
+
+           ! For Pperp equation, g = 5/3 presumed, thus -Pperp*Div(U)
+           Alpha = 1
+        end if
+        ! Alpha*p*Div(U)
         do k=1,nK; do j=1,nJ; do i=1,nI
-           Source_VC(iP,i,j,k) = -(g-1)*State_VGB(iP,i,j,k,iBlock)*&
-                vInv_CB(i,j,k,iBlock)*&
-                (uDotArea_XI(i+1,j,k,iFluid) - uDotArea_XI(i,j,k,iFluid) &
-                +uDotArea_YI(i,j+1,k,iFluid) - uDotArea_YI(i,j,k,iFluid) &
-                +uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid))
+           Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
+                - Alpha*State_VGB(iP,i,j,k,iBlock)*vInv_CB(i,j,k,iBlock)*&
+                ( uDotArea_XI(i+1,j,k,iFluid) - uDotArea_XI(i,j,k,iFluid) &
+                + uDotArea_YI(i,j+1,k,iFluid) - uDotArea_YI(i,j,k,iFluid) &
+                + uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid))
         end do; end do; end do
 
-        if(DoTestMe.and.VarTest==iP)call write_source('After p div U')
+        if(DoTestMe .and. VarTest==iP)call write_source('After p div U')
+        
      end do
 
      ! Joule heating: dP/dt += (gamma-1)*eta*j**2

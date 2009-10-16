@@ -24,8 +24,9 @@ module ModFaceFlux
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area !^CFG IF BORISCORR
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
-       UseRS7, UseTotalSpeed, UseElectronPressure, &
-       eFluid_, Pe_               ! indexes for electron fluid (nFluid+1)
+       UseRS7, UseTotalSpeed, UseElectronPressure,  &
+       eFluid_, Pe_,     &          ! indexes for electron fluid (nFluid+1)
+       Ppar_, Pperp_ 
 
   use ModPhysics, ONLY: AverageIonCharge, ElectronTemperatureRatio
 
@@ -891,7 +892,7 @@ contains
        if(IsNewBlockGradPe)then
           ! Obtain electron pressure
           if(UseElectronPressure)then
-             Pe_G = State_VGB(Pe_,:,:,:,iBlockFace)
+             Pe_G = State_VGB(Pe_,:,:,:,iBlockFace) 
           elseif(IsMhd)then
              Coef = AverageIonCharge*ElectronTemperatureRatio
              Pe_G = State_VGB(p_,:,:,:,iBlockFace)*Coef/(1 + Coef)
@@ -1979,14 +1980,15 @@ contains
     subroutine get_mhd_flux
 
       use ModPhysics, ONLY: inv_gm1, g, inv_c2LIGHT
-      use ModAdvance, ONLY: UseElectronPressure, UseElectronEnergy
+      use ModAdvance, ONLY: UseElectronPressure, UseElectronEnergy, &
+           UseAnisoPressure
       use ModWaves
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e
       real :: HallUx, HallUy, HallUz, InvRho
       real :: pAlfven
-      real :: B2, B0B1, pTotal
+      real :: B2, B0B1, FullB2, pTotal, DpPerB
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
       integer :: iVar
 
@@ -2002,6 +2004,7 @@ contains
       p       = State_V(p_)
 
       B2      = Bx**2 + By**2 + Bz**2
+      FullB2 = FullBx**2 + FullBy**2 + FullBz**2
 
       ! Calculate energy
       e = inv_gm1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
@@ -2014,7 +2017,7 @@ contains
 
       ! Calculate some intermediate values for flux calculations
       B0B1    = B0x*Bx + B0y*By + B0z*Bz
-      pTotal  = p + 0.5*B2 + B0B1
+      pTotal  = p + 0.5*B2 + B0B1     ! For anisopressure, p = Pperp
 
       if(UseWavePressure) &
            pTotal = pTotal + (GammaWave-1.0)*sum(State_V(WaveFirst_:WaveLast_))
@@ -2081,12 +2084,23 @@ contains
          Flux_V(By_) = UnPlus*FullBy - UyPlus*FullBn
          Flux_V(Bz_) = UnPlus*FullBz - UzPlus*FullBn
       end if
-
+  
       ! f_i[Pe] = u_e,i*p_e
       if(UseElectronPressure)Flux_V(Pe_) = HallUn*State_V(Pe_)
 
       ! f_i[p] = u_i*p
       Flux_V(p_) = Un*p
+
+      if(UseAnisoPressure)then
+         ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
+         DpPerB = (State_V(Ppar_) - State_V(Pperp_))*FullBn/max(1e-30,FullB2)
+         Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
+         Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
+         Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
+         ! f_i[Ppar] = u_i*Ppar, f_i[Pperp] = u_i*Pperp
+         Flux_V(Ppar_)  = Un*State_V(Ppar_)
+         Flux_V(Pperp_) = Un*State_V(Pperp_)
+      end if
 
       ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
       if(HallCoeff > 0.0) then
@@ -2392,10 +2406,11 @@ contains
       use ModPhysics, ONLY: g, Inv_C2Light, ElectronTemperatureRatio
       use ModNumConst, ONLY: cPi
       use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure, &
-           UseElectronEnergy
+           UseElectronEnergy, UseAnisoPressure
 
       real :: RhoU_D(3)
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn
+      real :: Ppar, Pperp, BnInvB2
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       real :: dB1dB1                                     !^CFG IF AWFLUX
 
@@ -2469,6 +2484,20 @@ contains
       Fast2  = Sound2 + Alfven2
       Discr  = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
 
+      ! Calculate Fast speed for anisopressure.
+      ! Formulae refer to V. B. Baranov, 1970
+      if(UseAnisoPressure)then
+         Ppar = State_V(Ppar_)
+         Pperp = State_V(Pperp_)
+         BnInvB2 = FullBn**2/(FullBx**2+FullBy**2+FullBz**2)
+         Sound2 = InvRHo*(2*Pperp + (2*Ppar - Pperp)*BnInvB2) ! define Sound2 in this way
+         Fast2 = Sound2 + Alfven2 
+         Discr = sqrt(max(0.0, Fast2**2  &
+              + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &  
+              - 3*Ppar*Pperp*InvRho**2*BnInvB2*(2-BnInvB2) &
+              + 3*(Ppar*InvRho*BnInvB2)**2 - 3*Ppar*InvRho*Alfven2Normal)))
+      endif
+
       ! Fast speed multipled by the face area
       if(UseBorisSimple)then                         !^CFG IF SIMPLEBORIS BEGIN
          Fast = sqrt( 0.5*(Fast2 + Discr) &
@@ -2476,6 +2505,7 @@ contains
       else                                           !^CFG END SIMPLEBORIS
          Fast = sqrt( 0.5*(Fast2 + Discr) )
       end if                                         !^CFG IF SIMPLEBORIS
+
 
       ! Add whistler wave speed for the shortest wavelength 2 dx
       if(HallCoeff > 0.0) then
