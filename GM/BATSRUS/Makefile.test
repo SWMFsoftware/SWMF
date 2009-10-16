@@ -25,6 +25,7 @@ test:
 	-@(make test_comet)
 	-@(make test_magnetometer)
 	-@(make test_func)
+	-@(make test_anisopalfven)
 	@ls -l *.diff
 
 # All tests are done in this directory:
@@ -64,6 +65,7 @@ test_help:
 	@echo "    test_titan_restart         (run titan restart test only)"
 	@echo "    test_func                  (run functionality tests only)"
 	@echo "    test_magnetometer          (run magnetometer tests only)"
+	@echo "    test_anisopalfven          (run anisopressure Alfven test only)"
 
 test_rundir:
 	rm -rf ${TESTDIR}
@@ -869,3 +871,32 @@ test_2bodyplot_check:
 	ls -l test_2bodyplot.diff
 
 
+### ALFVEN WAVE TEST FOR SINGLE FLUID MHD WITH ANISOTROPIC PRESSURE ###
+
+test_anisopalfven:
+	@echo "test_anisopalfven_compile..." > test_anisopalfven.diff
+	make test_anisopalfven_compile
+	@echo "test_anisopalfven_rundir..." >> test_anisopalfven.diff
+	make test_anisopalfven_rundir
+	@echo "test_anisopalfven_run..." >> test_anisopalfven.diff
+	make test_anisopalfven_run
+	@echo "test_anisopalfven_check..." >> test_anisopalfven.diff
+	make test_anisopalfven_check
+
+test_anisopalfven_compile:
+	./Config.pl -u=Waves -e=MhdAnisoP -g=100,2,2,100,1
+	make
+	make PIDL
+
+test_anisopalfven_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/ANISOPRESSURE/PARAM.in.Alfven PARAM.in
+
+test_anisopalfven_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULT
+
+test_anisopalfven_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+	  Param/ANISOPRESSURE/TestOutput/alfven_ref.out \
+	  ${TESTDIR}/RESULT/GM/cut_*6632.out > test_anisopalfven.diff
+	ls -l test_anisopalfven.diff
