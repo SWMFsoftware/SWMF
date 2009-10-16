@@ -72,10 +72,19 @@ public:
   void CutInputStr(char* dest, char* src) {
     int i,j;
 
-    for (i=0;(src[i]!='\0')&&(src[i]!=' ')&&
-      (src[i]!=',')&&(src[i]!='=')&&(src[i]!=';')&&(src[i]!=':')&&
-      (src[i]!='(')&&(src[i]!=')')&&(src[i]!='[')&&(src[i]!=']');i++) dest[i]=src[i];
+    if (src[0]!='"') {
+      for (i=0;(src[i]!='\0')&&(src[i]!=' ')&&
+        (src[i]!=',')&&(src[i]!='=')&&(src[i]!=';')&&(src[i]!=':')&&
+        (src[i]!='(')&&(src[i]!=')')&&(src[i]!='[')&&(src[i]!=']');i++) dest[i]=src[i];
+
       dest[i]='\0';
+    }
+    else {
+      for (i=1,j=0;(src[i]!='\0')&&(src[i]!='"');i++,j++) dest[j]=src[i];  
+      dest[j]='\0';
+      ++i;
+    }
+
 
     for (;(src[i]!='\0')&&((src[i]==' ')||
       (src[i]==',')||(src[i]=='=')||(src[i]==';')||(src[i]==':')||
@@ -113,7 +122,7 @@ public:
     }
 
     for(i=0;str[i]!='\0';i++) {
-      if (str[i]=='"') str[i]=' ';
+//      if (str[i]=='"') str[i]=' ';
 
       init_str[i]=str[i];
       if ((str[i]>='a')&&(str[i]<='z')) str[i]=str[i]-32;
