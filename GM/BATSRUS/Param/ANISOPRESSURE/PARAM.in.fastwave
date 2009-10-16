@@ -96,20 +96,6 @@ F                       UseUserUpdateStates
 
 #USERINPUTEND ---------------------
 
-TEST
-calc_face_flux
-
-TESTIJK
-50		iTest
-1		jTest
-1		kTest
-3		iBlockTest
-0		iProcTest
-
-TESTTIME
--1		nIterTest
-5.9		TimeTest
-
 #OUTERBOUNDARY
 periodic	xMinBc
 periodic	xMaxBc
