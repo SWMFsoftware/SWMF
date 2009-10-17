@@ -25,8 +25,7 @@ module ModFaceFlux
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
        UseRS7, UseTotalSpeed, UseElectronPressure,  &
-       eFluid_, Pe_,     &          ! indexes for electron fluid (nFluid+1)
-       Ppar_, Pperp_ 
+       eFluid_                           ! index for electron fluid (nFluid+1)
 
   use ModPhysics, ONLY: AverageIonCharge, ElectronTemperatureRatio
 
