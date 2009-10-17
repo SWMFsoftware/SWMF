@@ -116,9 +116,9 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
      allocate(StateGm1_VI(1:iUGmLast, nPoint), CoordXyPw1_DI(nCoord, nPoint), &
           iNodeTriangle1_II(3, 2*nPoint1))
+     allocate(StateGm2_VI(1:iUGmLast, nPoint), CoordXyPw2_DI(nCoord, nPoint))
      if(nLinePw2 /=0)then
-        allocate(StateGm2_VI(1:iUGmLast, nPoint), CoordXyPw2_DI(nCoord, nPoint), &
-             iNodeTriangle2_II(3, 2*nPoint2))
+        allocate(iNodeTriangle2_II(3, 2*nPoint2))
      end if
   end if
 
@@ -131,14 +131,14 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   ! Convert to X, Y on a unit sphere (this will be used for triangulation)
 
   where(Buffer_VI(Theta_,:) > cHalfPi)
-     CoordXyPw2_DI(x_,:) =  &
+     CoordXyPw2_DI(x_,1:nFieldline) =  &
           sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
-     CoordXyPw2_DI(y_,:) =  &
+     CoordXyPw2_DI(y_,1:nFieldline) =  &
           sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
   elsewhere
-     CoordXyPw1_DI(x_,:) =  &
+     CoordXyPw1_DI(x_,1:nFieldline) =  &
           sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
-     CoordXyPw1_DI(y_,:) =  &
+     CoordXyPw1_DI(y_,1:nFieldline) =  &
           sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
   end where
 
@@ -177,23 +177,23 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
      else
         ! Total density in normalized units
         where(Buffer_VI(Theta_,:)< cHalfPi)
-           StateGm1_VI(iRhoGmFirst, 1:nLinePw1) &
+           StateGm1_VI(iRhoGmFirst, 1:nFieldline) &
                 = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:),dim=1) * Si2No_V(UnitRho_)
         elsewhere
-           StateGm2_VI(iRhoGmFirst, :) &
+           StateGm2_VI(iRhoGmFirst, 1:nFieldline) &
                 = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:),dim=1) * Si2No_V(UnitRho_)
         end where
      end if
 
      ! Field aligned velocity = total moment/total density
       where(Buffer_VI(Theta_,:)< cHalfPi)
-         StateGm1_VI(iUGmFirst,1:nLinePw1) &
+         StateGm1_VI(iUGmFirst,1:nFieldline) &
               = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
               *     Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
               / sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:), dim=1) &
               * Si2No_V(UnitU_) 
       elsewhere
-         StateGm2_VI(iUGmFirst,:)&
+         StateGm2_VI(iUGmFirst,1:nFieldline)&
               = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
               *     Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
               / sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:), dim=1) &
