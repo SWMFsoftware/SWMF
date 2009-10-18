@@ -2,6 +2,7 @@
 
 ### TESTS FOR THE STAND-ALONE BATSRUS ###
 
+# !!! NOTE: In the list below "test_func" should be the last test
 test: 
 	@rm -f *.diff
 	-@(make test_shocktube)
@@ -24,9 +25,11 @@ test:
 	-@(make test_saturn)
 	-@(make test_comet)
 	-@(make test_magnetometer)
+	-@(make test_anisotropic)
 	-@(make test_func)
-	-@(make test_anisopalfven)
 	@ls -l *.diff
+
+# !!! NOTE: In the above list "test_func" should be the last test
 
 # All tests are done in this directory:
 TESTDIR = run_test
@@ -47,25 +50,25 @@ test_help:
 	@echo "    test_multifluid            (run multi-fluid test only)"
 	@echo "    test_multiion              (run multi-ion test only)"
 	@echo "    test_mhdions               (run MHD with ions test only)"
-	@echo "    test_mhdnoncons            (run Non-conservative MHD test only)"
-	@echo "    test_eosgodunov	      (run EOS/Godunov test only)"
-	@echo "    test_levelset	      (run Levelset test only)"
-	@echo "    test_hyades2d	      (run Hyades2D test only)"
-	@echo "    test_graydiffusion	      (run gray-diffusion set test only)"
-	@echo "    test_corona                (run Solar Corona test only)"
+	@echo "    test_mhdnoncons            (run non-conservative MHD test only)"
+	@echo "    test_eosgodunov            (run EOS/Godunov test only)"
+	@echo "    test_levelset              (run levelset test only)"
+	@echo "    test_hyades2d              (run Hyades2D test only)"
+	@echo "    test_graydiffusion         (run gray-diffusion set test only)"
+	@echo "    test_corona                (run solar corona test only)"
 	@echo "    test_coronasph             (run spherical Solar Corona test)"
-	@echo "    test_earthsph	      (run Spherical Earth test only)"
-	@echo "    test_2bodyplot	      (run 2 Body Plot test only)"
+	@echo "    test_earthsph              (run spherical Earth test only)"
+	@echo "    test_2bodyplot             (run 2 Body Plot test only)"
 	@echo "    test_mars                  (run Mars test only)"
 	@echo "    test_venus                 (run Venus test only)"
 	@echo "    test_saturn                (run Saturn test only)"
-	@echo "    test_comet                 (run Comet test only)"
-	@echo "    test_titan                 (run titan tests only)"
-	@echo "    test_titan_start           (run first titan test only)"
+	@echo "    test_comet                 (run comet test only)"
+	@echo "    test_titan                 (run Titan tests only)"
+	@echo "    test_titan_start           (run first Titan test only)"
 	@echo "    test_titan_restart         (run titan restart test only)"
 	@echo "    test_func                  (run functionality tests only)"
-	@echo "    test_magnetometer          (run magnetometer tests only)"
-	@echo "    test_anisopalfven          (run anisopressure Alfven test only)"
+	@echo "    test_magnetometer          (run magnetometer test only)"
+	@echo "    test_anisotropic          (run anisotropic pressure test only)"
 
 test_rundir:
 	rm -rf ${TESTDIR}
@@ -873,30 +876,30 @@ test_2bodyplot_check:
 
 ### ALFVEN WAVE TEST FOR SINGLE FLUID MHD WITH ANISOTROPIC PRESSURE ###
 
-test_anisopalfven:
-	@echo "test_anisopalfven_compile..." > test_anisopalfven.diff
-	make test_anisopalfven_compile
-	@echo "test_anisopalfven_rundir..." >> test_anisopalfven.diff
-	make test_anisopalfven_rundir
-	@echo "test_anisopalfven_run..." >> test_anisopalfven.diff
-	make test_anisopalfven_run
-	@echo "test_anisopalfven_check..." >> test_anisopalfven.diff
-	make test_anisopalfven_check
+test_anisotropic:
+	@echo "test_anisotropic_compile..." > test_anisotropic.diff
+	make test_anisotropic_compile
+	@echo "test_anisotropic_rundir..." >> test_anisotropic.diff
+	make test_anisotropic_rundir
+	@echo "test_anisotropic_run..." >> test_anisotropic.diff
+	make test_anisotropic_run
+	@echo "test_anisotropic_check..." >> test_anisotropic.diff
+	make test_anisotropic_check
 
-test_anisopalfven_compile:
+test_anisotropic_compile:
 	./Config.pl -u=Waves -e=MhdAnisoP -g=100,2,2,100,1
 	make
 	make PIDL
 
-test_anisopalfven_rundir: test_rundir
+test_anisotropic_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/ANISOPRESSURE/PARAM.in.Alfven PARAM.in
 
-test_anisopalfven_run:
+test_anisotropic_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
-test_anisopalfven_check:
+test_anisotropic_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 	  Param/ANISOPRESSURE/TestOutput/alfven_ref.out \
-	  ${TESTDIR}/RESULT/GM/cut_*6632.out > test_anisopalfven.diff
-	ls -l test_anisopalfven.diff
+	  ${TESTDIR}/RESULT/GM/cut_*t03*.out > test_anisotropic.diff
+	ls -l test_anisotropic.diff
