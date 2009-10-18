@@ -20,7 +20,7 @@ T			UseNonConservative
 100			MinBlockALL
 
 #GRID
-12			nRootBlockX
+4			nRootBlockX
 1			nRootBlockY
 1			nRootBlockZ
 -6.0			xMin
