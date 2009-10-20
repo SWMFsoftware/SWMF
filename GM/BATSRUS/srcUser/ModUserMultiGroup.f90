@@ -101,7 +101,7 @@ contains
     case('infinitemedium')
     case('planckian')
        if(nWave > 1)then
-          TradMin = 1.0; EradMin = cRadiation*TradMin**4
+          TradMin = 1e-4; EradMin = cRadiation*TradMin**4
           ! Reset the minimum photon energy to be 0.1 eV
           FreqMinSi = EphotonMin/cHPlanckEV
           ! Reset the maximum photon energy to be 20 keV
@@ -146,25 +146,22 @@ contains
        TeFinalSi = cKEVToK
        TeFinal = TeFinalSi*Si2No_V(UnitTemperature_)
        Rho = 1.0 ! fake, it is not used
-       TeInit = sqrt(sqrt(1.0+nWave))*TeFinal
-       Temperature = TeInit
-       Trad = 0.01*cKEVToK*Si2No_V(UnitTemperature_)
-       Erad = cRadiationNo*Trad**4
-       Pressure = Rho*Temperature
-       ExtraEint = cRadiationNo*Temperature**4 - inv_gm1*Pressure
-    case('planckian')
-       ! initial zero radiation, at time=infinity Erad(final)=a*te(final)**4,
-       ! where a is the radiation constant. Set Cv = 4*a*Te**3,
-       ! so that a*te(final)**4 + Erad(final)= a*te(initial)**4
-       ! or Te(initial)**4 = 2*Te(final)**4
-       TeFinalSi = cKEVToK
-       TeFinal = TeFinalSi*Si2No_V(UnitTemperature_)
-       Rho = 1.0 ! fake, it is not used
-       TeInit = sqrt(sqrt(2.0))*TeFinal
+       TeInit = sqrt(sqrt(1.0 + nWave))*TeFinal
        Temperature = TeInit
        Erad = 0.0
        Pressure = Rho*Temperature
        ExtraEint = cRadiationNo*Temperature**4 - inv_gm1*Pressure
+    case('planckian')
+       ! initial zero radiation and infinite heat capacity and given
+       ! electron temperature Te.
+       ! at time infinity: Erad(final)= a*Te**4
+       TeFinalSi = cKEVToK
+       TeFinal = TeFinalSi*Si2No_V(UnitTemperature_)
+       Rho = 1.0e18 ! this ensure large heat capacity
+       Temperature = TeFinal
+       Erad = 0.0
+       Pressure = Rho*Temperature
+       ExtraEint = 0.0
     end select
 
     do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
@@ -216,10 +213,8 @@ contains
                 StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = 1.0
              end do; end do
           else
-             ! set group temperature
              do k = 1, nK; do j = 1, nJ
-                StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = &
-                     sqrt(sqrt(1.0/cRadiationNo))
+                StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = 1.0
                 StateSemi_VGB(iTrImplLast,0,j,k,iBlock) = &
                      StateSemi_VGB(iTrImplLast,1,j,k,iBlock)
              end do; end do
@@ -244,8 +239,7 @@ contains
              do k = 1, nK; do j = 1, nJ
                 StateSemi_VGB(iTrImplFirst,nI+1,j,k,iBlock) = &
                      StateSemi_VGB(iTrImplFirst,nI,j,k,iBlock)
-                StateSemi_VGB(iTrImplLast,nI+1,j,k,iBlock) = &
-                     sqrt(sqrt(1.0/cRadiationNo))
+                StateSemi_VGB(iTrImplLast,nI+1,j,k,iBlock) = 1.0
              end do; end do
           end if
        end select
@@ -265,8 +259,7 @@ contains
           else
              ! bin 1 starts on the left
              do k = 1, nK; do i = 1, nI
-                StateSemi_VGB(iTrImplFirst,i,0,k,iBlock) = &
-                     sqrt(sqrt(1.0/cRadiationNo))
+                StateSemi_VGB(iTrImplFirst,i,0,k,iBlock) = 1.0
                 StateSemi_VGB(iTrImplLast,i,0,k,iBlock) = &
                      StateSemi_VGB(iTrImplLast,i,1,k,iBlock)
              end do; end do
@@ -291,8 +284,7 @@ contains
              do k = 1, nK; do i = 1, nI
                 StateSemi_VGB(iTrImplFirst,i,nJ+1,k,iBlock) = &
                      StateSemi_VGB(iTrImplFirst,i,nJ,k,iBlock)
-                StateSemi_VGB(iTrImplLast,i,nJ+1,k,iBlock) = &
-                     sqrt(sqrt(1.0/cRadiationNo))
+                StateSemi_VGB(iTrImplLast,i,nJ+1,k,iBlock) = 1.0
              end do; end do
           end if
        end select
@@ -312,8 +304,7 @@ contains
              end do; end do
           else
              do j = 1, nJ; do i = 1, nI
-                StateSemi_VGB(iTrImplFirst,i,j,0,iBlock) = &
-                     sqrt(sqrt(1.0/cRadiationNo))
+                StateSemi_VGB(iTrImplFirst,i,j,0,iBlock) = 1.0
                 StateSemi_VGB(iTrImplLast,i,j,0,iBlock) = &
                      StateSemi_VGB(iTrImplLast,i,j,1,iBlock)
              end do; end do
@@ -338,8 +329,7 @@ contains
              do j = 1, nJ; do i = 1, nI
                 StateSemi_VGB(iTrImplFirst,i,j,nK+1,iBlock) = &
                      StateSemi_VGB(iTrImplFirst,i,j,nK,iBlock)
-                StateSemi_VGB(iTrImplLast,i,j,nK+1,iBlock) = &
-                     sqrt(sqrt(1.0/cRadiationNo))
+                StateSemi_VGB(iTrImplLast,i,j,nK+1,iBlock) = 1.0
              end do; end do
           end if
        end select
@@ -356,7 +346,7 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
+    use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature
     use ModAdvance,    ONLY: State_VGB
     use ModConst,      ONLY: cKtoKev, cKEV
     use ModGeometry,   ONLY: dy_BLK, dz_BLK
@@ -379,7 +369,7 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k, iVar, iWave
-    real :: DelLogEphoton, Coord_W(nWave), Tg_W(nWave), PlanckSi, EinternalSi
+    real :: DelLogEphoton, Coord_W(nWave), PlanckSi, EinternalSi, TeSi
     integer :: iUnit, iError
     character(len=10) :: NameWave, NameFormat, TypeStatus
     character(len=100):: NameFile = 'planckian.outs'
@@ -448,7 +438,9 @@ contains
        end if
     end do
 
-    if(TypeProblem == 'planckian')then
+    if(TypeProblem == 'planckian' .and. NameVar == 'planckian')then
+       IsFound = .true.
+
        DelLogEphoton = (log(EphotonMax) - log(EphotonMin))/nWave
        do iWave = 1, nWave
           Coord_W(iWave) = exp(log(EphotonMin) + (iWave - 0.5)*DelLogEphoton)
@@ -464,18 +456,16 @@ contains
             ' could not open ascii file=' // trim(NamePlotDir)//NameFile)
 
        write(iUnit, "(a)")             'group energy'
-       write(iUnit, "(i7,es13.5,3i3)") n_step, Time_Simulation, 1, 1, 3
+       write(iUnit, "(i7,es13.5,3i3)") n_step, Time_Simulation, 1, 1, 2
        write(iUnit, "(3i8)")           nWave
        write(iUnit, "(100es13.5)")     0.0
-       write(iUnit, "(a)")             'Ephoton Egroup Tgroup Bgroup'
+       write(iUnit, "(a)")             'Ephoton(eV) Egroup(eV) Bgroup(eV)'
 
-       call user_material_properties(State_VGB(:,1,1,1,1), TgOut_W=Tg_W)
        do iWave = 1, nWave
-          call get_energy_g_from_temperature(iWave, TeFinalSi, EgSI=PlanckSi)
+          call get_planck_g_from_temperature(iWave, TeFinalSi, PlanckSi)
           iVar = WaveFirst_ + iWave - 1
           write(iUnit, "(100es18.10)") Coord_W(iWave), &
                State_VGB(iVar,1,1,1,1)*No2Si_V(UnitEnergyDens_)*cKEV, &
-               Tg_W(iWave)*cKToKEV, &
                PlanckSi*cKEV
        end do
 
@@ -497,8 +487,7 @@ contains
 
     ! The State_V vector is in normalized units
 
-    use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature, &
-         get_temperature_from_energy_g
+    use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature
     use ModPhysics,    ONLY: gm1, inv_gm1, No2Si_V, Si2No_V, &
          UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
          UnitX_, UnitT_, UnitU_, cRadiationNo, Clight
@@ -532,9 +521,9 @@ contains
     real, optional, intent(out) :: TgOut_W(nWave)          ! [K]
 
     integer :: iVar, iWave
-    real :: Rho, Pressure, Te, Tg_W(nWave)
+    real :: Rho, Pressure, Te
     real :: RhoSi, pSi, TeSi
-    real :: PlanckSi, CgTeSi, EgSi, TgSi, CgTgSi
+    real :: PlanckSi, EgSi
 
     character(len=*), parameter :: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
@@ -544,7 +533,7 @@ contains
 
     if(present(EinternalIn))then
        select case(TypeProblem)
-       case('infinitemedium','planckian')
+       case('infinitemedium')
           Te = sqrt(sqrt(EinternalIn*Si2No_V(UnitEnergyDens_)/cRadiationNo))
           Pressure = Rho*Te
           pSi = Pressure*No2Si_V(UnitP_)
@@ -568,7 +557,7 @@ contains
 
     if(present(EinternalOut))then
        select case(TypeProblem)
-       case('infinitemedium','planckian')
+       case('infinitemedium')
           EinternalOut = cRadiationNo*Te**4*No2Si_V(UnitEnergyDens_)
        case default
           EinternalOut = pSi*inv_gm1
@@ -579,10 +568,10 @@ contains
 
     if(present(CvOut))then
        select case(TypeProblem)
-       case('lightfront')
+       case('lightfront','planckian')
           CvOut = inv_gm1*Rho &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
-       case('infinitemedium','planckian')
+       case('infinitemedium')
           CvOut = 4.0*cRadiationNo*Te**3 &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
        end select
@@ -598,19 +587,8 @@ contains
        if(present(OpacityRosselandOut_W)) &
             OpacityRosselandOut_W = 1.0e-16/No2Si_V(UnitX_)
 
-       Tg_W = sqrt(sqrt(State_V(WaveFirst_:WaveLast_)/cRadiationNo))
-
        if(present(PlanckOut_W)) PlanckOut_W = cRadiationNo*Te**4 &
             *No2Si_V(UnitEnergyDens_)
-
-       if(present(CgTeOut_W)) CgTeOut_W = &
-            cRadiationNo*(Te+Tg_W)*(Te**2+Tg_W**2) &
-            *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
-
-       if(present(TgOut_W)) TgOut_W = Tg_W*No2Si_V(UnitTemperature_)
-
-       if(present(CgTgOut_W)) CgTgOut_W = 4.0*cRadiationNo*Tg_W**3 &
-            *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
 
     case('infinitemedium')
        if(present(OpacityPlanckOut_W))OpacityPlanckOut_W = 2.0/No2Si_V(UnitX_)
@@ -618,19 +596,8 @@ contains
        if(present(OpacityRosselandOut_W)) &
             OpacityRosselandOut_W = 1.0e20/No2Si_V(UnitX_)
 
-       Tg_W = sqrt(sqrt(State_V(WaveFirst_:WaveLast_)/cRadiationNo))
-
        if(present(PlanckOut_W)) PlanckOut_W = cRadiationNo*Te**4 &
             *No2Si_V(UnitEnergyDens_)
-
-       if(present(CgTeOut_W)) CgTeOut_W = &
-            cRadiationNo*(Te+Tg_W)*(Te**2+Tg_W**2) &
-            *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
-
-       if(present(TgOut_W)) TgOut_W = Tg_W*No2Si_V(UnitTemperature_)
-
-       if(present(CgTgOut_W)) CgTgOut_W = 4.0*cRadiationNo*Tg_W**3 &
-            *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
 
     case('planckian')
        if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = &
@@ -640,34 +607,16 @@ contains
             OpacityRosselandOut_W = 1.0e20/No2Si_V(UnitX_)
 
        if(nWave == 1)then
-          if(present(PlanckOut_W)) PlanckOut_W = 0.0
-          if(present(CgTeOut_W)) CgTeOut_W = 0.0
-          if(present(TgOut_W)) TgOut_W = 0.0
-          if(present(CgTgOut_W)) CgTgOut_W = 0.0
+          if(present(PlanckOut_W)) PlanckOut_W = cRadiationNo*Te**4 &
+               *No2Si_V(UnitEnergyDens_)
        else
 
-          if(present(PlanckOut_W) .or. present(CgTeOut_W))then
+          if(present(PlanckOut_W))then
              do iWave = 1, nWave
-                call get_energy_g_from_temperature( &
-                     iWave, TeSi, EgSI=PlanckSi, CgSI=CgTeSi)
-
-                if(present(PlanckOut_W)) PlanckOut_W(iWave) = PlanckSi
-                if(present(CgTeOut_W)) CgTeOut_W(iWave) = CgTeSi
+                call get_planck_g_from_temperature(iWave, TeSi, PlanckSi)
+                PlanckOut_W(iWave) = PlanckSi
              end do
           end if
-
-          if(present(TgOut_W) .or. present(CgTgOut_W))then
-             do iWave = 1, nWave
-                iVar = WaveFirst_ + iWave - 1
-                EgSi = State_V(iVar)*No2Si_V(UnitEnergyDens_)
-                call get_temperature_from_energy_g(iWave, EgSi, &
-                     TgSIOut=TgSi, CgSIOut=CgTgSi)
-
-                if(present(TgOut_W)) TgOut_W(iWave) = TgSi
-                if(present(CgTgOut_W)) CgTgOut_W(iWave) = CgTgSi
-             end do
-          end if
-
        end if
 
     end select
