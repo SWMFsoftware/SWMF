@@ -264,6 +264,12 @@ contains
     ! Temperature
     call AB_1blk3_gc_add_size(nLons,nLats,nAlts,2,size)
 
+    ! iTemperature
+    call AB_1blk3_gc_add_size(nLons,nLats,nAlts,2,size)
+
+    ! eTemperature
+    call AB_1blk3_gc_add_size(nLons,nLats,nAlts,2,size)
+
     ! Ion Species
     if (UseIonAdvection) &
          call AB_1blk4_gc_add_size(nLons,nLats,nAlts,nIons,2,size)
@@ -292,6 +298,12 @@ contains
     call AB_1blk3_gc_pack(nLons,nLats,nAlts,2, &
          Temperature(:,:,1:nAlts,index),dir,pole,p,out_array)
 
+    call AB_1blk3_gc_pack(nLons,nLats,nAlts,2, &
+         iTemperature(:,:,1:nAlts,index),dir,pole,p,out_array)
+
+    call AB_1blk3_gc_pack(nLons,nLats,nAlts,2, &
+         eTemperature(:,:,1:nAlts,index),dir,pole,p,out_array)
+
     if (UseIonAdvection) &
          call AB_1blk4_gc_pack(nLons,nLats,nAlts,nIons,2, &
          IDensityS(:,:,1:nAlts,:,index),dir,pole,p,out_array)
@@ -317,6 +329,12 @@ contains
     call AB_1blk3_gc_unpack(nLons,nLats,nAlts,2, &
          Temperature(:,:,1:nAlts,index),dir,p,in_array)
 
+    call AB_1blk3_gc_unpack(nLons,nLats,nAlts,2, &
+         iTemperature(:,:,1:nAlts,index),dir,p,in_array)
+
+    call AB_1blk3_gc_unpack(nLons,nLats,nAlts,2, &
+         eTemperature(:,:,1:nAlts,index),dir,p,in_array)
+
     if (UseIonAdvection) &
          call AB_1blk4_gc_unpack(nLons,nLats,nAlts,nIons,2, &
          IDensityS(:,:,1:nAlts,:,index),dir,p,in_array)
@@ -333,6 +351,9 @@ contains
 
     call AB_array4_gc_add_size(nLons,nLats,nAlts,nSpecies,2,size)
 
+    ! temperatures
+    call AB_array3_gc_add_size(nLons,nLats,nAlts,2,size)
+    call AB_array3_gc_add_size(nLons,nLats,nAlts,2,size)
     call AB_array3_gc_add_size(nLons,nLats,nAlts,2,size)
 
     if (UseIonAdvection) &
@@ -362,6 +383,12 @@ contains
 
     call AB_array3_gc_pack(nLons,nLats,nAlts,2, &
          Temperature(:,:,1:nAlts,index),dir,pole,p,out_array)
+
+    call AB_array3_gc_pack(nLons,nLats,nAlts,2, &
+         iTemperature(:,:,1:nAlts,index),dir,pole,p,out_array)
+
+    call AB_array3_gc_pack(nLons,nLats,nAlts,2, &
+         eTemperature(:,:,1:nAlts,index),dir,pole,p,out_array)
 
     if (UseIonAdvection) then
        do iIon = 1, nIons
@@ -395,6 +422,12 @@ contains
 
     call AB_array3_gc_unpack(nLons,nLats,nAlts,2, &
          Temperature(:,:,1:nAlts,index),dir,p,in_array)
+
+    call AB_array3_gc_unpack(nLons,nLats,nAlts,2, &
+         iTemperature(:,:,1:nAlts,index),dir,p,in_array)
+
+    call AB_array3_gc_unpack(nLons,nLats,nAlts,2, &
+         eTemperature(:,:,1:nAlts,index),dir,p,in_array)
 
     if (UseIonAdvection) then
 !       call AB_array4_gc_unpack(nLons,nLats,nAlts,nIons,2, &
