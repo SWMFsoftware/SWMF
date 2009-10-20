@@ -145,20 +145,20 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   if(UseMultiIon)then
      do i = iRhoGmFirst, iRhoGmLast
         where(Buffer_VI(Theta_,:)< cHalfPi)
-           StateGm1_VI(i,1:nLinePw1) &
+           StateGm1_VI(i,1:nFieldline) &
           = Buffer_VI(i,:)*Si2No_V(UnitRho_)
         elsewhere
-           StateGm2_VI(i,:) &
+           StateGm2_VI(i,1:nFieldline) &
           = Buffer_VI(i,:)*Si2No_V(UnitRho_)
         end where
      end do
      
      do i = iUGmFirst, iUGmLast
         where(Buffer_VI(Theta_,:)< cHalfPi)
-           StateGm1_VI(i, 1:nLinePw1) &
+           StateGm1_VI(i, 1:nFieldline) &
                 = Buffer_VI(i, :) * Si2No_V(UnitU_)
         elsewhere
-           StateGm2_VI(i, :) &
+           StateGm2_VI(i, 1:nFieldline) &
                 = Buffer_VI(i,:) * Si2No_V(UnitU_)
         end where
      end do
@@ -167,10 +167,10 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
      if(UseMultiSpecies)then
         do i=iRhoGmFirst, iRhoGmLast
            where(Buffer_VI(Theta_,:)< cHalfPi)
-              StateGm1_VI(i, 1:nLinePw1) &
+              StateGm1_VI(i, 1:nFieldline) &
                    = Buffer_VI(i,:) * Si2No_V(UnitRho_)
            elsewhere
-              StateGm2_VI(i, :) &
+              StateGm2_VI(i, 1:nFieldline) &
                    = Buffer_VI(i,:) * Si2No_V(UnitRho_)
            end where
         end do
@@ -428,9 +428,10 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
           Area2*StateGm_VI(iUGmFirst, iNode2) + &
           Area3*StateGm_VI(iUGmFirst, iNode3))
 
-     deallocate(StateGm_VI)
-
   end if
+
+  deallocate(StateGm_VI)
+
   if(DoTestMe)then
      write(*,*)NameSub,' finished with'
      write(*,*)'CoordIn_D     =', CoordIn_D
