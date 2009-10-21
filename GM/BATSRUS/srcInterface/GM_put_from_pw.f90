@@ -146,20 +146,20 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
      do i = iRhoGmFirst, iRhoGmLast
         where(Buffer_VI(Theta_,:)< cHalfPi)
            StateGm1_VI(i,1:nFieldline) &
-          = Buffer_VI(i,:)*Si2No_V(UnitRho_)
+                = Buffer_VI(i+iRhoPwFirst-1,:)*Si2No_V(UnitRho_)
         elsewhere
            StateGm2_VI(i,1:nFieldline) &
-          = Buffer_VI(i,:)*Si2No_V(UnitRho_)
+                = Buffer_VI(i+iRhoPwFirst-1,:)*Si2No_V(UnitRho_)
         end where
      end do
      
      do i = iUGmFirst, iUGmLast
         where(Buffer_VI(Theta_,:)< cHalfPi)
            StateGm1_VI(i, 1:nFieldline) &
-                = Buffer_VI(i, :) * Si2No_V(UnitU_)
+                = Buffer_VI(i-iUGmFirst+iUPwFirst, :) * Si2No_V(UnitU_)
         elsewhere
            StateGm2_VI(i, 1:nFieldline) &
-                = Buffer_VI(i,:) * Si2No_V(UnitU_)
+                = Buffer_VI(i-iUGmFirst+iUPwFirst, :) * Si2No_V(UnitU_)
         end where
      end do
   else
@@ -168,10 +168,10 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
         do i=iRhoGmFirst, iRhoGmLast
            where(Buffer_VI(Theta_,:)< cHalfPi)
               StateGm1_VI(i, 1:nFieldline) &
-                   = Buffer_VI(i,:) * Si2No_V(UnitRho_)
+                   = Buffer_VI(i+iRhoGmFirst-1,:) * Si2No_V(UnitRho_)
            elsewhere
               StateGm2_VI(i, 1:nFieldline) &
-                   = Buffer_VI(i,:) * Si2No_V(UnitRho_)
+                   = Buffer_VI(i+iRhoGmFirst-1,:) * Si2No_V(UnitRho_)
            end where
         end do
      else
