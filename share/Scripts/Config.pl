@@ -158,7 +158,7 @@ if($Uninstall){
 	&shell_command("cd util; make distclean")
 	    if -d "util" and not $IsComponent;
 	&shell_command("make allclean");
-	&shell_command("rm -f Makefile.def Makefile.conf ".
+	&shell_command("rm -f Makefile.def Makefile.conf data ".
 		       "src*/$MakefileDepend src*/$MakefileRules");
 	exit 0;
     }
@@ -359,6 +359,9 @@ sub install_code_{
     # Create Makefile.RULES as needed
     &create_makefile_rules;
 
+    # Link data directory if possible
+    &link_smwf_data;
+
     # Install the code
     &shell_command("cd share; make install") 
 	if -d "share" and not $IsComponent;
@@ -530,6 +533,26 @@ sub create_makefile_rules{
 	close INFILE;
 	close OUTFILE;
     }
+}
+
+##############################################################################
+
+sub link_smwf_data{
+
+    return if -d "data";
+    my $SwmfData = "";
+    foreach ("$ENV{HOME}/SWMF_data", "/csem1/SWMF_data"){
+	next unless -d $_;
+	$SwmfData = $_;
+	last;
+    }
+    my $DataDir;
+    if($IsComponent){
+	$DataDir = "$SwmfData/$Component/$Code/data";
+    }else{
+	$DataDir = "$SwmfData/data";
+    }
+    &shell_command("ln -s $DataDir data") if -d $DataDir;
 }
 
 ##############################################################################
