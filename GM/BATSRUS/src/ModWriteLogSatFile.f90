@@ -277,7 +277,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   integer :: iVar,iR,iVarTot, iBLK
   integer :: i,j,k
   integer :: iError
-  real :: R_log
+  real :: r
 
   logical :: DoTest,DoTestMe
 
@@ -377,7 +377,7 @@ contains
     real :: FullB_DG(3,0:nI+1,0:nJ+1,0:nK+1)
 
     integer :: jVar
-    character(len=10) :: NameVar, String
+    character(len=10) :: NameVar, NameLogVarLower
 
     ! External function for ionosphere    !^CFG IF IONOSPHERE
     real, external :: logvar_ionosphere   !^CFG IF IONOSPHERE
@@ -689,16 +689,16 @@ contains
        iVarTot = iVarTot - 1
        do iR=1,nLogR
           iVarTot = iVarTot + 1
-          R_log = LogR_I(iR)
+          r = LogR_I(iR)
           tmp1_BLK(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = 1.0
-          LogVar_I(iVarTot) = calc_sphere('integrate',50, R_log, tmp1_BLK)
+          LogVar_I(iVarTot) = calc_sphere('integrate',50, r, tmp1_BLK)
        end do
     case('rhoflx')
        ! rho*U_R
        iVarTot = iVarTot - 1
        do iR=1,nLogR
           iVarTot = iVarTot + 1
-          R_log = LogR_I(iR)
+          r = LogR_I(iR)
           do iBLK=1,nBlock
              if(unusedBLK(iBLK)) CYCLE
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
@@ -709,25 +709,25 @@ contains
                )/R_BLK(i,j,k,iBLK)
              end do; end do; end do
           end do
-          LogVar_I(iVarTot) = calc_sphere('integrate',360, R_log, tmp1_BLK)
+          LogVar_I(iVarTot) = calc_sphere('integrate',360, r, tmp1_BLK)
        end do
     case('dstflx')
        ! B1z
        iVarTot = iVarTot - 1
        do iR=1,nLogR
           iVarTot = iVarTot + 1
-          R_log = LogR_I(iR)
+          r = LogR_I(iR)
           tmp1_BLK(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = &
                State_VGB(Bz_,0:nI+1,0:nJ+1,0:nK+1,1:nBlock)
-          LogVar_I(iVarTot) = calc_sphere('integrate',180, R_log, tmp1_BLK) / &
-               (4*cPi*R_log**2)
+          LogVar_I(iVarTot) = calc_sphere('integrate',180, r, tmp1_BLK) / &
+               (4*cPi*r**2)
        end do
     case('bflx')
        ! B_R
        iVarTot = iVarTot - 1
        do iR=1,nLogR
           iVarTot = iVarTot + 1
-          R_log = LogR_I(iR)
+          r = LogR_I(iR)
           do iBLK=1,nBlock
              if(unusedBLK(iBLK)) CYCLE
              FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
@@ -742,14 +742,14 @@ contains
              end do; end do; end do
           end do
  
-          LogVar_I(iVarTot) = calc_sphere('integrate',360, R_log, tmp1_BLK)
+          LogVar_I(iVarTot) = calc_sphere('integrate',360, r, tmp1_BLK)
        end do
     case('b2flx')
        ! B^2*u_R
        iVarTot = iVarTot - 1
        do iR=1,nLogR
           iVarTot = iVarTot + 1
-          R_log = LogR_I(iR)           
+          r = LogR_I(iR)           
           do iBLK=1,nBlock
              if(unusedBLK(iBLK))cycle
              FullB_DG = State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
@@ -765,13 +765,13 @@ contains
                      ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
              end do; end do; end do
           end do
-          LogVar_I(iVarTot) = calc_sphere('integrate',360, R_log,tmp1_BLK)
+          LogVar_I(iVarTot) = calc_sphere('integrate',360, r,tmp1_BLK)
        end do
     case('pvecflx')
        iVarTot = iVarTot - 1
        do iR=1,nLogR
           iVarTot = iVarTot + 1
-          R_log = LogR_I(iR)
+          r = LogR_I(iR)
           do iBLK=1,nBlock
              if(unusedBLK(iBLK))CYCLE
              FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
@@ -786,14 +786,13 @@ contains
                      FullB_DG(y_,i,j,k)*RhoUy + FullB_DG(z_,i,j,k)*RhoUz
                 tmp1_BLK(i,j,k,iBLk) = ( &
                   ( bDotb*rhoUx - bDotU*FullB_DG(x_,i,j,k))*X_BLK(i,j,k,iBLk)+&
-                  ( bDotb*rhoUy - bDotU*FullB_DG(y_,i,j,k))*Y_BLK(i,j,k,iBLk)+&  
-                  ( bDotb*rhoUz - bDotU*FullB_DG(z_,i,j,k))*Z_BLK(i,j,k,iBLk)   &  
+                  ( bDotb*rhoUy - bDotU*FullB_DG(y_,i,j,k))*Y_BLK(i,j,k,iBLk)+&
+                  ( bDotb*rhoUz - bDotU*FullB_DG(z_,i,j,k))*Z_BLK(i,j,k,iBLk) &
                   ) / (State_VGB(iRho,i,j,k,iBLk)*R_BLK(i,j,k,iBLk))
              end do; end do; end do
           end do
-          LogVar_I(iVarTot) = calc_sphere('integrate',360, R_log,tmp1_BLK)
+          LogVar_I(iVarTot) = calc_sphere('integrate',360, r,tmp1_BLK)
        end do
-
 
        ! simple circular integrals
     case('e2dflx')
@@ -803,12 +802,11 @@ contains
        iVarTot = iVarTot-1
        do iR=1,nLogR
           iVarTot = iVarTot+1
-          R_log = LogR_I(iR)
+          r = LogR_I(iR)
           do iBLK = 1,nBlock
              if(unusedBLK(iBLK))CYCLE
-             FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
-             if(UseB0)FullB_DG = FullB_DG &
-                  +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+             FullB_DG = State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+             if(UseB0)FullB_DG = FullB_DG + B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
                 Bx = FullB_DG(x_,i,j,k)
                 By = FullB_DG(y_,i,j,k)
@@ -822,7 +820,7 @@ contains
                      ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK)) 
              end do; end do; end do
           end do
-          LogVar_I(iVarTot) = integrate_circle(R_log,0.0,tmp1_BLK)
+          LogVar_I(iVarTot) = integrate_circle(r, 0.0, tmp1_BLK)
        end do
 
        ! OTHER VALUES
@@ -834,14 +832,14 @@ contains
 
     case default
        ! Check if the variable name is one of the state variables
-       String = NameLogVar_I(iVar)
-       call lower_case(String)
+       NameLogVarLower = NameLogVar_I(iVar)
+       call lower_case(NameLogVarLower)
 
        do jVar = 1, nVar
           NameVar = NameVar_V(jVar)
           call lower_case(NameVar)
-          if(NameVar /= String) CYCLE
-          LogVar_I(iVarTot) = StateIntegral_V(jVar)/volume
+          if(NameVar /= NameLogVarLower) CYCLE
+          LogVar_I(iVarTot) = StateIntegral_V(jVar)/Volume
           RETURN
        end do
        if (UseUserLogFiles) then
@@ -849,11 +847,11 @@ contains
              iVarTot = iVarTot - 1
              do iR=1,nLogR
                 iVarTot = iVarTot + 1
-                R_log = LogR_I(iR)           
-                call user_get_log_var( LogVar_I(iVarTot),NameLogVar,R_log )
+                r = LogR_I(iR)           
+                call user_get_log_var(LogVar_I(iVarTot), NameLogVarLower, r)
              end do
           else
-             call user_get_log_var( LogVar_I(iVarTot), NameLogVar )
+             call user_get_log_var(LogVar_I(iVarTot), NameLogVarLower)
           end if
        else
           if(iProc == 0)then
@@ -878,7 +876,7 @@ contains
     implicit none
 
     integer :: jVar, jFluid
-    character(len=10) :: NameVar, String
+    character(len=10) :: NameVar, NameLogVarLower
 
     !-------------------------------------------------------------------------
     if (iProc/=0) RETURN
@@ -893,17 +891,17 @@ contains
     case('rhouz')
        LogVar_I(iVarTot) = StateSat_V(iRhoUz)
     case('bx')
-       LogVar_I(iVarTot) = StateSat_V(Bx_)+B0Sat_D(1)
+       LogVar_I(iVarTot) = StateSat_V(Bx_) + B0Sat_D(1)
     case('by')
-       LogVar_I(iVarTot) = StateSat_V(By_)+B0Sat_D(2)
+       LogVar_I(iVarTot) = StateSat_V(By_) + B0Sat_D(2)
     case('bz')
-       LogVar_I(iVarTot) = StateSat_V(Bz_)+B0Sat_D(3)
+       LogVar_I(iVarTot) = StateSat_V(Bz_) + B0Sat_D(3)
     case('e')
        LogVar_I(iVarTot) = inv_gm1*StateSat_V(iP) + 0.5*&
             sum(StateSat_V(iRhoUx:iRhoUz)**2)/StateSat_V(iRho)
        if(iFluid == 1 .and. IsMhd) &
             LogVar_I(iVarTot) = LogVar_I(iVarTot) &
-            + 0.5*sum((StateSat_V(Bx_:Bz_)+B0Sat_D)**2)
+            + 0.5*sum((StateSat_V(Bx_:Bz_) + B0Sat_D)**2)
     case('n','t','temp')
        ! Calculate the number density
        if(UseMultiSpecies)then
@@ -959,7 +957,7 @@ contains
           LogVar_I(iVarTot) = 1
        end if
        
-       !Raytracing footpoint values !^CFG IF RAYTRACE BEGIN
+       !Raytracing footpoint values               !^CFG IF RAYTRACE BEGIN
     case('theta1')
        LogVar_I(iVarTot) = SatRayVarSum_I(1)
     case('phi1')
@@ -969,16 +967,16 @@ contains
     case('theta2')
        LogVar_I(iVarTot) = SatRayVarSum_I(4)
     case('phi2')
-       LogVar_I(iVarTot) = SatRayVarSum_I(5)       !^CFG END RAYTRACE
+       LogVar_I(iVarTot) = SatRayVarSum_I(5)      !^CFG END RAYTRACE
 
     case default
        ! Check if the variable name is one of the state variables
-       String = NameLogVar_I(iVar)
-       call lower_case(String)
+       NameLogVarLower = NameLogVar_I(iVar)
+       call lower_case(NameLogVarLower)
        do jVar = 1, nVar
           NameVar = NameVar_V(jVar)
           call lower_case(NameVar)
-          if(NameVar /= String) CYCLE
+          if(NameVar /= NameLogVarLower) CYCLE
           LogVar_I(iVarTot) = StateSat_V(jVar)
           RETURN
        end do
