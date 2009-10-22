@@ -63,7 +63,7 @@ contains
 
   subroutine init_rad_diffusion
 
-    use ModAdvance,     ONLY: nWave, UseElectronEnergy
+    use ModAdvance,     ONLY: nWave, UseElectronPressure
     use ModMain,        ONLY: UseRadDiffusion
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
@@ -112,7 +112,7 @@ contains
 
        select case(TypeSemiImplicit)
        case('radiation')
-          if(UseElectronEnergy)then
+          if(UseElectronPressure)then
              call stop_mpi(NameSub//": Te/=Ti requires Te,Ti relaxation")
           end if
           if(nWave == 1)then
@@ -142,7 +142,7 @@ contains
           nRelax = nWave
           allocate(iRelax_I(nRelax))
           iRelax_I = (/ (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
-          if(UseElectronEnergy)then
+          if(UseElectronPressure)then
              nPoint = 1
              allocate(iPoint_I(nPoint))
              iPoint_I = iTeImpl
@@ -158,7 +158,7 @@ contains
           iDiff_I = iTeImpl
           iDiffHeat = 1; iDiffRadFirst = 0; iDiffRadLast = 0
           nRelax = 0
-          if(UseElectronEnergy)then
+          if(UseElectronPressure)then
              nPoint = 1
              allocate(iPoint_I(nPoint))
              iPoint_I = iTeImpl
@@ -330,7 +330,7 @@ contains
 
   subroutine get_impl_rad_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
-    use ModAdvance,  ONLY: State_VGB, UseElectronEnergy, nWave, WaveFirst_, &
+    use ModAdvance,  ONLY: State_VGB, UseElectronPressure, nWave, WaveFirst_, &
          WaveLast_
     use ModConst,    ONLY: cBoltzmann
     use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, TypeSemiImplicit, &
@@ -397,7 +397,7 @@ contains
 
        ! calculate coefficients for linearized energy exchange and diffusion
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(UseElectronEnergy)then
+          if(UseElectronPressure)then
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
                   OpacityPlanckOut_W = OpacityPlanckSi_W, &
@@ -457,7 +457,7 @@ contains
              end if
 
           case('radcond')
-             if(UseElectronEnergy)then
+             if(UseElectronPressure)then
                 TeTiCoefPrime = TeTiCoef/Cvi &
                      /(cRadiationNo*(Te+Ti)*(Te**2+Ti**2))
                 PointCoef_VCB(1,i,j,k,iBlock) = &
@@ -472,7 +472,7 @@ contains
              PlanckWeight_WCB(:,i,j,k,iBlock) = Planck_W/Planck
 
           case('cond')
-             if(UseElectronEnergy)then
+             if(UseElectronPressure)then
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
 
                 PointCoef_VCB(1,i,j,k,iBlock) = TeTiCoef &
@@ -1320,7 +1320,7 @@ contains
 
   subroutine update_impl_rad_diff(iBlock, iImplBlock, StateImpl_VG)
 
-    use ModAdvance,    ONLY: State_VGB, UseElectronEnergy
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModEnergy,     ONLY: calc_energy_cell
     use ModImplicit,   ONLY: nw, iTeImpl, iTrImplFirst, iTrImplLast, &
          DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
@@ -1328,7 +1328,7 @@ contains
     use ModPhysics,    ONLY: inv_gm1, g, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, UnitRho_, UnitTemperature_
     use ModUser,       ONLY: user_material_properties
-    use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Ee_, nWave, WaveFirst_
+    use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Pe_, nWave, WaveFirst_
 
     integer, intent(in) :: iBlock, iImplBlock
     real, intent(inout) :: StateImpl_VG(nw,nI,nJ,nK)
@@ -1352,10 +1352,10 @@ contains
           end do
        end if
 
-       if(UseElectronEnergy)then
+       if(UseElectronPressure)then
           ! electrons
-          State_VGB(Ee_,i,j,k,iBlock) = State_VGB(Ee_,i,j,k,iBlock) &
-               + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+          State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
+               + (g - 1)*DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
                *(StateImpl_VG(iTeImpl,i,j,k)-ImplOld_VCB(iTeImpl,i,j,k,iBlock))
 
           ! ion pressure -> Einternal
@@ -1396,23 +1396,25 @@ contains
           call stop_mpi(NameSub//' negative Eint')
        end if
 
-       if(UseElectronEnergy)then
+       if(UseElectronPressure)then
           ! ions
           State_VGB(p_,i,j,k,iBlock) = (g - 1)*Einternal
 
           ! electrons
-          Ee = State_VGB(Ee_,i,j,k,iBlock) + State_VGB(ExtraEint_,i,j,k,iBlock)
+          Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
+               + State_VGB(ExtraEint_,i,j,k,iBlock)
           EeSi = Ee*No2Si_V(UnitEnergyDens_)
 
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
                EinternalIn = EeSi, PressureOut = PeSi)
 
-          ! use true electron pressure
-          State_VGB(Ee_,i,j,k,iBlock) = inv_gm1*PeSi*Si2No_V(UnitP_)
+          ! Set true electron pressure
+          State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
 
           ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
-          State_VGB(ExtraEint_,i,j,k,iBlock) = Ee - State_VGB(Ee_,i,j,k,iBlock)
+          State_VGB(ExtraEint_,i,j,k,iBlock) = &
+               Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
 
        else
           ! ions + electrons

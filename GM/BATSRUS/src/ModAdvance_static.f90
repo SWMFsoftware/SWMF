@@ -24,7 +24,6 @@ Module ModAdvance
   logical, parameter:: UseElectronPressure = Pe_ > 1
   logical, parameter:: UseAnisoPressure    = Ppar_ > 1
   logical, parameter:: UseIdealEos = ExtraEint_ == 1
-  logical, parameter:: UseElectronEnergy = Ee_ > 1
 
   !\ One of the two possible ways to treat the MHD-like systems
   !  (oartially symmetrizable, following the Godunov definition).

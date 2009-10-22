@@ -1,5 +1,8 @@
 module ModMultiIon
 
+!!! "resistive terms" = ion-electron collisions to be added
+!!! RZ geometry terms are missing
+
   ! Calculate source terms for multi-ion MHD. 
   ! For sake of numerical stability this should be done with 
   ! a point-implicit scheme. 
@@ -54,7 +57,7 @@ module ModMultiIon
   logical:: IsAnalyticJacobian = .true.
 
   ! how to reconcile ions with total fluid
-  logical :: DoAddRhoP = .false.
+  logical :: DoAddRho  = .false.
   logical :: DoAddRhoU = .true.
 
 contains
@@ -71,7 +74,7 @@ contains
     !------------------------------------------------------------------------
     select case(NameCommand)
     case("#MHDIONS")
-       call read_var('DoAddRhoP', DoAddRhoP)
+       call read_var('DoAddRho',  DoAddRho)
        call read_var('DoAddRhoU', DoAddRhoU)
     case("#MULTIION")
        call read_var('LowDensityRatio',    LowDensityRatio)
@@ -639,7 +642,7 @@ contains
 
     use ModEnergy, ONLY: calc_energy
     use ModAdvance, ONLY: State_VGB, Energy_GBI, &
-         Rho_, p_, RhoUx_, RhoUy_, RhoUz_, UseElectronPressure, Pe_
+         Rho_, p_, RhoUx_, RhoUy_, RhoUz_, UseElectronPressure
     use ModPhysics, ONLY: ElectronTemperatureRatio, LowDensityRatio
 
     integer, intent(in) :: iBlock
@@ -663,26 +666,21 @@ contains
        InvRho = 1/Rho
 
        if(.not.IsFinal)then
-          if(DoAddRhoP)then
-             State_VGB(Rho_,i,j,k,iBlock) = sum(State_V(iRhoIon_I))
-             p = sum(State_V(iPIon_I))
-             if(UseElectronPressure)then
-                State_VGB(p_,i,j,k,iBlock) = p + State_V(Pe_)
-             else
-                State_VGB(p_,i,j,k,iBlock) = p * TeRatio1
-             end if
+
+          ! Ion pressures are always added up into total pressure
+          p = sum(State_V(iPIon_I))
+          if(UseElectronPressure) then
+             State_VGB(p_,i,j,k,iBlock) = p
           else
+             State_VGB(p_,i,j,k,iBlock) = p * TeRatio1
+          end if
+
+          if(DoAddRho)then
+             State_VGB(Rho_,i,j,k,iBlock) = sum(State_V(iRhoIon_I))
+          else
+             ! Distribute total density among ions
              InvSum = 1/sum(State_V(iRhoIon_I))
              State_VGB(iRhoIon_I,i,j,k,iBlock) = State_V(iRhoIon_I)*Rho*InvSum
-
-             ! Distribute total pressure among ions
-             InvSum = 1/sum(State_V(iPIon_I))
-             if(UseElectronPressure)then
-                p = State_V(p_) - State_V(Pe_)
-             else
-                p = State_V(p_) * InvTeRatio1
-             end if
-             State_VGB(iPIon_I,i,j,k,iBlock) = State_V(iPIon_I)*p*InvSum
           end if
 
           IonSum = sum(State_V(iRhoUxIon_I))
@@ -691,6 +689,10 @@ contains
                minval(State_V(iRhoUxIon_I)) <= 0)then
              State_VGB(RhoUx_,i,j,k,iBlock) = IonSum
           else
+             !!! This will be correct only if the total pressure equation contains
+             !!! the divergence of a pressure tensor of the form 
+             !!! div(sum_s rho_s (u_s - u) (u_s - u_+) )
+
              State_VGB(iRhoUxIon_I,i,j,k,iBlock) = State_V(iRhoUxIon_I) &
                   *State_V(RhoUx_)/IonSum
           endif
@@ -745,7 +747,7 @@ contains
 
           ! Set ion temperatures to be equal with the total
           if(UseElectronPressure)then
-             p = State_V(p_) - State_V(Pe_)
+             p = State_V(p_)
           else
              p = State_V(p_) * InvTeRatio1
           end if
@@ -762,7 +764,7 @@ contains
           State_VGB(RhoUz_,i,j,k,iBlock) = sum(State_V(iRhoUzIon_I))
           p = sum(State_V(iPIon_I))
           if(UseElectronPressure)then
-             State_VGB(p_,i,j,k,iBlock)  = p + State_V(Pe_)
+             State_VGB(p_,i,j,k,iBlock)  = p
           else
              State_VGB(p_,i,j,k,iBlock)  = p * TeRatio1
           end if

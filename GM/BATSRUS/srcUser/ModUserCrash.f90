@@ -328,7 +328,7 @@ contains
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
          ExtraEint_, LevelBe_, LevelXe_, LevelPl_, &
-         Ee_, UseElectronEnergy
+         Pe_, UseElectronPressure
     use ModVarIndexes,  ONLY: Erad_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
     use ModLookupTable, ONLY: interpolate_lookup_table
@@ -354,7 +354,7 @@ contains
        end if
     end if
 
-    if(UseElectronEnergy .and. (UseTube .or. UseGold))then
+    if(UseElectronPressure .and. (UseTube .or. UseGold))then
        call stop_mpi(NameSub //" electron energy does not yet work " &
             //"with plastic tube or gold washer")
     end if
@@ -513,10 +513,10 @@ contains
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
             i, j, k, iBlock, EinternalOut=EinternalSi)
 
-       if(UseElectronEnergy)then
+       if(UseElectronPressure)then
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - State_VGB(Ee_,i,j,k,iBlock)
+               - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
        else
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
@@ -545,7 +545,7 @@ contains
 
   subroutine read_hyades_file
 
-    use ModAdvance,    ONLY: UseElectronEnergy
+    use ModAdvance,    ONLY: UseElectronPressure
     use ModIoUnit,     ONLY: UnitTmp_
     use ModPhysics,    ONLY: Si2No_V, Io2No_V, UnitX_, UnitRho_, UnitU_, &
          UnitP_, UnitTemperature_, UnitEnergyDens_
@@ -661,7 +661,7 @@ contains
     Hyades2No_V(iUxHyades)  = 0.01   * Si2No_V(UnitU_)   ! cm/s  -> m/s
     Hyades2No_V(iPHyades)   = 0.1    * Si2No_V(UnitP_)   ! dyne  -> Pa
 
-    if(UseRadDiffusion .or. UseElectronEnergy)then
+    if(UseRadDiffusion .or. UseElectronPressure)then
        if(iTeHyades < 0) call stop_mpi(NameSub// &
             ' could not find electron temperature in '//trim(NameVarHyades))
 
@@ -675,7 +675,7 @@ contains
        Hyades2No_V(iTrHyades)= cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
     end if
 
-    if(UseElectronEnergy)then
+    if(UseElectronPressure)then
        if(iTiHyades < 0) call stop_mpi(NameSub// &
             ' could not find ion temperature in '//trim(NameVarHyades))
 
@@ -872,10 +872,10 @@ contains
     use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
     use ModSize,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
-         Erad_, UseElectronEnergy, Ee_
+         Erad_, UseElectronPressure, Pe_
     use ModGeometry,   ONLY: x_BLK
     use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
-         UnitP_, UnitN_, cRadiationNo, UnitEnergyDens_, inv_gm1
+         UnitP_, UnitN_, cRadiationNo, UnitEnergyDens_
     use ModMain,       ONLY: UseRadDiffusion
     use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_
 
@@ -921,7 +921,7 @@ contains
                ( Weight1*DataHyades_VC(iUxHyades, iCell-1) &
                + Weight2*DataHyades_VC(iUxHyades, iCell) )
 
-          if(UseElectronEnergy)then
+          if(UseElectronPressure)then
              Te = ( Weight1*DataHyades_VC(iTeHyades, iCell-1) &
                   + Weight2*DataHyades_VC(iTeHyades, iCell) )
              Ti = ( Weight1*DataHyades_VC(iTiHyades, iCell-1) &
@@ -934,7 +934,7 @@ contains
 
              Natomic = NatomicSi*Si2No_V(UnitN_)
              State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti
-             State_VGB(Ee_,i,j,k,iBlock) = inv_gm1*PeSi*Si2No_V(UnitP_)
+             State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
           else
              State_VGB(p_,i,j,k,iBlock) = &
                   ( Weight1*DataHyades_VC(iPHyades, iCell-1) &
@@ -982,12 +982,12 @@ contains
     use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
     use ModSize,        ONLY: nI, nJ, nK
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
-         LevelXe_, LevelPl_, Erad_, UseElectronEnergy, Ee_
+         LevelXe_, LevelPl_, Erad_, UseElectronPressure, Pe_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, y2
     use ModTriangulate, ONLY: calc_triangulation, find_triangle
     use ModMain,        ONLY: UseRadDiffusion
     use ModPhysics,     ONLY: cRadiationNo, No2Si_V, Si2No_V, &
-         UnitTemperature_, UnitN_, UnitP_, UnitEnergyDens_, inv_gm1
+         UnitTemperature_, UnitN_, UnitP_, UnitEnergyDens_
     use ModVarIndexes,  ONLY: nWave, WaveFirst_, WaveLast_
 
     integer, intent(in) :: iBlock
@@ -1111,7 +1111,7 @@ contains
 
        State_VGB(Rho_,i,j,k,iBlock)  = DataHyades_V(iRhoHyades)
 
-       if(UseElectronEnergy)then
+       if(UseElectronPressure)then
           Te = DataHyades_V(iTeHyades)
           Ti = DataHyades_V(iTiHyades)
 
@@ -1122,7 +1122,7 @@ contains
 
           Natomic = NatomicSi*Si2No_V(UnitN_)
           State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti
-          State_VGB(Ee_,i,j,k,iBlock) = inv_gm1*PeSi*Si2No_V(UnitP_)
+          State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
        else
           State_VGB(p_,i,j,k,iBlock)  = DataHyades_V(iPHyades)
        end if
@@ -1168,7 +1168,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, &
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
-         UseElectronEnergy
+         UseElectronPressure
     use ModGeometry, ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
     use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_
@@ -1185,7 +1185,7 @@ contains
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
-    if(UseElectronEnergy)then
+    if(UseElectronPressure)then
        call update_states_electron
 
        RETURN
@@ -1247,7 +1247,7 @@ contains
 
     subroutine update_states_electron
 
-      use ModAdvance, ONLY: Ee_
+      use ModAdvance, ONLY: Pe_
 
       real :: PeSi, Ee, EeSi
       !------------------------------------------------------------------------
@@ -1258,18 +1258,20 @@ contains
          ! At this point Pe=(g-1)*Ee with the ideal gamma g.
          ! Use this Pe to get electron internal energy density.
 
-         Ee = State_VGB(Ee_,i,j,k,iBlock) + State_VGB(ExtraEint_,i,j,k,iBlock)
+         Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
+              + State_VGB(ExtraEint_,i,j,k,iBlock)
          EeSi = Ee*No2Si_V(UnitEnergyDens_)
 
          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
               i, j, k, iBlock, &
               EinternalIn=EeSi, PressureOut=PeSi)
 
-         ! use true electron pressure
-         State_VGB(Ee_,i,j,k,iBlock) = inv_gm1*PeSi*Si2No_V(UnitP_)
+         ! Set true electron pressure
+         State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
 
          ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
-         State_VGB(ExtraEint_,i,j,k,iBlock) = Ee - State_VGB(Ee_,i,j,k,iBlock)
+         State_VGB(ExtraEint_,i,j,k,iBlock) = &
+              Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
 
       end do; end do; end do
 
@@ -1319,7 +1321,7 @@ contains
     use ModConst,   ONLY: cKtoKev, cBoltzmann
     use ModSize,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Rho_, p_, LevelXe_, LevelBe_, LevelPl_, &
-         nWave, WaveFirst_, WaveLast_, UseElectronEnergy
+         nWave, WaveFirst_, WaveLast_, UseElectronPressure
     use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
          UnitTemperature_, cRadiationNo, No2Si_V, UnitEnergyDens_
     use ModLookupTable, ONLY: interpolate_lookup_table
@@ -1363,7 +1365,7 @@ contains
        end do; end do; end do
     case('tikev', 'TiKev')
        NameIdlUnit = 'KeV'
-       if(UseElectronEnergy)then
+       if(UseElectronPressure)then
           do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, NatomicOut=NatomicSi)
@@ -1562,7 +1564,7 @@ contains
   !===========================================================================
   subroutine calc_table_value(iTable, Arg1, Arg2, Value_V)
 
-    use ModAdvance,    ONLY: UseElectronEnergy
+    use ModAdvance,    ONLY: UseElectronPressure
     use ModProcMH,     ONLY: iProc
     use CRASH_ModEos,  ONLY: eos
     use ModConst,      ONLY: cProtonMass, cBoltzmann
@@ -1591,7 +1593,7 @@ contains
        Rho = Arg1
        e   = Arg2*Rho
        do iMaterial = 0, nMaterial-1
-          if(UseElectronEnergy)then
+          if(UseElectronPressure)then
              call eos(iMaterial, Rho, eElectronIn=e, pElectronOut=p)
           else
              call eos(iMaterial, Rho, EtotalIn=e, pTotalOut=p)
@@ -1605,7 +1607,7 @@ contains
        Rho = Arg1
        p   = Arg2*Rho
        do iMaterial = 0, nMaterial-1
-          if(UseElectronEnergy)then
+          if(UseElectronPressure)then
              call eos(iMaterial, Rho, pElectronIn=p, eElectronOut=e)
           else
              call eos(iMaterial, Rho, PtotalIn=p, eTotalOut=e)
@@ -1620,7 +1622,7 @@ contains
        Rho = Arg1
        p   = Arg2*Rho
        do iMaterial = 0, nMaterial-1
-          if(UseElectronEnergy)then
+          if(UseElectronPressure)then
              call eos(iMaterial, Rho, pElectronIn=p, CvElectronOut=Cv, &
                   TeTiRelax=TeTiRelax, HeatCond=HeatCond, TeOut=Te)
 
@@ -1756,11 +1758,11 @@ contains
     use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature, &
          get_temperature_from_energy_g
     use ModMain,       ONLY: nI, nJ, nK
-    use ModAdvance,    ONLY: State_VGB, UseElectronEnergy
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, UnitEnergyDens_, &
          inv_gm1, g, Si2No_V, cRadiationNo, UnitTemperature_
     use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_, nWave, &
-         WaveFirst_, WaveLast_, ExtraEint_, Ee_
+         WaveFirst_, WaveLast_, ExtraEint_, Pe_
     use ModLookupTable,ONLY: interpolate_lookup_table
     use ModConst,      ONLY: cAtomicMass
 
@@ -1856,7 +1858,7 @@ contains
        end if
     end if
 
-    if(UseElectronEnergy)then
+    if(UseElectronPressure)then
        call get_electron_thermo
     else
        call get_thermo
@@ -2116,9 +2118,9 @@ contains
                  HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
          end if
       else
-         ! electron pressure is (g - 1)*State_V(Ee_)
+         ! electron pressure is State_V(Pe_)
          ! Use this pressure to calculate the true electron internal energy
-         pSi = (g - 1)*State_V(Ee_)*No2Si_V(UnitP_)
+         pSi = State_V(Pe_)*No2Si_V(UnitP_)
          if(present(EinternalOut))then
             if(iTableEPerP > 0)then
                call interpolate_lookup_table(iTableEPerP, RhoSi, &

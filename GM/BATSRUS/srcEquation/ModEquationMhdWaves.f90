@@ -170,10 +170,6 @@ contains
     NamePrimitiveVarTec=trim(NamePrimitiveVarTec)//trim(NamePrimitiveVarSuff)
 
     ! Set the unit and unit name for the wave energy variable
-    UnitUser_V(ExtraEInt_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(ExtraEInt_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(ExtraEInt_) = NameUnitUserIdl_V(Energy_)
-   
     UnitUser_V(WaveFirst_:WaveLast_)        = UnitUser_V(Energy_)
     NameUnitUserTec_V(WaveFirst_:WaveLast_) = NameUnitUserTec_V(Energy_)
     NameUnitUserIdl_V(WaveFirst_:WaveLast_) = NameUnitUserIdl_V(Energy_)

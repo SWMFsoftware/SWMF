@@ -116,11 +116,6 @@ contains
     ! Initialize usre units and names for the MHD variables
     call init_mhd_variables
 
-    ! Set the unit and unit name for the wave energy variable
-    UnitUser_V(ExtraEInt_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(ExtraEInt_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(ExtraEInt_) = NameUnitUserIdl_V(Energy_)
-    
   end subroutine init_mod_equation
 
 end module ModVarIndexes

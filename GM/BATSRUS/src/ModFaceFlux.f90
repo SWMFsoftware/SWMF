@@ -1573,11 +1573,11 @@ contains
 
     subroutine godunov_flux
 
-      use ModAdvance,  ONLY: UseElectronEnergy
+      use ModAdvance,  ONLY: UseElectronPressure
       use ModExactRS,  ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
            pL, pR, UnL, UnR, UnStar, pStar
       use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
-      use ModPhysics,  ONLY: inv_gm1,g
+      use ModPhysics,  ONLY: inv_gm1, g
       use ModWaves,    ONLY: UseWavePressure, GammaWave
 
       real::Rho, Un, p, pTotal, e, StateStar_V(nVar)
@@ -1610,11 +1610,11 @@ contains
          !It is easier to add zero than using if(UseWavePressure)
          pWaveL = 0.0; pWaveR = 0.0
       end if
-      if(UseElectronEnergy)then
+      if(UseElectronPressure)then
          ! StateLeft_V(p_) and StateRight_V(p_) are the ion pressure
          ! Add the electron pressure to the total pressure
-         PeL = (g - 1)*StateLeft_V(Ee_)
-         PeR = (g - 1)*StateRight_V(Ee_)
+         PeL = StateLeft_V(Pe_)
+         PeR = StateRight_V(Pe_)
          pL = pL + PeL
          pR = pR + PeR
       else
@@ -1709,8 +1709,8 @@ contains
             Flux_V(iVar) = Factor*StateStar_V(iVar)*Un
          end do
       end if
-      if(UseElectronEnergy) &
-           Flux_V(Ee_) = (Adiabatic/Isothermal)*StateStar_V(Ee_)*Un
+      if(UseElectronPressure) &
+           Flux_V(Pe_) = (Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
 
       !^CFG IF IMPLICIT BEGIN
       if(.not.UseSemiImplicit)then
@@ -1979,8 +1979,7 @@ contains
     subroutine get_mhd_flux
 
       use ModPhysics, ONLY: inv_gm1, g, inv_c2LIGHT
-      use ModAdvance, ONLY: UseElectronPressure, UseElectronEnergy, &
-           UseAnisoPressure
+      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
       use ModWaves
 
       ! Variables for conservative state and flux calculation
@@ -2020,7 +2019,7 @@ contains
 
       if(UseWavePressure) &
            pTotal = pTotal + (GammaWave-1.0)*sum(State_V(WaveFirst_:WaveLast_))
-      if(UseElectronEnergy) pTotal = pTotal + (g - 1)*State_V(Ee_)
+      if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
 
       ! Normal direction
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
@@ -2188,23 +2187,16 @@ contains
     end subroutine get_magnetic_flux
 
     !==========================================================================
-    subroutine get_hd_flux(Gamma,EPerRhoExtra)
+    subroutine get_hd_flux
 
-      use ModAdvance, ONLY: UseElectronEnergy
-      use ModPhysics, ONLY: inv_gm1, g
+      use ModAdvance, ONLY: UseElectronPressure
+      use ModPhysics, ONLY: inv_gm1
       use ModWaves
 
-      real, optional::Gamma,EPerRhoExtra
-
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, GM1Inv, pTotal
+      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal
       integer :: iVar
       !-----------------------------------------------------------------------
-      if(present(Gamma))then
-         GM1Inv=1.0/(Gamma-1.0)
-      else
-         GM1Inv=inv_gm1
-      end if
       ! Extract primitive variables
       Rho     = State_V(iRho)
       Ux      = State_V(iUx)
@@ -2213,8 +2205,7 @@ contains
       p       = State_V(iP)
 
       ! Calculate energy
-      e = GM1Inv*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
-      if(present(EPerRhoExtra))e=e+EPerRhoExtra*Rho
+      e = inv_gm1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
 
       ! Calculate conservative state
       StateCons_V(iRhoUx)  = Rho*Ux
@@ -2226,7 +2217,7 @@ contains
 
       if(UseWavePressure) &
            pTotal = pTotal + (GammaWave-1.0)*sum(State_V(WaveFirst_:WaveLast_))
-      if(UseElectronEnergy) pTotal = pTotal + (g - 1)*State_V(Ee_)
+      if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
 
       ! Normal velocity
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
@@ -2405,7 +2396,7 @@ contains
       use ModPhysics, ONLY: g, Inv_C2Light, ElectronTemperatureRatio
       use ModNumConst, ONLY: cPi
       use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure, &
-           UseElectronEnergy, UseAnisoPressure
+           UseAnisoPressure
 
       real :: RhoU_D(3)
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn
@@ -2429,14 +2420,12 @@ contains
             Rho1= State_V(iRhoIon_I(iFluid))
             Rho = Rho + Rho1
             p   = p   + State_V(iPIon_I(iFluid))
-            RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(iFluid): iUzIon_I(iFluid))
+            RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(iFluid):iUzIon_I(iFluid))
          end do
-         if(UseElectronPressure)then
-            p = p + State_V(Pe_)
-         else
-            p = p * (1 + ElectronTemperatureRatio)
-         end if
+         if(.not.UseElectronPressure) p = p * (1 + ElectronTemperatureRatio)
       end if
+
+      if(UseElectronPressure) p = p + State_V(Pe_)
 
       InvRho = 1.0/Rho
       if(UseRS7)then
@@ -2447,7 +2436,6 @@ contains
       if(UseWavePressure)&
          Sound2 = Sound2 + GammaWave * (GammaWave - 1)*&
          sum(State_V(WaveFirst_:WaveLast_))*InvRho
-      if(UseElectronEnergy) Sound2 = Sound2 + g*(g - 1)*State_V(Ee_)*InvRho
      
       Un     = InvRho*sum( RhoU_D*Normal_D )
 
@@ -2585,10 +2573,10 @@ contains
     !========================================================================
     subroutine get_hd_speed
 
-      use ModAdvance, ONLY: UseElectronEnergy, State_VGB
+      use ModAdvance, ONLY: UseElectronPressure, State_VGB
       use ModPhysics, ONLY: g
 
-      real :: InvRho, Sound2, Sound, Un
+      real :: InvRho, Sound2, Sound, Un, p
 
       character(len=*), parameter:: NameSub=NameMod//'::get_hd_speed'
       !------------------------------------------------------------------------
@@ -2597,12 +2585,13 @@ contains
 
       ! Calculate sound speed and normal speed
       InvRho = 1.0/State_V(iRho)
-      Sound2 = g*State_V(iP)*InvRho
+      p = State_V(iP)
+      if(UseElectronPressure) p = p + State_V(Pe_)
+      Sound2 = g*p*InvRho
 
       if(UseWavePressure) &
-           Sound2 = Sound2 + GammaWave* (GammaWave-1.0) * &
-           sum(State_V(WaveFirst_:WaveLast_)) * InvRho
-      if(UseElectronEnergy) Sound2 = Sound2 + g*(g - 1)*State_V(Ee_)*InvRho
+           Sound2 = Sound2 + GammaWave*(GammaWave-1)*InvRho &
+           *sum(State_V(WaveFirst_:WaveLast_))
 
       if(Sound2 <= 0.0)then
          write(*,*)NameSub,' negative Sound2=',Sound2
@@ -2612,8 +2601,8 @@ contains
          if(UseWavePressure)write(*,*)NameSub,' GammaWave, State(Waves):',&
               GammaWave, State_V(WaveFirst_:WaveLast_)
 
-         if(UseElectronEnergy)write(*,*)NameSub,' g,State_V(Ee_)=',&
-              g,State_V(Ee_)
+         if(UseElectronPressure)write(*,*)NameSub,' g,State_V(Pe_)=',&
+              g,State_V(Pe_)
 
          write(*,*)NameSub,' rho, p(left) =', &
               State_VGB( (/Rho_,p_/),iLeft,jLeft,kLeft,iBlockFace)

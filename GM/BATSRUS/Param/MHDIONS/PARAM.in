@@ -84,8 +84,8 @@ Distance units are in km
 0.25		ElectronTemperatureRatio
 
 #MHDIONS
-F		DoAddRhoP
-F		DoAddRhoU
+T		DoAddRho
+T		DoAddRhoU
 
 Sheared boundary condition is used for non-zero shock slope
 #OUTERBOUNDARY

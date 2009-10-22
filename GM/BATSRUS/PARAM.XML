@@ -3664,23 +3664,22 @@ IsAnalyticJacobian false.
 </command>
 
 <command name="MHDIONS">
-	<parameter name="DoAddRhoP" type="logical" default="F"/>
+	<parameter name="DoAddRho"  type="logical" default="F"/>
 	<parameter name="DoAddRhoU" type="logical" default="T"/>
 #MHDIONS
-F			DoAddRhoP
+F			DoAddRho
 T			DoAddRhoU
 
 This command determines how the total MHD fluid and the individual ion fluids
-are reconciled after each time step. If both DoAddRhoP and DoAddRhoU are true,
-then the density, pressure and momentum of individual ion fluids are added up
+are reconciled after each time step. If both DoAddRho and DoAddRhoU are true,
+then the density and momentum of individual ion fluids are added up
 and the MHD solution is overwritten. This is mostly useful for testing 
 purposes, because in this case it is better not to solve for the total fluid
 at all. 
 
-If DoAddRhoP is false then the density and pressure obtained by 
-the MHD scheme is used to adjust the densities and pressures of the ion fluids.
-They are scaled such that their sum matches the total fluid. The electron
-pressure is also taken into account (if not zero).
+If DoAddRho is false then the density obtained by  the MHD scheme is used
+to adjust the densities of the ion fluids.
+They are scaled such that their sum matches the total fluid.
 
 If DoAddRhoU is false, the same scaling is done for the three components 
 of the ion momenta as long as all ion velocities have the same signs! 

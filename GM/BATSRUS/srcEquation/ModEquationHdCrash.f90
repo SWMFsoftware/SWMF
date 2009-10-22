@@ -105,11 +105,7 @@ contains
 
     call init_mhd_variables
 
-    ! Set the unit and unit name for the wave energy variable
-    UnitUser_V(ExtraEint_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(ExtraEint_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(ExtraEint_) = NameUnitUserIdl_V(Energy_)
-
+    ! Set the unit and unit name
     UnitUser_V(LevelXe_:LevelPl_) = 1e-6 ! = No2Io_V(UnitX_) = micron
 
   end subroutine init_mod_equation

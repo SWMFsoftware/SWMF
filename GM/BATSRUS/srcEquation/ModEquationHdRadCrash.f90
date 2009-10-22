@@ -130,9 +130,6 @@ contains
        NameUnitUserTec_V(iWave) = NameUnitUserTec_V(Energy_)
        NameUnitUserIdl_V(iWave) = NameUnitUserIdl_V(Energy_)
     end do
-    UnitUser_V(ExtraEint_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(ExtraEint_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(ExtraEint_) = NameUnitUserIdl_V(Energy_)
 
     UnitUser_V(LevelXe_:LevelPl_) = 1e-6 ! = No2Io_V(UnitX_) = micron
 

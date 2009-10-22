@@ -165,13 +165,22 @@ contains
     case('GEM')
        ! write(*,*)'GEM problem set up'
        State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(z_BLK(:,:,:,iBlock)/Lambda0)
-       State_VGB(p_,:,:,:,iBlock)  = State_VGB(p_,:,:,:,iBlock) &
-            + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2)
 
-       ! Scale electron pressure proportionally as defined in #SHOCKTUBE
-       if(UseElectronPressure) &
-            State_VGB(Pe_,:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)* &
-            ShockLeftState_V(Pe_)/ShockLeftState_V(p_)
+       ! Modify pressure(s) to balance magnetic pressure
+       if(UseElectronPressure) then
+          ! Distribute the correction proportionally between electrons and ions
+          State_VGB(Pe_,:,:,:,iBlock) = ShockLeftState_V(Pe_)*(1.0 &
+               + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
+               /(ShockLeftState_V(Pe_) + ShockLeftState_V(p_)))
+
+          State_VGB(p_,:,:,:,iBlock) = ShockLeftState_V(p_)*(1.0 &
+               + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
+               /(ShockLeftState_V(Pe_) + ShockLeftState_V(p_)))
+
+       else
+          State_VGB(p_,:,:,:,iBlock)  = State_VGB(p_,:,:,:,iBlock) &
+               + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2)
+       end if
 
        State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
        !!!set intial perturbation

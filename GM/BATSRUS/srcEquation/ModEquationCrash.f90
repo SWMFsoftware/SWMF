@@ -8,7 +8,7 @@ module ModVarIndexes
        Redefine4 => WaveFirst_, &
        Redefine5 => WaveLast_, &
        Redefine6 => ExtraEint_, &
-       Redefine7 => Ee_
+       Redefine7 => Pe_
 
   implicit none
 
@@ -39,7 +39,7 @@ module ModVarIndexes
        LevelXe_   = 5,                  & ! Xenon
        LevelBe_   = 6,                  & ! Berillium
        LevelPl_   = 7,                  & ! Plastic
-       Ee_        = 8,                  &
+       Pe_        = 8,                  &
        WaveFirst_ = 9,                  &
        WaveLast_  = WaveFirst_+nWave-1, &
        ExtraEint_ = WaveLast_+1,        &
@@ -67,7 +67,7 @@ module ModVarIndexes
        0.0, & ! LevelXe_
        0.0, & ! LevelBe_
        0.0, & ! LevelPl_
-       0.0, & ! Ee_
+       0.0, & ! Pe_
        (0.0, iWave=WaveFirst_,WaveLast_), &
        0.0, & ! ExtraEint_
        1.0, & ! p_
@@ -82,7 +82,7 @@ module ModVarIndexes
        'Xe  ', & ! LevelXe_ 
        'Be  ', & ! LevelBe_
        'Pl  ', & ! LevelPl_
-       'Ee  ', & ! Ee_
+       'Pe  ', & ! Pe_
        ('Ew  ', iWave=WaveFirst_,WaveLast_), &
        'EInt', & ! ExtraEint_
        'P   ', & ! p_
@@ -90,15 +90,15 @@ module ModVarIndexes
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Xe Be Pl Ee Ew EInt E'
+       'Rho Mx My Mz Xe Be Pl Pe Ew EInt E'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Xe Be Pl Ee Ew EInt P'
+       'Rho Ux Uy Uz Xe Be Pl Pe Ew EInt P'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "Xe", "Be", "Pl", "Ee", "Ew", "EInt", "p"'
+       '"`r", "U_x", "U_y", "U_z", "Xe", "Be", "Pl", "Pe", "Ew", "EInt", "p"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
@@ -134,12 +134,6 @@ contains
        NameUnitUserTec_V(iWave) = NameUnitUserTec_V(Energy_)
        NameUnitUserIdl_V(iWave) = NameUnitUserIdl_V(Energy_)
     end do
-    UnitUser_V(Ee_)          = UnitUser_V(Energy_)
-    NameUnitUserTec_V(Ee_)   = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(Ee_)   = NameUnitUserIdl_V(Energy_)
-    UnitUser_V(ExtraEint_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(ExtraEint_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(ExtraEint_) = NameUnitUserIdl_V(Energy_)
 
     UnitUser_V(LevelXe_:LevelPl_) = 1e-6 ! = No2Io_V(UnitX_) = micron
 

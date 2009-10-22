@@ -540,7 +540,7 @@ subroutine init_mhd_variables
   use ModVarIndexes
   use ModPhysics
   use ModMultiFluid
-  use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure 
+  use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseIdealEos
   use ModMain,    ONLY: UseB
   implicit none
 
@@ -587,7 +587,13 @@ subroutine init_mhd_variables
      NameUnitUserTec_V(Ppar_) = NameTecUnit_V(UnitP_)
      NameUnitUserIdl_V(Ppar_) = NameIdlUnit_V(UnitP_)
   end if
-     
+
+  if(.not.UseIdealEos)then
+     UnitUser_V(ExtraEint_)        = No2Io_V(UnitEnergyDens_)
+     NameUnitUserTec_V(ExtraEint_) = NameTecUnit_V(UnitEnergyDens_)
+     NameUnitUserIdl_V(ExtraEint_) = NameIdlUnit_V(UnitEnergyDens_)
+  end if
+
   if(NameVar_V(Hyp_) == 'Hyp')then
      ! Set the scalar field Phi used in hyperbolic cleaning
      UnitUser_V(Hyp_) = No2Io_V(UnitB_)*No2Io_V(UnitU_)

@@ -26,13 +26,13 @@ subroutine calc_sources
   use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
   use ModCovariant,     ONLY: UseCovariant 
   use ModCurrent,       ONLY: get_current
-  use ModWaves,         ONLY: UseWavePressure, GammaWave, WaveEnergy, DivU_C
+  use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
 
   implicit none
 
   integer :: i, j, k, iDim, iVar
   logical :: UseRzGeometry
-  real :: Pe, DivU
+  real :: Pe, Pwave, DivU
   real :: Coef, Alpha
 
   ! Variable for div B diffusion
@@ -121,21 +121,31 @@ subroutine calc_sources
      end do
 
      ! Joule heating: dP/dt += (gamma-1)*eta*j**2
-     if(UseResistivity)then  !^CFG IF DISSFLUX BEGIN
+     if(UseResistivity .and. .not.UseMultiIon)then  !^CFG IF DISSFLUX BEGIN
 
         do k=1,nK; do j=1,nJ; do i=1,nI           
            call get_current(i,j,k,iBlock,Current_D)
            JouleHeating = (g-1) * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
-           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
            if(UseElectronPressure) then
               ! For single ion fluid the ion-electron collision results in a 
               ! heat exchange term for the electron pressure 
               ! See eq. 4.124c in Schumk and Nagy.
               HeatExchange = (g-1) * Eta_GB(i,j,k,iBlock) * &
                    3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)* &
-                   (State_VGB(P_,i,j,k,iBlock) - 2*State_VGB(Pe_,i,j,k,iBlock))
-              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + JouleHeating &
-                   + HeatExchange
+                   (State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
+
+              ! Joule heating applies to electrons only
+              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
+                   + JouleHeating + HeatExchange
+
+              ! Heat exchange applies to ions too
+              Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) - HeatExchange
+
+              ! Remove Joule heating and apply heat exchange to ion energy
+              Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                   - inv_gm1*(JouleHeating + HeatExchange)
+           else
+              Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
            end if
         end do; end do; end do
 
@@ -145,37 +155,46 @@ subroutine calc_sources
   end if
 
   if(UseWavePressure)then
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        DivU_C(i,j,k) = vInv_CB(i,j,k,iBlock)*&
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        DivU_C(i,j,k) = vInv_CB(i,j,k,iBlock)* &
              (uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
              +uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
              +uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
-        WaveEnergy = 0.0
-        do iVar = WaveFirst_,WaveLast_
-           Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) - &
-                DivU_C(i,j,k) * (GammaWave - 1.0) * State_VGB(iVar,i,j,k,iBlock)
-           WaveEnergy = WaveEnergy + State_VGB(iVar,i,j,k,iBlock)
+
+        Pwave = (GammaWave - 1) &
+             *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+
+        do iVar = WaveFirst_, WaveLast_
+           Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
+                - DivU_C(i,j,k)*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
         end do
-        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
-             DivU_C(i,j,k) * (GammaWave - 1.0) * WaveEnergy
+        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+             + DivU_C(i,j,k)*Pwave
 
         ! Add "geometrical source term" p/r to the radial momentum equation
         ! The "radial" direction is along the Y axis
         ! NOTE: here we have to use signed radial distance!
         if(UseRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-             + (GammaWave - 1)*WaveEnergy/y_BLK(i,j,k,iBlock)
+             + Pwave/y_BLK(i,j,k,iBlock)
      end do; end do; end do
   end if
 
-  if(UseElectronEnergy)then
+  if(UseElectronPressure)then
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
         DivU = vInv_CB(i,j,k,iBlock) &
              *(uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
              + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
              + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
-        Pe = (g - 1)*State_VGB(Ee_,i,j,k,iBlock)
 
-        Source_VC(Ee_,i,j,k) = Source_VC(Ee_,i,j,k) - Pe*DivU
+        Pe = State_VGB(Pe_,i,j,k,iBlock)
+
+        ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
+        Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) - (g-1)*Pe*DivU
+
+        ! The energy equation contains the work of electron pressure
+        ! -u.grad Pe = -div(u Pe) + Pe div u
+        ! The -div(u Pe) is implemented as a flux in ModFaceFlux. 
+        ! Here we add the Pe div u source term
         Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Pe*DivU
 
         ! Add "geometrical source term" p/r to the radial momentum equation
@@ -184,21 +203,8 @@ subroutine calc_sources
         if(UseRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
              + Pe/y_BLK(i,j,k,iBlock)
      end do; end do; end do
-  end if
-
-  if(UseElectronPressure)then
-     ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-             - (g-1)*State_VGB(Pe_,i,j,k,iBlock)*&
-             vInv_CB(i,j,k,iBlock)*&
-             (uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_) &
-             +uDotArea_YI(i,j+1,k,eFluid_) - uDotArea_YI(i,j,k,eFluid_) &
-             +uDotArea_ZI(i,j,k+1,eFluid_) - uDotArea_ZI(i,j,k,eFluid_))
-     end do; end do; end do
 
      if(DoTestMe.and.VarTest==Pe_)call write_source('After Pe div Ue')
-
   end if
 
   if(TypeGeometry == 'rz')then
