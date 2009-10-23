@@ -14,7 +14,7 @@ module ModHallResist
   real, public:: HallCmaxFactor = 1.0
 
   ! Non-diagonal part (Hall) resistivity with an arbitrary factor
-  real, public:: IonMassPerCharge, HallFactor
+  real, public:: HallFactor = 1.0
 
   ! Ion mass per charge may depend on space and time for multispecies
   real, public, allocatable:: IonMassPerCharge_G(:,:,:)
@@ -70,11 +70,7 @@ contains
   !============================================================================
   subroutine init_hall_resist
     use ModSize,    ONLY: nI, nJ, nK, nDim
-    use ModConst,   ONLY: cProtonMass, cElectronCharge, cMu
-    use ModPhysics, ONLY: No2Si_V, UnitB_, UnitT_, UnitX_, UnitRho_, &
-         AverageIonCharge
-    use ModVarIndexes, ONLY: UseMultiSpecies
-    use ModMultiFluid, ONLY: UseMultiIon, MassIon_I
+    use ModPhysics, ONLY: IonMassPerCharge
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='init_hall_resist'
@@ -82,22 +78,15 @@ contains
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    IonMassPerCharge =HallFactor/cMu &
-         * (cProtonMass/(AverageIonCharge*cElectronCharge)) &
-         * No2Si_V(UnitB_)*No2Si_V(UnitT_)/(No2Si_V(UnitX_)**2 &
-         * No2Si_V(UnitRho_))
-
-    ! If not multispecies, multiply with average ion mass
-    if(.not. (UseMultiSpecies .or. UseMultiIon)) &
-         IonMassPerCharge = IonMassPerCharge * MassIon_I(1)
+    IonMassPerCharge = HallFactor*IonMassPerCharge
 
     if (DoTestMe) then
        write(*,*) ''
        write(*,*) '>>>>>>>>>>>>>>>>> HALL Resistivity Parameters <<<<<<<<<<'
        write(*,*)
-       write(*,*) 'HallFactor       = ',HallFactor
-       write(*,*) 'HallCmaxFactor   = ',HallCmaxFactor
-       write(*,*) 'IonMassPerCharge = ',IonMassPerCharge
+       write(*,*) 'HallFactor       = ', HallFactor
+       write(*,*) 'HallCmaxFactor   = ', HallCmaxFactor
+       write(*,*) 'IonMassPerCharge = ', IonMassPerCharge
        ! Omega_Bi=B0/IonMassPerCharge'
        write(*,*)
        write(*,*) '>>>>>>>>>>>>>>>>>                       <<<<<<<<<<<<<<<<<'
@@ -155,6 +144,7 @@ contains
     use ModVarIndexes, ONLY: &
          UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V, nVar
     use ModMultiFluid, ONLY: UseMultiIon, iRhoIon_I, MassIon_I
+    use ModPhysics, ONLY: IonMassPerCharge
 
     ! Set IonMassPerCharge_G based on average mass
     integer, intent(in) :: iBlock

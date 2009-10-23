@@ -15,8 +15,6 @@ subroutine calc_sources
   use ModResistivity,   ONLY: UseResistivity, Eta_GB   !^CFG IF DISSFLUX
   use ModUser,          ONLY: user_calc_sources
   use ModCoordTransform
-  use ModHallResist,    ONLY: &
-       UseHallResist, IonMassPerCharge
   use ModImplicit,      ONLY: UseFullImplicit            !^CFG IF IMPLICIT
   use ModRadDiffusion,  ONLY: calc_source_rad_diffusion  !^CFG IF IMPLICIT
   use ModTemperature,   ONLY: calc_source_temperature_diff, &

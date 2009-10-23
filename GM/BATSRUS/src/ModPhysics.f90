@@ -20,6 +20,7 @@ module ModPhysics
   ! plasma parameters
   real:: AverageIonCharge         = 1.0
   real:: ElectronTemperatureRatio = 0.0
+  real:: IonMassPerCharge         = 1.0
 
   ! thermal/total energy ratio limits for correctP
   real    :: Pratio_lo=0.01, Pratio_hi=0.1

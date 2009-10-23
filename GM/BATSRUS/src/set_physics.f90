@@ -91,6 +91,18 @@ subroutine set_physics_constants
   ElectronCharge = cElectronCharge* &
        Si2No_V(UnitJ_)/( Si2No_V(UnitU_)*Si2No_V(UnitN_) )
 
+  ! Average ion mass per charge used by Hall MHD and
+  ! by ion-electron thermal exchange term
+  if(TypeNormalization /= 'NONE') &
+       IonMassPerCharge = 1.0/cMu &
+       * (cProtonMass/(AverageIonCharge*cElectronCharge)) &
+       * No2Si_V(UnitB_)*No2Si_V(UnitT_)/(No2Si_V(UnitX_)**2 &
+       * No2Si_V(UnitRho_))
+
+  ! If not multispecies, multiply with average ion mass
+  if(.not. (UseMultiSpecies .or. UseMultiIon)) &
+       IonMassPerCharge = IonMassPerCharge * MassIon_I(1)
+
   !\
   ! set the (corrected) speed of light and get normalization
   !/

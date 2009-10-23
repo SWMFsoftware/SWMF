@@ -200,7 +200,7 @@ F			UseSourceImpl
 
 #HALLRESISTIVITY
 T			UseHallResistFlux
-3.76991e+06		HallFactor
+35.10762213248		HallFactor (for historical reasons)
 0.0			HallCmaxFactor
 
 #SAVERESTART
