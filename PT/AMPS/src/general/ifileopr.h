@@ -19,7 +19,7 @@
 class CiFileOperations {
 public:
   FILE* fd;
-  char fname[100],init_str[1000];
+  char fname[100]; 
   long int line;
 
   CiFileOperations() {
@@ -102,7 +102,7 @@ public:
     return (!feof(fd)) ? false : true;
   };
 
-  bool GetInputStr(char* str,int n){
+  bool GetInputStr(char* str,long int n){
     int i,j;
 
     if (!feof(fd)) do {
@@ -117,24 +117,23 @@ public:
     } while ((str[0]=='\0')&&(!feof(fd)));
 
     if (feof(fd)!=0) {
-      str[0]='\0',init_str[0]='\0';  
+      str[0]='\0';   
       return false; 
     }
 
     for(i=0;str[i]!='\0';i++) {
 //      if (str[i]=='"') str[i]=' ';
 
-      init_str[i]=str[i];
+      
       if ((str[i]>='a')&&(str[i]<='z')) str[i]=str[i]-32;
     }
-    init_str[i]='\0';
+    
  
     return true;
   }; 
 
   void error() {
     printf("Error in file %s, line=%ld\n",fname,line);
-    printf("%s\n",init_str);
     exit(0);
   }; 
 };
