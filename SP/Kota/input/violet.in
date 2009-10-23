@@ -1,0 +1,60 @@
+     1000, 10, 150,  1.0,  1.0, 1.0
+     0.005,  1.25, 0.025
+     0.001, 1000., 0.005
+     0.65, 0.90, 5, 5 
+     400., 800., 3.5, 26.0  
+      1, 1,  0.33,  0.40,  0. 
+       4, 5
+      0.05, 0.1, 0.2, 1.00
+       25, 50, 75, 100, 125
+      
+      open(in,file = 'violet.in')
+      read(in,*) nr,nmu,nw, wghtl,wghtmu,wghtw
+      read(in,*) rmin,rmax,rshock
+      read(in,*) emin,emax,einj
+      read(in,*) tmax,dt0,kfriss,kacc
+      read(in,*) swind,fwind,bbrad,period
+      read(in,*) iz,massa,ekpp,xlmbda0,qex
+      read(in,*) krmax,kemax
+      read(in,*) (robs(k),k=1,krmax)
+      read(in,*) (keobs(k),k=1,kemax)
+      write(*,*) 'beolvasas megvolt '
+      close(in)
+
+      nr     =   number of spatial points
+      nmu    =   number of pitchngle points
+      nw     =   number of energy/momentum points
+      wghtl  =   weighht factor in implicit spatial step (technical)
+      wghtmu =   same for pitch-angle step
+      wghtw  =   same for momentum step
+
+      rmin   =   inner boundary in radius - at start of calculation [AU]
+      rmax   =   outer boundary in radius - at start of calculation [AU]
+      rshck  =   shock position in radius - at start of calculation [AU]
+
+      emin   =   minimum energy [MeV/nucl]
+      emax   =   maximum energy [MeV/nucl]
+      einj   =   injection energy [MeV/nucl]
+
+      tmax   =   maximum time for computation [hr]
+      dt0    =   time step of 'refreshing' ie sliding grid
+      kfriss =   number of substeps between refreshing 
+      kacc   =   number of sub-substeps computing acceleration in one substep 
+
+      swind  =   slow solar wind [km/s]  -- not to be used
+      fwind  =   fast solar wind [km/s]  -- not to be used
+      bbrad  =   B_r [nT] (normalized to 1 AU) -- not to be used
+      period =   solar rotation period [day]
+
+      iz     =   particle charge, Z  - integer
+      massa  =   particle atomic mass number, A
+      ekpp   =   exponent assumed for rigidity dependence of scatt. mfp
+      xlmbda0=   scattering mean free path (mfp) - at 1 AU           
+      qex    =   exponent for pitch-angle dependence of scattering rate
+
+      krmax  =   number of radial position to be in outputs (1-4)
+      kemax  =   number of energies to be in outputs        (1-5)
+
+      robs() =   radial positions in output
+      keobs()=   energy points in output  
+      
