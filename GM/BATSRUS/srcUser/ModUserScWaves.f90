@@ -22,12 +22,12 @@ module ModUser
   
   real, parameter               :: VersionUserModule = 1.0
   character (len=*), parameter  :: &
-       NameUserModule = 'Solar Wind and Waves'
+       NameUserModule = 'Alfven Waves Driven Solar Wind'
   character(len=lStringLine)    :: NameModel
 
   !Global variables - frequency grid
   logical                       :: IsInitWave = .false.
-  logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
+  logical                       :: DoDampCutOff = .true., DoDampSurface = .false.
   real,dimension(nWave)         :: LogFreq_I ! frequency grid
   real                          :: FreqInertial, LogFreqInertial, dLogFreq
   !WaveDissip_CB=0.0 ! for plotting only
@@ -426,7 +426,20 @@ contains
     real                         :: DensCell,PresCell,GammaCell,Beta,WavePres
     character(len=*),parameter   :: NameSub='user_update_states'
     !--------------------------------------------
+    !\
+    ! Dissipate wave energy before frequency advection 
+    !/
+    if (IsInitWave .and. DoDampCutOff) call dissipate_waves(iBlock)
+    
+    !\
+    ! Advect solution
+    !/
     call update_states_MHD(iStage,iBlock)
+    !\
+    ! Dissipate wave energy after advection
+    !/
+    if (IsInitWave .and. DoDampCutOff) call dissipate_waves(iBlock)
+   
     !\
     ! Begin update of pressure and relaxation energy::
     !/
@@ -449,85 +462,10 @@ contains
     !\
     ! End update of pressure and relaxation energy::
     !/
-
-    !\
-    ! Update spectrum and pressure if initialized
-    !/
-    if(any(State_VGB(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK,iBlock) > 0.0)) then
-       call update_states_spectrum(iBlock)
- 
-       do k=1,nK ; do j=1,nJ ; do i=1,nI
-          WavePres=0.5*sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-        
-          if(WavePres<0.0) then
-             write(*,*) '=============================================='
-             write(*,*) 'Total wave pressure negative at: ',i,j,k,iBlock
-             write(*,*) 'Wave = ',WavePres,' MHD= ',State_VGB(p_,i,j,k,iBlock)
-             write(*,*) '=============================================='
-          end if
-       end do; end do; end do
-    end if
     call calc_energy_cell(iBlock)
   end subroutine user_update_states
   !=======================================================================
-  subroutine update_states_spectrum(iBlock)
-    ! called by user_update_states, takes care of Ixx state variables.
-
-    use ModVarIndexes
-    use ModAdvance,  ONLY: State_VGB
-    use ModSize,     ONLY: nI, nJ, nK
-
-    implicit none
-
-    integer,intent(in)          :: iBlock
-    integer                     :: i,j,k, iWave
-    integer                     :: iMode, nMode, nPointsMode
-    integer                     :: AdvectWaveFirst,AdvectWaveLast
-    real                        :: LogFreqCutOff
-
-    character(len=*),parameter :: NameSub='update_states_spectrum'
-    !-------------------------------------------------------------------
-    ! we will need to fix the time step for operator splitting 
-    ! and the advection velocity <<<<<<<<< TBC
-     
-     do k=1,nK; do j=1,nJ ; do i=1,nI
-
-       !\
-       ! Dissipate wave energy before frequency advection 
-       !/
-        if (DoDampCutOff) then
-           do iWave = WaveFirst_,WaveLast_
-              call dissipate_waves(iWave,i,j,k,iBlock)
-           end do ! finished wave dissipation before advection
-        end if
-       !\
-       ! update spectrum according to advection in frequency space
-       !/
-       ! seperate spectrum into different wave modes
-       nMode = 2 
-       ! at least two frequency points needed for each wave mode
-       nPointsMode = max(2*nMode, nWave/nMode)
-       do iMode = 1, nMode
-          ! iMode = 1 : Alfven waves with velocity (u+Va)
-          ! iMode = 2 : Alfven waves with velocity (u-Va)
-          AdvectWaveFirst = WaveFirst_+(iMode-1)*nPointsMode
-          AdvectWaveLast  = AdvectWaveFirst + nPointsMode - 1
-          !call advect_log_freq(AdvectWaveFirst, AdvectWaveLast,i,j,k,iBlock)
-       end do
-
-       !\
-       ! Dissipate wave energy after frequency advection
-       !/
-       ! Some energy may have advected above cut-off frequency
-       do iWave = WaveFirst_,WaveLast_ 
-          call dissipate_waves(iWave,i,j,k,iBlock)
-       end do
-       
-    end do ; end do ; end do
-   write(*,*) 'Finished updating spectrum'
-  end subroutine update_states_spectrum
-  !======================================================================
-  subroutine dissipate_waves(iWave, i,j,k,iBlock)
+   subroutine dissipate_waves(iBlock)
 
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
@@ -535,20 +473,24 @@ contains
 
     implicit none
 
-    integer,intent(in)      :: i,j,k,iBlock, iWave
+    integer,intent(in)      :: iBlock
+    integer                 :: i, j, k, iWave
     real                    :: dWavePres = 0.0
     real                    :: LogFreqCutOff
   
     ! -----------------------------------------------------------------
-    DoDampCutOff = .true.
     DoDampSurface = .false.
 
     if (DoDampCutOff) then
-       call calc_cutoff_freq(i,j,k,iBlock,LogFreqCutOff)
-       if (LogFreq_I(iWave) .ge. LogFreqCutOff .and. &
-            State_VGB(WaveFirst_+iWave-1,i,j,k,iBlock) > 0.0) then
-          dWavePres = -State_VGB(iWave,i,j,k,iBlock)
-       end if
+       do k=1,nK ; do j=1, nJ ; do i=1,nI
+          call calc_cutoff_freq(i,j,k,iBlock,LogFreqCutOff)
+          do iWave=WaveFirst_, WaveLast_
+             if (LogFreq_I(iWave) .ge. LogFreqCutOff .and. &
+                  State_VGB(iWave,i,j,k,iBlock) > 0.0) then
+                dWavePres = -State_VGB(iWave,i,j,k,iBlock)
+             end if
+          end do
+       end do; end do; end do
     end if
 
     ! Add more dissipation mechanisms here
@@ -564,123 +506,7 @@ contains
 
   end subroutine dissipate_waves
   !=====================================================================
-  subroutine advect_log_freq(AdvectWaveFirst,AdvectWaveLast,i,j,k,iBlock)
-    ! called by update_states_spectrum, part of update_states
-
-    use ModMain,     ONLY: dt_BLK,Cfl, iteration_number
-    use ModVarIndexes
-    use ModAdvance,  ONLY: State_VGB, uDotArea_XI, uDotArea_YI,uDotArea_ZI
-    use ModNumConst, ONLY: cHalf
-    use ModGeometry, ONLY: vInv_CB
-    
-    implicit none
-
-    integer,intent(in)          :: i,j,k,iBlock
-    integer,intent(in)          :: AdvectWaveFirst,AdvectWaveLast
-    integer                     :: iFreq
-    integer                     :: nFreq = nWave/2
-    real                        :: WaveEnergy_G(-1:nWave/2+2)! with GC
-    real                        :: Limiter_I(0:nWave/2+1)
-    real                        :: FluxL_I(1:nWave/2+1)
-    real                        :: FluxR_I(0:nWave/2)
-    real                        :: DivU, MyCfl, SlopeL, SlopeR
-
-    character(len=*),parameter  :: NameSub='advect_log_freq'
-    !-------------------------------------------------------------------
-    ! Advance alfven waves spectrum according to :
-    ! df/dt-(1/2)divU*df/dlog(w)
-    ! where f=Ixx/w
-    ! one stage second order upwind scheme
-    ! f(i)^(n+1)=f(i)^n-cfl[f(i-1/2)-f(i+1/2)]^2
-    ! where:
-    ! f(i+1/2), f(1-1/2) are slope-limited numerical fluxes 
-    ! Here , f = WaveEnergy_G, f(i+/- 0.5) are FluxR, FluxL 
-    
-    ! copy relevant part of spectrum
-    WaveEnergy_G = State_VGB(AdvectWaveFirst:AdvectWaveLast,i,j,k,iBlock)
-    !\
-    ! Calculate CFL for this scheme (depends on BATSRUS cfl)
-    !/
-    DivU = vInv_CB(i,j,k,iBlock)* &
-         (uDotArea_XI(i+1,j,k,1)-uDotArea_XI(i,j,k,1) &
-         +uDotArea_YI(i,j+1,k,1)-uDotArea_YI(i,j,k,1) &
-         +uDotArea_ZI(i,j,k+1,1)-uDotArea_ZI(i,j,k,1) )
-    
-    MyCfl = (-cHalf*DivU*dt_BLK(iBlock)*Cfl)/dLogFreq
-    if(abs(MyCfl)>1.0) then
-       write(*,*) 'Warning! CFL too large!'
-       write(*,*) MyCfl
-    end if
-    !\
-    ! Set BC's
-    !/
-    WaveEnergy_G(-1:0) = 0.0
-    WaveEnergy_G(nFreq+1:nFreq+2) = WaveEnergy_G(nFreq)
-    
-    !\
-    ! Calculate MC slope limiter
-    !/
-    do iFreq = 0,nFreq
-       SlopeR = WaveEnergy_G(iFreq+1)-WaveEnergy_G(iFreq)
-       SlopeL = WaveEnergy_G(iFreq)-WaveEnergy_G(iFreq-1)
-       
-       Limiter_I(iFreq) = sign(0.50,SlopeR)+sign(0.50,SlopeL)
-       ! Result:
-       ! Limiter =1 if both slopes are positive
-       !         =-1 if both negative
-       !         =0  if slopes of different sign
-       SlopeR = abs(SlopeR)
-       SlopeL = abs(SlopeL)
-       
-       Limiter_I(iFreq)= Limiter_I(iFreq)*min(max(SlopeL,SlopeR),2.0*SlopeL,2.0*SlopeR)
-       ! Final Result:
-       ! Limiter = 0 of slopes of different signs
-       !         = min(SteeperSlope, 2*ModarateSlope) if both positive
-       !         = -min(SteeperSlope,2*ModarateSlope) if both negative
-    end do
-
-    !\
-    ! Advance the solution over one time step
-    !/
-    if (MyCfl > 0.0) then ! use left BC (0 ghost cell) 
-       do iFreq=0,nFreq
-          ! calculate numerical flux through right (downwind) edges
-          FluxR_I(iFreq) =WaveEnergy_G(iFreq)+cHalf*(1-MyCfl)*Limiter_I(iFreq)
-       end do
-       ! calculate numerical flux through left (upwind) edges
-       FluxL_I(1:nFreq+1)=FluxR_I(0:nFreq)
-
-    else ! MyCfl <0, use right BC (n+1 ghost cell)
-       do iFreq=1, nFreq+1
-          ! calculate numerical flux through right (downwind) edges
-          FluxL_I(iFreq) = WaveEnergy_G(iFreq)-cHalf*(1+MyCfl)*Limiter_I(iFreq)
-       end do
-       ! calculate numerical flux through left (upwind) edges
-       FluxR_I(0:nFreq)=FluxL_I(1:nFreq+1)
-    end if
-
-    ! advance solution
-    WaveEnergy_G(1:nFreq)=WaveEnergy_G(1:nFreq)+ &
-         MyCfl*(FluxL_I(1:nFreq)-FluxR_I(1:nFreq))
-    !\
-    ! Update state variables
-    !/
-    do iFreq = 1,nFreq
-       State_VGB(AdvectWaveFirst+iFreq-1,i,j,k,iBlock)=WaveEnergy_G(iFreq)
-
-       if(State_VGB(AdvectWaveFirst+iFreq-1,i,j,k,iBlock)<0.0) then
-          write(*,*) '=========================================================='
-          write(*,*) 'Negative wave pressure at frequency point ', iFreq
-          write(*,*) 'At: ', i,j,k,iBlock, ' iteration: ',iteration_number
-          write(*,*) 'WavePressure = ',WaveEnergy_G(iFreq),&
-               ' freq= ',exp(LogFreq_I(iFreq))
-          write(*,*) 'WavePressure at next freq= ',WaveEnergy_G(iFreq+1)
-          write(*,*) '---------------------------------------------------------'
-       end if
-    end do
-  end subroutine advect_log_freq
-  !======================================================================
-  subroutine write_spectrogram
+   subroutine write_spectrogram
     
     use ModProcMH
     use ModMain,   ONLY: iteration_number, nBLK,unusedBLK,nBlockALL
@@ -807,7 +633,7 @@ contains
      
     use ModVarIndexes
     use ModAdvance,           ONLY: State_VGB
-    use ModConst,             ONLY: cElectronCharge, cProtonMass
+    use ModConst,             ONLY: cElectronCharge, cProtonMass,cTiny
     use ModSize,              ONLY: nI,nJ,nK
     use ModPhysics,           ONLY: No2Si_V,UnitB_
 
@@ -824,6 +650,7 @@ contains
     BzNo = State_VGB(Bz_,i,j,k,iBLK)
 
     BtotSi = No2Si_V(UnitB_)*sqrt(BxNo**2 + ByNo**2 + BzNo**2)
+    BtotSi = max(BtotSi,cTiny**2)
     LogFreqCutOff = log((cElectronCharge*BtotSi)/cProtonMass)
 
   end subroutine calc_cutoff_freq
@@ -891,33 +718,28 @@ contains
 
     use ModVarIndexes
     use ModNumConst, ONLY: cPi
-    use ModWaves,    ONLY: FreqMinSI,FreqMaxSI
+    use ModWaves,    ONLY: FreqMinSI,FreqMaxSI,&
+         DeltaLogFrequency
     implicit none
     
-    integer                    :: nWaveHalf=max(2,nWave/2)
-    integer                    :: iFreq
+    integer                    :: iFreq,nWaveHalf
     real                       :: LogFreqMin, LogFreqMax
     character(len=*),parameter :: NameSub='set_freq_grid'
     !-----------------------------------------------------------------
+    nWaveHalf = max(nWave/2,1)
     ! Minimal frequency in frequency grid
     LogFreqMin = log(2*cPi*FreqMinSI) 
 
-    ! Maximal frequency in frequency grid
-    LogFreqMax = log(2*cPi*FreqMaxSI) 
-
-    ! calculate frequency interval on a natural logarithmic scale 
-    dLogFreq = (LogFreqMax-LogFreqMin)/(nWaveHalf-1) 
- 
-    ! Divide the spectrum into frequncy groups on a log scale
+    ! calculate frequencies
     ! Plus waves (+Va)
     do iFreq = 1,nWaveHalf
-       LogFreq_I(iFreq)=LogFreqMin+(iFreq-1)*dLogFreq
+       LogFreq_I(iFreq)=LogFreqMin+(iFreq-1)*DeltaLogFrequency
     end do
     ! Minus waves (-Va)
     do iFreq = 1,nWaveHalf
-       LogFreq_I(nWaveHalf+iFreq)=LogFreqMin+(iFreq-1)*dLogFreq
+       LogFreq_I(nWaveHalf+iFreq)=LogFreqMin+(iFreq-1)*DeltaLogFrequency
     end do
-  end subroutine set_freq_grid
+   end subroutine set_freq_grid
   !===================================================================
   subroutine init_wave_spectrum
 
