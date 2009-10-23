@@ -88,7 +88,7 @@ test_pw_run:
 test_pw_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/PW/plots/north_plots_iline0001.out \
-		${PWDIR}/output/Earth/north_plots_iline0001.out \
+		${PWDIR}/data/output/Earth/north_plots_iline0001.out \
 		> test_pw.diff)
 	ls -ltr test_pw*.diff
 
@@ -121,7 +121,7 @@ test_rb_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test_rb_check:
-	gunzip -c ${RBDIR}/output/2002f296_e.fls.gz \
+	gunzip -c ${RBDIR}/data/output/2002f296_e.fls.gz \
 		> ${TESTDIR}/2002f296_e.fls.ref
 	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/RB/plots/2002f296_e.fls \
