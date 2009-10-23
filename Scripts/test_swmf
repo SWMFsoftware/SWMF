@@ -45,6 +45,11 @@ cd $HOME
 # execute local startup file (may or may not be necessary)
 source .cshrc
 
+# update SWMF_data (no need if /csem1 is mounted on the machine!)
+cd SWMF_data
+cvs update -d
+cd ..
+
 # Create a temporary directory for the tests
 mkdir -p Tmp
 cd Tmp
