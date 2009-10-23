@@ -1,8 +1,0 @@
-This is an example layout to run the GM-IM-IE-UA restarted from GM
-
-#COMPONENTMAP
-UA   0    31   1
-IM   32   32    1
-IE   33   34    1
-GM   35  999    1
-#END
