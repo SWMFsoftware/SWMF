@@ -79,10 +79,11 @@ rundir:
 		fi;)
 	cd ${RUNDIR}; ln -s ${BINDIR}/PostProcess.exe ./PostGITM.exe
 	cd ${RUNDIR}/UA; \
-		mkdir restartOUT data; \
+		mkdir restartOUT data DataIn; \
 		ln -s restartOUT restartIN; \
 		ln -s ${BINDIR}/pGITM .; \
-		ln -s ${UADIR}/srcData DataIn
+		ln -s ${UADIR}/srcData/* DataIn; rm -f DataIn/CVS; \
+		ln -s ${UADIR}/data/* DataIn;    rm -f DataIn/CVS
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/GITM.exe . ; \
