@@ -73,11 +73,9 @@ rundir:
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/HEIDI.exe .;\
 	fi);
-	ln -s ${HEIDIDIR}/input/* ${RUNDIR}/IM/input;\
-	cp ${HEIDIDIR}/input/*.gz ${RUNDIR}/IM/restartIN;\
-	cd  ${RUNDIR}/IM/restartIN;\
-	gzip -d *.gz
-
+	ln -s ${HEIDIDIR}/input/* ${RUNDIR}/IM/input
+	cp ${HEIDIDIR}/data/input/*.gz ${RUNDIR}/IM/restartIN
+	cd ${RUNDIR}/IM/restartIN; gunzip *.gz
 
 clean: install
 	@(if [ -r "Makefile.conf" ]; then  \
