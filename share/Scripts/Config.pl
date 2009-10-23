@@ -158,7 +158,7 @@ if($Uninstall){
 	&shell_command("cd util; make distclean")
 	    if -d "util" and not $IsComponent;
 	&shell_command("make allclean");
-	&shell_command("rm -f Makefile.def Makefile.conf data ".
+	&shell_command("rm -f Makefile.def Makefile.conf data dataCRASH ".
 		       "src*/$MakefileDepend src*/$MakefileRules");
 	exit 0;
     }
@@ -549,6 +549,8 @@ sub link_smwf_data{
     my $DataDir;
     if($IsComponent){
 	$DataDir = "$SwmfData/$Component/$Code/data";
+	&shell_command("ln -s $SwmfData/$Component/$Code/CRASH dataCRASH")
+	    if $Code eq "BATSRUS";
     }else{
 	$DataDir = "$SwmfData/data";
     }
