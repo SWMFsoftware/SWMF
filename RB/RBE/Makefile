@@ -53,9 +53,11 @@ test_run:
 
 
 test_check:
-	gunzip -c output/2002f296_e.fls.standalone.gz > ${TESTDIR}/RB/2002f296_e.fls.ref
+	gunzip -c data/output/2002f296_e.fls.standalone.gz \
+		> ${TESTDIR}/RB/2002f296_e.fls.ref
 	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
-		${TESTDIR}/RB/plots/2002f296_e.fls ${TESTDIR}/RB/2002f296_e.fls.ref \
+		${TESTDIR}/RB/plots/2002f296_e.fls \
+		${TESTDIR}/RB/2002f296_e.fls.ref \
 		> test.diff
 	ls -l test.diff
 
@@ -86,15 +88,14 @@ rundir:
 		fi;)
 	cd ${RUNDIR}/RB; \
 		mkdir restartOUT restartIN plots
-	cp ${RBDIR}/input/rbe_e.fin ${RUNDIR}/RB/
-	cp ${RBDIR}/input/B_wave_eq.dat ${RUNDIR}/RB/
-	cp ${RBDIR}/input/Horne_chorus.tgz ${RUNDIR}/RB/
-	cd ${RUNDIR}/RB/ ; \
-	tar xfz Horne_chorus.tgz
+	cp ${RBDIR}/data/input/rbe_e.fin ${RUNDIR}/RB/
+	cp ${RBDIR}/data/input/B_wave_eq.dat ${RUNDIR}/RB/
+	cp ${RBDIR}/data/input/Horne_chorus.tgz ${RUNDIR}/RB/
+	cd ${RUNDIR}/RB/; tar xzf Horne_chorus.tgz
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/rbe.exe .   ; \
-		cp ../input/2002_296.* RB/  ; \
+		cp ../data/input/2002_296.* RB/; \
 		cp ../input/PARAM.in . ; \
 		touch core ; chmod 444 core;\
 	fi);
