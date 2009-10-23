@@ -377,7 +377,7 @@ test_hyades2d_compile:
 
 test_hyades2d_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d PARAM.in
-	gunzip -c ${DIR}/dataCRASH/hyades2d_1.1ns.out.gz \
+	gunzip -c ${DIR}/data/CRASH/hyades2d_1.1ns.out.gz \
 		> ${TESTDIR}/hyades2d_1.1ns.out
 	gunzip -c ${DIR}/util/CRASH/input/opacities.out.gz \
 	        > ${TESTDIR}/table_opacities.out
