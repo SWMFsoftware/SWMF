@@ -85,23 +85,23 @@ test_run: PWOM
 test_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
-		output/${PLANET}/restart_iline0001.dat \
+		data/output/${PLANET}/restart_iline0001.dat \
 		> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0002.dat \
-		output/${PLANET}/restart_iline0002.dat \
+		data/output/${PLANET}/restart_iline0002.dat \
 		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0003.dat \
-		output/${PLANET}/restart_iline0003.dat \
+		data/output/${PLANET}/restart_iline0003.dat \
 		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0004.dat \
-		output/${PLANET}/restart_iline0004.dat \
+		data/output/${PLANET}/restart_iline0004.dat \
 		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/PW/plots/north_plots_iline0001.out \
-		output/${PLANET}/north_plots_iline0001.out \
+		data/output/${PLANET}/north_plots_iline0001.out \
 		> test_${PLANET}${MYTEST}_plots.diff)
 	ls -l *.diff
 
@@ -114,7 +114,7 @@ test_restart:
 	make   test_check MYTEST=_restart
 
 test_restart_save:
-	cp input/${PLANET}/restart_iline* ${TESTDIR}/PW/restartIN/
+	cp data/input/${PLANET}/restart_iline* ${TESTDIR}/PW/restartIN/
 	cp input/${PLANET}/pw.input.restartsave ${TESTDIR}/pw.input
 	cd ${TESTDIR}; ${MPIRUN} ./PWOM.exe
 	cd ${TESTDIR}; mv PW/restartOUT/* PW/restartIN/
@@ -139,8 +139,8 @@ rundir:
 		fi;)
 	cd ${RUNDIR}/PW; \
 		mkdir restartIN restartOUT plots; \
-		cp ${PWDIR}/input/${PLANET}/restart_iline* restartIN/ ;\
-		cp ${PWDIR}/input/${PLANET}/North.dat .
+		cp ${PWDIR}/data/input/${PLANET}/restart_iline* restartIN/ ;\
+		cp ${PWDIR}/data/input/${PLANET}/North.dat .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR}; \
 			ln -s ${BINDIR}/PWOM.exe .; \
