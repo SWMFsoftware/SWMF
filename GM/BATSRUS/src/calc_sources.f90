@@ -128,10 +128,12 @@ subroutine calc_sources
               ! For single ion fluid the ion-electron collision results in a 
               ! heat exchange term for the electron pressure 
               ! See eq. 4.124c in Schumk and Nagy.
-              HeatExchange = (g-1) * Eta_GB(i,j,k,iBlock) * &
+              HeatExchange =0.0
+              if(.not.UseMultiSpecies)& 
+                   HeatExchange = (g-1) * Eta_GB(i,j,k,iBlock) * &
                    3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)* &
                    (State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
-
+                           
               ! Joule heating applies to electrons only
               Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                    + JouleHeating + HeatExchange
