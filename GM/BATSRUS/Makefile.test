@@ -292,7 +292,9 @@ test_mhdnoncons_check:
 		> test_mhdnoncons.diff
 	ls -l test_mhdnoncons.diff
 
-### CRASH TEST ###
+### CRASH RELATED TESTS ###############################################
+
+### EQUATION OF STATE AND GODUNOV SOLVER TEST ###
 
 test_eosgodunov:
 	@echo "test_eosgodunov_compile..." > test_eosgodunov.diff
@@ -375,7 +377,7 @@ test_hyades2d_compile:
 
 test_hyades2d_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d PARAM.in
-	gunzip -c ${DIR}/util/CRASH/input/hyades2d_1.1ns.out.gz \
+	gunzip -c ${DIR}/dataCRASH/hyades2d_1.1ns.out.gz \
 		> ${TESTDIR}/hyades2d_1.1ns.out
 	gunzip -c ${DIR}/util/CRASH/input/opacities.out.gz \
 	        > ${TESTDIR}/table_opacities.out
@@ -457,6 +459,8 @@ test_graydiffusion_check:
 		Param/CRASH/TestOutput/log_graydiffusion.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_graydiffusion.diff
 	ls -l test_graydiffusion.diff
+
+### END OF CRASH RELATED TESTS #############################################
 
 ### STANDALONE SOLAR CORONA TESTS ###
 
