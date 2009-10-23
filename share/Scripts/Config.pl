@@ -547,10 +547,10 @@ sub link_swmf_data{
 	last;
     }
     my $DataDir;
-    if($IsComponent){
-	$DataDir = "$SwmfData/$Component/$Code/data";
-    }else{
+    if($Code eq "SWMF"){
 	$DataDir = "$SwmfData/data";
+    }else{
+	$DataDir = "$SwmfData/$Component/$Code/data";
     }
     &shell_command("ln -s $DataDir data") if -d $DataDir;
 }
