@@ -26,6 +26,11 @@ module ModInputs
   character (len=iCharLen_) :: cAMIEFileSouth
   character (len=iCharLen_) :: cAMIEFileNorth
 
+  logical :: UseNewellAurora   = .false.
+  logical :: UseNewellAveraged = .true.
+  logical :: UseNewellMono     = .false.
+  logical :: UseNewellWave     = .false.
+  
   character (len=iCharLen_) :: TypeLimiter = "minmod"
 
   integer, dimension(7) :: iStartTime

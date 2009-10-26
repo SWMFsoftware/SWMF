@@ -314,6 +314,21 @@ subroutine set_inputs
               call IO_set_sw_v_single(abs(vx))
            endif
 
+        case ("#NEWELLAURORA")
+           call read_in_logical(UseNewellAurora, iError)
+           call read_in_logical(UseNewellAveraged, iError)
+           call read_in_logical(UseNewellMono, iError)
+           call read_in_logical(UseNewellWave, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #NEWELLAURORA'
+              write(*,*) '#NEWELLAURORA'
+              write(*,*) 'UseNewellAurora   (logical)'
+              write(*,*) 'UseNewellAveraged (logical)'
+              write(*,*) 'UseNewellMono (logical)'
+              write(*,*) 'UseNewellWave (logical)'
+              IsDone = .true.
+           endif
+
         case ("#AMIEFILES")
            call read_in_string(cAMIEFileNorth, iError)
            call read_in_string(cAMIEFileSouth, iError)

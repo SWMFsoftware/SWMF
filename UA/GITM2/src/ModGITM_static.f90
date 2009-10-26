@@ -94,7 +94,9 @@ module ModGITM
        ExB, EField
 
   real, dimension(-1:nLons+2, -1:nLats+2) :: &
-       ElectronEnergyFlux, ElectronAverageEnergy
+       ElectronEnergyFlux, ElectronAverageEnergy, &
+       ElectronEnergyFluxMono, ElectronNumberFluxMono, &
+       ElectronEnergyFluxWave, ElectronNumberFluxWave
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocksMax) :: &
        Velocity, IVelocity

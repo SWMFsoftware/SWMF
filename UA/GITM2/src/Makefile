@@ -26,6 +26,7 @@ MODULES = \
 	ModSatellites.o\
 	ModLimiter.o\
 	ModTides.o\
+	ModNewell.o\
 	ModUser.o
 
 OBJECTS = \

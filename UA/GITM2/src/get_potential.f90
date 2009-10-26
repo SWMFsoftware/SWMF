@@ -5,6 +5,7 @@ subroutine get_potential(iBlock)
   use ModIndicesInterfaces
   use ModInputs
   use ModUserGITM
+  use ModNewell
 
   implicit none
 
@@ -23,7 +24,7 @@ subroutine get_potential(iBlock)
   character (len=100), dimension(100) :: Lines
   character (len=100) :: TimeLine
 
-  real :: temp
+  real :: temp, by, bz, vx
 
   call start_timing("Get AMIE Potential")
   call report("get_potential",2)
@@ -41,14 +42,19 @@ subroutine get_potential(iBlock)
 
   if (IsFirstTime) then
 
+     if (UseNewellAurora) then
+        call init_newell
+        UseIMF = .true.
+     endif
+
      if (index(cAMIEFileNorth,"none") > 0) then
 
         Lines(1) = "#BACKGROUND"
         Lines(2) = "UA/DataIn/"
 
         UseHPI = .true.
-        call get_IMF_Bz(CurrentTime, temp, iError)
-        call IO_SetIMFBz(temp)
+        call get_IMF_Bz(CurrentTime, bz, iError)
+        call IO_SetIMFBz(bz)
         if (iError /= 0) then
            write(*,*) "Can not find IMF Bz."
            write(*,*) "Setting potential to Millstone HPI."
@@ -123,8 +129,8 @@ subroutine get_potential(iBlock)
 
   if (UseIMF) then
 
-     call get_IMF_Bz(CurrentTime, temp, iError)
-     call IO_SetIMFBz(temp)
+     call get_IMF_Bz(CurrentTime, bz, iError)
+     call IO_SetIMFBz(bz)
 
      if (iError /= 0) then
         write(*,*) &
@@ -133,10 +139,10 @@ subroutine get_potential(iBlock)
         call stop_gitm("Stopping in get_potential")
      endif
 
-     if (iDebugLevel > 1) write(*,*) "==> Bz : ",temp
+     if (iDebugLevel > 1) write(*,*) "==> IMF Bz : ",bz
 
-     call get_IMF_By(CurrentTime, temp, iError)
-     call IO_SetIMFBy(temp)
+     call get_IMF_By(CurrentTime, by, iError)
+     call IO_SetIMFBy(by)
 
      if (iError /= 0) then
         write(*,*) &
@@ -144,17 +150,17 @@ subroutine get_potential(iBlock)
         call stop_gitm("Stopping in get_potential")
      endif
 
-     if (iDebugLevel > 1) write(*,*) "==> IMF By : ",temp
+     if (iDebugLevel > 1) write(*,*) "==> IMF By : ",by
 
-     call get_SW_V(CurrentTime, temp, iError)
-     call IO_SetSWV(temp)
+     call get_SW_V(CurrentTime, vx, iError)
+     call IO_SetSWV(vx)
 
      if (iError /= 0) then
         write(*,*) "Code Error in get_sw_v called from get_potential.f90"
         call stop_gitm("Stopping in get_potential")
      endif
 
-     if (iDebugLevel > 1) write(*,*) "==> Solar Wind Velocity : ",temp
+     if (iDebugLevel > 1) write(*,*) "==> Solar Wind Velocity : ",vx
 
 !!!     call get_kp(CurrentTime, temp, iError)
 !!!     call IO_Setkp(temp)
@@ -163,6 +169,8 @@ subroutine get_potential(iBlock)
 !!!        write(*,*) "Code Error in get_kp called from get_potential.f90"
 !!!        call stop_gitm("Stopping in get_potential")
 !!!     endif
+
+     if (UseNewellAurora) call calc_dfdt(by, bz, vx)
 
   endif
 
@@ -252,45 +260,51 @@ subroutine get_potential(iBlock)
 
      iAlt = nAlts+1
 
-     call start_timing("setgrid")
-     call IO_SetGrid(                    &
-          MLT(-1:nLons+2,-1:nLats+2,iAlt), &
-          MLatitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), iError)
-     call end_timing("setgrid")
+     if (UseNewellAurora) then
+        call run_newell(iBlock)
+     else
 
-     if (iError /= 0) then
-        write(*,*) "Error in routine get_potential (IO_SetGrid):"
-        write(*,*) iError
-        call stop_gitm("Stopping in get_potential")
-     endif
+        call start_timing("setgrid")
+        call IO_SetGrid(                    &
+             MLT(-1:nLons+2,-1:nLats+2,iAlt), &
+             MLatitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), iError)
+        call end_timing("setgrid")
 
-     call IO_GetAveE(ElectronAverageEnergy, iError)
-     if (iError /= 0) then
-        write(*,*) "Error in get_potential (IO_GetAveE):"
-        write(*,*) iError
-        call stop_gitm("Stopping in get_potential")
-     endif
+        if (iError /= 0) then
+           write(*,*) "Error in routine get_potential (IO_SetGrid):"
+           write(*,*) iError
+           call stop_gitm("Stopping in get_potential")
+        endif
 
-     do iLat=-1,nLats+2
-        do iLon=-1,nLons+2
-           if (ElectronAverageEnergy(iLon,iLat) < 0.0) then
-              ElectronAverageEnergy(iLon,iLat) = 0.1
-              write(*,*) "i,j Negative : ",iLon,iLat,&
-                   ElectronAverageEnergy(iLon,iLat)
-           endif
-           if (ElectronAverageEnergy(iLon,iLat) > 100.0) then
-              write(*,*) "i,j Positive : ",iLon,iLat,&
-                   ElectronAverageEnergy(iLon,iLat)
-              ElectronAverageEnergy(iLon,iLat) = 0.1
-           endif
+        call IO_GetAveE(ElectronAverageEnergy, iError)
+        if (iError /= 0) then
+           write(*,*) "Error in get_potential (IO_GetAveE):"
+           write(*,*) iError
+           call stop_gitm("Stopping in get_potential")
+        endif
+
+        do iLat=-1,nLats+2
+           do iLon=-1,nLons+2
+              if (ElectronAverageEnergy(iLon,iLat) < 0.0) then
+                 ElectronAverageEnergy(iLon,iLat) = 0.1
+                 write(*,*) "i,j Negative : ",iLon,iLat,&
+                      ElectronAverageEnergy(iLon,iLat)
+              endif
+              if (ElectronAverageEnergy(iLon,iLat) > 100.0) then
+                 write(*,*) "i,j Positive : ",iLon,iLat,&
+                      ElectronAverageEnergy(iLon,iLat)
+                 ElectronAverageEnergy(iLon,iLat) = 0.1
+              endif
+           enddo
         enddo
-     enddo
 
-     call IO_GetEFlux(ElectronEnergyFlux, iError)
-     if (iError /= 0) then
-        write(*,*) "Error in get_potential (IO_GetEFlux):"
-        write(*,*) iError
-        call stop_gitm("Stopping in get_potential")
+        call IO_GetEFlux(ElectronEnergyFlux, iError)
+        if (iError /= 0) then
+           write(*,*) "Error in get_potential (IO_GetEFlux):"
+           write(*,*) iError
+           call stop_gitm("Stopping in get_potential")
+        endif
+
      endif
 
      if (iDebugLevel > 2) &
