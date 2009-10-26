@@ -118,8 +118,8 @@ subroutine calc_sources
         
      end do
 
-     ! Joule heating: dP/dt += (gamma-1)*eta*j**2
-     if(UseResistivity .and. .not.UseMultiIon)then  !^CFG IF DISSFLUX BEGIN
+     ! Joule heating: dP/dt += (gamma-1)*eta*j**2    !^CFG IF DISSFLUX BEGIN
+     if(UseResistivity .and. .not.UseMultiIon)then  
 
         do k=1,nK; do j=1,nJ; do i=1,nI           
            call get_current(i,j,k,iBlock,Current_D)
@@ -127,9 +127,9 @@ subroutine calc_sources
            if(UseElectronPressure) then
               ! For single ion fluid the ion-electron collision results in a 
               ! heat exchange term for the electron pressure 
-              ! See eq. 4.124c in Schumk and Nagy.
+              ! See eq. 4.124c in Schunk and Nagy.
               HeatExchange =0.0
-              if(.not.UseMultiSpecies)& 
+              if(.not.UseMultiSpecies) & 
                    HeatExchange = (g-1) * Eta_GB(i,j,k,iBlock) * &
                    3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)* &
                    (State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
@@ -151,7 +151,7 @@ subroutine calc_sources
 
         if(DoTestMe.and.VarTest==P_)call write_source('After eta j')
 
-     end if                 !^CFG END DISSFLUX
+     end if                                        !^CFG END DISSFLUX
   end if
 
   if(UseWavePressure)then
