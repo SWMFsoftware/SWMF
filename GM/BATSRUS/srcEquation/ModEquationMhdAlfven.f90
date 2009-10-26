@@ -117,11 +117,6 @@ contains
 
     call init_mhd_variables
 
-    ! Set the unit and unit name for the wave energy variable
-    UnitUser_V(WaveFirst_:WaveLast_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(WaveFirst_:WaveLast_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(WaveFirst_:WaveLast_) = NameUnitUserIdl_V(Energy_)
-
   end subroutine init_mod_equation
 
 end module ModVarIndexes

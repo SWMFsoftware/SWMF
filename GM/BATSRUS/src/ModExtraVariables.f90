@@ -4,7 +4,7 @@ module ModExtraVariables
 
   ! Set impossible value for indexes
   integer, parameter :: Pe_ = 1, Ppar_ = 1, Pperp_ = 1
-  integer, parameter :: Hyp_ = 1, Erad_ = 1, ExtraEint_ = 1, Ee_ = 1
+  integer, parameter :: Hyp_ = 1, Erad_ = 1, ExtraEint_ = 1
 
   
 

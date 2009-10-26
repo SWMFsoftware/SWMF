@@ -128,13 +128,6 @@ contains
 
     call init_mhd_variables
 
-    ! Set the unit and unit name for the wave energy variable
-    do iWave = WaveFirst_, WaveLast_
-       UnitUser_V(iWave)        = UnitUser_V(Energy_)
-       NameUnitUserTec_V(iWave) = NameUnitUserTec_V(Energy_)
-       NameUnitUserIdl_V(iWave) = NameUnitUserIdl_V(Energy_)
-    end do
-
     UnitUser_V(LevelXe_:LevelPl_) = 1e-6 ! = No2Io_V(UnitX_) = micron
 
   end subroutine init_mod_equation
