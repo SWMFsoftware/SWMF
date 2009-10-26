@@ -18,8 +18,8 @@ Module ModHeidiMain
   real    :: DL1,DR,LZ(NR),Z(NR),BE(NR,Slen),PHI(NT),DPHI,MLT(NT)
   real    :: MAS(NS),M1(NS),WE(NE),DE(NE),EKEV(NE),V(NE,NS)
   real    :: VBND(NE,NS),MU(NPA),DMU(NPA),WMU(NPA),EBND(NE)
-  real    :: CONMU1,CONMU2,FFACTOR(NR,NE,NPA),FACMU(NPA),CONF1,CONF2
-  real    :: CEDR(NE,NPA,NS),CIDR(NE,NPA,NS)
+  real    :: CONMU1,CONMU2,FFACTOR(NR,NT,NE,NPA),FACMU(NPA,NR,NT),CONF1,CONF2
+  real    :: CEDR(NR,NT,NE,NPA,NS),CIDR(NR,NT,NE,NPA,NS)
   
   ! Define flux variable, and a few others
   ! Formerly: Common block CF2
@@ -41,6 +41,7 @@ Module ModHeidiMain
   integer :: nSpecies, iSpecies
   
   
+  real :: funt(nPa,nR,nT)=0.0,funi(nPa,nR,nT)=0.0
 
 end Module ModHeidiMain
 

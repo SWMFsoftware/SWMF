@@ -8,8 +8,8 @@ Module ModHeidiWaves
 
 ! Define plasma anisotropy variables
 ! Formerly: Common block CANIS
-	real BFC(NR),EPME(NR,NE,NPA),EPMA(NR,NE,NPA),EPP(NE,NS)
-	real ERNM(NR,NE,NPA),ERNH(NE,NS),ATAW(NR,NT,NE,NPA)
+	real BFC(NR),EPME(NR,NT,NE,NPA),EPMA(NR,NT,NE,NPA),EPP(NE,NS)
+	real ERNM(NR,NT,NE,NPA),ERNH(NE,NS),ATAW(NR,NT,NE,NPA)
 	real GTAW(NR,NT,NE,NPA)
 
 ! Define the quasi-linear diffusion coefficients

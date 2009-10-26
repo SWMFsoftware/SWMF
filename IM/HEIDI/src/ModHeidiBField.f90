@@ -54,7 +54,6 @@ contains
        do iPhi =1, nPhi
           do iR =1, nR 
              LatMax =  acos(sqrt(1./L_I(iR)))
-             write(*,*) 'LatMax',LatMax
              LatMin = -LatMax
              dLat   = (LatMax-LatMin)/(nPoint-1)
              Lat = LatMin
@@ -278,7 +277,9 @@ contains
   !==================================================================================
 
   subroutine find_mirror_points (nPoint, nPitch, PitchAngle_I, bField_I, bMirror_I,iMirror_II)
-
+ 
+    use ModNumConst,   ONLY: cDegToRad
+    
     integer, intent(in) :: nPoint                ! Number of points along the field line
     integer, intent(in) :: nPitch                ! Pitch angle grid
     real, intent(in)    :: PitchAngle_I(nPitch)  ! Pitch angle values
@@ -289,16 +290,22 @@ contains
     integer,intent(out) :: iMirror_II(2,nPitch)  ! Location of each mirror point for all pitch angles
     integer             :: i_I(1)
     integer             :: iPoint, iPitch
+    real, parameter     :: cTiny = 0.000001
     !----------------------------------------------------------------------------------
 
     i_I  = minloc(bField_I)
     iMinB= i_I(1)
     bMin = bField_I(iMinB)
 
-        
     do iPitch = 1, nPitch
-       bMirror_I(iPitch) = bMin/(sin(PitchAngle_I(iPitch)))**2
+       bMirror_I(iPitch) = bMin/(sin(PitchAngle_I(iPitch)*cDegToRad+cTiny))**2
        
+       !temporary fix 
+       if  (bMirror_I(iPitch) .gt. maxval(bField_I(1:nPoint))) then
+          iMirror_II(1,iPitch) = 1+1
+          iMirror_II(2,iPitch) = nPoint-1
+       end if
+              
        do iPoint = iMinB,1, -1
           if (bField_I(iPoint) >= bMirror_I(iPitch)) then 
              iMirror_II(1,iPitch) = (iPoint + 1)
@@ -312,11 +319,9 @@ contains
              EXIT
           end if
        end do
-       
 
-     enddo
-
-
+    enddo
+    
     
   end subroutine find_mirror_points
 
@@ -392,7 +397,6 @@ contains
     if (iFirst >iLast) RETURN
 
     Inv2L = 1.0/(2.*L)
-
     Coeff = Inv2L*sqrt(bMirror)
 
     DeltaS1 = abs((bMirror-bField_I(iFirst))*(dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))

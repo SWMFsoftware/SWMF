@@ -28,4 +28,7 @@ Module ModHeidiSize
   real, parameter :: RadiusMin = 1.5
   real, parameter :: RadiusMax = 7.0
 
+  ! Define the number of points along the field line
+  integer, parameter :: nPoint = 101
+
 end Module ModHeidiSize

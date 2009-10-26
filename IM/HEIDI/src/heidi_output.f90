@@ -83,7 +83,7 @@ subroutine ECFL
            do J=1,JO
               do K=1,KO
                  do L=1,LO	     ! UPA(I)-1 , changed to include the l.c.
-                    CFL=abs(EDOT(I,J,K,L)*VR(I,J)+(COULI(I,K,L,S)+COULE(I,K,L,S))*XNE(I,J))
+                    CFL=abs(EDOT(I,J,K,L)*VR(I,J)+(COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
                     if (CFL.gt.1.) then
                        write (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),XNE(I,J),CFL
                        Ibad=Ibad +1
@@ -133,9 +133,9 @@ subroutine ECFL
            do J=1,JO
               do K=1,KO
                  do L=1,LO	     
-                    CFL=abs(P1(I,J)+P2(I,K,L))
+                    CFL=abs(P1(I,J)+P2(I,j,K,L))
                     if (CFL.gt.1.) then
-                       write (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),A,P1(I,J),P2(I,K,L),CFL
+                       write (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),A,P1(I,J),P2(I,j,K,L),CFL
                        Ibad=Ibad +1
                     end if
                     if (CFL.gt.CMAX) then
@@ -228,7 +228,7 @@ subroutine WRESULT(LNC,XN,IFIR)
 
   real              :: flux,esum,csum,psum,erate,xlec,xlnc
   real              :: cfl,weight,xr2
-  real              :: edr,xe,xn1,FUNI,FUNT
+  real              :: edr,xe,xn1
   real              :: acosd
   real              :: LNC(NR,NS),XN(NR,NS),XNO(NR)
   real              :: NSUM,TAUD,TAUBO,TAUCHE,EO(NR)
@@ -248,9 +248,7 @@ subroutine WRESULT(LNC,XN,IFIR)
   integer           :: iUnitSal1,iUnitSal2,iUnitSal3,iUnitSal4
   character(LEN=500):: StringVarName, StringHeader, NameFile
   character(len=20) :: TypePosition
-
-
-  external :: FUNI,FUNT
+  
   save ntc
 
   data IPF/'_lpf.','_mpf.','_hpf.'/
@@ -284,8 +282,6 @@ subroutine WRESULT(LNC,XN,IFIR)
   !	IF (IA.GE.8) CALL CURRENTCALC
   call CURRENTCALC  ! Do it all the time
    
-!	print *, 'WRESULT DST VALUES: ',(DST(S),S=1,NS)
-
   !.......L counter offset in PAD outputs
   IFN=0
   if (IPA.eq.0) IFN=19
@@ -383,7 +379,7 @@ subroutine WRESULT(LNC,XN,IFIR)
                  write(UnitTmp_,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
                  do K=2,KO,NEC
                     write(UnitTmp_,43) EKEV(K),(F2(I,J,K,IFM(L),S)/   &
-                         FFACTOR(I,K,IFM(L)),L=1+IFN,19+IFN)
+                         FFACTOR(I,j,K,IFM(L)),L=1+IFN,19+IFN)
                  end do	       ! K loop
               end do		! J loop
            end do		! I loop
@@ -408,7 +404,7 @@ subroutine WRESULT(LNC,XN,IFIR)
               write(UnitTmp_,33) T,LZ(I),KP,ACOSD(MU(2))
               write(UnitTmp_,31) (MLT(J),J=1,JO,3)
               do K=1,KO,NEC
-                 write(UnitTmp_,29) EKEV(K),(F2(I,J,K,2,S)/FFACTOR(I,K,L),   &
+                 write(UnitTmp_,29) EKEV(K),(F2(I,J,K,2,S)/FFACTOR(I,j,K,L),   &
                       J=1,JO,3)
               end do
            end do
@@ -434,12 +430,12 @@ subroutine WRESULT(LNC,XN,IFIR)
                  do K=2,KO
                     FZERO(I,J,K)=0.
                     do L=2,UPA(I)-1
-                       FZERO(I,J,K)=FZERO(I,J,K)+F2(I,J,K,L,S)*CEDR(K,L,S)   &
-                            /FFACTOR(I,K,L)
+                       FZERO(I,J,K)=FZERO(I,J,K)+F2(I,J,K,L,S)*CEDR(i,j,K,L,S)   &
+                            /FFACTOR(I,j,K,L)
                     end do
                     do L=UPA(I),LO
                        FZERO(I,J,K)=FZERO(I,J,K)+F2(I,J,K,L,S)   &
-                            *CEDR(K,UPA(I)-1,S)/FFACTOR(I,K,L)
+                            *CEDR(i,j,K,UPA(I)-1,S)/FFACTOR(I,j,K,L)
                     end do
                     if (IFAC.eq.1) FZERO(I,J,K)=FZERO(I,J,K)/EKEV(K)/FLUXFACT(S)
                     EDR=EDR+FZERO(I,J,K)*WE(K)
@@ -461,12 +457,12 @@ subroutine WRESULT(LNC,XN,IFIR)
                  do K=2,KO
                     FZERO(I,J,K)=0.
                     do L=2,UPA(I)-1
-                       FZERO(I,J,K)=FZERO(I,J,K)+F2(I,J,K,L,S)*CIDR(K,L,S)   &
-                            /FFACTOR(I,K,L)
+                       FZERO(I,J,K)=FZERO(I,J,K)+F2(I,J,K,L,S)*CIDR(i,j,K,L,S)   &
+                            /FFACTOR(I,j,K,L)
                     end do
                     do L=UPA(I),LO
                        FZERO(I,J,K)=FZERO(I,J,K)+F2(I,J,K,L,S)   &
-                            *CIDR(K,UPA(I)-1,S)/FFACTOR(I,K,L)
+                            *CIDR(i,j,K,UPA(I)-1,S)/FFACTOR(I,j,K,L)
                     end do
                     if (IFAC.eq.1) FZERO(I,J,K)=FZERO(I,J,K)/EKEV(K)/FLUXFACT(S)
                     EDR=EDR+FZERO(I,J,K)*WE(K)
@@ -509,7 +505,7 @@ subroutine WRESULT(LNC,XN,IFIR)
                        AVEFL(I,J,K)=0.
                        do L=UPA(I),LO-1
                           AVEFL(I,J,K)=AVEFL(I,J,K)+F2(I,J,K,L,S)*WMU(L)   &
-                               /FFACTOR(I,K,L)
+                               /FFACTOR(I,j,K,L)
                        end do ! L loop
                        AVEFL(I,J,K)=AVEFL(I,J,K)/(MU(LO)-MU(UPA(I)))
                        if (IFAC.eq.2) AVEFL(I,J,K)=AVEFL(I,J,K)*FLUXFACT(S)*EKEV(K)
@@ -542,13 +538,13 @@ subroutine WRESULT(LNC,XN,IFIR)
                  write(UnitTmp_,*)'     EKEV  \ FLUX[1/cm2/s/ster/keV]  AVEFL'
                  if (IFAC.eq.1) then
                     do K=2,KO,NEC
-                       write(UnitTmp_,30) EKEV(K),(F2(I,J,K,L,S)/FFACTOR(I,K,L),   &
+                       write(UnitTmp_,30) EKEV(K),(F2(I,J,K,L,S)/FFACTOR(I,j,K,L),   &
                             L=UPA(I),LO-1,IL),AVEFL(I,J,K)
                     end do
                  else
                     do K=2,KO,NEC
                        write(UnitTmp_,30) EKEV(K),(F2(I,J,K,L,S)*FLUXFACT(S)*EKEV(K)   &
-                            /FFACTOR(I,K,L),L=UPA(I),LO-1,IL),AVEFL(I,J,K)
+                            /FFACTOR(I,j,K,L),L=UPA(I),LO-1,IL),AVEFL(I,J,K)
                     end do
                  end if
                  !	     END IF
@@ -616,8 +612,8 @@ subroutine WRESULT(LNC,XN,IFIR)
                  write (iUnitOut,37) LZ(I),MLT(J),XNE(I,J)
                  write (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
                  do K=2,KO,KO-2
-                    write (iUnitOut,30) EKEV(K),(COULE(I,K,L,S)*XNE(I,J),L=2,LO,NLC),   &
-                         COULE(I,K,LO-1,S)*XNE(I,J)
+                    write (iUnitOut,30) EKEV(K),(COULE(I,j,K,L,S)*XNE(I,J),L=2,LO,NLC),   &
+                         COULE(I,j,K,LO-1,S)*XNE(I,J)
                  end do
               end do
            end do
@@ -628,8 +624,8 @@ subroutine WRESULT(LNC,XN,IFIR)
                  write (iUnitOut,37) LZ(I),MLT(J),XNE(I,J)
                  write (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
                  do K=2,KO,KO-2
-                    write (iUnitOut,30) EKEV(K),(COULI(I,K,L,S)*XNE(I,J),L=2,LO,NLC),   &
-                         COULI(I,K,LO-1,S)*XNE(I,J)
+                    write (iUnitOut,30) EKEV(K),(COULI(I,j,K,L,S)*XNE(I,J),L=2,LO,NLC),   &
+                         COULI(I,j,K,LO-1,S)*XNE(I,J)
                  end do
               end do
            end do
@@ -646,8 +642,8 @@ subroutine WRESULT(LNC,XN,IFIR)
                  write (iUnitOut,36) LZ(I),MLT(J)
                  write (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
                  do K=2,KO,KO-2
-                    write (iUnitOut,30) EKEV(K),(P1(I,J)+P2(I,K,L),L=2,LO,NLC),   &
-                         P1(I,J)+P2(I,K,LO-1)
+                    write (iUnitOut,30) EKEV(K),(P1(I,J)+P2(I,j,K,L),L=2,LO,NLC),   &
+                         P1(I,J)+P2(I,j,K,LO-1)
                  end do
               end do
            end do
@@ -682,7 +678,7 @@ subroutine WRESULT(LNC,XN,IFIR)
                  do K=1,KO
                     do L=1,LO	     ! UPA(I)-1 , changed to include the l.c.
                        CFL=abs(EDOT(I,J,K,L)*VR(I,J)+   &
-                            (COULI(I,K,L,S)+COULE(I,K,L,S))*XNE(I,J))
+                            (COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
                        if (CFL.gt.1.) then
                           write (iUnitOut,39)LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),XNE(I,J),CFL
                           Ibad=Ibad +1
@@ -717,7 +713,7 @@ subroutine WRESULT(LNC,XN,IFIR)
                  write (UnitTmp_,36) EKEV(EV(K)),ACOSD(MU(PAV(L)))
                  write (UnitTmp_,41) ' L \ MLT =',(MLT(J),J=1,JO,2)
                  do I=2,IO,2
-                    write (UnitTmp_,42) LZ(I),(P1(I,J)+P2(I,EV(K),PAV(L)),J=1,JO,2)
+                    write (UnitTmp_,42) LZ(I),(P1(I,J)+P2(I,j,EV(K),PAV(L)),J=1,JO,2)
                  end do
               end do
            end do
@@ -737,14 +733,14 @@ subroutine WRESULT(LNC,XN,IFIR)
            write(UnitTmp_,41) '   Ne =',(XNE(I,1),I=2,IO)
            write (UnitTmp_,41) ' E \ L =',(LZ(I),I=2,IO)
            do K=2,KO
-              write(UnitTmp_,43) EKEV(K),(F2(I,1,K,2,S)/FFACTOR(I,K,2),I=2,IO)
+              write(UnitTmp_,43) EKEV(K),(F2(I,1,K,2,S)/FFACTOR(I,1,K,2),I=2,IO)
            end do		! K loop
            write (UnitTmp_,*) 'Energy-Lshell spectra at MLT=12 and PA=90'
            write (UnitTmp_,71) T,KP
            write(UnitTmp_,41) '   Ne =',(XNE(I,13),I=2,IO)
            write (UnitTmp_,41) ' E \ L =',(LZ(I),I=2,IO)
            do K=2,KO
-              write(UnitTmp_,43) EKEV(K),(F2(I,13,K,2,S)/FFACTOR(I,K,2),I=2,IO)
+              write(UnitTmp_,43) EKEV(K),(F2(I,13,K,2,S)/FFACTOR(I,13,K,2),I=2,IO)
            end do		! K loop
            write (UnitTmp_,*) 'Energy-Lshell spectra at MLT=0 and PA=UPA'
            write (UnitTmp_,71) T,KP
@@ -752,7 +748,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            write (UnitTmp_,41) ' E \ L =',(LZ(I),I=2,IO)
            do K=2,KO
               write(UnitTmp_,43) EKEV(K),(F2(I,1,K,UPA(I)-1,S)/   &
-                   FFACTOR(I,K,UPA(I)-1),I=2,IO)
+                   FFACTOR(I,1,K,UPA(I)-1),I=2,IO)
            end do		! K loop
            write (UnitTmp_,*) 'Energy-Lshell spectra at MLT=12 and PA=UPA'
            write (UnitTmp_,71) T,KP
@@ -760,7 +756,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            write (UnitTmp_,41) ' E \ L =',(LZ(I),I=2,IO)
            do K=2,KO
               write(UnitTmp_,43) EKEV(K),(F2(I,13,K,UPA(I)-1,S)/   &
-                   FFACTOR(I,K,UPA(I)-1),I=2,IO)
+                   FFACTOR(I,13,K,UPA(I)-1),I=2,IO)
            end do		! K loop
            close(UnitTmp_)
 	end if
@@ -781,8 +777,14 @@ subroutine WRESULT(LNC,XN,IFIR)
                  write(UnitTmp_,*)' L   E[KEV]  TAUBO[HR] TAUCHE[HR] TAUD[HR]'
                  do K=2,KO
                     TAUD=2*pi*ME/abs(1.44E-2*RE-3*EKEV(K)*1000*LZ(I))/RE/   &
-                         (1-FUNI(MU(L))/6/FUNT(MU(L)))/3600.
-                    TAUBO=4*LZ(I)*RE/V(K,S)*FUNT(MU(L))/3600.
+                         (1-FUNI(l,i,j)/6/FUNT(l,i,j))/3600.
+                    TAUBO=4*LZ(I)*RE/V(K,S)*FUNT(l,i,j)/3600.
+                    
+                    !TAUD=2*pi*ME/abs(1.44E-2*RE-3*EKEV(K)*1000*LZ(I))/RE/   &
+                    !     (1-FUNI(MU(L))/6/FUNT(MU(L)))/3600.
+                    !TAUBO=4*LZ(I)*RE/V(K,S)*FUNT(MU(L))/3600.
+
+
                     TAUCHE=-DT/ALOG(achar(I,K,L,S))/3600.
                     write(UnitTmp_,80) LZ(I),EBND(K),TAUBO,TAUCHE,TAUD
                  enddo
@@ -954,7 +956,7 @@ subroutine WRESULT(LNC,XN,IFIR)
                  do L=1,LO
                     do K=2,KO
                        do J=1,JO
-                          NBC(J)=NBC(J)+FGEOS(J,K,L,S)*ERNM(IO,K,L)*ERNH(K,S)*RFAC
+                          NBC(J)=NBC(J)+FGEOS(J,K,L,S)*ERNM(IO,j,K,L)*ERNH(K,S)*RFAC
                        end do
                     end do
                  end do
@@ -984,8 +986,8 @@ subroutine WRESULT(LNC,XN,IFIR)
                     write(iUnitOut,45) T,LZ(IO)+DL1,MLT(II),KP,0.
                     write(iUnitOut,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
                     do K=2,KO,NEC
-                       write(iUnitOut,43) EKEV(K),(FGEOS(II,K,IFM(L),S)/   &
-                            FFACTOR(IO,K,IFM(L)),L=1+IFN,19+IFN)
+                       !write(iUnitOut,43) EKEV(K),(FGEOS(II,K,IFM(L),S)/   &
+                       !     FFACTOR(IO,j,K,IFM(L)),L=1+IFN,19+IFN)
                     end do	! K loop
                  end do		! J loop
                  close (iUnitOut)

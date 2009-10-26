@@ -87,7 +87,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
         do J=1,JO
            do K=1,KO
               do L=1,LO
-                 F2(I,J,K,L,S)=1.E-25*FFACTOR(I,K,L)
+                 F2(I,J,K,L,S)=1.E-25*FFACTOR(i,j,k,l)
               end do
            end do
         end do
@@ -116,7 +116,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
                  do L=UPA(I),LO
                     do K=2,KO
                        do J=J6,J18
-                          F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,K,L),FINI(K)*CHI(I,J))
+                          F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(i,j,k,l),FINI(K)*CHI(I,J))
                        end do	! J loop
                     end do	! K loop
                  end do	! L loop
@@ -141,7 +141,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
                  do L=UPA(I),LO
                     do K=2,KO
                        do J=J6,J18
-                          F2(I,J,K,L,S)=FINI(K)*CHI(I,J)*FFACTOR(I,K,L)
+                          F2(I,J,K,L,S)=FINI(K)*CHI(I,J)*FFACTOR(I,j,K,L)
                        end do	! J loop
                     end do	! K loop
                  end do		! L loop
@@ -206,14 +206,15 @@ subroutine INITIAL(LNC,XN,J6,J18)
                     call LINTP2(LIN,EIN,NI,3,5,LZ(I),10**E1(K),YZ,IER)
                     Y10=(10**Y)*E2(k)
                     do L=2,UPA(I)-1
-                       F2(I,1,K,L,S)=Y10*(1.-MU(L)**2)**(YZ/2.)*FFACTOR(I,K,L)
+                       ! NOT SURE IS CORRECT
+                       F2(I,1,K,L,S)=Y10*(1.-MU(L)**2)**(YZ/2.)*FFACTOR(I,1,K,L)
                     end do	! L loop
                     KK=K
                  else			! Maxwellian below 1 keV
                     X=EKEV(k)/EKEV(KK)
                     Y12=Y10*X*exp(1.-X)
                     do L=2,UPA(I)-1
-                       F2(I,1,K,L,S)=Y12*(1.-MU(L)**2)**(YZ/2.)*FFACTOR(I,K,L)
+                       F2(I,1,K,L,S)=Y12*(1.-MU(L)**2)**(YZ/2.)*FFACTOR(I,1,K,L)
                     end do ! L loop
                  end if
               end do	! K loop
@@ -275,10 +276,10 @@ subroutine INITIAL(LNC,XN,J6,J18)
                  WEIGHT=exp(DUMMY*ALOG(Ab)+(1.-DUMMY)*ALOG(0.1*Ab))
                  do J=1,JO
                     do I=2,6
-                       F2(I,J,K,L,S)=Ab*FAC*FFACTOR(I,K,L)*(.5)**(6-I)
+                       F2(I,J,K,L,S)=Ab*FAC*FFACTOR(I,j,K,L)*(.5)**(6-I)
                     end do		! I loop
                     do I=11,IO
-                       F2(I,J,K,L,S)=Ab*FAC*FFACTOR(I,K,L)
+                       F2(I,J,K,L,S)=Ab*FAC*FFACTOR(I,j,K,L)
                     end do		! I loop
                  end do		! J loop
               end do		! K Loop
@@ -288,10 +289,10 @@ subroutine INITIAL(LNC,XN,J6,J18)
                  WEIGHT=exp(DUMMY*ALOG(0.1*Ab)+(1.-DUMMY)*ALOG(Ab))
                  do J=1,JO
                     do I=2,6
-                       F2(I,J,K,L,S)=Ab*FAC*FFACTOR(I,K,L)*(.5)**(6-I)
+                       F2(I,J,K,L,S)=Ab*FAC*FFACTOR(I,j,K,L)*(.5)**(6-I)
                     end do		! I loop
                     do I=11,IO
-                       F2(I,J,K,L,S)=Ab*FAC*FFACTOR(I,K,L)
+                       F2(I,J,K,L,S)=Ab*FAC*FFACTOR(I,j,K,L)
                     end do		! I loop
                  end do		! J loop
               end do		! K Loop
@@ -301,16 +302,16 @@ subroutine INITIAL(LNC,XN,J6,J18)
                  WEIGHT=exp(DUMMY*ALOG(Ab)+(1.-DUMMY)*ALOG(0.1*Ab))
                  do J=1,JO
                     do I=2,6
-                       F2(I,J,K,L,S)=WEIGHT*FAC*FFACTOR(I,K,L)*(.5)**(6-I)
+                       F2(I,J,K,L,S)=WEIGHT*FAC*FFACTOR(I,j,K,L)*(.5)**(6-I)
                     end do		! I loop
                     do I=7,10
-                       F2(I,J,K,L,S)=WEIGHT*FAC*FFACTOR(I,K,L)
+                       F2(I,J,K,L,S)=WEIGHT*FAC*FFACTOR(I,j,K,L)
                     end do		! I loop
                  end do		! J loop
                  WEIGHT=exp(DUMMY*ALOG(0.1*Ab)+(1.-DUMMY)*ALOG(Ab))
                  do J=1,JO
                     do I=11,IO
-                       F2(I,J,K,L,S)=WEIGHT*FAC*FFACTOR(I,K,L)
+                       F2(I,J,K,L,S)=WEIGHT*FAC*FFACTOR(I,j,K,L)
                     end do		! I loop
                  end do		! J loop
               end do		! K Loop
@@ -398,9 +399,9 @@ subroutine INITIAL(LNC,XN,J6,J18)
               do K=2,KO		! Convert from log scale
                  do J=1,JO
                     do I=2,IO
-                       F2(I,J,K,L,S)=10**(F2(I,J,K,L,S))*FFACTOR(I,K,L)
-                       if (F2(I,J,K,L,S).le.1.E-30*FFACTOR(I,K,L)) then
-                          F2(I,J,K,L,S)=1.E-30*FFACTOR(I,K,L)
+                       F2(I,J,K,L,S)=10**(F2(I,J,K,L,S))*FFACTOR(I,j,K,L)
+                       if (F2(I,J,K,L,S).le.1.E-30*FFACTOR(I,j,K,L)) then
+                          F2(I,J,K,L,S)=1.E-30*FFACTOR(I,j,K,L)
                        end if
                     end do	! I loop
                  end do	! J loop
@@ -610,7 +611,7 @@ subroutine LMPLOSS
         do L=1,LO		! Lose everything beyond magnetopause
 	   do K=2,KO
               do I=ILMP(J)+1,ILold(J)
-                 FLO=1.E-30*FFACTOR(I,K,L)
+                 FLO=1.E-30*FFACTOR(I,j,K,L)
                  RNL=RNL+(F2(I,J,K,L,S)-FLO)*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
                  REL=REL+(F2(I,J,K,L,S)-FLO)*CONSL(K,S)*EKEV(K)   &
                       *WE(K)*WMU(L)*DR*DPHI
@@ -917,7 +918,7 @@ subroutine GEOSB
            do L=1,LO
               do K=2,KO
                  do J=1,JO
-                    FGEOS(J,K,L,S)=Fkapb(K)*FFACTOR(IO,K,L)
+                    FGEOS(J,K,L,S)=Fkapb(K)*FFACTOR(IO,j,K,L)
                  end do	! J LOOP
               end do	! K LOOP
            end do	! L LOOP
@@ -925,7 +926,7 @@ subroutine GEOSB
            do L=1,LO
               do K=2,KO
                  do J=1,JO
-                    FGEOS(J,K,L,S)=Flanl(K,L,S)*FFACTOR(IO,K,L)
+                    FGEOS(J,K,L,S)=Flanl(K,L,S)*FFACTOR(IO,j,K,L)
                  end do	! J LOOP
               end do	! K LOOP
            end do	! L LOOP

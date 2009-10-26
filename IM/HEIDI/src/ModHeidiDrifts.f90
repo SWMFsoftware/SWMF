@@ -9,17 +9,17 @@ Module ModHeidiDrifts
 ! Define the atmospheric loss and charge exchange variables
 ! Formerly: Common block CE
 	integer:: J6,J18
-	real :: ACHAR(NR,NE,NPA,NS),ATLOS(NR,NE,NPA,NS)
+	real :: ACHAR(NR,NE,NPA,NS),ATLOS(NR,NT,NE,NPA,NS)
 
 ! Define the advection drift rate variables
 ! Formerly: Common block CDR
-	real :: VR(NR,NT),P1(NR,NT),P2(NR,NE,NPA),EDOT(NR,NT,NE,NPA)
+	real :: VR(NR,NT),P1(NR,NT),P2(NR,NT,NE,NPA),EDOT(NR,NT,NE,NPA)
 	real :: MUDOT(NR,NT,NPA)
 
 ! Define the pitch angle diffusion coefficient variables
 ! Formerly: Common block CCOUL
-	real :: COULE(NR,NE,NPA,NS),COULI(NR,NE,NPA,NS)
-	real :: ATAE(NE,NPA,NS),BTAE(NE,NPA,NS),GTAE(NE,NPA+1,NS)
-	real :: ATAI(NE,NPA,NS),BTAI(NE,NPA,NS),GTAI(NE,NPA+1,NS)
+	real :: COULE(NR,NT,NE,NPA,NS),COULI(NR,NT,NE,NPA,NS)
+	real :: ATAE(NR,NT,NE,NPA,NS),BTAE(NR,NT,NE,NPA,NS),GTAE(NR,NT,NE,NPA+1,NS)
+	real :: ATAI(NR,NT,NE,NPA,NS),BTAI(NR,NT,NE,NPA,NS),GTAI(NR,NT,NE,NPA+1,NS)
 
 end Module ModHeidiDrifts

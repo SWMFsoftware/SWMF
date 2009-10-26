@@ -31,8 +31,8 @@ subroutine LLIMIT
      do K=1,KO
         do J=1,JO
            do I=1,IO
-              if (abs(F2(I,J,K,L,S)).le.1.E-29*FFACTOR(I,K,L))   &
-                   F2(I,J,K,L,S)=1.E-30*FFACTOR(I,K,L)
+              if (abs(F2(I,J,K,L,S)).le.1.E-29*FFACTOR(I,j,K,L))   &
+                   F2(I,J,K,L,S)=1.E-30*FFACTOR(I,j,K,L)
            end do
         end do
      end do
@@ -181,7 +181,7 @@ subroutine DRIFTR
               F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(I)*FBND(I)+C(I-1)*FBND(I-1)
 	   end do ! I loop 
 	   do I=ILMP(J)+1,IO
-              F2(I,J,K,L,S)=1.E-30*FFACTOR(I,K,L)
+              F2(I,J,K,L,S)=1.E-30*FFACTOR(I,j,K,L)
 	   end do
 50         format(4I3,1P,10E10.2)
 
@@ -208,7 +208,7 @@ subroutine DRIFTR
         if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then
            do L=UPA(I),LO
               do I=2,IO
-                 F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,K,L),FINI(K)*CHI(I,J))
+                 F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
               end do
            end do
         end if
@@ -248,7 +248,7 @@ end subroutine DRIFTR
 	   F(0)=F2(I,JO,K,L,S)
 
 	   do J=1,JO
-	    C(J)=P1(I,J)+P2(I,K,L)
+	    C(J)=P1(I,J)+P2(I,j,K,L)
 !	    C(J)=AMIN1(0.99,AMAX1(-0.99,C(J)))
 	    ISIGN=1
 	    if(C(J).ne.abs(C(J))) ISIGN=-1
@@ -302,7 +302,7 @@ end subroutine DRIFTR
 	  if (Ib.eq.1 .and. S.eq.1) then
 	  do J=J6,J18
 	    do L=UPA(I),LO
-	     F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,K,L),FINI(K)*CHI(I,J))
+	     F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
 	    end do
 	  end do	! J loop
 	  end if
@@ -348,7 +348,7 @@ end subroutine DRIFTR
 		f(1:ko)=f2(i,j,1:ko,l,s)
 !	   end do
 	   do K=1,KO
-	    C(K)=EDOT(I,J,K,L)*VR(I,J)+(COULE(I,K,L,S)+COULI(I,K,L,S))*XNE(I,J)
+	    C(K)=EDOT(I,J,K,L)*VR(I,J)+(COULE(I,j,K,L,S)+COULI(I,j,K,L,S))*XNE(I,J)
 !	    C(K)=AMIN1(0.99,AMAX1(-0.99,C(K)))
 	    ISIGN=1
 	    if (C(K).ne.abs(C(K))) ISIGN=-1
@@ -418,7 +418,7 @@ end subroutine DRIFTR
 	  if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then
 	    do L=UPA(I),LO
 	     do K=2,KO
-	      F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,K,L),FINI(K)*CHI(I,J))
+	      F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
 	     end do
 	    end do
 	  end if
@@ -466,7 +466,7 @@ end subroutine DRIFTR
 	   ULL=LO-1
 !  dayside BC for IBC=1
 	   if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then
-	      F(UPA(I))=FBC(EKEV(K),FFACTOR(I,K,L),FINI(K)*CHI(I,J))
+	      F(UPA(I))=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
 	      UL=UPA(I)-1
 	      ULL=UPA(I)-1
 	    end if
@@ -498,7 +498,7 @@ end subroutine DRIFTR
 ! dayside BC for IBC=1
 	   if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then 
 	     do L=UPA(I),LO
-	      F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,K,L),FINI(K)*CHI(I,J))
+	      F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
 	     end do	! yet another L loop
 	   endif
 !	   F2(I,J,K,LO,S)=F2(I,J,K,LO-1,S)*CONMU2
@@ -533,7 +533,7 @@ end subroutine DRIFTR
 	  do K=2,KO
 	   do J=1,JO
 	    do I=2,ILMP(J)
-	      FN=AMAX1(F2(I,J,K,L,S)*achar(I,K,L,S),1.E-30*FFACTOR(I,K,L))
+	      FN=AMAX1(F2(I,J,K,L,S)*achar(I,K,L,S),1.E-30*FFACTOR(I,j,K,L))
 	      FL=F2(I,J,K,L,S)-FN
 	      CEN=CEN+FL*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
 	      CEE=CEE+FL*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
@@ -547,7 +547,7 @@ end subroutine DRIFTR
 	 do J=1,JO
 	  do I=2,ILMP(J)
 	   do L=UPA(I),LO
-		FN=AMAX1(F2(I,J,K,L,S)*ATLOS(I,K,L,S),1.E-30*FFACTOR(I,K,L))
+		FN=AMAX1(F2(I,J,K,L,S)*ATLOS(I,j,K,L,S),1.E-30*FFACTOR(I,j,K,L))
 		FL=F2(I,J,K,L,S)-FN
 		ALN=ALN+FL*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
 		ALE=ALE+FL*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
@@ -561,7 +561,7 @@ end subroutine DRIFTR
 	   do J=J6,J18
 	    do I=2,IO
 	     do L=UPA(I),LO-1
-	      F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,K,L),FINI(K)*CHI(I,J))
+	      F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
 	     end do
 	    end do
 	   end do	! J loop
@@ -607,15 +607,15 @@ end subroutine DRIFTR
      		UL=UPA(I)-1 
 	   do L=3,UL
 	    BTAW=ATAW(I,J,K,L)+GTAW(I,J,K,L)
-	    AN=(ATAI(K,L,S)+ATAE(K,L,S))*XNE(I,J)+IWPI*ATAW(I,J,K,L)
-	    BN=(BTAI(K,L,S)+BTAE(K,L,S))*XNE(I,J)+IWPI*BTAW
-	    GN=(GTAI(K,L,S)+GTAE(K,L,S))*XNE(I,J)+IWPI*GTAW(I,J,K,L)
+	    AN=(ATAI(i,j,K,L,S)+ATAE(i,j,K,L,S))*XNE(I,J)+IWPI*ATAW(I,J,K,L)
+	    BN=(BTAI(i,j,K,L,S)+BTAE(i,j,K,L,S))*XNE(I,J)+IWPI*BTAW
+	    GN=(GTAI(i,j,K,L,S)+GTAE(i,j,K,L,S))*XNE(I,J)+IWPI*GTAW(I,J,K,L)
 	    if (L.ge.UPA(I)) then
 	     ll=UPA(I)-1
 	     BTAW=ATAW(I,J,K,LL)+GTAW(I,J,K,LL)
-	     AN=(ATAI(K,LL,S)+ATAE(K,LL,S))*XNE(I,J)+IWPI*ATAW(I,J,K,LL)
-	     BN=(BTAI(K,LL,S)+BTAE(K,LL,S))*XNE(I,J)+IWPI*BTAW
-	     GN=(GTAI(K,LL,S)+GTAE(K,LL,S))*XNE(I,J)+IWPI*GTAW(I,J,K,LL)
+	     AN=(ATAI(i,j,K,LL,S)+ATAE(i,j,K,LL,S))*XNE(I,J)+IWPI*ATAW(I,J,K,LL)
+	     BN=(BTAI(i,j,K,LL,S)+BTAE(i,j,K,LL,S))*XNE(I,J)+IWPI*BTAW
+	     GN=(GTAI(i,j,K,LL,S)+GTAE(i,j,K,LL,S))*XNE(I,J)+IWPI*GTAW(I,J,K,LL)
 	    end if
 	    if (il.eq.0) then
 	      AN=2.*AN
@@ -646,7 +646,7 @@ end subroutine DRIFTR
 ! dayside BC for IBC=1
 	   if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then
 	     do L=UPA(I),LO-1
-	      F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,K,L),FINI(K)*CHI(I,J))
+	      F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
 	     end do	! 3rd L loop
 	   else 				  ! day or night, IBC>1
 	     F2(I,J,K,LO-1,S)=RK(LO-1)/(1+RL(LO-1)*CONMU2)

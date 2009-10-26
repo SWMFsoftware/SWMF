@@ -54,9 +54,9 @@ subroutine PRESSURES
                  SUMA=0.
                  SUMN=0.
                  do L=1,LO
-                    SUME=SUME+F2(I,J,K,L,S)*EPME(I,K,L)
-                    SUMA=SUMA+F2(I,J,K,L,S)*EPMA(I,K,L)
-                    SUMN=SUMN+F2(I,J,K,L,S)*ERNM(I,K,L)
+                    SUME=SUME+F2(I,J,K,L,S)*EPME(I,j,K,L)
+                    SUMA=SUMA+F2(I,J,K,L,S)*EPMA(I,j,K,L)
+                    SUMN=SUMN+F2(I,J,K,L,S)*ERNM(I,j,K,L)
                     Nspace(I,J,S)=Nspace(I,J,S)+F2(I,J,K,L,S)*WE(K)*DR*DPHI*WMU(L)*CONSL(K,S)
                     Espace(I,J,S)=Espace(I,J,S)+F2(I,J,K,L,S)*WE(K)*DR*DPHI*WMU(L)*EKEV(K)*CONSL(K,S)
                  enddo  ! L loop
