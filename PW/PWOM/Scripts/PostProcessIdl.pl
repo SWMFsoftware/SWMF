@@ -6,29 +6,37 @@ my $Verbose = ($v or $verbose);
 my $Append  = ($M);
 use strict;
 use FileHandle;
+use FileCache maxopen =>500;
 &print_help if $Help;
 
 my $plot;
 my $file;
-my %plot_handle;
+my %plot_data;
 my @test;
 my $i=1;
 my $iLine;
 my $nHeader=5;
 my $pi=3.14159;
 my $rPlanet=1.0;
-
+#print "$FileCache::cacheout_maxopen\n";
+#$FileCache::cacheout_maxopen = 1000;
+#print "$FileCache::cacheout_maxopen\n";
 print STDOUT "Enter Alt Slice For Output: ";
 my $AltSlice = <STDIN>;
 chop($AltSlice);
 
+# Get plot list and read data into hash array
 my @plot_file = sort glob "north_plots_iline????.out";
 my $nLine = @plot_file;
+my $nFileSize;
 for $file (@plot_file) {
-    my $fh;
-    open($fh,"<",$file) or next;
-    my $a=$fh;
-    $plot_handle{$file} = $a;
+    open(fh,"<",$file) or next;
+    $i=0;
+    while(<fh>){
+	$plot_data{$file}[$i] = $_;
+	$i++;
+    }
+    $nFileSize =$plot_data{$file} ;
 }
 
 my $nfile = @plot_file;
@@ -36,12 +44,11 @@ my $nfile = @plot_file;
 my $nData; # number of grid points in radial direction
 
 
-
 my $iPlot;
 my $iPlotString = "0000";
 my @Head;
+my $iPos=0;
 SNAPSHOT:{
-
     my $fh;
     $iPlot++;
     $iPlotString++;
@@ -51,10 +58,10 @@ SNAPSHOT:{
     my $nStep;
     my $Time;
     foreach $plot (@plot_file) {
-	$fh = $plot_handle{$plot};
+	print "Working on file $plot\n" if $Debug;
 	for $iLine (1..$nHeader){
 	    my $line;
-	    $line = <$fh>;
+	    $line = $plot_data{$plot}[$iPos+$iLine-1];
 	    print "header $iLine: $line\n" if $Debug;
 	    $Head[$iLine]=$line;
 	    #before discarding get nData and variable list
@@ -67,12 +74,12 @@ SNAPSHOT:{
 		$variables =$line;
 	    }elsif ($iLine eq 3){
 		$line =~ /\s*(\d+)/ 
-		    or die "Could not match nData in $line";
+		    or die "Could not match nData in $line, for file $plot\n";
 		$nData = $1;
 	    }
 	}
     }
-    
+    $iPos=$iPos+$nHeader;
     # loop over altitude and write out each fieldlines alt slice
     my $iAlt;
     for $iAlt (1..$nData){
@@ -104,13 +111,9 @@ SNAPSHOT:{
 	foreach $plot (@plot_file) {
 	    print "file = $plot\n" if $Verbose;
 	    
-	    # open get filehandle from hash for reading
-	    $fh = $plot_handle{$plot};
-	    print "fh = $fh\n" if $Debug;
-	    
 	    # read line from current alt
-	    my $line = <$fh>;
-	    
+	    my $line = $plot_data{$plot}[$iPos+$iAlt-1];	    
+
 	    # parse line and convert the coords to XYZ
 	    my @linesplit= split/\s+/, $line ;
 	    my $r = $rPlanet;
@@ -167,26 +170,29 @@ SNAPSHOT:{
 	}
 	
     }
-    redo SNAPSHOT unless eof($fh);
+    $iPos=$iPos+$nData;
+    redo SNAPSHOT unless $iPos >= $nFileSize;
 }
 
-
-#########################
+###############################
 # Do Southern Hemisphere
-#########################
+###############################
 
+# Get plot list and read data into hash array
 my @plot_file = sort glob "south_plots_iline????.out";
 my $nLine = @plot_file;
-
 if($nLine == 0){
     die("No Plots for Southern Hemisphere. Only slices generated for North.\n");
 }
-
+my $nFileSize;
 for $file (@plot_file) {
-    my $fh;
-    open($fh,"<",$file) or next;
-    my $a=$fh;
-    $plot_handle{$file} = $a;
+    open(fh,"<",$file) or next;
+    $i=0;
+    while(<fh>){
+	$plot_data{$file}[$i] = $_;
+	$i++;
+    }
+    $nFileSize =$plot_data{$file} ;
 }
 
 my $nfile = @plot_file;
@@ -194,12 +200,11 @@ my $nfile = @plot_file;
 my $nData; # number of grid points in radial direction
 
 
-
 my $iPlot;
 my $iPlotString = "0000";
 my @Head;
+my $iPos=0;
 SNAPSHOT:{
-
     my $fh;
     $iPlot++;
     $iPlotString++;
@@ -209,10 +214,10 @@ SNAPSHOT:{
     my $nStep;
     my $Time;
     foreach $plot (@plot_file) {
-	$fh = $plot_handle{$plot};
+	print "Working on file $plot\n" if $Debug;
 	for $iLine (1..$nHeader){
 	    my $line;
-	    $line = <$fh>;
+	    $line = $plot_data{$plot}[$iPos+$iLine-1];
 	    print "header $iLine: $line\n" if $Debug;
 	    $Head[$iLine]=$line;
 	    #before discarding get nData and variable list
@@ -225,12 +230,12 @@ SNAPSHOT:{
 		$variables =$line;
 	    }elsif ($iLine eq 3){
 		$line =~ /\s*(\d+)/ 
-		    or die "Could not match nData in $line";
+		    or die "Could not match nData in $line, for file $plot\n";
 		$nData = $1;
 	    }
 	}
     }
-    
+    $iPos=$iPos+$nHeader;
     # loop over altitude and write out each fieldlines alt slice
     my $iAlt;
     for $iAlt (1..$nData){
@@ -243,7 +248,7 @@ SNAPSHOT:{
 		open OUT, ">south_plot_snapshot${iPlotString}_iAlt${iAlt}.dat";
 	    }
 	}
-	print "Save into plot_snapshot${iPlot}_iAlt${iAlt}.dat\n" if $Verbose;
+	print "Save into south_plot_snapshot${iPlot}_iAlt${iAlt}.dat\n" if $Verbose;
 	
 	# write Header into file
 	$variables=~s/Lat/X/;
@@ -262,13 +267,9 @@ SNAPSHOT:{
 	foreach $plot (@plot_file) {
 	    print "file = $plot\n" if $Verbose;
 	    
-	    # open get filehandle from hash for reading
-	    $fh = $plot_handle{$plot};
-	    print "fh = $fh\n" if $Debug;
-	    
 	    # read line from current alt
-	    my $line = <$fh>;
-	    
+	    my $line = $plot_data{$plot}[$iPos+$iAlt-1];	    
+
 	    # parse line and convert the coords to XYZ
 	    my @linesplit= split/\s+/, $line ;
 	    my $r = $rPlanet;
@@ -325,9 +326,9 @@ SNAPSHOT:{
 	}
 	
     }
-    redo SNAPSHOT unless eof($fh);
+    $iPos=$iPos+$nData;
+    redo SNAPSHOT unless $iPos >= $nFileSize;
 }
-
 
 exit;
 ##############################################################################
