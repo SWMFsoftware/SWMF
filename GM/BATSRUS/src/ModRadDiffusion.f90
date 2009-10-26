@@ -1347,8 +1347,10 @@ contains
              iVarImpl = iTrImplFirst - 1 + iWave
              iVar = WaveFirst_ - 1 + iWave
 
-             State_VGB(iVar,i,j,k,iBlock) = &
+             StateImpl_VG(iVarImpl,i,j,k) = &
                   max(EradMin_W(iWave), StateImpl_VG(iVarImpl,i,j,k))
+
+             State_VGB(iVar,i,j,k,iBlock) = StateImpl_VG(iVarImpl,i,j,k)
           end do
        end if
 
