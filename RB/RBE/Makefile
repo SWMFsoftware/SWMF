@@ -88,9 +88,9 @@ rundir:
 		fi;)
 	cd ${RUNDIR}/RB; \
 		mkdir restartOUT restartIN plots
-	cp ${RBDIR}/data/input/rbe_e.fin ${RUNDIR}/RB/
-	cp ${RBDIR}/data/input/B_wave_eq.dat ${RUNDIR}/RB/
-	cp ${RBDIR}/data/input/Horne_chorus.tgz ${RUNDIR}/RB/
+	cp data/input/rbe_e.fin ${RUNDIR}/RB/
+	cp data/input/B_wave_eq.dat ${RUNDIR}/RB/
+	cp data/input/Horne_chorus.tgz ${RUNDIR}/RB/
 	cd ${RUNDIR}/RB/; tar xzf Horne_chorus.tgz
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
