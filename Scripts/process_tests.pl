@@ -4,7 +4,6 @@ use strict;
 my %WeightMachine = (
     "columbia"     => "1.0",
     "grendel"      => "0.5",
-    "grendel_ompi" => "0.5",
     "grid"         => "1.0",
     "mesh"         => "1.0",
     "nyx"          => "0.2",
@@ -265,7 +264,7 @@ foreach $day (@days){
     my $score; 
     foreach my $type (@ScoreTypes){
 	$score .= "$type: " 
-	    . sprintf("%.1f", 100*$Scores{$type}/$MaxScores{$type})
+	    . sprintf("%.1f", 100*$Scores{$type}/($MaxScores{$type}+1e-30))
 	    . '%, ';
     }
     chop($score); chop($score);
