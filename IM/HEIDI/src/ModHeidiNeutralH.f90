@@ -4,18 +4,18 @@ module ModHeidiHydrogenGeo
 
 contains
 
-  subroutine get_rairden_density(nStep, nRadialPoint,L_I, RhoH_II)
+  subroutine get_rairden_density(nPoint, nRadialPoint,L_I, RhoH_II)
 
     use ModIoUnit, ONLY : UnitTmp_
-    integer, intent(in)  :: nStep                  ! number of points along the field line
+    integer, intent(in)  :: nPoint                  ! number of points along the field line
     integer, intent(in)  :: nRadialPoint           ! number of points in the radial direction = NR
     real,    intent(in)  :: L_I(nRadialPoint)      ! x^2+y^2
-    real,    intent(out) :: RhoH_II(nRadialPoint, nStep)  !interpolated density
+    real,    intent(out) :: RhoH_II(nRadialPoint, nPoint)  !interpolated density
     integer, parameter   :: nUniform =100          !number of points on new refined grid
     integer, parameter   :: nRairden = 81          !number of radial point in the Rairden hydrogen file
     character (len=100)  :: StringHeader
     real                 :: Lat
-    real                 :: RadialDistance_II(nRadialPoint, nStep)
+    real                 :: RadialDistance_II(nRadialPoint, nPoint)
     real                 :: LatMax, LatMin, dLat
     real                 :: Rad_I(nUniform), Weight, RhoHUniform_I(nUniform)
     real                 :: RairdenDistance_I(nRairden),RairdenDensity
@@ -75,15 +75,15 @@ contains
        LatMax = acos(sqrt(1./L_I(iR)))
        write(*,*) 'LatMax', LatMax
        LatMin = -LatMax
-       dLat   = (LatMax - LatMin)/(nStep - 1)
-       do iStep = 1, nStep
+       dLat   = (LatMax - LatMin)/(nPoint - 1)
+       do iStep = 1, nPoint
           Lat = LatMin + (iStep-1)*dLat
           RadialDistance_II(iR,iStep) = abs(L_I(iR)/cos(Lat))
        end do
     end do
     
     do iR = 1, nRadialPoint
-       do iStep =1, nStep
+       do iStep =1, nPoint
           r = RadialDistance_II(iR,iStep)
           i = 1 + (r - rMin)/dR
           Weight = (Rad_I(i) - r)/dR
@@ -99,15 +99,15 @@ contains
   end subroutine get_rairden_density
 
   !=================================================================================
-  subroutine get_hydrogen_density(nStep, L, bField_I, bMirror,iMirror_I,dLength_I,HDensity_I,AvgHDensity)
+  subroutine get_hydrogen_density(nPoint, L, bField_I, bMirror,iMirror_I,dLength_I,HDensity_I,AvgHDensity)
 
-    integer, intent(in)  :: nStep
+    integer, intent(in)  :: nPoint
     real,    intent(in)  :: L
-    real,    intent(in)  :: bField_I(nStep) 
+    real,    intent(in)  :: bField_I(nPoint) 
     real,    intent(in)  :: bMirror  
     integer, intent(in)  :: iMirror_I(2)
-    real,    intent(in)  :: dLength_I(nStep-1)
-    real,    intent(in)  :: HDensity_I(nStep) 
+    real,    intent(in)  :: dLength_I(nPoint-1)
+    real,    intent(in)  :: HDensity_I(nPoint) 
     real,    intent(out) :: AvgHDensity
     real                 :: InvL
     real                 :: DeltaS1, DeltaS2, b1, b2, Coeff
@@ -145,36 +145,40 @@ contains
   subroutine test_density
 
     use ModHeidiBField, ONLY: initialize_b_field,find_mirror_points
-    
-    integer, parameter   :: nStep =11                  
-    integer,parameter    :: nRadialPoint =1 
-    real                 :: L_I(nRadialPoint)
-    real                 :: Rho_II(nStep)    
+ 
+
+    integer, parameter   :: nPoint = 11
     integer, parameter   :: nPitch = 1
+    integer, parameter   :: nR = 1
+    integer, parameter   :: nPhi =1
+    real                 :: L_I(nR)
+    real                 :: Phi_I(nPhi)    
+    real                 :: bFieldMagnitude_III(nPoint,nR,nPhi) 
+    real                 :: Rho_II(nPoint)    
     real                 :: PitchAngle_I(nPitch) 
-    real                 :: bField_I(nRadialPoint,nStep) 
-    real                 :: Length_I(nRadialPoint,nStep) 
-    real                 :: RadialDistance_I(nRadialPoint,nStep) 
-    real                 :: dLength_I(nStep)
-    real                 :: AvgHDensity(nRadialPoint),HDensity(nRadialPoint,nStep)
+    real                 :: dLength_III(nPoint-1,nR,nPhi)      ! Length interval between i and i+1  
+    real                 :: Length_III(nPoint,nR,nPhi) 
+    real                 :: RadialDistance_III(nPoint,nR,nPhi)
+    real                 :: AvgHDensity(nR),HDensity(nR,nPoint)
     real                 :: bMirror_I(nPitch),bMirror
     integer              :: iMirror_I(2)
     real, parameter      :: Pi = 3.141592654   
-    real                 :: Ds_I(nStep)
+    real                 :: Ds_I(nPoint)
     integer              :: iStep
     !-----------------------------------------------------------------------------
 
     L_I =2.0
     PitchAngle_I(1) = Pi/10.
     
-    call initialize_b_field(L_I(1), iStep, bField_I, RadialDistance_I, Length_I, Ds_I)
+    call initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, RadialDistance_III,Length_III, dLength_III)
+!call initialize_b_field(L_I(1), iStep, bField_I, RadialDistance_I, Length_I, Ds_I)
             
-    call find_mirror_points (iStep, nPitch, PitchAngle_I, bField_I, bMirror_I,iMirror_I)
+    call find_mirror_points (iStep, nPitch, PitchAngle_I,bFieldMagnitude_III, bMirror_I,iMirror_I)
     
     bMirror = bMirror_I(1)
  
-    call get_rairden_density(nStep, nRadialPoint,L_I, Rho_II)
-    call get_hydrogen_density(nStep, L_I(1), bField_I, bMirror,iMirror_I(1),dLength_I,Rho_II,AvgHDensity(1))
+    call get_rairden_density(nPoint, nR,L_I(1), Rho_II)
+    call get_hydrogen_density(nPoint, L_I(1), bFieldMagnitude_III, bMirror,iMirror_I(1),dLength_III,Rho_II,AvgHDensity(1))
        
   end subroutine test_density
   
