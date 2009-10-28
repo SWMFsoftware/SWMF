@@ -24,8 +24,6 @@ subroutine CEPARA
   integer           :: iUnit
   real              :: x,y
   real              :: FACI,fac,cosd,acosd
-!  real              :: funt
-!  real              :: funt(nPa,nR,nT)
   real              :: RLAMBDA(71),PA(71),HDNS(NR,NPA)
   real              :: LH(20),HDNSIN(20,71)
   character(len=80) :: TITLE
@@ -36,8 +34,6 @@ subroutine CEPARA
   !\ Open a file with the bounce-averaged H dens [m-3] in geocorona
   !  obtained through bounce-averaging the Chamberlain model
   !/ (Mei-Ching's fit by a poly of order 4 good for L from 1 to 6.5)
-
-  !call get_IntegralH(funt)
 
 
   S=0
@@ -132,7 +128,6 @@ subroutine CEPARA
            do i = 2, IO
               do L = UPA(I), LO 
                  ATLOS(I,j,K,L,S)=exp(-DT/(29.1347*LZ(I)*FUNT(l,i,j)*sqrt(M1(S)/EKEV(K))))
-                 !ATLOS(I,:,K,L,S)=exp(-DT/(29.1347*LZ(I)*FUNT(MU(L))*sqrt(M1(S)/EKEV(K))))
               end do
            end do
         end do
@@ -223,20 +218,13 @@ subroutine OTHERPARA
      do J=1,JO     ! loop in azimuthal grid
         do L=1,UPA(I)
            MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
-           
            !MUDOT(I,J,L)=(1.-MUBOUN**2)*FUNI(MUBOUN)/LZ(I)  &
            !    /MUBOUN/4./FUNT(MUBOUN)*DL1/DMU(L)
            !GPA=1.-FUNI(MU(L))/6./FUNT(MU(L))
            
-           write(*,*) 'FUNT(l,i,j)',FUNT(l,i,1), FUNI(l,i,1)
-           write(*,*) 'FUNT(l,i,j)',FUNT(l+1,i,1), FUNI(l+1,i,1)
-           
-           MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(l+1,i,j)-FUNI(l,i,j)))/LZ(I)  &
-               /MUBOUN/4./(0.5*(FUNT(l+1,i,j)-FUNT(l,i,j)))*DL1/DMU(L)
+           MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(l+1,i,j)+FUNI(l,i,j)))/LZ(I)  &
+               /MUBOUN/4./(0.5*(FUNT(l+1,i,j)+FUNT(l,i,j)))*DL1/DMU(L)
 
-           !MUDOT(I,J,1)=(1.-MUBOUN**2)*(FUNI(1,i,j))/LZ(I)  &
-           !    /MUBOUN/4./(FUNT(1,i,j))*DL1/DMU(L)
-	   
            GPA=1.-FUNI(l,i,j)/6./FUNT(l,i,j)
                       
            do K=1,KO
@@ -244,7 +232,7 @@ subroutine OTHERPARA
 	   end do	! K loop
         end do 	! L loop
 
-              
+       
        MULC=MU(UPA(I))+0.5*WMU(UPA(I))
         do L=UPA(I)+1,LO-1
 	   MUBOUN=MU(L)+0.5*WMU(L)
@@ -252,8 +240,8 @@ subroutine OTHERPARA
            !MUDOT(I,J,L)=(1.-MUBOUN**2)*FUNI(MULC)/LZ(I)  &
            !     /MUBOUN/4./FUNT(MULC)*DL1/DMU(L)
            
-           MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(l+1,i,j)-FUNI(l,i,j)))/LZ(I)  &
-                /MUBOUN/4./(0.5*(FUNT(l+1,i,j)-FUNT(l,i,j)))*DL1/DMU(L)
+           MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(l+1,i,j)+FUNI(l,i,j)))/LZ(I)  &
+                /MUBOUN/4./(0.5*(FUNT(l+1,i,j)+FUNT(l,i,j)))*DL1/DMU(L)
 
 	   do K=1,KO
               EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
@@ -376,9 +364,9 @@ subroutine OTHERPARA
                  COULDI(K,1)=0.
                  GTAI(i,j,K,2,S)=0.
                  
-
-                 write(*,*) 'in coeff'
+                 
                  do L=2,LO-1
+                    !write(*,*) 'i,j,k,l', i,j,k,l
                     BANE=(1.-FUNI(l,i,j))/2./FUNT(l,i,j)/(1.-MU(L)*MU(L))
                     !BANE=(1.-FUNI(MU(L))/2./FUNT(MU(L)))/(1.-MU(L)*MU(L))
                     COULE(1,j,K,L,S)=COULE(1,j,K,1,S)*BANE
@@ -387,14 +375,17 @@ subroutine OTHERPARA
                     CIDR(i,j,K,L,S)=CIDR(i,j,K,1,S)*BANE*FACMU(L,i,j)*WMU(L)
                     MUBOUN=MU(L)+0.5*WMU(L)
                     !BADIF=(1.-MUBOUN*MUBOUN)*FUNI(MUBOUN)/MUBOUN
-                    BADIF=(1.-MUBOUN*MUBOUN)*(0.5*(FUNI(l+1,i,j)-FUNI(l,i,j)))/MUBOUN
+                    BADIF=(1.-MUBOUN*MUBOUN)*(0.5*(FUNI(l+1,i,j)+FUNI(l,i,j)))/MUBOUN
                     !\
                     ! Collisions with plasmaspheric electrons
                     !/
                     COULDE(K,L)=CCDE*BADIF
-                    if (FACMU(L,i,j)==0.0) FACMU(L,i,j)=0.0000001
-                    if (FACMU(L+1,i,j)==0.0) FACMU(L+1,i,j)=0.0000001
-                   ! write(*,*) 'FACMU(L,i,j)',FACMU(L,i,j)
+                    
+                    !if (FACMU(L,i,j)==0.0) FACMU(L,i,j)=0.0000001
+                    !if (FACMU(L+1,i,j)==0.0) FACMU(L+1,i,j)=0.0000001
+                    
+                    !write(*,*) 'FACMU(L,i,j),FACMU(L+1,i,j)',FACMU(L,i,j),FACMU(L+1,i,j)
+                    
                     ATAE(i,j,K,L,S)=COULDE(K,L)/FACMU(L+1,i,j)/DMU(L)/WMU(L)
                     AFIR=COULDE(K,L)/FACMU(L,i,j)/DMU(L)/WMU(L)
                     ASEC=COULDE(K,L-1)/FACMU(L,i,j)/DMU(L-1)/WMU(L)
@@ -411,6 +402,8 @@ subroutine OTHERPARA
                     GTAI(i,j,K,L+1,S)=COULDI(K,L)/FACMU(L,i,j)/WMU(L+1)/DMU(L)
                  end do	! L loop
                  
+                 !write(*,*) '~~~~~~~~~~~~~~~~~'
+
                  COULDE(K,LO)=0.
                  ATAE(i,j,K,LO,S)=0.
                  COULDI(K,LO)=0.
@@ -418,6 +411,8 @@ subroutine OTHERPARA
               end do	! K loop
            end do       ! J loop
         end do          ! I loop
+
+
 
 
         do K=1,KO

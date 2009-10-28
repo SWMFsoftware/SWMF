@@ -986,8 +986,8 @@ subroutine WRESULT(LNC,XN,IFIR)
                     write(iUnitOut,45) T,LZ(IO)+DL1,MLT(II),KP,0.
                     write(iUnitOut,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
                     do K=2,KO,NEC
-                       !write(iUnitOut,43) EKEV(K),(FGEOS(II,K,IFM(L),S)/   &
-                       !     FFACTOR(IO,j,K,IFM(L)),L=1+IFN,19+IFN)
+                       write(iUnitOut,43) EKEV(K),(FGEOS(II,K,IFM(L),S)/   &
+                            FFACTOR(IO,II,K,IFM(L)),L=1+IFN,19+IFN)
                     end do	! K loop
                  end do		! J loop
                  close (iUnitOut)

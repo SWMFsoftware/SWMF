@@ -371,7 +371,7 @@ subroutine ARRAYS
         MUB(l)=COSD(PA(l)+DPA/2.)
      end do
      WMU(1)=2*MUB(1)
-     WMU(2:lo-1)=MUB(2:lo-1)-MUB(2:lo-1)
+     WMU(2:lo-1)=MUB(2:lo-1)-MUB(2:lo-1) ! WRONG!!!
      DMU(1:lo-2)=0.5*(WMU(2:lo-1)+WMU(1:lo-2))
      do l=1,lo-2
         MU(L+1)=MU(L)+DMU(L)
@@ -482,6 +482,7 @@ subroutine ARRAYS
   call get_IntegralH(funt)
   call get_IntegralI(funi)
 
+
   !\ 
   ! Define conversion factors
   ! FFACTOR is ratio of phase space F to F2 in conservative space
@@ -526,15 +527,21 @@ subroutine ARRAYS
   !\
   ! Variables for pressure and anisotropy calculations
   !/
+
+! open (unit = 2, file = "EPMA_setup.dat")
+!   write (2,*)'Numerical values '
+!   write (2,*)'l ERNM EPMA EPME' 
   
   do i = 1, io
      do j =1, jo
         do k = 1, ko
            do l = 1, lo
-              ERNM(i,j,k,l) = WMU(L)/(FFACTOR(i,j,k,l)+0.00001)
+              ERNM(i,j,k,l) = WMU(L)/(FFACTOR(i,j,k,l))
               EPMA(i,j,k,l) = ERNM(i,j,k,l)*MU(L)*MU(L)
               EPME(i,j,k,l) = ERNM(i,j,k,l) - EPMA(i,j,k,l)
+              !write(2,*) l,ERNM(i,j,k,l), EPMA(i,j,k,l), EPME(i,j,k,l) 
            end do
+        !stop
         end do
      end do
   end do
@@ -547,7 +554,7 @@ subroutine ARRAYS
         EPP(K,S)=ERNH(K,S)*EKEV(K)
      end do
   end do
-
+  
   do i = 1,NR
      do j = 1, NT
 	do k = 1, NE
@@ -562,8 +569,15 @@ subroutine ARRAYS
               do LL=1,lo
                  FACMU(LL,i,j) = FUNT(ll,i,j)*MU(LL)
                  !FACMU(LL,i,j) = FUNT(MU(LL))*MU(LL)
+                 
+                 !write(*,*) 'i,j,k,l', i,j,k,l
+                 !write(*,*) 'MU(LL), FUNT(ll,i,j),FACMU(LL,i,j)',MU(LL), FUNT(ll,i,j),FACMU(LL,i,j)
+                 
+                ! write(*,*) '~~~~~~~~~~~~~~~~~'
+              
               end do
 
+                            
               !.......to keep F const at 90 & at 0 deg
               CONMU1=FACMU(2,i,j)/FACMU(3,i,j)
               CONMU2=FACMU(LO,i,j)/FACMU(LO-1,i,j)
@@ -578,7 +592,7 @@ subroutine ARRAYS
                  if (IFAC.eq.1) CONSL(1:KO,S)=CONSL(1:KO,S)/FLUXFACT(S)/EKEV(1:KO)
               end do
 
-              return
+              !return
            end do
         end do
      end do

@@ -311,7 +311,7 @@ end subroutine DRIFTR
 	end do	! big I loop
 
 	return
-	end
+      end subroutine DRIFTP
 ! 
 ! End of subroutine DRIFTP
 !
@@ -427,7 +427,7 @@ end subroutine DRIFTR
 	end do	! J loop
 
 	return
-	end
+      end subroutine DRECOUL
 !
 ! End of subroutine DRECOUL
 !
@@ -507,7 +507,7 @@ end subroutine DRIFTR
 	end do	! J loop
 
 	return
-	end
+      end subroutine DRIFTMU
 !
 ! End of subroutine DRIFTMU
 !

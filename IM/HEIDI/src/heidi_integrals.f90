@@ -48,13 +48,15 @@ subroutine get_IntegralH(IntegralH_III)
                    a1*y**(1./3.)+a2*y**(2./3.)+ a3*y+a4*y**(4./3.)
 
               !write(*,*) 'IntegralH_III',IntegralH_III(iPitch,iR, iPhi)
-              !if (IntegralH_III(iPitch,iR, iPhi)==0.0) then
-              !   write(*,*) 'Shit'
-              !end if
+             
            end do
         end do
      end do
   endif
+
+
+  
+
 
   if (TypeBField == 'numeric') then
 
@@ -122,11 +124,11 @@ subroutine get_IntegralI(IntegralI_III)
         do iR = 1, nR
            do iPitch = 1, nPa
               PitchAngle_I(iPitch) = acos(mu(iPitch))
-              write(*,*) 'mu', mu(iPitch)
+             ! write(*,*) 'mu', mu(iPitch)
               if (PitchAngle_I(iPitch)==0.0) PitchAngle_I(iPitch)=cTiny
               x = cos(PitchAngle_I(iPitch))
               
-              write(*,*) 'iPitch, PitchAngle_I,x=', iPitch, PitchAngle_I(iPitch), x
+              !write(*,*) 'iPitch, PitchAngle_I,x=', iPitch, PitchAngle_I(iPitch), x
               
               y=sqrt(1.-x*x)
               IntegralI_III(iPitch,iR,iPhi)=2.*alpha*(1.-y)+2.*beta*y*alog(y)+4.*beta*(y-sqrt(y))+  &

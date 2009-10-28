@@ -136,15 +136,9 @@ SUBROUTINE ANISCH
   integer :: iUnitWdc=22
   integer :: iUnitJper=3
 
-  !real    :: funt(nPa,nR,nT),funi(nPa,nR,nT)
-
 
   DATA pmas/1.672E-24/, keVerg/1.602E-9/,    &
        cv/3E10/, esu/4.803E-10/, gausgam/1.E-5/
-
-  !call get_IntegralH(funt)
-  !call get_IntegralI(funi)
-
 
   kprint=	25		! 27 (E=51), 30 (E=100), 33 (E=200)
   IF(S.EQ.2)ST2='_h'
@@ -411,7 +405,8 @@ SUBROUTINE ANISCH
                  DWAVE(L)=AVDAA(L)*DT*(1.-MUBOUN*MUBOUN)/MUBOUN 
                  if (lz(i).eq.(4).and.k.eq.kprint)then
                     !taudaa=dwave(l)/DT/MUBOUN/FUNT(MUBOUN)
-                    taudaa=dwave(l)/DT/MUBOUN/(0.5*(FUNT(l+1,i,j)-FUNT(l,i,j)))
+                    taudaa=dwave(l)/DT/MUBOUN/(0.5*(FUNT(l+1,i,j)+FUNT(l,i,j)))
+                    
                     if(taudaa.lt.1e-20) taudaa=1e-20
                     write(iUnitWdc,552) ekev(k),PAbn(L),taudaa,1/taudaa
                  endif
