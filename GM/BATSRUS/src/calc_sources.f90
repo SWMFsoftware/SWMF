@@ -115,44 +115,45 @@ subroutine calc_sources
         end do; end do; end do
 
         if(DoTestMe .and. VarTest==iP)call write_source('After p div U')
-        
+
      end do
-
-     ! Joule heating: dP/dt += (gamma-1)*eta*j**2    !^CFG IF DISSFLUX BEGIN
-     if(UseResistivity .and. .not.UseMultiIon)then  
-
-        do k=1,nK; do j=1,nJ; do i=1,nI           
-           call get_current(i,j,k,iBlock,Current_D)
-           JouleHeating = (g-1) * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
-           if(UseElectronPressure) then
-              ! For single ion fluid the ion-electron collision results in a 
-              ! heat exchange term for the electron pressure 
-              ! See eq. 4.124c in Schunk and Nagy.
-              HeatExchange =0.0
-              if(.not.UseMultiSpecies) & 
-                   HeatExchange = (g-1) * Eta_GB(i,j,k,iBlock) * &
-                   3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)* &
-                   (State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
-                           
-              ! Joule heating applies to electrons only
-              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-                   + JouleHeating + HeatExchange
-
-              ! Heat exchange applies to ions too
-              Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) - HeatExchange
-
-              ! Remove Joule heating and apply heat exchange to ion energy
-              Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-                   - inv_gm1*(JouleHeating + HeatExchange)
-           else
-              Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
-           end if
-        end do; end do; end do
-
-        if(DoTestMe.and.VarTest==P_)call write_source('After eta j')
-
-     end if                                        !^CFG END DISSFLUX
   end if
+
+  ! Joule heating: dP/dt += (gamma-1)*eta*j**2    !^CFG IF DISSFLUX BEGIN
+  if(UseResistivity .and. .not.UseMultiIon .and. &
+       (UseElectronPressure .or. UseNonConservative))then  
+
+     do k=1,nK; do j=1,nJ; do i=1,nI           
+        call get_current(i,j,k,iBlock,Current_D)
+        JouleHeating = (g-1) * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
+        if(UseElectronPressure) then
+           ! For single ion fluid the ion-electron collision results in a 
+           ! heat exchange term for the electron pressure 
+           ! See eq. 4.124c in Schunk and Nagy.
+           HeatExchange =0.0
+           if(.not.UseMultiSpecies) & 
+                HeatExchange = (g-1) * Eta_GB(i,j,k,iBlock) * &
+                3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)* &
+                (State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
+
+           ! Joule heating applies to electrons only
+           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
+                + JouleHeating + HeatExchange
+
+           ! Heat exchange applies to ions too
+           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) - HeatExchange
+
+           ! Remove Joule heating and apply heat exchange to ion energy
+           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                - inv_gm1*(JouleHeating + HeatExchange)
+        else
+           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
+        end if
+     end do; end do; end do
+
+     if(DoTestMe.and.VarTest==P_)call write_source('After eta j')
+
+  end if                                        !^CFG END DISSFLUX
 
   if(UseWavePressure)then
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
