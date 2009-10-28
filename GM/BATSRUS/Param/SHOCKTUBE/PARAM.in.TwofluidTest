@@ -1,0 +1,190 @@
+Begin session: 1
+
+#ECHO
+T                       DoEcho
+
+#DESCRIPTION
+Two-fluid MHD test	StringDescription
+
+#EQUATION
+MHD with electron pressure and hyperbolic cleaning	NameEquation
+10							nVar
+
+#USERMODULE
+Waves and GEM, Yingjuan Ma
+1.20			VersionUserModule
+
+#CHECKGRIDSIZE
+      64                              nI
+       2                              nJ
+       2                              nK
+       4                     MinBlockALL
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#SHOCKTUBE
+1.0			Rho (left state)
+1.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+0.0			By
+0.0			Bz
+0.0			Hyp
+1.0			Pe
+1.0			P
+1.0			Rho (right state)
+1.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+0.0			By
+0.0			Bz
+0.0			Hyp
+1.01			Pe
+1.01			P
+
+#GRID
+4                    	nRootBlockX
+1                     	nRootBlockY
+1                     	nRootBlockZ
+-100.                 	xMin
+ 100.                 	xMax
+-1.                   	yMin
+ 1.                   	yMax
+-1.                   	zMin
+ 1.                   	zMax
+
+#OUTERBOUNDARY
+periodic                TypeBcEast
+periodic                TypeBcWest
+float                   TypeBcSouth
+float                   TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+#USERFLAGS
+F			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN ----------------
+
+#WAVE
+6			By_
+1000.0			Width
+10.0			Amplitude
+100.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+7			Bz_
+1000.0			Width
+10.0			Amplitude
+100.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+90.0			Phase
+
+#USERINPUTEND   ----------------
+
+
+#TESTXYZ
+2.0			xTest		(X coordinate of cell for testing)
+0.5			yTest		(Y coordinate of cell for testing)
+0.5			zTest		(Z coordinate of cell for testing)
+
+#TESTVAR
+6			iVarTest By
+
+#DIVBSOURCE
+F			UseB0Source
+
+#STRICT
+F			UseStrict
+
+#DIVB
+F                       UseDivbSource
+F                       UseDivbDiffusion
+F                       UseProjection
+F                       UseConstrainB
+
+#STRICT
+T			UseStrict
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc			TypeLimiter
+1.5			BetaLimiter
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#RESISTIVITY
+T			UseResistivity
+constant		TypeResistivity
+5.0			Eta0Si
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+1
+cut mhd idl_ascii       StringPlot
+-1			DnOutput
+10.0			DtOutput
+-100.0			xMin
++100.0                  xMax
+-0.01			yMin
++0.01			yMax
+-0.01			zMin
++0.01			zMax
+0.			DxOutput
+
+#STOP
+-1			MaxIteration
+10.0			tSimulationMax
+
+End session: 1
+#RUN ############################################################
+Begin session: 2
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#STOP
+-1                      MaxIteration
+20.0                    tSimulationMax
+
+End session: 2
+#END ############################################################

@@ -7,6 +7,7 @@ test:
 	@rm -f *.diff
 	-@(make test_shocktube)
 	-@(make test_hallmhd)
+	-@(make test_twofluidmhd)
 	-@(make test_multifluid)
 	-@(make test_multiion)
 	-@(make test_mhdions)
@@ -47,6 +48,7 @@ test_help:
 	@echo "    test MPIRUN='mprun -np 2'  (run test with mprun -np 2)"
 	@echo "    test_shocktube             (run shocktube test only)"
 	@echo "    test_hallmhd               (run Hall MHD test only)"
+	@echo "    test_twofluidmhd           (run two-fluid test only)"
 	@echo "    test_multifluid            (run multi-fluid test only)"
 	@echo "    test_multiion              (run multi-ion test only)"
 	@echo "    test_mhdions               (run MHD with ions test only)"
@@ -135,6 +137,36 @@ test_hallmhd_check:
 	  Param/SHOCKTUBE/TestOutput/hall_ref.out \
 	  ${TESTDIR}/RESULT/GM/cut_*0118.out > test_hallmhd.diff
 	ls -l test_hallmhd.diff
+
+### TWOFLUID MHD TEST ###
+
+test_twofluidmhd:
+	@echo "test_twofluidmhd_compile..." > test_twofluidmhd.diff
+	make test_twofluidmhd_compile
+	@echo "test_twofluidmhd_rundir..." >> test_twofluidmhd.diff
+	make test_twofluidmhd_rundir
+	@echo "test_twofluidmhd_run..." >> test_twofluidmhd.diff
+	make test_twofluidmhd_run
+	@echo "test_twofluidmhd_check..." >> test_twofluidmhd.diff
+	make test_twofluidmhd_check
+
+test_twofluidmhd_compile:
+	./Config.pl -u=Waves -e=MhdHypPe -g=64,2,2,10,10
+	make
+	make PIDL
+
+test_twofluidmhd_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.TwoFluidTest PARAM.in
+
+test_twofluidmhd_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULT
+
+test_twofluidmhd_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-13 \
+	  Param/SHOCKTUBE/TestOutput/twofluid_ref.out \
+	  ${TESTDIR}/RESULT/GM/cut_mhd_1_t00000020*.out > test_twofluidmhd.diff
+	ls -l test_twofluidmhd.diff
 
 ### MULTI FLUID TEST ###
 
