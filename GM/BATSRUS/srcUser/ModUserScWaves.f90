@@ -27,9 +27,9 @@ module ModUser
 
   !Global variables - frequency grid
   logical                       :: IsInitWave = .false.
-  logical                       :: DoDampCutOff = .true., DoDampSurface = .false.
+  logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
   real,dimension(nWave)         :: LogFreq_I ! frequency grid
-  real                          :: FreqInertial, LogFreqInertial, dLogFreq
+  real                          :: FreqInertial, LogFreqInertial
   !WaveDissip_CB=0.0 ! for plotting only
 
 contains
@@ -162,7 +162,8 @@ contains
     use ModWaves,      ONLY: AlfvenSpeedPlusFirst_,  &
                              AlfvenSpeedPlusLast_,   &
                              AlfvenSpeedMinusFirst_, &
-                             AlfvenSpeedMinusLast_   
+                             AlfvenSpeedMinusLast_ , &
+                             DeltaLogFrequency
     implicit none
 
     real, intent(out):: VarsGhostFace_V(nVar)
@@ -245,7 +246,7 @@ contains
           if(LogFreq_I(iWave-WaveFirst_+1) .le. LogFreqInertial.or.vAlfvenSi.le.0.0) then
              VarsGhostFace_V(iWave)=0.0
           else    
-             VarsGhostFace_V(iWave) = (2.0/3.0) * dLogFreq * wEnergyDens* &
+             VarsGhostFace_V(iWave) = (2.0/3.0) * DeltaLogFrequency * wEnergyDens* &
                   exp((LogFreq_I(iWave-WaveFirst_+1)-LogFreqInertial)*(-2.0/3.0))
           end if
        end do
@@ -254,8 +255,11 @@ contains
           if(LogFreq_I(iWave-WaveFirst_+1) .le. LogFreqInertial.or.vAlfvenSi.ge.0.0) then
              VarsGhostFace_V(iWave)=0.0
           else    
-             VarsGhostFace_V(iWave) = (2.0/3.0) * dLogFreq * wEnergyDens* &
+             VarsGhostFace_V(iWave) = (2.0/3.0) * DeltaLogFrequency * wEnergyDens* &
                   exp((LogFreq_I(iWave-WaveFirst_+1)-LogFreqInertial)*(-2.0/3.0))
+          end if
+          if(VarsGhostFace_V(iWave) < 0.0) then
+             write(*,*) 'negative wave energy at inner bc'
           end if
        end do
     end if
@@ -434,7 +438,14 @@ contains
     !\
     ! Advect solution
     !/
+    if(any(State_VGB(WaveFirst_:WaveLast_,:,:,:,iBlock)<0.0)) then
+       write(*,*) NameSub,' : negative wave energy before MHD'
+    end if
     call update_states_MHD(iStage,iBlock)
+    if(any(State_VGB(WaveFirst_:WaveLast_,:,:,:,iBlock)<0.0)) then
+       write(*,*) NameSub, ': negative wave energy after MHD'
+    end if
+
     !\
     ! Dissipate wave energy after advection
     !/
@@ -525,10 +536,9 @@ contains
     real                             :: dx, dz, x,y,z, IwPlusSi,IwMinusSi
     integer                          :: iFreq,i,j,k,iBLK
     integer                          :: iUnit,iError,aError
-    character(len=40)                :: FileName,HeaderName 
+    character(len=40)                :: FileNameTec,FileNameHead,FileNameGrid 
     character(len=11)                :: NameStage
     character(len=7)                 :: NameProc
-    character(len=30)                :: HeaderText,NameProcN
     character(len=*),parameter       :: NameSub='write_spectrogram'
     !-------------------------------------------------------------------
     !\
@@ -584,40 +594,43 @@ contains
     !\
     ! write header file (iProc==0)
     !/
-    ! create some strings for all files
     write(NameStage,'(i5.5)') iteration_number
     write(NameProc,'(a,i4.4)') "_pe",iProc
-    write(NameProcN,'(a,i4.4,a)')" ", nProc," nProc"
+   
     if (iProc==0) then
-       HeaderName='SC/IO2/Spectrum_n_'//trim(NameStage)//'.T'
-       write(*,*) 'SC:  writing file ', HeaderName
+       FileNameHead='SC/IO2/Spectrum_n_'//trim(NameStage)//'.H'
+       write(*,*) 'SC:  writing file ', FileNameHead
        iUnit=io_unit_new()
-       open(unit=iUnit, file=HeaderName, form='formatted', access='sequential',&
+       open(unit=iUnit, file=FileNameHead, form='formatted', access='sequential',&
          status='replace',iostat=iError)
-       write(iUnit, '(a)') HeaderName
-       write(iUnit, '(a)') trim(NameProcN)
-       write(iUnit, '(a)') trim(NameStage)//' n_step'
+       write(iUnit, '(a)') 'Title: BATSRUS SC Spectrogram'
+       write(iUnit, '(i4.4)') nProc
+       write(iUnit, '(a)') 'Variables = "Y[R]", "w","I+[Jm-3]","I-[Jm-3]" '
        close(iUnit)
     end if
     !\
+    ! Write grid size file
+    !/
+    FileNameGrid='SC/IO2/Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.G'
+    iUnit=io_unit_new()
+    open(unit=iUnit, file=FileNameGrid,form='formatted',access='sequential',&
+         status='replace',iostat=iError)
+    write(iUnit,'(i6.6)') nWave/2
+    write(iUnit,'(i6.6)') nCell
+
+    !\
     ! Write data file
     !/
-    FileName='SC/IO2/Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.tec'
+    FileNameTec='SC/IO2/Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.tec'
     iUnit=io_unit_new()
-    open(unit=iUnit, file=FileName, form='formatted',access='sequential',&
+    open(unit=iUnit, file=FileNameTec, form='formatted',access='sequential',&
          status='replace',iostat=iError)
-    ! write header if iProc==0
-    !if (iProc==0) then
-       write(iUnit,'(a)') 'Title: BATSRUS SC Spectrogram'
-       write(iUnit,'(a)') 'Variables = "Y[R]", "w","I+[Jm-3]", "I-[Jm-3]" '
-       write(HeaderText,'(a,i2.2,a,i6.6,a)') 'Zone I= ',nWave/2,', J= ',nCell,',F=point'
-       write(iUnit,'(a)') trim(HeaderText)
-    !end if
     do iRow=1,nRow
-          write(iUnit, fmt="(30(e14.6))") &
-               Cut_II(iRow,:)
+       write(iUnit, fmt="(30(e14.6))") &
+            Cut_II(iRow,:)
     end do
     close(iUnit)
+
     if(allocated(Cut_II)) deallocate(Cut_II,STAT=aError)
     if(aError .ne. 0) then
        write(*,*) NameSub, 'Deallocation of spectrogram array failed'
@@ -757,7 +770,7 @@ contains
     use ModConst,       ONLY: cLightSpeed, cElectronCharge, cGEV, cAU,cMu
     use ModNumConst,    ONLY: cTiny,cPi
     use ModPhysics,     ONLY: No2Si_V,Si2No_V,UnitB_,UnitRho_,UnitX_,UnitP_,UnitU_
-    use ModWaves
+    use ModWaves,       ONLY: DeltaLogFrequency
     
     implicit none
 
@@ -782,27 +795,18 @@ contains
     character(len=*),parameter    :: NameSub= 'init_wave_spectrum'
     ! ------------------------------------------------------------------
     IsInitWave=.true.
-   
-    ! \
-    ! Set frequency grid
-    ! /
 
     call set_freq_grid
     ! minimal frequency of non-zero energy (inertial range lower bound)
     ! FreqInertial set in input command #FREQINERTIAL
     LogFreqInertial = log(2*cPi*FreqInertial)
-   
-    ! \
+ 
     ! Calculate wave spectrum energy  coefficients in all cells 
-    ! /
     ConstCoeff=(216/(7*cMu*Lambda0))*((cElectronCharge*cLightSpeed)/cGEV)**(-1.0/3.0)
 
-    !\
     ! Initialize spectrum in all frequency groups and all cells
-    !/
     State_VGB(WaveFirst_:WaveLast_,:,:,:,:) = 0.0
 
-   
     do iBLK=1,nBLK
        if (unusedBLK(iBLK)) CYCLE
  
@@ -821,7 +825,7 @@ contains
           vAlfvenSi = BtotSi/sqrt(RhoSi*cMu)
           
           ! The wave energy spectrum is described by the power law:
-          ! I= ConstCoeff*(B^{5/3}/r)*(w/vAlfven)^{-2/3}dLogFreq
+          ! I= ConstCoeff*(B^{5/3}/r)*(w/vAlfven)^{-2/3}DeltaLogFrequency
           EnergyCoeff = ConstCoeff * (BtotSi**(5.0/3.0)) * InvRSi *&
                (vAlfvenSi)**(-FreqPower)
  
@@ -835,11 +839,17 @@ contains
                 WaveEnergy_I(iWave)=EnergyCoeff &
                      *exp(LogFreq_I(iWave) * FreqPower)
              end if
+         
              ! Store wave energy state variables Ixx_
              ! Ixx_, represent w'I(logw')dlogw' and is in normalized units,
              ! while WaveEnergy_I represents w'I(logw') and is in SI units.
-             State_VGB(WaveFirst_+iWave-1,i,j,k,iBLK) = WaveEnergy_I(iWave)*dLogFreq *&
-                                                  Si2No_V(UnitP_)
+             State_VGB(WaveFirst_+iWave-1,i,j,k,iBLK) =&
+                  WaveEnergy_I(iWave)*DeltaLogFrequency*Si2No_V(UnitP_)
+             if(State_VGB(WaveFirst_+iWave-1,i,j,k,iBLK) < 0.0) then
+                write(*,*) 'Damn!'
+                write(*,*) 'dLogFreq= ', DeltaLogFrequency
+                write(*,*) 'WaveEnergy_I', WaveEnergy_I(iWave)
+             end if
           end do
        end do; end do ; end do
     end do
