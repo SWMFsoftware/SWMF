@@ -191,7 +191,7 @@ subroutine rbe_run
   use ModTimeConvert, ONLY: time_real_to_int
 
   ! print initial fluxes
-  if (t.eq.tstart .and. itype.eq.1) call rbe_save_result(.false.)
+  if (t.eq.tstart .and. itype.eq.1) call rbe_save_result(.false.,.true.)
 
   if (t.gt.(tstart-trans).and.ires.eq.1.and.mod(t,tf).eq.0.) then
      call fieldpara(t,dt,c,q,rc,re,xlati,&
@@ -305,7 +305,7 @@ subroutine rbe_run
 
   !  Print results
   if (t.gt.tstart.and.mod(t,tint).eq.0.) &
-       call rbe_save_result(.true. .and. IsStandAlone)
+       call rbe_save_result(.true. .and. IsStandAlone, .true.)
 
   open(unit=UnitTmp_,file='RB/rbe_swmf.log')
   write(UnitTmp_,'(a8)') outname
@@ -316,7 +316,7 @@ end subroutine rbe_run
 
 !============================================================================
 
-subroutine rbe_save_result(DoSaveRestart)
+subroutine rbe_save_result(DoSaveRestart, DoSavePlot)
 
   use rbe_time
   use rbe_cgrid
@@ -331,14 +331,13 @@ subroutine rbe_save_result(DoSaveRestart)
 
   implicit none
 
-  logical, intent(in) :: DoSaveRestart ! logical sets whether to just save 
-                                       ! plots or to also save restart
-
+  logical, intent(in) :: DoSaveRestart ! logical sets whether to save restart
+  logical, intent(in) :: DoSavePlot    ! logical sets whether to save plot
 
   call p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
        xjac,gride,gridp,gridy,bo,xnsw,vsw,Bx,By,Bz,vswb,&
        xnswb,parmod,ecbf,ecdt,eclc,ecce,density,iprint,ntime,irm,&
-       iplsp,iw1,iw2,itype,DoSaveRestart)
+       iplsp,iw1,iw2,itype,DoSaveRestart, DoSavePlot)
 
 end subroutine rbe_save_result
 
@@ -2021,7 +2020,7 @@ end subroutine boundary
 subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
      xjac,gride,gridp,gridy,bo,xnsw,vsw,Bx,By,Bz,&
      vswb,xnswb,parmod,ecbf,ecdt,eclc,ecce,density,iprint,&
-     ntime,irm,iplsp,iw1,iw2,itype, DoSaveRestart)
+     ntime,irm,iplsp,iw1,iw2,itype, DoSaveRestart, DoSavePlot)
 
   use rbe_grid
   use rbe_cread1,ONLY: UseSeparatePlotFiles
@@ -2037,7 +2036,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
        flx(ir,ip,je,ig),ecbf(ir),ecdt(ir),eclc(ir),ecce(ir),&
        psd(ir,ip,iw,ik),ebound(je+1),density(ir,ip),parmod(10)
   integer iw1(ik),iw2(ik),irm(ip),iSat
-  logical, intent(in) :: DoSaveRestart
+  logical, intent(in) :: DoSaveRestart, DoSavePlot
   hour=t/3600.
   do i=1,ir
      xlati1(i)=xlati(i)*180./pi   ! lat. at ionosphere in degree
@@ -2053,42 +2052,44 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
   ! Open the files to write fluxes and psd                  
   iwh=ifix(0.5*(iw+1))
   ikh=ifix(0.5*(ik+1))
-  if (UseSeparatePlotFiles) then
-     open(unit=UnitTmp_,file='RB/plots/'//outnameSep//st2//'.fls',&
-          status='unknown')
-     write(UnitTmp_,'(f10.5,5i6,"         ! rc(Re),ir,ip,je,ig,ntime")')&
-          rc,ir,ip,je,ig,ntime
-     write(UnitTmp_,'(6f9.3)') (gride(k),k=1,je)
-     !     write(UnitTmp_,'(7f9.3)') (Ebound(k),k=1,je+1)
-     write(UnitTmp_,'(6f9.5)') (gridy(m),m=1,ig)
-     write(UnitTmp_,'(10f8.3)') (xlati1(i),i=1,ir)
-     if (iprint.eq.1) then
-        close(UnitTmp_)
-        return
-     endif
-  else
-     if (t.eq.tstart) then
-        open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='unknown')
-        !        open(unit=13,file=outname//st2//'.psd',status='unknown')
+  if (DoSavePlot) then
+     if (UseSeparatePlotFiles) then
+        open(unit=UnitTmp_,file='RB/plots/'//outnameSep//st2//'.fls',&
+             status='unknown')
         write(UnitTmp_,'(f10.5,5i6,"         ! rc(Re),ir,ip,je,ig,ntime")')&
              rc,ir,ip,je,ig,ntime
         write(UnitTmp_,'(6f9.3)') (gride(k),k=1,je)
         !     write(UnitTmp_,'(7f9.3)') (Ebound(k),k=1,je+1)
         write(UnitTmp_,'(6f9.5)') (gridy(m),m=1,ig)
         write(UnitTmp_,'(10f8.3)') (xlati1(i),i=1,ir)
-        !        write(13,'(f10.5,5i6,"         ! rc(Re),iwh,ikh,ir,ip,ntime")')
-        !    *         rc,iwh,ikh,ir,ip,ntime
-        !        write(13,'(1p,7e11.3)') (w(k),k=1,iw,2)
-        !        write(13,'(1p,7e11.3)') (si(m),m=1,ik,2)
-        !        write(13,'(10f8.3)') (xlati1(i),i=1,ir)
         if (iprint.eq.1) then
            close(UnitTmp_)
-           !           close(13)
            return
         endif
-     else                                                  ! in pbo_2.f
-        open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='old',position='append')
-        !        open(unit=13,file=outname//st2//'.psd',status='old',position='append')
+     else
+        if (t.eq.tstart) then
+           open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='unknown')
+           !        open(unit=13,file=outname//st2//'.psd',status='unknown')
+           write(UnitTmp_,'(f10.5,5i6,"         ! rc(Re),ir,ip,je,ig,ntime")')&
+                rc,ir,ip,je,ig,ntime
+           write(UnitTmp_,'(6f9.3)') (gride(k),k=1,je)
+           !     write(UnitTmp_,'(7f9.3)') (Ebound(k),k=1,je+1)
+           write(UnitTmp_,'(6f9.5)') (gridy(m),m=1,ig)
+           write(UnitTmp_,'(10f8.3)') (xlati1(i),i=1,ir)
+           !        write(13,'(f10.5,5i6,"         ! rc(Re),iwh,ikh,ir,ip,ntime")')
+           !    *         rc,iwh,ikh,ir,ip,ntime
+           !        write(13,'(1p,7e11.3)') (w(k),k=1,iw,2)
+           !        write(13,'(1p,7e11.3)') (si(m),m=1,ik,2)
+           !        write(13,'(10f8.3)') (xlati1(i),i=1,ir)
+           if (iprint.eq.1) then
+              close(UnitTmp_)
+              !           close(13)
+              return
+           endif
+        else                                                  ! in pbo_2.f
+           open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='old',position='append')
+           !        open(unit=13,file=outname//st2//'.psd',status='old',position='append')
+        endif
      endif
   endif
   ! Convert f2 to f (differential flux)
@@ -2120,7 +2121,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
 
   ! Calculate and write fluxes at fixed E and y grides. 
   call fluxes(f,y,p,gridp,ekev,gride,gridy,irm,iw1,iw2,flx) 
-  write(UnitTmp_,'(f7.2,10f9.2,"   hour,parmod(1:10)")') hour,parmod         
+  if (DoSavePlot) write(UnitTmp_,'(f7.2,10f9.2,"   hour,parmod(1:10)")') hour,parmod         
   !     write(13,'(1x,7hhour = ,f6.2,10f9.2,"   parmod(1:10)")') hour,parmod
   do i=1,ir             ! Write fluxes @ fixed E & y grids
      do j=1,ip
@@ -2131,24 +2132,26 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
            density(i,j)=density(irm(j),j)
            flx(i,j,1:je,1:ig)=flx(irm(j),j,1:je,1:ig)
         endif
-        write(UnitTmp_,'(f7.2,f6.1,2f8.3,1pe11.3,0p,i5,1pe11.3)')&
+        if (DoSavePlot) write(UnitTmp_,'(f7.2,f6.1,2f8.3,1pe11.3,0p,i5,1pe11.3)')&
              xlati1(i),xmlt(j),ro(i,j),xmlto(i,j),bo(i,j),irm(j),density(i,j)
         !           write(13,'(f7.2,f6.1,2f8.3,1pe11.3,0p,i5)')
         !    *                xlati1(i),xmlt(j),ro(i,j),xmlto(i,j),bo(i,j),irm(j)
-        do k=1,je
-           write(UnitTmp_,'(1p,12e11.3)') (flx(i,j,k,m),m=1,ig)
-        enddo
+        if (DoSavePlot) then
+           do k=1,je
+              write(UnitTmp_,'(1p,12e11.3)') (flx(i,j,k,m),m=1,ig)
+           enddo
+        endif
         !           do k=1,iw,2
         !              write(13,'(1p,12e11.3)') (psd(i,j,k,m),m=1,ik,2)
         !           enddo
      enddo
   enddo
-  close(UnitTmp_)
-  if (DoWriteTec) then
+  if (DoSavePlot) close(UnitTmp_)
+  if (DoWriteTec .and. DoSavePlot) then
      call write_tec(t,flx,ebound)
   endif
   !Write out any sats that are being tracked
-  if(DoWriteSats) then
+  if(DoWriteSats .and. DoSavePlot) then
      do iSat=1,nRbSats
         call write_rb_sat(iSat,ir,ip,je,ig,flx)
      enddo
@@ -2156,21 +2159,23 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
   !     close(13)
 
   ! Write energy changes from various processes
-  if(UseSeparatePlotFiles) then
-     open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.ec',status='old',position='append')
-  else
-     open(unit=UnitTmp_,file='RB/'//outname//st2//'.ec',status='old',position='append')
+  if (DoSavePlot) then
+     if(UseSeparatePlotFiles) then
+        open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.ec',status='old',position='append')
+     else
+        open(unit=UnitTmp_,file='RB/'//outname//st2//'.ec',status='old',position='append')
+     endif
+     write(UnitTmp_,*) hour,'     ! hour'
+     write(UnitTmp_,*) '   i  ro(i,1)       ecbf          ecdt          ecce',&
+          '          eclc'
+     do i=1,ir
+        ro1=ro(i,1)
+        write(UnitTmp_,'(i4,f9.2,1p,4e14.4)') i,ro1,ecbf(i),ecdt(i),ecce(i),eclc(i)
+     enddo
+     write(UnitTmp_,'(8x,"total",1p,4e14.4)') &
+          sum(ecbf),sum(ecdt),sum(ecce),sum(eclc)
+     close(UnitTmp_)
   endif
-  write(UnitTmp_,*) hour,'     ! hour'
-  write(UnitTmp_,*) '   i  ro(i,1)       ecbf          ecdt          ecce',&
-       '          eclc'
-  do i=1,ir
-     ro1=ro(i,1)
-     write(UnitTmp_,'(i4,f9.2,1p,4e14.4)') i,ro1,ecbf(i),ecdt(i),ecce(i),eclc(i)
-  enddo
-  write(UnitTmp_,'(8x,"total",1p,4e14.4)') &
-       sum(ecbf),sum(ecdt),sum(ecce),sum(eclc)
-  close(UnitTmp_)
 
   ! Open files to write all the information for continous run        
   if (DoSaveRestart) then
@@ -2206,11 +2211,11 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
      close(UnitTmp_)
   endif
   ! Write to log file
-  if (t.eq.tstart) write(*,'(a8)') outname
-  write(*,*) 't(hour)   ',t/3600. 
+  if (t.eq.tstart .and. DoSavePlot) write(*,'(a8)') outname
+  if (DoSavePlot) write(*,*) 't(hour)   ',t/3600. 
   
   ! Write the potential values
-  if (DoSaveIe) call RB_plot_potential
+  if (DoSaveIe .and. DoSavePlot) call RB_plot_potential
 end subroutine p_result
 
 
