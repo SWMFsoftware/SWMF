@@ -294,6 +294,43 @@ CRASH_for_Darwin:
 		${LBLAS} ${Lflag1}
 	rm -rf Tmp_
 
+#########################################################################
+
+CRASHBATLEXE = ${BINDIR}/CRASHBATL.exe
+
+OBJECTS_CRASHBATL = main.f90 ${MODULES} ${OBJECTS}
+
+LIBCRASHBATL = libCRASHBATL.a
+
+CRASHBATLLIB:	DEPEND
+	make ${LIBCRASHBATL}
+	@echo
+	@echo ${LIBCRASHBATL}
+
+${LIBCRASHBATL}: ${MODULES} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+	rm -f ${LIBCRASHBATL}
+	${AR} ${LIBCRASHBATL} ${MODULES} ${OBJECTS}
+
+LIBBATL = ../../srcBATL/libBATL.a
+
+CRASHBATL:
+	make ${CRASHBATLEXE}
+	@echo ' '
+	@echo Program CRASHBATL has been brought up to date.
+	@echo ' '	
+
+${CRASHBATLEXE}: ${OBJECTS_EXE} ${LIBCRASHBATL}
+	rm -rf Tmp_; mkdir Tmp_
+	cd Tmp_; \
+		ar -x ../${LIBCRASHBATL}; \
+		ar -x ${LIBDIR}/libMAGNETOGRAM.a; \
+		ar -x ${LIBBATL}; \
+		ar -x ${LIBTIMING}; \
+		ar -x ${LIBCRASH}; \
+		ar -x ${LIBSHARE}
+	${LINK.f90} -o ${CRASHBATLEXE} ${OBJECTS_EXE} Tmp_/*.o \
+		${LBLAS} ${Lflag1}
+	rm -rf Tmp_
 
 #
 #	cleaning

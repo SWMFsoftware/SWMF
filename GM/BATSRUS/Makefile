@@ -64,6 +64,7 @@ INSTALLFILES =	src/Makefile.DEPEND \
 
 install: src/ModSize.f90
 	touch ${INSTALLFILES}
+	if [ -d srcBATL ]; then touch srcBATL/Makefile.DEPEND; fi
 	./Config.pl -u=Default -e=Mhd
 	cd src; make STATIC
 
@@ -90,6 +91,15 @@ CRASH:
 	cd ${CRASHDIR}; make LIB
 	cd src; make LIB
 	cd src; make CRASH
+
+CRASHBATL:
+	cd ${SHAREDIR}; make LIB
+	cd ${TIMINGDIR}; make LIB
+	cd ${MAGNETOGRAMDIR}; make LIB
+	cd ${CRASHDIR}; make LIB
+	cd srcBATL; make LIB
+	cd src; make CRASHBATLLIB
+	cd src; make CRASHBATL
 
 NOMPI:
 	cd util/NOMPI/src; make LIB
@@ -198,6 +208,7 @@ clean:
 	cd src; make clean
 	cd srcInterface; make clean
 	cd srcPostProc;  make clean
+	@(if [ -d srcBATL ]; then cd srcBATL; make clean; fi);
 	@(if [ -d util  ]; then cd util;  make clean; fi);
 	@(if [ -d share ]; then cd share; make clean; fi);
 
@@ -234,6 +245,7 @@ dist:
 	tar -rf tmp.tar  Scripts
 	tar -rf tmp.tar  src srcInterface srcUser srcEquation
 	tar -rf tmp.tar  srcPostProc srcTest 
+	@(if [ -d srcBATL ]; then tar -rf tmp.tar srcBATL; fi);
 	@(if [ -d util  ]; then tar -rf tmp.tar util; fi);
 	@(if [ -d share ]; then tar -rf tmp.tar share; fi);
 	@echo ' '

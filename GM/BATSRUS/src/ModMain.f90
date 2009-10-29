@@ -23,6 +23,9 @@ Module ModMain
   ! In stand alone mode this variable is set to true
   logical             :: IsStandAlone = .false.
 
+  ! Shall we use the BATL library
+  logical :: UseBatl = .false.
+
   ! In the SWMF the BATSRUS may run as GM, SC or IH component
   character (len=2)   :: NameThisComp='GM'
 
