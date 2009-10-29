@@ -1769,7 +1769,7 @@ contains
     real,    intent(out):: Flux_V(nFlux)       ! fluxes for all states
     real,    intent(out):: Un_I(nFluid+1)      ! normal velocities
     real,    intent(out):: En                  ! normal electric field
-    real,    intent(out):: Pe                  ! electron pressure
+    real,    intent(out):: Pe                  ! electron pressure for multiion
 
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
     real:: FluxBx, FluxBy, FluxBz, Coef
@@ -1782,6 +1782,7 @@ contains
     En = 0.0
 
     if(UseMultiIon)then
+       ! Pe has to be returned for multiion only
        if(UseElectronPressure)then
           Pe = State_V(Pe_)
        elseif(IsMhd)then
@@ -2002,7 +2003,6 @@ contains
       p       = State_V(p_)
 
       B2      = Bx**2 + By**2 + Bz**2
-      FullB2 = FullBx**2 + FullBy**2 + FullBz**2
 
       ! Calculate energy
       e = inv_gm1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
@@ -2091,6 +2091,7 @@ contains
 
       if(UseAnisoPressure)then
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
+         FullB2 = FullBx**2 + FullBy**2 + FullBz**2
          DpPerB = (State_V(Ppar_) - State_V(Pperp_))*FullBn/max(1e-30,FullB2)
          Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
          Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
@@ -2240,6 +2241,9 @@ contains
       do iVar = ScalarFirst_, ScalarLast_
          Flux_V(iVar) = Un*State_V(iVar)
       end do
+
+      ! Needed for adiabatic source term for electron pressure
+      HallUn = Un
 
     end subroutine get_hd_flux
 

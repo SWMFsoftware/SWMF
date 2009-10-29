@@ -183,9 +183,9 @@ subroutine calc_sources
   if(UseElectronPressure)then
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
         DivU = vInv_CB(i,j,k,iBlock) &
-             *(uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
-             + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
-             + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
+             *(uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_) &
+             + uDotArea_YI(i,j+1,k,eFluid_) - uDotArea_YI(i,j,k,eFluid_) &
+             + uDotArea_ZI(i,j,k+1,eFluid_) - uDotArea_ZI(i,j,k,eFluid_))
 
         Pe = State_VGB(Pe_,i,j,k,iBlock)
 
