@@ -156,7 +156,7 @@ test_twofluidmhd_compile:
 	make PIDL
 
 test_twofluidmhd_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.TwoFluidTest PARAM.in
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.TwofluidTest PARAM.in
 
 test_twofluidmhd_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
