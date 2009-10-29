@@ -59,12 +59,12 @@ help:
 
 INSTALLFILES =	src/Makefile.DEPEND \
 		src/Makefile.RULES \
+		srcBATL/Makefile.DEPEND \
 		srcInterface/Makefile.DEPEND \
 		srcPostProc/Makefile.RULES
 
 install: src/ModSize.f90
 	touch ${INSTALLFILES}
-	if [ -d srcBATL ]; then touch srcBATL/Makefile.DEPEND; fi
 	./Config.pl -u=Default -e=Mhd
 	cd src; make STATIC
 
@@ -80,6 +80,7 @@ BATSRUS:
 	cd ${TIMINGDIR}; make LIB
 	cd ${MAGNETOGRAMDIR}; make LIB
 	cd ${EMPIRICALEEDIR}; make LIB
+	cd srcBATL; make LIB
 	cd src; make LIB
 	cd src; make BATSRUS
 
@@ -87,19 +88,10 @@ CRASH:
 	cd ${SHAREDIR}; make LIB
 	cd ${TIMINGDIR}; make LIB
 	cd ${MAGNETOGRAMDIR}; make LIB
-	cd ${EMPIRICALEEDIR}; make LIB
-	cd ${CRASHDIR}; make LIB
-	cd src; make LIB
-	cd src; make CRASH
-
-CRASHBATL:
-	cd ${SHAREDIR}; make LIB
-	cd ${TIMINGDIR}; make LIB
-	cd ${MAGNETOGRAMDIR}; make LIB
 	cd ${CRASHDIR}; make LIB
 	cd srcBATL; make LIB
-	cd src; make CRASHBATLLIB
-	cd src; make CRASHBATL
+	cd src; make LIB
+	cd src; make CRASH
 
 NOMPI:
 	cd util/NOMPI/src; make LIB
@@ -206,9 +198,9 @@ CLEAN2 = cleanhtml #				    ^CFG IF NOT MAKEHTML
 clean:
 	@touch ${INSTALLFILES}
 	cd src; make clean
+	cd srcBATL; make clean
 	cd srcInterface; make clean
 	cd srcPostProc;  make clean
-	@(if [ -d srcBATL ]; then cd srcBATL; make clean; fi);
 	@(if [ -d util  ]; then cd util;  make clean; fi);
 	@(if [ -d share ]; then cd share; make clean; fi);
 
@@ -218,8 +210,10 @@ distclean:
 allclean:
 	@touch ${INSTALLFILES}
 	cd src; make distclean
+	cd srcBATL; make distclean
 	cd srcInterface; make distclean
 	cd srcPostProc;  make distclean
+	cd srcTest; make distclean
 	@				#^CFG IF DOC BEGIN
 	@					#^CFG IF NOT REMOVEDOCTEX BEGIN
 	cd Doc/Tex; make clean ${CLEAN1} ${CLEAN2}
@@ -243,9 +237,8 @@ dist:
 	tar -rf tmp.tar  Idl
 	tar -rf tmp.tar  Param
 	tar -rf tmp.tar  Scripts
-	tar -rf tmp.tar  src srcInterface srcUser srcEquation
+	tar -rf tmp.tar  src srcBATL srcUser srcEquation srcInterface
 	tar -rf tmp.tar  srcPostProc srcTest 
-	@(if [ -d srcBATL ]; then tar -rf tmp.tar srcBATL; fi);
 	@(if [ -d util  ]; then tar -rf tmp.tar util; fi);
 	@(if [ -d share ]; then tar -rf tmp.tar share; fi);
 	@echo ' '
