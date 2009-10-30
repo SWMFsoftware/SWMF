@@ -63,13 +63,16 @@ INSTALLFILES =	src/Makefile.DEPEND \
 		srcInterface/Makefile.DEPEND \
 		srcPostProc/Makefile.RULES
 
-install: src/ModSize.f90
+install: src/ModSize.f90 srcBATL/BATL_size.f90
 	touch ${INSTALLFILES}
 	./Config.pl -u=Default -e=Mhd
 	cd src; make STATIC
 
-src/ModSize.f90:
+src/ModSize.f90: src/ModSize.f90
 	cp -f src/ModSize_orig.f90 src/ModSize.f90
+
+srcBATL/BATL_size.f90: srcBATL/BATL_size.f90
+	cp -f srcBATL/BATL_size_orig.f90 srcBATL/BATL_size.f90
 
 LIB:
 	cd src; make LIB
