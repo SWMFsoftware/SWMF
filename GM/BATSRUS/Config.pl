@@ -299,7 +299,14 @@ sub current_settings{
 
     open(FILE, $EquationMod) or die "$ERROR Could not open $EquationMod\n";
     my $Equation='???';
+    my $prev;
     while(<FILE>){
+	if(s/\&\s*\n//){
+	    $prev .= $_;
+	    next;
+	}
+	$_ = $prev . $_;
+	$prev = "";
 	next unless /NameEquation\s*=\s*[\'\"]([^\'\"]*)/;
 	$Equation = $1; last;
     }
