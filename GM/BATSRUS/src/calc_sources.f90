@@ -131,12 +131,17 @@ subroutine calc_sources
            ! heat exchange term for the electron pressure 
            ! See eq. 4.124c in Schunk and Nagy.
            HeatExchange =0.0
-           if(.not.UseMultiSpecies) & 
-                HeatExchange = (g-1) * Eta_GB(i,j,k,iBlock) * &
-                3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)* &
-                (State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
+           if(.not.UseMultiSpecies)then
+              ! Explicit heat exchange
+              HeatExchange = (g-1) * Eta_GB(i,j,k,iBlock) * &
+                   3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)
 
-           ! Joule heating applies to electrons only
+              ! Point-implicit correction for stability: H' = H/(1+dt*H)
+              HeatExchange = &
+                   HeatExchange/(1 + Cfl*HeatExchange*time_BLK(i,j,k,iBlock)) &
+                   *(State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
+           end if
+
            Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                 + JouleHeating + HeatExchange
 
