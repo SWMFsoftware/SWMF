@@ -6,7 +6,7 @@ subroutine exchange_messages
        UseConstrainB,&              !^CFG IF CONSTRAINB 
        UseProjection,&              !^CFG IF PROJECTION
        UseDivbDiffusion,&           !^CFG IF DIVBDIFFUSE
-       time_simulation,nOrder,prolong_order,optimize_message_pass
+       time_simulation,nOrder,prolong_order,optimize_message_pass, UseBatl
   use ModVarIndexes
   use ModAdvance, ONLY : &
        State_VGB,divB1_GB
@@ -20,12 +20,16 @@ subroutine exchange_messages
   use ModFaceValue,ONLY: UseAccurateResChange
   use ModEnergy,   ONLY: calc_energy_ghost
 
+  use BATL_lib, ONLY: message_pass_cell
+
   implicit none
 
   integer :: iBlock
   logical :: oktest, oktest_me, oktime, oktime_me
   logical :: DoRestrictFace, DoOneLayer, DoTwoCoarseLayers
   logical :: DoCorners, DoFaces
+
+  integer :: nWidth, nCoarseLayer
 
   !---------------------------------------------------------------------------
 
@@ -57,12 +61,16 @@ subroutine exchange_messages
   if(oktest)write(*,*)'Checked negative P, me=',iProc
 
   if (UsePlotMessageOptions) then
-     if(oktest)write(*,*)'calling message_pass with plot options'
-     !                              Don't send just one layer
-     !                                      Don't send faces only
-     !                                               Don't monotone restrict
-     call message_pass_cells8(.false.,.false.,.false.,nVar, State_VGB)
-     call message_pass_cells(.false.,.false.,.false.,DivB1_GB)
+     if(UseBatl)then
+        call message_pass_cell(nVar, State_VGB)
+     else
+        if(oktest)write(*,*)'calling message_pass with plot options'
+        !                              Don't send just one layer
+        !                                      Don't send faces only
+        !                                               Don't monotone restrict
+        call message_pass_cells8(.false.,.false.,.false.,nVar, State_VGB)
+        call message_pass_cells(.false.,.false.,.false.,DivB1_GB)
+     end if
   elseif (optimize_message_pass=='all') then
      if(oktest)write(*,*)'calling message_pass with corners: me,type=',&
           iProc,optimize_message_pass
@@ -70,7 +78,16 @@ subroutine exchange_messages
      ! two ghost cell layers to fill in the corner cells at the sheared BCs.
      DoOneLayer = nOrder == 1 .and. ShockSlope == 0.0
 
-     call message_pass_cells8(DoOneLayer, .false., DoRestrictFace,nVar, State_VGB)
+     if(UseBatl)then
+        nWidth = 2;       if(DoOneLayer)        nWidth = 1
+        nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
+        call message_pass_cell(nVar, State_VGB, &
+             nWidthIn=nWidth, nProlongOrderIn=1, &
+             nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace)
+     else
+        call message_pass_cells8(DoOneLayer, .false., DoRestrictFace, &
+             nVar, State_VGB)
+     end if
      if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
   else
      if(oktest)write(*,*)'calling message_pass: me,type=',&
@@ -93,8 +110,16 @@ subroutine exchange_messages
         DoFaces = .not.(nOrder == 2 .and. UseAccurateResChange)
         ! Pass one layer if possible
         DoOneLayer = nOrder == 1
-
-        call message_pass_cells8(DoOneLayer,DoFaces,DoRestrictFace,nVar, State_VGB)
+        if(UseBatl)then
+           nWidth = 2;       if(DoOneLayer)        nWidth = 1
+           nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
+           call message_pass_cell(nVar, State_VGB, &
+                nWidthIn=nWidth, nProlongOrderIn=1, nCoarseLayerIn=nCoarseLayer,&
+                DoSendCornerIn=.not.DoFaces, DoRestrictFaceIn=DoRestrictFace)
+        else
+           call message_pass_cells8(DoOneLayer,DoFaces,DoRestrictFace, &
+                nVar, State_VGB)
+        end if
         if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
      case default
         call stop_mpi('Unknown optimize_message_pass='//optimize_message_pass)
