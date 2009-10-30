@@ -18,7 +18,7 @@ module BATL_size
   integer :: nBlock = 0
 
   ! Number of cells per block in each direction
-  integer, parameter :: nI = 8, nJ = 4, nK = 2
+  integer, parameter :: nI = 8, nJ = 8, nK = 8
 
   ! Number of cells per block
   integer, parameter :: nIJK = nI*nJ*nK
