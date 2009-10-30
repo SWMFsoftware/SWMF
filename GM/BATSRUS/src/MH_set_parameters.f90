@@ -8,7 +8,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModAdvance
   use ModGeometry, ONLY : init_mod_geometry, &
        TypeGeometry,UseCovariant,UseVertexBasedGrid,is_axial_geometry,  & 
-       allocate_face_area_vectors,allocate_old_levels,rTorusLarge,rTorusSmall,& 
+       allocate_face_area_vectors,allocate_old_levels,rTorusLarge,rTorusSmall,&
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary,r_to_gen,&
        read_grid_file, set_fake_grid_file
   use ModNodes, ONLY : init_mod_nodes
@@ -62,6 +62,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModLookupTable, ONLY: read_lookup_table_param
   use ModIonoVelocity,ONLY: read_iono_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
+  use BATL_lib, ONLY: init_mpi, init_batl, nDimBatl => nDim
 
   implicit none
 
@@ -204,6 +205,13 @@ subroutine MH_set_parameters(TypeAction)
      call correct_parameters
 
      ! initialize module variables
+     if(UseBatl)then
+        call init_mpi(iComm)
+        call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
+             TypeGeometry, TypeBc_I(1:2*nDimBatl-1) == 'periodic', &
+             proc_dims(1:nDimBatl))
+     end if
+
      call init_mod_advance
      DivB1_GB = 0.0
      call init_mod_geometry
@@ -267,6 +275,9 @@ subroutine MH_set_parameters(TypeAction)
      if(.not.read_command(NameCommand)) CYCLE READPARAM
 
      select case(NameCommand)
+
+     case("#BATL")
+        call read_var('UseBatl', UseBatl)
 
      case("#COMPONENT")
         call read_var('NameComp', NameCompRead)
