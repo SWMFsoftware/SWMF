@@ -39,6 +39,7 @@ my $Setvar;
 
 # Grid size variables
 my $NameGridFile = "$Src/ModSize.f90";
+my $NameBatlFile = "srcBATL/BATL_size.f90";
 my $GridSize;
 my ($nI, $nJ, $nK, $MaxBlock);
 my $MaxImplBlock;
@@ -162,7 +163,7 @@ sub set_grid_size{
 
     print "Writing new grid size $GridSize into $NameGridFile...\n";
 
-    @ARGV = ($NameGridFile);
+    @ARGV = ($NameGridFile, $NameBatlFile);
 
     while(<>){
 	if(/^\s*!/){print; next} # Skip commented out lines
