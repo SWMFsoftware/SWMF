@@ -207,7 +207,7 @@ DEPEND:
 #
 
 MY_LIB  = libBATSRUS.a
-LIBBATL = srcBATL/libBATL.a
+LIBBATL = ../srcBATL/libBATL.a
 
 LIB:	DEPEND
 	make ${MY_LIB}
@@ -215,8 +215,8 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${MODULES} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
-	rm -f ${MY_LIB}
+${MY_LIB}: ${LIBBATL} ${MODULES} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+	cp -f ${LIBBATL} ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES} ${OBJECTS}
 
 # Object files not included into the library
@@ -241,7 +241,6 @@ ${EXE}: ${OBJECTS_EXE}
 	rm -rf Tmp_; mkdir Tmp_
 	cd Tmp_; \
 		ar -x ../${MY_LIB}; \
-		ar -x ../../${LIBBATL}; \
 		ar -x ${LIBDIR}/libMAGNETOGRAM.a; \
 		ar -x ${LIBDIR}/libEMPIRICALEE.a; \
 		ar -x ${LIBTIMING}; \
@@ -270,7 +269,6 @@ ${CRASHEXE}: ${OBJECTS_EXE} ${LIBCRASH}
 	rm -rf Tmp_; mkdir Tmp_
 	cd Tmp_; \
 		ar -x ../${MY_LIB}; \
-		ar -x ../../${LIBBATL}; \
 		ar -x ${LIBDIR}/libMAGNETOGRAM.a; \
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBCRASH}; \
