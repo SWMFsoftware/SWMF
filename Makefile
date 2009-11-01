@@ -407,12 +407,12 @@ tags:	ENV_CHECK
 #
 
 IH/BATSRUS/src/Makefile:
-	rm -rf IH/BATSRUS/src IH/BATSRUS/srcBATL \
-		IH/BATSRUS/srcUser IH/BATSRUS/srcEquation \
-		IH/BATSRUS/srcInterface/*.f90
-	mkdir -p IH/BATSRUS/src IH/BATSRUS/srcBATL \
-		IH/BATSRUS/srcUser IH/BATSRUS/srcEquation
+	cd IH/BATSRUS; \
+		rm -rf src srcBATL srcUser srcEquation srcInterface/*.f90; \
+		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../IH/BATSRUS/src
+	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
+					../../../IH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90 \
@@ -420,7 +420,6 @@ IH/BATSRUS/src/Makefile:
 		ModDensityAndGradient.f90\
 		../../../IH/BATSRUS/srcInterface
 	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/srcInterface
-	cp GM/BATSRUS/srcBATL/*.f90 IH/BATSRUS/srcBATL/
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
 	cp GM/BATSRUS/srcEquation/*.f90 IH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
@@ -428,7 +427,6 @@ IH/BATSRUS/src/Makefile:
 			../../IH/BATSRUS/
 	echo '*' > IH/BATSRUS/src/.cvsignore
 	cd IH/BATSRUS/src; rm -f main.f90
-	cd IH/BATSRUS/srcBATL; rm -f *main.f90
 
 # rename IH source files to avoid name conflicts
 IH_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90 \
@@ -454,19 +452,19 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 # configure and collect source files for SC/BATSRUS component
 #
 OH/BATSRUS/src/Makefile:
-	rm -rf  OH/BATSRUS/src OH/BATSRUS/srcBATL \
-		OH/BATSRUS/srcUser OH/BATSRUS/srcEquation \
-		OH/BATSRUS/srcInterface/OH_wrapper.f90
-	mkdir -p OH/BATSRUS/src OH/BATSRUS/srcBATL \
-		OH/BATSRUS/srcUser OH/BATSRUS/srcEquation
+	cd OH/BATSRUS; \
+		rm -rf src srcBATL srcUser srcEquation \
+			srcInterface/OH_wrapper.f90; \
+		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../OH/BATSRUS/src
+	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
+					../../../OH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90 \
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
 		ModDensityAndGradient.f90\
 		../../../OH/BATSRUS/srcInterface
-	cp GM/BATSRUS/srcBATL/*.f90 OH/BATSRUS/srcBATL/
 	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
 	cp GM/BATSRUS/srcEquation/*.f90 OH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
@@ -483,7 +481,6 @@ OH/BATSRUS/src/Makefile:
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
 	's/IH/OH/g;s/Ih/Oh/g;s/SC/IH/g;s/Sc/Ih/g' ModBuffer.f90
 	cd OH/BATSRUS/src; rm -f main.f90
-	cd OH/BATSRUS/srcBATL; rm -f *main.f90
 
 # rename OH source files to avoid name conflicts
 OH_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90 \
@@ -507,11 +504,9 @@ OHBATSRUS: OH/BATSRUS/src/Makefile \
 # configure and collect source files for SC/BATSRUS component
 #
 SC/BATSRUS/src/Makefile:
-	rm -rf \
-		SC/BATSRUS/src SC/BATSRUS/srcBATL \
-		SC/BATSRUS/srcUser SC/BATSRUS/srcEquation \
-		SC/BATSRUS/srcInterface/SC_wrapper.f90 \
-		SC/BATSRUS/srcInterface/SC_get_for_sp.f90
+	cd SC/BATSRUS; \
+		rm -rf src srcBATL srcUser srcEquation \
+		  srcInterface/SC_wrapper.f90 srcInterface/SC_get_for_sp.f90
 	cd GM/BATSRUS; \
 		cp -f Makefile.conf ../../SC/BATSRUS; \
 		make COMP=SC DREL=TMP relax_src
@@ -548,17 +543,16 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 
 #^CMP IF LC BEGIN
 #
-# configure and collect source files for LC/BATSRUS component
+# collect source files for LC/BATSRUS component
 #
 LC/BATSRUS/src/Makefile:
-	rm -rf  LC/BATSRUS/src LC/BATSRUS/srcBATL \
-		LC/BATSRUS/srcUser LC/BATSRUS/srcEquation \
-		LC/BATSRUS/srcInterface/LC_wrapper.f90 \
-		LC/BATSRUS/srcInterface/LC_get_for_sp.f90
-	mkdir -p LC/BATSRUS/src LC/BATSRUS/srcBATL \
-		LC/BATSRUS/srcUser LC/BATSRUS/srcEquation
+	cd LC/BATSRUS; \
+		rm -rf src srcBATL srcUser srcEquation \
+		  srcInterface/LC_wrapper.f90 srcInterface/LC_get_for_sp.f90; \
+		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../LC/BATSRUS/src
-	cp GM/BATSRUS/srcBATL/*.f90 LC/BATSRUS/srcBATL/
+	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
+						  ../../../LC/BATSRUS/srcBATL
 	cp GM/BATSRUS/srcUser/*.f90 LC/BATSRUS/srcUser/	  
 	cp GM/BATSRUS/srcEquation/*.f90 LC/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
@@ -578,7 +572,6 @@ LC/BATSRUS/src/Makefile:
 	's/IH/LC/g;s/BATSRUS/LC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
 		LC_wrapper.f90 LC_get_for_sp.f90
 	cd LC/BATSRUS/src; rm -f main.f90
-	cd LC/BATSRUS/srcBATL; rm -f *main.f90
 
 # rename LC source files to avoid name conflicts
 LC_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90 \
