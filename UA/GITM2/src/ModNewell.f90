@@ -102,12 +102,23 @@ contains
 
        where (EnergyFluxDiff > 10.0) EnergyFluxDiff = 0.5
        where (EnergyFluxDiff > 5.0)  EnergyFluxDiff = 5.0
-       
        where (EnergyFluxMono > 10.0) EnergyFluxMono = 0.5
        where (EnergyFluxMono > 5.0)  EnergyFluxMono = 5.0
-
        where (EnergyFluxWave > 10.0) EnergyFluxWave = 0.5
        where (EnergyFluxWave > 5.0)  EnergyFluxWave = 5.0
+
+       where (EnergyFluxIons > 4.0)  EnergyFluxIons = 0.25
+       where (EnergyFluxIons > 2.0)  EnergyFluxIons = 2.0
+
+       where (NumberFluxDiff > 2.0e10) NumberFluxDiff = 0.0
+       where (NumberFluxDiff > 2.0e9)  NumberFluxDiff = 1.0e9
+       where (NumberFluxMono > 2.0e10) NumberFluxMono = 0.0
+       where (NumberFluxMono > 2.0e9)  NumberFluxMono = 1.0e9
+       where (NumberFluxWave > 2.0e10) NumberFluxWave = 0.0
+       where (NumberFluxWave > 2.0e9)  NumberFluxWave = 1.0e9
+
+       where (NumberFluxIons > 5.0e8)  NumberFluxIons = 0.0
+       where (NumberFluxIons > 1.0e8)  NumberFluxIons = 1.0e8
 
        call smooth(EnergyFluxDiff)
        call smooth(NumberFluxDiff)
@@ -350,40 +361,54 @@ contains
     real, dimension(nMlts, nMlats) :: value, valueout
 
     integer, parameter :: nP = 2
-    integer :: iMlt, iLat, iM, iL, n
+    integer :: iMlt, iLat, iM, iL, n, iMa, iLa
     real    :: ave, std
 
-    valueout = value
-    do iMlt = 1+nP, nMlts-nP
-       do iLat = 1+nP, nMlats-nP
+    valueout = value*0.0
+    do iMlt = 1, nMlts
+       do iLat = 1, nMlats
           if (value(iMlt, iLat) > 0.0) then
              n = 0
              ave = 0.0
              do iM = iMlt-nP, iMlt+nP
+                iMa = iM
+                iMa = mod(iMa + nMlts, nMlts)
+                if (iMa == 0) iMa = nMlts
                 do iL = iLat-nP, iLat+nP
-                   if (value(iM,iL) > 0.0) then
-                      ave = ave + value(iM,iL)
+                   iLa = iL
+                   iLa = mod(iLa + nMlats, nMlats)
+                   if (iLa == 0) iLa = nMlats
+                   if (value(iMa,iLa) > 0.0) then
+                      ave = ave + value(iMa,iLa)
                       n   = n + 1
                    endif
                 enddo
              enddo
-             if (n > 0) then 
+             if (n > (2*nP+1)*(2*nP+1)/2) then 
                 ave = ave/n
                 std = 0.0
                 do iM = iMlt-nP, iMlt+nP
+                   iMa = iM
+                   iMa = mod(iMa + nMlts, nMlts)
+                   if (iMa == 0) iMa = nMlts
                    do iL = iLat-nP, iLat+nP
-                      if (value(iM,iL) > 0.0) then
-                         std = std + abs(ave - value(iM,iL))
+                      iLa = iL
+                      iLa = mod(iLa + nMlats, nMlats)
+                      if (iLa == 0) iLa = nMlats
+                      if (value(iMa,iLa) > 0.0) then
+                         std = std + abs(ave - value(iMa,iLa))
                       endif
                    enddo
                 enddo
                 std = std/n
-                ! We only want to kill points that are 3 stdev ABOVE the average
+                ! We only want to kill points that are 2 stdev ABOVE the average
                 ! value.
-                if (value(iMlt,iLat)-ave > 3*std) then
+                if (abs(value(iMlt,iLat)-ave) > 2*std) then
                    !write(*,*) "ave : ", valueout(iMlt,iLat), ave, &
                    !   std, abs(ave - value(iMlt,iLat)), 2*std
                    valueout(iMlt,iLat) = ave
+                else
+                   valueout(iMlt,iLat) = value(iMlt,iLat)
                 endif
              endif
           endif
