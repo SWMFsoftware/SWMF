@@ -75,6 +75,7 @@ srcBATL/BATL_size.f90: srcBATL/BATL_size_orig.f90
 	cp -f srcBATL/BATL_size_orig.f90 srcBATL/BATL_size.f90
 
 LIB:
+	cd srcBATL; make LIB
 	cd src; make LIB
 	cd srcInterface; make LIB
 
