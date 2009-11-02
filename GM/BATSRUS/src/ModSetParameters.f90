@@ -209,7 +209,7 @@ subroutine MH_set_parameters(TypeAction)
      if(UseBatl)then
         call init_mpi(iComm)
         call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
-             TypeGeometry, TypeBc_I(1:2*nDimBatl-1) == 'periodic', &
+             TypeGeometry, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
              proc_dims(1:nDimBatl))
      end if
 
