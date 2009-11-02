@@ -63,7 +63,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModIonoVelocity,ONLY: read_iono_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
   use BATL_lib, ONLY: init_mpi, init_batl, nDimBatl => nDim
-
+  use ModIoUnit, ONLY: io_unit_new
+  
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -242,9 +243,18 @@ subroutine MH_set_parameters(TypeAction)
      ! Initialize user module and allow user to modify things
      if(UseUserInitSession)call user_init_session
 
-     if(iProc==0 .and. IsStandAlone)then
+     if((iProc==0 .or. UseTimingAll) .and. IsStandAlone)then
         call timing_active(UseTiming)
-        if(iSession==1)call timing_step(0)
+        if(iSession==1)then
+           call timing_step(0)
+           if(UseTimingAll)then
+              iUnitTiming = io_unit_new()
+              write(NameTimingFile,'(a,i6.6)') 'timing.pe', iProc
+              open(iUnitTiming, FILE=NameTimingFile, STATUS='replace')
+              call timing_iounit(iUnitTiming)
+              call timing_comp_proc("  ",iProc)
+           end if
+        end if
         call timing_depth(TimingDepth)
         call timing_report_style(TimingStyle)
      end if
@@ -381,6 +391,8 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DnTiming',dn_timing)
            call read_var('nDepthTiming',TimingDepth)
            call read_var('TypeTimingReport',TimingStyle)
+           UseTimingAll = index(TimingStyle,'all') > 0
+           TimingStyle  = TimingStyle(1:4)
         end if
 
      case("#OUTERBOUNDARY")

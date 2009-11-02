@@ -250,6 +250,9 @@ Module ModMain
 
   ! Timing variables
   logical:: UseTiming = .true.
+  logical:: UseTimingAll = .false.
+  integer:: iUnitTiming = 6
+  character(len=30):: NameTimingFile
   integer:: dn_timing = -2
 
   !\

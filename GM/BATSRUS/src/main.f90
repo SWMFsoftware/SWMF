@@ -11,7 +11,7 @@ program BATSRUS
        n_step, nIter, iteration_number, &
        IsLastRead, &
        lVerbose, &
-       dn_timing, UseTiming
+       dn_timing, UseTiming, UseTimingAll, iUnitTiming
   use ModRestartFile, ONLY: NameRestartInDir
   use CON_planet, ONLY: init_planet_const, set_planet_defaults
 
@@ -177,6 +177,8 @@ program BATSRUS
   call timing_stop('BATSRUS')
 
   if(dn_timing > -3)call timing_report_total
+
+  if(UseTimingAll)close(iUnitTiming)
 
   call error_report('PRINT',0.,iError,.true.)
 
