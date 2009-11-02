@@ -687,6 +687,76 @@ test_mars_check:
 		${TESTDIR}/MarsTest/GM/log_n000001.log > test_mars.diff
 	ls -l test_mars.diff
 
+### TESTS FOR MODELING MARSFLUIDS ###
+
+test_marsfluids:
+	-@(make test_marsfluids_start)
+	-@(make test_marsfluids_restart)
+
+test_marsfluids_start:
+	@echo "test_marsfluids_compile..." > test_marsfluids.diff
+	make test_marsfluids_compile
+	@echo "test_marsfluids_rundir..." >> test_marsfluids.diff
+	make test_marsfluids_rundir
+	@echo "test_marsfluids_run..." >> test_marsfluids.diff
+	make test_marsfluids_run
+	@echo "test_marsfluids_check..." >> test_marsfluids.diff
+	make test_marsfluids_check
+
+test_marsfluids_compile:
+	./Config.pl -u=MarsFluids -e=MhdMarsFluids -g=6,6,6,1000,200
+	make
+	make PIDL
+
+test_marsfluids_rundir: test_rundir
+	cd ${TESTDIR}; \
+		cp Param/MARSFLUIDS/PARAM.in .
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_marsfluids_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf MarsFluidsTest; ./PostProc.pl -M -o MarsFluidsTest
+
+test_marsfluids_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+		Param/MARSFLUIDS/TestOutput/log_n000001.log \
+		${TESTDIR}/MarsFluidsTest/GM/log_n000001.log > test_marsfluids.diff
+	ls -l test_marsfluids.diff
+
+test_marsfluids_restart:
+	@echo "test_marsfluids_restart_save..." > test_marsfluids_restart.diff
+	make test_marsfluids_restart_save
+	@echo "test_marsfluids_restart_read..." >> test_marsfluids_restart.diff
+	make test_marsfluids_restart_read
+	@echo "test_marsfluids_restart_check..." >> test_marsfluids_restart.diff
+	make test_marsfluids_restart_check
+
+
+test_marsfluids_restart_save:
+	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartsave PARAM.in
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf MarsFluidsTest/RestartSave RESTART_marsfluids
+	cd ${TESTDIR}; ./PostProc.pl -M -o MarsFluidsTest/RestartSave
+
+test_marsfluids_restart_read:
+	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartread PARAM.in
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ./Restart.pl -i MarsFluidsTest/RestartSave/RESTART
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf MarsFluidsTest/RestartRead
+	cd ${TESTDIR}; ./PostProc.pl -M -o MarsFluidsTest/RestartRead
+
+test_marsfluids_restart_check:
+	cd ${TESTDIR}/MarsFluidsTest; \
+		cp RestartSave/GM/log_n000001.log log_all.log; \
+		tail -10 RestartRead/GM/log_n000011.log >> log_all.log
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+		Param/MARSFLUIDS/TestOutput/log_n000001.log \
+		${TESTDIR}/MarsFluidsTest/log_all.log > test_marsfluids_restart.diff
+	ls -l test_marsfluids*.diff
+
+
 ### TESTS FOR MODELING VENUS ###
 
 test_venus:
