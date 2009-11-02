@@ -1,0 +1,157 @@
+#ECHO
+T                       DoEcho
+
+#INCLUDE
+GM/restartIN/restart.H
+
+#DESCRIPTION
+Mars test read restart
+
+#ROTATION 
+F			UseRotation
+
+#GRAVITY
+T			UseGravity
+0			iDirGravity
+
+#POINTIMPLICIT
+T
+1.0
+F 
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#TIMESTEPPING
+1			nStage
+0.2			CflExpl
+
+#SCHEME
+2                       nOrder
+Linde                   TypeFlux
+minmod                  TypeLimiter
+
+#USERFLAGS
+T			UseUserInnerBcs
+T			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+T                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+0
+
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+RAW step time	        StringLog
+1	                DnSaveLogfile
+-1.                     DtSaveLogfile
+
+#INNERBOUNDARY
+user			TypeInnerBc
+
+#OUTERBOUNDARY
+inflow                  TypeBcEast
+outflow                 TypeBcWest
+fixed                   TypeBcSouth
+fixed                   TypeBcNorth
+fixed                   TypeBcBottom
+fixed                   TypeBcTop
+
+
+#USERINPUTBEGIN -----------------------------------------------------
+
+#UseHotO
+T
+1.0
+0.0
+1.0
+
+#UseTempCont
+F
+
+UseMarsB0
+T
+60
+-180
+0.0
+-99.5
+25.26
+
+UseMarsAtm
+T           
+Mars_TGCM_max.dat   TGCMFilename 
+19                  NAlt
+
+#SOLARCON
+issiC
+
+#REACTIONS
+F
+T
+
+
+#USERINPUTEND ---------------------------------------------------------
+
+#MHDIONS
+T		DoAddRhoP
+T			DoAddRhoU
+
+
+#MULTISPECIES
+F			DoReplaceDensity
+5.0			SpeciesPercentCheck
+
+#MULTIION
+0.000000001
+F
+F
+
+! For nyx or dc only
+#RESTARTOUTFILE
+block			TypeRestartInFile
+
+#SAVERESTART
+F			DoSaveRestart
+
+
+#SAVEPLOT
+3			nPlotFiles
+x=0 MHD idl             StringPlot
+2000			DnSaveplot
+-1.0			DtSaveplot
+0.0			DxSavePlot
+y=0 MHD idl             StringPlot
+2000			DnSaveplot
+-1.0			DtSaveplot
+0.0			DxSavePlot
+z=0 MHD idl             StringPlot
+2000			DnSaveplot
+-1.0			DtSaveplot
+0.0			DxSaveplot
+cut MHD idl             StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+-10.0			xMin
+20.0			xMax
+0.0001			yMin
+0.00011			yMax
+0.0001			zMin
+0.00011                 zmax
+0.			DxSavePlot
+
+#STOP
+10			MaxIteration
+-1.0			tSimulationMax
