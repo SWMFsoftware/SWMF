@@ -22,6 +22,7 @@ test:
 	-@(make test_2bodyplot)
 	-@(make test_titan)
 	-@(make test_mars)
+	-@(make test_marsfluids)
 	-@(make test_venus)
 	-@(make test_saturn)
 	-@(make test_comet)
@@ -62,6 +63,9 @@ test_help:
 	@echo "    test_earthsph              (run spherical Earth test only)"
 	@echo "    test_2bodyplot             (run 2 Body Plot test only)"
 	@echo "    test_mars                  (run Mars test only)"
+	@echo "    test_marsfluids            (run marsfluids tests only)"
+        @echo "    test_marsfluids_start      (run first marsfluids test only)"
+        @echo "    test_marsfluids_restart    (run marsfluids restart test only)"
 	@echo "    test_venus                 (run Venus test only)"
 	@echo "    test_saturn                (run Saturn test only)"
 	@echo "    test_comet                 (run comet test only)"
