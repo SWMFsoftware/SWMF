@@ -39,7 +39,7 @@ contains
          nBlock, nI, nJ, nK, nIjk_D, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          MaxDim, nDim, iRatio, jRatio, kRatio, iRatio_D, InvIjkRatio
 
-    use BATL_mpi, ONLY: iComm, nProc, iProc
+    use BATL_mpi, ONLY: iComm, nProc, iProc, barrier_mpi
 
     use BATL_tree, ONLY: &
          iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, iNode_B, &
@@ -81,6 +81,8 @@ contains
 
     ! Local variables
 
+    logical, parameter :: UseRSend = .true.
+
     integer :: nWidth
     integer :: nCoarseLayer
     integer :: nProlongOrder
@@ -109,10 +111,17 @@ contains
     ! Variables related to recv and send buffers
     integer, parameter:: nGhostCell = &
          (MaxI-MinI+1)*(MaxJ-MinJ+1)*(MaxK-MinK+1) - nI*nJ*nK
-    integer, allocatable, save:: iBufferR_P(:), iBufferS_P(:)
 
-    integer :: MaxBufferS = -1, MaxBufferR = -1, DnBuffer
-    real, pointer, save:: BufferR_IP(:,:), BufferS_IP(:,:)
+    type BufferType
+       real, pointer:: Data_I(:)
+       integer:: nData, MaxData
+    end type BufferType
+    type(BufferType), allocatable, save:: BufferR_P(:), BufferS_P(:)
+
+    ! Use this pointer to access a particular buffer
+    real, pointer:: DataPtr_I(:)
+
+    integer :: DnBuffer
 
     integer:: iRequestR, iRequestS, iError
     integer, allocatable, save:: iRequestR_I(:), iRequestS_I(:), &
@@ -125,6 +134,11 @@ contains
     !--------------------------------------------------------------------------
     DoTest = .false.; if(present(DoTestIn)) DoTest = DoTestIn
     if(DoTest)write(*,*)NameSub,' starting with nVar=',nVar
+
+
+    call timing_start('batl_pass')
+
+    call timing_start('init_pass')
 
     ! Set values or defaults for optional arguments
     nWidth = nG
@@ -154,8 +168,14 @@ contains
 
     if(nProc > 1)then
        ! Small arrays are allocated once 
-       if(.not.allocated(iBufferR_P))then
-          allocate(iBufferR_P(0:nProc-1), iBufferS_P(0:nProc-1))
+       if(.not.allocated(BufferR_P))then
+          allocate(BufferR_P(0:nProc-1), BufferS_P(0:nProc-1))
+          do iProcSend = 0, nProc-1
+             BufferR_P(iProcSend) % MaxData = 0
+             BufferS_P(iProcSend) % MaxData = 0
+             nullify(BufferR_P(iProcSend)%Data_I)
+             nullify(BufferS_P(iProcSend)%Data_I)
+          end do
           allocate(iRequestR_I(nProc-1), iRequestS_I(nProc-1))
           allocate(iStatus_II(MPI_STATUS_SIZE,nProc-1))
        end if
@@ -169,15 +189,22 @@ contains
     ! Set to zero so we can add it for first order prolongation too
     Slope_VG = 0.0
 
+    call timing_stop('init_pass')
+
     do iProlongOrder = 1, nProlongOrder
+
+       call timing_start('local_pass')
+
        ! Second order prolongation needs two stages: 
        ! first stage fills in equal and coarser ghost cells
        ! second stage uses these to prolong and fill in finer ghost cells
 
        if(nProc>1)then
           ! initialize buffer indexes
-          iBufferR_P = 0
-          iBufferS_P = 0
+          do iProcSend = 0, nProc - 1
+             BufferR_P(iProcSend) % nData = 0
+             BufferS_P(iProcSend) % nData = 0
+          end do
        end if
 
        ! Loop through all nodes
@@ -223,51 +250,79 @@ contains
           end do
        end do ! iBlockSend
 
+       call timing_stop('local_pass')
+
        ! Done for serial run
        if(nProc == 1) CYCLE
 
-       call timing_start('send_recv')
+       call timing_start('recv_pass')
 
-       if(maxval(iBufferR_P) > MaxBufferR) call extend_buffer(&
-            .false., MaxBufferR, 2*maxval(iBufferR_P), BufferR_IP)
+       !write(*,*)'!!! iProc, total recv, send buffer=', &
+       !     iProc,sum(iBufferR_P), sum(iBufferS_P)
 
        ! post requests
        iRequestR = 0
        do iProcSend = 0, nProc - 1
-          if(iBufferR_P(iProcSend) == 0) CYCLE
+          if(BufferR_P(iProcSend)%nData == 0) CYCLE
           iRequestR = iRequestR + 1
 
-          !write(*,*)'!!! MPI_irecv:iProcRecv,iProcSend,iBufferR=',&
-          !     iProc,iProcSend,iBufferR_P(iProcSend)
+          if(BufferR_P(iProcSend)%nData > BufferR_P(iProcSend)%MaxData) &
+               call extend_buffer( &
+               .false., BufferR_P(iProcSend)%nData, BufferR_P(iProcSend))
 
-          call MPI_irecv(BufferR_IP(1,iProcSend), iBufferR_P(iProcSend), &
+          !write(*,*)'!!! MPI_irecv:iProcRecv,iProcSend,nData=',&
+          !     iProc,iProcSend,BufferR_P(iProcSend)%nData
+
+          call MPI_irecv( &
+               BufferR_P(iProcSend)%Data_I, &
+               BufferR_P(iProcSend)%nData, &
                MPI_REAL, iProcSend, 1, iComm, iRequestR_I(iRequestR), &
                iError)
        end do
 
+       call timing_stop('recv_pass')
+
+       if(UseRSend) then
+          call timing_start('barrier_pass')
+          call barrier_mpi
+          call timing_stop('barrier_pass')
+       end if
+
+       call timing_start('send_pass')
+
        ! post sends
        iRequestS = 0
        do iProcRecv = 0, nProc-1
-          if(iBufferS_P(iProcRecv) == 0) CYCLE
+          if(BufferS_P(iProcRecv)%nData == 0) CYCLE
           iRequestS = iRequestS + 1
 
-          !write(*,*)'!!! MPI_isend:iProcRecv,iProcSend,iBufferS=',&
-          !     iProcRecv,iProc,iBufferS_P(iProcRecv)
+          !write(*,*)'!!! MPI_isend:iProcRecv,iProcSend,nData=',&
+          !     iProcRecv,iProc,BufferS_P(iProcRecv)%nData
 
-          call MPI_isend(BufferS_IP(1,iProcRecv), iBufferS_P(iProcRecv), &
-               MPI_REAL, iProcRecv, 1, iComm, iRequestS_I(iRequestS), &
-               iError)
+          if(UseRSend)then
+             call MPI_rsend( &
+                  BufferS_P(iProcRecv)%Data_I, &
+                  BufferS_P(iProcRecv)%nData, &
+                  MPI_REAL, iProcRecv, 1, iComm, iError)
+          else
+             call MPI_isend( &
+                  BufferS_P(iProcRecv)%Data_I, &
+                  BufferS_P(iProcRecv)%nData, &
+                  MPI_REAL, iProcRecv, 1, iComm, iRequestS_I(iRequestS), &
+                  iError)
+          end if
        end do
+       call timing_stop('send_pass')
       
+       call timing_start('wait_pass')
        ! wait for all requests to be completed
        if(iRequestR > 0) &
             call MPI_waitall(iRequestR, iRequestR_I, iStatus_II, iError)
 
        ! wait for all sends to be completed
-       if(iRequestS > 0) &
+       if(.not.UseRSend .and. iRequestS > 0) &
             call MPI_waitall(iRequestS, iRequestS_I, iStatus_II, iError)
-
-       call timing_stop('send_recv')
+       call timing_stop('wait_pass')
 
        call timing_start('buffer_to_state')
        call buffer_to_state
@@ -277,36 +332,38 @@ contains
 
     deallocate(Slope_VG)
 
+    call timing_stop('batl_pass')
+
   contains
 
-    subroutine extend_buffer(DoCopy, MaxBufferOld, MaxBufferNew, Buffer_IP)
+    subroutine extend_buffer(DoCopy, MaxDataNew, BufferPtr)
 
       logical, intent(in)   :: DoCopy
-      integer, intent(in)   :: MaxBufferNew
-      integer, intent(inout):: MaxBufferOld
-      real, pointer:: Buffer_IP(:,:)
+      integer, intent(in)   :: MaxDataNew
+      type(BufferType), intent(inout):: BufferPtr
 
-      real, pointer :: OldBuffer_IP(:,:)
+      real, pointer :: DataOld_I(:)
       !------------------------------------------------------------------------
       !write(*,*)'extend_buffer called with ',&
-      !     'DoCopy, MaxBufferOld, MaxBufferNew=', &
-      !     DoCopy, MaxBufferOld, MaxBufferNew
+      !     'DoCopy, MaxDataOld, MaxDataNew=', &
+      !     DoCopy, BufferPtr%MaxData, MaxDataNew
 
-      if(MaxBufferOld < 0 .or. .not.DoCopy)then
-         if(MaxBufferOld > 0) deallocate(Buffer_IP)
-         allocate(Buffer_IP(MaxBufferNew,0:nProc-1))
+      if(BufferPtr%MaxData < 1 .or. .not.DoCopy)then
+         if(BufferPtr%MaxData > 0) deallocate(BufferPtr%Data_I)
+         allocate(BufferPtr%Data_I(MaxDataNew))
       else
          ! store old values
-         OldBuffer_IP => Buffer_IP
+         DataOld_I => BufferPtr%Data_I
          ! allocate extended buffer
-         allocate(Buffer_IP(MaxBufferNew,0:nProc-1))
+         allocate(BufferPtr%Data_I(MaxDataNew))
+
          ! copy old values
-         Buffer_IP(1:MaxBufferOld,:) = OldBuffer_IP(1:MaxBufferOld,:)  
+         BufferPtr%Data_I(1:BufferPtr%nData) = DataOld_I(1:BufferPtr%nData)
          ! free old storage
-         deallocate(OldBuffer_IP)
+         deallocate(DataOld_I)
       end if
       ! Set new buffer size
-      MaxBufferOld = MaxBufferNew
+      BufferPtr%MaxData = MaxDataNew
 
     end subroutine extend_buffer
 
@@ -322,42 +379,43 @@ contains
       jRMin = 1; jRMax = 1
       kRMin = 1; kRMax = 1
       do iProcSend = 0, nProc - 1
-         if(iBufferR_P(iProcSend) == 0) CYCLE
+         if(BufferR_P(iProcSend)%nData == 0) CYCLE
 
+         DataPtr_I => BufferR_P(iProcSend)%Data_I
          iBufferR = 0
          do
-            iBlockRecv = nint(BufferR_IP(iBufferR+1,iProcSend))
-            iRMin      = nint(BufferR_IP(iBufferR+2,iProcSend))
-            iRMax      = nint(BufferR_IP(iBufferR+3,iProcSend))
-            if(nDim > 1) jRMin = nint(BufferR_IP(iBufferR+4,iProcSend))
-            if(nDim > 1) jRMax = nint(BufferR_IP(iBufferR+5,iProcSend))
-            if(nDim > 2) kRMin = nint(BufferR_IP(iBufferR+6,iProcSend))
-            if(nDim > 2) kRMax = nint(BufferR_IP(iBufferR+7,iProcSend))
+            iBlockRecv = nint(DataPtr_I(iBufferR+1))
+            iRMin      = nint(DataPtr_I(iBufferR+2))
+            iRMax      = nint(DataPtr_I(iBufferR+3))
+            if(nDim > 1) jRMin = nint(DataPtr_I(iBufferR+4))
+            if(nDim > 1) jRMax = nint(DataPtr_I(iBufferR+5))
+            if(nDim > 2) kRMin = nint(DataPtr_I(iBufferR+6))
+            if(nDim > 2) kRMax = nint(DataPtr_I(iBufferR+7))
 
             iBufferR = iBufferR + 1 + 2*nDim
             if(present(Time_B))then
                ! Get time of neighbor and interpolate/extrapolate ghost cells
                iBufferR = iBufferR + 1
-               TimeSend  = BufferR_IP(iBufferR,iProcSend)
+               TimeSend  = DataPtr_I(iBufferR)
                WeightOld = (TimeSend - Time_B(iBlockRecv)) &
                     / max(TimeSend - TimeOld_B(iBlockRecv), 1e-30)
                WeightNew = 1 - WeightOld
                do k = kRMin, kRmax; do j = jRMin, jRMax; do i = iRMin, iRmax
                   State_VGB(:,i,j,k,iBlockRecv) = &
                        WeightOld*State_VGB(:,i,j,k,iBlockRecv) + &
-                       WeightNew*BufferR_IP(iBufferR+1:iBufferR+nVar,iProcSend)
+                       WeightNew*DataPtr_I(iBufferR+1:iBufferR+nVar)
 
                   iBufferR = iBufferR + nVar
                end do; end do; end do
             else
                do k = kRMin, kRmax; do j = jRMin, jRMax; do i = iRMin, iRmax
                   State_VGB(:,i,j,k,iBlockRecv) = &
-                       BufferR_IP(iBufferR+1:iBufferR+nVar,iProcSend)
+                       DataPtr_I(iBufferR+1:iBufferR+nVar)
                   
                   iBufferR = iBufferR + nVar
                end do; end do; end do
             end if
-            if(iBufferR >= iBufferR_P(iProcSend)) EXIT
+            if(iBufferR >= BufferR_P(iProcSend)%nData) EXIT
          end do
       end do
       
@@ -408,39 +466,43 @@ contains
                  State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend)
          end if
       else
-         iBufferS = iBufferS_P(iProcRecv)
+         iBufferS = BufferS_P(iProcRecv)%nData
 
-         if(iBufferS + DnBuffer > MaxBufferS) call extend_buffer( &
-              .true., MaxBufferS, 2*(iBufferS+DnBuffer), BufferS_IP)
+         if(iBufferS + DnBuffer > BufferS_P(iProcRecv)%MaxData) &
+              call extend_buffer( &
+              .true., 2*(iBufferS+DnBuffer), BufferS_P(iProcRecv))
 
-         BufferS_IP(            iBufferS+1,iProcRecv) = iBlockRecv
-         BufferS_IP(            iBufferS+2,iProcRecv) = iRMin
-         BufferS_IP(            iBufferS+3,iProcRecv) = iRMax
-         if(nDim > 1)BufferS_IP(iBufferS+4,iProcRecv) = jRMin
-         if(nDim > 1)BufferS_IP(iBufferS+5,iProcRecv) = jRMax
-         if(nDim > 2)BufferS_IP(iBufferS+6,iProcRecv) = kRMin
-         if(nDim > 2)BufferS_IP(iBufferS+7,iProcRecv) = kRMax
+         DataPtr_I => BufferS_P(iProcRecv)%Data_I
+
+         DataPtr_I(            iBufferS+1) = iBlockRecv
+         DataPtr_I(            iBufferS+2) = iRMin
+         DataPtr_I(            iBufferS+3) = iRMax
+         if(nDim > 1)DataPtr_I(iBufferS+4) = jRMin
+         if(nDim > 1)DataPtr_I(iBufferS+5) = jRMax
+         if(nDim > 2)DataPtr_I(iBufferS+6) = kRMin
+         if(nDim > 2)DataPtr_I(iBufferS+7) = kRMax
 
          iBufferS = iBufferS + 1 + 2*nDim
 
          if(present(Time_B))then
             iBufferS = iBufferS + 1
-            BufferS_IP(iBufferS,iProcRecv) = Time_B(iBlockSend)
+            DataPtr_I(iBufferS) = Time_B(iBlockSend)
          end if
 
          do k = kSMin,kSmax; do j = jSMin,jSMax; do i = iSMin,iSmax
-            BufferS_IP(iBufferS+1:iBufferS+nVar,iProcRecv) = &
+            DataPtr_I(iBufferS+1:iBufferS+nVar) = &
                  State_VGB(:,i,j,k,iBlockSend)
             iBufferS = iBufferS + nVar
          end do; end do; end do
 
-         iBufferS_P(iProcRecv) = iBufferS
+         BufferS_P(iProcRecv)%nData = iBufferS
 
          ! Number of reals to be received from the other processor
          ! is the same as sent for equal levels
          nSize = nVar*(iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1)
          if(present(Time_B)) nSize = nSize + 1
-         iBufferR_P(iProcRecv) = iBufferR_P(iProcRecv) + 1 + 2*nDim + nSize
+         BufferR_P(iProcRecv)%nData = BufferR_P(iProcRecv)%nData &
+              + 1 + 2*nDim + nSize
 
       end if
 
@@ -495,7 +557,8 @@ contains
 
          nSize = nVar*(iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1)
          if(present(Time_B)) nSize = nSize + 1
-         iBufferR_P(iProcRecv) = iBufferR_P(iProcRecv) + 1 + 2*nDim + nSize
+         BufferR_P(iProcRecv)%nData = BufferR_P(iProcRecv)%nData &
+              + 1 + 2*nDim + nSize
 
       end if
 
@@ -573,24 +636,27 @@ contains
             end do
          end do
       else
-         iBufferS = iBufferS_P(iProcRecv)
+         iBufferS = BufferS_P(iProcRecv)%nData
 
-         if(iBufferS + DnBuffer > MaxBufferS) call extend_buffer( &
-              .true., MaxBufferS, 2*(iBufferS+DnBuffer), BufferS_IP)
+         if(iBufferS + DnBuffer > BufferS_P(iProcRecv)%MaxData) &
+              call extend_buffer( &
+              .true., 2*(iBufferS+DnBuffer), BufferS_P(iProcRecv))
 
-         BufferS_IP(            iBufferS+1,iProcRecv) = iBlockRecv
-         BufferS_IP(            iBufferS+2,iProcRecv) = iRMin
-         BufferS_IP(            iBufferS+3,iProcRecv) = iRMax
-         if(nDim > 1)BufferS_IP(iBufferS+4,iProcRecv) = jRMin
-         if(nDim > 1)BufferS_IP(iBufferS+5,iProcRecv) = jRMax
-         if(nDim > 2)BufferS_IP(iBufferS+6,iProcRecv) = kRMin
-         if(nDim > 2)BufferS_IP(iBufferS+7,iProcRecv) = kRMax
+         DataPtr_I => BufferS_P(iProcRecv)%Data_I
+
+         DataPtr_I(            iBufferS+1) = iBlockRecv
+         DataPtr_I(            iBufferS+2) = iRMin
+         DataPtr_I(            iBufferS+3) = iRMax
+         if(nDim > 1)DataPtr_I(iBufferS+4) = jRMin
+         if(nDim > 1)DataPtr_I(iBufferS+5) = jRMax
+         if(nDim > 2)DataPtr_I(iBufferS+6) = kRMin
+         if(nDim > 2)DataPtr_I(iBufferS+7) = kRMax
 
          iBufferS = iBufferS + 1 + 2*nDim
 
          if(present(Time_B))then
             iBufferS = iBufferS + 1
-            BufferS_IP(iBufferS,iProcRecv) = Time_B(iBlockSend)
+            DataPtr_I(iBufferS) = Time_B(iBlockSend)
          end if
 
          do kR=kRMin,kRMax
@@ -603,7 +669,7 @@ contains
                   iS1 = iSMin + iRatioRestr*(iR-iRMin)
                   iS2 = iS1 + iRatioRestr - 1
                   do iVar = 1, nVar
-                     BufferS_IP(iBufferS+iVar,iProcRecv) = &
+                     DataPtr_I(iBufferS+iVar) = &
                           InvIjkRatioRestr * &
                           sum(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2,&
                           iBlockSend))
@@ -612,7 +678,8 @@ contains
                end do
             end do
          end do
-         iBufferS_P(iProcRecv) = iBufferS
+
+         BufferS_P(iProcRecv)%nData = iBufferS
 
       end if
 
@@ -658,7 +725,7 @@ contains
 
                   nSize = nVar*(iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1)
                   if(present(Time_B)) nSize = nSize + 1
-                  iBufferR_P(iProcRecv) = iBufferR_P(iProcRecv) &
+                  BufferR_P(iProcRecv)%nData = BufferR_P(iProcRecv)%nData &
                        + 1 + 2*nDim + nSize
                   
                end if
@@ -779,23 +846,26 @@ contains
                      end do
                   end do
                else
-                  iBufferS = iBufferS_P(iProcRecv)
+                  iBufferS = BufferS_P(iProcRecv)%nData
 
-                  if(iBufferS + DnBuffer > MaxBufferS) call extend_buffer( &
-                       .true., MaxBufferS, 2*(iBufferS+DnBuffer), BufferS_IP)
+                  if(iBufferS + DnBuffer > BufferS_P(iProcRecv)%MaxData) &
+                       call extend_buffer( &
+                       .true., 2*(iBufferS+DnBuffer), BufferS_P(iProcRecv))
 
-                  BufferS_IP(            iBufferS+1,iProcRecv) = iBlockRecv
-                  BufferS_IP(            iBufferS+2,iProcRecv) = iRMin
-                  BufferS_IP(            iBufferS+3,iProcRecv) = iRMax
-                  if(nDim > 1)BufferS_IP(iBufferS+4,iProcRecv) = jRMin
-                  if(nDim > 1)BufferS_IP(iBufferS+5,iProcRecv) = jRMax
-                  if(nDim > 2)BufferS_IP(iBufferS+6,iProcRecv) = kRMin
-                  if(nDim > 2)BufferS_IP(iBufferS+7,iProcRecv) = kRMax
+                  DataPtr_I => BufferS_P(iProcRecv)%Data_I
+
+                  DataPtr_I(            iBufferS+1) = iBlockRecv
+                  DataPtr_I(            iBufferS+2) = iRMin
+                  DataPtr_I(            iBufferS+3) = iRMax
+                  if(nDim > 1)DataPtr_I(iBufferS+4) = jRMin
+                  if(nDim > 1)DataPtr_I(iBufferS+5) = jRMax
+                  if(nDim > 2)DataPtr_I(iBufferS+6) = kRMin
+                  if(nDim > 2)DataPtr_I(iBufferS+7) = kRMax
 
                   iBufferS = iBufferS + 1 + 2*nDim
                   if(present(Time_B))then
                      iBufferS = iBufferS + 1
-                     BufferS_IP(iBufferS,iProcRecv) = Time_B(iBlockSend)
+                     DataPtr_I(iBufferS) = Time_B(iBlockSend)
                   end if
 
                   do kR=kRMin,kRMax
@@ -805,7 +875,7 @@ contains
                         do iR=iRMin,iRMax
                            iS = iSMin &
                                 + (iR+3)/iRatioRestr - (iRMin+3)/iRatioRestr
-                           BufferS_IP(iBufferS+1:iBufferS+nVar,iProcRecv)= &
+                           DataPtr_I(iBufferS+1:iBufferS+nVar)= &
                                 State_VGB(:,iS,jS,kS,iBlockSend) &
                                 + Slope_VG(:,iR,jR,kR)
                            iBufferS = iBufferS + nVar
@@ -813,7 +883,7 @@ contains
                      end do
                   end do
 
-                  iBufferS_P(iProcRecv) = iBufferS
+                  BufferS_P(iProcRecv)%nData = iBufferS
 
                end if
             end do
