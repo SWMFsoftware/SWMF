@@ -98,6 +98,9 @@ TESTDIR = run_test
 MPIRUN = mpirun -np 2
 
 test:
+	echo "GITM2 is not tested nightly" > notest.diff
+
+test_ignored:
 	-@(make test_earth)
 	-@(make test_mars)
 	ls -l *.diff
