@@ -95,6 +95,7 @@ contains
 
   subroutine init_heat_conduction
 
+    use ModAdvance,    ONLY: UseElectronPressure
     use ModImplicit,   ONLY: UseSemiImplicit, iTeImpl
     use ModMain,       ONLY: nI, nJ, nK, MaxBlock, nDim
     use ModMultiFluid, ONLY: MassIon_I
@@ -113,11 +114,19 @@ contains
 
     allocate(Te_G(-1:nI+2,-1:nJ+2,-1:nK+2))
 
-    ! Used for ideal EOS: p = n*T + ne*Te (dimensionless) and n=rho/ionmass
-    ! so that p=rho/massion *T*(1+ne/n Te/T)
-    ! TeFraction is defined such that Te = p/rho * TeFraction
-    TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
-         /(1 + AverageIonCharge*ElectronTemperatureRatio)
+    ! TeFraction is used for ideal EOS:
+    if(UseElectronPressure)then
+       ! Pe = ne*Te (dimensionless) and n=rho/ionmass
+       ! so that Pe = ne/n *n*Te = (ne/n)*(rho/ionmass)*Te
+       ! TeFraction is defined such that Te = Pe/rho * TeFraction
+       TeFraction = MassIon_I(1)/AverageIonCharge
+    else
+       ! p = n*T + ne*Te (dimensionless) and n=rho/ionmass
+       ! so that p=rho/massion *T*(1+ne/n Te/T)
+       ! TeFraction is defined such that Te = p/rho * TeFraction
+       TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
+            /(1 + AverageIonCharge*ElectronTemperatureRatio)
+    end if
 
     DoTestHeatConduction = .false.
     DoModifyHeatConduction = .false.
@@ -157,22 +166,22 @@ contains
 
   !============================================================================
 
-  subroutine get_heat_flux(iDir, i, j, k, iBlock, &
+  subroutine get_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
        StateLeft_V, StateRight_V, Normal_D, HeatCondCoefNormal, HeatFlux)
 
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModFaceGradient, ONLY: get_face_gradient
     use ModMain,         ONLY: nI, nJ, nK
     use ModPhysics,      ONLY: inv_gm1, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_
     use ModUser,         ONLY: user_material_properties
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_
+    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_
 
-    integer, intent(in) :: iDir, i, j, k, iBlock
+    integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
     real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
     real,    intent(out):: HeatCondCoefNormal, HeatFlux
 
-    integer :: ii, jj, kk
+    integer :: i, j, k
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3)
     real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi
 
@@ -181,24 +190,33 @@ contains
 
     if(IsNewBlockHeatConduction)then
        if(UseIdealEos)then
-          Te_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock) &
-               *TeFraction
+          if(UseElectronPressure)then
+             do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+                Te_G(i,j,k) = TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
+                     /State_VGB(Rho_,i,j,k,iBlock)
+             end do; end do; end do
+          else
+             do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+                Te_G(i,j,k) = TeFraction*State_VGB(p_,i,j,k,iBlock) &
+                     /State_VGB(Rho_,i,j,k,iBlock)
+             end do; end do; end do
+          end if
        else
-          do kk = -1, nK+2; do jj = -1, nJ+2; do ii = -1, nI+2
+          do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
              call user_material_properties( &
-                  State_VGB(:,ii,jj,kk,iBlock), TeOut=TeSi)
-             Te_G(ii,jj,kk) = TeSi*Si2No_V(UnitTemperature_)
+                  State_VGB(:,i,j,k,iBlock), TeOut=TeSi)
+             Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
        end if
     end if
 
-    call get_face_gradient(iDir, i, j, k, iBlock, &
+    call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
          IsNewBlockHeatConduction, Te_G, FaceGrad_D)
 
-    call get_heat_conduction_coef(iDir, i, j, k, iBlock, StateLeft_V, &
-         Normal_D, HeatCondL_D)
-    call get_heat_conduction_coef(iDir, i, j, k, iBlock, StateRight_V, &
-         Normal_D, HeatCondR_D)
+    call get_heat_conduction_coef(iDir, iFace, jFace, kFace, iBlock, &
+         StateLeft_V, Normal_D, HeatCondL_D)
+    call get_heat_conduction_coef(iDir, iFace, jFace, kFace, iBlock, &
+         StateRight_V, Normal_D, HeatCondR_D)
 
     HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
 
@@ -221,18 +239,18 @@ contains
 
   !============================================================================
 
-  subroutine get_heat_conduction_coef(iDim, i, j, k, iBlock, State_V, &
-       Normal_D, HeatCond_D)
+  subroutine get_heat_conduction_coef(iDim, iFace, jFace, kFace, iBlock, &
+       State_V, Normal_D, HeatCond_D)
 
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModB0,           ONLY: B0_DX, B0_DY, B0_DZ
     use ModMain,         ONLY: UseB0
     use ModNumConst,     ONLY: cTolerance
     use ModPhysics,      ONLY: Si2No_V, UnitTemperature_
     use ModUser,         ONLY: user_material_properties
-    use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_
+    use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_, Pe_
 
-    integer, intent(in) :: iDim, i, j, k, iBlock
+    integer, intent(in) :: iDim, iFace, jFace, kFace, iBlock
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: HeatCond_D(3)
 
@@ -243,11 +261,11 @@ contains
     if(UseB0)then
        select case(iDim)
        case(1)
-          B_D = State_V(Bx_:Bz_) + B0_DX(:,i,j,k)
+          B_D = State_V(Bx_:Bz_) + B0_DX(:,iFace,jFace,kFace)
        case(2)
-          B_D = State_V(Bx_:Bz_) + B0_DY(:,i,j,k)
+          B_D = State_V(Bx_:Bz_) + B0_DY(:,iFace,jFace,kFace)
        case(3)
-          B_D = State_V(Bx_:Bz_) + B0_DZ(:,i,j,k)
+          B_D = State_V(Bx_:Bz_) + B0_DZ(:,iFace,jFace,kFace)
        end select
     else
        B_D = State_V(Bx_:Bz_)
@@ -259,7 +277,11 @@ contains
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
     if(UseIdealEos)then
-       Te = TeFraction*State_V(p_)/State_V(Rho_)
+       if(UseElectronPressure)then
+          Te = TeFraction*State_V(Pe_)/State_V(Rho_)
+       else
+          Te = TeFraction*State_V(p_)/State_V(Rho_)
+       end if
     else
        ! Note we assume that the heat conduction formula for the
        ! ideal state is still applicable for the non-ideal state
@@ -301,7 +323,7 @@ contains
 
   subroutine get_impl_heat_cond_state(StateImpl_VGB, DconsDsemi_VCB)
 
-    use ModAdvance,    ONLY: State_VGB, UseIdealEos, &
+    use ModAdvance,    ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
          RightState_VX, RightState_VY, RightState_VZ
     use ModFaceValue,  ONLY: calc_face_value
@@ -310,7 +332,7 @@ contains
     use ModMain,       ONLY: nI, nJ, nK, MaxImplBlk, x_, y_, z_
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_,inv_gm1
     use ModUser,       ONLY: user_material_properties
-    use ModVarIndexes, ONLY: Rho_, p_
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_
 
     real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
@@ -326,9 +348,15 @@ contains
 
        if(UseIdealEos)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
-                  TeFraction*State_VGB(p_,i,j,k,iBlock) &
-                  /State_VGB(Rho_,i,j,k,iBlock)
+             if(UseElectronPressure)then
+                StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
+                     TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
+                     /State_VGB(Rho_,i,j,k,iBlock)
+             else
+                StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
+                     TeFraction*State_VGB(p_,i,j,k,iBlock) &
+                     /State_VGB(Rho_,i,j,k,iBlock)
+             end if
              DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
                   inv_gm1*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
           end do; end do; end do
@@ -596,48 +624,83 @@ contains
 
   subroutine update_impl_heat_cond(iBlock, iImplBlock, StateImpl_VG)
 
-    use ModAdvance,  ONLY: State_VGB, Energy_GBI, UseIdealEos, p_, &
-         ExtraEint_
+    use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModEnergy,   ONLY: calc_energy_cell, calc_pressure_cell
     use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB
     use ModMain,     ONLY: nI, nJ, nK
-    use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_
+    use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
+         UnitP_
     use ModUser,     ONLY: user_material_properties
+    use ModVarIndexes, ONLY: p_, Pe_, ExtraEint_
 
     integer, intent(in) :: iBlock, iImplBlock
     real, intent(in) :: StateImpl_VG(nw,nI,nJ,nK)
 
     integer :: i, j, k
     real :: Einternal, EinternalSi, PressureSi
+    real :: Ee, EeSi, PeSi
     !--------------------------------------------------------------------------
 
-    if(UseIdealEos)then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
-               + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-               *( StateImpl_VG(iTeImpl,i,j,k) &
-               -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
-       end do; end do; end do
+    if(UseElectronPressure)then
+       if(UseIdealEos)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
+                  + gm1*DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+                  *( StateImpl_VG(iTeImpl,i,j,k) &
+                  -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
+          end do; end do; end do
+       else
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
+                  + State_VGB(ExtraEint_,i,j,k,iBlock) &
+                  + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+                  *( StateImpl_VG(iTeImpl,i,j,k) &
+                  -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
 
-       call calc_pressure_cell(iBlock)
+             EeSi = Ee*No2Si_V(UnitEnergyDens_)
+
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, &
+                  EinternalIn = EeSi, PressureOut = PeSi)
+
+             ! Set true electron pressure
+             State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
+
+             ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
+             State_VGB(ExtraEint_,i,j,k,iBlock) = &
+                  Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
+
+          end do; end do; end do
+       end if
+
     else
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-               + State_VGB(ExtraEint_,i,j,k,iBlock) &
-               + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-               *( StateImpl_VG(iTeImpl,i,j,k) &
-               -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
 
-          EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
+       if(UseIdealEos)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
+                  + gm1*DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+                  *( StateImpl_VG(iTeImpl,i,j,k) &
+                  -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
+          end do; end do; end do
+       else
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
+                  + State_VGB(ExtraEint_,i,j,k,iBlock) &
+                  + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+                  *( StateImpl_VG(iTeImpl,i,j,k) &
+                  -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
 
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               EinternalIn = EinternalSi, PressureOut = PressureSi)
+             EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
-          State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
-          State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock)
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  EinternalIn = EinternalSi, PressureOut = PressureSi)
 
-       end do; end do; end do
+             State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+             State_VGB(ExtraEint_,i,j,k,iBlock) = &
+                  Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock)
+
+          end do; end do; end do
+       end if
 
        call calc_energy_cell(iBlock)
     end if

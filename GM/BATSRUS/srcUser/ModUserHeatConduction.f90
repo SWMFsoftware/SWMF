@@ -227,28 +227,31 @@ contains
     use ModAdvance,  ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
          UseElectronPressure
     use ModImplicit, ONLY: UseSemiImplicit
+    use ModVarIndexes, ONLY: Pe_
 
     integer, intent(in) :: iStage, iBlock
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
-    if(UseElectronPressure)then
-       call update_states_electron
-
-       RETURN
-    end if
 
     ! No call to update_states_MHD to nullify the effect of the hydro solver
     ! call update_states_MHD(iStage,iBlock)
-
     if(TypeProblem == 'parcond' .and. .not.UseSemiImplicit)then
-       Flux_VX(1:nVar,:,:,:) = 0.0
-       Flux_VY(1:nVar,:,:,:) = 0.0
-       Flux_VZ(1:nVar,:,:,:) = 0.0
-       Source_VC(1:nVar,:,:,:) = 0.0
-
+       if(UseElectronPressure)then
+          Flux_VX(1:Pe_-1,:,:,:) = 0.0; Flux_VX(Pe_+1:nVar+1,:,:,:) = 0.0
+          Flux_VY(1:Pe_-1,:,:,:) = 0.0; Flux_VY(Pe_+1:nVar+1,:,:,:) = 0.0
+          Flux_VZ(1:Pe_-1,:,:,:) = 0.0; Flux_VZ(Pe_+1:nVar+1,:,:,:) = 0.0
+          Source_VC(1:Pe_-1,:,:,:) = 0.0; Source_VC(Pe_+1:nVar+1,:,:,:) = 0.0
+       else
+          Flux_VX(1:nVar,:,:,:) = 0.0
+          Flux_VY(1:nVar,:,:,:) = 0.0
+          Flux_VZ(1:nVar,:,:,:) = 0.0
+          Source_VC(1:nVar,:,:,:) = 0.0
+       end if
        call update_states_MHD(iStage,iBlock)
     end if
+
+    if(TypeProblem == 'lowrie') call update_states_electron
 
   contains
 
@@ -735,27 +738,28 @@ contains
 
   subroutine get_state_parcond(i, j, iBlock)
 
-    use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,    ONLY: ElectronTemperatureRatio, inv_gm1
-    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, By_, Bz_, p_, &
-         ExtraEint_
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+    use ModPhysics,    ONLY: inv_gm1, ElectronTemperatureRatio
+    use ModVarIndexes, ONLY: Rho_, Bx_, By_, p_, Pe_, ExtraEint_
 
     integer, intent(in) :: i, j, iBlock
 
-    real :: Temperature, Te
+    real :: Te
     !--------------------------------------------------------------------------
     call get_temperature_parcond(i, j, iBlock, Te)
+    State_VGB(:,i,j,:,iBlock) = 0.0
     State_VGB(Rho_,i,j,:,iBlock) = 1.0
-    State_VGB(RhoUx_:RhoUz_,i,j,:,iBlock) = 0.0
     State_VGB(Bx_,i,j,:,iBlock) = Bx
     State_VGB(By_,i,j,:,iBlock) = By
-    State_VGB(Bz_,i,j,:,iBlock) = 0.0
-    if(TypeProblem=='parcondsemi')then
-       State_VGB(ExtraEint_,i,j,:,iBlock) = (1.0/3.5)*Te**3.5 - inv_gm1*Te
+    if(TypeProblem == 'parcondsemi')then
        State_VGB(p_,i,j,:,iBlock) = Te
+       State_VGB(ExtraEint_,i,j,:,iBlock) = (1.0/3.5)*Te**3.5 - inv_gm1*Te
     else
-       Temperature = Te*(1 + ElectronTemperatureRatio)
-       State_VGB(p_,i,j,:,iBlock) = Temperature
+       if(UseElectronPressure)then
+          State_VGB(Pe_,i,j,:,iBlock) = Te
+       else
+          State_VGB(p_,i,j,:,iBlock) = Te*(1 + ElectronTemperatureRatio)
+       end if
     end if
 
   end subroutine get_state_parcond
@@ -795,11 +799,12 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModGeometry,   ONLY: x_Blk, y_Blk
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation
-    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, UnitT_, ShockSlope
-    use ModVarIndexes, ONLY: p_, Rho_
+    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, UnitT_, ShockSlope, &
+         ElectronTemperatureRatio
+    use ModVarIndexes, ONLY: p_, Rho_, Pe_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -976,17 +981,30 @@ contains
 
     case('parcond', 'parcondsemi')
        select case(NameVar)
-       case('t0','temp0','te0')
+       case('te0')
           do j=-1,nJ+2; do i=-1,nI+2
-             call get_temperature_parcond(i, j, iBlock, Temperature)
-             PlotVar_G(i,j,:) = Temperature
+             call get_temperature_parcond(i, j, iBlock, Te)
+             PlotVar_G(i,j,:) = Te
           end do; end do
        case('te')
-          do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  TeOut = PlotVar_G(i,j,k))
-             PlotVar_G(i,j,:) = PlotVar_G(i,j,k)*Si2No_V(UnitTemperature_)
-          end do; end do; end do
+          if(UseIdealEos)then
+             do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+                if(UseElectronPressure)then
+                   PlotVar_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
+                        /State_VGB(Rho_,i,j,k,iBlock)
+                else
+                   PlotVar_G(i,j,k) = State_VGB(p_,i,j,k,iBlock) &
+                        /State_VGB(Rho_,i,j,k,iBlock) &
+                        /(1 + ElectronTemperatureRatio)
+                end if
+             end do; end do; end do
+          else
+             do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+                call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                     TeOut = PlotVar_G(i,j,k))
+                PlotVar_G(i,j,:) = PlotVar_G(i,j,k)*Si2No_V(UnitTemperature_)
+             end do; end do; end do
+          end if
        case default
           IsFound = .false.
        end select
@@ -1006,7 +1024,7 @@ contains
 
     ! The State_V vector is in normalized units
 
-    use ModAdvance,    ONLY: nWave
+    use ModAdvance,    ONLY: nWave, UseElectronPressure
     use ModConst,      ONLY: cBoltzmann
     use ModPhysics,    ONLY: gm1, inv_gm1, No2Si_V, Si2No_V, &
          UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
@@ -1082,7 +1100,11 @@ contains
           Ee = inv_gm1*State_V(Pe_) + State_V(ExtraEint_)
           Te = sqrt(sqrt(Ee/cRadiationNo))
        else
-          Pressure = State_V(p_)
+          if(UseElectronPressure)then
+             Pressure = State_V(Pe_)
+          else
+             Pressure = State_V(p_)
+          end if
           pSi = Pressure*No2Si_V(UnitP_)
           Te = Pressure/Rho
        end if

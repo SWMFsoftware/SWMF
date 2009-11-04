@@ -1762,6 +1762,7 @@ contains
     use ModMultiFluid
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
     use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
+    use ModPhysics,  ONLY: gm1
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
@@ -1871,7 +1872,14 @@ contains
     !^CFG IF  IMPLICIT BEGIN
     if(.not.UseSemiImplicit)then
        if(UseRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
-       if(UseParallelConduction) Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
+       if(UseParallelConduction)then
+          if(UseElectronPressure)then
+             Flux_V(Pe_) = Flux_V(Pe_) + gm1*HeatFlux
+          else
+             Flux_V(p_) = Flux_V(p_) + gm1*HeatFlux
+             Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
+          end if
+       end if
     end if
     !^CFG END IMPLICIT
 
