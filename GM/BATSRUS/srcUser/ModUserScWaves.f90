@@ -229,7 +229,7 @@ contains
     !\
     ! Update BCs for wave spectrum
     !/
-    if(IsInitWave) then
+    if(.not.IsInitWave) then
        BRCell = sum(RFace_D * &
             (State_VGB(Bx_:Bz_,iCell,jCell,kCell,iBlockBc) + &
             B0_DGB(:,iCell,jCell,kCell,iBlockBc)) )
@@ -243,7 +243,7 @@ contains
       
        wEnergyDens = wEnergyDensSI * Si2No_V(UnitP_)
        do iWave = AlfvenSpeedPlusFirst_,AlfvenSpeedPlusLast_
-          if(LogFreq_I(iWave-WaveFirst_+1) .le. LogFreqInertial.or.vAlfvenSi.le.0.0) then
+          if(LogFreq_I(iWave-WaveFirst_+1) .lt. LogFreqInertial.or.vAlfvenSi.le.0.0) then
              VarsGhostFace_V(iWave)=0.0
           else    
              VarsGhostFace_V(iWave) = (2.0/3.0) * DeltaLogFrequency * wEnergyDens* &
@@ -252,7 +252,7 @@ contains
        end do
 
        do iWave = AlfvenSpeedMinusFirst_,AlfvenSpeedMinusLast_
-          if(LogFreq_I(iWave-WaveFirst_+1) .le. LogFreqInertial.or.vAlfvenSi.ge.0.0) then
+          if(LogFreq_I(iWave-WaveFirst_+1) .lt. LogFreqInertial.or.vAlfvenSi.ge.0.0) then
              VarsGhostFace_V(iWave)=0.0
           else    
              VarsGhostFace_V(iWave) = (2.0/3.0) * DeltaLogFrequency * wEnergyDens* &
@@ -261,6 +261,12 @@ contains
           if(VarsGhostFace_V(iWave) < 0.0) then
              write(*,*) 'negative wave energy at inner bc'
           end if
+       end do
+    end if
+
+    if(IsInitWave) then
+       do iWave = WaveFirst_,WaveLast_
+          VarsGhostFace_V(iWave)=nWave-iWave
        end do
     end if
 
@@ -617,7 +623,7 @@ contains
          status='replace',iostat=iError)
     write(iUnit,'(i6.6)') nWave/2
     write(iUnit,'(i6.6)') nCell
-
+    close(iUnit)
     !\
     ! Write data file
     !/
