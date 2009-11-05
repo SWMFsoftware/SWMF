@@ -41,7 +41,7 @@ subroutine get_weimer_potential
 
 
      call get_IMF_Bz(CurrentTime, temp, iError)
-     write(*,*) temp
+     
      call IO_SetIMFBz(temp)
      if (iError /= 0) then
         call con_stop("PW_ERROR:Can not find IMF Bz.")
