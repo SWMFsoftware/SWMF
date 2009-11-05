@@ -89,7 +89,7 @@ contains
     logical :: DoSendCorner
     logical :: DoRestrictFace
 
-    integer :: iProlongOrder  ! index for 2 stage scheme for 2nd order prolong
+    integer :: iProlongStage  ! index for 2 stage scheme for 2nd order prolong
     integer :: iCountOnly     ! index for 2 stage scheme for count, sendrecv
     logical :: DoCountOnly    ! logical for count vs. sendrecv stages
 
@@ -177,12 +177,12 @@ contains
 
     call timing_stop('init_pass')
 
-    do iProlongOrder = 1, nProlongOrder
+    do iProlongStage = 1, nProlongOrder
        do iCountOnly = 1, 2
-          ! No need to send and recv messages in serial run
-          if(nProc == 1 .and. iCountOnly == 2) CYCLE
-
           DoCountOnly = iCountOnly == 1
+
+          ! No need to count data for send/recv in serial runs
+          if(nProc == 1 .and. DoCountOnly) CYCLE
 
           call timing_start('local_pass')
 
@@ -247,7 +247,7 @@ contains
                       ! Do prolongation in the second stage if nProlongOrder=2
                       ! We still need to call restriction and prolongation in
                       ! both stages to calculate the amount of received data
-                      if(iProlongOrder == 2 .and. DiLevel == 0) CYCLE
+                      if(iProlongStage == 2 .and. DiLevel == 0) CYCLE
 
                       if(DiLevel == 0)then
                          call do_equal
@@ -337,7 +337,7 @@ contains
        call buffer_to_state
        call timing_stop('buffer_to_state')
 
-    end do ! iProlongOrder
+    end do ! iProlongStage
 
     deallocate(Slope_VG)
 
@@ -407,20 +407,6 @@ contains
       real    :: WeightOld, WeightNew
       !------------------------------------------------------------------------
 
-      iRMin = iEqualR_DII(1,iDir,Min_)
-      iRMax = iEqualR_DII(1,iDir,Max_)
-      jRMin = iEqualR_DII(2,jDir,Min_)
-      jRMax = iEqualR_DII(2,jDir,Max_)
-      kRMin = iEqualR_DII(3,kDir,Min_)
-      kRMax = iEqualR_DII(3,kDir,Max_)
-
-      iSMin = iEqualS_DII(1,iDir,Min_)
-      iSMax = iEqualS_DII(1,iDir,Max_)
-      jSMin = iEqualS_DII(2,jDir,Min_)
-      jSMax = iEqualS_DII(2,jDir,Max_)
-      kSMin = iEqualS_DII(3,kDir,Min_)
-      kSMax = iEqualS_DII(3,kDir,Max_)
-
       iSend = (3*iDir + 3)/2
       jSend = (3*jDir + 3)/2
       kSend = (3*kDir + 3)/2
@@ -429,7 +415,32 @@ contains
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
-      if(iProc == iProcRecv .and. .not. DoCountOnly) RETURN
+      ! No need to count data for local copy
+      if(DoCountOnly .and. iProc == iProcRecv) RETURN
+
+      iRMin = iEqualR_DII(1,iDir,Min_)
+      iRMax = iEqualR_DII(1,iDir,Max_)
+      jRMin = iEqualR_DII(2,jDir,Min_)
+      jRMax = iEqualR_DII(2,jDir,Max_)
+      kRMin = iEqualR_DII(3,kDir,Min_)
+      kRMax = iEqualR_DII(3,kDir,Max_)
+
+      if(DoCountOnly)then
+         ! Number of reals to send to and received from the other processor
+         nSize = nVar*(iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1) &
+              + 1 + 2*nDim
+         if(present(Time_B)) nSize = nSize + 1
+         nBufferR_P(iProcRecv) = nBufferR_P(iProcRecv) + nSize
+         nBufferS_P(iProcRecv) = nBufferS_P(iProcRecv) + nSize
+         RETURN
+      end if
+
+      iSMin = iEqualS_DII(1,iDir,Min_)
+      iSMax = iEqualS_DII(1,iDir,Max_)
+      jSMin = iEqualS_DII(2,jDir,Min_)
+      jSMax = iEqualS_DII(2,jDir,Max_)
+      kSMin = iEqualS_DII(3,kDir,Min_)
+      kSMax = iEqualS_DII(3,kDir,Max_)
 
       if(iProc == iProcRecv)then
          ! Local copy
@@ -446,13 +457,6 @@ contains
             State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv)= &
                  State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend)
          end if
-      elseif(DoCountOnly)then
-         ! Number of reals to send to and received from the other processor
-         nSize = nVar*(iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1) &
-              + 1 + 2*nDim
-         if(present(Time_B)) nSize = nSize + 1
-         nBufferR_P(iProcRecv) = nBufferR_P(iProcRecv) + nSize
-         nBufferS_P(iProcRecv) = nBufferS_P(iProcRecv) + nSize
       else
          ! Put data into the send buffer
          iBufferS = iBufferS_P(iProcRecv)
@@ -518,10 +522,10 @@ contains
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
-      if(iProc == iProcRecv .and. .not. DoCountOnly) RETURN
+      ! No need to count data for local copy
+      if(DoCountOnly .and. iProc == iProcRecv) RETURN
 
-      if(DoCountOnly .and. &
-           iProc /= iProcRecv .and. iProlongOrder == nProlongOrder)then
+      if(DoCountOnly .and. iProlongStage == nProlongOrder)then
          ! This processor will receive a prolonged buffer from
          ! the other processor and the "recv" direction of the prolongations
          ! will be the same as the "send" direction for this restriction:
@@ -541,7 +545,7 @@ contains
       end if
 
       ! If this is the pure prolongation stage, all we did was counting
-      if(iProlongOrder == 2) RETURN
+      if(iProlongStage == 2) RETURN
 
       iRecv = iSend - 3*iDir
       jRecv = jSend - 3*jDir
@@ -555,7 +559,7 @@ contains
       kRMin = iRestrictR_DII(3,kRecv,Min_)
       kRMax = iRestrictR_DII(3,kRecv,Max_)
 
-      if(DoCountOnly .and. iProc /= iProcRecv)then
+      if(DoCountOnly)then
          ! Number of reals to send to the other processor
          nSize = nVar*(iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1) &
               + 1 + 2*nDim 
@@ -564,7 +568,7 @@ contains
          RETURN
       end if
 
-      ! Sending range depends on iDir,jDir,kDir only
+      ! Index range that gets restricted depends on iDir,jDir,kDir only
       iSMin = iRestrictS_DII(1,iDir,Min_)
       iSMax = iRestrictS_DII(1,iDir,Max_)
       jSMin = iRestrictS_DII(2,jDir,Min_)
@@ -683,7 +687,7 @@ contains
          do jSide = (1-jDir)/2, 1-(1+jDir)/2, 3-jRatio
             jSend = (3*jDir + 3 + jSide)/2
             jRecv = jSend - 3*jDir
-            do iSide = (1-iDir)/2, 1-(1+iDir)/2
+            do iSide = (1-iDir)/2, 1-(1+iDir)/2, 3-iRatio
                iSend = (3*iDir + 3 + iSide)/2
                iRecv = iSend - 3*iDir
 
@@ -691,10 +695,10 @@ contains
                iProcRecv  = iTree_IA(Proc_,iNodeRecv)
                iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
-               if(iProc == iProcRecv .and. .not. DoCountOnly) CYCLE
+               ! No need to count data for local copy
+               if(DoCountOnly .and. iProc == iProcRecv) CYCLE
 
-               if(DoCountOnly .and. &
-                    iProc /= iProcRecv .and. iProlongOrder == 1)then
+               if(DoCountOnly .and. iProlongStage == 1)then
                   ! This processor will receive a restricted buffer from
                   ! the other processor and the "recv" direction of the
                   ! restriction will be the same as the "send" direction for
@@ -714,7 +718,7 @@ contains
                end if
 
                ! For 2nd order prolongation no prolongation is done in stage 1
-               if(iProlongOrder < nProlongOrder) CYCLE
+               if(iProlongStage < nProlongOrder) CYCLE
 
                ! Receiving range depends on iRecv,kRecv,jRecv = 0..3
                iRMin = iProlongR_DII(1,iRecv,Min_)
@@ -724,7 +728,7 @@ contains
                kRMin = iProlongR_DII(3,kRecv,Min_)
                kRMax = iProlongR_DII(3,kRecv,Max_)
 
-               if(DoCountOnly .and. iProc /= iProcRecv)then
+               if(DoCountOnly)then
                   ! Number of reals to send to the other processor
                   nSize = nVar*(iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1)&
                        + 1 + 2*nDim
