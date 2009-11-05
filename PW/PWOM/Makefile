@@ -115,13 +115,13 @@ test_restart:
 
 test_restart_save:
 	cp data/input/${PLANET}/restart_iline* ${TESTDIR}/PW/restartIN/
-	cp input/${PLANET}/pw.input.restartsave ${TESTDIR}/pw.input
+	cp input/${PLANET}/PARAM.in.restartsave ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./PWOM.exe
 	cd ${TESTDIR}; mv PW/restartOUT/* PW/restartIN/
 	cd ${TESTDIR}/PW; rm -rf plot_save; mv plots plots_save; mkdir plots
 
 test_restart_read:
-	cp input/${PLANET}/pw.input.restartread ${TESTDIR}/pw.input
+	cp input/${PLANET}/PARAM.in.restartread ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./PWOM.exe
 	cd ${TESTDIR}/PW; \
 	rm -rf plots_read; mv plots plots_read; mv plots_save plots
@@ -144,7 +144,7 @@ rundir:
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR}; \
 			ln -s ${BINDIR}/PWOM.exe .; \
-			cp ${PWDIR}/input/${PLANET}/pw.input .; \
+			cp ${PWDIR}/input/${PLANET}/PARAM.in .; \
 			touch core ; chmod 444 core ; \
 			ln -s PW/* .; \
 	fi)

@@ -22,9 +22,9 @@ program pw
   ! Read the input file
   !****************************************************************************
   IsStandAlone = .true.
-  NameInput    = 'pw.input'
+  NameInput    = 'PARAM.in'
 
-  call read_file('pw.input',iComm)
+  call read_file('PARAM.in',iComm)
   call read_init('  ',iSessionIn=1,iLineIn=0)
 
   call PW_set_parameters('READ')
