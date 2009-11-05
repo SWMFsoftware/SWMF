@@ -111,7 +111,7 @@ contains
 
           if(datatype.eq.1) then
              ! OLD NOAA HPI FILES
-             read(LunIndices_,'(i4)', iostat = ierror ) iYear
+             if (i==1) read(LunIndices_,'(i4)', iostat = ierror ) iYear
              tmp(1,i) = iYear
              tmp(2,i) = 1
              read(LunIndices_,'(a10,f3.0,f2.0,f2.0,f8.1)', iostat = ierror ) &
