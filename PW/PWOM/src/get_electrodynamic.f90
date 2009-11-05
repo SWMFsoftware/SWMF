@@ -7,7 +7,7 @@ subroutine PW_get_electrodynamics
   use ModIoUnit, ONLY: UnitTmp_
   use ModPWOM
   use ModNumConst, ONLY:cDegToRad
-!  use ModAurora , ONLY: set_Emax,set_theta0
+  use ModAurora , ONLY: set_aurora
   use ModCommonVariables,ONLY:Ap
   implicit none
 
@@ -65,6 +65,14 @@ subroutine PW_get_electrodynamics
      endif
 
   end if
+  
+  ! Set AvE_G and Eflux_G when using empirical Aurora
+  if (UseAurora) then
+     call set_aurora
+     AvE_G  (1:nPhi,1:nTheta) = ElectronAverageEnergy_C(1:nPhi,1:nTheta)
+     Eflux_G(1:nPhi,1:nTheta) = ElectronEnergyFlux_C   (1:nPhi,1:nTheta)
+  end if
+
 !******************************************************************************
 !  Calc Bfield components
 !******************************************************************************
@@ -116,7 +124,7 @@ subroutine PW_get_electrodynamics
   enddo
 
   ! Fill ghost cells for AvE and Eflux from IE when UseIE=T, else set to 0
-  if (UseIE) then
+  if (UseIE .or. UseAurora) then
      AvE_G  (nPhi+1,1:nTheta)  = AvE_G  (2,1:nTheta)     
      Eflux_G(nPhi+1,1:nTheta)  = Eflux_G(2,1:nTheta)     
      AvE_G  (0,1:nTheta)       = AvE_G  (nPhi-1,1:nTheta)

@@ -19,150 +19,42 @@ Module ModAurora
 
 
   integer,parameter :: nSpecies = 3
-contains
-  !============================================================================
-  
-  real function get_etop(GmLat,GmLon)
-    !returns topside electron energy input
-    use ModNumConst, ONLY:cPi,cDegToRad
-    
-    real,intent(in) :: GmLat,GmLon
-    real :: Theta,Phi,DeltaTheta,DeltaPhi
-    real :: eTopMax
-    !--------------------------------------------------------------------------
-    Theta=cPi/2-GmLat*cDegToRad
-    Phi = GmLon*cDegToRad
-    eTopMax = 10.0*E0
-    ! If point is inside aurora return auroral etop value, else return default
-    
-    if(Theta > Theta0-dtheta/2 .and. Theta < Theta0+dtheta/2 &
-         .and. phi > 0.5*cPi .and. phi < 1.5*cPi) then
-       DeltaTheta = abs(Theta-Theta0)
-       DeltaPhi = abs(Phi - cPi)
-       get_etop = &
-            (1 - 2.0*DeltaPhi/cPi)*(eTopMax-(eTopMax-E0)*DeltaTheta/dtheta)
-       
-    else
-       get_etop = E0
-    endif
-    
-  end function get_etop
-  
-  !============================================================================
-  !============================================================================
-  
-  real function get_eflux(GmLat,GmLon)
-    !returns topside electron energy input
-    use ModNumConst, ONLY:cPi,cDegToRad
-    
-    real,intent(in) :: GmLat,GmLon
-    real :: Theta,Phi,DeltaTheta,DeltaPhi
-    !--------------------------------------------------------------------------
-    Theta=cPi/2-GmLat*cDegToRad
-    Phi = GmLon*cDegToRad
-    
-    ! If point is inside aurora return auroral etop value, else return default
-    
-    if(Theta > Theta0-dtheta/2 .and. Theta < Theta0+dtheta/2 &
-         .and. phi > 0.5*cPi .and. phi < 1.5*cPi) then
-       DeltaTheta = abs(Theta-Theta0)
-       DeltaPhi = abs(Phi - cPi)
-       get_eflux = (1 - 2.0*DeltaPhi/cPi)*(Emax-(Emax-E0)*DeltaTheta/dtheta)
-       
-    else
-       get_eflux = E0
-    endif
-    
-  end function get_eflux
-  
-  !============================================================================
-  !============================================================================
-  
-  real function get_eAverageE(GmLat,GmLon)
-    !returns average precipitating energy
-    use ModNumConst, ONLY:cPi,cDegToRad
-    
-    real,intent(in) :: GmLat,GmLon
-    real :: Theta,Phi,DeltaTheta,DeltaPhi
-    real,parameter:: AveE0=.2, AveEmax=.75
-    !--------------------------------------------------------------------------
-    Theta=cPi/2-GmLat*cDegToRad
-    Phi = GmLon*cDegToRad
-    
-    ! If point is inside aurora return auroral etop value, else return default
-    
-    if(Theta > Theta0-dtheta/2 .and. Theta < Theta0+dtheta/2 &
-         .and. phi > 0.5*cPi .and. phi < 1.5*cPi) then
-       DeltaTheta = abs(Theta-Theta0)
-       DeltaPhi = abs(Phi - cPi)
-       get_eAverageE = &
-            (1 - 2.0*DeltaPhi/cPi)*(AveEmax-(AveEmax-AveE0)*DeltaTheta/dtheta)
-       
-    else
-       get_eAverageE = AveE0
-    endif
-    
-  end function get_eAverageE
-  
-  !============================================================================
-  
-  subroutine set_Emax(Ap)
-    real,intent(in) :: Ap
-    !--------------------------------------------------------------------------
-    
-    Emax=1.0+7.0*Ap/207.0
-  end subroutine set_Emax
-  
-  !============================================================================
-  
-  subroutine set_theta0(nPhi,nTheta,uExBphi_C,uExBtheta_C,Theta_G)
-    use ModPWOM, ONLY: DoMoveLine
-    integer,intent(in) :: nPhi,nTheta
-    real   ,intent(in) :: uExBphi_C(nPhi,nTheta),uExBtheta_C(nPhi,nTheta)
-    real   ,intent(in) :: Theta_G(0:nPhi+1,0:nTheta+1)
-    real,parameter :: AlphaMax = 0.5            !30 degrees  
-    real,parameter :: ThetaMin = 0.174532925199 !10 degrees  
-    integer:: iPhi,iTheta
-    real :: Alpha
-    
-    !--------------------------------------------------------------------------
-    iPhi = nPhi/2
-    do iTheta=nTheta,1,-1
-       Theta0=Theta_G(iPhi,iTheta)
-       if (.not. DoMoveLine) return
-       Alpha = atan(uExBtheta_C(iPhi,iTheta)/uExBphi_C(iPhi,iTheta))
-       
-       if (Alpha >= AlphaMax .or. Theta0 <= ThetaMin ) then
-          return
-       endif
-    enddo
-  end subroutine set_theta0
-  
+contains  
   !============================================================================
   subroutine set_aurora
     use ModNumConst,ONLY:cPi,cHalfPi,cRadToDeg
     Use ModPWOM,    ONLY: ElectronAverageEnergy_C,ElectronEnergyFlux_C,&
-                          UseAurora,nLine, PhiLine_I,ThetaLine_I,Time
+                          UseAurora,nLine, PhiLine_I,ThetaLine_I,Time, &
+                          nLon => nPhi, nLat => nTheta, Theta_G, Phi_G
     use ModPwTime,  ONLY: CurrentTime,StartTime
     use ModIndicesInterfaces, only: get_HPI
 
     real, allocatable ::MLT_II(:,:), MLatitude_II(:,:)
-    integer :: iLine, iLat, iLon, nLat, nLon, iError
+    integer :: iLine, iLat, iLon, iError
     real    :: temp
     !--------------------------------------------------------------------------
     
-    ! Allocated and set reduced grid of fieldline foot points
+!    ! Allocated and set reduced grid of fieldline foot points
+!    if (.not.allocated(MLT_II)) &
+!         allocate(MLT_II(nLine,nLine),MLatitude_II(nLine,nLine))
+!    if (.not.allocated(ElectronAverageEnergy_C)) &
+!         allocate(ElectronAverageEnergy_C(nLine,nLine),ElectronEnergyFlux_C(nLine,nLine))
+!    
+!    nLat = nLine
+!    nLon = nLine
+!    do iLine = 1,nLine 
+!       MLT_II(iLine,1:nLat)=mod(PhiLine_I(iLine)*12.0/cPi+12.0,24.0)
+!       MLatitude_II(1:nLon,iLine)=(cHalfPi-ThetaLine_I(iLine))*cRadToDeg
+!    enddo
+
+    ! Allocated and set grid to match electrodynamics grid
     if (.not.allocated(MLT_II)) &
-         allocate(MLT_II(nLine,nLine),MLatitude_II(nLine,nLine))
+         allocate(MLT_II(nLon,nLat),MLatitude_II(nLon,nLat))
     if (.not.allocated(ElectronAverageEnergy_C)) &
-         allocate(ElectronAverageEnergy_C(nLine,nLine),ElectronEnergyFlux_C(nLine,nLine))
+         allocate(ElectronAverageEnergy_C(nLon,nLat),ElectronEnergyFlux_C(nLon,nLat))
     
-    nLat = nLine
-    nLon = nLine
-    do iLine = 1,nLine 
-       MLT_II(iLine,1:nLat)=mod(PhiLine_I(iLine)*12.0/cPi+12.0,24.0)
-       MLatitude_II(1:nLon,iLine)=(cHalfPi-ThetaLine_I(iLine))*cRadToDeg
-    enddo
+    MLT_II      (1:nLon,1:nLat) = mod(Phi_G(1:nLon,1:nLat)*12.0/cPi+12.0,24.0)
+    MLatitude_II(1:nLon,1:nLat) = (cHalfPi-Theta_G(1:nLon,1:nLat))*cRadToDeg
 
     call IO_SetnMLTs(nLon)
     call IO_SetnLats(nLat)
@@ -193,7 +85,7 @@ contains
        write(*,*) iError
        call con_stop("Stopping in set_aurora")
     endif
-    
+
     do iLat=1,nLat
        do iLon=1,nLon
           if (ElectronAverageEnergy_C(iLon,iLat) < 0.0) then
@@ -216,6 +108,7 @@ contains
        write(*,*) iError
        call con_stop("Stopping in set_aurora")
     endif
+
     
   end subroutine set_aurora
   !============================================================================

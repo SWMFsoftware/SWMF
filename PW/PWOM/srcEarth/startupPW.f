@@ -279,10 +279,10 @@ C                                                                      C
 
 
       
-      if(UseAurora) then
-         call get_aurora(nDim,AltD(1:nDim),NDensity_CI(1:nDim,O_:N2_),
-     &        NeutralPressure_C(1:nDim)*0.1)
-      endif
+!      if(UseAurora) then
+!         call get_aurora(nDim,AltD(1:nDim),NDensity_CI(1:nDim,O_:N2_),
+!     &        NeutralPressure_C(1:nDim)*0.1)
+!      endif
       	
       call  get_ionization(nDim, AltD(1:nDim), IonRateO_C(1:nDim))		
 
@@ -305,7 +305,7 @@ C                                                                      C
 C      READ (5,2) ETOP,ELFXIN
 c      ETOP=5.0E-3
 
-      if (UseIE .and. (GmLat < 85.0 .and. GmLat > -85.0)
+      if ((UseIE .or. UseAurora) .and. (GmLat < 85.0 .and. GmLat > -85.0)
      &     .and. UseAuroralHeatFlux) then
          ETOP = max (EfluxIE/EfluxRef * EtopAurora, EtopMin)
       else

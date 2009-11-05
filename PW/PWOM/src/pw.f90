@@ -293,10 +293,10 @@ subroutine PW_advance_line
      DoLog=.False.
   endif
 
-  if (UseAurora) then
-     call set_aurora
-     call set_auroral_rates
-  endif
+!  if (UseAurora) then
+!     call set_aurora
+!     call set_auroral_rates
+!  endif
 
   call put_field_line(nAlt,&
        State_CVI(:,:,iLine),&

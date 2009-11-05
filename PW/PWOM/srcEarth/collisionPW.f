@@ -241,15 +241,15 @@ CALEX These are the energy collision terms as seen in eq 4.86 in Nagy
      &     +NDensity_CI(I,O_)/(16.0*xamu)+NDensity_CI(I,O2_)/(32.0*xamu)
      &     +NDensity_CI(I,N2_)/(28.0*xamu)+NDensity_CI(I,H_)/(xamu)
      &     +NDensity_CI(I,He_)/(4.0*xamu)
-      if (UseAurora)then
-         AuroralHeatCoef = (StateIn_GV(I,RhoO_)/Mass_I(Ion1_)**2.0)
-     &                     / AuroralHeatCoefLower
-         Source_CV(I,pO_) =
-     &        StateIn_GV(I,RhoO_)*Source_CV(I,pO_)+AuroralHeatCoef*HeatingRate_C(I)
-      else
+!      if (UseAurora)then
+!         AuroralHeatCoef = (StateIn_GV(I,RhoO_)/Mass_I(Ion1_)**2.0)
+!     &                     / AuroralHeatCoefLower
+!         Source_CV(I,pO_) =
+!     &        StateIn_GV(I,RhoO_)*Source_CV(I,pO_)+AuroralHeatCoef*HeatingRate_C(I)
+!      else
          Source_CV(I,pO_) =
      &        StateIn_GV(I,RhoO_)*Source_CV(I,pO_)
-      endif
+!      endif
 
 
       do jSpecies=1,nSpecies
@@ -258,13 +258,13 @@ CALEX These are the energy collision terms as seen in eq 4.86 in Nagy
      & + dU2_II(Ion2_,jSpecies)
      &  *FricHeatCoef_II(Ion2_,jSpecies)*CollisionFreq_IIC(Ion2_,jSpecies,I)
       enddo
-      if (UseAurora)then
-         AuroralHeatCoef = (StateIn_GV(I,RhoH_)/Mass_I(Ion2_)**2.0)
-     &        / AuroralHeatCoefLower
-         Source_CV(I,pH_) =StateIn_GV(I,RhoH_)*Source_CV(I,pH_)+AuroralHeatCoef*HeatingRate_C(I) 
-      else
+!      if (UseAurora)then
+!         AuroralHeatCoef = (StateIn_GV(I,RhoH_)/Mass_I(Ion2_)**2.0)
+!     &        / AuroralHeatCoefLower
+!         Source_CV(I,pH_) =StateIn_GV(I,RhoH_)*Source_CV(I,pH_)+AuroralHeatCoef*HeatingRate_C(I) 
+!      else
          Source_CV(I,pH_) =StateIn_GV(I,RhoH_)*Source_CV(I,pH_)
-      endif
+!      endif
 
       do jSpecies=1,nSpecies
          if(Ion3_ /= jSpecies) Source_CV(I,pHe_) = Source_CV(I,pHe_) - dT_II(Ion3_,jSpecies)
@@ -272,13 +272,13 @@ CALEX These are the energy collision terms as seen in eq 4.86 in Nagy
      & + dU2_II(Ion3_,jSpecies)
      &  *FricHeatCoef_II(Ion3_,jSpecies)*CollisionFreq_IIC(Ion3_,jSpecies,I)
       enddo
-      if (UseAurora)then
-         AuroralHeatCoef = (StateIn_GV(I,RhoHe_)/Mass_I(Ion3_)**2.0)
-     &        / AuroralHeatCoefLower 
-         Source_CV(I,pHe_) =StateIn_GV(I,RhoHe_)*Source_CV(I,pHe_)+AuroralHeatCoef*HeatingRate_C(I) 
-      else
+!      if (UseAurora)then
+!         AuroralHeatCoef = (StateIn_GV(I,RhoHe_)/Mass_I(Ion3_)**2.0)
+!     &        / AuroralHeatCoefLower 
+!         Source_CV(I,pHe_) =StateIn_GV(I,RhoHe_)*Source_CV(I,pHe_)+AuroralHeatCoef*HeatingRate_C(I) 
+!      else
          Source_CV(I,pHe_) =StateIn_GV(I,RhoHe_)*Source_CV(I,pHe_)
-      endif
+!      endif
 
       do jSpecies=1,nSpecies
          if(Ion4_ /= jSpecies) Source_CV(I,pE_) = Source_CV(I,pE_) - dT_II(Ion4_,jSpecies)
