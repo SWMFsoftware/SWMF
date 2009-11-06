@@ -235,7 +235,7 @@ end subroutine DRIFTR
 	integer :: i,j,k,l,n,isign,imag
 	real :: fup,RR,corr,x
 	real :: fbc
-
+!------------------------------------------------------
   	do I=2,IO
 	 do K=2,KO
 	  do L=2,LO
@@ -310,6 +310,9 @@ end subroutine DRIFTR
 	 end do	! big K loop
 	end do	! big I loop
 
+
+        
+ 
 	return
       end subroutine DRIFTP
 ! 
@@ -321,116 +324,122 @@ end subroutine DRIFTR
 !	Routine calculates the change of distribution function due to
 !	energization along the drift path and Coulomb energy decay
 !***********************************************************************
-	subroutine DRECOUL
-
+      subroutine DRECOUL
+        
 	use ModHeidiSize
 	use ModHeidiIO
 	use ModHeidiMain
 	use ModHeidiDrifts
-
+        use ModIoUnit, ONLY : UNITTMP_
+        
 	implicit none
-
+        
 	real :: FBND(NE),F(0:NE+2),C(NE),LIMITER,corr,fup,RR,x,CD
 	integer :: i,j,k,l,n,isign
 	real :: fbc
-
+!--------------------------------------------------------
+        
 	do J=1,JO
-	 do I=2,ILMP(J)
-	  do L=2,LO
-	   do k=0,KO+2
-	    F(K)=0.
-	   end do
-	   do k=1,KO
-	    C(k)=0.
-	   end do 
-!	   do K=1,KO
-!		F(K)=F2(I,J,K,L,S)
-		f(1:ko)=f2(i,j,1:ko,l,s)
-!	   end do
-	   do K=1,KO
-	    C(K)=EDOT(I,J,K,L)*VR(I,J)+(COULE(I,j,K,L,S)+COULI(I,j,K,L,S))*XNE(I,J)
-!	    C(K)=AMIN1(0.99,AMAX1(-0.99,C(K)))
-	    ISIGN=1
-	    if (C(K).ne.abs(C(K))) ISIGN=-1
-	    X=F(K+1)-F(K)
-	    FUP=0.5*(F(K)+F(K+1)-ISIGN*X)
-	    if (abs(X).le.1.E-27) FBND(K)=FUP
-	    if (abs(X).gt.1.E-27) then
-		N=K+1-ISIGN
- 		RR=(F(N)-F(N-1))/X
-		if (RR.le.0) FBND(K)=FUP
-		if (RR.gt.0) then
-		  LIMITER=AMAX1(AMIN1(2.*RR,1.),AMIN1(RR,2.))
-		  CORR=-0.5*(C(K)-ISIGN)*X
-		  FBND(K)=FUP+LIMITER*CORR
-		end if
-	    end if
-	   end do	! K loop
-
-	   do K=2,KO
-		F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(K)*FBND(K)*DE(K)/WE(K)   &
-     		  +C(K-1)*FBND(K-1)*DE(K-1)/WE(K)
-	   end do
-
+           do I=2,ILMP(J)
+              do L=2,LO
+                 do k=0,KO+2
+                    F(K)=0.
+                 end do
+                 do k=1,KO
+                    C(k)=0.
+                 end do
+                 !	   do K=1,KO
+                 !		F(K)=F2(I,J,K,L,S)
+                 f(1:ko)=f2(i,j,1:ko,l,s)
+                 !	   end do
+                 do K=1,KO
+                    C(K)=EDOT(I,J,K,L)*VR(I,J)+(COULE(I,j,K,L,S)+COULI(I,j,K,L,S))*XNE(I,J)
+                    
+                    !	    C(K)=AMIN1(0.99,AMAX1(-0.99,C(K)))
+                    ISIGN=1
+                    if (C(K).ne.abs(C(K))) ISIGN=-1
+                    X=F(K+1)-F(K)
+                    FUP=0.5*(F(K)+F(K+1)-ISIGN*X)
+                    if (abs(X).le.1.E-27) FBND(K)=FUP
+                    if (abs(X).gt.1.E-27) then
+                       N=K+1-ISIGN
+                       RR=(F(N)-F(N-1))/X
+                       if (RR.le.0) FBND(K)=FUP
+                       if (RR.gt.0) then
+                          LIMITER=AMAX1(AMIN1(2.*RR,1.),AMIN1(RR,2.))
+                          CORR=-0.5*(C(K)-ISIGN)*X
+                          FBND(K)=FUP+LIMITER*CORR
+                       end if
+                    end if
+                 end do	! K loop
+                 
+                 
+                 do K=2,KO
+                    F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(K)*FBND(K)*DE(K)/WE(K)   &
+                         +C(K-1)*FBND(K-1)*DE(K-1)/WE(K)
+                    
+                 end do
+                 
+                 
 !.......Keep track of sources and losses, separately for drift and CC
 !	Actually a net values for each, adding the sources and
 !	subtracting the losses
 !	Note: particle changes only at the Erange boundaries, while
 !	energy changes throughout the range; E endpoints done in loop
-	   CD=EDOT(I,J,1,L)*VR(I,J)*DE(1)/WE(2)	! Drift at K=1,2 bnd
-	   if (CD.gt.0) then
-	     ESN=ESN+CD*FBND(1)*CONSL(2,S)*WE(2)*WMU(L)*DR*DPHI
-	   else
-	     ELN=ELN-CD*FBND(1)*CONSL(2,S)*WE(2)*WMU(L)*DR*DPHI
-	   end if
-	   CD=C(1)*DE(1)/WE(2)-CD		! CC at K=1,2 bnd
-	   ECN=ECN+CD*FBND(1)*CONSL(2,S)*WE(2)*WMU(L)*DR*DPHI
-	   CD=EDOT(I,J,KO,L)*VR(I,J)*DE(KO)/WE(KO)	! Drift at K=KO
-	   if (CD.le.0) then
-	     ESN=ESN-CD*FBND(KO)*CONSL(KO,S)*WE(KO)*WMU(L)*DR*DPHI
-	   else 
-	     ELN=ELN+CD*FBND(KO)*CONSL(KO,S)*WE(KO)*WMU(L)*DR*DPHI
-	   end if
-	   CD=C(KO)*DE(KO)/WE(KO)-CD		! CC at K=KO
-	   ECN=ECN-CD*FBND(KO)*CONSL(KO,S)*WE(KO)*WMU(L)*DR*DPHI
-	   do K=2,KO				! Now do energy changes
-	     CD=EDOT(I,J,K-1,L)*VR(I,J)*DE(K-1)/WE(K)	! Drift at lower bnd
-	     if (CD.gt.0) then
-	       ESE=ESE+CD*FBND(K-1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
-	     else
-	       ELE=ELE-CD*FBND(K-1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
-	     end if
-	     CD=C(K-1)*DE(K-1)/WE(K)-CD		! CC at lower bnd
-	     ECE=ECE+CD*FBND(K-1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
-	     CD=EDOT(I,J,K,L)*VR(I,J)*DE(K)/WE(K)	! Drift at upper bnd
-	     if (CD.le.0) then
-	       ESE=ESE-CD*FBND(K)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
-	     else
-	       ELE=ELE+CD*FBND(K)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
-	     end if
-	     CD=C(K)*DE(K)/WE(K)-CD		! CC at upper bnd 
-	     ECE=ECE-CD*FBND(K)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
-	   end do
-
-	  end do	! End L loop
-
-! dayside BC for IBC=1
-	  if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then
-	    do L=UPA(I),LO
-	     do K=2,KO
-	      F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
-	     end do
-	    end do
-	  end if
-
-	 end do	! I loop
+                 CD=EDOT(I,J,1,L)*VR(I,J)*DE(1)/WE(2)	! Drift at K=1,2 bnd
+                 if (CD.gt.0) then
+                    ESN=ESN+CD*FBND(1)*CONSL(2,S)*WE(2)*WMU(L)*DR*DPHI
+                 else
+                    ELN=ELN-CD*FBND(1)*CONSL(2,S)*WE(2)*WMU(L)*DR*DPHI
+                 end if
+                 CD=C(1)*DE(1)/WE(2)-CD		! CC at K=1,2 bnd
+                 ECN=ECN+CD*FBND(1)*CONSL(2,S)*WE(2)*WMU(L)*DR*DPHI
+                 CD=EDOT(I,J,KO,L)*VR(I,J)*DE(KO)/WE(KO)	! Drift at K=KO
+                 if (CD.le.0) then
+                    ESN=ESN-CD*FBND(KO)*CONSL(KO,S)*WE(KO)*WMU(L)*DR*DPHI
+                 else 
+                    ELN=ELN+CD*FBND(KO)*CONSL(KO,S)*WE(KO)*WMU(L)*DR*DPHI
+                 end if
+                 CD=C(KO)*DE(KO)/WE(KO)-CD		! CC at K=KO
+                 ECN=ECN-CD*FBND(KO)*CONSL(KO,S)*WE(KO)*WMU(L)*DR*DPHI
+                 do K=2,KO				! Now do energy changes
+                    CD=EDOT(I,J,K-1,L)*VR(I,J)*DE(K-1)/WE(K)	! Drift at lower bnd
+                    if (CD.gt.0) then
+                       ESE=ESE+CD*FBND(K-1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
+                    else
+                       ELE=ELE-CD*FBND(K-1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
+                    end if
+                    CD=C(K-1)*DE(K-1)/WE(K)-CD		! CC at lower bnd
+                    ECE=ECE+CD*FBND(K-1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
+                    CD=EDOT(I,J,K,L)*VR(I,J)*DE(K)/WE(K)	! Drift at upper bnd
+                    if (CD.le.0) then
+                       ESE=ESE-CD*FBND(K)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
+                    else
+                       ELE=ELE+CD*FBND(K)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
+                    end if
+                    CD=C(K)*DE(K)/WE(K)-CD		! CC at upper bnd 
+                    ECE=ECE-CD*FBND(K)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
+                 end do
+                 
+              end do	! End L loop
+              
+              ! dayside BC for IBC=1
+              if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then
+                 do L=UPA(I),LO
+                    do K=2,KO
+                       F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
+                    end do
+                 end do
+              end if
+              
+              
+              
+              
+           end do	! I loop
 	end do	! J loop
 
-	return
       end subroutine DRECOUL
-!
-! End of subroutine DRECOUL
-!
+
 
 !***********************************************************************
 !			DRIFTMU
@@ -592,85 +601,75 @@ end subroutine DRIFTR
 	real :: F(NPA),AN,BN,GN,RP,DENOM,RK(NPA),RL(NPA),FBC,BTAW
 	integer :: IL,i,j,k,l,ll,UL
 
+        
 	il=1				! =0 for fully implicit
 	do J=1,JO
-	 do I=2,ILMP(J)
-	  do K=2,KO
-	   do L=1,LO
-	      F(L)=F2(I,J,K,L,S)
-	   end do	! 1st L loop
+           do I=2,ILMP(J)
+              do K=2,KO
+                 do L=1,LO
+                    F(L)=F2(I,J,K,L,S)
+                 end do	! 1st L loop
+                 
+                 RK(2)=0.			! lower b.c.
+                 RL(2)=-CONMU1		!   "     "
+                 UL=LO-1
+                 if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18)    &
+                      UL=UPA(I)-1 
+                 do L=3,UL
+                    BTAW=ATAW(I,J,K,L)+GTAW(I,J,K,L)
+                    AN=(ATAI(i,j,K,L,S)+ATAE(i,j,K,L,S))*XNE(I,J)+IWPI*ATAW(I,J,K,L)
+                    BN=(BTAI(i,j,K,L,S)+BTAE(i,j,K,L,S))*XNE(I,J)+IWPI*BTAW
+                    GN=(GTAI(i,j,K,L,S)+GTAE(i,j,K,L,S))*XNE(I,J)+IWPI*GTAW(I,J,K,L)
 
-	   RK(2)=0.			! lower b.c.
-	   RL(2)=-CONMU1		!   "     "
-	   UL=LO-1
-	   if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18)    &
-     		UL=UPA(I)-1 
-	   do L=3,UL
-	    BTAW=ATAW(I,J,K,L)+GTAW(I,J,K,L)
-	    AN=(ATAI(i,j,K,L,S)+ATAE(i,j,K,L,S))*XNE(I,J)+IWPI*ATAW(I,J,K,L)
-	    BN=(BTAI(i,j,K,L,S)+BTAE(i,j,K,L,S))*XNE(I,J)+IWPI*BTAW
-	    GN=(GTAI(i,j,K,L,S)+GTAE(i,j,K,L,S))*XNE(I,J)+IWPI*GTAW(I,J,K,L)
-	    if (L.ge.UPA(I)) then
-	     ll=UPA(I)-1
-	     BTAW=ATAW(I,J,K,LL)+GTAW(I,J,K,LL)
-	     AN=(ATAI(i,j,K,LL,S)+ATAE(i,j,K,LL,S))*XNE(I,J)+IWPI*ATAW(I,J,K,LL)
-	     BN=(BTAI(i,j,K,LL,S)+BTAE(i,j,K,LL,S))*XNE(I,J)+IWPI*BTAW
-	     GN=(GTAI(i,j,K,LL,S)+GTAE(i,j,K,LL,S))*XNE(I,J)+IWPI*GTAW(I,J,K,LL)
-	    end if
-	    if (il.eq.0) then
-	      AN=2.*AN
-	      BN=2.*BN
-	      GN=2.*GN
-	      RP=F(L)
-	    else
-	      RP=AN*F(L+1)+(1.-BN)*F(L)+GN*F(L-1)
-	    end if
-	    if (RP.lt.0.) il=0
-	    DENOM=BN+GN*RL(L-1)+1.
-	    RK(L)=(RP+GN*RK(L-1))/DENOM
-	    RL(L)=-AN/DENOM
-!	    IF (RK(L).LT.-1.E-29 .OR. ABS(RL(L)+.5).GT.0.50001) THEN
-!	       LL=L
-!	       IF (L.GE.UPA(I)) LL=UPA(I)-1
-!	       print 51,I,J,K,L,LL,IWPI,RK(L),RL(L),AN,BN,GN
-!	       print 52,ATAI(K,LL),ATAE(K,LL),ATAW(I,J,K,LL),BTAI(K,LL),   &
-!                 BTAE(K,LL),GTAI(K,LL),GTAE(K,LL),GTAW(I,J,K,LL)
-!	       print 52,F(L-1),F(L),F(L+1),DENOM,RP,RL(L-1),RK(L-1),i,   &
-!      		 XNE(I,J)
-!	       STOP
-!51		FORMAT (6I4,1P,5E11.3)
-!52		FORMAT (1P,8E10.2)
-!	    END IF
-	   end do	! 2nd L loop
+                    if (L.ge.UPA(I)) then
+                       ll=UPA(I)-1
+                       BTAW=ATAW(I,J,K,LL)+GTAW(I,J,K,LL)
+                       AN=(ATAI(i,j,K,LL,S)+ATAE(i,j,K,LL,S))*XNE(I,J)+IWPI*ATAW(I,J,K,LL)
+                       BN=(BTAI(i,j,K,LL,S)+BTAE(i,j,K,LL,S))*XNE(I,J)+IWPI*BTAW
+                       GN=(GTAI(i,j,K,LL,S)+GTAE(i,j,K,LL,S))*XNE(I,J)+IWPI*GTAW(I,J,K,LL)
+                       
+                    end if
+                    if (il.eq.0) then
+                       AN=2.*AN
+                       BN=2.*BN
+                       GN=2.*GN
+                       RP=F(L)
+                    else
+                       RP=AN*F(L+1)+(1.-BN)*F(L)+GN*F(L-1)
+                    end if
+                    if (RP.lt.0.) il=0
+                    DENOM=BN+GN*RL(L-1)+1.
+                    RK(L)=(RP+GN*RK(L-1))/DENOM
+                    RL(L)=-AN/DENOM
+                 end do	! 2nd L loop
+                 
+                 ! dayside BC for IBC=1
+                 if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then
+                    do L=UPA(I),LO-1
+                       F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
+                    end do	! 3rd L loop
+                 else 				  ! day or night, IBC>1
+                    F2(I,J,K,LO-1,S)=RK(LO-1)/(1+RL(LO-1)*CONMU2)
+                    do L=LO-2,UPA(I),-1
+                       DENOM=BN+GN*RL(L-1)+1.
+                       RK(L)=(RP+GN*RK(L-1))/DENOM
+                       RL(L)=-AN/DENOM
+                       F2(I,J,K,L,S)=RK(L)-RL(L)*F2(I,J,K,L+1,S)
+                    end do	! 4th L loop
+                    
+                 endif
 
-! dayside BC for IBC=1
-	   if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then
-	     do L=UPA(I),LO-1
-	      F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
-	     end do	! 3rd L loop
-	   else 				  ! day or night, IBC>1
-	     F2(I,J,K,LO-1,S)=RK(LO-1)/(1+RL(LO-1)*CONMU2)
-	     do L=LO-2,UPA(I),-1
-		F2(I,J,K,L,S)=RK(L)-RL(L)*F2(I,J,K,L+1,S)
-	     end do	! 4th L loop
-!	     IF (F2(I,J,K,UPA(I),S).LT.0.2*F2(I,J,K,UPA(I)+1,S)) THEN
-!	      PRINT 10, 'Bad F2:',I,J,K,UPA(I),T,F2(I,J,K,UPA(I),S),   &
-!     		0.2*F2(I,J,K,UPA(I)+1,S),RK(UPA(I)),RL(UPA(I))
-!    	      F2(I,J,K,UPA(I),S)=0.2*F2(I,J,K,UPA(I)+1,S)
-!	     END IF
-	   endif
-	   do L=UPA(I)-1,2,-1
-		F2(I,J,K,L,S)=RK(L)-RL(L)*F2(I,J,K,L+1,S)
-	   end do	! 4th L loop
-	   F2(I,J,K,LO,S)=F2(I,J,K,LO-1,S)*CONMU2
-	  end do	! K loop
-	 end do		! I loop
-	end do		! J loop
+                 do L=UPA(I)-1,2,-1
+                    F2(I,J,K,L,S)=RK(L)-RL(L)*F2(I,J,K,L+1,S)
+                 end do	! 4th L loop
+                 
+                 F2(I,J,K,LO,S)=F2(I,J,K,LO-1,S)*CONMU2
+              end do	! K loop
+           end do       ! I loop
+        end do		! J loop
 
+        
 10	format(A10,4I4,F10.1,1P,5E11.3)
-	return
-	end
-! 
-! End of subroutine COULMU
-!
+      end subroutine COULMU
+
 

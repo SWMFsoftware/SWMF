@@ -27,13 +27,6 @@ subroutine PRESSURES
   real    :: RFAC,SUME,SUMA,SUMN,SUMTE,SUMTN,J_FAC
   !---------------------------------------------------------------------   
   
-!open (unit = 3, file = "PPAR_S.dat")
-!   write (3,*)'Numerical values '
-!    write (3,*)'PPAR PPER'
-
-
-  
-
 
   !...Start the main species loop
   do S=1,NS
@@ -66,10 +59,6 @@ subroutine PRESSURES
                     SUME=SUME+F2(I,J,K,L,S)*EPME(I,j,K,L)
                     SUMA=SUMA+F2(I,J,K,L,S)*EPMA(I,j,K,L)
                     SUMN=SUMN+F2(I,J,K,L,S)*ERNM(I,j,K,L)
-
-                   ! write(3,*) l,ERNM(i,j,k,l), EPMA(i,j,k,l), EPME(i,j,k,l) 
-                    
-
                     Nspace(I,J,S)=Nspace(I,J,S)+F2(I,J,K,L,S)*WE(K)*DR*DPHI*WMU(L)*CONSL(K,S)
                     Espace(I,J,S)=Espace(I,J,S)+F2(I,J,K,L,S)*WE(K)*DR*DPHI*WMU(L)*EKEV(K)*CONSL(K,S)
                  enddo  ! L loop
@@ -79,17 +68,8 @@ subroutine PRESSURES
                  RNHT(I,J,S)=RNHT(I,J,S)+ERNH(K,S)*SUMN
                  EDEN(I,J,S)=EDEN(I,J,S)+ERNH(K,S)*EKEV(K)*SUMN
                  
-                 !write(3,*) 'SUME,SUMA',SUME,SUMA
-                 
-                 !write(3,*) 'PPER, PPAR',PPER(i,j,1), PPAR(i,j,1)
-                 
-                 !write(3,*) 'SUME,SUMA,EPP(K,S)*SUME,EPP(K,S)*SUMA',&
-                 !SUME,SUMA,EPP(K,S)*SUME,EPP(K,S)*SUMA
-                 
-                 !write(3,*) 'i,j,s,PPER, PPAR',i,j,s,PPER(i,j,s), PPAR(i,j,s)
-
-
               enddo   ! K loop
+              
               !...These parameters are equatorial plane values (not bounce-integrated)
               ANIS(I,J,S)=PPER(I,J,S)/2./PPAR(I,J,S)-1.
               EPAR(I,J,S)=2*PPAR(I,J,S)/RNHT(I,J,S)  ! kT parallel [keV] 
@@ -120,8 +100,7 @@ subroutine PRESSURES
               JPER(I,J,S)=-J_FAC*((PPER(I_1,J,S)-PPER(I_2,J,S))/DL1+   &
                    3.*(PPER(I,J,S)-PPAR(I,J,S))/LZ(I))/BE(I,1) !J perp [A/m2]
            end do   ! I loop
-	end do    ! J loop
-        !stop
+        end do    ! J loop
         !...These values are bounce-integrated
         !	NTOT(S)=2.E6*RFAC*RE*RE*SUMTN	! Ntotal for RC species [parts]
         !	ETOT(S)=2.E6*RFAC*RE*RE*SUMTE	! Etotal for RC species [keV]
@@ -130,8 +109,11 @@ subroutine PRESSURES
 	Dst(S)=-3.98E-30*ETOT(S)	! Dst* [nT] 
         !	print *, 'Dst: ',S,Dst(S),ETOT(S),NTOT(S)
 
+          
+
      end if    ! SCALC check
   end do    ! S loop
+  close(3)
 end subroutine PRESSURES
 !=======================================================================
 !			 	CURRENTSETUP

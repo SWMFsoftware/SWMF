@@ -21,6 +21,7 @@
 !	instead of embedded in ARRAYS
 !
 ! Last Modified: March 2006, Mike Liemohn
+!
 !======================================================================
 !                             HEIDI_READ
 !	Read parameters: DT, TMAX, Species, Storm, .......
@@ -29,10 +30,10 @@
 subroutine heidi_read
 
   use ModHeidiIO
-  use ModHeidiMain,  ONLY: ithermfirst
-  use ModIoUnit,     ONLY: UNITTMP_
-  use ModHeidiInput, ONLY: set_parameters
-  use ModProcIM,     ONLY: iProc
+  use ModHeidiMain, ONLY: ithermfirst
+  use ModIoUnit, only : UNITTMP_
+  use ModHeidiInput, only: set_parameters
+  use ModProcIM, only:iProc
 
   implicit none
 
@@ -55,11 +56,16 @@ subroutine heidi_read
 
      call write_prefix; write(iUnitStdOut,*)  'DT,TMAX,TINT,TIME',DT,TMAX,TINT,TIME
      call write_prefix; write(iUnitStdOut,*)  'IO,JO,KO,LO,ISO',IO,JO,KO,LO,ISO
+     !call write_prefix; write(iUnitStdOut,*) ' ELB,SWE,RW,HMIN',ELB,SWE,RW,HMIN
+     !call write_prefix; write(iUnitStdOut,*)  'ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT',&
+     !     ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
      call write_prefix; write(iUnitStdOut,*)  '(SCALC(k),k=1,NS)',(SCALC(k),k=1,NS)
      call write_prefix; write(iUnitStdOut,*)  'YEAR,month,day,UT',YEAR,month,day,UT
      call write_prefix; write(iUnitStdOut,*)  'R,AP,KP',R,AP,KP
      call write_prefix; write(iUnitStdOut,*)  '(INI(k),k=1,NS)',(INI(k),k=1,NS)
      call write_prefix; write(iUnitStdOut,*)  '(IBC(k),k=1,NS)',(IBC(k),k=1,NS)
+     !call write_prefix; write(iUnitStdOut,*)  'TINJ,Ab,Eob',TINJ,Ab,Eob
+     !call write_prefix; write(iUnitStdOut,*)  '(IRES(k),k=1,15)',(IRES(k),k=1,15)
      call write_prefix; write(iUnitStdOut,*)  'NAME=', NameRun
 
   endif
@@ -116,6 +122,10 @@ subroutine heidi_read
      TPPC(1:IPPC)=TPPC(1:IPPC)*86400. ! Convert to seconds
      PPC(1:IPPC)=PPC(1:IPPC)*1.E3       ! Convert to Volts
      
+!!$     if (iProc==0) then
+!!$        call write_prefix; write(iUnitStdOut,*) 'PPC:',IPPC,TPPC(1),TPPC(IPPC),PPC(1),PPC(IPPC)
+!!$     end if
+     
   end if
 
 end subroutine heidi_read
@@ -138,7 +148,6 @@ subroutine CONSTANT(NKP)
   character(len=80) :: header
   !------------------------------------------------------------------------
   !.......Read Kp history of the modeled storm
-  
   if (IKP.ge.3) then
      open(UNITTMP_,FILE=NameInputDirectory//trim(NameRun)//'_kp.in',STATUS='OLD') 
      read(UNITTMP_,10) HEADER
@@ -157,11 +166,9 @@ subroutine CONSTANT(NKP)
   Q=1.6E-19	   ! Electron charge, eV -> J conversion
   PI=3.141592654
 
-  !\
-  ! Conversion factor from phase space distribution F[s^3/km^6] into
-  ! the equatorial directional flux: FLUX[1/cm^2/s/keV/ster]
-  ! FLUXFACT = FLUX/F/E[keV]
-  !/
+  !	Conversion factor from phase space distribution F[s^3/km^6] into
+  !	the equatorial directional flux: FLUX[1/cm^2/s/keV/ster]
+  !	FLUXFACT = FLUX/F/E[keV]
 
   FLUXFACT(1)=6.1847E6
   FLUXFACT(2)=1.833847
@@ -199,9 +206,7 @@ subroutine BFIELD_SETUP(cone)
      BFC(I)=ME/Z(I)**3/40./sqrt(PI*Q)		! in SI units
   end do
 
-  !\
-  ! CONE - pitch angle loss cone in degree
-  !/
+  !.......CONE - pitch angle loss cone in degree
   do i=1,io	
      CONE(I)=ASIND(sqrt(((RE+HMIN)/Z(I))**3   &
           /sqrt(4.-3.*((RE+HMIN)/Z(I)))))
@@ -224,14 +229,13 @@ subroutine ARRAYS
   use ModHeidiMain
   use ModHeidiWaves
   use ModProcIM, only: iProc
-
+  
   implicit none
 
   integer :: I,J,K,L,IDL1,IC,IML,LL
   real :: DPA,SEG1,SEG2,RWU,CONV,degrad,camlra,muboun,spa
   real :: ASIND,COSD,ACOSD,CON1
   real :: sind
-
   external :: sind, ASIND,COSD,ACOSD
   real :: amla0(Slen)
 
@@ -260,11 +264,13 @@ subroutine ARRAYS
      if (iProc==0) then
         call write_prefix; write(iUnitStdOut,*)  'Error : 0.25 is not a factor of DL1 '
      end if
+     !WRITE(6,*) ' Error : 0.25 is not a factor of DL1 '
      call CON_stop('ERROR in heidi_setup.f90')
   else if (DL1.lt.0.25 .and. mod(250,IDL1).ne.0) then
      if (iProc==0) then
         call write_prefix; write(iUnitStdOut,*)  'Error : DL1 is not a factor of 0.25'
      end if
+     !WRITE (6,*) ' Error : DL1 is not a factor of 0.25'
      call CON_stop('ERROR in heidi_setup.f90')
   end if
 
@@ -283,6 +289,7 @@ subroutine ARRAYS
      if (iProc==0) then
         call write_prefix; write(iUnitStdOut,*)  'Error : JO is not a factor of NLT '
      end if
+     !WRITE(6,*) ' Error : JO is not a factor of NLT '
      call CON_stop('ERROR in heidi_setup.f90')
   end if
 
@@ -294,11 +301,7 @@ subroutine ARRAYS
   do I=1,NS
      MAS(I)=MP*M1(I)		! Mass of each species (kg)
   end do
-  
-  !\
-  ! Calculate Kinetic Energy EKEV [keV] at cent
-  !/
-  
+  !.......Calculate Kinetic Energy EKEV [keV] at cent
   WE(1)=abs(SWE)	!  |_._|___.___|____.____|______.______|
   !    .     <   DE   >    <      WE     >
   !   EKEV                EBND
@@ -349,17 +352,14 @@ subroutine ARRAYS
   EKEV(1)=ELB+0.5*WE(1)
   do K=1,KO-1
      EKEV(K+1)=EKEV(K)+DE(K)	! E[keV] at cent of grid
-  end do
+       end do
   do S=1,NS
      V(1:ko,s)=sqrt(2.*EKEV(1:ko)*1000.*Q/MAS(S))    ! Vel [m/s] at cent
      VBND(1:ko,s)=sqrt(2.*EBND(1:ko)*1000.*Q/MAS(S)) ! Vel [m/s] at bound
   end do
 
-  !\
-  ! PA is equatorial pitch angle in deg - PA(1)=90, PA(LO)=0.
-  ! MU is cosine of equatorial PA
-  !/
-
+  !.......PA is equatorial pitch angle in deg - PA(1)=90, PA(LO)=0.
+  !.......MU is cosine of equatorial PA
   if (IPA.ne.1) then	! Constant DPA based on LO
      DPA=-90./(LO-1)	! Grid size for pitch angle in degree
      PA(1)=90.
@@ -371,7 +371,7 @@ subroutine ARRAYS
         MUB(l)=COSD(PA(l)+DPA/2.)
      end do
      WMU(1)=2*MUB(1)
-     WMU(2:lo-1)=MUB(2:lo-1)-MUB(2:lo-1) ! WRONG!!!
+     WMU(2:lo-1)=MUB(2:lo-1)-MUB(2:lo-1)
      DMU(1:lo-2)=0.5*(WMU(2:lo-1)+WMU(1:lo-2))
      do l=1,lo-2
         MU(L+1)=MU(L)+DMU(L)
@@ -384,10 +384,7 @@ subroutine ARRAYS
      WMU(LO)=2*(1.-MUB(LO-1))
      DMU(LO-1)=MU(LO)-MU(LO-1)
      DMU(LO)=WMU(LO)
-     !\
-     ! Find the pitch angle nearest to the edge of the loss cone
-     !/
-
+     !.......Find the pitch angle nearest to the edge of the loss cone
      do I=1,IO
         UPA(I)=0
         L=0
@@ -462,11 +459,9 @@ subroutine ARRAYS
      call write_prefix; write(iUnitStdOut,*) 'SUMS:',SUMW,SUMD
      call write_prefix; write(iUnitStdOut,*) 'LO:',MU(LO-1),MU(LO),DMU(LO),WMU(LO),MU(LO-1)+.5*DMU(LO-1)
   end if
-
-  !\
-  ! calculate pitch angles for mlat
-  !/
   
+  !print *, '1:',MU(1),MU(2),DMU(1),WMU(1),MU(2)-.5*DMU(2)
+  !**  calculate pitch angles for mlat
   do I=1,IO
      do IML=1,ISO
         do L=1,LO
@@ -483,82 +478,78 @@ subroutine ARRAYS
   call get_IntegralI(funi)
 
 
-  !\ 
-  ! Define conversion factors
-  ! FFACTOR is ratio of phase space F to F2 in conservative space
-  ! IFAC indicates conversion to flux or distribution function
-  !/
-
+  !.......Define conversion factors
+  !.......FFACTOR is ratio of phase space F to F2 in conservative space
+  !.......IFAC indicates conversion to flux or distribution function
+  
+  
+  FFACTOR = 0.
+  
   if (IFAC.eq.1) then	! Flux function
-     do k = 1, ko   
-        FFACTOR(1:io,j,k,1)=0.
-        do l = 2, lo
-           do i=1,io
-              do j = 1, jo
-                 !FFACTOR(i,j,k,l) = LZ(i)*LZ(i)/sqrt(EKEV(K))*MU(L)*FUNT(MU(L))
-                    FFACTOR(i,j,k,l) = LZ(i)*LZ(i)/sqrt(EKEV(K))*MU(L)*FUNT(l,i,j)
-                 end do
+     do J =1, JO
+        do K=1,KO
+           do L=2,LO
+              do i=1,io
+                 FFACTOR(I,J,K,L)=LZ(i)*LZ(i)/sqrt(EKEV(K))*MU(L)*FUNT(L,I,J)
+              end do
            end do
         end do
      end do
   else 			! Distribution function
-     
-     do l = 2, lo
-        do k = 1, ko
-           FFACTOR(1:io,:,k,1)=0.
-           do j =1, jo
+     do J =1, JO
+        do K=1,KO
+           do L=2,LO
               do i=1,io
-                 FFACTOR(i,j,k,l) = LZ(i)*LZ(i)*sqrt(EKEV(K))*MU(L)*FUNT(l,i,j)
-                 !FFACTOR(i,:,k,l) = LZ(i)*LZ(i)*sqrt(EKEV(K))*MU(L)*FUNT(MU(L))
+                 FFACTOR(I,J,K,L)=LZ(i)*LZ(i)*sqrt(EKEV(K))*MU(L)*FUNT(L,I,J)
               end do
            end do
         end do
-     end do 
+     end do
   end if
-
-  do k = 1, ko
-     do j =1, jo
-        do i = 1, io
-           FFACTOR(i,j,k,1) = FFACTOR(i,j,k,2)
+  do J =1, JO
+     do K=1,KO
+        do i=1,io
+           FFACTOR(I,J,K,1)=FFACTOR(I,J,K,2)
         end do
      end do
   end do
 
-  !\
-  ! Variables for pressure and anisotropy calculations
-  !/
-
-! open (unit = 2, file = "EPMA_setup.dat")
-!   write (2,*)'Numerical values '
-!   write (2,*)'l ERNM EPMA EPME' 
+  !.......Variables for pressure and anisotropy calculations
   
-  do i = 1, io
-     do j =1, jo
-        do k = 1, ko
-           do l = 1, lo
-              ERNM(i,j,k,l) = WMU(L)/(FFACTOR(i,j,k,l))
-              EPMA(i,j,k,l) = ERNM(i,j,k,l)*MU(L)*MU(L)
-              EPME(i,j,k,l) = ERNM(i,j,k,l) - EPMA(i,j,k,l)
-              !write(2,*) l,ERNM(i,j,k,l), EPMA(i,j,k,l), EPME(i,j,k,l) 
-           end do
-        !stop
-        end do
-     end do
-  end do
+ 
+ do j =1, jo
+    do i = 1, io
+       do K=1,KO
+          do L=1,LO
+             ERNM(I,J,K,L)=WMU(L)/FFACTOR(I,J,K,L)
+             EPMA(I,J,K,L)=ERNM(I,J,K,L)*MU(L)*MU(L)
+             EPME(I,J,K,L)=ERNM(I,J,K,L)-EPMA(I,J,K,L)
+          end do
+       end do
+    end do
+ end do
 
   CONV=1.
-  do s =1, NS
+  do s=1,NS
      do k=1,KO
         if (IFAC.eq.1) CONV=1./(EKEV(K)*FLUXFACT(S))
         ERNH(K,S)=WE(K)*sqrt(EKEV(K))*CONV
         EPP(K,S)=ERNH(K,S)*EKEV(K)
      end do
   end do
-  
-  do i = 1,NR
-     do j = 1, NT
-	do k = 1, NE
-           do l = 1, NPA
+
+  !.......zero out wave diff coeff
+  !  DO 20 I=1,NR
+  !     DO 20 J=1,NT
+  !	DO 20 K=1,NE
+  !           DO 20 L=1,NPA
+  !              ATAW(I,J,K,L)=0.
+  !              GTAW(I,J,K,L)=0.
+  !20            CONTINUE
+  do I=1,NR
+     do J=1,NT
+	do K=1,NE
+           do L=1,NPA
               ATAW(I,J,K,L)=0.
               GTAW(I,J,K,L)=0.
               !.......to keep F constant at boundary
@@ -567,26 +558,18 @@ subroutine ARRAYS
 
               !.......FACMU is the PA dependent factor due to conversion to F2
               do LL=1,lo
-                 FACMU(LL,i,j) = FUNT(ll,i,j)*MU(LL)
-                 !FACMU(LL,i,j) = FUNT(MU(LL))*MU(LL)
-                 
-                 !write(*,*) 'i,j,k,l', i,j,k,l
-                 !write(*,*) 'MU(LL), FUNT(ll,i,j),FACMU(LL,i,j)',MU(LL), FUNT(ll,i,j),FACMU(LL,i,j)
-                 
-                ! write(*,*) '~~~~~~~~~~~~~~~~~'
-              
+                 FACMU(LL,I,J)=FUNT(LL,I,J)*MU(LL)
               end do
 
-                            
               !.......to keep F const at 90 & at 0 deg
-              CONMU1=FACMU(2,i,j)/FACMU(3,i,j)
-              CONMU2=FACMU(LO,i,j)/FACMU(LO-1,i,j)
+              CONMU1=FACMU(2,I,J)/FACMU(3,I,J)
+              CONMU2=FACMU(LO,I,J)/FACMU(LO-1,I,J)
 
               !	CONSL is for source/loss calculations, integrating F to give
               !	particles or keV
               !	CONSL is 8*PI*SQRT(2)*(kg->amu * keV->J)^1.5 *(m->km)^6 * Re^2 
               !	  which should be ~4.3E13/M(amu)^1.5
-              do S = 1, NS
+              do S=1,NS
                  CON1=8.*sqrt(2.)*PI*(Q*1.E3/MP/M1(S))**1.5*1.E-18*RE**2
                  CONSL(1:KO,S)=CON1
                  if (IFAC.eq.1) CONSL(1:KO,S)=CONSL(1:KO,S)/FLUXFACT(S)/EKEV(1:KO)
@@ -902,11 +885,11 @@ subroutine THERMAL
   !.......Set F2(K=1) to the thermal plasma flux level (PE runs)
   if (IST.eq.1 .and. SCALC(1).eq.1) then
      EO=0.001	! Te=1 eV
-     do l = 1, lo
-        do j = 1, jo
-           do i = 1, io
+     do l=1,LO
+        do j=1,JO
+           do i=1,io
               F2(I,J,1,L,1)=sqrt(5.*Q/MAS(1)*(PI*EO)**3)*XNE(I,J)*EKEV(1)* &
-                   exp(-EKEV(1)/EO)*FFACTOR(I,j,1,L)
+                   exp(-EKEV(1)/EO)*FFACTOR(I,J,1,L)
            end do
         end do
      end do
@@ -936,35 +919,34 @@ real function G(X)
   G=G1/2./X/X
 
 end function G
-!!$!======================================================================
-!!$!                       Function T(X) 
-!!$!	 function f(y) taken from Ejiri, JGR,1978
-!!$!======================================================================
+!======================================================================
+!                       Function T(X) 
+!	 function f(y) taken from Ejiri, JGR,1978
+!======================================================================
 !!$real function FUNT(X)		! X is cos of equat pa = MU
 !!$
 !!$  use ModHeidiSize
 !!$  use ModHeidiMain
+!!$  use ModConst, ONLY : cPi
 !!$  use ModHeidiBField
-!!$  use ModConst,      ONLY : cPi,  cTiny
 !!$  use ModHeidiInput, ONLY: TypeBField
 !!$
 !!$  implicit none
 !!$
 !!$  real :: y,x,alpha,beta,a1,a2,a3,a4
 !!$
-!!$!  integer, parameter   :: nPoint = 101
+!!$  real                 :: L = 15.0
+!!$  integer, parameter   :: nStep = 101
 !!$  integer, parameter   :: nPitch = 1
+!!$  real                 :: PitchAngle_I(nPitch) 
+!!$  real                 :: bField_I(nstep) 
+!!$  real                 :: Length_I(nStep) 
+!!$  real                 :: RadialDistance_I(nStep) 
+!!$  real                 :: Ds_I(nStep-1)
 !!$  real                 :: HalfPathLength
 !!$  real                 :: bMirror_I(nPitch),bMirror
 !!$  integer              :: iMirror_II(2,nPitch)
 !!$  real                 :: Percent, sums, difer
-!!$  real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
-!!$  real                 :: RadialDistance_III(nPoint,nR,nT)
-!!$  real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
-!!$  real                 :: Length_III(nPoint,nR,nT) 
-!!$  real                 :: PitchAngle_I(nPitch)   
-!!$  integer              :: iPhi, iR,iPitch
-!!$
 !!$  !------------------------------------------------------------------------ 
 !!$  if (TypeBField == 'analytic') then
 !!$     y=sqrt(1-x*x)
@@ -977,37 +959,22 @@ end function G
 !!$     funt=alpha-beta*(y+sqrt(y))+a1*y**(1./3.)+a2*y**(2./3.)+  &
 !!$          a3*y+a4*y**(4./3.)
 !!$  endif
-
-
+!!$
 !!$  if (TypeBField == 'numeric') then
 !!$
-!!$     call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-!!$          RadialDistance_III,Length_III, dLength_III)
-!!$
+!!$     call initialize_b_field(L, nStep, bField_I, RadialDistance_I, Length_I, Ds_I)
 !!$     if (x==1.0) then 
 !!$        PitchAngle_I(1)= acos(0.999998)
 !!$     else
 !!$        PitchAngle_I(1) = acos(x)
 !!$     endif
 !!$
-!!$     do iPhi = 1, nT
-!!$        do iR =1, nR
-!!$           call find_mirror_points (nPoint, nPitch, PitchAngle_I, bFieldMagnitude_III(:,iR,iPhi), &
-!!$                bMirror_I,iMirror_II)
-!!$
-!!$           bMirror = bMirror_I(1)   
-!!$
-!!$           call half_bounce_path_length(nPoint, iMirror_II(:,1),bMirror,&
-!!$                bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), LZ(iR), HalfPathLength)
-!!$
-!!$           funt = HalfPathLength
-!!$           if (funt ==0.0) funt = cTiny
-!!$
-!!$        end do
-!!$     end do
-!!$
+!!$     call find_mirror_points (nStep, nPitch, PitchAngle_I, bField_I, bMirror_I,iMirror_II)
+!!$     bMirror = bMirror_I(1)
+!!$     call half_bounce_path_length(nStep, iMirror_II(:,1), bMirror, bField_I, Ds_I,L, HalfPathLength)
+!!$     funt = HalfPathLength
+!!$     if (funt ==0.0) funt =0.00000001
 !!$  endif
-!!$
 !!$
 !!$end function FUNT
 !!$!======================================================================
@@ -1015,31 +982,30 @@ end function G
 !!$!	 function I(y) taken from Ejiri, JGR,1978
 !!$!======================================================================
 !!$real function FUNI(X)		! X is cos of equat pa = MU
-!!$ 
+!!$
+!!$
 !!$  use ModHeidiSize
-!!$  use ModHeidiMain
 !!$  use ModHeidiInput, ONLY: TypeBField
 !!$  use ModHeidiBField
-!!$  use ModConst,      ONLY: cPi
-!!$  
+!!$  use ModConst, ONLY : cPi
 !!$  implicit none
-!!$  
+!!$
 !!$  real    :: y,x,alpha,beta,a1,a2,a3,a4
-!!$  
-!!$!  integer, parameter   :: nPoint = 101
+!!$
+!!$  real                 :: L = 15.0
+!!$  integer, parameter   :: nStep = 101
 !!$  integer, parameter   :: nPitch = 1
+!!$  real                 :: PitchAngle_I(nPitch) 
+!!$  real                 :: bField_I(nstep) 
+!!$  real                 :: Length_I(nStep) 
+!!$  real                 :: RadialDistance_I(nStep) 
+!!$  real                 :: Ds_I(nStep-1)
 !!$  real                 :: SecondAdiabInv
 !!$  real                 :: bMirror_I(nPitch),bMirror
 !!$  integer              :: iMirror_II(2,nPitch)
 !!$  real                 :: Percent, sums, difer
-!!$  real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
-!!$  real                 :: RadialDistance_III(nPoint,nR,nT)
-!!$  real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
-!!$  real                 :: Length_III(nPoint,nR,nT) 
-!!$  real                 :: PitchAngle_I(nPitch)   
-!!$  integer              :: iPhi, iR,iPitch
-!!$  !------------------------------------------------------------------------
 !!$
+!!$  !------------------------------------------------------------------------
 !!$  if (TypeBField == 'analytic') then
 !!$
 !!$     y=sqrt(1.-x*x)
@@ -1049,41 +1015,28 @@ end function G
 !!$     a2=-0.037
 !!$     a3=-0.074
 !!$     a4=0.056
+!!$     !funi=2.*alpha*(1.-y)+2.*beta*y*alog(y)+4.*beta*(y-sqrt(y))+  &
+!!$     !     3.*a1*(y**(1./3.)-y)+6.*a2*(y**(2./3.)-y)+6.*a4*(y-y**(4./3.))  &
+!!$     !     -2.*a3*y*alog(y)
+!!$ 
 !!$     funi=2.*alpha*(1.-y)+2.*beta*y*alog(y)+4.*beta*(y-sqrt(y))+  &
-!!$          3.*a1*(y**(1./3.)-y)+6.*a2*(y**(2./3.)-y)+6.*a4*(y-y**(4./3.))  &
-!!$          -2.*a3*y*alog(y)
-!!$  endif
-  
+!!$                   3.*a1*(y**(1./3.)-y)+6.*a2*(y**(2./3.)-y)+6.*a4*(y-y**(4./3.))  &
+!!$                   -2.*a3*y*alog(y)
+!!$
+!!$ endif
+!!$
 !!$  if (TypeBField == 'numeric') then
-!!$     
-!!$     call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-!!$          RadialDistance_III,Length_III, dLength_III)
-!!$     
-!!$     if (x==1.0) then 
-!!$        PitchAngle_I(1)= acos(0.999998)
-!!$     else
-!!$        PitchAngle_I(1) = acos(x)
-!!$     endif
-!!$     
-!!$     do iPhi = 1, nT
-!!$        do iR =1, nR
-!!$           call find_mirror_points (nPoint, nPitch, PitchAngle_I, bFieldMagnitude_III(:,iR,iPhi), &
-!!$                bMirror_I,iMirror_II)
-!!$           
-!!$           bMirror = bMirror_I(1)   
-!!$                      
-!!$           call second_adiabatic_invariant(nPoint, iMirror_II(:,1), bMirror, &
-!!$                bFieldMagnitude_III(:,iR,iPhi),dLength_III(:,iR,iPhi), LZ(iR), SecondAdiabInv)
-!!$           
-!!$           funi = SecondAdiabInv           
-!!$        end do
-!!$     end do
-!!$  
+!!$     call initialize_b_field(L, nStep, bField_I, RadialDistance_I, Length_I, Ds_I)
+!!$     PitchAngle_I(1) = acos(x)
+!!$     call find_mirror_points (nStep, nPitch, PitchAngle_I, bField_I, bMirror_I,iMirror_II)
+!!$     bMirror = bMirror_I(1)
+!!$     call second_adiabatic_invariant(nStep, iMirror_II(:,1), bMirror, bField_I, Ds_I,L, SecondAdiabInv)
+!!$     funi = SecondAdiabInv
 !!$  endif
 !!$
 !!$end function FUNI
 !============================================================================
-!       new code to adjust the Cray's floating point operations
+!       new code to adjust the Cray's floating point operations====
 !	Couldn't we just ROUND() it?
 !============================================================================
 real function APPX(T)

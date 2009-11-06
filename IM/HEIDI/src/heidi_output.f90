@@ -4,8 +4,6 @@
 !	ECFL
 !	WRESULT
 !	PSRCLOSS
-!
-! Last Modified: March 2006, Mike Liemohn
 !=========================================================================
 !				ECFL
 !	Checks the energy advection CFL numbers
@@ -32,7 +30,7 @@ subroutine ECFL
 
   save ntc
   !--------------------------------------------------------------------------
-  !Define parts of the output file names
+  ! Define parts of the output file names
 
   if (T.eq.0) then
      ntc=0
@@ -79,10 +77,12 @@ subroutine ECFL
 	Jm=0
 	Km=0
 	Lm=0
-	do I=1,IO
-           do J=1,JO
-              do K=1,KO
-                 do L=1,LO	     ! UPA(I)-1 , changed to include the l.c.
+        
+        
+        do I = 1, IO
+           do J = 1, JO
+              do K = 1, KO  
+                 do L = 1, LO	     ! UPA(I)-1 , changed to include the l.c.
                     CFL=abs(EDOT(I,J,K,L)*VR(I,J)+(COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
                     if (CFL.gt.1.) then
                        write (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),XNE(I,J),CFL
@@ -99,7 +99,8 @@ subroutine ECFL
                  end do	! L loop
               end do	! K loop
            end do	! J loop
-	end do	! I loop
+	end do	        ! I loop
+        
 50	continue
 	write (iUnitOut,*) 'Bad CFLs: ',Ibad
 	write (iUnitOut,*) 'Max CFL: ',CMAX,Im,Jm,Km,Lm
@@ -107,7 +108,8 @@ subroutine ECFL
 	write (iUnitOut,*) 'Radial advection |CFL| > 1 (entire grid)'
 	Ibad=0
 	CMAX=0.
-	do I=1,IO
+
+        do I=1,IO
            do J=1,JO
               CFL=abs(VR(I,J))
               if (CFL.gt.1.) then
@@ -121,7 +123,8 @@ subroutine ECFL
               end if
               if (Ibad.gt.1000) goto 51
            end do	! J loop
-	end do	! I loop
+	end do	       ! I loop
+
 51	continue
 	write (iUnitOut,*) 'Bad CFLs: ',Ibad
 	write (iUnitOut,*) 'Max CFL: ',CMAX,Im,Jm
@@ -129,13 +132,15 @@ subroutine ECFL
 	Ibad=0
 	CMAX=0.
 	write (iUnitOut,*) 'Azimuthal advection |CFL| > 1 (entire grid)'
-	do I=1,IO
+        
+        do I=1,IO
            do J=1,JO
-              do K=1,KO
+              do K=1,KO 
                  do L=1,LO	     
                     CFL=abs(P1(I,J)+P2(I,j,K,L))
                     if (CFL.gt.1.) then
-                       write (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),A,P1(I,J),P2(I,j,K,L),CFL
+                       write (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),&
+                            A,P1(I,J),P2(I,j,K,L),CFL
                        Ibad=Ibad +1
                     end if
                     if (CFL.gt.CMAX) then
@@ -146,20 +151,21 @@ subroutine ECFL
                        Lm=L
                     end if
                     if (Ibad.gt.1000) goto 52
-                 end do	! L loop
-              end do	! K loop
-           end do	! J loop
-	end do	! I loop
+                 end do	! I loop
+              end do	! J loop
+           end do	! K loop
+	end do	        ! L loop
+
 52	continue
 	write (iUnitOut,*) 'Bad CFLs: ',Ibad
 	write (iUnitOut,*) 'Max CFL: ',CMAX,Im,Jm,Km,Lm
-
-	write (iUnitOut,*) 'Mu advection |CFL| > 1 (entire grid)'
+        write (iUnitOut,*) 'Mu advection |CFL| > 1 (entire grid)'
 	Ibad=0
 	CMAX=0.
-	do I=1,IO
+
+        do I=1,IO
            do J=1,JO
-              do L=1,LO	     
+              do L=1,LO	  
                  CFL=abs(MUDOT(I,J,L)*VR(I,J))
                  if (CFL.gt.1.) then
                     write (iUnitOut,39) LZ(I),MLT(J),ACOSD(MU(L)),A,CFL
@@ -172,22 +178,22 @@ subroutine ECFL
                     Lm=L
                  end if
                  if (Ibad.gt.1000) goto 53
-              end do	! L loop
+              end do	! I loop
            end do	! J loop
-	end do	! I loop
+	end do	        ! L loop
+        
 53	continue
 	write (iUnitOut,*) 'Bad CFLs: ',Ibad
 	write (iUnitOut,*) 'Max CFL: ',CMAX,Im,Jm,Lm
-
-	close(iUnitOut)
-
+        close(iUnitOut)
+        
      end if		! SCALC Check
   end do		! S LOOP
 
 37 format(4(2X,A3,2X),7(2X,A7,2X))
 38 format(20(2X,A7,2X))
 39 format(10(1PE11.3))
-
+  
   return
 end subroutine ECFL
 !=========================================================================
@@ -257,36 +263,52 @@ subroutine WRESULT(LNC,XN,IFIR)
   data PAV,EV/2,20,42,5,19,31/
   !--------------------------------------------------------------------------
 
-  !.......Define parts of the output file names
+  !\
+  ! Define parts of the output file names
+  !/
+  
   if (IFIR.eq.1) then
      ntc=int(nint(TIME/TINT))
   else
      ntc=ntc+1
   end if
   write(NameStep, '(i3.3)') ntc 
-
+  
 11 format (I1)
 12 format (I2)
 13 format (I3)
 
-  !.......Find output counters
+  open(unit=8,file='F2_output.dat')
+
+
+  ! Find output counters
   NLC=nint(real(LO-1)/10.)
   if (NLC.lt.1) NLC=1
   NEC=nint(real(KO-1)/25.)
   if (NEC.lt.1) NEC=1
 
-  !.......Calculate bulk quantities
+  ! Calculate bulk quantities
   call write_prefix; write(iUnitStdOut,*)  'Calling PRESSURES'
+  write(8,*) 'F2 before'
+  write(8,*) F2(:,1,:,:,2)
+  
   call PRESSURES
+  write(8,*) 'F2 after'
+  write(8,*) F2(:,1,:,:,2)
   call write_prefix; write(iUnitStdOut,*) 'Calling CURRENTCALC'
-  !	IF (IA.GE.8) CALL CURRENTCALC
-  call CURRENTCALC  ! Do it all the time
-   
-  !.......L counter offset in PAD outputs
+  call CURRENTCALC  
+  
+
+  close(8)
+  
+  ! L counter offset in PAD outputs
   IFN=0
   if (IPA.eq.0) IFN=19
 
-  !.......Write the plasmaspheric thermal densities (IRES(7), 'pla' & 'dgcpm')
+  !\
+  ! Write the plasmaspheric thermal densities (IRES(7), 'pla' & 'dgcpm')
+  !/
+
   if (IRES(7).eq.1 .and. iProc.eq.0) then
      call write_prefix; write(iUnitStdOut,*)  'Printing plasmasphere'
      !	  First create Dan's output file for his plotting software
@@ -310,18 +332,21 @@ subroutine WRESULT(LNC,XN,IFIR)
      close (UnitTmp_)
   end if
 
-  !CC Output from Aaron's ionosphere code
-  !CC Didn't work...we need Aaron to diagnose the problem
-  !	print *, 'Saving Aaron''s ionosphere model output'
+  ! Output from Aaron's ionosphere code
+  ! Didn't work...we need Aaron to diagnose the problem
+  
   if ((IA.ge.8 .and. IA.le.11) .or. IA.ge.13) then
      if (iProc.eq.0) call IonoHeidiWriteOutput(1,t,NameRun,NameStep)
   end if
 
-  !CC Start the main loop over species we're calculating
-  do S=1,NS
-     print *, 'WRESULT: ',S,SCALC(S)
+  !\
+  ! Start the main loop over species we're calculating
+  !/
+  
+  do S = 1, NS
+     call write_prefix; write(iUnitStdOut,*)  'WRESULT: ',S,SCALC(S)
      if (SCALC(S).eq.1) then
-
+        
 	if (S.eq.1) NameSpecies='_e' 
 	if (S.eq.2) NameSpecies='_h' 
 	if (S.eq.3) NameSpecies='_he' 
@@ -332,7 +357,8 @@ subroutine WRESULT(LNC,XN,IFIR)
 	if (S.eq.3) NameOutputSpecies='helium/'
 	if (S.eq.4) NameOutputSpecies='oxygen/'
 
-
+        ! Find the energy and particle losses
+ 
 
         !.......Find the energy and particle losses
 	do I=2,IO
@@ -343,6 +369,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            do K=2,KO
               do L=2,LO-1
                  do J=1,JO
+
                     if(L.lt.UPA(I)) then
                        WEIGHT=F2(I,J,K,L,S)*WE(K)*WMU(L)
                        XN(I,S)=XN(I,S)+WEIGHT  		      ! N in LZ
@@ -355,15 +382,39 @@ subroutine WRESULT(LNC,XN,IFIR)
            LNC(I,S)=XNO(I)-XN(I,S)
            LEC(I,S)=EO(I)-ENER(I,S)
 
-        end do
+        end do       
 
-        !.......Start the output routines
 
-        !.......Write the phase space distribution, F (IRES(1), 'psd')
+
+!!$        do L=2,LO-1
+!!$           do K=2,KO
+!!$              do J=1,JO
+!!$                 do I = 2, IO
+!!$                    XNO(I)=XN(I,S)
+!!$                    XN(I,S)=0
+!!$                    EO(I)=ENER(I,S)
+!!$                    ENER(I,S)=0.
+!!$                    if(L.lt.UPA(I)) then
+!!$                       WEIGHT = F2(I,J,K,L,S)*WE(K)*WMU(L)
+!!$                       XN(I,S)=XN(I,S)+WEIGHT  		      ! N in LZ
+!!$                       ENER(I,S)=ENER(I,S)+EKEV(K)*WEIGHT     ! E in LZ
+!!$                    endif
+!!$                    LNC(I,S)=XNO(I)-XN(I,S)
+!!$                    LEC(I,S)=EO(I)-ENER(I,S)
+!!$                 end do ! I loop
+!!$              end do	! J loop
+!!$           end do	! K loop
+!!$        end do          ! L loop
+        
+        !\
+        ! Start the output routines
+        !/
+        
+        ! Write the phase space distribution, F (IRES(1), 'psd')
         !	IF (MOD(T,21600.).LT.2*DT) THEN	! Only every 6 hours
 	if (IRES(1).eq.1) then
            NameSuffix='_psd.'
-
+           
            open(UNIT=UnitTmp_,file=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//trim(NameSpecies)//&
                 NameSuffix//NameStep,STATUS='UNKNOWN')
            write (UnitTmp_,*) 'Filename: '//NameOutputDir//trim(NameRun)//&
@@ -373,24 +424,43 @@ subroutine WRESULT(LNC,XN,IFIR)
            else
               write (UnitTmp_,*) 'Phase space distribution function, F'
            end if
-           do I=2,IO,2  ! ,4
+          
+!!$           do K=2,KO,NEC
+!!$              do J=1,JO  ! ,3
+!!$                 do I=2,IO,2   ! ,4 
+!!$                    write(UnitTmp_,45) T,LZ(I),MLT(J),KP,XNE(I,J)
+!!$                    write(UnitTmp_,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
+!!$                    write(UnitTmp_,43) EKEV(K),(F2(I,J,K,IFM(L),S)/   &
+!!$                         FFACTOR(I,j,K,IFM(L)),L=1+IFN,19+IFN)
+!!$                 end do	        ! I loop
+!!$              end do		! J loop
+!!$           end do		! K loop
+!!$           close(UnitTmp_)
+!!$	end if
+!!$        !	end if					! 6 hour check
+           
+           do I=2,IO,2   ! ,4 
               do J=1,JO  ! ,3
                  write(UnitTmp_,45) T,LZ(I),MLT(J),KP,XNE(I,J)
                  write(UnitTmp_,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
                  do K=2,KO,NEC
                     write(UnitTmp_,43) EKEV(K),(F2(I,J,K,IFM(L),S)/   &
                          FFACTOR(I,j,K,IFM(L)),L=1+IFN,19+IFN)
-                 end do	       ! K loop
-              end do		! J loop
-           end do		! I loop
+                 end do
+              end do
+           end do
            close(UnitTmp_)
 	end if
-        !	END IF					! 6 hour check
+        !	end if	 
 
-        !.......Write equatorially trapped distribution (IRES(2), 'etf')
+
+
+
+
+        ! Write equatorially trapped distribution (IRES(2), 'etf')
 	if (IRES(2).eq.1) then
            NameSuffix='_etf.'
-
+           
            open(UNIT=UnitTmp_,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
                 trim(NameSpecies)//NameSuffix//NameStep,STATUS='UNKNOWN')
            write (UnitTmp_,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//&
@@ -411,19 +481,21 @@ subroutine WRESULT(LNC,XN,IFIR)
            close(UnitTmp_)
 	end if
 
-        !.......Write the plasmaspheric heating (IRES(3), 'dep')
+        ! Write the plasmaspheric heating (IRES(3), 'dep')
 	if (IRES(3).eq.1) then
            XR2=IO/2.
            IR2=IO/2
            NameSuffix='_dep.'
-
-
+           
            iUnitOut = io_unit_new()
-
+           
            open(UNIT=iUnitOut,file=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
                 trim(NameSpecies)//NameSuffix//NameStep,STATUS='UNKNOWN')
            write (iUnitOut,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//&
                 trim(NameRun)//trim(NameSpecies)//NameSuffix//NameStep
+           
+          
+           
            do I=2,IO			! Electron heating
               do J=1,JO
                  EDR=0.

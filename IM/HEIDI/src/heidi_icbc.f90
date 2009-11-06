@@ -79,6 +79,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
      ntc=ntc+1
   end if
   
+  
   !.......Start the loop over RC species
   do S=1,NS
 
@@ -92,7 +93,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
            end do
         end do
      end do
-
+     
      !.......Do the rest only if we're calculating this species
      if (SCALC(S).eq.1) then
 
@@ -106,7 +107,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
 	if (S.eq.3) NameSpecies='_he' 
 	if (S.eq.4) NameSpecies='_o' 
 
-
+        
 
         !.......Loss cone distribution (INI=1)
         if (INI(S).eq.1) then
@@ -117,10 +118,12 @@ subroutine INITIAL(LNC,XN,J6,J18)
                     do K=2,KO
                        do J=J6,J18
                           F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(i,j,k,l),FINI(K)*CHI(I,J))
+                          
                        end do	! J loop
                     end do	! K loop
                  end do	! L loop
               end do	! I loop
+              !close(1)
            else			! Read in from input file: 'cone.bcf'
 
               open(UNITTMP_,FILE=NameInputDirectory//'cone.bcf',STATUS='OLD')
@@ -137,15 +140,21 @@ subroutine INITIAL(LNC,XN,J6,J18)
                     !110	      CHI(I,J)=CHI(I,J)*CHI0
                  end do	! I loop
               end do	! J loop
+              
+
+              
+              
               do I=2,IO
                  do L=UPA(I),LO
                     do K=2,KO
                        do J=J6,J18
                           F2(I,J,K,L,S)=FINI(K)*CHI(I,J)*FFACTOR(I,j,K,L)
+                          
                        end do	! J loop
                     end do	! K loop
                  end do		! L loop
               end do		! I loop
+              
            end if	! end of INI=1 case
 
            !.......Gaussian in R and PHI about some location (INI=2)
@@ -199,6 +208,9 @@ subroutine INITIAL(LNC,XN,J6,J18)
               sg=18.0
            end if
            !.......Find distribution at local midnight
+           
+           
+
            do I=ig1,ig2
               do K=kg2,kg1,-1
                  if (EKEV(K).gt.1.) then
@@ -208,6 +220,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
                     do L=2,UPA(I)-1
                        ! NOT SURE IS CORRECT
                        F2(I,1,K,L,S)=Y10*(1.-MU(L)**2)**(YZ/2.)*FFACTOR(I,1,K,L)
+                       
                     end do	! L loop
                     KK=K
                  else			! Maxwellian below 1 keV
@@ -215,11 +228,12 @@ subroutine INITIAL(LNC,XN,J6,J18)
                     Y12=Y10*X*exp(1.-X)
                     do L=2,UPA(I)-1
                        F2(I,1,K,L,S)=Y12*(1.-MU(L)**2)**(YZ/2.)*FFACTOR(I,1,K,L)
+                        write(1,*)  F2(I,1,K,L,2)
                     end do ! L loop
                  end if
               end do	! K loop
            end do	! I loop
-
+           !close(1)
            !.......Gaussian in R for INI=2
            if (INI(S).eq.2) then
               do l=2,UPA(i)
@@ -585,6 +599,14 @@ end if
      ECOF(I)=DPHI*X**2*(acos(ELAT2)-acos(ELAT1))*(ELAT1+ELAT2)/2.
   end do	! I loop
 
+
+  open(unit=11,file='F2_initial.dat')
+  write(11,*) F2(:,1,:,:,2)
+  !close(5)
+
+
+
+
 101 format(A80)
 102 format(21X,F6.2,5X,F4.1)
 103 format(F7.3,20(1PE9.2))
@@ -606,10 +628,11 @@ subroutine LMPLOSS
   real :: FLO
   integer :: I,K,L,J
   !---------------------------------------------------------------------
+
   do J=1,JO
      if (ILMP(J).lt.ILold(J)) then
         do L=1,LO		! Lose everything beyond magnetopause
-	   do K=2,KO
+           do K=2,KO
               do I=ILMP(J)+1,ILold(J)
                  FLO=1.E-30*FFACTOR(I,j,K,L)
                  RNL=RNL+(F2(I,J,K,L,S)-FLO)*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
@@ -933,6 +956,14 @@ subroutine GEOSB
         end if
      end if		! SCALC check
   end do		! S loop
+
+
+! open(unit=12,file='F2_GEOSB.dat')
+ ! write(12,*) F2(:,1,:,:,2)
+  !close(5)
+ 
+
+
 
 end subroutine GEOSB
 !=======================================================================
