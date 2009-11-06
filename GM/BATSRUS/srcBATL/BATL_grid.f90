@@ -19,8 +19,8 @@ module BATL_grid
        CoordMax_D(MaxDim)         ! Max gen. coordinates of domain
 
   real, public, allocatable::   &
-       CoordMin_DB(:,:),        & ! Min gen. coordinates of a block
-       CoordMax_DB(:,:),        & ! Max gen. coordinates of a block
+       CoordMin_DB(:,:),        & ! Min gen. coordinates of a block domain
+       CoordMax_DB(:,:),        & ! Max gen. coordinates of a block domain
        CellSize_DB(:,:),        & ! Cell size in gen. coordinates
        CellFace_DB(:,:),        & ! Cell faces for Cartesian grids
        CellFace_DFB(:,:,:,:,:), & ! Cell faces for general grids
