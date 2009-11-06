@@ -19,7 +19,7 @@ module BATL_pass_face
 contains
 
   subroutine message_pass_face(nVar, Flux_VXB, Flux_VYB, Flux_VZB, &
-       DoResChangeOnlyIn, MinLevelSendIn, DoTestIn)
+       DoSubtractIn, DoResChangeOnlyIn, MinLevelSendIn, DoTestIn)
 
     use BATL_size, ONLY: MaxBlock, &
          nBlock, nI, nJ, nK, nIjk_D, &
@@ -42,13 +42,15 @@ contains
          Flux_VZB(nVar,nI,nJ,2,MaxBlock)
 
     ! Optional arguments
+    logical, optional, intent(in) :: DoSubtractIn
     logical, optional, intent(in) :: DoResChangeOnlyIn
     logical, optional, intent(in) :: DoTestIn
     integer, optional, intent(in) :: MinLevelSendIn
 
     ! Send sum of fine fluxes to coarse neighbors and 
-    ! subtract it from the coarse flux (if any).
-    !
+    ! subtract it from the coarse flux if DoSubtractIn is true (default), or
+    ! replace original flux with sum of fine fluxes if DoSubtractIn is false.
+    ! 
     ! DoResChangeOnlyIn determines if the flux correction is applied at
     !     resolution changes only. True is the default.
     !
@@ -57,7 +59,7 @@ contains
 
     ! Local variables
 
-    logical :: DoReschangeOnly
+    logical :: DoSubtract, DoReschangeOnly
 
     integer :: iDim, iDimSide, iRecvSide, iSign
     integer :: iSend, jSend, kSend, iSide, jSide, kSide
@@ -91,6 +93,9 @@ contains
     if(DoTest)write(*,*)NameSub,' starting with nVar=',nVar
 
     ! Set values or defaults for optional arguments
+    DoSubtract = .true.
+    if(present(DoSubtractIn)) DoSubtract = DoSubtractIn
+
     DoResChangeOnly = .true.
     if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
 
@@ -201,9 +206,9 @@ contains
 
     call timing_stop('send_recv')
 
-    call timing_start('buffer_to_state')
+    call timing_start('buffer_to_flux')
     call buffer_to_flux
-    call timing_stop('buffer_to_state')
+    call timing_stop('buffer_to_flux')
 
   contains
 
@@ -272,13 +277,22 @@ contains
                kRMin = iReceive_DII(3,iSubFace2,Min_)
                kRMax = iReceive_DII(3,iSubFace2,Max_)
 
-               ! Add sent flux to the original
-               do k = kRMin, kRmax; do j = jRMin, jRMax
-                  Flux_VXB(:,j,k,iDimSide,iBlockRecv) = &
-                       Flux_VXB(:,j,k,iDimSide,iBlockRecv) &
-                       - BufferR_IP(iBufferR+1:iBufferR+nVar,iProcSend)
-                  iBufferR = iBufferR + nVar
-               end do; end do
+               if(DoSubtract)then
+                  ! Subtract sent flux from the original
+                  do k = kRMin, kRmax; do j = jRMin, jRMax
+                     Flux_VXB(:,j,k,iDimSide,iBlockRecv) = &
+                          Flux_VXB(:,j,k,iDimSide,iBlockRecv) &
+                          - BufferR_IP(iBufferR+1:iBufferR+nVar,iProcSend)
+                     iBufferR = iBufferR + nVar
+                  end do; end do
+               else
+                  ! Replace original flux with sum of sent flux
+                  do k = kRMin, kRmax; do j = jRMin, jRMax
+                     Flux_VXB(:,j,k,iDimSide,iBlockRecv) = &
+                          BufferR_IP(iBufferR+1:iBufferR+nVar,iProcSend)
+                     iBufferR = iBufferR + nVar
+                  end do; end do
+               end if
 
             case(2)
                iRMin = iReceive_DII(1,iSubFace1,Min_)
@@ -286,25 +300,40 @@ contains
                kRMin = iReceive_DII(3,iSubFace2,Min_)
                kRMax = iReceive_DII(3,iSubFace2,Max_)
 
-               do k = kRMin, kRmax; do i = iRMin, iRMax
-                  Flux_VYB(:,i,k,iDimSide,iBlockRecv) = &
-                       Flux_VYB(:,i,k,iDimSide,iBlockRecv) &
-                       - BufferR_IP(iBufferR+1:iBufferR+nVar,iProcSend)
-                  iBufferR = iBufferR + nVar
-               end do; end do
-
+               if(DoSubtract)then
+                  do k = kRMin, kRmax; do i = iRMin, iRMax
+                     Flux_VYB(:,i,k,iDimSide,iBlockRecv) = &
+                          Flux_VYB(:,i,k,iDimSide,iBlockRecv) &
+                          - BufferR_IP(iBufferR+1:iBufferR+nVar,iProcSend)
+                     iBufferR = iBufferR + nVar
+                  end do; end do
+               else
+                  do k = kRMin, kRmax; do i = iRMin, iRMax
+                     Flux_VYB(:,i,k,iDimSide,iBlockRecv) = &
+                          BufferR_IP(iBufferR+1:iBufferR+nVar,iProcSend)
+                     iBufferR = iBufferR + nVar
+                  end do; end do
+               end if
             case(3)
                iRMin = iReceive_DII(1,iSubFace1,Min_)
                iRMax = iReceive_DII(1,iSubFace1,Max_)
                jRMin = iReceive_DII(2,iSubFace2,Min_)
                jRMax = iReceive_DII(2,iSubFace2,Max_)
 
-               do j = jRMin, jRmax; do i = iRMin, iRMax
-                  Flux_VZB(:,i,j,iDimSide,iBlockRecv) = &
-                       Flux_VZB(:,i,j,iDimSide,iBlockRecv) &
-                       - BufferR_IP(iBufferR+1:iBufferR+nVar,iProcSend)
-                  iBufferR = iBufferR + nVar
-               end do; end do
+               if(DoSubtract)then
+                  do j = jRMin, jRmax; do i = iRMin, iRMax
+                     Flux_VZB(:,i,j,iDimSide,iBlockRecv) = &
+                          Flux_VZB(:,i,j,iDimSide,iBlockRecv) &
+                          - BufferR_IP(iBufferR+1:iBufferR+nVar,iProcSend)
+                     iBufferR = iBufferR + nVar
+                  end do; end do
+               else
+                  do j = jRMin, jRmax; do i = iRMin, iRMax
+                     Flux_VZB(:,i,j,iDimSide,iBlockRecv) = &
+                          BufferR_IP(iBufferR+1:iBufferR+nVar,iProcSend)
+                     iBufferR = iBufferR + nVar
+                  end do; end do
+               end if
             end select
 
             if(iBufferR >= iBufferR_P(iProcSend)) EXIT
@@ -379,12 +408,22 @@ contains
             do iR1 = iR1Min, iR1Max
                iS1Min = 1 + Dn1*(iR1-iR1Min)
                iS1Max = iS1Min + Dn1 - 1
-               do iVar = 1, nVar
-                  Flux_VFB(iVar,iR1,iR2,iRecvSide,iBlockRecv) = &
-                       Flux_VFB(iVar,iR1,iR2,iRecvSide,iBlockRecv) - &
-                       sum(Flux_VFB(iVar,iS1Min:iS1Max,iS2Min:iS2Max,&
-                       iDimSide,iBlock))
-               end do
+               if(DoSubtract)then
+                  ! Subtract sum of fine fluxes from original
+                  do iVar = 1, nVar
+                     Flux_VFB(iVar,iR1,iR2,iRecvSide,iBlockRecv) = &
+                          Flux_VFB(iVar,iR1,iR2,iRecvSide,iBlockRecv) - &
+                          sum(Flux_VFB(iVar,iS1Min:iS1Max,iS2Min:iS2Max,&
+                          iDimSide,iBlock))
+                  end do
+               else
+                  ! Replace original with sum of fine fluxes
+                  do iVar = 1, nVar
+                     Flux_VFB(iVar,iR1,iR2,iRecvSide,iBlockRecv) = &
+                          sum(Flux_VFB(iVar,iS1Min:iS1Max,iS2Min:iS2Max,&
+                          iDimSide,iBlock))
+                  end do
+               end if
             end do
          end do
       else
