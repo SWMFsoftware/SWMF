@@ -816,7 +816,7 @@ contains
     do iBLK=1,nBLK
        if (unusedBLK(iBLK)) CYCLE
  
-       do k=1,nK ; do j = i,nJ ; do i=1,nI
+       do k=1,nK ; do j = 1,nJ ; do i=1,nI
       
           if (R_BLK(i,j,k,iBLK) .lt. 1.0) CYCLE
 
