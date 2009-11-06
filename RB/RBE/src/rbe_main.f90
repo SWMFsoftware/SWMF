@@ -42,9 +42,10 @@
 program rbe
 
   use rbe_cread2, ONLY: nstept, nstep, IsStandAlone
-  use rbe_time,   ONLY: istep
+  use rbe_time,   ONLY: istep,t
   use ModMpi,ONLY: MPI_COMM_WORLD
   use ModReadParam
+  use ModPrerunField, ONLY: UsePrerun, read_prerun
   implicit none
   !---------------------------------------------------------------------------
   
@@ -54,6 +55,7 @@ program rbe
   call read_file('PARAM.in',MPI_COMM_WORLD)
   call read_init('  ',iSessionIn=1,iLineIn=0)
   call RB_set_parameters('READ')
+  if (usePrerun) call read_prerun(t)
   call readInputData
   call timing_active(.true.)
   call timing_step(0)
@@ -68,6 +70,7 @@ program rbe
   do istep = 1, nstept+nstep 
      call timing_step(istep)
      call timing_start('rbe_run')
+     if (usePrerun) call read_prerun(t)
      call rbe_run
      call timing_stop('rbe_run')
   end do

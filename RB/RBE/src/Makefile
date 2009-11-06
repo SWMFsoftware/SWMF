@@ -10,6 +10,7 @@ OBJECTS = \
 	ModRbe.o\
 	ModRbSat.o\
 	ModWriteTec.o\
+	ModPrerunField.o\
 	rbe_subs.o\
 	plot_potential.o\
 	trace_line.o\

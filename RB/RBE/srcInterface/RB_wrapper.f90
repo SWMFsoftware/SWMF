@@ -196,6 +196,7 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   use rbe_grid,    ONLY: nLat => ir, nLon => ip
   use rbe_constant,ONLY: rEarth => re
   use rbe_cread2,  ONLY: xnswa,vswa,bxw,byw,bzw,nsw,iyear,iday,UseSmooth
+  use ModPrerunField,ONLY: DoWritePrerun, save_prerun
   implicit none
 
   integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
@@ -218,7 +219,7 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
-  if(nVarLine /= 4) then
+  if(nVarLine /= nVar) then
      write(*,*)'nVarLine=',nVarLine
      call CON_stop(NameSub//' invalid nVarLine (should be 4)')
   end if
@@ -248,8 +249,8 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   
   StateLine_VI      = BufferLine_VI
   StateIntegral_IIV = Integral_IIV
-  nPoint=nPointLine
-  
+  nPoint    = nPointLine
+  nIntegral = nIntegralIn
   !Convert Units
   StateLine_VI(2,:) = StateLine_VI(2,:) / rEarth ! m --> Earth Radii
   StateLine_VI(3,:) = StateLine_VI(3,:) / rEarth ! m --> Earth Radii
@@ -292,6 +293,7 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
      IsFirstCall = .false.
   endif
 
+  if (DoWritePrerun) call save_prerun(tSimulation)
 end subroutine RB_put_from_gm
 !============================================================================
 

@@ -9,6 +9,7 @@ subroutine RB_set_parameters(NameAction)
   use rbe_io_unit
   use ModRbTime
   use ModWriteTec, ONLY: DoWriteTec
+  use ModPrerunField, ONLY:  DoWritePrerun, UsePrerun, DtRead
   implicit none
 
   character (len=100)           :: NameCommand
@@ -122,6 +123,11 @@ subroutine RB_set_parameters(NameAction)
      
      case('#INPUTDATA')
         call read_var('NameStorm',storm)
+     
+     case('#PRERUNFIELD')
+        call read_var('DoWritePrerun',DoWritePrerun)
+        if(.not.DoWritePrerun) call read_var('UsePrerun',UsePrerun)
+        if(UsePrerun)          call read_var('DtRead',   DtRead)
 
      case('#BOUNDARY')
         call read_var('UseMhdBoundary',UseMhdBoundary) 

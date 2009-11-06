@@ -189,6 +189,7 @@ subroutine rbe_run
   use ModIoUnit, ONLY: UnitTmp_
   use ModRbTime
   use ModTimeConvert, ONLY: time_real_to_int
+  use ModPrerunField, ONLY: UsePrerun, read_prerun
 
   ! print initial fluxes
   if (t.eq.tstart .and. itype.eq.1) call rbe_save_result(.false.,.true.)
@@ -235,6 +236,8 @@ subroutine rbe_run
   endif
 
   t=t+dt
+  !update field if using prerun MHD field
+  if (usePrerun) call read_prerun(t)
   !update outname 
   CurrentTime = StartTime+t
   call time_real_to_int(CurrentTime,iCurrentTime_I)
