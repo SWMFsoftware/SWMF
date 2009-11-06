@@ -1,14 +1,10 @@
 ! File name: heidi_currents.f90
-!
 ! Contains: pressure and current calculation routines for HEIDI
 !	PRESSURES
 !	CURRENTSETUP
 !	CURRENTCALC
 !	Funcpf
 !	Funcpc
-!
-! Last Modified: March 2006, Mike Liemohn
-!
 !=======================================================================
 !			 	PRESSURES
 !     Routine calculates the pressures from the distribution function
@@ -26,17 +22,14 @@ subroutine PRESSURES
   integer :: I,J,K,L,I_1,I_2
   real    :: RFAC,SUME,SUMA,SUMN,SUMTE,SUMTN,J_FAC
   !---------------------------------------------------------------------   
-  
-
-  !...Start the main species loop
-  do S=1,NS
+  !\
+  ! Start the main species loop
+  !/
+  do S = 1, NS
      if (SCALC(S).eq.1) then
-
         !   RFAC is 4*PI*SQRT(2)*(kg->amu * keV->J)^1.5 *(m->km)^6 *(cm->m)^3
         !   and should be ~5.3E-7/M(amu)^1.5
-
         RFAC=4.*PI*sqrt(2.)*1.E-24*(Q*1.E3/MP/M1(S))**1.5
-
         !   J_FAC is (keV->J)*(T->G)*(m->cm)^3 /RE(in m)
         !   and should be ~2.5E-13
 	J_FAC=Q*1.E13/RE
@@ -62,22 +55,23 @@ subroutine PRESSURES
                     Nspace(I,J,S)=Nspace(I,J,S)+F2(I,J,K,L,S)*WE(K)*DR*DPHI*WMU(L)*CONSL(K,S)
                     Espace(I,J,S)=Espace(I,J,S)+F2(I,J,K,L,S)*WE(K)*DR*DPHI*WMU(L)*EKEV(K)*CONSL(K,S)
                  enddo  ! L loop
-                 
                  PPER(I,J,S)=PPER(I,J,S)+EPP(K,S)*SUME
                  PPAR(I,J,S)=PPAR(I,J,S)+EPP(K,S)*SUMA
                  RNHT(I,J,S)=RNHT(I,J,S)+ERNH(K,S)*SUMN
                  EDEN(I,J,S)=EDEN(I,J,S)+ERNH(K,S)*EKEV(K)*SUMN
-                 
               enddo   ! K loop
-              
-              !...These parameters are equatorial plane values (not bounce-integrated)
+              !\
+              ! These parameters are equatorial plane values (not bounce-integrated)
+              !/
               ANIS(I,J,S)=PPER(I,J,S)/2./PPAR(I,J,S)-1.
               EPAR(I,J,S)=2*PPAR(I,J,S)/RNHT(I,J,S)  ! kT parallel [keV] 
-              RNHT(I,J,S)=RNHT(I,J,S)*RFAC	! RC dens [1/cm3]
-              EDEN(I,J,S)=EDEN(I,J,S)*RFAC	! RC ener dens [keV/cm3]
-              PPAR(I,J,S)=2*RFAC*PPAR(I,J,S) ! P parallel [keV/cm3]
-              PPER(I,J,S)=RFAC*PPER(I,J,S)	! P perpend [keV/cm3]
-              !...These parameters are globally integrated values
+              RNHT(I,J,S)=RNHT(I,J,S)*RFAC	     ! RC dens [1/cm3]
+              EDEN(I,J,S)=EDEN(I,J,S)*RFAC	     ! RC ener dens [keV/cm3]
+              PPAR(I,J,S)=2*RFAC*PPAR(I,J,S)         ! P parallel [keV/cm3]
+              PPER(I,J,S)=RFAC*PPER(I,J,S)	     ! P perpend [keV/cm3]
+              !\
+              ! These parameters are globally integrated values
+              !/
               SUMTN=SUMTN+Nspace(I,J,S)
               SUMTE=SUMTE+Espace(I,J,S)
            end do   ! I loop
@@ -100,20 +94,18 @@ subroutine PRESSURES
               JPER(I,J,S)=-J_FAC*((PPER(I_1,J,S)-PPER(I_2,J,S))/DL1+   &
                    3.*(PPER(I,J,S)-PPAR(I,J,S))/LZ(I))/BE(I,1) !J perp [A/m2]
            end do   ! I loop
-        end do    ! J loop
-        !...These values are bounce-integrated
+        end do      ! J loop
+        !\
+        ! These values are bounce-integrated
         !	NTOT(S)=2.E6*RFAC*RE*RE*SUMTN	! Ntotal for RC species [parts]
         !	ETOT(S)=2.E6*RFAC*RE*RE*SUMTE	! Etotal for RC species [keV]
+        !/
 	NTOT(S)=SUMTN
 	ETOT(S)=SUMTE
 	Dst(S)=-3.98E-30*ETOT(S)	! Dst* [nT] 
-        !	print *, 'Dst: ',S,Dst(S),ETOT(S),NTOT(S)
-
-          
-
      end if    ! SCALC check
-  end do    ! S loop
-  close(3)
+  end do       ! S loop
+
 end subroutine PRESSURES
 !=======================================================================
 !			 	CURRENTSETUP
@@ -130,7 +122,9 @@ subroutine CURRENTSETUP
   real    :: Lambda(Slen),R22(NR+3,Slen),Rionos,Lmax,dlam,lam1,lam2
   integer :: kk,i,j,k
   !---------------------------------------------------------------------   
-  !  Setup calculations
+  !\
+  ! Setup calculations
+  !/
 
   Ir=IO+3   ! add 1 to the bottom end, 2 to the top end
   Lsh(2:IO+1)=LZ(1:IO)
@@ -364,8 +358,9 @@ subroutine CURRENTCALC
   external :: Funcpc,Funcpf
 
   !---------------------------------------------------------------------   
-
-  !  Initialize a few numbers
+  !\
+  ! Initialize a few numbers
+  !/
   Pzero=1.E-8
   Nzero=1.E-8
   !Irad(1:IO,1:JO,1:NS)=0.   ! Radially outward current totals (A)
@@ -376,12 +371,14 @@ subroutine CURRENTCALC
   Iphi=0.   ! Eastward current totals (A)
   Jion1=0.  ! Current into ionosphere (A/m2)
 
-
-  !  Start main species loop
+  !\
+  ! Start main species loop
+  !/
   do S=1,NS
      if (SCALC(S).eq.1) then
-
-        !  Calculate bulk values for an empty loss cone distribution
+        !\
+        ! Calculate bulk values for an empty loss cone distribution
+        !/
 	do j=1,Jo
            Pf1(1:Ir,j)=Pzero
            Pc1(1:Ir,j)=Pzero
@@ -411,8 +408,9 @@ subroutine CURRENTCALC
               As1(i,j)=Pf1(i,j)/(Pc1(i,j)+1e-30) - 1.
            end do
 	end do
-
+        !\
         ! Jperp calculation
+        !/
 	do j=1,Jo
            do i=1,Ir
               do k=1,Kmax(i)
@@ -462,7 +460,9 @@ subroutine CURRENTCALC
                  Jc(1,i,j,k)=Jx1+Jx2   ! save Jperp for Jpara calculation
                  Jc(2,i,j,k)=Jy1+Jy2
                  Jc(3,i,j,k)=Jz1+Jz2
-                 !* Integrate for total current output  (A) (doubled: N&S hemispheres)
+                 !\
+                 ! Integrate for total current output  (A) (doubled: N&S hemispheres)
+                 !/
                  if (i.ge.3 .and. i.le.ILMP(J)) then
                     Irad(i,j,s)=Irad(i,j,s)+2.*.16E-9*Re*cr(i,k)**3*Lsh(i)*dphi   &
                          *ds(i,k)*((Jc(1,i,j,k)*cp(j)+Jc(2,i,j,k)*sp(j))   &
@@ -470,26 +470,18 @@ subroutine CURRENTCALC
                     Iphi(i,j,s)=Iphi(i,j,s)+2.*.16E-9*delR(i,k)*ds(i,k)*   &
                          (-Jc(1,i,j,k)*sp(j)+Jc(2,i,j,k)*cp(j))
                     if (Iphi(i,j,s)-Iphi(i,j,s).ne.0.) then
-                       !print *,'Iphi:',Iphi(i,j,s),s,i,j,k,Kmax(i),Jc(1,i,j,k),   &
-                       !     Jc(2,i,j,k),Jc(3,i,j,k),Jx1,Jx2,Jy1,Jy2,Jz1,Jz2
-                       ! print *,'dP#:',dPx,dPy,dPz,dPi1,dPi2,dPj1,dPj2,dPk1,dPk2
-                       ! print *,'dPi:',i1(i),i2(i),Pf1(i2(i),j),Pf1(i1(i),j),fac2(i,k),fac1(i,k)
-                       !print *,'Funcpc:',Funcpc(As1(i,j),BBr(i,k),BBr(i,Kmax(i))),BBr(i,k),   &
-                       !     BBr(i,Kmax(i)),As1(i,j)
-                       !print *,'FuncPi1:',Pf1(i2(i),j),fac2(i,k),Funcpc(As1(i2(i),j),   &
-                       !     BBr(i2(i),ikk2(i,k)-ik2(i,k)),BBr(i2(i),Kmax(i2(i)))),   &
-                       !     1.-fac2(i,k),Funcpc(As1(i2(i),j),BBr(i2(i),   &
-                       !     ikk2(i,k)),BBr(i2(i),Kmax(i2(i)))),Pf1(i,j),   &
-                       !     Funcpc(As1(i,j),BBr(i,k),BBr(i,Kmax(i)))
                        call CON_stop('ERROR in heidi_currents.f90')
                     end if
-                 end if  !! Only save where we have pressures
-              end do  ! k loop
-           end do   ! i loop
-	end do    ! j loop
+                 end if  ! Only save where we have pressures
+              end do     ! k loop
+           end do        ! i loop
+	end do           ! j loop
 
-        !  Begin Jparallel calculation
-	do j=1,Jo
+        !\
+        ! Begin Jparallel calculation
+        !/
+
+	do j = 1, Jo
            Imax=ILMP(J)-1
            if (J.ge.2 .and.J.le.Jo-1) then
               Imax=min(Imax,min(ILMP(J-1)-1,ILMP(J+1)-1))
@@ -525,10 +517,9 @@ subroutine CURRENTCALC
               end do ! k loop
               Jion1(i,j,s)=0.16E-9*J3    ! A/m2 into one hemisphere
            end do  ! i loop
-	end do   ! j loop
-
-     end if   ! SCALC check
-  end do   ! S loop
+	end do     ! j loop
+     end if        ! SCALC check
+  end do           ! S loop
 
 end subroutine CURRENTCALC
 !=======================================================================
@@ -563,5 +554,5 @@ real function Funcpc(As,BBr,BBm)
   FuncPc=(As+1.)/(1.+As*BBr)**2*c1*(1.-c2)
 
 end function Funcpc
-
+!=======================================================================
 

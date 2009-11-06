@@ -4,9 +4,6 @@
 !	CEPARA
 !	OTHERPARA
 !	MAGCONV
-!
-! Last Modified: March 2006, Mike Liemohn
-!
 !======================================================================
 !			       CEPARA
 ! Calculates the cross-section of charge exchange of ring current
@@ -18,8 +15,8 @@ subroutine CEPARA
   use ModHeidiSize
   use ModHeidiMain
   use ModHeidiDrifts
-  use ModIoUnit,  only : io_unit_new,UNITTMP_
-  use ModHeidiIO, only: NameInputDirectory
+  use ModIoUnit,  ONLY: io_unit_new,UNITTMP_
+  use ModHeidiIO, ONLY: NameInputDirectory
 
   implicit none
 
@@ -31,48 +28,32 @@ subroutine CEPARA
   real              :: LH(20),HDNSIN(20,71)
   character(len=80) :: TITLE
   external          :: cosd,acosd
-  
-
   !---------------------------------------------------------------------
-  !.......Open a file with the bounce-averaged H dens [m-3] in geocorona
-  !	obtained through bounce-averaging the Chamberlain model
-  !	(Mei-Ching's fit by a poly of order 4 good for L from 1 to 6.5)
-  S=0
-  do I=2,NS
+  !\
+  ! Open a file with the bounce-averaged H dens [m-3] in geocorona
+  ! obtained through bounce-averaging the Chamberlain model
+  ! (Mei-Ching's fit by a poly of order 4 good for L from 1 to 6.5)
+  !/
+
+  S = 0
+  do I = 2, NS
      S=S+SCALC(I)   ! S=0, no ions in calc, S>0, ions in calc
   end do
   if (S.ge.1) then	! Only needed for ion charge exchange
-     ! Read in from file instead
-     !	  DO I=1,20
-     !	    LH(I)=1.5+.25*REAL(I)
-     !	  END DO
-     !cc	  IF(LO.EQ.31) THEN
-     !cc	    OPEN(UNIT=iUnit,FILE='hgeo.in',STATUS='OLD')
-     !cc	    LUP=LO-1
-     !cc	  ELSE
-     !cc	    IF(LO.EQ.50) OPEN(UNIT=iUnit,FILE='hgeo50.in',STATUS='OLD')
-     !cc	    IF(LO.EQ.60) OPEN(UNIT=iUnit,file='hgeo64.in',STATUS='OLD')
-     !cc	    IF(LO.EQ.71) OPEN(UNIT=iUnit,file='hgeo71.in',STATUS='OLD')
-
-
      open(UNITTMP_,file=NameInputDirectory//'hgeo71.in',STATUS='OLD')
-     !cc	    IF(LO.EQ.91) OPEN(UNIT=iUnit,file='hgeo91.in',STATUS='OLD')
      LUP=71
-     !cc	  ENDIF
-     do I=1,20
+     do I = 1,20
         read(UNITTMP_,3) TITLE,LH(i)
-        do L=1,LUP
+        do L = 1,LUP
            read(UNITTMP_,4) PA(L),RLAMBDA(L),HDNSIN(I,L)
         end do	! L loop
-        !cc	    if (LO.EQ.31) HDNSIN(I,LUP+1)=HDNSIN(I,LUP)
      end do	! I loop
      close(UNITTMP_)
-     !cc	  If (LO.EQ.31) LUP=LUP+1
-     do L=1,LUP
-        PA(L)=COSD(PA(L))
+     do L = 1, LUP
+        PA(L) = COSD(PA(L))
      end do
-     do I=1,IO
-        do L=1,LO
+     do L=1,LO
+        do I=1,IO
            call LINTP2(LH,PA,HDNSIN,20,71,LZ(i),MU(L),FAC,IER)
            HDNS(i,l)=FAC
         enddo
@@ -81,13 +62,17 @@ subroutine CEPARA
   end if
 3 format(A61,F5.2)
 4 format(2F7.3,2X,1PE12.5)
+  !\
+  ! Calculate charge exchange cross-section of species S with H
+  ! and then the charge exchange decay rate ACHAR
+  !/
 
-  !.......Calculate charge exchange cross-section of species S with H
-  !         and then the charge exchange decay rate ACHAR
+  !\
+  ! H+ charge exchange
+  !/
 
-  !.......H+ charge exchange
   if (SCALC(2).eq.1) then
-     do K=2,KO
+     do K = 2,KO
         X=ALOG10(EKEV(K))
         if (X.lt.-2.) X=-2.
         Y=-18.767-0.11017*X-3.8173e-2*X**2-0.1232*X**3-5.0488e-2*X**4
@@ -98,7 +83,10 @@ subroutine CEPARA
      end do	! K loop
   end if
 
-  !.......He+ charge exchange
+  !\
+  ! He+ charge exchange
+  !/
+
   if (SCALC(3).eq.1) then
      do K=2,KO
         X=ALOG10(EKEV(K))
@@ -111,32 +99,39 @@ subroutine CEPARA
      end do	! K loop
   end if
 
-  !.......O+ charge exchange
+  !\
+  ! O+ charge exchange
+  !/
+
   if (SCALC(4).eq.1) then
      do K=2,KO
         X=ALOG10(EKEV(K))
         if (X.lt.-2.) X=-2.
         Y=-18.987-0.10613*X-5.4841E-3*X**2-1.6262E-2*X**3   &
              -7.0554E-3*X**4
-        !...........10**Y is cross sect of O+ in m2
+        ! 10**Y is cross sect of O+ in m2
         do L=2,Lo
            achar(2:io,k,l,4)=exp(-(10.**Y*V(K,4)*HDNS(2:io,L)*DT))
         end do	! L loop
      end do	! K loop
   end if
 
-  !.......Calculate the losses due to the collis with atmosphere
-  do j = 1, jo
-     do s=1,NS
-        do I=2,IO
+  !\
+  ! Calculate the losses due to the collis with atmosphere
+  !/
+
+  do s = 1, NS
+     do I=2,IO  
+        do L = UPA(I),LO
            do K=2,KO
-              do L=UPA(I),LO
+              do j = 1, jo
                  ATLOS(I,J,K,L,S)=exp(-DT/(29.1347*LZ(I)*FUNT(L,I,J)*sqrt(M1(S)/EKEV(K))))
-              end do	! L loop
-           end do	! K loop
-        end do		! I loop
-     end do		! S loop
-  end do
+              end do	! I loop
+           end do	! J loop
+        end do		! K loop
+     end do		! L loop
+  end do                ! S loop
+
 end subroutine CEPARA
 !======================================================================
 !				OTHERPARA
@@ -163,12 +158,18 @@ subroutine OTHERPARA
   data RA/1.,.77,.2,.03/     ! Thermal proportions in plasmasphere
   !---------------------------------------------------------------------  
 
-  !.......Parameters used in calculating drifts at boundaries
+  !\
+  ! Parameters used in calculating drifts at boundaries
+  !/
+
   C=1.44E-2*RE**2		! Constant of corotation, [C]=V*m
   ISS=-1			! sign of specie's charge
   if (S.ge.2) ISS=1
 
-  !.......Determine the dayside
+  !\
+  ! Determine the dayside
+  !/
+
   J6=0
   J=0
   do while (J6.eq.0)
@@ -182,58 +183,56 @@ subroutine OTHERPARA
      if (MLT(J).ge.17.99) J18=J
   end do	! While J18 loop
 
-  do j=1, jo
-     do K=1,KO
-        do i=1,io
-           do L=1,UPA(I)    ! Kp independent part of azimuthal drift
+  do i = 1, io      
+     do L = 1, UPA(I)    ! Kp independent part of azimuthal drift
+        do K = 1, KO
+           do j = 1,  jo
               GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
               P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
-              !	    P2(I,K,L)=C*DT/DPHI/ME
-           end do	! 1st L loop
-           do L=UPA(I)+1,LO
-              P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
-              !	    P2(I,K,L)=C*DT/DPHI/ME
-           end do	! 2nd L loop
+           end do
         end do
-     end do	! K loop
+     end do
   end do
-  do I=1,IO
+
+  do i = 1, io 
+     do L=UPA(I)+1,LO
+        do K = 1, KO
+           do j = 1,  jo
+              P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
+           end do
+        end do
+     end do
+  end do
+
+  do I = 1, IO
      VR(I,J6)=0.
      VR(I,J18)=0.
   end do	! I loop processing VR
 
-  !.......Pitch angle and energy time derivatives at boundaries of grids
+  !\
+  ! Pitch angle and energy time derivatives at boundaries of grids
+  !/
+
   do I=1,IO
      do J=1,JO
         do L=1,UPA(I)
 	   MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
-           !MUDOT(I,J,L)=(1.-MUBOUN**2)*FUNI(MUBOUN)/LZ(I)  &
-           !     /MUBOUN/4./FUNT(MUBOUN)*DL1/DMU(L)
-           
            MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
                 /MUBOUN/4./(0.5*(FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
-	                         
            GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
-	   
            do K=1,KO
               EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
 	   end do	! K loop
         end do 	! L loop
         MULC=MU(UPA(I))+0.5*WMU(UPA(I))
-        
         do L=UPA(I)+1,LO-1
            MUBOUN=MU(L)+0.5*WMU(L)
-	   !MUDOT(I,J,L)=(1.-MUBOUN**2)*FUNI(MULC)/LZ(I)  &
-           !     /MUBOUN/4./FUNT(MULC)*DL1/DMU(L)
-           
            if (l== LO-1) MU(L+1) = MU(L)
            MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
                 /MUBOUN/4./(0.5*( FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
-                      
            do K=1,KO
               EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
 	   end do	! K loop
-           
         end do	! L loop
         MUDOT(I,J,LO)=0.
         do K=1,KO
@@ -242,21 +241,22 @@ subroutine OTHERPARA
      end do 	! J loop
   end do	! I loop
 
-  !.......We assume Te=Ti=1eV (kT=1eV)
-  do I=1,NSTH
-     TMAS(I)=TM1(I)*MP
-     VF(I)=sqrt(2.*Q/TMAS(I))	! [m/s]
+  !\
+  ! We assume Te=Ti=1eV (kT=1eV)
+  !/
+
+  do I = 1, NSTH
+     TMAS(I) = TM1(I)*MP
+     VF(I) =sqrt(2.*Q/TMAS(I))	! [m/s]
   end do	! I loop
   EPS=8.854E-12                ! [F/m]
   DLN=21.5                     ! Coulomb logarithm
   QE=(Q**2/EPS)
 
-
-  do S=1,NS
-     
+  do S = 1, NS
      if (SCALC(S).eq.1) then
         SQM=sqrt(MAS(S))
-!!! GAMA and EDRCO divided by an extra 2 to match Khazanov defn of Q
+        ! GAMA and EDRCO divided by an extra 2 to match Khazanov defn of Q
         GAMA=DLN/8./PI*QE*1E6/SQM*QE ! *1E6 to transform ne into m-3
         CCO=GAMA/Q*sqrt(2.)*DT
         CCD=GAMA*2*DT/16./sqrt(2.)   ! 2*DT due to double the time step
@@ -280,14 +280,22 @@ subroutine OTHERPARA
                     EDRI=EDRI+RA(IS)*G(XD)
                     CDI=CDI+RA(IS)*(ERF(XD,IER)-G(XD))
                  end do	! IS loop
-                 !.......Collisions with plasmaspheric e- (minus: dF/dt-d(cF)/dt=0)
+                 !\
+                 ! Collisions with plasmaspheric e- (minus: dF/dt-d(cF)/dt=0)
+                 !/
                  COULE(1,J,K,1,S)=-CCE*sqrt(EBND(K)/Q/1000.)/DE(K)*CCO
-                 !.......Collisions with plasmaspheric ions
+                 !\
+                 ! Collisions with plasmaspheric ions
+                 !/
                  COULI(1,J,K,1,S)=-CCI*sqrt(EBND(K)/Q/1000.)/DE(K)*CCO
-                 !.......Energy deposition rate [eV/cm2/s]
+                 !\
+                 ! Energy deposition rate [eV/cm2/s]
+                 !/
                  CEDR(I,J,K,1,S)=EDRCO*EKEV(K)*EDRE
                  CIDR(I,J,K,1,S)=EDRCO*EKEV(K)*EDRI
-                 !.......Coulomb scattering
+                 !\
+                 ! Coulomb scattering
+                 !/
                  CCDE=CCD*CDE/(EKEV(K)*Q*1000)**(1.5)
                  CCDI=CCD*CDI/(EKEV(K)*Q*1000)**(1.5)
                  COULDE(K,1)=0.
@@ -301,18 +309,20 @@ subroutine OTHERPARA
                     CEDR(I,J,K,L,S)=CEDR(I,J,K,1,S)*BANE*FACMU(L,I,J)*WMU(L)
                     CIDR(I,J,K,L,S)=CIDR(I,J,K,1,S)*BANE*FACMU(L,I,J)*WMU(L)
                     MUBOUN=MU(L)+0.5*WMU(L)
-                    !BADIF=(1.-MUBOUN*MUBOUN)*FUNI(MUBOUN)/MUBOUN
                     BADIF=(1.-MUBOUN*MUBOUN)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/MUBOUN
-                    !.......Collisions with plasmaspheric electrons
+                    !\
+                    ! Collisions with plasmaspheric electrons
+                    !/
                     COULDE(K,L)=CCDE*BADIF
-                    
-                    
+
                     ATAE(I,J,K,L,S)=COULDE(K,L)/FACMU(L+1,I,J)/DMU(L)/WMU(L)
                     AFIR=COULDE(K,L)/FACMU(L,I,J)/DMU(L)/WMU(L)
                     ASEC=COULDE(K,L-1)/FACMU(L,I,J)/DMU(L-1)/WMU(L)
                     BTAE(I,J,K,L,S)=AFIR+ASEC
                     GTAE(I,J,K,L+1,S)=COULDE(K,L)/FACMU(L,I,J)/WMU(L+1)/DMU(L)
-                    !.......Collisions with plasmaspheric ions
+                    !\
+                    ! Collisions with plasmaspheric ions
+                    !/
                     COULDI(K,L)=CCDI*BADIF
                     ATAI(I,J,K,L,S)=COULDI(K,L)/FACMU(L+1,I,J)/DMU(L)/WMU(L)
                     AFIR=COULDI(K,L)/FACMU(L,I,J)/DMU(L)/WMU(L)
@@ -327,9 +337,9 @@ subroutine OTHERPARA
               end do	! K loop
            end do
         end do
-        
-        do j=1, jo
-           do K=1,KO
+
+        do K=1,KO
+           do j=1, jo        
               do I=IO,1,-1		! Set to edge of loss cone when
                  do L=1,UPA(I)-1	! in the loss cone
                     COULE(I,J,K,L,S)=COULE(1,J,K,L,S)
@@ -338,18 +348,17 @@ subroutine OTHERPARA
                  do L=UPA(I),LO
                     COULE(I,J,K,L,S)=COULE(I,J,K,L-1,S)
                     COULI(I,J,K,L,S)=COULI(I,J,K,L-1,S)
-  
                  end do	! 2nd L loop
               end do	! I loop
-           end do	! K loop
-        end do
-     end if	! SCALC check
+           end do	! J loop
+        end do          ! K loop
+     end if	        ! SCALC check
   end do		! S loop
-  
-  
 
+  !\
+  ! Set continuous source/loss integrals to zero
+  !/
 
-  !...Set continuous source/loss integrals to zero
   RNS=0.	! Radial drift particle source
   RNL=0.	! Radial drift particle loss
   RES=0.	! Radial drift energy source
@@ -364,7 +373,10 @@ subroutine OTHERPARA
   ALE=0.	! Atmospheric loss energy gain/loss
   CEN=0.	! Charge exchange particle gain/loss
   CEE=0.	! Charge exchange energy gain/loss
-  !...Set "magnetopause" at outer boundary
+  !\
+  ! Set "magnetopause" at outer boundary
+  !/
+
   ILMP(1:JO)=IO
   LMP(1:JO)=LZ(IO)+DL1
 
@@ -412,21 +424,20 @@ subroutine MAGCONV(I3,NST)
   use ModHeidiDGCPM
   use ModProcIM
   use ModIoUnit,  only : io_unit_new
+
   implicit none
 
-
   integer :: ABASE(24),AEPEN(24),IER,j,i,ii,I4,I3,NST,jj,bc_choice
-  integer ::L,IOpot,JOpot   
-
-  real :: KR,SPJ,CPJ,PJ,DLMAG,Ppc0,Eom,EOJ,EOJ1,NY(4),FAC,CRo
-  real :: KGAM,KS(4),KALP,KBETA,KPHI,KEX,KEY,LP,DLP,PCO,PHIPOFF
-  real :: Ro,RR,RoRg,KEPS,KSD,SJ,CJ,PHIP,EPR,EPP,ERF,DP1,FACP
-  real :: DPP,DP2,sLP,dLPdphi,Jreducer
-  real :: sind,cosd
-  real ::jfac_temp(NR+3,NT)
-  real ::FPOT1(3*NR,NT),FPOT2(3*NR,NT),FPOT12(3*NR,NT)
-  real ::TP1,TP2,LZpot(3*NR),data(3*NR),Fmin,Fmax,MLTpot(NT)
-  real ::t_sawtooth(9),tdiff,dt_saw
+  integer :: L,IOpot,JOpot   
+  real    :: KR,SPJ,CPJ,PJ,DLMAG,Ppc0,Eom,EOJ,EOJ1,NY(4),FAC,CRo
+  real    :: KGAM,KS(4),KALP,KBETA,KPHI,KEX,KEY,LP,DLP,PCO,PHIPOFF
+  real    :: Ro,RR,RoRg,KEPS,KSD,SJ,CJ,PHIP,EPR,EPP,ERF,DP1,FACP
+  real    :: DPP,DP2,sLP,dLPdphi,Jreducer
+  real    :: sind,cosd
+  real    :: jfac_temp(NR+3,NT)
+  real    :: FPOT1(3*NR,NT),FPOT2(3*NR,NT),FPOT12(3*NR,NT)
+  real    :: TP1,TP2,LZpot(3*NR),data(3*NR),Fmin,Fmax,MLTpot(NT)
+  real    :: t_sawtooth(9),tdiff,dt_saw
   character(len=80):: header
   data ABASE/1,1,1,2,3,1,2,3,1,2,3,4,4,5,5,6,6,1,1,1,10,11,12,13/
   data AEPEN/0,0,0,0,0,1,1,1,2,2,2,2,0,2,3,2,3,0,0,0, 0, 0, 0, 0/
@@ -435,9 +446,9 @@ subroutine MAGCONV(I3,NST)
   data KEX/3.E-5/, KEY/1.2E-4/, PCO/9.17E4/
   data t_sawtooth/9.6e4,9.84e4,1.062e5,1.152e5,1.278e5,   &
        1.374e5,1.458e5,1.554e5,1.626e5/
-  !cc Use the next t_sawtooth definition for 4.5 h of 2*Vsw early on 4/18
-  !cc	DATA t_sawtooth/8.64e4,8.82e4,9.0e4,9.18e4,9.36e4,
-  !cc     &                  9.54e4,9.72e4,9.9e4,1.008e5/
+  ! Use the next t_sawtooth definition for 4.5 h of 2*Vsw early on 4/18
+  ! DATA t_sawtooth/8.64e4,8.82e4,9.0e4,9.18e4,9.36e4,
+  !  &                  9.54e4,9.72e4,9.9e4,1.008e5/
   data dt_saw/600./
 
   external :: ERF,sind,cosd
@@ -454,16 +465,16 @@ subroutine MAGCONV(I3,NST)
   integer :: edayplus
   real    :: univ_time
   !---------------------------------------------------------------------  
+
   PHIPOFF=0.
   DP1=.4*PI
   DP2=2.*PI/3.
   FACP=AMIN1((.25*KP)**2,1.5)
   Kr=KP/(1.+.1*KP)
-  !**  The next line is to cut down the size of the field-aligned currents...
+  ! The next line is to cut down the size of the field-aligned currents...
   Jreducer=1.0
 
-  !** Find polar cap potential value (if needed)
-  !print *, 'Is ABASE 3 or 4?'
+  ! Find polar cap potential value (if needed)
   if (ABASE(IA+1).eq.3 .or. ABASE(IA+1).eq.4) then  
      if (I3.eq.NST) then
         I4=0
@@ -482,7 +493,6 @@ subroutine MAGCONV(I3,NST)
      else if (T.ge.TPPC(I4+1)) then
         I4=I4+1
      end if
-     !	  print *, 'PPC:',I4,IPPC,TPPC(I4),PPC(I4)
      if (T.le.TPPC(1)) then
         PPC0=PPC(1)
      else if (T.ge.TPPC(IPPC)) then
@@ -491,22 +501,18 @@ subroutine MAGCONV(I3,NST)
         Ppc0=PPC(I4)+(PPC(I4+1)-PPC(I4))*(T-TPPC(I4))   &
              /AMAX1(.1*DT,TPPC(I4+1)-TPPC(I4))
      end if
-     !	print *, 'Ppc0:',I4,TPPC(I4),TPPC(I4+1),PPC(I4),PPC(I4+1)
   end if
 
-  DLMAG=LMP(7)+LMP(19)  ! Width across magnetosphere at X=0
+  DLMAG=LMP(7)+LMP(19)     ! Width across magnetosphere at X=0
   Eom=sqrt(KEX**2+KEY**2)  ! Eo factor for McIlwain field
 
-  if (IA.eq.0) A=0.     ! No convection field
+  if (IA.eq.0) A=0.        ! No convection field
 
-  !  Calculate base convection electric field
-
-  !CC Shielded Volland-Stern
-  !print *, 'Is ABASE 1-4?'
+  !\
+  ! Calculate base convection electric field
+  !/
 
   if (ABASE(IA+1).eq.1) then
-
-     
      do J=1,JO   ! Fill in drift values
         do i=1,io
            VR(I,J)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
@@ -515,23 +521,24 @@ subroutine MAGCONV(I3,NST)
                 DT/DPHI*(RE*RE/ME)
            BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*sin(phi(j))
         end do
-        
-        !Compute the V-S potential outside the edges of the radial grid. 
-        !Needed for the current calculation.
-        
+        !\
+        ! Compute the V-S potential outside the edges of the radial grid. 
+        ! Needed for the current calculation.
+        !/
         BASEPOT(1,j)    = A*RE*(LZ(1)-DL1)**(LAMGAM)*sin(phi(j))
-        !BASEPOT(io+1,j) = A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
-        !BASEPOT(io+2,j) = A*RE*(LZ(io)+2*dl1)**(LAMGAM)*sin(phi(j))
         BASEPOT(io+2,j) = A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
-             
      end do
-     do J=1,nphicells   ! Fill in DGCPM potentials
-        do I=1,nthetacells
+
+     do J = 1, nphicells   ! Fill in DGCPM potentials
+        do I = 1, nthetacells
            potdgcpm(i,j)=A*RE*vlzcells(I)**(LAMGAM)*SIND(vphicells(J))
         enddo
      enddo
 
-     !CC McIlwain or modified McIlwain field
+     !\
+     ! McIlwain or modified McIlwain field
+     !/
+
   else if (ABASE(IA+1).eq.2 .or. ABASE(IA+1).eq.3) then
 
      KEPS=1.+KALP*Kr   ! McIlwain E5D potential structure
@@ -589,7 +596,9 @@ subroutine MAGCONV(I3,NST)
         enddo
      enddo
 
-     !CC Unshielded Volland-Stern field
+     !\
+     ! Unshielded Volland-Stern field
+     !/
   else if (ABASE(IA+1).eq.4) then
 
      KEPS=Ppc0/DLMAG
@@ -609,26 +618,28 @@ subroutine MAGCONV(I3,NST)
            potdgcpm(i,j)=KEPS*vlzcells(I)*SIND(vphicells(J))
         enddo
      enddo
-     !	print *, 'Conv:',KEPS,VR(IO,1),P1(IO,7)
 
-     !CC Base field is specified during the self-consistent calculation
+     !\
+     ! Base field is specified during the self-consistent calculation
+     !/
+
   else if (ABASE(IA+1).ge.5) then
-     !print *, 'ABASE is 5.'
-
-     do J=1,JO   !  Zero out drift values
-        do i=1,io
+     do J = 1, JO   !  Zero out drift values
+        do i = 1, io
            VR(I,J) = 0.0
            P1(I,J) = 0.0
         end do
      end do
-     do J=1,nphicells   ! Zero out DGCPM potentials
-        do I=1,nthetacells
+     do J = 1, nphicells   ! Zero out DGCPM potentials
+        do I = 1, nthetacells
            potdgcpm(i,j) = 0.0
         enddo
      enddo
 
-     !CC Read in potentials from a file
-     !print *, 'Is ABASE >=10?'
+     !\
+     ! Read in potentials from a file
+     !/
+
   else if (ABASE(IA+1).eq.10) then
 
      iUnitPot = io_unit_new()
@@ -684,7 +695,9 @@ subroutine MAGCONV(I3,NST)
      enddo
 
      call write_prefix; write(iUnitStdOut,*) 'FPOT12 Max, Min:',Fmin,Fmax,Fmax-Fmin
-     !         transform FPOT to equatorial plane drifts
+     !\
+     ! transform FPOT to equatorial plane drifts
+     !/
      do j=1,jo
         SJ=sin(PHI(J))
         CJ=cos(PHI(J))
@@ -703,16 +716,20 @@ subroutine MAGCONV(I3,NST)
            P1(i,j)=P1(i,j)-EPR*DT/DPHI*RR**2*RE/ME
         end do
      end do
-     !         potdgcpm filled in from FPOT12
+     !\
+     ! potdgcpm filled in from FPOT12
+     !/
+
      Fmax=0.
      Fmin=0.
-     do j=1,nphicells   !   Fill in DGCPM potentials
-        do i=1,nthetacells
+
+     do j = 1, nphicells   !   Fill in DGCPM potentials
+        do i = 1, nthetacells
            call LINTP2(LZpot,MLT,FPOT12,3*NR,NT,   &
                 vlzcells(i),vmltcells(J),FAC,IER)
            potdgcpm(i,j)=FAC
         enddo
-        do i=1,nthetacells
+        do i = 1, nthetacells
            if (potdgcpm(i,j).gt.Fmax) Fmax=potdgcpm(i,j)
            if (potdgcpm(i,j).lt.Fmin) Fmin=potdgcpm(i,j)
         enddo
@@ -720,10 +737,13 @@ subroutine MAGCONV(I3,NST)
 
      call write_prefix; write(iUnitStdOut,*)  'potdgcpm Max, Min:',Fmin,Fmax,Fmax-Fmin
 
-     !CC Calculate potentials using an ionospheric model (AMIE, Weimer, etc.)
+     !\
+     ! Calculate potentials using an ionospheric model (AMIE, Weimer, etc.)
+     !/
+
   else if (ABASE(IA+1).ge.11) then
 
-     !         Transfer date and time to new variables
+     ! Transfer date and time to new variables
      eyear=year
      eday=day
      edayplus=aint(t/86400.)
@@ -735,12 +755,12 @@ subroutine MAGCONV(I3,NST)
      univ_time=univ_time-eminute*60.
      esecond=univ_time
 
-     !         Transfer solar wind values to new variables
+     ! Transfer solar wind values to new variables
      eby=BYSW
      ebz=BZSW
      evsw=USW
-     !         Transfer grids to new variables
-     !         Note that we have 2 sets of grids, for RAM and for DGCPM
+     ! Transfer grids to new variables
+     ! Note that we have 2 sets of grids, for RAM and for DGCPM
      nemlts1=NT
      nelats1=NR+3
      do i=1,nelats1
@@ -757,19 +777,22 @@ subroutine MAGCONV(I3,NST)
      do j=1,nemlts2
         elats2(j,1:nelats2)=90.-vthetacells(1:nelats2)
      end do
-     !         Transfer the potential model choice to a new variable
-     !         nechoice = 1 means AMIE potentials
-     !                  = 2 means Weimer-96 potentials
-     !                  = 3 means Foster potentials
-     !                  = ?? we have to add in more to the DATA defs above
+     !\
+     ! Transfer the potential model choice to a new variable
+     ! nechoice = 1 means AMIE potentials
+     !          = 2 means Weimer-96 potentials
+     !          = 3 means Foster potentials
+     !          = ?? we have to add in more to the DATA defs above
+     !/
+
      nechoice=ABASE(IA+1) - 10
 
-     !       Aaron: insert your call here, using the "e" variables
+     ! Aaron: insert your call here, using the "e" variables
 
      call get_potential_heidi(nechoice,eby,ebz,evsw,eyear,eday,ehour,   &
           eminute,esecond,elats1,emlts1,epots1,elats2,emlts2,epots2)
 
-     !         Use epots1 to update the advection coefficients:
+     ! Use epots1 to update the advection coefficients:
      do j=1,jo  ! transform pots1 to equatorial plane drifts
         jj=j+1
         if (j.eq.jo) jj=1
@@ -785,16 +808,20 @@ subroutine MAGCONV(I3,NST)
            P1(i,j)=-EPR*DT/DPHI*RR**2*RE/ME
         end do
      end do
-     !         write pots2 into potdgcpm (for Dan Ober's code)
+     ! Write pots2 into potdgcpm (for Dan Ober's code)
      do j=1,nphicells
         potdgcpm(1:nthetacells,j)=epots2(j,1:nthetacells)
      end do
 
-     !CC Done with base field calculations
+     !\
+     ! Done with base field calculations
+     !/
+
   end if
 
-  !  Calculate Burke-Wygant penetration electric field
-  !print *, 'Burke-Wygant pen field?'
+  !\
+  ! Calculate Burke-Wygant penetration electric field
+  !/
 
   if (AEPEN(IA+1).eq.1) then
      if (ABASE(IA+1).eq.1) then
@@ -803,9 +830,8 @@ subroutine MAGCONV(I3,NST)
         PHIP=sqrt(PCO*RE*Eom*KEPS)
      end if
      PHIP=AMAX1(0.,1.4*PHIP-3200.)  ! From Burke's analysis, fig12
-     !	print *, PHIP,FACP,PCO,RE*Eom,KEPS
-     PHIP=-PHIP*FACP    ! To have the Burke value at MLT=18
-     do J=1,JO   ! Fill in radial drift values
+     PHIP=-PHIP*FACP                ! To have the Burke value at MLT=18
+     do J=1,JO                      ! Fill in radial drift values
         CJ=cos(PHI(J))
         SJ=sin(PHI(J))
         PJ=PHI(J)-PHIPOFF
@@ -833,8 +859,6 @@ subroutine MAGCONV(I3,NST)
            EPP=PHIP*RoRg/RR*KSD
            FAC=EPP*DT/DL1*RR**3*RE/ME
            VR(I,J)=VR(I,J)+FAC
-           !	if (i.eq.io) print 51,RR,MLT(J),CPJ,CRo,SPJ,RoRg,KSD,EPP,FAC,VR(I,j) 
-           !	if (i.eq.2 .and. mod(j-1,6).eq.0) print 51,RR,MLT(J),EPP,FAC,VR(I,j) 
         end do
      end do
      do J=1,JO   ! Fill in azimuthal drift values
@@ -860,8 +884,6 @@ subroutine MAGCONV(I3,NST)
            EPR=PHIP*RoRg*KSD
            FAC=-EPR*DT/DPHI*RR**2*RE/ME
            P1(I,J)=P1(I,J)+FAC
-           !	if (i.eq.io) print 51,RR,MLT(J),CPJ,CRo,PHIP,RoRg,KSD,EPR,FAC,P1(I,j) 
-           !	if (i.eq.2 .and. mod(j-1,6).eq.0) print 51,RR,MLT(J),EPR,FAC,P1(I,j) 
         end do
      end do
      do j=1,nphicells   ! Fill in DGCPM potentials
@@ -889,16 +911,17 @@ subroutine MAGCONV(I3,NST)
   end if
 51 format(f6.3,f6.2,1p,10e11.3)
 
-  !  Calculate self-consistent penetration electric field
-  !print *, 'Self-consistent pen field?'
+  !\
+  ! Calculate self-consistent penetration electric field
+  !/
 
   if (AEPEN(IA+1).ge.2) then
      call write_prefix; write(iUnitStdOut,*)  '...Calling PRESSURES'
      call PRESSURES    ! Updates the bulk ring current parameters
      call write_prefix; write(iUnitStdOut,*) '...Calling CURRENTCALC' 
      call CURRENTCALC  ! Finds the perpendicular "ring current"
-     !			    ! and the field-aligned closure currents
-     
+     ! and the field-aligned closure currents
+
 
      Irfac=Ir
      Latfac(1:Ir)=Lats(1:Ir)
@@ -913,9 +936,9 @@ subroutine MAGCONV(I3,NST)
      if (bc_choice.ne.0 .and. AEPEN(IA+1).eq.3) bc_choice=-bc_choice
      !             !! W-96/AMIE everywhere, done in S-C potential call
 
-     !CC The Jfac adjustment that's commented out is if you only do 1
-     !CC species and want to proportionally increase the Jfac value
-     !CC to reflect the current from all species
+     ! The Jfac adjustment that's commented out is if you only do 1
+     ! species and want to proportionally increase the Jfac value
+     ! to reflect the current from all species
      !	  NY(2)=0.34*EXP(0.054*KP)	! From Young et al 1982
      !	  NY(3)=5.1E-3*EXP(6.6E-3*F107)
      !	  NY(4)=0.011*EXP(0.24*KP+0.011*F107)
@@ -923,87 +946,72 @@ subroutine MAGCONV(I3,NST)
      !	  DO j=1,JO
      !	    Jfac(1:Ir,j)=Jion1(1:Ir,j)*FAC
      !	  end do
-     !CC Here the Jfac from the various species are summed together
+     ! Here the Jfac from the various species are summed together
 
-     
      if (nProc.gt.1) then
         call MPI_BARRIER(iComm,iError)
-        
         Jfac = 0.0
         do i = 1, nProc
            if (i-1.eq.iProc) then
               jfac_temp(:,:) = Jion1(:,:,nParallelSpecies(i))
            endif
-           
-
            call MPI_Bcast(jfac_temp,(NR+3)*NT,MPI_Real,   &
                 i-1,iComm,iError)
-
            Jion1(:,:,nParallelSpecies(i)) = jfac_temp(:,:)
            JFAC(:,:)=Jfac(:,:)+Jreducer*Jion1(:,:,nParallelSpecies(i))
         enddo
-
-
-
      else
-        do J=1,JO
+        do J  = 1, JO
            Jfac(1:Ir,J)=0.
-           do S=1,NS   
+           do S = 1, NS   
               if (SCALC(S).eq.1) JFAC(1:Ir,J)=Jfac(1:Ir,j)+Jreducer*Jion1(1:Ir,j,s)
            end do
         end do
-
      endif
-
 
      if (iProc.eq.0) then
         call write_prefix; write(iUnitStdOut,*) 'FACs being sent to potential solver' 
      end if
-        !	do j=1,JO 
-        !	print 50, MLT(J),(JFAC(i,j),i=1,Ir)
-        !	end do
-50      format(F5.1,1P,25E12.4)
+50   format(F5.1,1P,25E12.4)
 
-        !cc The next few lines are for doubling convection during sawtooth "snaps"
-        evsw=USW
-        do ii=1,9
-           tdiff = t - t_sawtooth(ii)
-           if (tdiff.ge.0. .and. tdiff.le.dt_saw) evsw=2.*evsw
-        end do
-        !cc End the sawtooth snap block
-        if (iProc==0) then
-           call write_prefix; write(iUnitStdOut,*) '...Calling EPENCALC'
-        end if
-        call EPENCALC(t,f107,bc_choice,BYSW,BZSW,evsw) 
-        !CC                             ! Aaron Ridley's solver 
-        !CC                             ! for the potential
-        !CC				! from the field-aligned currents
-        !CC         ! Note: By and Bz in nT, Usw in m/s
+     !\
+     ! The next few lines are for doubling convection during sawtooth "snaps"
+     !/
 
+     evsw=USW
+     do ii=1,9
+        tdiff = t - t_sawtooth(ii)
+        if (tdiff.ge.0. .and. tdiff.le.dt_saw) evsw=2.*evsw
+     end do
+     ! End the sawtooth snap block
+     if (iProc==0) then
+        call write_prefix; write(iUnitStdOut,*) '...Calling EPENCALC'
+     end if
+     call EPENCALC(t,f107,bc_choice,BYSW,BZSW,evsw) 
+     ! Aaron Ridley's solver 
+     ! for the potential
+     ! from the field-aligned currents
+     ! Note: By and Bz in nT, Usw in m/s
 
-        if (iProc==0) then 
-           call write_prefix; write(iUnitStdOut,*) &
+     if (iProc==0) then 
+        call write_prefix; write(iUnitStdOut,*) &
              'Potentials returned from the solver'
-        end if
-        !	do j=1,JO 
-        !	print 50, MLT(J),(FPOT(i,j),i=1,Ir)
-        !	end do
-
-     
+     end if
 
      call MPI_BARRIER(iComm,iError)
 
      call MPI_Bcast(fpot,(NR+3)*NT,MPI_Real,0,iComm,iError)
 
+     !\
      ! While EPENCALC is commented out, use these lines to zero out FPOT
      !	do j=1,jo
      !	 do i=1,ir
      !	  FPOT(i,j)=0.
      !	 enddo
      !	end do  ! End FPOT zeroing
+     !/
 
      if (AEPEN(IA+1).gt.1) then  !! >2 Prohibits inclusion of Epen
-
         do j=1,jo  ! transform FPOT to equatorial plane drifts
            SJ=sin(PHI(J))
            CJ=cos(PHI(J))
@@ -1022,7 +1030,9 @@ subroutine MAGCONV(I3,NST)
               P1(i,j)=P1(i,j)-EPR*DT/DPHI*RR**2*RE/ME
            end do
         end do
-        !CC potdgcpm filled in write_ring_current from epencalc
+
+        !\
+        !potdgcpm filled in write_ring_current from epencalc
         !	  do j=1,nphicells   !   Fill in DGCPM potentials
         !	   do i=1,nthetacells
         !	    CALL LINTP2(LZ,MLT,FPOT,NR,NT,
@@ -1030,12 +1040,15 @@ subroutine MAGCONV(I3,NST)
         !	    potdgcpm(i,j)=potdgcpm(i,j)+FAC
         !	   enddo
         !	  enddo
+        !/
 
      end if  !! Prohibits inclusion of Epen
 
   end if
 
   call write_prefix; write(iUnitStdOut,*)'Done with MAGCONV'
+
 end subroutine MAGCONV
 
+!===================================================================
 
