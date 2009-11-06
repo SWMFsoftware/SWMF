@@ -5,9 +5,9 @@ subroutine heidi_run
        write_prefix,iUnitStdOut
   use ModHeidiMain, ONLY: s,t,dt,scalc
   use ModProcIM, ONLY: iProc
-
+  
   implicit none 
-!------------------------------------------------------------------------------
+  !------------------------------------------------------------------------------
   
   call GETKPA(i3,nst,i2,nkp)
   if (ISW.gt.0) call GETSWIND
@@ -17,36 +17,42 @@ subroutine heidi_run
   do S = 1,NS
      if (SCALC(S).eq.1) then
         call LMPLOSS
-        !.......Call routines to calculate the changes of distribution function
-        !               considering drifts, charge exchange and Coulomb drag
-        !	CALL FCHECK(1)
+        !\
+        ! Call routines to calculate the changes of distribution function
+        ! considering drifts, charge exchange and Coulomb drag
+        !/
         call DRIFTR
         call DRIFTP
         call DRECOUL
         call DRIFTMU
         call CHAREXCHANGE
         call COULMU
-        !	CALL FCHECK(2)
         call CHAREXCHANGE
         call DRIFTMU
         call DRECOUL
         call DRIFTP
         call DRIFTR
         call LLIMIT	  ! Truncates results below 1E-30
-        !	CALL FCHECK(3)
-        !.......Print sources and losses (continuous output stream)
+        !\
+        ! Print sources and losses (continuous output stream)
+        !/
         if (IRES(14).eq.1) call PSRCLOSS(T)
      end if  ! SCALC check
   end do  ! S loop
   
-  !.......Increment time
+  !\
+  ! Increment time
+  !/
   T = T + 2.*DT
   if (iProc==0) then
      call write_prefix; write(iUnitStdOut,*)&
           'SimulationTime=', T
   end if
 
-  !.......Print desired result files at every TINT sec 
+  !\
+  ! Print desired result files at every TINT sec 
+  !/
+
   call FCHECK(11)
   if (mod(I3,NPR).eq.0 .or. I3.eq.NSTEP) then
      call FCHECK(10)	! Checks for negative results
@@ -54,7 +60,9 @@ subroutine heidi_run
      if (iwpi.gt.0) call ANISCH
   end if
   
-  !	Update boundary condition
+  !\
+  ! Update boundary condition
+  !/
   if (mod(I3,NIBC).eq.0) call GEOSB
  
 end subroutine heidi_run
