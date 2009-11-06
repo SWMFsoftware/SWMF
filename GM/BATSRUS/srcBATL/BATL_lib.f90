@@ -32,7 +32,7 @@ module BATL_lib
 
   ! Inherited from BATL_tree
   public:: nNodeUsed
-  public:: Unused_B
+  public:: Unused_B, Unused_BP
   public:: iNode_B
   public:: DiLevelNei_IIIB, iNodeNei_IIIB
   public:: iStatusNew_A, Refine_, Coarsen_
