@@ -39,9 +39,7 @@ Module ModHeidiMain
   ! Formerly: Common block PAR
   integer :: nParallelSpecies(NS)
   integer :: nSpecies, iSpecies
-  
-  
-  real :: funt(nPa,nR,nT)=0.0,funi(nPa,nR,nT)=0.0
 
+  real :: funt(nPa,nR,nT),funi(nPa,nR,nT)
 end Module ModHeidiMain
 
