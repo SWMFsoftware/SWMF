@@ -7,7 +7,6 @@ module ModUser
   use ModVarIndexes
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_initial_perturbation,       &
        IMPLEMENTED6 => user_get_log_var,                &
@@ -19,8 +18,10 @@ module ModUser
   real, parameter               :: VersionUserModule = 1.0
   character (len=*), parameter  :: NameUserModule = 'Multigroup Frequency Advection'
   character(len=lStringLine)    :: NameModel
+
   logical                       :: IsInitWave = .false.
   real                          :: LogFreqCutOff
+  integer                       :: LeftNullGroupNum,RightNullGroupNum
   integer                       :: nWaveHalf ! number of waves in each direction
   real,dimension(nWave)         :: LogFreq_I ! frequency grid
 
@@ -36,7 +37,7 @@ contains
 
     character (len=100) :: NameCommand
     !--------------------------------------------------------------------------
-    UseUserInitSession = .true.
+    UseUserInitSession = .false.
 
     if(iProc == 0 .and. lVerbose > 0)then
        call write_prefix;
@@ -58,6 +59,10 @@ contains
        case("#FREQUENCY")
           call read_frequency
 
+       case("#FREQMARGIN")
+          call read_var('LeftNullGroupNum',LeftNullGroupNum)
+          call read_var('RightNullGroupNum',RightNullGroupNum)
+
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
@@ -77,28 +82,6 @@ contains
     end do
 
   end subroutine user_read_inputs
-  !============================================================================
-  subroutine user_init_session
-    use ModIO,          ONLY: write_prefix, iUnitOut,NamePlotDir
-    use ModProcMH,      ONLY: iProc
-    use ModReadParam,   ONLY: i_line_command
-    implicit none
-    !--------------------------------------------------------------------------
-    if(iProc == 0)then
-       call write_prefix; write(iUnitOut,*) ''
-       call write_prefix; write(iUnitOut,*) 'user_init_session:'
-       call write_prefix; write(iUnitOut,*) ''
-    end if
-
-    
-
-    if(iProc == 0)then
-       call write_prefix; write(iUnitOut,*) ''
-       call write_prefix; write(iUnitOut,*) 'user_init_session finished'
-       call write_prefix; write(iUnitOut,*) ''
-    end if
-
-  end subroutine user_init_session
   !============================================================================
   subroutine user_initial_perturbation
     use ModMain, ONLY: nBLK,unusedBLK,x_,y_,z_,n_step
@@ -227,7 +210,7 @@ contains
     else
        iRow=1
        do iBLK=1,nBLK
-          if(unusedBLK(iBLK)) CYCLE
+          !if(unusedBLK(iBLK)) CYCLE
           do k=1,nK ; do j=1,nJ ; do i=1,nI
              x=x_BLK(i,j,k,iBLK)
              y=y_BLK(i,j,k,iBLK)
@@ -236,12 +219,12 @@ contains
              dz=dz_BLK(iBLK)
              if((z< dz) .and. (z >=0.0) .and. (x<dx) .and. (x>=0.0)) then
                 do iFreq=1,nWave/2
-                   IwPlusSi  = No2Si_V(UnitP_)*State_VGB(AlfvenSpeedPlusFirst_+iFreq-1,i,j,k,iBLK)
-                   IwMinusSi = No2Si_V(UnitP_)*State_VGB(AlfvenSpeedMinusFirst_+iFreq-1,i,j,k,iBLK)
+                   IwPlusSi  = State_VGB(AlfvenSpeedPlusFirst_+iFreq-1,i,j,k,iBLK)
+                   IwMinusSi = State_VGB(AlfvenSpeedMinusFirst_+iFreq-1,i,j,k,iBLK)
                    Cut_II(iRow,1) = y
                    Cut_II(iRow,2) = LogFreq_I(iFreq)
-                   Cut_II(iRow,3) = log(IwPlusSi)
-                   Cut_II(iRow,4) = log(IwMinusSi)
+                   Cut_II(iRow,3) = IwPlusSi
+                   Cut_II(iRow,4) = IwMinusSi
                    iRow=iRow+1
                 end do
              end if
@@ -330,27 +313,23 @@ contains
     
     implicit none
     integer                    :: i,j,k,iBLK, iWave
-    real                       :: WaveEnergy
     real,parameter             :: FreqPower=-2.0/3.0
     character(len=*),parameter :: NameSub= 'init_wave_spectrum'
     ! ------------------------------------------------------------------
     IsInitWave=.true.
     write(*,*) 'Entered ',NameSub
     call set_freq_grid
-    write(*,*) 'DeltaFreq= ',DeltaLogFrequency
     State_VGB(WaveFirst_:WaveLast_,:,:,:,:) = 0.0
 
     do iBLK=1,nBLK
        do k=1,nK ; do j = 1,nJ ; do i=1,nI
           do iWave=1,nWave
-             WaveEnergy = exp(LogFreq_I(iWave) * FreqPower)
-
-             State_VGB(WaveFirst_+iWave-1,i,j,k,iBLK) =&
-                  WaveEnergy*DeltaLogFrequency
-             if(State_VGB(WaveFirst_+iWave-1,i,j,k,iBLK) < 0.0) then
-                write(*,*) 'Negative energy at init spectrum'
-                write(*,*) 'dLogFreq= ', DeltaLogFrequency
-                write(*,*) 'WaveEnergy', WaveEnergy
+             if( (iWave .le. LeftNullGroupNum) .or. &
+                  (iWave .gt. nWave-RightNullGroupNum)) then
+                State_VGB(WaveFirst_+iWave-1,i,j,k,iBLK) = 0.0
+             else
+                State_VGB(WaveFirst_+iWave-1,i,j,k,iBLK) =&
+                     exp(LogFreq_I(iWave)*FreqPower)
              end if
           end do
        end do; end do ; end do
