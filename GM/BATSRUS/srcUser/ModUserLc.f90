@@ -493,7 +493,7 @@ contains
          inv_gm1
 
     integer :: i, j, k, iBlock
-    real :: CoronalHeating, RadiativeCooling, EinternalSource, Cv, TeFraction
+    real :: CoronalHeating, RadiativeCooling, EinternalSource, Cv
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -540,7 +540,7 @@ contains
     real, intent(in) :: State_V(nVar)
     real, intent(out):: RadiativeCooling
 
-    real :: Te, TeSi, TeFraction, CoolingFunctionCgs, NumberDensCgs
+    real :: Te, TeSi, CoolingFunctionCgs, NumberDensCgs
     real :: Log10TeSi, Log10NeCgs, CoolingTableOut(2)
     real, parameter :: RadNorm = 1.0E+22
     real, parameter :: TeModMinSi = 2.0E+4
