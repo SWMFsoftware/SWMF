@@ -12,7 +12,8 @@ module ModUser
        IMPLEMENTED7 => user_calc_sources,               &
        IMPLEMENTED8 => user_update_states,              &
        IMPLEMENTED9 => user_specify_refinement,         &
-       IMPLEMENTED10=> user_set_boundary_cells
+       IMPLEMENTED10=> user_set_boundary_cells,         &
+       IMPLEMENTED11=> user_set_plot_var
 
   include 'user_module.h' !list of public methods
 
@@ -109,7 +110,7 @@ contains
 
   subroutine user_init_session
 
-    use ModAdvance,     ONLY: WaveFirst_, WaveLast_
+    use ModAdvance,     ONLY: UseElectronPressure
     use ModIO,          ONLY: write_prefix, iUnitOut,NamePlotDir
     use ModMagnetogram, ONLY: read_magnetogram_file
     use ModMultiFluid,  ONLY: MassIon_I
@@ -117,7 +118,7 @@ contains
          ElectronTemperatureRatio, AverageIonCharge
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: i_line_command
-    use ModWaves
+    use ModWaves,       ONLY: UseWavePressure, UseAlfvenSpeed
 
     !--------------------------------------------------------------------------
     if(iProc == 0)then
@@ -148,8 +149,19 @@ contains
     UseAlfvenSpeed = .true.
     UseWavePressure = .true.
 
-    TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
-         /(1 + AverageIonCharge*ElectronTemperatureRatio)
+    ! TeFraction is used for ideal EOS:
+    if(UseElectronPressure)then
+       ! Pe = ne*Te (dimensionless) and n=rho/ionmass
+       ! so that Pe = ne/n *n*Te = (ne/n)*(rho/ionmass)*Te
+       ! TeFraction is defined such that Te = Pe/rho * TeFraction
+       TeFraction = MassIon_I(1)/AverageIonCharge
+    else
+       ! p = n*T + ne*Te (dimensionless) and n=rho/ionmass
+       ! so that p=rho/massion *T*(1+ne/n Te/T)
+       ! TeFraction is defined such that Te = p/rho * TeFraction
+       TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
+            /(1 + AverageIonCharge*ElectronTemperatureRatio)
+    end if
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -163,17 +175,18 @@ contains
 
   subroutine user_face_bcs(VarsGhostFace_V)
 
-    use ModAdvance,     ONLY: State_VGB, WaveFirst_, WaveLast_
+    use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
     use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame
-    use ModNumConst,    ONLY: cTolerance
+    use ModMultiFluid,  ONLY: MassIon_I
     use ModPhysics,     ONLY: OmegaBody, BodyRho_I, BodyTDim_I, &
-         UnitTemperature_, Si2No_V
-    use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_
+         UnitTemperature_, Si2No_V, AverageIonCharge
+    use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, &
+         WaveFirst_, WaveLast_, Pe_
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
-    real :: Density, Temperature, FullBr
+    real :: Density, NumDensIon, NumDensElectron, Tbase, FullBr
     real :: Runit_D(3), U_D(3)
     real :: B1_D(3), B1t_D(3), B1r_D(3), FullB_D(3)
     !--------------------------------------------------------------------------
@@ -200,13 +213,23 @@ contains
     end if
 
     Density = BodyRho_I(1)
-    Temperature = BodyTDim_I(1)*Si2No_V(UnitTemperature_)
-!    VarsGhostFace_V(Rho_) = &
-!         max(-VarsTrueFace_V(Rho_) + 2.0*Density, VarsTrueFace_V(Rho_))
-!    VarsGhostFace_V(p_) = &
-!         max(VarsGhostFace_V(Rho_)*Temperature, VarsTrueFace_V(p_))
+    ! The electron and ion temperature are equal to Tbase at the coronal base
+    Tbase = BodyTDim_I(1)*Si2No_V(UnitTemperature_)
+
+!!!    VarsGhostFace_V(Rho_) = &
+!!!         max(-VarsTrueFace_V(Rho_) + 2.0*Density, VarsTrueFace_V(Rho_))
+!!!    VarsGhostFace_V(p_) = &
+!!!         max(VarsGhostFace_V(Rho_)*Temperature, VarsTrueFace_V(p_))
+
     VarsGhostFace_V(Rho_) =  2.0*Density - VarsTrueFace_V(Rho_)
-    VarsGhostFace_V(p_) = VarsGhostFace_V(Rho_)*Temperature
+    NumDensIon = VarsGhostFace_V(Rho_)/MassIon_I(1)
+    NumDensElectron = NumDensIon*AverageIonCharge
+    if(UseElectronPressure)then
+       VarsGhostFace_V(p_) = NumDensIon*Tbase
+       VarsGhostFace_V(Pe_) = NumDensElectron*Tbase
+    else
+       VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Tbase
+    end if
 
     !\
     ! Apply corotation if needed
@@ -224,17 +247,22 @@ contains
 
   subroutine user_set_ics
 
-    use ModAdvance,    ONLY: State_VGB, WaveFirst_, WaveLast_
+    ! The isothermal parker wind solution is used as initial condition
+
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
     use ModMain,       ONLY: nI, nJ, nK, globalBLK
+    use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
-         BodyRho_I, BodyTDim_I, No2Si_V, UnitU_
-    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_
+         BodyRho_I, BodyTDim_I, No2Si_V, UnitU_, AverageIonCharge
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
+         WaveFirst_, WaveLast_
 
     integer :: i, j, k, iBlock
     integer :: IterCount
-    real :: x, y, z, r, RhoBase, Tbase, Rho
-    real :: Ur, Ur0, Ur1, del, Ubase, rTransonic, Uescape, Usound, T0
+    real :: x, y, z, r, RhoBase, Rho, NumDensIon, NumDensElectron
+    real :: Tbase, Tcorona, Temperature
+    real :: Ur, Ur0, Ur1, del, Ubase, rTransonic, Uescape, Usound
 
     real, parameter :: Epsilon = 1.0e-6
     !--------------------------------------------------------------------------
@@ -242,10 +270,12 @@ contains
     iBlock = globalBLK
 
     RhoBase = BodyRho_I(1)
+    ! The electron and ion temperature are equal to Tbase at the coronal base
     Tbase = BodyTDim_I(1)*Si2No_V(UnitTemperature_)
-    T0 = 3.0e6*Si2No_V(UnitTemperature_)
+    ! Initially, the electron and ion temperature are at 1.5e6(K) in the corona
+    Tcorona = 1.5e6*Si2No_V(UnitTemperature_)
 
-    Usound = sqrt(T0)
+    Usound = sqrt(Tcorona*(1.0+AverageIonCharge)/MassIon_I(1))
     Uescape = sqrt(-GBody*2.0/rBody)/Usound
 
     !\
@@ -314,10 +344,19 @@ contains
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
        State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 0.0
+       NumDensIon = Rho/MassIon_I(1)
+       NumDensElectron = NumDensIon*AverageIonCharge
        if(true_cell(i,j,k,iBlock))then
-          State_VGB(p_,i,j,k,iBlock) = Rho*T0
+          Temperature = Tcorona
        else
-          State_VGB(p_,i,j,k,iBlock) = Rho*Tbase
+          Temperature = Tbase
+       end if
+       if(UseElectronPressure)then
+          State_VGB(p_,i,j,k,iBlock) = NumDensIon*Temperature
+          State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*Temperature
+       else
+          State_VGB(p_,i,j,k,iBlock) = &
+               (NumDensIon + NumDensElectron)*Temperature
        end if
     end do; end do; end do
 
@@ -343,16 +382,15 @@ contains
 
   subroutine user_calc_sources
 
-    use ModAdvance,        ONLY: State_VGB, Source_VC, Rho_, p_, Energy_, &
-         UseNonConservative
+    use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure
     use ModCoronalHeating, ONLY: UseUnsignedFluxModel, get_coronal_heating
     use ModGeometry,       ONLY: r_BLK
     use ModMain,           ONLY: nI, nJ, nK, GlobalBlk
-    use ModPhysics,        ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
-         inv_gm1
+    use ModPhysics,        ONLY: gm1
+    use ModVarIndexes,     ONLY: Rho_, Energy_, Pe_
 
     integer :: i, j, k, iBlock
-    real :: CoronalHeating, RadiativeCooling, EinternalSource, Cv, TeFraction
+    real :: CoronalHeating, RadiativeCooling
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -369,18 +407,15 @@ contains
           CoronalHeating = 0.0
        end if
 
+       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + CoronalHeating
+
        call get_radiative_cooling( &
             State_VGB(:,i,j,k,iBlock), RadiativeCooling)
 
-       EinternalSource = CoronalHeating + RadiativeCooling
-
-       if(UseNonConservative)then
-          Cv = inv_gm1*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
-
-          Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-               + EinternalSource*State_VGB(Rho_,i,j,k,iBlock)/Cv
+       if(UseElectronPressure)then
+          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + gm1*RadiativeCooling
        else
-          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + EinternalSource
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k)+RadiativeCooling
        end if
     end do; end do; end do
 
@@ -390,30 +425,37 @@ contains
 
   subroutine get_radiative_cooling(State_V, RadiativeCooling)
 
+    use ModAdvance,    ONLY: UseElectronPressure
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitT_, UnitN_, &
-         UnitEnergyDens_, UnitTemperature_
-    use ModVarIndexes, ONLY: nVar, Rho_, p_
+         UnitEnergyDens_, UnitTemperature_, AverageIonCharge
+    use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_
 
     real, intent(in) :: State_V(nVar)
     real, intent(out):: RadiativeCooling
 
-    real :: Te, TeSi, TeFraction, CoolingFunctionCgs, NumberDensCgs
+    real :: Te, TeSi, TeFraction, CoolingFunctionCgs
+    real :: NumDensIonCgs, NumDensElectronCgs
     !--------------------------------------------------------------------------
 
-    Te = TeFraction*State_V(p_)/State_V(Rho_)
+    if(UseElectronPressure)then
+       Te = TeFraction*State_V(Pe_)/State_V(Rho_)
+    else
+       Te = TeFraction*State_V(p_)/State_V(Rho_)
+    end if
     TeSi =Te*No2Si_V(UnitTemperature_)
 
-    ! currently proton plasma only
-    call get_cooling_function_fit(TeSi, CoolingFunctionCgs)
-    NumberDensCgs = State_V(Rho_)*No2Si_V(UnitN_)*1.0e-6
+    ! CGS is used to avoid insane numbers
+    call get_cooling_function(TeSi, CoolingFunctionCgs)
+    NumDensIonCgs = (State_V(Rho_)/MassIon_I(1))*No2Si_V(UnitN_)*1.0e-6
+    NumDensElectronCgs = AverageIonCharge*NumDensIonCgs
 
-    RadiativeCooling = -NumberDensCgs**2*CoolingFunctionCgs &
+    RadiativeCooling = -NumDensIonCgs*NumDensElectronCgs*CoolingFunctionCgs &
          *0.1*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
 
   contains
 
-    subroutine get_cooling_function_fit(TeSi, CoolingFunctionCgs)
+    subroutine get_cooling_function(TeSi, CoolingFunctionCgs)
 
       ! Based on Rosner et al. (1978) and Peres et al. (1982)
       ! Need to be replaced by Chianti tables
@@ -442,7 +484,7 @@ contains
          CoolingFunctionCgs = 10**(-26.6)*sqrt(TeSi)
       end if
 
-    end subroutine get_cooling_function_fit
+    end subroutine get_cooling_function
 
   end subroutine get_radiative_cooling
 
@@ -509,6 +551,72 @@ contains
 
   end subroutine user_get_log_var
   
+  !============================================================================
+
+  subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
+       PlotVar_G, PlotVarBody, UsePlotVarBody, &
+       NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
+
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+    use ModMultiFluid, ONLY: MassIon_I
+    use ModPhysics,    ONLY: AverageIonCharge, ElectronTemperatureRatio, &
+         No2Si_V, UnitTemperature_
+    use ModSize,       ONLY: nI, nJ, nK
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_
+
+    integer,          intent(in)   :: iBlock
+    character(len=*), intent(in)   :: NameVar
+    logical,          intent(in)   :: IsDimensional
+    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVarBody
+    logical,          intent(out)  :: UsePlotVarBody
+    character(len=*), intent(inout):: NameTecVar
+    character(len=*), intent(inout):: NameTecUnit
+    character(len=*), intent(inout):: NameIdlUnit
+    logical,          intent(out)  :: IsFound
+
+    integer :: i, j, k
+    real :: TiFraction
+
+    character (len=*), parameter :: NameSub = 'user_set_plot_var'
+    !--------------------------------------------------------------------------
+
+    IsFound = .true.
+
+    select case(NameVar)
+    case('te')
+       NameIdlUnit = 'K'
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          if(UseElectronPressure)then
+             PlotVar_G(i,j,k) = TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
+                  /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+          else
+             PlotVar_G(i,j,k) = TeFraction*State_VGB(p_,i,j,k,iBlock) &
+                  /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+          end if
+       end do; end do; end do
+    case('ti')
+       NameIdlUnit = 'K'
+       TiFraction = MassIon_I(1) &
+            /(1 + AverageIonCharge*ElectronTemperatureRatio)
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          if(UseElectronPressure)then
+             PlotVar_G(i,j,k) = MassIon_I(1)*State_VGB(p_,i,j,k,iBlock) &
+                  /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+          else
+             PlotVar_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
+                  /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+          end if
+       end do; end do; end do
+    case default
+       IsFound = .false.
+    end select
+
+    UsePlotVarBody = .false.
+    PlotVarBody    = 0.0
+
+  end subroutine user_set_plot_var
+
   !============================================================================
 
   subroutine user_specify_refinement(iBlock, iArea, DoRefine)
