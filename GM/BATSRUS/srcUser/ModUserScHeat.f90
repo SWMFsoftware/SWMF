@@ -216,12 +216,9 @@ contains
     ! The electron and ion temperature are equal to Tbase at the coronal base
     Tbase = BodyTDim_I(1)*Si2No_V(UnitTemperature_)
 
-!!!    VarsGhostFace_V(Rho_) = &
-!!!         max(-VarsTrueFace_V(Rho_) + 2.0*Density, VarsTrueFace_V(Rho_))
-!!!    VarsGhostFace_V(p_) = &
-!!!         max(VarsGhostFace_V(Rho_)*Temperature, VarsTrueFace_V(p_))
-
     VarsGhostFace_V(Rho_) =  2.0*Density - VarsTrueFace_V(Rho_)
+    !VarsGhostFace_V(Rho_) = &
+    !     max(-VarsTrueFace_V(Rho_) + 2.0*Density, VarsTrueFace_V(Rho_))
     NumDensIon = VarsGhostFace_V(Rho_)/MassIon_I(1)
     NumDensElectron = NumDensIon*AverageIonCharge
     if(UseElectronPressure)then
@@ -229,6 +226,8 @@ contains
        VarsGhostFace_V(Pe_) = NumDensElectron*Tbase
     else
        VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Tbase
+       !VarsGhostFace_V(p_) = &
+       !     max((NumDensIon + NumDensElectron)*Tbase, VarsTrueFace_V(p_))
     end if
 
     !\
@@ -386,7 +385,7 @@ contains
     use ModCoronalHeating, ONLY: UseUnsignedFluxModel, get_coronal_heating
     use ModGeometry,       ONLY: r_BLK
     use ModMain,           ONLY: nI, nJ, nK, GlobalBlk
-    use ModPhysics,        ONLY: gm1
+    use ModPhysics,        ONLY: gm1, rBody
     use ModVarIndexes,     ONLY: Rho_, Energy_, Pe_
 
     integer :: i, j, k, iBlock
@@ -398,6 +397,8 @@ contains
     iBlock = globalBlk
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(r_BLK(i,j,k,iBlock) < rBody) CYCLE
+
        if(UseUnsignedFluxModel)then
           call get_coronal_heating(i, j, k, iBlock, CoronalHeating)
        elseif(UseExponentialHeating)then
@@ -434,7 +435,7 @@ contains
     real, intent(in) :: State_V(nVar)
     real, intent(out):: RadiativeCooling
 
-    real :: Te, TeSi, TeFraction, CoolingFunctionCgs
+    real :: Te, TeSi, CoolingFunctionCgs
     real :: NumDensIonCgs, NumDensElectronCgs
     !--------------------------------------------------------------------------
 
