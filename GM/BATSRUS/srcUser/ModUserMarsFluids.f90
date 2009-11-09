@@ -26,8 +26,8 @@ module ModUser
   character (len=*), parameter :: NameUserModule = &
        'Mars 5 Fluids MHD code, Dalal Najib'
 
-   character (len=10) :: SolarCond='solarmax  '
-  
+  character (len=10) :: SolarCond='solarmax  '
+
   real    :: CollisionCoefDim = 1.0, CollisionCoef
   ! Radius within which the point implicit scheme should be used
   real :: rPointImplicit = 4.0
@@ -149,7 +149,7 @@ module ModUser
   real, dimension(32,nIonFluid)::Impact_ION,Impact_ION_dim=0.0 
   real, dimension(32):: Temp_dim
   logical :: UseChargeEx=.true.
-  
+  !logical ::InitSession= .false.
 
   integer,parameter::NLong=73, NLat=36, MaxAlt=21
   real :: Long_I(NLong), Lat_I(NLat), Alt_I(MaxAlt), Alt0
@@ -165,12 +165,12 @@ module ModUser
   !end mars stuff
 
   logical:: UseOldEnergy=.false.
-  logical::InitSession=.false.
 
 contains
 
   !============================================================================
   subroutine user_calc_sources
+
     use ModPointImplicit, ONLY: UsePointImplicit_B,UsePointImplicit,&
          IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK,&
@@ -211,7 +211,13 @@ contains
 
     iBlock = GlobalBlk
 
-    if(InitSession)call set_neutral_density
+    !write(*,*)'nDenNuSpecies_CBI(1, 1, 1, iBlock, MaxNuSpecies=',nDenNuSpecies_CBI(1, 1, 1, iBlock, 1)
+    if( nDenNuSpecies_CBI(1, 1, 1, iBlock, 1) < 0.0)then
+      ! write(*,*)'we are in user_calc_sources'
+      ! write(*,*)'nBLK=',nBLK
+      ! write(*,*)'iBlock=',iBlock
+       call set_neutral_density(iBlock)
+    end if
 
     ! Do not provide explicit source term when point-implicit scheme is used
     ! IsPointImplSource is true only when called from ModPointImplicit
@@ -245,7 +251,7 @@ contains
             +5.0e-4
        Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
             CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
-                  6.0e-3)/cosSZA
+            6.0e-3)/cosSZA
        if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then
           Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
        else
@@ -318,8 +324,8 @@ contains
        MaxSLSpecies_CB(i,j,k,iBlock)=1.0e-3
 
        ! calculate optical depth and producation rate
-   
-       
+
+
        Productrate= Productrate_CB(i,j,k,iBlock)
 
        if(DoTestCell)then
@@ -448,7 +454,7 @@ contains
                Recb_I(:)*NumDens*State_VGB(iRhoIon_I(:), iTest,jTest,kTest, iBlock)
           write(*,*)'NumDens=',NumDens
           write(*,*)'!!!!SiSpecies'
-         write(*,*)' PhoIon_I*MassIon_I=', PhoIon_I*MassIon_I
+          write(*,*)' PhoIon_I*MassIon_I=', PhoIon_I*MassIon_I
           write(*,*)'Last term in Sispecies='
           do iFluid=1, nIonFluid
              write(*,*)'dSdRho_II(1:nIonFluid, iFluid)=',dSdRho_II(1:nIonFluid, iFluid)
@@ -458,7 +464,7 @@ contains
        end if
 
 
-       
+
        !if(DoTestCell)then
        !   write(*,*)NameSub,' State_VGB(iRhoIon_I(:))',State_VGB(iRhoIon_I(:),iTest,jTest,kTest,BLKTest)
        !   do iFluid=1,nIonFluid
@@ -470,7 +476,7 @@ contains
        !    write(*,*)'Recb_I(:)=',Recb_I(:)
        ! end if
 
-       
+
 
        !SiSpecies_I(3)=SiSpecies_I(2)
        !LiSpecies_I(3)=SiSpecies_I(2)
@@ -684,7 +690,7 @@ contains
                + PhoIon_I*kTe0                &
                - LossNumRho_I*Temp_I               &
                - RLNumRhox_I*NumDens_I*KTe         
-          
+
           !if(kTi > 3000*Si2No_V(UnitTemperature_))&
           !     tmp = tmp+totalNumRho*(1000*-KTi)*nu_BLK(i,j,k)*5.0
 
@@ -698,7 +704,7 @@ contains
           !   tmp_I=tmp_I &
           !         - nu_BLK(i,j,k,iBlock)*0.1*NumDens_I*exp(10*((2*kTi) -6000*Si2No_V(UnitTemperature_))/(2*kTi))
           !end if
-          
+
           if(DoTestCell)then
              write(*,*)NameSub,'SourceNumRho_I=',SourceNumRho_I
              write(*,*)NameSub,'NumDens_I=',NumDens_I
@@ -817,11 +823,11 @@ contains
 !!$          write(*,*)NameSub,'totalRLNumRhox=', totalRLNumRhox
 !!$          write(*,*)NameSub,' Tmp_I=',Tmp_I(:)
           write(*,*)NameSub,' Source_VC(iPIon_I(:))',Source_VC(iPIon_I(:),iTest,jTest,kTest)
-         ! write(*,*)NameSub,' Source_VC(rho_ )=', Source_VC(rho_       ,iTest,jTest,kTest)
-         ! write(*,*)NameSub,'  Source_VC(iRhoIon_I(:),:,:,:)=', Source_VC(iRhoIon_I(:),iTest,jTest,kTest)
-         ! write(*,*)NameSub,' Source_VC(rhoUx_)=', Source_VC(rhoUx_     ,iTest,jTest,kTest)
-         ! write(*,*)NameSub,'Source_VC(rhoUy_)=',Source_VC(rhoUy_     ,iTest,jTest,kTest)
-         ! write(*,*)NameSub,' Source_VC(rhoUz_)=', Source_VC(rhoUz_     ,iTest,jTest,kTest)         
+          ! write(*,*)NameSub,' Source_VC(rho_ )=', Source_VC(rho_       ,iTest,jTest,kTest)
+          ! write(*,*)NameSub,'  Source_VC(iRhoIon_I(:),:,:,:)=', Source_VC(iRhoIon_I(:),iTest,jTest,kTest)
+          ! write(*,*)NameSub,' Source_VC(rhoUx_)=', Source_VC(rhoUx_     ,iTest,jTest,kTest)
+          ! write(*,*)NameSub,'Source_VC(rhoUy_)=',Source_VC(rhoUy_     ,iTest,jTest,kTest)
+          ! write(*,*)NameSub,' Source_VC(rhoUz_)=', Source_VC(rhoUz_     ,iTest,jTest,kTest)         
 
        end if
 
@@ -832,7 +838,7 @@ contains
   end subroutine user_calc_sources
   !=============================================================================
   subroutine user_init_point_implicit
-    
+
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
     !------------------------------------------------------------------------
 
@@ -891,6 +897,8 @@ contains
 
     if(.not.allocated(nDenNuSpecies_CBI))then
        allocate(nDenNuSpecies_CBI(nI, nJ, nK, nBLK, MaxNuSpecies))
+       nDenNuSpecies_CBI = -1.0
+
        allocate( TempNuSpecies_CBI(1:nI, 1:nJ, 1:nK, nBLK))
        allocate(Productrate_CB(1:nI, 1:nJ, 1:nK, nBLK))
        allocate(Ionizationrate_CBI(1:nI, 1:nJ, 1:nK, nBLK,2))
@@ -900,14 +908,7 @@ contains
        allocate(nu_BLK(1:nI,1:nJ,1:nK,nBLK))
        allocate(nu1_BLK(1:nI,1:nJ,1:nK,nBLK))
     end if
-    
 
-  
-    call set_multiSp_ICs
-    call set_neutral_density
-    call set_multiSp_ICs
-
-     InitSession=.true.
   end subroutine user_init_session
   !============================================================================
   subroutine user_read_inputs
@@ -958,7 +959,7 @@ contains
 
        case("#SOLARCON") !solar cycle condition
           call read_var('SolarCon',SolarCond)
- 
+
 
 
        case("#UseHotO")  !adding hot Oxygen or not
@@ -971,11 +972,11 @@ contains
        case('#REACTIONS')
           call read_var('UseImpactIon',UseImpactIon)
           call read_var('UseChargeEx',UseChargeEx)
-         ! open(15,file='read_in.dat')
-         ! do i=1,32
-         !    read(15,*)Temp_dim(i),Impact_ION_dim(i,Op_),Impact_ION_dim(i,Hp_)
-         ! end do
-         ! close(15)
+          ! open(15,file='read_in.dat')
+          ! do i=1,32
+          !    read(15,*)Temp_dim(i),Impact_ION_dim(i,Op_),Impact_ION_dim(i,Hp_)
+          ! end do
+          ! close(15)
 
        case("#UseMarsAtm")
           call read_var('UseMarsAtm',UseMarsAtm)
@@ -1042,7 +1043,7 @@ contains
     case('spherical','spherical_lnr')
        ! at least part of the block is outside the body 
        if (R_BLK(nI,1,1,globalBLK) >= Rbody) then  
-          
+
           write(*,*)'we are in the spherical case of Mars input!'
 
           do k=1,nK
@@ -1244,7 +1245,7 @@ contains
        RateDim_I(CO2_hv__CO2p_em_)=7.3e-7
        RateDim_I(O_hv__Op_em_) = 2.734e-7
        RateDim_I(H_hv__Hp_em_) = 8.59e-8
-       
+
     case ('issiA')
 
        !Tnu_body_dim = 132.39      ! neutral temperature
@@ -1274,19 +1275,19 @@ contains
        !RateDim_I(O_hv__Op_em_) = 8.89e-8
        !RateDim_I(H_hv__Hp_em_) = 5.58e-8
 
-       !!!!yingjuan
+!!!!yingjuan
 
        Alt0=(Rbody-1.0)*3396.
        Tnu_body_dim = -64.56*exp(-0.5*((Alt0-115.7)/20.14)**2)+196.95 ! neutral temperature 
        !increase to 1000k to exobase
-       
+
        RateDim_I(CO2_hv__CO2p_em_)=2.47e-7
        RateDim_I(CO2_hv__Op_CO_em_)=2.2e-8
        RateDim_I(O_hv__Op_em_) = 8.89e-8
        RateDim_I(H_hv__Hp_em_) = 5.58e-8
        RateDim_I(CO2p_em__CO_O_) = 3.5e-7  !*sqrt(300/Te_dim)
        RateDim_I(O2p_em__O_O_) = 1.0e-7   !*exp(0.7*log(300/Te_dim)) 
-                                          !for Te<1200k
+       !for Te<1200k
        RateDim_I(Hp_O__Op_H_) = 1.0e-15
 
        BodynDenNuSpDim_I(CO2_) = 6.04e18*exp(-Alt0/6.98) !/cc
@@ -1296,7 +1297,7 @@ contains
 
        BodynDenNuSpDim_I(H_)= 184383
        BodynDenNuSpDim_I(Hx_)= 20635.3
-       
+
        BodynDenNuSpDim_I(Oh_)= 5.23e3*exp(-Alt0/626.2)
        BodynDenNuSpDim_I(Ohx_)=9.76e2*exp(-Alt0/2790)
        BodynDenNuSpDim_I(Oh2x_)=3.71e4*exp(-Alt0/88.47)
@@ -1312,7 +1313,7 @@ contains
        HNuSpeciesDim_I(Oh2x_)=88.47
 
     case('issiC')
-        Alt0=(Rbody-1.0)*3396.
+       Alt0=(Rbody-1.0)*3396.
        Tnu_body_dim = -161.13*exp(-0.5*((Alt0-112.6)/25.25)**2)+291.78 ! neutral temperature
        !increase to 1000k to exobase
 
@@ -1322,7 +1323,7 @@ contains
        RateDim_I(H_hv__Hp_em_) = 8.59e-8
        RateDim_I(CO2p_em__CO_O_) = 3.5e-7  !*sqrt(300/Te_dim)
        RateDim_I(O2p_em__O_O_) = 1.0e-7   !*exp(0.7*log(300/Te_dim))
-                                          !for Te<1200k
+       !for Te<1200k
        RateDim_I(Hp_O__Op_H_) = 1.0e-15
 
        BodynDenNuSpDim_I(CO2_) = 5.88e18*exp(-Alt0/7.00) !/cc
@@ -1376,7 +1377,7 @@ contains
        RateDim_I(O_hv__Op_em_) = 8.89e-8
        RateDim_I(H_hv__Hp_em_) = 5.58e-8
 
-       
+
     case default
        call stop_mpi('unknow solar condition '//SolarCond)
     end select
@@ -1530,14 +1531,13 @@ contains
     character (len=*), parameter :: NameSub = 'user_set_ics'
     logical:: DoTest, DoTestMe, DoTestCell
     !-------------------------------------------------------------------------
-
-   
-
     if(iProc==PROCtest .and. globalBLK==BLKtest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
     end if
+
+    call set_neutral_density(globalBlk)
 
     if(DoTestMe)then
        write(*,*)'in set_ics'
@@ -1566,49 +1566,49 @@ contains
 
           !if(UseIssiA)then
 
-         ! putting the ISSI parameters
+          ! putting the ISSI parameters
 
-        !  nDenNuSpecies_CBI(i,j,k,globalBLK,H_)=&
-        !       1.5e5*&
-        !       exp(25965*(1/(R_BLK(i,j,k,globalBLK)*&
-        !       0.001*No2Si_V(UnitX_))))/&
-        !       exp((25965.0)/(3595))
+          !  nDenNuSpecies_CBI(i,j,k,globalBLK,H_)=&
+          !       1.5e5*&
+          !       exp(25965*(1/(R_BLK(i,j,k,globalBLK)*&
+          !       0.001*No2Si_V(UnitX_))))/&
+          !       exp((25965.0)/(3595))
 
 
-           !nDenNuSpecies_CBI(i,j,k,globalBLK,O_)=&
-            !    (5.85e13*&
-            !   exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/10.56))+&
-            ! (7.02e9*&
-            !   exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/33.97))
+          !nDenNuSpecies_CBI(i,j,k,globalBLK,O_)=&
+               !    (5.85e13*&
+          !   exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/10.56))+&
+               ! (7.02e9*&
+          !   exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/33.97))
 
-           !nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)=&
-            !   (6.04e18*&
-            !   exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/6.98))+&
-            ! (1.67e15*&
-            !   exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/11.49))
+          !nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)=&
+               !   (6.04e18*&
+          !   exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/6.98))+&
+               ! (1.67e15*&
+          !   exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/11.49))
 
-            !nDenNuSpecies_CBI(i,j,k,globalBLK,Ox_)=0.0
-            !nDenNuSpecies_CBI(i,j,k,globalBLK,Hx_)=0.0
-            !nDenNuSpecies_CBI(i,j,k,globalBLK,CO2x_)=0.0
-            
-            !nDenNuSpecies_CBI(i,j,k,globalBLK,Oh_)=&
-            !     (5.23e3*&
-            !     exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/626.2))+&
-            !     (9.76e2*&
-            !     exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/2790.0))+&
-            !     (3.71e4*&
-            !     exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/88.47))
+          !nDenNuSpecies_CBI(i,j,k,globalBLK,Ox_)=0.0
+          !nDenNuSpecies_CBI(i,j,k,globalBLK,Hx_)=0.0
+          !nDenNuSpecies_CBI(i,j,k,globalBLK,CO2x_)=0.0
 
-            !nDenNuSpecies_CBI(i,j,k,globalBLK,Ohx_)=0.0
-            
-                Alt0= (R_BLK(i,j,k,globalBLK)-1.0)*3396.0
-                nDenNuSpecies_CBI(i,j,k,globalBLK,H_)=&
-                     1.0e3*&
-                     exp(9.25e5*(1.0/(Alt0+3393.5)-1.0/3593.5))
-                nDenNuSpecies_CBI(i,j,k,globalBLK,Hx_)= &
-                     3.0e4*&
-                     exp(1.48e4 *(1.0/(Alt0+3393.5)-1.0/3593.5))    
-            !end if
+          !nDenNuSpecies_CBI(i,j,k,globalBLK,Oh_)=&
+               !     (5.23e3*&
+          !     exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/626.2))+&
+               !     (9.76e2*&
+          !     exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/2790.0))+&
+               !     (3.71e4*&
+          !     exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/88.47))
+
+          !nDenNuSpecies_CBI(i,j,k,globalBLK,Ohx_)=0.0
+
+          Alt0= (R_BLK(i,j,k,globalBLK)-1.0)*3396.0
+          nDenNuSpecies_CBI(i,j,k,globalBLK,H_)=&
+               1.0e3*&
+               exp(9.25e5*(1.0/(Alt0+3393.5)-1.0/3593.5))
+          nDenNuSpecies_CBI(i,j,k,globalBLK,Hx_)= &
+               3.0e4*&
+               exp(1.48e4 *(1.0/(Alt0+3393.5)-1.0/3593.5))    
+          !end if
 
        else
           nDenNuSpecies_CBI(i,j,k,globalBLK,:)=0.0
@@ -1891,7 +1891,6 @@ contains
 
 
     time_BLK(:,:,:,globalBLK) = 0.00
-    !InitSession=.false.
 
   end subroutine user_set_ICs
 
@@ -2056,18 +2055,18 @@ contains
     IsFound=.true.
 
     select case(NameVar)
-  !  case('hp')
-  !     iVar=HpRho_
-  !     iIon=1
-  !  case('o2p')
-  !     iVar=O2pRho_
-  !     iIon=2
-  !  case('op')
-  !     iVar=OpRho_
-  !     iIon=3
-  !  case('co2p')
-  !     iVar=CO2pRho_
-  !     iIon=4
+       !  case('hp')
+       !     iVar=HpRho_
+       !     iIon=1
+       !  case('o2p')
+       !     iVar=O2pRho_
+       !     iIon=2
+       !  case('op')
+       !     iVar=OpRho_
+       !     iIon=3
+       !  case('co2p')
+       !     iVar=CO2pRho_
+       !     iIon=4
 
     case('co2')
        iVar=CO2_
@@ -2085,7 +2084,7 @@ contains
        iVar=Ox_
     case('co2x')
        iVar=CO2x_
-       
+
     case('rateo') 
        iVar=O_
     case('rateco2')
@@ -2098,16 +2097,16 @@ contains
     NameTecUnit = '[amu/cm3]'
     NameIdlUnit = 'amu/cm3'
     PlotVar_G(1:nI,1:nJ,1:nK)=Ionizationrate_CBI(:,:,:,iBlock,iVar)*No2Io_V(UnitT_)
-  !  PlotVar_G(1:nI,1:nJ,1:nK)= nDenNuSpecies_CBI(:,:,:,iBlock,iVar)
-  !  PlotVar_G   = State_VGB(iVar,:,:,:,iBlock)/MassIon_I(iIon)
-    
-   PlotVarBody = BodyRho_I(iIon+1)
+    !  PlotVar_G(1:nI,1:nJ,1:nK)= nDenNuSpecies_CBI(:,:,:,iBlock,iVar)
+    !  PlotVar_G   = State_VGB(iVar,:,:,:,iBlock)/MassIon_I(iIon)
+
+    PlotVarBody = BodyRho_I(iIon+1)
 
     if(IsDimensional) PlotVar_G = PlotVar_G*No2Io_V(UnitRho_)
 
   end subroutine user_set_plot_var
   !============================================================================
-  subroutine set_neutral_density
+  subroutine set_neutral_density(iBlock)
 
     use ModProcMH, ONLY : iProc
     use ModMain
@@ -2116,179 +2115,203 @@ contains
     use ModIO, ONLY : restart
     use ModPhysics
     use ModNumConst
-    
+
+    integer, intent(in):: iBlock
+
     real :: Rmax,CosSZA
-    integer:: i, j, k, q, iBlock
+    integer:: i, j, k, q
     character (len=*), parameter :: NameSub = 'set_neutral_density'
     logical:: DoTest, DoTestMe, DoTestCell
 
     !--------------------------------------------------------------------------
-    
-    iBlock= GlobalBlk
 
     if(iProc==PROCtest.and. iBlock==BLKtest)then
        call set_oktest(NameSub,DoTest,DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
     end if
-        
-   
-   
- !calculate neutral 
-    do iBlock = 1, nBLK
-       
 
-       if(UnusedBlk(iBlock)) CYCLE
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          
-          DoTestCell= DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
-          
-         
 
-          !if(DoTestCell)then
-          !   write(*,*)'iProc, iBlock, iTest, jTest, kTest=',iProc, iBlock, i, j, k 
-          !   write(*,*)'I am inside testcell' 
-          !   write(*,*)'beginning of set_neutral_density'
-          !   write(*,*)'nDenNuSpecies_CBI=',nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,:)
-          !   write(*,*)'Productrate_CBI=',Productrate_CB(iTest,jTest,kTest,iBlock)
-          !   write(*,*)'Ionizationrate_CBI=',Ionizationrate_CBI(iTest,jTest,kTest,iBlock,:)
+    !if(DoTestCell)write(*,*)'set_neutral_density called,iBlock', iBlock
+
+
+    !calculate neutral 
+
+    do k=1,nK; do j=1,nJ; do i=1,nI
+
+       DoTestCell= DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
+
+       !if(DoTestCell)then
+       !   write(*,*)'iProc, iBlock, iTest, jTest, kTest=',iProc, iBlock, i, j, k 
+       !   write(*,*)'I am inside testcell' 
+       !   write(*,*)'beginning of set_neutral_density'
+       !   write(*,*)'nDenNuSpecies_CBI=',nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,:)
+       !   write(*,*)'Productrate_CBI=',Productrate_CB(iTest,jTest,kTest,iBlock)
+       !   write(*,*)'Ionizationrate_CBI=',Ionizationrate_CBI(iTest,jTest,kTest,iBlock,:)
+       !end if
+
+       !write(*,*)' BodynDenNuSpecies_I(:)=', BodynDenNuSpecies_I
+       if(R_BLK(i,j,k,iBlock)<= Rbody)then
+          nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
+               BodynDenNuSpecies_I
+
+       else if(R_BLK(i,j,k,iBlock)< 5.0) then         
+          nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
+               BodynDenNuSpecies_I(:)*& 
+               exp(-(R_BLK(i,j,k,iBlock)-Rbody)&
+               /HNuSpecies_I(:))
+
+          !putting the ISSI parameters
+
+          !    if(UseIssiA) then
+
+          ! nDenNuSpecies_CBI(i,j,k,globalBLK,H_)=&
+          !      1.5e5*&
+          !      exp(25965*(1/(R_BLK(i,j,k,globalBLK)*&
+          !      0.001*No2Si_V(UnitX_))))/&
+          !      exp((25965.0)/(3595))
+
+
+          !  nDenNuSpecies_CBI(i,j,k,globalBLK,O_)=&
+          !       (5.85e13*&
+          !      exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/10.56))+&
+          !    (7.02e9*&
+          !      exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/33.97))
+
+          !  nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)=&
+          !      (6.04e18*&
+          !      exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/6.98))+&
+          !    (1.67e15*&
+          !      exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/11.49))
+
+          !  nDenNuSpecies_CBI(i,j,k,globalBLK,Oh_)=&
+          !        (5.23e3*&
+          !        exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/626.2))+&
+          !        (9.76e2*&
+          !        exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/2790.0))+&
+          !        (3.71e4*&
+          !        exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/88.47))
+
+          !   nDenNuSpecies_CBI(i,j,k,globalBLK,Ohx_)=0.0
+
+
+          !   nDenNuSpecies_CBI(i,j,k,globalBLK,Ox_)=0.0
+          !   nDenNuSpecies_CBI(i,j,k,globalBLK,Hx_)=0.0
+          !   nDenNuSpecies_CBI(i,j,k,globalBLK,CO2x_)=0.0
+
+
+          Alt0= (R_BLK(i,j,k,globalBLK)-1.0)*3396.0
+          nDenNuSpecies_CBI(i,j,k,iBlock,H_)=&
+               1.0e3*&
+               exp(9.25e5*(1.0/(Alt0+3393.5)-1.0/3593.5))
+          nDenNuSpecies_CBI(i,j,k,iBlock,Hx_)= &
+               3.0e4*&
+               exp(1.48e4 *(1.0/(Alt0+3393.5)-1.0/3593.5))
+
           !end if
 
-          !write(*,*)' BodynDenNuSpecies_I(:)=', BodynDenNuSpecies_I
-          if(R_BLK(i,j,k,iBlock)<= Rbody)then
-             nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
-                  BodynDenNuSpecies_I
+       else
+          nDenNuSpecies_CBI(i,j,k,iBlock,:)=0.0
 
-          else if(R_BLK(i,j,k,iBlock)< 5.0) then         
-             nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
-                  BodynDenNuSpecies_I(:)*& 
-                  exp(-(R_BLK(i,j,k,iBlock)-Rbody)&
-                 /HNuSpecies_I(:))
+       end if
 
-              !putting the ISSI parameters
-             
-         !    if(UseIssiA) then
-
-         ! nDenNuSpecies_CBI(i,j,k,globalBLK,H_)=&
-         !      1.5e5*&
-         !      exp(25965*(1/(R_BLK(i,j,k,globalBLK)*&
-         !      0.001*No2Si_V(UnitX_))))/&
-         !      exp((25965.0)/(3595))
-               
-
-         !  nDenNuSpecies_CBI(i,j,k,globalBLK,O_)=&
-         !       (5.85e13*&
-         !      exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/10.56))+&
-         !    (7.02e9*&
-         !      exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/33.97))
-
-         !  nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)=&
-         !      (6.04e18*&
-         !      exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/6.98))+&
-         !    (1.67e15*&
-         !      exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/11.49))
-
-         !  nDenNuSpecies_CBI(i,j,k,globalBLK,Oh_)=&
-         !        (5.23e3*&
-         !        exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/626.2))+&
-         !        (9.76e2*&
-         !        exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/2790.0))+&
-         !        (3.71e4*&
-         !        exp(-((R_BLK(i,j,k,globalBLK)-Rbody)*0.001*No2Si_V(UnitX_)+100)/88.47))
-
-         !   nDenNuSpecies_CBI(i,j,k,globalBLK,Ohx_)=0.0
+       !if(iProc==0 .and. iBlock==859 .and. i==1 .and. j==1 .and. k==1   )then
+       !  write(*,*)'I am inside testcell'
+       !  write(*,*)'iProc, iBlock, iTest, jTest, kTest=',iProc, iBlock, i, j, k
+       !   write(*,*)'middle of set_neutral_density'
+       !   write(*,*)'R_BLK(i,j,k,iBlock)=',R_BLK(iTest,jTest,kTest,iBlock)
+       !   write(*,*)'BodynDenNuSpecies_I(:)=',BodynDenNuSpecies_I(:)
+       !   write(*,*)'nDenNuSpecies_CBI=',nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,:)
+       !   write(*,*)'Productrate_CBI=',Productrate_CB(iTest,jTest,kTest,iBlock)
+       !   write(*,*)'Ionizationrate_CBI=',Ionizationrate_CBI(iTest,jTest,kTest,iBlock,:)
+       !end if
 
 
-         !   nDenNuSpecies_CBI(i,j,k,globalBLK,Ox_)=0.0
-         !   nDenNuSpecies_CBI(i,j,k,globalBLK,Hx_)=0.0
-         !   nDenNuSpecies_CBI(i,j,k,globalBLK,CO2x_)=0.0
-          
-               
-                Alt0= (R_BLK(i,j,k,globalBLK)-1.0)*3396.0
-                nDenNuSpecies_CBI(i,j,k,iBlock,H_)=&
-                     1.0e3*&
-                     exp(9.25e5*(1.0/(Alt0+3393.5)-1.0/3593.5))
-                nDenNuSpecies_CBI(i,j,k,iBlock,Hx_)= &
-                     3.0e4*&
-                     exp(1.48e4 *(1.0/(Alt0+3393.5)-1.0/3593.5))
-  
-         !end if
+    end do;end do;end do
 
-          else
-             nDenNuSpecies_CBI(i,j,k,iBlock,:)=0.0
+    !    call neutral_density_averages  !calculate averaged neutral density
 
-          end if
-          
-          !if(iProc==0 .and. iBlock==859 .and. i==1 .and. j==1 .and. k==1   )then
-          !  write(*,*)'I am inside testcell'
-          !  write(*,*)'iProc, iBlock, iTest, jTest, kTest=',iProc, iBlock, i, j, k
-          !   write(*,*)'middle of set_neutral_density'
-          !   write(*,*)'R_BLK(i,j,k,iBlock)=',R_BLK(iTest,jTest,kTest,iBlock)
-          !   write(*,*)'BodynDenNuSpecies_I(:)=',BodynDenNuSpecies_I(:)
-          !   write(*,*)'nDenNuSpecies_CBI=',nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,:)
-          !   write(*,*)'Productrate_CBI=',Productrate_CB(iTest,jTest,kTest,iBlock)
-          !   write(*,*)'Ionizationrate_CBI=',Ionizationrate_CBI(iTest,jTest,kTest,iBlock,:)
-          !end if
+    ! calculate optical depth and producation rate
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
+            x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
+            +5.0e-4
 
 
-       end do;end do;end do
+       Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
+            CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
+            6.0e-3)/cosSZA        
 
-       !    call neutral_density_averages  !calculate averaged neutral density
+!!!resseting the value of Optdep for test
+       !Optdep= sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
+       !     CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies))
 
-       ! calculate optical depth and producation rate
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-               x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
-               +5.0e-4
+       if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then 
+          Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
+       else
+          Productrate_CB(i,j,k,iBlock) = 1.0e-5
+       end if
 
-          
-          Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
-               CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
-               6.0e-3)/cosSZA        
+    end do; end do; end do
 
-          !!!resseting the value of Optdep for test
-          !Optdep= sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
-          !     CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies))
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       if(UseHotO) then
+          nu_BLK(i,j,k,iBlock)=&
+               sum(nDenNuSpecies_CBI(i,j,k,iBlock,:))*nu0         
+          nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
+               nDenNuSpecies_CBI(i,j,k,iBlock,Ox_)
 
-          if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then 
-             Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
-          else
-             Productrate_CB(i,j,k,iBlock) = 1.0e-5
-          end if
+          nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)= &
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+ &
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2x_)
 
-       end do; end do; end do
+          nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
+               nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)+&
+               nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)+&
+               nDenNuSpecies_CBI(i,j,k,iBlock,Oh2x_)
+
+          nDenNuSpecies_CBI(i,j,k,iBlock,H_)= &
+               nDenNuSpecies_CBI(i,j,k,iBlock,H_)+ &
+               nDenNuSpecies_CBI(i,j,k,iBlock,Hx_)
+
+       else
+          nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)= &
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+ &
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2x_)
+
+          nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
+               nDenNuSpecies_CBI(i,j,k,iBlock,Ox_)
+
+          nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_))*nu0
+
+          nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1.0e-5
+
+       end if
+
+    end do; end do; end do 
+
+
+    if(UseMarsAtm)then
+       if(maxval(R_BLK(:,:,:,iBlock))<5.0*Rbody) call Mars_input
 
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(UseHotO) then
-             nu_BLK(i,j,k,iBlock)=&
-                  sum(nDenNuSpecies_CBI(i,j,k,iBlock,:))*nu0         
-             nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,Ox_)
-
-             nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)= &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+ &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,CO2x_)
-
-             nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
+             nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)= &
                   nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)+&
-                  nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)+&
-                   nDenNuSpecies_CBI(i,j,k,iBlock,Oh2x_)
-
-             nDenNuSpecies_CBI(i,j,k,iBlock,H_)= &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,H_)+ &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,Hx_)
-
-          else
-             nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)= &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+ &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,CO2x_)
+                  nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)
 
              nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
                   nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,Ox_)
+                  nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)
 
+             nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
+                  nDenNuSpecies_CBI(i,j,k,iBlock,O_)+&
+                  nDenNuSpecies_CBI(i,j,k,iBlock,H_) )*nu0
+          else              
              nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
                   nDenNuSpecies_CBI(i,j,k,iBlock,O_))*nu0
 
@@ -2296,64 +2319,35 @@ contains
 
           end if
 
+          Ionizationrate_CBI(i,j,k,iBlock,CO2_)=&
+               Ionizationrate_CBI(i,j,k,iBlock,CO2_)*&
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
+          Ionizationrate_CBI(i,j,k,iBlock,O_)=&
+               Ionizationrate_CBI(i,j,k,iBlock,O_)*&
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+
        end do; end do; end do 
+    else
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          Ionizationrate_CBI(i,j,k,iBlock,O_)= &
+               Rate_I(O_hv__Op_em_)&
+               *nDenNuSpecies_CBI(i,j,k,iBlock,O_)&
+               *Productrate_CB(i,j,k,iBlock)
 
+          Ionizationrate_CBI(i,j,k,iBlock,CO2_)= &
+               Rate_I(CO2_hv__CO2p_em_)&
+               *nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)&
+               *Productrate_CB(i,j,k,iBlock)
+          !if(DoTestCell)then
+          !   write(*,*)'end of set_neutral_density'
+          !   write(*,*)'nDenNuSpecies_CBI=',nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,:)
+          !   write(*,*)'Productrate_CBI=',Productrate_CB(iTest,jTest,kTest,iBlock)
+          !   write(*,*)'Ionizationrate_CBI=',Ionizationrate_CBI(iTest,jTest,kTest,iBlock,:)
+          !end if
 
-       if(UseMarsAtm)then
-          if(maxval(R_BLK(:,:,:,iBlock))<5.0*Rbody) call Mars_input
+       end do; end do; end do
 
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             if(UseHotO) then
-                nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)= &
-                     nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)+&
-                     nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)
-
-                nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
-                     nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
-                     nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)
-
-                nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
-                     nDenNuSpecies_CBI(i,j,k,iBlock,O_)+&
-                     nDenNuSpecies_CBI(i,j,k,iBlock,H_) )*nu0
-             else              
-                nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
-                     nDenNuSpecies_CBI(i,j,k,iBlock,O_))*nu0
-
-                nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1.0e-5
-
-             end if
-
-             Ionizationrate_CBI(i,j,k,iBlock,CO2_)=&
-                  Ionizationrate_CBI(i,j,k,iBlock,CO2_)*&
-                  nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
-             Ionizationrate_CBI(i,j,k,iBlock,O_)=&
-                  Ionizationrate_CBI(i,j,k,iBlock,O_)*&
-                  nDenNuSpecies_CBI(i,j,k,iBlock,O_)
-
-          end do; end do; end do 
-       else
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             Ionizationrate_CBI(i,j,k,iBlock,O_)= &
-                  Rate_I(O_hv__Op_em_)&
-                  *nDenNuSpecies_CBI(i,j,k,iBlock,O_)&
-                  *Productrate_CB(i,j,k,iBlock)
-
-             Ionizationrate_CBI(i,j,k,iBlock,CO2_)= &
-                  Rate_I(CO2_hv__CO2p_em_)&
-                  *nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)&
-                  *Productrate_CB(i,j,k,iBlock)
-             !if(DoTestCell)then
-             !   write(*,*)'end of set_neutral_density'
-             !   write(*,*)'nDenNuSpecies_CBI=',nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,:)
-             !   write(*,*)'Productrate_CBI=',Productrate_CB(iTest,jTest,kTest,iBlock)
-             !   write(*,*)'Ionizationrate_CBI=',Ionizationrate_CBI(iTest,jTest,kTest,iBlock,:)
-             !end if
-
-             end do; end do; end do
-    
-          end if
-       end do
-       InitSession=.false.
-     end subroutine set_neutral_density
+    end if
+  end subroutine set_neutral_density
   !============================================================================
-   end module ModUser
+end module ModUser
