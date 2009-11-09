@@ -180,6 +180,7 @@ contains
        x0 = 0.02  ! shift in x-direction
 
     case('parcond')
+       HeatConductionCoef = 1.0
        AmplitudeTemperature = 9.0
        Tmin = 1.0
        Bx = 1.7

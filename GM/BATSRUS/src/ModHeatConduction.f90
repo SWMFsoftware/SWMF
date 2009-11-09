@@ -21,8 +21,8 @@ module ModHeatConduction
   logical, public :: IsNewBlockHeatConduction = .true.
 
   ! Variables for setting the field-aligned heat conduction coefficient
-  character(len=20), public :: TypeHeatConduction = 'test'
-  logical :: DoModifyHeatConduction, DoTestHeatConduction
+  character(len=20), public :: TypeHeatConduction = 'user'
+  logical :: DoModifyHeatConduction, DoUserHeatConduction
 
   real :: HeatConductionParSi = 1.23e-11  ! taken from calc_heat_flux
   real :: TmodifySi = 3.0e5, DeltaTmodifySi = 2.0e4
@@ -65,11 +65,13 @@ contains
        call read_var('UseParallelConduction', UseParallelConduction)
        if(UseParallelConduction)then
           call read_var('TypeHeatConduction', TypeHeatConduction)
-          call read_var('HeatConductionParSi', HeatConductionParSi)
 
           select case(TypeHeatConduction)
-          case('test','spitzer')
+          case('user')
+          case('spitzer')
+             call read_var('HeatConductionParSi', HeatConductionParSi)
           case('modified')
+             call read_var('HeatConductionParSi', HeatConductionParSi)
              call read_var('TmodifySi', TmodifySi)
              call read_var('DeltaTmodifySi', DeltaTmodifySi)
           case default
@@ -128,11 +130,11 @@ contains
             /(1 + AverageIonCharge*ElectronTemperatureRatio)
     end if
 
-    DoTestHeatConduction = .false.
+    DoUserHeatConduction = .false.
     DoModifyHeatConduction = .false.
 
-    if(TypeHeatConduction == 'test')then
-       DoTestHeatConduction = .true.
+    if(TypeHeatConduction == 'user')then
+       DoUserHeatConduction = .true.
     elseif(TypeHeatConduction == 'modified')then
        DoModifyHeatConduction = .true.
     end if
@@ -246,7 +248,8 @@ contains
     use ModB0,           ONLY: B0_DX, B0_DY, B0_DZ
     use ModMain,         ONLY: UseB0
     use ModNumConst,     ONLY: cTolerance
-    use ModPhysics,      ONLY: Si2No_V, UnitTemperature_
+    use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
+         UnitEnergyDens_, UnitU_, UnitX_
     use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_, Pe_
 
@@ -255,7 +258,7 @@ contains
     real, intent(out):: HeatCond_D(3)
 
     real :: B_D(3), Bnorm, Bunit_D(3), TeSi, Te
-    real :: HeatCoef, FractionSpitzer, FractionFieldAligned
+    real :: HeatCoefSi, HeatCoef, FractionSpitzer, FractionFieldAligned
     !--------------------------------------------------------------------------
 
     if(UseB0)then
@@ -282,6 +285,7 @@ contains
        else
           Te = TeFraction*State_V(p_)/State_V(Rho_)
        end if
+       TeSi = Te*No2Si_V(UnitTemperature_)
     else
        ! Note we assume that the heat conduction formula for the
        ! ideal state is still applicable for the non-ideal state
@@ -289,8 +293,12 @@ contains
        Te = TeSi*Si2No_V(UnitTemperature_)
     end if
 
-    if(DoTestHeatConduction)then
-       HeatCoef = 1.0
+    if(DoUserHeatConduction)then
+       call user_material_properties(State_V, TeIn=TeSi, &
+            HeatCondOut=HeatCoefSi)
+       HeatCoef = HeatCoefSi &
+              *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
+              *Si2No_V(UnitU_)*Si2No_V(UnitX_)
     else
 
        if(DoModifyHeatConduction)then
