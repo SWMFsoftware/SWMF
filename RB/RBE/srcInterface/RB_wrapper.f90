@@ -306,6 +306,8 @@ subroutine RB_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
   use CON_coupler, ONLY: Grid_C, IE_
   use ModNumConst, ONLY: cTwoPi,cPi,cHalfPi
   use ModInterpolate, ONLY: bilinear
+  use ModPrerunField,ONLY: DoWritePrerun, save_prerun_IE
+  use rbe_time,    ONLY: tSimulation => t
   implicit none
 
   character(len=*), parameter :: NameSub='RB_put_from_ie'
@@ -357,7 +359,7 @@ subroutine RB_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
      end select
   end do
   
-
+  if (DoWritePrerun) call save_prerun_IE(tSimulation)
   if(.not.IsPotFound)then
      write(*,*)NameSub,': Name_V=',Name_V
      call CON_stop(NameSub//' could not find Pot')

@@ -112,4 +112,71 @@ contains
     
   end subroutine read_prerun
 
+  !=============================================================================
+  subroutine save_prerun_IE(tSimulation)
+    use rbe_convect, ONLY: Potential_II => potent
+    use ModIoUnit,  ONLY: UnitTmp_
+    use rbe_grid,    ONLY: nLat => ir, nLon => ip
+    real, intent(in) :: tSimulation
+    Character(len=100) :: NameFile             !output file name
+    integer :: iTimeOut, iLat, iLon
+    !---------------------------------------------------------------------------
+    
+    ! Create Filename and open file
+    iTimeOut=int(tSimulation)
+    write(NameFile,"(a,i8.8,a)") &
+         'RB/PrerunIE_',iTimeOut,'.dat'   
+    open(UnitTmp_,file=NameFile,status="replace", form="unformatted")
+
+    ! Write out Potential_II
+    do iLon = 1,nLon
+          write(UnitTmp_) Potential_II(1:nLat,iLon)
+    end do
+    
+    close(UnitTmp_)
+
+  end subroutine save_prerun_IE
+  
+  !=============================================================================
+  subroutine read_prerun_IE(tSimulation)
+    use rbe_convect, ONLY: Potential_II => potent
+    use ModIoUnit,   ONLY: UnitTmp_
+    use rbe_grid,    ONLY: nLat => ir, nLon => ip
+    use rbe_cread2,  ONLY: UseIE
+    real, intent(in) :: tSimulation
+    integer          :: iTimeOut
+    integer,save     :: iTimeOutPrev = -1
+    integer          :: n, iLat, iLon
+    Logical, save    :: IsFirstCall =.true.
+    Character(len=100) :: NameFile             ! input file name
+    !---------------------------------------------------------------------------
+
+    ! Set filename for reading
+    iTimeOut=int(floor(tSimulation/DtRead) * DtRead)
+    
+    if(iTimeOut == iTimeOutPrev) then
+       return
+    else
+       iTimeOutPrev =iTimeOut
+    end if 
+    
+    write(NameFile,"(a,i8.8,a)") &
+         'RB/PrerunIE_',iTimeOut,'.dat'   
+    open(UnitTmp_,file=NameFile,status="old", form="unformatted")
+
+    ! read Potential_II
+    do iLon = 1,nLon
+          read(UnitTmp_) Potential_II(1:nLat,iLon)
+    end do
+    
+    close(UnitTmp_)
+    
+    if (IsFirstCall) then
+       IsFirstCall = .false.
+       UseIE = .true.
+    endif
+
+    
+end subroutine read_prerun_IE
+
 end Module ModPrerunField

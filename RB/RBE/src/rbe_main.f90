@@ -41,11 +41,11 @@
 
 program rbe
 
-  use rbe_cread2, ONLY: nstept, nstep, IsStandAlone
+  use rbe_cread2, ONLY: nstept, nstep, IsStandAlone, iConvect
   use rbe_time,   ONLY: istep,t
   use ModMpi,ONLY: MPI_COMM_WORLD
   use ModReadParam
-  use ModPrerunField, ONLY: UsePrerun, read_prerun
+  use ModPrerunField, ONLY: UsePrerun, read_prerun, read_prerun_IE
   implicit none
   !---------------------------------------------------------------------------
   
@@ -56,6 +56,7 @@ program rbe
   call read_init('  ',iSessionIn=1,iLineIn=0)
   call RB_set_parameters('READ')
   if (usePrerun) call read_prerun(t)
+  if (usePrerun .and. iConvect==2) call read_prerun_IE(t)
   call readInputData
   call timing_active(.true.)
   call timing_step(0)
@@ -71,6 +72,7 @@ program rbe
      call timing_step(istep)
      call timing_start('rbe_run')
      if (usePrerun) call read_prerun(t)
+     if (usePrerun .and. iConvect==2) call read_prerun_IE(t)
      call rbe_run
      call timing_stop('rbe_run')
   end do
