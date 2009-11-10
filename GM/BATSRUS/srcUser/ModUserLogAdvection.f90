@@ -157,8 +157,7 @@ contains
   end subroutine user_update_states
   !=======================================================================
   subroutine write_spectrogram
- 
-  
+   
     use ModProcMH
     use ModMain,   ONLY: iteration_number, nBLK,unusedBLK,nBlockALL
     use ModSize,   ONLY: nI,nJ,nK
@@ -309,7 +308,9 @@ contains
     use ModVarIndexes
     use ModAdvance,     ONLY: State_VGB
     use ModSize,        ONLY: nI,nJ,nK
-    use ModWaves,       ONLY: DeltaLogFrequency
+    use ModWaves,       ONLY: DeltaLogFrequency, &
+         AlfvenSpeedPlusFirst_,&
+         AlfvenSpeedMinusFirst_
     
     implicit none
     integer                    :: i,j,k,iBLK, iWave
@@ -323,12 +324,16 @@ contains
 
     do iBLK=1,nBLK
        do k=1,nK ; do j = 1,nJ ; do i=1,nI
-          do iWave=1,nWave
+          
+          do iWave=1,nWaveHalf
              if( (iWave .le. LeftNullGroupNum) .or. &
-                  (iWave .gt. nWave-RightNullGroupNum)) then
-                State_VGB(WaveFirst_+iWave-1,i,j,k,iBLK) = 0.0
+                  (iWave .gt. nWaveHalf-RightNullGroupNum)) then
+                State_VGB(AlfvenSpeedPlusFirst_+iWave-1,i,j,k,iBLK) = 0.0
+                State_VGB(AlfvenSpeedMinusFirst_+iWave-1,i,j,k,iBLK)= 0.0
              else
-                State_VGB(WaveFirst_+iWave-1,i,j,k,iBLK) =&
+                State_VGB(AlfvenSpeedPlusFirst_+iWave-1,i,j,k,iBLK) =&
+                     exp(LogFreq_I(iWave)*FreqPower)
+                State_VGB(AlfvenSpeedMinusFirst_+iWave-1,i,j,k,iBLK)=&
                      exp(LogFreq_I(iWave)*FreqPower)
              end if
           end do
