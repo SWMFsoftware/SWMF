@@ -27,6 +27,7 @@ module ModUser
   logical :: UseExponentialHeating = .false.
 
   real :: TeFraction
+  real :: EtaPerpSi
 
   character(len=lStringLine) :: NameModel, TypeCoronalHeating
 
@@ -38,10 +39,10 @@ contains
 
     use ModCoronalHeating, ONLY: UseUnsignedFluxModel
     use ModMain
-    use ModProcMH,      ONLY: iProc
-    use ModReadParam,   ONLY: read_line, read_command, read_var
-    use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
-    use ModMagnetogram, ONLY: set_parameters_magnetogram
+    use ModProcMH,         ONLY: iProc
+    use ModReadParam,      ONLY: read_line, read_command, read_var
+    use ModIO,             ONLY: write_prefix, write_myname, iUnitOut
+    use ModMagnetogram,    ONLY: set_parameters_magnetogram
 
     character (len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
@@ -111,15 +112,19 @@ contains
   subroutine user_init_session
 
     use ModAdvance,     ONLY: UseElectronPressure
+    use ModConst,       ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
+         cElectronMass
     use ModIO,          ONLY: write_prefix, iUnitOut,NamePlotDir
     use ModMagnetogram, ONLY: read_magnetogram_file
     use ModMultiFluid,  ONLY: MassIon_I
+    use ModNumConst,    ONLY: cTwoPi
     use ModPhysics,     ONLY: Si2No_V, UnitP_, UnitEnergyDens_, UnitT_, &
          ElectronTemperatureRatio, AverageIonCharge
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: i_line_command
     use ModWaves,       ONLY: UseWavePressure, UseAlfvenSpeed
 
+    real, parameter :: CoulombLog = 20.0
     !--------------------------------------------------------------------------
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -162,6 +167,10 @@ contains
        TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
             /(1 + AverageIonCharge*ElectronTemperatureRatio)
     end if
+
+    ! perpendicular resistivity, used for temperature relaxation
+    EtaPerpSi = sqrt(cElectronMass)*CoulombLog &
+         *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -274,6 +283,7 @@ contains
     ! Initially, the electron and ion temperature are at 1.5e6(K) in the corona
     Tcorona = 1.5e6*Si2No_V(UnitTemperature_)
 
+    ! normalize with isothermal sound speed.
     Usound = sqrt(Tcorona*(1.0+AverageIonCharge)/MassIon_I(1))
     Uescape = sqrt(-GBody*2.0/rBody)/Usound
 
@@ -381,15 +391,17 @@ contains
 
   subroutine user_calc_sources
 
-    use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure
+    use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
+         time_BLK
     use ModCoronalHeating, ONLY: UseUnsignedFluxModel, get_coronal_heating
     use ModGeometry,       ONLY: r_BLK
-    use ModMain,           ONLY: nI, nJ, nK, GlobalBlk
-    use ModPhysics,        ONLY: gm1, rBody
-    use ModVarIndexes,     ONLY: Rho_, Energy_, Pe_
+    use ModMain,           ONLY: nI, nJ, nK, GlobalBlk, Cfl
+    use ModPhysics,        ONLY: gm1, inv_gm1, rBody, Si2No_V, UnitT_
+    use ModVarIndexes,     ONLY: Rho_, Energy_, p_, Pe_
 
     integer :: i, j, k, iBlock
     real :: CoronalHeating, RadiativeCooling
+    real :: HeatExchange, HeatExchangeSi
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -410,6 +422,22 @@ contains
 
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + CoronalHeating
 
+       if(UseElectronPressure)then
+          ! Explicit heat exchange
+          call get_heat_exchange( &
+               State_VGB(:,i,j,k,iBlock), HeatExchangeSi)
+          HeatExchange = HeatExchangeSi/Si2No_V(UnitT_)
+
+          ! Point-implicit correction for stability: H' = H/(1+dt*H)
+          HeatExchange = &
+               HeatExchange/(1 + Cfl*HeatExchange*time_BLK(i,j,k,iBlock)) &
+               *(State_VGB(p_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
+
+          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + HeatExchange
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+               - inv_gm1*HeatExchange
+       end if
+
        call get_radiative_cooling( &
             State_VGB(:,i,j,k,iBlock), RadiativeCooling)
 
@@ -421,6 +449,31 @@ contains
     end do; end do; end do
 
   end subroutine user_calc_sources
+
+  !============================================================================
+
+  subroutine get_heat_exchange(State_V, HeatExchangeSi)
+
+    use ModConst,      ONLY: cMu, cElectronCharge, cProtonMass
+    use ModMultiFluid, ONLY: MassIon_I
+    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitRho_, gm1
+    use ModVarIndexes, ONLY: nVar, Rho_, Pe_
+
+    real, intent(in) :: State_V(nVar)
+    real, intent(out):: HeatExchangeSi
+
+    real :: Te, TeSi, RhoSi
+    !--------------------------------------------------------------------------
+
+    Te = TeFraction*State_V(Pe_)/State_V(Rho_)
+    TeSi = Te*No2Si_V(UnitTemperature_)
+    RhoSi = State_V(Rho_)*No2Si_V(UnitRho_)
+
+    HeatExchangeSi = gm1*EtaPerpSi*3*cMu &
+         *(cElectronCharge/(cProtonMass*MassIon_I(1)))**2 &
+         *RhoSi/TeSi**1.5
+    
+  end subroutine get_heat_exchange
 
   !============================================================================
 
@@ -577,7 +630,7 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k
-    real :: TiFraction
+    real :: TiFraction, HeatExchangeSi
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -608,6 +661,12 @@ contains
              PlotVar_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
           end if
+       end do; end do; end do
+    case('teti')
+       NameIdlUnit = '1/s'
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          call get_heat_exchange(State_VGB(:,i,j,k,iBlock),HeatExchangeSi)
+          PlotVar_G(i,j,k) = HeatExchangeSi
        end do; end do; end do
     case default
        IsFound = .false.
