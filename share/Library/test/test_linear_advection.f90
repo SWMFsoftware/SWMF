@@ -1,10 +1,10 @@
 program linear_advection_test
 
-  use ModLinearAdvectiom, ONLY: test_linear_advection
+  use ModLinearAdvection, ONLY: test_linear_advection
 
   implicit none
 
-  call test_linear_advectiom
+  call test_linear_advection
 
 end program linear_advection_test
 
