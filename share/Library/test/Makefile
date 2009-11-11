@@ -50,7 +50,8 @@ test: \
 	test_geopack \
 	test_axes \
 	test_planet_field \
-	test_plot_file 
+	test_plot_file \
+	test_linear_advection
 
 #######################################################################
 OBJ_TIME_CONVERT = \
@@ -147,6 +148,27 @@ test_linear_solver:
 	-@(./test_linear_solver.exe)
 	@echo
 	@echo test_linear_solver done
+	@echo -----------------------------------------------------------------
+#######################################################################
+OBJ_LINEAR_ADVECTION = \
+	test_linear_advection.o \
+	../src/ModLinearAdvection.o 
+
+test_linear_advection_exe:
+	@(cd ../src; make ModLinearAdvection.o)
+	@make test_linear_advection.o
+	${LINK.f90} -o test_linear_advection.exe ${OBJ_LINEAR_ADVECTION} ${Lflag1}
+
+test_linear_advection:
+	@echo -----------------------------------------------------------------
+	@echo test_linear_advection starting
+	@echo
+	@make test_linear_advection_exe
+	@echo
+	@echo './test_linear_advection.exe'
+	-@(./test_linear_advection.exe)
+	@echo
+	@echo test_linear_advection done
 	@echo -----------------------------------------------------------------
 
 #######################################################################
