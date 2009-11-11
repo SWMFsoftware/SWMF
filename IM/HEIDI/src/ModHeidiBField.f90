@@ -354,6 +354,7 @@ contains
     iFirst = iMirror_I(1)
     iLast  = iMirror_I(2)
     SecondAdiabInv = 0.0
+    
 
     if (iFirst > iLast) RETURN
 
@@ -364,7 +365,7 @@ contains
 
 
     SecondAdiabInv= SecondAdiabInv + Coeff*(2./3.)*DeltaS1*sqrt(bMirror-bField_I(iFirst))
-
+    
     do iPoint = iFirst, iLast-1
        b1 = bField_I(iPoint)
        b2 =  bField_I(iPoint+1)
@@ -379,7 +380,7 @@ contains
   end subroutine second_adiabatic_invariant
 
   !==================================================================================
-  subroutine half_bounce_path_length(nPoint, iMirror_I, bMirror, bField_I, dLength_I,L, HalfPathLength)
+  subroutine half_bounce_path_length(nPoint, iMirror_I, bMirror, bField_I, dLength_I,L, HalfPathLength,Sb)
     
     !\
     ! Calculate integral of ds/sqrt((B-Bm)/Bm) between the mirror points using the
@@ -391,34 +392,41 @@ contains
     real, intent(in)    :: bMirror  
     real, intent(in)    :: dLength_I(nPoint-1)
     real, intent(in)    :: bField_I(nPoint) 
-    real, intent(out)   :: HalfPathLength
+    real, intent(out)   :: HalfPathLength,Sb
     real, intent(in)    :: L
     real                :: Inv2L
     integer             :: iPoint, iFirst, iLast
-    real                :: DeltaS1, DeltaS2,b1,b2, Coeff
+    real                :: DeltaS1, DeltaS2,b1,b2, Coeff,CoeffSb
     !----------------------------------------------------------------------------------
     iFirst = iMirror_I(1)
     iLast  = iMirror_I(2)
     HalfPathLength = 0.0
+    Sb = 0.0
 
     if (iFirst >iLast) RETURN
 
     Inv2L = 1.0/(2.*L)
     Coeff = Inv2L*sqrt(bMirror)
+    CoeffSb = sqrt(bMirror)
 
     DeltaS1 = abs((bMirror-bField_I(iFirst))*(dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
-    HalfPathLength= HalfPathLength + Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
-
+    HalfPathLength = HalfPathLength + Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
+    Sb = Sb + CoeffSb*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
+    
     do iPoint = iFirst, iLast-1
        b1 = bField_I(iPoint)
        b2 = bField_I(iPoint+1)
        HalfPathLength = HalfPathLength + Coeff*2.*dLength_I(iPoint)/(b1 - b2) &
+            *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
+       Sb = Sb + CoeffSb*2.*dLength_I(iPoint)/(b1 - b2) &
             *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
 
     end do
 
     DeltaS2 = abs((bMirror-bField_I(iLast))*(dLength_I(iLast))/(bField_I(iLast+1)-bField_I(iLast)))
     HalfPathLength= HalfPathLength + Coeff*2.*DeltaS2/(sqrt(bMirror-bField_I(iLast)))
+    Sb = Sb + CoeffSb*2.*DeltaS2/(sqrt(bMirror-bField_I(iLast)))
+
 
   end subroutine half_bounce_path_length
 
@@ -525,7 +533,7 @@ contains
     real                 :: PitchAngle
     real                 :: Ds_I(nPoint)
     real                 :: SecondAdiabInv, IntegralBAnalytic
-    real                 :: HalfPathLength, IntegralHAnalytic
+    real                 :: HalfPathLength, IntegralHAnalytic,Sb
     real                 :: bMirror
     integer              :: iMirror_I(2)
     real, parameter      :: Pi = 3.141592654
@@ -554,7 +562,7 @@ contains
 
        Percent1 = 100*abs(IntegralBAnalytic - SecondAdiabInv)/IntegralBAnalytic
 
-       call half_bounce_path_length(iPoint, iMirror_I, bMirror,  bFieldMagnitude_III, Ds_I,L_I(1), HalfPathLength)
+       call half_bounce_path_length(iPoint, iMirror_I, bMirror,  bFieldMagnitude_III, Ds_I,L_I(1), HalfPathLength,Sb)
 
 
        Percent2 = 200*abs(IntegralHAnalytic - HalfPathLength)/(IntegralHAnalytic+HalfPathLength)

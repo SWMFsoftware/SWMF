@@ -16,7 +16,7 @@ subroutine get_IntegralH(IntegralH_III)
 
   real :: y,x,alpha,beta,a1,a2,a3,a4
 
-  real                 :: HalfPathLength
+  real                 :: HalfPathLength,Sb
   real                 :: bMirror_I(nPa),bMirror
   integer              :: iMirror_I(2)
   real                 :: bFieldMagnitude_III(nPoint,nR,nT)! Magnitude of magnetic field 
@@ -64,7 +64,7 @@ subroutine get_IntegralH(IntegralH_III)
                       bMirror_I(iPitch),iMirror_I)
               
               call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
-                   bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), LZ(iR), HalfPathLength)
+                   bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), LZ(iR), HalfPathLength,Sb)
 
               if (HalfPathLength==0.0) HalfPathLength = cTiny
               IntegralH_III(iPitch, iR, iPhi) = HalfPathLength
@@ -176,6 +176,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III,PitchAngle_I)
   real, intent(out)    :: NeutralHydrogen_III(nPa,nR,nT)
   real                 :: Rho_II(nR,nPoint)
   integer              :: iPhi, iR,iPitch
+  real                 :: HalfPathLength,Sb
 
   !----------------------------------------------------------------------------------
   if (TypeBField == 'numeric') then
@@ -196,8 +197,12 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III,PitchAngle_I)
               call get_hydrogen_density(nPoint, LZ(iR), bFieldMagnitude_III(:,iR,iPhi), bMirror_I(iPitch)&
                    ,iMirror_I(:),dLength_III(:,iR,iPhi),Rho_II(iR,:),AvgHDensity)
               
+              call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
+                   bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), LZ(iR), HalfPathLength,Sb)
+
+              if (Sb==0.0) Sb = cTiny
               if (AvgHDensity ==0.0) AvgHDensity = cTiny
-              NeutralHydrogen_III(iPitch,iR,iPhi) = AvgHDensity
+              NeutralHydrogen_III(iPitch,iR,iPhi) = AvgHDensity/Sb
            end do
         end do
      end do

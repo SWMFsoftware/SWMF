@@ -38,7 +38,7 @@ contains
 
     do iRairden = 1, nRairden
        read(UnitTmp_,*) RairdenDistance_I(iRairden), RairdenDensity
-       LnRairdenDensity_I(iRairden) = log(RairdenDensity)
+       LnRairdenDensity_I(iRairden) = log(RairdenDensity*10.**6)    ! need the density in m^-3 NOT cm^-3!!!!
     end do
     close(UnitTmp_) 
 
@@ -100,9 +100,9 @@ contains
     real,    intent(in)  :: dLength_I(nPoint-1)
     real,    intent(in)  :: HDensity_I(nPoint) 
     real,    intent(out) :: AvgHDensity
-    real                 :: InvL
+    real                 :: Inv2L
     real                 :: DeltaS1, DeltaS2, b1, b2, Coeff
-    integer              :: iStep, iFirst, iLast
+    integer              :: iPoint, iFirst, iLast
     !-----------------------------------------------------------------------------
 
     iFirst = iMirror_I(1)
@@ -112,23 +112,29 @@ contains
 
     if (iFirst > iLast) RETURN
 
-    InvL = 1.0/L
-    Coeff = InvL/sqrt(bMirror)
+    ! Inv2L = 1.0/(2*L)
+    Inv2L = 1.0
+    Coeff = Inv2L*sqrt(bMirror)
 
-    DeltaS1 = abs((bMirror-bField_I(iFirst))*(dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
+    DeltaS1 = abs((bMirror-bField_I(iFirst))*&
+         (dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
+    
+    AvgHDensity= AvgHDensity + HDensity_I(iFirst)*Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
 
-    AvgHDensity= AvgHDensity + HDensity_I(iFirst)*Coeff*(2./3.)*DeltaS1*sqrt(bMirror-bField_I(iFirst))
+    do iPoint = iFirst, iLast-1
+       b1 = bField_I(iPoint)
+       b2 = bField_I(iPoint+1)
 
-    do iStep = iFirst, iLast-1
-       b1 = bField_I(iStep)
-       b2 =  bField_I(iStep+1)
-       AvgHDensity = AvgHDensity + HDensity_I(iStep)*Coeff*(2./3.)*dLength_I(iStep)/(b1 - b2) &
-            *( sqrt(bMirror  - b2)**3 - sqrt(bMirror  - b1)**3 )  
+       AvgHDensity = AvgHDensity + HDensity_I(iPoint)*Coeff*2.*dLength_I(iPoint)/(b1 - b2) &
+            *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
 
     end do
 
+    
     DeltaS2 = abs((bMirror-bField_I(iLast))*(dLength_I(iLast))/(bField_I(iLast+1)-bField_I(iLast)))
-    AvgHDensity = AvgHDensity + HDensity_I(iLast)*Coeff*(2./3.)*DeltaS2*(sqrt(bMirror-bField_I(iLast)))
+
+   
+    AvgHDensity = AvgHDensity + HDensity_I(iLast)* Coeff*2.*DeltaS2/(sqrt(bMirror-bField_I(iLast)))
 
   end subroutine get_hydrogen_density
   !===============================================================
