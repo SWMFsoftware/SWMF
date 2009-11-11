@@ -1,4 +1,4 @@
-module ModLinAdvection
+module ModLinearAdvection
   implicit none
 
 contains
@@ -39,10 +39,10 @@ contains
     F_I(1-nGCLeft : nX+nGCRight) = FInOut_I(1-nGCLeft : nX+nGCRight)
 
     !Check for positivity
-    if(any(F_I(1:nX)<=0.0))then
+    if(any(F_I(1:nX)<0.0))then
        write(*,*)'Before advection F_I <=0'
        write(*,*)F_I
-       call CON_stop('Error in'//NameSub )
+       call CON_stop('Error in '//NameSub )
     end if
 
     !One stage second order upwind scheme
@@ -71,10 +71,10 @@ contains
     end do
 
     FInOut_I(1-nGCLeft:nX+nGCRight) = F_I(1-nGCLeft:nX+nGCRight)
-    if(any(FInOut_I(1:nX)<=0.0))then
+    if(any(FInOut_I(1:nX)<0.0))then
        write(*,*)'After advection F_I <=0'
        write(*,*)F_I
-       call CON_stop('Error in'//NameSub )
+       call CON_stop('Error in '//NameSub )
     end if
   end subroutine advance_lin_advection_plus
 
@@ -119,10 +119,10 @@ contains
     F_I(1-nGCLeft : nX+nGCRight) = FInOut_I(1-nGCLeft:nX+nGCRight)
 
     !Check for positivity
-    if(any(F_I(1:nX)<=0.0))then
+    if(any(F_I(1:nX)<0.0))then
        write(*,*)'Before advection F_I <=0'
        write(*,*)F_I
-        call CON_stop('Error in'//NameSub )
+        call CON_stop('Error in '//NameSub )
     end if
 
     !One stage second order upwind scheme
@@ -148,10 +148,10 @@ contains
 
     FInOut_I(1:nX)=F_I(1:nX)
 
-    if(any(FInOut_I(1:nX)<=0.0))then
+    if(any(FInOut_I(1:nX)<0.0))then
        write(*,*)'After advection F_I <=0'
        write(*,*)F_I
-       call CON_stop('Error in'//NameSub )
+       call CON_stop('Error in '//NameSub )
     end if
     !------------------------------------ DONE --------------------------------!
   end subroutine advance_lin_advection_minus
@@ -175,4 +175,4 @@ contains
     !---------------------------------- DONE ----------------------------------!
   end function df_lim
   !============================================================================!
-end module ModLinAdvection
+end module ModLinearAdvection
