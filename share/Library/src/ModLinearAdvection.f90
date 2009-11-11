@@ -1,6 +1,8 @@
 module ModLinearAdvection
+
   implicit none
 
+  public :: test_linear_advection
 contains
   !===========advance_lin_advection==========================================!
   !DESCRIPTION: the procedure integrates the linear advection equation,      !
@@ -156,6 +158,35 @@ contains
     !------------------------------------ DONE --------------------------------!
   end subroutine advance_lin_advection_minus
   !============================================================================!
+  subroutine test_linear_advection
+    ! Added Nov. 2009 by R. Oran
+
+    use ModIoUnit, ONLY: UNITTMP_
+    implicit none
+
+    integer,parameter            :: nCell= 40,nStep=100
+    real,dimension(nCell),parameter ::CFL = 0.999                         
+    integer,parameter            :: nGCLeft=1, nGCRight=1 !ghost cells    
+    real,dimension(1-nGCLeft : nCell+nGCRight) ::  F_I = 0.0
+    integer                      :: iCell, iStep
+    ! ------------------------------------------------------
+    ! Initial condition - create a ractangular pulse
+    do iCell = 5,15
+       F_I(iCell)= 1.0
+    end do
+    open(UNITTMP_,file='linear_advection.out',status='replace')
+    !write(UNITTMP_,'(a)') 'step F_I'
+   
+    ! Start looping over ime steps
+    
+    do iStep =1,nStep
+       !write(UNITTMP_,'(i3.3)') iStep
+       write(UNITTMP_,*) (iStep, F_I(iCell),iCell=1,nCell)
+       call advance_lin_advection_minus(CFL,nCell,nGCLeft,nGCRight,F_I)
+
+    end do
+    close(UNITTMP_)
+  end subroutine test_linear_advection
   !====================SUPERBEE LIMITER =======================================!
   real function df_lim(F_I)
     real,dimension(0:2),intent(in)::F_I
