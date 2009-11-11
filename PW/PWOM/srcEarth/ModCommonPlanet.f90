@@ -71,6 +71,10 @@ Module ModCommonPlanet
                        iU(3)   = (/2,5,8/),&
                        iP(3)   = (/3,6,9/),iTe_=10
                        
+  
+  integer, parameter :: nPlotVar = 20
+  character(len=79), parameter :: NamePlotVar= &
+ 'r Lat Lon uO uH uHe ue lgnO lgnH lgnHe lgne TO TH THe Te MO MH MHe Me Ef Pe g'
 
-    end Module ModCommonPlanet
+end Module ModCommonPlanet
     

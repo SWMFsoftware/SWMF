@@ -7,6 +7,7 @@ subroutine PW_set_parameters(NameAction)
                                 UsePhotoElectronHeatFlux,UseAuroralHeatFlux, &
                                 UseCuspHeatFlux
   use ModPwTime
+  use ModPwPlots, ONLY : TypePlot
   implicit none
   
 
@@ -66,6 +67,10 @@ subroutine PW_set_parameters(NameAction)
         call read_var('DtSavePlot',DtOutput)
         call read_var('DnSavePlot',DnOutput)
         call read_var('SaveFirst',DoSavePlot)
+        
+     case('#TYPEPLOT')
+        call read_var('TypePlot',TypePlot)
+
      case('#SAVEPLOTELECTRODYNAMICS')
         call read_var('DoPlotElectrodynamics',DoPlotElectrodynamics)
         call read_var('DtPlotElectrodynamics',DtPlotElectrodynamics)

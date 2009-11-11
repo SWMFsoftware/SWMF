@@ -20,6 +20,7 @@ subroutine polar_wind
   use ModCommonVariables
   use ModFieldLine
   use ModPwImplicit, only: PW_implicit_update
+  use ModPwPlots, ONLY: PW_print_plot
   INTEGER NOTP(100)
   
   !     define the output files and attaching units

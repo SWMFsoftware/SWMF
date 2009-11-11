@@ -4,6 +4,5 @@ OBJECTS_PLANET = \
 	neutral_atmosphere_planet.o\
 	collisionPW_planet.o\
 	calc_chemical_equilibrium.o\
-	print_plot.o\
 	upper_heat_conduction.o\
 	get_rate.o

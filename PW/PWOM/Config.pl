@@ -85,7 +85,7 @@ sub set_planet{
 	&shell_command("cp $file $outfile");
     }
     my $Files = "$Dir/PLANET $Dir/Makefile.planet $Dir/ModCommonPlanet.f90".
-	" $Dir/print_plot.f90 $Dir/upper_heat_conduction.f90";
+	" $Dir/upper_heat_conduction.f90";
     $Files .= " $Dir/get_rate.f90" if $Planet eq "Saturn";
     $Files .= " $Dir/ModGlow.f90"  if $Planet eq "Earth";
     &shell_command("cp $Files src/");

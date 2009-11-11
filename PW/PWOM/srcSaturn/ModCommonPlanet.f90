@@ -47,7 +47,11 @@ Module ModCommonPlanet
   ! Neutral parameters,densities,pressures (needed for ModAurora) 
   integer, parameter :: nNeutral = 5, O_=1, O2_=2, N2_=3, H_=4, He_=5
   real :: NDensity_CI(MaxGrid,nNeutral),NeutralPressure_C(MaxGrid)
-
+  
+  ! For Plotting
+  integer, parameter :: nPlotVar = 16
+  character(len=79), parameter :: NamePlotVar= &
+ 'r Lat Lon uH3 uH ue lgnH3 lgnH lgne TH3 TH Te MH3 MH Me Ef Pe g'
   
 
 

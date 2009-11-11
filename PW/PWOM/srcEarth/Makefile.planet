@@ -16,7 +16,6 @@ OBJECTS_PLANET = \
 	ssflux_planet.o\
 	vcd_planet.o\
 	collisionPW_planet.o\
-	print_plot.o\
 	upper_heat_conduction.o\
 	ggm_planet.o
 

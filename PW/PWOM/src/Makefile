@@ -21,6 +21,7 @@ MODULES = \
 	ModAurora.o\
 	ModPwTime.o\
 	ModLatLon.o\
+	ModPwPlot.o\
 	${MODULES_PLANET}
 
 METHODS = \
@@ -99,5 +100,5 @@ PWOM_for_Darwin:
 
 distclean: clean
 	rm -f PLANET *_planet.f get_rate.f90 \
-		ModGlow.f90 print_plot.f90 upper_heat_conduction.f90 \
+		ModGlow.f90 upper_heat_conduction.f90 \
 		ModCommonPlanet.f90 Makefile.planet 
