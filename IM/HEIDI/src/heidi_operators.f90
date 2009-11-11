@@ -520,7 +520,7 @@ subroutine CHAREXCHANGE
         do K=2,KO
 	   do J=1,JO
               do I=2,ILMP(J)
-                 FN=AMAX1(F2(I,J,K,L,S)*achar(I,K,L,S),1.E-30*FFACTOR(I,j,K,L))
+                 FN=AMAX1(F2(I,J,K,L,S)*achar(I,j,K,L,S),1.E-30*FFACTOR(I,j,K,L))
                  FL=F2(I,J,K,L,S)-FN
                  CEN=CEN+FL*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
                  CEE=CEE+FL*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI

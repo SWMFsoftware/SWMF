@@ -278,8 +278,6 @@ subroutine WRESULT(LNC,XN,IFIR)
 12 format (I2)
 13 format (I3)
 
-  open(unit=8,file='F2_output.dat')
-
 
   ! Find output counters
   NLC=nint(real(LO-1)/10.)
@@ -289,18 +287,11 @@ subroutine WRESULT(LNC,XN,IFIR)
 
   ! Calculate bulk quantities
   call write_prefix; write(iUnitStdOut,*)  'Calling PRESSURES'
-  write(8,*) 'F2 before'
-  write(8,*) F2(:,1,:,:,2)
-  
   call PRESSURES
-  write(8,*) 'F2 after'
-  write(8,*) F2(:,1,:,:,2)
   call write_prefix; write(iUnitStdOut,*) 'Calling CURRENTCALC'
   call CURRENTCALC  
   
 
-  close(8)
-  
   ! L counter offset in PAD outputs
   IFN=0
   if (IPA.eq.0) IFN=19
@@ -857,7 +848,7 @@ subroutine WRESULT(LNC,XN,IFIR)
                     !TAUBO=4*LZ(I)*RE/V(K,S)*FUNT(MU(L))/3600.
 
 
-                    TAUCHE=-DT/ALOG(achar(I,K,L,S))/3600.
+                    TAUCHE=-DT/ALOG(achar(I,J,K,L,S))/3600.
                     write(UnitTmp_,80) LZ(I),EBND(K),TAUBO,TAUCHE,TAUD
                  enddo
               enddo

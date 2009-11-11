@@ -9,7 +9,6 @@ contains
 
     use ModHeidiInput, ONLY: TypeBfieldGrid
     use ModNumConst,   ONLY: cTiny, cPi
-    use ModNumConst,   ONLY: cDegToRad
     use ModConst,      ONLY: cMu
 
  
@@ -153,10 +152,17 @@ contains
        Lat = LatMin
        do iPhi =1, nPhi
           do iR =1, nR 
+             LatMax = acos(sqrt(1./L_I(iR)))
+             LatMin = -LatMax
+             dLat = (LatMax - LatMin)/(nPoint -1)
+             Lat = LatMin
+             !write(*,*) 'Lat here', Lat
              do iPoint = 1, nPoint!(iR,iPhi)
-                RadialDistance_III(iPoint,iR,iPhi)= r
-                
-                bR(iPoint,iR,iPhi) = sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1/ 0.2D1) / cPi/ 0.2D1 + &
+                CosLat2 = 1.-sin(Lat)**2
+                RadialDistance_III(iPoint,iR,iPhi) = L_I(iR)*CosLat2
+                r = RadialDistance_III(iPoint,iR,iPhi)
+              !  write(*,*) 'Lat, sin(Lat)', Lat, sin(Lat)*cMu,Me*0.3D1,r
+               bR(iPoint,iR,iPhi) = sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1/ 0.2D1) / cPi/ 0.2D1 + &
                      d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 +&
                      r ** 2 * sin(Lat) ** 2) / cPi* sin(Lat) / 0.2D1
                 
@@ -257,7 +263,7 @@ contains
              GradB2over2_VIII(3,iPoint,iR,iPhi) =  GradPhi(iPoint,iR,iPhi)  
              
              RadialDistance_III(iPoint,iR,iPhi) = L_I(iR)*CosLat2 ! not good
-
+             Length_III(iPoint, iR, iPhi) =dipole_length(L_I(iR),LatMin,Lat)
              Lat = Lat + dLat
           end do
        end do
@@ -275,54 +281,55 @@ contains
  
   end subroutine initialize_b_field
   !==================================================================================
-
-  subroutine find_mirror_points (nPoint, nPitch, PitchAngle_I, bField_I, bMirror_I,iMirror_II)
+  subroutine find_mirror_points (nPoint, PitchAngle, bField_I, bMirror,iMirror_II)
  
-    use ModNumConst,   ONLY: cDegToRad
-    
     integer, intent(in) :: nPoint                ! Number of points along the field line
-    integer, intent(in) :: nPitch                ! Pitch angle grid
-    real, intent(in)    :: PitchAngle_I(nPitch)  ! Pitch angle values
+    real, intent(in)    :: PitchAngle            ! Pitch angle values
     real, intent(in)    :: bField_I(nPoint)      ! Magnetic field values
-    real, intent(out)   :: bMirror_I(nPitch)     ! B magnitude at mirror points    
+    real, intent(out)   :: bMirror             ! B magnitude at mirror points    
     real                :: bMin                  ! Minimum value of magnetic field along a field line
     integer             :: iMinB                 ! Location of minimum B
-    integer,intent(out) :: iMirror_II(2,nPitch)  ! Location of each mirror point for all pitch angles
+    integer,intent(out) :: iMirror_II(2)  ! Location of each mirror point for all pitch angles
     integer             :: i_I(1)
     integer             :: iPoint, iPitch
     real, parameter     :: cTiny = 0.000001
     !----------------------------------------------------------------------------------
 
+    
     i_I  = minloc(bField_I)
     iMinB= i_I(1)
     bMin = bField_I(iMinB)
-
-    do iPitch = 1, nPitch
-       bMirror_I(iPitch) = bMin/(sin(PitchAngle_I(iPitch)*cDegToRad+cTiny))**2
+    
+        
+    if (PitchAngle == 0.0) then 
+       bMirror = bMin/(sin(PitchAngle+cTiny))**2 
+    else
        
-       !temporary fix 
-       if  (bMirror_I(iPitch) .gt. maxval(bField_I(1:nPoint))) then
-          iMirror_II(1,iPitch) = 1+1
-          iMirror_II(2,iPitch) = nPoint-1
-       end if
-              
+       bMirror = bMin/(sin(PitchAngle))**2 
+    end if
+       
+       
+       !if  (bMirror  .gt. maxval(bField_I(1:nPoint))) then
+       !   iMirror_II(1) = 1+1
+       !   iMirror_II(2) = nPoint-1
+       !end if
+        
+      
        do iPoint = iMinB,1, -1
-          if (bField_I(iPoint) >= bMirror_I(iPitch)) then 
-             iMirror_II(1,iPitch) = (iPoint + 1)
+          if (bField_I(iPoint) >= bMirror ) then 
+             iMirror_II(1) = (iPoint + 1)
              EXIT
           end if
        end do
 
        do iPoint = iMinB, nPoint
-          if (bField_I(iPoint) >= bMirror_I(iPitch)) then 
-             iMirror_II(2,iPitch) = (iPoint - 1)
+          if (bField_I(iPoint) >= bMirror ) then 
+             iMirror_II(2) = (iPoint - 1)
              EXIT
           end if
        end do
 
-    enddo
-    
-    
+   
   end subroutine find_mirror_points
 
   !==================================================================================
@@ -515,41 +522,39 @@ contains
     real                 :: RadialDistance_III(nPoint,nR,nPhi)
     real                 :: dLength_III(nPoint-1,nR,nPhi)      ! Length interval between i and i+1  
     real                 :: Length_III(nPoint,nR,nPhi) 
-    real                 :: PitchAngle_I(nPitch) 
+    real                 :: PitchAngle
     real                 :: Ds_I(nPoint)
     real                 :: SecondAdiabInv, IntegralBAnalytic
     real                 :: HalfPathLength, IntegralHAnalytic
-    real                 :: bMirror_I(nPitch),bMirror
-    integer              :: iMirror_II(2,nPitch)
+    real                 :: bMirror
+    integer              :: iMirror_I(2)
     real, parameter      :: Pi = 3.141592654
     real                 :: Percent1, Percent2
     integer              :: iPoint
 !----------------------------------------------------------------------------------
-    open (unit = 2, file = "Convergence_nonuniform.dat")
-    write (2,*)'Numerical values for the second adiabatic invariant integration btw a mirror point and eq'
-    write (2,*)'nPoint  IntegralBAnalytic   2nd_orderB  IntegralHAnalytic  2nd_orderH Percent1, Percent2'
+    !open (unit = 2, file = "Convergence_nonuniform.dat")
+    !write (2,*)'Numerical values for the second adiabatic invariant integration btw a mirror point and eq'
+    !write (2,*)'nPoint  IntegralBAnalytic   2nd_orderB  IntegralHAnalytic  2nd_orderH Percent1, Percent2'
 
     L_I(1) = 10.0 
     Phi_I(1) = 1.0
+    PitchAngle = Pi/10.
     
     do iPoint = 101, nPoint,100
-       call initialize_b_field(L_I(1), Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, RadialDistance_III,Length_III, dLength_III)
+    
+       call initialize_b_field(L_I(1), Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
+          RadialDistance_III,Length_III, dLength_III)
 
+       IntegralBAnalytic = second_adiab_invariant(cos(PitchAngle))
+       IntegralHAnalytic = analytic_h(cos(PitchAngle))
+       call find_mirror_points (iPoint,  PitchAngle, bFieldMagnitude_III, &
+                      bMirror,iMirror_I)
        
-       PitchAngle_I(1) = Pi/10.
-       IntegralBAnalytic = second_adiab_invariant(cos(PitchAngle_I(1)))
-       IntegralHAnalytic = analytic_h(cos(PitchAngle_I(1)))
-
-       call find_mirror_points (iPoint, nPitch, PitchAngle_I, bFieldMagnitude_III, bMirror_I,iMirror_II)
-
-       bMirror = bMirror_I(1)
-
-
-       call second_adiabatic_invariant(iPoint, iMirror_II(:,1), bMirror, bFieldMagnitude_III, Ds_I,L_I(1), SecondAdiabInv)
+       call second_adiabatic_invariant(iPoint, iMirror_I, bMirror, bFieldMagnitude_III, Ds_I,L_I(1), SecondAdiabInv)
 
        Percent1 = 100*abs(IntegralBAnalytic - SecondAdiabInv)/IntegralBAnalytic
 
-       call half_bounce_path_length(iPoint, iMirror_II(:,1), bMirror,  bFieldMagnitude_III, Ds_I,L_I(1), HalfPathLength)
+       call half_bounce_path_length(iPoint, iMirror_I, bMirror,  bFieldMagnitude_III, Ds_I,L_I(1), HalfPathLength)
 
 
        Percent2 = 200*abs(IntegralHAnalytic - HalfPathLength)/(IntegralHAnalytic+HalfPathLength)
@@ -560,7 +565,7 @@ contains
 
     end do
 
-    close(2)
+    !close(2)
 
   end subroutine test_general_b
   !==================================================================================

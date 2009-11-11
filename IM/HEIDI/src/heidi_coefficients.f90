@@ -15,18 +15,21 @@ subroutine CEPARA
   use ModHeidiSize
   use ModHeidiMain
   use ModHeidiDrifts
-  use ModIoUnit,  ONLY: io_unit_new,UNITTMP_
-  use ModHeidiIO, ONLY: NameInputDirectory
-
+  use ModIoUnit,     ONLY: io_unit_new,UNITTMP_
+  use ModHeidiIO,    ONLY: NameInputDirectory
+  use ModHeidiInput, ONLY: TypeBField
+  
   implicit none
 
   integer           :: I,K,L,I1,LUP,ier,J
   integer           :: iUnit 
   real              :: x,y		
   real              :: FACI,fac,cosd,acosd
-  real              :: RLAMBDA(71),PA(71),HDNS(NR,NPA)
+  real              :: RLAMBDA(71),PA(71),HDNS(NR,NT,NPA)
   real              :: LH(20),HDNSIN(20,71)
   character(len=80) :: TITLE
+  real              :: PitchAngle_I(nPA), NeutralHydrogen(nPA,nR,nT)
+
   external          :: cosd,acosd
   !---------------------------------------------------------------------
   !\
@@ -40,26 +43,52 @@ subroutine CEPARA
      S=S+SCALC(I)   ! S=0, no ions in calc, S>0, ions in calc
   end do
   if (S.ge.1) then	! Only needed for ion charge exchange
-     open(UNITTMP_,file=NameInputDirectory//'hgeo71.in',STATUS='OLD')
-     LUP=71
-     do I = 1,20
-        read(UNITTMP_,3) TITLE,LH(i)
-        do L = 1,LUP
-           read(UNITTMP_,4) PA(L),RLAMBDA(L),HDNSIN(I,L)
-        end do	! L loop
-     end do	! I loop
-     close(UNITTMP_)
-     do L = 1, LUP
-        PA(L) = COSD(PA(L))
-     end do
-     do L=1,LO
-        do I=1,IO
-           call LINTP2(LH,PA,HDNSIN,20,71,LZ(i),MU(L),FAC,IER)
-           HDNS(i,l)=FAC
-        enddo
-     end do
+     
+     if (TypeBField == 'analytic') then
+        open(UNITTMP_,file=NameInputDirectory//'hgeo71.in',STATUS='OLD')
+        LUP=71
+        do I = 1,20
+           read(UNITTMP_,3) TITLE,LH(i)
+           do L = 1,LUP
+              read(UNITTMP_,4) PA(L),RLAMBDA(L),HDNSIN(I,L)
+           end do	! L loop
+        end do	        ! I loop
+        close(UNITTMP_)
 
+        do L = 1, LUP
+           PA(L) = COSD(PA(L))
+        end do
+        
+        do L=1,LO
+           do j = 1, jo
+              do I=1,IO
+                 call LINTP2(LH,PA,HDNSIN,20,71,LZ(i),MU(L),FAC,IER)
+                 HDNS(i,j,l)=FAC
+              enddo
+           end do
+        end do
+     end if
+
+     if (TypeBField == 'numeric') then
+        call get_neutral_hydrogen(NeutralHydrogen,PitchAngle_I)
+        
+        do L = 1,lo
+           PA(L) = cos(PitchAngle_I(L))
+        end do
+        
+        do L=1,LO
+           do j =1, jo
+              do I=1,IO
+                 call LINTP2(LZ,PA,NeutralHydrogen(:,:,j),20,71,LZ(i),MU(L),FAC,IER)
+                 HDNS(i,j,l) = FAC
+              enddo
+           end do
+        end do
+     end if
+     
   end if
+
+
 3 format(A61,F5.2)
 4 format(2F7.3,2X,1PE12.5)
   !\
@@ -77,10 +106,12 @@ subroutine CEPARA
         if (X.lt.-2.) X=-2.
         Y=-18.767-0.11017*X-3.8173e-2*X**2-0.1232*X**3-5.0488e-2*X**4
         !............10**Y is cross section of H+ in m2
-        do L=2,Lo
-           achar(2:io,k,l,2)=exp(-(10.**Y*V(K,2)*HDNS(2:io,L)*DT))
-        end do	! L loop	
-     end do	! K loop
+        do j = 1, jo
+           do L=2,Lo
+              achar(2:io,j,k,l,2)=exp(-(10.**Y*V(K,2)*HDNS(2:io,j,L)*DT))
+           end do ! L loop
+        end do    ! j loop
+     end do	  ! K loop
   end if
 
   !\
@@ -93,10 +124,12 @@ subroutine CEPARA
         if (X.lt.-2.) X=-2.
         Y=-20.789+0.92316*X-0.68017*X**2+0.66153*X**3-0.20998*X**4
         !..........10**Y is cross sect of He+ in m2
-        do L=2,Lo
-           achar(2:io,K,L,3)=exp(-(10.**Y*V(K,3)*HDNS(2:io,L)*DT))
-        end do	! L loop
-     end do	! K loop
+        do j = 1, jo
+           do L=2,Lo
+              achar(2:io,j,K,L,3)=exp(-(10.**Y*V(K,3)*HDNS(2:io,j,L)*DT))
+           end do ! L loop
+        end do    ! j loop
+     end do	  ! K loop
   end if
 
   !\
@@ -110,10 +143,12 @@ subroutine CEPARA
         Y=-18.987-0.10613*X-5.4841E-3*X**2-1.6262E-2*X**3   &
              -7.0554E-3*X**4
         ! 10**Y is cross sect of O+ in m2
-        do L=2,Lo
-           achar(2:io,k,l,4)=exp(-(10.**Y*V(K,4)*HDNS(2:io,L)*DT))
-        end do	! L loop
-     end do	! K loop
+        do j =1, jo
+           do L=2,Lo
+              achar(2:io,j,k,l,4)=exp(-(10.**Y*V(K,4)*HDNS(2:io,j,L)*DT))
+           end do  ! L loop
+        end do     ! j loop
+     end do	   ! K loop
   end if
 
   !\

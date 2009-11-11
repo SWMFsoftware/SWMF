@@ -5,7 +5,7 @@
 
 subroutine get_IntegralH(IntegralH_III)
 
-  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
+  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR, io, jo,lo
   use ModConst,      ONLY: cPi,  cTiny
   use ModHeidiInput, ONLY: TypeBField
   use ModHeidiMain,  ONLY: Phi, LZ, mu
@@ -18,8 +18,7 @@ subroutine get_IntegralH(IntegralH_III)
 
   real                 :: HalfPathLength
   real                 :: bMirror_I(nPa),bMirror
-  integer              :: iMirror_II(2,nPa)
-  real                 :: Percent, sums, difer
+  integer              :: iMirror_I(2)
   real                 :: bFieldMagnitude_III(nPoint,nR,nT)! Magnitude of magnetic field 
   real                 :: RadialDistance_III(nPoint,nR,nT)
   real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
@@ -43,15 +42,13 @@ subroutine get_IntegralH(IntegralH_III)
               PitchAngle_I(iPitch) = acos(mu(iPitch))
               x = cos(PitchAngle_I(iPitch))
               y=sqrt(1-x*x)
+              
               IntegralH_III(iPitch,iR, iPhi) =alpha-beta*(y+sqrt(y))+ &
                    a1*y**(1./3.)+a2*y**(2./3.)+ a3*y+a4*y**(4./3.)
            end do
         end do
      end do
   endif
-
-
-  
 
 
   if (TypeBField == 'numeric') then
@@ -63,17 +60,14 @@ subroutine get_IntegralH(IntegralH_III)
         do iR =1, nR
            do iPitch =1, nPa
               PitchAngle_I(iPitch) = acos(mu(iPitch))
-              call find_mirror_points (nPoint, nPa, PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
-                   bMirror_I,iMirror_II)
-
-              bMirror = bMirror_I(1)   
-
-              call half_bounce_path_length(nPoint, iMirror_II(:,1),bMirror,&
+              call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
+                      bMirror_I(iPitch),iMirror_I)
+              
+              call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
                    bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), LZ(iR), HalfPathLength)
 
               if (HalfPathLength==0.0) HalfPathLength = cTiny
               IntegralH_III(iPitch, iR, iPhi) = HalfPathLength
-              
            end do
         end do
      end do
@@ -97,8 +91,7 @@ subroutine get_IntegralI(IntegralI_III)
   
   real                 :: SecondAdiabInv
   real                 :: bMirror_I(nPa),bMirror
-  integer              :: iMirror_II(2,nPa)
-  real                 :: Percent, sums, difer
+  integer              :: iMirror_I(2)
   real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
   real                 :: RadialDistance_III(nPoint,nR,nT)
   real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
@@ -124,6 +117,7 @@ subroutine get_IntegralI(IntegralI_III)
               if (PitchAngle_I(iPitch)==0.0) PitchAngle_I(iPitch)=cTiny
               x = cos(PitchAngle_I(iPitch))
               y=sqrt(1.-x*x)
+                                          
               IntegralI_III(iPitch,iR,iPhi)=2.*alpha*(1.-y)+2.*beta*y*alog(y)+4.*beta*(y-sqrt(y))+  &
                    3.*a1*(y**(1./3.)-y)+6.*a2*(y**(2./3.)-y)+6.*a4*(y-y**(4./3.))  &
                    -2.*a3*y*alog(y)
@@ -132,7 +126,6 @@ subroutine get_IntegralI(IntegralI_III)
      end do
 
   endif
-
 
 
   if (TypeBField == 'numeric') then
@@ -144,16 +137,13 @@ subroutine get_IntegralI(IntegralI_III)
         do iR =1, nR
            do iPitch =1, nPa
               PitchAngle_I(iPitch) = acos(mu(iPitch))
-              call find_mirror_points (nPoint, nPa, PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
-                   bMirror_I,iMirror_II)
-
-              bMirror = bMirror_I(1)   
-
-              call second_adiabatic_invariant(nPoint, iMirror_II(:,1), bMirror, &
-                   bFieldMagnitude_III(:,iR,iPhi),dLength_III(:,iR,iPhi), LZ(iR), SecondAdiabInv)
               
-
-              if (SecondAdiabInv ==0.0) SecondAdiabInv = cTiny
+              call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
+                   bMirror_I(iPitch),iMirror_I)
+              
+              call second_adiabatic_invariant(nPoint, iMirror_I(:), bMirror_I(iPitch), &
+                   bFieldMagnitude_III(:,iR,iPhi),dLength_III(:,iR,iPhi), LZ(iR), SecondAdiabInv)
+              !if (SecondAdiabInv ==0.0) SecondAdiabInv = cTiny
               IntegralI_III(iPitch,iR,iPhi) = SecondAdiabInv           
            end do
         end do
@@ -164,5 +154,57 @@ subroutine get_IntegralI(IntegralI_III)
 
 end subroutine get_IntegralI
 !============================================================
+subroutine get_neutral_hydrogen(NeutralHydrogen_III,PitchAngle_I)
+
+  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
+  use ModConst,      ONLY: cPi,  cTiny
+  use ModHeidiInput, ONLY: TypeBField
+  use ModHeidiMain,  ONLY: Phi, LZ, mu
+  use ModHeidiBField
+  use ModHeidiHydrogenGeo
+
+  implicit none
+
+  real                 :: AvgHDensity
+  real                 :: bMirror_I(nPa)
+  integer              :: iMirror_I(2)
+  real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
+  real                 :: RadialDistance_III(nPoint,nR,nT)
+  real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
+  real                 :: Length_III(nPoint,nR,nT) 
+  real                 :: PitchAngle_I(nPa)
+  real, intent(out)    :: NeutralHydrogen_III(nPa,nR,nT)
+  real                 :: Rho_II(nR,nPoint)
+  integer              :: iPhi, iR,iPitch
+
+  !----------------------------------------------------------------------------------
+  if (TypeBField == 'numeric') then
+     
+     call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
+          RadialDistance_III,Length_III, dLength_III)
+     
+     do iPhi = 1, nT
+        do iR =1, nR
+           do iPitch =1, nPa
+              PitchAngle_I(iPitch) = acos(mu(iPitch))
+              
+              call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
+                   bMirror_I(iPitch),iMirror_I)
+
+              
+              call get_rairden_density(nPoint, nR, LZ(iR), Rho_II(iR,:))
+              call get_hydrogen_density(nPoint, LZ(iR), bFieldMagnitude_III(:,iR,iPhi), bMirror_I(iPitch)&
+                   ,iMirror_I(:),dLength_III(:,iR,iPhi),Rho_II(iR,:),AvgHDensity)
+              
+              if (AvgHDensity ==0.0) AvgHDensity = cTiny
+              NeutralHydrogen_III(iPitch,iR,iPhi) = AvgHDensity
+           end do
+        end do
+     end do
+
+
+  end if
+
+end subroutine get_neutral_hydrogen
 
 

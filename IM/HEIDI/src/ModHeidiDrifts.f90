@@ -9,7 +9,7 @@ Module ModHeidiDrifts
 ! Define the atmospheric loss and charge exchange variables
 ! Formerly: Common block CE
 	integer:: J6,J18
-	real :: ACHAR(NR,NE,NPA,NS),ATLOS(NR,NT,NE,NPA,NS)
+	real :: ACHAR(NR,NT,NE,NPA,NS),ATLOS(NR,NT,NE,NPA,NS)
 
 ! Define the advection drift rate variables
 ! Formerly: Common block CDR
