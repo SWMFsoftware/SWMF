@@ -5,7 +5,8 @@ module ModHeidiBField
 
 contains
 
-  subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, RadialDistance_III,Length_III, dLength_III)
+  subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
+       RadialDistance_III,Length_III, dLength_III,GradB2over2_VIII)
 
     use ModHeidiInput, ONLY: TypeBfieldGrid
     use ModNumConst,   ONLY: cTiny, cPi
@@ -31,7 +32,7 @@ contains
     real                   :: Beta,dLatNew,beta1,beta2
     real                   :: alpha2, alpha4, f1, f2
     real                   :: bField_VIII(3,nPoint,nR,nPhi)
-    real                   :: GradB2over2_VIII(3,nPoint,nR,nPhi) 
+    real,optional          :: GradB2over2_VIII(3,nPoint,nR,nPhi) 
     real                   :: GradR(nPoint,nR,nPhi),GradTheta(nPoint,nR,nPhi),GradPhi(nPoint,nR,nPhi) 
     real                   :: bR(nPoint,nR,nPhi),bTheta(nPoint,nR,nPhi), bPhi(nPoint,nR,nPhi)
     real                   :: r

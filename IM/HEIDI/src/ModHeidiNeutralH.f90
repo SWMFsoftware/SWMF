@@ -112,9 +112,7 @@ contains
 
     if (iFirst > iLast) RETURN
 
-    ! Inv2L = 1.0/(2*L)
-    Inv2L = 1.0
-    Coeff = Inv2L*sqrt(bMirror)
+    Coeff = sqrt(bMirror)
 
     DeltaS1 = abs((bMirror-bField_I(iFirst))*&
          (dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
