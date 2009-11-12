@@ -377,7 +377,7 @@ contains
   subroutine UpdateSpectrum(nX,nP,pInjection,DeltaLnP,&
        X_DI,F_II,B_I,Rho_I,SP_Dt)
     use ModLogAdvection
-    use ModLinAdvection
+    use ModLinearAdvection
     !-----------------------------------------------------------------
     
     integer,intent(in)::nX,nP                    !The number of points and the number of the energy intervals

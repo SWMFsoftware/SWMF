@@ -78,7 +78,7 @@ contains
   !============================================================================
   subroutine update_wave_group_advection(iBlock)
     use ModAdvance, ONLY: State_VGB, time_blk
-    use ModLinAdvection, ONLY: advance_lin_advection_plus, &
+    use ModLinearAdvection, ONLY: advance_lin_advection_plus, &
          advance_lin_advection_minus
     use ModMain, ONLY: CFL
     integer,intent(in)::iBlock
