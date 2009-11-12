@@ -167,29 +167,32 @@ contains
     integer,parameter            :: nCell= 80,nStep=5
     real,dimension(nCell),parameter ::CFL = 0.9999
     integer,parameter            :: nGCLeft=1, nGCRight=1 !ghost cells    
-    real,dimension(1-nGCLeft : nCell+nGCRight) ::  F_I = 0.0
+    real,dimension(1-nGCLeft : nCell+nGCRight) ::  Fplus_I = 0.0,&
+                                                   Fminus_I=0.0 ! solution vectors
     integer                      :: iCell, iStep
-    real :: Fref
+    real :: FrefPlus, FrefMinus
     ! ------------------------------------------------------
     ! Initial condition - create a ractangular pulse
     do iCell = 5,15
-       F_I(iCell)= 1.0
+       Fplus_I(iCell) = 1.0           ! pulse moving right
+       Fminus_I(nCell-20+iCell) = 1.0 ! pulse moving left
     end do
     open(UNITTMP_,file='linear_advection.out',status='replace')
-    !write(UNITTMP_,'(a)') 'step F_I'
-   
-    ! Start looping over ime steps
+    
+    ! Start looping over time steps
     
     do iStep =1,nStep
-       !write(UNITTMP_,'(i3.3)') iStep
-       !write(UNITTMP_,*) iStep,( F_I(iCell),iCell=1,nCell)
-       call advance_lin_advection_plus(CFL,nCell,nGCLeft,nGCRight,F_I)
+       call advance_lin_advection_plus(CFL,nCell,nGCLeft,nGCRight,Fplus_I)
+       call advance_lin_advection_minus(CFL,nCell,nGCLeft,nGCRight,Fminus_I)
     end do
 
     do iCell = 1, nCell
-       Fref = 0.0
-       if(iCell>=5+nStep .and. iCell<=15+nStep) Fref = 1.0
-       write(UNITTMP_,*) F_I(iCell), Fref, F_I(iCell)-Fref
+       FrefPlus = 0.0
+       FrefMinus = 0.0
+       if(iCell>=5+nStep .and. iCell<=15+nStep) FrefPlus = 1.0
+       if(iCell>= nCell-15-nStep .and. iCell<=nCell-5-nStep) FrefMinus = 1.0
+       write(UNITTMP_,*) Fplus_I(iCell), FrefPlus, Fplus_I(iCell)-FrefPlus, &
+            Fminus_I(iCell),FrefMinus, Fminus_I(iCell)-FrefMinus
     end do
     close(UNITTMP_)
 
