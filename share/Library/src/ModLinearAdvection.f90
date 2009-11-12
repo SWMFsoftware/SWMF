@@ -164,11 +164,12 @@ contains
     use ModIoUnit, ONLY: UNITTMP_
     implicit none
 
-    integer,parameter            :: nCell= 40,nStep=100
-    real,dimension(nCell),parameter ::CFL = 0.999                         
+    integer,parameter            :: nCell= 80,nStep=5
+    real,dimension(nCell),parameter ::CFL = 0.9999
     integer,parameter            :: nGCLeft=1, nGCRight=1 !ghost cells    
     real,dimension(1-nGCLeft : nCell+nGCRight) ::  F_I = 0.0
     integer                      :: iCell, iStep
+    real :: Fref
     ! ------------------------------------------------------
     ! Initial condition - create a ractangular pulse
     do iCell = 5,15
@@ -181,11 +182,17 @@ contains
     
     do iStep =1,nStep
        !write(UNITTMP_,'(i3.3)') iStep
-       write(UNITTMP_,*) (iStep, F_I(iCell),iCell=1,nCell)
-       call advance_lin_advection_minus(CFL,nCell,nGCLeft,nGCRight,F_I)
+       !write(UNITTMP_,*) iStep,( F_I(iCell),iCell=1,nCell)
+       call advance_lin_advection_plus(CFL,nCell,nGCLeft,nGCRight,F_I)
+    end do
 
+    do iCell = 1, nCell
+       Fref = 0.0
+       if(iCell>=5+nStep .and. iCell<=15+nStep) Fref = 1.0
+       write(UNITTMP_,*) F_I(iCell), Fref, F_I(iCell)-Fref
     end do
     close(UNITTMP_)
+
   end subroutine test_linear_advection
   !====================SUPERBEE LIMITER =======================================!
   real function df_lim(F_I)
