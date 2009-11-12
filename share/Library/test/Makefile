@@ -15,6 +15,7 @@ help:
 	@echo "   test_coord_transform  - test ModTimeConvert"
 	@echo "   test_freq             - test ModFreq"
 	@echo "   test_linear_solver    - test ModLinearSolver"
+	@echo "   test_linear_advection - test ModLinearAdvection"
 	@echo "   test_sort             - test ModSort"
 	@echo "   test_io_unit          - test ModIoUnit"
 	@echo "   test_interpolate      - test ModInterpolate"
@@ -167,6 +168,10 @@ test_linear_advection:
 	@echo
 	@echo './test_linear_advection.exe'
 	-@(./test_linear_advection.exe)
+	@echo
+	@echo DiffNum.pl -r=1e12 linear_advection.out linear_advection.ref
+	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-12 \
+	linear_advection.out linear_advection.ref) > linear_advection.diff
 	@echo
 	@echo test_linear_advection done
 	@echo -----------------------------------------------------------------
