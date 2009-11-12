@@ -21,7 +21,6 @@ module ModUser
   character (len=*), parameter :: &
        NameUserModule = 'Global Corona'
 
-  real :: BcAlfvenWavePressure, BcAlfvenWavePressureCgs = 8.36e-2
   real :: HeatingAmplitude, HeatingAmplitudeCgs = 6.07e-7
   real :: DecayLength = 0.7
   logical :: UseExponentialHeating = .false.
@@ -67,8 +66,8 @@ contains
              DoUpdateB0 = dt_updateb0 > 0.0
           end if
 
-       case("#ALFVENWAVE")
-          call read_var('BcAlfvenWavePressureCgs', BcAlfvenWavePressureCgs)
+       case("#EMPIRICALSW")
+          call read_var('NameModel',NameModel)
 
        case("#CORONALHEATING")
           call read_var('TypeCoronalHeating', TypeCoronalHeating)
@@ -118,8 +117,8 @@ contains
     use ModMagnetogram, ONLY: read_magnetogram_file
     use ModMultiFluid,  ONLY: MassIon_I
     use ModNumConst,    ONLY: cTwoPi
-    use ModPhysics,     ONLY: Si2No_V, UnitP_, UnitEnergyDens_, UnitT_, &
-         ElectronTemperatureRatio, AverageIonCharge
+    use ModPhysics,     ONLY: Si2No_V, UnitEnergyDens_, UnitT_, &
+         ElectronTemperatureRatio, AverageIonCharge, BodyTDim_I
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: i_line_command
     use ModWaves,       ONLY: UseWavePressure, UseAlfvenSpeed
@@ -140,16 +139,18 @@ contains
        call read_magnetogram_file(NamePlotDir)
     end if
 
-    if(TypeCoronalHeating == 'exponential')then
-        HeatingAmplitude =  HeatingAmplitudeCgs*0.1 &
-             *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
-     end if
-
-    if(BcAlfvenWavePressureCgs < 0.0)then
-       write(*,*) 'Negative Alfven wave pressure not allowed'
+    if(i_line_command("#EMPIRICALSW", iSessionIn = 1) < 0)then
+       write(*,*) 'An empirical model has to be set via #EMPIRICALSW'
        call stop_mpi('ERROR: Correct PARAM.in!')
     end if
-    BcAlfvenWavePressure = BcAlfvenWavePressureCgs*0.1*Si2No_V(UnitP_)
+    if(i_line_command("#EMPIRICALSW") > 0)then
+       call set_empirical_model(trim(NameModel),BodyTDim_I(1))
+    end if
+
+    if(TypeCoronalHeating == 'exponential')then
+       HeatingAmplitude =  HeatingAmplitudeCgs*0.1 &
+            *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+    end if
 
     UseAlfvenSpeed = .true.
     UseWavePressure = .true.
@@ -188,8 +189,8 @@ contains
     use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
     use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame
     use ModMultiFluid,  ONLY: MassIon_I
-    use ModPhysics,     ONLY: OmegaBody, BodyRho_I, BodyTDim_I, &
-         UnitTemperature_, Si2No_V, AverageIonCharge
+    use ModPhysics,     ONLY: OmegaBody, BodyRho_I, BodyTDim_I, No2Si_V, &
+         UnitTemperature_, Si2No_V, AverageIonCharge, UnitU_, UnitEnergyDens_
     use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, &
          WaveFirst_, WaveLast_, Pe_
 
@@ -198,6 +199,7 @@ contains
     real :: Density, NumDensIon, NumDensElectron, Tbase, FullBr
     real :: Runit_D(3), U_D(3)
     real :: B1_D(3), B1t_D(3), B1r_D(3), FullB_D(3)
+    real :: UalfvenSi, EwaveSi, Ewave
     !--------------------------------------------------------------------------
 
     Runit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
@@ -212,14 +214,6 @@ contains
 
     FullB_D = B0Face_D + B1t_D
     FullBr = dot_product(Runit_D, FullB_D)
-
-    if(FullBr > 0.0)then
-       VarsGhostFace_V(WaveFirst_) = 2.0*BcAlfvenWavePressure
-       VarsGhostFace_V(WaveLast_) = VarsTrueFace_V(WaveLast_)
-    else
-       VarsGhostFace_V(WaveFirst_) = VarsTrueFace_V(WaveFirst_)
-       VarsGhostFace_V(WaveLast_) = 2.0*BcAlfvenWavePressure
-    end if
 
     Density = BodyRho_I(1)
     ! The electron and ion temperature are equal to Tbase at the coronal base
@@ -239,6 +233,23 @@ contains
        !     max((NumDensIon + NumDensElectron)*Tbase, VarsTrueFace_V(p_))
     end if
 
+    ! Set Alfven waves energy density based on Bernoulli function
+    UalfvenSi = (FullBr/sqrt(VarsTrueFace_V(Rho_)))*No2Si_V(UnitU_)
+    call get_total_wave_energy( &
+         FaceCoords_D(x_), &
+         FaceCoords_D(y_), &
+         FaceCoords_D(z_), &
+         UalfvenSi, EwaveSi)
+    Ewave = EwaveSi*Si2No_V(UnitEnergyDens_)
+
+    if(UalfvenSi > 0.0)then
+       VarsGhostFace_V(WaveFirst_) = Ewave
+       VarsGhostFace_V(WaveLast_) = VarsTrueFace_V(WaveLast_)
+    else
+       VarsGhostFace_V(WaveFirst_) = VarsTrueFace_V(WaveFirst_)
+       VarsGhostFace_V(WaveLast_) = Ewave
+    end if
+
     !\
     ! Apply corotation if needed
     !/
@@ -250,6 +261,54 @@ contains
     end if
 
   end subroutine user_face_bcs
+
+  !============================================================================
+
+  subroutine get_total_wave_energy(X, Y, Z, VAlfvenSI, WaveEnergyDensSI)
+
+    ! Provides the distribution of the total Alfven wave energy density
+    ! at the coronal base complying with the WSA semi-empirical model
+    ! Borrowed from ModExpansionFactors
+    ! No nonzero heat conduction contribution at base yet
+
+    use ModExpansionFactors
+    use ModMultiFluid,  ONLY: MassIon_I
+    use ModPhysics,     ONLY: g, inv_gm1, AverageIonCharge
+    implicit none
+
+    real, intent(in) :: X,Y,Z,VAlfvenSI !VAlfven should be in m/s
+    real, intent(out)   :: WaveEnergyDensSI
+
+    real :: RR,Uf,ExpansionFactorInv
+    real, parameter :: RhoVAt1AU = 5.40e-15 !kg/(m2*s)
+    real, parameter :: AreaRatio = (cAU/rSun)**2
+    real, parameter :: RhoV =  AreaRatio * RhoVAt1AU
+    real, parameter :: VAlfvenMin = 1.0e5   !100 km/s
+    !--------------------------------------------------------------------------
+
+    !\
+    ! Calculate cell-centered spherical coordinates::
+    RR   = sqrt(X**2+Y**2+Z**2)
+    !\
+    ! Avoid calculating inside a critical radius = 0.5*Rsun
+    !/
+    if (RR <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then 
+       WaveEnergyDensSI = 0.0
+       RETURN
+    end if
+
+    !v_\infty from WSA model:
+    call get_bernoulli_integral(X,Y,Z,Uf)
+
+    !An expansion factor
+    call get_interpolated(ExpansionFactorInv_N,X,Y,Z,ExpansionFactorInv)
+
+    WaveEnergyDensSi = (0.5*Uf**2 + cSunGravitySI - g*inv_gm1*&
+         cBoltzmann/(cProtonMass*MassIon_I(1))*(1.0+AverageIonCharge)*T0 )&
+         * RhoV/&
+         max(abs(VAlfvenSI) * ExpansionFactorInv, VAlfvenMin)
+
+  end subroutine get_total_wave_energy
 
   !============================================================================
 
@@ -423,7 +482,7 @@ contains
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + CoronalHeating
 
        if(UseElectronPressure)then
-          ! Explicit heat exchange
+          ! Explicit heat exchange (AverageIonCharge is assumed to be 1)
           call get_heat_exchange( &
                State_VGB(:,i,j,k,iBlock), HeatExchangeSi)
           HeatExchange = HeatExchangeSi/Si2No_V(UnitT_)
@@ -437,6 +496,8 @@ contains
           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
                - inv_gm1*HeatExchange
        end if
+
+       CYCLE
 
        call get_radiative_cooling( &
             State_VGB(:,i,j,k,iBlock), RadiativeCooling)
@@ -472,7 +533,7 @@ contains
     HeatExchangeSi = gm1*EtaPerpSi*3*cMu &
          *(cElectronCharge/(cProtonMass*MassIon_I(1)))**2 &
          *RhoSi/TeSi**1.5
-    
+
   end subroutine get_heat_exchange
 
   !============================================================================
@@ -604,7 +665,7 @@ contains
     end select
 
   end subroutine user_get_log_var
-  
+
   !============================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
