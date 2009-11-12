@@ -231,6 +231,7 @@ subroutine ARRAYS
   real     :: sind
   real     :: amla0(Slen)
   real     :: CONE(NR+4),PA(NPA),MUB(NPA),sumd,sumw,LZMAX,LZMIN
+  real     :: bFieldMagnitude_III(nPoint,nR,nT)
   external :: sind, ASIND,COSD,ACOSD
   data amla0/0.0,0.2,0.4,0.6,0.8,1.0,1.5,2.0,2.5,3.0,3.5, &
        4.0,4.5,5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0/
@@ -459,6 +460,7 @@ subroutine ARRAYS
      call write_prefix; write(iUnitStdOut,*) 'SUMS:',SUMW,SUMD
      call write_prefix; write(iUnitStdOut,*) 'LO:',MU(LO-1),MU(LO),DMU(LO),WMU(LO),MU(LO-1)+.5*DMU(LO-1)
   end if
+  
   !\
   ! Calculate pitch angles for mlat
   !/
@@ -473,6 +475,9 @@ subroutine ARRAYS
         end do
      end do
   end do
+
+  call get_B_field(bFieldMagnitude_III)
+
 
 
   call get_IntegralH(funt)
@@ -520,6 +525,21 @@ subroutine ARRAYS
   !\
   ! Variables for pressure and anisotropy calculations
   !/
+
+  
+  open (unit = 2, file = "Integrals_numeric.dat")
+  write (2,*)'Numerical values '
+  write (2,*)'l   mu  PA(rad) PA(deg)   FUNI     FUNT' 
+  
+  do l = 1, lo
+     write(2,*) l, mu(l), acos(mu(l)), acos(mu(l))*180./3.14159265358979323846, FUNI(l,1,1), FUNT(l,1,1)
+  end do
+
+close(2)
+
+!stop
+
+
 
   do L=1,LO    
      do K=1,KO

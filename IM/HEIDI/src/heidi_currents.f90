@@ -16,15 +16,19 @@ subroutine PRESSURES
   use ModHeidiMain
   use ModHeidiWaves
   use ModHeidiCurrents
-
+  use ModHeidiBField
   implicit none
 
   integer :: I,J,K,L,I_1,I_2
   real    :: RFAC,SUME,SUMA,SUMN,SUMTE,SUMTN,J_FAC
+  real    :: bFieldMagnitude_III(nPoint,nR,nT)
   !---------------------------------------------------------------------   
   !\
   ! Start the main species loop
   !/
+
+  call get_B_field(bFieldMagnitude_III)
+  
   do S = 1, NS
      if (SCALC(S).eq.1) then
         !   RFAC is 4*PI*SQRT(2)*(kg->amu * keV->J)^1.5 *(m->km)^6 *(cm->m)^3
@@ -91,8 +95,12 @@ subroutine PRESSURES
                  I_1=ILMP(J)
                  I_2=ILMP(J)-1
               end if
+              !JPER(I,J,S)=-J_FAC*((PPER(I_1,J,S)-PPER(I_2,J,S))/DL1+   &
+              !     3.*(PPER(I,J,S)-PPAR(I,J,S))/LZ(I))/BE(I,1) !J perp [A/m2]
+              
               JPER(I,J,S)=-J_FAC*((PPER(I_1,J,S)-PPER(I_2,J,S))/DL1+   &
-                   3.*(PPER(I,J,S)-PPAR(I,J,S))/LZ(I))/BE(I,1) !J perp [A/m2]
+                   3.*(PPER(I,J,S)-PPAR(I,J,S))/LZ(I))/bFieldMagnitude_III(nPointEq,i,j) !J perp [A/m2]
+              
            end do   ! I loop
         end do      ! J loop
         !\

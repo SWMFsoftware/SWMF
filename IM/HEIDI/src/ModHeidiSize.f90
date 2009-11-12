@@ -30,5 +30,6 @@ Module ModHeidiSize
 
   ! Define the number of points along the field line
   integer, parameter :: nPoint = 101
+  integer, parameter :: nPointEq = (nPoint-1)/2 +1
 
 end Module ModHeidiSize

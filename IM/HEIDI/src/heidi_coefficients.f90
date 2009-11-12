@@ -75,7 +75,13 @@ subroutine CEPARA
         do L = 1,lo
            PA(L) = cos(PitchAngle_I(L))
         end do
-        
+       
+!!$        do i =1, io
+!!$           do l =1, lo
+!!$              write(*,*) Lz(i) ,PitchAngle_I(L)*180/3.14159265 ,NeutralHydrogen(l,i,1)
+!!$           end do
+!!$        end do
+ 
         do L=1,LO
            do j =1, jo
               do I=1,IO
@@ -87,6 +93,7 @@ subroutine CEPARA
      end if
      
   end if
+
 
 
 3 format(A61,F5.2)
@@ -108,6 +115,11 @@ subroutine CEPARA
         !............10**Y is cross section of H+ in m2
         do j = 1, jo
            do L=2,Lo
+              !write(*,*) 'k,j,l',k,j,l
+              !write(*,*) 'Y',Y
+              !write(*,*) 'V(K,2)',V(K,2)
+              !write(*,*) 'DT',DT
+              !write(*,*) 'HDNS(2:io,j,L)',HDNS(2:io,j,L)
               achar(2:io,j,k,l,2)=exp(-(10.**Y*V(K,2)*HDNS(2:io,j,L)*DT))
            end do ! L loop
         end do    ! j loop
