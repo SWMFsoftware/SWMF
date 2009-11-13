@@ -1111,6 +1111,15 @@ contains
 
        State_VGB(Rho_,i,j,k,iBlock)  = DataHyades_V(iRhoHyades)
 
+       State_VGB(RhoUx_,i,j,k,iBlock) = &
+            DataHyades_V(iRhoHyades) * DataHyades_V(iUxHyades)
+
+       State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = (/y, z/)/r * &
+            DataHyades_V(iRhoHyades) * DataHyades_V(iUrHyades)
+
+       ! Interpolate level set functions
+       State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = LevelHyades_V
+
        if(UseElectronPressure)then
           Te = DataHyades_V(iTeHyades)
           Ti = DataHyades_V(iTiHyades)
@@ -1126,15 +1135,6 @@ contains
        else
           State_VGB(p_,i,j,k,iBlock)  = DataHyades_V(iPHyades)
        end if
-
-       State_VGB(RhoUx_,i,j,k,iBlock) = &
-            DataHyades_V(iRhoHyades) * DataHyades_V(iUxHyades)
-
-       State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = (/y, z/)/r * &
-            DataHyades_V(iRhoHyades) * DataHyades_V(iUrHyades)
-
-       ! Interpolate level set functions
-       State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = LevelHyades_V
 
        if(UseRadDiffusion)then
           if(UseHyadesGroupFile)then
