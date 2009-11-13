@@ -20,8 +20,8 @@ module ModUser
   character(len=lStringLine)    :: NameModel
 
   logical                       :: IsInitWave = .false.
-  real                          :: LogFreqCutOff
-  integer                       :: LeftNullGroupNum,RightNullGroupNum
+  real                          :: LogFreqCutOff, SpectralIndex
+  integer                       :: LowestFreqNum,SpectrumWidth
   integer                       :: nWaveHalf ! number of waves in each direction
   real,dimension(nWave)         :: LogFreq_I ! frequency grid
 
@@ -59,9 +59,10 @@ contains
        case("#FREQUENCY")
           call read_frequency
 
-       case("#FREQMARGIN")
-          call read_var('LeftNullGroupNum',LeftNullGroupNum)
-          call read_var('RightNullGroupNum',RightNullGroupNum)
+       case("#SPECTRUM")
+          call read_var('LowestFreqNum',LowestFreqNum)
+          call read_var('SpectrumWidth',SpectrumWidth)
+          call read_var('SpectralIndex',SpectralIndex)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -156,7 +157,7 @@ contains
 
   end subroutine user_update_states
   !=======================================================================
-  subroutine write_spectrogram
+   subroutine write_spectrogram
    
     use ModProcMH
     use ModMain,   ONLY: iteration_number, nBLK,unusedBLK,nBlockALL
@@ -165,7 +166,6 @@ contains
     use ModIoUnit, ONLY: io_unit_new
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
-    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_
     use ModWaves
 
     implicit none
@@ -196,7 +196,7 @@ contains
           end if
        end do; end do ; end do
     end do
-    nRow=nCell*nWave/2
+    nRow=nCell*nWaveHalf
     !\
     ! Allocate plot arrays
     !/
@@ -217,7 +217,7 @@ contains
              dx=dx_BLK(iBLK)
              dz=dz_BLK(iBLK)
              if((z< dz) .and. (z >=0.0) .and. (x<dx) .and. (x>=0.0)) then
-                do iFreq=1,nWave/2
+                do iFreq=1,nWaveHalf
                    IwPlusSi  = State_VGB(AlfvenSpeedPlusFirst_+iFreq-1,i,j,k,iBLK)
                    IwMinusSi = State_VGB(AlfvenSpeedMinusFirst_+iFreq-1,i,j,k,iBLK)
                    Cut_II(iRow,1) = y
@@ -243,8 +243,8 @@ contains
     open(unit=iUnit, file=FileNameTec,form='formatted',access='sequential',&
          status='replace',iostat=iError)
     write(iUnit, '(a)') 'Title: BATSRUS SC Spectrogram'
-    write(iUnit, '(a)') 'Variables = "Y[R]", "w","I+[Jm-3]","I-[Jm-3]" '
-    write(iUnit,'(a,i3.3,a,i5.5,a)') 'Zone I= ',nWave/2,' J= ',nCell,' F=point'
+    write(iUnit, '(a)') 'Variables = "Y[R]", "log(w)","I+[Jm-3]","I-[Jm-3]" '
+    write(iUnit,'(a,i3.3,a,i5.5,a)') 'Zone I= ',nWaveHalf,' J= ',nCell,' F=point'
     do iRow=1,nRow
        write(iUnit, fmt="(30(e14.6))") &
             Cut_II(iRow,:)
@@ -314,27 +314,25 @@ contains
     
     implicit none
     integer                    :: i,j,k,iBLK, iWave
-    real,parameter             :: FreqPower=-2.0/3.0
     character(len=*),parameter :: NameSub= 'init_wave_spectrum'
     ! ------------------------------------------------------------------
     IsInitWave=.true.
-    write(*,*) 'Entered ',NameSub
     call set_freq_grid
     State_VGB(WaveFirst_:WaveLast_,:,:,:,:) = 0.0
-
+    SpectralIndex = SpectralIndex + 1 ! State_VGB(iWave) represents I*w
     do iBLK=1,nBLK
        do k=1,nK ; do j = 1,nJ ; do i=1,nI
           
           do iWave=1,nWaveHalf
-             if( (iWave .le. LeftNullGroupNum) .or. &
-                  (iWave .gt. nWaveHalf-RightNullGroupNum)) then
+             if( (iWave .le. LowestFreqNum) .or. &
+                  (iWave .gt. LowestFreqNum+SpectrumWidth)) then
                 State_VGB(AlfvenSpeedPlusFirst_+iWave-1,i,j,k,iBLK) = 0.0
                 State_VGB(AlfvenSpeedMinusFirst_+iWave-1,i,j,k,iBLK)= 0.0
              else
-                State_VGB(AlfvenSpeedPlusFirst_+iWave-1,i,j,k,iBLK) =&
-                     exp(LogFreq_I(iWave)*FreqPower)
-                State_VGB(AlfvenSpeedMinusFirst_+iWave-1,i,j,k,iBLK)=&
-                     exp(LogFreq_I(iWave)*FreqPower)
+                State_VGB(AlfvenSpeedPlusFirst_+iWave-1,i,j,k,iBLK) = &
+                     exp(LogFreq_I(iWave)*SpectralIndex)
+                State_VGB(AlfvenSpeedMinusFirst_+iWave-1,i,j,k,iBLK)= &
+                     exp(LogFreq_I(iWave)*SpectralIndex)
              end if
           end do
        end do; end do ; end do
