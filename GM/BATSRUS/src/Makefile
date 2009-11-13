@@ -60,7 +60,6 @@ MODULES = \
 	ModSatelliteFile.o\
 	ModSize.o\
 	ModSolarwind.o \
-	ModTemperature.o \
 	ModTimeStepControl.o \
 	ModUserEmpty.o \
 	ModUser.o \

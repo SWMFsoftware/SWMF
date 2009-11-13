@@ -11,6 +11,7 @@ module ModRadDiffusion
   private !except
 
   ! Public methods
+  public :: read_rad_diffusion_param
   public :: init_rad_diffusion
   public :: get_radiation_energy_flux
   public :: calc_source_rad_diffusion
@@ -23,6 +24,13 @@ module ModRadDiffusion
   ! Logical for adding radiation diffusion
   logical, public :: IsNewBlockRadDiffusion = .true.
   logical, public :: IsNewTimestepRadDiffusion = .true.
+
+  ! Parameters for radiation flux limiter
+  logical          :: UseRadFluxLimiter  = .false.
+  character(len=20):: TypeRadFluxLimiter = 'larsen'
+
+  ! Minimum threshold for radiation temperature
+  real             :: TradMinSi, EradMin_W(nWave)
 
   ! Coefficients for n-temperature electron-ion-radiation model
   real, allocatable :: DiffCoef_VFDB(:,:,:,:,:,:)
@@ -53,13 +61,47 @@ module ModRadDiffusion
   ! temporary radiation energy array needed by set_block_field
   real, allocatable :: Erad1_WG(:,:,:,:)
 
-  real :: EradMin_W(nWave)
 
   logical :: UseTemperature
 
-  real :: PeMinSi = -1.1e5, PeMin
-
 contains
+
+  subroutine read_rad_diffusion_param(NameCommand)
+
+    use ModMain,      ONLY: UseRadDiffusion
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in) :: NameCommand
+
+    character(len=*), parameter :: NameSub = 'read_rad_diffusion_param'
+    !--------------------------------------------------------------------------
+
+    select case(NameCommand)
+    case("#RADIATION")
+       call read_var('UseRadDiffusion', UseRadDiffusion)
+
+       if(UseRadDiffusion)then
+          call read_var('UseRadFluxLimiter', UseRadFluxLimiter)
+          if(UseRadFluxLimiter)then
+             call read_var('TypeRadFluxLimiter', TypeRadFluxLimiter, &
+                  IsLowerCase=.true.)
+
+             select case(TypeRadFluxLimiter)
+             case("larsen","sum","max")
+             case default
+                call stop_mpi(NameSub//': unknown TypeRadFluxLimiter='&
+                     //TypeRadFluxLimiter)
+             end select
+          end if
+          call read_var('TradMinSi', TradMinSi)
+       end if
+
+    case default
+       call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
+    end select
+
+
+  end subroutine read_rad_diffusion_param
 
   !============================================================================
 
@@ -71,8 +113,7 @@ contains
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
          TypeSemiImplicit, iEradImpl, iTeImpl, iTrImplFirst, iTrImplLast
     use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_, &
-         cRadiationNo, UnitP_
-    use ModTemperature, ONLY: TradMinSi
+         cRadiationNo
     use ModVarIndexes,  ONLY: nVar, nWave, WaveFirst_
     use ModWaves,       ONLY: UseWavePressure, GammaWave
 
@@ -89,10 +130,8 @@ contains
        if(nWave < 1) call stop_mpi(NameSub// &
             ": the number of wave bins should be 1 or more")
 
-       TradMin = TradMinSi*Si2No_V(UnitTemperature_)
-       EradMin_W(:) = cRadiationNo*TradMin**4/nWave
-
-       PeMin = PeMinSi*Si2No_V(UnitP_)
+       TradMin   = TradMinSi*Si2No_V(UnitTemperature_)
+       EradMin_W = cRadiationNo*TradMin**4/nWave
     end if
 
     if(UseFullImplicit)then
@@ -246,7 +285,6 @@ contains
 
       use ModAdvance,     ONLY: nWave
       use ModPhysics,     ONLY: Si2No_V, UnitX_, Clight
-      use ModTemperature, ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
       use ModUser,        ONLY: user_material_properties
 
       real, intent(in) :: State_V(nVar)
@@ -345,7 +383,6 @@ contains
          Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_, &
          No2Si_V
     use ModUser,     ONLY: user_material_properties
-    use ModTemperature, ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, &
          UseCovariant, TypeGeometry, FaceAreaI_DFB, FaceAreaJ_DFB
     use ModParallel, ONLY: NOBLK, NeiLev
@@ -1330,7 +1367,7 @@ contains
          DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
     use ModMain,       ONLY: nI, nJ, nK, Dt, UseRadDiffusion
     use ModPhysics,    ONLY: inv_gm1, g, No2Si_V, Si2No_V, UnitEnergyDens_, &
-         UnitP_, UnitRho_, UnitTemperature_
+         UnitP_, UnitRho_, UnitTemperature_, PeMin
     use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Pe_, nWave, WaveFirst_
 
@@ -1364,7 +1401,7 @@ contains
                + (g - 1)*DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
                *(StateImpl_VG(iTeImpl,i,j,k)-ImplOld_VCB(iTeImpl,i,j,k,iBlock))
 
-          State_VGB(Pe_,i,j,k,iBlock) = max(State_VGB(Pe_,i,j,k,iBlock),PeMin)
+          State_VGB(Pe_,i,j,k,iBlock) = max(State_VGB(Pe_,i,j,k,iBlock), PeMin)
 
           ! ion pressure -> Einternal
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)

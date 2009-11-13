@@ -17,8 +17,6 @@ subroutine calc_sources
   use ModCoordTransform
   use ModImplicit,      ONLY: UseFullImplicit            !^CFG IF IMPLICIT
   use ModRadDiffusion,  ONLY: calc_source_rad_diffusion  !^CFG IF IMPLICIT
-  use ModTemperature,   ONLY: calc_source_temperature_diff, &
-       UseTemperatureDiffusion
   use ModMultiFluid
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
   use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
@@ -382,10 +380,8 @@ subroutine calc_sources
   end if
 
 
-  if(UseTemperatureDiffusion) &
-       call calc_source_temperature_diff(iBlock)
   !^CFG IF  IMPLICIT BEGIN
-  if(UseRadDiffusion .and. UseFullImplicit.and..not.UseTemperatureDiffusion) &
+  if(UseRadDiffusion .and. UseFullImplicit) &
        call calc_source_rad_diffusion(iBlock)
   !^CFG END IMPLICIT
 

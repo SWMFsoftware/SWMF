@@ -243,7 +243,6 @@ subroutine BATS_init_session
        TypeSemiImplicit, UseFullImplicit                   !^CFG IF IMPLICIT
   use ModRadDiffusion, ONLY: init_rad_diffusion            !^CFG IF IMPLICIT
   use ModHeatConduction, ONLY: init_heat_conduction        !^CFG IF IMPLICIT
-  use ModTemperature, ONLY: UseTemperatureDiffusion, init_temperature_diffusion
   use ModUser, ONLY: user_initial_perturbation
   implicit none
 
@@ -278,7 +277,6 @@ subroutine BATS_init_session
   if(UseHallResist)call init_hall_resist
   !call test_face_current
 
-  if(UseTemperatureDiffusion) call init_temperature_diffusion
   if(UseParallelConduction) call init_heat_conduction !^CFG IF  IMPLICIT BEGIN
   if(UseSemiImplicit)then
      select case(TypeSemiImplicit)
@@ -315,7 +313,6 @@ subroutine BATS_advance(TimeSimulationLimit)
        part_steady_select, part_steady_switch
   use ModImplicit, ONLY: UseImplicit, UseFullImplicit, &   !^CFG IF IMPLICIT
        UseSemiImplicit                                     !^CFG IF IMPLICIT
-  use ModTemperature,  ONLY: advance_temperature, UseTemperatureDiffusion
   use ModIonoVelocity, ONLY: apply_iono_velocity
   use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
 
@@ -382,8 +379,6 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseIE)call apply_iono_velocity
 
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
-
-  if(UseTemperatureDiffusion) call advance_temperature
 
   call exchange_messages
 

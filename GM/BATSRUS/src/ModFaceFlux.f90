@@ -40,8 +40,6 @@ module ModFaceFlux
   use ModHeatConduction, ONLY: IsNewBlockHeatConduction, get_heat_flux
   !^CFG END IMPLICIT
 
-  use ModTemperature, ONLY: UseTemperatureDiffusion
-
   use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
 
   use ModVarIndexes

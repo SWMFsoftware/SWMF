@@ -49,7 +49,7 @@ subroutine MH_set_parameters(TypeAction)
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
   use ModHeatConduction, ONLY: read_heatconduction_param !^CFG IF IMPLICIT
-  use ModTemperature, ONLY: UseTemperatureDiffusion, read_temperature_param
+  use ModRadDiffusion,   ONLY: read_rad_diffusion_param  !^CFG IF IMPLICIT
   use ModResistivity                              !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals,iFluid
   use ModMultiIon, ONLY: multi_ion_set_parameters
@@ -521,13 +521,13 @@ subroutine MH_set_parameters(TypeAction)
         call read_var("rInnerHall ", rInnerHall)
         call read_var("DrInnerHall", DrInnerHall)
 
-     case("#RADIATION", &
-          "#HEATCONDUCTION", &
-          "#IMPLICITTEMPERATURE")
-        call read_temperature_param(NameCommand)
+     case("#ELECTRONPRESSURE")
+        call read_var('PeMinSi', PeMinSi)
 
-     case("#PARALLELCONDUCTION", &                  !^CFG IF IMPLICIT BEGIN
-          "#WEAKFIELDCONDUCTION")
+     case("#RADIATION")                             !^CFG IF IMPLICIT BEGIN 
+        call read_rad_diffusion_param(NameCommand)
+
+     case("#PARALLELCONDUCTION", "#WEAKFIELDCONDUCTION")
         call read_heatconduction_param(NameCommand) !^CFG END IMPLICIT
 
      case("#SAVELOGFILE")

@@ -110,6 +110,9 @@ module ModPhysics
   ! Density ratio of major and minor ions/neutrals (e.g. in the solar wind)
   real :: LowDensityRatio = 0.0001
 
+  ! Minimum threshold for electron pressure 
+  real :: PeMinSi = -1.1e5, PeMin
+
   !\
   ! General variables for the second body
   !/

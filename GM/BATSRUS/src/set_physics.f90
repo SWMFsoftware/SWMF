@@ -270,6 +270,8 @@ subroutine set_physics_constants
      CellState_VI(iRhoUz,:) = FaceState_VI(iUz,:)*FaceState_VI(iRho,:)
   end do
 
+  PeMin = PeMinSi*Si2No_V(UnitP_)
+
   !\
   ! Now do the magnetic field stuff
   !/

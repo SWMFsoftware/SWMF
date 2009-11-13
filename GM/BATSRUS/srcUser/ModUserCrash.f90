@@ -987,7 +987,7 @@ contains
     use ModTriangulate, ONLY: calc_triangulation, find_triangle
     use ModMain,        ONLY: UseRadDiffusion
     use ModPhysics,     ONLY: cRadiationNo, No2Si_V, Si2No_V, &
-         UnitTemperature_, UnitN_, UnitP_, UnitEnergyDens_
+         UnitTemperature_, UnitN_, UnitP_, UnitEnergyDens_, PeMin
     use ModVarIndexes,  ONLY: nWave, WaveFirst_, WaveLast_
 
     integer, intent(in) :: iBlock
@@ -1131,7 +1131,7 @@ contains
 
           Natomic = NatomicSi*Si2No_V(UnitN_)
           State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti
-          State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
+          State_VGB(Pe_,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
        else
           State_VGB(p_,i,j,k,iBlock)  = DataHyades_V(iPHyades)
        end if
