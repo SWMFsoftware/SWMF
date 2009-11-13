@@ -57,6 +57,8 @@ module ModRadDiffusion
 
   logical :: UseTemperature
 
+  real :: PeMinSi = -1.1e5, PeMin
+
 contains
 
   !============================================================================
@@ -69,7 +71,7 @@ contains
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
          TypeSemiImplicit, iEradImpl, iTeImpl, iTrImplFirst, iTrImplLast
     use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_, &
-         cRadiationNo
+         cRadiationNo, UnitP_
     use ModTemperature, ONLY: TradMinSi
     use ModVarIndexes,  ONLY: nVar, nWave, WaveFirst_
     use ModWaves,       ONLY: UseWavePressure, GammaWave
@@ -89,6 +91,8 @@ contains
 
        TradMin = TradMinSi*Si2No_V(UnitTemperature_)
        EradMin_W(:) = cRadiationNo*TradMin**4/nWave
+
+       PeMin = PeMinSi*Si2No_V(UnitP_)
     end if
 
     if(UseFullImplicit)then
@@ -1359,6 +1363,8 @@ contains
           State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
                + (g - 1)*DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
                *(StateImpl_VG(iTeImpl,i,j,k)-ImplOld_VCB(iTeImpl,i,j,k,iBlock))
+
+          State_VGB(Pe_,i,j,k,iBlock) = max(State_VGB(Pe_,i,j,k,iBlock),PeMin)
 
           ! ion pressure -> Einternal
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
