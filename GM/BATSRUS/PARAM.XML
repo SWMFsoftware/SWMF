@@ -4875,6 +4875,16 @@ The default value is "all", ie. the Hall effect is applied everywhere
 if the Hall effect is switched on in the #HALLRESISTIVITY command.
 </command>
 
+<command name="ELECTRONPRESSURE">
+	 <parameter name="PeMinSi" type="real" min="-1" default="-1"/>
+
+#ELECTRONPRESSURE
+1.1e5			PeMinSi
+
+Provide the minimum electron pressure threshold in SI units. 
+Currently the minimum electron pressure is only used in ModRadDiffusion. 
+The default value is -1, i.e. no threshold is applied.
+</command>
 
 <command name="RADIATION">
 	<parameter name="UseRadDiffusion" type="logical" default="F"/>
