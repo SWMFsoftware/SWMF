@@ -54,6 +54,12 @@ public:
 
     for (idim=0;idim<DIM;idim++) nrml[idim]=n(idim);
   };
+
+  void SetNormal(double* n) {
+    int idim;
+
+    for (idim=0;idim<DIM;idim++) nrml[idim]=n[idim];
+  };
 //===================================================
   array_1d<DataType> Normal() {
     array_1d<DataType> normal(DIM);
@@ -64,7 +70,7 @@ public:
   };
 
 //===================================================
-  void GetNormal(DataType* n) {
+  void GetNormal(double* n) {
     for (int idim=0;idim<DIM;idim++) n[idim]=nrml[idim];
   }; 
 //===================================================

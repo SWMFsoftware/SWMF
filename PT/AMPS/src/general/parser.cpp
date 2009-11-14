@@ -2,6 +2,11 @@
 //$Id$
 //===================================================
 
+#ifdef MPI_ON
+#include "mpi.h"
+#endif
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>

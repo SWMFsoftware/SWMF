@@ -3,6 +3,10 @@
 //===================================================
 
 
+#ifdef MPI_ON
+#include "mpi.h"
+#endif
+
 
 #include "global.dfn"
 #include "data.h"

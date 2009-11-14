@@ -1,11 +1,13 @@
-#include <time.h>
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
+
 
 #ifdef MPI_ON
 #include "mpi.h"
 #endif
+
+#include <time.h>
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 extern int ThisThread;
 extern int TotalThreadsNumber;
@@ -24,9 +26,9 @@ void rnd_seed() {
 #ifdef MPI_ON
   int thread;
   MPI_Comm_rank(MPI_COMM_WORLD,&thread);
-  initstate((unsigned) (thread+time(NULL)),random_state_buffer,256);
+  initstate((unsigned) (thread /*+time(NULL)*/ ),random_state_buffer,256);
 #else  
-  initstate((unsigned) time(NULL),random_state_buffer,256);
+  initstate((unsigned) 0 /*time(NULL)*/ ,random_state_buffer,256);
 #endif
 }
 
@@ -92,6 +94,8 @@ void PrintErrorLog(const char* message) {
 
 //use: PrintErrorLog(__LINE__,__FILE__, "mesage")
 void PrintErrorLog(long int nline, const char* fname, const char* message) {
+
+return;
 
   FILE* errorlog=fopen("error.log","a+");
 

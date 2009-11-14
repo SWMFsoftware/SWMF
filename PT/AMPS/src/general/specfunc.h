@@ -1,12 +1,9 @@
 #ifndef SPECFUNC
 #define SPECFUNC
 
+
 #include <math.h>
 #include <iostream>
-
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 
 extern int DIM;
 extern int ThisThread;

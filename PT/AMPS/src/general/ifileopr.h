@@ -16,10 +16,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#define init_str_maxlength 10000
+
 class CiFileOperations {
 public:
   FILE* fd;
-  char fname[100]; 
+  char fname[100],init_str[init_str_maxlength]; 
   long int line;
 
   CiFileOperations() {
@@ -117,7 +119,7 @@ public:
     } while ((str[0]=='\0')&&(!feof(fd)));
 
     if (feof(fd)!=0) {
-      str[0]='\0';   
+      str[0]='\0',init_str[0]='\0';   
       return false; 
     }
 
@@ -125,15 +127,17 @@ public:
 //      if (str[i]=='"') str[i]=' ';
 
       
+      if (i<init_str_maxlength-1) init_str[i]=str[i];
       if ((str[i]>='a')&&(str[i]<='z')) str[i]=str[i]-32;
     }
     
- 
+    init_str[(i<init_str_maxlength-1) ? i : init_str_maxlength-1 ]='\0';
     return true;
   }; 
 
   void error() {
     printf("Error in file %s, line=%ld\n",fname,line);
+    printf("%s\n",init_str);
     exit(0);
   }; 
 };

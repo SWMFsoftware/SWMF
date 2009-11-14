@@ -534,25 +534,38 @@ public:
 
 //==================================================
   void GetTMatrix2D() {
-    array_1d<DataType> a0(DIM),a1(DIM),b(DIM);
+//    array_1d<DataType> a0(DIM),a1(DIM),b(DIM);
     int i,n[3];
     double detA,det;
+
+double a0vect[3],a1vect[3],bvect[3],t[3];
 
     TMatrix.init(DIM,DIM,DIM+1,ncells);
 
     for(long int ncell=0;ncell<ncells;ncell++) 
       for (int nbasis=0;nbasis<DIM+1;nbasis++) {  
-        for (i=0;i<DIM;i++) {
+        for (i=0;i<2;i++) {
           n[i]=nbasis+i+1;
           if (n[i]>=DIM+1) n[i]-=(DIM+1);
         }
 
+/*
       a0=cell[ncell].node[n[0]]->X()-cell[ncell].node[nbasis]->X();
       a1=cell[ncell].node[n[1]]->X()-cell[ncell].node[nbasis]->X();
 
       detA=a0(0)*a1(1)-a1(0)*a0(1);
+*/
+
+      cell[ncell].node[n[0]]->GetX(a0vect);cell[ncell].node[nbasis]->GetX(t);
+      cell[ncell].node[n[1]]->GetX(a1vect);
+
+      a0vect[0]-=t[0],a0vect[1]-=t[1];
+      a1vect[0]-=t[0],a1vect[1]-=t[1];
+      detA=a0vect[0]*a1vect[1]-a1vect[0]*a0vect[1];
+      
     
-      for (i=0;i<DIM;i++) {
+      for (i=0;i<2;i++) {
+/*
         b=0.0;
         b(i)=1.0;
 
@@ -561,6 +574,17 @@ public:
 
         det=a0(0)*b(1)-b(0)*a0(1);
         TMatrix(1,i,nbasis,ncell)=det/detA;
+*/
+
+        bvect[0]=0.0,bvect[1]=0.0; 
+        bvect[i]=1.0;
+
+        det=bvect[0]*a1vect[1]-bvect[1]*a1vect[0];
+        TMatrix(0,i,nbasis,ncell)=det/detA;
+
+        det=a0vect[0]*bvect[1]-bvect[0]*a0vect[1];
+        TMatrix(1,i,nbasis,ncell)=det/detA;
+
       }
     }
   };
@@ -623,17 +647,27 @@ public:
 //get bvector
           if (nbr_ncell>=0) {
             int idim;
-            array_1d<DataType> e(DIM);
+//            array_1d<DataType> e(DIM);
+
+double e[3],t[3];
+
             double a;
             int n,n_common_nodes;
 
             n=cells_connection_data[ncell].ne[nbasis][nface]+nbasis+1; 
             if (n>DIM) n-=DIM+1;
-            e=cell[ncell].node[n]->X()-cell[ncell].node[nbasis]->X();
+
+
+//            e=cell[ncell].node[n]->X()-cell[ncell].node[nbasis]->X();
+
+            cell[ncell].node[n]->GetX(e);
+            cell[ncell].node[nbasis]->GetX(t);
 
             for (idim=0;idim<DIM;idim++) {
+//              e[i]-=t[i];
+
               a=0.0;
-              for (i=0;i<DIM;i++) a+=e(i)*TMatrix(idim,i,nbr_nbasis,nbr_ncell); 
+              for (i=0;i<DIM;i++) a+=(e[i]-t[i])*TMatrix(idim,i,nbr_nbasis,nbr_ncell); 
               bvector(ncell,idim,nbasis,nface)=a; 
             }
 
@@ -675,7 +709,7 @@ public:
       b[1]=a[0];
       break;
     default :
-      printf("Error: proc. Cdsmc::ChangeLocalVector2D\n");
+      printf("Error: proc. Cdsmc::ChangeLocalVector2D, nd1=%i, nd2=%i, dn=%i\n",nb1,nb2,dn);
       exit(__LINE__,__FILE__);
     }
 
@@ -702,7 +736,7 @@ public:
       b[1]=a[0];
       break;
     default :
-      printf("Error: proc. Cdsmc::ChangeLocalVector2D\n");
+      printf("Error: proc. Cdsmc::ChangeLocalVector2D, nd1=%i, nd2=%i, dn=%i\n",nb1,nb2,dn);
       exit(__LINE__,__FILE__);
     }  
 
