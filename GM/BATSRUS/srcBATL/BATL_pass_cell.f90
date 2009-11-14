@@ -965,13 +965,18 @@ contains
       if(DoSendCorner)then
          ! Face + two edges + corner or edge + one corner 
          ! are sent/recv together from fine to coarse block
-         !!! nWidthProlongS_D(1:nDim) = 1 + (nWidth-1)/iRatio_D(1:nDim)
+
          do iDim = 1, nDim
             if(iRatio_D(iDim) == 1)CYCLE
-            iProlongS_DII(iDim,1,Max_) = &
-                 iProlongS_DII(iDim,1,Max_) + nWidthProlongS_D(iDim)
-            iProlongS_DII(iDim,2,Min_) = &
-                 iProlongS_DII(iDim,2,Min_) - nWidthProlongS_D(iDim)
+
+            ! The extension is by nWidth/2 rounded upwards independent of
+            ! the value of nCoarseLayers. There is no need to send 
+            ! two coarse layers into corner/edge ghost cells.
+
+            iProlongS_DII(iDim,1,Max_) = iProlongS_DII(iDim,1,Max_) &
+                 + (nWidth+1)/2
+            iProlongS_DII(iDim,2,Min_) = iProlongS_DII(iDim,2,Min_) &
+                 - (nWidth+1)/2
             iProlongR_DII(iDim,1,Max_) = iProlongR_DII(iDim,1,Max_) + nWidth
             iProlongR_DII(iDim,2,Min_) = iProlongR_DII(iDim,2,Min_) - nWidth
          end do
@@ -1070,10 +1075,6 @@ contains
           ! the first order restricted cell cannot be used in the prolongation.
           if(DoRestrictFace .and. nProlongOrder == 2) CYCLE
 
-          ! Sending multiple coarse cell layers is not meaningful for edges
-          ! and corners. The current algorithm does not support this !!!
-          if(nCoarseLayer > 1 .and. DoSendCorner) CYCLE
-          
           if(DoTestMe)write(*,*) 'testing message_pass_cell with', &
                ' DoSendCorner=',   DoSendCorner, &
                ' DoRestrictFace=', DoRestrictFace
@@ -1125,6 +1126,17 @@ contains
                 iDir = 0; if(i<1) iDir = -1; if(i>nI) iDir = 1
                 jDir = 0; if(j<1) jDir = -1; if(j>nJ) jDir = 1
                 kDir = 0; if(k<1) kDir = -1; if(k>nK) kDir = 1
+
+                ! If nCoarseLayer==2 and DoSendCorner is true
+                ! the second ghost cells in the corner/edges
+                ! are not well defined (they may contain
+                ! the value coming from the first or second coarse cell).
+
+                if(nCoarseLayer==2 .and. DoSendCorner .and. ( &
+                     (i<0 .or. i>nI+1) .and. (jDir /= 0 .or. kDir /= 0) .or. &
+                     (j<0 .or. j>nJ+1) .and. (iDir /= 0 .or. kDir /= 0) .or. &
+                     (k<0 .or. k>nK+1) .and. (iDir /= 0 .or. jDir /= 0) &
+                     )) CYCLE
 
                 ! if we do not send corners and edges, check that the
                 ! State_VGB in these cells is still the unset value
