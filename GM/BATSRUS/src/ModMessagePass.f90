@@ -44,8 +44,11 @@ contains
     !           _s subface    (one quarter of a face)
 
     use ModProcMH
-    use ModMain, ONLY : nI,nJ,nK,nBLK,prolong_type,nBlockMax,okdebug,unusedBLK, &
-         east_,west_,south_,north_,bot_,top_, optimize_message_pass, BlkTest
+    use ModMain, ONLY: nI,nJ,nK,nBLK,prolong_type,nBlockMax,okdebug,unusedBLK,&
+         east_,west_,south_,north_,bot_,top_, optimize_message_pass, BlkTest,&
+         UseBatl
+    use BATL_lib, ONLY: message_pass_cell
+
     use ModAMR, ONLY : unusedBlock_BP,child2subface
     use ModParallel, ONLY : NOBLK, neiLEV,neiPE,neiBLK, BLKneighborCHILD
     use ModVarIndexes,ONLY:MaxVarState=>nVar
@@ -116,6 +119,22 @@ contains
 
     !--------------------------------------------------------------------------
 
+    nCoarseLayer=1
+    if(present(DoTwoCoarseLayers))then
+       if(DoTwoCoarseLayers) nCoarseLayer=2
+    end if
+
+    if(UseBatl)then
+       if(.not.present(Sol_VGB)) &
+            call stop_mpi('message_pass_dir without Sol_VGB, and UseBatl')
+
+       call message_pass_cell(nVar,Sol_VGB,width,prolongorder,nCoarseLayer,&
+            sendcorners, restrictface)
+
+       RETURN
+    end if
+
+
     call set_oktest('message_pass_dir',oktest, oktest_me)
 
     if(present(restrictface))then
@@ -124,10 +143,6 @@ contains
        qrestrictface=.false.
     endif
 
-    nCoarseLayer=1
-    if(present(DoTwoCoarseLayers))then
-       if(DoTwoCoarseLayers) nCoarseLayer=2
-    end if
     nCoarse1 = nCoarseLayer - 1
 
     if(oktest)write(*,*)&
