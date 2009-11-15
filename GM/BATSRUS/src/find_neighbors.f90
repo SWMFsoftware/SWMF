@@ -20,7 +20,7 @@
 
 subroutine find_neighbors
   use ModProcMH, ONLY: iProc
-  use ModMain,   ONLY: nBlock, UnusedBLK
+  use ModMain,   ONLY: nBlock, UnusedBLK, UseBatl
   use ModParallel
   use ModPolarNeighbor
   implicit none
@@ -29,7 +29,11 @@ subroutine find_neighbors
   integer, dimension(4) :: iProcOut_I, iBlockOut_I, iChildOut_I
   logical::DoTest=.false.,DoTestMe=.false.,DoCallOKTest=.true.
   character(LEN=*),parameter::NameSub='find_neighbors'
-    !--------------------------------------------------------!
+  !--------------------------------------------------------!
+
+  if(UseBatl) RETURN
+
+
   if(DoCallOKTest)then
      call set_oktest(NameSub,DoTest,DoTestMe)
      DoCallOKTest=.false.

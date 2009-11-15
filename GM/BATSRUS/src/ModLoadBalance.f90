@@ -4,7 +4,8 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModMain
   use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
   use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP,&
-       SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_
+       SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_,&
+       State_VGB
   use ModGeometry, ONLY: True_Blk
   use ModGeometry, ONLY: UseCovariant     
   use ModPartSteady, ONLY: UsePartSteady
@@ -14,6 +15,10 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModMpi
   use ModEnergy, ONLY: calc_energy_ghost
   use ModConserveFlux, ONLY: init_cons_flux
+
+  use BATL_lib, ONLY: regrid_batl
+  use ModBatlInterface, ONLY: set_batsrus_grid
+  
   implicit none
 
   ! Load balance grid using Peano-Hilbert ordering of blocks
@@ -71,6 +76,13 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   logical :: DoFixVar_B(MaxBlock)
 
   !---------------------------------------------------------------------------
+  if(UseBatl)then
+     call select_stepping(DoMoveCoord)
+!     call regrid_batl(nVar, State_VGB)
+!     call set_batsrus_grid
+     RETURN
+  end if
+
   call set_oktest('load_balance',DoTest,DoTestMe)
 
   if (DoTestMe) write(*,*)'load_balance: ',&

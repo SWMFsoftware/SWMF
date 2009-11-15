@@ -49,6 +49,12 @@ contains
 
     use ModIO, ONLY: restart
     use ModRestartFile, ONLY: read_octree_file
+
+    use ModMain, ONLY: UseBatl
+    use BATL_lib, ONLY: nBlockBatl => nBlock, Unused_B, iNode_B, &
+         iStatusNew_A, Refine_, init_grid_batl
+    use ModBatlInterface, ONLY: set_batsrus_grid
+
     !\
     ! Set up problem geometry, blocks, and grid structure.
     !/
@@ -57,12 +63,16 @@ contains
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
     logical :: local_refine(nBLK)
 
-
+    integer:: iBlock
     !--------------------------------------------------------------------------
 
-    call set_root_block_geometry
-    call build_octree_roots   ! Initialize octree data structure.
-    call find_neighbors       ! Get initial neighbor information.
+    if(UseBatl)then
+       call set_batsrus_grid
+    else
+       call set_root_block_geometry
+       call build_octree_roots   ! Initialize octree data structure.
+       call find_neighbors       ! Get initial neighbor information.
+    end if
 
     if (.not.restart) then
        ! Create initial solution block geometry.
@@ -74,7 +84,18 @@ contains
                   ' starting initial refinement level ',nRefineLevel
           end if
           call specify_refinement(local_refine)
-          call refine_grid(local_refine)
+
+          if(UseBatl)then
+             do iBlock = 1, nBlockBatl
+                if(Unused_B(iBlock)) CYCLE
+                if(local_refine(iBlock)) &
+                     iStatusNew_A(iNode_B(iBlock)) = Refine_
+             end do
+             call init_grid_batl
+             call set_batsrus_grid
+          else
+             call refine_grid(local_refine)
+          end if
        end do
     else
        ! Read initial solution block geometry from octree restart file.
@@ -83,8 +104,11 @@ contains
        call read_octree_file     ! Read octree restart file.
 
     end if
-    ! number blocks and balance load
-    call number_soln_blocks
+
+    if(.not.UseBatl)then
+       ! number blocks and balance load
+       call number_soln_blocks
+    end if
 
     ! Set initial block types
     where(.not.UnusedBlk) iTypeAdvance_B = ExplBlock_

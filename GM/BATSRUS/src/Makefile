@@ -23,6 +23,7 @@ MODULES = \
 	ModAdvance.o\
 	ModAMR.o\
 	ModB0.o\
+	ModBatlInterface.o\
 	ModBlockData.o\
 	ModBoundaryCells.o\
 	ModConserveFlux.o\

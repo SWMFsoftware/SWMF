@@ -13,8 +13,12 @@ subroutine advance_expl(DoCalcTimestep)
   use ModBlockData, ONLY: set_block_data
   use ModImplicit,  ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   use ModPhysics,   ONLY: No2Si_V, UnitT_
-  use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux
+  use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
+       nCorrectedFaceValues, CorrectedFlux_VXB, &
+       CorrectedFlux_VYB, CorrectedFlux_VZB
   use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
+
+  use BATL_lib, ONLY: message_pass_face
   implicit none
 
   logical, intent(in) :: DoCalcTimestep
@@ -40,7 +44,7 @@ subroutine advance_expl(DoCalcTimestep)
 
      call barrier_mpi2('expl1')
 
-     do globalBLK = 1, nBlockMax
+     do globalBLK = 1, nBlock
         if (unusedBLK(globalBLK)) CYCLE
         if(all(neiLev(:,globalBLK)/=1)) CYCLE
         ! Calculate interface values for L/R states of each 
@@ -74,13 +78,18 @@ subroutine advance_expl(DoCalcTimestep)
 
      ! Message pass conservative flux corrections.
      call timing_start('send_cons_flux')
-     call message_pass_faces_9conserve
+     if(UseBatl)then
+        call message_pass_face(nCorrectedFaceValues, CorrectedFlux_VXB, &
+             CorrectedFlux_VYB, CorrectedFlux_VZB, DoSubtractIn=.false.)
+     else
+        call message_pass_faces_9conserve
+     end if
      call timing_stop('send_cons_flux')
 
      if(DoTestMe)write(*,*)NameSub,' done message pass'
 
      ! Multi-block solution update.
-     do globalBLK = 1, nBlockMax
+     do globalBLK = 1, nBlock
 
         if (unusedBLK(globalBLK)) CYCLE
 
