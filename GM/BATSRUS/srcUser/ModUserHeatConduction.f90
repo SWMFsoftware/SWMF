@@ -470,10 +470,10 @@ contains
           RhoU_D(2) = 0.0
 
           do k = -1, nk+2
+             State_VGB(:,i,j,k,iBlock) = 0.0
              State_VGB(Rho_,i,j,k,iBlock) = Rho
              State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = &
                   matmul(Rot_II,RhoU_D(x_:y_))
-             State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
              State_VGB(Pe_,i,j,k,iBlock) = Pe
              State_VGB(ExtraEint_,i,j,k,iBlock) = &
                   Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
@@ -1166,7 +1166,7 @@ contains
 
     if(present(NatomicOut)) NatomicOut = State_V(Rho_)*No2Si_V(UnitN_)
     if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = 0.0
-    if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W = 0.0
+    if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W = 1e16
     if(present(CgTeOut_W)) CgTeOut_W = 0.0
 
   end subroutine user_material_properties
