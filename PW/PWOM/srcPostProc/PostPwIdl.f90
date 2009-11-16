@@ -56,7 +56,7 @@ program PostPwIdl
  !    open(UnitTmp_, file=NameOut, status='replace',form='unformatted')
  ! end select
 
-  NamePlotVar(1:9) = 'Y X Z'
+  NamePlotVar(1:9) = 'Y X Z Lon'
   
 
   do iTime=1,nTime 

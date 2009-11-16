@@ -17,7 +17,7 @@ my $i=1;
 my $iLine;
 
 my $Pwd     = `pwd`; chop $Pwd;
-my $PostPwIdl = "$Pwd/PostPwIDL.exe";
+my $PostPwIdl = "$Pwd/PostPwIdl.exe";
 
 # Get parameters from STDIN
 print STDOUT "Enter Alt Slice For Output: ";
