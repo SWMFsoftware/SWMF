@@ -77,7 +77,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
   !---------------------------------------------------------------------------
   if(UseBatl)then
-     call select_stepping(DoMoveCoord)
+     call select_stepping(DoMoveCoord)       !^CFG IF IMPLICIT
 !     call regrid_batl(nVar, State_VGB)
 !     call set_batsrus_grid
      RETURN
