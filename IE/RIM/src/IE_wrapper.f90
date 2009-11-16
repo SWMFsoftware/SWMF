@@ -365,7 +365,7 @@ end subroutine IE_set_grid
 
 !==============================================================================
 
-subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
+subroutine IE_get_for_gm(Buffer_IIV,iSize,jSize,tSimulation)
 
   use ModProcIE, only:nProc
   use ModSizeRIM
@@ -375,7 +375,7 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
   character (len=*),parameter :: NameSub='IE_get_for_gm'
 
   integer, intent(in)           :: iSize,jSize
-  real, intent(out)             :: Buffer_II(iSize,jSize)
+  real, intent(out)             :: Buffer_IIV(iSize,jSize,2)
   real (Real8_),    intent(in)  :: tSimulation
 
   integer :: i,j,k
@@ -390,7 +390,8 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
   ! Make sure that the most recent result is provided
   tSimulationTmp = tSimulation
   call IE_run(tSimulationTmp,tSimulation)
-  Buffer_II = PotentialAll
+  Buffer_IIV(:,:,1) = PotentialAll
+  Buffer_IIV(:,:,2) = JouleHeatingAll
 
 end subroutine IE_get_for_gm
 
