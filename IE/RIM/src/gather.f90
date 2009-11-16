@@ -29,6 +29,8 @@ subroutine gather
      write(*,"(a,1p,2e12.3,a)") " RIM=> CPCP South/North : ", &
      cpcps/1000.0, cpcpn/1000.0, " kV"
 
+  call rearrange(JouleHeating,JouleHeatingAll)
+
 contains
 
   subroutine rearrange(ValueLocal, ValueAll)
