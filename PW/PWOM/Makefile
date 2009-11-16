@@ -149,6 +149,13 @@ rundir:
 			ln -s PW/* .; \
 	fi)
 
+PwIDL:
+	cd ${SHAREDIR}; make LIB
+	cd srcPostProc; make PwIDL
+	@echo ' '
+	@echo Program PostPwIDL has been brought up to date.
+	@echo ' '
+
 PDF:
 	@cd doc/Tex; make PDF
 
@@ -157,6 +164,7 @@ clean:
 	cd src; make clean
 	cd srcInterface; make clean
 	cd doc/Tex; make clean
+	cd srcPostProc; make clean
 	@(if [ -d share ]; then cd share; make clean; fi);
 	@(if [ -d util ];  then cd util;  make clean; fi);
 
