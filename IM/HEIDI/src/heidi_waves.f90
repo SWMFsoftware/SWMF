@@ -136,9 +136,15 @@ SUBROUTINE ANISCH
   integer :: iUnitWdc=22
   integer :: iUnitJper=3
 
-
+  real    :: bFieldMagnitude_III(nPoint,nR,nT) 
+  
   DATA pmas/1.672E-24/, keVerg/1.602E-9/,    &
        cv/3E10/, esu/4.803E-10/, gausgam/1.E-5/
+
+!-------------------------------------------------------------------------
+
+  call get_B_field(bFieldMagnitude_III)  
+
 
   kprint=	25		! 27 (E=51), 30 (E=100), 33 (E=200)
   IF(S.EQ.2)ST2='_h'
@@ -427,8 +433,12 @@ SUBROUTINE ANISCH
          'L   PHI     JPER[nA/m2]') 
   DO I=2,IO-1
      DO J=1,JO
-        CJPER=-1.6E3*((PPER(I+1,J,S)-PPER(I,J,S))/DL1+3*(PPER(I,J,S)-   &
-             PPAR(I,J,S))/LZ(I))/BE(I,1)
+        !CJPER=-1.6E3*((PPER(I+1,J,S)-PPER(I,J,S))/DL1+3*(PPER(I,J,S)-   &
+        !     PPAR(I,J,S))/LZ(I))/BE(I,1)
+        
+        CJPER=-1.6E3*((PPER(I+1,J,S)-PPER(I,J,S))/DL1+3*(PPER(I,J,S)-&
+             PPAR(I,J,S))/LZ(I))/bFieldMagnitude_III(nPointEq,i,j)
+
         WRITE(iUnitJper,551) LZ(I),PHI(J),CJPER
      ENDDO
   ENDDO
