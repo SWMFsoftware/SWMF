@@ -96,7 +96,7 @@ module BATL_tree
   integer, public :: nNode = 0, nNodeUsed = 0
 
   ! Ordering along the Morton-Hilbert space filling curve
-  integer, public, allocatable :: iNodeMorton_I(:)
+  integer, public, allocatable :: iNodeMorton_I(:), iMortonNode_A(:)
 
   ! Number of levels below root in level (that has occured at any time)
   integer, public :: nLevel = 0
@@ -147,6 +147,7 @@ contains
     ! Allocate and initialize all elements of tree as unset
     allocate(iTree_IA(nInfo, MaxNode));                 iTree_IA       = Unset_
     allocate(iNodeMorton_I(MaxNode));                   iNodeMorton_I   = Unset_
+    allocate(iMortonNode_A(MaxNode));                   iMortonNode_A   = Unset_
     allocate(iStatusNew_A(MaxNode));                    iStatusNew_A   = Unset_
     allocate(iStatusAll_A(MaxNode));                    iStatusAll_A   = Unset_
     allocate(iProcNew_A(MaxNode));                      iProcNew_A     = Unset_
@@ -167,7 +168,8 @@ contains
   subroutine clean_tree
 
     if(.not.allocated(iTree_IA)) RETURN
-    deallocate(iTree_IA, iNodeMorton_I, iStatusNew_A, iStatusAll_A, &
+    deallocate(iTree_IA, iNodeMorton_I, iMortonNode_A, &
+         iStatusNew_A, iStatusAll_A, &
          iProcNew_A, iNodeNew_A, &
          iNode_B, Unused_B, Unused_BP, &
          iNodeNei_IIIB, DiLevelNei_IIIB)
@@ -604,6 +606,9 @@ contains
        if(iTree_IA(Status_, iNode) == Used_) RETURN
     end do
 
+    ! Did not find the point so set iNode as unset
+    iNode = Unset_
+
   end subroutine find_tree_node
 
   !==========================================================================
@@ -756,7 +761,7 @@ contains
     ! Eliminate holes from the tree
 
     ! Amount of shift for each node
-    integer :: iNode, iNodeSkipped, iNodeOld, i, iBlock
+    integer :: iNode, iNodeSkipped, iNodeOld, iNodeNew, i, iBlock
     !-------------------------------------------------------------------------
     ! Set impossible initial value
     iNodeSkipped = MaxNode + 1
@@ -796,7 +801,9 @@ contains
     ! Fix the node indexes along the Morton curve
     do iMorton = 1, nNodeUsed
        iNodeOld = iNodeMorton_I(iMorton)
-       iNodeMorton_I(iMorton) = iNodeNew_A(iNodeOld)
+       iNodeNew = iNodeNew_A(iNodeOld)
+       iNodeMorton_I(iMorton) = iNodeNew
+       iMortonNode_A(iNodeNew)= iMorton
     end do
     
     ! Fix iNode_B indexes
@@ -875,6 +882,9 @@ contains
     read(UnitTmp_) iTree_IA(:,1:nNodeIn)
     close(UnitTmp_)
 
+    ! Set number of existing refinement levels
+    nLevel = maxval(iTree_IA(Level_,1:nNodeIn))
+
     ! It is probably ordered already...
     call order_tree
 
@@ -908,7 +918,7 @@ contains
     ! Initialize processor and block indexes
     iProcNew_A = Unset_
 
-    ! Create iNodeMorton_I
+    ! Set iNodeMorton_I and iMortonNode_A
     call order_tree
 
     ! Check if there are multiple node types that need separate balancing
@@ -1092,7 +1102,7 @@ contains
   !==========================================================================
   subroutine order_tree
 
-    ! Set iNodeMorton_I indirect index array according to 
+    ! Set iNodeMorton_I and iMortonNode_A indirect index arrays according to 
     ! 1. root node order
     ! 2. Morton ordering for each root node
 
@@ -1102,6 +1112,7 @@ contains
     iNode = 0
     iMorton = 0
     iNodeMorton_I = Unset_
+    iMortonNode_A = Unset_
     do kRoot = 1, nRoot_D(3)
        do jRoot = 1, nRoot_D(2)
           do iRoot = 1, nRoot_D(1)
@@ -1121,7 +1132,8 @@ contains
   recursive subroutine order_children(iNode)
 
     ! Recursively apply Morton ordering for nodes below a root block.
-    ! Store result into iNodeMorton_I using the global iMorton index.
+    ! Store result into iNodeMorton_I and iMortonNode_A using the global 
+    ! iMorton index.
 
     integer, intent(in) :: iNode
     integer :: iChild
@@ -1131,6 +1143,7 @@ contains
     if(iTree_IA(Status_, iNode) >= Used_)then
        iMorton = iMorton + 1
        iNodeMorton_I(iMorton) = iNode
+       iMortonNode_A(iNode)   = iMorton
     else
        do iChild = Child1_, ChildLast_
           call order_children(iTree_IA(iChild, iNode))
@@ -1171,6 +1184,7 @@ contains
 
     write(*,*)'nNode, nNodeUsed, nBlock=',nNode, nNodeUsed, nBlock
     write(*,*)'iNodeMorton_I =', iNodeMorton_I(1:nNodeUsed)
+    write(*,*)'iMortonNode_A =', iMortonNode_A(1:nNodeUsed)
     write(*,*)'IsPeriodic_D =', IsPeriodic_D
 
     iNode = iNodeMorton_I(1)
