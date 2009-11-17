@@ -33,10 +33,11 @@ module BATL_lib
   ! Inherited from BATL_tree
   public:: nNodeUsed
   public:: Unused_B, Unused_BP
-  public:: iNode_B
+  public:: iNode_B, iMortonNode_A
   public:: DiLevelNei_IIIB, iNodeNei_IIIB
   public:: iStatusNew_A, Refine_, Coarsen_
   public:: iTree_IA, MinLevel_, MaxLevel_, Unset_
+  public:: write_tree_file, read_tree_file
 
   ! Inherited from BATL_geometry
   public:: TypeGeometry, IsCartesian, IsRzGeometry, IsSpherical, &
