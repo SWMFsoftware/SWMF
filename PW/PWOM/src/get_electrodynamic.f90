@@ -198,6 +198,8 @@ subroutine PW_get_electrodynamics
      Jr_G(:,:) = 0.0
   endif
 
+  IsFirst = .false.
+
   !set auroral heating 
 !  call set_theta0(nPhi,nTheta,uExBphi_C,uExBtheta_C,Theta_G)
 !  call set_Emax(Ap(1))

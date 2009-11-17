@@ -14,12 +14,13 @@ subroutine get_weimer_potential
   real,save :: MLT_C(360,90), MLatitude_C(360,90)
   !----------------------------------------------------------------------------
 
-  call allocate_ie_variables(360, 90)
+
 
   CurrentTime=StartTime+Time
 
   if (IsFirst) then 
      !Setup Theta and Phi Grids
+     call allocate_ie_variables(360, 90)
      dTheta=cHalfPi/(real(nTheta)-1.0)
      dPhi  =cTwoPi /(real(nPhi)-1.0)
 

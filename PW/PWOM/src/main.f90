@@ -51,6 +51,10 @@ program pw
            Time = Tmax
            exit TIMELOOP
         endif
+        
+        ! Get electrodynamics information before updating lines
+        call PW_get_electrodynamics
+
         do iLine=1,nLine
            
            ! move_line moves the flux tube, then we can use the angular
