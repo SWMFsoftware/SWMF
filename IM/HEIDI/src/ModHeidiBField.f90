@@ -37,19 +37,19 @@ contains
     real                   :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
     real                   :: GradR(nPoint,nR,nPhi),GradTheta(nPoint,nR,nPhi),GradPhi(nPoint,nR,nPhi) 
     real                   :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi
+    real                   :: DipoleFactor
     integer                :: iR, iPhi,iPoint     
     !Parameters
     real, parameter        :: DipoleStrength =  0.32   ! nTm^-3
-    real, parameter        :: alpha = 1.1              ! alpha is the stretching factor
-    real, parameter        :: beta = 1.0/1.1
+    real, parameter        :: alpha = 1.1              ! alpha is the stretching factor in z direction
+    real, parameter        :: beta = 1.0/1.1           ! beta is the stretching factor in y direction
     real, parameter        :: Me = 8.02!*(10**15)
     real, parameter        :: d = 20.0
     real, parameter        :: J =  8.02!*(10**13)
-
-
-
     !----------------------------------------------------------------------------------
 
+    DipoleFactor= cMu*Me/4.*cPi
+    
 
     !\
     ! Dipole magnetic field with uniform number of points along the field line
@@ -280,7 +280,7 @@ contains
                 GradBCrossB_VIII(1,iPoint,iR,iPhi) = Vr 
                 GradBCrossB_VIII(2,iPoint,iR,iPhi) = Vtheta
                 GradBCrossB_VIII(3,iPoint,iR,iPhi) = Vphi
-                mag = DipoleStrength*(sqrt(Br**2+Btheta**2+Bphi**2))
+                mag = DipoleFactor*(sqrt(Br**2+Btheta**2+Bphi**2))
 
                 bFieldMagnitude_III(iPoint,iR,iPhi) = mag
                 
@@ -295,7 +295,9 @@ contains
   
   
     !\
-    ! Stretched dipole magnetic field, due to wire current 
+    ! Stretched dipole magnetic field, due to wire current. 
+    ! The radial distance and field line length are WRONG. 
+    ! Needes another calculation for those. More complicated. 
     !/
 
     if (TypeBFieldGrid == 'stretched2') then  
@@ -611,32 +613,32 @@ contains
     real               :: alpha, beta                                                                                               
     integer            :: i                                                                                                         
     !----------------------------------------------------------------------------------                                             
-                                                                                                                                    
     y = cos(Phi)                                                                                                                    
-                                                                                                                                    
+    
     stretched_dipole_length = 0.0                                                                                                   
-                                                                                                                                    
+    
     LatMax =  acos(sqrt(1./L))                                                                                                      
     LatMin = -LatMax                                                                                                                
     dLat   = (LatMax-LatMin)/(nPoint-1)                                                                                             
                                                                                                                                     
     Lat = LatMin                                                                                                                    
     x(1) = sin(LatMin)           
-  dSdTheta(1) = (sqrt(-dble((-9 * x(1) ** 4 * beta ** 2 + 9 * beta ** 2 * &                                                       
-            x(1) ** 2 + alpha ** 2 + 9 * x(1) ** 4 * y ** 2 * beta ** 2 - 9 * x(1) ** 4 * y **2 - &                                 
-            9 * beta ** 2 * y ** 2 * x(1) ** 2 + 9 * y ** 2 * x(1) ** 2 - 6 * alpha ** 2 * &                                        
-            x(1) ** 2 + 9 * x(1) ** 4 * alpha ** 2) * (y ** 2 - y ** 2 * x(1) ** 2 + beta ** 2 - &                                  
-            beta ** 2 * y ** 2 - beta ** 2 * x(1) ** 2 + beta ** 2 * y ** 2 * x(1) ** 2 + &                                         
-            alpha ** 2 * x(1) ** 2) ** 2 * (1 - x(1) ** 2) * L ** 2 / (-y ** 2 + beta ** 2 * &                                      
-            y ** 2 - beta ** 2) / alpha ** 2)))                                                                                     
-                                                                                                                                    
-                                                                                                                                    
+    
+    dSdTheta(1) = (sqrt(-dble((-9 * x(1) ** 4 * beta ** 2 + 9 * beta ** 2 * &                                                       
+         x(1) ** 2 + alpha ** 2 + 9 * x(1) ** 4 * y ** 2 * beta ** 2 - 9 * x(1) ** 4 * y **2 - &                                 
+         9 * beta ** 2 * y ** 2 * x(1) ** 2 + 9 * y ** 2 * x(1) ** 2 - 6 * alpha ** 2 * &                                        
+         x(1) ** 2 + 9 * x(1) ** 4 * alpha ** 2) * (y ** 2 - y ** 2 * x(1) ** 2 + beta ** 2 - &                                  
+         beta ** 2 * y ** 2 - beta ** 2 * x(1) ** 2 + beta ** 2 * y ** 2 * x(1) ** 2 + &                                         
+         alpha ** 2 * x(1) ** 2) ** 2 * (1 - x(1) ** 2) * L ** 2 / (-y ** 2 + beta ** 2 * &                                      
+         y ** 2 - beta ** 2) / alpha ** 2)))                                                                                     
+    
+    
     do i = 2, nPoint                                                                                                                
-                                                                                                                                    
+       
        Lat =Lat + dLat                                                                                                              
-                                                                                                                                    
+       
        x(i) = sin(Lat)                                                                                                              
-                                                                                                                                    
+       
        dSdTheta(i) = (sqrt(-dble((-9 * x(i) ** 4 * beta ** 2 + 9 * beta ** 2 * &                                                    
             x(i) ** 2 + alpha ** 2 + 9 * x(i) ** 4 * y ** 2 * beta ** 2 - 9 * x(i) ** 4 * y **2 - &                                 
             9 * beta ** 2 * y ** 2 * x(i) ** 2 + 9 * y ** 2 * x(i) ** 2 - 6 * alpha ** 2 * &                                        
@@ -646,8 +648,8 @@ contains
             y ** 2 - beta ** 2) / alpha ** 2)))                                                                                     
                                                                                                                                     
        stretched_dipole_length = stretched_dipole_length + 0.5*(dSdTheta(i)+dSdTheta(i-1))*dLat                                     
-                                                                                                                                    
-    end do                                                                                                                          
+       
+    end do
                                                                                                                                     
   end function stretched_dipole_length       
 

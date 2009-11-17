@@ -4,7 +4,7 @@ module ModHeidiBACoefficients
 
 contains
 
-subroutine get_drift_velocity(nPoint,nR,nPhi, Energy, b4_III,VDrift_VIII,GradBCrossB_VIII)
+subroutine get_drift_velocity(nPoint,nR,nPhi, Energy, bFieldMagnitude_III,VDrift_VIII,GradBCrossB_VIII)
   
   ! \ This subroutine calculates the drift velocity for a
   !   stretched dipole (TypeBFieldGrid = 'stretched2')

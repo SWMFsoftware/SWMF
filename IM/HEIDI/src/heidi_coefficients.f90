@@ -190,7 +190,9 @@ subroutine OTHERPARA
   use ModHeidiIO
   use ModHeidiMain
   use ModHeidiDrifts
+  use ModHeidiInput, ONLY: TypeBField
 
+  
   implicit none
 
   integer :: i,j,k,l,is,iss,ier
@@ -199,10 +201,15 @@ subroutine OTHERPARA
   real    :: erf
   real    :: COULDE(NE,NPA),COULDI(NE,NPA),AFIR,ASEC
   real    :: VF(NSTH),RA(NSTH),MUBOUN,MULC,TMAS(NSTH),TM1(NSTH)
-  external :: erf
+  
+  real, dimension(nR,nT,nE,nPA) :: dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII,dEdt_IIII
+  real, dimension(nR,nT,nPA)    :: dMudt_III 
+
+  external:: erf
+
 
   data TM1/5.4462E-4,1.0,4.0,16.0/  ! Thermal mass in AMU
-  data RA/1.,.77,.2,.03/     ! Thermal proportions in plasmasphere
+  data RA/1.,.77,.2,.03/            ! Thermal proportions in plasmasphere
   !---------------------------------------------------------------------  
 
   !\
@@ -260,33 +267,79 @@ subroutine OTHERPARA
   ! Pitch angle and energy time derivatives at boundaries of grids
   !/
 
-  do I=1,IO
-     do J=1,JO
-        do L=1,UPA(I)
-	   MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
-           MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
-                /MUBOUN/4./(0.5*(FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
-           GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
+  if (TypeBField == 'analytic') then 
+     
+     do I=1,IO
+        do J=1,JO
+           do L=1,UPA(I)
+              MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
+              MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
+                   /MUBOUN/4./(0.5*(FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
+              GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
+              do K=1,KO
+                 EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
+              end do	! K loop
+           end do 	! L loop
+           MULC=MU(UPA(I))+0.5*WMU(UPA(I))
+           do L=UPA(I)+1,LO-1
+              MUBOUN=MU(L)+0.5*WMU(L)
+              if (l== LO-1) MU(L+1) = MU(L)
+              MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
+                   /MUBOUN/4./(0.5*( FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
+              do K=1,KO
+                 EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
+              end do	! K loop
+           end do	! L loop
+           MUDOT(I,J,LO)=0.
            do K=1,KO
-              EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
-	   end do	! K loop
-        end do 	! L loop
-        MULC=MU(UPA(I))+0.5*WMU(UPA(I))
-        do L=UPA(I)+1,LO-1
-           MUBOUN=MU(L)+0.5*WMU(L)
-           if (l== LO-1) MU(L+1) = MU(L)
-           MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
-                /MUBOUN/4./(0.5*( FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
+              EDOT(I,J,K,LO)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
+           end do	! K loop
+        end do 	! J loop
+     end do	! I loop
+     
+  end if
+
+  
+  if (TypeBField == 'numeric') then 
+     
+     call get_coef(dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII,dEdt_IIII,dMudt_III)
+     
+     do I=1,IO
+        do J=1,JO
+           do L=1,UPA(I)
+              MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
+              !MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
+              !     /MUBOUN/4./(0.5*(FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
+              
+              MUDOT(I,J,L) = -((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,l)
+
+              do K=1,KO
+                 EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)!*DL1/DE(K)
+              end do	! K loop
+           end do 	! L loop
+           MULC=MU(UPA(I))+0.5*WMU(UPA(I))
+           do L=UPA(I)+1,LO-1
+              MUBOUN=MU(L)+0.5*WMU(L)
+              if (l== LO-1) MU(L+1) = MU(L)
+              
+              !MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
+              !     /MUBOUN/4./(0.5*( FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
+              
+              MUDOT(I,J,L)= -((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,l)
+
+              do K=1,KO
+                 EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)!*DL1/DE(K)
+              end do	! K loop
+           end do	! L loop
+           MUDOT(I,J,LO)=0.
            do K=1,KO
-              EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
-	   end do	! K loop
-        end do	! L loop
-        MUDOT(I,J,LO)=0.
-        do K=1,KO
-           EDOT(I,J,K,LO)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
-        end do	! K loop
-     end do 	! J loop
-  end do	! I loop
+              EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)!*DL1/DE(K)
+           end do	! K loop
+        end do 	! J loop
+     end do	! I loop
+     
+  end if
+
 
   !\
   ! We assume Te=Ti=1eV (kT=1eV)

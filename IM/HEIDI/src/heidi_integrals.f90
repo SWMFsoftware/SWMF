@@ -238,11 +238,11 @@ subroutine get_B_field(bFieldMagnitude_III)
 end subroutine get_B_field
 
 !============================================================
-subroutine get_coef
+subroutine get_coef(dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII,dEdt_IIII,dMudt_III)
   
   use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR,nE
   use ModConst,      ONLY: cTiny  
-  use ModHeidiMain,  ONLY: Phi, LZ, mu,EKEV
+  use ModHeidiMain,  ONLY: Phi, LZ, mu,EKEV, EBND
   use ModHeidiBACoefficients
 
   use ModHeidiBField
@@ -251,16 +251,17 @@ subroutine get_coef
 
   real, dimension(nPa)              :: bMirror_I,PitchAngle_I
   real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III,RadialDistance_III, Length_III, b4_III
-  real, dimension(nR,nT,nE,nPA)     :: dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII
+  real, dimension(nR,nT,nE,nPA)     :: dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII,dEdt_IIII
+  real, dimension(nR,nT,nPA)        :: dMudt_III
   real, dimension(nPoint,nR,nT,NE)  :: DriftR_IIII, DriftPhi_IIII
   real, dimension(3,nPoint,nR,nT)   :: GradBCrossB_VIII
   real, dimension(3,nPoint,nR,nT,NE):: VDrift_VIII
   real, dimension(nPoint-1,nR,nT)   :: dLength_III
-  real                              :: BouncedDriftR,BouncedDriftPhi,BouncedInvRdRdt
-  real                              :: HalfPathLength,Sb
+  real                              :: BouncedDriftR,BouncedDriftPhi,BouncedInvRdRdt,BouncedInvRdRdt1 
+  real                              :: HalfPathLength,Sb,SecondAdiabInv
   integer                           :: iMirror_I(2)
   integer                           :: iPhi, iR, iPitch,iE
-
+  real                              :: bField_VIII(3,nPoint,nR,nT)
   !----------------------------------------------------------------------------------
 
   call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
@@ -268,7 +269,7 @@ subroutine get_coef
   
  
   do iE = 1, nE
-     call get_drift_velocity(nPoint,nR,nT, EKEV(iE), b4_III,VDrift_VIII(:,:,:,:,iE),GradBCrossB_VIII)
+     call get_drift_velocity(nPoint,nR,nT, EKEV(iE), bFieldMagnitude_III,VDrift_VIII(:,:,:,:,iE),GradBCrossB_VIII)
      
      do iPhi = 1, nT
         do iR =1, nR
@@ -277,11 +278,15 @@ subroutine get_coef
               
               call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
                    bMirror_I(iPitch),iMirror_I)
+             
+              call second_adiabatic_invariant(nPoint, iMirror_I(:), bMirror_I(iPitch), &
+                   bFieldMagnitude_III(:,iR,iPhi),dLength_III(:,iR,iPhi), LZ(iR), SecondAdiabInv) 
               
               call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
                    bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), LZ(iR), HalfPathLength,Sb)
               
-              DriftR_IIII(:,:,:,:) =  VDrift_VIII(1,:,:,:,:)  ! Radial Drift
+              
+              DriftR_IIII(:,:,:,:)   = VDrift_VIII(1,:,:,:,:)  ! Radial Drift
               DriftPhi_IIII(:,:,:,:) = VDrift_VIII(2,:,:,:,:) ! Azimuthal Drift
               
               ! \
@@ -295,13 +300,19 @@ subroutine get_coef
            
               call get_bounced_drift(nPoint, LZ(iR),bFieldMagnitude_III(:,iR,iPhi),&
                    bMirror_I(iPitch), iMirror_I(:),dLength_III(:,iR,iPhi),&
-                   DriftPhi_IIII(:,iR,iPhi,iE),BouncedDriftPhi,RadialDistance_III(:,iR,iPhi)) 
+                   DriftPhi_IIII(:,iR,iPhi,iE),BouncedDriftPhi,RadialDistance_III(:,iR,iPhi),BouncedInvRdRdt1 ) 
               
               if (Sb==0.0) Sb = cTiny
               dRdt_IIII  (iR,iPhi,iE,iPitch)   = BouncedDriftR/Sb
               dPhiDt_IIII(iR,iPhi,iE,iPitch)   = BouncedDriftPhi/Sb
               InvRdRdt_IIII(iR,iPhi,iE,iPitch) = BouncedInvRdRdt/Sb
-                           
+              if (SecondAdiabInv ==0.0) SecondAdiabInv = cTiny
+              
+              !write(*,*) 'SecondAdiabInv',SecondAdiabInv
+
+              dEdt_IIII(iR,iPhi,iE,iPitch)  = - 8. *EBND(iE)/(SecondAdiabInv*SecondAdiabInv)* BouncedInvRdRdt/Sb
+              dMudt_III(iR,iPhi,iPitch) = 4./(SecondAdiabInv*SecondAdiabInv)* BouncedInvRdRdt/Sb
+
 
            end do
         end do
