@@ -1,6 +1,9 @@
 #ECHO
 T			DoEcho
 
+#BATL
+T
+
 #LOOKUPTABLE
 pPerE(rho,e/rho)        NameTable
 save                    NameCommand
