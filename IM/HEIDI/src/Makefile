@@ -82,7 +82,8 @@ ${EXE}: ${EXEOBJECTS}
 	cd Tmp_; \
 		ar -x ${LIBDIR}/libEMPIRICALIE.a; \
 		ar -x ${LIBDIR}/libINDICES.a; \
-		ar -x ${LIBDIR}/libSHARE.a
+		ar -x ${LIBDIR}/libSHARE.a;\
+		ar -x ${LIBDIR}/libTIMING.a
 	${LINK.f90}  -o  ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}
 	rm -rf Tmp_
 
