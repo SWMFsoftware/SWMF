@@ -90,13 +90,23 @@ contains
 
   !============================================================================
 
-  subroutine init_grid_batl
+  subroutine init_grid_batl(DoRefine_B)
 
     use BATL_tree, ONLY: adapt_tree, distribute_tree
     use BATL_grid, ONLY: create_grid
+
+    logical, optional, intent(in):: DoRefine_B(MaxBlock)
+
+    integer:: iBlock
     !------------------------------------------------------------------------
 
-    call adapt_tree
+    if(present(DoRefine_B))then
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          if(DoRefine_B(iBlock)) iStatusNew_A(iNode_B(iBlock)) = Refine_
+       end do
+       call adapt_tree
+    end if
     call distribute_tree(DoMove=.true.)
     call create_grid
 
