@@ -196,7 +196,7 @@ contains
 
     use BATL_lib, ONLY: init_mpi, init_batl, init_grid_batl, &
          iProc, iComm, MaxDim, MaxBlock, nBlock, Unused_B, Xyz_DGB, iNode_B, &
-         iTree_IA, iStatusNew_A, MaxLevel_, Refine_
+         iTree_IA, MaxLevel_
 
     use ModReadParam, ONLY: read_file, read_init, &
          read_line, read_command, read_var
@@ -204,6 +204,7 @@ contains
     character(len=100):: StringLine, NameCommand
 
     integer:: nRoot_D(MaxDim) = (/4,4,2/)
+    logical, allocatable:: DoRefine_B(:)
     real :: BlobRadius
     integer :: iDim, i, j, k, iBlock, iLevel
     !------------------------------------------------------------------------
@@ -252,21 +253,24 @@ contains
     ! Allow only one level of refinement
     iTree_IA(MaxLevel_,:) = MaxLevel
 
+    allocate(DoRefine_B(MaxBlock))
     do iLevel = 1, MaxLevel
+       DoRefine_B = .false.
        LOOPBLOCK: do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(sum((Xyz_DGB(1:nDim,i,j,k,iBlock) - BlobCenter_D)**2) &
                   < BlobRadius2)then
-                iStatusNew_A(iNode_B(iBlock)) = Refine_
+                DoRefine_B(iBlock) = .true.
                 CYCLE LOOPBLOCK
              end if
           end do; end do; end do
        end do LOOPBLOCK
 
-       call init_grid_batl
+       call init_grid_batl(DoRefine_B)
 
     end do
+    deallocate(DoRefine_B)
 
     ! Initial time step and time
     iStep    = 0
