@@ -10,7 +10,6 @@ subroutine get_drift_velocity(nPoint,nR,nPhi, Energy, bFieldMagnitude_III,VDrift
   !   stretched dipole (TypeBFieldGrid = 'stretched2')
   ! /
 
-  use ModCoordTransform, ONLY: cross_product
   use ModConst,          ONLY: cElectronCharge
 
   integer, intent(in)    :: nPoint        
@@ -22,21 +21,17 @@ subroutine get_drift_velocity(nPoint,nR,nPhi, Energy, bFieldMagnitude_III,VDrift
   real                   :: bFieldMagnitude_III(nPoint,nR,nPhi)
   real                   :: b4_III(nPoint,nR,nPhi)
   real                   :: VDrift_VIII(3,nPoint,nR,nPhi)
-  real                   :: Energy
+  real                   :: Energy,b2,b4
   integer                :: iPoint, iR, iPhi
   !-----------------------------------------------------------------------------
 
   do iPhi = 1, nPhi
      do iR =1, nR
         do iPoint =1 ,nPoint
-!           GradBCrossB_VIII(:,iPoint,iR,iPhi) = &
-!                cross_product(GradB2over2_VIII(:,iPoint,iR,iPhi), &
-!                bField_VIII(:,iPoint,iR,iPhi))
-           
-           b4_III(iPoint,iR,iPhi)= bFieldMagnitude_III(iPoint,iR,iPhi)*&
-                bFieldMagnitude_III(iPoint,iR,iPhi)*&
-                bFieldMagnitude_III(iPoint,iR,iPhi)*&
-                bFieldMagnitude_III(iPoint,iR,iPhi)
+
+           b2 = bFieldMagnitude_III(iPoint,iR,iPhi)*bFieldMagnitude_III(iPoint,iR,iPhi)
+           b4 = b2*b2
+           b4_III(iPoint,iR,iPhi) = b4
                    
            VDrift_VIII(1,iPoint,iR,iPhi) = -Energy*GradBCrossB_VIII(1,iPoint,iR,iPhi)/&
                 (cElectronCharge*b4_III(iPoint,iR,iPhi))   ! Vr
