@@ -21,6 +21,7 @@ subroutine get_IntegralH(IntegralH_III)
   integer              :: iMirror_I(2)
   real                 :: bFieldMagnitude_III(nPoint,nR,nT)! Magnitude of magnetic field 
   real                 :: RadialDistance_III(nPoint,nR,nT)
+  real                 :: GradBCrossB_VIII(3,nPoint,nR,nT)
   real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
   real                 :: Length_III(nPoint,nR,nT) 
   real                 :: PitchAngle_I(nPa)   
@@ -54,7 +55,7 @@ subroutine get_IntegralH(IntegralH_III)
   if (TypeBField == 'numeric') then
 
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III)
+          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
 
      do iPhi = 1, nT
         do iR =1, nR
@@ -94,6 +95,7 @@ subroutine get_IntegralI(IntegralI_III)
   integer              :: iMirror_I(2)
   real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
   real                 :: RadialDistance_III(nPoint,nR,nT)
+  real                 :: GradBCrossB_VIII(3,nPoint,nR,nT)
   real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
   real                 :: Length_III(nPoint,nR,nT) 
   real                 :: PitchAngle_I(nPa)
@@ -131,7 +133,7 @@ subroutine get_IntegralI(IntegralI_III)
   if (TypeBField == 'numeric') then
 
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III)
+          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
 
      do iPhi = 1, nT
         do iR =1, nR
@@ -170,6 +172,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III,PitchAngle_I)
   integer              :: iMirror_I(2)
   real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
   real                 :: RadialDistance_III(nPoint,nR,nT)
+  real                 :: GradBCrossB_VIII(3,nPoint,nR,nT)
   real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
   real                 :: Length_III(nPoint,nR,nT) 
   real                 :: PitchAngle_I(nPa)
@@ -182,7 +185,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III,PitchAngle_I)
   if (TypeBField == 'numeric') then
      
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III)
+          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
      
      do iPhi = 1, nT
         do iR =1, nR
@@ -222,13 +225,14 @@ subroutine get_B_field(bFieldMagnitude_III)
   real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
   real                 :: RadialDistance_III(nPoint,nR,nT)
   real                 :: dLength_III(nPoint-1,nR,nT)       ! Length interval between i and i+1  
+  real                 :: GradBCrossB_VIII(3,nPoint,nR,nT)
   real                 :: Length_III(nPoint,nR,nT) 
   integer              :: iPhi, iR,iPitch
 
   !----------------------------------------------------------------------------------
   
   call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-       RadialDistance_III,Length_III, dLength_III)
+       RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
   
   
 end subroutine get_B_field
@@ -249,7 +253,7 @@ subroutine get_coef
   real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III,RadialDistance_III, Length_III, b4_III
   real, dimension(nR,nT,nE,nPA)     :: dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII
   real, dimension(nPoint,nR,nT,NE)  :: DriftR_IIII, DriftPhi_IIII
-  real, dimension(3,nPoint,nR,nT)   :: GradB2over2_VIII
+  real, dimension(3,nPoint,nR,nT)   :: GradBCrossB_VIII
   real, dimension(3,nPoint,nR,nT,NE):: VDrift_VIII
   real, dimension(nPoint-1,nR,nT)   :: dLength_III
   real                              :: BouncedDriftR,BouncedDriftPhi,BouncedInvRdRdt
@@ -260,11 +264,11 @@ subroutine get_coef
   !----------------------------------------------------------------------------------
 
   call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-       RadialDistance_III,Length_III, dLength_III,GradB2over2_VIII)
+       RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
   
  
   do iE = 1, nE
-     call get_drift_velocity(nPoint,nR,nT, EKEV(iE), b4_III,VDrift_VIII(:,:,:,:,iE))
+     call get_drift_velocity(nPoint,nR,nT, EKEV(iE), b4_III,VDrift_VIII(:,:,:,:,iE),GradBCrossB_VIII)
      
      do iPhi = 1, nT
         do iR =1, nR
