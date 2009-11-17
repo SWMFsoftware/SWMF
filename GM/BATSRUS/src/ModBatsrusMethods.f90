@@ -47,17 +47,14 @@ contains
 
   subroutine grid_setup
 
+    ! Set up problem geometry, blocks, and grid structure.
+
     use ModIO, ONLY: restart
-    use ModRestartFile, ONLY: read_octree_file
+    use ModRestartFile, ONLY: read_octree_file, NameRestartInDir
 
     use ModMain, ONLY: UseBatl
-    use BATL_lib, ONLY: nBlockBatl => nBlock, Unused_B, iNode_B, &
-         iStatusNew_A, Refine_, init_grid_batl
+    use BATL_lib, ONLY: init_grid_batl, read_tree_file
     use ModBatlInterface, ONLY: set_batsrus_grid
-
-    !\
-    ! Set up problem geometry, blocks, and grid structure.
-    !/
 
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
@@ -86,12 +83,7 @@ contains
           call specify_refinement(local_refine)
 
           if(UseBatl)then
-             do iBlock = 1, nBlockBatl
-                if(Unused_B(iBlock)) CYCLE
-                if(local_refine(iBlock)) &
-                     iStatusNew_A(iNode_B(iBlock)) = Refine_
-             end do
-             call init_grid_batl
+             call init_grid_batl(local_refine)
              call set_batsrus_grid
           else
              call refine_grid(local_refine)
@@ -100,9 +92,13 @@ contains
     else
        ! Read initial solution block geometry from octree restart file.
 
-       ! Read restart header file only if old type.
-       call read_octree_file     ! Read octree restart file.
-
+       if(UseBatl)then
+          call read_tree_file(trim(NameRestartInDir)//'octree.rst')
+          call init_grid_batl
+          call set_batsrus_grid
+       else
+          call read_octree_file
+       end if
     end if
 
     if(.not.UseBatl)then

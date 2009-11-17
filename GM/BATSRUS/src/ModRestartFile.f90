@@ -8,7 +8,7 @@ module ModRestartFile
   use ModMain,       ONLY: GlobalBlk, Global_Block_Number, nI, nJ, nK, Gcn, &
        nBlock, UnusedBlk, ProcTest, BlkTest, iTest, jTest, kTest, &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
-       NameThisComp
+       NameThisComp, UseBatl
   use ModVarIndexes, ONLY: nVar, DefaultState_V
   use ModAdvance,    ONLY: State_VGB
   use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK
@@ -18,6 +18,8 @@ module ModRestartFile
   use ModMain,       ONLY: UseConstrainB                    !^CFG IF CONSTRAINB
   use ModImplicit,   ONLY: n_prev, ImplOld_VCB, dt_prev          !^CFG IF IMPLICIT
   use ModKind,       ONLY: Real4_, Real8_
+
+  use BATL_lib, ONLY: write_tree_file, iMortonNode_A, iNode_B
 
   implicit none
 
@@ -151,7 +153,11 @@ contains
     !------------------------------------------------------------------------
     call timing_start(NameSub)
 
-    call write_octree_file
+    if(UseBatl)then
+       call write_tree_file(trim(NameRestartOutDir)//'octree.rst')
+    else
+       call write_octree_file
+    end if
     if(iProc==0)call write_restart_header
     select case(TypeRestartOutFile)
     case('block')
@@ -191,7 +197,7 @@ contains
     do iBlock = 1, nBlock
        if (.not.unusedBLK(iBlock)) call fix_block_geometry(iBlock)
     end do
-    call set_body_flag
+    if(.not.UseBatl) call set_body_flag
     call timing_stop(NameSub)
 
   end subroutine read_restart_files
@@ -401,8 +407,12 @@ contains
     else
        DoTest=.false.; DoTestMe=.false.
     end if
-
-    iBlockRestart = iBlockRestartALL_A(global_block_number(iBlock))
+    
+    if(UseBatl)then
+       iBlockRestart = iMortonNode_A(iNode_B(iBlock))
+    else
+       iBlockRestart = iBlockRestartALL_A(global_block_number(iBlock))
+    end if
     write(StringDigit,'(i1)') max(5,1+int(alog10(real(iBlockRestart))))
 
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
@@ -523,7 +533,11 @@ contains
     character:: StringDigit
     !--------------------------------------------------------------------
 
-    iBlockRestart = global_block_number(iBlock)
+    if(UseBatl)then
+       iBlockRestart = iMortonNode_A(iNode_B(iBlock))
+    else
+       iBlockRestart = global_block_number(iBlock)
+    end if
     write(StringDigit,'(i1)') max(5,int(1+alog10(real(iBlockRestart))))
 
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
@@ -634,10 +648,13 @@ contains
 
        if(UnusedBlk(iBlock)) CYCLE
        ! Use the global block index as the record number
-       iRec = iBlockRestartALL_A(global_block_number(iBlock))
+       if(UseBatl)then
+          iRec = iMortonNode_A(iNode_B(iBlock))
+       else
+          iRec = iBlockRestartALL_A(global_block_number(iBlock))
+       end if
 
-       if(DoTestMe) write(*,*) NameSub,' iBlock,iBlockGlobal, iRec=',&
-            iBlock, global_block_number(iBlock), iRec
+       if(DoTestMe) write(*,*) NameSub,' iBlock, iRec=', iBlock, iRec
 
        ! Fill in ghost cells
        do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
@@ -734,7 +751,11 @@ contains
 
        if(UnusedBlk(iBlock)) CYCLE
        ! Use the global block index as the record number
-       iRec = global_block_number(iBlock)
+       if(UseBatl)then
+          iRec = iMortonNode_A(iNode_B(iBlock))
+       else
+          iRec = global_block_number(iBlock)
+       end if
 
        if(UseConstrainB)then                          !^CFG IF CONSTRAINB BEGIN
           ! Save face centered magnetic field 
