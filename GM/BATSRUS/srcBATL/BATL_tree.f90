@@ -1184,7 +1184,7 @@ contains
 
     write(*,*)'nNode, nNodeUsed, nBlock=',nNode, nNodeUsed, nBlock
     write(*,*)'iNodeMorton_I =', iNodeMorton_I(1:nNodeUsed)
-    write(*,*)'iMortonNode_A =', iMortonNode_A(1:nNodeUsed)
+    write(*,*)'iMortonNode_A =', iMortonNode_A(1:nNode)
     write(*,*)'IsPeriodic_D =', IsPeriodic_D
 
     iNode = iNodeMorton_I(1)
