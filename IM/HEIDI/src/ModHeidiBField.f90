@@ -37,7 +37,7 @@ contains
     real                   :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
     real                   :: GradR(nPoint,nR,nPhi),GradTheta(nPoint,nR,nPhi),GradPhi(nPoint,nR,nPhi) 
     real                   :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi
-    real                   :: DipoleFactor
+    real                   :: DipoleFactor,delta
     integer                :: iR, iPhi,iPoint     
     !Parameters
     real, parameter        :: DipoleStrength =  0.32   ! nTm^-3
@@ -73,7 +73,14 @@ contains
              end do
           end do
        end do
-              
+       
+       do iPhi =1, nPhi
+          do iR =1, nR
+             do iPoint = 1, nPoint-1
+                dLength_III(iPoint,iR,iPhi) = Length_III(iPoint+1,iR,iPhi) - Length_III(iPoint,iR,iPhi)
+             end do
+          end do
+       end do
     end if
 
 
@@ -111,7 +118,14 @@ contains
              end do
           end do
        end do
-    
+       
+       do iPhi =1, nPhi
+          do iR =1, nR
+             do iPoint = 1, nPoint
+                dLength_III(iPoint,iR,iPhi) = Length_III(iPoint+1,iR,iPhi) - Length_III(iPoint,iR,iPhi)
+             end do
+          end do
+       end do
     end if
 
     !\
@@ -288,15 +302,24 @@ contains
                 bFieldMagnitude_III(iPoint,iR,iPhi) = mag
                 
                 Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), Phi_I(iPhi), alpha, beta)        
+                !Length_III(iPoint,iR,iPhi) = dipole_length(L_I(ir),LatMin,Lat)
                 Lat = Lat + dLat 
 
              end do
           end do
        end do
 
+       do iPhi =1, nPhi
+          do iR =1, nR
+             do iPoint =1, nPoint-1
+                delta = Length_III(iPoint,iR,iPhi)/(nPoint)
+                dLength_III(iPoint,iR,iPhi) = delta+(iPoint-1)*delta
+             end do
+          end do
+       end do
+
     end if
-  
-  
+
     !\
     ! Stretched dipole magnetic field, due to wire current. 
     ! The radial distance and field line length are WRONG. 
@@ -415,17 +438,16 @@ contains
           end do
        end do
     end do
-
- end if
     
- do iPhi =1, nPhi
-    do iR =1, nR 
-       do iPoint = 1, nPoint-1
-          dLength_III(iPoint,iR,iPhi) = Length_III(iPoint+1,iR,iPhi) - Length_III(iPoint,iR,iPhi)
+    do iPhi =1, nPhi
+       do iR =1, nR 
+          do iPoint = 1, nPoint-1
+             dLength_III(iPoint,iR,iPhi) = Length_III(iPoint+1,iR,iPhi) - Length_III(iPoint,iR,iPhi)
+          end do
        end do
     end do
- end do
- 
+
+ end if
 
 
  
