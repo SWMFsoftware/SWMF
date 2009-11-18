@@ -43,8 +43,11 @@ subroutine calc_aurora
      JrH(:,iLat)   = OuterMagJr(:,iLat)
   enddo
 
-  call solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, OCFLBH, eFluxH, AveEH)
-
+  if (iConductanceModel == 5) then
+     call old_aurora(RhoH,PH,TH, JrH, InvBH, LatH, OCFLBH, eFluxH, AveEH)
+  else
+     call solve_for_aurora(RhoH,PH,TH, JrH, InvBH, LatH, OCFLBH, eFluxH, AveEH)
+  endif
   do iLon = 0, nLons+1
      ! Need to shift longitudes
      iLonTo   = iLon
@@ -85,7 +88,11 @@ subroutine calc_aurora
      JrH(:,iLat)   = OuterMagJr(:,iLR)
   enddo
 
-  call solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, OCFLBH, eFluxH, AveEH)
+  if (iConductanceModel == 5) then
+     call old_aurora(RhoH,PH,TH, JrH, InvBH, LatH, OCFLBH, eFluxH, AveEH)
+  else
+     call solve_for_aurora(RhoH,PH,TH, JrH, InvBH, LatH, OCFLBH, eFluxH, AveEH)
+  endif
 
   ! Move results back into main variables
   do iLat = 1, nLats/2
@@ -521,3 +528,270 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
   deallocate(pNorm, Width, Smooth, Center)
 
 end subroutine solve_for_aurora
+
+
+!------------------------------------------------------------------------
+
+subroutine old_aurora(RhoH, PH, TH, JrH, InvBH, LatH, OCFLBH, eFluxH, AveEH)
+
+  use ModRIM
+  use ModParamRIM
+  use ModNumConst, only: cDegToRad, cPi
+  use ModProcIE
+  use ModAurora
+
+  implicit none
+
+  ! Variables that have an 'H' stuck on the end are only defined for a
+  ! hemisphere
+  real, dimension(0:nLonsAll+1,nLats/2) :: &
+       rhoH, pH, TH, InvBH, LatH
+  real, dimension(0:nLons+1,nLats/2), intent(in)  :: JrH
+  real, dimension(0:nLons+1,nLats/2), intent(out) :: eFluxH, AveEH
+  real, dimension(0:nLonsAll+1), intent(out) :: OCFLBH
+
+  real, allocatable :: Width(:), smooth(:), Center(:)
+
+  real :: smoothlat(nLats/2), MaxP
+  real :: y1, y2, x1, x2, distance, dlat, dmlt
+  real :: hal_a0, hal_a1, hal_a2, hall, ped
+  real :: ped_a0, ped_a1, ped_a2
+  logical :: IsDone, IsPeakFound, IsPolarCap
+  logical :: IsFirstTime = .true.
+  integer :: iLon, iLat, iSubLon, nSmooth, iMlt, jLat, iLonOff, i 
+
+  allocate( &
+       Width(0:nLonsAll+1), &
+       Smooth(0:nLonsAll+1), &
+       Center(0:nLonsAll+1))
+
+  iLonOff = iProc*nLons  
+  OCFLBSmoothLon = 15.0*cDegToRad
+
+  nSmooth = OCFLBSmoothLon/(Longitude(1,1) - Longitude(0,1))
+
+  eFluxH = 0.0001
+  AveEH  = 0.5
+  OCFLBH = 1.0e32
+
+  ! First, find open closed field-line boundary
+
+  Width = 0.0
+  do iLon = 0, nLonsAll+1
+
+     IsDone = .false.
+     IsPeakFound = .false.
+     MaxP = maxval(pH(iLon,:))
+
+     iLat = 1
+
+     do while (.not. IsDone)
+
+        if (InvBH(iLon, iLat) > 0) then
+
+           ! Set OCFLB to latitude of first open field-line
+           if (OCFLBH(iLon) == 1.0e32) &
+                OCFLBH(iLon) = abs(LatH(iLon,iLat))
+
+           ! Find the peak location of the pressure - this may be the location
+           ! of the inner edge of the plasma sheet.
+           if (pH(iLon,iLat) == MaxP) IsPeakFound = .true.
+
+           ! Determine the width of the oval.  We want it to be greater
+           ! than some minimum width
+           Width(iLon) = OCFLBH(iLon) - abs(LatH(iLon,iLat))
+
+           if (IsPeakFound .and. Width(iLon) >= MinAuroralWidth) &
+                IsDone = .true.
+
+        else 
+
+           ! if we encounter an open "pocket" in a closed region, then
+           ! this will start the search over again.
+
+           OCFLBH(iLon) = 1.0e32
+
+        endif
+
+        iLat = iLat + 1
+
+        if (iLat == nLats/2) then
+           OCFLBH(iLon) = MaxAuroralLat
+           Width(iLon) = MinAuroralWidth
+           IsDone = .true.
+        endif
+
+     enddo
+
+     if (OCFLBH(iLon) > MaxAuroralLat) OCFLBH(iLon) = MaxAuroralLat
+     if (width(iLon) > 12.0*cDegToRad) width(iLon) = 12.0*cDegToRad
+
+     Center(iLon) = OCFLBH(iLon) - Width(iLon)
+
+     if (Center(iLon)+Width(iLon) > MaxAuroralLat+MinAuroralWidth) &
+          Width(iLon) = MaxAuroralLat + MinAuroralWidth - Center(iLon)
+
+  enddo
+
+!  do iLon = 0, nLonsAll+1
+!     smooth(iLon) = 0.0
+!     do iSubLon = iLon-nSmooth, iLon+nSmooth
+!        i = iSubLon
+!        if (i < 1) i = i + nLonsAll
+!        if (i > nLonsAll) i = i - nLonsAll
+!        smooth(iLon) = smooth(iLon) + OCFLBH(i)
+!     enddo
+!  enddo
+!  OCFLBH = smooth/(2*nSmooth+1)
+!
+!  do iLon = 0, nLonsAll+1
+!     smooth(iLon) = 0.0
+!     do iSubLon = iLon-nSmooth, iLon+nSmooth
+!        i = iSubLon
+!        if (i < 1) i = i + nLonsAll
+!        if (i > nLonsAll) i = i - nLonsAll
+!        smooth(iLon) = smooth(iLon) + Center(i)
+!     enddo
+!  enddo
+!  Center = smooth/(2*nSmooth+1)
+!
+!  do iLon = 0, nLonsAll+1
+!     smooth(iLon) = 0.0
+!     do iSubLon = iLon-nSmooth, iLon+nSmooth
+!        i = iSubLon
+!        if (i < 1) i = i + nLonsAll
+!        if (i > nLonsAll) i = i - nLonsAll
+!        smooth(iLon) = smooth(iLon) + Width(i)
+!     enddo
+!  enddo
+!  Width = smooth/(2*nSmooth+1) !/ 2.0
+
+  Width = 5.0*cDegToRad
+  ocflbh = 70.0*cDegToRad
+
+  if (IsFirstTime) then
+     call smooth_aurora
+     IsFirstTime = .false.
+  endif
+
+  dlat = (cond_lats(1) - cond_lats(2))*cDegToRad
+  dmlt = (cond_mlts(2) - cond_mlts(1))*cPi/12.0
+
+  do iLon = 0, nLons+1
+     do iLat = 1, nLats/2
+
+        y1 = LatH(iLon,iLat)/dlat + 1.0
+        if (y1 < 1) y1 = 1.0
+        if (y1 > i_cond_nlats-1) then
+           jlat = i_cond_nlats-1
+           y1   = 1.0
+        else
+           jlat = y1
+           y1   = 1.0 - (y1 - jlat)
+        endif
+        y2 = 1.0 - y1
+
+        x1 = Longitude(iLon, iLat)/dmlt + 1.0
+        if (x1 < 1) x1 = x1 + i_cond_nmlts
+        if (x1 >= i_cond_nmlts+1) x1 = x1 - i_cond_nmlts
+        imlt = x1
+        x1   = 1.0 - (x1 - imlt)
+        x2   = 1.0 - x1
+
+        if (JrH(iLon,iLat) > 0) then
+
+           hal_a0 = x1*y1*hal_a0_up(imlt  ,jlat  ) + &
+                x2*y1*hal_a0_up(imlt+1,jlat  ) + &
+                x1*y2*hal_a0_up(imlt  ,jlat+1) + &
+                x2*y2*hal_a0_up(imlt+1,jlat+1)
+           
+           hal_a1 = x1*y1*hal_a1_up(imlt  ,jlat  ) + &
+                x2*y1*hal_a1_up(imlt+1,jlat  ) + &
+                x1*y2*hal_a1_up(imlt  ,jlat+1) + &
+                x2*y2*hal_a1_up(imlt+1,jlat+1)
+
+           hal_a2 = x1*y1*hal_a2_up(imlt  ,jlat  ) + &
+                x2*y1*hal_a2_up(imlt+1,jlat  ) + &
+                x1*y2*hal_a2_up(imlt  ,jlat+1) + &
+                x2*y2*hal_a2_up(imlt+1,jlat+1)
+
+           ped_a0 = x1*y1*ped_a0_up(imlt  ,jlat  ) + &
+                x2*y1*ped_a0_up(imlt+1,jlat  ) + &
+                x1*y2*ped_a0_up(imlt  ,jlat+1) + &
+                x2*y2*ped_a0_up(imlt+1,jlat+1)
+
+           ped_a1 = x1*y1*ped_a1_up(imlt  ,jlat  ) + &
+                x2*y1*ped_a1_up(imlt+1,jlat  ) + &
+                x1*y2*ped_a1_up(imlt  ,jlat+1) + &
+                x2*y2*ped_a1_up(imlt+1,jlat+1)
+
+           ped_a2 = x1*y1*ped_a2_up(imlt  ,jlat  ) + &
+                x2*y1*ped_a2_up(imlt+1,jlat  ) + &
+                x1*y2*ped_a2_up(imlt  ,jlat+1) + &
+                x2*y2*ped_a2_up(imlt+1,jlat+1)
+           
+        else
+           
+           hal_a0 = x1*y1*hal_a0_do(imlt  ,jlat  ) + &
+                x2*y1*hal_a0_do(imlt+1,jlat  ) + &
+                x1*y2*hal_a0_do(imlt  ,jlat+1) + &
+                x2*y2*hal_a0_do(imlt+1,jlat+1)
+
+           hal_a1 = x1*y1*hal_a1_do(imlt  ,jlat  ) + &
+                x2*y1*hal_a1_do(imlt+1,jlat  ) + &
+                x1*y2*hal_a1_do(imlt  ,jlat+1) + &
+                x2*y2*hal_a1_do(imlt+1,jlat+1)
+
+           hal_a2 = x1*y1*hal_a2_do(imlt  ,jlat  ) + &
+                x2*y1*hal_a2_do(imlt+1,jlat  ) + &
+                x1*y2*hal_a2_do(imlt  ,jlat+1) + &
+                x2*y2*hal_a2_do(imlt+1,jlat+1)
+
+           ped_a0 = x1*y1*ped_a0_do(imlt  ,jlat  ) + &
+                x2*y1*ped_a0_do(imlt+1,jlat  ) + &
+                x1*y2*ped_a0_do(imlt  ,jlat+1) + &
+                x2*y2*ped_a0_do(imlt+1,jlat+1)
+
+           ped_a1 = x1*y1*ped_a1_do(imlt  ,jlat  ) + &
+                x2*y1*ped_a1_do(imlt+1,jlat  ) + &
+                x1*y2*ped_a1_do(imlt  ,jlat+1) + &
+                x2*y2*ped_a1_do(imlt+1,jlat+1)
+
+           ped_a2 = x1*y1*ped_a2_do(imlt  ,jlat  ) + &
+                x2*y1*ped_a2_do(imlt+1,jlat  ) + &
+                x1*y2*ped_a2_do(imlt  ,jlat+1) + &
+                x2*y2*ped_a2_do(imlt+1,jlat+1)
+
+        endif
+
+        distance = abs(LatH(iLon,iLat) - OCFLBH(iLon+iLonOff))/3.0
+   
+        hal_a0 = hal_a0 * exp(-1.0*(distance/(Width(iLon+iLonOff)))**2)
+        ped_a0 = ped_a0 * exp(-1.0*(distance/(Width(iLon+iLonOff)))**2)
+
+        !
+        ! A sort of correction on the fit
+        !
+
+        hal_a1 = hal_a0 + (hal_a1 - hal_a0)*  &
+             exp(-1.0*(distance/Width(iLon+iLonOff))**2)
+        ped_a1 = ped_a0 + (ped_a1 - ped_a0)*  &
+             exp(-1.0*(distance/Width(iLon+iLonOff))**2)
+
+        ! Multiply by sqrt(3) to compensate for the 3 times narrower oval
+        hall=1.7*( &
+             hal_a0-hal_a1*exp(-abs(JrH(iLon,iLat)*1.0e9)*hal_a2**2))
+        ped =1.7*( &
+             ped_a0-ped_a1*exp(-abs(JrH(iLon,iLat)*1.0e9)*ped_a2**2))
+
+        if (hall > 1.0 .and. ped > 0.5) then
+           AveEH(iLon,iLat) = ((hall/ped)/0.45)**(1.0/0.85)
+           EFluxH(iLon,iLat) = (ped*(16.0+AveEH(iLon,iLat)**2)/&
+                (40.0*AveEH(iLon,iLat)))**2
+
+        endif
+
+     enddo
+  enddo
+
+end subroutine old_aurora

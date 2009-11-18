@@ -27,6 +27,7 @@ MODULES = \
 	ModIoRIM.o\
 	ModParamRIM.o\
 	ModFiles.o\
+	ModAurora.o\
 	ModIEInterface.o
 
 #
