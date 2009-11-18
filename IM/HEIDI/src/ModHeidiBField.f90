@@ -6,7 +6,7 @@ module ModHeidiBField
 contains
   
   subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-       RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
+       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII)
     
     use ModHeidiInput, ONLY: TypeBfieldGrid
     use ModNumConst,   ONLY: cTiny, cPi
@@ -276,6 +276,9 @@ contains
                      dble((y**2-y**2*x**2+beta**2-beta**2*y**2-beta**2*x**2+beta**2*y**2*x**2+x**2*alpha**2)**8)*dble((r**2*(y**2- &
                      y**2*x**2+beta**2- beta**2*y**2-beta**2*x**2+beta**2*y**2*x**2+x**2*alpha**2))**(-0.1D1/0.2D1))/dble(alpha**3)
 
+                if (Vr ==0.0) Vr = 0.000001
+                if (Vtheta ==0.0) Vtheta = 0.000001
+                if (Vphi ==0.0) Vphi = 0.000001
 
                 GradBCrossB_VIII(1,iPoint,iR,iPhi) = Vr 
                 GradBCrossB_VIII(2,iPoint,iR,iPhi) = Vtheta
