@@ -124,8 +124,6 @@ contains
 
     call init_mhd_variables
 
-    UnitUser_V(LevelXe_:LevelPl_) = 1e-6 ! = No2Io_V(UnitX_) = micron
-
   end subroutine init_mod_equation
 
 end module ModVarIndexes
