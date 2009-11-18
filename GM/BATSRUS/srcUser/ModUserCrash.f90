@@ -1484,18 +1484,30 @@ contains
     use ModProcMH,      ONLY: iProc, iComm
     use ModVarIndexes,  ONLY: LevelXe_, LevelPl_, Rho_, UnitUser_V
     use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
-    use ModPhysics,     ONLY: cRadiationNo, Si2No_V, UnitTemperature_
+    use ModPhysics,     ONLY: cRadiationNo, Si2No_V, UnitTemperature_, &
+         No2Io_V, UnitX_
     use ModConst,       ONLY: cKevToK, cHPlanckEV
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI
     use CRASH_ModMultiGroup, ONLY: set_multigroup
     use CRASH_ModEos,   ONLY: Xe_, Be_, Plastic_
 
     integer:: iMaterial
+    logical:: IsFirstTime = .true.
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
 
-    ! Initialize in the first session only
-    UseUserInitSession = .false.
+    ! The units always have to be reset, because set_physics sets them
+    if(UseUserSource)then
+       UnitUser_V(LevelXe_:LevelPl_) = No2Io_V(UnitX_)
+    else if(UseMixedCell) then
+       UnitUser_V(LevelXe_:LevelPl_) = UnitUser_V(Rho_)
+    else
+       UnitUser_V(LevelXe_:LevelPl_) = UnitUser_V(Rho_)*No2Io_V(UnitX_)
+    end if
+
+    ! The rest of the initialization should be done once
+    if(.not.IsFirstTime) RETURN
+    IsFirstTime = .false.
 
     !\
     !Set the photon energy range
@@ -1518,14 +1530,6 @@ contains
 
     !Now set the number of groups and the frequency range:
     call set_multigroup(nWave, FreqMinSI, FreqMaxSI)
-
-    if(UseUserSource)then
-       UnitUser_V(LevelXe_:LevelPl_) = 1.e-6 ! = No2Io_V(UnitX_) = micron
-    else if(UseMixedCell) then
-       UnitUser_V(LevelXe_:LevelPl_) = UnitUser_V(Rho_)
-    else
-       UnitUser_V(LevelXe_:LevelPl_) = UnitUser_V(Rho_)*1.e-6
-    end if
 
     EradBc1 = cRadiationNo*(TrkevBc1*cKeVtoK*Si2No_V(UnitTemperature_))**4
     EradBc2 = cRadiationNo*(TrkevBc2*cKeVtoK*Si2No_V(UnitTemperature_))**4
