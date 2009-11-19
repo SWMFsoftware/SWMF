@@ -11,18 +11,24 @@ module BATL_amr
   public do_amr
   public test_amr
 
+  ! Parameter of slope limiter used by prolongation
   real, public:: BetaProlong = 1.5
+
+  ! Status change due to AMR is registered in this 
+  integer, allocatable:: iAmrChange_B(:)
+  integer, parameter  :: AmrRemoved_ = -1, &
+       AmrUnchanged_ = 0, AmrMoved_ = 1, AmrRefined_ = 2, AmrCoarsened_ = 3
 
 contains
 
   !===========================================================================
-  subroutine do_amr(nVar, State_VGB, Dt_B, Dt_DB, DoTestIn)
+  subroutine do_amr(nVar, State_VGB, Dt_B, DoTestIn)
 
     use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         nI, nJ, nK, nIJK, iRatio, jRatio, kRatio, iRatio_D, nDim
-    use BATL_mpi,  ONLY: iComm, nProc, iProc, barrier_mpi
+         nI, nJ, nK, nIJK, iRatio, jRatio, kRatio
+    use BATL_mpi,  ONLY: iComm, nProc, iProc
 
-    use BATL_tree, ONLY: nNode, nNodeUsed, Unused_BP, &
+    use BATL_tree, ONLY: nNode, Unused_BP, &
          iTree_IA, iProcNew_A, Proc_, Block_, Coord1_, Coord2_, Coord3_, &
          Status_, Child1_, ChildLast_, Used_, Refine_, CoarsenNew_
 
@@ -38,9 +44,6 @@ contains
 
     ! Time step limit for each block
     real, intent(inout), optional :: Dt_B(MaxBlock)
-
-    ! Directional time step limit for each block
-    real, intent(inout), optional :: Dt_DB(nDim, MaxBlock)
 
     logical, optional:: DoTestIn
 
@@ -72,11 +75,14 @@ contains
     if(DoTest)write(*,*) NameSub,' starting'
 
     ! Small arrays are allocated once 
-    if(.not.allocated(iBlockAvailable_P))then
-       allocate(iBlockAvailable_P(0:nProc-1))
-    end if
+    if(.not.allocated(iBlockAvailable_P)) &
+         allocate(iBlockAvailable_P(0:nProc-1), iAmrChange_B(MaxBlock))
 
-    allocate(Buffer_I(nVar*nIJK+1+nDim), &
+    ! Initialize iAmrChange_B
+    iAmrChange_B = AmrUnchanged_
+
+    ! nVar dependent arrays are allocated and deallocated every call
+    allocate(Buffer_I(nVar*nIJK+1), &
          StateP_VG(nVar,iMinP:iMaxP,jMinP:jMaxP,kMinP:kMaxP), &
          SlopeL_V(nVar), SlopeR_V(nVar), Slope_V(nVar))
 
@@ -98,7 +104,7 @@ contains
        if(DoTest) write(*,*)NameSub,' CoarsenNew iNode=',iNodeRecv
 
        iProcRecv  = iProcNew_A(iNodeRecv)
-       iBlockRecv = i_block_available(iProcRecv, iNodeRecv)
+       iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrCoarsened_)
 
        do iChild = Child1_, ChildLast_
           iNodeSend = iTree_IA(iChild,iNodeRecv)
@@ -124,7 +130,7 @@ contains
        if(iProcRecv == iProcSend) CYCLE
 
        iBlockSend = iTree_IA(Block_,iNodeSend)
-       iBlockRecv = i_block_available(iProcRecv, iNodeSend)
+       iBlockRecv = i_block_available(iProcRecv, iNodeSend, AmrMoved_)
 
        if(DoTest) write(*,*)NameSub, &
             ' node to move iNode,iProcS/R,iBlockS/R=',&
@@ -149,8 +155,7 @@ contains
           iNodeRecv = iTree_IA(iChild,iNodeSend)
 
           iProcRecv  = iProcNew_A(iNodeRecv)
-          iBlockRecv = i_block_available(iProcRecv, iNodeRecv)
-
+          iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrRefined_)
 
           if(DoTest) write(*,*)NameSub,' iChild,iNodeRecv=',iChild,iNodeRecv
 
@@ -166,9 +171,9 @@ contains
   contains
 
     !==========================================================================
-    integer function i_block_available(iProcRecv, iNodeRecv)
+    integer function i_block_available(iProcRecv, iNodeRecv, iAmrChange)
 
-      integer, intent(in):: iProcRecv, iNodeRecv
+      integer, intent(in):: iProcRecv, iNodeRecv, iAmrChange
       integer :: iBlock
       character(len=*), parameter:: NameSub = 'BATL_amr::i_block_available'
       !-----------------------------------------------------------------------
@@ -187,9 +192,9 @@ contains
 
       ! Create the grid info (x,y,z,volume,faces)
       if(iProc == iProcRecv)then
+         iAmrChange_B(iBlock) = iAmrChange
          call create_grid_block(iBlock, iNodeRecv)
          if(present(Dt_B))  Dt_B(iBlock) = Huge(1.0)
-         if(present(Dt_DB)) Dt_DB(:,iBlock) = Huge(1.0)
       end if
 
       ! Find next available block
@@ -211,6 +216,8 @@ contains
       iBlockAvailable_P(iProcSend) = &
            min(iBlockAvailable_P(iProcSend), iBlockSend)
 
+      if(iProc == iProcSend) iAmrChange_B(iBlockSend) = AmrRemoved_
+
     end subroutine make_block_available
     !==========================================================================
     subroutine send_block
@@ -231,11 +238,6 @@ contains
          Buffer_I(iBuffer) = Dt_B(iBlockSend)
       end if
 
-      if(present(Dt_DB))then
-         Buffer_I(iBuffer+1:iBuffer+nDim) = Dt_DB(:,iBlockSend)
-         iBuffer = iBuffer + nDim
-      end if
-
       ! Put more things into buffer here if necessary !!!
       call MPI_send(Buffer_I, iBuffer, MPI_REAL, iProcRecv, 1, iComm, iError)
 
@@ -250,7 +252,6 @@ contains
 
       iBuffer = nIJK*nVar
       if(present(Dt_B))  iBuffer = iBuffer + 1
-      if(present(Dt_DB)) iBuffer = iBuffer + nDim
       call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
            Status_I, iError)
 
@@ -260,11 +261,7 @@ contains
          iBuffer = iBuffer + nVar
       end do; end do; end do
 
-      if(present(Dt_B))then
-         iBuffer = iBuffer + 1
-         Dt_B(iBlockRecv) = Buffer_I(iBuffer)
-      end if
-      if(present(Dt_DB))Dt_DB(:,iBlockRecv) = Buffer_I(iBuffer+1:iBuffer+nDim)
+      if(present(Dt_B)) Dt_B(iBlockRecv) = Buffer_I(iBuffer+1)
 
     end subroutine recv_block
 
@@ -304,11 +301,6 @@ contains
          Buffer_I(iBuffer) = Dt_B(iBlockSend)
       end if
 
-      if(present(Dt_DB))then
-         Buffer_I(iBuffer+1:iBuffer+nDim) = Dt_DB(:,iBlockSend)
-         iBuffer = iBuffer + nDim
-      end if
-
       if(iProcRecv /= iProcSend) call MPI_send(Buffer_I, iBuffer, &
            MPI_REAL, iProcRecv, 1, iComm, iError)
 
@@ -326,7 +318,6 @@ contains
       if(iProcRecv /= iProcSend)then
          iBuffer = nIJK*nVar/IjkRatio
          if(present(Dt_B))  iBuffer = iBuffer + 1
-         if(present(Dt_DB)) iBuffer = iBuffer + nDim
          call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
               Status_I, iError)
       end if
@@ -346,15 +337,10 @@ contains
          iBuffer = iBuffer + nVar
       end do; end do; end do
 
-      ! Take the smallest of the doubled (for full AMR only) time steps 
+      ! Take the smallest of the doubled (valid for full AMR only) time steps 
       ! of the children blocks
-      if(present(Dt_B))then
-         iBuffer = iBuffer + 1
-         Dt_B(iBlockRecv) = min(Dt_B(iBlockRecv), 2*Buffer_I(iBuffer))
-      end if
-
-      if(present(Dt_DB)) Dt_DB(:,iBlockRecv) = min(Dt_DB(:,iBlockRecv), &
-           iRatio_D(1:nDim)*Buffer_I(iBuffer+1:iBuffer+nDim))
+      if(present(Dt_B)) &
+           Dt_B(iBlockRecv) = min(Dt_B(iBlockRecv), 2*Buffer_I(iBuffer+1))
 
     end subroutine recv_coarsened_block
     !==========================================================================
@@ -406,12 +392,6 @@ contains
          Buffer_I(iBuffer) = Dt_B(iBlockSend)
       end if
 
-      if(present(Dt_DB))then
-         Buffer_I(iBuffer+1:iBuffer+nDim) = Dt_DB(:,iBlockSend)
-         iBuffer = iBuffer + nDim
-      end if
-
-
       if(iProcRecv /= iProcSend) &
            call MPI_send(Buffer_I, iBuffer, MPI_REAL, iProcRecv, 1, &
            iComm, iError)
@@ -424,7 +404,6 @@ contains
 
       use BATL_size, ONLY: InvIjkRatio
 
-      integer:: iSize = 1, jSize = 1, kSize = 1
       integer:: iBuffer, i, j, k
 
       integer:: iP, jP, kP, iR, jR, kR
@@ -443,12 +422,7 @@ contains
       end do; end do; end do
 
       ! Set time step to half of the parent block
-      if(present(Dt_B)) then
-         iBuffer = iBuffer + 1
-         Dt_B(iBlockRecv) = 0.5*Buffer_I(iBuffer)
-      end if
-      if(present(Dt_DB)) Dt_DB(:,iBlockRecv) = &
-           Buffer_I(iBuffer+1:iBuffer+nDim)/iRatio_D(1:nDim)
+      if(present(Dt_B)) Dt_B(iBlockRecv) = 0.5*Buffer_I(iBuffer+1)
 
       do kR = 1, nK
          kP = (kR + Dk)/kRatio
@@ -543,11 +517,10 @@ contains
   subroutine test_amr
 
     use BATL_mpi,  ONLY: iProc, nProc, barrier_mpi
-    use BATL_size, ONLY: MaxDim, nDim, nDimAmr, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nIJK_D, nBlock
+    use BATL_size, ONLY: MaxDim, nDim, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nBlock
     use BATL_tree, ONLY: init_tree, set_tree_root, refine_tree_node, &
-         coarsen_tree_node,  distribute_tree, move_tree, show_tree, &
-         clean_tree, iTree_IA, &
+         coarsen_tree_node, distribute_tree, move_tree, show_tree, clean_tree,&
          iProcNew_A, Unused_B, nNode
     use BATL_grid, ONLY: init_grid, create_grid, clean_grid, Xyz_DGB, &
          CellSize_DB
@@ -561,7 +534,7 @@ contains
     real, parameter:: DomainSize_D(MaxDim) = DomainMax_D - DomainMin_D
 
     integer, parameter:: nVar = nDim
-    real, allocatable:: State_VGB(:,:,:,:,:), Dt_B(:), Dt_DB(:,:)
+    real, allocatable:: State_VGB(:,:,:,:,:), Dt_B(:)
 
     integer:: iBlock
 
@@ -582,15 +555,13 @@ contains
     if(DoTestMe) call show_tree('after create_grid')
 
     allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlockTest), &
-         Dt_B(MaxBlockTest), Dt_DB(nDim,MaxBlockTest))
+         Dt_B(MaxBlockTest))
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        State_VGB(:,:,:,:,iBlock)    = Xyz_DGB(1:nDim,:,:,:,iBlock)
        ! set the time step to dt = dx
-       Dt_B(iBlock)    = DomainSize_D(1) / (nI*nRootTest_D(1))
-       Dt_DB(:,iBlock) = &
-            DomainSize_D(1:nDim) / (nIJK_D(1:nDim)*nRootTest_D(1:nDim))
+       Dt_B(iBlock) = DomainSize_D(1) / (nI*nRootTest_D(1))
     end do
 
     if(DoTestMe) write(*,*)'test prolong and balance'
@@ -602,14 +573,11 @@ contains
        write(*,*)'iProc, iProcNew_A=',iProc, iProcNew_A(1:nNode)
     end if
 
-    call do_amr(nVar, State_VGB, Dt_B, Dt_DB)
+    call do_amr(nVar, State_VGB, Dt_B)
     if(DoTestMe) call show_tree('after do_amr')
     call move_tree
-
-    ! Update grid variables
-    call create_grid
-
     if(DoTestMe) call show_tree('after move_tree')
+    if(DoTestMe) write(*,*)'iAmrChange_B=', iAmrChange_B(1:nBlock)
 
     call check_state
 
@@ -621,18 +589,15 @@ contains
        call show_tree('after distribute_tree(.false.)')
        write(*,*)'iProc, iProcNew_A=',iProc, iProcNew_A(1:nNode)
     end if
-    call do_amr(nVar, State_VGB, Dt_B, Dt_DB)
-
+    call do_amr(nVar, State_VGB, Dt_B)
     if(DoTestMe) call show_tree('after do_amr')
     call move_tree
     if(DoTestMe) call show_tree('after move_tree')
-
-    ! Update grid variables
-    call create_grid
+    if(DoTestMe) write(*,*)'iAmrChange_B=', iAmrChange_B(1:nBlock)
 
     call check_state
 
-    deallocate(State_VGB, Dt_B, Dt_DB)
+    deallocate(State_VGB, Dt_B)
 
     call clean_grid
     call clean_tree
@@ -641,8 +606,6 @@ contains
     !==========================================================================
     subroutine check_state
 
-      integer :: iBlcok
-      !-----------------------------------------------------------------------
       do iBlock = 1, nBlock
          if(Unused_B(iBlock)) CYCLE
 
@@ -657,18 +620,14 @@ contains
               write(*,*)NameSub,' error for iProc,iBlock,dt,dx=', &
               iProc, iBlock, Dt_B(iBlock), CellSize_DB(1,iBlock)
 
-         if(any(abs(Dt_DB(:,iBlock) - CellSize_DB(1:nDim,iBlock)) > 1e-6)) &
-              write(*,*)NameSub,' error for iProc,iBlock,dt_D,dx_D=', &
-              iProc, iBlock, Dt_DB(:,iBlock), CellSize_DB(1:nDim,iBlock)
-
       end do
 
     end subroutine check_state
     !==========================================================================
     subroutine show_state
 
-      integer :: iBlock, iDim, iProcShow
-
+      integer :: iProcShow
+      !-----------------------------------------------------------------------
       call barrier_mpi
 
       do iProcShow = 0, nProc - 1
@@ -695,7 +654,7 @@ contains
     !========================================================================
     subroutine show_dt
 
-      integer:: iBlock, iProcShow
+      integer:: iProcShow
       !---------------------------------------------------------------------
       call barrier_mpi
 
@@ -705,9 +664,6 @@ contains
                if(Unused_B(iBlock)) CYCLE
                write(*,*)'iProc, iBlock, Dx, Dt =', &
                     iProc, iBlock, CellSize_DB(1,iBlock), Dt_B(iBlock)
-
-               write(*,*)'iProc, iBlock, Dx_D, Dt_D =', &
-                    iProc, iBlock, CellSize_DB(1:nDim,iBlock), Dt_DB(:,iBlock)
             end do
          end if
          call barrier_mpi
