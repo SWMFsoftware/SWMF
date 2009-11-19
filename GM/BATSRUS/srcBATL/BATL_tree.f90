@@ -912,6 +912,8 @@ contains
     integer :: iType, nType, iProcStart, iProcStop, iProcExtraBlock
     integer, allocatable :: iNodeType_I(:), nNodeType_I(:), iProcType_I(:), &
          iBlock_P(:), nBlockType_PI(:,:)
+
+    character(len=*), parameter:: NameSub='BATL_tree::distribute_tree'
     !------------------------------------------------------------------------
     if(DoMove)Unused_BP = .true.
 
@@ -1026,6 +1028,14 @@ contains
           if(DoMove)then
              ! Assign block index right away
              iBlockTo = modulo(iMorton-1, nNodePerProc) + 1
+
+             if(iBlockTo > MaxBlock)then
+                write(*,*) NameSub,': nNodeUsed, nNodePerProc=',&
+                     nNodeUsed, nNodePerProc
+                write(*,*) NameSub,': iBlockTo, MaxBlock=',iBlockTo, MaxBlock
+                call CON_stop(NameSub//' ERROR: iBlockTo > MaxBlock')
+             end if
+
              iTree_IA(Block_,iNode) = iBlockTo
              Unused_BP(iBlockTo,iProcTo) = .false.
           end if
