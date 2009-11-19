@@ -32,12 +32,12 @@ subroutine PW_get_electrodynamics
         !  Change angles to radians
         Theta_G(1:nPhi,1:nTheta) = Theta_G(1:nPhi,1:nTheta)*cDegToRad
         Phi_G  (1:nPhi,1:nTheta) = Phi_G  (1:nPhi,1:nTheta)*cDegToRad
+        !  Convert potential from kilovolts to Volts
+        Potential_G(1:nPhi,1:nTheta) = Potential_G(1:nPhi,1:nTheta)*1.0e3
+        !  Convert microA/m^2 --> A/m^2
+        Jr_G(1:nPhi,1:nTheta) = Jr_G(1:nPhi,1:nTheta) * 1.0e-6 
         close(UnitTmp_)   
      endif
-     !  Convert potential from kilovolts to Volts
-     Potential_G(1:nPhi,1:nTheta) = Potential_G(1:nPhi,1:nTheta)*1.0e3
-     !  Convert microA/m^2 --> A/m^2
-     Jr_G(1:nPhi,1:nTheta) = Jr_G(1:nPhi,1:nTheta) * 1.0e-6 
   elseif (UseWeimer) then
      call get_weimer_potential
   endif
