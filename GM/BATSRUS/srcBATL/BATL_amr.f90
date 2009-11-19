@@ -15,8 +15,8 @@ module BATL_amr
   real, public:: BetaProlong = 1.5
 
   ! Status change due to AMR is registered in this 
-  integer, allocatable:: iAmrChange_B(:)
-  integer, parameter  :: AmrRemoved_ = -1, &
+  integer, public, allocatable:: iAmrChange_B(:)
+  integer, public, parameter  :: AmrRemoved_ = -1, &
        AmrUnchanged_ = 0, AmrMoved_ = 1, AmrRefined_ = 2, AmrCoarsened_ = 3
 
 contains
