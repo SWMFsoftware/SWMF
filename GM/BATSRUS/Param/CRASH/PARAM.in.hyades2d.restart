@@ -1,9 +1,6 @@
 #ECHO
 T			DoEcho
 
-#BATL
-T
-
 #TEST
 krylov			StringTest
 

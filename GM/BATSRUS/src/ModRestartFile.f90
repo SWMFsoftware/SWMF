@@ -232,11 +232,14 @@ contains
     write(unit_tmp,'(a)')'#CODEVERSION'
     write(unit_tmp,'(f5.2,a35)')CodeVersion,'CodeVersion'
     write(unit_tmp,*)
-
+    if(UseBatl)then
+       write(unit_tmp,'(a)')'#BATL'
+       write(unit_tmp,'(l1,a39)') UseBatl, 'UseBatl'
+       write(unit_tmp,*)
+    end if
     write(unit_tmp,'(a)')'#USERMODULE'
     write(unit_tmp,'(a)')       NameUserModule
     write(unit_tmp,'(f5.2,a35)')VersionUserModule,'VersionUserModule'
-
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#COMPONENT'
     write(unit_tmp,'(a2,a38)')NameThisComp,'NameComp'
