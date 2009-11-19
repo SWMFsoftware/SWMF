@@ -628,7 +628,7 @@ contains
   subroutine write_head_version
 
     write(iOutputUnit_,*) "VERSION"
-    write(iOutputUnit_,*) 2.4
+    write(iOutputUnit_,*) 2.4+PlanetNum
     write(iOutputUnit_,*) ""
 
   end subroutine write_head_version
