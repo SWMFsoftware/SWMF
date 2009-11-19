@@ -17,7 +17,7 @@ module ModUser
 
   use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, VarTest, &
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates
-
+  use ModSize, ONLY: nI, nJ, nK
   use CRASH_ModEos, ONLY: cAtomicMass_I, cAPolyimide
 
   include 'user_module.h' !list of public methods
@@ -127,6 +127,9 @@ module ModUser
   real    :: xStartWave = -100.0
   real    :: xEndWave   = +100.0
   real    :: DpWave     =  100.0
+
+  ! electron temperature used for calculating heat flux
+  real :: Te_G(-1:nI+2,-1:nJ+2,-1:nK+2), Ti_G(-1:nI+2,-1:nJ+2,-1:nK+2)
 
 contains
 
@@ -325,7 +328,8 @@ contains
     use ModProcMH,      ONLY: iProc
     use ModMain,        ONLY: GlobalBlk, nI, nJ, nK
     use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
-         Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_
+         Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_, &
+         UnitTemperature_, UnitN_, PeMin
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
          ExtraEint_, LevelBe_, LevelXe_, LevelPl_, &
          Pe_, UseElectronPressure
@@ -337,6 +341,7 @@ contains
 
     real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi
     real    :: DxyGold = -1.0
+    real    :: TeSi, PeSi, Natomic, NatomicSi
 
     integer :: iBlock, i, j, k
 
@@ -508,6 +513,22 @@ contains
             State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = &
             State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) &
             *State_VGB(Rho_,i,j,k,iBlock)
+
+    end do; end do; end do
+
+    ! Set the remaining State_VGB quantities that involve
+    ! user_material_properties
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(UseElectronPressure)then
+          TeSi = Te_G(i,j,k)*No2Si_V(UnitTemperature_)
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, TeIn=TeSi, &
+               PressureOut=PeSi, NatomicOut=NatomicSi)
+
+          Natomic = NatomicSi*Si2No_V(UnitN_)
+          State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti_G(i,j,k)
+          State_VGB(Pe_,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
+       end if
 
        ! Calculate internal energy
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
@@ -875,7 +896,7 @@ contains
          Erad_, UseElectronPressure, Pe_
     use ModGeometry,   ONLY: x_BLK
     use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
-         UnitP_, UnitN_, cRadiationNo, UnitEnergyDens_
+         UnitP_, cRadiationNo, UnitEnergyDens_
     use ModMain,       ONLY: UseRadDiffusion
     use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_
 
@@ -883,7 +904,7 @@ contains
 
     integer :: i, j, k, iCell, iWave
     real :: x, Weight1, Weight2
-    real :: Tr, Te, TeSi, PeSi, Ti, Natomic, NatomicSi
+    real :: Tr
     real :: TrSi, EgSi
     character(len=*), parameter :: NameSub='interpolate_hyades1d'
     !-------------------------------------------------------------------------
@@ -922,19 +943,10 @@ contains
                + Weight2*DataHyades_VC(iUxHyades, iCell) )
 
           if(UseElectronPressure)then
-             Te = ( Weight1*DataHyades_VC(iTeHyades, iCell-1) &
-                  + Weight2*DataHyades_VC(iTeHyades, iCell) )
-             Ti = ( Weight1*DataHyades_VC(iTiHyades, iCell-1) &
-                  + Weight2*DataHyades_VC(iTiHyades, iCell) )
-
-             TeSi = Te*No2Si_V(UnitTemperature_)
-             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  i, j, k, iBlock, TeIn=TeSi, &
-                  PressureOut=PeSi, NatomicOut=NatomicSi)
-
-             Natomic = NatomicSi*Si2No_V(UnitN_)
-             State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti
-             State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
+             Te_G(i,j,k) = ( Weight1*DataHyades_VC(iTeHyades, iCell-1) &
+                  +          Weight2*DataHyades_VC(iTeHyades, iCell) )
+             Ti_G(i,j,k) = ( Weight1*DataHyades_VC(iTiHyades, iCell-1) &
+                  +          Weight2*DataHyades_VC(iTiHyades, iCell) )
           else
              State_VGB(p_,i,j,k,iBlock) = &
                   ( Weight1*DataHyades_VC(iPHyades, iCell-1) &
@@ -987,7 +999,7 @@ contains
     use ModTriangulate, ONLY: calc_triangulation, find_triangle
     use ModMain,        ONLY: UseRadDiffusion
     use ModPhysics,     ONLY: cRadiationNo, No2Si_V, Si2No_V, &
-         UnitTemperature_, UnitN_, UnitP_, UnitEnergyDens_, PeMin
+         UnitTemperature_, UnitP_, UnitEnergyDens_
     use ModVarIndexes,  ONLY: nWave, WaveFirst_, WaveLast_
 
     integer, intent(in) :: iBlock
@@ -1001,7 +1013,6 @@ contains
     integer :: i, j, k, iNode1, iNode2, iNode3, iWave
     real    :: x, y, z, r, Weight1, Weight2, Weight3
     real    :: WeightNode_I(3), WeightMaterial_I(0:nMaterial-1), Weight
-    real    :: Te, TeSi, PeSi, Ti, Natomic, NatomicSi
     real    :: TrSi, EgSi
 
     integer :: iMaterial, iMaterial_I(1), iMaterialNode_I(3)
@@ -1121,17 +1132,8 @@ contains
        State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = LevelHyades_V
 
        if(UseElectronPressure)then
-          Te = DataHyades_V(iTeHyades)
-          Ti = DataHyades_V(iTiHyades)
-
-          TeSi = Te*No2Si_V(UnitTemperature_)
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, TeIn=TeSi, &
-               PressureOut=PeSi, NatomicOut=NatomicSi)
-
-          Natomic = NatomicSi*Si2No_V(UnitN_)
-          State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti
-          State_VGB(Pe_,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
+          Te_G(i,j,k) = DataHyades_V(iTeHyades)
+          Ti_G(i,j,k) = DataHyades_V(iTiHyades)
        else
           State_VGB(p_,i,j,k,iBlock)  = DataHyades_V(iPHyades)
        end if
