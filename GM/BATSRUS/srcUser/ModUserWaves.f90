@@ -8,7 +8,8 @@ module ModUser
        IMPLEMENTED3 => user_get_log_var,                &
        IMPLEMENTED4 => user_get_b0,                     &
        IMPLEMENTED5 => user_face_bcs,                   &
-       IMPLEMENTED6 => user_set_outerbcs
+       IMPLEMENTED6 => user_set_outerbcs,               &
+       IMPLEMENTED7 => user_amr_criteria
 
   use ModVarIndexes, ONLY: nVar
 
@@ -368,5 +369,42 @@ contains
     end do
 
   end subroutine user_set_outerbcs
+
+  !===============================================================================
+
+  subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
+
+    use ModSize,     ONLY: nI, nJ, nK
+    use ModAdvance,  ONLY: State_VGB, Rho_
+    use ModAMR,      ONLY: RefineCritMin_I, CoarsenCritMax
+
+    ! Variables required by this user subroutine
+    integer, intent(in)          :: iBlock
+    real, intent(out)            :: UserCriteria
+    character (len=*),intent(in) :: TypeCriteria
+    logical ,intent(inout)       :: IsFound
+
+    real, parameter:: RhoMin = 2.0
+
+    integer:: i, j, k
+    !------------------------------------------------------------------
+    ! These settings make sure that sorted refinement works
+    ! such that all blocks with criteria 1 are refined,
+    ! and all blocks with criteria 0 are coarsened if possible.
+    RefineCritMin_I = 0.5
+    CoarsenCritMax  = 0.5
+
+    IsFound = .true.
+
+    ! If density exceeds RhoMin, refine
+    UserCriteria = 1.0
+    do k = 1, nK; do j=, nJ; do i = 1, nI
+       if(State_VGB(Rho_,i,j,k,iBlock) > RhoMin) RETURN
+    end do; end do; end do
+
+    ! No need to refine
+    UserCriteria = 0.0
+
+  end subroutine user_amr_criteria
 
 end module ModUser
