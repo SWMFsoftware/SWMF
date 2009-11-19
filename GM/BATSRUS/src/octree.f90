@@ -217,7 +217,16 @@ end subroutine coarsen_octree_block
 !
 !------------------------------------------------------------------------
 subroutine set_levels
-  use ModAMR
+  use ModAMR, ONLY: min_block_level, max_block_level, fix_body_level
+
+  use ModMain, ONLY: UseBatl
+  use BATL_lib, ONLY: iTree_IA, MinLevel_, MaxLevel_
+  !---------------------------------------------------------------------
+  if(UseBatl)then
+     iTree_IA(MinLevel_,:) = min_block_level
+     iTree_IA(MaxLevel_,:) = max_block_level
+     RETURN  !!! ignoring body level ???
+  end if
 
   call set_min_level(min_block_level)
   call set_max_level(max_block_level)
