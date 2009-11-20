@@ -76,16 +76,22 @@ contains
 
        ! Perform initial refinement of mesh and solution blocks.
        do nRefineLevel = 1, initial_refine_levels
-          if (iProc == 0.and.lVerbose>0) then
-             call write_prefix; write (iUnitOut,*) NameSub, &
-                  ' starting initial refinement level ',nRefineLevel
-          end if
-          call specify_refinement(local_refine)
 
           if(UseBatl)then
+             if (iProc == 0.and.lVerbose>0) then
+                call write_prefix; write (iUnitOut,*) NameSub, &
+                     ' starting initial refinement level, nBlockAll =', &
+                     nRefineLevel, nBlockAll
+             end if
+             call specify_refinement(local_refine)
              call init_grid_batl(local_refine)
              call set_batsrus_grid
           else
+             if (iProc == 0.and.lVerbose>0) then
+                call write_prefix; write (iUnitOut,*) NameSub, &
+                     ' starting initial refinement level ', nRefineLevel
+             end if
+             call specify_refinement(local_refine)
              call refine_grid(local_refine)
           end if
        end do
