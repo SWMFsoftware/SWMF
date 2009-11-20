@@ -26,12 +26,20 @@ subroutine amr(idepth)
   integer :: iBlock, iError
   real :: minDX, maxDX    
   logical :: DoRefine_B(nBLK)
+
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter:: NameSub = 'amr'
   !----------------------------------------------------------------------------
+  call set_oktest(NameSub, DoTest, DoTestMe)
   if(UseBatl)then
      ! Do message passing with second order accurate ghost cells
+
+     if(DoTestMe)write(*,*) NameSub,' starts 2nd order accurate message passing'
+
      UsePlotMessageOptions = .true.
      call exchange_messages
      if(automatic_refinement) then
+        if(DoTestMe)write(*,*) NameSub,' sets user criteria'
         do iBlock = 1, nBlock
            if(Unused_B(iBlock)) CYCLE
            call user_amr_criteria(iBlock, UserCriteria, 'user', IsFound)
@@ -41,7 +49,9 @@ subroutine amr(idepth)
               iStatusNew_A(iNode_B(iBlock)) = Coarsen_
            end if
         end do
-        call regrid_batl(nVar, State_VGB, Dt_BLK)
+        if(DoTestMe)write(*,*) NameSub,' call regrid'
+        call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe)
+        if(DoTestMe)write(*,*) NameSub,' call set_batsrus_grid'
         call set_batsrus_grid
 
         if(iProc==0 .and. lVerbose>0)then
@@ -61,7 +71,7 @@ subroutine amr(idepth)
 
      else
         call specify_refinement(DoRefine_B)
-        call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B)
+        call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, DoTestIn=DoTestMe)
         call set_batsrus_grid
 
         if(iProc == 0 .and. lVerbose>0) then
@@ -69,6 +79,10 @@ subroutine amr(idepth)
                 'specify_refinement,  new number of blocks = ', nBlockALL
         end if
      end if
+
+     ! Update iTypeAdvance, and redo load balancing if necessary
+     ! Load balance: move coords, data, and there are new blocks
+     call load_balance(.true.,.true.,.true.)
 
      ! redo message passing
      UsePlotMessageOptions = .false.
