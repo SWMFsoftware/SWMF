@@ -150,7 +150,7 @@ contains
   !============================================================================
 
   subroutine regrid_batl(nVar, State_VGB, Dt_B, DoRefine_B, DoCoarsen_B, &
-       DoBalanceEachLevelIn)
+       DoBalanceEachLevelIn, DoTestIn)
 
     integer, intent(in)   :: nVar                         ! number of variables
     real,    intent(inout):: &                            ! state variables
@@ -161,6 +161,7 @@ contains
     logical, intent(in), optional:: DoRefine_B(MaxBlock)  ! request to refine
     logical, intent(in), optional:: DoCoarsen_B(MaxBlock) ! request to coarsen
     logical, intent(in), optional:: DoBalanceEachLevelIn  ! balance per level?
+    logical, intent(in), optional:: DoTestIn              ! print test info
 
     ! Refine, coarsen and load balance the blocks containing the nVar 
     ! state variables in State_VGB. Use second order accurate conservative
@@ -199,7 +200,15 @@ contains
 
     logical:: DoBalanceEachLevel
     integer:: iBlock
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'regrid_batl'
     !------------------------------------------------------------------------
+    DoTest = .false.
+    if(present(DoTestIn)) DoTest = DoTestIn
+
+    if(DoTest)write(*,*) NameSub,' starting with nVar=', nVar
+
     DoBalanceEachLevel = .false.
     if(present(DoBalanceEachLevelIn)) DoBalanceEachLevel = DoBalanceEachLevelIn
 
@@ -218,9 +227,13 @@ contains
     end if
 
     ! Coarsen and refine the tree nodes
+    if(DoTest)write(*,*) NameSub,' call adapt_tree'
     call adapt_tree
 
     ! Load balance the tree
+    if(DoTest)write(*,*) NameSub, &
+         ' call distribute_tree with DoBalanceEachLevel=', DoBalanceEachLevel
+         
     if(DoBalanceEachLevel)then
        call distribute_tree(DoMove=.false., iTypeNode_A=iTree_IA(Level_,:)+1)
     else
@@ -228,10 +241,14 @@ contains
     end if
 
     ! Coarsen, refine and load balance the flow variables, and set Dt_B.
-    call do_amr(nVar, State_VGB, Dt_B)
+    if(DoTest)write(*,*) NameSub,' call do_amr'
+    call do_amr(nVar, State_VGB, Dt_B, DoTestIn=DoTestIn)
 
     ! Finalize the tree information
+    if(DoTest)write(*,*) NameSub,' call move_tree'
     call move_tree
+
+    if(DoTest)write(*,*) NameSub,' finished'
 
   end subroutine regrid_batl
 
