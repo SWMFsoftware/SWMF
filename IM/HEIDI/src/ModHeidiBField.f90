@@ -43,12 +43,13 @@ contains
     
     real                   :: cos2LatMin,cos2LatMax,cos2Lat1,cos2Lat2,cos2Lat3
     complex                :: root(3)
-    integer                :: nroot
+    integer                :: nroot, i
+    real                   ::dd
 
     !Parameters
     real, parameter        :: DipoleStrength =  0.32   ! nTm^-3
-    real, parameter        :: alpha = 1.1              ! alpha is the stretching factor in z direction
-    real, parameter        :: beta = 1.0/1.1           ! beta is the stretching factor in y direction
+    real, parameter        :: alpha = 1!1.1              ! alpha is the stretching factor in z direction
+    real, parameter        :: beta = 1!1.0/1.1           ! beta is the stretching factor in y direction
     real, parameter        :: Me = 8.02!*(10**15)
     real, parameter        :: d = 20.0
     real, parameter        :: J =  8.02!*(10**13)
@@ -127,7 +128,7 @@ contains
        
        do iPhi =1, nPhi
           do iR =1, nR
-             do iPoint = 1, nPoint
+             do iPoint = 1, nPoint-1
                 dLength_III(iPoint,iR,iPhi) = Length_III(iPoint+1,iR,iPhi) - Length_III(iPoint,iR,iPhi)
              end do
           end do
@@ -143,6 +144,13 @@ contains
        alpha4 = alpha2 * alpha2
        beta2 = beta* beta
 
+ 
+       dd = 0.0
+
+!       open(unit=4, file='roots.dat')
+!       write(4,*) 'roots'
+!       write(4,*)  'iPhi,iR,root(1),root(2),root(3), a,b,c,dd'
+
        do iPhi =1, nPhi
           y = cos(Phi_I(iPhi))
           !\
@@ -156,35 +164,18 @@ contains
 
           do iR =1, nR 
              c = -1./(L_I(iR)*L_I(iR))
-             call get_cubic_root(a,b,0.0,c,root,nroot)
-             
-             if (aimag(root(1)) == 0.0) then
-                cos2Lat1 = real(root(1))
-             else
-                cos2Lat1 = 0.0
-             end if
 
-             write(*,*) 'root1', root(1)
-             write(*,*) 'root2', root(2)
-
-             if (aimag(root(2)) == 0.0) then
-                cos2Lat2 = real(root(2))
-             else
-                cos2Lat2 = 0.0
-             end if
+             call get_cubic_root(a,b,dd,c,root,nroot)
              
-                          
-             if (aimag(root(3)) == 0.0) then
-                cos2Lat3 = real(root(3))
-             else
-                cos2Lat3 = 0.0
-             endif
+             do i =1, nroot
+                if ((aimag(root(i)) <= 1.e-5).and. (real(root(i))<=1.0) .and. (real(root(i))>=0.0)) &
+                    cos2Lat1 = real(root(i))
+                
+             end do
+            
 
-             cos2LatMin = min(cos2Lat1,cos2Lat2,cos2lat3)
-             cos2LatMax = max(cos2Lat1,cos2Lat2,cos2lat3) 
-             
-             LatMin = acos(sqrt(cos2LatMax))
-             LatMax = acos(sqrt(cos2LatMin))
+             LatMax = acos(sqrt(cos2Lat1))
+             LatMin = -LatMax
              dLat   = (LatMax-LatMin)/(nPoint-1)
              Lat = LatMin
              
@@ -346,37 +337,51 @@ contains
                 !mag = DipoleFactor*(sqrt(Br**2+Btheta**2+Bphi**2))
                 mag = DipoleStrength*(sqrt(Br**2+Btheta**2+Bphi**2))
                 bFieldMagnitude_III(iPoint,iR,iPhi) = mag
-                
-                L = L_I(iR)
-                dSdTheta = (sqrt(-dble((-9 * x** 4 * beta ** 2 + 9 * beta ** 2 * &                           
-                     x** 2 + alpha ** 2 + 9 * x** 4 * y ** 2 * beta ** 2 - 9 * x** 4 * y **2 - &        
-                     9 * beta ** 2 * y ** 2 * x** 2 + 9 * y ** 2 * x** 2 - 6 * alpha ** 2 * &               
-                     x** 2 + 9 * x** 4 * alpha ** 2) * (y ** 2 - y ** 2 * x** 2 + beta ** 2 - &         
-                     beta ** 2 * y ** 2 - beta ** 2 * x** 2 + beta ** 2 * y ** 2 * x** 2 + &                
-                     alpha ** 2 * x** 2) ** 2 * (1 - x** 2) * L ** 2 / (-y ** 2 + beta ** 2 * &             
-                     y ** 2 - beta ** 2) / alpha ** 2)))                   
-                
-                
-                dLength_III(iPoint,iR,iPhi) = dSdTheta*dLat
-                
-                Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), Phi_I(iPhi), alpha, beta)        
-                !Length_III(iPoint,iR,iPhi) = dipole_length(L_I(ir),LatMin,Lat)
+                Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,LatMax,Phi_I(iPhi), alpha, beta)        
                 Lat = Lat + dLat 
 
              end do
           end do
        end do
 
+
        do iPhi =1, nPhi
+          y = cos(Phi_I(iPhi))
+          gamma = y**2 + beta2 * (1-y**2)                                                 
+          a = gamma - alpha2                                                              
+          b = alpha2
+          
           do iR =1, nR
+             c = -1./(L_I(iR)*L_I(iR)) 
+             L = L_I(iR)
+             
+             call get_cubic_root(a,b,dd,c,root,nroot)                                     
+             
+             do i =1, nroot                                                               
+                if ((aimag(root(i)) <= 1.e-5).and. (real(root(i))<=1.0) .and. (real(root(i))>=0.0)) &                                                                              
+                     cos2Lat1 = real(root(i))                                              
+             end do
+                             
+             LatMax = acos(sqrt(cos2Lat1))                                                
+             LatMin = -LatMax     
+             dLat   = (LatMax-LatMin)/(nPoint-1)                                          
+             Lat = LatMin    
+             
              do iPoint =1, nPoint-1
-                delta = Length_III(iPoint,iR,iPhi)/(nPoint)
-                dLength_III(iPoint,iR,iPhi) = delta!+(iPoint-1)*delta
-                
-                !dLength_III(iPoint,iR,iPhi) = Length_III(iPoint+1,iR,iPhi) - Length_III(iPoint,iR,iPhi)
+                x = sin(Lat) 
+                dSdTheta = (sqrt(-dble((-9 * x** 4 * beta ** 2 + 9 * beta ** 2 * &                               
+                     x** 2 + alpha ** 2 + 9 * x** 4 * y ** 2 * beta ** 2 - 9 * x** 4 * y **2 - &                 
+                     9 * beta ** 2 * y ** 2 * x** 2 + 9 * y ** 2 * x** 2 - 6 * alpha ** 2 * &                    
+                     x** 2 + 9 * x** 4 * alpha ** 2) * (y ** 2 - y ** 2 * x** 2 + beta ** 2 - &                  
+                     beta ** 2 * y ** 2 - beta ** 2 * x** 2 + beta ** 2 * y ** 2 * x** 2 + &                     
+                     alpha ** 2 * x** 2) ** 2 * (1 - x** 2) * L ** 2 / (-y ** 2 + beta ** 2 * &                  
+                     y ** 2 - beta ** 2) / alpha ** 2))) 
+                dLength_III(iPoint,iR,iPhi) = dSdTheta*dLat
+                Lat = Lat+dLat
              end do
           end do
        end do
+       
 
     end if
 
@@ -683,7 +688,7 @@ contains
 
   !==================================================================================
   
-  real function stretched_dipole_length(L,Phi,alpha,beta)
+  real function stretched_dipole_length(L,LatMin,LatMax,Phi,alpha,beta)
 
     
     use ModHeidiSize, only: nPoint
@@ -701,22 +706,6 @@ contains
     !----------------------------------------------------------------------------------
     y = cos(Phi)
     stretched_dipole_length = 0.0
-    
-    ! Gamma = (cos(phi))^2 + beta^2 * (sin(phi))^2
-    gamma = y**2+beta**2*(1-y**2)
-       
-    alpha2 = alpha*alpha
-    alpha4 = alpha2*alpha2
-    
-    a = gamma - alpha2
-    b = alpha2
-    c = -1./L
-    
-    cos2Lat = (-b + sqrt(b**2-4*a*c))/(2.*a)
-    cosLat = sqrt(cos2Lat)
-    
-    LatMax = acos(cosLat)
-    LatMin = -LatMax
     dLat   = (LatMax-LatMin)/(nPoint-1)
     Lat = LatMin
     
@@ -859,6 +848,10 @@ contains
     ! Solve a cubic equation ax**3 + bx**2 + cx + d = 0                                       
     !/                                                                                        
     
+    use ModNumConst,   ONLY: cPi
+
+    implicit none
+    
     real    :: a,b,c,d       ! coefficients                                                   
     complex :: x(3)          ! roots                                                          
     integer :: nroot         ! number of roots                                                
@@ -867,11 +860,14 @@ contains
     real    :: y1,y2,y3,y2real,y2imag                                                         
     real    :: factor                                                                         
     real    :: u,v                                                                            
-    
-    real, parameter:: cPi = 3.141592654                                                       
-    
+        
     !---------------------------------------------------------------------                      
-    
+
+    y1 = 0.0
+    y2 = 0.0
+    y3 = 0.0
+    y2real = 0.0
+
     if (a == 0.0) then                                                                        
        call get_quadratic_root(b,c,d,x,nroot)                                                 
        return                                                                                 
@@ -888,25 +884,19 @@ contains
     !    discriminant < 0 =>  there are three real unequal roots                              
     !/                                                                                        
     
-    p = (1./3.)*(3.*(c/a)-(b/a)*(b/a))                                                        
-    q = (1./27.)*(2.*(b/a)*(b/a)*(b/a) - 9.*(b/a)*(c/a) + 27.*(d/a))                          
-    discriminant = (p*p*p)/27. + (q*q)/4.                                                     
-    phi = acos((-q/2.)/(sqrt(abs(p*p*p)/ 27.)))        
+    p = (1./3.)*(3.*(c/a)-(b/a)*(b/a))
+    q = (1./27.)*(2.*(b/a)*(b/a)*(b/a) - 9.*(b/a)*(c/a) + 27.*(d/a))
+    discriminant = (p*p*p)/27. + (q*q)/4.
 
-    factor = b/(3.*a)                                                                         
-       
-    if (discriminant < 0.0) then                                                              
+    if (discriminant < 0.0) then 
+       phi = acos((-q/2.)/(sqrt(abs(p*p*p)/ 27.)))
        alpha =  2.* sqrt(abs(p)/3.)                                                           
        y1 = alpha*cos(phi/3.)                                                                 
        y2 = -alpha*cos((phi + cPi)/3.)                                                        
-       y3 = -alpha*cos((phi - cPi)/3.)                                                        
-       
-       y1 = y1 - factor
-       y2 = y2 - factor
-       y3 = y3 -factor
+       y3 = -alpha*cos((phi - cPi)/3.)
     else                                                                                      
-       alpha = -0.5*q + sqrt(discriminant)                                                    
-       beta  = -0.5*q - sqrt(discriminant)                                                    
+       alpha = -(q/2.) + sqrt(discriminant)                                                    
+       beta  = -(q/2.) - sqrt(discriminant)                                                    
        u = abs(alpha)**(1./3.)                                                                
        v = abs(beta)**(1./3.)                                                                 
        if (alpha < 0.0) u = -u                                                                
@@ -914,17 +904,19 @@ contains
        y1 = u + v                                                                             
        y2real = -(u + v)/2.   
        y2imag = (u -v) * sqrt(3.)/2                                                           
-       y1 = y1 -factor
-       y2real = y2real - factor
-
     end if
-    
+
+    factor = b/(a*3.)
+    y1 = y1 - factor
+    y2 = y2 -factor
+    y3 = y3 -factor
+    y2real = y2real -factor
+
     if (discriminant < 0.0) then                                                              
        x(1) = cmplx(y1, 0.0)                                                                  
        x(2) = cmplx(y2, 0.0)                                                                  
        x(3) = cmplx(y3, 0.0)                                                                  
-    end if
-    if (discriminant == 0.0) then                                                             
+    else if (discriminant == 0.0) then                                                             
        x(1) = cmplx(y1, 0.0)                                                                  
        x(2) = cmplx(y2real, 0.0)                                                              
        x(3) = cmplx(y2real, 0.0)                                                              
