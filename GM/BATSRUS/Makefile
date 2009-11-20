@@ -44,6 +44,7 @@ help:
 	@echo '    PSPH    (PostSPH.exe creates spherical tec file from sph*.tec files)'
 	@echo '    SNAPSHOT    (SNAPSHOT.exe extract snapshots from *.outs movies)'
 	@echo '    EARTH_TRAJ (EARTH_TRAJ.exe creates Earth trajectory file for heliosphere)'
+	@echo '    TIME_CONV (TIME_CONV.exe converts the Carrington time to the usual one)'
 	@echo ' '
 	@echo '    rundir      (create run directory for standalone or SWMF)'
 	@echo '    rundir RUNDIR=run_test (create run directory run_test)'
@@ -124,6 +125,12 @@ EARTH_TRAJ:
 	cd srcPostProc; make EARTH_TRAJ
 	@echo ' '
 	@echo Program EARTH_TRAJ has been brought up to date.
+	@echo ' '
+
+TIME_CONV:
+	cd srcPostProc; make TIME_CONV
+	@echo ' '
+	@echo Program TIME_CONV has been brought up to date.
 	@echo ' '
 
 # The MACHINE variable holds the machine name for which scripts should
