@@ -370,7 +370,7 @@ contains
 
   end subroutine user_set_outerbcs
 
-  !===============================================================================
+  !============================================================================
 
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
@@ -398,7 +398,7 @@ contains
 
     ! If density exceeds RhoMin, refine
     UserCriteria = 1.0
-    do k = 1, nK; do j=, nJ; do i = 1, nI
+    do k = 1, nK; do j= 1, nJ; do i = 1, nI
        if(State_VGB(Rho_,i,j,k,iBlock) > RhoMin) RETURN
     end do; end do; end do
 
