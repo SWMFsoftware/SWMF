@@ -326,7 +326,7 @@ contains
   subroutine adapt_tree
 
     use BATL_size, ONLY: iRatio, jRatio, kRatio
-    use BATL_mpi, ONLY: iComm, nProc, iProc, barrier_mpi
+    use BATL_mpi, ONLY: iComm, nProc
     use ModMpi, ONLY: MPI_allreduce, MPI_INTEGER, MPI_MAX
 
     ! All processors can request some status changes in iStatusNew_A.

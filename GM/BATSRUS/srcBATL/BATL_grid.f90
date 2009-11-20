@@ -222,7 +222,7 @@ contains
     use BATL_geometry, ONLY: init_geometry
     use ModNumConst, ONLY: i_DD
 
-    integer :: iBlock, nBlockAll, Int_D(MaxDim)
+    integer :: iBlock
 
     integer, parameter:: MaxBlockTest            = 50
     integer, parameter:: nRootTest_D(MaxDim)     = (/3,2,1/)

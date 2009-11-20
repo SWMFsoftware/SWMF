@@ -195,7 +195,7 @@ contains
   subroutine initialize
 
     use BATL_lib, ONLY: init_mpi, init_batl, init_grid_batl, &
-         iProc, iComm, MaxDim, MaxBlock, nBlock, Unused_B, Xyz_DGB, iNode_B, &
+         iProc, iComm, MaxDim, MaxBlock, nBlock, Unused_B, Xyz_DGB, &
          iTree_IA, MaxLevel_
 
     use ModReadParam, ONLY: read_file, read_init, &
