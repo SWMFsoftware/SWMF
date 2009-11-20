@@ -50,6 +50,9 @@ earth_traj.o: ${OBJECTS1}
 EARTH_TRAJ: ${OBJECTS1} earth_traj.o
 	${LINK.f90} ${SEARCH} -o ${BINDIR}/EARTH_TRAJ.exe earth_traj.o \
 		${OBJECTS1} ${Lflag2}
+TIME_CONV:  ${OBJECTS1} time_convert.o
+	    ${LINK.f90} ${SEARCH} -o ${BINDIR}/TIME_CONV.exe time_convert.o \
+		${OBJECTS1} ${Lflag2}
 
 #
 #	cleaning
