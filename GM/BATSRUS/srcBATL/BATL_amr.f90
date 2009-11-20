@@ -60,14 +60,14 @@ contains
 
     integer:: Status_I(MPI_STATUS_SIZE), iError
 
-    character(len=*), parameter:: NameSub = 'BATL_AMR::do_amr'
-    logical:: DoTest
-
     integer, parameter:: iMinP = 2-iRatio, iMaxP = nI/iRatio + iRatio - 1
     integer, parameter:: jMinP = 2-jRatio, jMaxP = nJ/jRatio + jRatio - 1
     integer, parameter:: kMinP = 2-kRatio, kMaxP = nK/kRatio + kRatio - 1
     integer, parameter:: nSizeP = &
          (iMaxP-iMinP+1)*(jMaxP-jMinP+1)*(kMaxP-kMinP+1)
+
+    character(len=*), parameter:: NameSub = 'BATL_AMR::do_amr'
+    logical:: DoTest
     !-------------------------------------------------------------------------
     DoTest = .false.
     if(present(DoTestIn)) DoTest = DoTestIn
@@ -157,7 +157,8 @@ contains
           iProcRecv  = iProcNew_A(iNodeRecv)
           iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrRefined_)
 
-          if(DoTest) write(*,*)NameSub,' iChild,iNodeRecv=',iChild,iNodeRecv
+          if(DoTest) write(*,*)NameSub,' nNode,iChild,iNodeRecv,iProcRecv=',&
+               nNode,iChild,iNodeRecv,iProcRecv
 
           if(iProc == iProcSend) call send_refined_block
           if(iProc == iProcRecv) call recv_refined_block
@@ -411,7 +412,9 @@ contains
       !------------------------------------------------------------------------
 
       if(iProcRecv /= iProcSend)then
-         call MPI_recv(Buffer_I, nSizeP, MPI_REAL, iProcSend, 1, iComm, &
+         iBuffer = nSizeP*nVar
+         if(present(Dt_B)) iBuffer = iBuffer + 1
+         call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
               Status_I, iError)
       end if
 
