@@ -1,19 +1,19 @@
 module ModHeidiBField
-  
+
   implicit none
-  
-  
+
+
 contains
-  
+
   subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
        RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII)
-    
+
     use ModHeidiInput, ONLY: TypeBfieldGrid
     use ModNumConst,   ONLY: cTiny, cPi
     use ModNumConst,   ONLY: cDegToRad
     use ModConst,      ONLY: cMu
 
- 
+
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
     integer, intent(in)    :: nPhi                                ! Number of points in the azimuthal direction
@@ -40,7 +40,7 @@ contains
     real                   :: DipoleFactor,delta, dSdTheta
     real                   :: a,b,c,gamma,cos2Lat,cosLat,L
     integer                :: iR, iPhi,iPoint     
-    
+
     real                   :: cos2LatMin,cos2LatMax,cos2Lat1,cos2Lat2,cos2Lat3
     complex                :: root(3)
     integer                :: nroot, i
@@ -56,7 +56,6 @@ contains
     !----------------------------------------------------------------------------------
 
     DipoleFactor= cMu*Me/4.*cPi
-    
 
     !\
     ! Dipole magnetic field with uniform number of points along the field line
@@ -69,7 +68,7 @@ contains
              LatMin = -LatMax
              dLat   = (LatMax-LatMin)/(nPoint-1)
              Lat = LatMin
-             
+
              do iPoint = 1, nPoint
                 SinLat2 = sin(Lat)**2
                 CosLat2 = 1.0 - SinLat2  
@@ -80,16 +79,8 @@ contains
              end do
           end do
        end do
-       
-       do iPhi =1, nPhi
-          do iR =1, nR
-             do iPoint = 1, nPoint-1
-                dLength_III(iPoint,iR,iPhi) = Length_III(iPoint+1,iR,iPhi) - Length_III(iPoint,iR,iPhi)
-             end do
-          end do
-       end do
-    end if
 
+    end if
 
     !\
     ! Dipole magnetic field with non-uniform number of points along the field line. 
@@ -103,16 +94,16 @@ contains
              LatMin = -LatMax
              dLat   = (LatMax-LatMin)/(nPoint-1)
              Lat = LatMin
-             
+
              LatMin2 = LatMin**2
              LatMax2 = LatMax**2
              LatMinMax = LatMin*LatMax
-             
+
              beta1 = 6.0*(-nPoint+cTiny*nPoint+1.0)*(nPoint-1.0) 
              beta2 = nPoint*(2.0*LatMax2*nPoint + 2.0*LatMinMax*nPoint + 2.0*LatMin2*nPoint &
                   - 4.0*LatMinMax - LatMin2 - LatMax2)
              BetaF = - beta1/beta2  
-             
+
              do iPoint = 1, nPoint
                 Lat = LatMin+(iPoint-1)*dLat
                 SinLat2 = sin(Lat)**2
@@ -125,63 +116,47 @@ contains
              end do
           end do
        end do
-       
-       do iPhi =1, nPhi
-          do iR =1, nR
-             do iPoint = 1, nPoint-1
-                dLength_III(iPoint,iR,iPhi) = Length_III(iPoint+1,iR,iPhi) - Length_III(iPoint,iR,iPhi)
-             end do
-          end do
-       end do
+
     end if
 
     !\
     ! Stretched dipole magnetic field, with azimuthal symmetry. 
     !/
-    
+
     if (TypeBFieldGrid == 'stretched1') then  
        alpha2 = alpha * alpha
        alpha4 = alpha2 * alpha2
        beta2 = beta* beta
 
- 
        dd = 0.0
-
-!       open(unit=4, file='roots.dat')
-!       write(4,*) 'roots'
-!       write(4,*)  'iPhi,iR,root(1),root(2),root(3), a,b,c,dd'
-
        do iPhi =1, nPhi
           y = cos(Phi_I(iPhi))
+
           !\
           ! Calculate the maximum latitude for this case (from the equation of the field line)
           ! Yields a cubic equation in latitude
           !/ 
+
           gamma = y**2 + beta2 * (1-y**2)
           a = gamma - alpha2
           b = alpha2
 
-
           do iR =1, nR 
              c = -1./(L_I(iR)*L_I(iR))
-
              call get_cubic_root(a,b,dd,c,root,nroot)
-             
              do i =1, nroot
                 if ((aimag(root(i)) <= 1.e-5).and. (real(root(i))<=1.0) .and. (real(root(i))>=0.0)) &
-                    cos2Lat1 = real(root(i))
-                
+                     cos2Lat1 = real(root(i))
              end do
-            
 
              LatMax = acos(sqrt(cos2Lat1))
              LatMin = -LatMax
              dLat   = (LatMax-LatMin)/(nPoint-1)
              Lat = LatMin
-             
+
              do iPoint = 1, nPoint
                 x = sin(Lat)
-                
+
                 !\
                 ! Radial distance for the stretched dipole is calclulated as a function of the 
                 ! dipole radial distance; Easy calculation for this case.
@@ -189,7 +164,7 @@ contains
 
                 RadialDistance_III(iPoint,iR,iPhi) = L_I(iR)*(1. - x**2)*&
                      sqrt((1. - x ** 2) * (y**2 + beta**2 *(1-y**2)) + alpha ** 2 * x ** 2)
-                
+
                 r =  RadialDistance_III(iPoint,iR,iPhi)
 
                 ! \
@@ -206,7 +181,7 @@ contains
                      alpha ** 2) - 1) * x / alpha * (r ** 2 * (1 - x ** 2) * y ** 2 + beta **2 * &
                      r ** 2 * (1 - x ** 2) * (1 - y ** 2) + r ** 2 * x ** 2 * alpha ** 2) ** (-0.3D1 / 0.2D1)
 
-                
+
                 Btheta = 0.3D1 * dble(r ** 2) * sqrt(dble(1 - x ** 2)) * dble(y ** 2)* dble(x ** 2) * &
                      dble(alpha) * dble((r ** 2 * (1 - x ** 2) * y **2 + beta ** 2 * r ** 2 * (1 - x ** 2) * &
                      (1 - y ** 2) + r ** 2 * x** 2 * alpha ** 2) ** (-0.5D1 / 0.2D1)) + 0.3D1 * &
@@ -220,8 +195,8 @@ contains
                      alpha ** 2) ** (-0.3D1 / 0.2D1))
 
                 Bphi = 0.0
-                
-                
+
+
                 !\
                 ! Gradient drift components (Vr,Vteta,Vphi)
                 !/
@@ -335,191 +310,146 @@ contains
                 GradBCrossB_VIII(2,iPoint,iR,iPhi) = Vtheta
                 GradBCrossB_VIII(3,iPoint,iR,iPhi) = Vphi
                 !mag = DipoleFactor*(sqrt(Br**2+Btheta**2+Bphi**2))
+
                 mag = DipoleStrength*(sqrt(Br**2+Btheta**2+Bphi**2))
                 bFieldMagnitude_III(iPoint,iR,iPhi) = mag
-                Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,LatMax,Phi_I(iPhi), alpha, beta)        
+                Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,Lat,Phi_I(iPhi), alpha, beta)  
                 Lat = Lat + dLat 
-
              end do
           end do
        end do
-
-
-       do iPhi =1, nPhi
-          y = cos(Phi_I(iPhi))
-          gamma = y**2 + beta2 * (1-y**2)                                                 
-          a = gamma - alpha2                                                              
-          b = alpha2
-          
-          do iR =1, nR
-             c = -1./(L_I(iR)*L_I(iR)) 
-             L = L_I(iR)
-             
-             call get_cubic_root(a,b,dd,c,root,nroot)                                     
-             
-             do i =1, nroot                                                               
-                if ((aimag(root(i)) <= 1.e-5).and. (real(root(i))<=1.0) .and. (real(root(i))>=0.0)) &                                                                              
-                     cos2Lat1 = real(root(i))                                              
-             end do
-                             
-             LatMax = acos(sqrt(cos2Lat1))                                                
-             LatMin = -LatMax     
-             dLat   = (LatMax-LatMin)/(nPoint-1)                                          
-             Lat = LatMin    
-             
-             do iPoint =1, nPoint-1
-                x = sin(Lat) 
-                dSdTheta = (sqrt(-dble((-9 * x** 4 * beta ** 2 + 9 * beta ** 2 * &                               
-                     x** 2 + alpha ** 2 + 9 * x** 4 * y ** 2 * beta ** 2 - 9 * x** 4 * y **2 - &                 
-                     9 * beta ** 2 * y ** 2 * x** 2 + 9 * y ** 2 * x** 2 - 6 * alpha ** 2 * &                    
-                     x** 2 + 9 * x** 4 * alpha ** 2) * (y ** 2 - y ** 2 * x** 2 + beta ** 2 - &                  
-                     beta ** 2 * y ** 2 - beta ** 2 * x** 2 + beta ** 2 * y ** 2 * x** 2 + &                     
-                     alpha ** 2 * x** 2) ** 2 * (1 - x** 2) * L ** 2 / (-y ** 2 + beta ** 2 * &                  
-                     y ** 2 - beta ** 2) / alpha ** 2))) 
-                dLength_III(iPoint,iR,iPhi) = dSdTheta*dLat
-                Lat = Lat+dLat
-             end do
-          end do
-       end do
-       
 
     end if
+
 
     !\
     ! Stretched dipole magnetic field, due to wire current. 
     ! The radial distance and field line length are WRONG. 
-    ! Needes another calculation for those. More complicated. 
+    ! Needes another calculation for those. More complicated!!! 
     !/
 
     if (TypeBFieldGrid == 'stretched2') then  
-       
+
        Lat = LatMin
        do iPhi =1, nPhi
           do iR =1, nR 
-             do iPoint = 1, nPoint!(iR,iPhi)
+             do iPoint = 1, nPoint
                 RadialDistance_III(iPoint,iR,iPhi)= r
-                
                 bR = sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1/ 0.2D1) / cPi/ 0.2D1 + &
                      d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 +&
                      r ** 2 * sin(Lat) ** 2) / cPi* sin(Lat) / 0.2D1
-                
                 bTheta = cMu * Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1) / cPi/ 0.4D1 &
                      - (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
                      r ** 2 * sin(Lat) ** 2) / cPi/ 0.2D1
-                
-                
                 bPhi= r * sin(Lat) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
                      r ** 2 * sin(Lat) ** 2) /cPi * sin(Phi_I(iPhi)) / 0.2D1
-                
-             
+
                 bField_VIII(1,iPoint,iR,iPhi) = bR
                 bField_VIII(2,iPoint,iR,iPhi) = bTheta
                 bField_VIII(3,iPoint,iR,iPhi) = bPhi
-                
+
                 bFieldMagnitude_III(iPoint,iR,iPhi) =sqrt(bR * bR + bTheta * bTheta + bPhi * bPhi)
-                     
 
+                ! Gradient
 
-             ! Gradient
-             
-             GradR(iPoint,iR,iPhi) = (sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.2D1 &
-                  + d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) /cPi * sin(Lat) / 0.2D1) * &
-                  (-0.3D1 / 0.2D1 * sin(Lat) * cMu * Me * (r ** 2) ** (-0.5D1 / 0.2D1) /cPi * r - &
-                  d * cMu * J * sin(Lat) * ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * cos(Lat) * cos(Phi_I(iPhi)) + &
-                  0.2D1 * r * sin(Lat) ** 2) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) ** 2 /cPi / 0.2D1) + &
-                  (cMu * Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.4D1 - &
-                  (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) /cPi / 0.2D1) * (-0.3D1 / 0.4D1 * cMu * Me * cos(Lat) * &
-                  (r ** 2) ** (-0.5D1 / 0.2D1) /cPi * r - cos(Phi_I(iPhi)) * &
-                  cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) /cPi / 0.2D1 + (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * &
-                  cMu * J * ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * cos(Lat) * cos(Phi_I(iPhi)) + &
-                  0.2D1 * r * sin(Lat) ** 2) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) ** 2 /cPi / 0.2D1) + &
-                  r * sin(Lat) ** 2 * cMu ** 2 * J ** 2 / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) ** 2 /cPi ** 2 * sin(Phi_I(iPhi)) ** 2 / 0.4D1 - &
-                  r ** 2 * sin(Lat) ** 2 * cMu ** 2 * J ** 2 * sin(Phi_I(iPhi)) ** 2 * &
-                  ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * cos(Lat) * cos(Phi_I(iPhi)) +&
-                  0.2D1 * r * sin(Lat) ** 2) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) ** 3 /cPi ** 2 / 0.4D1
-             
-             GradTheta(iPoint,iR,iPhi) = ((sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.2D1 + &
-                  d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d)** 2 + r ** 2 * &
-                  sin(Lat) ** 2) /cPi * sin(Lat) / 0.2D1) * &
-                  (-cMu * Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.2D1 - &
-                  d * cMu * J * sin(Lat) * ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + &
-                  0.2D1 * d) * r * sin(Lat) * cos(Phi_I(iPhi)) - &
-                  0.2D1 * r ** 2 * sin(Lat) * cos(Lat)) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) ** 2 /cPi / 0.2D1 - &
-                  d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2* sin(Lat) ** 2) /cPi * cos(Lat) / 0.2D1) + &
-                  (cMu *Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi /0.4D1 - &
-                  (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) /cPi / 0.2D1) * &
-                  (sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1 / 0.2D1)/cPi / 0.4D1 - &
-                  d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) /cPi * sin(Lat) / 0.2D1 + &
-                  (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J * &
-                  ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * r * sin(Lat) * cos(Phi_I(iPhi)) - &
-                  0.2D1 * r ** 2 * sin(Lat) * cos(Lat)) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) ** 2 /cPi / 0.2D1) - &
-                  r ** 2 * sin(Lat) * cMu ** 2 * J ** 2 / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) ** 2 /cPi ** 2 * &
-                  sin(Phi_I(iPhi)) ** 2 * cos(Lat) / 0.4D1 - r ** 2 * sin(Lat) ** 2 * cMu ** 2 * J ** 2 * &
-                  sin(Phi_I(iPhi)) ** 2 * ((0.2D1 * r *cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * &
-                  r * sin(Lat) * cos(Phi_I(iPhi)) - 0.2D1 * r ** 2 * sin(Lat) * cos(Lat)) &
-                  / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) ** 3 /cPi ** 2 / 0.4D1) / r
-             
-             GradPhi(iPoint,iR,iPhi) =  0.1D1 / r / cos(Lat) * ((sin(Lat) * cMu * Me * &
-                  (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.2D1 + d * cMu * J /&
-                  ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + r ** 2 * sin(Lat) ** 2) /cPi * &
-                  sin(Lat) / 0.2D1) * d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 +&
-                  r ** 2 * sin(Lat) ** 2) ** 2 /cPi * sin(Lat) * &
-                  (r * cos(Lat) * cos(Phi_I(iPhi)) + d) * r * cos(Lat)* sin(Phi_I(iPhi)) + &
-                  (cMu * Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1)/cPi / &
-                  0.4D1 - (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu *J / &
-                  ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + r ** 2 * sin(Lat) ** 2) / &
-                  cPi / 0.2D1) * (r * sin(Phi_I(iPhi)) * cMu * J / ((r * cos(Lat) * &
-                  cos(Phi_I(iPhi)) + d) ** 2 + r ** 2 * sin(Lat) ** 2) /cPi / 0.2D1 - &
-                  (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) ** 2/cPi * &
-                  (r * cos(Lat) * cos(Phi_I(iPhi)) + d) * r * cos(Lat) * sin(Phi_I(iPhi))) + &
-                  r ** 3 * sin(Lat) ** 2 * cMu ** 2 * J ** 2 / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 +&
-                  r ** 2 * sin(Lat) ** 2) ** 3 /cPi ** 2 * sin(Phi_I(iPhi)) ** 3 * &
-                  (r * cos(Lat) * cos(Phi_I(iPhi)) + d) * cos(Lat) / 0.2D1 + &
-                  r ** 2 * sin(Lat) ** 2 * cMu ** 2 * J ** 2 / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                  r ** 2 * sin(Lat) ** 2) ** 2 /cPi ** 2 * sin(Phi_I(iPhi)) * cos(Phi_I(iPhi)) / 0.4D1)
-             
-             GradB2over2_VIII(1,iPoint,iR,iPhi) =  GradR(iPoint,iR,iPhi)
-             GradB2over2_VIII(2,iPoint,iR,iPhi) =  GradTheta(iPoint,iR,iPhi)
-             GradB2over2_VIII(3,iPoint,iR,iPhi) =  GradPhi(iPoint,iR,iPhi)  
-             
-             RadialDistance_III(iPoint,iR,iPhi) = L_I(iR)*CosLat2 ! not good
+                GradR(iPoint,iR,iPhi) = (sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.2D1 &
+                     + d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) /cPi * sin(Lat) / 0.2D1) * &
+                     (-0.3D1 / 0.2D1 * sin(Lat) * cMu * Me * (r ** 2) ** (-0.5D1 / 0.2D1) /cPi * r - &
+                     d*cMu*J*sin(Lat)*((0.2D1*r*cos(Lat)*cos(Phi_I(iPhi)) + 0.2D1 * d) * cos(Lat) * cos(Phi_I(iPhi)) + &
+                     0.2D1 * r * sin(Lat) ** 2) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi / 0.2D1) + &
+                     (cMu * Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.4D1 - &
+                     (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) /cPi / 0.2D1) * (-0.3D1 / 0.4D1 * cMu * Me * cos(Lat) * &
+                     (r ** 2) ** (-0.5D1 / 0.2D1) /cPi * r - cos(Phi_I(iPhi)) * &
+                     cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) /cPi / 0.2D1 + (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * &
+                     cMu * J * ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * cos(Lat) * cos(Phi_I(iPhi)) + &
+                     0.2D1 * r * sin(Lat) ** 2) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi / 0.2D1) + &
+                     r * sin(Lat) ** 2 * cMu ** 2 * J ** 2 / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi ** 2 * sin(Phi_I(iPhi)) ** 2 / 0.4D1 - &
+                     r ** 2 * sin(Lat) ** 2 * cMu ** 2 * J ** 2 * sin(Phi_I(iPhi)) ** 2 * &
+                     ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * cos(Lat) * cos(Phi_I(iPhi)) +&
+                     0.2D1 * r * sin(Lat) ** 2) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) ** 3 /cPi ** 2 / 0.4D1
 
-             Lat = Lat + dLat
+                GradTheta(iPoint,iR,iPhi) = ((sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.2D1 + &
+                     d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d)** 2 + r ** 2 * &
+                     sin(Lat) ** 2) /cPi * sin(Lat) / 0.2D1) * &
+                     (-cMu * Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.2D1 - &
+                     d * cMu * J * sin(Lat) * ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + &
+                     0.2D1 * d) * r * sin(Lat) * cos(Phi_I(iPhi)) - &
+                     0.2D1 * r ** 2 * sin(Lat) * cos(Lat)) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi / 0.2D1 - &
+                     d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2* sin(Lat) ** 2) /cPi * cos(Lat) / 0.2D1) + &
+                     (cMu *Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi /0.4D1 - &
+                     (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) /cPi / 0.2D1) * &
+                     (sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1 / 0.2D1)/cPi / 0.4D1 - &
+                     d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) /cPi * sin(Lat) / 0.2D1 + &
+                     (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J * &
+                     ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * r * sin(Lat) * cos(Phi_I(iPhi)) - &
+                     0.2D1 * r ** 2 * sin(Lat) * cos(Lat)) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi / 0.2D1) - &
+                     r ** 2 * sin(Lat) * cMu ** 2 * J ** 2 / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi ** 2 * &
+                     sin(Phi_I(iPhi)) ** 2 * cos(Lat) / 0.4D1 - r ** 2 * sin(Lat) ** 2 * cMu ** 2 * J ** 2 * &
+                     sin(Phi_I(iPhi)) ** 2 * ((0.2D1 * r *cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * &
+                     r * sin(Lat) * cos(Phi_I(iPhi)) - 0.2D1 * r ** 2 * sin(Lat) * cos(Lat)) &
+                     / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) ** 3 /cPi ** 2 / 0.4D1) / r
+
+                GradPhi(iPoint,iR,iPhi) =  0.1D1 / r / cos(Lat) * ((sin(Lat) * cMu * Me * &
+                     (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.2D1 + d * cMu * J /&
+                     ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + r ** 2 * sin(Lat) ** 2) /cPi * &
+                     sin(Lat) / 0.2D1) * d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 +&
+                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi * sin(Lat) * &
+                     (r * cos(Lat) * cos(Phi_I(iPhi)) + d) * r * cos(Lat)* sin(Phi_I(iPhi)) + &
+                     (cMu * Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1)/cPi / &
+                     0.4D1 - (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu *J / &
+                     ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + r ** 2 * sin(Lat) ** 2) / &
+                     cPi / 0.2D1) * (r * sin(Phi_I(iPhi)) * cMu * J / ((r * cos(Lat) * &
+                     cos(Phi_I(iPhi)) + d) ** 2 + r ** 2 * sin(Lat) ** 2) /cPi / 0.2D1 - &
+                     (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) ** 2/cPi * &
+                     (r * cos(Lat) * cos(Phi_I(iPhi)) + d) * r * cos(Lat) * sin(Phi_I(iPhi))) + &
+                     r ** 3 * sin(Lat) ** 2 * cMu ** 2 * J ** 2 / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 +&
+                     r ** 2 * sin(Lat) ** 2) ** 3 /cPi ** 2 * sin(Phi_I(iPhi)) ** 3 * &
+                     (r * cos(Lat) * cos(Phi_I(iPhi)) + d) * cos(Lat) / 0.2D1 + &
+                     r ** 2 * sin(Lat) ** 2 * cMu ** 2 * J ** 2 / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
+                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi ** 2 * sin(Phi_I(iPhi)) * cos(Phi_I(iPhi)) / 0.4D1)
+
+                GradB2over2_VIII(1,iPoint,iR,iPhi) =  GradR(iPoint,iR,iPhi)
+                GradB2over2_VIII(2,iPoint,iR,iPhi) =  GradTheta(iPoint,iR,iPhi)
+                GradB2over2_VIII(3,iPoint,iR,iPhi) =  GradPhi(iPoint,iR,iPhi)  
+
+                RadialDistance_III(iPoint,iR,iPhi) = L_I(iR)*CosLat2 ! not good
+
+                Lat = Lat + dLat
+             end do
           end do
        end do
-    end do
-    
+
+    end if
+
     do iPhi =1, nPhi
        do iR =1, nR 
           do iPoint = 1, nPoint-1
              dLength_III(iPoint,iR,iPhi) = Length_III(iPoint+1,iR,iPhi) - Length_III(iPoint,iR,iPhi)
+             write(4,*) iPhi,iR,iPoint,dLength_III(iPoint,iR,iPhi)
+
           end do
        end do
     end do
 
- end if
-
-
- 
   end subroutine initialize_b_field
   !==================================================================================
   subroutine find_mirror_points (nPoint, PitchAngle, bField_I, bMirror,iMirror_II)
- 
+
     integer, intent(in) :: nPoint                ! Number of points along the field line
     real, intent(in)    :: PitchAngle            ! Pitch angle values
     real, intent(in)    :: bField_I(nPoint)      ! Magnetic field values
@@ -531,42 +461,31 @@ contains
     integer             :: iPoint, iPitch
     real, parameter     :: cTiny = 0.000001
     !----------------------------------------------------------------------------------
-
-    
     i_I  = minloc(bField_I)
     iMinB= i_I(1)
     bMin = bField_I(iMinB)
-    
-        
+
     if (PitchAngle == 0.0) then 
        bMirror = bMin/(sin(PitchAngle+cTiny))**2 
     else
-       
+
        bMirror = bMin/(sin(PitchAngle))**2 
     end if
-       
-       
-       !if  (bMirror  .gt. maxval(bField_I(1:nPoint))) then
-       !   iMirror_II(1) = 1+1
-       !   iMirror_II(2) = nPoint-1
-       !end if
-        
-      
-       do iPoint = iMinB,1, -1
-          if (bField_I(iPoint) >= bMirror ) then 
-             iMirror_II(1) = (iPoint + 1)
-             EXIT
-          end if
-       end do
 
-       do iPoint = iMinB, nPoint
-          if (bField_I(iPoint) >= bMirror ) then 
-             iMirror_II(2) = (iPoint - 1)
-             EXIT
-          end if
-       end do
+    do iPoint = iMinB,1, -1
+       if (bField_I(iPoint) >= bMirror ) then 
+          iMirror_II(1) = (iPoint + 1)
+          EXIT
+       end if
+    end do
 
-   
+    do iPoint = iMinB, nPoint
+       if (bField_I(iPoint) >= bMirror ) then 
+          iMirror_II(2) = (iPoint - 1)
+          EXIT
+       end if
+    end do
+
   end subroutine find_mirror_points
 
   !==================================================================================
@@ -576,7 +495,7 @@ contains
     ! Calculate integral of sqrt((B-Bm)/Bm) between the mirror points using the
     ! trapezoidal rule
     !/
-    
+
     integer             :: nPoint
     integer, intent(in) :: iMirror_I(2)
     real, intent(in)    :: bMirror  
@@ -591,7 +510,7 @@ contains
     iFirst = iMirror_I(1)
     iLast  = iMirror_I(2)
     SecondAdiabInv = 0.0
-    
+
 
     if (iFirst > iLast) RETURN
 
@@ -602,7 +521,7 @@ contains
 
 
     SecondAdiabInv= SecondAdiabInv + Coeff*(2./3.)*DeltaS1*sqrt(bMirror-bField_I(iFirst))
-    
+
     do iPoint = iFirst, iLast-1
        b1 = bField_I(iPoint)
        b2 =  bField_I(iPoint+1)
@@ -618,11 +537,11 @@ contains
 
   !==================================================================================
   subroutine half_bounce_path_length(nPoint, iMirror_I, bMirror, bField_I, dLength_I,L, HalfPathLength,Sb)
-    
+
     !\
     ! Calculate integral of ds/sqrt((B-Bm)/Bm) between the mirror points using 
     !/
-    
+
     integer             :: nPoint
     integer, intent(in) :: iMirror_I(2)
     real, intent(in)    :: bMirror  
@@ -648,7 +567,7 @@ contains
     DeltaS1 = abs((bMirror-bField_I(iFirst))*(dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
     HalfPathLength = HalfPathLength + Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
     Sb = Sb + CoeffSb*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
-    
+
     do iPoint = iFirst, iLast-1
        b1 = bField_I(iPoint)
        b2 = bField_I(iPoint+1)
@@ -687,12 +606,12 @@ contains
   end function dipole_length
 
   !==================================================================================
-  
+
   real function stretched_dipole_length(L,LatMin,LatMax,Phi,alpha,beta)
 
-    
+
     use ModHeidiSize, only: nPoint
-    
+
     implicit none
     real               :: L                       ! L shell value   
     real               :: LatMin                  ! Minimum Latitude                                               
@@ -708,9 +627,9 @@ contains
     stretched_dipole_length = 0.0
     dLat   = (LatMax-LatMin)/(nPoint-1)
     Lat = LatMin
-    
+
     x(1) = sin(LatMin)
-    
+
     dSdTheta(1) = (sqrt(-dble((-9 * x(1) ** 4 * beta ** 2 + 9 * beta ** 2 * &
          x(1) ** 2 + alpha ** 2 + 9 * x(1) ** 4 * y ** 2 * beta ** 2 - 9 * x(1) ** 4 * y **2 - &
          9 * beta ** 2 * y ** 2 * x(1) ** 2 + 9 * y ** 2 * x(1) ** 2 - 6 * alpha ** 2 * & 
@@ -731,7 +650,7 @@ contains
             y ** 2 - beta ** 2) / alpha ** 2)))
 
        stretched_dipole_length = stretched_dipole_length + 0.5*(dSdTheta(i)+dSdTheta(i-1))*dLat
-       
+
     end do
   end function stretched_dipole_length
 
@@ -756,7 +675,7 @@ contains
     ! = the integral of sqrt(1 - B/Bm)ds for a dipole B field. 
     !	function I(mu) taken from Ejiri, JGR,1978
     !/
-    
+
     real, intent(in)     :: x ! cosine of the equatorial pitch angle
     real                 :: y, alpha, beta, a1, a2, a3, a4
     real, parameter      :: Pi = 3.141592654
@@ -784,7 +703,7 @@ contains
     ! = the integral of ds/sqrt(1 - B/Bm) for a dipole B field. 
     !	function f(y) taken from Ejiri, JGR,1978
     !/
-    
+
     real, intent(in)     :: x ! cosine of the equatorial pitch angle 
     real                 :: y, alpha, beta, a1, a2, a3, a4
     real, parameter      :: Pi = 3.141592654
@@ -801,22 +720,22 @@ contains
          a3*y+a4*y**(4./3.)
 
   end function analytic_h
-  
+
   !=====================================================================                      
   subroutine get_quadratic_root(a,b,c,x,nroot)                                                
     !\                                                                                        
     ! Solve the  quadratic equation: ax**2 + bx +c = 0                                        
     !/                                                                                        
-    
+
     implicit none                                                                             
-    
+
     real    :: a, b, c            ! coefficients                                              
     real    :: discriminant       ! discriminant                                              
     complex :: x(2)               ! roots                                                     
     integer :: nroot              ! number of roots                                           
-    
+
     !--------------------------------------------------------------------                     
-    
+
     if (a == 0.0) then                                                                        
        if(b == 0.0) then                                                                      
           nroot = 0               ! Nothing to solve                                          
@@ -825,7 +744,7 @@ contains
           x(1) = cmplx(-c/b, 0.0) ! Linear equation                                           
        end if
     else                                                                                      
-       
+
        !Start solving the quadratic equation                                                  
        nroot  = 2                                                                             
        discriminant = b*b -4.*a*c                                                             
@@ -837,21 +756,21 @@ contains
           x(2) = cmplx(-b/(2.*a), -sqrt(-discriminant)/(2.*a))                                 
        end if
     end if
-    
-    
+
+
   end subroutine get_quadratic_root
   !=====================================================================                      
-                                                                                              
+
   subroutine get_cubic_root(a,b,c,d,x,nroot)                                                  
-    
+
     !\                                                                                        
     ! Solve a cubic equation ax**3 + bx**2 + cx + d = 0                                       
     !/                                                                                        
-    
+
     use ModNumConst,   ONLY: cPi
 
     implicit none
-    
+
     real    :: a,b,c,d       ! coefficients                                                   
     complex :: x(3)          ! roots                                                          
     integer :: nroot         ! number of roots                                                
@@ -860,7 +779,7 @@ contains
     real    :: y1,y2,y3,y2real,y2imag                                                         
     real    :: factor                                                                         
     real    :: u,v                                                                            
-        
+
     !---------------------------------------------------------------------                      
 
     y1 = 0.0
@@ -872,9 +791,9 @@ contains
        call get_quadratic_root(b,c,d,x,nroot)                                                 
        return                                                                                 
     end if
-    
+
     nroot = 3                                                                                 
-    
+
     !\                                                                                        
     ! define p and q and the discriminant                                                     
     ! definitions in Tuma and Walsh 'Engineering mathematics handbook'                        
@@ -883,7 +802,7 @@ contains
     !    discriminant = 0 =>  there are three real roots of which at least two are equal      
     !    discriminant < 0 =>  there are three real unequal roots                              
     !/                                                                                        
-    
+
     p = (1./3.)*(3.*(c/a)-(b/a)*(b/a))
     q = (1./27.)*(2.*(b/a)*(b/a)*(b/a) - 9.*(b/a)*(c/a) + 27.*(d/a))
     discriminant = (p*p*p)/27. + (q*q)/4.
@@ -925,8 +844,8 @@ contains
        x(2) = cmplx(y2real, y2imag)                                                           
        x(3) = cmplx(y2real, -y2imag)                                                          
     end if
-    
-    
+
+
   end subroutine get_cubic_root
 
   !==================================================================================
@@ -953,7 +872,7 @@ contains
     real, parameter      :: Pi = 3.141592654
     real                 :: Percent1, Percent2
     integer              :: iPoint
-!----------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     !open (unit = 2, file = "Convergence_nonuniform.dat")
     !write (2,*)'Numerical values for the second adiabatic invariant integration btw a mirror point and eq'
     !write (2,*)'nPoint  IntegralBAnalytic   2nd_orderB  IntegralHAnalytic  2nd_orderH Percent1, Percent2'
@@ -961,17 +880,17 @@ contains
     L_I(1) = 10.0 
     Phi_I(1) = 1.0
     PitchAngle = Pi/10.
-    
+
     do iPoint = 101, nPoint,100
-    
+
        call initialize_b_field(L_I(1), Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
+            RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
 
        IntegralBAnalytic = second_adiab_invariant(cos(PitchAngle))
        IntegralHAnalytic = analytic_h(cos(PitchAngle))
        call find_mirror_points (iPoint,  PitchAngle, bFieldMagnitude_III, &
-                      bMirror,iMirror_I)
-       
+            bMirror,iMirror_I)
+
        call second_adiabatic_invariant(iPoint, iMirror_I, bMirror, bFieldMagnitude_III, Ds_I,L_I(1), SecondAdiabInv)
 
        Percent1 = 100*abs(IntegralBAnalytic - SecondAdiabInv)/IntegralBAnalytic
