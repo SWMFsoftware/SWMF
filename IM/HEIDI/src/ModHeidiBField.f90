@@ -36,7 +36,8 @@ contains
     real                   :: GradB2over2_VIII(3,nPoint,nR,nPhi) 
     real                   :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
     real                   :: GradR(nPoint,nR,nPhi),GradTheta(nPoint,nR,nPhi),GradPhi(nPoint,nR,nPhi) 
-    real                   :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi
+!    real                   :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi
+    double precision       :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi
     real                   :: DipoleFactor,delta, dSdTheta
     real                   :: a,b,c,gamma,cos2Lat,cosLat,L
     integer                :: iR, iPhi,iPoint     
@@ -302,9 +303,9 @@ contains
                      dble((y**2-y**2*x**2+beta**2-beta**2*y**2-beta**2*x**2+beta**2*y**2*x**2+x**2*alpha**2)**8)*dble((r**2*(y**2- &
                      y**2*x**2+beta**2- beta**2*y**2-beta**2*x**2+beta**2*y**2*x**2+x**2*alpha**2))**(-0.1D1/0.2D1))/dble(alpha**3)
 
-                if (Vr <= 1.e-7) Vr = 0.0
-                if (Vtheta <= 1.e-7) Vtheta = 0.0
-                if (Vphi <= 1.e-7) Vphi = 0.0
+                !if (Vr <= 1.e-7) Vr = 0.0
+                !if (Vtheta <= 1.e-7) Vtheta = 0.0
+                !if (Vphi <= 1.e-7) Vphi = 0.0
 
                 GradBCrossB_VIII(1,iPoint,iR,iPhi) = Vr 
                 GradBCrossB_VIII(2,iPoint,iR,iPhi) = Vtheta
@@ -316,12 +317,11 @@ contains
                 Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,Lat,Phi_I(iPhi), alpha, beta)  
                 Lat = Lat + dLat 
 
-!                write(*,*) iPhi, iR, iPoint,GradBCrossB_VIII(1,iPoint,iR,iPhi),GradBCrossB_VIII(2,iPoint,iR,iPhi),&
-!                     GradBCrossB_VIII(3,iPoint,iR,iPhi)
+                write(*,*) iPhi, iR, iPoint,GradBCrossB_VIII(1,iPoint,iR,iPhi),GradBCrossB_VIII(2,iPoint,iR,iPhi),&
+                     GradBCrossB_VIII(3,iPoint,iR,iPhi)
              end do
           end do
        end do
-
 
 
 
