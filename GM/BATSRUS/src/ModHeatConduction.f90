@@ -24,7 +24,7 @@ module ModHeatConduction
   character(len=20), public :: TypeHeatConduction = 'user'
   logical :: DoModifyHeatConduction, DoUserHeatConduction
 
-  real :: HeatConductionParSi = 1.23e-11  ! taken from calc_heat_flux
+  real :: HeatConductionParSi = 9.0e-12  ! default for single charged ions
   real :: TmodifySi = 3.0e5, DeltaTmodifySi = 2.0e4
   real :: HeatConductionPar, Tmodify, DeltaTmodify
 
