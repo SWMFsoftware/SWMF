@@ -48,7 +48,7 @@ contains
 
     !Parameters
     real, parameter        :: DipoleStrength =  0.32   ! nTm^-3
-    real, parameter        :: alpha = 1!1.1              ! alpha is the stretching factor in z direction
+    real, parameter        :: alpha =1! 1.1              ! alpha is the stretching factor in z direction
     real, parameter        :: beta = 1!1.0/1.1           ! beta is the stretching factor in y direction
     real, parameter        :: Me = 8.02!*(10**15)
     real, parameter        :: d = 20.0
@@ -302,9 +302,9 @@ contains
                      dble((y**2-y**2*x**2+beta**2-beta**2*y**2-beta**2*x**2+beta**2*y**2*x**2+x**2*alpha**2)**8)*dble((r**2*(y**2- &
                      y**2*x**2+beta**2- beta**2*y**2-beta**2*x**2+beta**2*y**2*x**2+x**2*alpha**2))**(-0.1D1/0.2D1))/dble(alpha**3)
 
-                if (Vr ==0.0) Vr = 0.000001
-                if (Vtheta ==0.0) Vtheta = 0.000001
-                if (Vphi ==0.0) Vphi = 0.000001
+                if (Vr <= 1.e-7) Vr = 0.0
+                if (Vtheta <= 1.e-7) Vtheta = 0.0
+                if (Vphi <= 1.e-7) Vphi = 0.0
 
                 GradBCrossB_VIII(1,iPoint,iR,iPhi) = Vr 
                 GradBCrossB_VIII(2,iPoint,iR,iPhi) = Vtheta
@@ -315,9 +315,20 @@ contains
                 bFieldMagnitude_III(iPoint,iR,iPhi) = mag
                 Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,Lat,Phi_I(iPhi), alpha, beta)  
                 Lat = Lat + dLat 
+
+!                write(*,*) iPhi, iR, iPoint,GradBCrossB_VIII(1,iPoint,iR,iPhi),GradBCrossB_VIII(2,iPoint,iR,iPhi),&
+!                     GradBCrossB_VIII(3,iPoint,iR,iPhi)
              end do
           end do
        end do
+
+
+
+
+!       write(*,*) 'bField',  bFieldMagnitude_III(51,1,1)
+!       write(*,*) 'B^2',bFieldMagnitude_III(51,1,1)*bFieldMagnitude_III(51,1,1)
+!       write(*,*) '~~~~~~~~~~~~~~~~~~'
+
 
     end if
 
@@ -440,8 +451,6 @@ contains
        do iR =1, nR 
           do iPoint = 1, nPoint-1
              dLength_III(iPoint,iR,iPhi) = Length_III(iPoint+1,iR,iPhi) - Length_III(iPoint,iR,iPhi)
-             write(4,*) iPhi,iR,iPoint,dLength_III(iPoint,iR,iPhi)
-
           end do
        end do
     end do
