@@ -588,7 +588,7 @@ contains
 
   subroutine assign_coarse_blk_soln
 
-    real, dimension(nVar,1:nI/2, 1:nJ/2, 1:nK/2, 8) ::&
+    real, dimension(nVar,1:nI/2, 1:(nJ+1)/2, 1:(nK+1)/2, 8) ::&
          restricted_soln_blks
 
     integer,parameter :: isize=(nI/2)*(nJ/2)*(nK/2)*nVar
@@ -605,15 +605,15 @@ contains
        iBLK = local_cubeBLK(icube)
        if(true_BLK(iBLK))then
           restricted_soln_blks(&
-               1:nVar,1:nI/2,1:nJ/2,1:nK/2,icube) = 0.125*(&
-               State_VGB(1:nVar,1:nI:2, 1:nJ:2, 1:nK:2,iBLK)+  &
-               State_VGB(1:nVar,2:nI:2, 1:nJ:2, 1:nK:2,iBLK)+  &
-               State_VGB(1:nVar,1:nI:2, 2:nJ:2, 1:nK:2,iBLK)+  &
-               State_VGB(1:nVar,1:nI:2, 1:nJ:2, 2:nK:2,iBLK)+  &
-               State_VGB(1:nVar,2:nI:2, 2:nJ:2, 1:nK:2,iBLK)+  &
-               State_VGB(1:nVar,2:nI:2, 1:nJ:2, 2:nK:2,iBLK)+  &
-               State_VGB(1:nVar,1:nI:2, 2:nJ:2, 2:nK:2,iBLK)+  &
-               State_VGB(1:nVar,2:nI:2, 2:nJ:2, 2:nK:2,iBLK))
+               1:nVar,1:nI/2,1:(nJ+1)/2,1:(nK+1)/2,icube) = 0.125*(&
+               State_VGB(1:nVar,1:nI:2, 1:nJ  :2, 1:nK  :2,iBLK)+  &
+               State_VGB(1:nVar,2:nI:2, 1:nJ  :2, 1:nK  :2,iBLK)+  &
+               State_VGB(1:nVar,1:nI:2, 2:nJ+1:2, 1:nK  :2,iBLK)+  &
+               State_VGB(1:nVar,1:nI:2, 1:nJ  :2, 2:nK+1:2,iBLK)+  &
+               State_VGB(1:nVar,2:nI:2, 2:nJ+1:2, 1:nK  :2,iBLK)+  &
+               State_VGB(1:nVar,2:nI:2, 1:nJ  :2, 2:nK+1:2,iBLK)+  &
+               State_VGB(1:nVar,1:nI:2, 2:nJ+1:2, 2:nK+1:2,iBLK)+  &
+               State_VGB(1:nVar,2:nI:2, 2:nJ+1:2, 2:nK+1:2,iBLK))
        else
           ! Exclude non-true (body) cells from the restriction 
           ! if there are any true cells
