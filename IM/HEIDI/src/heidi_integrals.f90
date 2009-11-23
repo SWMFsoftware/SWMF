@@ -22,6 +22,7 @@ subroutine get_IntegralH(IntegralH_III)
   real                 :: bFieldMagnitude_III(nPoint,nR,nT)! Magnitude of magnetic field 
   real                 :: RadialDistance_III(nPoint,nR,nT)
   real                 :: GradBCrossB_VIII(3,nPoint,nR,nT)
+  real                 :: GradB_VIII(3,nPoint,nR,nT)
   real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
   real                 :: Length_III(nPoint,nR,nT) 
   real                 :: PitchAngle_I(nPa)   
@@ -55,7 +56,7 @@ subroutine get_IntegralH(IntegralH_III)
   if (TypeBField == 'numeric') then
 
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
+          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
 
      do iPhi = 1, nT
         do iR =1, nR
@@ -96,6 +97,7 @@ subroutine get_IntegralI(IntegralI_III)
   real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
   real                 :: RadialDistance_III(nPoint,nR,nT)
   real                 :: GradBCrossB_VIII(3,nPoint,nR,nT)
+  real                 :: GradB_VIII(3,nPoint,nR,nT)
   real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
   real                 :: Length_III(nPoint,nR,nT) 
   real                 :: PitchAngle_I(nPa)
@@ -133,8 +135,9 @@ subroutine get_IntegralI(IntegralI_III)
   if (TypeBField == 'numeric') then
 
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
+          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
 
+!     write(*,*) GradB_VIII
      do iPhi = 1, nT
         do iR =1, nR
            do iPitch =1, nPa
@@ -173,6 +176,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III,PitchAngle_I)
   real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
   real                 :: RadialDistance_III(nPoint,nR,nT)
   real                 :: GradBCrossB_VIII(3,nPoint,nR,nT)
+  real                 :: GradB_VIII(3,nPoint,nR,nT)
   real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
   real                 :: Length_III(nPoint,nR,nT) 
   real                 :: PitchAngle_I(nPa)
@@ -185,7 +189,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III,PitchAngle_I)
   if (TypeBField == 'numeric') then
      
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
+          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
      
      do iPhi = 1, nT
         do iR =1, nR
@@ -226,13 +230,14 @@ subroutine get_B_field(bFieldMagnitude_III)
   real                 :: RadialDistance_III(nPoint,nR,nT)
   real                 :: dLength_III(nPoint-1,nR,nT)       ! Length interval between i and i+1  
   real                 :: GradBCrossB_VIII(3,nPoint,nR,nT)
+  real                 :: GradB_VIII(3,nPoint,nR,nT)
   real                 :: Length_III(nPoint,nR,nT) 
   integer              :: iPhi, iR,iPitch
 
   !----------------------------------------------------------------------------------
   
   call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-       RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
+       RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
   
   
 end subroutine get_B_field
@@ -244,7 +249,7 @@ subroutine get_coef(dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII,dEdt_IIII,dMudt_III)
   use ModConst,      ONLY: cTiny  
   use ModHeidiMain,  ONLY: Phi, LZ, mu, EKEV, EBND
   use ModHeidiBACoefficients
-
+  use ModHeidiIO,    ONLY: Kp
   use ModHeidiBField
   
   implicit none
@@ -253,8 +258,8 @@ subroutine get_coef(dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII,dEdt_IIII,dMudt_III)
   real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III,RadialDistance_III, Length_III, b4_III
   real, dimension(nR,nT,nE,nPA)     :: dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII,dEdt_IIII
   real, dimension(nR,nT,nPA)        :: dMudt_III
-  real, dimension(nPoint,nR,nT,NE)  :: DriftR_IIII, DriftPhi_IIII
-  real, dimension(3,nPoint,nR,nT)   :: GradBCrossB_VIII
+  real, dimension(nPoint,nR,nT,NE)  :: DriftR_IIII, DriftTheta_IIII,DriftPhi_IIII
+  real, dimension(3,nPoint,nR,nT)   :: GradBCrossB_VIII, GradB_VIII
   real, dimension(3,nPoint,nR,nT)   :: VDrift_VIII
   real, dimension(nPoint-1,nR,nT)   :: dLength_III
   real                              :: BouncedDriftR,BouncedDriftPhi,BouncedInvRdRdt,BouncedInvRdRdt1 
@@ -263,49 +268,46 @@ subroutine get_coef(dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII,dEdt_IIII,dMudt_III)
   integer                           :: iPhi, iR, iPitch,iE
   real                              :: bField_VIII(3,nPoint,nR,nT)
   real                              :: Energy
+  real                              :: t2,t3,t4,t5,sinPitch,sin2Pitch,cosPitch,cos2Pitch
+  real                              :: I2, CoeffE, CoeffMu
   integer                           :: iPoint
+  real, parameter                   :: Me = 7.9e15 ,Re = 6.371e6 
+  real                              :: VrConv(nR,nT), A
   !----------------------------------------------------------------------------------
 
-!  call timing_active(.true.)
-!  call timing_depth(3)
-!  call timing_step(0)
-!  call timing_start('GET_COEF')
-  
-!  call timing_start('initialize_b_field')
+  A=7.05E-6/(1.-0.159*Kp + 0.0093 * Kp**2)**3 
+
   call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-       RadialDistance_III, Length_III, dLength_III, GradBCrossB_VIII)
-  
-!  call timing_stop('initialize_b_field')
+       RadialDistance_III, Length_III, dLength_III, GradBCrossB_VIII,GradB_VIII)
   
   do iE = 1, nE
-     Energy = EKEV(iE)
-!     call timing_start('get_drift_velocity')
+     Energy = 1000. * EKEV(iE)
+
      call get_drift_velocity(nPoint,nR,nT, Energy, bFieldMagnitude_III,VDrift_VIII,GradBCrossB_VIII)
-!     call timing_stop('get_drift_velocity')
 
      do iPhi = 1,nT
         do iR =1, nR
            do iPitch =1,nPa
              
               PitchAngle_I(iPitch) = acos(mu(iPitch))
+              sinPitch = sin(PitchAngle_I(iPitch))
+              sin2Pitch = sinPitch * sinPitch
+
+              cosPitch = cos(PitchAngle_I(iPitch))
+              cos2Pitch = cosPitch * cosPitch
               
-!              call timing_start('find_mirror_points')
               call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
                    bMirror_I(iPitch),iMirror_I)
-!              call timing_stop('find_mirror_points')
-              
-!              call timing_start('second_adiabatic_invariant(')
+
               call second_adiabatic_invariant(nPoint, iMirror_I(:), bMirror_I(iPitch), &
                    bFieldMagnitude_III(:,iR,iPhi),dLength_III(:,iR,iPhi), LZ(iR), SecondAdiabInv) 
-!              call timing_stop('second_adiabatic_invariant(')
 
-!              call timing_start('half_bounce_path_length')
               call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
                    bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), LZ(iR), HalfPathLength,Sb)
-!              call timing_stop('half_bounce_path_length')
-
+                            
 
               DriftR_IIII(:,iR,iPhi,iE)   = VDrift_VIII(1,:,iR,iPhi) ! Radial Drift
+              DriftTheta_IIII(:,iR,iPhi,iE) = VDrift_VIII(2,:,iR,iPhi) ! Theta Drift
               DriftPhi_IIII(:,iR,iPhi,iE) = VDrift_VIII(3,:,iR,iPhi) ! Azimuthal Drift
 
               ! \
@@ -314,36 +316,69 @@ subroutine get_coef(dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII,dEdt_IIII,dMudt_III)
               !              BouncedInvRdRdt = <1/R dR/dt>
               !/
 
-!              call timing_start('get_bounced_drift')
               call get_bounced_drift(nPoint, LZ(iR),bFieldMagnitude_III(:,iR,iPhi),&
                    bMirror_I(iPitch), iMirror_I(:),dLength_III(:,iR,iPhi),&
                    DriftR_IIII(:,iR,iPhi,iE),BouncedDriftR,RadialDistance_III(:,iR,iPhi),BouncedInvRdRdt ) 
-!              call timing_stop('get_bounced_drift')
-              
 
-!              call timing_start('get_bounced_drift2')
               call get_bounced_drift(nPoint, LZ(iR),bFieldMagnitude_III(:,iR,iPhi),&
                    bMirror_I(iPitch), iMirror_I(:),dLength_III(:,iR,iPhi),&
                    DriftPhi_IIII(:,iR,iPhi,iE),BouncedDriftPhi,RadialDistance_III(:,iR,iPhi),BouncedInvRdRdt1 ) 
-!              call timing_stop('get_bounced_drift2')  
-
             
               if (Sb==0.0) Sb = cTiny
-             dRdt_IIII  (iR,iPhi,iE,iPitch)   = BouncedDriftR/Sb
+              dRdt_IIII  (iR,iPhi,iE,iPitch)   = BouncedDriftR/Sb
               dPhiDt_IIII(iR,iPhi,iE,iPitch)   = BouncedDriftPhi/Sb
               InvRdRdt_IIII(iR,iPhi,iE,iPitch) = BouncedInvRdRdt/Sb
               if (SecondAdiabInv ==0.0) SecondAdiabInv = cTiny
-              
-              !write(*,*) 'SecondAdiabInv',SecondAdiabInv
 
-              dEdt_IIII(iR,iPhi,iE,iPitch)  = - 8. *EBND(iE)/(SecondAdiabInv*SecondAdiabInv)* BouncedInvRdRdt/Sb
-              dMudt_III(iR,iPhi,iPitch) = 4./(SecondAdiabInv*SecondAdiabInv)* BouncedInvRdRdt/Sb
+              call get_bounced_VGradB(nPoint, LZ(iR), bFieldMagnitude_III(:,iR,iPhi),&
+                   GradB_VIII(1,:,iR,iPhi),bMirror_I(iPitch),iMirror_I(:),&
+                   dLength_III(:,iR,iPhi),DriftR_IIII(:,iR,iPhi,iE),&
+                   RadialDistance_III(:,iR,iPhi),t2)
               
+              call get_bounced_VGradB(nPoint, LZ(iR), bFieldMagnitude_III(:,iR,iPhi),&
+                   GradB_VIII(2,:,iR,iPhi),bMirror_I(iPitch),iMirror_I(:),&
+                   dLength_III(:,iR,iPhi),DriftTheta_IIII(:,iR,iPhi,iE),&
+                   RadialDistance_III(:,iR,iPhi),t4)
+
+
+              call get_bounced_VGradB(nPoint, LZ(iR), bFieldMagnitude_III(:,iR,iPhi),&
+                   GradB_VIII(3,:,iR,iPhi),bMirror_I(iPitch),iMirror_I(:),&
+                   dLength_III(:,iR,iPhi),DriftPhi_IIII(:,iR,iPhi,iE),&
+                   RadialDistance_III(:,iR,iPhi),t5)
+
+
+              
+              VrConv(iR, iPhi) = -A* cos(Phi(iPhi))*(LZ(iR))**4/&              
+                   (RE*RE/ME)        
+              
+              I2 = SecondAdiabInv*SecondAdiabInv
+              CoeffE = Energy*(1.- I2/(I2+sin2Pitch))
+              ! Needs the dBdt term too
+!              dEdt_IIII(iR,iPhi,iE,iPitch)  = CoeffE * t2/Sb -(&
+!                   1./RadialDistance_III(nPoint/2,iR,iPhi))* (2.* Energy*I2)/(I2+sin2Pitch)*(BouncedDriftR/Sb+VrConv(iR,iPhi))+&
+!                   CoeffE * t4/Sb + CoeffE * t5/Sb
+ 
+
+              dEdt_IIII(iR,iPhi,iE,iPitch)  = CoeffE * (t2/Sb+VrConv(iR,iPhi)) -(&
+                   1./RadialDistance_III(nPoint/2,iR,iPhi))* (2.* Energy*I2)/(I2+sin2Pitch)*(BouncedDriftR/Sb + VrConv(iR,iPhi))+&
+                   CoeffE * t4/Sb + CoeffE * t5/Sb
+             
+              CoeffMu = -(1.-cos2Pitch)*I2/(cosPitch*(I2 + 1. - cos2Pitch))
+ 
+
+              !Needs the dBdt term too
+             dMudt_III(iR,iPhi,iPitch) = CoeffMu * &
+                  ((1./RadialDistance_III(nPoint/2,iR,iPhi))*(BouncedDriftR/Sb+VrConv(iR,iPhi))+&
+                   0.5 * (t2/Sb+VrConv(iR,iPhi)) + 0.5 * t4/Sb +0.5* t5/Sb) 
+
+ 
            end do
         end do
      end do
      
   end do
-! call timing_stop('GET_COEF') 
-! call timing_report_total 
+
+
+
+
 end subroutine get_coef

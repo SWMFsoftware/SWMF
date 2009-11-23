@@ -150,6 +150,7 @@ contains
     real                 :: Phi_I(nPhi)    
     real                 :: bFieldMagnitude_III(nPoint,nR,nPhi) 
     real                 :: GradBCrossB_VIII(3,nPoint,nR,nPhi)
+    real                 :: GradB_VIII(3,nPoint,nR,nPhi)
     real                 :: Rho_II(nPoint)    
     real                 :: PitchAngle
     real                 :: dLength_III(nPoint-1,nR,nPhi)      ! Length interval between i and i+1  
@@ -167,7 +168,7 @@ contains
     PitchAngle = Pi/10.
    
     call initialize_b_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
+          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
     
     call find_mirror_points (iPoint,  PitchAngle, bFieldMagnitude_III, &
                       bMirror,iMirror_I)

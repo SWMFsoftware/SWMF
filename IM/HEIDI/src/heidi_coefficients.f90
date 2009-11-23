@@ -115,11 +115,6 @@ subroutine CEPARA
         !............10**Y is cross section of H+ in m2
         do j = 1, jo
            do L=2,Lo
-              !write(*,*) 'k,j,l',k,j,l
-              !write(*,*) 'Y',Y
-              !write(*,*) 'V(K,2)',V(K,2)
-              !write(*,*) 'DT',DT
-              !write(*,*) 'HDNS(2:io,j,L)',HDNS(2:io,j,L)
               achar(2:io,j,k,l,2)=exp(-(10.**Y*V(K,2)*HDNS(2:io,j,L)*DT))
            end do ! L loop
         end do    ! j loop
@@ -267,6 +262,11 @@ subroutine OTHERPARA
   ! Pitch angle and energy time derivatives at boundaries of grids
   !/
 
+  open (unit = 2, file = "EDOT.dat")
+  write (2,*)'Values '
+  write (2,*)'i,j,k,l,EDOT' 
+
+
   if (TypeBField == 'analytic') then 
      
      do I=1,IO
@@ -278,6 +278,7 @@ subroutine OTHERPARA
               GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
               do K=1,KO
                  EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
+                 write(2,*) 'i,j,k,l,EDOT',i,j,k,l,EDOT(I,J,K,L)
               end do	! K loop
            end do 	! L loop
            MULC=MU(UPA(I))+0.5*WMU(UPA(I))
@@ -296,13 +297,27 @@ subroutine OTHERPARA
            end do	! K loop
         end do 	! J loop
      end do	! I loop
-     
+ 
+
+     write(*,*) 'EDOT_analytic', EDOT(20,24,42,67)
+    
   end if
 
   
   if (TypeBField == 'numeric') then 
-     
      call get_coef(dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII,dEdt_IIII,dMudt_III)
+
+     do I=1,IO
+        do J=1,JO
+           do L=1,UPA(I)
+              do k = 1,ko
+                 write(2,*) dEdt_IIII(i,j,k,l) 
+              end do
+           end do
+        end do
+     end do
+     
+     
      
      do I=1,IO
         do J=1,JO
@@ -311,10 +326,11 @@ subroutine OTHERPARA
               !MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
               !     /MUBOUN/4./(0.5*(FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
               
-              MUDOT(I,J,L) = -((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,l)
+              MUDOT(I,J,L) = -((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,l)*DL1/DMU(L)
+              
 
               do K=1,KO
-                 EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)!*DL1/DE(K)
+                 EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)*DL1/DE(K)
               end do	! K loop
            end do 	! L loop
            MULC=MU(UPA(I))+0.5*WMU(UPA(I))
@@ -325,21 +341,27 @@ subroutine OTHERPARA
               !MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
               !     /MUBOUN/4./(0.5*( FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
               
-              MUDOT(I,J,L)= -((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,l)
+              MUDOT(I,J,L)= -((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,l)*DL1/DMU(L)
 
               do K=1,KO
-                 EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)!*DL1/DE(K)
+                 EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)*DL1/DE(K)
               end do	! K loop
            end do	! L loop
            MUDOT(I,J,LO)=0.
            do K=1,KO
-              EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)!*DL1/DE(K)
+              EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)*DL1/DE(K)
+           
            end do	! K loop
         end do 	! J loop
      end do	! I loop
+ 
+     write(*,*) 'EDOT_numeric', EDOT(20,24,42,67)   
      
   end if
 
+  close(2)
+
+  !stop
 
   !\
   ! We assume Te=Ti=1eV (kT=1eV)
@@ -612,6 +634,7 @@ subroutine MAGCONV(I3,NST)
   ! Calculate base convection electric field
   !/
 
+
   if (ABASE(IA+1).eq.1) then
      do J=1,JO   ! Fill in drift values
         do i=1,io
@@ -620,6 +643,9 @@ subroutine MAGCONV(I3,NST)
            P1(I,J)=A*LAMGAM*LZ(I)**(LAMGAM+1.)*sin(PHI(J)+0.5*DPHI)*   &
                 DT/DPHI*(RE*RE/ME)
            BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*sin(phi(j))
+
+           !write(*,*) i,j,VR(i,j)
+
         end do
         !\
         ! Compute the V-S potential outside the edges of the radial grid. 
@@ -901,6 +927,8 @@ subroutine MAGCONV(I3,NST)
            RR=LZ(I)+0.5*DL1
            EPP=-(epots1(jj,i+1)-epots1(j,i+1))/RR/DPHI
            VR(i,j)=EPP*DT/DL1*RR**3*RE/ME
+
+
         end do
         do i=1,io
            RR=LZ(I)
@@ -1121,6 +1149,9 @@ subroutine MAGCONV(I3,NST)
               RR=LZ(I)+0.5*DL1
               EPP=-(FPOT(i+1,jj)-FPOT(i+1,j))/RR/DPHI
               VR(i,j)=VR(i,j)+EPP*DT/DL1*RR**3*RE/ME
+              !!!!!VR is calculated here
+           
+
            end do
            SJ=sin(PHI(J)+.5*DPHI)
            CJ=cos(PHI(J)+.5*DPHI)

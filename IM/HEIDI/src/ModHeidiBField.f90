@@ -6,7 +6,7 @@ module ModHeidiBField
 contains
 
   subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII)
+       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
 
     use ModHeidiInput, ONLY: TypeBfieldGrid
     use ModNumConst,   ONLY: cTiny, cPi
@@ -33,11 +33,9 @@ contains
     real                   :: BetaF,dLatNew,beta1,beta2
     real                   :: alpha2, alpha4
     real                   :: bField_VIII(3,nPoint,nR,nPhi)
-    real                   :: GradB2over2_VIII(3,nPoint,nR,nPhi) 
     real                   :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
-    real                   :: GradR(nPoint,nR,nPhi),GradTheta(nPoint,nR,nPhi),GradPhi(nPoint,nR,nPhi) 
-!    real                   :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi
-    double precision       :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi
+    real                   :: GradB_VIII(3,nPoint,nR,nPhi)
+    double precision       :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi,GradR, GradTheta, GradPhi
     real                   :: DipoleFactor,delta, dSdTheta
     real                   :: a,b,c,gamma,cos2Lat,cosLat,L
     integer                :: iR, iPhi,iPoint     
@@ -45,15 +43,14 @@ contains
     real                   :: cos2LatMin,cos2LatMax,cos2Lat1,cos2Lat2,cos2Lat3
     complex                :: root(3)
     integer                :: nroot, i
-    real                   ::dd
+    real                   :: dd
+    real                   :: VrConv(nR,nPhi)
 
     !Parameters
     real, parameter        :: DipoleStrength =  0.32   ! nTm^-3
-    real, parameter        :: alpha =1! 1.1              ! alpha is the stretching factor in z direction
+    real, parameter        :: alpha =1!1.1              ! alpha is the stretching factor in z direction
     real, parameter        :: beta = 1!1.0/1.1           ! beta is the stretching factor in y direction
-    real, parameter        :: Me = 8.02!*(10**15)
-    real, parameter        :: d = 20.0
-    real, parameter        :: J =  8.02!*(10**13)
+    real, parameter        :: Me = 8.02e15
     !----------------------------------------------------------------------------------
 
     DipoleFactor= cMu*Me/4.*cPi
@@ -124,7 +121,7 @@ contains
     ! Stretched dipole magnetic field, with azimuthal symmetry. 
     !/
 
-    if (TypeBFieldGrid == 'stretched1') then  
+    if (TypeBFieldGrid == 'stretched') then  
        alpha2 = alpha * alpha
        alpha4 = alpha2 * alpha2
        beta2 = beta* beta
@@ -154,6 +151,7 @@ contains
              LatMin = -LatMax
              dLat   = (LatMax-LatMin)/(nPoint-1)
              Lat = LatMin
+
 
              do iPoint = 1, nPoint
                 x = sin(Lat)
@@ -302,145 +300,107 @@ contains
                      y**2-72*alpha**2*y**6*beta**2*x**6+66*alpha**4*beta**4*x**4*y**4)*sqrt(dble(1-x**2))/dble(r**9)/&
                      dble((y**2-y**2*x**2+beta**2-beta**2*y**2-beta**2*x**2+beta**2*y**2*x**2+x**2*alpha**2)**8)*dble((r**2*(y**2- &
                      y**2*x**2+beta**2- beta**2*y**2-beta**2*x**2+beta**2*y**2*x**2+x**2*alpha**2))**(-0.1D1/0.2D1))/dble(alpha**3)
+                
+                GradR = 3 * (4 * beta ** 2 * x ** 2 * y ** 2 - beta ** 4 * y ** 4 + 2* beta ** 4 * y ** 2 + &
+                     2 * beta ** 4 * x ** 2 + 5 * x ** 4 * alpha ** 4 - 4 * x ** 2 * alpha ** 2 * beta ** 2 *&
+                     y ** 2 + 4 * beta ** 2 * x ** 4 * y ** 2 * alpha ** 2 + 2 * beta ** 4 * x ** 2 * &
+                     y **4 - 4 * x ** 4 * alpha ** 2 * beta ** 2 + 2 * beta ** 4 * x ** 4 * y ** 2 - &
+                     beta ** 4 * x ** 4 * y ** 4 - 4 * beta ** 4 * x ** 2 * y ** 2 + 4 * beta ** 2 * x ** 2 * &
+                     alpha ** 2 - beta ** 4 * x ** 4 + 2 * y ** 4 * x ** 2 + 2 * y ** 4 * beta ** 2 - x ** 4 * &
+                     y ** 4 - y ** 4 - 2 * beta ** 2 * y ** 2 - beta ** 4 - 9 * alpha ** 4 * x ** 2 + 2 * &
+                     x ** 4 * y ** 4 * beta ** 2 - 4 * x ** 4 * y ** 2 * alpha ** 2 - 2 * x ** 4 * beta ** 2 * &
+                     y ** 2 - 4 * y ** 4 * beta ** 2 * x ** 2 + 4 * y ** 2 * x ** 2 * alpha ** 2) / &
+                     r ** 7 * (-(4 * beta ** 2 * x ** 2 * y ** 2 - beta ** 4 * y ** 4 + 2 * beta ** 4 * &
+                     y** 2 + 2 * beta ** 4 * x ** 2 + 5 * x ** 4 * alpha ** 4 - 4 * x ** 2 * alpha ** 2 * beta ** 2 * &
+                     y ** 2 + 4 * beta ** 2 * x ** 4 * y ** 2 * alpha ** 2 + 2 * beta ** 4 * x ** 2 * y ** 4 - &
+                     4 * x ** 4 * alpha ** 2 * beta ** 2 + 2 * beta ** 4 * x ** 4 * y ** 2 - beta ** 4 * x ** 4 * &
+                     y ** 4 - 4 * beta ** 4 * x ** 2 * y ** 2 + 4 * beta ** 2 * x ** 2 * alpha ** 2 - beta ** 4 * &
+                     x ** 4 + 2 * y ** 4 * x** 2 + 2 * y ** 4 * beta ** 2 - x ** 4 * y ** 4 - y ** 4 - &
+                     2 * beta ** 2 * y ** 2 - beta ** 4 - 9 * alpha ** 4 * x ** 2 + 2 * x ** 4 * y ** 4 * beta ** 2 - &
+                     4 * x ** 4 * y ** 2 * alpha ** 2 - 2 * x ** 4 * beta ** 2 * y ** 2 - 4 * y ** 4 * beta ** 2 * &
+                     x ** 2 + 4 * y ** 2 * x ** 2 * alpha ** 2) / r ** 6 / alpha ** 2 / (y ** 2 - x ** 2 * y ** 2 + &
+                     beta ** 2 - beta ** 2 * y ** 2 - beta ** 2 * x ** 2 + beta ** 2 * x ** 2 * y ** 2 + x ** 2 * &
+                     alpha ** 2) ** 5) ** (-0.1D1 / 0.2D1) / (y ** 2 - x ** 2 * y ** 2 + beta ** 2 - beta ** 2 * &
+                     y ** 2 - beta ** 2 * x ** 2 + beta ** 2 * x ** 2 * y ** 2 + x ** 2 * alpha ** 2) ** 5 / alpha ** 2
 
-                !if (Vr <= 1.e-7) Vr = 0.0
-                !if (Vtheta <= 1.e-7) Vtheta = 0.0
-                !if (Vphi <= 1.e-7) Vphi = 0.0
+                GradTheta = -0.3D1 * dble(-3 * y ** 4 * alpha ** 2 - 3 * beta ** 4 * alpha ** 2 + 6 * &
+                     y ** 4 * alpha ** 2 * beta ** 2 + 14 * x ** 2 * alpha ** 4 * y ** 2 - 6 * y ** 2 * &
+                     beta ** 2 * alpha ** 2 - 14 * x ** 2 * alpha ** 4 * beta ** 2 * y ** 2 + beta ** 6 - &
+                     3 * beta ** 4 * y ** 4 * alpha ** 2 - 9 * beta ** 2 * x ** 4 * alpha ** 4 - 6 * beta ** 6 * &
+                     x ** 2 * y ** 4 + 3 * beta ** 4 * x ** 4 * alpha ** 2 - 3 * beta ** 6 * x ** 4 * y ** 2 + 3 * &
+                     beta ** 6 * x ** 4 * y ** 4 + 6 * beta ** 6 * x ** 2 * y ** 2 - 6 * beta ** 4 * y ** 4 + 3 * &
+                     beta ** 4 * y ** 2 + beta ** 6 * x ** 4 - beta ** 6 * y ** 6 + 6 * y ** 6 * beta ** 2 * x ** 2 + &
+                     2 * y ** 6 * beta ** 6 * x ** 2 + 3 * y ** 4 * alpha ** 2 * x ** 4 + 6 * beta ** 2 * x ** 4 * &
+                     y ** 2 *alpha ** 2 + 12 * beta ** 4 * x ** 2 * y ** 4 + 3 * beta ** 4 * x** 4 * y ** 2 - 6 * &
+                     beta ** 4 * x ** 4 * y ** 4 - 6 * beta ** 4 *x ** 2 * y ** 2 + 3 * y ** 4 * beta ** 2 + y ** 6 -&
+                     y ** 6 * beta** 6 * x ** 4 + 6 * beta ** 4 * alpha ** 2 * y ** 2 + 14 * x ** 2 * alpha ** 4 *&
+                     beta ** 2 + 3 * x ** 4 * y ** 4 * beta ** 2 - 6 * y ** 4 * beta ** 2 * x ** 2 + 3 * y ** 6 * &
+                     beta ** 4 - 2 * y ** 6 * x ** 2 - 3 * y ** 6 * beta ** 2 - 6 * y ** 4 * beta ** 2 * x ** 4 * &
+                     alpha ** 2 - 6 * beta ** 4 * x ** 4 * y ** 2 * alpha ** 2 + 9 * beta ** 2 * y ** 2 * x ** 4 * &
+                     alpha ** 4 + 3 * beta ** 4 * y ** 4 * x ** 4 * alpha ** 2 + y ** 6 * x ** 4 + 3 * beta ** 6 * &
+                     y ** 4 - 3 * beta ** 6 * y ** 2 - 2 * beta ** 6 * x ** 2 - 9 * y ** 2 * x ** 4 * alpha ** 4 - &
+                     6 * y ** 6 * beta ** 4 * x ** 2 + 3 * y ** 6 * beta ** 4 * x ** 4 - 3 * y ** 6 * x ** 4 * &
+                     beta ** 2 - 3 * alpha ** 4 * beta ** 2 * y ** 2 + 5 * alpha ** 6 * x ** 4 - 12 * alpha** 6 * &
+                     x ** 2 + 3 * alpha ** 4 * y ** 2 + 3 * alpha ** 4 * beta ** 2) / dble(r ** 7) * dble(x) * &
+                     sqrt(dble(1 - x ** 2)) / dble(alpha ** 2) / dble((y ** 2 - x ** 2 * y ** 2 + beta ** 2 - &
+                     beta ** 2 *y ** 2 - beta ** 2 * x ** 2 + beta ** 2 * x ** 2 * y ** 2 + x ** 2 * alpha ** 2) ** 6) * &
+                     dble((-(4 * beta ** 2 * x ** 2 * y ** 2 - beta ** 4 * y ** 4 + 2 * beta ** 4 * y ** 2 + 2 * &
+                     beta ** 4 * x **2 + 5 * x ** 4 * alpha ** 4 - 4 * x ** 2 * alpha ** 2 * beta ** 2* y ** 2 + 4 * &
+                     beta ** 2 * x ** 4 * y ** 2 * alpha ** 2 + 2 * beta ** 4 * x ** 2 * y ** 4 - 4 * x ** 4 * &
+                     alpha ** 2 * beta ** 2 + 2* beta ** 4 * x ** 4 * y ** 2 - beta ** 4 * x ** 4 * y ** 4 - 4 * &
+                     beta ** 4 * x ** 2 * y ** 2 + 4 * beta ** 2 * x ** 2 * alpha ** 2 - beta ** 4 * x ** 4 + 2 * &
+                     y ** 4 * x ** 2 + 2 * y ** 4 * beta **2 - x ** 4 * y ** 4 - y ** 4 - 2 * beta ** 2 * y ** 2 - &
+                     beta ** 4 - 9 * alpha ** 4 * x ** 2 + 2 * x ** 4 * y ** 4 * beta ** 2 - 4 *x ** 4 * y ** 2 * &
+                     alpha ** 2 - 2 * x ** 4 * beta ** 2 * y ** 2 - 4 * y ** 4 * beta ** 2 * x ** 2 + 4 * y ** 2 * &
+                     x ** 2 * alpha ** 2) / r ** 6 / alpha ** 2 / (y ** 2 - x ** 2 * y ** 2 + beta ** 2 - &
+                     beta ** 2 * y ** 2 - beta ** 2 * x ** 2 + beta ** 2 * x ** 2 * y ** 2 + x ** 2 * &
+                     alpha ** 2) ** 5) ** (-0.1D1 / 0.2D1))
 
+
+                GradPhi = 0.3D1 * dble(4 * beta ** 2 * x ** 2 * y ** 2 - beta ** 4 * y** 4 + 2 * beta ** 4 * y ** 2 + &
+                     2 * beta ** 4 * x ** 2 + 7 * x **4 * alpha ** 4 - 6 * x ** 2 * alpha ** 2 * beta ** 2 * y ** 2 + &
+                     6* beta ** 2 * x ** 4 * y ** 2 * alpha ** 2 + 2 * beta ** 4 * x **2 * y ** 4 - 6 * x ** 4 * &
+                     alpha ** 2 * beta ** 2 + 2 * beta ** 4 * x ** 4 * y ** 2 - beta ** 4 * x ** 4 * y ** 4 - 4 * &
+                     beta ** 4 * x ** 2 * y ** 2 + 6 * beta ** 2 * x ** 2 * alpha ** 2 - beta ** 4 * x ** 4 + 2 * &
+                     y ** 4 * x ** 2 + 2 * y ** 4 * beta ** 2 - x ** 4 *y ** 4 - y ** 4 - 2 * beta ** 2 * y ** 2 - &
+                     beta ** 4 - 15 * alpha ** 4 * x ** 2 + 2 * x ** 4 * y ** 4 * beta ** 2 - 6 * x ** 4 * y ** 2 * &
+                     alpha ** 2 - 2 * x ** 4 * beta ** 2 * y ** 2 - 4 * y ** 4 *beta ** 2 * x ** 2 + 6 * y ** 2 * &
+                     x ** 2 * alpha ** 2) / dble(r ** 7) * dble(-1 + beta ** 2) * sqrt(dble(1 - y ** 2)) * &
+                     dble(y) / dble(alpha ** 2) / dble((y ** 2 - x ** 2 * y ** 2 + beta ** 2 - beta ** 2 * y ** 2 - &
+                     beta ** 2 * x ** 2 + beta ** 2 * x ** 2 * y ** 2 + x ** 2 * alpha ** 2) ** 6) * &
+                     dble((-(4 * beta ** 2 * x ** 2 * y** 2 - beta ** 4 * y ** 4 + 2 * beta ** 4 * y ** 2 + &
+                     2 * beta ** 4 * x ** 2 + 5 * x ** 4 * alpha ** 4 - 4 * x ** 2 * alpha ** 2 * beta ** 2 * y ** 2 + &
+                     4 * beta ** 2 * x ** 4 * y ** 2 * alpha ** 2 + 2 * beta ** 4 * x ** 2 * y ** 4 - 4 * x ** 4 * &
+                     alpha ** 2 * beta ** 2 + 2 * beta ** 4 * x ** 4 * y ** 2 - beta ** 4 * x ** 4 * y **4 - 4 * &
+                     beta ** 4 * x ** 2 * y ** 2 + 4 * beta ** 2 * x ** 2 * alpha ** 2 - beta ** 4 * x ** 4 + 2 * &
+                     y ** 4 * x ** 2 + 2 * y ** 4 *beta ** 2 - x ** 4 * y ** 4 - y ** 4 - 2 * beta ** 2 * y ** 2 - &
+                     beta ** 4 - 9 * alpha ** 4 * x ** 2 + 2 * x ** 4 * y ** 4 * beta **2 - 4 * x ** 4 * y ** 2 * &
+                     alpha ** 2 - 2 * x ** 4 * beta ** 2 * y** 2 - 4 * y ** 4 * beta ** 2 * x ** 2 + 4 * y ** 2 * &
+                     x ** 2 * alpha ** 2) / r ** 6 / alpha ** 2 / (y ** 2 - x ** 2 * y ** 2 + beta** 2 - &
+                     beta ** 2 * y ** 2 - beta ** 2 * x ** 2 + beta ** 2 * x **2 * y ** 2 + x ** 2 * &
+                     alpha ** 2) ** 5) ** (-0.1D1 / 0.2D1)) * sqrt(dble(1 - x ** 2))
+
+                ! Gradient B
+                GradB_VIII(1,iPoint, iR, iPhi) = GradR
+                GradB_VIII(2,iPoint, iR, iPhi) = GradTheta
+                GradB_VIII(3,iPoint, iR, iPhi) = GradPhi
+
+
+                ! drift Velocity components
+                
                 GradBCrossB_VIII(1,iPoint,iR,iPhi) = Vr 
                 GradBCrossB_VIII(2,iPoint,iR,iPhi) = Vtheta
                 GradBCrossB_VIII(3,iPoint,iR,iPhi) = Vphi
                 !mag = DipoleFactor*(sqrt(Br**2+Btheta**2+Bphi**2))
+
 
                 mag = DipoleStrength*(sqrt(Br**2+Btheta**2+Bphi**2))
                 bFieldMagnitude_III(iPoint,iR,iPhi) = mag
                 Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,Lat,Phi_I(iPhi), alpha, beta)  
                 Lat = Lat + dLat 
 
-                write(*,*) iPhi, iR, iPoint,GradBCrossB_VIII(1,iPoint,iR,iPhi),GradBCrossB_VIII(2,iPoint,iR,iPhi),&
-                     GradBCrossB_VIII(3,iPoint,iR,iPhi)
-             end do
-          end do
-       end do
-
-
-
-!       write(*,*) 'bField',  bFieldMagnitude_III(51,1,1)
-!       write(*,*) 'B^2',bFieldMagnitude_III(51,1,1)*bFieldMagnitude_III(51,1,1)
-!       write(*,*) '~~~~~~~~~~~~~~~~~~'
-
-
-    end if
-
-
-    !\
-    ! Stretched dipole magnetic field, due to wire current. 
-    ! The radial distance and field line length are WRONG. 
-    ! Needes another calculation for those. More complicated!!! 
-    !/
-
-    if (TypeBFieldGrid == 'stretched2') then  
-
-       Lat = LatMin
-       do iPhi =1, nPhi
-          do iR =1, nR 
-             do iPoint = 1, nPoint
-                RadialDistance_III(iPoint,iR,iPhi)= r
-                bR = sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1/ 0.2D1) / cPi/ 0.2D1 + &
-                     d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 +&
-                     r ** 2 * sin(Lat) ** 2) / cPi* sin(Lat) / 0.2D1
-                bTheta = cMu * Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1) / cPi/ 0.4D1 &
-                     - (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) / cPi/ 0.2D1
-                bPhi= r * sin(Lat) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) /cPi * sin(Phi_I(iPhi)) / 0.2D1
-
-                bField_VIII(1,iPoint,iR,iPhi) = bR
-                bField_VIII(2,iPoint,iR,iPhi) = bTheta
-                bField_VIII(3,iPoint,iR,iPhi) = bPhi
-
-                bFieldMagnitude_III(iPoint,iR,iPhi) =sqrt(bR * bR + bTheta * bTheta + bPhi * bPhi)
-
-                ! Gradient
-
-                GradR(iPoint,iR,iPhi) = (sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.2D1 &
-                     + d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) /cPi * sin(Lat) / 0.2D1) * &
-                     (-0.3D1 / 0.2D1 * sin(Lat) * cMu * Me * (r ** 2) ** (-0.5D1 / 0.2D1) /cPi * r - &
-                     d*cMu*J*sin(Lat)*((0.2D1*r*cos(Lat)*cos(Phi_I(iPhi)) + 0.2D1 * d) * cos(Lat) * cos(Phi_I(iPhi)) + &
-                     0.2D1 * r * sin(Lat) ** 2) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi / 0.2D1) + &
-                     (cMu * Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.4D1 - &
-                     (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) /cPi / 0.2D1) * (-0.3D1 / 0.4D1 * cMu * Me * cos(Lat) * &
-                     (r ** 2) ** (-0.5D1 / 0.2D1) /cPi * r - cos(Phi_I(iPhi)) * &
-                     cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) /cPi / 0.2D1 + (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * &
-                     cMu * J * ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * cos(Lat) * cos(Phi_I(iPhi)) + &
-                     0.2D1 * r * sin(Lat) ** 2) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi / 0.2D1) + &
-                     r * sin(Lat) ** 2 * cMu ** 2 * J ** 2 / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi ** 2 * sin(Phi_I(iPhi)) ** 2 / 0.4D1 - &
-                     r ** 2 * sin(Lat) ** 2 * cMu ** 2 * J ** 2 * sin(Phi_I(iPhi)) ** 2 * &
-                     ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * cos(Lat) * cos(Phi_I(iPhi)) +&
-                     0.2D1 * r * sin(Lat) ** 2) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) ** 3 /cPi ** 2 / 0.4D1
-
-                GradTheta(iPoint,iR,iPhi) = ((sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.2D1 + &
-                     d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d)** 2 + r ** 2 * &
-                     sin(Lat) ** 2) /cPi * sin(Lat) / 0.2D1) * &
-                     (-cMu * Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.2D1 - &
-                     d * cMu * J * sin(Lat) * ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + &
-                     0.2D1 * d) * r * sin(Lat) * cos(Phi_I(iPhi)) - &
-                     0.2D1 * r ** 2 * sin(Lat) * cos(Lat)) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi / 0.2D1 - &
-                     d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2* sin(Lat) ** 2) /cPi * cos(Lat) / 0.2D1) + &
-                     (cMu *Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1) /cPi /0.4D1 - &
-                     (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) /cPi / 0.2D1) * &
-                     (sin(Lat) * cMu * Me * (r ** 2) ** (-0.3D1 / 0.2D1)/cPi / 0.4D1 - &
-                     d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) /cPi * sin(Lat) / 0.2D1 + &
-                     (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J * &
-                     ((0.2D1 * r * cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * r * sin(Lat) * cos(Phi_I(iPhi)) - &
-                     0.2D1 * r ** 2 * sin(Lat) * cos(Lat)) / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi / 0.2D1) - &
-                     r ** 2 * sin(Lat) * cMu ** 2 * J ** 2 / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi ** 2 * &
-                     sin(Phi_I(iPhi)) ** 2 * cos(Lat) / 0.4D1 - r ** 2 * sin(Lat) ** 2 * cMu ** 2 * J ** 2 * &
-                     sin(Phi_I(iPhi)) ** 2 * ((0.2D1 * r *cos(Lat) * cos(Phi_I(iPhi)) + 0.2D1 * d) * &
-                     r * sin(Lat) * cos(Phi_I(iPhi)) - 0.2D1 * r ** 2 * sin(Lat) * cos(Lat)) &
-                     / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) ** 3 /cPi ** 2 / 0.4D1) / r
-
-                GradPhi(iPoint,iR,iPhi) =  0.1D1 / r / cos(Lat) * ((sin(Lat) * cMu * Me * &
-                     (r ** 2) ** (-0.3D1 / 0.2D1) /cPi / 0.2D1 + d * cMu * J /&
-                     ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + r ** 2 * sin(Lat) ** 2) /cPi * &
-                     sin(Lat) / 0.2D1) * d * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 +&
-                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi * sin(Lat) * &
-                     (r * cos(Lat) * cos(Phi_I(iPhi)) + d) * r * cos(Lat)* sin(Phi_I(iPhi)) + &
-                     (cMu * Me * cos(Lat) * (r ** 2) ** (-0.3D1 / 0.2D1)/cPi / &
-                     0.4D1 - (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu *J / &
-                     ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + r ** 2 * sin(Lat) ** 2) / &
-                     cPi / 0.2D1) * (r * sin(Phi_I(iPhi)) * cMu * J / ((r * cos(Lat) * &
-                     cos(Phi_I(iPhi)) + d) ** 2 + r ** 2 * sin(Lat) ** 2) /cPi / 0.2D1 - &
-                     (r * cos(Phi_I(iPhi)) + d * cos(Lat)) * cMu * J / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) ** 2/cPi * &
-                     (r * cos(Lat) * cos(Phi_I(iPhi)) + d) * r * cos(Lat) * sin(Phi_I(iPhi))) + &
-                     r ** 3 * sin(Lat) ** 2 * cMu ** 2 * J ** 2 / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 +&
-                     r ** 2 * sin(Lat) ** 2) ** 3 /cPi ** 2 * sin(Phi_I(iPhi)) ** 3 * &
-                     (r * cos(Lat) * cos(Phi_I(iPhi)) + d) * cos(Lat) / 0.2D1 + &
-                     r ** 2 * sin(Lat) ** 2 * cMu ** 2 * J ** 2 / ((r * cos(Lat) * cos(Phi_I(iPhi)) + d) ** 2 + &
-                     r ** 2 * sin(Lat) ** 2) ** 2 /cPi ** 2 * sin(Phi_I(iPhi)) * cos(Phi_I(iPhi)) / 0.4D1)
-
-                GradB2over2_VIII(1,iPoint,iR,iPhi) =  GradR(iPoint,iR,iPhi)
-                GradB2over2_VIII(2,iPoint,iR,iPhi) =  GradTheta(iPoint,iR,iPhi)
-                GradB2over2_VIII(3,iPoint,iR,iPhi) =  GradPhi(iPoint,iR,iPhi)  
-
-                RadialDistance_III(iPoint,iR,iPhi) = L_I(iR)*CosLat2 ! not good
-
-                Lat = Lat + dLat
+!                write(*,*) iPhi, iR, iPoint,GradBCrossB_VIII(1,iPoint,iR,iPhi),GradBCrossB_VIII(2,iPoint,iR,iPhi),&
+!                     GradBCrossB_VIII(3,iPoint,iR,iPhi)
              end do
           end do
        end do
@@ -871,7 +831,7 @@ contains
     real                 :: RadialDistance_III(nPoint,nR,nPhi)
     real                 :: dLength_III(nPoint-1,nR,nPhi)      ! Length interval between i and i+1  
     real                 :: Length_III(nPoint,nR,nPhi) 
-    real                 :: GradBCrossB_VIII(3,nPoint,nR,nPhi)
+    real                 :: GradBCrossB_VIII(3,nPoint,nR,nPhi),GradB_VIII(3,nPoint,nR,nPhi)
     real                 :: PitchAngle
     real                 :: Ds_I(nPoint)
     real                 :: SecondAdiabInv, IntegralBAnalytic
@@ -893,7 +853,7 @@ contains
     do iPoint = 101, nPoint,100
 
        call initialize_b_field(L_I(1), Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-            RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII)
+            RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
 
        IntegralBAnalytic = second_adiab_invariant(cos(PitchAngle))
        IntegralHAnalytic = analytic_h(cos(PitchAngle))
