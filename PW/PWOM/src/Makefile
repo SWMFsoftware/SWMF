@@ -49,6 +49,7 @@ METHODS = \
 	read_restart.o\
 	set_vertical_grid.o\
 	calc_dt.o\
+	calc_centrifugal.o\
 	${OBJECTS_PLANET}
 
 LIBOBJECTS = ${MODULES} ${METHODS}
