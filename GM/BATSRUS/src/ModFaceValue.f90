@@ -504,26 +504,26 @@ contains
              end do
           end do
        end do
-       do k=kMinFaceY,kMaxFaceY
-          do i=iMinFaceY,iMaxFaceY
+       if(nJ > 1)then
+          do k=kMinFaceY,kMaxFaceY; do i=iMinFaceY,iMaxFaceY
              do j=1-nOrder,jMinFaceX-1
                 call calc_primitives_boris    ! additional calculations for 
              end do                           ! y -faces
              do j=jMaxFaceX+1,nJ+nOrder
                 call calc_primitives_boris    ! additional calculations for 
              end do	                      ! y-faces
-          end do
-       end do
-       do j=jMinFaceZ,jMaxFaceZ
-          do i=iMinFaceZ,iMaxFaceZ
+          end do; end do
+       end if
+       if(nK > 1)then
+          do j=jMinFaceZ,jMaxFaceZ; do i=iMinFaceZ,iMaxFaceZ
              do k=1-nOrder,kMinFaceX-1
                 call calc_primitives_boris    ! additional calculations for 
              end do                           ! z-faces
              do k=kMaxFaceX+1,nK+nOrder
                 call calc_primitives_boris    ! additional calculations for 
              end do	                      ! z-faces
-          end do
-       end do
+          end do; end do
+       end if
     else                                         !^CFG END BORISCORR
        if(UseAccurateResChange)then
           do k=-1,nK+2; do j=-1, nJ+2; do i=-1, nI+2
@@ -537,26 +537,26 @@ contains
                 end do
              end do
           end do
-          do k=kMinFaceY,kMaxFaceY
-             do i=iMinFaceY,iMaxFaceY
+          if(nJ > 1)then
+             do k=kMinFaceY,kMaxFaceY; do i=iMinFaceY,iMaxFaceY
                 do j=1-nOrder,jMinFaceX-1
                    call calc_primitives_MHD   ! additional calculations for 
                 end do                        ! y -faces
                 do j=jMaxFaceX+1,nJ+nOrder
                    call calc_primitives_MHD   ! additional calculations for 
                 end do	                      ! y-faces
-             end do
-          end do
-          do j=jMinFaceZ,jMaxFaceZ
-             do i=iMinFaceZ,iMaxFaceZ
+             end do; end do
+          end if
+          if(nK > 1)then
+             do j=jMinFaceZ,jMaxFaceZ; do i=iMinFaceZ,iMaxFaceZ
                 do k=1-nOrder,kMinFaceX-1
                    call calc_primitives_MHD   ! additional calculations for 
                 end do                        ! z-faces
                 do k=kMaxFaceX+1,nK+nOrder
                    call calc_primitives_MHD   ! additional calculations for 
                 end do	                      ! z-faces
-             end do
-          end do
+             end do; end do
+          end if
        end if
     end if                                       !^CFG IF BORISCORR
 
@@ -571,22 +571,22 @@ contains
        if (.not.DoResChangeOnly) then
           call get_faceX_first(&
                1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
-          call get_faceY_first(&
+          if(nJ > 1) call get_faceY_first(&
                iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
-          call get_faceZ_first(&
+          if(nK < 1) call get_faceZ_first(&
                iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
        else
           if(neiLeast(iBlock)==+1)&
                call get_faceX_first(1,1,1,nJ,1,nK)
           if(neiLwest(iBlock)==+1)&
                call get_faceX_first(nIFace,nIFace,1,nJ,1,nK)
-          if(neiLsouth(iBlock)==+1) &
+          if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
                call get_faceY_first(1,nI,1,1,1,nK)
-          if(neiLnorth(iBlock)==+1) &
+          if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
                call get_faceY_first(1,nI,nJFace,nJFace,1,nK)
-          if(neiLbot(iBlock)==+1) &
+          if(nK > 1 .and. neiLbot(iBlock)==+1) &
                call get_faceZ_first(1,nI,1,nJ,1,1)
-          if(neiLtop(iBlock)==+1) &
+          if(nK > 1 .and. neiLtop(iBlock)==+1) &
                call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace)
        end if
     case(2)
@@ -600,9 +600,9 @@ contains
        if (.not.DoResChangeOnly)then
           call get_faceX_second(&
                1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
-          call get_faceY_second(&
+          if(nJ > 1) call get_faceY_second(&
                iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
-          call get_faceZ_second(&
+          if(nK > 1) call get_faceZ_second(&
                iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
        end if
 
@@ -624,13 +624,13 @@ contains
                   call get_faceX_first(1,1,1,nJ,1,nK)
              if(neiLwest(iBlock)==+1)&
                   call get_faceX_first(nIFace,nIFace,1,nJ,1,nK)
-             if(neiLsouth(iBlock)==+1) &
+             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
                   call get_faceY_first(1,nI,1,1,1,nK)
-             if(neiLnorth(iBlock)==+1) &
+             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
                   call get_faceY_first(1,nI,nJFace,nJFace,1,nK)
-             if(neiLbot(iBlock)==+1) &
+             if(nK > 1 .and. neiLbot(iBlock)==+1) &
                   call get_faceZ_first(1,nI,1,nJ,1,1)
-             if(neiLtop(iBlock)==+1) &
+             if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace)
           end if
        else if(DoResChangeOnly) then
@@ -639,13 +639,13 @@ contains
                call get_faceX_second(1,1,1,nJ,1,nK)
           if(neiLwest(iBlock)==+1)&
                call get_faceX_second(nIFace,nIFace,1,nJ,1,nK)
-          if(neiLsouth(iBlock)==+1) &
+          if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
                call get_faceY_second(1,nI,1,1,1,nK)
-          if(neiLnorth(iBlock)==+1) &
+          if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
                call get_faceY_second(1,nI,nJFace,nJFace,1,nK)
-          if(neiLbot(iBlock)==+1) &
+          if(nK > 1 .and. neiLbot(iBlock)==+1) &
                call get_faceZ_second(1,nI,1,nJ,1,1)
-          if(neiLtop(iBlock)==+1) &
+          if(nK > 1 .and. neiLtop(iBlock)==+1) &
                call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace)
        endif
 
@@ -655,20 +655,20 @@ contains
                   call logfaceX_to_faceX(1,1,1,nJ,1,nK)
              if(neiLwest(iBlock)==+1) &
                   call logfaceX_to_faceX(nIFace,nIFace,1,nJ,1,nK)
-             if(neiLsouth(iBlock)==+1) &
+             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
                   call logfaceY_to_faceY(1,nI,1,1,1,nK)
-             if(neiLnorth(iBlock)==+1) &
+             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
                   call logfaceY_to_faceY(1,nI,nJFace,nJFace,1,nK)
-             if(neiLbot(iBlock)==+1) &
+             if(nK > 1 .and. neiLbot(iBlock)==+1) &
                   call logfaceZ_to_faceZ(1,nI,1,nJ,1,1)
-             if(neiLtop(iBlock)==+1) &
+             if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call logfaceZ_to_faceZ(1,nI,1,nJ,nKFace,nKFace)
           else
              call logfaceX_to_faceX(1,nIFace,jMinFaceX,jMaxFaceX, &
                   kMinFaceX,kMaxFaceX)
-             call logfaceY_to_faceY(iMinFaceY,iMaxFaceY,1,nJFace, &
+             if(nJ > 1) call logfaceY_to_faceY(iMinFaceY,iMaxFaceY,1,nJFace, &
                   kMinFaceY,kMaxFaceY)
-             call logfaceZ_to_faceZ(iMinFaceZ,iMaxFaceZ, &
+             if(nK > 1) call logfaceZ_to_faceZ(iMinFaceZ,iMaxFaceZ, &
                   jMinFaceZ,jMaxFaceZ,1,nKFace)
           end if
        end if
@@ -678,20 +678,20 @@ contains
                   call ratio_to_scalar_faceX(1,1,1,nJ,1,nK)
              if(neiLwest(iBlock)==+1) &
                   call ratio_to_scalar_faceX(nIFace,nIFace,1,nJ,1,nK)
-             if(neiLsouth(iBlock)==+1) &
+             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
                   call ratio_to_scalar_faceY(1,nI,1,1,1,nK)
-             if(neiLnorth(iBlock)==+1) &
+             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
                   call ratio_to_scalar_faceY(1,nI,nJFace,nJFace,1,nK)
-             if(neiLbot(iBlock)==+1) &
+             if(nK > 1 .and. neiLbot(iBlock)==+1) &
                   call ratio_to_scalar_faceZ(1,nI,1,nJ,1,1)
-             if(neiLtop(iBlock)==+1) &
+             if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call ratio_to_scalar_faceZ(1,nI,1,nJ,nKFace,nKFace)
           else
              call ratio_to_scalar_faceX(1,nIFace,jMinFaceX,jMaxFaceX, &
                   kMinFaceX,kMaxFaceX)
-             call ratio_to_scalar_faceY(iMinFaceY,iMaxFaceY,1,nJFace, &
+             if(nJ > 1) call ratio_to_scalar_faceY(iMinFaceY,iMaxFaceY,1,nJFace, &
                   kMinFaceY,kMaxFaceY)
-             call ratio_to_scalar_faceZ(iMinFaceZ,iMaxFaceZ, &
+             if(nK > 1) call ratio_to_scalar_faceZ(iMinFaceZ,iMaxFaceZ, &
                   jMinFaceZ,jMaxFaceZ,1,nKFace)
           end if
        end if

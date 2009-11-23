@@ -369,16 +369,24 @@ contains
          call set_ion_mass_per_charge(iBlock)
 
     if (DoResChangeOnly) then
-       if(neiLeast(iBlock) == 1)call get_flux_x(1,1,1,nJ,1,nK)
-       if(neiLwest(iBlock) == 1)call get_flux_x(nIFace,nIFace,1,nJ,1,nK)
-       if(neiLsouth(iBlock)== 1)call get_flux_y(1,nI,1,1,1,nK)
-       if(neiLnorth(iBlock)== 1)call get_flux_y(1,nI,nJFace,nJFace,1,nK)
-       if(neiLbot(iBlock)  == 1)call get_flux_z(1,nI,1,nJ,1,1)
-       if(neiLtop(iBlock)  == 1)call get_flux_z(1,nI,1,nJ,nKFace,nKFace)
+       if(neiLeast(iBlock) == 1) &
+            call get_flux_x(1,1,1,nJ,1,nK)
+       if(neiLwest(iBlock) == 1) &
+            call get_flux_x(nIFace,nIFace,1,nJ,1,nK)
+       if(nJ > 1 .and. neiLsouth(iBlock) == 1) &
+            call get_flux_y(1,nI,1,1,1,nK)
+       if(nJ > 1 .and. neiLnorth(iBlock) == 1) &
+            call get_flux_y(1,nI,nJFace,nJFace,1,nK)
+       if(nK > 1 .and. neiLbot(iBlock)   == 1) &
+            call get_flux_z(1,nI,1,nJ,1,1)
+       if(nK > 1 .and. neiLtop(iBlock)   == 1) &
+            call get_flux_z(1,nI,1,nJ,nKFace,nKFace)
     else
        call get_flux_x(1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
-       call get_flux_y(iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
-       call get_flux_z(iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
+       if(nJ > 1) &
+            call get_flux_y(iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
+       if(nK > 1) &
+            call get_flux_z(iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
     end if
 
   contains

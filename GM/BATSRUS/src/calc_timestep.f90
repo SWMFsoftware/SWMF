@@ -4,7 +4,6 @@ subroutine calc_timestep
   use ModMain
   use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
        DoFixAxis, rFixAxis, r2FixAxis, State_VGB, Rho_, FluxType, NormB0_CB
-  use ModNumConst
   use ModGeometry, ONLY: true_cell, true_BLK, vInv_CB, rMin_BLK, TypeGeometry
   use ModGeometry, ONLY: y_BLK, TypeGeometry
   use ModParallel, ONLY: NeiLEast, NeiLBot, NeiLTop, NOBLK
@@ -12,7 +11,7 @@ subroutine calc_timestep
 
   logical :: DoTest, DoTestMe
   integer :: i, j, k, Di, Dk, iBlock
-  real:: SourceSpectralRadius_C(nI,nJ,nK)
+  real:: Vdt
   !--------------------------------------------------------------------------
   iBlock = GlobalBlk
 
@@ -21,26 +20,15 @@ subroutine calc_timestep
   else
      DoTest=.false.; DoTestMe=.false.
   endif
-  
-  if(UseCurlB0.and.FluxType=='Roe'&
-       .and..false.&
-       )then
-     ! Extra time step limitation for Roe scheme
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        SourceSpectralRadius_C(i,j,k) = &
-             NormB0_CB(i,j,k,iBlock)/sqrt(State_VGB(Rho_,i,j,k,iBlock))
-     end do;end do;end do
-  else
-     SourceSpectralRadius_C = 0.0
-  end if
 
   ! Calculate time step limit based on maximum speeds across 6 faces
   do k=1,nK; do j=1,nJ; do i=1,nI
-     time_BLK(i,j,k,iBlock) = 1.0 /(vInv_CB(i,j,k,iBlock)&
-          *(max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k)) &
-          + max(VdtFace_y(i,j,k),VdtFace_y(i,j+1,k)) &
-          + max(VdtFace_z(i,j,k),VdtFace_z(i,j,k+1)) &
-          ) + SourceSpectralRadius_C(i,j,k))
+
+     Vdt = max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k))
+     if(nJ > 1) Vdt = Vdt + max(VdtFace_y(i,j,k), VdtFace_y(i,j+1,k))
+     if(nK > 1) Vdt = Vdt + max(VdtFace_z(i,j,k), VdtFace_z(i,j,k+1))
+     time_BLK(i,j,k,iBlock) = 1.0 / (vInv_CB(i,j,k,iBlock)*Vdt)
+
   end do; end do; end do
   
 
@@ -80,7 +68,7 @@ subroutine calc_timestep
      Dt_BLK(iBlock) = minval(time_BLK(:,:,:,iBlock))
   else
      ! If the block has no true cells, set Dt_BLK=1.0E20
-     Dt_BLK(iBlock) = min(cHuge,&
+     Dt_BLK(iBlock) = min(1e20, &
           minval(time_BLK(:,:,:,iBlock), &
           MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)))
   end if
@@ -95,7 +83,7 @@ subroutine calc_timestep
   ! Set time step to zero inside body.
   if(.not.true_BLK(iBlock)) then
      where (.not.true_cell(1:nI,1:nJ,1:nK,iBlock))&
-          time_BLK(:,:,:,iBlock) = cZero
+          time_BLK(:,:,:,iBlock) = 0.0
   end if
 
 end subroutine calc_timestep
