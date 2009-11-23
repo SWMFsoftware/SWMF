@@ -2205,7 +2205,7 @@ contains
          Rho_, RhoUx_
     use ModAMR,      ONLY: RefineCritMin_I, CoarsenCritMax
     use ModPhysics,  ONLY: Io2No_V, UnitRho_, UnitU_
-    use ModGeometry, ONLY: x_BLK
+    use ModGeometry, ONLY: x_BLK, dx_BLK, MinDxValue
 
     ! Variables required by this user subroutine
     integer, intent(in)          :: iBlock
@@ -2218,7 +2218,7 @@ contains
 
     logical:: IsXe_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     real   :: RhoMin
-    integer:: i, j, k
+    integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
     !------------------------------------------------------------------
 
     ! Location of sound wave edges and the tangential discontinuity
@@ -2235,18 +2235,25 @@ contains
     ! If block is beyond xMinAmr, do not refine
     if(x_BLK(1,1,1,iBlock) >= xMinAmr) RETURN
 
+    if( (dx_BLK(iBlock) - MinDxValue) > 1e-6)then
+       iMin = 0; iMax = nI+1; jMin = 0; jMax = nJ+1; kMin = 0; kMax = nK+1
+    else
+       iMin = -1; iMax = nI+2; jMin = -1; jMax = nJ+2; kMin = -1; kMax = nK+2
+    end if
+
     ! If there is a Xe interface anywhere in the block, refine
-    do k = -1, nK+2; do j=-1, nJ+2; do i = -1, nI+2
+    do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
        IsXe_G(i,j,k) = State_VGB(LevelXe_,i,j,k,iBlock) &
             >   maxval(State_VGB(LevelBe_:LevelPl_,i,j,k,iBlock))
     end do; end do; end do
 
     UserCriteria = 1.0
-    if(any(IsXe_G) .and. .not. all(IsXe_G)) RETURN
+    if(any(IsXe_G(iMin:iMax,jMin:jMax,kMin:kMax)) .and. &
+         .not. all(IsXe_G(iMin:iMax,jMin:jMax,kMin:kMax))) RETURN
 
     ! If Xe density exceeds RhoMin, refine
     RhoMin = RhoMinAmrDim*Io2No_V(UnitRho_)
-    do k = -1, nK+2; do j=-1, nJ+2; do i = -1, nI+2
+    do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
        if(IsXe_G(i,j,k) .and. State_VGB(Rho_,i,j,k,iBlock) > RhoMin) RETURN
     end do; end do; end do
 
