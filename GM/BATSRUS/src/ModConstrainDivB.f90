@@ -942,11 +942,11 @@ subroutine restrict_Bface(fine_sol,iVar,coarse_sol)
           fine_sol(1:nI:2, 1:nJ+1:2, 2:nK+1:2)+&
           fine_sol(2:nI:2, 1:nJ+1:2, 2:nK+1:2))
   case(Bz_)
-     coarse_sol(1:nI/2,1:nJ/2,1:nK/2+1)=0.25*(&
-          fine_sol(1:nI:2, 1:nJ:2, 1:nK+1:2)+&
-          fine_sol(2:nI:2, 1:nJ:2, 1:nK+1:2)+&
-          fine_sol(1:nI:2, 2:nJ:2, 1:nK+1:2)+&
-          fine_sol(2:nI:2, 2:nJ:2, 1:nK+1:2))
+     coarse_sol(1:nI/2,1:(nJ+1)/2,1:nK/2+1)=0.25*(&
+          fine_sol(1:nI:2, 1:nJ  :2, 1:nK+1:2)+&
+          fine_sol(2:nI:2, 1:nJ  :2, 1:nK+1:2)+&
+          fine_sol(1:nI:2, 2:nJ+1:2, 1:nK+1:2)+&
+          fine_sol(2:nI:2, 2:nJ+1:2, 1:nK+1:2))
   case default
      call stop_mpi('Invalid iVar in restrict_Bface')
   end select
