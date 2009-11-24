@@ -106,7 +106,7 @@ subroutine calc_sources
               ! Calculate b.grad u.b
               bDotGradparU = dot_product(b_D, matmul(b_D, GradU_DD))
 
-              ! p parallel: -Ppar*b.(b.(Grad U))
+              ! p parallel: -2*Ppar*b.(b.(Grad U))
               Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
                    - 2*State_VGB(Ppar_,i,j,k,iBlock)*bDotGradparU
               ! p perpendicular: Pperp*b.(b.(GradU))
@@ -168,6 +168,10 @@ subroutine calc_sources
 
            ! Heat exchange applies to ions too
            Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) - HeatExchange
+
+           ! Heat exchange for parallel ion pressure
+           if(UseAnisoPressure) &
+                Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) - HeatExchange
 
            ! Remove Joule heating and apply heat exchange to ion energy
            Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
