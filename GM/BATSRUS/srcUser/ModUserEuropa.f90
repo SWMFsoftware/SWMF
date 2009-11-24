@@ -7,17 +7,18 @@ module ModUser
        IMPLEMENTED1 => user_set_ics,       &
        IMPLEMENTED2 => user_read_inputs,   &
        IMPLEMENTED3 => user_calc_sources,  &
-       IMPLEMENTED4 => user_update_states
-       
+       IMPLEMENTED4 => user_update_states, &
+       IMPLEMENTED5 => user_face_bcs
+      
 
   include 'user_module.h' !list of public methods
 
   real,              parameter :: VersionUserModule = 0.9
   character (len=*), parameter :: NameUserModule = &
-       'Rubin single species Europa MHD module, Sep. 2009'
+       'Rubin single species Europa MHD module, Nov 2009'
 
-  real, public, dimension(1:nI, 1:nJ, 1:nK, nBLK) :: Neutral_BLK
-  real :: n0, H, v, alpha, mi_mean, kin
+  real, public, dimension(1:nI, 1:nJ, 1:nK, nBLK) :: Neutral_BLK, MassLoad_BLK
+  real :: n0, dn, H, v, alpha, mi_mean, kin, distr
   real :: vNorm, alphaNorm, kinNorm, nNorm
 
 contains
@@ -46,7 +47,9 @@ contains
        select case(NameCommand)
           
          case("#EUROPA")
-            call read_var('n0' , n0)           !! Neutral surface density [1/cm^3]
+            call read_var('n0' , n0)           !! Median neutral surface density [1/cm^3]
+            call read_var('distr' , distr)     !! Ram side neutral distr: uniform (0) or cos (1)
+            call read_var('dn' , dn)           !! Ram side fraction [%] only if distr==0
             call read_var('H' , H)             !! Neutral scale height [km]
             call read_var('v' , v)             !! Ionization rate [1/s]
             call read_var('alpha' , alpha)     !! Recombination rate [cm^3/s]
@@ -54,6 +57,7 @@ contains
             call read_var('mi_mean' , mi_mean) !! mean ion mass [amu]
             H=H*1E3                            !! conversion to SI  
             n0=n0*1E6                          !! conversion to SI
+            dn=dn/100.0
          case('#USERINPUTEND')
             if(iProc==0.and.lVerbose > 0)then
                call write_prefix;
@@ -80,17 +84,53 @@ contains
   !========================================================================
   subroutine user_set_ICs
 
-    use ModMain, ONLY: globalBLK
+    use ModMain, ONLY: globalBLK,BlkTest,iTest,jTest,kTest
     use ModPhysics
     use ModNumConst
-    use ModGeometry,ONLY: R_BLK
+    use ModGeometry,ONLY: R_BLK, x_BLK, y_BLK, z_BLK
     integer :: i,j,k
-
-    ! neutral density in SI units
+    real :: alpha
+    
     do k=1,nK; do j=1,nJ; do i=1,nI
+       ! angle of cell position relative to ram direction 
+       alpha=acos((-SW_Ux*x_BLK(i,j,k,globalBLK)-SW_Uy*y_BLK(i,j,k,globalBLK)&
+            -SW_Uz*z_BLK(i,j,k,globalBLK))/R_BLK(i,j,k,globalBLK)/&
+            (SW_Ux**2+SW_Uy**2+SW_Uz**2)**0.5)
+
+       ! neutral density used for mass loading in SI units
+       if(distr==0) then
+          ! uniform neutral density distribution
+          if(alpha<=cPi/2) then
+             ! ram side
+             MassLoad_BLK(i,j,k,globalBLK) = 2*dn*n0*exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
+                  /(H/rPlanetSi))
+          else
+             ! wake side
+             MassLoad_BLK(i,j,k,globalBLK) = 2*(1-dn)*n0*exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
+                  /(H/rPlanetSi))
+          end if
+       else if(distr==1) then
+          ! cosine neutral density distribution
+          if(alpha<=cPi/2) then
+             ! ram side (100%), normalization factor 1/4
+             MassLoad_BLK(i,j,k,globalBLK) = 4*cos(alpha)*n0*exp(-(R_BLK(i,j,k,globalBLK)&
+                  - Rbody)/(H/rPlanetSi))
+          else
+             ! wake side is set to 0
+             MassLoad_BLK(i,j,k,globalBLK) = 0
+          end if
+       end if
+
+       ! neutral density for ion neutral friction (charge exchange)
        Neutral_BLK(i,j,k,globalBLK) = n0*exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
             /(H/rPlanetSi))
 
+       if(globalBLK==BlkTest.and.k==kTest.and.j==jTest.and.i==iTest) then
+          write(*,*)'X= ',x_BLK(i,j,k,globalBLK),'Y= ',y_BLK(i,j,k,globalBLK),&
+               'Z= ',z_BLK(i,j,k,globalBLK)
+          write(*,*)'SW_Ux= ',SW_Ux,'SW_Uy= ',SW_Uy,'SW_Uz= ',SW_Uz
+          write(*,*)'alpha= ',alpha,'n= ',Neutral_BLK(i,j,k,globalBLK)
+       end if
     end do;  end do;  end do
 
     vNorm=1/Si2No_V(UnitT_)                           !! conversion to unitless
@@ -147,7 +187,7 @@ contains
     SE     = 0.0
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       Srho(i,j,k) = Neutral_BLK(i,j,k,globalBLK)*nNorm*mi_mean*v*vNorm &   !! newly ionized neutrals
+       Srho(i,j,k) = MassLoad_BLK(i,j,k,globalBLK)*nNorm*mi_mean*v*vNorm &   !! newly ionized neutrals
             - alpha*alphaNorm*State_VGB(rho_,i,j,k,globalBLK)*ne(i,j,k)*Si2No_V(UnitN_) !! loss due to recombination
        
        SrhoUx(i,j,k) = - State_VGB(rho_,i,j,k,globalBLK)*( &
@@ -162,14 +202,16 @@ contains
             Neutral_BLK(i,j,k,globalBLK)*nNorm*kin*kinNorm  &               !! loss due to charge exchange
             + alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_))*uz(i,j,k)          !! loss due to recombination
 
-       SP(i,j,k) = 1/3*(v*vNorm*mi_mean + kin*kinNorm*State_VGB(rho_,i,j,k,globalBLK))* &
-            Neutral_BLK(i,j,k,globalBLK)*nNorm*uxyz(i,j,k)  &               !! newly generated ions
-            - State_VGB(p_,i,j,k,globalBLK)*kin *kinNorm* &
+
+       SP(i,j,k) = 1/3*(v*vNorm*mi_mean*MassLoad_BLK(i,j,k,globalBLK)&
+            + kin*kinNorm*State_VGB(rho_,i,j,k,globalBLK)* &
+            Neutral_BLK(i,j,k,globalBLK))*nNorm*uxyz(i,j,k)  &              !! newly generated ions
+            - State_VGB(p_,i,j,k,globalBLK)*kin*kinNorm* &
             Neutral_BLK(i,j,k,globalBLK)*nNorm &                            !! loss due to charge exchange
             - State_VGB(p_,i,j,k,globalBLK)*alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_) !! loss due to recombination
 
        SE(i,j,k) = - 0.5*State_VGB(rho_,i,j,k,globalBLK)*( &
-            kin *kinNorm*Neutral_BLK(i,j,k,globalBLK)*nNorm &               !! loss due to charge exchange
+            kin*kinNorm*Neutral_BLK(i,j,k,globalBLK)*nNorm &                !! loss due to charge exchange
             + alpha *alphaNorm*ne(i,j,k)*Si2No_V(UnitN_))*uxyz(i,j,k) &     !! loss due to recombination
             - inv_gm1*(kin*kinNorm - alpha *alphaNorm)*State_VGB(p_,i,j,k,globalBLK)
     end do;  end do;  end do
@@ -216,5 +258,38 @@ contains
     call calc_energy_cell(iBlock)
 
   end subroutine user_update_states
+
+
+  !========================================================================
+  !  SUBROUTINE user_face_bcs(VarsGhostFace_V)
+  !========================================================================
+
+  ! This is the comet version!!
+  subroutine user_face_bcs(VarsGhostFace_V)
+
+    use ModSize,       ONLY: nDim,West_,North_,Top_
+    use ModVarIndexes
+    use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim, BodyNDim_I
+    use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V
+
+    real, intent(out):: VarsGhostFace_V(nVar)
+
+    real:: UdotR, URefl_D(1:3)
+    !--------------------------------------------------------------------------
+    UdotR = dot_product(VarsTrueFace_V(Ux_:Uz_),FaceCoords_D)* &
+     2.0/dot_product(FaceCoords_D,FaceCoords_D)
+    URefl_D = FaceCoords_D*UdotR
+
+    VarsGhostFace_V = VarsTrueFace_V
+
+    if (UdotR > 0.0) then
+       VarsGhostFace_V(Rho_)  = SW_rho*BodyNDim_I(1)
+       VarsGhostFace_V(P_)= SW_p*6.0e-3
+       VarsGhostFace_V(RhoUx_:RhoUz_) = 0.0
+       ! VarsGhostFace_V(Bx_:Bz_) = 0.0 float mag. field
+    endif
+  end subroutine user_face_bcs
+
+
 
 end module ModUser
