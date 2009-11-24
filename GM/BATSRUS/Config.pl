@@ -127,36 +127,27 @@ sub set_grid_size{
 
     $GridSize = $NewGridSize;
 
-    if($GridSize=~/^\d+,\d+,\d+,\d+
-       ,\d+  #^CFG IF IMPLICIT
+    if($GridSize=~/^[1-9]\d*,[1-9]\d*,[1-9]\d*,[1-9]\d*
+       ,[1-9]\d*  #^CFG IF IMPLICIT
        $/x){
 	($nI,$nJ,$nK,$MaxBlock,$MaxImplBlock)= split(',', $GridSize);
     }elsif($GridSize){
 	die "$ERROR -g=$GridSize should be ".
 	    "5".  #^CFG IF IMPLICIT
 	    #"4". #^CFG IF NOT IMPLICIT
-	    " integers separated with commas\n";
+	    " positive integers separated with commas\n";
     }
 
     # Check the grid size (to be set)
-    die "$ERROR nI=$nI must be 2 or more\n" if $nI < 2;
-    die "$ERROR nJ=$nJ must be 2 or more\n" if $nJ < 2;
-    die "$ERROR nK=$nK must be 2 or more\n" if $nK < 2;
-
-    die "$ERROR nI=$nI must be an even integer\n" if $nI!=int($nI) or $nI%2!=0;
-    die "$ERROR nJ=$nJ must be an even integer\n" if $nJ!=int($nJ) or $nJ%2!=0;
-    die "$ERROR nK=$nK must be an even integer\n" if $nK!=int($nK) or $nK%2!=0;
+    die "$ERROR nK=$nK must be 1 if nJ is 1\n"         if $nJ==1 and $nK>1;
+    die "$ERROR nI=$nI must be an even integer\n"      if           $nI%2!=0;
+    die "$ERROR nJ=$nJ must be 1 or an even integer\n" if $nJ>1 and $nJ%2!=0;
+    die "$ERROR nK=$nK must be 1 or an even integer\n" if $nK>1 and $nK%2!=0;
 
     warn "$WARNING nI=$nI nJ=$nJ nK=$nK does not allow AMR\n" 
 	if $nI == 2 or $nJ == 2 or $nK==2;
 
-    die "$ERROR MaxBlock=$MaxBlock must be a positive integer\n" 
-	if $MaxBlock<1 or $MaxBlock != int($MaxBlock);
-
     #^CFG IF IMPLICIT BEGIN
-    die "$ERROR MaxImplBlock=$MaxImplBlock must be a positive integer\n" 
-	if $MaxImplBlock<1 or $MaxImplBlock != int($MaxImplBlock);
-
     die "$ERROR MaxImplBlock=$MaxImplBlock cannot exceed MaxBlock=$MaxBlock\n"
 	if $MaxImplBlock > $MaxBlock;
     #^CFG END IMPLICIT
@@ -324,13 +315,18 @@ Additional options for BATSRUS/Config.pl:
 
 -g=NI,NJ,NK,MAXBLK,MAXIMPLBLK     
                 Set grid size. NI, NJ and NK are the number of cells 
-                in the I, J and K directions, respectively. These parameters
-                have to be even integers and at least 4.
+                in the I, J and K directions, respectively. 
+                If NK = 1, the 3rd dimension is ignored: 2D grid.
+                If NJ=NK=1, the 2nd and 3rd dimensions are ignored: 1D grid.
+                1D and 2D grids are still experimental and limited.
+                In non-ignored dimensions NI, NJ, NK have to be even integers.
+                To allow AMR, the number of cells has to be 4 or more in all 
+                non-ignored directions. 
                 MAXBLK is the maximum number of blocks per processor.
-                MAXIMPLBLK is the maximum number of implicitly 
-                integrated blocks per processor.
+                MAXIMPLBLK is the maximum number of implicitly integrated 
+                blocks per processor. Cannot be larger than MAXBLK.
 
--e              List all available equations.
+-e              List all available equation modules.
 
 -e=EQUATION     Select equation EQUATION. 
 
