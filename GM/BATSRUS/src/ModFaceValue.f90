@@ -573,7 +573,7 @@ contains
                1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
           if(nJ > 1) call get_faceY_first(&
                iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
-          if(nK < 1) call get_faceZ_first(&
+          if(nK > 1) call get_faceZ_first(&
                iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
        else
           if(neiLeast(iBlock)==+1)&
