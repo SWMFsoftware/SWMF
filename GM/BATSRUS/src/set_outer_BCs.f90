@@ -78,6 +78,11 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   else
      iLast = Top_
   end if
+
+  ! Do not work on ignored directions
+  if(nK == 1 .and. iLast > 4) iLast = 4
+  if(nJ == 1 .and. iLast > 2) iLast = 2
+
   do iSide = iStart, iLast
 
      ! Check if this side of the block is indeed an outer boundary
