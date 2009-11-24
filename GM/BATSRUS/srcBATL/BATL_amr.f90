@@ -195,6 +195,7 @@ contains
       if(iProc == iProcRecv)then
          iAmrChange_B(iBlock) = iAmrChange
          call create_grid_block(iBlock, iNodeRecv)
+         State_VGB(:,:,:,:,iBlock) = 777.0
          if(present(Dt_B))  Dt_B(iBlock) = Huge(1.0)
       end if
 
