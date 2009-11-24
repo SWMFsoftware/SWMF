@@ -29,7 +29,7 @@ subroutine calc_sources
   integer :: i, j, k, iDim, iVar
   logical :: UseRzGeometry
   real :: Pe, Pwave, DivU
-  real :: Coef, Alpha
+  real :: Coef, GammaMinus1
 
   ! Variable for div B diffusion
   real :: Dr
@@ -67,32 +67,49 @@ subroutine calc_sources
   if(UseNonconservative)then
      do iFluid = 1, nFluid
         call select_fluid
-        ! Adiabatic heating: -(g-1)*P*Div(U)
-        Alpha = g - 1
+
         if(UseAnisoPressure)then
            ! Source terms for anisotropic pressure equations
            do k=1,nK; do j=1,nJ; do i=1,nI
               if(.not.true_cell(i,j,k,iBlock)) CYCLE
               ! Calculate bDotGradparU = b dot (b matmul GradU)
-              b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)/ &
-                   sqrt(max(1e-30,sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)))
+
+              ! Calculate unit vector parallel with full B field
+              b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+              if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+              b_D = b_D/sqrt(max(1e-30, sum(B_D**2)))
+
+              ! Calculate gradient tensor of velocity
               GradU_DD(x_,:) = (0.5*(LeftState_VX(Ux_:Uz_,i+1,j,k) &
-                   + RightState_VX(Ux_:Uz_,i+1,j,k)) &
-                   - 0.5*(LeftState_VX(Ux_:Uz_,i,j,k) &
+                   + RightState_VX(Ux_:Uz_,i+1,j,k))               &
+                   - 0.5*(LeftState_VX(Ux_:Uz_,i,j,k)              &
                    + RightState_VX(Ux_:Uz_,i,j,k)))/dx_BLK(iBlock)
-              GradU_DD(y_,:) = (0.5*(LeftState_VY(Ux_:Uz_,i,j+1,k) &
-                   + RightState_VY(Ux_:Uz_,i,j+1,k)) &
-                   - 0.5*(LeftState_VY(Ux_:Uz_,i,j,k) &
-                   + RightState_VY(Ux_:Uz_,i,j,k)))/dy_BLK(iBlock)
-              GradU_DD(z_,:) = (0.5*(LeftState_VZ(Ux_:Uz_,i,j,k+1) &
-                   + RightState_VZ(Ux_:Uz_,i,j,k+1)) &
-                   - 0.5*(LeftState_VZ(Ux_:Uz_,i,j,k) &
-                   + RightState_VZ(Ux_:Uz_,i,j,k)))/dz_BLK(iBlock)
+              if(nJ > 1) then
+                 GradU_DD(y_,:) = &
+                      ( 0.5*(LeftState_VY(Ux_:Uz_,i,j+1,k)  &
+                      +     RightState_VY(Ux_:Uz_,i,j+1,k)) &
+                      - 0.5*(LeftState_VY(Ux_:Uz_,i,j,k)    &
+                      +     RightState_VY(Ux_:Uz_,i,j,k)))/dy_BLK(iBlock)
+              else
+                 GradU_DD(y_,:) = 0.0
+              end if
+              if(nK > 1) then
+                 GradU_DD(z_,:) = &
+                      ( 0.5*(LeftState_VZ(Ux_:Uz_,i,j,k+1) &
+                      +     RightState_VZ(Ux_:Uz_,i,j,k+1)) &
+                      - 0.5*(LeftState_VZ(Ux_:Uz_,i,j,k) &
+                      +     RightState_VZ(Ux_:Uz_,i,j,k)))/dz_BLK(iBlock)
+              else
+                 GradU_DD(z_,:) = 0.0
+              end if
+
+              ! Calculate b.grad u.b
               bDotGradparU = dot_product(b_D, matmul(b_D, GradU_DD))
-              ! p parallel: -Ppar*bDot(bDot(GradU))
+
+              ! p parallel: -Ppar*b.(b.(Grad U))
               Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
                    - 2*State_VGB(Ppar_,i,j,k,iBlock)*bDotGradparU
-              ! p perpendicular: Pperp*bDot(bDot(GradU))
+              ! p perpendicular: Pperp*b.(b.(GradU))
               Source_VC(Pperp_,i,j,k) = Source_VC(Pperp_,i,j,k) &
                    + State_VGB(Pperp_,i,j,k,iBlock)*bDotGradparU
            end do; end do; end do
@@ -100,16 +117,22 @@ subroutine calc_sources
            if(DoTestMe .and. (VarTest == Ppar_ .or. VarTest == Pperp_)) &
                 call write_source('After bDotGradparU')
 
-           ! For Pperp equation, g = 5/3 presumed, thus -Pperp*Div(U)
-           Alpha = 1
+           ! For Pperp equation, GammaPerp = 2, thus -Pperp*Div(U)
+           GammaMinus1 = 1
+        else
+           GammaMinus1 = g - 1
         end if
-        ! Alpha*p*Div(U)
+
+        ! Adiabatic heating: -(g-1)*P*Div(U)
         do k=1,nK; do j=1,nJ; do i=1,nI
+           DivU = uDotArea_XI(i+1,j,k,iFluid) - uDotArea_XI(i,j,k,iFluid)
+           if(nJ > 1) DivU = DivU + &
+                uDotArea_YI(i,j+1,k,iFluid) - uDotArea_YI(i,j,k,iFluid)
+           if(nK > 1) DivU = DivU + &
+                uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid)
+           DivU = vInv_CB(i,j,k,iBlock)*DivU
            Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
-                - Alpha*State_VGB(iP,i,j,k,iBlock)*vInv_CB(i,j,k,iBlock)*&
-                ( uDotArea_XI(i+1,j,k,iFluid) - uDotArea_XI(i,j,k,iFluid) &
-                + uDotArea_YI(i,j+1,k,iFluid) - uDotArea_YI(i,j,k,iFluid) &
-                + uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid))
+                - GammaMinus1*State_VGB(iP,i,j,k,iBlock)*DivU
         end do; end do; end do
 
         if(DoTestMe .and. VarTest==iP)call write_source('After p div U')
@@ -160,20 +183,22 @@ subroutine calc_sources
 
   if(UseWavePressure)then
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        DivU_C(i,j,k) = vInv_CB(i,j,k,iBlock)* &
-             (uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
-             +uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
-             +uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
+        DivU            = uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
+        if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
+        if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
+        DivU = vInv_CB(i,j,k,iBlock)*DivU
+
+        ! Store div U so it can be used in ModWaves
+        DivU_C(i,j,k) = DivU
 
         Pwave = (GammaWave - 1) &
              *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
 
         do iVar = WaveFirst_, WaveLast_
            Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
-                - DivU_C(i,j,k)*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
+                - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
         end do
-        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-             + DivU_C(i,j,k)*Pwave
+        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + DivU*Pwave
 
         ! Add "geometrical source term" p/r to the radial momentum equation
         ! The "radial" direction is along the Y axis
@@ -185,10 +210,12 @@ subroutine calc_sources
 
   if(UseElectronPressure)then
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        DivU = vInv_CB(i,j,k,iBlock) &
-             *(uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_) &
-             + uDotArea_YI(i,j+1,k,eFluid_) - uDotArea_YI(i,j,k,eFluid_) &
-             + uDotArea_ZI(i,j,k+1,eFluid_) - uDotArea_ZI(i,j,k,eFluid_))
+        DivU = uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_)
+        if(nJ > 1) DivU = DivU &
+             + uDotArea_YI(i,j+1,k,eFluid_) - uDotArea_YI(i,j,k,eFluid_)
+        if(nK > 1) DivU = DivU &
+             + uDotArea_ZI(i,j,k+1,eFluid_) - uDotArea_ZI(i,j,k,eFluid_)
+        DivU = vInv_CB(i,j,k,iBlock)*DivU
 
         Pe = State_VGB(Pe_,i,j,k,iBlock)
 
@@ -245,7 +272,7 @@ subroutine calc_sources
 
         if(.not. IsMhd) CYCLE
 
-        Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) -&
+        Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) -&
              DivB1_GB(i,j,k,iBlock)* &
              State_VGB(Bx_:Bz_,i,j,k,iBlock)
         Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k) &
@@ -256,11 +283,10 @@ subroutine calc_sources
 
      if (UseB0Source) then
         do k=1,nK; do j=1,nJ; do i=1,nI
-           Source_VC(rhoUx_:rhoUz_,i,j,k)=Source_VC(rhoUx_:rhoUz_,i,j,k) - &
-                State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0_CB(i,j,k,iBlock)+&
-                cross_product(&
-                State_VGB(Bx_:Bz_,i,j,k,iBlock),&
-                CurlB0_DCB(:,i,j,k,iBlock))
+           Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
+                - State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0_CB(i,j,k,iBlock) &
+                + cross_product( &
+                State_VGB(Bx_:Bz_,i,j,k,iBlock), CurlB0_DCB(:,i,j,k,iBlock))
         end do; end do; end do
      end if
   else
@@ -272,8 +298,7 @@ subroutine calc_sources
         if(R_BLK(i,j,k,iBlock)<rCurrentFreeB0)CYCLE
         CurlB0CrossB_D = cross_product(&
              CurlB0_DCB(:,i,j,k,iBlock),&
-             State_VGB(Bx_:Bz_,i,j,k,iBlock)+&
-             B0_DGB(:,i,j,k,iBlock))
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
         Source_VC(rhoUx_:rhoUz_,i,j,k)= Source_VC(rhoUx_:rhoUz_,i,j,k) +&
              CurlB0CrossB_D
         Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k)        +&
@@ -290,7 +315,7 @@ subroutine calc_sources
        .and. boris_cLIGHT_factor < 0.9999 & 
        .and. index(test_string,'nodivE')<1) then
 
-     coef= (boris_cLIGHT_factor**2 - 1.0)*inv_c2LIGHT
+     Coef = (boris_cLIGHT_factor**2 - 1.0)*inv_c2LIGHT
      FullB_DC = State_VGB(Bx_:Bz_,1:nI,1:nJ,1:nK,iBlock)
      if(UseB0)FullB_DC = FullB_DC + B0_DGB(:,1:nI,1:nJ,1:nK,iBlock) 
      do k=1,nK; do j=1,nJ; do i=1,nI
@@ -365,7 +390,7 @@ subroutine calc_sources
      call multi_ion_source_expl(iBlock)
 
      ! Add stiff momentum source terms (uPlus - Uion) and artificial friction
-     ! Explicit evaluation of these source terms is for development purposes only
+     ! Explicit evaluation of these source terms is for code development only
      if (.not. (UsePointImplicit .and. UsePointImplicit_B(iBlock)) ) &
           call multi_ion_source_impl
 
@@ -441,11 +466,14 @@ contains
             -B0_DZ(:,i,j,k)*dB1nBot     &
             -B0_DZ(:,i,j,k+1)*dB1nTop               
     end do; end do; end do
-    if((.not.IsMhd).or.(.not.UseB0))return
+
+    if((.not.IsMhd).or.(.not.UseB0)) RETURN
+
     do k=1,nK; do j=1,nJ; do i=1,nI
        Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k)  - &
             DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
     end do; end do; end do
+
   end subroutine calc_divb_source
   !===========================================================================
   subroutine calc_divb_source_covar
@@ -454,7 +482,8 @@ contains
     real :: FaceArea_D(3), vInvHalf
     real :: B1nJumpL, B1nJumpR, DivBInternal_C(1:nI,1:nJ,1:nK)
     integer :: i,j,k
-
+    !------------------------------------------------------------------------
+    
     do k=1,nK; do j=1,nJ; do i=1,nI
        VInvHalf=vInv_CB(i,j,k,iBlock)*cHalf
        FaceArea_D=FaceAreaI_DFB(:,i,j,k,iBlock)
@@ -472,7 +501,7 @@ contains
             (FaceArea_D(1)*(RightState_VX(Bx_,i+1,j,k)-LeftState_VX(Bx_,i+1,j,k))+&
             FaceArea_D(2)*(RightState_VX(By_,i+1,j,k)-LeftState_VX(By_,i+1,j,k))+&
             FaceArea_D(3)*(RightState_VX(Bz_,i+1,j,k)-LeftState_VX(Bz_,i+1,j,k)))
-       DivBInternal_C(i,j,k)=DivBInternal_C(i,j,k)+&
+       DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k)+&
             (FaceArea_D(1)*LeftState_VX(Bx_,i+1,j,k)+&
             FaceArea_D(2)*LeftState_VX(By_,i+1,j,k)+&
             FaceArea_D(3)*LeftState_VX(Bz_,i+1,j,k))
@@ -482,8 +511,8 @@ contains
        if(.not.IsMhd) CYCLE
 
        Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
-            -B0_DX(:,i,j,k)*B1nJumpL   &
-            -B0_DX(:,i+1,j,k)*B1nJumpR
+            - B0_DX(:,i,j,k)*B1nJumpL   &
+            - B0_DX(:,i+1,j,k)*B1nJumpR
 
     end do; end do; end do
 
@@ -556,7 +585,9 @@ contains
        DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock)+&
             DivBInternal_C(i,j,k)
     end do; end do; end do
-    if((.not.IsMhd).or.(.not.UseB0))return
+
+    if((.not.IsMhd).or.(.not.UseB0))RETURN
+
     do k=1,nK; do j=1,nJ; do i=1,nI 
        Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
             -DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)            
@@ -576,51 +607,52 @@ end subroutine calc_sources
 
 subroutine calc_divb(iBlock)
 
-  use ModMain, ONLY : &              
-       UseDivbDiffusion,&            !^CFG IF DIVBDIFFUSE
-       nI,nJ,nK,test_string
-  use ModVarIndexes, ONLY : Bx_,By_,Bz_
-  use ModAdvance, ONLY : DivB1_GB,State_VGB, &
-       LeftState_VX,RightState_VX,&
-       LeftState_VY,RightState_VY,&
-       LeftState_VZ,RightState_VZ
-  use ModNumConst
-  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK 
+  ! Calculate div B for a block and store result into DivB1_GB
+  ! Compute divB using averaged and conservatively corrected 
+  ! left and right values
+
+  use ModMain,       ONLY: nI,nJ,nK
+  use ModVarIndexes, ONLY: Bx_,By_,Bz_
+  use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK 
+  use ModAdvance,    ONLY: DivB1_GB,State_VGB, &
+       LeftState_VX, RightState_VX, &
+       LeftState_VY, RightState_VY, &
+       LeftState_VZ, RightState_VZ
+
   implicit none
 
   integer, intent(in) :: iBlock
+
+  integer:: i, j, k
+  real   :: DivB, InvDx, InvDy, InvDz
   !---------------------------------------------------------------------------
 
-  !\
-  ! Calculate div B for a block and store result into DivB1_GB
-  !/
-  if(index(test_string,'DIVB_CD')>0)then
-     ! Use central differencing if test string contains DIVB_CD
-     DivB1_GB(1:nI,1:nJ,1:nK,iBlock) = cHalf*(&
-          (State_VGB(Bx_, 2:nI+1, 1:nJ  , 1:nK  ,iBlock)- &
-          State_VGB(Bx_, 0:nI-1, 1:nJ  , 1:nK  ,iBlock))/dx_BLK(iBlock)+&
-          (State_VGB(By_, 1:nI  , 2:nJ+1, 1:nK  ,iBlock)- &
-          State_VGB(By_, 1:nI  , 0:nJ-1, 1:nK  ,iBlock))/dy_BLK(iBlock)+&
-          (State_VGB(Bz_, 1:nI  , 1:nJ  , 2:nK+1,iBlock)- &
-          State_VGB(Bz_, 1:nI  , 1:nJ  , 0:nK-1,iBlock))/dz_BLK(iBlock))
-  else
-     ! Compute divB using averaged and conservatively corrected 
-     ! left and right values
-     
-     DivB1_GB(1:nI,1:nJ,1:nK,iBlock) = &
-          cHalf *( &
-          ((LeftState_VX(Bx_,2:nI+1,1:nJ,1:nK)+    &
-            RightState_VX(Bx_,2:nI+1,1:nJ,1:nK))-   &
-           (LeftState_VX(Bx_,1:nI,1:nJ,1:nK)+    &
-            RightState_VX(Bx_,1:nI,1:nJ,1:nK))  )/dx_BLK(iBlock)+  &
-          ((LeftState_VY(By_,1:nI,2:nJ+1,1:nK)+    &
-            RightState_VY(By_,1:nI,2:nJ+1,1:nK))-   &
-           (LeftState_VY(By_,1:nI,1:nJ,1:nK)+    &
-            RightState_VY(By_,1:nI,1:nJ,1:nK))  )/dy_BLK(iBlock)+  &
-          ((LeftState_VZ(Bz_,1:nI,1:nJ,2:nK+1)+    &
-            RightState_VZ(Bz_,1:nI,1:nJ,2:nK+1))-   &
-           (LeftState_VZ(Bz_,1:nI,1:nJ,1:nK)+    &
-            RightState_VZ(Bz_,1:nI,1:nJ,1:nK))  )/dz_BLK(iBlock) )
-  endif                                         
+  InvDx            = 1/dx_BLK(iBlock)
+  if(nJ > 1) InvDy = 1/dy_BLK(iBlock)
+  if(nK > 1) InvDz = 1/dz_BLK(iBlock)
+
+  do k=1, nK; do j=1, nJ; do i=1, nI
+     DivB = InvDx* &
+          (  LeftState_VX(Bx_,i+1,j,k)  &
+          + RightState_VX(Bx_,i+1,j,k)  &
+          -  LeftState_VX(Bx_,i,j,k)    &
+          - RightState_VX(Bx_,i,j,k) )
+  
+     if(nJ > 1) DivB = DivB + InvDy* &
+          (  LeftState_VY(By_,i,j+1,k)   &
+          + RightState_VY(By_,i,j+1,k)   &
+          -  LeftState_VY(By_,i,j,k)     &
+          - RightState_VY(By_,i,j,k) )
+  
+     if(nK > 1) DivB = DivB + InvDz* &
+          (  LeftState_VZ(Bz_,i,j,k+1)    &
+          + RightState_VZ(Bz_,i,j,k+1)    &
+          -  LeftState_VZ(Bz_,i,j,k)      &
+          - RightState_VZ(Bz_,i,j,k) )
+
+     DivB1_GB(i,j,k,iBlock) = 0.5*DivB
+
+  end do; end do; end do
+
 end subroutine calc_divb
 
