@@ -271,9 +271,9 @@ subroutine write_runtime_values()
        '  Largest cell dx: ', maxDXvalue
   call write_prefix; write(iUnitOut,*)
   call write_prefix
-  write(iUnitOut,'(1x,a,3i8)')    'root blocks: ', proc_dims(1:3)
+  write(iUnitOut,'(1x,a,3i8)')    'root blocks: ', proc_dims
   call write_prefix
-  write(iUnitOut,'(1x,a,3i8)')    'nCells:      ', nCells(1:3)
+  write(iUnitOut,'(1x,a,3i8)')    'nIJK_D:      ', nIJK_D
   call write_prefix
   write(iUnitOut,'(1x,a,2f16.8)') 'x:           ', x1, x2
   call write_prefix

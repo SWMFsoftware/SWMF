@@ -45,7 +45,7 @@ subroutine set_root_block_geometry
   ! Set the block geometry for all root blocks
 
   iBLK = 0
-  Dxyz(:)=(XyzMax_D(:)-XyzMin_D(:))/(nCells(:)*proc_dims(:))
+  Dxyz(:) = (XyzMax_D - XyzMin_D)/(nIJK_D*proc_dims)
   iPE = 0
   do k = 1, proc_dims(3)
      do j = 1, proc_dims(2)

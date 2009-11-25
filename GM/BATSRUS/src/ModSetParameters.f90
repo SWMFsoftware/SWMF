@@ -1554,8 +1554,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nI',nIJKRead_D(1))
         call read_var('nJ',nIJKRead_D(2))
         call read_var('nK',nIJKRead_D(3))
-        if(any(nCells/=nIJKRead_D).and.iProc==0)then
-           write(*,*)'Code is compiled with nI,nJ,nK=',nCells
+        if(any(nIJK_D/=nIJKRead_D).and.iProc==0)then
+           write(*,*)'Code is compiled with nI,nJ,nK=',nIJK_D
            call stop_mpi('Change nI,nJ,nK in ModSize.f90 and recompile!')
         end if
         call read_var('MinBlockALL',qtotal)
@@ -2560,7 +2560,7 @@ contains
 
   subroutine correct_plot_range
 
-    use ModGeometry, ONLY : XyzMin_D, XyzMax_D, nCells
+    use ModGeometry, ONLY : XyzMin_D, XyzMax_D, nIJK_D
     use ModParallel, ONLY : proc_dims
     use ModIO
 
@@ -2581,7 +2581,7 @@ contains
     if(DoTestMe)write(*,*) NameSub,' XyzMin_D, XyzMax_D=', XyzMin_D, XyzMax_D
 
     ! Largest cell size and a much smaller distance for 2D cuts
-    CellSizeMax_D = (XyzMax_D - XyzMin_D)/(nCells*proc_dims)
+    CellSizeMax_D = (XyzMax_D - XyzMin_D)/(nIJK_D*proc_dims)
     SmallSize_D   = cTiny*CellSizeMax_D
 
     if(DoTestMe)write(*,*)NameSub,' CellSizeMax_D=',CellSizeMax_D

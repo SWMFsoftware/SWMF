@@ -1412,7 +1412,7 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
 
   use ModParallel,ONLY : proc_dims
   use ModOctree, ONLY: adaptive_block_ptr, octree_roots
-  use ModSize, ONLY: nCells
+  use ModSize, ONLY: nIJK_D
   use ModGeometry, ONLY : UseCovariant         
   use ModGeometry, ONLY : XyzMin_D, XyzMax_D
   use ModNumConst
@@ -1471,7 +1471,7 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
         iPE    = octree % ptr % PE
         iBlock = octree % ptr % BLK
         if(DoFindCell)then
-           DXyz_D = DXyz_D/nCells
+           DXyz_D = DXyz_D/nIJK_D
            iCell  = int((Xyz_D(1)-XyzCorner_D(1))/DXyz_D(1))+1
            jCell  = int((Xyz_D(2)-XyzCorner_D(2))/DXyz_D(2))+1
            kCell  = int((Xyz_D(3)-XyzCorner_D(3))/DXyz_D(3))+1

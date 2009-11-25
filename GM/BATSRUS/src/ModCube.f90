@@ -101,7 +101,7 @@ contains
     integer::iShift_D(3),iChild1Here,iBin
     logical::IsFaseIndex_D(3)
     where(iDirS2R_D==+1)   !send UP
-       iMaxS_D=nCells    
+       iMaxS_D=nIJK_D    
        iMinS_D=iMaxS_D+1-nLayerS
        iMaxR_D=0         
        iMinR_D=iMaxR_D+1-nLayerR
@@ -109,16 +109,16 @@ contains
     where(iDirS2R_D==-1)   !send DOWN
        iMinS_D=1         
        iMaxS_D=iMinS_D-1+nLayerS
-       iMinR_D=nCells+1  
+       iMinR_D=nIJK_D+1  
        iMaxR_D=iMinR_D-1+nLayerR
     end where
     select case(iLevelR) ! Indices along the face
     case(0)              ! Recv block is at the same level
        where(iDirS2R_D==0)
           iMinS_D=1      
-          iMaxS_D=nCells
+          iMaxS_D=nIJK_D
           iMinR_D=1      
-          iMaxR_D=nCells
+          iMaxR_D=nIJK_D
        end where
     case(-1)             ! Recv block is finer
        if(.not.present(iChild1))then
@@ -138,20 +138,20 @@ contains
              iMinS_D=1 + iShift_D 
              iMaxS_D=nCell2_D + iShift_D
              iMinR_D=1            
-             iMaxR_D=nCells
+             iMaxR_D=nIJK_D
           end where
        else
           where(iDirS2R_D==0.and.iShift_D==0)
              iMinS_D=1            
              iMaxS_D=nCell2_D + nExtraCell
              iMinR_D=1            
-             iMaxR_D=nCells +2*nExtraCell
+             iMaxR_D=nIJK_D +2*nExtraCell
           end where
           where(iDirS2R_D==0.and.iShift_D/=0)
              iMinS_D=1 - nExtraCell + nCell2_D   
-             iMaxS_D=nCells 
+             iMaxS_D=nIJK_D 
              iMinR_D=1 - 2 * nExtraCell          
-             iMaxR_D=nCells 
+             iMaxR_D=nIJK_D 
           end where
        end if
     case(+1)    !Receiveng block is coarser
@@ -169,7 +169,7 @@ contains
        end if
        where(iDirS2R_D==0)
           iMinS_D=1             
-          iMaxS_D=nCells 
+          iMaxS_D=nIJK_D 
           iMinR_D=1 + iShift_D  
           iMaxR_D=nCell2_D + iShift_D
        end where
@@ -193,7 +193,7 @@ contains
     integer::iShift_D(3),iChild1Here,iBin
     logical::IsFaseIndex_D(3)
     where(iDirS2R_D==+1)   !send UP
-       iMaxS_D=nCells+1    
+       iMaxS_D=nIJK_D+1    
        iMinS_D=iMaxS_D
        iMaxR_D=1         
        iMinR_D=iMaxR_D
@@ -201,16 +201,16 @@ contains
     where(iDirS2R_D==-1)   !send DOWN
        iMinS_D=1         
        iMaxS_D=iMinS_D
-       iMinR_D=nCells+1  
+       iMinR_D=nIJK_D+1  
        iMaxR_D=iMinR_D
     end where
     select case(iLevelR) ! Indices along the face
     case(0)              ! Recv block is at the same level
        where(iDirS2R_D==0)
           iMinS_D=1      
-          iMaxS_D=nCells+1
+          iMaxS_D=nIJK_D+1
           iMinR_D=1      
-          iMaxR_D=nCells+1
+          iMaxR_D=nIJK_D+1
        end where
     case(-1)             ! Recv block is finer
        if(.not.present(iChild1))then
@@ -229,7 +229,7 @@ contains
           iMinS_D=1 + iShift_D 
           iMaxS_D=nCell2_D+1 + iShift_D
           iMinR_D=1            
-          iMaxR_D=nCells+1
+          iMaxR_D=nIJK_D+1
        end where
     case(+1)    !Receiveng block is coarser
        if(.not.present(iChild1))then
@@ -246,7 +246,7 @@ contains
        end if
        where(iDirS2R_D==0)
           iMinS_D=1             
-          iMaxS_D=nCells+1 
+          iMaxS_D=nIJK_D+1 
           iMinR_D=1 + iShift_D  
           iMaxR_D=nCell2_D+1 + iShift_D
        end where

@@ -1,5 +1,6 @@
 module ModEnergy
 
+  use ModProcMH,  ONLY: iProc
   use ModMultiFluid
   use ModSize,    ONLY: nI, nJ, nK, gcn
   use ModAdvance, ONLY: State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
@@ -150,6 +151,7 @@ contains
     integer, intent(in) :: iFluidMin, iFluidMax
     integer::i,j,k
     !--------------------------------------------------------------------------
+
     do iFluid = iFluidMin, iFluidMax
        call select_fluid
 

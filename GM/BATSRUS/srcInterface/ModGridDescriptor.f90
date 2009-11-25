@@ -103,7 +103,7 @@ contains
   end subroutine pack_soln_block
   !=====================================================================!
   subroutine MH_get_roots_dd(DomainDecomposition)                         
-    use ModSize,ONLY:nDim,nCells                                             
+    use ModSize,ONLY:nDim,nIJK_D                                             
     use ModParallel,ONLY:periodic3d,proc_dims                                
     use ModGeometry,ONLY:XyzMin_D,XyzMax_D                                     
     type(DomainDecompositionType),intent(inout)::DomainDecomposition  
@@ -112,13 +112,13 @@ contains
          proc_dims  ,&!As in DomainDecompositionType
          XyzMin_D,&   !As in DomainDecompositionType
          XyzMax_D,&   !As in DomainDecompositionType
-         nCells,&     !As in DomainDecompositionType
+         nIJK_D,&     !As in DomainDecompositionType
          IsPeriodic_D=periodic3d,& 
          iShift_DI=iShiftChild_DI)       !As in DomainDecompositionType
   end subroutine MH_get_roots_dd                                             
 !----------------------------------------------------------------------------!
   subroutine MH_get_roots_id(GridID_)                         
-    use ModSize,ONLY:nDim,nCells                                             
+    use ModSize,ONLY:nDim,nIJK_D                                             
     use ModParallel,ONLY:periodic3d,proc_dims                                
     use ModGeometry,ONLY:XyzMin_D,XyzMax_D                                     
     integer,intent(in)::GridID_  
@@ -127,7 +127,7 @@ contains
          proc_dims  ,&!As in DomainDecompositionType
          XyzMin_D,&   !As in DomainDecompositionType
          XyzMax_D,&   !As in DomainDecompositionType
-         nCells,&     !As in DomainDecompositionType
+         nIJK_D,&     !As in DomainDecompositionType
          IsPeriodic_D=periodic3d,& 
          iShift_DI=iShiftChild_DI)       !As in DomainDecompositionType
   end subroutine MH_get_roots_id

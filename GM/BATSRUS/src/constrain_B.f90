@@ -1547,13 +1547,13 @@ contains
     end select
 
     isize1=nxface*(nyface+1); isize2=(nxface+1)*nyface
-    isize3=nCells(edgedir)/2
+    isize3=nIJK_D(edgedir)/2
 
     select case(iface)
     case(1,3,5)
-       rface=iface+1; isface=1; irface=nCells(facedir)+1
+       rface=iface+1; isface=1; irface=nIJK_D(facedir)+1
     case(2,4,6)
-       rface=iface-1; isface=nCells(facedir)+1; irface=1
+       rface=iface-1; isface=nIJK_D(facedir)+1; irface=1
     end select
 
   end subroutine setranges
@@ -1705,9 +1705,9 @@ contains
           BLKneighborLEV(d_side(1),d_side(2),d_side(3),iBLK)==1)then
 
           if(q_edge==-1)then
-             isedge=1;                   iredge=nCells(sidedir)+1; iedge=2
+             isedge=1;                   iredge=nIJK_D(sidedir)+1; iedge=2
           else
-             isedge=nCells(sidedir)/2+1; iredge=1;                 iedge=1
+             isedge=nIJK_D(sidedir)/2+1; iredge=1;                 iedge=1
           end if
 
           neiB=BLKneighborBLK(d_edge(1),d_edge(2),d_edge(3),1,iBLK)
@@ -1771,7 +1771,7 @@ contains
        if(iedge==1)then
           iredge=1
        else
-          iredge=nCells(sidedir)+1
+          iredge=nIJK_D(sidedir)+1
        end if
        neiedgeP= BLKneighborPE(d_edge(1),d_edge(2),d_edge(3),1:2,iBLK)
        neiedgeB=BLKneighborBLK(d_edge(1),d_edge(2),d_edge(3),1:2,iBLK)

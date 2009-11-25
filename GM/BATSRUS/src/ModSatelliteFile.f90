@@ -592,7 +592,7 @@ contains
 
     use ModRaytrace
     use ModMpi
-    use ModMain,       ONLY: nI, nJ, nK, nCells, nBlock
+    use ModMain,       ONLY: nI, nJ, nK, nBlock
     use ModGeometry,   ONLY: XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK, UseCovariant
 
     integer, intent(in) :: iSatIn

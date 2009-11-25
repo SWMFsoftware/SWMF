@@ -166,7 +166,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   use ModNumConst
   use ModVarIndexes, ONLY : nVar, Bx_, By_, Bz_
   use ModProcMH
-  use ModMain, ONLY : nI, nJ, nK, nCells, nBlock, unusedBLK, BlkTest
+  use ModMain, ONLY : nI, nJ, nK, nIJK_D, nBlock, unusedBLK, BlkTest
   use ModAdvance, ONLY : State_VGB, StateOld_VCB
   use ModGeometry, ONLY : XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry, ONLY : UseCovariant     
@@ -276,7 +276,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
         end select
         ! Check if point is inside the buffer zone on the upper side
         if(Xyz_D(iDim) > XyzStart_BLK(iDim,iBlock) + &
-             (nCells(iDim)-1)*Dxyz_D(iDim) + DxyzHi_D(iDim)) CYCLE BLOCK
+             (nIJK_D(iDim)-1)*Dxyz_D(iDim) + DxyzHi_D(iDim)) CYCLE BLOCK
      end do
 
      ! Find closest cell center indexes towards the lower index direction
@@ -292,8 +292,8 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
         if(IjkLo_D(iDim) < 1)then
            IjkLo_D(iDim)   = 0
            DxyzInv_D(iDim) = 1/DxyzLo_D(iDim)
-        elseif(IjkLo_D(iDim) >= nCells(iDim))then
-           IjkLo_D(iDim)   = nCells(iDim)
+        elseif(IjkLo_D(iDim) >= nIJK_D(iDim))then
+           IjkLo_D(iDim)   = nIJK_D(iDim)
            DxyzInv_D(iDim) = 1/DxyzHi_D(iDim)
         else
            DxyzInv_D(iDim) = 1/Dxyz_D(iDim)

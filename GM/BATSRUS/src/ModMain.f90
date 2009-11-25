@@ -14,7 +14,7 @@ Module ModMain
   !\
   ! Version of BATSRUS
   !/
-  real, parameter :: CodeVersion = 8.03
+  real, parameter :: CodeVersion = 9.00
   real            :: CodeVersionRead = -1.0
 
   !\
@@ -31,12 +31,6 @@ Module ModMain
 
   ! In hydro equations B_ = U_ is set.
   logical, parameter:: UseB = B_ /= U_
-
-  !\
-  ! Named indexes for directions
-  !/
-  integer, parameter :: x_ = 1,  y_   = 2,  z_     = 3
-  integer, parameter :: R_ = x_, Phi_ = y_, Theta_ = z_
 
   !\
   ! Time stepping parameters and values.
