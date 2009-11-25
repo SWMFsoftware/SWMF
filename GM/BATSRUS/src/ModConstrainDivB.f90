@@ -250,6 +250,8 @@ subroutine Bface2Bcenter(iBlock)
 
   !---------------------------------------------------------------------------
 
+  State_VGB(Bx_:Bz_,:,:,:,iBlock) = -777.0
+
   ! average in direction x (b->B)
   State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)= 0.5*(      &
        Bxface_BLK(1:nI  ,1:nJ,1:nK,iBlock)+ &
