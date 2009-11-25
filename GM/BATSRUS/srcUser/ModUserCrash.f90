@@ -19,6 +19,7 @@ module ModUser
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates
   use ModSize, ONLY: nI, nJ, nK
   use CRASH_ModEos, ONLY: cAtomicMass_I, cAPolyimide
+  use BATL_amr, ONLY: BetaProlong
 
   include 'user_module.h' !list of public methods
 
@@ -130,6 +131,10 @@ module ModUser
 
   ! electron temperature used for calculating heat flux
   real :: Te_G(-1:nI+2,-1:nJ+2,-1:nK+2), Ti_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+
+  ! AMR parameters
+  real:: RhoMinAmrDim = 20.0   ! kg/m3
+  real:: xMaxAmr      = 2500.0 ! microns
 
 contains
 
@@ -245,6 +250,10 @@ contains
           call read_var('TrkevBc1', TrkevBc1)
           call read_var('DistBc2', DistBc2)
           call read_var('TrkevBc2', TrkevBc2)
+       case("#USERAMR")
+          call read_var('RhoMinAmr',   RhoMinAmrDim)
+          call read_var('xMaxAmr',     xMaxAmr)
+          call read_var('BetaProlong', BetaProlong)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -2213,9 +2222,6 @@ contains
     character (len=*),intent(in) :: TypeCriteria
     logical ,intent(inout)       :: IsFound
 
-    real, parameter:: RhoMinAmrDim = 20.0   ! kg/m3
-    real, parameter:: xMinAmr      = 2500.0 ! microns
-
     logical:: IsXe_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     real   :: RhoMin
     integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
@@ -2232,8 +2238,8 @@ contains
 
     UserCriteria = 0.0
 
-    ! If block is beyond xMinAmr, do not refine
-    if(x_BLK(1,1,1,iBlock) >= xMinAmr) RETURN
+    ! If block is beyond xMaxAmr, do not refine
+    if(x_BLK(1,1,1,iBlock) >= xMaxAmr) RETURN
 
     if( (dx_BLK(iBlock) - MinDxValue) > 1e-6)then
        iMin = 0; iMax = nI+1; jMin = 0; jMax = nJ+1; kMin = 0; kMax = nK+1
