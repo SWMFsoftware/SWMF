@@ -58,7 +58,7 @@ namespace PARSER {
       ifile.GetInputStr(str,sizeof(str));
       ifile.CutInputStr(str1,str);
 
-      if (strcmp("#GENERAL",str1)==0) parser_readGeneralBlock(fd,ifile.CurrentLine());
+      if (strcmp("#GENERAL",str1)==0) readGeneralBlock(ifile);
       else if (strcmp(BlockName,str1)==0) {
         v.parser(fd,ifile.CurrentLine(),InputFile,BlockName);
         ifile.closefile();
