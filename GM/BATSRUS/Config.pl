@@ -38,7 +38,7 @@ my $UserModule;
 my $Setvar;
 
 # Grid size variables
-my $NameGridFile = "$Src/ModSize.f90";
+my $NameSizeFile = "$Src/ModSize.f90";
 my $NameBatlFile = "srcBATL/BATL_size.f90";
 my $GridSize;
 my ($nI, $nJ, $nK, $MaxBlock);
@@ -93,28 +93,35 @@ exit 0;
 
 sub get_settings{
 
-    # Read size of the grid from $NameGridFile
-    open(MODSIZE,$NameGridFile) or die "$ERROR could not open $NameGridFile\n";
-    while(<MODSIZE>){
+    # Read size of the grid from $NameSizeFile
+    open(FILE, $NameSizeFile) or die "$ERROR could not open $NameSizeFile\n";
+    while(<FILE>){
 	next if /^\s*!/; # skip commented out lines
-        $nI=$1           if /\bnI\s*=\s*(\d+)/i;
-	$nJ=$1           if /\bnJ\s*=\s*(\d+)/i;
-	$nK=$1           if /\bnK\s*=\s*(\d+)/i;
-        $MaxBlock=$1     if /\bnBLK\s*=\s*(\d+)/i;
+        $MaxBlock=$1     if /\bMaxBlock\s*=\s*(\d+)/i;
 	$MaxImplBlock=$1 if /\bMaxImplBLK\s*=[^0-9]*(\d+)/i;
     }
-    close MODSIZE;
+    close FILE;
 
-    die "$ERROR could not read nI from $NameGridFile\n" unless length($nI);
-    die "$ERROR could not read nJ from $NameGridFile\n" unless length($nJ);
-    die "$ERROR could not read nK from $NameGridFile\n" unless length($nK);
-    die "$ERROR could not read MaxBlock from $NameGridFile\n" 
+    die "$ERROR could not read MaxBlock from $NameSizeFile\n" 
 	unless length($MaxBlock);
 
     #^CFG IF IMPLICIT BEGIN
-    die "$ERROR could not read MaxImplBlock from $NameGridFile\n" 
+    die "$ERROR could not read MaxImplBlock from $NameSizeFile\n" 
 	unless length($MaxImplBlock);                         
     #^CFG END IMPLICIT
+
+    open(FILE, $NameBatlFile) or die "$ERROR could not open $NameBatlFile\n";
+    while(<FILE>){
+        next if /^\s*!/; # skip commented out lines
+        $nI=$1           if /\bnI\s*=\s*(\d+)/i;
+	$nJ=$1           if /\bnJ\s*=\s*(\d+)/i;
+	$nK=$1           if /\bnK\s*=\s*(\d+)/i;
+    }
+    close FILE;
+
+    die "$ERROR could not read nI from $NameBatlFile\n" unless length($nI);
+    die "$ERROR could not read nJ from $NameBatlFile\n" unless length($nJ);
+    die "$ERROR could not read nK from $NameBatlFile\n" unless length($nK);
 
     $GridSize = "$nI,$nJ,$nK,$MaxBlock";
     $GridSize .= ",$MaxImplBlock";                            #^CFG IF IMPLICIT
@@ -152,17 +159,23 @@ sub set_grid_size{
 	if $MaxImplBlock > $MaxBlock;
     #^CFG END IMPLICIT
 
-    print "Writing new grid size $GridSize into $NameGridFile...\n";
+    print "Writing new grid size $GridSize into ".
+	"$NameSizeFile and $NameBatlFile...\n";
 
-    @ARGV = ($NameGridFile, $NameBatlFile);
+    @ARGV = ($NameSizeFile);
+    while(<>){
+	if(/^\s*!/){print; next} # Skip commented out lines
+	s/\b(MaxBlock\s*=[^0-9]*)(\d+)/$1$MaxBlock/i;
+	s/\b(MaxImplBLK\s*=[^0-9]*)(\d+)/$1$MaxImplBlock/i;
+	print;
+    }
 
+    @ARGV = ($NameBatlFile);
     while(<>){
 	if(/^\s*!/){print; next} # Skip commented out lines
 	s/\b(nI\s*=[^0-9]*)(\d+)/$1$nI/i;
 	s/\b(nJ\s*=[^0-9]*)(\d+)/$1$nJ/i;
 	s/\b(nK\s*=[^0-9]*)(\d+)/$1$nK/i;
-	s/\b(nBLK\s*=[^0-9]*)(\d+)/$1$MaxBlock/i;
-	s/\b(MaxImplBLK\s*=[^0-9]*)(\d+)/$1$MaxImplBlock/i;
 	print;
     }
 
