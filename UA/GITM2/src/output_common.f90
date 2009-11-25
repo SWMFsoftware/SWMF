@@ -18,6 +18,7 @@ integer function bad_outputtype()
      if (OutputType(iOutputType) == '3DCHM')     IsFound = .true.
      if (OutputType(iOutputType) == '3DUSR')     IsFound = .true.
      if (OutputType(iOutputType) == '3DGLO')     IsFound = .true.
+     if (OutputType(iOutputType) == '3DCMS')     IsFound = .true.
 
      if (OutputType(iOutputType) == '2DGEL')     IsFound = .true.
      if (OutputType(iOutputType) == '2DMEL')     IsFound = .true.
@@ -27,6 +28,8 @@ integer function bad_outputtype()
      if (OutputType(iOutputType) == '1DGLO')     IsFound = .true.
      if (OutputType(iOutputType) == '1DTHM')     IsFound = .true.
      if (OutputType(iOutputType) == '1DNEW')     IsFound = .true.
+     if (OutputType(iOutputType) == '1DCHM')     IsFound = .true.
+     if (OutputType(iOutputType) == '1DCMS')     IsFound = .true.
 
      if (.not. IsFound) then
         bad_outputtype = iOutputType
@@ -203,6 +206,16 @@ subroutine output(dir, iBlock, iOutputType)
      nvars_to_write = 30
      call output_3dchm(iBlock)
 
+   case ('1DCHM')
+
+     nvars_to_write = 30
+     call output_1dchm(iBlock)
+
+  case ('3DCMS')
+     
+     nvars_to_write = nSpeciesTotal*2+(nIons-1)*2+3
+     call output_3dcms(iBlock)
+     
   case ('3DGLO')
 
      nvars_to_write = 3 + 3
@@ -245,13 +258,18 @@ subroutine output(dir, iBlock, iOutputType)
  case ('1DTHM')
      
      nGCs = 0
-     nvars_to_write = 14 + (nspeciestotal*2)
+     nvars_to_write = 14
      call output_1dthm
 
   case ('1DNEW')
      nGCs = 0
      nvars_to_write = 15 + nSpeciesTotal + nSpecies + nIons + nSpecies
      call output_1dnew(iiLon, iiLat, iBlock, rLon, rLat, iOutputUnit_)
+
+  case ('1DCMS')
+     
+     nvars_to_write = nSpeciesTotal*2+(nIons-1)*2+3
+     call output_1dcms(iBlock)
 
   end select
 
@@ -361,18 +379,7 @@ contains
        write(iOutputUnit_,"(I7,A1,a)")  12, " ", "NO Cooling"
        write(iOutputUnit_,"(I7,A1,a)")  13, " ", "O Cooling"
        write(iOutputUnit_,"(I7,A1,a)")  14, " ", "Total Abs EUV"
-       if (cType(1:2) == "1D") then
-          do iSpecies = 1, nSpeciesTotal
-             write(iOutputUnit_,"(I7,A1,a,a)") 11 + iSpecies, " ", &
-                  "Production Rate ",cSpecies(iSpecies)
-          enddo
-          do iSpecies = 1, nSpeciesTotal
-             write(iOutputUnit_,"(I7,A1,a,a)") 11 + nSpeciesTotal + iSpecies, " ", &
-                  "Loss Rate ",cSpecies(iSpecies)
-             
-          enddo
-       endif
-       
+              
     endif
 
     if (cType(3:5) == "CHM") then
@@ -406,6 +413,30 @@ contains
        write(iOutputUnit_,"(I7,A1,a)") 30, " ", "Chemical Heating Rate"
        
        
+    endif
+
+     if (cType(3:5) == "CMS") then
+       
+       
+         do iSpecies = 1, nSpeciesTotal
+             write(iOutputUnit_,"(I7,A1,a,a)") 3 + iSpecies, " ", &
+                  " Sources ",cSpecies(iSpecies)
+          enddo
+         do iSpecies = 1, nSpeciesTotal
+             write(iOutputUnit_,"(I7,A1,a,a)") 3 + iSpecies + nSpeciesTotal, " ", &
+                  " Losses ",cSpecies(iSpecies)
+          enddo
+
+          do iSpecies = 1, nIons-1
+             write(iOutputUnit_,"(I7,A1,a,a)") 3 + iSpecies + nSpeciesTotal*2, " ", &
+                  " Sources ",cIons(iSpecies)
+          enddo
+
+          do iSpecies = 1, nIons-1
+             write(iOutputUnit_,"(I7,A1,a,a)") 3 + iSpecies + nSpeciesTotal*2 + nIons - 1, " ", &
+                  " Losses ",cIons(iSpecies)
+          enddo
+          
     endif
 
     if (cType(3:5) == "GLO") then
@@ -915,11 +946,7 @@ subroutine output_1dthm
   do iAlt=-1,nAlts+2
      iiAlt = max(min(iAlt,nAlts),1)
  
-     do iSpecies = 1, nSpeciesTotal 
-        varsS(iSpecies) = NeutralSourcesTotal(iSpecies,iiAlt)
-        varsL(iSpecies) = NeutralLossesTotal(iSpecies,iiAlt)
-     enddo
-
+    
      write(iOutputUnit_) &
           Longitude(1,1),               &
           Latitude(1,1),                &
@@ -934,8 +961,8 @@ subroutine output_1dthm
           JouleHeating(1,1,iiAlt)*dt*TempUnit(1,1,iiAlt),         &
           -RadCooling(1,1,iiAlt,1)*dt*TempUnit(1,1,iiAlt),           &
           -OCooling(1,1,iiAlt)*dt*TempUnit(1,1,iiAlt),            &
-          EuvTotal(1,1,iiAlt,1) * dt,                             &
-          varsS, varsL
+          EuvTotal(1,1,iiAlt,1) * dt
+      
                    
   enddo
 
@@ -944,6 +971,48 @@ end subroutine output_1dthm
 !----------------------------------------------------------------
 !
 !----------------------------------------------------------------
+subroutine output_1dcms(iBlock)
+
+  use ModGITM
+  use ModInputs
+  use ModSources
+  use ModConstants
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon, iSpecies
+  real :: vars(nSpeciesTotal*2+nIons*2)
+
+  do iAlt=-1,nAlts+2
+     iiAlt = max(min(iAlt,nAlts),1)
+     
+     do iSpecies = 1, nSpeciesTotal
+        vars(iSpecies) = NeutralSourcesTotal(1,1,iiAlt,iSpecies,1)
+     enddo
+     do iSpecies = 1, nSpeciesTotal
+        vars(iSpecies+nSpeciesTotal) = NeutralLossesTotal(1,1,iiAlt,iSpecies,1)
+     enddo
+     do iSpecies = 1, nIons-1
+        vars(iSpecies+nSpeciesTotal*2) = ISourcesTotal(1,1,iiAlt,iSpecies,1)
+     enddo
+     do iSpecies = 1, nIons-1
+        vars(iSpecies+nSpeciesTotal*2+nIons-1) = ILossesTotal(1,1,iiAlt,iSpecies,1)
+     enddo
+     
+     
+     write(iOutputUnit_) &
+          Longitude(1,iBlock),               &
+          Latitude(1,iBlock),                &
+          Altitude_GB(1,1,iAlt,iBlock),   &
+          Vars
+  enddo
+
+end subroutine output_1dcms
+
+!----------------------------------------------------------------
+!
+!----------------------------------------------------------------
+
 subroutine output_3dchm(iBlock)
 
   use ModGITM
@@ -983,6 +1052,90 @@ subroutine output_3dchm(iBlock)
   enddo
 
 end subroutine output_3dchm
+
+!----------------------------------------------------------------
+!
+!----------------------------------------------------------------
+subroutine output_1dchm(iBlock)
+
+  use ModGITM
+  use ModInputs
+  use ModSources
+  use ModConstants
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon, iReact
+  real :: vars(nReactions)
+
+  do iAlt=-1,nAlts+2
+     iiAlt = max(min(iAlt,nAlts),1)
+     do iReact = 1, nReactions
+              
+              vars(iReact) = ChemicalHeatingSpecies(1,1,iiAlt,iReact) / &
+                   Element_Charge
+              
+              enddo
+              
+              write(iOutputUnit_) &
+                   Longitude(1,1),               &
+                   Latitude(1,1),                &
+                   Altitude_GB(1,1,iAlt,1),   &
+                   Vars, &
+                   ChemicalHeatingRate(1,1,iiAlt) * &
+                   cp(1,1,iiAlt,1) *   &
+                   Rho(1,1,iiAlt,1)*TempUnit(1,1,iiAlt) / &
+                   Element_Charge
+  enddo
+
+end subroutine output_1dchm
+
+!----------------------------------------------------------------
+!
+!----------------------------------------------------------------
+subroutine output_3dcms(iBlock)
+
+  use ModGITM
+  use ModInputs
+  use ModSources
+  use ModConstants
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon, iSpecies
+  real :: vars(nSpeciesTotal*2+nIons*2)
+
+  do iAlt=-1,nAlts+2
+     iiAlt = max(min(iAlt,nAlts),1)
+     do iLat=-1,nLats+2
+        iiLat = min(max(iLat,1),nLats)
+        do iLon=-1,nLons+2
+           iiLon = min(max(iLon,1),nLons)
+           
+           do iSpecies = 1, nSpeciesTotal
+              vars(iSpecies) = NeutralSourcesTotal(iiLon,iiLat,iiAlt,iSpecies,iBlock)
+           enddo
+           do iSpecies = 1, nSpeciesTotal
+              vars(iSpecies+nSpeciesTotal) = NeutralLossesTotal(iiLon,iiLat,iiAlt,iSpecies,iBlock)
+           enddo
+           do iSpecies = 1, nIons-1
+              vars(iSpecies+nSpeciesTotal*2) = ISourcesTotal(iiLon,iiLat,iiAlt,iSpecies,iBlock)
+           enddo
+           do iSpecies = 1, nIons-1
+              vars(iSpecies+nSpeciesTotal*2+nIons-1) = ILossesTotal(iiLon,iiLat,iiAlt,iSpecies,iBlock)
+           enddo
+           
+   
+           write(iOutputUnit_) &
+                Longitude(iLon,iBlock),               &
+                Latitude(iLat,iBlock),                &
+                Altitude_GB(iLon,iLat,iAlt,iBlock),   &
+                Vars
+        enddo
+     enddo
+  enddo
+
+end subroutine output_3dcms
 
 !----------------------------------------------------------------
 !
