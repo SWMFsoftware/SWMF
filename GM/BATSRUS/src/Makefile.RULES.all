@@ -23,6 +23,10 @@ $OS eq "Linux" and $Compiler eq "ifort" and $Equation =~ /Mars|Venus|Titan/i
 $OS eq "IRIX64" and $Compiler eq "f90"
 	${COMPILE.f90} ${Cflag2} set_outer_BCs.f90
 
+# On some machines NAG f95 -O3/-O4 produced run time error for write_plot_los
+$Compiler eq "f95"
+	${COMPILE.f90} ${Cflag2} write_plot_los.f90
+
 # The NAG compiler cannot compile big static arrays with the -nan flag
 $Compiler eq "f95" and $Debug eq "yes"
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModIO.f90
