@@ -31,6 +31,7 @@ contains
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
     use ModMagnetogram, ONLY: set_parameters_magnetogram
+    use ModWaves, ONLY: read_frequency, read_alfven_speed, read_wave_pressure
     implicit none
 
     character (len=100) :: NameCommand
@@ -61,6 +62,13 @@ contains
 
        case("#EMPIRICALSW")
           call read_var('NameModel',NameModel)
+       case("#FREQUENCY")
+          call read_frequency
+       case("#ALFVENSPEED")
+          call read_alfven_speed
+       case("#WAVEPRESSURE")
+          call read_wave_pressure
+
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -162,6 +170,7 @@ contains
     B1n_D(x_:z_) = B1dotR*RFace_D(x_:z_)
     B1t_D        = B1_D-B1n_D
 
+    VarsGhostFace_V(:) = 1.0e-31
     !\
     ! Update BCs for velocity and induction field::
     !/
@@ -373,6 +382,7 @@ contains
     ! The sqrt is for backward compatibility with older versions of the Sc
     U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
 
+    State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = 1.0e-31
     do k=1,nK; do j=1,nJ; do i=1,nI
        x = x_BLK(i,j,k,iBLK)
        y = y_BLK(i,j,k,iBLK)
