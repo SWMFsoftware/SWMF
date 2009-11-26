@@ -8,10 +8,12 @@ subroutine heidi_run
   
   implicit none 
   !------------------------------------------------------------------------------
-  
+
+!  call OTHERPARA
   call GETKPA(i3,nst,i2,nkp)
   if (ISW.gt.0) call GETSWIND
   call MAGCONV(i3,nst)
+  call get_E_mu_dot
   call THERMAL
   if (I3.eq.NST) call WRESULT(LNC,XN,1)
   do S = 1,NS

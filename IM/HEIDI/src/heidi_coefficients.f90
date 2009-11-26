@@ -18,7 +18,8 @@ subroutine CEPARA
   use ModIoUnit,     ONLY: io_unit_new,UNITTMP_
   use ModHeidiIO,    ONLY: NameInputDirectory
   use ModHeidiInput, ONLY: TypeBField
-  
+
+
   implicit none
 
   integer           :: I,K,L,I1,LUP,ier,J
@@ -186,7 +187,7 @@ subroutine OTHERPARA
   use ModHeidiMain
   use ModHeidiDrifts
   use ModHeidiInput, ONLY: TypeBField
-
+  use ModInit, ONLY :i3,nst
   
   implicit none
 
@@ -258,110 +259,7 @@ subroutine OTHERPARA
      VR(I,J18)=0.
   end do	! I loop processing VR
 
-  !\
-  ! Pitch angle and energy time derivatives at boundaries of grids
-  !/
 
-  open (unit = 2, file = "EDOT.dat")
-  write (2,*)'Values '
-  write (2,*)'i,j,k,l,EDOT' 
-
-
-  if (TypeBField == 'analytic') then 
-     
-     do I=1,IO
-        do J=1,JO
-           do L=1,UPA(I)
-              MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
-              MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
-                   /MUBOUN/4./(0.5*(FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
-              GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
-              do K=1,KO
-                 EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
-                 write(2,*) 'i,j,k,l,EDOT',i,j,k,l,EDOT(I,J,K,L)
-              end do	! K loop
-           end do 	! L loop
-           MULC=MU(UPA(I))+0.5*WMU(UPA(I))
-           do L=UPA(I)+1,LO-1
-              MUBOUN=MU(L)+0.5*WMU(L)
-              if (l== LO-1) MU(L+1) = MU(L)
-              MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
-                   /MUBOUN/4./(0.5*( FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
-              do K=1,KO
-                 EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
-              end do	! K loop
-           end do	! L loop
-           MUDOT(I,J,LO)=0.
-           do K=1,KO
-              EDOT(I,J,K,LO)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)
-           end do	! K loop
-        end do 	! J loop
-     end do	! I loop
- 
-
-     write(*,*) 'EDOT_analytic', EDOT(20,24,42,67)
-    
-  end if
-
-  
-  if (TypeBField == 'numeric') then 
-     call get_coef(dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII,dEdt_IIII,dMudt_III)
-
-     do I=1,IO
-        do J=1,JO
-           do L=1,UPA(I)
-              do k = 1,ko
-                 write(2,*) dEdt_IIII(i,j,k,l) 
-              end do
-           end do
-        end do
-     end do
-     
-     
-     
-     do I=1,IO
-        do J=1,JO
-           do L=1,UPA(I)
-              MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
-              !MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
-              !     /MUBOUN/4./(0.5*(FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
-              
-              MUDOT(I,J,L) = -((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,l)*DL1/DMU(L)
-              
-
-              do K=1,KO
-                 EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)*DL1/DE(K)
-              end do	! K loop
-           end do 	! L loop
-           MULC=MU(UPA(I))+0.5*WMU(UPA(I))
-           do L=UPA(I)+1,LO-1
-              MUBOUN=MU(L)+0.5*WMU(L)
-              if (l== LO-1) MU(L+1) = MU(L)
-              
-              !MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
-              !     /MUBOUN/4./(0.5*( FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L)
-              
-              MUDOT(I,J,L)= -((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,l)*DL1/DMU(L)
-
-              do K=1,KO
-                 EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)*DL1/DE(K)
-              end do	! K loop
-           end do	! L loop
-           MUDOT(I,J,LO)=0.
-           do K=1,KO
-              EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)*DL1/DE(K)
-           
-           end do	! K loop
-        end do 	! J loop
-     end do	! I loop
- 
-     write(*,*) 'EDOT_numeric', EDOT(20,24,42,67)   
-     
-  end if
-
-  close(2)
-
-  !stop
 
   !\
   ! We assume Te=Ti=1eV (kT=1eV)
@@ -842,6 +740,7 @@ subroutine MAGCONV(I3,NST)
            P1(i,j)=P1(i,j)-EPR*DT/DPHI*RR**2*RE/ME
         end do
      end do
+     
      !\
      ! potdgcpm filled in from FPOT12
      !/
@@ -926,7 +825,8 @@ subroutine MAGCONV(I3,NST)
         do i=1,io   ! Note this is shifted from epots1's I grid
            RR=LZ(I)+0.5*DL1
            EPP=-(epots1(jj,i+1)-epots1(j,i+1))/RR/DPHI
-           VR(i,j)=EPP*DT/DL1*RR**3*RE/ME
+           VR(i,j) = EPP*DT/DL1*RR**3*RE/ME
+           
 
 
         end do
@@ -1150,7 +1050,8 @@ subroutine MAGCONV(I3,NST)
               EPP=-(FPOT(i+1,jj)-FPOT(i+1,j))/RR/DPHI
               VR(i,j)=VR(i,j)+EPP*DT/DL1*RR**3*RE/ME
               !!!!!VR is calculated here
-           
+
+              !write(*,*) 'VR magconv', VR(i,j)
 
            end do
            SJ=sin(PHI(J)+.5*DPHI)
