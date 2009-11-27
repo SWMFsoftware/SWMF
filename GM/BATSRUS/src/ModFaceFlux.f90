@@ -2418,7 +2418,7 @@ contains
 
       real :: RhoU_D(3)
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn, FullB2
-      real :: Ppar, Pperp, BnInvB2
+      real :: Ppar, Pperp, BnInvB2, GammaPe
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       real :: dB1dB1                                     !^CFG IF AWFLUX
 
@@ -2491,15 +2491,19 @@ contains
       ! Formulae refer to V. B. Baranov, 1970
       if(UseAnisoPressure) FullB2 = FullBx**2+FullBy**2+FullBz**2
       if(UseAnisoPressure .and. FullB2 > 0)then
+         GammaPe = 0.0 
+         if(UseElectronPressure) GammaPe = g*State_V(Pe_) ! considering Pe
          Ppar = State_V(Ppar_)
          Pperp = State_V(Pperp_)
          BnInvB2 = FullBn**2/FullB2
-         Sound2 = InvRHo*(2*Pperp + (2*Ppar - Pperp)*BnInvB2) ! define Sound2 in this way
+         Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 &
+              + GammaPe)                        ! define Sound2 in this way
          Fast2 = Sound2 + Alfven2 
          Discr = sqrt(max(0.0, Fast2**2  &
               + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &  
-              - 3*Ppar*Pperp*InvRho**2*BnInvB2*(2-BnInvB2) &
-              + 3*(Ppar*InvRho*BnInvB2)**2 - 3*Ppar*InvRho*Alfven2Normal)))
+              - (3*Ppar + GammaPe)*Pperp*InvRho**2*BnInvB2*(2-BnInvB2) &
+              + (3*Ppar + GammaPe)*Ppar*(InvRho*BnInvB2)**2 &
+              - (3*Ppar + GammaPe)*InvRho*Alfven2Normal)))
       else
          Fast2  = Sound2 + Alfven2
          Discr  = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
