@@ -1,7 +1,7 @@
 module ModLinearAdvection
 
   implicit none
-
+  real:: BetaLim=2.0
   public :: test_linear_advection
 contains
   !===========advance_lin_advection==========================================!
@@ -13,7 +13,8 @@ contains
        nX,            &
        nGCLeft,       &
        nGCRight,      &
-       FInOut_I       )      
+       FInOut_I,      &
+       BetaIn)      
 
 
     !--------------------------------------------------------------------------!
@@ -26,6 +27,7 @@ contains
     !                                                                          !
     !In: sol. to be advanced; Out: advanced sol.                               !
     real,dimension(1-nGCLeft : nX+nGCRight),intent(inout)::  FInOut_I          !
+    real, optional::BetaIn
                                                                 
     !--------------------------------------------------------------------------!
     integer:: iX,iStep,nStep
@@ -34,7 +36,11 @@ contains
     real,dimension(0:nX+1)::CFL_I
     character(LEN=*),parameter :: NameSub = 'advance_lin_advection_plus'
     !--------------------------------------------------------------------------!
-
+    if(present(BetaIn))then
+       BetaLim = BetaIn
+    else
+       BetaLim = 2.0
+    end if
 
     nStep=1+int(maxval(CFLIn_I)); CFL_I(1:nX) = CFLIn_I/real(nStep)
     CFL_I(0) = CFL_I(1); CFL_I(nX+1) = CFL_I(nX)
@@ -90,7 +96,8 @@ contains
        nX,            &
        nGCLeft,       &
        nGCRight,      &
-       FInOut_I       )      
+       FInOut_I,      &
+       BetaIn       )      
     !--------------------------------------------------------------------------!
     !
     integer,intent(in):: nX           !Number of meshes                        !
@@ -100,6 +107,7 @@ contains
     !boundary condition, if any              !
     real,dimension(1-nGCLeft:nX+nGCRight),intent(inout):: &
          FInOut_I                     !In: sol. to be advanced; Out: advanced  !
+    real, optional :: BetaIn
     !sol. index 0 is to set boundary         !
     !condition at the injection energy.      !
     !--------------------------------------------------------------------------!
@@ -112,6 +120,11 @@ contains
 
     real,dimension(0:nX+1)::CFL_I
     !--------------------------------------------------------------------------!
+    if(present(BetaIn))then
+       BetaLim = BetaIn
+    else
+       BetaLim = 2.0
+    end if
 
 
     nStep=1+int(maxval(CFLIn_I)); CFL_I(1:nX) = CFLIn_I/real(nStep)
@@ -212,7 +225,7 @@ contains
     df_lim = sign(0.50,dF1) + sign(0.50,dF2)
     dF1 = abs(dF1)
     dF2 = abs(dF2)
-    df_lim = df_lim * min(max(dF1,dF2), 2.0*dF1, 2.0*dF2)
+    df_lim = df_lim * min(max(dF1,dF2), BetaLim*dF1, BetaLim*dF2)
     !---------------------------------- DONE ----------------------------------!
   end function df_lim
   !============================================================================!
