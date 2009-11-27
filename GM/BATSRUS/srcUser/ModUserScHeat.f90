@@ -24,6 +24,8 @@ module ModUser
   real :: DecayLength = 0.7   ! in units of rSun
   real :: HeatFluxCgs = 1.0e5 ! erg cm^-2 s^-1
   real :: HeatingAmplitude
+  logical ::  UseWaveDissipation = .false.
+  real :: DissipationScaleFactor  ! unit = m*T^0.5
 
   real :: TeFraction
   real :: EtaPerpSi
@@ -79,11 +81,18 @@ contains
           case('exponential')
              UseUnsignedFluxModel = .false.
              UseExponentialHeating = .true.
+             UseWaveDissipation = .false.
              call read_var('DecayLength', DecayLength)
              call read_var('HeatFluxCgs', HeatFluxCgs)
           case('unsignedflux')
              UseUnsignedFluxModel = .true.
              UseExponentialHeating = .false.
+             UseWaveDissipation = .false.
+          case('wavedissipation')
+             UseUnsignedFluxModel = .false.
+             UseExponentialHeating = .false.
+             UseWaveDissipation = .true.
+             call read_var('DissipationScaleFactor', DissipationScaleFactor)
           case default
              call stop_mpi(NameSub//': unknown TypeCoronalHeating = ' &
                   //TypeCoronalHeating)
@@ -376,7 +385,7 @@ contains
        State_VGB(RhoUy_,i,j,k,iBlock) = Rho*Ur*y/r *Usound
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
-       State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 0.0
+       State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 1.0e-12 !0.0
        NumDensIon = Rho/MassIon_I(1)
        NumDensElectron = NumDensIon*AverageIonCharge
 
@@ -412,16 +421,19 @@ contains
   subroutine user_calc_sources
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
-         time_BLK
+         time_BLK, B0_DGB
     use ModCoronalHeating, ONLY: UseUnsignedFluxModel, get_coronal_heating
-    use ModGeometry,       ONLY: r_BLK
+    use ModGeometry,       ONLY: x_BLK, y_BLK, z_BLK, r_BLK
     use ModMain,           ONLY: nI, nJ, nK, GlobalBlk, Cfl
-    use ModPhysics,        ONLY: gm1, inv_gm1, rBody, Si2No_V, UnitT_
-    use ModVarIndexes,     ONLY: Rho_, Energy_, p_, Pe_
+    use ModPhysics,        ONLY: gm1, inv_gm1, rBody, Si2No_V, No2Si_V, &
+         UnitT_, UnitB_, UnitX_
+    use ModVarIndexes,     ONLY: Rho_, Bx_, Bz_, Energy_, p_, Pe_, &
+         WaveFirst_, WaveLast_
 
-    integer :: i, j, k, iBlock
+    integer :: i, j, k, iBlock, iWave
     real :: CoronalHeating, RadiativeCooling
     real :: HeatExchange, HeatExchangeSi
+    real :: DissipationLength, WaveHeating, FullB_D(3), FullBSi
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -436,10 +448,20 @@ contains
        elseif(UseExponentialHeating)then
           CoronalHeating = HeatingAmplitude &
                *exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
+       elseif(UseWaveDissipation)then
+          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          FullBSi = sqrt(sum(FullB_D**2))*No2Si_V(UnitB_)
+          DissipationLength = DissipationScaleFactor/sqrt(FullBSi)*Si2No_V(UnitX_)
+          CoronalHeating = 0.0
+          do iWave = WaveFirst_, WaveLast_
+             WaveHeating = State_VGB(iWave,i,j,k,iBlock)**1.5 &
+                  /sqrt(State_VGB(Rho_,i,j,k,iBlock))/DissipationLength
+             Source_VC(iWave,i,j,k) = Source_VC(iWave,i,j,k) - WaveHeating
+             CoronalHeating = CoronalHeating + WaveHeating
+          end do
        else
           CoronalHeating = 0.0
        end if
-
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + CoronalHeating
 
        if(UseElectronPressure)then
