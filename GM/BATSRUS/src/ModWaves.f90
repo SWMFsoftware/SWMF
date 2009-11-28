@@ -106,40 +106,38 @@ contains
          .or.((.not.UseAlfvenSpeed ).and. nWave==1))return
     if(UseAlfvenSpeed)then
 
-       !Boundary conditions at very low and very high frequency:
-       F2_I(0) = 0.0; F2_I(nWaveHalf+1) = 0.0
-
        do k= 1, nK; do j= 1,nJ; do i= 1,nI
           CFL2_I = abs( DivU_C(i,j,k) ) * (GammaWave - 1.0)/&
                DeltaLogFrequency * CFL * time_blk(i,j,k, iBlock)
-
+          ! Boundary conditions
+          F2_I(0) = 0.0 ; F2_I(nWaveHalf+1) = 0.0
           if(DivU_C(i,j,k)>0.0)then
-             F2_I(nWaveHalf+1) = F2_I(nWaveHalf)
+         
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenSpeedPlusFirst_:AlfvenSpeedPlusLast_, i,j,k, iBlock)
-             
+             F2_I(nWaveHalf+1)=F2_I(nWaveHalf)
              call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I,BetaLimiter) 
              State_VGB(AlfvenSpeedPlusFirst_:AlfvenSpeedPlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
 
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenSpeedMinusFirst_:AlfvenSpeedMinusLast_, i,j,k, iBlock)
-             
+             F2_I(nWaveHalf+1) = F2_I(nWaveHalf)
              call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I,BetaLimiter) 
              State_VGB(AlfvenSpeedMinusFirst_:AlfvenSpeedMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           else
-             F2_I(0) = F2_I(1)
+         
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenSpeedPlusFirst_:AlfvenSpeedPlusLast_, i,j,k, iBlock)
-             
+             F2_I(0) = F2_I(1) 
              call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I,BetaLimiter) 
              State_VGB(AlfvenSpeedPlusFirst_:AlfvenSpeedPlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
              
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenSpeedMinusFirst_:AlfvenSpeedMinusLast_, i,j,k, iBlock)
-             
+             F2_I(0) = F2_I(1)
              call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I,BetaLimiter) 
              State_VGB(AlfvenSpeedMinusFirst_:AlfvenSpeedMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
