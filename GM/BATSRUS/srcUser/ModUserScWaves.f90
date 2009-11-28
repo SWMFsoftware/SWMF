@@ -446,11 +446,11 @@ contains
     !\
     ! Advect solution
     !/
-    if(any(State_VGB(WaveFirst_:WaveLast_,:,:,:,iBlock)<0.0)) then
+    if(any(State_VGB(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK,iBlock)<0.0)) then
        write(*,*) NameSub,' : negative wave energy before MHD'
     end if
     call update_states_MHD(iStage,iBlock)
-    if(any(State_VGB(WaveFirst_:WaveLast_,:,:,:,iBlock)<0.0)) then
+    if(any(State_VGB(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK,iBlock)<0.0)) then
        write(*,*) NameSub, ': negative wave energy after MHD'
     end if
 
