@@ -25,12 +25,12 @@ module ModUser
        NameUserModule = 'Alfven Waves Driven Solar Wind'
   character(len=lStringLine)    :: NameModel
 
-  !Global variables - frequency grid
   logical                       :: IsInitWave = .false.
   logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
+  real                          :: LogFreqCutOff, SpectralIndex
+  integer                       :: LowestFreqNum, SpectrumWidth, nWaveOver2
+  real                          :: xTrace = 0.0, zTrace = 0.0
   real,dimension(nWave)         :: LogFreq_I ! frequency grid
-  real                          :: FreqInertial, LogFreqInertial
-  !WaveDissip_CB=0.0 ! for plotting only
 
 contains
   !============================================================================
@@ -71,19 +71,26 @@ contains
        case("#WAVEPRESSURE")
           call read_wave_pressure
 
+       case("#FREQUENCY")
+          call read_frequency
+
+       case("#SPECTRUM")
+          call read_var('LowestFreqNum',LowestFreqNum)
+          call read_var('SpectrumWidth',SpectrumWidth)
+          call read_var('SpectralIndex',SpectralIndex)
+
+       case("#SPECTROGRAM")
+          call read_var('xTrace',xTrace)
+          call read_var('zTrace',zTrace)
+
+
        case("#ARCH","#TD99FLUXROPE","#GL98FLUXROPE")
           call EEE_set_parameters(NameCommand)
 
        case("#EMPIRICALSW")
           call read_var('NameModel',NameModel)
 
-       case("#FREQUENCY")
-          call read_frequency
-
-       case("#FREQINERTIAL")
-          call read_var('FreqInertial',FreqInertial)
-
-       case('#USERINPUTEND')
+        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
              write(iUnitOut,*)'User read_input TURBULENCE CORONA ends'
@@ -172,7 +179,7 @@ contains
 
     real:: DensCell,PresCell,GammaCell,TBase,B1dotR  
     real, dimension(3):: RFace_D,B1_D,U_D,B1t_D,B1n_D
-    real :: BRCell, vAlfvenSi, wEnergyDensSi, wEnergyDens
+    real :: BRCell, vAlfvenSi, wEnergyDensSi, wEnergyDens, SpectralCoeff
   
     !--------------------------------------------------------------------------
 
@@ -229,7 +236,9 @@ contains
     !\
     ! Update BCs for wave spectrum
     !/
-    if(.not.IsInitWave) then
+    VarsGhostFace_V(AlfvenSpeedPlusFirst_ :AlfvenSpeedPlusLast_ ) = 1.0e-30
+    VarsGhostFace_V(AlfvenSpeedMinusFirst_:AlfvenSpeedMinusLast_) = 1.0e-30
+    if(IsInitWave) then
        BRCell = sum(RFace_D * &
             (State_VGB(Bx_:Bz_,iCell,jCell,kCell,iBlockBc) + &
             B0_DGB(:,iCell,jCell,kCell,iBlockBc)) )
@@ -241,35 +250,33 @@ contains
             FaceCoords_D(z_),&
             vAlfvenSi, wEnergyDensSi)
       
+       SpectralCoeff = -(1/SpectralIndex)
        wEnergyDens = wEnergyDensSI * Si2No_V(UnitP_)
        do iWave = AlfvenSpeedPlusFirst_,AlfvenSpeedPlusLast_
-          if(LogFreq_I(iWave-WaveFirst_+1) .lt. LogFreqInertial.or.vAlfvenSi.le.0.0) then
-             VarsGhostFace_V(iWave)=0.0
+          if(iWave-AlfvenSpeedPlusFirst_+1 .lt. LowestFreqNum .or.& 
+               iWave-AlfvenSpeedPlusFirst_+1 .gt. LowestFreqNum+SpectrumWidth .or.&
+               vAlfvenSi.le.0.0) then
+             VarsGhostFace_V(iWave)=1e-30
           else    
-             VarsGhostFace_V(iWave) = (2.0/3.0) * DeltaLogFrequency * wEnergyDens* &
-                  exp((LogFreq_I(iWave-WaveFirst_+1)-LogFreqInertial)*(-2.0/3.0))
+             VarsGhostFace_V(iWave) = SpectralCoeff * DeltaLogFrequency * wEnergyDens* &
+                  exp((LogFreq_I(iWave-WaveFirst_+1))*SpectralIndex)
           end if
        end do
 
        do iWave = AlfvenSpeedMinusFirst_,AlfvenSpeedMinusLast_
-          if(LogFreq_I(iWave-WaveFirst_+1) .lt. LogFreqInertial.or.vAlfvenSi.ge.0.0) then
-             VarsGhostFace_V(iWave)=0.0
+          if(iWave-AlfvenSpeedMinusFirst_+1 .lt. LowestFreqNum .or. & 
+               iWave-AlfvenSpeedMinusFirst_+1 .gt. LowestFreqNum+SpectrumWidth .or. &
+               vAlfvenSi.ge.0.0) then
+             VarsGhostFace_V(iWave)=1e-30
           else    
-             VarsGhostFace_V(iWave) = (2.0/3.0) * DeltaLogFrequency * wEnergyDens* &
-                  exp((LogFreq_I(iWave-WaveFirst_+1)-LogFreqInertial)*(-2.0/3.0))
+             VarsGhostFace_V(iWave) = SpectralCoeff * DeltaLogFrequency * wEnergyDens* &
+                  exp((LogFreq_I(iWave-WaveFirst_+1))*SpectralIndex)
           end if
           if(VarsGhostFace_V(iWave) < 0.0) then
              write(*,*) 'negative wave energy at inner bc'
           end if
        end do
     end if
-
-    if(IsInitWave) then
-       do iWave = WaveFirst_,WaveLast_
-          VarsGhostFace_V(iWave)=nWave-iWave
-       end do
-    end if
-
     !\
     ! Apply corotation
     !/
@@ -372,7 +379,7 @@ contains
 
     ! The sqrt is for backward compatibility with older versions of the Sc
     U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
-
+    State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = 1e-30 !Initialize the wave spectrum
     do k=1,nK; do j=1,nJ; do i=1,nI
        x = x_BLK(i,j,k,iBLK)
        y = y_BLK(i,j,k,iBLK)
@@ -436,11 +443,6 @@ contains
     real                         :: DensCell,PresCell,GammaCell,Beta,WavePres
     character(len=*),parameter   :: NameSub='user_update_states'
     !--------------------------------------------
-    !\
-    ! Dissipate wave energy before frequency advection 
-    !/
-    if (IsInitWave .and. DoDampCutOff) call dissipate_waves(iBlock)
-    
     !\
     ! Advect solution
     !/
@@ -533,7 +535,7 @@ contains
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_
-    use ModWaves
+    use ModWaves, ONLY: AlfvenSpeedMinusFirst_,AlfvenSpeedPlusFirst_
 
     implicit none
     
@@ -542,13 +544,17 @@ contains
     real                             :: dx, dz, x,y,z, IwPlusSi,IwMinusSi
     integer                          :: iFreq,i,j,k,iBLK
     integer                          :: iUnit,iError,aError
-    character(len=40)                :: FileNameTec,FileNameHead,FileNameGrid 
+    character(len=40)                :: FileNameTec 
     character(len=11)                :: NameStage
     character(len=7)                 :: NameProc
     character(len=*),parameter       :: NameSub='write_spectrogram'
     !-------------------------------------------------------------------
+    write(NameStage,'(i6.6)') iteration_number
+    write(NameProc,'(a,i4.4)') "_pe",iProc
+    FileNameTec = 'SC/IO2/Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.tec'
+    if(iProc == 0) write(*,*) 'SC: writing file ',FileNameTec
     !\
-    ! count cells in cut x=0, z=0
+    ! count cells along x=xTrace, z=zTrace line parallel to y axis
     !/
     nCell=0
     do iBLK=1,nBLK
@@ -558,89 +564,71 @@ contains
           dx=dx_BLK(iBLK)
           z=z_BLK(i,j,k,iBLK)
           dz=dz_BLK(iBLK)
-          if((z< dz) .and. (z >=0.0) .and. (x<dx) .and. (x>=0.0)) then
+          if((z < zTrace+dz) .and. (z >= zTrace) .and. &
+             (x < xTrace+dx) .and. (x >= xTrace)) then
              nCell=nCell+1
           end if
        end do; end do ; end do
     end do
-    nRow=nCell*nWave/2
-    !\
-    ! Allocate plot arrays
-    !/
-    ALLOCATE(Cut_II(nRow,4),STAT=aError)
-    !\
-    ! Fill plot array
-    !/
-    if (aError .ne. 0) then
-       call stop_mpi('Allocation failed for spectrogram array')
-    else
-       iRow=1
-       do iBLK=1,nBLK
-          if(unusedBLK(iBLK)) CYCLE
-          do k=1,nK ; do j=1,nJ ; do i=1,nI
-             x=x_BLK(i,j,k,iBLK)
-             y=y_BLK(i,j,k,iBLK)
-             z=z_BLK(i,j,k,iBLK)
-             dx=dx_BLK(iBLK)
-             dz=dz_BLK(iBLK)
-             if((z< dz) .and. (z >=0.0) .and. (x<dx) .and. (x>=0.0)) then
-                do iFreq=1,nWave/2
-                   IwPlusSi  = No2Si_V(UnitP_)*State_VGB(AlfvenSpeedPlusFirst_+iFreq-1,i,j,k,iBLK)
-                   IwMinusSi = No2Si_V(UnitP_)*State_VGB(AlfvenSpeedMinusFirst_+iFreq-1,i,j,k,iBLK)
-                   Cut_II(iRow,1) = y
-                   Cut_II(iRow,2) = LogFreq_I(iFreq)
-                   Cut_II(iRow,3) = IwPlusSi
-                   Cut_II(iRow,4) = IwMinusSi
-                   iRow=iRow+1
-                end do
-             end if
-          end do; end do ; end do
-       end do
-    end if
-    !\
-    ! write header file (iProc==0)
-    !/
-    write(NameStage,'(i5.5)') iteration_number
-    write(NameProc,'(a,i4.4)') "_pe",iProc
-   
-    if (iProc==0) then
-       FileNameHead='SC/IO2/Spectrum_n_'//trim(NameStage)//'.H'
-       write(*,*) 'SC:  writing file ', FileNameHead
+    if (nCell > 0 )then !write spectrogram output file
+     
+       nRow=nCell*nWaveOver2
+       !\
+       ! Allocate plot arrays
+       !/
+       ALLOCATE(Cut_II(nRow,4),STAT=aError)
+       !\
+       ! Fill plot array
+       !/
+       if (aError .ne. 0) then
+          call stop_mpi('Allocation failed for spectrogram array')
+       else
+          iRow=1
+          do iBLK=1,nBLK
+             if(unusedBLK(iBLK)) CYCLE
+             do k=1,nK ; do j=1,nJ ; do i=1,nI
+                x=x_BLK(i,j,k,iBLK)
+                y=y_BLK(i,j,k,iBLK)
+                z=z_BLK(i,j,k,iBLK)
+                dx=dx_BLK(iBLK)
+                dz=dz_BLK(iBLK)
+                if((z < zTrace+dz) .and. (z >= zTrace) .and. &
+                   (x < xTrace+dx) .and. (x >= xTrace)) then
+                   do iFreq=1,nWaveOver2
+                      IwPlusSi  = No2Si_V(UnitP_)* &
+                           State_VGB(AlfvenSpeedPlusFirst_+iFreq-1,i,j,k,iBLK)
+                      IwMinusSi = No2Si_V(UnitP_)* &
+                           State_VGB(AlfvenSpeedMinusFirst_+iFreq-1,i,j,k,iBLK)
+                      Cut_II(iRow,1) = y
+                      Cut_II(iRow,2) = LogFreq_I(iFreq)
+                      Cut_II(iRow,3) = IwPlusSi
+                      Cut_II(iRow,4) = IwMinusSi
+                      iRow=iRow+1
+                   end do
+                end if
+             end do; end do ; end do
+          end do
+       end if
+       !\
+       ! write data file
+       !/
        iUnit=io_unit_new()
-       open(unit=iUnit, file=FileNameHead, form='formatted', access='sequential',&
-         status='replace',iostat=iError)
+       open(unit=iUnit, file=FileNameTec, form='formatted', access='sequential',&
+            status='replace',iostat=iError)
        write(iUnit, '(a)') 'Title: BATSRUS SC Spectrogram'
-       write(iUnit, '(i4.4)') nProc
-       write(iUnit, '(a)') 'Variables = "Y[R]", "w","I+[Jm-3]","I-[Jm-3]" '
+       write(iUnit, '(a)') 'Variables = "Y[R]", "log(w)","I+[Jm-3]","I-[Jm-3]" '
+       write(iUnit,'(a,i3.3,a,i5.5,a)') 'Zone I= ',nWaveOver2,' J= ',nCell,' F=point'
+       do iRow=1,nRow
+          write(iUnit, fmt="(30(e14.6))") &
+               Cut_II(iRow,:)
+       end do
        close(iUnit)
-    end if
-    !\
-    ! Write grid size file
-    !/
-    FileNameGrid='SC/IO2/Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.G'
-    iUnit=io_unit_new()
-    open(unit=iUnit, file=FileNameGrid,form='formatted',access='sequential',&
-         status='replace',iostat=iError)
-    write(iUnit,'(i6.6)') nWave/2
-    write(iUnit,'(i6.6)') nCell
-    close(iUnit)
-    !\
-    ! Write data file
-    !/
-    FileNameTec='SC/IO2/Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.tec'
-    iUnit=io_unit_new()
-    open(unit=iUnit, file=FileNameTec, form='formatted',access='sequential',&
-         status='replace',iostat=iError)
-    do iRow=1,nRow
-       write(iUnit, fmt="(30(e14.6))") &
-            Cut_II(iRow,:)
-    end do
-    close(iUnit)
 
-    if(allocated(Cut_II)) deallocate(Cut_II,STAT=aError)
-    if(aError .ne. 0) then
-       write(*,*) NameSub, 'Deallocation of spectrogram array failed'
-       call stop_mpi(NameSub)
+       if(allocated(Cut_II)) deallocate(Cut_II,STAT=aError)
+       if(aError .ne. 0) then
+          write(*,*) NameSub, 'Deallocation of spectrogram array failed'
+          call stop_mpi(NameSub)
+       end if
     end if
   end subroutine write_spectrogram
   !=====================================================================
@@ -741,32 +729,37 @@ contains
          DeltaLogFrequency
     implicit none
     
-    integer                    :: iFreq,nWaveHalf
+    integer                    :: iFreq
     real                       :: LogFreqMin, LogFreqMax
     character(len=*),parameter :: NameSub='set_freq_grid'
     !-----------------------------------------------------------------
-    nWaveHalf = max(nWave/2,1)
+    nWaveOver2 = max(nWave/2,1)
     ! Minimal frequency in frequency grid
     LogFreqMin = log(2*cPi*FreqMinSI) 
 
     ! calculate frequencies
     ! Plus waves (+Va)
-    do iFreq = 1,nWaveHalf
+    do iFreq = 1,nWaveOver2
        LogFreq_I(iFreq)=LogFreqMin+(iFreq-1)*DeltaLogFrequency
     end do
     ! Minus waves (-Va)
-    do iFreq = 1,nWaveHalf
-       LogFreq_I(nWaveHalf+iFreq)=LogFreqMin+(iFreq-1)*DeltaLogFrequency
+    do iFreq = 1,nWaveOver2
+       LogFreq_I(nWaveOver2+iFreq)=LogFreqMin+(iFreq-1)*DeltaLogFrequency
     end do
    end subroutine set_freq_grid
   !===================================================================
   subroutine init_wave_spectrum
 
-    ! This subroutine initializes the Alfven wave energy spectrum in each cell over a frequency grid.
-    ! The frequancy range of the spectrum is determined by Alfven waves frequencie observed at the chromosphere 
-    ! and around 1AU. The spectrum is assumed to be of a Kolomogorov type, with a -5/3 spectral index. 
-    ! The intensity of the energy spectrum is detemined by a coefficient which varies with B and r according to an equation described below.
-    ! Further developement of this model will enable setting wave spectrum properties via PARAM.in.
+    ! This subroutine initializes the Alfven wave energy spectrum in each cell
+    ! over a frequency grid.
+    ! The frequancy range of the spectrum is determined by Alfven waves frequencie
+    ! observed at the chromosphere and around 1AU. 
+    ! The range is set by the #SPECTRUM command.
+    ! The spectrum is assumed to be of a Kolomogorov type, with a -5/3 spectral index. 
+    ! The intensity of the energy spectrum is detemined by a coefficient which varies
+    ! with B and r according to an equation described below.
+    ! The state variables represent w*I, where w is the frequency and I the energy
+    ! spectral density.
   
     use ModMain,        ONLY: unusedBLK,nBLK
     use ModVarIndexes
@@ -776,7 +769,8 @@ contains
     use ModConst,       ONLY: cLightSpeed, cElectronCharge, cGEV, cAU,cMu
     use ModNumConst,    ONLY: cTiny,cPi
     use ModPhysics,     ONLY: No2Si_V,Si2No_V,UnitB_,UnitRho_,UnitX_,UnitP_,UnitU_
-    use ModWaves,       ONLY: DeltaLogFrequency
+    use ModWaves,       ONLY: DeltaLogFrequency, AlfvenSpeedPlusFirst_,&
+         AlfvenSpeedMinusFirst_
     
     implicit none
 
@@ -794,24 +788,16 @@ contains
     !the intensity of outward travelling waves (initial condition)
     real,parameter                :: Alpha=1.0/10.0
     real,parameter                :: Lambda0=4.0/10.0  ![AU]
-    real,parameter                :: FreqPower=-2.0/3.0 ! spectral index
     real                          :: ConstCoeff
     real                          :: EnergyCoeff ! product of (B^(5/3)/r) and previous coefficient
-    real                          :: MinI01,MaxI01, MinI50, MaxI50 ! for testing
     character(len=*),parameter    :: NameSub= 'init_wave_spectrum'
     ! ------------------------------------------------------------------
     IsInitWave=.true.
-
     call set_freq_grid
-    ! minimal frequency of non-zero energy (inertial range lower bound)
-    ! FreqInertial set in input command #FREQINERTIAL
-    LogFreqInertial = log(2*cPi*FreqInertial)
- 
+    State_VGB(WaveFirst_:WaveLast_,:,:,:,:) = 1e-30
+    SpectralIndex = SpectralIndex + 1 ! State_VGB(iWave) represents I*w
     ! Calculate wave spectrum energy  coefficients in all cells 
     ConstCoeff=(216/(7*cMu*Lambda0))*((cElectronCharge*cLightSpeed)/cGEV)**(-1.0/3.0)
-
-    ! Initialize spectrum in all frequency groups and all cells
-    State_VGB(WaveFirst_:WaveLast_,:,:,:,:) = 0.0
 
     do iBLK=1,nBLK
        if (unusedBLK(iBLK)) CYCLE
@@ -832,25 +818,20 @@ contains
           
           ! The wave energy spectrum is described by the power law:
           ! I= ConstCoeff*(B^{5/3}/r)*(w/vAlfven)^{-2/3}DeltaLogFrequency
-          EnergyCoeff = ConstCoeff * (BtotSi**(5.0/3.0)) * InvRSi *&
-               (vAlfvenSi)**(-FreqPower)
+          EnergyCoeff =DeltaLogFrequency* ConstCoeff * (BtotSi**(5.0/3.0)) * InvRSi *&
+               (vAlfvenSi)**(SpectralIndex)
  
           ! Start filling frequency groups
-          call calc_cutoff_freq(i,j,k,iBLK, LogFreqCutOff)
-          do iWave=1,nWave
-             if ((LogFreq_I(iWave) .ge. LogFreqCutOff) .or. &
-                  (LogFreq_I(iWave) .le. LogFreqInertial)) then
-                WaveEnergy_I(iWave) = 0.0
-             else
-                WaveEnergy_I(iWave)=EnergyCoeff &
-                     *exp(LogFreq_I(iWave) * FreqPower)
-             end if
-         
-             ! Store wave energy state variables Ixx_
-             ! Ixx_, represent w'I(logw')dlogw' and is in normalized units,
-             ! while WaveEnergy_I represents w'I(logw') and is in SI units.
-             State_VGB(WaveFirst_+iWave-1,i,j,k,iBLK) =&
-                  WaveEnergy_I(iWave)*DeltaLogFrequency*Si2No_V(UnitP_)
+!          call calc_cutoff_freq(i,j,k,iBLK, LogFreqCutOff)
+          do iWave=1,nWaveOver2
+            ! if ( (iWave .gt. LowestFreqNum) .or. &
+            !      (iWave .le. LowestFreqNum+SpectrumWidth) ) then
+ 
+                State_VGB(AlfvenSpeedPlusFirst_+iWave-1,i,j,k,iBLK) = EnergyCoeff &
+                     *exp(LogFreq_I(iWave) * SpectralIndex)*Si2No_V(UnitP_)
+                State_VGB(AlfvenSpeedMinusFirst_+iWave-1,i,j,k,iBLK) = EnergyCoeff &
+                     *exp(LogFreq_I(iWave)*SpectralIndex)*Si2No_V(UnitP_)
+            ! end if
              if(State_VGB(WaveFirst_+iWave-1,i,j,k,iBLK) < 0.0) then
                 write(*,*) 'Damn!'
                 write(*,*) 'dLogFreq= ', DeltaLogFrequency
@@ -860,8 +841,6 @@ contains
        end do; end do ; end do
     end do
 
-    !call write_spectrogram
-        
   end subroutine init_wave_spectrum
   !========================================================================
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
