@@ -114,7 +114,7 @@ contains
                DeltaLogFrequency * CFL * time_blk(i,j,k, iBlock)
 
           if(DivU_C(i,j,k)>0.0)then
-
+             F2_I(nWaveHalf+1) = F2_I(nWaveHalf)
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenSpeedPlusFirst_:AlfvenSpeedPlusLast_, i,j,k, iBlock)
              
@@ -129,6 +129,7 @@ contains
              State_VGB(AlfvenSpeedMinusFirst_:AlfvenSpeedMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           else
+             F2_I(0) = F2_I(1)
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenSpeedPlusFirst_:AlfvenSpeedPlusLast_, i,j,k, iBlock)
              
