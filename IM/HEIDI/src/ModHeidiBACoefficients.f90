@@ -51,7 +51,7 @@ end subroutine get_drift_velocity
 !===============================================================
 
 subroutine get_bounced_drift(nPoint, L, bField_I, bMirror,iMirror_I,&
-     dLength_I,Drift_I,BouncedDrift,RadialDistance_I,BouncedInvRdRdt)
+     dLength_I,Drift_I,BouncedDrift,RadialDistance_I)
   
   integer, intent(in)  :: nPoint
   real,    intent(in)  :: L
@@ -62,7 +62,6 @@ subroutine get_bounced_drift(nPoint, L, bField_I, bMirror,iMirror_I,&
   real,    intent(in)  :: Drift_I(nPoint)
   real,    intent(in)  :: RadialDistance_I(nPoint)
   real,    intent(out) :: BouncedDrift
-  real, optional       :: BouncedInvRdRdt
   real                 :: Inv2L
   real                 :: DeltaS1, DeltaS2, b1, b2, Coeff
   integer              :: iPoint, iFirst, iLast
@@ -73,7 +72,7 @@ subroutine get_bounced_drift(nPoint, L, bField_I, bMirror,iMirror_I,&
     iLast  = iMirror_I(2)
 
     BouncedDrift    = 0.0
-    BouncedInvRdRdt = 0.0
+
     if (iFirst > iLast) RETURN
     
     Coeff = sqrt(bMirror) 
@@ -81,8 +80,6 @@ subroutine get_bounced_drift(nPoint, L, bField_I, bMirror,iMirror_I,&
          (dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
 
    BouncedDrift    = BouncedDrift + Drift_I(iFirst)*Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
-   BouncedInvRdRdt =  BouncedInvRdRdt +&
-        (1./RadialDistance_I(iFirst))*Drift_I(iFirst)*Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
    
    do iPoint = iFirst, iLast-1
       b1 = bField_I(iPoint)
@@ -90,12 +87,7 @@ subroutine get_bounced_drift(nPoint, L, bField_I, bMirror,iMirror_I,&
       
        BouncedDrift =  BouncedDrift + Drift_I(iPoint)*Coeff*2.*dLength_I(iPoint)/(b1 - b2) &
             *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
-
        
-       BouncedInvRdRdt= BouncedInvRdRdt + &
-            (1./RadialDistance_I(iPoint))*Drift_I(iPoint)*Coeff*2.*dLength_I(iPoint)/(b1 - b2) &
-            *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
-   
     end do
 
       
@@ -103,7 +95,6 @@ subroutine get_bounced_drift(nPoint, L, bField_I, bMirror,iMirror_I,&
 
    
    BouncedDrift  = BouncedDrift + Drift_I(iLast)* Coeff*2.*DeltaS2/(sqrt(bMirror-bField_I(iLast)))
-   BouncedInvRdRdt = BouncedInvRdRdt + (1./RadialDistance_I(iLast))*Drift_I(iLast)* Coeff*2.*DeltaS2/(sqrt(bMirror-bField_I(iLast)))
  
 end subroutine get_bounced_drift
 
@@ -138,17 +129,16 @@ subroutine get_bounced_VGradB(nPoint, L, bField_I, GradB_I,bMirror,iMirror_I,&
          (dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
     
    TempFirst = (1./bField_I(iFirst)) * Drift_I(iFirst) * GradB_I(iFirst)
-   BouncedVGradB    = BouncedVGradB + TempFirst*Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
+!    TempFirst = Drift_I(iFirst) * GradB_I(iFirst)
+  BouncedVGradB    = BouncedVGradB + TempFirst*Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
    
    
    do iPoint = iFirst, iLast-1
       b1 = bField_I(iPoint)
       b2 = bField_I(iPoint+1)
       Temp = (1./bField_I(iPoint)) * Drift_I(iPoint) * GradB_I(iPoint)
-      
-!      write(*,*) 'Drift here', Drift_I(iPoint)
-!      write(*,*) 'GradB_I(iPoint)',GradB_I(iPoint)
-!      write(*,*) 'Temp', Temp
+!      Temp =  Drift_I(iPoint) * GradB_I(iPoint)      
+
       BouncedVGradB  =  BouncedVGradB  + Temp *Coeff*2.*dLength_I(iPoint)/(b1 - b2) &
             *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
 
@@ -158,6 +148,7 @@ subroutine get_bounced_VGradB(nPoint, L, bField_I, GradB_I,bMirror,iMirror_I,&
     DeltaS2 = abs((bMirror-bField_I(iLast))*(dLength_I(iLast))/(bField_I(iLast+1)-bField_I(iLast)))
 
    TempLast = (1./bField_I(iLast)) * Drift_I(iLast) * GradB_I(iLast)
+!   TempLast = Drift_I(iLast) * GradB_I(iLast)
    BouncedVGradB   = BouncedVGradB + TempLast* Coeff*2.*DeltaS2/(sqrt(bMirror-bField_I(iLast)))
    
 

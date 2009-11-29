@@ -335,8 +335,8 @@ subroutine DRECOUL
            end do
            f(1:ko)=f2(i,j,1:ko,l,s)
            do K=1,KO
-              C(K)=EDOT(I,J,K,L)*VR(I,J)+(COULE(I,j,K,L,S)+COULI(I,j,K,L,S))*XNE(I,J)
-
+!              C(K)=EDOT(I,J,K,L)*VR(I,J)+(COULE(I,j,K,L,S)+COULI(I,j,K,L,S))*XNE(I,J)
+              C(K)=EDOT(I,J,K,L)+(COULE(I,j,K,L,S)+COULI(I,j,K,L,S))*XNE(I,J)
               !	    C(K)=AMIN1(0.99,AMAX1(-0.99,C(K)))
               ISIGN=1
               if (C(K).ne.abs(C(K))) ISIGN=-1
@@ -369,7 +369,9 @@ subroutine DRECOUL
            ! Note: particle changes only at the Erange boundaries, while
            ! energy changes throughout the range; E endpoints done in loop
            !/  
-           CD=EDOT(I,J,1,L)*VR(I,J)*DE(1)/WE(2)	! Drift at K=1,2 bnd
+!           CD=EDOT(I,J,1,L)*VR(I,J)*DE(1)/WE(2)	! Drift at K=1,2 bnd
+           CD=EDOT(I,J,1,L)*DE(1)/WE(2)	! Drift at K=1,2 bnd
+
            if (CD.gt.0) then
               ESN=ESN+CD*FBND(1)*CONSL(2,S)*WE(2)*WMU(L)*DR*DPHI
            else
@@ -377,8 +379,10 @@ subroutine DRECOUL
            end if
            CD=C(1)*DE(1)/WE(2)-CD		! CC at K=1,2 bnd
            ECN=ECN+CD*FBND(1)*CONSL(2,S)*WE(2)*WMU(L)*DR*DPHI
-           CD=EDOT(I,J,KO,L)*VR(I,J)*DE(KO)/WE(KO)	! Drift at K=KO
-           if (CD.le.0) then
+!           CD=EDOT(I,J,KO,L)*VR(I,J)*DE(KO)/WE(KO)	! Drift at K=KO
+           CD=EDOT(I,J,KO,L)*DE(KO)/WE(KO)	! Drift at K=KO
+           
+          if (CD.le.0) then
               ESN=ESN-CD*FBND(KO)*CONSL(KO,S)*WE(KO)*WMU(L)*DR*DPHI
            else 
               ELN=ELN+CD*FBND(KO)*CONSL(KO,S)*WE(KO)*WMU(L)*DR*DPHI
@@ -386,16 +390,20 @@ subroutine DRECOUL
            CD=C(KO)*DE(KO)/WE(KO)-CD		! CC at K=KO
            ECN=ECN-CD*FBND(KO)*CONSL(KO,S)*WE(KO)*WMU(L)*DR*DPHI
            do K=2,KO				! Now do energy changes
-              CD=EDOT(I,J,K-1,L)*VR(I,J)*DE(K-1)/WE(K)	! Drift at lower bnd
-              if (CD.gt.0) then
+!              CD=EDOT(I,J,K-1,L)*VR(I,J)*DE(K-1)/WE(K)	! Drift at lower bnd
+              CD=EDOT(I,J,K-1,L)*DE(K-1)/WE(K)	! Drift at lower bnd 
+
+             if (CD.gt.0) then
                  ESE=ESE+CD*FBND(K-1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
               else
                  ELE=ELE-CD*FBND(K-1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
               end if
               CD=C(K-1)*DE(K-1)/WE(K)-CD		! CC at lower bnd
               ECE=ECE+CD*FBND(K-1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
-              CD=EDOT(I,J,K,L)*VR(I,J)*DE(K)/WE(K)	! Drift at upper bnd
-              if (CD.le.0) then
+!              CD=EDOT(I,J,K,L)*VR(I,J)*DE(K)/WE(K)	! Drift at upper bnd
+              CD=EDOT(I,J,K,L)*DE(K)/WE(K)	! Drift at upper bnd
+
+             if (CD.le.0) then
                  ESE=ESE-CD*FBND(K)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
               else
                  ELE=ELE+CD*FBND(K)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
@@ -463,8 +471,9 @@ subroutine DRIFTMU
            end if
 
 	   do L=2,UL
-              C(L)=MUDOT(I,J,L)*VR(I,J)
-              !	    C(L)=AMIN1(0.99,AMAX1(-0.99,C(L)))
+!              C(L)=MUDOT(I,J,L)*VR(I,J)
+              C(L)=MUDOT(I,J,L) 
+             !	    C(L)=AMIN1(0.99,AMAX1(-0.99,C(L)))
               X=F(L+1)-F(L)
               ISIGN=1
               if(C(L).ne.abs(C(L))) ISIGN=-1

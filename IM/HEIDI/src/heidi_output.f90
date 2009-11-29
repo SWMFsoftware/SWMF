@@ -83,7 +83,8 @@ subroutine ECFL
            do J = 1, JO
               do K = 1, KO  
                  do L = 1, LO	     ! UPA(I)-1 , changed to include the l.c.
-                    CFL=abs(EDOT(I,J,K,L)*VR(I,J)+(COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
+!                    CFL=abs(EDOT(I,J,K,L)*VR(I,J)+(COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
+                    CFL=abs(EDOT(I,J,K,L)+(COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
                     if (CFL.gt.1.) then
                        write (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),XNE(I,J),CFL
                        Ibad=Ibad +1
@@ -166,8 +167,9 @@ subroutine ECFL
         do I=1,IO
            do J=1,JO
               do L=1,LO	  
-                 CFL=abs(MUDOT(I,J,L)*VR(I,J))
-                 if (CFL.gt.1.) then
+!                 CFL=abs(MUDOT(I,J,L)*VR(I,J))
+                 CFL=abs(MUDOT(I,J,L)) 
+                if (CFL.gt.1.) then
                     write (iUnitOut,39) LZ(I),MLT(J),ACOSD(MU(L)),A,CFL
                     Ibad=Ibad +1
                  end if
@@ -717,9 +719,12 @@ subroutine WRESULT(LNC,XN,IFIR)
                  write (iUnitOut,36) LZ(I),MLT(J)
                  write (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
                  do K=2,KO,KO-2
-                    write (iUnitOut,30) EKEV(K),(VR(I,J)*EDOT(I,J,K,L),L=2,LO,NLC),   &
-                         VR(I,J)*EDOT(I,J,K,LO-1)
-                 end do
+!                    write (iUnitOut,30) EKEV(K),(VR(I,J)*EDOT(I,J,K,L),L=2,LO,NLC),   &
+!                         VR(I,J)*EDOT(I,J,K,LO-1)
+                    write (iUnitOut,30) EKEV(K),(EDOT(I,J,K,L),L=2,LO,NLC),   &
+                         EDOT(I,J,K,LO-1) 
+
+                end do
               end do
            end do
            write (iUnitOut,*)
@@ -728,8 +733,8 @@ subroutine WRESULT(LNC,XN,IFIR)
               write (iUnitOut,*) ' L =',LZ(I)
               write (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
               do J=1,JO,3
-                 write (iUnitOut,30) MLT(J),(VR(I,J)*MUDOT(I,J,L),L=2,LO,NLC),   &
-                      VR(I,J)*MUDOT(I,J,LO-1)
+                 write (iUnitOut,30) MLT(J),(MUDOT(I,J,L),L=2,LO,NLC),   &
+                      MUDOT(I,J,LO-1)
               end do
            end do
            write (iUnitOut,*) 'Energy advection |CFL| > 1 (entire grid)'
@@ -740,8 +745,11 @@ subroutine WRESULT(LNC,XN,IFIR)
               do J=1,JO
                  do K=1,KO
                     do L=1,LO	     ! UPA(I)-1 , changed to include the l.c.
-                       CFL=abs(EDOT(I,J,K,L)*VR(I,J)+   &
+!                       CFL=abs(EDOT(I,J,K,L)*VR(I,J)+   &
+!                            (COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
+                       CFL=abs(EDOT(I,J,K,L)+   &
                             (COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
+
                        if (CFL.gt.1.) then
                           write (iUnitOut,39)LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),XNE(I,J),CFL
                           Ibad=Ibad +1

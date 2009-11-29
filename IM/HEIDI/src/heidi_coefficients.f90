@@ -77,12 +77,6 @@ subroutine CEPARA
            PA(L) = cos(PitchAngle_I(L))
         end do
        
-!!$        do i =1, io
-!!$           do l =1, lo
-!!$              write(*,*) Lz(i) ,PitchAngle_I(L)*180/3.14159265 ,NeutralHydrogen(l,i,1)
-!!$           end do
-!!$        end do
- 
         do L=1,LO
            do j =1, jo
               do I=1,IO
@@ -536,13 +530,14 @@ subroutine MAGCONV(I3,NST)
   if (ABASE(IA+1).eq.1) then
      do J=1,JO   ! Fill in drift values
         do i=1,io
+
            VR(I,J)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
                 DT/DL1*(RE*RE/ME)
            P1(I,J)=A*LAMGAM*LZ(I)**(LAMGAM+1.)*sin(PHI(J)+0.5*DPHI)*   &
                 DT/DPHI*(RE*RE/ME)
            BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*sin(phi(j))
 
-           !write(*,*) i,j,VR(i,j)
+!           write(*,*) 'VS CONV',i,j,VR(i,j)
 
         end do
         !\
@@ -1051,7 +1046,7 @@ subroutine MAGCONV(I3,NST)
               VR(i,j)=VR(i,j)+EPP*DT/DL1*RR**3*RE/ME
               !!!!!VR is calculated here
 
-              !write(*,*) 'VR magconv', VR(i,j)
+!              write(*,*) 'VR magconv', VR(i,j)
 
            end do
            SJ=sin(PHI(J)+.5*DPHI)

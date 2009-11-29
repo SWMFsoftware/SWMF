@@ -10,7 +10,6 @@ contains
 
     use ModHeidiInput, ONLY: TypeBfieldGrid
     use ModNumConst,   ONLY: cTiny, cPi
-    use ModNumConst,   ONLY: cDegToRad
     use ModConst,      ONLY: cMu
 
 
@@ -381,9 +380,9 @@ contains
                      alpha ** 2) ** 5) ** (-0.1D1 / 0.2D1)) * sqrt(dble(1 - x ** 2))
 
                 ! Gradient B
-                GradB_VIII(1,iPoint, iR, iPhi) = GradR
-                GradB_VIII(2,iPoint, iR, iPhi) = GradTheta
-                GradB_VIII(3,iPoint, iR, iPhi) = GradPhi
+                GradB_VIII(1,iPoint, iR, iPhi) = DipoleStrength*GradR
+                GradB_VIII(2,iPoint, iR, iPhi) = DipoleStrength*GradTheta
+                GradB_VIII(3,iPoint, iR, iPhi) = DipoleStrength*GradPhi
 
 
                 ! drift Velocity components
@@ -422,24 +421,40 @@ contains
     integer, intent(in) :: nPoint                ! Number of points along the field line
     real, intent(in)    :: PitchAngle            ! Pitch angle values
     real, intent(in)    :: bField_I(nPoint)      ! Magnetic field values
-    real, intent(out)   :: bMirror             ! B magnitude at mirror points    
-    real                :: bMin                  ! Minimum value of magnetic field along a field line
-    integer             :: iMinB                 ! Location of minimum B
+    real, intent(out)   :: bMirror               ! B magnitude at mirror points    
+    real                :: bMin,bMax                  ! Minimum value of magnetic field along a field line
+    integer             :: iMinB,iMaxB           ! Location of minimum B
     integer,intent(out) :: iMirror_II(2)  ! Location of each mirror point for all pitch angles
-    integer             :: i_I(1)
+    integer             :: i_I(1),j_I(1)
     integer             :: iPoint, iPitch
-    real, parameter     :: cTiny = 0.000001
+    real, parameter     :: cTiny = 1.e-6
+    real                :: PALossCone
     !----------------------------------------------------------------------------------
     i_I  = minloc(bField_I)
     iMinB= i_I(1)
     bMin = bField_I(iMinB)
+    
+    j_I = maxloc(bField_I)
+    iMaxB = j_I(1)
+    bMax = bField_I(iMaxB)
 
-    if (PitchAngle == 0.0) then 
+    PALossCone = asin(sqrt( bField_I(nPoint/2)/bMax))
+    
+    if (PitchAngle <= PALossCone) then
+       bMirror = bMin/(sin(PALossCone))**2
+    else if (PitchAngle == 0.0) then   
        bMirror = bMin/(sin(PitchAngle+cTiny))**2 
-    else
-
+    else 
        bMirror = bMin/(sin(PitchAngle))**2 
     end if
+       
+
+!    if (PitchAngle == 0.0) then 
+!       bMirror = bMin/(sin(PitchAngle+cTiny))**2 
+!    else
+!
+!       bMirror = bMin/(sin(PitchAngle))**2 
+!    end if
 
     do iPoint = iMinB,1, -1
        if (bField_I(iPoint) >= bMirror ) then 
@@ -527,11 +542,14 @@ contains
     HalfPathLength = 0.0
     Sb = 0.0
 
+
     if (iFirst >iLast) RETURN
 
     Inv2L = 1.0/(2.*L)
     Coeff = Inv2L*sqrt(bMirror)
     CoeffSb = sqrt(bMirror)
+    
+   
 
     DeltaS1 = abs((bMirror-bField_I(iFirst))*(dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
     HalfPathLength = HalfPathLength + Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
@@ -540,6 +558,8 @@ contains
     do iPoint = iFirst, iLast-1
        b1 = bField_I(iPoint)
        b2 = bField_I(iPoint+1)
+       
+
        HalfPathLength = HalfPathLength + Coeff*2.*dLength_I(iPoint)/(b1 - b2) &
             *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
        Sb = Sb + CoeffSb*2.*dLength_I(iPoint)/(b1 - b2) &
@@ -846,7 +866,7 @@ contains
     !write (2,*)'Numerical values for the second adiabatic invariant integration btw a mirror point and eq'
     !write (2,*)'nPoint  IntegralBAnalytic   2nd_orderB  IntegralHAnalytic  2nd_orderH Percent1, Percent2'
 
-    L_I(1) = 10.0 
+    L_I(1) = 10. 
     Phi_I(1) = 1.0
     PitchAngle = Pi/10.
 
@@ -869,8 +889,11 @@ contains
 
        Percent2 = 200*abs(IntegralHAnalytic - HalfPathLength)/(IntegralHAnalytic+HalfPathLength)
 
-       write (2,*) iPoint, IntegralBAnalytic, SecondAdiabInv,IntegralHAnalytic,&
-            HalfPathLength ,Percent1, Percent2
+!       write (2,*) iPoint, IntegralBAnalytic, SecondAdiabInv,IntegralHAnalytic,&
+!            HalfPathLength ,Percent1, Percent2
+
+!       write (*,*) iPoint, IntegralBAnalytic, SecondAdiabInv,IntegralHAnalytic,&
+!            HalfPathLength ,Percent1, Percent2
 
 
     end do
