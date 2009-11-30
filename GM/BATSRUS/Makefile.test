@@ -343,7 +343,7 @@ test_eosgodunov:
 	make test_eosgodunov_check
 
 test_eosgodunov_compile:
-	./Config.pl -e=HdEos -u=Eos -g=10,2,2,100,1
+	./Config.pl -e=HdEos -u=Eos -g=10,1,1,100,1
 	make CRASH
 	make PIDL
 
@@ -358,7 +358,7 @@ test_eosgodunov_run:
 test_eosgodunov_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
 	  Param/CRASH/TestOutput/eosgodunov.out \
-	  ${TESTDIR}/RESULT/GM/cut_*0341.out > test_eosgodunov.diff
+	  ${TESTDIR}/RESULT/GM/cut_*500.0*.out > test_eosgodunov.diff
 	ls -l test_eosgodunov.diff
 
 ### LEVELSET TEST ###
@@ -374,7 +374,7 @@ test_levelset:
 	make test_levelset_check
 
 test_levelset_compile:
-	./Config.pl -e=HdCrash -u=Crash -g=4,4,2,2000,1
+	./Config.pl -e=HdCrash -u=Crash -g=4,4,1,2000,1
 	make CRASH
 	make PIDL
 
@@ -407,7 +407,7 @@ test_hyades2d:
 	make test_hyades2d_check
 
 test_hyades2d_compile:
-	./Config.pl -e=HdRadCrash -u=Crash -g=10,10,2,200,200
+	./Config.pl -e=HdRadCrash -u=Crash -g=10,10,1,200,200
 	make CRASH
 	make PIDL
 
@@ -425,7 +425,7 @@ test_hyades2d_run:
 test_hyades2d_restart:
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d.restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS/
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
 
 test_hyades2d_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-4 -a=1e-8 \

@@ -3,6 +3,9 @@ Begin session: 1
 #ECHO
 T			DoEcho
 
+#BATL
+T			UseBatl
+
 #LOOKUPTABLE
 pPerE(rho,e/rho)        NameTable
 save                    NameCommand
@@ -60,7 +63,7 @@ READ
 #CHECKGRIDSIZE
 4			nI
 4			nJ
-2			nK
+1			nK
 500			MinBlockALL
 
 tube is 5mm = 500um long, 625 um wide
