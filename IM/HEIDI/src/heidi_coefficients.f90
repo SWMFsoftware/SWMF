@@ -500,6 +500,7 @@ subroutine MAGCONV(I3,NST)
   use ModHeidiDGCPM
   use ModProcIM
   use ModIoUnit,  only : io_unit_new
+  use ModHeidiInput, ONLY: TypeBField
 
   implicit none
 
@@ -540,6 +541,11 @@ subroutine MAGCONV(I3,NST)
 
   integer :: edayplus
   real    :: univ_time
+
+  real, dimension(nR,nT,nE,nPA) :: dEdt_IIII,VPhi_IIII,VR_IIII
+  real, dimension(nR,nT,nPA)    :: dMudt_III 
+
+
   !---------------------------------------------------------------------  
 
   PHIPOFF=0.
@@ -589,10 +595,46 @@ subroutine MAGCONV(I3,NST)
   !/
 
 
+  if (TypeBField == 'numeric') then
+     call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+  end if
+
+
   if (ABASE(IA+1).eq.1) then
+     
+     if (TypeBField == 'numeric') then
+  !      call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+        
+
      do J=1,JO   ! Fill in drift values
         do i=1,io
-                      
+           do l =1, lo
+              do k = 1, ko
+                 VR(i,j,k,l)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
+                      DT/DL1*(RE*RE/ME) + VR_IIII(i,j,k,l)
+              end do
+           end do
+           P1(I,J)=A*LAMGAM*LZ(I)**(LAMGAM+1.)*sin(PHI(J)+0.5*DPHI)*   &
+                DT/DPHI*(RE*RE/ME)
+           BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*sin(phi(j))
+           
+           
+        end do
+        !\
+        ! Compute the V-S potential outside the edges of the radial grid. 
+        ! Needed for the current calculation.
+        !/
+        BASEPOT(1,j)    = A*RE*(LZ(1)-DL1)**(LAMGAM)*sin(phi(j))
+        BASEPOT(io+2,j) = A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
+     end do
+
+  end if
+
+  if (TypeBField == 'analytic') then
+     
+     
+     do J=1,JO   ! Fill in drift values
+        do i=1,io
            do l =1, lo
               do k = 1, ko
                  VR(i,j,k,l)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
@@ -612,6 +654,7 @@ subroutine MAGCONV(I3,NST)
         BASEPOT(1,j)    = A*RE*(LZ(1)-DL1)**(LAMGAM)*sin(phi(j))
         BASEPOT(io+2,j) = A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
      end do
+  end if
 
      do J = 1, nphicells   ! Fill in DGCPM potentials
         do I = 1, nthetacells
@@ -640,8 +683,17 @@ subroutine MAGCONV(I3,NST)
            KSD=1.+RoRg*(Ro/RR)
            do l = 1, lo
               do k = 1, ko
-                 VR(i,j,k,l)=-DT/DL1*RE/ME*RR**3*KEPS/KSD*(EOJ1+KGAM*SJ/KSD   &
-                      *(EOJ+KPHI/RR)*RoRg*KBETA/RR*(KS(2)+Kr*KS(4)))
+                 
+                 if (TypeBField == 'numeric') then
+!                    call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+                    VR(i,j,k,l)=-DT/DL1*RE/ME*RR**3*KEPS/KSD*(EOJ1+KGAM*SJ/KSD   &
+                         *(EOJ+KPHI/RR)*RoRg*KBETA/RR*(KS(2)+Kr*KS(4)))&
+                         + VR_IIII(i,j,k,l)
+                 end if
+                 if (TypeBField == 'analytic') then
+                    VR(i,j,k,l)=-DT/DL1*RE/ME*RR**3*KEPS/KSD*(EOJ1+KGAM*SJ/KSD   &
+                         *(EOJ+KPHI/RR)*RoRg*KBETA/RR*(KS(2)+Kr*KS(4)))
+                 end if
               end do
            end do
         end do
@@ -694,8 +746,18 @@ subroutine MAGCONV(I3,NST)
         do i=1,io
            do l =1, lo
               do k = 1, ko
-                 VR(i,j,k,l)=-KEPS*cos(PHI(J))*(LZ(I)+0.5*DL1)**3   &
-                      *DT/DL1*(RE/ME)
+
+                 if (TypeBField == 'numeric') then
+!                    call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+                    VR(i,j,k,l)=-KEPS*cos(PHI(J))*(LZ(I)+0.5*DL1)**3   &
+                         *DT/DL1*(RE/ME) + VR_IIII(i,j,k,l)
+                 end if
+                 
+                 if (TypeBField == 'analytic') then
+                    VR(i,j,k,l)=-KEPS*cos(PHI(J))*(LZ(I)+0.5*DL1)**3   &
+                         *DT/DL1*(RE/ME)
+                 end if
+
               end do
            end do
            P1(I,J)=KEPS*LZ(I)**2*sin(PHI(J)+0.5*DPHI)*   &
@@ -721,7 +783,16 @@ subroutine MAGCONV(I3,NST)
         do i = 1, io
            do l =1, lo
               do k =1, ko
-                 VR(i,j,k,l) = 0.0
+
+                 if (TypeBField == 'numeric') then
+!                    call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+                    VR(i,j,k,l) = 0.0 + VR_IIII(i,j,k,l)
+                 end if
+
+                 if (TypeBField == 'analytic') then
+                    VR(i,j,k,l) = 0.0
+                 end if
+                 
               end do
            end do
            P1(I,J) = 0.0
@@ -805,7 +876,16 @@ subroutine MAGCONV(I3,NST)
            EPP=-(FPOT12(i+1,jj)-FPOT12(i+1,j))/RR/DPHI
            do l = 1, lo
               do k = 1, ko
-                 VR(i,j,k,l)=VR(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
+
+                 if (TypeBField == 'numeric') then
+!                    call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+                    VR(i,j,k,l)=VR(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME + VR_IIII(i,j,k,l)
+                    
+                 end if
+                 if (TypeBField == 'analytic') then
+                    VR(i,j,k,l)=VR(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
+                  end if
+
               end do
            end do
         end do
@@ -904,7 +984,16 @@ subroutine MAGCONV(I3,NST)
            EPP=-(epots1(jj,i+1)-epots1(j,i+1))/RR/DPHI
            do l = 1, lo
               do k = 1, ko
-                 VR(i,j,k,l) = EPP*DT/DL1*RR**3*RE/ME
+                 
+                 if (TypeBField == 'numeric') then
+                    !call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+                    VR(i,j,k,l) = EPP*DT/DL1*RR**3*RE/ME + VR_IIII(i,j,k,l)
+                 end if
+
+                 if (TypeBField == 'analytic') then
+                    VR(i,j,k,l) = EPP*DT/DL1*RR**3*RE/ME
+                 end if
+
               end do
            end do
         end do
@@ -966,7 +1055,16 @@ subroutine MAGCONV(I3,NST)
            FAC=EPP*DT/DL1*RR**3*RE/ME
            do l = 1, lo
               do k = 1, ko
-                 VR(i,j,k,l)=VR(i,j,k,l)+FAC
+                 
+                 if (TypeBField == 'numeric') then
+!                    call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+                    VR(i,j,k,l)=VR(i,j,k,l)+FAC + VR_IIII(i,j,k,l)
+                 end if
+
+                 if (TypeBField == 'analytic') then
+                    VR(i,j,k,l)=VR(i,j,k,l)+FAC
+                 end if
+
               end do
            end do
         end do
@@ -1120,6 +1218,7 @@ subroutine MAGCONV(I3,NST)
      !	 enddo
      !	end do  ! End FPOT zeroing
      !/
+     
 
      if (AEPEN(IA+1).gt.1) then  !! >2 Prohibits inclusion of Epen
         do j=1,jo  ! transform FPOT to equatorial plane drifts
@@ -1132,7 +1231,16 @@ subroutine MAGCONV(I3,NST)
               EPP=-(FPOT(i+1,jj)-FPOT(i+1,j))/RR/DPHI
               do l = 1, lo
                  do k = 1, ko
-                    VR(i,j,k,l) = VR(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
+
+                    if (TypeBField == 'numeric') then
+!                       call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+                       VR(i,j,k,l) = VR(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME + VR_IIII(i,j,k,l)
+                    end if
+
+                    if (TypeBField == 'analytic') then
+                       VR(i,j,k,l) = VR(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
+                    end if
+
                  end do
               end do
            end do
