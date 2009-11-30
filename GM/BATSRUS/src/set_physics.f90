@@ -179,8 +179,8 @@ subroutine set_physics_constants
   end if
 
   !^CFG IF SECONDBODY BEGIN
-  RhoBody2= RhoDimBody2 * Io2No_V(UnitRho_)
-  pBody2  = RhoBody2/MassIon_I(1) * TDimBody2*Io2No_V(UnitTemperature_)
+  RhoBody2= RhoDimBody2 *Io2No_V(UnitN_)*MassIon_I(1)
+  pBody2  = RhoBody2 * TDimBody2*Io2No_V(UnitTemperature_)
   !^CFG END SECONDBODY
 
   ! Here the arrays of the FACE VALUE are formed
@@ -285,7 +285,17 @@ subroutine set_physics_constants
   end if
   Bdp  = DipoleStrengthSi*Si2No_V(UnitB_)
 
-  BdpBody2_D = BdpDimBody2_D*Io2No_V(UnitB_)              !^CFG IF SECONDBODY
+  !^CFG IF SECONDBODY BEGIN
+  BdpBody2_D = BdpDimBody2_D*Io2No_V(UnitB_)              
+
+  ! Saving initial coordinates of second body:
+  if(UseOrbit)then
+     ! Transfer orbit period from [days] to [s]: 
+     OrbitPeriod = OrbitPeriod*cSecondPerDay 
+     xBody2init = xBody2
+     yBody2init = yBody2
+  end if
+  !^CFG END SECONDBODY 
 
   ! Compute dipole tilt variables
   if(NameThisComp=='IH')then

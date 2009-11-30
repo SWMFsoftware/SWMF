@@ -7,6 +7,7 @@ subroutine write_progress(inopt)
   use ModIO, ONLY: iUnitOut, write_prefix
   use ModUser, ONLY: NameUserModule, VersionUserModule
   use ModVarIndexes, ONLY: NameEquation
+  Use ModConst, ONLY: cSecondPerDay
   implicit none
 
   integer, intent(in) :: inopt
@@ -162,6 +163,11 @@ subroutine write_runtime_values()
      call write_prefix
      write(iUnitOut,'(10X,2(A13,ES13.5))') &
           'RhoDimBody2: ',RhoDimBody2,', TDimBody2:   ',TDimBody2
+     if (UseOrbit) then
+        call write_prefix; write(iUnitOut,'(10X,''UseOrbit: .true.'')')
+        call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
+             'OrbitPeriod: ',OrbitPeriod/cSecondPerDay 
+     endif
   else
      call write_prefix
      write(iUnitOut,'(10X,''UseBody2: .false.'')')

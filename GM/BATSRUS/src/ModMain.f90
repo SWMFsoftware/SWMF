@@ -94,6 +94,7 @@ Module ModMain
   ! Logicals for bodies
   logical :: Body1    = .false.
   logical :: UseBody2 = .false.
+  logical :: UseOrbit=.true.
 
   !\
   ! Block AMR grid parameters

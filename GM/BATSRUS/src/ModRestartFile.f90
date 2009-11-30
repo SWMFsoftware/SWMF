@@ -369,6 +369,8 @@ contains
        write(unit_tmp,'(es22.15,a18)')rCurrentsBody2,'rCurrentsBody2'
        write(unit_tmp,'(es22.15,a18)')RhoDimBody2,   'RhoDimBody2'
        write(unit_tmp,'(es22.15,a18)')tDimBody2,     'tDimBody2'
+       write(unit_tmp,'(l1,a39)')     UseOrbit,      'UseOrbit'
+       write(unit_tmp,'(es22.15,a18)')OrbitPeriod,   'OrbitPeriod'
        write(unit_tmp,*)
     end if
     !^CFG END SECONDBODY
