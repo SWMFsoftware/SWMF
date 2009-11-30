@@ -22,32 +22,32 @@ subroutine get_E_mu_dot
      do I=1,IO
         do J=1,JO
            do L=1,UPA(I)
-              MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
-              MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
-                   /MUBOUN/4./(0.5*(FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L) * VR(I,J)
-
-              GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
               do K=1,KO
-                 EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)*VR(i,j)
+                 MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
+                 MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
+                      /MUBOUN/4./(0.5*(FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L) * VR(i,j,k,l)
+                 
+                 GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
+                 EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)*VR(i,j,k,l)
               end do	! K loop
            end do 	! L loop
            MULC=MU(UPA(I))+0.5*WMU(UPA(I))
            do L=UPA(I)+1,LO-1
-              MUBOUN=MU(L)+0.5*WMU(L)
-              if (l== LO-1) MU(L+1) = MU(L)
-              MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
-                   /MUBOUN/4./(0.5*( FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L) * VR(I,J)
               do K=1,KO
-                 EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)*VR(i,j)
+                 MUBOUN=MU(L)+0.5*WMU(L)
+                 if (l== LO-1) MU(L+1) = MU(L)
+                 MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
+                      /MUBOUN/4./(0.5*( FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L) * VR(i,j,k,l)
+                 EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)*VR(i,j,k,l)
               end do	! K loop
            end do	! L loop
            MUDOT(I,J,LO)=0.
            do K=1,KO
-              EDOT(I,J,K,LO)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)*VR(i,j)
+              EDOT(I,J,K,LO)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)*VR(i,j,k,l)
            end do	! K loop
         end do 	! J loop
      end do	! I loop
-
+     
   end if
 
   

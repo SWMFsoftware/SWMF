@@ -307,11 +307,14 @@ subroutine OTHERPARA
    
    close(5)
 
-  do I = 1, IO
-     VR(I,J6)=0.
-     VR(I,J18)=0.
-  end do	! I loop processing VR
-
+   do l = 1, lo
+      do k = 1, ko
+         do I = 1, IO
+            VR(I,J6,k,l)=0.
+            VR(I,J18,k,l)=0.
+         end do	! I loop processing VR
+      end do
+   end do
 
 
   !\
@@ -528,7 +531,7 @@ subroutine MAGCONV(I3,NST)
 
   ! Variables to send to Aaron's subroutine
   real :: eyear, eday, ehour, eminute, esecond, eby, ebz, evsw
-  integer :: nemlts1, nelats1, nemlts2, nelats2, nechoice
+  integer :: nemlts1, nelats1, nemlts2, nelats2, nechoice,k
   real :: emlts1(NT,NR+3), elats1(NT,NR+3), epots1(NT,NR+3)
   real :: emlts2(nphicells,nthetacells), elats2(nphicells,nthetacells),  &
        epots2(nphicells,nthetacells)
@@ -589,15 +592,18 @@ subroutine MAGCONV(I3,NST)
   if (ABASE(IA+1).eq.1) then
      do J=1,JO   ! Fill in drift values
         do i=1,io
-
-           VR(I,J)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
-                DT/DL1*(RE*RE/ME) 
+                      
+           do l =1, lo
+              do k = 1, ko
+                 VR(i,j,k,l)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
+                      DT/DL1*(RE*RE/ME)
+              end do
+           end do
            P1(I,J)=A*LAMGAM*LZ(I)**(LAMGAM+1.)*sin(PHI(J)+0.5*DPHI)*   &
                 DT/DPHI*(RE*RE/ME)
            BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*sin(phi(j))
-
-!           write(*,*) 'VS CONV',i,j,VR(i,j)
-
+           
+           
         end do
         !\
         ! Compute the V-S potential outside the edges of the radial grid. 
@@ -632,8 +638,12 @@ subroutine MAGCONV(I3,NST)
            RR=LZ(i)+0.5*DL1
            RoRg=(Ro/RR)**(KGAM-1.)
            KSD=1.+RoRg*(Ro/RR)
-           VR(I,J)=-DT/DL1*RE/ME*RR**3*KEPS/KSD*(EOJ1+KGAM*SJ/KSD   &
-                *(EOJ+KPHI/RR)*RoRg*KBETA/RR*(KS(2)+Kr*KS(4)))
+           do l = 1, lo
+              do k = 1, ko
+                 VR(i,j,k,l)=-DT/DL1*RE/ME*RR**3*KEPS/KSD*(EOJ1+KGAM*SJ/KSD   &
+                      *(EOJ+KPHI/RR)*RoRg*KBETA/RR*(KS(2)+Kr*KS(4)))
+              end do
+           end do
         end do
      end do
      do J=1,JO   ! Fill in azimuthal drift values
@@ -682,8 +692,12 @@ subroutine MAGCONV(I3,NST)
      KEPS=Ppc0/DLMAG
      do J=1,JO   !  Fill in drift values
         do i=1,io
-           VR(I,J)=-KEPS*cos(PHI(J))*(LZ(I)+0.5*DL1)**3   &
-                *DT/DL1*(RE/ME)
+           do l =1, lo
+              do k = 1, ko
+                 VR(i,j,k,l)=-KEPS*cos(PHI(J))*(LZ(I)+0.5*DL1)**3   &
+                      *DT/DL1*(RE/ME)
+              end do
+           end do
            P1(I,J)=KEPS*LZ(I)**2*sin(PHI(J)+0.5*DPHI)*   &
                 DT/DPHI*(RE/ME)
         end do
@@ -702,9 +716,14 @@ subroutine MAGCONV(I3,NST)
      !/
 
   else if (ABASE(IA+1).ge.5) then
+     
      do J = 1, JO   !  Zero out drift values
         do i = 1, io
-           VR(I,J) = 0.0
+           do l =1, lo
+              do k =1, ko
+                 VR(i,j,k,l) = 0.0
+              end do
+           end do
            P1(I,J) = 0.0
         end do
      end do
@@ -784,7 +803,11 @@ subroutine MAGCONV(I3,NST)
         do i=1,io   ! Note this is shifted from FPOT12's I grid by 1
            RR=LZ(I)+0.5*DL1
            EPP=-(FPOT12(i+1,jj)-FPOT12(i+1,j))/RR/DPHI
-           VR(i,j)=VR(i,j)+EPP*DT/DL1*RR**3*RE/ME
+           do l = 1, lo
+              do k = 1, ko
+                 VR(i,j,k,l)=VR(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
+              end do
+           end do
         end do
         SJ=sin(PHI(J)+.5*DPHI)
         CJ=cos(PHI(J)+.5*DPHI)
@@ -879,10 +902,11 @@ subroutine MAGCONV(I3,NST)
         do i=1,io   ! Note this is shifted from epots1's I grid
            RR=LZ(I)+0.5*DL1
            EPP=-(epots1(jj,i+1)-epots1(j,i+1))/RR/DPHI
-           VR(i,j) = EPP*DT/DL1*RR**3*RE/ME
-           
-
-
+           do l = 1, lo
+              do k = 1, ko
+                 VR(i,j,k,l) = EPP*DT/DL1*RR**3*RE/ME
+              end do
+           end do
         end do
         do i=1,io
            RR=LZ(I)
@@ -940,7 +964,11 @@ subroutine MAGCONV(I3,NST)
            KSD=3.*SPJ*CPJ**2-2.*CRo*dLPdphi/DLP*(1.+CRo/sLP)
            EPP=PHIP*RoRg/RR*KSD
            FAC=EPP*DT/DL1*RR**3*RE/ME
-           VR(I,J)=VR(I,J)+FAC
+           do l = 1, lo
+              do k = 1, ko
+                 VR(i,j,k,l)=VR(i,j,k,l)+FAC
+              end do
+           end do
         end do
      end do
      do J=1,JO   ! Fill in azimuthal drift values
@@ -1102,11 +1130,11 @@ subroutine MAGCONV(I3,NST)
            do i=1,io   ! Note this is shifted from FPOT's I grid
               RR=LZ(I)+0.5*DL1
               EPP=-(FPOT(i+1,jj)-FPOT(i+1,j))/RR/DPHI
-              VR(i,j)=VR(i,j)+EPP*DT/DL1*RR**3*RE/ME
-              !!!!!VR is calculated here
-
-!              write(*,*) 'VR magconv', VR(i,j)
-
+              do l = 1, lo
+                 do k = 1, ko
+                    VR(i,j,k,l) = VR(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
+                 end do
+              end do
            end do
            SJ=sin(PHI(J)+.5*DPHI)
            CJ=cos(PHI(J)+.5*DPHI)

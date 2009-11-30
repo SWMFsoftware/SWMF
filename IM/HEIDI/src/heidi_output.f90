@@ -83,7 +83,6 @@ subroutine ECFL
            do J = 1, JO
               do K = 1, KO  
                  do L = 1, LO	     ! UPA(I)-1 , changed to include the l.c.
-!                    CFL=abs(EDOT(I,J,K,L)*VR(I,J)+(COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
                     CFL=abs(EDOT(I,J,K,L)+(COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
                     if (CFL.gt.1.) then
                        write (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),XNE(I,J),CFL
@@ -110,21 +109,25 @@ subroutine ECFL
 	Ibad=0
 	CMAX=0.
 
-        do I=1,IO
-           do J=1,JO
-              CFL=abs(VR(I,J))
-              if (CFL.gt.1.) then
-                 write (iUnitOut,39) LZ(I),MLT(J),A,VR(I,J),CFL
-                 Ibad=Ibad +1
-              end if
-              if (CFL.gt.CMAX) then
-                 CMAX=CFL
-                 Im=I
-                 Jm=J
-              end if
-              if (Ibad.gt.1000) goto 51
-           end do	! J loop
-	end do	       ! I loop
+        do l = 1, lo
+           do k = 1, ko
+              do I=1,IO
+                 do J=1,JO
+                    CFL=abs(VR(i,j,k,l))
+                    if (CFL.gt.1.) then
+                       write (iUnitOut,39) LZ(I),MLT(J),A,VR(i,j,k,l),CFL
+                       Ibad=Ibad +1
+                    end if
+                    if (CFL.gt.CMAX) then
+                       CMAX=CFL
+                       Im=I
+                       Jm=J
+                    end if
+                    if (Ibad.gt.1000) goto 51
+                 end do	! J loop
+              end do	       ! I loop
+              end do
+           end do
 
 51	continue
 	write (iUnitOut,*) 'Bad CFLs: ',Ibad
@@ -167,7 +170,6 @@ subroutine ECFL
         do I=1,IO
            do J=1,JO
               do L=1,LO	  
-!                 CFL=abs(MUDOT(I,J,L)*VR(I,J))
                  CFL=abs(MUDOT(I,J,L)) 
                 if (CFL.gt.1.) then
                     write (iUnitOut,39) LZ(I),MLT(J),ACOSD(MU(L)),A,CFL
@@ -698,7 +700,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            write (iUnitOut,*) 'Radial drift Courant numbers'
            write (iUnitOut,41) ' L \ MLT =',(MLT(J),J=1,JO,3)
            do I=2,IO,4
-              write (iUnitOut,42) LZ(I),(VR(I,J),J=1,JO,3)
+              write (iUnitOut,42) LZ(I),(VR(I,J,:,:),J=1,JO,3)
            end do
            write (iUnitOut,*)
            write (iUnitOut,*) 'Azimuthal drift Courant numbers'
@@ -719,8 +721,6 @@ subroutine WRESULT(LNC,XN,IFIR)
                  write (iUnitOut,36) LZ(I),MLT(J)
                  write (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
                  do K=2,KO,KO-2
-!                    write (iUnitOut,30) EKEV(K),(VR(I,J)*EDOT(I,J,K,L),L=2,LO,NLC),   &
-!                         VR(I,J)*EDOT(I,J,K,LO-1)
                     write (iUnitOut,30) EKEV(K),(EDOT(I,J,K,L),L=2,LO,NLC),   &
                          EDOT(I,J,K,LO-1) 
 
@@ -745,8 +745,6 @@ subroutine WRESULT(LNC,XN,IFIR)
               do J=1,JO
                  do K=1,KO
                     do L=1,LO	     ! UPA(I)-1 , changed to include the l.c.
-!                       CFL=abs(EDOT(I,J,K,L)*VR(I,J)+   &
-!                            (COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
                        CFL=abs(EDOT(I,J,K,L)+   &
                             (COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
 
@@ -775,7 +773,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            write (UnitTmp_,*) 'Radial drift component'
            write (UnitTmp_,41) ' L \ MLT =',(MLT(J),J=1,JO,2)
            do I=2,IO,2
-              write (UnitTmp_,42) LZ(I),(VR(I,J),J=1,JO,2)
+              write (UnitTmp_,42) LZ(I),(VR(I,J,:,:),J=1,JO,2)
            end do
            write (UnitTmp_,*)
            write (UnitTmp_,*) 'Azimuthal drift component at various E,mu'

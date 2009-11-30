@@ -130,14 +130,14 @@ subroutine DRIFTR
 	   do I=1,IO		!  <   F(I)  >
               F(I) = F2(I,J,K,L,S)  ! F - average in cell(i,j,k,l)
 	   end do
-	   if (VR(IO,J).ge.0.) then
+	   if (VR(IO,J,k,l).ge.0.) then
               FBND(1)=0.	          ! outflow b. c.
               FBND(IO)=F(IO)       ! upwind for the side with no b.c.
-              C(IO)=VR(IO,J)
+              C(IO)=VR(IO,J,k,l)
               UR=IO-1
            else
               FBND(1)=F(2)         ! upwind for the side with no b.c
-              C(1)=VR(1,J)
+              C(1)=VR(1,J,k,l)
               UR=IO
               f01(j,k,l,S)=FGEOS(J,K,L,S)*CONF1
               f02(j,k,l,S)=FGEOS(J,K,L,S)*CONF2
@@ -146,7 +146,7 @@ subroutine DRIFTR
            end if
            !	   C(1)=AMIN1(0.99,AMAX1(-0.99,C(1)))
 	   do I=2,UR
-              C(I)=VR(I,J)
+              C(I)=VR(I,J,k,l)
               !	     C(I)=AMIN1(0.99,AMAX1(-0.99,C(I)))
               X=F(I+1)-F(I)
               ISIGN=1

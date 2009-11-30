@@ -360,8 +360,8 @@ subroutine get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
               InvR =  1./LZ(iR)
 
 
-              TermER1 = CoeffE * InvB * GradEqBR * (BouncedDriftR/Sb + VR(iR,iPhi))
-              TermER2 = -(2*EBND(iE)*I2)/(I2+sin2Pitch) * InvR * (BouncedDriftR/Sb+ VR(iR,iPhi)) 
+              TermER1 = CoeffE * InvB * GradEqBR * (BouncedDriftR/Sb + VR(iR,iPhi,iE,iPitch))
+              TermER2 = -(2*EBND(iE)*I2)/(I2+sin2Pitch) * InvR * (BouncedDriftR/Sb+ VR(iR,iPhi,iE,iPitch)) 
               TermER  = TermER1 + TermER2
               TermELambda = CoeffE * InvB * GradEqBLambda * BouncedDriftLambda/Sb
               TermEPhi = CoeffE * InvB * GradEqBPhi* &
@@ -379,8 +379,8 @@ subroutine get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
 !              CoeffMu = -(1.-cos2Pitch)*(SecondAdiabInv/(2.*HalfPathLength))/&
 !                   (cosPitch*(I2 + 1. - cos2Pitch))
  
-              TermMuR1     = InvR * (BouncedDriftR/Sb + VR(iR,iPhi))
-              TermMuR2     = 0.5 * InvB * GradEqBR * (BouncedDriftR/Sb+ VR(iR,iPhi)) 
+              TermMuR1     = InvR * (BouncedDriftR/Sb + VR(iR,iPhi,iE,iPitch))
+              TermMuR2     = 0.5 * InvB * GradEqBR * (BouncedDriftR/Sb+ VR(iR,iPhi,iE,iPitch)) 
               TermMuR      = TermMuR1 + TermMuR2
               TermMuLambda = -0.5 * InvB * GradEqBLambda * BouncedDriftLambda/Sb
               TermMuPhi    = 0.5 * InvB * GradEqBPhi *&
