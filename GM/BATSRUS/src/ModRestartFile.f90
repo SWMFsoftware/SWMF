@@ -208,7 +208,7 @@ contains
 
     use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem,&
          nBlockAll, Body1, Time_Accurate, iStartTime_I, IsStandAlone
-    use ModMain,       ONLY: UseBody2                     !^CFG IF SECONDBODY
+    use ModMain,       ONLY: UseBody2,UseOrbit                     !^CFG IF SECONDBODY
     use ModVarIndexes, ONLY: NameEquation, nVar, nFluid
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, &             
