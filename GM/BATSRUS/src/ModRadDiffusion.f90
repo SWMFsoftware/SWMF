@@ -4,6 +4,7 @@
 module ModRadDiffusion
 
   use ModVarIndexes, ONLY: p_, nWave
+  use BATL_size, ONLY: nDim, MaxDim
 
   implicit none
   save
@@ -109,7 +110,7 @@ contains
 
     use ModAdvance,     ONLY: nWave, UseElectronPressure
     use ModMain,        ONLY: UseRadDiffusion
-    use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
+    use ModSize,        ONLY: nI, nJ, nK, MaxBlock
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
          TypeSemiImplicit, iEradImpl, iTeImpl, iTrImplFirst, iTrImplLast
     use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_, &
@@ -377,7 +378,7 @@ contains
     use ModConst,    ONLY: cBoltzmann
     use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, TypeSemiImplicit, &
          iTeImpl, iTrImplFirst, iTrImplLast, ImplCoeff
-    use ModMain,     ONLY: nDim, x_, y_, nI, nJ, nK, MaxImplBlk, Dt
+    use ModMain,     ONLY: x_, y_, nI, nJ, nK, MaxImplBlk, Dt
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, UnitN_, UnitP_, &
          Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_, &
@@ -401,7 +402,7 @@ contains
     real :: TeTiCoefSi, TeTiCoef, TeTiCoefPrime
 
     integer :: iDim, Di, Dj, Dk, iDiff, nDimInUse
-    real :: Coeff, Dxyz_D(3)
+    real :: Coeff, Dxyz_D(MaxDim)
 
     real :: PlanckSi_W(nWave), Planck_W(nWave), Planck
 
@@ -1264,17 +1265,17 @@ contains
          fAx_BLK, fAy_BLK, fAz_BLK
     use ModImplicit, ONLY: TypeSemiImplicit, iTeImpl, UseFullImplicit, &
          UseSemiImplicit
-    use ModMain,     ONLY: nI, nJ, nK, nDim
+    use ModMain,     ONLY: nI, nJ, nK
     use ModNumConst, ONLY: i_DD
 
-    integer, parameter:: nStencil = 2*nDim + 1
+    integer, parameter:: nStencil = 7 !!! 2*nDim + 1
 
     integer, intent(in) :: iBlock, nVar
     real, intent(inout) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
 
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax, iPoint
     real :: DiffLeft, DiffRight, RelaxCoef, PlanckWeight
-    real :: Dxyz_D(nDim), Area_D(nDim), Coeff
+    real :: Dxyz_D(MaxDim), Area_D(MaxDim), Coeff
     !--------------------------------------------------------------------------
 
     if(UseSemiImplicit)then
