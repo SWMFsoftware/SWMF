@@ -20,7 +20,6 @@
    if nfile gt 1 then begin
       print,'More than one files were read...'
       print,'Probably w is from file ',filenames(nfile-1)
-      physics=physicss(nfile-1)
       nfile=1
    endif
 
@@ -58,13 +57,6 @@
    if keyword_set(cut) then help,cut
    if keyword_set(velpos) then help,velpos
    velpos0=velpos
-
-   askstr,'physics (e.g. mhd12)      ',physics,doask
-
-   physics=strtrim(physics,2)
-
-   physics2d=strmid(physics,0,strlen(physics)-2)+'23'
-   print,'Within the slice we are using ',physics2d
 
    print
    help,x
@@ -153,7 +145,7 @@
     
     first= islice eq 1
     getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
-        x2d,w2d,xreg,wreg,usereg,physics2d,eqpar,var2d,cut0,rcut
+        x2d,w2d,xreg,wreg,usereg,time,eqpar,var2d,cut0,rcut
 
    endfor
 
@@ -211,7 +203,7 @@
       if abs(height) ge rBody then rBodySlice=0.0 $
       else                         rBodySlice=sqrt(rBody^2 - height^2)
 
-      plot_func,x2d,w2d,xreg,wreg,usereg,2,physics2d,eqpar,rBodySlice,$
+      plot_func,x2d,w2d,xreg,wreg,usereg,2,time,eqpar,rBodySlice,$
         var2d,wnames,axistype,plotmodes,plottitles,$
         ax,az,contourlevel,0,$
         velvector,0,velseed,velpos,velx,vely,veltri,$

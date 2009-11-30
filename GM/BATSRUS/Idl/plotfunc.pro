@@ -116,7 +116,7 @@
 
    if noautorange eq 0 then begin
       getlimits,1,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
-                x,w,xreg,wreg,usereg,physics,eqpar,variables,cut0,rcut
+                x,w,xreg,wreg,usereg,time,eqpar,variables,cut0,rcut
 
       print
       for ifunc=0,nfunc-1 do $
@@ -141,7 +141,7 @@
 
    if !d.name eq 'X' and !d.window ge 0 then wshow
 
-   plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
+   plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
      variables,wnames,axistype,plotmodes,plottitles,$
      ax,az,contourlevel,0,$
      velvector,0,velseed,velpos,velx,vely,veltri,$

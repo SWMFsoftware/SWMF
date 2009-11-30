@@ -142,7 +142,7 @@
 
                first= npict eq 0 and ifile eq 0
                getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,$
-                 doask,x,w,xreg,wreg,usereg,physicss(ifile),eqpar,variables,$
+                 doask,x,w,xreg,wreg,usereg,time,eqpar,variables,$
                  cut0,rcut
 
                if ifile eq nfile-1 then begin
@@ -269,7 +269,7 @@
                 plottitles(*) = string(format=timetitle,t)
             endif
 
-            plot_func,x,w,xreg,wreg,usereg,ndim,physicss(ifile),eqpar,rBody,$
+            plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
               variables,wnames,axistype,plotmodes,plottitles,$
               ax,az,contourlevel,linestyle,$
 	      velvector,velspeed,velseed,velpos,velx,vely,veltri,$

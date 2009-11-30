@@ -899,7 +899,7 @@ pro readlimits,nfunc,funcs,autoranges,noautorange,fmax,fmin,doask
 end
 ;===========================================================================
 pro getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
-                x,w,xreg,wreg,usereg,physics,eqpar,variables,cut,rcut
+              x,w,xreg,wreg,usereg,time,eqpar,variables,cut,rcut
 
    on_error,2
 
@@ -915,9 +915,9 @@ pro getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
          endif
       endif else begin
          if usereg then getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
-                            xreg,wreg,physics,eqpar,variables,cut,rcut $
+           xreg,wreg,time,eqpar,variables,cut,rcut $
          else           getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
-                            x,   w,   physics,eqpar,variables,cut,rcut
+           x,   w,   time,eqpar,variables,cut,rcut
 
          f_max=max(f)
          f_min=min(f)
@@ -1500,17 +1500,17 @@ endif
 end
 
 ;===========================================================================
-pro getfunc,f,f1,f2,func1,func2,x,w,physics,eqpar,variables,cut,rcut
+pro getfunc,f,f1,f2,func1,func2,x,w,time,eqpar,variables,cut,rcut
 ;===========================================================================
 on_error,2
 
-f1=funcdef(x,w,func1,physics,eqpar,variables,rcut)
+f1=funcdef(x,w,func1,time,eqpar,variables,rcut)
 
 if keyword_set(cut) then f1=f1(cut)
 
 if func2 eq '' then f=f1 else begin
 
-   f2=funcdef(x,w,func2,physics,eqpar,variables,rcut)
+   f2=funcdef(x,w,func2,time,eqpar,variables,rcut)
 
    if keyword_set(cut) then f2=f2(cut)
 
@@ -1521,7 +1521,7 @@ endelse
 end
 
 ;===========================================================================
-pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
+pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
   variables,wnames,axistype,plotmodes,plottitles,$
   ax,az,contourlevel,linestyle,$
   velvector,velspeed,velseed,velpos,velx,vely,veltri,$
@@ -1737,9 +1737,9 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
       endif
 
       if usereg then getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
-                             xreg,wreg,physics,eqpar,variables,cut0,rcut $
+        xreg,wreg,time,eqpar,variables,cut0,rcut $
       else           getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
-                             x,  w,   physics,eqpar,variables,cut0,rcut
+        x,   w,   time,eqpar,variables,cut0,rcut
 
       f_min=fmin(ifunc)
       f_max=fmax(ifunc)

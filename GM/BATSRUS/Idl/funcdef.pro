@@ -1,6 +1,6 @@
 ;^CFG COPYRIGHT VAC_UM
 ;===========================================================================
-function funcdef,xx,w,func,physics,eqpar,variables,rcut
+function funcdef,xx,w,func,time,eqpar,variables,rcut
 ;
 ; Originally developed for the Versatile Advection Code by G. Toth (1996-99).
 ; Rewritten for the BATSRUS code by G. Toth (2000).
@@ -10,10 +10,11 @@ function funcdef,xx,w,func,physics,eqpar,variables,rcut
 ; "xx"        array contains the "ndim" components of the coordinates.
 ; "w"         array contains the "nw" variables.
 ; "func"      string describes the function to be returned.
-; "physics"   string defines the meaning of the variables in "w".
+; "time"      simulatuion time
 ; "eqpar"     array contains the equation parameters.
 ; "variables" string array contains the names of the coordinates in xx
 ;             the variables in w and the equation parameters in eqpar
+; "rcut"      radius for central cut out circle
 ;
 ; The "func" string is interpreted by the following rules:
 ;
