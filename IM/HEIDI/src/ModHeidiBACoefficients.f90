@@ -156,5 +156,75 @@ subroutine get_bounced_VGradB(nPoint, L, bField_I, GradB_I,bMirror,iMirror_I,&
  end subroutine get_bounced_VGradB
 
 !===============================================================
+subroutine get_bounced_drift_new(nPoint, L, bField_I, bMirror,iMirror_I,& 
+     dLength_I,Drift_I,BouncedDrift,RadialDistance_I)                                                                          
+
+  implicit none                                                                                                                               
+  integer, intent(in)  :: nPoint
+  real,    intent(in)  :: L
+  real,    intent(in)  :: bField_I(nPoint)
+  real,    intent(in)  :: bMirror
+  integer, intent(in)  :: iMirror_I(2)
+  real,    intent(in)  :: dLength_I(nPoint-1)
+  real,    intent(in)  :: Drift_I(nPoint)
+  real,    intent(in)  :: RadialDistance_I(nPoint)
+  real,    intent(out) :: BouncedDrift
+  real                 :: Inv2L
+  real                 :: DeltaS1, DeltaS2, b1, b2, Coeff
+  real                 :: v1,v2,c1,c2, alpha1,alpha2,vMirror
+  integer              :: iPoint, iFirst, iLast
+
+!-----------------------------------------------------------------------------
+
+  iFirst = iMirror_I(1)
+  iLast  = iMirror_I(2)
+
+  vMirror = 0.5*(Drift_I(iFirst)+Drift(iFirst-1))
+
+  BouncedDrift    = 0.0  
+
+  if (iFirst > iLast) RETURN
+  
+  Coeff = sqrt(bMirror)
+  c1 = 3.*(sqrt(2.)-1.)
+  c2 = sqrt(2.)-2.
+
+
+
+  DeltaS1 = abs((bMirror-bField_I(iFirst))*&
+       (dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst))) 
+
+  BouncedDrift = BouncedDrift + Coeff* 2./3. * DeltaS1/&
+       (bField_I(iFirst-1)-bField_I(iFirst))* &
+       sqrt(bMirror-bField_I(iFirst)) * (-3.* Drift_I(iFirst) ) 
+
+  do iPoint = iFirst, iLast -1
+
+     b1 = bField_I(iPoint)
+     b2 = bField_I(iPoint+1)
+     
+     v1 = Drift_I(iPoint)
+     v2 = Drift_I(iPoint+1)
+     
+     alpha2 = sqrt(bMirror - b2) * ( c1* v2 - c2 * (vMirror - v2))
+     alpha1 = sqrt(bMirror - b1) * ( c1* v1 - c2 * (vMirror - v1))
+
+     BouncedDrift = BouncedDrift + Coeff* 2./3. * dLength_I(iPoint)/(b1-b2)&
+          *(alpha2-alpha1)
+
+  end do
+
+   DeltaS2 = abs((bMirror-bField_I(iLast))*(dLength_I(iLast))/&
+        (bField_I(iLast+1)-bField_I(iLast)))
+
+  BouncedDrift = BouncedDrift + Coeff* 2./3. * DeltaS2/&
+       (bField_I(iLast+1)-bField_I(iLast))*&
+       sqrt(bMirror-bField_I(iLast)) * (-3.* Drift_I(iLast) ) 
+
+end subroutine get_bounced_drift_new
+
+
+
+!===============================================================
 
 end module ModHeidiBACoefficients
