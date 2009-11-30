@@ -57,6 +57,7 @@ module ModBoundaryCells
   SAVE
 
   logical::SaveBoundaryCells=.false.
+  logical::ResetBody2Cells=.false.
   integer::MinBoundarySaved=-777,MaxBoundarySaved=-777,nBoundarySaved=0
   logical,allocatable,dimension(:,:,:,:,:)::IsBoundaryCell_IGB
 
