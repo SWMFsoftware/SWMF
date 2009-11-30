@@ -246,11 +246,11 @@ subroutine get_B_field(bFieldMagnitude_III)
 end subroutine get_B_field
 
 !============================================================
-subroutine get_coef(dEdt_IIII,dMudt_III)
+subroutine get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
   
   use ModHeidiSize,   ONLY: nPoint,nPointEq, nPa, nT, nR,nE,DT
   use ModConst,       ONLY: cTiny  
-  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND,wmu
+  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND,wmu,DPHI
   use ModHeidiIO,     ONLY: Kp
   use ModHeidiDrifts, ONLY: VR, P1,P2
   use ModHeidiBField
@@ -267,6 +267,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
   real, dimension(3,nPoint,nR,nT)   :: VDrift_VIII
   real, dimension(nPoint-1,nR,nT)   :: dLength_III
   real, dimension(nPa,nR,nT)        :: h,s
+  real, dimension(nR,nT,nE,nPA)     :: VPhi_IIII,VR_IIII
   real                              :: BouncedDriftR, BouncedDriftPhi, BouncedDriftLambda
   real                              :: HalfPathLength,Sb,SecondAdiabInv
   integer                           :: iMirror_I(2)
@@ -288,6 +289,11 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
   
   call get_IntegralH(h)
   call get_IntegralI(s)
+
+  open (unit=2, file='Drift.dat')
+  write(2,*) 'Drift Phi value'
+  write(2,*) 'analytic numeric'
+
 
   do iE = 1, nE
      Energy = 1000. * EKEV(iE)
@@ -382,9 +388,13 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
 
 
               !Needs the dBdt term too
-             dMudt_III(iR,iPhi,iPitch) =  CoeffMu*(TermMuR + TermMuLambda + TermMuPhi)
+              dMudt_III(iR,iPhi,iPitch) =  CoeffMu*(TermMuR + TermMuLambda + TermMuPhi)
 
-             
+              VPhi_IIII(iR,iPhi,iE,iPitch) = BouncedDriftPhi/Sb
+              VR_IIII(iR,iPhi,iE,iPitch) = BouncedDriftR/Sb
+           write(2,*) iR,iPhi,iE,iPitch, P2(iR,iPhi,iE,iPitch), VPhi_IIII(iR,iPhi,iE,iPitch),&
+                 DriftPhi_IIII(nPointEq,iR,iPhi,iE)
+
           end do
        end do
     end do
@@ -392,6 +402,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
      
  end do
 
+ close(2)
 dEdt_IIII(:,:,:,1) = dEdt_IIII(:,:,:,2) 
 dMudt_III(:,:,1)  = dMudt_III(:,:,2)
 

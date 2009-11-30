@@ -33,11 +33,11 @@ subroutine get_drift_velocity(nPoint,nR,nPhi, Energy, bFieldMagnitude_III,VDrift
            b4 = b2*b2
            b4_III(iPoint,iR,iPhi) = b4
                    
-           VDrift_VIII(1,iPoint,iR,iPhi) = -1000.*Energy*GradBCrossB_VIII(1,iPoint,iR,iPhi)/&
+           VDrift_VIII(1,iPoint,iR,iPhi) =  Energy*GradBCrossB_VIII(1,iPoint,iR,iPhi)/&
                 (b4_III(iPoint,iR,iPhi))   ! Vr                           
-           VDrift_VIII(2,iPoint,iR,iPhi) = -1000.*Energy*GradBCrossB_VIII(2,iPoint,iR,iPhi)/&
+           VDrift_VIII(2,iPoint,iR,iPhi) =  Energy*GradBCrossB_VIII(2,iPoint,iR,iPhi)/&
                 (b4_III(iPoint,iR,iPhi))   ! VTheta                       
-           VDrift_VIII(3,iPoint,iR,iPhi) = -1000.*Energy*GradBCrossB_VIII(3,iPoint,iR,iPhi)/&
+           VDrift_VIII(3,iPoint,iR,iPhi) =  Energy*GradBCrossB_VIII(3,iPoint,iR,iPhi)/&
                 (b4_III(iPoint,iR,iPhi))  ! VPhi 
 
            
@@ -66,36 +66,37 @@ subroutine get_bounced_drift(nPoint, L, bField_I, bMirror,iMirror_I,&
   real                 :: DeltaS1, DeltaS2, b1, b2, Coeff
   integer              :: iPoint, iFirst, iLast
 
-    !-----------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
+  
+  iFirst = iMirror_I(1)
+  iLast  = iMirror_I(2)
+  
+  BouncedDrift    = 0.0
+  
+  if (iFirst > iLast) RETURN
+  
+  Inv2L = 1./(2*L)
+  Coeff = Inv2L*sqrt(bMirror) 
+  DeltaS1 = abs((bMirror-bField_I(iFirst))*&
+       (dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
+  
+  BouncedDrift    = BouncedDrift + Drift_I(iFirst)*Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
+  
+  do iPoint = iFirst, iLast-1
+     b1 = bField_I(iPoint)
+     b2 = bField_I(iPoint+1)
+     
+     BouncedDrift =  BouncedDrift + Drift_I(iPoint)*Coeff*2.*dLength_I(iPoint)/(b1 - b2) &
+          *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
 
-    iFirst = iMirror_I(1)
-    iLast  = iMirror_I(2)
+  end do
+  
+  
+  DeltaS2 = abs((bMirror-bField_I(iLast))*(dLength_I(iLast))/(bField_I(iLast+1)-bField_I(iLast)))
+  
+  
+  BouncedDrift  = BouncedDrift + Drift_I(iLast)* Coeff*2.*DeltaS2/(sqrt(bMirror-bField_I(iLast)))
 
-    BouncedDrift    = 0.0
-
-    if (iFirst > iLast) RETURN
-    
-    Coeff = sqrt(bMirror) 
-    DeltaS1 = abs((bMirror-bField_I(iFirst))*&
-         (dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
-
-   BouncedDrift    = BouncedDrift + Drift_I(iFirst)*Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
-   
-   do iPoint = iFirst, iLast-1
-      b1 = bField_I(iPoint)
-      b2 = bField_I(iPoint+1)
-      
-       BouncedDrift =  BouncedDrift + Drift_I(iPoint)*Coeff*2.*dLength_I(iPoint)/(b1 - b2) &
-            *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
-       
-    end do
-
-      
-    DeltaS2 = abs((bMirror-bField_I(iLast))*(dLength_I(iLast))/(bField_I(iLast+1)-bField_I(iLast)))
-
-   
-   BouncedDrift  = BouncedDrift + Drift_I(iLast)* Coeff*2.*DeltaS2/(sqrt(bMirror-bField_I(iLast)))
- 
 end subroutine get_bounced_drift
 
 !===============================================================

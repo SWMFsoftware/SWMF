@@ -192,7 +192,7 @@ subroutine OTHERPARA
   real    :: COULDE(NE,NPA),COULDI(NE,NPA),AFIR,ASEC
   real    :: VF(NSTH),RA(NSTH),MUBOUN,MULC,TMAS(NSTH),TM1(NSTH)
   
-  real, dimension(nR,nT,nE,nPA) :: dRdt_IIII ,dPhiDt_IIII, InvRdRdt_IIII,dEdt_IIII
+  real, dimension(nR,nT,nE,nPA) :: dEdt_IIII,VPhi_IIII,VR_IIII
   real, dimension(nR,nT,nPA)    :: dMudt_III 
 
   external:: erf
@@ -205,6 +205,10 @@ subroutine OTHERPARA
   !\
   ! Parameters used in calculating drifts at boundaries
   !/
+
+
+
+
 
   C=1.44E-2*RE**2		! Constant of corotation, [C]=V*m
   ISS=-1			! sign of specie's charge
@@ -227,26 +231,81 @@ subroutine OTHERPARA
      if (MLT(J).ge.17.99) J18=J
   end do	! While J18 loop
 
-  do i = 1, io      
-     do L = 1, UPA(I)    ! Kp independent part of azimuthal drift
-        do K = 1, KO
-           do j = 1,  jo
-              GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
-              P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
-           end do
-        end do
-     end do
-  end do
+  
 
-  do i = 1, io 
-     do L=UPA(I)+1,LO
-        do K = 1, KO
-           do j = 1,  jo
-              P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
-           end do
-        end do
-     end do
-  end do
+     open(unit=5, file='drifts.dat')
+     
+
+   if (TypeBField == 'analytic') then
+      
+      do i = 1, io      
+         do L = 1, UPA(I)    ! Kp independent part of azimuthal drift
+            do K = 1, KO
+               do j = 1,  jo
+                  GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
+                  P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
+                  write(5,*)  i,j,k,l,P2(I,J,K,L)
+               end do
+            end do
+         end do
+      end do
+      
+      do i = 1, io 
+         do L=UPA(I)+1,LO
+            do K = 1, KO
+               do j = 1,  jo
+                  P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
+                  write(5,*)  i,j,k,l,P2(I,J,K,L)
+               end do
+            end do
+         end do
+      end do
+      
+   end if
+
+
+   if (TypeBField == 'numeric') then
+      
+      call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+      do i = 1, io      
+         do L = 1, UPA(I)    ! Kp independent part of azimuthal drift
+            do K = 1, KO
+               do j = 1,  jo
+                  GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
+
+                  P2(I,J,K,L)=(C*DT/DPHI/ME -ISS*VPhi_IIII(i,j,k,l))
+                  
+!                  P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
+                  write(5,*)  i,j,k,l,P2(I,J,K,L)
+               end do
+            end do
+         end do
+      end do
+      
+      do i = 1, io 
+         do L=UPA(I)+1,LO
+            do K = 1, KO
+               do j = 1,  jo
+                  
+                  P2(I,J,K,L)=(C*DT/DPHI/ME -ISS*VPhi_IIII(i,j,k,l))
+                  !                  P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
+                  write(5,*)  i,j,k,l,P2(I,J,K,L)
+               end do
+            end do
+         end do
+      end do
+
+!      do l = 1, lo
+!         do k = 1, ko
+!            do I = 1, IO
+!               VR(I,J6,k,l)  = 0.0 + VR_IIII(i,j6,k,l)
+!               VR(I,J18,k,l) = 0.0 + VR_IIII(i,j18,k,l)
+!            end do	! I loop processing VR
+!         end do
+!      end do
+   end if
+   
+   close(5)
 
   do I = 1, IO
      VR(I,J6)=0.
@@ -532,7 +591,7 @@ subroutine MAGCONV(I3,NST)
         do i=1,io
 
            VR(I,J)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
-                DT/DL1*(RE*RE/ME)
+                DT/DL1*(RE*RE/ME) 
            P1(I,J)=A*LAMGAM*LZ(I)**(LAMGAM+1.)*sin(PHI(J)+0.5*DPHI)*   &
                 DT/DPHI*(RE*RE/ME)
            BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*sin(phi(j))

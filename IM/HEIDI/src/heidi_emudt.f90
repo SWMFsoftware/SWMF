@@ -11,7 +11,7 @@ subroutine get_E_mu_dot
   
   
   real, dimension(nR,nT,nPA)    :: dMudt_III 
-  real,dimension(nR,nT,nE,nPa)  :: dEdt_IIII
+  real,dimension(nR,nT,nE,nPa)  :: dEdt_IIII,VPhi_IIII,VR_IIII
   real                          :: MUBOUN,MULC
   real                          :: gpa
   integer                       :: i,j,k,l
@@ -52,7 +52,7 @@ subroutine get_E_mu_dot
 
   
   if (TypeBField == 'numeric') then 
-     call get_coef(dEdt_IIII,dMudt_III)
+     call get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
 
       do I=1,IO
         do J=1,JO

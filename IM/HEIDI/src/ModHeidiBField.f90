@@ -50,9 +50,11 @@ contains
     real, parameter        :: alpha =1!1.1              ! alpha is the stretching factor in z direction
     real, parameter        :: beta = 1!1.0/1.1           ! beta is the stretching factor in y direction
     real, parameter        :: Me = 8.02e15
+
     !----------------------------------------------------------------------------------
 
-    DipoleFactor= cMu*Me/4.*cPi
+    DipoleFactor= Me*10.e-10
+
 
     !\
     ! Dipole magnetic field with uniform number of points along the field line
@@ -379,32 +381,33 @@ contains
                      beta ** 2 * y ** 2 - beta ** 2 * x ** 2 + beta ** 2 * x **2 * y ** 2 + x ** 2 * &
                      alpha ** 2) ** 5) ** (-0.1D1 / 0.2D1)) * sqrt(dble(1 - x ** 2))
 
-                ! Gradient B
-                GradB_VIII(1,iPoint, iR, iPhi) = DipoleStrength*GradR
-                GradB_VIII(2,iPoint, iR, iPhi) = DipoleStrength*GradTheta
-                GradB_VIII(3,iPoint, iR, iPhi) = DipoleStrength*GradPhi
 
+
+                ! Gradient B
+                GradB_VIII(1,iPoint, iR, iPhi) = DipoleFactor*GradR
+                GradB_VIII(2,iPoint, iR, iPhi) = DipoleFactor*GradTheta
+                GradB_VIII(3,iPoint, iR, iPhi) = DipoleFactor*GradPhi               
 
                 ! drift Velocity components
-                
-                GradBCrossB_VIII(1,iPoint,iR,iPhi) = Vr 
-                GradBCrossB_VIII(2,iPoint,iR,iPhi) = Vtheta
-                GradBCrossB_VIII(3,iPoint,iR,iPhi) = Vphi
-                !mag = DipoleFactor*(sqrt(Br**2+Btheta**2+Bphi**2))
+                GradBCrossB_VIII(1,iPoint,iR,iPhi) = Vr * (DipoleFactor)**3
+                GradBCrossB_VIII(2,iPoint,iR,iPhi) = Vtheta * (DipoleFactor)**3
+                GradBCrossB_VIII(3,iPoint,iR,iPhi) = Vphi * (DipoleFactor)**3
+
+                mag = DipoleFactor*(sqrt(Br**2+Btheta**2+Bphi**2))
 
 
-                mag = DipoleStrength*(sqrt(Br**2+Btheta**2+Bphi**2))
+                !mag = DipoleStrength*(sqrt(Br**2+Btheta**2+Bphi**2))
                 bFieldMagnitude_III(iPoint,iR,iPhi) = mag
                 Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,Lat,Phi_I(iPhi), alpha, beta)  
                 Lat = Lat + dLat 
 
-!                write(*,*) iPhi, iR, iPoint,GradBCrossB_VIII(1,iPoint,iR,iPhi),GradBCrossB_VIII(2,iPoint,iR,iPhi),&
-!                     GradBCrossB_VIII(3,iPoint,iR,iPhi)
+
              end do
           end do
        end do
 
     end if
+
 
     do iPhi =1, nPhi
        do iR =1, nR 
