@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-subroutine amr(idepth)
+subroutine amr(DoMessagePass)
   use ModProcMH
   use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,MaxBlock,&
        unusedBLK,lVerbose,UseB,UseB0, UseBatl, Dt_BLK
@@ -19,7 +19,7 @@ subroutine amr(idepth)
 
   implicit none
 
-  integer, intent(in) :: idepth
+  logical, intent(in) :: DoMessagePass
 
   logical:: IsFound
   real :: UserCriteria
@@ -36,8 +36,10 @@ subroutine amr(idepth)
 
      if(DoTestMe)write(*,*) NameSub,' starts 2nd order accurate message passing'
 
-     UsePlotMessageOptions = .true.
-     call exchange_messages
+     if(DoMessagePass)then
+        UsePlotMessageOptions = .true.
+        call exchange_messages
+     end if
      if(automatic_refinement) then
         if(DoTestMe)write(*,*) NameSub,' sets user criteria'
         do iBlock = 1, nBlock
@@ -80,13 +82,15 @@ subroutine amr(idepth)
         end if
      end if
 
-     ! Update iTypeAdvance, and redo load balancing if necessary
-     ! Load balance: move coords, data, and there are new blocks
-     call load_balance(.true.,.true.,.true.)
+     if(DoMessagePass)then
+        ! Update iTypeAdvance, and redo load balancing if necessary
+        ! Load balance: move coords, data, and there are new blocks
+        call load_balance(.true.,.true.,.true.)
 
-     ! redo message passing
-     UsePlotMessageOptions = .false.
-     call exchange_messages
+        ! redo message passing
+        UsePlotMessageOptions = .false.
+        call exchange_messages
+     end if
      RETURN !!! TODO: iTypeAdvance, B0, ModBlockData...
   end if
 

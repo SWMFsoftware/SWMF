@@ -154,15 +154,16 @@ contains
              call set_ICs
           end do
 
-          !\
-          ! Allow the user to add a perturbation and use that for
-          ! physical refinement.
-          !/
-          if (UseUserPerturbation) &
-               call user_initial_perturbation
+          ! Allow the user to add a perturbation and use that for physical refinement.
+          if (UseUserPerturbation) call user_initial_perturbation
 
-          call amr_physics
-          call number_soln_blocks
+          ! Do physics based AMR without the message passing
+          if (UseBatl) then
+             call amr(.false.)
+          else
+             call amr_physics
+             call number_soln_blocks
+          end if
        end do
        ! Move coordinates, but not data (?), there are new blocks
        call load_balance(.true.,.false.,.true.)
@@ -524,7 +525,8 @@ subroutine BATS_amr_refinement
 
   if(UseConstrainB)call b_face_fine_pass     !^CFG IF CONSTRAINB
 
-  call amr(nRefineLevel)
+  ! Do AMR with message passing
+  call amr(.true.)
 
   !^CFG IF CONSTRAINB BEGIN
   if(UseConstrainB)then
