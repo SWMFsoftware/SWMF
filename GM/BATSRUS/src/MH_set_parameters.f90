@@ -2665,6 +2665,12 @@ contains
 
        end select
 
+       ! Reduce plot range in ignored dimensions
+       if(nJ == 1) plot_range(3,iFile) = -SmallSize_D(y_)
+       if(nJ == 1) plot_range(4,iFile) = +SmallSize_D(y_)
+       if(nK == 1) plot_range(5,iFile) = -SmallSize_D(z_)
+       if(nK == 1) plot_range(6,iFile) = +SmallSize_D(z_)
+
        if(DoTestMe)write(*,*)'For file ',ifile-plot_,&
             ' original range   =',plot_range(:,ifile)
 
