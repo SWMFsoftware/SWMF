@@ -417,6 +417,141 @@ contains
 
   end subroutine accurate_reschange
   !===========================================================================
+  subroutine accurate_reschange2d(&
+       Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
+       Coarse1_VI        ,& ! State in the coarser ghostcells, 1st layer
+       Fine1_VI          ,& ! States in 2 fine physical cells, 1st layer
+       Fine2_VI          ,& ! States in 2 fine physical cells, 2nd layer
+       CoarseToFineF_VI  ,& ! Values at subfaces, in the coarse ghostcell
+       FineToCoarseF_VI  ,& ! Facevalues in the physical cell,
+                                !   looking at the coarser cell 
+       FineF_VI)            ! Facevalues in the physical cell,
+    !                         looking at another physical cell
+
+
+    !             ! C1_V        !       !       !
+    !_____________!_____________!_______!_______!_
+    !             !         CToF!FToC FF!       !
+    ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
+    !             !         CToF!FToC FF!       !
+    !_____________!_____________!_F1_V__!__F2_V_!_
+    !             !             !       !       !
+    !             ! C1_V        !       !       !
+
+    real, intent(in) :: Coarse2_V(nVar)
+    real, intent(in) :: Coarse1_VI(nVar,-1:4)
+    real, intent(in) :: Fine1_VI(nVar,2)
+    real, intent(in) :: Fine2_VI(nVar,2)
+
+    real, intent(inout), dimension(nVar, 2)::&
+         CoarseToFineF_VI ,FineToCoarseF_VI , FineF_VI
+
+    integer:: iVar, i2
+    real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
+    real, dimension(nVar):: GradNormal_V, SignGradNormal_V
+    real, dimension(nVar):: GradNormalLtd_V, FaceMiddle_V, Transverse_V
+    real, dimension(nVar,2):: Coarse1Max_VI, Coarse1Min_VI
+
+    real :: AverageOrig_V(nVar), AverageOrig
+    real :: Coarse, Middle, FaceAverage, FaceTmp_I(2), Alpha, Alpha1
+    real :: Beta
+    !-------------------------------------------------------------------------
+
+    !Calculate averaged Fine1_VI
+    do iVar=1,nVar
+       AveragedFine1_V(iVar) = 0.5*sum(Fine1_VI(iVar,:))
+    end do
+    GradNormal_V = AveragedFine1_V - Coarse1_VI(:,1)
+
+    !Save sign of the gradient
+    SignGradNormal_V=sign(1.0,GradNormal_V)
+
+    !Limit gradient in the first coarser cell
+    Slope1_V = cTwoThird*abs(GradNormal_V)
+    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VI(:,1) - Coarse2_V)
+
+    Beta = min(BetaLimiterResChange, BetaLimiter)
+
+    GradNormalLtd_V= SignGradNormal_V*max(0.0,min( &
+         Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
+
+    ! Add limited normal gradient to obtain the middle value for the fine face
+    FaceMiddle_V = Coarse1_VI(:,1) + GradNormalLtd_V
+
+    do i2 = 1, 2
+       ! Calculate transverse gradient between coarse cells
+       do iVar = 1, nVar
+          ! TransverseSlope = (Cside1 - Ccenter) / 4
+          Transverse_V(iVar) = &
+               0.125*sum(Coarse1_VI(iVar,4*i2-5:4*i2-4)) &
+               - 0.25*Coarse1_VI(iVar,1)
+       end do
+
+       ! Bound the face value by Coarse1, Coarse1+Transverse and Fine1
+       Coarse1Max_VI(:,i2) = Coarse1_VI(:,1) + max(0.0, Transverse_V)
+       Coarse1Min_VI(:,i2) = Coarse1_VI(:,1) + min(0.0, Transverse_V)
+
+       ! Add transverse gradient and limit it
+       CoarseToFineF_VI(:,i2) = &
+            max( min(Coarse1Min_VI(:,i2), Fine1_VI(:,i2)), &
+            min( max(Coarse1Max_VI(:,i2), Fine1_VI(:,i2)), &
+            FaceMiddle_V + Transverse_V) )
+
+    end do
+
+    ! The average face value
+    AverageOrig_V = 0.5*( CoarseToFineF_VI(:,1) + CoarseToFineF_VI(:,2) )
+
+    ! For each variable fix the face values if necessary
+    do iVar = 1, nVar
+
+       AverageOrig = AverageOrig_V(iVar)
+       Coarse      = Coarse1_VI(iVar,1)
+       Middle      = FaceMiddle_V(iVar)
+
+       ! Check if the |L-M| <= |M-C| condition is satisfied 
+       if(abs(AverageOrig - Middle) <=  abs(Coarse - Middle) ) CYCLE
+
+       ! Calculate the fixed average value L = Lorig + sgn(Lorig-M)*|M-C|
+       FaceAverage = Middle + &
+            sign( abs(Middle - Coarse), AverageOrig - Middle )
+
+       ! Correct face values either upward or downward
+       if(AverageOrig < FaceAverage)then
+          FaceTmp_I = max(Coarse1Max_VI(iVar,:), CoarseToFineF_VI(iVar,:))
+       else
+          FaceTmp_I = min(Coarse1Min_VI(iVar,:), CoarseToFineF_VI(iVar,:))
+       end if
+
+       ! Calculate interpolation coefficient needed to satisfy the condition
+       Alpha = (FaceAverage - AverageOrig) / (0.5*sum(FaceTmp_I) - AverageOrig)
+       Alpha1 = 1.0 - Alpha
+
+       ! Interpolate
+       CoarseToFineF_VI(iVar,:) = &
+            Alpha*FaceTmp_I + Alpha1*CoarseToFineF_VI(iVar,:)
+
+    end do
+
+    ! The face is half the distance in the fine cell
+    Slope1_V = 0.5*Slope1_V
+    do i2 = 1, 2
+       !Limit gradient in the first layer of finer cells
+       Slope2_V = 0.5*SignGradNormal_V*(Fine2_VI(:,i2) - Fine1_VI(:,i2))
+
+       ! The first limiting ensures that the FineToCoarse face value
+       ! remains between the Fine1 and Coarse values
+       GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
+            SignGradNormal_V*(Fine1_VI(:,i2) - Coarse1_VI(:,1)), &
+            Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V + Slope2_V)))
+
+       FineToCoarseF_VI(:,i2) = Fine1_VI(:,i2) - GradNormalLtd_V
+       FineF_VI(:,i2) = Fine1_VI(:,i2) + GradNormalLtd_V
+
+    end do
+
+  end subroutine accurate_reschange2d
+  !===========================================================================
   subroutine calc_face_value(DoResChangeOnly, iBlock)
 
     ! The subroutine calculates right and left face values.
@@ -611,9 +746,15 @@ contains
             )then
 
           if (UseAccurateResChange)then
-             do iSide=east_,top_
-                if(neilev(iSide,iBlock) == +1)call get_face_accurate(iSide)
-             end do
+             if(nK == 1)then
+                do iSide = 1, 4
+                   if(neilev(iSide,iBlock) == 1)call get_face_accurate2d(iSide)
+                end do
+             else
+                do iSide = 1, 6
+                   if(neilev(iSide,iBlock) == 1)call get_face_accurate(iSide)
+                end do
+             end if
           else if(UseTvdResChange)then
              do iSide=east_,top_
                 if(neilev(iSide,iBlock) == +1)call get_face_tvd(iSide)
@@ -1232,6 +1373,57 @@ contains
          end do; end do
       end select
     end subroutine get_face_accurate
+    !=======================================================================
+    subroutine get_face_accurate2d(iSideIn)
+      integer, intent(in):: iSideIn
+
+      select case(iSideIn)
+      case(1)
+         do j=1,nJ,2
+            call accurate_reschange2d(&
+                 Coarse2_V       = Primitive_VG(:,-1,j,1)         ,&
+                 Coarse1_VI      = Primitive_VG(:, 0,j-2:j+3,1)   ,&
+                 Fine1_VI        = Primitive_VG(:, 1,j:j+1,1)     ,&
+                 Fine2_VI        = Primitive_VG(:, 2,j:j+1,1)     ,&
+                 CoarseToFineF_VI= LeftState_VX(:, 1,j:j+1,1)     ,&
+                 FineToCoarseF_VI=RightState_VX(:, 1,j:j+1,1)     ,&
+                 FineF_VI        = LeftState_VX(:, 2,j:j+1,1))
+         end do
+      case(2)
+         do j=1,nJ,2
+            call accurate_reschange2d(&
+                 Coarse2_V       = Primitive_VG(:,nI+2,j,1)       ,&
+                 Coarse1_VI      = Primitive_VG(:,nI+1,j-2:j+3,1) ,&
+                 Fine1_VI        = Primitive_VG(:,nI  ,j:j+1,1)   ,&
+                 Fine2_VI        = Primitive_VG(:,nI-1,j:j+1,1)   ,&
+                 CoarseToFineF_VI=RightState_VX(:,nI+1,j:j+1,1)   ,&
+                 FineToCoarseF_VI= LeftState_VX(:,nI+1,j:j+1,1)   ,&
+                 FineF_VI        =RightState_VX(:,nI  ,j:j+1,1))
+         end do
+      case(south_)
+         do i=1,nI,2
+            call accurate_reschange2d(&
+                 Coarse2_V       = Primitive_VG(:,i,-1,1)         ,&
+                 Coarse1_VI      = Primitive_VG(:,i-2:i+3,0,1)    ,&
+                 Fine1_VI        = Primitive_VG(:,i:i+1,1,1)      ,&
+                 Fine2_VI        = Primitive_VG(:,i:i+1,2,1)      ,&
+                 CoarseToFineF_VI= LeftState_VY(:,i:i+1,1,1)      ,&
+                 FineToCoarseF_VI=RightState_VY(:,i:i+1,1,1)      ,&
+                 FineF_VI        = LeftState_VY(:,i:i+1,2,1))
+         end do
+      case(north_)
+         do i=1,nI,2
+            call accurate_reschange2d(&
+                 Coarse2_V       = Primitive_VG(:,i,nJ+2,1)       ,&
+                 Coarse1_VI      = Primitive_VG(:,i-2:i+3,nJ+1,1) ,&
+                 Fine1_VI        = Primitive_VG(:,i:i+1,nJ,1)     ,&
+                 Fine2_VI        = Primitive_VG(:,i:i+1,nJ-1,1)   ,&
+                 CoarseToFineF_VI=RightState_VY(:,i:i+1,nJ+1,1)   ,&
+                 FineToCoarseF_VI= LeftState_VY(:,i:i+1,nJ+1,1)   ,&
+                 FineF_VI        =RightState_VY(:,i:i+1,nJ,1)) 
+         end do
+      end select
+    end subroutine get_face_accurate2d
     !=======================================================================
     subroutine get_face_tvd(iSideIn)
       integer,intent(in)::iSideIn
