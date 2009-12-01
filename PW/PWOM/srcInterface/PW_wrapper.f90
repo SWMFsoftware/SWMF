@@ -90,12 +90,12 @@ subroutine PW_init_session(iSession, TimeSimulation)
   UseIE = Couple_CC(IE_, PW_) % DoThis
   
   if(DoInitialize) then
-     ! Initialize PW
-     call PW_initialize
      ! Set time related variables for UA 
      call get_time(tStartOut = StartTime)
      CurrentTime = StartTime + TimeSimulation
      call time_real_to_int(StartTime, iStartTime)
+     ! Initialize PW
+     call PW_initialize
      if(Time /= TimeSimulation .and. iProc==0) &
           write(*,*)'WARNING ',NameSub,': PWOM Time=',Time, &
           ' differs from SWMF TimeSimulation=',TimeSimulation 
