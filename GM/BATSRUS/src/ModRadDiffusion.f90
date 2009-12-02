@@ -1368,7 +1368,7 @@ contains
          DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
     use ModMain,       ONLY: nI, nJ, nK, Dt, UseRadDiffusion
     use ModPhysics,    ONLY: inv_gm1, g, No2Si_V, Si2No_V, UnitEnergyDens_, &
-         UnitP_, UnitRho_, UnitTemperature_, PeMin
+         UnitP_, UnitRho_, UnitTemperature_, PeMin, ExtraEintMin
     use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Pe_, nWave, WaveFirst_
 
@@ -1459,8 +1459,8 @@ contains
           State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
 
           ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
-          State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
+          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+               Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
 
        else
           ! ions + electrons
@@ -1472,8 +1472,8 @@ contains
 
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
 
-          State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock)
+          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+               Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock))
 
        end if
 

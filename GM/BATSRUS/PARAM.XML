@@ -4886,6 +4886,19 @@ Currently the minimum electron pressure is only used in ModRadDiffusion.
 The default value is -1, i.e. no threshold is applied.
 </command>
 
+<command name="EXTRAINTERNALENERGY">
+	 <parameter name="ExtraEintMinSi" type="real" default="0"/>
+
+#EXTRAINTERNALENERGY
+-1e3			ExtraEintMinSi
+
+Provide the minimum extra internal energy density threshold in SI units. 
+The extra internal energy density is the difference between true 
+internal energy density and the p/(gamma-1) of the ideal gas. 
+Using a large enough gamma (e.g. 5/3) can guarantee that the 
+difference is always non-negative. The default value is zero. 
+</command>
+
 <command name="RADIATION">
 	<parameter name="UseRadDiffusion" type="logical" default="F"/>
 	<if expr="$UseRadDiffusion">

@@ -338,13 +338,12 @@ contains
     use ModMain,        ONLY: GlobalBlk, nI, nJ, nK
     use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_, &
-         UnitTemperature_, UnitN_, PeMin
+         UnitTemperature_, UnitN_, PeMin, ExtraEintMin
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
          ExtraEint_, LevelBe_, LevelXe_, LevelPl_, &
          Pe_, UseElectronPressure
     use ModVarIndexes,  ONLY: Erad_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
-    use ModLookupTable, ONLY: interpolate_lookup_table
     use ModConst,       ONLY: cPi
     use CRASH_ModEos,   ONLY: eos
 
@@ -544,13 +543,13 @@ contains
             i, j, k, iBlock, EinternalOut=EinternalSi)
 
        if(UseElectronPressure)then
-          State_VGB(ExtraEint_,i,j,k,iBlock) = &
+          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
+               - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
        else
-          State_VGB(ExtraEint_,i,j,k,iBlock) = &
+          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - inv_gm1*State_VGB(P_,i,j,k,iBlock)
+               - inv_gm1*State_VGB(P_,i,j,k,iBlock))
        end if
 
     end do; end do; end do
@@ -1182,7 +1181,7 @@ contains
          UseElectronPressure
     use ModGeometry, ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
     use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
-         UnitP_, UnitEnergyDens_
+         UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModEnergy,   ONLY: calc_energy_cell
     use ModVarIndexes, ONLY: nWave
 
@@ -1246,9 +1245,9 @@ contains
        end if
 
        ! Set ExtraEint = Total internal energy - P/(gamma -1)
-       State_VGB(ExtraEint_,i,j,k,iBlock) = &
+       State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
             Si2No_V(UnitEnergyDens_)*EinternalSi &
-            - inv_gm1*State_VGB(p_,i,j,k,iBlock)
+            - inv_gm1*State_VGB(p_,i,j,k,iBlock))
 
     end do; end do; end do
 
@@ -1281,8 +1280,8 @@ contains
          State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
 
          ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
-         State_VGB(ExtraEint_,i,j,k,iBlock) = &
-              Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
+         State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+              Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
 
       end do; end do; end do
 
@@ -1335,7 +1334,6 @@ contains
          nWave, WaveFirst_, WaveLast_, UseElectronPressure
     use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
          UnitTemperature_, cRadiationNo, No2Si_V, UnitEnergyDens_
-    use ModLookupTable, ONLY: interpolate_lookup_table
     use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK, TypeGeometry
     use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_
 
@@ -1777,7 +1775,7 @@ contains
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, UnitEnergyDens_, &
          inv_gm1, g, Si2No_V, cRadiationNo, UnitTemperature_
     use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_, nWave, &
-         WaveFirst_, WaveLast_, ExtraEint_, Pe_
+         WaveFirst_, WaveLast_, Pe_
     use ModLookupTable,ONLY: interpolate_lookup_table
     use ModConst,      ONLY: cAtomicMass
 
@@ -1810,7 +1808,7 @@ contains
 
     logical :: IsMix
     integer :: iMaterial, jMaterial, iMaterial_I(1)
-    real    :: pSi, RhoSi, TeSi, LevelSum
+    real    :: pSi, RhoSi, TeSi, EinternalSi, LevelSum
     real    :: Value_V(nMaterial*nThermo), Opacity_V(2*nMaterial)
     real    :: GroupOpacity_W(2*nWave)
     real, dimension(0:nMaterial-1) :: &
@@ -1825,6 +1823,8 @@ contains
     !-------------------------------------------------------------------------
     ! Density, transformed to SI
     RhoSi = No2Si_V(UnitRho_)*State_V(Rho_)
+
+    if(present(EinternalIn)) EinternalSi = max(1e-30, EinternalIn)
 
     ! The electron temperature may be needed for the opacities
     ! Initialize to negative value to see if it gets set
@@ -1885,8 +1885,12 @@ contains
          .or. present(OpacityRosselandOut_W))then
 
        if(iTableOpacity > 0 .and. nWave == 1)then
+          if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error(&
+               'Gray opacity(Rho,Te)', RhoSi, TeSi)
+
           call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
                Opacity_V, DoExtrapolate = .false.)
+
           Opacity_V(1:2*nMaterial:2) = Opacity_V(1:2*nMaterial:2) &
                *PlanckScaleFactor_I
           Opacity_V(2:2*nMaterial:2) = Opacity_V(2:2*nMaterial:2) &
@@ -1908,8 +1912,13 @@ contains
              if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = 0
              if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W = 0
              do jMaterial = 0, nMaterial-1
+
+                if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error( &
+                     'Group opacity(Rho,Te,jMaterial)', RhoSi, TeSi, jMaterial)
+
                 call interpolate_lookup_table(iTableOpacity_I(jMaterial), &
                      RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
+
                 if(present(OpacityPlanckOut_W)) &
                      OpacityPlanckOut_W = OpacityPlanckOut_W &
                      + Weight_I(jMaterial)*GroupOpacity_W(1:nWave) * RhoSi
@@ -1918,8 +1927,13 @@ contains
                      + Weight_I(jMaterial)*GroupOpacity_W(nWave+1:)*RhoSi
              end do
           else
+
+             if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error( &
+                  'Group opacity(Rho,Te,iMaterial)', RhoSi, TeSi, iMaterial)
+
              call interpolate_lookup_table(iTableOpacity_I(iMaterial), &
                   RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
+
              if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
                   = GroupOpacity_W(1:nWave)*RhoSi
              if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
@@ -1976,10 +1990,13 @@ contains
          ! Obtain the pressure from EinternalIn
          if(iTablePPerE > 0)then
             ! Use lookup table
+            if(RhoSi <= 0 .or. EinternalSi <= 0) call lookup_error( &
+                 'pPerE(Rho,Einternal)', RhoSi, EinternalSi)
+
             call interpolate_lookup_table(iTablePPerE, RhoSi, &
-                 EinternalIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
+                 EinternalSi/RhoSi, pPerE_I, DoExtrapolate = .false.)
             ! Use a number density weighted average
-            pSi = EinternalIn*sum(Weight_I*pPerE_I)
+            pSi = EinternalSi*sum(Weight_I*pPerE_I)
          else
             ! Use EOS function
             if(IsMix)then
@@ -2012,6 +2029,10 @@ contains
          if(present(EinternalOut))then
             ! Obtain the internal energy from pressure
             if(iTableEPerP > 0)then
+
+               if(RhoSi <= 0 .or. pSi <= 0) call lookup_error( &
+                    'ePerP(Rho,p)', RhoSi, pSi)
+
                call interpolate_lookup_table(iTableEPerP, RhoSi, &
                     pSi/RhoSi, EPerP_I, DoExtrapolate = .false.)
                ! Use a number density weighted average
@@ -2041,6 +2062,10 @@ contains
            present(PlanckOut_W) .or. present(CgTeOut_W))then
 
          if(iTableThermo > 0)then
+
+            if(RhoSi <= 0 .or. pSi <= 0) call lookup_error( &
+                 'thermo(Rho,p)', RhoSi, pSi)
+
             call interpolate_lookup_table(iTableThermo, RhoSi, pSi/RhoSi, &
                  Value_V, DoExtrapolate = .false.)
 
@@ -2102,10 +2127,15 @@ contains
          ! Obtain electron pressure from the true electron internal energy
          if(iTablePPerE > 0)then
             ! Use lookup table
+
+            if(RhoSi <= 0 .or. EinternalSi <= 0) call lookup_error( &
+                 'pPerE_e(Rho,Eint)', RhoSi, EinternalSi)
+
             call interpolate_lookup_table(iTablePPerE, RhoSi, &
-                 EinternalIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
+                 EinternalSi/RhoSi, pPerE_I, DoExtrapolate = .false.)
+
             ! Use a number density weighted average
-            pSi = EinternalIn*sum(Weight_I*pPerE_I)
+            pSi = EinternalSi*sum(Weight_I*pPerE_I)
          else
             ! Use inline electron EOS
             if(IsMix)then
@@ -2138,8 +2168,13 @@ contains
          pSi = State_V(Pe_)*No2Si_V(UnitP_)
          if(present(EinternalOut))then
             if(iTableEPerP > 0)then
+
+               if(RhoSi <= 0 .or. pSi <= 0) call lookup_error( &
+                    'EperP_e(Rho,p)', RhoSi, pSi)
+
                call interpolate_lookup_table(iTableEPerP, RhoSi, &
                     pSi/RhoSi, EPerP_I, DoExtrapolate = .false.)
+
                ! Use a number density weighted average
                EinternalOut = pSi*sum(Weight_I*EPerP_I)
             else
@@ -2167,6 +2202,9 @@ contains
            present(PlanckOut_W) .or. present(CgTeOut_W))then
 
          if(iTableThermo > 0)then
+            if(RhoSi <= 0 .or. pSi <= 0) call lookup_error( &
+                 'thermo_e(Rho,p)', RhoSi, pSi)
+
             call interpolate_lookup_table(iTableThermo, RhoSi, pSi/RhoSi, &
                  Value_V, DoExtrapolate = .false.)
 
@@ -2203,6 +2241,32 @@ contains
       end if
 
     end subroutine get_electron_thermo
+
+    !========================================================================
+
+    subroutine lookup_error(String, Arg1, Arg2, iArg)
+
+      use ModProcMH, ONLY: iProc
+      use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+      use ModVarIndexes, ONLY: ExtraEint_
+
+      character(len=*),  intent(in) :: String
+      real,              intent(in) :: Arg1, Arg2
+      integer, optional, intent(in) :: iArg
+
+      !---------------------------------------------------------------------
+      write(*,*) 'ERROR for lookup arguments of '//String//': ', Arg1, Arg2
+      if(present(iArg)) write(*,*) 'iArg =', iArg
+      
+      write(*,*)'ERROR at i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
+      write(*,*)'ERROR at x,y,z=', &
+           x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
+      write(*,*)'ERROR pressure, ExtraEint=', State_V(p_)*No2Si_V(UnitP_), &
+           State_V(ExtraEint_)*No2Si_V(UnitP_)
+      write(*,*)'ERROR State_V=', State_V
+      call stop_mpi('lookup_error')
+
+    end subroutine lookup_error
 
   end subroutine user_material_properties
 

@@ -271,6 +271,7 @@ subroutine set_physics_constants
   end do
 
   PeMin = PeMinSi*Si2No_V(UnitP_)
+  ExtraEintMin = ExtraEintMinSi*Si2No_V(UnitEnergyDens_)
 
   !\
   ! Now do the magnetic field stuff
