@@ -156,7 +156,18 @@ Module ModConst
   real,parameter :: mSun              = 1.99E+30               ! [kg]
   real,parameter :: RotationPeriodSun = 25.38 * cSecondPerDay  ! [ s]
 
+  !\
+  ! The Mendeleev table
+  !/
+  character(LEN=2),parameter:: NameElement_I(54)=(/&
+     'H_' ,                                                                               'He',& ! 1:2
+     'Li','Be',                                                  'B_','C_','N_','O_','F_','Ne',& ! 3:10
+     'Na','Mg',                                                  'Al','Si','P_','S_','Cl','Ar',& !11:18
+     'K_','Ca','Sc','Ti','V_','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',& !19:36
+     'Rb','Sr','Y_','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I_','Xe'/) !37:54
 
+          
+  
 
 end module ModConst
 !====================================================================
