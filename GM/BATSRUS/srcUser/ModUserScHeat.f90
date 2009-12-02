@@ -12,7 +12,9 @@ module ModUser
        IMPLEMENTED7 => user_update_states,              &
        IMPLEMENTED8 => user_specify_refinement,         &
        IMPLEMENTED9 => user_set_plot_var,               &
-       IMPLEMENTED10=> user_set_outerbcs
+       IMPLEMENTED10=> user_set_outerbcs,               &
+       IMPLEMENTED11=> user_face_bcs,                   &
+       IMPLEMENTED12=> user_set_boundary_cells
 
   include 'user_module.h' !list of public methods
 
@@ -20,10 +22,6 @@ module ModUser
   character (len=*), parameter :: &
        NameUserModule = 'Global Corona'
 
-  logical :: UseExponentialHeating = .false.
-  real :: DecayLength = 0.7   ! in units of rSun
-  real :: HeatFluxCgs = 1.0e5 ! erg cm^-2 s^-1
-  real :: HeatingAmplitude
   logical ::  UseWaveDissipation = .false.
   real :: DissipationScaleFactor  ! unit = m*T^0.5
 
@@ -38,7 +36,6 @@ contains
 
   subroutine user_read_inputs
 
-    use ModCoronalHeating, ONLY: UseUnsignedFluxModel
     use ModMain,           ONLY: UseUserInitSession, lVerbose, UseUserB0, &
          DoUpdateB0, Dt_UpdateB0
     use ModProcMH,         ONLY: iProc
@@ -78,19 +75,7 @@ contains
        case("#CORONALHEATING")
           call read_var('TypeCoronalHeating', TypeCoronalHeating)
           select case(TypeCoronalHeating)
-          case('exponential')
-             UseUnsignedFluxModel = .false.
-             UseExponentialHeating = .true.
-             UseWaveDissipation = .false.
-             call read_var('DecayLength', DecayLength)
-             call read_var('HeatFluxCgs', HeatFluxCgs)
-          case('unsignedflux')
-             UseUnsignedFluxModel = .true.
-             UseExponentialHeating = .false.
-             UseWaveDissipation = .false.
           case('wavedissipation')
-             UseUnsignedFluxModel = .false.
-             UseExponentialHeating = .false.
              UseWaveDissipation = .true.
              call read_var('DissipationScaleFactor', DissipationScaleFactor)
           case default
@@ -160,12 +145,6 @@ contains
        call set_empirical_model(trim(NameModel),BodyTDim_I(1))
     end if
 
-    if(TypeCoronalHeating == 'exponential')then
-       ! transform heatflux at 1Rs to Heating amplitude
-       HeatingAmplitude =  HeatFluxCgs*1.0e-3*Si2No_V(UnitPoynting_) &
-            /DecayLength/(1 + 2.0*DecayLength*(1.0 + DecayLength))
-    end if
-
     UseAlfvenSpeed = .true.
     UseWavePressure = .true.
 
@@ -220,12 +199,10 @@ contains
     Uratio = Ufinal/Umin
 
     ! This is the temperature variation
-    Tbase = T0/min(Uratio, 2.0)*Si2No_V(UnitTemperature_)
-!    Tbase = T0*Si2No_V(UnitTemperature_)
+    Tbase = T0/min(Uratio, 1.5)*Si2No_V(UnitTemperature_)
 
     ! This is the density variation
     RhoBase = BodyRho_I(1)/URatio
-!    RhoBase = BodyRho_I(1)
 
   end subroutine get_plasma_parameters_base
 
@@ -273,11 +250,10 @@ contains
     call get_interpolated(ExpansionFactorInv_N, x, y, z, ExpansionFactorInv)
 
     HeatFluxSi = 0.0
-    if(UseExponentialHeating) HeatFluxSi = HeatFluxCgs*1.0e-3
 
     WaveEnergyDensSi = (RhoV*(0.5*Uf**2 + cSunGravitySi - g*inv_gm1*&
          cBoltzmann/(cProtonMass*MassIon_I(1))*(1.0+AverageIonCharge) &
-         *T0/min(Uf/UMin, 2.0) ) & !This is a modulated Tc
+         *T0/min(Uf/UMin, 1.5) ) & !This is a modulated Tc
          - ExpansionFactorInv*HeatFluxSi) &
          /max(abs(VAlfvenSi)*ExpansionFactorInv, VAlfvenMin)
 
@@ -422,7 +398,6 @@ contains
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
          time_BLK, B0_DGB
-    use ModCoronalHeating, ONLY: UseUnsignedFluxModel, get_coronal_heating
     use ModGeometry,       ONLY: x_BLK, y_BLK, z_BLK, r_BLK
     use ModMain,           ONLY: nI, nJ, nK, GlobalBlk, Cfl
     use ModPhysics,        ONLY: gm1, inv_gm1, rBody, Si2No_V, No2Si_V, &
@@ -443,15 +418,11 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(r_BLK(i,j,k,iBlock) < rBody) CYCLE
 
-       if(UseUnsignedFluxModel)then
-          call get_coronal_heating(i, j, k, iBlock, CoronalHeating)
-       elseif(UseExponentialHeating)then
-          CoronalHeating = HeatingAmplitude &
-               *exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
-       elseif(UseWaveDissipation)then
+       if(UseWaveDissipation)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
           FullBSi = sqrt(sum(FullB_D**2))*No2Si_V(UnitB_)
-          DissipationLength = DissipationScaleFactor/sqrt(FullBSi)*Si2No_V(UnitX_)
+          DissipationLength = DissipationScaleFactor &
+               /sqrt(FullBSi)*Si2No_V(UnitX_)
           CoronalHeating = 0.0
           do iWave = WaveFirst_, WaveLast_
              WaveHeating = State_VGB(iWave,i,j,k,iBlock)**1.5 &
@@ -863,5 +834,99 @@ contains
     end do; end do
 
   end subroutine user_set_outerbcs
+
+  !============================================================================
+
+  subroutine user_face_bcs(VarsGhostFace_V)
+
+    use ModAdvance,     ONLY: State_VGB, UseElectronPressure
+    use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
+    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame
+    use ModMultiFluid,  ONLY: MassIon_I
+    use ModPhysics,     ONLY: OmegaBody, BodyRho_I, BodyTDim_I, No2Si_V, &
+         UnitTemperature_, Si2No_V, AverageIonCharge, UnitU_, UnitEnergyDens_
+    use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, &
+         WaveFirst_, WaveLast_, Pe_
+
+    real, intent(out) :: VarsGhostFace_V(nVar)
+
+    real :: RhoBase, NumDensIon, NumDensElectron, Tbase, FullBr
+    real :: Runit_D(3), U_D(3)
+    real :: B1_D(3), B1t_D(3), B1r_D(3), FullB_D(3)
+    real :: UalfvenSi, EwaveSi, Ewave
+    !--------------------------------------------------------------------------
+
+    Runit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
+
+    U_D   = VarsTrueFace_V(Ux_:Uz_)
+    B1_D  = VarsTrueFace_V(Bx_:Bz_)
+    B1r_D = dot_product(Runit_D, B1_D)*Runit_D
+    B1t_D = B1_D - B1r_D
+
+    VarsGhostFace_V(Ux_:Uz_) = -U_D
+    VarsGhostFace_V(Bx_:Bz_) = B1t_D !- B1r_D
+
+    FullB_D = B0Face_D + B1t_D
+    FullBr = dot_product(Runit_D, FullB_D)
+
+    call get_plasma_parameters_base(FaceCoords_D, RhoBase, Tbase)
+
+    VarsGhostFace_V(Rho_) =  2.0*RhoBase - VarsTrueFace_V(Rho_)
+    NumDensIon = VarsGhostFace_V(Rho_)/MassIon_I(1)
+    NumDensElectron = NumDensIon*AverageIonCharge
+    if(UseElectronPressure)then
+       VarsGhostFace_V(p_) = NumDensIon*Tbase
+       VarsGhostFace_V(Pe_) = NumDensElectron*Tbase
+    else
+       VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Tbase
+    end if
+
+    ! Set Alfven waves energy density based on Bernoulli function
+    UalfvenSi = (FullBr/sqrt(RhoBase))*No2Si_V(UnitU_)
+    call get_total_wave_energy( &
+         FaceCoords_D(x_), &
+         FaceCoords_D(y_), &
+         FaceCoords_D(z_), &
+         UalfvenSi, EwaveSi)
+    Ewave = EwaveSi*Si2No_V(UnitEnergyDens_)
+
+    if(UalfvenSi > 0.0)then
+       VarsGhostFace_V(WaveFirst_) = Ewave
+       VarsGhostFace_V(WaveLast_) = VarsTrueFace_V(WaveLast_)
+    else
+       VarsGhostFace_V(WaveFirst_) = VarsTrueFace_V(WaveFirst_)
+       VarsGhostFace_V(WaveLast_) = Ewave
+    end if
+
+    !\
+    ! Apply corotation if needed
+    !/
+    if(.not.UseRotatingFrame)then
+       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) &
+            - 2.0*OmegaBody*FaceCoords_D(y_)
+       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
+            + 2.0*OmegaBody*FaceCoords_D(x_)
+    end if
+
+  end subroutine user_face_bcs
+
+  !============================================================================
+
+  subroutine user_set_boundary_cells(iBLK)
+
+    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, r_Blk
+    use ModBoundaryCells, ONLY: SaveBoundaryCells
+    use ModPhysics,       ONLY: rBody
+
+    integer, intent(in) :: iBLK
+
+    character (len=*), parameter :: Name='user_set_boundary_cells'
+    !--------------------------------------------------------------------------
+    IsBoundaryCell_GI(:,:,:,ExtraBc_) = r_Blk(:,:,:,iBLK) < rBody
+
+    if(SaveBoundaryCells) RETURN
+    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
+
+  end subroutine user_set_boundary_cells
 
 end module ModUser
