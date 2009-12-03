@@ -200,12 +200,22 @@ subroutine set_physics_constants
           LowDensityRatio*BodyRho_I(1)
   endif
 
+  if(UseElectronPressure)then
+     FaceState_VI(Pe_,Body1_) = sum(BodyP_I(IonFirst_:IonLast_))
+     FaceState_VI(Pe_,Body2_) = pBody2             !^CFG IF SECONDBODY
+  end if
+
+  if(UseAnisoPressure)then
+     FaceState_VI(Ppar_,Body1_) = BodyP_I(1)
+     FaceState_VI(Ppar_,Body2_) = pBody2           !^CFG IF SECONDBODY
+  end if
+
   !The following part of the code is sensitive to a particular physical
   !model. It should be modified in adding/deleting the physical effects 
   !or features
 
-  FaceState_VI(rho_,body2_)=RhoBody2                !^CFG IF SECONDBODY
-  FaceState_VI(P_,body2_)=pBody2                    !^CFG IF SECONDBODY
+  FaceState_VI(rho_,body2_) = RhoBody2             !^CFG IF SECONDBODY
+  FaceState_VI(P_,body2_)   = pBody2               !^CFG IF SECONDBODY
 
   !For Outer Boundaries (if SW_* are set)
   if(SW_rho > 0.0)then
