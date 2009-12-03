@@ -2310,6 +2310,12 @@ contains
     else
        iMin = -1; iMax = nI+2; jMin = -1; jMax = nJ+2; kMin = -1; kMax = nK+2
     end if
+    if(nJ == 1)then
+       jMin = 1; jMax = 1
+    endif
+    if(nK == 1)then
+       kMin = 1; kMax = 1
+    end if
 
     ! If there is a Xe interface anywhere in the block, refine
     do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
