@@ -595,23 +595,25 @@ contains
           call face_right_fine2coarse(1,nI+1,nI+1,1,nJ,1,nK)
        end if
 
-       call face_equal(2,1,nI,2,nJ,1,nK)
-       if(NeiLev(3,iBlock)==0.or.NeiLev(3,iBlock)==NOBLK)then
-          call face_equal(2,1,nI,1,1,1,nK)
-       else if(NeiLev(3,iBlock)==-1)then
-          call face_left_coarse2fine(2,1,nI,1,1,1,nK)
-       else if(NeiLev(3,iBlock)==1)then
-          call face_left_fine2coarse(2,1,nI,1,1,1,nK)
-       end if
-       if(NeiLev(4,iBlock)==0.or.NeiLev(4,iBlock)==NOBLK)then
-          call face_equal(2,1,nI,nJ+1,nJ+1,1,nK)
-       else if(NeiLev(4,iBlock)==-1)then
-          call face_right_coarse2fine(2,1,nI,nJ+1,nJ+1,1,nK)
-       else if(NeiLev(4,iBlock)==1)then
-          call face_right_fine2coarse(2,1,nI,nJ+1,nJ+1,1,nK)
+       if(nJ > 1)then
+          call face_equal(2,1,nI,2,nJ,1,nK)
+          if(NeiLev(3,iBlock)==0.or.NeiLev(3,iBlock)==NOBLK)then
+             call face_equal(2,1,nI,1,1,1,nK)
+          else if(NeiLev(3,iBlock)==-1)then
+             call face_left_coarse2fine(2,1,nI,1,1,1,nK)
+          else if(NeiLev(3,iBlock)==1)then
+             call face_left_fine2coarse(2,1,nI,1,1,1,nK)
+          end if
+          if(NeiLev(4,iBlock)==0.or.NeiLev(4,iBlock)==NOBLK)then
+             call face_equal(2,1,nI,nJ+1,nJ+1,1,nK)
+          else if(NeiLev(4,iBlock)==-1)then
+             call face_right_coarse2fine(2,1,nI,nJ+1,nJ+1,1,nK)
+          else if(NeiLev(4,iBlock)==1)then
+             call face_right_fine2coarse(2,1,nI,nJ+1,nJ+1,1,nK)
+          end if
        end if
 
-       if(nDimInUse==3)then
+       if(nDimInUse==3 .and. nK > 1)then
           call face_equal(3,1,nI,1,nJ,2,nK)
           if(NeiLev(5,iBlock)==0.or.NeiLev(5,iBlock)==NOBLK)then
              call face_equal(3,1,nI,1,nJ,1,1)
