@@ -276,7 +276,7 @@ contains
 
   end subroutine tvd_reschange
   !===========================================================================
-  subroutine accurate_reschange(&
+  subroutine accurate_reschange3d(&
        Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
        Coarse1_VII       ,& ! State in the coarser ghostcells, 1st layer
        Fine1_VII         ,& ! States in 4 fine physical cells, 1st layer
@@ -415,7 +415,7 @@ contains
 
     end do; end do
 
-  end subroutine accurate_reschange
+  end subroutine accurate_reschange3d
   !===========================================================================
   subroutine accurate_reschange2d(&
        Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
@@ -551,6 +551,71 @@ contains
     end do
 
   end subroutine accurate_reschange2d
+  !===========================================================================
+  subroutine accurate_reschange1d(&
+       Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
+       Coarse1_V         ,& ! State in the coarser ghostcells, 1st layer
+       Fine1_V           ,& ! States in 2 fine physical cells, 1st layer
+       Fine2_V           ,& ! States in 2 fine physical cells, 2nd layer
+       CoarseToFineF_V   ,& ! Values at face, in the coarse ghostcell
+       FineToCoarseF_V   ,& ! Facevalues in the physical cell,
+                                !   looking at the coarser cell 
+       FineF_V)             ! Facevalues in the physical cell,
+    !                         looking at another physical cell
+
+
+    !_____________!_____________!_______!_______!_
+    !             !         CToF!FToC FF!       !
+    ! C2_V        ! C1_V        ! F1_V  !  F2_V !
+    !_____________!_____________!_______!_______!_
+
+    real, intent(in) :: Coarse2_V(nVar)
+    real, intent(in) :: Coarse1_V(nVar)
+    real, intent(in) :: Fine1_V(nVar)
+    real, intent(in) :: Fine2_V(nVar)
+
+    real, intent(inout), dimension(nVar)::&
+         CoarseToFineF_V ,FineToCoarseF_V , FineF_V
+
+    real, dimension(nVar):: Slope1_V, Slope2_V
+    real, dimension(nVar):: GradNormal_V, SignGradNormal_V, GradNormalLtd_V
+
+    real :: Beta
+    !-------------------------------------------------------------------------
+
+    !Calculate averaged Fine1_VI
+    GradNormal_V = Fine1_V - Coarse1_V
+
+    !Save sign of the gradient
+    SignGradNormal_V=sign(1.0,GradNormal_V)
+
+    !Limit gradient in the first coarser cell
+    Slope1_V = cTwoThird*abs(GradNormal_V)
+    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_V - Coarse2_V)
+
+    Beta = min(BetaLimiterResChange, BetaLimiter)
+
+    GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
+         Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
+
+    ! Add limited normal gradient to obtain the middle value for the fine face
+    CoarseToFineF_V = Coarse1_V + GradNormalLtd_V
+
+    ! The face is half the distance in the fine cell
+    Slope1_V = 0.5*Slope1_V
+    !Limit gradient in the first layer of finer cells
+    Slope2_V = 0.5*SignGradNormal_V*(Fine2_V - Fine1_V)
+
+    ! The first limiting ensures that the FineToCoarse face value
+    ! remains between the Fine1 and Coarse values
+    GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
+         SignGradNormal_V*(Fine1_V - Coarse1_V), &
+         Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V + Slope2_V)))
+
+    FineToCoarseF_V = Fine1_V - GradNormalLtd_V
+    FineF_V         = Fine1_V + GradNormalLtd_V
+
+  end subroutine accurate_reschange1d
   !===========================================================================
   subroutine calc_face_value(DoResChangeOnly, iBlock)
 
@@ -745,14 +810,18 @@ contains
             .and..not.UseConstrainB & !^CFG IF CONSTRAINB
             )then
 
-          if (UseAccurateResChange)then
+          if(nJ == 1 .and. (UseAccurateResChange .or. UseTvdResChange))then
+             do iSide = 1, 2
+                if(neiLev(iSide,iBlock) == 1)call get_face_accurate1d(iSide)
+             end do
+          elseif (UseAccurateResChange)then
              if(nK == 1)then
                 do iSide = 1, 4
                    if(neilev(iSide,iBlock) == 1)call get_face_accurate2d(iSide)
                 end do
              else
                 do iSide = 1, 6
-                   if(neilev(iSide,iBlock) == 1)call get_face_accurate(iSide)
+                   if(neilev(iSide,iBlock) == 1)call get_face_accurate3d(iSide)
                 end do
              end if
           else if(UseTvdResChange)then
@@ -1205,7 +1274,7 @@ contains
     end subroutine BorisFaceZtoMHD
     !^CFG END BORISCORR
     !==========================================================================
-    subroutine get_face_accurate(iSideIn)
+    subroutine get_face_accurate3d(iSideIn)
       integer, intent(in):: iSideIn
 
       select case(iSideIn)
@@ -1213,7 +1282,7 @@ contains
          do k=1,nK,2; do j=1,nJ,2
             if(  all(true_cell(-1:2,j:j+1,k:k+1,iBlock)) .and. &
                  all(true_cell(0,j-2:j+3,k-2:k+3,iBlock)) ) then
-               call accurate_reschange(&
+               call accurate_reschange3d(&
                     Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
                     Coarse1_VII  =    Primitive_VG(:, 0,j-2:j+3,k-2:k+3),&
                     Fine1_VII    =    Primitive_VG(:, 1,j:j+1,k:k+1)   ,&
@@ -1240,7 +1309,7 @@ contains
          do k=1,nK,2; do j=1,nJ,2
             if(  all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)).and. &
                  all(true_cell(nI+1,j-2:j+3,k-2:k+3,iBlock)) ) then
-               call accurate_reschange(&
+               call accurate_reschange3d(&
                     Coarse2_V    =    Primitive_VG(:, nI+2,j,k)         ,&
                     Coarse1_VII  =    Primitive_VG(:, nI+1,j-2:j+3,k-2:k+3) ,&
                     Fine1_VII    =    Primitive_VG(:, nI,j:j+1,k:k+1)  ,&
@@ -1267,7 +1336,7 @@ contains
          do k=1,nK,2; do i=1,nI,2
             if(  all(true_cell(i:i+1,-1:2,k:k+1,iBlock)) .and. &
                  all(true_cell(i-2:i+3,0,k-2:k+3,iBlock)) ) then
-               call accurate_reschange(&
+               call accurate_reschange3d(&
                     Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
                     Coarse1_VII  =    Primitive_VG(:,i-2:i+3,0,k-2:k+3),&
                     Fine1_VII    =    Primitive_VG(:,i:i+1, 1,k:k+1)   ,&
@@ -1294,7 +1363,7 @@ contains
          do k=1,nK,2; do i=1,nI,2
             if(  all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)) .and. &
                  all(true_cell(i-2:i+3,nJ+1,k-2:k+3,iBlock)) ) then
-               call accurate_reschange(&
+               call accurate_reschange3d(&
                     Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
                     Coarse1_VII  =    Primitive_VG(:,i-2:i+3,nJ+1,k-2:k+3),&
                     Fine1_VII    =    Primitive_VG(:,i:i+1, nJ,k:k+1)  ,&
@@ -1321,7 +1390,7 @@ contains
          do j=1,nJ,2; do i=1,nI,2
             if(  all(true_cell(i:i+1,j:j+1,-1:2,iBlock)) .and. &
                  all(true_cell(i-2:i+3,j-2:j+3,0,iBlock)) ) then
-               call accurate_reschange(&
+               call accurate_reschange3d(&
                     Coarse2_V    =    Primitive_VG(:,i,j,-1)           ,&
                     Coarse1_VII  =    Primitive_VG(:,i-2:i+3,j-2:j+3,0),&
                     Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, 1)   ,&
@@ -1348,7 +1417,7 @@ contains
          do j=1,nJ,2; do i=1,nI,2
             if(  all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)) .and. &
                  all(true_cell(i-2:i+3,j-2:j+3,nK+1,iBlock)) ) then
-               call accurate_reschange(&
+               call accurate_reschange3d(&
                     Coarse2_V    =    Primitive_VG(:,i,j,nK+2)         ,&
                     Coarse1_VII  =    Primitive_VG(:,i-2:i+3,j-2:j+3,nK+1),&
                     Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK)  ,&
@@ -1372,7 +1441,33 @@ contains
             end if
          end do; end do
       end select
-    end subroutine get_face_accurate
+    end subroutine get_face_accurate3d
+    !=======================================================================
+    subroutine get_face_accurate1d(iSideIn)
+      integer, intent(in):: iSideIn
+
+      select case(iSideIn)
+      case(1)
+         call accurate_reschange1d(&
+              Coarse2_V       = Primitive_VG(:,-1,1,1)     ,&
+              Coarse1_V       = Primitive_VG(:, 0,1,1)     ,&
+              Fine1_V         = Primitive_VG(:, 1,1,1)     ,&
+              Fine2_V         = Primitive_VG(:, 2,1,1)     ,&
+              CoarseToFineF_V = LeftState_VX(:, 1,1,1)     ,&
+              FineToCoarseF_V =RightState_VX(:, 1,1,1)     ,&
+              FineF_V         = LeftState_VX(:, 2,1,1))
+      case(2)
+         call accurate_reschange1d(&
+              Coarse2_V       = Primitive_VG(:,nI+2,1,1)   ,&
+              Coarse1_V       = Primitive_VG(:,nI+1,1,1)   ,&
+              Fine1_V         = Primitive_VG(:,nI  ,1,1)   ,&
+              Fine2_V         = Primitive_VG(:,nI-1,1,1)   ,&
+              CoarseToFineF_V =RightState_VX(:,nI+1,1,1)   ,&
+              FineToCoarseF_V = LeftState_VX(:,nI+1,1,1)   ,&
+              FineF_V         =RightState_VX(:,nI  ,1,1))
+      end select
+
+    end subroutine get_face_accurate1d
     !=======================================================================
     subroutine get_face_accurate2d(iSideIn)
       integer, intent(in):: iSideIn
