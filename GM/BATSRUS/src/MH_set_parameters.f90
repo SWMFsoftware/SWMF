@@ -524,7 +524,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#ELECTRONPRESSURE")
         call read_var('PeMinSi', PeMinSi)
 
-     case("EXTRAINTERNALENERGY")
+     case("#EXTRAINTERNALENERGY")
         call read_var('ExtraEintMinSi', ExtraEintMinSi)
 
      case("#RADIATION")                             !^CFG IF IMPLICIT BEGIN 
