@@ -85,7 +85,11 @@ contains
     widdop = 1.41e11 * ennp * vel                                     
     widcol = 4.58e6 * densnn**0.3333 * vel                           
                                                                         
-    gamma = widnat + widdop + widcol                                  
+    gamma = widnat + widdop + widcol  
+    if(widdop<1.e-30)then
+       write(*,*)ennp,densnn,tp,vel
+       call CON_stop('Zero Doppler width of the line')
+    end if
     avoigt = ( widnat + widcol ) / widdop                             
     dnudop = widdop / 12.566  
   end subroutine line_width
