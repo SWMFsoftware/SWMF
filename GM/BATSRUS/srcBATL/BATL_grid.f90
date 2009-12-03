@@ -120,8 +120,10 @@ contains
 
        if(TypeGeometry == 'rz')then
           do j = MinJ, MaxJ
+             ! NOTE: beyond the axis (y<0) the ghost cell volume is NEGATIVE!
+             ! This allows the conservative prolongation work in BATL_amr.
              CellVolume_GB(:,j,:,iBlock) = &
-                  CellVolume_B(iBlock)*abs(Xyz_DGB(2,1,j,1,iBlock))
+                  CellVolume_B(iBlock)*Xyz_DGB(2,1,j,1,iBlock)
           end do
           do j = 1, nJ
              CellFace_DFB(1,:,j,1:nK,iBlock) = &
