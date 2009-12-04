@@ -11,7 +11,7 @@ contains
     use ModHeidiInput, ONLY: TypeBfieldGrid
     use ModNumConst,   ONLY: cTiny, cPi
     use ModConst,      ONLY: cMu
-
+    use ModHeidiIO,    ONLY: time
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -34,7 +34,7 @@ contains
     real                   :: bField_VIII(3,nPoint,nR,nPhi)
     real                   :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
     real                   :: GradB_VIII(3,nPoint,nR,nPhi)
-    double precision       :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi,GradR, GradTheta, GradPhi
+    double precision       :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi,GradR, GradTheta, GradPhi,dBdt
     real                   :: DipoleFactor,delta, dSdTheta
     real                   :: a,b,c,gamma,cos2Lat,cosLat,L
     integer                :: iR, iPhi,iPoint     
@@ -47,14 +47,16 @@ contains
 
     !Parameters
     real, parameter        :: DipoleStrength =  0.32   ! nTm^-3
-    real, parameter        :: alpha =1!1.1              ! alpha is the stretching factor in z direction
-    real, parameter        :: beta = 1!1.0/1.1           ! beta is the stretching factor in y direction
-    real, parameter        :: Me = 8.02e15
+    real, parameter        :: alpha0 =1!1.1              ! alpha is the stretching factor in z direction
+!    real, parameter        :: beta = 1!1.0/1.1           ! beta is the stretching factor in y direction
+    real, parameter        :: Me = 7.19e15
 
+    real :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w,t,c1
+    real :: alpha,beta
     !----------------------------------------------------------------------------------
 
-    DipoleFactor= Me*10.e-10
-
+!    DipoleFactor= cMu*Me/(4.*cPi)
+    DipoleFactor= Me
 
     !\
     ! Dipole magnetic field with uniform number of points along the field line
@@ -123,6 +125,12 @@ contains
     !/
 
     if (TypeBFieldGrid == 'stretched') then  
+       t = time
+       write(*,*) t,time
+       w = 2*cPi/40.
+       alpha = alpha0 + alpha0*sin(w*t)
+       beta = 1./alpha
+
        alpha2 = alpha * alpha
        alpha4 = alpha2 * alpha2
        beta2 = beta* beta
@@ -156,6 +164,10 @@ contains
 
              do iPoint = 1, nPoint
                 x = sin(Lat)
+
+
+                
+
 
                 !\
                 ! Radial distance for the stretched dipole is calclulated as a function of the 
@@ -382,16 +394,57 @@ contains
                      alpha ** 2) ** 5) ** (-0.1D1 / 0.2D1)) * sqrt(dble(1 - x ** 2))
 
 
+                ! dB/dt for the stretched dipole
+
+                p = alpha
+
+                dBdtTemp = alpha0 * cos(w * t) * w * p ** 3 * (0.9D1 * x ** 4 * y ** 6 * p **2 - 0.9D1 * x ** 2 * y ** 6 * p ** 2 &
+                     - 0.3D1 * x ** 6 * y ** 6 * p ** 2 + 0.6D1 * x ** 6 * y ** 4 * p ** 2 - 0.96D2 * x ** 4 * y **2 * &
+                     p ** 4 + 0.9D1 * x ** 4 * p ** 2 * y ** 2 + 0.60D2 * x ** 4 *p ** 6 * y ** 2 + 0.3D1 * y ** 2 * p ** 2 &
+                     - 0.24D2 * x ** 6 * p ** 4 * y ** 4 - 0.3D1 * x ** 6 * p ** 2 * y ** 2 + 0.48D2 * x ** 6 * y ** 2 * &
+                     p ** 4 + 0.60D2 * x ** 4 * p ** 8 * y ** 2 - 0.54D2 * x** 2 * p ** 8 * y ** 2 + 0.9D1 * x ** 2 * &
+                     p ** 10 * y ** 2 - 0.6D1 * x ** 6 * p ** 8 * y ** 2 + 0.18D2 * x ** 2 * y ** 4 * p ** 2 -0.18D2 * &
+                     x ** 4 * y ** 4 * p ** 2 + 0.3D1 * y ** 6 * p ** 6 * x ** 2 + 0.54D2 * x ** 2 * p ** 8 - 0.60D2 * &
+                     x ** 4 * p ** 8 - 0.24D2* x ** 2 * p ** 4 + 0.48D2 * x ** 4 * p ** 4 - 0.2D1 * y ** 6 - 0.2D1 * x ** 6 &
+                     - 0.6D1 * x ** 2 - 0.60D2 * x ** 4 * p ** 6 * y ** 4+ 0.12D2 * x ** 4 * p ** 8 * y ** 4 + 0.6D1 * &
+                     x ** 4 * p ** 10 * y ** 2 + 0.30D2 * x ** 2 * p ** 6 * y ** 4 - 0.6D1 * x ** 2 * p **8 * y ** 4 + &
+                     0.30D2 * x ** 6 * p ** 6 * y ** 4 - 0.6D1 * x ** 6 *p ** 8 * y ** 4 - 0.30D2 * x ** 6 * p ** 6 * &
+                     y ** 2 - 0.15D2 * x ** 6 * p ** 10 * y ** 2 - 0.6D1 * x ** 4 * y ** 6 + 0.6D1 * x ** 2* y ** 6 - &
+                     0.6D1 * x ** 6 * y ** 4 + 0.6D1 * x ** 6 * y ** 2 + 0.2D1 * x ** 6 * y ** 6 - 0.36D2 * x ** 4 * &
+                     p ** 12 + 0.6D1 * x ** 6* p ** 8 + 0.20D2 * x ** 6 * p ** 12 + 0.3D1 * y ** 6 * p ** 2 - 0.6D1 * &
+                     y ** 2 - 0.3D1 * x ** 4 * y ** 6 * p ** 6 + x ** 6 * y ** 6 * p ** 6 - 0.24D2 * x ** 6 * p ** 4 - &
+                     0.1D1 * y ** 6 * p ** 6 + 0.48D2 * x ** 2 * y ** 2 * p ** 4 - 0.6D1 * y ** 4 * p ** 2 - 0.9D1 * &
+                     x ** 2 * p ** 2 * y ** 2 - 0.30D2 * x ** 2 * p ** 6 * y ** 2 -0.24D2 * x ** 2 * y ** 4 * p ** 4 + &
+                     0.48D2 * x ** 4 * y ** 4 * p ** 4 - 0.18D2 * x ** 2 * y ** 4 + 0.18D2 * x ** 4 * y ** 4 + 0.6D1* &
+                     y ** 4 + 0.6D1 * x ** 4 - 0.18D2 * x ** 4 * y ** 2 + 0.18D2 * x** 2 * y ** 2 + 0.2D1) * (-0.1D1 * &
+                     (-0.1D1 + 0.4D1 * x ** 4 * y ** 2 * p ** 4 - 0.2D1 * x ** 4 * p ** 2 * y ** 2 - 0.4D1 * x ** 4 *&
+                     p ** 6 * y ** 2 - 0.2D1 * y ** 2 * p ** 2 - 0.4D1 * x ** 2 * y **4 * p ** 2 + 0.2D1 * x ** 4 * y ** 4 &
+                     * p ** 2 - 0.9D1 * x ** 2 * p ** 8 + 0.5D1 * x ** 4 * p ** 8 - 0.1D1 * y ** 4 * p ** 4 + 0.4D1* &
+                     x ** 2 * p ** 4 - 0.4D1 * x ** 4 * p ** 4 + 0.2D1 * x ** 2 + 0.2D1 * y ** 2 - 0.4D1 * x ** 2 * y ** 2 &
+                     * p ** 4 + 0.2D1 * y ** 4 *p ** 2 + 0.4D1 * x ** 2 * p ** 2 * y ** 2 + 0.4D1 * x ** 2 * p **6 * y ** 2 &
+                     + 0.2D1 * x ** 2 * y ** 4 * p ** 4 - 0.1D1 * x ** 4 * y ** 4 * p ** 4 + 0.2D1 * x ** 2 * y ** 4 - &
+                     0.1D1 * x ** 4 * y ** 4 - 0.1D1 * y ** 4 - 0.1D1 * x ** 4 + 0.2D1 * x ** 4 * y ** 2 - 0.4D1 * x ** 2 &
+                     * y ** 2) * p ** 4 / r ** 6 / (x ** 2 * y ** 2 - 0.1D1 * x ** 2 * p ** 2 * y ** 2 - 0.1D1 * x ** 2 +&
+                     x ** 2 * p ** 4 - 0.1D1 * y ** 2 + y ** 2 * p ** 2 + 0.1D1) ** 5) ** (-0.1D1 / 0.2D1) / r ** 6 / &
+                     (x ** 2 * y ** 2 - 0.1D1 * x ** 2 * p ** 2 * y ** 2 -0.1D1 * x ** 2 + x ** 2 * p ** 4 - 0.1D1 * &
+                     y ** 2 + y ** 2 * p **2 + 0.1D1) ** 6
+
+ 
+                dBdt_III(iPoint,iR,iPhi) = dBdtTemp
+!                write(*,*) dBdtTemp
 
                 ! Gradient B
                 GradB_VIII(1,iPoint, iR, iPhi) = DipoleFactor*GradR
                 GradB_VIII(2,iPoint, iR, iPhi) = DipoleFactor*GradTheta
                 GradB_VIII(3,iPoint, iR, iPhi) = DipoleFactor*GradPhi               
 
+
                 ! drift Velocity components
                 GradBCrossB_VIII(1,iPoint,iR,iPhi) = Vr * (DipoleFactor)**3
-                GradBCrossB_VIII(2,iPoint,iR,iPhi) = Vtheta * (DipoleFactor)**3
-                GradBCrossB_VIII(3,iPoint,iR,iPhi) = Vphi * (DipoleFactor)**3
+                GradBCrossB_VIII(2,iPoint,iR,iPhi) = 1./(L_I(iR))*Vtheta * (DipoleFactor)**3
+                GradBCrossB_VIII(3,iPoint,iR,iPhi) = 1./(L_I(iR)* cos(Lat)) *Vphi * (DipoleFactor)**3
+!                GradBCrossB_VIII(3,iPoint,iR,iPhi) = Vphi * (DipoleFactor)**3
+
 
                 mag = DipoleFactor*(sqrt(Br**2+Btheta**2+Bphi**2))
 
