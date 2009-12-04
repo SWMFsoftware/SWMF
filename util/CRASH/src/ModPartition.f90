@@ -163,6 +163,7 @@ Contains
   !========================================================================!
   subroutine mod_init
     use CRASH_ModFermiGas,ONLY: UseFermiGas, init_Fermi_function
+    use CRASH_ModExcitationData,ONLY: init_excitation
     integer:: iZ  !Used for loops
     real   :: DeBroglieInv
     !-----------------
@@ -176,7 +177,7 @@ Contains
     eWeight1eV1m3 = 2*DeBroglieInv**3 ! 2/(Lambda^3)
    
     if(UseFermiGas) call init_Fermi_function
-
+    call init_excitation
     DoInit=.false.
 
   end subroutine mod_init

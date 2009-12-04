@@ -5,9 +5,10 @@ module CRASH_ModMultiGroup
   use CRASH_ModAtomicDataMix,ONLY : Concentration_I !(1:nMixMax)
   use CRASH_ModAtomicDataMix,ONLY : IonizPotential_II !(1:nZMax,1:nMixMax)
   use CRASH_ModAtomicMass,   ONLY : cAtomicMass_I !(1:nZMax)
-  use CRASH_ModPartition,   ONLY : Population_II !(0:nZMax,1:nMixMax)
+  use CRASH_ModPartition,    ONLY : Population_II !(0:nZMax,1:nMixMax)
   use CRASH_ModExcitationData, ONLY:n_ground !(iZ,nZ)
   use CRASH_ModExcitationData, ONLY:n_screened !(iZ,nZ)
+  use CRASH_ModExcitationData, ONLY:UseDeltaNEq0Transition,UseCoreElectron
   use CRASH_ModExcitation,   ONLY : Partition_III !(nExcitation,0:nZMax  ,nMixMax)
   use CRASH_ModExcitation,   ONLY : ExcitationEnergy_III !nExcitation,0:nZMax-1,nMixMax)
   use CRASH_ModExcitation,   ONLY : IonizationPotentialLowering_I! (0:nZMax
@@ -76,15 +77,8 @@ module CRASH_ModMultiGroup
   !\
   ! LOGICALS
   !/
-  !Determine if we account for the optical transitions with no change 
-  !in the principal quantum number
-
-  logical,parameter :: UseDeltaNEq0Transition = .false.
-
-  !Determine if we account for bound-free transition, in which the
-  !bound electron is photo-ionized from inner shells ("core electron")
-  logical,parameter :: UseCoreElectron = .false.
-
+ 
+  
   !Determine if we account for the corrections used in HYADES for
   !the oscillator strength
 
