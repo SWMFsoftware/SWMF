@@ -6,6 +6,7 @@
 
 
 module CRASH_ModIonization
+  use CRASH_ModAtomicMass,ONLY:nZMax
   implicit none
   PRIVATE !Except
  !/////////////////////////////////////////////////////////////////////////////
@@ -143,30 +144,53 @@ real, parameter, dimension(10,10) :: cPotential10_II = reshape(  (/   &
    6061.    , 6500.,  6644.   , 6787., 6931., 7615.  , 7772.  , 8111.,  8259.,  17090.  ,& ! 60-s; error:
    17500.   , 17910., 18320.  , 20570.,21040.,21870. , 22260. , 89680., 91290.          /) ! 70-s; error: 
   
- public :: get_ioniz_potential
-
+ public :: get_ioniz_potential,init_ioniz_potential,put_ioniz_potential
+ real:: cPotential_II(1:nZMax,1:nZMax) = 0.0
+ logical::DoInit = .true.
 contains
+  subroutine init_ioniz_potential
+    integer :: nZ									  
+    !============!
+    cPotential_II = 0.0
+
+    do nZ=1,10
+       cPotential_II(1:nZ,nZ) = cPotential10_II( 1:nZ, nZ)
+    end do
+    do nZ=11,20
+       cPotential_II(1:nZ,nZ) = cPotential20_II( 1:nZ, nZ)
+    end do
+    do nZ=21,30
+       cPotential_II(1:nZ,nZ) = cPotential30_II( 1:nZ, nZ)
+    end do
+    !!do nZ=1,30
+    !!   write(*,*)nZ
+    !!   write(*,*)cPotential_II(1:nZ,nZ)
+    !!end do
+    cPotential_II(1:54,54) = cPotentialXe_I
+     
+    cPotential_II(1:79,79) = cPotentialAu_I
+    DoInit = .false.
+  end subroutine init_ioniz_potential
+  !================================================
   subroutine get_ioniz_potential( nZ, cPotential_I)
-         integer,intent(in) :: nZ									  
-
-         real,intent(out), dimension(nZ) :: cPotential_I
-	   
-         select case (nZ)
-           case (1:10)
-             cPotential_I = cPotential10_II( 1:nZ, nZ)
-           case (11:20)
-             cPotential_I = cPotential20_II( 1:nZ, nZ)
-           case (21:30)
-             cPotential_I = cPotential30_II( 1:nZ, nZ)
-          case (54)
-             cPotential_I = cPotentialXe_I
-          case(79)
-             cPotential_I = cPotentialAu_I
-           case default
-             write(*,*) "No such element found in the database"
-         end select
-
-  end subroutine get_ioniz_potential  
+    integer,intent(in) :: nZ									  
+    
+    real,intent(out), dimension(nZ) :: cPotential_I
+    !===========   
+    if(DoInit)call init_ioniz_potential
+    cPotential_I = cPotential_II( 1:nZ, nZ)
+    if(cPotential_I(1)<1.0)then  
+       write(*,*) 'No such element with iZ=',nZ,' is found in the database'
+       call CON_stop('Code is aborted')
+    end if
+  end subroutine get_ioniz_potential
+  !=================================!
+  subroutine put_ioniz_potential(nZ,iZ,Potential)
+    integer,intent(in)::nZ,iZ
+    real::Potential
+    !--------------
+    cPotential_II(iZ,nZ) = Potential
+  end subroutine put_ioniz_potential
 end module CRASH_ModIonization
 
 

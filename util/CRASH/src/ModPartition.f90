@@ -155,7 +155,7 @@ module CRASH_ModPartition
   !Tolerance parameters: should be reset if the tolerance in
   !CRASH_ModStatSum is reset
   real, public :: ToleranceZ = 0.001!  !Accuracy of Z needed
-  real, public :: StatSumToleranceLog = 7.0     
+  real, public :: StatSumToleranceLog = 7.0
 Contains
   !========================================================================!
   !Several initialazations of constants, such as                           !
@@ -164,6 +164,7 @@ Contains
   subroutine mod_init
     use CRASH_ModFermiGas,ONLY: UseFermiGas, init_Fermi_function
     use CRASH_ModExcitationData,ONLY: init_excitation
+    use CRASH_ModIonization,ONLY: init_ioniz_potential
     integer:: iZ  !Used for loops
     real   :: DeBroglieInv
     !-----------------
@@ -177,6 +178,7 @@ Contains
     eWeight1eV1m3 = 2*DeBroglieInv**3 ! 2/(Lambda^3)
    
     if(UseFermiGas) call init_Fermi_function
+    call init_ioniz_potential
     call init_excitation
     DoInit=.false.
 

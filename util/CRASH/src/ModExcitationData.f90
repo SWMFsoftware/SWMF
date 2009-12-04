@@ -540,20 +540,20 @@ contains
               cExcitationEnergy_IIII(0:4,4:8,1,nZ) = cExcitationXe1_II(0:4,4:8)
          where (cExcitationXe2_II(0:3,4:7) /= 0.0)&
               cExcitationEnergy_IIII(0:3,4:7,2,nZ) = cExcitationXe2_II(0:3,4:7)
-         write(*,*)'Before'
-         do iZ=0,19
-            do iN=1,10
-               write(*,'(10e12.5)')cExcitationEnergy_IIII(:,iN,iZ,54)
-            end do
-         end do
+         !write(*,*)'Before'
+         !do iZ=0,19
+         !   do iN=1,10
+         !      write(*,'(10e12.5)')cExcitationEnergy_IIII(:,iN,iZ,54)
+         !   end do
+         !end do
          if(UseDataBase)call read_atomic_data(&
               54,19, cExcitationEnergy_IIII(:,:,0:19,54),cDegeneracy_IIII(:,:,0:19,54))
-         write(*,*)'After'
-         do iZ=0,19
-            do iN=1,10
-               write(*,'(10e12.5)')cExcitationEnergy_IIII(:,iN,iZ,54)
-            end do
-         end do
+         !write(*,*)'After'
+         !do iZ=0,19
+         !   do iN=1,10
+         !      write(*,'(10e12.5)')cExcitationEnergy_IIII(:,iN,iZ,54)
+         !   end do
+         !end do
       end select
 
       if(UsePressureIonization)then    
