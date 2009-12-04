@@ -147,7 +147,7 @@ contains
     if(UseSemiImplicit)then
 
        allocate(Erad_WG(nWave,-1:nI+2,-1:nJ+2,-1:nK+2))
-       allocate(Erad1_WG(nWave,0:nI+1,0:nJ+1,0:nK+1))
+       allocate(Erad1_WG(nWave,-1:nI+2,-1:nJ+2,-1:nK+2))
 
        ! Default to zero, unless reset
        iTeImpl = 0; iTrImplFirst = 0; iTrImplLast = 0;
@@ -770,7 +770,7 @@ contains
     subroutine get_diffusion_coef
 
       use ModAdvance,      ONLY: nWave
-      use ModFaceGradient, ONLY: set_block_field
+      use ModFaceGradient, ONLY: set_block_field2
 
       real :: OpacityRosseland_W(nWave), DiffRad_W(nWave)
       real :: Grad2ByErad2_W(nWave)
@@ -784,7 +784,7 @@ contains
 
             if(IsNewBlockRadDiffusion)then
                Erad_WG = State_VGB(WaveFirst_:WaveLast_,:,:,:,iBlock)
-               call set_block_field(iBlock, nWave, Erad1_WG, Erad_WG)
+               call set_block_field2(iBlock, nWave, Erad1_WG, Erad_WG)
 
                IsNewBlockRadDiffusion = .false.
             end if
