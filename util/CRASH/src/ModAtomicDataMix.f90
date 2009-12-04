@@ -1,17 +1,11 @@
 module CRASH_ModAtomicDataMix
   use CRASH_ModIonization
   use CRASH_ModAtomicMass,ONLY : nZMax
+  use CRASH_ModExcitationData,ONLY: nExcitation, UseExcitation,&
+       UsePressureIonization
   implicit none
   SAVE
   !Interface to databases
-
-  !\
-  ! The logical to handle whether excitation levels should
-  ! be accounted for
-  !/
-  logical,public :: UseExcitation = .false.
-
-  logical,public :: UsePressureIonization = .false. ! UseExcitation should be also .true.
 
   integer, parameter :: nMixMax = 6
 
@@ -25,12 +19,6 @@ module CRASH_ModAtomicDataMix
 
   ! Array of ionization potentials - energy needed to create i-level ion from (i-1)-level ion
   real,dimension(1:nZMax,nMixMax) :: IonizPotential_II
-
-  !\
-  !  Maximum principal quantum number for the excitation states.
-  !/
-  integer,parameter:: nExcitation = 10
-
 
   !The degeneracy ('multiplicity') of the given quantum state:
   integer,dimension(0:nExcitation-1,nExcitation,0:nZMax-1,nMixMax):: Degeneracy_IIII = 0
@@ -50,9 +38,9 @@ contains
   !========================================================================
   subroutine set_data_for_mixture(nMixIn, nZIn_I, ConcentrationIn_I)
     use ModConst,ONLY : cTiny
-    use CRASH_ModExcitationData,ONLY : get_excitation_energy,&
-         get_virial_coeff4_energy, get_degeneracy
-
+    use CRASH_ModExcitationData, ONLY:cExcitationEnergy_IIII,&
+         cDegeneracy_IIII,cVirialCoeff4Energy_IIII
+    
     integer,intent(in)::nMixIn
     integer,dimension(nMixIn),intent(in) :: nZIn_I
     real,dimension(nMixIn),intent(in) :: ConcentrationIn_I
@@ -75,18 +63,13 @@ contains
     nZ_I( 1:nMix ) = nZIn_I( 1:nMix )
     do iMix=1,nMix
        call get_ioniz_potential(nZ_I(iMix),IonizPotential_II(1:nZ_I(iMix),iMix))
-
-
       
-       call get_excitation_energy(nExcitation,nZ_I(iMix),&
-            ExcitationEnergy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
+       ExcitationEnergy_IIII(:,:,0:nZ_I(iMix)-1,iMix) = cExcitationEnergy_IIII(:,:,0:nZ_I(iMix)-1,nZ_I(iMix))
        
-       call get_degeneracy(nExcitation,nZ_I(iMix),&
-            Degeneracy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
+
+       Degeneracy_IIII(:,:,0:nZ_I(iMix)-1,iMix) = cDegeneracy_IIII(:,:,0:nZ_I(iMix)-1,nZ_I(iMix))
     
-       if (UsePressureIonization)&
-            call get_virial_coeff4_energy(nExcitation,nZ_I(iMix),&
-            VirialCoeff4Energy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
+       VirialCoeff4Energy_IIII(:,:,0:nZ_I(iMix)-1,iMix) = cVirialCoeff4Energy_IIII(:,:,0:nZ_I(iMix)-1,nZ_I(iMix))
 
     end do
    
