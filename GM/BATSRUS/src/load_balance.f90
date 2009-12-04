@@ -80,6 +80,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
      call select_stepping(DoMoveCoord)       !^CFG IF IMPLICIT
 !     call regrid_batl(nVar, State_VGB)
 !     call set_batsrus_grid
+     call find_test_cell
      RETURN
   end if
 
