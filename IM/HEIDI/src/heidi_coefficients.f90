@@ -193,7 +193,7 @@ subroutine OTHERPARA
   real    :: VF(NSTH),RA(NSTH),MUBOUN,MULC,TMAS(NSTH),TM1(NSTH)
   
   real, dimension(nR,nT,nE,nPA) :: dEdt_IIII,VPhi_IIII,VR_IIII
-  real, dimension(nR,nT,nPA)    :: dMudt_III 
+  real, dimension(nR,nT,nE,nPA)    :: dMudt_III 
 
   external:: erf
 
@@ -232,86 +232,58 @@ subroutine OTHERPARA
   end do	! While J18 loop
 
   
-
-     open(unit=5, file='drifts.dat')
-     
-
-   if (TypeBField == 'analytic') then
-      
-      do i = 1, io      
-         do L = 1, UPA(I)    ! Kp independent part of azimuthal drift
-            do K = 1, KO
-               do j = 1,  jo
-                  GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
-                  P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
-                  write(5,*)  i,j,k,l,P2(I,J,K,L)
-               end do
-            end do
-         end do
-      end do
-      
-      do i = 1, io 
-         do L=UPA(I)+1,LO
-            do K = 1, KO
-               do j = 1,  jo
-                  P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
-                  write(5,*)  i,j,k,l,P2(I,J,K,L)
-               end do
-            end do
-         end do
-      end do
-      
-   end if
-
-
-   if (TypeBField == 'numeric') then
-      
-      call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
-      do i = 1, io      
-         do L = 1, UPA(I)    ! Kp independent part of azimuthal drift
-            do K = 1, KO
-               do j = 1,  jo
-                  GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
-
-                  P2(I,J,K,L)=(C*DT/DPHI/ME -ISS*VPhi_IIII(i,j,k,l))
-                  
-!                  P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
-                  write(5,*)  i,j,k,l,P2(I,J,K,L)
-               end do
-            end do
-         end do
-      end do
-      
-      do i = 1, io 
-         do L=UPA(I)+1,LO
-            do K = 1, KO
-               do j = 1,  jo
-                  
-                  P2(I,J,K,L)=(C*DT/DPHI/ME -ISS*VPhi_IIII(i,j,k,l))
-                  !                  P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
-                  write(5,*)  i,j,k,l,P2(I,J,K,L)
-               end do
-            end do
-         end do
-      end do
-
-!      do l = 1, lo
-!         do k = 1, ko
-!            do I = 1, IO
-!               VR(I,J6,k,l)  = 0.0 + VR_IIII(i,j6,k,l)
-!               VR(I,J18,k,l) = 0.0 + VR_IIII(i,j18,k,l)
-!            end do	! I loop processing VR
-!         end do
-!      end do
-   end if
+  if (TypeBField == 'numeric') then
+     call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
+  end if
+  
+  open(unit=5, file='drifts.dat')
    
-   close(5)
+  do i = 1, io      
+     do L = 1, UPA(I)    ! Kp independent part of azimuthal drift
+        do K = 1, KO
+           do j = 1,  jo
+              GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
+              P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
+              if (TypeBField == 'numeric') then
+                 P2(I,J,K,L)=(C/Me- ISS*VPhi_IIII(i,j,k,l))*DT/DPHI
+              end if
+              
+!              write(5,*)  i,j,k,l,P2(I,J,K,L), VPhi_IIII(i,j,k,l), C, Me, C/Me, DT/DPHI
+           end do
+        end do
+     end do
+  end do
+  
+  do i = 1, io 
+     do L=UPA(I)+1,LO
+        do K = 1, KO
+           do j = 1,  jo
+              P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
+              if (TypeBField == 'numeric') then
+                 P2(I,J,K,L)=(C/Me- ISS*VPhi_IIII(i,j,k,l))*DT/DPHI
+              end if
+ !             write(5,*)  i,j,k,l,P2(I,J,K,L),Z(I)
+           end do
+        end do
+     end do
+  end do
+
+   
+  close(5)
+
 
    do l = 1, lo
       do k = 1, ko
          do I = 1, IO
-            VR(I,J6,k,l)=0.
-            VR(I,J18,k,l)=0.
+            VrConv(I,J6,k,l)=0.
+            VrConv(I,J18,k,l)=0.
+            if (TypeBField == 'numeric') then
+               VR(i,j6,k,l)  = VrConv(i,j6,k,l) + VR_IIII(i,j6,k,l)
+               VR(i,j18,k,l) = VrConv(i,j18,k,l) + VR_IIII(i,j18,k,l)
+            end if
+            VR(i,j6,k,l) = VrConv(I,J6,k,l)
+            VR(i,j6,k,l) = VrConv(I,J6,k,l)
+
          end do	! I loop processing VR
       end do
    end do
@@ -543,7 +515,7 @@ subroutine MAGCONV(I3,NST)
   real    :: univ_time
 
   real, dimension(nR,nT,nE,nPA) :: dEdt_IIII,VPhi_IIII,VR_IIII
-  real, dimension(nR,nT,nPA)    :: dMudt_III 
+  real, dimension(nR,nT,nE,nPA)    :: dMudt_III 
 
 
   !---------------------------------------------------------------------  
@@ -596,49 +568,24 @@ subroutine MAGCONV(I3,NST)
 
 
   if (TypeBField == 'numeric') then
-     call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+     call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
   end if
 
 
   if (ABASE(IA+1).eq.1) then
      
-     if (TypeBField == 'numeric') then
-  !      call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
-        
-
      do J=1,JO   ! Fill in drift values
         do i=1,io
            do l =1, lo
               do k = 1, ko
-                 VR(i,j,k,l)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
-                      DT/DL1*(RE*RE/ME) + VR_IIII(i,j,k,l)
-              end do
-           end do
-           P1(I,J)=A*LAMGAM*LZ(I)**(LAMGAM+1.)*sin(PHI(J)+0.5*DPHI)*   &
-                DT/DPHI*(RE*RE/ME)
-           BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*sin(phi(j))
-           
-           
-        end do
-        !\
-        ! Compute the V-S potential outside the edges of the radial grid. 
-        ! Needed for the current calculation.
-        !/
-        BASEPOT(1,j)    = A*RE*(LZ(1)-DL1)**(LAMGAM)*sin(phi(j))
-        BASEPOT(io+2,j) = A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
-     end do
-
-  end if
-
-  if (TypeBField == 'analytic') then
-     
-     
-     do J=1,JO   ! Fill in drift values
-        do i=1,io
-           do l =1, lo
-              do k = 1, ko
-                 VR(i,j,k,l)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
+                 VrConv(i,j,k,l)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
                       DT/DL1*(RE*RE/ME)
+                 VR(i,j,k,l) = VrConv(i,j,k,l) 
+
+                 if (TypeBField == 'numeric') then
+                    VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
+                 end if
+
               end do
            end do
            P1(I,J)=A*LAMGAM*LZ(I)**(LAMGAM+1.)*sin(PHI(J)+0.5*DPHI)*   &
@@ -654,7 +601,6 @@ subroutine MAGCONV(I3,NST)
         BASEPOT(1,j)    = A*RE*(LZ(1)-DL1)**(LAMGAM)*sin(phi(j))
         BASEPOT(io+2,j) = A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
      end do
-  end if
 
      do J = 1, nphicells   ! Fill in DGCPM potentials
         do I = 1, nthetacells
@@ -683,17 +629,13 @@ subroutine MAGCONV(I3,NST)
            KSD=1.+RoRg*(Ro/RR)
            do l = 1, lo
               do k = 1, ko
-                 
-                 if (TypeBField == 'numeric') then
-!                    call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
-                    VR(i,j,k,l)=-DT/DL1*RE/ME*RR**3*KEPS/KSD*(EOJ1+KGAM*SJ/KSD   &
-                         *(EOJ+KPHI/RR)*RoRg*KBETA/RR*(KS(2)+Kr*KS(4)))&
-                         + VR_IIII(i,j,k,l)
-                 end if
-                 if (TypeBField == 'analytic') then
-                    VR(i,j,k,l)=-DT/DL1*RE/ME*RR**3*KEPS/KSD*(EOJ1+KGAM*SJ/KSD   &
+                    VrConv(i,j,k,l)=-DT/DL1*RE/ME*RR**3*KEPS/KSD*(EOJ1+KGAM*SJ/KSD   &
                          *(EOJ+KPHI/RR)*RoRg*KBETA/RR*(KS(2)+Kr*KS(4)))
+                    VR(i,j,k,l) = VrConv(i,j,k,l)
+                    if (TypeBField == 'numeric') then
+                    VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
                  end if
+
               end do
            end do
         end do
@@ -746,18 +688,13 @@ subroutine MAGCONV(I3,NST)
         do i=1,io
            do l =1, lo
               do k = 1, ko
-
-                 if (TypeBField == 'numeric') then
-!                    call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
-                    VR(i,j,k,l)=-KEPS*cos(PHI(J))*(LZ(I)+0.5*DL1)**3   &
-                         *DT/DL1*(RE/ME) + VR_IIII(i,j,k,l)
-                 end if
-                 
-                 if (TypeBField == 'analytic') then
-                    VR(i,j,k,l)=-KEPS*cos(PHI(J))*(LZ(I)+0.5*DL1)**3   &
+                    VrConv(i,j,k,l)=-KEPS*cos(PHI(J))*(LZ(I)+0.5*DL1)**3   &
                          *DT/DL1*(RE/ME)
-                 end if
-
+                    VR(i,j,k,l) = VrConv(i,j,k,l)
+                    if (TypeBField == 'numeric') then
+                       VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
+                    end if
+                    
               end do
            end do
            P1(I,J)=KEPS*LZ(I)**2*sin(PHI(J)+0.5*DPHI)*   &
@@ -783,17 +720,12 @@ subroutine MAGCONV(I3,NST)
         do i = 1, io
            do l =1, lo
               do k =1, ko
-
-                 if (TypeBField == 'numeric') then
-!                    call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
-                    VR(i,j,k,l) = 0.0 + VR_IIII(i,j,k,l)
-                 end if
-
-                 if (TypeBField == 'analytic') then
-                    VR(i,j,k,l) = 0.0
-                 end if
-                 
-              end do
+                    VrConv(i,j,k,l) = 0.0
+                    VR(i,j,k,l) = VrConv(i,j,k,l)
+                    if (TypeBField == 'numeric') then
+                       VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
+                    end if
+                 end do
            end do
            P1(I,J) = 0.0
         end do
@@ -876,16 +808,12 @@ subroutine MAGCONV(I3,NST)
            EPP=-(FPOT12(i+1,jj)-FPOT12(i+1,j))/RR/DPHI
            do l = 1, lo
               do k = 1, ko
-
+                 VrConv(i,j,k,l)=VrConv(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
+                 VR(i,j,k,l) = VrConv(i,j,k,l)
                  if (TypeBField == 'numeric') then
-!                    call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
-                    VR(i,j,k,l)=VR(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME + VR_IIII(i,j,k,l)
-                    
+                    VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
                  end if
-                 if (TypeBField == 'analytic') then
-                    VR(i,j,k,l)=VR(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
-                  end if
-
+                 
               end do
            end do
         end do
@@ -984,16 +912,11 @@ subroutine MAGCONV(I3,NST)
            EPP=-(epots1(jj,i+1)-epots1(j,i+1))/RR/DPHI
            do l = 1, lo
               do k = 1, ko
-                 
+                 VrConv(i,j,k,l) = EPP*DT/DL1*RR**3*RE/ME
+                 VR(i,j,k,l) = VrConv(i,j,k,l)
                  if (TypeBField == 'numeric') then
-                    !call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
-                    VR(i,j,k,l) = EPP*DT/DL1*RR**3*RE/ME + VR_IIII(i,j,k,l)
+                    VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
                  end if
-
-                 if (TypeBField == 'analytic') then
-                    VR(i,j,k,l) = EPP*DT/DL1*RR**3*RE/ME
-                 end if
-
               end do
            end do
         end do
@@ -1055,16 +978,11 @@ subroutine MAGCONV(I3,NST)
            FAC=EPP*DT/DL1*RR**3*RE/ME
            do l = 1, lo
               do k = 1, ko
-                 
-                 if (TypeBField == 'numeric') then
-!                    call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
-                    VR(i,j,k,l)=VR(i,j,k,l)+FAC + VR_IIII(i,j,k,l)
-                 end if
-
-                 if (TypeBField == 'analytic') then
-                    VR(i,j,k,l)=VR(i,j,k,l)+FAC
-                 end if
-
+                    VrConv(i,j,k,l)=VrConv(i,j,k,l)+FAC
+                    VR(i,j,k,l) = VrConv(i,j,k,l)
+                    if (TypeBField == 'numeric') then
+                       VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
+                    end if
               end do
            end do
         end do
@@ -1231,16 +1149,11 @@ subroutine MAGCONV(I3,NST)
               EPP=-(FPOT(i+1,jj)-FPOT(i+1,j))/RR/DPHI
               do l = 1, lo
                  do k = 1, ko
-
+                    VrConv(i,j,k,l) = VrConv(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
+                    VR(i,j,k,l) = VrConv(i,j,k,l)
                     if (TypeBField == 'numeric') then
-!                       call  get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
-                       VR(i,j,k,l) = VR(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME + VR_IIII(i,j,k,l)
+                       VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
                     end if
-
-                    if (TypeBField == 'analytic') then
-                       VR(i,j,k,l) = VR(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
-                    end if
-
                  end do
               end do
            end do
