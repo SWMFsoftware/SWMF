@@ -21,6 +21,7 @@ OBJECTS=\
 	ModExcitationData.o \
 	ModPowerLawEos.o\
 	ModFermiGas.o\
+	ModHydrogenicModel.o \
         ModIonizPotential.o \
 	ModPartition.o \
 	ModPolyimide.o \
