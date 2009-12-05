@@ -28,6 +28,7 @@ subroutine get_IntegralH(IntegralH_III)
   real                 :: PitchAngle_I(nPa)   
   real, intent(out)    :: IntegralH_III(nPa,nR,nT)
   integer              :: iPhi, iR,iPitch
+  real                 :: dBdt_III(nPoint,nR,nT)
   !----------------------------------------------------------------------------------
 
   if (TypeBField == 'analytic') then
@@ -56,7 +57,7 @@ subroutine get_IntegralH(IntegralH_III)
   if (TypeBField == 'numeric') then
 
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
+          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
      do iPhi = 1, nT
         do iR =1, nR
@@ -106,7 +107,7 @@ subroutine get_IntegralI(IntegralI_III)
   real                 :: PitchAngle_I(nPa)
   real, intent(out)    :: IntegralI_III(nPa,nR,nT)
   integer              :: iPhi, iR,iPitch
-
+  real                 :: dBdt_III(nPoint, nR, nT)
   !----------------------------------------------------------------------------------
 
   if (TypeBField == 'analytic') then
@@ -138,7 +139,7 @@ subroutine get_IntegralI(IntegralI_III)
   if (TypeBField == 'numeric') then
 
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
+          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
      do iPhi = 1, nT
         do iR =1, nR
@@ -186,12 +187,13 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III,PitchAngle_I)
   real                 :: Rho_II(nR,nPoint)
   integer              :: iPhi, iR,iPitch
   real                 :: HalfPathLength,Sb
+  real                 :: dBdt_III(nPoint,nR,nT)
 
   !----------------------------------------------------------------------------------
   if (TypeBField == 'numeric') then
      
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
+          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
      
      do iPhi = 1, nT
         do iR =1, nR
@@ -236,23 +238,23 @@ subroutine get_B_field(bFieldMagnitude_III)
   real                 :: GradB_VIII(3,nPoint,nR,nT)
   real                 :: Length_III(nPoint,nR,nT) 
   integer              :: iPhi, iR,iPitch
+  real                 :: dBdt_III(nPoint,nR,nT)
 
   !----------------------------------------------------------------------------------
   
   call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-       RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
+       RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
   
   
 end subroutine get_B_field
 
 !============================================================
-subroutine get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+subroutine get_coef(dEdt_IIII,dMudt_III)
   
   use ModHeidiSize,   ONLY: nPoint,nPointEq, nPa, nT, nR,nE,DT
   use ModConst,       ONLY: cTiny  
   use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND,wmu,DPHI,Z
-  use ModHeidiIO,     ONLY: Kp
-  use ModHeidiDrifts, ONLY: VR, P1,P2
+  use ModHeidiDrifts, ONLY: VrConv, P1,P2
   use ModHeidiBField
   use ModHeidiBACoefficients
 
@@ -261,7 +263,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
   real, dimension(nPa)              :: bMirror_I, PitchAngle_I
   real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III, RadialDistance_III, Length_III, b4_III
   real, dimension(nR,nT,nE,nPA)     :: dEdt_IIII
-  real, dimension(nR,nT,nPA)        :: dMudt_III
+  real, dimension(nR,nT,nE,nPA)     :: dMudt_III
   real, dimension(nPoint)           :: DriftR_I, DriftLambda_I,DriftPhi_I
   real, dimension(3,nPoint,nR,nT)   :: GradBCrossB_VIII, GradB_VIII
   real, dimension(3,nPoint)         :: VDrift_II
@@ -275,17 +277,18 @@ subroutine get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
   real                              :: sinPitch,sin2Pitch,cosPitch,cos2Pitch
   real                              :: I2, CoeffE, CoeffMu
   real                              :: InvB, InvR, TermER, TermELambda,TermEPhi
-  real                              :: TermER1, TermER2
+  real                              :: TermER1, TermER2, TermEB, TermMuB
   real                              :: TermMuR, TermMuLambda,TermMuPhi
   real                              :: TermMuR1, TermMuR2
   real                              :: GradEqBR, GradEqBLambda, GradEqBPhi
   real, parameter                   :: Me = 7.9e15 ,Re = 6.371e6 
   integer                           :: iPhi, iR, iPitch,iE
-
+  real                              :: dBdt_III(nPoint,nR,nT)
+  real                              :: BouncedDBdt
   !----------------------------------------------------------------------------------
 
   call initialize_b_field(Z, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-       RadialDistance_III, Length_III, dLength_III, GradBCrossB_VIII,GradB_VIII)
+       RadialDistance_III, Length_III, dLength_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
   
   call get_IntegralH(h)
   call get_IntegralI(s)
@@ -330,16 +333,20 @@ subroutine get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
 
               call get_bounced_drift(nPoint, Z(iR),bFieldMagnitude_III(:,iR,iPhi),&
                    bMirror_I(iPitch), iMirror_I(:),dLength_III(:,iR,iPhi),&
-                   DriftR_I,BouncedDriftR,RadialDistance_III(:,iR,iPhi)) 
+                   DriftR_I(:),BouncedDriftR,RadialDistance_III(:,iR,iPhi)) 
 
               call get_bounced_drift(nPoint, Z(iR),bFieldMagnitude_III(:,iR,iPhi),&
                    bMirror_I(iPitch), iMirror_I(:),dLength_III(:,iR,iPhi),&
-                   DriftLambda_I,BouncedDriftLambda,RadialDistance_III(:,iR,iPhi)) 
+                   DriftLambda_I(:),BouncedDriftLambda,RadialDistance_III(:,iR,iPhi)) 
             
 
               call get_bounced_drift(nPoint, Z(iR),bFieldMagnitude_III(:,iR,iPhi),&
                    bMirror_I(iPitch), iMirror_I(:),dLength_III(:,iR,iPhi),&
-                   DriftPhi_I,BouncedDriftPhi,RadialDistance_III(:,iR,iPhi)) 
+                   DriftPhi_I(:),BouncedDriftPhi,RadialDistance_III(:,iR,iPhi)) 
+              
+              call get_bounced_drift(nPoint, Z(iR),bFieldMagnitude_III(:,iR,iPhi),&
+                   bMirror_I(iPitch), iMirror_I(:),dLength_III(:,iR,iPhi),&
+                   dBdt_III(:,iR,iPhi),BouncedDBdt,RadialDistance_III(:,iR,iPhi)) 
               
               if (Sb==0.0) Sb = cTiny
 !              if ( SecondAdiabInv ==0.0)  SecondAdiabInv = cTiny
@@ -361,15 +368,16 @@ subroutine get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
               InvB = 1./ bFieldMagnitude_III(nPointEq,iR,iPhi)
               InvR =  1./Z(iR)
 
-
-              TermER1 = CoeffE * InvB * GradEqBR * (BouncedDriftR/Sb + VR(iR,iPhi,iE,iPitch))
-              TermER2 = -(2*EBND(iE)*I2)/(I2+sin2Pitch) * InvR * (BouncedDriftR/Sb+ VR(iR,iPhi,iE,iPitch)) 
+              
+              TermEB = CoeffE * InvB * BouncedDBdt/Sb
+              TermER1 = CoeffE * InvB * GradEqBR * (BouncedDriftR/Sb + VrConv(iR,iPhi,iE,iPitch))
+              TermER2 = -(2*EBND(iE)*I2)/(I2+sin2Pitch) * InvR * (BouncedDriftR/Sb+ VrConv(iR,iPhi,iE,iPitch)) 
               TermER  = TermER1 + TermER2
               TermELambda = CoeffE * InvB * GradEqBLambda * BouncedDriftLambda/Sb
               TermEPhi = CoeffE * InvB * GradEqBPhi* &
                    (BouncedDriftPhi/Sb + P1(iR,iPhi) + P2(iR,iPhi,iE,iPitch))
 
-              dEdt_IIII(iR,iPhi,iE,iPitch)  = TermER + TermELambda + TermEPhi
+              dEdt_IIII(iR,iPhi,iE,iPitch)  = (TermEB + TermER + TermELambda + TermEPhi)*6.371e6
 
 
               !\
@@ -381,22 +389,18 @@ subroutine get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
 !              CoeffMu = -(1.-cos2Pitch)*(SecondAdiabInv/(2.*HalfPathLength))/&
 !                   (cosPitch*(I2 + 1. - cos2Pitch))
  
-              TermMuR1     = InvR * (BouncedDriftR/Sb + VR(iR,iPhi,iE,iPitch))
-              TermMuR2     = 0.5 * InvB * GradEqBR * (BouncedDriftR/Sb+ VR(iR,iPhi,iE,iPitch)) 
+!              TermMuR1     = InvR * (BouncedDriftR/Sb + VrConv(iR,iPhi,iE,iPitch))
+              TermMuB      = 0.5 * InvB*BouncedDBdt/Sb * 1.e6
+              TermMuR1     = 1./LZ(iR) * (BouncedDriftR/Sb + VrConv(iR,iPhi,iE,iPitch)) 
+              TermMuR2     = 0.5 * InvB * GradEqBR * (BouncedDriftR/Sb+ VrConv(iR,iPhi,iE,iPitch))*1e6 
               TermMuR      = TermMuR1 + TermMuR2
-              TermMuLambda = -0.5 * InvB * GradEqBLambda * BouncedDriftLambda/Sb
+              TermMuLambda = -0.5 * InvB * GradEqBLambda * BouncedDriftLambda/Sb*1e6
               TermMuPhi    = 0.5 * InvB * GradEqBPhi *&
-                   (BouncedDriftPhi/Sb + P1(iR,iPhi) + P2(iR,iPhi,iE,iPitch))
+                   (BouncedDriftPhi/Sb + P1(iR,iPhi) + P2(iR,iPhi,iE,iPitch))*1.e6   ! in m
 
 
               !Needs the dBdt term too
-              dMudt_III(iR,iPhi,iPitch) =  CoeffMu*(TermMuR + TermMuLambda + TermMuPhi)
-
-              VPhi_IIII(iR,iPhi,iE,iPitch) = BouncedDriftPhi/Sb
-              VR_IIII(iR,iPhi,iE,iPitch) = BouncedDriftR/Sb
-              
-           write(2,*) iR,iPhi,iE,iPitch, P2(iR,iPhi,iE,iPitch), VPhi_IIII(iR,iPhi,iE,iPitch),&
-                P2(iR,iPhi,iE,iPitch)/(VPhi_IIII(iR,iPhi,iE,iPitch)+cTiny)
+              dMudt_III(iR,iPhi,iE,iPitch) =  CoeffMu*(TermMuB + TermMuR + TermMuLambda + TermMuPhi)
 
           end do
        end do
@@ -406,7 +410,110 @@ subroutine get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
 
  close(2)
 dEdt_IIII(:,:,:,1) = dEdt_IIII(:,:,:,2) 
-dMudt_III(:,:,1)  = dMudt_III(:,:,2)
+dMudt_III(:,:,:,1) = dMudt_III(:,:,:,2)
 
 
 end subroutine get_coef
+
+!============================================================
+
+subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
+  
+  use ModHeidiSize,   ONLY: nPoint,nPointEq, nPa, nT, nR,nE,DT
+  use ModConst,       ONLY: cTiny  
+  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND,wmu,DPHI,Z
+  use ModHeidiBField
+  use ModHeidiBACoefficients
+
+  implicit none
+
+  real, dimension(nPa)              :: bMirror_I, PitchAngle_I
+  real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III, RadialDistance_III, Length_III, b4_III
+  real, dimension(nPoint)           :: DriftR_I, DriftLambda_I,DriftPhi_I
+  real, dimension(3,nPoint,nR,nT)   :: GradBCrossB_VIII, GradB_VIII
+  real, dimension(3,nPoint)         :: VDrift_II
+  real, dimension(nPoint-1,nR,nT)   :: dLength_III
+  real, dimension(nPa,nR,nT)        :: h,s
+  real, dimension(nR,nT,nE,nPA)     :: VPhi_IIII,VR_IIII
+  real                              :: BouncedDriftR, BouncedDriftPhi, BouncedDriftLambda
+  real                              :: HalfPathLength,Sb,SecondAdiabInv
+  integer                           :: iMirror_I(2)
+  real                              :: Energy
+  real                              :: sinPitch,sin2Pitch,cosPitch,cos2Pitch
+  real                              :: I2, CoeffE, CoeffMu
+  real                              :: InvB, InvR, TermER, TermELambda,TermEPhi
+  real                              :: TermER1, TermER2
+  real                              :: TermMuR, TermMuLambda,TermMuPhi
+  real                              :: TermMuR1, TermMuR2
+  real                              :: GradEqBR, GradEqBLambda, GradEqBPhi
+  real, parameter                   :: Me = 7.9e15 ,Re = 6.371e6 
+  integer                           :: iPhi, iR, iPitch,iE
+  real                              :: dBdt_III(nPoint,nR,nT)
+
+  !----------------------------------------------------------------------------------
+
+  call initialize_b_field(Z, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
+       RadialDistance_III, Length_III, dLength_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
+
+  do iE = 1, nE
+     Energy = 1000. * EKEV(iE)
+     
+     do iPhi = 1, nT
+        do iR = 1, nR
+           do iPitch = 1, nPa
+              
+              PitchAngle_I(iPitch) = acos(mu(iPitch))
+              sinPitch = sin(PitchAngle_I(iPitch))
+              sin2Pitch = sinPitch * sinPitch
+
+              cosPitch = cos(PitchAngle_I(iPitch))
+              cos2Pitch = cosPitch * cosPitch
+              
+              call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
+                   bMirror_I(iPitch),iMirror_I)
+
+              call second_adiabatic_invariant(nPoint, iMirror_I(:), bMirror_I(iPitch), &
+                   bFieldMagnitude_III(:,iR,iPhi),dLength_III(:,iR,iPhi), Z(iR), SecondAdiabInv) 
+
+              call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
+                   bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), Z(iR), HalfPathLength,Sb)
+              
+
+              call get_drift_velocity(nPoint, Energy,PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi),&
+                   GradBCrossB_VIII(:,:,iR,iPhi), VDrift_II)
+              
+
+              DriftR_I(:)      = VDrift_II(1,:) ! Radial Drift
+              DriftLambda_I(:) = VDrift_II(2,:) ! Theta Drift
+              DriftPhi_I(:)    = VDrift_II(3,:) ! Azimuthal Drift
+
+
+              call get_bounced_drift(nPoint, Z(iR),bFieldMagnitude_III(:,iR,iPhi),&
+                   bMirror_I(iPitch), iMirror_I(:),dLength_III(:,iR,iPhi),&
+                   DriftR_I(:),BouncedDriftR,RadialDistance_III(:,iR,iPhi)) 
+
+              call get_bounced_drift(nPoint, Z(iR),bFieldMagnitude_III(:,iR,iPhi),&
+                   bMirror_I(iPitch), iMirror_I(:),dLength_III(:,iR,iPhi),&
+                   DriftLambda_I(:),BouncedDriftLambda,RadialDistance_III(:,iR,iPhi)) 
+            
+
+              call get_bounced_drift(nPoint, Z(iR),bFieldMagnitude_III(:,iR,iPhi),&
+                   bMirror_I(iPitch), iMirror_I(:),dLength_III(:,iR,iPhi),&
+                   DriftPhi_I(:),BouncedDriftPhi,RadialDistance_III(:,iR,iPhi)) 
+              
+              if (Sb==0.0) Sb = cTiny
+
+              VPhi_IIII(iR,iPhi,iE,iPitch) = BouncedDriftPhi/Sb
+              VR_IIII(iR,iPhi,iE,iPitch) = BouncedDriftR/Sb
+              
+!              write(*,*) VPhi_IIII(iR,iPhi,iE,iPitch)
+
+          end do
+       end do
+    end do
+ end do
+
+ VPhi_IIII(:,:,:,1) = VPhi_IIII(:,:,:,2) 
+ VR_IIII(:,:,:,1)   =  VR_IIII(:,:,:,2) 
+
+end subroutine get_grad_curv_drift

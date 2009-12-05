@@ -472,7 +472,7 @@ subroutine DRIFTMU
 
 	   do L=2,UL
 !              C(L)=MUDOT(I,J,L)*VR(I,J)
-              C(L)=MUDOT(I,J,L) 
+              C(L)=MUDOT(I,J,K,L) 
              !	    C(L)=AMIN1(0.99,AMAX1(-0.99,C(L)))
               X=F(L+1)-F(L)
               ISIGN=1

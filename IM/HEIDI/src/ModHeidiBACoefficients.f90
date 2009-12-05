@@ -28,7 +28,7 @@ subroutine get_drift_velocity(nPoint,Energy,PitchAngle,&
      b4 = b2*b2
      sinPitch = sin(PitchAngle)
      sin2Pitch = sinPitch*sinPitch
-     Coeff = Energy*(2.-sin2Pitch)/b4
+     Coeff = -Energy*(2.-sin2Pitch)/b4
      
      !dR/dt
      VDrift_II(1,iPoint) = Coeff*GradBCrossB_II(1,iPoint)

@@ -169,21 +169,23 @@ subroutine ECFL
 
         do I=1,IO
            do J=1,JO
-              do L=1,LO	  
-                 CFL=abs(MUDOT(I,J,L)) 
-                if (CFL.gt.1.) then
-                    write (iUnitOut,39) LZ(I),MLT(J),ACOSD(MU(L)),A,CFL
-                    Ibad=Ibad +1
-                 end if
-                 if (CFL.gt.CMAX) then
-                    CMAX=CFL
-                    Im=I
-                    Jm=J
-                    Lm=L
-                 end if
-                 if (Ibad.gt.1000) goto 53
-              end do	! I loop
-           end do	! J loop
+              do k = 1, KO
+                 do L=1,LO	  
+                    CFL=abs(MUDOT(I,J,K,L)) 
+                    if (CFL.gt.1.) then
+                       write (iUnitOut,39) LZ(I),MLT(J),ACOSD(MU(L)),A,CFL
+                       Ibad=Ibad +1
+                    end if
+                    if (CFL.gt.CMAX) then
+                       CMAX=CFL
+                       Im=I
+                       Jm=J
+                       Lm=L
+                    end if
+                    if (Ibad.gt.1000) goto 53
+                 end do	! I loop
+              end do	! J loop
+           end do       ! K loop
 	end do	        ! L loop
         
 53	continue
@@ -733,8 +735,10 @@ subroutine WRESULT(LNC,XN,IFIR)
               write (iUnitOut,*) ' L =',LZ(I)
               write (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
               do J=1,JO,3
-                 write (iUnitOut,30) MLT(J),(MUDOT(I,J,L),L=2,LO,NLC),   &
-                      MUDOT(I,J,LO-1)
+                 do k = 2, ko,ko-2
+                    write (iUnitOut,30) MLT(J),(MUDOT(I,J,K,L),L=2,LO,NLC),   &
+                         MUDOT(I,J,K,LO-1)
+                 end do
               end do
            end do
            write (iUnitOut,*) 'Energy advection |CFL| > 1 (entire grid)'

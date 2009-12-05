@@ -162,13 +162,14 @@ contains
     real, parameter      :: Pi = 3.141592654   
     real                 :: Ds_I(nPoint)
     integer              :: iPoint
+    real                 :: dBdt_III(nPoint,nR,nPhi)
     !-----------------------------------------------------------------------------
 
     L_I(1) = 2.0
     PitchAngle = Pi/10.
    
     call initialize_b_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
+          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
     
     call find_mirror_points (iPoint,  PitchAngle, bFieldMagnitude_III, &
                       bMirror,iMirror_I)

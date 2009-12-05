@@ -14,7 +14,7 @@ Module ModHeidiDrifts
 ! Define the advection drift rate variables
 ! Formerly: Common block CDR
 	real :: VR(NR,NT,NE,NPA),P1(NR,NT),P2(NR,NT,NE,NPA),EDOT(NR,NT,NE,NPA)
-	real :: MUDOT(NR,NT,NPA)
+	real :: MUDOT(NR,NT,NE,NPA), VrConv(NR,NT,NE,NPA)
 
 ! Define the pitch angle diffusion coefficient variables
 ! Formerly: Common block CCOUL

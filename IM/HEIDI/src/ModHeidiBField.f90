@@ -6,12 +6,13 @@ module ModHeidiBField
 contains
 
   subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
+       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
     use ModHeidiInput, ONLY: TypeBfieldGrid
     use ModNumConst,   ONLY: cTiny, cPi
     use ModConst,      ONLY: cMu
     use ModHeidiIO,    ONLY: time
+    use ModHeidiMain,  ONLY: t
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -47,11 +48,11 @@ contains
 
     !Parameters
     real, parameter        :: DipoleStrength =  0.32   ! nTm^-3
-    real, parameter        :: alpha0 =1!1.1              ! alpha is the stretching factor in z direction
+    real, parameter        :: alpha0 =1.!1.1              ! alpha is the stretching factor in z direction
 !    real, parameter        :: beta = 1!1.0/1.1           ! beta is the stretching factor in y direction
     real, parameter        :: Me = 7.19e15
 
-    real :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w,t,c1
+    real :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w,c1
     real :: alpha,beta
     !----------------------------------------------------------------------------------
 
@@ -125,10 +126,10 @@ contains
     !/
 
     if (TypeBFieldGrid == 'stretched') then  
-       t = time
-       write(*,*) t,time
+       !t = time
+       !write(*,*) t,time
        w = 2*cPi/40.
-       alpha = alpha0 + alpha0*sin(w*t)
+       alpha = alpha0! + alpha0*sin(w*t)
        beta = 1./alpha
 
        alpha2 = alpha * alpha
@@ -917,6 +918,7 @@ contains
     real, parameter      :: Pi = 3.141592654
     real                 :: Percent1, Percent2
     integer              :: iPoint
+    real                 :: dBdt_III(nPoint,nR,nPhi)
     !----------------------------------------------------------------------------------
     !open (unit = 2, file = "Convergence_nonuniform.dat")
     !write (2,*)'Numerical values for the second adiabatic invariant integration btw a mirror point and eq'
@@ -929,7 +931,7 @@ contains
     do iPoint = 101, nPoint,100
 
        call initialize_b_field(L_I(1), Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-            RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII)
+            RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
        IntegralBAnalytic = second_adiab_invariant(cos(PitchAngle))
        IntegralHAnalytic = analytic_h(cos(PitchAngle))

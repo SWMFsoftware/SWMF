@@ -10,12 +10,14 @@ subroutine get_E_mu_dot
   implicit none
   
   
-  real, dimension(nR,nT,nPA)    :: dMudt_III 
+  real, dimension(nR,nT,nE,nPA)    :: dMudt_III 
   real,dimension(nR,nT,nE,nPa)  :: dEdt_IIII,VPhi_IIII,VR_IIII
   real                          :: MUBOUN,MULC
   real                          :: gpa
   integer                       :: i,j,k,l
 !-----------------------------------------------------------------------------
+  open(unit=12,file='mudot.dat')
+  open(unit=13, file='edot.dat')
 
   if (TypeBField == 'analytic') then 
      
@@ -24,11 +26,12 @@ subroutine get_E_mu_dot
            do L=1,UPA(I)
               do K=1,KO
                  MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
-                 MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
+                 MUDOT(I,J,K,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
                       /MUBOUN/4./(0.5*(FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L) * VR(i,j,k,l)
-                 
                  GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
                  EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)*VR(i,j,k,l)
+                 write(12,*) MUDOT(I,J,K,L)
+                 write(13,*)EDOT(I,J,K,L)
               end do	! K loop
            end do 	! L loop
            MULC=MU(UPA(I))+0.5*WMU(UPA(I))
@@ -36,13 +39,13 @@ subroutine get_E_mu_dot
               do K=1,KO
                  MUBOUN=MU(L)+0.5*WMU(L)
                  if (l== LO-1) MU(L+1) = MU(L)
-                 MUDOT(I,J,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
+                 MUDOT(I,J,K,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
                       /MUBOUN/4./(0.5*( FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L) * VR(i,j,k,l)
                  EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)*VR(i,j,k,l)
               end do	! K loop
            end do	! L loop
-           MUDOT(I,J,LO)=0.
-           do K=1,KO
+           do K = 1, KO
+              MUDOT(I,J,K,LO)=0.
               EDOT(I,J,K,LO)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)*VR(i,j,k,l)
            end do	! K loop
         end do 	! J loop
@@ -50,37 +53,41 @@ subroutine get_E_mu_dot
      
   end if
 
+
   
   if (TypeBField == 'numeric') then 
-     call get_coef(dEdt_IIII,dMudt_III,VPhi_IIII,VR_IIII)
+     call get_coef(dEdt_IIII,dMudt_III)
 
       do I=1,IO
         do J=1,JO
            do L=1,UPA(I)
-              MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
-
-              MUDOT(I,J,L) = ((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,l)*DL1/DMU(L)
               do K=1,KO
+                 MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
+                 MUDOT(I,J,K,L) = ((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,k,l)*DL1/DMU(L)
                  EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)*DL1/DE(K)
+                 write(12,*) MUDOT(I,J,K,L)
+                 write(13,*)EDOT(I,J,K,L)
+                 
               end do	! K loop
            end do 	! L loop
            MULC=MU(UPA(I))+0.5*WMU(UPA(I))
            do L=UPA(I)+1,LO-1
-              MUBOUN=MU(L)+0.5*WMU(L)
-              if (l== LO-1) MU(L+1) = MU(L)
-              MUDOT(I,J,L)= ((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,l)*DL1/DMU(L)
               do K=1,KO
+                 MUBOUN=MU(L)+0.5*WMU(L)
+           !      if (l== LO-1) MU(L+1) = MU(L)
+                 MUDOT(I,J,K,L)= ((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,k,l)*DL1/DMU(L)
                  EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)*DL1/DE(K)
               end do	! K loop
            end do	! L loop
-           MUDOT(I,J,LO)=0.
            do K=1,KO
+              MUDOT(I,J,K,LO)=0.
               EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)*DL1/DE(K)
-           
            end do	! K loop
         end do 	! J loop
      end do	! I loop
- 
+     
   end if
+close(12)
+close(13)
 
 end subroutine get_E_mu_dot
