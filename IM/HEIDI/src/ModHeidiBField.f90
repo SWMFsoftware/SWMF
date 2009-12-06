@@ -12,7 +12,7 @@ contains
     use ModNumConst,   ONLY: cTiny, cPi
     use ModConst,      ONLY: cMu
     use ModHeidiIO,    ONLY: time
-    use ModHeidiMain,  ONLY: t
+    use ModHeidiMain,  ONLY: t,LZ
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -48,12 +48,12 @@ contains
 
     !Parameters
     real, parameter        :: DipoleStrength =  0.32   ! nTm^-3
-    real, parameter        :: alpha0 =1.!1.1              ! alpha is the stretching factor in z direction
+    real, parameter        :: alpha0 =1.001              ! alpha is the stretching factor in z direction
 !    real, parameter        :: beta = 1!1.0/1.1           ! beta is the stretching factor in y direction
-    real, parameter        :: Me = 7.19e15
+    real, parameter        :: Me = 7.19e15!,alpha=1.001
 
     real :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w,c1
-    real :: alpha,beta
+    real :: beta,alpha
     !----------------------------------------------------------------------------------
 
 !    DipoleFactor= cMu*Me/(4.*cPi)
@@ -126,10 +126,13 @@ contains
     !/
 
     if (TypeBFieldGrid == 'stretched') then  
-       !t = time
-       !write(*,*) t,time
-       w = 2*cPi/40.
-       alpha = alpha0! + alpha0*sin(w*t)
+!       t = t/3600.
+       
+       w = 2*cPi/50.
+       alpha = 1. + 1.1*sin(w*t)
+
+       write(*,*) 't,w, sin(w*t),alpha',t,w, sin(w*t),alpha
+
        beta = 1./alpha
 
        alpha2 = alpha * alpha
@@ -150,7 +153,8 @@ contains
           b = alpha2
 
           do iR =1, nR 
-             c = -1./(L_I(iR)*L_I(iR))
+!             c = -1./(L_I(iR)*L_I(iR))
+             c = -1./(LZ(iR)*LZ(iR))
              call get_cubic_root(a,b,dd,c,root,nroot)
              do i =1, nroot
                 if ((aimag(root(i)) <= 1.e-5).and. (real(root(i))<=1.0) .and. (real(root(i))>=0.0)) &
@@ -184,6 +188,7 @@ contains
                 !  Magnetic field components for the uniformly stretched dipole in y and z.
                 !/
 
+!                write(*,*) 'ALPHA', alpha,r,x,y,iPoint
                 Br = 3 * r ** 2 * (1 - x ** 2) * y ** 2 * x * alpha * (r ** 2 * (1- x ** 2) * y ** 2 +&
                      beta ** 2 * r ** 2 * (1 - x ** 2) * (1 - y ** 2) + r ** 2 * x ** 2 * &
                      alpha ** 2) ** (-0.5D1 / 0.2D1) + 3 * r ** 2 * (1 - x ** 2) * (1 - y ** 2) * x * &

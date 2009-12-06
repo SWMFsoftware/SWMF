@@ -95,11 +95,11 @@ subroutine PRESSURES
                  I_1=ILMP(J)
                  I_2=ILMP(J)-1
               end if
-              !JPER(I,J,S)=-J_FAC*((PPER(I_1,J,S)-PPER(I_2,J,S))/DL1+   &
-              !     3.*(PPER(I,J,S)-PPAR(I,J,S))/LZ(I))/BE(I,1) !J perp [A/m2]
-              
               JPER(I,J,S)=-J_FAC*((PPER(I_1,J,S)-PPER(I_2,J,S))/DL1+   &
-                   3.*(PPER(I,J,S)-PPAR(I,J,S))/LZ(I))/bFieldMagnitude_III(nPointEq,i,j) !J perp [A/m2]
+                   3.*(PPER(I,J,S)-PPAR(I,J,S))/LZ(I))/BE(I,1) !J perp [A/m2]
+              
+!              JPER(I,J,S)=-J_FAC*((PPER(I_1,J,S)-PPER(I_2,J,S))/DL1+   &
+!                   3.*(PPER(I,J,S)-PPAR(I,J,S))/LZ(I))/bFieldMagnitude_III(nPointEq,i,j) !J perp [A/m2]
               
            end do   ! I loop
         end do      ! J loop
@@ -539,11 +539,15 @@ real function Funcpf(As,BBr,BBm)
 
   implicit none
 
-  real:: c1, c2, BBr, BBm, As
+  real:: c1, c2, BBr, BBm, As,prod
   !---------------------------------------------------------------------  
   c1=sqrt(amax1(0.,(BBr/BBm-1.)/(BBr/BBm-BBr)))
   c2=(1.+As*BBr)/(BBr/BBm+As*BBr)
-  FuncPf=(As+1.)/(1.+As*BBr)*c1*(1.-c2)
+  prod = As*BBr
+
+  if (prod ==-1.) prod =-0.9999
+
+  FuncPf=(As+1.)/(1.+prod)*c1*(1.-c2)
 
 end function Funcpf
 !=======================================================================
@@ -555,12 +559,16 @@ real function Funcpc(As,BBr,BBm)
 
   implicit none
 
-  real:: c1, c2, BBr, BBm, As
+  real:: c1, c2, BBr, BBm, As,prod
   !--------------------------------------------------------------------    
+
   c1=sqrt(amax1(0.,(BBr/BBm-1.)/(BBr/BBm-BBr)))
   c2=(1.+As*BBr)/(BBr/BBm+As*BBr)
-  FuncPc=(As+1.)/(1.+As*BBr)**2*c1*(1.-c2)
 
+  prod = As*BBr
+  if (prod ==-1.) prod =-0.9999
+!  FuncPc=(As+1.)/(1.+As*BBr)**2*c1*(1.-c2)
+  FuncPc=(As+1.)/(1.+prod)**2*c1*(1.-c2)
 end function Funcpc
 !=======================================================================
 
