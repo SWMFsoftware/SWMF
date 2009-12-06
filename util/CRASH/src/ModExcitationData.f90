@@ -370,7 +370,7 @@ module CRASH_ModExcitationData
   !For terms p^2-p^4 and d^2-d^8 the used stat.wieght is off by a factor of 2 to 50
   logical,public:: UseFullGroundState = .false. 
   !====================THE END OF INTERNAL DATABASE=====================================
-  logical,public::UseDataBase = .true.
+  logical,public::UseDataBase = .false.
 contains
   !=====================================================================================
   subroutine init_excitation
@@ -663,7 +663,7 @@ contains
     do iZ=0,min(iZMax,nZ-1)
 
        NameFile='../input/atomic_data'//'/'//NameElement_I(nZ)//'/'//NameElement_I(nZ-iZ)//'.lev'
-     
+       write(*,'(a)')NameFile
        iUnit = io_unit_new()
        open(iUnit,file=NameFile,status='old')
        do iLine=1,nHeader
