@@ -116,6 +116,7 @@ contains
              tmp(2,i) = 1
              read(LunIndices_,'(a10,f3.0,f2.0,f2.0,f8.1)', iostat = ierror ) &
                   line,tmp(3:6,i)
+             if (tmp(3,i) < 1) iError = 1
           endif
 
           if(datatype.eq.2) then
