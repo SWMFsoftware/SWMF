@@ -30,6 +30,8 @@ subroutine gather
      cpcps/1000.0, cpcpn/1000.0, " kV"
 
   call rearrange(JouleHeating,JouleHeatingAll)
+  call rearrange(AveE, AveEAll)
+  call rearrange(Eflux,EfluxAll)
 
 contains
 
