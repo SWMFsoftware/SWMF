@@ -150,7 +150,9 @@ subroutine init_RIM()
        OuterMagTAllR(0:nLonsAll+1,nLats), &
        OuterMagPAllR(0:nLonsAll+1,nLats), &
        LatitudeAllR(0:nLonsAll+1,nLats),&
-       JouleHeatingAll(nLats+2,nLonsAll+1))
+       JouleHeatingAll(nLats+2,nLonsAll+1), &
+       AveEall(nLats+2,nLonsAll+1), &
+       EfluxAll(nLats+2,nLonsAll+1))
 
   SigmaHAll        = -1.0e32
   SigmaPAll        = -1.0e32
@@ -163,6 +165,8 @@ subroutine init_RIM()
   OuterMagRhoAll   = -1.0e32
   OuterMagPAll     = -1.0e32
   JouleHeatingAll  = -1.0e32
+  AveEAll          = -1.0e32
+  EfluxAll         = -1.0e32
 
   ! This is ONLY for communication to other modules
 
