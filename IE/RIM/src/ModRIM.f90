@@ -55,7 +55,7 @@ module ModRIM
        OuterMagInvBAll, OuterMagRhoAll, OuterMagPAll, &
        OuterMagInvBAllR, OuterMagRhoAllR, OuterMagPAllR, OuterMagTAllR, &
        LatitudeAllR, &
-       InnerMagEFluxAll, InnerMagAveEAll, JouleHeatingAll
+       InnerMagEFluxAll, InnerMagAveEAll, JouleHeatingAll, AveEAll, EfluxAll
 
   real :: cpcps = 0.0
   real :: cpcpn = 0.0
