@@ -67,7 +67,7 @@ contains
     ! Plot file parameters
     integer :: iFile, i, iError, iDebugProc
     character (len=50) :: plot_string
-    character (len=100) :: imffilename
+    character (len=100) :: imffilename,hpifilename
     character (len=100), dimension(100) :: cTempLines
 
     !--------------------------------------------------------------------------
@@ -154,6 +154,23 @@ contains
        case ("#HPI")
           call read_var('HemisphericPower',HemisphericPower)
           call IO_set_hpi_single(HemisphericPower)
+
+        case ("#NOAAHPI_INDICES")
+           cTempLines(1) = NameCommand
+           call read_var('hpifilename',hpifilename)
+           cTempLines(2) = hpifilename
+           cTempLines(3) = " "
+           cTempLines(4) = "#END"
+
+           call IO_set_inputs(cTempLines)
+           call read_NOAAHPI_Indices(iError)
+
+           if (iError /= 0) then
+              write(*,*) "read indices was NOT successful (NOAA HPI file)"
+              EXIT
+           else
+              UseStaticIMF = .false.
+           endif
 
        case ("#MHD_INDICES")
           cTempLines(1) = NameCommand
@@ -555,6 +572,14 @@ subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
              Buffer_IIV(:,:,iVar) = Buffer_IIV(:,:,iVar) + InnerMagJrAll
         if (maxval(IonoJrAll) > -1.0e31) &
              Buffer_IIV(:,:,iVar) = Buffer_IIV(:,:,iVar) + IonoJrAll
+    case('Ave')
+        Buffer_IIV(:,:,iVar) = 0.0
+        if (maxval(AveEAll) > -1.0e31) &
+             Buffer_IIV(:,:,iVar) = Buffer_IIV(:,:,iVar) + AveEAll
+     case('Tot')
+        Buffer_IIV(:,:,iVar) = 0.0
+        if (maxval(EfluxAll) > -1.0e31) &
+             Buffer_IIV(:,:,iVar) = Buffer_IIV(:,:,iVar) + EfluxAll
      case default
         call CON_stop(NameSub//' invalid NameVar='//Name_V(iVar))
      end select
