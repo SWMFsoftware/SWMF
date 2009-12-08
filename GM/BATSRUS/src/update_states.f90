@@ -21,7 +21,7 @@ subroutine update_states(iStage,iBlock)
   endif
 
   if(oktest_me)then
-     write(*,*)NameSub,'dt=',time_BLK(iTest, jTest, kTest, iBlock)
+     write(*,*)NameSub,' dt=',time_BLK(iTest, jTest, kTest, iBlock)
      if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
           IsConserv_CB(iTest,jTest,kTest,iBlock)
      write(*,*)
