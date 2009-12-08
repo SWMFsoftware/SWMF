@@ -134,6 +134,7 @@ contains
              CellFace_DFB(2,1:nI,j,1:nK,iBlock) = CellFace_DB(2,iBlock) &
                   *0.5*sum(Xyz_DGB(2,1,j-1:j,1,iBlock))
           end do
+          CellFace_DFB(3,:,:,:,iBlock) = CellFace_DB(3,iBlock)
        else
           ! Also useful for Cartesian to keep code simple
           CellVolume_GB(:,:,:,iBlock) = CellVolume_B(iBlock)
