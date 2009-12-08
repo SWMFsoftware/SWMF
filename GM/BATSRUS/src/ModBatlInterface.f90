@@ -52,8 +52,10 @@ contains
   !===========================================================================
   subroutine set_batsrus_block(iBlock)
 
-    use BATL_lib, ONLY: CellSize_DB, CoordMin_DB, DiLevelNei_IIIB, iProc
-    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, XyzStart_BLK
+    use BATL_lib, ONLY: CellSize_DB, CoordMin_DB, DiLevelNei_IIIB, iProc, &
+         IsRzGeometry, CellFace_DFB, nI, nJ, nK
+    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, XyzStart_BLK, &
+         FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
     use ModParallel, ONLY: BLKneighborLEV,  neiLEV, &
          neiLeast, neiLwest, neiLsouth, neiLnorth, neiLbot, neiLtop, &
          neiBeast, neiBwest, neiBsouth, neiBnorth, neiBbot, neiBtop, &
@@ -101,6 +103,35 @@ contains
 
     call fix_block_geometry(iBlock)
 
+    if(IsRzGeometry)then
+       ! This is like Cartesian except for the areas in R (=x) and Z (=y)
+       FaceAreaI_DFB(:,:,:,:,iBlock) = 0.0
+       FaceAreaJ_DFB(:,:,:,:,iBlock) = 0.0
+       FaceAreaK_DFB(:,:,:,:,iBlock) = 0.0
+       FaceAreaI_DFB(1,:,:,:,iBlock) = CellFace_DFB(1,:,1:nJ,1:nK,iBlock)
+       FaceAreaJ_DFB(2,:,:,:,iBlock) = CellFace_DFB(2,1:nI,:,1:nK,iBlock)
+    end if
+       
   end subroutine set_batsrus_block
+  !============================================================================
+  subroutine set_batsrus_state
+
+    ! Here we should fix B0 and other things
+
+    use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_
+    use ModEnergy, ONLY: calc_energy_cell
+
+    integer:: iBlock
+    !-------------------------------------------------------------------------
+    RETURN
+    
+    do iBlock = 1, nBlock
+       if(iAmrChange_B(iBlock) <= AmrMoved_) CYCLE
+
+       call calc_energy_cell(iBlock)
+    end do
+
+  end subroutine set_batsrus_state
+  !============================================================================
 
 end module ModBatlInterface
