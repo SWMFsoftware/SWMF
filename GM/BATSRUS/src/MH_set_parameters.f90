@@ -2473,8 +2473,12 @@ contains
     ! Set XyzMin_D, XyzMax_D based on 
     ! #GRID, #GRIDGEOMETRY, and #LIMITGENCOORD/#LIMITRADIUS
     select case(TypeGeometry)
-    case('cartesian', 'rz')
-       !            X,  Y,  Z
+    case('cartesian')
+       XyzMin_D = (/x1, y1, z1/)
+       XyzMax_D = (/x2, y2, z2/)
+    case('rz')
+       z1 = -0.5
+       z2 = +0.5
        XyzMin_D = (/x1, y1, z1/)
        XyzMax_D = (/x2, y2, z2/)
     case('spherical', 'spherical_lnr', 'spherical_genr')
@@ -2562,16 +2566,14 @@ contains
        call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
             TypeGeometry, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
             proc_dims(1:nDimBatl))
+       ! Fix grid size in ignored directions
+       if(nDimBatl == 1)then
+          y1 = -0.5; XyzMin_D(2) = -0.5
+          y2 = +0.5; XyzMax_D(2) = +0.5
+       end if
        if(nDimBatl < 3)then
-          ! Fix grid size in ignored directions
-          XyzMin_D(nDimBatl+1:3) = -0.5
-          XyzMax_D(nDimBatl+1:3) = +0.5
-          if(nDimBatl == 1)then
-             y1 = -0.5
-             y2 = +0.5
-          end if
-          z1 = -0.5
-          z2 = +0.5
+          z1 = -0.5; XyzMin_D(3) = -0.5
+          z2 = +0.5; XyzMax_D(3) = +0.5
        end if
     end if
 
