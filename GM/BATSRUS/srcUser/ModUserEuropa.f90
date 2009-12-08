@@ -15,7 +15,7 @@ module ModUser
 
   real,              parameter :: VersionUserModule = 0.9
   character (len=*), parameter :: NameUserModule = &
-       'Rubin single species Europa MHD module, Nov 2009'
+       'Rubin single species Europa MHD module, Dec 2009'
 
   real, public, dimension(1:nI, 1:nJ, 1:nK, nBLK) :: Neutral_BLK, MassLoad_BLK
   real :: n0, dn, H, v, alpha, mi_mean, kin, distr
@@ -89,18 +89,18 @@ contains
     use ModNumConst
     use ModGeometry,ONLY: R_BLK, x_BLK, y_BLK, z_BLK
     integer :: i,j,k
-    real :: alpha
+    real :: theta
     
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! angle of cell position relative to ram direction 
-       alpha=acos((-SW_Ux*x_BLK(i,j,k,globalBLK)-SW_Uy*y_BLK(i,j,k,globalBLK)&
+       theta=acos((-SW_Ux*x_BLK(i,j,k,globalBLK)-SW_Uy*y_BLK(i,j,k,globalBLK)&
             -SW_Uz*z_BLK(i,j,k,globalBLK))/R_BLK(i,j,k,globalBLK)/&
             (SW_Ux**2+SW_Uy**2+SW_Uz**2)**0.5)
 
        ! neutral density used for mass loading in SI units
        if(distr==0) then
           ! uniform neutral density distribution
-          if(alpha<=cPi/2) then
+          if(theta<=cPi/2) then
              ! ram side
              MassLoad_BLK(i,j,k,globalBLK) = 2*dn*n0*exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
                   /(H/rPlanetSi))
@@ -111,9 +111,9 @@ contains
           end if
        else if(distr==1) then
           ! cosine neutral density distribution
-          if(alpha<=cPi/2) then
+          if(theta<=cPi/2) then
              ! ram side (100%), normalization factor 1/4
-             MassLoad_BLK(i,j,k,globalBLK) = 4*cos(alpha)*n0*exp(-(R_BLK(i,j,k,globalBLK)&
+             MassLoad_BLK(i,j,k,globalBLK) = 4*cos(theta)*n0*exp(-(R_BLK(i,j,k,globalBLK)&
                   - Rbody)/(H/rPlanetSi))
           else
              ! wake side is set to 0
@@ -129,7 +129,7 @@ contains
           write(*,*)'X= ',x_BLK(i,j,k,globalBLK),'Y= ',y_BLK(i,j,k,globalBLK),&
                'Z= ',z_BLK(i,j,k,globalBLK)
           write(*,*)'SW_Ux= ',SW_Ux,'SW_Uy= ',SW_Uy,'SW_Uz= ',SW_Uz
-          write(*,*)'alpha= ',alpha,'n= ',Neutral_BLK(i,j,k,globalBLK)
+          write(*,*)'theta= ',theta,'n= ',Neutral_BLK(i,j,k,globalBLK)
        end if
     end do;  end do;  end do
 
