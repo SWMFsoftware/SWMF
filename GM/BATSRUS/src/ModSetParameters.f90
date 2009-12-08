@@ -62,7 +62,6 @@ subroutine MH_set_parameters(TypeAction)
   use ModLookupTable, ONLY: read_lookup_table_param
   use ModIonoVelocity,ONLY: read_iono_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
-  use BATL_lib, ONLY: init_mpi, init_batl, nDimBatl => nDim
   use ModIoUnit, ONLY: io_unit_new
   
   implicit none
@@ -206,13 +205,6 @@ subroutine MH_set_parameters(TypeAction)
      call correct_parameters
 
      ! initialize module variables
-     if(UseBatl)then
-        call init_mpi(iComm)
-        call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
-             TypeGeometry, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
-             proc_dims(1:nDimBatl))
-     end if
-
      call init_mod_advance
      DivB1_GB = 0.0
      call init_mod_geometry
@@ -2441,6 +2433,11 @@ contains
   !===========================================================================
   subroutine correct_grid_geometry
 
+    use BATL_lib, ONLY: init_mpi, init_batl, nDimBatl => nDim, &
+         CoordMin_D, CoordMax_D
+    use ModBatlInterface, ONLY: set_batsrus_grid
+    !-----------------------------------------------------------------------
+
     if(i_line_command("#GRID", iSessionIn = 1) < 0) &
          call stop_mpi(NameSub // &
          ' #GRID command must be specified in the first session!')
@@ -2558,6 +2555,25 @@ contains
 
     if(TypeGeometry /= 'spherical_genr') &
          call set_fake_grid_file
+
+    ! Set BATL grid
+    if(UseBatl)then
+       call init_mpi(iComm)
+       call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
+            TypeGeometry, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
+            proc_dims(1:nDimBatl))
+       if(nDimBatl < 3)then
+          ! Fix grid size in ignored directions
+          XyzMin_D(nDimBatl+1:3) = -0.5
+          XyzMax_D(nDimBatl+1:3) = +0.5
+          if(nDimBatl == 1)then
+             y1 = -0.5
+             y2 = +0.5
+          end if
+          z1 = -0.5
+          z2 = +0.5
+       end if
+    end if
 
   end subroutine correct_grid_geometry
 
