@@ -1040,13 +1040,10 @@ subroutine fix_rz_geometry(iBlock)
   integer,intent(in)::iBlock
   
   integer :: i, j, k
-  real    :: DzInv
   
   character(LEN=*),parameter::NameSub='fix_rz_geometry'
   !---------------------------------------------------!
   
-  DzInv = 1/dz_BLK(iBlock)
-
   !No fluxes along 'k' direction
   FaceAreaK_DFB(:,:,:,:,iBlock) = 0; FaceArea2MinK_B(iBlock)= 1.0
   
@@ -1054,16 +1051,15 @@ subroutine fix_rz_geometry(iBlock)
   !we need (1) to eliminate the dependence on meaningless dZ and (2)
   !to add the radius-dependent multipliers (radial coordinate is abs(y)
   do j=1,nJ
-     vInv_CB(:,j,:,iBlock) = vInv_CB(:,j,:,iBlock)/&
-          (abs(y_BLK(1,j,1,iBlock)) * DzInv)
+     vInv_CB(:,j,:,iBlock) = vInv_CB(:,j,:,iBlock)/abs(y_BLK(1,j,1,iBlock))
 
-     FaceAreaI_DFB(:,:,j,:,iBlock) = FaceAreaI_DFB(:,:,j,:,iBlock) * DzInv *&
-           abs(y_BLK(1,j,1,iBlock))
+     FaceAreaI_DFB(:,:,j,:,iBlock) = FaceAreaI_DFB(:,:,j,:,iBlock) &
+           *abs(y_BLK(1,j,1,iBlock))
   end do
 
   do j=1,nJ+1
-     FaceAreaJ_DFB(:,:,j,:,iBlock) = FaceAreaJ_DFB(:,:,j,:,iBlock) * DzInv *&
-           abs(NodeY_NB(1,j,1,iBlock))
+     FaceAreaJ_DFB(:,:,j,:,iBlock) = FaceAreaJ_DFB(:,:,j,:,iBlock) &
+           *abs(NodeY_NB(1,j,1,iBlock))
   end do
 
   !At the pole the face area along j direction is zero. Non-zero FaceArea2MinJ 
