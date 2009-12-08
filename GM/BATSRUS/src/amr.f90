@@ -14,7 +14,7 @@ subroutine amr(DoMessagePass)
   use ModParallel,      ONLY: UsePlotMessageOptions
   use BATL_lib,         ONLY: regrid_batl, Unused_B, iNode_B, &
        iStatusNew_A, Refine_, Coarsen_
-  use ModBatlInterface, ONLY: set_batsrus_grid
+  use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
   use ModUser,          ONLY: user_amr_criteria
 
   implicit none
@@ -34,7 +34,7 @@ subroutine amr(DoMessagePass)
   if(UseBatl)then
      ! Do message passing with second order accurate ghost cells
 
-     if(DoTestMe)write(*,*) NameSub,' starts 2nd order accurate message passing'
+     if(DoTestMe)write(*,*)NameSub,' starts 2nd order accurate message passing'
 
      if(DoMessagePass)then
         UsePlotMessageOptions = .true.
@@ -82,6 +82,9 @@ subroutine amr(DoMessagePass)
         end if
      end if
 
+     ! Fix energy and other variables in moved/refined/coarsened blocks
+     call set_batsrus_state
+
      if(DoMessagePass)then
         ! Update iTypeAdvance, and redo load balancing if necessary
         ! Load balance: move coords, data, and there are new blocks
@@ -95,6 +98,7 @@ subroutine amr(DoMessagePass)
   end if
 
   ! Ensure ghostcells are up to date.
+  ! UsePlotMessageOptions = .true. !!! this would be useful
   call exchange_messages
 
   if (automatic_refinement) then
@@ -140,6 +144,7 @@ subroutine amr(DoMessagePass)
   end if
 
   ! Update ghost cells
+  ! UsePlotMessageOptions = .false. !!! this would be useful (see above)
   call exchange_messages
   if(UseB0)then
      ! Correct B0 face at newly created and removed resolution changes
