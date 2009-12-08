@@ -2,7 +2,7 @@ module BATL_grid
 
   use BATL_size
   use BATL_tree
-  use BATL_geometry, ONLY: IsCartesian, TypeGeometry
+  use BATL_geometry, ONLY: IsCartesian, IsRzGeometry, TypeGeometry
 
   implicit none
 
@@ -108,7 +108,7 @@ contains
     CellSize_DB(:,iBlock) = (CoordMax_DB(:,iBlock) - CoordMin_DB(:,iBlock)) &
          / nIJK_D
 
-    if(IsCartesian .or. TypeGeometry == 'rz')then
+    if(IsCartesian .or. IsRzGeometry)then
        ! For RZ geometry this is true in generalized coordinate sense only
        CellVolume_B(iBlock) = product(CellSize_DB(:,iBlock))
        CellFace_DB(:,iBlock) = CellVolume_B(iBlock) / CellSize_DB(:,iBlock)
@@ -118,7 +118,7 @@ contains
                ( (/i, j, k/) - 0.5 ) * CellSize_DB(:,iBlock)
        end do; end do; end do
 
-       if(TypeGeometry == 'rz')then
+       if(IsRzGeometry)then
           do j = MinJ, MaxJ
              ! NOTE: beyond the axis (y<0) the ghost cell volume is NEGATIVE!
              ! This allows the conservative prolongation work in BATL_amr.
@@ -132,7 +132,7 @@ contains
           do j = 1, nJ+1
              ! Could use node coordinate here !!!
              CellFace_DFB(2,1:nI,j,1:nK,iBlock) = CellFace_DB(2,iBlock) &
-                  *0.5*sum(abs(Xyz_DGB(2,1,j-1:j,1,iBlock)))
+                  *0.5*sum(Xyz_DGB(2,1,j-1:j,1,iBlock))
           end do
        else
           ! Also useful for Cartesian to keep code simple
