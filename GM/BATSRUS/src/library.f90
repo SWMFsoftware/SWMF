@@ -1294,10 +1294,11 @@ subroutine find_test_cell
 
   use ModProcMH
   use ModMain
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,r_BLK,dx_BLK
+  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,r_BLK,dx_BLK,dy_BLK,dz_BLK,vInv_CB
   use ModParallel, ONLY : NOBLK, neiLEV,neiPE,neiBLK
   use ModAdvance,  ONLY : tmp1_BLK
   use ModMpi
+  use BATL_lib, ONLY: CellSize_DB, CellFace_DFB, CellVolume_GB, IsCartesian
   implicit none
 
   real :: qdist, qdist_min
@@ -1374,9 +1375,19 @@ subroutine find_test_cell
              'x=',x_BLK(Itest,Jtest,Ktest,BLKtest),&
              ' y=',y_BLK(Itest,Jtest,Ktest,BLKtest),&
              ' z=',z_BLK(Itest,Jtest,Ktest,BLKtest),&
-             ' r=',r_BLK(iTest,jTest,kTest,BLKtest),&
-             ' dx=',dx_BLK(BLKtest)
-
+             ' r=',r_BLK(iTest,jTest,kTest,BLKtest)
+        write(*,'(a,f12.5,a,f12.5,a,f12.5,a,f12.5)') &
+             'dx=',      dx_BLK(BLKtest),&
+             ' dy=',     dy_BLK(BLKtest),&
+             ' dz=',     dz_BLK(BLKtest),&
+             ' Vol111=', 1./vInv_CB(1,1,1,BLKtest)
+        if(UseBatl)then
+           write(*,'(a,3f12.5,a,f12.5)') &
+                ' CellSize_D=',CellSize_DB(:,BLKtest),&
+                ' CellVol111=',CellVolume_GB(1,1,1,BLKtest)
+           if(.not.IsCartesian) write(*,'(a,3f12.5)') &
+                ' CellFace111_D=',CellFace_DFB(:,1,1,1,BLKtest)
+        end if
   	do idir=1,6
   	   select case(neiLEV(idir,BLKtest))
            case(0,1)
