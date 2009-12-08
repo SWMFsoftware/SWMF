@@ -15,11 +15,13 @@ module BATL_lib
 
   private ! except
 
-  ! Public methods of this module
+  ! Public methods and variables of this module
   public:: init_batl
   public:: clean_batl
   public:: init_grid_batl
   public:: regrid_batl
+
+  logical, public:: IsBatlInitialized = .false.
 
   ! Inherited from BATL_size
   public:: MaxDim, nDim, nDimAmr
@@ -103,12 +105,16 @@ contains
     ! cell volumes, face areas, etc. are all set.
     !
     !-------------------------------------------------------------------------
+    if(IsBatlInitialized) RETURN
+
     call init_tree(MaxBlockIn)
     call init_geometry(TypeGeometryIn, IsPeriodicIn_D)
     call init_grid(CoordMinIn_D, CoordMaxIn_D)
     call set_tree_root(nRootIn_D)
     call distribute_tree(.true.)
     call create_grid
+
+    IsBatlInitialized = .true.
 
   end subroutine init_batl
   !============================================================================
@@ -117,6 +123,8 @@ contains
     ! Free up memory by cleaning the grid and tree data
     call clean_grid
     call clean_tree
+
+    IsBatlInitialized = .false.
 
   end subroutine clean_batl
 
