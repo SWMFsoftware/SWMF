@@ -1,7 +1,8 @@
 !^CFG COPYRIGHT UM
 module ModConserveFlux
 
-  use ModSize, ONLY: nDim, nI, nJ, nK, MaxBlock
+  use BATL_size, ONLY: nDim, MaxDim
+  use ModSize, ONLY: nI, nJ, nK, MaxBlock
   use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_,B_,U_
 
   use ModProcMH, ONLY: iProc
@@ -57,9 +58,9 @@ contains
     integer,intent(in) :: iBlock
     !--------------------------------------------------------------------------
     if(.not.allocated(CorrectedFlux_VXB)) allocate( &
-         CorrectedFlux_VXB(nCorrectedFaceValues, nJ, nK, 2, MaxBlock), &
-         CorrectedFlux_VYB(nCorrectedFaceValues, nI, nK, 2, MaxBlock), &
-         CorrectedFlux_VZB(nCorrectedFaceValues, nI, nJ, 2, MaxBlock))
+         CorrectedFlux_VXB(nCorrectedFaceValues,nJ,nK,2,MaxBlock), &
+         CorrectedFlux_VYB(nCorrectedFaceValues,nI,nK,2,MaxBlock), &
+         CorrectedFlux_VZB(nCorrectedFaceValues,nI,nJ,2,MaxBlock)  )
 
     CorrectedFlux_VXB(:,:,:,:,iBlock) = 0.0
     CorrectedFlux_VYB(:,:,:,:,iBlock) = 0.0
@@ -96,25 +97,25 @@ contains
        call save_corrected_flux_x
     end if
 
-    if (neiLsouth(iBlock)==+1) then
+    if (nDim > 1 .and. neiLsouth(iBlock)==+1) then
        lFaceFrom=1
        lFaceTo=1
        call save_corrected_flux_y
     end if
 
-    if (neiLnorth(iBlock)==+1) then
+    if (nDim > 1 .and. neiLnorth(iBlock)==+1) then
        lFaceFrom=1+nJ
        lFaceTo=2
        call save_corrected_flux_y
     end if
 
-    if (neiLbot(iBlock)==+1) then
+    if (nDim > 2 .and. neiLbot(iBlock)==+1) then
        lFaceFrom=1
        lFaceTo=1
        call save_corrected_flux_z
     end if
 
-    if (neiLtop(iBlock)==+1) then
+    if (nDim > 2 .and. neiLtop(iBlock)==+1) then
        lFaceFrom=nK+1
        lFaceTo=2
        call save_corrected_flux_z
@@ -137,7 +138,9 @@ contains
               = VdtFace_x(lFaceFrom,j,k)
 
       end do;end do
-      if(.not.UseB)return
+
+      if(.not.UseB)RETURN
+
       if(UseCovariant)then
          do k=1,nK; do j=1,nJ
             CorrectedFlux_VXB(BnL_, j, k, lFaceTo, iBlock) = &
@@ -185,7 +188,9 @@ contains
          CorrectedFlux_VYB(Vdt_, i, k, lFaceTo, iBlock)         &
               = VdtFace_y(i, lFaceFrom, k)
       end do; end do
-      if(.not.UseB)return
+
+      if(.not.UseB)RETURN
+
       if(UseCovariant)then
          do k=1,nK; do i=1,nI
             CorrectedFlux_VYB(BnL_, i, k, lFaceTo, iBlock) = &
@@ -220,7 +225,9 @@ contains
          CorrectedFlux_VZB(Vdt_,  i,j,lFaceTo,iBlock)           &
               = VdtFace_z(i,j,lFaceFrom)
       end do; end do
-      if(.not.UseB)return
+
+      if(.not.UseB)RETURN
+
       if(UseCovariant)then
          do j=1,nJ; do i=1,nI
             CorrectedFlux_VZB(BnL_, i, j, lFaceTo, iBlock) = &
@@ -283,7 +290,7 @@ contains
        end if
     end if
 
-    if (neiLsouth(iBlock)==-1) then
+    if (nDim > 1 .and. neiLsouth(iBlock)==-1) then
        if(.not.unusedBlock_BP(neiBsouth(1,iBlock),neiPsouth(1,iBlock)).and.&
             .not.unusedBlock_BP(neiBsouth(2,iBlock),neiPsouth(2,iBlock)).and.&
             .not.unusedBlock_BP(neiBsouth(3,iBlock),neiPsouth(3,iBlock)).and.&
@@ -294,7 +301,7 @@ contains
        end if
     end if
 
-    if (neiLnorth(iBlock)==-1) then
+    if (nDim > 1 .and. neiLnorth(iBlock)==-1) then
        if ( .not.unusedBlock_BP(neiBnorth(1,iBlock),neiPnorth(1,iBlock)).and.&
             .not.unusedBlock_BP(neiBnorth(2,iBlock),neiPnorth(2,iBlock)).and.&
             .not.unusedBlock_BP(neiBnorth(3,iBlock),neiPnorth(3,iBlock)).and.&
@@ -305,7 +312,7 @@ contains
        end if
     end if
 
-    if (neiLbot(iBlock)==-1) then
+    if (nDim > 2 .and. neiLbot(iBlock)==-1) then
        if ( .not.unusedBlock_BP(neiBbot(1,iBlock),neiPbot(1,iBlock)).and. &
             .not.unusedBlock_BP(neiBbot(2,iBlock),neiPbot(2,iBlock)).and. &
             .not.unusedBlock_BP(neiBbot(3,iBlock),neiPbot(3,iBlock)).and. &
@@ -316,7 +323,7 @@ contains
        end if
     end if
 
-    if (neiLtop(iBlock)==-1) then
+    if (nDim > 2 .and. neiLtop(iBlock)==-1) then
        if ( .not.unusedBlock_BP(neiBtop(1,iBlock),neiPtop(1,iBlock)).and. &
             .not.unusedBlock_BP(neiBtop(2,iBlock),neiPtop(2,iBlock)).and. &
             .not.unusedBlock_BP(neiBtop(3,iBlock),neiPtop(3,iBlock)).and. &
@@ -408,7 +415,7 @@ contains
 
     integer,intent(in) :: iFaceOut,iFaceIn,iBlock
     integer :: j,k
-    real,dimension(nDim) :: B_D,FaceArea_D
+    real,dimension(MaxDim) :: B_D,FaceArea_D
     real:: FaceArea2,DeltaBDotFA
     !------------------------------------------------------------------------
     do k=1,nK; do j=1,nJ
@@ -439,7 +446,7 @@ contains
     integer,intent(in) :: jFaceOut,jFaceIn,iBlock
 
     integer :: i,k
-    real,dimension(nDim) :: B_D,FaceArea_D
+    real,dimension(MaxDim) :: B_D,FaceArea_D
     real:: FaceArea2,DeltaBDotFA
     !------------------------------------------------------------------------
 
@@ -473,7 +480,7 @@ contains
     integer,intent(in) :: kFaceOut,kFaceIn,iBlock
 
     integer :: i,j
-    real,dimension(nDim) :: B_D, FaceArea_D
+    real,dimension(MaxDim) :: B_D, FaceArea_D
     real:: FaceArea2,DeltaBDotFA
     !------------------------------------------------------------------------
     do j=1,nJ; do i=1,nI
