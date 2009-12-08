@@ -483,11 +483,11 @@ contains
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
-         call set_cell_values_x
-
          DoTestCell = DoTestMe &
               .and. (iFace == iTest .or. iFace == iTest+1) &
               .and. jFace == jTest .and. kFace == kTest
+
+         call set_cell_values_x
 
          if(UseB0)then
             B0x = B0_DX(x_,iFace, jFace, kFace)
@@ -537,10 +537,10 @@ contains
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
-         call set_cell_values_y
-
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
+
+         call set_cell_values_y
 
          if(UseB0)then
             B0x = B0_DY(x_,iFace, jFace, kFace)
@@ -593,10 +593,11 @@ contains
       do kFace = kMin, kMax; 
          do jFace = jMin, jMax; do iFace = iMin, iMax
 
-         call set_cell_values_z
-
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
+
+         call set_cell_values_z
+
          if(UseB0)then
             B0x = B0_DZ(x_,iFace, jFace, kFace)
             B0y = B0_DZ(y_,iFace, jFace, kFace)
@@ -687,12 +688,17 @@ contains
 
     iLeft = iFace - 1; jLeft = jFace; kLeft = kFace
 
-    if(UseCovariant)then                  
+    if(UseCovariant)then
+
        AreaX = FaceAreaI_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaI_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaI_DFB(z_, iFace, jFace, kFace, iBlockFace)
        Area2 = AreaX**2 + AreaY**2 + AreaZ**2
        if(Area2 < 0.5*FaceArea2MinI_B(iBlockFace))then
+
+          if(DoTestCell)write(*,*)'Area2, FaceArea2MinI_B=', &
+               Area2, FaceArea2MinI_B(iBlockFace)
+
           ! The face is at the pole
           Normal_D(x_)= &
                x_BLK(iFace, jFace, kFace, iBlockFace)-&
@@ -712,7 +718,7 @@ contains
           Area = sqrt(Area2)
           Normal_D=(/AreaX, AreaY, AreaZ/)/Area
        end if
-    end if                                
+    end if
 
     call set_cell_values_common
 
@@ -729,6 +735,10 @@ contains
        AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlockFace)
        Area2 = AreaX**2 + AreaY**2 + AreaZ**2
        if(Area2 < 0.5*FaceArea2MinJ_B(iBlockFace))then
+
+          if(DoTestCell)write(*,*)'Area2, FaceArea2MinJ_B=', &
+               Area2, FaceArea2MinJ_B(iBlockFace)
+
           !The face is at the pole
           Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
                        x_BLK(iLeft, jLeft, kLeft, iBlockFace)
@@ -745,7 +755,9 @@ contains
        else
           Area = sqrt(Area2)
           Normal_D = (/AreaX, AreaY, AreaZ/)/Area
+
        end if
+
     end if                                
 
     call set_cell_values_common
@@ -763,6 +775,10 @@ contains
        AreaZ = FaceAreaK_DFB(z_, iFace, jFace, kFace, iBlockFace)
        Area2 = AreaX**2 + AreaY**2 + AreaZ**2
        if(Area2 < 0.5*FaceArea2MinK_B(iBlockFace))then
+
+          if(DoTestCell)write(*,*)'Area2, FaceArea2MinK_B=', &
+               Area2, FaceArea2MinK_B(iBlockFace)
+
           !The face is at the pole
           Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
                        x_BLK(iLeft, jLeft, kLeft, iBlockFace)
@@ -795,6 +811,10 @@ contains
 
     real :: r
     !--------------------------------------------------------------------
+
+    if(DoTestCell .and. UseCovariant) &
+         write(*,*)'Area2,AreaX,AreaY,AreaZ,Normal_D=', &
+         Area2, AreaX, AreaY, AreaZ, Normal_D
 
     iRight= iFace; jRight = jFace; kRight = kFace
 
@@ -1731,7 +1751,7 @@ contains
     subroutine write_test_info
       integer :: iVar
       !--------------------------------------------------------------------
-      write(*,*)'Hat state for face=',iDimFace,&
+      write(*,*)'Hat state for dir=',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
       write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_))
       write(*,*)'Un =',0.5*(StateLeft_V(U_+iDimFace)+StateRight_V(U_+iDimFace))
