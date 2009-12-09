@@ -1880,7 +1880,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
          polyfill, rBodySlice*cos(theta), rBodySlice*sin(theta),color = 0, $
            noclip=0
          ; redraw box in case the body is at the edge
-         plot,xx,yy,XSTYLE=1,YSTYLE=1,/NODATA,/NOERASE
+         if(plotmod ne 'polar')then $
+           plot,xx,yy,XSTYLE=1,YSTYLE=1,/NODATA,/NOERASE
       endif
 
       if showgrid and plotdim eq 2 and plotmod ne 'surface'    $
