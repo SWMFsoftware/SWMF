@@ -125,6 +125,8 @@ contains
              CellVolume_GB(:,j,:,iBlock) = &
                   CellVolume_B(iBlock)*Xyz_DGB(2,1,j,1,iBlock)
           end do
+          CellVolume_GB(1:nI,1:nJ,1:nK,iBlock) = &
+               abs(CellVolume_GB(1:nI,1:nJ,1:nK,iBlock))
           do j = 1, nJ
              CellFace_DFB(1,:,j,1:nK,iBlock) = &
                   CellFace_DB(1,iBlock)*abs(Xyz_DGB(2,1,j,1,iBlock))
@@ -132,7 +134,7 @@ contains
           do j = 1, nJ+1
              ! Could use node coordinate here !!!
              CellFace_DFB(2,1:nI,j,1:nK,iBlock) = CellFace_DB(2,iBlock) &
-                  *0.5*sum(Xyz_DGB(2,1,j-1:j,1,iBlock))
+                  *0.5*abs(sum(Xyz_DGB(2,1,j-1:j,1,iBlock)))
           end do
           CellFace_DFB(3,:,:,:,iBlock) = CellFace_DB(3,iBlock)
        else
