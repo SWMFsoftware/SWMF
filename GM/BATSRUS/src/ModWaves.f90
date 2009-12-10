@@ -77,16 +77,18 @@ contains
   end subroutine read_frequency
   !============================================================================
   subroutine update_wave_group_advection(iBlock)
-    use ModAdvance, ONLY: State_VGB, time_blk
-    use ModLinearAdvection, ONLY: advance_lin_advection_plus, &
-         advance_lin_advection_minus
-    use ModMain, ONLY: CFL
-    Use ModFaceValue,ONLY:BetaLimiter
-    integer,intent(in)::iBlock
+    use ModAdvance,           ONLY: State_VGB, time_blk
+    use ModGeometry,          ONLY: true_cell
+    use ModLinearAdvection,   ONLY: advance_lin_advection_plus, &
+                                    advance_lin_advection_minus
+    use ModMain,              ONLY: CFL
+    Use ModFaceValue,         ONLY:BetaLimiter
+   
+    integer,intent(in)    ::iBlock
 
     !\
     !Soution vector, to account for zero boundary condition
-    !a singe ayer of the ghost cels is added
+    !a single layer of the ghost cels is added
     !/
     real:: F_I(0:nWave+1), F2_I( 0: nWaveHalf+1)
     
@@ -107,6 +109,7 @@ contains
     if(UseAlfvenSpeed)then
 
        do k= 1, nK; do j= 1,nJ; do i= 1,nI
+          if(.not. true_cell(i,j,k,iBlock)) CYCLE
           CFL2_I = abs( DivU_C(i,j,k) ) * (GammaWave - 1.0)/&
                DeltaLogFrequency * CFL * time_blk(i,j,k, iBlock)
           ! Boundary conditions
