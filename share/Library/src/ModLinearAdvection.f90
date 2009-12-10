@@ -49,7 +49,7 @@ contains
     !Check for positivity
     if(any(F_I(1:nX)<0.0))then
        write(*,*)'Before advection F_I <=0'
-       write(*,*)F_I
+       write(*,*) F_I
        call CON_stop('Error in '//NameSub )
     end if
 
@@ -60,7 +60,7 @@ contains
        !Boundary condition at the left boundary
        if(nGCLeft<2)F_I(            -1:0-nGCLeft) = F_I( 1-nGCLeft )
        !Boundary condition at the right boundary
-       if(nGCRight<2)F_I(nX+1-nGCRight:nX+2     ) = F_I(nX+nGCRight)
+       if(nGCRight<2)F_I(nX+1+nGCRight:nX+2     ) = F_I(nX+nGCRight)
 
        do iX=0,nX
 
@@ -136,8 +136,8 @@ contains
     !Check for positivity
     if(any(F_I(1:nX)<0.0))then
        write(*,*)'Before advection F_I <=0'
-       write(*,*)F_I
-        call CON_stop('Error in '//NameSub )
+       write(*,*) F_I
+       call CON_stop('Error in '//NameSub )
     end if
 
     !One stage second order upwind scheme
