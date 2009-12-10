@@ -668,13 +668,14 @@ contains
 
     do iStage = 1, nOrder
 
-       if(DoTest)write(*,*)NameSub,' advance_expl iProc, iStage=',iProc,iStage       
+       if(DoTest)write(*,*)NameSub,' advance_expl iProc, iStage=',iProc,iStage
+
+       call set_boundary
+
        call timing_start('message_pass')
        call message_pass_cell(nVar, State_VGB, &
             DoSendCornerIn=.true., nProlongOrderIn=2)
        call timing_stop('message_pass')
-
-       call set_boundary
 
        if(DoTest)write(*,*)NameSub,' finished message_pass iProc=',iProc
 
