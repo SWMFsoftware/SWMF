@@ -158,7 +158,7 @@ if($Uninstall){
 	&shell_command("cd util; make distclean")
 	    if -d "util" and not $IsComponent;
 	&shell_command("make allclean");
-	&shell_command("rm -f Makefile.def Makefile.conf data ".
+	&shell_command("rm -f Makefile.def Makefile.conf data dataCRASH ".
 		       "src*/$MakefileDepend src*/$MakefileRules");
 	exit 0;
     }
@@ -359,7 +359,7 @@ sub install_code_{
     # Create Makefile.RULES as needed
     &create_makefile_rules;
 
-    # Link data directory if possible
+    # Link data and dataCRASH directories if possible
     &link_swmf_data;
 
     # Install the code
@@ -539,6 +539,16 @@ sub create_makefile_rules{
 
 sub link_swmf_data{
 
+    if($Code eq "BATSRUS" and not -d "dataCRASH"){
+	my $CrashData = "";
+	foreach ("$ENV{HOME}/CRASH_data", "/csem1/CRASH_data"){
+	    next unless -d $_;
+	    $CrashData = $_;
+	    last;
+	}
+	&shell_command("ln -s $CrashData dataCRASH") if $CrashData;
+    }
+
     return if -d "data";
     my $SwmfData = "";
     foreach ("$ENV{HOME}/SWMF_data", "/csem1/SWMF_data"){
@@ -553,6 +563,7 @@ sub link_swmf_data{
 	$DataDir = "$SwmfData/$Component/$Code/data";
     }
     &shell_command("ln -s $DataDir data") if -d $DataDir;
+
 }
 
 ##############################################################################
