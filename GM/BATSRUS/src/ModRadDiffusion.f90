@@ -541,25 +541,25 @@ contains
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(NeiLev(3,iBlock) == NOBLK)then
+       if(nJ > 1 .and. NeiLev(3,iBlock) == NOBLK)then
           j = 0
           do k = 1, nK; do i = 1, nI
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(NeiLev(4,iBlock) == NOBLK)then
+       if(nJ > 1 .and. NeiLev(4,iBlock) == NOBLK)then
           j = nJ + 1
           do k = 1, nK; do i = 1, nI
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(NeiLev(5,iBlock) == NOBLK)then
+       if(nK > 1 .and. NeiLev(5,iBlock) == NOBLK)then
           k = 0
           do j = 1, nJ; do i = 1, nI
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(NeiLev(6,iBlock) == NOBLK)then
+       if(nK > 1 .and. NeiLev(6,iBlock) == NOBLK)then
           k = nK + 1
           do j = 1, nJ; do i = 1, nI
              call get_ghostcell_diffcoef
@@ -730,12 +730,12 @@ contains
       !------------------------------------------------------------------------
 
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
-      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
+      iShift = 1-Di; jShift = min(1-Dj,nJ-1); kShift = min(1-Dk,nK-1)
       do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
          do iDiff = 1, nDiff
             DiffCoef_VFDB(iDiff,i:i+iShift,j:j+jShift,k:k+kShift,iDim,iBlock) &
                  = (DiffSemiCoef_VGB(iDiff,i-Di,j-Dj,k-Dk,iBlock) &
-                 + 0.5*sum(DiffSemiCoef_VGB( &
+                 + (4.0/2**nDim)*sum(DiffSemiCoef_VGB( &
                  iDiff,i:i+iShift,j:j+jShift,k:k+kShift,iBlock)))*2.0/9.0
          end do
       enddo; enddo; enddo
@@ -752,13 +752,13 @@ contains
       !------------------------------------------------------------------------
 
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
-      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
+      iShift = 1-Di; jShift = min(1-Dj,nJ-1); kShift = min(1-Dk,nK-1)
       do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
          i1=i-Di; j1=j-Dj; k1=k-Dk
          do iDiff = 1, nDiff
             DiffCoef_VFDB(iDiff,i:i+iShift,j:j+jShift,k:k+kShift,iDim,iBlock) &
                  = (DiffSemiCoef_VGB(iDiff,i,j,k,iBlock) &
-                 + 0.5*sum(DiffSemiCoef_VGB( &
+                 + (4.0/2**nDim)*sum(DiffSemiCoef_VGB( &
                  iDiff,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift,iBlock)))*2.0/9.0
          end do
       enddo; enddo; enddo
@@ -790,10 +790,12 @@ contains
             end if
 
             Grad2ByErad2_W = &
-                 ( ((Erad_WG(:,i+1,j,k) - Erad_WG(:,i-1,j,k))*InvDx2)**2 &
-                 + ((Erad_WG(:,i,j+1,k) - Erad_WG(:,i,j-1,k))*InvDy2)**2 &
-                 + ((Erad_WG(:,i,j,k+1) - Erad_WG(:,i,j,k-1))*InvDz2)**2 ) &
-                 / Erad_WG(:,i,j,k)**2
+                 ((Erad_WG(:,i+1,j,k) - Erad_WG(:,i-1,j,k))*InvDx2)**2
+            if(nJ > 1) Grad2ByErad2_W = Grad2ByErad2_W + &
+                 ((Erad_WG(:,i,j+1,k) - Erad_WG(:,i,j-1,k))*InvDy2)**2
+            if(nK > 1) Grad2ByErad2_W = Grad2ByErad2_W + &
+                 ((Erad_WG(:,i,j,k+1) - Erad_WG(:,i,j,k-1))*InvDz2)**2
+            Grad2ByErad2_W = Grad2ByErad2_W/ Erad_WG(:,i,j,k)**2
 
             ! For now only Larsen's radiation flux limiter
             DiffRad_W = Clight/sqrt(9*OpacityRosseland_W**2 + Grad2ByErad2_W)
@@ -945,18 +947,22 @@ contains
 
     if(NeiLev(1,iBlock)==1) call correct_left_ghostcell(1,0,0,1,nJ,1,nK)
     if(NeiLev(2,iBlock)==1) call correct_right_ghostcell(1,nI+1,nI+1,1,nJ,1,nK)
-    if(NeiLev(3,iBlock)==1) call correct_left_ghostcell(2,1,nI,0,0,1,nK)
-    if(NeiLev(4,iBlock)==1) call correct_right_ghostcell(2,1,nI,nJ+1,nJ+1,1,nK)
-
-    if(TypeGeometry /= 'rz')then
-       if(NeiLev(5,iBlock)==1) call correct_left_ghostcell(3,1,nI,1,nJ,0,0)
+    if(nDim > 1)then
+       if(NeiLev(3,iBlock)==1) &
+            call correct_left_ghostcell(2,1,nI,0,0,1,nK)
+       if(NeiLev(4,iBlock)==1) &
+            call correct_right_ghostcell(2,1,nI,nJ+1,nJ+1,1,nK)
+    end if
+    if(nDim > 2 .and. TypeGeometry /= 'rz')then
+       if(NeiLev(5,iBlock)==1) &
+            call correct_left_ghostcell(3,1,nI,1,nJ,0,0)
        if(NeiLev(6,iBlock)==1) &
             call correct_right_ghostcell(3,1,nI,1,nJ,nK+1,nK+1)
     end if
 
     Rhs_VC = 0.0
 
-    if(TypeGeometry == 'rz')then
+    if(TypeGeometry == 'rz' .or. nK == 1)then
        ! No flux from Z direction
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           do iDiff = 1, nDiff
@@ -1052,7 +1058,7 @@ contains
     end if
 
     if(UsePDotADotP)then
-       if(TypeGeometry == 'rz')then
+       if(TypeGeometry == 'rz' .or. nK == 1)then
           ! No flux from Z direction
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              do iDiff = 1, nDiff
@@ -1147,8 +1153,7 @@ contains
           end do; end do; end do  
        end if
 
-
-       if(NeiLev(3,iBlock) == NOBLK)then
+       if(nDim > 1 .and. NeiLev(3,iBlock) == NOBLK)then
           j = 1
           do k = 1, nK; do i = 1, nI; do iDiff = 1, nDiff
              iVar = iDiff_I(iDiff)
@@ -1159,7 +1164,7 @@ contains
           end do; end do; end do  
        end if
 
-       if(NeiLev(4,iBlock) == NOBLK)then
+       if(nDim > 1 .and. NeiLev(4,iBlock) == NOBLK)then
           j = nJ
           do k = 1, nK; do i = 1, nI; do iDiff = 1, nDiff
              iVar = iDiff_I(iDiff)
@@ -1214,7 +1219,7 @@ contains
       !------------------------------------------------------------------------
 
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
-      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
+      iShift = 1-Di; jShift = min(1-Dj,nJ-1); kShift = min(1-Dk,nK-1)
       do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
          i1=i+Di; j1=j+Dj; k1=k+Dk
          do iDiff = 1, nDiff
@@ -1222,7 +1227,7 @@ contains
             StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) = &
                  StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) &
                  + StateImpl_VG(iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift) &
-                 -0.25*sum(StateImpl_VG( &
+                 -(2.0/2**nDim)*sum(StateImpl_VG( &
                  iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift))
          end do
       enddo; enddo; enddo
@@ -1242,7 +1247,7 @@ contains
       !------------------------------------------------------------------------
 
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
-      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
+      iShift = 1-Di; jShift = min(1-Dj,nJ-1); kShift = min(1-Dk,nK-1)
       do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
          i1=i-Di; j1=j-Dj; k1=k-Dk
          do iDiff = 1, nDiff
@@ -1250,7 +1255,7 @@ contains
             StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) = &
                  StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) &
                  + StateImpl_VG(iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift) &
-                 -0.25*sum(StateImpl_VG( &
+                 -(2.0/2**nDim)*sum(StateImpl_VG( &
                  iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift))
          end do
       enddo; enddo; enddo
