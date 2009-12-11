@@ -193,6 +193,9 @@ subroutine BFIELD_SETUP(cone)
         BE(I,IML)=0.32/LZ(I)**3*sqrt(1.+3.*sin(camlra)**2)  &
              /cos(camlra)**6		  ! in gauss
         BFC(I)=ME/Z(I)**3/40./sqrt(PI*Q)	  ! in SI units
+
+
+        
      end do
   end do
 
@@ -222,7 +225,7 @@ subroutine ARRAYS
   use ModHeidiMain
   use ModHeidiWaves
   use ModProcIM, ONLY: iProc
-
+  use ModPlotFile, only: save_plot_file
   implicit none
 
   integer  :: I,J,K,L,IDL1,IC,IML,LL
@@ -235,6 +238,10 @@ subroutine ARRAYS
   external :: sind, ASIND,COSD,ACOSD
   data amla0/0.0,0.2,0.4,0.6,0.8,1.0,1.5,2.0,2.5,3.0,3.5, &
        4.0,4.5,5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0/
+  integer:: iPoint
+  character(LEN=500):: StringVarName, StringHeader, NameFile
+ character(len=20) :: TypePosition
+ character(len=20) :: TypeFile = 'ascii'
   !------------------------------------------------------------------------
 
   M1(1) = 5.4462E-4
@@ -480,8 +487,85 @@ subroutine ARRAYS
 
 
 
+  NameFile = 'BField.out'
+  StringHeader = 'Magnetic field in the equatorial plane'
+  StringVarName = 'R MLT B'
+  TypePosition = 'rewind'
+
+!  open(unit=2, file=NameFile)
+!  do j = 1, NT
+!     do i = 1, nR
+!        write(*,*)bFieldMagnitude_III(nPointEq,i,j)
+        call save_plot_file(NameFile, & 
+             TypePositionIn = TypePosition,&
+             TypeFileIn     = TypeFile,&
+             StringHeaderIn = StringHeader, &
+             nStepIn = 0, &
+             TimeIn = 0.0, &
+             !ParamIn_I = (/real(nR), real(NT)/), &
+             NameVarIn = StringVarName, &
+             nDimIn = 2, & 
+             CoordMinIn_D = (/1.75, 0.0/),&
+             CoordMaxIn_D = (/6.5, 24.0/),&
+             VarIn_VII = bFieldMagnitude_III(nPointEq:nPointEq,:,:))
+        TypePosition = 'rewind' 
+!     end do
+!  end do
+
+
+
   call get_IntegralH(funt)
   call get_IntegralI(funi)
+
+  NameFile = 'funi.out'
+  StringHeader = 'Magnetic field in the equatorial plane'
+  StringVarName = 'R MLT funi '
+  TypePosition = 'rewind'
+
+
+  do l = 1, lo
+     call save_plot_file(NameFile, & 
+          TypePositionIn = TypePosition,&
+          TypeFileIn     = TypeFile,&
+          StringHeaderIn = StringHeader, &
+          nStepIn = 0, &
+          TimeIn = 0.0, &
+          ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
+          NameVarIn = StringVarName, &
+          nDimIn = 2, & 
+          CoordMinIn_D = (/1.75, 0.0/),&
+          CoordMaxIn_D = (/6.5, 24.0/),&
+          VarIn_VII = funi(l:l,:,:))
+     TypePosition = 'append' 
+  end do
+  
+
+  
+  NameFile = 'funt.out'
+  StringHeader = 'Magnetic field in the equatorial plane'
+  StringVarName = 'R MLT funt'
+  TypePosition = 'rewind'
+  
+  
+  do l = 1, lo
+     call save_plot_file(NameFile, & 
+          TypePositionIn = TypePosition,&
+          TypeFileIn     = TypeFile,&
+          StringHeaderIn = StringHeader, &
+          nStepIn = 0, &
+          TimeIn = 0.0, &
+          ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
+          NameVarIn = StringVarName, &
+          nDimIn = 2, & 
+          CoordMinIn_D = (/1.75, 0.0/),&
+          CoordMaxIn_D = (/6.5, 24.0/),&
+          VarIn_VII = funt(l:l,:,:))
+     TypePosition = 'append' 
+  end do
+
+
+!stop
+
 
   !\
   ! Define conversion factors
@@ -531,10 +615,13 @@ subroutine ARRAYS
   write (2,*)'Numerical values '
   write (2,*)'l   mu  PA(rad) PA(deg)   FUNI     FUNT' 
   
-  do l = 1, lo
-     write(2,*) l, mu(l), acos(mu(l)), acos(mu(l))*180./3.14159265358979323846, FUNI(l,1,1), FUNT(l,1,1)
+  do i =1 , io
+     do j = 1, jo
+        do l = 1, lo
+           write(2,*) l, mu(l), acos(mu(l)), acos(mu(l))*180./3.14159265358979323846, FUNI(l,i,j), FUNT(l,i,j)
+        end do
+     end do
   end do
-
 close(2)
 
 !stop

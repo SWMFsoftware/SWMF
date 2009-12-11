@@ -29,7 +29,10 @@ subroutine get_drift_velocity(nPoint,Energy,PitchAngle,&
      sinPitch = sin(PitchAngle)
      sin2Pitch = sinPitch*sinPitch
      Coeff = -Energy*(2.-sin2Pitch)/b4
-     
+
+!     sinPitch = cos(PitchAngle)
+!     sin2Pitch = sinPitch*sinPitch
+!     Coeff = -Energy*(1.+sin2Pitch)/b4     
      !dR/dt
      VDrift_II(1,iPoint) = Coeff*GradBCrossB_II(1,iPoint)
      ! dTheta/dt                       
@@ -53,6 +56,7 @@ subroutine get_bounced_drift(nPoint, L, bField_I, bMirror,iMirror_I,&
   integer, intent(in)  :: iMirror_I(2)
   real,    intent(in)  :: dLength_I(nPoint-1)
   real,    intent(in)  :: Drift_I(nPoint)
+!  real,    intent(in)  :: Drift_I 
   real,    intent(in)  :: RadialDistance_I(nPoint)
   real,    intent(out) :: BouncedDrift
   real                 :: DeltaS1, DeltaS2, b1, b2, Coeff
@@ -73,13 +77,16 @@ subroutine get_bounced_drift(nPoint, L, bField_I, bMirror,iMirror_I,&
        (dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
   
   BouncedDrift    = BouncedDrift + Drift_I(iFirst)*Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
-
+!  BouncedDrift    = BouncedDrift + Drift_I*Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
   do iPoint = iFirst, iLast-1
      b1 = bField_I(iPoint)
      b2 = bField_I(iPoint+1)
      
      BouncedDrift =  BouncedDrift + Drift_I(iPoint)*Coeff*2.*dLength_I(iPoint)/(b1 - b2) &
           *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
+!     BouncedDrift =  BouncedDrift + Drift_I*Coeff*2.*dLength_I(iPoint)/(b1 - b2) &
+!          *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
+
   end do
   
   
@@ -87,7 +94,7 @@ subroutine get_bounced_drift(nPoint, L, bField_I, bMirror,iMirror_I,&
   
   
   BouncedDrift  = BouncedDrift + Drift_I(iLast)* Coeff*2.*DeltaS2/(sqrt(bMirror-bField_I(iLast)))
-
+!  BouncedDrift  = BouncedDrift + Drift_I * Coeff*2.*DeltaS2/(sqrt(bMirror-bField_I(iLast)))
 end subroutine get_bounced_drift
 
 !===============================================================

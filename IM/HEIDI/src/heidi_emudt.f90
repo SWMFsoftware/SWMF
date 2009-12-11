@@ -16,11 +16,15 @@ subroutine get_E_mu_dot
   real                          :: gpa
   integer                       :: i,j,k,l
 !-----------------------------------------------------------------------------
-  open(unit=12,file='mudot.dat')
-  open(unit=13, file='edot.dat')
+!  open(unit=12,file='mudot.dat')
+!  open(unit=13, file='edot.dat')
+   
+  call get_IntegralH(funt)
+  call get_IntegralI(funi) 
 
   if (TypeBField == 'analytic') then 
-     
+
+    
      do I=1,IO
         do J=1,JO
            do L=1,UPA(I)
@@ -28,10 +32,9 @@ subroutine get_E_mu_dot
                  MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
                  MUDOT(I,J,K,L)=(1.-MUBOUN**2)*(0.5*(FUNI(L+1,I,J)+FUNI(L,I,J)))/LZ(I)  &
                       /MUBOUN/4./(0.5*(FUNT(L+1,I,J)+FUNT(L,I,J)))*DL1/DMU(L) * VR(i,j,k,l)
+
                  GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
                  EDOT(I,J,K,L)=-3.*EBND(K)/LZ(I)*GPA*DL1/DE(K)*VR(i,j,k,l)
-                 write(12,*) MUDOT(I,J,K,L)
-                 write(13,*)EDOT(I,J,K,L)
               end do	! K loop
            end do 	! L loop
            MULC=MU(UPA(I))+0.5*WMU(UPA(I))
@@ -65,9 +68,6 @@ subroutine get_E_mu_dot
                  MUBOUN=MU(L)+0.5*WMU(L)           ! MU at boundary of grid
                  MUDOT(I,J,K,L) = ((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,k,l)*DL1/DMU(L)
                  EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)*DL1/DE(K)
-                 write(12,*) MUDOT(I,J,K,L)
-                 write(13,*)EDOT(I,J,K,L)
-                 
               end do	! K loop
            end do 	! L loop
            MULC=MU(UPA(I))+0.5*WMU(UPA(I))
@@ -87,7 +87,7 @@ subroutine get_E_mu_dot
      end do	! I loop
      
   end if
-close(12)
-close(13)
+!close(12)
+!close(13)
 
 end subroutine get_E_mu_dot

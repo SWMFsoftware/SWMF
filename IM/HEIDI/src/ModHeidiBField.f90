@@ -48,7 +48,7 @@ contains
 
     !Parameters
     real, parameter        :: DipoleStrength =  0.32   ! nTm^-3
-    real, parameter        :: alpha0 =1.001              ! alpha is the stretching factor in z direction
+    real, parameter        :: alpha0 =1.01              ! alpha is the stretching factor in z direction
 !    real, parameter        :: beta = 1!1.0/1.1           ! beta is the stretching factor in y direction
     real, parameter        :: Me = 7.19e15!,alpha=1.001
 
@@ -129,18 +129,19 @@ contains
 !       t = t/3600.
        
        w = 2*cPi/50.
-       alpha = 1. + 1.1*sin(w*t)
+       alpha = 1.0! + 1.1*sin(w*t/3600.)
 
        write(*,*) 't,w, sin(w*t),alpha',t,w, sin(w*t),alpha
 
        beta = 1./alpha
-
+!       beta = 1.1!alpha
        alpha2 = alpha * alpha
        alpha4 = alpha2 * alpha2
        beta2 = beta* beta
 
        dd = 0.0
        do iPhi =1, nPhi
+!          write(*,*) 'PHI angle', PHI_I(iPhi)
           y = cos(Phi_I(iPhi))
 
           !\
@@ -220,24 +221,48 @@ contains
                 !/
 
 
-                Vr = dble(3 - 3 * x ** 2) * dble(y) * sqrt(dble(1 - y ** 2)) * &
-                     dble(2 * beta ** 2 * y ** 2 + beta ** 4 + y ** 4 + 4 * y ** 2 &
-                     * beta** 4 * x ** 2 + 6 * y ** 2 * x ** 4 * alpha ** 2 - &
-                     4 * beta ** 2 * y ** 2 * x ** 2 - 2 * y ** 2 * beta ** 4 * x ** 4 -&
-                     6 * alpha ** 2 * y ** 2 * x ** 2 + 6 * alpha ** 2 * beta ** 2 * x ** 4 - &
-                     2 * y** 4 * beta ** 2 * x ** 4 + y ** 4 * beta ** 4 - &
-                     2 * y ** 4 * beta ** 2 - 2 * y ** 2 * beta ** 4 - &
-                     7 * alpha ** 4 * x ** 4 + x ** 4* y ** 4 + x ** 4 * beta ** 4 - &
-                     2 * x ** 2 * y ** 4 + 15 * x ** 2* alpha ** 4 - 2 * x ** 2 * beta ** 4 - &
-                     2 * y ** 4 * beta ** 4 * x ** 2 + 2 * x ** 4 * beta ** 2 * y ** 2 - &
-                     6 * alpha ** 2 * beta ** 2 * x ** 2 - 6 * beta ** 2 * y ** 2 * x ** 4 * alpha ** 2 + &
-                     4 * y ** 4 * beta ** 2 * x ** 2 + y ** 4 * beta ** 4 * x ** 4 + &
-                     6 * alpha ** 2 * beta ** 2 * x ** 2 * y ** 2) * dble(-1 + beta ** 2) * &
-                     dble((r ** 2 * (y ** 2 - y ** 2 * x ** 2 + beta ** 2 - beta ** 2 * y ** 2 -&
-                     beta ** 2 * x ** 2 + beta ** 2 * y ** 2 * x ** 2 + &
-                     x ** 2* alpha ** 2)) ** (-0.1D1 / 0.2D1)) / dble((y ** 2 - y ** 2 * x ** 2 + &
-                     beta ** 2 - beta ** 2 * y ** 2 - beta ** 2 * x ** 2 + beta ** 2 * y ** 2 * x ** 2 + &
-                     x ** 2 * alpha ** 2) ** 7) / dble(alpha ** 3) / dble(r ** 9)
+!                Vr = dble(3 - 3 * x ** 2) * dble(y) * sqrt(dble(1 - y ** 2)) * &
+!                     dble(2 * beta ** 2 * y ** 2 + beta ** 4 + y ** 4 + 4 * y ** 2 &
+!                     * beta** 4 * x ** 2 + 6 * y ** 2 * x ** 4 * alpha ** 2 - &
+!                     4 * beta ** 2 * y ** 2 * x ** 2 - 2 * y ** 2 * beta ** 4 * x ** 4 -&
+!                     6 * alpha ** 2 * y ** 2 * x ** 2 + 6 * alpha ** 2 * beta ** 2 * x ** 4 - &
+!                     2 * y** 4 * beta ** 2 * x ** 4 + y ** 4 * beta ** 4 - &
+!                     2 * y ** 4 * beta ** 2 - 2 * y ** 2 * beta ** 4 - &
+!                     7 * alpha ** 4 * x ** 4 + x ** 4* y ** 4 + x ** 4 * beta ** 4 - &
+!                     2 * x ** 2 * y ** 4 + 15 * x ** 2* alpha ** 4 - 2 * x ** 2 * beta ** 4 - &
+!                     2 * y ** 4 * beta ** 4 * x ** 2 + 2 * x ** 4 * beta ** 2 * y ** 2 - &
+!                     6 * alpha ** 2 * beta ** 2 * x ** 2 - 6 * beta ** 2 * y ** 2 * x ** 4 * alpha ** 2 + &
+!                     4 * y ** 4 * beta ** 2 * x ** 2 + y ** 4 * beta ** 4 * x ** 4 + &
+!                     6 * alpha ** 2 * beta ** 2 * x ** 2 * y ** 2) * dble(-1 + beta ** 2) * &
+!                     dble((r ** 2 * (y ** 2 - y ** 2 * x ** 2 + beta ** 2 - beta ** 2 * y ** 2 -&
+!                     beta ** 2 * x ** 2 + beta ** 2 * y ** 2 * x ** 2 + &
+!                     x ** 2* alpha ** 2)) ** (-0.1D1 / 0.2D1)) / dble((y ** 2 - y ** 2 * x ** 2 + &
+!                     beta ** 2 - beta ** 2 * y ** 2 - beta ** 2 * x ** 2 + beta ** 2 * y ** 2 * x ** 2 + &
+!                     x ** 2 * alpha ** 2) ** 7) / dble(alpha ** 3) / dble(r ** 9)
+
+
+
+                Vr = -0.3D1 / dble(r ** 9) * dble(-1 + x ** 2) * dble(y) * &
+                     sqrt(dble(1 - y ** 2)) * dble(-1 + beta ** 2) * dble(-x ** 4 * y ** 4 - 15 &
+                     * alpha ** 4 * x ** 2 + 7 * x ** 4 * alpha ** 4 + 2 * y ** 4 * x** 2 + 2 * &
+                     beta ** 4 * x ** 2 - beta ** 4 * x ** 4 + 4 * beta ** 2 * x ** 2 * &
+                     y ** 2 - y ** 4 * beta ** 4 - 4 * y ** 4 * beta ** 2 * x ** 2 - 6 * &
+                     x ** 4 * alpha ** 2 * y ** 2 - 6 * x ** 4 * alpha ** 2 * beta ** 2 - &
+                     2 * x ** 4 * y ** 2 * beta ** 2 + 2 * x ** 4 * y** 4 * beta ** 2 - &
+                     4 * beta ** 4 * x ** 2 * y ** 2 + 2 * y ** 4 *beta ** 4 * x ** 2 + &
+                     2 * beta ** 4 * x ** 4 * y ** 2 - beta ** 4 * x ** 4 * y ** 4 + 2 * &
+                     y ** 4 * beta ** 2 + 2 * beta ** 4 * y ** 2 - 2 * y ** 2 * beta ** 2 - &
+                     beta ** 4 - y ** 4 - 6 * alpha ** 2 *beta ** 2 * x ** 2 * y ** 2 + &
+                     6 * x ** 4 * alpha ** 2 * beta ** 2 * y ** 2 + 6 * alpha ** 2 * &
+                     beta ** 2 * x ** 2 + 6 * y ** 2 * alpha ** 2 * x ** 2) / dble((y ** 2 - &
+                     x ** 2 * y ** 2 + beta ** 2 - y** 2 * beta ** 2 - beta ** 2 * x ** 2 &
+                     + beta ** 2 * x ** 2 * y ** 2 + x ** 2 * alpha ** 2) ** 7) * &
+                     dble((r ** 2 * (y ** 2 - x ** 2 * y ** 2 + beta ** 2 - y ** 2 * &
+                     beta ** 2 - beta ** 2 * x ** 2 + beta ** 2 * x ** 2 * y ** 2 + &
+                     x ** 2 * alpha ** 2)) ** (-0.1D1 / 0.2D1)) / dble(alpha ** 3)
+
+
+
 
                 Vtheta = dble(30 * alpha ** 2 * y ** 4 * beta ** 2 * x ** 6 - 9 * beta ** 4 * alpha ** 2 - &
                      15 * alpha ** 2 * y ** 4 * beta ** 4 * x ** 6 - 99 * x ** 2 * alpha ** 4 * y ** 2 &
@@ -449,7 +474,6 @@ contains
                 GradBCrossB_VIII(1,iPoint,iR,iPhi) = Vr * (DipoleFactor)**3
                 GradBCrossB_VIII(2,iPoint,iR,iPhi) = 1./(L_I(iR))*Vtheta * (DipoleFactor)**3
                 GradBCrossB_VIII(3,iPoint,iR,iPhi) = 1./(L_I(iR)* cos(Lat)) *Vphi * (DipoleFactor)**3
-!                GradBCrossB_VIII(3,iPoint,iR,iPhi) = Vphi * (DipoleFactor)**3
 
 
                 mag = DipoleFactor*(sqrt(Br**2+Btheta**2+Bphi**2))
@@ -467,7 +491,7 @@ contains
 
     end if
 
-
+!stop
     do iPhi =1, nPhi
        do iR =1, nR 
           do iPoint = 1, nPoint-1
