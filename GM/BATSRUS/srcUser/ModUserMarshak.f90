@@ -157,9 +157,11 @@ contains
        select case(TypeBc)
        case('user')
           ! float, just for the sake of having filled in ghost cells
-          State_VGB(:,0,1:nJ,1:nK,iBlock)  = State_VGB(:,1,1:nJ,1:nK,iBlock)
-          State_VGB(:,-1,1:nJ,1:nK,iBlock) = State_VGB(:,1,1:nJ,1:nK,iBlock)
+          State_VGB(:,0,:,:,iBlock)  = State_VGB(:,1,:,:,iBlock)
+          State_VGB(:,-1,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
        case('usersemi')
+          ! Set temperature in case we use radcond
+          StateSemi_VGB(:,0,:,:,iBlock) = 0.0
           ! Marshak boundary conditions
           Coef = 2.0/(3.0*SpecificOpacity*Density*Dx_Blk(iBlock))
           StateSemi_VGB(iEradImpl,0,1:nJ,1:nK,iBlock) = &
@@ -176,9 +178,11 @@ contains
        select case(TypeBc)
        case('user')
           ! float, just for the sake of having filled in ghost cells
-          State_VGB(:,nI+1,1:nJ,1:nK,iBlock) = State_VGB(:,nI,1:nJ,1:nK,iBlock)
-          State_VGB(:,nI+2,1:nJ,1:nK,iBlock) = State_VGB(:,nI,1:nJ,1:nK,iBlock)
+          State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
+          State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
        case('usersemi','usersemilinear')
+          ! Set temperature in case we use radcond
+          StateSemi_VGB(:,nI+1,:,:,iBlock) = 0.0
           ! zero radiation influx boundary conditions
           Coef = 2.0/(3.0*SpecificOpacity*Density*Dx_Blk(iBlock))
           StateSemi_VGB(iEradImpl,nI+1,1:nJ,1:nK,iBlock) = &
