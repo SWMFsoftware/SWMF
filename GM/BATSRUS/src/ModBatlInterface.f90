@@ -55,7 +55,9 @@ contains
     use BATL_lib, ONLY: CellSize_DB, CoordMin_DB, DiLevelNei_IIIB, iProc, &
          IsRzGeometry, CellFace_DFB, nI, nJ, nK
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, XyzStart_BLK, &
-         FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
+         FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &
+         FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B  
+
     use ModParallel, ONLY: BLKneighborLEV,  neiLEV, &
          neiLeast, neiLwest, neiLsouth, neiLnorth, neiLbot, neiLtop, &
          neiBeast, neiBwest, neiBsouth, neiBnorth, neiBbot, neiBtop, &
@@ -110,6 +112,9 @@ contains
        FaceAreaK_DFB(:,:,:,:,iBlock) = 0.0
        FaceAreaI_DFB(1,:,:,:,iBlock) = CellFace_DFB(1,:,1:nJ,1:nK,iBlock)
        FaceAreaJ_DFB(2,:,:,:,iBlock) = CellFace_DFB(2,1:nI,:,1:nK,iBlock)
+       FaceArea2MinI_B(iBlock) = 1e-30
+       FaceArea2MinJ_B(iBlock) = 1e-30
+       FaceArea2MinK_B(iBlock) = 1e-30
     end if
        
   end subroutine set_batsrus_block
