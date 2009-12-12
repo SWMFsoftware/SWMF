@@ -300,7 +300,7 @@ contains
       OpacityRosseland = OpacityRosselandSi_W(1)/Si2No_V(UnitX_)
 
       if(UseRadFluxLimiter)then
-         Grad2ByErad2 = sum(FaceGrad_D**2)/State_V(Erad_)**2
+         Grad2ByErad2 = sum(FaceGrad_D(1:nDim)**2)/State_V(Erad_)**2
 
          select case(TypeRadFluxLimiter)
          case("sum")
@@ -962,7 +962,21 @@ contains
 
     Rhs_VC = 0.0
 
-    if(TypeGeometry == 'rz' .or. nK == 1)then
+    if(nDim == 1)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             Rhs_VC(iVar,i,j,k) = &
+                  vInv_CB(i,j,k,iBlock) * ( &
+                  + DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)* &
+                  (   StateImpl_VG(iVar,i+1,j,k)   &
+                  -   StateImpl_VG(iVar,i  ,j,k))  &
+                  - DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
+                  (   StateImpl_VG(iVar,i  ,j,k)   &
+                  -   StateImpl_VG(iVar,i-1,j,k)) )
+          end do
+       end do; end do; end do
+    elseif(TypeGeometry == 'rz' .or. nDim == 2)then
        ! No flux from Z direction
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           do iDiff = 1, nDiff
@@ -1058,7 +1072,20 @@ contains
     end if
 
     if(UsePDotADotP)then
-       if(TypeGeometry == 'rz' .or. nK == 1)then
+       if(nDim == 1)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do iDiff = 1, nDiff
+                iVar = iDiff_I(iDiff)
+                pDotADotPPe = pDotADotPPe  + 0.5 *(&
+                     DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)* &
+                     (   StateImpl_VG(iVar,i+1,j,k)   &
+                     -   StateImpl_VG(iVar,i  ,j,k))**2  &
+                     + DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
+                     (   StateImpl_VG(iVar,i  ,j,k)   &
+                     -   StateImpl_VG(iVar,i-1,j,k))**2 )
+             end do
+          end do; end do; end do
+       elseif(TypeGeometry == 'rz' .or. nDim == 2)then
           ! No flux from Z direction
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              do iDiff = 1, nDiff
