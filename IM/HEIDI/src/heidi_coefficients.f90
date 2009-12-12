@@ -18,7 +18,7 @@ subroutine CEPARA
   use ModIoUnit,     ONLY: io_unit_new,UNITTMP_
   use ModHeidiIO,    ONLY: NameInputDirectory
   use ModHeidiInput, ONLY: TypeBField
-
+  use ModPlotFile, only: save_plot_file 
 
   implicit none
 
@@ -29,9 +29,12 @@ subroutine CEPARA
   real              :: RLAMBDA(71),PA(71),HDNS(NR,NT,NPA)
   real              :: LH(20),HDNSIN(20,71)
   character(len=80) :: TITLE
-  real              :: PitchAngle_I(nPA), NeutralHydrogen(nPA,nR,nT)
+  real              :: PitchAngle_I(nPA), NeutralHydrogen(nR,nT,nPa)
 
   external          :: cosd,acosd
+ character(LEN=500):: StringVarName, StringHeader, NameFile                              
+ character(len=20) :: TypePosition       
+ character(len=20) :: TypeFile = 'ascii' 
   !---------------------------------------------------------------------
   !\
   ! Open a file with the bounce-averaged H dens [m-3] in geocorona
@@ -44,6 +47,7 @@ subroutine CEPARA
      S=S+SCALC(I)   ! S=0, no ions in calc, S>0, ions in calc
   end do
   if (S.ge.1) then	! Only needed for ion charge exchange
+     
      
      if (TypeBField == 'analytic') then
         open(UNITTMP_,file=NameInputDirectory//'hgeo71.in',STATUS='OLD')
@@ -60,6 +64,7 @@ subroutine CEPARA
            PA(L) = COSD(PA(L))
         end do
         
+        
         do L=1,LO
            do j = 1, jo
               do I=1,IO
@@ -71,22 +76,40 @@ subroutine CEPARA
      end if
 
      if (TypeBField == 'numeric') then
-        call get_neutral_hydrogen(NeutralHydrogen,PitchAngle_I)
+        call get_neutral_hydrogen(NeutralHydrogen)
         
-        do L = 1,lo
-           PA(L) = cos(PitchAngle_I(L))
-        end do
-       
         do L=1,LO
            do j =1, jo
               do I=1,IO
-                 call LINTP2(LZ,PA,NeutralHydrogen(:,:,j),20,71,LZ(i),MU(L),FAC,IER)
-                 HDNS(i,j,l) = FAC
+                 HDNS(i,j,l) = NeutralHydrogen(i,j,l)
               enddo
            end do
         end do
      end if
      
+
+NameFile = 'neutralH.out'
+StringHeader = 'neutral in the equatorial plane'                                 
+StringVarName = 'R MLT funi '                                                           
+TypePosition = 'rewind'                                                                 
+
+!do l = 1, lo                                                                            
+!   call save_plot_file(NameFile, &                                                      
+!        TypePositionIn = TypePosition,&                                                 
+!        TypeFileIn     = TypeFile,&                                                     
+!        StringHeaderIn = StringHeader, &                                                
+!        nStepIn = 0, &                                                                  
+!        TimeIn = 0.0, &                                                                 
+!        ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &             
+!        NameVarIn = StringVarName, &                                                    
+!        nDimIn = 2, &                                                                   
+!        CoordMinIn_D = (/1.75, 0.0/),&                                                  
+!        CoordMaxIn_D = (/6.5, 24.0/),&                                                  
+!        VarIn_VII = NeutralHydrogen(:,:,l:l))                                                    
+!   TypePosition = 'append'                                                              
+!end do
+
+
   end if
 
 
@@ -236,7 +259,7 @@ subroutine OTHERPARA
      call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
   end if
   
-  open(unit=5, file='drifts.dat')
+
    
   do i = 1, io      
      do L = 1, UPA(I)    ! Kp independent part of azimuthal drift
@@ -244,11 +267,11 @@ subroutine OTHERPARA
            do j = 1,  jo
               GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
               P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
+
               if (TypeBField == 'numeric') then
-                 P2(I,J,K,L)=(C/Me- ISS*VPhi_IIII(i,j,k,l))*DT/DPHI
+                 P2(I,J,K,L)=(C/Me-ISS*VPhi_IIII(i,j,k,l))*DT/DPHI
               end if
               
-!              write(5,*)  i,j,k,l,P2(I,J,K,L), VPhi_IIII(i,j,k,l), C, Me, C/Me, DT/DPHI
            end do
         end do
      end do
@@ -259,17 +282,18 @@ subroutine OTHERPARA
         do K = 1, KO
            do j = 1,  jo
               P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
+              
               if (TypeBField == 'numeric') then
-                 P2(I,J,K,L)=(C/Me- ISS*VPhi_IIII(i,j,k,l))*DT/DPHI
+                 P2(I,J,K,L)=(C/Me - ISS*VPhi_IIII(i,j,k,l))*DT/DPHI
               end if
- !             write(5,*)  i,j,k,l,P2(I,J,K,L),Z(I)
+
+
            end do
         end do
      end do
   end do
 
    
-  close(5)
 
 
    do l = 1, lo
@@ -277,10 +301,12 @@ subroutine OTHERPARA
          do I = 1, IO
             VrConv(I,J6,k,l)=0.
             VrConv(I,J18,k,l)=0.
+
             if (TypeBField == 'numeric') then
-               VR(i,j6,k,l)  = VrConv(i,j6,k,l) + VR_IIII(i,j6,k,l)
-               VR(i,j18,k,l) = VrConv(i,j18,k,l) + VR_IIII(i,j18,k,l)
+               VR(i,j6,k,l)  = VrConv(i,j6,k,l) + ISS* VR_IIII(i,j6,k,l)*DT/DL1
+               VR(i,j18,k,l) = VrConv(i,j18,k,l)+ ISS* VR_IIII(i,j18,k,l)*DT/DL1
             end if
+
             VR(i,j6,k,l) = VrConv(I,J6,k,l)
             VR(i,j6,k,l) = VrConv(I,J6,k,l)
 
@@ -516,7 +542,7 @@ subroutine MAGCONV(I3,NST)
 
   real, dimension(nR,nT,nE,nPA) :: dEdt_IIII,VPhi_IIII,VR_IIII
   real, dimension(nR,nT,nE,nPA)    :: dMudt_III 
-
+real :: ISS
 
   !---------------------------------------------------------------------  
 
@@ -571,19 +597,23 @@ subroutine MAGCONV(I3,NST)
      call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
   end if
 
+  ISS=-1			! sign of specie's charge
+  if (S.ge.2) ISS=1
+  
 
+  
   if (ABASE(IA+1).eq.1) then
      
      do J=1,JO   ! Fill in drift values
         do i=1,io
            do l =1, lo
               do k = 1, ko
+                 
                  VrConv(i,j,k,l)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
                       DT/DL1*(RE*RE/ME)
                  VR(i,j,k,l) = VrConv(i,j,k,l) 
-
                  if (TypeBField == 'numeric') then
-                    VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
+                    VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
                  end if
 
               end do
@@ -594,6 +624,8 @@ subroutine MAGCONV(I3,NST)
            
            
         end do
+
+
         !\
         ! Compute the V-S potential outside the edges of the radial grid. 
         ! Needed for the current calculation.
@@ -601,6 +633,8 @@ subroutine MAGCONV(I3,NST)
         BASEPOT(1,j)    = A*RE*(LZ(1)-DL1)**(LAMGAM)*sin(phi(j))
         BASEPOT(io+2,j) = A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
      end do
+
+
 
      do J = 1, nphicells   ! Fill in DGCPM potentials
         do I = 1, nthetacells
@@ -633,7 +667,7 @@ subroutine MAGCONV(I3,NST)
                          *(EOJ+KPHI/RR)*RoRg*KBETA/RR*(KS(2)+Kr*KS(4)))
                     VR(i,j,k,l) = VrConv(i,j,k,l)
                     if (TypeBField == 'numeric') then
-                    VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
+                    VR(i,j,k,l) = VrConv(i,j,k,l) +ISS* VR_IIII(i,j,k,l)*DT/DL1
                  end if
 
               end do
@@ -692,7 +726,7 @@ subroutine MAGCONV(I3,NST)
                          *DT/DL1*(RE/ME)
                     VR(i,j,k,l) = VrConv(i,j,k,l)
                     if (TypeBField == 'numeric') then
-                       VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
+                       VR(i,j,k,l) = VrConv(i,j,k,l) +ISS* VR_IIII(i,j,k,l)*DT/DL1
                     end if
                     
               end do
@@ -723,7 +757,7 @@ subroutine MAGCONV(I3,NST)
                     VrConv(i,j,k,l) = 0.0
                     VR(i,j,k,l) = VrConv(i,j,k,l)
                     if (TypeBField == 'numeric') then
-                       VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
+                       VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
                     end if
                  end do
            end do
@@ -811,7 +845,7 @@ subroutine MAGCONV(I3,NST)
                  VrConv(i,j,k,l)=VrConv(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
                  VR(i,j,k,l) = VrConv(i,j,k,l)
                  if (TypeBField == 'numeric') then
-                    VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
+                    VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
                  end if
                  
               end do
@@ -915,7 +949,7 @@ subroutine MAGCONV(I3,NST)
                  VrConv(i,j,k,l) = EPP*DT/DL1*RR**3*RE/ME
                  VR(i,j,k,l) = VrConv(i,j,k,l)
                  if (TypeBField == 'numeric') then
-                    VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
+                    VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
                  end if
               end do
            end do
@@ -981,7 +1015,7 @@ subroutine MAGCONV(I3,NST)
                     VrConv(i,j,k,l)=VrConv(i,j,k,l)+FAC
                     VR(i,j,k,l) = VrConv(i,j,k,l)
                     if (TypeBField == 'numeric') then
-                       VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
+                       VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
                     end if
               end do
            end do
@@ -1152,7 +1186,7 @@ subroutine MAGCONV(I3,NST)
                     VrConv(i,j,k,l) = VrConv(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
                     VR(i,j,k,l) = VrConv(i,j,k,l)
                     if (TypeBField == 'numeric') then
-                       VR(i,j,k,l) = VrConv(i,j,k,l) + VR_IIII(i,j,k,l)
+                       VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
                     end if
                  end do
               end do
