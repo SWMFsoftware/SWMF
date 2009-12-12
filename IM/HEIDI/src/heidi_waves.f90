@@ -433,11 +433,11 @@ SUBROUTINE ANISCH
          'L   PHI     JPER[nA/m2]') 
   DO I=2,IO-1
      DO J=1,JO
-        !CJPER=-1.6E3*((PPER(I+1,J,S)-PPER(I,J,S))/DL1+3*(PPER(I,J,S)-   &
-        !     PPAR(I,J,S))/LZ(I))/BE(I,1)
+        CJPER=-1.6E3*((PPER(I+1,J,S)-PPER(I,J,S))/DL1+3*(PPER(I,J,S)-   &
+             PPAR(I,J,S))/LZ(I))/BE(I,1)
         
-        CJPER=-1.6E3*((PPER(I+1,J,S)-PPER(I,J,S))/DL1+3*(PPER(I,J,S)-&
-             PPAR(I,J,S))/LZ(I))/bFieldMagnitude_III(nPointEq,i,j)
+!        CJPER=-1.6E3*((PPER(I+1,J,S)-PPER(I,J,S))/DL1+3*(PPER(I,J,S)-&
+!             PPAR(I,J,S))/LZ(I))/bFieldMagnitude_III(nPointEq,i,j)
 
         WRITE(iUnitJper,551) LZ(I),PHI(J),CJPER
      ENDDO
