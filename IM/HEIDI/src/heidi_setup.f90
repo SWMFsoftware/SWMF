@@ -226,6 +226,9 @@ subroutine ARRAYS
   use ModHeidiWaves
   use ModProcIM, ONLY: iProc
   use ModPlotFile, only: save_plot_file
+  use ModHeidiInput, ONLY: TypeBField
+
+
   implicit none
 
   integer  :: I,J,K,L,IDL1,IC,IML,LL
@@ -360,6 +363,8 @@ subroutine ARRAYS
      VBND(1:ko,s)=sqrt(2.*EBND(1:ko)*1000.*Q/MAS(S)) ! Vel [m/s] at bound
   end do
 
+
+
   !\
   ! PA is equatorial pitch angle in deg - PA(1)=90, PA(LO)=0.
   ! MU is cosine of equatorial PA
@@ -485,86 +490,79 @@ subroutine ARRAYS
 
   call get_B_field(bFieldMagnitude_III)
 
+ 
 
+  call get_IntegralH(funt)
+  call get_IntegralI(funi)
 
-  NameFile = 'BField.out'
-  StringHeader = 'Magnetic field in the equatorial plane'
-  StringVarName = 'R MLT B'
-  TypePosition = 'rewind'
+  if (TypeBField=='numeric') then
 
-!  open(unit=2, file=NameFile)
-!  do j = 1, NT
-!     do i = 1, nR
-!        write(*,*)bFieldMagnitude_III(nPointEq,i,j)
+     NameFile = 'BField.out'
+     StringHeader = 'Magnetic field in the equatorial plane'
+     StringVarName = 'R MLT B'
+     TypePosition = 'rewind'
+     
+     call save_plot_file(NameFile, & 
+          TypePositionIn = TypePosition,&
+          TypeFileIn     = TypeFile,&
+          StringHeaderIn = StringHeader, &
+          nStepIn = 0, &
+          TimeIn = 0.0, &
+          !ParamIn_I = (/real(nR), real(NT)/), &
+          NameVarIn = StringVarName, &
+          nDimIn = 2, & 
+          CoordMinIn_D = (/1.75, 0.0/),&
+          CoordMaxIn_D = (/6.5, 24.0/),&
+          VarIn_VII = bFieldMagnitude_III(nPointEq:nPointEq,:,:))
+     TypePosition = 'rewind' 
+     
+     NameFile = 'funi.out'
+     StringHeader = 'Magnetic field in the equatorial plane'
+     StringVarName = 'R MLT funi '
+     TypePosition = 'rewind'
+     
+     
+     do l = 1, lo
         call save_plot_file(NameFile, & 
              TypePositionIn = TypePosition,&
              TypeFileIn     = TypeFile,&
              StringHeaderIn = StringHeader, &
              nStepIn = 0, &
              TimeIn = 0.0, &
-             !ParamIn_I = (/real(nR), real(NT)/), &
+             ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
              NameVarIn = StringVarName, &
              nDimIn = 2, & 
              CoordMinIn_D = (/1.75, 0.0/),&
              CoordMaxIn_D = (/6.5, 24.0/),&
-             VarIn_VII = bFieldMagnitude_III(nPointEq:nPointEq,:,:))
-        TypePosition = 'rewind' 
-!     end do
-!  end do
-
-
-
-  call get_IntegralH(funt)
-  call get_IntegralI(funi)
-
-  NameFile = 'funi.out'
-  StringHeader = 'Magnetic field in the equatorial plane'
-  StringVarName = 'R MLT funi '
-  TypePosition = 'rewind'
-
-
-  do l = 1, lo
-     call save_plot_file(NameFile, & 
-          TypePositionIn = TypePosition,&
-          TypeFileIn     = TypeFile,&
-          StringHeaderIn = StringHeader, &
-          nStepIn = 0, &
-          TimeIn = 0.0, &
-          ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
-          NameVarIn = StringVarName, &
-          nDimIn = 2, & 
-          CoordMinIn_D = (/1.75, 0.0/),&
-          CoordMaxIn_D = (/6.5, 24.0/),&
-          VarIn_VII = funi(l:l,:,:))
-     TypePosition = 'append' 
-  end do
-  
-
-  
-  NameFile = 'funt.out'
-  StringHeader = 'Magnetic field in the equatorial plane'
-  StringVarName = 'R MLT funt'
-  TypePosition = 'rewind'
-  
-  
-  do l = 1, lo
-     call save_plot_file(NameFile, & 
-          TypePositionIn = TypePosition,&
-          TypeFileIn     = TypeFile,&
-          StringHeaderIn = StringHeader, &
-          nStepIn = 0, &
-          TimeIn = 0.0, &
-          ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
-          NameVarIn = StringVarName, &
-          nDimIn = 2, & 
-          CoordMinIn_D = (/1.75, 0.0/),&
-          CoordMaxIn_D = (/6.5, 24.0/),&
-          VarIn_VII = funt(l:l,:,:))
-     TypePosition = 'append' 
-  end do
-
-
-!stop
+             VarIn_VII = funi(l:l,:,:))
+        TypePosition = 'append' 
+     end do
+     
+     
+     
+     NameFile = 'funt.out'
+     StringHeader = 'Magnetic field in the equatorial plane'
+     StringVarName = 'R MLT funt'
+     TypePosition = 'rewind'
+     
+     
+     do l = 1, lo
+        call save_plot_file(NameFile, & 
+             TypePositionIn = TypePosition,&
+             TypeFileIn     = TypeFile,&
+             StringHeaderIn = StringHeader, &
+             nStepIn = 0, &
+             TimeIn = 0.0, &
+             ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
+             NameVarIn = StringVarName, &
+             nDimIn = 2, & 
+             CoordMinIn_D = (/1.75, 0.0/),&
+             CoordMaxIn_D = (/6.5, 24.0/),&
+             VarIn_VII = funt(l:l,:,:))
+        TypePosition = 'append' 
+     end do
+     
+  endif
 
 
   !\
@@ -572,6 +570,7 @@ subroutine ARRAYS
   ! FFACTOR is ratio of phase space F to F2 in conservative space
   ! IFAC indicates conversion to flux or distribution function
   !/
+
 
 
   FFACTOR = 0.
@@ -609,23 +608,6 @@ subroutine ARRAYS
   !\
   ! Variables for pressure and anisotropy calculations
   !/
-
-  
-  open (unit = 2, file = "Integrals_numeric.dat")
-  write (2,*)'Numerical values '
-  write (2,*)'l   mu  PA(rad) PA(deg)   FUNI     FUNT' 
-  
-  do i =1 , io
-     do j = 1, jo
-        do l = 1, lo
-           write(2,*) l, mu(l), acos(mu(l)), acos(mu(l))*180./3.14159265358979323846, FUNI(l,i,j), FUNT(l,i,j)
-        end do
-     end do
-  end do
-close(2)
-
-!stop
-
 
 
   do L=1,LO    

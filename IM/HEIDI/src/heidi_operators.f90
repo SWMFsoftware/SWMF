@@ -57,14 +57,15 @@ subroutine FCHECK(MARK)
            do k=2,ko
               do j=1,jo
                  do i=2,io
-                    if ((F2(I,J,K,L,m).lt.-1.E-12).or.   &   ! -1E-29
+                    if ((F2(I,J,K,L,m).lt.-1.E-29).or.   &   ! -1E-29
                          (F2(I,J,K,L,m)-F2(I,J,K,L,m).ne.0.)) then
-                       call write_prefix; write(iUnitStdOut,*) 'Bad F,T,I,J,K,L,MARK:',F2(I,J,K,L,m),   &
+!                         (F2(I,J,K,L,m)-F2(I,J,K,L,m).ge.1e-12)) then
+                      call write_prefix; write(iUnitStdOut,*) 'Bad F,T,I,J,K,L,MARK:',F2(I,J,K,L,m),   &
                             T,m,I,J,K,L,MARK,Ibad
-                       call write_prefix; write(iUnitStdOut,*) 'Radius:',(F2(I1,J,K,L,m),I1=2,IO,IO/10)
-                       call write_prefix; write(iUnitStdOut,*) 'Azimuth:',(F2(I,J1,K,L,m),J1=1,JO,JO/10)
-                       call write_prefix; write(iUnitStdOut,*) 'Energy:',(F2(I,J,K1,L,m),K1=2,KO,KO/10)
-                       call write_prefix; write(iUnitStdOut,*) 'Pitch angle:',(F2(I,J,K,L1,m),L1=1,LO,LO/10)
+!                       call write_prefix; write(iUnitStdOut,*) 'Radius:',(F2(I1,J,K,L,m),I1=2,IO,IO/10)
+!                       call write_prefix; write(iUnitStdOut,*) 'Azimuth:',(F2(I,J1,K,L,m),J1=1,JO,JO/10)
+!                       call write_prefix; write(iUnitStdOut,*) 'Energy:',(F2(I,J,K1,L,m),K1=2,KO,KO/10)
+!                       call write_prefix; write(iUnitStdOut,*) 'Pitch angle:',(F2(I,J,K,L1,m),L1=1,LO,LO/10)
                        Ibad=Ibad+1
                        if (Ibad.eq.20) goto 151 
                     end if

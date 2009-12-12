@@ -10,21 +10,14 @@ subroutine get_E_mu_dot
   implicit none
   
   
-  real, dimension(nR,nT,nE,nPA)    :: dMudt_III 
+  real,dimension(nR,nT,nE,nPA)  :: dMudt_III 
   real,dimension(nR,nT,nE,nPa)  :: dEdt_IIII,VPhi_IIII,VR_IIII
   real                          :: MUBOUN,MULC
   real                          :: gpa
   integer                       :: i,j,k,l
 !-----------------------------------------------------------------------------
-!  open(unit=12,file='mudot.dat')
-!  open(unit=13, file='edot.dat')
-   
-  call get_IntegralH(funt)
-  call get_IntegralI(funi) 
 
   if (TypeBField == 'analytic') then 
-
-    
      do I=1,IO
         do J=1,JO
            do L=1,UPA(I)
@@ -74,7 +67,7 @@ subroutine get_E_mu_dot
            do L=UPA(I)+1,LO-1
               do K=1,KO
                  MUBOUN=MU(L)+0.5*WMU(L)
-           !      if (l== LO-1) MU(L+1) = MU(L)
+                 if (l== LO-1) MU(L+1) = MU(L)
                  MUDOT(I,J,K,L)= ((1.-MUBOUN**2)/MUBOUN)*dMudt_III(i,j,k,l)*DL1/DMU(L)
                  EDOT(I,J,K,L)= dEdt_IIII(i,j,k,l)*DL1/DE(K)
               end do	! K loop
@@ -87,7 +80,5 @@ subroutine get_E_mu_dot
      end do	! I loop
      
   end if
-!close(12)
-!close(13)
 
 end subroutine get_E_mu_dot

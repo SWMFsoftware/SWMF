@@ -1,22 +1,22 @@
 module ModHeidiHydrogenGeo
-
+  
   implicit none
-
+  
 contains
-
-  subroutine get_rairden_density(nPoint, nRadialPoint,L, RhoH_I)
-
+  
+  subroutine get_rairden_density(nPoint, RadialDistance_I,L, RhoH_I)
+    
     use ModIoUnit,  ONLY : UnitTmp_
     use ModHeidiIO, ONLY : NameInputDirectory,NameRun
+    
     integer, intent(in)  :: nPoint                  ! number of points along the field line
-    integer, intent(in)  :: nRadialPoint            ! number of points in the radial direction = NR
+    real   , intent(in)  :: RadialDistance_I(nPoint)
     real,    intent(in)  :: L                       ! x^2+y^2
     real,    intent(out) :: RhoH_I(nPoint)          !interpolated density
     integer, parameter   :: nUniform =100           !number of points on new refined grid
     integer, parameter   :: nRairden = 82           !number of radial point in the Rairden hydrogen file
     character (len=100)  :: StringHeader
     real                 :: Lat
-    real                 :: RadialDistance_I(nPoint)
     real                 :: LatMax, LatMin, dLat
     real                 :: Rad_I(nUniform), Weight, RhoHUniform_I(nUniform)
     real                 :: RairdenDistance_I(nRairden),RairdenDensity
@@ -27,9 +27,11 @@ contains
     integer              :: iR,iStep
     
     !------------------------------------------------------------------------------
-
-    ! Read the Rairden Geocorona Hydrogen density file.
     
+    !\
+    ! Read the Rairden Geocorona Hydrogen density file.
+    !/
+
     open(UNITTMP_,FILE=NameInputDirectory//'RairdenHydrogenGeocorona.dat',status='old')
     
     do i = 1, 4
@@ -42,7 +44,9 @@ contains
     end do
     close(UnitTmp_) 
 
-    !interpolate the hydrogen density to a new, well refined grid.
+    !\
+    !Interpolate the hydrogen density to a new, well refined grid.
+    !/
 
     rMax = RairdenDistance_I(nRairden)
     rMin = RairdenDistance_I(1)  
@@ -60,24 +64,6 @@ contains
              EXIT
           end if
        end do
-    end do
-   
-     !write the new interpolated values to a file
-!!$    open(unit=2, file='density.dat')
-!!$    write (2,*)'values for rairden density and interpolated density'
-!!$    write (2,*)' R, LnH, H'
-!!$    do i = 1, nUniform
-!!$       write(2,*) Rad_I(i),RhoHUniform_I(i)
-!!$    end do
-!!$    close(2)
-
-    ! calculate distance to any point along the field line 
-    LatMax = acos(sqrt(1./L))
-    LatMin = -LatMax
-    dLat   = (LatMax - LatMin)/(nPoint - 1)
-    do iStep = 1, nPoint
-       Lat = LatMin + (iStep-1)*dLat
-       RadialDistance_I(iStep) = L*cos(Lat)*cos(Lat)
     end do
     
     do iStep =1, nPoint
@@ -174,8 +160,7 @@ contains
     call find_mirror_points (iPoint,  PitchAngle, bFieldMagnitude_III, &
                       bMirror,iMirror_I)
     
-    call get_rairden_density(nPoint, nR,L_I(1), Rho_II)
-    
+     call get_rairden_density(nPoint, RadialDistance_III,L_I(1), Rho_II)   
     call get_hydrogen_density(nPoint, L_I(1), bFieldMagnitude_III, bMirror,iMirror_I(1),dLength_III,Rho_II,AvgHDensity(1))
        
   end subroutine test_density

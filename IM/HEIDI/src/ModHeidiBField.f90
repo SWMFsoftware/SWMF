@@ -12,7 +12,7 @@ contains
     use ModNumConst,   ONLY: cTiny, cPi
     use ModConst,      ONLY: cMu
     use ModHeidiIO,    ONLY: time
-    use ModHeidiMain,  ONLY: t,LZ
+    use ModHeidiMain,  ONLY: LZ!,t
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -48,15 +48,13 @@ contains
 
     !Parameters
     real, parameter        :: DipoleStrength =  0.32   ! nTm^-3
-    real, parameter        :: alpha0 =1.01              ! alpha is the stretching factor in z direction
-!    real, parameter        :: beta = 1!1.0/1.1           ! beta is the stretching factor in y direction
-    real, parameter        :: Me = 7.19e15!,alpha=1.001
+    real, parameter        :: alpha0 =1.0              ! alpha is the stretching factor in z direction
+    real, parameter        :: Me = 7.19e15
 
     real :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w,c1
-    real :: beta,alpha
+    real :: beta,alpha,t
     !----------------------------------------------------------------------------------
 
-!    DipoleFactor= cMu*Me/(4.*cPi)
     DipoleFactor= Me
 
     !\
@@ -126,22 +124,23 @@ contains
     !/
 
     if (TypeBFieldGrid == 'stretched') then  
-!       t = t/3600.
+       t = 0.0!t/3600.
        
        w = 2*cPi/50.
-       alpha = 1.0! + 1.1*sin(w*t/3600.)
 
-       write(*,*) 't,w, sin(w*t),alpha',t,w, sin(w*t),alpha
+       ! Time dependent B field
+       !       alpha = alpha0 + 1.1*sin(w*t/3600.)
+
+       alpha = alpha0
 
        beta = 1./alpha
-!       beta = 1.1!alpha
+
        alpha2 = alpha * alpha
        alpha4 = alpha2 * alpha2
        beta2 = beta* beta
 
        dd = 0.0
        do iPhi =1, nPhi
-!          write(*,*) 'PHI angle', PHI_I(iPhi)
           y = cos(Phi_I(iPhi))
 
           !\
@@ -154,7 +153,6 @@ contains
           b = alpha2
 
           do iR =1, nR 
-!             c = -1./(L_I(iR)*L_I(iR))
              c = -1./(LZ(iR)*LZ(iR))
              call get_cubic_root(a,b,dd,c,root,nroot)
              do i =1, nroot
@@ -189,29 +187,35 @@ contains
                 !  Magnetic field components for the uniformly stretched dipole in y and z.
                 !/
 
-!                write(*,*) 'ALPHA', alpha,r,x,y,iPoint
-                Br = 3 * r ** 2 * (1 - x ** 2) * y ** 2 * x * alpha * (r ** 2 * (1- x ** 2) * y ** 2 +&
-                     beta ** 2 * r ** 2 * (1 - x ** 2) * (1 - y ** 2) + r ** 2 * x ** 2 * &
-                     alpha ** 2) ** (-0.5D1 / 0.2D1) + 3 * r ** 2 * (1 - x ** 2) * (1 - y ** 2) * x * &
-                     alpha * (r ** 2 * (1 - x ** 2) * y ** 2 + beta ** 2 * r ** 2 * (1 - x ** 2) * &
-                     (1 - y ** 2) + r ** 2 * x ** 2 * alpha ** 2) ** (-0.5D1 / 0.2D1) + &
-                     (3 * r ** 2 * x ** 2 * alpha ** 2 / (r ** 2 * (1 - x ** 2) * y ** 2 + &
-                     beta ** 2 * r ** 2 * (1 - x ** 2) * (1 - y ** 2) + r ** 2 * x ** 2 * &
-                     alpha ** 2) - 1) * x / alpha * (r ** 2 * (1 - x ** 2) * y ** 2 + beta **2 * &
-                     r ** 2 * (1 - x ** 2) * (1 - y ** 2) + r ** 2 * x ** 2 * alpha ** 2) ** (-0.3D1 / 0.2D1)
+
+                Br = -3 * r ** 2 * x * (1 - x ** 2) * y ** 2 * alpha * (r ** 2 * (1 - x ** 2) * &
+                     y ** 2 + r ** 2 * (1 - x ** 2) * (1 - y ** 2) * beta ** 2 + r ** 2 * x ** 2 *&
+                     alpha ** 2) ** (-0.5D1 / 0.2D1) - 3 * r ** 2 * x * (1 - x ** 2) * (1 - y ** 2) *&
+                     alpha * (r ** 2 * (1 - x ** 2) * y ** 2 + r ** 2 * (1 - x ** 2) * (1 - y ** 2) *&
+                     beta ** 2 + r ** 2 * x ** 2 * alpha ** 2) ** (-0.5D1 / 0.2D1) + 1 / alpha * &
+                     (-2 * r ** 2 * x ** 2 * alpha ** 2 * (r ** 2 * (1 - x ** 2) * y **2 + &
+                     r ** 2 * (1 - x ** 2) * (1 - y ** 2) * beta ** 2 + r ** 2 * x** 2 * &
+                     alpha ** 2) ** (-0.5D1 / 0.2D1) - (-r ** 2 * (1 - x ** 2) * y ** 2 - &
+                     r ** 2 * (1 - x ** 2) * (1 - y ** 2) * beta ** 2) * (r ** 2 * (1 - x ** 2) *&
+                     y ** 2 + r ** 2 * (1 - x ** 2) * (1 - y ** 2) * beta ** 2 + r ** 2 * x ** 2 * &
+                     alpha ** 2) ** (-0.5D1 / 0.2D1)) * x
 
 
-                Btheta = 0.3D1 * dble(r ** 2) * sqrt(dble(1 - x ** 2)) * dble(y ** 2)* dble(x ** 2) * &
-                     dble(alpha) * dble((r ** 2 * (1 - x ** 2) * y **2 + beta ** 2 * r ** 2 * (1 - x ** 2) * &
-                     (1 - y ** 2) + r ** 2 * x** 2 * alpha ** 2) ** (-0.5D1 / 0.2D1)) + 0.3D1 * &
-                     dble(r ** 2) * sqrt(dble(1 - x ** 2)) * dble(1 - y ** 2) * dble(x ** 2) * &
-                     dble(alpha) * dble((r ** 2 * (1 - x ** 2) * y ** 2 + beta ** 2 * r ** 2 *(1 - x ** 2) * &
-                     (1 - y ** 2) + r ** 2 * x ** 2 * alpha ** 2) ** (-0.5D1 / 0.2D1)) - &
-                     dble(3 * r ** 2 * x ** 2 * alpha ** 2 / (r ** 2 * (1 - x ** 2) * y ** 2 + beta ** 2 * &
-                     r ** 2 * (1 - x ** 2) * (1 -y ** 2) + r ** 2 * x ** 2 * alpha ** 2) - 1) * &
-                     sqrt(dble(1 - x **2)) / dble(alpha) * dble((r ** 2 * (1 - x ** 2) * y ** 2 + &
-                     beta ** 2 * r ** 2 * (1 - x ** 2) * (1 - y ** 2) + r ** 2 * x ** 2 * &
-                     alpha ** 2) ** (-0.3D1 / 0.2D1))
+                Btheta = -0.3D1 * dble(r ** 2) * dble(x ** 2) * sqrt(dble(1 - x ** 2)) * &
+                     dble(y ** 2) * dble(alpha) * dble((r ** 2 * (1 - x ** 2) * y ** 2 + &
+                     r ** 2 * (1 - x ** 2) * (1 - y ** 2) * beta ** 2 + r ** 2 * x ** 2 * &
+                     alpha ** 2) ** (-0.5D1 / 0.2D1)) - 0.3D1 * dble(r ** 2) *dble(x ** 2) * &
+                     sqrt(dble(1 - x ** 2)) * dble(1 - y ** 2) * dble(alpha) * dble((r ** 2 * &
+                     (1 - x ** 2) * y ** 2 + r ** 2 * (1 - x ** 2) * (1 - y ** 2) * &
+                     beta ** 2 + r ** 2 * x ** 2 * alpha ** 2) ** (-0.5D1 / 0.2D1)) - &
+                     0.1D1 / dble(alpha) * dble(-2 * r ** 2 * x ** 2 * alpha ** 2 *&
+                     (r ** 2 * (1 - x ** 2) * y ** 2 + r ** 2 * (1 - x ** 2) * (1 - y ** 2) * &
+                     beta ** 2 + r ** 2 * x ** 2 * alpha ** 2) ** (-0.5D1 / 0.2D1) -&
+                     (-r ** 2 * (1 - x ** 2) * y ** 2 - r ** 2 * (1 - x ** 2) * (1 - y ** 2) *&
+                     beta ** 2) * (r ** 2 * (1 - x ** 2) * y ** 2 + r ** 2 * (1 - x ** 2) *&
+                     (1 - y ** 2) * beta ** 2 + r ** 2 * x ** 2 * alpha ** 2) ** (-0.5D1 / 0.2D1)) *&
+                     sqrt(dble(1 - x ** 2))
+
 
                 Bphi = 0.0
 
@@ -219,26 +223,6 @@ contains
                 !\
                 ! Gradient drift components (Vr,Vteta,Vphi)
                 !/
-
-
-!                Vr = dble(3 - 3 * x ** 2) * dble(y) * sqrt(dble(1 - y ** 2)) * &
-!                     dble(2 * beta ** 2 * y ** 2 + beta ** 4 + y ** 4 + 4 * y ** 2 &
-!                     * beta** 4 * x ** 2 + 6 * y ** 2 * x ** 4 * alpha ** 2 - &
-!                     4 * beta ** 2 * y ** 2 * x ** 2 - 2 * y ** 2 * beta ** 4 * x ** 4 -&
-!                     6 * alpha ** 2 * y ** 2 * x ** 2 + 6 * alpha ** 2 * beta ** 2 * x ** 4 - &
-!                     2 * y** 4 * beta ** 2 * x ** 4 + y ** 4 * beta ** 4 - &
-!                     2 * y ** 4 * beta ** 2 - 2 * y ** 2 * beta ** 4 - &
-!                     7 * alpha ** 4 * x ** 4 + x ** 4* y ** 4 + x ** 4 * beta ** 4 - &
-!                     2 * x ** 2 * y ** 4 + 15 * x ** 2* alpha ** 4 - 2 * x ** 2 * beta ** 4 - &
-!                     2 * y ** 4 * beta ** 4 * x ** 2 + 2 * x ** 4 * beta ** 2 * y ** 2 - &
-!                     6 * alpha ** 2 * beta ** 2 * x ** 2 - 6 * beta ** 2 * y ** 2 * x ** 4 * alpha ** 2 + &
-!                     4 * y ** 4 * beta ** 2 * x ** 2 + y ** 4 * beta ** 4 * x ** 4 + &
-!                     6 * alpha ** 2 * beta ** 2 * x ** 2 * y ** 2) * dble(-1 + beta ** 2) * &
-!                     dble((r ** 2 * (y ** 2 - y ** 2 * x ** 2 + beta ** 2 - beta ** 2 * y ** 2 -&
-!                     beta ** 2 * x ** 2 + beta ** 2 * y ** 2 * x ** 2 + &
-!                     x ** 2* alpha ** 2)) ** (-0.1D1 / 0.2D1)) / dble((y ** 2 - y ** 2 * x ** 2 + &
-!                     beta ** 2 - beta ** 2 * y ** 2 - beta ** 2 * x ** 2 + beta ** 2 * y ** 2 * x ** 2 + &
-!                     x ** 2 * alpha ** 2) ** 7) / dble(alpha ** 3) / dble(r ** 9)
 
 
 
@@ -479,7 +463,6 @@ contains
                 mag = DipoleFactor*(sqrt(Br**2+Btheta**2+Bphi**2))
 
 
-                !mag = DipoleStrength*(sqrt(Br**2+Btheta**2+Bphi**2))
                 bFieldMagnitude_III(iPoint,iR,iPhi) = mag
                 Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,Lat,Phi_I(iPhi), alpha, beta)  
                 Lat = Lat + dLat 
@@ -491,7 +474,6 @@ contains
 
     end if
 
-!stop
     do iPhi =1, nPhi
        do iR =1, nR 
           do iPoint = 1, nPoint-1
@@ -533,14 +515,6 @@ contains
     else 
        bMirror = bMin/(sin(PitchAngle))**2 
     end if
-       
-
-!    if (PitchAngle == 0.0) then 
-!       bMirror = bMin/(sin(PitchAngle+cTiny))**2 
-!    else
-!
-!       bMirror = bMin/(sin(PitchAngle))**2 
-!    end if
 
     do iPoint = iMinB,1, -1
        if (bField_I(iPoint) >= bMirror ) then 

@@ -545,8 +545,6 @@ real function Funcpf(As,BBr,BBm)
   c2=(1.+As*BBr)/(BBr/BBm+As*BBr)
   prod = As*BBr
 
-  if (prod ==-1.) prod =-0.9999
-
   FuncPf=(As+1.)/(1.+prod)*c1*(1.-c2)
 
 end function Funcpf
@@ -566,8 +564,7 @@ real function Funcpc(As,BBr,BBm)
   c2=(1.+As*BBr)/(BBr/BBm+As*BBr)
 
   prod = As*BBr
-  if (prod ==-1.) prod =-0.9999
-!  FuncPc=(As+1.)/(1.+As*BBr)**2*c1*(1.-c2)
+
   FuncPc=(As+1.)/(1.+prod)**2*c1*(1.-c2)
 end function Funcpc
 !=======================================================================
