@@ -301,8 +301,6 @@ subroutine set_physics_constants
 
   ! Saving initial coordinates of second body:
   if(UseOrbit)then
-     ! Transfer orbit period from [days] to [s]: 
-     OrbitPeriod = OrbitPeriod*cSecondPerDay 
      xBody2init = xBody2
      yBody2init = yBody2
   end if

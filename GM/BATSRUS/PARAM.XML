@@ -5098,6 +5098,9 @@ The default is UseResistivity=.false.
 							default="5" />
 		<parameter name="tDimBody2" type="real" min="0"
 							default="25000"/>
+		<parameter name="UseOrbit" type="logical" default="F"/>
+		<parameter name="OrbitPeriod" type="real" min="0"
+			default="100.0" if="$UseOrbit"/>
 	</if>
 
 #SECONDBODY
@@ -5109,10 +5112,15 @@ T			UseBody2   ! Rest of the parameters read if .true.
 0.011                   rCurrents2  !This is unused currently 
 5.0			RhoDimBody2 (/ccm) density for fixed BC for rho_BLK
 25000.0			TDimBody2 (K) temperature for fixed BC for P_BLK
+T			UseOrbit
+365.25			OrbitPeriod [days]
 
-Default for UseBody2=.false.   -   All others have no defaults!
+Defines the radius, (initial) position, surface density and temperature, 
+and orbit period (if any) of a second body. The second body may also 
+have magnetic field given by the #DIPOLEBODY2 command.
 This command should appear before the #INNERBOUNDARY command when using
 a second body.
+Default is UseBody2=.false.  
 </command>
 
 <command name="DIPOLEBODY2" if="$_IsFirstSession">
@@ -5130,9 +5138,7 @@ the 3 components of the dipole vector in the GSE frame.
 The absolute value of the dipole vector is the equatorial field strength
 in nano Tesla.
 
-Default is no dipole field.
-
-For now the dipole of the second body can only be aligned with the z-axis
+Default is no dipole field for the second body.
 </command>
 <!-- ^CFG END SECONDBODY -->
 </commandgroup>

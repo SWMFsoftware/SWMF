@@ -149,6 +149,7 @@ T                       UseBody2   ! Rest of the parameters read if .true.
 3.0                     rCurrents2  !This is unused currently 
 20.0                    RhoDimBody2 (/ccm) density for fixed BC for rho_BLK
 35000.0                 TDimBody2 (K) temperature for fixed BC for P_BLK
+F			UseOrbit
 
 #DIPOLEBODY2
 0.0                     BdpDimBody2x [nT]
