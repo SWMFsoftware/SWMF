@@ -146,8 +146,8 @@ contains
 
     ! Allocate and initialize all elements of tree as unset
     allocate(iTree_IA(nInfo, MaxNode));                 iTree_IA       = Unset_
-    allocate(iNodeMorton_I(MaxNode));                   iNodeMorton_I   = Unset_
-    allocate(iMortonNode_A(MaxNode));                   iMortonNode_A   = Unset_
+    allocate(iNodeMorton_I(MaxNode));                   iNodeMorton_I  = Unset_
+    allocate(iMortonNode_A(MaxNode));                   iMortonNode_A  = Unset_
     allocate(iStatusNew_A(MaxNode));                    iStatusNew_A   = Unset_
     allocate(iStatusAll_A(MaxNode));                    iStatusAll_A   = Unset_
     allocate(iProcNew_A(MaxNode));                      iProcNew_A     = Unset_
