@@ -41,7 +41,8 @@ contains
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
     use ModMagnetogram, ONLY: set_parameters_magnetogram
-    use ModWaves,       ONLY: read_alfven_speed,read_wave_pressure,read_frequency
+    use ModWaves,       ONLY: read_alfven_speed,read_wave_pressure,&
+                              UseWavePressure, UseWavePressureLtd, read_frequency
     implicit none
 
     character (len=100) :: NameCommand
@@ -70,7 +71,7 @@ contains
 
        case("#WAVEPRESSURE")
           call read_wave_pressure
-
+          UseWavePressureLtd = UseWavePressure
        case("#FREQUENCY")
           call read_frequency
 

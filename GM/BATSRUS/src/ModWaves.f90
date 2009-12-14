@@ -42,6 +42,11 @@ module ModWaves
   
   logical:: UseWavePressure = .false.
 
+  !For multi-component wave pressure the limitatation of different
+  !frequency groups does not ensure the proper limitation of the total 
+  !pressure therefore, it is reasonble to collect the total wave pressure
+  !and limit it accordingly 
+  logical:: UseWavePressureLtd = .false.
   real :: GammaWave = 1.50
  
  

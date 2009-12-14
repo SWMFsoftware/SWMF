@@ -2051,8 +2051,13 @@ contains
       B0B1    = B0x*Bx + B0y*By + B0z*Bz
       pTotal  = p + 0.5*B2 + B0B1     ! For anisopressure, p = Pperp
 
-      if(UseWavePressure) &
-           pTotal = pTotal + (GammaWave-1.0)*sum(State_V(WaveFirst_:WaveLast_))
+      if(UseWavePressure)then
+         if(.not.UseWavePressureLtd)then
+            pTotal = pTotal + (GammaWave - 1.0)*sum(State_V(WaveFirst_:WaveLast_))
+         else
+            pTotal = pTotal + (GammaWave - 1.0)*State_V(ExtraEInt_)
+         end if
+      end if
       if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
 
       ! Normal direction

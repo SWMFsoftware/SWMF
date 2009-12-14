@@ -13,7 +13,8 @@ subroutine update_states_MHD(iStage,iBLK)
   use ModMultiIon, ONLY: multi_ion_source_impl, multi_ion_init_point_impl, &
        multi_ion_set_restrict, multi_ion_update, DoRestrictMultiIon
   use ModEnergy
-  use ModWaves, ONLY: nWave, UseWavePressure, update_wave_group_advection
+  use ModWaves, ONLY: nWave, UseWavePressure, UseWavePressureLtd,&
+       WaveFirst_,WaveLast_, update_wave_group_advection
   implicit none
 
   integer, intent(in) :: iStage, iBLK
@@ -168,9 +169,14 @@ contains
 
     end if
 
-    if(iStage == nStage.and. UseWavePressure.and.nWave>=2)&
-         call update_wave_group_advection(iBLK) 
-
+    if(UseWavePressure)then
+       if(iStage==nStage.and.nWave>2)call update_wave_group_advection(iBLK)
+       if(UseWavePressureLtd)then
+          do k=1,nK;do j=1,nJ; do i=1,nI
+             State_VGB(ExtraEInt_,i,j,k,iBLK)= sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK))
+          end do; end do; end do
+       end if
+    end if
     if(boris_correction) then                 !^CFG IF BORISCORR BEGIN
        if(UseB0)then
           B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBLK)
