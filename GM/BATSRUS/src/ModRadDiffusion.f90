@@ -409,6 +409,8 @@ contains
     character(len=*), parameter:: NameSub='get_impl_rad_diff_state'
     !--------------------------------------------------------------------------
 
+    nDimInUse = nDim; if(TypeGeometry == 'rz') nDimInUse = 2
+
     do iImplBlock = 1, nImplBLK
 
        iBlock = impl2iBLK(iImplBlock)
@@ -541,25 +543,25 @@ contains
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(nJ > 1 .and. NeiLev(3,iBlock) == NOBLK)then
+       if(nDim > 1 .and. NeiLev(3,iBlock) == NOBLK)then
           j = 0
           do k = 1, nK; do i = 1, nI
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(nJ > 1 .and. NeiLev(4,iBlock) == NOBLK)then
+       if(nDim > 1 .and. NeiLev(4,iBlock) == NOBLK)then
           j = nJ + 1
           do k = 1, nK; do i = 1, nI
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(nK > 1 .and. NeiLev(5,iBlock) == NOBLK)then
+       if(nDimInUse > 2 .and. NeiLev(5,iBlock) == NOBLK)then
           k = 0
           do j = 1, nJ; do i = 1, nI
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(nK > 1 .and. NeiLev(6,iBlock) == NOBLK)then
+       if(nDimInUse > 2 .and. NeiLev(6,iBlock) == NOBLK)then
           k = nK + 1
           do j = 1, nJ; do i = 1, nI
              call get_ghostcell_diffcoef
@@ -568,7 +570,6 @@ contains
 
     end do
 
-    nDimInUse = 3; if(TypeGeometry == 'rz') nDimInUse = 2
 
     ! Message pass to fill in ghost cells 
     call message_pass_dir(iDirMin=1,iDirMax=3,Width=1, &
@@ -791,9 +792,9 @@ contains
 
             Grad2ByErad2_W = &
                  ((Erad_WG(:,i+1,j,k) - Erad_WG(:,i-1,j,k))*InvDx2)**2
-            if(nJ > 1) Grad2ByErad2_W = Grad2ByErad2_W + &
+            if(nDim > 1) Grad2ByErad2_W = Grad2ByErad2_W + &
                  ((Erad_WG(:,i,j+1,k) - Erad_WG(:,i,j-1,k))*InvDy2)**2
-            if(nK > 1) Grad2ByErad2_W = Grad2ByErad2_W + &
+            if(nDimInUse > 2) Grad2ByErad2_W = Grad2ByErad2_W + &
                  ((Erad_WG(:,i,j,k+1) - Erad_WG(:,i,j,k-1))*InvDz2)**2
             Grad2ByErad2_W = Grad2ByErad2_W/ Erad_WG(:,i,j,k)**2
 
