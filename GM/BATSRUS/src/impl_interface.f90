@@ -444,7 +444,7 @@ subroutine get_semi_impl_jacobian
        nStencil, MAT, ImplCoeff, DconsDsemi_VCB !!!, wnrm
   use ModRadDiffusion, ONLY: add_jacobian_rad_diff
   use ModHeatConduction, ONLY: add_jacobian_heat_cond
-  use ModMain, ONLY: nI, nJ, nK, nDim, Dt
+  use ModMain, ONLY: nI, nJ, nK, Dt
   use ModGeometry, ONLY: vInv_CB
 
   implicit none
@@ -495,9 +495,10 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
 
   use ModRadDiffusion, ONLY: set_rad_outflow_bc
   use ModImplicit, ONLY: StateSemi_VGB, iTrImplFirst, iTrImplLast, iEradImpl,nw
-  use ModMain,     ONLY: nI, nJ, nK, TypeBc_I
+  use ModMain,     ONLY: TypeBc_I
   use ModParallel, ONLY: NOBLK, NeiLev
   use ModUser,     ONLY: user_set_outerbcs
+  use BATL_size,   ONLY: nI, nJ, nK, nDim
 
   integer, intent(in) :: iBlock, iImplBlock
   logical, intent(in) :: IsLinear
@@ -575,7 +576,7 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
         call stop_mpi(NameSub//': unknown TypeBc_I(2)='//TypeBc_I(2))
      end if
   end if
-  if(NeiLev(3,iBlock) == NOBLK)then
+  if(nDim > 1 .and. NeiLev(3,iBlock) == NOBLK)then
      if(TypeBc_I(3) == 'outflow' .or. TypeBc_I(3) == 'float')then
         do iVar = 1, nw
            if(iVar == iTrImplFirst)then
@@ -610,7 +611,7 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
         call stop_mpi(NameSub//': unknown TypeBc_I(3)='//TypeBc_I(3))
      end if
   end if
-  if(NeiLev(4,iBlock) == NOBLK) then
+  if(nDim > 1 .and. NeiLev(4,iBlock) == NOBLK) then
      if(TypeBc_I(4) == 'outflow' .or. TypeBc_I(4) == 'float')then
         do iVar = 1, nw
            if(iVar == iTrImplFirst)then
@@ -645,7 +646,7 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
         call stop_mpi(NameSub//': unknown TypeBc_I(4)='//TypeBc_I(4))
      end if
   end if
-  if(NeiLev(5,iBlock) == NOBLK) then
+  if(nDim > 2 .and. NeiLev(5,iBlock) == NOBLK) then
      if(TypeBc_I(5) == 'outflow' .or. TypeBc_I(5) == 'float')then
         do iVar = 1, nw
            if(iVar == iTrImplFirst)then
@@ -678,7 +679,7 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
         call stop_mpi(NameSub//': unknown TypeBc_I(5)='//TypeBc_I(5))
      end if
   end if
-  if(NeiLev(6,iBlock) == NOBLK)then 
+  if(nDim > 2 .and. NeiLev(6,iBlock) == NOBLK)then 
      if(TypeBc_I(6) == 'outflow' .or. TypeBc_I(6) == 'float')then
         do iVar = 1, nw
            if(iVar == iTrImplFirst)then
