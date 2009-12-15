@@ -380,7 +380,7 @@ test_levelset_compile:
 
 test_levelset_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.levelset PARAM.in
-	cp ${DIR}/util/CRASH/input/hyades_1.1ns.out ${TESTDIR}
+	cp dataCRASH/input/hyades_1.1ns.out ${TESTDIR}
 
 test_levelset_run:
 	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
@@ -413,9 +413,9 @@ test_hyades2d_compile:
 
 test_hyades2d_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d PARAM.in
-	gunzip -c data/CRASH/hyades2d_1.1ns.out.gz \
+	gunzip -c dataCRASH/input/hyades2d_1.1ns.out.gz \
 		> ${TESTDIR}/hyades2d_1.1ns.out
-	gunzip -c ${DIR}/util/CRASH/input/opacities.out.gz \
+	gunzip -c dataCRASH/input/opacities.out.gz \
 	        > ${TESTDIR}/table_opacities.out
 
 test_hyades2d_run:
