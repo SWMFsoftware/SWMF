@@ -1064,11 +1064,7 @@ subroutine fix_rz_geometry(iBlock)
 
   !At the pole the face area along j direction is zero. Non-zero FaceArea2MinJ 
   !should be set:
-
-  if(minval(y_BLK(1,1:nJ,1,iBlock)**2) < &
-       dy_BLK(iBlock)**2) FaceArea2MinJ_B(iBlock) = &
-       0.10 * (dy_BLK(iBlock) * dx_BLK(iBlock))**2
-
+  FaceArea2MinJ_B(iBlock) = 1e-30
 
 end subroutine fix_rz_geometry
 
