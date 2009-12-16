@@ -20,11 +20,10 @@ module CRASH_ModExcitationData
   !For test of formula for excitation energies
   public :: cExcitationN_III,cExcitationBe_III
 
-  real,   public,dimension(0:nExcitation-1,1:nExcitation,0:nZMax-1,1:nZMax)::&
-       cExcitationEnergy_IIII,cVirialCoeff4Energy_IIII
+  real,   public, allocatable:: &
+       cExcitationEnergy_IIII(:,:,:,:), cVirialCoeff4Energy_IIII(:,:,:,:)
 
-  integer,public,dimension(0:nExcitation-1,1:nExcitation,0:nZMax-1,1:nZMax)::&
-       cDegeneracy_IIII
+  integer, public, allocatable:: cDegeneracy_IIII(:,:,:,:)
 
   !\
   ! The logical to handle whether excitation levels should
@@ -369,10 +368,10 @@ module CRASH_ModExcitationData
   !Astrophysical quantities book is incorrect (thanks to Rafael Rodrigez)
   !For terms p^2-p^4 and d^2-d^8 the used stat.wieght is off by a factor of 2 to 50
   logical,public:: UseFullGroundState = .false. 
-  !====================THE END OF INTERNAL DATABASE=====================================
+  !====================THE END OF INTERNAL DATABASE============================
   logical,public::UseDataBase = .false.
 contains
-  !=====================================================================================
+  !============================================================================
   subroutine init_excitation
 
     use ModConst, ONLY: cRyToEV
@@ -382,7 +381,6 @@ contains
 
     integer :: iL, iN, iZ, nGround
     integer :: InnerDegeneracy
-    !-------------------------
 
     !Degeneracies of ground states for positive ions of the first 10 elements.
     !The data for the first 3 columns are taken from the book 
@@ -448,7 +446,11 @@ contains
          1, 2 /)
     
     
-    !--------------
+    !-------------------------------------------------------------------------
+    if(.not.allocated(cExcitationEnergy_IIII)) allocate( &
+         cExcitationEnergy_IIII(0:nExcitation-1,nExcitation,0:nZMax-1,nZMax),&
+         cVirialCoeff4Energy_IIII(0:nExcitation-1,nExcitation,0:nZMax-1,nZMax)&
+         , cDegeneracy_IIII(0:nExcitation-1,nExcitation,0:nZMax-1,nZMax))
 
     if(UseFullGroundState)then
        cDegeneracy10_II = cDegeneracy10Good_II
