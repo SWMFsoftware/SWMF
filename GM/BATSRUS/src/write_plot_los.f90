@@ -323,7 +323,8 @@ subroutine write_plot_los(iFile)
 
         if(IsRzGeometry)then
            ! Exclude blocks that do not intersect the Z=0 plane (from above)
-           if(.not. (z_BLK(1,1,0,iBLK)<0 .and. z_BLK(1,1,nK,iBLK)>0)) CYCLE
+           if(nK > 1 .and. &
+                .not. (z_BLK(1,1,0,iBLK)<0 .and. z_BLK(1,1,nK,iBLK)>0)) CYCLE
            ! Exclude blocks below the Y=0 plane
            if(y_BLK(1,nJ,1,iBLK)<0) CYCLE
         end if
