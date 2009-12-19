@@ -898,8 +898,8 @@ contains
 
   subroutine interpolate_hyades1d(iBlock)
 
+    use BATL_size,           ONLY: nJ, nK, MinI, MaxI
     use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
-    use ModSize,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          Erad_, UseElectronPressure, Pe_
     use ModGeometry,   ONLY: x_BLK
@@ -916,7 +916,7 @@ contains
     real :: TrSi, EgSi
     character(len=*), parameter :: NameSub='interpolate_hyades1d'
     !-------------------------------------------------------------------------
-    do i = -1, nI+2
+    do i = MinI, MaxI
        ! Find the Hyades points around this position
        x = x_Blk(i,1,1,iBlock)
 
@@ -939,7 +939,7 @@ contains
           Weight2 = 1.0 - Weight1
        end if
 
-       do k = -1,nk+2; do j = -1,nJ+2
+       do k = 1, nK; do j = 1, nJ
           ! Interpolate density, momentum and pressure
 
           State_VGB(Rho_,i,j,k,iBlock) = &
@@ -1190,7 +1190,7 @@ contains
     integer, intent(in):: iStage,iBlock
 
     integer:: i, j, k
-    real   :: PressureSi, EinternalSi, GammaEos
+    real   :: PressureSi, EinternalSi, GammaEos, DivU
     logical:: IsConserv
 
     character(len=*), parameter :: NameSub = 'user_update_states'
@@ -1204,14 +1204,16 @@ contains
     ! Fix adiabatic compression source for pressure
     if(UseNonConservative)then
        do k=1,nK; do j=1,nJ; do i=1,nI
+          DivU          =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
+          if(nJ>1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
+          if(nK>1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
+          DivU = vInv_CB(i,j,k,iBlock)*DivU
+
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, GammaOut=GammaEos)
+
           Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-               -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*&
-               vInv_CB(i,j,k,iBlock)*&
-               ( uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
-               + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
-               + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1) )
+               -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*DivU
        end do; end do; end do
     end if
 
@@ -1309,10 +1311,10 @@ contains
     ! Note that all levels use the velocity of the first (and only) fluid
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       DivU = vInv_CB(i,j,k,iBlock) &
-            *(uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
-            + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
-            + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
+       DivU            =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
+       if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
+       if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
+       DivU = vInv_CB(i,j,k,iBlock)*DivU
 
        Source_VC(LevelXe_:LevelPl_,i,j,k) = &
             Source_VC(LevelXe_:LevelPl_,i,j,k) &
