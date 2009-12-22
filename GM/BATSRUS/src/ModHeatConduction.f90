@@ -24,7 +24,6 @@ module ModHeatConduction
   character(len=20), public :: TypeHeatConduction = 'user'
   logical :: DoModifyHeatConduction, DoUserHeatConduction
 
-  real :: HeatConductionParSi = 9.0e-12  ! default for single charged ions
   real :: TmodifySi = 3.0e5, DeltaTmodifySi = 2.0e4
   real :: HeatConductionPar, Tmodify, DeltaTmodify
 
@@ -69,9 +68,7 @@ contains
           select case(TypeHeatConduction)
           case('user')
           case('spitzer')
-             call read_var('HeatConductionParSi', HeatConductionParSi)
           case('modified')
-             call read_var('HeatConductionParSi', HeatConductionParSi)
              call read_var('TmodifySi', TmodifySi)
              call read_var('DeltaTmodifySi', DeltaTmodifySi)
           case default
@@ -98,11 +95,16 @@ contains
   subroutine init_heat_conduction
 
     use ModAdvance,    ONLY: UseElectronPressure
+    use ModConst,      ONLY: cBoltzmann, cElectronMass, cEps, cElectronCharge
     use ModImplicit,   ONLY: UseSemiImplicit, iTeImpl
     use ModMain,       ONLY: nI, nJ, nK, MaxBlock, nDim
     use ModMultiFluid, ONLY: MassIon_I
+    use ModNumConst,   ONLY: cTwoPi
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          UnitU_, UnitX_, UnitB_, ElectronTemperatureRatio, AverageIonCharge
+
+    real, parameter:: CoulombLog = 20.0
+    real :: HeatConductionParSi
 
     character(len=*), parameter :: NameSub = 'init_heat_conduction'
     !--------------------------------------------------------------------------
@@ -138,6 +140,12 @@ contains
     elseif(TypeHeatConduction == 'modified')then
        DoModifyHeatConduction = .true.
     end if
+
+    ! electron heat conduct coefficient for single charged ions
+    ! = 9.2e-12 W/(m*K^(7/2))
+    HeatConductionParSi = 3.2*3.0*cTwoPi/CoulombLog &
+         *sqrt(cTwoPi*cBoltzmann/cElectronMass)*cBoltzmann &
+         *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
 
     ! unit HeatConductionParSi is W/(m*K^(7/2))
     HeatConductionPar = HeatConductionParSi &

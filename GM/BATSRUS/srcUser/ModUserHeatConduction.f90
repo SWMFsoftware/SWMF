@@ -188,6 +188,7 @@ contains
        Time0 = Time_Simulation
 
     case('parcondsemi')
+       HeatConductionCoef = 1.0
        AmplitudeTemperature = 100.0
        Tmin = 0.01
        Bx = 1.7
@@ -1143,6 +1144,8 @@ contains
        case('lowrie')
           Ti = State_V(p_)/State_V(Rho_)
           HeatCond = 0.00175*(g*Ti)**3.5/State_V(Rho_)*4.0*cRadiationNo*Te**3
+       case('parcondsemi')
+          HeatCond = HeatConductionCoef*Te**2.5
        case default
           HeatCond = HeatConductionCoef
        end select
