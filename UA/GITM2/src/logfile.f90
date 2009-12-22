@@ -67,6 +67,7 @@ subroutine logfile(dir)
   use ModTime
   use ModMpi
   use ModIndices
+  use ModIndicesInterfaces
   use ModUtilities, ONLY: flush_unit
 
   implicit none
@@ -75,7 +76,7 @@ subroutine logfile(dir)
   character (len=8) :: cIter
 
   real    :: minTemp, maxTemp, localVar, minVertVel, maxVertVel
-  real    :: AverageTemp, AverageVertVel, TotalVolume
+  real    :: AverageTemp, AverageVertVel, TotalVolume, Bx, By, Bz, Vx, Hpi
   integer :: iError
 
   if (.not. IsOpenLogFile .and. iProc == 0) then
@@ -126,7 +127,7 @@ subroutine logfile(dir)
        write(iLogFileUnit_,'(a)') &
             "   iStep yyyy mm dd hh mm ss  ms      dt "// &
             "min(T) max(T) mean(T) min(VV) max(VV) mean(VV) F107 F107A "// &
-            "Bx By Bz Vx HPI"
+            "By Bz Vx HPI"
           
 
   endif
@@ -167,12 +168,17 @@ subroutine logfile(dir)
      AverageTemp = AverageTemp / TotalVolume
      AverageVertVel = AverageVertVel / TotalVolume
 
-     write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,6f13.5,7f9.1)") &
+     call get_f107(CurrentTime, f107, iError)
+     call get_f107A(CurrentTime, f107A, iError)
+      call get_IMF_By(CurrentTime, by, iError)
+      call get_IMF_Bz(CurrentTime, bz, iError)
+      call get_sw_v(CurrentTime, Vx, iError)
+      call get_hpi(CurrentTime,Hpi,iError)
+
+     write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,6f13.5,6f9.1)") &
           iStep, iTimeArray, dt, minTemp, maxTemp, AverageTemp, &
           minVertVel, maxVertVel, AverageVertVel,&
-         Indices_TV(1,F107_),Indices_TV(1,F107A_), Indices_TV(1,imf_bx_),&
-          Indices_TV(1,imf_by_),Indices_TV(1,imf_bz_),Indices_TV(1,sw_v_),&
-          Indices_TV(1,HPI_)
+         f107,f107A,By,Bz,Vx, Hpi
 
      call flush_unit(iLogFileUnit_)
   endif
