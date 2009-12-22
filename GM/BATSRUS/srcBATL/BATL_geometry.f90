@@ -9,6 +9,7 @@ module BATL_geometry
   private ! except
 
   public:: init_geometry
+  public:: xyz_to_coord
 
   character(len=20), public:: TypeGeometry = 'cartesian'
 
@@ -49,5 +50,24 @@ contains
     if(present(IsPeriodicIn_D)) IsPeriodic_D(1:nDim) = IsPeriodicIn_D
 
   end subroutine init_geometry
+
+  !=========================================================================
+  
+  subroutine xyz_to_coord(XyzIn_D, CoordOut_D)
+
+    real, intent(in) :: XyzIn_D(MaxDim)
+    real, intent(out):: CoordOut_D(MaxDim)
+
+    character(len=*), parameter:: NameSub = 'BATL_geometry::xyz_to_coord'
+    !----------------------------------------------------------------------
+
+    if(IsCartesian .or. IsRzGeometry)then
+       CoordOut_D = XyzIn_D
+    else
+       call CON_stop(NameSub// &
+            ' not yet implemented for TypeGeometry='//TypeGeometry)
+    end if
+
+  end subroutine xyz_to_coord
 
 end module BATL_geometry
