@@ -1,8 +1,10 @@
 module BATL_grid
 
+  use BATL_mpi, ONLY: iProc
   use BATL_size
   use BATL_tree
-  use BATL_geometry, ONLY: IsCartesian, IsRzGeometry, TypeGeometry
+  use BATL_geometry, ONLY: &
+       IsCartesian, IsRzGeometry, TypeGeometry, xyz_to_coord
 
   implicit none
 
@@ -12,6 +14,7 @@ module BATL_grid
   public :: clean_grid
   public :: create_grid
   public :: create_grid_block
+  public :: find_grid_block
   public :: test_grid
 
   real, public:: &
@@ -163,8 +166,6 @@ contains
 
   subroutine show_grid_block(iBlock)
 
-    use BATL_mpi, ONLY: iProc
-
     integer, intent(in):: iBlock
 
     ! Show grid information for block iBlock
@@ -221,6 +222,54 @@ contains
 
   !===========================================================================
 
+  subroutine find_grid_block(XyzIn_D, iProcOut, iBlockOut, IjkOut_D)
+
+    real,    intent(in) :: XyzIn_D(MaxDim)        ! Cartesian coords of point
+    integer, intent(out):: iBlockOut, iProcOut    ! Block and proc indexes
+
+    integer, intent(out), optional:: IjkOut_D(MaxDim) ! Cell indexes
+
+    real:: CoordTree_D(MaxDim), Coord_D(MaxDim)
+    integer:: iNode
+
+    character(len=*), parameter:: NameSub = 'find_grid_block'
+    !------------------------------------------------------------------------
+    ! Convert to generalized coordinates if necessary
+    if(IsCartesian .or. IsRzGeometry)then
+       Coord_D = XyzIn_D
+    else
+       call xyz_to_coord(XyzIn_D, Coord_D)
+    end if
+    ! Calculate normalized coordinates for tree search
+    CoordTree_D = (Coord_D - CoordMin_D)/(CoordMax_D - CoordMin_D)
+
+    ! Find node containing the point
+    call find_tree_node(CoordTree_D, iNode)
+
+    ! Check if point was found
+    if(iNode > 0)then
+       ! Convert to block and processor indexes
+       iBlockOut = iTree_IA(Block_,iNode)
+       iProcOut  = iTree_IA(Proc_, iNode)
+    else
+       iBlockOut = Unset_
+       iProcOut  = Unset_
+    end if
+
+    if(.not. present(IjkOut_D)) RETURN
+
+    ! Determine cell index on the processor that contains the block
+    if(iProc == iProcOut)then
+       IjkOut_D = max(1, min(nIjk_D, 1 + floor( &
+            (Coord_D - CoordMin_DB(:,iBlockOut))/CellSize_DB(:,iBlockOut))))
+    else
+       IjkOut_D = Unset_
+    end if
+
+  end subroutine find_grid_block
+
+  !===========================================================================
+
   subroutine test_grid
 
     use BATL_mpi, ONLY: iProc
@@ -237,10 +286,9 @@ contains
 
     real, parameter:: Tolerance = 1e-6
 
-    integer:: i, j, k, Di, Dj, iDim
-    real:: Radius
+    integer:: i, j, k, Di, Dj, iDim, iBlockOut, iProcOut, IjkOut_D(MaxDim)
+    real:: Radius, Xyz_D(MaxDim)
     real, allocatable:: CellVolumeCart_B(:), CellFaceCart_DB(:,:)
-
 
     logical:: DoTestMe
     character(len=*), parameter :: NameSub = 'test_grid'
@@ -264,6 +312,30 @@ contains
     call create_grid
 
     call show_grid
+
+    if(DoTestMe) write(*,*)'Testing find_grid_block'
+    call find_grid_block(DomainMin_D, iProcOut, iBlockOut, IjkOut_D)
+    if(iProc == iProcOut) then
+       Xyz_D = Xyz_DGB(:,IjkOut_D(1),IjkOut_D(2),IjkOut_D(3),iBlockOut) &
+            - 0.5*CellSize_DB(:,iBlockOut)
+       if(any(abs(DomainMin_D(1:nDim) - Xyz_D(1:nDim)) > 1e-6)) then
+            write(*,*) 'Error: DomainMin_D, Xyz_D=', &
+                  DomainMin_D, Xyz_D
+            write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
+                 iProcOut, iBlockOut, IjkOut_D
+         end if
+    end if
+    call find_grid_block(DomainMax_D, iProcOut, iBlockOut, IjkOut_D)
+    if(iProc == iProcOut) then
+       Xyz_D = Xyz_DGB(:,IjkOut_D(1),IjkOut_D(2),IjkOut_D(3),iBlockOut) &
+            + 0.5*CellSize_DB(:,iBlockOut)
+       if(any(abs(DomainMax_D(1:nDim) - Xyz_D(1:nDim)) > 1e-6)) then
+            write(*,*) 'Error: DomainMax_D, Xyz_D=', &
+                  DomainMax_D, Xyz_D
+            write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
+                 iProcOut, iBlockOut, IjkOut_D
+         end if
+    end if
 
     if(nDim == 2)then
        if(DoTestMe) write(*,*)'Testing create_grid in RZ geometry'
