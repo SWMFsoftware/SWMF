@@ -591,11 +591,12 @@ contains
     ! Root node indexes are ordered
     iNode = Ijk_D(1) + nRoot_D(1)*((Ijk_D(2)-1) + nRoot_D(2)*(Ijk_D(3)-1))
 
-    if(iTree_IA(Status_, iNode) == Used_) RETURN
+    if(iTree_IA(Status_,iNode) == Used_) RETURN
 
     ! Get normalized coordinates within root node and scale it up
-    ! to the largest resolution
-    iCoord_D = (Coord_D(1:nDimAmr) - Ijk_D(1:nDimAmr))*MaxCoord_I(nLevel)
+    ! to the largest resolution: 0 <= iCoord_D <= MaxCoord_I(nLevel)-1
+    iCoord_D = min(MaxCoord_I(nLevel) - 1, &
+         int((Coord_D(1:nDimAmr) - Ijk_D(1:nDimAmr))*MaxCoord_I(nLevel)))
 
     ! Go down the tree using bit information
     do iLevel = nLevel-1,0,-1
