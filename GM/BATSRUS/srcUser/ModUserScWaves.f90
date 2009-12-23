@@ -27,11 +27,11 @@ module ModUser
 
   logical                       :: IsInitWave = .false.
   logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
-  real                          :: LogFreqCutOff, SpectralIndex
+  real                          :: LogFreqCutOff, SpectralIndex,WaveInnerBcFactor
   integer                       :: LowestFreqNum, SpectrumWidth, nWaveOver2
   real                          :: xTrace = 0.0, zTrace = 0.0
   real,dimension(nWave)         :: LogFreq_I ! frequency grid
-
+  character(len=10)             :: TypeWaveInnerBc
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -41,8 +41,7 @@ contains
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
     use ModMagnetogram, ONLY: set_parameters_magnetogram
-    use ModWaves,       ONLY: read_alfven_speed,read_wave_pressure,&
-                              UseWavePressure, UseWavePressureLtd, read_frequency
+    use ModWaves,       ONLY: read_alfven_speed,read_wave_pressure,read_frequency
     implicit none
 
     character (len=100) :: NameCommand
@@ -71,7 +70,7 @@ contains
 
        case("#WAVEPRESSURE")
           call read_wave_pressure
-          UseWavePressureLtd = UseWavePressure
+
        case("#FREQUENCY")
           call read_frequency
 
@@ -84,6 +83,9 @@ contains
           call read_var('xTrace',xTrace)
           call read_var('zTrace',zTrace)
 
+       case("#WAVEINNERBC")
+          call read_var('TypeWaveInnerBc', TypeWaveInnerBc)
+          call read_var('WaveInnerBcFactor',WaveInnerBcFactor)
 
        case("#ARCH","#TD99FLUXROPE","#GL98FLUXROPE")
           call EEE_set_parameters(NameCommand)
@@ -166,21 +168,19 @@ contains
     use ModConst,      ONLY: cMu
     use ModNumConst,   ONLY: cTolerance,cTiny
     use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
-                             iFace, jFace, kFace, iSide, iBlockBc
+                             iFace, jFace, kFace, iSide, iBlockBc, B0Face_D
     use ModWaves,      ONLY: AlfvenSpeedPlusFirst_,  &
                              AlfvenSpeedPlusLast_,   &
                              AlfvenSpeedMinusFirst_, &
                              AlfvenSpeedMinusLast_ , &
                              DeltaLogFrequency
-    implicit none
 
-    real, intent(out):: VarsGhostFace_V(nVar)
+    real, intent(out) :: VarsGhostFace_V(nVar)
 
-    integer:: iCell,jCell,kCell, iWave
-
-    real:: DensCell,PresCell,GammaCell,TBase,B1dotR  
-    real, dimension(3):: RFace_D,B1_D,U_D,B1t_D,B1n_D
-    real :: BRCell, vAlfvenSi, wEnergyDensSi, wEnergyDens, SpectralCoeff
+    integer           :: iCell,jCell,kCell, iWave
+    real              :: DensCell,PresCell,GammaCell,TBase,B1dotR, FullBr  
+    real, dimension(3):: RFace_D,B1_D,U_D,B1t_D,B1n_D,FullB_D
+    real              :: vAlfvenSi, wEnergyDensSi, wEnergyDens, SpectralCoeff
   
     !--------------------------------------------------------------------------
 
@@ -193,10 +193,14 @@ contains
     B1t_D        = B1_D-B1n_D
 
     !\
-    ! Update BCs for velocity and induction field::
+    ! Update BCs for velocity and induction field: reflective BC
     !/
     VarsGhostFace_V(Ux_:Uz_) = -U_D(x_:z_)
-    VarsGhostFace_V(Bx_:Bz_) = B1t_D(x_:z_)!-B1n_D(x_:z_)
+    VarsGhostFace_V(Bx_:Bz_) = B1t_D(x_:z_)
+
+    ! calculate this for later
+    FullB_D = VarsGhostFace_V(Bx_:Bz_) + B0Face_D
+    FullBr = sum(RFace_D*FullB_D)
 
     !\
     ! Update BCs for the mass density, EnergyRL, 
@@ -239,26 +243,36 @@ contains
     !/
     VarsGhostFace_V(AlfvenSpeedPlusFirst_ :AlfvenSpeedPlusLast_ ) = 1.0e-30
     VarsGhostFace_V(AlfvenSpeedMinusFirst_:AlfvenSpeedMinusLast_) = 1.0e-30
-    if(IsInitWave) then
-       BRCell = sum(RFace_D * &
-            (State_VGB(Bx_:Bz_,iCell,jCell,kCell,iBlockBc) + &
-            B0_DGB(:,iCell,jCell,kCell,iBlockBc)) )
-       vAlfvenSi = (BRCell/sqrt(VarsTrueFace_V(Rho_))) * No2Si_V(UnitU_)
-      
-       call get_total_wave_energy_dens(&
-            FaceCoords_D(x_),&
-            FaceCoords_D(y_),&
-            FaceCoords_D(z_),&
-            vAlfvenSi, wEnergyDensSi)
-      
-       SpectralCoeff = -(1/SpectralIndex)
-       wEnergyDens = wEnergyDensSI * Si2No_V(UnitP_)
+    if(IsInitWave ) then
+       select case(TypeWaveInnerBc)
+       case('WSA')
+
+          vAlfvenSi = (FullBr/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
+             
+          call get_total_wave_energy_dens(&
+               FaceCoords_D(x_),&
+               FaceCoords_D(y_),&
+               FaceCoords_D(z_),&
+               vAlfvenSi, wEnergyDensSi)
+       
+          wEnergyDens = wEnergyDensSi * Si2No_V(UnitP_)*WaveInnerBcFactor
+  
+       case('Turb')
+          wEnergyDens = sum(FullB_D**2)*WaveInnerBcFactor**2
+       end select
+       !\
+       ! Deconstruct total energy into frequency groups
+       !/
+       SpectralCoeff = -(1.0/SpectralIndex)
        do iWave = AlfvenSpeedPlusFirst_,AlfvenSpeedPlusLast_
           if(iWave-AlfvenSpeedPlusFirst_+1 .lt. LowestFreqNum .or.& 
-               iWave-AlfvenSpeedPlusFirst_+1 .gt. LowestFreqNum+SpectrumWidth .or.&
-               vAlfvenSi.le.0.0) then
+               iWave-AlfvenSpeedPlusFirst_+1 .gt. LowestFreqNum+SpectrumWidth) then
              VarsGhostFace_V(iWave)=1e-30
-          else    
+             
+          elseif (FullBr .le. 0.0) then
+             ! float bc
+             VarsGhostFace_V(iWave) = VarsTrueFace_V(iWave) 
+          else
              VarsGhostFace_V(iWave) = SpectralCoeff * DeltaLogFrequency * wEnergyDens* &
                   exp((LogFreq_I(iWave-WaveFirst_+1))*SpectralIndex)
           end if
@@ -266,10 +280,12 @@ contains
 
        do iWave = AlfvenSpeedMinusFirst_,AlfvenSpeedMinusLast_
           if(iWave-AlfvenSpeedMinusFirst_+1 .lt. LowestFreqNum .or. & 
-               iWave-AlfvenSpeedMinusFirst_+1 .gt. LowestFreqNum+SpectrumWidth .or. &
-               vAlfvenSi.ge.0.0) then
+               iWave-AlfvenSpeedMinusFirst_+1 .gt. LowestFreqNum+SpectrumWidth) then
              VarsGhostFace_V(iWave)=1e-30
-          else    
+          elseif(FullBr .ge. 0.0) then
+             ! float BC
+             VarsGhostFace_V(iWave) = VarsTrueFace_V(iWave)
+          else
              VarsGhostFace_V(iWave) = SpectralCoeff * DeltaLogFrequency * wEnergyDens* &
                   exp((LogFreq_I(iWave-WaveFirst_+1))*SpectralIndex)
           end if
@@ -278,6 +294,7 @@ contains
           end if
        end do
     end if
+         
     !\
     ! Apply corotation
     !/
@@ -639,8 +656,9 @@ contains
     ! which is the ion cyclotron frequency (in radians) 
     ! \omega_{c.o.}=zeB/m. For ions z=1. 
      
+    use ModMain,              ONLY: x_,y_,z_
     use ModVarIndexes
-    use ModAdvance,           ONLY: State_VGB
+    use ModAdvance,           ONLY: State_VGB, B0_DGB
     use ModConst,             ONLY: cElectronCharge, cProtonMass,cTiny
     use ModSize,              ONLY: nI,nJ,nK
     use ModPhysics,           ONLY: No2Si_V,UnitB_
@@ -649,25 +667,24 @@ contains
      
     real, intent(out)           :: LogFreqCutOff
     integer, intent(in)         :: i,j,k,iBLK
-    real                        :: BxNo, ByNo, BzNo,BtotSi 
+
+    real                        :: BtotSi
+    real,dimension(3)           :: BNo_D
     character(len=*),parameter  :: NameSub = 'calc_cutoff_freq'
     ! -----------------------------------------------------------------
 
-    BxNo = State_VGB(Bx_,i,j,k,iBLK)
-    ByNo = State_VGB(By_,i,j,k,iBLK)
-    BzNo = State_VGB(Bz_,i,j,k,iBLK)
-
-    BtotSi = No2Si_V(UnitB_)*sqrt(BxNo**2 + ByNo**2 + BzNo**2)
-    BtotSi = max(BtotSi,cTiny**2)
+    BNo_D = State_VGB(Bx_:Bz_,i,j,k,iBLK) + B0_DGB(x_:z_,i,j,k,iBLK)
+  
+    BtotSi = No2Si_V(UnitB_)*sqrt(sum(BNo_D**2))
     LogFreqCutOff = log((cElectronCharge*BtotSi)/cProtonMass)
 
   end subroutine calc_cutoff_freq
   !=======================================================================
   subroutine calc_poynt_flux(i,j,k,iBLK, UseUr, PoyntFluxSi)
 
-    Use ModMain,       ONLY: nBLK
+    Use ModMain,       ONLY: nBLK, x_,y_,z_
     use ModSize,       ONLY: nI,nJ,nK
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, B0_DGB
     use ModVarIndexes
     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModPhysics,    ONLY: No2Si_V, UnitB_, UnitRho_,UnitU_,UnitP_
@@ -677,10 +694,10 @@ contains
     integer,intent(in)         :: i,j,k,iBLK
     logical,intent(in)         :: UseUr
     real,intent(out)           :: PoyntFluxSi
-    real,dimension(3)          :: r_D,B_D,U_D
-    real                       :: x,y,z,Bx,By,Bz,Br
-    real                       :: Ux, Uy, Uz, Ur, Rho  
-    real                       :: vAlfvenRadial ! in radial direction
+
+    real,dimension(3)          :: r_D,BSi_D,USi_D
+    real                       :: x,y,z,BrSi,UrSi, RhoSi  
+    real                       :: vAlfvenRadialSi ! in radial direction
     character(len=*),parameter :: NameSub='calc_poynt_flux'
     ! -----------------------------------------------------------------
     !! Poynting flux is calculated in SI UNITS
@@ -695,29 +712,24 @@ contains
     r_D = r_D/sqrt(sum(r_D**2)) ! unit vector in radial direction
 
     ! get B, Br vectors in SI units
-    Bx = No2Si_V(UnitB_)*State_VGB(Bx_,i,j,k,iBLK)
-    By = No2Si_V(UnitB_)*State_VGB(By_,i,j,k,iBLK)
-    Bz = No2Si_V(UnitB_)*State_VGB(Bz_,i,j,k,iBLK)
-    B_D =(/Bx,By,Bz/)
-    Br = dot_product(r_D,B_D)
+    BSi_D = (State_VGB(Bx_:Bz_,i,j,k,iBLK) + B0_DGB(x_:z_,i,j,k,iBLK)) &
+         * No2Si_V(UnitB_)
+    BrSi = dot_product(r_D,BSi_D)
     
     ! get density in SI units
-    Rho = No2Si_V(UnitRho_)*State_VGB(rho_,i,j,k,iBLK)
+    RhoSi = No2Si_V(UnitRho_)*State_VGB(rho_,i,j,k,iBLK)
     ! calculate radial component of Alfven speed
-    vAlfvenRadial = abs(Br/sqrt(Rho*cMu)) ! for outgoing waves
+    vAlfvenRadialSi = abs(BrSi/sqrt(RhoSi*cMu)) ! for outgoing waves
     
-    ! correct vAlfven if bulk velocity is not neglected
+    ! add Ur to vAlfven if bulk velocity is not neglected
     if(UseUr) then
-       Ux = No2Si_V(UnitU_)*State_VGB(Ux_,i,j,k,iBLK)
-       Uy = No2Si_V(UnitU_)*State_VGB(Uy_,i,j,k,iBLK)
-       Uz = No2Si_V(UnitU_)*State_VGB(Uz_,i,j,k,iBLK)
-       U_D = (/Ux, Uy, Uz/)
-       Ur = dot_product(r_D,U_D)
+       USi_D = No2Si_V(UnitU_)*State_VGB(Ux_:Uz_,i,j,k,iBLK)
+       UrSi = dot_product(r_D,USi_D)
         
-       vAlfvenRadial= Ur+vAlfvenRadial
+       vAlfvenRadialSi = UrSi+vAlfvenRadialSi
     end if
      
-    PoyntFluxSi=vAlfvenRadial*No2Si_V(UnitP_)* & 
+    PoyntFluxSi=vAlfvenRadialSi*No2Si_V(UnitP_)* & 
          sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK))
 
   end subroutine calc_poynt_flux
