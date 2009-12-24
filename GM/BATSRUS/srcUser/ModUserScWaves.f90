@@ -428,8 +428,6 @@ contains
     
     end do; end do; end do
 
-    call init_wave_spectrum
-
   end subroutine user_set_ics
   !============================================================================
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
