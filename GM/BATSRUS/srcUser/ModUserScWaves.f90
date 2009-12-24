@@ -174,7 +174,7 @@ contains
     use ModSize,       ONLY: East_,West_,South_,North_,Bot_,Top_,nDim
     use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, n_step, Iteration_Number
     use ModVarIndexes 
-    use ModAdvance,    ONLY: State_VGB, B0_DGB
+    use ModAdvance,    ONLY: State_VGB, B0_DGB, UseIdealEos
     use ModPhysics,    ONLY: inv_gm1,OmegaBody,No2Si_V,Si2No_V, &
                              UnitB_,UnitU_,UnitRho_,UnitP_,UnitX_
     use ModConst,      ONLY: cMu
@@ -280,7 +280,7 @@ contains
                   exp((LogFreq_I(iWave-WaveFirst_+1))*SpectralIndex)
           end if
           if(VarsGhostFace_V(iWave) < 0.0) then
-             write(*,*) NameSub 'found negative wave energy at inner boundary'
+             write(*,*) 'Negative wave energy at inner boundary'
              call stop_MPI('ERROR in plus  waves BC')
           end if
        end do
@@ -297,7 +297,7 @@ contains
                   exp((LogFreq_I(iWave-WaveFirst_+1))*SpectralIndex)
           end if
           if(VarsGhostFace_V(iWave) < 0.0) then
-             write(*,*) NameSub 'found negative wave energy'
+             write(*,*) 'Negative wave energy'
              call stop_MPI('ERROR in minus waves BCs')
           end if
        end do
@@ -425,7 +425,10 @@ contains
             *U0*((ROne-1.0)/(Rmax-1.0))*z/R
        State_VGB(ExtraEInt_,i,j,k,iBLK) = Pres_BLK &
             *(1.0/(Gamma_BLK-1.0)-inv_gm1) 
+    
     end do; end do; end do
+
+    call init_wave_spectrum
 
   end subroutine user_set_ics
   !============================================================================
@@ -814,7 +817,7 @@ contains
     !/
 
     ! Calculate wave spectrum energy  coefficients in all cells 
-    ConstCoeff=(216/(7*cMu*Lambda0))*((cElectronCharge*cLightSpeed)/cGEV)**(-1.0/3.0)
+    return
 
     !do iBLK=1,nBLK
     !  if (unusedBLK(iBLK)) CYCLE
