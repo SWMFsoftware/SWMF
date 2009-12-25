@@ -1298,12 +1298,13 @@ subroutine find_test_cell
   use ModParallel, ONLY : NOBLK, neiLEV,neiPE,neiBLK
   use ModAdvance,  ONLY : tmp1_BLK
   use ModMpi
-  use BATL_lib, ONLY: CellSize_DB, CellFace_DFB, CellVolume_GB, IsCartesian
+  use BATL_lib, ONLY: CellSize_DB, CellFace_DFB, CellVolume_GB, IsCartesian, &
+       MaxDim, find_grid_block
   implicit none
 
   real :: qdist, qdist_min
   logical :: pass_message
-  integer :: loc(5), idir, iError, iProcTestMe
+  integer :: loc(5), IjkTest_D(MaxDim), idir, iError, iProcTestMe
   real, external :: minval_loc_BLK
   !----------------------------------------------------------------------------
 
@@ -1315,9 +1316,10 @@ subroutine find_test_cell
            if(unusedBLK(BLKtest))then
               write(*,*)'Test cell is in an unused block'
            else
-              Xtest_mod = x_BLK(Itest,Jtest,Ktest,BLKtest)
-              Ytest_mod = y_BLK(Itest,Jtest,Ktest,BLKtest)
-              Ztest_mod = z_BLK(Itest,Jtest,Ktest,BLKtest)
+              XyzTestCell_D = (/ &
+                   x_BLK(Itest,Jtest,Ktest,BLKtest), &
+                   y_BLK(Itest,Jtest,Ktest,BLKtest), &
+                   z_BLK(Itest,Jtest,Ktest,BLKtest) /)
               pass_message = .true.
            end if
         else
@@ -1326,44 +1328,47 @@ subroutine find_test_cell
         end if
      end if
      call MPI_Bcast(pass_message,1,MPI_LOGICAL,PROCtest,iComm,iError)
-     if (.not. pass_message) return
+     if (.not. pass_message) RETURN
 
   else   ! if a coord_test
-
      pass_message = .true.
 
-     tmp1_BLK(1:nI,1:nJ,1:nK,1:nBlockMax)=&
-          abs(x_BLK(1:nI,1:nJ,1:nK,1:nBlockMax)-Xtest)+&
-          abs(y_BLK(1:nI,1:nJ,1:nK,1:nBlockMax)-Ytest)+&
-          abs(z_BLK(1:nI,1:nJ,1:nK,1:nBlockMax)-Ztest)
+     if(UseBatl)then
+        call find_grid_block( (/ xTest, yTest, zTest /), &
+             ProcTest, BlkTest, IjkTest_D)
+        iTest = IjkTest_D(1)
+        jTest = IjkTest_D(2)
+        kTest = Ijktest_D(3)
+     else
 
-     qdist=minval_loc_BLK(nProc,tmp1_BLK,loc)
+        tmp1_BLK(1:nI,1:nJ,1:nK,1:nBlockMax)=&
+             abs(x_BLK(1:nI,1:nJ,1:nK,1:nBlockMax)-Xtest)+&
+             abs(y_BLK(1:nI,1:nJ,1:nK,1:nBlockMax)-Ytest)+&
+             abs(z_BLK(1:nI,1:nJ,1:nK,1:nBlockMax)-Ztest)
 
-     !!! write(*,*)'minval=',qdist,' loc=',loc
+        qdist=minval_loc_BLK(nProc,tmp1_BLK,loc)
 
-     Itest=loc(1)
-     Jtest=loc(2)
-     Ktest=loc(3)
-     BLKtest=loc(4)
-     iProcTestMe=loc(5)
+!!! write(*,*)'minval=',qdist,' loc=',loc
 
-     ! Tell everyone which processor contains the test cell
-     ! The others have -1 so MPI_MAX behaves like a broadcast.
-     call MPI_allreduce(iProcTestMe,PROCtest,1,MPI_INTEGER,MPI_MAX,&
-          iComm,iError)
-
-     if(iProc==ProcTest)then
-        Xtest_mod = x_BLK(Itest,Jtest,Ktest,BLKtest)
-        Ytest_mod = y_BLK(Itest,Jtest,Ktest,BLKtest)
-        Ztest_mod = z_BLK(Itest,Jtest,Ktest,BLKtest)
+        Itest=loc(1)
+        Jtest=loc(2)
+        Ktest=loc(3)
+        BLKtest=loc(4)
+        iProcTestMe=loc(5)
+     
+        ! Tell everyone which processor contains the test cell
+        ! The others have -1 so MPI_MAX behaves like a broadcast.
+        call MPI_allreduce(iProcTestMe,PROCtest,1,MPI_INTEGER,MPI_MAX,&
+             iComm,iError)
      end if
+     if(iProc==ProcTest) XyzTestCell_D = (/ &
+          x_BLK(Itest,Jtest,Ktest,BLKtest), &
+          y_BLK(Itest,Jtest,Ktest,BLKtest), &
+          z_BLK(Itest,Jtest,Ktest,BLKtest) /)
   end if
-
   if (pass_message) then
 
-     call MPI_Bcast(Xtest_mod,1,MPI_REAL,PROCtest,iComm,iError)
-     call MPI_Bcast(Ytest_mod,1,MPI_REAL,PROCtest,iComm,iError)
-     call MPI_Bcast(Ztest_mod,1,MPI_REAL,PROCtest,iComm,iError)
+     call MPI_Bcast(XyzTestCell_D,3,MPI_REAL,PROCtest,iComm,iError)
 
      if(iProc==PROCtest .and. UseTestCell .and. lVerbose>0)then
         write(*,*)
@@ -1380,13 +1385,13 @@ subroutine find_test_cell
              'dx=',      dx_BLK(BLKtest),&
              ' dy=',     dy_BLK(BLKtest),&
              ' dz=',     dz_BLK(BLKtest),&
-             ' Vol111=', 1./vInv_CB(1,1,1,BLKtest)
+             ' Volume=', 1./vInv_CB(iTest,jTest,kTest,BLKtest)
         if(UseBatl)then
            write(*,'(a,3f12.5,a,f12.5)') &
                 ' CellSize_D=',CellSize_DB(:,BLKtest),&
-                ' CellVol111=',CellVolume_GB(1,1,1,BLKtest)
+                ' CellVolume=',CellVolume_GB(iTest,jTest,kTest,BLKtest)
            if(.not.IsCartesian) write(*,'(a,3f12.5)') &
-                ' CellFace111_D=',CellFace_DFB(:,1,1,1,BLKtest)
+                ' CellFace_D=',CellFace_DFB(:,iTest,jTest,kTest,BLKtest)
         end if
   	do idir=1,6
   	   select case(neiLEV(idir,BLKtest))

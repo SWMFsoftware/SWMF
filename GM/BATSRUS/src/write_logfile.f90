@@ -125,7 +125,7 @@ subroutine write_logfile(iSatIn,iFile)
   if (DoWritePosition) then
      NameAll = trim(NameAll)//' X Y Z'
      if (iSatIn == 0) then
-        Xyz_D = (/ xTest_mod, yTest_mod, zTest_mod /); 
+        Xyz_D = XyzTestCell_D
      elseif (iSatIn >= 1) then
         Xyz_D = XSatellite(iSat,1:3)
      end if

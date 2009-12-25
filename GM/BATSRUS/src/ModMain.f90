@@ -224,14 +224,13 @@ Module ModMain
   character (len=100) :: test_string=''
 
   ! Location for test
-  integer :: Itest=1, Jtest=1, Ktest=1, BLKtest=1, PROCtest=0, ITERtest=-1
+  integer :: iTest=1, jTest=1, kTest=1, BLKtest=1, PROCtest=0, ITERtest=-1
   integer :: VARtest=1, DIMtest=1
   real    :: xTest=0.0, yTest=0.0, zTest=0.0, tTest=0.0
-  real    :: xTest_mod=0.0, yTest_mod=0.0, zTest_mod=0.0
+  real    :: XyzTestCell_D(3)=0.0
   logical :: UseTestCell=.false., coord_test=.false.
 
   ! Debug logicals
-  logical, parameter :: debug1=.false., debug2=.false.
   logical :: okdebug=.false., ShowGhostCells=.true.
 
   !\
