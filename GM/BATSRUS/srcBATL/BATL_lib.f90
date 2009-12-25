@@ -51,6 +51,7 @@ module BATL_lib
   public:: Xyz_DGB
   public:: CellFace_DB, CellFace_DFB
   public:: CellVolume_B, CellVolume_GB
+  public:: find_grid_block
 
   ! Inherited from BATL_amr
   public:: iAmrChange_B
