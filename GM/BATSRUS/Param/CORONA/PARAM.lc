@@ -154,10 +154,9 @@ T			UseCurlB0
 30			DnRefine
 F			DoAutomaticRefinement 
 
-#PARALLELCONDUCTION
-T			UseParallelConduction
+#HEATCONDUCTION
+T			UseHeatConduction
 modified		TypeHeatConduction
-1E-11			HeatConductionParSi
 2.5E+5			TmodifySi
 1.0E+4			DeltaTmodifySi
 

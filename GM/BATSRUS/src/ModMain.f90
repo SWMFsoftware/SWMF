@@ -188,7 +188,7 @@ Module ModMain
   ! Logicals for adding radiation diffusion and heat conduction
   logical :: UseRadDiffusion = .false.
   logical :: UseHeatConduction = .false.
-  logical :: UseParallelConduction = .false.
+  logical :: UseIonHeatConduction = .false.
 
   ! Logical and type for gravity
   logical :: UseGravity

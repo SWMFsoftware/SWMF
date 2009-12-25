@@ -216,7 +216,6 @@ contains
     ! No nonzero heat conduction contribution at base yet
 
     use ModExpansionFactors
-    use ModMain,       ONLY: UseParallelConduction
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: g, inv_gm1, AverageIonCharge
 

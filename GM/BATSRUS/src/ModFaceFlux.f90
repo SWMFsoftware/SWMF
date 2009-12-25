@@ -3,7 +3,8 @@ module ModFaceFlux
   use ModProcMH,     ONLY: iProc
   use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit, &
        iTest, jTest, kTest, ProcTest, BlkTest, DimTest
-  use ModMain,       ONLY: UseRadDiffusion, UseParallelConduction
+  use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction, &
+       UseIonHeatConduction
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
@@ -37,7 +38,8 @@ module ModFaceFlux
 
   !^CFG IF IMPLICIT BEGIN
   use ModRadDiffusion, ONLY: IsNewBlockRadDiffusion, get_radiation_energy_flux
-  use ModHeatConduction, ONLY: IsNewBlockHeatConduction, get_heat_flux
+  use ModHeatConduction, ONLY: IsNewBlockHeatCond, IsNewBlockIonHeatCond, &
+       get_heat_flux, get_ion_heat_flux
   !^CFG END IMPLICIT
 
   use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
@@ -108,7 +110,8 @@ module ModFaceFlux
   real :: GradXPeNe, GradYPeNe, GradZPeNe
 
   ! Variables for diffusion solvers (radiation diffusion, heat conduction)
-  real :: DiffCoef, EradFlux, RadDiffCoef, HeatFlux, HeatCondCoefNormal
+  real :: DiffCoef, EradFlux, RadDiffCoef, HeatFlux, IonHeatFlux, &
+       HeatCondCoefNormal
 
   ! These are variables for pure MHD solvers (Roe and HLLD)
   ! Number of MHD fluxes including the pressure and energy fluxes
@@ -361,7 +364,8 @@ contains
     IsNewBlockHall   = .true.
     IsNewBlockGradPe = .true.
     IsNewBlockRadDiffusion = .true.      !^CFG IF IMPLICIT
-    IsNewBlockHeatConduction = .true.    !^CFG IF IMPLICIT
+    IsNewBlockHeatCond    = .true.       !^CFG IF IMPLICIT
+    IsNewBlockIonHeatCond = .true.       !^CFG IF IMPLICIT
 
     if(UseResistivity) call set_resistivity(iBlock)      !^CFG IF DISSFLUX
 
@@ -840,7 +844,8 @@ contains
        NormalX = Normal_D(x_); NormalY = Normal_D(y_); NormalZ = Normal_D(z_)
        AreaX = Area*NormalX; AreaY = Area*NormalY; AreaZ = Area*NormalZ
 
-       if(HallCoeff > 0.0 .or. Eta > 0.0 .or. UseParallelConduction) &
+       if(HallCoeff > 0.0 .or. Eta > 0.0 .or. &
+            UseHeatConduction .or. UseIonHeatConduction) &
             InvDxyz = 1.0/sqrt(  &
             ( x_BLK(iRight,jRight,kRight, iBlockFace)          &
             - x_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 +    &
@@ -958,10 +963,17 @@ contains
           DiffCoef = DiffCoef + RadDiffCoef
        end if
 
-       if(UseParallelConduction)then
+       if(UseHeatConduction)then
           call get_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
                StateLeft_V, StateRight_V, Normal_D, &
                HeatCondCoefNormal, HeatFlux)
+          DiffCoef = DiffCoef + HeatCondCoefNormal
+       end if
+
+       if(UseIonHeatConduction)then
+          call get_ion_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
+               StateLeft_V, StateRight_V, Normal_D, &
+               HeatCondCoefNormal, IonHeatFlux)
           DiffCoef = DiffCoef + HeatCondCoefNormal
        end if
     end if
@@ -1105,7 +1117,7 @@ contains
     ! Increase maximum speed with diffusion speed if necessary
     !^CFG IF IMPLICIT BEGIN
     if(.not. UseSemiImplicit)then
-       if(UseParallelConduction .or. UseRadDiffusion) &
+       if(UseHeatConduction .or. UseIonHeatConduction .or. UseRadDiffusion) &
             CmaxDt = CmaxDt + 2.0*DiffCoef*InvDxyz
     end if
     !^CFG END IMPLICIT
@@ -1898,13 +1910,17 @@ contains
     !^CFG IF  IMPLICIT BEGIN
     if(.not.UseSemiImplicit)then
        if(UseRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
-       if(UseParallelConduction)then
+       if(UseHeatConduction)then
           if(UseElectronPressure)then
              Flux_V(Pe_) = Flux_V(Pe_) + gm1*HeatFlux
           else
              Flux_V(p_) = Flux_V(p_) + gm1*HeatFlux
              Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
           end if
+       end if
+       if(UseIonHeatConduction)then
+          Flux_V(p_) = Flux_V(p_) + gm1*IonHeatFlux
+          Flux_V(Energy_) = Flux_V(Energy_) + IonHeatFlux
        end if
     end if
     !^CFG END IMPLICIT

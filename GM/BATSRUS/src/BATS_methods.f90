@@ -261,7 +261,7 @@ end subroutine BATS_setup
 subroutine BATS_init_session
 
   use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation, &
-       UseRadDiffusion, UseParallelConduction
+       UseRadDiffusion, UseHeatConduction, UseIonHeatConduction
   use ModMain, ONLY: UseProjection                 !^CFG IF PROJECTION
   use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
   use ModCT,   ONLY: DoInitConstrainB              !^CFG IF CONSTRAINB
@@ -304,7 +304,8 @@ subroutine BATS_init_session
   if(UseHallResist)call init_hall_resist
   !call test_face_current
 
-  if(UseParallelConduction) call init_heat_conduction !^CFG IF  IMPLICIT BEGIN
+  if(UseHeatConduction .or. UseIonHeatConduction) & !^CFG IF  IMPLICIT BEGIN
+       call init_heat_conduction
   if(UseSemiImplicit)then
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
@@ -312,7 +313,7 @@ subroutine BATS_init_session
      end select
   elseif(UseFullImplicit.and.UseRadDiffusion)then
      call init_rad_diffusion
-  end if                                              !^CFG END IMPLICIT
+  end if                                            !^CFG END IMPLICIT
 
   ! Make sure that ghost cells are up to date
   call exchange_messages

@@ -12,32 +12,35 @@ module ModHeatConduction
   public :: read_heatconduction_param
   public :: init_heat_conduction
   public :: get_heat_flux
+  public :: get_ion_heat_flux
   public :: get_impl_heat_cond_state
   public :: get_heat_conduction_rhs
   public :: add_jacobian_heat_cond
   public :: update_impl_heat_cond
 
   ! Logical for adding field-aligned heat conduction
-  logical, public :: IsNewBlockHeatConduction = .true.
+  logical, public :: IsNewBlockHeatCond = .true.
+  logical, public :: IsNewBlockIonHeatCond = .true.
 
   ! Variables for setting the field-aligned heat conduction coefficient
   character(len=20), public :: TypeHeatConduction = 'user'
   logical :: DoModifyHeatConduction, DoUserHeatConduction
 
   real :: TmodifySi = 3.0e5, DeltaTmodifySi = 2.0e4
-  real :: HeatConductionPar, Tmodify, DeltaTmodify
+  real :: HeatCondPar, IonHeatCondPar, Tmodify, DeltaTmodify
 
   logical :: DoWeakFieldConduction = .false.
   real :: BmodifySi = 1.0e-7, DeltaBmodifySi = 1.0e-8 ! modify about 1 mG
   real :: Bmodify, DeltaBmodify
 
-  ! electron temperature used for calculating heat flux
-  real, allocatable :: Te_G(:,:,:)
+  ! electron/ion temperature used for calculating heat flux
+  real, allocatable :: Te_G(:,:,:), Ti_G(:,:,:)
 
   ! Used for ideal EOS: p = n*T + ne*Te (dimensionless) and n=rho/ionmass
   ! so that p=rho/massion *T*(1+ne/n Te/T)
+  ! TiFraction is defined such that Ti = p/rho * TiFraction
   ! TeFraction is defined such that Te = p/rho * TeFraction
-  real :: TeFraction
+  real :: TiFraction, TeFraction
 
   ! Heat flux for operator split scheme
   real, allocatable :: FluxImpl_X(:,:,:), FluxImpl_Y(:,:,:), FluxImpl_Z(:,:,:)
@@ -51,18 +54,19 @@ contains
 
   subroutine read_heatconduction_param(NameCommand)
 
-    use ModMain,      ONLY: UseParallelConduction
+    use ModMain,      ONLY: UseHeatConduction, UseIonHeatConduction
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
 
-    character(len=*), parameter :: NameSub = 'read_heatconduction_param'
+    character(len=*), parameter :: &
+         NameSub = 'ModHeatConduction::read_heatconduction_param'
     !--------------------------------------------------------------------------
 
     select case(NameCommand)
-    case("#PARALLELCONDUCTION")
-       call read_var('UseParallelConduction', UseParallelConduction)
-       if(UseParallelConduction)then
+    case("#HEATCONDUCTION")
+       call read_var('UseHeatConduction', UseHeatConduction)
+       if(UseHeatConduction)then
           call read_var('TypeHeatConduction', TypeHeatConduction)
 
           select case(TypeHeatConduction)
@@ -84,6 +88,9 @@ contains
           call read_var('DeltaBmodifySi', DeltaBmodifySi)
        end if
 
+    case("#IONHEATCONDUCTION")
+       call read_var('UseIonHeatConduction', UseIonHeatConduction)
+
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
@@ -94,19 +101,23 @@ contains
 
   subroutine init_heat_conduction
 
+    use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
+         nDim
     use ModAdvance,    ONLY: UseElectronPressure
-    use ModConst,      ONLY: cBoltzmann, cElectronMass, cEps, cElectronCharge
+    use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
+         cEps, cElectronCharge
     use ModImplicit,   ONLY: UseSemiImplicit, iTeImpl
-    use ModMain,       ONLY: nI, nJ, nK, MaxBlock, nDim
+    use ModMain,       ONLY: MaxBlock, UseHeatConduction, UseIonHeatConduction
     use ModMultiFluid, ONLY: MassIon_I
     use ModNumConst,   ONLY: cTwoPi
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          UnitU_, UnitX_, UnitB_, ElectronTemperatureRatio, AverageIonCharge
 
     real, parameter:: CoulombLog = 20.0
-    real :: HeatConductionParSi
+    real :: HeatCondParSi, IonHeatCondParSi
 
-    character(len=*), parameter :: NameSub = 'init_heat_conduction'
+    character(len=*), parameter :: &
+         NameSub = 'ModHeatConduction::init_heat_conduction'
     !--------------------------------------------------------------------------
 
     if(UseSemiImplicit)then
@@ -114,23 +125,54 @@ contains
        write(*,*) "It is currently guaranteed to give wrong results !!!"
     end if
 
-    if(allocated(Te_G)) RETURN
-
-    allocate(Te_G(-1:nI+2,-1:nJ+2,-1:nK+2))
+    if(UseHeatConduction)then
+       if(.not.allocated(Te_G))allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+    else
+       if(allocated(Te_G))deallocate(Te_G)
+    end if
+    if(UseIonHeatConduction)then
+       if(.not.allocated(Ti_G))allocate(Ti_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+    else
+       if(allocated(Ti_G))deallocate(Ti_G)
+    end if
 
     ! TeFraction is used for ideal EOS:
     if(UseElectronPressure)then
        ! Pe = ne*Te (dimensionless) and n=rho/ionmass
        ! so that Pe = ne/n *n*Te = (ne/n)*(rho/ionmass)*Te
        ! TeFraction is defined such that Te = Pe/rho * TeFraction
+       TiFraction = MassIon_I(1)
        TeFraction = MassIon_I(1)/AverageIonCharge
     else
        ! p = n*T + ne*Te (dimensionless) and n=rho/ionmass
        ! so that p=rho/massion *T*(1+ne/n Te/T)
        ! TeFraction is defined such that Te = p/rho * TeFraction
-       TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
+       TiFraction = MassIon_I(1) &
             /(1 + AverageIonCharge*ElectronTemperatureRatio)
+       TeFraction = TiFraction*ElectronTemperatureRatio
     end if
+
+    ! electron heat conduct coefficient for single charged ions
+    ! = 9.2e-12 W/(m*K^(7/2))
+    HeatCondParSi = 3.2*3.0*cTwoPi/CoulombLog &
+         *sqrt(cTwoPi*cBoltzmann/cElectronMass)*cBoltzmann &
+         *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
+
+    ! unit HeatCondParSi is W/(m*K^(7/2))
+    HeatCondPar = HeatCondParSi &
+         *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)**3.5 &
+         *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+
+    ! ion heat conduct coefficient
+    ! = 2.6e-13 W/(m*K^(7/2)) for protons
+    IonHeatCondParSi = 3.9*3.0*cTwoPi/CoulombLog &
+         *sqrt(cTwoPi*cBoltzmann/(MassIon_I(1)*cProtonMass))*cBoltzmann &
+         *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
+
+    ! unit HeatCondParSi is W/(m*K^(7/2))
+    IonHeatCondPar = IonHeatCondParSi &
+         *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)**3.5 &
+         *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
     DoUserHeatConduction = .false.
     DoModifyHeatConduction = .false.
@@ -140,17 +182,6 @@ contains
     elseif(TypeHeatConduction == 'modified')then
        DoModifyHeatConduction = .true.
     end if
-
-    ! electron heat conduct coefficient for single charged ions
-    ! = 9.2e-12 W/(m*K^(7/2))
-    HeatConductionParSi = 3.2*3.0*cTwoPi/CoulombLog &
-         *sqrt(cTwoPi*cBoltzmann/cElectronMass)*cBoltzmann &
-         *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
-
-    ! unit HeatConductionParSi is W/(m*K^(7/2))
-    HeatConductionPar = HeatConductionParSi &
-         *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)**3.5 &
-         *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
     if(DoModifyHeatConduction)then
        Tmodify = TmodifySi*Si2No_V(UnitTemperature_)
@@ -162,7 +193,7 @@ contains
        DeltaBmodify = DeltaBmodifySi*Si2No_V(UnitB_)
     end if
 
-    if(UseSemiImplicit)then
+    if(UseSemiImplicit.and..not.allocated(HeatCond_DFDB))then
        allocate( &
             FluxImpl_X(nI+1,nJ,nK), &
             FluxImpl_Y(nI,nJ+1,nK), &
@@ -179,9 +210,9 @@ contains
   subroutine get_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
        StateLeft_V, StateRight_V, Normal_D, HeatCondCoefNormal, HeatFlux)
 
+    use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModMain,         ONLY: nI, nJ, nK
     use ModPhysics,      ONLY: inv_gm1, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_
     use ModUser,         ONLY: user_material_properties
@@ -195,24 +226,24 @@ contains
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3)
     real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi
 
-    character(len=*), parameter :: NameSub = 'get_heat_flux'
+    character(len=*), parameter :: NameSub = 'ModHeatConduction::get_heat_flux'
     !--------------------------------------------------------------------------
 
-    if(IsNewBlockHeatConduction)then
+    if(IsNewBlockHeatCond)then
        if(UseIdealEos)then
           if(UseElectronPressure)then
-             do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 Te_G(i,j,k) = TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
                      /State_VGB(Rho_,i,j,k,iBlock)
              end do; end do; end do
           else
-             do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 Te_G(i,j,k) = TeFraction*State_VGB(p_,i,j,k,iBlock) &
                      /State_VGB(Rho_,i,j,k,iBlock)
              end do; end do; end do
           end if
        else
-          do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              call user_material_properties( &
                   State_VGB(:,i,j,k,iBlock), TeOut=TeSi)
              Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
@@ -221,11 +252,11 @@ contains
     end if
 
     call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
-         IsNewBlockHeatConduction, Te_G, FaceGrad_D)
+         IsNewBlockHeatCond, Te_G, FaceGrad_D)
 
-    call get_heat_conduction_coef(iDir, iFace, jFace, kFace, iBlock, &
+    call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
          StateLeft_V, Normal_D, HeatCondL_D)
-    call get_heat_conduction_coef(iDir, iFace, jFace, kFace, iBlock, &
+    call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
          StateRight_V, Normal_D, HeatCondR_D)
 
     HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
@@ -249,7 +280,7 @@ contains
 
   !============================================================================
 
-  subroutine get_heat_conduction_coef(iDim, iFace, jFace, kFace, iBlock, &
+  subroutine get_heat_cond_coef(iDim, iFace, jFace, kFace, iBlock, &
        State_V, Normal_D, HeatCond_D)
 
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
@@ -313,11 +344,11 @@ contains
           ! Artificial modified heat conduction for a smoother transition
           ! region, Linker et al. (2001)
           FractionSpitzer = 0.5*(1.0+tanh((Te-Tmodify)/DeltaTmodify))
-          HeatCoef = HeatConductionPar*(FractionSpitzer*Te**2.5 &
+          HeatCoef = HeatCondPar*(FractionSpitzer*Te**2.5 &
                + (1.0 - FractionSpitzer)*Tmodify**2.5)
        else
           ! Spitzer form for collisional regime
-          HeatCoef = HeatConductionPar*Te**2.5
+          HeatCoef = HeatCondPar*Te**2.5
        end if
     end if
 
@@ -331,7 +362,120 @@ contains
        HeatCond_D = HeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
     end if
 
-  end subroutine get_heat_conduction_coef
+  end subroutine get_heat_cond_coef
+
+  !============================================================================
+
+  subroutine get_ion_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
+       StateLeft_V, StateRight_V, Normal_D, HeatCondCoefNormal, HeatFlux)
+
+    use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos
+    use ModFaceGradient, ONLY: get_face_gradient
+    use ModPhysics,      ONLY: inv_gm1
+    use ModVarIndexes,   ONLY: nVar, Rho_, p_
+
+    integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
+    real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
+    real,    intent(out):: HeatCondCoefNormal, HeatFlux
+
+    integer :: i, j, k
+    real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3)
+    real :: FaceGrad_D(3), CvL, CvR
+
+    character(len=*), parameter :: &
+         NameSub = 'ModHeatConduction::get_ion_heat_flux'
+    !--------------------------------------------------------------------------
+
+    if(IsNewBlockHeatCond)then
+       if(UseIdealEos)then
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             Ti_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
+                  /State_VGB(Rho_,i,j,k,iBlock)
+          end do; end do; end do
+       else
+          call stop_mpi(NameSub// &
+               ': no ion heat conduction yet for non-ideal eos')
+       end if
+    end if
+
+    call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
+         IsNewBlockIonHeatCond, Ti_G, FaceGrad_D)
+
+    call get_ion_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
+         StateLeft_V, Normal_D, HeatCondL_D)
+    call get_ion_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
+         StateRight_V, Normal_D, HeatCondR_D)
+
+    HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
+
+    HeatFlux = -sum(HeatCond_D*FaceGrad_D)
+
+    ! get the heat conduction coefficient normal to the face for
+    ! time step restriction
+    if(UseIdealEos)then
+       CvL = inv_gm1*StateLeft_V(Rho_)/TiFraction
+       CvR = inv_gm1*StateRight_V(Rho_)/TiFraction
+    else
+       call stop_mpi(NameSub// &
+            ': no ion heat conduction yet for non-ideal eos')
+    end if
+    HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
+
+  end subroutine get_ion_heat_flux
+
+  !============================================================================
+
+  subroutine get_ion_heat_cond_coef(iDim, iFace, jFace, kFace, iBlock, &
+       State_V, Normal_D, HeatCond_D)
+
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos
+    use ModB0,           ONLY: B0_DX, B0_DY, B0_DZ
+    use ModMain,         ONLY: UseB0
+    use ModNumConst,     ONLY: cTolerance
+    use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_
+
+    integer, intent(in) :: iDim, iFace, jFace, kFace, iBlock
+    real, intent(in) :: State_V(nVar), Normal_D(3)
+    real, intent(out):: HeatCond_D(3)
+
+    real :: B_D(3), Bnorm, Bunit_D(3), Ti
+    real :: HeatCoef
+
+    character(len=*), parameter :: &
+         NameSub = 'ModHeatConduction::get_ion_heat_cond_coef'
+    !--------------------------------------------------------------------------
+
+    if(UseB0)then
+       select case(iDim)
+       case(1)
+          B_D = State_V(Bx_:Bz_) + B0_DX(:,iFace,jFace,kFace)
+       case(2)
+          B_D = State_V(Bx_:Bz_) + B0_DY(:,iFace,jFace,kFace)
+       case(3)
+          B_D = State_V(Bx_:Bz_) + B0_DZ(:,iFace,jFace,kFace)
+       end select
+    else
+       B_D = State_V(Bx_:Bz_)
+    end if
+
+    ! The magnetic field should nowhere be zero. The following fix will
+    ! turn the magnitude of the field direction to zero.
+    Bnorm = sqrt(sum(B_D**2))
+    Bunit_D = B_D/max(Bnorm,cTolerance)
+
+    if(UseIdealEos)then
+       Ti = TiFraction*State_V(p_)/State_V(Rho_)
+    else
+       call stop_mpi(NameSub//': no ion heat conduction yet for non-ideal eos')
+    end if
+
+    ! Spitzer form for collisional regime
+    HeatCoef = IonHeatCondPar*Ti**2.5
+
+    HeatCond_D = HeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
+
+  end subroutine get_ion_heat_cond_coef
 
   !============================================================================
   ! Operator split, semi-implicit subroutines
@@ -393,9 +537,9 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
           if(UseCovariant) call set_covariant_cell_face(x_, i, j, k, iBlock)
 
-          call get_heat_conduction_coef(x_, i, j, k, iBlock, &
+          call get_heat_cond_coef(x_, i, j, k, iBlock, &
                LeftState_VX(:,i,j,k), Normal_D, HeatCondL_D)
-          call get_heat_conduction_coef(x_, i, j, k, iBlock, &
+          call get_heat_cond_coef(x_, i, j, k, iBlock, &
                RightState_VX(:,i,j,k), Normal_D, HeatCondR_D)
 
           HeatCond_DFDB(:,i,j,k,1,iBlock) = 0.5*(HeatCondL_D+HeatCondR_D)*Area
@@ -405,9 +549,9 @@ contains
        do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
           if(UseCovariant) call set_covariant_cell_face(y_, i, j, k, iBlock)
 
-          call get_heat_conduction_coef(y_, i, j, k, iBlock, &
+          call get_heat_cond_coef(y_, i, j, k, iBlock, &
                LeftState_VY(:,i,j,k), Normal_D, HeatCondL_D)
-          call get_heat_conduction_coef(y_, i, j, k, iBlock, &
+          call get_heat_cond_coef(y_, i, j, k, iBlock, &
                RightState_VY(:,i,j,k), Normal_D, HeatCondR_D)
 
           HeatCond_DFDB(:,i,j,k,2,iBlock) = 0.5*(HeatCondL_D+HeatCondR_D)*Area
@@ -417,9 +561,9 @@ contains
        do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
           if(UseCovariant) call set_covariant_cell_face(z_, i, j, k, iBlock)
 
-          call get_heat_conduction_coef(z_, i, j, k, iBlock, &
+          call get_heat_cond_coef(z_, i, j, k, iBlock, &
                LeftState_VZ(:,i,j,k), Normal_D, HeatCondL_D)
-          call get_heat_conduction_coef(z_, i, j, k, iBlock, &
+          call get_heat_cond_coef(z_, i, j, k, iBlock, &
                RightState_VZ(:,i,j,k), Normal_D, HeatCondR_D)
 
           HeatCond_DFDB(:,i,j,k,3,iBlock) = 0.5*(HeatCondL_D+HeatCondR_D)*Area
@@ -511,24 +655,24 @@ contains
 
     integer :: i, j, k
     real :: FaceGrad_D(3)
-    logical :: IsNewBlockHeatConduction
+    logical :: IsNewBlockHeatCond
     !--------------------------------------------------------------------------
 
-    IsNewBlockHeatConduction = .true.
+    IsNewBlockHeatCond = .true.
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
        call get_face_gradient(x_, i, j, k, iBlock, &
-            IsNewBlockHeatConduction, StateImpl_VG, FaceGrad_D)
+            IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D)
        FluxImpl_X(i,j,k) = -sum(HeatCond_DFDB(:,i,j,k,1,iBlock)*FaceGrad_D)
     end do; end do; end do
     do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
        call get_face_gradient(y_, i, j, k, iBlock, &
-            IsNewBlockHeatConduction, StateImpl_VG, FaceGrad_D)
+            IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D)
        FluxImpl_Y(i,j,k) = -sum(HeatCond_DFDB(:,i,j,k,2,iBlock)*FaceGrad_D)
     end do; end do; end do
     do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
        call get_face_gradient(z_, i, j, k, iBlock, &
-            IsNewBlockHeatConduction, StateImpl_VG, FaceGrad_D)
+            IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D)
        FluxImpl_Z(i,j,k) = -sum(HeatCond_DFDB(:,i,j,k,3,iBlock)*FaceGrad_D)
     end do; end do; end do
 
