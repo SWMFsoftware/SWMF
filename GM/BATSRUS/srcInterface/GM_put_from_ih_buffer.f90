@@ -14,7 +14,7 @@ subroutine read_ih_buffer(yIn,zIn,State_V)
 
   use ModVarIndexes, ONLY: nVar, RhoUy_, RhoUz_, By_, Bz_
   use ModIhBuffer
-  use ModMain, ONLY: TypeCoordSystem, Time_Simulation, yTest_mod, zTest_mod
+  use ModMain, ONLY: TypeCoordSystem, Time_Simulation
   use CON_axes, ONLY: transform_matrix
 
   implicit none
