@@ -387,7 +387,7 @@ contains
          NameSub = 'ModHeatConduction::get_ion_heat_flux'
     !--------------------------------------------------------------------------
 
-    if(IsNewBlockHeatCond)then
+    if(IsNewBlockIonHeatCond)then
        if(UseIdealEos)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              Ti_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
