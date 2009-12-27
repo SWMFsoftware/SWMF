@@ -185,7 +185,7 @@ contains
     Rot_II = reshape( (/CosSlope, SinSlope, -SinSlope, CosSlope/), &
          (/2,2/) )
 
-    do j=-1,nJ+2; do i=-1,nI+2
+    do j = 1, nJ; do i = 1, nI
        
        x = x_Blk(i,j,0,iBlock)*CosSlope + y_Blk(i,j,0,iBlock)*SinSlope - X0
 
@@ -222,7 +222,7 @@ contains
        RhoU_D(2) = 0.0
        RhoU_D(3) = 0.0
 
-       do k=-1,nk+2
+       do k = 1, nk
           State_VGB(Rho_,i,j,k,iBlock) = Rho
           State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = matmul(Rot_II,RhoU_D(x_:y_))
           State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
@@ -309,22 +309,24 @@ contains
     integer, intent(in):: iStage,iBlock
 
     integer:: i, j, k
-    real   :: PressureSi, EinternalSi, GammaEos
+    real   :: PressureSi, EinternalSi, GammaEos, DivU
     logical:: IsConserv
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
     ! Fix adiabatic compression source for pressure
     if(UseNonConservative)then
-       do k=1,nK; do j=1,nJ; do i=1,nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          DivU          =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
+          if(nJ>1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
+          if(nK>1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
+          DivU = vInv_CB(i,j,k,iBlock)*DivU
+
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               GammaOut=GammaEos)
+               i, j, k, iBlock, GammaOut=GammaEos)
+
           Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-               -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*&
-               vInv_CB(i,j,k,iBlock)*&
-               ( uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
-               + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
-               + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1) )
+               -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*DivU
        end do; end do; end do
     end if
 
@@ -373,12 +375,12 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
+    use BATL_size,     ONLY: nI, nJ, nK, nG, MinI, MaxI
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: x_Blk, y_Blk
     use ModMain,       ONLY: Time_Simulation
     use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitT_, &
          UnitTemperature_, UnitEnergyDens_, ShockSlope, cRadiationNo
-    use ModSize,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: p_, Rho_, Erad_
 
     integer,          intent(in)   :: iBlock
@@ -398,6 +400,8 @@ contains
     real :: x, Weight1, Weight2
     real :: Ux, Tgas, Trad
     real :: SinSlope, CosSlope
+    integer, parameter:: jMin = 1 - 2*min(1,nJ-1), jMax = nJ + 2*min(1,nJ-1)
+    integer, parameter:: kMin = 1 - 2*min(1,nK-1), kMax = nK + 2*min(1,nK-1)
     !------------------------------------------------------------------------
 
     UsePlotVarBody = .false.
@@ -406,10 +410,15 @@ contains
     IsFound = .true.
     select case(NameVar)
     case('tgas')
-       PlotVar_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+          PlotVar_G(i,j,k) = State_VGB(p_,i,j,k,iBlock) &
+               /State_VGB(Rho_,i,j,k,iBlock)
+       end do; end do; end do
 
     case('trad')
-       PlotVar_G = (State_VGB(Erad_,:,:,:,iBlock)/cRadiationNo)**0.25
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+          PlotVar_G(i,j,k) = (State_VGB(Erad_,i,j,k,iBlock)/cRadiationNo)**0.25
+       end do; end do; end do
 
     case('rho0','ux0','uy0','tgas0','trad0')
 
@@ -417,7 +426,7 @@ contains
        SinSlope = ShockSlope/sqrt(1.0+ShockSlope**2)
        CosSlope =        1.0/sqrt(1.0+ShockSlope**2)
 
-       do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
 
           x = x_Blk(i,j,k,iBlock)*CosSlope + y_Blk(i,j,k,iBlock)*SinSlope
           x = x - U0*Time_Simulation*Si2No_V(UnitT_) - X0
@@ -599,7 +608,7 @@ contains
     UserCriteria = 0.0
 
     ! capture the embedded hydro shock
-    LOOPCELL: do k = -1, nK+2; do j=1, nJ; do i = -1, nI+2
+    LOOPCELL: do k = 1, nK; do j=1, nJ; do i = -1, nI+2
        Temperature = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
        if(Temperature > TemperatureMin &
             .and. abs(y_Blk(i,j,k,iBlock)) < DyRefine)then
@@ -609,7 +618,7 @@ contains
     end do; end do; end do LOOPCELL
 
     ! capture the precursor
-    LOOPCELL2: do k = -1, nK+2; do j=1, nJ; do i = 0, nI+1
+    LOOPCELL2: do k = 1, nK; do j=1, nJ; do i = 0, nI+1
        TradL = sqrt(sqrt(State_VGB(Erad_,i-1,j,k,iBlock)/cRadiationNo))
        TradR = sqrt(sqrt(State_VGB(Erad_,i+1,j,k,iBlock)/cRadiationNo))
        DTradDx = (TradR - TradL)*0.5/Dx_Blk(iBlock)
