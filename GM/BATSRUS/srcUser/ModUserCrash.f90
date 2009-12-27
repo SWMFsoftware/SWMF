@@ -1360,20 +1360,21 @@ contains
     integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel, iWave, iVar
     real    :: Value_V(nMaterial*nThermo) ! Cv,Gamma,Kappa,Te for 3 materials
 
-    integer, parameter:: nGK = nG*min(1,nK-1), MinK = 1 - nGK, MaxK = nK + nGK
-    integer, parameter:: nGJ = nG*min(1,nJ-1), MinJ = 1 - nGJ, MaxJ = nJ + nGJ
+    ! Do not use MinJ,MinK,MaxJ,MaxK here to avoid pgf90 compilation error...
+    integer, parameter:: jMin = 1 - 2*min(1,nJ-1), jMax = nJ + 2*min(1,nJ-1)
+    integer, parameter:: kMin = 1 - 2*min(1,nK-1), kMax = nK + 2*min(1,nK-1)
     !------------------------------------------------------------------------  
 
     IsFound = .true.
     select case(NameVar)
     case('level', 'material')
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
           iMaterial_I = maxloc(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
           PlotVar_G(i,j,k) = iMaterial_I(1)
        end do; end do; end do
     case('tekev', 'TeKev')
        NameIdlUnit = 'KeV'
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, TeOut = PlotVar_G(i,j,k))
           PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * cKToKev
@@ -1381,7 +1382,7 @@ contains
     case('tikev', 'TiKev')
        NameIdlUnit = 'KeV'
        if(UseElectronPressure)then
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, NatomicOut=NatomicSi)
              PiSi = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
@@ -1390,7 +1391,7 @@ contains
           end do; end do; end do
        else
           ! Te = Ti at all times, use Te
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, TeOut = PlotVar_G(i,j,k))
              PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * cKToKev
@@ -1401,7 +1402,7 @@ contains
        ! used as a measure of the total radiation energy !!!
        ! multiply by sign of Erad for debugging purpose
        NameIdlUnit = 'KeV'
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
           WaveEnergy = 0.0
           do iWave = WaveFirst_, WaveLast_
              WaveEnergy = WaveEnergy + State_VGB(iWave,i,j,k,iBlock)
@@ -1411,26 +1412,26 @@ contains
                * No2Si_V(UnitTemperature_) * cKToKev
        end do; end do; end do
     case('planck')
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
                OpacityPlanckOut_W = OpacityPlanckSi_W)
           PlotVar_G(i,j,k) = OpacityPlanckSi_W(1)
        end do; end do; end do
     case('ross')
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
                OpacityRosselandOut_W = OpacityRosselandSi_W)
           PlotVar_G(i,j,k) = OpacityRosselandSi_W(1)
        end do; end do; end do
     case('cond')
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, HeatCondOut = PlotVar_G(i,j,k))
        end do; end do; end do
     case('teti')
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, TeTiRelaxOut = PlotVar_G(i,j,k))
        end do; end do; end do
@@ -1455,10 +1456,10 @@ contains
           iLevel = LevelPl_; iMaterial = Plastic_
        end select
        if(UseMixedCell)then
-          PlotVar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) = MassMaterial_I(iMaterial)&
-               *State_VGB(iLevel,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)
+          PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax) = MassMaterial_I(iMaterial)&
+               *State_VGB(iLevel,MinI:MaxI,jMin:jMax,kMin:kMax,iBlock)
        else
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
              iMaterial_I = maxloc(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
              if(iMaterial_I(1) - 1 == iMaterial) then
                 PlotVar_G(i,j,k) = State_VGB(Rho_,i,j,k,iBlock)
@@ -1467,8 +1468,8 @@ contains
              end if
           end do; end do; end do
        end if
-       if(IsDimensional) PlotVar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) = &
-            No2Io_V(UnitRho_)*PlotVar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+       if(IsDimensional) PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax) = &
+            No2Io_V(UnitRho_)*PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax)
     case default
        IsFound = .false.
     end select
@@ -1478,7 +1479,7 @@ contains
        if(NameVar == NameWave)then
           iVar = WaveFirst_ + iWave -1
 
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
              NameIdlUnit = 'J/m^3'
              PlotVar_G(i,j,k) = State_VGB(iVar,i,j,k,iBlock) &
                   *No2Si_V(UnitEnergyDens_)
