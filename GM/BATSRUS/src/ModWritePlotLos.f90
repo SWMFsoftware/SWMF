@@ -454,14 +454,13 @@ subroutine write_plot_los(iFile)
 
         ! Check if block can intersect this pixel
         if(DoCheckBlock)then
-           if(abs(bPix - bBlockCenter) > rBlockSize)CYCLE
+           if(abs(bPix - bBlockCenter) > rBlockSize) CYCLE
         end if
 
         do iPix = 1, nPix
 
            ! X position of the pixel on the image plane
            aPix = (iPix - 1) * SizePix - rSizeImage
-
 
            ! if los is on pole, will have block degeneracy ---> offset a 'tiny' bit
            ! (will always have this problem if nPix is odd)
@@ -489,18 +488,16 @@ subroutine write_plot_los(iFile)
            LosPix_D = LosPix_D/sqrt(sum(LosPix_D**2))
 
            ! Do not allow LOS direction to be perfectly aligned with major axes
-           where(LosPix_D ==0.0) LosPix_D = cTiny
+           where(LosPix_D == 0.0) LosPix_D = cTiny
 
            ! Calculate contribution of this block to this pixel
-           if (.not.IsSphGeometry) then
-              if(IsRzGeometry)then
-                 call integrate_los_block_rz
-              else
-                 call integrate_los_block
-              end if
+           if(IsRzGeometry)then
+              call integrate_los_block_rz
+           elseif(IsSphGeometry) then
+              call integrate_los_block_sph
+           else
+              call integrate_los_block
            end if
-
-           if (IsSphGeometry) call integrate_los_block_sph
 
         end do ! jPix loop
      end do    ! iPix loop
@@ -516,10 +513,11 @@ subroutine write_plot_los(iFile)
      Image_VII = ImagePe_VII
   end if
 
-  if(iProc==0 .and. plot_dimensional(iFile)) call dimensionalize_plotvar_los
-
-  if(DoTiming)call timing_start('los_save_plot')
   if (iProc==0) then
+
+     if(plot_dimensional(iFile)) call dimensionalize_plotvar_los
+
+     if(DoTiming)call timing_start('los_save_plot')
 
      select case(plot_form(ifile))
      case('tec')
@@ -594,8 +592,9 @@ subroutine write_plot_los(iFile)
 
      end select
 
-  end if  !iProc ==0
-  if(DoTiming)call timing_stop('los_save_plot')
+     if(DoTiming)call timing_stop('los_save_plot')
+
+  end if  ! iProc==0
 
   deallocate(ImagePe_VII, Image_VII)
 
@@ -644,16 +643,15 @@ contains
     ! the axial (X) and squared radial (Y**2) coordinates of the block faces
     real :: x_S(2), r2_S(2) 
     real :: Ratio, UnitYZ_D(2), DistRmin, r2Min, r2, Dist2, Dist
+
     ! coordinates of the intersections
     real :: Intersect_D(3), Intersect2_D(3), Intersect_DI(3,MaxIntersect)
+
     ! distances of intersections from the center of the pixel
     real :: DistIntersect, DistIntersect_I(MaxIntersect) 
 
     logical, parameter :: DoTestPix = .false.
     !------------------------------------------------------------------------
-
-!!! DoTestPix = iPix == 26 .and. jPix == 26
-
     ! Calculate the closest approach to the origin in the Y-Z plane
     ! Normalize the Y-Z components of the LOS vector to unity
     Ratio     = 1/sqrt(sum(LosPix_D(2:3)**2))
@@ -723,33 +721,19 @@ contains
        iSort_I(1:2) = (/1,2/)
     end if
 
-    if(DoTestPix)then
-       write(*,*)'iBLK, x_S, r2_S, nIntersect = ',iBLK, x_S, r2_S, nIntersect
-       do iIntersect=1,nIntersect
-          write(*,*)'Intersect_D, r2, d=',Intersect_DI(:,iIntersect), &
-               sum(Intersect_DI(2:3,iIntersect)**2), DistIntersect_I(iIntersect)
-       end do
-       write(*,*)'iSort_I=',iSort_I(1:nIntersect)
-    end if
-
     ! Loop through segments connecting the consecutive intersection points
     do iIntersect = 1, nIntersect-1
        Intersect_D  = Intersect_DI(:,iSort_I(iIntersect))
        Intersect2_D = Intersect_DI(:,iSort_I(iIntersect+1))
 
-       ! check if the radius of the midpoint is inside the block, if not return
+       ! check if the radius of the midpoint is inside the block, if not CYCLE
        r2 = sum((0.5*(Intersect_D(2:3) + Intersect2_D(2:3)))**2)
-
-       if(DoTestPix)then
-          write(*,*)'Intersect_D  =',Intersect_D
-          write(*,*)'Intersect2_D =',Intersect2_D
-          write(*,*)'!!! midpoint r2=',r2, r2 < r2_S(1) .or. r2 > r2_S(2)
-       end if
 
        if(r2 < r2_S(1) .or. r2 > r2_S(2)) CYCLE
 
        call integrate_segment(Intersect_D, Intersect2_D)
     end do
+
   end subroutine integrate_los_block_rz
 
   !===========================================================================
@@ -935,26 +919,15 @@ contains
   subroutine integrate_los_block_sph
 
     ! Local variables
-
-
     real :: Xyz1_D(3), Xyz2_D(3)
 
-
-    !
     logical, dimension(2) :: IsPoleNS
     logical :: IsIntersect
     real, dimension(8,3) :: cell_vertex_V
-
-
-
     !------------------------------------------------------------------------
-
-
     ! essentially a more general version of the cartesian version
     ! except this time made each part into its own subroutine
-
-    !  note, the 3D location of the pixel is XYZPix_D
-
+    ! note, the 3D location of the pixel is XYZPix_D
     ! need to make sure you discount the non-zero face on a polar block 
     ! use same check as fix_axis routines
     IsIntersect=.false.
@@ -963,12 +936,12 @@ contains
     IsPoleNS(2) = (NeiLBot(iBLK) == NOBLK)
 
     ! Block level intersection call
-    ! note BBoxVertex_V is calculated in main routine block loop and is 8 vertex locations
-    ! of the smallest 6 sided planar volume that bounds the curved block
+    ! note BBoxVertex_V is calculated in main routine block loop and is 8 vertex 
+    ! locations of the smallest 6 sided planar volume that bounds the curved block
     ! (slightly larger than the block itself)
     !
     ! this function finds the points where the los intersects this volume
-    !
+
     call find_intersect_general(BBoxVertex_DN,IsPoleNS,IsIntersect,Xyz1_D,Xyz2_D)
 
     ! NOW CALL SERIES OF NESTED ROUTINES that trim the LOS integral to 
@@ -978,8 +951,8 @@ contains
     !
     ! a) los_cut_backside  **trim if los hits sun, only take half of domain facing observer
     ! b) los_cut_boundary  **trim if los is within rInner and rOuter (can branch if double cut)
-    ! c) los_cut_rmin      **trim if los is los is below block rmin (node r boundary) 
-    ! d) los_cut_rmax      **trim if los is los is outside block rmax (node r boundary)
+    ! c) los_cut_rmin      **trim if los is below block rmin (node r boundary) 
+    ! d) los_cut_rmax      **trim if los is outside block rmax (node r boundary)
     ! e) integrate_segment **now go into integrate segment 
 
     if (IsIntersect) call los_cut_backside(Xyz1_D,Xyz2_D)
@@ -1021,40 +994,38 @@ contains
     real, allocatable, save:: PlotVar_GV(:,:,:,:)
 
     ! Added for EUV synth and sph geometry
-    real :: GenStart_D(3), GenEnd_D(3),GenLos_D(3)
+    real :: GenLos_D(3)
     real :: Temp            ! Electron Temp at the point
     real :: mu_gas = 0.5    ! mean molecular wieght of plasma
     real :: LogTemp, LogNe, rConv, Aux, EUVResponse(3), SXRResponse(2)
-    real :: Temp_GB(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real :: Temp_GB(-1:nI+2,-1:nJ+2,-1:nK+2)
+
     ! this is so can modify amount of block sent to interpolation routine
     integer :: iMin, iMax
     logical :: IsNoBlockInner = .false.
     logical :: IsNoBlockOuter = .false.
     !------------------------------------------------------------------------
-
-
     ! Number of segments for an accurate integral
-    if (.not.IsSphGeometry) &
-         nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D)/CellSize_D)
-
     if (IsSphGeometry) then
-
-       call xyz_to_gen(XyzStart_D,GenStart_D)
-       call xyz_to_gen(XyzEnd_D,GenEnd_D)
-
        ! in gen coords, hard to think of equally weighted length
        ! (along all 3 axes), so choose n=nI+nJ+nK for now, note that
        ! CellSize_D has gencoord deltas
 
        nSegment = nI+nJ+nK
-       !nSegment = 1 + sum(abs(GenEnd_D - GenStart_D)/CellSize_D)
-    endif
+    elseif (IsRzGeometry) then
+       ! In RZ geometry Delta Y is representative for the radial resolution
+       nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D) &
+            / (/ CellSize_D(1), CellSize_D(2), CellSize_D(2) /) )
+    else
+       nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D)/CellSize_D)
+    end if
 
     ! Length of a segment
     Ds = sqrt(sum((XyzEnd_D - XyzStart_D)**2)) / nSegment
 
     ! Don't want to divide block states repeatedly in nSegment loop
-    if(UseEUV .or. UseSXR) Temp_GB = State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
+    if(UseEUV .or. UseSXR) &
+         Temp_GB = State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
 
     do iSegment = 1, nSegment
        XyzLos_D = XyzStart_D &
@@ -1099,12 +1070,13 @@ contains
                - XyzStart_BLK(1:2,iBlk))/CellSize_D(1:2) + 1
           CoordNorm_D(3) = 0.0
 
-       else if(IsSphGeometry) then
-          ! get gen coord of los (note XyzStart_BLK will already be in Gencoord)
+       elseif(IsSphGeometry) then
+          ! get gen coord of los (note XyzStart_BLK is already in Gencoord)
           call xyz_to_gen(XyzLos_D,GenLos_D)
           CoordNorm_D = (GenLos_D - XyzStart_BLK(:,iBLK))/CellSize_D + 1
 
-          ! need to know if no block neighbor (ghost cells along this edge will be wrong)
+          ! need to know if no block neighbor 
+          ! (ghost cells along this edge will be wrong)
           IsNoBlockInner = (NeiLEast(iBLK) == NOBLK)     
           IsNoBlockOuter = (NeiLWest(iBLK) == NOBLK)
 
@@ -1117,13 +1089,13 @@ contains
           if(IsRzGeometry)then
              Rho = bilinear(State_VGB(Rho_,:,:,1,iBlk), &
                   -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
-          else if (IsSphGeometry) then
+          elseif (IsSphGeometry) then
              iMin = -1; iMax = nI+2
              if (IsNoBlockInner) iMin=1
              if (IsNoBlockOuter) iMax=nI
              Rho = trilinear(State_VGB(Rho_,:,:,:,iBlk), &
-                             iMin, iMax, -1, nJ+2, -1, nK+2,&
-                             CoordNorm_D,DoExtrapolate=.true.)
+                  iMin, iMax, -1, nJ+2, -1, nK+2,&
+                  CoordNorm_D, DoExtrapolate=.true.)
           else
              Rho = trilinear(State_VGB(Rho_,:,:,:,iBlk), &
                   -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
@@ -1134,16 +1106,19 @@ contains
 
           ! need to interpolate electron temperature. Should really be calling
           ! user_material_properties, but would need user to have implemented
-          ! this. Instead assume a fixed mu and electron/ion Temperature equilibrium
-          ! for now.
+          ! this. Instead assume a fixed mu and electron/ion Temperature 
+          ! equilibrium for now.
 
           if(IsRzGeometry)then
-             Temp = bilinear(Temp_GB(:,:,1), -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
+             Temp = bilinear(Temp_GB(:,:,1), -1, nI+2, -1, nJ+2, &
+                  CoordNorm_D(1:2))
           else if (IsSphGeometry) then
-             Temp = trilinear(Temp_GB(iMin:iMax,:,:), iMin, iMax, -1, nJ+2, -1, nK+2, &
-                              CoordNorm_D,DoExtrapolate=.true.)
+             Temp = trilinear(Temp_GB(iMin:iMax,:,:), &
+                  iMin, iMax, -1, nJ+2, -1, nK+2, &
+                  CoordNorm_D, DoExtrapolate=.true.)
           else
-             Temp = trilinear(Temp_GB(:,:,:), -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
+             Temp = trilinear(Temp_GB(:,:,:), -1, nI+2, -1, nJ+2, -1, nK+2, &
+                  CoordNorm_D)
           end if
         
 
@@ -1162,16 +1137,18 @@ contains
 
           if (UseEUV) then
              ! now interpolate EUV response values from a lookup table
-             if (iTableEUV <=0) call stop_mpi('Need to load #LOOKUPTABLE for EUV response!')
-             call interpolate_lookup_table(iTableEUV,LogTemp,LogNe,EUVResponse,&
-                  DoExtrapolate=.true.)
+             if (iTableEUV <=0) &
+                  call stop_mpi('Need to load #LOOKUPTABLE for EUV response!')
+             call interpolate_lookup_table(iTableEUV, LogTemp, LogNe, &
+                  EUVResponse, DoExtrapolate=.true.)
           end if
 
           if (UseSXR) then
              ! now interpolate SXR response values from a lookup table
-             if (iTableSXR <=0) call stop_mpi('Need to load #LOOKUPTABLE for SXR response!')
-             call interpolate_lookup_table(iTableSXR,LogTemp,LogNe,SXRResponse,&
-                  DoExtrapolate=.true.)
+             if (iTableSXR <=0) &
+                  call stop_mpi('Need to load #LOOKUPTABLE for SXR response!')
+             call interpolate_lookup_table(iTableSXR, LogTemp, LogNe, &
+                  SXRResponse, DoExtrapolate=.true.)
           end if
 
        end if
