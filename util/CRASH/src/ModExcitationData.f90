@@ -664,7 +664,8 @@ contains
     ExcitationEnergy_III = 0.0
     do iZ=0,min(iZMax,nZ-1)
 
-       NameFile='../input/atomic_data'//'/'//NameElement_I(nZ)//'/'//NameElement_I(nZ-iZ)//'.lev'
+       NameFile = '../../../dataCRASH/AtomicData/' &
+            // NameElement_I(nZ) // '/' // NameElement_I(nZ-iZ) // '.lev'
        write(*,'(a)')NameFile
        iUnit = io_unit_new()
        open(iUnit,file=NameFile,status='old')

@@ -8,7 +8,7 @@ module ModHydrogenicModel
   integer :: nElectron_I(100)=0
 
   real,dimension(100,100)::Sigma_II
-  character(LEN=*),parameter::NameFile = '../input/atomic_data/sigma.dat'
+  character(LEN=*),parameter::NameFile = '../../../dataCRASH/AtomicData/sigma.dat'
   integer::nZ  !The nuclei charge.
 contains
   function TypeConf()
