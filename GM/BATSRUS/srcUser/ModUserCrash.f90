@@ -30,7 +30,7 @@ module ModUser
   ! There are 3 materials: Xe, Be and Plastic
   integer, parameter :: nMaterial = 3
 
-  ! Average atomic mass of the materials (initialized in user_init_session)
+  ! Average atomic mass of the materials
   real, parameter:: MassMaterial_I(0:nMaterial-1) = &
        (/ cAtomicMass_I(54), cAtomicMass_I(4), cAPolyimide /)
 
@@ -1350,8 +1350,6 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    character (len=*), parameter :: Name='user_set_plot_var'
-
     character(len=10) :: NameWave
     real    :: p, Rho, pSi, RhoSi, TeSi, WaveEnergy
     real    :: PiSi, TiSi, NatomicSi
@@ -1363,8 +1361,12 @@ contains
     ! Do not use MinJ,MinK,MaxJ,MaxK here to avoid pgf90 compilation error...
     integer, parameter:: jMin = 1 - 2*min(1,nJ-1), jMax = nJ + 2*min(1,nJ-1)
     integer, parameter:: kMin = 1 - 2*min(1,nK-1), kMax = nK + 2*min(1,nK-1)
-    !------------------------------------------------------------------------  
 
+    ! Optical depth for Xenon, Berylium and plastic for radiography
+    real, parameter:: RadioDepth_I(0:nMaterial-1) = (/ 79.4, 0.36, 2.24 /)
+
+    character (len=*), parameter :: NameSub = 'user_set_plot_var'
+    !------------------------------------------------------------------------  
     IsFound = .true.
     select case(NameVar)
     case('level', 'material')
@@ -1446,7 +1448,23 @@ contains
           ! In Cartesian geometry it is real sphere
           PlotVar_G = max(0.0, 100 - r_BLK(:,:,:,iBlock)**2)
        end if
-    case('rhoxe', 'rhobe', 'rhopl')
+   case('radiograph')
+      if(UseMixedCell)then
+         do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+            PlotVar_G(i,j,k) = -sum(RadioDepth_I*MassMaterial_I &
+                 *State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
+         end do; end do; end do
+      else
+         do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+            iMaterial_I = maxloc(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
+            iMaterial   = iMaterial_I(1) - 1
+            PlotVar_G(i,j,k) = -RadioDepth_I(iMaterial) &
+                 *State_VGB(Rho_,i,j,k,iBlock)
+         end do; end do; end do
+      end if
+      if(IsDimensional) PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax) = &
+           No2Io_V(UnitRho_)*PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax)
+   case('rhoxe', 'rhobe', 'rhopl')
        select case(NameVar)
        case('rhoxe')
           iLevel = LevelXe_; iMaterial = Xe_
