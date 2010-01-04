@@ -823,7 +823,8 @@ subroutine select_conservative
      RETURN
   endif
 
-  if(any(TypeConservCrit_I == 'p' .or. TypeConservCrit_I == 'gradp'))then
+  if(any(TypeConservCrit_I == 'p' .or. TypeConservCrit_I == 'gradp' &
+       .or. TypeConservCrit_I == 'jumpp') )then
 
      if(DoTestMe)write(*,*)'select_conservative: Apply physics based criteria'
 
@@ -839,7 +840,8 @@ subroutine select_conservative
            case('p')
               if(UseB0)then
                  do k=1,nK; do j=1,nJ; do i=1,nI
-                    IsConserv_CB(i,j,k,iBlock) = IsConserv_CB(i,j,k,iBlock) .or. &
+                    IsConserv_CB(i,j,k,iBlock) = &
+                         IsConserv_CB(i,j,k,iBlock) .or. &
                          State_VGB(P_,i,j,k,iBlock) > pCoeffConserv * &
                          (Energy_GBI(i,j,k,iBlock,1) + 0.5 * &
                          ((State_VGB(Bx_,i,j,k,iBlock) &
@@ -855,7 +857,8 @@ subroutine select_conservative
                  end do;end do;end do
               else
                  do k=1,nK; do j=1,nJ; do i=1,nI
-                    IsConserv_CB(i,j,k,iBlock) = IsConserv_CB(i,j,k,iBlock) .or. &
+                    IsConserv_CB(i,j,k,iBlock) = &
+                         IsConserv_CB(i,j,k,iBlock) .or. &
                          State_VGB(P_,i,j,k,iBlock) > pCoeffConserv * &
                          Energy_GBI(i,j,k,iBlock,1) 
                  end do;end do;end do
@@ -864,13 +867,36 @@ subroutine select_conservative
               ! Switch to conservative if gradient of pressure is large
               do k=1,nK; do j=1,nJ; do i=1,nI
                  IsConserv_CB(i,j,k,iBlock) = IsConserv_CB(i,j,k,iBlock) .or. &
-                      (abs(State_VGB(P_,i+1,j,k,iBlock)-State_VGB(P_,i-1,j,k,iBlock))  &
-                      +abs(State_VGB(P_,i,j+1,k,iBlock)-State_VGB(P_,i,j-1,k,iBlock))  &
-                      +abs(State_VGB(P_,i,j,k+1,iBlock)-State_VGB(P_,i,j,k-1,iBlock))) &
-                      > GradPCoeffConserv * min(State_VGB(P_,i,j,k,iBlock),    &
-                      State_VGB(P_,i+1,j,k,iBlock), State_VGB(P_,i-1,j,k,iBlock),      &
-                      State_VGB(P_,i,j+1,k,iBlock), State_VGB(P_,i,j-1,k,iBlock),      &
-                      State_VGB(P_,i,j,k+1,iBlock), State_VGB(P_,i,j,k-1,iBlock))
+                      (abs(State_VGB(P_,i+1,j,k,iBlock) &
+                      -    State_VGB(P_,i-1,j,k,iBlock))  &
+                      +abs(State_VGB(P_,i,j+1,k,iBlock) &
+                      -    State_VGB(P_,i,j-1,k,iBlock))  &
+                      +abs(State_VGB(P_,i,j,k+1,iBlock) &
+                      -    State_VGB(P_,i,j,k-1,iBlock))) &
+                      > GradPCoeffConserv * min(    &
+                      State_VGB(P_,i,j,k,iBlock),   &
+                      State_VGB(P_,i+1,j,k,iBlock), &
+                      State_VGB(P_,i-1,j,k,iBlock), &
+                      State_VGB(P_,i,j+1,k,iBlock), &
+                      State_VGB(P_,i,j-1,k,iBlock), &
+                      State_VGB(P_,i,j,k+1,iBlock), &
+                      State_VGB(P_,i,j,k-1,iBlock))
+              end do; end do; end do
+           case('jumpp')
+              ! Switch to conservative if pressure jump is large
+              do k=1,nK; do j=1,nJ; do i=1,nI
+                 IsConserv_CB(i,j,k,iBlock) = IsConserv_CB(i,j,k,iBlock) .or. &
+                      maxval(State_VGB(P_,i-2:i+2,j,k,iBlock)) &
+                      > GradPCoeffConserv* &
+                      minval(State_VGB(P_,i-2:i+2,j,k,iBlock)) .or. &
+                      nJ > 1 .and. &
+                      maxval(State_VGB(P_,i,j-2:j+2,k,iBlock)) &
+                      > GradPCoeffConserv* &
+                      minval(State_VGB(P_,i:i,j-2:j+2,k,iBlock)) .or. &
+                      nK > 1 .and. &
+                      maxval(State_VGB(P_,i,j,k-2:k+2,iBlock)) &
+                      > GradPCoeffConserv* &
+                      minval(State_VGB(P_,i:i,j,k-2:k+2,iBlock))
               end do; end do; end do
            case default
               CYCLE
