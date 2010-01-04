@@ -3,32 +3,32 @@ use strict;
 
 # Default compiler per machine or OS
 my %Compiler = (
-		"Linux"     => "f95",
-		"Darwin"    => "f95",
-		"OSF1"      => "f90",
-		"IRIX64"    => "f90",
-		"AIX"       => "xlf90",
-		"palm"      => "ifort",
-		"cfe"       => "ifort",
-		"pfe"       => "ifort",
-		"sysx"      => "xlf90",
-		"nyx-login" => "pgf90",
-		"hera"      => "mpiifort",
+		"Linux"               => "f95",
+		"Darwin"              => "f95",
+		"OSF1"                => "f90",
+		"IRIX64"              => "f90",
+		"AIX"                 => "xlf90",
+		"palm"                => "ifort",
+		"cfe"                 => "ifort",
+		"pfe"                 => "ifort",
+		"sysx"                => "xlf90",
+		"nyx-login-intel"     => "pgf90",
+		"hera"                => "mpiifort",
 		);
 
 # Default MPI library per machine or OS
 my %MpiVersion = (
-		  "Linux"     => "mpich",
-		  "Darwin"    => "mpich",
-		  "OSF1"      => "mpich",
-		  "AIX"       => "IBM",
-		  "IRIX64"    => "SGI",
-		  "palm"      => "Altix",
-		  "cfe"       => "Altix",
-		  "pfe"       => "Altix",
-		  "grendel"   => "openmpi",
-		  "nyx-login" => "openmpi",
-		  "hera"      => "mvapich",
+		  "Linux"             => "mpich",
+		  "Darwin"            => "mpich",
+		  "OSF1"              => "mpich",
+		  "AIX"               => "IBM",
+		  "IRIX64"            => "SGI",
+		  "palm"              => "Altix",
+		  "cfe"               => "Altix",
+		  "pfe"               => "Altix",
+		  "grendel"           => "openmpi",
+		  "nyx-login-intel"   => "openmpi",
+		  "hera"              => "mvapich",
 		  );
 
 my $WARNING_='share/Scripts/Config.pl WARNING:';
