@@ -35,6 +35,8 @@ subroutine advance_expl(DoCalcTimestep)
   !/
   if(UsePartImplicit)call timing_start('advance_expl') !^CFG IF IMPLICIT
 
+  if(UseBody2 .and. UseOrbit) call update_secondbody  !^CFG IF SECONDBODY
+
   STAGELOOP: do iStage = 1, nStage
 
      if(DoTestMe)write(*,*)NameSub,' starting stage=',iStage
@@ -199,3 +201,32 @@ subroutine advance_expl(DoCalcTimestep)
   if(DoTestMe)write(*,*)NameSub,' finished'
 
 end subroutine advance_expl
+
+!^CFG IF SECONDBODY BEGIN
+!===========================================================================
+
+subroutine update_secondbody
+  use ModMain,          ONLY: time_simulation,globalBLK,nBlock
+  use ModConst,         ONLY: cTwoPi
+  use ModPhysics,       ONLY: xBody2,yBody2,OrbitPeriod,xBody2init, &
+       yBody2init
+
+  implicit none
+
+  real :: Rdistance
+  !-------------------------------------------------------------------------
+
+  ! Update second body coordinates
+  Rdistance = sqrt(xBody2**2+yBody2**2)
+  xBody2 = xBody2init*cos(cTwoPi*time_simulation/OrbitPeriod)
+  yBody2 = sqrt(Rdistance**2-xBody2**2)
+
+  do globalBLK = 1, nBlock
+     call fix_block_geometry(globalBLK)
+  end do
+  
+  call set_body_flag
+  call exchange_messages
+  
+end subroutine update_secondbody
+!^CFG END SECONDBODY
