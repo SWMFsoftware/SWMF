@@ -127,7 +127,7 @@ install: ENV_CHECK mkdir
 	cd CON;			make install
 	cd ESMF/ESMF_SWMF;	make install
 
-	if([ -d "GM/BATSRUS" ]); then \
+	@if([ -d "GM/BATSRUS" ]); then \
 		if([ -d "SC/BATSRUS" ]); \
 			then cp GM/BATSRUS/Config.pl SC/BATSRUS; \
 			     perl -i -pe 's/GM/SC/' SC/BATSRUS/Config.pl; \
@@ -150,7 +150,7 @@ install: ENV_CHECK mkdir
 			IH/BATSRUS_share/Config.pl; \
 		fi; \
 	fi
-	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
+	@for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
 		do (if([ -f "$$i/Config.pl" ]); then \
 			echo Installing $$i; cd $$i; ./Config.pl -install=c; \
 		    fi); \
