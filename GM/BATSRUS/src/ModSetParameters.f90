@@ -1136,7 +1136,7 @@ subroutine MH_set_parameters(TypeAction)
               case('p')
                  ! Balsara/Ryu switch 1
                  call read_var('pCoeffConserv',pCoeffConserv)
-              case('gradp')
+              case('gradp','jumpp')
                  ! Balsara/Ryu switch 2
                  call read_var('GradPCoeffConserv',GradPCoeffConserv)
               case default
@@ -1332,7 +1332,8 @@ subroutine MH_set_parameters(TypeAction)
         case('PLANETARY', 'SOLARWIND')
            ! Depends on other commands, defined in set_physics
         case('USER')
-           ! Call user_normalization to set the normalization units
+           ! Call user_normalization later in set_units (see set_physics.f90)
+           ! to set the normalization units
         case default
            call stop_mpi(NameSub//' ERROR: unknown TypeNormalization=' &
                 //TypeNormalization)
@@ -2022,7 +2023,9 @@ contains
 
   !=========================================================================
   subroutine correct_parameters
+
     use ModWaves, ONLY: UseAlfvenSpeed,UseWavePressure
+
     ! option and module parameters
     character (len=40) :: Name
     real               :: Version
@@ -2080,7 +2083,8 @@ contains
        UseRS7 = .true.
        if(UseAlfvenSpeed .or. UseWavePressure)then
           if(iProc==0) write(*,'(a)')NameSub // &
-               'Wave transport and wave pressure do not work with ' // trim(FluxType)
+               'Wave transport and wave pressure do not work with ' // &
+               trim(FluxType)
           if(UseStrict)&                             !^CFG IF AWFLUX
                call stop_mpi('Correct PARAM.in')    
           FluxType='Sokolov'                         !^CFG IF AWFLUX
@@ -2210,6 +2214,12 @@ contains
     if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
          call stop_mpi(NameSub// &
          'The prolongation order=2 requires message_pass_dir')
+
+    if(nK == 1 .and. UseTvdResChange) then
+       ! in 1D and 2D only accurate reschange is implemented
+       UseTvdResChange      = .false.
+       UseAccurateResChange = .true.
+    end if
 
     if (UseAccurateResChange .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
