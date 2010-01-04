@@ -293,7 +293,7 @@ contains
 
     use ModPhysics, ONLY : rBody, xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
     use ModPhysics, ONLY : FaceState_VI,Si2No_V,No2Si_V,UnitX_,UnitN_,UnitU_, &
-         UnitTemperature_, UnitJ_, UnitPoynting_
+         UnitTemperature_, UnitJ_, UnitPoynting_,OrbitPeriod
     use ModUser, ONLY: user_face_bcs
     use ModMain
     use ModMultiFluid
@@ -693,6 +693,18 @@ contains
             FaceCoords_D,nVar,FaceState_V)
 
        VarsGhostFace_V = FaceState_V
+
+    !^CFG IF SECONDBODY BEGIN
+    case('Body2Orbit')
+       VarsGhostFace_V = FaceState_V
+       VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0Face_D
+       
+       ! Setting velocity BCs to be the second body orbital velocity: 
+       VarsGhostFace_V(Ux_) = -(cTwoPi*yBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_) 
+       VarsGhostFace_V(Uy_) =  (cTwoPi*xBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
+       VarsGhostFace_V(Uz_) =  cZero
+    !^CFG END SECONDBODY
+
     case default
        call stop_mpi('Incorrect TypeBc_I='//TypeBc)
     end select
