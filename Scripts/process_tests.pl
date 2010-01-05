@@ -16,6 +16,7 @@ my %WeightTest = (
 
     "CCHM:test2_sc"                       => "1.0",
     "CCHM:test2_ih"                       => "1.0",
+    "CCHM:test_lc"                        => "1.0",
     "CCHM:GM/BATSRUS/test_corona"         => "1.0",
 
     "CWMM:test1_gm"                       => "1.0",
@@ -24,6 +25,9 @@ my %WeightTest = (
     "CWMM:test3_gm"                       => "1.0",
     "CWMM:test3_ie"                       => "1.0",
     "CWMM:test3_im"                       => "1.0",
+    "CWMM:test4_gm"                       => "1.0",
+    "CWMM:test4_ie"                       => "1.0",
+    "CWMM:test4_im"                       => "1.0",
     "CWMM:test_pw"                        => "0.5",
     "CWMM:test_rb"                        => "0.5",
     "CWMM:GM/BATSRUS/test_magnetometer"   => "0.1",
