@@ -1093,7 +1093,7 @@ contains
              iMin = -1; iMax = nI+2
              if (IsNoBlockInner) iMin=1
              if (IsNoBlockOuter) iMax=nI
-             Rho = trilinear(State_VGB(Rho_,:,:,:,iBlk), &
+             Rho = trilinear(State_VGB(Rho_,iMin:iMax,:,:,iBlk), &
                   iMin, iMax, -1, nJ+2, -1, nK+2,&
                   CoordNorm_D, DoExtrapolate=.true.)
           else
@@ -1121,7 +1121,6 @@ contains
                   CoordNorm_D)
           end if
         
-
           ! Note this is log base 10!!
           LogTemp = log10(Temp * mu_gas * No2Si_V(UnitTemperature_))
 
