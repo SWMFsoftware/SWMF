@@ -44,7 +44,7 @@ subroutine calc_sources
   real :: Current_D(3), JouleHeating, HeatExchange
 
   ! Varibles needed for anisotropic pressure
-  real :: b_D(3), GradU_DD(3,3), bDotGradparU
+  real :: b_D(3), GradU_DD(3,3), bDotGradparU, AnisoRelaxation
 
   integer:: iBlock
 
@@ -68,7 +68,7 @@ subroutine calc_sources
      do iFluid = 1, nFluid
         call select_fluid
 
-        if(UseAnisoPressure)then
+        if(UseAnisopressure)then
            ! Source terms for anisotropic pressure equations
            do k=1,nK; do j=1,nJ; do i=1,nI
               if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -158,9 +158,19 @@ subroutine calc_sources
                    3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)
 
               ! Point-implicit correction for stability: H' = H/(1+dt*H)
-              HeatExchange = &
+              if(UseAnisoPressure)then
+                 HeatExchange = &
                    HeatExchange/(1 + Cfl*HeatExchange*time_BLK(i,j,k,iBlock)) &
-                   *(State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
+                   *(2./3.*State_VGB(Pperp_,i,j,k,iBlock) &
+                   + 1./3.*State_VGB(Ppar_,i,j,k,iBlock) &
+                   - State_VGB(Pe_,i,j,k,iBlock))
+              else
+                 HeatExchange = HeatExchange / &
+                      (1 + Cfl*HeatExchange*time_BLK(i,j,k,iBlock)) &
+                      *(State_VGB(P_,i,j,k,iBlock) &
+                      - State_VGB(Pe_,i,j,k,iBlock))
+              end if
+
            end if
 
            Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
@@ -169,9 +179,20 @@ subroutine calc_sources
            ! Heat exchange applies to ions too
            Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) - HeatExchange
 
-           ! Heat exchange for parallel ion pressure
-           if(UseAnisoPressure) &
-                Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) - HeatExchange
+           if(UseAnisoPressure) then
+              ! Heat exchange for parallel ion pressure
+              Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) - HeatExchange
+              
+              ! Relaxation term due to collisions
+              AnisoRelaxation = Eta_GB(i,j,k,iBlock) &
+                   *State_VGB(Rho_,i,j,k,iBlock)/IonMassPerCharge**2 &
+                   *(State_VGB(Ppar_,i,j,k,iBlock) &
+                   - State_VGB(Pperp_,i,j,k,iBlock))
+              Source_VC(Pperp_,i,j,k) = Source_VC(Pperp_,i,j,k) &
+                   + 1./3.*AnisoRelaxation
+              Source_VC(Ppar_,i,j,k)  = Source_VC(Ppar_,i,j,k)  &
+                   - 2./3.*AnisoRelaxation
+           end if
 
            ! Remove Joule heating and apply heat exchange to ion energy
            Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
@@ -183,7 +204,21 @@ subroutine calc_sources
 
      if(DoTestMe.and.VarTest==P_)call write_source('After eta j')
 
-  end if                                        !^CFG END DISSFLUX
+  end if                                       !^CFG END DISSFLUX
+
+
+  if(UseAnisoPressure .and. TauWaveParticle > 0.0)then
+     ! "artificial" pressure relaxation for anisotropic pressure 
+     ! due to wave-particle interaction 
+     do k=1,nK; do j=1,nJ; do i=1,nI 
+        AnisoRelaxation = &
+             (State_VGB(Ppar_,i,j,k,iBlock) - State_VGB(Pperp_,i,j,k,iBlock))&
+             /TauWaveParticle
+        Source_VC(Pperp_,i,j,k) = Source_VC(Pperp_,i,j,k) + AnisoRelaxation/3.
+        Source_VC(Ppar_,i,j,k)  = Source_VC(Ppar_,i,j,k) - 2./3*AnisoRelaxation
+     end do; end do; end do  
+  end if
+
 
   if(UseWavePressure)then
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
