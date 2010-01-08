@@ -283,6 +283,8 @@ subroutine set_physics_constants
   PeMin = PeMinSi*Si2No_V(UnitP_)
   ExtraEintMin = ExtraEintMinSi*Si2No_V(UnitEnergyDens_)
 
+  TauWaveParticle = TauWaveParticleSi*Si2No_V(UnitT_)
+
   !\
   ! Now do the magnetic field stuff
   !/

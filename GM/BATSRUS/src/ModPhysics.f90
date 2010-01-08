@@ -113,6 +113,9 @@ module ModPhysics
   ! Minimum threshold for electron pressure and extra internal energy
   real :: PeMinSi = -1.1e5, PeMin, ExtraEintMinSi = 0.0, ExtraEintMin
 
+  ! Relaxation time for anisotropic pressure
+  real :: TauWaveParticleSi = -1.0, TauWaveParticle
+
   !\
   ! General variables for the second body
   !/

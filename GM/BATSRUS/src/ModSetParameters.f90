@@ -516,6 +516,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#ELECTRONPRESSURE")
         call read_var('PeMinSi', PeMinSi)
 
+     case("#ANISOTROPICPRESSURE")
+        call read_var('TauWaveParticleSi', TauWaveParticleSi)
+
      case("#EXTRAINTERNALENERGY")
         call read_var('ExtraEintMinSi', ExtraEintMinSi)
 
