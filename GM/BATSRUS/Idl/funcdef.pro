@@ -69,6 +69,7 @@ nEqpar = n_elements(eqpar)
 amu        = 1.6726e-24         ; [g]
 kboltzmann = 1.3807e-23         ; [SI]
 tunit      = 1.0/kboltzmann*1e-15 ; [using amu/cc and nPa]
+mu0        = 4*!pi*1e-7*1e9     ; [assuming nT for B and nPa for p]
 
 gamma  =  5./3.
 clight =  1.0
