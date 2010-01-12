@@ -993,10 +993,12 @@ contains
     ! Integrate variables from XyzStart_D to XyzEnd_D
     ! The line is split into nSegment segments of length Ds
 
+    use ModAdvance,     ONLY: UseElectronPressure
     use ModGeometry,    ONLY: XyzStart_BLK
     use ModInterpolate, ONLY: bilinear, trilinear
     use ModUser,        ONLY: user_set_plot_var
     use ModParallel,    ONLY: NeiLWest, NeiLEast, NOBLK
+    use ModVarIndexes,  ONLY: Pe_
 
     real, intent(in) :: XyzStart_D(3), XyzEnd_D(3)
 
@@ -1060,8 +1062,16 @@ contains
     Ds = sqrt(sum((XyzEnd_D - XyzStart_D)**2)) / nSegment
 
     ! Don't want to divide block states repeatedly in nSegment loop
-    if(UseEuv .or. UseSxr) &
-         Temp_GB = State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
+    if(UseEuv .or. UseSxr)then
+       ! Fully ionized hydrogen plasma only for now.
+       if(UseElectronPressure)then
+          Temp_GB = State_VGB(Pe_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
+       else
+          ! Fixed mean molecular weight, mu, and electron/ion Temperature
+          ! equilibrium.
+          Temp_GB = MuGas*State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
+       end if
+    end if
 
     do iSegment = 1, nSegment
        XyzLos_D = XyzStart_D &
@@ -1142,8 +1152,7 @@ contains
 
           ! need to interpolate electron temperature. Should really be calling
           ! user_material_properties, but would need user to have implemented
-          ! this. Instead assume a fixed mu and electron/ion Temperature 
-          ! equilibrium for now.
+          ! this.
 
           if(IsRzGeometry)then
              Temp = bilinear(Temp_GB(:,:,1), -1, nI+2, -1, nJ+2, &
@@ -1158,7 +1167,7 @@ contains
           end if
 
           ! Note this is log base 10!!
-          LogTemp = log10(max(Temp*MuGas*No2Si_V(UnitTemperature_), & 
+          LogTemp = log10(max(Temp*No2Si_V(UnitTemperature_), & 
                cTolerance))
 
           ! Here calc log base 10 of electron density, the -6 is to convert to CGS
