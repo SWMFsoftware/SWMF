@@ -73,11 +73,13 @@ module ModUser
   real :: MixLimit = 0.97
 
   ! Variables for Hyades file
+  logical           :: UseDelaunay     = .false. ! use Delaunay triangulation?
   logical           :: UseHyadesFile   = .false. ! read Hyades file?
   character(len=100):: NameHyadesFile            ! name of hyades file
   integer           :: nDimHyades      = -1      ! number of dimensions 
   integer           :: nVarHyades      = -1      ! number of variables
   integer           :: nCellHyades     = -1      ! number of cells
+  integer           :: nCellHyades_D(3)= -1      ! no. cells per dimension
   integer           :: iCellLastHyades = -1      ! cell with maximum X and r=0
   real              :: xBeHyades       = -1.0    ! position of Be-Xe interface
   real, allocatable :: DataHyades_VC(:,:)        ! cell centered Hyades data
@@ -586,7 +588,6 @@ contains
     use ModVarIndexes, ONLY: nWave
     use ModWaves,      ONLY: FreqMinSi, FreqMaxSi
 
-    integer:: nCellHyades_D(3)
     real                :: TimeHyades
     real, allocatable   :: Hyades2No_V(:)
     character(len=100)  :: NameVarHyades
@@ -1004,7 +1005,8 @@ contains
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          LevelXe_, LevelPl_, Erad_, UseElectronPressure, Pe_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, y2
-    use ModTriangulate, ONLY: calc_triangulation, find_triangle
+    use ModTriangulate, ONLY: calc_triangulation, mesh_triangulation, &
+         find_triangle
     use ModMain,        ONLY: UseRadDiffusion
     use ModPhysics,     ONLY: cRadiationNo, No2Si_V, Si2No_V, &
          UnitTemperature_, UnitP_, UnitEnergyDens_
@@ -1031,9 +1033,16 @@ contains
        ! allocate variables and do triangulation
        allocate(iNodeTriangle_II(3,2*nCellHyades))
        allocate(DataHyades_V(nDimHyades + nVarHyades))
-       call calc_triangulation( &
-            nCellHyades, DataHyades_VC( (/iXHyades, iRHyades/), :), &
-            iNodeTriangle_II, nTriangle)
+       if(UseDelaunay)then
+          call calc_triangulation( &
+               nCellHyades, DataHyades_VC( (/iXHyades, iRHyades/), :), &
+               iNodeTriangle_II, nTriangle)
+       else
+          call mesh_triangulation( &
+               nCellHyades_D(1), nCellHyades_D(2), &
+               DataHyades_VC( (/iXHyades, iRHyades/), :), &
+               iNodeTriangle_II, nTriangle)
+       end if
     end if
 
     ! Interpolate points 
