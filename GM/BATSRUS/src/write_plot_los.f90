@@ -55,8 +55,8 @@ subroutine write_plot_los(iFile)
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
        UnitTemperature_
   use ModIO
-  use ModAdvance, ONLY : rho_, State_VGB,P_
-  use ModNumConst, ONLY : cTiny, cUnit_DD, cTolerance,cZero,cOne
+  use ModAdvance, ONLY : rho_, State_VGB
+  use ModNumConst, ONLY : cTiny, cUnit_DD, cTolerance
   use ModMpi
   use CON_axes, ONLY : transform_matrix
   use ModCoordTransform, ONLY : rot_matrix_z, cross_product
@@ -90,11 +90,11 @@ subroutine write_plot_los(iFile)
 
   real ::     eqpar(neqparmax)
   character (len=10) :: eqparnames(neqparmax)
-  character (len=10) :: plotvarnames(nplotvarlosmax)
+  character (len=10) :: plotvarnames(nPlotVarLosMax)
   character (len=10) :: NameVar
 
 
-  integer :: nEqpar, nPlotvar
+  integer :: nEqpar, nPlotVar
   integer :: iPix, jPix             ! indexes of the pixel
   real    :: aPix, bPix             ! coordinates of pixel in the image frae
   real    :: ImageCenter_D(3)       ! 3D coordinates of the center of image
@@ -237,7 +237,7 @@ subroutine write_plot_los(iFile)
        ' form = ',plot_form(ifile)
 
   call lower_case(plot_vars1)
-  call split_string(plot_vars1,nPlotvarLosMax,plotvarnames,nplotvar)
+  call split_string(plot_vars1,nPlotVarLosMax,plotvarnames,nPlotVar)
   call split_string(plot_pars1,neqparmax,eqparnames,neqpar)
   call set_eqpar(ifile-plot_,neqpar,eqparnames,eqpar)
 
@@ -246,16 +246,16 @@ subroutine write_plot_los(iFile)
   if(oktest_me) then
      write(*,*) 'plot variables, UseRho=', plot_vars1, UseRho
      write(*,*) 'nPlotVar, PlotVarNames_V=', &
-          nPlotVar,plotvarnames(1:nplotvar)
+          nPlotVar,plotvarnames(1:nPlotVar)
   end if
 
   ! Get the headers that contain variables names and units
   select case(plot_form(ifile))
   case('tec')
-     call get_TEC_los_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
+     call get_TEC_los_variables(ifile,nPlotVar,plotvarnames,unitstr_TEC)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
   case('idl')
-     call get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
+     call get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
   end select
 
@@ -398,7 +398,7 @@ subroutine write_plot_los(iFile)
         ! check all 4 in case have non-uniform phi/theta
         ! (would still need to check 2 values if had fixed dPhi/dTheta)
 
-        CosAngleMin=cOne
+        CosAngleMin = 1.0
         do ii=5,8 ! 5-8 are max r bounding vertexes
            CosAngle = sum(XyzBlockCenter_D *  Xyz_DN(:, ii))/( rBlockCenter * rNodeMax)
            CosAngleMin = min(CosAngle,CosAngleMin)
@@ -410,7 +410,7 @@ subroutine write_plot_los(iFile)
 
         !--- note that now blocks can have odd shapes, so take maximum of
         !distances from XyzBlockCenter to corners to calc rBlockSize
-        rBlockSize = cZero        
+        rBlockSize = 0.0
         do ii=1,8
            dlength = sqrt(sum( (XyzBlockCenter_D(:) - BBoxVertex_DN(:, ii))**2))
            rBlockSize = max(dlength,rBlockSize)
@@ -512,7 +512,7 @@ subroutine write_plot_los(iFile)
 
   ! add up the pixels from all PE-s to the root node and save LOS file 
   if(nProc > 1)then
-     call MPI_REDUCE(ImagePe_VII, Image_VII, nPix*nPix*nPlotvar, &
+     call MPI_REDUCE(ImagePe_VII, Image_VII, nPix*nPix*nPlotVar, &
           MPI_REAL, MPI_SUM, 0, iComm, iError)
   else
      Image_VII = ImagePe_VII
@@ -998,7 +998,7 @@ contains
     use ModInterpolate, ONLY: bilinear, trilinear
     use ModUser,        ONLY: user_set_plot_var
     use ModParallel,    ONLY: NeiLWest, NeiLEast, NOBLK
-    use ModVarIndexes,  ONLY: Pe_
+    use ModVarIndexes,  ONLY: Pe_, p_
 
     real, intent(in) :: XyzStart_D(3), XyzEnd_D(3)
 
@@ -1026,7 +1026,7 @@ contains
     real :: Temp            ! Electron Temp at the point
     real :: MuGas = 0.5    ! mean molecular wieght of plasma
     real :: LogTemp, LogNe, rConv, ResponseFactor, EuvResponse(3), SxrResponse(2)
-    real :: Temp_GB(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real :: Temp_G(-1:nI+2,-1:nJ+2,-1:nK+2)
 
     ! this is so can modify amount of block sent to interpolation routine
     integer :: iMin, iMax
@@ -1065,11 +1065,11 @@ contains
     if(UseEuv .or. UseSxr)then
        ! Fully ionized hydrogen plasma only for now.
        if(UseElectronPressure)then
-          Temp_GB = State_VGB(Pe_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
+          Temp_G = State_VGB(Pe_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
        else
           ! Fixed mean molecular weight, mu, and electron/ion Temperature
           ! equilibrium.
-          Temp_GB = MuGas*State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
+          Temp_G = MuGas*State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
        end if
     end if
 
@@ -1155,14 +1155,14 @@ contains
           ! this.
 
           if(IsRzGeometry)then
-             Temp = bilinear(Temp_GB(:,:,1), -1, nI+2, -1, nJ+2, &
+             Temp = bilinear(Temp_G(:,:,1), -1, nI+2, -1, nJ+2, &
                   CoordNorm_D(1:2))
           else if (IsSphGeometry) then
-             Temp = trilinear(Temp_GB(iMin:iMax,:,:), &
+             Temp = trilinear(Temp_G(iMin:iMax,:,:), &
                   iMin, iMax, -1, nJ+2, -1, nK+2, &
                   CoordNorm_D, DoExtrapolate=.true.)
           else
-             Temp = trilinear(Temp_GB(:,:,:), -1, nI+2, -1, nJ+2, -1, nK+2, &
+             Temp = trilinear(Temp_G(:,:,:), -1, nI+2, -1, nJ+2, -1, nK+2, &
                   CoordNorm_D)
           end if
 
@@ -1203,7 +1203,7 @@ contains
 
        end if
 
-       do iVar = 1, nPlotvar
+       do iVar = 1, nPlotVar
           Value = 0.0 ! initialize to 0 so that if statements below work right
           NameVar = plotvarnames(iVar)
           select case(NameVar)
@@ -1641,7 +1641,7 @@ contains
           if(Discr > 0.0)then
              if(Solution1>cTiny) &
                   call integrate_segment(Xyz1_D, Solution1_D)
-             if(solution2<cOne-cTiny) &
+             if(solution2 < 1.0-cTiny) &
                   call integrate_segment(Xyz2_D, Solution2_D)
              RETURN
           end if
@@ -1749,7 +1749,7 @@ end subroutine write_plot_los
 
 !==============================================================================
 
-subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
+subroutine get_TEC_los_variables(iFile,nPlotVar,plotvarnames,unitstr_TEC)
 
   use ModPhysics, ONLY : NameTecUnit_V, UnitX_, UnitU_
   use ModIO, ONLY: plot_dimensional
@@ -1757,8 +1757,8 @@ subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
 
   ! Arguments
 
-  integer, intent(in) :: Nplotvar,iFile
-  character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
+  integer, intent(in) :: NPlotVar,iFile
+  character (LEN=10), intent(in) :: plotvarnames(NPlotVar)
   character (len=500), intent(out) :: unitstr_TEC 
   character (len=10) :: s
 
@@ -1780,7 +1780,7 @@ subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
      write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y'
   end if
 
-  do iVar = 1, nplotvar
+  do iVar = 1, nPlotVar
 
      write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "'
 
@@ -1873,7 +1873,7 @@ subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
 end subroutine get_TEC_los_variables
 
 !==============================================================================
-subroutine get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
+subroutine get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL)
 
   use ModPhysics, ONLY : NameIdlUnit_V, UnitX_, UnitU_
   use ModIO, ONLY : plot_dimensional
@@ -1882,8 +1882,8 @@ subroutine get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
 
   ! Arguments
 
-  integer, intent(in) :: iFile,Nplotvar
-  character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
+  integer, intent(in) :: iFile,NPlotVar
+  character (LEN=10), intent(in) :: plotvarnames(NPlotVar)
   character (len=79), intent(out) :: unitstr_IDL 
   character (len=10) :: s
 
@@ -1905,7 +1905,7 @@ subroutine get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
 
   if (plot_dimensional(ifile)) then
 
-     do iVar = 1, nplotvar
+     do iVar = 1, nPlotVar
 
         s=plotvarnames(iVar)
 
