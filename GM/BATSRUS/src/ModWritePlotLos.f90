@@ -21,7 +21,7 @@ subroutine write_plot_los(iFile)
   !           January  2002 modified for improved image plane
   !           December 2003 fixed sign error in scattering coefficient b_los
   !           January  2004 fix to accept 0 in LOS vector
-  !           January  2004 fixed declaration for norm_los(3), XYZPix_D(3) 
+  !           January  2004 fixed declaration for norm_los(3), XyzPix_D(3) 
   !           February 2004 fix integration and make 2nd order accurate
   !                         fix save_file in main.f90 update ghost cells
   !                         include forgotten plot_pars1=plot_pars(ifile)
@@ -34,14 +34,17 @@ subroutine write_plot_los(iFile)
   !                         simplify body-line distance calculation
   !                         moved plot variable loop inside line integration
   !                         dimensionalize some of the plot variables
-  !           January 2006  compatibility with framework
+  !           January  2006 compatibility with framework
   !                         rotation of the coordinates to HGI
   !                         wide-angle line-of-sight (for STEREO)
   !                         change in the parameters: satellite_position, 
   !                         offset_angle   
   !                         Cartesian grid and circular image centered
   !                         at the Sun (no offset angle)
-  !           March 2009    Allow integration of functions different from rho
+  !           March    2009 Allow integration of functions different from rho
+  !           Sept     2009 Edit by Cooper Downs: Added integration method
+  !                         for spherical geometry, also added EUV (3-filters)
+  !                         and Soft-Xray synthesis capability 
 
   use ModProcMH
   use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, unusedBLK, &
@@ -62,6 +65,8 @@ subroutine write_plot_los(iFile)
   use ModNodes, ONLY: NodeX_NB,NodeY_NB,NodeZ_NB
   use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
+  use ModVarIndexes, ONLY: nVar
+
   implicit none
 
   ! Arguments
@@ -123,7 +128,7 @@ subroutine write_plot_los(iFile)
 
   ! variables added for sph geometry
   logical :: IsSphGeometry = .false.
-  logical :: UseEUV,UseSXR
+  logical :: UseEuv,UseSxr
   real,dimension(3,8) :: Xyz_DN, BBoxVertex_DN
 
   integer :: iMid1,iMid2,iMid3,ii,jj,kk
@@ -295,20 +300,20 @@ subroutine write_plot_los(iFile)
        .or.       any(plotvarnames(1:nPlotVar) == 'pb')
 
   ! Do we need to calc EUV response?
-  UseEUV = any(plotvarnames(1:nPlotVar) == 'euv171') &
+  UseEuv = any(plotvarnames(1:nPlotVar) == 'euv171') &
        .or.       any(plotvarnames(1:nPlotVar) == 'euv195') &
        .or.       any(plotvarnames(1:nPlotVar) == 'euv284')
 
   ! Do we need to calc Soft X-Ray response? 
-  UseSXR = any(plotvarnames(1:nPlotVar) == 'sxr')
+  UseSxr = any(plotvarnames(1:nPlotVar) == 'sxr')
 
   ! if EUV or SXR calc, then get lookup table info
-  if (UseEUV) iTableEUV  = i_lookup_table('euv')
-  if (UseSXR) iTableSXR  = i_lookup_table('sxr')
+  if (UseEuv) iTableEUV  = i_lookup_table('euv')
+  if (UseSxr) iTableSXR  = i_lookup_table('sxr')
 
   ! Do we need to calculate density (also for white light and polarization)
   UseRho = UseScattering .or. any(plotvarnames(1:nPlotVar) == 'rho') &
-           .or. UseEUV .or. UseSXR
+       .or. UseEuv .or. UseSxr
 
   if(DoTiming)call timing_start('los_block_loop')
 
@@ -340,7 +345,7 @@ subroutine write_plot_los(iFile)
         XyzBlockCenter_D(3) = 0.50*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
         rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
 
-        if(.not.IsRzGeometry .and. (UseEUV .or. UseSXR)) then 
+        if(.not.IsRzGeometry .and. (UseEuv .or. UseSxr)) then 
            ! in cartesian grid, the rBody boundary cuts through blocks
            ! and, since EUV plots are integrating to surface, need to make sure that
            ! interpolation does not interpolate to ghost cells filled with
@@ -352,7 +357,7 @@ subroutine write_plot_los(iFile)
 
            rInner = rBody ! reset it with every block
            if(Body1) then
-                if(IsBoundaryBlock_IB(body1_,iBLK)) rInner = rBody + &
+              if(IsBoundaryBlock_IB(body1_,iBLK)) rInner = rBody + &
                    sqrt(sum(CellSize_D**2))
            end if
         end if
@@ -749,7 +754,7 @@ contains
     real :: coeff1,coeff2,coeff3
     real :: Discr
     real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
-    logical :: IsOuter, IsGoodSolution1, IsGoodSolution2  
+    logical :: IsOuter, IsGoodSolution1, IsGoodSolution2 , IsAllBehind
 
     !-------------------------------------------------------------------------
     !if(DoTiming)call timing_start('los_set_plotvar')
@@ -910,6 +915,13 @@ contains
        end if
     end if
 
+    ! remove backside of sun from EUV images
+    if(UseEuv.or.UseSxr) then 
+       call los_cut_backside(Point1_D, Point2_D,IsAllBehind)
+       ! don't continue if all on backside
+       if(IsAllBehind) RETURN
+    endif
+
     call integrate_segment(Point1_D, Point2_D)
 
   end subroutine integrate_los_block
@@ -919,15 +931,15 @@ contains
   subroutine integrate_los_block_sph
 
     ! Local variables
-    real :: Xyz1_D(3), Xyz2_D(3)
+    real :: Xyz1_D(3), Xyz2_D(3), rInside, rOutside
 
     logical, dimension(2) :: IsPoleNS
-    logical :: IsIntersect
+    logical :: IsIntersect, IsAllBehind
     real, dimension(8,3) :: cell_vertex_V
     !------------------------------------------------------------------------
     ! essentially a more general version of the cartesian version
     ! except this time made each part into its own subroutine
-    ! note, the 3D location of the pixel is XYZPix_D
+    ! note, the 3D location of the pixel is XyzPix_D
     ! need to make sure you discount the non-zero face on a polar block 
     ! use same check as fix_axis routines
     IsIntersect=.false.
@@ -944,18 +956,32 @@ contains
 
     call find_intersect_general(BBoxVertex_DN,IsPoleNS,IsIntersect,Xyz1_D,Xyz2_D)
 
-    ! NOW CALL SERIES OF NESTED ROUTINES that trim the LOS integral to 
+    ! NOW CALL SERIES OF ROUTINES that trim the LOS integral to 
     ! the correct limits within the blocks.
     !
     ! the order is as follows:
     !
     ! a) los_cut_backside  **trim if los hits sun, only take half of domain facing observer
-    ! b) los_cut_boundary  **trim if los is within rInner and rOuter (can branch if double cut)
-    ! c) los_cut_rmin      **trim if los is below block rmin (node r boundary) 
-    ! d) los_cut_rmax      **trim if los is outside block rmax (node r boundary)
-    ! e) integrate_segment **now go into integrate segment 
+    ! b) los_cut_rmax      **trim if los is outside block rmax (node r boundary)
+    ! c) los_cut_rmin      **trim if los is below block rmin (node r boundary),
+    !                        this can branch if double cut.
+    !                        call integrate segment from los_cut_rmin
 
-    if (IsIntersect) call los_cut_backside(Xyz1_D,Xyz2_D)
+    if (.not.IsIntersect) RETURN ! return if no intersection
+
+    ! cut off any part of los behind the sun,
+    ! trim to hemisphere towards observer
+    call los_cut_backside(Xyz1_D,Xyz2_D,IsAllBehind)
+    if(IsAllBehind) RETURN ! if this part los is entirely behind sun return
+
+    ! Determine minimum bounding radii for intersection
+    ! (either simulation limits or block limits)
+    rInside = max(rInner, rNodeMin)
+    rOutside = min(rOuter, rNodeMax)
+
+    ! call nested functions to trim between max and min radii,
+    ! which then call integrate segment
+    call los_cut_rmax(Xyz1_D, Xyz2_D, rInside, rOutside)
 
     RETURN
 
@@ -996,14 +1022,24 @@ contains
     ! Added for EUV synth and sph geometry
     real :: GenLos_D(3)
     real :: Temp            ! Electron Temp at the point
-    real :: mu_gas = 0.5    ! mean molecular wieght of plasma
-    real :: LogTemp, LogNe, rConv, Aux, EUVResponse(3), SXRResponse(2)
+    real :: MuGas = 0.5    ! mean molecular wieght of plasma
+    real :: LogTemp, LogNe, rConv, ResponseFactor, EuvResponse(3), SxrResponse(2)
     real :: Temp_GB(-1:nI+2,-1:nJ+2,-1:nK+2)
 
     ! this is so can modify amount of block sent to interpolation routine
     integer :: iMin, iMax
     logical :: IsNoBlockInner = .false.
     logical :: IsNoBlockOuter = .false.
+
+    ! parameters for temperature cuttoff of EUV/SXR response
+    ! idea is to neglect most of the broadened transition region
+    ! since broadening introduces unphysical column depth (by orders of
+    ! magnitude) which can cause it to be large enough to produce an
+    ! unwanted contribution
+    real :: TeCutSi = 4.0e+5
+    real :: DeltaTeCutSi = 3.0e+4
+    real :: FractionTrue
+
     !------------------------------------------------------------------------
     ! Number of segments for an accurate integral
     if (IsSphGeometry) then
@@ -1024,7 +1060,7 @@ contains
     Ds = sqrt(sum((XyzEnd_D - XyzStart_D)**2)) / nSegment
 
     ! Don't want to divide block states repeatedly in nSegment loop
-    if(UseEUV .or. UseSXR) &
+    if(UseEuv .or. UseSxr) &
          Temp_GB = State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
 
     do iSegment = 1, nSegment
@@ -1102,7 +1138,7 @@ contains
           end if
        end if
 
-       if(UseEUV.or.UseSXR)then
+       if(UseEuv.or.UseSxr)then
 
           ! need to interpolate electron temperature. Should really be calling
           ! user_material_properties, but would need user to have implemented
@@ -1120,34 +1156,40 @@ contains
              Temp = trilinear(Temp_GB(:,:,:), -1, nI+2, -1, nJ+2, -1, nK+2, &
                   CoordNorm_D)
           end if
-        
+
           ! Note this is log base 10!!
-          LogTemp = log10(Temp * mu_gas * No2Si_V(UnitTemperature_))
+          LogTemp = log10(max(Temp*MuGas*No2Si_V(UnitTemperature_), & 
+               cTolerance))
 
           ! Here calc log base 10 of electron density, the -6 is to convert to CGS
-          LogNe = log10(Rho*No2Si_V(UnitN_)) - 6.0
+          LogNe = log10(max(Rho*No2Si_V(UnitN_),cTolerance)) - 6.0
 
           ! rconv converts solar radii units to CGS for response function
           ! exponent      
           rConv = log10(6.96) + 10.0
 
-          ! calculates response function normalization (10 ^ an exponent)
-          Aux = 10.0**(2.0*LogNe + rConv - 26.0)
+          ! calculate Ne**2 and Normalize units (10 ^ an exponent)
+          ResponseFactor = 10.0**(2.0*LogNe + rConv - 26.0)
 
-          if (UseEUV) then
+          ! calculate Temp cuttoff function to neglect widened Trans region
+          FractionTrue = 0.5*(1.0 + tanh((10**LogTemp - TeCutSi)/DeltaTeCutSi))
+
+          if (UseEuv) then
              ! now interpolate EUV response values from a lookup table
              if (iTableEUV <=0) &
                   call stop_mpi('Need to load #LOOKUPTABLE for EUV response!')
              call interpolate_lookup_table(iTableEUV, LogTemp, LogNe, &
-                  EUVResponse, DoExtrapolate=.true.)
+                  EuvResponse, DoExtrapolate=.true.)
+             EuvResponse = EuvResponse * FractionTrue
           end if
 
-          if (UseSXR) then
+          if (UseSxr) then
              ! now interpolate SXR response values from a lookup table
              if (iTableSXR <=0) &
                   call stop_mpi('Need to load #LOOKUPTABLE for SXR response!')
              call interpolate_lookup_table(iTableSXR, LogTemp, LogNe, &
-                  SXRResponse, DoExtrapolate=.true.)
+                  SxrResponse, DoExtrapolate=.true.)
+             SxrResponse = SxrResponse * FractionTrue
           end if
 
        end if
@@ -1173,19 +1215,19 @@ contains
 
           case('euv171')
              ! EUV 171
-             Value = EUVResponse(1)*Aux
+             Value = EuvResponse(1)*ResponseFactor
 
           case('euv195')
              ! EUV 195
-             Value = EUVResponse(2)*Aux
+             Value = EuvResponse(2)*ResponseFactor
 
           case('euv284')
              ! EUV 284
-             Value = EUVResponse(3)*Aux
+             Value = EuvResponse(3)*ResponseFactor
 
           case('sxr')
              ! Soft X-Ray (Only one channel for now, can add others later)
-             Value = SXRResponse(1)*Aux
+             Value = SxrResponse(1)*ResponseFactor
 
           case('rho')
              ! Simple density integral
@@ -1347,7 +1389,7 @@ contains
     FaceNormal_DS(:,5)=cross_product((Vertex_DN(:, 7)-Vertex_DN(:, 8)),(Vertex_DN(:, 4)-Vertex_DN(:, 8)))
     FaceNormal_DS(:,6)=cross_product((Vertex_DN(:, 6)-Vertex_DN(:, 8)),(Vertex_DN(:, 4)-Vertex_DN(:, 8)))
 
-    LosPix_D = ObsPos_D - XYZPix_D
+    LosPix_D = ObsPos_D - XyzPix_D
     LosPix_D = LosPix_D/sqrt(sum(LosPix_D**2))
     where(LosPix_D ==0.0) LosPix_D = cTiny
 
@@ -1383,9 +1425,9 @@ contains
 
        !--- calc the 3D point of intersection with the line and this plane
        NewIntersect_DN(:, iSide) = &
-            XYZPix_D(:) + LosPix_D(:) * &
+            XyzPix_D(:) + LosPix_D(:) * &
             (sum(Vertex_DN(:, iFace) * FaceNormal_DS(:,iSide)) -&
-            sum(XYZPix_D * FaceNormal_DS(:,iSide))           ) / coeff1
+            sum(XyzPix_D * FaceNormal_DS(:,iSide))           ) / coeff1
 
     end do
 
@@ -1484,156 +1526,34 @@ contains
 
   !==========================================================================
 
-  subroutine los_cut_backside(Xyz1In_D,Xyz2In_D)
+  subroutine los_cut_backside(Xyz1_D,Xyz2_D,IsAllBehind)
 
-    real, dimension(3), intent(in) :: Xyz1In_D,Xyz2In_D
-    real, dimension(3) :: Xyz1_D, Xyz2_D
-    real :: dot1,dot2
+    real, dimension(3), intent(inOut) :: Xyz1_D,Xyz2_D
+    logical, intent(out) :: IsAllBehind
     logical :: IsBehind1, IsBehind2
 
-    ! *** NOTE XYZPix_D is the 3D position along the pixel LOS that lies 
+    IsAllBehind = .false.
+
+    ! check if pixel intersects the solar disk, if not then return
+    if(r2Pix > rInner2) RETURN
+
+    ! check if either are behind the sun (dot product will be negative if so)
+    IsBehind1 = (sum(Xyz1_D * ObsPos_D) < 0.0)
+    IsBehind2 = (sum(Xyz2_D * ObsPos_D) < 0.0)
+
+    ! *** NOTE XyzPix_D is the 3D position along the pixel LOS that lies 
     ! on the plane intersecting the sun center and perp to observer
-    ! ---> perfect for defining backside of sun
+    ! ---> perfect for trimming intersection to plane with the hemisphere
+    ! towards the observer. 
 
-    Xyz1_D = Xyz1In_D
-    Xyz2_D = Xyz2In_D
+    if(IsBehind1) Xyz1_D = XyzPix_D
 
-    if (r2Pix < rInner2) then
+    if(IsBehind2) Xyz2_D = XyzPix_D
 
-       dot1 = sum(Xyz1_D * ObsPos_D)
-       dot2 = sum(Xyz2_D * ObsPos_D)
-
-       ! check if both are behind the sun
-       IsBehind1 = (dot1 < 0.0)
-       IsBehind2 = (dot2 < 0.0)
-
-       if (IsBehind1.and.IsBehind2) RETURN
-
-       if (IsBehind1) Xyz1_D = XYZPix_D
-
-       if (IsBehind2) Xyz2_D = XYZPix_D
-
-    endif
-
-    call los_cut_boundary(Xyz1_D,Xyz2_D)
+    ! if both are behind, will not need the LOS
+    IsAllBehind = IsBehind1.and.IsBehind2
 
   end subroutine los_cut_backside
-
-  !==========================================================================
-
-  subroutine los_cut_boundary(Xyz1In_D,Xyz2In_D)
-
-
-    real, dimension(3), intent(in) :: Xyz1In_D,Xyz2In_D
-
-    real, dimension(3) :: Xyz1_D, Xyz2_D
-    real :: R2Point1, R2Point2,rLine_D(3),rLine2
-    real :: Coeff1,Coeff2,Coeff3
-    real :: Discr
-    real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
-    logical :: IsOuter, IsGoodSolution1, IsGoodSolution2
-    !----------------------------------------------------
-
-    Xyz1_D = Xyz1In_D
-    Xyz2_D = Xyz2In_D
-
-    R2Point1 = sum(Xyz1_D**2)
-    R2Point2 = sum(Xyz2_D**2)
-
-    ! Check if the whole segment is inside rInner
-    if( R2Point1 <= rInner2 .and. R2Point2 <= rInner2) RETURN
-
-    ! Check if the whole segment is outside rOuter
-    rLine_D = XYZPix_D - LosPix_D*dot_product(LosPix_D, XYZPix_D)
-    rLine2  = sum(rLine_D**2)
-    if( rLine2 > rOuter2 ) RETURN
-
-    ! Check if there is a need to calculate an intersection
-
-    ! Do we intersect the outer sphere
-    IsOuter = R2Point1 > rOuter2 .or. R2Point2 > rOuter2
-
-    ! Do we intersect the inner or outer spheres
-    if( IsOuter .or. &
-         (rLine2 < rInner2 .and. rBlockCenter < rInner+rBlockSize) ) then
-
-       coeff1 = sum((Xyz2_D - Xyz1_D)**2)
-       coeff2 = 2 * sum(Xyz1_D *(Xyz2_D - Xyz1_D))
-
-       if( IsOuter ) then
-          Coeff3 = R2Point1 - rOuter2
-       else
-          Coeff3 = R2Point1 - rInner2
-       end if
-
-       Discr = Coeff2**2 - 4 * Coeff1 * Coeff3
-
-       if(Discr < 0.0)then
-          write(*,*)'Warning: Discr=',Discr
-          !   call SC_stop_mpi("Negative discriminant")
-          RETURN
-       end if
-
-       ! Line of sight tangent to the outer sphere
-       if(IsOuter.AND.Discr==0.0)RETURN
-
-       ! Find the two intersections (distance from point1 towards point2)
-       Discr = sqrt(Discr)
-       Solution1 = (-Coeff2 - Discr)/(2 * Coeff1)
-       Solution2 = (-Coeff2 + Discr)/(2 * Coeff1)
-
-       Solution1_D = Xyz1_D + (Xyz2_D - Xyz1_D) * Solution1
-       Solution2_D = Xyz1_D + (Xyz2_D - Xyz1_D) * Solution2
-
-
-       ! Check if the solutions are within the segment
-       IsGoodSolution1 = (Solution1 >= 0.0 .and. Solution1 <= 1.0)
-       IsGoodSolution2 = (Solution2 >= 0.0 .and. Solution2 <= 1.0)
-
-       if(IsOuter)then
-          ! For outer sphere replace
-          ! outlying point1 with solution1 and
-          ! outlying point2 with solution2
-          if(R2Point1 > rOuter2) then
-             if(IsGoodSolution1)then
-                Xyz1_D = Solution1_D
-             else
-                RETURN
-             end if
-          end if
-          if(R2Point2 > rOuter2) then
-             if(IsGoodSolution2)then
-                Xyz2_D = Solution2_D
-             else
-                RETURN
-             end if
-          end if
-       else
-          ! For inner sphere replace 
-          ! internal point1 with solution2 and 
-          ! internal point2 with solution1
-          if(R2Point1 < rInner2) Xyz1_D = Solution2_D
-          if(R2Point2 < rInner2) Xyz2_D = Solution1_D
-          ! Weird case: the segment cuts the inner sphere
-          if(IsGoodSolution1 .and. IsGoodSolution2)then
-             ! Need to do two integrals:
-             ! from point1 to solution1 and
-             ! from point2 to solution2
-             if(Discr > 0.0)then
-                if(Solution1>cTiny) &
-                     call los_cut_rmin(Xyz1_D, Solution1_D,rNodeMin)
-                if(solution2<cOne-cTiny) &
-                     call los_cut_rmin(Xyz2_D, Solution2_D,rNodeMin)
-                RETURN
-             end if
-          end if
-
-       end if
-    end if
-
-    call los_cut_rmin(Xyz1_D, Xyz2_D,rNodeMin)
-
-  end subroutine los_cut_boundary
 
   !==========================================================================
 
@@ -1664,7 +1584,7 @@ contains
     ! Check if the whole segment is inside rInside
     if( R2Point1 <= rInside2 .and. R2Point2 <= rInside2) RETURN
 
-    rLine_D = XYZPix_D - LosPix_D * sum(LosPix_D * XYZPix_D)
+    rLine_D = XyzPix_D - LosPix_D * sum(LosPix_D * XyzPix_D)
     rLine2  = sum(rLine_D**2)
 
     ! Check if there is a need to calculate an intersection
@@ -1711,32 +1631,29 @@ contains
           ! from point2 to solution2
           if(Discr > 0.0)then
              if(Solution1>cTiny) &
-                  call los_cut_rmax(Xyz1_D, Solution1_D,rNodeMax)
+                  call integrate_segment(Xyz1_D, Solution1_D)
              if(solution2<cOne-cTiny) &
-                  call los_cut_rmax(Xyz2_D, Solution2_D,rNodeMax)
+                  call integrate_segment(Xyz2_D, Solution2_D)
              RETURN
           end if
        end if
 
     end if
 
-    call los_cut_rmax(Xyz1_D, Xyz2_D,rNodeMax)
+    call integrate_segment(Xyz1_D, Xyz2_D)
 
   end subroutine los_cut_rmin
 
   !==========================================================================
 
-  subroutine los_cut_rmax(Xyz1In_D,Xyz2In_D,rOutside)
+  subroutine los_cut_rmax(Xyz1_D, Xyz2_D, rInside, rOutside)
 
     !Input parameters: coordinates for two points of intersection of
     !the given LOS with the block boundary
-    real, dimension(3), intent(in) :: Xyz1In_D,Xyz2In_D
+    real, dimension(3), intent(inOut) :: Xyz1_D, Xyz2_D
 
     !The cutoff radius
-    real, intent(in) :: rOutside
-
-    !Copies of the input parameters:
-    real, dimension(3)::Xyz1_D, Xyz2_D
+    real, intent(in) :: rInside, rOutside
 
     real :: R2Point1, R2Point2,rLine_D(3),rLine2
     real :: Coeff1, Coeff2,Coeff3
@@ -1749,14 +1666,11 @@ contains
 
     rOutside2 = rOutside**2
 
-    Xyz1_D = Xyz1In_D
-    Xyz2_D = Xyz2In_D
-
     R2Point1 = sum(Xyz1_D**2)
     R2Point2 = sum(Xyz2_D**2)
 
     ! Check if the whole segment is outside rOutside
-    rLine_D = XYZPix_D - LosPix_D * sum(LosPix_D * XYZPix_D)
+    rLine_D = XyzPix_D - LosPix_D * sum(LosPix_D * XyzPix_D)
     rLine2  = sum(rLine_D**2)
 
     if( rLine2 > rOutside2 ) RETURN
@@ -1816,7 +1730,7 @@ contains
        end if
     end if
 
-    call integrate_segment(Xyz1_D, Xyz2_D)
+    call los_cut_rmin(Xyz1_D, Xyz2_D,rInside)
 
   end subroutine los_cut_rmax
 
