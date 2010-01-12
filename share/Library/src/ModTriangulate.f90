@@ -3,14 +3,62 @@ module ModTriangulate
   implicit none
 
   private ! except
+  public mesh_triangulation  ! Triangulation of a distorted 2D mesh
   public calc_triangulation  ! Delaunay triangulation of a set of points in 2D
   public find_triangle       ! Find the triangle containing a point
   public triangle_area       ! Returns the area of a triangle
 
 contains
 
+  !============================================================================
+  subroutine mesh_triangulation(n1, n2, CoordXy_DI, &
+       iNodeTriangle_II, nTriangle)
 
-  subroutine calc_triangulation(nPoint, CoordXy_DI, iNodeTriangle_II,nTriangle)
+    integer, intent(in) :: n1, n2
+    real,    intent(in) :: CoordXy_DI(2,n1*n2)
+    integer, intent(out):: iNodeTriangle_II(3,2*n1*n2)
+    integer, intent(out):: nTriangle
+
+    ! Triangulate a distorted n1*n2 logically Cartesian mesh by splitting
+    ! each quadrange along the shorter diagonal. The coordinates are
+    ! assumed to be in a natural ordering, with first index changing faster.
+    ! Triangle nodes are returned in counter clockwise order assuming that
+    ! the distorted mesh is based on a right handed coordinate system.
+
+    integer:: i1, i2, iCell, jCell, kCell, lCell
+    !-------------------------------------------------------------------------
+    iCell = 0
+    nTriangle = 0
+    do i2 = 1, n2-1; do i1 = 1, n1
+       iCell = iCell + 1
+
+       ! Skip max boundary in the first dimension (unless periodic)
+       if(i1 == n1) CYCLE
+
+       ! The vertices around this quadrangle are iCell and
+       jCell = iCell + 1
+       kCell = iCell + n1
+       lCell = iCell + n1 + 1
+
+       if(  sum((CoordXy_DI(:,iCell) - CoordXy_DI(:,lCell))**2) <= &
+            sum((CoordXy_DI(:,jCell) - CoordXy_DI(:,kCell))**2))then
+
+          ! Split along iCell--lCell diagonal
+          iNodeTriangle_II(:,nTriangle+1) = (/iCell, jCell, lCell/)
+          iNodeTriangle_II(:,nTriangle+2) = (/iCell, lCell, kCell/)
+       else
+          ! Split along jCell--kCell diagonal
+          iNodeTriangle_II(:,nTriangle+1) = (/jCell, kCell, iCell/)
+          iNodeTriangle_II(:,nTriangle+2) = (/jCell, lCell, kCell/)
+       end if
+       nTriangle = nTriangle + 2
+
+    end do; end do
+
+  end subroutine mesh_triangulation
+  !============================================================================
+  subroutine calc_triangulation(nPoint, CoordXy_DI, &
+       iNodeTriangle_II, nTriangle)
 
     ! calc_triangulation: origionally TABLE_DELAUNAY.
     !
