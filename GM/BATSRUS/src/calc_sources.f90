@@ -126,6 +126,7 @@ subroutine calc_sources
 
         ! Adiabatic heating: -(g-1)*P*Div(U)
         do k=1,nK; do j=1,nJ; do i=1,nI
+           if(.not.true_cell(i,j,k,iBlock)) CYCLE
            DivU = uDotArea_XI(i+1,j,k,iFluid) - uDotArea_XI(i,j,k,iFluid)
            if(nJ > 1) DivU = DivU + &
                 uDotArea_YI(i,j+1,k,iFluid) - uDotArea_YI(i,j,k,iFluid)
@@ -145,7 +146,8 @@ subroutine calc_sources
   if(UseResistivity .and. .not.UseMultiIon .and. &
        (UseElectronPressure .or. UseNonConservative))then  
 
-     do k=1,nK; do j=1,nJ; do i=1,nI           
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
         call get_current(i,j,k,iBlock,Current_D)
         JouleHeating = (g-1) * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
         if(UseElectronPressure) then
@@ -208,11 +210,12 @@ subroutine calc_sources
   end if                                       !^CFG END DISSFLUX
 
 
-  if(UseAnisoPressure .and. TauWaveParticle > 0.0)then
+  if(UseAnisoPressure .and. TauWaveParticle > -1.0)then
      ! "artificial" pressure relaxation for anisotropic pressure 
      ! due to wave-particle interaction 
      ! only done in unstable regions
      do k=1,nK; do j=1,nJ; do i=1,nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
         B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
         if(UseB0) B_D = B_D + B0_DGB(:,i,j,k,iBlock)         
         IsFirehose = (State_VGB(Ppar_,i,j,k,iBlock) &
@@ -232,6 +235,7 @@ subroutine calc_sources
 
   if(UseWavePressure)then
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
         DivU            = uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
         if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
         if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
@@ -259,6 +263,7 @@ subroutine calc_sources
 
   if(UseElectronPressure)then
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
         DivU = uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_)
         if(nJ > 1) DivU = DivU &
              + uDotArea_YI(i,j+1,k,eFluid_) - uDotArea_YI(i,j,k,eFluid_)
@@ -296,6 +301,7 @@ subroutine calc_sources
      ! NOTE: here we have to use signed radial distance!
 
      do k=1,nK; do j=1, nJ; do i=1, nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
         Source_VC(iRhoUy_I,i,j,k) = Source_VC(iRhoUy_I,i,j,k) &
              + State_VGB(iP_I,i,j,k,iBlock) / y_BLK(i,j,k,iBlock)
      end do; end do; end do
@@ -314,6 +320,7 @@ subroutine calc_sources
 
      ! Add contributions to other source terms
      do k=1,nK; do j=1,nJ; do i=1,nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
         RhoInv=cOne/State_VGB(rho_,i,j,k,iBlock)
         Source_VC(Bx_:Bz_,i,j,k)    = Source_VC(Bx_:Bz_,i,j,k) &
              -DivB1_GB(i,j,k,iBlock)* &
@@ -332,6 +339,7 @@ subroutine calc_sources
 
      if (UseB0Source) then
         do k=1,nK; do j=1,nJ; do i=1,nI
+           if(.not.true_cell(i,j,k,iBlock)) CYCLE
            Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
                 - State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0_CB(i,j,k,iBlock) &
                 + cross_product( &
@@ -344,6 +352,7 @@ subroutine calc_sources
 
   if(UseCurlB0)then
      do k=1,nK; do j=1,nJ; do i=1,nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
         if(R_BLK(i,j,k,iBlock)<rCurrentFreeB0)CYCLE
         CurlB0CrossB_D = cross_product(&
              CurlB0_DCB(:,i,j,k,iBlock),&
@@ -368,6 +377,7 @@ subroutine calc_sources
      FullB_DC = State_VGB(Bx_:Bz_,1:nI,1:nJ,1:nK,iBlock)
      if(UseB0)FullB_DC = FullB_DC + B0_DGB(:,1:nI,1:nJ,1:nK,iBlock) 
      do k=1,nK; do j=1,nJ; do i=1,nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
         E_D = cross_product(FullB_DC(:,i,j,k),&
              State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))/&
              State_VGB(rho_,i,j,k,iBlock)
@@ -419,6 +429,7 @@ subroutine calc_sources
         case('HGC','HGR')
            ! This is a special case since Omega is parallel with the Z axis
            do k=1,nK; do j=1,nJ; do i=1,nI
+              if(.not.true_cell(i,j,k,iBlock)) CYCLE
               Source_VC(iRhoUx,i,j,k) = Source_VC(iRhoUx,i,j,k) + &
                    2*OmegaBody*State_VGB(iRhoUy,i,j,k,iBlock)
               Source_VC(iRhoUy,i,j,k) = Source_VC(iRhoUy,i,j,k) - &
@@ -479,6 +490,7 @@ contains
     DzInvHalf = 0.5/Dz_BLK(iBlock)
 
     do k=1,nK; do j=1,nJ; do i=1,nI
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
        dB1nEast = DxInvHalf*&
             (RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))
 
@@ -519,6 +531,7 @@ contains
     if((.not.IsMhd).or.(.not.UseB0)) RETURN
 
     do k=1,nK; do j=1,nJ; do i=1,nI
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
        Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k)  - &
             DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
     end do; end do; end do
@@ -534,6 +547,7 @@ contains
     !------------------------------------------------------------------------
     
     do k=1,nK; do j=1,nJ; do i=1,nI
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
        VInvHalf=vInv_CB(i,j,k,iBlock)*cHalf
        FaceArea_D=FaceAreaI_DFB(:,i,j,k,iBlock)
        B1nJumpL =VInvHalf*&
@@ -566,6 +580,7 @@ contains
     end do; end do; end do
 
     do k=1,nK; do j=1,nJ; do i=1,nI 
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
        VInvHalf=vInv_CB(i,j,k,iBlock)*cHalf
        FaceArea_D=FaceAreaJ_DFB(:,i,j,k,iBlock)
        B1nJumpL = VInvHalf*&
@@ -598,6 +613,7 @@ contains
     end do; end do; end do
 
     do k=1,nK; do j=1,nJ; do i=1,nI 
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
        VInvHalf=vInv_CB(i,j,k,iBlock)*cHalf
        FaceArea_D=FaceAreaK_DFB(:,i,j,k,iBlock)
        B1nJumpL = VInvHalf*&
@@ -631,6 +647,7 @@ contains
     end do; end do; end do
 
     do k=1,nK; do j=1,nJ; do i=1,nI 
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
        DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock)+&
             DivBInternal_C(i,j,k)
     end do; end do; end do
@@ -638,6 +655,7 @@ contains
     if((.not.IsMhd).or.(.not.UseB0))RETURN
 
     do k=1,nK; do j=1,nJ; do i=1,nI 
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
        Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
             -DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)            
     end do; end do; end do
