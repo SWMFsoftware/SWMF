@@ -211,7 +211,7 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
      dss(ii)=FieldLength_I(ii+1)-FieldLength_I(ii)
      yint(ii)=1./Bmid
   enddo
-  call closed(n,yint,dss,ss)  ! use closed form
+  call closed(nAlt-1,yint,dss,ss)  ! use closed form
   if (iLat >= 1 .and. iLat <= ir) volume1=ss*re   ! volume / flux
   
 end subroutine mhd_trace
