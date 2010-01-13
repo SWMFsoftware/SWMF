@@ -11,6 +11,7 @@ module ModRestartFile
        NameThisComp, UseBatl
   use ModVarIndexes, ONLY: nVar, DefaultState_V
   use ModAdvance,    ONLY: State_VGB
+  use ModCovariant,  ONLY: NameGridFile
   use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK
   use ModParallel,   ONLY: iBlockRestartALL_A
   use ModIO,         ONLY: Restart_Bface                    !^CFG IF CONSTRAINB

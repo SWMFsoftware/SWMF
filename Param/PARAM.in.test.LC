@@ -223,7 +223,7 @@ ascii			TypeFile
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-LC/Param/RadCool_CorExt.dat	NameFile
+LC/Param/RadCool.dat	NameFile
 ascii			TypeFile
 
 #SAVELOGFILE
