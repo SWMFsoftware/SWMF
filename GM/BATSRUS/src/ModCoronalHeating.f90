@@ -16,7 +16,15 @@ module ModCoronalHeating
   !Bill Abbet model, if .true.
   logical, public :: UseUnsignedFluxModel = .false.
 
-  real :: HeatFactor = 0.0
+  ! Normalized value of Heating constant
+  real, public :: HeatFactor = 0.0
+
+  ! Cgs value of total power input from coronal heating
+  real, public :: TotalCoronalHeatingCgs = 1.0e+28
+
+  ! Exponential Scale height to truncate heating function
+  real, public :: DecayLength = 1.0
+
 
 contains
 
@@ -38,7 +46,6 @@ contains
     integer :: i, j, k, iBlock
     integer :: iTheta, iPhi, iError
     real :: UnsignedFlux, UnsignedFluxCgs, dAreaCgs
-    real :: TotalCoronalHeatingCgs
     real :: HeatFunction, HeatFunctionVolume, HeatFunctionVolumePe
     real :: x, y, z, Theta, Phi, SinTheta, CosTheta, SinPhi, CosPhi
     real :: FullB_D(3), B0_D(3), BrSi, BrCgs, SumUnsignedBrCgs
@@ -148,7 +155,7 @@ contains
     B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
     Bmagnitude = sqrt(sum(B_D**2))
 
-    HeatFunction = Bmagnitude*exp(-(r_BLK(i,j,k,iBlock)-1.0))
+    HeatFunction = Bmagnitude*exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
 
   end subroutine get_heat_function
 

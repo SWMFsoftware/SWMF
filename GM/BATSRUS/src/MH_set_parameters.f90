@@ -10,7 +10,7 @@ subroutine MH_set_parameters(TypeAction)
        TypeGeometry,UseCovariant,UseVertexBasedGrid,is_axial_geometry,  & 
        allocate_face_area_vectors,allocate_old_levels,rTorusLarge,rTorusSmall,&
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary,r_to_gen,&
-       read_grid_file, set_fake_grid_file
+       read_grid_file, set_fake_grid_file, NameGridFile
   use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
   use ModPhysics
@@ -104,10 +104,6 @@ subroutine MH_set_parameters(TypeAction)
   ! Variables for #LIMITGENCOORD1 or #LIMITRADIUS
   real :: Coord1Min = -1.0, Coord1Max = -1.0
   
-  ! Variables for #GRIDGEOMETRY command
-  character(len=lStringLine):: NameGridFile
-  
-
   ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
   character(len=lStringLine):: NameArea='all'
   integer                   :: nLevelArea=0
