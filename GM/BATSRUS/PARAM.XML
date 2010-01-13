@@ -2658,10 +2658,12 @@ plotform plotarea plotvar
 
 plotform = 'tec', 'idl', 'idl_real4', 'idl_real8', 'idl_ascii'
 plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d' 'rfr', 'eqr'
-plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'pos', 'var', 'bbk' 'rwi' - normalized
-plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'pos', 'VAR', 'BBK' 'RWI' - dimensional
+plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'euv', 'sxr', 'pos', 'var', 'bbk' 'rwi' - normalized
+plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'EUV', 'SXR', 'pos', 'VAR', 'BBK' 'RWI' - dimensional
 \end{verbatim}
 NOTES: The plotvar option 'sol' is only valid for plotarea 'los';
+       The plotvar option 'euv' is only valid for plotarea 'los';
+       The plotvar option 'sxr' is only valid for plotarea 'los';
        the plotvar option 'pos' is only valid for plotarea 'lin'.
        the plotvar option 'rwi' is only valid for plotarea 'rfr'.
 \\
@@ -2713,6 +2715,10 @@ values or as non-dimensional values:
          pars: READ FROM PARAMETER FILE
  'sol' - vars: wl pb
          pars: mu
+ 'euv' - vars: euv171 euv195 euv284
+         pars:
+ 'sxr' - vars: sxr
+         pars:
  'bbk' - vars: dx pe blk blkall
          pars: 
  'rwi' - vars: Intensity
@@ -2795,6 +2801,7 @@ values, an occultational disk is used to block the lines of sight
 going through the Sun.  The variables which control the direction of
 the lines of sight and the grid position and resolution are the
 following:
+
 \begin{verbatim}
  ObsPosX,ObsPosY,ObsPosZ - the position of the observer in (rotated) 
                            HGI coordinates (LC,SC,IH and OH) or the GM coordinates
@@ -2806,6 +2813,31 @@ following:
                           (white light) and 'pb' (polarization brightness) 
                           plot variables.
  nPix                   - the number of pixels in each direction
+\end{verbatim}
+
+For line-of-site Extreme Ultraviolet (EUV) and Soft X-Ray (SXR) plots,
+the same parametes are read as for the wl and pb plots (above) but now
+the integration is carried out to the surface of the sun so rOccult should
+be set to zero. MuLimbDarkening has no effect but needs to be included.
+
+Additionally, because EUV and SXR plots are configured to read in a response
+table specific to the EUV or SXR instument (e.g. SOHO EIT, STEREO EUVI,
+Yohkoh SXT) the tables for the response need to be read in by additional
+lines in the PARAM.in file. This follows the #LOOKUPTABLE command 
+syntax e.g:
+
+\begin{verbatim}
+#LOOKUPTABLE
+euv                     NameTable
+load                    NameCommand
+LC/Param/ResEIT.dat     NameFile
+ascii                   TypeFile
+
+#LOOKUPTABLE
+sxr                     NameTable
+load                    NameCommand
+LC/Param/ResSXT.dat     NameFile
+ascii                   TypeFile
 \end{verbatim}
 
 \noindent
