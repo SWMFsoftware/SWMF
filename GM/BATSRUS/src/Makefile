@@ -50,6 +50,7 @@ MODULES = \
 	ModMain.o\
 	ModMessagePass.o\
 	ModNodes.o\
+	ModNonWKBHeating.o\
 	ModOctree.o\
 	ModParallel.o\
 	ModPartSteady.o\
