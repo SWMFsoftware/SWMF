@@ -28,6 +28,24 @@ module ModNonWKBHeating
   !PUBLIC MEMBER:
   public:: Cranmer_heating_function
 
+  !The Cranmers heating function.
+
+  !The usage:
+
+  !Use ModNonWKBHeating
+
+  !....
+  !call Cranmer_heating_function(&
+  !      RSI,   &       !Heliocentric distance [m]
+  !      RhoSI, &       !Density, [kg/m^3]
+  !      UMagSI,&       !The magnitude of the solar wind speed, [m/s]
+  !      BMagSI,&       !The magnitude of the magnetic field, [T]
+  !      QHeatSI,&      !The calculated heating function,[J/m3/s]
+  !      WaveEnergyDensitySI,&   !Optional input, is used to calculate VPerp
+  !      IsFullReflection,   &   !Optional input, sets the reflection coef to 1
+  !      GammaSI)       !Optional output, nonlinear damping rate in s^{-1}
+
+
 
   real,parameter:: rSunCGS = rSun * 1.0e2 !Solar radius in cm
   real,parameter:: rSunCGS2= rSunCGS**2
@@ -135,7 +153,7 @@ contains
   !C---------------------------------------------------------------------------
 
   subroutine Cranmer_heating_function(&
-       RSI, UMagSI, RhoSI, BMagSI,&            !INPUT
+       RSI, RhoSI, UMagSI, BMagSI,&            !INPUT
        QHeatSI,                   &            !OUTPUT
        WaveEnergyDensitySI,IsFullReflection,&  !OPTIONAL INPUT
        GammaSI)                                !OPTIONAL OUTPUT
@@ -279,6 +297,7 @@ contains
     else
        WaveEnergyDensityCGS = WaveEnergyDensitySI * 10.0
     end if
+
     vPerp0 = sqrt(WaveEnergyDensityCGS / RhoCGS)
 
     !---------------reflection coefficient--------------------------
