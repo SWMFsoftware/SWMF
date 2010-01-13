@@ -2,19 +2,19 @@
 T			DoEcho
 
 #DESCRIPTION
-Input file for creating a steady state solar corona
+Input file for creating a steady state lower corona
 
 #TIMEACCURATE
 F			DoTimeAccurate
 
 #STARTTIME
-1998			iYear
-5			iMonth
-1			iDay
-0			iHour
-0			iMinute
-0			iSecond
-0.0 			FracSecond
+1998                    iYear
+5                       iMonth
+1                       iDay
+0                       iHour
+0                       iMinute
+0                       iSecond
+0.0                     FracSecond
 
 #SAVERESTART
 F			DoSaveRestart
@@ -28,14 +28,14 @@ HGR                     TypeCoordSystem
 
 #USER_FLAGS
 T			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
+T			UseUserSource
+T			UseUserPerturbation
 F			UseUserOuterBcs
 T			UseUserICs
 T			UseUserSpecifyRefinement
-F			UseUserLogFiles
+T			UseUserLogFiles
 F			UseUserWritePlot
-F			UseUserAMR
+T			UseUserAMR
 F			UseUserEchoInput
 T			UseUserB0
 T			UseUserInitSession
@@ -44,44 +44,129 @@ T			UseUserUpdateStates
 #USERINPUTBEGIN ------------------------
 
 #PFSSM
-T			UseUserB0
-1.0			Ro_PFSSM
-2.5			Rs_PFSSM
-0.0			H_PFSSM
+T                       UseUserB0
+1.0                     Ro_PFSSM
+2.5                     Rs_PFSSM
+0.0                     H_PFSSM
 LC/Param/CR1935_WSO.dat
-12			iHead_PFSSM
--1.0			PhiShift
-0.01			UnitB
--1.0			dt_UpdateB0
+12                      iHead_PFSSM
+-1.0                    PhiShift
+0.01                    UnitB
+-1.0                    dt_UpdateB0
 
-#EMPIRICALSW
-WSA			NameModel
+#CORONALHEATING
+exponential		TypeCoronalHeating
+0.057471264		DecayLength
+7.2847901E-05		HeatingAmplitudeCgs
+T			UseArComponent
+4.03E-05		ArHeatFactor
+30.0			ArHeatB0
+5.0			ArHeatDeltaB0
+
+#OPENCLOSEDHEAT
+T			DoOpenClosedHeat
+3.5			WsaT0
+
+#LONGSCALEHEAT
+T			DoChHeat
+5.0e-7			HeatChCgs
+0.7			DecayCh
+
+#TRBOUNDARY
+chromo			TypeTRBoundary
+1.0E+12 		BoundaryNeCgs
+2.0E+4			BoundaryTeCgs
+
+#MODIFYHEATCONDUCTION
+T			DoModHeatConduction
+3.0E+5			TeModSi
+1.0E+1			DeltaTeModSi
 
 #USERINPUTEND ----------------------------
+
+#GAMMA
+1.6666E+00		Gamma
 
 #BODY
 T			Usebody
 1.0			rBody
-3.0E+8			BodyNDim
-3.5E+6			BodyTDim
+1.5E+8			BodyNDim
+3.0E+6			BodyTDim
 
-#GAMMA
-1.5000E+00		Gamma
+#EXTRABOUNDARY
+T			UseExtraBoundary
+user			TypeBc_I(ExtraBc_)
+T			DoFixExtaBoundary
+
+#BODY
+F			Usebody
+
+#FACEBOUNDARY
+0			MinBoundary
+0			MaxBoundary
+F			DoFixOuterBoundary
+
+#PLASMA
+1.0			MassFluid
+1.0			AverageIonCharge
+1.0			ElectronTemperatureRatio
 
 #OUTERBOUNDARY
-float	                TypeBcEast
+user	                TypeBcEast
 float   	        TypeBcWest
 float	                TypeBcSouth
 float	  		TypeBcNorth
 float	 	        TypeBcBot
 float	   		TypeBcTop
 
-#INCLUDE
-LC/Param/Grid
+
+#GRIDGEOMETRY
+spherical_genr		TypeGeometry
+LC/Param/grid_TR.dat	NameGridFile
+
+! Use a true sphere, so box is made much larger
+#GRID
+1			nRootBlockX
+2			nRootBlockY
+1			nRootBlockZ
+-100.0			xMin
+ 100.0			xMax
+-100.0			yMin
+ 100.0			yMax
+-100.0			zMin
+ 100.0			zMax
+
+#LIMITRADIUS
+1.0			rMin
+24.0			rMax
 
 #GRIDLEVEL
 2			nLevelArea
-initial			NameArea
+all			NameArea
+
+#GRIDLEVEL
+2			nLevelArea
+box_gen			NameArea
+1.0			rMin
+0.0			LonMin
+-65.0			LatMin
+1.70			rMax
+360.0			LonMax
+65.0			LatMax
+
+#GRIDLEVEL
+3			nLevelArea
+user			NameArea
+
+#GRIDLEVEL
+2                       nLevelArea
+initial                 NameArea
+
+#FIXAXIS
+F                       UsePoleDiffusion
+T                       DoFixAxis
+8.0                     rFixAxis
+1.5                     r2FixAxis
 
 #USECURLB0
 T			UseCurlB0
@@ -90,6 +175,18 @@ T			UseCurlB0
 #AMR
 30			DnRefine
 F			DoAutomaticRefinement 
+
+#HEATCONDUCTION
+T			UseHeatConduction
+user			TypeHeatConduction
+
+#WEAKFIELDCONDUCTION
+T			DoWeakFieldConduction
+1.0E-7			BmodifySi
+1.0E-8			DeltaBmodifySi
+
+#MESSAGEPASS
+all			TypeMessagePass
 
 #SCHEME
 2			nOrder (1 or 2)
@@ -107,26 +204,33 @@ T
 2                       nStage
 0.80                    CflExpl
 
+FIXEDTIMESTEP
+T			UseDtFixed
+1E-9			DtFixedDim
+
+#LOOKUPTABLE
+euv			NameTable
+load			NameCommand
+LC/Param/ResEIT.dat	NameFile
+ascii			TypeFile
+
+#LOOKUPTABLE
+sxr			NameTable
+load			NameCommand
+LC/Param/ResSXT.dat	NameFile
+ascii			TypeFile
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+LC/Param/RadCool_CorExt.dat	NameFile
+ascii			TypeFile
+
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
-1			DnSaveLogfile
--1.			DtSaveLogfile
-
-#SAVEPLOT
-3			nPlotFiles
-y=0 MHD idl		StringPlot
-1000                   	DnSavePlot
--1.			DtSavePlot
--1.			DxSavePlot
-y=0 MHD idl		StringPlot
-1000			DnSavePlot
--1.			DtSavePlot
--1.			DxSavePlot
-z=0 MHD idl		StringPlot
-1000			DnSavePlot
--1.			DtSavePlot
--1.			DxSavePlot
+RAW                     StringLogfile
+1                       DnSaveLogfile
+-1.                     DtSaveLogfile
 
 #END_COMP LC ----------------------------------------------------------------
 
@@ -139,7 +243,7 @@ z=0 MHD idl		StringPlot
 #BEGIN_COMP LC --------------------------------------------------------------
 
 #AMR
--1			DnRefine
+-1                      DnRefine
 
 #END_COMP LC -----------------------------------------------------------------
 

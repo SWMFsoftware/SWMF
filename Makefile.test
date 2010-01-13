@@ -407,8 +407,8 @@ test_lc:
 
 test_lc_compile:
 	./Config.pl -v=Empty,LC/BATSRUS
-	cd LC/BATSRUS; Config.pl -u=Sc -e=MhdCorona
-	./Config.pl -g=LC:4,4,4,3000,1
+	cd LC/BATSRUS; Config.pl -u=Lc -e=Mhd
+	./Config.pl -g=LC:6,4,4,3000,1
 	cd LC/BATSRUS; ./Config.pl -dynamic; cd ../..
 	make SWMF PIDL
 
