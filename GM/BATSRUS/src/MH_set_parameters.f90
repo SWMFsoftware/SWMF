@@ -63,6 +63,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModIonoVelocity,ONLY: read_iono_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
   use ModIoUnit, ONLY: io_unit_new
+  use ModCoronalHeating,ONLY:read_corona_heating,read_active_region_heating,&
+       read_longscale_heating
   
   implicit none
 
@@ -1782,6 +1784,15 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('rBuffMax',  rBuffMax)
         call read_var('nThetaBuff',nThetaBuff)
         call read_var('nPhiBuff',  nPhiBuff)
+
+     case("#CORONALHEATING")
+        call read_corona_heating
+ 
+     case("#LONGSCALEHEAT")
+        call read_longscale_heating
+
+     case("#ACTIVEREGIONHEAT")
+        call read_active_region_heating
 
      case default
         if(iProc==0) then

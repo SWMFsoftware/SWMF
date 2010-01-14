@@ -26,6 +26,22 @@ F			DoSaveRestart
 #COORDSYSTEM
 HGR                     TypeCoordSystem
 
+#CORONALHEATING
+exponential		TypeCoronalHeating
+0.057471264		DecayLength
+7.2847901E-05		HeatingAmplitudeCgs
+
+#LONGSCALEHEAT
+T			DoChHeat
+5.0e-7			HeatChCgs
+0.7			DecayCh
+
+#ACTIVEREGIONHEAT
+T			UseArComponent
+4.03E-05		ArHeatFactor
+30.0			ArHeatB0
+5.0			ArHeatDeltaB0
+
 #USER_FLAGS
 T			UseUserInnerBcs
 T			UseUserSource
@@ -54,23 +70,12 @@ LC/Param/CR1935_WSO.dat
 0.01                    UnitB
 -1.0                    dt_UpdateB0
 
-#CORONALHEATING
-exponential		TypeCoronalHeating
-0.057471264		DecayLength
-7.2847901E-05		HeatingAmplitudeCgs
-T			UseArComponent
-4.03E-05		ArHeatFactor
-30.0			ArHeatB0
-5.0			ArHeatDeltaB0
+
 
 #OPENCLOSEDHEAT
 T			DoOpenClosedHeat
 3.5			WsaT0
 
-#LONGSCALEHEAT
-T			DoChHeat
-5.0e-7			HeatChCgs
-0.7			DecayCh
 
 #TRBOUNDARY
 chromo			TypeTRBoundary
