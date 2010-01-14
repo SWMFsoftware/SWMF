@@ -29,13 +29,13 @@ HGR                     TypeCoordSystem
 #USER_FLAGS
 T			UseUserInnerBcs
 T			UseUserSource
-F			UseUserPerturbation
+T			UseUserPerturbation
 F			UseUserOuterBcs
 T			UseUserICs
 T			UseUserSpecifyRefinement
 T			UseUserLogFiles
 F			UseUserWritePlot
-F			UseUserAMR
+T			UseUserAMR
 F			UseUserEchoInput
 T			UseUserB0
 T			UseUserInitSession
@@ -44,41 +44,67 @@ T			UseUserUpdateStates
 #USERINPUTBEGIN ------------------------
 
 #PFSSM
-T			UseUserB0
-1.0			Ro_PFSSM
-2.5			Rs_PFSSM
-0.0			H_PFSSM
+T                       UseUserB0
+1.0                     Ro_PFSSM
+2.5                     Rs_PFSSM
+0.0                     H_PFSSM
 LC/Param/CR1935_WSO.dat
-12			iHead_PFSSM
--1.0			PhiShift
-0.01			UnitB
--1.0			dt_UpdateB0
+12                      iHead_PFSSM
+-1.0                    PhiShift
+0.01                    UnitB
+-1.0                    dt_UpdateB0
 
 #CORONALHEATING
 exponential		TypeCoronalHeating
-0.028735632		DecayLengthExp
-2.0E-4			HeatingAmplitudeCgs
+0.057471264		DecayLength
+7.2847901E-05		HeatingAmplitudeCgs
+T			UseArComponent
+4.03E-05		ArHeatFactor
+30.0			ArHeatB0
+5.0			ArHeatDeltaB0
+
+#OPENCLOSEDHEAT
+T			DoOpenClosedHeat
+3.5			WsaT0
+
+#LONGSCALEHEAT
+T			DoChHeat
+5.0e-7			HeatChCgs
+0.7			DecayCh
 
 #TRBOUNDARY
-coronal			TypeTRBoundary
-3.0E+8			BoundaryNeCgs
-1.5E+6			BoundaryTeCgs
+chromo			TypeTRBoundary
+1.0E+12 		BoundaryNeCgs
+2.0E+4			BoundaryTeCgs
 
-#MODIFYHEAT
+#MODIFYHEATCONDUCTION
 T			DoModHeatConduction
-2.5E+5			TeModSi
-1.0E+4			DeltaTeModSi
+3.0E+5			TeModSi
+1.0E+1			DeltaTeModSi
 
 #USERINPUTEND ----------------------------
+
+#GAMMA
+1.6666E+00		Gamma
 
 #BODY
 T			Usebody
 1.0			rBody
-3.0E+8			BodyNDim
+1.5E+8			BodyNDim
 3.0E+6			BodyTDim
 
-#GAMMA
-1.6666E+00		Gamma
+#EXTRABOUNDARY
+T			UseExtraBoundary
+user			TypeBc_I(ExtraBc_)
+T			DoFixExtaBoundary
+
+#BODY
+F			Usebody
+
+#FACEBOUNDARY
+0			MinBoundary
+0			MaxBoundary
+F			DoFixOuterBoundary
 
 #PLASMA
 1.0			MassFluid
@@ -93,10 +119,6 @@ float	  		TypeBcNorth
 float	 	        TypeBcBot
 float	   		TypeBcTop
 
-#FACEBOUNDARY
--1			MinBoundary
-0			MaxBoundary
-F			DoFixOuterBoundary
 
 #GRIDGEOMETRY
 spherical_genr		TypeGeometry
@@ -116,14 +138,14 @@ LC/Param/grid_TR.dat	NameGridFile
 
 #LIMITRADIUS
 1.0			rMin
-12.0			rMax
+24.0			rMax
 
 #GRIDLEVEL
 2			nLevelArea
 all			NameArea
 
 #GRIDLEVEL
-4			nLevelArea
+2			nLevelArea
 box_gen			NameArea
 1.0			rMin
 0.0			LonMin
@@ -133,12 +155,12 @@ box_gen			NameArea
 65.0			LatMax
 
 #GRIDLEVEL
-4			nLevelArea
-currentsheet		NameArea
+3			nLevelArea
+user			NameArea
 
 #GRIDLEVEL
-2			nLevelArea
-initial			NameArea
+2                       nLevelArea
+initial                 NameArea
 
 #FIXAXIS
 F                       UsePoleDiffusion
@@ -156,9 +178,7 @@ F			DoAutomaticRefinement
 
 #HEATCONDUCTION
 T			UseHeatConduction
-modified		TypeHeatConduction
-2.5E+5			TmodifySi
-1.0E+4			DeltaTmodifySi
+user			TypeHeatConduction
 
 #WEAKFIELDCONDUCTION
 T			DoWeakFieldConduction
@@ -200,7 +220,7 @@ load			NameCommand
 LC/Param/ResSXT.dat	NameFile
 ascii			TypeFile
 
-LOOKUPTABLE
+#LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
 LC/Param/RadCool.dat	NameFile
@@ -208,41 +228,9 @@ ascii			TypeFile
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
-1			DnSaveLogfile
--1.			DtSaveLogfile
-
-#SAVEPLOT
-3			nPlotFiles
-x=0 MHD tec		StringPlot
-200			DnSavePlot
--1			DtSavePlot
-los euv tec		StringPlot
-200			DnSavePlot
--1			DtSavePlot
--43.227			ObsPosX
--209.23			ObsPosY
-26.743			ObsPosZ
-0.			OffsetAngle
-1.98			rSizeImage
-0.			xOffset
-0.			yOffset
-0.			rOccult
-0.			MuLimbDarkening
-50			nPix
-los sxr tec		StringPlot
-1000			DnSavePlot
--1			DtSavePlot
--43.227			ObsPosX
--209.23			ObsPosY
-26.743			ObsPosZ
-0.			OffsetAngle
-2.11			rSizeImage
-0.			xOffset
-0.			yOffset
-0.			rOccult
-0.			MuLimbDarkening
-512			nPix
+RAW                     StringLogfile
+1                       DnSaveLogfile
+-1.                     DtSaveLogfile
 
 #END_COMP LC ----------------------------------------------------------------
 
@@ -250,17 +238,17 @@ los sxr tec		StringPlot
 100			MaxIteration
 -1.0			tSimulationMax
 
-#RUN
+#RUN ########################################################################
 
-#BEGIN_COMP LC ----------------------------------------------------------------
+#BEGIN_COMP LC --------------------------------------------------------------
 
 #AMR
--1			DnRefine
+-1                      DnRefine
 
-#END_COMP LC ----------------------------------------------------------------
+#END_COMP LC -----------------------------------------------------------------
 
 #STOP
-200			MaxIteration
--1.0			tSimulationMax
+200
+-1.0
 
 #END
