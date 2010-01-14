@@ -26,6 +26,7 @@ module ModNonWKBHeating
   PRIVATE !Except
 
   !PUBLIC MEMBER:
+  logical,public::UseCranmerHeating = .false.
   public:: Cranmer_heating_function
 
   !The Cranmers heating function.

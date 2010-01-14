@@ -1,162 +1,214 @@
-!^CFG COPYRIGHT UM
-!==============================================================================
 module ModCoronalHeating
-
-  ! based on Abett (2007)
-
+  use ModUnsignedFluxModel
+  use ModNonWKBHeating
+  use ModMain,      ONLY: nBLK, nI, nJ, nK
+  use ModReadParam, ONLY: lStringLine
   implicit none
-  save
+  SAVE
 
-  private ! except
+  logical,public:: UseCoronalHeating = .false.
+  character(len=lStringLine) :: NameModel, TypeCoronalHeating
 
-  ! Public methods
-  public :: get_coronal_heat_factor
-  public :: get_coronal_heating
+  ! Variables and parameters for various heating models
+  !\
+  ! Exponential:
+  !/  
 
-  !Bill Abbet model, if .true.
-  logical, public :: UseUnsignedFluxModel = .false.
+  ! quantitative parameters for exponential heating model
 
-  ! Normalized value of Heating constant
-  real, public :: HeatFactor = 0.0
+  real :: HeatingAmplitude, HeatingAmplitudeCgs = 6.07e-7
+  real :: DecayLengthExp = 0.7  ! in Solar Radii units
+  logical :: UseExponentialHeating = .false.
 
-  ! Cgs value of total power input from coronal heating
-  real, public :: TotalCoronalHeatingCgs = 1.0e+28
+  ! parameters for high-B transition (in Gauss)
+  ! idea is to grossly approx 'Active Region' heating values
+  logical :: UseArComponent = .false.
+  real :: ArHeatB0 = 30.0
+  real :: DeltaArHeatB0 = 5.0
+  real :: ArHeatFactorCgs = 4.03E-05  ! cgs energy density = [ergs cm-3 s-1]
+  
+  ! open closed heat is if you want to have different heating
+  ! between open and closed field lines. The routines for the WSA
+  ! model in the ExpansionFactors module essentially do this, so will
+  ! need to call them
+  logical :: DoOpenClosedHeat = .false.
+  real :: WsaT0 = 3.50
+  
+  !\
+  ! Abbet's model
+  !/
+  
+  
+  ! Normalization constant for Abbet Model
+  real :: HeatNormalization = 1.0
 
-  ! Exponential Scale height to truncate heating function
-  real, public :: DecayLength = 1.0
 
-
+  
+  ! long scale height heating (Ch = Coronal Hole)
+  logical :: DoChHeat = .false.
+  real :: HeatChCgs = 5.0e-7
+  real :: DecayLengthCh = 0.7
+  
 contains
+  subroutine read_corona_heating
+    use ModReadParam,   ONLY: read_var
+    !----------------------------------
+    call read_var('TypeCoronalHeating', TypeCoronalHeating)
 
-  !============================================================================
+    !Initialize logicals
+    UseCoronalHeating = .true.
 
-  subroutine get_coronal_heat_factor
+    UseUnsignedFluxModel = .false.
+    UseCranmerHeating      = .false.
+    UseExponentialHeating= .false.
 
-    use ModAdvance,     ONLY: State_VGB, B0_DGB, Bx_, Bz_
-    use ModGeometry,    ONLY: vInv_CB, true_BLK, true_cell
-    use ModMagnetogram, ONLY: nTheta, nPhi, dSinTheta, dPhi, &
-         get_magnetogram_field
-    use ModMain,        ONLY: nI, nJ, nK, nBlock, UnusedBLK
-    use ModMpi,         ONLY: MPI_REAL, MPI_SUM
-    use ModNumConst,    ONLY: cHalfPi
-    use ModPhysics,     ONLY: Si2No_V, No2Si_V, UnitX_, UnitB_, UnitT_, &
-         UnitEnergyDens_, rBody
-    use ModProcMH,      ONLY: nProc, iComm
 
-    integer :: i, j, k, iBlock
-    integer :: iTheta, iPhi, iError
-    real :: UnsignedFlux, UnsignedFluxCgs, dAreaCgs
-    real :: HeatFunction, HeatFunctionVolume, HeatFunctionVolumePe
-    real :: x, y, z, Theta, Phi, SinTheta, CosTheta, SinPhi, CosPhi
-    real :: FullB_D(3), B0_D(3), BrSi, BrCgs, SumUnsignedBrCgs
+    select case(TypeCoronalHeating)
+    case('F','none')
+       UseCoronalHeating = .false.
+       
+    case('exponential')
+       UseExponentialHeating = .true.
+       call read_var('DecayLengthExp', DecayLengthExp)
+       call read_var('HeatingAmplitudeCgs', HeatingAmplitudeCgs)
 
-    real, save :: TotalCoronalHeating
-    logical, save :: DoFirst = .true.
+    case('unsignedflux','Abbet')
+       UseUnsignedFluxModel = .true.
+       call read_var('DecayLength', DecayLength)
+       call read_var('HeatNormalization', HeatNormalization)
+    case('Cranmer','NonWKB')
+       UseCranmerHeating     = .true.
+    case default
+       call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
+            //TypeCoronalHeating)
+    end select
+  end subroutine read_corona_heating
+  !===========================
+  subroutine read_active_region_heating
+    use ModReadParam,   ONLY: read_var
+    !---------------------------------
+    call read_var('UseArComponent', UseArComponent)
+    if(UseArComponent) then
+       call read_var('ArHeatFactorCgs', ArHeatFactorCgs)
+       call read_var('ArHeatB0', ArHeatB0)
+       call read_var('DeltaArHeatB0', DeltaArHeatB0)
+    endif
+  end subroutine read_active_region_heating
+  !===========================
+  subroutine read_longscale_heating
+    use ModReadParam,   ONLY: read_var
+    use ModReadParam,   ONLY: read_var
+    !---------------------------------
+    call read_var('DoChHeat', DoChHeat)
+    if(.not.DoChHeat)return
+    call read_var('HeatChCgs', HeatChCgs)
+    call read_var('DecayLengthCh', DecayLengthCh)
+  end subroutine read_longscale_heating
+  !===========================
+  
+  subroutine get_cell_heating(i, j, k, iBlock, CoronalHeating)
 
-    real, parameter :: HeatExponent = 1.1488, HeatCoef = 89.4
-    !--------------------------------------------------------------------------
-
-    if(DoFirst)then
-
-       ! uniform cell area on sphere
-       dAreaCgs = rBody**2*dSinTheta*dPhi*No2Si_V(UnitX_)**2*1e4
-       SumUnsignedBrCgs = 0.0
-
-       do iTheta = 0, nTheta
-          Theta = cHalfPi - asin((real(iTheta) + 0.5)*dSinTheta - 1.0)
-          SinTheta = sin(Theta)
-          CosTheta = cos(Theta)
-          do iPhi = 1, nPhi
-             Phi=(real(iPhi)-0.5)*dPhi
-             SinPhi = sin(Phi)
-             CosPhi = cos(Phi)
-
-             x = rBody*SinTheta*CosPhi
-             y = rBody*SinTheta*SinPhi
-             z = rBody*CosTheta
-
-             call get_magnetogram_field(x, y, z, B0_D)
-             BrSi = (x*B0_D(1) + y*B0_D(2) + z*B0_D(3))/rBody
-             BrCgs = BrSi*1e4
-             SumUnsignedBrCgs = SumUnsignedBrCgs + abs(BrCgs)
-          end do
-       end do
-
-       UnsignedFluxCgs = SumUnsignedBrCgs*dAreaCgs
-
-       TotalCoronalHeatingCgs = HeatCoef*UnsignedFluxCgs**HeatExponent
-
-       TotalCoronalHeating = TotalCoronalHeatingCgs*1e-7 &
-            *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
-
-       DoFirst = .false.
-    end if
-
-    HeatFunctionVolume = 0
-    do iBlock = 1, nBlock
-       if(unusedBLK(iBlock)) CYCLE
-
-       if(true_BLK(iBlock)) then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             call get_heat_function(i, j, k, iBlock, HeatFunction)
-             HeatFunctionVolume = HeatFunctionVolume &
-                  + HeatFunction/vInv_CB(i,j,k,iBlock)
-          end do; end do; end do
-       else
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(true_cell(i,j,k,iBlock))then
-                call get_heat_function(i, j, k, iBlock, HeatFunction)
-                HeatFunctionVolume = HeatFunctionVolume &
-                     + HeatFunction/vInv_CB(i,j,k,iBlock)
-             end if
-          end do; end do; end do
-       end if
-    end do
-
-    if(nProc>1)then
-       HeatFunctionVolumePe = HeatFunctionVolume
-       call MPI_allreduce(HeatFunctionVolumePe, HeatFunctionVolume, 1, &
-            MPI_REAL, MPI_SUM, iComm, iError)
-    end if
-
-    HeatFactor = TotalCoronalHeating/HeatFunctionVolume
-
-  end subroutine get_coronal_heat_factor
-
-  !============================================================================
-
-  subroutine get_coronal_heating(i, j, k, iBlock, CoronalHeating)
+    use ModGeometry,       ONLY: r_BLK, x_BLK, y_BLK, z_BLK
+    use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitEnergyDens_, UnitT_, &
+         No2Io_V, UnitB_,UnitRho_,UnitX_,UnitU_
+    use ModExpansionFactors, ONLY: UMin
+    use ModMain,       ONLY: x_, y_, z_
+    use ModVarIndexes, ONLY: Bx_, By_, Bz_,Rho_,RhoUx_,RhoUz_
+    use ModAdvance,    ONLY: State_VGB, B0_DGB
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: CoronalHeating
+    
+    real :: HeatCh
 
-    real :: HeatFunction
+    ! parameters for open/closed. This uses WSA model to determine if 
+    ! cell is in an 'open' or 'closed' field region.
+    !
+    ! ** NOTE ** WSA does field line tracing on an auxiliary grid.
+    ! should really be using the computational domain, but global 
+    ! feild line tracing for this purpose is not easily implemented
+    real :: Ufinal
+    real :: UminIfOpen = 290.0
+    real :: UmaxIfOpen = 300.0
+    real :: Weight
+    
+    ! local variables for ArHeating (Active Region Heating)
+    real :: FractionB, Bcell
+
+    real :: RhoSI, RSI, UMagSI, BMagSI, QHeatSI
     !--------------------------------------------------------------------------
+    
+    if(UseUnsignedFluxModel)then
+       
+       call get_coronal_heating(i, j, k, iBlock, CoronalHeating)
+       CoronalHeating = CoronalHeating * HeatNormalization
+       
+    elseif(UseExponentialHeating)then
+    
+       CoronalHeating = HeatingAmplitude &
+            *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
+            
+    elseif(UseCranmerHeating)then
 
-    call get_heat_function(i, j, k, iBlock, HeatFunction)
+       RSI   = r_BLK(i,j,k,iBlock) * No2Si_V(UnitX_)
+       RhoSI = State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitRho_)
+       UMagSI= sqrt( sum( State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2 ) )/&
+                          State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitU_)
+       BmagSI= sqrt( sum( State_VGB(Bx_   :   Bz_,i,j,k,iBlock)**2 ) ) &
+                                                       * No2Si_V(UnitB_)
+       call Cranmer_heating_function(&
+            RSI=RSI,      &
+            RhoSI = RhoSI,&
+            UMagSI=UMagSI,&
+            BMagSI=BMagSI,&
+            QHeatSI=QHeatSI)
+       CoronalHeating = QHeatSI *  Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+    else
+       CoronalHeating = 0.0
+    end if
+  
+    if(DoOpenClosedHeat)then
+       ! If field is less than 1.05 times the minimum speed, mark as closed
+       ! Interpolate between 1.05 and 1.10 for smoothness
+       UminIfOpen = UMin*1.05
+       UmaxIfOpen = UMin*1.1
+       call get_bernoulli_integral(x_BLK( i, j, k, iBlock)/&
+            R_BLK( i, j, k, iBlock),&
+            y_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock),&
+            z_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock), UFinal)
+       if(UFinal <= UminIfOpen) then
+          Weight = 0.0
+       else if (UFinal >= UmaxIfOpen) then
+          Weight = 1.0
+       else 
+          Weight = (UFinal - UminIfOpen)/(UmaxIfOpen - UminIfOpen)
+       end if
+       
+       CoronalHeating = (1.0 - Weight) * CoronalHeating
+    end if
 
-    CoronalHeating = HeatFactor*HeatFunction
+    if(DoChHeat) then
+       HeatCh = HeatChCgs * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+       CoronalHeating = CoronalHeating + HeatCh &
+            *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
+    end if
 
-  end subroutine get_coronal_heating
+    if(UseExponentialHeating.and.UseArComponent) then
+
+       Bcell = No2Io_V(UnitB_) * sqrt(&
+            ( B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock))**2 &
+            +(B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock))**2 &
+            +(B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))**2)
+          
+       FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
+       CoronalHeating = max(CoronalHeating, & 
+                 FractionB * ArHeatFactorCgs * Bcell &
+                 * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
+
+    endif
+                       
+  end subroutine get_cell_heating
 
   !============================================================================
-
-  subroutine get_heat_function(i, j, k, iBlock, HeatFunction)
-
-    use ModAdvance, ONLY: State_VGB, B0_DGB, Bx_, Bz_
-    use ModGeometry, ONLY: r_BLK
-
-    integer, intent(in) :: i, j, k, iBlock
-    real, intent(out) :: HeatFunction
-
-    real :: Bmagnitude, B_D(3)
-    !--------------------------------------------------------------------------
-
-    B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
-    Bmagnitude = sqrt(sum(B_D**2))
-
-    HeatFunction = Bmagnitude*exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
-
-  end subroutine get_heat_function
-
+  
 end module ModCoronalHeating

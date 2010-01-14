@@ -17,7 +17,7 @@ MOD1 = ModCT.o       #^CFG IF CONSTRAINB
 MOD2 = ModImplicit.o ModRadDiffusion.o ModHeatConduction.o #^CFG IF IMPLICIT
 MOD3 = ModRaytrace.o #^CFG IF RAYTRACE
 MOD4 = ModProject.o  #^CFG IF PROJECTION
-
+HEATING = ModCoronalHeating.o ModUnsignedFluxModel.o ModNonWKBHeating.o
 
 MODULES = \
 	ModAdvance.o\
@@ -36,7 +36,6 @@ MODULES = \
 	ModEnergy.o\
 	ModEquation.o\
 	ModCharacteristic.o\
-	ModCoronalHeating.o\
 	ModCovariant.o\
 	ModCurrent.o\
 	ModExpansionFactors.o \
@@ -50,7 +49,6 @@ MODULES = \
 	ModMain.o\
 	ModMessagePass.o\
 	ModNodes.o\
-	ModNonWKBHeating.o\
 	ModOctree.o\
 	ModParallel.o\
 	ModPartSteady.o\
@@ -66,6 +64,7 @@ MODULES = \
 	ModUserEmpty.o \
 	ModUser.o \
 	ModWaves.o \
+	${HEATING} \
 	${MOD1}	${MOD2}	${MOD3} ${MOD4} 
 
 # OBJECT FILES FOR MAIN EXECUTABLE
