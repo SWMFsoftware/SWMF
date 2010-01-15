@@ -798,12 +798,12 @@ subroutine MH_set_parameters(TypeAction)
               plot_var='euv'
               plot_dimensional(ifile) = index(plot_string,'EUV')>0
               plot_vars(ifile)='euv171 euv195 euv284' ! main euv bands
-              plot_pars(ifile)=''
+              plot_pars(ifile)='mu'
            elseif(index(plot_string,'SXR')>0.or.index(plot_string,'sxr')>0)then
               plot_var='sxr'
               plot_dimensional(ifile) = index(plot_string,'SXR')>0
               plot_vars(ifile)='sxr' ! soft x-ray band
-              plot_pars(ifile)=''
+              plot_pars(ifile)='mu'
            elseif(index(plot_string,'RWI')>0.or.index(plot_string,'rwi')>0)then 
               plot_var='rwi'
               plot_dimensional(ifile) = .false.
