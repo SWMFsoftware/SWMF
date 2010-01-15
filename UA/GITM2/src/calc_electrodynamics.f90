@@ -40,7 +40,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   real :: sp_d1d1_d, sp_d2d2_d, sp_d1d2_d, sh
   real :: xmag, ymag, zmag, bmag, signz, magpot, lShell
   real :: mlatMC, mltMC, jul, shl, spl, length, kdpm_s, kdlm_s, je1_s, je2_s
-  real :: kpm_s, klm_s
+  real :: kpm_s, klm_s, xstretch, ystretch
   real :: sinIm, spp, sll, shh, scc, sccline, sppline, sllline, shhline, be3
 
   real :: q2, dju,dl, cD
@@ -171,6 +171,9 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
            MagLonMC(i,j)     = 360.0 * float(i-1) / float(nMagLons)
 
            ! we could also use the stretch_grid function....
+!MAGSTRECH       xstretch =(float(j)-0.5)/float(nMagLats/2) - 1.0
+!MAGSTRECH       call stretch_grid(xstretch,ystretch)
+!MAGSTRECH       MagLatMC(i,j) = ystretch * 90.0
 
            if (UseApex) then 
 
@@ -786,20 +789,21 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   solver_a_mc = 4 * deltalmc**2 * sigmappmc / cos(MagLatMC*pi/180)
   solver_b_mc = 4 * deltapmc**2 * cos(MagLatMC*pi/180) * sigmallmc
-  solver_c_mc = sign(1.0, MagLatMC) * 2.0 * deltalmc * deltapmc * sigmaccmc
-  solver_d_mc = 2.0 * deltalmc**2 * deltapmc * ( &
+  solver_c_mc = deltalmc * deltapmc * (SigmaPLmc + SigmaLPmc)  
+     
+  solver_d_mc = 2.0 * deltalmc * deltapmc**2 * ( &
        sign(1.0, MagLatMC) * ( dSigmaPLdpMC + cos(MagLatMC*pi/180) * dSigmaLLdlMC)&
        - sin(MagLatMC*pi/180) * sigmallmc)
-  solver_e_mc = 2.0 * sign(1.0, MagLatMC) * deltalmc * deltapmc**2 * ( &
+  solver_e_mc = 2.0 * sign(1.0, MagLatMC) * deltalmc**2 * deltapmc * ( &
        dSigmaPPdpMC / cos(MagLatMC*pi/180) + dSigmaLPdlMC)
 !  solver_s_mc =  4 * deltalmc**2 * deltapmc**2 * (RBody) * &
 !       (dkdlmdlMC + dKDpmdpMC - dklmdlMC - dkpmdpMC)
   solver_s_mc = 4 * deltalmc**2 * deltapmc**2 * (RBody) * &
        (dkdlmdlMC + dKDpmdpMC)
-
+     
 !  solver_d_mc(:,42:49) = 0.0
 !  solver_e_mc(:,42:49) = 0.0
-
+     
 !  OldPotMc = 0.0
   DynamoPotentialMC = 0.0
 
@@ -817,26 +821,26 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         iI = iI + 1
 
         ! Right hand side
-        b(iI)    = -solver_s_mc(iLon, iLat)
+        b(iI)    = solver_s_mc(iLon, iLat)
 
         ! Initial Guess
         x(iI)    = DynamoPotentialMC(iLon, iLat)
-
+     
         ! i,j
         d_I(iI)  = -2*(solver_a_mc(iLon, iLat)+solver_b_mc(iLon, iLat))
 
         ! ilon-1, ilat
-        e_I(iI)  = solver_a_mc(iLon, iLat)-solver_d_mc(iLon, iLat)
-
+        e_I(iI)  = solver_a_mc(iLon, iLat)-solver_e_mc(iLon, iLat)
+  
         ! ilon+1, ilat
-        f_I(iI)  = solver_a_mc(iLon, iLat)+solver_d_mc(iLon, iLat)
-
+        f_I(iI)  = solver_a_mc(iLon, iLat)+solver_e_mc(iLon, iLat)
+       
         ! ilon, ilat-1
-        e1_I(iI) = solver_b_mc(iLon, iLat)-solver_e_mc(iLon, iLat)
-
+        e1_I(iI) = solver_b_mc(iLon, iLat)-solver_d_mc(iLon, iLat)
+       
         ! ilon, ilat+1
-        f1_I(iI) = solver_b_mc(iLon, iLat)+solver_e_mc(iLon, iLat)
-
+        f1_I(iI) = solver_b_mc(iLon, iLat)+solver_d_mc(iLon, iLat)
+  
         if (iLat == 2)          e1_I(iI) = 0.0
         if (iLat == nMagLats-1) f1_I(iI) = 0.0
         if (iLon == 1)          e_I(iI)  = 0.0
@@ -894,68 +898,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   DynamoPotentialMC(:,1) = 0.0
   DynamoPotentialMC(:,nMagLats) = 0.0
 
-!!  oldresidual = 1.0e32
-!!  residual    = 1.0e31
-!!  i = 0
-!!
-!!  do while (oldresidual > residual .and. i < 500)
-!!
-!!     do iLat = 2, nMagLats-1
-!!        do iLon = 1, nMagLons+1
-!!
-!!           iLm = iLon-1
-!!           if (iLm == 0) iLm = nMagLons
-!!           iLp = iLon+1
-!!           if (iLp == nMagLons+1) iLp = 0
-!!
-!!           DynamoPotentialMC(iLon, iLat) = solver_s_mc(iLon, iLat) + ( &
-!!                ( solver_a_mc(iLon, iLat)+solver_d_mc(iLon, iLat)) * &
-!!                DynamoPotentialMC(iLp   , iLat  ) + &
-!!                ( solver_b_mc(iLon, iLat)+solver_e_mc(iLon, iLat)) * &
-!!                DynamoPotentialMC(iLon  , iLat+1) + &
-!!                ( solver_c_mc(iLon, iLat)                        ) * &
-!!                DynamoPotentialMC(iLp   , iLat+1) + &
-!!                (-solver_c_mc(iLon, iLat)                        ) * &
-!!                DynamoPotentialMC(iLp   , iLat-1) + &
-!!                ( solver_a_mc(iLon, iLat)-solver_d_mc(iLon, iLat)) * &
-!!                DynamoPotentialMC(iLm   , iLat  ) + &
-!!                ( solver_b_mc(iLon, iLat)-solver_e_mc(iLon, iLat)) * &
-!!                DynamoPotentialMC(iLon  , iLat-1) + &
-!!                (-solver_c_mc(iLon, iLat)                        ) * &
-!!                DynamoPotentialMC(iLm   , iLat+1) + &
-!!                ( solver_c_mc(iLon, iLat)                        ) * &
-!!                DynamoPotentialMC(iLm   , iLat-1)) / &
-!!               (2*solver_a_mc(iLon, iLat)+2*solver_b_mc(iLon, iLat))
-!!
-!!        enddo
-!!     enddo
-!!
-!!!     DynamoPotentialMC(1,:) = sum(DynamoPotentialMC(2,:))/(nMagLons+1)
-!!
-!!     oldresidual = residual
-!!
-!!     residual = sum(abs(DynamoPotentialMC-OldPotMC))
-!!     i = i + 1
-!!
-!!     if (iDebugLevel > 1) &
-!!          write(*,*) "==> Dynamo Residual : ", i, sum(abs(DynamoPotentialMC)), &
-!!          maxval(DynamoPotentialMC)-minval(DynamoPotentialMC), residual
-!!
-!!     OldPotMC = DynamoPotentialMC
-!!
-!!  enddo
-
-!!!   do iLat = 1, nMagLats/2
-!!!      do iLon = 1, nMagLons+1
-!!!         jLat = nMagLats - (iLat-1)
-!!!         tmp = (DynamoPotentialMC(iLon,iLat) + DynamoPotentialMC(iLon,jLat))/2.0
-!!!         a = sin(MagLatMC(i,j)*pi/180)**2
-!!!         b = cos(MagLatMC(i,j)*pi/180)**2
-!!!         DynamoPotentialMC(iLon,iLat) = &
-!!!              a * DynamoPotentialMC(iLon,iLat) + &
-!!!              b * tmp
-!!!      enddo
-!!!   enddo
 
   if (iDebugLevel > 0) &
        write(*,*) "=> CPCP of Dynamo : ", &
@@ -1320,25 +1262,25 @@ subroutine matvec_gitm(x_I, y_I, n)
         iLp = iLon+1
         if (iLp == nMagLons+1) iLp = 0
 
-        y_I(i) = &
+           y_I(i) = &
              -(2*solver_a_mc(iLon, iLat)+2*solver_b_mc(iLon, iLat)) * &
              x_G(iLon   , iLat  ) + &
-             ( solver_a_mc(iLon, iLat)+solver_d_mc(iLon, iLat)) * &
+             ( solver_a_mc(iLon, iLat)+solver_e_mc(iLon, iLat)) * &
              x_G(iLp , iLat  ) + &
-             ( solver_b_mc(iLon, iLat)+solver_e_mc(iLon, iLat)) * &
+             ( solver_b_mc(iLon, iLat)+solver_d_mc(iLon, iLat)) * &
              x_G(iLon  , iLat+1) + &
-!             ( solver_c_mc(iLon, iLat)                        ) * &
-!             x_G(iLp, iLat+1) + &
-!             (-solver_c_mc(iLon, iLat)                        ) * &
-!             x_G(iLp, iLat-1) + &
-             ( solver_a_mc(iLon, iLat)-solver_d_mc(iLon, iLat)) * &
+             ( solver_c_mc(iLon, iLat)                        ) * &
+             x_G(iLp, iLat+1) + &
+             (-solver_c_mc(iLon, iLat)                        ) * &
+             x_G(iLp, iLat-1) + &
+             ( solver_a_mc(iLon, iLat)-solver_e_mc(iLon, iLat)) * &
              x_G(iLm, iLat  ) + &
-             ( solver_b_mc(iLon, iLat)-solver_e_mc(iLon, iLat)) * &
-             x_G(iLon  , iLat-1)
-!             (-solver_c_mc(iLon, iLat)                        ) * &
-!             x_G(iLm, iLat+1) + &
-!             ( solver_c_mc(iLon, iLat)                        ) * &
-!             x_G(iLm, iLat-1)
+             ( solver_b_mc(iLon, iLat)-solver_d_mc(iLon, iLat)) * &
+             x_G(iLon  , iLat-1)    + &
+             (-solver_c_mc(iLon, iLat)                        ) * &
+             x_G(iLm, iLat+1) + &
+             ( solver_c_mc(iLon, iLat)                        ) * &
+             x_G(iLm, iLat-1)
 
      end do
   end do
