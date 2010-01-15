@@ -2609,6 +2609,7 @@ contains
 
     use ModGeometry, ONLY : XyzMin_D, XyzMax_D, nIJK_D
     use ModParallel, ONLY : proc_dims
+    use ModCovariant, ONLY : TypeGeometry
     use ModIO
 
     implicit none
@@ -2679,11 +2680,16 @@ contains
              ! Limit plot range along x direction to be very small
              plot_range(1, iFile) = -SmallSize_D(x_)
              plot_range(2, iFile) = +SmallSize_D(x_)
+             if(index(TypeGeometry,'spherical') > 0) then
+                plot_range(1, iFile) = XyzMin_D(x_)
+                plot_range(2, iFile) = XyzMin_D(x_)+SmallSize_D(x_)
+             end if
           else
              ! Limit Phi direction around cHalfPi
              plot_range(3, iFile) = cHalfPi - SmallSize_D(Phi_)
              plot_range(4, iFile) = cHalfPi + SmallSize_D(Phi_)
           end if
+
        case('y=0')
           plot_range(1:5:2, iFile) = XyzMin_D
           plot_range(2:6:2, iFile) = XyzMax_D
@@ -2725,6 +2731,8 @@ contains
        ! Regular grid is not (yet) working in generalized coordinates
        ! because multiple pieces are used in the domain for x=0 and y=0 area
 !!! does Tecplot care about plot_dx and plot_range ???
+!!!ddz:  YES, plot_range is important.  Changed x=0 for spherical above and some
+!!!      logic in write_plot_tec.f90 as well.
        if(is_axial_geometry() .and. plot_form(iFile) == 'idl') &
             plot_dx(1, iFile) = -1.0
 

@@ -182,6 +182,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
      if((xmax-xmin)<(ymax-ymin) .and. (xmax-xmin)<(zmax-zmin))then
         !X Slice
         CutValue = 0.5*(xmin+xmax)
+        if(plot_type1(1:3) == 'x=0') CutValue = 0.
         if(.not.UseCovariant)then             
            ! First loop to count nodes and cells        
            do iBlockALL  = 1, nBlockALL
@@ -315,6 +316,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
      elseif((ymax-ymin)<(zmax-zmin))then
         !Y Slice
         CutValue = 0.5*(ymin+ymax)
+        if(plot_type1(1:3) == 'y=0') CutValue = 0.
         if(.not.UseCovariant)then                   
            ! First loop to count nodes and cells
            do iBlockALL  = 1, nBlockALL
@@ -449,6 +451,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
      else
         !Z Slice
         CutValue = 0.5*(zmin+zmax)
+        if(plot_type1(1:3) == 'z=0') CutValue = 0.
         ! First loop to count nodes and cells
         do iBlockALL  = 1, nBlockALL
            iBLK = iBlock_A(iBlockALL)
