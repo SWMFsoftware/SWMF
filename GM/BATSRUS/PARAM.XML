@@ -5173,6 +5173,120 @@ in nano Tesla.
 Default is no dipole field for the second body.
 </command>
 <!-- ^CFG END SECONDBODY -->
+
+<command name="CORONALHEATING">
+	<parameter name="UseCoronalHeating" type="logical" default="F"	/>
+	<if expr="$UseCoronalHeating">
+		<parameter name="TypeCoronalHeating" type="string" case="lower"
+			input="select" >
+			<option name="exponential"         />
+			<option name="unsignedflux"        />
+			<option name="NonWKB"              />
+		</parameter>
+		<if expr="$TypeCoronalHeating =~ /exponential/">
+			<parameter name="DecayLengthExp" type="real" 
+							default="0.7" />
+			<parameter name="HeatingAmplitudeCgs" type="real" 
+							default="6.07E-7" />
+		</if>
+		<if expr="$TypeCoronalHeating =~ /unsignedflux/">
+			<parameter name="DecayLength" type="real" 
+						default="1.0"/>
+			<parameter name="HeatNormalization" type="real" 
+						default="1.0"/>
+		</if>
+	</if>
+#CORONALHEATING
+T		UseCoronalHeating (rest of parameters read only if set to true)
+exponential	TypeCoronalHeating
+0.0575		DecayLengthEXP      [Rsun] 	  (read for exp heating only)
+7.285E-05	HeatingAmplitudeCgs [ergs/cm^3/s] (read for exp heating only)
+
+#CORONALHEATING
+T		UseCoronalHeating (rest of parameters read only if set to true)
+unsignedflux	TypeCoronalHeating
+0.0575		DecayLength	  [Rsun] (read for unsignedflux heating only)
+1.0		HeatNormalization [none] (read for unsignedflux heating only)
+
+If UseCoronalHeating is false, no CoronalHeating is included.
+If UseCoronalHeating is true, then one can select a simple exponential scale 
+height heating model or B weighted heating model normalized to the amount of 
+unsigned flux measured at the soalr surface (Abbett 2007). Each model applies a 
+cell based source term to the Energy equation.
+
+For TypeCoronalHeating='exponential' coronal heating is applied using an
+exponential scale height model. DecayLengthExp is the e-folding length in
+units of Solar Radii and HeatingAmplitudeCgs is the heating rate at r=1.0
+
+For TypeCoronalHeating='unsignedflux' the coronal heating term is calculated
+using the unsigned flux model presented in (Abbett 2007). DecayLengthExp is 
+the e-folding length in units of Solar Radii to limit the range of influence 
+of this function. Because the total power in X-Ray emission is not well
+constrained to total heating power in the corona, the term HeatNormalization 
+is used to uniformly multiply the heating rate by this factor (default 1.0).
+
+For TypeCoronalHeating='NonWKB' coronal heating is applied using the wave
+dissapation model of Cranmer 2010. No additional input parameters are needed.
+
+The default is UseCoronalHeating=.false.
+</command>
+
+<command name="LONGSCALEHEAT">
+	<parameter name="DoChHeat" type="logical" default="F"	/>
+	<if expr="$DoChHeat">
+		<parameter name="HeatChCgs" type="real" 
+						default="5.0E-7" />
+		<parameter name="DecayLengthCh" type="real" 
+						default="0.7" />
+	</if>
+#LONGSCALEHEAT
+T		DoChHeat (rest of parameters read only if set to true)
+7.285E-05	HeatChCgs	[ergs/cm^3/s]
+0.0575		DecayLengthCh	[Rsun]
+
+If DoChHeat is false, no long scale height heating is included.
+If DoChHeat is true, one supplies parameters for a simple exponential scale 
+height heating model like that in the CORONALHEATING command. HeatChCgs sets
+the base heating rate ar r=1.0 [Rsun] and DecayLengthCh is the e-folding length
+in units of Solar Radii.
+The idea is to use this commmand in conjunction with any short scale height
+heating model selected by the CORONALHEATING command.
+
+The default is DoChHeat=.false.
+</command>
+
+<command name="ACTIVEREGIONHEAT">
+	<parameter name="UseArComponent" type="logical" default="F"	/>
+	<if expr="$UseArComponent">
+		<parameter name="ArHeatFactorCgs" type="real" 
+						default="4.03E-5" />
+		<parameter name="ArHeatB0" type="real" 
+						default="30.0" />
+		<parameter name="DeltaArHeatB0" type="real" 
+						default="5.0" />
+	</if>
+#ACTIVEREGIONHEAT
+T		UseArComponent (rest of parameters read only if set to true)
+4.03E-05	ArHeatFactorCgs	[ergs/cm^3/s]
+30.0		ArHeatB0	[Gauss]
+5.0		DeltaArHeatB0	[Gauss]
+
+If UseArComponent is false, no ActiveRegion heating component is used.
+If UseArComponent is true, one supplies parameters for a linear B weighted 
+heating model used to supply strong heating to regions of high magnetic field
+strength. This model multiplies ArHeatFactorCgs by the cell magnetic field 
+strength in gauss to determine a heating rate. ArHeatB0 is the central field
+strength for the tanh transition function that selects between the exponential 
+heating model supplied by the CORONALHEATING command and the ArHeating term.
+DeltaArHeatB0 is the width of this transition function. 
+This transition function has values: approx 0.1 at b0-deltab0, 0.5 at b0,
+and approx 0.9 at b0+deltab0.
+
+This heating is ONLY applied when CORONALHEATING is set to the exponential
+heating model at the moment.
+
+The default is UseArComponent=.false.
+</command>
 </commandgroup>
 
 <commandgroup name="HELIOSPHERE SPECIFIC COMMANDS">
