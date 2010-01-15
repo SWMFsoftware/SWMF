@@ -131,8 +131,11 @@ module ModUser
   real    :: xEndWave   = +100.0
   real    :: DpWave     =  100.0
 
-  ! electron temperature used for calculating heat flux
+  ! electron and ion temperatures read from Hyades input
   real :: Te_G(-1:nI+2,-1:nJ+2,-1:nK+2), Ti_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+
+  ! Temperature limit for cold plastic (30,000K is a good limit)
+  real:: TeMaxColdPlSi = -1.0
 
   ! AMR parameters
   real:: RhoMinAmrDim = 20.0   ! kg/m3
@@ -256,6 +259,8 @@ contains
           call read_var('RhoMinAmr',   RhoMinAmrDim)
           call read_var('xMaxAmr',     xMaxAmr)
           call read_var('BetaProlong', BetaProlong)
+       case("#PLASTIC")
+          call read_var('TeMaxColdPlSi',  TeMaxColdPlSi)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -535,9 +540,17 @@ contains
                i, j, k, iBlock, TeIn=TeSi, &
                PressureOut=PeSi, NatomicOut=NatomicSi)
 
-          Natomic = NatomicSi*Si2No_V(UnitN_)
-          State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti_G(i,j,k)
           State_VGB(Pe_,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
+
+          if(State_VGB(LevelPl_,i,j,k,iBlock) > 0.0 &
+               .and. TeSi < TeMaxColdPlSi)then
+             ! Subtract electron pressure from the total pressure
+             State_VGB(p_,i,j,k,iBlock)  = max(PeMin, &
+                  State_VGB(p_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
+          else
+             Natomic = NatomicSi*Si2No_V(UnitN_)
+             State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti_G(i,j,k)
+          end if
        end if
 
        ! Calculate internal energy
@@ -956,11 +969,11 @@ contains
                   +          Weight2*DataHyades_VC(iTeHyades, iCell) )
              Ti_G(i,j,k) = ( Weight1*DataHyades_VC(iTiHyades, iCell-1) &
                   +          Weight2*DataHyades_VC(iTiHyades, iCell) )
-          else
-             State_VGB(p_,i,j,k,iBlock) = &
-                  ( Weight1*DataHyades_VC(iPHyades, iCell-1) &
-                  + Weight2*DataHyades_VC(iPHyades, iCell) )
           end if
+
+          State_VGB(p_,i,j,k,iBlock) = &
+               ( Weight1*DataHyades_VC(iPHyades, iCell-1) &
+               + Weight2*DataHyades_VC(iPHyades, iCell) )
 
           ! Set transverse momentum to zero
           State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = 0.0
@@ -1151,9 +1164,8 @@ contains
        if(UseElectronPressure)then
           Te_G(i,j,k) = DataHyades_V(iTeHyades)
           Ti_G(i,j,k) = DataHyades_V(iTiHyades)
-       else
-          State_VGB(p_,i,j,k,iBlock)  = DataHyades_V(iPHyades)
        end if
+       State_VGB(p_,i,j,k,iBlock)  = DataHyades_V(iPHyades)
 
        if(UseRadDiffusion)then
           if(UseHyadesGroupFile)then
