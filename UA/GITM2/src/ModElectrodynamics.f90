@@ -57,7 +57,7 @@ module ModElectrodynamics
    real, dimension(:), allocatable :: & 
         x,y,rhs,b,d_I,e_I,e1_I,f_I,f1_I
 
-  integer :: nMagLats = 90  ! 2 degrees
+  integer :: nMagLats = 180  ! 1 degrees
   integer :: nMagLons = 90  ! 4 degrees
 
   !----------------------------------------------------------------------
