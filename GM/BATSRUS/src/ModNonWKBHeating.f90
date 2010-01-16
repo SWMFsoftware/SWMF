@@ -213,7 +213,9 @@ contains
     !-------------------------------
 
     !Inputs conversion:
-    RCGS      = RSI    * 1.0e+2
+    RCGS      = max(RSI    * 1.0e+2, 1.001 * rSunCGS) 
+    !(max is to limit the denominator in the expression for rCrit)
+
     UMagCGS   = UMagSI * 1.0e+2
     RhoCGS    = RhoSI  * 1.0e-3
     BMagCGS   = BMagSI * 1.0e+4
