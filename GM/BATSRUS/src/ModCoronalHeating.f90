@@ -112,7 +112,7 @@ contains
     use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitEnergyDens_, UnitT_, &
          No2Io_V, UnitB_,UnitRho_,UnitX_,UnitU_
     use ModExpansionFactors, ONLY: UMin
-    use ModMain,       ONLY: x_, y_, z_
+    use ModMain,       ONLY: x_, y_, z_, UseB0
     use ModVarIndexes, ONLY: Bx_, By_, Bz_,Rho_,RhoUx_,RhoUz_
     use ModAdvance,    ONLY: State_VGB, B0_DGB
 
@@ -131,6 +131,7 @@ contains
     real :: UminIfOpen = 290.0
     real :: UmaxIfOpen = 300.0
     real :: Weight
+    real :: B_D(3)
     
     ! local variables for ArHeating (Active Region Heating)
     real :: FractionB, Bcell
@@ -138,6 +139,12 @@ contains
     real :: RhoSI, RSI, UMagSI, BMagSI, QHeatSI
     !--------------------------------------------------------------------------
     
+    if(UseB0)then
+       B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(x_:z_,i,j,k,iBlock)
+    else
+       B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    end if
+
     if(UseUnsignedFluxModel)then
        
        call get_coronal_heating(i, j, k, iBlock, CoronalHeating)
@@ -154,8 +161,7 @@ contains
        RhoSI = State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitRho_)
        UMagSI= sqrt( sum( State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2 ) )/&
                           State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitU_)
-       BmagSI= sqrt( sum( State_VGB(Bx_   :   Bz_,i,j,k,iBlock)**2 ) ) &
-                                                       * No2Si_V(UnitB_)
+       BmagSI= sqrt( sum( B_D**2 ) ) * No2Si_V(UnitB_)
        call Cranmer_heating_function(&
             RSI=RSI,      &
             RhoSI = RhoSI,&
@@ -195,10 +201,7 @@ contains
 
     if(UseExponentialHeating.and.UseArComponent) then
 
-       Bcell = No2Io_V(UnitB_) * sqrt(&
-            ( B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock))**2 &
-            +(B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock))**2 &
-            +(B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))**2)
+       Bcell = No2Io_V(UnitB_) * sqrt( sum( B_D**2 ) )
           
        FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
        CoronalHeating = max(CoronalHeating, & 
