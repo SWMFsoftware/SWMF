@@ -601,6 +601,8 @@ subroutine write_plot_los(iFile)
 
   end if  ! iProc==0
 
+  call barrier_mpi
+
   deallocate(ImagePe_VII, Image_VII)
 
   if(oktest_me)write(*,*) NameSub,' finished'
