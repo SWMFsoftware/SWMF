@@ -151,6 +151,7 @@ contains
   subroutine init_ioniz_potential
     integer :: nZ									  
     !============!
+    if(.not.DoInit)return
     cPotential_II = 0.0
 
     do nZ=1,10
@@ -162,10 +163,6 @@ contains
     do nZ=21,30
        cPotential_II(1:nZ,nZ) = cPotential30_II( 1:nZ, nZ)
     end do
-    !!do nZ=1,30
-    !!   write(*,*)nZ
-    !!   write(*,*)cPotential_II(1:nZ,nZ)
-    !!end do
     cPotential_II(1:54,54) = cPotentialXe_I
      
     cPotential_II(1:79,79) = cPotentialAu_I
