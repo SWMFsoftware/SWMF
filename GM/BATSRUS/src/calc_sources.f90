@@ -209,30 +209,6 @@ subroutine calc_sources
 
   end if                                       !^CFG END DISSFLUX
 
-
-  if(UseAnisoPressure .and. TauWaveParticle > -1.0)then
-     ! "artificial" pressure relaxation for anisotropic pressure 
-     ! due to wave-particle interaction 
-     ! only done in unstable regions
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        if(.not.true_cell(i,j,k,iBlock)) CYCLE
-        B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-        if(UseB0) B_D = B_D + B0_DGB(:,i,j,k,iBlock)         
-        IsFirehose = (State_VGB(Ppar_,i,j,k,iBlock) &
-             - State_VGB(Pperp_,i,j,k,iBlock)) > sum(B_D**2)
-        IsMirror = State_VGB(Pperp_,i,j,k,iBlock)/State_VGB(Ppar_,i,j,k,iBlock) &
-             > 1 + sum(B_D**2)/2./State_VGB(Pperp_,i,j,k,iBlock)
-        if(IsFirehose .or. IsMirror)then           
-           ! Point-implicit for stability
-           AnisoRelaxation = 1./(TauWaveParticle + Cfl*time_BLK(i,j,k,iBlock)) &
-                *(State_VGB(Ppar_,i,j,k,iBlock) - State_VGB(Pperp_,i,j,k,iBlock))
-           Source_VC(Pperp_,i,j,k) = Source_VC(Pperp_,i,j,k) + AnisoRelaxation/3.
-           Source_VC(Ppar_,i,j,k)  = Source_VC(Ppar_,i,j,k) - 2./3*AnisoRelaxation
-        end if
-     end do; end do; end do  
-  end if
-
-
   if(UseWavePressure)then
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE

@@ -335,8 +335,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModMain
   use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
   use ModAmr, ONLY: dn_refine
-  use ModPhysics, ONLY : No2Si_V, UnitT_
-  use ModAdvance, ONLY: UseNonConservative, nConservCrit
+  use ModPhysics, ONLY : No2Si_V, UnitT_, TauWaveParticle, TauInstability
+  use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
   use ModImplicit, ONLY: UseImplicit, UseFullImplicit, &   !^CFG IF IMPLICIT
@@ -403,6 +403,9 @@ subroutine BATS_advance(TimeSimulationLimit)
   endif                                   !^CFG IF IMPLICIT  
 
   if(UseIM)call apply_im_pressure         !^CFG IF RCM
+
+  if(UseAnisoPressure .and. (TauWaveParticle > -1.0 &
+       .or. TauInstability > -1.0)) call fix_anisotropy
 
   if(UseIE)call apply_iono_velocity
 

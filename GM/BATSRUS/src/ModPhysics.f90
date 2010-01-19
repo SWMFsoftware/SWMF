@@ -115,6 +115,10 @@ module ModPhysics
 
   ! Relaxation time for anisotropic pressure
   real :: TauWaveParticleSi = -1.0, TauWaveParticle
+  real :: TauInstabilitySi = -1.0, TauInstability
+
+  ! Isotropic region near body
+  real :: rIsotropy = 0.0
 
   !\
   ! General variables for the second body

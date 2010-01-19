@@ -80,7 +80,7 @@ subroutine advance_impl
   use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI, &
        time_BlK, &
        tmp1_BLK, UseUpdateCheck, iTypeAdvance_B, iTypeAdvance_BP, &
-       SkippedBlock_, ExplBlock_, ImplBlock_
+       SkippedBlock_, ExplBlock_, ImplBlock_, UseAnisoPressure
   use ModPhysics, ONLY : No2Si_V, UnitT_
   use ModImplicit
   use ModPointImplicit, ONLY: UsePointImplicit
@@ -540,13 +540,23 @@ subroutine advance_impl
      ! Calculate the largest relative drop in density or pressure
      do iBLK=1,nBlock
         if(UnusedBlk(iBLK)) CYCLE
-        tmp1_BLK(1:nI,1:nJ,1:nK,iBLK)=&
-             min( &
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) / &
-             StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBLK), &
-             State_VGB(Rho_,1:nI,1:nJ,1:nK,iBLK) / &
-             StateOld_VCB(Rho_,1:nI,1:nJ,1:nK,iBLK) &
-             )
+        if(UseAnisoPressure) then
+           ! Check isotropic p = (2*pPerp + pPar)/3 and rho
+           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
+                min((State_VGB(Ppar_,1:nI,1:nJ,1:nK,iBLK) &
+                + 2*State_VGB(Pperp_,1:nI,1:nJ,1:nK,iBLK)) / &
+                (StateOld_VCB(Ppar_,1:nI,1:nJ,1:nK,iBLK) &
+                + 2*StateOld_VCB(Pperp_,1:nI,1:nJ,1:nK,iBLK)), &
+                State_VGB(Rho_,1:nI,1:nJ,1:nK,iBLK) / &
+                StateOld_VCB(Rho_,1:nI,1:nJ,1:nK,iBLK) ) 
+        else
+           ! Check p and rho
+           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK)=&
+                min(State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) / &
+                StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBLK), &
+                State_VGB(Rho_,1:nI,1:nJ,1:nK,iBLK) / &
+                StateOld_VCB(Rho_,1:nI,1:nJ,1:nK,iBLK) )
+        end if
      end do
      pRhoRelativeMin = minval_BLK(nProc,tmp1_BLK)
 
