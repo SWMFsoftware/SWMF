@@ -34,6 +34,7 @@ subroutine write_plot_common(ifile)
   real :: PlotVar_inBody(nplotvarmax)
   logical :: PlotVar_useBody(nplotvarmax)
   real, allocatable :: PlotVarNodes_NBI(:,:,:,:,:)
+  real, allocatable :: PlotXYZNodes_NBI(:,:,:,:,:)
 
   character (len=10) :: plotvarnames(nplotvarmax)=''
   integer :: nplotvar
@@ -253,13 +254,27 @@ subroutine write_plot_common(ifile)
 
   ! Write files for new tecplot format
   if(plot_form(ifile)=='tec' .and. .NOT.(index(plot_type1,'sph')>0) )then
+     ! Fix of XYZ to be sure that "hanging" nodes are precicely on plane with "non-hanging" nodes.
+     ! Specifically, this fixes many grid problems for spherical plots, but doesn't hurt cartesian.
+     allocate(PlotXYZNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,3))
+     NodeValue_NB=NodeX_NB(:,:,:,:)                   ! X
+     call pass_and_average_nodes(.true.,NodeValue_NB)
+     PlotXYZNodes_NBI(:,:,:,:,1)=NodeValue_NB
+     NodeValue_NB=NodeY_NB(:,:,:,:)                   ! Y
+     call pass_and_average_nodes(.true.,NodeValue_NB)
+     PlotXYZNodes_NBI(:,:,:,:,2)=NodeValue_NB
+     NodeValue_NB=NodeZ_NB(:,:,:,:)                   ! Z
+     call pass_and_average_nodes(.true.,NodeValue_NB)
+     PlotXYZNodes_NBI(:,:,:,:,3)=NodeValue_NB
+     ! Now pass and average the rest of the values
      do i=1,nplotvar
         NodeValue_NB=PlotVarNodes_NBI(:,:,:,:,i)
         call pass_and_average_nodes(.true.,NodeValue_NB)
         PlotVarNodes_NBI(:,:,:,:,i)=NodeValue_NB
      end do
-     call write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI, &
+     call write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNodes_NBI, &
           unitstr_TEC, xmin,xmax,ymin,ymax,zmin,zmax)
+     deallocate(PlotXYZNodes_NBI)
      deallocate(PlotVarNodes_NBI)
   end if
 
