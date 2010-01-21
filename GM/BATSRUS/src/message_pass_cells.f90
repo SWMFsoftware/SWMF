@@ -683,8 +683,8 @@ subroutine mp_cells_set_indices(DoOneLayer,DoFacesOnly)
 
   DoOneLayer_D = DoOneLayer 
   
-  !If corners are to be send and DoOneLayerCorner is set to .true.,
-  !then only one layer of ghostcells is send to fill in corners,
+  !If corners are to be sent and DoOneLayerCorner is set to .true.,
+  !then only one layer of ghostcells is sent to fill in corners,
  
   DoOneLayer_D(7:26) = DoOneLayer_D(7:26).or.DoOneLayerCorner
 
