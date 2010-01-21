@@ -676,7 +676,7 @@ contains
              nCuts=nCuts+1
              if (iopt>0) then
                 ! Write point values
-                factor2=(Yp-PlotXYZNodes_NBI(ic,jc1,kc,iBL,2K))/ &
+                factor2=(Yp-PlotXYZNodes_NBI(ic,jc1,kc,iBLK,2))/ &
                      (PlotXYZNodes_NBI(ic,jc2,kc,iBLK,2)-PlotXYZNodes_NBI(ic,jc1,kc,iBLK,2))
                 factor1=1.-factor2
                 write(unit_tmp,fmt="(30(E14.6))") &
