@@ -3261,6 +3261,22 @@ for refinement.  Again, the rotation and centering cannot be applied to the
 'user' area.
 </command>
 
+<command name="MESSAGEPASSACROSSPOLE">
+#MESSAGEPASSACROSSPOLE
+
+This command enables message passing across the poles, which not only affects
+running the code, but also enables accurate tecplot plots as well.
+
+This option is equivalent to setting
+     #AMRLEVELS
+     0
+     999
+     T
+
+Note: if #AMRLEVELS or #AMRRESOLUTION are used after this command, be sure to
+set DoFixBodyLevel to T or it will override this option.
+</command>
+
 <command name="AMRLEVELS">
 	<parameter name="MinBlockLevel" type="integer" min="-1" default="0" />
 	<parameter name="MaxBlockLevel" type="integer" min="-1" default="99" />

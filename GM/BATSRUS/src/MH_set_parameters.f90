@@ -1023,6 +1023,18 @@ subroutine MH_set_parameters(TypeAction)
 
         end if
 
+     case("#MESSAGEPASSACROSSPOLE")
+        ! NOTE: setting DoFixBodyLevel to false in either #AMRLEVELS or #AMRRESOLUTION
+        !       after #MESSAGEPASSACROSSPOLE in PARAM.in will undo this.
+        min_block_level = 0
+        max_block_level = 999
+        fix_body_level = .true.
+        if(iSession==1)then
+           DoSetLevels=.true.
+        else
+           call set_levels
+        end if
+
      case("#AMRLEVELS")
         call read_var('MinBlockLevel',min_block_level)
         call read_var('MaxBlockLevel',max_block_level)
