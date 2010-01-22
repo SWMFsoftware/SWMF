@@ -137,6 +137,7 @@ contains
     real :: FractionB, Bcell
 
     real :: RhoSI, RSI, UMagSI, BMagSI, QHeatSI
+    
     !--------------------------------------------------------------------------
     
     if(UseB0)then
@@ -162,18 +163,34 @@ contains
        UMagSI= sqrt( sum( State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2 ) )/&
                           State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitU_)
        BmagSI= sqrt( sum( B_D**2 ) ) * No2Si_V(UnitB_)
-       call Cranmer_heating_function(&
-            RSI=RSI,      &
-            RhoSI = RhoSI,&
-            UMagSI=UMagSI,&
-            BMagSI=BMagSI,&
-            QHeatSI=QHeatSI)
+       if(.not.DoOpenClosedHeat)then
+          call Cranmer_heating_function(&
+               RSI=RSI,      &
+               RhoSI = RhoSI,&
+               UMagSI=UMagSI,&
+               BMagSI=BMagSI,&
+               QHeatSI=QHeatSI)
+       else
+          UminIfOpen = UMin*1.05
+          call get_bernoulli_integral(x_BLK( i, j, k, iBlock)/&
+               R_BLK( i, j, k, iBlock),&
+               y_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock),&
+               z_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock), UFinal)
+          call Cranmer_heating_function(&
+               RSI=RSI,      &
+               RhoSI  = RhoSI,&
+               UMagSI =UMagSI,&
+               BMagSI =BMagSI,&
+               QHeatSI=QHeatSI,&
+               IsFullReflection = UFinal< UMinIfOpen)
+       end if
+          
        CoronalHeating = QHeatSI *  Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
     else
        CoronalHeating = 0.0
     end if
   
-    if(DoOpenClosedHeat)then
+    if(DoOpenClosedHeat.and.(.not.UseCranmerHeating))then
        ! If field is less than 1.05 times the minimum speed, mark as closed
        ! Interpolate between 1.05 and 1.10 for smoothness
        UminIfOpen = UMin*1.05
