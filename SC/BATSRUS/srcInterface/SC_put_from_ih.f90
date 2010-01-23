@@ -1,6 +1,6 @@
 !==============================================================================
 !BOP
-!ROUTINE: SC_put_from_ih - tranfrom and put the data got from IH_
+!ROUTINE: SC_put_from_ih - transform and put the data got from IH_
 !INTERFACE:
 subroutine SC_put_from_ih(nPartial,&
      iPutStart,&
