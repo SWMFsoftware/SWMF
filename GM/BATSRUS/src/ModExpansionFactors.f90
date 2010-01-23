@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM 
+!^CFG COPYRIGHT UM
 module ModExpansionFactors
   use ModMpi
   use ModIoUnit,   ONLY: io_unit_new
@@ -13,12 +13,17 @@ module ModExpansionFactors
 
   !Gravity potential, m^2/s^2
   real,parameter :: cSunGravitySI=cGravitation*mSun/Rsun
-  real :: T0=3.5E+6 !in K
+ 
+  !The distribution of the temperature ober the
+  !coronal base is assumed to depend on the expansion
+  !factor: TBase = CoromalT0Dim/min(uFunal/uMin,2) is assumed
+  !
+  real :: CoronalT0Dim=3.5E+6 !in K
 
   !Gravity potential of a proton, in K
   real,parameter :: cSunGravityK =cSunGravitySI*cProtonMass/cBoltzmann
 
-  character(len=20) :: TypeModel='WSA' ! Type of SW model
+  character(len=20) :: TypeModel='none' ! Type of SW model
   !Distribution of the solar wind model parameters: 
 
   real,allocatable,dimension(:,:,:) :: FiskFactor_N
@@ -393,8 +398,8 @@ contains
     end select
 
     ! Finding the maximum surface value of gamma (related to the minimum speed)
-    gammaSS=( (cHalf*UMin**2+cSunGravitySI)/(T0*cBoltzmann/cProtonMass) ) &
-         /( (cHalf*UMin**2+cSunGravitySI)/(T0*cBoltzmann/cProtonMass)-cOne )
+    gammaSS=( (cHalf*UMin**2+cSunGravitySI)/(CoronalT0Dim*cBoltzmann/cProtonMass) ) &
+         /( (cHalf*UMin**2+cSunGravitySI)/(CoronalT0Dim*cBoltzmann/cProtonMass)-cOne )
   contains
     !----------------------------------------------------------------
     !----------
@@ -541,7 +546,7 @@ subroutine set_empirical_model(TypeRead,BodyT0)
   real, intent(in) :: BodyT0
   !------------------------------------------------------------------
   TypeModel=trim(TypeRead)
-  T0 = BodyT0
+  CoronalT0Dim = BodyT0
   call set_expansion_factors
   if(iProc==0)call write_expansion_tec
 
@@ -595,7 +600,7 @@ subroutine get_gamma_emp(xx,yy,zz,gammaOut)
   else
      call get_bernoulli_integral(xx,yy,zz,Uf)
      BernoulliFactor=(cHalf*Uf**2+cSunGravitySI)/&
-          (T0*cBoltzmann/cProtonMass/min(Uf/UMin, 2.0))&
+          (CoronalT0Dim*cBoltzmann/cProtonMass/min(Uf/UMin, 2.0))&
           *(R1-RR)*&
           & (Ro_PFSSM/RR)**nPowerIndex/ (R1-Ro_PFSSM)+ GammaSS&
           &/(GammaSS-cOne)*(cOne- (R1-RR)*(Ro_PFSSM/RR)&
@@ -646,7 +651,7 @@ subroutine get_total_wave_energy_dens(X,Y,Z,&
 
   WaveEnergyDensSi = (cHalf * Uf**2 + cSunGravitySI - g/(g - 1.0)*&
           cBoltzmann/cProtonMass*&
-          T0/min(Uf/UMin, 2.0) )& !This is a modulated Tc
+          CoronalT0Dim/min(Uf/UMin, 2.0) )& !This is a modulated Tc
           * RhoV/&
           max(abs(VAlfvenSI) * ExpansionFactorInv, VAlfvenMin)
 

@@ -181,7 +181,7 @@ contains
     ! This subroutine computes the base values for mass density and temperature
 
     use ModPhysics,          ONLY: BodyRho_I, Si2No_V, UnitTemperature_
-    use ModExpansionFactors, ONLY: Umin, T0
+    use ModExpansionFactors, ONLY: Umin, CoronalT0Dim
 
     real, intent(in) :: x_D(3)
     real, intent(out):: RhoBase, Tbase
@@ -198,8 +198,8 @@ contains
     call get_bernoulli_integral(Runit_D(1), Runit_D(2), Runit_D(3), Ufinal)
     Uratio = Ufinal/Umin
 
-    ! This is the temperature variation
-    Tbase = T0/min(Uratio, 1.5)*Si2No_V(UnitTemperature_)
+    !This is the temperature variation. In coronal holes the temperature is reduced 
+    Tbase = CoronalT0Dim*Si2No_V(UnitTemperature_) / min(Uratio, 1.5)
 
     ! This is the density variation
     RhoBase = BodyRho_I(1)/URatio
@@ -252,7 +252,7 @@ contains
 
     WaveEnergyDensSi = (RhoV*(0.5*Uf**2 + cSunGravitySi - g*inv_gm1*&
          cBoltzmann/(cProtonMass*MassIon_I(1))*(1.0+AverageIonCharge) &
-         *T0/min(Uf/UMin, 1.5) ) & !This is a modulated Tc
+         *CoronalT0Dim/min(Uf/UMin, 1.5) ) & !This is a modulated Tc
          - ExpansionFactorInv*HeatFluxSi) &
          /max(abs(VAlfvenSi)*ExpansionFactorInv, VAlfvenMin)
 

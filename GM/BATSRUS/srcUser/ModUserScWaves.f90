@@ -324,7 +324,7 @@ contains
     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModNumConst
     use ModPhysics,    ONLY: GBody,BodyRho_I,Si2No_V,UnitTemperature_
-    use ModExpansionFactors,  ONLY: UMin,T0
+    use ModExpansionFactors,  ONLY: UMin,CoronalT0Dim
     implicit none
 
     integer, intent(in)  :: iCell,jCell,kCell,iBlock
@@ -347,7 +347,7 @@ contains
     URatio=UFinal/UMin
 
     !This is the temperature variation
-    Temperature = T0/(min(URatio,2.0))*Si2No_V(UnitTemperature_)
+    Temperature = CoronalT0Dim*Si2No_V(UnitTemperature_)/(min(URatio,2.0))
 
     DensCell  = ((1.0/URatio)**2) &          !This is the density variation
          *BodyRho_I(1)*exp(-GBody/Temperature &
