@@ -474,13 +474,11 @@ OH/BATSRUS/src/Makefile:
 	echo '*' > OH/BATSRUS/src/.cvsignore
 	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
 		OH/BATSRUS/srcInterface/OH_wrapper.f90
-	cp -f IH/BATSRUS_share/src/IH_set_buffer_grid.f90 \
-		OH/BATSRUS/srcInterface/OH_set_buffer_grid.f90
 	cp -f IH/BATSRUS_share/src/IH_get_for_mh_with_xyz.f90 \
 		OH/BATSRUS/srcInterface/OH_get_for_mh_with_xyz.f90
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
 	's/IH/OH/g;s/_sc/_ih/;s/BATSRUS/OH_BATSRUS/;s/Inner/Outer/;'\
-		OH_wrapper.f90 OH_set_buffer_grid.f90 OH_get_for_ih_with_xyz.f90
+		OH_wrapper.f90 OH_get_for_ih_with_xyz.f90
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
 	's/IH/OH/g;s/Ih/Oh/g;s/SC/IH/g;s/Sc/Ih/g' ModBuffer.f90
 	cd OH/BATSRUS/src; rm -f main.f90
@@ -510,7 +508,7 @@ SC/BATSRUS/src/Makefile:
 	cd SC/BATSRUS; \
 		rm -rf src srcBATL srcUser srcEquation \
 		  srcInterface/SC_wrapper.f90 srcInterface/SC_get_for_sp.f90 \
-		  srcInterface/SC_set_buffer_grid.f90 srcInterface/SC_get_for_mh.f90 \
+		  srcInterface/SC_get_for_mh.f90 \
 		  srcInterface/SC_get_for_mh_with_xyz.f90 srcInterface/SC_put_from_mh.f90
 	cd GM/BATSRUS; \
 		cp -f Makefile.conf ../../SC/BATSRUS; \
@@ -522,7 +520,6 @@ SC/BATSRUS/src/Makefile:
 	rm -rf GM/BATSRUS/TMP
 	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
 		SC/BATSRUS/srcInterface/SC_wrapper.f90
-	cp -f IH/BATSRUS_share/src/IH_set_buffer_grid.f90 SC/BATSRUS/srcInterface/SC_set_buffer_grid.f90
 	cp -f IH/BATSRUS_share/src/IH_get_for_sp.f90 \
 		SC/BATSRUS/srcInterface/SC_get_for_sp.f90
 	cp -f IH/BATSRUS_share/src/IH_get_for_mh.f90 \
@@ -533,7 +530,7 @@ SC/BATSRUS/src/Makefile:
 		SC/BATSRUS/srcInterface/SC_put_from_mh.f90
 	cd SC/BATSRUS/srcInterface/; perl -i -pe \
 	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
-		SC_wrapper.f90 SC_get_for_sp.f90 SC_set_buffer_grid.f90 \
+		SC_wrapper.f90 SC_get_for_sp.f90 \
 		SC_get_for_mh.f90 SC_get_for_mh_with_xyz.f90 SC_put_from_mh,f90
 	cd SC/BATSRUS/src; rm -f main.f90
 	cd SC/BATSRUS/srcBATL; rm -f *main.f90
@@ -561,7 +558,7 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 LC/BATSRUS/src/Makefile:
 	cd LC/BATSRUS; \
 		rm -rf src srcBATL srcUser srcEquation \
-		srcInterface/LC_set_buffer_grid.f90 srcInterface/LC_get_for_mh.f90 \
+		srcInterface/LC_get_for_mh.f90 \
 		srcInterface/LC_put_from_mh.f90 \
 		srcInterface/LC_wrapper.f90 srcInterface/LC_get_for_sp.f90; \
 		mkdir src srcBATL srcUser srcEquation
