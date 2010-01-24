@@ -32,9 +32,9 @@ MOD14 = CON_couple_ih_oh.o       #^CMP IF OH
 #^CMP END IH
 
 MOD08 = CON_couple_mh_sp.o       #^CMP IF SP
+MOD15 = CON_couple_sc_lc.o       #^CMP IF LC 
 
-
-MODULES = ${MOD01} ${MOD03} ${MOD04} ${MOD05} ${MOD06} ${MOD14} \
+MODULES = ${MOD01} ${MOD03} ${MOD04} ${MOD05} ${MOD06} ${MOD14} ${MOD15}\
 	${MOD07} ${MOD08} ${MOD09} ${MOD10} ${MOD11} ${MOD12} ${MOD13}\
 	CON_wrapper.o \
 	CON_couple_all.o
