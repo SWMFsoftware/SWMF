@@ -1,0 +1,2 @@
+*.o *~
+SC_wrapper.f90
