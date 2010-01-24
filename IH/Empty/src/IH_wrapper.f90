@@ -114,21 +114,21 @@ subroutine IH_get_for_gm(&
 
 end subroutine IH_get_for_gm
 !===================================================================!
-subroutine IH_get_for_sc(&
+subroutine IH_get_for_mh(&
      nPartial,iGetStart,Get,W,State_V,nVar)
 ! derived type parameters, it is easier not to declare them
-  character(len=*), parameter :: NameSub='IH_get_for_sc'
+  character(len=*), parameter :: NameSub='IH_get_for_mh'
 
   call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
-end subroutine IH_get_for_sc
+end subroutine IH_get_for_mh
 !===================================================================!
-subroutine IH_get_for_oh(&
+subroutine IH_get_for_mh_with_xyz(&
      nPartial,iGetStart,Get,W,State_V,nVar)
 ! derived type parameters, it is easier not to declare them
-  character(len=*), parameter :: NameSub='IH_get_for_OH'
+  character(len=*), parameter :: NameSub='IH_get_for_mh_with_xyz'
 
   call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
-end subroutine IH_get_for_oh
+end subroutine IH_get_for_mh_with_xyz
 !===================================================================!
 subroutine IH_set_buffer_grid(DD,CompID_)
   character(len=*), parameter :: NameSub='IH_set_buffer_grid'
@@ -168,7 +168,7 @@ subroutine IH_get_a_line_point(&
   call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 end subroutine IH_get_a_line_point
 !===================================================================!
-subroutine IH_put_from_oh(nPartial,&
+subroutine IH_put_from_mh(nPartial,&
      iPutStart,&
      Put,& 
      Weight,&
@@ -180,10 +180,10 @@ subroutine IH_put_from_oh(nPartial,&
   logical,intent(in)::DoAdd
   real,dimension(nVar),intent(in)::StateSI_V
 
-  character (len=*), parameter :: NameSub='IH_put_from_oh.f90'
+  character (len=*), parameter :: NameSub='IH_put_from_mh.f90'
 
   call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
-end subroutine IH_put_from_oh
+end subroutine IH_put_from_mh
 !===================================================================!
 subroutine IH_match_ibc
   implicit none
