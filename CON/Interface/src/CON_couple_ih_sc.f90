@@ -58,7 +58,10 @@ module CON_couple_ih_sc
   character(len=*), parameter :: NameMod='couple_ih_sc'
   logical::IsSphericalSc=.false. , UseGenRSc = .false., UseLogRSc = .false.
   integer::iError
-
+  
+  !Parameters of the stretched grid, if needed
+  integer :: nGenRGridSc
+  real    :: DeltaGen
    
 contains
   !===============================================================!
@@ -80,6 +83,12 @@ contains
     IsSphericalSc = index(Grid_C(SC_) % TypeGeometry,'spherical') > 0 
     UseLogRSc     = index(Grid_C(SC_) % TypeGeometry,'lnr'      ) > 0
     UseGenRSc     = index(Grid_C(SC_) % TypeGeometry,'genr'     ) > 0
+    if(UseGenRSc) then
+       nGenRGridSc = size(Grid_C(SC_) % Coord1_I,1)
+       if(nGenRGridSc==1) &
+            call CON_stop('Stretched grid in SC is not properly initialized')
+       DeltaGen = 1.0/(nGenRGridSC - 1)
+    end if
 
     call init_coupler(              &    
        iCompSource=IH_,             & ! component index for source
@@ -116,7 +125,7 @@ contains
   subroutine couple_ih_sc(TimeCoupling)
     !INPUT ARGUMENTS:
     interface
-       subroutine SC_put_from_ih(nPartial,&
+       subroutine SC_put_from_mh(nPartial,&
             iPutStart,&
             Put,& 
             Weight,&
@@ -130,7 +139,7 @@ contains
          type(WeightPtrType),intent(in)::Weight
          logical,intent(in)::DoAdd
          real,dimension(nVar),intent(in)::StateSI_V
-       end subroutine SC_put_from_ih
+       end subroutine SC_put_from_mh
     end interface
 
     real,intent(in)::TimeCoupling
@@ -184,7 +193,7 @@ contains
          RouterIhSc,&
          nVar=8,&
          fill_buffer=IH_get_for_sc_and_transform,&
-         apply_buffer=SC_put_from_ih)
+         apply_buffer=SC_put_from_mh)
 
   end subroutine couple_ih_sc
   !======================================================!
@@ -273,7 +282,10 @@ contains
     else
        !transform to dimensionless cartesian Xyz
        R = SC_Xyz_D(R_)
-       if(UseLogRSc)R = exp(R)
+       if(UseLogRSc)then
+          R = exp(R)
+       elseif(UseGenRSc)then
+       end if
       
        Phi = SC_Xyz_D(Phi_) 
        Theta = SC_Xyz_D(Theta_)
@@ -303,7 +315,7 @@ contains
     integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7,&
          BuffX_=9,BuffZ_=11
     !------------------------------------------------------------
-    call IH_get_for_sc(&
+    call IH_get_for_mh_with_xyz(&
        nPartial,iGetStart,Get,w,State3_V,nVar+3)
     State_V=State3_V(1:nVar)
 
@@ -329,7 +341,7 @@ contains
     use ModIoUnit
     !INPUT ARGUMENTS:
     interface
-       subroutine SC_get_for_ih(&
+       subroutine SC_get_for_mh(&
             nPartial,iGetStart,Get,w,State_V,nVar)
          use CON_router
          implicit none
@@ -337,7 +349,7 @@ contains
          type(IndexPtrType),intent(in)::Get
          type(WeightPtrType),intent(in)::w
          real,dimension(nVar),intent(out)::State_V
-       end subroutine SC_get_for_ih
+       end subroutine SC_get_for_mh
     end interface
     integer::iPoint,nU_I(2)
     real,intent(in)::TimeCoupling
@@ -366,7 +378,7 @@ contains
     call couple_buffer_grid(&
          RouterScBuff,&
          nVar=8,&
-         fill_buffer=SC_get_for_ih,&
+         fill_buffer=SC_get_for_mh,&
          NameBuffer='IH_from_sc',&
          TargetID_=IH_)
     if(.not.DoneMatchIBC)then

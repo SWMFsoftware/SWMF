@@ -112,7 +112,7 @@ contains
   subroutine couple_oh_ih(TimeCoupling)
     !INPUT ARGUMENTS:
     interface
-       subroutine IH_put_from_oh(nPartial,&
+       subroutine IH_put_from_mh(nPartial,&
             iPutStart,&
             Put,& 
             Weight,&
@@ -126,7 +126,7 @@ contains
          type(WeightPtrType),intent(in)::Weight
          logical,intent(in)::DoAdd
          real,dimension(nVar),intent(in)::StateSI_V
-       end subroutine IH_put_from_oh
+       end subroutine IH_put_from_mh
     end interface
 
     real,intent(in)::TimeCoupling
@@ -180,7 +180,7 @@ contains
          RouterOhIh,&
          nVar=8,&
          fill_buffer=OH_get_for_ih_and_transform,&
-         apply_buffer=IH_put_from_oh)
+         apply_buffer=IH_put_from_mh)
 
   end subroutine couple_oh_ih
   !======================================================!
@@ -267,7 +267,7 @@ contains
     integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7,&
          BuffX_=9,BuffZ_=11
     !------------------------------------------------------------
-    call OH_get_for_ih(&
+    call OH_get_for_mh_with_xyz(&
        nPartial,iGetStart,Get,w,State3_V,nVar+3)
     State_V=State3_V(1:nVar)
 
@@ -293,7 +293,7 @@ contains
     use ModIoUnit
     !INPUT ARGUMENTS:
     interface
-       subroutine IH_get_for_oh(&
+       subroutine IH_get_for_mh(&
             nPartial,iGetStart,Get,w,State_V,nVar)
          use CON_router
          implicit none
@@ -301,7 +301,7 @@ contains
          type(IndexPtrType),intent(in)::Get
          type(WeightPtrType),intent(in)::w
          real,dimension(nVar),intent(out)::State_V
-       end subroutine IH_get_for_oh
+       end subroutine IH_get_for_mh
     end interface
     integer::iPoint,nU_I(2)
     real,intent(in)::TimeCoupling
@@ -330,7 +330,7 @@ contains
     call couple_buffer_grid(&
          RouterIhBuff,&
          nVar=8,&
-         fill_buffer=IH_get_for_oh,&
+         fill_buffer=IH_get_for_mh,&
          NameBuffer='OH_from_ih',&
          TargetID_=OH_)
     if(.not.DoneMatchIBC)then
