@@ -47,7 +47,6 @@ distclean: clean
 	ModRadioWaveImage.f90 \
 	ModRadioWaveRaytracing.f90 \
 	ModDensityAndGradient.f90 \
-	OH_set_buffer_grid.f90 \
 	OH_get_for_mh_with_xyz.f90 \
 	OH_wrapper.f90 Makefile.DEPEND  
 

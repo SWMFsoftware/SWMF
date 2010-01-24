@@ -1,6 +1,6 @@
 !^CFG COPYRIGHT UM
 subroutine OH_set_buffer_grid(DD)
-  use ModBuffer,ONLY:&
+  use OH_ModBuffer,ONLY:&
        set_spher_buffer_grid,set_buffer_name,&
        DomainDecompositionType,&
        LocalBufferDD
