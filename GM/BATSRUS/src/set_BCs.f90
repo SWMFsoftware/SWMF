@@ -693,6 +693,7 @@ contains
             FaceCoords_D,nVar,FaceState_V)
 
        VarsGhostFace_V = FaceState_V
+       if(UseB0)VarsGhostFace_V(Bx_:Bz_)=VarsGhostFace_V(Bx_:Bz_) - B0Face_D
 
     !^CFG IF SECONDBODY BEGIN
     case('Body2Orbit')
