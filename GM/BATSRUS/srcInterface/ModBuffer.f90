@@ -3,17 +3,29 @@ module ModBuffer
        nPhiBuff,nThetaBuff,RBuffMin,RBuffMax
   use CON_global_vector
   use CON_grid_descriptor
+  use CON_coupler,   ONLY: SC_
   implicit none
   save
+
+  !This is a name of a global vector, which
+  !is in the global vector storage
   character(LEN=10)::NameBuffer
+
+
   type(DomainDecompositionType),target::&
        LocalBufferDD
   type(GridDescriptorType)::LocalBufferGD
+
+  integer:: TargetID_ = SC_
   logical::DoInit
 contains
-  subroutine set_buffer_name(NameIn)
+  subroutine set_buffer_name(NameIn,IDIn)
     character(LEN=*),intent(in)::NameIn
+    integer,optional,intent(in)::IDIn
+    !-------------
+
     NameBuffer=NameIn
+    if(present(IDIn))TargetID_ = IDIn
   end subroutine set_buffer_name
   !====================================================
   subroutine set_spher_buffer_grid(DD,CompID_,IsLocal)
@@ -21,8 +33,10 @@ contains
          intent(out)::DD
     integer,intent(in)::CompID_
     logical,intent(in)::IsLocal
+    !----------------
     call init_decomposition(&
          DD,CompID_,nDim=3,IsLocal=IsLocal)
+
     if(is_proc0(CompID_).or.IsLocal)call get_root_decomposition(&
          DD,&
          iRootMapDim_D=(/1,1,1/),&
@@ -48,7 +62,7 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   use ModMain,       ONLY: nDim, R_, Phi_, Theta_, x_, y_, z_,&
        TypeCoordSystem, Time_Simulation
   use ModAdvance,    ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, Bx_, Bz_, p_
-  use CON_coupler,   ONLY: SC_, Grid_C
+  use CON_coupler,   ONLY: Grid_C
   use CON_axes,      ONLY: transform_matrix, transform_velocity
   use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
 
@@ -64,10 +78,11 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   real              :: XyzSc_D(nDim)
   !---------------------------------------------------------------------------
 
-  TypeCoordSc = Grid_C(SC_) % TypeCoord
+  TypeCoordSc = Grid_C(TargetID_) % TypeCoord
 
   if(TypeCoordSc /= TypeCoordSystem) then
-     ! Convert IH coordinates to SC coordinates
+     ! Convert target coordinates to the coordiante system of the model
+
      if(Time_Simulation > TimeSimulationLast)then
         ScIh_DD = &
              transform_matrix(Time_Simulation, TypeCoordSystem, TypeCoordSc)
@@ -82,7 +97,7 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   call xyz_to_spherical(XyzSc_D(x_),XyzSc_D(y_),XyzSc_D(z_),&
        Sph_D(R_),Sph_D(Phi_),Sph_D(Theta_))
 
-  ! Get the SC state from the spherical buffer grid
+  ! Get the target state from the spherical buffer grid
   State_V=point_state_v(&
        NameBuffer,&
        nVar,    &
