@@ -8,6 +8,12 @@ SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 
 include ../../../Makefile.conf
 
+SC_wrapper.f90:
+	cp -f ../../../IH/Empty/src/IH_wrapper.f90 SC_wrapper.f90
+	perl -i -pe \
+	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
+		SC_wrapper.f90
+
 # OBJECT FILE FOR THE WRAPPER
 
 OBJ_WRAPPER = \
@@ -36,5 +42,6 @@ SC_wrapper.o: ${LIBRARYDIR}/CON_comp_info.o
 #
 
 distclean: clean
+	   rm -f SC_wrapper.f90
 
 # keep this line
