@@ -143,6 +143,7 @@ contains
     end if
     if(i_line_command("#SPECTRUM") > 0) then
        call init_wave_spectrum
+       write(*,*) 'Finished initializing wave spectrum'
     end if
 
     if(i_line_command("#PFSSM", iSessionIn = 1) < 0)then
@@ -188,28 +189,26 @@ contains
                              DeltaLogFrequency
 
     real, intent(out) :: VarsGhostFace_V(nVar)
-
-    integer           :: iCell,jCell,kCell, iWave
-    real              :: DensCell,PresCell,GammaCell,TBase,B1dotR, FullBr  
+    integer           :: iCell,jCell,kCell, iWave, SpectrumFirst,SpectrumLast
+    real              :: DensCell,PresCell,GammaCell,TBase,FullBr, FullB  
     real, dimension(3):: RFace_D,B1n_D,FullB_D
     real              :: vAlfvenSi, wEnergyDensSi, wEnergyDens
-  
     !--------------------------------------------------------------------------
-
     ! calculate magnetic field normal to the surface - radial direction
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
     B1n_D(x_:z_) = sum(RFace_D*VarsTrueFace_V(Bx_:Bz_))*RFace_D(x_:z_)
-    
-    ! Add B0
-    FullB_D = VarsGhostFace_V(Bx_:Bz_) + B0Face_D
-    FullBr = sum(RFace_D*FullB_D)
-
     !\
     ! Update BCs for velocity and induction field: reflective BC
     !/
     VarsGhostFace_V(Ux_:Uz_) = -VarsTrueFace_V(Ux_:Uz_)
     VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - B1n_D
-
+  
+    ! Add B0
+    write(*,*) '*******ITERATION NUMBER ' ,iteration_number
+    write(*,*) 'Ghost cell values for b: ', sum(VarsGhostFace_V(Bx_:Bz_))
+    FullB_D = VarsGhostFace_V(Bx_:Bz_) + B0Face_D
+    FullBr = sum(RFace_D*FullB_D)
+    FullB = sum(FullB_D**2)
     !\
     ! Update BCs for the mass density, EnergyRL, 
     ! and pressure::
@@ -249,11 +248,10 @@ contains
     !\
     ! Update BCs for wave spectrum
     !/
-    !VarsGhostFace_V(WaveFirst_ :WaveLast_) = 1.0e-30
     if(IsInitWave ) then
        select case(TypeWaveInnerBc)
        case('WSA')
-          vAlfvenSi = (FullBr/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
+          vAlfvenSi = (FullB/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
           call get_total_wave_energy_dens(&
                FaceCoords_D(x_),&
                FaceCoords_D(y_),&
@@ -262,19 +260,22 @@ contains
           wEnergyDens = wEnergyDensSi * Si2No_V(UnitP_)*WaveInnerBcFactor
   
        case('Turb')
-          wEnergyDens = sum(FullB_D**2)*WaveInnerBcFactor**2
+          wEnergyDens = FullB*WaveInnerBcFactor**2
        end select
        !\
        ! Deconstruct total energy into frequency groups
        !/
+       ! "Plus" waves - parallel to B
+       SpectrumFirst = LowestFreqNum + AlfvenSpeedPlusFirst_
+       SpectrumLast = SpectrumFirst + SpectrumWidth
        do iWave = AlfvenSpeedPlusFirst_,AlfvenSpeedPlusLast_
-          if(iWave-AlfvenSpeedPlusFirst_+1 .lt. LowestFreqNum .or.& 
-               iWave-AlfvenSpeedPlusFirst_+1 .gt. LowestFreqNum+SpectrumWidth) then
+          ! no wave energy outside of emitted freq. range
+          if(iWave .lt. SpectrumFirst .or. iWave .gt. SpectrumLast) then
              VarsGhostFace_V(iWave)=1e-30
-             
+          ! full absorption of incoming waves - float bc
           elseif (FullBr .le. 0.0) then
-             ! float bc
-             VarsGhostFace_V(iWave) = VarsTrueFace_V(iWave) 
+             VarsGhostFace_V(iWave) = VarsTrueFace_V(iWave)
+          ! calculate wave energy for valid freq. groups
           else
              VarsGhostFace_V(iWave) = SpectralCoeff * DeltaLogFrequency * wEnergyDens* &
                   exp((LogFreq_I(iWave-WaveFirst_+1))*SpectralIndex)
@@ -285,13 +286,17 @@ contains
           end if
        end do
 
+       ! "Minus" waves - antiparallel to B
+       SpectrumFirst = LowestFreqNum + AlfvenSpeedMinusFirst_
+       SpectrumLast = SpectrumFirst + SpectrumWidth     
        do iWave = AlfvenSpeedMinusFirst_,AlfvenSpeedMinusLast_
-          if(iWave-AlfvenSpeedMinusFirst_+1 .lt. LowestFreqNum .or. & 
-               iWave-AlfvenSpeedMinusFirst_+1 .gt. LowestFreqNum+SpectrumWidth) then
+          ! no wave energy outside emitted freq. range
+          if(iWave .lt. SpectrumFirst .or. iWave .gt. SpectrumLast) then
              VarsGhostFace_V(iWave)=1e-30
+          ! full absorption of incoming waves - float bc
           elseif(FullBr .ge. 0.0) then
-             ! float BC
              VarsGhostFace_V(iWave) = VarsTrueFace_V(iWave)
+          ! caclculate wave energy for valid freq. groups
           else
              VarsGhostFace_V(iWave) = SpectralCoeff * DeltaLogFrequency * wEnergyDens* &
                   exp((LogFreq_I(iWave-WaveFirst_+1))*SpectralIndex)
@@ -356,28 +361,6 @@ contains
     PresCell = DensCell*Temperature
 
   end subroutine get_plasma_parameters_cell
-  !============================================================================
-  subroutine user_initial_perturbation
-    use ModMain, ONLY: nBLK,unusedBLK,x_,y_,z_,n_step
-    use ModGeometry
-    use ModProcMH
-
-    implicit none
-
-    logical :: oktest,oktest_me
-
-    !--------------------------------------------------------------------------
- 
-        call set_oktest('user_initial_perturbation',oktest,oktest_me)
-
-        !call init_wave_spectrum
-
-        if (iProc==0) then
-           
-           write(*,*) 'SC: Finished initializing wave spectrum'
-        end if
-     
-   end subroutine user_initial_perturbation
   !============================================================================
   subroutine user_set_ics
     use ModMain,      ONLY: globalBLK,nI,nJ,nK
