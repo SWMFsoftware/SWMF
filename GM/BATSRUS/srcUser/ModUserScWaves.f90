@@ -9,14 +9,13 @@ module ModUser
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
-       IMPLEMENTED4 => user_initial_perturbation,       &
-       IMPLEMENTED5 => user_face_bcs,                   &
-       IMPLEMENTED6 => user_get_log_var,                &
-       IMPLEMENTED7 => user_get_b0,                     &
-       IMPLEMENTED8 => user_update_states,              &
-       IMPLEMENTED9 => user_specify_refinement,         &
-       IMPLEMENTED10=> user_set_boundary_cells,         &
-       IMPLEMENTED11=> user_set_plot_var
+       IMPLEMENTED4 => user_face_bcs,                   &
+       IMPLEMENTED5 => user_get_log_var,                &
+       IMPLEMENTED6 => user_get_b0,                     &
+       IMPLEMENTED7 => user_update_states,              &
+       IMPLEMENTED8 => user_specify_refinement,         &
+       IMPLEMENTED9=> user_set_boundary_cells,         &
+       IMPLEMENTED10=> user_set_plot_var
   
   include 'user_module.h' !list of public methods
   
