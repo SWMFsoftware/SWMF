@@ -741,7 +741,7 @@ contains
          *0.1*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
 
     ! include multiplicative factors to make up for extention of
-    ! perpendicular heating at low temperatures (as per Abbet 2007).
+    ! perpendicular heating at low temperatures (as per Abbett 2007).
     ! Need this to strech transition region to larger scales
     ! Also, need radcool modification to become const below TeModMin
     if(DoModHeatConduction) then

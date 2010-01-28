@@ -35,11 +35,11 @@ module ModCoronalHeating
   real :: WsaT0 = 3.50
   
   !\
-  ! Abbet's model
+  ! Abbett's model
   !/
   
   
-  ! Normalization constant for Abbet Model
+  ! Normalization constant for Abbett Model
   real :: HeatNormalization = 1.0
 
 
@@ -72,7 +72,7 @@ contains
        call read_var('DecayLengthExp', DecayLengthExp)
        call read_var('HeatingAmplitudeCgs', HeatingAmplitudeCgs)
 
-    case('unsignedflux','Abbet')
+    case('unsignedflux','Abbett')
        UseUnsignedFluxModel = .true.
        call read_var('DecayLength', DecayLength)
        call read_var('HeatNormalization', HeatNormalization)
