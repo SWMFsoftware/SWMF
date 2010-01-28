@@ -214,7 +214,7 @@ test2:
 
 test2_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -g=SC:4,4,4,3000,IH:8,8,8,400,1
+	./Config.pl -g=SC:4,4,4,3000,1,IH:8,8,8,400,1
 	cd SC/BATSRUS; ./Config.pl -dynamic; cd ../..
 	cd IH/BATSRUS; ./Config.pl -dynamic; cd ../..
 	make SWMF PIDL EARTH_TRAJ
