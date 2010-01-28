@@ -68,6 +68,7 @@ contains
     use ModReadParam,  ONLY: read_var
     !--------------------------------------------------------------------------
     call read_var('UseWavePressure',UseWavePressure)
+    call read_var('UseWavePressureLtd',UseWavePressureLtd)
   end subroutine read_wave_pressure
   !============================================================================
   subroutine read_frequency
