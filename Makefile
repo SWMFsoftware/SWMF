@@ -509,7 +509,8 @@ SC/BATSRUS/src/Makefile:
 		rm -rf src srcBATL srcUser srcEquation \
 		  srcInterface/SC_wrapper.f90 srcInterface/SC_get_for_sp.f90 \
 		  srcInterface/SC_get_for_mh.f90 \
-		  srcInterface/SC_get_for_mh_with_xyz.f90 srcInterface/SC_put_from_mh.f90
+		  srcInterface/SC_get_for_mh_with_xyz.f90 srcInterface/SC_put_from_mh.f90; \
+		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../SC/BATSRUS/src
 	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
 						  ../../../SC/BATSRUS/srcBATL
