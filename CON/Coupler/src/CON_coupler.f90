@@ -25,15 +25,17 @@ module CON_coupler
   !PUBLIC TYPES:
   public :: CoordSystemType ! Extend grid descriptor type with coordinate info
   integer, parameter :: lTypeCoord=3
-
   integer, parameter :: lTypeGeometry = 15
+  integer, parameter :: lNameVar      = 200
 
   type CoordSystemType    
      real, dimension(:),pointer    :: Coord1_I, Coord2_I, Coord3_I
      integer, dimension(3)         :: nCoord_D
      character (len=lTypeCoord)    :: TypeCoord
      character (len=lTypeGeometry) :: TypeGeometry
-     real::UnitX
+     integer                       :: nVar
+     character (len=lNameVar)      :: NameVar
+     real                          :: UnitX
   end type CoordSystemType
 
   !PUBLIC DATA MEMBERS:
@@ -112,6 +114,7 @@ module CON_coupler
   !                 streched_to_gen
   ! 08/10/04 I.Sokolov - to avoid an inproper use of init_coord_system_all
   !                      which destroys the Grid_C structure. 
+  ! 01/30/10 G. Toth - added nVar and NameVar to Grid_C
   !EOP
 
   character(len=*), parameter, private :: NameMod='CON_coupler'
@@ -125,31 +128,33 @@ contains
        Coord1_I,      &! Non-uniform coords in 1st dim (optional)
        Coord2_I,      &! Non-uniform coords in 2nd dim (optional)
        Coord3_I,      &! Non-uniform coords in 3rd dim (optional)
+       nVar,          &! number of variables per cell/node
+       NameVar,       &! variable names
        iProc0In,      &
        iCommIn) 
 
     character(len=*), parameter :: NameSub='set_coord_system'
 
     integer, intent(in) :: GridID_
-    character(len=lTypeCoord), intent(in)  :: TypeCoord
+    character(len=*), intent(in)  :: TypeCoord
 
     ! Optional parameters
+    character(len=*), intent(in), optional:: TypeGeometry
 
-    character(len=lTypeGeometry), optional, intent(in)  :: &
-         TypeGeometry
-
-    real,    intent(in), optional :: &
+    real,             intent(in), optional :: &
          Coord1_I(:), Coord2_I(:), Coord3_I(:)
-    integer,intent(in),optional:: iProc0In,iCommIn
-    real,intent(in),optional::UnitX
 
-    character(LEN=lTypeGeometry), parameter :: &
-         TypeGeometryBlanck = '               '  ! 15 spaces
+    real,             intent(in), optional:: UnitX
+
+    integer,          intent(in), optional:: nVar
+    character(len=*), intent(in), optional:: NameVar
+
+    integer,          intent(in), optional:: iProc0In, iCommIn
 
     integer :: iProc0, iComm, iError
     logical :: IsRoot
     type(CoordSystemType), pointer :: ThisGrid
-    logical,save::DoInit=.true.
+    logical, save:: DoInit=.true.
     !-------------------------------------------------------------!
     if(DoInit)call init_coord_system_all
     if(present(iProc0In).and.present(iCommIn))then
@@ -164,92 +169,91 @@ contains
 
     IsRoot=is_proc0(compid_grid(GridID_))
 
-    if(IsRoot)Thisgrid%TypeCoord=TypeCoord
-
     ! Broadcast the coordinate type
+    if(IsRoot)Thisgrid%TypeCoord=TypeCoord
     call MPI_bcast(ThisGrid%TypeCoord,lTypeCoord,MPI_CHARACTER,&
          iProc0,iComm,iError)
+
+    if(present(TypeGeometry))then
+       ! Broadcast the geometry type
+       if(IsRoot) Thisgrid%TypeGeometry = TypeGeometry
+       call MPI_bcast(ThisGrid%TypeGeometry, lTypeGeometry, MPI_CHARACTER,&
+            iProc0, iComm, iError)
+    end if
+
+    if(present(nVar))then
+       ! Broadcast number of variables per cell
+       if(IsRoot) ThisGrid%nVar = nVar
+       call MPI_bcast(ThisGrid%nVar, 1, MPI_INTEGER, iProc0, iComm, iError)
+    end if
+
+    if(present(NameVar))then
+       ! Broadcast list of variable names
+       if(IsRoot) ThisGrid%NameVar = NameVar
+       call MPI_bcast(ThisGrid%NameVar, lNameVar, MPI_CHARACTER, &
+            iProc0, iComm, iError)
+    end if
+
     if(present(UnitX))then
-       if(IsRoot)Thisgrid%UnitX=UnitX
        ! Broadcast the unit of length
+       if(IsRoot)Thisgrid%UnitX=UnitX
        call MPI_bcast(ThisGrid%UnitX,1,MPI_REAL,&
             iProc0,iComm,iError)
     end if
 
-    if(IsRoot)then
-       if(present(TypeGeometry))then
-          Thisgrid%TypeGeometry = TypeGeometryBlanck
-          Thisgrid%TypeGeometry(1:len_trim(TypeGeometry)) = &
-               trim(TypeGeometry)
-       else
-          Thisgrid%TypeGeometry = 'cartesian      '
-       end if
-    end if
-
-    ! Broadcast the geometry type
-    call MPI_bcast(ThisGrid%TypeGeometry,lTypeGeometry,MPI_CHARACTER,&
-         iProc0,iComm,iError)
-
-    ! Get the size of the coordinate arrays
+    ! Get the size of the coordinate arrays and broadcast it
     if(IsRoot)then
        ThisGrid%nCoord_D = 0
        if(present(Coord1_I)) ThisGrid%nCoord_D(1)=size(Coord1_I)
        if(present(Coord2_I)) ThisGrid%nCoord_D(2)=size(Coord2_I)
        if(present(Coord3_I)) ThisGrid%nCoord_D(3)=size(Coord3_I)
     end if
+    call MPI_bcast(ThisGrid%nCoord_D, 3, MPI_INTEGER, iProc0, iComm, iError)
 
-    call MPI_bcast(ThisGrid%nCoord_D,3,MPI_INTEGER,iProc0,&
-         iComm,iError)
-
+    ! Allocate and broadcast coordinate arrays
     if(ThisGrid%nCoord_D(1)>0)then 
        if(associated(ThisGrid%Coord1_I))deallocate(ThisGrid%Coord1_I)
-       allocate(ThisGrid%Coord1_I(&
-            ThisGrid%nCoord_D(1)),stat=iError)
-       call check_allocate(iError,NameSub//'Coord1_I')
-       if(IsRoot)then
-          ThisGrid%Coord1_I = Coord1_I
-       end if
-       call MPI_bcast(ThisGrid%Coord1_I,&
-            ThisGrid%nCoord_D(1),MPI_REAL,&
-            iProc0,iComm,iError)
+       allocate(ThisGrid%Coord1_I(ThisGrid%nCoord_D(1)))
+       if(IsRoot) ThisGrid%Coord1_I = Coord1_I
+       call MPI_bcast(ThisGrid%Coord1_I, ThisGrid%nCoord_D(1), MPI_REAL,&
+            iProc0, iComm, iError)
     end if
 
     if(ThisGrid%nCoord_D(2)>0) then
        if(associated(ThisGrid%Coord2_I))deallocate(ThisGrid%Coord2_I)
-       allocate(ThisGrid%Coord2_I(&
-            ThisGrid%nCoord_D(2)),stat=iError)
-       call check_allocate(iError,NameSub//'Coord2_I')
-       if(IsRoot)then
-          ThisGrid%Coord2_I = Coord2_I
-       end if
-       call MPI_bcast(ThisGrid%Coord2_I,ThisGrid%nCoord_D(2),&
-            MPI_REAL,iProc0,iComm,iError)
+       allocate(ThisGrid%Coord2_I(ThisGrid%nCoord_D(2)))
+       if(IsRoot) ThisGrid%Coord2_I = Coord2_I
+       call MPI_bcast(ThisGrid%Coord2_I, ThisGrid%nCoord_D(2), MPI_REAL, &
+            iProc0, iComm, iError)
     end if
 
     if(ThisGrid%nCoord_D(3)>0)then
        if(associated(ThisGrid%Coord3_I))deallocate(ThisGrid%Coord3_I)
-       allocate(ThisGrid%Coord3_I(&
-            ThisGrid%nCoord_D(3)),stat=iError)
-       call check_allocate(iError,NameSub//'Coord3_I')
-       if(IsRoot)then
-          ThisGrid%Coord3_I = Coord3_I
-       end if
-       call MPI_bcast(ThisGrid%Coord3_I,ThisGrid%nCoord_D(3),&
-            MPI_REAL,iProc0,iComm,iError)
+       allocate(ThisGrid%Coord3_I(ThisGrid%nCoord_D(3)))
+       if(IsRoot) ThisGrid%Coord3_I = Coord3_I
+       call MPI_bcast(ThisGrid%Coord3_I, ThisGrid%nCoord_D(3), MPI_REAL, &
+            iProc0, iComm, iError)
     end if
+
   contains
+
     subroutine init_coord_system_all
       integer :: iComp
       DoInit=.false.
-      do iComp=1,MaxComp+3
+      do iComp=1, MaxComp+3
          nullify(&
               Grid_C(iComp)%Coord1_I, &
               Grid_C(iComp)%Coord2_I, &
               Grid_C(iComp)%Coord3_I)
-         Grid_C(iComp)%nCoord_D = 0
-         Grid_C(iComp)%UnitX=cOne
+         Grid_C(iComp)%nCoord_D    = 0
+         Grid_C(iComp)%TypeCoord   = '???'
+         Grid_C(iComp)%TypeGeometry = 'cartesian'
+         Grid_C(iComp)%nVar         = 0
+         Grid_C(iComp)%NameVar      = '???'
+         Grid_C(iComp)%UnitX        = 1.0
       end do
     end subroutine init_coord_system_all
+
   end subroutine set_coord_system
   !=============================================================!
   !BOP
@@ -386,8 +390,10 @@ contains
        nCell_D,      & ! Number of cells in a block in all dims
        iProc_A,      & ! Processor index for all the blocks (op)
        iBlock_A,     & ! Block index for all the blocks (op)
-       IsPeriodic_D)   ! Periodicity for all dimesnsions (op)
-    !"op"=optional
+       IsPeriodic_D, & ! Periodicity for all dimesnsions (op)
+       nVar,         & ! Number of variables per grid cell
+       NameVar       ) ! Variable names 
+
     !INPUT ARGUMENTS:
     integer, intent(in) :: iComp, nDim
     integer, intent(in) :: nRootBlock_D(nDim), nCell_D(nDim)
@@ -400,6 +406,10 @@ contains
     real,    intent(in), optional :: Coord3_I(:)
     integer, intent(in), optional :: iProc_A(:), iBlock_A(:)
     logical, intent(in), optional :: IsPeriodic_D(:)
+
+    integer, intent(in), optional :: nVar
+    character(len=lNameVar), intent(in), optional:: NameVar
+
     !DESCRIPTION: 
     ! Describe and broadcast non-octree grids
     !EOP
@@ -417,9 +427,11 @@ contains
     call set_coord_system(&
          GridID,                             &!Decomposition ID_
          TypeCoord,                          &
+         nVar=nVar,                          &
+         NameVar=NameVar,                    &
          Coord1_I=Coord1_I,                  &
          Coord2_I=Coord2_I,                  &
-         Coord3_I=Coord3_I)                           
+         Coord3_I=Coord3_I)
     if(is_proc0(iComp))call get_root_decomposition(&
          GridID,                             &!Decomposition ID_
          nRootBlock_D ,                      &
