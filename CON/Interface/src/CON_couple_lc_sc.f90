@@ -89,7 +89,7 @@ contains
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
     if(is_proc0(SC_))nWaveSc = SC_n_wave()
-    call MPI_BCAST(nWaveSc,1,MPI_INTEGER,i_proc0(SH_),i_comm(),iError)
+    call MPI_BCAST(nWaveSc,1,MPI_INTEGER,i_proc0(SC_),i_comm(),iError)
 
     if(is_proc0(LC_))nWaveLc = LC_n_wave()
     call MPI_BCAST(nWaveLc,1,MPI_INTEGER,i_proc0(LC_),i_comm(),iError)
