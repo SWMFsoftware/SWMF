@@ -22,6 +22,7 @@ module ModInterpolate
 
   public :: bilinear           ! 2nd order interpolation in 2D
   public :: trilinear          ! 2nd order interpolation in 3D
+  public :: find_cell          ! find cell in non-uniform grid
   public :: test_interpolation ! unit test
 
   character(len=*), parameter :: NameMod='ModInterpolate'
@@ -64,7 +65,7 @@ contains
     if(any( Xy_D < (/iMin, jMin/)) .or. any(Xy_D > (/ iMax, jMax /))) then
 
        !Crash if DoExtrapolate is not set.
-       if(.not. (PRESENT(DoExtrapolate))) then
+       if(.not. (present(DoExtrapolate))) then
           write(*,*)NameSub,&
                ' ERROR: Point outside of block and DoExtrapolate is not set!'
           write(*,*)NameSub,': iMin, iMax, jMin, jMax=',iMin, iMax, jMin, jMax
@@ -304,6 +305,76 @@ contains
   end function trilinear_vector
 
   !===========================================================================
+  subroutine find_cell(Coord, Coord_I, MinCoord, MaxCoord, &
+       iCoord, dCoord, IsInside)
+
+    ! Coord_I(MinCoord:MaxCoord) are cell coordinates in increasing order.
+    ! The goal is to find cell index iCoord that is left to coordinate Coord.
+    ! IsInside is set to true if Coord_I(1) <= Coord <= Coord_I(nCoord).
+    ! If Coord is the index iCoord is set such that 
+    !    Coord_I(iCoord) <= Coord < Coord_I(nCoord)
+    ! and the normalized distance is set to
+    !    dCoord = (Coord-Coord_I(iCoord))/(Coord_I(iCoord+1)-Coord_I(iCoord))
+    ! If Coord is outside, then iCoord is set to 1 or nCoord, and dCoord to 0.
+
+    real,    intent(in)           :: Coord
+    integer, intent(in)           :: MinCoord, MaxCoord
+    real,    intent(in)           :: Coord_I(MinCoord:MaxCoord)
+    integer, intent(out)          :: iCoord
+    real,    intent(out), optional:: dCoord
+    logical, intent(out), optional:: IsInside
+
+    integer:: i, j, Di
+    logical:: IsLast
+    !------------------------------------------------------------------------
+
+    if(Coord < Coord_I(MinCoord))then
+       iCoord = MinCoord
+       if(present(dCoord))   dCoord   = 0.0
+       if(present(IsInside)) IsInside = .false.
+       RETURN
+    end if
+    if(Coord > Coord_I(MaxCoord))then
+       iCoord = MaxCoord
+       if(present(dCoord))   dCoord   = 0.0
+       if(present(IsInside)) IsInside = .false.
+       RETURN
+    end if
+    if(present(IsInside)) IsInside = .true.
+
+    if(MaxCoord - MinCoord < 10)then
+       ! serial search
+       do i = MinCoord+1, MaxCoord
+          if(Coord_I(i) > Coord) EXIT
+       end do
+       iCoord = min(MaxCoord - 1, i - 1)
+    else
+       ! binary search
+       i  = (MinCoord + MaxCoord)/2
+       Di = (MaxCoord - MinCoord)/2
+       IsLast = .false.
+       do
+          if(Di == 1)then
+             IsLast = .true.
+          else
+             Di = (Di + 1)/2
+          endif
+          if(Coord < Coord_I(i)) then
+             i = max(MinCoord, i - Di)
+          elseif(Coord >= Coord_I(i+1))then
+             i = min(MaxCoord, i + Di)
+          end if
+          if(IsLast) EXIT
+       end do
+       iCoord = min(MaxCoord-1, i)
+    end if
+
+    if(present(dCoord)) dCoord = &
+         (Coord             - Coord_I(iCoord)) / &
+         (Coord_I(iCoord+1) - Coord_I(iCoord))
+
+  end subroutine find_cell
+  !===========================================================================
 
   subroutine test_interpolation
 
@@ -322,6 +393,12 @@ contains
          1., -10., 20., -200., 3., -30., 40., -400., &
          100., -1000., 2000., -20000., 300., -3000., 4000., -40000.,  &
          1e4, -1e5, 2e5, -2e6, 3e4, -3e5, 4e5, -4e6 /), (/2, 2, 2, 3/))
+
+    integer, parameter:: MinCoord = 1, MaxCoord = 5
+    real   :: Coord_I(MinCoord:MaxCoord) = (/ 1.0, 2.0, 4.0, 8.0, 16.0 /)
+    real   :: Coord, dCoord
+    integer:: i, iCoord
+    logical:: IsInside
 
     real :: Result, GoodResult, Result_V(2), GoodResult_V(2)
     logical :: DoExtrapolate = .false.
@@ -403,6 +480,46 @@ contains
     if(any(abs(Result_V - GoodResult_V) > 1.e-2)) write(*,*) &
          'Test failed: Result=', Result_V, ' differs from ', GoodResult_V
 
+    write(*,'(a)')'Testing find_cell'
+    do i = floor(Coord_I(MinCoord)) - 1, floor(Coord_I(MaxCoord)) + 1
+       Coord = i
+       call find_cell(Coord, Coord_I, MinCoord, MaxCoord, &
+            iCoord, dCoord, IsInside)
+       if(Coord < Coord_I(MinCoord) .or. Coord > Coord_I(MaxCoord))then
+          if(IsInside) write(*,*) 'Test failed for Coord=',Coord, &
+               ', IsInside=T, should be false'
+          if(dCoord /= 0.0) write(*,*) 'Test failed for Coord=',Coord, &
+               ', dCoord=', dCoord, ' should be 0.0'
+          if(Coord < Coord_I(MinCoord) .and. iCoord /= 1) &
+               write(*,*) 'Test failed for Coord=', Coord, &
+               ', iCoord=', iCoord, ' should be ',MinCoord
+          if(Coord > Coord_I(MaxCoord) .and. iCoord /= MaxCoord) &
+               write(*,*) 'Test failed for Coord=', Coord, &
+               ', iCoord=', iCoord, ' should be ', MaxCoord
+          CYCLE
+       end if
+       if(.not.IsInside) write(*,*) 'Test failed for Coord=',Coord, &
+               ', IsInside=F, should be true'
+
+       if(Coord_I(iCoord) > Coord) write(*,*) 'Test failed for Coord=', Coord,&
+            ', Coord_I(iCoord)=', Coord_I(iCoord), ' should be <= Coord'
+
+       if(iCoord == MaxCoord)then
+          if(dCoord /= 0.0) write(*,*) 'Test failed for Coord=', Coord,&
+               ', dCoord=', dCoord, ' should be 0.0'
+          CYCLE
+       end if
+
+       if(Coord_I(iCoord+1) < Coord) write(*,*)       &
+            'Test failed for Coord=', Coord,           &
+            ', Coord_I(iCoord+1)=', Coord_I(iCoord+1), ' should be >= Coord' 
+
+       if(abs(Coord_I(iCoord) + dCoord*(Coord_I(iCoord+1)-Coord_I(iCoord)) &
+            - Coord) > 1e-6) write(*,*) 'Test failed for Coord=', Coord, &
+            ', Coord_I(iCoord:iCoord+1)=', Coord_I(iCoord:iCoord+1), &
+            ', but incorrect dCoord = ', dCoord
+    end do
+    
   end subroutine test_interpolation
 
 end module ModInterpolate
