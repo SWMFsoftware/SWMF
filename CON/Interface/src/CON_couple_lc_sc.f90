@@ -2,9 +2,9 @@
 !^CMP FILE SC
 !^CMP FILE LC
 !BOP
-!MODULE: CON_couple_sc_lc - couple SC and LC both ways
+!MODULE: CON_couple_lc_sc - couple LC and SC both ways
 !INTERFACE:
-module CON_couple_sc_lc
+module CON_couple_lc_sc
 
   !DESCRIPTION:
   ! This coupler uses the SWMF parallel coupling toolkit.
@@ -17,29 +17,23 @@ module CON_couple_sc_lc
   
   !USES:
   use CON_coupler
-  use CON_axes, ONLY: transform_matrix,transform_velocity
+  use CON_axes, ONLY: transform_matrix, transform_velocity
   use ModConst
 
   implicit none
   private !except
   !
   !PUBLIC MEMBER FUNCTIONS:
-  public:: couple_sc_lc_init
-  public:: couple_sc_lc,couple_lc_sc
-
-  !REVISION HISTORY:
-  ! 7/23/03 Sokolov I.V.<igorsok@umich.edu> - prototype for sc-gm
-  ! 7/04/04                                 - version for sc-lc
-  ! 7/20/04                                 - version for lc-buffer
-  !EOP
+  public:: couple_lc_sc_init
+  public:: couple_sc_lc, couple_lc_sc
 
   !To trace the possible changes in the grids and/or mapping
-  integer :: SC_iGridRealization=-2
-  integer :: LC_iGridInLcSc=-2
-  integer :: LC_iGridInScLc=-2
+  integer :: SC_iGridRealization = -2
+  integer :: LC_iGridInLcSc      = -2
+  integer :: LC_iGridInScLc      = -2
 
   ! SC <-> LC conversion matrices
-  real :: ScToLc_DD(3,3),LcToSc_DD(3,3)
+  real :: ScToLc_DD(3,3), LcToSc_DD(3,3)
 
   ! Maximum time difference [s] without remap 
   ! The 600 s corresponds to about 0.1 degree rotation between LC and SC
@@ -65,7 +59,7 @@ module CON_couple_sc_lc
    
 contains
   !===============================================================!
-  subroutine couple_sc_lc_init
+  subroutine couple_lc_sc_init
     interface
        subroutine SC_set_buffer_grid(Dd)
          use CON_domain_decomposition
@@ -117,7 +111,7 @@ contains
          RouterToBuffer=RouterLcBuff,    &
          nVar=8,&
          NameBuffer='SC_from_lc')  !Version for the first order in time
-  end subroutine couple_sc_lc_init
+  end subroutine couple_lc_sc_init
   !===============================================================!
   !BOP
   !IROUTINE: couple_sc_lc - get SC solution at LC outer ghostpoints
@@ -330,9 +324,6 @@ contains
 
   end subroutine SC_get_for_lc_and_transform
 
-!===============================================================!
-!===============================================================!
-!===============================================================!
 !===============================================================
 !BOP
 !IROUTINE: couple_lc_sc - interpolate and get MHD state at the SC buffer grid 
@@ -398,7 +389,7 @@ contains
     end if
     if(DoTest)write(*,*)'Couple passed at PE=',i_proc()
   end subroutine couple_lc_sc
-  !======================================================!
+  !==========================================================================
   subroutine buffer_grid_point(&
        nDimFrom,Sph_D,nDimTo,LC_Coord_D,IsInterfacePoint)         
 
@@ -450,5 +441,5 @@ contains
     IsInterfacePoint=.true.
   end subroutine buffer_grid_point
   
-end module CON_couple_sc_lc
+end module CON_couple_lc_sc
 
