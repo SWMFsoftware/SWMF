@@ -17,7 +17,9 @@ module ModBuffer
   type(GridDescriptorType)::LocalBufferGD
 
   integer:: SourceID_ = SC_
-  logical::DoInit
+
+  integer::nVarBuff=-1
+  logical::DoInit =.true.
 contains
   subroutine set_buffer_name(NameIn,IDIn)
     character(LEN=*),intent(in)::NameIn
@@ -76,7 +78,17 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   real, save        :: SourceTarget_DD(nDim, nDim)
   real              :: TimeSimulationLast = -1.0
   real              :: XyzSource_D(nDim)
+
+  !Misc
+  integer:: UBound_I(2)
   !---------------------------------------------------------------------------
+
+  !Set nVarBuff
+  if(DoInit)then
+     DoInit = .false.
+     UBound_I=ubound_vector(NameBuffer)
+     nVarBuff = UBound_I(1)
+  end if
 
   TypeCoordSource = Grid_C(SourceID_) % TypeCoord
 
@@ -100,7 +112,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   ! Get the target state from the spherical buffer grid
   State_V=point_state_v(&
        NameBuffer,&
-       nVar,    &
+       nVarBuff,&
        nDim,    &
        Sph_D,   &
        LocalBufferGD,&
