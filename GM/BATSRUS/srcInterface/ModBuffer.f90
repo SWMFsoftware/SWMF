@@ -20,6 +20,7 @@ module ModBuffer
 
   integer::nVarBuff=-1
   logical::DoInit =.true.
+  real,dimension(:),allocatable::Buffer_V
 contains
   subroutine set_buffer_name(NameIn,IDIn)
     character(LEN=*),intent(in)::NameIn
@@ -64,10 +65,11 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   use ModMain,       ONLY: nDim, R_, Phi_, Theta_, x_, y_, z_,&
        TypeCoordSystem, Time_Simulation
   use ModAdvance,    ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, Bx_, Bz_, p_
+  use ModVarIndexes, ONLY: WaveFirst_,WaveLast_
   use CON_coupler,   ONLY: Grid_C
   use CON_axes,      ONLY: transform_matrix, transform_velocity
   use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
-
+  use ModPhysics,    ONLY: UnitEnergyDens_
   implicit none
   integer,intent(in)::nVar
   real,intent(in)::XyzTarget_D(nDim)
@@ -88,6 +90,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
      DoInit = .false.
      UBound_I=ubound_vector(NameBuffer)
      nVarBuff = UBound_I(1)
+     allocate(Buffer_V(nVarBuff))
   end if
 
   TypeCoordSource = Grid_C(SourceID_) % TypeCoord
@@ -110,7 +113,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
        Sph_D(R_),Sph_D(Phi_),Sph_D(Theta_))
 
   ! Get the target state from the spherical buffer grid
-  State_V=point_state_v(&
+  Buffer_V=point_state_v(&
        NameBuffer,&
        nVarBuff,&
        nDim,    &
@@ -118,8 +121,11 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
        LocalBufferGD,&
        bilinear_interpolation)
 
+  State_V(Rho_) = Buffer_V(Rho_)
   !Transform to primitive variables
-  State_V(Ux_:Uz_) = State_V(rhoUx_:rhoUz_)/State_V(rho_)
+  State_V(Ux_:Uz_) = Buffer_V(rhoUx_:rhoUz_)/Buffer_V(rho_)
+  State_V(Bx_:Bz_) = Buffer_V(Bx_:Bz_)
+  State_V(P_)      = Buffer_V(nVarBuff)
 
   ! Transform vector variables from SC to IH
   if(TypeCoordSource /= TypeCoordSystem)then
@@ -134,6 +140,8 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   State_V(Ux_:Uz_)   = State_V(Ux_:Uz_)*Si2No_V(UnitU_)
   State_V(Bx_:Bz_)   = State_V(Bx_:Bz_)*Si2No_V(UnitB_)
   State_V(P_)        = State_V(P_)     *Si2No_V(UnitP_)
+  if(nVarBuff>8)&
+     State_V(WaveFirst_:WaveLast_) = Buffer_V(8:nVarBuff-1)*Si2No_V(UnitEnergyDens_)
 
 end subroutine get_from_spher_buffer_grid
           
