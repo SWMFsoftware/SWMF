@@ -398,7 +398,7 @@ contains
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
          time_BLK, B0_DGB
     use ModGeometry,       ONLY: x_BLK, y_BLK, z_BLK, r_BLK
-    use ModMain,           ONLY: nI, nJ, nK, GlobalBlk, Cfl
+    use ModMain,           ONLY: nI, nJ, nK, GlobalBlk, Cfl, UseB0
     use ModPhysics,        ONLY: gm1, inv_gm1, rBody, Si2No_V, No2Si_V, &
          UnitT_, UnitB_, UnitX_
     use ModVarIndexes,     ONLY: Rho_, Bx_, Bz_, Energy_, p_, Pe_, &
@@ -418,7 +418,11 @@ contains
        if(r_BLK(i,j,k,iBlock) < rBody) CYCLE
 
        if(UseWaveDissipation)then
-          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          if(UseB0)then
+             FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          else
+             FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          end if
           FullBSi = sqrt(sum(FullB_D**2))*No2Si_V(UnitB_)
           DissipationLength = DissipationScaleFactor &
                /sqrt(FullBSi)*Si2No_V(UnitX_)
