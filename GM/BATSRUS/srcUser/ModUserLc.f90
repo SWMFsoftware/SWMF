@@ -538,7 +538,7 @@ contains
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModMpi
     use ModCoronalHeating,ONLY:UseExponentialHeating,&
-         DecayLengthExp,HeatingAmplitudeCGS
+         DecayLengthExp,HeatingAmplitudeCGS,WSAT0,DoOpenClosedHeat
     implicit none
 
     integer :: i, j, k, iBlock, iError
