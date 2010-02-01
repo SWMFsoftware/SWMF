@@ -191,3 +191,10 @@ subroutine IH_match_ibc
 
   call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 end subroutine IH_match_ibc
+!==========================
+integer function IH_n_wave()
+  implicit none
+  character(len=*), parameter :: NameSub='IH_n_wave'
+  call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+end function IH_n_wave
+!==========================
