@@ -772,11 +772,6 @@ contains
         HeatingAmplitude =  HeatingAmplitudeCgs*0.1 &
              *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
     end if
-
-    ! if using open closed heating initialize auxilary WSA grid
-    if(DoOpenClosedHeat) call set_empirical_model(trim('WSA'),WsaT0)
-    ! Need to initialize unsigned flux model first
-    if(UseUnsignedFluxModel) call get_coronal_heat_factor
   end subroutine init_coronal_heating
   !===========================
   subroutine read_active_region_heating
