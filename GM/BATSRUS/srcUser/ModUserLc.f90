@@ -1,4 +1,3 @@
-
 !^CFG COPYRIGHT UM
 !==============================================================================
 module ModUser
@@ -655,11 +654,9 @@ contains
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-       call get_cell_heating(i, j, k, iBlock, CoronalHeating)
-
        call get_radiative_cooling(i, j, k, iBlock, RadiativeCooling)
 
-       EinternalSource = CoronalHeating + RadiativeCooling
+       EinternalSource = RadiativeCooling
 
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + EinternalSource
 
@@ -669,7 +666,7 @@ contains
        if(DoCalcTime)then
           Einternal = inv_gm1 * State_VGB(P_,i,j,k,iBlock)
           TimeInvRad  = abs(RadiativeCooling / Einternal)
-          TimeInvHeat = abs(CoronalHeating   / Einternal)
+          TimeInvHeat = abs(CoronalHeating_C(i,j,k)   / Einternal)
    
           Vdt_MaxSource = (TimeInvRad + TimeInvHeat) / vInv_CB(i,j,k,iBlock)
    

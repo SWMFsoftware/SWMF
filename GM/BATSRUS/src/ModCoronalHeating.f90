@@ -674,6 +674,7 @@ module ModCoronalHeating
   use ModNonWKBHeating
   use ModMain,      ONLY: nBLK, nI, nJ, nK
   use ModReadParam, ONLY: lStringLine
+  use ModWaves,     ONLY: WaveFirst_,WaveLast_,UseWavePressure
   implicit none
   SAVE
 
@@ -720,6 +721,9 @@ module ModCoronalHeating
   real :: HeatChCgs = 5.0e-7
   real :: DecayLengthCh = 0.7
   
+  !Arrays for the calcelated heat function and dissipated wave energy
+  real :: CoronalHeating_C(1:nI,1:nJ,1:nK)
+  real :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
 contains
   subroutine read_corona_heating
     use ModReadParam,   ONLY: read_var
@@ -899,7 +903,155 @@ contains
     endif
                        
   end subroutine get_cell_heating
+  !===========================
+  
+  subroutine get_block_heating(iBlock)
 
-  !============================================================================
+    use ModGeometry,       ONLY: r_BLK, x_BLK, y_BLK, z_BLK
+    use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitEnergyDens_, UnitT_, &
+         No2Io_V, UnitB_,UnitRho_,UnitX_,UnitU_
+    use ModExpansionFactors, ONLY: UMin
+    use ModMain,       ONLY: x_, y_, z_, UseB0
+    use ModVarIndexes, ONLY: Bx_, By_, Bz_,Rho_,RhoUx_,RhoUz_
+    use ModAdvance,    ONLY: State_VGB, B0_DGB
+
+    integer, intent(in) :: iBlock
+
+    integer             :: i, j, k
+    real :: HeatCh
+
+    ! parameters for open/closed. This uses WSA model to determine if 
+    ! cell is in an 'open' or 'closed' field region.
+    !
+    ! ** NOTE ** WSA does field line tracing on an auxiliary grid.
+    ! should really be using the computational domain, but global 
+    ! feild line tracing for this purpose is not easily implemented
+    real :: Ufinal
+    real :: UminIfOpen = 290.0
+    real :: UmaxIfOpen = 300.0
+    real :: Weight
+    real :: B_D(3)
+    
+    ! local variables for ArHeating (Active Region Heating)
+    real :: FractionB, Bcell
+
+    real :: RhoSI, RSI, UMagSI, BMagSI, QHeatSI
+    
+    !--------------------------------------------------------------------------
+    
+
+    if(UseUnsignedFluxModel)then
+
+       do k=1,nK;do j=1,nJ; do i=1,nI
+       
+          call get_coronal_heating(i, j, k, iBlock, CoronalHeating_C(i,j,k))
+          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) * HeatNormalization
+
+       end do; end do; end do
+       
+    elseif(UseExponentialHeating)then
+       do k=1,nK;do j=1,nJ; do i=1,nI
+
+          CoronalHeating_C(i,j,k) = HeatingAmplitude &
+            *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
+
+       end do; end do; end do
+            
+    elseif(UseCranmerHeating)then
+       UminIfOpen = UMin*1.05
+
+       do k=1,nK;do j=1,nJ; do i=1,nI
+          
+          if(UseB0)then
+             B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(x_:z_,i,j,k,iBlock)
+          else
+             B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          end if
+          
+          RSI   = r_BLK(i,j,k,iBlock) * No2Si_V(UnitX_)
+          RhoSI = State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitRho_)
+          UMagSI= sqrt( sum( State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2 ) )/&
+               State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitU_)
+          BmagSI= sqrt( sum( B_D**2 ) ) * No2Si_V(UnitB_)
+          if(.not.DoOpenClosedHeat)then
+             call Cranmer_heating_function(&
+                  RSI=RSI,      &
+                  RhoSI = RhoSI,&
+                  UMagSI=UMagSI,&
+                  BMagSI=BMagSI,&
+                  QHeatSI=QHeatSI)
+          else
+             
+             call get_bernoulli_integral(x_BLK( i, j, k, iBlock)/&
+                  R_BLK( i, j, k, iBlock),&
+                  y_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock),&
+                  z_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock), UFinal)
+             call Cranmer_heating_function(&
+                  RSI=RSI,      &
+                  RhoSI  = RhoSI,&
+                  UMagSI =UMagSI,&
+                  BMagSI =BMagSI,&
+                  QHeatSI=QHeatSI,&
+                  IsFullReflection = UFinal< UMinIfOpen)
+          end if
+          
+          CoronalHeating_C(i,j,k) = QHeatSI *  Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+          
+       end do; end do; end do
+    else
+       CoronalHeating_C = 0.0
+    end if
+  
+    if(DoOpenClosedHeat.and.(.not.UseCranmerHeating))then
+       ! If field is less than 1.05 times the minimum speed, mark as closed
+       ! Interpolate between 1.05 and 1.10 for smoothness
+       UminIfOpen = UMin*1.05
+       UmaxIfOpen = UMin*1.1
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          call get_bernoulli_integral(x_BLK( i, j, k, iBlock)/&
+               R_BLK( i, j, k, iBlock),&
+               y_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock),&
+               z_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock), UFinal)
+          if(UFinal <= UminIfOpen) then
+             Weight = 0.0
+          else if (UFinal >= UmaxIfOpen) then
+             Weight = 1.0
+          else 
+             Weight = (UFinal - UminIfOpen)/(UmaxIfOpen - UminIfOpen)
+          end if
+       
+          CoronalHeating_C(i,j,k) = (1.0 - Weight) * CoronalHeating_C(i,j,k)
+       end do; end do; end do
+    end if
+
+    if(DoChHeat) then
+       HeatCh = HeatChCgs * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) + HeatCh &
+            *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
+       end do; end do; end do
+    end if
+    
+    if(UseExponentialHeating.and.UseArComponent) then
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          
+          if(UseB0)then
+             B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(x_:z_,i,j,k,iBlock)
+          else
+             B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          end if
+          
+          Bcell = No2Io_V(UnitB_) * sqrt( sum( B_D**2 ) )
+          
+          FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
+          CoronalHeating_C(i,j,k) = max(CoronalHeating_C(i,j,k), & 
+            FractionB * ArHeatFactorCgs * Bcell &
+            * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
+       end do; end do; end do
+    endif
+    
+  end subroutine get_block_heating
+
+  !============================================================================!
   
 end module ModCoronalHeating

@@ -23,7 +23,8 @@ subroutine calc_sources
   use ModCovariant,     ONLY: UseCovariant 
   use ModCurrent,       ONLY: get_current
   use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
-
+  use ModCoronalHeating,ONLY: UseCoronalHeating,&
+                              get_block_heating,CoronalHeating_C
   implicit none
 
   integer :: i, j, k, iDim, iVar
@@ -142,6 +143,7 @@ subroutine calc_sources
      end do
   end if
 
+
   ! Joule heating: dP/dt += (gamma-1)*eta*j**2    !^CFG IF DISSFLUX BEGIN
   if(UseResistivity .and. .not.UseMultiIon .and. &
        (UseElectronPressure .or. UseNonConservative))then  
@@ -234,6 +236,14 @@ subroutine calc_sources
         ! NOTE: here we have to use signed radial distance!
         if(UseRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
              + Pwave/y_BLK(i,j,k,iBlock)
+     end do; end do; end do
+  end if
+
+  if(UseCoronalHeating)then
+     call get_block_heating(iBlock)
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
+             CoronalHeating_C(i,j,k)
      end do; end do; end do
   end if
 
