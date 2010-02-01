@@ -16,7 +16,7 @@ module ModBuffer
        LocalBufferDD
   type(GridDescriptorType)::LocalBufferGD
 
-  integer:: TargetID_ = SC_
+  integer:: SourceID_ = SC_
   logical::DoInit
 contains
   subroutine set_buffer_name(NameIn,IDIn)
@@ -25,7 +25,7 @@ contains
     !-------------
 
     NameBuffer=NameIn
-    if(present(IDIn))TargetID_ = IDIn
+    if(present(IDIn))SourceID_ = IDIn
   end subroutine set_buffer_name
   !====================================================
   subroutine set_spher_buffer_grid(DD,CompID_,IsLocal)
@@ -57,7 +57,7 @@ end module ModBuffer
 
 !=============================================================!
 
-subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
+subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   use ModBuffer
   use ModMain,       ONLY: nDim, R_, Phi_, Theta_, x_, y_, z_,&
        TypeCoordSystem, Time_Simulation
@@ -68,33 +68,33 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
 
   implicit none
   integer,intent(in)::nVar
-  real,intent(in)::Xyz_D(nDim)
+  real,intent(in)::XyzTarget_D(nDim)
   real,dimension(nVar),intent(out)::State_V
   real,dimension(nDim)::Sph_D
 
-  character (len=3) :: TypeCoordSc
-  real, save        :: ScIh_DD(nDim, nDim)
+  character (len=3) :: TypeCoordSource
+  real, save        :: SourceTarget_DD(nDim, nDim)
   real              :: TimeSimulationLast = -1.0
-  real              :: XyzSc_D(nDim)
+  real              :: XyzSource_D(nDim)
   !---------------------------------------------------------------------------
 
-  TypeCoordSc = Grid_C(TargetID_) % TypeCoord
+  TypeCoordSource = Grid_C(SourceID_) % TypeCoord
 
-  if(TypeCoordSc /= TypeCoordSystem) then
+  if(TypeCoordSource /= TypeCoordSystem) then
      ! Convert target coordinates to the coordiante system of the model
 
      if(Time_Simulation > TimeSimulationLast)then
-        ScIh_DD = &
-             transform_matrix(Time_Simulation, TypeCoordSystem, TypeCoordSc)
+        SourceTarget_DD = &
+             transform_matrix(Time_Simulation, TypeCoordSystem, TypeCoordSource)
         TimeSimulationLast = Time_Simulation
      end if
-     XyzSc_D = matmul(ScIh_DD, Xyz_D)
+     XyzSource_D = matmul(SourceTarget_DD, XyzTarget_D)
   else
-     XyzSc_D = Xyz_D
+     XyzSource_D = XyzTarget_D
   end if
 
   ! Convert to left handed spherical coordinates !!!
-  call xyz_to_spherical(XyzSc_D(x_),XyzSc_D(y_),XyzSc_D(z_),&
+  call xyz_to_spherical(XyzSource_D(x_),XyzSource_D(y_),XyzSource_D(z_),&
        Sph_D(R_),Sph_D(Phi_),Sph_D(Theta_))
 
   ! Get the target state from the spherical buffer grid
@@ -110,11 +110,11 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   State_V(Ux_:Uz_) = State_V(rhoUx_:rhoUz_)/State_V(rho_)
 
   ! Transform vector variables from SC to IH
-  if(TypeCoordSc /= TypeCoordSystem)then
+  if(TypeCoordSource /= TypeCoordSystem)then
      State_V(Ux_:Uz_) = transform_velocity(Time_Simulation,&
-          State_V(Ux_:Uz_), XyzSc_D * No2Si_V(UnitX_), &
-          TypeCoordSc, TypeCoordSystem)
-     State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), ScIh_DD)
+          State_V(Ux_:Uz_), XyzSource_D * No2Si_V(UnitX_), &
+          TypeCoordSource, TypeCoordSystem)
+     State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), SourceTarget_DD)
   end if
 
   !Convert from SI units to normalized units
