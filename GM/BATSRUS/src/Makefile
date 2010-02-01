@@ -17,7 +17,7 @@ MOD1 = ModCT.o       #^CFG IF CONSTRAINB
 MOD2 = ModImplicit.o ModRadDiffusion.o ModHeatConduction.o #^CFG IF IMPLICIT
 MOD3 = ModRaytrace.o #^CFG IF RAYTRACE
 MOD4 = ModProject.o  #^CFG IF PROJECTION
-HEATING = ModCoronalHeating.o ModUnsignedFluxModel.o ModNonWKBHeating.o
+HEATING = ModCoronalHeating.o ModRadiativeCooling.o 
 
 MODULES = \
 	ModAdvance.o\
