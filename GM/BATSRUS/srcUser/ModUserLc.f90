@@ -3,7 +3,7 @@
 module ModUser
   use ModMain,      ONLY: nBLK, nI, nJ, nK
   use ModReadParam, ONLY: lStringLine
-  use ModCoronalHeating
+  use ModCoronalHeating,ONLY: CoronalHeating_C,get_cell_heating
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -75,7 +75,10 @@ contains
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
     use ModMagnetogram, ONLY: set_parameters_magnetogram
     use ModPhysics,     ONLY: SW_T_dim, SW_n_dim
-    use ModCoronalHeating, ONLY: UseUnsignedFluxModel, DecayLength, UseCranmerHeating
+    use ModCoronalHeating, ONLY: UseUnsignedFluxModel, DecayLength, UseCranmerHeating,&
+                                 read_corona_heating, UseExponentialHeating, &
+                                 read_active_region_heating,read_longscale_heating,&
+                                 DoOpenClosedHeat, WsaT0
 
     character (len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
@@ -205,15 +208,7 @@ contains
                    '#MESSAGEPASS!'
        call stop_mpi('ERROR: Correct PARAM.in!')
     end if
-
-    if(TypeCoronalHeating == 'exponential')then
-        HeatingAmplitude =  HeatingAmplitudeCgs*0.1 &
-             *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
-    end if
-
-    ! if using open closed heating initialize auxilary WSA grid
-    if(DoOpenClosedHeat) call set_empirical_model(trim('WSA'),WsaT0)
-
+    
     iTableRadCool = i_lookup_table('radcool')
 
     if(i_line_command("#PLASMA", iSessionIn = 1) < 0)then
@@ -542,6 +537,8 @@ contains
     use ModProcMH,      ONLY: iProc
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModMpi
+    use ModCoronalHeating,ONLY:UseExponentialHeating,&
+         DecayLengthExp,HeatingAmplitudeCGS
     implicit none
 
     integer :: i, j, k, iBlock, iError
@@ -560,18 +557,16 @@ contains
 
     TotalHeatingProc = 0.0
 
-    ! Need to initialize unsigned flux model first
-    if(UseUnsignedFluxModel) call get_coronal_heat_factor
-
+    
     do iBlock=1,nBLK
        if(unusedBLK(iBlock))CYCLE
        do k=1,nK; do j=1,nJ; do i=1,nI
 
-       ! Calc heating (Energy/Volume/Time) for the cell 
-       call get_cell_heating(i, j, k, iBlock, CoronalHeating)
-
-       ! Multiply by cell volume and add to sum
-       TotalHeatingProc = TotalHeatingProc + CoronalHeating &
+          ! Calc heating (Energy/Volume/Time) for the cell 
+          call get_cell_heating(i, j, k, iBlock, CoronalHeating)
+          
+          ! Multiply by cell volume and add to sum
+          TotalHeatingProc = TotalHeatingProc + CoronalHeating &
                           / vInv_CB(i, j, k, iBlock)
 
        end do; end do; end do
@@ -813,7 +808,7 @@ contains
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK, B0_DGB
     use ModPhysics,    ONLY: inv_gm1, No2Io_V, UnitEnergydens_, UnitX_, &
          UnitT_, No2Si_V
-    use ModCoronalHeating, ONLY: HeatFactor
+    use ModCoronalHeating, ONLY: HeatFactor,HeatNormalization
     use ModProcMH,     ONLY: nProc
 
     real, intent(out) :: VarValue

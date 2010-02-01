@@ -724,6 +724,8 @@ module ModCoronalHeating
   !Arrays for the calcelated heat function and dissipated wave energy
   real :: CoronalHeating_C(1:nI,1:nJ,1:nK)
   real :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
+
+  logical,private:: DoInit = .true. 
 contains
   subroutine read_corona_heating
     use ModReadParam,   ONLY: read_var
@@ -758,6 +760,24 @@ contains
             //TypeCoronalHeating)
     end select
   end subroutine read_corona_heating
+  !===========================
+  subroutine init_coronal_heating
+    use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitT_
+    !--------------------
+
+    if(.not.DoInit)return
+    DoInit = .false.
+
+    if(UseExponentialHeating)then
+        HeatingAmplitude =  HeatingAmplitudeCgs*0.1 &
+             *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+    end if
+
+    ! if using open closed heating initialize auxilary WSA grid
+    if(DoOpenClosedHeat) call set_empirical_model(trim('WSA'),WsaT0)
+    ! Need to initialize unsigned flux model first
+    if(UseUnsignedFluxModel) call get_coronal_heat_factor
+  end subroutine init_coronal_heating
   !===========================
   subroutine read_active_region_heating
     use ModReadParam,   ONLY: read_var

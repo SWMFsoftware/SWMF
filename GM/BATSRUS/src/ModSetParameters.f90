@@ -64,7 +64,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModTimeStepControl, ONLY: read_time_step_control_param
   use ModIoUnit, ONLY: io_unit_new
   use ModCoronalHeating,ONLY:read_corona_heating,read_active_region_heating,&
-       read_longscale_heating
+       read_longscale_heating, init_coronal_heating, UseCoronalHeating
   
   implicit none
 
@@ -229,6 +229,8 @@ subroutine MH_set_parameters(TypeAction)
      call init_mod_equation
 
      if(UseResistivity)call init_mod_resistivity !^CFG IF DISSFLUX
+
+     if(UseCoronalHeating)call init_coronal_heating
 
      ! Initialize user module and allow user to modify things
      if(UseUserInitSession)call user_init_session
