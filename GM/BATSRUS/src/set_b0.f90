@@ -422,14 +422,16 @@ subroutine get_b0(X0,Y0,Z0,B0)
   use ModPhysics,       ONLY : Si2No_V, UnitB_, DipoleStrengthSi
   use CON_planet_field, ONLY : get_planet_field
   use ModMain,          ONLY : UseBody2             !^CFG IF SECONDBODY
-  use ModMain,          ONLY : UseUserB0
+  use ModMain,          ONLY : UseUserB0, UseMagnetogram
   use ModUser,          ONLY: user_get_b0
   implicit none
 
   real, intent(in) :: X0,Y0,Z0
   real, intent(out), dimension(3) :: B0
 
-  if(UseUserB0)then
+  if(UseMagnetogram)then
+     call get_coronal_b0(X0,Y0,Z0,B0)
+  elseif(UseUserB0)then
      call user_get_b0(X0,Y0,Z0,B0)
   elseif(IsStandAlone .and. DipoleStrengthSi==0.0)then
      B0 = 0.0
@@ -690,3 +692,23 @@ subroutine update_b0
 end subroutine update_b0
 
 !===========================================================================
+subroutine get_coronal_b0(xInput,yInput,zInput,B0_D)
+  use EEE_ModMain,    ONLY: EEE_get_B0
+  use ModPhysics,     ONLY: Io2No_V,Si2No_V,UnitB_
+  use ModMagnetogram, ONLY: get_magnetogram_field
+  implicit none
+
+  real, intent(in):: xInput,yInput,zInput
+  real, intent(out), dimension(3):: B0_D
+
+  real :: x_D(3),B_D(3)
+  !--------------------------------------------------------------------------
+
+  call get_magnetogram_field(xInput,yInput,zInput,B0_D)
+  B0_D = B0_D*Si2No_V(UnitB_)
+
+  x_D = (/ xInput, yInput, zInput /)
+  call EEE_get_B0(x_D,B_D)
+  B0_D = B0_D + B_D*Si2No_V(UnitB_)
+
+end subroutine get_coronal_b0

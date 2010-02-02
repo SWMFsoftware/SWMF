@@ -63,9 +63,10 @@ subroutine MH_set_parameters(TypeAction)
   use ModIonoVelocity,ONLY: read_iono_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
   use ModIoUnit, ONLY: io_unit_new
+  !CORONA SPECIFIC PARAMETERS
+  use ModMagnetogram, ONLY: set_parameters_magnetogram,read_magnetogram_file
   use ModCoronalHeating,ONLY:read_corona_heating,read_active_region_heating,&
        read_longscale_heating, init_coronal_heating, UseCoronalHeating
-  
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -230,7 +231,12 @@ subroutine MH_set_parameters(TypeAction)
 
      if(UseResistivity)call init_mod_resistivity !^CFG IF DISSFLUX
 
+     if(UseMagnetogram)&
+          call read_magnetogram_file(NamePlotDir)
+
      if(UseCoronalHeating)call init_coronal_heating
+     
+
 
      ! Initialize user module and allow user to modify things
      if(UseUserInitSession)call user_init_session
@@ -1493,7 +1499,7 @@ subroutine MH_set_parameters(TypeAction)
      case('#STEADYSTATESATELLITE')
         call read_satellite_parameters(NameCommand)
 
-     case("#MAGNETOMETER")
+     case("#MANETOMETER")
         DoReadMagnetometerFile = .true.
         save_magnetometer_data =.true.
         call read_var('MagInputFile', MagInputFile)
@@ -1800,6 +1806,13 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('rBuffMax',  rBuffMax)
         call read_var('nThetaBuff',nThetaBuff)
         call read_var('nPhiBuff',  nPhiBuff)
+
+        !CORONA SPECIFIC COMMANDS
+
+     case("#MAGNETOGRAM")
+        call read_var('UseMagnetogram'  ,UseMagnetogram)
+        if(UseMagnetogram)&
+             call set_parameters_magnetogram
 
      case("#CORONALHEATING")
         call read_corona_heating
