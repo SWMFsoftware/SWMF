@@ -206,20 +206,16 @@ end subroutine advance_expl
 !===========================================================================
 
 subroutine update_secondbody
-  use ModMain,          ONLY: time_simulation,globalBLK,nBlock
-  use ModConst,         ONLY: cTwoPi
-  use ModPhysics,       ONLY: xBody2,yBody2,OrbitPeriod,xBody2init, &
-       yBody2init
+  use ModMain,     ONLY: time_simulation,globalBLK,nBlock
+  use ModConst,    ONLY: cTwoPi
+  use ModPhysics,  ONLY: xBody2,yBody2,OrbitPeriod,xBody2init,yBody2init
 
   implicit none
-
-  real :: Rdistance
   !-------------------------------------------------------------------------
 
   ! Update second body coordinates
-  Rdistance = sqrt(xBody2**2+yBody2**2)
   xBody2 = xBody2init*cos(cTwoPi*time_simulation/OrbitPeriod)
-  yBody2 = sqrt(Rdistance**2-xBody2**2)
+  yBody2 = xBody2init*sin(cTwoPi*time_simulation/OrbitPeriod)
 
   do globalBLK = 1, nBlock
      call fix_block_geometry(globalBLK)
