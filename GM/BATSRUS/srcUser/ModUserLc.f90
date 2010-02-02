@@ -176,7 +176,7 @@ contains
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: i_line_command
     use ModWaves
-    use ModMain,        ONLY: optimize_message_pass
+    use ModMain,        ONLY: optimize_message_pass, UseMagnetogram
     use ModLookupTable, ONLY: i_lookup_table
     use ModConst,       ONLY: cBoltzmann, cElectronMass, cProtonMass, &
          cEps, cElectronCharge, cTwoPi
@@ -189,15 +189,15 @@ contains
        call write_prefix; write(iUnitOut,*) 'user_init_session:'
        call write_prefix; write(iUnitOut,*) ''
     end if
-
-    if(i_line_command("#PFSSM", iSessionIn = 1) < 0)then
-       write(*,*) 'In session 1, a magnetogram file has to be read via #PFSSM'
-       call stop_mpi('ERROR: Correct PARAM.in!')
+    if(.not.UseMagnetogram)then
+       if(i_line_command("#PFSSM", iSessionIn = 1) < 0)then
+          write(*,*) 'In session 1, a magnetogram file has to be read via #PFSSM'
+          call stop_mpi('ERROR: Correct PARAM.in!')
+       end if
+       if(i_line_command("#PFSSM") > 0)then
+          call read_magnetogram_file(NamePlotDir)
+       end if
     end if
-    if(i_line_command("#PFSSM") > 0)then
-       call read_magnetogram_file(NamePlotDir)
-    end if
-
     if(i_line_command("#TRBOUNDARY", iSessionIn = 1) < 0)then
        write(*,*) 'In session 1, need to specify a BC with #TRBOUNDARY!'
        call stop_mpi('ERROR: Correct PARAM.in!')
