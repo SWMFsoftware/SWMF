@@ -20,7 +20,7 @@ module ModMagnetogram
   integer:: N_PFSSM=nHarmonicsMax
 
   ! Number of header lines in the file
-  integer:: iHead_PFSSM
+  integer:: iHead_PFSSM=12
 
 
   ! Name of the input file
