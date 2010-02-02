@@ -81,6 +81,12 @@ Module ModMain
   logical :: DoSplitDb0Dt = .true.
 
   !\
+  ! Coronal magnetic field (magnetogram + EE generator)
+  !/
+
+  logical:: UseMagnetogram=.false.
+
+  !\
   ! Inner and outer boundaries
   !/
   ! Indexes for boundaries
