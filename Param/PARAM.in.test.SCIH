@@ -135,13 +135,11 @@ F			UseUserLogFiles
 F			UseUserWritePlot
 F			UseUserAMR
 F			UseUserEchoInput
-T			UseUserB0
+F			UseUserB0
 T			UseUserInitSession
 T			UseUserUpdateStates
 
-#USERINPUTBEGIN ------------------------
-
-#PFSSM
+#MAGNETOGRAM
 T			UseUserB0
 1.0			Ro_PFSSM
 2.5			Rs_PFSSM
@@ -150,7 +148,9 @@ SC/Param/CR1935_WSO.dat
 12			iHead_PFSSM
 -1.0			PhiShift
 0.01			UnitB
--1.0			dt_UpdateB0
+
+#USERINPUTBEGIN ------------------------
+
 
 #EMPIRICALSW
 WSA			NameModel
