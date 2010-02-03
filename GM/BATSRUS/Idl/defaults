@@ -93,7 +93,8 @@ rcut=-1.0
 title=0      ; set to a string with the title
 xtitle=0     ; set to a string with the time title
 ytitles=0    ; set to a string array with the function names
-timeunit='h' ; set to '1' (unitless), 's' (second), 'm' (minute) or 'h' (hour) 
+timeunit='h' ; set to '1' (unitless), 's' (second), 'm' (minute), 'h' (hour) 
+	     ;        'millisec', 'microsec', 'ns' (nanosec)
 xrange=0     ; set to a [min,max] array for the time range
 yranges=0    ; set to a [[min1,max1], [min2,max2] ...] for function ranges
 colors=255   ; set to an array with colors for each function
