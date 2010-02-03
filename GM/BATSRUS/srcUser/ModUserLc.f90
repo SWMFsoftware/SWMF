@@ -555,8 +555,6 @@ contains
     ! Do this because want to be able to generalize models, which can depend on 
     ! topology of domain --> total heating not always known beforehand 
 
-    ! if using open closed heating initialize auxilary WSA grid
-    if(DoOpenClosedHeat) call set_empirical_model(trim('WSA'),WsaT0)
     ! Need to initialize unsigned flux model first
     if(UseUnsignedFluxModel) call get_coronal_heat_factor
 
