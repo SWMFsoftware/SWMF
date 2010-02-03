@@ -124,6 +124,9 @@ if n_elements(timeunit) gt 0 then begin
         '1': logtime = hours*3600
         's': logtime = hours*3600
         'm': logtime = hours*60
+        'millisec': logtime = hours*3600e3
+        'microsec': logtime = hours*3600e6
+        'ns'    : logtime = hours*3600e9
         else: 
     endcase
 endif
