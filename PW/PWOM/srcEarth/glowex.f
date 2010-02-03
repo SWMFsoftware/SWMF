@@ -62,8 +62,9 @@ C
 C
       use ModGlow
       use ModCommonVariables, ONLY: MaxGrid,DoLog,AltMin,GLAT,GLONG,F107,
-     &     F107A,IYD,SEC,iUnitOutput, GMLAT
-      use ModNumConst, ONLY: cRadToDeg,cPi
+     &     F107A,IYD,SEC,iUnitOutput, GMLAT, GMLONG
+      use ModNumConst, ONLY: cRadToDeg, cDegToRad, cPi
+      use CON_planet,  ONLY: IsPlanetModified, RotAxisTheta, RotAxisPhi
 
 C      PARAMETER (JMAX=92)
 C      PARAMETER (NBINS=84)
@@ -172,10 +173,24 @@ C
        CALL FIELDM (GLAT, GLONG, 300., XF, YF, ZF, FF, DIP, DEC, SDIP)
        DIP = ABS(DIP) * cPi/180.
 C     
-       CALL SOLZEN (IYD, UTG, GLAT, GLONG, SZA)
+       if (IsPlanetModified) then
+          if (RotAxisTheta == 0.0 .and. RotAxisPhi == 0.0) then
+             !IDEALAXES are set. Use gmlat and gmlong to set sza
+             SZA=acos(cos(GMLAT*cDegToRad)*cos(GMLONG*cDegToRad))*cRadToDeg
+          else
+             ! ERROR, planet modified but not IDEALAXES
+             call CON_STOP('PW ERROR: Planet modified, 
+     &            but not to IDEAL AXES')
+          endif
+       else
+          ! Standard situation: Real axes
+          CALL SOLZEN (IYD, UTG, GLAT, GLONG, SZA)
+       endif
+
        SZA = min(SZA,85.0)
        SZA = SZA * cPi/180.
        SZAD = SZA*cRadToDeg
+
        if (DoLog) WRITE(iUnitOutput,9996)SZAD
  9996  FORMAT(26X,'SOLAR ZENITH ANGLE:',1F8.2,' DEGREES')
 C     Calculate slant path column densities in the direction of sun of major

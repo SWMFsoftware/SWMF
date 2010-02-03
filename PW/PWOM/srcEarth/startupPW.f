@@ -20,6 +20,7 @@ C
       use ModIndicesInterfaces
       use ModNumConst, ONLY: cDegToRad
       use ModLatLon,   ONLY: convert_lat_lon
+      use CON_planet,  ONLY: IsPlanetModified, RotAxisTheta, RotAxisPhi
 C     
       CurrentTime=StartTime+Time
       NPT1=14
@@ -158,7 +159,7 @@ CALEX IYD=year_day of year
 C END
 !      CALL GGM_PLANET(IART,GLONG,GLAT,GMLONG,GMLAT)
       CALL convert_lat_lon(Time,GMLAT,GMLONG,GLAT,GLONG)
-      
+
       if (.not.UseStaticAtmosphere) then
          iDay  = mod(IYD,1000)+floor(Time/24.0/3600.0)
          iYear = IYD/1000
@@ -313,10 +314,21 @@ c      ETOP=5.0E-3
       endif
       
       if (UsePhotoElectronHeatFlux) then
-         call SOLZEN (IYD, SEC, GLAT, GLONG, SZA)
+         if (IsPlanetModified) then
+            if (RotAxisTheta == 0.0 .and. RotAxisPhi == 0.0) then
+               !IDEALAXES are set. Use gmlat and gmlong to set sza
+               SZA=acos(cos(GMLAT*cDegToRad)*cos(GMLONG*cDegToRad))*cRadToDeg
+            else
+               ! ERROR, planet modified but not IDEALAXES
+               call con_stop()
+            endif
+         else
+            ! Standard situation: Real axes
+            CALL SOLZEN (IYD, UTG, GLAT, GLONG, SZA)
+         endif
          ETOP = ETOP+EtopPhotoElectrons*max(cos(SZA*cDegToRad),0.0)
       endif
-
+      
       ELFXIN=0.
 C
 C      ELFXIN=9.
