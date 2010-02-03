@@ -366,7 +366,7 @@ module CRASH_ModExcitationData
   !======================CORRECTION!!!!
   !The statistical weight from the Allen's
   !Astrophysical quantities book is incorrect (thanks to Rafael Rodrigez)
-  !For terms p^2-p^4 and d^2-d^8 the used stat.wieght is off by a factor of 2 to 50
+  !For terms p^2-p^4 and d^2-d^8 the used stat.weight is off by a factor of 2 to 50
   logical,public:: UseFullGroundState = .false. 
   !====================THE END OF INTERNAL DATABASE============================
   logical,public::UseDataBase = .false.
@@ -605,7 +605,7 @@ contains
     !1-6-s--- !---2-5--p-------!----3-5------d----------------!--------4f-----!
     !------------------------------------------------------
     n_ground = nGround_I(nZ - iZ)
-    ! if(nZ==79.and.iZ<=54.and.iZ>=47)n_ground=4
+    if(nZ==79.and.iZ<=54.and.iZ>=47)n_ground=4
   end function n_ground
   !======================================================================================
   integer function n_screened(iZ,nZ)
@@ -618,7 +618,7 @@ contains
 
     nGround = n_ground(iZ, nZ)
     n_screened = nScreenedShell_I(nGround)
-    !if(nZ==79.and.nGround==5)n_screened=60
+    if(nZ==79.and.nGround==5)n_screened=60
 
   end function n_screened
   !=======================
