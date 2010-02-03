@@ -693,7 +693,6 @@ end subroutine update_b0
 
 !===========================================================================
 subroutine get_coronal_b0(xInput,yInput,zInput,B0_D)
-  use EEE_ModMain,    ONLY: EEE_get_B0
   use ModPhysics,     ONLY: Io2No_V,Si2No_V,UnitB_
   use ModMagnetogram, ONLY: get_magnetogram_field
   implicit none
@@ -701,14 +700,10 @@ subroutine get_coronal_b0(xInput,yInput,zInput,B0_D)
   real, intent(in):: xInput,yInput,zInput
   real, intent(out), dimension(3):: B0_D
 
-  real :: x_D(3),B_D(3)
+  real :: B_D(3)
   !--------------------------------------------------------------------------
 
   call get_magnetogram_field(xInput,yInput,zInput,B0_D)
   B0_D = B0_D*Si2No_V(UnitB_)
-
-  x_D = (/ xInput, yInput, zInput /)
-  call EEE_get_B0(x_D,B_D)
-  B0_D = B0_D + B_D*Si2No_V(UnitB_)
 
 end subroutine get_coronal_b0

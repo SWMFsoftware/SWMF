@@ -63,10 +63,14 @@ subroutine MH_set_parameters(TypeAction)
   use ModIonoVelocity,ONLY: read_iono_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
   use ModIoUnit, ONLY: io_unit_new
+
   !CORONA SPECIFIC PARAMETERS
-  use ModMagnetogram, ONLY: set_parameters_magnetogram,read_magnetogram_file
-  use ModCoronalHeating,ONLY:read_corona_heating,read_active_region_heating,&
-       read_longscale_heating, init_coronal_heating, UseCoronalHeating
+  use ModMagnetogram,     ONLY: set_parameters_magnetogram,read_magnetogram_file
+  use ModExpansionFactors,ONLY: NameModelSW, CoronalT0Dim
+  use ModCoronalHeating,  ONLY: read_corona_heating,read_active_region_heating,&
+       read_longscale_heating, init_coronal_heating, UseCoronalHeating, &
+       DoOpenClosedHeat
+
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -231,11 +235,18 @@ subroutine MH_set_parameters(TypeAction)
 
      if(UseResistivity)call init_mod_resistivity !^CFG IF DISSFLUX
 
-     if(UseMagnetogram)&
+     if(UseMagnetogram.and.i_line_command("#MAGNETOGRAM") > 0)&
           call read_magnetogram_file(NamePlotDir)
+
+     if(UseEmpiricalSW.and.i_line_command("#EMPIRICALSW") > 0)&
+       call set_empirical_model(trim(NameModelSW),BodyTDim_I(1))
 
      if(UseCoronalHeating)call init_coronal_heating
      
+     ! if using open closed heating initialize auxilary WSA grid
+     if(DoOpenClosedHeat.and.i_line_command("#OPENCLSEDHEAT")>0)&
+         call set_empirical_model(trim('WSA'),CoronalT0Dim)
+
 
 
      ! Initialize user module and allow user to modify things
@@ -1814,11 +1825,18 @@ subroutine MH_set_parameters(TypeAction)
         if(UseMagnetogram)&
              call set_parameters_magnetogram
 
+     case('#EMPIRICALSW')
+        call read_var('NameModelSW',NameModelSW)
+        UseEmpiricalSW = trim(NameModelSW)/='none'
+
      case("#CORONALHEATING")
         call read_corona_heating
  
      case("#LONGSCALEHEAT")
         call read_longscale_heating
+
+     case("#OPENCLOSEDHEAT")
+        call read_var('DoOpenClosedHeat', DoOpenClosedHeat)
 
      case("#ACTIVEREGIONHEAT")
         call read_active_region_heating
@@ -2249,6 +2267,16 @@ contains
        optimize_message_pass = 'all'
     endif
     !^CFG END IMPLICIT
+
+    !Check for magnetogram
+  
+    if(UseEmpiricalSW.and..not.UseMagnetogram)&
+         call stop_mpi(&
+         'Empirical Solar Wind model requires magnetogram')
+
+    if(DoOpenClosedHeat.and..not.UseModMagnetogram)&
+         call stop_mpi(&
+         'The heating in the closed field region requires magnetogram')
 
     if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
          call stop_mpi(NameSub// &

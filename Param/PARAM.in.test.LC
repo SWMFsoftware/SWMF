@@ -26,6 +26,18 @@ F			DoSaveRestart
 #COORDSYSTEM
 HGR                     TypeCoordSystem
 
+#MAGNETOGRAM
+T                       UseMagnetogram
+1.0                     Ro_PFSSM
+2.5                     Rs_PFSSM
+0.0                     H_PFSSM
+LC/Param/CR1935_WSO.dat
+12                      iHead_PFSSM
+-1.0                    PhiShift
+0.01                    UnitB
+
+!---------CORONAL HEATING--------------------------------------------------
+
 #CORONALHEATING
 exponential		TypeCoronalHeating
 0.057471264		DecayLength
@@ -42,6 +54,11 @@ T			UseArComponent
 30.0			ArHeatB0
 5.0			ArHeatDeltaB0
 
+#OPENCLOSEDHEAT
+T			DoOpenClosedHeat
+
+!--------END OF CORONAL HEATIN---------------------------------------------
+
 #USER_FLAGS
 T			UseUserInnerBcs
 T			UseUserSource
@@ -57,27 +74,19 @@ F			UseUserB0
 T			UseUserInitSession
 T			UseUserUpdateStates
 
-#MAGNETOGRAM
-T                       UseMagnetogram
-1.0                     Ro_PFSSM
-2.5                     Rs_PFSSM
-0.0                     H_PFSSM
-LC/Param/CR1935_WSO.dat
-12                      iHead_PFSSM
--1.0                    PhiShift
-0.01                    UnitB
 
 #USERINPUTBEGIN ------------------------
 
-#OPENCLOSEDHEAT
-T			DoOpenClosedHeat
-3.5			WsaT0
-
+!--------BOUNDARY CONDITION________________
+!  1. Excessive density, lower temperature in the chromosphere
 
 #TRBOUNDARY
 chromo			TypeTRBoundary
 1.0E+12 		BoundaryNeCgs
 2.0E+4			BoundaryTeCgs
+
+!  2. Modify accordingly the radiative cooling and heat conduction,
+!     to extend the transition region.
 
 #MODIFYHEATCONDUCTION
 T			DoModHeatConduction
@@ -206,9 +215,7 @@ T
 2                       nStage
 0.80                    CflExpl
 
-FIXEDTIMESTEP
-T			UseDtFixed
-1E-9			DtFixedDim
+!-----Take data which are used in making synthetic EUV and X-ray images
 
 #LOOKUPTABLE
 euv			NameTable
@@ -221,6 +228,8 @@ sxr			NameTable
 load			NameCommand
 LC/Param/ResSXT.dat	NameFile
 ascii			TypeFile
+
+!-----Take data which are used in calculating the radiative cooling
 
 #LOOKUPTABLE
 radcool			NameTable

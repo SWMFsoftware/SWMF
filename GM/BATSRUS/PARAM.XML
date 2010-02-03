@@ -5243,36 +5243,46 @@ observational data and to accomodate data measured in the units rather than
 Gs. Wilcox data (in microTl) may be only used with UnitB~0.01-0.03.
  
 </command>
+
+<command name="EMPIRICALSW">
+	<parameter name="NameModelSW" type="string" input="select"/>
+
+#EMPIRICALSW
+WSA             NameModelSW
+
+Depending on the expansion factors, calculated using the magnetogram field,
+for NameModelSW=WSA the spatial distribution of varied gamma is calculated.
+Through the Bernoulli integral the solar wind at 1AU should fit the WSA
+solar wind semi-empirical model, with the prescribed distribution of the
+varied gamma. Default value is NameModelSW=none
+</command>
 <command name="CORONALHEATING">
-	<parameter name="UseCoronalHeating" type="logical" default="F"	/>
-	<if expr="$UseCoronalHeating">
-		<parameter name="TypeCoronalHeating" type="string" case="lower"
-			input="select" >
-			<option name="exponential"         />
-			<option name="unsignedflux"        />
-			<option name="NonWKB"              />
-		</parameter>
-		<if expr="$TypeCoronalHeating =~ /exponential/">
-			<parameter name="DecayLengthExp" type="real" 
-							default="0.7" />
-			<parameter name="HeatingAmplitudeCgs" type="real" 
-							default="6.07E-7" />
-		</if>
-		<if expr="$TypeCoronalHeating =~ /unsignedflux/">
-			<parameter name="DecayLength" type="real" 
-						default="1.0"/>
-			<parameter name="HeatNormalization" type="real" 
-						default="1.0"/>
-		</if>
+	<parameter name="TypeCoronalHeating" type="string" case="lower"
+		input="select" >
+		<option name="exponential"         />
+		<option name="unsignedflux"        />
+		<option name="NonWKB"              />
+		<option name="none"                />
+	</parameter>
+	<if expr="$TypeCoronalHeating =~ /exponential/">
+		<parameter name="DecayLengthExp" type="real" 
+						default="0.7" />
+		<parameter name="HeatingAmplitudeCgs" type="real" 
+						default="6.07E-7" />
 	</if>
+	<if expr="$TypeCoronalHeating =~ /unsignedflux/">
+		<parameter name="DecayLength" type="real" 
+						default="1.0"/>
+		<parameter name="HeatNormalization" type="real" 
+						default="1.0"/>
+	</if>
+
 #CORONALHEATING
-T		UseCoronalHeating (rest of parameters read only if set to true)
 exponential	TypeCoronalHeating
 0.0575		DecayLengthEXP      [Rsun] 	  (read for exp heating only)
 7.285E-05	HeatingAmplitudeCgs [ergs/cm^3/s] (read for exp heating only)
 
 #CORONALHEATING
-T		UseCoronalHeating (rest of parameters read only if set to true)
 unsignedflux	TypeCoronalHeating
 0.0575		DecayLength	  [Rsun] (read for unsignedflux heating only)
 1.0		HeatNormalization [none] (read for unsignedflux heating only)
@@ -5356,6 +5366,18 @@ heating model at the moment.
 
 The default is UseArComponent=.false.
 </command>
+<command name="OPENCLOSEDHEAT">
+	<parameter name="DoOpenClosedHeat" type="logical" default="F"	/>
+
+#OPENCLOSEDHEAT
+T               DoOpenClosedField
+
+If DoOpenClosedHeat=.true., the the heating function or thrbulent heating
+rate are modulated from closed to open magnetic field. Default is
+DoOpenClosedField = .false.
+
+</command>
+
 </commandgroup>
 
 <commandgroup name="HELIOSPHERE SPECIFIC COMMANDS">
