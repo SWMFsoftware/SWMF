@@ -94,6 +94,7 @@ CRASH:
 	cd ${SHAREDIR}; make LIB
 	cd ${TIMINGDIR}; make LIB
 	cd ${MAGNETOGRAMDIR}; make LIB
+	cd ${EMPIRICALEEDIR}; make LIB
 	cd ${CRASHDIR}; make LIB
 	cd srcBATL; make LIB
 	cd src; make LIB
