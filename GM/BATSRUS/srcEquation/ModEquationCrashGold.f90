@@ -8,7 +8,8 @@ module ModVarIndexes
        Redefine4 => WaveFirst_, &
        Redefine5 => WaveLast_, &
        Redefine6 => ExtraEint_, &
-       Redefine7 => Pe_
+       Redefine7 => Pe_, &
+       Redefine8 => LevelAu_
 
   implicit none
 
