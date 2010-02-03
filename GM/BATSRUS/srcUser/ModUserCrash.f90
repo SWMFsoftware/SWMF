@@ -2373,6 +2373,7 @@ contains
     logical ,intent(inout)       :: IsFound
 
     logical:: IsXe_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    logical:: IsAu_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     real   :: RhoMin
     integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
     !------------------------------------------------------------------
@@ -2412,6 +2413,17 @@ contains
     UserCriteria = 1.0
     if(any(IsXe_G(iMin:iMax,jMin:jMax,kMin:kMax)) .and. &
          .not. all(IsXe_G(iMin:iMax,jMin:jMax,kMin:kMax))) RETURN
+
+    if(UseAu)then
+       ! If there is a Au interface anywhere in the block, refine
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          IsAu_G(i,j,k) = State_VGB(LevelAu_,i,j,k,iBlock) &
+               >   maxval(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
+       end do; end do; end do
+
+       if(any(IsAu_G(iMin:iMax,jMin:jMax,kMin:kMax)) .and. &
+         .not. all(IsAu_G(iMin:iMax,jMin:jMax,kMin:kMax))) RETURN
+    end if
 
     ! If Xe density exceeds RhoMin, refine
     RhoMin = RhoMinAmrDim*Io2No_V(UnitRho_)
