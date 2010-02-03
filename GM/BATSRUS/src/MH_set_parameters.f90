@@ -70,7 +70,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModCoronalHeating,  ONLY: read_corona_heating,read_active_region_heating,&
        read_longscale_heating, init_coronal_heating, UseCoronalHeating, &
        DoOpenClosedHeat
-
+  use ModRadiativeCooling,ONLY: UseRadCooling,&
+       read_modified_cooling, check_cooling_param
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -242,9 +243,10 @@ subroutine MH_set_parameters(TypeAction)
        call set_empirical_model(trim(NameModelSW),BodyTDim_I(1))
 
      if(UseCoronalHeating)call init_coronal_heating
+     call check_cooling_param
      
      ! if using open closed heating initialize auxilary WSA grid
-     if(DoOpenClosedHeat.and.i_line_command("#OPENCLSEDHEAT")>0)&
+     if(DoOpenClosedHeat.and.i_line_command("#OPENCLOSEDHEAT")>0)&
          call set_empirical_model(trim('WSA'),CoronalT0Dim)
 
 
@@ -1840,6 +1842,12 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#ACTIVEREGIONHEAT")
         call read_active_region_heating
+
+     case("#RADCOOLING")
+        call read_var('UseRadCooling',UseRadCooling)
+
+     case("#MODIFYHEATCONDUCTION")
+        call read_modified_cooling
 
      case default
         if(iProc==0) then

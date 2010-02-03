@@ -1649,7 +1649,7 @@ but some of them are evaluated implicitly.
 
 The TypeSemiImplicit parameter determines which terms and corresponding 
 variables are done semi-implicitly. The "radiation" option solves for the 
-gray diffusion energy density and it sets the the internal energy 
+gray diffusion energy density and it sets the internal energy 
 and pressure in a point implicit manner. The "radcond" option solves 
 implicitly the radiation diffusion and electron heat conduction together with
 the radiation and internal energy densities being the unknowns.
@@ -5372,10 +5372,22 @@ The default is UseArComponent=.false.
 #OPENCLOSEDHEAT
 T               DoOpenClosedField
 
-If DoOpenClosedHeat=.true., the the heating function or thrbulent heating
-rate are modulated from closed to open magnetic field. Default is
-DoOpenClosedField = .false.
+If DoOpenClosedHeat=.true., then the heating function or the turbulent heating
+rate are modulated from closed to open magnetic field. Exponential heating 
+function as well as the unsigned flux model function are switched off in the 
+open field region. With the Cranmer heating function, the reflection 
+coefficient in the closed field region is set to one, intensifying the 
+heating.
 
+Default is DoOpenClosedField = .false.
+</command>
+
+<command name="RADCOOLING">
+	 <parameter name="UseRadCooling" type="logical" default="F" />
+</command>
+
+<command name="MODIFYHEATCONDUCTION">
+	 <parameter name="DoModHeatConduction" type="logical" default="F" />
 </command>
 
 </commandgroup>

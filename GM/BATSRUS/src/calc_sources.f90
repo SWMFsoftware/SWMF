@@ -13,7 +13,7 @@ subroutine calc_sources
   use ModPhysics
   use ModNumConst
   use ModResistivity,   ONLY: UseResistivity, Eta_GB   !^CFG IF DISSFLUX
-  use ModUser,          ONLY: user_calc_sources
+  use ModUser,          ONLY: user_calc_sources,user_material_properties
   use ModCoordTransform
   use ModImplicit,      ONLY: UseFullImplicit            !^CFG IF IMPLICIT
   use ModRadDiffusion,  ONLY: calc_source_rad_diffusion  !^CFG IF IMPLICIT
@@ -25,6 +25,8 @@ subroutine calc_sources
   use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
   use ModCoronalHeating,ONLY: UseCoronalHeating,&
                               get_block_heating,CoronalHeating_C
+  use ModRadiativeCooling,ONLY: AuxTeSi,RadCooling_C,UseRadCooling,&
+                              get_radiative_cooling
   implicit none
 
   integer :: i, j, k, iDim, iVar
@@ -244,6 +246,21 @@ subroutine calc_sources
      do k=1,nK; do j=1,nJ; do i=1,nI
         Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
              CoronalHeating_C(i,j,k)
+        Source_VC(p_,     i,j,k) = Source_VC(p_,     i,j,k) + &
+             CoronalHeating_C(i,j,k) * (g-1.0)
+     end do; end do; end do
+  end if
+  if(UseRadCooling)then
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        call user_material_properties(&
+                State_VGB(:,i,j,k,iBlock),TeOut=AuxTeSi)
+        call get_radiative_cooling(i,j,k,iBlock,AuxTeSi,&
+             RadCooling_C(i,j,k))
+
+        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
+             RadCooling_C(i,j,k)
+        Source_VC(p_,     i,j,k) = Source_VC(p_,     i,j,k) + &
+             RadCooling_C(i,j,k) * (g-1.0)
      end do; end do; end do
   end if
 
