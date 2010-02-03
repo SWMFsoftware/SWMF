@@ -23,7 +23,7 @@ module ModExpansionFactors
   !Gravity potential of a proton, in K
   real,parameter :: cSunGravityK =cSunGravitySI*cProtonMass/cBoltzmann
 
-  character(len=20) :: TypeModel='none' ! Type of SW model
+  character(len=20) :: NameModelSW='none' ! Type of SW model
   !Distribution of the solar wind model parameters: 
 
   real,allocatable,dimension(:,:,:) :: FiskFactor_N
@@ -390,11 +390,13 @@ contains
     !     &-cSunGravitySI),(265.0*1.0E3)**2))
 
     ! Finding the minimum value of the final speed
-    select case(TypeModel) 
+    select case(NameModelSW) 
     case('WSA')
        UMin=minval(WSAspeed_N)
     case('Fisk')
        UMin=minval(Fiskspeed_N)
+    case default
+       call stop_mpi('Unknown SW empirical model: '//NameModelSW)
     end select
 
     ! Finding the maximum surface value of gamma (related to the minimum speed)
@@ -545,7 +547,7 @@ subroutine set_empirical_model(TypeRead,BodyT0)
   character(LEN=*),intent(in) :: TypeRead
   real, intent(in) :: BodyT0
   !------------------------------------------------------------------
-  TypeModel=trim(TypeRead)
+  NameModelSW=trim(TypeRead)
   CoronalT0Dim = BodyT0
   call set_expansion_factors
   if(iProc==0)call write_expansion_tec
