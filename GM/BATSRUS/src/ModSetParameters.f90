@@ -1844,7 +1844,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#RADCOOLING")
         call read_var('UseRadCooling',UseRadCooling)
 
-     case("#MODIFYHEATCONDUCTION")
+     case("#EXTENDEDTR")
         call read_modified_cooling
 
      case default

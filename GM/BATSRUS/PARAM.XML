@@ -5384,10 +5384,37 @@ Default is DoOpenClosedField = .false.
 
 <command name="RADCOOLING">
 	 <parameter name="UseRadCooling" type="logical" default="F" />
+#RADCOOLING
+T
+
+Switches the radiation cooling on and off. For coronal solar plasma the
+emissivity calculated in the "coronal" approximation (optically thin plasma
+with no radiation-induced excitations and ionization). The radiation loss rate
+is approximated using CHIANTI tables or approximate interpolation formula (see
+comments in src/ModRadiativeCooling.f90). Default value for UseRadCooling is
+.false.
+
 </command>
 
-<command name="MODIFYHEATCONDUCTION">
+<command name="EXTENDTR">
 	 <parameter name="DoModHeatConduction" type="logical" default="F" />
+	 <if expr="$DoModHeatConduction">
+		<parameter name="ArHeatFactorCgs" type="real" 
+						default="3.0E+5" />
+		<parameter name="ArHeatB0" type="real" 
+						default="1.0E+4" />
+	</if>
+#EXTENDTR
+T                    DoModHeatConduction
+3.0E+5               TeModSi
+1.0E+4               DeltaTeModSi
+
+Applied in calculations, which are to resolve the Transition Region (TR). To achieve
+this, at temperatures below TeModSi the heat conduction coefficient is artificially
+inhanced and the radiation loss rate is modified accordingly. The profile of temperature and
+density in this case are maintained to be the same as in the actual transition region,
+however, the spatial scale becomes much longer, so that the TR may be modelled at grids of a 
+realistic resolution. Default value is DoModHeatConduction = .true.
 </command>
 
 </commandgroup>
