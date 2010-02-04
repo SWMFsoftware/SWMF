@@ -1510,7 +1510,7 @@ subroutine MH_set_parameters(TypeAction)
      case('#STEADYSTATESATELLITE')
         call read_satellite_parameters(NameCommand)
 
-     case("#MANETOMETER")
+     case("#MAGNETOMETER")
         DoReadMagnetometerFile = .true.
         save_magnetometer_data =.true.
         call read_var('MagInputFile', MagInputFile)
