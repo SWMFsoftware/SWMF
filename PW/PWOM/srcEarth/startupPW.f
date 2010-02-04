@@ -324,7 +324,7 @@ c      ETOP=5.0E-3
             endif
          else
             ! Standard situation: Real axes
-            CALL SOLZEN (IYD, UTG, GLAT, GLONG, SZA)
+            CALL SOLZEN (IYD, SEC, GLAT, GLONG, SZA)
          endif
          ETOP = ETOP+EtopPhotoElectrons*max(cos(SZA*cDegToRad),0.0)
       endif
