@@ -1,5 +1,41 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
+!Description (Sokolov, Feb.,04,2010)
+!Coded by: Cooper Downs /cdowns@ifa.hawaii.edu
+!
+!read_inputs: #TRBOUNDARY (sets the type of BC at the corona boundary)
+!
+!init_session: checks the presence of #TRBOUNDARY, #MAGNETOGRAM and
+!#PLASMA commands, sets the dimensionless constans for density and temperature
+!at the coronal base and for the heat conduction coefficient.
+!
+!set_ics: initialize the MHD parameters using the Parker solution.
+!
+!set_initial_perturbation: initialize the "unsigned flux" model, calculate 
+!the total heating and compares with the contribution from the primary model
+!
+!face_bcs: implements two sorts of the BC at the low boundary: chromo and REB
+!
+!get_log_var: magnetic and internal energy, total heating
+!
+!calc_sources: modify the time step to prevent the code instability at large
+!values of the cooling function
+!
+!update_states: sets the logical at each used block needed for REB model
+!
+!specify refinement: refine a current sheet
+!
+!set_boundary_cells: to use the "extra" inner boundary
+!
+!set_outer_BC: set the boundary values for temperature as needed for the 
+!parallel heat conduction
+!
+!set_plot_var: implement plot variables qheat and qrad (heating and cooling
+!functions
+!
+!material_properties: (1) an output for Te and (2) modified Spitzer heat
+!conduction
+! 
 module ModUser
   use ModMain,      ONLY: nBLK, nI, nJ, nK
   use ModReadParam, ONLY: lStringLine
@@ -541,7 +577,6 @@ contains
 
     ! Need to initialize unsigned flux model first
     if(UseUnsignedFluxModel) call get_coronal_heat_factor
-
     TotalHeatingProc = 0.0
 
 
