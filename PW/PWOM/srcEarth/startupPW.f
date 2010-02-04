@@ -18,7 +18,7 @@ C
       use ModPwTime,ONLY: CurrentTime,StartTime,iStartTime,
      &                    Hour_,Minute_,Second_
       use ModIndicesInterfaces
-      use ModNumConst, ONLY: cDegToRad
+      use ModNumConst, ONLY: cDegToRad, cRadToDeg
       use ModLatLon,   ONLY: convert_lat_lon
       use CON_planet,  ONLY: IsPlanetModified, RotAxisTheta, RotAxisPhi
 C     
