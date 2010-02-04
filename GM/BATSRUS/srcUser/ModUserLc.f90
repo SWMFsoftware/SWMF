@@ -4,6 +4,7 @@ module ModUser
   use ModMain,      ONLY: nBLK, nI, nJ, nK
   use ModReadParam, ONLY: lStringLine
   use ModCoronalHeating,ONLY: CoronalHeating_C,get_cell_heating
+  use ModRadiativeCooling
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -35,7 +36,7 @@ module ModUser
 
   ! additional variables for TR boundary / heating models
   character(len=lStringLine) :: TypeTRBoundary
-  
+
   logical :: DoChromoBC  = .false.
   logical :: DoCoronalBC = .false.
   logical :: DoREBModel  = .false.
@@ -47,14 +48,7 @@ module ModUser
   real :: BoundaryTe
   real :: BoundaryRho
 
-  integer :: iTableRadCool = -1
 
-  ! Same use as the variables in ModHeatConduction
-  ! but need them here as well
-  logical :: DoModHeatConduction = .false.
-  real :: TeModSi = 3.0E+5
-  real :: DeltaTeModSi = 1E+4
-  real :: TeMod, DeltaTeMod
   real :: HeatCondParSi, HeatCondPar
 
   ! Variables for the REB model
@@ -84,6 +78,7 @@ contains
     character(len=*), parameter :: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
     UseUserInitSession = .true.
+    UseRadCooling=.true.
 
     if(iProc == 0 .and. lVerbose > 0)then
        call write_prefix;
@@ -106,18 +101,16 @@ contains
        case("#CORONALHEATING")
           call read_corona_heating
           if(UseExponentialHeating)call read_active_region_heating
-          
+
        case("#OPENCLOSEDHEAT")
           call read_var('DoOpenClosedHeat', DoOpenClosedHeat)
           if(DoOpenClosedHeat) call read_var('WsaT0', WsaT0)
 
        case("#LONGSCALEHEAT")
-         call read_longscale_heating
+          call read_longscale_heating
 
        case("#MODIFYHEATCONDUCTION")
-          call read_var('DoModHeatConduction',DoModHeatConduction)
-          call read_var('TeModSi',TeModSi)
-          call read_var('DeltaTeModSi',DeltaTeModSi)
+          call read_modified_cooling
 
        case("#TRBOUNDARY")
           call read_var('TypeTRBoundary', TypeTRBoundary)
@@ -177,7 +170,6 @@ contains
     use ModReadParam,   ONLY: i_line_command
     use ModWaves
     use ModMain,        ONLY: optimize_message_pass, UseMagnetogram
-    use ModLookupTable, ONLY: i_lookup_table
     use ModConst,       ONLY: cBoltzmann, cElectronMass, cProtonMass, &
          cEps, cElectronCharge, cTwoPi
 
@@ -205,11 +197,9 @@ contains
 
     if(optimize_message_pass/='all') then
        write(*,*) 'For Heat Conduction need message pass = all with ',&
-                   '#MESSAGEPASS!'
+            '#MESSAGEPASS!'
        call stop_mpi('ERROR: Correct PARAM.in!')
     end if
-    
-    iTableRadCool = i_lookup_table('radcool')
 
     if(i_line_command("#PLASMA", iSessionIn = 1) < 0)then
        write(*,*) 'Need to set electron temp ration with #PLASMA!'
@@ -233,10 +223,6 @@ contains
          *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)**3.5 &
          *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
-    if(DoModHeatConduction) then
-       TeMod = TeModSi * Si2No_V(UnitTemperature_)
-       DeltaTeMod = DeltaTeModSi * Si2No_V(UnitTemperature_)
-    end if
 
     ! calc normalized values of BC Te and Ne
     ! note, implicitly assuming Ne = Ni here
@@ -244,21 +230,21 @@ contains
     BoundaryRho = BoundaryNeCgs * 1.0E+6 * Si2No_V(UnitN_)
 
     if(iProc == 0)then
-       if(iTableRadCool>0) then
+       if(UseRadCoolingTable) then
           call write_prefix;  write(iUnitOut,*) 'Using Tabulated RadCooling'
        else
           call write_prefix;  write(iUnitOut,*) 'Using Analytic Fit to ', &
                                  'RadCooling'
        end if
        call write_prefix; write(iUnitOut,*) ''
-       
+
        if(DoModHeatConduction)then
           call write_prefix;  write(iUnitOut,*) 'using Modified Heat Conduction'
           call write_prefix;  write(iUnitOut,*) 'TeModSi      = ', TeModSi
           call write_prefix;  write(iUnitOut,*) 'DeltaTeModSi = ', DeltaTeModSi
           call write_prefix;  write(iUnitOut,*) ''
        end if
-       
+
        call write_prefix; write(iUnitOut,*) 'TeFraction = ',TeFraction
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session finished'
@@ -282,7 +268,7 @@ contains
          UnitT_, UnitX_
     use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_
     use ModFaceGradient, ONLY: get_face_gradient
-        
+
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
@@ -304,7 +290,7 @@ contains
     FullB_D = B0Face_D + B1t_D
     FullBr = dot_product(Runit_D, FullB_D)
 
-    
+
 
     Density = BoundaryRho
     if(DoREBModel) Density = calc_reb_density()
@@ -312,8 +298,6 @@ contains
     Temperature = BoundaryTe/TeFraction
 
 
-!    VarsGhostFace_V(Rho_) =  2.0*Density - VarsTrueFace_V(Rho_)
-!    VarsGhostFace_V(p_) = VarsGhostFace_V(Rho_)*Temperature
     VarsGhostFace_V(Rho_) =  Density
     VarsGhostFace_V(p_) = Density*Temperature
 
@@ -410,7 +394,7 @@ contains
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_
 
     integer :: i, j, k, iBlock
-   
+
     ! Variables for IC using Parker Isothermal Wind Solution
     ! Parker part copied from ModUserScHeat.f90 on 9/20/2009
     integer :: IterCount
@@ -431,7 +415,7 @@ contains
     ! TeBaseCGS and NeBaseCGS and rBase are values that match the coronal
     ! Solution at rTransRegion
     real :: TeBaseCgs, NeBaseCgs, NeValue, TeValue
-     
+
     !--------------------------------------------------------------------------
     ! This icond implements the radially symmetric parker isothermal wind solution 
     ! for the corona. If using a chromospheric condition, extend base of wind solution
@@ -560,17 +544,17 @@ contains
 
     TotalHeatingProc = 0.0
 
-    
+
     do iBlock=1,nBLK
        if(unusedBLK(iBlock))CYCLE
        do k=1,nK; do j=1,nJ; do i=1,nI
 
           ! Calc heating (Energy/Volume/Time) for the cell 
           call get_cell_heating(i, j, k, iBlock, CoronalHeating)
-          
+
           ! Multiply by cell volume and add to sum
           TotalHeatingProc = TotalHeatingProc + CoronalHeating &
-                          / vInv_CB(i, j, k, iBlock)
+               / vInv_CB(i, j, k, iBlock)
 
        end do; end do; end do
 
@@ -578,11 +562,11 @@ contains
 
     ! now collect sum over procs
     call MPI_allreduce(TotalHeatingProc, TotalHeating, 1, &
-                       MPI_REAL, MPI_SUM, iComm, iError)
+         MPI_REAL, MPI_SUM, iComm, iError)
 
     ! Convert total into CGS units
     TotalHeatingCgs = TotalHeating * No2Si_V(UnitEnergyDens_) * 10.0 &
-                      / No2Si_V(UnitT_) * (No2Si_V(UnitX_) * 100.0)**3
+         / No2Si_V(UnitT_) * (No2Si_V(UnitX_) * 100.0)**3
 
     ! now compute the total heating of the main models alone
     ! if it were applied to entire domain (to check consistency)
@@ -599,10 +583,10 @@ contains
        call write_prefix; write(iUnitOut,*) '----- START Coronal Heating #s -----------'
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'Total Heat of uniform single model'&
-             //' (ergs / s) = ', TotalHeatingModel
+            //' (ergs / s) = ', TotalHeatingModel
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'Total Heat into corona (ergs / s) = ',&
-             TotalHeatingCgs
+            TotalHeatingCgs
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) '------- END Coronal Heating #s -----------'
        call write_prefix; write(iUnitOut,*) ''
@@ -639,7 +623,7 @@ contains
          inv_gm1
 
     integer :: i, j, k, iBlock
-    real :: CoronalHeating, RadiativeCooling, EinternalSource
+
 
     ! variables for checking timestep control
     logical, parameter :: DoCalcTime = .true.
@@ -649,162 +633,50 @@ contains
     !--------------------------------------------------------------------------
 
     iBlock = globalBlk
+    ! Add this in for tentative timestep control from large source terms
+    ! need this because radiative loss term becomes INSANELY large at
+    ! Chromospheric densities
+
+    if(.not.DoCalcTime)return
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       Einternal = inv_gm1 * State_VGB(P_,i,j,k,iBlock)
+       TimeInvRad  = abs(RadCooling_c(i,j,k)/ Einternal)
+       TimeInvHeat = abs(CoronalHeating_C(i,j,k)   / Einternal)
 
-       call get_radiative_cooling(i, j, k, iBlock, RadiativeCooling)
+       Vdt_MaxSource = (TimeInvRad + TimeInvHeat) / vInv_CB(i,j,k,iBlock)
 
-       EinternalSource = RadiativeCooling
+       !**** NOTE This Is a CELL CENTERED TIMESCALE since sources are cell
+       ! centered. For now, add to lefthand VdtFace, knowing that calc timestep 
+       ! looks at MAX of VdtFaces on all sides
+       ! (however cells at the edge of the block will only see one neighbor...) 
+       VdtFace_x(i,j,k) = VdtFace_x(i,j,k) + 2.0 * Vdt_maxsource
+       VdtFace_y(i,j,k) = VdtFace_y(i,j,k) + 2.0 * Vdt_maxsource
+       VdtFace_z(i,j,k) = VdtFace_z(i,j,k) + 2.0 * Vdt_maxsource
 
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + EinternalSource
-
-       ! Add this in for tentative timestep control from large source terms
-       ! need this because radiative loss term becomes INSANELY large at
-       ! Chromospheric densities
-       if(DoCalcTime)then
-          Einternal = inv_gm1 * State_VGB(P_,i,j,k,iBlock)
-          TimeInvRad  = abs(RadiativeCooling / Einternal)
-          TimeInvHeat = abs(CoronalHeating_C(i,j,k)   / Einternal)
-   
-          Vdt_MaxSource = (TimeInvRad + TimeInvHeat) / vInv_CB(i,j,k,iBlock)
-   
-          !**** NOTE This Is a CELL CENTERED TIMESCALE since sources are cell
-          ! centered. For now, add to lefthand VdtFace, knowing that calc timestep 
-          ! looks at MAX of VdtFaces on all sides
-          ! (however cells at the edge of the block will only see one neighbor...) 
-          VdtFace_x(i,j,k) = VdtFace_x(i,j,k) + 2.0 * Vdt_maxsource
-          VdtFace_y(i,j,k) = VdtFace_y(i,j,k) + 2.0 * Vdt_maxsource
-          VdtFace_z(i,j,k) = VdtFace_z(i,j,k) + 2.0 * Vdt_maxsource
-       end if 
 
     end do; end do; end do
 
   end subroutine user_calc_sources
-
-  !============================================================================
-
-  subroutine get_radiative_cooling(i, j, k, iBlock, RadiativeCooling)
-
-    use ModMultiFluid, ONLY: MassIon_I
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitT_, UnitN_, &
-         UnitEnergyDens_, UnitTemperature_
-    use ModVarIndexes, ONLY: nVar, Rho_, P_
-    use ModLookupTable, ONLY: interpolate_lookup_table
-    use ModAdvance,    ONLY: State_VGB
-
-    integer, intent(in) :: i, j, k, iBlock
-    real, intent(out):: RadiativeCooling
-
-    real :: Te, TeSi, CoolingFunctionCgs, NumberDensCgs
-    real :: Log10TeSi, Log10NeCgs, CoolingTableOut(2)
-    real, parameter :: RadNorm = 1.0E+22
-    real, parameter :: TeModMinSi = 2.0E+4
-    real :: TeFactor, TeModMin, FractionSpitzer
-    !--------------------------------------------------------------------------
-
-    Te = TeFraction * State_VGB(P_, i, j, k, iBlock) &
-         / State_VGB(Rho_, i, j, k, iBlock)
-    TeSi =Te*No2Si_V(UnitTemperature_)
-
-    !if(TeSi<=2*TeModMinSi) then
-    !   RadiativeCooling = 0.0
-    !   RETURN
-    !endif
-
-    ! currently proton plasma only
-    NumberDensCgs = State_VGB(Rho_, i, j, k, iBlock) * No2Si_V(UnitN_) * 1.0e-6
-    if(iTableRadCool>0) then
-       Log10TeSi = log10(TeSi)
-       Log10NeCgs = log10(NumberDensCgs)
-       ! at the moment, radC not a function of Ne, but need a dummy 2nd
-       ! index, and might want to include Ne dependence in table later.
-       ! Also lookuptables need 2 output values, but we need only 1 in this case
-       ! so use dummy variable in 2nd var column.
-       ! *** also table variable should be normalized to radloss_cgs * 10E+22
-       ! since don't want to deal with such tiny numbers 
-       call interpolate_lookup_table(iTableRadCool,Log10TeSi,Log10NeCgs, &
-             CoolingTableOut, DoExtrapolate = .true.)
-       CoolingFunctionCgs = CoolingTableOut(1) / RadNorm
-    else
-       call get_cooling_function_fit(TeSi, CoolingFunctionCgs)
-    end if
-
-    ! Avoid extrapolation past zero
-    CoolingFunctionCgs = max(CoolingFunctionCgs,0.0)
-
-    RadiativeCooling = -NumberDensCgs**2*CoolingFunctionCgs &
-         *0.1*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
-
-    ! include multiplicative factors to make up for extention of
-    ! perpendicular heating at low temperatures (as per Abbett 2007).
-    ! Need this to strech transition region to larger scales
-    ! Also, need radcool modification to become const below TeModMin
-    if(DoModHeatConduction) then
-       TeModMin = TeModMinSi * Si2No_V(UnitTemperature_)
-       FractionSpitzer = 0.5*(1.0+tanh((Te-TeMod)/DeltaTeMod))
-       TeFactor = (FractionSpitzer * Te**2.5 &
-                  + (1.0 - FractionSpitzer)*TeMod**2.5)
-       if(Te >= TeModMin) then
-          RadiativeCooling = RadiativeCooling * Te**2.5 / TeFactor
-       else
-          RadiativeCooling = RadiativeCooling * (TeModMin / TeMod)**2.5
-       endif
-    end if
-
-  contains
-
-    subroutine get_cooling_function_fit(TeSi, CoolingFunctionCgs)
-
-      ! Based on Rosner et al. (1978) and Peres et al. (1982)
-      ! Need to be replaced by Chianti tables
-
-      real, intent(in) :: TeSi
-      real, intent(out):: CoolingFunctionCgs
-      !------------------------------------------------------------------------
-
-      if(TeSi <= 8e3)then
-         CoolingFunctionCgs = (1.0606e-6*TeSi)**11.7
-      elseif(TeSi <= 2e4)then
-         CoolingFunctionCgs = (1.397e-8*TeSi)**6.15
-      elseif(TeSi <= 10**4.575)then
-         CoolingFunctionCgs = 10**(-21.85)
-      elseif(TeSi <= 10**4.9)then
-         CoolingFunctionCgs = 10**(-31.0)*TeSi**2
-      elseif(TeSi <= 10**5.4)then
-         CoolingFunctionCgs = 10**(-21.2)
-      elseif(TeSi <= 10**5.77)then
-         CoolingFunctionCgs = 10**(-10.4)/TeSi**2
-      elseif(TeSi <= 10**6.315)then
-         CoolingFunctionCgs = 10**(-21.94)
-      elseif(TeSi <= 10**7.60457)then
-         CoolingFunctionCgs = 10**(-17.73)/TeSi**(2.0/3.0)
-      else
-         CoolingFunctionCgs = 10**(-26.6)*sqrt(TeSi)
-      end if
-
-    end subroutine get_cooling_function_fit
-
-  end subroutine get_radiative_cooling
-
   !============================================================================
 
   subroutine user_update_states(iStage, iBlock)
 
     integer, intent(in) :: iStage, iBlock
     !--------------------------------------------------------------------------
-
+    
     call update_states_MHD(iStage, iBlock)
-
+    
     ! REB model calls face gradient calculation, reset block logical
     ! so that the Te block will be re-calculated next pass
     if(DoREBModel) IsNewBlockTeCalc(iBlock) = .true.
-
+    
   end subroutine user_update_states
-
+  
   !============================================================================
-
+  
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
-
+    
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: unusedBLK, nBlock, x_, y_, z_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_ 
@@ -813,11 +685,11 @@ contains
          UnitT_, No2Si_V
     use ModCoronalHeating, ONLY: HeatFactor,HeatNormalization
     use ModProcMH,     ONLY: nProc
-
+    
     real, intent(out) :: VarValue
     character (LEN=10), intent(in) :: TypeVar 
     real, optional, intent(in) :: Radius
-
+    
     integer :: iBlock
     real :: unit_energy
     real, external :: integrate_BLK
@@ -833,7 +705,7 @@ contains
           tmp1_BLK(:,:,:,iBlock) = State_VGB(P_,:,:,:,iBlock)
        end do
        VarValue = unit_energy*inv_gm1*integrate_BLK(1,tmp1_BLK)
-
+       
     case('emag')
        do iBlock = 1, nBlock
           if(unusedBLK(iBlock)) CYCLE
@@ -843,11 +715,11 @@ contains
                +(B0_DGB(z_,:,:,:,iBlock) + State_VGB(Bz_,:,:,:,iBlock))**2
        end do
        VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
-
+       
     case('vol')
        tmp1_BLK(:,:,:,iBlock) = 1.0
        VarValue = integrate_BLK(1,tmp1_BLK)
-
+       
     case('psi')
        VarValue = HeatFactor * No2Si_V(UnitEnergyDens_) / No2Si_V(UnitT_) &
             * 10.0 / nProc * HeatNormalization
@@ -857,32 +729,32 @@ contains
        call write_myname;
        write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
     end select
-
+    
   end subroutine user_get_log_var
   
   !============================================================================
-
+  
   subroutine user_specify_refinement(iBlock, iArea, DoRefine)
-
+    
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
     use ModNumConst, ONLY: cTiny
     use ModMain,     ONLY: x_, y_, z_, time_loop
-
+    
     integer, intent(in) :: iBlock, iArea
     logical,intent(out) :: DoRefine
-
+    
     real :: rDotB_G(1:nI,1:nJ,0:nK+1)
     integer :: i, j, k
     character (len=*), parameter :: NameSub = 'user_specify_refinement'
     !--------------------------------------------------------------------------
-
+    
     if(.not.time_loop)then
        DoRefine = .false.
        RETURN
     end if
-
+    
     ! Calculate r.B in all physical cells and ghost cells 
     ! in the Z/Theta direction to find current sheet 
     ! passing between blocks
@@ -894,28 +766,28 @@ contains
             +           z_BLK(i,j,k,iBlock)   &
             * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
     end do; end do; end do;
-
+    
     DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny
-
+    
   end subroutine user_specify_refinement
-
+  
   !============================================================================
-
+  
   subroutine user_set_boundary_cells(iBLK)
-
+    
     use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, r_Blk
     use ModBoundaryCells, ONLY: SaveBoundaryCells
     use ModPhysics,       ONLY: rBody
-
+    
     integer, intent(in) :: iBLK
-
+    
     character (len=*), parameter :: Name='user_set_boundary_cells'
     !--------------------------------------------------------------------------
     IsBoundaryCell_GI(:,:,:,ExtraBc_) = r_Blk(:,:,:,iBLK) < rBody
-
+    
     if(SaveBoundaryCells) return
     call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
-
+    
   end subroutine user_set_boundary_cells
   
   !=====================================================================
@@ -924,11 +796,11 @@ contains
     use ModAdvance,  ONLY: Rho_, P_, State_VGB
     use ModGeometry, ONLY: TypeGeometry
     use ModSize,     ONLY: East_
-
+    
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
-
+    
     character (len=*), parameter :: NameSub = 'user_set_outerbcs'
     !-------------------------------------------------------------------
     
@@ -938,28 +810,28 @@ contains
     ! for the heat conduction calculation. The face_gradient calculation
     ! uses ghost cells! If face gradient was checking values other than
     ! P/rho, would need to set those as well!
-
+    
     if(iSide==East_) then
        State_VGB(Rho_,-1:0,:,:,iBlock) = BoundaryRho
        State_VGB(P_  ,-1:0,:,:,iBlock) = BoundaryRho * BoundaryTe/TeFraction
     else
        call stop_mpi('For TR Model ONLY East_ (low R) user boundary can be used')
     endif
-
+    
     IsFound = .true.
   end subroutine user_set_outerbcs
   
- !===========================================================================
+  !===========================================================================
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
-
+    
     use ModSize,    ONLY: nI, nJ, nK
     use ModPhysics, ONLY: No2Si_V, UnitT_,UnitEnergyDens_
     use ModAdvance,  ONLY: State_VGB
-
+    
     implicit none
-
+    
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
@@ -970,7 +842,7 @@ contains
     character(len=*), intent(inout):: NameTecUnit
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
-
+    
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     real                         :: UnitEnergyDensPerTime, CoronalHeating
     real                         :: RadiativeCooling
@@ -979,7 +851,7 @@ contains
     !UsePlotVarBody = .true. 
     !PlotVarBody = 0.0 
     IsFound=.true.
-
+    
     UnitEnergyDensPerTime = 10.0 * No2Si_V(UnitEnergydens_) / No2Si_V(UnitT_)
     !\                                                                              
     ! Define plot variable to be saved::
@@ -987,50 +859,51 @@ contains
     !
     select case(NameVar)
        !Allways use lower case !!
-
+       
     case('qheat')
        do k=-1,nK+2 ; do j=-1,nJ+2 ; do i=-1,nI+2
           call get_cell_heating(i, j, k, iBlock, CoronalHeating)
           PlotVar_G(i,j,k) = CoronalHeating
-       end do ; end do ; end do
+       end do; end do ; end do
        PlotVar_G= PlotVar_G * UnitEnergyDensPerTime
        NameTecVar = 'qH'
        NameTecUnit = '[erg/cm^3/s]'
        NameIdlUnit = '[erg/cm^3/s]'
-
+       
     case('qrad')
        do k=-1,nK+2 ; do j=-1,nJ+2 ; do i=-1,nI+2
-          call get_radiative_cooling(i, j, k, iBlock, RadiativeCooling)
+          call user_material_properties(State_VGB(:,i,j,k,iBlock),TeOut=AuxTeSi)
+          call get_radiative_cooling(i, j, k, iBlock, AuxTeSi, RadiativeCooling)
           PlotVar_G(i,j,k) = RadiativeCooling
-       end do ; end do ; end do
+       end do; end do ; end do
        PlotVar_G= PlotVar_G * UnitEnergyDensPerTime
        NameTecVar = 'qR'
        NameTecUnit = '[erg/cm^3/s]'
        NameIdlUnit = '[erg/cm^3/s]'
-
+       
     case default
        IsFound= .false.
     end select
   end subroutine user_set_plot_var
-
+  
   !============================================================================
-
+  
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalIn, TeIn, NatomicOut, &
        EinternalOut, TeOut, PressureOut, &
        CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
        OpacityPlanckOut_W, OpacityRosselandOut_W, &
        PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
-
+    
     ! The State_V vector is in normalized units
-
+    
     use ModAdvance,    ONLY: nWave, UseElectronPressure
     use ModConst,      ONLY: cBoltzmann
     use ModPhysics,    ONLY: gm1, inv_gm1, No2Si_V, Si2No_V, &
          UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
          UnitX_, UnitT_, UnitU_, UnitN_, cRadiationNo, g, Clight
     use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_, ExtraEint_
-
+    
     real, intent(in) :: State_V(nVar)
     integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
     real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
@@ -1047,7 +920,7 @@ contains
          OpacityPlanckOut_W(nWave)                         ! [1/m]
     real, optional, intent(out) :: &
          OpacityRosselandOut_W(nWave)                      ! [1/m]
-
+    
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
     !  Derivative of group Planckian by electron temperature
@@ -1057,30 +930,28 @@ contains
     real, optional, intent(out) :: CgTeOut_W(nWave)        ! [J/(m^3*K)]
     real, optional, intent(out) :: CgTgOut_W(nWave)        ! [J/(m^3*K)]
     real, optional, intent(out) :: TgOut_W(nWave)          ! [K]
-
+    
     real :: Rho, Pressure, Te, Ti
     real :: RhoSi, pSi, TeSi
     real :: HeatCond
     real :: FractionSpitzer
-
+    
     character(len=*), parameter :: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
-
+    
     Rho = State_V(Rho_)
     RhoSi = Rho*No2Si_V(Rho_)
-
+    
     if(present(TeIn))then
        TeSi = TeIn
        Te = TeSi*Si2No_V(UnitTemperature_)
-    endif
-
-    if(present(TeOut)) then
+    else
        Te = TeFraction * State_V(P_) &
             / State_V(Rho_)
        TeSi =Te*No2Si_V(UnitTemperature_)
-       TeOut = TeSi
     endif
-
+    if(present(TeOut))TeOut = TeSi
+    
     if(present(HeatCondOut))then
        if(DoModHeatConduction) then
           ! Artificial modified heat conduction for a smoother transition
@@ -1089,18 +960,18 @@ contains
           HeatCond = HeatCondPar*(FractionSpitzer*Te**2.5 &
                + (1.0 - FractionSpitzer)*TeMod**2.5)
        else
-          HeatCond = HeatCondPar
+          HeatCond = HeatCondPar * Te**2.5
        endif
        
        HeatCondOut = HeatCond &
             *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
             *No2Si_V(UnitU_)*No2Si_V(UnitX_)
     end if
-
+    
   end subroutine user_material_properties
-
+  
   !============================================================================
-
-
+  
+  
 end module ModUser
 
