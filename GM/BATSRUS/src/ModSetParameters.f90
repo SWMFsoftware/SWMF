@@ -236,20 +236,18 @@ subroutine MH_set_parameters(TypeAction)
 
      if(UseResistivity)call init_mod_resistivity !^CFG IF DISSFLUX
 
-     if(UseMagnetogram.and.i_line_command("#MAGNETOGRAM") > 0)&
+     if(UseMagnetogram .and. i_line_command("#MAGNETOGRAM") > 0)&
           call read_magnetogram_file(NamePlotDir)
 
-     if(UseEmpiricalSW.and.i_line_command("#EMPIRICALSW") > 0)&
-       call set_empirical_model(trim(NameModelSW),BodyTDim_I(1))
+     if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
+          call set_empirical_model(NameModelSW, BodyTDim_I(IonFirst_))
 
      if(UseCoronalHeating)call init_coronal_heating
      call check_cooling_param
      
      ! if using open closed heating initialize auxilary WSA grid
-     if(DoOpenClosedHeat.and.i_line_command("#OPENCLOSEDHEAT")>0)&
-         call set_empirical_model(trim('WSA'),CoronalT0Dim)
-
-
+     if(DoOpenClosedHeat .and. i_line_command("#OPENCLOSEDHEAT")>0)&
+          call set_empirical_model('WSA', CoronalT0Dim)
 
      ! Initialize user module and allow user to modify things
      if(UseUserInitSession)call user_init_session
@@ -1829,7 +1827,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case('#EMPIRICALSW')
         call read_var('NameModelSW',NameModelSW)
-        UseEmpiricalSW = trim(NameModelSW)/='none'
+        UseEmpiricalSW = NameModelSW /= 'none'
 
      case("#CORONALHEATING")
         call read_corona_heating
