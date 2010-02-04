@@ -125,14 +125,16 @@ contains
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenSpeedPlusFirst_:AlfvenSpeedPlusLast_, i,j,k, iBlock)
              F2_I(nWaveHalf+1)=F2_I(nWaveHalf)
-             call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I,BetaLimiter) 
+             call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
+                  BetaLimiter, UseConservativeBC= .true.) 
              State_VGB(AlfvenSpeedPlusFirst_:AlfvenSpeedPlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
 
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenSpeedMinusFirst_:AlfvenSpeedMinusLast_, i,j,k, iBlock)
              F2_I(nWaveHalf+1) = F2_I(nWaveHalf)
-             call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I,BetaLimiter) 
+             call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
+                  BetaLimiter, UseConservativeBC= .true.) 
              State_VGB(AlfvenSpeedMinusFirst_:AlfvenSpeedMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           else
@@ -140,14 +142,16 @@ contains
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenSpeedPlusFirst_:AlfvenSpeedPlusLast_, i,j,k, iBlock)
              F2_I(0) = F2_I(1) 
-             call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I,BetaLimiter) 
+             call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
+                  BetaLimiter, UseConservativeBC= .true.) 
              State_VGB(AlfvenSpeedPlusFirst_:AlfvenSpeedPlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
              
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenSpeedMinusFirst_:AlfvenSpeedMinusLast_, i,j,k, iBlock)
              F2_I(0) = F2_I(1)
-             call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I,BetaLimiter) 
+             call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
+                  BetaLimiter, UseConservativeBC= .true.)
              State_VGB(AlfvenSpeedMinusFirst_:AlfvenSpeedMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           end if
@@ -168,7 +172,7 @@ contains
              F_I( 1:nWave) = &
                   State_VGB(WaveFirst_:WaveLast_, i,j,k, iBlock)
              
-             call advance_lin_advection_minus( CFL_I, nWave, 1, 1, F_I) 
+             call advance_lin_advection_minus( CFL_I, nWave, 1, 1, F_I, UseConservativeBC= .true.) 
              State_VGB(WaveFirst_:WaveLast_, i,j,k, iBlock) = &
                   F_I( 1:nWave)
 
@@ -177,7 +181,7 @@ contains
              F_I( 1:nWave) = &
                   State_VGB(WaveFirst_:WaveLast_, i,j,k, iBlock)
              
-             call advance_lin_advection_plus( CFL_I, nWave, 1, 1, F_I) 
+             call advance_lin_advection_plus( CFL_I, nWave, 1, 1, F_I, UseConservativeBC= .true.)
              State_VGB(WaveFirst_:WaveLast_, i,j,k, iBlock) = &
                   F_I( 1:nWave)
 

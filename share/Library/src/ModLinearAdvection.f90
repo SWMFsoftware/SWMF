@@ -14,7 +14,7 @@ contains
        nGCLeft,       &
        nGCRight,      &
        FInOut_I,      &
-       BetaIn)      
+       BetaIn, UseConservativeBC )      
 
 
     !--------------------------------------------------------------------------!
@@ -28,6 +28,9 @@ contains
     !In: sol. to be advanced; Out: advanced sol.                               !
     real,dimension(1-nGCLeft : nX+nGCRight),intent(inout)::  FInOut_I          !
     real, optional::BetaIn
+    
+    !If this parameter IS PRESENT, the flux via the boundaries is nullified
+    logical, optional, intent(in):: UseConservativeBC 
                                                                 
     !--------------------------------------------------------------------------!
     integer:: iX,iStep,nStep
@@ -70,10 +73,16 @@ contains
        end do
        ! f_(i-1/2): 
        FSemiintDown_I(1:nX) = FSemiintUp_I(0:nX-1)
+       
+       !Ensure the conservation of sum(F_I(1:nX), if needed
+       if(present(UseConservativeBC))then
+          FSemiintDown_I(1) = 0.0
+          FSemiintUp_I( nX) = 0.0
+       end if
+       
        !\
        ! Update the solution from f^(n) to f^(n+1):
        !/
-
        F_I(1:nX) = F_I(1:nX)+CFL_I(1:nX)*&
             (FSemiintDown_I(1:nX)-FSemiintUp_I(1:nX))
     end do
@@ -97,7 +106,7 @@ contains
        nGCLeft,       &
        nGCRight,      &
        FInOut_I,      &
-       BetaIn       )      
+       BetaIn, UseConservativeBC )      
     !--------------------------------------------------------------------------!
     !
     integer,intent(in):: nX           !Number of meshes                        !
@@ -108,6 +117,10 @@ contains
     real,dimension(1-nGCLeft:nX+nGCRight),intent(inout):: &
          FInOut_I                     !In: sol. to be advanced; Out: advanced  !
     real, optional :: BetaIn
+
+    !If this parameter IS PRESENT, the flux via the boundaries is nullified
+    logical, optional, intent(in):: UseConservativeBC 
+
     !sol. index 0 is to set boundary         !
     !condition at the injection energy.      !
     !--------------------------------------------------------------------------!
@@ -154,6 +167,12 @@ contains
        end do
        ! f_(i+1/2):
        FSemiintUp_I(1:nX) = FSemiintDown_I(2:nX+1)
+
+       !Ensure the conservation of sum(F_I(1:nX), if needed
+       if(present(UseConservativeBC))then
+          FSemiintDown_I(1) = 0.0
+          FSemiintUp_I( nX) = 0.0
+       end if
        !\
        ! Update the solution from f^(n) to f^(n+1):
        !/
