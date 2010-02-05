@@ -357,6 +357,7 @@ contains
       ! implementation.
 
       real :: FaceGrad_D(3),GradTeSi_D(3)
+      real :: TotalFaceB_D(3), TotalFaceBunit_D(3)
 
       ! Here Rad integral is integral of lossfunction*T^(1/2) from T=10,000 to
       ! 500,000. Use same approximate loss function used in BATS to calculate
@@ -406,7 +407,13 @@ contains
       call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
            IsNewBlockTeCalc(iBlock), Te_G, FaceGrad_D)
 
-      qCondSi = 0.5 * HeatCondParSi * BoundaryTeSi**3 * sum(FaceGrad_D**2) &
+      ! calculate the unit vector of the total magnetic field
+      TotalFaceB_D = B0Face_D + B1_D
+      TotalFaceBunit_D = TotalFaceB_D / sqrt(sum(TotalFaceB_D**2))
+
+      ! calculate the heat conduction term in the REB numerator
+      qCondSi = 0.5 * HeatCondParSi * BoundaryTeSi**3 &
+           * sum(FaceGrad_D*TotalFaceBunit_D)**2 &
            * (No2Si_V(UnitTemperature_) / No2Si_V(UnitX_))**2
 
       ! put the terms together and calculate the REB density
