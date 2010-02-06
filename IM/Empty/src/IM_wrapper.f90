@@ -177,6 +177,26 @@ subroutine IM_get_for_gm(Buffer_II,iSizeIn,jSizeIn,NameVar)
 
 end subroutine IM_get_for_gm
 
+
+!===========================================================================
+
+subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
+            BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
+
+  implicit none
+
+  integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
+  real,    intent(in) :: Integral_IIV(iSizeIn,jSizeIn,nIntegralIn)
+  integer, intent(in) :: nVarLine, nPointLine
+  real,    intent(in) :: BufferLine_VI(nVarLine, nPointLine)
+
+  character (len=*),intent(in) :: NameVar
+  real, intent(in) :: tSimulation
+
+  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+
+end subroutine IM_put_from_gm_crcm
+
 !==============================================================================
 
 subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)

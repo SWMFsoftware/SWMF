@@ -676,4 +676,11 @@ end subroutine IM_save_restart
 
 !===========================================================================
 
+!============================================================================
+subroutine IM_put_from_gm_crcm
 
+  call CON_stop('IM_put_from_gm_crcm cannot be used by HEIDI!')
+
+end subroutine IM_put_from_gm_crcm
+
+!==============================================================================

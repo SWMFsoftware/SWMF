@@ -358,6 +358,14 @@ subroutine IM_put_from_ie_mpi
 end subroutine IM_put_from_ie_mpi
 
 !==============================================================================
+!============================================================================
+subroutine IM_put_from_gm_crcm
+
+  call CON_stop('IM_put_from_gm_crcm cannot be used by RCM2!')
+
+end subroutine IM_put_from_gm_crcm
+
+!==============================================================================
 subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
   use CON_router,   ONLY: IndexPtrType, WeightPtrType
