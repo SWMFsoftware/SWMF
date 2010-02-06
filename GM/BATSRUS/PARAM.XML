@@ -1169,6 +1169,19 @@ Default is -1.0, which means no smoothing.
 !!!!!!!!!!!!!!!!!!!!!!!! GRID GEOMETRY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+<command name="BATL" if="$_IsFirstSession">
+	<parameter name="UseBatl" type="logical" default="F" />
+
+#BATL
+T			UseBatl
+
+Use the Block Adaptive Tree Library (BATL) instead of the original 
+BATSRUS library. This library currently does not support all features yet, 
+so it can only be used in a limited set of applications. For those applications
+it offers several advantages, such as 1D and 2D AMR, and much more efficient
+dynamic grid adaptation, and correct AMR in R-Z geometry.
+</command>
+
 <command name="GRID" required="$_IsFirstSession" if="$_IsFirstSession">
 	<parameter name="nRootBlockX" type="integer" min="1"  default="2" />
 	<parameter name="nRootBlockY" type="integer" min="1"  default="1" />
@@ -3039,6 +3052,7 @@ Only useful if the initial condition has a non-trivial analytic form.
 
 <command name="GRIDRESOLUTION" alias="GRIDLEVEL" multiple="T">
 	<set name="RotateArea" value="0"/>
+	<set name="ScaleArea"  value="0"/>
 	<parameter name="Resolution" type="real" min="0"
 		if="$_command =~ /RESOLUTION/" />
 	<parameter name="nLevel" type="integer" min="0" max="30"
@@ -3073,6 +3087,11 @@ Only useful if the initial condition has a non-trivial analytic form.
 			<option name="ringz0"				/>
 			<option name="currentsheet"			/>
 			<option name="user"				/>
+		</part>
+		<part name="ScaleArea" type="string" input="select"
+			required="F"
+			if="$NameArea =~ /sphere|shell|cylinder|ring/">
+			<option name="scaled" />
 		</part>
 		<part name="RotateArea" type="string" input="select" 
 			required="F" 
@@ -3113,6 +3132,11 @@ Only useful if the initial condition has a non-trivial analytic form.
 		<parameter name="HeightRing" type="real" min="0" />
 		<parameter name="Radius1"    type="real" min="0" />
 		<parameter name="Radius2"    type="real" min="0" />
+	</if>
+	<if expr="$ScaleArea =~ /scaled/">
+		<parameter name="xScale" type="real" min="0" default="1"/>
+		<parameter name="yScale" type="real" min="0" default="1"/>
+		<parameter name="zScale" type="real" min="0" default="1"/>
 	</if>
 	<if expr="$RotateArea =~ /rotated/">
 		<parameter name="xRotate" type="real" min="-360" max="360" 
@@ -3185,6 +3209,14 @@ ringz0 rotated		NameArea
   0.0			zRotate
 
 #GRIDRESOLUTION
+1/4			Resolution
+sphere0 scaled		NameArea
+10.0			rSphere
+1.0			xScale
+3.0			yScale
+2.0			zScale
+
+#GRIDRESOLUTION
 0.15			Resolution
 currentsheet		NameArea
 
@@ -3242,10 +3274,17 @@ Y and Z axes, respectively, and are defined analogously as 'cylinderx'.
 The area 'ringx', 'ringy' and 'ringz' are the volumes between 
 two cylindrical surfaces parallel with the X, Y and Z axes, respectively.
 The ring area is given with the center, the height and the two radii.
+Note that all these round shapes can be made elliptical with the 
+"scaled" option (see below).
 
 If the area name contains the number '0', the center is taken to be at the 
 origin and the center coordinates are not read. Note that the areas 'box'
 and 'box_gen' are defined with the corners so the '0' cannot be used for these.
+
+If the word 'scaled' is added after the area name, the area can be 
+scaled (stretched) in the X, Y and Z directions. This allows making
+an ellipsoid from a sphere, or an elliptical slab from a cylinder.
+Also useful to distort shells and rings.
 
 If the word 'rotated' is added after the area name, the area can be 
 rotated by 3 angles around the X, Y and Z axes in this order. Only the
@@ -3253,12 +3292,12 @@ areas 'box', 'brick', 'cylinder*' and 'ring*' can be rotated.
 
 The 'currentsheet' area is defined as the blocks containing a reversal of the 
 radial magnetic field. This is mostly useful for the solar corona and 
-heliosphere. This special area type cannot be rotated or centered.
+heliosphere. This special area type cannot be scaled, rotated or centered.
 
 The 'user' area results in a call of the subroutine user_specify_refinement 
 defined in the user module. The user can define an arbitrary set of criteria 
-for refinement.  Again, the rotation and centering cannot be applied to the
-'user' area.
+for refinement.  Again, scaling, rotation and centering cannot be applied 
+to the 'user' area.
 </command>
 
 <command name="MESSAGEPASSACROSSPOLE">
