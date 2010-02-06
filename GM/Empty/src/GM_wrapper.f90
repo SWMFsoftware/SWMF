@@ -392,3 +392,31 @@ subroutine GM_get_multi_for_im(DoMultiFluidIM)
   logical, intent(out) :: DoMultiFluidIM
 
 end subroutine GM_get_multi_for_im
+
+!==============================================================================
+subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, nPointLine)
+  implicit none
+
+  integer, intent(in)           :: iSizeIn, jSizeIn
+  character (len=*), intent(in) :: NameVar
+  integer, intent(out)          :: nVarLine, nPointLine
+
+  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')  
+end subroutine GM_get_for_im_trace_crcm
+
+!==============================================================================
+subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
+     BufferLine_VI, nVarLine, nPointLine, NameVar)
+
+  implicit none
+
+  character (len=*), parameter :: NameSub='GM_get_for_im_crcm'
+
+  integer, intent(in)                                  :: iSizeIn, jSizeIn, nVarIn
+  real, intent(out), dimension(iSizeIn,jSizeIn,nVarIn) :: Buffer_IIV
+
+  integer, intent(in) :: nPointLine, nVarLine
+  real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+  
+  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')  
+end subroutine GM_get_for_im_crcm
