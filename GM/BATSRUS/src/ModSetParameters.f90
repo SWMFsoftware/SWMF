@@ -120,6 +120,8 @@ subroutine MH_set_parameters(TypeAction)
   logical                   :: DoReadAreaCenter=.false.
   real, dimension(3)        :: XyzStartArea_D=0.0, XyzEndArea_D=0.0
   real                      :: xRotateArea=0., yRotateArea=0., zRotateArea=0.
+  logical                   :: DoScale = .false.
+  real                      :: xScaleArea=1.0, yScaleArea=1.0, zScaleArea=1.0
 
   ! Variables for checking the user module
   character (len=lStringLine) :: NameUserModuleRead='?'
@@ -920,6 +922,11 @@ subroutine MH_set_parameters(TypeAction)
         Area_I(nArea)%DoRotate = i > 0
         if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+7:len(NameArea))
 
+        ! check for the word scaled in the name
+        i = index(NameArea,'scaled')
+        DoScale = i > 0
+        if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+6:len(NameArea))
+
         ! Extract character '0' from the name
         i = index(NameArea,'0')
         if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+1:len(NameArea))
@@ -1024,6 +1031,20 @@ subroutine MH_set_parameters(TypeAction)
            nArea = nArea - 1
            CYCLE READPARAM
         end select
+
+        if(DoScale)then
+           ! Read 3 scale factor for the sizes
+           call read_var('xScale', xScaleArea)
+           call read_var('yScale', yScaleArea)
+           call read_var('zScale', zScaleArea)
+           
+           ! Scale the x, y, z sizes
+           Area_I(nArea)%Size_D(1) = Area_I(nArea)%Size_D(1)*xScaleArea
+           Area_I(nArea)%Size_D(2) = Area_I(nArea)%Size_D(2)*yScaleArea
+           Area_I(nArea)%Size_D(3) = Area_I(nArea)%Size_D(3)*zScaleArea
+
+           DoScale = .false.
+        end if
 
         if(Area_I(nArea) % DoRotate)then
 
