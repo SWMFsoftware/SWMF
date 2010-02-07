@@ -193,6 +193,8 @@ subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   character (len=*),intent(in) :: NameVar
   real, intent(in) :: tSimulation
 
+  character (len=*), parameter :: NameSub='IM_put_from_gm_crcm'
+
   call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
 end subroutine IM_put_from_gm_crcm
