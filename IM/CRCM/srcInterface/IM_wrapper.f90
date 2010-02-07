@@ -400,13 +400,14 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   !Fill pressure and density
   do i=1,iSize; do j=1,jSize
-     if( i<iLatMin .or.  i <= iba(j) ) then
+     if( i<iLatMin .or.  i > iba(j) ) then
         Buffer_IIV(i,j,pres_) = -1.
         Buffer_IIV(i,j,dens_) = -1.
      else
         Buffer_IIV(i,j,pres_) = Pressure_C(i,j)
         Buffer_IIV(i,j,dens_) = Density_C (i,j)*cProtonMass*amu(1)
      end if
+
      if(DoMultiFluidGMCoupling)then
         !  Multifluid case                                                         
 !!!! ADD MULTIFLUID SUPPORT LATER!!!
