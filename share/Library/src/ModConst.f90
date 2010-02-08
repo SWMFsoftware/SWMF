@@ -199,6 +199,14 @@ contains
        call CON_stop('The spectroscopy symbol '//TypeL//' is not implemented')
     end select
   end function l_orbital
+  !====================================================================
+  real function kappa_0_e(CoulombLog)
+    real, intent(in):: CoulombLog
+    !-------------------------
+    kappa_0_e=3.2*3.0*cTwoPi/CoulombLog &
+         *sqrt(cTwoPi*cBoltzmann/cElectronMass)*cBoltzmann &
+         *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
+  end function kappa_0_e
 end module ModConst
 !====================================================================
 !====================================================================
@@ -302,5 +310,4 @@ real function energy_in(NameEnergyUnit)
           NameEnergyUnit//' and many other.')
   end select
 end function energy_in
-!====================================================================
-
+!======================
