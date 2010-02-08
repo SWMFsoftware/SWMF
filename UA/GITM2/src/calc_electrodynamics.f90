@@ -27,6 +27,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   use ModLinearSolver
   use ModMPI
   use ModTime
+  use ModMagTrace
 
   implicit none
 
@@ -49,8 +50,11 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: &
        e_density, Vi, Ve, MeVen, MeVei, MiVin, VeOe, ViOi, &
-       JuDotB, sigmap_d1d1_d, sigmap_d2d2_d, sigmap_d1d2_d, sigmah, &
+       JuDotB, sigmap_d2d2_d, sigmap_d1d2_d, sigmah, &
        ue1, ue2, kmp, kml, je1, je2, ed1, ed2
+
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax) :: sigmap_d1d1_d
+  real, dimension(-1:nLons+2, -1:nLats+2, nBlocksMax) :: IntegralValues
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3) :: &
        Gradient_GC
@@ -59,13 +63,14 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   real :: residual, oldresidual, a, tmp
 
-  logical :: IsDone, IsFirstTime = .true., DoTestMe
+  logical :: IsDone, IsFirstTime = .true., DoTestMe, Debug=.true.
 
   integer :: iLm, iLp, jLat, iI, MaxIteration, nIteration
   integer :: nX
 
   external :: matvec_gitm
 
+  if(Debug)write(*,*)'DBG: entered UA_calc_electrodynamics: ',DipoleStrength, UseDynamo, Is1D
   if (DipoleStrength == 0) return
 
   if (.not. UseDynamo .or. Is1D) return
@@ -269,6 +274,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   q2 = Element_Charge * Element_Charge
 
   do iBlock = 1, nBlocks
+     if(Debug)write(*,*)'DBG: starting block ',iBlock,' of ',nBlocks
 
      call calc_physics(iBlock)
      call calc_rates(iBlock)
@@ -311,7 +317,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         do j=-1,nLats+2
            do i=-1,nLons+2
 
-              sigmap_d1d1_d(i,j,k) = &
+              sigmap_d1d1_d(i,j,k,iBlock) = &
                    Sigma_Pedersen(i,j,k) * &
                    sum(b0_d1(i,j,k,:,iBlock)**2) / &
                    b0_cD(i,j,k,iBlock)
@@ -345,14 +351,14 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
                    sqrt(sum(b0_d2(i,j,k,:,iBlock)**2))
 
               ! These are from eqns 5.19 and 5.20
-              kmp(i,j,k) = ue2(i,j,k) * sigmap_d1d1_d(i,j,k) + &
+              kmp(i,j,k) = ue2(i,j,k) * sigmap_d1d1_d(i,j,k,iBlock) + &
                    (sigmah(i,j,k) - sigmap_d1d2_d(i,j,k)) * ue1(i,j,k)
 
               kml(i,j,k) = (sigmah(i,j,k) + sigmap_d1d2_d(i,j,k)) * ue2(i,j,k) - &
-                   ue1(i,j,k) * sigmap_d1d1_d(i,j,k)
+                   ue1(i,j,k) * sigmap_d1d1_d(i,j,k,iBlock)
 
               ! The Capital D is removed from the sigmah, since the d1d?_d are /D...
-              je1(i,j,k) = sigmap_d1d1_d(i,j,k)*(Ed1(i,j,k) + ue2(i,j,k)*b0_be3(i,j,k,iBlock)) + &
+              je1(i,j,k) = sigmap_d1d1_d(i,j,k,iBlock)*(Ed1(i,j,k) + ue2(i,j,k)*b0_be3(i,j,k,iBlock)) + &
                    (sigmap_d1d2_d(i,j,k) - sigmah(i,j,k)) * &
                    (Ed2(i,j,k) + ue1(i,j,k)*b0_be3(i,j,k,iBlock))
 
@@ -467,15 +473,16 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
            GeoLat = Latitude(iLat, iBlock)
            GeoLon = Longitude(iLon,iBlock)
 
-           if (GeoLat > pi) then
-              GeoLat = 2.0*pi - GeoLat
+           if (GeoLat > pi/2.) then
+              GeoLat = pi - GeoLat
               GeoLon = mod(GeoLon + pi,twopi)
            endif
-              
-           if (GeoLat < -pi) then
+           if (GeoLat < -pi/2.) then
               GeoLat = -pi - GeoLat
               GeoLon = mod(GeoLon + pi,twopi)
            endif
+           GeoLon = mod(GeoLon, twopi)
+           if(GeoLon<0.) GeoLon=GeoLon+twopi
 
            GeoAlt = Altitude_GB(iLon,iLat,1,iBlock)
            IsDone = .false.
@@ -490,8 +497,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
            do while (.not. IsDone)
 
               sp_d1d1_d = &
-                          xAlt  * sigmap_d1d1_d(iLon, iLat, iAlt) + &
-                   (1.0 - xAlt) * sigmap_d1d1_d(iLon, iLat, iAlt+1)
+                          xAlt  * sigmap_d1d1_d(iLon, iLat, iAlt  , iBlock) + &
+                   (1.0 - xAlt) * sigmap_d1d1_d(iLon, iLat, iAlt+1, iBlock)
 
               sp_d2d2_d = &
                           xAlt  * sigmap_d2d2_d(iLon, iLat, iAlt) + &
@@ -582,18 +589,20 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
                          ( Altitude_GB(iLon,iLat,iAlt+1,iBlock) &
                          - Altitude_GB(iLon,iLat,iAlt  ,iBlock))
                     GeoLat = GeoLat + signz*xmag/bmag * len/(RBody + GeoAlt)*pi
-                    GeoLon = GeoLon + &
-                         signz*ymag/bmag * len/(RBody + GeoAlt)*pi/cos(GeoLon)
+                    GeoLon = GeoLon + signz*ymag/bmag * len/(RBody + GeoAlt)*pi &
+                         /cos(GeoLon)
+                    !    /(sign(1.,GeoLon)*max(0.01,abs(cos(GeoLon))))
 
-                    if (GeoLat > pi) then
-                       GeoLat = 2.0*pi - GeoLat
+                    if (GeoLat > pi/2.) then
+                       GeoLat = pi - GeoLat
                        GeoLon = mod(GeoLon + pi,twopi)
                     endif
-              
-                    if (GeoLat < -pi) then
+                    if (GeoLat < -pi/2.) then
                        GeoLat = -pi - GeoLat
                        GeoLon = mod(GeoLon + pi,twopi)
                     endif
+                    GeoLon = mod(GeoLon, twopi)
+                    if(GeoLon<0.) GeoLon=GeoLon+twopi
 
                  endif
               endif
@@ -602,6 +611,11 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
         enddo
      enddo
+     if(Debug)then
+        if(iBlock == 1)then
+           write(*,*)'OLD: ',SigmaPP(1,1)
+        end if
+     end if
 
      call calc_mltlocal
 
@@ -651,6 +665,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      enddo
 
   enddo
+
+  if(Debug)then
+     write(*,*)' at end of block loop in calc_electrodynamics'
+     call MMT_Integrate(sigmap_d1d1_d,IntegralValues)
+     write(*,*)'NEW: ',IntegralValues(1,1,1)
+     stop
+  end if
   
   if (iDebugLevel > 2) write(*,*) "===> Beginning Sum of Electrodynamics"
 

@@ -27,6 +27,7 @@ MODULES = \
 	ModLimiter.o\
 	ModTides.o\
 	ModNewell.o\
+	ModMagTrace.o\
 	ModUser.o
 
 OBJECTS = \

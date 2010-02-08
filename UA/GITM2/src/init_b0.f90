@@ -4,6 +4,7 @@ subroutine init_b0
   use ModGITM
   use ModInputs
   use ModTime
+  use ModMagTrace
 
   implicit none
 
@@ -100,6 +101,10 @@ subroutine init_b0
 
   !    GyroFrequency_Electron(:,:,:,iBlock) = &
   !         Element_Charge * B0(:,:,:,Magnitude,iBlock) /  Mass_Electron
+
+  !\\\
+  call MMT_Init
+  !///
 
   call end_timing("init_b0")
   
