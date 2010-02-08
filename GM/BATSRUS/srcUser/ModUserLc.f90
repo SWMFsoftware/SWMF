@@ -274,7 +274,7 @@ contains
        end if
        call write_prefix; write(iUnitOut,*) ''
 
-       if(DoModHeatConduction)then
+       if(DoExtendTransitionRegion)then
           call write_prefix;  write(iUnitOut,*) 'using Modified Heat Conduction'
           call write_prefix;  write(iUnitOut,*) 'TeModSi      = ', TeModSi
           call write_prefix;  write(iUnitOut,*) 'DeltaTeModSi = ', DeltaTeModSi
@@ -566,6 +566,7 @@ contains
     use ModMpi
     use ModCoronalHeating,ONLY:UseExponentialHeating,&
          DecayLengthExp,HeatingAmplitudeCGS,WSAT0,DoOpenClosedHeat
+    use ModRadiativeCooling
     implicit none
 
     integer :: i, j, k, iBlock, iError
@@ -583,7 +584,10 @@ contains
     ! topology of domain --> total heating not always known beforehand 
 
     ! Need to initialize unsigned flux model first
+
+    write(*,*)'Radiation cooling integral equals:',cooling_function_integral_si(5.0e5)
     if(UseUnsignedFluxModel) call get_coronal_heat_factor
+
     TotalHeatingProc = 0.0
 
 
@@ -976,7 +980,6 @@ contains
     real :: Rho, Pressure, Te, Ti
     real :: RhoSi, pSi, TeSi
     real :: HeatCond
-    real :: FractionSpitzer
     
     character(len=*), parameter :: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
@@ -995,16 +998,13 @@ contains
     if(present(TeOut))TeOut = TeSi
     
     if(present(HeatCondOut))then
-       if(DoModHeatConduction) then
-          ! Artificial modified heat conduction for a smoother transition
+       HeatCond = HeatCondPar * Te**2.5
+
+       ! Artificial modified heat conduction for a smoother transition
           ! region, Linker et al. (2001)
-          FractionSpitzer = 0.5*(1.0+tanh((Te-TeMod)/DeltaTeMod))
-          HeatCond = HeatCondPar*(FractionSpitzer*Te**2.5 &
-               + (1.0 - FractionSpitzer)*TeMod**2.5)
-       else
-          HeatCond = HeatCondPar * Te**2.5
-       endif
-       
+       if(DoExtendTransitionRegion)&
+            HeatCond = HeatCond * extension_factor(TeSi)
+
        HeatCondOut = HeatCond &
             *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
             *No2Si_V(UnitU_)*No2Si_V(UnitX_)
