@@ -63,7 +63,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   real :: residual, oldresidual, a, tmp
 
-  logical :: IsDone, IsFirstTime = .true., DoTestMe, Debug=.true.
+  logical :: IsDone, IsFirstTime = .true., DoTestMe, Debug=.false.
 
   integer :: iLm, iLp, jLat, iI, MaxIteration, nIteration
   integer :: nX
