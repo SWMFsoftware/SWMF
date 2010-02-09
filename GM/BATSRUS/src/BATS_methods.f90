@@ -157,10 +157,11 @@ contains
           ! Allow the user to add a perturbation and use that for physical refinement.
           if (UseUserPerturbation) call user_initial_perturbation
 
-          ! Do physics based AMR without the message passing
           if (UseBatl) then
-             call amr(.false.)
+             ! Do physics based AMR with the message passing
+             call amr(.true.)
           else
+             ! Do physics based AMR without the message passing
              call amr_physics
              call number_soln_blocks
           end if
