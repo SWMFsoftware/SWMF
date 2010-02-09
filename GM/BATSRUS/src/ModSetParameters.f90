@@ -6,8 +6,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModGeometry, ONLY : init_mod_geometry, &
-       TypeGeometry,UseCovariant,UseVertexBasedGrid,is_axial_geometry,  & 
+  use ModGeometry, ONLY : init_mod_geometry, TypeGeometry, nMirror_D, &
+       UseCovariant,UseVertexBasedGrid,is_axial_geometry,  & 
        allocate_face_area_vectors,allocate_old_levels,rTorusLarge,rTorusSmall,&
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary,r_to_gen,&
        read_grid_file, set_fake_grid_file, NameGridFile
@@ -65,9 +65,10 @@ subroutine MH_set_parameters(TypeAction)
   use ModIoUnit, ONLY: io_unit_new
 
   !CORONA SPECIFIC PARAMETERS
-  use ModMagnetogram,     ONLY: set_parameters_magnetogram,read_magnetogram_file
+  use ModMagnetogram, ONLY: set_parameters_magnetogram, read_magnetogram_file
   use ModExpansionFactors,ONLY: NameModelSW, CoronalT0Dim
-  use ModCoronalHeating,  ONLY: read_corona_heating,read_active_region_heating,&
+  use ModCoronalHeating,  ONLY: read_corona_heating, &
+       read_active_region_heating, &
        read_longscale_heating, init_coronal_heating, UseCoronalHeating, &
        DoOpenClosedHeat
   use ModRadiativeCooling,ONLY: UseRadCooling,&
@@ -89,6 +90,7 @@ subroutine MH_set_parameters(TypeAction)
   logical :: DoReadSolarwindFile  = .false.
   logical :: DoReadSatelliteFiles = .false.
   logical :: DoReadMagnetometerFile=.false.
+  logical :: IsMirrorX,  IsMirrorY,  IsMirrorZ
 
   ! The name of the command
   character (len=lStringLine) :: NameCommand, StringLine
@@ -1559,6 +1561,15 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('NameGridFile',NameGridFile)
            call read_grid_file(NameGridFile)
         end if
+
+     case("#GRIDSYMMETRY")
+        nMirror_D = 1
+        call read_var('IsMirrorX', IsMirrorX)
+        if(IsMirrorX) nMirror_D(1) = 2
+        call read_var('IsMirrorY', IsMirrorY)
+        if(IsMirrorY) nMirror_D(2) = 2
+        call read_var('IsMirrorZ', IsMirrorZ)
+        if(IsMirrorZ) nMirror_D(3) = 2
 
      case("#LIMITRADIUS", "#LIMITGENCOORD1")
         if(.not.is_first_session())CYCLE READPARAM

@@ -1216,6 +1216,21 @@ There are no default values, the grid size must always be given in the
 first session (even if the component is switched off in the first session!).
 </command>
 
+<command name="GRIDSYMMETRY">
+	<parameter name="IsMirrorX" type="logical" default="F"/>
+	<parameter name="IsMirrorY" type="logical" default="F"/>
+	<parameter name="IsMirrorZ" type="logical" default="F"/>
+
+#GRIDSYMMETRY
+F			IsMirrorX
+T			IsMirrorY
+T			IsMirrorZ
+
+For symmetric test problems one can model only a part of the computational
+domain. Providing the symmetry directions with this command allows 
+the proper calculation of line-of-sight plots.
+</command>
+
 <command name="COORDSYSTEM" alias="COORDINATESYSTEM" multiple="T">
 	<parameter name="TypeCoordSystem" type="string" input="select">
 		<option name="GSM" default="$NameComp eq 'GM'"/>

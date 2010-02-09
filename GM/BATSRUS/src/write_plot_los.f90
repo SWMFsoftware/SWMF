@@ -51,7 +51,7 @@ subroutine write_plot_los(iFile)
        time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem, &
        x_,y_,z_,R_,Phi_,Theta_,Body1,body1_
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK, &
-       TypeGeometry,IsBoundaryBlock_IB
+       XyzStart_BLK, TypeGeometry, IsBoundaryBlock_IB, nMirror_D
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
        UnitTemperature_
   use ModIO
@@ -105,6 +105,7 @@ subroutine write_plot_los(iFile)
   real    :: SizePix, r2Pix    
   real    :: BlockDistance, ObsDistance, Ratio
   real    :: XyzBlockCenter_D(3), CellSize_D(3), aBlockCenter, bBlockCenter
+  real    :: XyzBlockStart_D(3), XyzBlockSign_D(3)
 
   real, dimension(3,3) :: FromHgi_DD
   real, dimension(3) :: Los_D, ObsPos_D
@@ -121,7 +122,7 @@ subroutine write_plot_los(iFile)
   character (LEN=40) :: file_format
 
   ! block and variable Indices
-  integer :: iBLK, iVar
+  integer :: iBLK, iMirror, jMirror, kMirror, iVar
 
   logical :: oktest,oktest_me,DoTiming,DoTimingMe, DoCheckBlock
   logical :: UseScattering, UseRho
@@ -324,188 +325,15 @@ subroutine write_plot_los(iFile)
 
      CellSize_D = (/ dx_BLK(iBlk), dy_BLK(iBlk), dz_BLK(iBlk) /)
 
-     if(.not.IsSphGeometry) then      
+     do iMirror = 1, nMirror_D(1)
+        do jMirror = 1, nMirror_D(2)
+           do kMirror = 1, nMirror_D(3)
 
-        if(IsRzGeometry)then
-           ! Exclude blocks that do not intersect the Z=0 plane (from above)
-           if(nK > 1 .and. &
-                .not. (z_BLK(1,1,0,iBLK)<0 .and. z_BLK(1,1,nK,iBLK)>0)) CYCLE
-           ! Exclude blocks below the Y=0 plane
-           if(y_BLK(1,nJ,1,iBLK)<0) CYCLE
-        end if
+              call integrate_block
 
-        rBlockSize = 0.5*sqrt(&
-             ((nI+1)*dx_BLK(iBLK))**2 + &
-             ((nJ+1)*dy_BLK(iBLK))**2 + &
-             ((nK+1)*dz_BLK(iBLK))**2)
-
-        !position of the block center
-        XyzBlockCenter_D(1) = 0.50*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
-        XyzBlockCenter_D(2) = 0.50*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
-        XyzBlockCenter_D(3) = 0.50*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
-        rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
-
-        if(.not.IsRzGeometry .and. (UseEuv .or. UseSxr)) then 
-           ! in cartesian grid, the rBody boundary cuts through blocks
-           ! and, since EUV plots are integrating to surface, need to make sure that
-           ! interpolation does not interpolate to ghost cells filled with
-           ! garbage body values. So make sure that rInner is equal to rBody + cell
-           ! diagonal width. This way, 8 cells bounding a point along the los
-           ! are guaranteed to be true_cells. Only do this for blocks on the
-           ! body (doesn't affect others). Also, changing it within block loop
-           ! means rInner depends on block resolution (which you want).
-
-           rInner = rBody ! reset it with every block
-           if(Body1) then
-              if(IsBoundaryBlock_IB(body1_,iBLK)) rInner = rBody + &
-                   sqrt(sum(CellSize_D**2))
-           end if
-        end if
-
-     else ! need to do additional things to check sph blocks
-
-        call generate_vertex_vectors(1,nI+1,1,nJ+1,1,nK+1,Xyz_DN)
-
-        ! want middle node indexes to find center
-        iMid1 = nI/2 + 1; iMid2 = nJ/2 + 1; iMid3 = nK/2 + 1         
-
-        XyzBlockCenter_D(x_) = NodeX_NB(iMid1,iMid2,iMid3,iBLK)
-        XyzBlockCenter_D(y_) = NodeY_NB(iMid1,iMid2,iMid3,iBLK)
-        XyzBlockCenter_D(z_) = NodeZ_NB(iMid1,iMid2,iMid3,iBLK)
-        rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
-
-
-        ! Main idea behind this method is to avoid r-curvature problems by
-        ! extending top (high r) block bounding vertexes by a factor such
-        ! that the entire curved volume is contained in a planar volume.
-        !
-        ! This way only need to find the planar intersections.
-        !
-        ! Then in the actual integration part, can discount any points that
-        ! are outside curved volume
-        !
-        ! The factor comes from finding the radius where the plane tangent to 
-        ! the point at the center of the top curved sphere intersects the 
-        ! bounding radial lines. (reduces to simple 90 degree triangle calc)
-
-        BBoxVertex_DN = Xyz_DN
-        rNodeMax = sqrt(sum(Xyz_DN(:, 8)**2))
-        rNodeMin = sqrt(sum(Xyz_DN(:, 1)**2))
-
-
-        ! Now want to find the maximum angular seperation between center of
-        ! bounding sphere and bounding lines that intersect it
-        ! check all 4 in case have non-uniform phi/theta
-        ! (would still need to check 2 values if had fixed dPhi/dTheta)
-
-        CosAngleMin = 1.0
-        do ii=5,8 ! 5-8 are max r bounding vertexes
-           CosAngle = sum(XyzBlockCenter_D *  Xyz_DN(:, ii))/( rBlockCenter * rNodeMax)
-           CosAngleMin = min(CosAngle,CosAngleMin)
-        enddo
-
-        ! now extend each top vertex along r by this factor   
-        BBoxVertex_DN(:,5:8) = BBoxVertex_DN(:, 5:8)/CosAngleMin
-
-
-        !--- note that now blocks can have odd shapes, so take maximum of
-        !distances from XyzBlockCenter to corners to calc rBlockSize
-        rBlockSize = 0.0
-        do ii=1,8
-           dlength = sqrt(sum( (XyzBlockCenter_D(:) - BBoxVertex_DN(:, ii))**2))
-           rBlockSize = max(dlength,rBlockSize)
-        enddo
-        rBlockSize = rBlockSize + cTiny !-- just to make sure...
-
-     end if
-
-     FixedXyzBlockCenter_D = XyzBlockCenter_D
-
-     if(rBlockCenter < rInner - rBlockSize) CYCLE
-
-     if(rBlockCenter > rOuter + rBlockSize) CYCLE
-
-     if(IsRzGeometry)then
-        ! There are no simple checks to exclude a block in R-Z geometry
-        DoCheckBlock = .false.
-     else
-        ! distance of block center from the observer along the LOS
-        BlockDistance = dot_product(Los_D, XyzBlockCenter_D - ObsPos_D)
-
-        ! Only blocks towards the image can be checked for exclusion easily
-        DoCheckBlock = BlockDistance > 0
-     end if
-     if(DoCheckBlock)then
-        Ratio = ObsDistance/BlockDistance
-        ! 3D vector from the image center to the projected block center
-        XyzBlockCenter_D = Ratio*(XyzBlockCenter_D -  ObsPos_D) + ObsPos_D &
-             - ImageCenter_D
-        aBlockCenter = dot_product(XyzBlockCenter_D, aUnit_D)
-        bBlockCenter = dot_product(XyzBlockCenter_D, bUnit_D)
-
-        ! Project block size
-        rBlockSize = rBlockSize*Ratio
-
-        ! Check if block is inside the LOS image
-        if((rSizeImage + rBlockSize)**2 < aBlockCenter**2 + bBlockCenter**2)&
-             CYCLE
-     end if
-
-     ! Loop over pixels
-     do jPix = 1, nPix
-
-        ! Y position of the pixel on the image plane
-        bPix = (jPix - 1) * SizePix - rSizeImage
-
-        ! Check if block can intersect this pixel
-        if(DoCheckBlock)then
-           if(abs(bPix - bBlockCenter) > rBlockSize) CYCLE
-        end if
-
-        do iPix = 1, nPix
-
-           ! X position of the pixel on the image plane
-           aPix = (iPix - 1) * SizePix - rSizeImage
-
-           ! if los is on pole, will have block degeneracy ---> offset a 'tiny' bit
-           ! (will always have this problem if nPix is odd)
-           if (IsSphGeometry.and.AlignedZ) aPix = aPix + cTiny
-
-           ! Check if block can intersect this pixel
-           if(DoCheckBlock)then
-              if( (aPix - aBlockCenter)**2 + (bPix - bBlockCenter)**2 > &
-                   rBlockSize**2 ) CYCLE 
-           end if
-
-           r2Pix = (aPix + aOffset)**2 + (bPix + bOffset)**2
-           ! Check if pixel is within occultation radius
-           if( r2Pix  <= rOccult2 ) CYCLE
-
-           r2Pix = aPix**2 + bPix**2
-           ! Check if pixel is outside the circular region
-           if( r2Pix > rSizeImage2 ) CYCLE 
-
-           ! Get the 3D location of the pixel
-           XyzPix_D = ImageCenter_D + aPix*aUnit_D + bPix*bUnit_D
-
-           ! Unit vector pointing from observer to pixel center
-           LosPix_D = ObsPos_D - XyzPix_D
-           LosPix_D = LosPix_D/sqrt(sum(LosPix_D**2))
-
-           ! Do not allow LOS direction to be perfectly aligned with major axes
-           where(LosPix_D == 0.0) LosPix_D = cTiny
-
-           ! Calculate contribution of this block to this pixel
-           if(IsRzGeometry)then
-              call integrate_los_block_rz
-           elseif(IsSphGeometry) then
-              call integrate_los_block_sph
-           else
-              call integrate_los_block
-           end if
-
-        end do ! jPix loop
-     end do    ! iPix loop
+           end do    ! kMirror
+        end do    ! jMirror
+     end do    ! iMirror
   end do       ! iBLK loop
 
   if(DoTiming)call timing_stop('los_block_loop')
@@ -610,6 +438,199 @@ subroutine write_plot_los(iFile)
   call timing_stop(NameSub)
 
 contains
+  !=========================================================================
+  subroutine integrate_block
+
+    if(.not.IsSphGeometry) then      
+
+       if(IsRzGeometry)then
+          ! Exclude blocks that do not intersect the Z=0 plane 
+          if(nK > 1 .and. &
+               .not. (z_BLK(1,1,0,iBLK)<0 .and. z_BLK(1,1,nK,iBLK)>0)) RETURN
+          ! Exclude blocks below the Y=0 plane
+          if(y_BLK(1,nJ,1,iBLK)<0) RETURN
+       end if
+
+       rBlockSize = 0.5*sqrt(&
+            ((nI+1)*dx_BLK(iBLK))**2 + &
+            ((nJ+1)*dy_BLK(iBLK))**2 + &
+            ((nK+1)*dz_BLK(iBLK))**2)
+
+       !position of the block center
+       XyzBlockCenter_D(1) = 0.5*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
+       XyzBlockCenter_D(2) = 0.5*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
+       XyzBlockCenter_D(3) = 0.5*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
+
+       if(iMirror == 2) XyzBlockCenter_D(1) = -XyzBlockCenter_D(1)
+       if(jMirror == 2) XyzBlockCenter_D(2) = -XyzBlockCenter_D(2)
+       if(kMirror == 2) XyzBlockCenter_D(3) = -XyzBlockCenter_D(3)
+
+       rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
+
+       if(.not.IsRzGeometry .and. (UseEuv .or. UseSxr)) then 
+          ! in cartesian grid, the rBody boundary cuts through blocks and,
+          ! since EUV plots are integrating to surface, need to make sure that
+          ! interpolation does not interpolate to ghost cells filled with
+          ! garbage body values. So make sure that rInner is equal to 
+          ! rBody + cell diagonal width. 
+          ! This way, 8 cells bounding a point along the los
+          ! are guaranteed to be true_cells. Only do this for blocks on the
+          ! body (doesn't affect others). Also, changing it within block loop
+          ! means rInner depends on block resolution (which you want).
+
+          rInner = rBody ! reset it with every block
+          if(Body1) then
+             if(IsBoundaryBlock_IB(body1_,iBLK)) rInner = rBody + &
+                  sqrt(sum(CellSize_D**2))
+          end if
+       end if
+
+    else ! need to do additional things to check sph blocks
+
+       call generate_vertex_vectors(1,nI+1,1,nJ+1,1,nK+1,Xyz_DN)
+
+       ! want middle node indexes to find center
+       iMid1 = nI/2 + 1; iMid2 = nJ/2 + 1; iMid3 = nK/2 + 1         
+
+       XyzBlockCenter_D(x_) = NodeX_NB(iMid1,iMid2,iMid3,iBLK)
+       XyzBlockCenter_D(y_) = NodeY_NB(iMid1,iMid2,iMid3,iBLK)
+       XyzBlockCenter_D(z_) = NodeZ_NB(iMid1,iMid2,iMid3,iBLK)
+       rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
+
+
+       ! Main idea behind this method is to avoid r-curvature problems by
+       ! extending top (high r) block bounding vertexes by a factor such
+       ! that the entire curved volume is contained in a planar volume.
+       !
+       ! This way only need to find the planar intersections.
+       !
+       ! Then in the actual integration part, can discount any points that
+       ! are outside curved volume
+       !
+       ! The factor comes from finding the radius where the plane tangent to 
+       ! the point at the center of the top curved sphere intersects the 
+       ! bounding radial lines. (reduces to simple 90 degree triangle calc)
+
+       BBoxVertex_DN = Xyz_DN
+       rNodeMax = sqrt(sum(Xyz_DN(:, 8)**2))
+       rNodeMin = sqrt(sum(Xyz_DN(:, 1)**2))
+
+       ! Now want to find the maximum angular seperation between center of
+       ! bounding sphere and bounding lines that intersect it
+       ! check all 4 in case have non-uniform phi/theta
+       ! (would still need to check 2 values if had fixed dPhi/dTheta)
+
+       CosAngleMin = 1.0
+       do ii=5,8 ! 5-8 are max r bounding vertexes
+          CosAngle = sum(XyzBlockCenter_D *  Xyz_DN(:, ii)) &
+               /(rBlockCenter * rNodeMax)
+          CosAngleMin = min(CosAngle,CosAngleMin)
+       enddo
+
+       ! now extend each top vertex along r by this factor   
+       BBoxVertex_DN(:,5:8) = BBoxVertex_DN(:, 5:8)/CosAngleMin
+
+       !--- note that now blocks can have odd shapes, so take maximum of
+       !distances from XyzBlockCenter to corners to calc rBlockSize
+       rBlockSize = 0.0
+       do ii=1,8
+          dlength = sqrt(sum( (XyzBlockCenter_D - BBoxVertex_DN(:,ii))**2))
+          rBlockSize = max(dlength,rBlockSize)
+       enddo
+       rBlockSize = rBlockSize + cTiny !-- just to make sure...
+
+    end if
+
+    FixedXyzBlockCenter_D = XyzBlockCenter_D
+
+    if(rBlockCenter < rInner - rBlockSize) RETURN
+
+    if(rBlockCenter > rOuter + rBlockSize) RETURN
+
+    if(IsRzGeometry)then
+       ! There are no simple checks to exclude a block in R-Z geometry
+       DoCheckBlock = .false.
+    else
+       ! distance of block center from the observer along the LOS
+       BlockDistance = dot_product(Los_D, XyzBlockCenter_D - ObsPos_D)
+
+       ! Only blocks towards the image can be checked for exclusion easily
+       DoCheckBlock = BlockDistance > 0
+    end if
+    if(DoCheckBlock)then
+       Ratio = ObsDistance/BlockDistance
+       ! 3D vector from the image center to the projected block center
+       XyzBlockCenter_D = Ratio*(XyzBlockCenter_D - ObsPos_D) + ObsPos_D &
+            - ImageCenter_D
+       aBlockCenter = dot_product(XyzBlockCenter_D, aUnit_D)
+       bBlockCenter = dot_product(XyzBlockCenter_D, bUnit_D)
+
+       ! Project block size
+       rBlockSize = rBlockSize*Ratio
+
+       ! Check if block is inside the LOS image
+       if((rSizeImage + rBlockSize)**2 < aBlockCenter**2 + bBlockCenter**2)&
+            RETURN
+    end if
+
+    ! Loop over pixels
+    do jPix = 1, nPix
+
+       ! Y position of the pixel on the image plane
+       bPix = (jPix - 1) * SizePix - rSizeImage
+
+       ! Check if block can intersect this pixel
+       if(DoCheckBlock)then
+          if(abs(bPix - bBlockCenter) > rBlockSize) CYCLE
+       end if
+
+       do iPix = 1, nPix
+
+          ! X position of the pixel on the image plane
+          aPix = (iPix - 1) * SizePix - rSizeImage
+
+          ! if los is on pole, will have block degeneracy 
+          !            ---> offset a 'tiny' bit
+          ! (will always have this problem if nPix is odd)
+          if (IsSphGeometry.and.AlignedZ) aPix = aPix + cTiny
+
+          ! Check if block can intersect this pixel
+          if(DoCheckBlock)then
+             if( (aPix - aBlockCenter)**2 + (bPix - bBlockCenter)**2 > &
+                  rBlockSize**2 ) CYCLE 
+          end if
+
+          r2Pix = (aPix + aOffset)**2 + (bPix + bOffset)**2
+          ! Check if pixel is within occultation radius
+          if( r2Pix  <= rOccult2 ) CYCLE
+
+          r2Pix = aPix**2 + bPix**2
+          ! Check if pixel is outside the circular region
+          if( r2Pix > rSizeImage2 ) CYCLE 
+
+          ! Get the 3D location of the pixel
+          XyzPix_D = ImageCenter_D + aPix*aUnit_D + bPix*bUnit_D
+
+          ! Unit vector pointing from observer to pixel center
+          LosPix_D = ObsPos_D - XyzPix_D
+          LosPix_D = LosPix_D/sqrt(sum(LosPix_D**2))
+
+          ! Do not allow LOS direction to be perfectly aligned with major axes
+          where(LosPix_D == 0.0) LosPix_D = cTiny
+
+          ! Calculate contribution of this block to this pixel
+          if(IsRzGeometry)then
+             call integrate_los_block_rz
+          elseif(IsSphGeometry) then
+             call integrate_los_block_sph
+          else
+             call integrate_los_block
+          end if
+
+       end do ! jPix loop
+    end do    ! iPix loop
+
+  end subroutine integrate_block
 
   !===========================================================================
   subroutine integrate_los_block_rz
@@ -631,7 +652,6 @@ contains
     !    (making sure that we integrate inside the ring!) to get the length 
     !    of the line segment.
 
-    use ModGeometry,    ONLY: XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK
     use ModSort,        ONLY: sort_quick
 
     ! maximum number of intersections between LOS and 
@@ -758,6 +778,7 @@ contains
     real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
     logical :: IsOuter, IsGoodSolution1, IsGoodSolution2 , IsAllBehind
 
+    real :: Tmp
     !-------------------------------------------------------------------------
     !if(DoTiming)call timing_start('los_set_plotvar')
 
@@ -773,6 +794,32 @@ contains
     yy2 = 0.50*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(nI+1,nJ+1,nK+1,iBLK))
     zz1 = 0.50*(z_BLK( 0, 0, 0,iBLK)+z_BLK(   1,   1,   1,iBLK))
     zz2 = 0.50*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(nI+1,nJ+1,nK+1,iBLK))
+
+    ! Store starting location
+    XyzBlockStart_D = XyzStart_BLK(:,iBlk)
+
+    ! Swap signs and order of faces for mirror images
+    if(iMirror == 2) then
+       Tmp = xx2; xx2 = -xx1; xx1 = -Tmp
+       XyzBlockStart_D(1) = -XyzBlockStart_D(1)
+       XyzBlockSign_D(1) = -1.0
+    else
+       XyzBlockSign_D(1) = +1.0
+    end if
+    if(jMirror == 2) then
+       Tmp = yy2; yy2 = -yy1; yy1 = -Tmp
+       XyzBlockStart_D(2) = -XyzBlockStart_D(2)
+       XyzBlockSign_D(2) = -1.0
+    else
+       XyzBlockSign_D(2) = +1.0
+    end if
+    if(kMirror == 2) then
+       Tmp = zz2; zz2 = -zz1; zz1 = -Tmp
+       XyzBlockStart_D(3) = -XyzBlockStart_D(3)
+       XyzBlockSign_D(3) = -1.0
+    else
+       XyzBlockSign_D(3) = +1.0
+    end if
 
     face_location(1,1) = xx1
     face_location(1,2) = yy1
@@ -792,7 +839,8 @@ contains
           do k=1,3   !coordinate loop
              if (j /= k) then  
                 intrsct(i,j,k) = XyzPix_D(k) + &
-                     (LosPix_D(k)/LosPix_D(j))*(face_location(i,j) - XyzPix_D(j))
+                     (LosPix_D(k)/LosPix_D(j)) &
+                     *(face_location(i,j) - XyzPix_D(j))
              end if
           end do
        end do
@@ -996,7 +1044,6 @@ contains
     ! The line is split into nSegment segments of length Ds
 
     use ModAdvance,     ONLY: UseElectronPressure
-    use ModGeometry,    ONLY: XyzStart_BLK
     use ModInterpolate, ONLY: bilinear, trilinear
     use ModUser,        ONLY: user_set_plot_var
     use ModParallel,    ONLY: NeiLWest, NeiLEast, NOBLK
@@ -1115,13 +1162,14 @@ contains
        if(IsRzGeometry)then
           ! Radial distance is sqrt(yLos**2+zLos**2)
           CoordNorm_D(1:2) = ( (/xLos, sqrt(yLos**2+zLos**2) /) &
-               - XyzStart_BLK(1:2,iBlk))/CellSize_D(1:2) + 1
+               - XyzBlockStart_D(1:2))/CellSize_D(1:2) + 1
           CoordNorm_D(3) = 0.0
 
        elseif(IsSphGeometry) then
-          ! get gen coord of los (note XyzStart_BLK is already in Gencoord)
+          ! get gen coord of los (note XyzStart_D is already in gen. coord)
           call xyz_to_gen(XyzLos_D,GenLos_D)
-          CoordNorm_D = (GenLos_D - XyzStart_BLK(:,iBLK))/CellSize_D + 1
+          CoordNorm_D = &
+               XyzBlockSign_D*(GenLos_D - XyzBlockStart_D)/CellSize_D + 1
 
           ! need to know if no block neighbor 
           ! (ghost cells along this edge will be wrong)
@@ -1129,7 +1177,8 @@ contains
           IsNoBlockOuter = (NeiLWest(iBLK) == NOBLK)
 
        else
-          CoordNorm_D = (XyzLos_D - XyzStart_BLK(:,iBlk))/CellSize_D + 1
+          CoordNorm_D = &
+               XyzBlockSign_D*(XyzLos_D - XyzBlockStart_D)/CellSize_D + 1
        end if
 
        ! interpolate density if it is needed by any of the plot variables

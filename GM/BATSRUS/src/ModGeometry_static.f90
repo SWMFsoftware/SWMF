@@ -18,6 +18,9 @@ Module ModGeometry
   real  ::    x1, x2, y1, y2, z1, z2
   real :: dxyz(3), xyzStart(3), xyzStart_BLK(3,nBLK),XyzMin_D(3),XyzMax_D(3)
 
+  ! Mirror symmetry in the 3 directions
+  integer:: nMirror_D(3) = 1
+
   !\
   ! Other block solution and geometry parameters.
   !/
