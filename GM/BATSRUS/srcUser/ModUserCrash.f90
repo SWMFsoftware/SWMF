@@ -147,6 +147,9 @@ module ModUser
   ! Temperature limit for cold plastic (30,000K is a good limit)
   real:: TeMaxColdPlSi = -1.0
 
+  ! Assume equal electron/ion temperature in plastic and gold at Hyades handoff
+  logical :: UseEqualTemperatureHyades = .false.
+
   ! AMR parameters
   real:: RhoMinAmrDim = 20.0   ! kg/m3
   real:: xMaxAmr      = 2500.0 ! microns
@@ -276,6 +279,10 @@ contains
           call read_var('BetaProlong', BetaProlong)
        case("#PLASTIC")
           call read_var('TeMaxColdPlSi',  TeMaxColdPlSi)
+
+       case("#TEMPERATUREHYADES")
+          call read_var('UseEqualTemperatureHyades', UseEqualTemperatureHyades)
+
        case('#USERINPUTEND')
           EXIT
        case default
@@ -365,14 +372,14 @@ contains
     use ModVarIndexes,  ONLY: Rho_, RhoUx_, RhoUz_, p_, ExtraEint_, &
          LevelBe_, LevelXe_, LevelPl_, LevelAu_, Pe_, Erad_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
-    use ModConst,       ONLY: cPi
+    use ModConst,       ONLY: cPi, cAtomicMass
     use CRASH_ModEos,   ONLY: eos, Xe_, Plastic_
 
     real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi
     real    :: DxyGold = -1.0
-    real    :: TeSi, PeSi, Natomic, NatomicSi
+    real    :: TeSi, PeSi, Natomic, NatomicSi, RhoSi, pSi, p, Te
 
-    integer :: iBlock, i, j, k
+    integer :: iBlock, i, j, k, iMaterial
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !------------------------------------------------------------------------
@@ -555,6 +562,7 @@ contains
     ! user_material_properties
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(UseElectronPressure)then
+
           TeSi = Te_G(i,j,k)*No2Si_V(UnitTemperature_)
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, TeIn=TeSi, &
@@ -562,7 +570,22 @@ contains
 
           State_VGB(Pe_,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
 
-          if(State_VGB(LevelPl_,i,j,k,iBlock) > 0.0 &
+          if(UseEqualTemperatureHyades .and. &
+               any(State_VGB(LevelPl_:LevelMax,i,j,k,iBlock) > 0.0))then
+             ! equal electron/ion temperature for plastic and gold
+             do iMaterial = Plastic_, nMaterial - 1
+                RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
+                pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
+                call eos(iMaterial, RhoSi, PtotalIn=pSi, TeOut=TeSi)
+                Te = TeSi*Si2No_V(UnitTemperature_)
+                Natomic = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial)) &
+                     *Si2No_V(UnitN_)
+                p = Natomic*Te
+                State_VGB(Pe_,i,j,k,iBlock) = &
+                     max(PeMin,State_VGB(p_,i,j,k,iBlock) - p)
+                State_VGB(p_,i,j,k,iBlock) = p
+             end do
+          else if(State_VGB(LevelPl_,i,j,k,iBlock) > 0.0 &
                .and. TeSi < TeMaxColdPlSi)then
              ! Subtract electron pressure from the total pressure
              State_VGB(p_,i,j,k,iBlock)  = max(PeMin, &
