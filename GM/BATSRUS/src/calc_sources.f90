@@ -25,8 +25,9 @@ subroutine calc_sources
   use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
   use ModCoronalHeating,ONLY: UseCoronalHeating,&
                               get_block_heating,CoronalHeating_C
-  use ModRadiativeCooling,ONLY: AuxTeSi,RadCooling_C,UseRadCooling,&
+  use ModRadiativeCooling,ONLY: RadCooling_C,UseRadCooling,&
                               get_radiative_cooling
+  use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor
   implicit none
 
   integer :: i, j, k, iDim, iVar
@@ -49,6 +50,9 @@ subroutine calc_sources
   ! Varibles needed for anisotropic pressure
   real :: b_D(3), GradU_DD(3,3), bDotGradparU, AnisoRelaxation
   logical :: IsFirehose, IsMirror 
+
+  ! Electron temperature in K:
+  real :: TeSi_C(nI,nJ,nK)
 
   integer:: iBlock
 
@@ -241,8 +245,16 @@ subroutine calc_sources
      end do; end do; end do
   end if
 
+  if(UseCoronalHeating.and.DoExtendTransitionRegion &
+       .or. UseRadCooling)call get_tesi_c(iBlock, TeSi_C)
   if(UseCoronalHeating)then
      call get_block_heating(iBlock)
+     if(.false..and. DoExtendTransitionRegion)then
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           CoronalHeating_C(i,j,k) = &
+                CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
+        end do; end do; end do
+     end if
      do k=1,nK; do j=1,nJ; do i=1,nI
         Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
              CoronalHeating_C(i,j,k)
@@ -250,11 +262,9 @@ subroutine calc_sources
              CoronalHeating_C(i,j,k) * (g-1.0)
      end do; end do; end do
   end if
-  if(UseRadCooling)then
+  if(UseRadCooling.and.(.not.UseElectronPressure))then
      do k=1,nK; do j=1,nJ; do i=1,nI
-        call user_material_properties(&
-                State_VGB(:,i,j,k,iBlock),TeOut=AuxTeSi)
-        call get_radiative_cooling(i,j,k,iBlock,AuxTeSi,&
+        call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k),&
              RadCooling_C(i,j,k))
 
         Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
@@ -265,6 +275,17 @@ subroutine calc_sources
   end if
 
   if(UseElectronPressure)then
+     if(UseRadCooling)then
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k),&
+                RadCooling_C(i,j,k))
+
+           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
+             RadCooling_C(i,j,k)
+           Source_VC(Pe_,    i,j,k) = Source_VC(Pe_,    i,j,k) + &
+                RadCooling_C(i,j,k) * (g-1.0)
+        end do; end do; end do
+     end if
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE
         DivU = uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_)
@@ -725,4 +746,43 @@ subroutine calc_divb(iBlock)
   end do; end do; end do
 
 end subroutine calc_divb
+!==========================================
+subroutine get_tesi_c(iBlock, TeSi_C)
+  use ModAdvance,    ONLY: UseIdealEos, UseElectronPressure
+  use ModAdvance,    ONLY: State_VGB, p_,Pe_,Rho_
+  use ModSize,       ONLY: nI, nJ, nK
+  use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, &
+       AverageIonCharge, ElectronTemperatureRatio
+  use ModMultifluid, ONLY: MassIon_I
+  use ModUser,       ONLY: user_material_properties
+  implicit none
 
+  integer, intent(in)  :: iBlock
+  real,    intent(out) :: TeSi_C(1:nI, 1:nJ, 1:nK)
+
+  integer:: i, j, k
+  !------------
+  if(UseIdealEos)then
+     if(UseElectronPressure)then
+        do k = 1, nK; do j = 1, nJ; do i = 1, nK
+           TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
+                /State_VGB(Rho_,i,j,k,iBlock)
+        end do; end do; end do
+        TeSi_C = TeSi_C * No2Si_V(UnitTemperature_ ) * &
+             MassIon_I(1)/AverageIonCharge
+     else
+        do k = 1, nK; do j = 1, nJ; do i = 1, nK
+           TeSi_C(i,j,k) = State_VGB(p_,i,j,k,iBlock) &
+                /State_VGB(Rho_,i,j,k,iBlock)
+        end do; end do; end do
+        TeSi_C = TeSi_C * No2Si_V(UnitTemperature_ ) * &
+             MassIon_I(1) * ElectronTemperatureRatio / &
+             (AverageIonCharge * ElectronTemperatureRatio + 1.0)
+     end if
+  else
+     do k = 1, nK; do j = 1, nJ; do i = 1, nK
+        call user_material_properties( &
+             State_VGB(:,i,j,k,iBlock), TeOut=TeSi_C(i,j,k))
+     end do; end do; end do
+  end if
+end subroutine get_tesi_c
