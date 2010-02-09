@@ -764,14 +764,14 @@ subroutine get_tesi_c(iBlock, TeSi_C)
   !------------
   if(UseIdealEos)then
      if(UseElectronPressure)then
-        do k = 1, nK; do j = 1, nJ; do i = 1, nK
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
            TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
                 /State_VGB(Rho_,i,j,k,iBlock)
         end do; end do; end do
         TeSi_C = TeSi_C * No2Si_V(UnitTemperature_ ) * &
              MassIon_I(1)/AverageIonCharge
      else
-        do k = 1, nK; do j = 1, nJ; do i = 1, nK
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
            TeSi_C(i,j,k) = State_VGB(p_,i,j,k,iBlock) &
                 /State_VGB(Rho_,i,j,k,iBlock)
         end do; end do; end do
@@ -780,7 +780,7 @@ subroutine get_tesi_c(iBlock, TeSi_C)
              (AverageIonCharge * ElectronTemperatureRatio + 1.0)
      end if
   else
-     do k = 1, nK; do j = 1, nJ; do i = 1, nK
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI
         call user_material_properties( &
              State_VGB(:,i,j,k,iBlock), TeOut=TeSi_C(i,j,k))
      end do; end do; end do
