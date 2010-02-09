@@ -105,7 +105,7 @@ subroutine write_plot_los(iFile)
   real    :: SizePix, r2Pix    
   real    :: BlockDistance, ObsDistance, Ratio
   real    :: XyzBlockCenter_D(3), CellSize_D(3), aBlockCenter, bBlockCenter
-  real    :: XyzBlockStart_D(3), XyzBlockSign_D(3)
+  real    :: XyzBlockStart_D(3), XyzBlockSign_D(3)=1.0
 
   real, dimension(3,3) :: FromHgi_DD
   real, dimension(3) :: Los_D, ObsPos_D
@@ -326,8 +326,11 @@ subroutine write_plot_los(iFile)
      CellSize_D = (/ dx_BLK(iBlk), dy_BLK(iBlk), dz_BLK(iBlk) /)
 
      do iMirror = 1, nMirror_D(1)
+        XyzBlockSign_D(1) = 3 - 2*iMirror
         do jMirror = 1, nMirror_D(2)
+           XyzBlockSign_D(2) = 3 - 2*jMirror
            do kMirror = 1, nMirror_D(3)
+              XyzBlockSign_D(3) = 3 - 2*kMirror
 
               call integrate_block
 
@@ -495,6 +498,11 @@ contains
        XyzBlockCenter_D(x_) = NodeX_NB(iMid1,iMid2,iMid3,iBLK)
        XyzBlockCenter_D(y_) = NodeY_NB(iMid1,iMid2,iMid3,iBLK)
        XyzBlockCenter_D(z_) = NodeZ_NB(iMid1,iMid2,iMid3,iBLK)
+
+       if(iMirror == 2) XyzBlockCenter_D(1) = -XyzBlockCenter_D(1)
+       if(jMirror == 2) XyzBlockCenter_D(2) = -XyzBlockCenter_D(2)
+       if(kMirror == 2) XyzBlockCenter_D(3) = -XyzBlockCenter_D(3)
+
        rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
 
 
@@ -572,6 +580,9 @@ contains
        if((rSizeImage + rBlockSize)**2 < aBlockCenter**2 + bBlockCenter**2)&
             RETURN
     end if
+
+    ! Store cell 1,1,1 coordinates
+    XyzBlockStart_D = XyzStart_BLK(:,iBlk)
 
     ! Loop over pixels
     do jPix = 1, nPix
@@ -699,8 +710,14 @@ contains
     r2_S(1) = (0.5*(y_BLK(1, 0,1,iBLK) + y_BLK(1,   1,1,iBLK)))**2
 
     ! The X positions of the left and right faces of the block
-    x_S(1) = 0.5*(x_BLK( 0,1,1,iBLK) + x_BLK(   1,1,1,iBLK))
-    x_S(2) = 0.5*(x_BLK(nI,1,1,iBLK) + x_BLK(nI+1,1,1,iBLK))
+    if(iMirror == 1) then
+       x_S(1) = 0.5*(x_BLK( 0,1,1,iBLK) + x_BLK(   1,1,1,iBLK))
+       x_S(2) = 0.5*(x_BLK(nI,1,1,iBLK) + x_BLK(nI+1,1,1,iBLK))
+    else
+       ! Swap signs and order of faces for mirror images
+       x_S(1) = -0.5*(x_BLK(nI,1,1,iBLK) + x_BLK(nI+1,1,1,iBLK))
+       x_S(2) = -0.5*(x_BLK( 0,1,1,iBLK) + x_BLK(   1,1,1,iBLK))
+    end if
 
     ! Initialize intersection arrays
     nIntersect = 0
@@ -795,30 +812,15 @@ contains
     zz1 = 0.50*(z_BLK( 0, 0, 0,iBLK)+z_BLK(   1,   1,   1,iBLK))
     zz2 = 0.50*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(nI+1,nJ+1,nK+1,iBLK))
 
-    ! Store starting location
-    XyzBlockStart_D = XyzStart_BLK(:,iBlk)
-
     ! Swap signs and order of faces for mirror images
     if(iMirror == 2) then
        Tmp = xx2; xx2 = -xx1; xx1 = -Tmp
-       XyzBlockStart_D(1) = -XyzBlockStart_D(1)
-       XyzBlockSign_D(1) = -1.0
-    else
-       XyzBlockSign_D(1) = +1.0
     end if
     if(jMirror == 2) then
        Tmp = yy2; yy2 = -yy1; yy1 = -Tmp
-       XyzBlockStart_D(2) = -XyzBlockStart_D(2)
-       XyzBlockSign_D(2) = -1.0
-    else
-       XyzBlockSign_D(2) = +1.0
     end if
     if(kMirror == 2) then
        Tmp = zz2; zz2 = -zz1; zz1 = -Tmp
-       XyzBlockStart_D(3) = -XyzBlockStart_D(3)
-       XyzBlockSign_D(3) = -1.0
-    else
-       XyzBlockSign_D(3) = +1.0
     end if
 
     face_location(1,1) = xx1
@@ -1161,15 +1163,15 @@ contains
        ! XyzStart contains the coordinates of cell 1,1,1, hence add 1
        if(IsRzGeometry)then
           ! Radial distance is sqrt(yLos**2+zLos**2)
-          CoordNorm_D(1:2) = ( (/xLos, sqrt(yLos**2+zLos**2) /) &
-               - XyzBlockStart_D(1:2))/CellSize_D(1:2) + 1
+          CoordNorm_D(1:2) = &
+               ( (/xLos*XyzBlockSign_D(1), sqrt(yLos**2+zLos**2) /) &
+               - XyzBlockStart_D(1:2) )/CellSize_D(1:2) + 1
           CoordNorm_D(3) = 0.0
 
        elseif(IsSphGeometry) then
           ! get gen coord of los (note XyzStart_D is already in gen. coord)
-          call xyz_to_gen(XyzLos_D,GenLos_D)
-          CoordNorm_D = &
-               XyzBlockSign_D*(GenLos_D - XyzBlockStart_D)/CellSize_D + 1
+          call xyz_to_gen(XyzBlockSign_D*XyzLos_D, GenLos_D)
+          CoordNorm_D = (GenLos_D - XyzBlockStart_D)/CellSize_D + 1
 
           ! need to know if no block neighbor 
           ! (ghost cells along this edge will be wrong)
@@ -1178,7 +1180,7 @@ contains
 
        else
           CoordNorm_D = &
-               XyzBlockSign_D*(XyzLos_D - XyzBlockStart_D)/CellSize_D + 1
+               (XyzBlockSign_D*XyzLos_D - XyzBlockStart_D)/CellSize_D + 1
        end if
 
        ! interpolate density if it is needed by any of the plot variables
