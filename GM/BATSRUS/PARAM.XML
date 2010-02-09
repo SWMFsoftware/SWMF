@@ -3067,12 +3067,12 @@ Only useful if the initial condition has a non-trivial analytic form.
 
 <command name="GRIDRESOLUTION" alias="GRIDLEVEL" multiple="T">
 	<set name="RotateArea" value="0"/>
-	<set name="ScaleArea"  value="0"/>
+	<set name="StretchArea"  value="0"/>
 	<parameter name="Resolution" type="real" min="0"
 		if="$_command =~ /RESOLUTION/" />
 	<parameter name="nLevel" type="integer" min="0" max="30"
 		if="$_command =~ /LEVEL/" />
-	<parameter name="StringArea" type="strings" min="1" max="2"
+	<parameter name="StringArea" type="strings" min="1" max="3"
 		case="lower">
 		<part name="NameArea" type="string" input="select" 
 							required="T">
@@ -3103,10 +3103,10 @@ Only useful if the initial condition has a non-trivial analytic form.
 			<option name="currentsheet"			/>
 			<option name="user"				/>
 		</part>
-		<part name="ScaleArea" type="string" input="select"
+		<part name="StretchArea" type="string" input="select"
 			required="F"
 			if="$NameArea =~ /sphere|shell|cylinder|ring/">
-			<option name="scaled" />
+			<option name="stretched" />
 		</part>
 		<part name="RotateArea" type="string" input="select" 
 			required="F" 
@@ -3148,10 +3148,10 @@ Only useful if the initial condition has a non-trivial analytic form.
 		<parameter name="Radius1"    type="real" min="0" />
 		<parameter name="Radius2"    type="real" min="0" />
 	</if>
-	<if expr="$ScaleArea =~ /scaled/">
-		<parameter name="xScale" type="real" min="0" default="1"/>
-		<parameter name="yScale" type="real" min="0" default="1"/>
-		<parameter name="zScale" type="real" min="0" default="1"/>
+	<if expr="$StretchArea =~ /stretched/">
+		<parameter name="xStretch" type="real" min="0" default="1"/>
+		<parameter name="yStretch" type="real" min="0" default="1"/>
+		<parameter name="zStretch" type="real" min="0" default="1"/>
 	</if>
 	<if expr="$RotateArea =~ /rotated/">
 		<parameter name="xRotate" type="real" min="-360" max="360" 
@@ -3225,11 +3225,11 @@ ringz0 rotated		NameArea
 
 #GRIDRESOLUTION
 1/4			Resolution
-sphere0 scaled		NameArea
+sphere0 stretched	NameArea
 10.0			rSphere
-1.0			xScale
-3.0			yScale
-2.0			zScale
+1.0			xStretch
+3.0			yStretch
+2.0			zStretch
 
 #GRIDRESOLUTION
 0.15			Resolution
@@ -3290,14 +3290,14 @@ The area 'ringx', 'ringy' and 'ringz' are the volumes between
 two cylindrical surfaces parallel with the X, Y and Z axes, respectively.
 The ring area is given with the center, the height and the two radii.
 Note that all these round shapes can be made elliptical with the 
-"scaled" option (see below).
+"stretched" option (see below).
 
 If the area name contains the number '0', the center is taken to be at the 
 origin and the center coordinates are not read. Note that the areas 'box'
 and 'box_gen' are defined with the corners so the '0' cannot be used for these.
 
-If the word 'scaled' is added after the area name, the area can be 
-scaled (stretched) in the X, Y and Z directions. This allows making
+If the word 'stretched' is added after the area name, the area can be 
+stretched in the X, Y and Z directions. This allows making
 an ellipsoid from a sphere, or an elliptical slab from a cylinder.
 Also useful to distort shells and rings.
 
@@ -3307,11 +3307,11 @@ areas 'box', 'brick', 'cylinder*' and 'ring*' can be rotated.
 
 The 'currentsheet' area is defined as the blocks containing a reversal of the 
 radial magnetic field. This is mostly useful for the solar corona and 
-heliosphere. This special area type cannot be scaled, rotated or centered.
+heliosphere. This special area type cannot be stretched, rotated or centered.
 
 The 'user' area results in a call of the subroutine user_specify_refinement 
 defined in the user module. The user can define an arbitrary set of criteria 
-for refinement.  Again, scaling, rotation and centering cannot be applied 
+for refinement.  Again, stretching, rotation and centering cannot be applied 
 to the 'user' area.
 </command>
 

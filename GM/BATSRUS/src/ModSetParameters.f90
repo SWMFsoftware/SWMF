@@ -116,14 +116,14 @@ subroutine MH_set_parameters(TypeAction)
   
   ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
   character(len=lStringLine):: NameArea='all'
-  integer                   :: nLevelArea=0
-  real                      :: AreaResolution=0.0, RadiusArea=0.0
-  real                      :: InitialResolution = -1.0
-  logical                   :: DoReadAreaCenter=.false.
-  real, dimension(3)        :: XyzStartArea_D=0.0, XyzEndArea_D=0.0
-  real                      :: xRotateArea=0., yRotateArea=0., zRotateArea=0.
-  logical                   :: DoScale = .false.
-  real                      :: xScaleArea=1.0, yScaleArea=1.0, zScaleArea=1.0
+  integer :: nLevelArea=0
+  real    :: AreaResolution=0.0, RadiusArea=0.0
+  real    :: InitialResolution = -1.0
+  logical :: DoReadAreaCenter=.false.
+  real    :: XyzStartArea_D(3)=0.0, XyzEndArea_D(3)=0.0
+  real    :: xRotateArea=0., yRotateArea=0., zRotateArea=0.
+  logical :: DoStretchArea = .false.
+  real    :: xStretchArea=1.0, yStretchArea=1.0, zStretchArea=1.0
 
   ! Variables for checking the user module
   character (len=lStringLine) :: NameUserModuleRead='?'
@@ -924,10 +924,10 @@ subroutine MH_set_parameters(TypeAction)
         Area_I(nArea)%DoRotate = i > 0
         if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+7:len(NameArea))
 
-        ! check for the word scaled in the name
-        i = index(NameArea,'scaled')
-        DoScale = i > 0
-        if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+6:len(NameArea))
+        ! check for the word stretched in the name
+        i = index(NameArea,'stretched')
+        DoStretchArea = i > 0
+        if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+9:len(NameArea))
 
         ! Extract character '0' from the name
         i = index(NameArea,'0')
@@ -1034,18 +1034,18 @@ subroutine MH_set_parameters(TypeAction)
            CYCLE READPARAM
         end select
 
-        if(DoScale)then
-           ! Read 3 scale factor for the sizes
-           call read_var('xScale', xScaleArea)
-           call read_var('yScale', yScaleArea)
-           call read_var('zScale', zScaleArea)
+        if(DoStretchArea)then
+           ! Read 3 stretch factors for the sizes
+           call read_var('xStretch', xStretchArea)
+           call read_var('yStretch', yStretchArea)
+           call read_var('zStretch', zStretchArea)
            
-           ! Scale the x, y, z sizes
-           Area_I(nArea)%Size_D(1) = Area_I(nArea)%Size_D(1)*xScaleArea
-           Area_I(nArea)%Size_D(2) = Area_I(nArea)%Size_D(2)*yScaleArea
-           Area_I(nArea)%Size_D(3) = Area_I(nArea)%Size_D(3)*zScaleArea
+           ! Stretch the x, y, z sizes
+           Area_I(nArea)%Size_D(1) = Area_I(nArea)%Size_D(1)*xStretchArea
+           Area_I(nArea)%Size_D(2) = Area_I(nArea)%Size_D(2)*yStretchArea
+           Area_I(nArea)%Size_D(3) = Area_I(nArea)%Size_D(3)*zStretchArea
 
-           DoScale = .false.
+           DoStretchArea = .false.
         end if
 
         if(Area_I(nArea) % DoRotate)then
