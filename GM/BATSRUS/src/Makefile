@@ -170,8 +170,8 @@ DYNAMIC:
 # Dependency rules for static/dynamic modules
 
 # Default variable declaration type for 1 module (select one)
-STATIC_OR_DYNAMIC = STATIC1
-#STATIC_OR_DYNAMIC = DYNAMIC1
+#STATIC_OR_DYNAMIC = STATIC1
+STATIC_OR_DYNAMIC = DYNAMIC1
 
 ModAdvance.f90: ModAdvance_static.f90
 	make -s ${STATIC_OR_DYNAMIC} NAME=Advance
