@@ -30,6 +30,7 @@ integer function bad_outputtype()
      if (OutputType(iOutputType) == '1DNEW')     IsFound = .true.
      if (OutputType(iOutputType) == '1DCHM')     IsFound = .true.
      if (OutputType(iOutputType) == '1DCMS')     IsFound = .true.
+     if (OutputType(iOutputType) == '1DUSR')     IsFound = .true.
 
      if (.not. IsFound) then
         bad_outputtype = iOutputType
@@ -57,7 +58,7 @@ subroutine output(dir, iBlock, iOutputType)
   use ModTime
   use ModInputs
   use ModSources
-  use ModUserGITM, only: nVarsUser2d, nVarsUser3d
+  use ModUserGITM, only: nVarsUser2d, nVarsUser3d, nVarsUser1d
 
   implicit none
 
@@ -246,7 +247,7 @@ subroutine output(dir, iBlock, iOutputType)
   case ('1DALL')
 
      nGCs = 0
-     nvars_to_write = 13+nSpeciesTotal+nSpecies+nIons+nSpecies+5
+     nvars_to_write = 13+nSpeciesTotal+nSpecies+nIons+nSpecies+4
      call output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iOutputUnit_)
 
   case ('1DGLO')
@@ -270,6 +271,12 @@ subroutine output(dir, iBlock, iOutputType)
      
      nvars_to_write = nSpeciesTotal*2+(nIons-1)*2+3
      call output_1dcms(iBlock)
+
+  case ('1DUSR')
+
+     if (iBlock == 1) call set_nVarsUser1d
+     nvars_to_write = nVarsUser1d
+     call output_1duser(iBlock, iOutputUnit_)
 
   end select
 
@@ -527,7 +534,7 @@ contains
 !       write(iOutputUnit_,"(I7,A1,a)") iOff+6, " ", "15N2 Mixing Ratio"
 !       write(iOutputUnit_,"(I7,A1,a)") iOff+7, " ", "13CH4 Mixing Ratio"
 
-          iOff = iOff + nSpecies
+          iOff = iOff + nSpecies - 1
           write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "RadCooling"
           write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "EuvHeating"
           write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "Conduction"
