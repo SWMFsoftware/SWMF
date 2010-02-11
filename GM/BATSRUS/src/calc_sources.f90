@@ -26,8 +26,9 @@ subroutine calc_sources
   use ModCoronalHeating,ONLY: UseCoronalHeating,&
                               get_block_heating,CoronalHeating_C
   use ModRadiativeCooling,ONLY: RadCooling_C,UseRadCooling,&
-                              get_radiative_cooling
-  use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor
+                              get_radiative_cooling, add_chromosphere_heating
+  use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
+                              UseChromosphereHeating
   implicit none
 
   integer :: i, j, k, iDim, iVar
@@ -249,7 +250,8 @@ subroutine calc_sources
        .or. UseRadCooling)call get_tesi_c(iBlock, TeSi_C)
   if(UseCoronalHeating)then
      call get_block_heating(iBlock)
-     if(.false..and. DoExtendTransitionRegion)then
+     if(UseChromosphereHeating.and. DoExtendTransitionRegion)then
+        call add_chromosphere_heating(TeSi_C, iBlock)
         do k=1,nK; do j=1,nJ; do i=1,nI
            CoronalHeating_C(i,j,k) = &
                 CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))

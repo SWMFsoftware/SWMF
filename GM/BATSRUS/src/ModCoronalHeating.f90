@@ -1066,7 +1066,6 @@ contains
     endif
     
   end subroutine get_block_heating
-
   !============================================================================!
   
 end module ModCoronalHeating

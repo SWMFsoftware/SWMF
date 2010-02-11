@@ -10,6 +10,8 @@ module ModChromosphere
   !The use of short-scale exponential heat function with 
   !the decay length = (30 m/K)*TeCromosphere SI
   logical:: UseChromosphereHeating    = .false. 
+ 
+
   real   :: NumberDensChromosphereCgs = 1.0e+12 ![cm^{-3}  
   real   :: TeChromosphereSi = 1.0e4            ![K]
 
@@ -252,5 +254,31 @@ contains
     IntegralSi = IntegralCgs * Cgs2SiEnergyDens * 1.0e-12 
     cooling_function_integral_si = IntegralSi
   end function cooling_function_integral_si
+  !========================================
+  subroutine add_chromosphere_heating(TeSi_C,iBlock)
+    use ModGeometry, ONLY: r_BLK
+    use ModConst,    ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
+    use ModPhysics,  ONLY: UnitX_, Si2No_V, UnitEnergyDens_, UnitT_
+    use ModCoronalHeating, ONLY: CoronalHeating_C
+    
+    real,    intent(in):: TeSi_C(1:nI,1:nJ,1:nK)
+    integer, intent(in):: iBlock
+
+    real, parameter:: cGravityAcceleration = cGravitation * mSun / rSun**2
+    real, parameter:: cBarometricScalePerT = cBoltzmann/&
+                      (cProtonMass * cGravityAcceleration)
+
+    real:: HeightSi_C(1:nI,1:nJ,1:nK), BarometricScaleSi, Amplitude
+    !------------------------------
+    HeightSi_C = (r_BLK(1:nI,1:nJ,1:nK,iBlock) - 1) * Si2No_V(UnitX_)
+    BarometricScaleSi = TeChromosphereSi *  cBarometricScalePerT
+    Amplitude = radiative_cooling(TeChromosphereSi, NumberDensChromosphereCgs)
+
+    where(HeightSi_C < 10.0 * BarometricScaleSi&
+         .and.TeSi_C < 1.1 * TeChromosphereSi)&
+         CoronalHeating_C = CoronalHeating_C + &
+         Amplitude * exp(-HeightSi_C/BarometricScaleSi)
+         
+  end subroutine add_chromosphere_heating
 
 end module ModRadiativeCooling
