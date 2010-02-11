@@ -98,7 +98,12 @@ chromo			TypeTRBoundary
 !  2. Modify accordingly the radiative cooling and heat conduction,
 !     to extend the transition region.
 
-#EXTENDEDTR
+#CHROMOSPHERE
+F
+1.0e+12
+2.0e+4
+
+#TRANSITIONREGION
 T			DoModHeatConduction
 3.0E+5			TeModSi
 1.0E+1			DeltaTeModSi

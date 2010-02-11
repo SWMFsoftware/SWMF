@@ -22,6 +22,14 @@ module ModPhysics
   real:: ElectronTemperatureRatio = 0.0
   real:: IonMassPerCharge         = 1.0
 
+  !The following logical is set to .true. when the #PLASMA command
+  !is present in the PARAM,in file. and this enebles to calculate
+  !Te using a formula: Te= P/(Rho* IonMass_I(1) &
+  !* ElectronTemperatureRatio/(ElectronTemperatureRatio + 1.0)
+
+  logical:: UseSimpleTe = .false. 
+  
+
   ! thermal/total energy ratio limits for correctP
   real    :: Pratio_lo=0.01, Pratio_hi=0.1
 

@@ -72,7 +72,7 @@ subroutine MH_set_parameters(TypeAction)
        read_longscale_heating, init_coronal_heating, UseCoronalHeating, &
        DoOpenClosedHeat
   use ModRadiativeCooling,ONLY: UseRadCooling,&
-       read_modified_cooling, check_cooling_param
+       read_modified_cooling, check_cooling_param, read_chromosphere
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -1654,6 +1654,7 @@ subroutine MH_set_parameters(TypeAction)
         MassIon_I = MassFluid_I(IonFirst_:IonLast_)
         call read_var('AverageIonCharge        ', AverageIonCharge)
         call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
+        UseSimpleTe = ElectronTemperatureRatio > 0.0
 
      case("#MULTISPECIES")
         call read_var('DoReplaceDensity', DoReplaceDensity)
@@ -1876,7 +1877,10 @@ subroutine MH_set_parameters(TypeAction)
      case("#RADCOOLING")
         call read_var('UseRadCooling',UseRadCooling)
 
-     case("#EXTENDEDTR")
+     case("#CHROMOSPHERE")
+        call read_chromosphere
+
+     case("#TRANSITIONREGION")
         call read_modified_cooling
 
      case default

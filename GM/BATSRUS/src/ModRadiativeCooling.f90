@@ -37,9 +37,19 @@ module ModChromosphere
 
   real :: TeTransitionRegionTopSi = 4.0e+5 ![K]
 
-  real, parameter :: TeModMinSi = 2.0E+4  !K
 contains
   !================================
+
+  subroutine read_chromosphere
+    use ModReadParam, ONLY: read_var
+    !-------------------------------
+    call read_var('UseChromosphereHeating'   , UseChromosphereHeating)
+    call read_var('NumberDensChromosphereCgs', NumberDensChromosphereCgs)
+    call read_var('TeChromosphereSi',          TeChromosphereSi      )
+  end subroutine read_chromosphere
+
+  !================================
+
   real function extension_factor(TeSi)
     real, intent(in) :: TeSi    !Dimensionless
     
@@ -134,10 +144,10 @@ contains
     ! Need this to strech transition region to larger scales
     ! Also, need radcool modification to become const below TeModMin
     if(DoExtendTransitionRegion) then
-       if(TeSiIn >= TeModMinSi) then
+       if(TeSiIn >= TeChromosphereSi) then
           RadiativeCooling = RadiativeCooling / extension_factor(TeSiIn)
        else
-          RadiativeCooling = RadiativeCooling * (TeModMinSi / TeModSi)**2.5
+          RadiativeCooling = RadiativeCooling * (TeChromosphereSi / TeModSi)**2.5
        endif
     end if
   end subroutine get_radiative_cooling

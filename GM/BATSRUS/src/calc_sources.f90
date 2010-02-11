@@ -748,11 +748,12 @@ subroutine calc_divb(iBlock)
 end subroutine calc_divb
 !==========================================
 subroutine get_tesi_c(iBlock, TeSi_C)
-  use ModAdvance,    ONLY: UseIdealEos, UseElectronPressure
+  use ModAdvance,    ONLY: UseElectronPressure
   use ModAdvance,    ONLY: State_VGB, p_,Pe_,Rho_
   use ModSize,       ONLY: nI, nJ, nK
   use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, &
-       AverageIonCharge, ElectronTemperatureRatio
+       AverageIonCharge, ElectronTemperatureRatio,    &
+       UseSimpleTe
   use ModMultifluid, ONLY: MassIon_I
   use ModUser,       ONLY: user_material_properties
   implicit none
@@ -762,7 +763,7 @@ subroutine get_tesi_c(iBlock, TeSi_C)
 
   integer:: i, j, k
   !------------
-  if(UseIdealEos)then
+  if(UseSimpleTe)then
      if(UseElectronPressure)then
         do k = 1, nK; do j = 1, nJ; do i = 1, nI
            TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
