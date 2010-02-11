@@ -131,6 +131,9 @@ module ModUser
   integer:: iTableOpacity = -1
   integer:: iTableOpacity_I(0:MaxMaterial-1) = -1
 
+  ! For comparison with SESAME
+  integer:: iTableSesame = -1
+
   ! Variables for the left and right boundary conditions
   real :: DistBc1 = 200.0, TrkevBc1=0.0, EradBc1 = 0.0
   real :: DistBc2 = 200.0, TrkevBc2=0.0, EradBc2 = 0.0
@@ -1658,10 +1661,12 @@ contains
     if(UseAu) &
          iTableOpacity_I(Au_) = i_lookup_table('OpacityAu(rho,T)')
 
+    iTableSesame = i_lookup_table('Sesame(rho,T)')
+
     if(iProc==0) write(*,*) NameSub, &
-         ' iTablePPerE, EPerP, Thermo, Opacity, Opacity_I = ', &
+         ' iTablePPerE, EPerP, Thermo, Opacity, Opacity_I, iTableSesame = ', &
          iTablePPerE, iTableEPerP, iTableThermo, iTableOpacity, &
-         iTableOpacity_I
+         iTableOpacity_I, iTableSesame
 
     if(iTablePPerE > 0) &
          call make_lookup_table(iTablePPerE, calc_table_value, iComm)
@@ -1676,6 +1681,9 @@ contains
             call make_lookup_table(iTableOpacity_I(iMaterial), &
             calc_table_value, iComm)
     end do
+
+    if(iTableSesame > 0) &
+         call make_lookup_table(iTableSesame, calc_table_value, iComm)
 
   end subroutine user_init_session
 
@@ -1773,7 +1781,7 @@ contains
           end if
        end do
     elseif(iTable == iTableOpacity)then
-       ! Calculate gray specific opacities for Xe_, Be_ and Plastic_
+       ! Calculate gray specific opacities for all materials
        ! for given Rho and Te
        ! Au_ is optional
        Rho = Arg1
@@ -1805,6 +1813,15 @@ contains
             OpacityRosselandOut_I=OpacityRosseland_W)
        Value_V(1:nWave)         = OpacityPlanck_W/Rho
        Value_V(nWave+1:2*nWave) = OpacityRosseland_W/Rho
+    elseif(iTable == iTableSesame)then
+       ! Calculate pressure and internal energy for all materials
+       Rho = Arg1
+       Te  = Arg2
+       do iMaterial = 0, nMaterial-1
+          call eos(iMaterial, Rho, TeIn=Te, pTotalOut=p, eTotalOut=e)
+          Value_V(1 + iMaterial*2) = p
+          Value_V(2 + iMaterial*2) = e/Rho
+       end do
     else
        write(*,*)NameSub,' iTable=', iTable
        call stop_mpi(NameSub//' invalid value for iTable')
