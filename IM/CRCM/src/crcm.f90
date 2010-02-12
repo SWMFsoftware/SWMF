@@ -99,7 +99,7 @@ subroutine crcm_run(delta_t)
 
   if (DoSavePlot.and.&
        (floor((Time+1.0e-5)/DtOutput))/=floor((Time+1.0e-5-delta_t)/DtOutput))&
-       call Crcm_plot(np,nt,xo,yo,Pressure_C,phot,rrio,bo,ftv,pot,Time,dt)
+       call Crcm_plot(np,nt,xo,yo,Pressure_C,phot,rrio,bo,ftv,pot,FAC_C,Time,dt)
 end subroutine crcm_run
 
 
@@ -154,7 +154,7 @@ subroutine crcm_init
   dphi=2.*cPi/nt
   do i=1,nt
      phi(i)=(i-1)*dphi
-     xmlt(i)=phi(i)*12.0/cPi   
+     xmlt(i)=mod(phi(i)*12.0/cPi + 12.0,24.0)   
   enddo
 
   ! CRCM output grids: energy, sinAo, delE1, dmu1
