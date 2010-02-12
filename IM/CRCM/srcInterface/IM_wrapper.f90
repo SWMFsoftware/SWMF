@@ -98,7 +98,7 @@ subroutine IM_set_grid
        XyzMax_D=(/np+0.5,nt+0.5/),               & ! max gen.coords for cells
        TypeCoord='SMG',                          & ! solar magnetic coord
        Coord1_I=(90.0-xlat(1:np))*cDegToRad,     & ! colatitude in radians
-       Coord2_I=mod(cRadToDeg*phi+180.0,360.0)*cDegToRad,  & ! longitude in radians
+       Coord2_I=phi,                             & ! longitude in radians
        Coord3_I=Radius_I,                        & ! radial size in meters
        IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
 
