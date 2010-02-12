@@ -112,13 +112,24 @@ subroutine get_im_pressure(iBlock, pIm_CD, dIm_CD,TauCoeffIm_C)
            if(rLon > 0.5*(RCM_lon(jsize)+RCM_lon(1)+360.)) iLon1=1
            iLon2=iLon1
         else
-           ! RCM_lat is in descending order
-           do iLat1 = 2, iSize
-              if(rLat > RCM_lat(iLat1)) EXIT
-           end do
-           iLat2 = iLat1-1
-           LatWeight1 = (rLat - RCM_lat(iLat2))/(RCM_lat(iLat1) - RCM_lat(iLat2))
-           LatWeight2 = 1 - LatWeight1
+           if (RCM_lat(1) > RCM_lat(iLat1)) then
+              ! RCM_lat is in descending order
+              do iLat1 = 2, iSize
+                 if(rLat > RCM_lat(iLat1)) EXIT
+              end do
+              iLat2 = iLat1-1
+              LatWeight1 = (rLat - RCM_lat(iLat2))/(RCM_lat(iLat1) - RCM_lat(iLat2))
+              LatWeight2 = 1 - LatWeight1
+           else
+              ! IM lat is in ascending order
+              do iLat1 = 2, iSize
+                 if(rLat < RCM_lat(iLat1)) EXIT
+              end do
+              iLat2 = iLat1-1
+              LatWeight1 = &
+                   (rLat - RCM_lat(iLat2))/(RCM_lat(iLat1) - RCM_lat(iLat2))
+              LatWeight2 = 1 - LatWeight1              
+           endif
 
            ! Note: RCM_lon is in ascending order
            if(rLon < RCM_lon(1)) then
