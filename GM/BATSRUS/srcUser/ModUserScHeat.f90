@@ -7,14 +7,13 @@ module ModUser
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_get_log_var,                &
-       IMPLEMENTED5 => user_get_b0,                     &
-       IMPLEMENTED6 => user_calc_sources,               &
-       IMPLEMENTED7 => user_update_states,              &
-       IMPLEMENTED8 => user_specify_refinement,         &
-       IMPLEMENTED9 => user_set_plot_var,               &
-       IMPLEMENTED10=> user_set_outerbcs,               &
-       IMPLEMENTED11=> user_face_bcs,                   &
-       IMPLEMENTED12=> user_set_boundary_cells
+       IMPLEMENTED5 => user_calc_sources,               &
+       IMPLEMENTED6 => user_update_states,              &
+       IMPLEMENTED7 => user_specify_refinement,         &
+       IMPLEMENTED8 => user_set_plot_var,               &
+       IMPLEMENTED9 => user_set_outerbcs,               &
+       IMPLEMENTED10=> user_face_bcs,                   &
+       IMPLEMENTED11=> user_set_boundary_cells
 
   include 'user_module.h' !list of public methods
 
@@ -28,7 +27,7 @@ module ModUser
   real :: TeFraction
   real :: EtaPerpSi
 
-  character(len=lStringLine) :: NameModel, TypeCoronalHeating
+  character(len=lStringLine) :: TypeCoronalHeating
 
 contains
 
@@ -36,12 +35,10 @@ contains
 
   subroutine user_read_inputs
 
-    use ModMain,           ONLY: UseUserInitSession, lVerbose, UseUserB0, &
-         DoUpdateB0, Dt_UpdateB0
+    use ModMain,           ONLY: UseUserInitSession, lVerbose
     use ModProcMH,         ONLY: iProc
     use ModReadParam,      ONLY: read_line, read_command, read_var
     use ModIO,             ONLY: write_prefix, write_myname, iUnitOut
-    use ModMagnetogram,    ONLY: set_parameters_magnetogram
 
     character (len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
@@ -58,16 +55,6 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
 
        select case(NameCommand)
-       case("#PFSSM")
-          call read_var('UseUserB0', UseUserB0)
-          if(UseUserB0)then
-             call set_parameters_magnetogram
-             call read_var('dt_UpdateB0', dt_UpdateB0)
-             DoUpdateB0 = dt_updateb0 > 0.0
-          end if
-
-       case("#EMPIRICALSW")
-          call read_var('NameModel',NameModel)
 
        case("#WSACOEFF")
           call read_wsa_coeff
@@ -111,14 +98,12 @@ contains
     use ModAdvance,     ONLY: UseElectronPressure
     use ModConst,       ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
          cElectronMass
-    use ModIO,          ONLY: write_prefix, iUnitOut, NamePlotDir
-    use ModMagnetogram, ONLY: read_magnetogram_file
+    use ModIO,          ONLY: write_prefix, iUnitOut
     use ModMultiFluid,  ONLY: MassIon_I
     use ModNumConst,    ONLY: cTwoPi
     use ModPhysics,     ONLY: Si2No_V, UnitEnergyDens_, UnitT_, &
-         ElectronTemperatureRatio, AverageIonCharge, BodyTDim_I, UnitPoynting_
+         ElectronTemperatureRatio, AverageIonCharge, UnitPoynting_
     use ModProcMH,      ONLY: iProc
-    use ModReadParam,   ONLY: i_line_command
     use ModWaves,       ONLY: UseWavePressure, UseAlfvenSpeed
 
     real, parameter :: CoulombLog = 20.0
@@ -127,22 +112,6 @@ contains
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session:'
        call write_prefix; write(iUnitOut,*) ''
-    end if
-
-    if(i_line_command("#PFSSM", iSessionIn = 1) < 0)then
-       write(*,*) 'In session 1, a magnetogram file has to be read via #PFSSM'
-       call stop_mpi('ERROR: Correct PARAM.in!')
-    end if
-    if(i_line_command("#PFSSM") > 0)then
-       call read_magnetogram_file(NamePlotDir)
-    end if
-
-    if(i_line_command("#EMPIRICALSW", iSessionIn = 1) < 0)then
-       write(*,*) 'An empirical model has to be set via #EMPIRICALSW'
-       call stop_mpi('ERROR: Correct PARAM.in!')
-    end if
-    if(i_line_command("#EMPIRICALSW") > 0)then
-       call set_empirical_model(trim(NameModel),BodyTDim_I(1))
     end if
 
     UseAlfvenSpeed = .true.
@@ -374,22 +343,6 @@ contains
     end do; end do; end do
 
   end subroutine user_set_ics
-
-  !============================================================================
-
-  subroutine user_get_b0(x, y, z, B0_D)
-
-    use ModPhysics,     ONLY: Si2No_V, UnitB_
-    use ModMagnetogram, ONLY: get_magnetogram_field
-
-    real, intent(in) :: x, y, z
-    real, intent(out):: B0_D(3)
-    !--------------------------------------------------------------------------
-
-    call get_magnetogram_field(x, y, z, B0_D)
-    B0_D = B0_D*Si2No_V(UnitB_)
-
-  end subroutine user_get_b0
 
   !============================================================================
 
