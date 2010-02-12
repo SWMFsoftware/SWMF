@@ -52,7 +52,8 @@ contains
     integer :: iLatTest = -1, iLonTest=-1
 !    integer :: iLatTest = 30, iLonTest=1
 
-    real :: R_12,R_24,imax,xmltr,xBoundary(ip),MajorAxis,MinorAxis,&
+    integer :: imax
+    real :: R_12,R_24,xmltr,xBoundary(ip),MajorAxis,MinorAxis,&
             MajorAxis2,MinorAxis2, sin2, Req2, xo1,xc, xCenter,rell2
     !--------------------------------------------------------------------------
 
