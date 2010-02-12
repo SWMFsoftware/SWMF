@@ -158,8 +158,8 @@ contains
           
        ! Take logarithm of the ranges if logarithmic
        if(Ptr%IsLogIndex_I(iIndex)) then
-          Ptr%IndexMin_I(iIndex) = log(Ptr%IndexMin_I(iIndex))
-          Ptr%IndexMax_I(iIndex) = log(Ptr%IndexMax_I(iIndex))
+          Ptr%IndexMin_I(iIndex) = log10(Ptr%IndexMin_I(iIndex))
+          Ptr%IndexMax_I(iIndex) = log10(Ptr%IndexMax_I(iIndex))
        end if
     end do
     ! Calculate increments
@@ -291,10 +291,10 @@ contains
     ! Fill up lookup table in parallel
     do i2 = iProc+1, n2, nProc
        Index2 = Index2Min + (i2 - 1)*dIndex2
-       if(IsLog2) Index2 = exp(Index2)
+       if(IsLog2) Index2 = 10**Index2
        do i1 = 1, n1
           Index1 = Index1Min + (i1 - 1)*dIndex1
-          if(IsLog1) Index1 = exp(Index1)
+          if(IsLog1) Index1 = 10**Index1
           call calc_table_var(iTable, Index1, Index2, Value_VII(:,i1,i2))
        end do
     end do
@@ -354,7 +354,7 @@ contains
 
     ! This line is broken so that emacs does not get confused
     where(Ptr%IsLogIndex_I) &
-         Arg_I = log(Arg_I)
+         Arg_I = log10(Arg_I)
 
     ! If value is outside table, use the last value (works well for constant)
     Value_V = bilinear(Ptr%Value_VII, Ptr%nValue, &
@@ -386,8 +386,8 @@ contains
     Ptr%nValue      = 3
     Ptr%IsLogIndex_I= (/.true., .false./)
     Ptr%nIndex_I    = (/15, 10/)
-    Ptr%IndexMin_I  = (/log(0.001),   1.0/)
-    Ptr%IndexMax_I  = (/log(1000.0), 10.0/)
+    Ptr%IndexMin_I  = (/log10(0.001),   1.0/)
+    Ptr%IndexMax_I  = (/log10(1000.0), 10.0/)
     Ptr%dIndex_I    = (Ptr%IndexMax_I - Ptr%IndexMin_I)/(Ptr%nIndex_I - 1)
 
     write(*,*)'testing i_lookup_table'
