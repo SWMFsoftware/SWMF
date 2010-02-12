@@ -40,7 +40,7 @@ contains
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
     use ModMagnetogram, ONLY: set_parameters_magnetogram
-    use ModWaves,       ONLY: read_alfven_speed,read_wave_pressure,read_frequency
+    use ModWaves,       ONLY: UseAlfvenWaves,read_wave_pressure,read_frequency
     implicit none
 
     character (len=100) :: NameCommand
@@ -72,7 +72,7 @@ contains
           call read_var('IsInitWave',IsInitWave)
        
        case("#ALFVENSPEED")
-          call read_alfven_speed
+          call read_var('UseAlfvenWaves', UseAlfvenWaves)
 
        case("#WAVEPRESSURE")
           call read_wave_pressure
@@ -228,10 +228,10 @@ contains
     use ModNumConst,   ONLY: cTolerance,cTiny
     use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
                              iFace, jFace, kFace, iSide, iBlockBc, B0Face_D
-    use ModWaves,      ONLY: AlfvenSpeedPlusFirst_,  &
-                             AlfvenSpeedPlusLast_,   &
-                             AlfvenSpeedMinusFirst_, &
-                             AlfvenSpeedMinusLast_ , &
+    use ModWaves,      ONLY: AlfvenWavePlusFirst_,  &
+                             AlfvenWavePlusLast_,   &
+                             AlfvenWaveMinusFirst_, &
+                             AlfvenWaveMinusLast_ , &
                              DeltaLogFrequency,      &
                              UseWavePressure      
 
@@ -316,9 +316,9 @@ contains
        ! Deconstruct total energy into frequency groups
        !/
        ! "Plus" waves - parallel to B
-       SpectrumFirst = LowestFreqNum + AlfvenSpeedPlusFirst_
+       SpectrumFirst = LowestFreqNum + AlfvenWavePlusFirst_
        SpectrumLast = SpectrumFirst + SpectrumWidth
-       do iWave = AlfvenSpeedPlusFirst_,AlfvenSpeedPlusLast_
+       do iWave = AlfvenWavePlusFirst_,AlfvenWavePlusLast_
           ! no wave energy outside of emitted freq. range
           if(iWave .lt. SpectrumFirst .or. iWave .gt. SpectrumLast) then
              VarsGhostFace_V(iWave)=1e-30
@@ -337,9 +337,9 @@ contains
        end do
 
        ! "Minus" waves - antiparallel to B
-       SpectrumFirst = LowestFreqNum + AlfvenSpeedMinusFirst_
+       SpectrumFirst = LowestFreqNum + AlfvenWaveMinusFirst_
        SpectrumLast = SpectrumFirst + SpectrumWidth     
-       do iWave = AlfvenSpeedMinusFirst_,AlfvenSpeedMinusLast_
+       do iWave = AlfvenWaveMinusFirst_,AlfvenWaveMinusLast_
           ! no wave energy outside emitted freq. range
           if(iWave .lt. SpectrumFirst .or. iWave .gt. SpectrumLast) then
              VarsGhostFace_V(iWave)=1e-30
@@ -587,7 +587,7 @@ contains
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_
-    use ModWaves, ONLY: AlfvenSpeedMinusFirst_,AlfvenSpeedPlusFirst_
+    use ModWaves, ONLY: AlfvenWaveMinusFirst_,AlfvenWavePlusFirst_
 
     implicit none
     
@@ -648,9 +648,9 @@ contains
                    (x < xTrace+dx) .and. (x >= xTrace)) then
                    do iFreq=1,nWaveHalf
                       IwPlusSi  = No2Si_V(UnitP_)* &
-                           State_VGB(AlfvenSpeedPlusFirst_+iFreq-1,i,j,k,iBLK)
+                           State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)
                       IwMinusSi = No2Si_V(UnitP_)* &
-                           State_VGB(AlfvenSpeedMinusFirst_+iFreq-1,i,j,k,iBLK)
+                           State_VGB(AlfvenWaveMinusFirst_+iFreq-1,i,j,k,iBLK)
                       Cut_II(iRow,1) = y
                       Cut_II(iRow,2) = LogFreq_I(iFreq)
                       Cut_II(iRow,3) = IwPlusSi

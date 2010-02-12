@@ -104,7 +104,8 @@ contains
     use ModPhysics,     ONLY: Si2No_V, UnitEnergyDens_, UnitT_, &
          ElectronTemperatureRatio, AverageIonCharge, UnitPoynting_
     use ModProcMH,      ONLY: iProc
-    use ModWaves,       ONLY: UseWavePressure, UseAlfvenSpeed
+    use ModWaves,       ONLY: UseWavePressure, UseAlfvenWaves
+
 
     real, parameter :: CoulombLog = 20.0
     !--------------------------------------------------------------------------
@@ -114,7 +115,10 @@ contains
        call write_prefix; write(iUnitOut,*) ''
     end if
 
-    UseAlfvenSpeed = .true.
+
+
+    UseAlfvenWaves = .true.
+
     UseWavePressure = .true.
 
     ! TeFraction is used for ideal EOS:

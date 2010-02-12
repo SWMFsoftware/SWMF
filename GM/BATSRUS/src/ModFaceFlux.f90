@@ -2183,14 +2183,14 @@ contains
               Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
       end if
 
-      if(UseAlfvenSpeed)then
+      if(UseAlfvenWaves)then
          AlfvenSpeed = FullBn/sqrt(Rho)
 
-         do iVar = AlfvenSpeedPlusFirst_, AlfvenSpeedPlusLast_
+         do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
             Flux_V(iVar) = Flux_V(iVar) + AlfvenSpeed*State_V(iVar) !!PLUS
          end do
 
-         do iVar = AlfvenSpeedMinusFirst_, AlfvenSpeedMinusLast_
+         do iVar = AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_
             Flux_V(iVar) = Flux_V(iVar) - AlfvenSpeed*State_V(iVar) !!MINUS
          end do
       end if

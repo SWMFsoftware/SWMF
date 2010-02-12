@@ -73,6 +73,7 @@ subroutine MH_set_parameters(TypeAction)
        DoOpenClosedHeat
   use ModRadiativeCooling,ONLY: UseRadCooling,&
        read_modified_cooling, check_cooling_param, read_chromosphere
+  use ModWaves, ONLY: UseAlfvenWaves
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -1883,6 +1884,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#TRANSITIONREGION")
         call read_modified_cooling
 
+     case("#ALFVENWAVES")
+        call read_var('UseAlfvenWaves',UseAlfvenWaves)
+
      case default
         if(iProc==0) then
            write(*,*) NameSub // ' WARNING: unknown #COMMAND ' // &
@@ -2123,7 +2127,7 @@ contains
   !=========================================================================
   subroutine correct_parameters
 
-    use ModWaves, ONLY: UseAlfvenSpeed,UseWavePressure
+    use ModWaves, ONLY: UseAlfvenWaves,UseWavePressure
 
     ! option and module parameters
     character (len=40) :: Name
@@ -2180,7 +2184,7 @@ contains
     case('ROE','Roe')                                !^CFG IF ROEFLUX BEGIN
        FluxType='Roe'
        UseRS7 = .true.
-       if(UseAlfvenSpeed .or. UseWavePressure)then
+       if(UseAlfvenWaves .or. UseWavePressure)then
           if(iProc==0) write(*,'(a)')NameSub // &
                'Wave transport and wave pressure do not work with ' // &
                trim(FluxType)
