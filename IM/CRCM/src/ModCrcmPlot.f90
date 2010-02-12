@@ -9,7 +9,7 @@ Module ModCrcmPlot
 contains
   !=============================================================================
   subroutine Crcm_plot(nLat,nLon, X_C,Y_C,Pressure_C,PressureHot_C,Rho_C,Beq_C,&
-       Volume_C,Potential_C,Time,Dt)
+       Volume_C,Potential_C,FAC_C,Time,Dt)
     use ModIoUnit,     ONLY: UnitTmp_
     use ModPlotFile,   ONLY: save_plot_file
     use ModCrcmInitialize, ONLY: IsRestart
@@ -17,13 +17,15 @@ contains
     real,    intent(in) :: X_C(nLat,nLon), Y_C(nLat,nLon), Time, Dt
     real,    intent(in) :: Pressure_C(nLat,nLon),Rho_C(nLat,nLon), & 
                            Beq_C(nLat,nLon),Volume_C(nLat,nLon),   &
-                           Potential_C(nLat,nLon),PressureHot_C(nLat,nLon)
+                           Potential_C(nLat,nLon),PressureHot_C(nLat,nLon), &
+                           FAC_C(nLat,nLon)
     real, allocatable   :: Coord_DII(:,:,:), PlotState_IIV(:,:,:)
-    integer             :: nVar=6,iLat,iLon
-    integer, parameter  :: x_=1, y_=2, nDim=2, P_=1,Phot_=2,Rho_=3,Beq_=4,Vol_=5, Pot_=6
+    integer             :: nVar=7,iLat,iLon
+    integer, parameter  :: x_=1, y_=2, nDim=2, P_=1,Phot_=2,Rho_=3,Beq_=4,Vol_=5, &
+                           Pot_=6, FAC_=7
     real                :: theta, phi
     character(len=14)   :: NamePlotEq = 'IM/CRCMeq.outs'
-    character(len=79), parameter :: NamePlotVar='x y P[nP] Phot[nP] n[/m3] Beq[T] Vol[m3/Wb] Pot[Volts] g'
+    character(len=79), parameter :: NamePlotVar='x y P[nP] Phot[nP] n[/m3] Beq[T] Vol[m3/Wb] Pot[Volts] FAC[Amp/m2] g'
     real, parameter              :: gamma = 1.66666666666667
     logical, save                :: IsFirstCall = .true.
     !--------------------------------------------------------------------------
@@ -46,6 +48,7 @@ contains
     PlotState_IIV(:,1:nLon,Beq_) = Beq_C   (:,1:nLon)    
     PlotState_IIV(:,1:nLon,Vol_) = Volume_C(:,1:nLon)    
     PlotState_IIV(:,1:nLon,Pot_) = Potential_C(:,1:nLon)    
+    PlotState_IIV(:,1:nLon,FAC_) = FAC_C   (:,1:nLon)    
 
     !fill ghost cells of plot data
     PlotState_IIV(:,nLon+1,P_) = Pressure_C(:,1)
@@ -54,6 +57,7 @@ contains
     PlotState_IIV(:,nLon+1,Beq_) = Beq_C   (:,1)    
     PlotState_IIV(:,nLon+1,Vol_) = Volume_C(:,1)    
     PlotState_IIV(:,nLon+1,Pot_) = Potential_C(:,1)    
+    PlotState_IIV(:,nLon+1,FAC_) = FAC_C(:,1)    
 
 
     !write plot
