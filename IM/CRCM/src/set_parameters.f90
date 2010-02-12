@@ -4,10 +4,12 @@ subroutine CRCM_set_parameters(NameAction)
   use ModReadParam
   use ModCrcmInitialize, ONLY: IsRestart
   use ModCrcmPlot,       ONLY: DtOutput, DoSavePlot
+  use ModFieldTrace,     ONLY: UseEllipse
   implicit none
 
   character (len=100)           :: NameCommand
   character (len=*), intent(in) :: NameAction
+  character (len=7)             :: TypeBoundary
   character (len=*), parameter  :: NameSub = 'CRCM_set_parameters'
 
   !\
@@ -25,6 +27,14 @@ subroutine CRCM_set_parameters(NameAction)
      case('#SAVEPLOT')
         call read_var('DtSavePlot',DtOutput)
         DoSavePlot = .true.
+
+     case('#TYPEBOUNDARY')
+        call read_var('TypeBoundary',TypeBoundary)
+        if(TypeBoundary == 'Ellipse') then
+           UseEllipse = .true.
+        else
+           UseEllipse = .false.
+        endif
         
      case('#RESTART')
         call read_var('IsRestart',IsRestart) !T:Continuous run
