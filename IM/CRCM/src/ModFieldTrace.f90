@@ -11,6 +11,8 @@ Module ModFieldTrace
   integer :: irm(ip),irm0(ip),iba(ip)
 
   real :: iw2(ik)
+
+  logical :: UseEllipse = .true.
 contains
   !***********************************************************************
   !                             fieldpara
@@ -49,6 +51,9 @@ contains
     real    :: pijkm,pc,c2m,e,q,tcone1,tcone2,x
     integer :: iLatTest = -1, iLonTest=-1
 !    integer :: iLatTest = 30, iLonTest=1
+
+    real :: R_12,R_24,imax,xmltr,xBoundary(ip),MajorAxis,MinorAxis,&
+            MajorAxis2,MinorAxis2, sin2, Req2, xo1,xc, xCenter,rell2
     !--------------------------------------------------------------------------
 
     a_I(0)=1.
@@ -97,7 +102,7 @@ contains
           iout=0
           xlati1=xlati(i)*cDegToRad
           xli(i)=rc/cos(xlati1)/cos(xlati1)
-          phi1=phi(j)+pi                  ! +x corresponing to noon
+          phi1=phi(j)                  ! +x corresponing to noon
 
           ! uncomment when T04 Tracing fixed
           !if (imod.le.2) call tsy_trace(i,rlim,re,rc,xlati1,phi1,t,ps,parmod,&
@@ -359,15 +364,45 @@ contains
     do j=1,ip
        irm(j)=irm(j)-1
     enddo
-
+    
     ! Find iba
-    do j=1,ip
-       do i=1,irm(j)
-          x1(i)=ro(i,j)
+    if (UseEllipse) then
+       R_24=rb                 ! boundary distance at midnight
+       do j=1,ip
+          imax=irm(j)
+          xmltr=xmlto(imax,j)*pi/12.
+          xBoundary(j)=-ro(imax,j)*cos(xmltr)
        enddo
-       call locate1(x1,irm(j),rb,ib)
-       iba(j)=ib
-    enddo
+       R_12=0.95*maxval(xBoundary)    ! boundary distance at noon
+       MajorAxis=0.5*(R_12+R_24)      ! major axis
+       MinorAxis=min(R_12,R_24)       ! minor axis
+       xCenter=0.5*(R_12-R_24)        ! center on x-axis
+       MajorAxis2=MajorAxis*MajorAxis
+       MinorAxis2=MinorAxis*MinorAxis
+       do j=1,ip
+          find_ib: do i=irm(j),1,-1
+             xmltr=xmlto(i,j)*pi/12.
+             sin2=sin(xmltr)*sin(xmltr)
+             Req2=ro(i,j)*ro(i,j)
+             xo1=-ro(i,j)*cos(xmltr)
+             xc=xo1-xCenter
+             rell2=MinorAxis2*(1.-xc*xc/MajorAxis2)/sin2 ! r^2 onellipse at x=xc
+             if (Req2.le.rell2) then
+                iba(j)=i
+                exit find_ib
+             endif
+          enddo find_ib
+       enddo
+    else
+       !use circle
+       do j=1,ip
+          do i=1,irm(j)
+             x1(i)=ro(i,j)
+          enddo
+          call locate1(x1,irm(j),rb,ib)
+          iba(j)=ib
+       enddo
+    endif
 
     ! Find iw2(m)
     do m=1,ik
@@ -677,7 +712,7 @@ contains
        nAlt=2*MinAlt
        call trace_dipole(Re,Lat,nAlt,MinAlt,FieldLength_I,&
             Bfield_I,RadialDist_I,Ro1)
-       xmlt1= (Lon)*12./cPi   ! mlt in hr           
+       xmlt1= mod((Lon)*12./cPi+12.0,24.0)   ! mlt in hr           
        if (xmlt1.lt.0.) xmlt1=xmlt1+24.
        bo1=Bfield_I(nAlt/2)
        IsFoundLine = .true.
