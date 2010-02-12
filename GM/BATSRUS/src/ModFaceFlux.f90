@@ -2034,7 +2034,7 @@ contains
       use ModWaves
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e
+      real :: Rho, Ux, Uy, Uz, p, e, Ppar
       real :: HallUx, HallUy, HallUz, InvRho
       real :: pAlfven
       real :: B2, B0B1, FullB2, pTotal, DpPerB
@@ -2055,7 +2055,12 @@ contains
       B2      = Bx**2 + By**2 + Bz**2
 
       ! Calculate energy
-      e = inv_gm1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
+      if(UseAnisoPressure)then  ! p = Pperp
+         Ppar  = State_V(Ppar_)
+         e = p + 0.5*Ppar + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
+      else
+         e = inv_gm1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
+      end if
 
       ! Calculate conservative state
       StateCons_V(RhoUx_)  = Rho*Ux
@@ -2147,13 +2152,13 @@ contains
       if(UseAnisoPressure)then
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
-         DpPerB = (State_V(Ppar_) - State_V(Pperp_))*FullBn/max(1e-30,FullB2)
+         DpPerB = (Ppar - p)*FullBn/max(1e-30,FullB2)
          Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
          Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
          Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
          ! f_i[Ppar] = u_i*Ppar, f_i[Pperp] = u_i*Pperp
-         Flux_V(Ppar_)  = Un*State_V(Ppar_)
-         Flux_V(Pperp_) = Un*State_V(Pperp_)
+         Flux_V(Ppar_)  = Un*Ppar
+         Flux_V(Pperp_) = Un*p
       end if
 
       ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
@@ -2167,6 +2172,12 @@ contains
               Un*(pTotal + e) &
               - FullBn*(UxPlus*Bx + UyPlus*By + UzPlus*Bz)  &
               + (UnPlus-Un)*(B2 + B0B1)
+      else if(UseAnisoPressure)then
+         ! can only work for single fluid without hall 
+         Flux_V(Energy_) = &
+              Un*(pTotal + e) &
+              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz) &
+              - FullBn*(Ux*Bx + Uy*By + Uz*Bz)
       else
          Flux_V(Energy_) = &
               Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
