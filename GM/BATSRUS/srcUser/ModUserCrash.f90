@@ -1602,7 +1602,7 @@ contains
     use ModPhysics,     ONLY: cRadiationNo, Si2No_V, UnitTemperature_, &
          No2Io_V, UnitX_
     use ModConst,       ONLY: cKevToK, cHPlanckEV
-    use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI
+    use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI, check_waves
     use CRASH_ModMultiGroup, ONLY: set_multigroup
     use CRASH_ModEos,   ONLY: Xe_, Be_, Plastic_, Au_
 
@@ -1643,8 +1643,12 @@ contains
     ! Read in Hyades output
     if(UseHyadesFile) call read_hyades_file
 
-    !Now set the number of groups and the frequency range:
+    ! Now set the number of groups and the frequency range in ModMultiGroup:
     call set_multigroup(nWave, FreqMinSI, FreqMaxSI)
+
+    ! frequency range is now set, final check of the waves
+    ! (determines information needed for frequency advection)
+    call check_waves
 
     EradBc1 = cRadiationNo*(TrkevBc1*cKeVtoK*Si2No_V(UnitTemperature_))**4
     EradBc2 = cRadiationNo*(TrkevBc2*cKeVtoK*Si2No_V(UnitTemperature_))**4
