@@ -73,7 +73,8 @@ subroutine MH_set_parameters(TypeAction)
        DoOpenClosedHeat
   use ModRadiativeCooling,ONLY: UseRadCooling,&
        read_modified_cooling, check_cooling_param, read_chromosphere
-  use ModWaves, ONLY: UseAlfvenWaves
+  use ModWaves, ONLY: UseAlfvenWaves, check_waves, &
+       read_wave_pressure, read_frequency, read_spectrum
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -246,6 +247,8 @@ subroutine MH_set_parameters(TypeAction)
 
      if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
           call set_empirical_model(NameModelSW, BodyTDim_I(IonFirst_))
+
+     call check_waves
 
      if(UseCoronalHeating)call init_coronal_heating
      call check_cooling_param
@@ -1886,6 +1889,15 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#ALFVENWAVES")
         call read_var('UseAlfvenWaves',UseAlfvenWaves)
+
+     case("#WAVEPRESSURE")
+        call read_wave_pressure
+
+     case("#FRQUENCY")
+        call read_frequency
+
+     case('#SPECTRUM')
+        call read_spectrum
 
      case default
         if(iProc==0) then

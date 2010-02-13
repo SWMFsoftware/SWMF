@@ -25,7 +25,7 @@ module ModWaves
   
   !Centered frequency, for each bin
   !The logarithmic grid is set by default. Can be reset in use_user_perturbation
-  real, dimension(nWave):: Frequancy_W = -1.0
+  real, dimension(WaveFirst_:WaveLast_):: FrequencySi_W = -1.0
 
   
   real :: DeltaLogFrequency = 0.0
@@ -55,7 +55,8 @@ module ModWaves
   real :: GammaWave = 1.50
  
   !Spectral functions: all functions are normalized by unity
-  real,dimension(nWave):: Spectrum_W      = 1.0/nWave , &
+
+  real,dimension(WaveFirst_:WaveLast_):: Spectrum_W  = 1.0/nWave , &
                           SpectrumPlus_W  = 2.0/nWave , &
                           SpectrumMinus_W = 2.0/nWave
 
@@ -73,15 +74,108 @@ module ModWaves
 
  
 contains
-  subroutine read_alfven_waves
+  subroutine read_spectrum
     use ModReadParam,  ONLY: read_var
     
-  end subroutine read_alfven_waves
+  end subroutine read_spectrum
   !============================================================================
   subroutine check_waves
+    integer:: iWave
     !--------------------------------------------------------------------------
-    if(UseAlfvenWaves.and. FreqMinSI > 0.0.and. nWaveHalf > 1) &
-         DeltaLogFrequency = log(FreqMaxSI / FreqMinSI)/nWaveHalf
+    if(UseAlfvenWaves .and. 2*nWaveHalf /= nWave)call stop_mpi(&
+         'nWave should be positive even when Alfven waves are used')
+
+    if(UseAlfvenWaves          .and. &
+         FreqMinSI > 0.0       .and. &
+         FreqMaxSi > FreqMinSi .and. &
+         nWaveHalf > 1             ) &
+         DeltaLogFrequency = log( FreqMaxSI / FreqMinSI ) / nWaveHalf
+
+    if( (.not.UseAlfvenWaves)  .and. &
+         FreqMinSI > 0.0       .and. &
+         FreqMaxSi > FreqMinSi .and. &
+         nWave > 1           ) &
+         DeltaLogFrequency = log( FreqMaxSI / FreqMinSI ) / nWave
+
+    if(FreqMinSi > 0           .and. &
+       FreqMaxSi > FreqMinSi   .and. &
+       DeltaLogFrequency > 0.0)then
+       
+       !set bin-centered frequencies
+
+       if(UseAlfvenWaves)then
+
+          FrequencySi_W(AlfvenWavePlusFirst_) = &
+               FreqMinSi * exp( 0.50 * DeltaLogFrequency)
+
+          do iWave = AlfvenWavePlusFirst_+ 1, AlfvenWavePlusLast_
+             FrequencySi_W(iWave) = FrequencySi_W(iWave - 1) * &
+                  exp( DeltaLogFrequency )
+          end do
+
+          FrequencySi_W(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) = &
+               FrequencySi_W(AlfvenWavePlusFirst_:AlfvenWavePlusLast_)
+       else
+
+          FrequencySi_W(WaveFirst_) = FreqMinSi * exp( 0.50 * DeltaLogFrequency)
+
+          do iWave = WaveFirst_ + 1, WaveLast_
+             FrequencySi_W(iWave) = FrequencySi_W(iWave - 1) * &
+                  exp( DeltaLogFrequency )
+          end do
+       end if
+    end if
+    !Set spectral functions
+
+    SpectrumMinus_W = 0.0; SpectrumPlus_W = 0.0
+
+    select case(NameSpectralFunction)
+       
+    case('uniform')
+       Spectrum_W = 1.0/nWave
+       
+       if(UseAlfvenWaves)then        
+          SpectrumPlus_W(AlfvenWavePlusFirst_:AlfvenWavePlusLast_) &
+               = 1.0/nWaveHalf
+          SpectrumMinus_W(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) &
+               = 1.0/nWaveHalf
+       end if
+    case('powerlaw')
+       if(any(FrequencySi_W <= 0.0))call stop_mpi(&
+            'Power law spectrum cannot be set for not-positive frequencies')
+       if(all(FrequencySi_W < FreqStartSi))call stop_mpi(&
+            'All bin-centered frequencies are below the start frequency for spectrum')
+
+       where(FrequencySi_W >= FreqStartSi)&
+            Spectrum_W = 1.0 / FrequencySi_W**(PowerIndex - 1.0)
+
+       !Normalize by unity:
+       Spectrum_W = Spectrum_W/sum(Spectrum_W)
+
+       if(UseAlfvenWaves)then
+
+          where(FrequencySi_W(&
+               AlfvenWavePlusFirst_:AlfvenWavePlusLast_) >= FreqStartSi)&
+               SpectrumPlus_W(&
+               AlfvenWavePlusFirst_:AlfvenWavePlusLast_) = 1.0 / &
+               FrequencySi_W(&
+               AlfvenWavePlusFirst_:AlfvenWavePlusLast_)**(PowerIndex - 1.0)
+
+          where(FrequencySi_W(&
+               AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) >= FreqStartSi)&
+               SpectrumMinus_W(&
+               AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) = 1.0 / &
+               FrequencySi_W(&
+               AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_)**(PowerIndex - 1.0)
+          
+          !Normalize by unity:
+          SpectrumPlus_W  = SpectrumPlus_W  /sum(SpectrumPlus_W)
+          SpectrumMinus_W = SpectrumMinus_W /sum(SpectrumMinus_W)
+       end if
+    case default
+       call stop_mpi(&
+            'Spectral function '//NameSpectralFunction//' is not implemented')
+    end select
   end subroutine check_waves
   !============================================================================
   subroutine read_wave_pressure
@@ -96,10 +190,6 @@ contains
     !--------------------------------------------------------------------------
     call read_var('FreqMinSI',FreqMinSI)
     call read_var('FreqMaxSI',FreqMaxSI)
-    if(UseAlfvenWaves.and. FreqMinSI > 0.0.and. nWaveHalf > 1) &
-         DeltaLogFrequency = log( FreqMaxSI / FreqMinSI ) / nWaveHalf
-    if( (.not.UseAlfvenWaves).and. FreqMinSI > 0.0.and. nWave > 1) &
-         DeltaLogFrequency = log( FreqMaxSI / FreqMinSI ) / nWave
   end subroutine read_frequency
   !============================================================================
   subroutine update_wave_group_advection(iBlock)
