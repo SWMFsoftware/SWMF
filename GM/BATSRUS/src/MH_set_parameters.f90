@@ -1893,7 +1893,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#WAVEPRESSURE")
         call read_wave_pressure
 
-     case("#FRQUENCY")
+     case("#FREQUENCY")
         call read_frequency
 
      case('#SPECTRUM')
