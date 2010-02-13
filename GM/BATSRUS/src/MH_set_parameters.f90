@@ -248,8 +248,6 @@ subroutine MH_set_parameters(TypeAction)
      if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
           call set_empirical_model(NameModelSW, BodyTDim_I(IonFirst_))
 
-     call check_waves
-
      if(UseCoronalHeating)call init_coronal_heating
      call check_cooling_param
      
@@ -259,6 +257,8 @@ subroutine MH_set_parameters(TypeAction)
 
      ! Initialize user module and allow user to modify things
      if(UseUserInitSession)call user_init_session
+
+     call check_waves
 
      if((iProc==0 .or. UseTimingAll) .and. IsStandAlone)then
         call timing_active(UseTiming)
