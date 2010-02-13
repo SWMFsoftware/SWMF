@@ -112,7 +112,7 @@ subroutine get_im_pressure(iBlock, pIm_CD, dIm_CD,TauCoeffIm_C)
            if(rLon > 0.5*(RCM_lon(jsize)+RCM_lon(1)+360.)) iLon1=1
            iLon2=iLon1
         else
-           if (RCM_lat(1) > RCM_lat(iLat1)) then
+           if (RCM_lat(1) > RCM_lat(2)) then
               ! RCM_lat is in descending order
               do iLat1 = 2, iSize
                  if(rLat > RCM_lat(iLat1)) EXIT
