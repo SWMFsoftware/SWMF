@@ -32,7 +32,7 @@ contains
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
-    use ModWaves,       ONLY: read_alfven_speed,read_wave_pressure,read_frequency
+    use ModWaves,       ONLY: UseAlfvenWaves,read_wave_pressure,read_frequency
     implicit none
 
     character (len=100) :: NameCommand
@@ -51,7 +51,7 @@ contains
        select case(NameCommand)
 
        case("#ALFVENSPEED")
-          call read_alfven_speed
+          call read_var('UseAlfvenWaves', UseAlfvenWaves)
 
        case("#WAVEPRESSURE")
           call read_wave_pressure
@@ -218,8 +218,8 @@ contains
              dz=dz_BLK(iBLK)
              if((z< dz) .and. (z >=0.0) .and. (x<dx) .and. (x>=0.0)) then
                 do iFreq=1,nWaveHalf
-                   IwPlusSi  = State_VGB(AlfvenSpeedPlusFirst_+iFreq-1,i,j,k,iBLK)
-                   IwMinusSi = State_VGB(AlfvenSpeedMinusFirst_+iFreq-1,i,j,k,iBLK)
+                   IwPlusSi  = State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)
+                   IwMinusSi = State_VGB(AlfvenWaveMinusFirst_+iFreq-1,i,j,k,iBLK)
                    Cut_II(iRow,1) = y
                    Cut_II(iRow,2) = LogFreq_I(iFreq)
                    Cut_II(iRow,3) = IwPlusSi
@@ -309,8 +309,8 @@ contains
     use ModAdvance,     ONLY: State_VGB
     use ModSize,        ONLY: nI,nJ,nK
     use ModWaves,       ONLY: DeltaLogFrequency, &
-         AlfvenSpeedPlusFirst_,&
-         AlfvenSpeedMinusFirst_
+         AlfvenWavePlusFirst_,&
+         AlfvenWaveMinusFirst_
     
     implicit none
     integer                    :: i,j,k,iBLK, iWave
@@ -326,12 +326,12 @@ contains
           do iWave=1,nWaveHalf
              if( (iWave .le. LowestFreqNum) .or. &
                   (iWave .gt. LowestFreqNum+SpectrumWidth)) then
-                State_VGB(AlfvenSpeedPlusFirst_+iWave-1,i,j,k,iBLK) = 0.0
-                State_VGB(AlfvenSpeedMinusFirst_+iWave-1,i,j,k,iBLK)= 0.0
+                State_VGB(AlfvenWavePlusFirst_+iWave-1,i,j,k,iBLK) = 0.0
+                State_VGB(AlfvenWaveMinusFirst_+iWave-1,i,j,k,iBLK)= 0.0
              else
-                State_VGB(AlfvenSpeedPlusFirst_+iWave-1,i,j,k,iBLK) = &
+                State_VGB(AlfvenWavePlusFirst_+iWave-1,i,j,k,iBLK) = &
                      exp(LogFreq_I(iWave)*SpectralIndex)
-                State_VGB(AlfvenSpeedMinusFirst_+iWave-1,i,j,k,iBLK)= &
+                State_VGB(AlfvenWaveMinusFirst_+iWave-1,i,j,k,iBLK)= &
                      exp(LogFreq_I(iWave)*SpectralIndex)
              end if
           end do
