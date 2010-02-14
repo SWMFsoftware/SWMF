@@ -19,15 +19,15 @@ module ModWaves
 
 
   real :: AlfvenSpeed  !Auxiliary variable
-  
+
   real :: FreqMinSI = -1.0
   real :: FreqMaxSI = -1.0
-  
+
   !Centered frequency, for each bin
   !The logarithmic grid is set by default. Can be reset in use_user_perturbation
   real, dimension(WaveFirst_:WaveLast_):: FrequencySi_W = -1.0
 
-  
+
   real :: DeltaLogFrequency = 0.0
 
   !To switch this option, set UseAlfvenWaves = .true.  
@@ -44,7 +44,7 @@ module ModWaves
 
   !Again, the wave pressure logicals and named indexes should be modified
   !only via the user routines.
-  
+
   logical:: UseWavePressure = .false.
 
   !For multi-component wave pressure the limitatation of different
@@ -53,12 +53,12 @@ module ModWaves
   !and limit it accordingly 
   logical:: UseWavePressureLtd = .false.
   real :: GammaWave = 1.50
- 
+
   !Spectral functions: all functions are normalized by unity
 
   real,dimension(WaveFirst_:WaveLast_):: Spectrum_W  = 1.0/nWave , &
-                          SpectrumPlus_W  = 2.0/nWave , &
-                          SpectrumMinus_W = 2.0/nWave
+       SpectrumPlus_W  = 2.0/nWave , &
+       SpectrumMinus_W = 2.0/nWave
 
   character(LEN=10)::  NameSpectralFunction = 'uniform'
 
@@ -72,11 +72,11 @@ module ModWaves
   real :: WaveEnergy = 0.0 !Auxiliary variable
   real :: DivU_C(nI,nJ,nK) = 0.0       !Auxiliary variable
 
- 
+
 contains
   subroutine read_spectrum
     use ModReadParam,  ONLY: read_var
-    
+
   end subroutine read_spectrum
   !============================================================================
   subroutine check_waves
@@ -98,9 +98,9 @@ contains
          DeltaLogFrequency = log( FreqMaxSI / FreqMinSI ) / nWave
 
     if(FreqMinSi > 0           .and. &
-       FreqMaxSi > FreqMinSi   .and. &
-       DeltaLogFrequency > 0.0)then
-       
+         FreqMaxSi > FreqMinSi   .and. &
+         DeltaLogFrequency > 0.0)then
+
        !set bin-centered frequencies
 
        if(UseAlfvenWaves)then
@@ -130,10 +130,10 @@ contains
     SpectrumMinus_W = 0.0; SpectrumPlus_W = 0.0
 
     select case(NameSpectralFunction)
-       
+
     case('uniform')
        Spectrum_W = 1.0/nWave
-       
+
        if(UseAlfvenWaves)then        
           SpectrumPlus_W(AlfvenWavePlusFirst_:AlfvenWavePlusLast_) &
                = 1.0/nWaveHalf
@@ -167,7 +167,7 @@ contains
                AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) = 1.0 / &
                FrequencySi_W(&
                AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_)**(PowerIndex - 1.0)
-          
+
           !Normalize by unity:
           SpectrumPlus_W  = SpectrumPlus_W  /sum(SpectrumPlus_W)
           SpectrumMinus_W = SpectrumMinus_W /sum(SpectrumMinus_W)
@@ -196,10 +196,10 @@ contains
     use ModAdvance,           ONLY: State_VGB, time_blk
     use ModGeometry,          ONLY: true_cell
     use ModLinearAdvection,   ONLY: advance_lin_advection_plus, &
-                                    advance_lin_advection_minus
+         advance_lin_advection_minus
     use ModMain,              ONLY: CFL
     Use ModFaceValue,         ONLY:BetaLimiter
-   
+
     integer,intent(in)    ::iBlock
 
     !\
@@ -207,13 +207,13 @@ contains
     !a single layer of the ghost cels is added
     !/
     real:: F_I(0:nWave+1), F2_I( 0: nWaveHalf+1)
-    
+
 
     !\
     !Auxiiary vector of CFL numbers:
     !/
     real:: CFL_I(1:nWave), CFL2_I(1:nWaveHalf)
-    
+
     !\
     !Loop variables:
     !/
@@ -221,17 +221,19 @@ contains
     !---------------------------
     if(DeltaLogFrequency<= 0.0                   &
          .or. (UseAlfvenWaves .and. nWaveHalf==1) &
-         .or.((.not.UseAlfvenWaves ).and. nWave==1))return
+         .or.((.not.UseAlfvenWaves ).and. nWave==1))RETURN
+
     if(UseAlfvenWaves)then
 
        do k= 1, nK; do j= 1,nJ; do i= 1,nI
           if(.not. true_cell(i,j,k,iBlock)) CYCLE
+
           CFL2_I = abs( DivU_C(i,j,k) ) * (GammaWave - 1.0)/&
                DeltaLogFrequency * CFL * time_blk(i,j,k, iBlock)
           ! Boundary conditions
           F2_I(0) = 0.0 ; F2_I(nWaveHalf+1) = 0.0
           if(DivU_C(i,j,k)>0.0)then
-         
+
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock)
              F2_I(nWaveHalf+1)=F2_I(nWaveHalf)
@@ -248,7 +250,7 @@ contains
              State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           else
-         
+
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock)
              F2_I(0) = F2_I(1) 
@@ -256,7 +258,7 @@ contains
                   BetaLimiter, UseConservativeBC= .true.) 
              State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
-             
+
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock)
              F2_I(0) = F2_I(1)
@@ -265,40 +267,36 @@ contains
              State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           end if
-          
-          
+
        end do; end do; end do
+
     else
+
        !Boundary conditions at very low and very high frequency:
        F_I(0) = 0.0; F_I(nWave+1) = 0.0
-       do k= 1, nK; do j= 1,nJ; do i= 1,nI
-          
-          
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not. true_cell(i,j,k,iBlock)) CYCLE
+
           CFL_I = abs( DivU_C(i,j,k) ) * (GammaWave - 1.0)/&
-               DeltaLogFrequency * CFL * time_blk(i,j,k, iBlock)
-          
-          if(DivU_C(i,j,k)>0.0)then
+               DeltaLogFrequency * CFL * time_blk(i,j,k,iBlock)
 
-             F_I( 1:nWave) = &
-                  State_VGB(WaveFirst_:WaveLast_, i,j,k, iBlock)
-             
-             call advance_lin_advection_minus( CFL_I, nWave, 1, 1, F_I, UseConservativeBC= .true.) 
-             State_VGB(WaveFirst_:WaveLast_, i,j,k, iBlock) = &
-                  F_I( 1:nWave)
+          F_I(1:nWave) = &
+               max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock), 1e-30)
 
-  
+          if(DivU_C(i,j,k) > 0.0)then
+             call advance_lin_advection_minus( CFL_I, nWave, 1, 1, F_I, &
+                  UseConservativeBC= .true.) 
           else
-             F_I( 1:nWave) = &
-                  State_VGB(WaveFirst_:WaveLast_, i,j,k, iBlock)
-             
-             call advance_lin_advection_plus( CFL_I, nWave, 1, 1, F_I, UseConservativeBC= .true.)
-             State_VGB(WaveFirst_:WaveLast_, i,j,k, iBlock) = &
-                  F_I( 1:nWave)
-
+             call advance_lin_advection_plus( CFL_I, nWave, 1, 1, F_I, &
+                  UseConservativeBC= .true.)
           end if
+
+          State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = F_I(1:nWave)
+
        end do; end do; end do
     end if
-       
-   
+
   end subroutine update_wave_group_advection
+
 end module ModWaves
