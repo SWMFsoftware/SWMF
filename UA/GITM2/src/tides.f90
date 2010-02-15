@@ -31,7 +31,8 @@ subroutine read_waccm_tides
 
   iError = 0
 
-  write(*,*) "Reading File : ",WACCM_file_name
+  if (iDebugLevel > 2) &
+       write(*,*) "===> Reading File : ",WACCM_file_name
   open(iInputUnit_,file=WACCM_file_name,&
        status="old",form="unformatted")
 
@@ -276,6 +277,8 @@ subroutine update_waccm_tides
   integer :: iLon, iLat, iAlt, i, j, k, iBlock
   real :: ri, rj, rk
 
+  call report("update_waccm_tides",1)
+  
   ut1 = utime / Rotation_Period * 2.0 * Pi
   ut2 = utime / Rotation_Period * 4.0 * Pi
 

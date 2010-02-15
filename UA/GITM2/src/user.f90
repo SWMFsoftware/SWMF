@@ -57,6 +57,23 @@ end subroutine set_nVarsUser2d
 !
 ! ----------------------------------------------------------------
 
+subroutine set_nVarsUser1d
+
+  use ModUserGITM
+
+  ! Make sure to include Lat, Lon, and Alt
+
+  nVarsUser1d = 4
+
+  if (nVarsUser2d-3 > nUserOutputs) &
+       call stop_gitm("Too many user outputs!! Increase nUserOutputs!!")
+
+end subroutine set_nVarsUser1d
+
+! ----------------------------------------------------------------
+!
+! ----------------------------------------------------------------
+
 subroutine output_header_user(cType, iOutputUnit_)
 
   use ModUserGITM
@@ -172,4 +189,31 @@ subroutine output_2dUser(iBlock, iOutputUnit_)
   enddo
 
 end subroutine output_2dUser
+
+!----------------------------------------------------------------
+!
+!----------------------------------------------------------------
+
+subroutine output_1dUser(iBlock, iOutputUnit_)
+
+  use ModGITM
+  use ModUserGITM
+
+  implicit none
+
+  integer, intent(in) :: iBlock, iOutputUnit_
+  integer :: iAlt, iLat, iLon
+
+  iAlt = 1
+  do iLat=1,nLats
+     do iLon=1,nLons
+        write(iOutputUnit_)       &
+             Longitude(iLon,iBlock), &
+             Latitude(iLat,iBlock), &
+             Altitude_GB(iLon, iLat, iAlt, iBlock),&
+             UserData2D(iLon,iLat,iAlt,1:nVarsUser2d-3,iBlock)
+     enddo
+  enddo
+
+end subroutine output_1dUser
 

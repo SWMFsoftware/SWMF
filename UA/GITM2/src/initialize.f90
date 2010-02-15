@@ -366,6 +366,11 @@ subroutine initialize_gitm(TimeIn)
 
   endif
 
+  if (UseWACCMTides) then
+     call read_waccm_tides
+     call update_waccm_tides
+  endif
+
   if (UseGSWMTides) then
      call read_tides
      call update_tides
