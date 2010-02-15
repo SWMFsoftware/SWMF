@@ -99,9 +99,10 @@ module ModInputs
   logical :: UseApex = .true.
   logical :: UseMSIS = .true.
   logical :: UseIRI  = .true.
-  logical :: UseMSISTides = .true.
-  logical :: UseMSISOnly  = .true.
-  logical :: UseGSWMTides = .false.
+  logical :: UseMSISTides  = .true.
+  logical :: UseMSISOnly   = .false.
+  logical :: UseGSWMTides  = .false.
+  logical :: UseWACCMTides = .false.
   logical :: UseStatisticalModelsOnly = .false.
   real    :: DtStatisticalModels = 3600.0
 

@@ -233,21 +233,21 @@ subroutine set_inputs
               enddo
            endif
 
-
         case ("#TIDES")
            call read_in_logical(UseMSISOnly, iError)
            call read_in_logical(UseMSISTides, iError)
            call read_in_logical(UseGSWMTides, iError)
+           call read_in_logical(UseWACCMTides, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #TIDES:'
               write(*,*) '#TIDES'
               write(*,*) 'UseMSISOnly        (logical)'
-              write(*,*) 'UseMSISTides        (logical)'
-              write(*,*) 'UseGSWMTides        (logical)'
-              if (UseGSWMTides .and. UseMSISTides) then
-                 write(*,*) "Can only use one of GSWM and MSIS tides!"
-                 iError = 1
-              endif
+              write(*,*) 'UseMSISTides       (logical)'
+              write(*,*) 'UseGSWMTides       (logical)'
+              write(*,*) 'UseWACCMTides      (logical)'
+           else
+              if (UseGSWMTides)  UseMSISOnly = .true.
+              if (UseWACCMTides) UseMSISOnly = .true.
            endif
 
         CASE ("#GSWMCOMP")
