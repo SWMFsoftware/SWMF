@@ -87,24 +87,42 @@ module ModUser
   logical           :: UseHyadesFile   = .false. ! read Hyades file?
   character(len=100):: NameHyadesFile            ! name of hyades file
   integer           :: nDimHyades      = -1      ! number of dimensions 
-  integer           :: nVarHyades      = -1      ! number of variables
-  integer           :: nCellHyades     = -1      ! number of cells
-  integer           :: nCellHyades_D(3)= -1      ! no. cells per dimension
-  integer           :: iCellLastHyades = -1      ! cell with maximum X and r=0
   real              :: xBeHyades       = -1.0    ! position of Be-Xe interface
+
+  ! mesh coordinates: ux and ur are always defined on these coordinates
+  integer           :: nCellHyadesMesh      = -1 ! number of mesh points
+  integer           :: nCellHyadesMesh_D(3) = -1 ! no. mesh cells per dimension
+  integer           :: nVarHyadesMesh       = -1 ! number of variables
+  real, allocatable :: DataHyadesMesh_VC(:,:)    ! cell centered Hyades data
+  integer           :: iXHyadesMesh         = -1 ! index of x coordinate
+  integer           :: iRHyadesMesh         = -1 ! index of r coordinate
+  integer           :: iUxHyades            = -1 ! index of x velocity
+  integer           :: iUrHyades            = -1 ! index of r velocity
+  integer           :: iCellLastHyadesMesh  = -1 ! cell with maximum X and r=0
+
+  ! center of mass coordinates of the zone:
+  ! if these coordinates are present all variables except velocities are on
+  ! these coordinates, otherwise they are interpolated to the mesh points
+  integer           :: nCellHyades          = -1 ! number of mesh points
+  integer           :: nCellHyades_D(3)     = -1 ! no. mesh cells per dimension
+  integer           :: nVarHyades           = -1 ! number of variables
   real, allocatable :: DataHyades_VC(:,:)        ! cell centered Hyades data
+  integer           :: iXHyades             = -1 ! index of x coordinate
+  integer           :: iRHyades             = -1 ! index of r coordinate
+  integer           :: iRhoHyades           = -1 ! index of density
+  integer           :: iPHyades             = -1 ! index of pressure
+  integer           :: iZHyades             = -1 ! index of ionization level
+  integer           :: iTeHyades            = -1 ! index of electron temper.
+  integer           :: iTiHyades            = -1 ! index of ion temperature
+  integer           :: iTrHyades            = -1 ! index of rad. temperature
+  integer           :: iMaterialHyades      = -1 ! index of material type
   real, allocatable :: LevelHyades_VC(:,:)       ! level set functions
-  integer           :: iXHyades        = -1      ! index of x coordinate
-  integer           :: iRHyades        = -1      ! index of r coordinate
-  integer           :: iRhoHyades      = -1      ! index of density
-  integer           :: iUxHyades       = -1      ! index of x velocity
-  integer           :: iUrHyades       = -1      ! index of r velocity
-  integer           :: iPHyades        = -1      ! index of pressure
-  integer           :: iZHyades        = -1      ! index of ionization level
-  integer           :: iTeHyades       = -1      ! index of electron temper.
-  integer           :: iTiHyades       = -1      ! index of ion temperature
-  integer           :: iTrHyades       = -1      ! index of rad. temperature
-  integer           :: iMaterialHyades = -1      ! index of material type
+  integer           :: iCellLastHyades      = -1 ! cell with maximum X and r=0
+
+  ! if we detect xcm as a HYADES variable, all variables except for the
+  ! velocities are defined on the zone centers
+  ! Default is that these variables are interpolated to the mesh points
+  logical :: UseZoneCenter = .false.
 
   ! Variables for Hyades multi-group file
   logical           :: UseHyadesGroupFile = .false.! read Hyades multi-group ?
@@ -647,6 +665,10 @@ contains
     use ModVarIndexes, ONLY: nWave
     use ModWaves,      ONLY: FreqMinSi, FreqMaxSi
 
+    integer :: nVarHyadesAll
+    integer :: iVarZone, iVarMesh, iVar, iCellMesh, j
+    integer, allocatable :: iVarZone_I(:), iVarMesh_I(:)
+
     real                :: TimeHyades
     real, allocatable   :: Hyades2No_V(:)
     character(len=100)  :: NameVarHyades
@@ -677,48 +699,100 @@ contains
     !-------------------------------------------------------------------------
 
     nCellHyades_D = 1
+    nCellHyadesMesh_D = 1
     call read_plot_file(NameHyadesFile, &
-         TimeOut = TimeHyades, nDimOut = nDimHyades, nVarOut = nVarHyades, &
-         nOut_D = nCellHyades_D, NameVarOut = NameVarHyades)
+         TimeOut = TimeHyades, nDimOut = nDimHyades, nVarOut = nVarHyadesAll, &
+         nOut_D = nCellHyadesMesh_D, NameVarOut = NameVarHyades)
 
     ! reset simulation time to HYADES time
     Time_Simulation = TimeHyades
 
-    ! total number of cells
-    nCellHyades = product(nCellHyades_D)
-
     ! extract coordinate, variable and eqpar names
     call split_string(NameVarHyades, MaxString, String_I, nString)
 
+    ! total number of mesh cells
+    nCellHyadesMesh = product(nCellHyadesMesh_D)
+
+    ! Do not use zone centers unless xcm is in the variable list
+    UseZoneCenter = index(NameVarHyades,'xcm') > 0
+
+    if(UseZoneCenter)then
+       nCellHyades_D(1:nDimHyades) = nCellHyadesMesh_D(1:nDimHyades) - 1
+       nCellHyades   = product(nCellHyades_D)
+    else
+       ! The zone centered HYADES variables are interpolated to the mesh center
+       nCellHyades_D = nCellHyadesMesh_D
+       nCellHyades   = nCellHyadesMesh
+    end if
+
+    iVarMesh = 0
+    iVarZone = 0
+
+    allocate( &
+         iVarMesh_I(nDimHyades + nVarHyadesAll), &
+         iVarZone_I(nDimHyades + nVarHyadesAll) )
+
     ! Find the columns for the coordinates and variables
-    do i = 1, nDimHyades + nVarHyades
+    do i = 1, nDimHyades + nVarHyadesAll
        ! The first nDimHyades strings are for the coordinates
        select case(String_I(i))
-       case('x')
-          iXHyades   = i
-       case('y', 'r')
-          iRHyades   = i
-       case('rho')
-          iRhoHyades = i
-       case('ux')
-          iUxHyades  = i
-       case('uy', 'ur')
-          iUrHyades  = i
-       case('p')
-          iPHyades   = i
-       case('te')
-          iTeHyades  = i
-       case('ti')
-          iTiHyades  = i
-       case('tr')
-          iTrHyades  = i
-       case('z')
-          iZHyades   = i
-       case('material')
-          iMaterialHyades = i
-       end select
+       case('x', 'y', 'r', 'ux', 'uy', 'ur')
+          ! Staggered mesh variables
+          iVarMesh = iVarMesh + 1
+          iVarMesh_I(iVarMesh) = i
+          select case(String_I(i))
+          case('x')
+             iXHyadesMesh = iVarMesh
+             ! if zone centers are not used, this means that the variables are
+             ! interpolated to the mesh centers
+             if(.not.UseZoneCenter)then
+                iVarZone = iVarZone + 1
+                iVarZone_I(iVarZone) = i
+                iXHyades = iVarZone
+             end if
+          case('y', 'r')
+             iRHyadesMesh = iVarMesh
+             if(.not.UseZoneCenter)then
+                iVarZone = iVarZone + 1
+                iVarZone_I(iVarZone) = i
+                iRHyades = iVarZone
+             end if
+          case('ux')
+             iUxHyades  = iVarMesh
+          case('uy', 'ur')
+             iUrHyades  = iVarMesh
+          end select
 
+       case default
+          ! zone centered mesh variables
+          iVarZone = iVarZone + 1
+          iVarZone_I(iVarZone) = i
+          select case(String_I(i))
+          case('xcm')
+             iXHyades   = iVarZone
+          case('rcm')
+             iRHyades   = iVarZone
+          case('rho')
+             iRhoHyades = iVarZone
+          case('p')
+             iPHyades   = iVarZone
+          case('te')
+             iTeHyades  = iVarZone
+          case('ti')
+             iTiHyades  = iVarZone
+          case('tr')
+             iTrHyades  = iVarZone
+          case('z')
+             iZHyades   = iVarZone
+          case('material')
+             iMaterialHyades = iVarZone
+          end select
+       end select
     end do
+
+    nVarHyades = iVarZone - nDimHyades
+    nVarHyadesMesh = iVarMesh - nDimHyades
+
     ! Check if every coordinate/variable has been found
     if(iRhoHyades < 0)call stop_mpi(NameSub// &
          ' could not find rho in '//trim(NameVarHyades))
@@ -734,8 +808,10 @@ contains
 
     if(nDimHyades > 1)then
        ! y, uy and material are needed in 2D
-       if(iRHyades < 0) call stop_mpi(NameSub// &
+       if(iRHyadesMesh < 0) call stop_mpi(NameSub// &
             ' could not find y/r in '//trim(NameVarHyades))
+       if(UseZoneCenter .and. iRHyades < 0) call stop_mpi(NameSub// &
+            ' could not find rcm in '//trim(NameVarHyades))
        if(iUrHyades < 0) call stop_mpi(NameSub// &
             ' could not find uy/ur in '//trim(NameVarHyades))
        if(iMaterialHyades < 0) call stop_mpi(NameSub// &
@@ -743,55 +819,95 @@ contains
     end if
 
     ! Set conversion from Hyades units to normalized units
-    allocate(Hyades2No_V(nDimHyades + nVarHyades))
+    allocate(Hyades2No_V(nDimHyades + nVarHyadesAll))
     Hyades2No_V = 1.0
-    Hyades2No_V(iXHyades)   = 0.01   * Si2No_V(UnitX_)   ! cm    -> m
-    Hyades2No_V(iRhoHyades) = 1000.0 * Si2No_V(UnitRho_) ! g/cm3 -> kg/m3
-    Hyades2No_V(iUxHyades)  = 0.01   * Si2No_V(UnitU_)   ! cm/s  -> m/s
-    Hyades2No_V(iPHyades)   = 0.1    * Si2No_V(UnitP_)   ! dyne  -> Pa
+    Hyades2No_V(iVarZone_I(iXHyades))  = 0.01*Si2No_V(UnitX_)   !cm    -> m
+    Hyades2No_V(iVarZone_I(iRhoHyades))= 1e3 *Si2No_V(UnitRho_) !g/cm3 -> kg/m3
+    Hyades2No_V(iVarZone_I(iPHyades))  = 0.1 *Si2No_V(UnitP_)   !dyne  -> Pa
+
+    Hyades2No_V(iVarMesh_I(iXHyadesMesh)) = 0.01*Si2No_V(UnitX_) ! cm    -> m
+    Hyades2No_V(iVarMesh_I(iUxHyades))    = 0.01*Si2No_V(UnitU_) ! cm/s  -> m/s
 
     if(UseRadDiffusion .or. UseElectronPressure)then
        if(iTeHyades < 0) call stop_mpi(NameSub// &
             ' could not find electron temperature in '//trim(NameVarHyades))
 
-       Hyades2No_V(iTeHyades)= cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
+       Hyades2No_V(iVarZone_I(iTeHyades)) = &
+            cKevToK*Si2No_V(UnitTemperature_) ! KeV   -> K
     end if
 
     if(UseRadDiffusion)then
        if(iTrHyades < 0) call stop_mpi(NameSub// &
             ' could not find radiation temperature in '//trim(NameVarHyades))
 
-       Hyades2No_V(iTrHyades)= cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
+       Hyades2No_V(iVarZone_I(iTrHyades)) = &
+            cKevToK*Si2No_V(UnitTemperature_) ! KeV   -> K
     end if
 
     if(UseElectronPressure)then
        if(iTiHyades < 0) call stop_mpi(NameSub// &
             ' could not find ion temperature in '//trim(NameVarHyades))
 
-       Hyades2No_V(iTiHyades)= cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
+       Hyades2No_V(iVarZone_I(iTiHyades)) = &
+            cKevToK*Si2No_V(UnitTemperature_) ! KeV   -> K
     end if
 
     if(nDimHyades > 1)then
-       Hyades2No_V(iRHyades)  = 0.01 * Si2No_V(UnitX_)   ! cm    -> m
-       Hyades2No_V(iUrHyades) = 0.01 * Si2No_V(UnitU_)   ! cm/s  -> m/s
+       Hyades2No_V(iVarZone_I(iRHyades)) = 0.01*Si2No_V(UnitX_)  ! cm    -> m
+
+       Hyades2No_V(iVarMesh_I(iRHyadesMesh)) = &
+            0.01*Si2No_V(UnitX_)  ! cm    -> m
+       Hyades2No_V(iVarMesh_I(iUrHyades)) = &
+            0.01*Si2No_V(UnitU_)  ! cm/s  -> m/s
     end if
 
     ! Read in the data
     allocate( &
+         DataHyadesMesh_VC(nDimHyades + nVarHyadesMesh, nCellHyadesMesh), &
          DataHyades_VC(nDimHyades + nVarHyades, nCellHyades), &
-         Coord_DI(nDimHyades,nCellHyades), &
-         Var_VI(nVarHyades,nCellHyades) )
+         Coord_DI(nDimHyades,nCellHyadesMesh), &
+         Var_VI(nVarHyadesAll,nCellHyadesMesh) )
 
     call read_plot_file(NameHyadesFile, &
          CoordOut_DI = Coord_DI, VarOut_VI = Var_VI)
 
-    ! Convert from CGS to normalized units and store in DataHyades_VC
-    do iCell = 1, nCellHyades
-       DataHyades_VC(:nDimHyades,iCell) = &
-            Coord_DI(:,iCell)*Hyades2No_V(:nDimHyades)
-       DataHyades_VC(nDimHyades+1:,iCell) = &
-            Var_VI(:,iCell)*Hyades2No_V(nDimHyades+1:)
-    end do
+    iCell = 0
+    iCellMesh = 0
+    do j = 1, nCellHyadesMesh_D(2); do i = 1, nCellHyadesMesh_D(1)
+       iCellMesh = iCellMesh + 1
+
+       ! Convert from CGS to normalized units and store in DataHyadesMesh_VC
+       DataHyadesMesh_VC(:nDimHyades,iCellMesh) = &
+            Coord_DI(:,iCellMesh)*Hyades2No_V(:nDimHyades)
+       ! the staggered velocity components
+       do iVar = nDimHyades + 1, nDimHyades + nVarHyadesMesh
+          DataHyadesMesh_VC(iVar,iCellMesh) = &
+            Var_VI(iVarMesh_I(iVar)-nDimHyades,iCellMesh) &
+            *Hyades2No_V(iVarMesh_I(iVar))
+       end do
+
+       ! The first rows in HYADES does only contain mesh data
+       if(UseZoneCenter .and. (i == 1 .or. j == 1)) CYCLE
+
+       iCell = iCell + 1
+
+       if(UseZoneCenter)then
+          do iVar = 1, nDimHyades
+             DataHyades_VC(iVar,iCell) = &
+                  Var_VI(iVarZone_I(iVar)-nDimHyades,iCellMesh) &
+                  *Hyades2No_V(iVarZone_I(iVar))
+          end do
+       else
+          DataHyades_VC(:nDimHyades,iCell) = &
+               DataHyadesMesh_VC(:nDimHyades,iCell)
+       end if
+       ! zone centered variables
+       do iVar = nDimHyades + 1, nDimHyades + nVarHyades
+          DataHyades_VC(iVar,iCell) = &
+               Var_VI(iVarZone_I(iVar)-nDimHyades,iCellMesh) &
+               *Hyades2No_V(iVarZone_I(iVar))
+       end do
+    end do; end do
 
     deallocate(Coord_DI, Var_VI)
 
@@ -837,7 +953,8 @@ contains
             DataHyades_VC(iPHyades, :) = pDimOutside*Io2No_V(UnitP_)
 
        ! Find cell with maximum X coordinate along the symmetry axis
-       iCellLastHyades = nCellHyades_D(1)
+       iCellLastHyades     = nCellHyades_D(1)
+       iCellLastHyadesMesh = nCellHyadesMesh_D(1)
 
        ! Calculate level set functions on the Hyades grid using 
        ! the minimum distance between cells of different materials
@@ -1014,8 +1131,8 @@ contains
                + Weight2*DataHyades_VC(iRhoHyades, iCell) )
 
           State_VGB(RhoUx_,i,j,k,iBlock) =  State_VGB(Rho_,i,j,k,iBlock) * &
-               ( Weight1*DataHyades_VC(iUxHyades, iCell-1) &
-               + Weight2*DataHyades_VC(iUxHyades, iCell) )
+               ( Weight1*DataHyadesMesh_VC(iUxHyades, iCell-1) &
+               + Weight2*DataHyadesMesh_VC(iUxHyades, iCell) )
 
           if(UseElectronPressure)then
              Te_G(i,j,k) = ( Weight1*DataHyades_VC(iTeHyades, iCell-1) &
@@ -1080,9 +1197,10 @@ contains
 
     integer, intent(in) :: iBlock
 
-    integer, save              :: nTriangle
-    integer, allocatable, save :: iNodeTriangle_II(:,:)
-    real, allocatable,    save :: DataHyades_V(:)
+    integer, save              :: nTriangle, nTriangleMesh
+    integer, allocatable, save :: &
+         iNodeTriangle_II(:,:), iNodeTriangleMesh_II(:,:)
+    real, allocatable,    save :: DataHyades_V(:), DataHyadesMesh_V(:)
     real                       :: LevelHyades_V(0:nMaterial-1)
     real                       :: EradHyades_V(nWave)
 
@@ -1108,6 +1226,21 @@ contains
                nCellHyades_D(1), nCellHyades_D(2), &
                DataHyades_VC( (/iXHyades, iRHyades/), :), &
                iNodeTriangle_II, nTriangle)
+       end if
+
+       allocate(DataHyadesMesh_V(nDimHyades + nVarHyadesMesh))
+       if(UseZoneCenter)then
+          allocate(iNodeTriangleMesh_II(3,2*nCellHyadesMesh))
+          if(UseDelaunay)then
+             call calc_triangulation( nCellHyadesMesh, &
+                  DataHyadesMesh_VC( (/iXHyadesMesh, iRHyadesMesh/), :), &
+                  iNodeTriangleMesh_II, nTriangleMesh)
+          else
+             call mesh_triangulation( &
+                  nCellHyadesMesh_D(1), nCellHyadesMesh_D(2), &
+                  DataHyadesMesh_VC( (/iXHyadesMesh, iRHyadesMesh/), :), &
+                  iNodeTriangleMesh_II, nTriangleMesh)
+          end if
        end if
     end if
 
@@ -1199,6 +1332,27 @@ contains
                   WeightNode_I(3)*EradHyades_VC(:,iNode3)
           end if
 
+          if(UseZoneCenter)then
+             ! Check if we are at the end of the Hyades grid
+             if(x >= DataHyadesMesh_VC(iXHyadesMesh, iCellLastHyadesMesh))then
+                iNode1 = iCellLastHyadesMesh;  Weight1 = 1.0
+                iNode2 = 1;                    Weight2 = 0.0
+                iNode3 = 1;                    Weight3 = 0.0
+             else
+                ! Find the Hyades triangle around this position
+                call find_triangle(&
+                     nCellHyadesMesh, nTriangleMesh, (/x, r/), &
+                     DataHyadesMesh_VC( (/iXHyadesMesh, iRHyadesMesh/),:), &
+                     iNodeTriangleMesh_II(:,1:nTriangleMesh), &
+                     iNode1, iNode2, iNode3, Weight1, Weight2, Weight3)
+             end if
+             ! Weight of the 3 nodes of the triangle
+             WeightNode_I    = (/ Weight1, Weight2, Weight3 /)
+          end if
+          DataHyadesMesh_V = &
+               WeightNode_I(1)*DataHyadesMesh_VC(:, iNode1) + &
+               WeightNode_I(2)*DataHyadesMesh_VC(:, iNode2) + &
+               WeightNode_I(3)*DataHyadesMesh_VC(:, iNode3)
        end if
 
        ! Interpolate density, momentum and pressure
@@ -1206,10 +1360,10 @@ contains
        State_VGB(Rho_,i,j,k,iBlock)  = DataHyades_V(iRhoHyades)
 
        State_VGB(RhoUx_,i,j,k,iBlock) = &
-            DataHyades_V(iRhoHyades) * DataHyades_V(iUxHyades)
+            DataHyades_V(iRhoHyades) * DataHyadesMesh_V(iUxHyades)
 
        State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = (/y, z/)/r * &
-            DataHyades_V(iRhoHyades) * DataHyades_V(iUrHyades)
+            DataHyades_V(iRhoHyades) * DataHyadesMesh_V(iUrHyades)
 
        ! Interpolate level set functions
        State_VGB(LevelXe_:LevelMax,i,j,k,iBlock) = LevelHyades_V
