@@ -2332,7 +2332,8 @@ contains
          call stop_mpi(&
          'Empirical Solar Wind model requires magnetogram')
 
-    if(DoOpenClosedHeat.and..not.UseMagnetogram)&
+    if(DoOpenClosedHeat.and.(.not.UseMagnetogram.and.&
+         (iSession==1.and.i_line_command('#PFSSM')<0)))&
          call stop_mpi(&
          'The heating in the closed field region requires magnetogram')
 
