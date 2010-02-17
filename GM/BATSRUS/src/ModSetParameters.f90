@@ -250,13 +250,14 @@ subroutine MH_set_parameters(TypeAction)
 
      if(UseCoronalHeating)call init_coronal_heating
      call check_cooling_param
+
+     ! Initialize user module and allow user to modify things
+     if(UseUserInitSession)call user_init_session
+
      
      ! if using open closed heating initialize auxilary WSA grid
      if(DoOpenClosedHeat .and. i_line_command("#OPENCLOSEDHEAT")>0)&
           call set_empirical_model('WSA', CoronalT0Dim)
-
-     ! Initialize user module and allow user to modify things
-     if(UseUserInitSession)call user_init_session
 
      call check_waves
 
