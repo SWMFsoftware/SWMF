@@ -718,7 +718,7 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
    endif else begin
       if plotmode eq 'plot' then plotmode=''
       print,'2D plotmode: shade/surface/cont/tv/polar/velovect/vector/stream'
-      print,'2D +options: bar,body,fill,grid,irr,label,log,mesh,over,white'
+      print,'2D +options: bar,body,fill,grid,irr,label,log,mesh,noaxis,over,white'
       askstr,'plotmode(s)                ',plotmode,doask
    endelse
    askstr,'plottitle(s) (e.g. B [G];J)',plottitle,doask
@@ -1525,393 +1525,416 @@ end
 
 ;===========================================================================
 pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
-  variables,wnames,axistype,plotmodes,plottitles,$
-  ax,az,contourlevel,linestyle,$
-  velvector,velspeed,velseed,velpos,velx,vely,veltri,$
-  cut,cut0,rcut,plotdim,$
-  nfunc,multix,multiy,fixaspect,plotix,plotiy,funcs,funcs1,funcs2,fmin,fmax,f
+              variables,wnames,axistype,plotmodes,plottitles,$
+              ax,az,contourlevel,linestyle,$
+              velvector,velspeed,velseed,velpos,velx,vely,veltri,$
+              cut,cut0,rcut,plotdim,$
+              nfunc,multix,multiy,fixaspect,plotix,plotiy,funcs,funcs1,funcs2,fmin,fmax,f
 ;===========================================================================
-   on_error,2
+  on_error,2
 
-   ; Get grid dimensions and set irr=1 if it is an irregular grid
+                                ; Get grid dimensions and set irr=1 if it is an irregular grid
 
-   if keyword_set(cut) then siz = size(cut)  $
-   else if usereg then      siz = size(xreg) $
-   else                     siz = size(x)
-   nx=siz(1)
-   if plotdim eq 1 then begin
-      ny=1
-      irr=0
-   endif else begin
-      ny=siz(2)
-      irr=ny eq 1
-   endelse
+  if keyword_set(cut) then siz = size(cut)  $
+  else if usereg then      siz = size(xreg) $
+  else                     siz = size(x)
+  nx=siz(1)
+  if plotdim eq 1 then begin
+     ny=1
+     irr=0
+  endif else begin
+     ny=siz(2)
+     irr=ny eq 1
+  endelse
 
-   if irr and axistype eq 'cells' then begin
-      print,'Irregular grid, axistype must be set to coord'
-      axistype='coord'
-   endif
+  if irr and axistype eq 'cells' then begin
+     print,'Irregular grid, axistype must be set to coord'
+     axistype='coord'
+  endif
 
-   if axistype eq 'coord' then begin
-      if usereg then $
-         getaxes,ndim,xreg,xx,yy,zz,cut,cut0,rSlice,plotdim,variables $
-      else $
-         getaxes,ndim,x   ,xx,yy,zz,cut,cut0,rSlice,plotdim,variables
-   endif
+  if axistype eq 'coord' then begin
+     if usereg then $
+        getaxes,ndim,xreg,xx,yy,zz,cut,cut0,rSlice,plotdim,variables $
+     else $
+        getaxes,ndim,x   ,xx,yy,zz,cut,cut0,rSlice,plotdim,variables
+  endif
 
-   ; Calculate plot spacing from number of plots per page (ppp) and charsize
-   if !p.charsize eq 0.0 then !p.charsize=1.0
-   ppp   = multix*multiy
-   space = max([float(!d.y_ch_size)/float(!d.y_size),$
-                float(!d.x_ch_size)/float(!d.x_size)])*3.0*!p.charsize
-   set_space, ppp, space, sizes, nx = multix, ny = multiy
+                                ; Calculate plot spacing from number of plots per page (ppp) and charsize
+  if !p.charsize eq 0.0 then !p.charsize=1.0
+  ppp   = multix*multiy
+  space = max([float(!d.y_ch_size)/float(!d.y_size),$
+               float(!d.x_ch_size)/float(!d.x_size)])*3.0*!p.charsize
+  set_space, ppp, space, sizes, nx = multix, ny = multiy
 
-   ; Store x and y titles and tick names
-   xtitle    = !x.title
-   ytitle    = !y.title
-   xtickname = !x.tickname
-   ytickname = !y.tickname
+                                ; Store x and y titles and tick names
+  xtitle    = !x.title
+  ytitle    = !y.title
+  xtickname = !x.tickname
+  ytickname = !y.tickname
 
-   for ifunc=0,nfunc-1 do begin
+  for ifunc=0,nfunc-1 do begin
 
-      plotmod=plotmodes(ifunc)
+     plotmod=plotmodes(ifunc)
 
-      ; stream2 --> stream
-      i=strpos(plotmod,'stream2')
-      if i ge 0 then plotmod=strmid(plotmod,0,i+6)+strmid(plotmod,i+7)
+                                ; stream2 --> stream
+     i=strpos(plotmod,'stream2')
+     if i ge 0 then plotmod=strmid(plotmod,0,i+6)+strmid(plotmod,i+7)
 
-      ; contour --> cont
-      i=strpos(plotmod,'contour')
-      if i ge 0 then plotmod=strmid(plotmod,0,i+4)+strmid(plotmod,i+7)
+                                ; contour --> cont
+     i=strpos(plotmod,'contour')
+     if i ge 0 then plotmod=strmid(plotmod,0,i+4)+strmid(plotmod,i+7)
 
-      i=strpos(plotmod,'white')
-      if i ge 0 then begin
-          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+5)
-          white=1
-      endif else white=0
+     i=strpos(plotmod,'white')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+5)
+        white=1
+     endif else white=0
 
-      i=strpos(plotmod,'grid')
-      if i ge 0 then begin
-          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
-          showgrid=1
-      endif else showgrid=0
+     i=strpos(plotmod,'noaxis')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+6)
+        noaxis=4
+     endif else noaxis = 0
 
-      i=strpos(plotmod,'irr')
-      if i ge 0 then begin
-          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
-          irr=1
-      endif
+     i=strpos(plotmod,'grid')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
+        showgrid=1
+     endif else showgrid=0
 
-      i=strpos(plotmod,'mesh')
-      if i ge 0 then begin
-          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
-          showgrid=1
-          if irr then showmesh=0 else showmesh=1
-      endif else showmesh=0
+     i=strpos(plotmod,'irr')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
+        irr=1
+     endif
 
-      i=strpos(plotmod,'body')
-      if i ge 0 then begin
-          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
-          showbody=1
-      endif else showbody=0
+     i=strpos(plotmod,'mesh')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
+        showgrid=1
+        if irr then showmesh=0 else showmesh=1
+     endif else showmesh=0
 
-      i=strpos(plotmod,'fill')
-      if i ge 0 then begin
-          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
-          fill=1
-      endif else fill=0
+     i=strpos(plotmod,'body')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
+        showbody=1
+     endif else showbody=0
 
-      i=strpos(plotmod,'bar')
-      if i ge 0 then begin
-          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
-          showbar=1
-          if strpos(plotmod,'stream') ge 0 then showbar=0
-          fill=1
-      endif else showbar=0
+     i=strpos(plotmod,'fill')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
+        fill=1
+     endif else fill=0
 
-      i=strpos(plotmod,'label')
-      if i ge 0 then begin
-          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+5)
-          label=1
-      endif else label=0
+     i=strpos(plotmod,'bar')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
+        showbar=1
+        if strpos(plotmod,'stream') ge 0 then showbar=0
+        fill=1
+     endif else showbar=0
 
-      i=strpos(plotmod,'over')
-      if i ge 0 then begin
-          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
-          !p.multi(0) = !p.multi(0)+1
-          if !p.multi(0) ge !p.multi(1)*!p.multi(2) then !p.multi(0)=0
-      endif
+     i=strpos(plotmod,'label')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+5)
+        label=1
+     endif else label=0
 
-      i=strpos(plotmod,'log')
-      if i ge 0 then begin
-          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
-          logarithm=1
-      endif else logarithm=0
+     i=strpos(plotmod,'over')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
+        !p.multi(0) = !p.multi(0)+1
+        if !p.multi(0) ge !p.multi(1)*!p.multi(2) then !p.multi(0)=0
+     endif
 
-      !p.title=plottitles(ifunc)
-      if !p.title eq 'default' then !p.title=funcs(ifunc)
+     i=strpos(plotmod,'log')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
+        logarithm=1
+     endif else logarithm=0
 
-      ; Calculate the next p.multi(0) explicitly
-      if !p.multi(0) gt 0 then multi0=!p.multi(0)-1 $
-      else multi0=!p.multi(1)*!p.multi(2)-1
+     !p.title=plottitles(ifunc)
+     if !p.title eq 'default' then !p.title=funcs(ifunc)
 
-      ; Calculate subplot position indices
-      if !p.multi(4) then begin
-         ; columnwise
-         plotix=multix-1-multi0/multiy
-         plotiy=multi0 mod multiy
-      endif else begin
-         ; rowwise
-         plotix=multix-1-(multi0 mod multix)
-         plotiy=multi0/multix
-      endelse
+                                ; Calculate the next p.multi(0) explicitly
+     if !p.multi(0) gt 0 then multi0=!p.multi(0)-1 $
+     else multi0=!p.multi(1)*!p.multi(2)-1
 
-      if plotmod ne 'shade' and plotmod ne 'surface' then begin
+                                ; Calculate subplot position indices
+     if !p.multi(4) then begin
+                                ; columnwise
+        plotix=multix-1-multi0/multiy
+        plotiy=multi0 mod multiy
+     endif else begin
+                                ; rowwise
+        plotix=multix-1-(multi0 mod multix)
+        plotiy=multi0/multix
+     endelse
 
-        ; obtain position for flat plotmodes
+     if plotmod ne 'shade' and plotmod ne 'surface' then begin
+
+                                ; obtain position for flat plotmodes
         set_position, sizes, plotix, multiy-1-plotiy, pos, /rect
 
-        ; shrink in X direction for (overplotting) a colorbar
+                                ; shrink in X direction for (overplotting) a colorbar
         if strpos(plotmodes(ifunc),'bar') ge 0 $
-          or (strpos(plotmodes(ifunc),'over') ge 0 and $
-              strpos(plotmodes(ifunc-1>0),'bar') ge 0) then $
-          pos(2) = pos(2) - (pos(2) - pos(0))*0.15
+           or (strpos(plotmodes(ifunc),'over') ge 0 and $
+               strpos(plotmodes(ifunc-1>0),'bar') ge 0) then $
+                  pos(2) = pos(2) - (pos(2) - pos(0))*0.15
 
-        ; shrink in X direction for the Y axis of plot
+                                ; shrink in X direction for the Y axis of plot
         if plotmod eq 'plot' and multix gt 1 then $
-          pos(0) = pos(0) + (pos(2) - pos(0))*0.15
+           pos(0) = pos(0) + (pos(2) - pos(0))*0.15
 
         if keyword_set(fixaspect) and plotmod ne 'plot' then begin
 
-	  if plotmod eq 'polar' then $
-            aspectx=1 $
-          else begin
-            if !x.range(1) ne !x.range(0) then    $
-               width=abs(!x.range(1)-!x.range(0)) $
-            else if axistype eq 'coord' then      $
-               width=  max(xx) - min(xx)          $
-            else                                  $
-               width=  nx-1.0
+           if plotmod eq 'polar' then $
+              aspectx=1 $
+           else begin
+              if !x.range(1) ne !x.range(0) then    $
+                 width=abs(!x.range(1)-!x.range(0)) $
+              else if axistype eq 'coord' then      $
+                 width=  max(xx) - min(xx)          $
+              else                                  $
+                 width=  nx-1.0
 
-            if !y.range(1) ne !y.range(0) then    $
-               height=abs(!y.range(1)-!y.range(0))$
-            else if axistype eq 'coord' then      $
-               height= max(yy) - min(yy)          $
-            else                                  $
-               height= ny-1.0
+              if !y.range(1) ne !y.range(0) then    $
+                 height=abs(!y.range(1)-!y.range(0))$
+              else if axistype eq 'coord' then      $
+                 height= max(yy) - min(yy)          $
+              else                                  $
+                 height= ny-1.0
 
-            aspectx = width/height
-          endelse
+              aspectx = width/height
+           endelse
 
-          aspectpos = (pos(2)-pos(0))/(pos(3)-pos(1)) $
-                    *float(!d.x_size)/float(!d.y_size)
+           aspectpos = (pos(2)-pos(0))/(pos(3)-pos(1)) $
+                       *float(!d.x_size)/float(!d.y_size)
 
-          aspectratio = aspectpos/aspectx
+           aspectratio = aspectpos/aspectx
+           
+                                ;print,'aspectx,pos,ratio=',aspectx,aspectpos,aspectratio
 
-          ;print,'aspectx,pos,ratio=',aspectx,aspectpos,aspectratio
-
-          if aspectratio gt 1 then begin
-             posmid=(pos(2)+pos(0))/2.
-             posdif=(pos(2)-pos(0))/2.
-             pos(0)=posmid - posdif/aspectratio
-             pos(2)=posmid + posdif/aspectratio
-          endif else begin
-             posmid=(pos(3)+pos(1))/2.
-             posdif=(pos(3)-pos(1))/2.
-             pos(1)=posmid - posdif*aspectratio
-             pos(3)=posmid + posdif*aspectratio
-          endelse
+           if aspectratio gt 1 then begin
+              posmid=(pos(2)+pos(0))/2.
+              posdif=(pos(2)-pos(0))/2.
+              pos(0)=posmid - posdif/aspectratio
+              pos(2)=posmid + posdif/aspectratio
+           endif else begin
+              posmid=(pos(3)+pos(1))/2.
+              posdif=(pos(3)-pos(1))/2.
+              pos(1)=posmid - posdif*aspectratio
+              pos(3)=posmid + posdif*aspectratio
+           endelse
         endif
 
-        ; Omit X axis if unneeded
+                                ; Omit X axis if unneeded
         if (plotiy gt 0) then begin
-          !x.tickname = strarr(60)+' '
-          !x.title = ' '
+           !x.tickname = strarr(60)+' '
+           !x.title = ' '
         endif
 
-        ; Omit Y axis if unneeded
+                                ; Omit Y axis if unneeded
         if (plotix gt 0 and plotmod ne 'plot') then begin
-          !y.tickname = strarr(60)+' '
-          !y.title = ' '
+           !y.tickname = strarr(60)+' '
+           !y.title = ' '
         endif
 
         !p.position = pos
 
-      endif
+     endif
 
-      if usereg then getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
-        xreg,wreg,time,eqpar,variables,cut0,rcut $
-      else           getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
-        x,   w,   time,eqpar,variables,cut0,rcut
+     if usereg then getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
+                            xreg,wreg,time,eqpar,variables,cut0,rcut $
+     else           getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
+                            x,   w,   time,eqpar,variables,cut0,rcut
 
-      f_min=fmin(ifunc)
-      f_max=fmax(ifunc)
+     f_min=fmin(ifunc)
+     f_max=fmax(ifunc)
 
-      if logarithm and f_min gt 0 and min(f) gt 0 then begin
-          f     = alog10(f)
-          f_min = alog10(f_min)
-          f_max = alog10(f_max)
-          if plottitles(ifunc) eq 'default' then !p.title = 'log '+!p.title
-      endif
+     if logarithm and f_min gt 0 and min(f) gt 0 then begin
+        f     = alog10(f)
+        f_min = alog10(f_min)
+        f_max = alog10(f_max)
+        if plottitles(ifunc) eq 'default' then !p.title = 'log '+!p.title
+     endif
 
-      if f_max eq f_min then begin
-         f_max=f_max+1
-         f_min=f_min-1
-      endif
+     if f_max eq f_min then begin
+        f_max=f_max+1
+        f_min=f_min-1
+     endif
 
-      if plotmod eq 'plot' then $
-         if nfunc gt ppp                then lstyle=ifunc/ppp $
-         else if keyword_set(linestyle) then lstyle=linestyle $
-         else                                lstyle=!p.linestyle
+     if plotmod eq 'plot' then $
+        if nfunc gt ppp                then lstyle=ifunc/ppp $
+        else if keyword_set(linestyle) then lstyle=linestyle $
+        else                                lstyle=!p.linestyle
 
-      ; Skip minimum ad maximum levels
-      if plotmod eq 'cont' or plotmod eq 'polar' then $
-         levels=(findgen(contourlevel+2)-1)/(contourlevel-1) $
-                *(f_max-f_min)+f_min
+                                ; Skip minimum ad maximum levels
+     if plotmod eq 'cont' or plotmod eq 'polar' then $
+        levels=(findgen(contourlevel+2)-1)/(contourlevel-1) $
+               *(f_max-f_min)+f_min
 
-      ; figure out the units of angle in the second coordinate
-      if plotmod eq 'polar' then begin
-          if max(yy)-min(yy) gt 300 then $
-            angleunit = !pi/180 $   ; degrees
-          else if max(yy)-min(yy) gt 20 then $
-            angleunit = !pi/12 $    ; local time
-          else $
-            angleunit = 1.0         ; radians
-      endif
+                                ; figure out the units of angle in the second coordinate
+     if plotmod eq 'polar' then begin
+        if max(yy)-min(yy) gt 300 then $
+           angleunit = !pi/180 $ ; degrees
+        else if max(yy)-min(yy) gt 20 then $
+           angleunit = !pi/12 $ ; local time
+        else $
+           angleunit = 1.0      ; radians
+     endif
 
-      if plotmod eq 'tv' then begin
-         ; Calculate plotting position and size
+     if plotmod eq 'tv' then begin
+                                ; Calculate plotting position and size
 
-         tvplotx=pos(0)*!d.x_size
-         tvploty=pos(1)*!d.y_size
-         tvsizex=(pos(2)-pos(0))*!d.x_size
-         tvsizey=(pos(3)-pos(1))*!d.y_size
-         ; recalculate f for tv mode
-         if !d.name eq 'PS' then tvf=congrid(f,200,200) $
-         else                    tvf=congrid(f,tvsizex,tvsizey)
+        tvplotx=pos(0)*!d.x_size
+        tvploty=pos(1)*!d.y_size
+        tvsizex=(pos(2)-pos(0))*!d.x_size
+        tvsizey=(pos(3)-pos(1))*!d.y_size
+                                ; recalculate f for tv mode
+        if !d.name eq 'PS' then tvf=congrid(f,200,200) $
+        else                    tvf=congrid(f,tvsizex,tvsizey)
 
-         tvf=bytscl(tvf,MIN=f_min,MAX=f_max,TOP=!D.TABLE_SIZE-3)+1
-      endif
+        tvf=bytscl(tvf,MIN=f_min,MAX=f_max,TOP=!D.TABLE_SIZE-3)+1
+     endif
 
-      if showbar then plot_color_bar, $
+     if showbar then plot_color_bar, $
         [pos(2)+0.005, pos(1), pos(2)+0.025, pos(3)], [f_min,f_max]
 
-      case axistype of
-      'cells': case plotmod of
-         'cont': contour,f>f_min,LEVELS=levels,$
-                 FILL=fill,FOLLOW=label,XSTYLE=1,YSTYLE=1,/NOERASE
-         'plot'     :plot,f,YRANGE=[f_min,f_max],XSTYLE=18,ystyle=18, $
-                                                 LINE=lstyle,/NOERASE
-         'shade'    :begin
-                        shade_surf,f>f_min,ZRANGE=[f_min,f_max],$
-                           XSTYLE=1,YSTYLE=1,ZSTYLE=18,AX=ax,AZ=az,/NOERASE
-                        if showgrid then $
-                           surface,f>f_min,ZRANGE=[f_min,f_max],$
-                           XSTYLE=1,YSTYLE=1,ZSTYLE=18,AX=ax,AZ=az,/NOERASE
-                     end
-         'surface'  :surface,f>f_min,ZRANGE=[f_min,f_max],$
-                        XSTYLE=1,YSTYLE=1,ZSTYLE=18,AX=ax,AZ=az,/NOERASE
-         'tv'       :begin
-                        tv,tvf,tvplotx,tvploty,XSIZE=tvsizex,YSIZE=tvsizey
-                        contour,f,XSTYLE=1,YSTYLE=1,/NODATA,/NOERASE
-                     end
-         'vel'      :vector,f1,f2,NVECS=velvector,MAXVAL=f_max,$
-                        DYNAMIC=velspeed,SEED=velseed,X0=velpos,/NOERASE
-         'vector'   :vector,f1,f2,NVECS=velvector,MAXVAL=f_max,$
-                        DYNAMIC=velspeed,SEED=velseed,X0=velpos,$
-                        /NOERASE,WHITE=white
-         'stream'   :streamline,f1,f2,NVECS=velvector,SEED=velseed,X0=velpos,$
-                        /NOERASE,WHITE=white
-         'velovect' :velovect,f1,f2,/NOERASE
-         'ovelovect':velovect,f1,f2,/NOERASE,$
-            XRANGE=[0,n_elements(f1(*,0))-1],YRANGE=[0,n_elements(f1(0,*))-1]
-         endcase
-      'coord': case plotmod of
-         'cont'     :if irr then begin
-                       if not keyword_set(tri) then $
-                         triangulate,float(xx),float(yy),tri
-                       contour,f>f_min,xx,yy,$
-                          FOLLOW=label, FILL=fill, TRIANGULATION=tri, $
-                          LEVELS=levels,XSTYLE=1,YSTYLE=1,/NOERASE
-                    endif else $
-                       contour,f>f_min,xx,yy,$
-                          FOLLOW=label, FILL=fill, $
-                          LEVELS=levels,XSTYLE=1,YSTYLE=1,/NOERASE
-	 'polar'    :polar_contour,f>f_min,yy*angleunit,xx,$
-                          FOLLOW=label, FILL=fill, $
-                          LEVELS=levels,XSTYLE=1,YSTYLE=1,/NOERASE
-         'plot'     :plot,xx,f,YRANGE=[f_min,f_max],XSTYLE=18,YSTYLE=18,$
-                          LINE=lstyle,/NOERASE
-         'shade'    :if irr then begin
-                        shade_surf_irr,f>f_min,xx,yy,AX=ax,AZ=az
-                        shade_surf,f>f_min,xx,yy,AX=ax,AZ=az,/NODATA,/NOERASE
-                     endif else begin
-                        shade_surf,f>f_min,xx,yy,ZRANGE=[f_min,f_max],$
-                           XSTYLE=1,YSTYLE=1,ZSTYLE=18,AX=ax,AZ=az,/NOERASE
-                        if showgrid then $
-                           surface,f>f_min,xx,yy,ZRANGE=[f_min,f_max],$
-                           XSTYLE=1,YSTYLE=1,ZSTYLE=18,AX=ax,AZ=az,/NOERASE
-                     endelse
-         'surface'  :surface,f>f_min,xx,yy,ZRANGE=[f_min,f_max],$
-                        XSTYLE=1,YSTYLE=1,ZSTYLE=18,AX=ax,AZ=az,/NOERASE
-         'tv'       :begin
-                       tv,tvf,tvplotx,tvploty,XSIZE=tvsizex,YSIZE=tvsizey
-                       contour,f,xx,yy,XSTYLE=1,YSTYLE=1,/NODATA,/NOERASE
-                     end
-         'vel'      :vector,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
-                        TRIANGLES=veltri,NVECS=velvector,MAXVAL=f_max,$
-                        DYNAMIC=velspeed,SEED=velseed,X0=velpos,/NOERASE
-         'vector'   :vector,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
-                        TRIANGLES=veltri,NVECS=velvector,MAXVAL=f_max,$
-                        DYNAMIC=velspeed,SEED=velseed,X0=velpos,$
-                        /NOERASE, WHITE=white
-         'stream'   :streamline,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
-                        TRIANGLES=veltri,NVECS=velvector,$
-                        SEED=velseed,X0=velpos,$
-                        /NOERASE, WHITE=white
-         'velovect' :velovect,f1,f2,xx(*,0),yy(0,*),/NOERASE
-         'ovelovect':velovect,f1,f2,xx(*,0),yy(0,*),/NOERASE,$
-                        XRANGE=[min(xx),max(xx)],YRANGE=[min(yy),max(yy)]
-         endcase
-      else:print,'Unknown axistype:',axistype
-      endcase
+     case axistype of
+        'cells': case plotmod of
+           'cont': contour,f>f_min,LEVELS=levels,$
+                           FILL=fill,FOLLOW=label,$
+                           XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NOERASE
+           'plot':plot,f,YRANGE=[f_min,f_max],$
+                       XSTYLE=noaxis+18,ystyle=18,LINE=lstyle,/NOERASE
+           'shade'    :begin
+              shade_surf,f>f_min,ZRANGE=[f_min,f_max],$
+                         XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
+                         ZSTYLE=noaxis+18,AX=ax,AZ=az,/NOERASE
+              if showgrid then $
+                 surface,f>f_min,ZRANGE=[f_min,f_max],$
+                         XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
+                         ZSTYLE=noaxis+18,AX=ax,AZ=az,/NOERASE
+           end
+           'surface'  :surface,f>f_min,ZRANGE=[f_min,f_max],$
+                               XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
+                               ZSTYLE=noaxis+18,AX=ax,AZ=az,/NOERASE
+           'tv'       :begin
+              tv,tvf,tvplotx,tvploty,XSIZE=tvsizex,YSIZE=tvsizey
+              contour,f,XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
+                      /NODATA,/NOERASE
+           end
+           'vel'      :vector,f1,f2,NVECS=velvector,MAXVAL=f_max,$
+                              DYNAMIC=velspeed,SEED=velseed,X0=velpos,/NOERASE
+           'vector'   :vector,f1,f2,NVECS=velvector,MAXVAL=f_max,$
+                              DYNAMIC=velspeed,SEED=velseed,X0=velpos,$
+                              /NOERASE,WHITE=white
+           'stream'   :streamline,f1,f2,NVECS=velvector,SEED=velseed, $
+                                  X0=velpos,/NOERASE,WHITE=white
+           'velovect' :velovect,f1,f2,/NOERASE
+           'ovelovect':velovect,f1,f2,/NOERASE,$
+                                XRANGE=[0,n_elements(f1(*,0))-1], $
+                                YRANGE=[0,n_elements(f1(0,*))-1]
+        endcase
+        'coord': case plotmod of
+           'cont'     :if irr then begin
+              if not keyword_set(tri) then $
+                 triangulate,float(xx),float(yy),tri
+              contour,f>f_min,xx,yy,$
+                      FOLLOW=label, FILL=fill, TRIANGULATION=tri, $
+                      LEVELS=levels,XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
+                      /NOERASE
+           endif else $
+              contour,f>f_min,xx,yy,$
+                      FOLLOW=label, FILL=fill, LEVELS=levels, $
+                      XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NOERASE
+           'polar'    :polar_contour,f>f_min,yy*angleunit,xx,$
+                                     FOLLOW=label, FILL=fill, LEVELS=levels,$
+                                     XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
+                                     /NOERASE
+           'plot'     :plot,xx,f,YRANGE=[f_min,f_max],$
+                            XSTYLE=noaxis+18,YSTYLE=noaxis+18,$
+                            LINE=lstyle,/NOERASE
+           'shade'    :if irr then begin
+              shade_surf_irr,f>f_min,xx,yy,AX=ax,AZ=az
+              shade_surf,f>f_min,xx,yy,AX=ax,AZ=az,/NODATA,/NOERASE
+           endif else begin
+              shade_surf,f>f_min,xx,yy,ZRANGE=[f_min,f_max],$
+                         XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
+                         ZSTYLE=noaxis+18,AX=ax,AZ=az,/NOERASE
+              if showgrid then $
+                 surface,f>f_min,xx,yy,ZRANGE=[f_min,f_max],$
+                         XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
+                         ZSTYLE=noaxis+18,$
+                         AX=ax,AZ=az,/NOERASE
+           endelse
+           'surface'  :surface,f>f_min,xx,yy,ZRANGE=[f_min,f_max],$
+                               XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
+                               ZSTYLE=noaxis+18,$
+                               AX=ax,AZ=az,/NOERASE
+           'tv'       :begin
+              tv,tvf,tvplotx,tvploty,XSIZE=tvsizex,YSIZE=tvsizey
+              contour,f,xx,yy,$
+                      XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
+                      /NODATA,/NOERASE
+           end
+           'vel'      :vector,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
+                              TRIANGLES=veltri,NVECS=velvector,MAXVAL=f_max,$
+                              DYNAMIC=velspeed,SEED=velseed,X0=velpos,/NOERASE
+           'vector'   :vector,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
+                              TRIANGLES=veltri,NVECS=velvector,MAXVAL=f_max,$
+                              DYNAMIC=velspeed,SEED=velseed,X0=velpos,$
+                              /NOERASE, WHITE=white
+           'stream'   :streamline,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
+                                  TRIANGLES=veltri,NVECS=velvector,$
+                                  SEED=velseed,X0=velpos,$
+                                  /NOERASE, WHITE=white
+           'velovect' :velovect,f1,f2,xx(*,0),yy(0,*),/NOERASE
+           'ovelovect':velovect,f1,f2,xx(*,0),yy(0,*),/NOERASE,$
+                                XRANGE=[min(xx),max(xx)],$
+                                YRANGE=[min(yy),max(yy)]
+        endcase
+        else:print,'Unknown axistype:',axistype
+     endcase
 
-      if showbody and axistype eq 'coord' then $
-      if rBody gt abs(rSlice) then begin
-         theta = findgen(37)*!pi*2.0/36.0
-         rBodySlice=sqrt(rBody^2-rSlice^2)
-         polyfill, rBodySlice*cos(theta), rBodySlice*sin(theta),color = 0, $
-           noclip=0
-         ; redraw box in case the body is at the edge
-         if(plotmod ne 'polar')then $
-           plot,xx,yy,XSTYLE=1,YSTYLE=1,/NODATA,/NOERASE
-      endif
+     if showbody and axistype eq 'coord' then $
+        if rBody gt abs(rSlice) then begin
+        theta = findgen(37)*!pi*2.0/36.0
+        rBodySlice=sqrt(rBody^2-rSlice^2)
+        polyfill, rBodySlice*cos(theta), rBodySlice*sin(theta),color = 0, $
+                  noclip=0
+                                ; redraw box in case the body is at the edge
+        if(plotmod ne 'polar')then $
+           plot,xx,yy,XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NODATA,/NOERASE
+     endif
 
-      if showgrid and plotdim eq 2 and plotmod ne 'surface'    $
-                                   and plotmod ne 'shade' then begin
-          if(plotmod eq 'polar')then                                       $
-            plotgrid,xx,yy*angleunit,lines=showmesh,xstyle=1,ystyle=1,/polar $
-          else if keyword_set(cut) then                                    $
-            plotgrid,xx,yy,lines=showmesh,xstyle=1,ystyle=1                $
-          else begin
-              if !x.range[0] ne !x.range[1] then xrange=!x.range else $
-                xrange=[min(xx),max(xx)]
-              if !y.range[0] ne !y.range[1] then yrange=!y.range else $
-                yrange=[min(yy),max(yy)]
-              plotgrid,x,lines=showmesh,xstyle=1,ystyle=1,$
-                xrange=xrange,yrange=yrange
-          endelse
-      endif
+     if showgrid and plotdim eq 2 and plotmod ne 'surface'    $
+        and plotmod ne 'shade' then begin
+        if(plotmod eq 'polar')then                                       $
+           plotgrid,xx,yy*angleunit,lines=showmesh,xstyle=1,ystyle=1,/polar $
+        else if keyword_set(cut) then                                    $
+           plotgrid,xx,yy,lines=showmesh,xstyle=1,ystyle=1                $
+        else begin
+           if !x.range[0] ne !x.range[1] then xrange=!x.range else $
+              xrange=[min(xx),max(xx)]
+           if !y.range[0] ne !y.range[1] then yrange=!y.range else $
+              yrange=[min(yy),max(yy)]
+           plotgrid,x,lines=showmesh,xstyle=1,ystyle=1,$
+                    xrange=xrange,yrange=yrange
+        endelse
+     endif
 
-      !p.multi(0) = multi0
-      !p.position = 0
-      !x.title    = xtitle
-      !x.tickname = xtickname
-      !y.title    = ytitle
-      !y.tickname = ytickname
-   endfor
+     !p.multi(0) = multi0
+     !p.position = 0
+     !x.title    = xtitle
+     !x.tickname = xtickname
+     !y.title    = ytitle
+     !y.tickname = ytickname
+  endfor
 
-   !p.position = 0
+  !p.position = 0
 
 end
 ;===========================================================================
