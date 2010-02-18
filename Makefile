@@ -608,7 +608,7 @@ LCBATSRUS: LC/BATSRUS/src/Makefile \
 	touch LC/BATSRUS/srcInterface/Makefile.DEPEND
 	cd LC/BATSRUS; \
 		perl -i -pe 's/GM/LC/' Config.pl; \
-		./Config.pl -install=c -u=Lc -e=Mhd
+		./Config.pl -install=c -u=LcV0 -e=Mhd
 
 #^CMP END LC
 

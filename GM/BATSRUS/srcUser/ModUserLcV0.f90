@@ -48,20 +48,21 @@ module ModUser
        IMPLEMENTED4 => user_initial_perturbation,       &
        IMPLEMENTED5 => user_face_bcs,                   &
        IMPLEMENTED6 => user_get_log_var,                &
-       IMPLEMENTED7 => user_calc_sources,               &
-       IMPLEMENTED8 => user_update_states,              &
-       IMPLEMENTED9 => user_specify_refinement,         &
-       IMPLEMENTED10=> user_set_boundary_cells,         &
-       IMPLEMENTED11=> user_set_outerbcs,               &
-       IMPLEMENTED12=> user_set_plot_var,               &
-       IMPLEMENTED13=> user_material_properties
+       IMPLEMENTED7 => user_get_b0,                     &
+       IMPLEMENTED8 => user_calc_sources,               &
+       IMPLEMENTED9 => user_update_states,              &
+       IMPLEMENTED10=> user_specify_refinement,         &
+       IMPLEMENTED11=> user_set_boundary_cells,         &
+       IMPLEMENTED12=> user_set_outerbcs,               &
+       IMPLEMENTED13=> user_set_plot_var,               &
+       IMPLEMENTED14=> user_material_properties
 
 
   include 'user_module.h' !list of public methods
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
-       NameUserModule = 'Low Corona / Heating by waves'
+       NameUserModule = 'Low Corona / TransRegion'
 
 
   ! ratio of electron Temperature / Total Temperature
@@ -98,12 +99,16 @@ contains
 
   subroutine user_read_inputs
 
-    use ModMain,        ONLY: lVerbose, UseUserInitSession     
+    use ModMain
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
+    use ModMagnetogram, ONLY: set_parameters_magnetogram
     use ModPhysics,     ONLY: SW_T_dim, SW_n_dim
-   
+    use ModCoronalHeating, ONLY: UseUnsignedFluxModel, DecayLength, UseCranmerHeating,&
+                                 read_corona_heating, UseExponentialHeating, &
+                                 read_active_region_heating,read_longscale_heating,&
+                                 DoOpenClosedHeat, WsaT0
 
     character (len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
@@ -121,6 +126,27 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
 
        select case(NameCommand)
+       case("#PFSSM")
+          call read_var('UseUserB0', UseUserB0)
+          if(UseUserB0)then
+             call set_parameters_magnetogram
+             call read_var('dt_UpdateB0', dt_UpdateB0)
+             DoUpdateB0 = dt_updateb0 > 0.0
+          end if
+
+       case("#CORONALHEATING")
+          call read_corona_heating
+          if(UseExponentialHeating)call read_active_region_heating
+
+       case("#OPENCLOSEDHEAT")
+          call read_var('DoOpenClosedHeat', DoOpenClosedHeat)
+          if(DoOpenClosedHeat) call read_var('WsaT0', WsaT0)
+
+       case("#LONGSCALEHEAT")
+          call read_longscale_heating
+
+       case("#MODIFYHEATCONDUCTION")
+          call read_modified_cooling
 
        case("#TRBOUNDARY")
           call read_var('TypeTRBoundary', TypeTRBoundary)
@@ -614,6 +640,23 @@ contains
     end if
 
   end subroutine user_initial_perturbation
+
+  !============================================================================
+
+  subroutine user_get_b0(x, y, z, B0_D)
+
+    use ModPhysics,     ONLY: Si2No_V, UnitB_
+    use ModMagnetogram, ONLY: get_magnetogram_field
+
+    real, intent(in) :: x, y, z
+    real, intent(out):: B0_D(3)
+    !--------------------------------------------------------------------------
+
+    call get_magnetogram_field(x, y, z, B0_D)
+    B0_D = B0_D*Si2No_V(UnitB_)
+
+  end subroutine user_get_b0
+
   !============================================================================
 
   subroutine user_calc_sources
