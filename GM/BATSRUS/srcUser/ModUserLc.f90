@@ -585,7 +585,7 @@ contains
 
     ! Need to initialize unsigned flux model first
 
-    write(*,*)'Radiation cooling integral equals:',cooling_function_integral_si(5.0e5)
+    !write(*,*)'Radiation cooling integral equals:',cooling_function_integral_si(5.0e5)
     if(UseUnsignedFluxModel) call get_coronal_heat_factor
 
     TotalHeatingProc = 0.0
