@@ -1,0 +1,26 @@
+#SAVEPLOT
+2                       nPlotFiles
+los euv tec		StringPlot
+40000			DnSavePlot
+-1			DtSavePlot
+#INCLUDE
+POS_EARTH
+0.			OffsetAngle
+1.98			rSizeImage
+0.			xOffset
+0.			yOffset
+0.			rOccult
+0.			MuLimbDarkening
+512			nPix
+los sxr tec		StringPlot
+40000			DnSavePlot
+-1			DtSavePlot
+#INCLUDE
+POS_EARTH
+0.			OffsetAngle
+2.11			rSizeImage
+0.			xOffset
+0.			yOffset
+0.			rOccult
+0.			MuLimbDarkening
+512			nPix
