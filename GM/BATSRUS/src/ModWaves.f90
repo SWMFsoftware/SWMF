@@ -192,6 +192,49 @@ contains
     call read_var('FreqMaxSI',FreqMaxSI)
   end subroutine read_frequency
   !============================================================================
+  subroutine set_wave_state(EWaveTotal, State_V, Xyz_D, B0_D)
+    use ModVarIndexes, ONLY: nVar, Bx_, Bz_, ExtraEInt_
+    use ModMain, ONLY: nDim, UseB0
+
+    !Input and output parameters:
+
+    !Total energy density of waves
+    real, intent(in)    :: EWaveTotal  
+   
+    !WaveFirst_:WaveLast_ components of this vector are to be filled in:
+    real, intent(inout) :: State_V(nVar)  
+
+    !If UseAlfvenWaves, the Plus or Minus waves are intialized, depending on
+    !the sign of {\bf B}\cdot{\bf r}, therefore, we need the following optional
+    !parameters:
+    real, intent(in), optional, dimension(nDim):: Xyz_D, B0_D
+
+
+    real:: BTotal_D(nDim)
+    !--------------------------------------------------------!
+
+    if(UseAlfvenWaves)then
+ 
+       BTotal_D = State_V(Bx_:Bz_)
+       if(UseB0) BTotal_D = BTotal_D + B0_D
+
+       !Figure out the sign of {\bf B}\cdot{\bf r}
+       if( sum( BTotal_D*Xyz_D ) > 0) then
+
+          State_V(WaveFirst_:WaveLast_) = EWaveTotal * SpectrumPlus_W
+
+       else
+          
+          State_V(WaveFirst_:WaveLast_) = EWaveTotal * SpectrumMinus_W
+       
+       end if
+    else
+       State_V(WaveFirst_:WaveLast_) = EWaveTotal * Spectrum_W
+       if( UseWavePressureLtd )&
+            State_V(ExtraEInt_) = sum(State_V(WaveFirst_:WaveLast_))
+    end if
+  end subroutine set_wave_state
+  !============================================================================
   subroutine update_wave_group_advection(iBlock)
     use ModAdvance,           ONLY: State_VGB, time_blk
     use ModGeometry,          ONLY: true_cell
