@@ -46,6 +46,7 @@ my $MaxImplBlock;
 
 # additional variable information
 my $nWave;
+my $nMaterial;
 
 # For SC/BATSRUS and IH/BATSRUS src/ is created during configuration of SWMF
 if(not -d $Src){exit 0};
@@ -223,6 +224,10 @@ sub set_var{
 	    $nWave = $Value;
             # Check the number of wave bins (to be set)
 	    die "$ERROR nWave=$nWave must be 1 or more\n" if $nWave < 1;
+	}elsif($Var eq "nMaterial"){
+	    $nMaterial = $Value;
+            # Check the number of material level indices (to be set)
+	    die "$ERROR nMaterial=$nMaterial must be 1 or more\n" if $nMaterial < 1;
 	}else{
 	    die "$ERROR unkown variable $Var in setvar\n";
 	}
@@ -351,11 +356,14 @@ Additional options for BATSRUS/Config.pl:
 
 -static         Use static allocation for large arrays.
 
--setvar=nWave=NWAVE
+-setvar=nWave=NWAVE,nMaterial=NMATERIAL
                 Set additional variables for the selected EQUATION module.
                 NWAVE is the number of wave bins used for radiation or wave
-                turbulence. Resetting the EQUATION module will remove the
-                stored NWAVE.
+                turbulence.
+                NMATERIAL is the number of material level indeces.
+                Resetting the EQUATION module will remove the stored NWAVE
+                and NMATERIAL.
+
 
 Examples for BATSRUS/Config.pl:
 
