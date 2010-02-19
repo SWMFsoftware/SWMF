@@ -370,14 +370,15 @@ test5:
 
 test5_compile:
 	./Config.pl -v=Empty,LC/BATSRUS
-	./Config.pl -g=LC:4,4,4,3000,1
+	cd LC/BATSRUS; ./Config.pl -u=Lc -e=MhdWaves -setvar=nWave=2
+	./Config.pl -g=LC:6,4,4,3000,1
 	cd LC/BATSRUS; ./Config.pl -dynamic; cd ../..
 	make SWMF PIDL
 
 test5_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR}
-	cp ${TESTDIR}/LC/Param/PARAM.lc ${TESTDIR}/PARAM.in
+	cp Param/PARAM.in.test.LCSCIH ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.LC ${TESTDIR}/LAYOUT.in
 
 test5_run:

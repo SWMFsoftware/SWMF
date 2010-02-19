@@ -1,0 +1,288 @@
+#ECHO
+T			DoEcho
+
+#DESCRIPTION
+Input file for a steady state LC/SC/IH with turbulent heating
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#STARTTIME
+1998                    iYear
+5                       iMonth
+1                       iDay
+0                       iHour
+0                       iMinute
+0                       iSecond
+0.0                     FracSecond
+
+#SAVERESTART
+F			DoSaveRestart
+2000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#BEGIN_COMP LC --------------------------------------------------------------
+
+#COORDSYSTEM
+HGR                     TypeCoordSystem
+
+#MAGNETOGRAM
+T                       UseMagnetogram
+1.0                     Ro_PFSSM
+2.5                     Rs_PFSSM
+0.0                     H_PFSSM
+LC/Param/CR1935_WSO.dat
+12                      iHead_PFSSM
+-1.0                    PhiShift
+0.01                    UnitB
+
+
+#ALFVENWAVES
+T                       UseAlfvenWaves
+
+#WAVEPRESSURE
+F                       UseWavePressure
+T                       UseWavePressureLtd
+
+
+!---------CORONAL HEATING--------------------------------------------------
+
+
+#CORONALHEATING
+exponential		TypeCoronalHeating
+0.057471264		DecayLength
+7.2847901E-05		HeatingAmplitudeCgs
+
+#LONGSCALEHEAT
+T			DoChHeat
+5.0e-7			HeatChCgs
+0.7			DecayCh
+
+#ACTIVEREGIONHEAT
+T			UseArComponent
+4.03E-05		ArHeatFactor
+30.0			ArHeatB0
+5.0			ArHeatDeltaB0
+
+#OPENCLOSEDHEAT
+T			DoOpenClosedHeat
+
+!--------END OF CORONAL HEATIN---------------------------------------------
+!--------RADIATIVE COOLING-------------------------------------------------
+
+#RADCOOLING
+T
+
+!--------User flags:
+!-User Sources: limit the time step to account for a cooling function
+! User Inner Bc: implements the BC "chromo"
+#USER_FLAGS
+T			UseUserInnerBcs
+T			UseUserSource
+T			UseUserPerturbation
+F			UseUserOuterBcs
+T			UseUserICs
+T			UseUserSpecifyRefinement
+T			UseUserLogFiles
+F			UseUserWritePlot
+T			UseUserAMR
+F			UseUserEchoInput
+F			UseUserB0
+T			UseUserInitSession
+F			UseUserUpdateStates
+
+
+#USERINPUTBEGIN ------------------------
+
+!--------BOUNDARY CONDITION________________
+!  1. Excessive density, lower temperature in the chromosphere
+
+#TRBOUNDARY
+chromo			TypeTRBoundary
+1.0E+12 		BoundaryNeCgs
+2.0E+4			BoundaryTeCgs
+
+
+#USERINPUTEND ----------------------------
+
+!  2. Modify accordingly the radiative cooling and heat conduction,
+!     to extend the transition region.
+
+#CHROMOSPHERE
+F
+1.0e+12
+2.0e+4
+
+#TRANSITIONREGION
+T			DoEntendTransitionRegion
+3.0E+5			TeModSi
+1.0E+1			DeltaTeModSi
+
+#GAMMA
+1.6666E+00		Gamma
+
+#BODY
+T			Usebody
+1.0			rBody
+1.5E+8			BodyNDim
+3.0E+6			BodyTDim
+
+#EXTRABOUNDARY
+T			UseExtraBoundary
+user			TypeBc_I(ExtraBc_)
+T			DoFixExtaBoundary
+
+#BODY
+F			Usebody
+
+#FACEBOUNDARY
+0			MinBoundary
+0			MaxBoundary
+F			DoFixOuterBoundary
+
+#PLASMA
+1.0			MassFluid
+1.0			AverageIonCharge
+1.0			ElectronTemperatureRatio
+
+#OUTERBOUNDARY
+user	                TypeBcEast
+float   	        TypeBcWest
+float	                TypeBcSouth
+float	  		TypeBcNorth
+float	 	        TypeBcBot
+float	   		TypeBcTop
+
+
+#GRIDGEOMETRY
+spherical_genr		TypeGeometry
+LC/Param/grid_TR.dat	NameGridFile
+
+! Use a true sphere, so box is made much larger
+#GRID
+1			nRootBlockX
+2			nRootBlockY
+1			nRootBlockZ
+-100.0			xMin
+ 100.0			xMax
+-100.0			yMin
+ 100.0			yMax
+-100.0			zMin
+ 100.0			zMax
+
+#LIMITRADIUS
+1.0			rMin
+24.0			rMax
+
+#GRIDLEVEL
+2			nLevelArea
+all			NameArea
+
+#GRIDLEVEL
+2			nLevelArea
+box_gen			NameArea
+1.0			rMin
+0.0			LonMin
+-65.0			LatMin
+1.70			rMax
+360.0			LonMax
+65.0			LatMax
+
+#GRIDLEVEL
+3			nLevelArea
+user			NameArea
+
+#GRIDLEVEL
+2                       nLevelArea
+initial                 NameArea
+
+#FIXAXIS
+F                       UsePoleDiffusion
+T                       DoFixAxis
+8.0                     rFixAxis
+1.5                     r2FixAxis
+
+#USECURLB0
+T			UseCurlB0
+2.5			rCurrentFreeB0
+
+#AMR
+30			DnRefine
+F			DoAutomaticRefinement 
+
+#HEATCONDUCTION
+T			UseHeatConduction
+user			TypeHeatConduction
+
+#WEAKFIELDCONDUCTION
+T			DoWeakFieldConduction
+1.0E-7			BmodifySi
+1.0E-8			DeltaBmodifySi
+
+#MESSAGEPASS
+all			TypeMessagePass
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc                      TypeLimiter
+1.2			LimiterBeta
+
+#TVDRESCHANGE
+T                       UseTvdResChange
+
+#RESCHANGEBOUNDARY
+T
+
+#TIMESTEPPING
+2                       nStage
+0.80                    CflExpl
+
+!-----Take data which are used in making synthetic EUV and X-ray images
+
+#LOOKUPTABLE
+euv			NameTable
+load			NameCommand
+LC/Param/ResEIT.dat	NameFile
+ascii			TypeFile
+
+#LOOKUPTABLE
+sxr			NameTable
+load			NameCommand
+LC/Param/ResSXT.dat	NameFile
+ascii			TypeFile
+
+!-----Take data which are used in calculating the radiative cooling
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+LC/Param/RadCool.dat	NameFile
+ascii			TypeFile
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW                     StringLogfile
+1                       DnSaveLogfile
+-1.                     DtSaveLogfile
+
+#END_COMP LC ----------------------------------------------------------------
+
+#STOP
+100			MaxIteration
+-1.0			tSimulationMax
+
+#RUN ########################################################################
+
+#BEGIN_COMP LC --------------------------------------------------------------
+
+#AMR
+-1                      DnRefine
+
+#END_COMP LC -----------------------------------------------------------------
+
+#STOP
+200
+-1.0
+
+#END
