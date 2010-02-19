@@ -1,20 +1,25 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
 !Description (Sokolov, Feb.,04,2010)
-!Coded by: Cooper Downs /cdowns@ifa.hawaii.edu
-!
+!Coded by: Cooper Downs /cdowns@ifa.hawaii.edu (version 0)
+!Development for the present version: Igor Sokolov
 !read_inputs: #TRBOUNDARY (sets the type of BC at the corona boundary)
+!Do not read TeBoundary and NeBoundary, set them equal to those
+!for chromosphere or for the top of the transition region, depending on the BC
 !
 !init_session: checks the presence of #TRBOUNDARY, #MAGNETOGRAM and
 !#PLASMA commands, sets the dimensionless constans for density and temperature
 !at the coronal base and for the heat conduction coefficient.
 !
 !set_ics: initialize the MHD parameters using the Parker solution.
+!Intialize waves acoordin to the "adiabatic law"
+!
 !
 !set_initial_perturbation: initialize the "unsigned flux" model, calculate 
 !the total heating and compares with the contribution from the primary model
 !
 !face_bcs: implements two sorts of the BC at the low boundary: chromo and REB
+!Set the BC for waves
 !
 !get_log_var: magnetic and internal energy, total heating
 !
@@ -278,6 +283,8 @@ contains
          UnitT_, UnitX_
     use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_
     use ModFaceGradient, ONLY: get_face_gradient
+    use ModWaves,       ONLY: UseAlfvenWaves
+    use ModAlfvenWaveHeating, ONLY: adiabatic_law_4_wave_state
 
 
     real, intent(out) :: VarsGhostFace_V(nVar)
@@ -310,6 +317,8 @@ contains
 
     VarsGhostFace_V(Rho_) =  Density
     VarsGhostFace_V(p_) = Density*Temperature
+    if(UseAlfvenWaves)call adiabatic_law_4_wave_state(&
+        VarsGhostFace_V, FaceCoords_D, B0Face_D)
 
     !\
     ! Apply corotation if needed
@@ -403,12 +412,14 @@ contains
 
   subroutine user_set_ics
 
-    use ModAdvance,    ONLY: State_VGB, WaveFirst_, WaveLast_
+    use ModAdvance,    ONLY: State_VGB, WaveFirst_, WaveLast_, B0_DGB
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
     use ModMain,       ONLY: nI, nJ, nK, globalBLK
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          BodyRho_I, BodyTDim_I, No2Si_V, UnitU_, UnitN_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_
+    use ModWaves,       ONLY: UseAlfvenWaves
+    use ModAlfvenWaveHeating, ONLY: adiabatic_law_4_wave_state
 
     integer :: i, j, k, iBlock
 
@@ -521,7 +532,12 @@ contains
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
        State_VGB(P_,i,j,k,iBlock) = Rho*T0
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
-
+       if(UseAlfvenWaves)call adiabatic_law_4_wave_state(&
+            State_VGB(:, i, j, k, iBlock),&
+            (/x_BLK(i, j, k, iBlock), &
+              y_BLK(i, j, k, iBlock), &
+              z_BLK(i, j, k, iBlock)/), &
+              B0_DGB(:, i, j, k, iBlock))
     end do; end do; end do
 
   end subroutine user_set_ics
@@ -953,6 +969,8 @@ contains
        TeSi =Te*No2Si_V(UnitTemperature_)
     endif
     if(present(TeOut))TeOut = TeSi
+    if(present(CvOut))CvOut =  inv_gm1*State_V(Rho_)/TeFraction * &
+         No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
     
     if(present(HeatCondOut))then
        HeatCond = HeatCondPar * Te**2.5

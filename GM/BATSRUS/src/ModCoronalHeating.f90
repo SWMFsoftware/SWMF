@@ -1,4 +1,104 @@
 !^CFG COPYRIGHT UM
+!
+!These parameters may be used to parameterize
+!the coronal heating in terms of waves
+module ModAlfvenWaveHeating
+  implicit none
+  
+  !If this locical is set to .true. the heating function is parameterized
+  !in terms of the absorption of the Alfven Waves
+  logical:: UseAlfvenWaveHeating = .false.
+  
+  !-------------------Original Steve Cranmer's code-----------------------!
+  !C  Wave action conservation constant.  Earlier models found values that!
+  !C  ranged between:                                                     !
+  !C     parameter (FoBconst=2.0d+04)                                     !
+  !C     parameter (FoBconst=9.0d+04)                                     !
+  !C  but this paper uses an intermediate value:                          !
+  !      parameter (FoBconst=5.0d+04)                                     !
+  !-----------------------------------------------------------------------!
+  
+  !------------------Comment from Igor------------------------------------!
+  !The consideration of the wave action conservation (about the wave      !
+  !action see for example, Sokolov et al 2009) explains only the          !
+  !conservation of this invariant along the flux tube. The choice of the  !
+  !ratio, (Flux Density Along The Flux tube) / (Magnetic field intensity),!
+  !to be also constant over the solar surface is formulated in Suzuki,2006!
+  !(see also the papers cited there) as the contition for the average of  !
+  ! < \delta B_\perp \delta u_\perp >. Another reincarnation of the same  !
+
+  real :: cEnergyFluxPerBCgs = 5.0e4 !erg/cm2/s/Gs
+
+  !If the wave energy flux, directed along the magnetic field and equal,  !
+  !in neglecting the plasma speed, to VAlfven * (Wave Energy Density      !
+  !is assumed to be proportional to the magnetic field intensity, then    !
+  ! Wave Energy Density [CGS] = cEnergyFluxPerBCgs * B[CGS]/VAlfvenCgs =  !
+  != cEnergyFluxPerBCgs * sqrt(4\pi * RhoCgs). The "adiabatic law" comes  !
+  !from here: Ew=const *\sqrt(Rho).
+  real :: cAdiabaticLaw = 0.0
+contains
+  !===================================
+  subroutine set_adiabatic_law_4_waves
+    use ModPhysics, ONLY: UnitRho_, UnitEnergyDens_, Si2No_V, No2Si_V
+    use ModConst  , ONLY: cTwoPi
+   
+    real, parameter:: Cgs2Si4EnergyDens = 1.0e-7 & !1 erg to J
+                                        / 1.0e-6   !1 cm3 to m3
+    real, parameter:: Si2Cgs4Dens       = 1.0e+3 & !1 kg in g
+                                        / 1.0e+6   !1 m3 in cm3
+    !---------------------------------------
+
+    cAdiabaticLaw = & ! (Wave Energy Demsity [NoDim]/sqrt(Rho[NoDim)=    1
+         ( sqrt(2.0 * cTwoPi * No2Si_V(UnitRho_) * & ! Rho[NoDim]        2
+                Si2Cgs4Dens)* &                      !                   3
+         cEnergyFluxPerBCgs ) &      !Wave Energy Density [CGS]          4
+         *Cgs2Si4EnergyDens   &      !Wave Energy Density [SI]           5
+         *Si2No_V(UnitEnergyDens_)   !Wave Energy Density [NoDim]        6
+    !    /sqrt(Rho[NoDim]), this square root cancels with that in line 2
+  end subroutine set_adiabatic_law_4_waves
+  !===================================  
+  subroutine adiabatic_law_4_wave_state(State_V, Xyz_D, B0_D)
+    use ModVarIndexes, ONLY: nVar, Bx_, Bz_, ExtraEInt_, Rho_
+    use ModMain, ONLY: nDim, UseB0
+    use ModWaves
+
+    !Input and output parameters:   
+   
+    !WaveFirst_:WaveLast_ components of this vector are to be filled in:
+    real, intent(inout) :: State_V(nVar)  
+
+    !If UseAlfvenWaves, the Plus or Minus waves are intialized, depending on
+    !the sign of {\bf B}\cdot{\bf r}, therefore, we need the following 
+    !parameters:
+    real, intent(in), dimension(nDim):: Xyz_D, B0_D
+
+
+    real:: BTotal_D(nDim), EWaveTotal
+    !--------------------------------------------------------!
+
+    EWaveTotal = cAdiabaticLaw * sqrt(State_V(Rho_))
+   
+ 
+    BTotal_D = State_V(Bx_:Bz_)
+    if(UseB0) BTotal_D = BTotal_D + B0_D
+    
+    !Figure out the sign of {\bf B}\cdot{\bf r}
+    if( sum( BTotal_D*Xyz_D ) > 0) then
+       
+       State_V(WaveFirst_:WaveLast_) = EWaveTotal * SpectrumPlus_W
+       
+    else
+       
+       State_V(WaveFirst_:WaveLast_) = EWaveTotal * SpectrumMinus_W
+       
+    end if
+    if( UseWavePressureLtd )&
+         State_V(ExtraEInt_) = sum(State_V(WaveFirst_:WaveLast_))
+  end subroutine adiabatic_law_4_wave_state
+  
+end module ModAlfvenWaveHeating
+
+
 !======================!Cranmer heating function!====================!
 !HISTORY:
 !
@@ -31,6 +131,7 @@ module ModNonWKBHeating
   !      parameter (xRsun=6.96d+10)
   !
   use ModConst, ONLY: rSun,cPi
+  use ModAlfvenWaveHeating
   implicit none
   SAVE
   PRIVATE !Except
@@ -63,26 +164,7 @@ module ModNonWKBHeating
 
   real,parameter:: cPi4 = 4.0 * cPi, cSqrt3Pi = 3.06998016655
 
-  !-------------------Original Steve Cranmer's code-----------------------!
-  !C  Wave action conservation constant.  Earlier models found values that!
-  !C  ranged between:                                                     !
-  !C     parameter (FoBconst=2.0d+04)                                     !
-  !C     parameter (FoBconst=9.0d+04)                                     !
-  !C  but this paper uses an intermediate value:                          !
-  !      parameter (FoBconst=5.0d+04)                                     !
-  !-----------------------------------------------------------------------!
-
-  !------------------Comment from Igor------------------------------------!
-  !The consideration of the wave action conservation (about the wave      !
-  !action see for example, Sokolov et al 2009) explains only the          !
-  !conservation of this invariant along the flux tube. The choice of the  !
-  !ratio, (Flux Density Along The Flux tube) / (Magnetic field intensity),!
-  !to be also constant over the solar surface is formulated in Suzuki,2006!
-  !(see also the papers cited there) as the contition for the average of  !
-  ! < \delta B_\perp \delta u_\perp >. Another reincarnation of the same
-
-  real,parameter:: cEnergyFluxPerB = 5.0e4 !erg/cm2/s/Gs
-
+  
   !C  Turbulent correlation length normalization.  Earlier models found
   !C  values that ranged from a minimum of (Cranmer et al. 2007):
   !C     parameter (ellconst=2.876d+08)
@@ -319,7 +401,7 @@ contains
     !   end if
 
     if(.not.present(WaveEnergyDensitySI))then
-       WaveEnergyDensityCGS = cEnergyFluxPerB * VAlfven * BMagCGS/&
+       WaveEnergyDensityCGS = cEnergyFluxPerBCgs * VAlfven * BMagCGS/&
             UPlusVA**2
     else
        WaveEnergyDensityCGS = WaveEnergyDensitySI * 10.0
@@ -763,6 +845,7 @@ contains
   !===========================
   subroutine init_coronal_heating
     use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitT_
+    use ModAlfvenWaveHeating
     !--------------------
 
     if(.not.DoInit)return
@@ -772,6 +855,9 @@ contains
         HeatingAmplitude =  HeatingAmplitudeCgs*0.1 &
              *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
     end if
+
+    call set_adiabatic_law_4_waves
+
   end subroutine init_coronal_heating
   !===========================
   subroutine read_active_region_heating
