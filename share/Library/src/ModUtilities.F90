@@ -1,5 +1,5 @@
+!-*- mode: f90 -*- 
 !^CFG COPYRIGHT UM
-!
 !BOP
 !
 !MODULE: ModUtilities - Simple Methods for CON and Components
@@ -230,6 +230,44 @@ contains
        if(nString == MaxString) RETURN      ! Check for maximum number of parts
     end do
   end subroutine split_string
+
+  !BOP ========================================================================
+  !ROUTINE: join_string - join string array into a single string
+  !INTERFACE:
+
+  subroutine join_string(nString, String_I, String, StringSepIn)
+
+    implicit none
+
+    !INPUT ARGUMENTS:
+    integer,             intent(in):: nString
+    character(len=*),    intent(in):: String_I(nString)
+    character, optional, intent(in):: StringSepIn
+    !OUTPUT ARGUMENTS:
+    character (len=*), intent(out):: String
+
+    !DESCRIPTION:
+    ! Join the input string array into one string. The parts are joined
+    ! with spaces or the optional StringSepIn.
+    !EOP
+
+    character(len=*), parameter :: NameSub = 'join_string'
+
+    character:: StringSep
+
+    integer :: i
+    !--------------------------------------------------------------------------
+    if(present(StringSepIn))then
+       StringSep = StringSepIn
+    else
+       StringSep = ' '
+    endif
+    String = String_I(1)
+    do i = 2, nString
+      String = trim(String) // StringSep // String_I(i)
+    end do
+
+  end subroutine join_string
 
   !BOP ========================================================================
   !ROUTINE: upper_case - convert string to all upper case
