@@ -1311,7 +1311,7 @@ contains
     use ModMain,       ONLY: time_accurate,UseUserHeating,x_,y_,z_,  &
          UseRotatingFrame
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, P_, &
-         ExtraEInt_ => ScalarFirst_
+         Ew_ => ScalarFirst_
 
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: nVar, State_VGB
@@ -1448,9 +1448,9 @@ contains
             cTwo*(DensCell+RhoFRope),VarsTrueFace_V(rho_))
        VarsGhostFace_V(P_  ) = max(-VarsTrueFace_V(P_       )+ &
             cTwo*PresCell,VarsTrueFace_V(P_  ))
-       VarsGhostFace_V(ExtraEInt_) = max(-VarsTrueFace_V(ExtraEInt_)+             & 
+       VarsGhostFace_V(Ew_) = max(-VarsTrueFace_V(Ew_)+             & 
             cTwo*PresCell*(cOne/(GammaCell-cOne)-inv_gm1),          &
-            VarsTrueFace_V(ExtraEInt_))
+            VarsTrueFace_V(Ew_))
     else
        !\
        ! Rotate to spherical coordinates
@@ -1506,7 +1506,7 @@ contains
           BphiFaceInside   =  BphiFaceOutside
           VarsGhostFace_V(rho_     ) = VarsTrueFace_V(rho_     )
           VarsGhostFace_V(P_       ) = VarsTrueFace_V(P_       )
-          VarsGhostFace_V(ExtraEInt_) = VarsTrueFace_V(ExtraEInt_)
+          VarsGhostFace_V(Ew_) = VarsTrueFace_V(Ew_)
        else
           !\
           ! At the base of open field regions::
@@ -1519,7 +1519,7 @@ contains
           BphiFaceInside   = cZero
           VarsGhostFace_V(Rho_) = cOne
           VarsGhostFace_V(P_  ) = inv_g
-          VarsGhostFace_V(ExtraEInt_ ) = VarsTrueFace_V(ExtraEInt_)
+          VarsGhostFace_V(Ew_ ) = VarsTrueFace_V(Ew_)
        endif
        !\
        ! Rotate back to cartesian coordinates::
@@ -1798,7 +1798,7 @@ contains
          unusedBLK,UseUserHeating,UseUserB0,gcn,x_,y_,z_
     use ModIO,        ONLY: restart
     use ModVarIndexes,ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_, &
-         ExtraEInt_ => ScalarFirst_ 
+         Ew_ => ScalarFirst_ 
     use ModAdvance,   ONLY: State_VGB,B0_DGB,tmp1_BLK,tmp2_BLK
     use ModProcMH,    ONLY: iProc,nProc,iComm
     use ModNumConst,  ONLY: cZero,cQuarter,cHalf,cOne,cTwo,cE1,cE9,  &
@@ -1862,7 +1862,7 @@ contains
                   4.0E+01*((ROne-cOne)/(Rmax-cOne))*yy/RR
              State_VGB(rhoUz_   ,i,j,k,iBLK) = Dens_BLK*&
                   4.0E+01*((ROne-cOne)/(Rmax-cOne))*zz/RR
-             State_VGB(ExtraEInt_,i,j,k,iBLK) = &
+             State_VGB(Ew_,i,j,k,iBLK) = &
                   Pres_BLK*(cOne/(Gamma_BLK-cOne)-inv_gm1)
           endif
           !----------------------------------------------------------------
@@ -3146,7 +3146,7 @@ contains
 
   !========================================================================
   subroutine user_update_states(iStage,iBlock)
-    use ModVarIndexes, ExtraEInt_ => ScalarFirst_
+    use ModVarIndexes, Ew_ => ScalarFirst_
     use ModSize
     use ModAdvance, ONLY: State_VGB
     use ModMain,    ONLY: nStage
@@ -3169,9 +3169,9 @@ contains
        State_VGB(P_   ,i,j,k,iBlock)=           &
             (GammaCell-cOne)*                   &
             (inv_gm1*State_VGB(P_,i,j,k,iBlock)&
-            + State_VGB(ExtraEInt_,i,j,k,iBlock)& 
+            + State_VGB(Ew_,i,j,k,iBlock)& 
        )
-       State_VGB(ExtraEInt_,i,j,k,iBlock)=       & 
+       State_VGB(Ew_,i,j,k,iBlock)=       & 
             State_VGB(P_,i,j,k,iBlock)*(cOne/(GammaCell - cOne) - inv_gm1)
     end do; end do; end do
     call calc_energy_cell(iBlock)
@@ -3197,7 +3197,7 @@ contains
     use ModMain,       ONLY: unusedBLK,nBLK,iteration_number,   &
          x_,y_,z_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, rho_, rhoUx_, rhoUy_, rhoUz_, P_, &
-         ExtraEInt_ => ScalarFirst_
+         Ew_ => ScalarFirst_
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0_DGB
     use ModPhysics,    ONLY: inv_gm1,No2Si_V(UnitEnergydens_),No2Si_V(UnitX_),&
@@ -3245,7 +3245,7 @@ contains
     case('ew_t','Ew_t','ew_r','Ew_r')
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = State_VGB(ExtraEInt_,:,:,:,iBLK)
+          tmp1_BLK(:,:,:,iBLK) = State_VGB(Ew_,:,:,:,iBLK)
        end do
        VarValue = unit_energy*integrate_BLK(1,tmp1_BLK)
     case('ms_t','Ms_t')

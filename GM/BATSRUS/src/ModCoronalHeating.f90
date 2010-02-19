@@ -58,7 +58,7 @@ contains
   end subroutine set_adiabatic_law_4_waves
   !===================================  
   subroutine adiabatic_law_4_wave_state(State_V, Xyz_D, B0_D)
-    use ModVarIndexes, ONLY: nVar, Bx_, Bz_, ExtraEInt_, Rho_
+    use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Ew_, Rho_
     use ModMain, ONLY: nDim, UseB0
     use ModWaves
 
@@ -93,7 +93,7 @@ contains
        
     end if
     if( UseWavePressureLtd )&
-         State_V(ExtraEInt_) = sum(State_V(WaveFirst_:WaveLast_))
+         State_V(Ew_) = sum(State_V(WaveFirst_:WaveLast_))
   end subroutine adiabatic_law_4_wave_state
   
 end module ModAlfvenWaveHeating

@@ -173,7 +173,7 @@ contains
        if(iStage==nStage.and.nWave>2)call update_wave_group_advection(iBlock)
        if(UseWavePressureLtd)then
           do k=1,nK;do j=1,nJ; do i=1,nI
-             State_VGB(ExtraEInt_,i,j,k,iBlock)= sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+             State_VGB(Ew_,i,j,k,iBlock)= sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
           end do; end do; end do
        end if
     end if

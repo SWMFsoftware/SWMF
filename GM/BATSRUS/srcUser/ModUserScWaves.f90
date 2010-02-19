@@ -287,7 +287,7 @@ contains
     VarsGhostFace_V(P_) = &
          max(VarsGhostFace_V(Rho_)*TBase, &
          VarsTrueFace_V(P_))
-    VarsGhostFace_V(ExtraEInt_) = &!max(-VarsTrueFace_V(ExtraEInt_)+ &
+    VarsGhostFace_V(Ew_) = &!max(-VarsTrueFace_V(Ew_)+ &
          VarsGhostFace_V(Rho_)*TBase &
          *(1.0/(GammaCell-1.0)-inv_gm1)
     
@@ -456,7 +456,7 @@ contains
             *U0*((ROne-1.0)/(Rmax-1.0))*y/R
        State_VGB(RhoUz_,i,j,k,iBLK) = Dens_BLK &
             *U0*((ROne-1.0)/(Rmax-1.0))*z/R
-       State_VGB(ExtraEInt_,i,j,k,iBLK) = Pres_BLK &
+       State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK &
             *(1.0/(Gamma_BLK-1.0)-inv_gm1) 
     
     end do; end do; end do
@@ -526,8 +526,8 @@ contains
                *0.25*(R_BLK(i,j,k,iBlock)/2.5)**1.50))
      
           State_VGB(P_   ,i,j,k,iBlock)=(Gamma0-1.0)*      &
-               (inv_gm1*State_VGB(P_,i,j,k,iBlock) + State_VGB(ExtraEInt_,i,j,k,iBlock))
-          State_VGB(ExtraEInt_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock) &
+               (inv_gm1*State_VGB(P_,i,j,k,iBlock) + State_VGB(Ew_,i,j,k,iBlock))
+          State_VGB(Ew_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock) &
                *(1.0/(Gamma0-1.0)-inv_gm1)
        end do; end do; end do
     end if
@@ -771,7 +771,7 @@ contains
     
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: unusedBLK,nBLK,x_,y_,z_
-    use ModVarIndexes !ONLY: ExtraEInt_,Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
+    use ModVarIndexes !ONLY: Ew_,Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0_DGB
     use ModPhysics,    ONLY: inv_gm1,&
@@ -821,7 +821,7 @@ contains
     case('ew_t','Ew_t','ew_r','Ew_r')
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = State_VGB(ExtraEInt_,:,:,:,iBLK)
+          tmp1_BLK(:,:,:,iBLK) = State_VGB(Ew_,:,:,:,iBLK)
        end do
        VarValue = unit_energy*integrate_BLK(1,tmp1_BLK)
     case('ms_t','Ms_t')

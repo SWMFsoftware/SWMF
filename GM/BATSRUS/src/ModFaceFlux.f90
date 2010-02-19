@@ -2076,7 +2076,7 @@ contains
          if(.not.UseWavePressureLtd)then
             pTotal = pTotal + (GammaWave - 1.0)*sum(State_V(WaveFirst_:WaveLast_))
          else
-            pTotal = pTotal + (GammaWave - 1.0)*State_V(ExtraEInt_)
+            pTotal = pTotal + (GammaWave - 1.0)*State_V(Ew_)
          end if
       end if
       if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)

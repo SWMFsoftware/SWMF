@@ -193,7 +193,7 @@ contains
   end subroutine read_frequency
   !============================================================================
   subroutine set_wave_state(EWaveTotal, State_V, Xyz_D, B0_D)
-    use ModVarIndexes, ONLY: nVar, Bx_, Bz_, ExtraEInt_
+    use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Ew_
     use ModMain, ONLY: nDim, UseB0
 
     !Input and output parameters:
@@ -231,7 +231,7 @@ contains
     else
        State_V(WaveFirst_:WaveLast_) = EWaveTotal * Spectrum_W
        if( UseWavePressureLtd )&
-            State_V(ExtraEInt_) = sum(State_V(WaveFirst_:WaveLast_))
+            State_V(Ew_) = sum(State_V(WaveFirst_:WaveLast_))
     end if
   end subroutine set_wave_state
   !============================================================================

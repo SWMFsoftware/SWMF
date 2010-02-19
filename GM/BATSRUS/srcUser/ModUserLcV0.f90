@@ -948,7 +948,7 @@ contains
     use ModPhysics,    ONLY: gm1, inv_gm1, No2Si_V, Si2No_V, &
          UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
          UnitX_, UnitT_, UnitU_, UnitN_, cRadiationNo, g, Clight
-    use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_, ExtraEint_
+    use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_
     
     real, intent(in) :: State_V(nVar)
     integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
