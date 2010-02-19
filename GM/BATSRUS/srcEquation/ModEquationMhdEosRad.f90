@@ -79,22 +79,22 @@ module ModVarIndexes
        'Bx  ', & ! Bx_
        'By  ', & ! By_
        'Bz  ', & ! Bz_
-       ('Ew  ', iWave=WaveFirst_,WaveLast_), &
+       ('I   ', iWave=WaveFirst_,WaveLast_), &
        'EInt', & ! ExtraEint_
        'P   ', & ! p_
        'E   '/)  ! Energy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'rho mx my mz bx by bz Ew EInt e'
+       'rho mx my mz bx by bz I EInt e'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz bx by bz Ew EInt p'
+       'Rho Ux Uy Uz bx by bz I EInt p'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "Ew", "EInt", "p"'
+       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "I", "EInt", "p"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
