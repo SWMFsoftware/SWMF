@@ -637,7 +637,7 @@ subroutine init_mhd_variables
      NameUnitUserIdl_V(ExtraEint_) = NameIdlUnit_V(UnitEnergyDens_)
   end if
 
-  if(NameVar_V(Hyp_) == 'Hyp')then
+  if(Hyp_ > 1)then
      ! Set the scalar field Phi used in hyperbolic cleaning
      UnitUser_V(Hyp_) = No2Io_V(UnitB_)*No2Io_V(UnitU_)
      NameUnitUserTec_V(Hyp_) = &

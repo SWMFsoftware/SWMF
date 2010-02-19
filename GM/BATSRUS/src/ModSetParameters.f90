@@ -1332,7 +1332,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#HYPERBOLICDIVB")
         if(.not.UseB)CYCLE READPARAM
-        if(NameVar_V(Hyp_) /= 'Hyp')then
+        if(Hyp_ == 1)then
            if(iProc==0)then
               write(*,*) NameSub // 'WARNING: ',&
                    'there is no hyperbolic scalar variable in the equation module!'
