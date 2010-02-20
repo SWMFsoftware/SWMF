@@ -2,7 +2,7 @@ module ModVarIndexes
 
   use ModSingleFluid
   use ModExtraVariables,        &
-       Redefine1 => ExtraEInt_, &
+       Redefine1 => Ew_, &
        Redefine2 => nWave,      &
        Redefine3 => WaveFirst_, &
        Redefine4 => WaveLast_
@@ -50,7 +50,7 @@ module ModVarIndexes
        Bx_    = 5,    &
        By_    = 6,    &
        Bz_    = 7,    &
-       ExtraEInt_    = 8,    &
+       Ew_    = 8,    &
        WaveFirst_ = 9, &
        WaveLast_  = WaveFirst_+nWave-1, &
        p_     = nVar, &
@@ -98,10 +98,10 @@ module ModVarIndexes
   
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVarPref = &
-       'rho mx my mz bx by bz Ew' 
+       'rho mx my mz bx by bz e' 
      
   character(len=*), parameter :: NameConservativeVarSuff = &
-       ' e'
+       ' Ew'
  
   character(len=4*nWave+len(NameConservativeVarPref) + &
        len(NameConservativeVarSuff))      :: NameConservativeVar = &
