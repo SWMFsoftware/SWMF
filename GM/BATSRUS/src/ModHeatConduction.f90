@@ -291,6 +291,7 @@ contains
          UnitEnergyDens_, UnitU_, UnitX_
     use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_, Pe_
+    use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
 
     integer, intent(in) :: iDim, iFace, jFace, kFace, iBlock
     real, intent(in) :: State_V(nVar), Normal_D(3)
@@ -349,6 +350,10 @@ contains
        else
           ! Spitzer form for collisional regime
           HeatCoef = HeatCondPar*Te**2.5
+          ! Artificial modified heat conduction for a smoother transition
+          ! region, Linker et al. (2001)
+          if(DoExtendTransitionRegion)&
+            HeatCoef = HeatCoef * extension_factor(TeSi)
        end if
     end if
 

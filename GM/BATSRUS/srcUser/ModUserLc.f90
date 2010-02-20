@@ -37,9 +37,6 @@
 !
 !set_plot_var: implement plot variables qheat and qrad (heating and cooling
 !functions
-!
-!material_properties: (1) an output for Te and (2) modified Spitzer heat
-!conduction
 ! 
 module ModUser
   use ModMain,      ONLY: nBLK, nI, nJ, nK
@@ -58,8 +55,7 @@ module ModUser
        IMPLEMENTED9 => user_specify_refinement,         &
        IMPLEMENTED10=> user_set_boundary_cells,         &
        IMPLEMENTED11=> user_set_outerbcs,               &
-       IMPLEMENTED12=> user_set_plot_var,               &
-       IMPLEMENTED13=> user_material_properties
+       IMPLEMENTED12=> user_set_plot_var
 
 
   include 'user_module.h' !list of public methods
@@ -88,8 +84,6 @@ module ModUser
   real :: BoundaryTe
   real :: BoundaryRho
 
-
-  real :: HeatCondParSi, HeatCondPar
 
   ! Variables for the REB model
   logical :: IsNewBlockTeCalc(nBLK) = .true.
@@ -226,18 +220,6 @@ contains
     TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
          /(1 + AverageIonCharge*ElectronTemperatureRatio)
 
-    ! *** HEAT CONDUCTION COEFF calc from ModHeatConduction
-    ! electron heat conduct coefficient for single charged ions
-    ! = 9.2e-12 W/(m*K^(7/2))
-    HeatCondParSi = 3.2*3.0*cTwoPi/CoulombLog &
-         *sqrt(cTwoPi*cBoltzmann/cElectronMass)*cBoltzmann &
-         *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
-
-    ! unit HeatCondParSi is W/(m*K^(7/2))
-    HeatCondPar = HeatCondParSi &
-         *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)**3.5 &
-         *Si2No_V(UnitU_)*Si2No_V(UnitX_)
-
 
     ! calc normalized values of BC Te and Ne
     ! note, implicitly assuming Ne = Ni here
@@ -333,6 +315,7 @@ contains
   contains
     !==========================================================================
     real function calc_reb_density()
+      use ModConst, ONLY: kappa_0_e
 
       ! function to return the density given by the Radiative Energy Balance Model
       ! (REB) for the Transition region. Originally given in Withbroe 1988, this
@@ -395,7 +378,7 @@ contains
       TotalFaceBunit_D = TotalFaceB_D / sqrt(sum(TotalFaceB_D**2))
 
       ! calculate the heat conduction term in the REB numerator
-      qCondSi = 0.5 * HeatCondParSi * BoundaryTeSi**3 &
+      qCondSi = 0.5 * kappa_0_e(20.) * BoundaryTeSi**3 &
            * sum(FaceGrad_D*TotalFaceBunit_D)**2 &
            * (No2Si_V(UnitTemperature_) / No2Si_V(UnitX_))**2
 
@@ -846,8 +829,9 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
     
     use ModSize,    ONLY: nI, nJ, nK
-    use ModPhysics, ONLY: No2Si_V, UnitT_,UnitEnergyDens_
-    use ModAdvance,  ONLY: State_VGB
+    use ModPhysics, ONLY: No2Si_V, UnitT_, UnitEnergyDens_, &
+         UnitTemperature_
+    use ModAdvance,  ONLY: State_VGB, Rho_, p_
     
     implicit none
     
@@ -891,7 +875,9 @@ contains
        
     case('qrad')
        do k=-1,nK+2 ; do j=-1,nJ+2 ; do i=-1,nI+2
-          call user_material_properties(State_VGB(:,i,j,k,iBlock),TeOut=AuxTeSi)
+          AuxTeSi = TeFraction * State_VGB(P_,i,j,k,iBlock) &
+            / State_VGB(Rho_,i,j,k,iBlock) *No2Si_V(UnitTemperature_)
+
           call get_radiative_cooling(i, j, k, iBlock, AuxTeSi, RadiativeCooling)
           PlotVar_G(i,j,k) = RadiativeCooling
        end do; end do ; end do
@@ -905,90 +891,6 @@ contains
     end select
   end subroutine user_set_plot_var
   
-  !============================================================================
-  
-  subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
-       EinternalIn, TeIn, NatomicOut, &
-       EinternalOut, TeOut, PressureOut, &
-       CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
-       OpacityPlanckOut_W, OpacityRosselandOut_W, &
-       PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
-    
-    ! The State_V vector is in normalized units
-    
-    use ModAdvance,    ONLY: nWave, UseElectronPressure
-    use ModConst,      ONLY: cBoltzmann
-    use ModPhysics,    ONLY: gm1, inv_gm1, No2Si_V, Si2No_V, &
-         UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
-         UnitX_, UnitT_, UnitU_, UnitN_, cRadiationNo, g, Clight
-    use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_
-    
-    real, intent(in) :: State_V(nVar)
-    integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
-    real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
-    real, optional, intent(in)  :: TeIn                    ! [K]
-    real, optional, intent(out) :: NatomicOut              ! [1/m^3]
-    real, optional, intent(out) :: EinternalOut            ! [J/m^3]
-    real, optional, intent(out) :: TeOut                   ! [K]
-    real, optional, intent(out) :: PressureOut             ! [Pa]
-    real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: GammaOut                ! dimensionless
-    real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
-    real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
-    real, optional, intent(out) :: &
-         OpacityPlanckOut_W(nWave)                         ! [1/m]
-    real, optional, intent(out) :: &
-         OpacityRosselandOut_W(nWave)                      ! [1/m]
-    
-    ! Multi-group specific interface. The variables are respectively:
-    !  Group Planckian spectral energy density
-    !  Derivative of group Planckian by electron temperature
-    !  Group specific heat of the radiation
-    !  Group radiation temperature
-    real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
-    real, optional, intent(out) :: CgTeOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: CgTgOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: TgOut_W(nWave)          ! [K]
-    
-    real :: Rho, Pressure, Te, Ti
-    real :: RhoSi, pSi, TeSi
-    real :: HeatCond
-    
-    character(len=*), parameter :: NameSub = 'user_material_properties'
-    !--------------------------------------------------------------------------
-    
-    Rho = State_V(Rho_)
-    RhoSi = Rho*No2Si_V(Rho_)
-    
-    if(present(TeIn))then
-       TeSi = TeIn
-       Te = TeSi*Si2No_V(UnitTemperature_)
-    else
-       Te = TeFraction * State_V(P_) &
-            / State_V(Rho_)
-       TeSi =Te*No2Si_V(UnitTemperature_)
-    endif
-    if(present(TeOut))TeOut = TeSi
-    if(present(CvOut))CvOut =  inv_gm1*State_V(Rho_)/TeFraction * &
-         No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
-    
-    if(present(HeatCondOut))then
-       HeatCond = HeatCondPar * Te**2.5
-
-       ! Artificial modified heat conduction for a smoother transition
-          ! region, Linker et al. (2001)
-       if(DoExtendTransitionRegion)&
-            HeatCond = HeatCond * extension_factor(TeSi)
-
-       HeatCondOut = HeatCond &
-            *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
-            *No2Si_V(UnitU_)*No2Si_V(UnitX_)
-    end if
-    
-  end subroutine user_material_properties
-  
-  !============================================================================
-  
-  
+  !============================================================================ 
 end module ModUser
 
