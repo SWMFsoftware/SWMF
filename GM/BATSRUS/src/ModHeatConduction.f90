@@ -24,10 +24,10 @@ module ModHeatConduction
 
   ! Variables for setting the field-aligned heat conduction coefficient
   character(len=20), public :: TypeHeatConduction = 'user'
-  logical :: DoModifyHeatConduction, DoUserHeatConduction
+  logical :: DoUserHeatConduction
 
-  real :: TmodifySi = 3.0e5, DeltaTmodifySi = 2.0e4
-  real :: HeatCondPar, IonHeatCondPar, Tmodify, DeltaTmodify
+  ! Dimensionless heat conduction coefficients
+  real :: HeatCondPar, IonHeatCondPar
 
   logical :: DoWeakFieldConduction = .false.
   real :: BmodifySi = 1.0e-7, DeltaBmodifySi = 1.0e-8 ! modify about 1 mG
@@ -72,9 +72,6 @@ contains
           select case(TypeHeatConduction)
           case('user')
           case('spitzer')
-          case('modified')
-             call read_var('TmodifySi', TmodifySi)
-             call read_var('DeltaTmodifySi', DeltaTmodifySi)
           case default
              call stop_mpi(NameSub//': unknown TypeHeatConduction = ' &
                   //TypeHeatConduction)
@@ -175,18 +172,8 @@ contains
          *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
     DoUserHeatConduction = .false.
-    DoModifyHeatConduction = .false.
 
-    if(TypeHeatConduction == 'user')then
-       DoUserHeatConduction = .true.
-    elseif(TypeHeatConduction == 'modified')then
-       DoModifyHeatConduction = .true.
-    end if
-
-    if(DoModifyHeatConduction)then
-       Tmodify = TmodifySi*Si2No_V(UnitTemperature_)
-       DeltaTmodify = DeltaTmodifySi*Si2No_V(UnitTemperature_)
-    end if
+    if(TypeHeatConduction == 'user') DoUserHeatConduction = .true.
 
     if(DoWeakFieldConduction)then
        Bmodify = BmodifySi*Si2No_V(UnitB_)
@@ -298,7 +285,7 @@ contains
     real, intent(out):: HeatCond_D(3)
 
     real :: B_D(3), Bnorm, Bunit_D(3), TeSi, Te
-    real :: HeatCoefSi, HeatCoef, FractionSpitzer, FractionFieldAligned
+    real :: HeatCoefSi, HeatCoef, FractionFieldAligned
     !--------------------------------------------------------------------------
 
     if(UseB0)then
@@ -341,20 +328,11 @@ contains
               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
     else
 
-       if(DoModifyHeatConduction)then
-          ! Artificial modified heat conduction for a smoother transition
-          ! region, Linker et al. (2001)
-          FractionSpitzer = 0.5*(1.0+tanh((Te-Tmodify)/DeltaTmodify))
-          HeatCoef = HeatCondPar*(FractionSpitzer*Te**2.5 &
-               + (1.0 - FractionSpitzer)*Tmodify**2.5)
-       else
-          ! Spitzer form for collisional regime
-          HeatCoef = HeatCondPar*Te**2.5
-          ! Artificial modified heat conduction for a smoother transition
-          ! region, Linker et al. (2001)
-          if(DoExtendTransitionRegion)&
-            HeatCoef = HeatCoef * extension_factor(TeSi)
-       end if
+       ! Spitzer form for collisional regime
+       HeatCoef = HeatCondPar*Te**2.5
+       ! Artificial modified heat conduction for a smoother transition
+       ! region, Linker et al. (2001)
+       if(DoExtendTransitionRegion) HeatCoef = HeatCoef*extension_factor(TeSi)
     end if
 
     if(DoWeakFieldConduction)then
