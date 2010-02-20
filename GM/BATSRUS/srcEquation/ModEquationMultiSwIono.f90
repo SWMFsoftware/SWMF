@@ -90,27 +90,27 @@ module ModVarIndexes
        1.0  /)! IonoEnergy_
 
   ! The names of the variables used in i/o
-  character(len=*), parameter :: NameVar_V(nVar+nFluid) = (/ &
-       'Rho  ',   & ! Rho_
-       'Mx   ',   & ! RhoUx_
-       'My   ',   & ! RhoUy_
-       'Mz   ',   & ! RhoUz_
-       'Bx   ',   & ! Bx_
-       'By   ',   & ! By_
-       'Bz   ',   & ! Bz_
-       'P    ',   & ! p_
-       'SwRho',   & ! SwRho_
-       'SwMx ',   & ! SwRhoUx_
-       'SwMy ',   & ! SwRhoUy_
-       'SwMz ',   & ! SwRhoUz_
-       'SwP  ',   & ! SwP_
+  character(len=7) :: NameVar_V(nVar+nFluid) = (/ &
+       'Rho    ', & ! Rho_
+       'Mx     ', & ! RhoUx_
+       'My     ', & ! RhoUy_
+       'Mz     ', & ! RhoUz_
+       'Bx     ', & ! Bx_
+       'By     ', & ! By_
+       'Bz     ', & ! Bz_
+       'P      ', & ! p_
+       'SwRho  ', & ! SwRho_
+       'SwMx   ', & ! SwRhoUx_
+       'SwMy   ', & ! SwRhoUy_
+       'SwMz   ', & ! SwRhoUz_
+       'SwP    ', & ! SwP_
        'IonoRho', & ! IonoRho_
        'IonoMx ', & ! IonoRhoUx_
        'IonoMy ', & ! IonoRhoUy_
        'IonoMz ', & ! IonoRhoUz_
        'IonoP  ', & ! IonoP_
-       'E    ',   & ! Energy_
-       'SwE  ',   & ! SwEnergy_
+       'E      ', & ! Energy_
+       'SwE    ', & ! SwEnergy_
        'IonoE  ' /) ! IonoEnergy_
 
   ! The space separated list of nVar conservative variables for plotting

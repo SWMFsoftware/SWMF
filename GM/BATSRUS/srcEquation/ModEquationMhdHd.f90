@@ -81,7 +81,7 @@ module ModVarIndexes
        1.0 /) ! NeuEnergy_
 
   ! The names of the variables used in i/o
-  character(len=*), parameter :: NameVar_V(nVar+nFluid) = (/ &
+  character(len=6) :: NameVar_V(nVar+nFluid) = (/ &
        'Rho   ', & ! Rho_
        'Mx    ', & ! RhoUx_
        'My    ', & ! RhoUy_

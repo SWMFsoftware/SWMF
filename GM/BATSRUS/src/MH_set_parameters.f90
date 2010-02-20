@@ -1944,11 +1944,13 @@ contains
   subroutine set_namevar
 
     integer :: iWave
-
+    character(len=lStringLine):: NameWave
+    
     ! Fix the NameVar_V string for waves
     if(WaveLast_ > 1)then
        do iWave = 1, nWave
-          write(NameVar_V(WaveFirst_+iWave-1),'(a,i2.2)') 'I',iWave
+          write(NameWave,'(a,i2.2)') 'I',iWave
+          NameVar_V(WaveFirst_+iWave-1) = NameWave
        end do
     end if
 

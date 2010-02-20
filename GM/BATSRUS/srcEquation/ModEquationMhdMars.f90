@@ -70,7 +70,7 @@ module ModVarIndexes
        1.0 /) ! Energy_
 
   ! The names of the variables used in i/o
-  character(len=*), parameter :: NameVar_V(nVar+1) = (/ &
+  character(len=4) :: NameVar_V(nVar+1) = (/ &
        'Rho ', & ! Rho_
        'Hp  ', & ! RhoHp_
        'O2p ', & ! RhoO2p_
