@@ -370,6 +370,7 @@ contains
     use ModUser,      ONLY: user_get_log_var
     use ModUtilities, ONLY: lower_case
     use ModCurrent,   ONLY: get_current
+    use ModWaves,     ONLY: UseWavePressure
 
     ! Local variables
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
@@ -830,9 +831,14 @@ contains
     case('cfl')
        if(iProc == 0)LogVar_I(iVarTot) = Cfl
 
-    case('ew')
+    case('ew', 'erad')
        if(Ew_ == 1)then
-          LogVar_I(iVarTot) = sum(StateIntegral_V(WaveFirst_:WaveLast_))/Volume
+          if(UseWavePressure)then
+             LogVar_I(iVarTot) = &
+                  sum(StateIntegral_V(WaveFirst_:WaveLast_))/Volume
+          else
+             LogVar_I(iVarTot) = 0.0
+          end if
        else
           LogVar_I(iVarTot) = StateIntegral_V(Ew_)/Volume
        end if
@@ -1031,7 +1037,7 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
      case('bx','by','bz','bxpnt','bypnt','bzpnt','b1xpnt','b1ypnt','b1zpnt', &
           'b1x','b1y','b1z','b0x','b0y','b0z','dst','dstdivb')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitB_)
-     case('e','epnt','ew')
+     case('e','epnt','ew','erad')
         LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitEnergyDens_)
      case('p','ppnt','pmin','pmax')
         LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitP_)

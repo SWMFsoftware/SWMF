@@ -557,6 +557,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModMultiFluid, ONLY: extract_fluid_name, &
        UseMultiIon, nIonFluid, MassIon_I, &
        IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
+  use ModWaves, ONLY: UseWavePressure
 
   implicit none
 
@@ -572,7 +573,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
   integer :: iVar, itmp, jtmp, jVar, iIon
   integer :: i,j,k,l, ip1,im1,jp1,jm1,kp1,km1
-  real :: xfactor,yfactor,zfactor, WaveEnergy
+  real :: xfactor,yfactor,zfactor
 
   integer:: iDir, Di, Dj, Dk
   real :: Jx, Jy, Jz
@@ -1237,14 +1238,19 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
            PlotVar(:,:,:,iVar) = 0.0
         end if
 
-     case('erad')
-        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-           WaveEnergy = 0.0
-           do jVar = WaveFirst_, WaveLast_
-              WaveEnergy = WaveEnergy + State_VGB(jVar,i,j,k,iBLK)
-           end do
-           PlotVar(i,j,k,iVar) = WaveEnergy
-       end do; end do; end do
+     case('ew','erad')
+        if(Ew_ == 1)then
+           if(UseWavePressure)then
+              do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+                 PlotVar(i,j,k,iVar) = &
+                      sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK))
+              end do; end do; end do
+           else
+              PlotVar(:,:,:,iVar) = 0.0
+           end if
+        else
+           PlotVar(:,:,:,iVar) = State_VGB(Ew_,:,:,:,iBLK)
+        end if
 
      case default
         ! Check if the name is one of the state variable names
@@ -1330,7 +1336,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
           ,'bxl','bxr','byl','byr','bzl','bzr' &         !^CFG IF CONSTRAINB
           )
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitB_)
-     case('e','e1','erad')
+     case('e','e1','ew','erad')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitEnergyDens_)
      case('p','pth')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitP_)
@@ -1610,8 +1616,8 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameTecVar = 'blkall'
      case('child')
         NameTecVar = 'Child #'
-     case('erad')
-        NameTecVar = 'Erad'
+     case('ew','erad')
+        NameTecVar = String
         NameUnit   = NameTecUnit_V(UnitEnergydens_)
      case default
         ! Set the default or user defined values
@@ -1692,7 +1698,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
         NameUnit = NameIdlUnit_V(UnitRhoU_)
      case('bx','by','bz','b1x','b1y','b1z','br','b1r')
         NameUnit = NameIdlUnit_V(UnitB_)
-     case('e','erad')
+     case('e','ew','erad')
         NameUnit = NameIdlUnit_V(UnitEnergydens_)
      case('p','pth')
         NameUnit = NameIdlUnit_V(UnitP_)
