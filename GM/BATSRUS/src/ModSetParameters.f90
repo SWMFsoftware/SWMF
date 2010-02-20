@@ -1961,7 +1961,7 @@ contains
     end if
 
     ! space separated NameVar string containing all variable names
-    call join_string(size(NameVar_V), NameVar_V, NameVarCouple)
+    call join_string(nVar, NameVar_V, NameVarCouple)
 
   end subroutine set_namevar
 
