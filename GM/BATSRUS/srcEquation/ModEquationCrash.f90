@@ -74,7 +74,7 @@ module ModVarIndexes
        1.0 /) ! Energy_
 
   ! The names of the variables used in i/o
-  character(len=*), parameter :: NameVar_V(nVar+nFluid) = (/ &
+  character(len=4) :: NameVar_V(nVar+nFluid) = (/ &
        'Rho ', & ! Rho_
        'Mx  ', & ! RhoUx_
        'My  ', & ! RhoUy_
@@ -83,18 +83,18 @@ module ModVarIndexes
        'Be  ', & ! LevelBe_
        'Pl  ', & ! LevelPl_
        'Pe  ', & ! Pe_
-       ('I   ', iWave=WaveFirst_,WaveLast_), &
+       ('I?? ', iWave=WaveFirst_,WaveLast_), &
        'EInt', & ! ExtraEint_
        'P   ', & ! p_
        'E   '/)  ! Energy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Xe Be Pl Pe I EInt E'
+       'Rho Mx My Mz Xe Be Pl Pe Ew EInt E'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Xe Be Pl Pe I EInt P'
+       'Rho Ux Uy Uz Xe Be Pl Pe Ew EInt P'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &

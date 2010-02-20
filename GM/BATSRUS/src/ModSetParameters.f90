@@ -139,6 +139,7 @@ subroutine MH_set_parameters(TypeAction)
   iSession = i_session_read()
 
   if(IsUninitialized)then
+     call set_namevar
      call set_defaults
      IsUninitialized=.false.
   end if
@@ -1937,6 +1938,21 @@ contains
     end if
 
   end function is_first_session
+
+  !===========================================================================
+
+  subroutine set_namevar
+
+    integer :: iWave
+
+    ! Fix the NameVar_V string for waves
+    if(WaveLast_ > 1)then
+       do iWave = 1, nWave
+          write(NameVar_V(WaveFirst_+iWave-1),'(a,i2.2)') 'I',iWave
+       end do
+    end if
+
+  end subroutine set_namevar
 
   !===========================================================================
 

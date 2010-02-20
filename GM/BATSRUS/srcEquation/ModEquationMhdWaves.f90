@@ -158,7 +158,6 @@ contains
     
     do iWave = 1, nWave
        write(NameWaveVar_I(iWave),'(a,i2.2)') 'I',iWave
-       NameVar_V(WaveFirst_+iWave-1) = NameWaveVar_I(iWave)
        NameConservativeVar=trim(NameConservativeVar)//&
             ' '//trim(NameWaveVar_I(iWave))
        NamePrimitiveVar=trim(NamePrimitiveVar)//&

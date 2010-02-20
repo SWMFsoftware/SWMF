@@ -830,6 +830,13 @@ contains
     case('cfl')
        if(iProc == 0)LogVar_I(iVarTot) = Cfl
 
+    case('ew')
+       if(Ew_ == 1)then
+          LogVar_I(iVarTot) = sum(StateIntegral_V(WaveFirst_:WaveLast_))/Volume
+       else
+          LogVar_I(iVarTot) = StateIntegral_V(Ew_)/Volume
+       end if
+
     case default
        ! Check if the variable name is one of the state variables
        NameLogVarLower = NameLogVar_I(iVar)
@@ -1024,7 +1031,7 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
      case('bx','by','bz','bxpnt','bypnt','bzpnt','b1xpnt','b1ypnt','b1zpnt', &
           'b1x','b1y','b1z','b0x','b0y','b0z','dst','dstdivb')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitB_)
-     case('e','epnt')
+     case('e','epnt','ew')
         LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitEnergyDens_)
      case('p','ppnt','pmin','pmax')
         LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitP_)
