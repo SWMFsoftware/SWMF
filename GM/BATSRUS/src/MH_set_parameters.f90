@@ -1946,9 +1946,12 @@ contains
 
   subroutine set_namevar
 
+    use ModUtilities, ONLY: join_string
+
     integer :: iWave
-    character(len=lStringLine):: NameWave
-    
+    character(len=3):: NameWave
+    !-------------------------------------------------------------------------
+
     ! Fix the NameVar_V string for waves
     if(WaveLast_ > 1)then
        do iWave = 1, nWave
@@ -1956,6 +1959,9 @@ contains
           NameVar_V(WaveFirst_+iWave-1) = NameWave
        end do
     end if
+
+    ! space separated NameVar string containing all variable names
+    call join_string(size(NameVar_V), NameVar_V, NameVarCouple)
 
   end subroutine set_namevar
 

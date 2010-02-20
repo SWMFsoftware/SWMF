@@ -71,6 +71,10 @@ Module ModMain
   logical :: UseRaytrace = .false.
   logical :: DoMultiFluidIMCoupling = .false.
 
+  ! Single space separated NameVar string containing all the variable
+  ! names of NameVar_V
+  character(len=size(NameVar_V)*(len(NameVar_V(1))+1)-1) :: NameVarCouple
+
   !\
   ! Parameters for the B0 field
   !/
