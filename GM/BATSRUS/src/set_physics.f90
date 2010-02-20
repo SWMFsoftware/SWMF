@@ -631,6 +631,13 @@ subroutine init_mhd_variables
      NameUnitUserIdl_V(WaveFirst_:WaveLast_) = NameIdlUnit_V(UnitEnergyDens_)
   end if
 
+  if(Ew_ > 1)then
+     ! Set the unit and unit name for the total wave energy variable
+     UnitUser_V(Ew_)        = No2Io_V(UnitEnergyDens_)
+     NameUnitUserTec_V(Ew_) = NameTecUnit_V(UnitEnergyDens_)
+     NameUnitUserIdl_V(Ew_) = NameIdlUnit_V(UnitEnergyDens_)
+  end if
+
   if(.not.UseIdealEos)then
      UnitUser_V(ExtraEint_)        = No2Io_V(UnitEnergyDens_)
      NameUnitUserTec_V(ExtraEint_) = NameTecUnit_V(UnitEnergyDens_)
