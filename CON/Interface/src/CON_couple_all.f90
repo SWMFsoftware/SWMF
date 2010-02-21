@@ -33,6 +33,9 @@ module CON_couple_all
   use CON_couple_ih_sc        !^CMP IF SC
   use CON_couple_ih_oh        !^CMP IF OH
   !^CMP END IH
+  !^CMP IF SC BEGIN
+  use CON_couple_lc_sc        !^CMP IF LC
+  !^CMP END SC
   use CON_couple_mh_sp        !^CMP IF SP
 
   implicit none
@@ -78,6 +81,9 @@ contains
     if(use_comp(IH_).and.use_comp(SC_))call couple_ih_sc_init  !^CMP IF SC
     if(use_comp(IH_).and.use_comp(OH_))call couple_oh_ih_init  !^CMP IF OH
     !                                                     ^CMP END IH
+    !                                                     ^CMP IF SC BEGIN
+    if(use_comp(LC_).and.use_comp(SC_))call couple_lc_sc_init  !!^CMP IF LC
+    !                                                     ^CMP END SC
     if((&                                                 !^CMP IF SP BEGIN
          use_comp(IH_).or.&                               !^CMP IF IH
          use_comp(SC_).or.&                               !^CMP IF SC
@@ -128,12 +134,21 @@ contains
     call timing_start(NameComp_I(iCompSource)//'_'//NameComp_I(iCompTarget)//'_couple')
 
     select case(iCompSource)
+    case(LC_)                                 !^CMP IF LC BEGIN
+       select case(iCompTarget)               
+       case(SC_)                              !^CMP IF SC
+          call couple_lc_sc(TimeSimulation)   !^CMP IF SC
+       case default                           
+          call error
+       end select                             !^CMP END LC
     case(SC_)                                 !^CMP IF SC BEGIN
        select case(iCompTarget)
        case(IH_)                              !^CMP IF IH
           call couple_sc_ih(TimeSimulation)   !^CMP IF IH
        case(SP_)                              !^CMP IF SP
           call couple_sc_sp(TimeSimulation)   !^CMP IF SP
+       case(LC_)                              !^CMP IF LC
+          call couple_sc_lc(TimeSimulation)   !^CMP IF LC
        case default                           
           call error
        end select                             !^CMP END SC
