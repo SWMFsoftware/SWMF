@@ -57,8 +57,9 @@ module CON_couple_lc_sc
   integer :: nGenRGridLc
   real    :: DeltaGen
 
-  !Number of waves in different models
-  integer::nWave, nWaveLc, nWaveSc   
+  ! Minimum number of variables in the different models
+  integer :: nVarLcSc
+
 contains
   !===============================================================!
   subroutine couple_lc_sc_init
@@ -71,34 +72,12 @@ contains
        end subroutine SC_set_buffer_grid
     end interface
 
-    interface
-       integer function LC_n_wave()
-         implicit none
-       end function LC_n_wave
-    end interface
-
-    interface
-       integer function SC_n_wave()
-         implicit none
-       end function SC_n_wave
-    end interface
-
     if(.not.DoInitialize)return
     DoInitialize=.false.
     
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
-    if(is_proc0(SC_))nWaveSc = SC_n_wave()
-    call MPI_BCAST(nWaveSc,1,MPI_INTEGER,i_proc0(SC_),i_comm(),iError)
-
-    if(is_proc0(LC_))nWaveLc = LC_n_wave()
-    call MPI_BCAST(nWaveLc,1,MPI_INTEGER,i_proc0(LC_),i_comm(),iError)
-
-    if(nWaveSc==nWaveLc .and. nWaveLc>=2)then
-       nWave = nWaveLc
-    else
-       nWave = 0
-    end if
+    nVarLcSc = min(Grid_C(LC_)%nVar, Grid_C(SC_)%nVar)
 
     IsSphericalLc = index(Grid_C(LC_) % TypeGeometry,'spherical') > 0 
     UseLogRLc     = index(Grid_C(LC_) % TypeGeometry,'lnr'      ) > 0
@@ -135,8 +114,9 @@ contains
          SourceGD=LC_SourceGrid,&
          TargetGD=BuffGD, &
          RouterToBuffer=RouterLcBuff,    &
-         nVar=8+nWave,&
+         nVar = nVarLcSc, &
          NameBuffer='SC_from_lc')  !Version for the first order in time
+
   end subroutine couple_lc_sc_init
   !===============================================================!
   !BOP
@@ -209,9 +189,10 @@ contains
        TimeCouplingLast    = TimeCoupling
        tNow=TimeCoupling
     end if
+
     call couple_comp(&
          RouterScLc,&
-         nVar=8+nWave,&
+         nVar = nVarLcSc, &
          fill_buffer=SC_get_for_lc_and_transform,&
          apply_buffer=LC_put_from_mh)
 
@@ -335,8 +316,9 @@ contains
     integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7
     integer::     BuffX_,BuffZ_
     !------------------------------------------------------------
-    BuffX_ =  9 + nWave
-    BuffZ_ = 11 + nWave
+
+    BuffX_ = nVarLcSc + 1
+    BuffZ_ = nVarLcSc + 3
 
     call SC_get_for_mh_with_xyz(&
        nPartial,iGetStart,Get,w,State3_V,nVar+3)
@@ -397,10 +379,11 @@ contains
 
     call couple_buffer_grid(&
          RouterLcBuff,&
-         nVar=8+nWave,&
+         nVar = nVarLcSc, &
          fill_buffer=LC_get_for_mh,&
          NameBuffer='SC_from_lc',&
          TargetID_=SC_)
+
     if(.not.DoneMatchIBC)then
        DoneMatchIBC=.true.
        if(is_proc(SC_))call SC_match_ibc
@@ -412,7 +395,7 @@ contains
        write(NameFile,'(a,i4.4,a)')'./SC/from_lc_',iCoupling,'.dat'
        open(iFile,FILE=NameFile,STATUS='unknown')
        do iPoint=1,nU_I(2)
-          write(iFile,*)point_state_v('SC_from_lc',8+nWave,iPoint)
+          write(iFile,*)point_state_v('SC_from_lc', nVarLcSc, iPoint)
        end do
        close(iFile)
     end if
