@@ -63,12 +63,30 @@ module CON_couple_ih_sc
   integer :: nGenRGridSc
   real    :: DeltaGen
 
-  ! Minimum number of variables in the different models
-  integer :: nVarIhSc
+  ! Number of variables to be coupled
+  integer :: nVarCouple
 
 contains
   !===============================================================!
   subroutine couple_ih_sc_init
+
+    ! Number of waves in different models
+    integer :: nWave, nWaveSc, nWaveIh
+
+    ! send-receive electron pressure ? (value=0 then no, value=1 then yes)
+    integer :: nElectronPressure
+
+    interface
+       integer function SC_n_wave()
+         implicit none
+       end function SC_n_wave
+    end interface
+
+    interface
+       integer function IH_n_wave()
+         implicit none
+       end function IH_n_wave
+    end interface
 
     interface
        subroutine IH_set_buffer_grid(Dd)
@@ -79,12 +97,30 @@ contains
        end subroutine IH_set_buffer_grid
     end interface
 
+    !--------------------------------------------------------------------------
+
     if(.not.DoInitialize)return
     DoInitialize=.false.
     
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
-    nVarIhSc = min(Grid_C(IH_)%nVar, Grid_C(SC_)%nVar)
+    if(is_proc0(IH_))nWaveIh = IH_n_wave()
+    call MPI_BCAST(nWaveIh,1,MPI_INTEGER,i_proc0(IH_),i_comm(),iError)
+
+    if(is_proc0(SC_))nWaveSc = SC_n_wave()
+    call MPI_BCAST(nWaveSc,1,MPI_INTEGER,i_proc0(SC_),i_comm(),iError)
+
+    if(nWaveIh==nWaveSc .and. nWaveSc>=2)then
+       nWave = nWaveSc
+    else
+       nWave = 0
+    end if
+
+    nElectronPressure = 0
+    if(index(Grid_C(IH_)%NameVar,' Pe') > 0 .and. &
+         index(Grid_C(SC_)%NameVar,' Pe') > 0) nElectronPressure = 1
+
+    nVarCouple = 8 + nWave + nElectronPressure
 
     IsSphericalSc = index(Grid_C(SC_) % TypeGeometry,'spherical') > 0 
     UseLogRSc     = index(Grid_C(SC_) % TypeGeometry,'lnr'      ) > 0
@@ -121,7 +157,7 @@ contains
          SourceGD=SC_SourceGrid,&
          TargetGD=BuffGD, &
          RouterToBuffer=RouterScBuff,    &
-         nVar = nVarIhSc, &
+         nVar = nVarCouple, &
          NameBuffer='IH_from_sc')  !Version for the first order in time
 
   end subroutine couple_ih_sc_init
@@ -199,7 +235,7 @@ contains
 
     call couple_comp(&
          RouterIhSc,&
-         nVar = nVarIhSc, &
+         nVar = nVarCouple, &
          fill_buffer=IH_get_for_sc_and_transform,&
          apply_buffer=SC_put_from_mh)
 
@@ -324,8 +360,8 @@ contains
     integer::BuffX_,BuffZ_
     !------------------------------------------------------------
 
-    BuffX_ = nVarIhSc + 1
-    BuffZ_ = nVarIhSc + 3
+    BuffX_ = nVarCouple + 1
+    BuffZ_ = nVarCouple + 3
 
     call IH_get_for_mh_with_xyz(&
        nPartial,iGetStart,Get,w,State3_V,nVar+3)
@@ -389,7 +425,7 @@ contains
 
     call couple_buffer_grid(&
          RouterScBuff,&
-         nVar = nVarIhSc, &
+         nVar = nVarCouple, &
          fill_buffer=SC_get_for_mh,&
          NameBuffer='IH_from_sc',&
          TargetID_=IH_)
@@ -405,7 +441,7 @@ contains
        write(NameFile,'(a,i4.4,a)')'./IH/from_sc_',iCoupling,'.dat'
        open(iFile,FILE=NameFile,STATUS='unknown')
        do iPoint=1,nU_I(2)
-          write(iFile,*)point_state_v('IH_from_sc', nVarIhSc, iPoint)
+          write(iFile,*)point_state_v('IH_from_sc', nVarCouple, iPoint)
        end do
        close(iFile)
     end if

@@ -1,9 +1,12 @@
 module ModBuffer
-  use ModMain,ONLY:&
-       nPhiBuff,nThetaBuff,RBuffMin,RBuffMax
-  use CON_global_vector
-  use CON_grid_descriptor
-  use CON_coupler,   ONLY: SC_
+  use ModMain,     ONLY: nPhiBuff, nThetaBuff, RBuffMin, RBuffMax
+  use ModNumConst, ONLY: cPi, cTwoPi
+  use CON_global_vector,   ONLY: ubound_vector, point_state_v
+  use CON_grid_descriptor, ONLY: GridDescriptorType, Nodes_, &
+       bilinear_interpolation, DomainDecompositionType, is_proc0, &
+       init_decomposition, get_root_decomposition, complete_grid, &
+       set_standard_grid_descriptor, bcast_decomposition
+  use CON_coupler,         ONLY: SC_
   implicit none
   save
 
@@ -21,7 +24,9 @@ module ModBuffer
   integer::nVarBuff=-1
   logical::DoInit =.true.
   real,dimension(:),allocatable::Buffer_V
+
 contains
+
   subroutine set_buffer_name(NameIn,IDIn)
     character(LEN=*),intent(in)::NameIn
     integer,optional,intent(in)::IDIn
@@ -43,7 +48,7 @@ contains
     if(is_proc0(CompID_).or.IsLocal)call get_root_decomposition(&
          DD,&
          iRootMapDim_D=(/1,1,1/),&
-         XyzMin_D=(/RBuffMin,cZero,cZero/),&
+         XyzMin_D=(/RBuffMin, 0.0, 0.0/),&
          XyzMax_D=(/RBuffMax,cTwoPi,cPi/), &
          nCells_D=(/1,nPhiBuff,nThetaBuff/),&
          PE_I=(/0/))
@@ -65,7 +70,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   use ModMain,       ONLY: nDim, R_, Phi_, Theta_, x_, y_, z_,&
        TypeCoordSystem, Time_Simulation
   use ModAdvance,    ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, Bx_, Bz_, p_
-  use ModVarIndexes, ONLY: WaveFirst_,WaveLast_
+  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, Pe_
   use CON_coupler,   ONLY: Grid_C
   use CON_axes,      ONLY: transform_matrix, transform_velocity
   use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
@@ -81,6 +86,10 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   real              :: TimeSimulationLast = -1.0
   real              :: XyzSource_D(nDim)
 
+  ! logicals and buffer indices for waves and electron pressure
+  logical :: UseWave, UseElectronPressure
+  integer :: iBuffWaveFirst, iBuffWaveLast, iBuffPe
+
   !Misc
   integer:: UBound_I(2)
   !---------------------------------------------------------------------------
@@ -92,6 +101,13 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
      nVarBuff = UBound_I(1)
      allocate(Buffer_V(nVarBuff))
   end if
+
+  UseWave = nVar>=10
+  iBuffWaveFirst = 8
+  iBuffWaveLast  = 8 + WaveLast_ - WaveFirst_
+
+  UseElectronPressure = nVar/=2*(nVar/2)
+  iBuffPe = nVarBuff - 1
 
   TypeCoordSource = Grid_C(SourceID_) % TypeCoord
 
@@ -140,8 +156,9 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   State_V(Ux_:Uz_)   = State_V(Ux_:Uz_)*Si2No_V(UnitU_)
   State_V(Bx_:Bz_)   = State_V(Bx_:Bz_)*Si2No_V(UnitB_)
   State_V(P_)        = State_V(P_)     *Si2No_V(UnitP_)
-  if(nVarBuff>8)&
-     State_V(WaveFirst_:WaveLast_) = Buffer_V(8:nVarBuff-1)*Si2No_V(UnitEnergyDens_)
+  if(UseWave) State_V(WaveFirst_:WaveLast_) = &
+       Buffer_V(iBuffWaveFirst:iBuffWaveLast)*Si2No_V(UnitEnergyDens_)
+  if(UseElectronPressure) State_V(Pe_) = Buffer_V(iBuffPe)*Si2No_V(UnitP_)
 
 end subroutine get_from_spher_buffer_grid
           

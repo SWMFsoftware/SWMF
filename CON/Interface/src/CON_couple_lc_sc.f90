@@ -57,12 +57,31 @@ module CON_couple_lc_sc
   integer :: nGenRGridLc
   real    :: DeltaGen
 
-  ! Minimum number of variables in the different models
-  integer :: nVarLcSc
+  ! Number of variables to be coupled
+  integer :: nVarCouple
 
 contains
   !===============================================================!
   subroutine couple_lc_sc_init
+
+    ! Number of waves in different models
+    integer :: nWave, nWaveSc, nWaveLc
+
+    ! send-receive electron pressure ? (value=0 then no, value=1 then yes)
+    integer :: nElectronPressure
+
+    interface
+       integer function SC_n_wave()
+         implicit none
+       end function SC_n_wave
+    end interface
+
+    interface
+       integer function LC_n_wave()
+         implicit none
+       end function LC_n_wave
+    end interface
+
     interface
        subroutine SC_set_buffer_grid(Dd)
          use CON_domain_decomposition
@@ -72,12 +91,30 @@ contains
        end subroutine SC_set_buffer_grid
     end interface
 
+    !--------------------------------------------------------------------------
+
     if(.not.DoInitialize)return
     DoInitialize=.false.
     
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
-    nVarLcSc = min(Grid_C(LC_)%nVar, Grid_C(SC_)%nVar)
+    if(is_proc0(LC_))nWaveLc = LC_n_wave()
+    call MPI_BCAST(nWaveLc,1,MPI_INTEGER,i_proc0(LC_),i_comm(),iError)
+
+    if(is_proc0(SC_))nWaveSc = SC_n_wave()
+    call MPI_BCAST(nWaveSc,1,MPI_INTEGER,i_proc0(SC_),i_comm(),iError)
+
+    if(nWaveLc==nWaveSc .and. nWaveSc>=2)then
+       nWave = nWaveSc
+    else
+       nWave = 0
+    end if
+
+    nElectronPressure = 0
+    if(index(Grid_C(LC_)%NameVar,' Pe') > 0 .and. &
+         index(Grid_C(SC_)%NameVar,' Pe') > 0) nElectronPressure = 1
+
+    nVarCouple = 8 + nWave + nElectronPressure
 
     IsSphericalLc = index(Grid_C(LC_) % TypeGeometry,'spherical') > 0 
     UseLogRLc     = index(Grid_C(LC_) % TypeGeometry,'lnr'      ) > 0
@@ -114,7 +151,7 @@ contains
          SourceGD=LC_SourceGrid,&
          TargetGD=BuffGD, &
          RouterToBuffer=RouterLcBuff,    &
-         nVar = nVarLcSc, &
+         nVar = nVarCouple, &
          NameBuffer='SC_from_lc')  !Version for the first order in time
 
   end subroutine couple_lc_sc_init
@@ -192,7 +229,7 @@ contains
 
     call couple_comp(&
          RouterScLc,&
-         nVar = nVarLcSc, &
+         nVar = nVarCouple, &
          fill_buffer=SC_get_for_lc_and_transform,&
          apply_buffer=LC_put_from_mh)
 
@@ -317,8 +354,8 @@ contains
     integer::     BuffX_,BuffZ_
     !------------------------------------------------------------
 
-    BuffX_ = nVarLcSc + 1
-    BuffZ_ = nVarLcSc + 3
+    BuffX_ = nVarCouple + 1
+    BuffZ_ = nVarCouple + 3
 
     call SC_get_for_mh_with_xyz(&
        nPartial,iGetStart,Get,w,State3_V,nVar+3)
@@ -379,7 +416,7 @@ contains
 
     call couple_buffer_grid(&
          RouterLcBuff,&
-         nVar = nVarLcSc, &
+         nVar = nVarCouple, &
          fill_buffer=LC_get_for_mh,&
          NameBuffer='SC_from_lc',&
          TargetID_=SC_)
@@ -395,7 +432,7 @@ contains
        write(NameFile,'(a,i4.4,a)')'./SC/from_lc_',iCoupling,'.dat'
        open(iFile,FILE=NameFile,STATUS='unknown')
        do iPoint=1,nU_I(2)
-          write(iFile,*)point_state_v('SC_from_lc', nVarLcSc, iPoint)
+          write(iFile,*)point_state_v('SC_from_lc', nVarCouple, iPoint)
        end do
        close(iFile)
     end if
