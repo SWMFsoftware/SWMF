@@ -102,7 +102,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
      allocate(Buffer_V(nVarBuff))
   end if
 
-  UseWave = nVar>=10
+  UseWave = nVarBuff>=10
   iBuffWaveFirst = 8
   iBuffWaveLast  = 8 + WaveLast_ - WaveFirst_
 
