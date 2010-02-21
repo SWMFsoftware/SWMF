@@ -22,7 +22,6 @@ module ModUser
    real, parameter               :: VersionUserModule = 1.0
   character (len=*), parameter  :: &
        NameUserModule = 'Alfven Waves Driven Solar Wind'
-  character(len=lStringLine)    :: NameModel
 
   logical                       :: IsInitWave = .false.
   logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
@@ -39,10 +38,7 @@ contains
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
-    use ModMagnetogram, ONLY: set_parameters_magnetogram
-    use ModWaves,       ONLY: UseAlfvenWaves,read_wave_pressure,read_frequency
-    implicit none
-
+   
     character (len=100) :: NameCommand
     !--------------------------------------------------------------------------
     UseUserInitSession = .true.
@@ -57,29 +53,10 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
 
        select case(NameCommand)
-       case("#PFSSM")
-          call read_var('UseUserB0'  ,UseUserB0)
-          if(UseUserB0)then
-             call set_parameters_magnetogram
-             call read_var('dt_UpdateB0',dt_UpdateB0)
-             DoUpdateB0 = dt_updateb0 > 0.0
-          end if
-
-       case("#EMPIRICALSW")
-          call read_var('NameModel',NameModel)
 
        case("#INITSPECTRUM")
           call read_var('IsInitWave',IsInitWave)
        
-       case("#ALFVENSPEED")
-          call read_var('UseAlfvenWaves', UseAlfvenWaves)
-
-       case("#WAVEPRESSURE")
-          call read_wave_pressure
-
-       case("#FREQUENCY")
-          call read_frequency
-
        case("#SPECTRUM")
           call read_var('LowestFreqNum',LowestFreqNum)
           call read_var('SpectrumWidth',SpectrumWidth)
@@ -97,10 +74,7 @@ contains
           call read_var('DoDampCutoff',DoDampCutoff)
           call read_var('DoDampSurface',DoDampSurface)
 
-       !case("#ARCH","#TD99FLUXROPE","#GL98FLUXROPE")
-       !   call EEE_set_parameters(NameCommand)
-
-        case('#USERINPUTEND')
+       case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
              write(iUnitOut,*)'User read_input TURBULENCE CORONA ends'
@@ -123,13 +97,9 @@ contains
   subroutine user_init_session
 
     use ModIO,          ONLY: write_prefix, iUnitOut,NamePlotDir
-    use ModMagnetogram, ONLY: read_magnetogram_file
-    use ModMain,        ONLY: UseUserB0
-    use ModPhysics,     ONLY: BodyNDim_I,BodyTDim_I,g
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: i_line_command
-    use ModWaves,       ONLY: UseWavePressure
-    implicit none
+
     !--------------------------------------------------------------------------
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -137,39 +107,23 @@ contains
        call write_prefix; write(iUnitOut,*) ''
     end if
 
-     if(i_line_command("#INITSPECTRUM") > 0) then
+    if(i_line_command("#INITSPECTRUM") > 0) then
        call init_wave_spectrum
     end if
 
-    if(IsInitWave .and. i_line_command("#FREQUENCY") <0) then
-       write(*,*) 'Alfven waves frequency range should be set via #FREQUENCY'
-       call stop_mpi('ERROR: Correct PARAM.in!')
-    end if
-    if(i_line_command("#FREQUENCY") > 0) then
-       call set_freq_grid
-    end if
+    !if(IsInitWave .and. i_line_command("#FREQUENCY") <0) then
+    !   write(*,*) 'Alfven waves frequency range should be set via #FREQUENCY'
+    !   call stop_mpi('ERROR: Correct PARAM.in!')
+    !end if
+    !if(i_line_command("#FREQUENCY") > 0) then
+    !   call set_freq_grid
+    !end if
 
     if(IsInitWave .and. i_line_command("#SPECTRUM") <0) then
        write(*,*) 'Alfven spectrum should be set via #SPECTRUM'
        call stop_mpi('ERROR: Correct PARAM.in!')
     end if
    
-    if(i_line_command("#PFSSM", iSessionIn = 1) < 0)then
-       write(*,*) 'In session 1, a magnetogram file has to be read via #PFSSM'
-       call stop_mpi('ERROR: Correct PARAM.in!')
-    end if
-    if(i_line_command("#PFSSM") > 0)then
-       call read_magnetogram_file(NamePlotDir)
-    end if
-
-    if(i_line_command("#EMPIRICALSW", iSessionIn = 1) < 0)then
-       write(*,*) 'An empirical model has to be set via #EMPIRICALSW'
-       call stop_mpi('ERROR: Correct PARAM.in!')
-    end if
-    if(i_line_command("#EMPIRICALSW") > 0)then
-       call set_empirical_model(trim(NameModel),BodyTDim_I(1))
-    end if
- 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session finished'
@@ -180,9 +134,10 @@ contains
   !====================================================================
   subroutine set_freq_grid
 
+    use ModProcMH,     ONLY: iProc
     use ModVarIndexes
-    use ModNumConst, ONLY: cPi
-    use ModWaves,    ONLY: FreqMinSI,DeltaLogFrequency
+    use ModNumConst,   ONLY: cPi
+    use ModWaves,      ONLY: FreqMinSI,DeltaLogFrequency
     implicit none
     
     integer                    :: iFreq, nWaveHalf
@@ -202,14 +157,19 @@ contains
     do iFreq = 1,nWaveHalf
        LogFreq_I(nWaveHalf+iFreq)=LogFreqMinRadian +(iFreq-1)*DeltaLogFrequency
     end do
+    
+    if(iProc == 0) write(*,*), NameSub,' finished. dLogFreq = ',DeltaLogFrequency
    end subroutine set_freq_grid
   !===================================================================
   subroutine init_wave_spectrum
    
     use ModProcMH,      ONLY: iProc
+    use ModWaves,       ONLY: check_waves
     
     character(len=*),parameter    :: NameSub= 'init_wave_spectrum'
     ! ------------------------------------------------------------------
+    call check_waves
+    call set_freq_grid
     SpectralIndex = SpectralIndex + 1 ! State_VGB(iWave) represents I*w
     SpectralCoeff = -(1.0/SpectralIndex)
     if (iProc == 0) write(*,*) 'Spectral coefficient is ',SpectralCoeff
@@ -222,7 +182,7 @@ contains
     use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, n_step, Iteration_Number
     use ModVarIndexes 
     use ModAdvance,    ONLY: State_VGB, B0_DGB, UseIdealEos
-    use ModPhysics,    ONLY: inv_gm1,OmegaBody,No2Si_V,Si2No_V, &
+    use ModPhysics,    ONLY: inv_gm1,gamma0,OmegaBody,No2Si_V,Si2No_V, &
                              UnitB_,UnitU_,UnitRho_,UnitP_,UnitX_
     use ModConst,      ONLY: cMu
     use ModNumConst,   ONLY: cTolerance,cTiny
@@ -233,7 +193,7 @@ contains
                              AlfvenWaveMinusFirst_, &
                              AlfvenWaveMinusLast_ , &
                              DeltaLogFrequency,      &
-                             UseWavePressure      
+                             UseWavePressure, UseWavePressureLtd      
 
     real, intent(out) :: VarsGhostFace_V(nVar)
     integer           :: iCell,jCell,kCell, iWave, SpectrumFirst,SpectrumLast
@@ -287,9 +247,6 @@ contains
     VarsGhostFace_V(P_) = &
          max(VarsGhostFace_V(Rho_)*TBase, &
          VarsTrueFace_V(P_))
-    VarsGhostFace_V(Ew_) = &!max(-VarsTrueFace_V(Ew_)+ &
-         VarsGhostFace_V(Rho_)*TBase &
-         *(1.0/(GammaCell-1.0)-inv_gm1)
     
     !\
     ! Update BCs for wave spectrum
@@ -356,6 +313,20 @@ contains
              call stop_MPI('ERROR in minus waves BCs')
           end if
        end do
+    end if
+
+    if(IsInitWave)then
+       !VarsGhostFace_V(Ew_) = 0.0
+       !call set_wave_state
+       if(UseWavePressureLtd)then
+          VarsGhostFace_V(Ew_) = sum(VarsGhostFace_V(WaveFirst_:WaveLast_))
+       else
+          VarsGhostFace_V(Ew_) = 0.0
+       end if
+    else
+       VarsGhostFace_V(Ew_) = &!max(-VarsTrueFace_V(Ew_)+ &
+            VarsGhostFace_V(Rho_)*TBase &
+            *(1.0/(GammaCell-1.0)-inv_gm1)
     end if
          
     !\
@@ -438,7 +409,8 @@ contains
 
     ! The sqrt is for backward compatibility with older versions of the Sc
     U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
-    State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = 1e-30 !Initialize the wave spectrum
+    State_VGB(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK,iBLK) = 1e-30 !Initialize the wave spectrum
+
     do k=1,nK; do j=1,nJ; do i=1,nI
        x = x_BLK(i,j,k,iBLK)
        y = y_BLK(i,j,k,iBLK)
@@ -456,9 +428,14 @@ contains
             *U0*((ROne-1.0)/(Rmax-1.0))*y/R
        State_VGB(RhoUz_,i,j,k,iBLK) = Dens_BLK &
             *U0*((ROne-1.0)/(Rmax-1.0))*z/R
-       State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK &
-            *(1.0/(Gamma_BLK-1.0)-inv_gm1) 
-    
+
+       if(.not.IsInitWave)then
+          State_VGB(Ew_,i,j,k,iBLK) = 0.0
+       else
+          State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK &
+               *(1.0/(Gamma_BLK-1.0)-inv_gm1) 
+       end if
+   
     end do; end do; end do
 
   end subroutine user_set_ics
