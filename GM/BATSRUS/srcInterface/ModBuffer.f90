@@ -106,7 +106,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   iBuffWaveFirst = 8
   iBuffWaveLast  = 8 + WaveLast_ - WaveFirst_
 
-  UseElectronPressure = nVar/=2*(nVar/2)
+  UseElectronPressure = nVarBuff/=2*(nVarBuff/2)
   iBuffPe = nVarBuff - 1
 
   TypeCoordSource = Grid_C(SourceID_) % TypeCoord
