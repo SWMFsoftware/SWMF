@@ -1,9 +1,11 @@
 module ModMagTrace
 
-  integer, parameter :: MaxMMTPoints = 6000
+  integer, parameter :: MaxMMTPoints = 1500
   integer, allocatable :: MMTblk(:,:,:,:,:)
 
-  real, parameter :: MMTlen=250.
+  logical, parameter :: MMTSaveInterp = .false., MMTDebug=.false.
+
+  real, parameter :: MMTlen=1000.
   real, allocatable :: MMTalt(:,:,:,:,:), MMTlat(:,:,:,:,:), MMTlon(:,:,:,:,:)
   real, allocatable :: MMTaltLoc(:,:,:,:,:), MMTlatLoc(:,:,:,:,:), MMTlonLoc(:,:,:,:,:)
 
@@ -21,7 +23,7 @@ contains
 
     integer :: i,j,k,m,jLon,jLat, iBlock, iLon, iLat, iAlt, iLoop, iSize, iError, iCount=0
 
-    logical :: IsFound, Debug=.false., VerticalOnly=.true.
+    logical :: IsFound, VerticalOnly=.true.
 
     real :: GeoLat, GeoLon, GeoAlt, xAlt, signz
     real :: GeoLatInitial, GeoLonInitial, GeoAltInitial
@@ -42,21 +44,23 @@ contains
     MMTlat = 0.;
     MMTlon = 0.;
 
-    ! Arrays to hold the block and location values of point along fieldline for integrals
-    if(.not.allocated(MMTblk)) &
-         allocate(MMTblk(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
-    if(.not.allocated(MMTaltLoc)) &
-         allocate(MMTaltLoc(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
-    if(.not.allocated(MMTlatLoc)) &
-         allocate(MMTlatLoc(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
-    if(.not.allocated(MMTlonLoc)) &
-         allocate(MMTlonLoc(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
-    MMTblk = 0;
-    MMTaltLoc = -9.;
-    MMTlatLoc = -9.;
-    MMTlonLoc = -9.;
+    if(MMTSaveInterp)then
+       ! Arrays to hold the block and location values of point along fieldline for integrals
+       if(.not.allocated(MMTblk)) &
+            allocate(MMTblk(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+       if(.not.allocated(MMTaltLoc)) &
+            allocate(MMTaltLoc(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+       if(.not.allocated(MMTlatLoc)) &
+            allocate(MMTlatLoc(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+       if(.not.allocated(MMTlonLoc)) &
+            allocate(MMTlonLoc(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+       MMTblk = 0;
+       MMTaltLoc = -9.;
+       MMTlatLoc = -9.;
+       MMTlonLoc = -9.;
+    end if
 
-    if(Debug) write(*,*)iProc,' MMT_Init:  ',nProcs,'  ', &
+    if(MMTDebug) write(*,*)iProc,' MMT_Init:  ',nProcs,'  ', &
          nAlts,nLons,NLats,'  ',nBlocksMax,'  ',MaxMMTPoints
 
     do iBlock=1,nBlocks;  do iLat=-1,nLats+2;  do iLon=-1,nLons+2
@@ -105,7 +109,8 @@ contains
              LOClon(iLoop,iLon,iLat,iBlock) = GeoLon
           end if
 
-          LengthFieldLine(iLon, iLat) = LengthFieldLine(iLon, iLat) + MMTlen
+          ! this "integral" is computed now as the length is the integral of 1.0 along fieldline
+          LengthFieldLine(iLon,iLat,iBlock) = LengthFieldLine(iLon,iLat,iBlock) + MMTlen
 
           CALL get_magfield(GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0,XMAG,YMAG,ZMAG)
 
@@ -149,70 +154,74 @@ contains
     call MPI_ALLGATHER(LOClat, iSize, MPI_REAL, MMTlat, iSize, MPI_REAL, iCommGITM, iError)
     call MPI_ALLGATHER(LOClon, iSize, MPI_REAL, MMTlon, iSize, MPI_REAL, iCommGITM, iError)
 
-    do k=1,nProcs; do iBlock=1,nBlocks;  do iLat=-1,nLats+2;  do iLon=-1,nLons+2; do i=1,MaxMMTPoints
-       GeoLat = MMTlat(i,iLon,iLat,iBlock,k)
-       GeoLon = MMTlon(i,iLon,iLat,iBlock,k)
-       GeoAlt = MMTalt(i,iLon,iLat,iBlock,k)
+    if(MMTSaveInterp)then
+       do k=1,nProcs; do iBlock=1,nBlocks
+          do iLat=-1,nLats+2;  do iLon=-1,nLons+2; do i=1,MaxMMTPoints
+             GeoLat = MMTlat(i,iLon,iLat,iBlock,k)
+             GeoLon = MMTlon(i,iLon,iLat,iBlock,k)
+             GeoAlt = MMTalt(i,iLon,iLat,iBlock,k)
 
-       IsFound = .false.
-       if(GeoAlt > 1.)then
-          do j=1,nBlocks
-             if(  GeoLat >=  ( Latitude(    0,j)+ Latitude(      1,j))/2. .and. &
-                  GeoLat <   ( Latitude(nLats,j)+ Latitude(nLats+1,j))/2. .and. &
-                  GeoLon >=  (Longitude(0    ,j)+Longitude(      1,j))/2. .and. &
-                  GeoLon <   (Longitude(nLons,j)+Longitude(nLons+1,j))/2. )then
-                if(IsFound)then
-                   write(*,*)'WARNING, BLOCK FOUND TWICE=] ',&
-                        i,iLon,iLat,iBlock,k,'  ',GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0
-                end if
-                IsFound = .true.
-                iCount = iCount +1
+             IsFound = .false.
+             if(GeoAlt > 1.)then
+                do j=1,nBlocks
+                   if(  GeoLat >=  ( Latitude(    0,j)+ Latitude(      1,j))/2. .and. &
+                        GeoLat <   ( Latitude(nLats,j)+ Latitude(nLats+1,j))/2. .and. &
+                        GeoLon >=  (Longitude(0    ,j)+Longitude(      1,j))/2. .and. &
+                        GeoLon <   (Longitude(nLons,j)+Longitude(nLons+1,j))/2. )then
+                      if(IsFound)then
+                         write(*,*)'WARNING, BLOCK FOUND TWICE=] ',i,iLon,iLat,iBlock,k, &
+                              '  ',GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0
+                      end if
+                      IsFound = .true.
+                      iCount = iCount +1
 
-                MMTblk(i,iLon,iLat,iBlock,k) = j
-                do m=0,nLats
-                   if(  GeoLat>=Latitude(m  ,j) .and. &
-                        GeoLat< Latitude(m+1,j))then
-                      MMTlatLoc(i,iLon,iLat,iBlock,k) = m + &
-                           (GeoLat-Latitude(m,j))/&
-                           (Latitude(m+1,j)-Latitude(m,j))
-                      jLat = m
-                      exit
+                      MMTblk(i,iLon,iLat,iBlock,k) = j
+                      do m=0,nLats
+                         if(  GeoLat>=Latitude(m  ,j) .and. &
+                              GeoLat< Latitude(m+1,j))then
+                            MMTlatLoc(i,iLon,iLat,iBlock,k) = m + &
+                                 (GeoLat-Latitude(m,j))/&
+                                 (Latitude(m+1,j)-Latitude(m,j))
+                            jLat = m
+                            exit
+                         end if
+                      end do
+                      do m=0,nLons
+                         if(  GeoLon>=Longitude(m  ,j) .and. &
+                              GeoLon< Longitude(m+1,j))then
+                            MMTlonLoc(i,iLon,iLat,iBlock,k) = m + &
+                                 (GeoLon-Longitude(m,j))/&
+                                 (Longitude(m+1,j)-Longitude(m,j))
+                            jLon=m
+                            exit
+                         end if
+                      end do
+                      do m=1,nAlts
+                         if(  GeoAlt>=Altitude_GB(jLon,jLat,m  ,j) .and. &
+                              GeoAlt< Altitude_GB(jLon,jLat,m+1,j))then
+                            MMTaltLoc(i,iLon,iLat,iBlock,k) = m + &
+                                 (GeoAlt-Altitude_GB(jLon,jLat,m,j))/ &
+                                 (Altitude_GB(jLon,jLat,m+1,j)-Altitude_GB(jLon,jLat,m,j))
+                            exit
+                         end if
+                      end do
+                      if(  MMTlatLoc(i,iLon,iLat,iBlock,k) == -9 .or. &
+                           MMTlonLoc(i,iLon,iLat,iBlock,k) == -9 .or. &
+                           MMTaltLoc(i,iLon,iLat,iBlock,k) == -9 )then
+                         write(*,*)'WARNING, BLOCK VALUE NOT VALID=] ',i,iLon,iLat,iBlock,k, &
+                              '  ',GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0
+                      end if
+
                    end if
                 end do
-                do m=0,nLons
-                   if(  GeoLon>=Longitude(m  ,j) .and. &
-                        GeoLon< Longitude(m+1,j))then
-                      MMTlonLoc(i,iLon,iLat,iBlock,k) = m + &
-                           (GeoLon-Longitude(m,j))/&
-                           (Longitude(m+1,j)-Longitude(m,j))
-                      jLon=m
-                      exit
-                   end if
-                end do
-                do m=1,nAlts
-                   if(  GeoAlt>=Altitude_GB(jLon,jLat,m  ,j) .and. &
-                        GeoAlt< Altitude_GB(jLon,jLat,m+1,j))then
-                      MMTaltLoc(i,iLon,iLat,iBlock,k) = m + &
-                           (GeoAlt-Altitude_GB(jLon,jLat,m,j))/ &
-                           (Altitude_GB(jLon,jLat,m+1,j)-Altitude_GB(jLon,jLat,m,j))
-                      exit
-                   end if
-                end do
-                if(  MMTlatLoc(i,iLon,iLat,iBlock,k) == -9 .or. &
-                     MMTlonLoc(i,iLon,iLat,iBlock,k) == -9 .or. &
-                     MMTaltLoc(i,iLon,iLat,iBlock,k) == -9 )then
-                   write(*,*)'WARNING, BLOCK VALUE NOT VALID=] ',&
-                        i,iLon,iLat,iBlock,k,'  ',GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0
-                end if
-
              end if
-          end do
-       end if
-    end do;  end do;  end do;  end do;  end do
-    if(Debug) write(*,*)iProc,' MMT_Init total processor fieldline length=',iCount*MMTlen
+          end do;  end do
+       end do;  end do;  end do
+       if(MMTDebug) write(*,*)iProc,' MMT_Init total processor fieldline length=',iCount*MMTlen
+    end if
 
-    if(Debug) call MMT_Test
-    if(Debug) stop
+    if(MMTDebug) call MMT_Test
+    if(MMTDebug) stop
 
   end subroutine MMT_Init
   !-/
@@ -227,11 +236,13 @@ contains
     use ModMpi
     implicit none
 
-    integer :: i,j,k,jBlk, iBlock, iLon, iLat, iAlt, iSize, iError
+    integer :: i,j,k,m,jLat,jLon, jBlk, iBlock, iLon, iLat, iAlt, iSize, iError, iCount=0
     integer :: i1, i2, j1, j2, k1, k2
 
+    logical :: IsFound
+
     real :: Dx1, Dx2, Dy1, Dy2, Dz1, Dz2
-    real :: GeoLat, GeoLon, GeoAlt, InterpValue
+    real :: GeoLat, GeoLon, GeoAlt, InterpValue, lonLoc, latLoc, altLoc
     real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax), intent(in) :: InValues
     real, dimension(-1:nLons+2, -1:nLats+2, nBlocksMax), intent(out) :: OutIntegral
     real, allocatable :: PartialIntegral(:,:,:,:), FullIntegral(:,:,:,:)
@@ -244,42 +255,109 @@ contains
          allocate(FullIntegral(-1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
     PartialIntegral = 0.
     FullIntegral = 0.
-    do k=1,nProcs; do iBlock=1,nBlocks;  do iLat=-1,nLats+2;  do iLon=-1,nLons+2; do i=1,MaxMMTPoints
-       GeoLat = MMTlat(i,iLon,iLat,iBlock,k)
-       GeoLon = MMTlon(i,iLon,iLat,iBlock,k)
-       GeoAlt = MMTalt(i,iLon,iLat,iBlock,k)
-       jBlk = MMTblk(i,iLon,iLat,iBlock,k)
-       if(jBlk > 0)then
-          !Set location
-          i1 =   floor(MMTlonLoc(i,iLon,iLat,iBlock,k))
-          i2 = ceiling(MMTlonLoc(i,iLon,iLat,iBlock,k))
+    do k=1,nProcs; do iBlock=1,nBlocks
+       do iLat=-1,nLats+2;  do iLon=-1,nLons+2; do i=1,MaxMMTPoints
+          GeoLat = MMTlat(i,iLon,iLat,iBlock,k)
+          GeoLon = MMTlon(i,iLon,iLat,iBlock,k)
+          GeoAlt = MMTalt(i,iLon,iLat,iBlock,k)
+          if(MMTSaveInterp)then
+             jBlk = MMTblk(i,iLon,iLat,iBlock,k)
+             lonLoc = MMTlonLoc(i,iLon,iLat,iBlock,k)
+             latLoc = MMTlatLoc(i,iLon,iLat,iBlock,k)  
+             altLoc = MMTaltLoc(i,iLon,iLat,iBlock,k)
+          else
+             jBlk=-9;  lonLoc=-9.;  latLoc=-9.;  altLoc=-9.
+             IsFound = .false.
+             if(GeoAlt > 1.)then
+                do j=1,nBlocks
+                   if(  GeoLat >=  ( Latitude(    0,j)+ Latitude(      1,j))/2. .and. &
+                        GeoLat <   ( Latitude(nLats,j)+ Latitude(nLats+1,j))/2. .and. &
+                        GeoLon >=  (Longitude(0    ,j)+Longitude(      1,j))/2. .and. &
+                        GeoLon <   (Longitude(nLons,j)+Longitude(nLons+1,j))/2. )then
+                      if(IsFound)then
+                         write(*,*)'WARNING, BLOCK FOUND TWICE=] ',i,iLon,iLat,iBlock,k, &
+                              '  ',GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0
+                      end if
+                      IsFound = .true.
+                      iCount = iCount +1
 
-          j1 =   floor(MMTlatLoc(i,iLon,iLat,iBlock,k))  
-          j2 = ceiling(MMTlatLoc(i,iLon,iLat,iBlock,k))
+                      jBlk = j
+                      do m=0,nLats
+                         if(  GeoLat>=Latitude(m  ,j) .and. &
+                              GeoLat< Latitude(m+1,j))then
+                            latLoc = m + &
+                                 (GeoLat-Latitude(m,j))/&
+                                 (Latitude(m+1,j)-Latitude(m,j))
+                            jLat = m
+                            exit
+                         end if
+                      end do
+                      do m=0,nLons
+                         if(  GeoLon>=Longitude(m  ,j) .and. &
+                              GeoLon< Longitude(m+1,j))then
+                            lonLoc = m + &
+                                 (GeoLon-Longitude(m,j))/&
+                                 (Longitude(m+1,j)-Longitude(m,j))
+                            jLon=m
+                            exit
+                         end if
+                      end do
+                      do m=1,nAlts
+                         if(  GeoAlt>=Altitude_GB(jLon,jLat,m  ,j) .and. &
+                              GeoAlt< Altitude_GB(jLon,jLat,m+1,j))then
+                            altLoc = m + &
+                                 (GeoAlt-Altitude_GB(jLon,jLat,m,j))/ &
+                                 (Altitude_GB(jLon,jLat,m+1,j)-Altitude_GB(jLon,jLat,m,j))
+                            exit
+                         end if
+                      end do
+                      if(  latLoc == -9 .or. &
+                           lonLoc == -9 .or. &
+                           altLoc == -9 )then
+                         write(*,*)'WARNING, BLOCK VALUE NOT VALID=] ',i,iLon,iLat,iBlock,k, &
+                              '  ',GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0
+                      end if
 
-          k1 =   floor(MMTaltLoc(i,iLon,iLat,iBlock,k))
-          k2 = ceiling(MMTaltLoc(i,iLon,iLat,iBlock,k))
+                   end if
+                end do
+             end if
+          end if
+          if(jBlk > 0)then
+             !Set location
+             i1 =   floor(lonLoc)
+             i2 = ceiling(lonLoc)
 
-          !Set interpolation weights
-          Dx1= MMTlonLoc(i,iLon,iLat,iBlock,k) - i1; Dx2 = 1.0 - Dx1
-          Dy1= MMTlatLoc(i,iLon,iLat,iBlock,k) - j1; Dy2 = 1.0 - Dy1
-          Dz1= MMTaltLoc(i,iLon,iLat,iBlock,k) - k1; Dz2 = 1.0 - Dz1
+             j1 =   floor(latLoc)  
+             j2 = ceiling(latLoc)
 
-          !Perform interpolation
-          InterpValue = Dz2*( Dy2*( Dx2*InValues(i1,j1,k1,jBlk)   &
-               +                    Dx1*InValues(i2,j1,k1,jBlk))  &
-               +              Dy1*( Dx2*InValues(i1,j2,k1,jBlk)   &
-               +                    Dx1*InValues(i2,j2,k1,jBlk))) &
-               +        Dz1*( Dy2*( Dx2*InValues(i1,j1,k2,jBlk)   &
-               +                    Dx1*InValues(i2,j1,k2,jBlk))  &
-               +              Dy1*( Dx2*InValues(i1,j2,k2,jBlk)   &
-               +                    Dx1*InValues(i2,j2,k2,jBlk)))
-          InterpValue = InterpValue * MMTlen
+             k1 =   floor(altLoc)
+             k2 = ceiling(altLoc)
 
-          PartialIntegral(iLon,iLat,iBlock,k) = &
-               PartialIntegral(iLon,iLat,iBlock,k) + InterpValue
-       end if
-    end do;  end do;  end do;  end do;  end do
+             !Set interpolation weights
+             Dx1= lonLoc - i1;  Dx2 = 1.0 - Dx1
+             Dy1= latLoc - j1;  Dy2 = 1.0 - Dy1
+             Dz1= altLoc - k1;  Dz2 = 1.0 - Dz1
+
+             !Perform interpolation
+             InterpValue = Dz2*( Dy2*( Dx2*InValues(i1,j1,k1,jBlk)   &
+                  +                    Dx1*InValues(i2,j1,k1,jBlk))  &
+                  +              Dy1*( Dx2*InValues(i1,j2,k1,jBlk)   &
+                  +                    Dx1*InValues(i2,j2,k1,jBlk))) &
+                  +        Dz1*( Dy2*( Dx2*InValues(i1,j1,k2,jBlk)   &
+                  +                    Dx1*InValues(i2,j1,k2,jBlk))  &
+                  +              Dy1*( Dx2*InValues(i1,j2,k2,jBlk)   &
+                  +                    Dx1*InValues(i2,j2,k2,jBlk)))
+             InterpValue = InterpValue * MMTlen
+
+             PartialIntegral(iLon,iLat,iBlock,k) = &
+                  PartialIntegral(iLon,iLat,iBlock,k) + InterpValue
+          end if
+       end do;  end do
+    end do;  end do;  end do
+
+    if(.not.MMTSaveInterp)then
+       if(MMTDebug) write(*,*)iProc,' MMT_Integrate total processor fieldline length=',iCount*MMTlen
+    end if
 
     iSize = (nLons+4) * (nLats+4) * nBlocksMax * nProcs
     call MPI_AllREDUCE(PartialIntegral, FullIntegral, iSize, MPI_REAL, MPI_SUM, iCommGITM, iError)
@@ -291,7 +369,7 @@ contains
 
   !-\
   !- This routine tests the MMT_Integrate routine
-  !- Turn Debug to T in MMT_Init and this will get called.
+  !- Turn MMTDebug to T in MMT_Init and this will get called.
   !- The total fieldline points should equal the sum of the integral values
   !-
   subroutine MMT_Test
