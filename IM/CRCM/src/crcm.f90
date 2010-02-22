@@ -31,8 +31,12 @@ subroutine crcm_run(delta_t)
   logical, save :: IsFirstCall =.true.
   !----------------------------------------------------------------------------
 
-  dt=10.                   
+!  dt=10.                   
   nstep=nint(delta_t/dt)
+  if (nstep == 0) then
+     nstep = 1
+  endif
+
   dt=delta_t/nstep         ! new dt
   
   ! do field line integration and determine vel, ekev, momentum (pp), etc.
@@ -69,7 +73,6 @@ subroutine crcm_run(delta_t)
   ! setup initial distribution
   if (IsFirstCall) then
      call initial_f2(nspec,np,nt,iba,amu,vel,xjac,ib0)
-  else
      IsFirstCall=.false.
   endif
 
@@ -89,7 +92,7 @@ subroutine crcm_run(delta_t)
           fb,f2,ib0)
      call charexchange(np,nt,nm,nk,nspec,kspec,iba,achar,f2)
      call losscone(np,nt,nm,nk,nspec,iba,alscone,f2)
-     Time = Time+dt*nstep
+     Time = Time+dt
  enddo
   
   ! Calculate CRCM output: flux, fac, phot
