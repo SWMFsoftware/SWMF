@@ -517,8 +517,10 @@ contains
       case (4)
          where (cExcitationBe_III(0:4,2:5,0:nZ-1) /= 0.0)&
               cExcitationEnergy_IIII(0:4,2:5,0:nZ-1,nZ) = cExcitationBe_III(0:4,2:5,0:nZ-1)
+                  
          if(UseDataBase)call read_atomic_data(&
               4,3, cExcitationEnergy_IIII(:,:,0:3,4),cDegeneracy_IIII(:,:,0:3,4))
+         call get_ioniz_potential(4,IonizPotential_I(1:4))
       case (6)
          where (cExcitationC_III(0:4,2:5,0:nZ-1) /= 0.0)&
               cExcitationEnergy_IIII(0:4,2:5,0:nZ-1,nZ) = cExcitationC_III(0:4,2:5,0:nZ-1)
@@ -542,20 +544,9 @@ contains
               cExcitationEnergy_IIII(0:4,4:8,1,nZ) = cExcitationXe1_II(0:4,4:8)
          where (cExcitationXe2_II(0:3,4:7) /= 0.0)&
               cExcitationEnergy_IIII(0:3,4:7,2,nZ) = cExcitationXe2_II(0:3,4:7)
-         !write(*,*)'Before'
-         !do iZ=0,19
-         !   do iN=1,10
-         !      write(*,'(10e12.5)')cExcitationEnergy_IIII(:,iN,iZ,54)
-         !   end do
-         !end do
+         
          if(UseDataBase)call read_atomic_data(&
               54,19, cExcitationEnergy_IIII(:,:,0:19,54),cDegeneracy_IIII(:,:,0:19,54))
-         !write(*,*)'After'
-         !do iZ=0,19
-         !   do iN=1,10
-         !      write(*,'(10e12.5)')cExcitationEnergy_IIII(:,iN,iZ,54)
-         !   end do
-         !end do
       end select
 
       if(UsePressureIonization)then    
@@ -633,6 +624,7 @@ contains
     use ModIoUnit, ONLY: io_unit_new
     use ModConst
     use ModUtilities,ONLY: split_string
+    use CRASH_ModIonization,ONLY:put_ioniz_potential
     implicit none
 
     integer,intent(in)::nZ,iZMax
@@ -659,6 +651,7 @@ contains
     integer::nString,iString
     integer::nInner,lInner,nGround,lGround
     character(len=1)::TypeL
+    real::Energy0,Energy0Old
     !================
     Degeneracy_III       = 0.0
     ExcitationEnergy_III = 0.0
@@ -669,7 +662,15 @@ contains
        write(*,'(a)')NameFile
        iUnit = io_unit_new()
        open(iUnit,file=NameFile,status='old')
-       do iLine=1,nHeader
+
+       read(iUnit,'(a)')NameRead
+       iPosition=index(NameRead,',')
+
+       read( NameRead(iPosition+1:len(NameRead)),*)Energy0
+       if(iZ>0)call put_ioniz_potential(nZ,iZ,Energy0 - Energy0Old)
+       Energy0Old = Energy0
+
+       do iLine=2,nHeader
           read(iUnit,*)
        end do
        read(iUnit,'(a)')NameRead
@@ -725,7 +726,6 @@ contains
        end do LINES
        close(iUnit)
     end do
-
   end subroutine read_atomic_data
 
 end module CRASH_ModExcitationData
