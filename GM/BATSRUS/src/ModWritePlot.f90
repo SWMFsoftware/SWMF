@@ -257,15 +257,24 @@ subroutine write_plot_common(ifile)
      ! Fix of XYZ to be sure that "hanging" nodes are precicely on plane with "non-hanging" nodes.
      ! Specifically, this fixes many grid problems for spherical plots, but doesn't hurt cartesian.
      allocate(PlotXYZNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,3))
-     NodeValue_NB=NodeX_NB(:,:,:,:)                   ! X
-     call pass_and_average_nodes(.true.,NodeValue_NB)
-     PlotXYZNodes_NBI(:,:,:,:,1)=NodeValue_NB
-     NodeValue_NB=NodeY_NB(:,:,:,:)                   ! Y
-     call pass_and_average_nodes(.true.,NodeValue_NB)
-     PlotXYZNodes_NBI(:,:,:,:,2)=NodeValue_NB
-     NodeValue_NB=NodeZ_NB(:,:,:,:)                   ! Z
-     call pass_and_average_nodes(.true.,NodeValue_NB)
-     PlotXYZNodes_NBI(:,:,:,:,3)=NodeValue_NB
+
+     if(TypeGeometry == 'cartesian' .or. TypeGeometry == 'rz')then
+        ! here, also the periodicity in the z-direction for the cylinder should go
+        PlotXYZNodes_NBI(:,:,:,:,1)=NodeX_NB
+        PlotXYZNodes_NBI(:,:,:,:,2)=NodeY_NB
+        PlotXYZNodes_NBI(:,:,:,:,3)=NodeZ_NB
+     else
+        NodeValue_NB=NodeX_NB(:,:,:,:)                   ! X
+        call pass_and_average_nodes(.true.,NodeValue_NB)
+        PlotXYZNodes_NBI(:,:,:,:,1)=NodeValue_NB
+        NodeValue_NB=NodeY_NB(:,:,:,:)                   ! Y
+        call pass_and_average_nodes(.true.,NodeValue_NB)
+        PlotXYZNodes_NBI(:,:,:,:,2)=NodeValue_NB
+        NodeValue_NB=NodeZ_NB(:,:,:,:)                   ! Z
+        call pass_and_average_nodes(.true.,NodeValue_NB)
+        PlotXYZNodes_NBI(:,:,:,:,3)=NodeValue_NB
+     end if
+
      ! Now pass and average the rest of the values
      do i=1,nplotvar
         NodeValue_NB=PlotVarNodes_NBI(:,:,:,:,i)
