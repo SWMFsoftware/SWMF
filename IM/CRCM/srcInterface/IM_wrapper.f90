@@ -607,7 +607,7 @@ subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
      ! Only worry about the northern hemisphere....  IE can fix the southern hemisphere.
 
      if (iLat <= nLat .and. iLon <= nLon) then
-        Buff_V(1) = Buff_V(1) - w * FAC_C(iLat,iLon)/2 / 1.0e6
+        Buff_V(1) = Buff_V(1) - w * FAC_C(iLat,iLon)/2 ! / 1.0e6
         ! Fill with -1 for now. In the future we will determine these values
         Buff_V(2) = -1.0
         Buff_V(3) = -1.0
