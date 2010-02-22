@@ -1209,7 +1209,7 @@ contains
     real    :: WeightNode_I(3), WeightMaterial_I(0:nMaterial-1), Weight
     real    :: TrSi, EgSi
 
-    integer :: iMaterial, iMaterial_I(1), iMaterialNode_I(3)
+    integer :: iMaterial, iMaterialNode_I(3)
 
     character(len=*), parameter :: NameSub='interpolate_hyades2d'
     !-------------------------------------------------------------------------
@@ -1301,8 +1301,7 @@ contains
              end do
 
              ! Find the dominant material
-             iMaterial_I = maxloc(WeightMaterial_I)
-             iMaterial   = iMaterial_I(1) - 1
+             iMaterial   = maxloc(WeightMaterial_I, 1) - 1
              Weight      = WeightMaterial_I(iMaterial)
 
              where(iMaterialNode_I == iMaterial) 
@@ -1584,7 +1583,7 @@ contains
     real    :: PiSi, TiSi, NatomicSi
     real    :: OpacityPlanckSi_W(nWave)
     real    :: OpacityRosselandSi_W(nWave)
-    integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel, iWave, iVar
+    integer :: i, j, k, iMaterial, iLevel, iWave, iVar
     real    :: Value_V(nMaterial*nThermo) ! Cv,Gamma,Kappa,Te for the materials
 
     ! Do not use MinJ,MinK,MaxJ,MaxK here to avoid pgf90 compilation error...
@@ -1601,8 +1600,8 @@ contains
     select case(NameVar)
     case('level', 'material')
        do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
-          iMaterial_I = maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock))
-          PlotVar_G(i,j,k) = iMaterial_I(1)
+          PlotVar_G(i,j,k) = &
+               maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock), 1) - 1
        end do; end do; end do
     case('tekev', 'TeKev')
        NameIdlUnit = 'KeV'
@@ -1687,8 +1686,8 @@ contains
           end do; end do; end do
        else
           do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
-             iMaterial_I = maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock))
-             iMaterial   = iMaterial_I(1) - 1
+             iMaterial = &
+                  maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock), 1) - 1
              PlotVar_G(i,j,k) = -RadioDepth_I(iMaterial) &
                   *State_VGB(Rho_,i,j,k,iBlock)
           end do; end do; end do
@@ -1711,8 +1710,8 @@ contains
                *State_VGB(iLevel,MinI:MaxI,jMin:jMax,kMin:kMax,iBlock)
        else
           do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
-             iMaterial_I = maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock))
-             if(iMaterial_I(1) - 1 == iMaterial) then
+             if(iMaterial == &
+                  maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock),1) - 1) then
                 PlotVar_G(i,j,k) = State_VGB(Rho_,i,j,k,iBlock)
              else
                 PlotVar_G(i,j,k) = 0.0
@@ -2087,7 +2086,7 @@ contains
     real, optional, intent(out) :: TgOut_W(nWave)          ! [K]
 
     logical :: IsMix
-    integer :: iMaterial, jMaterial, iMaterial_I(1)
+    integer :: iMaterial, jMaterial
     real    :: pSi, RhoSi, TeSi, EinternalSi, LevelSum
     real    :: Value_V(nMaterial*nThermo), Opacity_V(2*nMaterial)
     real    :: GroupOpacity_W(2*nWave)
@@ -2111,8 +2110,7 @@ contains
     TeSi = -7.70
 
     ! Find maximum level set value. 
-    iMaterial_I = maxloc(State_V(LevelXe_:LevelMax))
-    iMaterial   = iMaterial_I(1) - 1
+    iMaterial   = maxloc(State_V(LevelXe_:LevelMax), 1) - 1
 
     ! By default use weight 1 for the material with maximum level
     IsMix               = .false.
