@@ -101,8 +101,7 @@ contains
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModMultiFluid,  ONLY: MassIon_I
     use ModNumConst,    ONLY: cTwoPi
-    use ModPhysics,     ONLY: Si2No_V, UnitEnergyDens_, UnitT_, &
-         ElectronTemperatureRatio, AverageIonCharge, UnitPoynting_
+    use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge
     use ModProcMH,      ONLY: iProc
     use ModWaves,       ONLY: UseWavePressure, UseAlfvenWaves
 
@@ -115,10 +114,7 @@ contains
        call write_prefix; write(iUnitOut,*) ''
     end if
 
-
-
     UseAlfvenWaves = .true.
-
     UseWavePressure = .true.
 
     ! TeFraction is used for ideal EOS:
@@ -171,7 +167,8 @@ contains
     call get_bernoulli_integral(Runit_D(1), Runit_D(2), Runit_D(3), Ufinal)
     Uratio = Ufinal/Umin
 
-    !This is the temperature variation. In coronal holes the temperature is reduced 
+    ! This is the temperature variation.
+    ! In coronal holes the temperature is reduced 
     Tbase = CoronalT0Dim*Si2No_V(UnitTemperature_) / min(Uratio, 1.5)
 
     ! This is the density variation
@@ -703,24 +700,20 @@ contains
 
     ! Fill one layer of ghost cells with the temperature for heat conduction
 
-    use ModAdvance,    ONLY: State_VGB, B0_DGB, UseElectronPressure
-    use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_BLK
-    use ModMain,       ONLY: x_, y_, z_, nJ, nK, East_, UseRotatingFrame
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+    use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk
+    use ModMain,       ONLY: x_, y_, z_, nJ, nK, East_
     use ModMultiFluid, ONLY: MassIon_I
-    use ModPhysics,    ONLY: AverageIonCharge, No2Si_V, Si2No_V, UnitU_, &
-         UnitEnergyDens_, OmegaBody
-    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
-         WaveFirst_, WaveLast_
+    use ModPhysics,    ONLY: AverageIonCharge
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
     integer :: i, j, k
-    real :: x_D(3), r, Runit_D(3)
+    real :: x_D(3)
     real :: RhoBase, Tbase, NumDensIon, NumDensElectron
-    real :: B1_D(3), B1r_D(3), B1t_D(3), FullB_D(3), FullBr, U_D(3)
-    real :: Ewave, EwaveSi, UalfvenSi
 
     character (len=*), parameter :: NameSub = 'user_set_outerbcs'
     !--------------------------------------------------------------------------
@@ -733,20 +726,6 @@ contains
        x_D(x_) = 0.5*sum(x_Blk(0:1,j,k,iBlock))
        x_D(y_) = 0.5*sum(y_Blk(0:1,j,k,iBlock))
        x_D(z_) = 0.5*sum(z_Blk(0:1,j,k,iBlock))
-       r = 0.5*sum(r_Blk(0:1,j,k,iBlock))
-       Runit_D = x_D/r
-
-       B1_D  = State_VGB(Bx_:Bz_,1,j,k,iBlock)
-       B1r_D = sum(Runit_D*B1_D)*Runit_D
-       B1t_D = B1_D - B1r_D
-
-       FullB_D = 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)) + B1t_D
-       FullBr = sum(FullB_D*Runit_D)
-
-       ! extrapolate transverse magnetic field components
-       do i = -1, 0
-          State_VGB(Bx_:Bz_,i,j,k,iBlock) = B1t_D
-       end do
 
        call get_plasma_parameters_base(x_D, RhoBase, Tbase)
 
@@ -754,14 +733,6 @@ contains
        State_VGB(Rho_,0,j,k,iBlock) = &
             2.0*RhoBase - State_VGB(Rho_,1,j,k,iBlock)
        State_VGB(Rho_,-1,j,k,iBlock) = State_VGB(Rho_,0,j,k,iBlock)
-
-       ! reflective boundary
-       do i = -1, 0
-          U_D = State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock) &
-             /State_VGB(Rho_,1-i,j,k,iBlock)
-          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-               -State_VGB(Rho_,i,j,k,iBlock)*U_D
-       end do
 
        ! fixed electron and ion temperature
        do i = -1, 0
@@ -774,22 +745,6 @@ contains
              State_VGB(p_,i,j,k,iBlock) = (NumDensIon + NumDensElectron)*Tbase
           end if
        end do
-
-       ! Set Alfven waves energy density based on Bernoulli function
-       UalfvenSi = (FullBr/sqrt(RhoBase))*No2Si_V(UnitU_)
-       call get_total_wave_energy(x_D(x_), x_D(y_), x_D(z_), &
-            UalfvenSi, EwaveSi)
-       Ewave = EwaveSi*Si2No_V(UnitEnergyDens_)
-
-       if(UalfvenSi > 0.0)then
-          State_VGB(WaveFirst_,-1:0,j,k,iBlock) = Ewave
-          State_VGB(WaveLast_,-1:0,j,k,iBlock) = &
-               State_VGB(WaveLast_,1,j,k,iBlock)
-       else
-          State_VGB(WaveFirst_,-1:0,j,k,iBlock) = &
-               State_VGB(WaveFirst_,1,j,k,iBlock)
-          State_VGB(WaveLast_,-1:0,j,k,iBlock) = Ewave
-       end if
 
     end do; end do
 
