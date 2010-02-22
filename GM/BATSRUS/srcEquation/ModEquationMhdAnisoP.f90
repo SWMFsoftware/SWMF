@@ -1,7 +1,7 @@
 module ModVarIndexes
 
   use ModSingleFluid
-  use ModExtraVariables, Redefine1 => Ppar_, Redefine2 => Pperp_ 
+  use ModExtraVariables, Redefine => Ppar_
 
   implicit none
 
@@ -37,7 +37,7 @@ module ModVarIndexes
        By_    = 6,    &
        Bz_    = 7,    &
        Ppar_  = 8,    &
-       p_     = nVar, Pperp_ = p_, &
+       p_     = nVar, &
        Energy_= nVar+1
 
   ! This allows to calculate RhoUx_ as rhoU_+x_ and so on.
@@ -62,33 +62,33 @@ module ModVarIndexes
        0.0, & ! By_
        0.0, & ! Bz_
        1.0, & ! Ppar_
-       1.0, & ! p_ or Pperp_
+       1.0, & ! p_
        1.0 /) ! Energy_
 
   ! The names of the variables used in i/o
-  character(len=5) :: NameVar_V(nVar+1) = (/ &
-       'Rho  ', & ! Rho_
-       'Mx   ', & ! RhoUx_
-       'My   ', & ! RhoUy_
-       'Mz   ', & ! RhoUz_
-       'Bx   ', & ! Bx_
-       'By   ', & ! By_
-       'Bz   ', & ! Bz_
-       'Ppar ', & ! Ppar_
-       'Pperp', & ! Pperp_
-       'e    ' /) ! Energy_
+  character(len=4) :: NameVar_V(nVar+1) = (/ &
+       'Rho ', & ! Rho_
+       'Mx  ', & ! RhoUx_
+       'My  ', & ! RhoUy_
+       'Mz  ', & ! RhoUz_
+       'Bx  ', & ! Bx_
+       'By  ', & ! By_
+       'Bz  ', & ! Bz_
+       'Ppar', & ! Ppar_
+       'p   ', & ! p_
+       'e   ' /) ! Energy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'rho mx my mz bx by bz ppar pperp e'
+       'rho mx my mz bx by bz ppar p e'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'rho ux uy uz bx by bz ppar pperp'
+       'rho ux uy uz bx by bz ppar p'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p_par", "p_perp"'
+       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p_par", "p"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
