@@ -4,13 +4,10 @@ module ModEnergy
   use ModMultiFluid
   use ModSize,    ONLY: nI, nJ, nK, gcn, MaxBlock
   use ModAdvance, ONLY: State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
-       UseNonConservative, nConservCrit, IsConserv_CB, UseAnisoPressure
+       UseNonConservative, nConservCrit, IsConserv_CB
   use ModPhysics, ONLY: Gm1, Inv_Gm1
 
   implicit none
-
-  ! Variables used for converting energy to anisotropic pressure 
-  real :: Ppar, Pperp, pOld, pNew 
 
 contains
 
@@ -39,31 +36,6 @@ contains
        ! All cells are non-conservative
        call calc_energy_cell(iBlock)
        RETURN
-    end if
-
-    ! A mix of conservative and non-conservative scheme for aniso pressure
-    ! Only work for single fluid now, nfluid = 1
-    if(UseAnisoPressure)then
-       do k=1, nK; do j=1,nJ; do i=1,nI
-          if(IsConserv_CB(i,j,k,iBlock))then
-             Pperp = State_VGB(Pperp_,i,j,k,iBlock)
-             Ppar  = State_VGB(Ppar_,i,j,k,iBlock)
-             pOld  = 2/3.*Pperp + 1/3.*Ppar
-             pNew  = gm1*(Energy_GBI(i,j,k,iBlock,1) - 0.5* &
-                  sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)   &
-                  /State_VGB(iRho,i,j,k,iBlock) )                 &
-                  - gm1*0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
-             
-             State_VGB(Ppar_,i,j,k,iBlock)  = pNew/pOld*Ppar
-             State_VGB(Pperp_,i,j,k,iBlock) = pNew/pOld*Pperp
-          else
-             Energy_GBI(i,j,k,iBlock,1) = &
-                  inv_gm1*(2/3.*State_VGB(iP,i,j,k,iBlock) &
-                  + 1/3.*State_VGB(iP-1,i,j,k,iBlock)) &
-                  +0.5*(sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)/&
-                  State_VGB(iRho,i,j,k,iBlock))
-          end if
-       end do; end do; end do;
     end if
 
     ! A mix of conservative and non-conservative scheme (at least for the ions)
@@ -114,31 +86,10 @@ contains
     !
     !   P = (gamma-1)*(E - 0.5*rho*u^2 - 0.5*b1^2)
     !
-    ! For anisotropic pressure
-    !   pNew = 2/3*(E - 0.5*rho*u^2 - 0.5*b1^2)
-    !   pperp = 3*pNew/(2*pperp + ppar)*pperp = pNew/pOld*pperp
-    !   ppar  = 3*pNew/(2*pperp + ppar)*ppar  = pNew/pOld*ppar
-
+    
     integer, intent(in) :: iBlock
     integer :: i,j,k
     !--------------------------------------------------------------------------
-    if(UseAnisoPressure)then
-       ! Only works for single fluid now
-       do k=1, nK; do j=1, nJ; do i=1, nI
-          Pperp = StateOld_VCB(Pperp_,i,j,k,iBlock)
-          Ppar  = StateOld_VCB(Ppar_,i,j,k,iBlock)
-          pOld  = 2/3.*Pperp + 1/3.*Ppar
-          pNew  = gm1*(EnergyOld_CBI(i,j,k,iBlock,1) - 0.5* &
-               sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)   &
-               /StateOld_VCB(iRho,i,j,k,iBlock) )                 &
-               - gm1*0.5*sum(StateOld_VCB(Bx_:Bz_,i,j,k,iBlock)**2)
-
-          StateOld_VCB(Ppar_,i,j,k,iBlock)  = pNew/pOld*Ppar
-          StateOld_VCB(Pperp_,i,j,k,iBlock) = pNew/pOld*Pperp
-       end do; end do; end do
-       RETURN
-    end if
-
     do iFluid = 1, nFluid
        call select_fluid
        do k=1, nK; do j=1, nJ; do i=1, nI
@@ -166,32 +117,11 @@ contains
     !
     !   P = (gamma-1)*(E - 0.5*rho*u^2 - 0.5*b1^2)
     !
-    ! For anisotropic pressure, correction as
-    !   pNew = 2/3*(E - 0.5*rho*u^2 - 0.5*b1^2)
-    !   pperp = 3*pNew/(2*pperp + ppar)*pperp = pNew/pOld*pperp
-    !   ppar  = 3*pOld/(2*pperp + ppar)*ppar  = pNew/pOld*ppar
-
+   
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
     integer :: i,j,k    
     !--------------------------------------------------------------------------
-    if(UseAnisoPressure)then
-       ! Only works for single fluid now
-       do k=1, nK; do j=1, nJ; do i=1, nI
-          Pperp = State_VGB(Pperp_,i,j,k,iBlock)
-          Ppar  = State_VGB(Ppar_,i,j,k,iBlock)
-          pOld  = 2/3.*Pperp + 1/3.*Ppar
-          pNew  = gm1*(Energy_GBI(i,j,k,iBlock,1) - 0.5* &
-               sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)   &
-               /State_VGB(iRho,i,j,k,iBlock)                  &
-               - 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2))
-
-          State_VGB(Ppar_,i,j,k,iBlock)  = pNew/pOld*Ppar
-          State_VGB(Pperp_,i,j,k,iBlock) = pNew/pOld*Pperp
-       end do; end do; end do
-       RETURN
-    end if
-
     do iFluid = iFluidMin, iFluidMax
        call select_fluid
        do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
@@ -219,10 +149,6 @@ contains
     !
     !   E = p/(gamma-1) + 0.5*rho*u^2 + 0.5*b1^2
     !
-    ! For anisotropic pressure:
-    !
-    !   E = (2/3*pperp + 1/3*ppar)/(5/3-1) + 0.5*rho*u^2 + 0.5*b1^2
-    
 
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
@@ -240,10 +166,6 @@ contains
                   inv_gm1*State_VGB(iP,i,j,k,iBlock) &
                   +0.5*(sum(State_VGB(iRhoUx:iRhoUz, i, j, k, iBlock)**2)/&
                   State_VGB(iRho, i, j, k, iBlock))
-             if(UseAnisoPressure) &
-                  Energy_GBI(i, j, k, iBlock, iFluid) = &
-                  Energy_GBI(i, j, k, iBlock, iFluid) &
-                  +0.5*(State_VGB(iP-1,i,j,k,iBlock)-State_VGB(iP,i,j,k,iBlock))
           end if
        end do; end do; end do
        

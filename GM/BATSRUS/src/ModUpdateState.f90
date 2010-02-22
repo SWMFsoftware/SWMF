@@ -173,7 +173,7 @@ contains
        if(iStage==nStage.and.nWave>2)call update_wave_group_advection(iBlock)
        if(UseWavePressureLtd)then
           do k=1,nK;do j=1,nJ; do i=1,nI
-             State_VGB(Ew_,i,j,k,iBlock)= sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+             State_VGB(ExtraEInt_,i,j,k,iBlock)= sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
           end do; end do; end do
        end if
     end if
@@ -346,7 +346,7 @@ end subroutine update_states_mhd
 
 subroutine fix_anisotropy
 
-  use ModVarIndexes, ONLY: Bx_, Bz_, Ppar_, Pperp_
+  use ModVarIndexes, ONLY: Bx_, Bz_, Ppar_, p_
   use ModMain,    ONLY: nI, nJ, nK, nBlock, UnusedBlk, UseB0, &
        time_accurate, Cfl
   use ModB0,      ONLY: B0_DGB
@@ -357,7 +357,7 @@ subroutine fix_anisotropy
   implicit none
 
   ! Variables for anisotropic pressure
-  real:: B_D(3), B2, Ppar, Pperp, p, Dp, DtCell
+  real:: B_D(3), B2, Ppar, Pperp, Dp, DtCell
 
   integer:: i, j, k, iBlock
   !---------------------------------------------------------------------------
@@ -372,7 +372,7 @@ subroutine fix_anisotropy
         if(UseB0) B_D = B_D + B0_DGB(:,i,j,k,iBlock)
         B2     = sum(B_D**2)
         Ppar   = State_VGB(Ppar_,i,j,k,iBlock)
-        Pperp  = State_VGB(Pperp_,i,j,k,iBlock)
+        Pperp  = (3*State_VGB(p_,i,j,k,iBlock) - Ppar)/2.
         DtCell = Cfl*time_BLK(i,j,k,iBlock)
 
         ! Check for firehose and mirror instabilities
@@ -387,7 +387,6 @@ subroutine fix_anisotropy
         else
            CYCLE
         end if
-        State_VGB(Pperp_,i,j,k,iBlock) = Pperp - 1./3.*Dp
         State_VGB(Ppar_,i,j,k,iBlock)  = Ppar  + 2./3.*Dp
      end do; end do; end do  
   end do

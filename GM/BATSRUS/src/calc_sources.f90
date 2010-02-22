@@ -49,7 +49,7 @@ subroutine calc_sources
   real :: Current_D(3), JouleHeating, HeatExchange
 
   ! Varibles needed for anisotropic pressure
-  real :: b_D(3), GradU_DD(3,3), bDotGradparU, AnisoRelaxation
+  real :: b_D(3), GradU_DD(3,3), bDotGradparU
   logical :: IsFirehose, IsMirror 
 
   ! Electron temperature in K:
@@ -73,11 +73,11 @@ subroutine calc_sources
   Source_VC   = 0.0
 
   ! Calculate source terms for ion pressure
-  if(UseNonconservative)then
+  if(UseNonconservative .or. UseAnisoPressure)then
      do iFluid = 1, nFluid
         call select_fluid
 
-        if(UseAnisopressure)then
+        if(UseAnisoPressure)then
            ! Source terms for anisotropic pressure equations
            do k=1,nK; do j=1,nJ; do i=1,nI
               if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -115,21 +115,19 @@ subroutine calc_sources
               ! Calculate b.grad u.b
               bDotGradparU = dot_product(b_D, matmul(b_D, GradU_DD))
 
-              ! p parallel: -2*Ppar*b.(b.(Grad U))
+              ! p parallel: -2*ppar*b.(b.(Grad U))
               Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
                    - 2*State_VGB(Ppar_,i,j,k,iBlock)*bDotGradparU
-              ! p perpendicular: Pperp*b.(b.(GradU))
-              Source_VC(Pperp_,i,j,k) = Source_VC(Pperp_,i,j,k) &
-                   + State_VGB(Pperp_,i,j,k,iBlock)*bDotGradparU
+              ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
+              !     = (p - ppar)*b.(b.(GradU)) 
+              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+                   + (State_VGB(p_,i,j,k,iBlock) -  &
+                   State_VGB(Ppar_,i,j,k,iBlock))*bDotGradparU
            end do; end do; end do
 
-           if(DoTestMe .and. (VarTest == Ppar_ .or. VarTest == Pperp_)) &
+           if(DoTestMe .and. (VarTest == Ppar_ .or. VarTest == p_)) &
                 call write_source('After bDotGradparU')
-
-           ! For Pperp equation, GammaPerp = 2, thus -Pperp*Div(U)
-           GammaMinus1 = 1
-        else
-           GammaMinus1 = g - 1
+        
         end if
 
         ! Adiabatic heating: -(g-1)*P*Div(U)
@@ -142,7 +140,7 @@ subroutine calc_sources
                 uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid)
            DivU = vInv_CB(i,j,k,iBlock)*DivU
            Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
-                - GammaMinus1*State_VGB(iP,i,j,k,iBlock)*DivU
+                - (g - 1)*State_VGB(iP,i,j,k,iBlock)*DivU
         end do; end do; end do
 
         if(DoTestMe .and. VarTest==iP)call write_source('After p div U')
@@ -170,19 +168,10 @@ subroutine calc_sources
                    3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)
 
               ! Point-implicit correction for stability: H' = H/(1+dt*H)
-              if(UseAnisoPressure)then
-                 HeatExchange = &
-                   HeatExchange/(1 + Cfl*HeatExchange*time_BLK(i,j,k,iBlock)) &
-                   *(2./3.*State_VGB(Pperp_,i,j,k,iBlock) &
-                   + 1./3.*State_VGB(Ppar_,i,j,k,iBlock) &
+              HeatExchange = HeatExchange / &
+                   (1 + Cfl*HeatExchange*time_BLK(i,j,k,iBlock)) &
+                   *(State_VGB(P_,i,j,k,iBlock) &
                    - State_VGB(Pe_,i,j,k,iBlock))
-              else
-                 HeatExchange = HeatExchange / &
-                      (1 + Cfl*HeatExchange*time_BLK(i,j,k,iBlock)) &
-                      *(State_VGB(P_,i,j,k,iBlock) &
-                      - State_VGB(Pe_,i,j,k,iBlock))
-              end if
-
            end if
 
            Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
@@ -196,14 +185,10 @@ subroutine calc_sources
               Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) - HeatExchange
               
               ! Relaxation term due to collisions
-              AnisoRelaxation = Eta_GB(i,j,k,iBlock) &
-                   *State_VGB(Rho_,i,j,k,iBlock)/IonMassPerCharge**2 &
-                   *(State_VGB(Ppar_,i,j,k,iBlock) &
-                   - State_VGB(Pperp_,i,j,k,iBlock))
-              Source_VC(Pperp_,i,j,k) = Source_VC(Pperp_,i,j,k) &
-                   + 1./3.*AnisoRelaxation
               Source_VC(Ppar_,i,j,k)  = Source_VC(Ppar_,i,j,k)  &
-                   - 2./3.*AnisoRelaxation
+                   - Eta_GB(i,j,k,iBlock) &
+                   *State_VGB(Rho_,i,j,k,iBlock)/IonMassPerCharge**2 &
+                   *(State_VGB(Ppar_,i,j,k,iBlock) - State_VGB(p_,i,j,k,iBlock))
            end if
 
            ! Remove Joule heating and apply heat exchange to ion energy

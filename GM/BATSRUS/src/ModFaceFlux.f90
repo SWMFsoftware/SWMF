@@ -2034,7 +2034,7 @@ contains
       use ModWaves
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, Ppar
+      real :: Rho, Ux, Uy, Uz, p, e
       real :: HallUx, HallUy, HallUz, InvRho
       real :: pAlfven
       real :: B2, B0B1, FullB2, pTotal, DpPerB
@@ -2055,12 +2055,7 @@ contains
       B2      = Bx**2 + By**2 + Bz**2
 
       ! Calculate energy
-      if(UseAnisoPressure)then  ! p = Pperp
-         Ppar  = State_V(Ppar_)
-         e = p + 0.5*Ppar + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
-      else
-         e = inv_gm1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
-      end if
+      e = inv_gm1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
 
       ! Calculate conservative state
       StateCons_V(RhoUx_)  = Rho*Ux
@@ -2070,7 +2065,7 @@ contains
 
       ! Calculate some intermediate values for flux calculations
       B0B1    = B0x*Bx + B0y*By + B0z*Bz
-      pTotal  = p + 0.5*B2 + B0B1     ! For anisopressure, p = Pperp
+      pTotal  = p + 0.5*B2 + B0B1 
 
       if(UseWavePressure)then
          if(.not.UseWavePressureLtd)then
@@ -2079,6 +2074,10 @@ contains
             pTotal = pTotal + (GammaWave - 1.0)*State_V(Ew_)
          end if
       end if
+
+      ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 = p + bb/2 + (p - ppar)/2
+      if(UseAnisoPressure) pTotal = pTotal + 0.5*(p - State_V(Ppar_))
+
       if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
 
       ! Normal direction
@@ -2151,16 +2150,16 @@ contains
 
       if(UseAnisoPressure)then
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
+         ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
-         DpPerB = (Ppar - p)*FullBn/max(1e-30,FullB2)
+         DpPerB = 3/2.*(State_V(Ppar_) - p)*FullBn/max(1e-30,FullB2)
          Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
          Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
          Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
-         ! f_i[Ppar] = u_i*Ppar, f_i[Pperp] = u_i*Pperp
-         Flux_V(Ppar_)  = Un*Ppar
-         Flux_V(Pperp_) = Un*p
+         ! f_i[Ppar] = u_i*Ppar
+         Flux_V(Ppar_)  = Un*State_V(Ppar_)
       end if
-
+ 
       ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
       if(HallCoeff > 0.0) then
          Flux_V(Energy_) = &
@@ -2545,8 +2544,8 @@ contains
       if(UseAnisoPressure .and. FullB2 > 0)then
          GammaPe = 0.0 
          if(UseElectronPressure) GammaPe = g*State_V(Pe_) ! considering Pe
-         Ppar = State_V(Ppar_)
-         Pperp = State_V(Pperp_)
+         Ppar  = State_V(Ppar_)
+         Pperp = (3*p - Ppar)/2.
          BnInvB2 = FullBn**2/FullB2
          Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 &
               + GammaPe)                        ! define Sound2 in this way
