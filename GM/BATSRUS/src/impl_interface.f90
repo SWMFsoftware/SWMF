@@ -151,7 +151,8 @@ end subroutine impl2expl
 
 subroutine implicit2explicit(Var_VCB)
 
-  use ModMain, ONLY: nI,nJ,nK,MaxImplBLK
+  use ModMain, ONLY: nI,nJ,nK,MaxImplBLK, iTest, jTest, kTest, BlkTest
+  use ModAdvance, ONLY: State_VGB
   use ModImplicit, ONLY: nw, nImplBLK, impl2iBLK, &
        UseSemiImplicit, TypeSemiImplicit
   use ModRadDiffusion, ONLY: update_impl_rad_diff
@@ -161,8 +162,10 @@ subroutine implicit2explicit(Var_VCB)
   real :: Var_VCB(nw,nI,nJ,nK,MaxImplBLK)
   integer :: implBLK, iBLK
 
+  logical:: DoTest, DoTestMe
   character(len=*), parameter:: NameSub = 'implicit2explicit'
   !---------------------------------------------------------------------------
+  call set_oktest(NameSub,DoTest,DoTestMe)
 
   do implBLK=1,nImplBLK
      iBLK=impl2iBLK(implBLK)
@@ -180,6 +183,9 @@ subroutine implicit2explicit(Var_VCB)
         call impl2expl(Var_VCB(:,:,:,:,implBLK),iBLK)
      end if
   end do
+
+  if(DoTestMe)write(*,*) NameSub,': State_VGB=',&
+       State_VGB(:,iTest,jTest,kTest,BlkTest)
 
 end subroutine implicit2explicit
 
