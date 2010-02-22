@@ -36,7 +36,7 @@ contains
   real function pressure_e()
     use CRASH_ModFermiGas,ONLY:RPlus
 
-    pressure_e = pressure() - Na * cEV * Te 
+    pressure_e = Na * cEV * Te * (zAv*RPlus + VirialCoeffAv)
 
   end function pressure_e
 
@@ -47,7 +47,7 @@ contains
   real function internal_energy_e()
     use CRASH_ModFermiGas,ONLY:RPlus
 
-    internal_energy_e = internal_energy() - 1.50 * Te
+    internal_energy_e = 1.50 * Te *zAv * RPlus + EAv
 
   end function internal_energy_e
 
@@ -332,7 +332,7 @@ Contains
 
     if( .not.UsePreviousTe ) then
        
-          Te = max(UIn,IonizPotential_II(1,1)) * 0.1
+          Te = max(UIn,minval(IonizPotential_II(1,1:nMix))) * 0.1
    
     end if
 
