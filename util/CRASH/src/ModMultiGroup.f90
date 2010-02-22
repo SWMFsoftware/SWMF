@@ -446,6 +446,13 @@ contains
 
                    ennp = ExcitationEnergy_III(iNUpper, iZ,iMix)- &
                         ExcitationEnergy_III(iN, iZ,iMix)
+                   if(ennp<=0.0)then
+                      write(*,*)'ennp<0',ennp
+                      write(*,*)'iZ,iMix',iZ,nZ_I(iMix)
+                      write(*,*)'Upper:',inUpper, ExcitationEnergy_III(iNUpper, iZ,iMix)
+                      write(*,*)'Low:',iN, ExcitationEnergy_III(iN, iZ,iMix)
+                      call CON_stop('')
+                   end if
                    if ( ennp .gt. EnergyGroup_I(0) .and. &                     
                         ennp .lt. EnergyGroup_I(nGroup) ) then              
 
@@ -1019,7 +1026,10 @@ contains
 
                   ! ... compute the line widths for natural, Doppler, and pressure        
                   !     broadening to be used with Lorentzian line shape 
-
+                  if(TransitionEnergy<=0.0)then
+                      write(*,*)'TransitionEnergy<0'
+                      call CON_stop('')
+                   end if
                   call line_width ( Te, densnn, TransitionEnergy, cAtomicMass_I(nZ_I(iMix)),  &                            
                        gamma, avoigt, dnudop )        
 
