@@ -69,13 +69,15 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   use ModBuffer
   use ModMain,       ONLY: nDim, R_, Phi_, Theta_, x_, y_, z_,&
        TypeCoordSystem, Time_Simulation
-  use ModAdvance,    ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, Bx_, Bz_, p_
-  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, Pe_
+  use ModAdvance,    ONLY: UseElectronPressure
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, Bx_, Bz_, p_, &
+       WaveFirst_, WaveLast_, Pe_
   use CON_coupler,   ONLY: Grid_C
   use CON_axes,      ONLY: transform_matrix, transform_velocity
   use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
   use ModPhysics,    ONLY: UnitEnergyDens_
   implicit none
+
   integer,intent(in)::nVar
   real,intent(in)::XyzTarget_D(nDim)
   real,dimension(nVar),intent(out)::State_V
@@ -87,7 +89,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   real              :: XyzSource_D(nDim)
 
   ! logicals and buffer indices for waves and electron pressure
-  logical :: UseWave, UseElectronPressure
+  logical :: UseWave, UsePeInBuffer
   integer :: iBuffWaveFirst, iBuffWaveLast, iBuffPe
 
   !Misc
@@ -106,7 +108,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   iBuffWaveFirst = 8
   iBuffWaveLast  = 8 + WaveLast_ - WaveFirst_
 
-  UseElectronPressure = nVarBuff/=2*(nVarBuff/2)
+  UsePeInBuffer = nVarBuff/=2*(nVarBuff/2)
   iBuffPe = nVarBuff - 1
 
   TypeCoordSource = Grid_C(SourceID_) % TypeCoord
@@ -141,7 +143,6 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   !Transform to primitive variables
   State_V(Ux_:Uz_) = Buffer_V(rhoUx_:rhoUz_)/Buffer_V(rho_)
   State_V(Bx_:Bz_) = Buffer_V(Bx_:Bz_)
-  State_V(P_)      = Buffer_V(nVarBuff)
 
   ! Transform vector variables from SC to IH
   if(TypeCoordSource /= TypeCoordSystem)then
@@ -155,10 +156,21 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   State_V(rho_)      = State_V(rho_)   *Si2No_V(UnitRho_)
   State_V(Ux_:Uz_)   = State_V(Ux_:Uz_)*Si2No_V(UnitU_)
   State_V(Bx_:Bz_)   = State_V(Bx_:Bz_)*Si2No_V(UnitB_)
-  State_V(P_)        = State_V(P_)     *Si2No_V(UnitP_)
+
   if(UseWave) State_V(WaveFirst_:WaveLast_) = &
        Buffer_V(iBuffWaveFirst:iBuffWaveLast)*Si2No_V(UnitEnergyDens_)
-  if(UseElectronPressure) State_V(Pe_) = Buffer_V(iBuffPe)*Si2No_V(UnitP_)
+
+  if(UsePeInBuffer)then
+     State_V(Pe_) = Buffer_V(iBuffPe)*Si2No_V(UnitP_)
+     State_V(p_)  = Buffer_V(nVarBuff)*Si2No_V(UnitP_)
+  else
+     if(UseElectronPressure)then
+        State_V(Pe_) = 0.5*Buffer_V(nVarBuff)*Si2No_V(UnitP_)
+        State_V(p_)  = State_V(Pe_)
+     else
+        State_V(p_)  = Buffer_V(nVarBuff)*Si2No_V(UnitP_)
+     end if
+  end if
 
 end subroutine get_from_spher_buffer_grid
           
