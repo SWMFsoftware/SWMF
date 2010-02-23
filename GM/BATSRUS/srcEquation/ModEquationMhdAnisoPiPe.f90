@@ -1,9 +1,8 @@
 module ModVarIndexes
 
   use ModSingleFluid
-  use ModExtraVariables, Redefine1 => Ppar_, Redefine2 => Pperp_, &
-       Redefine3 => Pe_
-
+  use ModExtraVariables, Redefine1 => Ppar_, Redefine2 => Pe_
+      
   implicit none
 
   save
@@ -39,7 +38,7 @@ module ModVarIndexes
        Bz_    = 7,    &
        Pe_    = 8,    &
        Ppar_  = 9,    &
-       p_     = nVar, Pperp_= p_, &
+       p_     = nVar, &
        Energy_= nVar+1
 
   ! This allows to calculate RhoUx_ as rhoU_+x_ and so on.
@@ -65,22 +64,22 @@ module ModVarIndexes
        0.0, & ! Bz_
        1.0, & ! Pe_
        1.0, & ! Ppar_ 
-       1.0, & ! Pperp_
+       1.0, & ! p_
        1.0 /) ! Energy_
 
   ! The names of the variables used in i/o
-  character(len=5) :: NameVar_V(nVar+1) = (/ &
-       'Rho  ', & ! Rho_
-       'Mx   ', & ! RhoUx_
-       'My   ', & ! RhoUy_
-       'Mz   ', & ! RhoUz_
-       'Bx   ', & ! Bx_
-       'By   ', & ! By_
-       'Bz   ', & ! Bz_
-       'Pe   ', & ! Pe_
-       'Ppar ', & ! Ppar_
-       'Pperp', & ! Pperp_
-       'e    ' /) ! Energy_
+  character(len=4) :: NameVar_V(nVar+1) = (/ &
+       'Rho ', & ! Rho_
+       'Mx  ', & ! RhoUx_
+       'My  ', & ! RhoUy_
+       'Mz  ', & ! RhoUz_
+       'Bx  ', & ! Bx_
+       'By  ', & ! By_
+       'Bz  ', & ! Bz_
+       'Pe  ', & ! Pe_
+       'Ppar', & ! Ppar_
+       'p   ', & ! p_
+       'e   ' /) ! Energy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
@@ -88,12 +87,12 @@ module ModVarIndexes
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'rho ux uy uz bx by bz pe ppar pperp'
+       'rho ux uy uz bx by bz pe ppar p'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
        '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z"' // &
-       '"Pe", "P_par", "P_perp"'
+       '"Pe", "P_par", "p"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
