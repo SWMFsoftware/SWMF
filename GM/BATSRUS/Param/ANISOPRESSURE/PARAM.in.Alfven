@@ -39,7 +39,7 @@ T			UseNonConservative
 0.0			By
 0.0			Bz
 6.0			Ppar
-50.0			Pperp
+35.3333			p
 1.0			rho (right state)
 0.0			Ux
 0.0			Uy
@@ -48,7 +48,7 @@ T			UseNonConservative
 0.0			By
 0.0			Bz
 6.0			Ppar
-50.0			Pperp
+35.3333			p
 
 #USERFLAGS
 F			UseUserInnerBcs

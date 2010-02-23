@@ -39,7 +39,7 @@ T			UseNonConservative
 0.0			By
 0.0			Bz
 3.0			Ppar
-3.0			Pperp
+3.0			p
 1.0			rho (right state)
 0.0			Ux
 0.0			Uy
@@ -48,7 +48,7 @@ T			UseNonConservative
 0.0			By
 0.0			Bz
 3.0			Ppar
-3.0			Pperp
+3.0			p
 
 #USERFLAGS
 F			UseUserInnerBcs
@@ -69,7 +69,7 @@ F                       UseUserUpdateStates
 
 #WAVE
 1			Rho
-1.0			Width
+12.0			Width
 0.02			Amplitude
 6.0			LambdaX
 -1.0			LambdaY
@@ -78,7 +78,7 @@ F                       UseUserUpdateStates
 
 #WAVE
 8			Ppar
-1.0			Width
+12.0			Width
 0.18			Amplitude
 6.0			LambdaX
 -1.0			LambdaY
@@ -86,9 +86,9 @@ F                       UseUserUpdateStates
 0.0			Phase
 
 #WAVE
-9			Pperp
-1.0			Width
-0.06			Amplitude
+9			p
+12.0			Width
+0.1			Amplitude
 6.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
