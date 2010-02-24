@@ -49,7 +49,7 @@ subroutine MH_set_parameters(TypeAction)
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
   use ModHeatConduction, ONLY: read_heatconduction_param !^CFG IF IMPLICIT
-  use ModHeatConduction, ONLY: init_heat_conduction
+!!!  use ModHeatConduction, ONLY: init_heat_conduction
   use ModRadDiffusion,   ONLY: read_rad_diffusion_param  !^CFG IF IMPLICIT
   use ModResistivity                              !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals,iFluid
@@ -244,7 +244,7 @@ subroutine MH_set_parameters(TypeAction)
 
      if(UseResistivity)call init_mod_resistivity !^CFG IF DISSFLUX
 
-     call init_heat_conduction                   !^CFG IF IMPLICIT
+!!!     call init_heat_conduction                   !^CFG IF IMPLICIT
 
      if(UseMagnetogram .and. i_line_command("#MAGNETOGRAM") > 0)&
           call read_magnetogram_file(NamePlotDir)
