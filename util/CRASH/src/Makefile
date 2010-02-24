@@ -14,6 +14,7 @@ IOMIX=\
 
 
 OBJECTS=\
+	ModAcrylic.o \
 	ModAtomicMass.o \
 	ModAtomicDataMix.o \
 	ModEos.o\
@@ -164,7 +165,7 @@ test_abs:
 distclean: clean 
 	rm -f Makefile.DEPEND; \
         rm -rf Tmp_;
-
+	rm -f test*diff *report*
 
 
 
@@ -190,3 +191,9 @@ test_Fermi_for_Darwin:
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
 
+CONVERT: convert.o
+	rm -rf Tmp_; mkdir Tmp_ ;
+	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
+	${LINK.f90} -o CONVERT.exe convert.o Tmp_/*.o \
+		${Lflag1}    ; 
+	rm -rf Tmp_ 
