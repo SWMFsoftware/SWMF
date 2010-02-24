@@ -10,7 +10,7 @@ Module ModFieldTrace
 
   integer :: irm(ip),irm0(ip),iba(ip)
 
-  real :: iw2(ik)
+  integer :: iw2(ik)
 
   logical :: UseEllipse = .true.
 contains
