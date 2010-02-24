@@ -85,20 +85,6 @@ subroutine update_states_MHD(iStage,iBlock)
 
   end if
 
-  if(UseHelioBuffer3D .and. rMin_BLK(iBlock) < rBuffMax)then
-     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        r = r_BLK(i,j,k,iBlock)
-        if(rBuffMin <= r .and. r <= rBuffMax)then
-           call get_from_spher_buffer_grid( (/x_BLK(i,j,k,iBlock), &
-                y_BLK(i,j,k,iBlock),z_BLK(i,j,k,iBlock)/), nVar, State_V)
-           State_V(RhoUx_:RhoUz_) = State_V(Rho_)*State_V(Ux_:Uz_) 
-           if(UseB0) State_V(Bx_:Bz_) = State_V(Bx_:Bz_)-B0_DGB(:,i,j,k,iBlock)
-           State_VGB(:,i,j,k,iBlock) = State_V
-           call calc_energy_point(i,j,k,iBlock)
-        end if
-     end do; end do; end do
-  end if
-
   ! The point implicit update and other stuff below are only done in last stage
   if(iStage < nStage) RETURN
 
