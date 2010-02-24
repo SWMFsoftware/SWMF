@@ -1860,6 +1860,14 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nThetaBuff',nThetaBuff)
         call read_var('nPhiBuff',  nPhiBuff)
 
+     case("#HELIOBUFFER3D")
+        if(.not.is_first_session())CYCLE READPARAM
+        if(NameThisComp == 'SC'.or. NameThisComp == 'LC') &
+             call stop_mpi(NameSub//' ERROR:'// &
+             ' #HELIOBUFFER3D command can be used in IH,OH components only')
+        call read_var('UseHelioBuffer3D', UseHelioBuffer3D)
+        if(UseHelioBuffer3D)call read_var('nRBuff', nRBuff)
+
         !CORONA SPECIFIC COMMANDS
 
      case("#MAGNETOGRAM")

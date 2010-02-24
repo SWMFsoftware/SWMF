@@ -3,7 +3,8 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModGeometry, ONLY : R_BLK,vInv_CB,RMin_BLK,body_BLK,true_cell
+  use ModGeometry, ONLY : R_BLK,vInv_CB,RMin_BLK,body_BLK,true_cell, &
+       x_BLK, y_BLK, z_BLK
   use ModPhysics
   use ModNumConst
   use ModKind, ONLY: Real8_
@@ -27,10 +28,10 @@ subroutine update_states_MHD(iStage,iBlock)
        FullBxOld, FullByOld, FullBzOld, Ux, Uy, Uz, UxOld, UyOld, UzOld,&
        Bx, By, Bz, BxOld, ByOld, BzOld, B0x, B0y, B0z, RhoUx, RhoUy, RhoUz,&
        mBorisMinusRhoUxOld, mBorisMinusRhoUyOld, mBorisMinusRhoUzOld,&
-       Rho, RhoInv, eCorr, p
+       Rho, RhoInv, eCorr, p, r
   real:: DtFactor
   real:: DtLocal
-  real:: B0_DC(3,nI,nJ,nK)
+  real:: B0_DC(3,nI,nJ,nK), State_V(nVar)
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'update_states_mhd'
   !--------------------------------------------------------------------------
@@ -82,6 +83,20 @@ subroutine update_states_MHD(iStage,iBlock)
           State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
           Energy_GBI(iTest,jTest,kTest,iBlock,1)
 
+  end if
+
+  if(UseHelioBuffer3D .and. rMin_BLK(iBlock) < rBuffMax)then
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        r = r_BLK(i,j,k,iBlock)
+        if(rBuffMin <= r .and. r <= rBuffMax)then
+           call get_from_spher_buffer_grid( (/x_BLK(i,j,k,iBlock), &
+                y_BLK(i,j,k,iBlock),z_BLK(i,j,k,iBlock)/), nVar, State_V)
+           State_V(RhoUx_:RhoUz_) = State_V(Rho_)*State_V(Ux_:Uz_) 
+           if(UseB0) State_V(Bx_:Bz_) = State_V(Bx_:Bz_)-B0_DGB(:,i,j,k,iBlock)
+           State_VGB(:,i,j,k,iBlock) = State_V
+           call calc_energy_point(i,j,k,iBlock)
+        end if
+     end do; end do; end do
   end if
 
   ! The point implicit update and other stuff below are only done in last stage
