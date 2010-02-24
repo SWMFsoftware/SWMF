@@ -38,7 +38,7 @@ contains
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
-   
+ 
     character (len=100) :: NameCommand
     !--------------------------------------------------------------------------
     UseUserInitSession = .true.
@@ -53,7 +53,7 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
 
        select case(NameCommand)
-
+          
        case("#INITSPECTRUM")
           call read_var('IsInitWave',IsInitWave)
        
@@ -74,7 +74,7 @@ contains
           call read_var('DoDampCutoff',DoDampCutoff)
           call read_var('DoDampSurface',DoDampSurface)
 
-       case('#USERINPUTEND')
+         case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
              write(iUnitOut,*)'User read_input TURBULENCE CORONA ends'
@@ -97,9 +97,10 @@ contains
   subroutine user_init_session
 
     use ModIO,          ONLY: write_prefix, iUnitOut,NamePlotDir
+    use ModPhysics,     ONLY: BodyNDim_I,BodyTDim_I,g
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: i_line_command
-
+ 
     !--------------------------------------------------------------------------
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -110,14 +111,6 @@ contains
     if(i_line_command("#INITSPECTRUM") > 0) then
        call init_wave_spectrum
     end if
-
-    !if(IsInitWave .and. i_line_command("#FREQUENCY") <0) then
-    !   write(*,*) 'Alfven waves frequency range should be set via #FREQUENCY'
-    !   call stop_mpi('ERROR: Correct PARAM.in!')
-    !end if
-    !if(i_line_command("#FREQUENCY") > 0) then
-    !   call set_freq_grid
-    !end if
 
     if(IsInitWave .and. i_line_command("#SPECTRUM") <0) then
        write(*,*) 'Alfven spectrum should be set via #SPECTRUM'
@@ -134,16 +127,17 @@ contains
   !====================================================================
   subroutine set_freq_grid
 
-    use ModProcMH,     ONLY: iProc
-    use ModVarIndexes
-    use ModNumConst,   ONLY: cPi
-    use ModWaves,      ONLY: FreqMinSI,DeltaLogFrequency
+    use ModProcMH,      ONLY: iProc
+    use ModVarIndexes,  ONLY: nWave
+    use ModNumConst,    ONLY: cPi
+    use ModWaves,       ONLY: FreqMinSI,DeltaLogFrequency
     implicit none
     
     integer                    :: iFreq, nWaveHalf
     real                       :: LogFreqMinRadian
     character(len=*),parameter :: NameSub='set_freq_grid'
     !-----------------------------------------------------------------
+    if(iProc == 0) write(*,*) 'Setting Frequency grid, DeltaLogfreq = ',DeltaLogFrequency
     nWaveHalf = max(nWave/2, 1)
     ! Minimal frequency in frequency grid
     LogFreqMinRadian = log(2*cPi*FreqMinSI) 
@@ -157,15 +151,13 @@ contains
     do iFreq = 1,nWaveHalf
        LogFreq_I(nWaveHalf+iFreq)=LogFreqMinRadian +(iFreq-1)*DeltaLogFrequency
     end do
-    
-    if(iProc == 0) write(*,*), NameSub,' finished. dLogFreq = ',DeltaLogFrequency
    end subroutine set_freq_grid
   !===================================================================
   subroutine init_wave_spectrum
    
     use ModProcMH,      ONLY: iProc
     use ModWaves,       ONLY: check_waves
-    
+
     character(len=*),parameter    :: NameSub= 'init_wave_spectrum'
     ! ------------------------------------------------------------------
     call check_waves
@@ -182,7 +174,7 @@ contains
     use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, n_step, Iteration_Number
     use ModVarIndexes 
     use ModAdvance,    ONLY: State_VGB, B0_DGB, UseIdealEos
-    use ModPhysics,    ONLY: inv_gm1,gamma0,OmegaBody,No2Si_V,Si2No_V, &
+    use ModPhysics,    ONLY: inv_gm1,OmegaBody,No2Si_V,Si2No_V, &
                              UnitB_,UnitU_,UnitRho_,UnitP_,UnitX_
     use ModConst,      ONLY: cMu
     use ModNumConst,   ONLY: cTolerance,cTiny
@@ -193,28 +185,38 @@ contains
                              AlfvenWaveMinusFirst_, &
                              AlfvenWaveMinusLast_ , &
                              DeltaLogFrequency,      &
-                             UseWavePressure, UseWavePressureLtd      
+                             UseWavePressureLtd      
 
     real, intent(out) :: VarsGhostFace_V(nVar)
     integer           :: iCell,jCell,kCell, iWave, SpectrumFirst,SpectrumLast
     real              :: DensCell,PresCell,GammaCell,TBase,FullBr, FullB  
-    real, dimension(3):: RFace_D,B1n_D,FullB_D
+    real, dimension(3):: RFace_D,B1r_D,B1t_D,FullB_D
     real              :: vAlfvenSi, wEnergyDensSi, wEnergyDens
     character(len=*),parameter  :: NameSub = "user_face_bc"
     !--------------------------------------------------------------------------
-    ! calculate magnetic field normal to the surface - radial direction
+    ! vector normal to the face
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
-    B1n_D(x_:z_) = sum(RFace_D*VarsTrueFace_V(Bx_:Bz_))*RFace_D(x_:z_)
+
+    !\
+    ! Magnetic field reltaed quantities
+    !/
+    ! B1 normal to the face
+    B1r_D = sum(RFace_D*VarsTrueFace_V(Bx_:Bz_))*RFace_D(x_:z_)
+   
+    ! B1 tangential
+    B1t_D = VarsTrueFace_V(Bx_:Bz_) - B1r_D
+
+    ! Total mangnetic field - add B0
+    FullB_D = B0Face_D + B1t_D
+    FullBr = sum(RFace_D*FullB_D)
+    FullB = sum(FullB_D**2)
+   
     !\
     ! Update BCs for velocity and induction field: reflective BC
     !/
     VarsGhostFace_V(Ux_:Uz_) = -VarsTrueFace_V(Ux_:Uz_)
-    VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - B1n_D
+    VarsGhostFace_V(Bx_:Bz_) = B1t_D
   
-    ! Add B0
-    FullB_D = VarsGhostFace_V(Bx_:Bz_) + B0Face_D
-    FullBr = sum(RFace_D*FullB_D)
-    FullB = sum(FullB_D**2)
     !\
     ! Update BCs for the mass density, EnergyRL, 
     ! and pressure::
@@ -251,7 +253,7 @@ contains
     !\
     ! Update BCs for wave spectrum
     !/
-    if(UseWavePressure) then
+    if(IsInitWave) then
        select case(TypeWaveInnerBc)
        case('WSA')
           vAlfvenSi = (FullB/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
@@ -263,7 +265,7 @@ contains
           wEnergyDens = wEnergyDensSi * Si2No_V(UnitP_)*WaveInnerBcFactor
   
        case('Turb')
-          wEnergyDens = (FullB*WaveInnerBcFactor)**2
+          wEnergyDens = FullB*WaveInnerBcFactor
        end select
        if(wEnergyDens < 0.0)then
           write(*,*) 'Negative total wave energy density at inner BC'
@@ -313,20 +315,18 @@ contains
              call stop_MPI('ERROR in minus waves BCs')
           end if
        end do
-    end if
 
-    if(IsInitWave)then
-       !VarsGhostFace_V(Ew_) = 0.0
-       !call set_wave_state
-       if(UseWavePressureLtd)then
+       ! total wave pressure
+       if(UseWavePressureLtd) then
           VarsGhostFace_V(Ew_) = sum(VarsGhostFace_V(WaveFirst_:WaveLast_))
        else
-          VarsGhostFace_V(Ew_) = 0.0
+          VarsGhostFace_V(EW_) = 1.0e-30
        end if
     else
-       VarsGhostFace_V(Ew_) = &!max(-VarsTrueFace_V(Ew_)+ &
-            VarsGhostFace_V(Rho_)*TBase &
-            *(1.0/(GammaCell-1.0)-inv_gm1)
+       ! Heating by variable gamma, wave spectrum not initialized
+       VarsGhostFace_V(WaveFirst_:WaveLast_) = 1.0e-30
+       VarsGhostFace_V(Ew_) = &
+            VarsGhostFace_V(Rho_)*TBase*(1.0/(GammaCell-1.0)-inv_gm1)
     end if
          
     !\
@@ -409,8 +409,7 @@ contains
 
     ! The sqrt is for backward compatibility with older versions of the Sc
     U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
-    State_VGB(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK,iBLK) = 1e-30 !Initialize the wave spectrum
-
+    State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = 1.0e-30 !Initialize the wave spectrum
     do k=1,nK; do j=1,nJ; do i=1,nI
        x = x_BLK(i,j,k,iBLK)
        y = y_BLK(i,j,k,iBLK)
@@ -428,14 +427,13 @@ contains
             *U0*((ROne-1.0)/(Rmax-1.0))*y/R
        State_VGB(RhoUz_,i,j,k,iBLK) = Dens_BLK &
             *U0*((ROne-1.0)/(Rmax-1.0))*z/R
-
-       if(.not.IsInitWave)then
-          State_VGB(Ew_,i,j,k,iBLK) = 0.0
-       else
+       if(IsInitWave) then ! Alfven model
+          State_VGB(Ew_,i,j,k,iBLK) = nWave*1.0e-30
+       else !polytropic model
           State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK &
                *(1.0/(Gamma_BLK-1.0)-inv_gm1) 
        end if
-   
+
     end do; end do; end do
 
   end subroutine user_set_ics
@@ -464,7 +462,7 @@ contains
     use ModGeometry,ONLY: R_BLK
     use ModEnergy,  ONLY: calc_energy_cell
     use ModExpansionFactors, ONLY: gammaSS
-    use ModWaves,   ONLY: UseWavePressure
+    use ModWaves,   ONLY: UseWavePressure,UseWavePressureLtd
     implicit none
 
     integer,intent(in)           :: iStage,iBlock
@@ -491,7 +489,7 @@ contains
     !\
     ! Begin update of pressure and relaxation energy::
     !/
-    if(.not. UseWavePressure) then
+    if(.not. IsInitWave) then
        do k=1,nK; do j=1,nJ; do i=1,nI
           call get_plasma_parameters_cell(i,j,k,iBlock,&
                DensCell,PresCell,GammaCell)
@@ -508,6 +506,10 @@ contains
                *(1.0/(Gamma0-1.0)-inv_gm1)
        end do; end do; end do
     end if
+
+    if (UseWavePressure .and. (.not. UseWavePressureLtd)) &
+         State_VGB(Ew_,i,j,k,iBlock) = nWave*1.0e-30
+   
    
     !\
     ! End update of pressure and relaxation energy::
