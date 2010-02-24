@@ -15,14 +15,14 @@ subroutine crcm_run(delta_t)
   use ModCrcm,        ONLY: kspec, f2, dt, Time, phot, Pressure_C,FAC_C
   use ModCrcmPlanet,  ONLY: re_m, dipmom, Hiono
   use ModFieldTrace,  ONLY: fieldpara, brad=>ro, ftv=>volume, xo,yo,rb,irm,&
-                            ekev,iba,bo,pp,Have, sinA, vel, alscone
+                            ekev,iba,bo,pp,Have, sinA, vel, alscone, iw2
   use ModGmCrcm,      ONLY: rrio,ttio,StateIntegral_IIV,AveP_,AveDens_,iLatMin
   use ModIeCrcm,      ONLY: pot
   use ModCrcmPlot,    ONLY: Crcm_plot, DtOutput, DoSavePlot
   implicit none
 
 
-  integer n,nstep,ib0(nt),iw2(nk)
+  integer n,nstep,ib0(nt)
   real delta_t
   real flux(nspec,np,nt,neng,npit)
   real achar(np,nt,nm,nk)
@@ -558,12 +558,13 @@ subroutine driftV(nspec,np,nt,nm,nk,kspec,irm,re_m,Hiono,dipmom,dphi,xlat, &
   pi=acos(-1.)
   dphi2=dphi*2.
   kfactor=dipmom/(re_m+Hiono*1000.)
-  cor=2.*pi/86400.                  ! corotation speed in rad/s
+  cor=2.*pi/86400.                        ! corotation speed in rad/s
   xlatr=xlat*pi/180.
 
   nloop: do n=1,nspec
-     if (kspec(n).eq.1) icharge=-1       ! electrons
-     if (kspec(n).gt.1) icharge=1        ! ions
+!     if (kspec(n).eq.1) icharge=-1       ! electrons
+!     if (kspec(n).gt.1) icharge=1        ! ions
+     icharge=1
      mloop: do m=1,nk
         kloop: do k=1,nm  
 
@@ -638,7 +639,6 @@ subroutine drift(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
   nloop: do n=1,nspec
      mloop: do m=1,nk
         kloop: do k=1,iw2(m)
-
            f2d(1:np,1:nt)=f2(n,1:np,1:nt,k,m)         ! initial f2
 
            ! find nrun and new dt (dt1)
@@ -656,7 +656,6 @@ subroutine drift(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
            enddo
            nrun=ifix(cmax/0.50)+1     ! nrun to limit the Courant number
            dt1=dt/nrun                ! new dt
-
            ! Setup boundary fluxes and Courant numbers
            do j=1,nt
               ib=iba(j)
