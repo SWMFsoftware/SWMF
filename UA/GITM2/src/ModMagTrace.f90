@@ -35,11 +35,11 @@ contains
 
     ! Arrays to hold the alt/lat/lon of fieldline traces, synced to all processors
     if(.not.allocated(MMTalt)) &
-         allocate(MMTalt(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+         allocate(MMTalt(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocks, nProcs))
     if(.not.allocated(MMTlat)) &
-         allocate(MMTlat(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+         allocate(MMTlat(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocks, nProcs))
     if(.not.allocated(MMTlon)) &
-         allocate(MMTlon(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+         allocate(MMTlon(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocks, nProcs))
     MMTalt = 0.;
     MMTlat = 0.;
     MMTlon = 0.;
@@ -47,13 +47,13 @@ contains
     if(MMTSaveInterp)then
        ! Arrays to hold the block and location values of point along fieldline for integrals
        if(.not.allocated(MMTblk)) &
-            allocate(MMTblk(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+            allocate(MMTblk(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocks, nProcs))
        if(.not.allocated(MMTaltLoc)) &
-            allocate(MMTaltLoc(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+            allocate(MMTaltLoc(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocks, nProcs))
        if(.not.allocated(MMTlatLoc)) &
-            allocate(MMTlatLoc(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+            allocate(MMTlatLoc(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocks, nProcs))
        if(.not.allocated(MMTlonLoc)) &
-            allocate(MMTlonLoc(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+            allocate(MMTlonLoc(MaxMMTPoints, -1:nLons+2, -1:nLats+2, nBlocks, nProcs))
        MMTblk = 0;
        MMTaltLoc = -9.;
        MMTlatLoc = -9.;
@@ -250,9 +250,9 @@ contains
     !--------------------
 
     if(.not.allocated(PartialIntegral)) &
-         allocate(PartialIntegral(-1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+         allocate(PartialIntegral(-1:nLons+2, -1:nLats+2, nBlocks, nProcs))
     if(.not.allocated(FullIntegral)) &
-         allocate(FullIntegral(-1:nLons+2, -1:nLats+2, nBlocksMax, nProcs))
+         allocate(FullIntegral(-1:nLons+2, -1:nLats+2, nBlocks, nProcs))
     PartialIntegral = 0.
     FullIntegral = 0.
     do k=1,nProcs; do iBlock=1,nBlocks
