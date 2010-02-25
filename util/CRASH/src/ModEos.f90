@@ -15,7 +15,9 @@ module CRASH_ModEos
   !        iMaterial - integer index of the material:
   !        iMaterial=0 - xenon
   !        iMaterial=1 - beryllium   
-  !        iMaterial=2 - plastic
+  !        iMaterial=2 - plastic (or polyimide, if more than one plastic is used
+  !        iMaterial=3 - gold
+  !        iMaterial=4 - Acrylic (acronim is Ay_, as long as Ac and Ar are both in use.
   !        iMaterial=90 - plasma with eos E=aT^4/4; p=aT^4/12; C_V=aT^3 
   !
   ! In the initial CRASH treatment of materials,
@@ -68,6 +70,7 @@ module CRASH_ModEos
   !/
 
   use CRASH_ModPolyimide
+  use CRASH_ModAcrylic
   use CRASH_ModStatSum
   use CRASH_ModAtomicMass
   use CRASH_ModPowerLawEos
@@ -83,11 +86,13 @@ module CRASH_ModEos
   integer, public, parameter:: Be_=1      ! Beryllium
   integer, public, parameter:: Plastic_=2 ! Polyimide (C_22 H_10 N_2 O_5)
   integer, public, parameter:: Au_=3      ! Gold
+  integer, public, parameter:: Ay_=4      ! Acrylic
 
   public:: cAtomicMass_I, cAPolyimide ! inherited from ModPolyimide
+  public:: cAAcrylic
 
   public:: UsePreviousTe ! inherited from CRASH_ModStatSum
-  public:: eos, read_eos_parameters
+  public:: eos, read_eos_parameters, fix_hyades_state
   interface eos
      module procedure eos_material
      module procedure eos_mixture
@@ -99,13 +104,14 @@ module CRASH_ModEos
   integer, parameter:: Test_ = 90 
   integer, parameter :: nZ_I(Xe_:Au_)=(/54, 4, 6, 79 /)
 
-  real, parameter, dimension(Xe_:Au_),public :: cAtomicMassCRASH_I=&
+  real, parameter, dimension(Xe_:Ay_),public :: cAtomicMassCRASH_I=&
        (/cAtomicMass_I(54),   &!  Xe
          cAtomicMass_I(4),    &!  Be
          cAPolyimide,         &!  Pl
-         cAtomicMass_I(79)     /)
-  character(LEN=*),parameter,public,dimension(Xe_:Au_)::&
-       NameMaterial_I = (/'Xe','Be','Pl','Au'/)
+         cAtomicMass_I(79),   &!  Au
+         cAAcrylic/)
+  character(LEN=*),parameter,public,dimension(Xe_:Ay_)::&
+       NameMaterial_I = (/'Xe','Be','Pl','Au','Ay'/)
   
   !For better efficiency the if statments to treat gold are commented
   !out in ModExcitationData
@@ -194,6 +200,11 @@ contains
 
        !Get the atomic concentration
        Natomic = Rho / ( cAtomicMass * cAPolyimide )
+    elseif(iMaterial == Ay_)then
+       call set_mixture(nAcrylic, nZAcrylic_I, cAcrylic_I)
+
+       !Get the atomic concentration
+       Natomic = Rho / ( cAtomicMass * cAAcrylic)
     else
        call set_element(nZ_I(iMaterial))
 
@@ -210,7 +221,7 @@ contains
   end subroutine eos_material
 
   !============================================================================
-
+  !Cannot be used for mixed-cell simulations if gold and/or Acrylic is used
   subroutine eos_mixture(RhoToARatio_I,&
        TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
@@ -402,5 +413,29 @@ contains
     if(present(CvElectronOut)) CvElectronOut = (Natomic*cBoltzmann)*heat_capacity_e()
 
   end subroutine eos_generic
+  !=========================
+  subroutine fix_hyades_state(iMaterial, StateCgs_V, PMinSi)
+    use ModConst
+    integer,intent(in)         :: iMaterial
+    real   ,intent(inout)      :: StateCgs_V(4) !Rho[Cgs], P[Cgs], Te[KeV], Ti[Kev]
+    real, OPTIONAL, intent(in) :: PMinSi
 
+    real:: DensitySi, NAtomicSi, PressureSi, TeSi, TiSi
+    !---------------------------------
+    DensitySi  = 1.0e3 * StateCgs_V(1)
+    NAtomicSi  = DensitySi/(cAtomicMassCRASH_I(iMaterial)*cAtomicMass)
+    TeSi       = 1.0e3 * StateCgs_V(3) * ceVToK
+    TiSi       = 1.0e3 * StateCgs_V(4) * ceVToK
+    call eos(iMaterial, DensitySi, TeIn = TeSi, pTotalOut = PressureSi)
+    PressureSi = PressureSi + (TiSi - TeSi) * nAtomicSi * cBoltzmann
+    StateCgs_V(2) = 10.0 * PressureSi
+    if(present(PMinSi))then
+       if(PressureSi < PMinSi)then
+          PressureSi = PMinSi
+          StateCgs_V(2) = 10.0 * PressureSi
+          call eos(iMaterial, DensitySi, pTotalIn = PressureSi, TeOut = TeSi)
+          StateCgs_V(3:4) = TeSi * cKToeV * 1.0e-3
+       end if
+    end if
+  end subroutine fix_hyades_state
 end module CRASH_ModEos
