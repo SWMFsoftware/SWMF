@@ -1233,11 +1233,11 @@ subroutine output_2dgel(iBlock)
              HallConductance(iLon,iLat,iBlock), &
              ElectronAverageEnergy(iLon,iLat), &
              ElectronEnergyFlux(iLon,iLat), &
-             DivJuAlt(iLon,iLat), &
-             PedersenFieldLine(iLon, iLat), &
-             HallFieldLine(iLon, iLat), &
-             DivJuFieldLine(iLon, iLat), &
-             LengthFieldLine(iLon, iLat)
+             DivJuAlt(iLon,iLat,iBlock), &
+             PedersenFieldLine(iLon,iLat,iBlock), &
+             HallFieldLine(iLon,iLat,iBlock), &
+             DivJuFieldLine(iLon,iLat,iBlock), &
+             LengthFieldLine(iLon,iLat,iBlock)
      enddo
   enddo
 

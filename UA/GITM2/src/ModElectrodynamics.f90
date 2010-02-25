@@ -3,20 +3,13 @@ module ModElectrodynamics
 
   use ModSizeGitm
 
-  ! This is the divergence of the Neutral wind current
-  real, dimension(-1:nLons+2,-1:nLats+2,1:nAlts) :: DivJu
+  ! This is the height integral of the divergence of the Neutral wind current
+  real, dimension(-1:nLons+2,-1:nLats+2,nBlocksMax) :: DivJuAlt
 
-  ! This is the height integral of the divergence
-  real, dimension(-1:nLons+2,-1:nLats+2) :: DivJuAlt
-
-  ! This is the field-line integral of the conductance and divergence
-  real, dimension(-1:nLons+2,-1:nLats+2) :: &
-       HallFieldLine, PedersenFieldLine, DivJuFieldLine, LengthFieldLine
-
-  ! This is the field-line integral of the conductance and divergence
-  real, dimension(-1:nLons+2,-1:nLats+2) :: &
-       SigmaPP, SigmaLL, SigmaHH, SigmaCC, SigmaPL, SigmaLP, &
-       KDpm, KDlm, Kpm, Klm
+  ! These are the new field line integral values dimensioned by blocks
+  real, dimension(-1:nLons+2,-1:nLats+2, nBlocksMax) :: &
+       HallFieldLine, PedersenFieldLine, DivJuFieldLine, LengthFieldLine, &
+       SigmaPP, SigmaLL, SigmaCC,  KDpm, KDlm, Kpm, Klm
 
   ! This is the field aligned integral in magnetic coordinates
   real, dimension(:,:), allocatable :: DivJuAltMC
@@ -65,9 +58,6 @@ module ModElectrodynamics
 
   real, dimension(-1:nLons+2,-1:nLats+2, nBlocksMax) :: &
        HallConductance, PedersenConductance
-
-  real, dimension(-1:nLons+2,-1:nLats+2, -1: nAlts+2) :: &
-       Sigma_0, Sigma_Pedersen, Sigma_Hall
 
   real, dimension(-1:nLons+2,-1:nLats+2, -1: nAlts+2, 3) :: &
        UxB, Ju

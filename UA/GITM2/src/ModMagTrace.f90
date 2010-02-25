@@ -23,7 +23,7 @@ contains
 
     integer :: i,j,k,m,jLon,jLat, iBlock, iLon, iLat, iAlt, iLoop, iSize, iError, iCount=0
 
-    logical :: IsFound, VerticalOnly=.true.
+    logical :: IsFound, VerticalOnly=.false.
 
     real :: GeoLat, GeoLon, GeoAlt, xAlt, signz
     real :: GeoLatInitial, GeoLonInitial, GeoAltInitial

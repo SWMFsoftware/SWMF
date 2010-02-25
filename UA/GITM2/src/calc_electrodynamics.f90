@@ -1,12 +1,11 @@
-subroutine UA_fill_electrodynamics(UAr2_fac, UAr2_ped, UAr2_hal, &
-            UAr2_lats, UAr2_mlts)
-
+subroutine UA_fill_electrodynamics(UAr2_fac, UAr2_ped, UAr2_hal, UAr2_lats, UAr2_mlts)
   use ModElectrodynamics
 
   implicit none
 
   real, dimension(nMagLons+1,nMagLats), intent(out) :: &
        UAr2_fac, UAr2_ped, UAr2_hal, UAr2_lats, UAr2_mlts
+  !----------
 
   UAr2_Fac  = DivJuAltMC
   UAr2_Ped  = SigmaPedersenMC
@@ -19,7 +18,6 @@ end subroutine UA_fill_electrodynamics
 !\
 
 subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
-
   use ModGITM
   use ModInputs, only: iDebugLevel, iStartTime, UseApex, UseDynamo, Is1D
   use ModConstants
@@ -37,40 +35,38 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   integer :: i,j,k,bs, iError, iBlock, iDir, iLon, iLat, iAlt, ip, im
 
-  real :: GeoLat, GeoLon, GeoAlt, xAlt, len, ped, hal
-  real :: sp_d1d1_d, sp_d2d2_d, sp_d1d2_d, sh
+  real :: zzV
+  real :: GeoLat, GeoLon, GeoAlt, xAlt, len
   real :: xmag, ymag, zmag, bmag, signz, magpot, lShell
-  real :: mlatMC, mltMC, jul, shl, spl, length, kdpm_s, kdlm_s, je1_s, je2_s
+  real :: mlatMC, mltMC, jul, shl, spl, length, kdpm_s, kdlm_s
   real :: kpm_s, klm_s, xstretch, ystretch
-  real :: sinIm, spp, sll, shh, scc, sccline, sppline, sllline, shhline, be3
+  real :: sinIm, spp, sll, scc, be3
 
-  real :: q2, dju,dl, cD
+  real :: q2, dl, cD
 
   real :: magloctime_local(0:nLons+1,0:nLats+1)
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: &
        e_density, Vi, Ve, MeVen, MeVei, MiVin, VeOe, ViOi, &
-       JuDotB, sigmap_d2d2_d, sigmap_d1d2_d, sigmah, &
-       ue1, ue2, kmp, kml, je1, je2, ed1, ed2
+       JuDotB, ue1, ue2, ed1, ed2, sigma0
 
-  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax) :: sigmap_d1d1_d
-  real, dimension(-1:nLons+2, -1:nLats+2, nBlocksMax) :: IntegralValues
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax) :: &
+       sigmap_d1d1_d, sigmap_d2d2_d, sigmap_d1d2_d, sigmah, sigmap, DivJu, kmp, kml, je1, je2
 
-  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3) :: &
-       Gradient_GC
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3) :: Gradient_GC
 
   real :: aLat, aLon, gLat, gLon, Date, sLat, sLon, gLatMC, gLonMC
 
   real :: residual, oldresidual, a, tmp
 
-  logical :: IsDone, IsFirstTime = .true., DoTestMe, Debug=.false.
+  logical :: IsDone, IsFirstTime = .true., DoTestMe
 
   integer :: iLm, iLp, jLat, iI, MaxIteration, nIteration
   integer :: nX
 
   external :: matvec_gitm
+  !----------
 
-  if(Debug)write(*,*)'DBG: entered UA_calc_electrodynamics: ',DipoleStrength, UseDynamo, Is1D
   if (DipoleStrength == 0) return
 
   if (.not. UseDynamo .or. Is1D) return
@@ -79,7 +75,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   call start_timing("calc_electrodyn")
 
   if (IsFirstTime) then
-
      IsFirstTime = .false.
 
      allocate(DivJuAltMC(nMagLons+1,nMagLats), &
@@ -161,9 +156,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      DynamoPotentialMC = 0.0
      OldPotMC = 0.0
 
-     if (iError /= 0) then
-        call CON_stop("Error allocating array DivJuAltMC")
-     endif
+     if (iError /= 0) call CON_stop("Error allocating array DivJuAltMC")
 
      date = iStartTime(1) + float(iJulianDay)/float(jday(iStartTime(1),12,31))
 
@@ -172,13 +165,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
              write(*,*) "==> Calculating Apex->Geo", i, nMagLons+1
         do j=1,nMagLats
 
-           MagLatMC(i,j)     = 180.0 * (float(j)-0.5) / float(nMagLats) - 90.0
-           MagLonMC(i,j)     = 360.0 * float(i-1) / float(nMagLons)
+           MagLatMC(i,j) = 180.0 * (float(j)-0.5) / float(nMagLats) - 90.0
+           MagLonMC(i,j) = 360.0 *  float(i-1)    / float(nMagLons)
 
            ! we could also use the stretch_grid function....
-!MAGSTRECH       xstretch =(float(j)-0.5)/float(nMagLats/2) - 1.0
-!MAGSTRECH       call stretch_grid(xstretch,ystretch)
-!MAGSTRECH       MagLatMC(i,j) = ystretch * 90.0
+!MAGSTRETCH       xstretch =(float(j)-0.5)/float(nMagLats/2) - 1.0
+!MAGSTRETCH       call stretch_grid(xstretch,ystretch)
+!MAGSTRETCH       MagLatMC(i,j) = ystretch * 90.0
 
            if (UseApex) then 
 
@@ -195,8 +188,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
                  sLat = -100.0
               endif
 
-              call apex_to_geo(date, aLat, aLon, AltMinIono, &
-                   gLat, gLon, sLat, sLon)
+              call apex_to_geo(date, aLat, aLon, AltMinIono, gLat, gLon, sLat, sLon)
 
               GeoLatMC(i,j) = gLat*pi/180.0
               GeoLonMC(i,j) = gLon*pi/180.0
@@ -233,17 +225,11 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   endif
 
   if(UseApex .and. IsEarth) then
-
      do i=1,nMagLons+1
         do j=1,nMagLats
-
-           call magloctm(MagLonMC(i,j),SubsolarLatitude,   &
-                SubsolarLongitude,  &
-                MagneticPoleColat, &
-                MagneticPoleLon,mltMC)
-
+           call magloctm(MagLonMC(i,j), SubsolarLatitude, SubsolarLongitude, &
+                MagneticPoleColat, MagneticPoleLon, mltMC)
            MagLocTimeMC(i,j) = mod(mltMC+24.0,24.0)
-
         enddo
      enddo
   end if
@@ -273,8 +259,21 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   q2 = Element_Charge * Element_Charge
 
+  HallFieldLine     = 0.
+  PedersenFieldLine = 0.
+  DivJuFieldLine    = 0.
+  LengthFieldLine   = 0.
+  SigmaPP = 0.
+  SigmaLL = 0.
+  SigmaCC = 0.
+  KDpm = 0.
+  KDlm = 0.
+  Kpm  = 0.
+  Klm  = 0.
+  DivJu    = 0.
+  DivJuAlt = 0.
+
   do iBlock = 1, nBlocks
-     if(Debug)write(*,*)'DBG: starting block ',iBlock,' of ',nBlocks
 
      call calc_physics(iBlock)
      call calc_rates(iBlock)
@@ -294,12 +293,12 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      VeOe = Ve**2 + e_gyro**2
      ViOi = Vi**2 + i_gyro**2
 
-     Sigma_0 = q2 * E_Density / (1.0/MeVen + 1.0/MiVin)
+     sigma0 = q2 * E_Density / (1.0/MeVen + 1.0/MiVin)
 
-     Sigma_Pedersen = ((1.0/MeVen) * (Ve*Ve/VeOe) + &
+     sigmap(:,:,:,iBlock) = ((1.0/MeVen) * (Ve*Ve/VeOe) + &
           (1.0/MiVin) * (Vi*Vi/ViOi)) * E_Density * q2
 
-     Sigma_Hall = ((1.0/MeVen) * (Ve*e_gyro/VeOe) - &
+     sigmah(:,:,:,iBlock) = ((1.0/MeVen) * (Ve*e_gyro/VeOe) - &
           (1.0/MiVin) * (Vi*i_gyro/ViOi)) * E_Density * q2
 
      PedersenConductance(:,:,iBlock) = 0.0
@@ -307,9 +306,9 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
      do k=-1,nAlts+2
         PedersenConductance(:,:,iBlock) = PedersenConductance(:,:,iBlock) + &
-             Sigma_Pedersen(:,:,k)*dAlt_GB(:,:,k,iBlock)
+             sigmap(:,:,k,iBlock) * dAlt_GB(:,:,k,iBlock)
         HallConductance(:,:,iBlock)     = HallConductance(:,:,iBlock)     + &
-             Sigma_Hall(:,:,k)    *dAlt_GB(:,:,k,iBlock)
+             sigmah(:,:,k,iBlock) * dAlt_GB(:,:,k,iBlock)
      enddo
 
      call report("Starting Conductances",2)
@@ -317,96 +316,82 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         do j=-1,nLats+2
            do i=-1,nLons+2
 
-              sigmap_d1d1_d(i,j,k,iBlock) = &
-                   Sigma_Pedersen(i,j,k) * &
-                   sum(b0_d1(i,j,k,:,iBlock)**2) / &
-                   b0_cD(i,j,k,iBlock)
+              sigmap_d1d1_d(i,j,k,iBlock) = sigmap(i,j,k,iBlock) * &
+                   sum(b0_d1(i,j,k,:,iBlock)**2) / b0_cD(i,j,k,iBlock)
 
-              sigmap_d2d2_d(i,j,k) = &
-                   Sigma_Pedersen(i,j,k) * &
-                   sum(b0_d2(i,j,k,:,iBlock)**2) / &
-                   b0_cD(i,j,k,iBlock)
+              sigmap_d2d2_d(i,j,k,iBlock) = sigmap(i,j,k,iBlock) * &
+                   sum(b0_d2(i,j,k,:,iBlock)**2) / b0_cD(i,j,k,iBlock)
 
-              sigmah(i,j,k) = Sigma_Hall(i,j,k)
-              sigmap_d1d2_d(i,j,k) = &
-                   Sigma_Pedersen(i,j,k) * &
-                   sum(b0_d1(i,j,k,:,iBlock) * &
-                       b0_d2(i,j,k,:,iBlock))/&
-                   b0_cD(i,j,k,iBlock)
+              sigmap_d1d2_d(i,j,k,iBlock) = sigmap(i,j,k,iBlock) * &
+                   sum(b0_d1(i,j,k,:,iBlock)*b0_d2(i,j,k,:,iBlock)) / b0_cD(i,j,k,iBlock)
 
               ! Don't know why Richmond names these Ue1 and Ue2, when the
               ! paper describes them as being Uei = di . U
-              ue1(i,j,k) = sum( &
-                   Velocity(i,j,k,:,iBlock) * b0_d1(i,j,k,:,iBlock))
+              ue1(i,j,k) = sum(Velocity(i,j,k,:,iBlock) * b0_d1(i,j,k,:,iBlock))
 
-              ue2(i,j,k) = sum( &
-                   Velocity(i,j,k,:,iBlock) * b0_d2(i,j,k,:,iBlock))
+              ue2(i,j,k) = sum(Velocity(i,j,k,:,iBlock) * b0_d2(i,j,k,:,iBlock))
 
-              Ed1(i,j,k) = sum( &
-                   EField(i,j,k,:) * b0_d1(i,j,k,:,iBlock)) / &
+              Ed1(i,j,k) = sum(EField(i,j,k,:) * b0_d1(i,j,k,:,iBlock)) / &
                    sqrt(sum(b0_d1(i,j,k,:,iBlock)**2))
 
-              Ed2(i,j,k) = sum( &
-                   EField(i,j,k,:) * b0_d2(i,j,k,:,iBlock)) / &
+              Ed2(i,j,k) = sum(EField(i,j,k,:) * b0_d2(i,j,k,:,iBlock)) / &
                    sqrt(sum(b0_d2(i,j,k,:,iBlock)**2))
 
               ! These are from eqns 5.19 and 5.20
-              kmp(i,j,k) = ue2(i,j,k) * sigmap_d1d1_d(i,j,k,iBlock) + &
-                   (sigmah(i,j,k) - sigmap_d1d2_d(i,j,k)) * ue1(i,j,k)
+              kmp(i,j,k,iBlock) = ue2(i,j,k) * sigmap_d1d1_d(i,j,k,iBlock) + &
+                   (sigmah(i,j,k,iBlock) - sigmap_d1d2_d(i,j,k,iBlock)) * ue1(i,j,k)
 
-              kml(i,j,k) = (sigmah(i,j,k) + sigmap_d1d2_d(i,j,k)) * ue2(i,j,k) - &
+              kml(i,j,k,iBlock) = (sigmah(i,j,k,iBlock) + sigmap_d1d2_d(i,j,k,iBlock)) * ue2(i,j,k) - &
                    ue1(i,j,k) * sigmap_d1d1_d(i,j,k,iBlock)
 
               ! The Capital D is removed from the sigmah, since the d1d?_d are /D...
-              je1(i,j,k) = sigmap_d1d1_d(i,j,k,iBlock)*(Ed1(i,j,k) + ue2(i,j,k)*b0_be3(i,j,k,iBlock)) + &
-                   (sigmap_d1d2_d(i,j,k) - sigmah(i,j,k)) * &
-                   (Ed2(i,j,k) + ue1(i,j,k)*b0_be3(i,j,k,iBlock))
+              je1(i,j,k,iBlock) = &
+                   sigmap_d1d1_d(i,j,k,iBlock) &
+                   *(Ed1(i,j,k) + ue2(i,j,k)*b0_be3(i,j,k,iBlock)) + &
+                   (sigmap_d1d2_d(i,j,k,iBlock) - sigmah(i,j,k,iBlock)) &
+                   *(Ed2(i,j,k) + ue1(i,j,k)*b0_be3(i,j,k,iBlock))
 
-              je2(i,j,k) = sigmap_d2d2_d(i,j,k)*(Ed2(i,j,k) - ue1(i,j,k)*b0_be3(i,j,k,iBlock)) + &
-                   (sigmap_d1d2_d(i,j,k) + sigmah(i,j,k)) * &
-                   (Ed1(i,j,k) + ue2(i,j,k)*b0_be3(i,j,k,iBlock))
+              je2(i,j,k,iBlock) = &
+                   sigmap_d2d2_d(i,j,k,iBlock) &
+                   *(Ed2(i,j,k) - ue1(i,j,k)*b0_be3(i,j,k,iBlock)) + &
+                   (sigmap_d1d2_d(i,j,k,iBlock) + sigmah(i,j,k,iBlock)) &
+                   *(Ed1(i,j,k) + ue2(i,j,k)*b0_be3(i,j,k,iBlock))
 
-              SigmaR(i,j,k,iEast_,iEast_)   = &
-                   Sigma_Pedersen(i,j,k)
-              SigmaR(i,j,k,iEast_,iNorth_)  = &
-                   -Sigma_Hall(i,j,k) * sin(DipAngle(i,j,k,iBlock))
-              SigmaR(i,j,k,iEast_,iUp_)     = &
-                   Sigma_Hall(i,j,k) * cos(DipAngle(i,j,k,iBlock))
-              SigmaR(i,j,k,iNorth_,iEast_)  = &
-                   -SigmaR(i,j,k,iEast_,iNorth_)
+              SigmaR(i,j,k,iEast_,iEast_)   =  sigmap(i,j,k,iBlock)
+              SigmaR(i,j,k,iEast_,iNorth_)  = -sigmah(i,j,k,iBlock) * sin(DipAngle(i,j,k,iBlock))
+              SigmaR(i,j,k,iEast_,iUp_)     =  sigmah(i,j,k,iBlock) * cos(DipAngle(i,j,k,iBlock))
+              SigmaR(i,j,k,iNorth_,iEast_)  = -SigmaR(i,j,k,iEast_,iNorth_)
               SigmaR(i,j,k,iNorth_,iNorth_) = &
-                   Sigma_Pedersen(i,j,k)*sin(DipAngle(i,j,k,iBlock))**2+&
-                   Sigma_0(i,j,k)*cos(DipAngle(i,j,k,iBlock))**2
+                   sigmap(i,j,k,iBlock)*sin(DipAngle(i,j,k,iBlock))**2+&
+                   sigma0(i,j,k)*cos(DipAngle(i,j,k,iBlock))**2
               SigmaR(i,j,k,iNorth_,iUp_)    = &
-                   (Sigma_0(i,j,k) - Sigma_Pedersen(i,j,k)) * &
+                   (sigma0(i,j,k) - sigmap(i,j,k,iBlock)) * &
                    sin(DipAngle(i,j,k,iBlock)) * cos(DipAngle(i,j,k,iBlock))
-              SigmaR(i,j,k,iUp_,iEast_)     = &
-                   -SigmaR(i,j,k,iEast_,iUp_)
-              SigmaR(i,j,k,iUp_,iNorth_)    = &
-                   SigmaR(i,j,k,iNorth_,iUp_)
+              SigmaR(i,j,k,iUp_,iEast_)     = -SigmaR(i,j,k,iEast_,iUp_)
+              SigmaR(i,j,k,iUp_,iNorth_)    =  SigmaR(i,j,k,iNorth_,iUp_)
               SigmaR(i,j,k,iUp_,iUp_)       = &
-                   Sigma_Pedersen(i,j,k)*cos(DipAngle(i,j,k,iBlock))**2+&
-                   Sigma_0(i,j,k)*sin(DipAngle(i,j,k,iBlock))**2
+                   sigmap(i,j,k,iBlock)*cos(DipAngle(i,j,k,iBlock))**2+&
+                   sigma0(i,j,k)*sin(DipAngle(i,j,k,iBlock))**2
            enddo
         enddo
      enddo
 
      UxB(:,:,:,iEast_)  =  &
-          Velocity(:,:,:,iNorth_,iBlock)*B0(:,:,:,iUp_,iBlock)    - &
-          Velocity(:,:,:,iUp_,iBlock)   *B0(:,:,:,iNorth_,iBlock)
+          Velocity(:,:,:,iNorth_,iBlock)* B0(:,:,:,iUp_,iBlock)    - &
+          Velocity(:,:,:,iUp_,iBlock)   * B0(:,:,:,iNorth_,iBlock)
 
      UxB(:,:,:,iNorth_) = -( &
-          Velocity(:,:,:,iEast_,iBlock) *B0(:,:,:,iUp_,iBlock)    - &
-          Velocity(:,:,:,iUp_,iBlock)   *B0(:,:,:,iEast_,iBlock))
+          Velocity(:,:,:,iEast_,iBlock) * B0(:,:,:,iUp_,iBlock)    - &
+          Velocity(:,:,:,iUp_,iBlock)   * B0(:,:,:,iEast_,iBlock))
 
      UxB(:,:,:,iUp_)    =  &
-          Velocity(:,:,:,iEast_,iBlock) *B0(:,:,:,iNorth_,iBlock) - &
-          Velocity(:,:,:,iNorth_,iBlock)*B0(:,:,:,iEast_,iBlock)
+          Velocity(:,:,:,iEast_,iBlock) * B0(:,:,:,iNorth_,iBlock) - &
+          Velocity(:,:,:,iNorth_,iBlock)* B0(:,:,:,iEast_,iBlock)
 
      Ju(:,:,:,iEast_)  = &
-          SigmaR(:,:,:,iEast_,iEast_)  * UxB(:,:,:,iEast_) + &
-          SigmaR(:,:,:,iEast_,iNorth_) * UxB(:,:,:,iNorth_) + &
-          SigmaR(:,:,:,iEast_,iUp_)    * UxB(:,:,:,iUp_)
+          SigmaR(:,:,:,iEast_,iEast_)   * UxB(:,:,:,iEast_) + &
+          SigmaR(:,:,:,iEast_,iNorth_)  * UxB(:,:,:,iNorth_) + &
+          SigmaR(:,:,:,iEast_,iUp_)     * UxB(:,:,:,iUp_)
   
      Ju(:,:,:,iNorth_) = &
           SigmaR(:,:,:,iNorth_,iEast_)  * UxB(:,:,:,iEast_) + &
@@ -414,9 +399,9 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
           SigmaR(:,:,:,iNorth_,iUp_)    * UxB(:,:,:,iUp_)
   
      Ju(:,:,:,iUp_)    = &
-          SigmaR(:,:,:,iUp_,iEast_)  * UxB(:,:,:,iEast_) + &
-          SigmaR(:,:,:,iUp_,iNorth_) * UxB(:,:,:,iNorth_) + &
-          SigmaR(:,:,:,iUp_,iUp_)    * UxB(:,:,:,iUp_)
+          SigmaR(:,:,:,iUp_,iEast_)     * UxB(:,:,:,iEast_) + &
+          SigmaR(:,:,:,iUp_,iNorth_)    * UxB(:,:,:,iNorth_) + &
+          SigmaR(:,:,:,iUp_,iUp_)       * UxB(:,:,:,iUp_)
 
      ! We want to take the divergence of Ju perpendicular to the
      ! magnetic field line.  
@@ -424,199 +409,41 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      do iAlt = -1, nAlts+2
         do iLat = -1, nLats+2
            do iLon = -1, nLons+2
-
-              JuDotB(iLon, iLat, iAlt) = sum( &
-                   Ju(iLon,iLat,iAlt,:)* &
-                   B0(iLon,iLat,iAlt,:,iBlock)/B0(iLon,iLat,iAlt,iMag_,iBlock))
-
+              JuDotB(iLon, iLat, iAlt) = sum( Ju(iLon,iLat,iAlt,:)* &
+                   B0(iLon,iLat,iAlt,:,iBlock)/B0(iLon,iLat,iAlt,iMag_,iBlock) )
            enddo
         enddo
      enddo
 
      do iDir = 1, 3
-
         call UAM_Gradient_GC(Ju(:,:,:,iDir), Gradient_GC, iBlock)
-        DivJu(:,:,:) = DivJu(:,:,:) + Gradient_GC(:,:,1:nAlts,iDir)
+        DivJu(:,:,1:nAlts,iBlock) = DivJu(:,:,1:nAlts,iBlock) + Gradient_GC(:,:,1:nAlts,iDir)
 
         call UAM_Gradient_GC(JuDotB(:,:,:), Gradient_GC, iBlock)
-        DivJu(:,:,:) = DivJu(:,:,:) - Gradient_GC(:,:,1:nAlts,iDir) * &
+        DivJu(:,:,1:nAlts,iBlock) = DivJu(:,:,1:nAlts,iBlock) - Gradient_GC(:,:,1:nAlts,iDir) * &
              B0(:,:,:,iDir,iBlock)/B0(:,:,:,iMag_,iBlock)
-
      enddo
 
-     DivJuAlt = 0.0
      do k=1,nAlts
-        DivJuAlt(:,:) = DivJuAlt(:,:) + DivJu(:,:,k)*dAlt_GB(:,:,k,iBlock)
+        DivJuAlt(:,:,iBlock) = DivJuAlt(:,:,iBlock) + DivJu(:,:,k,iBlock)*dAlt_GB(:,:,k,iBlock)
      enddo
 
-     PedersenFieldLine = 0.0
-     HallFieldLine     = 0.0
-     LengthFieldLine   = 0.0
-     DivJuFieldLine    = 0.0
+  enddo  ! block loop
 
-     SigmaPP = 0.0
-     SigmaLL = 0.0
-     SigmaHH = 0.0
-     SigmaCC = 0.0
+  call report("Starting Magfield Traces",2)
 
-     KDpm = 0.0
-     KDlm = 0.0
+  call MMT_Integrate(sigmap_d1d1_d,SigmaPP)
+  call MMT_Integrate(sigmap_d2d2_d,SigmaLL)
+  call MMT_Integrate(sigmap_d1d2_d,SigmaCC)
+  call MMT_Integrate(sigmah,HallFieldLine)
+  call MMT_Integrate(sigmap,PedersenFieldLine)
+  call MMT_Integrate(DivJu,DivJuFieldLine)
+  call MMT_Integrate(kmp,KDpm)
+  call MMT_Integrate(kml,KDlm)
+  call MMT_Integrate(je1,Kpm)
+  call MMT_Integrate(je2,Klm)
 
-     Kpm = 0.0
-     Klm = 0.0
-
-     call report("Starting Magfield Traces",2)
-
-     do iLon = -1, nLons+2
-        do iLat = -1, nLats+2
-
-           GeoLat = Latitude(iLat, iBlock)
-           GeoLon = Longitude(iLon,iBlock)
-
-           if (GeoLat > pi/2.) then
-              GeoLat = pi - GeoLat
-              GeoLon = mod(GeoLon + pi,twopi)
-           endif
-           if (GeoLat < -pi/2.) then
-              GeoLat = -pi - GeoLat
-              GeoLon = mod(GeoLon + pi,twopi)
-           endif
-           GeoLon = mod(GeoLon, twopi)
-           if(GeoLon<0.) GeoLon=GeoLon+twopi
-
-           GeoAlt = Altitude_GB(iLon,iLat,1,iBlock)
-           IsDone = .false.
-           len = 250.0
-           xAlt = 1.0
-           iAlt = 1
-
-           CALL get_magfield(GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0, &
-                   XMAG,YMAG,ZMAG)
-           signz = sign(1.0,zmag)
-
-           do while (.not. IsDone)
-
-              sp_d1d1_d = &
-                          xAlt  * sigmap_d1d1_d(iLon, iLat, iAlt  , iBlock) + &
-                   (1.0 - xAlt) * sigmap_d1d1_d(iLon, iLat, iAlt+1, iBlock)
-
-              sp_d2d2_d = &
-                          xAlt  * sigmap_d2d2_d(iLon, iLat, iAlt) + &
-                   (1.0 - xAlt) * sigmap_d2d2_d(iLon, iLat, iAlt+1)
-
-              sp_d1d2_d = &
-                          xAlt  * sigmap_d1d2_d(iLon, iLat, iAlt) + &
-                   (1.0 - xAlt) * sigmap_d1d2_d(iLon, iLat, iAlt+1)
-
-              sh        = &
-                          xAlt  * sigmah(iLon, iLat, iAlt) + &
-                   (1.0 - xAlt) * sigmah(iLon, iLat, iAlt+1)
-
-              kdpm_s     = &
-                          xAlt  * kmp(iLon, iLat, iAlt) + &
-                   (1.0 - xAlt) * kmp(iLon, iLat, iAlt+1)
-
-              kdlm_s     = &
-                          xAlt  * kml(iLon, iLat, iAlt) + &
-                   (1.0 - xAlt) * kml(iLon, iLat, iAlt+1)
-
-              je1_s     = &
-                          xAlt  * je1(iLon, iLat, iAlt) + &
-                   (1.0 - xAlt) * je1(iLon, iLat, iAlt+1)
-
-              je2_s     = &
-                          xAlt  * je2(iLon, iLat, iAlt) + &
-                   (1.0 - xAlt) * je2(iLon, iLat, iAlt+1)
-
-              ped = &
-                          xAlt  * Sigma_Pedersen(iLon, iLat, iAlt) + &
-                   (1.0 - xAlt) * Sigma_Pedersen(iLon, iLat, iAlt+1)
-              hal = &
-                        xAlt  * Sigma_Hall(iLon, iLat, iAlt) + &
-                   (1.0-xAlt) * Sigma_Hall(iLon, iLat, iAlt+1)
-              dju = &
-                        xAlt  * DivJu(iLon, iLat, iAlt) + &
-                   (1.0-xAlt) * DivJu(iLon, iLat, iAlt+1)
-
-              SigmaPP(iLon, iLat) = SigmaPP(iLon, iLat) + len * sp_d1d1_d
-
-              if(SigmaPP(iLon, iLat) > 1000.) write(*,*) "integrating :",&
-                   iLon, iLat, iAlt, SigmaPP(iLon, iLat), len, sp_d1d1_d, &
-                   Sigma_Pedersen(iLon, iLat, iAlt), &
-                   b0_d1(iLon,iLat,iAlt,1:3,iBlock), &
-                   b0_cD(iLon,iLat,iAlt,iBlock), iBlock, iProc
-
-              if(SigmaPP(iLon, iLat) > 1000.) write(*,*) "neighbor :",&
-                   iLon, iLat, iAlt, SigmaPP(iLon, iLat), len, sp_d1d1_d, &
-                   Sigma_Pedersen(iLon-1, iLat, iAlt), &
-                   b0_d1(iLon-1,iLat,iAlt,1:3,iBlock), &
-                   b0_cD(iLon-1,iLat,iAlt,iBlock), iBlock, iProc
-
-              SigmaLL(iLon, iLat) = SigmaLL(iLon, iLat) + len * sp_d2d2_d
-              SigmaHH(iLon, iLat) = SigmaHH(iLon, iLat) + len * sh
-              SigmaCC(iLon, iLat) = SigmaCC(iLon, iLat) + len * sp_d1d2_d
-
-              KDpm(iLon, iLat) = KDpm(iLon, iLat) + len * kdpm_s
-              KDlm(iLon, iLat) = KDlm(iLon, iLat) + len * kdlm_s
-
-              Kpm(iLon, iLat) = Kpm(iLon, iLat) + len * je1_s
-              Klm(iLon, iLat) = Klm(iLon, iLat) + len * je2_s
-
-              PedersenFieldLine(iLon, iLat) = &
-                   PedersenFieldLine(iLon, iLat) + len * ped
-              HallFieldLine(iLon, iLat) = &
-                   HallFieldLine(iLon, iLat) + len * hal
-              DivJuFieldLine(iLon, iLat) = &
-                   DivJuFieldLine(iLon, iLat) + len * dju
-
-              LengthFieldLine(iLon, iLat) = &
-                   LengthFieldLine(iLon, iLat) + len
-
-              CALL get_magfield(GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0,&
-                   XMAG,YMAG,ZMAG)
-
-              if (sign(1.0,zmag)*signz < 0) then
-                 IsDone = .true.
-              else
-                 bmag = sqrt(xmag*xmag + ymag*ymag + zmag*zmag)
-                 GeoAlt = GeoAlt + abs(zmag)/bmag * len
-                 if (GeoAlt > Altitude_GB(iLon,iLat,nAlts,iBlock)) then
-                    IsDone = .true.
-                 else
-                    if (GeoAlt > Altitude_GB(iLon,iLat,iAlt+1,iBlock)) &
-                         iAlt = iAlt+1
-                    xAlt = (GeoAlt - Altitude_GB(iLon,iLat,iAlt,iBlock)) / &
-                         ( Altitude_GB(iLon,iLat,iAlt+1,iBlock) &
-                         - Altitude_GB(iLon,iLat,iAlt  ,iBlock))
-                    GeoLat = GeoLat + signz*xmag/bmag * len/(RBody + GeoAlt)*pi
-                    GeoLon = GeoLon + signz*ymag/bmag * len/(RBody + GeoAlt)*pi &
-                         /cos(GeoLon)
-                    !    /(sign(1.,GeoLon)*max(0.01,abs(cos(GeoLon))))
-
-                    if (GeoLat > pi/2.) then
-                       GeoLat = pi - GeoLat
-                       GeoLon = mod(GeoLon + pi,twopi)
-                    endif
-                    if (GeoLat < -pi/2.) then
-                       GeoLat = -pi - GeoLat
-                       GeoLon = mod(GeoLon + pi,twopi)
-                    endif
-                    GeoLon = mod(GeoLon, twopi)
-                    if(GeoLon<0.) GeoLon=GeoLon+twopi
-
-                 endif
-              endif
-
-           enddo
-
-        enddo
-     enddo
-     if(Debug)then
-        if(iBlock == 1)then
-           write(*,*)'OLD: ',SigmaPP(1,1)
-        end if
-     end if
-
+  do iBlock = 1, nBlocks
      call calc_mltlocal
 
      do i=1,nMagLons
@@ -627,10 +454,10 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
            gLatMC = GeoLatMC(i,j)
            gLonMC = GeoLonMC(i,j)
 
-           call find_mag_point(jul, shl, spl, length, spp, sll, shh, scc, &
+           call find_mag_point(jul, shl, spl, length, spp, sll, scc, &
                 kdpm_s, kdlm_s, be3, kpm_s, klm_s)
 
-           !write(*,*) "find_mag_points : ", i,j,mLatMC, mltMC, length
+           !write(*,*) "find_mag_point : ", i,j,mLatMC, mltMC, length
 
            if (length > 0) then
               DivJuAltMC(i,j)      = jul
@@ -643,35 +470,27 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
               SigmaPPMC(i,j) = spp * sinim
               SigmaLLMC(i,j) = sll / sinim
-              SigmaHHMC(i,j) = shh
+              SigmaHHMC(i,j) = shl
               SigmaCCMC(i,j) = scc
               if (MagLatMC(i,j) > 0.0) then
-                 SigmaPLMC(i,j) = + (shh - scc)
-                 SigmaLPMC(i,j) = - (shh + scc)
+                 SigmaPLMC(i,j) = + (shl - scc)
+                 SigmaLPMC(i,j) = - (shl + scc)
               else
-                 SigmaPLMC(i,j) = - (shh - scc)
-                 SigmaLPMC(i,j) = + (shh + scc)
+                 SigmaPLMC(i,j) = - (shl - scc)
+                 SigmaLPMC(i,j) = + (shl + scc)
               endif
 
               KDlmMC(i,j) = -sign(1.0,MagLatMC(i,j)) * kdlm_s * be3
               KDpmMC(i,j) = kdpm_s * be3 * abs(sinim)
 
-              KlmMC(i,j) = -sign(1.0,MagLatMC(i,j)) * klm_s
-              KpmMC(i,j) = kpm_s * abs(sinim)
-
+              KlmMC(i,j)  = -sign(1.0,MagLatMC(i,j)) * klm_s
+              KpmMC(i,j)  = kpm_s * abs(sinim)
            endif
 
         enddo
      enddo
 
-  enddo
-
-  if(Debug)then
-     write(*,*)' at end of block loop in calc_electrodynamics'
-     call MMT_Integrate(sigmap_d1d1_d,IntegralValues)
-     write(*,*)'NEW: ',IntegralValues(1,1,1)
-     stop
-  end if
+  enddo  ! block loop
   
   if (iDebugLevel > 2) write(*,*) "===> Beginning Sum of Electrodynamics"
 
@@ -696,60 +515,46 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   bs = nMagLats * (nMagLons+1)
 
   MagBufferMC = DivJuAltMC
-  call MPI_AllREDUCE(MagBufferMC, DivJuAltMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, DivJuAltMC,      bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = SigmaHallMC
-  call MPI_AllREDUCE(MagBufferMC, SigmaHallMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, SigmaHallMC,     bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = SigmaPedersenMC
-  call MPI_AllREDUCE(MagBufferMC, SigmaPedersenMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, SigmaPedersenMC, bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = LengthMC
-  call MPI_AllREDUCE(MagBufferMC, LengthMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, LengthMC,        bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = SigmaPPMC
-  call MPI_AllREDUCE(MagBufferMC, SigmaPPMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, SigmaPPMC,       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = SigmaLLMC
-  call MPI_AllREDUCE(MagBufferMC, SigmaLLMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, SigmaLLMC,       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = SigmaHHMC
-  call MPI_AllREDUCE(MagBufferMC, SigmaHHMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, SigmaHHMC,       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = SigmaCCMC
-  call MPI_AllREDUCE(MagBufferMC, SigmaCCMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, SigmaCCMC,       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = SigmaLPMC
-  call MPI_AllREDUCE(MagBufferMC, SigmaLPMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, SigmaLPMC,       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = SigmaPLMC
-  call MPI_AllREDUCE(MagBufferMC, SigmaPLMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, SigmaPLMC,       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = KDlmMC
-  call MPI_AllREDUCE(MagBufferMC, KDlmMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, KDlmMC,          bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = KDpmMC
-  call MPI_AllREDUCE(MagBufferMC, KDpmMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, KDpmMC,          bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = KlmMC
-  call MPI_AllREDUCE(MagBufferMC, KlmMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, KlmMC,           bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   MagBufferMC = KpmMC
-  call MPI_AllREDUCE(MagBufferMC, KpmMC,  &
-       bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
+  call MPI_AllREDUCE(MagBufferMC, KpmMC,           bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
   do i=1,nMagLons+1
      do j=2,nMagLats-1
@@ -793,19 +598,19 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   do j=1,nMagLats
      do i=2,nMagLons
-        dSigmaPLdpMC(i,j) = 0.5*(SigmaPLMC(i+1,j) - SigmaPLMC(i-1,j))/deltapmc(i,j)
-        dSigmaPPdpMC(i,j) = 0.5*(SigmaPPMC(i+1,j) - SigmaPPMC(i-1,j))/deltapmc(i,j)
-        dKDpmdpMC(i,j) = 0.5*(KDpmMC(i+1,j) - KDpmMC(i-1,j)) / deltapmc(i,j)
-        dKpmdpMC(i,j)  = 0.5*(KpmMC(i+1,j)  - KpmMC(i-1,j) ) / deltapmc(i,j)
+        dSigmaPLdpMC(i,j) = 0.5*(SigmaPLMC(i+1,j) - SigmaPLMC(i-1,j)) / deltapmc(i,j)
+        dSigmaPPdpMC(i,j) = 0.5*(SigmaPPMC(i+1,j) - SigmaPPMC(i-1,j)) / deltapmc(i,j)
+        dKDpmdpMC(i,j)    = 0.5*(KDpmMC(i+1,j)    - KDpmMC(i-1,j)   ) / deltapmc(i,j)
+        dKpmdpMC(i,j)     = 0.5*(KpmMC(i+1,j)     - KpmMC(i-1,j)    ) / deltapmc(i,j)
      enddo
-     dSigmaPLdpMC(1,j) = (SigmaPLMC(2,j) - SigmaPLMC(1,j))/deltapmc(1,j)
+     dSigmaPLdpMC(1,j)          = (SigmaPLMC(2,j) - SigmaPLMC(1,j))/deltapmc(1,j)
      dSigmaPLdpMC(nMagLons+1,j) = dSigmaPLdpMC(1,j)
-     dSigmaPPdpMC(1,j) = (SigmaPPMC(2,j) - SigmaPPMC(1,j))/deltapmc(1,j)
+     dSigmaPPdpMC(1,j)          = (SigmaPPMC(2,j) - SigmaPPMC(1,j))/deltapmc(1,j)
      dSigmaPPdpMC(nMagLons+1,j) = dSigmaPPdpMC(1,j)
-     dKDpmdpMC(1,j) = (KDpmMC(2,j) - KDpmMC(1,j))/deltapmc(1,j)
-     dKDpmdpMC(nMagLons+1,j) = dKDpmdpMC(1,j)
-     dKpmdpMC(1,j) = (KpmMC(2,j) - KpmMC(1,j))/deltapmc(1,j)
-     dKpmdpMC(nMagLons+1,j) = dKpmdpMC(1,j)
+     dKDpmdpMC(1,j)             = (KDpmMC(2,j) - KDpmMC(1,j))/deltapmc(1,j)
+     dKDpmdpMC(nMagLons+1,j)    = dKDpmdpMC(1,j)
+     dKpmdpMC(1,j)              = (KpmMC(2,j) - KpmMC(1,j))/deltapmc(1,j)
+     dKpmdpMC(nMagLons+1,j)     = dKpmdpMC(1,j)
   enddo
 
   solver_a_mc = 4 * deltalmc**2 * sigmappmc / cos(MagLatMC*pi/180)
@@ -970,11 +775,11 @@ contains
   !/
 
   subroutine find_mag_point(juline, shline, spline, length, &
-       sppline, sllline, shhline, sccline, kdpline, kdlline, be3, &
+       sppline, sllline, sccline, kdpline, kdlline, be3, &
        kpline, klline)
 
     real, intent(out) :: juline, shline, spline, &
-         sppline, sllline, shhline, sccline, kdpline, kdlline, &
+         sppline, sllline, sccline, kdpline, kdlline, &
          be3, kpline, klline
 
     integer :: ii, jj
@@ -987,6 +792,15 @@ contains
     shline = 0.0
     spline = 0.0
     length = 0.0
+
+    sppline=0.
+    sllline=0.
+    sccline=0.
+    kdpline=0.
+    kdlline=0.
+    be3=0.
+    kpline=0.
+    klline=0.
 
     if (gLatMC > Latitude(nLats+1,iBlock)) return
     if (gLatMC < Latitude(0,iBlock)) return
@@ -1016,227 +830,57 @@ contains
     lfac = (gLatMC - Latitude(jj  ,iBlock)) / &
          (Latitude(jj+1,iBlock)-Latitude(jj  ,iBlock))
 
-    call interpolate_local(HallFieldLine,     mfac, lfac, ii, jj, shline)
-    call interpolate_local(PedersenFieldLine, mfac, lfac, ii, jj, spline)
-    call interpolate_local(DivJuFieldLine,    mfac, lfac, ii, jj, juline)
-    call interpolate_local(LengthFieldLine,   mfac, lfac, ii, jj, length)
+    call interpolate_localB(HallFieldLine,     mfac, lfac, ii, jj, shline)
+    call interpolate_localB(PedersenFieldLine, mfac, lfac, ii, jj, spline)
+    call interpolate_localB(DivJuFieldLine,    mfac, lfac, ii, jj, juline)
+    call interpolate_localB(LengthFieldLine,   mfac, lfac, ii, jj, length)
 
-    call interpolate_local(SigmaPP, mfac, lfac, ii, jj, sppline)
-    call interpolate_local(SigmaLL, mfac, lfac, ii, jj, sllline)
-    call interpolate_local(SigmaHH, mfac, lfac, ii, jj, shhline)
-    call interpolate_local(SigmaCC, mfac, lfac, ii, jj, sccline)
+    call interpolate_localB(SigmaPP, mfac, lfac, ii, jj, sppline)
+    call interpolate_localB(SigmaLL, mfac, lfac, ii, jj, sllline)
+    call interpolate_localB(SigmaCC, mfac, lfac, ii, jj, sccline)
 
-    call interpolate_local(KDpm, mfac, lfac, ii, jj, kdpline)
-    call interpolate_local(KDlm, mfac, lfac, ii, jj, kdlline)
+    call interpolate_localB(KDpm, mfac, lfac, ii, jj, kdpline)
+    call interpolate_localB(KDlm, mfac, lfac, ii, jj, kdlline)
     
-    call interpolate_local(Kpm, mfac, lfac, ii, jj, kpline)
-    call interpolate_local(Klm, mfac, lfac, ii, jj, klline)
+    call interpolate_localB(Kpm, mfac, lfac, ii, jj, kpline)
+    call interpolate_localB(Klm, mfac, lfac, ii, jj, klline)
 
     call interpolate_local(b0_be3(:,:,1,iBlock), mfac, lfac, ii, jj, be3)
 
     if (sppline > 1000.) write(*,*) "sppline : ", &
          mfac, lfac, ii, jj, sppline, &
-         SigmaPP(ii,jj), SigmaPP(ii+1, jj), SigmaPP(jj+1,ii), SigmaPP(ii+1,jj+1)
+         SigmaPP(ii,jj  ,iBlock), SigmaPP(ii+1,jj  ,iBlock), &
+         SigmaPP(ii,jj+1,iBlock), SigmaPP(ii+1,jj+1,iBlock)
 
   end subroutine find_mag_point
-
-  !\
-  ! Since this is a contains subroutine, we don't need to pass in
-  ! mlatMC or mltMC or iBlock.
-  !/
-
-  subroutine find_mag_point_old(juline, shline, spline, length, &
-       sppline, sllline, shhline, sccline, kdpline, kdlline)
-
-    real, intent(out) :: juline, shline, spline, &
-         sppline, sllline, shhline, sccline, kdpline, kdlline
-
-    integer :: ii, jj
-
-    real :: dip, dec, length, mfac, lfac, gmlt, gmlt2, cdip, sdip, mt
-
-    logical :: IsFound
-
-    juline = 0.0
-    shline = 0.0
-    spline = 0.0
-    length = 0.0
-
-    mltMC = mod(mltMC+24.0,24.0)
-
-    gmlt  = maxval(magloctime_local)
-    gmlt2 = minval(magloctime_local)
-
-!    if (gmlt2 < gmlt .and. mltMC < gmlt2) then
-!       gmlt  = gmlt - 24.0
-!    else
-!       if (gmlt2 < gmlt .and. mltMC > gmlt)  gmlt2 = gmlt2 + 24.0
-!    endif
-!
-!    if (mltMC > gmlt) return
-!    if (mltMC < gmlt2) return
-
-    if (mlatMC > maxval(MLatitude(0:nLons+1,0:nLats+1,k,iBlock))) return
-    if (mlatMC < minval(MLatitude(0:nLons+1,0:nLats+1,k,iBlock))) return
-
-    ii = 0
-    do while (ii <= nLons)
-       jj = 0
-       do while (jj <= nLats-1)
-
-          gmlt  = magloctime_local(ii  ,jj)
-          gmlt2 = magloctime_local(ii+1,jj)
-
-          if (gmlt2 < gmlt .and. mltMC < gmlt2) then
-             gmlt  = gmlt - 24.0
-          else
-             if (gmlt2 < gmlt .and. mltMC > gmlt)  gmlt2 = gmlt2 + 24.0
-          endif
-
-          IsFound = .false.
-          
-          if ( mltMC  >= gmlt  .and. &
-               mltMC  <=  gmlt2 .and. &
-               mlatMC >= MLatitude( ii  ,jj  ,k, iBlock) .and. &
-               mlatMC <= MLatitude( ii  ,jj+1,k, iBlock)) then
-             if ( mltMC  >= gmlt  .and. &
-                  mltMC  <  gmlt2 .and. &
-                  mlatMC >= MLatitude( ii  ,jj  ,k, iBlock) .and. &
-                  mlatMC <  MLatitude( ii  ,jj+1,k, iBlock)) then
-                IsFound = .true.
-             else
-                if (ii == nLons .and. mltMC ==  gmlt2 .and. &
-                     mlatMC >= MLatitude( ii  ,jj  ,k, iBlock) .and. &
-                     mlatMC <  MLatitude( ii  ,jj+1,k, iBlock)) &
-                     IsFound = .true.
-                
-                if (jj == nLats .and. &
-                     mlatMC == MLatitude( ii  ,jj+1,k, iBlock) .and. &
-                     mltMC  >= gmlt  .and. &
-                     mltMC  <  gmlt2) &
-                     IsFound = .true.
-
-                if (ii == nLons .and. mltMC ==  gmlt2 .and. &
-                     jj == nLats .and. &
-                     mlatMC ==  MLatitude( ii  ,jj+1,k, iBlock)) &
-                     IsFound = .true.
-
-             endif
-          endif
-
-!          if (ii == 0 .or. jj == 0) IsFound = .false.
-
-          if (IsFound) then
-
-             mfac = (mltMC - gmlt) / (gmlt2-gmlt)
-
-             lfac = (mlatMC - MLatitude(ii,jj,k,iBlock)) / &
-                    (MLatitude(ii,jj+1,k,iBlock) - &
-                     MLatitude(ii,jj  ,k,iBlock))
-
-             call interpolate_local(HallFieldLine,     mfac, lfac, ii, jj, shline)
-             call interpolate_local(PedersenFieldLine, mfac, lfac, ii, jj, spline)
-             call interpolate_local(DivJuFieldLine,    mfac, lfac, ii, jj, juline)
-             call interpolate_local(LengthFieldLine,   mfac, lfac, ii, jj, length)
-
-             call interpolate_local(SigmaPP, mfac, lfac, ii, jj, sppline)
-             call interpolate_local(SigmaLL, mfac, lfac, ii, jj, sllline)
-             call interpolate_local(SigmaHH, mfac, lfac, ii, jj, shhline)
-             call interpolate_local(SigmaCC, mfac, lfac, ii, jj, sccline)
-
-             call interpolate_local(KDpm, mfac, lfac, ii, jj, kdpline)
-             call interpolate_local(KDlm, mfac, lfac, ii, jj, kdlline)
-
-!!             shline = (1.0-mfac)*(1.0-lfac)*HallFieldLine(ii  ,jj  ) + &
-!!                      (    mfac)*(1.0-lfac)*HallFieldLine(ii+1,jj  ) + &
-!!                      (1.0-mfac)*(    lfac)*HallFieldLine(ii  ,jj+1) + &
-!!                      (    mfac)*(    lfac)*HallFieldLine(ii+1,jj+1)
-!!
-!!             spline = (1.0-mfac)*(1.0-lfac)*PedersenFieldLine(ii  ,jj  ) + &
-!!                      (    mfac)*(1.0-lfac)*PedersenFieldLine(ii+1,jj  ) + &
-!!                      (1.0-mfac)*(    lfac)*PedersenFieldLine(ii  ,jj+1) + &
-!!                      (    mfac)*(    lfac)*PedersenFieldLine(ii+1,jj+1)
-!!
-!!             juline = (1.0-mfac)*(1.0-lfac)*DivJuFieldLine(ii  ,jj  ) + &
-!!                      (    mfac)*(1.0-lfac)*DivJuFieldLine(ii+1,jj  ) + &
-!!                      (1.0-mfac)*(    lfac)*DivJuFieldLine(ii  ,jj+1) + &
-!!                      (    mfac)*(    lfac)*DivJuFieldLine(ii+1,jj+1)
-!!
-!!             length = (1.0-mfac)*(1.0-lfac)*LengthFieldLine(ii  ,jj  ) + &
-!!                      (    mfac)*(1.0-lfac)*LengthFieldLine(ii+1,jj  ) + &
-!!                      (1.0-mfac)*(    lfac)*LengthFieldLine(ii  ,jj+1) + &
-!!                      (    mfac)*(    lfac)*LengthFieldLine(ii+1,jj+1)
-
-!             dip    = (1.0-mfac)*(1.0-lfac)*DipAngle(ii  ,jj  ,k,iBlock) + &
-!                      (    mfac)*(1.0-lfac)*DipAngle(ii+1,jj  ,k,iBlock) + &
-!                      (1.0-mfac)*(    lfac)*DipAngle(ii  ,jj+1,k,iBlock) + &
-!                      (    mfac)*(    lfac)*DipAngle(ii+1,jj+1,k,iBlock)
-!
-!             dec    = (1.0-mfac)*(1.0-lfac)*DecAngle(ii  ,jj  ,k,iBlock) + &
-!                      (    mfac)*(1.0-lfac)*DecAngle(ii+1,jj  ,k,iBlock) + &
-!                      (1.0-mfac)*(    lfac)*DecAngle(ii  ,jj+1,k,iBlock) + &
-!                      (    mfac)*(    lfac)*DecAngle(ii+1,jj+1,k,iBlock)
-
-!             ! Lets get the length of the field line in the region:
-!
-!!             mt = mlatMC*pi/180.0
-!
-!!             cdip = 2.0 * sin(mt) / sqrt(1.0 + 3.0*sin(mt)**2)
-!!             sdip = sqrt(1.0 - cdip*cdip)
-!
-!             sdip = sin(dip)
-!             cdip = abs(cos(dip))
-!
-!             ! Length in altitude
-!             length = dAlt_GB(ii,jj,k,iBlock) * sdip
-!
-!             ! Length in latitude
-!             length = length + &
-!                  (Latitude(jj+1,iBlock) - Latitude(jj,iBlock)) * &
-!                  RadialDistance(k) * cdip
-
-!             ! Length in Longitude
-!             length = length * abs(cos(dec)) + &
-!                  (Phi(ii+1,jj,k,iBlock) - Phi(ii,jj,k,iBlock)) * &
-!                  radial_distance(ii,jj,k) * &
-!                  abs(cos(Theta(ii,jj,k,iBlock))) * abs(sin(dec))
-
-!             spline = 1.0
-!             shline = 1.0
-!             juline = 1.0
-
-             shline = shline
-             spline = spline
-             juline = juline
-
-!             shline = shline * length
-!             spline = spline * length
-!             juline = juline * length
-
-             ii = nLons
-             jj = nLats
-
-          endif
-
-          jj=jj+1
-       enddo
-       ii=ii+1
-    enddo
-
-  end subroutine find_mag_point_old
 
   subroutine interpolate_local(VarToInter, mfac, lfac, ii, jj, Output)
 
     real, intent(in)    :: VarToInter(-1:nLons+2,-1:nLats+2), mfac, lfac
     integer, intent(in) :: ii, jj
     real, intent(out)   :: Output
-      
+    !----------
+
     Output = (1.0-mfac)*(1.0-lfac)*VarToInter(ii  ,jj  ) + &
              (    mfac)*(1.0-lfac)*VarToInter(ii+1,jj  ) + &
              (1.0-mfac)*(    lfac)*VarToInter(ii  ,jj+1) + &
              (    mfac)*(    lfac)*VarToInter(ii+1,jj+1)
 
   end subroutine interpolate_local
+
+  subroutine interpolate_localB(VarToInter, mfac, lfac, ii, jj, Output)
+
+    real, intent(in)    :: VarToInter(-1:nLons+2,-1:nLats+2,nBlocksMax), mfac, lfac
+    integer, intent(in) :: ii, jj
+    real, intent(out)   :: Output
+    !----------
+
+    Output = (1.0-mfac)*(1.0-lfac)*VarToInter(ii  ,jj  ,iBlock) + &
+             (    mfac)*(1.0-lfac)*VarToInter(ii+1,jj  ,iBlock) + &
+             (1.0-mfac)*(    lfac)*VarToInter(ii  ,jj+1,iBlock) + &
+             (    mfac)*(    lfac)*VarToInter(ii+1,jj+1,iBlock)
+
+  end subroutine interpolate_localB
 
 end subroutine UA_calc_electrodynamics
 
@@ -1256,7 +900,7 @@ subroutine matvec_gitm(x_I, y_I, n)
 
   integer :: iLat, iLon, i, iLm, iLp
   real :: x_G(nMagLons+1, nMagLats) ! 2D array with ghost cells
-  !-------------------------------------------------------------------------
+  !----------
 
   ! Put 1D vector into 2D solution
   i = 0;
