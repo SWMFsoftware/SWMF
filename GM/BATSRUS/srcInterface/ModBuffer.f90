@@ -1,5 +1,5 @@
 module ModBuffer
-  use ModMain,     ONLY: nRBuff, nPhiBuff, nThetaBuff, RBuffMin, RBuffMax
+  use ModMain,     ONLY: nPhiBuff, nThetaBuff, RBuffMin, RBuffMax
   use ModNumConst, ONLY: cPi, cTwoPi
   use CON_global_vector,   ONLY: ubound_vector, point_state_v
   use CON_grid_descriptor, ONLY: GridDescriptorType, Nodes_, &
@@ -50,7 +50,7 @@ contains
          iRootMapDim_D=(/1,1,1/),&
          XyzMin_D=(/RBuffMin, 0.0, 0.0/),&
          XyzMax_D=(/RBuffMax,cTwoPi,cPi/), &
-         nCells_D=(/nRBuff,nPhiBuff,nThetaBuff/),&
+         nCells_D=(/1,nPhiBuff,nThetaBuff/),&
          PE_I=(/0/))
     if(.not.IsLocal)then
        call bcast_decomposition(DD)
