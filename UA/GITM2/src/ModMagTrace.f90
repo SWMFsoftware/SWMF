@@ -149,7 +149,7 @@ contains
 
     end do;  end do;  end do
 
-    iSize = MaxMMTPoints * (nLons+4) * (nLats+4) * nBlocksMax
+    iSize = MaxMMTPoints * (nLons+4) * (nLats+4) * nBlocks
     call MPI_ALLGATHER(LOCalt, iSize, MPI_REAL, MMTalt, iSize, MPI_REAL, iCommGITM, iError)
     call MPI_ALLGATHER(LOClat, iSize, MPI_REAL, MMTlat, iSize, MPI_REAL, iCommGITM, iError)
     call MPI_ALLGATHER(LOClon, iSize, MPI_REAL, MMTlon, iSize, MPI_REAL, iCommGITM, iError)
@@ -359,7 +359,7 @@ contains
        if(MMTDebug) write(*,*)iProc,' MMT_Integrate total processor fieldline length=',iCount*MMTlen
     end if
 
-    iSize = (nLons+4) * (nLats+4) * nBlocksMax * nProcs
+    iSize = (nLons+4) * (nLats+4) * nBlocks * nProcs
     call MPI_AllREDUCE(PartialIntegral, FullIntegral, iSize, MPI_REAL, MPI_SUM, iCommGITM, iError)
     OutIntegral = FullIntegral(:,:,:,iProc+1)
 
