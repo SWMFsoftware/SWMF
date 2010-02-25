@@ -342,7 +342,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
                    (sigmah(i,j,k,iBlock) - sigmap_d1d2_d(i,j,k,iBlock)) * ue1(i,j,k)
 
               kml(i,j,k,iBlock) = (sigmah(i,j,k,iBlock) + sigmap_d1d2_d(i,j,k,iBlock)) * ue2(i,j,k) - &
-                   ue1(i,j,k) * sigmap_d1d1_d(i,j,k,iBlock)
+                   ue1(i,j,k) * sigmap_d2d2_d(i,j,k,iBlock)
 
               ! The Capital D is removed from the sigmah, since the d1d?_d are /D...
               je1(i,j,k,iBlock) = &
