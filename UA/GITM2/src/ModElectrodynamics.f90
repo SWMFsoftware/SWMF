@@ -9,7 +9,7 @@ module ModElectrodynamics
   ! These are the new field line integral values dimensioned by blocks
   real, dimension(-1:nLons+2,-1:nLats+2, nBlocksMax) :: &
        HallFieldLine, PedersenFieldLine, DivJuFieldLine, LengthFieldLine, &
-       SigmaPP, SigmaLL, SigmaCC,  KDpm, KDlm, Kpm, Klm
+       SigmaPP, SigmaLL, SigmaCC,  KDpm, KDlm
 
   ! This is the field aligned integral in magnetic coordinates
   real, dimension(:,:), allocatable :: DivJuAltMC
@@ -25,8 +25,7 @@ module ModElectrodynamics
   real, dimension(:,:), allocatable :: SigmaPLMC
   real, dimension(:,:), allocatable :: SigmaLPMC
 
-  real, dimension(:,:), allocatable :: KDpmMC, kpmMC
-  real, dimension(:,:), allocatable :: KDlmMC, klmMC
+  real, dimension(:,:), allocatable :: KDpmMC, KDlmMC
 
   ! These are the magnetic coordinates
   real, dimension(:,:), allocatable :: MagLatMC
@@ -42,8 +41,7 @@ module ModElectrodynamics
        solver_a_mc, solver_b_mc, solver_c_mc, solver_d_mc, solver_e_mc, &
        solver_s_mc, deltalmc, deltapmc, &
        dSigmaLLdlMC, dSigmaLPdlMC, dSigmaPLdpMC, dSigmaPPdpMC, &
-       dKDpmdpMC, dKDlmdlMC, DynamoPotentialMC, &
-       dKpmdpMC, dKlmdlMC
+       dKDpmdpMC, dKDlmdlMC, DynamoPotentialMC
 
   real, dimension(:,:), allocatable :: oldpotmc
   
