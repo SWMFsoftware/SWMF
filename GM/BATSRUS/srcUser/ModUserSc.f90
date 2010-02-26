@@ -142,14 +142,15 @@ contains
     use EEE_ModMain,   ONLY: EEE_get_state_BC
     use ModSize,       ONLY: East_,West_,South_,North_,Bot_,Top_,nDim
     use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, &
-         n_step, Iteration_Number
+         n_step, Iteration_Number,body2_,UseOrbit
     use ModVarIndexes, ONLY: nVar,Ew_,rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_
     use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: inv_gm1,OmegaBody,Si2No_V, &
-         UnitB_,UnitU_,UnitRho_,UnitP_
-    use ModNumConst,   ONLY: cTolerance,cTiny
+         UnitB_,UnitU_,UnitRho_,UnitP_,No2Si_V,UnitX_,rBody, &
+         xBody2,yBody2,zBody2,OrbitPeriod,FaceState_VI
+    use ModNumConst,   ONLY: cTolerance,cTiny,cTwoPi, cZero
     use ModFaceBc, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
-         iFace, jFace, kFace, iSide, iBlockBc
+         iFace, jFace, kFace, iSide, iBlockBc,iBoundary
     implicit none
 
     real, intent(out):: VarsGhostFace_V(nVar)
@@ -177,6 +178,21 @@ contains
     !/
     VarsGhostFace_V(Ux_:Uz_) = -U_D(x_:z_)
     VarsGhostFace_V(Bx_:Bz_) = B1t_D(x_:z_)!-B1n_D(x_:z_)
+
+    !^CFG IF SECONDBODY BEGIN
+    ! BCs for second body in SC
+    if (iBoundary==body2_) then
+       VarsGhostFace_V(Rho_)=FaceState_VI(Rho_, body2_)
+       VarsGhostFace_V(P_)=FaceState_VI(P_, body2_)
+       ! If use orbital motion
+       if(UseOrbit) then
+          VarsGhostFace_V(Ux_) = -(cTwoPi*yBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_) 
+          VarsGhostFace_V(Uy_) =  (cTwoPi*xBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
+          VarsGhostFace_V(Uz_) =  cZero
+       end if
+       return
+    end if
+    !^CFG END SECONDBODY
 
     !\
     ! Compute the perturbed state of the eruptive event at RFace_D::
