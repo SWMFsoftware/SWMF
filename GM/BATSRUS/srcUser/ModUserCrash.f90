@@ -18,8 +18,8 @@ module ModUser
   use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, VarTest, &
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates
   use ModSize, ONLY: nI, nJ, nK
-  use ModVarIndexes, ONLY: LevelXe_, LevelPl_, LevelAu_
-  use CRASH_ModEos, ONLY: cAtomicMass_I, cAPolyimide
+  use ModVarIndexes, ONLY: LevelXe_, LevelPl_, LevelAu_, LevelAy_
+  use CRASH_ModEos, ONLY: MassMaterial_I => cAtomicMassCRASH_I
   use BATL_amr, ONLY: BetaProlong
 
   include 'user_module.h' !list of public methods
@@ -28,21 +28,18 @@ module ModUser
   character (len=*), parameter :: &
        NameUserModule = 'HYDRO + IONIZATION EQUILIBRIUM + LEVEL SETS'
 
-  ! There are at most 4 materials: Xe, Be, Plastic, and Gold
-  integer, parameter :: MaxMaterial = 4
+  ! There are at most 5 materials: Xe, Be, Plastic, Gold, Acrylic
+  integer, parameter :: MaxMaterial = 5
 
   ! The Maximum Level set index that is used
-  integer, parameter :: LevelMax = max(LevelPl_, LevelAu_)
+  integer, parameter :: LevelMax = max(LevelPl_, LevelAu_, LevelAy_)
 
   ! The number of materials that is used
   integer, parameter :: nMaterial = LevelMax - LevelXe_ + 1
 
-  ! Do we use the gold level ?
+  ! Do we use the gold and acrylic levels ?
   logical, parameter :: UseAu = LevelAu_ > 1
-
-  ! Average atomic mass of the materials
-  real, parameter:: MassMaterial_I(0:MaxMaterial-1) = &
-       (/ cAtomicMass_I(54), cAtomicMass_I(4), cAPolyimide, cAtomicMass_I(79)/)
+  logical, parameter :: UseAy = LevelAy_ > 1
 
   ! Fully 3D simulation?
   logical :: IsThreeDim = .false.
@@ -181,12 +178,13 @@ contains
   subroutine user_read_inputs
 
     use ModReadParam
-    use CRASH_ModEos,        ONLY: read_eos_parameters
+    use CRASH_ModEos,        ONLY: read_eos_parameters, NameMaterial_I
     use CRASH_ModMultiGroup, ONLY: read_opacity_parameters
     use ModGeometry,         ONLY: TypeGeometry, UseCovariant
     use ModWaves,            ONLY: FreqMinSI, FreqMaxSI
     use ModConst,            ONLY: cHPlanckEV
 
+    integer :: iMaterial
     real :: EnergyPhotonMin, EnergyPhotonMax
     logical :: IsCylindrical
     character (len=100) :: NameCommand
@@ -248,29 +246,28 @@ contains
           call read_eos_parameters
 
        case("#OPACITYSCALEFACTOR") ! UQ only
-          call read_var('PlanckScaleFactorXe', PlanckScaleFactor_I(0))
-          call read_var('PlanckScaleFactorBe', PlanckScaleFactor_I(1))
-          call read_var('PlanckScaleFactorPl', PlanckScaleFactor_I(2))
-          if(UseAu)call read_var('PlanckScaleFactorAu', PlanckScaleFactor_I(3))
-          call read_var('RosselandScaleFactorXe', RosselandScaleFactor_I(0))
-          call read_var('RosselandScaleFactorBe', RosselandScaleFactor_I(1))
-          call read_var('RosselandScaleFactorPl', RosselandScaleFactor_I(2))
-          if(UseAu) call read_var('RosselandScaleFactorAu', &
-               RosselandScaleFactor_I(3))
+          do iMaterial = 0, nMaterial - 1
+             call read_var('PlanckScaleFactor'//NameMaterial_I(iMaterial), &
+                  PlanckScaleFactor_I(iMaterial))
+          end do
+          do iMaterial = 0, nMaterial - 1
+             call read_var('RosselandScaleFactor'//NameMaterial_I(iMaterial), &
+                  RosselandScaleFactor_I(iMaterial))
+          end do
 
        case("#GAMMALAW") ! UQ only
           call read_var('UseGammaLaw', UseGammaLaw)
-          call read_var('GammaXe', Gamma_I(0))
-          call read_var('GammaBe', Gamma_I(1))
-          call read_var('GammaPl', Gamma_I(2))
-          if(UseAu) call read_var('GammaAu', Gamma_I(3))
+          do iMaterial = 0, nMaterial - 1
+             call read_var('Gamma'//NameMaterial_I(iMaterial), &
+                  Gamma_I(iMaterial))
+          end do
 
        case("#FIXEDIONCHARGE") ! UQ only
           call read_var('UseFixedIonCharge', UseFixedIonCharge)
-          call read_var('IonChargeXe', IonCharge_I(0))
-          call read_var('IonChargeBe', IonCharge_I(1))
-          call read_var('IonChargePl', IonCharge_I(2))
-          if(UseAu) call read_var('IonChargeAu', IonCharge_I(3))
+          do iMaterial = 0, nMaterial - 1
+             call read_var('IonCharge'//NameMaterial_I(iMaterial), &
+                  IonCharge_I(iMaterial))
+          end do
 
        case("#THREEDIM")
           call read_var('IsThreeDim', IsThreeDim)
@@ -391,7 +388,7 @@ contains
          UnitTemperature_, UnitN_, PeMin, ExtraEintMin
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes,  ONLY: Rho_, RhoUx_, RhoUz_, p_, ExtraEint_, &
-         LevelBe_, LevelXe_, LevelPl_, LevelAu_, Pe_, Erad_
+         LevelBe_, LevelXe_, LevelPl_, Pe_, Erad_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
     use ModConst,       ONLY: cPi, cAtomicMass
     use CRASH_ModEos,   ONLY: eos, Xe_, Plastic_
@@ -545,13 +542,17 @@ contains
              ! If there is no plastic tube, things are easy
              State_VGB(LevelBe_,i,j,k,iBlock) =  DxBe
              State_VGB(LevelXe_,i,j,k,iBlock) = -DxBe
-             State_VGB(LevelPl_,i,j,k,iBlock) = -1e30
-             if(UseAu) State_VGB(LevelAu_,i,j,k,iBlock) = -1e30
+             do iMaterial = Plastic_, nMaterial - 1
+                State_VGB(LevelXe_+iMaterial,i,j,k,iBlock) = -1e30
+             end do
           end if
 
        end if ! nDimHyades /= 2
 
        if(UseMixedCell)then
+          if(UseAy) call stop_mpi(NameSub //" Acrylic is not yet supported " &
+            //"in the mixed cell approach")
+
           ! Use atomic concentrations instead of smooth level set functions
 
           ! Used materials: Xe, Be, Pl, and optionally Au
@@ -659,7 +660,7 @@ contains
          UnitP_, UnitTemperature_, UnitEnergyDens_
     use ModPlotFile,   ONLY: read_plot_file
     use ModUtilities,  ONLY: split_string
-    use CRASH_ModEos,  ONLY: Xe_, Be_, Plastic_
+    use CRASH_ModEos,  ONLY: Xe_, Be_, Plastic_, Au_, Ay_
     use ModConst,      ONLY: cKevToK, cHPlanckEV
     use ModMain,       ONLY: UseRadDiffusion, Time_Simulation
     use ModVarIndexes, ONLY: nWave
@@ -912,15 +913,17 @@ contains
     deallocate(Coord_DI, Var_VI)
 
     if(iMaterialHyades > 0)then
-       if(UseAu)then
-          ! Convert material indexes to the 4 values used in CRASH
-          ! Acrylic (4), Vacuum (5) --> Polyimid
-          where(nint(DataHyades_VC(iMaterialHyades, :)) >= 4) &
+       ! Vacuum (5) --> Polyimid
+       where(nint(DataHyades_VC(iMaterialHyades, :)) == 5) &
                DataHyades_VC(iMaterialHyades, :) = Plastic_
-       else
-          ! Convert material indexes to the 3 values used in CRASH
-          ! Gold (3), Acrylic (4), Vacuum (5) --> Polyimid
-          where(nint(DataHyades_VC(iMaterialHyades, :)) >= 3) &
+       if(.not.UseAy)then
+          ! Acrylic (4) --> Polyimid
+          where(nint(DataHyades_VC(iMaterialHyades, :)) == Ay_) &
+               DataHyades_VC(iMaterialHyades, :) = Plastic_
+       end if
+       if(.not.UseAu)then
+          ! Gold (3) --> Polyimid
+          where(nint(DataHyades_VC(iMaterialHyades, :)) == Au_) &
                DataHyades_VC(iMaterialHyades, :) = Plastic_
        end if
     end if
@@ -1563,8 +1566,8 @@ contains
          UnitTemperature_, cRadiationNo, No2Si_V, UnitEnergyDens_
     use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK, TypeGeometry
     use ModVarIndexes, ONLY: Rho_, p_, LevelXe_, LevelBe_, LevelPl_, &
-         LevelAu_, nWave, WaveFirst_, WaveLast_
-    use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_, Au_
+         LevelAu_, LevelAy_, nWave, WaveFirst_, WaveLast_
+    use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_, Au_, Ay_
     use BATL_size,    ONLY: nI, nJ, nK, nG, MinI, MaxI
 
     integer,          intent(in)   :: iBlock
@@ -1591,8 +1594,9 @@ contains
     integer, parameter:: kMin = 1 - 2*min(1,nK-1), kMax = nK + 2*min(1,nK-1)
 
     ! Optical depth for Xenon, Berylium, plastic and Gold for radiography
+    ! The optical depth of Acrylic is taken to be the same as polyimide
     real, parameter:: RadioDepth_I(0:MaxMaterial-1) = &
-         (/ 79.4, 0.36, 2.24, 1e10 /)
+         (/ 79.4, 0.36, 2.24, 1e10, 2.24 /)
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !------------------------------------------------------------------------  
@@ -1694,7 +1698,7 @@ contains
        end if
        if(IsDimensional) PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax) = &
             No2Io_V(UnitRho_)*PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax)
-    case('rhoxe', 'rhobe', 'rhopl', 'rhoau')
+    case('rhoxe', 'rhobe', 'rhopl', 'rhoau', 'rhoay')
        select case(NameVar)
        case('rhoxe')
           iLevel = LevelXe_; iMaterial = Xe_
@@ -1704,6 +1708,8 @@ contains
           iLevel = LevelPl_; iMaterial = Plastic_
        case('rhoau')
           iLevel = LevelAu_; iMaterial = Au_
+       case('rhoay')
+          iLevel = LevelAy_; iMaterial = Ay_
        end select
        if(UseMixedCell)then
           PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax) = MassMaterial_I(iMaterial)&
@@ -1757,7 +1763,7 @@ contains
     use ModConst,       ONLY: cKevToK, cHPlanckEV
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI
     use CRASH_ModMultiGroup, ONLY: set_multigroup
-    use CRASH_ModEos,   ONLY: Xe_, Be_, Plastic_, Au_
+    use CRASH_ModEos,        ONLY: NameMaterial_I
 
     integer:: iMaterial
     logical:: IsFirstTime = .true.
@@ -1808,11 +1814,10 @@ contains
     iTableEPerP     = i_lookup_table('ePerP(rho,p/rho)')
     iTableThermo    = i_lookup_table('Thermo(rho,p/rho)')
     iTableOpacity   = i_lookup_table('Opacity(rho,T)')
-    iTableOpacity_I(Xe_)      = i_lookup_table('OpacityXe(rho,T)')
-    iTableOpacity_I(Be_)      = i_lookup_table('OpacityBe(rho,T)')
-    iTableOpacity_I(Plastic_) = i_lookup_table('OpacityPl(rho,T)')
-    if(UseAu) &
-         iTableOpacity_I(Au_) = i_lookup_table('OpacityAu(rho,T)')
+    do iMaterial = 0, nMaterial - 1
+       iTableOpacity_I(iMaterial) = &
+            i_lookup_table('Opacity'//NameMaterial_I(iMaterial)//'(rho,T)')
+    end do
 
     iTableSesame = i_lookup_table('Sesame(rho,T)')
 
@@ -1843,11 +1848,12 @@ contains
   !===========================================================================
   subroutine calc_table_value(iTable, Arg1, Arg2, Value_V)
 
-    use ModAdvance,    ONLY: UseElectronPressure
-    use ModProcMH,     ONLY: iProc
-    use CRASH_ModEos,  ONLY: eos
-    use ModConst,      ONLY: cProtonMass, cBoltzmann
-    use ModVarIndexes, ONLY: nWave
+    use ModAdvance,     ONLY: UseElectronPressure
+    use ModProcMH,      ONLY: iProc
+    use CRASH_ModEos,   ONLY: eos, Ay_, Plastic_
+    use ModConst,       ONLY: cProtonMass, cBoltzmann
+    use ModLookupTable, ONLY: interpolate_lookup_table
+    use ModVarIndexes,  ONLY: nWave
 
     integer, intent(in):: iTable
     real, intent(in)   :: Arg1, Arg2
@@ -1869,7 +1875,7 @@ contains
 
     if(iTable == iTablePPerE)then
        ! Calculate p/e for Xe_, Be_ and Plastic_ for given Rho and e/Rho
-       ! Au_ is optional
+       ! Au_ and Ay_ are optional
        Rho = Arg1
        e   = Arg2*Rho
        do iMaterial = 0, nMaterial-1
@@ -1884,7 +1890,7 @@ contains
        end do
     elseif(iTable == iTableEPerP)then
        ! Calculate e/p for Xe_, Be_ and Plastic_ for given Rho and p/Rho
-       ! Au_ is optional
+       ! Au_ and Ay_ are optional
        Rho = Arg1
        p   = Arg2*Rho
        do iMaterial = 0, nMaterial-1
@@ -1900,7 +1906,7 @@ contains
     elseif(iTable == iTableThermo)then
        ! Calculate cV, gamma, HeatCond and Te for Xe_, Be_ and Plastic_ 
        ! for given Rho and p/Rho
-       ! Au_ is optional
+       ! Au_ and Ay_ are optional
        Rho = Arg1
        p   = Arg2*Rho
        do iMaterial = 0, nMaterial-1
@@ -1936,7 +1942,7 @@ contains
     elseif(iTable == iTableOpacity)then
        ! Calculate gray specific opacities for all materials
        ! for given Rho and Te
-       ! Au_ is optional
+       ! Au_ and Ay_ are optional
        Rho = Arg1
        Te  = Arg2
        do iMaterial = 0, nMaterial-1
@@ -1961,11 +1967,18 @@ contains
        do iMaterial = 0, nMaterial-1
           if(iTable == iTableOpacity_I(iMaterial)) EXIT
        end do
-       call eos(iMaterial, Rho, TeIn=Te, &
-            OpacityPlanckOut_I=OpacityPlanck_W, &
-            OpacityRosselandOut_I=OpacityRosseland_W)
-       Value_V(1:nWave)         = OpacityPlanck_W/Rho
-       Value_V(nWave+1:2*nWave) = OpacityRosseland_W/Rho
+
+       if(UseAy .and. iMaterial == Ay_)then
+          ! copy the opacity for acrylic from polyimide
+          call interpolate_lookup_table(iTableOpacity_I(Plastic_), &
+               Rho, Te, Value_V, DoExtrapolate = .false.)
+       else
+          call eos(iMaterial, Rho, TeIn=Te, &
+               OpacityPlanckOut_I=OpacityPlanck_W, &
+               OpacityRosselandOut_I=OpacityRosseland_W)
+          Value_V(1:nWave)         = OpacityPlanck_W/Rho
+          Value_V(nWave+1:2*nWave) = OpacityRosseland_W/Rho
+       end if
     elseif(iTable == iTableSesame)then
        ! Calculate pressure and internal energy for all materials
        Rho = Arg1
