@@ -2612,7 +2612,7 @@ contains
     ! If there is a Xe interface anywhere in the block, refine
     do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
        IsXe_G(i,j,k) = State_VGB(LevelXe_,i,j,k,iBlock) &
-            >   maxval(State_VGB(LevelBe_:LevelPl_,i,j,k,iBlock))
+            >   maxval(State_VGB(LevelBe_:LevelMax,i,j,k,iBlock))
     end do; end do; end do
 
     UserCriteria = 1.0
@@ -2622,8 +2622,14 @@ contains
     if(UseAu)then
        ! If there is a Au interface anywhere in the block, refine
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          IsAu_G(i,j,k) = State_VGB(LevelAu_,i,j,k,iBlock) &
-               >   maxval(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
+          if(UseAy)then
+             IsAu_G(i,j,k) = State_VGB(LevelAu_,i,j,k,iBlock) &
+                  > max(maxval(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock)), &
+                  State_VGB(LevelAy_,i,j,k,iBlock))
+          else
+             IsAu_G(i,j,k) = State_VGB(LevelAu_,i,j,k,iBlock) &
+                  >   maxval(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
+          end if
        end do; end do; end do
 
        if(any(IsAu_G(iMin:iMax,jMin:jMax,kMin:kMax)) .and. &
