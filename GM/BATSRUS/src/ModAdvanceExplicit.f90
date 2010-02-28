@@ -218,7 +218,6 @@ subroutine update_secondbody
   yBody2 = xBody2init*sin(cTwoPi*time_simulation/OrbitPeriod)
 
   do globalBLK = 1, nBlock
-     call set_boundary_cells(globalBLK)
      call fix_block_geometry(globalBLK)
   end do
   
