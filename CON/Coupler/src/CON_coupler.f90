@@ -359,18 +359,36 @@ contains
       integer::iL,iU,Number
       iL=lbound(Coord_I,1)
       iU=ubound(Coord_I,1)
-      if(XyzGen_D(iDim)<=Coord_I(iL))then
-         XyzGen_D(iDim)=real(iL) +&
-              OneIfExtrapolate * (XyzGen_D(iDim) - Coord_I(iL))/&
-              (Coord_I(iL+1) - Coord_I(iL))
-      elseif(XyzGen_D(iDim)>=Coord_I(iU))then
-         XyzGen_D(iDim)=real(iU) +&
-              OneIfExtrapolate * (XyzGen_D(iDim) - Coord_I(iU))/&
-              (Coord_I(iU) - Coord_I(iU-1))
+      if (Coord_I(iL) < Coord_I(iU)) then
+         if(XyzGen_D(iDim)<=Coord_I(iL))then
+            XyzGen_D(iDim)=real(iL) +&
+                 OneIfExtrapolate * (XyzGen_D(iDim) - Coord_I(iL))/&
+                 (Coord_I(iL+1) - Coord_I(iL))
+         elseif(XyzGen_D(iDim)>=Coord_I(iU))then
+            XyzGen_D(iDim)=real(iU) +&
+                 OneIfExtrapolate * (XyzGen_D(iDim) - Coord_I(iU))/&
+                 (Coord_I(iU) - Coord_I(iU-1))
+         else
+            Number=maxloc(Coord_I,1,MASK=Coord_I<=XyzGen_D(iDim))
+            XyzGen_D(iDim)=real(Number)+(XyzGen_D(iDim)-Coord_I(Number))/&
+                 (Coord_I(Number+1)-Coord_I(Number))
+         end if
       else
-         Number=maxloc(Coord_I,1,MASK=Coord_I<=XyzGen_D(iDim))
-         XyzGen_D(iDim)=real(Number)+(XyzGen_D(iDim)-Coord_I(Number))/&
-              (Coord_I(Number+1)-Coord_I(Number))
+         iU=lbound(Coord_I,1)
+         iL=ubound(Coord_I,1)
+         if(XyzGen_D(iDim)<=Coord_I(iL))then
+            XyzGen_D(iDim)=real(iL) +&
+                 OneIfExtrapolate * (XyzGen_D(iDim) - Coord_I(iL))/&
+                 (Coord_I(iL) - Coord_I(iL-1))
+         elseif(XyzGen_D(iDim)>=Coord_I(iU))then
+            XyzGen_D(iDim)=real(iU) +&
+                 OneIfExtrapolate * (XyzGen_D(iDim) - Coord_I(iU))/&
+                 (Coord_I(iU) - Coord_I(iU+1))
+         else
+            Number=maxloc(Coord_I,1,MASK=Coord_I<=XyzGen_D(iDim))
+            XyzGen_D(iDim)=real(Number)+(XyzGen_D(iDim)-Coord_I(Number))/&
+                 (Coord_I(Number)-Coord_I(Number-1))
+         end if
       end if
     end subroutine gen
   end subroutine stretched_to_gen
