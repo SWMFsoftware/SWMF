@@ -1,15 +1,17 @@
 module ModInterpolate
 
   ! Calculate second order accurate interpolation for 
+  !
   ! - a uniform grid with normalized coordinates, or 
-  ! - non-uniform grid with actual coordinates 
+  ! - non-uniform grid with actual coordinates, or
+  ! - any mixture of the two, i.e. only some of the coordinates are uniform
   !
   ! Normalized coordinates mean that the coordinates coincide with the 
-  ! indexes at the grid points. For uniform grid this is very fast algorithm.
-  ! For non-uniform grid a search is needed. The coordinates are assumed
-  ! to be in an increasing order. If the coordinates are decreasing swap signs.
+  ! indexes at the grid points. For uniform grid this is a very fast algorithm.
+  ! For non-uniform grid a binary search is needed. The coordinates are assumed
+  ! to be either monotone increasing or monotone decreasing. 
   !
-  ! One can interpolate both scalar or a vector valued array.
+  ! One can interpolate both scalar and vector valued arrays.
   !
   ! If the coordinates are outside the allowed ranges and the DoExtrapolate
   ! argument is not present the code stops. If the DoExtrapolate argument
@@ -21,18 +23,18 @@ module ModInterpolate
   ! Cell based 2D uniform grid with ghost cells, scalar valued:
   !
   !     InterpolatedValue = bilinear(Value_II, 0, nI+1, 0, nJ+1, &
-  !                         (/ (x - x(0))/DeltaX, (y - y(0))/DeltaY) /) )
+  !                         (/ (x - x0)/DeltaX, (y - y0)/DeltaY) /) )
   !
   ! Node based 2D grid with x(1)=y(1)=0.0, vector valued:
   !
   !     InterpolatedValue_V = bilinear(Value_VII, nVar, 1, nI, 1, nJ, &
   !                        (/ x/DeltaX+1, y/DeltaY+1 /) )
   !
-  ! Nonuniform 3D grid with ghost cells, first coordinate is in 
-  ! decreasing order, scalar valued:
+  ! Nonuniform 3D grid with ghost cells, third coordinate is uniform, 
+  ! scalar valued:
   !
   !     InterpolatedValue = trilinear(Value_III, -1, nI+2, -1, nJ+2, -1, nK+2,&
-  !                       (/ -x, y, z /), -x_I, y_I, z_I)
+  !                       (/ x, y, (z - z0)/DeltaZ /), x_I, y_I)
   !
 
   implicit none
@@ -304,7 +306,7 @@ contains
 
     ! Find cell index and distance from cell for either 
     ! - a uniform grid with normalized coordinate (Coord_I is NOT present)
-    ! - a nonuniform grid with increasing coordinates (Coord_I is present)
+    ! - a nonuniform grid with monotone coordinates (Coord_I is present)
     !
     ! For sake of easy usage the returned coordinate index iCoord always
     ! satisfies MinCoord <= iCoord < MaxCoord.
@@ -393,66 +395,129 @@ contains
           if(present(IsInside)) IsInside = .true.
        end if
 
-       ! Done with uniform grid case
-       RETURN
-    end if
+    elseif(Coord_I(MinCoord) < Coord_I(MaxCoord))then
 
-    if(Coord < Coord_I(MinCoord))then
-       if(.not. (present(DoExtrapolate))) then
-          if(present(StringError)) write(*,*) StringError
-          write(*,*) NameSub,': MinIndex, MaxIndex=', MinCoord, MaxCoord
-          write(*,*) NameSub,': Coord, CoordMin, CoordMax=', &
-               Coord, Coord_I(MinCoord), Coord_I(MaxCoord)
-          call CON_stop(NameSub//': coordinate is too small!')
-       elseif(DoExtrapolate)then
-          iCoord = MinCoord
-          dCoord = (Coord - Coord_I(iCoord)) &
-               /   (Coord_I(iCoord+1) - Coord_I(iCoord))
-       else
-          iCoord = MinCoord
-          dCoord   = 0.0
+       ! Monotone increasing coordinates
+
+       if(Coord < Coord_I(MinCoord))then
+          if(.not. (present(DoExtrapolate))) then
+             if(present(StringError)) write(*,*) StringError
+             write(*,*) NameSub,': MinIndex, MaxIndex=', MinCoord, MaxCoord
+             write(*,*) NameSub,': Coord, CoordMin, CoordMax=', &
+                  Coord, Coord_I(MinCoord), Coord_I(MaxCoord)
+             call CON_stop(NameSub//': coordinate is too small!')
+          elseif(DoExtrapolate)then
+             iCoord = MinCoord
+             dCoord = (Coord - Coord_I(iCoord)) &
+                  /   (Coord_I(iCoord+1) - Coord_I(iCoord))
+          else
+             iCoord = MinCoord
+             dCoord = 0.0
+          end if
+          if(present(IsInside)) IsInside = .false.
+          RETURN
        end if
-       if(present(IsInside)) IsInside = .false.
-       RETURN
-    end if
 
-    if(Coord > Coord_I(MaxCoord))then
-       if(.not. (present(DoExtrapolate))) then
-          if(present(StringError)) write(*,*) StringError
-          write(*,*) NameSub,': MinIndex, MaxIndex=', MinCoord, MaxCoord
-          write(*,*) NameSub,': Coord, CoordMin, CoordMax=', &
-               Coord, Coord_I(MinCoord), Coord_I(MaxCoord)
-          call CON_stop(NameSub//': coordinate is too large!')
-       elseif(DoExtrapolate)then
-          iCoord = MaxCoord - 1
-          dCoord = (Coord - Coord_I(iCoord))  &
-               /   (Coord_I(iCoord+1) - Coord_I(iCoord))
-       else
-          iCoord = MaxCoord - 1
-          dCoord   = 1.0
+       if(Coord > Coord_I(MaxCoord))then
+          if(.not. (present(DoExtrapolate))) then
+             if(present(StringError)) write(*,*) StringError
+             write(*,*) NameSub,': MinIndex, MaxIndex=', MinCoord, MaxCoord
+             write(*,*) NameSub,': Coord, CoordMin, CoordMax=', &
+                  Coord, Coord_I(MinCoord), Coord_I(MaxCoord)
+             call CON_stop(NameSub//': coordinate is too large!')
+          elseif(DoExtrapolate)then
+             iCoord = MaxCoord - 1
+             dCoord = (Coord - Coord_I(iCoord))  &
+                  /   (Coord_I(iCoord+1) - Coord_I(iCoord))
+          else
+             iCoord = MaxCoord - 1
+             dCoord = 1.0
+          end if
+          if(present(IsInside)) IsInside = .false.
+          RETURN
        end if
-       if(present(IsInside)) IsInside = .false.
-       RETURN
-    end if
 
-    if(present(IsInside)) IsInside = .true.
+       if(present(IsInside)) IsInside = .true.
 
-    ! binary search
-    i  = (MinCoord + MaxCoord)/2
-    Di = (MaxCoord - MinCoord)/2
-    do
-       Di = (Di + 1)/2
-       if(Coord < Coord_I(i)) then
-          i = max(MinCoord, i - Di)
-       elseif(Coord > Coord_I(i+1))then
-          i = min(MaxCoord-1, i + Di)
-       else
-          EXIT
+       ! binary search
+       i  = (MinCoord + MaxCoord)/2
+       Di = (MaxCoord - MinCoord)/2
+       do
+          Di = (Di + 1)/2
+          if(Coord < Coord_I(i)) then
+             i = max(MinCoord, i - Di)
+          elseif(Coord > Coord_I(i+1))then
+             i = min(MaxCoord-1, i + Di)
+          else
+             EXIT
+          end if
+       end do
+       iCoord = i
+       dCoord = (Coord             - Coord_I(iCoord)) &
+            /   (Coord_I(iCoord+1) - Coord_I(iCoord))
+
+    else
+
+       ! Monotone decreasing coordinates
+
+       if(Coord < Coord_I(MaxCoord))then
+          if(.not. (present(DoExtrapolate))) then
+             if(present(StringError)) write(*,*) StringError
+             write(*,*) NameSub,': MinIndex, MaxIndex=', MinCoord, MaxCoord
+             write(*,*) NameSub,': Coord, CoordMin, CoordMax=', &
+                  Coord, Coord_I(MaxCoord), Coord_I(MinCoord)
+             call CON_stop(NameSub//': coordinate is too small!')
+          elseif(DoExtrapolate)then
+             iCoord = MaxCoord - 1
+             dCoord = (Coord_I(iCoord) - Coord) &
+                  /   (Coord_I(iCoord) - Coord_I(iCoord+1))
+          else
+             iCoord = MaxCoord - 1
+             dCoord = 1.0
+          end if
+          if(present(IsInside)) IsInside = .false.
+          RETURN
        end if
-    end do
-    iCoord = i
-    dCoord = (Coord             - Coord_I(iCoord)) &
-         /   (Coord_I(iCoord+1) - Coord_I(iCoord))
+
+       if(Coord > Coord_I(MinCoord))then
+          if(.not. (present(DoExtrapolate))) then
+             if(present(StringError)) write(*,*) StringError
+             write(*,*) NameSub,': MinIndex, MaxIndex=', MinCoord, MaxCoord
+             write(*,*) NameSub,': Coord, CoordMin, CoordMax=', &
+                  Coord, Coord_I(MaxCoord), Coord_I(MinCoord)
+             call CON_stop(NameSub//': coordinate is too large!')
+          elseif(DoExtrapolate)then
+             iCoord = MinCoord
+             dCoord = (Coord_I(iCoord) - Coord)  &
+                  /   (Coord_I(iCoord) - Coord_I(iCoord+1))
+          else
+             iCoord = MinCoord
+             dCoord = 0.0
+          end if
+          if(present(IsInside)) IsInside = .false.
+          RETURN
+       end if
+
+       if(present(IsInside)) IsInside = .true.
+
+       ! binary search
+       i  = (MinCoord + MaxCoord)/2
+       Di = (MaxCoord - MinCoord)/2
+       do
+          Di = (Di + 1)/2
+          if(Coord > Coord_I(i)) then
+             i = max(MinCoord, i - Di)
+          elseif(Coord < Coord_I(i+1))then
+             i = min(MaxCoord-1, i + Di)
+          else
+             EXIT
+          end if
+       end do
+       iCoord = i
+       dCoord = (Coord_I(iCoord) - Coord  ) &
+            /   (Coord_I(iCoord) - Coord_I(iCoord+1))
+
+    end if
 
   end subroutine find_cell
   !===========================================================================
@@ -484,8 +549,8 @@ contains
     integer, parameter:: MinCoord = 1, MaxCoord = 8
     real   :: Coord_I(MinCoord:MaxCoord) = &
          (/ 1.0, 2.0, 4.0, 8.0, 16.0, 17.0, 24.0, 25.0 /)
-    integer:: nCoord
-    real   :: Coord, dCoord
+    integer:: nCoord, iSign
+    real   :: Coord, dCoord, CoordMin, CoordMax
     integer:: i, iCoord
     logical:: IsInside
 
@@ -494,63 +559,84 @@ contains
 
     character(len=*), parameter:: NameSub=NameMod//"::test_interpolation"
     !----------------------------------------------------------------------
-    write(*,'(a)')'Testing find_cell'
-    do nCoord = MaxCoord/2, MaxCoord
-       do i = ceiling(Coord_I(MinCoord)) - 1, floor(Coord_I(nCoord)) + 1
-          Coord = i
-          call find_cell(MinCoord, nCoord, Coord, &
-               iCoord, dCoord, Coord_I, .false., &
-               'Called from '//NameSub, IsInside)
+    ! Change sign of coordinates to test for increasing and decreasing orders
+    do iSign = 1, -1, -2
+       if(iSign == 1)then
+          write(*,'(a)')'Testing find_cell for increasing coordinates'
+       else
+          write(*,'(a)')'Testing find_cell for decreasing coordinates'
+       end if
 
-          if(Coord < Coord_I(MinCoord))then
-             if(IsInside) write(*,*) &
-               'Test failed for nCoord, Coord=', nCoord, Coord, &
-                  ', IsInside=T, should be false'
-             if(iCoord /= MinCoord) write(*,*)&
+       ! Change number of coordinates to test binary search
+       do nCoord = MaxCoord/2, MaxCoord
+
+          ! Search for all integer coordinates
+          ! starting below and finishing above the coordinate range
+
+          CoordMin = min(Coord_I(MinCoord), Coord_I(nCoord))
+          CoordMax = max(Coord_I(MinCoord), Coord_I(nCoord))
+
+          do i = ceiling(CoordMin) - 1, floor(CoordMax) + 1
+             Coord = i
+             call find_cell(MinCoord, nCoord, Coord, &
+                  iCoord, dCoord, Coord_I, .false., &
+                  'Called from '//NameSub, IsInside)
+
+             if(iSign*Coord < iSign*Coord_I(MinCoord))then
+                if(IsInside) write(*,*) &
+                     'Test failed for nCoord, Coord=', nCoord, Coord, &
+                     ', IsInside=T, should be false'
+                if(iCoord /= MinCoord) write(*,*)&
+                     'Test failed for nCoord, Coord=', nCoord, Coord, &
+                     ', iCoord=', iCoord, ' should be ', MinCoord
+                if(dCoord /= 0.0) write(*,*) &
+                     'Test failed for nCoord, Coord=', nCoord, Coord, &
+                     ', dCoord=', dCoord, ' should be 0.0'
+                CYCLE
+             end if
+             if(iSign*Coord > iSign*Coord_I(nCoord))then
+                if(IsInside) write(*,*) &
+                     'Test failed for nCoord, Coord=', nCoord, Coord, &
+                     ', IsInside=T, should be false'
+                if(iCoord /= nCoord - 1) write(*,*) &
+                     'Test failed for nCoord, Coord=', nCoord, Coord, &
+                     ', iCoord=', iCoord, ' should be ', nCoord - 1
+                if(dCoord /= 1.0) write(*,*) &
+                     'Test failed for nCoord, Coord=', nCoord, Coord, &
+                     ', dCoord=', dCoord, ' should be 1.0'
+                CYCLE
+             end if
+             if(.not.IsInside) write(*,*) &
                   'Test failed for nCoord, Coord=', nCoord, Coord, &
-                  ', iCoord=', iCoord, ' should be ', MinCoord
-             if(dCoord /= 0.0) write(*,*) &
-               'Test failed for nCoord, Coord=', nCoord, Coord, &
-                  ', dCoord=', dCoord, ' should be 0.0'
-             CYCLE
-          end if
-          if(Coord > Coord_I(nCoord))then
-             if(IsInside) write(*,*) &
-               'Test failed for nCoord, Coord=', nCoord, Coord, &
-                  ', IsInside=T, should be false'
-             if(iCoord /= nCoord - 1) write(*,*) &
+                  ', IsInside=F, should be true'
+
+             if(iCoord < MinCoord .or. iCoord > nCoord-1) then
+                write(*,*) &
+                     'Test failed for nCoord, Coord=', nCoord, Coord, &
+                     ', iCoord=', iCoord, ' should be < ', MinCoord, &
+                     ' and > ', nCoord - 1
+                CYCLE
+             end if
+
+             if(iSign*Coord_I(iCoord) > iSign*Coord) write(*,*) &
                   'Test failed for nCoord, Coord=', nCoord, Coord, &
-                  ', iCoord=', iCoord, ' should be ', nCoord - 1
-             if(dCoord /= 1.0) write(*,*) &
-               'Test failed for nCoord, Coord=', nCoord, Coord, &
-                  ', dCoord=', dCoord, ' should be 1.0'
-             CYCLE
-          end if
-          if(.not.IsInside) write(*,*) &
-               'Test failed for nCoord, Coord=', nCoord, Coord, &
-               ', IsInside=F, should be true'
+                  ', iSign*Coord_I(iCoord)=', iSign*Coord_I(iCoord), &
+                  ' should be <= iSign*Coord'
 
-          if(iCoord < MinCoord .or. iCoord > nCoord-1) then
-             write(*,*) &
+             if(iSign*Coord_I(iCoord+1) < iSign*Coord) write(*,*)       &
                   'Test failed for nCoord, Coord=', nCoord, Coord, &
-                  ', iCoord=', iCoord, ' should be < ', MinCoord, &
-                  ' and > ', nCoord - 1
-             CYCLE
-          end if
-
-          if(Coord_I(iCoord) > Coord) write(*,*) &
-               'Test failed for nCoord, Coord=', nCoord, Coord, &
-               ', Coord_I(iCoord)=', Coord_I(iCoord), ' should be <= Coord'
-
-          if(Coord_I(iCoord+1) < Coord) write(*,*)       &
-               'Test failed for nCoord, Coord=', nCoord, Coord, &
-               ', Coord_I(iCoord+1)=', Coord_I(iCoord+1), ' should be >= Coord' 
-          if(abs(Coord_I(iCoord) + dCoord*(Coord_I(iCoord+1)-Coord_I(iCoord)) &
-               - Coord) > 1e-6) write(*,*) &
-               'Test failed for nCoord, Coord=', nCoord, Coord, &
-               ', Coord_I(iCoord:iCoord+1)=', Coord_I(iCoord:iCoord+1), &
-               ', but incorrect dCoord = ', dCoord
+                  ', iSign*Coord_I(iCoord+1)=', iSign*Coord_I(iCoord+1), &
+                  ' should be >= iSign*Coord' 
+             if(abs(Coord_I(iCoord) &
+                  + dCoord*(Coord_I(iCoord+1) - Coord_I(iCoord)) &
+                  - Coord) > 1e-6) write(*,*) &
+                  'Test failed for nCoord, Coord=', nCoord, Coord, &
+                  ', Coord_I(iCoord:iCoord+1)=', Coord_I(iCoord:iCoord+1), &
+                  ', but incorrect dCoord = ', dCoord
+          end do
        end do
+       ! Change signs of coordinates to test decreasing order
+       Coord_I = -Coord_I
     end do
 
     !Test for normal conditions.
