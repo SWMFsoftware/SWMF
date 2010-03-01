@@ -2042,7 +2042,7 @@ contains
       integer :: iVar
 
       real :: InvNumDens, StateTmp_V(nVar), UxPlus, UyPlus, UzPlus, UnPlus
-      real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I
+      real, dimension(nIonFluid) :: NumDens_I, Ux_I, Uy_I, Uz_I, RhoUn_I
       !-----------------------------------------------------------------------
 
       ! Extract primitive variables
@@ -2069,13 +2069,14 @@ contains
 
       if(UseWavePressure)then
          if(.not.UseWavePressureLtd)then
-            pTotal = pTotal + (GammaWave - 1.0)*sum(State_V(WaveFirst_:WaveLast_))
+            pTotal = pTotal + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
          else
-            pTotal = pTotal + (GammaWave - 1.0)*State_V(Ew_)
+            pTotal = pTotal + (GammaWave-1)*State_V(Ew_)
          end if
       end if
 
-      ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 = p + bb/2 + (p - ppar)/2
+      ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
+      !        = p + bb/2 + (p - ppar)/2
       if(UseAnisoPressure) pTotal = pTotal + 0.5*(p - State_V(Ppar_))
 
       if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
@@ -2090,15 +2091,14 @@ contains
          NumDens_I  = State_V(iRhoIon_I) / MassIon_I
          InvNumDens = 1.0/sum(NumDens_I)
 
-         InvRho_I = 1.0/State_V(iRhoIon_I)
          Ux_I  = State_V(iUxIon_I)
          Uy_I  = State_V(iUyIon_I)
          Uz_I  = State_V(iUzIon_I)
 
          ! calculate the average positive charge velocity
-         UxPlus = InvNumDens* sum(NumDens_I*Ux_I)
-         UyPlus = InvNumDens* sum(NumDens_I*Uy_I)
-         UzPlus = InvNumDens* sum(NumDens_I*Uz_I)
+         UxPlus = InvNumDens*sum(NumDens_I*Ux_I)
+         UyPlus = InvNumDens*sum(NumDens_I*Uy_I)
+         UzPlus = InvNumDens*sum(NumDens_I*Uz_I)
 
          UnPlus = UxPlus*NormalX + UyPlus*NormalY + UzPlus*NormalZ
       else
@@ -2109,20 +2109,33 @@ contains
          UnPlus = Un
       end if
 
-      ! f_i[rho] = Rho*U_i
+      ! f_n[rho] = Rho*U_i
       Flux_V(Rho_) = Rho*Un
 
-      ! f_i[scalar] = Un*scalar
+      ! f_n[scalar] = Scalar*Un
       do iVar = ScalarFirst_, ScalarLast_
          Flux_V(iVar) = Un*State_V(iVar)
       end do
 
-      ! f_i[rhou_k] = u_i*u_k*rho - b_k*b_i -B0_k*b_i - B0_i*b_k + Ptotal*n_i
-      Flux_V(RhoUx_) = Un*Rho*Ux - Bn*FullBx - B0n*Bx + pTotal*NormalX
-      Flux_V(RhoUy_) = Un*Rho*Uy - Bn*FullBy - B0n*By + pTotal*NormalY
-      Flux_V(RhoUz_) = Un*Rho*Uz - Bn*FullBz - B0n*Bz + pTotal*NormalZ
+      if(UseMultiIon)then
+         ! Add up the (rho u u) diads of the ion fluids:
+         ! f_n[rhou_k] = sum_s(rho_s*u_n,s*u_k,s) 
+         !               - b_n*(b_k + B0_k) - B0_n*b_k + Ptotal*n_k
 
-      ! f_i[b_k]=u_i*(b_k+B0_k) - u_k*(b_i+B0_i)
+         RhoUn_I = State_V(iRhoIon_I) &
+              *(Ux_I*NormalX + Uy_I*NormalY + Uz_I*NormalZ)
+
+         Flux_V(RhoUx_) = sum(RhoUn_I*Ux_I) - Bn*FullBx - B0n*Bx + pTotal*NormalX
+         Flux_V(RhoUy_) = sum(RhoUn_I*Uy_I) - Bn*FullBy - B0n*By + pTotal*NormalY
+         Flux_V(RhoUz_) = sum(RhoUn_I*Uz_I) - Bn*FullBz - B0n*Bz + pTotal*NormalZ
+      else
+         ! f_n[rhou_k] = u_n*u_k*rho - b_n*(b_k + B0_k) - B0_n*b_k + Ptotal*n_k
+         Flux_V(RhoUx_) = Un*Rho*Ux - Bn*FullBx - B0n*Bx + pTotal*NormalX
+         Flux_V(RhoUy_) = Un*Rho*Uy - Bn*FullBy - B0n*By + pTotal*NormalY
+         Flux_V(RhoUz_) = Un*Rho*Uz - Bn*FullBz - B0n*Bz + pTotal*NormalZ
+      end if
+
+      ! f_n[b_k] = u_n*(b_k + B0_k) - u_k*(b_n + B0_n)
       if(HallCoeff > 0.0)then
          InvRho = 1.0/Rho
          HallUx = UxPlus - HallJx*InvRho
@@ -2142,10 +2155,10 @@ contains
          Flux_V(Bz_) = UnPlus*FullBz - UzPlus*FullBn
       end if
   
-      ! f_i[Pe] = u_e,i*p_e
+      ! f_n[Pe] = u_e,n*p_e
       if(UseElectronPressure)Flux_V(Pe_) = HallUn*State_V(Pe_)
 
-      ! f_i[p] = u_i*p
+      ! f_n[p] = u_n*p
       Flux_V(p_) = Un*p
 
       if(UseAnisoPressure)then
@@ -2165,12 +2178,12 @@ contains
          Flux_V(Energy_) = &
               Un*(pTotal + e) &
               - FullBn*(HallUx*Bx + HallUy*By + HallUz*Bz)  &
-              + (HallUn-Un)*(B2 + B0B1)
+              + (HallUn - Un)*(B2 + B0B1)
       else if(UseMultiIon)then
          Flux_V(Energy_) = &
               Un*(pTotal + e) &
               - FullBn*(UxPlus*Bx + UyPlus*By + UzPlus*Bz)  &
-              + (UnPlus-Un)*(B2 + B0B1)
+              + (UnPlus - Un)*(B2 + B0B1)
       else if(UseAnisoPressure)then
          ! can only work for single fluid without hall 
          Flux_V(Energy_) = &
