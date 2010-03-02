@@ -5490,6 +5490,7 @@ If UseAlfvenWaves = .true. the waves are separated into two sets, one of them ('
 parallel to the magnetic field, the second one ('minus') is for waves propagating anti-parallel 
 to the field. The propagation speed with respect to the background plasma is 
 $\pm V_A=\pm|B|/\sqrt{\rho}$.
+</command>
 
 </commandgroup>
 
