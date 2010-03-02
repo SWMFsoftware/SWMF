@@ -46,8 +46,7 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
      write(*,*) "Code : ",iError
      call stop_gitm("Stopping in euv_ionization_heat")
   endif
-write(*,*) f107,f107A
-stop
+
   CALL GTD6(iJulianDay,utime,AltKm,LatDeg,LonDeg,LST, &
        F107A,F107,AP,48,msis_dens,msis_temp)
 
