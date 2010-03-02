@@ -786,7 +786,7 @@ subroutine fieldpara(t,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
   use rbe_grid
   use rbe_cfield
   use rbe_cread2, ONLY: tf,dsth,tdst,byw,bzw,timf,xnswa,vswa,tsw,&
-       ndst,nimf,nsw,js,iyear,iday,imod
+       ndst,nimf,nsw,js,iyear,iday,imod, UseEllipse
   use ModNumConst, ONLY: pi => cPi
   common/geopack/aa(10),sps,cps,bb(3),ps,cc(11),kk(2),dd(8)
 
@@ -802,6 +802,10 @@ subroutine fieldpara(t,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
   real a_I(0:nTaylor),b_I(0:nTaylor),sumBn(0:nTaylor),sumhBn(0:nTaylor), &
        BnI(0:nTaylor,np),hBnI(0:nTaylor,np)
   integer :: iLatTest = -1, iLonTest=-1
+
+  integer :: imax
+  real :: R_12,R_24,xmltr,xBoundary(ip),MajorAxis,MinorAxis,&
+       MajorAxis2,MinorAxis2, sin2, Req2, xo1,xc, xCenter,rell2
   !--------------------------------------------------------------------------
 
   a_I(0)=1.
@@ -1114,14 +1118,58 @@ subroutine fieldpara(t,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
      irm(j)=irm(j)-1
   enddo
 
-  ! Find iba
-  do j=1,ip
-     do i=1,irm(j)
-        x1(i)=ro(i,j)
+!  ! Find iba
+!  do j=1,ip
+!     do i=1,irm(j)
+!        x1(i)=ro(i,j)
+!     enddo
+!     call locate1(x1,irm(j),rb,ib)
+!     iba(j)=ib
+!  enddo
+!
+!    ! Find iba
+  if (UseEllipse) then
+     R_24=rb                 ! boundary distance at midnight
+     do j=1,ip
+        imax=irm(j)
+        xmltr=xmlto(imax,j)*pi/12.
+        xBoundary(j)=-ro(imax,j)*cos(xmltr)
      enddo
-     call locate1(x1,irm(j),rb,ib)
-     iba(j)=ib
-  enddo
+     R_12=0.95*maxval(xBoundary)    ! boundary distance at noon
+     MajorAxis=0.5*(R_12+R_24)      ! major axis
+     if (R_12 < R_24) then
+        MinorAxis = R_12       ! minor axis
+     else
+        MinorAxis = R_24       ! minor axis
+     endif
+     xCenter=0.5*(R_12-R_24)        ! center on x-axis
+     MajorAxis2=MajorAxis*MajorAxis
+     MinorAxis2=MinorAxis*MinorAxis
+     do j=1,ip
+        find_ib: do i=irm(j),1,-1
+           xmltr=xmlto(i,j)*pi/12.
+           sin2=sin(xmltr)*sin(xmltr)
+           Req2=ro(i,j)*ro(i,j)
+           xo1=-ro(i,j)*cos(xmltr)
+           xc=xo1-xCenter
+           rell2=MinorAxis2*(1.-xc*xc/MajorAxis2)/sin2 ! r^2 onellipse at x=xc
+           if (Req2.le.rell2) then
+              iba(j)=i
+              exit find_ib
+           endif
+        enddo find_ib
+     enddo
+  else
+     !use circle
+     do j=1,ip
+        do i=1,irm(j)
+           x1(i)=ro(i,j)
+        enddo
+        call locate1(x1,irm(j),rb,ib)
+        iba(j)=ib
+     enddo
+  endif
+
 
 end subroutine fieldpara
 

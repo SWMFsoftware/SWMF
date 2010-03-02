@@ -78,6 +78,7 @@ module rbe_cread2
   real    :: BetaLimiter  = 2.0
 
   logical :: UseMhdBoundary = .false.
+  logical :: UseEllipse = .false.
 end module rbe_cread2
 !=============================================================================
 module rbe_cgrid

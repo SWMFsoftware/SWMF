@@ -130,7 +130,9 @@ subroutine RB_set_parameters(NameAction)
         if(UsePrerun)          call read_var('DtRead',   DtRead)
 
      case('#BOUNDARY')
+        call read_var('UseEllipse',UseEllipse) 
         call read_var('UseMhdBoundary',UseMhdBoundary) 
+
 
      case('#PLASMASPHERE')
         call read_var('UsePlasmaSphere',UsePlasmaSphere)
