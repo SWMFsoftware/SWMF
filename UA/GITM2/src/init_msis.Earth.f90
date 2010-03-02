@@ -1,5 +1,6 @@
 subroutine get_msis_temperature(lon, lat, alt, t, h)
 
+  use ModIndicesInterfaces
   use ModTime
   use ModInputs
   use ModPlanet
@@ -19,6 +20,7 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   real,dimension(7)    :: AP  
   real :: nO, nO2, nN2, m, r, g
 
+  integer :: iError
   !-------------------------------------------------------
   
   ap=10.0
@@ -29,7 +31,23 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   LatDeg = lat*180.0/pi
   AltKm  = alt/1000.0
   LST = mod(utime/3600.0+LonDeg/15.0,24.0)
+  iError = 0
+  
+  call get_f107(CurrentTime, f107, iError)
+  if (iError /= 0) then
+     write(*,*) "Error in getting F107 value.  Is this set?"
+     write(*,*) "Code : ",iError
+     call stop_gitm("Stopping in euv_ionization_heat")
+  endif
 
+  call get_f107a(CurrentTime, f107a, iError)
+  if (iError /= 0) then
+     write(*,*) "Error in getting F107a value.  Is this set?"
+     write(*,*) "Code : ",iError
+     call stop_gitm("Stopping in euv_ionization_heat")
+  endif
+write(*,*) f107,f107A
+stop
   CALL GTD6(iJulianDay,utime,AltKm,LatDeg,LonDeg,LST, &
        F107A,F107,AP,48,msis_dens,msis_temp)
 
