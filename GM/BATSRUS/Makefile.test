@@ -5,6 +5,7 @@
 # !!! NOTE: In the list below "test_func" should be the last test
 test: 
 	@rm -f *.diff
+	-@(make test_fluxemergence)
 	-@(make test_shocktube)
 	-@(make test_hallmhd)
 	-@(make test_twofluidmhd)
@@ -47,6 +48,7 @@ test_help:
 	@echo "    test MPIRUN=               (run all tests serially)"
 	@echo "    test MPIRUN='mpirun -np 3' (run test with mpirun -np 3)"
 	@echo "    test MPIRUN='mprun -np 2'  (run test with mprun -np 2)"
+	@echo "    test_fluxemergence         (run flux emergence test only)"
 	@echo "    test_shocktube             (run shocktube test only)"
 	@echo "    test_hallmhd               (run Hall MHD test only)"
 	@echo "    test_twofluidmhd           (run two-fluid test only)"
@@ -80,6 +82,45 @@ test_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR} STANDALONE=YES GMDIR=`pwd`
 
+### FLUX EMERGENCE TEST ###
+
+test_fluxemergence:
+	@echo "test_fluxemergence_compile..." > test_fluxemergence.diff
+	make test_fluxemergence_compile
+	@echo "test_fluxemergence_rundir..." >> test_fluxemergence.diff
+	make test_fluxemergence_rundir 
+	@echo "test_fluxemergence_run..." >> test_fluxemergence.diff
+	make test_fluxemergence_run
+	@echo "test_fluxemergence_check..." >> test_fluxemergence.diff
+	make test_fluxemergence_check
+
+test_fluxemergence_compile:
+	./Config.pl -e=MhdEosRad -u=Ee -g=8,8,8,500,1
+	make
+	make PIDL
+
+test_fluxemergence_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/TABLES/*.dat* .
+	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/Grid.* .
+	cd ${TESTDIR}; gunzip *.gz
+
+test_fluxemergence_run:
+	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.1D PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog_1d
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_1d
+	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.3D PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog_3d
+	cd ${TESTDIR}; ./Restart.pl
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_3d
+	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_restart; mv runlog_restart RESULTS/run_restart
+
+test_fluxemergence_check:
+	${SCRIPTDIR}/DiffNum.pl \
+		Param/FLUXEMERGENCE/TestOutput/log_fluxemergence.log \
+		${TESTDIR}/RESULTS/run_restart/GM/log_n000051.log > test_fluxemergence.diff
+	ls -l test_fluxemergence.diff
 
 ### SHOCK TUBE TEST ###
 

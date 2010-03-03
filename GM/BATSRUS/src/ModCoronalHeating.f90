@@ -26,9 +26,9 @@ module ModAlfvenWaveHeating
   !to be also constant over the solar surface is formulated in Suzuki,2006!
   !(see also the papers cited there) as the contition for the average of  !
   ! < \delta B_\perp \delta u_\perp >. Another reincarnation of the same  !
-
+  
   real :: cEnergyFluxPerBCgs = 5.0e4 !erg/cm2/s/Gs
-
+  
   !If the wave energy flux, directed along the magnetic field and equal,  !
   !in neglecting the plasma speed, to VAlfven * (Wave Energy Density      !
   !is assumed to be proportional to the magnetic field intensity, then    !
@@ -41,7 +41,7 @@ contains
   subroutine set_adiabatic_law_4_waves
     use ModPhysics, ONLY: UnitRho_, UnitEnergyDens_, Si2No_V, No2Si_V
     use ModConst  , ONLY: cTwoPi
-   
+    
     real, parameter:: Cgs2Si4EnergyDens = 1.0e-7 & !1 erg to J
                                         / 1.0e-6   !1 cm3 to m3
     real, parameter:: Si2Cgs4Dens       = 1.0e+3 & !1 kg in g
@@ -614,7 +614,8 @@ module ModUnsignedFluxModel
 
   ! Exponential Scale height to truncate heating function
   real, public :: DecayLength = 1.0
-
+  real, public :: DtUpdateFlux = -1.0
+  real, public :: UnsignedFluxHeight = -99999
 
 contains
 
@@ -623,10 +624,10 @@ contains
   subroutine get_coronal_heat_factor
 
     use ModAdvance,     ONLY: State_VGB, B0_DGB, Bx_, Bz_
-    use ModGeometry,    ONLY: vInv_CB, true_BLK, true_cell
+    use ModGeometry,    ONLY: vInv_CB, true_BLK, true_cell, fAz_BLK, z_BLK
     use ModMagnetogram, ONLY: nTheta, nPhi, dSinTheta, dPhi, &
          get_magnetogram_field
-    use ModMain,        ONLY: nI, nJ, nK, nBlock, UnusedBLK
+    use ModMain,        ONLY: nI, nJ, nK, nBlock, UnusedBLK, Time_Simulation
     use ModMpi,         ONLY: MPI_REAL, MPI_SUM
     use ModNumConst,    ONLY: cHalfPi
     use ModPhysics,     ONLY: Si2No_V, No2Si_V, UnitX_, UnitB_, UnitT_, &
@@ -635,24 +636,25 @@ contains
 
     integer :: i, j, k, iBlock
     integer :: iTheta, iPhi, iError
-    real :: UnsignedFlux, UnsignedFluxCgs, dAreaCgs
+    real :: UnsignedFluxCgs, dAreaCgs
     real :: HeatFunction, HeatFunctionVolume, HeatFunctionVolumePe
     real :: x, y, z, Theta, Phi, SinTheta, CosTheta, SinPhi, CosPhi
     real :: FullB_D(3), B0_D(3), BrSi, BrCgs, SumUnsignedBrCgs
-
-    real, save :: TotalCoronalHeating
+    real :: BzCgs(1:nI,1:nJ), SumUnsignedBzCgs, UnsignedFluxCgsPe
+    real, save :: TotalCoronalHeating, TimeUpdateLast
     logical, save :: DoFirst = .true.
 
     real, parameter :: HeatExponent = 1.1488, HeatCoef = 89.4
     !--------------------------------------------------------------------------
 
-    if(DoFirst)then
+    if(DoFirst .and. (DtUpdateFlux <= 0))then
 
        ! uniform cell area on sphere
        dAreaCgs = rBody**2*dSinTheta*dPhi*No2Si_V(UnitX_)**2*1e4
        SumUnsignedBrCgs = 0.0
 
        do iTheta = 0, nTheta
+
           Theta = cHalfPi - asin((real(iTheta) + 0.5)*dSinTheta - 1.0)
           SinTheta = sin(Theta)
           CosTheta = cos(Theta)
@@ -669,6 +671,7 @@ contains
              BrSi = (x*B0_D(1) + y*B0_D(2) + z*B0_D(3))/rBody
              BrCgs = BrSi*1e4
              SumUnsignedBrCgs = SumUnsignedBrCgs + abs(BrCgs)
+
           end do
        end do
 
@@ -680,6 +683,33 @@ contains
             *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
 
        DoFirst = .false.
+
+    elseif((DtUpdateFlux > 0).and.&
+         (Time_Simulation - TimeUpdateLast .gt. DtUpdateFlux))then
+       UnsignedFluxCgs = 0.0
+       do iBlock = 1, nBlock 
+          if(unusedBLK(iBlock)) cycle
+          if(true_BLK(iBlock)) then
+             dAreaCgs = fAz_BLK(iBlock)*No2Si_V(UnitX_)**2*1e4
+             
+             call get_photosphere_field(iBlock, UnsignedFluxHeight, &
+                  State_VGB(Bz_,1:nI,1:nJ,0:nK+1,iBlock), BzCgs)
+             
+             SumUnsignedBzCgs = sum(abs(BzCgs))
+             UnsignedFluxCgs = UnsignedFluxCgs +  SumUnsignedBzCgs*dAreaCgs
+          end if
+       end do
+       if(nProc>1)then
+          UnsignedFluxCgsPe = UnsignedFluxCgs
+          call MPI_allreduce(UnsignedFluxCgsPe, UnsignedFluxCgs, 1, &
+               MPI_REAL, MPI_SUM, iComm, iError)
+       end if
+       TotalCoronalHeatingCgs = HeatCoef*UnsignedFluxCgs**HeatExponent
+       
+       TotalCoronalHeating = TotalCoronalHeatingCgs*1e-7 &
+            *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
+       TimeUpdateLast = Time_Simulation
+       
     end if
 
     HeatFunctionVolume = 0
@@ -734,21 +764,57 @@ contains
   subroutine get_heat_function(i, j, k, iBlock, HeatFunction)
 
     use ModAdvance, ONLY: State_VGB, B0_DGB, Bx_, Bz_
-    use ModGeometry, ONLY: r_BLK
+    use ModGeometry, ONLY: r_BLK, z_BLK
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: HeatFunction
 
     real :: Bmagnitude, B_D(3)
     !--------------------------------------------------------------------------
-
+    
     B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
     Bmagnitude = sqrt(sum(B_D**2))
 
-    HeatFunction = Bmagnitude*exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
+    if(DtUpdateFlux <= 0.0)then
+       HeatFunction = Bmagnitude*exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
+    else
+       if(z_BLK(i,j,k,iBlock)<UnsignedFluxHeight)then
+          HeatFunction = 0.0
+       else
+          HeatFunction = Bmagnitude
+       end if
+    end if
 
   end subroutine get_heat_function
 
+  !===========================================================================
+  subroutine get_photosphere_field(iBlock, z_cut, Bz_V, BzCgs)
+    use ModMain,      ONLY: nI, nJ, nK
+    use ModGeometry,  ONLY: XyzStart_BLK, dz_BLK
+    use ModInterpolate, ONLY: find_cell
+    use ModPhysics,   ONLY: No2Si_V, UnitB_
+
+    integer, intent(in) :: iBlock
+    real, intent(in)    :: z_cut, Bz_V(1:nI, 1:nJ, 0:nK+1)
+    real, intent(out)   :: BzCgs(1:nI, 1:nJ)
+    real :: MinZ, MaxZ, DxLeft, iZ
+    integer :: iLeft
+    !--------------------------------------------------------------------------
+
+    MinZ = XyzStart_BLK(3,iBlock) - 0.5*dz_BLK(iBlock)
+    MaxZ = MinZ + nK*dz_BLK(iBlock)
+
+    BzCgs = 0.0
+    if((UnsignedFluxHeight.gt.MaxZ).or.(UnsignedFluxHeight.lt.MinZ))&
+         return
+
+    iZ = (UnsignedFluxHeight - MinZ)/dz_BLK(iBlock) + 0.5
+    call find_cell(0, nK+1, iZ, iLeft, DxLeft)
+    
+    BzCgs = ((1.0 - DxLeft)*Bz_V(1:nI, 1:nJ, iLeft) + &
+         DxLeft*Bz_V(1:nI, 1:nJ, iLeft+1))*No2Si_V(UnitB_)*1e4
+    
+  end subroutine get_photosphere_field
 end module ModUnsignedFluxModel
 !=========================================!Master module!======================!
 module ModCoronalHeating
@@ -835,8 +901,10 @@ contains
        UseUnsignedFluxModel = .true.
        call read_var('DecayLength', DecayLength)
        call read_var('HeatNormalization', HeatNormalization)
+
     case('Cranmer','NonWKB')
        UseCranmerHeating     = .true.
+
     case default
        call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
             //TypeCoronalHeating)

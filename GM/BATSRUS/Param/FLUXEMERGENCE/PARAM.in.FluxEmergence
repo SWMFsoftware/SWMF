@@ -1,0 +1,190 @@
+#PROGRESS
+10                      DnProgressShort
+100                     DnProgressLong
+
+#TIMING
+T			UseTiming
+-2			DnTiming
+-1			nDepthTiming
+tree			TypeTimingReport
+
+#SAVERESTART
+T                       DoSaveRestart
+-1                      DnSaveRestart
+180.                    DtSaveRestart
+
+#TIMEACCURATE
+T                       DoTimeAccurate
+
+#PLANET
+NONE                    NamePlanet
+
+#DIPOLE
+0.0                     DipoleStrength
+
+#INCLUDE
+restartIN/restart.H
+
+#INCLUDE
+Grid.3D
+
+#USERFLAGS
+F                       UseUserInnerBcs
+T                       UseUserSource
+T                       UseUserPerturbation
+T                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchInput
+F                       UseUserB0
+T                       UseUserInitSession
+T                       UseUserUpdateStates
+
+#USERINPUTBEGIN -------------------
+
+#RADMHD
+-18			z_photo
+33.			UnsignedFluxHeight
+T                       UseThinRadiation	
+1.e-6			RhoThinCutoff
+T			UseVerticalDamping
+50.			TimeVerticalDamping
+0.005			TemperatureGradient
+.5 			DtUpdateFlux
+F			UseUniformInitialState
+1.e-6			InitialDensity
+1.2e4			InitialTemperature
+0.			InitialBx
+0.			InitialBy
+0.			InitialBz
+6.e8			NumberDensFloor
+
+#ROPE
+T                       UseRope
+0                       x2c
+-25.                    x3c
+2                       ra
+-1.5                    qfac
+1.e1                    lamb
+1.			buoyancy
+1.e1                    b0_rope
+
+#USERINPUTEND ---------------------
+
+#LOOKUPTABLE
+RhoUzExtraEP(Z,Const)   NameTable
+load                    NameCommand
+InitialState.dat        NameFile
+ascii                   TypeFile
+
+#LOOKUPTABLE
+pPerE(rho,e/rho)	NameTable
+load			NameCommand
+pPerE.dat		NameFile
+ascii			TypeFile	
+
+#LOOKUPTABLE
+CvTe(rho,p/rho)		NameTable
+load			NameCommand
+CvTe.dat		NameFile
+ascii			TypeFile	
+
+#LOOKUPTABLE
+pe(rho,T)		NameTable
+load			NameCommand
+pERhoT.dat		NameFile
+ascii			TypeFile	
+
+#LOOKUPTABLE
+prl(T,Const)            NameTable
+load                    NameCommand
+chianti.dat             NameFile
+ascii                   TypeFile
+
+#PLASMA
+1.23839			AverageIonMass [amu]
+1.08359			AverageIonCharge [e]
+1.0			ElectronTemperatureRatio
+
+#CORONALHEATING
+unsignedflux            TypeCoronalHeating
+4640			Decaylength
+1.			HeatNormalization
+
+#MESSAGEPASS
+dir			TypeMessagePass
+
+#AMR
+-1			DnRefine
+F			DoAutoRefine
+0.0			PercentCoarsen
+50.0			PercentRefine
+100000   		MaxTotalBlocks
+
+#AMRLEVELS
+0                       MinBlockLevel
+99                      MaxBlockLevel
+F			DoFixBodyLevel
+
+#SCHEME
+2			nORDER
+Linde                   TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#DIVB
+T			UseDivbSource
+F			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
+
+#SAVERESTART
+T                       DoSaveRestart  
+-1                      DnSaveRestart
+180.                    DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR step date		StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+rho Ux Uy Uz E Pmin Pmax        NameLogVars
+4.0  10.0		rLog
+ 
+#IOUNITS
+HELIOSPHERIC            TypeIoUnit
+
+#SAVEPLOT
+2                       nPlotfiles
+x=0 VAR tec             StringPlot
+-1                      DnSavePlot
+10                     	DtSavePlot
+rho Ux Uy Uz P tempe Bx By Bz       NameVars
+g eta                   NamePars
+cut VAR tec		StringPlot
+-1  			DnSavePlot
+10.			DtSavePlot
+-35.			xMinCut
+35.			xMaxCut
+-35.			yMinCut
+35.			yMaxCut
+-17.4			zMinCut
+-17.3			zMaxCut
+rho Uz P tempe Bx By Bz	NameVars
+g eta	    		NamePars
+
+SAVEINITIAL
+T
+
+#STOP
+50			MaxIteration
+-1			tSimulationMax
+
+#END

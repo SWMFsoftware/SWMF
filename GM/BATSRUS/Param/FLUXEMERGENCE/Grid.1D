@@ -1,0 +1,41 @@
+#GAMMA
+1.666666		Gamma
+
+#GRAVITY
+T			UseGravity
+3			GravityDir
+
+#GRID
+2			nRootBlockX 
+2			nRootBlockY 
+21			nRootBlockZ
+-5.			xMin 
+5.			xMax 
+-5.			yMin
+5.			yMax 
+-35.			zMin
+70.			zMax
+
+#OUTERBOUNDARY
+periodic		TypeBcEast
+periodic		TypeBcWest
+periodic		TypeBcSouth
+periodic		TypeBcNorth
+TempGrad	        TypeBcBottom
+no_inflow		TypeBcTop	
+
+#NORMALIZATION
+READ                    TypeNormalization
+1.5E05                  No2SiUnitx
+6.4E03                  No2SiUnitU 
+2.7E-4                  No2SiUnitRho
+
+#GRIDRESOLUTION
+5./64	 		Resolution
+initial			NameArea
+
+#GRIDLEVEL
+0	                nLevel
+all                     NameArea
+
+#END
