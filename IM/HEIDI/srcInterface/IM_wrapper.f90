@@ -304,6 +304,12 @@ subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
 end subroutine IM_put_from_gm
 
 !==============================================================================
+subroutine im_put_from_gm_crcm
+
+  call CON_stop('im_put_from_gm_crcm should not be called for IM/HEIDI')
+
+end subroutine im_put_from_gm_crcm
+!==============================================================================
 
 subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      nVarLineIn, nPointLineIn, BufferLine_VI, NameVar)
