@@ -11,6 +11,7 @@ my $Rsync   = ($rsync or $sync);
 my $AllParam = ($param or $allparam);
 
 use strict;
+use File::Find;
 
 my $rsync = 'rsync -avz';
 my $exclude = " --exclude '*.idl' --exclude '*.tec' --exclude '*.dat'".
@@ -176,11 +177,15 @@ foreach my $Dir (sort keys %PlotDir){
 	       $#Files-1," file"; print "s" if $#Files > 2; print "\n";
 	rename $PlotDir, "$NameOutput/$Dir" or 
 	    die "$ERROR: could not rename $PlotDir $NameOutput/$Dir\n";
-	mkdir $PlotDir, 0777 or
-	    die "$ERROR: could not mkdir $PlotDir\n";
-	foreach my $SubDir (@Files){
-	    mkdir "$PlotDir/$SubDir", 0777 if -d "$NameOutput/$Dir/$SubDir";
-	}
+
+	# Recreate an empty directory tree in $PlotDir
+	# Store current directory so the recursive mkdir can work
+	my $Pwd = `pwd`; chop $Pwd;
+	find sub {return unless -d;
+		  $_ = $File::Find::name; s/$NameOutput\/$Dir/$PlotDir/; 
+		  mkdir "$Pwd/$_", 0777 or warn "failed mkdir $Pwd/$_\n"}, 
+	"$NameOutput/$Dir";
+
     }else{
 	warn "$WARNING: no files were found in $PlotDir\n";
     }
