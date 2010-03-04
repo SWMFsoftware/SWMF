@@ -74,7 +74,7 @@ Module ModMain
 
   ! Single space separated NameVar string containing all the variable
   ! names of NameVar_V (except for the fluid energies)
-  character(len=nVar*(len(NameVar_V(1))+1) - 1) :: NameVarCouple
+  character(len=500) :: NameVarCouple
 
   !\
   ! Parameters for the B0 field
