@@ -1423,7 +1423,7 @@ end subroutine find_test_cell
 subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
 
   ! The programm returns the value of iPE and iBlock for
-  ! the given Xyz values. If DoFindIjk=.true., 
+  ! the given Xyz values. If DoFindCell=.true., 
   ! the i,j,k values are returned too
 
   use ModParallel,ONLY : proc_dims
