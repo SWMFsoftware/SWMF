@@ -22,7 +22,7 @@ while($ARGV[0] =~ /-/){
     my $flag = shift(@ARGV);
     if($flag =~ /^-o=/){$Output=$'};  # -o=Makefile.test
     if($flag =~ /^-h/i){$Help=1};     # -h -help -H -Help
-    if($flag =~ /^(-s|-I)=?/){        # -s=path1,path2 -Ipath
+    if($flag =~ /^(-s|-p|-I)=?/){        # -s=path1,path2 -Ipath
 	my $path = $';  $path = shift(@ARGV) unless $path;
 
 	if($path !~ /[:,]/){
