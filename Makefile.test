@@ -541,43 +541,54 @@ test_ccmc_check:
 		Param/CCMC/test_GM.log > test_ccmc.diff
 	ls -l test_ccmc.diff
 
-### RAM_SCB model test  ###
+### test_ramscb: GM+IE+IM/RAMSCB ###
+
 test_ramscb:
-	@echo "starting..." > test_ramscb.diff
-	@echo "test_ramscb_compile..." >> test_ramscb.diff
+	@echo "test_ramscb_compile..." > test_ramscb_gm.diff
+	@echo "test_ramscb_compile..." > test_ramscb_ie.diff
+	@echo "test_ramscb_compile..." > test_ramscb_im.diff
 	make test_ramscb_compile
-	@echo "test_ramscb_rundir..." >> test_ramscb.diff
+	@echo "test_ramscb_rundir..." >> test_ramscb_gm.diff
+	@echo "test_ramscb_rundir..." >> test_ramscb_ie.diff
+	@echo "test_ramscb_rundir..." >> test_ramscb_im.diff
 	make test_ramscb_rundir
-	@echo "test_ramscb_run..." >> test_ramscb.diff
+	@echo "test_ramscb_run..." >> test_ramscb_gm.diff
+	@echo "test_ramscb_run..." >> test_ramscb_ie.diff
+	@echo "test_ramscb_run..." >> test_ramscb_im.diff
 	make test_ramscb_run
-	@echo "test_ramscb_check..." >> test_ramscb.diff
+	@echo "test_ramscb_check..." >> test_ramscb_gm.diff
+	@echo "test_ramscb_check..." >> test_ramscb_ie.diff
+	@echo "test_ramscb_check..." >> test_ramscb_im.diff
 	make test_ramscb_check
 
 test_ramscb_compile:
-	./Config.pl -v=IM/RAM_SCB
-	make SWMF
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RAM_SCB
+	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
+	make SWMF PIDL
 
 test_ramscb_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR}
-	cp ${IMDIR}/input/PARAM.in.test.ramscb ${TESTDIR}/PARAM.in
-	cp ${IMDIR}/input/LAYOUT.in.test.ramscb ${TESTDIR}/LAYOUT.in
+	cp ${IMDIR}/input/PARAM.in.test.gmieim.simple ${TESTDIR}/PARAM.in
+	cp ${IMDIR}/input/LAYOUT.in.test.gmieim.simple ${TESTDIR}/LAYOUT.in
 
+# Note: The RCM .dat file is copied to .txt to avoid conversion to .plt
 test_ramscb_run:
-	cd ${TESTDIR}; ./SWMF.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_ramscb_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-3 -a=1e-15 			\
-		${TESTDIR}/IM/output_ram/Dsbnd/dssep_05_0000_h.dat	\
-		${IMDIR}/output/test1/dssep_05_0000_h.dat.ref 		\
-		> test_ramscb.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5		\
-		${TESTDIR}/IM/output_ram/ram000_h.l  	\
-		${IMDIR}/output/test1/ram000_h.l.ref  	\
-		>> test_ramscb.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-3		\
-		${TESTDIR}/IM/output_ram/ram000_h.t 	\
-		${IMDIR}/output/test1/ram000_h.t.ref 		\
-		>> test_ramscb.diff)
-	ls -l test_ramscb.diff
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
+		${IMDIR}/output/test9/GM_log_n000001.log \
+		> test_ramscb_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
+		${TESTDIR}/RESULTS/IM/ram/log_n000001.log \
+		${IMDIR}/output/test9/IM_log_n000001.log \
+		> test_ramscb_im.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
+		${TESTDIR}/RESULTS/IE/IE.log \
+		${IMDIR}/output/test9/IE.log \
+		> test_ramscb_ie.diff)
+	ls -l test_ramscb*.diff
 
