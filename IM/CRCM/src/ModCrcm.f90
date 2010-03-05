@@ -7,5 +7,7 @@ Module ModCrcm
   real    :: dt =10., dtmax=10. ! tyical time step of crcm
   real    :: Time
   real    :: FAC_C(np,nt)
+  logical :: UseMcLimiter=.false.
+  real    :: BetaLimiter = 1.5
 
 end Module ModCrcm

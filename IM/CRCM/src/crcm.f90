@@ -899,6 +899,7 @@ subroutine FLS_2D(np,nt,iba,fb0,fb1,cl,cp,f2d,fal,fap)
   !
   !  Input: np,nt,iba,fb0,fb1,cl,cp,f2d
   !  Output: fal,fap
+  use ModCrcm, ONLY: UseMcLimiter, BetaLimiter
 
   implicit none
 
@@ -935,7 +936,11 @@ subroutine FLS_2D(np,nt,iba,fb0,fb1,cl,cp,f2d,fal,fap)
            if (xsign.eq.-1.) r=(fwbc(i+2,j)-fwbc(i+1,j))/x
            if (r.le.0.) fal(i,j)=fup
            if (r.gt.0.) then
-              xlimiter=max(min(2.*r,1.),min(r,2.))
+              if(UseMcLimiter)then
+                 xlimiter = min(BetaLimiter*r, BetaLimiter, 0.5*(1+r))
+              else
+                 xlimiter = max(min(2.*r,1.),min(r,2.))
+              end if
               corr=flw-fup
               fal(i,j)=fup+xlimiter*corr
            endif
@@ -951,7 +956,11 @@ subroutine FLS_2D(np,nt,iba,fb0,fb1,cl,cp,f2d,fal,fap)
            if (xsign.eq.-1.) r=(fwbc(i,j2)-fwbc(i,j1))/x
            if (r.le.0.) fap(i,j)=fup
            if (r.gt.0.) then
-              xlimiter=max(min(2.*r,1.),min(r,2.))
+              if(UseMcLimiter)then
+                 xlimiter = min(BetaLimiter*r, BetaLimiter, 0.5*(1+r))
+              else
+                 xlimiter = max(min(2.*r,1.),min(r,2.))
+              end if
               corr=flw-fup
               fap(i,j)=fup+xlimiter*corr
            endif

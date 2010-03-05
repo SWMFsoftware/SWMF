@@ -5,6 +5,7 @@ subroutine CRCM_set_parameters(NameAction)
   use ModCrcmInitialize, ONLY: IsRestart
   use ModCrcmPlot,       ONLY: DtOutput, DoSavePlot
   use ModFieldTrace,     ONLY: UseEllipse
+  use ModCrcm,           ONLY: UseMcLimiter, BetaLimiter
   implicit none
 
   character (len=100)           :: NameCommand
@@ -38,7 +39,12 @@ subroutine CRCM_set_parameters(NameAction)
         
      case('#RESTART')
         call read_var('IsRestart',IsRestart) !T:Continuous run
-                                             !F:Initial run
+ 
+                                            !F:Initial run
+     case('#LIMITER')
+        call read_var('UseMcLimiter', UseMcLimiter)
+        if(UseMcLimiter) call read_var('BetaLimiter', BetaLimiter)
+     
      end select
   enddo
 
