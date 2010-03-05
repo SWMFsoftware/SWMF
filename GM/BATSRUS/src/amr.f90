@@ -131,6 +131,7 @@ subroutine amr(DoMessagePass)
 
   ! Load balance: move coords, data, and there are new blocks
   call load_balance(.true.,.true.,.true.)
+  call count_true_cells
   if(iProc==0.and.lVerbose>0)then
      ! Write block/cell summary after AMR
      call write_prefix
