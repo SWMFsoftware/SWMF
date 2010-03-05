@@ -3722,6 +3722,8 @@ for the diffusion of all the fluids.
 <command name="MULTIION">
 	<parameter name="LowDensityRatio" type="real" min="0" max="1"
 		default="0.0001" />
+	<parameter name="LowPressureRatio" type="real" min="0" max="1"
+		default="1e-10" />
 	<parameter name="DoRestrictMultiIon" type="logical" default="F" />
 	<if expr="$DoRestrictMultiIon">
 		<parameter name="MachNumberMultiIon" type="real" min="1"
@@ -3729,13 +3731,12 @@ for the diffusion of all the fluids.
 		<parameter name="ParabolaWidthMultiIon" type="real" min="0"
 			default="30" />
 	</if>
-	<parameter name="IsAnalyticJacobian" type="logical" default="F" />
 #MULTIION
 0.0001			LowDensityRatio
+1e-10			LowPressureRatio
 T			DoRestrictMultiIon
 3.0			MachNumberMultiIon (read if DoRestrictMultiIon)
 30.0			ParabolaWidthMultiIon (read if DoRestrictMultiIon)
-T			IsAnalyticJacobian
 
 This command is useful for multiion simulations. Since the numerical schemes
 cannot handle zero densities or temperatures, it is necessary to have all the
@@ -3746,6 +3747,9 @@ is dominant.
 The LowDensityRatio parameter determines the relative density of the minor 
 ion fluids in regions where essentially only one ion fluid is present. 
 
+The LowPressureRatio parameter is used to keep the pressures of the minor
+fluids above a fraction of the total pressure.
+
 If DoRestrictMultiIon is true, the first ion fluid is set to be dominant
 in the region determined by the MachNumberMultiIon and ParabolaWidthMultiIon
 parameters. The current parametrization tries to find the region occupied
@@ -3755,14 +3759,8 @@ direction is being larger than MachNumberMultiIon and the point being
 outside the paraboloid determined by the 
 $y^2 + z^2 + x*ParabolaWidthMultiIon = 0$ equation.
 
-The IsAnalyticJacobian parameter is temporary. It will be removed soon.
-It determines whether the Jacobian matrix used in the point implicit 
-evaluation of the multi-ion source is calculated analytically or numerically.
-Currently the default is a numerical evaluation, but it will be changed
-to analytic, since that is faster.
-
-The defaults are LowDensityRatio=0.0001, DoRestrictMultiIon false and
-IsAnalyticJacobian false.
+The defaults are LowDensityRatio=0.0001, LowPressureRatio=1e-10, and
+DoRestrictMultiIon=false.
 </command>
 
 <command name="MHDIONS">
