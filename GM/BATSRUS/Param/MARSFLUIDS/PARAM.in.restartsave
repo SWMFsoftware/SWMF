@@ -182,7 +182,7 @@ F			DoReplaceDensity
 
 #MULTIION
 1e-9			LowDensityRatio
--1e-10			LowPressureRatio
+1e-11			LowPressureRatio
 F			DoRestrictMultiIon
 
 ! For nyx or dc only
