@@ -100,7 +100,7 @@ test_fluxemergence_compile:
 	make PIDL
 
 test_fluxemergence_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/TABLES/*.dat* .
+	cd ${TESTDIR}; cp ../data/FLUXEMERGENCE/*.dat* .
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/Grid.* .
 	cd ${TESTDIR}; gunzip *.gz
 
@@ -116,8 +116,8 @@ test_fluxemergence_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_restart; mv runlog_restart RESULTS/run_restart
 
-test_fluxemergence_check:
-	${SCRIPTDIR}/DiffNum.pl \
+test_fluxemergence_check:	
+	${SCRIPTDIR}/DiffNum.pl -t -a=3e-5 -r=2e-5\
 		Param/FLUXEMERGENCE/TestOutput/log_fluxemergence.log \
 		${TESTDIR}/RESULTS/run_restart/GM/log_n000051.log > test_fluxemergence.diff
 	ls -l test_fluxemergence.diff

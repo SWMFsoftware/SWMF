@@ -149,7 +149,7 @@ T                       DoSaveRestart
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR step date		StringLog
+VAR  			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 rho Ux Uy Uz E Pmin Pmax        NameLogVars
