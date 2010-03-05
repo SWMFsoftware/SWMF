@@ -645,15 +645,15 @@ contains
   subroutine user_material_properties(State_V, i,j,k,iBlock,iDir, &
        EinternalIn, TeIn, NatomicOut, &
        EinternalOut, TeOut, PressureOut,   &
-       CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
-       OpacityPlanckOut_W, OpacityRosselandOut_W,  &
-       PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
+       CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
+       OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
+
     use ModLookupTable,ONLY: interpolate_lookup_table
     use ModPhysics,    ONLY: No2Si_V, UnitEnergyDens_, UnitP_, &
          UnitRho_, inv_gm1, gm1
     use ModVarIndexes, ONLY: nVar, Rho_, p_, ExtraEInt_
     use ModAdvance,    ONLY: nWave
-    implicit none
+
     !--------------------------------------------------------------------------
     ! The State_V vector is in normalized units
     real, intent(in) :: State_V(nVar)
@@ -667,13 +667,11 @@ contains
     real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]  
     real, optional, intent(out) :: GammaOut
     real, optional, intent(out) :: HeatCondOut             ! [Jm^2/(Ks)]   
+    real, optional, intent(out) :: IonHeatCondOut          ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]  
     real, optional, intent(out) :: OpacityPlanckOut_W(nWave)      ! [1/m] 
     real, optional, intent(out) :: OpacityRosselandOut_W(nWave)   ! [1/m] 
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3] 
-    real, optional, intent(out) :: CgTeOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: CgTgOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: TgOut_W(nWave)          ! [K] 
 
     real    :: pSi, enSi,RhoSi, TeSi, pPerE(1:1), PressureEnSi(2)
     real    :: Value_V(2)

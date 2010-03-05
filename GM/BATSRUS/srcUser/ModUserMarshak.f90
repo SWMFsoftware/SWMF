@@ -249,9 +249,8 @@ contains
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalIn, TeIn, NatomicOut, &
        EinternalOut, TeOut, PressureOut, &
-       CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
-       OpacityPlanckOut_W, OpacityRosselandOut_W, &
-       PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
+       CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
+       OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
 
     ! The State_V vector is in normalized units
 
@@ -272,6 +271,7 @@ contains
     real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]
     real, optional, intent(out) :: GammaOut                ! dimensionless
     real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
+    real, optional, intent(out) :: IonHeatCondOut          ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: &
          OpacityPlanckOut_W(nWave)                         ! [1/m]
@@ -280,13 +280,7 @@ contains
 
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
-    !  Derivative of group Planckian by electron temperature
-    !  Group specific heat of the radiation
-    !  Group radiation temperature
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
-    real, optional, intent(out) :: CgTeOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: CgTgOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: TgOut_W(nWave)          ! [K]
 
     real :: Rho, Pressure, Temperature
     real :: RhoSi, pSi, TemperatureSi

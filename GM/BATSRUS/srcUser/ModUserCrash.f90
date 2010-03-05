@@ -2046,9 +2046,8 @@ contains
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalIn, TeIn, NatomicOut, &
        EinternalOut, TeOut, PressureOut, &
-       CvOut, GammaOut, HeatCondOut, TeTiRelaxOut, &
-       OpacityPlanckOut_W, OpacityRosselandOut_W, &
-       PlanckOut_W, CgTeOut_W, CgTgOut_W, TgOut_W)
+       CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
+       OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
 
     ! The State_V vector is in normalized units, all other physical
     ! quantities are in SI.
@@ -2082,6 +2081,7 @@ contains
     real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]
     real, optional, intent(out) :: GammaOut                ! dimensionless
     real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
+    real, optional, intent(out) :: IonHeatCondOut          ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: &
          OpacityPlanckOut_W(nWave)                         ! [1/m]
@@ -2090,13 +2090,7 @@ contains
 
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
-    !  Derivative of group Planckian by electron temperature
-    !  Group specific heat of the radiation
-    !  Group radiation temperature
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
-    real, optional, intent(out) :: CgTeOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: CgTgOut_W(nWave)        ! [J/(m^3*K)]
-    real, optional, intent(out) :: TgOut_W(nWave)          ! [K]
 
     logical :: IsMix
     integer :: iMaterial, jMaterial
@@ -2109,7 +2103,7 @@ contains
 
     ! multi-group variables
     integer :: iWave, iVar
-    real :: EgSi, PlanckSi, CgTeSi, TgSi, CgTgSi, Tg, Te
+    real :: EgSi, PlanckSi, Te
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !-------------------------------------------------------------------------
@@ -2245,25 +2239,10 @@ contains
        end if
     end if
 
-    if(present(PlanckOut_W) .or. present(CgTeOut_W))then
+    if(present(PlanckOut_W))then
        do iWave = 1, nWave
-          call get_planck_g_from_temperature( &
-               iWave, TeSi, EgSI=PlanckSi, CgSI=CgTeSi)
-
-          if(present(PlanckOut_W)) PlanckOut_W(iWave) = PlanckSi
-          if(present(CgTeOut_W)) CgTeOut_W(iWave) = CgTeSi
-       end do
-    end if
-
-    if(present(TgOut_W) .or. present(CgTgOut_W))then
-       do iWave = 1, nWave
-          iVar = WaveFirst_ + iWave - 1
-          EgSi = State_V(iVar)*No2Si_V(UnitEnergyDens_)
-          call get_temperature_from_energy_g(iWave, EgSi, &
-               TgSIOut=TgSi, CgSIOut=CgTgSi)
-
-          if(present(TgOut_W)) TgOut_W(iWave) = TgSi
-          if(present(CgTgOut_W)) CgTgOut_W(iWave) = CgTgSi
+          call get_planck_g_from_temperature(iWave, TeSi, EgSI=PlanckSi)
+          PlanckOut_W(iWave) = PlanckSi
        end do
     end if
 
@@ -2350,7 +2329,7 @@ contains
            present(HeatCondOut) .or. &
            present(OpacityPlanckOut_W) .or. &
            present(OpacityRosselandOut_W) .or. &
-           present(PlanckOut_W) .or. present(CgTeOut_W))then
+           present(PlanckOut_W))then
 
          if(iTableThermo > 0)then
 
@@ -2490,7 +2469,7 @@ contains
            present(HeatCondOut) .or. present(TeTiRelaxOut) .or. &
            present(OpacityPlanckOut_W) .or. &
            present(OpacityRosselandOut_W) .or. &
-           present(PlanckOut_W) .or. present(CgTeOut_W))then
+           present(PlanckOut_W))then
 
          if(iTableThermo > 0)then
             if(RhoSi <= 0 .or. pSi <= 0) call lookup_error( &

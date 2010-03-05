@@ -23,8 +23,10 @@ module ModHeatConduction
   logical, public :: IsNewBlockIonHeatCond = .true.
 
   ! Variables for setting the field-aligned heat conduction coefficient
-  character(len=20), public :: TypeHeatConduction = 'user'
+  character(len=20), public :: TypeHeatConduction = 'spitzer'
   logical :: DoUserHeatConduction
+  character(len=20), public :: TypeIonHeatConduction = 'spitzer'
+  logical :: DoUserIonHeatConduction
 
   ! Dimensionless heat conduction coefficients
   real :: HeatCondPar, IonHeatCondPar
@@ -70,8 +72,7 @@ contains
           call read_var('TypeHeatConduction', TypeHeatConduction)
 
           select case(TypeHeatConduction)
-          case('user')
-          case('spitzer')
+          case('user','spitzer')
           case default
              call stop_mpi(NameSub//': unknown TypeHeatConduction = ' &
                   //TypeHeatConduction)
@@ -87,6 +88,16 @@ contains
 
     case("#IONHEATCONDUCTION")
        call read_var('UseIonHeatConduction', UseIonHeatConduction)
+       if(UseIonHeatConduction)then
+          call read_var('TypeIonHeatConduction', TypeIonHeatConduction)
+
+          select case(TypeIonHeatConduction)
+          case('user','spitzer')
+          case default
+             call stop_mpi(NameSub//': unknown TypeIonHeatConduction = ' &
+                  //TypeIonHeatConduction)
+          end select
+       end if
 
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -172,8 +183,9 @@ contains
          *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
     DoUserHeatConduction = .false.
-
     if(TypeHeatConduction == 'user') DoUserHeatConduction = .true.
+    DoUserIonHeatConduction = .false.
+    if(TypeIonHeatConduction == 'user') DoUserIonHeatConduction = .true.
 
     if(DoWeakFieldConduction)then
        Bmodify = BmodifySi*Si2No_V(UnitB_)
@@ -412,18 +424,21 @@ contains
   subroutine get_ion_heat_cond_coef(iDim, iFace, jFace, kFace, iBlock, &
        State_V, Normal_D, HeatCond_D)
 
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos
-    use ModB0,           ONLY: B0_DX, B0_DY, B0_DZ
-    use ModMain,         ONLY: UseB0
-    use ModNumConst,     ONLY: cTolerance
-    use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_
+    use ModAdvance,    ONLY: State_VGB, UseIdealEos
+    use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
+    use ModMain,       ONLY: UseB0
+    use ModNumConst,   ONLY: cTolerance
+    use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
+         UnitU_, UnitX_
+    use ModUser,       ONLY: user_material_properties
+    use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_, p_
 
     integer, intent(in) :: iDim, iFace, jFace, kFace, iBlock
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: HeatCond_D(3)
 
     real :: B_D(3), Bnorm, Bunit_D(3), Ti
-    real :: HeatCoef
+    real :: IonHeatCoefSi, IonHeatCoef
 
     character(len=*), parameter :: &
          NameSub = 'ModHeatConduction::get_ion_heat_cond_coef'
@@ -453,10 +468,17 @@ contains
        call stop_mpi(NameSub//': no ion heat conduction yet for non-ideal eos')
     end if
 
-    ! Spitzer form for collisional regime
-    HeatCoef = IonHeatCondPar*Ti**2.5
+    if(DoUserIonHeatConduction)then
+       call user_material_properties(State_V, IonHeatCondOut=IonHeatCoefSi)
+       IonHeatCoef = IonHeatCoefSi &
+              *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
+              *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+    else
+       ! Spitzer form for collisional regime
+       IonHeatCoef = IonHeatCondPar*Ti**2.5
+    end if
 
-    HeatCond_D = HeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
+    HeatCond_D = IonHeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
 
   end subroutine get_ion_heat_cond_coef
 
