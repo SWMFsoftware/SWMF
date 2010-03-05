@@ -53,12 +53,15 @@ module ModMultiIon
   real    :: TauCutOffDim = -1.0  ! cut-off time scale
   integer :: nPowerCutOff = 0     ! cut-off exponent
 
-  ! calculate analytic Jacobian for point-implicit scheme?
-  logical:: IsAnalyticJacobian = .true.
+  ! calculate analytic Jacobian for point-implicit scheme
+  logical, parameter:: IsAnalyticJacobian = .true.
 
   ! how to reconcile ions with total fluid
   logical :: DoAddRho  = .false.
   logical :: DoAddRhoU = .true.
+
+  ! Minimum pressure ratio for a minor fluid (so it remains positive)
+  real:: LowPressureRatio = 1e-10
 
 contains
 
@@ -78,14 +81,14 @@ contains
        call read_var('DoAddRhoU', DoAddRhoU)
     case("#MULTIION")
        call read_var('LowDensityRatio',    LowDensityRatio)
+       call read_var('LowPressureRatio',   LowPressureRatio)
        call read_var('DoRestrictMultiIon', DoRestrictMultiIon)
        if(DoRestrictMultiIon)then
           call read_var('MachNumberMultiIon',    MachNumberMultiIon)
           call read_var('ParabolaWidthMultiIon', ParabolaWidthMultiIon)
        end if
-!!! Temporary. Should be done analytically all the time eventually
-       call read_var('IsAnalyticJacobian', IsAnalyticJacobian)
        IsPointImplMatrixSet = IsAnalyticJacobian
+       
     case("#COLLISION")
        call read_var('CollisionCoefDim', CollisionCoefDim)
        call read_var('TauCutOff', TauCutOffDim)
@@ -665,10 +668,16 @@ contains
        Rho    = State_V(Rho_)
        InvRho = 1/Rho
 
+       ! Total pressure
+       p      = sum(State_V(iPIon_I))
+
+       ! Keep pressures above LowPressureRatio*pTotal
+       State_VGB(iPIon_I,i,j,k,iBlock) = &
+            max( State_V(iPIon_I), LowPressureRatio*p )
+
        if(.not.IsFinal)then
 
           ! Ion pressures are always added up into total pressure
-          p = sum(State_V(iPIon_I))
           if(UseElectronPressure) then
              State_VGB(p_,i,j,k,iBlock) = p
           else
@@ -689,10 +698,6 @@ contains
                minval(State_V(iRhoUxIon_I)) <= 0)then
              State_VGB(RhoUx_,i,j,k,iBlock) = IonSum
           else
-             !!! This will be correct only if the total pressure equation contains
-             !!! the divergence of a pressure tensor of the form 
-             !!! div(sum_s rho_s (u_s - u) (u_s - u_+) )
-
              State_VGB(iRhoUxIon_I,i,j,k,iBlock) = State_V(iRhoUxIon_I) &
                   *State_V(RhoUx_)/IonSum
           endif
@@ -727,7 +732,21 @@ contains
        IsMultiIon = .true.
        if(DoRestrictMultiIon)IsMultiIon = IsMultiIon_CB(i,j,k,iBlock)
 
-       if(.not. IsMultiIon)then
+       if(IsMultiIon)then
+          ! Add up ion fluids to total fluid
+          ! This is necessary when point-implicit source terms are evaluated
+          ! for the ion fluids only and their sum is not 0 due to user sources
+
+          State_VGB(Rho_,  i,j,k,iBlock) = sum(State_V(iRhoIon_I))
+          State_VGB(RhoUx_,i,j,k,iBlock) = sum(State_V(iRhoUxIon_I))
+          State_VGB(RhoUy_,i,j,k,iBlock) = sum(State_V(iRhoUyIon_I))
+          State_VGB(RhoUz_,i,j,k,iBlock) = sum(State_V(iRhoUzIon_I))
+          if(UseElectronPressure)then
+             State_VGB(p_,i,j,k,iBlock)  = p
+          else
+             State_VGB(p_,i,j,k,iBlock)  = p * TeRatio1
+          end if
+       else
           ! Put most of the stuff into the first ion fluid
           State_VGB(iRhoIon_I(1),i,j,k,iBlock) = &
                Rho*(1.0 - LowDensityRatio*(IonLast_ - IonFirst_))
@@ -753,22 +772,6 @@ contains
           end if
           State_VGB(iPIon_I,i,j,k,iBlock) = p*InvRho * &
                State_VGB(iRhoIon_I,i,j,k,iBlock)*MassIon_I(1)/MassIon_I
-       else
-          ! Add up ion fluids to total fluid
-          ! This is necessary when point-implicit source terms are evaluated
-          ! for the ion fluids only and their sum is not 0 due to user sources
-
-          State_VGB(Rho_,  i,j,k,iBlock) = sum(State_V(iRhoIon_I))
-          State_VGB(RhoUx_,i,j,k,iBlock) = sum(State_V(iRhoUxIon_I))
-          State_VGB(RhoUy_,i,j,k,iBlock) = sum(State_V(iRhoUyIon_I))
-          State_VGB(RhoUz_,i,j,k,iBlock) = sum(State_V(iRhoUzIon_I))
-          p = sum(State_V(iPIon_I))
-          if(UseElectronPressure)then
-             State_VGB(p_,i,j,k,iBlock)  = p
-          else
-             State_VGB(p_,i,j,k,iBlock)  = p * TeRatio1
-          end if
-
        end if
 
     end do; end do; end do
