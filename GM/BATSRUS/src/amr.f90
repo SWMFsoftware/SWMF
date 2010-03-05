@@ -56,6 +56,7 @@ subroutine amr(DoMessagePass)
         if(DoTestMe)write(*,*) NameSub,' call set_batsrus_grid'
         call set_batsrus_grid
 
+        call count_true_cells
         if(iProc==0 .and. lVerbose>0)then
            ! Write block/cell summary after AMR
            call write_prefix; write(iUnitOut,*) '|'
@@ -65,6 +66,8 @@ subroutine amr(DoMessagePass)
                 '|  AMR:  Total number of blocks used = ', nBlockALL
            call write_prefix; write(iUnitOut,*) &
                 '|  AMR:  Total number of cells = ', nBlockALL*nIJK
+           call write_prefix; write(iUnitOut,*) &
+                '|  AMR:  Total number of true cells = ', nTrueCellsALL
            call write_prefix; write(iUnitOut,*) &
                 '|  Smallest cell dx: ', minDXvalue, &
                 '  Largest cell dx: ',   maxDXvalue

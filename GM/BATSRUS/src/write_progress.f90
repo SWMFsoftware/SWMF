@@ -81,6 +81,7 @@ subroutine write_runtime_values()
   DxMax = maxval(dx_BLK, MASK=(.not.unusedBLK))
   call MPI_allreduce(DxMin, minDXvalue, 1, MPI_REAL, MPI_MIN, iComm, iError)
   call MPI_allreduce(DxMax, maxDXvalue, 1, MPI_REAL, MPI_MAX, iComm, iError)
+  call count_true_cells
 
   if (iProc /= 0 .or. lVerbose<=0) RETURN
 
@@ -273,6 +274,8 @@ subroutine write_runtime_values()
        nBlockALL
   call write_prefix; write(iUnitOut,*)'  Total number of cells = ', &
        nBlockALL*nIJK
+  call write_prefix; write(iUnitOut,*)'  Total number of true cells = ', &
+       nTrueCellsALL
   call write_prefix; write(iUnitOut,*)'  Smallest cell dx: ', minDXvalue, &
        '  Largest cell dx: ', maxDXvalue
   call write_prefix; write(iUnitOut,*)
@@ -304,3 +307,24 @@ subroutine write_timeaccurate
 
 end subroutine write_timeaccurate
 
+!============================================================================
+
+subroutine count_true_cells
+  use ModMain
+  use ModProcMH
+  use ModMpi
+  use ModGeometry, ONLY : true_cell
+
+  integer :: iBlk, i,j,k, iError
+  !----------------------------------------------------------------------------
+
+  nTrueCells=0
+  do iBlk=1,nBlockMax  ! Block loop
+     if(unusedBLK(iBlk))CYCLE
+     do k=1,nK; do j=1,nJ; do i=1,nI  ! Cell loop
+        if(true_cell(i,j,k,iBlk)) nTrueCells=nTrueCells+1
+     end do; end do; end do
+  end do
+  call MPI_reduce(nTrueCells,nTrueCellsALL,1,MPI_INTEGER,MPI_SUM,0,iComm,iError)
+
+end subroutine count_true_cells

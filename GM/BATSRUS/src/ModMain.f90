@@ -302,4 +302,9 @@ Module ModMain
   logical:: UseExtraBoundary         = .false.
   logical:: DoFixExtraBoundaryOrPole = .false.
 
+  !\
+  ! Number of true cells locally and globally
+  !/
+  integer :: nTrueCells, nTrueCellsALL
+
 end module ModMain
