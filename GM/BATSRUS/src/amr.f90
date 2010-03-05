@@ -133,17 +133,21 @@ subroutine amr(DoMessagePass)
   call load_balance(.true.,.true.,.true.)
   if(iProc==0.and.lVerbose>0)then
      ! Write block/cell summary after AMR
-     call write_prefix; write(iUnitOut,*) '|'
-     call write_prefix; 
+     call write_prefix
+     write(iUnitOut,*) '|'
+     call write_prefix 
      write(iUnitOut,*) '|  AMR:  nBlockMax = ',nBlockMax,' nBLK = ',nBLK
-     call write_prefix; 
+     call write_prefix 
      write(iUnitOut,*) '|  AMR:  Total number of blocks used = ', nBlockALL
-     call write_prefix; 
+     call write_prefix 
      write(iUnitOut,*) '|  AMR:  Total number of cells = ', nBlockALL*nIJK
-     call write_prefix; 
+     call write_prefix
+     write(iUnitOut,*) '|  AMR:  Total number of true cells = ', nTrueCellsALL
+     call write_prefix 
      write(iUnitOut,*) '|  Smallest cell dx: ',minDXvalue,&
           '  Largest cell dx: ',maxDXvalue
-     call write_prefix; write(iUnitOut,*) '|'
+     call write_prefix
+     write(iUnitOut,*) '|'
   end if
 
   ! Update ghost cells
