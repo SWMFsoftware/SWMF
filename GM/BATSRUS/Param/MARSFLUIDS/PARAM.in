@@ -172,9 +172,9 @@ F			DoReplaceDensity
 5.0			SpeciesPercentCheck
 
 #MULTIION
-0.000000001
-F
-F
+1e-9			LowDensityRatio
+-1e-10			LowPressureRatio
+F			DoRestrictMultiIon
 
 ! For nyx or dc only
 RESTARTOUTFILE
