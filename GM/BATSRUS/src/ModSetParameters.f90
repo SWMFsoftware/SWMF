@@ -557,7 +557,8 @@ subroutine MH_set_parameters(TypeAction)
      case("#RADIATION")                             !^CFG IF IMPLICIT BEGIN 
         call read_rad_diffusion_param(NameCommand)
 
-     case("#HEATCONDUCTION", "#WEAKFIELDCONDUCTION", "#IONHEATCONDUCTION")
+     case("#HEATCONDUCTION", "#WEAKFIELDCONDUCTION", &
+          "#IONHEATCONDUCTION", "#HEATFLUXREGION")
         call read_heatconduction_param(NameCommand) !^CFG END IMPLICIT
 
      case("#SAVELOGFILE")

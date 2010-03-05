@@ -31,9 +31,14 @@ module ModHeatConduction
   ! Dimensionless heat conduction coefficients
   real :: HeatCondPar, IonHeatCondPar
 
+  ! Parameters for heat conduction in regions of weak magnetic field
   logical :: DoWeakFieldConduction = .false.
   real :: BmodifySi = 1.0e-7, DeltaBmodifySi = 1.0e-8 ! modify about 1 mG
   real :: Bmodify, DeltaBmodify
+
+  ! Parameters for heat flux region
+  logical :: UseHeatFluxRegion = .false.
+  real :: rCollisional, rCollisionless
 
   ! electron/ion temperature used for calculating heat flux
   real, allocatable :: Te_G(:,:,:), Ti_G(:,:,:)
@@ -97,6 +102,13 @@ contains
              call stop_mpi(NameSub//': unknown TypeIonHeatConduction = ' &
                   //TypeIonHeatConduction)
           end select
+       end if
+
+    case("#HEATFLUXREGION")
+       call read_var('UseHeatFluxRegion', UseHeatFluxRegion)
+       if(UseHeatFluxRegion)then
+          call read_var('rCollisional', rCollisional)
+          call read_var('rCollisionless', rCollisionless)
        end if
 
     case default
@@ -222,7 +234,7 @@ contains
     real,    intent(out):: HeatCondCoefNormal, HeatFlux
 
     integer :: i, j, k
-    real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3)
+    real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
     real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi
 
     character(len=*), parameter :: NameSub = 'ModHeatConduction::get_heat_flux'
@@ -259,6 +271,11 @@ contains
          StateRight_V, Normal_D, HeatCondR_D)
 
     HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
+
+    if(UseHeatFluxRegion)then
+         HeatCondFactor = heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
+         HeatCond_D = HeatCond_D*HeatCondFactor
+    end if
 
     HeatFlux = -sum(HeatCond_D*FaceGrad_D)
 
@@ -375,7 +392,7 @@ contains
     real,    intent(out):: HeatCondCoefNormal, HeatFlux
 
     integer :: i, j, k
-    real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3)
+    real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
     real :: FaceGrad_D(3), CvL, CvR
 
     character(len=*), parameter :: &
@@ -403,6 +420,11 @@ contains
          StateRight_V, Normal_D, HeatCondR_D)
 
     HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
+
+    if(UseHeatFluxRegion)then
+         HeatCondFactor = heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
+         HeatCond_D = HeatCond_D*HeatCondFactor
+    end if
 
     HeatFlux = -sum(HeatCond_D*FaceGrad_D)
 
@@ -481,6 +503,43 @@ contains
     HeatCond_D = IonHeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
 
   end subroutine get_ion_heat_cond_coef
+
+  !============================================================================
+
+  real function heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
+
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+    use ModNumConst, ONLY: cPi
+
+    integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
+
+    real :: x_D(3), r
+    !--------------------------------------------------------------------------
+    select case(iDir)
+    case(1)
+       x_D(1) = 0.5*sum(x_BLK(iFace-1:iFace,jFace,kFace,iBlock))
+       x_D(2) = 0.5*sum(y_BLK(iFace-1:iFace,jFace,kFace,iBlock))
+       x_D(3) = 0.5*sum(z_BLK(iFace-1:iFace,jFace,kFace,iBlock))
+    case(2)
+       x_D(1) = 0.5*sum(x_BLK(iFace,jFace-1:jFace,kFace,iBlock))
+       x_D(2) = 0.5*sum(y_BLK(iFace,jFace-1:jFace,kFace,iBlock))
+       x_D(3) = 0.5*sum(z_BLK(iFace,jFace-1:jFace,kFace,iBlock))
+    case(3)
+       x_D(1) = 0.5*sum(x_BLK(iFace,jFace,kFace-1:kFace,iBlock))
+       x_D(2) = 0.5*sum(y_BLK(iFace,jFace,kFace-1:kFace,iBlock))
+       x_D(3) = 0.5*sum(z_BLK(iFace,jFace,kFace-1:kFace,iBlock))
+    end select
+    r = sqrt(sum(x_D**2))
+    if(r <= rCollisional)then
+       heat_cond_factor = 1.0
+    elseif(r >= rCollisionless)then
+       heat_cond_factor = 0.0
+    else
+       heat_cond_factor = &
+            0.5*(1 + cos(cPi*(r-rCollisional)/(rCollisionless-rCollisional)) )
+    end if
+
+  end function heat_cond_factor
 
   !============================================================================
   ! Operator split, semi-implicit subroutines
