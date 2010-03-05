@@ -2,7 +2,7 @@
 subroutine amr(DoMessagePass)
   use ModProcMH
   use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,MaxBlock,&
-       unusedBLK,lVerbose,UseB,UseB0, UseBatl, Dt_BLK
+       unusedBLK,lVerbose,UseB,UseB0, UseBatl, Dt_BLK, nTrueCellsALL
   use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK
   use ModAMR, ONLY : automatic_refinement
   use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
