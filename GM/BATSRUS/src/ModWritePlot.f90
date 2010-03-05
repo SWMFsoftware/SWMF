@@ -273,6 +273,9 @@ subroutine write_plot_common(ifile)
         NodeValue_NB=NodeZ_NB(:,:,:,:)                   ! Z
         call pass_and_average_nodes(.true.,NodeValue_NB)
         PlotXYZNodes_NBI(:,:,:,:,3)=NodeValue_NB
+
+        ! Make near zero values exactly zero
+        where(abs(PlotXYZNodes_NBI)<1.e-10) PlotXYZNodes_NBI=0.
      end if
 
      ! Now pass and average the rest of the values
