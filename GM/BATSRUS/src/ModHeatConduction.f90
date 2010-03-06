@@ -509,7 +509,6 @@ contains
   real function heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
 
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
-    use ModNumConst, ONLY: cPi
 
     integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
 
@@ -535,8 +534,7 @@ contains
     elseif(r >= rCollisionless)then
        heat_cond_factor = 0.0
     else
-       heat_cond_factor = &
-            0.5*(1 + cos(cPi*(r-rCollisional)/(rCollisionless-rCollisional)) )
+       heat_cond_factor = (rCollisionless - r)/(rCollisionless - rCollisional)
     end if
 
   end function heat_cond_factor
