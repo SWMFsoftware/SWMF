@@ -78,6 +78,10 @@ float			zMaxBc
 2		nStage
 0.8		CflExpl
 
+#BORIS
+T		UseBorisCorrection
+1e-4		BorisClightFactor
+
 #SCHEME
 2		nOrder
 Rusanov		TypeFlux

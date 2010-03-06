@@ -217,13 +217,6 @@ contains
        ! Lorentz force: J x B
        Force_D = cross_product(Current_D, FullB_D)
 
-       if(UseBoris)then                       !^CFG IF BORISCORR BEGIN
-          ! Boris correction: reduce the Lorentz force by a factor of
-          ! Ga2 = 1/(1+v_A^2/c^2) = rho/(rho+B^2/c^2)
-          Ga2 = State_V(Rho_)/(State_V(Rho_) + InvClight2*sum(FullB_D**2))
-          Force_D = Ga2 * Force_D
-       end if                                 !^CFG END BORISCORR
-
        ! Subtract electron pressure gradient force
        if(UseMultiIon .and. &
             (UseElectronPressure .or. ElectronTemperatureRatio > 0.0))then
@@ -249,6 +242,19 @@ contains
           end if
 
        end if
+
+       if(UseBoris)then                       !^CFG IF BORISCORR BEGIN
+          ! Simplified Boris correction
+          ! (see the ASTRONUM 2009 proceedings paper by Toth et al.)
+          ! Divide the number density by
+          !
+          ! 1 + V_s^2/c^2 = 1 + B^2/(c^2*n*M_s)
+          !
+          ! where we used V_s^2 = (M/M_s)*B^2/rho = B^2/(n*M_s)
+
+          Ga2 = sum(FullB_D**2)*InvClight2*InvNumDens
+          NumDens_I = NumDens_I/(1 + Ga2/MassIon_I)
+       end if                                 !^CFG END BORISCORR
 
        ! Multiply by n_s/n_e for all ion fluids
        ForceX_I = NumDens_I*InvNumDens*Force_D(x_)
@@ -313,7 +319,7 @@ contains
     real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D
     real, dimension(3) :: Force_D
     real, dimension(nIonFluid) :: &
-         NumDens_I, Rho_I, InvRho_I, Ux_I, Uy_I, Uz_I, Temp_I
+         NumDens_I, NumDensBoris_I, Rho_I, InvRho_I, Ux_I, Uy_I, Uz_I, Temp_I
 
     ! Alfven Lorentz factor for Boris correction
     real :: Ga2
@@ -385,6 +391,20 @@ contains
        NumDens    = sum(NumDens_I)
        InvNumDens = 1.0/NumDens
 
+       NumDensBoris_I = NumDens_I
+       if(UseBoris)then                       !^CFG IF BORISCORR BEGIN
+          ! See the ASTRONUM 2009 proceedings paper by Toth et al.
+          !
+          ! Boris correction: divide the number density by
+          !
+          ! 1 + V_s^2/c^2 = 1 + B^2/(c^2*n*M_s)
+          !
+          ! where we used V_s^2 = (M/M_s)*B^2/rho = B^2/(n*M_s)
+
+          Ga2 = sum(FullB_D**2)*InvClight2*InvNumDens
+          NumDensBoris_I = NumDens_I/(1 + Ga2/MassIon_I)
+       end if                                 !^CFG END BORISCORR
+
        Temp_I     = State_V(iPIon_I)/NumDens_I
        AverageTemp= sum(State_V(iPIon_I))*InvNumDens
 
@@ -416,14 +436,6 @@ contains
 
        TemperatureCoef = 1.0/(AverageTemp*sqrt(AverageTemp))
 
-       Ga2 = 1.0
-       if(UseBoris)then                       !^CFG IF BORISCORR BEGIN
-          ! Reduce the J x B like terms by a factor of 
-          ! Ga2 = 1/(1+v_A^2/c^2) = rho/(rho+B^2/c^2)
-          Ga2 = State_V(Rho_)/(State_V(Rho_) + InvClight2*sum(FullB_D**2)) 
-       end if                                 !^CFG END BORISCORR
-
-
        if(TauCutOffDim > 0)then
           InvTauCutOff = 1.0/(Io2No_V(UnitT_)*TauCutOffDim)
           InvuCutOff2  = 1.0/(Io2No_V(UnitU_)*uCutOffDim)**2
@@ -438,7 +450,7 @@ contains
        do iIon = 1, nIonFluid
           uIon_D = (/ Ux_I(iIon),  Uy_I(iIon), Uz_I(iIon) /)
           u_D    = uIon_D - uPlus_D
-          ForceCoeff = Ga2 * ElectronCharge*NumDens_I(iIon)
+          ForceCoeff = ElectronCharge*NumDensBoris_I(iIon)
           Force_D    = ForceCoeff * cross_product(u_D, FullB_D) 
 
           if(DoTestCell)then
