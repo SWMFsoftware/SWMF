@@ -173,10 +173,10 @@ contains
 
     use ModPointImplicit, ONLY: UsePointImplicit_B,UsePointImplicit,&
          IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK,&
+    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, iNewGrid, iNewDecomposition, &
          PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest
-    use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_,Si2No_V, No2Io_V,LowDensityRatio,&
-         UnitT_,UnitN_
+    use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_, &
+         Si2No_V, No2Io_V,LowDensityRatio, UnitT_, UnitN_
     use ModAdvance, ONLY: State_VGB, Source_VC,VdtFace_x,&
          VdtFace_y,VdtFace_z
     use ModGeometry,ONLY: r_BLK,x_BLK,y_BLK,z_BLK,R_BLK,&
@@ -214,7 +214,8 @@ contains
 
     !write(*,*)'nDenNuSpecies_CBI(1, 1, 1, iBlock, MaxNuSpecies=',nDenNuSpecies_CBI(1, 1, 1, iBlock, 1)
     if( nDenNuSpecies_CBI(1, 1, 1, iBlock, 1) < 0.0 &
-         .or. iLastGrid /= iNewGrid .or. iLastDecomposition /= iNewDecomposition)then
+         .or. iLastGrid /= iNewGrid &
+         .or. iLastDecomposition /= iNewDecomposition)then
       ! write(*,*)'we are in user_calc_sources'
       ! write(*,*)'nBLK=',nBLK
       ! write(*,*)'iBlock=',iBlock
