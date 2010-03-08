@@ -207,16 +207,24 @@ contains
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     logical :: DoTest, DoTestMe, DoTestCell
 
+    integer :: iLastGrid=-100, iLastDecomposition=-100
     !--------------------------------------------------------------------
 
     iBlock = GlobalBlk
 
     !write(*,*)'nDenNuSpecies_CBI(1, 1, 1, iBlock, MaxNuSpecies=',nDenNuSpecies_CBI(1, 1, 1, iBlock, 1)
-    if( nDenNuSpecies_CBI(1, 1, 1, iBlock, 1) < 0.0)then
+    if( nDenNuSpecies_CBI(1, 1, 1, iBlock, 1) < 0.0 &
+         .or. iLastGrid /= iNewGrid .or. iLastDecomposition /= iNewDecomposition)then
       ! write(*,*)'we are in user_calc_sources'
       ! write(*,*)'nBLK=',nBLK
       ! write(*,*)'iBlock=',iBlock
        call set_neutral_density(iBlock)
+
+       if(iBlock == nBlock)then
+          iLastGrid          = iNewGrid
+          iLastDecomposition = iNewDecomposition
+       end if
+
     end if
 
     ! Do not provide explicit source term when point-implicit scheme is used
