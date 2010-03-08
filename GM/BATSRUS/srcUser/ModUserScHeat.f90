@@ -8,12 +8,11 @@ module ModUser
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_get_log_var,                &
        IMPLEMENTED5 => user_calc_sources,               &
-       IMPLEMENTED6 => user_update_states,              &
-       IMPLEMENTED7 => user_specify_refinement,         &
-       IMPLEMENTED8 => user_set_plot_var,               &
-       IMPLEMENTED9 => user_set_outerbcs,               &
-       IMPLEMENTED10=> user_face_bcs,                   &
-       IMPLEMENTED11=> user_set_boundary_cells
+       IMPLEMENTED6 => user_specify_refinement,         &
+       IMPLEMENTED7 => user_set_plot_var,               &
+       IMPLEMENTED8 => user_set_outerbcs,               &
+       IMPLEMENTED9 => user_face_bcs,                   &
+       IMPLEMENTED10=> user_set_boundary_cells
 
   include 'user_module.h' !list of public methods
 
@@ -259,7 +258,7 @@ contains
 
     ! normalize with isothermal sound speed.
     Usound = sqrt(Tcorona*(1.0+AverageIonCharge)/MassIon_I(1))
-    Uescape = sqrt(-GBody*2.0/rBody)/Usound
+    Uescape = sqrt(-GBody*2.0)/Usound
 
     !\
     ! Initialize MHD wind with Parker's solution
@@ -513,17 +512,6 @@ contains
     end subroutine get_cooling_function
 
   end subroutine get_radiative_cooling
-
-  !============================================================================
-
-  subroutine user_update_states(iStage, iBlock)
-
-    integer, intent(in) :: iStage, iBlock
-    !--------------------------------------------------------------------------
-
-    call update_states_MHD(iStage, iBlock)
-
-  end subroutine user_update_states
 
   !============================================================================
 
