@@ -186,9 +186,6 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
 end subroutine GM_get_for_im_crcm
 
 !==========================================================================
-
-
-!==========================================================================
 subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
 
   ! Do ray tracing for IM/RAM_SCB. 
@@ -204,6 +201,7 @@ subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
   use CON_axes,         ONLY: transform_matrix
   use ModGmImCoupling, ONLY: StateLine_VI
   use ModMultiFluid, ONLY: iFluid, nFluid, iUx_I, iUz_I
+  use ModRaytrace, ONLY: DoExtractBGradB1
 
   implicit none
 
@@ -236,6 +234,7 @@ subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
   NameVar = 'iLine Length x y z '//NamePrimitiveVar
 
   ! Trace field lines starting from IM equatorial grid (do message pass)
+  DoExtractBGradB1 = .true. !!! Maybe check NameVersionIm here ???
   call trace_ray_equator(nRadius, nLon, RadiusIm_I, LongitudeIm_I, .true.)
 
   if(iProc /= 0) RETURN
