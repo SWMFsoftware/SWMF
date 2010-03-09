@@ -134,6 +134,10 @@ module ModRaytrace
   real, allocatable :: RayIntegral_VII(:,:,:)
   real, allocatable :: RayResult_VII(:,:,:)
 
+  ! Temporary array for extracting b.grad(B1) info
+  real, allocatable :: bGradB1_DGB(:,:,:,:,:)
+  logical:: DoExtractBGradB1 = .false.
+
   ! Conversion matrix between SM and GM coordinates 
   ! (to be safe initialized to unit matrix)
   real :: GmSm_DD(3,3) = reshape( (/ &
