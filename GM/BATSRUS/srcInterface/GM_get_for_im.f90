@@ -229,12 +229,14 @@ subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
      LongitudeIm_I = Grid_C(IM_) % Coord2_I
   end if
 
+  ! Trace field lines starting from IM equatorial grid (do message pass)
+  DoExtractBGradB1 = .true. !!! Maybe check NameVersionIm here ???
+
   ! The variables to be passed: line index, length along line, 
   ! coordinatess and primitive variables. Total is 5 + nVar.
   NameVar = 'iLine Length x y z '//NamePrimitiveVar
+  if(DoExtractBGradB1) NameVar = trim(NameVar) //' bgradb1x bgradb1y bgradb1z'
 
-  ! Trace field lines starting from IM equatorial grid (do message pass)
-  DoExtractBGradB1 = .true. !!! Maybe check NameVersionIm here ???
   call trace_ray_equator(nRadius, nLon, RadiusIm_I, LongitudeIm_I, .true.)
 
   if(iProc /= 0) RETURN
@@ -260,6 +262,11 @@ subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
      end do
      StateLine_VI(Bx_+5:Bz_+5,iPoint)= &
           matmul(SmGm_DD,         StateLine_VI(Bx_+5:Bz_+5,iPoint)) ! mag field
+
+     if(DoExtractBGradB1) &
+          StateLine_VI(nVarLine-2:nVarLine,iPoint)= &
+          matmul(SmGm_DD, StateLine_VI(nVarLine-2:nVarLine,iPoint))! b.grad(B1)
+
   end do
 
 end subroutine GM_get_for_im_trace
