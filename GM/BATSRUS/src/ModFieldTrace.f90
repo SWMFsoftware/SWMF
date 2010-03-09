@@ -1347,6 +1347,9 @@ contains
                trilinear(bGradB1_DGB(:,:,:,:,iBlock), &
                3, 0, nI+1, 0, nJ+1, 0, nK+1, x_D)
 
+          if(DoExtractUnitSi) PlotVar_V(nVar+1:nVar+3) = &
+               PlotVar_V(nVar+1:nVar+3) * No2Si_V(UnitB_)/No2Si_V(UnitX_)
+             
           n = n + 3
 
        end if
