@@ -1232,7 +1232,7 @@ contains
     !---------------------------------------------------------------------
     if(DipoleStrength==0)call get_planet(DipoleStrengthOut=DipoleStrength)
 
-    call map_planet_field(Time_Simulation, XyzCur_D, TypeCoordSystem//' NORM', &
+    call map_planet_field(Time_Simulation, XyzCur_D, TypeCoordSystem//' NORM',&
          rIonosphere, x_D, iHemisphere)
 
     if(iHemisphere==0)then
@@ -1259,9 +1259,12 @@ contains
     use ModAdvance, ONLY: State_VGB, nVar, &
          Rho_, RhoUx_, RhoUz_, Ux_, Uz_, p_, Bx_, Bz_
     use ModMain, ONLY: UseB0
+    use ModRaytrace, ONLY: DoExtractBGradB1, bGradB1_DGB
+    use ModInterpolate, ONLY: trilinear
+
     real, intent(in) :: x_D(3),Xyz_D(3)
 
-    real    :: State_V(nVar), B0_D(3), PlotVar_V(4+nVar)
+    real    :: State_V(nVar), B0_D(3), PlotVar_V(4+nVar+3)
     integer :: n, iLine
     !----------------------------------------------------------------------
 
@@ -1329,13 +1332,25 @@ contains
              State_V(iUz_I(IonFirst_:iIonSecond)) = &
                   State_V(iUz_I(IonFirst_:iIonSecond)) * No2Si_V(UnitU_)
              State_V(iP_I(IonFirst_:iIonSecond))      =  &
-                  State_V(iP_I(IonFirst_:iIonSecond))      * No2Si_V(UnitP_)
+                  State_V(iP_I(IonFirst_:iIonSecond))  * No2Si_V(UnitP_)
           end if
        end if
 
        PlotVar_V(5:4+nVar) = State_V
 
        n = 4 + nVar
+
+       if(DoExtractBGradB1)then
+
+          ! Interpolate b.grad B1 into the last 3 elements
+          PlotVar_V(nVar+1:nVar+3) = &
+               trilinear(bGradB1_DGB(:,:,:,:,iBlock), &
+               3, 0, nI+1, 0, nJ+1, 0, nK+1, x_D)
+
+          n = n + 3
+
+       end if
+
     else
        n = 4
     end if
@@ -1805,19 +1820,20 @@ end subroutine plot_ray_equator
 subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
      DoMessagePass)
 
-  use ModMain, ONLY: x_, y_, z_
+  use ModMain, ONLY: x_, y_, z_, nI, nJ, nK, UnusedBlk
   use CON_ray_trace, ONLY: ray_init
   use CON_axes, ONLY: transform_matrix
   use ModRaytrace, ONLY: oktest_ray, R_raytrace, R2_raytrace, RayLengthMax, &
        DoIntegrateRay, DoExtractRay, DoTraceRay, DoMapRay, &
-       DoExtractState, DoExtractUnitSi, RayMap_DSII, RayMapLocal_DSII, &
+       DoExtractState, DoExtractUnitSi, DoExtractBGradB1, bGradB1_DGB, &
+       RayMap_DSII, RayMapLocal_DSII, &
        NameVectorField, Bxyz_DGB, nRay_D, CpuTimeStartRay, GmSm_DD, CLOSEDRAY
   use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
   use ModPhysics, ONLY: rBody
   use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, B0_DGB
   use ModProcMH,  ONLY: iProc, iComm
   use ModMpi
-  use ModGeometry,       ONLY: x1, x2, y1, y2, z1, z2
+  use ModGeometry,       ONLY: x1, x2, y1, y2, z1, z2, dx_BLK, dy_BLK, dz_BLK
   use CON_line_extract,  ONLY: line_init, line_collect, line_clean
   use ModMessagePass,    ONLY: message_pass_dir
   use ModCoordTransform, ONLY: xyz_to_sph
@@ -1839,8 +1855,8 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   ! Fill in ghost cells if DoMessagePass is true.
 
   integer :: iR, iLon, iSide
-  integer :: iProcFound, iBlockFound, i, j, k, iError
-  real    :: r, Phi, XyzSm_D(3), Xyz_D(3)
+  integer :: iProcFound, iBlockFound, iBlock, i, j, k, iError
+  real    :: r, Phi, XyzSm_D(3), Xyz_D(3), b_D(3)
 
   integer :: nStateVar
 
@@ -1875,6 +1891,34 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   DoExtractRay   = .true.
   DoTraceRay     = .false.
   DoMapRay       = .true.
+
+  if(DoExtractBGradB1)then
+     allocate(bGradB1_DGB(3,0:nI+1,0:nJ+1,0:nK+1,nBlock))
+     do iBlock = 1, nBlock
+        if(UnusedBlk(iBlock)) CYCLE
+        do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1; 
+           b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+           if(UseB0) b_D = b_D +  B0_DGB(:,i,j,k,iBlock)
+           b_D = b_D/sqrt(max(1e-30,sum(b_D**2)))
+        
+           bGradB1_DGB(1,i,j,k,iBlock) = 0.5*sum(b_D *  &
+                ( State_VGB(Bx_:Bz_,i+1,j,k,iBlock)     &
+                - State_VGB(Bx_:Bz_,i-1,j,k,iBlock))) / &
+                dx_BLK(iBlock)
+
+           bGradB1_DGB(2,i,j,k,iBlock) = 0.5*sum(b_D *  &
+                ( State_VGB(Bx_:Bz_,i,j+1,k,iBlock)     & 
+                - State_VGB(Bx_:Bz_,i,j-1,k,iBlock))) / &
+                dy_BLK(iBlock)
+
+           bGradB1_DGB(3,i,j,k,iBlock) = 0.5*sum(b_D * &
+                ( State_VGB(Bx_:Bz_,i,j,k+1,iBlock) &
+                - State_VGB(Bx_:Bz_,i,j,k+1,iBlock))) / &
+                dz_BLK(iBlock)
+
+        end do; end do; end do
+     end do
+  end if
 
   nRay_D  = (/ 2, nRadius, nLon, 0 /)
   DoExtractState = .true.
@@ -1964,6 +2008,8 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   else
      deallocate(RayMap_DSII)
   end if
+
+  if(DoExtractBGradB1) deallocate(bGradB1_DGB)
 
   if(DoMessagePass)call exchange_messages
 
