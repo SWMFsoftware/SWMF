@@ -14,7 +14,7 @@ contains
        nGCLeft,       &
        nGCRight,      &
        FInOut_I,      &
-       BetaIn, UseConservativeBC )      
+       BetaIn, UseConservativeBC, IsNegativeEnergy )      
 
 
     !--------------------------------------------------------------------------!
@@ -30,7 +30,8 @@ contains
     real, optional::BetaIn
     
     !If this parameter IS PRESENT, the flux via the boundaries is nullified
-    logical, optional, intent(in):: UseConservativeBC 
+    logical, optional, intent(in):: UseConservativeBC
+    logical, optional, intent(out):: IsNegativeEnergy
                                                                 
     !--------------------------------------------------------------------------!
     integer:: iX,iStep,nStep
@@ -45,15 +46,22 @@ contains
        BetaLim = 2.0
     end if
 
+    if(present(IsNegativeEnergy))IsNegativeEnergy = .false.
+
     nStep=1+int(maxval(CFLIn_I)); CFL_I(1:nX) = CFLIn_I/real(nStep)
     CFL_I(0) = CFL_I(1); CFL_I(nX+1) = CFL_I(nX)
     F_I(1-nGCLeft : nX+nGCRight) = FInOut_I(1-nGCLeft : nX+nGCRight)
 
     !Check for positivity
     if(any(F_I(1:nX)<0.0))then
-       write(*,*)'Before advection F_I <=0'
+       write(*,*)'Before advection F_I <=0 in '//NameSub
        write(*,*) F_I
-       call CON_stop('Error in '//NameSub )
+       if(present(IsNegativeEnergy))then
+          IsNegativeEnergy = .true.
+          return
+       else
+          call CON_stop('Error in '//NameSub )
+       end if
     end if
 
     !One stage second order upwind scheme
@@ -89,9 +97,14 @@ contains
 
     FInOut_I(1-nGCLeft:nX+nGCRight) = F_I(1-nGCLeft:nX+nGCRight)
     if(any(FInOut_I(1:nX)<0.0))then
-       write(*,*)'After advection F_I <=0'
+       write(*,*)'After advection F_I <=0 in '//NameSub
        write(*,*)F_I
-       call CON_stop('Error in '//NameSub )
+       if(present(IsNegativeEnergy))then
+          IsNegativeEnergy = .true.
+          return
+       else
+          call CON_stop('Error in '//NameSub )
+       end if
     end if
   end subroutine advance_lin_advection_plus
 
@@ -106,7 +119,7 @@ contains
        nGCLeft,       &
        nGCRight,      &
        FInOut_I,      &
-       BetaIn, UseConservativeBC )      
+       BetaIn, UseConservativeBC, IsNegativeEnergy)      
     !--------------------------------------------------------------------------!
     !
     integer,intent(in):: nX           !Number of meshes                        !
@@ -119,7 +132,9 @@ contains
     real, optional :: BetaIn
 
     !If this parameter IS PRESENT, the flux via the boundaries is nullified
-    logical, optional, intent(in):: UseConservativeBC 
+    logical, optional, intent(in):: UseConservativeBC
+
+    logical, optional, intent(out):: IsNegativeEnergy 
 
     !sol. index 0 is to set boundary         !
     !condition at the injection energy.      !
@@ -138,7 +153,7 @@ contains
     else
        BetaLim = 2.0
     end if
-
+    if(present(IsNegativeEnergy))IsNegativeEnergy = .false.
 
     nStep=1+int(maxval(CFLIn_I)); CFL_I(1:nX) = CFLIn_I/real(nStep)
     CFL_I(0) = CFL_I(1); CFL_I(nX+1) = CFL_I(nX)
@@ -148,9 +163,14 @@ contains
 
     !Check for positivity
     if(any(F_I(1:nX)<0.0))then
-       write(*,*)'Before advection F_I <=0'
+       write(*,*)'Before advection F_I <=0 in '//NameSub
        write(*,*) F_I
-       call CON_stop('Error in '//NameSub )
+        if(present(IsNegativeEnergy))then
+          IsNegativeEnergy = .true.
+          return
+       else
+          call CON_stop('Error in '//NameSub )
+       end if
     end if
 
     !One stage second order upwind scheme
@@ -183,9 +203,14 @@ contains
     FInOut_I(1:nX)=F_I(1:nX)
 
     if(any(FInOut_I(1:nX)<0.0))then
-       write(*,*)'After advection F_I <=0'
+       write(*,*)'After advection F_I <=0 in '//NameSub
        write(*,*)F_I
-       call CON_stop('Error in '//NameSub )
+       if(present(IsNegativeEnergy))then
+          IsNegativeEnergy = .true.
+          return
+       else
+          call CON_stop('Error in '//NameSub )
+       end if
     end if
     !------------------------------------ DONE --------------------------------!
   end subroutine advance_lin_advection_minus

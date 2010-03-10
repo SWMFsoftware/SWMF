@@ -237,7 +237,7 @@ contains
   !============================================================================
   subroutine update_wave_group_advection(iBlock)
     use ModAdvance,           ONLY: State_VGB, time_blk
-    use ModGeometry,          ONLY: true_cell
+    use ModGeometry,          ONLY: true_cell, x_BLK, y_BLK, z_BLK
     use ModLinearAdvection,   ONLY: advance_lin_advection_plus, &
          advance_lin_advection_minus
     use ModMain,              ONLY: CFL
@@ -261,6 +261,8 @@ contains
     !Loop variables:
     !/
     integer :: i,j,k
+
+    logical :: IsNegativeEnergy
     !---------------------------
     if(DeltaLogFrequency<= 0.0                   &
          .or. (UseAlfvenWaves .and. nWaveHalf==1) &
@@ -281,7 +283,13 @@ contains
                   State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock)
              F2_I(nWaveHalf+1)=F2_I(nWaveHalf)
              call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
-                  BetaLimiter, UseConservativeBC= .true.) 
+                  BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
+             if(IsNegativeEnergy)then
+                write(*,*) 'Negative energy density in xyz=',&
+                     x_BLK(i, j, k, iBlock), y_BLK(i, j, k, iBlock), z_BLK(i, j, k, iBlock), &
+                     ' ijk=', i, j, k, ' iBlock=',iBlock
+                call stop_mpi('Stopped')
+             end if
              State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
 
@@ -289,7 +297,13 @@ contains
                   State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock)
              F2_I(nWaveHalf+1) = F2_I(nWaveHalf)
              call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
-                  BetaLimiter, UseConservativeBC= .true.) 
+                  BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
+             if(IsNegativeEnergy)then
+                write(*,*) 'Negative energy density in xyz=',&
+                     x_BLK(i, j, k, iBlock), y_BLK(i, j, k, iBlock), z_BLK(i, j, k, iBlock), &
+                     ' ijk=', i, j, k, ' iBlock=',iBlock
+                call stop_mpi('Stopped')
+             end if
              State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           else
@@ -298,7 +312,13 @@ contains
                   State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock)
              F2_I(0) = F2_I(1) 
              call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
-                  BetaLimiter, UseConservativeBC= .true.) 
+                  BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
+             if(IsNegativeEnergy)then
+                write(*,*) 'Negative energy density in xyz=',&
+                     x_BLK(i, j, k, iBlock), y_BLK(i, j, k, iBlock), z_BLK(i, j, k, iBlock), &
+                     ' ijk=', i, j, k, ' iBlock=',iBlock
+                call stop_mpi('Stopped')
+             end if 
              State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
 
@@ -306,7 +326,13 @@ contains
                   State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock)
              F2_I(0) = F2_I(1)
              call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
-                  BetaLimiter, UseConservativeBC= .true.)
+                  BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
+             if(IsNegativeEnergy)then
+                write(*,*) 'Negative energy density in xyz=',&
+                     x_BLK(i, j, k, iBlock), y_BLK(i, j, k, iBlock), z_BLK(i, j, k, iBlock), &
+                     ' ijk=', i, j, k, ' iBlock=',iBlock
+                call stop_mpi('Stopped')
+             end if
              State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           end if
