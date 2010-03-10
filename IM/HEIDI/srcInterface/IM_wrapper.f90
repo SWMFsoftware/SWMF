@@ -30,7 +30,6 @@ subroutine IM_set_param(CompInfo,TypeAction)
      call put(CompInfo,                         &
           Use=.true.,                           &
           NameVersion='RAM_HEIDI (Liemohn)',    &
-!          NameVersion='HEIDI (Liemohn)',    &
           Version=1.1)
 
   case('MPI')
@@ -309,19 +308,21 @@ end subroutine IM_put_from_gm
 subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      nVarLineIn, nPointLineIn, BufferLine_VI, NameVar)
 
-  use ModHeidiMain,   ONLY: nR, nT, LZ, BHeidi_III, SHeidi_III, RHeidi_III 
+  use ModHeidiMain,   ONLY: nR, nT, LZ, BHeidi_III, SHeidi_III, RHeidi_III,&
+       bGradB1xHeidi_III,bGradB1yHeidi_III, bGradB1zHeidi_III
   use ModHeidiIO,     ONLY: Time
   use ModHeidiSize,   ONLY: RadiusMin, RadiusMax, nPointEq
   use ModIoUnit,      ONLY: UnitTmp_
   use ModPlotFile,    ONLY: save_plot_file
   use ModHeidiBField, ONLY: dipole_length
-  
+
   implicit none
 
   integer, intent(in)          :: nRadiusIn, nLonIn
   real,    intent(in)          :: Map_DSII(3,2,nRadiusIn,nLonIn)
   integer, intent(in)          :: nVarLineIn, nPointLineIn
   real,    intent(in)          :: BufferLine_VI(nVarLineIn,nPointLineIn)
+
   character(len=*), intent(in) :: NameVar
   character(len=*), parameter  :: NameSub='IM_put_from_gm_line'
   character(len=100)           :: NameFile
@@ -332,25 +333,30 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   ! there is no need for them, and BufferLine_VI should be put 
   ! into HEIDI variables right here. 
   ! Note that this routine is only called on the root processor !!!
-  
+
   integer :: nVarLine   = 0          ! number of vars per line point
   integer :: nPointLine = 0          ! number of points in all lines
   real, save, allocatable :: StateLine_VI(:,:)   ! state along all lines
 
-  integer, parameter             :: I_=1,S_=2,X_=3,Y_=4,Z_=5,Bx_=10,By_=11,Bz_=12
+  integer, parameter             :: I_=1, S_=2, X_=3, Y_=4, Z_=5
+  integer, parameter             :: Bx_=10, By_=11, Bz_=12, gx_=14, gy_=15, gz_=16 
   integer, parameter             :: nStepInside = 10, nStepInterp = 40
   integer, parameter             :: nStep = 2*(nStepInside + nStepInterp)+1
   real,    parameter             :: rBoundary = 2.5, DipoleStrength = 0.32 !7.19e15
   real,    parameter             :: Re = 6357.0e3
-!  real, dimension(nStep,nR,nT)   :: BHeidi_III, RHeidi_III,SHeidi_III
 
   !Local Variables
   real,dimension(nStepInside,nR) :: bDipoleN_II, rDipoleN_II, sDipoleN_II
   real,dimension(nStepInside,nR) :: bDipoleS_II, rDipoleS_II, sDipoleS_II  
   real,dimension(nStep,nR,nT)    :: bDipole_III, rDipole_III, sDipole_III
   real, dimension(nStepInterp)   :: LengthHeidi_I,BHeidi_I,RHeidi_I
+  real, dimension(nStepInterp)   :: LengthHeidi1_I,BHeidi1_I,RHeidi1_I
+  real, dimension(nStepInterp)   :: bGradB1xHeidi1_I, bGradB1yHeidi1_I, bGradB1zHeidi1_I
+  real, dimension(nStepInterp)   :: bGradB1xHeidi_I, bGradB1yHeidi_I, bGradB1zHeidi_I
   integer,save                   :: iRiTiDIr_DI(3,2*nR*nT)                ! line index 
   real, allocatable              :: B_I(:), Length_I(:),RadialDist_I(:)
+  real, allocatable              :: bGradB1x_I(:), bGradB1y_I(:), bGradB1z_I(:)
+  real, allocatable              :: bGradB1x1_I(:), bGradB1y1_I(:), bGradB1z1_I(:)
   real, allocatable              :: B1_I(:), Length1_I(:),RadialDist1_I(:)
   real                           :: LatMax, LatMin, Lat, dLat
   real                           :: SinLat2,CosLat2
@@ -372,6 +378,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   ! Copy into local variables
   StateLine_VI = BufferLine_VI
 
+  ! StateLine_VI = PlotVar_V
   if(DoTest)then
      write(*,*)NameSub,' nVarLine,nPointLine=',nVarLine,nPointLine
 
@@ -381,7 +388,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      open(UnitTmp_, FILE=NameFile, STATUS="replace")
      ! Same format as in GM/BATSRUS/src/ray_trace_new.f90
      write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nR, nT, nPointLine
-     write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p'
+     write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p bgradb1x bgradb1y bgradb1z'
      do iPoint = 1, nPointLine
         write(UnitTmp_, *) StateLine_VI(:, iPoint)
      end do
@@ -434,7 +441,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   !\
   ! Count the maximum size of the field line array (iMax)
   !/
-  
+
   iMax = 0 ; iLineLast = -1; i = 1
   do iPoint =1 ,nPointLine
      if (StateLine_VI(1,iPoint) == iLineLast) then
@@ -447,13 +454,10 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   end do
 
 
-  allocate(B_I(iMax))
-  allocate(Length_I(iMax))
-  allocate(RadialDist_I(iMax))
-
-  allocate(B1_I(iMax))
-  allocate(Length1_I(iMax))
-  allocate(RadialDist1_I(iMax))
+  allocate(B_I(iMax)); allocate(Length_I(iMax)); allocate(RadialDist_I(iMax))
+  allocate(B1_I(iMax)); allocate(Length1_I(iMax)); allocate(RadialDist1_I(iMax))
+  allocate(bGradB1x1_I(iMax)); allocate(bGradB1y1_I(iMax)); allocate(bGradB1z1_I(iMax));
+  allocate(bGradB1x_I(iMax)); allocate(bGradB1y_I(iMax)); allocate(bGradB1z_I(iMax));
 
   iMax1 = 0
   B_I = 0.0
@@ -462,11 +466,14 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   i = 1
   j = 1
 
-  BHeidi_I      = 0.0
-  LengthHeidi_I = 0.0
-  RHeidi_I = 0.0
+  BHeidi_I = 0.0; LengthHeidi_I = 0.0; RHeidi_I = 0.0
+  bGradB1x_I = 0.0; bGradB1x_I = 0.0; bGradB1z_I = 0.0
 
   do iPoint = 1, nPointLine
+     !  do iPoint = 1, 20
+     !     write(*,*) 'grad B1',iPoint, StateLine_VI(1,iPoint),&
+     StateLine_VI(14,iPoint), StateLine_VI(15,iPoint), StateLine_VI(16,iPoint)
+
      if  (StateLine_VI(1,iPoint) == iLineFirst)  then
         ! B field in Gauss
         B1_I(j) = 10000.0*sqrt(StateLine_VI(BX_,iPoint)**2 + &
@@ -474,12 +481,20 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         Length1_I (j) = StateLine_VI(S_,iPoint)
         RadialDist1_I(j) = sqrt(StateLine_VI(X_,iPoint)**2 + &
              StateLine_VI(Y_,iPoint)**2 + StateLine_VI(Z_,iPoint)**2 )
-        
+
+        bGradB1x1_I(j) = StateLine_VI(gx_,iPoint)
+        bGradB1y1_I(j) = StateLine_VI(gy_,iPoint)
+        bGradB1z1_I(j) = StateLine_VI(gz_,iPoint)
+
         j = j + 1
         np = j-1
-        
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re,B_I(2:np),BHeidi_I,LengthHeidi_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re,RadialDist_I(2:np),RHeidi_I,LengthHeidi_I) 
+
+        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, B1_I(2:np),BHeidi1_I,LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, RadialDist1_I(2:np), RHeidi1_I,LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, bGradB1x1_I(2:np), bGradB1xHeidi1_I,LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, bGradB1y1_I(2:np), bGradB1yHeidi1_I,LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, bGradB1z1_I(2:np), bGradB1zHeidi1_I,LengthHeidi1_I) 
+
 
         iLine = StateLine_VI(1,iPoint)     
         iR    = iRiTiDir_DI(1,iLine)
@@ -487,28 +502,44 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         iDir  = iRiTiDir_DI(3,iLine)
 
         if (iDir ==1) then  ! Northern hemisphere
-           BHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = BHeidi_I(:)
-           SHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = LengthHeidi_I(:)
-           RHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = RHeidi_I(:)
+           BHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = BHeidi1_I(:)
+           SHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = LengthHeidi1_I(:)
+           RHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = RHeidi1_I(:)
+
+           bGradB1xHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) =  bGradB1xHeidi1_I(:)
+           bGradB1yHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) =  bGradB1yHeidi1_I(:)
+           bGradB1zHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) =  bGradB1zHeidi1_I(:)
         end if
-        
+
         if (iDir ==2) then     ! Southern hemisphere
-           BHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = BHeidi_I(nStepInterp:1:-1) 
-           SHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = LengthHeidi_I(nStepInterp:1:-1) 
-           RHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = RHeidi_I(nStepInterp:1:-1) 
+           BHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = BHeidi1_I(nStepInterp:1:-1) 
+           SHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = LengthHeidi1_I(nStepInterp:1:-1) 
+           RHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = RHeidi1_I(nStepInterp:1:-1) 
+
+           bGradB1xHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = bGradB1xHeidi1_I(nStepInterp:1:-1) 
+           bGradB1yHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = bGradB1yHeidi1_I(nStepInterp:1:-1) 
+           bGradB1zHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = bGradB1zHeidi1_I(nStepInterp:1:-1) 
         end if
-        
+
         BHeidi_III(nPointEq,iR,iT) = B1_I(1)
         SHeidi_III(nPointEq,iR,iT) = Length1_I(1)
         RHeidi_III(nPointEq,iR,iT) = RadialDist1_I(1)
 
+        bGradB1xHeidi_III(nPointEq,iR,iT) =  bGradB1x1_I(1)
+        bGradB1yHeidi_III(nPointEq,iR,iT) =  bGradB1y1_I(1)
+        bGradB1zHeidi_III(nPointEq,iR,iT) =  bGradB1z1_I(1)
+
      end if
-     
+
      if ((StateLine_VI(1,iPoint) /= iLineLast) .and. (iPoint > 1)) then   
         np = i-1
 
         call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re,B_I(2:np),BHeidi_I,LengthHeidi_I)
         call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re,RadialDist_I(2:np),RHeidi_I,LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, bGradB1x_I(2:np), bGradB1xHeidi_I,LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, bGradB1y_I(2:np), bGradB1yHeidi_I,LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, bGradB1z_I(2:np), bGradB1zHeidi_I,LengthHeidi_I) 
+
         iLine = StateLine_VI(1,iPoint)
 
         iR   = iRiTiDir_DI(1,iLine)
@@ -519,17 +550,31 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            BHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = BHeidi_I(:)
            SHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = LengthHeidi_I(:)
            RHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = RHeidi_I(:)
+
+           bGradB1xHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1xHeidi_I(:)
+           bGradB1yHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1yHeidi_I(:)
+           bGradB1zHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1zHeidi_I(:)
+
         end if
 
         if (iDir ==2) then     ! Southern hemisphere
            BHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = BHeidi_I(nStepInterp:1:-1)
            SHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = LengthHeidi_I(nStepInterp:1:-1) 
            RHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = RHeidi_I(nStepInterp:1:-1) 
+
+           bGradB1xHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = bGradB1xHeidi_I(nStepInterp:1:-1) 
+           bGradB1yHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = bGradB1yHeidi_I(nStepInterp:1:-1) 
+           bGradB1zHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = bGradB1zHeidi_I(nStepInterp:1:-1) 
+
         end if
 
         BHeidi_III(nPointEq,iR,iT) = B_I(1)
         SHeidi_III(nPointEq,iR,iT) = Length_I(1)
         RHeidi_III(nPointEq,iR,iT) = RadialDist_I(1)
+
+        bGradB1xHeidi_III(nPointEq,iR,iT) = bGradB1x_I(1)
+        bGradB1yHeidi_III(nPointEq,iR,iT) = bGradB1y_I(1)
+        bGradB1zHeidi_III(nPointEq,iR,iT) = bGradB1z_I(1)
 
         i = 1
         iLineLast = StateLine_VI(1,iPoint)
@@ -542,23 +587,30 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      RadialDist_I(i) = sqrt(StateLine_VI(X_,iPoint)**2 + &
           StateLine_VI(Y_,iPoint)**2 + StateLine_VI(Z_,iPoint)**2 )
 
+     bGradB1x_I(i) = StateLine_VI(gx_,iPoint)
+     bGradB1y_I(i) = StateLine_VI(gy_,iPoint)
+     bGradB1z_I(i) = StateLine_VI(gz_,iPoint)
+
      iLineLast = StateLine_VI(1,iPoint)
 
      i = i + 1
 
   end do
 
-  deallocate(B_I)
-  deallocate(Length_I)
-  deallocate(RadialDist_I)
+  !stop
+
+  deallocate(B_I); deallocate(Length_I); deallocate(RadialDist_I)
+  deallocate(B1_I); deallocate(Length1_I); deallocate(RadialDist1_I)
+  deallocate(bGradB1x1_I); deallocate(bGradB1y1_I); deallocate(bGradB1z1_I);
+  deallocate(bGradB1x_I); deallocate(bGradB1y_I); deallocate(bGradB1z_I);
 
   !\
   ! Fill in the values of the B field with dipole values inside rBoundary ( = 2.5 Re)
   !/
 
 
-!  open (unit=3,file='BFieldMHD.dat')
-!  write(3,*) 'iT,iR,iPoint,BField'
+  !  open (unit=3,file='BFieldMHD.dat')
+  !  write(3,*) 'iT,iR,iPoint,BField'
 
   do iT = 1, nT
      do iR = 1, nR
@@ -638,13 +690,15 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      end do
   end do
 
-!  write(*,*) 'MHD',BHeidi_III(50,:,1)
+  !write(*,*) '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+  !write(*,*) 'MHD B field',BHeidi_III(50,:,1)
+  !write(*,*) '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
 
   !do iStep = 1, nStep
   !   write(3,*) 1,5,iStep,BHeidi_III(iStep,5,1),LZ(iR)
   !end do
   !close(3)
-  
+
 end subroutine IM_put_from_gm_line
 
 !==============================================================================
@@ -908,13 +962,14 @@ subroutine IM_save_restart(TimeSimulation)
 !!! call heidi_save_restart
 
 end subroutine IM_save_restart
-!===========================================================================
 
-subroutine im_put_from_gm_crcm
- 
-  call CON_stop('im_put_from_gm_crcm should not be called for IM/HEIDI')
- 
-end subroutine im_put_from_gm_crcm
+!===========================================================================
+subroutine IM_put_from_gm_crcm
+
+  ! This subroutine is necessary for HEIDI to run with RBE and should be empty here.
+end subroutine IM_put_from_gm_crcm
+
+
 !===========================================================================
 
 subroutine interpolate_linear_b (nP,Length_I,B_I,nPoint,LengthHeidi_I,BHeidi_I)
