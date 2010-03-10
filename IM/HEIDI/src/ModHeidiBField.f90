@@ -51,6 +51,7 @@ contains
     real, parameter        :: Me = 7.19e15
 
     real :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w,c1
+     real, dimension(nPoint,nR,nPhi) :: GradB0R_III, GradB0Theta_III, GradB0Phi_III
     real :: beta,alpha,t
     !----------------------------------------------------------------------------------
 
@@ -67,6 +68,9 @@ contains
        RadialDistance_III  = RHeidi_III 
        Length_III          = SHeidi_III 
 !       write(*,*) bFieldMagnitude_III(50,:,1)
+
+       call get_gradB0(nPoint,nR,nPhi,L_I,Phi_I,GradB0R_III, GradB0Theta_III, GradB0Phi_III)
+
 
     case('uniform')
        do iPhi =1, nPhi
@@ -637,7 +641,49 @@ contains
   end subroutine half_bounce_path_length
 
   !================================================================================== 
+  subroutine get_gradB0(nPoint,nR,nPhi,L_I,Phi_I,GradB0R_III, GradB0Theta_III, GradB0Phi_III)
 
+    implicit none
+
+    integer, intent(in)    :: nPoint                              ! Number of points along the field line
+    integer, intent(in)    :: nR                                  ! Number of points in the readial direction
+    integer, intent(in)    :: nPhi                                ! Number of points in the azimuthal direction
+    real,    intent(in)    :: L_I(nR) 
+    real,    intent(in)    :: Phi_I(nPhi) 
+    real, dimension(nPoint,nR,nPhi), intent(out) :: GradB0R_III, GradB0Theta_III, GradB0Phi_III
+
+    !Local Variables
+    real    :: LatMax, LatMin,dLat, Lat
+    real    :: y, x, r
+    integer :: iPhi, iR, iPoint
+    
+
+    !----------------------------------------------------------------------------------
+    
+    
+    do iPhi =1, nPhi
+       y = cos(Phi_I(iPhi))
+       do iR =1, nR 
+          LatMax =  acos(sqrt(1./L_I(iR)))
+          LatMin = -LatMax
+          dLat   = (LatMax-LatMin)/(nPoint-1)
+          Lat = LatMin
+          do iPoint = 1, nPoint
+             x = sin(Lat)
+             r = L_I(iR) * (cos(Lat))**2
+                          
+             GradB0R_III(iPoint,iR,iPhi) = dble((4/r**6 * x**2 + 1/r**6 * (1 - x**2))**(-0.1D1/0.2D1) * &
+                  (-24/r**7 * x**2 - 6/r**7 * (1 - x**2)))/0.2D1
+             GradB0Theta_III(iPoint,iR,iPhi) = -0.3D1/dble(r**7) * dble((4/r**6 * x**2 + 1 / r **6 * &
+                  (1 - x**2))**(-0.1D1/0.2D1)) * dble(x) * sqrt(dble(1 - x**2))
+             GradB0Phi_III(iPoint,iR,iPhi) = 0.0
+             
+          end do
+       end do
+    end do
+    
+  end subroutine get_gradB0
+  !================================================================================== 
   real function dipole_length(L, LatMin, LatMax)
 
     implicit none
