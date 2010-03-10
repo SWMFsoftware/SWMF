@@ -10,7 +10,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNode
   use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, nBlock, &
        nBlockALL,nBlockMax, time_accurate,n_step,&
        nOrder, UseRotatingBc, BlkTest, ProcTest, &
-       TypeCoordSystem, CodeVersion
+       TypeCoordSystem, CodeVersion, nTrueCellsALL
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModMain, ONLY: boris_correction                     !^CFG IF BORISCORR
   use ModCovariant, ONLY: UseCovariant, TypeGeometry      
@@ -53,6 +53,8 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNode
 
   call set_oktest('write_plot_tec',oktest,oktest_me)
   if(oktest_me)write(*,*) plot_type1,plot_type1(1:3)  
+
+  call count_true_cells
 
   ! Create text string for zone name like 'N=0002000 T=0000:05:00'
   if(time_accurate)then
@@ -757,6 +759,10 @@ contains
     write(stmp,'(i12)')nBlockALL*nI*nJ*nK
     write(unit_tmp,'(a,a,a)') 'AUXDATA CELLS="',trim(adjustl(stmp)),'"'
 
+    !CELLSUSED
+    write(stmp,'(i12)')nTrueCellsALL
+    write(unit_tmp,'(a,a,a)') 'AUXDATA CELLSUSED="',trim(adjustl(stmp)),'"'
+
     !CODEVERSION
     write(stmp,'(a,f5.2)')'BATSRUS',CodeVersion
     write(unit_tmp,'(a,a,a)') 'AUXDATA CODEVERSION="',trim(adjustl(stmp)),'"'
@@ -827,6 +833,16 @@ contains
        write(stmp,'(a)')'T= N/A'
     end if
     write(unit_tmp,'(a,a,a)') 'AUXDATA TIMESIM="',trim(adjustl(stmp)),'"'
+
+    !TIMESIMSHORT
+    if(time_accurate)then
+       write(stmp,'(a)')'T='// &
+            StringDateOrTime(1:4)//":"// &
+            StringDateOrTime(5:6)
+    else
+       write(stmp,'(a)')'T= SS'
+    end if
+    write(unit_tmp,'(a,a,a)') 'AUXDATA TIMESIMSHORT="',trim(adjustl(stmp)),'"'
 
   end subroutine write_auxdata
 
