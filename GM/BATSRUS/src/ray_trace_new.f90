@@ -1345,7 +1345,7 @@ contains
           ! Interpolate b.grad B1 into the last 3 elements
           PlotVar_V(nVar+1:nVar+3) = &
                trilinear(bGradB1_DGB(:,:,:,:,iBlock), &
-               3, 0, nI+1, 0, nJ+1, 0, nK+1, x_D)
+               3, 0, nI+1, 0, nJ+1, 0, nK+1, x_D, DoExtrapolate=.false.)
 
           if(DoExtractUnitSi) PlotVar_V(nVar+1:nVar+3) = &
                PlotVar_V(nVar+1:nVar+3) * No2Si_V(UnitB_)/No2Si_V(UnitX_)
@@ -1927,6 +1927,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   DoExtractState = .true.
   DoExtractUnitSi= .true.
   nStateVar = 4 + nVar
+  if(DoExtractBGradB1) nStateVar = nStateVar + 3
   call line_init(nStateVar)
 
   NameVectorField = 'B'
