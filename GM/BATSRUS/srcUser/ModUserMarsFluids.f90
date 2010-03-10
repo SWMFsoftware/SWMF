@@ -103,6 +103,7 @@ module ModUser
        CO2x_=8,&
        Oh2x_ =9
 
+  ! Given in cm^2
   real, dimension(MaxNuSpecies)::CrossSection_I,&
        CrossSectionDim_I=(/2.6e-17,1.5e-17,0.0,1.5e-17,&
        1.5e-17,0.0,1.5e-17,2.6e-17, 1.5e-17/)
@@ -1418,7 +1419,7 @@ contains
 
     nu0=nu0_dim*No2Io_V(UnitN_)*No2Io_V(UnitT_)
     BodynDenNuSpecies_I(:)=&
-         BodynDenNuSpDim_I(:)*Io2No_V(UnitN_)
+         BodynDenNuSpDim_I(:)*1e6*Si2No_V(UnitN_)
     HNuSpecies_I(:)=&
          HNuSpeciesDim_I(:)*1.0e3*Si2No_V(UnitX_)
 
@@ -1475,8 +1476,11 @@ contains
          Rate_I(CO2p_O__Op_CO2_)* BodynDenNuSpecies_I(O_)
     CoeffSpecies_II(Op_,CO2p_)=ReactionRate_I(CO2p_O__Op_CO2_)
 
-
-    CrossSection_I=CrossSectiondim_I*No2Io_V(unitN_)*No2Si_V(unitX_)*1.0e2
+    ! Convert cm^2 into normalized units but take into account that
+    ! the cross-section will be multiplied scale height (UnitX_) and
+    ! number density (UnitN_) and these normalized units are not compatible
+    CrossSection_I = CrossSectiondim_I*1.0e-4 / &
+         ( Si2No_V(UnitX_)*Si2No_V(UnitN_) )
 
     Optdep =  sum(BodynDenNuSpecies_I*CrossSection_I*HNuSpecies_I)
     Productrate0 = max(exp(-Optdep), 1.0e-5)
