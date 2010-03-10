@@ -3,7 +3,7 @@
 !	LLIMIT
 !	FCHECK
 !	DRIFTR
-!	DRIFTP
+!	heidi_driftp
 !	DRECOUL
 !	DRIFTMU
 !	CHAREXCHANGE
@@ -213,11 +213,11 @@ subroutine DRIFTR
   end do	! J loop
 end subroutine DRIFTR
 !======================================================================
-!			     DRIFTP
+!			     Heidi_driftp
 !     Routine calculate the change of distribution function due to
 ! 			 azimuthal drift
 !======================================================================
-subroutine DRIFTP
+subroutine heidi_driftp
 
   use ModHeidiSize
   use ModHeidiIO
@@ -304,7 +304,7 @@ subroutine DRIFTP
      end do	! big K loop
   end do	! big I loop
 
-end subroutine DRIFTP
+end subroutine heidi_driftp
 !======================================================================
 !			DRECOUL
 !	Routine calculates the change of distribution function due to
@@ -513,7 +513,7 @@ end subroutine DRIFTMU
 !		CHAREXCHANGE & ATMOSPHERIC LOSSES
 !  Routine calculates the decay of distributions due to charge exchange
 !======================================================================
-subroutine CHAREXCHANGE
+subroutine heidi_charexchange
 
   use ModHeidiSize
   use ModHeidiIO
@@ -565,7 +565,7 @@ subroutine CHAREXCHANGE
      end do	! K loop
   endif
 
-end subroutine CHAREXCHANGE
+end subroutine heidi_charexchange
 
 !======================================================================
 !			 	COULMU

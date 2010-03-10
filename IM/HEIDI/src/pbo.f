@@ -8,7 +8,7 @@ ccccccccccccccccccccccccccccccccccccccccc
 ccc subroutine initmain, plasmasphere ccc
 ccccccccccccccccccccccccccccccccccccccccc
 
-      subroutine initmain()
+      subroutine heidi_initmain()
 
 c Set nthetacells, nphicells array index
       integer nthetacells, nphicells
@@ -148,23 +148,23 @@ c variables for getgrid
       print*, 'Number of middle grid cells = ',nrcells*nphicells
 
       print*, 'Getting equatorial B field on middle grid'
-      call getmgridb(nrcells,nphicells,vrcells,mgridb)
+      call heidi_getmgridb(nrcells,nphicells,vrcells,mgridb)
 
       print*, 'Getting ionospheric B field on middle grid'
-      call getmgridbi(nrcells,nphicells,vthetacells,mgridbi)
+      call heidi_getmgridbi(nrcells,nphicells,vthetacells,mgridbi)
 
 c get flux tube volumes
        print*, 'Getting volume of flux tubes on middle grid'
-       call getdipolevol(nthetacells,nphicells,vthetacells,mgridvol)
+       call heidi_getdipolevol(nthetacells,nphicells,vthetacells,mgridvol)
 
 c get equatorial locations of flux tubes
       print*, 'Getting x, y values for flux tubes'
-      call getxydipole(nthetacells,nphicells,vthetacells,
+      call heidi_getxydipole(nthetacells,nphicells,vthetacells,
      *   vphicells,mgridx,mgridy,mgridoc)
 
 c set initial particle distribution
       print*, 'Setting initial content of flux tubes on middle grid'
-      call initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
+      call heidi_initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
      *   mgridvol,mgridoc)
 
       return
@@ -173,7 +173,7 @@ ccccccccccccccccccccc
 ccc entry getgrid ccc
 ccccccccccccccccccccc
 
-      entry getgrid(thetagrid,nt,phigrid,np)
+      entry heidi_getgrid(thetagrid,nt,phigrid,np)
 
       gdelr = ((rmax - rmin) / (float(nt-1)))
       pi = 3.14159          ! rad
@@ -194,9 +194,9 @@ cccccccccccccccccccccccccccc
 ccc entry setfluxtubevol ccc
 cccccccccccccccccccccccccccc
 
-      entry setfluxtubevol(thetagrid,nt,phigrid,np,fluxtubevol)
+      entry heidi_setfluxtubevol(thetagrid,nt,phigrid,np,fluxtubevol)
 
-      call interpol2dpolar(thetagrid,nt,phigrid,np,fluxtubevol,
+      call heidi_interpol2dpolar(thetagrid,nt,phigrid,np,fluxtubevol,
      *   vthetacells,nthetacells,vphicells,nphicells,mgridvol)
 
       return
@@ -205,15 +205,15 @@ ccccccccccccccccccccccc
 ccc entry setxygrid ccc
 ccccccccccccccccccccccc
 
-      entry setxygrid(thetagrid,nt,phigrid,np,gridx,gridy,gridoc)
+      entry heidi_setxygrid(thetagrid,nt,phigrid,np,gridx,gridy,gridoc)
 
-      call interpol2dpolar(thetagrid,nt,phigrid,np,gridx,
+      call heidi_interpol2dpolar(thetagrid,nt,phigrid,np,gridx,
      *   vthetacells,nthetacells,vphicells,nphicells,mgridx)
 
-      call interpol2dpolar(thetagrid,nt,phigrid,np,gridy,
+      call heidi_interpol2dpolar(thetagrid,nt,phigrid,np,gridy,
      *   vthetacells,nthetacells,vphicells,nphicells,mgridy)
 
-      call interpol2dpolar(thetagrid,nt,phigrid,np,gridoc,
+      call heidi_interpol2dpolar(thetagrid,nt,phigrid,np,gridoc,
      *   vthetacells,nthetacells,vphicells,nphicells,mgridoc)
 
       return
@@ -222,11 +222,11 @@ ccccccccccccccccccccccccc
 ccc entry initdensity ccc
 ccccccccccccccccccccccccc
 
-      entry initdensity()
+      entry heidi_initdensity()
 
 c set initial particle distribution
       print*, 'Setting initial content of flux tubes on middle grid'
-      call initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
+      call heidi_initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
      *   mgridvol,mgridoc)
 
       return
@@ -235,9 +235,9 @@ cccccccccccccccccccccccc
 ccc entry getdensity ccc
 cccccccccccccccccccccccc
 
-      entry getdensity(thetagrid,nt,phigrid,np,density)
+      entry heidi_getdensity(thetagrid,nt,phigrid,np,density)
 
-      call interpol2dpolar(vthetacells,nthetacells,vphicells,
+      call heidi_interpol2dpolar(vthetacells,nthetacells,vphicells,
      *   nphicells,mgridden,thetagrid,nt,phigrid,np,density)
 
       return
@@ -246,21 +246,21 @@ cccccccccccccccccccc
 ccc entry setpot ccc
 cccccccccccccccccccc
 
-      entry setpot(thetagrid,nt,phigrid,np,pot)
+      entry heidi_setpot(thetagrid,nt,phigrid,np,pot)
 
-      call interpol2dpolar(thetagrid,nt,phigrid,np,pot,
+      call heidi_interpol2dpolar(thetagrid,nt,phigrid,np,pot,
      *   vthetacells,nthetacells,vphicells,nphicells,mgridpot)
 
 c      print*, 'Differencing setpot on middle grid to get electric ',
 c     *   'field'
-      call gradpot(nrcells,nphicells,vrcells,delr,delphi,mgridpot,
+      call heidi_gradpot(nrcells,nphicells,vrcells,delr,delphi,mgridpot,
      *   mgrider,mgridep)
 
       maxvr = 0.0
       maxvp = 0.0
 
 c      print*, 'Calculating the E cross B drift velocity on middle grid'
-      call ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,mgridb,
+      call heidi_ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,mgridb,
      *   mgridvr,mgridvp,maxvr,maxvp)
 
 c deltr,deltp in units of seconds
@@ -293,20 +293,20 @@ cccccccccccccccccccc
 ccc entry getpot ccc
 cccccccccccccccccccc
 
-      entry getpot(thetagrid,nt,phigrid,np,pot,par,wc)
+      entry heidi_getpot(thetagrid,nt,phigrid,np,pot,par,wc)
 
 c      print*, 'Getting electric potential on middle grid'
-      call getmgridpot(nrcells,nphicells,vrcells,vthetacells,
+      call heidi_getmgridpot(nrcells,nphicells,vrcells,vthetacells,
      *   vphicells,mgridpot,par)
 
       if (wc.eq.1) then
-       call addcorotpot(nrcells,nphicells,vrcells,vthetacells,
+       call heidi_addcorotpot(nrcells,nphicells,vrcells,vthetacells,
      *    vphicells,mgridpot)
       endif
 
 c      print*,'Got pot'
 
-      call interpol2dpolar(vthetacells,nthetacells,vphicells,
+      call heidi_interpol2dpolar(vthetacells,nthetacells,vphicells,
      *   nphicells,mgridpot,thetagrid,nt,phigrid,np,pot)
 
 c      print*,'finished'
@@ -317,24 +317,24 @@ cccccccccccccccccccccccccc
 ccc entry plasmasphere ccc
 cccccccccccccccccccccccccc
 
-      entry plasmasphere(delt,par)
+      entry heidi_plasmasphere(delt,par)
 
       if ((par(1).ne.pari(1)).or.(par(2).ne.pari(2))) then 
 
 c       print*, 'Getting electric potential on middle grid'
-       call getmgridpot(nrcells,nphicells,vrcells,vthetacells,
+       call heidi_getmgridpot(nrcells,nphicells,vrcells,vthetacells,
      *    vphicells,mgridpot,par)
 
 c       print*, 'Differencing potential on middle grid to get electric ',
 c     *    'field'
-       call gradpot(nrcells,nphicells,vrcells,delr,delphi,mgridpot,
+       call heidi_gradpot(nrcells,nphicells,vrcells,delr,delphi,mgridpot,
      *    mgrider,mgridep)
 
        maxvr = 0.0
        maxvp = 0.0
 
 c       print*, 'Calculating the E cross B drift velocity on middle grid'
-       call ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,mgridb,
+       call heidi_ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,mgridb,
      *    mgridvr,mgridvp,maxvr,maxvp)
 
 c deltr,deltp in units of seconds
@@ -386,11 +386,11 @@ c     *    mgridvr,mgridvp,deltmax,mgridhalf)
 
 c Upwind/LaxWendroff-superbee differencing on middle grid to 
 c advance solution in time
-       call superbee(nrcells,nphicells,vrcells,delr,delphi,mgridn,
+       call heidi_superbee(nrcells,nphicells,vrcells,delr,delphi,mgridn,
      *    mgridvr,mgridvp,deltmax,mgridhalf)
 
 c calculate filling and draining of flux tubes
-       call filling(nrcells,nphicells,vrcells,vthetacells,vphicells,
+       call heidi_filling(nrcells,nphicells,vrcells,vthetacells,vphicells,
      *    mgridn,mgridden,mgridvol,mgridoc,mgridbi,deltmax)
 
        time = time + deltmax
@@ -408,9 +408,9 @@ cccccccccccccccccccccccccccccc
 ccc entry saveplasmasphere ccc
 cccccccccccccccccccccccccccccc
 
-      entry saveplasmasphere(filename)
+      entry heidi_saveplasmasphere(filename)
 
-      call saveit(vthetacells,nthetacells,vphicells,nphicells,
+      call heidi_saveit(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridden,mgridx,mgridy,mgridoc,mgridpot,filename)
 
       return
@@ -419,12 +419,12 @@ cccccccccccccccccccccccccccccc
 ccc entry loadplasmasphere ccc
 cccccccccccccccccccccccccccccc
 
-      entry loadplasmasphere(filename)
+      entry heidi_loadplasmasphere(filename)
 
-      call loadit(vthetacells,nthetacells,vphicells,nphicells,
+      call heidi_loadit(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridden,mgridx,mgridy,mgridoc,filename)
 
-      call denton(nthetacells,nphicells,mgridden,mgridvol,
+      call heidi_denton(nthetacells,nphicells,mgridden,mgridvol,
      *    mgridoc,mgridn)
 
       return
@@ -434,7 +434,7 @@ ccccccccccccccccccccccccc
 ccc subroutine saveit ccc
 ccccccccccccccccccccccccc
 
-      subroutine saveit(vthetacells,nthetacells,vphicells,nphicells,
+      subroutine  heidi_saveit(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridden,mgridx,mgridy,mgridoc,mgridpot,filename)
 
       use ModIoUnit, ONLY : UNITTMP_
@@ -476,7 +476,7 @@ ccccccccccccccccccccccccc
 ccc subroutine loadit ccc
 ccccccccccccccccccccccccc
 
-      subroutine loadit(vthetacells,nthetacells,vphicells,nphicells,
+      subroutine  heidi_loadit(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridden,mgridx,mgridy,mgridoc,filename)
 
       use ModIoUnit, ONLY : io_unit_new
@@ -534,19 +534,19 @@ c Internal: mgridoc1, open(0) or closed(1) table
       read(iUnitIn,*) mgridoc1
       close(unit = iUnitIn)
 
-      call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
+      call heidi_interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
      *   nphicells1,mgridden1,vthetacells,nthetacells,vphicells,
      *   nphicells,mgridden)
 
-      call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
+      call heidi_interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
      *   nphicells1,mgridx1,vthetacells,nthetacells,vphicells,
      *   nphicells,mgridx)
 
-      call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
+      call heidi_interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
      *   nphicells1,mgridy1,vthetacells,nthetacells,vphicells,
      *   nphicells,mgridy)
 
-      call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
+      call heidi_interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
      *   nphicells1,mgridoc1,vthetacells,nthetacells,vphicells,
      *   nphicells,mgridoc)
 
@@ -557,7 +557,7 @@ ccccccccccccccccccccccccccc
 ccc function saturation ccc
 ccccccccccccccccccccccccccc
 
-      real function saturation(l)
+      real function heidi_saturation(l)
 
 c Carpenter and Anderson's saturation density in units of
 c particles / m**3 
@@ -568,7 +568,7 @@ c input: l in re
 
 c output: saturation in particles / m**3
 
-      saturation = (1.0e6) * 10.0**((-0.3145*l)+3.9043)
+      heidi_saturation = (1.0e6) * 10.0**((-0.3145*l)+3.9043)
 
       return
       end
@@ -577,7 +577,7 @@ ccccccccccccccccccccccc
 ccc function trough ccc
 ccccccccccccccccccccccc
 
-      real function trough(l)
+      real function heidi_trough(l)
 
 c Carpenter and Anderson's trough density in units of
 c particles / m**3 
@@ -588,7 +588,7 @@ c input: l in re
 
 c output: trough in particles / m**3
 
-      trough = (1.0e6) * 0.5 * ((10.0/l)**4.0)
+      heidi_trough = (1.0e6) * 0.5 * ((10.0/l)**4.0)
 
       return
       end
@@ -597,7 +597,7 @@ cccccccccccccccccccccccccccccccccc
 ccc function DipoleFluxTubeVol ccc
 cccccccccccccccccccccccccccccccccc
 
-      real function dipoleFluxTubeVol(l)
+      real function heidi_dipoleFluxTubeVol(l)
 
 c calculates the unit volume of a dipole magnetic field flux tube
 c (the volume in m**3 per unit of magnetic flux(weber))
@@ -608,7 +608,7 @@ c 1 weber = Tesla-m**2 or joule/ampere or volt-sec
 c input: l in re
       real l
 
-c output: dipoleFluxTubevol in m/Tesla or m**3/weber
+c output: heidi_dipoleFluxTubevol in m/Tesla or m**3/weber
 
       real pi, re, mu, m
 
@@ -617,7 +617,7 @@ c output: dipoleFluxTubevol in m/Tesla or m**3/weber
       mu = 4.0*pi*1.0e-7    ! newtons/amps**2
       m = 8.05e22           ! amps*meter**2
 
-      dipoleFluxTubeVol = ((4.0*pi)/(mu*m)) * (32.0/35.0) * (l**4) * 
+      heidi_dipoleFluxTubeVol = ((4.0*pi)/(mu*m)) * (32.0/35.0) * (l**4) * 
      *    sqrt(1.0-(1.0/l)) * (1.0+(1.0/(2.0*l))+(3.0/(8.0*l*l))+
      *    (5.0/(16.0*l*l*l))) * (re**4.0)
 
@@ -628,7 +628,7 @@ ccccccccccccccccccccccccccc
 ccc subroutine mydipole ccc
 ccccccccccccccccccccccccccc
 
-      subroutine mydipole(r,theta,br,btheta)
+      subroutine  heidi_mydipole(r,theta,br,btheta)
 
 c calculates the two components of a dipole magnetic field
 
@@ -661,7 +661,7 @@ cccccccccccccccccccccccccc
 ccc subroutine dipoleb ccc
 cccccccccccccccccccccccccc
 
-      subroutine dipoleb(r,theta,eb)
+      subroutine  heidi_dipoleb(r,theta,eb)
 
 c calculates the magnitude of a dipole magnetic field
 c 1 tesla = 1 newton/(ampere-meter)
@@ -691,7 +691,7 @@ ccccccccccccccccccccccccccccccc
 ccc subroutine DipoleLshell ccc
 ccccccccccccccccccccccccccccccc
 
-      subroutine dipoleLshell(r,theta,l)
+      subroutine  heidi_dipoleLshell(r,theta,l)
 
 c calculates the L parameter of a dipole magnetic field line
 
@@ -717,7 +717,7 @@ ccccccccccccccccccccccc
 ccc subroutine coro ccc
 ccccccccccccccccccccccc
 
-      subroutine coro(r,theta,vphi)
+      subroutine  heidi_coro(r,theta,vphi)
 
 c calculates the corotation velocity in meter / sec
 
@@ -746,7 +746,7 @@ ccccccccccccccccccccccccc
 ccc subroutine dipsph ccc
 ccccccccccccccccccccccccc
 
-      subroutine dipsph(s,q,r,theta,j)
+      subroutine  heidi_dipsph(s,q,r,theta,j)
 
 c converts dipole coords into spherical ones and vica versa
 c (theta in degrees).
@@ -801,7 +801,7 @@ ccccccccccccccccccccccccc
 ccc subroutine vpocar ccc
 ccccccccccccccccccccccccc
 
-      subroutine vpocar(theta,vr,vtheta,vx,vy)
+      subroutine  heidi_vpocar(theta,vr,vtheta,vx,vy)
 
 c Calculates cartesian vector components from polar
 
@@ -830,7 +830,7 @@ cccccccccccccccccccccccccccc
 ccc subroutine getmgridb ccc
 cccccccccccccccccccccccccccc
 
-      subroutine getmgridb(nrcells,nphicells,vrcells,mgridb)
+      subroutine  heidi_getmgridb(nrcells,nphicells,vrcells,mgridb)
 
 c input: nrcells, nphicells array index
       integer nrcells, nphicells
@@ -844,7 +844,7 @@ c output: mgridb in tesla
       real bfield
 
       do i = 1, nrcells
-       call dipoleb(vrcells(i),90.0,bfield)
+       call heidi_dipoleb(vrcells(i),90.0,bfield)
        do j = 1, nphicells
         mgridb(i,j) = bfield
        enddo
@@ -857,7 +857,7 @@ ccccccccccccccccccccccccccccc
 ccc subroutine getmgridbi ccc
 ccccccccccccccccccccccccccccc
 
-      subroutine getmgridbi(nrcells,nphicells,vthetacells,mgridbi)
+      subroutine  heidi_getmgridbi(nrcells,nphicells,vthetacells,mgridbi)
 
 c input: nrcells, nphicells array index
       integer nrcells, nphicells
@@ -871,7 +871,7 @@ c output: mgridbi in tesla
       real bfield
 
       do i = 1, nrcells
-       call dipoleb(1.0,vthetacells(i),bfield)
+       call heidi_dipoleb(1.0,vthetacells(i),bfield)
        do j = 1, nphicells
         mgridbi(i,j) = bfield
        enddo
@@ -884,7 +884,7 @@ cccccccccccccccccccccccccc
 ccc subroutine ecrossb ccc
 cccccccccccccccccccccccccc
 
-      subroutine ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,
+      subroutine  heidi_ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,
      *              mgridb,mgridvr,mgridvp,maxvr,maxvp)
 
 c Input: nrcells, nphicells array index
@@ -924,7 +924,7 @@ c Output: maxvr, maxvp in meter / sec
           jvr = j
 	endif
         vt = - mgrider(i, j) / mgridb(i,j)
-        call coro(vrcells(i),90.0,vc)
+        call heidi_coro(vrcells(i),90.0,vc)
         mgridvp(i,j) = (vt + vc)/(vrcells(i)*re*rad)
         if (abs(mgridvp(i,j)).gt.maxvp) then
 	  maxvp = abs(mgridvp(i,j))
@@ -943,7 +943,7 @@ ccccccccccccccccccccccccccccccc
 ccc subroutine getdipolevol ccc
 ccccccccccccccccccccccccccccccc
 
-      subroutine getdipolevol(nthetacells,nphicells,
+      subroutine  heidi_getdipolevol(nthetacells,nphicells,
      *    vthetacells,mgridvol)
 
 c Input: nthetacells, nphicells array index
@@ -965,7 +965,7 @@ c Output: mgridvol in m**3 / weber
       do i = 1, nthetacells
         st = sin(vthetacells(i)*rad)
         vrcell = 1.0/(st*st)
-        dvol = dipolefluxtubevol(vrcell)
+        dvol = heidi_dipolefluxtubevol(vrcell)
        do j = 1, nphicells
         mgridvol(i,j) = dvol
        enddo
@@ -978,7 +978,7 @@ cccccccccccccccccccccccccccccc
 ccc subroutine getxydipole ccc
 cccccccccccccccccccccccccccccc
 
-      subroutine getxydipole(nthetacells,nphicells,
+      subroutine  heidi_getxydipole(nthetacells,nphicells,
      *   vthetacells,vphicells,mgridx,mgridy,mgridoc)
 
 c Theta is zero at the north pole, positive towards the equator 
@@ -1023,7 +1023,7 @@ ccccccccccccccccccccccccccccc
 ccc subroutine initmgridn ccc
 ccccccccccccccccccccccccccccc
 
-      subroutine initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
+      subroutine  heidi_initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
      *   mgridvol,mgridoc)
 
 c Input: nrcells, nphicells array index
@@ -1048,7 +1048,7 @@ c mgridden in units of particles per m**3
       real dn
 
       do i = 1, nrcells-1
-       dn = saturation(vrcells(i))
+       dn = heidi_saturation(vrcells(i))
        do j = 1, nphicells
         if (mgridoc(i,j).gt.0.999) then
          mgridden(i,j) = dn
@@ -1060,7 +1060,7 @@ c mgridden in units of particles per m**3
        enddo
       enddo
       i = nrcells
-      dn = trough(vrcells(i))
+      dn = heidi_trough(vrcells(i))
       do j = 1, nphicells
        if (mgridoc(i,j).gt.0.999) then
         mgridden(i,j) = dn
@@ -1078,7 +1078,7 @@ ccccccccccccccccccccccccc
 ccc subroutine denton ccc
 ccccccccccccccccccccccccc
 
-      subroutine denton(nthetacells,nphicells,mgridden,mgridvol,
+      subroutine  heidi_denton(nthetacells,nphicells,mgridden,mgridvol,
      *    mgridoc,mgridn)
 
 c Input: nthetacells, nphicells array index
@@ -1110,7 +1110,7 @@ cccccccccccccccccccccccccc
 ccc subroutine filling ccc
 cccccccccccccccccccccccccc
 
-      subroutine filling(nrcells,nphicells,vrcells,vthetacells,
+      subroutine  heidi_filling(nrcells,nphicells,vrcells,vthetacells,
      *    vphicells,mgridn,mgridden,mgridvol,mgridoc,mgridbi,delt)
 
 c Input: nrcells, nphicells array index
@@ -1144,7 +1144,7 @@ c particles/m**2/sec
       fmax  = 2.0e12
 
       do i = 1, nrcells
-       dsat = saturation(vrcells(i))
+       dsat = heidi_saturation(vrcells(i))
        do j = 1, nphicells
         if (mgridoc(i,j).gt.0.999) then
          if ((vphicells(j).ge.90.0).and.(vphicells(j).le.270.0)) then
@@ -1193,7 +1193,7 @@ ccccccccccccccccccccccccc
 ccc subroutine upwind ccc
 ccccccccccccccccccccccccc
 
-      subroutine upwind(nrcells,nphicells,vrcells,delr,delphi,mgridn,
+      subroutine  heidi_upwind(nrcells,nphicells,vrcells,delr,delphi,mgridn,
      *   mgridvr,mgridvp,delt,mgridhalf)
 
 C First order upwind differencing 
@@ -1343,7 +1343,7 @@ ccccccccccccccccccccccccccc
 ccc subroutine superbee ccc
 ccccccccccccccccccccccccccc
 
-      subroutine superbee(nrcells,nphicells,vrcells,delr,delphi,mgridn,
+      subroutine  heidi_superbee(nrcells,nphicells,vrcells,delr,delphi,mgridn,
      *   mgridvr,mgridvp,delt,mgridhalf)
 
 C Mixed first order upwind and
@@ -1686,7 +1686,7 @@ ccccccccccccccccccccccccccccc
 ccc subroutine epotsimple ccc
 ccccccccccccccccccccccccccccc
 
-      subroutine epotsimple(dtheta,dphi,kp,pot)
+      subroutine  heidi_epotsimple(dtheta,dphi,kp,pot)
 
 c input: dtheta, and dphi in degrees
 c phi is zero at 24 MLT positive towards dawn
@@ -1731,7 +1731,7 @@ cccccccccccccccccccccccccccc
 ccc subroutine epotsojka ccc
 cccccccccccccccccccccccccccc
 
-      subroutine epotsojka(dtheta,dphi,kp,pot)
+      subroutine  heidi_epotsojka(dtheta,dphi,kp,pot)
 
 c input: dphi,dtheta (spherical coordinates) in degrees
 c theta is zero at the pole and 
@@ -1871,7 +1871,7 @@ cccccccccccccccccccccccccccccc
 ccc subroutine getmgridpot ccc
 cccccccccccccccccccccccccccccc
 
-      subroutine getmgridpot(nrcells,nphicells,vrcells,vthetacells,
+      subroutine  heidi_getmgridpot(nrcells,nphicells,vrcells,vthetacells,
      *   vphicells,mgridpot,par)
 
 c Get the electric potential on the grid
@@ -1898,10 +1898,10 @@ c Output: mgridpot in volts
        do j = 1, nphicells
         mgridpot(i,j) = 0.0
         if (par(1).eq.1.0) then
-         call epotsimple(vthetacells(i),vphicells(j),par(2),pot)
+         call heidi_epotsimple(vthetacells(i),vphicells(j),par(2),pot)
          mgridpot(i,j) = mgridpot(i,j) + pot
         else if (par(1).eq.2.0) then
-         call epotsojka(vthetacells(i),vphicells(j),par(2),pot)
+         call heidi_epotsojka(vthetacells(i),vphicells(j),par(2),pot)
          mgridpot(i,j) = mgridpot(i,j) + pot
         else
          print*,'par(1) ne 1 or 2'
@@ -1917,7 +1917,7 @@ cccccccccccccccccccccccccccccc
 ccc subroutine addcorotpot ccc
 cccccccccccccccccccccccccccccc
 
-      subroutine addcorotpot(nrcells,nphicells,vrcells,vthetacells,
+      subroutine  heidi_addcorotpot(nrcells,nphicells,vrcells,vthetacells,
      *   vphicells,mgridpot)
 
 c Get the corotation electric potential on the grid
@@ -1954,7 +1954,7 @@ cccccccccccccccccccccccccc
 ccc subroutine gradpot ccc
 cccccccccccccccccccccccccc
 
-      subroutine gradpot(nrcells,nphicells,vrcells,delr,delphi,
+      subroutine  heidi_gradpot(nrcells,nphicells,vrcells,delr,delphi,
      *   mgridpot,mgrider,mgridep)
 
 c Calculates the two components of the electric field
@@ -2065,7 +2065,7 @@ ccccccccccccccccccccccc
 ccc subroutine hunt ccc
 ccccccccccccccccccccccc
 
-      SUBROUTINE HUNT(XX,N,X,JLO)
+      SUBROUTINE  heidi_hunt(XX,N,X,JLO)
 c
 c if x.le.min(xx) then jlo = 0
 c if x.gt.max(xx) then jlo = n
@@ -2119,7 +2119,7 @@ ccccccccccccccccccccccccc
 ccc subroutine locate ccc
 ccccccccccccccccccccccccc
 
-      SUBROUTINE LOCATE(XX,N,X,J)
+      SUBROUTINE  heidi_LOCATE(XX,N,X,J)
       DIMENSION XX(N)
       JL=0
       JU=N+1
@@ -2140,7 +2140,7 @@ cccccccccccccccccccccccccccccccccc
 ccc subroutine interpol2dpolar ccc
 cccccccccccccccccccccccccccccccccc
 
-      subroutine interpol2dpolar(theta1,ntheta1,phi1, 
+      subroutine  heidi_interpol2dpolar(theta1,ntheta1,phi1, 
      *   nphi1,data1,theta2,ntheta2,phi2,nphi2,data2)
 
 c interpolate/extrapolate values from data1 into data2
@@ -2164,7 +2164,7 @@ c interpolate/extrapolate values from data1 into data2
         print*,'interpol2dpolar: theta2(',i,') is greater than 90'
         call CON_stop('ERROR in pbo.f')
        endif
-       call hunt(theta1,ntheta1,theta2(i),ii)
+       call heidi_hunt(theta1,ntheta1,theta2(i),ii)
        if (ii.eq.0) ii = 1
        if (ii.eq.ntheta1) ii = ntheta1 - 1
        stheta = (theta2(i)-theta1(ii))/(theta1(ii+1)-theta1(ii))
@@ -2177,7 +2177,7 @@ c interpolate/extrapolate values from data1 into data2
          print*,'interpol2dpolar: phi2(',j,') is greater than 360'
          call CON_stop('ERROR in pbo.f')
         endif
-        call hunt(phi1,nphi1,phi2(j),jj)
+        call heidi_hunt(phi1,nphi1,phi2(j),jj)
         if (jj.eq.0) then
          jj = nphi1
          jjp = 1
@@ -2219,7 +2219,7 @@ cccccccccccccccccccccccccc
 ccc subroutine savet96 ccc
 cccccccccccccccccccccccccc
 
-      subroutine savet96(vthetacells,nthetacells,vphicells,nphicells,
+      subroutine  heidi_savet96(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridvol,mgridx,mgridy,mgridoc,parmod)
 
       use ModIoUnit, ONLY : UNITTMP_
@@ -2256,7 +2256,7 @@ cccccccccccccccccccccccccc
 ccc subroutine readt96 ccc
 cccccccccccccccccccccccccc
 
-      subroutine readt96(vthetacells,nthetacells,vphicells,nphicells,
+      subroutine  heidi_readt96(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridvol,mgridx,mgridy,mgridoc,parmod)
 
       use ModIoUnit, ONLY : UNITTMP_

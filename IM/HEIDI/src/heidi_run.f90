@@ -33,23 +33,23 @@ subroutine heidi_run
 
         call DRIFTR
         call FCHECK(6)
-        call DRIFTP
+        call heidi_driftp
         call FCHECK(7)
         call DRECOUL
         call FCHECK(8)
         call DRIFTMU
         call FCHECK(9)
-        call CHAREXCHANGE
+        call heidi_charexchange
         call FCHECK(10)
         call COULMU
         call FCHECK(11)
-        call CHAREXCHANGE
+        call heidi_charexchange
         call FCHECK(12)
         call DRIFTMU
         call FCHECK(13)
         call DRECOUL
         call FCHECK(14)
-        call DRIFTP
+        call heidi_driftp
         call FCHECK(15)
         call DRIFTR
         call FCHECK(16)

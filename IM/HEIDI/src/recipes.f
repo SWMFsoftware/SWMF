@@ -1,4 +1,4 @@
-      SUBROUTINE LINTP(XX,YY,N,X,Y,IER)
+      SUBROUTINE heidi_lintp(XX,YY,N,X,Y,IER)
 CD
       DIMENSION XX(N),YY(N)
       IER = 0
@@ -37,7 +37,7 @@ c		  If X.GT.X(N) then J=N-1
       END
 C
 C
-      SUBROUTINE LINTP2(X1A,X2A,YA,M,N,X1,X2,Y,IER)
+      SUBROUTINE heidi_lintp2(X1A,X2A,YA,M,N,X1,X2,Y,IER)
 c
 c    NN...maximum expected dimension of N or M
 c
@@ -45,27 +45,27 @@ c
       DIMENSION X1A(M),X2A(N),YA(M,N),YTMP(NN),YYTMP(NN)
       IER = 0
 c
-c    do M evaluations of row constructed using 1-dimensional evaluator LINTP
+c    do M evaluations of row constructed using 1-dimensional evaluator heidi_lintp
 c
       DO 12 J=1,M
         DO 11 K=1,N
           YTMP(K)=YA(J,K)
 11      CONTINUE
-        CALL LINTP(X2A,YTMP,N,X2,YYTMP(J),IER)
+        CALL heidi_lintp(X2A,YTMP,N,X2,YYTMP(J),IER)
         IER = 10 * IER
         IF (IER.EQ.10) RETURN
 12    CONTINUE
 c
 c    evaluate it
 c
-      CALL LINTP(X1A,YYTMP,M,X1,Y,IER)
+      CALL heidi_lintp(X1A,YYTMP,M,X1,Y,IER)
       IER = IER * 10
       RETURN
       END
 C
 C
 C
-      FUNCTION GAMMLN(XX,IER)
+      FUNCTION heidi_gammln(XX,IER)
 c
 c    double precision for recurrences
 c
@@ -82,7 +82,7 @@ c
         X=X+ONE
         SER=SER+COF(J)/X
 11    CONTINUE
-      GAMMLN=TMP+LOG(STP*SER)
+      heidi_gammln=TMP+LOG(STP*SER)
       RETURN
       END
 C
@@ -95,7 +95,7 @@ c    EPS...small number
 c
       PARAMETER (ITMAX=100,EPS=3.E-7)
       IER = 0
-      GLN=GAMMLN(A,IER)
+      GLN=heidi_gammln(A,IER)
       IF(X.LE.0.)THEN
         IF(X.LT.0.)PAUSE
         GAMSER=0.
@@ -127,7 +127,7 @@ c    ITMAX...max iterations to preform
 c    EPS...a small number
 c
       PARAMETER (ITMAX=100,EPS=3.E-7)
-      GLN=GAMMLN(A,IER)
+      GLN=heidi_gammln(A,IER)
       IER = 0
 c
 c    previous value to check for convergence
@@ -224,7 +224,7 @@ c
 C
 C
 C
-      SUBROUTINE TRIDAG(A,B,C,R,U,N,IER)
+      SUBROUTINE heidi_tridag(A,B,C,R,U,N,IER)
 CD
       PARAMETER (NMAX=100)
       DIMENSION GAM(NMAX),A(N),B(N),C(N),R(N),U(N)

@@ -1,16 +1,16 @@
 ! File name: heidi_coefficients.f90
 !
 ! Contains: drift and diffusion coefficient definition routines for HEIDI
-!	CEPARA
+!	Heidi_cepara
 !	OTHERPARA
 !	MAGCONV
 !======================================================================
-!			       CEPARA
+!			       Heidi_cepara
 ! Calculates the cross-section of charge exchange of ring current
 ! ion species with the neutral hydrogen and the charge exchange rate
 ! Also calculates the atmospheric loss rate (out the loss cone)
 !======================================================================
-subroutine CEPARA
+subroutine Heidi_cepara
 
   use ModHeidiSize
   use ModHeidiMain
@@ -68,7 +68,7 @@ subroutine CEPARA
         do L=1,LO
            do j = 1, jo
               do I=1,IO
-                 call LINTP2(LH,PA,HDNSIN,20,71,LZ(i),MU(L),FAC,IER)
+                 call heidi_lintp2(LH,PA,HDNSIN,20,71,LZ(i),MU(L),FAC,IER)
                  HDNS(i,j,l)=FAC
               enddo
            end do
@@ -192,7 +192,7 @@ TypePosition = 'rewind'
      end do		! L loop
   end do                ! S loop
 
-end subroutine CEPARA
+end subroutine Heidi_cepara
 !======================================================================
 !				OTHERPARA
 !	  Calculate parameters used in drifts and Coulomb drags
@@ -869,7 +869,7 @@ real :: ISS
 
      do j = 1, nphicells   !   Fill in DGCPM potentials
         do i = 1, nthetacells
-           call LINTP2(LZpot,MLT,FPOT12,3*NR,NT,   &
+           call heidi_lintp2(LZpot,MLT,FPOT12,3*NR,NT,   &
                 vlzcells(i),vmltcells(J),FAC,IER)
            potdgcpm(i,j)=FAC
         enddo
@@ -1204,7 +1204,7 @@ real :: ISS
         !potdgcpm filled in write_ring_current from epencalc
         !	  do j=1,nphicells   !   Fill in DGCPM potentials
         !	   do i=1,nthetacells
-        !	    CALL LINTP2(LZ,MLT,FPOT,NR,NT,
+        !	    CALL heidi_lintp2(LZ,MLT,FPOT,NR,NT,
         !     &	      vlzcells(I),vmltcells(J),FAC,IER)
         !	    potdgcpm(i,j)=potdgcpm(i,j)+FAC
         !	   enddo

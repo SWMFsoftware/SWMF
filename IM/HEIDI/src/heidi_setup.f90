@@ -904,9 +904,9 @@ subroutine THERMAL
   !/
   if (ithermfirst.eq.1) then
      if (iProc.eq.0) then
-        call initmain()
-        call getgrid(vthetacells,nthetacells,vphicells,nphicells)
-        call getxydipole(nthetacells,nphicells,vthetacells,vphicells, &
+        call heidi_initmain()
+        call heidi_getgrid(vthetacells,nthetacells,vphicells,nphicells)
+        call heidi_getxydipole(nthetacells,nphicells,vthetacells,vphicells, &
              gridx,gridy,gridoc)
         do i=1,nthetacells
            vlzcells(i)=1./sind(vthetacells(i))**2
@@ -941,8 +941,8 @@ subroutine THERMAL
               call write_prefix; write(iUnitStdOut,*) 'Reading in plasmasphere file: ',filename
            end if
 
-           call loadplasmasphere(filename)
-           call getdensity(vthetacells,nthetacells,vphicells,nphicells, &
+           call heidi_loadplasmasphere(filename)
+           call heidi_getdensity(vthetacells,nthetacells,vphicells,nphicells, &
                 dendgcpm)
            delt=0.
         else	 ! initialize plasmasphere with 48 h of low activity
@@ -959,20 +959,20 @@ subroutine THERMAL
         endif  ! itherminit
      endif     ! ithermfirst
      if (delt.gt.0.) then
-        call setpot(vthetacells,nthetacells,vphicells,nphicells,potdgcpm)
+        call heidi_setpot(vthetacells,nthetacells,vphicells,nphicells,potdgcpm)
         if (iProc==0) then
            call write_prefix; write(iUnitStdOut,*)  &
                 'Calling plasmasphere:',potdgcpm(nthetacells,nphicells/4), &
                 potdgcpm(nthetacells,3*nphicells/4)
         end if
         do n = 1, ntimestep
-           call plasmasphere(delt,par)
+           call heidi_plasmasphere(delt,par)
         end do
-        call getdensity(vthetacells,nthetacells,vphicells,nphicells,dendgcpm)
+        call heidi_getdensity(vthetacells,nthetacells,vphicells,nphicells,dendgcpm)
      endif
      do j = 1,JO
         do i = 1,IO
-           call LINTP2(vlzcells,vmltcells,dendgcpm,nthetacells,nphicells, &
+           call heidi_lintp2(vlzcells,vmltcells,dendgcpm,nthetacells,nphicells, &
                 LZ(I),MLT(J),XNE(I,J),IER)
            XNE(I,J)=1.E-6*XNE(i,J)
         end do	! I loop

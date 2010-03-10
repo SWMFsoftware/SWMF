@@ -30,10 +30,10 @@ subroutine heidi_init
   I2=(NST-1)/NKP + 1
   if (IKP.ge.3) F107=F107R(I2)
   call ARRAYS
-  call CEPARA
+  call heidi_cepara
   call OTHERPARA
   call CURRENTSETUP
-  call INITIAL(LNC,XN,J6,J18)
+  call heidi_initial(LNC,XN,J6,J18)
   call THERMAL   ! Setup only
   call GEOSB
   if (iwpi.gt.0) then

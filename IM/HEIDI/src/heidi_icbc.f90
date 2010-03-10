@@ -1,17 +1,17 @@
 ! File name: heidi_icbc.f90
 ! Contains: initial and boundary condition definition routines for HEIDI
-!	INITIAL
+!	Heidi_initial
 !	LMPLOSS
 !	GEOSB
 !	FBC
 !	FINJ
 !=======================================================================
-!				INITIAL
+!				Heidi_initial
 !   	Initial set up of distribution functions (F2), energy (ENER)
 !  	                and number of particle (N)
 !=======================================================================
 
-subroutine INITIAL(LNC,XN,J6,J18)
+subroutine Heidi_initial(LNC,XN,J6,J18)
 
   use ModHeidiSize
   use ModHeidiIO
@@ -26,7 +26,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
   integer :: j6,j18,i,j,k,l,ifn,jj,ii,kk,ig1,ig2,ig3,ig4,  &
        kg,kg1,kg2,IER,Iin,Kin
   real :: weight,elat1,elat2,etotal,efractn,pg,sg,y,yz,y10,y12,x,xlt
-  real :: fbc,Cst1,Cst2,GAMMLN,esum
+  real :: fbc,Cst1,Cst2,heidi_gammln,esum
   real :: XN(NR,NS),LNC(NR,NS),N,FAC
   integer ::I1,J1,K1,L1
   parameter (I1=5, J1=9, K1=25, L1=19)	! From restart.bcf sizes
@@ -48,7 +48,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
   data EIN/2.05,21.6,50.15,153.,350./	! EIN => E[keV]
   data IFM/2,7,13,20,28,35,42,47,50,52,54,56,58,60,62,64,66,68,70,  &
        2,11,21,31,41,51,61,70,75,79,82,83,84,85,86,87,88,89,90/
-  external :: GAMMLN
+  external :: heidi_gammln
 
   integer :: iUnit
   integer :: iUnit_tst
@@ -204,8 +204,8 @@ subroutine INITIAL(LNC,XN,J6,J18)
            do I=ig1,ig2
               do K=kg2,kg1,-1
                  if (EKEV(K).gt.1.) then
-                    call LINTP2(LI,EI,FI,6,11,LZ(I),E1(K),Y,IER)
-                    call LINTP2(LIN,EIN,NI,3,5,LZ(I),10**E1(K),YZ,IER)
+                    call heidi_lintp2(LI,EI,FI,6,11,LZ(I),E1(K),Y,IER)
+                    call heidi_lintp2(LIN,EIN,NI,3,5,LZ(I),10**E1(K),YZ,IER)
                     Y10=(10**Y)*E2(k)
                     do L=2,UPA(I)-1
                        F2(I,1,K,L,S)=Y10*(1.-MU(L)**2)**(YZ/2.)*FFACTOR(I,1,K,L)
@@ -355,7 +355,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
                  end do	        ! L loop
                  do K=2,KO
                     do L=1,LO-1
-                       call LINTP2(E0,MU0,F0,K1,L1,EKEV(K),MU(L),F2(II,JJ,K,L,S),IER)
+                       call heidi_lintp2(E0,MU0,F0,K1,L1,EKEV(K),MU(L),F2(II,JJ,K,L,S),IER)
                        if (EKEV(K).gt.E0(K1)) &
                             F2(II,JJ,K,L,S)=AMIN1(F2(II,JJ,K,L,S),F2(II,JJ,K-1,L,S))
                     end do	! L loop
@@ -379,7 +379,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
                  end do	        ! J loop
                  do J=1,JO
                     do I=2,IO
-                       call LINTP2(R0,MLT0,G0,I1,J1,LZ(I),MLT(J),F2(I,J,K,L,S),IER)
+                       call heidi_lintp2(R0,MLT0,G0,I1,J1,LZ(I),MLT(J),F2(I,J,K,L,S),IER)
                        if (LZ(I).gt.R0(I1)) &
                             F2(I,J,K,L,S)=AMIN1(F2(I,J,K,L,S),F2(I-1,J,K,L,S))
                     end do 	! I loop
@@ -421,7 +421,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
               Ninj=.4			! Density, cm-3
            end if
            Cst1=sqrt(Q*1.E4/(2.*MAS(S)*(PI*Kinj*Einj)**3))
-           Cst2=exp(GAMMLN(Kinj+1.,IER)-GAMMLN(Kinj-0.5,IER))
+           Cst2=exp(heidi_gammln(Kinj+1.,IER)-heidi_gammln(Kinj-0.5,IER))
            do L=2,UPA(IO)-1
               do K=1,KO
                  do J=1,JO
@@ -569,7 +569,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
 102 format(21X,F6.2,5X,F4.1)
 103 format(F7.3,20(1PE9.2))
 
-end subroutine INITIAL
+end subroutine Heidi_initial
 !=======================================================================
 !				 LMPLOSS
 !   		If LMP moved inward, then lose the particles 
@@ -627,10 +627,10 @@ subroutine GEOSB
   real :: TM1,TM2,NM1,NM2,TFM1,TFM2,TCM1,TCM2,NM,TFM,TCM,TS1,TS2,  &
        Flanl(NE,NPA,NS),FS1(7),FS2(7),ES(7),FS(7),NY(NS),NEL,  &
        NE1,NE2,TEF1,TEF2,TEC1,TEC2,NMFAC(NS),FSFAC(NS),TEF,TEC,  &
-       Ekap,Kappa,GAMMLN
+       Ekap,Kappa,heidi_gammln
   integer :: I,J,K,L,IER,GetBCI,BCI,I2,KES(NS),I6,I7,I9,IG7
   integer :: SKAPPA(4)
-  external :: GetBCI,GAMMLN
+  external :: GetBCI,heidi_gammln
   data ES/45.,60.,94.,141.,210.,325.,535./, Kappa/5.00/
   data SKAPPA/1,1,1,1/
   save KES,TM1,TM2,NM1,NM2,TFM1,TFM2,TCM1,TCM2,TS1,TS2,FS1,FS2,  &
@@ -831,7 +831,7 @@ subroutine GEOSB
            if (SKAPPA(S).eq.1) then  ! bi-kappa=5,  SOPA (if designated)
               Ekap=TFM*(Kappa-1.5)/Kappa
               FAC=(TFM/TCM)*(MAS(S)*1.E13/(2.*PI*Kappa*Ekap*Q))**1.5
-              FAC=FAC*exp(GAMMLN(Kappa+1.,IER)-GAMMLN(Kappa-0.5,IER))
+              FAC=FAC*exp(heidi_gammln(Kappa+1.,IER)-heidi_gammln(Kappa-0.5,IER))
               do L=1,LO
                  do K=1,KES(S)          ! MPA moments
                     Flanl(K,L,S)=NM*NMFAC(S)*FAC*(1.+EKEV(K)*(MU(L)**2+   &
@@ -842,7 +842,7 @@ subroutine GEOSB
                  FS(1)=AMAX1(.5*FS(2),Flanl(KES(S),10,S)   &
                       *FLUXFACT(S)*EKEV(KES(S)))
                  do K=KES(S)+1,KO                        ! SOPA fluxes
-                    call LINTP(ES,FS,7,EKEV(K),FAC,IER)
+                    call heidi_lintp(ES,FS,7,EKEV(K),FAC,IER)
                     Flanl(K,1:LO,S)=FAC/FLUXFACT(S)/EKEV(K)
                  end do
               endif
@@ -866,7 +866,7 @@ subroutine GEOSB
                  FS(1)=AMAX1(.5*FS(2)*FSFAC(S),Flanl(KES(S),10,S)   &
                       *FLUXFACT(S)*EKEV(KES(S)))/FSFAC(S)
                  do K=KES(S)+1,KO			! SOPA fluxes
-                    call LINTP(ES,FS,7,EKEV(K),FAC,IER)
+                    call heidi_lintp(ES,FS,7,EKEV(K),FAC,IER)
                     Flanl(K,1:LO,S)=FSFAC(S)*FAC/FLUXFACT(S)/EKEV(K)
                  end do ! K loop for SOPA
               endif
@@ -945,11 +945,11 @@ subroutine FINJ(F)
   implicit none
 
   integer :: K,IER,I
-  real    :: F(NE),Cst1,Cst2,GAMMLN,CONV
+  real    :: F(NE),Cst1,Cst2,heidi_gammln,CONV
   real    :: T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,FAC,ERF,NY(NS),TLAG
   character header*80
   save T1,T2,BZ1,BZ2,MD1,MD2,U1,U2
-  external :: GAMMLN,ERF
+  external :: heidi_gammln,ERF
 
   !-----------------------------------------------------------------------
 
@@ -1009,7 +1009,7 @@ subroutine FINJ(F)
      Ninj=Ninj*NY(S)/NY(1)
   end if
   Cst1=(MAS(S)*1.E13/(2.*PI*Kinj*Einj*Q))**1.5
-  Cst2=exp(GAMMLN(Kinj+1.,IER)-GAMMLN(Kinj-0.5,IER))
+  Cst2=exp(heidi_gammln(Kinj+1.,IER)-heidi_gammln(Kinj-0.5,IER))
   CONV=1.
   do K=1,KO
      if (IFAC.eq.1) CONV=FLUXFACT(S)*EKEV(K)
