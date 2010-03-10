@@ -2,7 +2,6 @@ module ModHeidiBField
 
   implicit none
 
-
 contains
 
   subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
@@ -12,7 +11,7 @@ contains
     use ModNumConst,   ONLY: cTiny, cPi
     use ModConst,      ONLY: cMu
     use ModHeidiIO,    ONLY: time
-    use ModHeidiMain,  ONLY: LZ!,t
+    use ModHeidiMain,  ONLY: LZ, BHeidi_III, SHeidi_III, RHeidi_III!,t
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -61,7 +60,15 @@ contains
     ! Dipole magnetic field with uniform number of points along the field line
     !/
 
-    if (TypeBFieldGrid == 'uniform') then 
+    select case(TypeBFieldGrid)
+
+    case('mhd')
+       bFieldMagnitude_III = BHeidi_III
+       RadialDistance_III  = RHeidi_III 
+       Length_III          = SHeidi_III 
+!       write(*,*) bFieldMagnitude_III(50,:,1)
+
+    case('uniform')
        do iPhi =1, nPhi
           do iR =1, nR 
              LatMax =  acos(sqrt(1./L_I(iR)))
@@ -80,14 +87,12 @@ contains
           end do
        end do
 
-    end if
+       !\
+       ! Dipole magnetic field with non-uniform number of points along the field line. 
+       ! More refined at the equator, coarser towards the poles
+       !/
 
-    !\
-    ! Dipole magnetic field with non-uniform number of points along the field line. 
-    ! More refined at the equator, coarser towards the poles
-    !/
-
-    if (TypeBFieldGrid == 'nonuniform') then
+    case('nonuniform')
        do iPhi =1, nPhi
           do iR =1, nR 
              LatMax =  acos(sqrt(1./L_I(iR)))
@@ -117,17 +122,14 @@ contains
           end do
        end do
 
-    end if
+       !\
+       ! Stretched dipole magnetic field, with azimuthal symmetry. 
+       !/
 
-    !\
-    ! Stretched dipole magnetic field, with azimuthal symmetry. 
-    !/
 
-    if (TypeBFieldGrid == 'stretched') then  
+    case('stretched')
        t = 0.0!t/3600.
-       
        w = 2*cPi/50.
-
        ! Time dependent B field
        !       alpha = alpha0 + 1.1*sin(w*t/3600.)
 
@@ -170,7 +172,7 @@ contains
                 x = sin(Lat)
 
 
-                
+
 
 
                 !\
@@ -328,7 +330,7 @@ contains
                      y**2-72*alpha**2*y**6*beta**2*x**6+66*alpha**4*beta**4*x**4*y**4)*sqrt(dble(1-x**2))/dble(r**9)/&
                      dble((y**2-y**2*x**2+beta**2-beta**2*y**2-beta**2*x**2+beta**2*y**2*x**2+x**2*alpha**2)**8)*dble((r**2*(y**2- &
                      y**2*x**2+beta**2- beta**2*y**2-beta**2*x**2+beta**2*y**2*x**2+x**2*alpha**2))**(-0.1D1/0.2D1))/dble(alpha**3)
-                
+
                 GradR = 3 * (4 * beta ** 2 * x ** 2 * y ** 2 - beta ** 4 * y ** 4 + 2* beta ** 4 * y ** 2 + &
                      2 * beta ** 4 * x ** 2 + 5 * x ** 4 * alpha ** 4 - 4 * x ** 2 * alpha ** 2 * beta ** 2 *&
                      y ** 2 + 4 * beta ** 2 * x ** 4 * y ** 2 * alpha ** 2 + 2 * beta ** 4 * x ** 2 * &
@@ -444,9 +446,9 @@ contains
                      (x ** 2 * y ** 2 - 0.1D1 * x ** 2 * p ** 2 * y ** 2 -0.1D1 * x ** 2 + x ** 2 * p ** 4 - 0.1D1 * &
                      y ** 2 + y ** 2 * p **2 + 0.1D1) ** 6
 
- 
+
                 dBdt_III(iPoint,iR,iPhi) = dBdtTemp
-!                write(*,*) dBdtTemp
+                !                write(*,*) dBdtTemp
 
                 ! Gradient B
                 GradB_VIII(1,iPoint, iR, iPhi) = DipoleFactor*GradR
@@ -472,7 +474,7 @@ contains
           end do
        end do
 
-    end if
+    end select
 
     do iPhi =1, nPhi
        do iR =1, nR 
@@ -501,13 +503,13 @@ contains
     i_I  = minloc(bField_I)
     iMinB= i_I(1)
     bMin = bField_I(iMinB)
-    
+
     j_I = maxloc(bField_I)
     iMaxB = j_I(1)
     bMax = bField_I(iMaxB)
 
     PALossCone = asin(sqrt( bField_I(nPoint/2)/bMax))
-    
+
     if (PitchAngle <= PALossCone) then
        bMirror = bMin/(sin(PALossCone))**2
     else if (PitchAngle == 0.0) then   
@@ -608,8 +610,8 @@ contains
     Inv2L = 1.0/(2.*L)
     Coeff = Inv2L*sqrt(bMirror)
     CoeffSb = sqrt(bMirror)
-    
-   
+
+
 
     DeltaS1 = abs((bMirror-bField_I(iFirst))*(dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
     HalfPathLength = HalfPathLength + Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
@@ -618,7 +620,7 @@ contains
     do iPoint = iFirst, iLast-1
        b1 = bField_I(iPoint)
        b2 = bField_I(iPoint+1)
-       
+
 
        HalfPathLength = HalfPathLength + Coeff*2.*dLength_I(iPoint)/(b1 - b2) &
             *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
@@ -950,11 +952,11 @@ contains
 
        Percent2 = 200*abs(IntegralHAnalytic - HalfPathLength)/(IntegralHAnalytic+HalfPathLength)
 
-!       write (2,*) iPoint, IntegralBAnalytic, SecondAdiabInv,IntegralHAnalytic,&
-!            HalfPathLength ,Percent1, Percent2
+       !       write (2,*) iPoint, IntegralBAnalytic, SecondAdiabInv,IntegralHAnalytic,&
+       !            HalfPathLength ,Percent1, Percent2
 
-!       write (*,*) iPoint, IntegralBAnalytic, SecondAdiabInv,IntegralHAnalytic,&
-!            HalfPathLength ,Percent1, Percent2
+       !       write (*,*) iPoint, IntegralBAnalytic, SecondAdiabInv,IntegralHAnalytic,&
+       !            HalfPathLength ,Percent1, Percent2
 
 
     end do

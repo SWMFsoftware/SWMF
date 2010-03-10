@@ -41,5 +41,6 @@ Module ModHeidiMain
   integer :: nSpecies, iSpecies
 
   real :: funt(nPa,nR,nT),funi(nPa,nR,nT)
+  real, dimension(nPoint,nR,nT) :: BHeidi_III, SHeidi_III, RHeidi_III
 end Module ModHeidiMain
 
