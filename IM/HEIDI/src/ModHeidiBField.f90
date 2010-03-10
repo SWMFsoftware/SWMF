@@ -11,7 +11,8 @@ contains
     use ModNumConst,   ONLY: cTiny, cPi
     use ModConst,      ONLY: cMu
     use ModHeidiIO,    ONLY: time
-    use ModHeidiMain,  ONLY: LZ, BHeidi_III, SHeidi_III, RHeidi_III!,t
+    use ModHeidiMain,  ONLY: LZ, BHeidi_III, SHeidi_III, RHeidi_III,&
+          bGradB1xHeidi_III,bGradB1yHeidi_III, bGradB1zHeidi_III
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -67,7 +68,7 @@ contains
        bFieldMagnitude_III = BHeidi_III
        RadialDistance_III  = RHeidi_III 
        Length_III          = SHeidi_III 
-!       write(*,*) bFieldMagnitude_III(50,:,1)
+       write(*,*)'HEIDI B field', bFieldMagnitude_III(50,:,1)
 
        call get_gradB0(nPoint,nR,nPhi,L_I,Phi_I,GradB0R_III, GradB0Theta_III, GradB0Phi_III)
 
