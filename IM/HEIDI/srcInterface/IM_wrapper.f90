@@ -908,14 +908,13 @@ subroutine IM_save_restart(TimeSimulation)
 !!! call heidi_save_restart
 
 end subroutine IM_save_restart
-
 !===========================================================================
-subroutine IM_put_from_gm_crcm
 
-! This subroutine is necessary for HEIDI to run with RBE and should be empty here.
-end subroutine IM_put_from_gm_crcm
-
-
+subroutine im_put_from_gm_crcm
+ 
+  call CON_stop('im_put_from_gm_crcm should not be called for IM/HEIDI')
+ 
+end subroutine im_put_from_gm_crcm
 !===========================================================================
 
 subroutine interpolate_linear_b (nP,Length_I,B_I,nPoint,LengthHeidi_I,BHeidi_I)
