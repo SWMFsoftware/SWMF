@@ -309,7 +309,7 @@ end subroutine IM_put_from_gm
 subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      nVarLineIn, nPointLineIn, BufferLine_VI, NameVar)
 
-  use ModHeidiMain,   ONLY: nR, nT, LZ
+  use ModHeidiMain,   ONLY: nR, nT, LZ, BHeidi_III, SHeidi_III, RHeidi_III 
   use ModHeidiIO,     ONLY: Time
   use ModHeidiSize,   ONLY: RadiusMin, RadiusMax, nPointEq
   use ModIoUnit,      ONLY: UnitTmp_
@@ -342,7 +342,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   integer, parameter             :: nStep = 2*(nStepInside + nStepInterp)+1
   real,    parameter             :: rBoundary = 2.5, DipoleStrength = 0.32 !7.19e15
   real,    parameter             :: Re = 6357.0e3
-  real, dimension(nStep,nR,nT)   :: BHeidi_III, RHeidi_III,SHeidi_III
+!  real, dimension(nStep,nR,nT)   :: BHeidi_III, RHeidi_III,SHeidi_III
 
   !Local Variables
   real,dimension(nStepInside,nR) :: bDipoleN_II, rDipoleN_II, sDipoleN_II
@@ -637,6 +637,8 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         !        end do
      end do
   end do
+
+!  write(*,*) 'MHD',BHeidi_III(50,:,1)
 
   !do iStep = 1, nStep
   !   write(3,*) 1,5,iStep,BHeidi_III(iStep,5,1),LZ(iR)
