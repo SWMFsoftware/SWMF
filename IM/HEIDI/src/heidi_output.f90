@@ -310,11 +310,11 @@ subroutine WRESULT(LNC,XN,IFIR)
      call write_prefix; write(iUnitStdOut,*)  'Printing plasmasphere'
      !	  First create Dan's output file for his plotting software
      filename = NameOutputDir//trim(NameRun)//'_dgcpm_'//NameStep//'.dat'
-     call getdensity(vthetacells,nthetacells,vphicells,nphicells,   &
+     call heidi_getdensity(vthetacells,nthetacells,vphicells,nphicells,   &
           dendgcpm)
      !	call saveit(vthetacells,nthetacells,vphicells,nphicells,   &
      !              dendgcpm,gridx,gridy,gridoc,filename)
-     call saveplasmasphere(filename)
+     call heidi_saveplasmasphere(filename)
      !	  Next create an output like we have made before
      NameSuffix='_pla.'
 
