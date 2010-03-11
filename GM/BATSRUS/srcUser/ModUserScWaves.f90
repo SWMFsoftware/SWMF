@@ -30,6 +30,7 @@ module ModUser
   real                          :: SpectralIndex, SpectralCoeff
   integer                       :: LowestFreqNum, SpectrumWidth, nWaveHalf
   real                          :: xTrace = 0.0, zTrace = 0.0
+  real                          :: xTestSpec,yTestSpec,zTestSpec
   character(len=10)             :: TypeWaveInnerBc
 contains
   !============================================================================
@@ -65,7 +66,10 @@ contains
        case("#SPECTROGRAM")
           call read_var('xTrace',xTrace)
           call read_var('zTrace',zTrace)
-
+       case("#TESTSPEC")
+          call read_var('xTestSpec',xTestSpec)
+          call read_var('yTestSpec',yTestSpec)
+          call read_var('zTestSpec',zTestSpec)
        case("#WAVEINNERBC")
           call read_var('TypeWaveInnerBc', TypeWaveInnerBc)
           call read_var('WaveInnerBcFactor',WaveInnerBcFactor)
@@ -409,7 +413,7 @@ contains
 
     ! The sqrt is for backward compatibility with older versions of the Sc
     U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
-    State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = 1.0e-30 !Initialize the wave spectrum
+    State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = 1.0e-12 !Initialize the wave spectrum
     do k=1,nK; do j=1,nJ; do i=1,nI
        x = x_BLK(i,j,k,iBLK)
        y = y_BLK(i,j,k,iBLK)
@@ -428,7 +432,7 @@ contains
        State_VGB(RhoUz_,i,j,k,iBLK) = Dens_BLK &
             *U0*((ROne-1.0)/(Rmax-1.0))*z/R
        if(IsInitWave) then ! Alfven model
-          State_VGB(Ew_,i,j,k,iBLK) = nWave*1.0e-30
+          State_VGB(Ew_,i,j,k,iBLK) = nWave*1.0e-12
        else !polytropic model
           State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK &
                *(1.0/(Gamma_BLK-1.0)-inv_gm1) 
@@ -508,7 +512,7 @@ contains
     end if
 
     if (UseWavePressure .and. (.not. UseWavePressureLtd)) &
-         State_VGB(Ew_,i,j,k,iBlock) = nWave*1.0e-30
+         State_VGB(Ew_,i,j,k,iBlock) = nWave*1.0e-12
    
    
     !\
@@ -556,6 +560,72 @@ contains
 
   end subroutine dissipate_waves
   !=====================================================================
+   subroutine write_cell_spectrum
+    
+    use ModProcMH
+    use ModMain,   ONLY: iteration_number, nBLK,unusedBLK,nBlockALL
+    use ModSize,   ONLY: nI,nJ,nK
+    use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK
+    use ModIoUnit, ONLY: io_unit_new
+    use ModVarIndexes
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_
+    use ModWaves, ONLY: AlfvenWaveMinusFirst_,AlfvenWavePlusFirst_
+
+    implicit none
+    
+    real,dimension(nWaveHalf,3)      :: Spectrum_II 
+    real                             :: x,y,z, IwPlusSi,IwMinusSi
+    integer                          :: iFreq,i,j,k,iBLK
+    integer                          :: iUnit,iError,aError
+    character(len=40)                :: FileNameTec 
+    character(len=11)                :: NameStage
+    character(len=7)                 :: NameProc
+    character(len=*),parameter       :: NameSub='write_cell_spectrum'
+    !-------------------------------------------------------------------
+    write(NameStage,'(i6.6)') iteration_number
+    write(NameProc,'(a,i4.4)') "_pe",iProc
+    FileNameTec = 'SC/IO2/Cell_Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.spec'
+    if(iProc == 0) write(*,*) 'SC: writing file ',FileNameTec
+   
+    do iBLK=1,nBLK
+       if(unusedBLK(iBLK)) CYCLE
+       do k=1,nK ; do j=1,nJ ; do i=1,nI
+          x=x_BLK(i,j,k,iBLK)
+          y=y_BLK(i,j,k,iBLK)
+          z=z_BLK(i,j,k,iBLK)
+          if((x == xTestSpec) .and. (y == yTestSpec) .and. (z == zTestSpec)) then
+             do iFreq=1,nWaveHalf
+                IwPlusSi  = No2Si_V(UnitP_)* &
+                     State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)
+                IwMinusSi = No2Si_V(UnitP_)* &
+                     State_VGB(AlfvenWaveMinusFirst_+iFreq-1,i,j,k,iBLK)
+                Spectrum_II(iFreq,1) = LogFreq_I(iFreq)
+                Spectrum_II(iFreq,2) = IwPlusSi
+                Spectrum_II(iFreq,3) = IwMinusSi
+                
+             end do
+          end if
+       end do; end do ; end do
+    end do
+    
+    !\
+    ! write data file
+    !/
+    iUnit=io_unit_new()
+    open(unit=iUnit, file=FileNameTec, form='formatted', access='sequential',&
+         status='replace',iostat=iError)
+    write(iUnit, '(a)') 'Title: BATSRUS SC Spectrogram'
+    write(iUnit, '(a)') 'Variables = "log(w)","I+[Jm-3]","I-[Jm-3]" '
+    write(iUnit,'(a,i3.3,a,i5.5,a)') 'Zone I= ',nWaveHalf,' F=point'
+    do iFreq=1,nWaveHalf
+       write(iUnit, fmt="(30(e14.6))") &
+            Spectrum_II(iFreq,:)
+    end do
+    close(iUnit)
+     
+  end subroutine write_cell_spectrum
+   !=====================================================================
    subroutine write_spectrogram
     
     use ModProcMH
@@ -772,6 +842,8 @@ contains
     select case(TypeVar)
     case('spec')
        call write_spectrogram
+    case('cellspec')
+       call write_cell_spectrum
     case('em_t','Em_t','em_r','Em_r')
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
