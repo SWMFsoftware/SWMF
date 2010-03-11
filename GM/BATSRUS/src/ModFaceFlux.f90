@@ -837,7 +837,7 @@ contains
          (UseElectronPressure .or. ElectronTemperatureRatio > 0.0)
 
     Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
-    if(UseResistiveFlux) Eta = 0.5* &
+    if(UseResistivity .and. UseResistiveFlux) Eta = 0.5* &
          ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
          + Eta_GB(iRight,jRight,kRight,iBlockFace))  !^CFG END DISSFLUX
 
