@@ -2,6 +2,7 @@
 use strict;
 
 my %WeightMachine = (
+    "pleiades"     => "1.0",
     "columbia"     => "1.0",
     "grendel"      => "0.5",
     "grid"         => "1.0",
@@ -72,10 +73,11 @@ foreach $day (@days){
     chdir $day;
 
     # The results for each machine are in different directories
-    @machines = grep {-d} glob('*');
+    @machines = grep {-d} glob('*') unless @machines;
 
     foreach $machine (@machines){
 	my $file = "$machine/$resfile";
+
 	next unless -f $file;
 
 	open RESULTS, $file or die "$ERROR: could not open $file\n";
