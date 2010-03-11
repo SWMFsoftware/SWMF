@@ -12,7 +12,8 @@ subroutine calc_sources
        neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModPhysics
   use ModNumConst
-  use ModResistivity,   ONLY: UseResistivity, Eta_GB   !^CFG IF DISSFLUX
+  use ModResistivity,   ONLY: UseResistivity, &          !^CFG IF DISSFLUX
+       calc_resistivity_source                           !^CFG IF DISSFLUX
   use ModUser,          ONLY: user_calc_sources,user_material_properties
   use ModCoordTransform
   use ModImplicit,      ONLY: UseFullImplicit            !^CFG IF IMPLICIT
@@ -21,7 +22,6 @@ subroutine calc_sources
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
   use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
   use ModCovariant,     ONLY: UseCovariant 
-  use ModCurrent,       ONLY: get_current
   use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
   use ModCoronalHeating,ONLY: UseCoronalHeating,&
                               get_block_heating,CoronalHeating_C
@@ -44,9 +44,6 @@ subroutine calc_sources
   ! Variables needed for Boris source terms also used for div(u)
   real :: FullB_DC(nDim,nI,nJ,nK),FullBx, FullBy, FullBz, Ux, Uy, Uz, RhoInv
   real :: E_D(3), DivE
-
-  ! Variables needed for Joule heating
-  real :: Current_D(3), JouleHeating, HeatExchange
 
   ! Varibles needed for anisotropic pressure
   real :: b_D(3), GradU_DD(3,3), bDotGradparU
@@ -150,57 +147,11 @@ subroutine calc_sources
 
 
   ! Joule heating: dP/dt += (gamma-1)*eta*j**2    !^CFG IF DISSFLUX BEGIN
-  if(UseResistivity .and. .not.UseMultiIon .and. &
+  ! Heat exchange between electrons and ions (mult-ion is not coded).
+  if(.not.UseMultiIon .and. UseResistivity .and. &
        (UseElectronPressure .or. UseNonConservative))then  
-
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        if(.not.true_cell(i,j,k,iBlock)) CYCLE
-        call get_current(i,j,k,iBlock,Current_D)
-        JouleHeating = (g-1) * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
-        if(UseElectronPressure) then
-           ! For single ion fluid the ion-electron collision results in a 
-           ! heat exchange term for the electron pressure 
-           ! See eq. 4.124c in Schunk and Nagy.
-           HeatExchange =0.0
-           if(.not.UseMultiSpecies)then
-              ! Explicit heat exchange
-              HeatExchange = (g-1) * Eta_GB(i,j,k,iBlock) * &
-                   3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)
-
-              ! Point-implicit correction for stability: H' = H/(1+dt*H)
-              HeatExchange = HeatExchange / &
-                   (1 + Cfl*HeatExchange*time_BLK(i,j,k,iBlock)) &
-                   *(State_VGB(P_,i,j,k,iBlock) &
-                   - State_VGB(Pe_,i,j,k,iBlock))
-           end if
-
-           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-                + JouleHeating + HeatExchange
-
-           ! Heat exchange applies to ions too
-           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) - HeatExchange
-
-           if(UseAnisoPressure) then
-              ! Heat exchange for parallel ion pressure
-              Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) - HeatExchange
-              
-              ! Relaxation term due to collisions
-              Source_VC(Ppar_,i,j,k)  = Source_VC(Ppar_,i,j,k)  &
-                   - Eta_GB(i,j,k,iBlock) &
-                   *State_VGB(Rho_,i,j,k,iBlock)/IonMassPerCharge**2 &
-                   *(State_VGB(Ppar_,i,j,k,iBlock) - State_VGB(p_,i,j,k,iBlock))
-           end if
-
-           ! Remove Joule heating and apply heat exchange to ion energy
-           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-                - inv_gm1*(JouleHeating + HeatExchange)
-        else
-           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
-        end if
-     end do; end do; end do
-
-     if(DoTestMe.and.VarTest==P_)call write_source('After eta j')
-
+     call calc_resistivity_source(iBlock)
+     if(DoTestMe.and.VarTest==P_)call write_source('After resistive src')
   end if                                       !^CFG END DISSFLUX
 
   if(UseWavePressure)then

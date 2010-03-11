@@ -5178,6 +5178,26 @@ subroutine user_read_inputs of the ModUser file.
 
 The default is UseResistivity=.false.
 </command>
+
+<command name="RESISTIVITYOPTIONS">
+	<parameter name="UseResistiveFlux" type="logical" default="T"/>
+	<parameter name="UseJouleHeating"  type="logical" default="T"/>
+	<parameter name="UseHeatExchange"  type="logical" default="T"/>
+#RESISTIVITYOPTIONS
+T			UseResistiveFlux
+T			UseJouleHeating
+F			UseHeatExchange
+
+Switch off negligible resistivity effects for sake of computational speed.
+If UseResistiveFlux is false, the resistive terms in the induction equation
+are neglected. If UseJouleHeating is false and non-conservative equations
+are used then the Joule heating is neglected in the electron/ion pressure
+equation. If UseHeatExchange is false, the heat exchange between electron
+and ion pressures is neglected. 
+
+The defaults are true for all three logicals.
+</command>
+
 <!-- ^CFG END DISSFLUX -->
 
 <!-- ^CFG IF SECONDBODY BEGIN -->

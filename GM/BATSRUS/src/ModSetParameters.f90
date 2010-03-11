@@ -49,9 +49,9 @@ subroutine MH_set_parameters(TypeAction)
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
   use ModHeatConduction, ONLY: read_heatconduction_param !^CFG IF IMPLICIT
-!!!  use ModHeatConduction, ONLY: init_heat_conduction
   use ModRadDiffusion,   ONLY: read_rad_diffusion_param  !^CFG IF IMPLICIT
-  use ModResistivity                              !^CFG IF DISSFLUX
+  use ModResistivity, ONLY: UseResistivity, &            !^CFG IF DISSFLUX
+       read_resistivity_param, init_mod_resistivity      !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals,iFluid
   use ModMultiIon, ONLY: multi_ion_set_parameters
   use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
@@ -470,29 +470,8 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('Kappa0Heat'  ,Kappa0Heat)
            call read_var('ExponentHeat',ExponentHeat)
         end if
-
-     case("#RESISTIVITY")
-        call read_var('UseResistivity',UseResistivity)
-        if(UseResistivity)then
-           call read_var('TypeResistivity', TypeResistivity, &
-                IsLowerCase=.true.)
-           select case(TypeResistivity)
-           case('spitzer')
-              call read_var('CoulombLogarithm', CoulombLogarithm)
-           case('user')
-              call read_var('Eta0Si',Eta0Si)
-           case('constant')
-              call read_var('Eta0Si',Eta0Si)
-           case('anomalous')
-              call read_var('Eta0Si',       Eta0Si)
-              call read_var('Eta0AnomSi',   Eta0AnomSi)
-              call read_var('EtaMaxAnomSi', EtaMaxAnomSi)
-              call read_var('jCritAnomSi',  jCritAnomSi)
-           case default
-              call stop_mpi(NameSub//': unknown TypeResistivity='&
-                   //TypeResistivity)
-           end select
-        end if
+     case("#RESISTIVITY", "#RESISTIVITYOPTIONS")
+        call read_resistivity_param(NameCommand)
         !                                               ^CFG END DISSFLUX
 
      case("#HALLRESISTIVITY")

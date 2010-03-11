@@ -42,7 +42,8 @@ module ModFaceFlux
        get_heat_flux, get_ion_heat_flux
   !^CFG END IMPLICIT
 
-  use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
+  use ModResistivity, ONLY: &                    !^CFG IF DISSFLUX
+       UseResistivity, UseResistiveFlux, Eta_GB  !^CFG IF DISSFLUX
 
   use ModVarIndexes
   use ModMultiFluid
@@ -836,7 +837,7 @@ contains
          (UseElectronPressure .or. ElectronTemperatureRatio > 0.0)
 
     Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
-    if(UseResistivity) Eta = 0.5* &
+    if(UseResistiveFlux) Eta = 0.5* &
          ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
          + Eta_GB(iRight,jRight,kRight,iBlockFace))  !^CFG END DISSFLUX
 
