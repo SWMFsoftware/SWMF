@@ -12,7 +12,8 @@ contains
     use ModConst,      ONLY: cMu
     use ModHeidiIO,    ONLY: time
     use ModHeidiMain,  ONLY: LZ, BHeidi_III, SHeidi_III, RHeidi_III,&
-          bGradB1xHeidi_III,bGradB1yHeidi_III, bGradB1zHeidi_III
+          bGradB1xHeidi_III, bGradB1yHeidi_III, bGradB1zHeidi_III,&
+          BrHeidi_III, BThetaHeidi_III, BPhiHeidi_III
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -52,8 +53,9 @@ contains
     real, parameter        :: Me = 7.19e15
 
     real :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w,c1
-     real, dimension(nPoint,nR,nPhi) :: GradB0R_III, GradB0Theta_III, GradB0Phi_III
+    real, dimension(3,nPoint,nR,nPhi) :: GradB0R_VI, GradB0Theta_VI, GradB0Phi_VI
     real :: beta,alpha,t
+    real :: DirBr, DirBTheta, DirBPhi, Tr, Ttheta,TPhi 
     !----------------------------------------------------------------------------------
 
     DipoleFactor= Me
@@ -68,9 +70,39 @@ contains
        bFieldMagnitude_III = BHeidi_III
        RadialDistance_III  = RHeidi_III 
        Length_III          = SHeidi_III 
-       write(*,*)'HEIDI B field', bFieldMagnitude_III(50,:,1)
+       !write(*,*)'HEIDI B field', bFieldMagnitude_III(50,:,1)
 
-       call get_gradB0(nPoint,nR,nPhi,L_I,Phi_I,GradB0R_III, GradB0Theta_III, GradB0Phi_III)
+       call get_gradB0(nPoint,nR,nPhi,L_I,Phi_I,GradB0R_VI, GradB0Theta_VI, GradB0Phi_VI)
+       ! Contribution from dipole
+       do iPhi = 1, nPhi
+          do iR = 1, nR
+             do iPoint =1, nPoint
+                                
+                DirBr     = BrHeidi_III(iPoint,iR,iPhi)/min(1.e-3,BHeidi_III(iPoint,iR,iPhi))
+                DirBtheta = BThetaHeidi_III(iPoint,iR,iPhi)/min(1.e-3,BHeidi_III(iPoint,iR,iPhi))
+                DirBPhi   = BPhiHeidi_III(iPoint,iR,iPhi)/min(1.e-3,BHeidi_III(iPoint,iR,iPhi)) 
+                
+                Tr = DirBr     * GradB0R_VI(1,iPoint,iR,iPhi) + &
+                     DirBtheta * GradB0R_VI(2,iPoint,iR,iPhi) + &
+                     DirBPhi   * GradB0R_VI(3,iPoint,iR,iPhi)  
+                
+                Ttheta = DirBr * GradB0Theta_VI(1,iPoint,iR,iPhi) + &
+                     DirBtheta * GradB0Theta_VI(2,iPoint,iR,iPhi) + &
+                     DirBPhi   * GradB0Theta_VI(3,iPoint,iR,iPhi)  
+                
+                Tphi = DirBr   * GradB0Phi_VI(1,iPoint,iR,iPhi) + &
+                     DirBtheta * GradB0Phi_VI(2,iPoint,iR,iPhi) + &
+                     DirBPhi   * GradB0Phi_VI(3,iPoint,iR,iPhi)  
+                !!! Needs another term! CHECK AGAIN to make sure is correct!!!
+                ! contains both dipolar and B1 contribution.
+                GradB_VIII(1,iPoint, iR, iPhi) = Tr     +  bGradB1xHeidi_III(iPoint,iR,iPhi)
+                GradB_VIII(2,iPoint, iR, iPhi) = Ttheta +  bGradB1yHeidi_III(iPoint,iR,iPhi)
+                GradB_VIII(3,iPoint, iR, iPhi) = Tphi   +  bGradB1zHeidi_III(iPoint,iR,iPhi)
+
+             end do
+          end do
+       end do
+
 
 
     case('uniform')
@@ -642,28 +674,24 @@ contains
   end subroutine half_bounce_path_length
 
   !================================================================================== 
-  subroutine get_gradB0(nPoint,nR,nPhi,L_I,Phi_I,GradB0R_III, GradB0Theta_III, GradB0Phi_III)
+  subroutine get_gradB0(nPoint,nR,nPhi,L_I,Phi_I,GradB0R_VI, GradB0Theta_VI, GradB0Phi_VI)
 
     implicit none
 
-    integer, intent(in)    :: nPoint                              ! Number of points along the field line
-    integer, intent(in)    :: nR                                  ! Number of points in the readial direction
-    integer, intent(in)    :: nPhi                                ! Number of points in the azimuthal direction
+    integer, intent(in)    :: nPoint        ! Number of points along the field line
+    integer, intent(in)    :: nR            ! Number of points in the readial direction
+    integer, intent(in)    :: nPhi          ! Number of points in the azimuthal direction
     real,    intent(in)    :: L_I(nR) 
     real,    intent(in)    :: Phi_I(nPhi) 
-    real, dimension(nPoint,nR,nPhi), intent(out) :: GradB0R_III, GradB0Theta_III, GradB0Phi_III
+    real, dimension(3,nPoint,nR,nPhi), intent(out) :: GradB0R_VI, GradB0Theta_VI, GradB0Phi_VI
 
     !Local Variables
     real    :: LatMax, LatMin,dLat, Lat
-    real    :: y, x, r
+    real    :: x, r
     integer :: iPhi, iR, iPoint
     
-
     !----------------------------------------------------------------------------------
-    
-    
     do iPhi =1, nPhi
-       y = cos(Phi_I(iPhi))
        do iR =1, nR 
           LatMax =  acos(sqrt(1./L_I(iR)))
           LatMin = -LatMax
@@ -672,13 +700,21 @@ contains
           do iPoint = 1, nPoint
              x = sin(Lat)
              r = L_I(iR) * (cos(Lat))**2
-                          
-             GradB0R_III(iPoint,iR,iPhi) = dble((4/r**6 * x**2 + 1/r**6 * (1 - x**2))**(-0.1D1/0.2D1) * &
-                  (-24/r**7 * x**2 - 6/r**7 * (1 - x**2)))/0.2D1
-             GradB0Theta_III(iPoint,iR,iPhi) = -0.3D1/dble(r**7) * dble((4/r**6 * x**2 + 1 / r **6 * &
-                  (1 - x**2))**(-0.1D1/0.2D1)) * dble(x) * sqrt(dble(1 - x**2))
-             GradB0Phi_III(iPoint,iR,iPhi) = 0.0
+             !gradB0R = gradient of (B0 on r direction)
              
+             gradB0R_VI(1,iPoint,iR,iPhi) = (6. * x)/r**4
+             gradB0R_VI(2,iPoint,iR,iPhi) = (2. * sqrt(1.-x**2))/r**4
+             gradB0R_VI(3,iPoint,iR,iPhi) = 0.0
+             
+             gradB0Theta_VI(1,iPoint,iR,iPhi) = (3. * sqrt(1.-x**2))/r**4
+             gradB0Theta_VI(2,iPoint,iR,iPhi) = -x/r**4
+             gradB0Theta_VI(3,iPoint,iR,iPhi) = 0.0
+             
+             gradB0Phi_VI(1,iPoint,iR,iPhi) = 0.0
+             gradB0Phi_VI(2,iPoint,iR,iPhi) = 0.0
+             gradB0Phi_VI(3,iPoint,iR,iPhi) = 0.0
+
+             Lat = Lat + dLat
           end do
        end do
     end do
