@@ -12,7 +12,8 @@ module ModUser
        IMPLEMENTED7 => user_set_plot_var,               &
        IMPLEMENTED8 => user_set_outerbcs,               &
        IMPLEMENTED9 => user_face_bcs,                   &
-       IMPLEMENTED10=> user_set_boundary_cells
+       IMPLEMENTED10=> user_set_boundary_cells,         &
+       IMPLEMENTED11=> user_set_resistivity
 
   include 'user_module.h' !list of public methods
 
@@ -23,7 +24,7 @@ module ModUser
   logical ::  UseWaveDissipation = .false.
   real :: DissipationScaleFactor  ! unit = m*T^0.5
 
-  real :: TeFraction
+  real :: TeFraction, TiFraction
   real :: EtaPerpSi
 
   character(len=lStringLine) :: TypeCoronalHeating
@@ -121,16 +122,19 @@ contains
        ! Pe = ne*Te (dimensionless) and n=rho/ionmass
        ! so that Pe = ne/n *n*Te = (ne/n)*(rho/ionmass)*Te
        ! TeFraction is defined such that Te = Pe/rho * TeFraction
+       TiFraction = MassIon_I(1)
        TeFraction = MassIon_I(1)/AverageIonCharge
     else
        ! p = n*T + ne*Te (dimensionless) and n=rho/ionmass
        ! so that p=rho/massion *T*(1+ne/n Te/T)
        ! TeFraction is defined such that Te = p/rho * TeFraction
-       TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
+       TiFraction = MassIon_I(1) &
             /(1 + AverageIonCharge*ElectronTemperatureRatio)
+       TeFraction = TiFraction*ElectronTemperatureRatio
     end if
 
     ! perpendicular resistivity, used for temperature relaxation
+    ! Note EtaPerpSi is divided by cMu.
     EtaPerpSi = sqrt(cElectronMass)*CoulombLog &
          *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
 
@@ -359,7 +363,6 @@ contains
 
     integer :: i, j, k, iBlock, iWave
     real :: CoronalHeating, RadiativeCooling
-    real :: HeatExchange, HeatExchangeSi
     real :: DissipationLength, WaveHeating, FullB_D(3), FullBSi
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
@@ -391,22 +394,6 @@ contains
        end if
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + CoronalHeating
 
-       if(UseElectronPressure)then
-          ! Explicit heat exchange (AverageIonCharge is assumed to be 1)
-          call get_heat_exchange( &
-               State_VGB(:,i,j,k,iBlock), HeatExchangeSi)
-          HeatExchange = HeatExchangeSi/Si2No_V(UnitT_)
-
-          ! Point-implicit correction for stability: H' = H/(1+dt*H)
-          HeatExchange = &
-               HeatExchange/(1 + Cfl*HeatExchange*time_BLK(i,j,k,iBlock)) &
-               *(State_VGB(p_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
-
-          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + HeatExchange
-          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               - inv_gm1*HeatExchange
-       end if
-
        CYCLE
 
        call get_radiative_cooling( &
@@ -420,31 +407,6 @@ contains
     end do; end do; end do
 
   end subroutine user_calc_sources
-
-  !============================================================================
-
-  subroutine get_heat_exchange(State_V, HeatExchangeSi)
-
-    use ModConst,      ONLY: cMu, cElectronCharge, cProtonMass
-    use ModMultiFluid, ONLY: MassIon_I
-    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitRho_, gm1
-    use ModVarIndexes, ONLY: nVar, Rho_, Pe_
-
-    real, intent(in) :: State_V(nVar)
-    real, intent(out):: HeatExchangeSi
-
-    real :: Te, TeSi, RhoSi
-    !--------------------------------------------------------------------------
-
-    Te = TeFraction*State_V(Pe_)/State_V(Rho_)
-    TeSi = Te*No2Si_V(UnitTemperature_)
-    RhoSi = State_V(Rho_)*No2Si_V(UnitRho_)
-
-    HeatExchangeSi = gm1*EtaPerpSi*3*cMu &
-         *(cElectronCharge/(cProtonMass*MassIon_I(1)))**2 &
-         *RhoSi/TeSi**1.5
-
-  end subroutine get_heat_exchange
 
   !============================================================================
 
@@ -577,9 +539,7 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use ModMultiFluid, ONLY: MassIon_I
-    use ModPhysics,    ONLY: AverageIonCharge, ElectronTemperatureRatio, &
-         No2Si_V, UnitTemperature_
+    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_
     use ModSize,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: Rho_, p_, Pe_
 
@@ -595,7 +555,6 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k
-    real :: TiFraction, HeatExchangeSi
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -616,22 +575,9 @@ contains
        end do; end do; end do
     case('ti')
        NameIdlUnit = 'K'
-       TiFraction = MassIon_I(1) &
-            /(1 + AverageIonCharge*ElectronTemperatureRatio)
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-          if(UseElectronPressure)then
-             PlotVar_G(i,j,k) = MassIon_I(1)*State_VGB(p_,i,j,k,iBlock) &
-                  /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
-          else
-             PlotVar_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
-                  /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
-          end if
-       end do; end do; end do
-    case('teti')
-       NameIdlUnit = '1/s'
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-          call get_heat_exchange(State_VGB(:,i,j,k,iBlock),HeatExchangeSi)
-          PlotVar_G(i,j,k) = HeatExchangeSi
+          PlotVar_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
+               /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
        end do; end do; end do
     case default
        IsFound = .false.
@@ -831,5 +777,32 @@ contains
     call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
 
   end subroutine user_set_boundary_cells
+
+  !============================================================================
+
+  subroutine user_set_resistivity(iBlock, Eta_G)
+
+    use ModAdvance,    ONLY: State_VGB
+    use ModMain,       ONLY: nI, nJ, nK
+    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitX_, UnitT_
+    use ModVarIndexes, ONLY: Rho_, Pe_
+
+    integer, intent(in) :: iBlock
+    real,    intent(out):: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+
+    integer :: i, j, k
+    real :: Te, TeSi
+
+    character (len=*), parameter :: NameSub = 'user_set_resistivity'
+    !--------------------------------------------------------------------------
+
+    do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       Te = TeFraction*State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+       TeSi = Te*No2Si_V(UnitTemperature_)
+
+       Eta_G(i,j,k) = EtaPerpSi/TeSi**1.5 *Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
+    end do; end do; end do
+
+  end subroutine user_set_resistivity
 
 end module ModUser
