@@ -2597,6 +2597,31 @@ contains
 
     !Finish checks for implicit                     !^CFG END IMPLICIT
 
+    !Set min_block_level and max_block_level for #AMRRESOLUTION in session 1
+    if(i_line_command("#AMRRESOLUTION", iSessionIn = 1) > 0)then
+       local_root_dx = (XyzMax_D(x_)-XyzMin_D(x_))/real(proc_dims(1)*nI)
+       if    (max_cell_dx < -1.E-6) then
+          min_block_level = -1
+       elseif(max_cell_dx <  1.E-6) then
+          min_block_level = 99
+       else
+          do j=1,99
+             min_block_level = j-1
+             if ( local_root_dx/(2**j) < max_cell_dx) EXIT
+          end do
+       end if
+       if    (min_cell_dx < -1.E-6) then
+          max_block_level = -1
+       elseif(min_cell_dx <  1.E-6) then
+          max_block_level = 99
+       else
+          do j=1,99
+             max_block_level = j-1
+             if ( local_root_dx/(2**j) < min_cell_dx) EXIT
+          end do
+       end if
+    end if
+
   end subroutine correct_parameters
 
   !===========================================================================
