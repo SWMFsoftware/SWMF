@@ -1342,15 +1342,15 @@ contains
 
        if(DoExtractBGradB1)then
 
+          n = n + 3
+
           ! Interpolate b.grad B1 into the last 3 elements
-          PlotVar_V(nVar+1:nVar+3) = &
+          PlotVar_V(n-2:n) = &
                trilinear(bGradB1_DGB(:,:,:,:,iBlock), &
                3, 0, nI+1, 0, nJ+1, 0, nK+1, x_D, DoExtrapolate=.false.)
 
-          if(DoExtractUnitSi) PlotVar_V(nVar+1:nVar+3) = &
-               PlotVar_V(nVar+1:nVar+3) * No2Si_V(UnitB_)/No2Si_V(UnitX_)
-             
-          n = n + 3
+          if(DoExtractUnitSi) PlotVar_V(n-2:n) = &
+               PlotVar_V(n-2:n) * No2Si_V(UnitB_)/No2Si_V(UnitX_)
 
        end if
 
