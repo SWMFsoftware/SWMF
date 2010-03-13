@@ -137,7 +137,7 @@ contains
     use ModWaves,       ONLY: FreqMinSI,DeltaLogFrequency
     implicit none
     
-    integer                    :: iFreq, nWaveHalf
+    integer                    :: iFreq
     real                       :: LogFreqMinRadian
     character(len=*),parameter :: NameSub='set_freq_grid'
     !-----------------------------------------------------------------
@@ -466,12 +466,16 @@ contains
     use ModGeometry,ONLY: R_BLK
     use ModEnergy,  ONLY: calc_energy_cell
     use ModExpansionFactors, ONLY: gammaSS
-    use ModWaves,   ONLY: UseWavePressure,UseWavePressureLtd
+    use ModWaves,   ONLY: UseWavePressure, UseWavePressureLtd, &
+                          AlfvenWavePlusFirst_,  AlfvenWavePlusLast_, &
+                          AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_ 
+                    
     implicit none
 
     integer,intent(in)           :: iStage,iBlock
     integer                      :: i,j,k
     real                         :: DensCell,PresCell,GammaCell,Beta,WavePres
+    real,dimension(-1:nI+2,-1:nJ+2,-1:nK+2) :: MaxMinusWaveEner_G, MaxPlusWaveEner_G
     character(len=*),parameter   :: NameSub='user_update_states'
     !--------------------------------------------
     !\
@@ -480,10 +484,31 @@ contains
     if(any(State_VGB(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK,iBlock)<0.0)) then
        write(*,*) NameSub,' : negative wave energy before MHD'
     end if
+    
+    ! NORMALIZE WAVE ENERGY
+
+    do k=-1,nK+2 ; do j=-1,nJ+2 ; do i=-1,nI+2
+       MaxMinusWaveEner_G(i,j,k) = &
+            maxval(State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_,i,j,k,iBlock))
+       MaxPlusWaveEner_G(i,j,k) = &
+            maxval(State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_,i,j,k,iBlock))
+    end do; end do; end do
+
     call update_states_MHD(iStage,iBlock)
+    
     if(any(State_VGB(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK,iBlock)<0.0)) then
        write(*,*) NameSub, ': negative wave energy after MHD'
     end if
+
+    do k=-1,nK+2 ; do j=-1,nJ+2 ; do i=-1,nI+2
+       State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_,i,j,k,iBlock) = & 
+            MaxMinusWaveEner_G(i,j,k)* &
+            State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_,i,j,k,iBlock)
+       State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_,i,j,k,iBlock) = & 
+            MaxPlusWaveEner_G(i,j,k)* &
+            State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_,i,j,k,iBlock)
+    
+    end do; end do; end do
 
     !\
     ! Dissipate wave energy after advection
@@ -578,15 +603,12 @@ contains
     real                             :: x,y,z, IwPlusSi,IwMinusSi
     integer                          :: iFreq,i,j,k,iBLK
     integer                          :: iUnit,iError,aError
+    logical                          :: DoSaveCellSpec = .false.
     character(len=40)                :: FileNameTec 
     character(len=11)                :: NameStage
     character(len=7)                 :: NameProc
     character(len=*),parameter       :: NameSub='write_cell_spectrum'
     !-------------------------------------------------------------------
-    write(NameStage,'(i6.6)') iteration_number
-    write(NameProc,'(a,i4.4)') "_pe",iProc
-    FileNameTec = 'SC/IO2/Cell_Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.spec'
-    if(iProc == 0) write(*,*) 'SC: writing file ',FileNameTec
    
     do iBLK=1,nBLK
        if(unusedBLK(iBLK)) CYCLE
@@ -595,6 +617,7 @@ contains
           y=y_BLK(i,j,k,iBLK)
           z=z_BLK(i,j,k,iBLK)
           if((x == xTestSpec) .and. (y == yTestSpec) .and. (z == zTestSpec)) then
+             DoSaveCellSpec = .true.
              do iFreq=1,nWaveHalf
                 IwPlusSi  = No2Si_V(UnitP_)* &
                      State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)
@@ -609,20 +632,27 @@ contains
        end do; end do ; end do
     end do
     
-    !\
-    ! write data file
-    !/
-    iUnit=io_unit_new()
-    open(unit=iUnit, file=FileNameTec, form='formatted', access='sequential',&
-         status='replace',iostat=iError)
-    write(iUnit, '(a)') 'Title: BATSRUS SC Spectrogram'
-    write(iUnit, '(a)') 'Variables = "log(w)","I+[Jm-3]","I-[Jm-3]" '
-    write(iUnit,'(a,i3.3,a,i5.5,a)') 'Zone I= ',nWaveHalf,' F=point'
-    do iFreq=1,nWaveHalf
-       write(iUnit, fmt="(30(e14.6))") &
-            Spectrum_II(iFreq,:)
-    end do
-    close(iUnit)
+    if (DoSaveCellSpec) then
+       !\
+       ! write data file
+       !/
+       write(NameStage,'(i6.6)') iteration_number
+       write(NameProc,'(a,i4.4)') "_pe",iProc
+       FileNameTec = 'SC/IO2/Cell_Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.spec'
+       if(iProc == 0) write(*,*) 'SC: writing file ',FileNameTec
+      
+       iUnit=io_unit_new()
+       open(unit=iUnit, file=FileNameTec, form='formatted', access='sequential',&
+            status='replace',iostat=iError)
+       write(iUnit, '(a)') 'Title: BATSRUS SC Spectrogram'
+       write(iUnit, '(a)') 'Variables = "log(w)","I+[Jm-3]","I-[Jm-3]" '
+       write(iUnit,'(a,i3.3,a,i5.5,a)') 'Zone I= ',nWaveHalf,' F=point'
+       do iFreq=1,nWaveHalf
+          write(iUnit, fmt="(30(e14.6))") &
+               Spectrum_II(iFreq,:)
+       end do
+       close(iUnit)
+    end if
      
   end subroutine write_cell_spectrum
    !=====================================================================
