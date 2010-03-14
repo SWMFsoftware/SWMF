@@ -14,6 +14,8 @@ fixaspect=1
 velrandom=0
 ; Array subtracted from w during animation
 wsubtract=0
+; Keep original size of fits image
+noresize=0
 
 ; File descriptors
 logfilename=''
