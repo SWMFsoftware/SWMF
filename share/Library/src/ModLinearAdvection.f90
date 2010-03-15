@@ -217,43 +217,54 @@ contains
   !============================================================================!
   subroutine test_linear_advection
     ! Added Nov. 2009 by R. Oran
-
+    
     use ModIoUnit, ONLY: UNITTMP_
     implicit none
-
-    integer,parameter            :: nCell= 80,nStep=5
-    real,dimension(nCell),parameter ::CFL = 0.9999
-    integer,parameter            :: nGCLeft=1, nGCRight=1 !ghost cells    
+    
+    integer,parameter                          :: nGCLeft=1, nGCRight=1     
+    integer,parameter                          :: nCell= 80,nStep=100
+    integer                                    :: iCell, iStep
+    real                                       :: FrefPlus, FrefMinus
+    real,dimension(nCell),parameter            ::CFL = 0.9
     real,dimension(1-nGCLeft : nCell+nGCRight) ::  Fplus_I = 0.0,&
-                                                   Fminus_I=0.0 ! solution vectors
-    integer                      :: iCell, iStep
-    real :: FrefPlus, FrefMinus
+         Fminus_I=0.0 ! solution vectors
+    logical                                    :: IsNegativeEnergy
+    character(len=4)                            :: NameStage
+    character(len=40)                          :: FileNameTec
     ! ------------------------------------------------------
-    ! Initial condition - create a ractangular pulse
-    do iCell = 5,15
-       Fplus_I(iCell) = 1.0           ! pulse moving right
-       Fminus_I(nCell-20+iCell) = 1.0 ! pulse moving left
-    end do
-    open(UNITTMP_,file='linear_advection.out',status='replace')
-    
+    ! Initial condition - create a uniform spectrum
+  
+    Fplus_I  = 1.0 ! moving right
+    Fminus_I = 1.0 ! moving left
     ! Start looping over time steps
-    
     do iStep =1,nStep
-       call advance_lin_advection_plus(CFL,nCell,nGCLeft,nGCRight,Fplus_I)
-       call advance_lin_advection_minus(CFL,nCell,nGCLeft,nGCRight,Fminus_I)
+       call advance_lin_advection_plus(CFL,nCell,nGCLeft,nGCRight,Fplus_I,&
+            2.0,.true.,IsNegativeEnergy)
+       call advance_lin_advection_minus(CFL,nCell,nGCLeft,nGCRight,Fminus_I,& 
+            2.0,.true.,IsNegativeEnergy)
+    
+       ! exact sln. for square pulse
+       !do iCell = 1, nCell
+       !   FrefPlus = 0.0
+       !   FrefMinus = 0.0
+       !   if(iCell>=5+nStep .and. iCell<=15+nStep) FrefPlus = 1.0
+       !   if(iCell>= nCell-15-nStep .and. iCell<=nCell-5-nStep) FrefMinus = 1.0
+       !   !end do
+    
+       ! write sln to file
+       write(NameStage,'(i4.4)') iStep
+       FileNameTec = 'LinAdvOut/Linear_advection_n_'//trim(NameStage)//'.dat'
+       open(UNITTMP_,file=FileNameTec,form='formatted', access='sequential',&
+            status='replace')
+       write(UNITTMP_, '(a)') 'Title: Test Linear Advection'
+       write(UNITTMP_, '(a)') 'Variables = "Cell","I+","I-"'
+       write(UNITTMP_, '(a,i3.3,a,i5.5,a)') 'Zone I= ',nCell,' F=point'
+       do iCell =1,nCell
+          write(UNITTMP_,'(i3.3,e14.6,e14.6)') iCell,Fplus_I(iCell), Fminus_I(iCell)
+       end do
+       close(UNITTMP_)
     end do
-
-    do iCell = 1, nCell
-       FrefPlus = 0.0
-       FrefMinus = 0.0
-       if(iCell>=5+nStep .and. iCell<=15+nStep) FrefPlus = 1.0
-       if(iCell>= nCell-15-nStep .and. iCell<=nCell-5-nStep) FrefMinus = 1.0
-       write(UNITTMP_,*) Fplus_I(iCell), FrefPlus, Fplus_I(iCell)-FrefPlus, &
-            Fminus_I(iCell),FrefMinus, Fminus_I(iCell)-FrefMinus
-    end do
-    close(UNITTMP_)
-
-  end subroutine test_linear_advection
+end subroutine test_linear_advection
   !====================SUPERBEE LIMITER =======================================!
   real function df_lim(F_I)
     real,dimension(0:2),intent(in)::F_I
