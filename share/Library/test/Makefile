@@ -171,9 +171,9 @@ test_linear_advection:
 	mkdir LinAdvOut
 	-@(./test_linear_advection.exe)
 	@echo
-	@echo DiffNum.pl -r=1e12 linear_advection.out linear_advection.ref
+	@echo DiffNum.pl -r=1e12 LinAdvOut\Linear_advection_n_0100.dat linear_advection.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-12 \
-	linear_advection.out linear_advection.ref) > linear_advection.diff
+	 LinAdvOut\Linear_advection_n_00100.dat linear_advection.ref) > linear_advection.diff
 	@echo
 	@echo test_linear_advection done
 	@echo -----------------------------------------------------------------
