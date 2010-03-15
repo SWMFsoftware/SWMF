@@ -97,14 +97,13 @@ contains
     integer            :: nStep, nDim, nParam, nVar, n1, n2, n3
     real               :: Time, Coord
     logical            :: IsCartesian
-    real,         allocatable :: Param_I(:), Coord_ID(:,:), Var_IV(:,:)
+    real, allocatable  :: Param_I(:), Coord_ID(:,:), Var_IV(:,:)
 
     integer :: n_D(0:MaxDim)
     integer :: i, j, k, i_D(3), iDim, iVar, n, nDimOut, iError
 
     character(len=*), parameter:: NameSub = 'save_plot_file'
     !---------------------------------------------------------------------
-
     ! either write a new file (remove old one if any)
     ! or append to an existing file
     TypePosition = 'rewind'
@@ -262,6 +261,8 @@ contains
        write(UnitTmp_, "(3i8)")           n_D(1:nDim)
        write(UnitTmp_, "(100es13.5)")     Param_I
        write(UnitTmp_, "(a)")             trim(NameVar)
+
+       where(abs(Var_IV) < 1e-99) Var_IV = 0.0
 
        ! write out coordinates and variables line by line
        n = 0
