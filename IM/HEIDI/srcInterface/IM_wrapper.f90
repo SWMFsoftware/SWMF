@@ -343,7 +343,9 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   integer, parameter             :: Bx_=10, By_=11, Bz_=12, gx_=14, gy_=15, gz_=16 
   integer, parameter             :: nStepInside = 10, nStepInterp = 40
   integer, parameter             :: nStep = 2*(nStepInside + nStepInterp)+1
-  real,    parameter             :: rBoundary = 2.5, DipoleStrength = 0.32 !7.19e15
+  real,    parameter             :: rBoundary = 2.5
+!  real,    parameter             ::DipoleStrength = 0.32 !7.19e15
+  real,    parameter             :: DipoleStrength = 7.19e15
   real,    parameter             :: Re = 6357.0e3
 
   !Local Variables
@@ -484,8 +486,13 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   do iPoint = 1, nPointLine
      if  (StateLine_VI(1,iPoint) == iLineFirst)  then
         ! B field in Gauss
-        B1_I(j) = 10000.0*sqrt(StateLine_VI(BX_,iPoint)**2 + &
+!        B1_I(j) = 10000.0*sqrt(StateLine_VI(BX_,iPoint)**2 + &
+!             StateLine_VI(BY_,iPoint)**2 + StateLine_VI(BZ_,iPoint)**2)
+
+        ! in nT
+        B1_I(j) = sqrt(StateLine_VI(BX_,iPoint)**2 + &
              StateLine_VI(BY_,iPoint)**2 + StateLine_VI(BZ_,iPoint)**2)
+
         Length1_I (j) = StateLine_VI(S_,iPoint)
         RadialDist1_I(j) = sqrt(StateLine_VI(X_,iPoint)**2 + &
              StateLine_VI(Y_,iPoint)**2 + StateLine_VI(Z_,iPoint)**2 )
@@ -693,11 +700,11 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            r = LZ(iR) * (cos(Lat))**2
            !gradB0R = gradient of (B0 on r direction)
            
-           gradB0R1= (6. * x)/r**4
-           gradB0R2 = (2. * sqrt(1.-x**2))/r**4
+           gradB0R1= DipoleStrength*(6. * x)/r**4
+           gradB0R2 = DipoleStrength*(2. * sqrt(1.-x**2))/r**4
            
-           gradB0Theta1 = (3. * sqrt(1.-x**2))/r**4
-           gradB0Theta2 = -x/r**4
+           gradB0Theta1 = DipoleStrength*(3. * sqrt(1.-x**2))/r**4
+           gradB0Theta2 = DipoleStrength*( -x/r**4)
                                 
            Tr =  BrDipole_II(iStep,iR)/bDipole_II(iStep,iR) * gradB0R1 +&
                 BThetaDipole_II(iStep,iR)/bDipole_II(iStep,iR) * gradB0R2
@@ -737,11 +744,11 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            r = LZ(iR) * (cos(Lat))**2
            !gradB0R = gradient of (B0 on r direction)
            
-           gradB0R1= (6. * x)/r**4
-           gradB0R2 = (2. * sqrt(1.-x**2))/r**4
+           gradB0R1= DipoleStrength* (6. * x)/r**4
+           gradB0R2 = DipoleStrength* (2. * sqrt(1.-x**2))/r**4
            
-           gradB0Theta1 = (3. * sqrt(1.-x**2))/r**4
-           gradB0Theta2 = -x/r**4
+           gradB0Theta1 = DipoleStrength* (3. * sqrt(1.-x**2))/r**4
+           gradB0Theta2 = DipoleStrength*(- x/r**4)
                                 
            Tr =  BrDipoleN_II(iStep,iR)/bDipoleN_II(iStep,iR) * gradB0R1 +&
                 BThetaDipoleN_II(iStep,iR)/bDipoleN_II(iStep,iR) * gradB0R2
@@ -773,11 +780,11 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            r = LZ(iR) * (cos(Lat))**2
            !gradB0R = gradient of (B0 on r direction)
            
-           gradB0R1= (6. * x)/r**4
-           gradB0R2 = (2. * sqrt(1.-x**2))/r**4
+           gradB0R1=  DipoleStrength*(6. * x)/r**4
+           gradB0R2 =  DipoleStrength*(2. * sqrt(1.-x**2))/r**4
            
-           gradB0Theta1 = (3. * sqrt(1.-x**2))/r**4
-           gradB0Theta2 = -x/r**4
+           gradB0Theta1 =  DipoleStrength*(3. * sqrt(1.-x**2))/r**4
+           gradB0Theta2 =  DipoleStrength*(-x/r**4)
                                 
            Tr =  BrDipoleS_II(iStep,iR)/bDipoleS_II(iStep,iR) * gradB0R1 +&
                 BThetaDipoleS_II(iStep,iR)/bDipoleS_II(iStep,iR) * gradB0R2

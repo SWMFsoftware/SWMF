@@ -62,7 +62,7 @@ contains
     DipoleFactor= Me
 
     if (t < 2.*dt) then
-       write(*,*) 'simulatin time=',t       
+       write(*,*) 'simulation time=',t       
 
        call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
             RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.0)
@@ -71,6 +71,8 @@ contains
        select case(TypeBFieldGrid)
 
        case('mhd')
+
+          write(*,*) 'GOT HERE!!!!!!!!!!'
           bFieldMagnitude_III = BHeidi_III
           RadialDistance_III  = RHeidi_III 
           Length_III          = SHeidi_III 
@@ -359,6 +361,7 @@ contains
     real    :: LatMax, LatMin,dLat, Lat
     real    :: x, r
     integer :: iR, iPoint
+    real, parameter :: DipoleFactor = 7.19e15
 
     !----------------------------------------------------------------------------------
     gradB0Phi_VI = 0.0
@@ -373,12 +376,12 @@ contains
           r = L_I(iR) * (cos(Lat))**2
           !gradB0R = gradient of (B0 on r direction)
 
-          gradB0R_VI(1,iPoint,iR) = (6. * x)/r**4
-          gradB0R_VI(2,iPoint,iR) = (2. * sqrt(1.-x**2))/r**4
+          gradB0R_VI(1,iPoint,iR) = DipoleFactor* (6. * x)/r**4
+          gradB0R_VI(2,iPoint,iR) = DipoleFactor* (2. * sqrt(1.-x**2))/r**4
           gradB0R_VI(3,iPoint,iR) = 0.0
 
-          gradB0Theta_VI(1,iPoint,iR) = (3. * sqrt(1.-x**2))/r**4
-          gradB0Theta_VI(2,iPoint,iR) = -x/r**4
+          gradB0Theta_VI(1,iPoint,iR) = DipoleFactor* (3. * sqrt(1.-x**2))/r**4
+          gradB0Theta_VI(2,iPoint,iR) = DipoleFactor* (-x/r**4)
           gradB0Theta_VI(3,iPoint,iR) = 0.0
 
           Lat = Lat + dLat
