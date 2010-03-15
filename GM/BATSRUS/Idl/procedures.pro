@@ -1852,7 +1852,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
                       XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NOERASE
            'polar'    :polar_contour,f>f_min,yy*angleunit,xx,$
                                      FOLLOW=label, FILL=fill, LEVELS=levels,$
-                                     XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
+                                     XSTYLE=noaxis+1,YSTYLE=noaxis+1,/dither, $
                                      /NOERASE
            'plot'     :plot,xx,f,YRANGE=[f_min,f_max],$
                             XSTYLE=noaxis+18,YSTYLE=noaxis+18,$
