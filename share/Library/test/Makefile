@@ -167,6 +167,8 @@ test_linear_advection:
 	@make test_linear_advection_exe
 	@echo
 	@echo './test_linear_advection.exe'
+	rm -rf LinAdvOut
+	mkdir LinAdvOut
 	-@(./test_linear_advection.exe)
 	@echo
 	@echo DiffNum.pl -r=1e12 linear_advection.out linear_advection.ref
