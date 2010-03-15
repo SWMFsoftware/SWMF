@@ -164,20 +164,23 @@ test_linear_advection:
 	@echo -----------------------------------------------------------------
 	@echo test_linear_advection starting
 	@echo
+	rm -rf LinAdvOut		
+	mkdir LinAdvOut
 	@make test_linear_advection_exe
 	@echo
 	@echo './test_linear_advection.exe'
-	rm -rf LinAdvOut
-	mkdir LinAdvOut
 	-@(./test_linear_advection.exe)
+	@echo 
+	@echo 'Output files saves in directory LinAdvOut.'
 	@echo
-	@echo DiffNum.pl -r=1e12 LinAdvOut\Linear_advection_n_0100.dat linear_advection.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-12 \
-	 LinAdvOut\Linear_advection_n_00100.dat linear_advection.ref) > linear_advection.diff
+	@echo DiffNum.pl LinAdvOut/Linear_advection_n_0100.dat linear_advection.ref
+	-@(${SCRIPTDIR}/DiffNum.pl \
+	LinAdvOut/Linear_advection_n_0100.dat linear_advection.ref) > \
+	linear_advection.diff
 	@echo
 	@echo test_linear_advection done
 	@echo -----------------------------------------------------------------
-
+	ls -la linear_advection.diff
 #######################################################################
 OBJ_SORT = \
 	test_sort.o \
