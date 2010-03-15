@@ -647,7 +647,7 @@ contains
     real, parameter :: HeatExponent = 1.1488, HeatCoef = 89.4
     !--------------------------------------------------------------------------
 
-    if(DoFirst .and. (DtUpdateFlux <= 0))then
+    if(DoFirst .and. (DtUpdateFlux <= 0.0))then
 
        ! uniform cell area on sphere
        dAreaCgs = rBody**2*dSinTheta*dPhi*No2Si_V(UnitX_)**2*1e4
