@@ -78,9 +78,9 @@ subroutine advance_impl
   use ModVarIndexes
   use ModMultifluid, ONLY: select_fluid, iFluid, nFluid, iP
   use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI, &
-       time_BlK, &
-       tmp1_BLK, UseUpdateCheck, iTypeAdvance_B, iTypeAdvance_BP, &
-       SkippedBlock_, ExplBlock_, ImplBlock_
+       time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
+       SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
+  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
   use ModPhysics, ONLY : No2Si_V, UnitT_
   use ModImplicit
   use ModPointImplicit, ONLY: UsePointImplicit
@@ -93,7 +93,7 @@ subroutine advance_impl
 
   implicit none
 
-  real, external :: minval_BLK
+  real, external :: minval_BLK, minval_loc_BLK
 
   integer :: iVar, iw, implBLK, iBLK, KrylovMatVec, info, NewtonIter
   integer :: iError
@@ -106,7 +106,7 @@ subroutine advance_impl
 
   logical :: DoTest, DoTestMe, DoTestKrylov, DoTestKrylovMe
 
-  logical :: UseUpdateCheckOrig, UsePointImplicitOrig
+  logical :: UseUpdateCheckOrig, UsePointImplicitOrig, DoFixAxisOrig
 
   real    :: pRhoRelativeMin
 
@@ -114,7 +114,7 @@ subroutine advance_impl
 
   external impl_matvec, impl_matvec_free, impl_preconditioner
 
-  integer :: i, j, k, n
+  integer :: i, j, k, n, iBlock, iLoc_I(5)
   !----------------------------------------------------------------------------
 
   NameSub(1:2) = NameThisComp
@@ -149,7 +149,7 @@ subroutine advance_impl
 
   TimeSimulationOrig = Time_Simulation
   UseUpdateCheckOrig = UseUpdateCheck
-  UseUpdateCheck = .false.
+  UseUpdateCheck     = .false.
 
   ! Advance explicitly treated blocks if any
   if(UsePartImplicit .and. nBlockExplALL > 0)then
@@ -209,6 +209,10 @@ subroutine advance_impl
   ! Switch off point implicit scheme while advancing the implicit blocks
   UsePointImplicitOrig = UsePointImplicit
   UsePointImplicit = .false.
+
+  ! Switch off merging the cells around the poles during the implicit solve
+  DoFixAxisOrig      = DoFixAxis
+  DoFixAxis          = .false.
 
   if(UseSemiImplicit)then
      ! time step is set by the explicit scheme
@@ -500,6 +504,8 @@ subroutine advance_impl
   ! Put back implicit result into the explicit code
   call implicit2explicit(Impl_VGB(:,1:nI,1:nJ,1:nK,:))
 
+  if(DoFixAxisOrig)call fix_axis_cells
+
   ! Make explicit part available again for partially explicit scheme
   if(UsePartImplicit)then
      ! Restore unusedBLK
@@ -538,7 +544,7 @@ subroutine advance_impl
   if(UseUpdateCheckOrig .and. time_accurate .and. UseDtFixed)then
 
      ! Calculate the largest relative drop in density or pressure
-     do iBLK=1,nBlock
+     do iBLK = 1, nBlock
         if(UnusedBlk(iBLK)) CYCLE
            ! Check p and rho
            tmp1_BLK(1:nI,1:nJ,1:nK,iBLK)=&
@@ -547,8 +553,21 @@ subroutine advance_impl
                 State_VGB(Rho_,1:nI,1:nJ,1:nK,iBLK) / &
                 StateOld_VCB(Rho_,1:nI,1:nJ,1:nK,iBLK) )
      end do
-     pRhoRelativeMin = minval_BLK(nProc,tmp1_BLK)
 
+     if(index(Test_String, 'updatecheck') > 0)then
+        pRhoRelativeMin = minval_loc_BLK(nProc, tmp1_BLK, iLoc_I)
+        if(iLoc_I(5) == iProc)then
+           i = iLoc_I(1); j = iLoc_I(2); k = iLoc_I(3); iBlock = iLoc_I(4)
+           write(*,*) 'pRhoRelativeMin is at i,j,k,iBlock,iProc = ',iLoc_I
+           write(*,*) 'x,y,z =', x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), &
+                z_BLK(i,j,k,iBlock)
+           write(*,*) 'RhoOld,pOld=', StateOld_VCB((/Rho_,P_/),i,j,k,iBlock)
+           write(*,*) 'RhoNew,pNew=', State_VGB((/Rho_,P_/),i,j,k,iBlock)
+           write(*,*) 'pRhoRelativeMin=', pRhoRelativeMin
+        end if
+     else
+        pRhoRelativeMin = minval_BLK(nProc,tmp1_BLK)
+     end if
      if(pRhoRelativeMin < RejectStepLevel .or. info/=0)then
         ! Redo step if pressure decreased below RejectStepLevel
         ! or the Krylov iteration failed.
@@ -581,7 +600,9 @@ subroutine advance_impl
   if(.not.UseSemiImplicit) &
        Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
+  ! Restore logicals
   UseUpdateCheck   = UseUpdateCheckOrig
   UsePointImplicit = UsePointImplicitOrig
-
+  DoFixAxis        = DoFixAxisOrig
+  
 end subroutine advance_impl
