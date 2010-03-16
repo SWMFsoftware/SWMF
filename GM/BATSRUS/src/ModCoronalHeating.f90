@@ -641,13 +641,13 @@ contains
     real :: x, y, z, Theta, Phi, SinTheta, CosTheta, SinPhi, CosPhi
     real :: FullB_D(3), B0_D(3), BrSi, BrCgs, SumUnsignedBrCgs
     real :: BzCgs(1:nI,1:nJ), SumUnsignedBzCgs, UnsignedFluxCgsPe
-    real, save :: TotalCoronalHeating, TimeUpdateLast
-    logical, save :: DoFirst = .true.
+    real    :: TotalCoronalHeating = -1.0, TimeUpdateLast = -1.0
+    logical :: DoFirst = .true.
 
     real, parameter :: HeatExponent = 1.1488, HeatCoef = 89.4
     !--------------------------------------------------------------------------
 
-    if(DoFirst .and. (DtUpdateFlux <= 0.0))then
+    if(DoFirst .and. DtUpdateFlux <= 0.0)then
 
        ! uniform cell area on sphere
        dAreaCgs = rBody**2*dSinTheta*dPhi*No2Si_V(UnitX_)**2*1e4
@@ -684,8 +684,8 @@ contains
 
        DoFirst = .false.
 
-    elseif((DtUpdateFlux > 0).and.&
-         (Time_Simulation - TimeUpdateLast .gt. DtUpdateFlux))then
+    elseif( DtUpdateFlux > 0.0 .and. &
+         Time_Simulation - TimeUpdateLast > DtUpdateFlux ) then
        UnsignedFluxCgs = 0.0
        do iBlock = 1, nBlock 
           if(unusedBLK(iBlock)) cycle
