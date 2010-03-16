@@ -10,6 +10,7 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   use ModNumConst
   use ModMain, ONLY : n_step,time_simulation, DoMultiFluidIMCoupling
   use ModIoUnit, ONLY: UNITTMP_
+  use ModProcMH, ONLY: iProc
   implicit none
   CHARACTER (LEN=80) :: filename
   character(len=*), parameter :: NameSub='GM_put_from_im'
@@ -72,6 +73,7 @@ contains
     integer :: j2
     real :: lonShift
     !-------------------------------------------------------------------------
+    if(iProc /= 0)RETURN
 
     !write values to plot file
     write(filename,'(a,i6.6,a)')"IMp_n=",n_step,".dat"
@@ -93,11 +95,11 @@ contains
           j=j2; if(j2==jSizeIn+1) j=1
           lonShift=0.; if(j2==jSizeIn+1) lonShift=360.
           if(DoMultiFluidIMCoupling)then
-             write(UNITTMP_,'(2i4,3G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i), &
+             write(UNITTMP_,'(2i4,8G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i), &
                   RCM_p(i,j),RCM_dens(i,j), &
                   RCM_Hpp(i,j),RCM_Hpdens(i,j),RCM_Opp(i,j), RCM_Opdens(i,j)
           else
-             write(UNITTMP_,'(2i4,3G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i), &
+             write(UNITTMP_,'(2i4,4G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i), &
                   RCM_p(i,j),RCM_dens(i,j)
           endif
        end do
@@ -108,11 +110,10 @@ contains
 
   !============================================================================
   subroutine write_IMvars_idl
+    if(iProc /= 0)RETURN
 
     !write values to plot file
-
     write(filename,'(a,i6.6,a)')"IMp_n=",n_step,".out"
-
     OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown', &
          iostat =iError)
     if (iError /= 0) call CON_stop("Can not open file "//filename)
