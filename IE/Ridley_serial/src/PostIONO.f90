@@ -13,11 +13,12 @@ program PostIONO
   integer :: nYear,nMonth,nDay,nHour,nMinute,nSecond,nMillisecond
   integer :: i,j,n,n_step
   
-  real :: Theta,Phi, X,Y,Z, DegToRad, time_simulation
+  real :: Theta,Phi, X,Y,Z, DegToRad, TimeSimulation, ttilt,ptilt
 
-  character (len=200) :: PlotTitle, PlotVars, ZoneTitle
-  character (len=200) :: text,text2
+  character (len=1000) :: PlotTitle, PlotVars, ZoneTitle
+  character (len=1000) :: text,text2
   character (len=22)  :: textNandT
+  character (len=80) :: stmp
 
   character (LEN=4) :: TimeH4
   character (LEN=2) :: TimeM2,TimeS2
@@ -67,7 +68,7 @@ program PostIONO
 
   ! Read variable names
   PlotVars='VARIABLES = "X", "Y", "Z", '
-  pvLength=25
+  pvLength=27
   do i=1,nvars
      read(50,'(a6,a)') text2,text
      call FixChar(n)
@@ -106,18 +107,26 @@ program PostIONO
 
   ! Read simulation time
   read(50, '(i13,a)')     n_step, text
-  read(50, '(1pe13.5,a)') time_simulation, text
+  read(50, '(1pe13.5,a)') TimeSimulation, text
+
+  ! Skip 2 lines
+  read(50,'(a)') text
+  read(50,'(a)') text
+
+  ! Read tilts
+  read(50, '(f7.2,a)') ttilt, text
+  read(50, '(f7.2,a)') ptilt, text
 
   ! Close IDL file
   close(50)
 
   ! Create zone name
   write(TimeH4,'(i4.4)') &
-     int(                            Time_Simulation/3600.)
+     int(                           TimeSimulation/3600.)
   write(TimeM2,'(i2.2)') &
-     int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.)
+     int((TimeSimulation-(3600.*int(TimeSimulation/3600.)))/60.)
   write(TimeS2,'(i2.2)') &
-     int( Time_Simulation-(  60.*int(Time_Simulation/  60.)))
+     int( TimeSimulation-(  60.*int(TimeSimulation/  60.)))
   write(textNandT,'(a,i7.7,a)') &
        "N=",n_step," T="//TimeH4//":"//TimeM2//":"//TimeS2
 
@@ -131,6 +140,19 @@ program PostIONO
   write(51,'(a)') PlotTitle(1:ptLength)
   write(51,'(a)') PlotVars(1:pvLength)
   write(51,'(a)') ZoneTitle(1:len_trim(ZoneTitle))
+
+  ! Write AUXDATA
+  write(stmp,'(i4.4,a,5(i2.2,a),i3.3)') &
+       nYear,'-',nMonth,'-',nDay,' ',nHour,':',nMinute,':',nSecond,'.',nMillisecond
+  write(51,'(a,a,a)') 'AUXDATA TIMEEVENT="',trim(adjustl(stmp)),'"'
+  write(stmp,'(a)') " T="//TimeH4//":"//TimeM2//":"//TimeS2
+  write(51,'(a,a,a)') 'AUXDATA TIMESIM="',trim(adjustl(stmp)),'"'
+  write(stmp,'(a)') " T="//TimeH4//":"//TimeM2
+  write(51,'(a,a,a)') 'AUXDATA TIMESIMSHORT="',trim(adjustl(stmp)),'"'
+  write(stmp,'(f7.2)') ttilt
+  write(51,'(a,a,a)') 'AUXDATA THETATILTDEG="',trim(adjustl(stmp)),'"'
+  write(stmp,'(f7.2)') ptilt
+  write(51,'(a,a,a)') 'AUXDATA PHITILTDEG="',trim(adjustl(stmp)),'"'
 
   ! Open and read until 'BEGIN NORTHERN HEMISPHERE'
   text='inputfile.DAT'
