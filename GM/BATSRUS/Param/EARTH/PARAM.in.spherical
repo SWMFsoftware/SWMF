@@ -1,22 +1,19 @@
 #ECHO
-T
+T			DoEcho
 
 #DESCRIPTION
-May 4, 1998 Run
+Spherical test run based on May 4 1998 storm
 
 #TIMEACCURATE
 F			DoTimeAccurate
 
 #STARTTIME
-1998		year
-05		month
-04		day
-02		hour
-00		minute
-00		second
-0.0 		FracSecond
-
-#BEGIN_COMP GM ---------------------------------------------------------------
+1998			iYear
+05			iMonth
+04			iDay
+02			iHour
+00			iMinute
+00			iSecond
 
 #RAYTRACE
 T			UseAccurateIntegral
@@ -24,54 +21,39 @@ T			UseAccurateTrace
 0.1			DtExchangeRay
 1			DnRaytrace
 
-#COVARIANTGEOMETRY
-spherical_lnr
-
 #GRID
-2			nRootBlock_D(x_)
-2			nRootBlock_D(y_)
-2			nRootBlock_D(z_)
--224.			x1
- 32.			x2
--64.			y1
- 64.			y2
--64.			z1
- 64.			z2
+2			nRootBlockX
+2			nRootBlockY
+2			nRootBlockZ
+-224.			xMin
+ 32.			xMax
+-64.			yMin
+ 64.			yMax
+-64.			zMin
+ 64.			zMax
 
-#LIMITGENCOORD1
-0.916291                rMin = (2.5)
-5.55490		        rMax = (sqrt(224^2+128^2+128^2))
+#GRIDGEOMETRY
+spherical_lnr		TypeGeometry
 
-GRIDLEVEL
-1
-all
+#FIXAXIS
+F                       UsePoleDiffusion
+T                       DoFixAxis
+1000.0                  rFixAxis
+1.0                     r2FixAxis
+
+#LIMITRADIUS
+2.5                	rMin
+290.0		        rMax > (sqrt(224^2+128^2+128^2))
 
 #GRIDLEVEL
 2
 initial
-
-!refine the magnetosphere
-GRIDLEVEL
-2                       Resolution
-box                     NameArea
--224.0                  xMinBox
- -64.0                  yMinBox
- -64.0                  zMinBox
-  32.0                  xMaxBox
-  64.0                  yMaxBox
-  64.0                  zMaxBox
 
 !refine inner magnetosphere
 #GRIDLEVEL
 3                       Resolution
 sphere0                 NameArea
 25.0                    rSphere
-
-!refine inner magnetosphere
-#GRIDLEVEL
-3                       Resolution
-sphere0                 NameArea
-12.0                    rSphere
 
 !refine the magnetosphere
 #GRIDLEVEL
@@ -85,35 +67,23 @@ box                     NameArea
    4.0                  zMaxBox
 
 #MAGNETOSPHERE
-T                       body1
-2.5                     Rbody
-3.0                     Rcurrents
-28.0                   Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK
-25000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK
-
-NONCONSERVATIVE
-T                       UseNonConservative
-
-CONSERVATIVECRITERIA
-1			nConservCrit
-parabola		TypeConservCrit_I
- 5.0			xParabolaConserv
-15.0			yParabolaConserv
-
-#TVDRESCHANGE
-T
+T                       UseBody
+2.5                     rBody
+3.0                     rCurrents
+28.0                   	BodyNDim (/cc) number density inside body
+25000.0                 BodyTDim (K) temperature inside body
 
 #TIMESTEPPING
 1			nStage
 0.80			CflExlp
 
 #OUTERBOUNDARY
-outflow			TypeBC_I(east_)
-vary			TypeBC_I(west_)
-float			TypeBC_I(south_)
-float			TypeBC_I(north_)
-float			TypeBC_I(bot_)
-float			TypeBC_I(top_)
+outflow			TypeBcEast
+vary			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
 
 #SCHEME
 1			nOrder
@@ -127,7 +97,7 @@ VAR			StringLogfile
 dt rho mx my mz p bx by bz pmin pmax dst phi1 theta1 phi2 theta2 status
 
 #SAVEPLOT
-3                       nPlotFiles
+6                       nPlotFiles
 x=0 RAY idl             StringPlot
 20                      DnSavePlot
 -1.			DtSavePlot
@@ -140,25 +110,31 @@ z=0 RAY idl             StringPlot
 20                      DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
+x=0 MHD idl             StringPlot
+20                      DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+y=0 MHD idl             StringPlot
+20                      DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+z=0 MHD idl             StringPlot
+20                      DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
 
-#UPSTREAM_INPUT_FILE
-T                       UseUpstreamInputFile
-imf19980504.dat         UpstreamFileName
-0.0                     Satellite_Y_Pos
-0.0                     Satellite_Z_Pos
-
-#END_COMP GM -----------------------------------------------------------------
+#SOLARWINDFILE
+T                       UseSolarWindFile
+imf19980504.dat         NameSolarWindFile
 
 #STOP
-20                      MaxIter
--1.			TimeMax
+20                      MaxIteration
+-1.			tSimulationMax
 
 #RUN	######################################################################
 
-#BEGIN_COMP GM ---------------------------------------------------------------
-
 #SCHEME
-2			nORDER
+2			nOrder
 Rusanov			TypeFlux
 mc3                     TypeLimiter
 1.2
@@ -168,14 +144,12 @@ mc3                     TypeLimiter
 0.60			CflExlp
 
 #BORIS
-T
-0.02
-
-#END_COMP GM -----------------------------------------------------------------
+T			UseBorisCorrection
+0.02			BorisClightFactor
 
 #STOP
-50                      MaxIter
--1.			TimeMax
+50                      MaxIteration
+-1.			tSimulationMax
 
 #RUN	######################################################################
 
@@ -185,19 +159,8 @@ T			DoTimeAccurate
 #SAVERESTART                                                     
 F                       DoSaveRestart
 
-#BEGIN_COMP GM ---------------------------------------------------------------
-
-NONCONSERVATIVE
-T                       UseNonConservative
-
-CONSERVATIVECRITERIA
-1			nConservCrit
-parabola		TypeConservCrit_I
- 5.0			xParabolaConserv
-15.0			yParabolaConserv
-
 #TIMESTEPPING
-2			nSTAGE
+2			nStage
 0.8			CflExpl
 
 #FIXEDTIMESTEP
@@ -210,10 +173,9 @@ T			UsePartImplicit
 F			UseFullImplicit
 100.0			ImplCFL
 
-#END_COMP GM -----------------------------------------------------------------
+#TEST
+updatecheck krylov
 
 #STOP
-60 			MaxIter
--1.0 			TimeMax
-
-#END
+60 			MaxIteration
+-1.0 			tSimulationMax
