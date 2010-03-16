@@ -115,13 +115,14 @@ subroutine ray_trace_accurate
 
         call xyz_to_latlonstatus(ray(:,:,i,j,k,iBlock))
 
-        if(ray(3,1,i,j,k,iBlock)==-2.) write(*,*) &
-             'Loop ray found at iProc,iBlock,i,j,k,ray=',&
-             iProc,iBlock,i,j,k,ray(:,:,i,j,k,iBlock)
+        ! Comment out these statements as they spew thousands of lines with IM coupling
+        !if(ray(3,1,i,j,k,iBlock)==-2.) write(*,*) &
+        !     'Loop ray found at iProc,iBlock,i,j,k,ray=',&
+        !     iProc,iBlock,i,j,k,ray(:,:,i,j,k,iBlock)
 
-        if(ray(3,1,i,j,k,iBlock)==-3.) write(*,*) &
-             'Strange ray found at iProc,iBlock,i,j,k,ray=',&
-             iProc,iBlock,i,j,k,ray(:,:,i,j,k,iBlock)
+        !if(ray(3,1,i,j,k,iBlock)==-3.) write(*,*) &
+        !     'Strange ray found at iProc,iBlock,i,j,k,ray=',&
+        !     iProc,iBlock,i,j,k,ray(:,:,i,j,k,iBlock)
      end do; end do; end do
   end do
 
