@@ -258,7 +258,7 @@ contains
     allocate(ThetaLdem_I(0:nThetaLdem+1), PhiLdem_I(0:nPhiLdem+1))
     ThetaLdem_I(1:nThetaLdem) = Coord_DII(Theta_,:,1)*cDegToRad
     ThetaLdem_I(0) = -cHalfPi
-    ThetaLdem_I(nPhiLdem+1) = cHalfPi
+    ThetaLdem_I(nThetaLdem+1) = cHalfPi
     PhiLdem_I(1:nPhiLdem) = Coord_DII(Phi_,1,:)*cDegToRad
     PhiLdem_I(0) = PhiLdem_I(nPhiLdem) - cTwoPi
     PhiLdem_I(nPhiLdem+1) = PhiLdem_I(1) + cTwoPi
