@@ -242,9 +242,9 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
   !
   SAVE
   !
-  call IM_write_prefix
-  write(iUnitOut,'(A,I8,A,I8,A,I2)') &
-       '  PE=',iProc+1,' of ',nProc,' starting.  icontrol=',icontrol
+!  call IM_write_prefix
+!  write(iUnitOut,'(A,I8,A,I8,A,I2)') &
+!       '  PE=',iProc+1,' of ',nProc,' starting.  icontrol=',icontrol
   time0=MPI_Wtime()
   !
   !
@@ -470,8 +470,8 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
         time1=MPI_Wtime()
         if(iProc == 0) then
            call IM_write_prefix
-           write(iUnitOut,*)' Time ',i_time,'-',i_time+idt, &
-                ': CPUT =', time1-time0
+           write(iUnitOut,*)' Time ',i_time,'-',i_time+idt,' completed.' !, &
+           !     '  CPUT =', time1-time0
         end if
         !
      END DO

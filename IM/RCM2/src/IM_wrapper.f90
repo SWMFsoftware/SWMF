@@ -901,8 +901,8 @@ subroutine IM_run(TimeSimulation,TimeSimulationLimit)
 
   iTimeStart = nint(TimeSimulation)
   iTimeEnd   = iTimeStart + iDtNow ! we only want to make a single step !!!
-  call IM_write_prefix; write(*,*)'iTimeStart, iTimeEnd, iDtNow', &
-       iTimeStart, iTimeEnd, iDtNow
+!   call IM_write_prefix; write(*,*)'iTimeStart, iTimeEnd, iDtNow', &
+!        iTimeStart, iTimeEnd, iDtNow
 
   if(IsUninitialized)then
      if(.not.DoneGmCoupling)call CON_stop(NameSub//&
