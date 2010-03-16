@@ -27,6 +27,12 @@ module ModUser
   real :: TeFraction, TiFraction
   real :: EtaPerpSi
 
+  ! Global LDEM data
+  logical :: UseLdem = .false.
+  character(len=100):: NameLdemFile
+  real, allocatable :: ThetaLdem_I(:), PhiLdem_I(:), VarLdem_VII(:,:,:)
+  integer :: nThetaLdem, nPhiLdem
+
   character(len=lStringLine) :: TypeCoronalHeating
 
 contains
@@ -69,6 +75,10 @@ contains
              call stop_mpi(NameSub//': unknown TypeCoronalHeating = ' &
                   //TypeCoronalHeating)
           end select
+
+       case('#LDEM')
+          call read_var('UseLdem', UseLdem)
+          call read_var('NameLdemFile', NameLdemFile)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -138,6 +148,8 @@ contains
     EtaPerpSi = sqrt(cElectronMass)*CoulombLog &
          *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
 
+    if(UseLdem) call read_ldem
+
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session finished'
@@ -145,6 +157,157 @@ contains
     end if
 
   end subroutine user_init_session
+
+  !============================================================================
+
+  subroutine read_ldem
+
+    use ModIO,          ONLY: NamePlotDir
+    use ModMultiFluid,  ONLY: MassIon_I
+    use ModNumConst,    ONLY: cDegToRad, cHalfPi, cTwoPi
+    use ModPhysics,     ONLY: AverageIonCharge, Si2No_V, UnitN_, &
+         UnitTemperature_
+    use ModPlotFile,    ONLY: read_plot_file, save_plot_file
+    use ModProcMH,      ONLY: iProc
+    use ModTriangulate, ONLY: calc_triangulation, find_triangle
+
+    ! Original 3D EUVI LDEM data
+    integer :: nCell_D(3), nVar
+    real, allocatable :: Coord_DIII(:,:,:,:), Var_VIII(:,:,:,:)
+
+    ! 2D boundary map
+    integer :: j, k, iVar
+    real, allocatable :: Coord_DII(:,:,:), Var_VII(:,:,:)
+
+    ! Triangulation of boundary map to patch the LDEM map for used radius
+    integer :: iCell, nCell, iNode1, iNode2, iNode3
+    integer, save :: nTriangle
+    real :: Weight1, Weight2, Weight3
+    integer, allocatable :: iNodeTriangle_II(:,:)
+    real, allocatable :: Coord_DI(:,:), Var_VI(:,:)
+
+    integer, parameter :: Theta_ = 2, Phi_ = 3
+    !--------------------------------------------------------------------------
+
+    nCell_D = 1
+    call read_plot_file(NameLdemFile, nVarOut = nVar, nOut_D = nCell_D)
+
+    allocate(Coord_DIII(3,nCell_D(1),nCell_D(2),nCell_D(3)), &
+         Var_VIII(nVar,nCell_D(1),nCell_D(2),nCell_D(3)))
+
+    call read_plot_file(NameLdemFile, &
+         CoordOut_DIII = Coord_DIII, VarOut_VIII = Var_VIII)
+
+    allocate(Coord_DII(Theta_:Phi_,nCell_D(2),nCell_D(3)), &
+         Var_VII(2,nCell_D(2),nCell_D(3)))
+
+    ! For now: the smallest radius is assumed to be the solar boundary
+    Coord_DII(:,:,:) = Coord_DIII(Theta_:Phi_,1,:,:)
+
+    ! Keep only the two lowest moments
+    Var_VII(:,:,:) = Var_VIII(1:2,1,:,:)
+
+    ! 3D data is no longer needed
+    deallocate(Coord_DIII, Var_VIII)
+
+    ! How many elements have only positive data ?
+    nCell = count(Var_VII(1,:,:)>0.0 .and. Var_VII(2,:,:)>0.0)
+
+    ! Create arrays for Delaunay triangulation
+    allocate(Coord_DI(Theta_:Phi_,nCell), Var_VI(2,nCell), &
+         iNodeTriangle_II(3,2*nCell))
+
+    iCell = 0
+    do k = 1, nCell_D(3); do j = 1, nCell_D(2)
+       if(any(Var_VII(1:2,j,k) <= 0.0)) CYCLE
+
+       iCell = iCell + 1
+       Coord_DI(:,iCell) = Coord_DII(:,j,k)
+       Var_VI(:,iCell) = Var_VII(:,j,k)
+    end do; end do
+
+    ! Delaunay triangulation
+    call calc_triangulation(nCell, Coord_DI, iNodeTriangle_II, nTriangle)
+
+    ! Overwrite the rejected (negative) data points
+    do k = 1, nCell_D(3); do j = 1, nCell_D(2)
+       if(all(Var_VII(1:2,j,k) > 0.0)) CYCLE
+
+       call find_triangle(nCell, nTriangle, Coord_DII(:,j,k), &
+            Coord_DI(:,:), iNodeTriangle_II(:,1:nTriangle), &
+            iNode1, iNode2, iNode3, Weight1, Weight2, Weight3)
+
+       Var_VII(:,j,k) = &
+            Weight1*Var_VI(:,iNode1) + &
+            Weight2*Var_VI(:,iNode2) + &
+            Weight3*Var_VI(:,iNode3)
+    end do; end do
+
+    ! Show the patched LDEM moments
+    if(iProc == 0) call save_plot_file(trim(NamePlotDir)//'LDEM_patched.outs',&
+         nDimIn = 2, CoordIn_DII = Coord_DII, VarIn_VII = Var_VII, &
+         NameVarIn = 'lat lon Ne Tm')
+
+    ! We are done with the Delaunay triangulation
+    deallocate(Coord_DI, Var_VI, iNodeTriangle_II)
+
+    ! Store coordinate arrays for bilinear interpolation
+    ! extend the domain size and make dimensionless
+    nThetaLdem = nCell_D(2)
+    nPhiLdem = nCell_D(3)
+    allocate(ThetaLdem_I(0:nThetaLdem+1), PhiLdem_I(0:nPhiLdem+1))
+    ThetaLdem_I(1:nThetaLdem) = Coord_DII(Theta_,:,1)*cDegToRad
+    ThetaLdem_I(0) = -cHalfPi
+    ThetaLdem_I(nPhiLdem+1) = cHalfPi
+    PhiLdem_I(1:nPhiLdem) = Coord_DII(Phi_,1,:)*cDegToRad
+    PhiLdem_I(0) = PhiLdem_I(nPhiLdem) - cTwoPi
+    PhiLdem_I(nPhiLdem+1) = PhiLdem_I(1) + cTwoPi
+
+    allocate(VarLdem_VII(2,0:nThetaLdem+1,0:nPhiLdem+1))
+
+    VarLdem_VII(:,1:nThetaLdem,1:nPhiLdem) = Var_VII(:,:,:)
+    ! periodicity
+    VarLdem_VII(:,1:nThetaLdem,0) = Var_VII(:,:,nCell_D(3))
+    VarLdem_VII(:,1:nThetaLdem,nPhiLdem+1) = Var_VII(:,:,1)
+    ! average to poles
+    do iVar = 1, 2
+       VarLdem_VII(iVar,0,:) = sum(Var_VII(iVar,1,:))/nCell_D(3)
+       VarLdem_VII(iVar,nThetaLdem+1,:) = &
+            sum(Var_VII(iVar,nThetaLdem,:))/nCell_D(3)
+    end do
+
+    ! Make the moments (electron density and temperature) dimensionless
+    VarLdem_VII(1,:,:) = VarLdem_VII(1,:,:)*1e6/AverageIonCharge &
+         *Si2No_V(UnitN_)*MassIon_I(1)
+    VarLdem_VII(2,:,:) = VarLdem_VII(2,:,:)*1e6*Si2No_V(UnitTemperature_)
+
+    deallocate(Coord_DII, Var_VII)
+
+  end subroutine read_ldem
+
+  !============================================================================
+
+  subroutine get_ldem_moments(x_D, RhoBase, Tbase)
+
+    Use ModInterpolate, ONLY: bilinear
+    use ModNumConst,    ONLY: cHalfPi, cTwoPi
+
+    real, intent(in)  :: x_D(3)
+    real, intent(out) :: RhoBase, Tbase
+
+    real :: r, Theta, Phi, VarLdem_V(2)
+    !--------------------------------------------------------------------------
+    r = sqrt(sum(x_D**2))
+    Theta = cHalfPi - acos(x_D(3)/r)
+    Phi = modulo(atan2(x_D(2),x_D(1)), cTwoPi)
+
+    VarLdem_V = bilinear(VarLdem_VII, 2, 0, nThetaLdem+1, 0, nPhiLdem+1, &
+         (/Theta,Phi/), x_I=ThetaLdem_I, y_I=PhiLdem_I, DoExtrapolate=.false.)
+
+    RhoBase = VarLdem_V(1)
+    Tbase = VarLdem_V(2)
+
+  end subroutine get_ldem_moments
 
   !============================================================================
 
@@ -164,6 +327,11 @@ contains
                    ! are scaled as functions of UFinal/UMin ratio.
     real :: Runit_D(3)
     !--------------------------------------------------------------------------
+    if(UseLdem)then
+       call get_ldem_moments(x_D, RhoBase, Tbase)
+
+       RETURN
+    end if
 
     Runit_D = x_D/sqrt(sum(x_D**2))
 
@@ -190,7 +358,8 @@ contains
 
     use ModExpansionFactors
     use ModMultiFluid, ONLY: MassIon_I
-    use ModPhysics,    ONLY: g, inv_gm1, AverageIonCharge
+    use ModPhysics,    ONLY: g, inv_gm1, AverageIonCharge, No2Si_V, &
+         UnitTemperature_
 
     real, intent(in) :: x, y, z, VAlfvenSi !VAlfven should be in m/s
     real, intent(out):: WaveEnergyDensSi
@@ -201,7 +370,7 @@ contains
     real, parameter :: RhoV =  AreaRatio * RhoVAt1AU
     real, parameter :: VAlfvenMin = 1.0e5   !100 km/s
 
-    real :: HeatFluxSi
+    real :: HeatFluxSi, RhoBase, Tbase
     !--------------------------------------------------------------------------
 
     !\
@@ -223,9 +392,11 @@ contains
 
     HeatFluxSi = 0.0
 
+    call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
+
     WaveEnergyDensSi = (RhoV*(0.5*Uf**2 + cSunGravitySi - g*inv_gm1*&
          cBoltzmann/(cProtonMass*MassIon_I(1))*(1.0+AverageIonCharge) &
-         *CoronalT0Dim/min(Uf/UMin, 1.5) ) & !This is a modulated Tc
+         *Tbase*No2Si_V(UnitTemperature_) ) & !This is a modulated Tc
          - ExpansionFactorInv*HeatFluxSi) &
          /max(abs(VAlfvenSi)*ExpansionFactorInv, VAlfvenMin)
 
