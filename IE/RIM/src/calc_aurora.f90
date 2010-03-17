@@ -538,7 +538,7 @@ subroutine old_aurora(RhoH, PH, TH, JrH, InvBH, LatH, OCFLBH, eFluxH, AveEH)
   use ModParamRIM
   use ModNumConst, only: cDegToRad, cPi
   use ModProcIE
-  use ModAurora
+  use ModAuroraRIM
 
   implicit none
 
