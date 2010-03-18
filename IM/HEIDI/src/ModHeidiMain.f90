@@ -43,6 +43,7 @@ Module ModHeidiMain
   real :: funt(nPa,nR,nT),funi(nPa,nR,nT)
   real, dimension(nPoint,nR,nT) :: BHeidi_III, SHeidi_III, RHeidi_III
   real, dimension(nPoint,nR,nT) :: bGradB1xHeidi_III,bGradB1yHeidi_III, bGradB1zHeidi_III 
-  real, dimension(nPoint,nR,nT) :: BRHeidi_III, BThetaHeidi_III, BPhiHeidi_III
+  real, dimension(nPoint,nR,nT) :: BxHeidi_III, ByHeidi_III, BzHeidi_III
+  real, dimension(3,nPoint,nR,nT) :: Xyz_VIII
 end Module ModHeidiMain
 
