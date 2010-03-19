@@ -23,6 +23,7 @@ module ModUser
 
   logical ::  UseWaveDissipation = .false.
   real :: DissipationScaleFactor  ! unit = m*T^0.5
+  real :: WaveMultiplier = 1.0
 
   real :: TeFraction, TiFraction
   real :: EtaPerpSi
@@ -32,8 +33,6 @@ module ModUser
   character(len=100):: NameLdemFile
   real, allocatable :: ThetaLdem_I(:), PhiLdem_I(:), VarLdem_VII(:,:,:)
   integer :: nThetaLdem, nPhiLdem
-
-  character(len=lStringLine) :: TypeCoronalHeating
 
 contains
 
@@ -65,16 +64,13 @@ contains
        case("#WSACOEFF")
           call read_wsa_coeff
 
-       case("#CORONALHEATING")
-          call read_var('TypeCoronalHeating', TypeCoronalHeating)
-          select case(TypeCoronalHeating)
-          case('wavedissipation')
-             UseWaveDissipation = .true.
-             call read_var('DissipationScaleFactor', DissipationScaleFactor)
-          case default
-             call stop_mpi(NameSub//': unknown TypeCoronalHeating = ' &
-                  //TypeCoronalHeating)
-          end select
+       case("#WAVEDISSIPATION")
+          call read_var('UseWaveDissipation', UseWaveDissipation)
+          if(UseWaveDissipation) &
+               call read_var('DissipationScaleFactor', DissipationScaleFactor)
+
+       case("#WAVEMULTIPLIER")
+          call read_var('WaveMultiplier', WaveMultiplier)
 
        case('#LDEM')
           call read_var('UseLdem', UseLdem)
@@ -150,6 +146,8 @@ contains
 
     if(UseLdem) call read_ldem
 
+    if(iProc == 0) call write_alfvenwave_boundary
+
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session finished'
@@ -157,6 +155,65 @@ contains
     end if
 
   end subroutine user_init_session
+
+  !============================================================================
+
+  subroutine write_alfvenwave_boundary
+
+    use ModIO,          ONLY: NamePlotDir
+    use ModMagnetogram, ONLY: r_latitude, dPhi, nTheta, nPhi
+    use ModNumConst,    ONLY: cRadToDeg
+    use ModPhysics,     ONLY: rBody, No2Si_V, Si2No_V, &
+         UnitP_, UnitU_, UnitEnergyDens_
+    use ModPlotFile,    ONLY: save_plot_file
+    use ModWaves,       ONLY: GammaWave
+
+    integer :: iPhi, iTheta
+    real :: r, Theta, Phi, x, y, z
+    real :: RhoBase, Tbase, Br, B0_D(3), UalfvenSi
+    real :: Ewave, WaveEnergyDensSi, DeltaU
+    real :: Coord_DII(2,0:nPhi,0:nTheta), State_VII(2,0:nPhi,0:nTheta)
+    character(len=32) :: FileNameOut
+    !--------------------------------------------------------------------------
+    FileNameOut = trim(NamePlotDir)//'Alfvenwave.outs'
+
+    do iTheta = 0, nTheta
+       do iPhi = 0, nPhi
+          r     = rBody
+          Theta = r_latitude(iTheta)
+          Phi   = real(iPhi)*dPhi
+
+          Coord_DII(1,iPhi,iTheta) = Phi*cRadToDeg
+          Coord_DII(2,iPhi,iTheta) = Theta*cRadToDeg
+
+          x = r*cos(Theta)*cos(Phi)
+          y = r*cos(Theta)*sin(Phi)
+          z = r*sin(Theta)
+
+          call get_coronal_b0(x, y, z, B0_D)
+          Br = (x*B0_D(1)+y*B0_D(2)+z*B0_D(3))/r
+
+          call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
+
+          UalfvenSi = (Br/sqrt(RhoBase))*No2Si_V(UnitU_)
+
+          call get_total_wave_energy(x, y, z, UalfvenSi, WaveEnergyDensSi)
+          Ewave = WaveEnergyDensSi*Si2No_V(UnitEnergyDens_)
+          ! Root mean square amplitude of the velocity fluctuation
+          ! This assumes equipartition (of magnetic and velocity fluctuations)
+          DeltaU = sqrt(Ewave/RhoBase)
+
+          State_VII(1,iPhi,iTheta) = (GammaWave - 1)*Ewave*No2Si_V(UnitP_)
+          State_VII(2,iPhi,iTheta) = DeltaU*No2Si_V(UnitU_)
+       end do
+    end do
+
+    call save_plot_file(FileNameOut, nDimIn=2, StringHeaderIn = &
+         'Longitude [Deg], Latitude [Deg], Pwave [Pa], DeltaU [km/s]', &
+         nameVarIn = 'Longitude Latitude Pwave DeltaU', &
+         CoordIn_DII=Coord_DII, VarIn_VII=State_VII)
+
+  end subroutine Write_alfvenwave_boundary
 
   !============================================================================
 
@@ -321,10 +378,13 @@ contains
     real, intent(in) :: x_D(3)
     real, intent(out):: RhoBase, Tbase
 
-    real :: Ufinal ! The solar wind speed at the far end of the Parker spiral,
-                   ! which originates from the given point.
-    real :: Uratio ! The coronal based values for temperature and density
-                   ! are scaled as functions of UFinal/UMin ratio.
+
+    ! The solar wind speed at the far end of the Parker spiral,
+    ! which originates from the given point.
+    real :: Ufinal
+    ! The coronal based values for temperature and density
+    ! are scaled as functions of UFinal/UMin ratio.
+    real :: Uratio
     real :: Runit_D(3)
     !--------------------------------------------------------------------------
     if(UseLdem)then
@@ -399,6 +459,8 @@ contains
          *Tbase*No2Si_V(UnitTemperature_) ) & !This is a modulated Tc
          - ExpansionFactorInv*HeatFluxSi) &
          /max(abs(VAlfvenSi)*ExpansionFactorInv, VAlfvenMin)
+
+    WaveEnergyDensSi = WaveEnergyDensSi*WaveMultiplier
 
   end subroutine get_total_wave_energy
 
@@ -534,7 +596,7 @@ contains
 
     integer :: i, j, k, iBlock, iWave
     real :: CoronalHeating, RadiativeCooling
-    real :: DissipationLength, WaveHeating, FullB_D(3), FullBSi
+    real :: DissipationLength, WaveDissipation, FullB_D(3), FullBSi
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -555,10 +617,10 @@ contains
                /sqrt(FullBSi)*Si2No_V(UnitX_)
           CoronalHeating = 0.0
           do iWave = WaveFirst_, WaveLast_
-             WaveHeating = State_VGB(iWave,i,j,k,iBlock)**1.5 &
+             WaveDissipation = State_VGB(iWave,i,j,k,iBlock)**1.5 &
                   /sqrt(State_VGB(Rho_,i,j,k,iBlock))/DissipationLength
-             Source_VC(iWave,i,j,k) = Source_VC(iWave,i,j,k) - WaveHeating
-             CoronalHeating = CoronalHeating + WaveHeating
+             Source_VC(iWave,i,j,k) = Source_VC(iWave,i,j,k) - WaveDissipation
+             CoronalHeating = CoronalHeating + WaveDissipation
           end do
        else
           CoronalHeating = 0.0
