@@ -56,15 +56,15 @@ contains
        a = (sqrt(x**2 + y**2 + z**2))**5
        b = (sqrt(x**2 + (y*beta)**2 + (alpha*z)**2))**5
 
-       ! write(*,*) 'Bx', B0_DGB(1,i,j,k,iBlock), Bdp*(3*z * x)/a
-       ! write(*,*) 'By', B0_DGB(2,i,j,k,iBlock), Bdp*(3*z * y)/a
-       ! write(*,*) 'Bz', B0_DGB(3,i,j,k,iBlock), Bdp*(2*z**2  - x**2 - y**2)/a
+        !write(*,*) 'Bx', B0_DGB(1,i,j,k,iBlock), Bdp*(3*z * x)/a
+        !write(*,*) 'By', B0_DGB(2,i,j,k,iBlock), Bdp*(3*z * y)/a
+        !write(*,*) 'Bz', B0_DGB(3,i,j,k,iBlock), Bdp*(2*z**2  - x**2 - y**2)/a
 
-       State_VGB(Bx_,i,j,k,iBlock) = Bdp*((-3. * z * x * alpha)/b + (3. * z * x)/a)
-       State_VGB(By_,i,j,k,iBlock) = Bdp*((-3. * z * y * alpha)/b + (3. * z * y)/a)
+       State_VGB(Bx_,i,j,k,iBlock) = Bdp*((-3. * z * x * alpha)/b - (3. * z * x)/a)
+       State_VGB(By_,i,j,k,iBlock) = Bdp*((-3. * z * y * alpha)/b - (3. * z * y)/a)
        State_VGB(Bz_,i,j,k,iBlock) = &
-            Bdp*((-2. * (alpha*z)**2 + x**2 + (beta*y)**2)/(alpha*b) + &
-            ( 2. *        z**2  - x**2 -        y**2)/a)
+            Bdp*((-2. * (alpha*z)**2 + x**2 + (beta*y)**2)/(alpha*b) - &
+            (  2.      *        z**2 - x**2 -        y**2)/a)
 
     end do; end do; end do
 
