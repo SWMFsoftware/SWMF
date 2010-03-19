@@ -142,6 +142,7 @@ program PostIONO
   write(51,'(a)') ZoneTitle(1:len_trim(ZoneTitle))
 
   ! Write AUXDATA
+  write(51,'(a)') 'AUXDATA HEMISPHERE="North"'
   write(stmp,'(i4.4,a,5(i2.2,a),i3.3)') &
        nYear,'-',nMonth,'-',nDay,' ',nHour,':',nMinute,':',nSecond,'.',nMillisecond
   write(51,'(a,a,a)') 'AUXDATA TIMEEVENT="',trim(adjustl(stmp)),'"'
@@ -192,6 +193,20 @@ program PostIONO
   write(51,'(a)') PlotTitle(1:ptLength)
   write(51,'(a)') PlotVars(1:pvLength)
   write(51,'(a)') ZoneTitle(1:len_trim(ZoneTitle))
+
+  ! Write AUXDATA
+  write(51,'(a)') 'AUXDATA HEMISPHERE="South"'
+  write(stmp,'(i4.4,a,5(i2.2,a),i3.3)') &
+       nYear,'-',nMonth,'-',nDay,' ',nHour,':',nMinute,':',nSecond,'.',nMillisecond
+  write(51,'(a,a,a)') 'AUXDATA TIMEEVENT="',trim(adjustl(stmp)),'"'
+  write(stmp,'(a)') " T="//TimeH4//":"//TimeM2//":"//TimeS2
+  write(51,'(a,a,a)') 'AUXDATA TIMESIM="',trim(adjustl(stmp)),'"'
+  write(stmp,'(a)') " T="//TimeH4//":"//TimeM2
+  write(51,'(a,a,a)') 'AUXDATA TIMESIMSHORT="',trim(adjustl(stmp)),'"'
+  write(stmp,'(f7.2)') ttilt
+  write(51,'(a,a,a)') 'AUXDATA THETATILTDEG="',trim(adjustl(stmp)),'"'
+  write(stmp,'(f7.2)') ptilt
+  write(51,'(a,a,a)') 'AUXDATA PHITILTDEG="',trim(adjustl(stmp)),'"'
 
   ! Open and read until 'BEGIN SOUTHERN HEMISPHERE'
   text='inputfile.DAT'
