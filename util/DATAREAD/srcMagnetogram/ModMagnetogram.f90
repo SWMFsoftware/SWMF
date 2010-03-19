@@ -13,7 +13,7 @@ module ModMagnetogram
   !/
 
   ! Maximum order of spherical harmonics
-  integer,parameter::nHarmonicsMax=90
+  integer,parameter::nHarmonicsMax=180 !90
   ! Weights of the spherical harmonics
   real, dimension(nHarmonicsMax+1,nHarmonicsMax+1):: g_nm,h_nm
   
@@ -587,7 +587,7 @@ contains
       character(len=32)                :: FileNameOut
       !-----------------------------------------------------
       FileNameDat = trim(NameOutDir)//'PFSSM_Br.dat'
-      FileNameOut = trim(NameOutDir)//'PFSSM_Br.out'
+      FileNameOut = trim(NameOutDir)//'PFSSM_Br.outs'
       
       write(*,*) prefix, 'Writing PFSSM_Br output file, named'
       write(*,*) prefix, FileNameDat
