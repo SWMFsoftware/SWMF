@@ -205,7 +205,7 @@ contains
     end do
 
     call save_plot_file(FileNameOut, nDimIn=2, StringHeaderIn = &
-         'Longitude [Deg], Latitude [Deg], Pwave [Pa], DeltaU [km/s]', &
+         'Longitude [Deg], Latitude [Deg], Pwave [Pa], DeltaU [m/s]', &
          nameVarIn = 'Longitude Latitude Pwave DeltaU', &
          CoordIn_DII=Coord_DII, VarIn_VII=State_VII)
 
@@ -217,8 +217,8 @@ contains
 
     use ModIO,          ONLY: NamePlotDir
     use ModMultiFluid,  ONLY: MassIon_I
-    use ModNumConst,    ONLY: cDegToRad, cHalfPi, cTwoPi
-    use ModPhysics,     ONLY: AverageIonCharge, Si2No_V, UnitN_, &
+    use ModNumConst,    ONLY: cDegToRad, cRadToDeg, cHalfPi, cTwoPi
+    use ModPhysics,     ONLY: AverageIonCharge, Si2No_V, No2Si_V, UnitN_, &
          UnitTemperature_
     use ModPlotFile,    ONLY: read_plot_file, save_plot_file
     use ModProcMH,      ONLY: iProc
@@ -296,11 +296,6 @@ contains
             Weight3*Var_VI(:,iNode3)
     end do; end do
 
-    ! Show the patched LDEM moments
-    if(iProc == 0) call save_plot_file(trim(NamePlotDir)//'LDEM_patched.outs',&
-         nDimIn = 2, CoordIn_DII = Coord_DII, VarIn_VII = Var_VII, &
-         NameVarIn = 'lat lon Ne Tm')
-
     ! We are done with the Delaunay triangulation
     deallocate(Coord_DI, Var_VI, iNodeTriangle_II)
 
@@ -335,6 +330,29 @@ contains
     VarLdem_VII(2,:,:) = VarLdem_VII(2,:,:)*1e6*Si2No_V(UnitTemperature_)
 
     deallocate(Coord_DII, Var_VII)
+
+    if(iProc == 0)then
+       ! Flip coordinates for plotting
+       ! (The original file has a left handed coordinate system)
+       allocate(Coord_DII(2,0:nPhiLdem+1,0:nThetaLdem+1), &
+            Var_VII(2,0:nPhiLdem+1,0:nThetaLdem+1))
+       do k = 0, nThetaLdem+1; do j = 0, nPhiLdem+1
+          Coord_DII(1,j,k) = PhiLdem_I(nPhiLdem+1-j)*cRadToDeg
+          Coord_DII(2,j,k) = ThetaLdem_I(nThetaLdem+1-k)*cRadToDeg
+          Var_VII(1,j,k) = VarLdem_VII(1,nThetaLdem+1-k,nPhiLdem+1-j) &
+               *1e-6/MassIon_I(1)*AverageIonCharge*No2Si_V(UnitN_)
+          Var_VII(2,j,k) = VarLdem_VII(2,nThetaLdem+1-k,nPhiLdem+1-j) &
+               *1e-6*No2Si_V(UnitTemperature_)
+       end do; end do
+
+       ! Show the patched LDEM moments
+       call save_plot_file(trim(NamePlotDir)//'LDEM_patched.outs',&
+            nDimIn = 2, CoordIn_DII = Coord_DII, VarIn_VII = Var_VII, &
+            NameVarIn = 'Longitude Latitude Ne Tm', StringHeaderIn = &
+            'Longitude [Deg], Latitude [Deg], Ne [1/cm^3], Te [MK]')
+
+       deallocate(Coord_DII, Var_VII)
+    end if
 
   end subroutine read_ldem
 
@@ -411,6 +429,7 @@ contains
     ! at the lower boundary
 
     use ModExpansionFactors, ONLY: ExpansionFactorInv_N, get_interpolated
+    use ModNumConst,         ONLY: cTolerance
 
     real, intent(in) :: x, y, z, Br
     real, intent(out):: Ewave
@@ -422,7 +441,7 @@ contains
     call get_interpolated(ExpansionFactorInv_N, x, y, z, ExpansionFactorInv)
 
     Ewave = 0.0
-    if(ExpansionFactorInv > 0.0) Ewave = (DeltaBPerB*Br)**2
+    if(ExpansionFactorInv > cTolerance) Ewave = (DeltaBPerB*Br)**2
 
   end subroutine get_wave_energy
 
@@ -734,6 +753,7 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB
+    use ModMain,       ONLY: UseB0
     use ModNumConst,   ONLY: cTolerance
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_
     use ModSize,       ONLY: nI, nJ, nK
@@ -780,16 +800,24 @@ contains
 
     case('deltabperb')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-          FullB = sqrt(sum((B0_DGB(:,i,j,k,iBlock) &
-               + State_VGB(Bx_:Bz_,i,j,k,iBlock))**2))
+          if(UseB0)then
+             FullB = sqrt(sum((B0_DGB(:,i,j,k,iBlock) &
+                  + State_VGB(Bx_:Bz_,i,j,k,iBlock))**2))
+          else
+             FullB = sqrt(sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2))
+          end if
           Ewave = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
           PlotVar_G(i,j,k) = sqrt(Ewave)/max(FullB, cTolerance)
        end do; end do; end do
 
     case('beta')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-          FullB2 = sum((B0_DGB(:,i,j,k,iBlock) &
-               + State_VGB(Bx_:Bz_,i,j,k,iBlock))**2)
+          if(UseB0)then
+             FullB2 = sum((B0_DGB(:,i,j,k,iBlock) &
+                  + State_VGB(Bx_:Bz_,i,j,k,iBlock))**2)
+          else
+             FullB2 = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+          end if
           if(UseElectronPressure)then
              p = State_VGB(p_,i,j,k,iBlock) + State_VGB(Pe_,i,j,k,iBlock)
           else
