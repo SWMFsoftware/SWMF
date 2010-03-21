@@ -22,8 +22,8 @@ module ModUser
        NameUserModule = 'Global Corona'
 
   logical ::  UseWaveDissipation = .false.
-  real :: DissipationScaleFactor  ! unit = m*T^0.5
-  real :: WaveMultiplier = 1.0
+  real :: DissipationScaleFactor  ! unit = m*Gauss^0.5
+  real :: DeltaBPerB
 
   real :: TeFraction, TiFraction
   real :: EtaPerpSi
@@ -69,8 +69,8 @@ contains
           if(UseWaveDissipation) &
                call read_var('DissipationScaleFactor', DissipationScaleFactor)
 
-       case("#WAVEMULTIPLIER")
-          call read_var('WaveMultiplier', WaveMultiplier)
+       case("#WAVEBOUNDARY")
+          call read_var('DeltaBPerB', DeltaBPerB)
 
        case('#LDEM')
           call read_var('UseLdem', UseLdem)
@@ -163,15 +163,14 @@ contains
     use ModIO,          ONLY: NamePlotDir
     use ModMagnetogram, ONLY: r_latitude, dPhi, nTheta, nPhi
     use ModNumConst,    ONLY: cRadToDeg
-    use ModPhysics,     ONLY: rBody, No2Si_V, Si2No_V, &
-         UnitP_, UnitU_, UnitEnergyDens_
+    use ModPhysics,     ONLY: rBody, No2Si_V, UnitP_, UnitU_
     use ModPlotFile,    ONLY: save_plot_file
     use ModWaves,       ONLY: GammaWave
 
     integer :: iPhi, iTheta
     real :: r, Theta, Phi, x, y, z
-    real :: RhoBase, Tbase, Br, B0_D(3), UalfvenSi
-    real :: Ewave, WaveEnergyDensSi, DeltaU
+    real :: RhoBase, Tbase, Br, B0_D(3)
+    real :: Ewave, DeltaU
     real :: Coord_DII(2,0:nPhi,0:nTheta), State_VII(2,0:nPhi,0:nTheta)
     character(len=32) :: FileNameOut
     !--------------------------------------------------------------------------
@@ -195,10 +194,7 @@ contains
 
           call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
 
-          UalfvenSi = (Br/sqrt(RhoBase))*No2Si_V(UnitU_)
-
-          call get_total_wave_energy(x, y, z, UalfvenSi, WaveEnergyDensSi)
-          Ewave = WaveEnergyDensSi*Si2No_V(UnitEnergyDens_)
+          call get_wave_energy(x, y, z, Br, Ewave)
           ! Root mean square amplitude of the velocity fluctuation
           ! This assumes equipartition (of magnetic and velocity fluctuations)
           DeltaU = sqrt(Ewave/RhoBase)
@@ -409,60 +405,26 @@ contains
 
   !============================================================================
 
-  subroutine get_total_wave_energy(x, y, z, VAlfvenSi, WaveEnergyDensSi)
+  subroutine get_wave_energy(x, y, z, Br, Ewave)
 
     ! Provides the distribution of the total Alfven wave energy density
-    ! at the coronal base complying with the WSA semi-empirical model
-    ! Borrowed from ModExpansionFactors
-    ! No nonzero heat conduction contribution at base yet
+    ! at the lower boundary
 
-    use ModExpansionFactors
-    use ModMultiFluid, ONLY: MassIon_I
-    use ModPhysics,    ONLY: g, inv_gm1, AverageIonCharge, No2Si_V, &
-         UnitTemperature_
+    use ModExpansionFactors, ONLY: ExpansionFactorInv_N, get_interpolated
 
-    real, intent(in) :: x, y, z, VAlfvenSi !VAlfven should be in m/s
-    real, intent(out):: WaveEnergyDensSi
+    real, intent(in) :: x, y, z, Br
+    real, intent(out):: Ewave
 
-    real :: r, Uf, ExpansionFactorInv
-    real, parameter :: RhoVAt1AU = 5.40e-15 !kg/(m2*s)
-    real, parameter :: AreaRatio = (cAU/rSun)**2
-    real, parameter :: RhoV =  AreaRatio * RhoVAt1AU
-    real, parameter :: VAlfvenMin = 1.0e5   !100 km/s
-
-    real :: HeatFluxSi, RhoBase, Tbase
+    real :: ExpansionFactorInv
     !--------------------------------------------------------------------------
 
-    !\
-    ! Calculate cell-centered spherical coordinates::
-    r = sqrt(x**2 + y**2 + z**2)
-    !\
-    ! Avoid calculating inside a critical radius = 0.5*Rsun
-    !/
-    if (r < max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then 
-       WaveEnergyDensSi = 0.0
-       RETURN
-    end if
-
-    !v_\infty from WSA model:
-    call get_bernoulli_integral(x, y, z, Uf)
-
-    !An expansion factor
+    ! Inverse expansion factor
     call get_interpolated(ExpansionFactorInv_N, x, y, z, ExpansionFactorInv)
 
-    HeatFluxSi = 0.0
+    Ewave = 0.0
+    if(ExpansionFactorInv > 0.0) Ewave = (DeltaBPerB*Br)**2
 
-    call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
-
-    WaveEnergyDensSi = (RhoV*(0.5*Uf**2 + cSunGravitySi - g*inv_gm1*&
-         cBoltzmann/(cProtonMass*MassIon_I(1))*(1.0+AverageIonCharge) &
-         *Tbase*No2Si_V(UnitTemperature_) ) & !This is a modulated Tc
-         - ExpansionFactorInv*HeatFluxSi) &
-         /max(abs(VAlfvenSi)*ExpansionFactorInv, VAlfvenMin)
-
-    WaveEnergyDensSi = WaveEnergyDensSi*WaveMultiplier
-
-  end subroutine get_total_wave_energy
+  end subroutine get_wave_energy
 
   !============================================================================
 
@@ -596,7 +558,7 @@ contains
 
     integer :: i, j, k, iBlock, iWave
     real :: CoronalHeating, RadiativeCooling
-    real :: DissipationLength, WaveDissipation, FullB_D(3), FullBSi
+    real :: DissipationLength, WaveDissipation, FullB_D(3), FullBCgs
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -612,9 +574,9 @@ contains
           else
              FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
           end if
-          FullBSi = sqrt(sum(FullB_D**2))*No2Si_V(UnitB_)
+          FullBCgs = sqrt(sum(FullB_D**2))*No2Si_V(UnitB_)*1e4
           DissipationLength = DissipationScaleFactor &
-               /sqrt(FullBSi)*Si2No_V(UnitX_)
+               /sqrt(FullBCgs)*Si2No_V(UnitX_)
           CoronalHeating = 0.0
           do iWave = WaveFirst_, WaveLast_
              WaveDissipation = State_VGB(iWave,i,j,k,iBlock)**1.5 &
@@ -771,10 +733,11 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB
+    use ModNumConst,   ONLY: cTolerance
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_
     use ModSize,       ONLY: nI, nJ, nK
-    use ModVarIndexes, ONLY: Rho_, p_, Pe_
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_, WaveFirst_, WaveLast_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -788,6 +751,7 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k
+    real :: FullB, FullB2, p, Ewave
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -806,12 +770,34 @@ contains
                   /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
           end if
        end do; end do; end do
+
     case('ti')
        NameIdlUnit = 'K'
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
           PlotVar_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
                /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
        end do; end do; end do
+
+    case('deltabperb')
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          FullB = sqrt(sum((B0_DGB(:,i,j,k,iBlock) &
+               + State_VGB(Bx_:Bz_,i,j,k,iBlock))**2))
+          Ewave = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+          PlotVar_G(i,j,k) = sqrt(Ewave)/max(FullB, cTolerance)
+       end do; end do; end do
+
+    case('beta')
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          FullB2 = sum((B0_DGB(:,i,j,k,iBlock) &
+               + State_VGB(Bx_:Bz_,i,j,k,iBlock))**2)
+          if(UseElectronPressure)then
+             p = State_VGB(p_,i,j,k,iBlock) + State_VGB(Pe_,i,j,k,iBlock)
+          else
+             p = State_VGB(p_,i,j,k,iBlock)
+          end if
+          PlotVar_G(i,j,k) = 2.0*p/max(FullB2, cTolerance)
+       end do; end do; end do
+
     case default
        IsFound = .false.
     end select
@@ -925,8 +911,7 @@ contains
     use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
     use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame
     use ModMultiFluid,  ONLY: MassIon_I
-    use ModPhysics,     ONLY: OmegaBody, BodyRho_I, BodyTDim_I, No2Si_V, &
-         UnitTemperature_, Si2No_V, AverageIonCharge, UnitU_, UnitEnergyDens_
+    use ModPhysics,     ONLY: OmegaBody, AverageIonCharge
     use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, &
          WaveFirst_, WaveLast_, Pe_
 
@@ -935,7 +920,7 @@ contains
     real :: RhoBase, NumDensIon, NumDensElectron, Tbase, FullBr
     real :: Runit_D(3), U_D(3)
     real :: B1_D(3), B1t_D(3), B1r_D(3), FullB_D(3)
-    real :: UalfvenSi, EwaveSi, Ewave
+    real :: Ewave
     !--------------------------------------------------------------------------
 
     Runit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
@@ -963,16 +948,11 @@ contains
        VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Tbase
     end if
 
-    ! Set Alfven waves energy density based on Bernoulli function
-    UalfvenSi = (FullBr/sqrt(RhoBase))*No2Si_V(UnitU_)
-    call get_total_wave_energy( &
-         FaceCoords_D(x_), &
-         FaceCoords_D(y_), &
-         FaceCoords_D(z_), &
-         UalfvenSi, EwaveSi)
-    Ewave = EwaveSi*Si2No_V(UnitEnergyDens_)
+    ! Set Alfven waves energy density
+    call get_wave_energy(FaceCoords_D(x_), FaceCoords_D(y_), FaceCoords_D(z_),&
+         FullBr, Ewave)
 
-    if(UalfvenSi > 0.0)then
+    if(FullBr > 0.0)then
        VarsGhostFace_V(WaveFirst_) = Ewave
        VarsGhostFace_V(WaveLast_) = VarsTrueFace_V(WaveLast_)
     else
