@@ -137,6 +137,7 @@ subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   !---------------------------------------------------------------------------
   Buff_V = 0.0
 
+
   do iPoint = iPointStart, iPointStart + nPoint - 1
 
      iLat   = Index % iCB_II(1,iPoint)
@@ -311,7 +312,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   use ModHeidiMain,      ONLY: nR, nT, LZ, BHeidi_III, SHeidi_III, RHeidi_III,&
        bGradB1xHeidi_III,bGradB1yHeidi_III, bGradB1zHeidi_III,&
        BxHeidi_III, ByHeidi_III, BzHeidi_III,Xyz_VIII
-!  use ModHeidiMain,      ONLY: Phi_I=>Phi
+  !  use ModHeidiMain,      ONLY: Phi_I=>Phi
   use ModHeidiMain,      ONLY: Phi
   use ModHeidiIO,        ONLY: Time
   use ModHeidiSize,      ONLY: RadiusMin, RadiusMax, nPointEq
@@ -356,17 +357,14 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   real,dimension(3,nStep,nR,nT)       :: XyzDipole_VIII
   real,dimension(3,nStepInside,nR,nT) :: XyzDipoleN_VIII,XyzDipoleS_VIII
   real,dimension(nStepInside,nR,nT)   :: BDipoleS_III, BxDipoleS_III, ByDipoleS_III, BzDipoleS_III
-  real, dimension(nStep,nR,nT)        :: BDipole_III,BxDipole_III, ByDipole_III, BzDipole_III
+  real, dimension(nStep,nR,nT)        :: BDipole_III,BxDipole_III, ByDipole_III, BzDipole_III, STemp
   real,dimension(nStepInside,nR)      :: rDipoleN_II, sDipoleN_II, rDipoleS_II, sDipoleS_II
   real, dimension(nStep,nR)           :: rDipole_II, sDipole_II 
-  real,dimension(3,nStepInside,nR,nT) :: GradBDipoleN_VIII,GradBDipoleS_VIII
-  real, dimension(3,nStep,nR,nT)      :: GradBDipole_VIII
-
-
+  
   real,dimension(nStep,nR)       :: bGradB1x_II, bGradB1y_II
-  real, dimension(nStepInterp)   :: LengthHeidi_I,BHeidi_I,RHeidi_I
-  real, dimension(nStepInterp)   :: XHeidi_I,XHeidi1_I,YHeidi1_I,YHeidi_I,ZHeidi1_I,ZHeidi_I
-  real, dimension(nStepInterp)   :: LengthHeidi1_I,BHeidi1_I,RHeidi1_I
+  real, dimension(nStepInterp)   :: LengthHeidi_I,BHeidi_I,RHeidi_I,LengthHeidinew_I
+  real, dimension(nStepInterp)   :: XHeidi_I,XHeidi1_I,YHeidi1_I,YHeidi_I,ZHeidi1_I,ZHeidi_I,XHeidinew_I,XHeidi1new_I
+  real, dimension(nStepInterp)   :: LengthHeidi1_I,BHeidi1_I,RHeidi1_I,LengthHeidi1new_I
   real, dimension(nStepInterp)   :: BxHeidi1_I,ByHeidi1_I,BzHeidi1_I
   real, dimension(nStepInterp)   :: BxHeidi_I,ByHeidi_I,BzHeidi_I
   real, dimension(nStepInterp)   :: bGradB1xHeidi1_I, bGradB1yHeidi1_I, bGradB1zHeidi1_I
@@ -385,6 +383,9 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   integer                        :: iR, iT, iDir, n
   integer                        :: iPoint,ip, iPhi
   integer                        :: iMax, i, iLineLast,iLine,imax1,iLineFirst,j
+
+  real :: sRest,sMax
+  real :: LatDipole(nStep,nR),LatDipoleN(nStepInside,nR),LatDipoleS(nStepInside,nR)
   !---------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -474,6 +475,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      iLineLast = StateLine_VI(1,iPoint)
   end do
 
+
   allocate(X_I(iMax));         allocate(Y_I(iMax));          allocate(Z_I(iMax))
   allocate(X1_I(iMax));        allocate(Y1_I(iMax));         allocate(Z1_I(iMax))
   allocate(B_I(iMax));         allocate(Length_I(iMax));     allocate(RadialDist_I(iMax))
@@ -493,12 +495,13 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
 
   BHeidi_I = 0.0; LengthHeidi_I = 0.0; RHeidi_I = 0.0
   bGradB1x_I = 0.0; bGradB1x_I = 0.0; bGradB1z_I = 0.0
-
+  bGradB1xHeidi_III = 0.0 ; bGradB1yHeidi_III=0.0; bGradB1zHeidi_III=0.0
 
 
   do iPoint = 1, nPointLine
 
      if  (StateLine_VI(1,iPoint) == iLineFirst)  then
+       
         X1_I(j) = StateLine_VI(X_,iPoint)
         Y1_I(j) = StateLine_VI(Y_,iPoint)
         Z1_I(j) = StateLine_VI(Z_,iPoint)
@@ -519,20 +522,23 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         j = j + 1
         np = j-1
 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, X1_I(2:np),XHeidi1_I,LengthHeidi1_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, Y1_I(2:np),YHeidi1_I,LengthHeidi1_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, Z1_I(2:np),ZHeidi1_I,LengthHeidi1_I) 
 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, B1_I(2:np),BHeidi1_I,LengthHeidi1_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, RadialDist1_I(2:np), RHeidi1_I,LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(1:np-1), X1_I(2:np),XHeidi1new_I,LengthHeidi1new_I)
 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, bGradB1x1_I(2:np), bGradB1xHeidi1_I, LengthHeidi1_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, bGradB1y1_I(2:np), bGradB1yHeidi1_I, LengthHeidi1_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, bGradB1z1_I(2:np), bGradB1zHeidi1_I, LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(2:np), X1_I(2:np),XHeidi1_I,LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(2:np), Y1_I(2:np),YHeidi1_I,LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(2:np), Z1_I(2:np),ZHeidi1_I,LengthHeidi1_I) 
 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, Bx1_I(2:np), BxHeidi1_I, LengthHeidi1_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, By1_I(2:np), ByHeidi1_I, LengthHeidi1_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length1_I(2:np))/Re, Bz1_I(2:np), BzHeidi1_I, LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(2:np), B1_I(2:np),BHeidi1_I,LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(2:np), RadialDist1_I(2:np), RHeidi1_I,LengthHeidi1_I) 
+
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(2:np), bGradB1x1_I(2:np), bGradB1xHeidi1_I, LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(2:np), bGradB1y1_I(2:np), bGradB1yHeidi1_I, LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(2:np), bGradB1z1_I(2:np), bGradB1zHeidi1_I, LengthHeidi1_I) 
+
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(2:np), Bx1_I(2:np), BxHeidi1_I, LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(2:np), By1_I(2:np), ByHeidi1_I, LengthHeidi1_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(2:np), Bz1_I(2:np), BzHeidi1_I, LengthHeidi1_I) 
 
         iLine = StateLine_VI(1,iPoint)     
         iR    = iRiTiDir_DI(1,iLine)
@@ -540,12 +546,24 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         iDir  = iRiTiDir_DI(3,iLine)
 
         if (iDir ==1) then  ! Northern hemisphere
+
+!           sMax = LengthHeidi1new_I(nStepInterp)/nStepInterp
+!           do i = 1, nStepInterp
+!              LengthHeidi1new_I(i) = i* sMax
+!           end do
+           
            Xyz_VIII(1,(nPointEq+ 1):(nStep - nStepInside),iR,iT) = XHeidi1_I(:)
            Xyz_VIII(2,(nPointEq+ 1):(nStep - nStepInside),iR,iT) = YHeidi1_I(:)
            Xyz_VIII(3,(nPointEq+ 1):(nStep - nStepInside),iR,iT) = ZHeidi1_I(:)
 
            BHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = BHeidi1_I(:)
-           SHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = LengthHeidi1_I(:)
+           !SHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = LengthHeidi1_I(:)
+
+           !do i = nPointEq+ 1,nStep - nStepInside
+           !   Stemp(i,iR,iT) = (i-nPointEq)* maxval(LengthHeidi1new_I(:))/(nStepInterp-1)
+           !end do
+
+           Stemp((nPointEq+ 1):(nStep - nStepInside),iR,iT) = LengthHeidi1new_I(:)
            RHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = RHeidi1_I(:)
 
            bGradB1xHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1xHeidi1_I(:)
@@ -561,12 +579,25 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
 
 
         if (iDir ==2) then     ! Southern hemisphere
+
+
+           sMax = LengthHeidi1new_I(nStepInterp-1)/(nStepInterp-1)
+           do i = 1, nStepInterp
+              LengthHeidi1new_I(i) = i* sMax
+           end do
+
            Xyz_VIII(1,(nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = XHeidi1_I(nStepInterp:1:-1) 
            Xyz_VIII(2,(nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = YHeidi1_I(nStepInterp:1:-1) 
            Xyz_VIII(3,(nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = ZHeidi1_I(nStepInterp:1:-1) 
 
            BHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = BHeidi1_I(nStepInterp:1:-1) 
-           SHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = LengthHeidi1_I(nStepInterp:1:-1) 
+
+           !SHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = LengthHeidi1_I(nStepInterp:1:-1) 
+           
+
+           !SHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = LengthHeidi1_I(:) 
+           STemp((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = LengthHeidi1new_I(:) 
+
            RHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = RHeidi1_I(nStepInterp:1:-1) 
 
            bGradB1xHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = bGradB1xHeidi1_I(nStepInterp:1:-1) 
@@ -578,14 +609,15 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            BzHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = BzHeidi1_I(nStepInterp:1:-1) 
 
         end if
-        
+
 
         Xyz_VIII(1,nPointEq,iR,iT) = X1_I(1)
         Xyz_VIII(2,nPointEq,iR,iT) = Y1_I(1)
         Xyz_VIII(3,nPointEq,iR,iT) = Z1_I(1)
 
         BHeidi_III(nPointEq,iR,iT) = B1_I(1)
-        SHeidi_III(nPointEq,iR,iT) = Length1_I(1)
+!        SHeidi_III(nPointEq,iR,iT) = Length1_I(1)
+        STemp(nPointEq,iR,iT) = Length1_I(np)
         RHeidi_III(nPointEq,iR,iT) = RadialDist1_I(1)
 
         bGradB1xHeidi_III(nPointEq,iR,iT) =  bGradB1x1_I(1)
@@ -602,20 +634,22 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      if ((StateLine_VI(1,iPoint) /= iLineLast) .and. (iPoint > 1)) then   
         np = i-1
         
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, X_I(2:np), XHeidi_I,LengthHeidi_I)
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, Y_I(2:np), YHeidi_I,LengthHeidi_I)
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, Z_I(2:np), ZHeidi_I,LengthHeidi_I)
+        call interpolate_mhd(3,(np-1),nStepInterp,Length1_I(1:np-1), X_I(2:np),XHeidinew_I,LengthHeidinew_I)
 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, B_I(2:np),BHeidi_I,LengthHeidi_I)
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, RadialDist_I(2:np),RHeidi_I,LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np), X_I(2:np), XHeidi_I,LengthHeidi_I)
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np), Y_I(2:np), YHeidi_I,LengthHeidi_I)
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np), Z_I(2:np), ZHeidi_I,LengthHeidi_I)
 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, bGradB1x_I(2:np), bGradB1xHeidi_I,LengthHeidi_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, bGradB1y_I(2:np), bGradB1yHeidi_I,LengthHeidi_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, bGradB1z_I(2:np), bGradB1zHeidi_I,LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np), B_I(2:np),BHeidi_I,LengthHeidi_I)
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np), RadialDist_I(2:np),RHeidi_I,LengthHeidi_I) 
 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, Bx_I(2:np), BxHeidi_I, LengthHeidi_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, By_I(2:np), ByHeidi_I, LengthHeidi_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,(Length_I(2:np))/Re, Bz_I(2:np), BzHeidi_I, LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np), bGradB1x_I(2:np), bGradB1xHeidi_I,LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np), bGradB1y_I(2:np), bGradB1yHeidi_I,LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np), bGradB1z_I(2:np), bGradB1zHeidi_I,LengthHeidi_I) 
+
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np), Bx_I(2:np), BxHeidi_I, LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np), By_I(2:np), ByHeidi_I, LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np), Bz_I(2:np), BzHeidi_I, LengthHeidi_I) 
 
         iLine = StateLine_VI(1,iPoint)
         iR   = iRiTiDir_DI(1,iLine)
@@ -624,12 +658,27 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
 
 
         if (iDir ==1) then  ! Northern hemisphere
+
+           !sMax = LengthHeidinew_I(nStepInterp)/nStepInterp
+           !do i = 1, nStepInterp
+           !   LengthHeidinew_I(i) = i* sMax
+           !end do
+
            Xyz_VIII(1,(nPointEq+ 1):(nStep - nStepInside),iR,iT) = XHeidi_I(:)
            Xyz_VIII(2,(nPointEq+ 1):(nStep - nStepInside),iR,iT) = YHeidi_I(:)
            Xyz_VIII(3,(nPointEq+ 1):(nStep - nStepInside),iR,iT) = ZHeidi_I(:)
 
            BHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = BHeidi_I(:)
-           SHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = LengthHeidi_I(:)
+           
+           !SHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = LengthHeidi_I(:)
+
+!           do i = nPointEq+ 1,nStep - nStepInside
+!              Stemp(i,iR,iT) = (i-nPointEq)* maxval(LengthHeidinew_I(:))/(nStepInterp-1)
+!           end do
+
+           STemp((nPointEq+ 1):(nStep - nStepInside),iR,iT) = LengthHeidinew_I(:)
+           
+           
            RHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = RHeidi_I(:)
 
            bGradB1xHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1xHeidi_I(:)
@@ -643,12 +692,22 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         end if
 
         if (iDir ==2) then     ! Southern hemisphere
+
+           sMax = LengthHeidinew_I(nStepInterp-1)/(nStepInterp-1)
+           do i = 1, nStepInterp
+              LengthHeidinew_I(i) = i* sMax
+           end do
+
            Xyz_VIII(1,(nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = XHeidi_I(nStepInterp:1:-1)
            Xyz_VIII(2,(nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = YHeidi_I(nStepInterp:1:-1)
            Xyz_VIII(3,(nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = ZHeidi_I(nStepInterp:1:-1)
-           
+
            BHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = BHeidi_I(nStepInterp:1:-1)
-           SHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = LengthHeidi_I(nStepInterp:1:-1) 
+
+!           SHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = LengthHeidi_I(nStepInterp:1:-1) 
+           !SHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = LengthHeidi_I(:) 
+           STemp((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = LengthHeidinew_I(:) 
+
            RHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = RHeidi_I(nStepInterp:1:-1) 
 
            bGradB1xHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = bGradB1xHeidi_I(nStepInterp:1:-1) 
@@ -666,7 +725,8 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         Xyz_VIII(3,nPointEq,iR,iT) = Z_I(1)
 
         BHeidi_III(nPointEq,iR,iT) = B_I(1)
-        SHeidi_III(nPointEq,iR,iT) = Length_I(1)
+        !SHeidi_III(nPointEq,iR,iT) = Length_I(1)
+        STemp(nPointEq,iR,iT) = Length_I(np)
         RHeidi_III(nPointEq,iR,iT) = RadialDist_I(1)
 
         bGradB1xHeidi_III(nPointEq,iR,iT) = bGradB1x_I(1)
@@ -721,43 +781,34 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
 
   do iPhi =1, nT
      do iR = 1, nR
-        if (LZ(iR) <= rBoundary) then
+       if (LZ(iR) <= rBoundary) then
 
            LatMax =  acos(sqrt(1./LZ(iR)))
            LatMin = -LatMax
            dLat   = (LatMax-LatMin)/(nStep-1)
            Lat = LatMin
            do iStep = 1, nStep
-              r = LZ(iR) * (cos(Lat))**2
+              r = Re*LZ(iR) * (cos(Lat))**2
 
               x = r * cos(Lat) * cos(Phi(iPhi))
               y = r * cos(Lat) * sin(Phi(iPhi))
               z = r * sin(Lat)
               a = (sqrt(x**2 + y**2 +z**2))**5
-
-              XyzDipole_VIII(1,iPoint,iR,iPhi) = x 
-              XyzDipole_VIII(2,iPoint,iR,iPhi) = y 
-              XyzDipole_VIII(3,iPoint,iR,iPhi) = z
               
-              BxDipole_III(iPoint,iR,iPhi) = (-3. * z * x)/a
-              ByDipole_III(iPoint,iR,iPhi) = (-3. * z * y)/a
-              BzDipole_III(iPoint,iR,iPhi) = (-2. * z**2 + x**2 + y**2)/a
-              BDipole_III(iPoint,iR,iPhi) = DipoleFactor*sqrt((BxDipole_III(iPoint,iR,iPhi))**2+&
-                   (ByDipole_III(iPoint,iR,iPhi))**2 + (BzDipole_III(iPoint,iR,iPhi))**2)
+              XyzDipole_VIII(1,iStep,iR,iPhi) = x 
+              XyzDipole_VIII(2,iStep,iR,iPhi) = y 
+              XyzDipole_VIII(3,iStep,iR,iPhi) = z
 
-              sDipole_II(iStep,iR) = dipole_length(LZ(ir),LatMin,Lat) 
+              BxDipole_III(iStep,iR,iPhi) = DipoleFactor * (3. * z * x)/a
+              ByDipole_III(iStep,iR,iPhi) = DipoleFactor * (3. * z * y)/a
+              BzDipole_III(iStep,iR,iPhi) = DipoleFactor * (2. * z**2 - x**2 - y**2)/a
+              BDipole_III(iStep,iR,iPhi)  = sqrt((BxDipole_III(iStep,iR,iPhi))**2+&
+                   (ByDipole_III(iStep,iR,iPhi))**2 + (BzDipole_III(iStep,iR,iPhi))**2)
+
+              sDipole_II(iStep,iR) = dipole_length(Re*LZ(ir),LatMin,Lat) 
               rDipole_II(iStep,iR) = r
+              LatDipole(iStep,iR) = Lat
 
-              GradBDipole_VIII(1,iStep,iR,iPhi) = DipoleFactor*(-3. * ((x**2 + 4. * z**2 + y**2)/ &
-                   (x**2 + y**2 + z**2)**4)**(-1./2.) * x * (x**2 + y**2 + 5. *     &
-                   z**2)/(x**2 + y**2 + z**2)**5)
-
-              GradBDipole_VIII(2,iStep,iR,iPhi) =DipoleFactor*( -3. * ((x**2 + 4. * z**2 + y**2)/ &
-                   (x**2 + y**2 + z**2)**4)**(-1./2.) * y * (x**2 + y**2 + 5. *     &
-                   z**2)/(x**2 + y**2 + z**2)**5)
-
-              GradBDipole_VIII(3,iStep,iR,iPhi) =DipoleFactor*( -12. * ((x**2 + 4. * z**2 + y**2) &
-                   /(x**2 + y**2 + z**2)**4)**(-1./2.) * z**3/(x**2 + y**2 + z**2)**5)
 
               Lat = Lat + dLat
            end do
@@ -765,11 +816,9 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      end do
   end do
 
-!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+  !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   do iPhi =1, nT
      do iR = 1, nR
-        write(*,*) 'iR', iR
         if (LZ(iR) >rBoundary) then
            LatMax =  acos(sqrt(1./LZ(iR)))
            LatMin = acos(sqrt(rBoundary/LZ(iR)))
@@ -777,92 +826,56 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            Lat = LatMin
            ! Northern part
            do iStep = 1,nStepInside
-              write(*,*) 'iStep', iStep
-              r = LZ(iR) * (cos(Lat))**2
-!              write(*,*) 'r',r
+              r = Re*LZ(iR) * (cos(Lat))**2
               x = r * cos(Lat) * cos(Phi(iPhi))
-!              write(*,*) 'x',x
               y = r * cos(Lat) * sin(Phi(iPhi))
-!              write(*,*) 'y',y
               z = r * sin(Lat)
-!              write(*,*) 'z',z
               a = (sqrt(x**2 + y**2 +z**2))**5
-!              write(*,*) 'a',a
               
+              XyzDipoleN_VIII(1,iStep,iR,iPhi) = x 
+              XyzDipoleN_VIII(2,iStep,iR,iPhi) = y 
+              XyzDipoleN_VIII(3,iStep,iR,iPhi) = z
 
+              BxDipoleN_III(iStep,iR,iPhi) = DipoleFactor * (3. * z * x)/a
+              ByDipoleN_III(iStep,iR,iPhi) = DipoleFactor * (3. * z * y)/a
+              BzDipoleN_III(iStep,iR,iPhi) = DipoleFactor * (2. * z**2 - x**2 - y**2)/a
+              BDipoleN_III(iStep,iR,iPhi)  = sqrt((BxDipoleN_III(iStep,iR,iPhi))**2+&
+                   (ByDipoleN_III(iStep,iR,iPhi))**2 + (BzDipoleN_III(iStep,iR,iPhi))**2)
 
-              XyzDipoleN_VIII(1,iPoint,iR,iPhi) = x 
-              XyzDipoleN_VIII(2,iPoint,iR,iPhi) = y 
-              XyzDipoleN_VIII(3,iPoint,iR,iPhi) = z
-
-              BxDipoleN_III(iPoint,iR,iPhi) = (-3. * z * x)/a
-!              write(*,*) 'Bx',BxDipoleN_III(iPoint,iR,iPhi)
-              
-              ByDipoleN_III(iPoint,iR,iPhi) = (-3.* x * y)/a
-
-!              write(*,*) 'By', ByDipoleN_III(iPoint,iR,iPhi)
-              BzDipoleN_III(iPoint,iR,iPhi) = (-2. * z**2 + x**2 + y**2)/a
-!              write(*,*) 'By',BzDipoleN_III(iPoint,iR,iPhi)
-              
-              BDipoleN_III(iPoint,iR,iPhi) = DipoleFactor*sqrt((BxDipoleN_III(iPoint,iR,iPhi))**2+&
-                   (ByDipoleN_III(iPoint,iR,iPhi))**2 + (BzDipoleN_III(iPoint,iR,iPhi))**2)
-
-             
-
-              sDipoleN_II(iStep,iR) = dipole_length(LZ(ir),LatMin,Lat) 
+              sRest = dipole_length(Re*LZ(ir),-LatMax,LatMin) 
+!              sDipoleN_II(iStep,iR) = sRest + dipole_length(Re*LZ(ir),LatMin,Lat) 
+              sDipoleN_II(iStep,iR) = dipole_length(Re*LZ(ir),LatMin-dLat,Lat)
               rDipoleN_II(iStep,iR) = r
-
-
-              GradBDipoleN_VIII(1,iStep,iR,iPhi) = DipoleFactor*(-3. * ((x**2 + 4. * z**2 + y**2)/ &
-                   (x**2 + y**2 + z**2)**4)**(-1./2.) * x * (x**2 + y**2 + 5. *     &
-                   z**2)/(x**2 + y**2 + z**2)**5)
-
-              GradBDipoleN_VIII(2,iStep,iR,iPhi) =DipoleFactor*( -3. * ((x**2 + 4. * z**2 + y**2)/ &
-                   (x**2 + y**2 + z**2)**4)**(-1./2.) * y * (x**2 + y**2 + 5. *     &
-                   z**2)/(x**2 + y**2 + z**2)**5)
-
-              GradBDipoleN_VIII(3,iStep,iR,iPhi) = DipoleFactor*(-12. * ((x**2 + 4. * z**2 + y**2) &
-                   /(x**2 + y**2 + z**2)**4)**(-1./2.) * z**3/(x**2 + y**2 + z**2)**5)
-
+              LatDipoleN(iStep,iR) = Lat
               Lat = Lat + dLat
 
            end do
-           write(*,*) 'Southern part'
-
            ! Southern part
-
-           Lat = - LatMax
+           LatMax = acos(sqrt(1./LZ(iR)))
+           LatMin = acos(sqrt(rBoundary/LZ(iR)))
+           dLat   = (LatMax-LatMin)/(nStepInside-1)
+           Lat = -LatMax
+           
            do iStep = 1,nStepInside
-              r = LZ(iR) * (cos(Lat))**2
+              r = Re*LZ(iR) * (cos(Lat))**2
               x = r * cos(Lat) * cos(Phi(iPhi))
               y = r * cos(Lat) * sin(Phi(iPhi))
               z = r * sin(Lat)
               a = (sqrt(x**2 + y**2 +z**2))**5
 
-              XyzDipoleS_VIII(1,iPoint,iR,iPhi) = x 
-              XyzDipoleS_VIII(2,iPoint,iR,iPhi) = y 
-              XyzDipoleS_VIII(3,iPoint,iR,iPhi) = z
-
-              BxDipoleS_III(iPoint,iR,iPhi) = (-3. * z * x)/a
-              ByDipoleS_III(iPoint,iR,iPhi) = (-3. * z * y)/a
-              BzDipoleS_III(iPoint,iR,iPhi) = (-2. * z**2 + x**2 + y**2)/a
-              BDipoleS_III(iPoint,iR,iPhi) = DipoleFactor*sqrt((BxDipoleS_III(iPoint,iR,iPhi))**2+&
-                   (ByDipoleS_III(iPoint,iR,iPhi))**2 + (BzDipoleS_III(iPoint,iR,iPhi))**2)
-
-              sDipoleS_II(iStep,iR) = dipole_length(LZ(ir),LatMin,Lat) 
+              XyzDipoleS_VIII(1,iStep,iR,iPhi) = x 
+              XyzDipoleS_VIII(2,iStep,iR,iPhi) = y 
+              XyzDipoleS_VIII(3,iStep,iR,iPhi) = z
+              
+              BxDipoleS_III(iStep,iR,iPhi) = DipoleFactor * (3. * z * x)/a
+              ByDipoleS_III(iStep,iR,iPhi) = DipoleFactor * (3. * z * y)/a
+              BzDipoleS_III(iStep,iR,iPhi) = DipoleFactor * (2. * z**2 - x**2 - y**2)/a
+              BDipoleS_III(iStep,iR,iPhi)  = sqrt((BxDipoleS_III(iStep,iR,iPhi))**2+&
+                   (ByDipoleS_III(iStep,iR,iPhi))**2 + (BzDipoleS_III(iStep,iR,iPhi))**2)
+              
+              sDipoleS_II(iStep,iR) = dipole_length(Re*LZ(ir),-LatMax,Lat) 
               rDipoleS_II(iStep,iR) = r
-
-              GradBDipoleS_VIII(1,iStep,iR,iPhi) = DipoleFactor*(-3. * ((x**2 + 4. * z**2 + y**2)/ &
-                   (x**2 + y**2 + z**2)**4)**(-1./2.) * x * (x**2 + y**2 + 5. *     &
-                   z**2)/(x**2 + y**2 + z**2)**5)
-
-              GradBDipoleS_VIII(2,iStep,iR,iPhi) =DipoleFactor*( -3. * ((x**2 + 4. * z**2 + y**2)/ &
-                   (x**2 + y**2 + z**2)**4)**(-1./2.) * y * (x**2 + y**2 + 5. *     &
-                   z**2)/(x**2 + y**2 + z**2)**5)
-
-              GradBDipoleS_VIII(3,iStep,iR,iPhi) = DipoleFactor*(-12. * ((x**2 + 4. * z**2 + y**2) &
-                   /(x**2 + y**2 + z**2)**4)**(-1./2.) * z**3/(x**2 + y**2 + z**2)**5)
-
+              LatDipoleS(iStep,iR) = Lat
               Lat = Lat + dLat
 
            end do
@@ -870,27 +883,52 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      end do
   end do
 
-  write(*,*) ''
 
-
+  !stop
   !\
   ! Convert to Heidi grid B field
   !/
 
   ns = nStepInside
 
-  do iT = 1,nT
+  do iT = 1,1!nT
      do iR = 1, nR
         if (LZ(iR) > rBoundary) then
            Xyz_VIII(:,1:nStepInside,iR,iT)                 = XyzDipoleS_VIII(:,:,iR,iT)   
+           Xyz_VIII(:,(nStep-nStepInside +1):nStep,iR,iT)  = XyzDipoleN_VIII(:,:,iR,iT)
 
-           BHeidi_III(1:nStepInside,iR,iT)                 = BDipoleS_III(:,iR,iT)   
-           BHeidi_III((nStep-nStepInside +1):nStep,iR,iT)  = BDipoleN_III(:,iR,iT)
+           BHeidi_III(1:nStepInside,iR,iT)                 = BDipoleS_III(1:nStepInside,iR,1)   
+           BHeidi_III((nStep-nStepInside +1):nStep,iR,iT)  = BDipoleN_III(1:nStepInside,iR,1)
+
            RHeidi_III(1:nStepInside,iR,iT)                 = rDipoleS_II(:,iR)   
            RHeidi_III((nStep-nStepInside +1):nStep,iR,iT)  = rDipoleN_II(:,iR)
-           SHeidi_III(1:nStepInside,iR,iT)                 = sDipoleS_II(:,iR)   
-           SHeidi_III((nStep-nStepInside +1):nStep,iR,iT)  = sDipoleN_II(:,iR)
 
+           SHeidi_III(1:nStepInside,iR,iT)                 = sDipoleS_II(:,iR)   
+           
+           !  i = 11, 51
+           do i = nStepInside+1, nStepInside + nStepInterp+1
+              SHeidi_III(i,iR,iT) = sDipoleS_II(nStepInside,iR) + STemp(i,iR,iT)
+           end do
+
+           !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           !  i = 52,91
+           do i = nStepInside + nStepInterp + 2, nStep - nStepInside
+              SHeidi_III(i,iR,iT) = SHeidi_III(nStepInside + nStepInterp+1, iR, iT) + STemp(i,iR,iT) 
+              write(*,*)  i,SHeidi_III(i,iR,iT) ,SHeidi_III(nStepInside + nStepInterp+1, iR, iT) , STemp(i,iR,iT)
+
+           end do
+
+           !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+           !  i = 92,101
+           do i = nStep-nStepInside+1 , nStep
+              j = i - (nStep-nStepInside) 
+              SHeidi_III(i,iR,iT) = SHeidi_III(nStep-nStepInside,iR,iT) + sDipoleN_II(j,iR)
+
+              !write(*,*) 'i', i, j, sDipoleN_II(j,iR), SHeidi_III(nStep-nStepInside-1,iR,iT), SHeidi_III(i,iR,iT)
+           end do
+
+           !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
            BxHeidi_III(1:nStepInside,iR,iT)                = BxDipoleS_III(:,iR,iT) 
            BxHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = BxDipoleN_III(:,iR,IT)
@@ -900,15 +938,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
 
            BzHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = BzDipoleN_III(:,iR,iT)
            BzHeidi_III(1:nStepInside,iR,iT)                = BzDipoleS_III(:,iR,iT) 
-
-           bGradB1xHeidi_III(1:nStepInside,iR,iT) =  GradBDipoleS_VIII(1,:,iR,iPhi)
-           bGradB1yHeidi_III(1:nStepInside,iR,iT) =  GradBDipoleS_VIII(2,:,iR,iPhi)
-           bGradB1zHeidi_III(1:nStepInside,iR,iT) =  GradBDipoleS_VIII(3,:,iR,iPhi)
-
-           bGradB1xHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = GradBDipoleN_VIII(1,:,iR,iPhi)
-           bGradB1yHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = GradBDipoleN_VIII(2,:,iR,iPhi)
-           bGradB1zHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = GradBDipoleN_VIII(3,:,iR,iPhi)
-
+           
         end if
 
         if (LZ(iR) <= rBoundary) then
@@ -922,16 +952,12 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            ByHeidi_III(:,iR,iT) = ByDipole_III(:,iR,iT)
            BzHeidi_III(:,iR,iT) = BzDipole_III(:,iR,iT)
 
-           bGradB1xHeidi_III(:,iR,iT) = GradBDipole_VIII(1,:,iR,iPhi)
-           bGradB1yHeidi_III(:,iR,iT) = GradBDipole_VIII(2,:,iR,iPhi)
-           bGradB1zHeidi_III(:,iR,iT) = GradBDipole_VIII(3,:,iR,iPhi)
-
         end if
      end do
   end do
 
   Xyz_VIII(:,:,:,nT) = Xyz_VIII(:,:,:,1)
-  BHeidi_III(:,:,nT) = Bheidi_III(:,:,1)
+  BHeidi_III(:,:,nT) = BHeidi_III(:,:,1)
   RHeidi_III(:,:,nT) = RHeidi_III(:,:,1)
   SHeidi_III(:,:,nT) = SHeidi_III(:,:,1)
 
@@ -943,6 +969,39 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   bGradB1yHeidi_III(:,:,nT) = bGradB1yHeidi_III(:,:,1)  
   bGradB1zHeidi_III(:,:,nT) = bGradB1zHeidi_III(:,:,1)
 
+
+  open(unit=5,file='line.dat')
+    write(5,*) 'iStep,iR,iT,S'
+    do iT = 1,1
+       do iR = 5, 5
+          do iStep =1, nStep
+             
+             write(5,*) iStep,iR,iT,SHeidi_III(iStep,iR,iT)
+  
+          end do
+       end do
+    end do
+
+
+
+!    open(unit=7,file='line_dipole.dat')
+!    write(7,*) 'iStep,iR,iT,S'
+!    !do iT = 1,1
+!       do iR = 5, 5
+!          do iStep =1, nStep
+!             
+!             write(7,*) iStep,iR,iT,sDipole_II(iStep,iR),LatDipole(iStep,iR),&
+!                  sDipoleN_II(iStep,iR),LatDipoleN(iStep,iR),&
+!                  sDipoleS_II(iStep,iR),LatDipoleS(iStep,iR)
+!  
+!          end do
+!       end do
+!    !end do
+
+!    stop
+!       write(*,*) 'I AM HERE'
+
+!STOP
 end subroutine IM_put_from_gm_line
 
 !==============================================================================
@@ -1349,10 +1408,18 @@ subroutine interpolate_mhd(nOrder,nStepMhd,nStep,lMhd_I,bMhd_I,bHeidi_I,lHeidi_I
   LengthMin = LMhd_I(1)
   dLength = (LengthMax - LengthMin)/(nStep - 1)
 
+
   do iStep = 1, nStep
      lHeidi_I(iStep) = LengthMin + (iStep - 1) * dLength
      bHeidi_I(iStep) = lagrange(lHeidi_I(iStep),lMhd_I,bMhd_I,nStepMhd, nOrder+1)
   end do
+
+
+!!$  
+!!$  do iStep = 1, nStepMHD
+!!$     LengthNew(iStep)  = LengthMax -  LMHD(nStepMHD - iStep + 1)
+!!$  end do
+
 
 end subroutine interpolate_mhd
 
