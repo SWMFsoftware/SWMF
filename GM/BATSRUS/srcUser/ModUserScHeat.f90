@@ -169,7 +169,7 @@ contains
     use ModIO,          ONLY: NamePlotDir
     use ModMagnetogram, ONLY: r_latitude, dPhi, nTheta, nPhi
     use ModNumConst,    ONLY: cRadToDeg
-    use ModPhysics,     ONLY: rBody, No2Si_V, UnitP_, UnitU_
+    use ModPhysics,     ONLY: rBody, No2Si_V, UnitP_, UnitU_, UnitEnergyDens_
     use ModPlotFile,    ONLY: save_plot_file
     use ModWaves,       ONLY: GammaWave
 
@@ -177,10 +177,12 @@ contains
     real :: r, Theta, Phi, x, y, z
     real :: RhoBase, Tbase, Br, B0_D(3)
     real :: Ewave, DeltaU
-    real :: Coord_DII(2,0:nPhi,0:nTheta), State_VII(2,0:nPhi,0:nTheta)
+    real, allocatable :: Coord_DII(:,:,:), State_VII(:,:,:)
     character(len=32) :: FileNameOut
     !--------------------------------------------------------------------------
     FileNameOut = trim(NamePlotDir)//'Alfvenwave.outs'
+
+    allocate(Coord_DII(2,0:nPhi,0:nTheta), State_VII(3,0:nPhi,0:nTheta))
 
     do iTheta = 0, nTheta
        do iPhi = 0, nPhi
@@ -207,13 +209,18 @@ contains
 
           State_VII(1,iPhi,iTheta) = (GammaWave - 1)*Ewave*No2Si_V(UnitP_)
           State_VII(2,iPhi,iTheta) = DeltaU*No2Si_V(UnitU_)
+          State_VII(3,iPhi,iTheta) = Ewave*abs(Br)/sqrt(Rhobase) &
+               *No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
        end do
     end do
 
     call save_plot_file(FileNameOut, nDimIn=2, StringHeaderIn = &
-         'Longitude [Deg], Latitude [Deg], Pwave [Pa], DeltaU [m/s]', &
-         nameVarIn = 'Longitude Latitude Pwave DeltaU', &
+         'Longitude [Deg], Latitude [Deg], Pwave [Pa], DeltaU [m/s] ' &
+         //'Ewaveflux [J/(m^2s)]', &
+         nameVarIn = 'Longitude Latitude Pwave DeltaU Ewaveflux', &
          CoordIn_DII=Coord_DII, VarIn_VII=State_VII)
+
+    deallocate(Coord_DII, State_VII)
 
   end subroutine Write_alfvenwave_boundary
 
