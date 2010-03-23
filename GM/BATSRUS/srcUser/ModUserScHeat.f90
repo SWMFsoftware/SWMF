@@ -22,8 +22,9 @@ module ModUser
        NameUserModule = 'Global Corona'
 
   logical ::  UseWaveDissipation = .false.
-  real :: DissipationScaleFactor  ! unit = m*Gauss^0.5
-  real :: DeltaBPerB
+  real :: DissipationScaleFactorSi  ! unit = m*T^0.5
+  real :: DissipationScaleFactor
+  real :: DeltaBPerB = 0.0
 
   real :: TeFraction, TiFraction
   real :: EtaPerpSi
@@ -67,7 +68,8 @@ contains
        case("#WAVEDISSIPATION")
           call read_var('UseWaveDissipation', UseWaveDissipation)
           if(UseWaveDissipation) &
-               call read_var('DissipationScaleFactor', DissipationScaleFactor)
+               call read_var('DissipationScaleFactorSi', &
+               DissipationScaleFactorSi)
 
        case("#WAVEBOUNDARY")
           call read_var('DeltaBPerB', DeltaBPerB)
@@ -107,7 +109,8 @@ contains
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModMultiFluid,  ONLY: MassIon_I
     use ModNumConst,    ONLY: cTwoPi
-    use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge
+    use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge, &
+         Si2No_V, UnitB_, UnitX_
     use ModProcMH,      ONLY: iProc
     use ModWaves,       ONLY: UseWavePressure, UseAlfvenWaves
 
@@ -143,6 +146,9 @@ contains
     ! Note EtaPerpSi is divided by cMu.
     EtaPerpSi = sqrt(cElectronMass)*CoulombLog &
          *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
+
+    DissipationScaleFactor = DissipationScaleFactorSi*Si2No_V(UnitX_) &
+         *sqrt(Si2No_V(UnitB_))
 
     if(UseLdem) call read_ldem
 
@@ -428,20 +434,52 @@ contains
     ! Provides the distribution of the total Alfven wave energy density
     ! at the lower boundary
 
-    use ModExpansionFactors, ONLY: ExpansionFactorInv_N, get_interpolated
-    use ModNumConst,         ONLY: cTolerance
+    use ModExpansionFactors
+    use ModMultiFluid, ONLY: MassIon_I
+    use ModNumConst,   ONLY: cTolerance
+    use ModPhysics,    ONLY: g, inv_gm1, AverageIonCharge, &
+         Si2No_V, No2Si_V, UnitU_, UnitTemperature_, UnitEnergyDens_
 
     real, intent(in) :: x, y, z, Br
     real, intent(out):: Ewave
 
-    real :: ExpansionFactorInv
+    real :: ExpansionFactorInv, Uf
+    real :: RhoBase, Tbase, VAlfvenSi, TbaseSi, HeatFluxSi, WaveEnergyDensSi
+
+    real, parameter :: RhoVAt1AU = 5.4e-15 !kg/(m2*s)
+    real, parameter :: AreaRatio = (cAU/rSun)**2
+    real, parameter :: RhoV =  AreaRatio * RhoVAt1AU
+    real, parameter :: VAlfvenMin = 1.0e5  !100 km/s
     !--------------------------------------------------------------------------
 
     ! Inverse expansion factor
     call get_interpolated(ExpansionFactorInv_N, x, y, z, ExpansionFactorInv)
 
     Ewave = 0.0
-    if(ExpansionFactorInv > cTolerance) Ewave = (DeltaBPerB*Br)**2
+    if(ExpansionFactorInv < cTolerance) RETURN
+
+    if(DeltaBPerB > cTolerance)then
+       Ewave = (DeltaBPerB*Br)**2
+    else
+
+       call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
+       VAlfvenSi = (Br/sqrt(RhoBase))*No2Si_V(UnitU_)
+       TbaseSi = Tbase*No2Si_V(UnitTemperature_)
+
+       !v_\infty from WSA model:
+       call get_bernoulli_integral(x, y, z, Uf)
+
+       ! Currently, the coronal model starts at the electron temperature max
+       HeatFluxSi = 0.0
+
+       WaveEnergyDensSi = (RhoV*(0.5*Uf**2 + cSunGravitySi - g*inv_gm1*&
+            cBoltzmann/(cProtonMass*MassIon_I(1))*(1.0+AverageIonCharge) &
+            *TbaseSi) - ExpansionFactorInv*HeatFluxSi) &
+            /max(abs(VAlfvenSi)*ExpansionFactorInv, VAlfvenMin)
+
+       Ewave = WaveEnergyDensSi*Si2No_V(UnitEnergyDens_)
+
+    end if
 
   end subroutine get_wave_energy
 
@@ -567,17 +605,16 @@ contains
   subroutine user_calc_sources
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
-         time_BLK, B0_DGB
-    use ModGeometry,       ONLY: x_BLK, y_BLK, z_BLK, r_BLK
+         B0_DGB
+    use ModGeometry,       ONLY: r_BLK
     use ModMain,           ONLY: nI, nJ, nK, GlobalBlk, Cfl, UseB0
-    use ModPhysics,        ONLY: gm1, inv_gm1, rBody, Si2No_V, No2Si_V, &
-         UnitT_, UnitB_, UnitX_
+    use ModPhysics,        ONLY: gm1, rBody
     use ModVarIndexes,     ONLY: Rho_, Bx_, Bz_, Energy_, p_, Pe_, &
          WaveFirst_, WaveLast_
 
     integer :: i, j, k, iBlock, iWave
     real :: CoronalHeating, RadiativeCooling
-    real :: DissipationLength, WaveDissipation, FullB_D(3), FullBCgs
+    real :: DissipationLength, WaveDissipation, FullB_D(3), FullB
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -593,9 +630,8 @@ contains
           else
              FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
           end if
-          FullBCgs = sqrt(sum(FullB_D**2))*No2Si_V(UnitB_)*1e4
-          DissipationLength = DissipationScaleFactor &
-               /sqrt(FullBCgs)*Si2No_V(UnitX_)
+          FullB = sqrt(sum(FullB_D**2))
+          DissipationLength = DissipationScaleFactor/sqrt(FullB)
           CoronalHeating = 0.0
           do iWave = WaveFirst_, WaveLast_
              WaveDissipation = State_VGB(iWave,i,j,k,iBlock)**1.5 &
