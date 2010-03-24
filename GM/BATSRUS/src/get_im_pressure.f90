@@ -249,6 +249,7 @@ subroutine apply_im_pressure
   use ModImPressure
   use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
        iRhoUx_I, iRhoUy_I, iRhoUz_I
+  use ModEnergy, ONLY: calc_energy_cell
 
   implicit none
 
@@ -465,15 +466,8 @@ subroutine apply_im_pressure
      end if
 
      ! Now get the energy that corresponds to these new values
-     Energy_GBI(1:nI,1:nJ,1:nK,iBlock,1) = &
-          inv_gm1*State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) + 0.5*( &
-          ( State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)**2 &
-          + State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)**2 &
-          + State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)**2 &
-          )/State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)  &
-          + State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)**2 &
-          + State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)**2 &
-          + State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)**2)
+     call calc_energy_cell(iBlock)
+
   end do
 
 end subroutine apply_im_pressure
