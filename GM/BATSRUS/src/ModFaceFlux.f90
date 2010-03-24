@@ -1947,10 +1947,12 @@ contains
     subroutine get_boris_flux
 
       use ModPhysics, ONLY: inv_gm1, Inv_C2light, InvClight
+      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
+      use ModWaves
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e
-      real :: B2, FullB2, pTotal, pTotal2, UDotB
+      real :: B2, FullB2, pTotal, pTotal2, UDotB, DpPerB
       real :: Ex, Ey, Ez, E2Half
       integer :: iVar
       !-----------------------------------------------------------------------
@@ -1989,6 +1991,21 @@ contains
 
       ! Calculate some intermediate values for flux calculations
       pTotal  = p + 0.5*B2 + B0x*Bx + B0y*By + B0z*Bz
+
+      if(UseWavePressure)then
+         if(.not.UseWavePressureLtd)then
+            pTotal = pTotal + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+         else
+            pTotal = pTotal + (GammaWave-1)*State_V(Ew_)
+         end if
+      end if
+
+      ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
+      !        = p + bb/2 + (p - ppar)/2
+      if(UseAnisoPressure) pTotal = pTotal + 0.5*(p - State_V(Ppar_))
+
+      if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
+
       pTotal2 = pTotal + E2Half
 
       ! Normal direction
@@ -2015,6 +2032,22 @@ contains
       ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
       Flux_V(Energy_) = &
            Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)
+
+      if(UseAnisoPressure)then
+         ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
+         ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
+         DpPerB = 3/2.*(State_V(Ppar_) - p)*FullBn/max(1e-30,FullB2)
+         Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
+         Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
+         Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
+         ! f_i[Ppar] = u_i*Ppar
+         Flux_V(Ppar_)  = Un*State_V(Ppar_)
+         Flux_V(Energy_) = Flux_V(Energy_) &
+              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
+      end if
+
+      ! f_n[Pe] = u_e,n*p_e
+      if(UseElectronPressure)Flux_V(Pe_) = Un*State_V(Pe_)
 
       ! f_i[scalar] = Un*scalar
       do iVar = ScalarFirst_, ScalarLast_
