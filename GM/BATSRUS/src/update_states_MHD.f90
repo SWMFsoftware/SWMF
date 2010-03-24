@@ -368,6 +368,10 @@ subroutine fix_anisotropy
      if(UnusedBlk(iBlock)) CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE
+        
+        ! Avoid Pperp < 0
+        State_VGB(Ppar_,i,j,k,iBlock) = &
+             min(3*State_VGB(p_,i,j,k,iBlock),State_VGB(Ppar_,i,j,k,iBlock)) 
 
         B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
         if(UseB0) B_D = B_D + B0_DGB(:,i,j,k,iBlock)
@@ -377,18 +381,27 @@ subroutine fix_anisotropy
         DtCell = Cfl*time_BLK(i,j,k,iBlock)
 
         ! Check for firehose and mirror instabilities
-        if(TauInstability > -1.0 .and. &
-             ((Ppar - Pperp) > B2 .or. Pperp**2 > Ppar*Pperp + Ppar*0.5*B2))then
-           ! Push towards isotropy with Tau using a point implicit approach
-           Dp = DtCell*(Pperp - Ppar)/(DtCell + TauInstability)
-           ! Other regions
+        ! Limit anisotropy to instability criteria in unstable regions
+        if(TauInstability > -1.0 .and. (Ppar - Pperp) > B2)then
+           ! firehose
+           Dp = DtCell*(Ppar - Pperp - B2)/(DtCell + TauInstability)
+        else if(TauInstability > -1.0 .and. &
+             Pperp**2 > Ppar*Pperp + 0.5*B2*Ppar)then
+           ! mirror
+           Dp = DtCell*(Ppar - Pperp + 0.5*B2*Ppar/Pperp) &
+                /(DtCell + TauInstability)
+        else if(TauInstability > -1.0 .and. &
+             Pperp > Ppar + Ppar*0.3*sqrt(B2*Ppar))then
+           ! proton cyclotron
+           Dp = DtCell*(Ppar - Pperp + 0.3*sqrt(B2*Ppar)) &
+                /(DtCell + TauInstability)
         else if(TauWaveParticle > -1.0)then
            ! Generic "wave-particle" term making the pressure isotropic
-           Dp = DtCell*(Pperp - Ppar)/(DtCell + TauWaveParticle)
+           Dp = DtCell*(Ppar - Pperp)/(DtCell + TauWaveParticle)
         else
            CYCLE
         end if
-        State_VGB(Ppar_,i,j,k,iBlock)  = Ppar  + 2./3.*Dp
+        State_VGB(Ppar_,i,j,k,iBlock)  = Ppar - 2./3.*Dp
      end do; end do; end do  
   end do
 
