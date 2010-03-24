@@ -107,6 +107,7 @@ contains
     use ModConst,       ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
          cElectronMass
     use ModIO,          ONLY: write_prefix, iUnitOut
+    use ModMain,        ONLY: NameThisComp
     use ModMultiFluid,  ONLY: MassIon_I
     use ModNumConst,    ONLY: cTwoPi
     use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge, &
@@ -150,9 +151,11 @@ contains
     DissipationScaleFactor = DissipationScaleFactorSi*Si2No_V(UnitX_) &
          *sqrt(Si2No_V(UnitB_))
 
-    if(UseLdem) call read_ldem
+    if(NameThisComp == 'SC')then
+       if(UseLdem) call read_ldem
 
-    if(iProc == 0) call write_alfvenwave_boundary
+       if(iProc == 0) call write_alfvenwave_boundary
+    end if
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
