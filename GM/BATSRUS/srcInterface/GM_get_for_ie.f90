@@ -45,16 +45,18 @@ end module ModFieldAlignedCurrent
 
 subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
 
+  use CON_axes, ONLY: transform_matrix
+  use ModMain, ONLY: Time_Simulation, TypeCoordSystem
   use ModIeGrid
   use ModCurrent,            ONLY: calc_field_aligned_current
   use ModFieldAlignedCurrent,ONLY: FieldAlignedCurrent_II, &
        init_mod_field_aligned_current!, calc_field_aligned_current
   use ModRaytrace, ONLY: DoTraceIE, RayResult_VII, RayIntegral_VII, &
-       InvB_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
-  use ModNumConst, ONLY: cRadToDeg
+       InvB_, RhoInvB_, pInvB_, xEnd_, yEnd_, zEnd_, CLOSEDRAY, GmSm_DD
+  use ModNumConst, ONLY: cRadToDeg, cDegToRad
   use ModProcMH,         ONLY: iProc, iComm
   use ModPhysics, ONLY: No2Si_V, UnitP_, UnitRho_, UnitB_,rCurrents, UnitJ_
-  use ModCoordTransform, ONLY: sph_to_xyz
+  use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
   implicit none
 
   character (len=*), parameter :: NameSub='GM_get_for_ie'
@@ -65,7 +67,7 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
   real :: Radius,iError, Phi, Theta, LatBoundary
   real, allocatable, dimension(:), save :: IE_lat, IE_lon
   real, allocatable, dimension(:,:,:)   :: bSm_DII 
-  real :: XyzIono_D(3)
+  real :: XyzIono_D(3), RtpIono_D(3), Xyz_D(3), Lat,Lon, dLat,dLon
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   call CON_set_do_test(NameSub,DoTest, DoTestMe)
@@ -127,13 +129,45 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
            RayResult_VII(pInvB_,:,:)=RayResult_VII(pInvB_,:,:)/RayResult_VII(InvB_,:,:)
         end where
         where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-           RayResult_VII(   InvB_,:,:) = -1.*No2Si_V(UnitB_)
+           RayResult_VII(   InvB_,:,:) = -1.
            RayResult_VII(rhoInvB_,:,:) = 0.
            RayResult_VII(  pInvB_,:,:) = 0.
         end where
         Buffer_IIV(:,:,2) = RayResult_VII(   InvB_,:,:) / No2Si_V(UnitB_)
         Buffer_IIV(:,:,3) = RayResult_VII(rhoInvB_,:,:) * No2Si_V(UnitRho_)
         Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
+
+        ! Transformation matrix from default (GM) to SM coordinates
+        GmSm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
+
+        ! Loop to compute deltas
+        do i=1,iSize
+           do j=1,jSize
+              Lat = -IE_Lat(i)
+              Lon =  IE_Lon(j)
+              if(RayResult_VII(InvB_,i,j)>1.e-10)then
+                 XyzIono_D(1)=RayResult_VII(xEnd_,i,j)
+                 XyzIono_D(2)=RayResult_VII(yEnd_,i,j)
+                 XyzIono_D(3)=RayResult_VII(zEnd_,i,j)
+                 XyzIono_D = matmul(GmSm_DD,XyzIono_D)
+                 call xyz_to_sph(XyzIono_D, RtpIono_D)
+                 Lat=90.-RtpIono_D(2)*cRadToDeg
+                 Lon=    RtpIono_D(3)*cRadToDeg
+              end if
+
+              ! Shift to closer to local value, even if outside 0-360
+              if( (IE_Lon(j)-Lon)<-180. ) Lon = Lon-360.
+              if( (IE_Lon(j)-Lon)> 180. ) Lon = Lon+360.
+
+              ! Compute deltas
+              dLat = abs(Lat) - abs(IE_Lat(i))
+              dLon =     Lon  -     IE_Lon(j)
+
+              ! Put into exchange buffer
+              Buffer_IIV(i,j,5) = dLat
+              Buffer_IIV(i,j,6) = dLon
+           end do
+        end do
      end if
      deallocate(RayIntegral_VII, RayResult_VII)
   end if

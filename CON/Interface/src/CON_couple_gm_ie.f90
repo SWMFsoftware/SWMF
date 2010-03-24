@@ -196,7 +196,7 @@ contains
     !/
 
     ! Number of variables to pass
-    integer, parameter :: nVar=4
+    integer, parameter :: nVar=6
 
     ! Name of this interface
     character (len=*), parameter :: NameSub='couple_gm_ie'

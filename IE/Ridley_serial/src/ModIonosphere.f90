@@ -123,11 +123,13 @@ module ModIonosphere
 
   logical :: IsFilledWithIm(1:IONO_nTheta,1:IONO_nPsi)
 
-  real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::     &
-       IONO_NORTH_invB,IONO_SOUTH_invB,             & !Ray tracing 1/B integral
-       IONO_NORTH_rho, IONO_SOUTH_rho,              & !Ray tracing density integral
-       IONO_NORTH_p,   IONO_SOUTH_p, &                !Ray tracing pressure integral
-       IONO_NORTH_t,   IONO_SOUTH_t                   !Ray tracing temperature integral
+  real, dimension(1:IONO_nTheta,1:IONO_nPsi) :: &
+       IONO_NORTH_invB, IONO_SOUTH_invB,        & !Ray tracing 1/B integral
+       IONO_NORTH_rho,  IONO_SOUTH_rho,         & !Ray tracing density integral
+       IONO_NORTH_p,    IONO_SOUTH_p,           & !Ray tracing pressure integral
+       IONO_NORTH_t,    IONO_SOUTH_t,           & !Ray tracing temperature integral
+       IONO_NORTH_dLat, IONO_SOUTH_dLat,        & !Ray tracing conjugate delta Lat (degrees)
+       IONO_NORTH_dLon, IONO_SOUTH_dLon           !Ray tracing conjugate delta Lon (degrees)
        
 
   ! Pentadiagonal matrix for the Poisson equation

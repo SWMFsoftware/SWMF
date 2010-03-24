@@ -577,9 +577,11 @@ subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar)
      Iono_North_Jr = Buffer_IIV(1:IONO_nTheta,:,1)
      Iono_North_Jr(IONO_nTheta-1:IONO_nTheta,1) = 0.0
      if(nVar>1)then
-        Iono_North_invB           = Buffer_IIV(1:IONO_nTheta,:,2)
-        Iono_North_rho            = Buffer_IIV(1:IONO_nTheta,:,3)
-        Iono_North_p              = Buffer_IIV(1:IONO_nTheta,:,4)
+        Iono_North_invB = Buffer_IIV(1:IONO_nTheta,:,2)
+        Iono_North_rho  = Buffer_IIV(1:IONO_nTheta,:,3)
+        Iono_North_p    = Buffer_IIV(1:IONO_nTheta,:,4)
+        Iono_North_dLat = Buffer_IIV(1:IONO_nTheta,:,5)
+        Iono_North_dLon = Buffer_IIV(1:IONO_nTheta,:,6)
         if(DoTest) call write_dataN
      end if
   endif
@@ -589,9 +591,11 @@ subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar)
      Iono_South_Jr = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,1)
      Iono_South_Jr(1:2,1) = 0.0
      if(nVar>1)then
-        Iono_South_invB           = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,2)
-        Iono_South_rho            = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,3)
-        Iono_South_p              = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,4)
+        Iono_South_invB = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,2)
+        Iono_South_rho  = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,3)
+        Iono_South_p    = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,4)
+        Iono_South_dLat = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,5)
+        Iono_South_dLon = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,6)
         if(DoTest) call write_dataS
      end if
   endif
