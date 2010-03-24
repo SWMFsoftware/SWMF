@@ -618,7 +618,7 @@ contains
     BodyP_I(1)   =sum(BodyRhoSpecies_I(1:MaxSpecies)&
          /MassFluid_I(2:nFluid))*Ti_body
    
-    BodyP_I(2:nFluid)=Ti_bodysum(BodyRhoSpecies_I(1:MaxSpecies)&
+    BodyP_I(2:nFluid)=Ti_body*sum(BodyRhoSpecies_I(1:MaxSpecies)&
          /MassFluid_I(2:nFluid))
 
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
