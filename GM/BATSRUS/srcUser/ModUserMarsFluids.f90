@@ -128,10 +128,9 @@ module ModUser
 
   real :: TNu_body_dim = 300.0, TNu_body, Tnu, Tnu_dim ! neutral temperature 
   real :: Ti_body_dim=300.0, Ti_body  !ion temperature at the body
-  real :: Tp_body_dim=600.0, Tp_body  !dimensionless temperature 
-  !of new created ions / plasma (Tp_body=2.0*Ti_body)
+  
 
-  real :: T300_dim = 300.0, T300 , Ti_dim =300., Tp
+  real :: T300_dim = 300.0, T300 , Ti_dim =300.
   real :: nu0_dim=4.0e-10,nu0
 
   real :: Te_new_dim=1000., KTe0
@@ -178,7 +177,7 @@ contains
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, iNewGrid, iNewDecomposition, &
          PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest
     use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_,Si2No_V, No2Io_V, No2Si_V, LowDensityRatio,&
-         UnitT_,UnitN_,ElectronTemperatureRatio
+         UnitT_,UnitN_
     use ModAdvance, ONLY: State_VGB, Source_VC,VdtFace_x,&
          VdtFace_y,VdtFace_z
     use ModGeometry,ONLY: r_BLK,x_BLK,y_BLK,z_BLK,R_BLK,&
@@ -372,8 +371,8 @@ contains
 
        end if
 
-       State_VGB(P_,i,j,k,iBlock)=sum(State_VGB(iPIon_I,i,j,k,iBlock))*(1+ElectronTemperatureRatio)
-       kTi=State_VGB(P_,i,j,k,iBlock)/NumDens/(1+ElectronTemperatureRatio)
+       State_VGB(P_,i,j,k,iBlock)=sum(State_VGB(iPIon_I,i,j,k,iBlock))
+       kTi=State_VGB(P_,i,j,k,iBlock)/NumDens
        !Ti_dim=kTi*No2Si_V(UnitTemperature_)
 
        !charge exchange
@@ -406,7 +405,7 @@ contains
 
        ! Recombination
 
-       kTi=State_VGB(P_,i,j,k,iBlock)/NumDens/(1+ElectronTemperatureRatio)   
+       kTi=State_VGB(P_,i,j,k,iBlock)/NumDens   
        kTe=kTi
 
        if(kTi <= 0.0)then
@@ -531,49 +530,7 @@ contains
             -nu_BLK(i,j,k,iBlock)*State_VGB(iRhoUzIon_I(:),i,j,k,iBlock)
        !----- pressure and energy source terms
 
-       if(UseOldEnergy)then
-          tmp = (totalSourceNumRho*Tp_body + totalPSNumRho*T300*20.) &
-               -(totalLossNumx+totalRLNumRhox)*State_VGB(P_,i,j,k,iBlock)
-
-          tmp_I = (SourceNumRho_I*Tp_body + PhoIon_I*T300*20.) &
-               -(LossNumx_I + RLNumRhox_I)*State_VGB(iPIon_I,i,j,k,iBlock)
-          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               + (inv_gm1*tmp-0.50*uu2*(totalLossRho))&
-               - 0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
-               nu_BLK(i,j,k,iBlock)
-
-
-          do iFluid = 1, nIonFluid
-             Source_VC(Energy_+iFluid,i,j,k) = &
-                  Source_VC(Energy_+iFluid,i,j,k)&
-                  +(inv_gm1*tmp_I(iFluid) - 0.5*uu2_I(iFluid)*LiSpecies_I(iFluid))&
-                  -0.5*State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock)*uu2_I(iFluid)*&
-                  nu_BLK(i,j,k,iBlock)
-          end do
-          Source_VC(P_ ,i,j,k) = Source_VC(P_ ,i,j,k) &
-               + (tmp + 0.5*uu2*(totalSourceRho)*gm1) &
-               + gm1*0.5*State_VGB(rho_,i,j,k,iBlock)*uu2* &
-               nu_BLK(i,j,k,iBlock)
-
-          Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k) &
-               + (tmp_I + 0.5*uu2_I*SiSpecies_I*gm1)&
-               + gm1*0.5*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
-               nu_BLK(i,j,k,iBlock)
-
-          if(kTi > TNu_body)then
-
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-                  -nu_BLK(i,j,k,iBlock)*NumDens*inv_gm1&
-                  *(kTi-TNu_body)
-
-             Source_VC(P_ ,i,j,k) = Source_VC(P_ ,i,j,k)  &
-                  -nu_BLK(i,j,k,iBlock)*NumDens*inv_gm1&
-                  *(kTi-TNu_body)
-
-          end if
-
-       else
-
+      
           tmp = totalSourceNumRho*TNu_body            &
                + NumDens*(TNu_body-KTi)*nu_BLK(i,j,k,iBlock) &
                + totalPSNumRho*kTe0                &
@@ -619,27 +576,7 @@ contains
                nu_BLK(i,j,k,iBlock)  &
                + 0.5*gm1*uu2_I*SiSpecies_I &
                + tmp_I
-       end if
-
-
-       if(DoTestCell)then
-
-!!$          write(*,*)NameSub,'totalSourceNumRho= ', totalSourceNumRho
-!!$          write(*,*)NameSub,' totalLossNumRho=',totalLossNumRho
-!!$          write(*,*)NameSub,'totalLossx=', totalLossx
-!!$          write(*,*)NameSub,'totalLossNumx=', totalLossNumx
-!!$          write(*,*)NameSub,'totalPSNumRho=',totalPSNumRho
-!!$          write(*,*)NameSub,'totalRLNumRhox=', totalRLNumRhox
-!!$          write(*,*)NameSub,' Tmp_I=',Tmp_I(:)
-          !write(*,*)NameSub,' Source_VC(iPIon_I(:))',Source_VC(iPIon_I(:),iTest,jTest,kTest)
-          ! write(*,*)NameSub,' Source_VC(rho_ )=', Source_VC(rho_       ,iTest,jTest,kTest)
-          ! write(*,*)NameSub,'  Source_VC(iRhoIon_I(:),:,:,:)=', Source_VC(iRhoIon_I(:),iTest,jTest,kTest)
-          ! write(*,*)NameSub,' Source_VC(rhoUx_)=', Source_VC(rhoUx_     ,iTest,jTest,kTest)
-          ! write(*,*)NameSub,'Source_VC(rhoUy_)=',Source_VC(rhoUy_     ,iTest,jTest,kTest)
-          ! write(*,*)NameSub,' Source_VC(rhoUz_)=', Source_VC(rhoUz_     ,iTest,jTest,kTest)         
-
-       end if
-
+       
     end do; end do; end do     ! end of the i,j,k loop
 
     !end of chemistry
@@ -674,24 +611,15 @@ contains
 
     integer::iBoundary
     !--------------------------------------------------------------------------
-    !For Outer Boundaries
-    !do iBoundary=East_,Top_
-    !   FaceState_VI(HpRho_,iBoundary)    = SW_rho
-    !   FaceState_VI(O2pRho_,iBoundary)   = cTiny8
-    !   FaceState_VI(OpRho_,iBoundary)    = cTiny8
-    !   FaceState_VI(CO2pRho_,iBoundary)  = cTiny8     
-    !end do
     call set_multiSp_ICs  
     !    Rbody = 1.0 + 140.0e3/Mars
     BodyRho_I(1) = sum(BodyRhoSpecies_I(1:MaxSpecies))
     !BodyRho_I(2:nFluid)=BodyRhoSpecies_I(1:MaxSpecies)
     BodyP_I(1)   =sum(BodyRhoSpecies_I(1:MaxSpecies)&
-         /MassFluid_I(2:nFluid))*Tp_body
-    write(*,*)'BodyP_I(1)=',BodyP_I(1)
-    write(*,*)'sum(BodyRhoSpecies_I(1:MaxSpecies)=',sum(BodyRhoSpecies_I(1:MaxSpecies))
-    write(*,*)'Tp_body=',Tp_body
-    BodyP_I(2:nFluid)=Tp_body*sum(BodyRhoSpecies_I(1:MaxSpecies)&
-         /MassFluid_I(2:nFluid))/(1+ElectronTemperatureRatio)
+         /MassFluid_I(2:nFluid))*Ti_body
+   
+    BodyP_I(2:nFluid)=Ti_bodysum(BodyRhoSpecies_I(1:MaxSpecies)&
+         /MassFluid_I(2:nFluid))
 
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(iRhoIon_I,body1_) = BodyRhoSpecies_I
@@ -1013,17 +941,7 @@ contains
     real :: Productrate
     logical::oktest=.false., oktestme=.false.
     !---------------------------------------------------------------
-    if(oktestme)then
-       write(*,*)'in set_multisp_ICs, No2Io_V(UnitN_),t=',&
-            No2Io_V(UnitN_),No2Io_V(UnitT_)
-       write(*,*)'No2Si_V(UnitX_), temperature=',&
-            No2Si_V(UnitX_), No2Si_V(UnitTemperature_)
-       write(*,*)'kTp=',SW_p*Tp_body_dim/SW_T_dim, &
-            Tp_body_dim/No2Si_V(UnitTemperature_)
-       write(*,*)'BodynDenNuSpecies_dim_I(:)',&
-            BodynDenNuSpdim_I(:)
-    end if
-
+  
     select case(SolarCond)
 
     case('solarmax')
@@ -1162,12 +1080,10 @@ contains
 
 
     Ti_body_dim = Tnu_body_dim  !ion temperature at the body
-    Tp_body_dim = 2.0*Tnu_body_dim 
 
 
     TNu_body= TNu_body_dim*Si2No_V(UnitTemperature_)
     Ti_body = Ti_body_dim*Si2No_V(UnitTemperature_)
-    Tp_body = Tp_body_dim*Si2No_V(UnitTemperature_)
     T300 = T300_dim*Si2No_V(UnitTemperature_)
 
     kTe0=max(Te_new_dim, Tnu_body_dim)*Si2No_V(UnitTemperature_)
@@ -1175,7 +1091,6 @@ contains
     if(oktest)then
        write(*,*)'Tnu_body=',Tnu_body, TNu_body_dim
        write(*,*)'T300=', T300, T300_dim
-       write(*,*)'Tp_body=', Tp_body, Tp_body_dim       
     end if
 
     nu0=nu0_dim*No2Io_V(UnitN_)*No2Io_V(UnitT_)
@@ -1367,10 +1282,10 @@ contains
           State_VGB(rho_,i,j,k,globalBLK)  = &
                sum( State_VGB(iRho_I(2:nFluid),i,j,k,globalBLK))
 
-          State_VGB(iPIon_I,i,j,k,globalBLK) = (Tp_body/2)*State_VGB(iRhoIon_I,i,j,k,globalBLK) &
+          State_VGB(iPIon_I,i,j,k,globalBLK) = Ti_body*State_VGB(iRhoIon_I,i,j,k,globalBLK) &
                /MassIon_I(:) 
           State_VGB(P_,i,j,k,globalBLK) = &
-               max(SW_p,sum(State_VGB(iPIon_I,i,j,k,globalBLK))*(1+ElectronTemperatureRatio))
+               max(SW_p,sum(State_VGB(iPIon_I,i,j,k,globalBLK)))
        else
 
           State_VGB(:,i,j,k,globalBLK)   = CellState_VI(:,1)
@@ -1477,39 +1392,17 @@ contains
             sum(State_VGB(iRhoIon_I,i,j,k,globalBLK))
 
        State_VGB(P_,i,j,k,globalBLK) = &
-            max(SW_p,(sum(State_VGB(iRhoIon_I(:),i,j,k,globalBLK)/(MassIon_I(:))))*Tp_body*(1+ElectronTemperatureRatio))
+            max(SW_p,(sum(State_VGB(iRhoIon_I(:),i,j,k,globalBLK)/(MassIon_I(:))))*Ti_body)
 
        State_VGB(iPIon_I,i,j,k,globalBLK)=State_VGB(P_,i,j,k,globalBLK)&
-            /(sum(State_VGB(iRhoIon_I,i,j,k,globalBLK)/(MassIon_I))/(1+ElectronTemperatureRatio))*&
+            /(sum(State_VGB(iRhoIon_I,i,j,k,globalBLK)/(MassIon_I)))*&
             State_VGB(iRhoIon_I,i,j,k,globalBLK)/MassIon_I
 
        Temp_I=State_VGB(iPIon_I(1:nIonFluid),i,j,k,globalBLK)/&
             (State_VGB(iRhoIon_I(1:nIonFluid),i,j,k,globalBLK)/MassFluid_I(2:nFluid))
 
-   !    if(DoTestCell)then
-   !       write(*,*)'!!!!!Debugging in set_ics'
-   !       write(*,*)'State_VGB(iPIon_I(1:nIonFluid),i,j,k,globalBLK)==',State_VGB(iPIon_I(1:nIonFluid),iTest,jTest,kTest,globalBLK)
-   !       write(*,*)'State_VGB(P_,i,j,k,globalBLK) = ',State_VGB(P_,iTest,jTest,kTest,globalBLK)  
-   !       write(*,*)'Temp_I=',Temp_I
-   !       write(*,*)'T_SW=',SW_p*MassIon_I(1)/SW_Rho
-   !    end if
-
-
-
-       !if(DoTestMe)then
-       !   write(*,*)'Tp_body=',Tp_body
-       !   write(*,*)'Temp_I in set_ICs=',Temp_I
-       !   write(*,*)'TNu_body=',TNu_body
-       !   write(*,*)'Ti_body=',Ti_body
-       !end if
-
     end do; end do; end do
 
-    !if(DoTestMe)then
-    !write(*,*)'State_VGB(iPIon_I(1:nIonFluid),i,j,k,globalBLK)==',State_VGB(iPIon_I(1:nIonFluid),iTest,jTest,kTest,globalBLK)=
-    !write(*,*)'State_VGB(P_,i,j,k,globalBLK) = ',State_VGB(P_,iTest,jTest,kTest,globalBLK)  
-    !   write(*,*)'Ti_body=',Ti_body
-    !end if
 
     if(DoTestMe)then
        write(*,*)'!!!!in set_ics '
@@ -1531,7 +1424,7 @@ contains
     use ModMain,       ONLY: UseRotatingBc, iTest, jTest, kTest, ProcTest, BlkTest, GLOBALBLK
     use ModProcMH,   ONLY: iProc
     use ModVarIndexes, ONLY: nVar, OpRho_, O2pRho_, CO2pRho_, HpRho_,HpP_,O2pP_,OpP_,CO2pP_,iRhoUx_I,iRhoUy_I,iRhoUz_I
-    use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim,ElectronTemperatureRatio
+    use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim
     use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V, iFace,jFace,kFace
 
     real, intent(out):: VarsGhostFace_V(nVar)
@@ -1572,10 +1465,9 @@ contains
     VarsGhostFace_V(HpRho_)  = SW_rho*0.3
     VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(iRhoIon_I))    
 
-    VarsGhostFace_V(iPIon_I)=Tp_body*VarsGhostFace_V(iRhoIon_I)/MassIon_I/&
-         (1+ElectronTemperatureRatio)
+    VarsGhostFace_V(iPIon_I)=Ti_body*VarsGhostFace_V(iRhoIon_I)/MassIon_I
 
-    VarsGhostFace_V(P_)=Tp_body*sum(VarsGhostFace_V(iRhoIon_I)/MassIon_I)
+    VarsGhostFace_V(P_)=sum(VarsGhostFace_V(iPIon_I))
 
 
     ! Reflective in radial direction
