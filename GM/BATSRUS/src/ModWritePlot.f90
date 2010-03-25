@@ -264,18 +264,19 @@ subroutine write_plot_common(ifile)
         PlotXYZNodes_NBI(:,:,:,:,2)=NodeY_NB
         PlotXYZNodes_NBI(:,:,:,:,3)=NodeZ_NB
      else
-        NodeValue_NB=NodeX_NB(:,:,:,:)                   ! X
+        NodeValue_NB = NodeX_NB(:,:,:,:)                   ! X
         call pass_and_average_nodes(.true.,NodeValue_NB)
         PlotXYZNodes_NBI(:,:,:,:,1)=NodeValue_NB
-        NodeValue_NB=NodeY_NB(:,:,:,:)                   ! Y
+        NodeValue_NB = NodeY_NB(:,:,:,:)                   ! Y
         call pass_and_average_nodes(.true.,NodeValue_NB)
         PlotXYZNodes_NBI(:,:,:,:,2)=NodeValue_NB
-        NodeValue_NB=NodeZ_NB(:,:,:,:)                   ! Z
+        NodeValue_NB = NodeZ_NB(:,:,:,:)                   ! Z
         call pass_and_average_nodes(.true.,NodeValue_NB)
         PlotXYZNodes_NBI(:,:,:,:,3)=NodeValue_NB
 
         ! Make near zero values exactly zero
-        where(abs(PlotXYZNodes_NBI)<1.e-10) PlotXYZNodes_NBI=0.
+        where(abs(PlotXYZNodes_NBI(:,:,:,1:nBlock,:)<1.e-10) &
+             PlotXYZNodes_NBI(:,:,:,1:nBlock,:) = 0.
      end if
 
      ! Now pass and average the rest of the values
