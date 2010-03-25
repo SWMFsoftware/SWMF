@@ -2446,22 +2446,44 @@ contains
     subroutine get_boris_speed
 
       use ModPhysics, ONLY: g, inv_c2LIGHT
+      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
 
-      real :: InvRho, Sound2, FullBx, FullBy, FullBz
+      real :: InvRho, Sound2, FullBx, FullBy, FullBz, FullBn, FullB2
+      real :: p, Ppar, Pperp, BnInvB2, GammaPe
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, Slow
       real :: GammaA2, GammaU2
       real :: UnBoris, Sound2Boris, Alfven2Boris, Alfven2NormalBoris
       !-----------------------------------------------------------------------
       InvRho = 1.0/State_V(Rho_)
-      Sound2 = g*State_V(p_)*InvRho
+      p = State_V(p_)
       FullBx = State_V(Bx_) + B0x
       FullBy = State_V(By_) + B0y
       FullBz = State_V(Bz_) + B0z
-      Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
+      FullB2 = FullBx**2+FullBy**2+FullBz**2
+      FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
 
+      ! Calculate Sound2
+      if(UseAnisoPressure .and. FullB2 > 0)then
+         GammaPe = 0.0 
+         if(UseElectronPressure) GammaPe = g*State_V(Pe_) ! considering Pe
+         Ppar  = State_V(Ppar_)
+         Pperp = (3*p - Ppar)/2.
+         BnInvB2 = FullBn**2/FullB2
+         Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 &
+              + GammaPe)                        ! define Sound2 in this way
+      else 
+         if(UseElectronPressure) p = p + State_V(Pe_)
+         Sound2 = g*p*InvRho
+         if(UseWavePressure)&
+              Sound2 = Sound2 + GammaWave * (GammaWave - 1)*&
+              sum(State_V(WaveFirst_:WaveLast_))*InvRho      
+      end if
+
+      
+      Alfven2= FullB2*InvRho
+      Alfven2Normal = InvRho*FullBn**2
+      
       Un = State_V(Ux_)*NormalX + State_V(Uy_)*NormalY + State_V(Uz_)*NormalZ
-      Alfven2Normal = &
-           InvRho*(NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz)**2
 
       ! "Alfven Lorentz" factor
       GammaA2 = 1.0/(1.0 + Alfven2*inv_c2LIGHT) 
@@ -2476,7 +2498,16 @@ contains
 
       ! Approximate slow and fast wave speeds
       Fast2  = Sound2Boris + Alfven2Boris
-      Discr  = sqrt(max(0.0, Fast2**2 - 4.0*Sound2*Alfven2NormalBoris))
+
+      if(UseAnisoPressure .and. FullB2 > 0)then 
+         Discr = sqrt(max(0.0, Fast2**2  &
+              + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &  
+              - (3*Ppar + GammaPe)*Pperp*InvRho**2*BnInvB2*(2-BnInvB2) &
+              + (3*Ppar + GammaPe)*Ppar*(InvRho*BnInvB2)**2 &
+              - (3*Ppar + GammaPe)*InvRho*Alfven2NormalBoris)))
+      else
+         Discr = sqrt(max(0.0, Fast2**2 - 4.0*Sound2*Alfven2NormalBoris))
+      end if
 
       ! Get fast and slow speeds multiplied with the face area
       Fast = sqrt( 0.5*(          Fast2 + Discr) )
