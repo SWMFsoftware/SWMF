@@ -780,7 +780,7 @@ test_marsfluids_restart:
 test_marsfluids_restart_save:
 	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf MarsFluidsTest/RestartSave RESTART_marsfluids
 	cd ${TESTDIR}; ./PostProc.pl -M -o MarsFluidsTest/RestartSave
 
@@ -788,7 +788,7 @@ test_marsfluids_restart_read:
 	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i MarsFluidsTest/RestartSave/RESTART
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf MarsFluidsTest/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o MarsFluidsTest/RestartRead
 
