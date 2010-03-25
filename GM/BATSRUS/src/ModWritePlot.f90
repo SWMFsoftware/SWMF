@@ -275,7 +275,7 @@ subroutine write_plot_common(ifile)
         PlotXYZNodes_NBI(:,:,:,:,3)=NodeValue_NB
 
         ! Make near zero values exactly zero
-        where(abs(PlotXYZNodes_NBI(:,:,:,1:nBlock,:)<1.e-10) &
+        where(abs(PlotXYZNodes_NBI(:,:,:,1:nBlock,:))<1.e-10) &
              PlotXYZNodes_NBI(:,:,:,1:nBlock,:) = 0.
      end if
 
