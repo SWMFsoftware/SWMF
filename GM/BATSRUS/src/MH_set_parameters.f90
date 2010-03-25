@@ -2601,6 +2601,15 @@ contains
        end if
     end if
 
+    ! 
+    if(TypeGeometry == 'cartesian')then                               
+       if(UsePoleDiffusion .or. DoFixAxis)then
+          UsePoleDiffusion = .false.
+          DoFixAxis = .false.
+          write(*,*) NameSub//' setting UsePoleDiffusion and DoFixAxis to FALSE'
+       end if
+    end if
+
   end subroutine correct_parameters
 
   !===========================================================================
