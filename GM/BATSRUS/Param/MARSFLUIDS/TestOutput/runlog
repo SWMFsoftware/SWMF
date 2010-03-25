@@ -3,12 +3,24 @@
           for 3D Heliospheric Flows
  University of Michigan, 1995-2007
 
- BATSRUS version 9.00 is running as GM on    4 PE(s)
+ BATSRUS version 9.00 is running as GM on    1 PE(s)
 
  EQUATIONS:   Multi-fluid MHD for Mars
  USER MODULE: Mars 5 Fluids MHD code, Dalal Najib 1.20
 
-ModReadParam::read_file: read and broadcast nLine= 213 lines of text
+
+ BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2007
+
+ BATSRUS version 9.00 is running as GM on    1 PE(s)
+
+ EQUATIONS:   Multi-fluid MHD for Mars
+ USER MODULE: Mars 5 Fluids MHD code, Dalal Najib 1.20
+
+ModReadParam::read_file: read and broadcast nLine= 223 lines of text
+ ----- Starting Session  1  ------
+ModReadParam::read_file: read and broadcast nLine= 223 lines of text
  ----- Starting Session  1  ------
  init_mod_restart_file: setting TypeRestartOutFile = one
  GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
@@ -68,7 +80,105 @@ T			body1		UseBody
 300.                 	BodyTdim		BodyTDim
 9.07E+03                BodyNDim
 300.                 	BodyTdim		BodyTDim
+ 4.8E-04                BodyNDim init_mod_restart_file: setting TypeRestartOutFile = one
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
+
+#NORMALIZATION
+SOLARWIND		TypeNormalization
+
+#DESCRIPTION
+
+#COVARIANTGEOMETRY
+spherical_lnr		TypeGeometry
+
+#PLANET
+Mars			NamePlanet
+
+#ROTATION
+F			UseRotation
+
+#GRAVITY
+T			UseGravity
+0			iDirGravity
+
+#GRID
+2                     nRootBlockX
+2                      nRootBlockY
+2                      nRootBlockZ
+-24.                    xMin
+  8.                    xMax
+-16.                    yMin
+ 16.                    yMax
+-16.                    zMin
+ 16.                    zMax
+
+#LIMITRADIUS
+1.029884232197		rMin		Coord1Min
+32.9849					rMax = sqrt(24^2+16^2+16^2)		Coord1Max
+
+#GRIDLEVEL
+3			nLevelArea
+initial					NameArea
+
+#GRIDLEVEL
+1			nLevelArea
+sphere0					NameArea
+1.7							Radius = 1.5*rBody
+
+#POINTIMPLICIT
+T		UsePointImplicit
+1.0		BetaPointImplicit
+F		IsAsymmetric
+
+#BODY
+T			body1		UseBody
+1.0294464		Rbody		rBody
+1.0			Rcurrents		rCurrents
+1.0e2                 	BodyNDim
+300.                 	BodyTdim		BodyTDim
+9.07E+03                BodyNDim
+300.                 	BodyTdim		BodyTDim
  4.8E-04                BodyNDim
+
+300.                 	BodyTdim		BodyTDim
+ 1.70E+01               BodyNDim
+300.                 	BodyTdim		BodyTDim
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#TIMESTEPPING
+1			nStage
+0.2			CflExpl
+
+#SCHEME
+2                       nOrder
+Linde                   TypeFlux
+minmod                  TypeLimiter
+
+#USERFLAGS
+T			UseUserInnerBcs
+T			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+T                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+0		nConservCrit
+
+#SAVELOGFILE
+T                       DoSaveLogfile
 300.                 	BodyTdim		BodyTDim
  1.70E+01               BodyNDim
 300.                 	BodyTdim		BodyTDim
@@ -146,7 +256,11 @@ issiC		SolarCon
 
 #REACTIONS
 F		UseImpactIon
-T		UseChargeEx
+T		UseChargcheck_dir SWMF_ERROR: could not open file in directory GM/IO2/, iError=   2
+ Stopping execution! me= 0  at iteration= 0  with msg:
+ check_dir ERROR: Cannot find/write into directory GM/IO2/
+ errcode=  6.6770128794790649E-306
+eEx
 
 #USERINPUTEND ---------------------------------------------------------
  USERINPUTEND
@@ -158,6 +272,14 @@ T			DoAddRhoU
 #MULTISPECIES
 F			DoReplaceDensity
 5.0			SpeciesPercentCheck
+
+#PLASMA
+1.0             IonMass H [amu]		MassFluid
+32.0            IonMass O2 [amu]		MassFluid
+16.0            IonMass O [amu]		MassFluid
+44.0            IonMass CO2 [amu]		MassFluid
+1.0             AverageIonCharge (ignored)		AverageIonCharge
+1.0             ElectronTemperatureRatio
 
 #MULTIION
 1e-9			LowDensityRatio
@@ -187,11 +309,10 @@ z=0 MHD idl             StringPlot
 -1.0			tSimulationMax
  GM_set_parameters: CHECK iSession = 1
   
+init_mod_advance allocated arrays
 init_mod_geometry allocated arrays
+init_mod_nodes allocated arrays
 init_mod_raytrace allocated arrays
- BodyP_I(1)=   4.2749443874653261
- sum(BodyRhoSpecies_I(1:MaxSpecies)=   1.9452098706314698E+05
- Tp_body=   7.0359060682006677E-04
  BATS_setup starting initial refinement level  1
  parallel_refine starting to refine  4  block(s) on PE 0
  BATS_setup starting initial refinement level  2
@@ -258,10 +379,10 @@ init_mod_raytrace allocated arrays
     Other Runtime Parameters
     ------------------------
 
- Available processors: nProc =  4
+ Available processors: nProc =  1
 
  After initial grid setup:
-   nBlockMax =  15  nBLK =  1000
+   nBlockMax =  36  nBLK =  1000
    Total number of blocks used =  36
    Total number of cells =  7776
    Total number of true cells =  7460
@@ -277,25 +398,15 @@ init_mod_raytrace allocated arrays
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   0.26    100.00         1         1
+BATSRUS                   0.45    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     0.26     99.99         1         1
-exch_msgs                 0.02      5.76         1         1
-load_balance              0.01      4.12         1         1
+setup                     0.45    100.00         1         1
+exch_msgs                 0.04      9.42         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
- First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.6965959595020433E-10
-Speed is   5387.5 c/s/p  BodyP_I(1)=   4.2749443874653261
- sum(BodyRhoSpecies_I(1:MaxSpecies)=   1.9452098706314698E+05
- Tp_body=   7.0359060682006677E-04
- BodyP_I(1)=   4.2749443874653261
- sum(BodyRhoSpecies_I(1:MaxSpecies)=   1.9452098706314698E+05
- Tp_body=   7.0359060682006677E-04
- BodyP_I(1)=   4.2749443874653261
- sum(BodyRhoSpecies_I(1:MaxSpecies)=   1.9452098706314698E+05
- Tp_body=   7.0359060682006677E-04
-after      3.9 s at N =      10
-Speed is   5238.0 c/s/p after      7.7 s at N =      20
+ First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.3056148121619266E-10
+Speed is   1286.8 c/s/p after     60.7 s at N =      10
+Speed is   1288.7 c/s/p after    121.5 s at N =      20
 
     Finished Numerical Simulation
     -----------------------------
@@ -309,26 +420,24 @@ saved ifile= 5 type=z=0_mhd    at n_step=     20
 SORTED TIMING from step       0 to      20    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   7.74    100.00         1         1
+BATSRUS                 121.67    100.00         1         1
 -------------------------------------------------------------------------------
-advance                   7.30     94.32        20        20
-update_states             5.02     64.78        20       360
-update_point_implici      4.89     63.09        20       180
-calc_fluxes               0.99     12.76        20       360
-save_logfile              0.39      5.00        20        20
-calc_facevalues           0.37      4.79        20       360
-exch_msgs                 0.30      3.93        20        40
-calc_sources              0.18      2.38        20       360
-barrier-expl2             0.14      1.85        20        40
-update_check              0.10      1.28        20        40
-calc_face_bfo             0.10      1.23        20       160
-save_plot                 0.05      0.66         1         3
-barrier-expl1             0.03      0.34        20        40
-calc_fluxes_bfo           0.02      0.31        20       160
-set_bcs                   0.02      0.29        20       280
-send_cons_flux            0.00      0.05        20        40
+advance                 121.06     99.49        20        20
+update_states            96.75     79.52        20      1440
+update_point_implici     94.73     77.85        20       720
+calc_fluxes              14.50     11.92        20      1440
+calc_facevalues           4.02      3.31        20      1440
+calc_sources              1.90      1.56        20      1440
+exch_msgs                 1.45      1.19        20        40
+update_check              1.05      0.87        20        40
+calc_face_bfo             0.69      0.57        20       640
+save_logfile              0.43      0.36        20        20
+calc_fluxes_bfo           0.32      0.26        20       640
+set_bcs                   0.22      0.18        20      1120
+save_plot                 0.18      0.15         1         3
+send_cons_flux            0.03      0.02        20        40
 -------------------------------------------------------------------------------
 Error_report for Time step reduction, min(factor)
- OCCURED first= 1  last= 20  count_max= 39  count_sum= 39
- VALUES min=   1.6965959595020433E-10  max=   0.5017594606179985  mean=   0.1049239630241109  last=   0.5017594606179985  last_sum=   0.5017594606179985
+ OCCURED first= 1  last= 19  count_max= 37  count_sum= 37
+ VALUES min=   1.3056148121619266E-10  max=   0.6260230606246013  mean=   0.1232508658237774  last=   0.6260230606246013  last_sum=   0.6260230606246013
 
