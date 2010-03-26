@@ -1732,7 +1732,7 @@ subroutine plot_ray_equator(iFile)
   real    :: SmGm_DD(3,3)
   real    :: PlotVar_V(0:4+nVar)
 
-  character(len=100) :: NameFile, NameFileEnd
+  character(len=100) :: NameFile, NameFileEnd=''
 
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'plot_ray_equator'
