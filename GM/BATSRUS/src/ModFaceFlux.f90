@@ -28,7 +28,7 @@ module ModFaceFlux
        UseRS7, UseTotalSpeed, UseElectronPressure,  &
        eFluid_                           ! index for electron fluid (nFluid+1)
 
-  use ModPhysics, ONLY: AverageIonCharge, ElectronTemperatureRatio
+  use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
 
   use ModMultiIon, ONLY: &
        Pe_X, Pe_Y, Pe_Z ! output: Pe for grad Pe in multi-ion MHD
@@ -834,7 +834,7 @@ contains
 
     ! Calculate -grad(pe)/(n_e * e) term for Hall MHD if needed
     UseHallGradPe = HallCoeff > 0.0 .and. &
-         (UseElectronPressure .or. ElectronTemperatureRatio > 0.0)
+         (UseElectronPressure .or. ElectronPressureRatio > 0.0)
 
     Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
     if(UseResistivity .and. UseResistiveFlux) Eta = 0.5* &
@@ -925,11 +925,10 @@ contains
           if(UseElectronPressure)then
              Pe_G = State_VGB(Pe_,:,:,:,iBlockFace) 
           elseif(IsMhd)then
-             Coef = AverageIonCharge*ElectronTemperatureRatio
-             Pe_G = State_VGB(p_,:,:,:,iBlockFace)*Coef/(1 + Coef)
+             Pe_G = State_VGB(p_,:,:,:,iBlockFace)*PePerPtotal
           else
              Pe_G = sum(State_VGB(iPIon_I,:,:,:,iBlockFace),DIM=1) &
-                  *ElectronTemperatureRatio
+                  *ElectronPressureRatio
           end if
        end if
 
@@ -1812,7 +1811,7 @@ contains
     real,    intent(out):: Pe                  ! electron pressure for multiion
 
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
-    real:: FluxBx, FluxBy, FluxBz, Coef
+    real:: FluxBx, FluxBy, FluxBz
     !--------------------------------------------------------------------------
 
     ! Calculate conservative state
@@ -1826,10 +1825,9 @@ contains
        if(UseElectronPressure)then
           Pe = State_V(Pe_)
        elseif(IsMhd)then
-          Coef = AverageIonCharge*ElectronTemperatureRatio
-          Pe = State_V(p_)*Coef/(1 + Coef)
+          Pe = State_V(p_)*PePerPtotal
        else
-          Pe = sum(State_V(iPIon_I))*ElectronTemperatureRatio
+          Pe = sum(State_V(iPIon_I))*ElectronPressureRatio
        end if
     else
        Pe = 0.0
@@ -2540,7 +2538,7 @@ contains
     subroutine get_mhd_speed
 
       use ModMain,    ONLY: UseCurlB0
-      use ModPhysics, ONLY: g, Inv_C2Light, ElectronTemperatureRatio
+      use ModPhysics, ONLY: g, Inv_C2Light, ElectronPressureRatio
       use ModNumConst, ONLY: cPi
       use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure
@@ -2569,7 +2567,7 @@ contains
             p   = p   + State_V(iPIon_I(iFluid))
             RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(iFluid):iUzIon_I(iFluid))
          end do
-         if(.not.UseElectronPressure) p = p * (1 + ElectronTemperatureRatio)
+         if(.not.UseElectronPressure) p = p * (1 + ElectronPressureRatio)
       end if
 
       if(UseElectronPressure) p = p + State_V(Pe_)

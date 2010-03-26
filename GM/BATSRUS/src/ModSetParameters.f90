@@ -1643,7 +1643,8 @@ subroutine MH_set_parameters(TypeAction)
         MassIon_I = MassFluid_I(IonFirst_:IonLast_)
         call read_var('AverageIonCharge        ', AverageIonCharge)
         call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
-        UseSimpleTe = ElectronTemperatureRatio > 0.0
+        ElectronPressureRatio = ElectronTemperatureRatio*AverageIonCharge
+        PePerPtotal = ElectronPressureRatio/(1 + ElectronPressureRatio)
 
      case("#MULTISPECIES")
         call read_var('DoReplaceDensity', DoReplaceDensity)

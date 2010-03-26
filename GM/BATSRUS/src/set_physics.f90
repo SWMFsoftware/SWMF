@@ -153,6 +153,9 @@ subroutine set_physics_constants
   SW_By  = SW_By_dim*Io2No_V(UnitB_)
   SW_Bz  = SW_Bz_dim*Io2No_V(UnitB_)
 
+  if(.not.UseElectronPressure .and. IsMhd) &
+       SW_p = SW_p*(1 + ElectronPressureRatio)
+
   ! These are useful for printing out values
   SW_rho_dim = SW_rho*No2Io_V(UnitRho_)
   SW_p_dim   = SW_p*No2Io_V(UnitP_)
@@ -178,10 +181,16 @@ subroutine set_physics_constants
           /sum(PolarRho_I(IonFirst_:IonLast_))
   end if
 
+  if(.not.UseElectronPressure .and. IsMhd) then
+      BodyP_I(1)  = BodyP_I(1)*(1 + ElectronPressureRatio)
+      PolarP_I(1) = PolarP_I(1)*(1 + ElectronPressureRatio)
+   end if
+
   !^CFG IF SECONDBODY BEGIN
   RhoBody2= RhoDimBody2 *Io2No_V(UnitN_)*MassIon_I(1)
   pBody2  = RhoBody2 * TDimBody2*Io2No_V(UnitTemperature_)
-  !^CFG END SECONDBODY
+   !^CFG END SECONDBODY
+
 
   ! Here the arrays of the FACE VALUE are formed
   ! Initialization
@@ -249,8 +258,8 @@ subroutine set_physics_constants
         FaceState_VI(iUy,  East_:Top_) = SW_Uy
         FaceState_VI(iUz,  East_:Top_) = SW_Uz
         ! Use solar wind temperature and reduced density to get pressure
-        FaceState_VI(iP,   East_:Top_) = &
-             SW_p*(1.0-LowDensityRatio*(nFluid-IonFirst_))
+        FaceState_VI(iP,   East_:Top_) = SW_p/(1+ElectronPressureRatio) &
+             *(1.0-LowDensityRatio*(nFluid-IonFirst_))
 
         do iFluid = IonFirst_+1, nFluid
            call select_fluid
@@ -259,13 +268,14 @@ subroutine set_physics_constants
            FaceState_VI(iUy,  East_:Top_) = SW_Uy
            FaceState_VI(iUz,  East_:Top_) = SW_Uz
            ! Use solar wind temperature and reduced density to get pressure 
-           FaceState_VI(iP,   East_:Top_) = SW_p*LowDensityRatio &
-                *MassIon_I(1)/MassFluid_I(iFluid)
+           FaceState_VI(iP,   East_:Top_) = SW_p/(1+ElectronPressureRatio) &
+                *LowDensityRatio*MassIon_I(1)/MassFluid_I(iFluid)
         end do
 
+
         ! Fix total pressure if necessary (density and temperature are kept)
-        if(UseMultiIon .and. IsMhd) &
-             FaceState_VI(P_,East_:Top_) = sum(FaceState_VI(iP_I(2:nFluid),1))
+        if(UseMultiIon .and. IsMhd) FaceState_VI(P_,East_:Top_) = &
+             (1+ElectronPressureRatio)*sum(FaceState_VI(iP_I(2:nFluid),1))
      end if
   end if
 

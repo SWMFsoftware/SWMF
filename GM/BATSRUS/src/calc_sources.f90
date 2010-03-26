@@ -684,14 +684,15 @@ subroutine calc_divb(iBlock)
   end do; end do; end do
 
 end subroutine calc_divb
-!==========================================
+
+!===========================================================================
+
 subroutine get_tesi_c(iBlock, TeSi_C)
-  use ModAdvance,    ONLY: UseElectronPressure
+  use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModAdvance,    ONLY: State_VGB, p_,Pe_,Rho_
   use ModSize,       ONLY: nI, nJ, nK
   use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, &
-       AverageIonCharge, ElectronTemperatureRatio,    &
-       UseSimpleTe
+       AverageIonCharge, PePerPtotal
   use ModMultifluid, ONLY: MassIon_I
   use ModUser,       ONLY: user_material_properties
   implicit none
@@ -700,8 +701,8 @@ subroutine get_tesi_c(iBlock, TeSi_C)
   real,    intent(out) :: TeSi_C(1:nI, 1:nJ, 1:nK)
 
   integer:: i, j, k
-  !------------
-  if(UseSimpleTe)then
+  !--------------------------------------------------------------------------
+  if(UseIdealEos)then
      if(UseElectronPressure)then
         do k = 1, nK; do j = 1, nJ; do i = 1, nI
            TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
@@ -715,12 +716,11 @@ subroutine get_tesi_c(iBlock, TeSi_C)
                 /State_VGB(Rho_,i,j,k,iBlock)
         end do; end do; end do
         TeSi_C = TeSi_C * No2Si_V(UnitTemperature_ ) * &
-             MassIon_I(1) * ElectronTemperatureRatio / &
-             (AverageIonCharge * ElectronTemperatureRatio + 1.0)
+             MassIon_I(1)/AverageIonCharge * PePerPtotal
      end if
   else
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        call user_material_properties( &
+        call user_material_properties(                        &
              State_VGB(:,i,j,k,iBlock), TeOut=TeSi_C(i,j,k))
      end do; end do; end do
   end if

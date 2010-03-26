@@ -403,7 +403,7 @@ contains
 
     use ModPhysics, ONLY: &
          Io2No_V, UnitTemperature_, UnitN_, UnitRho_, UnitP_, UnitU_, UnitB_, &
-         AverageIonCharge, LowDensityRatio
+          LowDensityRatio, ElectronPressureRatio
     use ModMultiFluid
     use ModConst
 
@@ -467,6 +467,10 @@ contains
              Solarwind_V(p_) = Solarwind_V(p_)*Io2No_V(UnitP_)
           end if
        end if
+
+       ! Modify pressure with electron pressure                                                                                                                      
+       if(UseTemperature) Solarwind_V(p_) = Solarwind_V(p_) * &
+            (1.0 + ElectronPressureRatio)
 
        ! Set or normalize other fluids for multi-fluid equations
        do iFluid = 2, nFluid
