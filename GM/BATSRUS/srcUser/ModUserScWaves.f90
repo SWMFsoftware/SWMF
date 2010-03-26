@@ -210,6 +210,7 @@ contains
     !\
     ! Update BCs for the mass density and pressure::
     !/
+    iCell = iFace ; jCell = jFace ; kCell = kFace
     select case(iSide)
     case(East_)
        iCell  = iFace
