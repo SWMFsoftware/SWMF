@@ -2607,7 +2607,8 @@ contains
        if(UsePoleDiffusion .or. DoFixAxis)then
           UsePoleDiffusion = .false.
           DoFixAxis = .false.
-          write(*,*) NameSub//' setting UsePoleDiffusion and DoFixAxis to FALSE'
+          if(iProc == 0) write(*,*) NameSub// &
+               ' setting UsePoleDiffusion and DoFixAxis to FALSE'
        end if
     end if
 
