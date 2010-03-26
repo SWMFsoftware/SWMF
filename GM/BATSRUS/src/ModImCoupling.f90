@@ -360,7 +360,7 @@ subroutine apply_im_pressure
      else
         if(DoCoupleImPressure)then
            do iFluid = 1, nIons
-              where(pIm_CD(1,:,:,:) > 0.0) &
+              where(pIm_CD(iFluid,:,:,:) > 0.0) &
                    State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock) = Factor* &
                    (TauCoupleIM*State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock) + &
                    pIm_CD(iFluid,:,:,:))
