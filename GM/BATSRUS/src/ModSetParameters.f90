@@ -1846,7 +1846,10 @@ subroutine MH_set_parameters(TypeAction)
      case("#MAGNETOGRAM")
         call read_var('UseMagnetogram'  ,UseMagnetogram)
         if(UseMagnetogram)&
-             call set_parameters_magnetogram
+             call set_parameters_magnetogram(NameCommand)
+
+     case("#SAVEPOTENTIALFIELD")
+        call set_parameters_magnetogram(NameCommand)
 
      case('#EMPIRICALSW')
         call read_var('NameModelSW',NameModelSW)

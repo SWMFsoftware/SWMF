@@ -57,6 +57,9 @@ module ModMagnetogram
 
   real,allocatable,dimension(:,:,:,:)::B_DN
 
+  ! logical for saving the potential field B_DN
+  logical :: DoSavePotentialField = .false.
+
   real, public :: dR=1.0,dPhi=1.0,dSinTheta=1.0,dInv_D(nDim)=1.0
   integer, public :: nThetaPerProc,nRExt=2
   integer, public :: nR=29, nPhi=72, nTheta=29
@@ -160,18 +163,32 @@ contains
 
   !============================================================================
 
-  subroutine set_parameters_magnetogram
-    use ModReadParam, ONLY: read_var
-    implicit none
+  subroutine set_parameters_magnetogram(NameCommand)
 
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in) :: NameCommand
+
+    character(len=*), parameter :: &
+         NameSub = 'ModMagnetogram::set_parameters_magnetogram'
     !--------------------------------------------------------------------------
-    call read_var('Ro_PFSSM'   ,Ro_PFSSM)
-    call read_var('Rs_PFSSM'   ,Rs_PFSSM)
-    call read_var('H_PFSSM'    ,H_PFSSM)
-    call read_var('File_PFSSM' ,File_PFSSM)
-    call read_var('iHead_PFSSM',iHead_PFSSM)
-    call read_var('Phi_Shift'  ,Phi_Shift)
-    call read_var('UnitB'      ,UnitB)
+
+    select case(NameCommand)
+    case("#MAGNETOGRAM")
+       call read_var('Ro_PFSSM'   ,Ro_PFSSM)
+       call read_var('Rs_PFSSM'   ,Rs_PFSSM)
+       call read_var('H_PFSSM'    ,H_PFSSM)
+       call read_var('File_PFSSM' ,File_PFSSM)
+       call read_var('iHead_PFSSM',iHead_PFSSM)
+       call read_var('Phi_Shift'  ,Phi_Shift)
+       call read_var('UnitB'      ,UnitB)
+
+    case("#SAVEPOTENTIALFIELD")
+       call read_var('DoSavePotentialField', DoSavePotentialField)
+
+    case default
+       call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
+    end select
 
   end subroutine set_parameters_magnetogram
 
@@ -466,6 +483,7 @@ contains
     end if
 
     if(iProc==0)call write_Br_plot
+    if(iProc==0 .and. DoSavePotentialField)call write_potential_field
 contains
     subroutine set_auxiliary_arrays
 
@@ -631,7 +649,44 @@ contains
            'Longitude [Deg], Latitude [Deg], Br_0 [G], Br_SS [G]',&
            nDimIn=2, CoordIn_DII=Coord_DII,VarIn_VII=State_VII)
     end subroutine Write_Br_plot
+
+    !==========================================================================
+
+    subroutine write_potential_field
+
+      use ModPlotFile, ONLY: save_plot_file
+
+      real, allocatable :: Coord_DIII(:,:,:,:)
+
+      character(len=32) :: FileNameOut
+      !------------------------------------------------------------------------
+
+      allocate(Coord_DIII(3,-nRExt:nR,0:nPhi,0:nTheta))
+
+      do iTheta = 0, nTheta
+         do iPhi = 0, nPhi
+            do iR = -nRExt, nR
+               Coord_DIII(1,iR,iPhi,iTheta) = Ro_PFSSM + dR*iR
+               Coord_DIII(2,iR,iPhi,iTheta) = real(iPhi)*dPhi*cRadToDeg
+               Coord_DIII(3,iR,iPhi,iTheta) = r_latitude(iTheta)*cRadToDeg
+            end do
+         end do
+      end do
+
+      FileNameOut = trim(NameOutDir)//'PotentialField.outs'
+      call save_plot_file(FileNameOut, TypeFileIn='real8', StringHeaderIn = &
+           'Radius [Rs] Longitude [Deg] Latitude [Deg] B [G]', &
+           nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
+           //' Ro_PFSSM Rs_PFSSM Phi_Shift', &
+           ParamIn_I = (/ Ro_PFSSM, Rs_PFSSM, Phi_Shift /), &
+           nDimIn=3, CoordIn_DIII=Coord_DIII,VarIn_VIII=B_DN)
+
+      deallocate(Coord_DIII)
+
+    end subroutine write_potential_field
+
   end subroutine set_magnetogram
+
   !==========================================================================
   ! This subroutine corrects the angles Phi and Theta after every 
   ! step of the field-alligned integration 
