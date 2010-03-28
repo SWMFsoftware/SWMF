@@ -187,7 +187,7 @@ contains
        call read_var('DoSavePotentialField', DoSavePotentialField)
 
     case default
-       call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
+       call CON_stop(NameSub//' invalid NameCommand='//NameCommand)
     end select
 
   end subroutine set_parameters_magnetogram
