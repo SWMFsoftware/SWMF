@@ -166,7 +166,8 @@ contains
    
     use ModSize,             ONLY: East_,West_,South_,North_,Bot_,Top_,nDim
     use ModMain,             ONLY: x_,y_,z_, UseRotatingFrame
-    !use ModExpansionFactors, ONLY: ExpansionFactorInv
+    use ModExpansionFactors!, ONLY: ExpansionFactorInv_N,get_interpolated,&
+                           !        get_total_wave_energy_dens
     use ModAdvance,          ONLY: State_VGB, B0_DGB
     use ModPhysics,          ONLY: OmegaBody,No2Si_V,Si2No_V,UnitU_,UnitP_
     use ModNumConst,         ONLY: cTolerance
@@ -182,11 +183,14 @@ contains
     real                        :: DensCell,PresCell,TBase,FullBr, FullB  
     real, dimension(3)          :: RFace_D,B1r_D,B1t_D,FullB_D
     real                        :: vAlfvenSi, wEnergyDensSi, wEnergyDensBc
+    real                        :: ExpansionFactorInv,x,y,z
     character(len=*),parameter  :: NameSub = "user_face_bc"
     !--------------------------------------------------------------------------
     ! vector normal to the face
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
-
+    x = FaceCoords_D(x_)
+    y = FaceCoords_D(y_)
+    z = FaceCoords_D(z_)
     !\
     ! Magnetic field reltaed quantities
     !/
@@ -242,64 +246,66 @@ contains
     ! Update BCs for wave spectrum
     !/
     if(IsInitWave) then
-       !if(ExpansionFactorInv < cTolerance) then
-       !   ! no wave energy in closed field lines
-       !   wEnergyDens = 1.0e-30
-       !else
+       call get_interpolated(ExpansionFactorInv_N,x,y,z,ExpansionFactorInv)
+       if(ExpansionFactorInv < cTolerance) then
+          ! no wave energy in closed field lines
+          wEnergyDensBc = 0.0
+          VarsGhostFace_V(WaveFirst_:WaveLast_) = 0.0
+       else
           select case(TypeWaveInnerBc)
           case('WSA')
              vAlfvenSi = (FullB/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
-             call get_total_wave_energy_dens(&
-                  FaceCoords_D(x_),&
-                  FaceCoords_D(y_),&
-                  FaceCoords_D(z_),&
-                  vAlfvenSi, wEnergyDensSi)
+             call get_total_wave_energy_dens(x, y, z, vAlfvenSi, wEnergyDensSi)
              wEnergyDensBc = wEnergyDensSi * Si2No_V(UnitP_)*WaveInnerBcFactor
   
           case('Turb')
-             wEnergyDensBc = FullB*WaveInnerBcFactor
+             wEnergyDensBc = FullBr*WaveInnerBcFactor
           end select
-          if(wEnergyDensBc < 0.0)then
-             write(*,*) 'Negative total wave energy density at inner BC'
-             call stop_MPI('Error in face_bcs')
-          end if
-       !end if
-       !\
-       ! Deconstruct total energy into frequency groups
-       !/
-       call get_wave_group_bc(wEnergyDensBc,WavesGhostFace_I)
-        
-       if (FullBr .le. 0.0) then
-          
-          ! full absorption of "Plus"  waves - float bc
-          VarsGhostFace_V(AlfvenWavePlusFirst_:AlfvenWavePlusLast_) =&
-               VarsTrueFace_V(AlfvenWavePlusFirst_:AlfvenWavePlusLast_)
-          ! Set spectrum of "Minus" waves
-          VarsGhostFace_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) = &
-               WavesGhostFace_I(1:nWaveHalf)
       
-       else
+          if(wEnergyDensBc < 0.0)then
+             write(*,*) 'Negative TOTAL wave energy at inner BC'
+             call stop_MPI('Error in user_face_bcs')
+          end if
+          !\
+          ! Deconstruct total energy into frequency groups
+          !/
+          call get_wave_group_bc(wEnergyDensBc,WavesGhostFace_I)
+        
+          if (FullBr .le. 0.0) then
+             
+             ! full absorption of "Plus"  waves - float bc
+             VarsGhostFace_V(AlfvenWavePlusFirst_:AlfvenWavePlusLast_) =&
+                  VarsTrueFace_V(AlfvenWavePlusFirst_:AlfvenWavePlusLast_)
+             ! Set spectrum of "Minus" waves
+             VarsGhostFace_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) = &
+                  WavesGhostFace_I
+      
+          else
    
-          ! full absorption of "Minus" waves - float bc
-          VarsGhostFace_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) =&
-               VarsTrueFace_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_)
-          ! Set spectrum of "Plus" waves
-          VarsGhostFace_V(AlfvenWavePlusFirst_:AlfvenWavePlusLast_) = &
-               WavesGhostFace_I
+             ! full absorption of "Minus" waves - float bc
+             VarsGhostFace_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) =&
+                  VarsTrueFace_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_)
+             ! Set spectrum of "Plus" waves
+             VarsGhostFace_V(AlfvenWavePlusFirst_:AlfvenWavePlusLast_) = &
+                  WavesGhostFace_I
    
+          end if
        end if
-       if(any(VarsGhostFace_V(WaveFirst_:WaveLast_) <= 0.0)) then
-          write(*,*) 'Negative wave energy at inner boundary'
-          call stop_MPI('ERROR in plus waves BC')
+ 
+       if(any(VarsGhostFace_V(WaveFirst_:WaveLast_) < 0.0)) then
+          write(*,*) 'Negative GROUP wave energy at BC. WavesGhostFace ='
+          write(*,*) VarsGhostFace_V(WaveFirst_:Wavelast_)
+          write(*,*) 'Br = ', FullBr
+          call stop_MPI('ERROR in user_face_bcs')
        end if
      
        !\
        ! BC for total wave pressure
        !/
        if(UseWavePressureLtd) then
-          VarsGhostFace_V(Ew_) = 0.5*sum(VarsGhostFace_V(WaveFirst_:WaveLast_))
+          VarsGhostFace_V(Ew_) = wEnergyDensBc
        else
-          VarsGhostFace_V(Ew_) = 1.0e-30
+          VarsGhostFace_V(Ew_) = 0.0
        end if
     end if
 
@@ -335,9 +341,14 @@ contains
        else
           ! spectral decomposition
           WavesGhostFace_I(iWave) = SpectralCoeff * dLogFreq * wEnergyDensBc* &
-               exp((LogFreq_I(iWave-WaveFirst_+1))*SpectralIndex)
+               exp(LogFreq_I(iWave)*SpectralIndex)
        end if
     end do
+    if(any(WavesGhostFace_I(1:nwaveHalf) < 0.0)) then
+       write(*,*) 'Negative element in WavesGhostFace_I'
+       call stop_MPI(NameSub)
+    end if
+      
   end subroutine get_wave_group_bc
   !===========================================================================
   subroutine get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
