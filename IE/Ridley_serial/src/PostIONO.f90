@@ -67,7 +67,7 @@ program PostIONO
   read(50,'(a)') text
 
   ! Read variable names
-  PlotVars='VARIABLES = "X", "Y", "Z", '
+  PlotVars='VARIABLES = "X [R]", "Y [R]", "Z [R]", '
   pvLength=27
   do i=1,nvars
      read(50,'(a6,a)') text2,text
