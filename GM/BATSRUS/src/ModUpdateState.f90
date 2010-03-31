@@ -391,9 +391,9 @@ subroutine fix_anisotropy
            Dp = DtCell*(Ppar - Pperp + 0.5*B2*Ppar/Pperp) &
                 /(DtCell + TauInstability)
         else if(TauInstability > -1.0 .and. &
-             Pperp > Ppar + Ppar*0.3*sqrt(B2*Ppar))then
+           Pperp > Ppar + Ppar*0.3*sqrt(0.5*B2/max(1e-8,Ppar)))then
            ! proton cyclotron
-           Dp = DtCell*(Ppar - Pperp + Ppar*0.3*sqrt(B2*Ppar)) &
+           Dp = DtCell*(Ppar - Pperp + Ppar*0.3*sqrt(0.5*B2/max(1e-8,Ppar))) &
                 /(DtCell + TauInstability)
         else if(TauWaveParticle > -1.0)then
            ! Generic "wave-particle" term making the pressure isotropic
