@@ -13,7 +13,7 @@ program PostIONO
   integer :: nYear,nMonth,nDay,nHour,nMinute,nSecond,nMillisecond
   integer :: i,j,n,n_step
   
-  real :: Theta,Phi, X,Y,Z, DegToRad, TimeSimulation, ttilt,ptilt
+  real :: Theta,Phi, X,Y,Z, DegToRad, TimeSimulation, ttilt,ptilt, Radius
 
   character (len=1000) :: PlotTitle, PlotVars, ZoneTitle
   character (len=1000) :: text,text2
@@ -22,6 +22,8 @@ program PostIONO
 
   character (LEN=4) :: TimeH4
   character (LEN=2) :: TimeM2,TimeS2
+  !--------------------------------------------------------------------------
+  Radius = (6378.+100.)/6378.
 
   ! Setup Degree to Radian conversion factor
   DegToRad = (2.*asin(1.))/180.
@@ -68,7 +70,7 @@ program PostIONO
 
   ! Read variable names
   PlotVars='VARIABLES = "X [R]", "Y [R]", "Z [R]", '
-  pvLength=27
+  pvLength=39
   do i=1,nvars
      read(50,'(a6,a)') text2,text
      call FixChar(n)
@@ -226,9 +228,9 @@ program PostIONO
         read(text,*) Theta,Phi
         Phi=Phi*DegToRad
         Theta=(180.-Theta)*DegToRad
-        X=sin(Theta)*cos(Phi)
-        Y=sin(Theta)*sin(Phi)
-        Z=cos(Theta)
+        X=Radius*sin(Theta)*cos(Phi)
+        Y=Radius*sin(Theta)*sin(Phi)
+        Z=Radius*cos(Theta)
         write(51,'(3E14.6,a)') X,Y,Z,text(1:n)
      end do
   end do
