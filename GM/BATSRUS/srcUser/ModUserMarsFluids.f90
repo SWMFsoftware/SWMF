@@ -1404,11 +1404,13 @@ contains
   subroutine user_face_bcs(VarsGhostFace_V)
 
     use ModSize,       ONLY: nDim,West_,North_,Top_	
-    use ModMain,       ONLY: UseRotatingBc, iTest, jTest, kTest, ProcTest, BlkTest, GLOBALBLK
+    use ModMain,       ONLY: UseRotatingBc, iTest, jTest, kTest, ProcTest, &
+         BlkTest, GLOBALBLK, ExtraBc_, Body1_
     use ModProcMH,   ONLY: iProc
     use ModVarIndexes, ONLY: nVar, OpRho_, O2pRho_, CO2pRho_, HpRho_,HpP_,O2pP_,OpP_,CO2pP_,iRhoUx_I,iRhoUy_I,iRhoUz_I
-    use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim,ElectronPressureRatio
-    use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V, iFace,jFace,kFace
+    use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim,ElectronPressureRatio,FaceState_VI
+    use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V, iFace,jFace,kFace, iBoundary
+    
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
@@ -1427,7 +1429,15 @@ contains
        DoTest=.false.; DoTestMe=.false.
     end if
 
-    DoTestCell = DoTestMe .and. iFace==iTest .and. jFace==jTest .and. kFace==kTest
+    if(iBoundary == ExtraBc_)then
+       VarsGhostFace_V = FaceState_VI(:,east_)
+       RETURN
+    elseif(iBoundary /= Body1_)then       
+       call stop_mpi(NameSub//' invalid iBoundary value')
+    end if
+
+    DoTestCell = DoTestMe &
+         .and. iFace==iTest .and. jFace==jTest .and. kFace==kTest
 
     XFace = FaceCoords_D(1)
     YFace = FaceCoords_D(2)
@@ -1463,10 +1473,11 @@ contains
     VarsGhostFace_V(iRhoUx_I) = VarsTrueFace_V(iRhoUx_I) - 2*uDotR_I*FaceCoords_D(1)
     VarsGhostFace_V(iRhoUy_I) = VarsTrueFace_V(iRhoUy_I) - 2*uDotR_I*FaceCoords_D(2)
     VarsGhostFace_V(iRhoUz_I) = VarsTrueFace_V(iRhoUz_I) - 2*uDotR_I*FaceCoords_D(3)
+
     ! VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - 2*bDotR*FaceCoords_D
     VarsGhostFace_V(Bx_:Bz_) = 0.0
-
-    If(DoTestCell) then
+   
+    if(DoTestCell) then
        write(*,*)'VarsGhostFace_V(iRhoIon_I)=',VarsGhostFace_V(iRhoIon_I)
        write(*,*)'VarsGhostFace_V(iRhoUx_I(1))=',VarsGhostFace_V(iRhoUx_I(1))
        write(*,*)'VarsGhostFace_V(iRhoUy_I(1))=',VarsGhostFace_V(iRhoUy_I(1))
@@ -1487,34 +1498,22 @@ contains
 
   !========================================================================
 
-  subroutine user_set_boundary_cells(iBLK)
-    use ModGeometry
-    use ModMain	
-    use ModNumConst	
+  subroutine user_set_boundary_cells(iBlock)
 
-    integer,intent(in)::iBLK
-    !-----------------------------------------------------------------------
-    !  SHOULD define IsBoundaryCell_GI(:,:,:,ExtraBc_) using
-    !  a boundary condition for iBLK block
-    !  EXAMPLE: OUTER SPHERICAL BOUNDARY of radius of 100.
-    !  IsBoundaryCell_GI(:,:,:,ExtraBc_) = R_BLK(:,:,:,iBLK)<100.
-    if (index(TypeGeometry,'spherical')>0)then
-       if(XyzStart_BLK(Theta_,iBLK)<dz_BLK(iBLK))then
-          !	IsBoundaryCell_GI(:,:,1-gcn:0,ExtraBc_)=.true.
-          !	IsBoundaryCell_GI(1:nI,1:nJ,1-gcn:0,ExtraBc_)=.false.
+    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, x_Blk, x2
+    use ModBoundaryCells, ONLY: SaveBoundaryCells
 
-          !	IsBoundaryCell_GI(:,:,1-gcn:0,ExtraBc_)=.true.
-          IsBoundaryCell_GI(nI+1:nI+gcn,:,1-gcn:0,ExtraBc_)=.true.
-          IsBoundaryCell_GI(1-gcn:0,:,1-gcn:0,ExtraBc_)=.true.	
-       elseif(XyzStart_BLK(Theta_,iBLK)+nK*dz_BLK(iBLK)>cPi)then
-          !        IsBoundaryCell_GI(:,:,nK+1:nK+gcn,ExtraBc_)=.true.
-          !        IsBoundaryCell_GI(1:nI,1:nJ,nK+1:nK+gcn,ExtraBc_)=.false.
+    implicit none
 
-          !        IsBoundaryCell_GI(:,:,nK+1:nK+gcn,ExtraBc_)=.true.
-          IsBoundaryCell_GI(nI+1:nI+gcn,:,nK+1:nK+gcn,ExtraBc_)=.true.
-          IsBoundaryCell_GI(1-gcn:0,:,nK+1:nK+gcn,ExtraBc_)=.true.
-       end if
-    end if
+    integer, intent(in):: iBlock
+
+    character (len=*), parameter :: Name='user_set_boundary_cells'
+    !--------------------------------------------------------------------------
+    IsBoundaryCell_GI(:,:,:,ExtraBc_) = x_Blk(:,:,:,iBlock) > x2
+
+    if(SaveBoundaryCells) return
+    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
+
   end subroutine user_set_boundary_cells
 
   !========================================================================
