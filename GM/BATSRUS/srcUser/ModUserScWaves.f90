@@ -184,6 +184,7 @@ contains
     real, dimension(3)          :: RFace_D,B1r_D,B1t_D,FullB_D
     real                        :: vAlfvenSi, wEnergyDensSi, wEnergyDensBc
     real                        :: ExpansionFactorInv,x,y,z
+    logical                     :: IsClosedWSA = .false.
     character(len=*),parameter  :: NameSub = "user_face_bc"
     !--------------------------------------------------------------------------
     ! vector normal to the face
@@ -246,29 +247,32 @@ contains
     ! Update BCs for wave spectrum
     !/
     if(IsInitWave) then
-       call get_interpolated(ExpansionFactorInv_N,x,y,z,ExpansionFactorInv)
-       if(ExpansionFactorInv < cTolerance) then
-          ! no wave energy in closed field lines
-          wEnergyDensBc = 0.0
-          VarsGhostFace_V(WaveFirst_:WaveLast_) = 0.0
-       else
-          select case(TypeWaveInnerBc)
-          case('WSA')
+       select case(TypeWaveInnerBc)
+       case('WSA')
+          call get_interpolated(ExpansionFactorInv_N,x,y,z,ExpansionFactorInv)
+          if(ExpansionFactorInv < cTolerance) then
+             ! no wave energy in closed field lines
+             wEnergyDensBc = 0.0
+             IsClosedWSA = .true.
+            else
              vAlfvenSi = (FullB/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
              call get_total_wave_energy_dens(x, y, z, vAlfvenSi, wEnergyDensSi)
              wEnergyDensBc = wEnergyDensSi * Si2No_V(UnitP_)*WaveInnerBcFactor
-  
-          case('Turb')
-             wEnergyDensBc = FullBr*WaveInnerBcFactor
-          end select
-      
-          if(wEnergyDensBc < 0.0)then
-             write(*,*) 'Negative TOTAL wave energy at inner BC'
-             call stop_MPI('Error in user_face_bcs')
           end if
-          !\
-          ! Deconstruct total energy into frequency groups
-          !/
+       case('Turb')
+          wEnergyDensBc = FullB*WaveInnerBcFactor
+       end select
+       
+       if(wEnergyDensBc < 0.0)then
+          write(*,*) 'Negative TOTAL wave energy at inner BC'
+          call stop_MPI('Error in user_face_bcs')
+       end if
+       !\
+       ! Set BC for each frequency group
+       !/
+       if (IsClosedWSA) then  
+          VarsGhostFace_V(WaveFirst_:WaveLast_) = 0.0
+       else
           call get_wave_group_bc(wEnergyDensBc,WavesGhostFace_I)
         
           if (FullBr .le. 0.0) then
@@ -291,7 +295,7 @@ contains
    
           end if
        end if
- 
+
        if(any(VarsGhostFace_V(WaveFirst_:WaveLast_) < 0.0)) then
           write(*,*) 'Negative GROUP wave energy at BC. WavesGhostFace ='
           write(*,*) VarsGhostFace_V(WaveFirst_:Wavelast_)
@@ -337,7 +341,7 @@ contains
     do iWave = 1, nWaveHalf
        if(iWave .lt. WaveFirstBc_ .or. iWave .gt. WaveLastBc_) then
           ! no wave energy outside of emitted freq. range
-          WavesGhostFace_I(iWave)=1e-30
+          WavesGhostFace_I(iWave)= 0.0
        else
           ! spectral decomposition
           WavesGhostFace_I(iWave) = SpectralCoeff * dLogFreq * wEnergyDensBc* &
