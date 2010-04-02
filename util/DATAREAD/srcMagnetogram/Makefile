@@ -15,6 +15,9 @@ OBJECTS_EXE= \
 main.o: ModMagHarmonics.o
 dipole.o: ModMagHarmonics.o
 
+POTENTIAL: potential_field.o
+	${LINK.f90} -o POTENTIAL.exe potential_field.o -L${LIBDIR} -lSHARE ${Lflag1}
+
 HARMONICS:
 	make ${EXE}
 	@echo ${EXE} has been compiled.
