@@ -66,7 +66,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModIoUnit, ONLY: io_unit_new
 
   !CORONA SPECIFIC PARAMETERS
-  use ModMagnetogram, ONLY: set_parameters_magnetogram, read_magnetogram_file
+  use ModMagnetogram, ONLY: set_parameters_magnetogram, &
+       read_magnetogram_file, read_potential_field
   use ModExpansionFactors,ONLY: NameModelSW, CoronalT0Dim
   use ModCoronalHeating,  ONLY: read_corona_heating, &
        read_active_region_heating, &
@@ -244,10 +245,13 @@ subroutine MH_set_parameters(TypeAction)
 
      if(UseResistivity)call init_mod_resistivity !^CFG IF DISSFLUX
 
-!!!     call init_heat_conduction                   !^CFG IF IMPLICIT
-
-     if(UseMagnetogram .and. i_line_command("#MAGNETOGRAM") > 0)&
-          call read_magnetogram_file(NamePlotDir)
+     if(UseMagnetogram)then
+        if(i_line_command("#MAGNETOGRAM") > 0)then
+           call read_magnetogram_file(NamePlotDir)
+        elseif(i_line_command("#READPOTENTIALFIELD") > 0)then
+           call read_potential_field(NamePlotDir)
+        end if
+     end if
 
      if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
           call set_empirical_model(NameModelSW, BodyTDim_I(IonFirst_))
@@ -1844,6 +1848,11 @@ subroutine MH_set_parameters(TypeAction)
         !CORONA SPECIFIC COMMANDS
 
      case("#MAGNETOGRAM")
+        call read_var('UseMagnetogram'  ,UseMagnetogram)
+        if(UseMagnetogram)&
+             call set_parameters_magnetogram(NameCommand)
+
+     case("#READPOTENTIALFIELD")
         call read_var('UseMagnetogram'  ,UseMagnetogram)
         if(UseMagnetogram)&
              call set_parameters_magnetogram(NameCommand)

@@ -1,236 +1,21 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
-module ModUser
-  use ModReadParam, ONLY: lStringLine
-  use ModUserEmpty,                                     &
-       IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_init_session,               &
-       IMPLEMENTED3 => user_set_ics,                    &
-       IMPLEMENTED4 => user_get_log_var,                &
-       IMPLEMENTED5 => user_calc_sources,               &
-       IMPLEMENTED6 => user_specify_refinement,         &
-       IMPLEMENTED7 => user_set_plot_var,               &
-       IMPLEMENTED8 => user_set_outerbcs,               &
-       IMPLEMENTED9 => user_face_bcs,                   &
-       IMPLEMENTED10=> user_set_boundary_cells,         &
-       IMPLEMENTED11=> user_set_resistivity
+module ModLdem
+  implicit none
+  save
 
-  include 'user_module.h' !list of public methods
+  private !except
 
-  real, parameter :: VersionUserModule = 1.0
-  character (len=*), parameter :: &
-       NameUserModule = 'Global Corona'
+  public :: read_ldem
+  public :: get_ldem_moments
 
-  logical ::  UseWaveDissipation = .false.
-  real :: DissipationScaleFactorSi  ! unit = m*T^0.5
-  real :: DissipationScaleFactor
-  real :: DeltaBPerB = 0.0
+  logical, public :: UseLdem = .false.
+  character(len=100), public :: NameLdemFile
 
-  real :: TeFraction, TiFraction
-  real :: EtaPerpSi
-
-  ! Global LDEM data
-  logical :: UseLdem = .false.
-  character(len=100):: NameLdemFile
   real, allocatable :: ThetaLdem_I(:), PhiLdem_I(:), VarLdem_VII(:,:,:)
   integer :: nThetaLdem, nPhiLdem
 
 contains
-
-  !============================================================================
-
-  subroutine user_read_inputs
-
-    use ModMain,           ONLY: UseUserInitSession, lVerbose
-    use ModProcMH,         ONLY: iProc
-    use ModReadParam,      ONLY: read_line, read_command, read_var
-    use ModIO,             ONLY: write_prefix, write_myname, iUnitOut
-
-    character (len=100) :: NameCommand
-    character(len=*), parameter :: NameSub = 'user_read_inputs'
-    !--------------------------------------------------------------------------
-    UseUserInitSession = .true.
-
-    if(iProc == 0 .and. lVerbose > 0)then
-       call write_prefix;
-       write(iUnitOut,*)'User read_input SOLAR CORONA starts'
-    endif
-
-    do
-       if(.not.read_line() ) EXIT
-       if(.not.read_command(NameCommand)) CYCLE
-
-       select case(NameCommand)
-
-       case("#WSACOEFF")
-          call read_wsa_coeff
-
-       case("#WAVEDISSIPATION")
-          call read_var('UseWaveDissipation', UseWaveDissipation)
-          if(UseWaveDissipation) &
-               call read_var('DissipationScaleFactorSi', &
-               DissipationScaleFactorSi)
-
-       case("#WAVEBOUNDARY")
-          call read_var('DeltaBPerB', DeltaBPerB)
-
-       case('#LDEM')
-          call read_var('UseLdem', UseLdem)
-          call read_var('NameLdemFile', NameLdemFile)
-
-       case('#USERINPUTEND')
-          if(iProc == 0 .and. lVerbose > 0)then
-             call write_prefix;
-             write(iUnitOut,*)'User read_input SOLAR CORONA ends'
-          endif
-          EXIT
-
-       case default
-          if(iProc == 0) then
-             call write_myname; write(*,*) &
-                  'ERROR: Invalid user defined #COMMAND in user_read_inputs. '
-             write(*,*) '--Check user_read_inputs for errors'
-             write(*,*) '--Check to make sure a #USERINPUTEND command was used'
-             write(*,*) '  *Unrecognized command was: '//NameCommand
-             call stop_mpi('ERROR: Correct PARAM.in or user_read_inputs!')
-          end if
-       end select
-    end do
-
-  end subroutine user_read_inputs
-
-  !============================================================================
-
-  subroutine user_init_session
-
-    use ModAdvance,     ONLY: UseElectronPressure
-    use ModConst,       ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
-         cElectronMass
-    use ModIO,          ONLY: write_prefix, iUnitOut
-    use ModMain,        ONLY: NameThisComp
-    use ModMultiFluid,  ONLY: MassIon_I
-    use ModNumConst,    ONLY: cTwoPi
-    use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge, &
-         Si2No_V, UnitB_, UnitX_
-    use ModProcMH,      ONLY: iProc
-    use ModWaves,       ONLY: UseWavePressure, UseAlfvenWaves
-
-
-    real, parameter :: CoulombLog = 20.0
-    !--------------------------------------------------------------------------
-    if(iProc == 0)then
-       call write_prefix; write(iUnitOut,*) ''
-       call write_prefix; write(iUnitOut,*) 'user_init_session:'
-       call write_prefix; write(iUnitOut,*) ''
-    end if
-
-    UseAlfvenWaves = .true.
-    UseWavePressure = .true.
-
-    ! TeFraction is used for ideal EOS:
-    if(UseElectronPressure)then
-       ! Pe = ne*Te (dimensionless) and n=rho/ionmass
-       ! so that Pe = ne/n *n*Te = (ne/n)*(rho/ionmass)*Te
-       ! TeFraction is defined such that Te = Pe/rho * TeFraction
-       TiFraction = MassIon_I(1)
-       TeFraction = MassIon_I(1)/AverageIonCharge
-    else
-       ! p = n*T + ne*Te (dimensionless) and n=rho/ionmass
-       ! so that p=rho/massion *T*(1+ne/n Te/T)
-       ! TeFraction is defined such that Te = p/rho * TeFraction
-       TiFraction = MassIon_I(1) &
-            /(1 + AverageIonCharge*ElectronTemperatureRatio)
-       TeFraction = TiFraction*ElectronTemperatureRatio
-    end if
-
-    ! perpendicular resistivity, used for temperature relaxation
-    ! Note EtaPerpSi is divided by cMu.
-    EtaPerpSi = sqrt(cElectronMass)*CoulombLog &
-         *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
-
-    DissipationScaleFactor = DissipationScaleFactorSi*Si2No_V(UnitX_) &
-         *sqrt(Si2No_V(UnitB_))
-
-    if(NameThisComp == 'SC')then
-       if(UseLdem) call read_ldem
-
-       if(iProc == 0) call write_alfvenwave_boundary
-    end if
-
-    if(iProc == 0)then
-       call write_prefix; write(iUnitOut,*) ''
-       call write_prefix; write(iUnitOut,*) 'user_init_session finished'
-       call write_prefix; write(iUnitOut,*) ''
-    end if
-
-  end subroutine user_init_session
-
-  !============================================================================
-
-  subroutine write_alfvenwave_boundary
-
-    use ModExpansionFactors, ONLY: H_PFSSM
-    use ModIO,          ONLY: NamePlotDir
-    use ModMagnetogram, ONLY: r_latitude, dPhi, nTheta, nPhi
-    use ModNumConst,    ONLY: cRadToDeg
-    use ModPhysics,     ONLY: rBody, No2Si_V, UnitP_, UnitU_, &
-         UnitEnergyDens_, UnitB_
-    use ModPlotFile,    ONLY: save_plot_file
-    use ModWaves,       ONLY: GammaWave
-
-    integer :: iPhi, iTheta
-    real :: r, Theta, Phi, x, y, z
-    real :: RhoBase, Tbase, Br, B0_D(3)
-    real :: Ewave, DeltaU
-    real, allocatable :: Coord_DII(:,:,:), State_VII(:,:,:)
-    character(len=32) :: FileNameOut
-    !--------------------------------------------------------------------------
-    FileNameOut = trim(NamePlotDir)//'Alfvenwave.outs'
-
-    allocate(Coord_DII(2,0:nPhi,0:nTheta), State_VII(4,0:nPhi,0:nTheta))
-
-    do iTheta = 0, nTheta
-       do iPhi = 0, nPhi
-          r     = rBody + H_PFSSM
-          Theta = r_latitude(iTheta)
-          Phi   = real(iPhi)*dPhi
-
-          Coord_DII(1,iPhi,iTheta) = Phi*cRadToDeg
-          Coord_DII(2,iPhi,iTheta) = Theta*cRadToDeg
-
-          x = r*cos(Theta)*cos(Phi)
-          y = r*cos(Theta)*sin(Phi)
-          z = r*sin(Theta)
-
-          call get_coronal_b0(x, y, z, B0_D)
-          Br = (x*B0_D(1)+y*B0_D(2)+z*B0_D(3))/r
-
-          call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
-
-          call get_wave_energy(x, y, z, Br, Ewave)
-          ! Root mean square amplitude of the velocity fluctuation
-          ! This assumes equipartition (of magnetic and velocity fluctuations)
-          DeltaU = sqrt(Ewave/RhoBase)
-
-          State_VII(1,iPhi,iTheta) = (GammaWave - 1)*Ewave*No2Si_V(UnitP_)
-          State_VII(2,iPhi,iTheta) = DeltaU*No2Si_V(UnitU_)
-          State_VII(3,iPhi,iTheta) = Ewave*abs(Br)/sqrt(Rhobase) &
-               *No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
-          State_VII(4,iPhi,iTheta) = Br*No2Si_V(UnitB_)*1e4
-       end do
-    end do
-
-    call save_plot_file(FileNameOut, nDimIn=2, StringHeaderIn = &
-         'Longitude [Deg], Latitude [Deg], Pwave [Pa], DeltaU [m/s] ' &
-         //'Ewaveflux [J/(m^2s)], Br [Gauss]', &
-         nameVarIn = 'Longitude Latitude Pwave DeltaU Ewaveflux Br', &
-         CoordIn_DII=Coord_DII, VarIn_VII=State_VII)
-
-    deallocate(Coord_DII, State_VII)
-
-  end subroutine Write_alfvenwave_boundary
-
-  !============================================================================
 
   subroutine read_ldem
 
@@ -399,12 +184,241 @@ contains
 
   end subroutine get_ldem_moments
 
+end module ModLdem
+
+!==============================================================================
+
+module ModUser
+  use ModUserEmpty,                                     &
+       IMPLEMENTED1 => user_read_inputs,                &
+       IMPLEMENTED2 => user_init_session,               &
+       IMPLEMENTED3 => user_set_ics,                    &
+       IMPLEMENTED4 => user_get_log_var,                &
+       IMPLEMENTED5 => user_calc_sources,               &
+       IMPLEMENTED6 => user_specify_refinement,         &
+       IMPLEMENTED7 => user_set_plot_var,               &
+       IMPLEMENTED8 => user_set_outerbcs,               &
+       IMPLEMENTED9 => user_face_bcs,                   &
+       IMPLEMENTED10=> user_set_boundary_cells,         &
+       IMPLEMENTED11=> user_set_resistivity
+
+  include 'user_module.h' !list of public methods
+
+  real, parameter :: VersionUserModule = 1.0
+  character (len=*), parameter :: &
+       NameUserModule = 'Global Corona'
+
+  logical ::  UseWaveDissipation = .false.
+  real :: DissipationScaleFactorSi  ! unit = m*T^0.5
+  real :: DissipationScaleFactor
+  real :: DeltaBPerB = 0.0
+
+  real :: TeFraction, TiFraction
+  real :: EtaPerpSi
+
+contains
+
+  !============================================================================
+
+  subroutine user_read_inputs
+
+    use ModLdem,      ONLY: UseLdem, NameLdemFile
+    use ModMain,      ONLY: UseUserInitSession, lVerbose
+    use ModProcMH,    ONLY: iProc
+    use ModReadParam, ONLY: read_line, read_command, read_var
+    use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
+
+    character (len=100) :: NameCommand
+    character(len=*), parameter :: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    UseUserInitSession = .true.
+
+    if(iProc == 0 .and. lVerbose > 0)then
+       call write_prefix;
+       write(iUnitOut,*)'User read_input SOLAR CORONA starts'
+    endif
+
+    do
+       if(.not.read_line() ) EXIT
+       if(.not.read_command(NameCommand)) CYCLE
+
+       select case(NameCommand)
+
+       case("#WSACOEFF")
+          call read_wsa_coeff
+
+       case("#WAVEDISSIPATION")
+          call read_var('UseWaveDissipation', UseWaveDissipation)
+          if(UseWaveDissipation) &
+               call read_var('DissipationScaleFactorSi', &
+               DissipationScaleFactorSi)
+
+       case("#WAVEBOUNDARY")
+          call read_var('DeltaBPerB', DeltaBPerB)
+
+       case('#LDEM')
+          call read_var('UseLdem', UseLdem)
+          call read_var('NameLdemFile', NameLdemFile)
+
+       case('#USERINPUTEND')
+          if(iProc == 0 .and. lVerbose > 0)then
+             call write_prefix;
+             write(iUnitOut,*)'User read_input SOLAR CORONA ends'
+          endif
+          EXIT
+
+       case default
+          if(iProc == 0) then
+             call write_myname; write(*,*) &
+                  'ERROR: Invalid user defined #COMMAND in user_read_inputs. '
+             write(*,*) '--Check user_read_inputs for errors'
+             write(*,*) '--Check to make sure a #USERINPUTEND command was used'
+             write(*,*) '  *Unrecognized command was: '//NameCommand
+             call stop_mpi('ERROR: Correct PARAM.in or user_read_inputs!')
+          end if
+       end select
+    end do
+
+  end subroutine user_read_inputs
+
+  !============================================================================
+
+  subroutine user_init_session
+
+    use ModAdvance,     ONLY: UseElectronPressure
+    use ModConst,       ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
+         cElectronMass
+    use ModIO,          ONLY: write_prefix, iUnitOut
+    use ModLdem,        ONLY: read_ldem, UseLdem
+    use ModMain,        ONLY: NameThisComp
+    use ModMultiFluid,  ONLY: MassIon_I
+    use ModNumConst,    ONLY: cTwoPi
+    use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge, &
+         Si2No_V, UnitB_, UnitX_
+    use ModProcMH,      ONLY: iProc
+    use ModWaves,       ONLY: UseWavePressure, UseAlfvenWaves
+
+    real, parameter :: CoulombLog = 20.0
+    !--------------------------------------------------------------------------
+    if(iProc == 0)then
+       call write_prefix; write(iUnitOut,*) ''
+       call write_prefix; write(iUnitOut,*) 'user_init_session:'
+       call write_prefix; write(iUnitOut,*) ''
+    end if
+
+    UseAlfvenWaves = .true.
+    UseWavePressure = .true.
+
+    ! TeFraction is used for ideal EOS:
+    if(UseElectronPressure)then
+       ! Pe = ne*Te (dimensionless) and n=rho/ionmass
+       ! so that Pe = ne/n *n*Te = (ne/n)*(rho/ionmass)*Te
+       ! TeFraction is defined such that Te = Pe/rho * TeFraction
+       TiFraction = MassIon_I(1)
+       TeFraction = MassIon_I(1)/AverageIonCharge
+    else
+       ! p = n*T + ne*Te (dimensionless) and n=rho/ionmass
+       ! so that p=rho/massion *T*(1+ne/n Te/T)
+       ! TeFraction is defined such that Te = p/rho * TeFraction
+       TiFraction = MassIon_I(1) &
+            /(1 + AverageIonCharge*ElectronTemperatureRatio)
+       TeFraction = TiFraction*ElectronTemperatureRatio
+    end if
+
+    ! perpendicular resistivity, used for temperature relaxation
+    ! Note EtaPerpSi is divided by cMu.
+    EtaPerpSi = sqrt(cElectronMass)*CoulombLog &
+         *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
+
+    DissipationScaleFactor = DissipationScaleFactorSi*Si2No_V(UnitX_) &
+         *sqrt(Si2No_V(UnitB_))
+
+    if(NameThisComp == 'SC')then
+       if(UseLdem) call read_ldem
+
+       if(iProc == 0) call write_alfvenwave_boundary
+    end if
+
+    if(iProc == 0)then
+       call write_prefix; write(iUnitOut,*) ''
+       call write_prefix; write(iUnitOut,*) 'user_init_session finished'
+       call write_prefix; write(iUnitOut,*) ''
+    end if
+
+  end subroutine user_init_session
+
+  !============================================================================
+
+  subroutine write_alfvenwave_boundary
+
+    use ModExpansionFactors, ONLY: H_PFSSM
+    use ModIO,          ONLY: NamePlotDir
+    use ModMagnetogram, ONLY: r_latitude, dPhi, nTheta, nPhi
+    use ModNumConst,    ONLY: cRadToDeg
+    use ModPhysics,     ONLY: rBody, No2Si_V, UnitP_, UnitU_, &
+         UnitEnergyDens_, UnitB_
+    use ModPlotFile,    ONLY: save_plot_file
+    use ModWaves,       ONLY: GammaWave
+
+    integer :: iPhi, iTheta
+    real :: r, Theta, Phi, x, y, z
+    real :: RhoBase, Tbase, Br, B0_D(3)
+    real :: Ewave, DeltaU
+    real, allocatable :: Coord_DII(:,:,:), State_VII(:,:,:)
+    character(len=32) :: FileNameOut
+    !--------------------------------------------------------------------------
+    FileNameOut = trim(NamePlotDir)//'Alfvenwave.outs'
+
+    allocate(Coord_DII(2,0:nPhi,0:nTheta), State_VII(4,0:nPhi,0:nTheta))
+
+    do iTheta = 0, nTheta
+       do iPhi = 0, nPhi
+          r     = rBody + H_PFSSM
+          Theta = r_latitude(iTheta)
+          Phi   = real(iPhi)*dPhi
+
+          Coord_DII(1,iPhi,iTheta) = Phi*cRadToDeg
+          Coord_DII(2,iPhi,iTheta) = Theta*cRadToDeg
+
+          x = r*cos(Theta)*cos(Phi)
+          y = r*cos(Theta)*sin(Phi)
+          z = r*sin(Theta)
+
+          call get_coronal_b0(x, y, z, B0_D)
+          Br = (x*B0_D(1)+y*B0_D(2)+z*B0_D(3))/r
+
+          call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
+
+          call get_wave_energy(x, y, z, Br, Ewave)
+          ! Root mean square amplitude of the velocity fluctuation
+          ! This assumes equipartition (of magnetic and velocity fluctuations)
+          DeltaU = sqrt(Ewave/RhoBase)
+
+          State_VII(1,iPhi,iTheta) = (GammaWave - 1)*Ewave*No2Si_V(UnitP_)
+          State_VII(2,iPhi,iTheta) = DeltaU*No2Si_V(UnitU_)
+          State_VII(3,iPhi,iTheta) = Ewave*abs(Br)/sqrt(Rhobase) &
+               *No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
+          State_VII(4,iPhi,iTheta) = Br*No2Si_V(UnitB_)*1e4
+       end do
+    end do
+
+    call save_plot_file(FileNameOut, nDimIn=2, StringHeaderIn = &
+         'Longitude [Deg], Latitude [Deg], Pwave [Pa], DeltaU [m/s] ' &
+         //'Ewaveflux [J/(m^2s)], Br [Gauss]', &
+         nameVarIn = 'Longitude Latitude Pwave DeltaU Ewaveflux Br', &
+         CoordIn_DII=Coord_DII, VarIn_VII=State_VII)
+
+    deallocate(Coord_DII, State_VII)
+
+  end subroutine Write_alfvenwave_boundary
+
   !============================================================================
 
   subroutine get_plasma_parameters_base(x_D, RhoBase, Tbase)
 
     ! This subroutine computes the base values for mass density and temperature
 
+    use ModLdem,             ONLY: get_ldem_moments, UseLdem
     use ModPhysics,          ONLY: BodyRho_I, Si2No_V, UnitTemperature_
     use ModExpansionFactors, ONLY: Umin, CoronalT0Dim
 

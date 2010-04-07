@@ -16,12 +16,11 @@ module ModMagnetogram
   integer,parameter::nHarmonicsMax=180 !90
   ! Weights of the spherical harmonics
   real, dimension(nHarmonicsMax+1,nHarmonicsMax+1):: g_nm,h_nm
-  
+
   integer:: N_PFSSM=nHarmonicsMax
 
   ! Number of header lines in the file
   integer:: iHead_PFSSM=12
-
 
   ! Name of the input file
   character (LEN=32):: File_PFSSM='mf.dat'
@@ -33,7 +32,7 @@ module ModMagnetogram
   ! Ro - radius of inner boundary for the potential
   ! H  - height of ??
   !  
-  
+
   real, public :: Rs_PFSSM=2.50,Ro_PFSSM=1.0,H_PFSSM=0.0
 
   ! Units of the magnetic field in the file including corrections
@@ -57,8 +56,9 @@ module ModMagnetogram
 
   real,allocatable,dimension(:,:,:,:)::B_DN
 
-  ! logical for saving the potential field B_DN
+  ! logical for reading the potential field B_DN
   logical :: DoSavePotentialField = .false.
+  character(len=100) :: NamePotentialFieldFile
 
   real, public :: dR=1.0,dPhi=1.0,dSinTheta=1.0,dInv_D(nDim)=1.0
   integer, public :: nThetaPerProc,nRExt=2
@@ -77,7 +77,7 @@ module ModMagnetogram
   !Then, calls set_magnetogram
 
   public :: set_parameters_magnetogram
-  
+
   public :: set_magnetogram
   !Reads the file of magnetic field harmonics  
   !and recovers the spatial distribution of the 
@@ -87,7 +87,7 @@ module ModMagnetogram
   public :: get_hlcmm
   ! Read H(eliographic) L(ongitude) of the C(entral) M(eridian) of 
   ! the M(ap) from the file header. Assign Phi_Shift=HLCMM-180
- 
+
   public :: get_magnetogram_field
   !Gives the interpolated values of the Cartesian components of
   !the macnetic vector in HGR system, input parameters
@@ -96,6 +96,9 @@ module ModMagnetogram
   public :: sin_latitude, r_latitude, colatitude
   public :: correct_angles
   public :: interpolate_field
+
+  ! read the potential field source surface solution
+  public :: read_potential_field
 
 contains
   !=================================================================
@@ -186,6 +189,12 @@ contains
     case("#SAVEPOTENTIALFIELD")
        call read_var('DoSavePotentialField', DoSavePotentialField)
 
+    case("#READPOTENTIALFIELD")
+       call read_var('NamePotentialFieldFile', NamePotentialFieldFile)
+       call read_var('H_PFSSM'    ,H_PFSSM)
+       call read_var('Phi_Shift'  ,Phi_Shift)
+       call read_var('UnitB'      ,UnitB)
+
     case default
        call CON_stop(NameSub//' invalid NameCommand='//NameCommand)
     end select
@@ -196,7 +205,7 @@ contains
 
   subroutine read_magnetogram_file(NamePlotDir)
     implicit none
-    
+
     character(len=*),intent(in) :: NamePlotDir
     integer :: iError
     !--------------------------------------------------------------------------
@@ -261,7 +270,7 @@ contains
     nRExt=min(10,1+floor(real(nR)*(0.1*Ro_PFSSM)/(Rs_PFSSM-Ro_PFSSM)))
     if(iProc==0)then
        write(*,*) prefix, &
-         'Magnetogram is extended by ',nRExt,' nodes towards the Sun'
+            'Magnetogram is extended by ',nRExt,' nodes towards the Sun'
     end if
     !\
     ! Initialize all coefficient arrays::
@@ -287,7 +296,7 @@ contains
     do n=0,N_PFSSM
        stuff=stuff/Rs_PFSSM**2
        stuff1 = 1.0/(real(n+1)+real(n)*stuff)
-!       stuff1 = 1.0/real(n+1+(n/(Rs_PFSSM**(2*n+1))))
+       !       stuff1 = 1.0/real(n+1+(n/(Rs_PFSSM**(2*n+1))))
        g_nm(n+1,1:n+1) = g_nm(n+1,1:n+1)*stuff1
        h_nm(n+1,1:n+1) = h_nm(n+1,1:n+1)*stuff1
     enddo
@@ -369,11 +378,11 @@ contains
     !\
     !
     !/
- 
+
     real, dimension(-1:N_PFSSM+2,-nRExt:nR):: &
          RoRsPower_I, RoRPower_I, rRsPower_I
 
-  
+
     !Introduce a spherical grid with the resolution, depending on the
     !magnetogram resolution (N_PFSSM)
     dR=(Rs_PFSSM-Ro_PFSSM)/real(nR)
@@ -384,7 +393,7 @@ contains
 
     !Calculate the radial part of spherical functions
     call calc_radial_functions
- 
+
     call set_auxiliary_arrays
 
     !Allocate the magnetic field array, at the spherical grid.
@@ -396,11 +405,11 @@ contains
 
     !Parallel computation of the magnetic field at the grid
     nThetaPerProc=nTheta/nProc+1 
-    
+
 
     !Loop by theta, each processor treats a separate part of the grid
     do iTheta=iProc*nThetaPerProc,(iProc+1)*nThetaPerProc-1
-       
+
        if(iTheta>nTheta)EXIT !Some processors may have less amount of work
        Theta=colatitude(iTheta)
        CosTheta=cos(Theta)
@@ -412,7 +421,7 @@ contains
        !Start loop by Phi
        do iPhi=0,nPhi
           Phi=real(iPhi)*dPhi
-          
+
           !Calculate azymuthal harmonics, for a given Phi
           do m=0,N_PFSSM
              CosPhi_I(m)=cos(m*Phi)
@@ -427,7 +436,7 @@ contains
              !/
              SumR = 0.0; SumT   = 0.0
              SumP = 0.0; SumPsi = 0.0
-             
+
              !\
              ! Calculate B for (R_PFSSM,Phi_PFSSM)::
              ! Also calculate magnetic potential Psi_PFSSM
@@ -471,7 +480,7 @@ contains
           end do
        end do
     end do
-    
+
     if(nProc>1)then
        do iBcast=0,nProc-1
           iStart=iBcast*nThetaPerProc
@@ -483,8 +492,8 @@ contains
     end if
 
     if(iProc==0)call write_Br_plot
-    if(iProc==0 .and. DoSavePotentialField)call write_potential_field
-contains
+    if(iProc==0 .and. DoSavePotentialField)call save_potential_field
+  contains
     subroutine set_auxiliary_arrays
 
       !\
@@ -504,7 +513,7 @@ contains
          factRatio1(m+1) = factRatio1(m)*Sqrt_I(2*m-1)/Sqrt_I(2*m)
       enddo
     end subroutine set_auxiliary_arrays
-   
+
     subroutine calc_Legandre_polynoms
       real:: SinThetaM, SinThetaM1
       integer:: delta_m0
@@ -595,104 +604,161 @@ contains
          end do
       end do
     end subroutine calc_radial_functions
-  !=====================================================================
-    subroutine write_Br_plot
-      use ModPlotFile, ONLY: save_plot_file
-
-      integer :: iError,iPhi,iTheta,iUnit
-      real,dimension(2,0:nPhi,0:nTheta):: Coord_DII,State_VII
-      character(len=32)                :: FileNameDat
-      character(len=32)                :: FileNameOut
-      !-----------------------------------------------------
-      FileNameDat = trim(NameOutDir)//'PFSSM_Br.dat'
-      FileNameOut = trim(NameOutDir)//'PFSSM_Br.outs'
-      
-      write(*,*) prefix, 'Writing PFSSM_Br output file, named'
-      write(*,*) prefix, FileNameDat
-      iUnit = io_unit_new()
-      open ( unit = iUnit, &
-           file = FileNameDat, &
-           form = 'formatted', &
-           access = 'sequential', &
-           status = 'replace', iostat = iError )
-
-      if ( iError /= 0 ) then
-         write (*,*) prefix, ' '
-         write (*,*) prefix, 'TECPLOT_WRITE_OPEN - Fatal error!'
-         write (*,*) prefix, '  Could not open the PFSSM_Br output file.'
-         call CON_stop('')
-      end if
-
-      write ( iUnit, '(a)' ) 'Title = "'     // trim ('PFSSM_Br') // '"'
-      write ( iUnit, '(a)' ) &
-           'Variables = ' // trim (&
-           '"Longitude [Deg]", "Latitude [Deg]", "Br_0 [G]","Br_SS [G]"')
-      write ( iUnit, '(a)' ) ' '
-      write ( iUnit, '(a,i6,a,i6,a)' ) 'Zone I = ', nPhi+1, ', J=', nTheta+1,&
-           ', F=point' 
-
-      do iTheta=0,nTheta
-         do iPhi=0,nPhi
-            Coord_DII(1,iPhi,iTheta) = real(iPhi)*dPhi/cDegToRad
-            Coord_DII(2,iPhi,iTheta) = r_latitude(iTheta)/cDegToRad
-
-            State_VII(1,iPhi,iTheta) = UnitB*B_DN(R_,0,iPhi,iTheta)
-            State_VII(2,iPhi,iTheta) = UnitB*B_DN(R_,nR,iPhi,iTheta)
-
-            write ( iUnit, '(4f10.3)' )Coord_DII(:,iPhi,iTheta),&
-                 State_VII(:,iPhi,iTheta)
-         end do
-      end do
-      close(iUnit)
-      call save_plot_file(FileNameOut,TypeFileIn='ascii',&
-           StringHeaderIn=&
-           'Longitude [Deg], Latitude [Deg], Br_0 [G], Br_SS [G]',&
-           nDimIn=2, CoordIn_DII=Coord_DII,VarIn_VII=State_VII)
-    end subroutine Write_Br_plot
-
-    !==========================================================================
-
-    subroutine write_potential_field
-
-      use ModPlotFile, ONLY: save_plot_file
-
-      real, allocatable :: Coord_DIII(:,:,:,:)
-
-      character(len=32) :: FileNameOut
-      !------------------------------------------------------------------------
-
-      allocate(Coord_DIII(3,-nRExt:nR,0:nPhi,0:nTheta))
-
-      do iTheta = 0, nTheta
-         do iPhi = 0, nPhi
-            do iR = -nRExt, nR
-               Coord_DIII(1,iR,iPhi,iTheta) = Ro_PFSSM + dR*iR
-               Coord_DIII(2,iR,iPhi,iTheta) = real(iPhi)*dPhi*cRadToDeg
-               Coord_DIII(3,iR,iPhi,iTheta) = r_latitude(iTheta)*cRadToDeg
-            end do
-         end do
-      end do
-
-      FileNameOut = trim(NameOutDir)//'PotentialField.outs'
-      call save_plot_file(FileNameOut, TypeFileIn='real8', StringHeaderIn = &
-           'Radius [Rs] Longitude [Deg] Latitude [Deg] B [G]', &
-           nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
-           //' Ro_PFSSM Rs_PFSSM Phi_Shift', &
-           ParamIn_I = (/ Ro_PFSSM, Rs_PFSSM, Phi_Shift /), &
-           nDimIn=3, CoordIn_DIII=Coord_DIII,VarIn_VIII=B_DN)
-
-      deallocate(Coord_DIII)
-
-    end subroutine write_potential_field
 
   end subroutine set_magnetogram
+
+  !=====================================================================
+
+  subroutine write_Br_plot
+    use ModPlotFile, ONLY: save_plot_file
+
+    integer :: iError,iPhi,iTheta,iUnit
+    real,dimension(2,0:nPhi,0:nTheta):: Coord_DII,State_VII
+    character(len=32)                :: FileNameDat
+    character(len=32)                :: FileNameOut
+    !-----------------------------------------------------
+    FileNameDat = trim(NameOutDir)//'PFSSM_Br.dat'
+    FileNameOut = trim(NameOutDir)//'PFSSM_Br.outs'
+
+    write(*,*) prefix, 'Writing PFSSM_Br output file, named'
+    write(*,*) prefix, FileNameDat
+    iUnit = io_unit_new()
+    open ( unit = iUnit, &
+         file = FileNameDat, &
+         form = 'formatted', &
+         access = 'sequential', &
+         status = 'replace', iostat = iError )
+
+    if ( iError /= 0 ) then
+       write (*,*) prefix, ' '
+       write (*,*) prefix, 'TECPLOT_WRITE_OPEN - Fatal error!'
+       write (*,*) prefix, '  Could not open the PFSSM_Br output file.'
+       call CON_stop('')
+    end if
+
+    write ( iUnit, '(a)' ) 'Title = "'     // trim ('PFSSM_Br') // '"'
+    write ( iUnit, '(a)' ) &
+         'Variables = ' // trim (&
+         '"Longitude [Deg]", "Latitude [Deg]", "Br_0 [G]","Br_SS [G]"')
+    write ( iUnit, '(a)' ) ' '
+    write ( iUnit, '(a,i6,a,i6,a)' ) 'Zone I = ', nPhi+1, ', J=', nTheta+1,&
+         ', F=point' 
+
+    do iTheta=0,nTheta
+       do iPhi=0,nPhi
+          Coord_DII(1,iPhi,iTheta) = real(iPhi)*dPhi/cDegToRad
+          Coord_DII(2,iPhi,iTheta) = r_latitude(iTheta)/cDegToRad
+
+          State_VII(1,iPhi,iTheta) = UnitB*B_DN(R_,0,iPhi,iTheta)
+          State_VII(2,iPhi,iTheta) = UnitB*B_DN(R_,nR,iPhi,iTheta)
+
+          write ( iUnit, '(4f10.3)' )Coord_DII(:,iPhi,iTheta),&
+               State_VII(:,iPhi,iTheta)
+       end do
+    end do
+    close(iUnit)
+    call save_plot_file(FileNameOut,TypeFileIn='ascii',&
+         StringHeaderIn=&
+         'Longitude [Deg], Latitude [Deg], Br_0 [G], Br_SS [G]',&
+         nDimIn=2, CoordIn_DII=Coord_DII,VarIn_VII=State_VII)
+
+  end subroutine Write_Br_plot
+
+  !==========================================================================
+
+  subroutine save_potential_field
+
+    use ModPlotFile, ONLY: save_plot_file
+
+    real, allocatable :: Radius_I(:), Theta_I(:), Phi_I(:)
+
+    integer :: iR, iTheta, iPhi
+    character(len=32) :: FileNameOut
+    !------------------------------------------------------------------------
+
+    allocate(Radius_I(-nRExt:nR), Phi_I(0:nPhi), Theta_I(0:nTheta))
+
+    do iR = -nRExt, nR
+       Radius_I(iR) = Ro_PFSSM + dR*iR
+    end do
+    do iPhi = 0, nPhi
+       Phi_I(iPhi) = real(iPhi)*dPhi
+    end do
+    do iTheta = 0, nTheta
+       Theta_I(iTheta) = r_latitude(iTheta)
+    end do
+
+    FileNameOut = trim(NameOutDir)//'potentialfield.outs'
+    call save_plot_file(FileNameOut, TypeFileIn='real8', StringHeaderIn = &
+         'Radius [Rs] Longitude [Deg] Latitude [Deg] B [G]', &
+         nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
+         //' Ro_PFSSM Rs_PFSSM nRExt', &
+         ParamIn_I = (/ Ro_PFSSM, Rs_PFSSM, real(nRExt) /), &
+         nDimIn=3, VarIn_VIII=B_DN, &
+         Coord1In_I=Radius_I, &
+         Coord2In_I=Phi_I, &
+         Coord3In_I=Theta_I)
+
+    deallocate(Radius_I, Theta_I, Phi_I)
+
+  end subroutine save_potential_field
+
+  !============================================================================
+
+  subroutine read_potential_field(NamePlotDir)
+
+    use ModPlotFile, ONLY: read_plot_file
+
+    character(len=*),intent(in) :: NamePlotDir
+
+    integer :: iError
+    integer :: n_D(3), nParam
+    real :: Param_I(3)
+
+    character(len=*), parameter :: &
+         NameSub = 'ModMagnetogram::read_potential_field'
+    !--------------------------------------------------------------------------
+    iComm = MPI_COMM_WORLD
+    call MPI_COMM_SIZE(iComm,nProc,iError)
+    call MPI_COMM_RANK(iComm,iProc,iError)
+
+    n_D = 1
+    call read_plot_file(NamePotentialFieldFile, TypeFileIn='real8', &
+         nOut_D=n_D, nParamOut=nParam, ParamOut_I=Param_I)
+
+    Ro_PFSSM = Param_I(1)
+    Rs_PFSSM = Param_I(2)
+    nRExt = nint(Param_I(3))
+
+    nR = n_D(1) - 1
+    nPhi = n_D(2) - 1
+    nTheta = n_D(3) - 1
+
+    allocate(B_DN(3,-nRExt:nR,0:nPhi,0:nTheta))
+
+    call read_plot_file(NamePotentialFieldFile, TypeFileIn='real8', &
+         VarOut_VIII=B_DN)
+
+    ! recover public vaiables
+    dR = (Rs_PFSSM - Ro_PFSSM)/nR
+    dPhi = cTwoPi/nPhi
+    dSinTheta = 2.0/(nTheta+1)
+    dInv_D = 1.0/(/dR,dPhi,dSinTheta/)
+    nThetaPerProc = nTheta/nProc + 1
+
+    NameOutDir = NamePlotDir
+
+    if(iProc==0)call write_Br_plot
+    if(iProc==0 .and. DoSavePotentialField)call save_potential_field
+
+  end subroutine read_potential_field
 
   !==========================================================================
   ! This subroutine corrects the angles Phi and Theta after every 
   ! step of the field-alligned integration 
   subroutine correct_angles(TR_D)
     real,dimension(nDim),intent(inout) :: TR_D
-      
+
     if(TR_D(Theta_) < 0.0)then
        TR_D(Theta_) = -TR_D(Theta_)
        TR_D(Phi_)=TR_D(Phi_)+cPi
@@ -702,7 +768,7 @@ contains
        TR_D(Phi_)=TR_D(Phi_)+cPi
     end if
     TR_D(Phi_)=modulo(TR_D(Phi_),cTwoPi)
-    
+
   end subroutine correct_angles
   !==========================================================================
   subroutine interpolate_field(R_D,BMap_D)
@@ -719,11 +785,11 @@ contains
     Res_D(R_)=max(min(Res_D(R_),Rs_PFSSM-cTiny),Ro_PFSSM-nRExt*dR+cTiny)
 
     Res_D(R_)=Res_D(R_)-Ro_PFSSM
-    
+
     call correct_angles(Res_D)
     DoCorrection=Res_D(Theta_)/=R_D(Theta_)
     Res_D(Theta_)=cos(Res_D(Theta_)) & !This is sin(latitude)
-          -sin_latitude(0)             !This is sin(latitude) for iTheta=0 
+         -sin_latitude(0)             !This is sin(latitude) for iTheta=0 
     Res_D=Res_D*dInv_D
     Node_D=floor(Res_D)
     if(Node_D(R_)==nR)Node_D(R_)=Node_D(R_)-1
@@ -740,14 +806,14 @@ contains
        Res_D(Theta_)=1.0
        BRAvr=sum(&
             (1.0-Res_D(R_))*B_DN(R_,Node_D(R_)  ,:,nTheta)&
-                 +Res_D(R_) *B_DN(R_,Node_D(R_)+1,:,nTheta))/(nPhi+1)
+            +Res_D(R_) *B_DN(R_,Node_D(R_)+1,:,nTheta))/(nPhi+1)
     elseif(Node_D(Theta_)==-1)then
        Node_D(Theta_)= Node_D(Theta_)+1
        ReductionCoeff=sqrt(max(0.0,2.0*Res_D(Theta_)-1.0))
        Res_D(Theta_) = 0.0
        BRAvr=sum(&
             (1.0-Res_D(R_))*B_DN(R_,Node_D(R_)  ,:,     0)&
-                 +Res_D(R_) *B_DN(R_,Node_D(R_)+1,:,     0))/(nPhi+1)
+            +Res_D(R_) *B_DN(R_,Node_D(R_)+1,:,     0))/(nPhi+1)
     end if
 
     if(Node_D(Phi_)==nPhi)Node_D(Phi_)=0
@@ -776,7 +842,7 @@ contains
   subroutine get_magnetogram_field(xInput,yInput,zInput,B0_D)
     real, intent(in):: xInput,yInput,zInput
     real, intent(out), dimension(3):: B0_D
-  
+
     real:: Rin_PFSSM,Theta_PFSSM,Phi_PFSSM
     real:: BMap_D(nDim)
     real:: SinPhi,CosPhi,XY,R_PFSSM
@@ -805,9 +871,9 @@ contains
     ! The inner boundary in the simulations starts at a height
     ! H_PFSSM above that of the magnetic field measurements!
     !/
-   
+
     R_PFSSM =min(Rin_PFSSM+H_PFSSM, Rs_PFSSM)
-  
+
 
     !\
     ! Transform Phi_PFSSM from the component's frame to the magnetogram's frame.
