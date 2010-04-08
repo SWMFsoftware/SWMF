@@ -5,8 +5,9 @@ module ModPotentialField
   logical :: DoReadMagnetogram = .true.
   logical :: UseCosTheta = .true. 
 
-  integer         :: nR = 50, nTheta = 90, nPhi = 90
+  integer         :: nR = 90, nTheta = 90, nPhi = 90
   real, parameter :: rMin = 1.0, rMax = 2.5
+  real :: PhiShift
 
   logical :: UseBr = .true.
 
@@ -105,6 +106,9 @@ contains
     Br_II = Br_II - BrAverage
 
     deallocate(Br0_II)
+
+    ! longitude = 0 is shifted by PhiShift
+    PhiShift = 360.0 - 360.0/nPhi0 *0.5*(nPhiRatio-1)
 
     close(iUnit)
 
@@ -256,10 +260,9 @@ contains
           do iR = 1, nR+1
              r = RadiusNode_I(iR)
              Theta = Theta_I(iTheta)
-             Phi = PhiNode_I(iPhi)
+             Phi = Phi_I(iPhi)
 
-             B_DN(1,iR,iPhi,nTheta+1-iTheta) = &
-                  0.5*sum(Br_G(iR,iTheta,iPhi-1:iPhi))
+             B_DN(1,iR,iPhi,nTheta+1-iTheta) = Br_G(iR,iTheta,iPhi)
              B_DN(3,iR,iPhi,nTheta+1-iTheta) = &
                   trilinear(Btheta_G, 0, nR+1, 1, nTheta+1, 0, nPhi+1, &
                   (/r,Theta,Phi/), x_I=Radius_I, y_I=ThetaNode_I, &
@@ -281,6 +284,9 @@ contains
          Coord1In_I=RadiusNode_I, &
          Coord2In_I=PhiNode_I, &
          Coord3In_I=cHalfPi-Theta_I(nTheta:1:-1))
+
+    ! longitude = 0 is shifted by PhiShift
+    write(*,*) "Use in PARAM.in a Phi_Shift = ", PhiShift
 
   end subroutine save_potential_field
 
@@ -304,7 +310,7 @@ contains
     end if
 
     ! The potential is zero at the outer boundary
-    x_G(nR+1,:,:) = 0.0
+    x_G(nR+1,:,:) = -x_G(nR,:,:)
 
     ! Symmetric in Theta but shifted by nPhi/2
     do iPhi = 1, nPhi
