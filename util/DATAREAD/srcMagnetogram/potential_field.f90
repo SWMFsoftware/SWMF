@@ -279,14 +279,12 @@ contains
     call save_plot_file('potentialfield.out', TypeFileIn='real8', &
          StringHeaderIn = 'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
          nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
-         //' Ro_PFSSM Rs_PFSSM nRExt', ParamIn_I = (/ rMin, rMax, 0.0 /), &
+         //' Ro_PFSSM Rs_PFSSM PhiShift nRExt', &
+         ParamIn_I = (/ rMin, rMax, PhiShift, 0.0 /), &
          nDimIn=3, VarIn_VIII=B_DN, &
          Coord1In_I=RadiusNode_I, &
          Coord2In_I=PhiNode_I, &
          Coord3In_I=cHalfPi-Theta_I(nTheta:1:-1))
-
-    ! longitude = 0 is shifted by PhiShift
-    write(*,*) "Use in PARAM.in a Phi_Shift = ", PhiShift
 
   end subroutine save_potential_field
 

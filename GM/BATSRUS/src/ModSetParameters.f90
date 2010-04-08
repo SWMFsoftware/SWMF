@@ -1847,12 +1847,7 @@ subroutine MH_set_parameters(TypeAction)
 
         !CORONA SPECIFIC COMMANDS
 
-     case("#MAGNETOGRAM")
-        call read_var('UseMagnetogram'  ,UseMagnetogram)
-        if(UseMagnetogram)&
-             call set_parameters_magnetogram(NameCommand)
-
-     case("#READPOTENTIALFIELD")
+     case("#MAGNETOGRAM", "#READPOTENTIALFIELD")
         call read_var('UseMagnetogram'  ,UseMagnetogram)
         if(UseMagnetogram)&
              call set_parameters_magnetogram(NameCommand)
