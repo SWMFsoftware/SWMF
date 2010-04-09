@@ -107,8 +107,8 @@ contains
 
     deallocate(Br0_II)
 
-    ! longitude = 0 is shifted by PhiShift
-    PhiShift = 360.0 - 360.0/nPhi0 *0.5*(nPhiRatio-1)
+    ! longitude = 0 is shifted by -PhiShift (BATSRUS will shift by -PhiShift)
+    PhiShift = 360.0/nPhi0 *0.5*(nPhiRatio-1)
 
     close(iUnit)
 
