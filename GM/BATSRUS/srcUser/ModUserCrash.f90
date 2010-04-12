@@ -172,6 +172,9 @@ module ModUser
   real:: RhoMinAmrDim = 20.0   ! kg/m3
   real:: xMaxAmr      = 2500.0 ! microns
 
+  ! Option to start with reduced radiation in the initial condition.
+  real :: RadiationScaleFactor = 1.0
+
 contains
 
   !============================================================================
@@ -301,6 +304,10 @@ contains
        case("#TEMPERATUREHYADES")
           call read_var('UseEqualTemperatureHyades', UseEqualTemperatureHyades)
 
+       case("#RADIATIONSCALEFACTOR")
+          ! Multiply the initial radiation by RadiationScaleFactor
+          call read_var('RadiationScaleFactor', RadiationScaleFactor)
+
        case('#USERINPUTEND')
           EXIT
        case default
@@ -382,13 +389,13 @@ contains
   subroutine user_set_ics
 
     use ModProcMH,      ONLY: iProc
-    use ModMain,        ONLY: GlobalBlk, nI, nJ, nK
+    use ModMain,        ONLY: GlobalBlk, nI, nJ, nK, UseRadDiffusion
     use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_, &
          UnitTemperature_, UnitN_, PeMin, ExtraEintMin
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes,  ONLY: Rho_, RhoUx_, RhoUz_, p_, ExtraEint_, &
-         LevelBe_, LevelXe_, LevelPl_, Pe_, Erad_
+         LevelBe_, LevelXe_, LevelPl_, Pe_, Erad_, WaveFirst_, WaveLast_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
     use ModConst,       ONLY: cPi, cAtomicMass
     use CRASH_ModEos,   ONLY: eos, Xe_, Plastic_
@@ -631,6 +638,10 @@ contains
                EinternalSi*Si2No_V(UnitEnergyDens_) &
                - inv_gm1*State_VGB(P_,i,j,k,iBlock))
        end if
+
+       if(UseRadDiffusion) &
+            State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
+            State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*RadiationScaleFactor
 
     end do; end do; end do
 
