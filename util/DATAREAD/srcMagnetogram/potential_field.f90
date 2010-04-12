@@ -102,7 +102,7 @@ contains
     end do
 
     ! remove monopole
-    BrAverage = 0.0 !sum(Br_II)/(nTheta*nPhi)
+    BrAverage = sum(Br_II)/(nTheta*nPhi)
     Br_II = Br_II - BrAverage
 
     deallocate(Br0_II)
