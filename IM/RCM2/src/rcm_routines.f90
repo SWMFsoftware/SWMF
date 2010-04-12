@@ -3334,7 +3334,7 @@ END SUBROUTINE Move_plasma_grid_NEW
                                 densityHp, densityOp, temperatureHp, temperatureOp, &
                                 kmin, kmax, &
                                 iprec, rprec, &
-                                x_h, x_o,DoMultiFluidGMCoupling
+                                x_h, x_o,DoMultiFluidGMCoupling, NameRcmDir
       IMPLICIT NONE
       INTEGER(iprec), INTENT (IN) :: iflag, i_where
 !
@@ -3521,7 +3521,7 @@ END SUBROUTINE Move_plasma_grid_NEW
       DO i=1,isize
       DO k=1,kcsize
          IF (eeta(i,j,k) < 0.0) THEN
-             OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
+             OPEN (unit=UNIT_DEBUG,FILE=trim(NameRcmDir)//'RCM_DEBUG')
              WRITE (UNIT_DEBUG,'(/////)')
              WRITE (UNIT_DEBUG,*) 'RCM, RCM_PLASMA_BC, ERROR:'
              WRITE (UNIT_DEBUG,*) 'NEGATIVE ETA VALUE AFTER FIRST PASS TO ASSIGN ETAS'
@@ -3647,7 +3647,7 @@ END SUBROUTINE Move_plasma_grid_NEW
            ! It is possible that even for k_end=k_beg+1, the correction factor
            ! is still negative. Thus, add a check for it:
            IF (.NOT.Flag_found_kuse) THEN
-               OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
+               OPEN (unit=UNIT_DEBUG,FILE=trim(NameRcmDir)//'RCM_DEBUG')
                WRITE (UNIT_DEBUG,'(/////)')
                WRITE (UNIT_DEBUG,*) 'RCM, RCM_PLASMA_BC, ERROR OCCURED:'
                WRITE (UNIT_DEBUG,*) 'CORRECTION FACTOR IS NEGATIVE AT SOME ENERGIES'
@@ -3686,7 +3686,7 @@ END SUBROUTINE Move_plasma_grid_NEW
                (s2 > 0.0 .AND. ABS(b_factor) > 0.2*s1/s2)) THEN
 
                ! Write out error message:
-               OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
+               OPEN (unit=UNIT_DEBUG,FILE=trim(NameRcmDir)//'RCM_DEBUG')
                WRITE (UNIT_DEBUG,'(/////)')
                WRITE (UNIT_DEBUG,*) 'RCM, RCM_PLASMA_BC, POSSIBLE PROBLEM OCCURED:'
                WRITE (UNIT_DEBUG,*) 'S1*S3-S2**2 IS CLOSE TO BEING NEGATIVE?'
@@ -3748,7 +3748,7 @@ END SUBROUTINE Move_plasma_grid_NEW
            ! another check for negative etas:
            DO k = k_beg, k_end
               if (eeta(i,j,k) < 0.0) then
-                 OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
+                 OPEN (unit=UNIT_DEBUG,FILE=trim(NameRcmDir)//'RCM_DEBUG')
                  WRITE (UNIT_DEBUG,'(/////)')
                  WRITE(UNIT_DEBUG,*)'NEGATIVE EETA VALUE FOUND IN RCM_PLASMA_BC'
                  WRITE(UNIT_DEBUG,*)'AFTER THE CORRECTION PROCEDURE'
@@ -3819,7 +3819,7 @@ END SUBROUTINE Move_plasma_grid_NEW
 
             IF (density(i,j) /= 0.0 ) THEN
                 IF (ABS(density_rcm-density(i,j))/density(i,j) > 0.01) THEN
-                 OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
+                 OPEN (unit=UNIT_DEBUG,FILE=trim(NameRcmDir)//'RCM_DEBUG')
                  WRITE (UNIT_DEBUG,'(/////)')
                  WRITE (UNIT_DEBUG,*) 'RCM: IN RCM_PLASMA_BC THERE IS A MISMATCH IN MASS DENSITY MOMENTS:'
                  WRITE (UNIT_DEBUG,*) 'MHD SENT: ',' N=',density(i,j),' T=', temperature(i,j)
@@ -3836,7 +3836,7 @@ END SUBROUTINE Move_plasma_grid_NEW
 
             IF (temperature(i,j) /= 0.0 .and. density(i,j) /= 0.0) THEN
                 IF (ABS((temperature(i,j)-pressure_rcm/density(i,j)/1.6E-4)/temperature(i,j)) > 0.01) THEN
-                 OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
+                 OPEN (unit=UNIT_DEBUG,FILE=trim(NameRcmDir)//'RCM_DEBUG')
                  WRITE (UNIT_DEBUG,'(/////)')
                  WRITE (UNIT_DEBUG,*) 'RCM: IN RCM_PLASMA_BC THERE IS A MISMATCH IN ENERGY DENSITY MOMENTS:'
                  WRITE (UNIT_DEBUG,*) 'MHD SENT: ',' N=',density(i,j),' T=',temperature(i,j)
@@ -3867,7 +3867,7 @@ END SUBROUTINE Move_plasma_grid_NEW
             end do
             IF (densityHp(i,j) /= 0.0 ) THEN
                IF (ABS(densityHp_rcm-densityHp(i,j))/densityHp(i,j) > 0.01) THEN
-                  OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG1')
+                  OPEN (unit=UNIT_DEBUG,FILE=trim(NameRcmDir)//'RCM_DEBUG1')
                   WRITE (UNIT_DEBUG,'(/////)')
                   WRITE (UNIT_DEBUG,*) 'RCM: IN RCM_PLASMA_BC THERE IS A MISMATCH IN MASS DENSITY MOMENTS:'
                   WRITE (UNIT_DEBUG,*) 'MHD SENT: ',' N_Hp=',densityHp(i,j),' T_Hp=', temperatureHp(i,j)
@@ -3885,7 +3885,7 @@ END SUBROUTINE Move_plasma_grid_NEW
 
             IF (densityOp(i,j) /= 0.0 ) THEN
                IF (ABS(densityOp_rcm-densityOp(i,j))/densityOp(i,j) > 0.01) THEN
-                  OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG2')
+                  OPEN (unit=UNIT_DEBUG,FILE=trim(NameRcmDir)//'RCM_DEBUG2')
                   WRITE (UNIT_DEBUG,'(/////)')
                   WRITE (UNIT_DEBUG,*) 'RCM: IN RCM_PLASMA_BC THERE IS A MISMATCH IN MASS DENSITY MOMENTS:'
                   WRITE (UNIT_DEBUG,*) 'MHD SENT: ',' N_Op=',densityOp(i,j),' T_Op=', temperatureOp(i,j)
@@ -3902,7 +3902,7 @@ END SUBROUTINE Move_plasma_grid_NEW
 
             IF (temperatureHp(i,j) /= 0.0 .and. densityHp(i,j) /= 0.0) THEN
                IF (ABS((temperatureHp(i,j)-pressureHp_rcm/densityHp_rcm/1.6E-4)/temperatureHp(i,j)) > 0.01) THEN
-                  OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG3')
+                  OPEN (unit=UNIT_DEBUG,FILE=trim(NameRcmDir)//'RCM_DEBUG3')
                   WRITE (UNIT_DEBUG,'(/////)')
                   WRITE (UNIT_DEBUG,*) 'RCM: IN RCM_PLASMA_BC THERE IS A MISMATCH IN ENERGY DENSITY MOMENTS:'
                   WRITE (UNIT_DEBUG,*) 'MHD SENT: ',' N_Hp=',densityHp(i,j),' T_Hp=',temperatureHp(i,j)
@@ -3919,7 +3919,7 @@ END SUBROUTINE Move_plasma_grid_NEW
             
             IF (temperatureOp(i,j) /= 0.0 .and. densityOp(i,j) /= 0.0) THEN
                IF (ABS((temperatureOp(i,j)-pressureOp_rcm/densityOp_rcm/1.6E-4)/temperatureOp(i,j)) > 0.01) THEN
-                  OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG4')
+                  OPEN (unit=UNIT_DEBUG,FILE=trim(NameRcmDir)//'RCM_DEBUG4')
                   WRITE (UNIT_DEBUG,'(/////)')
                   WRITE (UNIT_DEBUG,*) 'RCM: IN RCM_PLASMA_BC THERE IS A MISMATCH IN ENERGY DENSITY MOMENTS:'
                   WRITE (UNIT_DEBUG,*) 'MHD SENT: ',' N_Op=',densityOp(i,j),' T_Op=',temperatureOp(i,j)
