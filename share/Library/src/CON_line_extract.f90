@@ -56,7 +56,6 @@ contains
     character (len=*), parameter :: NameSub = NameMod//'::line_init'
     !-------------------------------------------------------------------------
     
-    if(nVar == nVarIn) RETURN          ! nothing to do if the same comm
     if(nVar >  0     ) call line_clean ! clean up previous allocation
 
     ! Set number of variables for each point
