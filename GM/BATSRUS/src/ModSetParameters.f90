@@ -247,7 +247,7 @@ subroutine MH_set_parameters(TypeAction)
 
      if(UseMagnetogram)then
         if(i_line_command("#MAGNETOGRAM") > 0)then
-           call read_magnetogram_file(NamePlotDir)
+          call read_magnetogram_file(NamePlotDir)
         elseif(i_line_command("#READPOTENTIALFIELD") > 0)then
            call read_potential_field(NamePlotDir)
         end if
@@ -684,6 +684,10 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('nLon',      plot_range(2,ifile))
               call read_var('RadiusMin', plot_range(3,ifile))
               call read_var('RadiusMax', plot_range(4,ifile))
+           elseif (index(plot_string,'ieb')>0)then
+              plot_area='ieb'
+           elseif (index(plot_string,'lcb')>0)then
+              plot_area='lcb'
            elseif (index(plot_string,'sph')>0)then
    	      plot_area='sph'
 	      call read_var('Radius',plot_range(1,ifile))
@@ -834,6 +838,12 @@ subroutine MH_set_parameters(TypeAction)
                    'Variable "pos" can only be used with area "lin" !')
            elseif (index(plot_string,'eqr')>0)then
               plot_var ='eqr'
+              plot_dimensional(ifile) = .true.
+           elseif (index(plot_string,'ieb')>0)then
+              plot_var ='nul'
+              plot_dimensional(ifile) = .true.
+           elseif (index(plot_string,'lcb')>0)then
+              plot_var ='nul'
               plot_dimensional(ifile) = .true.
            elseif(index(plot_string,'BBK')>0.or.index(plot_string,'bbk')>0)then
               plot_var='blk'

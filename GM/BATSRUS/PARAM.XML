@@ -2461,6 +2461,8 @@ example), the start and end times should be set for all of them.
 					if="$plotform =~ /\btec\b/"/>
 				<option name="1D" value="1d/1d_" 
 					if="$plotform =~ /\btec\b/"/>
+				<option name="ieb" />
+				<option name="lcb" />
 			</part>
 			<part name="plotvar" type="string" required="T"
 				input="select">
@@ -2492,6 +2494,7 @@ example), the start and end times should be set for all of them.
 					value="bbk" />
 				<option name="Set variables"    value="VAR" />
 				<option name="Set scaled vars." value="var"/>
+				<option name="NULL - irrelevant" value="nul"/>
 			</part>
 		</parameter>
 		<parameter name="DnSavePlot" type="integer" min="-1" 
@@ -2676,6 +2679,12 @@ eqr eqr idl		StringPlot
 25			nLon
 3.0			RadiusMin
 10.0			RadiusMax
+ieb nul tec             StringPlot  !IE grid field line plots
+1000                    DnSavePlot
+-1.                     DtSavePlot
+lcb nul tec             StringPlot  !last closed field line plots
+1000                    DnSavePlot
+-1.                     DtSavePlot
 
 Default is nPlotFile=0. \\
 
@@ -2685,7 +2694,7 @@ StringPlot must contain the following 3 parts in the following order
 plotform plotarea plotvar
 
 plotform = 'tec', 'idl', 'idl_real4', 'idl_real8', 'idl_ascii'
-plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d' 'rfr', 'eqr'
+plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d' 'rfr', 'eqr', 'ieb', 'lcb'
 plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'euv', 'sxr', 'pos', 'var', 'bbk' 'rwi' - normalized
 plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'EUV', 'SXR', 'pos', 'VAR', 'BBK' 'RWI' - dimensional
 \end{verbatim}
@@ -2719,6 +2728,8 @@ lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
 rfr   - radiotelescope pixel image plot
 eqr   - field lines traced from the magnetic equatorial plane
+ieb   - field lines traced from a subset of the IE coupled grid
+lcb   - last closed field lines
 \end{verbatim}
 The plotvar string defines the plot variables and the equation parameters.
 It also controls whether or not the variables will be plotted in dimensional

@@ -2,9 +2,10 @@
 !^CFG FILE RAYTRACE
 
 ! The main subroutines in this file are
-! subroutine ray_trace_accurate     - trace all rays starting from 3D MHD grid
-! subroutine integrate_ray_accurate - integrate rays starting from 2D IM grid
-! subroutine write_plot_line        - extract lines into plot file(s)
+! subroutine ray_trace_accurate        - trace all rays starting from 3D MHD grid
+! subroutine integrate_ray_accurate    - integrate rays starting from 2D IM grid
+! subroutine integrate_ray_accurate_1d - integrate rays starting from 1D list of points
+! subroutine write_plot_line           - extract lines into plot file(s)
 
 subroutine ray_trace_accurate
 
@@ -1698,6 +1699,163 @@ end subroutine integrate_ray_accurate
 
 !============================================================================
 
+subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
+
+  use CON_ray_trace,     ONLY: ray_init
+  use CON_planet_field,  ONLY: map_planet_field
+  use CON_axes,          ONLY: transform_matrix
+  use CON_line_extract,  ONLY: line_init, line_collect
+  use CON_planet,        ONLY: DipoleStrength
+  use ModRaytrace
+  use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
+       UseB0, DoMultiFluidIMCoupling
+  use ModPhysics,        ONLY: rBody
+  use ModAdvance,        ONLY: nVar, State_VGB, Rho_, p_, Bx_, Bz_, B0_DGB
+  use ModProcMH
+  use ModMpi
+  use ModMessagePass,    ONLY: message_pass_dir
+  use ModNumConst,       ONLY: cDegToRad, cTiny
+  use ModCoordTransform, ONLY: sph_to_xyz
+  use ModUtilities,      ONLY: check_allocate
+  use ModGeometry,       ONLY: XyzMax_D, XyzMin_D, x1, x2, y1, y2, z1, z2, &
+       UseCovariant
+  use ModMultiFluid
+  implicit none
+
+  !INPUT ARGUMENTS:
+  integer, intent(in):: nPts
+  real,    intent(in):: XyzPt_DI(3,nPts)
+  character(len=*), intent(in):: NameVar
+
+  !DESCRIPTION:
+  ! A 1D list of points is sent in with x,y,z values in GM coordinates.
+  ! NameVar lists the variables that need to be extracted and/or integrated.
+  ! The subroutine can calculate the integral of various quantities 
+  ! and/or extract state variables along the field lines starting from the
+  ! points sent in.
+
+  real    :: Xyz_D(3)
+  integer :: iPt, iRay
+  integer :: iProcFound, iBlockFound, i, j, k
+  integer :: nStateVar, iIonSecond
+  integer :: iError
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub = 'integrate_ray_accurate_1d'
+  !-------------------------------------------------------------------------
+
+  iIonSecond = min(IonFirst_+1, IonLast_)
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
+
+  if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc,' with nPts=',nPts
+
+  call timing_start('integrate_ray_1d')
+
+  oktest_ray = .false.
+
+  ! Initialize some basic variables
+  R_raytrace      = rBody
+  R2_raytrace     = R_raytrace**2
+  if(UseOldMethodOfRayTrace .and. .not.UseCovariant)then
+     RayLengthMax = 4.*sum(XyzMax_D - XyzMin_D)
+  else
+     RayLengthMax = 4.*(abs(x2-x1) + abs(y2-y1) + abs(z2-z1))
+  end if
+
+  DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
+  DoExtractRay   = index(NameVar, '_I') > 0
+  DoTraceRay     = .false.
+  DoMapRay       = .false.
+
+  if(DoTestMe)write(*,*)NameSub,' DoIntegrateRay,DoExtractRay,DoTraceRay=',&
+       DoIntegrateRay,DoExtractRay,DoTraceRay
+
+  if(DoExtractRay)then
+     nRay_D  = (/ 2, nPts, 0, 0 /)
+     DoExtractState = .true.
+     DoExtractUnitSi= .true.
+     nStateVar = 4 + nVar
+     call line_init(nStateVar)
+  end if
+
+  NameVectorField = 'B'
+
+  ! (Re)initialize CON_ray_trace
+  call ray_init(iComm)
+
+  ! Copy magnetic field into Bxyz_DGB
+  Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
+
+  ! Fill in all ghost cells
+  call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
+       ProlongOrder=2, nVar=3, Sol_VGB=Bxyz_DGB)
+
+  ! Add B0 for faster interpolation
+  if(UseB0) Bxyz_DGB(1:3,:,:,:,1:nBlock) = &
+       Bxyz_DGB(1:3,:,:,:,1:nBlock) + B0_DGB(:,:,:,:,1:nBlock)
+
+  if(DoIntegrateRay)then
+     ! Copy density and pressure into Extra_VGB
+     Extra_VGB(1,:,:,:,1:nBlock) = State_VGB(rho_,:,:,:,1:nBlock)
+     Extra_VGB(2,:,:,:,1:nBlock) = State_VGB(p_  ,:,:,:,1:nBlock)
+
+     ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
+     call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
+          ProlongOrder=2, nVar=2, Sol_VGB=Extra_VGB)
+
+     allocate(&
+          RayIntegral_VII(nRayIntegral,nRay_D(1),nRay_D(2)), &
+          RayResult_VII(nRayIntegral,nRay_D(1),nRay_D(2)), STAT=iError)
+     call check_allocate(iError,NameSub//' RayIntegral_VI,RayResult_VI')
+     RayIntegral_VII = 0.0
+     RayResult_VII   = 0.0
+
+     if(DoMultiFluidIMCoupling) then 
+        ! Copy density and pressure into Extra_VGB
+        ExtraMulti_VGB(1:2,:,:,:,1:nBlock) = &
+             State_VGB(iRho_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
+        ExtraMulti_VGB(3:4,:,:,:,1:nBlock) = &
+             State_VGB(iP_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
+        
+        ! Fill in all ghost cells (faces+edges+co5Brners) without monotone restrict
+        call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
+          ProlongOrder=2, nVar=4, Sol_VGB=ExtraMulti_VGB)
+     endif
+  end if
+
+  ! Transformation matrix between the SM and GM coordinates
+  GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+
+  ! Integrate rays
+  CpuTimeStartRay = MPI_WTIME()
+  do iPt = 1, nPts
+     Xyz_D=XyzPt_DI(:,iPt)
+
+     ! Find processor and block for the location
+     call xyz_to_peblk(Xyz_D(1), Xyz_D(2), Xyz_D(3), &
+          iProcFound, iBlockFound, .true., i, j, k)
+
+     ! If location is on this PE, follow and integrate ray
+     if(iProc == iProcFound)then
+        call follow_ray(1, (/1, iPt, 0, iBlockFound/), Xyz_D)
+        call follow_ray(2, (/2, iPt, 0, iBlockFound/), Xyz_D)
+     end if
+  end do
+
+  ! Do remaining rays obtained from other PE-s
+  call finish_ray
+
+  if(DoIntegrateRay) call MPI_reduce( RayIntegral_VII, RayResult_VII, &
+       size(RayIntegral_VII), MPI_REAL, MPI_SUM, 0, iComm, iError)
+
+  if(DoExtractRay) call line_collect(iComm,0)
+
+  call timing_stop('integrate_ray_1d')
+
+end subroutine integrate_ray_accurate_1d
+
+!============================================================================
+
 subroutine plot_ray_equator(iFile)
 
   use ModMain, ONLY: n_step, time_accurate, Time_Simulation, TypeCoordSystem
@@ -2503,3 +2661,274 @@ subroutine xyz_to_ijk(XyzIn_D,IjkOut_D,iBlock,XyzRef_D,GenRef_D,dGen_D)
   IjkOut_D = (Gen_D - GenRef_D)/dGen_D + 1.
 
 end subroutine xyz_to_ijk
+
+!============================================================================
+
+subroutine lcb_plot(iFile)
+  use CON_line_extract,  ONLY: line_get, line_clean
+  use CON_planet_field,  ONLY: map_planet_field
+  use CON_axes,          ONLY: transform_matrix
+  use ModIoUnit,         ONLY: UnitTmp_
+  use ModAdvance,        ONLY: nVar, Ux_, Uz_, Bx_, Bz_
+  use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, time_accurate, n_step
+  use ModNumConst,       ONLY: cRadToDeg, cDegToRad
+  use ModProcMH,         ONLY: iProc, iComm
+  use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, rBody
+  use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
+  use ModIO,             ONLY: StringDateOrTime, NamePlotDir
+  use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII
+  use ModMpi
+  implicit none
+
+  integer, intent(in) :: iFile
+
+  character (len=*), parameter :: NameSub='lcb_plot'
+  character (len=80) :: FileName,stmp
+  integer, parameter :: nPts=11, nD=6
+  integer :: i,j,k, nLine, iStart,iMid,iEnd, jStart,jMid,jEnd, iLon, iD, iLC
+  integer :: iPoint, nPoint, nVarOut, iHemisphere, nFile, iError, nTP
+  real :: PlotVar_V(0:4+nVar)
+  real :: Radius, RadiusIono, Lon, zL,zU, zLs=0., zUs=40., xV,yV
+  real :: XyzIono_D(3), Xyz_D(3)
+  real :: Gsm2Smg_DD(3,3) = reshape( (/ 1.,0.,0.,  0.,1.,0.,  0.,0.,1. /), (/3,3/) )
+  real :: Smg2Gsm_DD(3,3) = reshape( (/ 1.,0.,0.,  0.,1.,0.,  0.,0.,1. /), (/3,3/) )
+  real, allocatable :: PlotVar_VI(:,:), XyzPt_DI(:,:), zPt_I(:)
+  logical :: Map1,Map2, Odd
+  logical :: WriteOnlyLC = .true.
+  logical :: DoTest, DoTestMe
+  !--------------------------------------------------------------------------
+  call CON_set_do_test(NameSub,DoTest, DoTestMe)
+  if(DoTest)write(*,*)NameSub,': starting'
+
+  RadiusIono = (6378.+100.)/6378.
+  nTP=int( (rBody-RadiusIono)/.1 )
+
+  if(.not.allocated(XyzPt_DI)) allocate(XyzPt_DI(3,nPts), zPt_I(nPts))
+  Radius = 6.
+
+  ! Transformation matrix from default (GM) to SM coordinates
+  Gsm2Smg_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
+  Smg2Gsm_DD = transform_matrix(time_simulation,'SMG','GSM')
+
+  if(iProc == 0)then
+     FileName=trim(NamePlotDir)//'LCB-GM'
+     if(time_accurate)then
+        call get_time_string
+        FileName = trim(FileName) // "_t" // StringDateOrTime
+     end if
+     write(FileName,'(a,i7.7,a)') trim(FileName)//"_n", n_step,".dat"
+
+     open( UnitTmp_, FILE=trim(FileName), STATUS="replace")
+     write(UnitTmp_,'(a)')'TITLE="IE B traces (GM Coordinates)"'
+     write(UnitTmp_,'(a)')'VARIABLES="X [R]", "Y [R]", "Z [R]"'
+  end if
+
+  do iLon=1,36
+     Lon = 10.*(iLon-1)
+     xV = Radius*cos(cDegToRad*Lon)
+     yV = Radius*sin(cDegToRad*Lon)
+
+     zL=zLs;  zU=zUs
+     do iD=1,nD
+        iLC=1
+
+        ! Create in SM coords
+        XyzPt_DI(1,:) = xV
+        XyzPt_DI(2,:) = yV
+        do i=1,nPts
+           XyzPt_DI(3,i) = zL + ((i-1)*((zU-zL)/(nPts-1)))
+        end do
+        zPt_I = XyzPt_DI(3,:)
+
+        ! Convert to GM coords
+        do i=1,nPts
+           XyzPt_DI(:,i) = matmul(Smg2Gsm_DD,XyzPt_DI(:,i))
+        end do
+
+        call integrate_ray_accurate_1d(nPts, XyzPt_DI, 'extract_I')
+
+        if(iProc == 0)then
+
+           call line_get(nVarOut, nPoint)
+           if(nPoint>0)then
+              !PlotVar_VI variables = 'iLine l x y z rho ux uy uz bx by bz p'
+              allocate(PlotVar_VI(0:nVarOut, nPoint))
+              call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
+
+              k=0
+              do iPoint = 1, nPoint
+                 nLine=PlotVar_VI(0,iPoint)
+                 if(k /= nLine)then
+                    Odd=.true.;  if( (nLine/2)*2 == nLine )Odd=.false.
+
+                    !\\
+                    ! finish previous line
+                    if(k/=0)then
+                       if(Odd)then
+                          iEnd = iPoint-1
+                          Map2 = .false.
+                          Xyz_D=PlotVar_VI(2:4,iEnd) * Si2No_V(UnitX_)
+                          if(sqrt(Xyz_D(1)**2 + Xyz_D(2)**2 + Xyz_D(3)**2)<1.5*rBody)Map2 = .true.
+
+                          if(Map1 .and. Map2)then
+                             iLC=k/2
+                             jStart=iStart; jMid=iMid; jEnd=iEnd
+                          end if
+
+                          if(.not.WriteOnlyLC)then
+                             !\\
+                             ! write all
+                             if(iD == nD)then
+                                j=(iEnd-iStart)+2*nTP
+                                write(UnitTmp_,'(a,f7.2,i3,a,a,i8,a)') 'ZONE T="LCB lon=',Lon,k/2,'"', &
+                                     ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
+                                Xyz_D = PlotVar_VI(2:4,iMid-1) * Si2No_V(UnitX_)
+                                do i=0,nTP-1
+                                   ! Map from the ionosphere to first point
+                                   call map_planet_field(time_simulation, Xyz_D, 'GSM NORM', &
+                                        RadiusIono+i*.1, XyzIono_D, iHemisphere)
+                                   write(UnitTmp_, *) XyzIono_D
+                                end do
+                                do i=iMid-1,iStart+1,-1
+                                   PlotVar_V = PlotVar_VI(:, i)
+                                   Xyz_D = PlotVar_V(2:4) * Si2No_V(UnitX_)
+                                   write(UnitTmp_, *) Xyz_D
+                                end do
+                                do i=iMid,iEnd
+                                   PlotVar_V = PlotVar_VI(:, i)
+                                   Xyz_D = PlotVar_V(2:4) * Si2No_V(UnitX_)
+                                   write(UnitTmp_, *) Xyz_D
+                                end do
+                                do i=nTP-1,0,-1
+                                   ! Map from last point to the ionosphere
+                                   call map_planet_field(time_simulation, Xyz_D, 'GSM NORM', &
+                                        RadiusIono+i*.1, XyzIono_D, iHemisphere)
+                                   write(UnitTmp_, *) XyzIono_D
+                                end do
+                             end if
+                          end if
+                       else
+                          iEnd = iPoint-1
+                          Map1 = .false.
+                          Xyz_D=PlotVar_VI(2:4,iEnd) * Si2No_V(UnitX_)
+                          if(sqrt(Xyz_D(1)**2 + Xyz_D(2)**2 + Xyz_D(3)**2)<1.5*rBody)Map1 = .true.
+                       end if
+                    end if
+
+                    !\\
+                    ! start new line counters
+                    k=nLine
+                    if(Odd)then
+                       iStart = iPoint
+                    else
+                       iMid = iPoint
+                    end if
+                 end if
+              end do
+
+              !\\
+              ! finish last line
+              if(k/=0)then
+                 iEnd = nPoint
+                 Map2 = .false.
+                 Xyz_D=PlotVar_VI(2:4,iEnd) * Si2No_V(UnitX_)
+                 if(sqrt(Xyz_D(1)**2 + Xyz_D(2)**2 + Xyz_D(3)**2)<1.5*rBody)Map2 = .true.
+
+                 if(Map1 .and. Map2)then
+                    iLC=k/2
+                    jStart=iStart; jMid=iMid; jEnd=iEnd
+                 end if
+              end if
+
+              if(WriteOnlyLC)then
+                 !\\
+                 ! write only last closed
+                 if(iD == nD)then
+                    j=(jEnd-jStart)+2*nTP
+                    write(UnitTmp_,'(a,f7.2,a,a,i8,a)') 'ZONE T="LCB lon=',Lon,'"', &
+                         ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
+                    Xyz_D = PlotVar_VI(2:4,jMid-1) * Si2No_V(UnitX_)
+                    do i=0,nTP-1
+                       ! Map from the ionosphere to first point
+                       call map_planet_field(time_simulation, Xyz_D, 'GSM NORM', &
+                            RadiusIono+i*.1, XyzIono_D, iHemisphere)
+                       write(UnitTmp_, *) XyzIono_D
+                    end do
+                    do i=jMid-1,jStart+1,-1
+                       PlotVar_V = PlotVar_VI(:, i)
+                       Xyz_D = PlotVar_V(2:4) * Si2No_V(UnitX_)
+                       write(UnitTmp_, *) Xyz_D
+                    end do
+                    do i=jMid,jEnd
+                       PlotVar_V = PlotVar_VI(:, i)
+                       Xyz_D = PlotVar_V(2:4) * Si2No_V(UnitX_)
+                       write(UnitTmp_, *) Xyz_D
+                    end do
+                    do i=nTP-1,0,-1
+                       ! Map from last point to the ionosphere
+                       call map_planet_field(time_simulation, Xyz_D, 'GSM NORM', &
+                            RadiusIono+i*.1, XyzIono_D, iHemisphere)
+                       write(UnitTmp_, *) XyzIono_D
+                    end do
+                 end if
+              end if
+
+              if(.not.WriteOnlyLC)then
+                 !\\
+                 ! write last
+                 if(iD == nD)then
+                    j=(iEnd-iStart)+2*nTP
+                    write(UnitTmp_,'(a,f7.2,i3,a,a,i8,a)') 'ZONE T="LCB lon=',Lon,k/2,'"', &
+                         ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
+                    Xyz_D = PlotVar_VI(2:4,iMid-1) * Si2No_V(UnitX_)
+                    do i=0,nTP-1
+                       ! Map from the ionosphere to first point
+                       call map_planet_field(time_simulation, Xyz_D, 'GSM NORM', &
+                            RadiusIono+i*.1, XyzIono_D, iHemisphere)
+                       write(UnitTmp_, *) XyzIono_D
+                    end do
+                    do i=iMid-1,iStart+1,-1
+                       PlotVar_V = PlotVar_VI(:, i)
+                       Xyz_D = PlotVar_V(2:4) * Si2No_V(UnitX_)
+                       write(UnitTmp_, *) Xyz_D
+                    end do
+                    do i=iMid,iEnd
+                       PlotVar_V = PlotVar_VI(:, i)
+                       Xyz_D = PlotVar_V(2:4) * Si2No_V(UnitX_)
+                       write(UnitTmp_, *) Xyz_D
+                    end do
+                    do i=nTP-1,0,-1
+                       ! Map from last point to the ionosphere
+                       call map_planet_field(time_simulation, Xyz_D, 'GSM NORM', &
+                            RadiusIono+i*.1, XyzIono_D, iHemisphere)
+                       write(UnitTmp_, *) XyzIono_D
+                    end do
+                 end if
+              end if
+
+              deallocate(PlotVar_VI)
+           end if
+           call line_clean
+        end if
+
+        if(allocated(RayIntegral_VII)) deallocate(RayIntegral_VII)
+        if(allocated(RayResult_VII))   deallocate(RayResult_VII)
+
+        ! set new zL and zU
+        call MPI_Bcast(iLC,1,MPI_INTEGER,0,iComm,iError)
+        if(iLC == nPts)then
+           zL=zUs
+           zU=zUs*2.
+        else
+           zL = zPt_I(iLC)
+           zU = zPt_I(iLC+1)
+        end if
+
+     end do  !iD loop
+
+  end do  !iLon loop
+
+  if(iProc == 0) close(UnitTmp_)
+
+  if(DoTest)write(*,*)NameSub,': finished'
+end subroutine lcb_plot

@@ -810,6 +810,8 @@ contains
        if(.not.DoExchangeAgain .and. ( &
             index(plot_type(iFile),'lin')==1 .or. &    !^CFG IF RAYTRACE
             index(plot_type(iFile),'eqr')==1 .or. &    !^CFG IF RAYTRACE
+            index(plot_type(iFile),'ieb')==1 .or. &    !^CFG IF RAYTRACE
+            index(plot_type(iFile),'lcb')==1 .or. &    !^CFG IF RAYTRACE
             index(plot_type(iFile),'los')==1 .or. &
             index(plot_type(iFile),'sph')==1 .or. &
             plot_form(iFile) == 'tec')) then
@@ -843,6 +845,16 @@ contains
        if(index(plot_type(iFile),'eqr')>0) then
           IsFound = .true.
           call plot_ray_equator(iFile)
+       end if
+
+       if(index(plot_type(iFile),'ieb')>0) then
+          IsFound = .true.
+          call ieb_plot(iFile)
+       end if
+
+       if(index(plot_type(iFile),'lcb')>0) then
+          IsFound = .true.
+          call lcb_plot(iFile)
        end if
 
        !^CFG END RAYTRACE
