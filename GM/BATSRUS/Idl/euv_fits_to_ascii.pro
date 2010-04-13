@@ -71,6 +71,7 @@ print, ''
 ; prompt user for filenames
 nfile = 3
 filenames=strarr(nfile)
+filename = ''
 askstr, 'Use default input filenames(y/n)',filename,1
 if filename eq 'y' then begin
    filenames(0) = 'fits1.fits'
@@ -80,7 +81,6 @@ if filename eq 'y' then begin
    print,''
 endif
 if filename eq 'n' then begin
-   filename = ''
    for ifile=0,nfile-1 do begin
       print, 'Enter input filename ',ifile
       askstr,'filename ',filename,1
