@@ -626,6 +626,7 @@ subroutine Set_Euv(iError)
   close(iInputUnit_)
   nSeeTimes = iline - 1
     
+  if (nSeeTimes .gt. 3) iError = 0
 end subroutine Set_Euv
 
 

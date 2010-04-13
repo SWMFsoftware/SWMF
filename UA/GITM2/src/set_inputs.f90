@@ -787,7 +787,7 @@ subroutine set_inputs
 
         case ("#EUV_DATA")
            call read_in_logical(UseEUVData, iError)
-           call read_in_string(cEUVFile, iError)
+           call read_in_string(iError)
            
            if (UseEUVData) call Set_Euv(cEUVFile,iError)
            if (iError /= 0) then
