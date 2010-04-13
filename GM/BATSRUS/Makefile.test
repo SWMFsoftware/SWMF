@@ -237,15 +237,12 @@ test_multifluid_rundir: test_rundir
 
 test_multifluid_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_multifluid_check:
-	@echo 'Brio and Sod tests' > ${TESTDIR}/GM/IO2/cut_25.idl
-	@echo 'dx x y z Rho Mx My Mz Bx By Bz e NeuRho NeuMx NeuMy NeuMz NeuE p b1x b1y b1z' >> ${TESTDIR}/GM/IO2/cut_25.idl
-	cat ${TESTDIR}/GM/IO2/cut_raw_2_t00000025_n*_pe*.idl \
-		>> ${TESTDIR}/GM/IO2/cut_25.idl
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
-	  Param/MULTIFLUID/TestOutput/cut_25.idl \
-	  ${TESTDIR}/GM/IO2/cut_25.idl > test_multifluid.diff
+	  Param/MULTIFLUID/TestOutput/cut_t25.out \
+	  ${TESTDIR}/RESULT/GM/cut_*025_n*.out > test_multifluid.diff
 	ls -l test_multifluid.diff
 
 ### TEST MAGNETOMETER ###

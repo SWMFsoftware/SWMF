@@ -87,7 +87,7 @@ z=0 raw idl	PlotString
 -1		DnSavePlot
 10.0		DtSavePlot
 0.0		DxSavePlot
-cut raw idl	PlotString
+cut raw idl_ascii	PlotString
 -1              DnSavePlot
 10.0            DtSavePlot
 -128.0		xMinCut
@@ -97,9 +97,6 @@ cut raw idl	PlotString
 0.1		zMinCut
 0.11		zMaxCut
 0.0             DxSavePlot
-z=0 raw tec	PlotString
--1		DnSavePlot
-10.0		DtSavePlot
 
 The grid size is 256, so the final time corresponds to the usual 0.1
 #STOP
