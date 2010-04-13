@@ -19,6 +19,7 @@ test:
 	-@(make test_graydiffusion)
 	-@(make test_corona)
 	-@(make test_coronasph)
+	-@(make test_outerhelio)
 	-@(make test_earthsph)
 	-@(make test_2bodyplot)
 	-@(make test_titan)
@@ -48,35 +49,36 @@ test_help:
 	@echo "    test MPIRUN=               (run all tests serially)"
 	@echo "    test MPIRUN='mpirun -np 3' (run test with mpirun -np 3)"
 	@echo "    test MPIRUN='mprun -np 2'  (run test with mprun -np 2)"
-	@echo "    test_fluxemergence         (run flux emergence test only)"
-	@echo "    test_shocktube             (run shocktube test only)"
-	@echo "    test_hallmhd               (run Hall MHD test only)"
-	@echo "    test_twofluidmhd           (run two-fluid test only)"
-	@echo "    test_multifluid            (run multi-fluid test only)"
-	@echo "    test_multiion              (run multi-ion test only)"
-	@echo "    test_mhdions               (run MHD with ions test only)"
-	@echo "    test_mhdnoncons            (run non-conservative MHD test only)"
-	@echo "    test_eosgodunov            (run EOS/Godunov test only)"
-	@echo "    test_levelset              (run levelset test only)"
-	@echo "    test_hyades2d              (run Hyades2D test only)"
-	@echo "    test_graydiffusion         (run gray-diffusion set test only)"
-	@echo "    test_corona                (run solar corona test only)"
+	@echo "    test_anisotropic           (run anisotropic pressure test)"
+	@echo "    test_2bodyplot             (run 2 Body Plot test)"
+	@echo "    test_comet                 (run comet test)"
+	@echo "    test_corona                (run Solar Corona test)"
 	@echo "    test_coronasph             (run spherical Solar Corona test)"
-	@echo "    test_earthsph              (run spherical Earth test only)"
-	@echo "    test_2bodyplot             (run 2 Body Plot test only)"
-	@echo "    test_mars                  (run Mars test only)"
-	@echo "    test_marsfluids            (run marsfluids tests only)"
-	@echo "    test_marsfluids_start      (run first marsfluids test only)"
-	@echo "    test_marsfluids_restart    (run marsfluids restart test only)"
-	@echo "    test_venus                 (run Venus test only)"
-	@echo "    test_saturn                (run Saturn test only)"
-	@echo "    test_comet                 (run comet test only)"
-	@echo "    test_titan                 (run Titan tests only)"
-	@echo "    test_titan_start           (run first Titan test only)"
-	@echo "    test_titan_restart         (run titan restart test only)"
-	@echo "    test_func                  (run functionality tests only)"
-	@echo "    test_magnetometer          (run magnetometer test only)"
-	@echo "    test_anisotropic          (run anisotropic pressure test only)"
+	@echo "    test_earthsph              (run spherical Earth test)"
+	@echo "    test_eosgodunov            (run EOS/Godunov test)"
+	@echo "    test_fluxemergence         (run flux emergence test)"
+	@echo "    test_func                  (run functionality tests)"
+	@echo "    test_graydiffusion         (run gray-diffusion set test)"
+	@echo "    test_hallmhd               (run Hall MHD test)"
+	@echo "    test_hyades2d              (run Hyades2D test)"
+	@echo "    test_levelset              (run levelset test)"
+	@echo "    test_magnetometer          (run magnetometer test)"
+	@echo "    test_mars                  (run Mars test)"
+	@echo "    test_marsfluids            (run marsfluids tests)"
+	@echo "    test_marsfluids_start      (run first marsfluids test)"
+	@echo "    test_marsfluids_restart    (run marsfluids restart test)"
+	@echo "    test_mhdions               (run MHD with ions test)"
+	@echo "    test_mhdnoncons            (run non-conservative MHD test)"
+	@echo "    test_multifluid            (run multi-fluid test)"
+	@echo "    test_multiion              (run multi-ion test)"
+	@echo "    test_outerhelio            (run Outer Heliosphere test)"
+	@echo "    test_saturn                (run Saturn test)"
+	@echo "    test_shocktube             (run shocktube test)"
+	@echo "    test_titan                 (run Titan tests)"
+	@echo "    test_titan_start           (run first Titan test)"
+	@echo "    test_titan_restart         (run titan restart test)"
+	@echo "    test_twofluidmhd           (run two-fluid test)"
+	@echo "    test_venus                 (run Venus test)"
 
 test_rundir:
 	rm -rf ${TESTDIR}
@@ -602,6 +604,37 @@ test_coronasph_check:
 		Param/CORONA/TestOutput/log_n000001.sph \
 		${TESTDIR}/RESULTS/SC/log_n000001.log > test_coronasph.diff
 	ls -l test_coronasph.diff
+
+### STANDALONE OUTER HELIOSPHERE TESTS ###
+
+test_outerhelio:
+	@echo "test_outerhelio_compile..." > test_outerhelio.diff
+	make test_outerhelio_compile
+	@echo "test_outerhelio_rundir..." >> test_outerhelio.diff
+	make test_outerhelio_rundir
+	@echo "test_outerhelio_run..." >> test_outerhelio.diff
+	make test_outerhelio_run
+	@echo "test_outerhelio_check..." >> test_outerhelio.diff
+	make test_outerhelio_check
+
+test_outerhelio_compile:
+	./Config.pl -u=OuterHelio -e=OuterHelio -g=4,4,4,3500,1
+	make BATSRUS PIDL
+
+test_outerhelio_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in .
+
+test_outerhelio_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+
+test_outerhelio_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
+		Param/OUTERHELIO/TestOutput/log_n000000.log \
+		${TESTDIR}/RESULTS/OH/log_n000000.log > test_outerhelio.diff
+	ls -l test_outerhelio.diff
 
 ### FUNCTIONALITY TEST SUITE ###
 

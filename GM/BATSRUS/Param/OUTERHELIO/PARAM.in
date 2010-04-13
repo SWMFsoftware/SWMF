@@ -1,118 +1,63 @@
-!- PARAM.in:  Example input file for BATSRUS --
-!refine project_B
+#ECHO
+T			DoEcho
 
 #COMPONENT
-IH
+OH			NameComponent
 
-#ECHO
-T
-
-#TIMEACCURATE           
-F  
-
-#PLOTFILENAME
-year                   NameMaxTimeUnit
-
-#SCHEME
-2
-Rusanov
-minmod
-
-#SAVERESTART
-T                       DoSaveRestart 
-1000                    DoSaveRestart 
--1800.0                 dt
-
-#USERMODULE
-Global Heliosphere              NameUserModule
-2.0             VersionUserModule
-
-#MULTIFLUID
-T
-
-#RESTART
-F
+#PLANET
+NONE
 
 #GRAVITY
 F                       UseGravity (rest of parameters read if true)
 0                       iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
 
 #BODY
-T                       UseBody (rest of parameters read if true)
-10.0                    rBody (user units)
-7.02E-2                  BodyNDim(1) (/cc) number density for inner boundary
-6.962E3                 BodyTDim(K)(1) temperature for inner boundary
-
-#PLANET
-NONE
+T                       UseBody
+30.0                    rBody (AU)
+0.01                    BodyNDim(1) [/cc] number density for ions
+1.09E5                  BodyTDim(1) [K] temperature for ions
+0.18                    BodyNDim(2) for 1st neutral fluid
+6519.0                  BodyTDim(2)
+7.E-5                   BodyNDim(3) for 2nd neutral fluid
+6519.0                  BodyTDim(3)
+7.8E-3                  BodyNDim(4) for 3rd neutral fluid
+1.609E3                 BodyTDim(4)
+0.18                    BodyNDim(5) for 4th neutral fluid
+6519.0                  BodyTDim(5)
 
 #IOUNITS
 USER
 
 #NORMALIZATION
-READ
-1.496400000000000E+11       No2SiUnitX
-4.704960839671357E+03       No2SiUnitU
-1.304628000000000E-23     No2SiUnitRho
+USER
 
-#USERFLAGS
-T                       UseUserInnerBcs
-F                       UseUserSource
-F                       UseUserPerturbation
-T                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-T                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserInitSession
-F                       UseUserUpdateStates
+#PLOTFILENAME
+year                   NameMaxTimeUnit
 
-#USERINPUTBEGIN --------------------------------------------------------
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-1500.0			xMin
+ 1500.0			xMax
+-1500.0			yMin
+ 1500.0			yMax
+-1500.0			zMin
+ 1500.0			zMax
 
-#GLOBALHELIOSPHERE
-10.
+#GRIDLEVEL
+2			nLevelArea
+all			NameArea
 
-#SOLARWINDH
-7.02E-2                  SWH_rho_dim [n/cc] (default/unchanged)
-6.962E3                 SWH_T_dim [K] (default/unchanged)
-450.0                   SWH_Ux_dim [km/s] (default/unchanged)
-0.0                     SWH_Uy_dim [km/s] (default/unchanged)
-0.0                     SWH_Uz_dim [km/s] (default/unchanged)
-6.453E-02         SWH_Bx_dim [nT] (default/unchanged)
-0.0                     SWH_By_dim [nT] (default/unchanged)
-0.0                     SWH_Bz_dim [nT] (default/unchanged)
+#GRIDLEVEL
+5			nLevelArea (usually 11)
+initial			NameArea
 
-#VLISW
-7.0E-2             VLISW_rho_dim [n/cc]        
-1.E4               VLISW_T_dim
--25.0               VLISW_Ux_dim
-0.0                VLISW_Uy_dim (default/unchanged)
-0.0              VLISW_Uz_dim (default/unchanged)
--0.127            VLISW_Bx_dim (default/unchanged)
-0.064            VLISW_By_dim (default/unchanged)
--0.110             VLISW_Bz_dim (default/unchanged)
-
-#USERINPUTEND ----------------------------------------------------------
-
-#GAMMA
-1.666666666666          g
-
-#INNERBOUNDARY
-user
-
-#OUTERBOUNDARY
-outflow                    TypeBcOuter_E(East_) 
-user               TypeBcOuter_E(West_) 
-outflow               TypeBcOuter_E(South_) 
-outflow               TypeBcOuter_E(North_) 
-outflow               TypeBcOuter_E(Bot_) 
-outflow               TypeBcOuter_E(Top_) 
-
-#INCLUDE
-Param/OUTERHELIO/Grid
+#GRIDLEVEL
+11                      nLevel
+shell0                  NameArea
+30.0
+30.2
 
 #GRIDRESOLUTION
 35.937
@@ -120,139 +65,285 @@ box
 0.0
 -600
 -600
-600
+-600
 600
 600
 
 #GRIDRESOLUTION
 17.969
 box
-153.0
+-153.0
 -340.0
 -340.0
-600.0
+-600.0
 340.0
 340.0
 
 #GRIDRESOLUTION
 8.984
 box
-109.0
+-109.0
 -200.0
 -200.0
-400.0
+-400.0
 200.0
 200.0
 
 #GRIDRESOLUTION
 4.492
 box
-59.64
+-59.64
 -136.0
 -136.0
-272.0
+-272.0
 136.0
 136.0
 
 #GRIDRESOLUTION
-2.246
+3.0
 box
-71.31
+-71.31
 -85.0
 -85.0
-170.0
+-170.0
 85.0
 85.0
 
 #GRIDRESOLUTION
-1.123
+1.5
 box
-20.00
+-20.00
 -42.0
--42.0 
-68.0
+-42.0
+-68.0
 42.0
 42.0
 
 #GRIDRESOLUTION
-0.5
-box
-5.0
--20.0
--20.0
-20.0
-20.0
-20.0
-
-#GRIDRESOLUTION
-0.2
+0.7
 box
 -5.0
--10.0
--10.0
-10.0
-10.0
-10.0
+-40.0
+-40.0
+-40.0
+40.0
+40.0
+
+#INNERBOUNDARY
+user
+
+#OUTERBOUNDARY
+user                  TypeBcOuter_E(East_) user
+outflow               TypeBcOuter_E(West_) 
+outflow               TypeBcOuter_E(South_) 
+outflow               TypeBcOuter_E(North_) 
+outflow               TypeBcOuter_E(Bot_) 
+outflow               TypeBcOuter_E(Top_) 
+
+#TIMEACCURATE           
+F  			IsTimeAccurate
+
+#MULTIFLUID
+F			UseTotalSpeed
+F
+F
+
+#SCHEME
+1			nOrder
+Linde			TypeFlux
 
 #TIMESTEPPING
-2                       nStage (1 or 2)
+1                       nStage (1 or 2)
 0.80                    CflExpl
 
-#DIVB
-T			UseDivbSource
-F			UseDivbDiffusion
-F			UseProjection
-F			UseConstrainB
-
-#PLOTDIR
-IO2
-
-#SAVELOGFILE
-.true.			Rest of parameters read if true
-MHD			log_form
-1000			dn_output(logfile_)
--1.			output(logfile_) in sec. Read only if time accurate!
-RHO 			log_vars (variable to write) Read when variable form.
-4.0  10.0		R_log  !radii where flx is calc. Read if vars inc. flx.
--1.
-
-
 #NONCONSERVATIVE
-T               UseNonConservative
+T			UseNonConservative
 
 #CONSERVATIVECRITERIA
+0			nConsCrit
+
 1       nConservCrit1
 p       TypeConservCrit
 0.0001
 
+#SAVERESTART
+T			DoSaveRestart 
+1000			DoSaveRestart 
+-1.0			DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
 #SAVEPLOT
-1
-y=0 MHD tec
-10
--1.0
+3			nPlotFile
+y=0 MHD idl		StringPlot
+10			DnOutput
+-1.0			DtOuput
+-1.0			DxOutput
+y=0 VAR idl		StringPlot
+10			DnOutput
+-1.0			DtOuput
+-1.0			DxOutput
+fluid mach		NameVar
+rbody			NameParam
+z=0 MHD idl		StringPlot
+10			DnOutput
+-1.0			DtOuput
+-1.0			DxOutput
+
+#USERFLAGS
+T                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+T                       UseUserOuterBcs
+T                       UseUserICs
+T                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#SOLARWINDH
+0.00874                    SWH_rho_dim [n/cc]
+1.0868E5                   SWH_T_dim [K] 
+417.07                   SWH_Ux_dim [km/s]
+0.0                     SWH_Uy_dim [km/s]
+0.0                     SWH_Uz_dim [km/s]
+7.17E-03                SWH_Bx_dim [nT]
+0.0                     SWH_By_dim [nT]
+0.0                     SWH_Bz_dim [nT]
+
+#VLISW                  
+0.06            VLISW_rho_dim [n/cc]
+6519.0               VLISW_T_dim
+26.3               VLISW_Ux_dim
+0.0                VLISW_Uy_dim
+-2.3              VLISW_Uz_dim
+0.3093            VLISW_Bx_dim
+-0.080            VLISW_By_dim
+-0.2988           VLISW_Bz_dim
+
+#NEUTRALS
+0.18		RhoNeutralsISW_dim
+6519.0		TNeutralsISW_dim
+26.3		UxNeutralsISW_dim
+0.0		UyNeutralsISW_dim
+-2.3		UzNeutralsISW_dim
+1.0		mNeutralsmp
+
+#FACTORS
+0.05		RhoNeuFactor
+1.0		uNeuFactor
+1.E-2		RhoNe2Factor
+0.2		uNe2Factor
+1.E-2		RhoNe3Factor
+1.0		uNe3Factor
+1.E-3		RhoNe4Factor
+0.1		uNe4Factor
+
+#REGIONS
+6.E5		TempPop1LimitDim
+100.0		uPop1LimitDim
+0.9		MachPop2Limit
+1.5		MachPop3Limit
+50.0		rPop3Limit
+0.5		MachPop4Limit
+
+#USERINPUTEND ----------------------------------------------------------
 
 #STOP
-1500
+50
 -1.0
 
-#RUN
+#RUN ####################################################################
 
 #SCHEME
-2
-Linde
-minmod
-
-#TIMEACCURATE
-T
-
-#SAVEPLOT
-1
-y=0 MHD tec
-500
--1.0
+2			nOrder
+Linde			TypeFlux
+minmod			TypeLimiter
 
 #STOP
-90000
--1.0
+100			MaxIteration
+-1.0			tSimulationMax
+
+#RUN ###################################################################
+
+#USERFLAGS
+T                       UseUserInnerBcs
+T                       UseUserSource
+T                       UseUserPerturbation
+T                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+! Applies to the ions only if UseRusanovForNeutrals is true in #MULTIFLUID
+#SCHEME
+2                       nOrder
+Linde                   TypeFlux
+mc                      TypeLimiter
+1.5                     LimiterBeta
+
+! 0.8 works fine for higher resolution
+#TIMESTEPPING
+2                       nStage
+0.4                     CflExpl 
+
+! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
+#NONCONSERVATIVE
+F                       UseNonConservative
+
+#MULTIFLUID
+F                       UseTotalSpeed
+F                       DoConserveNeutrals
+F                       UseRusanovForNeutrals
+
+! Point implicit does not seem to help stability
+POINTIMPLICIT
+T                       UsePointImplicit
+1.0                     BetaPointImplicit
+
+#SAVERESTART
+T                       DoSaveRestart
+1000                    DoSaveRestart
+-1.0                    DtSaveRestart
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+RAW                     StringLogfile
+1                       DnSaveLogfile
+-1.                     DtSaveLogfile
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#SOURCES
+T                       UseIonSource
+T                       UseNeuSource
+T                       UseNe2Source
+T                       UseNe3Source
+T                       UseNe4Source
+
+#USERINPUTEND ----------------------------------------------------------
+
+#STOP
+150                      MaxIteration
+-1.0                     tSimulationMax
 
 #END

@@ -1,0 +1,555 @@
+
+ BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2007
+
+ BATSRUS version 9.00 is running as GM on    4 PE(s)
+
+ EQUATIONS:   MHD and four neutrals
+ USER MODULE: Outer Heliosphere with 4 neutrals, Opher & Toth 2.30
+
+ModReadParam::read_file: read and broadcast nLine= 347 lines of text
+ ----- Starting Session  1  ------
+ init_mod_restart_file: setting TypeRestartOutFile = one
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
+
+#COMPONENT
+OH			NameComponent
+ init_mod_restart_file: setting TypeRestartOutFile = one
+
+#PLANET
+NONE		NamePlanet
+
+#GRAVITY
+F                       UseGravity (rest of parameters read if true)
+
+#BODY
+T                       UseBody
+30.0                    rBody (AU)
+0.01                    BodyNDim(1) [/cc] number density for ions
+1.09E5                  BodyTDim(1) [K] temperature for ions
+0.18                    BodyNDim(2) for 1st neutral fluid
+6519.0                  BodyTDim(2)
+7.E-5                   BodyNDim(3) for 2nd neutral fluid
+6519.0                  BodyTDim(3)
+7.8E-3                  BodyNDim(4) for 3rd neutral fluid
+1.609E3                 BodyTDim(4)
+0.18                    BodyNDim(5) for 4th neutral fluid
+6519.0                  BodyTDim(5)
+
+#IOUNITS
+USER		TypeIoUnit
+
+#NORMALIZATION
+USER		TypeNormalization
+
+#PLOTFILENAME
+year                   NameMaxTimeUnit
+
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-1500.0			xMin
+ 1500.0			xMax
+-1500.0			yMin
+ 1500.0			yMax
+-1500.0			zMin
+ 1500.0			zMax
+
+#GRIDLEVEL
+2			nLevelArea
+all			NameArea
+
+#GRIDLEVEL
+5			nLevelArea (usually 11)
+initial			NameArea
+
+#GRIDLEVEL
+11                      nLevel		nLevelArea
+shell0                  NameArea
+30.0		Radius1
+30.2		Radius2
+
+#GRIDRESOLUTION
+35.937		AreaResolution
+box		NameArea
+0.0		xMinBox
+-600		yMinBox
+-600		zMinBox
+-600		xMaxBox
+600		yMaxBox
+600		zMaxBox
+
+#GRIDRESOLUTION
+17.969		AreaResolution
+box		NameArea
+-153.0		xMinBox
+-340.0		yMinBox
+-340.0		zMinBox
+-600.0		xMaxBox
+340.0		yMaxBox
+340.0		zMaxBox
+
+#GRIDRESOLUTION
+8.984		AreaResolution
+box		NameArea
+-109.0		xMinBox
+-200.0		yMinBox
+-200.0		zMinBox
+-400.0		xMaxBox
+200.0		yMaxBox
+200.0		zMaxBox
+
+#GRIDRESOLUTION
+4.492		AreaResolution
+box		NameArea
+-59.64		xMinBox
+-136.0		yMinBox
+-136.0		zMinBox
+-272.0		xMaxBox
+136.0		yMaxBox
+136.0		zMaxBox
+
+#GRIDRESOLUTION
+3.0		AreaResolution
+box		NameArea
+-71.31		xMinBox
+-85.0		yMinBox
+-85.0		zMinBox
+-170.0		xMaxBox
+85.0		yMaxBox
+85.0		zMaxBox
+
+#GRIDRESOLUTION
+1.5		AreaResolution
+box		NameArea
+-20.00		xMinBox
+-42.0		yMinBox
+-42.0		zMinBox
+-68.0		xMaxBox
+42.0		yMaxBox
+42.0		zMaxBox
+
+#GRIDRESOLUTION
+0.7		AreaResolution
+box		NameArea
+-5.0		xMinBox
+-40.0		yMinBox
+-40.0		zMinBox
+-40.0		xMaxBox
+40.0		yMaxBox
+40.0		zMaxBox
+
+#INNERBOUNDARY
+user		TypeBcInner
+
+#OUTERBOUNDARY
+user                  TypeBcOuter_E(East_) user		TypeBcEast
+outflow               TypeBcOuter_E(West_)		TypeBcWest
+outflow               TypeBcOuter_E(South_)		TypeBcSouth
+outflow               TypeBcOuter_E(North_)		TypeBcNorth
+outflow               TypeBcOuter_E(Bot_)		TypeBcBottom
+outflow               TypeBcOuter_E(Top_)		TypeBcTop
+
+#TIMEACCURATE
+F  			IsTimeAccurate		DoTimeAccurate
+
+#MULTIFLUID
+F			UseTotalSpeed
+F		DoConserveNeutrals
+
+#SCHEME
+1			nOrder
+Linde			TypeFlux
+
+#TIMESTEPPING
+1                       nStage (1 or 2)
+0.80                    CflExpl
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+0			nConsCrit		nConservCrit
+
+#SAVERESTART
+T			DoSaveRestart
+1000			DoSaveRestart		DnSaveRestart
+-1.0			DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+3			nPlotFile
+y=0 MHD idl		StringPlot
+10			DnOutput		DnSavePlot
+-1.0			DtOuput		DtSavePlot
+-1.0			DxOutput		DxSavePlot
+y=0 VAR idl		StringPlot
+10			DnOutput		DnSavePlot
+-1.0			DtOuput		DtSavePlot
+-1.0			DxOutput		DxSavePlot
+fluid mach		NameVar		NameVars
+rbody			NameParam		NamePars
+z=0 MHD idl		StringPlot
+10			DnOutput		DnSavePlot
+-1.0			DtOuput		DtSavePlot
+-1.0			DxOutput		DxSavePlot
+
+#USERFLAGS
+T                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+T                       UseUserOuterBcs
+T                       UseUserICs
+T                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#SOLARWINDH
+0.00874                    SWH_rho_dim [n/cc]
+1.0868E5                   SWH_T_dim [K]
+417.07                   SWH_Ux_dim [km/s]
+0.0                     SWH_Uy_dim [km/s]
+0.0                     SWH_Uz_dim [km/s]
+7.17E-03                SWH_Bx_dim [nT]
+0.0                     SWH_By_dim [nT]
+0.0                     SWH_Bz_dim [nT]
+
+#VLISW
+0.06            VLISW_rho_dim [n/cc]
+6519.0               VLISW_T_dim
+26.3               VLISW_Ux_dim
+0.0                VLISW_Uy_dim
+-2.3              VLISW_Uz_dim
+0.3093            VLISW_Bx_dim
+-0.080            VLISW_By_dim
+-0.2988           VLISW_Bz_dim
+
+#NEUTRALS
+0.18		RhoNeutralsISW_dim
+6519.0		TNeutralsISW_dim
+26.3		UxNeutralsISW_dim
+0.0		UyNeutralsISW_dim
+-2.3		UzNeutralsISW_dim
+1.0		mNeutralsmp
+
+#FACTORS
+0.05		RhoNeuFactor
+1.0		uNeuFactor
+1.E-2		RhoNe2Factor
+0.2		uNe2Factor
+1.E-2		RhoNe3Factor
+1.0		uNe3Factor
+1.E-3		RhoNe4Factor
+0.1		uNe4Factor
+
+#REGIONS
+6.E5		TempPop1LimitDim
+100.0		uPop1LimitDim
+0.9		MachPop2Limit
+1.5		MachPop3Limit
+50.0		rPop3Limit
+0.5		MachPop4Limit
+
+#USERINPUTEND ----------------------------------------------------------
+ USERINPUTEND
+
+#STOP
+50		MaxIteration
+-1.0		tSimulationMax
+
+#RUN ####################################################################
+ OH_set_parameters: CHECK iSession = 1
+  
+init_mod_geometry allocated arrays
+init_mod_raytrace allocated arrays
+ BATS_setup starting initial refinement level  1
+ parallel_refine starting to refine  1  block(s) on PE 0
+ BATS_setup starting initial refinement level  2
+ parallel_refine starting to refine  8  block(s) on PE 0
+ BATS_setup starting initial refinement level  3
+ parallel_refine starting to refine  8  block(s) on PE 0
+ BATS_setup starting initial refinement level  4
+ parallel_refine starting to refine  76  block(s) on PE 0
+ BATS_setup starting initial refinement level  5
+ parallel_refine starting to refine  368  block(s) on PE 0
+ renumber_octree: finished renumbering 3228  blocks.
+     total blocks =  3228
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Physical Parameters
+    -------------------
+
+          I/O Unit type: USER            Normalization: USER
+
+          Gamma:         1.66666667
+
+          rBody:         3.00000E+01, rPlanet:     6.96000E+08
+          BodyNDim:      1.00000E-02, BodyTDim:    1.09000E+05
+          BodyNDim:      1.80000E-01, BodyTDim:    6.51900E+03
+          BodyNDim:      7.00000E-05, BodyTDim:    6.51900E+03
+          BodyNDim:      7.80000E-03, BodyTDim:    1.60900E+03
+          BodyNDim:      1.80000E-01, BodyTDim:    6.51900E+03
+          Bdp:           0.00000E+00, Tilt:        0.00000E+00
+
+          UseBody2: .false.
+
+          ClightFactor:  1.00000E+00, Clight:      7.75290E+03
+
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          1st-order scheme
+          Linde flux function
+          Steady state calculation
+          Explicit time stepping
+              nStage: 1
+              Cfl:    0.80
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =  4
+
+ After initial grid setup:
+   nBlockMax =  2000  nBLK =  2000
+   Total number of blocks used =  3228
+   Total number of cells =  206592
+   Total number of true cells =  206584
+   Smallest cell dx:   23.4375000000000000   Largest cell dx:    1.8750000000000000E+02
+
+ root blocks:        1       1       1
+ nIJK_D:             4       4       4
+ x:             -1500.00000000   1500.00000000
+ y:             -1500.00000000   1500.00000000
+ z:             -1500.00000000   1500.00000000
+
+saved ifile= 3 type=y=0_mhd    at n_step=      0
+saved ifile= 4 type=y=0_var    at n_step=      0
+saved ifile= 5 type=z=0_mhd    at n_step=      0
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                  27.84    100.00         1         1
+-------------------------------------------------------------------------------
+setup                    27.84    100.00         1         1
+exch_msgs                 1.33      4.77         1         1
+save_plot                 1.09      3.90         1         3
+save_logfile              1.06      3.81         1         1
+load_balance              0.38      1.38         1         1
+int_domain                0.04      0.15         1         1
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+ First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.8218710485964597E-05
+saved ifile= 3 type=y=0_mhd    at n_step=     10
+saved ifile= 4 type=y=0_var    at n_step=     10
+saved ifile= 5 type=z=0_mhd    at n_step=     10
+Speed is  50378.9 c/s/p after     12.6 s at N =      10
+saved ifile= 3 type=y=0_mhd    at n_step=     20
+saved ifile= 4 type=y=0_var    at n_step=     20
+saved ifile= 5 type=z=0_mhd    at n_step=     20
+Speed is  50336.1 c/s/p after     23.9 s at N =      20
+saved ifile= 3 type=y=0_mhd    at n_step=     30
+saved ifile= 4 type=y=0_var    at n_step=     30
+saved ifile= 5 type=z=0_mhd    at n_step=     30
+Speed is  50709.1 c/s/p after     35.2 s at N =      30
+saved ifile= 3 type=y=0_mhd    at n_step=     40
+saved ifile= 4 type=y=0_var    at n_step=     40
+saved ifile= 5 type=z=0_mhd    at n_step=     40
+Speed is  50569.9 c/s/p after     46.5 s at N =      40
+saved ifile= 3 type=y=0_mhd    at n_step=     50
+saved ifile= 4 type=y=0_var    at n_step=     50
+saved ifile= 5 type=z=0_mhd    at n_step=     50
+Speed is  50058.0 c/s/p after     57.9 s at N =      50
+ ----- End of Session    1  ------
+ ----- Starting Session  2  ------
+ OH_set_parameters: READ iSession = 2  iLine= 269  nLine = 1000
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+minmod			TypeLimiter
+
+#STOP
+100			MaxIteration
+-1.0			tSimulationMax
+
+#RUN ###################################################################
+ OH_set_parameters: CHECK iSession = 2
+  
+saved ifile= 3 type=y=0_mhd    at n_step=     60
+saved ifile= 4 type=y=0_var    at n_step=     60
+saved ifile= 5 type=z=0_mhd    at n_step=     60
+Speed is  19739.8 c/s/p after     85.5 s at N =      60
+saved ifile= 3 type=y=0_mhd    at n_step=     70
+saved ifile= 4 type=y=0_var    at n_step=     70
+saved ifile= 5 type=z=0_mhd    at n_step=     70
+Speed is  19976.7 c/s/p after    112.8 s at N =      70
+saved ifile= 3 type=y=0_mhd    at n_step=     80
+saved ifile= 4 type=y=0_var    at n_step=     80
+saved ifile= 5 type=z=0_mhd    at n_step=     80
+Speed is  19659.6 c/s/p after    140.0 s at N =      80
+saved ifile= 3 type=y=0_mhd    at n_step=     90
+saved ifile= 4 type=y=0_var    at n_step=     90
+saved ifile= 5 type=z=0_mhd    at n_step=     90
+Speed is  19766.4 c/s/p after    167.1 s at N =      90
+saved ifile= 3 type=y=0_mhd    at n_step=    100
+saved ifile= 4 type=y=0_var    at n_step=    100
+saved ifile= 5 type=z=0_mhd    at n_step=    100
+Speed is  19839.2 c/s/p after    194.6 s at N =     100
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step      50 to     100    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1   136.70  136.696  136.696   100.00
+-------------------------------------------------------------------------------
+advance                  50      50   130.44    2.609    2.609    95.42
+save_logfile             50      50     2.80    0.056    0.056     2.05
+save_plot                 5      15     3.11    0.622    0.207     2.28
+exch_msgs                 1       1     0.33    0.331    0.331     0.24
+#others                                 0.02    0.016              0.01
+-------------------------------------------------------------------------------
+
+   100 of    100 iterations completed.   Expected time to completion:      0.00
+
+ ----- End of Session    2  ------
+ ----- Starting Session  3  ------
+ OH_set_parameters: READ iSession = 3  iLine= 280  nLine = 1000
+
+#USERFLAGS
+T                       UseUserInnerBcs
+T                       UseUserSource
+T                       UseUserPerturbation
+T                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#SCHEME
+2                       nOrder
+Linde                   TypeFlux
+mc                      TypeLimiter
+1.5                     LimiterBeta
+
+#TIMESTEPPING
+2                       nStage
+0.4                     CflExpl
+
+#NONCONSERVATIVE
+F                       UseNonConservative
+
+#MULTIFLUID
+F                       UseTotalSpeed
+F                       DoConserveNeutrals
+
+#SAVERESTART
+T                       DoSaveRestart
+1000                    DoSaveRestart		DnSaveRestart
+-1.0                    DtSaveRestart
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+RAW                     StringLogfile
+1                       DnSaveLogfile
+-1.                     DtSaveLogfile
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#SOURCES
+T                       UseIonSource
+T                       UseNeuSource
+T                       UseNe2Source
+T                       UseNe3Source
+T                       UseNe4Source
+
+#USERINPUTEND ----------------------------------------------------------
+ USERINPUTEND
+
+#STOP
+150                      MaxIteration
+-1.0                     tSimulationMax
+ OH_set_parameters: CHECK iSession = 3
+  
+saved ifile= 3 type=y=0_mhd    at n_step=    110
+saved ifile= 4 type=y=0_var    at n_step=    110
+saved ifile= 5 type=z=0_mhd    at n_step=    110
+Speed is  18763.2 c/s/p after    224.8 s at N =     110
+saved ifile= 3 type=y=0_mhd    at n_step=    120
+saved ifile= 4 type=y=0_var    at n_step=    120
+saved ifile= 5 type=z=0_mhd    at n_step=    120
+Speed is  18607.7 c/s/p after    253.5 s at N =     120
+saved ifile= 3 type=y=0_mhd    at n_step=    130
+saved ifile= 4 type=y=0_var    at n_step=    130
+saved ifile= 5 type=z=0_mhd    at n_step=    130
+Speed is  18386.8 c/s/p after    282.4 s at N =     130
+saved ifile= 3 type=y=0_mhd    at n_step=    140
+saved ifile= 4 type=y=0_var    at n_step=    140
+saved ifile= 5 type=z=0_mhd    at n_step=    140
+Speed is  18608.5 c/s/p after    311.3 s at N =     140
+saved ifile= 3 type=y=0_mhd    at n_step=    150
+saved ifile= 4 type=y=0_var    at n_step=    150
+saved ifile= 5 type=z=0_mhd    at n_step=    150
+Speed is  18759.8 c/s/p after    340.0 s at N =     150
+
+    Finished Numerical Simulation
+    -----------------------------
+ => Writing restart files ...
+saved ifile= 1 type=restart    at n_step=    150
+
+    Finished Saving Output Files
+    ----------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to     150    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                 340.17    100.00         1         1
+-------------------------------------------------------------------------------
+advance                 322.23     94.73       150       150
+calc_fluxes             128.91     37.90       150    201750
+calc_facevalues          60.21     17.70       150    201750
+exch_msgs                59.99     17.64       152       252
+calc_face_bfo            17.91      5.27       150     89500
+update_check             12.78      3.76       150       250
+calc_sources             12.73      3.74       150    201750
+update_states            10.38      3.05       150    201750
+barrier-expl2             9.86      2.90       150       250
+save_plot                 8.94      2.63        15        45
+save_logfile              8.03      2.36       150       150
+calc_fluxes_bfo           4.77      1.40       150     89500
+int_domain                2.38      0.70       150       150
+barrier-expl1             1.75      0.51       150       250
+send_cons_flux            1.22      0.36       150       250
+write_restart_files       0.21      0.06         1         1
+set_bcs                   0.01      0.00       150       500
+-------------------------------------------------------------------------------
+Error_report for Time step reduction, min(factor)
+ OCCURED first= 1  last= 150  count_max= 249  count_sum= 249
+ VALUES min=   4.7643217818873702E-11  max=   0.2518188754896691  mean=   5.3334814638984016E-03  last=   7.6314226058733309E-02  last_sum=   7.6314226058733309E-02
+
