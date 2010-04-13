@@ -2932,3 +2932,248 @@ subroutine lcb_plot(iFile)
 
   if(DoTest)write(*,*)NameSub,': finished'
 end subroutine lcb_plot
+
+!**************************************************************
+
+subroutine ieb_plot(iFile)
+  use CON_line_extract,  ONLY: line_get, line_clean
+  use CON_planet_field,  ONLY: map_planet_field
+  use CON_axes,          ONLY: transform_matrix
+  use ModIoUnit,         ONLY: UnitTmp_
+  use ModAdvance,        ONLY: nVar, Ux_, Uz_, Bx_, Bz_
+  use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, time_accurate, n_step
+  use ModNumConst,       ONLY: cRadToDeg, cDegToRad
+  use ModProcMH,         ONLY: iProc, iComm
+  use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, rBody
+  use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
+  use ModIO,             ONLY: StringDateOrTime, NamePlotDir
+  use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII
+  implicit none
+
+  integer, intent(in) :: iFile
+
+  character (len=*), parameter :: NameSub='ieb_plot'
+  character (len=80) :: FileName,stmp
+  character (len=2) :: Coord
+  character (len=1) :: NS
+  integer :: i,j,k, nLat,nLon, nLine, nTP, iStart,iEnd, iLat,iLon, OC
+  integer :: iPoint, nPoint, nVarOut, iHemisphere, nFile
+  real :: PlotVar_V(0:4+nVar)
+  real :: Radius, Lat,Lon, Theta,Phi, LonOC
+  real :: XyzIono_D(3), RtpIono_D(3), Xyz_D(3)
+  real :: Gsm2Smg_DD(3,3) = reshape( (/ 1.,0.,0.,  0.,1.,0.,  0.,0.,1. /), (/3,3/) )
+  real :: Smg2Gsm_DD(3,3) = reshape( (/ 1.,0.,0.,  0.,1.,0.,  0.,0.,1. /), (/3,3/) )
+  real, allocatable :: PlotVar_VI(:,:), IE_lat(:), IE_lon(:)
+  logical :: MapDown
+  logical :: DoTest, DoTestMe
+  !--------------------------------------------------------------------------
+  call CON_set_do_test(NameSub,DoTest, DoTestMe)
+  if(DoTest)write(*,*)NameSub,': starting'
+
+  nLat=181
+  nLon=36
+  if(.not.allocated(IE_lat)) allocate(IE_lat(nLat), IE_lon(nLon))
+
+  ! Load grid and convert to lat-lon in degrees
+  do i=1,nLat
+     IE_lat(i) = 90.-1.*(i-1)
+  end do
+  do i=1,nLon
+     IE_lon(i) = 10.*(i-1)
+  end do
+  Radius = (6378.+100.)/6378.
+  nTP=int( (rBody-Radius)/.1 )
+
+  call integrate_ray_accurate(nLat, nLon, IE_lat, IE_lon, Radius, 'extract_I')
+
+  if(iProc == 0)then
+
+     ! Transformation matrix from default (GM) to SM coordinates
+     Gsm2Smg_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
+     Smg2Gsm_DD = transform_matrix(time_simulation,'SMG','GSM')
+
+     call line_get(nVarOut, nPoint)
+     if(nPoint>0)then
+        !PlotVar_VI variables = 'iLine l x y z rho ux uy uz bx by bz p'
+        allocate(PlotVar_VI(0:nVarOut, nPoint))
+        call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
+
+        do nFile=1,4
+
+           if(nFile==1)then
+              Coord = 'SM';  NS = 'N'
+           elseif(nFile==2)then
+              Coord = 'GM';  NS = 'N'
+           elseif(nFile==3)then
+              Coord = 'SM';  NS = 'S'
+           elseif(nFile==4)then
+              Coord = 'GM';  NS = 'S'
+           end if
+           FileName=trim(NamePlotDir)//'IEB-'//trim(Coord)//'-'//trim(NS)
+           if(time_accurate)then
+              call get_time_string
+              FileName = trim(FileName) // "_t" // StringDateOrTime
+           end if
+           write(FileName,'(a,i7.7,a)') trim(FileName)//"_n", n_step,".dat"
+
+           open( UnitTmp_, FILE=trim(FileName), STATUS="replace")
+           if(Coord == 'GM')then
+              write(UnitTmp_,'(a)')'TITLE="IE B traces (GM Coordinates)"'
+           else
+              write(UnitTmp_,'(a)')'TITLE="IE B traces (SM Coordinates)"'
+           end if
+           write(UnitTmp_,'(a)')'VARIABLES="X [R]", "Y [R]", "Z [R]", "Lat", "Lon", "OC"'
+
+           k=0
+           LonOC=-1.
+           do iPoint = 1, nPoint
+              nLine=PlotVar_VI(0,iPoint)
+              if(k /= nLine)then
+                 !\\
+                 ! finish previous line
+                 if(k/=0)then
+                    iEnd = iPoint-1
+                    MapDown = .false.
+                    Xyz_D=PlotVar_VI(2:4,iEnd) * Si2No_V(UnitX_)
+                    if(sqrt(Xyz_D(1)**2 + Xyz_D(2)**2 + Xyz_D(3)**2)<1.5*rBody)MapDown = .true.
+                    j=(1+iEnd-iStart)+(nTP+1)
+                    if(MapDown)j=j+(nTP+1)
+                    OC=-1; if(MapDown)OC=2
+                    if(MapDown .and. LonOC/=Lon)OC=1
+
+!\
+!                     write(UnitTmp_,'(a,2f7.2,a,a,i8,a)') 'ZONE T="IEB ll=',Lat,Lon,'"', &
+!                          ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
+!-
+                    write(UnitTmp_,'(a,2f7.2,a,a,f7.2,a,i8,a)') 'ZONE T="IEB ll=',Lat,Lon,'"', &
+                         ', STRANDID=1, SOLUTIONTIME=',Lon, &
+                         ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
+!/
+                    write(stmp,'(f8.2)')Lat
+                    write(UnitTmp_,'(a,a,a)') 'AUXDATA LAT="',trim(adjustl(stmp)),'"'
+                    write(stmp,'(f8.2)')Lon
+                    write(UnitTmp_,'(a,a,a)') 'AUXDATA LON="',trim(adjustl(stmp)),'"'
+
+                    ! Convert to SMG Cartesian coordinates on the surface of the ionosphere
+                    Theta = cDegToRad*(90.0 - Lat)     
+                    Phi = cDegToRad*Lon
+                    call sph_to_xyz(Radius, Theta, Phi, XyzIono_D)
+                    Xyz_D=XyzIono_D
+                    if(Coord == 'GM') Xyz_D = matmul(Smg2Gsm_DD,Xyz_D)
+                    write(UnitTmp_, *) Xyz_D,Lat,Lon,OC
+                    do i=1,nTP
+                       ! Map from the ionosphere to rBody
+                       call map_planet_field(time_simulation, XyzIono_D, 'SMG NORM', &
+                            Radius+i*.1, Xyz_D, iHemisphere)
+                       if(Coord == 'GM') Xyz_D = matmul(Smg2Gsm_DD,Xyz_D)
+                       write(UnitTmp_, *) Xyz_D,Lat,Lon,OC
+                    end do
+                    do i=iStart,iEnd
+                       ! Convert vectors to SM coordinates
+                       PlotVar_V = PlotVar_VI(:, i)
+                       PlotVar_V(2:4) = matmul(Gsm2Smg_DD,PlotVar_V(2:4))
+                       PlotVar_V(2:4) = PlotVar_V(2:4) * Si2No_V(UnitX_)
+                       Xyz_D = PlotVar_V(2:4)
+                       if(Coord == 'GM') Xyz_D = matmul(Smg2Gsm_DD,Xyz_D)
+                       write(UnitTmp_, *) Xyz_D,Lat,Lon,OC
+                    end do
+                    if(MapDown)then
+                       Xyz_D=PlotVar_V(2:4)
+                       do i=nTP,0,-1
+                          ! Map from rBody to the ionosphere
+                          call map_planet_field(time_simulation, Xyz_D, 'SMG NORM', &
+                               Radius+i*.1, XyzIono_D, iHemisphere)
+                          if(Coord == 'GM') XyzIono_D = matmul(Smg2Gsm_DD,XyzIono_D)
+                          write(UnitTmp_, *) XyzIono_D,Lat,Lon,OC
+                       end do
+                    end if
+                 end if
+
+                 !\\
+                 ! start new line counters
+                 k=nLine
+                 iStart = iPoint
+                 iLon=1+((nLine-1)/nLat)
+                 iLat=nLine-(iLon-1)*nLat
+                 Lon=IE_lon(iLon)
+                 Lat=IE_lat(iLat)
+                 if(NS == 'N')then
+                    if(Lat<0.)k=0
+                 else
+                    if(Lat>0.)k=0
+                 end if
+              end if
+           end do
+
+           !\\
+           ! finish last line
+           if(k/=0)then
+              iEnd = nPoint
+              MapDown = .false.
+              Xyz_D=PlotVar_VI(2:4,iEnd) * Si2No_V(UnitX_)
+              if(sqrt(Xyz_D(1)**2 + Xyz_D(2)**2 + Xyz_D(3)**2)<1.5*rBody)MapDown = .true.
+              j=(1+iEnd-iStart)+(nTP+1)
+              if(MapDown)j=j+(nTP+1)
+              OC=-1; if(MapDown)OC=2
+              if(MapDown .and. LonOC/=Lon)OC=1
+!\
+!              write(UnitTmp_,'(a,2f7.2,a,a,i8,a)') 'ZONE T="IEB ll=',Lat,Lon,'"', &
+!                   ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
+!-
+              write(UnitTmp_,'(a,2f7.2,a,a,f7.2,a,i8,a)') 'ZONE T="IEB ll=',Lat,Lon,'"', &
+                   ', STRANDID=1, SOLUTIONTIME=',Lon, &
+                   ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
+!/
+              write(stmp,'(f8.2)')Lat
+              write(UnitTmp_,'(a,a,a)') 'AUXDATA LAT="',trim(adjustl(stmp)),'"'
+              write(stmp,'(f8.2)')Lon
+              write(UnitTmp_,'(a,a,a)') 'AUXDATA LON="',trim(adjustl(stmp)),'"'
+
+              ! Convert to SMG Cartesian coordinates on the surface of the ionosphere
+              Theta = cDegToRad*(90.0 - Lat)     
+              Phi = cDegToRad*Lon
+              call sph_to_xyz(Radius, Theta, Phi, XyzIono_D)
+              Xyz_D=XyzIono_D
+              if(Coord == 'GM') Xyz_D = matmul(Smg2Gsm_DD,Xyz_D)
+              write(UnitTmp_, *) Xyz_D,Lat,Lon,OC
+              do i=1,nTP
+                 ! Map from the ionosphere to rBody
+                 call map_planet_field(time_simulation, XyzIono_D, 'SMG NORM', &
+                      Radius+i*.1, Xyz_D, iHemisphere)
+                 if(Coord == 'GM') Xyz_D = matmul(Smg2Gsm_DD,Xyz_D)
+                 write(UnitTmp_, *) Xyz_D,Lat,Lon,OC
+              end do
+              do i=iStart,iEnd
+                 ! Convert vectors to SM coordinates
+                 PlotVar_V = PlotVar_VI(:, i)
+                 PlotVar_V(2:4) = matmul(Gsm2Smg_DD,PlotVar_V(2:4))
+                 PlotVar_V(2:4) = PlotVar_V(2:4) * Si2No_V(UnitX_)
+                 Xyz_D = PlotVar_V(2:4)
+                 if(Coord == 'GM') Xyz_D = matmul(Smg2Gsm_DD,Xyz_D)
+                 write(UnitTmp_, *) Xyz_D,Lat,Lon,OC
+              end do
+              if(MapDown)then
+                 Xyz_D=PlotVar_V(2:4)
+                 do i=nTP,0,-1
+                    ! Map from the ionosphere to rBody
+                    call map_planet_field(time_simulation, Xyz_D, 'SMG NORM', &
+                         Radius+i*.1, XyzIono_D, iHemisphere)
+                    if(Coord == 'GM') XyzIono_D = matmul(Smg2Gsm_DD,XyzIono_D)
+                    write(UnitTmp_, *) XyzIono_D,Lat,Lon,OC
+                 end do
+              end if
+           end if
+
+           close(UnitTmp_)
+        end do
+
+        deallocate(PlotVar_VI)
+     end if
+     call line_clean
+  end if
+
+  if(allocated(RayIntegral_VII)) deallocate(RayIntegral_VII)
+  if(allocated(RayResult_VII))   deallocate(RayResult_VII)
+
+  if(DoTest)write(*,*)NameSub,': finished'
+end subroutine ieb_plot
