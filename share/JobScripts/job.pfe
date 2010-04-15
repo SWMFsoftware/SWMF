@@ -29,10 +29,10 @@
 # cd into the run directory
 cd $PBS_O_WORKDIR
 
-# These settings were found useful for large runs 
-setenv MPI_MSGS_PER_HOST 100000
-setenv MPI_MSGS_PER_PROC 100000
-setenv MPI_MSGS_MAX      100000
+# These settings may or may not be useful
+#setenv MPI_MSGS_PER_HOST 100000
+#setenv MPI_MSGS_PER_PROC 100000
+#setenv MPI_MSGS_MAX      100000
 
 # run SWMF (the number of processors is already specified above)
 # the date/time stamp for runlog is only necessary for automated resubmission
