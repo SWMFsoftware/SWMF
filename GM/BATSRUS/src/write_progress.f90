@@ -54,20 +54,23 @@ end subroutine write_progress
 
 subroutine write_runtime_values()
 
-  use ModIO, ONLY: iUnitOut, write_prefix
-  use ModProcMH
   use ModMain
+  use ModPhysics
+  use ModIO,        ONLY: iUnitOut, write_prefix
+  use ModProcMH,    ONLY: iProc, nProc, iComm
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModAdvance,   ONLY: FluxType
   use ModGeometry,  ONLY: x1,x2,y1,y2,z1,z2,minDXvalue,maxDXvalue,dx_BLK
   use ModParallel,  ONLY: proc_dims
-  use ModPhysics
-  use ModMpi
-  use CON_planet
   use ModImplicit,  ONLY: &                           !^CFG IF IMPLICIT
        UseImplicit, UseSemiImplicit, TypeSemiImplicit !^CFG IF IMPLICIT
   use ModUser, ONLY: user_write_progress
-  use ModMultiFluid,ONLY: IonFirst_
+  use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid
+  use ModFaceFlux,   ONLY: TypeFluxNeutral
+  use CON_planet,   ONLY: NamePlanet, IsPlanetModified, Planet_, NewPlanet_, &
+       RadiusPlanet, MassPlanet, TiltRotation, OmegaPlanet, OmegaOrbit, &
+       IonosphereHeight
+  use ModMpi
 
   implicit none
 
@@ -225,6 +228,11 @@ subroutine write_runtime_values()
   end select
   call write_prefix
   write(iUnitOut,'(10X,a,a)') trim(FluxType),' flux function'
+  if(UseNeutralFluid)then
+     call write_prefix
+     write(iUnitOut,'(10X,a,a)') trim(TypeFluxNeutral), &
+          ' flux for neutral fluids'
+  end if
 
   call write_prefix
   if (time_accurate) then
