@@ -45,9 +45,6 @@ Module ModAdvance
   ! Replace density with sum of species densities (in multi-species plasma)
   logical :: DoReplaceDensity = .true.
 
-  ! Use the same speeds in the solvers for all fluids, or not
-  logical :: UseTotalSpeed = .true.
-
   !\
   ! Conservative/Non-conservative parameters
   !/
