@@ -747,6 +747,7 @@ TypeTimingReport determines the format of the timing reports:
 		<option name="PLANETARY" default="T"/>
 		<option name="SOLARWIND"/>
 		<option name="NONE"/>
+		<option name="USER"/>
                 <option name="READ"/>
 	</parameter>
 	<if expr="$TypeNormalization =~ /READ/">
@@ -781,7 +782,7 @@ is usually not consistent with the inverse cube of the normalization
 of distance. 
 
 Possible values for TypeNormalization are NONE, PLANETARY, SOLARWIND, 
-and READ. 
+USER and READ. 
 
 If TypeNormalization="NONE" then the distance, velocity and density
 units are the SI units, i.e. meter, meter/sec, and kg/m$^3$.
@@ -803,6 +804,9 @@ that are variable, and may not even make sense (e.g. for a shock tube test
 or a Tokamak problem). This normalization is only kept for sake of 
 backwards compatibility.
 
+If TypeNormalization="USER" the normalization is set in the user module.
+This may be useful if the normalization depends on some input parameters.
+
 Finally TypeNormalization="READ" reads the three basic normalization units from
 the PARAM.in file as shown in the example. This allows arbitrary normalization.
 
@@ -814,7 +818,8 @@ solar wind parameters have been changed). It also allows other programs
 to read the data saved in the restart files and convert them to appropriate
 units. 
 
-The default normalization is PLANETARY.
+The default normalization is PLANETARY for GM 
+and SOLARWIND for all other components.
 </command>
 
 <command name="IOUNITS" if="$_IsFirstSession">
@@ -1196,11 +1201,11 @@ dynamic grid adaptation, and correct AMR in R-Z geometry.
 2                       nRootBlockX
 1                       nRootBlockY
 1                       nRootBlockZ
--224.                   xMin
- 32.                    xMax
--64.                    yMin
- 64.                    yMax
--64.                    zMin
+-224.                   xMin	   
+ 32.                    xMax	   
+-64.                    yMin	   
+ 64.                    yMax	   
+-64.                    zMin	   
  64.                    zMax
 
 The nRootBlockX, nRootBlockY and nRootBlockZ parameters define the 
@@ -3719,15 +3724,27 @@ or exceeding 1 per cent are checked for large changes (see the
 Default values are shown.
 </command>
 
-<command name="MULTIFLUID">
-	<parameter name="UseTotalSpeed" type="logical" default="T"/>
-#MULTIFLUID
-F		UseTotalSpeed
+<command name="NEUTRALFLUID">
+	<parameter name="DoConserveNeutrals" type="logical" default="T"/>
+	<parameter name="TypeFluxNeutral" type="string" input="select">
+		<option name="default"  default="T"/>
+		<option name="Rusanov"/>
+		<option name="Linde"  />
+	</parameter>
+#NEUTRALFLUID
+F		DoConserveNeutrals
+Linde		TypeFluxNeutral (default, Rusanov or Linde)
 
-Allows using individual maximum speeds for the numerical diffusion for 
-each fluid. This is useful for weakly coupled fluids, e.g. 
-low densitiy ions and neutrals. Default is to use the same maximum speed
-for the diffusion of all the fluids.
+If DoConserveNeutrals is false, the pressure equation is used 
+for neutrals even where the energy equation is used for the ions.
+If DoConserveNeutrals is true, the neutrals do the same as ions.
+The neutral fluid uses the flux function set by TypeFluxNeutral.
+The default is to use the same as the ion fluid if possible. 
+Currently only the Rusanov and Linde schemes are available for
+the neutrals. If the ion fluid uses any other flux function,
+the neutrals will use the Linde scheme. 
+
+Default values are DoConserveNeutrals=T and TypeFluxNeutral=default.
 </command>
 
 <command name="MULTIION">

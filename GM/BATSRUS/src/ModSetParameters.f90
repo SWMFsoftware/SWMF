@@ -52,14 +52,15 @@ subroutine MH_set_parameters(TypeAction)
   use ModRadDiffusion,   ONLY: read_rad_diffusion_param  !^CFG IF IMPLICIT
   use ModResistivity, ONLY: UseResistivity, &            !^CFG IF DISSFLUX
        read_resistivity_param, init_mod_resistivity      !^CFG IF DISSFLUX
-  use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals,iFluid
+  use ModMultiFluid, ONLY: MassIon_I, iFluid, DoConserveNeutrals
   use ModMultiIon, ONLY: multi_ion_set_parameters
   use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
        read_solar_wind_file, normalize_solar_wind_data
   use ModSatelliteFile, ONLY: nSatellite, &
        read_satellite_parameters, read_satellite_input_files
   use ModGroundMagPerturb
-  use ModFaceFlux, ONLY: face_flux_set_parameters, UseClimit, UsePoleDiffusion
+  use ModFaceFlux, ONLY: face_flux_set_parameters, TypeFluxNeutral, &
+       UseClimit, UsePoleDiffusion
   use ModLookupTable, ONLY: read_lookup_table_param
   use ModIonoVelocity,ONLY: read_iono_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
@@ -1664,9 +1665,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoReplaceDensity', DoReplaceDensity)
         call read_var('SpeciesPercentCheck',SpeciesPercentCheck)
 
-     case("#MULTIFLUID")
-        call read_var('UseTotalSpeed', UseTotalSpeed)
+     case("#NEUTRALFLUID")
         call read_var('DoConserveNeutrals', DoConserveNeutrals)
+        call read_var('TypeFluxNeutral',    TypeFluxNeutral)
 
      case("#MULTIION", "#MHDIONS", "#COLLISION")
         call multi_ion_set_parameters(NameCommand)
@@ -2117,12 +2118,16 @@ contains
        nConservCrit         = 0
        rConserv             = -1.
 
-       ! Boundary Conditions and Normalization (avoid Emacs indentation bug)
-       TypeBc_I(east_:top_)  = 'float';   TypeIoUnit = "HELIOSPHERIC"      
-       TypeBc_I(body1_)      = 'unknown'; TypeNormalization = "SOLARWIND"
+       ! Boundary Conditions
+       TypeBc_I(east_:top_)  = 'float'
+       TypeBc_I(body1_)      = 'unknown'
        BodyTDim_I            = 2.85E06    ! K
        BodyNDim_I(IonFirst_) = 1.50E8     ! /cc  protons
        BodyNDim_I(IonFirst_+1:nFluid) = BodyNDim_I(IonFirst_)*cTiny
+
+       ! Normalization and I/O units
+       TypeNormalization     = "SOLARWIND"
+       TypeIoUnit            = "HELIOSPHERIC"
 
        ! Refinement criteria
        nRefineCrit    = 3
@@ -2144,13 +2149,17 @@ contains
        TypeConservCrit_I(1) = 'r'
        rConserv             = 2*rBody
 
-       ! Boundary Conditions and Normalization (avoid Emacs indentation bug)
-       TypeBc_I(east_)        ='outflow'; TypeIoUnit = "PLANETARY"
+       ! Boundary Conditions and Normalization
+       TypeBc_I(east_)        ='outflow'
        TypeBc_I(west_)        ='inflow'
        TypeBc_I(south_:top_)  ='fixed'
        TypeBc_I(body1_)='ionosphere'
        BodyTDim_I    = 25000.0          ! K
        BodyNDim_I    = 5.0              ! /cc
+
+       ! Normalization and I/O units
+       TypeNormalization = "PLANETARY"
+       TypeIoUnit        = "PLANETARY"
 
        ! Refinement Criteria
        nRefineCrit    = 3
@@ -2252,8 +2261,31 @@ contains
        FluxType='Rusanov'                            !^CFG IF RUSANOVFLUX
     end select
 
-    ! Check flux type selection for implicit   !^CFG IF IMPLICIT BEGIN
+    ! Set flux type for neutral fluids
+    select case(TypeFluxNeutral)
+    case('default')
+       select case(FluxType)
+       case('Rusanov', 'Linde')
+          TypeFluxNeutral = FluxType
+       case default
+          TypeFluxNeutral = 'Linde'
+       end select
+    case('RUSANOV','TVDLF','Rusanov')
+       TypeFluxNeutral = 'Rusanov'
+    case('LINDE','HLLEL','Linde')
+       TypeFluxNeutral = 'Linde'
+    case default
+       if(iProc==0)then
+          write(*,'(a)')NameSub// &
+               ' WARNING: Unknown value for TypeFluxNeutral='// &
+               trim(TypeFluxNeutral)//' !!!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*)NameSub//' setting TypeFluxNeutral=Linde'
+       end if
+       TypeFluxNeutral = 'Linde'
+    end select
 
+    ! Check flux type selection for implicit   !^CFG IF IMPLICIT BEGIN
     select case(FluxTypeImpl)
     case('default')
        FluxTypeImpl = FluxType
