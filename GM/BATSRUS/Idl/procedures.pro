@@ -168,6 +168,14 @@ pro openfile,unit,filename,filetype
 
    on_error,2
 
+   i = strpos(filename,'.gz')
+   if i gt 0 then begin
+       filenamenew = strmid(filename,0,i)
+       print,'gunzip -c '+filename+' > '+filenamenew
+       spawn,'gunzip -c '+filename+' > '+filenamenew
+       filename = filenamenew
+   endif
+
    close,unit
    case filetype of
        'log'   :openr,unit,filename
