@@ -228,7 +228,7 @@ test_multifluid:
 	make test_multifluid_check
 
 test_multifluid_compile:
-	./Config.pl -u=Default -e=MhdHd -g=256,4,4,10,1
+	./Config.pl -u=Default -e=MhdHd -g=64,2,2,10,1
 	make
 	make PIDL
 
@@ -237,7 +237,7 @@ test_multifluid_rundir: test_rundir
 
 test_multifluid_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_multifluid_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
