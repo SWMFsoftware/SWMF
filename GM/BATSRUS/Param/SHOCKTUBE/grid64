@@ -1,0 +1,17 @@
+#CHECKGRIDSIZE
+64                              nI
+2                               nJ
+2                               nK
+4                               MinBlockALL
+
+#GRID
+4                               nRootBlockX
+1				nRootBlockY
+1				nRootBlockZ
+-128.				xMin	   
+ 128.				xMax	   
+-1.				yMin	   
+ 1.				yMax	   
+-1.				zMin	   
+ 1.				zMax
+
