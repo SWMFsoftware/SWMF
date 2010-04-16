@@ -189,6 +189,7 @@ end module ModLdem
 !==============================================================================
 
 module ModUser
+  use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -200,7 +201,8 @@ module ModUser
        IMPLEMENTED8 => user_set_outerbcs,               &
        IMPLEMENTED9 => user_face_bcs,                   &
        IMPLEMENTED10=> user_set_boundary_cells,         &
-       IMPLEMENTED11=> user_set_resistivity
+       IMPLEMENTED11=> user_set_resistivity,            &
+       IMPLEMENTED12=> user_update_states
 
   include 'user_module.h' !list of public methods
 
@@ -215,6 +217,12 @@ module ModUser
 
   real :: TeFraction, TiFraction
   real :: EtaPerpSi
+
+  ! Variables for the Bernoulli equation
+  logical :: UseHeatFluxInBernoulli = .false.
+  logical :: IsNewBlockTe(MaxBlock) = .true.
+  real :: HeatCondPar
+  real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
 contains
 
@@ -260,6 +268,9 @@ contains
           call read_var('UseLdem', UseLdem)
           call read_var('NameLdemFile', NameLdemFile)
 
+       case('#BERNOULLI')
+          call read_var('UseHeatFluxInBernoulli', UseHeatFluxInBernoulli)
+
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
@@ -294,10 +305,11 @@ contains
     use ModMultiFluid,  ONLY: MassIon_I
     use ModNumConst,    ONLY: cTwoPi
     use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge, &
-         Si2No_V, UnitB_, UnitX_
+         Si2No_V, UnitB_, UnitX_, UnitU_, UnitEnergyDens_, UnitTemperature_
     use ModProcMH,      ONLY: iProc
     use ModWaves,       ONLY: UseWavePressure, UseAlfvenWaves
 
+    real :: HeatCondParSi
     real, parameter :: CoulombLog = 20.0
     !--------------------------------------------------------------------------
     if(iProc == 0)then
@@ -339,6 +351,17 @@ contains
        if(iProc == 0) call write_alfvenwave_boundary
     end if
 
+    ! electron heat conduct coefficient for single charged ions
+    ! = 9.2e-12 W/(m*K^(7/2))
+    HeatCondParSi = 3.2*3.0*cTwoPi/CoulombLog &
+         *sqrt(cTwoPi*cBoltzmann/cElectronMass)*cBoltzmann &
+         *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
+
+    ! unit HeatCondParSi is W/(m*K^(7/2))
+    HeatCondPar = HeatCondParSi &
+         *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)**3.5 &
+         *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session finished'
@@ -363,7 +386,7 @@ contains
     integer :: iPhi, iTheta
     real :: r, Theta, Phi, x, y, z
     real :: RhoBase, Tbase, Br, B0_D(3)
-    real :: Ewave, DeltaU
+    real :: Ewave, DeltaU, HeatFlux
     real, allocatable :: Coord_DII(:,:,:), State_VII(:,:,:)
     character(len=32) :: FileNameOut
     !--------------------------------------------------------------------------
@@ -389,7 +412,8 @@ contains
 
           call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
 
-          call get_wave_energy(x, y, z, Br, Ewave)
+          HeatFlux = 0.0
+          call get_wave_energy(x, y, z, Br, HeatFlux, Ewave)
           ! Root mean square amplitude of the velocity fluctuation
           ! This assumes equipartition (of magnetic and velocity fluctuations)
           DeltaU = sqrt(Ewave/RhoBase)
@@ -456,7 +480,7 @@ contains
 
   !============================================================================
 
-  subroutine get_wave_energy(x, y, z, Br, Ewave)
+  subroutine get_wave_energy(x, y, z, Br, HeatFlux, Ewave)
 
     ! Provides the distribution of the total Alfven wave energy density
     ! at the lower boundary
@@ -467,7 +491,7 @@ contains
     use ModPhysics,    ONLY: g, inv_gm1, AverageIonCharge, &
          Si2No_V, No2Si_V, UnitU_, UnitTemperature_, UnitEnergyDens_
 
-    real, intent(in) :: x, y, z, Br
+    real, intent(in) :: x, y, z, Br, HeatFlux
     real, intent(out):: Ewave
 
     real :: ExpansionFactorInv, Uf
@@ -480,6 +504,9 @@ contains
     !--------------------------------------------------------------------------
 
     ! Inverse expansion factor
+    ! Note the slight inconsistency, since the expansion factor is not the
+    ! true expansion factor at rBody+PFSSM_Height as needed in the
+    ! Bernoulli equation.
     call get_interpolated(ExpansionFactorInv_N, x, y, z, ExpansionFactorInv)
 
     Ewave = 0.0
@@ -497,7 +524,7 @@ contains
        call get_bernoulli_integral(x, y, z, Uf)
 
        ! Currently, the coronal model starts at the electron temperature max
-       HeatFluxSi = 0.0
+       HeatFluxSi = HeatFlux*No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
 
        WaveEnergyDensSi = (RhoV*(0.5*Uf**2 + cSunGravitySi - g*inv_gm1*&
             cBoltzmann/(cProtonMass*MassIon_I(1))*(1.0+AverageIonCharge) &
@@ -626,6 +653,18 @@ contains
     end do; end do; end do
 
   end subroutine user_set_ics
+
+  !============================================================================
+
+  subroutine user_update_states(iStage, iBlock)
+
+    integer, intent(in) :: iStage, iBlock
+    !--------------------------------------------------------------------------
+    call update_states_MHD(iStage, iBlock)
+
+    if(UseHeatFluxInBernoulli) IsNewBlockTe(iBlock) = .true.
+
+  end subroutine user_update_states
 
   !============================================================================
 
@@ -998,9 +1037,11 @@ contains
 
   subroutine user_face_bcs(VarsGhostFace_V)
 
+    use BATL_size,      ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
-    use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
-    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame
+    use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
+         iSide, iFace, jFace, kFace
+    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK
     use ModMultiFluid,  ONLY: MassIon_I
     use ModPhysics,     ONLY: OmegaBody, AverageIonCharge
     use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, &
@@ -1011,21 +1052,21 @@ contains
     real :: RhoBase, NumDensIon, NumDensElectron, Tbase, FullBr
     real :: Runit_D(3), U_D(3)
     real :: B1_D(3), B1t_D(3), B1r_D(3), FullB_D(3)
-    real :: Ewave
+    real :: Ewave, HeatFlux
     !--------------------------------------------------------------------------
 
     Runit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
 
     U_D   = VarsTrueFace_V(Ux_:Uz_)
     B1_D  = VarsTrueFace_V(Bx_:Bz_)
-    B1r_D = dot_product(Runit_D, B1_D)*Runit_D
+    B1r_D = sum(Runit_D*B1_D)*Runit_D
     B1t_D = B1_D - B1r_D
 
     VarsGhostFace_V(Ux_:Uz_) = -U_D
     VarsGhostFace_V(Bx_:Bz_) = B1t_D !- B1r_D
 
     FullB_D = B0Face_D + B1t_D
-    FullBr = dot_product(Runit_D, FullB_D)
+    FullBr = sum(Runit_D*FullB_D)
 
     call get_plasma_parameters_base(FaceCoords_D, RhoBase, Tbase)
 
@@ -1039,9 +1080,13 @@ contains
        VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Tbase
     end if
 
+    ! Contribution of the heat flux on Bernoulli equation
+    HeatFlux = 0.0
+    if(UseHeatFluxInBernoulli) call get_boundary_heatflux
+
     ! Set Alfven waves energy density
     call get_wave_energy(FaceCoords_D(x_), FaceCoords_D(y_), FaceCoords_D(z_),&
-         FullBr, Ewave)
+         FullBr, HeatFlux, Ewave)
 
     if(FullBr > 0.0)then
        VarsGhostFace_V(WaveFirst_) = Ewave
@@ -1060,6 +1105,47 @@ contains
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
             + 2.0*OmegaBody*FaceCoords_D(x_)
     end if
+
+  contains
+
+    subroutine get_boundary_heatflux
+
+      use ModFaceGradient, ONLY: get_face_gradient
+
+      real :: FaceGrad_D(3)
+      integer :: iBlock, iDir, i, j, k
+      !------------------------------------------------------------------------
+      iBlock = GlobalBLK
+
+      if(iSide==1 .or. iSide==2)then
+         iDir = x_
+      elseif(iSide==3 .or. iSide==4)then
+         iDir = y_
+      else
+         iDir = z_
+      endif
+
+      if(IsNewBlockTe(iBlock))then
+         if(UseElectronPressure)then
+            do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+               Te_G(i,j,k) = TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
+                    /State_VGB(Rho_,i,j,k,iBlock)
+            end do; end do; end do
+         else
+            do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+               Te_G(i,j,k) = TeFraction*State_VGB(p_,i,j,k,iBlock) &
+                    /State_VGB(Rho_,i,j,k,iBlock)
+            end do; end do; end do
+         end if
+      end if
+
+      call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
+           IsNewBlockTe(iBlock), Te_G, FaceGrad_D)
+
+      ! Use 1D proxi for heat flux
+      HeatFlux = -HeatCondPar*Tbase**2.5*sum(FaceGrad_D*Runit_D)
+
+    end subroutine get_boundary_heatflux
 
   end subroutine user_face_bcs
 
