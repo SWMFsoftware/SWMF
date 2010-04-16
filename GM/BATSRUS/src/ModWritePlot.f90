@@ -1362,7 +1362,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitTemperature_)
      case('eta')                                          !^CFG IF DISSFLUX
         PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*&       !^CFG IF DISSFLUX
-             (No2Io_V(UnitX_)**2/No2Io_V(UnitT_))         !^CFG IF DISSFLUX
+             (No2Si_V(UnitX_)**2/No2Si_V(UnitT_))         !^CFG IF DISSFLUX
      case('ux','uy','uz')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitU_)
      case('jx','jy','jz','jr',&
