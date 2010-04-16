@@ -7,7 +7,7 @@ module ModFaceFlux
        UseIonHeatConduction
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
-  use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
+  use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, UseNeutralFluid
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, true_cell
 
@@ -25,7 +25,7 @@ module ModFaceFlux
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area !^CFG IF BORISCORR
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
-       UseRS7, UseTotalSpeed, UseElectronPressure,  &
+       UseRS7, UseElectronPressure,  &
        eFluid_                           ! index for electron fluid (nFluid+1)
 
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
@@ -54,8 +54,15 @@ module ModFaceFlux
   ! Number of fluxes including pressure and energy fluxes
   integer, parameter :: nFlux=nVar+nFluid
 
-  logical :: DoLf                !^CFG IF RUSANOVFLUX
-  logical :: DoHll               !^CFG IF LINDEFLUX
+  ! Range of fluid indexes for the current solver
+  integer:: iFluidMin = 1, iFluidMax = nFluid
+
+  ! Neutral fluids may use different flux function
+  logical:: UseDifferentNeutralFlux = .false.
+  character(len=10):: TypeFluxNeutral = 'default'
+
+  logical :: DoLf,  DoLfNeutral  !^CFG IF RUSANOVFLUX
+  logical :: DoHll, DoHllNeutral !^CFG IF LINDEFLUX
   logical :: DoHlld              !^CFG IF HLLDFLUX
   logical :: DoAw                !^CFG IF AWFLUX
   logical :: DoRoeOld            !^CFG IF ROEFLUX
@@ -352,6 +359,10 @@ contains
     DoRoeOld = TypeFlux == 'RoeOld'      !^CFG IF ROEFLUX
     DoRoe    = TypeFlux == 'Roe'         !^CFG IF ROEFLUX
     DoGodunov= TypeFlux == 'Godunov'
+
+    UseDifferentNeutralFlux = UseNeutralFluid .and. TypeFluxNeutral /= TypeFlux
+    DoLfNeutral             = TypeFluxNeutral == 'Rusanov'
+    DoHllNeutral            = TypeFluxNeutral == 'Linde'
 
     UseRS7 = DoRoe  ! This is always true for the current implementation
 
@@ -979,21 +990,22 @@ contains
     end if
     !^CFG END IMPLICIT
 
-    if(DoRoe)then
-       if(UseB)then
+    if(UseB)then
+       if(DoRoe)then
           if(IsBoundary)then
-             uLeft_D=StateLeft_V(Ux_:Uz_); uRight_D=StateRight_V(Ux_:Uz_)
+             uLeft_D  = StateLeft_V(Ux_:Uz_)
+             uRight_D = StateRight_V(Ux_:Uz_)
           else
              !Since the divB source term is calculated using the
              !cell centered velocity, the numerical diffusion
              !for the normal magnetic field should be evaluated
              !in terms of the cell centered velocity too
              uLeft_D = &
-                  State_VGB(RhoUx_:RhoUz_, iLeft, jLeft, kLeft, iBlockFace)/&
-                  State_VGB(Rho_, iLeft, jLeft, kLeft, iBlockFace)
+                  State_VGB(RhoUx_:RhoUz_,iLeft,jLeft,kLeft,iBlockFace) &
+                  /        State_VGB(Rho_,iLeft,jLeft,kLeft,iBlockFace)
              uRight_D = &
-                  State_VGB(RhoUx_:RhoUz_, iRight,jRight,kRight,iBlockFace)/&
-                  State_VGB(Rho_, iRight,jRight,kRight,iBlockFace)
+                  State_VGB(RhoUx_:RhoUz_,iRight,jRight,kRight,iBlockFace) &
+                  /        State_VGB(Rho_,iRight,jRight,kRight,iBlockFace)
           end if
 
           if(UseB0)then
@@ -1012,33 +1024,33 @@ contains
 
           Unormal_I=Unormal_I(1)
        end if
-    end if
-    if(UseRS7 .or. UseLindeFix)then
-       ! Sokolov's algorithm
-       ! Calculate the jump in the normal magnetic field vector
-       DiffBn_D = Normal_D* &
-            0.5*sum( (StateRight_V(Bx_:Bz_) - StateLeft_V(Bx_:Bz_))*Normal_D )
+       if(UseRS7 .or. UseLindeFix)then
+          ! Sokolov's algorithm
+          ! Calculate the jump in the normal magnetic field vector
+          DiffBn_D = Normal_D* &
+               0.5*sum((StateRight_V(Bx_:Bz_) - StateLeft_V(Bx_:Bz_))*Normal_D)
 
-       ! Remove the jump in the normal magnetic field
-       StateLeft_V(Bx_:Bz_)  =  StateLeft_V(Bx_:Bz_)  + DiffBn_D
-       StateRight_V(Bx_:Bz_) =  StateRight_V(Bx_:Bz_) - DiffBn_D
+          ! Remove the jump in the normal magnetic field
+          StateLeft_V(Bx_:Bz_)  =  StateLeft_V(Bx_:Bz_)  + DiffBn_D
+          StateRight_V(Bx_:Bz_) =  StateRight_V(Bx_:Bz_) - DiffBn_D
 
-       ! The energy jump is also modified by 
-       ! 1/2(Br^2 - Bl^2) = 1/2(Br-Bl)*(Br+Bl)
-       ! We store half of this in DiffE
-       DiffE = &
-            0.5*sum( (StateRight_V(Bx_:Bz_) + StateLeft_V(Bx_:Bz_))*DiffBn_D )
+          ! The energy jump is also modified by 
+          ! 1/2(Br^2 - Bl^2) = 1/2(Br-Bl)*(Br+Bl)
+          ! We store half of this in DiffE
+          DiffE = &
+               0.5*sum((StateRight_V(Bx_:Bz_) + StateLeft_V(Bx_:Bz_))*DiffBn_D)
 
-       DiffBb = sum(DiffBn_D**2)
+          DiffBb = sum(DiffBn_D**2)
+       end if
     end if
 
     ! Calculate average state (used by most solvers and also by bCrossArea_D)
     State_V = 0.5*(StateLeft_V + StateRight_V)
 
-    if(.not.DoGodunov &
+    if(UseDifferentNeutralFlux .or. .not.DoGodunov &
          .and. .not.DoHlld &                                !^CFG IF HLLDFLUX
          )then
-       ! All solvers, except HLLD, use left and right fluxes and avarage state
+       ! All solvers, except HLLD and Godunov, use left and right fluxes
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft)
 
@@ -1046,8 +1058,8 @@ contains
             StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight)
 
        if(UseRS7)then
-          call modify_flux(FluxLeft_V,UnLeft_I(1))
-          call modify_flux(FluxRight_V,UnRight_I(1))
+          call modify_flux(FluxLeft_V, UnLeft_I(1))
+          call modify_flux(FluxRight_V, UnRight_I(1))
        end if
     end if
 
@@ -1065,6 +1077,15 @@ contains
        end if
     end if
 
+    if(UseDifferentNeutralFlux)then
+       iFluidMin = 1; iFluidMax = IonLast_
+    else
+       iFluidMin = 1; iFluidMax = nFluid
+    end if
+
+    ! Initialize CmaxDt so we can take maximum of ion and neutral cmaxdt
+    CmaxDt = 0.0
+
     if(DoLf)     call lax_friedrichs_flux       !^CFG IF RUSANOVFLUX
     if(DoHll)    call harten_lax_vanleer_flux   !^CFG IF LINDEFLUX
     if(DoHlld)   call hlld_flux                 !^CFG IF HLLDFLUX
@@ -1073,23 +1094,19 @@ contains
     if(DoRoe)    call roe_solver_new            !^CFG IF ROEFLUX
     if(DoGodunov)call godunov_flux
 
-    if(UseRS7 .and. .not.DoRoe &
-         .and. .not.DoHlld &                    !^CFG IF HLLDFLUX
-         )then
-       call stop_mpi('Second order RS7 is implemented for Roe solver only')
-       !cDivBWave=max(abs(AreaX*UL_D(x_)+AreaY*UL_D(y_)+AreaZ*UL_D(z_)),&
-       !     abs(AreaX*UR_D(x_)+AreaY*UR_D(y_)+AreaZ*UR_D(z_)))
-       !Flux_V(Bx_) = Flux_V(Bx_) - cDivBWave*DiffBx
-       !Flux_V(By_) = Flux_V(By_) - cDivBWave*DiffBy
-       !Flux_V(Bz_) = Flux_V(Bz_) - cDivBWave*DiffBz
-       !
-       ! Fix the energy diffusion
-       !Flux_V(Energy_) = Flux_V(Energy_) - cDivBWave*DiffE
+    if(UseDifferentNeutralFlux)then
+       iFluidMin = IonLast_+1; iFluidMax = nFluid
+
+       if(DoLfNeutral)  call lax_friedrichs_flux       !^CFG IF RUSANOVFLUX
+       if(DoHllNeutral) call harten_lax_vanleer_flux   !^CFG IF LINDEFLUX
+
+       iFluidMin = 1
     end if
+
     if(UseLindeFix)then
 
        if(UseHyperbolicDivb) then
-          ! Overwrite the Flux of the Hyp field with the Lax-Friedrichs Flux
+          ! Overwrite the flux of the Hyp field with the Lax-Friedrichs flux
           Cmax = max(Cmax, SpeedHyp)
           Flux_V(Hyp_) = 0.5*(FluxLeft_V(Hyp_) + FluxRight_V(Hyp_) &
                - Cmax*(StateRight_V(Hyp_) - StateLeft_V(Hyp_)))
@@ -1118,7 +1135,7 @@ contains
     !^CFG IF IMPLICIT BEGIN
     if(.not. UseSemiImplicit)then
        if(UseHeatConduction .or. UseIonHeatConduction .or. UseRadDiffusion) &
-            CmaxDt = CmaxDt + 2.0*DiffCoef*InvDxyz
+            CmaxDt = CmaxDt + 2*DiffCoef*InvDxyz
     end if
     !^CFG END IMPLICIT
 
@@ -1154,13 +1171,9 @@ contains
       !----------------------------------------------------------------------
       call get_speed_max(State_V, B0x, B0y, B0z, Cmax_I = Cmax_I)
 
-      if(UseTotalSpeed)then
-         Cmax = maxval(Cmax_I)
-         Flux_V = 0.5*(FluxLeft_V + FluxRight_V &
-              - Cmax*(StateRightCons_V - StateLeftCons_V))
-      else
-         do iFluid = 1, nFluid
-            Cmax = Cmax_I(iFluid); iRho=iRho_I(iFluid); iP=iP_I(iFluid) 
+      if(UseNeutralFluid)then
+         do iFluid = iFluidMin, iFluidMax
+            Cmax = Cmax_I(iFluid)
             do iVar = iRho_I(iFluid), iP_I(iFluid)
                Flux_V(iVar) = 0.5*(FluxLeft_V(iVar) + FluxRight_V(iVar) &
                     - Cmax*(StateRightCons_V(iVar) - StateLeftCons_V(iVar)))
@@ -1169,7 +1182,12 @@ contains
             Flux_V(iVar) = 0.5*(FluxLeft_V(iVar) + FluxRight_V(iVar) &
                  - Cmax*(StateRightCons_V(iVar) - StateLeftCons_V(iVar)))
          end do
+         ! Cmax is used for Linde fix of Bn flux, hyperbolic cleaning, etc.
          Cmax = Cmax_I(1)
+      else
+         Cmax = maxval(Cmax_I)
+         Flux_V = 0.5*(FluxLeft_V + FluxRight_V &
+              - Cmax*(StateRightCons_V - StateLeftCons_V))
       end if
 
       Unormal_I = 0.5*(UnLeft_I + UnRight_I)
@@ -1200,7 +1218,38 @@ contains
            Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
 
 
-      if(UseTotalSpeed)then
+      if(UseNeutralFluid)then
+         ! Cmax is used for Linde fix of Bn flux, hyperbolic cleaning, etc.
+         Cmax = Cmax_I(1)
+
+         do iFluid = iFluidMin, iFluidMax
+            Cleft =min(0.0, CleftStateLeft_I(iFluid), CleftStateHat_I(iFluid))
+            Cright=max(0.0,CrightStateRight_I(iFluid),CrightStateHat_I(iFluid))
+               
+            WeightLeft  = Cright/(Cright - Cleft)
+            WeightRight = 1.0 - WeightLeft
+            Diffusion   = Cright*WeightRight
+         
+            do iVar = iRho_I(iFluid), iP_I(iFluid)
+               Flux_V(iVar) = &
+                    (WeightRight*FluxRight_V(iVar)+WeightLeft*FluxLeft_V(iVar)&
+                    - Diffusion*(StateRightCons_V(iVar)-StateLeftCons_V(iVar)))
+            end do
+
+            iVar = nVar + iFluid ! energy index
+            Flux_V(iVar) = &
+                 (WeightRight*FluxRight_V(iVar)+WeightLeft*FluxLeft_V(iVar) &
+                 - Diffusion*(StateRightCons_V(iVar)-StateLeftCons_V(iVar)))
+
+            ! Weighted average of the normal speed
+            Unormal_I(iFluid) = &
+                 WeightRight*UnRight_I(iFluid) + WeightLeft*UnLeft_I(iFluid)
+            
+            if(iFluid==1) Unormal_I(eFluid_) = &
+                 WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
+            
+         end do
+      else
          Cmax   = maxval(Cmax_I)
          Cleft  =min(0.0, minval(CleftStateLeft_I), minval(CleftStateHat_I))
          Cright =max(0.0, maxval(CrightStateRight_I), maxval(CrightStateHat_I))
@@ -1210,40 +1259,11 @@ contains
          Diffusion   = Cright*WeightRight
 
          Flux_V = &
-              (WeightRight*FluxRight_V + WeightLeft*FluxLeft_V &
-              - Diffusion*(StateRightCons_V - StateLeftCons_V))
+              (WeightRight*FluxRight_V+WeightLeft*FluxLeft_V&
+              - Diffusion*(StateRightCons_V-StateLeftCons_V))
 
          ! Weighted average of the normal speed
          Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
-
-      else
-         Cmax   = Cmax_I(1)
-         do iFluid = 1, nFluid
-            Cleft =min(0.0, CleftStateLeft_I(iFluid), CleftStateHat_I(iFluid))
-            Cright=max(0.0,CrightStateRight_I(iFluid),CrightStateHat_I(iFluid))
-
-            WeightLeft  = Cright/(Cright - Cleft)
-            WeightRight = 1.0 - WeightLeft
-            Diffusion   = Cright*WeightRight
-
-            do iVar = iRho_I(iFluid), iP_I(iFluid)
-               Flux_V(iVar) = &
-                    (WeightRight*FluxRight_V(iVar)+WeightLeft*FluxLeft_V(iVar)&
-                    - Diffusion*(StateRightCons_V(iVar)-StateLeftCons_V(iVar)))
-            end do
-            iVar = nVar + iFluid ! energy index
-            Flux_V(iVar) = &
-                 (WeightRight*FluxRight_V(iVar)+WeightLeft*FluxLeft_V(iVar) &
-                 - Diffusion*(StateRightCons_V(iVar)-StateLeftCons_V(iVar)))
-
-            ! Weighted average of the normal speed
-            Unormal_I(iFluid) = &
-                 WeightRight*UnRight_I(iFluid) + WeightLeft*UnLeft_I(iFluid)
-
-            if(iFluid==1) Unormal_I(eFluid_) = &
-                 WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
-
-         end do
       end if
 
       Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft !^CFG IF BORISCORR
@@ -1296,7 +1316,7 @@ contains
       ! Rotated flux for vector variables
       real :: FluxRot_V(nFluxMhd)
 
-      ! Needed as an argument for get_physical_flux
+      ! Needed as an argument for get_physcal_flux
       real :: StateCons_V(nFlux)
 
       ! Left and right state (scalars and extra variables only)
@@ -1335,8 +1355,8 @@ contains
       call get_speed_max(StateRight_V, B0x, B0y, B0z, &
            Cleft_I = CleftStateRight_I, Cright_I = CrightStateRight_I)
 
-      sL = min(minval(CleftStateLeft_I),  minval(CleftStateRight_I)) 
-      sR = max(maxval(CrightStateLeft_I), maxval(CrightStateRight_I))
+      sL = min(CleftStateLeft_I(1),  CleftStateRight_I(1))
+      sR = max(CrightStateLeft_I(1), CrightStateRight_I(1))
 
       Cmax   = max(sR, -sL)
       CmaxDt = Cmax
@@ -1849,61 +1869,75 @@ contains
     ! Make sure this is initialized
     HallUn = 0.0
 
-    iFluid = 1
-    if(IsMhd)then
-       ! single ion fluid MHD (possibly with extra neutrals)
-       if(UseBoris)then           !^CFG IF BORISCORR BEGIN
-          call get_boris_flux
-       else                       !^CFG END BORISCORR
-          call get_mhd_flux
-       end if                     !^CFG IF BORISCORR
-    else
-       ! If there is no MHD fluid, calculate fluxes for magnetic field
-       ! together with hydro fluxes for the first fluid
-       if(UseB)call get_magnetic_flux
+    ! do iFluid = iFluidMin, iFluidMax
+    do iFluid = 1, nFluid
        call select_fluid
-       call get_hd_flux
-    end if
-    Un_I(1) = Un
+       if(iFluid == 1 .and. IsMhd)then
+          ! Calculate MHD flux for first fluid
+          if(UseBoris)then           !^CFG IF BORISCORR BEGIN
+             call get_boris_flux
+          else                       !^CFG END BORISCORR
+             call get_mhd_flux
+          end if                     !^CFG IF BORISCORR
+       else
+          ! If there is no MHD fluid, calculate fluxes for magnetic field
+          ! together with hydro fluxes for the first fluid
+          if(UseB .and. iFluid == 1)call get_magnetic_flux
 
-    ! Calculate hydro fluxes for individual ion and neutral fluids
-    do iFluid = 2, nFluid
-       call select_fluid
-       call get_hd_flux
-       Un_I(iFLuid) = Un
+          ! Calculate HD flux for individual ion and neutral fluids
+          call get_hd_flux
+       end if
+       ! Store normal velocity (needed for source terms with div U)
+       Un_I(iFluid) = Un
     end do
 
-    ! These terms are common for the induction equation
-    ! If the first fluid is the total fluid, 
-    ! the total energy density is also updated
-    if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
-       ! Add curl Eta.J to induction equation
-       FluxBx = NormalY*EtaJz - NormalZ*EtaJy
-       FluxBy = NormalZ*EtaJx - NormalX*EtaJz
-       FluxBz = NormalX*EtaJy - NormalY*EtaJx
+    ! The extra fluxes should be added at the same time as fluid 1 fluxes
+    ! if(iFluidMin /= 1) RETURN
 
-       Flux_V(Bx_) = Flux_V(Bx_) + FluxBx
-       Flux_V(By_) = Flux_V(By_) + FluxBy
-       Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
+    if(UseB) then
+       ! These terms are common for the induction equation
+       ! If the first fluid is the total fluid, 
+       ! the total energy density is also updated
+       if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
+          ! Add curl Eta.J to induction equation
+          FluxBx = NormalY*EtaJz - NormalZ*EtaJy
+          FluxBy = NormalZ*EtaJx - NormalX*EtaJz
+          FluxBz = NormalX*EtaJy - NormalY*EtaJx
 
-       ! add B.dB/dt term to energy equation
-       if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
-            + Bx*FluxBx + By*FluxBy + Bz*FluxBz
-    end if                                     !^CFG END DISSFLUX
+          Flux_V(Bx_) = Flux_V(Bx_) + FluxBx
+          Flux_V(By_) = Flux_V(By_) + FluxBy
+          Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
 
-    if(UseHallGradPe)then
-       ! Add curl (-grad Pe/n e) to induction equation
-       FluxBx = - (NormalY*GradZPeNe - NormalZ*GradYPeNe)
-       FluxBy = - (NormalZ*GradXPeNe - NormalX*GradZPeNe)
-       FluxBz = - (NormalX*GradYPeNe - NormalY*GradXPeNe)
+          ! add B.dB/dt term to energy equation
+          if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
+               + Bx*FluxBx + By*FluxBy + Bz*FluxBz
+       end if                                     !^CFG END DISSFLUX
 
-       Flux_V(Bx_) = Flux_V(Bx_) + FluxBx
-       Flux_V(By_) = Flux_V(By_) + FluxBy
-       Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
+       if(UseHallGradPe)then
+          ! Add curl (-grad Pe/n e) to induction equation
+          FluxBx = - (NormalY*GradZPeNe - NormalZ*GradYPeNe)
+          FluxBy = - (NormalZ*GradXPeNe - NormalX*GradZPeNe)
+          FluxBz = - (NormalX*GradYPeNe - NormalY*GradXPeNe)
 
-       ! add B.dB/dt term to energy equation
-       if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
-            + Bx*FluxBx + By*FluxBy + Bz*FluxBz
+          Flux_V(Bx_) = Flux_V(Bx_) + FluxBx
+          Flux_V(By_) = Flux_V(By_) + FluxBy
+          Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
+
+          ! add B.dB/dt term to energy equation
+          if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
+               + Bx*FluxBx + By*FluxBy + Bz*FluxBz
+       end if
+
+       if(UseHyperbolicDivb)then
+          Hyp  = State_V(Hyp_)
+
+          Flux_V(Bx_:Bz_) = Flux_V(Bx_:Bz_) + Normal_D*Hyp
+          Flux_V(Hyp_)    = SpeedHyp2*FullBn
+
+          if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) + Bn*Hyp
+       elseif(Hyp_ > 1)then
+          Flux_V(Hyp_) = 0.0
+       end if
     end if
 
     !^CFG IF  IMPLICIT BEGIN
@@ -1923,17 +1957,6 @@ contains
        end if
     end if
     !^CFG END IMPLICIT
-
-    if(UseHyperbolicDivb)then
-       Hyp  = State_V(Hyp_)
-
-       Flux_V(Bx_:Bz_) = Flux_V(Bx_:Bz_) + Normal_D*Hyp
-       Flux_V(Hyp_)    = SpeedHyp2*FullBn
-
-       if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) + Bn*Hyp
-    elseif(Hyp_ > 1)then
-       Flux_V(Hyp_) = 0.0
-    end if
 
     ! Set the normal electron velocity used for Hall MHD and/or 
     ! the electron pressure source term
@@ -2186,7 +2209,7 @@ contains
          Flux_V(By_) = UnPlus*FullBy - UyPlus*FullBn
          Flux_V(Bz_) = UnPlus*FullBz - UzPlus*FullBn
       end if
-  
+
       ! f_n[Pe] = u_e,n*p_e
       if(UseElectronPressure)Flux_V(Pe_) = HallUn*State_V(Pe_)
 
@@ -2204,7 +2227,7 @@ contains
          ! f_i[Ppar] = u_i*Ppar
          Flux_V(Ppar_)  = Un*State_V(Ppar_)
       end if
- 
+
       ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
       if(HallCoeff > 0.0) then
          Flux_V(Energy_) = &
@@ -2378,32 +2401,30 @@ contains
     integer :: iVar
     !--------------------------------------------------------------------------
 
-    if(DoAW)then                                 !^CFG IF AWFLUX BEGIN
-       ! For AW flux UnLeft_I,UnRight_I are already set by get_physical_flux
-       UnLeft = minval(UnLeft_I(1:nIonFluid))
-       UnRight= maxval(UnRight_I(1:nIonFluid))
-    end if                                       !^CFG END AWFLUX
-    if(UseB)then
-       if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
-          call get_boris_speed
-       else                                         !^CFG END BORISCORR
-          call get_mhd_speed
-       endif                                        !^CFG IF BORISCORR    
-    else
-       iFluid = 1
-       call get_hd_speed
-    end if
+    do iFluid = iFluidMin, iFluidMax
+       call select_fluid
+       if(iFluid == 1 .and. UseB)then
+          if(DoAW)then                                 !^CFG IF AWFLUX BEGIN
+             ! For AW flux UnLeft_I,UnRight_I are already set by get_physical_flux
+             UnLeft = minval(UnLeft_I(1:nIonFluid))
+             UnRight= maxval(UnRight_I(1:nIonFluid))
+          end if                                       !^CFG END AWFLUX
 
-    if(nFluid > 1)then
-
-       do iFluid = 2, nFluid
-          call select_fluid
+          if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
+             call get_boris_speed
+          else                                         !^CFG END BORISCORR
+             call get_mhd_speed
+          endif                                        !^CFG IF BORISCORR    
+       else
           if(DoAw)then                           !^CFG IF AWFLUX BEGIN
              UnLeft = UnLeft_I(iFluid)
              UnRight= UnRight_I(iFluid)
           end if                                 !^CFG END AWFLUX
           call get_hd_speed
-       end do
+       end if
+    end do
+
+    if(nFluid > 1 .and. iFluidMin == 1 .and. iFluidMax >= IonLast_)then
 
        ! For ion fluids the maximum speed is taken to be 
        ! the maximum of the individual HD speed and the total MHD speed
@@ -2420,14 +2441,20 @@ contains
 
     end if
 
-    ! Take maximum time step limit for all the fluids
-    if (present(Cmax_I)) CmaxDt=maxval(CmaxDt_I)
+    ! Take time step limit for the fluids that were calculated so far
+    if (present(Cmax_I)) &
+         CmaxDt = max(CmaxDt, maxval(CmaxDt_I(iFluidMin:iFluidMax)))
 
     ! Limit propagation speeds if required
     if (Climit > 0.0) then
-       if(present(Cmax_I))   Cmax_I   = min( Climit, Cmax_I)
-       if(present(Cleft_I))  Cleft_I  = max(-Climit, Cleft_I)
-       if(present(Cright_I)) Cright_I = min( Climit, Cright_I)
+       if(present(Cmax_I))  Cmax_I(iFluidMin:iFluidMax) &
+            = min( Climit, Cmax_I(iFluidMin:iFluidMax))
+       
+       if(present(Cleft_I)) Cleft_I(iFluidMin:iFluidMax) &
+            = max(-Climit, Cleft_I(iFluidMin:iFluidMax))
+
+       if(present(Cright_I)) Cright_I(iFluidMin:iFluidMax) &
+            = min( Climit, Cright_I(iFluidMin:iFluidMax))
 
        if(present(Cmax_I))then
           ! If Climit has reduced the diffusion, then the block has to be
