@@ -137,7 +137,7 @@ test_shocktube:
 	make test_shocktube_check
 
 test_shocktube_compile:
-	./Config.pl -u=Default -e=MhdHyp -g=256,4,4,10,1
+	./Config.pl -u=Default -e=MhdHyp -g=64,2,2,10,1
 	make
 	make PIDL
 
@@ -146,13 +146,12 @@ test_shocktube_rundir: test_rundir
 
 test_shocktube_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_shocktube_check:
-	cat ${TESTDIR}/GM/IO2/cut_raw_2_t25.60000_n0000386_pe*.idl \
-		> ${TESTDIR}/GM/IO2/cut_25.idl
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-13 \
-	  Param/SHOCKTUBE/TestOutput/cut_25.idl \
-	  ${TESTDIR}/GM/IO2/cut_25.idl > test_shocktube.diff
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+		${TESTDIR}/RESULT/GM/cut_*t25*.out \
+		Param/SHOCKTUBE/TestOutput/mhdhyp_ref.out > test_shocktube.diff
 	ls -l test_shocktube.diff
 
 ### HALL MHD TEST ###

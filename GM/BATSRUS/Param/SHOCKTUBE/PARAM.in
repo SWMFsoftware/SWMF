@@ -53,25 +53,21 @@ raw		StringLogfile
 #SAVERESTART
 F		DoSaverestart
 
-This is set only for sake of the test_shocktube test
-#SAVEBINARY
-F		UseBinary
-
 #SAVEPLOT
 2		nPlotfile
 z=0 raw idl	PlotString
 -1		DnSavePlot
 10.0		DtSavePlot
 0.0		DxSavePlot
-cut raw idl	PlotString
+cut raw idl_ascii	PlotString
 -1              DnSavePlot
 10.0            DtSavePlot
 -128.0		xMinCut
 +128.0		xMaxCut
-0.1		yMinCut
-0.11		yMaxCut
-0.1		zMinCut
-0.11		zMaxCut
+-0.01		yMinCut
+0.01		yMaxCut
+-0.01		zMinCut
+0.01		zMaxCut
 0.0             DxSavePlot
 
 The grid size is 256, so the final time corresponds to the usual 0.1
