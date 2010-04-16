@@ -8,6 +8,9 @@ module ModMultiFluid
   ! Convenient parameters for the ion fluids
   logical, parameter :: UseMultiIon = IonLast_ > IonFirst_
 
+  ! Logical for multifluid with neutral fluds
+  logical, parameter :: UseNeutralFluid = nFluid > 1 .and. nFluid > IonLast_
+
   integer, parameter :: nIonFluid   = IonLast_ - IonFirst_ + 1
 
   integer, parameter :: iUx_I(nFluid) = iRhoUx_I(1:nFluid)
