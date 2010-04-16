@@ -143,10 +143,9 @@ outflow               TypeBcOuter_E(Top_)
 #TIMEACCURATE           
 F  			IsTimeAccurate
 
-#MULTIFLUID
-F			UseTotalSpeed
-F
-F
+#NEUTRALFLUID
+F			DoConserveNeutrals
+Linde			TypeFluxNeutral
 
 #SCHEME
 1			nOrder
@@ -294,7 +293,6 @@ F                       UseUserB0
 F                       UseUserInitSession
 F                       UseUserUpdateStates
 
-! Applies to the ions only if UseRusanovForNeutrals is true in #MULTIFLUID
 #SCHEME
 2                       nOrder
 Linde                   TypeFlux
@@ -309,11 +307,6 @@ mc                      TypeLimiter
 ! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
 #NONCONSERVATIVE
 F                       UseNonConservative
-
-#MULTIFLUID
-F                       UseTotalSpeed
-F                       DoConserveNeutrals
-F                       UseRusanovForNeutrals
 
 ! Point implicit does not seem to help stability
 POINTIMPLICIT
