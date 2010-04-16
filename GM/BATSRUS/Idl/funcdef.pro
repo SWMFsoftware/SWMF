@@ -62,15 +62,17 @@ if ndim gt 2 then n3=siz(3)
 siz=size(w)
 if siz(0) le ndim then nw=1 else nw=siz(ndim+1)
 
+; Define some constants for "planetary" units
+amu        = 1.6726e-24         ; [g]
+kboltzmann = 1.3807e-23         ; [SI]
+tunit      = 1e-15/kboltzmann   ; tunit*p/rho       [nPa] [amu/cc] -> [K]
+mu0        = 4*!pi*1e-7*1e9     ; p/(bb/2/mu0)      [nPa] [nT]
+mu0A       = 4*!pi*1e-7*amu*1e27; sqrt(bb/mu0A/rho) [nT] [amu/cc] -> [km/s]
+
 ; Number of equation parameters
 nEqpar = n_elements(eqpar)
 
 ; Extract equation parameters
-amu        = 1.6726e-24         ; [g]
-kboltzmann = 1.3807e-23         ; [SI]
-tunit      = 1.0/kboltzmann*1e-15 ; [using amu/cc and nPa]
-mu0        = 4*!pi*1e-7*1e9     ; [assuming nT for B and nPa for p]
-
 gamma  =  5./3.
 clight =  1.0
 rbody  = -1.0
