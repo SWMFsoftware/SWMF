@@ -295,7 +295,7 @@ F                       UseUserUpdateStates
 
 #SCHEME
 2                       nOrder
-Linde                   TypeFlux
+Roe                     TypeFlux
 mc                      TypeLimiter
 1.5                     LimiterBeta
 
