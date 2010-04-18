@@ -65,7 +65,7 @@ subroutine write_runtime_values()
   use ModImplicit,  ONLY: &                           !^CFG IF IMPLICIT
        UseImplicit, UseSemiImplicit, TypeSemiImplicit !^CFG IF IMPLICIT
   use ModUser, ONLY: user_write_progress
-  use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid
+  use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid, iFluid
   use ModFaceFlux,   ONLY: TypeFluxNeutral
   use CON_planet,   ONLY: NamePlanet, IsPlanetModified, Planet_, NewPlanet_, &
        RadiusPlanet, MassPlanet, TiltRotation, OmegaPlanet, OmegaOrbit, &
@@ -75,7 +75,7 @@ subroutine write_runtime_values()
   implicit none
 
   character(len=100):: String, StringFormat
-  integer           :: iError, iFluid
+  integer           :: iError
   real              :: DxMin, DxMax    
   !------------------------------------------------------------------------
 
