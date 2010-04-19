@@ -220,7 +220,7 @@ module ModUser
 
   ! Variables for the Bernoulli equation
   logical :: UseHeatFluxInBernoulli = .false.
-  logical :: IsNewBlockTe(MaxBlock) = .true.
+  logical :: IsNewBlockTe_B(MaxBlock) = .true.
   real :: HeatCondPar
   real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
@@ -510,7 +510,7 @@ contains
     call get_interpolated(ExpansionFactorInv_N, x, y, z, ExpansionFactorInv)
 
     Ewave = 0.0
-    if(ExpansionFactorInv < cTolerance) RETURN
+    if(ExpansionFactorInv < 1e-3) RETURN
 
     if(DeltaBPerB > cTolerance)then
        Ewave = (DeltaBPerB*Br)**2
@@ -662,7 +662,7 @@ contains
     !--------------------------------------------------------------------------
     call update_states_MHD(iStage, iBlock)
 
-    if(UseHeatFluxInBernoulli) IsNewBlockTe(iBlock) = .true.
+    if(UseHeatFluxInBernoulli) IsNewBlockTe_B(iBlock) = .true.
 
   end subroutine user_update_states
 
@@ -1125,7 +1125,7 @@ contains
          iDir = z_
       endif
 
-      if(IsNewBlockTe(iBlock))then
+      if(IsNewBlockTe_B(iBlock))then
          if(UseElectronPressure)then
             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                Te_G(i,j,k) = TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
@@ -1140,7 +1140,7 @@ contains
       end if
 
       call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
-           IsNewBlockTe(iBlock), Te_G, FaceGrad_D)
+           IsNewBlockTe_B(iBlock), Te_G, FaceGrad_D)
 
       ! Use 1D proxi for heat flux
       HeatFlux = -HeatCondPar*Tbase**2.5*sum(FaceGrad_D*Runit_D)
