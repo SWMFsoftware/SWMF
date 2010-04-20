@@ -1,0 +1,20 @@
+#!/bin/sh
+#PBS -V
+#PBS -A crash
+#PBS -q cac
+#PBS -N CRASH
+#PBS -l nodes=16:ppn=8:crash
+#PBS -l walltime=48:00:00
+
+# cd to job submission directory
+cd $PBS_O_WORKDIR
+
+# Check compiler versions
+which pgf90
+which mpif90
+
+#get queue status
+qstat -u $USER -n
+
+# run job on all PEs
+mpirun ./CRASH.exe > runlog_`date +%y%m%d%H%M`
