@@ -138,6 +138,8 @@ module ModUser
   logical :: UseFixedIonCharge = .false.
   real :: IonCharge_I(0:MaxMaterial-1) = 1.0
 
+  ! Factor to suppress the A.S.S.
+  real :: AssFactor = -1.0
 
   ! Indexes for lookup tables
   integer:: iTablePPerE = -1, iTableEPerP = -1, iTableThermo = -1
@@ -307,6 +309,10 @@ contains
        case("#RADIATIONSCALEFACTOR")
           ! Multiply the initial radiation by RadiationScaleFactor
           call read_var('RadiationScaleFactor', RadiationScaleFactor)
+
+       case("#ASS")
+          ! Multiply plastic pressure and negative Uy/Ur by AssFactor
+          call read_var('AssFactor', AssFactor)
 
        case('#USERINPUTEND')
           EXIT
@@ -1387,6 +1393,19 @@ contains
        end if
        State_VGB(p_,i,j,k,iBlock)  = DataHyades_V(iPHyades)
 
+       if(AssFactor > 0.0)then
+          ! Reduce plastic pressure
+          if(State_VGB(LevelPl_,i,j,k,iBlock)>0. .or. &
+               UseAy .and. State_VGB(LevelAy_,i,j,k,iBlock)>0.) &
+               State_VGB(p_,i,j,k,iBlock) &
+               = AssFactor*State_VGB(p_,i,j,k,iBlock)
+
+          ! Reduce inward velocity
+          if(State_VGB(RhoUy_,i,j,k,iBlock)<0.0) &
+               State_VGB(RhoUy_,i,j,k,iBlock) &
+               = AssFactor*State_VGB(RhoUy_,i,j,k,iBlock)
+       end if
+
        if(UseRadDiffusion)then
           if(UseHyadesGroupFile)then
              State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = EradHyades_V
@@ -2215,6 +2234,11 @@ contains
                 call interpolate_lookup_table(iTableOpacity_I(jMaterial), &
                      RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
 
+                GroupOpacity_W(1:nWave) = GroupOpacity_W(1:nWave) &
+                     *PlanckScaleFactor_I(jMaterial)
+                GroupOpacity_W(nWave+1:) = GroupOpacity_W(nWave+1:) &
+                     *RosselandScaleFactor_I(jMaterial)
+
                 if(present(OpacityPlanckOut_W)) &
                      OpacityPlanckOut_W = OpacityPlanckOut_W &
                      + Weight_I(jMaterial)*GroupOpacity_W(1:nWave) * RhoSi
@@ -2229,6 +2253,11 @@ contains
 
              call interpolate_lookup_table(iTableOpacity_I(iMaterial), &
                   RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
+
+             GroupOpacity_W(1:nWave) = GroupOpacity_W(1:nWave) &
+                  *PlanckScaleFactor_I(iMaterial)
+             GroupOpacity_W(nWave+1:) = GroupOpacity_W(nWave+1:) &
+                  *RosselandScaleFactor_I(iMaterial)
 
              if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
                   = GroupOpacity_W(1:nWave)*RhoSi
@@ -2245,6 +2274,13 @@ contains
              call eos(iMaterial, RhoSi, TeIn=TeSi, &
                   OpacityPlanckOut_I=OpacityPlanckOut_W, &
                   OpacityRosselandOut_I=OpacityRosselandOut_W)
+
+             OpacityPlanckOut_W = OpacityPlanckOut_W &
+                  *PlanckScaleFactor_I(iMaterial)
+
+             OpacityRosselandOut_W = OpacityRosselandOut_W &
+                  *RosselandScaleFactor_I(iMaterial)
+             
           end if
 
        end if
