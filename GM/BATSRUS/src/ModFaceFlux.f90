@@ -2351,7 +2351,7 @@ contains
 
       if(UseWavePressure) &
            pTotal = pTotal + (GammaWave-1.0)*sum(State_V(WaveFirst_:WaveLast_))
-      if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
+      if(UseElectronPressure .and. .not.UseMultiIon) pTotal = pTotal + State_V(Pe_)
 
       ! Normal velocity
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
@@ -2764,7 +2764,8 @@ contains
       ! Calculate sound speed and normal speed
       InvRho = 1.0/State_V(iRho)
       p = State_V(iP)
-      if(UseElectronPressure) p = p + State_V(Pe_)
+      
+      if(UseElectronPressure .and. .not.UseMultiIon) p = p + State_V(Pe_)
       Sound2 = g*p*InvRho
 
       if(UseWavePressure) &
