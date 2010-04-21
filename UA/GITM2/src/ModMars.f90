@@ -5,32 +5,37 @@ module ModPlanet
   use ModSizeGITM
 
   implicit none
-
 ! Modified (01/18/07) : SWB :   Aij, s-exponents for mutual diffusion
-! Majors (4):  COntrol the Pressures Gradients and winds
-  integer, parameter :: nSpecies = 4
+! Modified (06/12/08) : SWB :   ordering to species revised
+! Modified (06/12/08) : SWB :   nSpecies = 6; nSpeciesTotal = 11
+! Majors (6):  COntrol the Pressures Gradients and winds
+  integer, parameter :: nSpecies = 6
   integer, parameter :: iCO2_    = 1
   integer, parameter :: iCO_     = 2
   integer, parameter :: iO_      = 3
   integer, parameter :: iN2_     = 4
+  integer, parameter :: iO2_    = 5
+  integer, parameter :: iAr_    = 6
 
 ! Minors (6) : Ride on background of mean winds derived from majors
-  integer, parameter :: iN_  =  5
-  integer, parameter :: iNO_ =  6
-  integer, parameter :: iAr_ =  7
-  integer, parameter :: iO2_ =  8
-  integer, parameter :: iHe_ =  9
-  integer, parameter :: iH_  =  10
-  integer, parameter :: nSpeciesTotal = iH_
+  integer, parameter :: iN4S_  =  7
+  integer, parameter :: iHe_ =  8
+  integer, parameter :: iH_ =  9
+  integer, parameter :: iN2D_ =  10
+  integer, parameter :: iNO_ =  11
+  integer, parameter :: nSpeciesTotal = iNO_
 
-! Major Ions (4):  Most Important to MWACM code
-  integer, parameter  :: iO2P_  = 1
-  integer, parameter  :: iCO2P_ = 2
-  integer, parameter  :: iNOP_  = 3
-  integer, parameter  :: iOP_   = 4
-  integer, parameter  :: ie_    = 5
+! Major Ions (5):  Most Important to MWACM code
+! Modified (05/21/08) : SWB :   Add N2+ to major ions list
+  integer, parameter  :: iOP_  = 1
+  integer, parameter  :: iO2P_  = 2
+  integer, parameter  :: iCO2P_ = 3
+  integer, parameter  :: iN2P_  = 4
+  integer, parameter  :: iNOP_  = 5
+  integer, parameter  :: ie_    = 6
   integer, parameter  :: nIons  = ie_
-  integer, parameter  :: nIonsAdvect = 4
+  integer, parameter  :: nIonsAdvect = 0
+  integer, parameter  :: nSpeciesAll = 16 !Ions plus neutrals
 
   character (len=20) :: cSpecies(nSpeciesTotal)
   character (len=20) :: cIons(nIons)
@@ -111,55 +116,55 @@ module ModPlanet
   ! These are Modified for Mars by SWB: 1/18/07
   ! -- Most source state Dij = Dji (check)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+ real, parameter, dimension(6, 6) :: Diff0 = 1.0e17 * reshape( (/ &
   ! These are Aij coefficients from B&K (1973) formulation: Aij*1.0E+17
   ! Use Jared Bell's Titan GITM formulation for Mars GITM
-
-  real, parameter, dimension(4, 4) :: Diff0 = 1.0e17 * reshape( (/ &
 ! integer, parameter :: iCO2_    = 1
 ! integer, parameter :: iCO_     = 2
 ! integer, parameter :: iO_      = 3
 ! integer, parameter :: iN2_     = 4
-     !---------------------------------+
-     ! i=C02      CO      O     N2  
-     !---------------------------------+
-!       0.0000, 0.7762, 0.2119,  0.6580, &            ! CO2
-!       0.4940, 0.0000, 0.9466,  0.9280, &            ! CO
-!       0.7703, 0.9481, 0.0000,  0.9690, &            ! O
-!       0.6580, 0.9280, 0.9690,  0.0000 /), (/4,4/) ) ! N2
-!
-       0.0000, 0.7762, 0.2119,  0.6580, &            ! CO2
-       0.7762, 0.0000, 0.9466,  0.9280, &            ! CO
-       0.2219, 0.9466, 0.0000,  0.9690, &            ! O
-       0.6580, 0.9280, 0.9690,  0.0000 /), (/4,4/) ) ! N2
+! integer, parameter :: iO2_     = 5
+! integer, parameter :: iAr_     = 6
+     !------------------------------------------------+
+     ! i=C02      CO      O        N2      O2      Ar  
+     !------------------------------------------------+
+       0.0000, 0.7762, 0.2219,  0.6580,  0.5770, 1.1920,         &  ! CO2
+       0.7762, 0.0000, 0.9466,  0.9280,  0.8300, 0.6625,         &  ! CO
+       0.2219, 0.9466, 0.0000,  0.9690,  0.9690, 0.5510,         &  ! O
+       0.6580, 0.9280, 0.9690,  0.0000,  0.7150, 0.6640,         &  ! N2
+       0.5770, 0.8300, 0.9690,  0.7150,  0.0000, 0.7170,         &  ! O2
+       1.1920, 0.6625, 0.5510,  0.6640,  0.7170, 0.000 /), (/6,6/) )! Ar
 
   ! These are s-exponents from B&K (1973) formulation: T**s
-  real, parameter, dimension(4, 4) :: DiffExp = reshape( (/ &
-       !---------------------------------+
-       !i= CO2    CO      O      N2
-       !---------------------------------+
-       0.000,  0.750,  0.750, 0.752, &             ! CO2
-       0.750,  0.000,  0.750, 0.710, &             ! CO
-       0.750,  0.750,  0.000, 0.774, &             ! O
-       0.752,  0.710,  0.774, 0.000 /), (/4,4/) )  ! N2
 
+   real, parameter, dimension(6, 6) :: DiffExp = reshape( (/ &
+     !------------------------------------------------+
+     ! i=C02      CO      O     N2     O2     Ar  
+     !------------------------------------------------+
+       0.000,  0.750,  0.750, 0.752, 0.749, 0.750,  &           ! CO2
+       0.750,  0.000,  0.750, 0.710, 0.724, 0.750,  &           ! CO
+       0.750,  0.750,  0.000, 0.774, 0.774, 0.841,  &           ! O
+       0.752,  0.710,  0.774, 0.000, 0.750, 0.752,  &           ! N2
+       0.749,  0.724,  0.774, 0.750, 0.000, 0.736,  &           ! O2
+       0.750,  0.750,  0.841, 0.752, 0.736, 0.000 /), (/6,6/) ) ! AR
+ 
 !     Arrays filled in init_radcool in data statements (np = 68)
-  integer, parameter :: np=68
+  integer, parameter :: np=68,nInAlts = 124
   real,dimension(np) :: pnbr,ef1,ef2,co2vmr,o3pvmr,n2covmr
 
   !! Stuff for initial conditions
 
-  real , Dimension(-1:nAlts + 2) :: newalt
-  real , Dimension(-1:nAlts + 2) :: InTemp
-  real , Dimension(-1:nAlts + 2) :: IneTemp
-  real , Dimension(-1:nAlts + 2) :: InITemp
-  real , Dimension(-1:nAlts + 2,nSpeciesTotal) :: InNDensityS 
-  real , Dimension(-1:nAlts + 2,nIons) :: InIDensityS
+  real , Dimension(nInAlts) :: newalt
+  real , Dimension(nInAlts) :: InTemp
+  real , Dimension(nInAlts) :: IneTemp
+  real , Dimension(nInAlts) :: InITemp
+  real , Dimension(nInAlts,nSpeciesTotal) :: InNDensityS 
+  real , Dimension(nInAlts,nIons) :: InIDensityS
 
   real, parameter:: AltMinIono=100.0 ! in km
 
   real, dimension(nLons, nLats,nBlocksMax) :: &
-       fir,fvis,Tbot,TopL,Psurf,P125
+       fir,fvis,Tbot,TopL,Psurf,P125,iAltMinIono
 
 !################ Nelli, April 07 ##########################
 !Setting up parameters needed by the correlated k lower
@@ -423,25 +428,26 @@ contains
     use ModTime
     use ModIoUnit, only : UnitTmp_
 
-    integer :: iTime(7), iiAlt
-
-!   Mass = AMU * mean molecular weight  (unlike TGCM codes)
+    integer :: iTime(7), iiAlt,ialt
+   
+    !   Mass = AMU * mean molecular weight  (unlike TGCM codes)
 
     Mass(iO_)    = 15.9994 * AMU
     Mass(iCO_)   = 12.011 * AMU + Mass(iO_)
     Mass(iCO2_)  = Mass(iCO_) + Mass(iO_)
-    Mass(iN_)    = 14.00674 * AMU
-    Mass(iN2_)   = Mass(iN_) * 2
-    Mass(iNO_)   = Mass(iN_) + Mass(iO_)
+    Mass(iN4S_)    = 14.00674 * AMU
+    Mass(iN2D_)    = Mass(iN4S_)
+    Mass(iN2_)   = Mass(iN4S_) * 2
+    Mass(iNO_)   = Mass(iN4S_) + Mass(iO_)
 
     Mass(iO2_)   = 2 * Mass(iO_)
-    Mass(iAr_)   = 39.948 * AMU * 2
-    Mass(iHe_)   = 4.0026 * AMU * 2
-    Mass(iH_)    = 1.0079 * AMU * 2
+    Mass(iAr_)   = 39.948 * AMU 
+    Mass(iHe_)   = 4.0026 * AMU 
+    Mass(iH_)    = 1.0079 * AMU
 
     cSpecies(iO_)    = "O"
     cSpecies(iO2_)   = "O!D2!N"
-    cSpecies(iN_)    = "N"
+    cSpecies(iN4S_)    = "N"
     cSpecies(iN2_)   = "N!D2!N"
     cSpecies(iCO_)   = "CO"
     cSpecies(iCO2_)  = "CO!D2!N"
@@ -454,6 +460,7 @@ contains
     cIons(iCO2P_)   = "CO!D2!U+!N"
     cIons(iNOP_)   = "NO!U+!N"
     cIons(iOP_)    = "O!U+!N"
+    cIons(iN2P_)    = "N!D2!U+!N"
     cIons(ie_)     = "e-"
 
     Vibration(iCO2_)  = 7.0  ! Corrected by Bougher (01/18/07)!!!!
@@ -488,18 +495,19 @@ contains
     InNDensityS(:,:) = 1.0e+3
     InIDensityS(:,:) = 1.0e+3
 
-    do iiAlt = -1,nAlts+2
+    do iiAlt = 1,124
+
        read(UnitTmp_,111) &
             newalt(iiAlt), &
             InTemp(iiAlt), &
             InITemp(iiAlt), &
             IneTemp(iiAlt), &
-            !
+                                !
             InNDensityS(iiAlt,iCO2_), &
             InNDensityS(iiAlt,iO2_), &
             InNDensityS(iiAlt,iCO_), &
             InNDensityS(iiAlt,iN2_), &
-            !
+                                !
             InNDensityS(iiAlt,iO_), &
             InNDensityS(iiAlt,iAr_), &
             
@@ -507,22 +515,24 @@ contains
 
     end do
 
+    InNDensityS = Alog(inNDensityS)
     close(Unit = UnitTmp_)
 
+    
 
-!######## Nelli, April 07 ################################
-!              
-!C             PURPOSE IS TO SET UP THE CORRELATED K LOWER ATMOPSHERE
-!C             RADIATION CODE.
-!C             INITIALIZATION CONSISTS MAINLY OF READING INPUT VALUES,
-!C             CALCULATING CONSTANTS FOR USE IN THE RADIATION CODE, AND
-!C             INITIALIZING THE SET OF VALUES MAINTAINED FOR EACH BAND PASS
+    !######## Nelli, April 07 ################################
+    !              
+    !C             PURPOSE IS TO SET UP THE CORRELATED K LOWER ATMOPSHERE
+    !C             RADIATION CODE.
+    !C             INITIALIZATION CONSISTS MAINLY OF READING INPUT VALUES,
+    !C             CALCULATING CONSTANTS FOR USE IN THE RADIATION CODE, AND
+    !C             INITIALIZING THE SET OF VALUES MAINTAINED FOR EACH BAND PASS
 
-!C  Set up the radiation code stuff
+    !C  Set up the radiation code stuff
 
-      CALL RADSETUP
+    CALL RADSETUP
 
-!###########################################################
+    !###########################################################
 
   end subroutine init_planet
 
@@ -986,6 +996,7 @@ contains
 !C     Get CO2 k coefficients, and interpolate them to the finer
 !C     pressure grid.
 
+
       call laginterp(pgasref,pfgasref)
 
       
@@ -1301,10 +1312,6 @@ contains
   subroutine init_magheat
   return
   end subroutine init_magheat
-
-  subroutine init_isochem
-  return
-  end subroutine init_isochem
 
   subroutine init_aerosol
   return

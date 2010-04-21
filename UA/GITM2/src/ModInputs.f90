@@ -139,6 +139,8 @@ module ModInputs
   logical :: UseIonDrag          = .true.
   logical :: UseViscosity        = .true.
   logical :: UseCoriolis         = .true.
+  logical :: UseGravity         = .false.
+
   logical :: UseHorAdvection     = .true.
   logical :: UseVerAdvection     = .true.
   logical :: UseNeutralFriction  = .true.

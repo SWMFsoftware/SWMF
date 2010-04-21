@@ -17,14 +17,18 @@ module ModSources
        EuvHeating,eEuvHeating, &
        RadCooling, RadCoolingRate, RadCoolingErgs, EuvHeatingErgs, &
        LowAtmosRadRate
+
+  real, dimension(nLons,nLats,nAlts,3) :: GWAccel = 0.0
+
   !\
   ! Reactions used in chemistry output
   ! i.e. in2p_e -->  n2+ + e
   !      ino_n  -->  no + n
   !/
 
+  
   integer, parameter :: nReactions = 26
-  real :: ChemicalHeatingSpecies(nLons, nLats, nAlts,nReactions)
+ real :: ChemicalHeatingSpecies(nLons, nLats, nAlts,nReactions)
   real :: ChemicalHeatingS(nReactions)
   real :: NeutralSourcesTotal(nLons,nLats,nAlts,nSpeciesTotal,nBlocksMax)
   real :: NeutralLossesTotal(nLons,nLats,nAlts,nSpeciesTotal,nBlocksMax)
@@ -57,6 +61,8 @@ module ModSources
   integer, parameter ::    iop2p_e = 24
   integer, parameter ::    iop2p_o = 25
   integer, parameter ::    iop2p_n2 = 26
+
+
 
 
   !\
