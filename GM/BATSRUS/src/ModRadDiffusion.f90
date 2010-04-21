@@ -1303,7 +1303,7 @@ contains
     use ModMain,     ONLY: nI, nJ, nK
     use ModNumConst, ONLY: i_DD
 
-    integer, parameter:: nStencil = 7 !!! 2*nDim + 1
+    integer, parameter:: nStencil = 2*nDim + 1
 
     integer, intent(in) :: iBlock, nVar
     real, intent(inout) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
