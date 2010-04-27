@@ -103,7 +103,7 @@ subroutine init_b0
   !         Element_Charge * B0(:,:,:,Magnitude,iBlock) /  Mass_Electron
 
   !\\\
-  if (maxval(b0) > 1.0) then begin
+  if (maxval(b0) > 1.0) then
      call MMT_Init
   endif
   !///
