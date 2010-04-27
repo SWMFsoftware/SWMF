@@ -250,6 +250,9 @@ subroutine set_inputs
               if (UseWACCMTides) UseMSISOnly = .true.
            endif
 
+        case ("#GRAVITYWAVE")
+           call read_in_logical(UseGravityWave,iError)
+
         CASE ("#GSWMCOMP")
            DO i=1,4
               CALL read_in_logical(UseGswmComp(i), iError)

@@ -106,7 +106,7 @@ subroutine calc_planet_sources(iBlock)
   ! (1) calc_radcooling(iBlock):  added 1/31/07 (BOUGHER)
   ! (2) calc_radcode(iBlock)   :  to be added later (NELLI)
 
-!  if (useGravityWave)  call calc_GW(iBlock)
+  if (useGravityWave)  call calc_GW(iBlock)
   
   !\ -------------------------------------------------------------------
   ! CO2 NLTE Cooling Formulation from Miguel Lopez-Valverde (2001)
@@ -816,7 +816,7 @@ end subroutine init_isochem
 
      !   MAIN DO LOOPS... OVER LONGITUDE AND LATITUDE
      GWAccel(:,:,:,:) = 0.0
-
+     write(*,*) "yes"
      if (CurrentTime-StartTime .lt. 3600) then
         return
      endif
