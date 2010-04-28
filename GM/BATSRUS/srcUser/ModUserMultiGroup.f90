@@ -180,7 +180,8 @@ contains
   subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModImplicit,   ONLY: StateSemi_VGB, iTrImplFirst, iTrImplLast
+    use ModImplicit,   ONLY: StateSemi_VGB, iTrImplFirst, iTrImplLast, &
+         UseSplitSemiImplicit, iVarSemi
     use ModMain,       ONLY: nI, nJ, nK
     use ModPhysics,    ONLY: cRadiationNo
     use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_
@@ -202,7 +203,7 @@ contains
        case('user')
           ! float, just for the sake of having filled in ghost cells
           State_VGB(:,0,:,:,iBlock)  = State_VGB(:,1,:,:,iBlock)
-          State_VGB(:,-1,:,:,iBlock)  = State_VGB(:,1,:,:,iBlock)
+          State_VGB(:,-1,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
           ! bin 1 starts on the left
           State_VGB(WaveFirst_,-1:0,:,:,iBlock) = 1.0
        case('usersemi')
@@ -212,11 +213,18 @@ contains
              do k = 1, nK; do j = 1, nJ
                 StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = 1.0
              end do; end do
+          elseif(UseSplitSemiImplicit)then
+             if(iVarSemi == iTrImplFirst)then
+                StateSemi_VGB(1,0,1:nJ,1:nK,iBlock) = 1.0
+             else
+                StateSemi_VGB(1,0,1:nJ,1:nK,iBlock) = &
+                     StateSemi_VGB(1,1,1:nJ,1:nK,iBlock)
+             end if
           else
              do k = 1, nK; do j = 1, nJ
                 StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = 1.0
-                StateSemi_VGB(iTrImplLast,0,j,k,iBlock) = &
-                     StateSemi_VGB(iTrImplLast,1,j,k,iBlock)
+                StateSemi_VGB(iTrImplFirst+1:iTrImplLast,0,j,k,iBlock) = &
+                     StateSemi_VGB(iTrImplFirst+1:iTrImplLast,1,j,k,iBlock)
              end do; end do
           end if
        end select
@@ -227,19 +235,27 @@ contains
           State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
           State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
           ! bin 2 starts on the right
-           if(nWave > 1) State_VGB(WaveLast_,nI+1:nI+2,:,:,iBlock) = 1.0
+          if(nWave > 1) &
+               State_VGB(WaveFirst_+1:WaveLast_,nI+1:nI+2,:,:,iBlock) = 1.0
        case('usersemi')
           if(nWave == 1)then
              do k = 1, nK; do j = 1, nJ
                 StateSemi_VGB(iTrImplFirst,nI+1,j,k,iBlock) = &
                      StateSemi_VGB(iTrImplFirst,nI,j,k,iBlock)
              end do; end do
+          elseif(UseSplitSemiImplicit)then
+             if(iVarSemi == iTrImplFirst)then
+                StateSemi_VGB(1,nI+1,1:nJ,1:nK,iBlock) = &
+                     StateSemi_VGB(1,nI,1:nJ,1:nK,iBlock)
+             else
+                StateSemi_VGB(1,nI+1,1:nJ,1:nK,iBlock) = 1.0
+             end if
           else
              ! bin 2 starts on the right
              do k = 1, nK; do j = 1, nJ
                 StateSemi_VGB(iTrImplFirst,nI+1,j,k,iBlock) = &
                      StateSemi_VGB(iTrImplFirst,nI,j,k,iBlock)
-                StateSemi_VGB(iTrImplLast,nI+1,j,k,iBlock) = 1.0
+                StateSemi_VGB(iTrImplFirst+1:iTrImplLast,nI+1,j,k,iBlock) = 1.0
              end do; end do
           end if
        end select
@@ -256,12 +272,19 @@ contains
              do k = 1, nK; do i = 1, nI
                 StateSemi_VGB(iTrImplFirst,i,0,k,iBlock) = 1.0
              end do; end do
+          elseif(UseSplitSemiImplicit)then
+             if(iVarSemi == iTrImplFirst)then
+                StateSemi_VGB(1,1:nI,0,1:nK,iBlock) = 1.0
+             else
+                StateSemi_VGB(1,1:nI,0,1:nK,iBlock) = &
+                     StateSemi_VGB(1,1:nI,1,1:nK,iBlock)
+             end if
           else
              ! bin 1 starts on the left
              do k = 1, nK; do i = 1, nI
                 StateSemi_VGB(iTrImplFirst,i,0,k,iBlock) = 1.0
-                StateSemi_VGB(iTrImplLast,i,0,k,iBlock) = &
-                     StateSemi_VGB(iTrImplLast,i,1,k,iBlock)
+                StateSemi_VGB(iTrImplFirst+1:iTrImplLast,i,0,k,iBlock) = &
+                     StateSemi_VGB(iTrImplFirst+1:iTrImplLast,i,1,k,iBlock)
              end do; end do
           end if
        end select
@@ -272,19 +295,27 @@ contains
           State_VGB(:,:,nJ+1,:,iBlock) = State_VGB(:,:,nJ,:,iBlock)
           State_VGB(:,:,nJ+2,:,iBlock) = State_VGB(:,:,nJ,:,iBlock)
           ! bin 2 starts on the right
-          if(nWave > 1) State_VGB(WaveLast_,:,nJ+1:nJ+2,:,iBlock) = 1.0
+          if(nWave > 1) &
+               State_VGB(WaveFirst_+1:WaveLast_,:,nJ+1:nJ+2,:,iBlock) = 1.0
        case('usersemi')
           if(nWave == 1)then
              do k = 1, nK; do i = 1, nI
                 StateSemi_VGB(iTrImplFirst,i,nJ+1,k,iBlock) = &
                      StateSemi_VGB(iTrImplFirst,i,nJ,k,iBlock)
              end do; end do
+          elseif(UseSplitSemiImplicit)then
+             if(iVarSemi == iTrImplFirst)then
+                StateSemi_VGB(1,1:nI,nJ+1,1:nK,iBlock) = &
+                     StateSemi_VGB(1,1:nI,nJ,1:nK,iBlock)
+             else
+                StateSemi_VGB(1,1:nI,nJ+1,1:nK,iBlock) = 1.0
+             end if
           else
              ! bin 2 starts on the right
              do k = 1, nK; do i = 1, nI
                 StateSemi_VGB(iTrImplFirst,i,nJ+1,k,iBlock) = &
                      StateSemi_VGB(iTrImplFirst,i,nJ,k,iBlock)
-                StateSemi_VGB(iTrImplLast,i,nJ+1,k,iBlock) = 1.0
+                StateSemi_VGB(iTrImplFirst+1:iTrImplLast,i,nJ+1,k,iBlock) = 1.0
              end do; end do
           end if
        end select
@@ -302,11 +333,18 @@ contains
              do j = 1, nJ; do i = 1, nI
                 StateSemi_VGB(iTrImplFirst,i,j,0,iBlock) = 1.0
              end do; end do
+          elseif(UseSplitSemiImplicit)then
+             if(iVarSemi == iTrImplFirst)then
+                StateSemi_VGB(1,1:nI,1:nJ,0,iBlock) = 1.0
+             else
+                StateSemi_VGB(1,1:nI,1:nJ,0,iBlock) = &
+                     StateSemi_VGB(1,1:nI,1:nJ,1,iBlock)
+             end if
           else
              do j = 1, nJ; do i = 1, nI
                 StateSemi_VGB(iTrImplFirst,i,j,0,iBlock) = 1.0
-                StateSemi_VGB(iTrImplLast,i,j,0,iBlock) = &
-                     StateSemi_VGB(iTrImplLast,i,j,1,iBlock)
+                StateSemi_VGB(iTrImplFirst+1:iTrImplLast,i,j,0,iBlock) = &
+                     StateSemi_VGB(iTrImplFirst+1:iTrImplLast,i,j,1,iBlock)
              end do; end do
           end if
        end select
@@ -317,19 +355,27 @@ contains
           State_VGB(:,:,:,nK+1,iBlock) = State_VGB(:,:,:,nK,iBlock)
           State_VGB(:,:,:,nK+2,iBlock) = State_VGB(:,:,:,nK,iBlock)
           ! bin 2 starts on the right
-          if(nWave > 1) State_VGB(WaveLast_,:,:,nK+1:nK+2,iBlock) = 1.0
+          if(nWave > 1) &
+               State_VGB(WaveFirst_+1:WaveLast_,:,:,nK+1:nK+2,iBlock) = 1.0
        case('usersemi')
           if(nWave == 1)then
              do j = 1, nJ; do i = 1, nI
                 StateSemi_VGB(iTrImplFirst,i,j,nK+1,iBlock) = &
                      StateSemi_VGB(iTrImplFirst,i,j,nK,iBlock)
              end do; end do
+          elseif(UseSplitSemiImplicit)then
+             if(iVarSemi == iTrImplFirst)then
+                StateSemi_VGB(1,1:nI,1:nJ,nK+1,iBlock) = &
+                     StateSemi_VGB(1,1:nI,1:nJ,nK,iBlock)
+             else
+                StateSemi_VGB(1,1:nI,1:nJ,nK+1,iBlock) = 1.0
+             end if
           else
              ! bin 2 starts on the right
              do j = 1, nJ; do i = 1, nI
                 StateSemi_VGB(iTrImplFirst,i,j,nK+1,iBlock) = &
                      StateSemi_VGB(iTrImplFirst,i,j,nK,iBlock)
-                StateSemi_VGB(iTrImplLast,i,j,nK+1,iBlock) = 1.0
+                StateSemi_VGB(iTrImplFirst+1:iTrImplLast,i,j,nK+1,iBlock) = 1.0
              end do; end do
           end if
        end select
@@ -412,31 +458,9 @@ contains
           PlotVar_G(i,j,k) = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))&
                + EinternalSi*Si2No_V(UnitEnergyDens_)
        end do; end do; end do
-    case('dy')
-       PlotVar_G(:,:,:) = dy_BLK(iBlock)
-    case('dz')
-       PlotVar_G(:,:,:) = dz_BLK(iBlock)
     case default
        IsFound = .false.
     end select
-
-    if(nWave < 10)then
-       NameFormat = "(a,i1)"
-    else
-       NameFormat = "(a,i2.2)"
-    end if
-
-    do iWave = 1, nWave
-       write(NameWave, NameFormat) 'erad', iWave
-       if(NameVar == NameWave)then
-          iVar = WaveFirst_ + iWave -1
-          do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-             PlotVar_G(i,j,k) = State_VGB(iVar,i,j,k,iBlock)
-          end do; end do; end do
-          IsFound = .true.
-          EXIT
-       end if
-    end do
 
     if(TypeProblem == 'planckian' .and. NameVar == 'planckian')then
        IsFound = .true.
