@@ -62,7 +62,7 @@ subroutine write_runtime_values()
   use ModAdvance,   ONLY: FluxType
   use ModGeometry,  ONLY: x1,x2,y1,y2,z1,z2,minDXvalue,maxDXvalue,dx_BLK
   use ModParallel,  ONLY: proc_dims
-  use ModImplicit,  ONLY: &                           !^CFG IF IMPLICIT
+  use ModImplicit,  ONLY: UseSplitSemiImplicit, &     !^CFG IF IMPLICIT
        UseImplicit, UseSemiImplicit, TypeSemiImplicit !^CFG IF IMPLICIT
   use ModUser, ONLY: user_write_progress
   use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid, iFluid
@@ -245,8 +245,13 @@ subroutine write_runtime_values()
   if (UseImplicit) then                            !^CFG IF IMPLICIT BEGIN
      write(iUnitOut,'(10X,a)') 'Implicit time stepping'
   elseif(UseSemiImplicit)then
-     write(iUnitOut,'(10X,a)') 'Semi-implicit time stepping for '// &
-          trim(TypeSemiImplicit)
+     if(UseSplitSemiImplicit)then
+        write(iUnitOut,'(10X,a)') 'Split semi-implicit time stepping for '// &
+             trim(TypeSemiImplicit)
+     else
+        write(iUnitOut,'(10X,a)') 'Semi-implicit time stepping for '// &
+             trim(TypeSemiImplicit)
+     end if
   else                                             !^CFG END IMPLICIT
      write(iUnitOut,'(10X,a)') 'Explicit time stepping'
   end if                                           !^CFG IF IMPLICIT

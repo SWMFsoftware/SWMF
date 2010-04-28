@@ -342,7 +342,7 @@ subroutine impl_jacobian(implBLK,JAC)
   if(UseHallResist .and. .not. UseCovariant)call impl_hall_resist
   if(UseHallResist .and.       UseCovariant)call impl_hall_resist_general
 
-  if(UseRadDiffusion) call add_jacobian_rad_diff(iBLK, nw, JAC)
+  if(UseRadDiffusion) call add_jacobian_rad_diff(iBLK, JAC)
 
   ! Multiply JAC by the implicit timestep dt and ImplCoeff
   if(time_accurate)then

@@ -749,17 +749,17 @@ contains
 
   !============================================================================
 
-  subroutine add_jacobian_heat_cond(iBlock, nVar, Jacobian_VVCI)
+  subroutine add_jacobian_heat_cond(iBlock, Jacobian_VVCI)
 
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, UseCovariant
-    use ModImplicit, ONLY: iTeImpl
+    use ModImplicit, ONLY: iTeImpl, nVarSemi
     use ModMain,     ONLY: nI, nJ, nK, nDim
     use ModNumConst, ONLY: i_DD
 
     integer, parameter:: nStencil = 2*nDim + 1
 
-    integer, intent(in) :: iBlock, nVar
-    real, intent(inout) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
+    integer, intent(in) :: iBlock
+    real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
     integer :: i, j, k, iDim, Di, Dj, Dk
     real :: DiffLeft, DiffRight, Dxyz_D(nDim)

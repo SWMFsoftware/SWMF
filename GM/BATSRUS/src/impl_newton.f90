@@ -67,17 +67,16 @@ subroutine impl_newton_init
              + coef2*(Impl_VGB(iw,i,j,k,implBLK) &
              -        ImplOld_VCB(iw,i,j,k,iBLK)))/wnrm(iw)
      end do; end do; enddo; enddo; enddo
-  else
-     do implBLK = 1, nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
-        n=n+1
-        ! RHS = dt*R/wnrm for the first iteration
-        rhs(n)=ResExpl_VCB(iw,i,j,k,implBLK)*dtcoeff/wnrm(iw)
 
-        !!!DEBUG
-        !if(i==Itest.and.j==Jtest.and.k==Ktest) &
-        !  write(*,*)'iw,ResExpl_VCB,rhs=', iw, ResExpl_VCB(i,j,k,iw), rhs(n)
+  else
+     do implBLK = 1, nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI
+        do iw=1,nVarSemi
+           n=n+1
+           ! RHS = dt*R/wnrm for the first iteration
+           rhs(n)=ResExpl_VCB(iw,i,j,k,implBLK)*dtcoeff/wnrm(iw)
 
      end do; end do; enddo; enddo; enddo
+
   endif
 
   if(UseNewton .or. UseConservativeImplicit)then
@@ -109,15 +108,15 @@ subroutine impl_newton_init
   select case(KrylovInitType)
   case('explicit')
      ! w_n+1-w_n = dt * R_n
-     dw(1:nimpl)=rhs(1:nimpl)
+     dw(1:nimpl) = rhs(1:nimpl)
   case('scaled')
      ! Like explicit, but amplitude reduced
      ! w_n+1-w_n = dtexpl * R_n
-     dw(1:nimpl)=rhs(1:nimpl)/dtcoeff
+     dw(1:nimpl) = rhs(1:nimpl)/dtcoeff
   case('nul')
      ! w_n+1-w_n = 0
-     dw(1:nimpl)=0.0
-     non0dw=.false.
+     dw(1:nimpl) = 0.0
+     non0dw = .false.
   case('old')
   case default
      call stop_mpi('Unknown type for KrylovInitType='//KrylovInitType)
@@ -222,10 +221,12 @@ subroutine impl_newton_update(dwnrm, converged)
 
      ! w=w+dw for all true cells
      n=0
-     do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
+     do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI;
+        do iw = iVarSemiMin, iVarSemiMax
         n=n+1
         if(true_cell(i,j,k,impl2iBLK(implBLK)))&
-             Impl_VGB(iw,i,j,k,implBLK)=Impl_VGB(iw,i,j,k,implBLK)+coeff*dw(n)*wnrm(iw)
+             Impl_VGB(iw,i,j,k,implBLK) = Impl_VGB(iw,i,j,k,implBLK) &
+             + coeff*dw(n)*wnrm(iw)
      enddo; enddo; enddo; enddo; enddo
 
      if(UseConservativeImplicit .or. .not.Converged) then
@@ -234,8 +235,8 @@ subroutine impl_newton_update(dwnrm, converged)
         else
            !calculate low order residual ResImpl_VCB = dtexpl*RES_low(k+1)
            !                  low,   no dt, subtract
-           call get_residual(.true.,.false.,.true.,Impl_VGB(:,1:nI,1:nJ,1:nK,:),&
-                ResImpl_VCB)
+           call get_residual(.true., .false., .true., &
+                Impl_VGB(:,1:nI,1:nJ,1:nK,:), ResImpl_VCB)
         end if
      end if
 
@@ -254,8 +255,8 @@ subroutine impl_newton_update(dwnrm, converged)
      endif
 
      ! Calculate norm of high order residual
-     residual=0.0
-     do iw=1,nw
+     residual = 0.0
+     do iw = 1, nw
         call MPI_allreduce(sum(Impl_VGB(iw,1:nI,1:nJ,1:nK,1:nImplBLK)**2),&
              wnrm2,   1,MPI_REAL,MPI_SUM,iComm,iError)
         call MPI_allreduce(sum(ResExpl_VCB(iw,1:nI,1:nJ,1:nK,1:nImplBLK)**2),&

@@ -274,11 +274,22 @@ subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, Var_VCB, &
 
 end subroutine get_residual
 !==============================================================================
+subroutine set_semi_impl_range
+
+  use ModRadDiffusion, ONLY: set_rad_diff_range
+
+  implicit none
+  
+  !select case(TypeSemiImplicit)
+  call set_rad_diff_range
+
+end subroutine set_semi_impl_range
+!==============================================================================
 subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
   use ModProcMH, ONLY: iProc
-  use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
-       TypeSemiImplicit
+  use ModImplicit, ONLY: StateSemi_VGB, nw, nVarSemi, nImplBlk, impl2iblk, &
+       TypeSemiImplicit, iVarSemiMin, iVarSemiMax, nVarSemi
   use ModLinearSolver, ONLY: UsePDotADotP
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
@@ -290,7 +301,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   implicit none
 
   real, intent(in)  :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
-  real, intent(out) :: Rhs_VCB(nw,nI,nJ,nK,MaxImplBlk)
+  real, intent(out) :: Rhs_VCB(nVarSemi,nI,nJ,nK,MaxImplBlk)
 
   integer :: iImplBlock, iBlock, i, j, k, iVar
 
@@ -299,19 +310,21 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   ! Fill in StateSemi so it can be message passed
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
-     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nw
-        StateSemi_VGB(iVar,i,j,k,iBlock) = StateImpl_VGB(iVar,i,j,k,iImplBlock)
-     end do; end do; end do; end do
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        StateSemi_VGB(:,i,j,k,iBlock) = &
+             StateImpl_VGB(iVarSemiMin:iVarSemiMax,i,j,k,iImplBlock)
+     end do; end do; end do
   end do
 
   ! Message pass to fill in ghost cells 
   select case(TypeSemiImplicit)
   case('radiation', 'radcond', 'cond')
-     call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
-          ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB,restrictface=.true.)
+     call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, SendCorners=.false.,&
+          ProlongOrder=1, nVar=nVarSemi, Sol_VGB=StateSemi_VGB, &
+          restrictface=.true.)
   case('parcond')
      ! DoOneLayer, DoFacesOnly, UseMonotoneRestrict, nVar, State_VGB
-     call message_pass_cells8(.true., .false., .true., nw, StateSemi_VGB)
+     call message_pass_cells8(.true., .false., .true., nVarSemi, StateSemi_VGB)
   case default
      call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
           //TypeSemiImplicit)
@@ -349,7 +362,9 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   ! Calculate y_I = A.x_I where A is the linearized sem-implicit operator
 
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
-       TypeSemiImplicit, ImplCoeff, DconsDsemi_VCB, KrylovType !!!, wnrm
+       TypeSemiImplicit, UseSplitSemiImplicit, &
+       iVarSemiMin, iVarSemiMax, iVarSemi, nVarSemi, &
+       ImplCoeff, DconsDsemi_VCB, KrylovType
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModRadDiffusion, ONLY: get_rad_diffusion_rhs
@@ -373,14 +388,14 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   character(len=*), parameter:: NameSub = 'get_semi_impl_matvec'
   !------------------------------------------------------------------------
 
-  if(.not.allocated(Rhs_VC)) allocate(Rhs_VC(nW,nI,nJ,nK))
+  if(.not.allocated(Rhs_VC)) allocate(Rhs_VC(nVarSemi,nI,nJ,nK))
 
   ! Fill in StateSemi so it can be message passed
   n = 0
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
-     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nw
-        n=n+1
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVarSemi
+        n = n + 1
         StateSemi_VGB(iVar,i,j,k,iBlock) = x_I(n) !!! *wnrm(iVar)
      end do; end do; end do; end do
   end do
@@ -395,17 +410,16 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
      pDotADotPPe = 0.0
 
-     call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
-          ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB,restrictface=.true.)
+     call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, SendCorners=.false.,&
+          ProlongOrder=1, nVar=nVarSemi, Sol_VGB=StateSemi_VGB, &
+          restrictface=.true.)
   case('parcond')
      ! DoOneLayer, DoFacesOnly, UseMonotoneRestrict, nVar, State_VGB
-     call message_pass_cells8(.true., .false., .true., nw, StateSemi_VGB)
+     call message_pass_cells8(.true., .false., .true., nVarSemi, StateSemi_VGB)
   case default
      call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
           //TypeSemiImplicit)
   end select
-
-
 
   n=0
   do iImplBlock = 1, nImplBLK
@@ -425,28 +439,43 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
              //TypeSemiImplicit)
      end select
 
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        Volume = 1.0/vInv_CB(i,j,k,iBlock)
-        do iVar = 1, nw
+     if(UseSplitSemiImplicit)then
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           Volume = 1.0/vInv_CB(i,j,k,iBlock)
            n = n + 1
-           y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVar,i,j,k,iImplBlock)/dt &
-                - ImplCoeff * Rhs_VC(iVar,i,j,k))
+           y_I(n) = &
+                Volume*(x_I(n)*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock)/dt &
+                - ImplCoeff * Rhs_VC(1,i,j,k))
            pDotADotPPe = pDotADotPPe +  &
-                Volume * x_I(n)**2 * DconsDsemi_VCB(iVar,i,j,k,iImplBlock)/(dt * ImplCoeff)
-        enddo
-     enddo; enddo; enddo
-
+                Volume * x_I(n)**2 * DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock)&
+                /(dt * ImplCoeff)
+        end do; enddo; enddo
+     else
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           Volume = 1.0/vInv_CB(i,j,k,iBlock)
+           do iVar = 1, nw
+              n = n + 1
+              y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVar,i,j,k,iImplBlock)/dt&
+                   - ImplCoeff * Rhs_VC(iVar,i,j,k))
+              pDotADotPPe = pDotADotPPe +  &
+                   Volume * x_I(n)**2 * DconsDsemi_VCB(iVar,i,j,k,iImplBlock) &
+                   /(dt * ImplCoeff)
+           enddo
+        enddo; enddo; enddo
+     end if
   end do
   if (UsePDotADotP)then
      pDotADotPPe = pDotADotPPe * ImplCoeff
   else
      pDotADotPPe = 0.0
   end if
+
 end subroutine get_semi_impl_matvec
 !==============================================================================
 subroutine get_semi_impl_jacobian
 
   use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, &
+       UseSplitSemiImplicit, iVarSemi, &
        nStencil, MAT, ImplCoeff, DconsDsemi_VCB !!!, wnrm
   use ModRadDiffusion, ONLY: add_jacobian_rad_diff
   use ModHeatConduction, ONLY: add_jacobian_heat_cond
@@ -469,9 +498,9 @@ subroutine get_semi_impl_jacobian
      ! Get dR/dU
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        call add_jacobian_rad_diff(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
+        call add_jacobian_rad_diff(iBlock, MAT(:,:,:,:,:,:,iImplBlock))
      case('parcond')
-        call add_jacobian_heat_cond(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
+        call add_jacobian_heat_cond(iBlock, MAT(:,:,:,:,:,:,iImplBlock))
      case default
         call stop_mpi(NameSub//': no get_rhs implemented for' &
              //TypeSemiImplicit)
@@ -484,12 +513,18 @@ subroutine get_semi_impl_jacobian
              Coeff * MAT(:, :, i, j, k, iStencil, iImplBlock)
      end do; end do; end do; end do
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        Coeff = 1.0/(dt*vInv_CB(i,j,k,iBlock)) 
-        do iVar = 1, nw
-           MAT(iVar, iVar, i, j, k, 1, iImplBlock) = &             
-                Coeff*DconsDsemi_VCB(iVar,i,j,k,iImplBlock) &
-                + MAT(iVar, iVar, i, j, k, 1, iImplBlock) 
-        end do
+        Coeff = 1.0/(dt*vInv_CB(i,j,k,iBlock))
+        if(UseSplitSemiImplicit)then
+           MAT(1,1,i,j,k,1,iImplBlock) = &
+                Coeff*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock) &
+                + MAT(1,1,i,j,k,1,iImplBlock)
+        else
+           do iVar = 1, nw
+              MAT(iVar,iVar,i,j,k,1,iImplBlock) = &             
+                   Coeff*DconsDsemi_VCB(iVar,i,j,k,iImplBlock) &
+                   + MAT(iVar,iVar,i,j,k,1,iImplBlock) 
+           end do
+        end if
      end do; end do; end do
   end do
 
@@ -500,11 +535,14 @@ end subroutine get_semi_impl_jacobian
 subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
 
   use ModRadDiffusion, ONLY: set_rad_outflow_bc
-  use ModImplicit, ONLY: StateSemi_VGB, iTrImplFirst, iTrImplLast, iEradImpl,nw
+  use ModImplicit, ONLY: UseSplitSemiImplicit, iVarSemiMin, iVarSemiMax, &
+       StateSemi_VGB, iTrImplFirst, iTrImplLast, iEradImpl
   use ModMain,     ONLY: TypeBc_I
   use ModParallel, ONLY: NOBLK, NeiLev
   use ModUser,     ONLY: user_set_outerbcs
   use BATL_size,   ONLY: nI, nJ, nK, nDim
+
+  implicit none
 
   integer, intent(in) :: iBlock, iImplBlock
   logical, intent(in) :: IsLinear
@@ -518,19 +556,19 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
 
   if(NeiLev(1,iBlock) == NOBLK)then
      if(TypeBc_I(1) == 'outflow' .or. TypeBc_I(1) == 'float')then
-        do iVar = 1, nw
-           if(iVar == iTrImplFirst)then
-              call set_rad_outflow_bc(1,iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
-           elseif(iVar > iTrImplFirst .and. iVar <= iTrImplLast)then
-              ! bc already set
-           else
+        do iVar = iVarSemiMin, iVarSemiMax
+           if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
+              ! For non-radiation variables
               if(IsLinear)then
                  StateSemi_VGB(iVar,0,:,:,iBlock) = 0.0
               else
                  StateSemi_VGB(iVar,0,:,:,iBlock) = &
                       StateSemi_VGB(iVar,1,:,:,iBlock)
               end if
+           elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
+              ! For radiation variables (only call once when unsplit)
+              call set_rad_outflow_bc(1,iBlock, iImplBlock, &
+                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
            end if
         end do
      elseif(TypeBc_I(1) == 'user')then
@@ -551,19 +589,17 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
   end if
   if(NeiLev(2,iBlock) == NOBLK)then
      if(TypeBc_I(2) == 'outflow' .or. TypeBc_I(2) == 'float')then
-        do iVar = 1, nw
-           if(iVar == iTrImplFirst)then
-              call set_rad_outflow_bc(2, iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
-           elseif(iVar > iTrImplFirst .and. iVar <= iTrImplLast)then
-              ! bc already set
-           else
+        do iVar = iVarSemiMin, iVarSemiMax
+           if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
               if(IsLinear)then
                  StateSemi_VGB(iVar,nI+1,:,:,iBlock) = 0.0
               else
                  StateSemi_VGB(iVar,nI+1,:,:,iBlock) = &
                       StateSemi_VGB(iVar,nI,:,:,iBlock)
               end if
+           elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
+              call set_rad_outflow_bc(2, iBlock, iImplBlock, &
+                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
            end if
         end do
      elseif(TypeBc_I(2) == 'user')then
@@ -584,19 +620,17 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
   end if
   if(nDim > 1 .and. NeiLev(3,iBlock) == NOBLK)then
      if(TypeBc_I(3) == 'outflow' .or. TypeBc_I(3) == 'float')then
-        do iVar = 1, nw
-           if(iVar == iTrImplFirst)then
-              call set_rad_outflow_bc(3, iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
-           elseif(iVar > iTrImplFirst .and. iVar <= iTrImplLast)then
-              ! bc already set
-           else
+        do iVar = iVarSemiMin, iVarSemiMax
+           if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
               if(IsLinear)then
                  StateSemi_VGB(iVar,:,0,:,iBlock) = 0.0
               else
                  StateSemi_VGB(iVar,:,0,:,iBlock) = &
                       StateSemi_VGB(iVar,:,1,:,iBlock)
               end if
+           elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
+              call set_rad_outflow_bc(3, iBlock, iImplBlock, &
+                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
            end if
         end do
      elseif(TypeBc_I(3) == 'user')then
@@ -619,19 +653,17 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
   end if
   if(nDim > 1 .and. NeiLev(4,iBlock) == NOBLK) then
      if(TypeBc_I(4) == 'outflow' .or. TypeBc_I(4) == 'float')then
-        do iVar = 1, nw
-           if(iVar == iTrImplFirst)then
-              call set_rad_outflow_bc(4, iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
-           elseif(iVar > iTrImplFirst .and. iVar <= iTrImplLast)then
-              ! bc already set
-           else
+        do iVar = iVarSemiMin, iVarSemiMax
+           if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
               if(IsLinear)then
                  StateSemi_VGB(iVar,:,nJ+1,:,iBlock) = 0.0
               else
                  StateSemi_VGB(iVar,:,nJ+1,:,iBlock) = &
                       StateSemi_VGB(iVar,:,nJ,:,iBlock)
               end if
+           elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
+              call set_rad_outflow_bc(4, iBlock, iImplBlock, &
+                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
            end if
         end do
      elseif(TypeBc_I(4) == 'user')then
@@ -654,19 +686,17 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
   end if
   if(nDim > 2 .and. NeiLev(5,iBlock) == NOBLK) then
      if(TypeBc_I(5) == 'outflow' .or. TypeBc_I(5) == 'float')then
-        do iVar = 1, nw
-           if(iVar == iTrImplFirst)then
-              call set_rad_outflow_bc(5, iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
-           elseif(iVar > iTrImplFirst .and. iVar <= iTrImplLast)then
-              ! bc already set
-           else
+        do iVar = iVarSemiMin, iVarSemiMax
+           if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
               if(IsLinear)then
                  StateSemi_VGB(iVar,:,:,0,iBlock) = 0.0
               else
                  StateSemi_VGB(iVar,:,:,0,iBlock) = &
                       StateSemi_VGB(iVar,:,:,1,iBlock)
               end if
+           elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
+              call set_rad_outflow_bc(5, iBlock, iImplBlock, &
+                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
            end if
         end do
      elseif(TypeBc_I(5) == 'user')then
@@ -687,19 +717,17 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
   end if
   if(nDim > 2 .and. NeiLev(6,iBlock) == NOBLK)then 
      if(TypeBc_I(6) == 'outflow' .or. TypeBc_I(6) == 'float')then
-        do iVar = 1, nw
-           if(iVar == iTrImplFirst)then
-              call set_rad_outflow_bc(6, iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
-           elseif(iVar > iTrImplFirst .and. iVar <= iTrImplLast)then
-              ! bc already set
-           else
+        do iVar = iVarSemiMin, iVarSemiMax
+           if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
               if(IsLinear)then
                  StateSemi_VGB(iVar,:,:,nK+1,iBlock) = 0.0
               else
                  StateSemi_VGB(iVar,:,:,nK+1,iBlock) = &
                       StateSemi_VGB(iVar,:,:,nK,iBlock)
               end if
+           elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
+              call set_rad_outflow_bc(6, iBlock, iImplBlock, &
+                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
            end if
         end do
      elseif(TypeBc_I(6) == 'user')then
@@ -735,29 +763,26 @@ contains
     ! If the shock is not tilted, there is nothing to do
     if(abs(ShockSlope)<cTiny) RETURN
 
-    do iVar = 1, nw
-
-       ! Shear according to ShockSlope
-       if(ShockSlope < -cTiny)then
-          call stop_mpi('ShockSlope must be positive!')
-       elseif(ShockSlope > 1.0)then
-          call stop_mpi('ShockSlope > 1 not allowed!')
-       else
-          ! ShockSlope <= 1
-          Dn = nint(1.0/ShockSlope)
-          if(abs(Dn-1.0/ShockSlope)>cTiny)call stop_mpi( &
-               'ShockSlope <= 1 should be the inverse of a round number!')
-          select case(iSide)
-             ! Shift parallel to X by 1, but copy from distance Dn in Y
-          case(south_)
-             StateSemi_VGB(iVar,1:nI,0,:,iBlock) = &
-                  StateSemi_VGB(iVar,0:nI-1,Dn,:,iBlock)
-          case(north_)
-             StateSemi_VGB(iVar,1:nI,nJ+1,:,iBlock) = &
-                  StateSemi_VGB(iVar,2:nI+1,nJ+1-Dn,:,iBlock)
-          end select
-       end if
-    end do
+    ! Shear according to ShockSlope
+    if(ShockSlope < -cTiny)then
+       call stop_mpi('ShockSlope must be positive!')
+    elseif(ShockSlope > 1.0)then
+       call stop_mpi('ShockSlope > 1 not allowed!')
+    else
+       ! ShockSlope <= 1
+       Dn = nint(1.0/ShockSlope)
+       if(abs(Dn-1.0/ShockSlope)>cTiny)call stop_mpi( &
+            'ShockSlope <= 1 should be the inverse of a round number!')
+       select case(iSide)
+          ! Shift parallel to X by 1, but copy from distance Dn in Y
+       case(south_)
+          StateSemi_VGB(:,1:nI,0,:,iBlock) = &
+               StateSemi_VGB(:,0:nI-1,Dn,:,iBlock)
+       case(north_)
+          StateSemi_VGB(:,1:nI,nJ+1,:,iBlock) = &
+               StateSemi_VGB(:,2:nI+1,nJ+1-Dn,:,iBlock)
+       end select
+    end if
 
   end subroutine semi_bc_shear
 

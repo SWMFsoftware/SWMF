@@ -96,13 +96,13 @@ subroutine impl_matvec_free(qx,qy,nn)
 
   call timing_start('matvec_free')
 
-  if(.not.allocated(ImplEps_VCB))allocate(ImplEps_VCB(nw,nI,nJ,nK,MaxImplBLK))
-
   if(UseSemiImplicit)then
      call get_semi_impl_matvec(qx, qy, nn)
      call timing_stop('matvec_free')
      RETURN
   end if
+
+  if(.not.allocated(ImplEps_VCB))allocate(ImplEps_VCB(nw,nI,nJ,nK,MaxImplBLK))
 
   qxnrm=sum(qx(1:nimpl)**2)
   call MPI_allreduce(qxnrm, qxnrm_total, 1, MPI_REAL, MPI_SUM,iComm,iError)
@@ -186,8 +186,8 @@ end subroutine impl_matvec_free
 !=============================================================================
 subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
 
-  use ModImplicit, ONLY: JacobiPrec_I, MAT, nw, nI, nJ, nwIJK, nIJK, nImplBlk,&
-       PrecondType
+  use ModImplicit, ONLY: JacobiPrec_I, MAT, nVarSemi, nI, nJ, nwIJK, nIJK, &
+       nImplBlk, PrecondType
   use ModLinearSolver, ONLY: Lhepta, Uhepta, multiply_dilu
 
   implicit none
@@ -203,7 +203,7 @@ subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
   do iImplBlock=1,nImplBLK
 
      if(PrecondType == 'DILU')then
-        call multiply_dilu(nIJK,nw,nI,nI*nJ,&
+        call multiply_dilu(nIJK, nVarSemi, nI, nI*nJ,&
              PrecVec_I(nwIJK*(iImplBlock-1)+1),&
              MAT(1,1,1,1,1,1,iImplBlock),&
              MAT(1,1,1,1,1,2,iImplBlock),&
@@ -213,14 +213,14 @@ subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
              MAT(1,1,1,1,1,6,iImplBlock),&
              MAT(1,1,1,1,1,7,iImplBlock))
      else
-        call Lhepta(nIJK,nw,nI,nI*nJ,&
+        call Lhepta(nIJK, nVarSemi, nI, nI*nJ,&
              PrecVec_I(nwIJK*(iImplBlock-1)+1),&
              MAT(1,1,1,1,1,1,iImplBlock),&
              MAT(1,1,1,1,1,2,iImplBlock),&
              MAT(1,1,1,1,1,4,iImplBlock),&
              MAT(1,1,1,1,1,6,iImplBlock))
 
-        call Uhepta(.true.,nIJK,nw,nI,nI*nJ,&
+        call Uhepta(.true., nIJK, nVarSemi, nI, nI*nJ,&
              PrecVec_I(nwIJK*(iImplBlock-1)+1),&
              MAT(1,1,1,1,1,3,iImplBlock),&
              MAT(1,1,1,1,1,5,iImplBlock),&

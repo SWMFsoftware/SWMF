@@ -2371,7 +2371,7 @@ contains
 
     !^CFG IF IMPLICIT BEGIN
     if ( UseRadDiffusion &
-         .and. (UseFullImplicit.or.UseSemiImplicit) &  
+         .and. (UseFullImplicit .or. UseSemiImplicit) &  
          .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
           write(*,'(a)')NameSub//&
@@ -2535,7 +2535,7 @@ contains
        end if
     end if
 
-    if(nKrylovVector>KrylovMatvecMax)then
+    if(nKrylovVector > KrylovMatvecMax)then
        if(iProc==0)then
           write(*,'(a)')'nKrylovVector>KrylovMatvecMax is useless!'
           write(*,*)'reducing nKrylovVector to KrylovMatvecMax'
@@ -2543,7 +2543,7 @@ contains
        nKrylovVector = KrylovMatvecMax
     endif
 
-    if(PrecondSide/='left'.and.PrecondSide/='symmetric'.and.&
+    if(PrecondSide /= 'left' .and. PrecondSide/='symmetric' .and. &
          PrecondSide/='right')then
        if(iProc==0)then
           write(*,'(3a)')NameSub//' WARNING: PrecondSide=',PrecondSide,&

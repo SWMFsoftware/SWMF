@@ -21,6 +21,7 @@ module ModRadDiffusion
   public :: get_rad_diffusion_rhs
   public :: add_jacobian_rad_diff
   public :: update_impl_rad_diff
+  public :: set_rad_diff_range
 
   ! Logical for adding radiation diffusion
   logical, public :: IsNewBlockRadDiffusion = .true.
@@ -43,14 +44,16 @@ module ModRadDiffusion
 
   ! Index indicating which implicit variables involve diffusion
   integer, allocatable :: iDiff_I(:)
-  integer :: nDiff
+  integer :: nDiff, iDiffMin, iDiffMax
+
   ! which one are heat conduction, which one radiation diffusion
   integer :: iDiffHeat = 0, iDiffRadFirst = 0, iDiffRadLast = 0
+  integer :: iDiffRadMin = 0, iDiffRadMax = 0
 
   ! Index indicating which nRelax implicit variables involve energy exchange
   ! with the electrons
   integer, allocatable :: iRelax_I(:)
-  integer :: nRelax
+  integer :: nRelax, iRelaxMin, iRelaxMax
 
   ! Index which nPoint variables involve point implicit energy exchange
   ! with the state variable stored in PointImpl_CB
@@ -111,8 +114,9 @@ contains
     use ModAdvance,     ONLY: nWave, UseElectronPressure
     use ModMain,        ONLY: UseRadDiffusion
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock
-    use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
-         TypeSemiImplicit, iEradImpl, iTeImpl, iTrImplFirst, iTrImplLast
+    use ModImplicit,    ONLY: UseFullImplicit, &
+         UseSemiImplicit, UseSplitSemiImplicit, TypeSemiImplicit, &
+         iEradImpl, iTeImpl, iTrImplFirst, iTrImplLast
     use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_, &
          cRadiationNo
     use ModVarIndexes,  ONLY: nVar, nWave, WaveFirst_
@@ -159,22 +163,31 @@ contains
           if(UseElectronPressure)then
              call stop_mpi(NameSub//": Te/=Ti requires Te,Ti relaxation")
           end if
+
+          nDiff = nWave
+          allocate(iDiff_I(nDiff))
+
           if(nWave == 1)then
              iTrImplFirst = 1; iTrImplLast = 1
              nRelax = 0
              nPoint = 1
              allocate(iPoint_I(nPoint))
              iPoint_I = iTrImplFirst
+             iDiff_I  = 1
+          elseif(UseSplitSemiImplicit)then
+             iTrImplFirst = 1
+             iTrImplLast  = nWave
+             nPoint = 0
+             nRelax = 0
+             iDiff_I = 1
           else
              iTeImpl = 1; iTrImplFirst = 2; iTrImplLast = nWave + 1
              nPoint = 0
              nRelax = nWave
              allocate(iRelax_I(nRelax))
              iRelax_I = (/ (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
+             iDiff_I = (/ (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
           end if
-          nDiff = nWave
-          allocate(iDiff_I(nDiff))
-          iDiff_I = (/ (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
           iDiffHeat = 0; iDiffRadFirst = 1; iDiffRadLast = nWave
 
        case('radcond')
@@ -243,6 +256,14 @@ contains
        UseWavePressure = .true.
        GammaWave = 4.0/3.0       ! relativistic gamma for photon field
     end if
+
+    ! For the unsplit semi-implicit scheme these are the defaults
+    iRelaxMin   = 1
+    iRelaxMax   = nRelax
+    iDiffMin    = 1
+    iDiffMax    = nDiff
+    iDiffRadMin = iDiffRadFirst
+    iDiffRadMax = iDiffRadLast
 
   end subroutine init_rad_diffusion
 
@@ -377,7 +398,7 @@ contains
          WaveLast_
     use ModConst,    ONLY: cBoltzmann
     use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, TypeSemiImplicit, &
-         iTeImpl, iTrImplFirst, iTrImplLast, ImplCoeff
+         UseSplitSemiImplicit, iTeImpl, iTrImplFirst, iTrImplLast, ImplCoeff
     use ModMain,     ONLY: x_, y_, nI, nJ, nK, MaxImplBlk, Dt
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, UnitN_, UnitP_, &
@@ -494,7 +515,8 @@ contains
 
                 ! This is just the Planck function at time level * saved
                 PointImpl_CB(i,j,k,iBlock) = Planck
-             else
+             elseif(.not.UseSplitSemiImplicit)then
+                ! Unsplit multigroup
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
                 RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
                 PlanckWeight_WCB(:,i,j,k,iBlock) = Planck_W/Planck
@@ -863,7 +885,7 @@ contains
     select case(iSide)
     case(1)
        do k = 1, nK; do j = 1, nJ
-          do iDiff = iDiffRadFirst, iDiffRadLast
+          do iDiff = iDiffRadMin, iDiffRadMax
              iVar = iDiff_I(iDiff)          
              Coef = 2/Clight &
                   *DiffSemiCoef_VGB(iDiff,1,j,k,iBlock)/dx_BLK(iBlock)
@@ -873,7 +895,7 @@ contains
        end do; end do
     case(2)
        do k = 1, nK; do j = 1, nJ
-          do iDiff = iDiffRadFirst, iDiffRadLast
+          do iDiff = iDiffRadMin, iDiffRadMax
              iVar = iDiff_I(iDiff)
              Coef = 2/Clight &
                   *DiffSemiCoef_VGB(iDiff,nI,j,k,iBlock)/dx_BLK(iBlock)
@@ -883,7 +905,7 @@ contains
        end do; end do
     case(3)
        do k = 1, nK; do i = 1, nI
-          do iDiff = iDiffRadFirst, iDiffRadLast
+          do iDiff = iDiffRadMin, iDiffRadMax
              iVar = iDiff_I(iDiff)
              Coef = 2/Clight &
                   *DiffSemiCoef_VGB(iDiff,i,1,k,iBlock)/dy_BLK(iBlock)
@@ -893,7 +915,7 @@ contains
        end do; end do
     case(4)
        do k = 1, nK; do i = 1, nI
-          do iDiff = iDiffRadFirst, iDiffRadLast
+          do iDiff = iDiffRadMin, iDiffRadMax
              iVar = iDiff_I(iDiff)
              Coef = 2/Clight &
                   *DiffSemiCoef_VGB(iDiff,i,nJ,k,iBlock)/dy_BLK(iBlock)
@@ -903,7 +925,7 @@ contains
        end do; end do
     case(5)
        do j = 1, nJ; do i = 1, nI
-          do iDiff = iDiffRadFirst, iDiffRadLast
+          do iDiff = iDiffRadMin, iDiffRadMax
              iVar = iDiff_I(iDiff)
              Coef = 2/Clight &
                   *DiffSemiCoef_VGB(iDiff,i,j,1,iBlock)/dz_BLK(iBlock)
@@ -913,7 +935,7 @@ contains
        end do; end do
     case(6)
        do k = j, nJ; do i = 1, nI
-          do iDiff = iDiffRadFirst, iDiffRadLast
+          do iDiff = iDiffRadMin, iDiffRadMax
              iVar = iDiff_I(iDiff)
              Coef = 2/Clight &
                   *DiffSemiCoef_VGB(iDiff,i,j,nK,iBlock)/dz_BLK(iBlock)
@@ -930,14 +952,14 @@ contains
   subroutine get_rad_diffusion_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
     use ModGeometry, ONLY: TypeGeometry, vInv_CB
-    use ModImplicit, ONLY: nw, iTeImpl
+    use ModImplicit, ONLY: nVarSemi, iTeImpl
     use ModLinearSolver, ONLY: pDotADotPPe, UsePDotADotP
     use ModMain,     ONLY: nI, nJ, nK
     use ModParallel, ONLY: NeiLev, NOBLK
 
     integer, intent(in) :: iBlock
-    real, intent(inout) :: StateImpl_VG(nw,-1:nI+2,-1:nJ+2,-1:nK+2)
-    real, intent(out)   :: Rhs_VC(nw,nI,nJ,nK)
+    real, intent(inout) :: StateImpl_VG(nVarSemi,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(out)   :: Rhs_VC(nVarSemi,nI,nJ,nK)
     logical, intent(in) :: IsLinear
 
     real :: Te, EnergyExchange
@@ -965,7 +987,7 @@ contains
 
     if(nDim == 1)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          do iDiff = 1, nDiff
+          do iDiff = iDiffMin, iDiffMax
              iVar = iDiff_I(iDiff)
              Rhs_VC(iVar,i,j,k) = &
                   vInv_CB(i,j,k,iBlock) * ( &
@@ -980,7 +1002,7 @@ contains
     elseif(TypeGeometry == 'rz' .or. nDim == 2)then
        ! No flux from Z direction
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          do iDiff = 1, nDiff
+          do iDiff = iDiffMin, iDiffMax
              iVar = iDiff_I(iDiff)
              Rhs_VC(iVar,i,j,k) = &
                   vInv_CB(i,j,k,iBlock) * ( &
@@ -1000,7 +1022,7 @@ contains
        end do; end do; end do
     else
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          do iDiff = 1, nDiff
+          do iDiff = iDiffMin, iDiffMax
              iVar = iDiff_I(iDiff)
              Rhs_VC(iVar,i,j,k) = &
                   vInv_CB(i,j,k,iBlock) * ( &
@@ -1030,7 +1052,7 @@ contains
     ! Source terms due to energy exchange
     if(nRelax > 0)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          do iRelax = 1, nRelax
+          do iRelax = iRelaxMin, iRelaxMax
              iVar = iRelax_I(iRelax)
 
              EnergyExchange = RelaxCoef_VCB(iRelax,i,j,k,iBlock) &
@@ -1075,7 +1097,7 @@ contains
     if(UsePDotADotP)then
        if(nDim == 1)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             do iDiff = 1, nDiff
+             do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
                 pDotADotPPe = pDotADotPPe  + 0.5 *(&
                      DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)* &
@@ -1089,7 +1111,7 @@ contains
        elseif(TypeGeometry == 'rz' .or. nDim == 2)then
           ! No flux from Z direction
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             do iDiff = 1, nDiff
+             do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
                 pDotADotPPe = pDotADotPPe  + 0.5 *(&
                      DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)* &
@@ -1108,7 +1130,7 @@ contains
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             do iDiff = 1, nDiff
+             do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
                 pDotADotPPe = pDotADotPPe + 0.5 *(&
                      DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)*   &
@@ -1138,7 +1160,7 @@ contains
           !/
           if(NeiLev(5,iBlock) == NOBLK)then
              k = 1
-             do j = 1, nJ; do i = 1, nI; do iDiff = 1, nDiff
+             do j = 1, nJ; do i = 1, nI; do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
                 pDotADotPPe = pDotADotPPe + 0.5 *&
                      DiffCoef_VFDB(iDiff,i,j,k  ,3,iBlock)* &
@@ -1149,7 +1171,7 @@ contains
 
           if(NeiLev(6,iBlock) == NOBLK)then
              k = nK
-             do j = 1, nJ; do i = 1, nI; do iDiff = 1, nDiff
+             do j = 1, nJ; do i = 1, nI; do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
                 pDotADotPPe = pDotADotPPe + 0.5 *&
                      DiffCoef_VFDB(iDiff,i,j,k+1,3,iBlock)* &
@@ -1161,7 +1183,7 @@ contains
 
        if(NeiLev(1,iBlock) == NOBLK)then
           i = 1
-          do k = 1, nK; do j = 1, nJ; do iDiff = 1, nDiff
+          do k = 1, nK; do j = 1, nJ; do iDiff = iDiffMin, iDiffMax
              iVar = iDiff_I(iDiff)
              pDotADotPPe = pDotADotPPe + 0.5 *&
                   DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
@@ -1172,7 +1194,7 @@ contains
 
        if(NeiLev(2,iBlock) == NOBLK)then
           i = nI
-          do k = 1, nK; do j = 1, nJ; do iDiff = 1, nDiff
+          do k = 1, nK; do j = 1, nJ; do iDiff = iDiffMin, iDiffMax
              iVar = iDiff_I(iDiff)
              pDotADotPPe = pDotADotPPe + 0.5 *&
                   DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)*   &
@@ -1183,7 +1205,7 @@ contains
 
        if(nDim > 1 .and. NeiLev(3,iBlock) == NOBLK)then
           j = 1
-          do k = 1, nK; do i = 1, nI; do iDiff = 1, nDiff
+          do k = 1, nK; do i = 1, nI; do iDiff = iDiffMin, iDiffMax
              iVar = iDiff_I(iDiff)
              pDotADotPPe = pDotADotPPe + 0.5 *&
                   DiffCoef_VFDB(iDiff,i,j  ,k,2,iBlock)* &
@@ -1194,7 +1216,7 @@ contains
 
        if(nDim > 1 .and. NeiLev(4,iBlock) == NOBLK)then
           j = nJ
-          do k = 1, nK; do i = 1, nI; do iDiff = 1, nDiff
+          do k = 1, nK; do i = 1, nI; do iDiff = iDiffMin, iDiffMax
              iVar = iDiff_I(iDiff)
              pDotADotPPe = pDotADotPPe + 0.5 *&
                   DiffCoef_VFDB(iDiff,i,j+1,k,2,iBlock)* &
@@ -1206,7 +1228,7 @@ contains
        ! Source terms due to energy exchange
        if(nRelax > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             do iRelax = 1, nRelax
+             do iRelax = iRelaxMin, iRelaxMax
                 iVar = iRelax_I(iRelax)
 
                 pDotADotPPe = pDotADotPPe + &
@@ -1250,7 +1272,7 @@ contains
       iShift = 1-Di; jShift = min(1-Dj,nJ-1); kShift = min(1-Dk,nK-1)
       do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
          i1=i+Di; j1=j+Dj; k1=k+Dk
-         do iDiff = 1, nDiff
+         do iDiff = iDiffMin, iDiffMax
             iVar = iDiff_I(iDiff)
             StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) = &
                  StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) &
@@ -1278,7 +1300,7 @@ contains
       iShift = 1-Di; jShift = min(1-Dj,nJ-1); kShift = min(1-Dk,nK-1)
       do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
          i1=i-Di; j1=j-Dj; k1=k-Dk
-         do iDiff = 1, nDiff
+         do iDiff = iDiffMin, iDiffMax
             iVar = iDiff_I(iDiff)
             StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) = &
                  StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) &
@@ -1294,19 +1316,19 @@ contains
 
   !============================================================================
 
-  subroutine add_jacobian_rad_diff(iBlock, nVar, Jacobian_VVCI)
+  subroutine add_jacobian_rad_diff(iBlock, Jacobian_VVCI)
 
     use ModGeometry, ONLY: vInv_CB, dx_BLK, dy_BLK, dz_BLK, &
          fAx_BLK, fAy_BLK, fAz_BLK
     use ModImplicit, ONLY: TypeSemiImplicit, iTeImpl, UseFullImplicit, &
-         UseSemiImplicit
+         UseSemiImplicit, nVarSemi
     use ModMain,     ONLY: nI, nJ, nK
     use ModNumConst, ONLY: i_DD
 
     integer, parameter:: nStencil = 2*nDim + 1
 
-    integer, intent(in) :: iBlock, nVar
-    real, intent(inout) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
+    integer, intent(in) :: iBlock
+    real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax, iPoint
     real :: DiffLeft, DiffRight, RelaxCoef, PlanckWeight
@@ -1314,6 +1336,7 @@ contains
     !--------------------------------------------------------------------------
 
     if(UseSemiImplicit)then
+       ! Point implicit for ions (or electrons with no heat-conduction)
        if(nPoint > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              do iPoint = 1, nPoint
@@ -1329,7 +1352,7 @@ contains
 
        if(nRelax > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             do iRelax = 1, nRelax
+             do iRelax = iRelaxMin, iRelaxMax
                 iVar = iRelax_I(iRelax)
 
                 RelaxCoef = RelaxCoef_VCB(iRelax,i,j,k,iBlock)
@@ -1369,8 +1392,9 @@ contains
        if(UseFullImplicit) Coeff = -Area_D(iDim)/Dxyz_D(iDim)
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          do iDiff = 1, nDiff
+          do iDiff = iDiffMin, iDiffMax
              iVar = iDiff_I(iDiff)
+
              DiffLeft = Coeff*vInv_CB(i,j,k,iBlock) &
                   *DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock)
              DiffRight = Coeff*vInv_CB(i,j,k,iBlock) &
@@ -1517,5 +1541,26 @@ contains
     call calc_energy_cell(iBlock)
 
   end subroutine update_impl_rad_diff
+  !==========================================================================
+  subroutine set_rad_diff_range
+
+    use ModImplicit, ONLY: iVarSemi
+
+    character(len=*), parameter:: NameSub = 'set_rad_diff_range'
+    !-----------------------------------------------------------------------
+
+    ! Range of relaxation (all semi-implicit variables should have relaxation)
+    iRelaxMin   = iVarSemi
+    iRelaxMax   = iVarSemi
+
+    ! Range of diffusions (all semi-implicit variables should have diffusion)
+    iDiffMin    = iVarSemi
+    iDiffMax    = iVarSemi
+
+    ! Range of radiation diffusion (never used for electron temperature)
+    iDiffRadMin = iVarSemi
+    iDiffRadMax = iVarSemi
+
+  end subroutine set_rad_diff_range
 
 end module ModRadDiffusion

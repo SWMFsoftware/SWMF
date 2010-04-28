@@ -612,7 +612,7 @@ contains
        if(.not.DoMoveExtraData) &
             iSize = iSize - nExtraData
        if(.not.(UseBDF2 .and. n_prev > 0)) &    !^CFG IF IMPLICIT
-            iSize = iSize - nWIJK               !^CFG IF IMPLICIT
+            iSize = iSize - nVar*nIJK           !^CFG IF IMPLICIT
        if(.not.(DoSendRay)) &                   !^CFG IF RCM
             iSize = iSize - 3*2*nIJK            !^CFG IF RCM
     else
