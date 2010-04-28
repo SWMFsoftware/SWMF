@@ -1209,7 +1209,11 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
         ! GRID INFORMATION
      case('dx')
-        PlotVar(:,:,:,iVar)=dx_BLK(iBLK)
+        PlotVar(:,:,:,iVar) = dx_BLK(iBLK)
+     case('dy')
+        PlotVar(:,:,:,iVar) = dy_BLK(iBLK)
+     case('dz')
+        PlotVar(:,:,:,iVar) = dz_BLK(iBLK)
      case('dt')
         PlotVar(1:nI,1:nJ,1:nK,iVar)=time_BLK(1:nI,1:nJ,1:nK,iBLK)
      case('dtblk')
@@ -1380,7 +1384,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         ! GRID INFORMATION
      case('dt','dtblk')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitT_)
-     case('dx')
+     case('dx','dy','dz')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitX_)
 
         ! DEFAULT CASE
@@ -1610,8 +1614,8 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameTecVar = 'Status'
      case('f1x','f1y','f1z','f2x','f2y','f2z')
         NameTecVar = NamePlotVar                 !^CFG END RAYTRACE
-     case('dx')
-        NameTecVar = 'dx'
+     case('dx','dy','dz')
+        NameTecVar = String
         NameUnit   = NameTecUnit_V(UnitX_)
      case('dt')
         NameTecVar = 'dt'
@@ -1741,7 +1745,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
         NameUnit = '1'
      case('dt', 'dtblk')
         NameUnit = NameIdlUnit_V(UnitT_)
-     case('dx')
+     case('dx','dy','dz')
         NameUnit = NameIdlUnit_V(UnitX_)
      case default
         ! Set default or user defined unit
