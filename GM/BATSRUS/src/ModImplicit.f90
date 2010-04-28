@@ -39,6 +39,12 @@ module ModImplicit
   logical :: UseSemiImplicit = .false.
   character(len=40) :: TypeSemiImplicit = 'radiation'
 
+  logical:: UseSplitSemiImplicit = .false.
+  ! Index range for split semi implicit scheme
+  integer:: iVarSemiMin, iVarSemiMax
+  ! Number and index of implicit variables per splitting
+  integer :: nVarSemi, iVarSemi
+
   ! Named indices for semi-implicit variables
   integer :: iTeImpl=0, iTrImplFirst=0, iTrImplLast=0, iEradImpl=0
 
@@ -166,6 +172,8 @@ contains
          Jacobi_, BlockJacobi_, GaussSeidel_, Dilu_, Bilu_
 
     character(len=*), intent(in) :: NameCommand
+
+    integer :: i
     character(len=*), parameter:: NameSub = 'read_implicit_param'
     !--------------------------------------------------------------------------
     select case(NameCommand)
@@ -206,7 +214,13 @@ contains
 
     case('#SEMIIMPLICIT', '#SEMIIMPL')
        call read_var('UseSemiImplicit', UseSemiImplicit)
-       if(UseSemiImplicit)call read_var('TypeSemiImplicit', TypeSemiImplicit)
+       if(UseSemiImplicit)then
+          call read_var('TypeSemiImplicit', TypeSemiImplicit)
+          i = index(TypeSemiImplicit,'split')
+          UseSplitSemiImplicit = i > 0
+          if(UseSplitSemiImplicit) &
+               TypeSemiImplicit = TypeSemiImplicit(1:i-1)
+       end if
 
     case('#IMPLSCHEME', '#IMPLICITSCHEME')
        call read_var('nOrderImpl', nOrder_Impl)
@@ -280,6 +294,7 @@ contains
 
     use ModUtilities,  ONLY: check_allocate
     use ModVarIndexes, ONLY: nWave
+    use ModLinearSolver, ONLY: Bilu_
 
     integer :: iError
 
@@ -290,9 +305,11 @@ contains
     if(UseSemiImplicit)then
        select case(TypeSemiImplicit)
        case('radiation')
-          if(nWave == 1)then
-             nw = 1
+          if(nWave == 1 .or. UseSplitSemiImplicit)then
+             ! Waves with point implicit temperature
+             nw = nWave
           else
+             ! (electron) temperature and waves
              nw = 1 + nWave
           end if
        case('cond', 'parcond')
@@ -302,24 +319,50 @@ contains
        case default
           call stop_mpi(NameSub//': nw unknown for'//TypeSemiImplicit)
        end select
-    else
-       nw = nVar
-    end if
-    nwIJK = nw*nIJK
-    MaxImplVar=nwIJK*MaxImplBLK
 
+    else
+       ! Solve for all variables implicitly. nVarSemi has to be set too.
+       nw       = nVar
+    end if
+
+    if(UseSplitSemiImplicit)then
+       ! Split semi-implicit scheme solves 1 implicit variable at a time
+       nVarSemi = 1
+    else
+       ! Unsplit (semi-)implicit scheme solves all impl. variables together
+       nVarSemi = nw
+    end if
+    ! Set range of (semi-)implicit variables for unsplit scheme.
+    ! For split scheme this will be overwritten.
+    iVarSemiMin = 1
+    iVarSemiMax = nVarSemi
+
+    nwIJK      = nVarSemi*nIJK
+    MaxImplVar = nwIJK*MaxImplBLK
+
+    ! Fix preconditioner type from DILU to BILU for a single variable
+    ! because BILU is optimized for scalar equation.
+    if(nVarSemi == 1 .and. PrecondType == 'DILU')then
+       PrecondType  = 'BILU'
+       PrecondParam = Bilu_
+    end if
+
+    ! Arrays for all implicit variables
     allocate(Impl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBLK))
     allocate(ImplOld_VCB(nw,nI,nJ,nK,nBLK))
-    allocate(ResImpl_VCB(nw,nI,nJ,nK,MaxImplBLK))
-    allocate(ResExpl_VCB(nw,nI,nJ,nK,MaxImplBLK))
-    allocate(StateSemi_VGB(nw,-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock))
+    allocate(wnrm(nw))
+    if(UseSemiImplicit) allocate(DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBLK))
+
+    ! Arrays for split implicit variables
+    allocate(StateSemi_VGB(nVarSemi,-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock))
+    allocate(ResExpl_VCB(nVarSemi,nI,nJ,nK,MaxImplBLK))
+    allocate(ResImpl_VCB(nVarSemi,nI,nJ,nK,MaxImplBLK))
+
+    allocate(MAT(nVarSemi,nVarSemi,nI,nJ,nK,nStencil,MaxImplBLK))
     allocate(rhs0(MaxImplVar))
     allocate(rhs(MaxImplVar))
     allocate(dw(MaxImplVar))
-    allocate(wnrm(nw))
-    allocate(MAT(nw,nw,1:nI,1:nJ,1:nK,nstencil,MaxImplBLK))
     if(PrecondType == 'JACOBI') allocate(JacobiPrec_I(MaxImplVar))
-    if(UseSemiImplicit) allocate(DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBLK))
 
     if(iProc==0)then
        call write_prefix
