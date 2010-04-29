@@ -764,7 +764,7 @@ contains
        TR_D(Phi_)=TR_D(Phi_)+cPi
     end if
     if(TR_D(Theta_) > cPi)then
-       TR_D(Theta_)=cPi-TR_D(Theta_)
+       TR_D(Theta_)=cTwoPi-TR_D(Theta_)
        TR_D(Phi_)=TR_D(Phi_)+cPi
     end if
     TR_D(Phi_)=modulo(TR_D(Phi_),cTwoPi)
