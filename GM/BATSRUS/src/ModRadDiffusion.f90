@@ -3,6 +3,26 @@
 !============================================================================
 module ModRadDiffusion
 
+  ! Solve for gray or multigroup radiation diffusion 
+  ! and/or isotropic electron heat conduction in the 
+  ! non-relativistic fluid velocity limit.
+  !
+  ! The unknowns are radiation energy density and black body 
+  ! radiation energy density (a*Te**4) representing the material
+  ! (electron or ion) energy density.
+  !
+  ! Both unsplit and split semi-implicit schemes are implemented.
+  ! The energy exchange terms are either evaluated point-implicitly,
+  ! or implicitly. 
+  !
+  ! Notes: 
+  !
+  ! 1. If present, the electron/ion energy density must be the
+  !    first implicit variable! 
+  !
+  ! 2. In the split semi-implicit scheme all variables
+  !    use the point-implicit energy exchange!
+
   use ModVarIndexes, ONLY: p_, nWave
   use BATL_size, ONLY: nDim, MaxDim
 
@@ -39,7 +59,7 @@ module ModRadDiffusion
   real, allocatable :: RelaxCoef_VCB(:,:,:,:,:)
   real, allocatable :: DiffSemiCoef_VGB(:,:,:,:,:)
   real, allocatable :: PointCoef_VCB(:,:,:,:,:)
-  real, allocatable :: PointImpl_CB(:,:,:,:)
+  real, allocatable :: PointImpl_VCB(:,:,:,:,:)
   real, allocatable :: PlanckWeight_WCB(:,:,:,:,:)
 
   ! Index indicating which implicit variables involve diffusion
@@ -56,9 +76,8 @@ module ModRadDiffusion
   integer :: nRelax, iRelaxMin, iRelaxMax
 
   ! Index which nPoint variables involve point implicit energy exchange
-  ! with the state variable stored in PointImpl_CB
-  integer, allocatable :: iPoint_I(:)
-  integer :: nPoint
+  ! with the state variable stored in PointImpl_VCB
+  integer :: nPoint, iPointSemi
 
   ! radiation energy used for calculating radiative energy flux
   real, allocatable :: Erad_WG(:,:,:,:)
@@ -167,20 +186,15 @@ contains
           nDiff = nWave
           allocate(iDiff_I(nDiff))
 
-          if(nWave == 1)then
-             iTrImplFirst = 1; iTrImplLast = 1
-             nRelax = 0
-             nPoint = 1
-             allocate(iPoint_I(nPoint))
-             iPoint_I = iTrImplFirst
-             iDiff_I  = 1
-          elseif(UseSplitSemiImplicit)then
+          if(nWave == 1 .or. UseSplitSemiImplicit)then
+             ! Radiation-material exchange is done point-implicitly
              iTrImplFirst = 1
              iTrImplLast  = nWave
-             nPoint = 0
+             nPoint       = nWave
              nRelax = 0
              iDiff_I = 1
           else
+             ! Radiation-material exchange is done with relaxation terms
              iTeImpl = 1; iTrImplFirst = 2; iTrImplLast = nWave + 1
              nPoint = 0
              nRelax = nWave
@@ -201,8 +215,6 @@ contains
           iRelax_I = (/ (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
           if(UseElectronPressure)then
              nPoint = 1
-             allocate(iPoint_I(nPoint))
-             iPoint_I = iTeImpl
           else
              nPoint = 0
           end if
@@ -217,8 +229,6 @@ contains
           nRelax = 0
           if(UseElectronPressure)then
              nPoint = 1
-             allocate(iPoint_I(nPoint))
-             iPoint_I = iTeImpl
           else
              nPoint = 0
           end if
@@ -230,8 +240,8 @@ contains
        if(nPoint>0)then
           allocate(PointCoef_VCB(nPoint,nI,nJ,nK,MaxBlock))
           PointCoef_VCB = 0.0
-          allocate(PointImpl_CB(nI,nJ,nK,MaxBlock))
-          PointImpl_CB = 0.0
+          allocate(PointImpl_VCB(nPoint,nI,nJ,nK,MaxBlock))
+          PointImpl_VCB = 0.0
        end if
 
        allocate(DiffSemiCoef_VGB(nDiff,-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock))
@@ -264,6 +274,7 @@ contains
     iDiffMax    = nDiff
     iDiffRadMin = iDiffRadFirst
     iDiffRadMax = iDiffRadLast
+    iPointSemi  = 1
 
   end subroutine init_rad_diffusion
 
@@ -514,8 +525,12 @@ contains
                      /(1 + ImplCoeff*Dt*Clight*OpacityPlanck_W(1) / Cv)
 
                 ! This is just the Planck function at time level * saved
-                PointImpl_CB(i,j,k,iBlock) = Planck
-             elseif(.not.UseSplitSemiImplicit)then
+                PointImpl_VCB(:,i,j,k,iBlock) = Planck
+             elseif(UseSplitSemiImplicit)then
+                ! Store information for Opacity_g*(Erad_g - B_g) term
+                PointCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
+                PointImpl_VCB(:,i,j,k,iBlock) = Planck_W
+             else
                 ! Unsplit multigroup
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
                 RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
@@ -524,11 +539,13 @@ contains
 
           case('radcond')
              if(UseElectronPressure)then
+                ! Store variables for 
+                ! TeTiCoef*(B_e - B_i) = TeTiCoef'*(Te - Ti) term
                 TeTiCoefPrime = TeTiCoef/Cvi &
                      /(cRadiationNo*(Te+Ti)*(Te**2+Ti**2))
                 PointCoef_VCB(1,i,j,k,iBlock) = &
                      TeTiCoefPrime*Cvi/(1.0 + ImplCoeff*Dt*TeTiCoefPrime)
-                PointImpl_CB(i,j,k,iBlock) = cRadiationNo*Ti**4
+                PointImpl_VCB(1,i,j,k,iBlock) = cRadiationNo*Ti**4
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
              else
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
@@ -543,7 +560,7 @@ contains
 
                 PointCoef_VCB(1,i,j,k,iBlock) = TeTiCoef &
                      /(1.0 + ImplCoeff*Dt*TeTiCoef/Cvi)
-                PointImpl_CB(i,j,k,iBlock) = Ti
+                PointImpl_VCB(1,i,j,k,iBlock) = Ti
              else
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
              end if
@@ -1072,24 +1089,16 @@ contains
     if(nPoint > 0)then
        if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             do iPoint = 1, nPoint
-                iVar = iPoint_I(iPoint)
-
-                Rhs_VC(iVar,i,j,k) = Rhs_VC(iVar,i,j,k) &
-                     - PointCoef_VCB(iPoint,i,j,k,iBlock) &
-                     *StateImpl_VG(iVar,i,j,k)
-             end do
+             Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
+                  - PointCoef_VCB(iPointSemi,i,j,k,iBlock) &
+                  *StateImpl_VG(1,i,j,k)
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             do iPoint = 1, nPoint
-                iVar = iPoint_I(iPoint)
-
-                EnergyExchange = PointCoef_VCB(iPoint,i,j,k,iBlock) &
-                     *(PointImpl_CB(i,j,k,iBlock) - StateImpl_VG(iVar,i,j,k))
-
-                Rhs_VC(iVar,i,j,k) = Rhs_VC(iVar,i,j,k) + EnergyExchange
-             end do
+             Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
+                  + PointCoef_VCB(iPointSemi,i,j,k,iBlock) &
+                  *(PointImpl_VCB(iPointSemi,i,j,k,iBlock) &
+                  - StateImpl_VG(1,i,j,k))
           end do; end do; end do
        end if
     end if
@@ -1242,13 +1251,10 @@ contains
        ! Point implicit source terms due to energy exchange
        if(nPoint > 0 .and. IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             do iPoint = 1, nPoint
-                iVar = iPoint_I(iPoint)
-                pDotADotPPe = pDotADotPPe + &
-                     PointCoef_VCB(iPoint,i,j,k,iBlock) &
-                     *StateImpl_VG(iVar,i,j,k)**2 &
-                     /vInv_CB(i,j,k,iBlock)
-             end do
+             pDotADotPPe = pDotADotPPe + &
+                  PointCoef_VCB(iPointSemi,i,j,k,iBlock) &
+                  *StateImpl_VG(1,i,j,k)**2 &
+                  /vInv_CB(i,j,k,iBlock)
           end do; end do; end do
        end if
 
@@ -1339,14 +1345,9 @@ contains
        ! Point implicit for ions (or electrons with no heat-conduction)
        if(nPoint > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             do iPoint = 1, nPoint
-                iVar = iPoint_I(iPoint)
-
-                ! dSvar/dVar (diagonal)
-                Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
-                     Jacobian_VVCI(iVar,iVar,i,j,k,1) &
-                     - PointCoef_VCB(iPoint,i,j,k,iBlock)
-             end do
+             ! dSvar/dVar (diagonal)
+             Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
+                  - PointCoef_VCB(iPointSemi,i,j,k,iBlock)
           end do; end do; end do
        end if
 
@@ -1421,12 +1422,12 @@ contains
 
   subroutine update_impl_rad_diff(iBlock, iImplBlock, StateImpl_VG)
 
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseIdealEos
     use ModEnergy,     ONLY: calc_energy_cell
     use ModImplicit,   ONLY: nw, iTeImpl, iTrImplFirst, iTrImplLast, &
          DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
     use ModMain,       ONLY: nI, nJ, nK, Dt, UseRadDiffusion
-    use ModPhysics,    ONLY: inv_gm1, g, No2Si_V, Si2No_V, UnitEnergyDens_, &
+    use ModPhysics,    ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, UnitRho_, UnitTemperature_, PeMin, ExtraEintMin
     use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Pe_, nWave, WaveFirst_
@@ -1458,7 +1459,7 @@ contains
        if(UseElectronPressure)then
           ! electrons
           State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-               + (g - 1)*DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+               + gm1*DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
                *(StateImpl_VG(iTeImpl,i,j,k)-ImplOld_VCB(iTeImpl,i,j,k,iBlock))
 
           State_VGB(Pe_,i,j,k,iBlock) = max(State_VGB(Pe_,i,j,k,iBlock), PeMin)
@@ -1477,14 +1478,16 @@ contains
           end if
        end if
 
-       do iPoint = 1, nPoint
-          iVar = iPoint_I(iPoint)
+       ! Add up internal energy change from all point-implicit variables
+       ! Multiple point-implicit variables can occur 
+       ! in split semi-implicit scheme only.
+       do iVar = 1, nPoint
 
-          Relaxation = PointCoef_VCB(iPoint,i,j,k,iBlock)*( &
+          Relaxation = PointCoef_VCB(iVar,i,j,k,iBlock)*( &
                + ImplCoeff*(StateImpl_VG(iVar,i,j,k) &
-               -            PointImpl_CB(i,j,k,iBlock)) &
+               -            PointImpl_VCB(iVar,i,j,k,iBlock)) &
                + (1.0 - ImplCoeff)*(ImplOld_VCB(iVar,i,j,k,iBlock) &
-               -            PointImpl_CB(i,j,k,iBlock)) )
+               -            PointImpl_VCB(iVar,i,j,k,iBlock)) )
 
           Einternal = Einternal + Dt*Relaxation
        end do
@@ -1500,10 +1503,14 @@ contains
           write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
           call stop_mpi(NameSub//' negative Eint')
        end if
+       
+       if(UseIdealEos)then
+          ! ions (electrons were already 
+          State_VGB(p_,i,j,k,iBlock) = gm1*Einternal
 
-       if(UseElectronPressure)then
+       elseif(UseElectronPressure)then
           ! ions
-          State_VGB(p_,i,j,k,iBlock) = (g - 1)*Einternal
+          State_VGB(p_,i,j,k,iBlock) = gm1*Einternal
 
           ! electrons
           Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
@@ -1524,13 +1531,10 @@ contains
        else
           ! ions + electrons
           EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
-
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
                EinternalIn = EinternalSi, PressureOut = PressureSi)
-
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
-
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock))
 
@@ -1560,6 +1564,9 @@ contains
     ! Range of radiation diffusion (never used for electron temperature)
     iDiffRadMin = iVarSemi
     iDiffRadMax = iVarSemi
+
+    ! Index of point implicit energy exchange terms
+    iPointSemi  = iVarSemi
 
   end subroutine set_rad_diff_range
 
