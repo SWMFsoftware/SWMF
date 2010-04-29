@@ -81,6 +81,9 @@ module ModPointImplicit
   ! Use asymmetric derivative in numerical Jacobian calculation
   logical:: IsAsymmetric = .true. 
 
+  ! Normalize variables cell-by-cell or per block
+  logical:: DoNormalizeCell = .false.
+
 contains
  !============================================================================
   subroutine read_point_implicit_param
@@ -94,6 +97,7 @@ contains
     if(UsePointImplicit) then
        call read_var('BetaPointImplicit', BetaPointImpl)
        call read_var('IsAsymmetric',      IsAsymmetric)
+       call read_var('DoNormalizeCell',   DoNormalizeCell)
     end if
 
   end subroutine read_point_implicit_param
@@ -122,10 +126,10 @@ contains
     end interface
 
     integer :: i, j, k, iVar, jVar, iIVar, iJVar
-    real :: DtCell, BetaStage, Norm, Epsilon
-    real :: StateExpl_VC(nVar,1:nI,1:nJ,1:nK)
-    real :: Source0_VC(nVar,1:nI,1:nJ,1:nK), Source1_VC(nVar,1:nI,1:nJ,1:nK)
-    real :: State0_C(1:nI,1:nJ,1:nK)
+    real :: DtCell, BetaStage, Norm_C(nI,nJ,nK), Epsilon_C(nI,nJ,nK)
+    real :: StateExpl_VC(nVar,nI,nJ,nK)
+    real :: Source0_VC(nVar,nI,nJ,nK), Source1_VC(nVar,nI,nJ,nK)
+    real :: State0_C(nI,nJ,nK)
 
     real, allocatable, save :: Matrix_II(:,:), Rhs_I(:)
 
@@ -227,20 +231,22 @@ contains
           State0_C = State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock)
 
           ! Get perturbation based on first norm of state in the block
-          if(true_BLK(iBlock))then
-             Norm = sum(abs(State0_C))/nIJK
+          if(DoNormalizeCell)then
+             Norm_C = abs(State0_C)
+          elseif(true_BLK(iBlock))then
+             Norm_C = sum(abs(State0_C))/nIJK
           else
-             Norm = sum(abs(State0_C), mask=true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+             Norm_C = sum(abs(State0_C), mask=true_cell(1:nI,1:nJ,1:nK,iBlock)) &
                   /max(count(true_cell(1:nI,1:nJ,1:nK,iBlock)),1)
           end if
 
-          Epsilon = EpsPointImpl*Norm + EpsPointImpl_V(iVar)
+          Epsilon_C = EpsPointImpl*Norm_C + EpsPointImpl_V(iVar)
 
           if(DefaultState_V(iVar) > 0.5 .and. .not. IsAsymmetric) &
-               Epsilon = min(Epsilon, max(1e-30, 0.5*maxval(State0_C)))
+               Epsilon_C = min(Epsilon_C, max(1e-30, 0.5*maxval(State0_C)))
 
           ! Perturb the state
-          State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State0_C + Epsilon
+          State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State0_C + Epsilon_C
 
           ! Calculate perturbed source
           Source_VC = 0.0
@@ -251,15 +257,15 @@ contains
              ! Calculate dS/dU matrix elements
              do iJVar = 1,nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
-                     (Source_VC(jVar,:,:,:) - Source0_VC(jVar,:,:,:))/Epsilon
+                     (Source_VC(jVar,:,:,:) - Source0_VC(jVar,:,:,:))/Epsilon_C
              end do
 
           else
-             ! Store perturbed source corresponding to +Epsilon perturbation
+             ! Store perturbed source corresponding to +Epsilon_C perturbation
              Source1_VC = Source_VC(1:nVar,:,:,:)
 
              ! Perturb the state in opposite direction
-             State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State0_C - Epsilon
+             State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State0_C - Epsilon_C
 
              ! Calculate perturbed source
              Source_VC = 0.0
@@ -269,7 +275,7 @@ contains
              do iJVar = 1,nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
                      0.5*(Source1_VC(jVar,:,:,:) - Source_VC(jVar,:,:,:)) &
-                     /Epsilon
+                     /Epsilon_C
              end do
 
           end if
