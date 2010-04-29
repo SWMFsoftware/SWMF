@@ -208,17 +208,24 @@ contains
           iTeImpl = 1; iTrImplFirst = 2; iTrImplLast = iTrImplFirst + nWave - 1
           nDiff = 1 + nWave
           allocate(iDiff_I(nDiff))
-          iDiff_I = (/ iTeImpl, (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
           iDiffHeat = 1; iDiffRadFirst = 2; iDiffRadLast = nWave + 1
-          nRelax = nWave
-          allocate(iRelax_I(nRelax))
-          iRelax_I = (/ (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
-          if(UseElectronPressure)then
-             nPoint = 1
-          else
-             nPoint = 0
-          end if
 
+          if(UseSplitSemiImplicit)then
+             iDiff_I = 1
+             nRelax  = 0
+             nPoint  = 1 + nWave
+          else
+             iDiff_I = &
+                  (/ iTeImpl, (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
+             nRelax = nWave
+             allocate(iRelax_I(nRelax))
+             iRelax_I = (/ (iVarImpl,iVarImpl=iTrImplFirst,iTrImplLast) /)
+             if(UseElectronPressure)then
+                nPoint = 1
+             else
+                nPoint = 0
+             end if
+          end if
        case('cond')
           UseTemperature = .true.
           iTeImpl = 1
@@ -551,8 +558,17 @@ contains
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
              end if
 
-             RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
-             PlanckWeight_WCB(:,i,j,k,iBlock) = Planck_W/Planck
+             if(UseSplitSemiImplicit)then
+                ! The radiation-material energy exchange is point-implicit
+                PointCoef_VCB(iTrImplFirst:,i,j,k,iBlock) &
+                     = Clight*OpacityPlanck_W
+                PointImpl_VCB(iTrImplFirst:,i,j,k,iBlock) &
+                     = Planck_W
+             else
+                ! The radiation-material energy exchange is semi-implicit
+                RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
+                PlanckWeight_WCB(:,i,j,k,iBlock) = Planck_W/Planck
+             end if
 
           case('cond')
              if(UseElectronPressure)then
@@ -885,13 +901,13 @@ contains
   subroutine set_rad_outflow_bc(iSide, iBlock, iImplBlock, State_VG, IsLinear)
 
     use ModAdvance,  ONLY: State_VGB
-    use ModImplicit, ONLY: nw
+    use ModImplicit, ONLY: nVarSemi
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
     use ModMain,     ONLY: nI, nJ, nK
     use ModPhysics,  ONLY: Clight
 
     integer, intent(in) :: iSide, iBlock, iImplBlock
-    real, intent(inout) :: State_VG(nw,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(inout) :: State_VG(nVarSemi,-1:nI+2,-1:nJ+2,-1:nK+2)
     logical, intent(in) :: IsLinear
 
     integer :: iVar, i, j, k, iDiff
@@ -903,7 +919,7 @@ contains
     case(1)
        do k = 1, nK; do j = 1, nJ
           do iDiff = iDiffRadMin, iDiffRadMax
-             iVar = iDiff_I(iDiff)          
+             iVar = iDiff_I(iDiff)
              Coef = 2/Clight &
                   *DiffSemiCoef_VGB(iDiff,1,j,k,iBlock)/dx_BLK(iBlock)
              State_VG(iVar,0,j,k) = State_VG(iVar,1,j,k) &
