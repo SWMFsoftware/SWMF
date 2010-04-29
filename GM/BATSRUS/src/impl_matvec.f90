@@ -262,15 +262,15 @@ subroutine impl_matvec_prec(qx,qy,n)
   ! for left, symmetric and right preconditioning, respectively
 
   if(PrecondSide /= 'left' .and. PrecondType /= 'JACOBI')then
-     do implBLK=1,nImplBLK
+     do implBLK = 1, nImplBLK
         if(PrecondSide=='right') &
-             call Lhepta(nIJK,nw,nI,nI*nJ,&
+             call Lhepta(nIJK, nVarSemi, nI, nI*nJ, &
              qy(nwIJK*(implBLK-1)+1) ,&
              MAT(1,1,1,1,1,1,implBLK),&   ! Main diagonal
              MAT(1,1,1,1,1,2,implBLK),&   ! -i
              MAT(1,1,1,1,1,4,implBLK),&   ! -j
              MAT(1,1,1,1,1,6,implBLK))    ! -k
-        call Uhepta(.true.,nIJK,nw,nI,nI*nJ,&
+        call Uhepta(.true.,nIJK, nVarSemi, nI, nI*nJ, &
              qy(nwIJK*(implBLK-1)+1) ,  &
              MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
              MAT(1,1,1,1,1,5,implBLK),  &   ! +j 
@@ -287,7 +287,7 @@ subroutine impl_matvec_prec(qx,qy,n)
      qy = JacobiPrec_I(1:n)*qy
   elseif(PrecondType == 'DILU') then
      do implBLK = 1, nImplBLK
-        call multiply_dilu(nIJK,nw,nI,nI*nJ,&
+        call multiply_dilu(nIJK, nVarSemi, nI, nI*nJ, &
              qy(nwIJK*(implBLK-1)+1),&
              MAT(1,1,1,1,1,1,implBLK),&
              MAT(1,1,1,1,1,2,implBLK),&
@@ -299,7 +299,7 @@ subroutine impl_matvec_prec(qx,qy,n)
      end do
   elseif(PrecondSide /= 'right')then
      do implBLK = 1, nImplBLK
-        call Lhepta(nIJK,nw,nI,nI*nJ,&
+        call Lhepta(nIJK, nVarSemi, nI, nI*nJ,&
              qy(nwIJK*(implBLK-1)+1) ,&
              MAT(1,1,1,1,1,1,implBLK),&   ! Main diagonal
              MAT(1,1,1,1,1,2,implBLK),&   ! -i
@@ -308,7 +308,7 @@ subroutine impl_matvec_prec(qx,qy,n)
      end do
      if(PrecondSide == 'left') then
         do implBLK = 1, nImplBLK
-           call Uhepta(.true.,nIJK,nw,nI,nI*nJ,&
+           call Uhepta(.true., nIJK, nVarSemi, nI, nI*nJ,&
                 qy(nwIJK*(implBLK-1)+1),   &
                 MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
                 MAT(1,1,1,1,1,5,implBLK),  &   ! +j
@@ -365,55 +365,55 @@ contains
 
     implicit none
 
-    real, intent(in) :: qx(nw,nIJK)
-    real, intent(inout):: qy(nw,nIJK)
-    real, intent(in) :: JAC(nw,nw,nIJK,nstencil)
+    real, intent(in) :: qx(nVarSemi,nIJK)
+    real, intent(inout):: qy(nVarSemi,nIJK)
+    real, intent(in) :: JAC(nVarSemi,nVarSemi,nIJK,nstencil)
     integer :: i,j,k
 
     do j=1,nIJK
-       do i=1,nw
-          do k=1,nw
+       do i=1,nVarSemi
+          do k=1,nVarSemi
              qy(i,j)=qy(i,j)+JAC(i,k,j,1)*qx(k,j)
           end do
        end do
        if(j>1)then
-          do i=1,nw
-             do k=1,nw
+          do i=1,nVarSemi
+             do k=1,nVarSemi
                 qy(i,j)=qy(i,j)+JAC(i,k,j,2)*qx(k,j-1)
              end do
           end do
        end if
        if(j<nIJK)then
-          do i=1,nw
-             do k=1,nw
+          do i=1,nVarSemi
+             do k=1,nVarSemi
                 qy(i,j)=qy(i,j)+JAC(i,k,j,3)*qx(k,j+1)
              end do
           end do
        end if
        if(j>nI)then
-          do i=1,nw
-             do k=1,nw
+          do i=1,nVarSemi
+             do k=1,nVarSemi
                 qy(i,j)=qy(i,j)+JAC(i,k,j,4)*qx(k,j-nI)
              end do
           end do
        end if
        if(j<=nIJK-nI)then
-          do i=1,nw
-             do k=1,nw
+          do i=1,nVarSemi
+             do k=1,nVarSemi
                 qy(i,j)=qy(i,j)+JAC(i,k,j,5)*qx(k,j+nI)
              end do
           end do
        end if
        if(j>nI*nJ)then
-          do i=1,nw
-             do k=1,nw
+          do i=1,nVarSemi
+             do k=1,nVarSemi
                 qy(i,j)=qy(i,j)+JAC(i,k,j,6)*qx(k,j-nI*nJ)
              end do
           end do
        end if
        if(j<=nIJK-nI*nJ)then
-          do i=1,nw
-             do k=1,nw
+          do i=1,nVarSemi
+             do k=1,nVarSemi
                 qy(i,j)=qy(i,j)+JAC(i,k,j,7)*qx(k,j+nI*nJ)
              end do
           end do
