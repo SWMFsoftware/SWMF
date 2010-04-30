@@ -26,6 +26,7 @@ OBJECTS=\
         ModIonizPotential.o \
 	ModPartition.o \
 	ModPolyimide.o \
+	ModPolysterene.o \
 	ModStatSum.o \
 	ModTransport.o \
 	${IOMIX}
@@ -190,6 +191,7 @@ test_Fermi_for_Darwin:
 	${LINK.f90} -o test_Fermi.exe test_Fermi.o Tmp_/*.o \
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
+convert.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
 CONVERT: convert.o
 	rm -rf Tmp_; mkdir Tmp_ ;
@@ -197,3 +199,4 @@ CONVERT: convert.o
 	${LINK.f90} -o CONVERT.exe convert.o Tmp_/*.o \
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
+
