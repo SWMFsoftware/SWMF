@@ -1473,7 +1473,7 @@ contains
        end if
 
        if(UseElectronPressure)then
-          ! electrons
+          ! electron pressure update: Pnew = Pold + (gamma-1)*Cv'*Delta(a*Te^4)
           State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
                + gm1*DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
                *(StateImpl_VG(iTeImpl,i,j,k)-ImplOld_VCB(iTeImpl,i,j,k,iBlock))
@@ -1505,7 +1505,16 @@ contains
                + (1.0 - ImplCoeff)*(ImplOld_VCB(iVar,i,j,k,iBlock) &
                -            PointImpl_VCB(iVar,i,j,k,iBlock)) )
 
-          Einternal = Einternal + Dt*Relaxation
+          if(UseElectronPressure .and. iVar > 1)then
+             ! Add energy exchange between electrons and each radiation group
+             ! for split semi-implicit scheme
+             State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
+                  + gm1*Dt*Relaxation
+          else
+             ! Add energy exchange between ions and electrons
+             ! or ions+electrons and radiation (when UseElectronPressure=F)
+             Einternal = Einternal + Dt*Relaxation
+          end if
        end do
 
        if(Einternal < 0.0)then
@@ -1521,7 +1530,7 @@ contains
        end if
        
        if(UseIdealEos)then
-          ! ions (electrons were already 
+          ! ions (electrons are already updated)
           State_VGB(p_,i,j,k,iBlock) = gm1*Einternal
 
        elseif(UseElectronPressure)then
