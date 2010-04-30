@@ -14,7 +14,6 @@ IOMIX=\
 
 
 OBJECTS=\
-	ModAcrylic.o \
 	ModAtomicMass.o \
 	ModAtomicDataMix.o \
 	ModEos.o\
@@ -25,8 +24,7 @@ OBJECTS=\
 	ModHydrogenicModel.o \
         ModIonizPotential.o \
 	ModPartition.o \
-	ModPolyimide.o \
-	ModPolysterene.o \
+	ModPlastic.o \
 	ModStatSum.o \
 	ModTransport.o \
 	${IOMIX}
