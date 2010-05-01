@@ -30,9 +30,9 @@ T			UseGravity
 
 
 #GRID
-2                     nRootBlockX
-2                      nRootBlockY
-2                      nRootBlockZ
+2			nRootBlockX
+2			nRootBlockY
+2			nRootBlockZ
 -24.                    xMin
   8.                    xMax
 -16.                    yMin
@@ -42,26 +42,27 @@ T			UseGravity
 
 #LIMITRADIUS
 1.029884232197		rMin
-32.9849					rMax = sqrt(24^2+16^2+16^2)
+32.9849			rMax = sqrt(24^2+16^2+16^2)
 
 #GRIDLEVEL
 3			nLevelArea
-initial					NameArea
+initial			NameArea
 
 #GRIDLEVEL
 1			nLevelArea
-sphere0					NameArea
-1.7							Radius = 1.5*rBody
+sphere0			NameArea
+1.7			Radius = 1.5*rBody
 
 GRIDLEVEL
 3			nLevelArea
-sphere0					NameArea
-1.3							Radius = 1.3*rBody
+sphere0			NameArea
+1.3			Radius = 1.3*rBody
 
 #POINTIMPLICIT
-T
-1.0
-F
+T			UsePointImplicit
+1.0			BetaPointImpl	
+F			IsAssymetric	
+F			DoNormalizeCell 
 
 #BODY
 T			body1
@@ -127,15 +128,16 @@ fixed                   TypeBcNorth
 fixed                   TypeBcBottom
 fixed                   TypeBcTop
 
+! 3nT Parker's spiral
 #SOLARWIND
-2.7                     SW_rho_dim [n/cc] \
-2.55E5                   SW_T_dim [K]       |
--485.0                  SW_Ux_dim [km/s]   |
-0.0                     SW_Uy_dim [km/s]   |
-0.0                     SW_Uz_dim [km/s]   |
--1.634                 SW_Bx_dim [nT]     |3nT parker's spiral
-2.516                  SW_By_dim [nT]     |
-1.00                    SW_Bz_dim [nT]    /
+2.7                     SwNDim  [n/cc]
+2.55E5                  SwTDim  [K]
+-485.0                  SwUxDim [km/s]
+0.0                     SwUyDim [km/s]
+0.0                     SwUzDim [km/s]
+-1.634                  SwBxDim [nT]
+2.516                   SwByDim [nT]  
+1.00                    SwBzDim [nT]  
 
 #USERINPUTBEGIN -----------------------------------------------------
 

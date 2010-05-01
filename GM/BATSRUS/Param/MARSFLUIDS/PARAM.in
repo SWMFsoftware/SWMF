@@ -50,9 +50,10 @@ sphere0					NameArea
 1.3							Radius = 1.3*rBody
 
 #POINTIMPLICIT
-T
-1.0
-F
+T			UsePointImplicit	
+1.0			BetaPointImpl	
+F			IsAssymetric	
+F			DoNormalizeCell 
 
 #BODY
 T			body1

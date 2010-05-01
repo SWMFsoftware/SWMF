@@ -1617,14 +1617,17 @@ relative error 0.001 and absolute error 0.0001.
 
 <command name="POINTIMPLICIT">
 	<parameter name="UsePointImplicit" type="logical" default="F"/>
-	<parameter name="BetaPointImplicit" type="real" min="0.5" max="1"
-				default="0.5" if="$UsePointImplicit"/>
-	<parameter name="IsAsymmetric" type="logical" default="T"
-						if="$UsePointImplicit"/>
+	<if expr="$UsePointImplicit">
+		<parameter name="BetaPointImplicit" type="real" 
+			min="0.5" max="1" default="0.5"/>
+		<parameter name="IsAsymmetric" type="logical" default="T"/>
+		<parameter name="DoNormalizeCell" type="logical" default="F"/>
+	</if>
 #POINTIMPLICIT
 T		UsePointImplicit
 0.5		BetaPointImplicit (read if UsePointImplicit is true)
 T		IsAsymmetric
+T		DoNormalizeCell
 
 Switches on or off the point implicit scheme. The BetaPointImplicit
 parameter (in the 0.5 to 1.0 range) determines the order of accuracy 
@@ -1637,6 +1640,11 @@ parameter is ignored and the coefficient is set to 1.
 If the IsAsymmetric parameter is true, the numerical Jacobian is calculated
 with a one-sided (asymmetric) difference formula. Otherwise a two-sided
 symmetric difference is used. The latter is slower somewhat but more accurate.
+
+If DoNormalizeCell is true, the normalization of variables (this is needed
+to make small perturbations for the calculation of numerical derivatives)
+is done cell-by-cell. The default is false, so normalization is done 
+on a block-by-block basis.
 
 For single-ion MHD the default is UsePointImplicit=.false.
 For multi-ion MHD the default values are 
@@ -4709,13 +4717,13 @@ X=0 plane.
 	<parameter name="SwBzDim"  type="real"		default="-5"	/>
 #SOLARWIND
 5.0			SwNDim  [n/cc]
-100000.0		SwTDim  [K]
+100000.0		SwTDim  [K]   
 -400.0			SwUxDim [km/s]
 0.0			SwUyDim [km/s]
 0.0			SwUzDim [km/s]
-0.0			SwBxDim [nT]
-0.0			SwByDim [nT]
--5.0			SwBzDim [nT]
+0.0			SwBxDim [nT]  
+0.0			SwByDim [nT]  
+-5.0			SwBzDim [nT]  
 
 This command defines the solar wind parameters for the GM component.
 The default values are all 0.0-s.

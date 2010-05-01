@@ -22,6 +22,7 @@ update_point_implicit
 T			UsePointImplicit
 1.0			BetaPointImplicit
 T			IsAsymmetric
+F			DoNormalizeCell
 
 PLASMA
 1.0		MassH+

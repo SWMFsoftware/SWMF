@@ -312,6 +312,8 @@ F                       UseNonConservative
 POINTIMPLICIT
 T                       UsePointImplicit
 1.0                     BetaPointImplicit
+T			IsAsymmetric
+T			DoNormalizeCell
 
 #SAVERESTART
 T                       DoSaveRestart

@@ -100,9 +100,10 @@ T                       UseUserUpdateStates
 #USERINPUTEND ---------------------------------------------------------
 
 #POINTIMPLICIT
-T                UsePointImplicit
-1.0              BetaPointImpl
-T		 IsAssymetric
+T               	UsePointImplicit
+1.0             	BetaPointImpl	
+T			IsAssymetric	
+F			DoNormalizeCell 
 
 #STARTTIME
 2001                    StartTime_i(1)=year

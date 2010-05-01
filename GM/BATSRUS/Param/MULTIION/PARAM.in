@@ -5,6 +5,7 @@ T
 T			UsePointImplicit
 0.5			BetaPointImplicit
 T			IsAsymmetric
+F			DoNormalizeCell
 
 #PLANET
 NONE
