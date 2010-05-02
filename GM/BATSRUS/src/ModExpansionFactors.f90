@@ -454,9 +454,9 @@ contains
       !     &**2, mask=ExpansionFactorInv_N(0,:,:)<0.001))
 
       ! An appropriate angle calculation on a sphere
-      theta_b = minval(acos(cos(Theta_IJ(:,:))*cos(Theta) &
-           + sin(Theta_IJ(:,:))*sin(Theta)*cos(Phi-Phi_IJ(:,:))), &
-           mask=ExpansionFactorInv_N(0,:,:)<0.001)
+      theta_b = acos(maxval(cos(Theta_IJ(:,:))*cos(Theta) &
+           + sin(Theta_IJ(:,:))*sin(Theta)*cos(Phi-Phi_IJ(:,:)), &
+           mask=ExpansionFactorInv_N(0,:,:)<0.001))
 
     end function theta_b
   end subroutine set_expansion_factors

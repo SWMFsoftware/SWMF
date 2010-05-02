@@ -127,7 +127,7 @@ contains
     else
        B0_DG=0.00
     end if
-    do k=-1,nK+2; do j=-2, nJ+2; do i=-2, nI+2
+    do k=-1, nK+2; do j=-1, nJ+2; do i=-1, nI+2
 
        ! EtaSi = EtaPerpSpitzer/Te^1.5 in SI units
        EtaSi = EtaPerpSpitzerSi &
