@@ -3,15 +3,15 @@
           for 3D Heliospheric Flows
  University of Michigan, 1995-2007
 
- BATSRUS version 8.01 is running as GM on    2 PE(s)
+ BATSRUS version 9.00 is running as GM on    4 PE(s)
 
  EQUATIONS:   Solar Corona MHD
  USER MODULE: EMPIRICAL SC - Cohen, Sokolov 1.00
 
-ModReadParam::read_file: read and broadcast nLine= 204 lines of text
+ModReadParam::read_file: read and broadcast nLine= 244 lines of text
  ----- Starting Session  1  ------
  init_mod_restart_file: setting TypeRestartOutFile = one
- GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 204
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
 
 #COMPONENT
 SC			NameComp
@@ -50,32 +50,24 @@ T			UseUserInitSession
 T			UseUserUpdateStates
 
 #USERINPUTBEGIN ------------------------
- User read_input HELIOSPHERE starts
+ User read_input SOLAR CORONA starts
 
 #PFSSM
 T			UseUserB0
 1.0			Ro_PFSSM
 2.5			Rs_PFSSM
 0.0			H_PFSSM
-CR1935_WSO.dat          File_PFSSM
+Param/CORONA/CR1935_WSO.dat    File_PFSSM
 12			iHead_PFSSM
 -1.0			PhiShift		Phi_Shift
-1.0			UnitB
- Norder =  90
- Entered coefficient file name :: CR1935_WSO.dat                  
- Entered number of header lines::  12
- Reset N_PFSSM= 29
- Phi_Shift=   3.1500000000000000E+02
- Magnetogram is extended by  2  nodes towards the Sun
- Writing PFSSM_Br output file, named
- SC/IO2/PFSSM_Br.dat
+0.01			UnitB
 -1.0			dt_UpdateB0
 
 #EMPIRICALSW
 WSA			NameModel
 
 #USERINPUTEND ----------------------------
- User read_input HELIOSPHERE ends
+ User read_input SOLAR CORONA ends
 
 #BODY
 T			UseBody
@@ -85,6 +77,14 @@ T			UseBody
 
 #GAMMA
 1.5000E+00		Gamma
+
+#OUTERBOUNDARY
+float	                TypeBcEast
+float   	        TypeBcWest
+float	                TypeBcSouth
+float	  		TypeBcNorth
+float	 	        TypeBcBot		TypeBcBottom
+float	   		TypeBcTop
 
 #GRID
 1			nRootBlockX
@@ -97,17 +97,23 @@ T			UseBody
 -24.0			zMin
  24.0			zMax
 
-#OUTERBOUNDARY
-float	                TypeBcEast
-float   	        TypeBcWest
-float	                TypeBcSouth
-float	  		TypeBcNorth
-float	 	        TypeBcBot		TypeBcBottom
-float	   		TypeBcTop
+#GRIDLEVEL
+2			nLevelArea
+all			NameArea
 
-#AMRINIT
-helio_init		TypeRefineInit
-2			nRefineLevelInit
+#GRIDLEVEL
+10			nLevel		nLevelArea
+shell0			NameArea
+1.0			Radius1
+1.1			Radius2
+
+#GRIDRESOLUTION
+0.2			Resolution		AreaResolution
+user			NameArea
+
+#GRIDLEVEL
+2			nLevelArea
+initial			NameArea
 
 #USECURLB0
 T			UseCurlB0
@@ -162,7 +168,24 @@ z=0 MHD idl		StringPlot
  SC_set_parameters: CHECK iSession = 1
   
  Only Extra and Outer boundary cells can be saved
+init_mod_advance allocated arrays
+init_mod_geometry allocated arrays
+init_mod_raytrace allocated arrays
+ 
+ user_init_session:
+ 
+ Norder =  180
+ Entered coefficient file name :: Param/CORONA/CR1935_WSO.dat     
+ Entered number of header lines::  12
+ Reset N_PFSSM= 29
+ Phi_Shift=   3.1500000000000000E+02
+ Magnetogram is extended by  2  nodes towards the Sun
+ Writing PFSSM_Br output file, named
+ SC/IO2/PFSSM_Br.dat             
  Writing PFSSM factors  output file
+ 
+ user_init_session finished
+ 
  BATS_setup starting initial refinement level  1
  parallel_refine starting to refine  1  block(s) on PE 0
  BATS_setup starting initial refinement level  2
@@ -177,7 +200,7 @@ z=0 MHD idl		StringPlot
     Planetary Parameters
     --------------------
 
-          Name:            EARTH                                     
+          Name:            EARTH  
           Radius:           6.37800E+06
           Mass:             5.97600E+24
           Rotation Tilt:    4.10152E-01
@@ -190,130 +213,129 @@ z=0 MHD idl		StringPlot
 
           I/O Unit type: HELIOSPHERIC            Normalization: SOLARWIND
 
-          gamma:         1.50000000
+          Gamma:         1.50000000
 
           rBody:         1.00000E+00, rPlanet:     6.96000E+08
           BodyNDim:      3.00000E+08, BodyTDim:    3.50000E+06
           Bdp:           0.00000E+00, Tilt:        0.00000E+00
           Gravity is used, gBody= -4.40223E+00
 
-          body2: .false.
+          UseBody2: .false.
 
-          cLIGHTfactor:  1.00000E+00, cLIGHT:      1.44007E+03
+          ClightFactor:  1.00000E+00, Clight:      1.44007E+03
 
 
     MHD Numerical Solution Parameters
     ---------------------------------
 
-          2nd-Order Scheme
-          with limiter mc    
-          beta= 1.20
+          2nd-order scheme with mc limiter
+              BetaLimiter = 1.20
+          Sokolov flux function
           Steady state calculation
-          Sokolov Flux Function
-          Explicit Time Stepping
+          Explicit time stepping
+              nStage: 2
+              Cfl:    0.80
 
     Other Runtime Parameters
     ------------------------
 
- Available processors: nProc =  2
+ Available processors: nProc =  4
 
  After initial grid setup:
-   nBlockMax =  64  nBLK =  3000
+   nBlockMax =  36  nBLK =  3000
    Total number of blocks used =  64
    Total number of cells =  4096
+   Total number of true cells =  4096
    Smallest cell dx:    3.0000000000000000   Largest cell dx:    3.0000000000000000
 
  root blocks:        1       1       1
- nCells:             4       4       4
+ nIJK_D:             4       4       4
  x:               -24.00000000     24.00000000
  y:               -24.00000000     24.00000000
  z:               -24.00000000     24.00000000
- multistage:         2
- cfl:               0.80000000
 
 -------------------------------------------------------------------------------
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   0.48    100.00         1         1
+BATSRUS                   0.26    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     0.48    100.00         1         1
-load_balance              0.06     13.29         1         1
-exch_msgs                 0.04      8.73         1         1
+setup                     0.26    100.00         1         1
+load_balance              0.01      4.03         1         1
+exch_msgs                 0.01      2.39         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
- First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   3.7568945795569035E-03
+ First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   4.9925750664029439E-03
 saved ifile= 3 type=x=0_mhd    at n_step=     10
 saved ifile= 4 type=y=0_mhd    at n_step=     10
 saved ifile= 5 type=z=0_mhd    at n_step=     10
-Speed is  90363.6 c/s/p after      0.4 s at N =      10
+Speed is  57334.8 c/s/p after      0.5 s at N =      10
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
  parallel_refine starting to refine  8  block(s) on PE 0
  renumber_octree: finished renumbering 120  blocks.
  |
- |  AMR:  nBlockMax =  64  nBLK =  3000
+ |  AMR:  nBlockMax =  36  nBLK =  3000
  |  AMR:  Total number of blocks used =  120
  |  AMR:  Total number of cells =  7680
+ |  AMR:  Total number of true cells =  7680
  |  Smallest cell dx:    1.5000000000000000   Largest cell dx:    3.0000000000000000
  |
-Timing for last SC_amr (BATSRUS):    0.06 sec
+Timing for last SC_amr (BATSRUS):    0.07 sec
 Timing for last load_balance (SC_amr):    0.00 sec
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
 saved ifile= 3 type=x=0_mhd    at n_step=     20
 saved ifile= 4 type=y=0_mhd    at n_step=     20
 saved ifile= 5 type=z=0_mhd    at n_step=     20
-Speed is 156702.7 c/s/p after      0.8 s at N =      20
+Speed is  92418.8 c/s/p after      1.1 s at N =      20
 saved ifile= 3 type=x=0_mhd    at n_step=     30
 saved ifile= 4 type=y=0_mhd    at n_step=     30
 saved ifile= 5 type=z=0_mhd    at n_step=     30
-Speed is  81214.8 c/s/p after      1.4 s at N =      30
+Speed is  57202.4 c/s/p after      1.7 s at N =      30
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
- parallel_refine starting to refine  34  block(s) on PE 0
-     FixRefinementLevels found  38  blocks to refine
- parallel_refine starting to refine  38  block(s) on PE 0
- renumber_octree: finished renumbering 624  blocks.
+ parallel_refine starting to refine  80  block(s) on PE 0
+ renumber_octree: finished renumbering 680  blocks.
  |
- |  AMR:  nBlockMax =  326  nBLK =  3000
- |  AMR:  Total number of blocks used =  624
- |  AMR:  Total number of cells =  39936
+ |  AMR:  nBlockMax =  184  nBLK =  3000
+ |  AMR:  Total number of blocks used =  680
+ |  AMR:  Total number of cells =  43520
+ |  AMR:  Total number of true cells =  43512
  |  Smallest cell dx:    0.7500000000000000   Largest cell dx:    3.0000000000000000
  |
-Timing for last SC_amr (BATSRUS):    0.27 sec
-Timing for last load_balance (SC_amr):    0.03 sec
+Timing for last SC_amr (BATSRUS):    0.20 sec
+Timing for last load_balance (SC_amr):    0.02 sec
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
 saved ifile= 3 type=x=0_mhd    at n_step=     40
 saved ifile= 4 type=y=0_mhd    at n_step=     40
 saved ifile= 5 type=z=0_mhd    at n_step=     40
-Speed is 401068.6 c/s/p after      2.4 s at N =      40
+Speed is 320395.8 c/s/p after      2.6 s at N =      40
 saved ifile= 3 type=x=0_mhd    at n_step=     50
 saved ifile= 4 type=y=0_mhd    at n_step=     50
 saved ifile= 5 type=z=0_mhd    at n_step=     50
-Speed is  76384.0 c/s/p after      5.3 s at N =      50
+Speed is  59096.4 c/s/p after      4.9 s at N =      50
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
- parallel_refine starting to refine  193  block(s) on PE 0
-     FixRefinementLevels found  61  blocks to refine
- parallel_refine starting to refine  61  block(s) on PE 0
- renumber_octree: finished renumbering 2402  blocks.
+ parallel_refine starting to refine  238  block(s) on PE 0
+ renumber_octree: finished renumbering 2346  blocks.
  |
- |  AMR:  nBlockMax =  1201  nBLK =  3000
- |  AMR:  Total number of blocks used =  2402
- |  AMR:  Total number of cells =  153728
+ |  AMR:  nBlockMax =  625  nBLK =  3000
+ |  AMR:  Total number of blocks used =  2346
+ |  AMR:  Total number of cells =  150144
+ |  AMR:  Total number of true cells =  150056
  |  Smallest cell dx:    0.3750000000000000   Largest cell dx:    3.0000000000000000
  |
-Timing for last SC_amr (BATSRUS):    0.85 sec
-Timing for last load_balance (SC_amr):    0.04 sec
+Timing for last SC_amr (BATSRUS):    0.54 sec
+Timing for last load_balance (SC_amr):    0.05 sec
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
 saved ifile= 3 type=x=0_mhd    at n_step=     60
 saved ifile= 4 type=y=0_mhd    at n_step=     60
 saved ifile= 5 type=z=0_mhd    at n_step=     60
-Speed is 307728.0 c/s/p after      9.1 s at N =      60
+Speed is 191265.9 c/s/p after      7.8 s at N =      60
 saved ifile= 3 type=x=0_mhd    at n_step=     70
 saved ifile= 4 type=y=0_mhd    at n_step=     70
 saved ifile= 5 type=z=0_mhd    at n_step=     70
-Speed is  74861.2 c/s/p after     19.8 s at N =      70
+Speed is  57906.3 c/s/p after     14.9 s at N =      70
  ----- End of Session    1  ------
  ----- Starting Session  2  ------
- SC_set_parameters: READ iSession = 1  iLine= 139  nLine = 204
+ SC_set_parameters: READ iSession = 2  iLine= 154  nLine = 1000
 
 #AMR
 -1			DnRefine
@@ -333,32 +355,11 @@ F                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
 T                       UseUserB0
-T                       UseUserInitSession
+T			UseUserInitSession
 T                       UseUserUpdateStates
 
 #USERINPUTBEGIN ---------------
- User read_input HELIOSPHERE starts
-
-#TD99FLUXROPE
-T                       UseTD99Perturbation
-F                       UseVariedCurrent
-0.000E+00               CurrentStartTime
-0.000E+00               CurrentRiseTime
-T                       DoTD99FluxRope
-F                       DoEquilItube
-F                       DoRevCurrent
-8.000E-01               aratio_TD99 in [-]
-5.000E+12               Itube_TD99 in [A]
-7.000E+08               Rtube_TD99 in [m]
-3.000E+08               atube_TD99 in [m]
-1.000E+08               d_TD99     in [m]
-1.000E+13               Mass_TD99  in [kg]
-180.0                   LongitudeTD99 in [deg]
-15.0                    LatitudeTD99    in [deg]
-30.0                    OrientationTD99 in [deg]
-F                       DoBqField
-1.820E+13               q_TD99 in [T*m**2]
-6.000E+08               L_TD99 in [m]
+ User read_input SOLAR CORONA starts
 
 #GL98FLUXROPE
 T                       UseFluxRope
@@ -376,50 +377,26 @@ T                       UseFluxRope
 0.0                     OrientationGL98
 
 #USERINPUTEND ---------------
- User read_input HELIOSPHERE ends
+ User read_input SOLAR CORONA ends
 
 #STOP
-100		MaxIteration
+71		MaxIteration
 -1.0		tSimulationMax
- SC_set_parameters: CHECK iSession = 1
+
+#RUN ######################################################################
+ SC_set_parameters: CHECK iSession = 2
   
- Writing PFSSM factors  output file
- EEE: 
- EEE: >>>>>>>>>>>>>>>>>>>                   <<<<<<<<<<<<<<<<<<<<<
- EEE: 
- EEE:     Twisted Flux Rope Model by Titov & Demoulin, 1999.     
- EEE: 
- EEE: >>>>>>>>>>>>>>>>>>>                   <<<<<<<<<<<<<<<<<<<<<
- EEE: 
- EEE: >>>>     Normalization Units (in MKS) in the model.    <<<<
- EEE: 
- EEE: X0 =    6.9600000000000000E+08 [m] =    6.9600000000000000E+02 [Mm] = Rsun
- EEE: B0 =    1.6530838137829550E-04 [T] =    1.6530838137829551 [Gauss]
- EEE: I0 =    1.8900607780801690E-07 [A] =    0.1890060778080169 [microA]
- EEE: 
- EEE: >>>>       Normalized values of model parameters.      <<<<
- EEE: 
- EEE: d_TD99      =    0.1436781609195402 [X0]    1.0000000000000000E+02 [Mm]
- EEE: Rtube_TD99  =    1.0057471264367817 [X0]    7.0000000000000000E+02 [Mm]
- EEE: atube_TD99  =    0.4310344827586207 [X0]    3.0000000000000000E+02 [Mm]
- EEE: atube/Rtube =    0.4285714285714285 [-]
- EEE: Itube_TD99  =   54.6104500041259655 [I0]    5.0000000000000000E+12 [A]
- EEE: aratio_TD99 =    0.8000000000000000 [-]
- EEE: Mass_TD99   =    1.0000000000000000E+16 [g] InvH0_TD99  =    4.4022265845731852 [1/X0]
- EEE: Rho0_TD99   =    3.5270020166823297E-02 [Rho0] =    1.7697790719308596E-17 [g/cm^3]
- EEE: 
- EEE: q_TD99      =    0.2272783329595636 [B0*X0^2]    1.8200000000000000E+13 [T m^2]
- EEE: L_TD99      =    0.8620689655172413 [X0]    6.0000000000000000E+02 [Mm]
- EEE: 
- EEE: Free energy of flux rope is    1.3273345212764958E+35 Ergs.
- EEE: Separation of flux rope ends is    6.9282032302755090E+02 Mm, or  89.5888348742522851 deg.
- EEE: 
- EEE: >>>>>>>>>>>>>>>>>>>>>>>> Action!!! <<<<<<<<<<<<<<<<<<<<<<<<
- EEE: 
+ 
+ user_init_session:
+ 
+ 
+ user_init_session finished
+ 
  EEE: 
  EEE: >>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<
+ EEE: 
  EEE:             Gibson and Low CME is initiated!!!
- EEE:             CAUTION: this module is NOT tested!!!
+ EEE: 
  EEE: >>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<
  EEE: 
  EEE: cme_a  =    0.7000000000000000 [rSun]
@@ -433,39 +410,124 @@ T                       UseFluxRope
  EEE: LongitudeGL98 =   80.0000000000000000 [degrees]
  EEE: LatitudeGL98 =  -10.0000000000000000 [degrees]
  EEE: OrientationGL98 =    0.0000000000000000 [degrees]
-saved ifile= 3 type=x=0_mhd    at n_step=     80 time=   0:00:03 h:m:s
-saved ifile= 4 type=y=0_mhd    at n_step=     80 time=   0:00:03 h:m:s
-saved ifile= 5 type=z=0_mhd    at n_step=     80 time=   0:00:03 h:m:s
-Speed is  76908.4 c/s/p after     40.4 s at N =      80 (3.0574E+00 s)
-saved ifile= 3 type=x=0_mhd    at n_step=     90 time=   0:00:06 h:m:s
-saved ifile= 4 type=y=0_mhd    at n_step=     90 time=   0:00:06 h:m:s
-saved ifile= 5 type=z=0_mhd    at n_step=     90 time=   0:00:06 h:m:s
-Speed is  76647.6 c/s/p after     50.9 s at N =      90 (6.5843E+00 s)
-saved ifile= 3 type=x=0_mhd    at n_step=    100 time=   0:00:10 h:m:s
-saved ifile= 4 type=y=0_mhd    at n_step=    100 time=   0:00:10 h:m:s
-saved ifile= 5 type=z=0_mhd    at n_step=    100 time=   0:00:10 h:m:s
-Speed is  76656.0 c/s/p after     61.3 s at N =     100 (1.0343E+01 s)
+ EEE: 
+ ----- End of Session    2  ------
+ ----- Starting Session  3  ------
+ SC_set_parameters: READ iSession = 3  iLine= 200  nLine = 1000
+
+#USER_FLAGS
+T                       UseUserInnerBCs		UseUserInnerBcs
+F                       UseUserSource
+T                       UseUserPerturbation
+F                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+T                       UseUserB0
+T			UseUserInitSession
+T                       UseUserUpdateStates
+
+#USERINPUTBEGIN ---------------
+ User read_input SOLAR CORONA starts
+
+#TD99FLUXROPE
+T                       UseTD99Perturbation
+F                       UseVariedCurrent
+0.000E+00               CurrentStartTime
+0.000E+00               CurrentRiseTime
+T                       DoTD99FluxRope
+F                       DoEquilItube
+F                       DoRevCurrent
+8.000E-01               aratio_TD99 in [-]
+2.000E+11               Itube_TD99 in [A]
+7.000E+08               Rtube_TD99 in [m]
+3.000E+08               atube_TD99 in [m]
+1.000E+08               d_TD99     in [m]
+1.000E+13               Mass_TD99  in [kg]
+180.0                   LongitudeTD99 in [deg]
+15.0                    LatitudeTD99    in [deg]
+30.0                    OrientationTD99 in [deg]
+F                       DoBqField
+1.820E+13               q_TD99 in [T*m**2]
+6.000E+08               L_TD99 in [m]
+
+#USERINPUTEND ---------------
+ User read_input SOLAR CORONA ends
+
+#STOP
+100		MaxIteration
+-1.0		tSimulationMax
+ SC_set_parameters: CHECK iSession = 3
+  
+ 
+ user_init_session:
+ 
+ 
+ user_init_session finished
+ 
+ EEE: 
+ EEE: >>>>>>>>>>>>>>>>>>>                   <<<<<<<<<<<<<<<<<<<<<
+ EEE: 
+ EEE:     Twisted Flux Rope Model by Titov & Demoulin, 1999.     
+ EEE: 
+ EEE: >>>>>>>>>>>>>>>>>>>                   <<<<<<<<<<<<<<<<<<<<<
+ EEE: 
+ EEE: d_TD99      =    1.0000000000000000E+02 [Mm]
+ EEE: Rtube_TD99  =    7.0000000000000000E+02 [Mm]
+ EEE: atube_TD99  =    3.0000000000000000E+02 [Mm]
+ EEE: atube/Rtube =    0.4285714285714285 [-]
+ EEE: Itube_TD99  =    2.0000000000000000E+11 [A]
+ EEE: aratio_TD99 =    0.8000000000000000 [-]
+ EEE: Mass_TD99   =    1.0000000000000000E+16 [g] 
+ EEE: Rho0_TD99   =    1.7697790719308596E-17 [g/cm^3]
+ EEE: 
+ EEE: q_TD99      =    1.8200000000000000E+13 [T m^2]
+ EEE: L_TD99      =    6.0000000000000000E+02 [Mm]
+ EEE: 
+ EEE: Free energy of flux rope is    2.1237352340423935E+32 Ergs.
+ EEE: Separation of flux rope ends is    6.9282032302755090E+02 Mm,
+ EEE:    or   89.5888348742522851 deg.
+ EEE: 
+saved ifile= 3 type=x=0_mhd    at n_step=     80 time=   0:03:11 h:m:s
+saved ifile= 4 type=y=0_mhd    at n_step=     80 time=   0:03:11 h:m:s
+saved ifile= 5 type=z=0_mhd    at n_step=     80 time=   0:03:11 h:m:s
+Speed is  58915.8 c/s/p after     22.9 s at N =      80 (1.9154E+02 s)
+saved ifile= 3 type=x=0_mhd    at n_step=     90 time=   0:08:40 h:m:s
+saved ifile= 4 type=y=0_mhd    at n_step=     90 time=   0:08:40 h:m:s
+saved ifile= 5 type=z=0_mhd    at n_step=     90 time=   0:08:40 h:m:s
+Speed is  57101.2 c/s/p after     30.1 s at N =      90 (5.2013E+02 s)
+saved ifile= 3 type=x=0_mhd    at n_step=    100 time=   0:15:35 h:m:s
+saved ifile= 4 type=y=0_mhd    at n_step=    100 time=   0:15:35 h:m:s
+saved ifile= 5 type=z=0_mhd    at n_step=    100 time=   0:15:35 h:m:s
+Speed is  59423.5 c/s/p after     37.0 s at N =     100 (9.3573E+02 s)
 -------------------------------------------------------------------------------
-TIMING TREE of depth 2 from step      70 to     100    on PE    0
+TIMING TREE of depth 2 from step      71 to     100    on PE    0
 name                  #iter  #calls      sec   s/iter   s/call  percent
 -------------------------------------------------------------------------------
-BATSRUS                   1       1    41.55   41.551   41.551   100.00
+BATSRUS                   1       1    21.20   21.197   21.197   100.00
 -------------------------------------------------------------------------------
-advance                  30      30    29.65    0.988    0.988    71.36
-save_logfile             30      30     0.62    0.021    0.021     1.49
-save_plot                 3       9     1.00    0.333    0.111     2.41
-exch_msgs                 1       1     0.07    0.072    0.072     0.17
-#others                                10.21   10.210             24.57
+advance                  29      29    18.85    0.650    0.650    88.92
+save_logfile             29      29     1.12    0.038    0.038     5.26
+save_plot                 3       9     0.64    0.214    0.071     3.03
+exch_msgs                 1       1     0.07    0.067    0.067     0.32
+#others                                 0.52    0.522              2.46
 -------------------------------------------------------------------------------
 
    100 of    100 iterations completed.   Expected time to completion:      0.00
 
 
-    Finished Numerical Simulation
+    Finished Numerical SimWarning: Floating underflow occurred
+Warning: Floating underflow occurred
+Warning: Floating underflow occurred
+Warning: Floating underflow occurred
+ulation
     -----------------------------
-   Simulated Time T =   0.10343E+02 (    0.172384 min,     0.002873 hrs)
+   Simulated Time T =   0.93573E+03 (   15.595463 min,     0.259924 hrs)
  => Writing restart files ...
-saved ifile= 1 type=restart    at n_step=    100 time=   0:00:10 h:m:s
+saved ifile= 1 type=restart    at n_step=    100 time=   0:15:35 h:m:s
 
     Finished Saving Output Files
     ----------------------------
@@ -473,29 +535,29 @@ saved ifile= 1 type=restart    at n_step=    100 time=   0:00:10 h:m:s
 SORTED TIMING from step       0 to     100    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                  61.39    100.00         1         1
+BATSRUS                  37.08    100.00         1         1
 -------------------------------------------------------------------------------
-advance                  46.39     75.57       100       100
-calc_fluxes              15.34     24.98       100    112240
-calc_facevalues           8.66     14.10       100    112240
-update_states             5.88      9.57       100    112240
-exch_msgs                 5.72      9.31       104       207
-calc_sources              4.13      6.72       100    112240
-calc_face_bfo             3.07      5.00        80     66280
-save_plot                 1.90      3.10        10        30
-update_check              1.78      2.90       100       200
-save_logfile              1.57      2.56       100       100
-SC_amr                    1.18      1.92         3         3
-calc_fluxes_bfo           0.98      1.60        80     66280
-int_domain                0.31      0.51       100       100
-send_cons_flux            0.18      0.30       100       200
-barrier-expl2             0.13      0.22       100       200
-load_balance              0.07      0.12         3         3
-set_bcs                   0.07      0.12        60      1920
-write_restart_files       0.06      0.10         1         1
-barrier-expl1             0.02      0.03       100       200
+advance                  30.99     83.57       100       100
+calc_fluxes               8.41     22.68       100     55520
+exch_msgs                 5.94     16.02       105       208
+calc_facevalues           4.56     12.30       100     55520
+update_states             3.88     10.47       100     55520
+save_logfile              3.25      8.77       100       100
+calc_sources              2.16      5.82       100     55520
+calc_face_bfo             1.60      4.31        80     30760
+update_check              1.57      4.23       100       200
+save_plot                 1.22      3.30        10        30
+barrier-expl2             0.88      2.38       100       200
+SC_amr                    0.82      2.20         3         3
+calc_fluxes_bfo           0.52      1.40        80     30760
+send_cons_flux            0.41      1.12       100       200
+int_domain                0.30      0.81       100       100
+barrier-expl1             0.19      0.51       100       200
+write_restart_files       0.08      0.23         1         1
+load_balance              0.08      0.21         3         3
+set_bcs                   0.04      0.10        60       960
 -------------------------------------------------------------------------------
 Error_report for Time step reduction, min(factor)
- OCCURED first= 1  last= 71  count_max= 37  count_sum= 37
- VALUES min=   3.7568945795569035E-03  max=   0.7500000000000000  mean=   0.3595338416350923  last=   0.3750000000000000  last_sum=   0.3750000000000000
+ OCCURED first= 1  last= 72  count_max= 33  count_sum= 33
+ VALUES min=   4.9925750664029439E-03  max=   0.7500000000000000  mean=   0.3918839422011469  last=   0.7500000000000000  last_sum=   0.7500000000000000
 
