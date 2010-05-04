@@ -8,7 +8,7 @@
  EQUATIONS:   Solar Corona MHD
  USER MODULE: EMPIRICAL SC - Cohen, Sokolov 1.00
 
-ModReadParam::read_file: read and broadcast nLine= 244 lines of text
+ModReadParam::read_file: read and broadcast nLine= 262 lines of text
  ----- Starting Session  1  ------
  init_mod_restart_file: setting TypeRestartOutFile = one
  GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
@@ -170,6 +170,7 @@ z=0 MHD idl		StringPlot
  Only Extra and Outer boundary cells can be saved
 init_mod_advance allocated arrays
 init_mod_geometry allocated arrays
+init_mod_nodes allocated arrays
 init_mod_raytrace allocated arrays
  
  user_init_session:
@@ -260,16 +261,16 @@ name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
 BATSRUS                   0.26    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     0.26    100.00         1         1
-load_balance              0.01      4.03         1         1
-exch_msgs                 0.01      2.39         1         1
+setup                     0.26     99.86         1         1
+load_balance              0.01      5.56         1         1
+exch_msgs                 0.01      3.92         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
  First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   4.9925750664029439E-03
 saved ifile= 3 type=x=0_mhd    at n_step=     10
 saved ifile= 4 type=y=0_mhd    at n_step=     10
 saved ifile= 5 type=z=0_mhd    at n_step=     10
-Speed is  57334.8 c/s/p after      0.5 s at N =      10
+Speed is  57758.5 c/s/p after      0.5 s at N =      10
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
  parallel_refine starting to refine  8  block(s) on PE 0
  renumber_octree: finished renumbering 120  blocks.
@@ -280,17 +281,17 @@ Speed is  57334.8 c/s/p after      0.5 s at N =      10
  |  AMR:  Total number of true cells =  7680
  |  Smallest cell dx:    1.5000000000000000   Largest cell dx:    3.0000000000000000
  |
-Timing for last SC_amr (BATSRUS):    0.07 sec
+Timing for last SC_amr (BATSRUS):    0.05 sec
 Timing for last load_balance (SC_amr):    0.00 sec
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
 saved ifile= 3 type=x=0_mhd    at n_step=     20
 saved ifile= 4 type=y=0_mhd    at n_step=     20
 saved ifile= 5 type=z=0_mhd    at n_step=     20
-Speed is  92418.8 c/s/p after      1.1 s at N =      20
+Speed is 107011.5 c/s/p after      1.0 s at N =      20
 saved ifile= 3 type=x=0_mhd    at n_step=     30
 saved ifile= 4 type=y=0_mhd    at n_step=     30
 saved ifile= 5 type=z=0_mhd    at n_step=     30
-Speed is  57202.4 c/s/p after      1.7 s at N =      30
+Speed is  53982.6 c/s/p after      1.7 s at N =      30
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
  parallel_refine starting to refine  80  block(s) on PE 0
  renumber_octree: finished renumbering 680  blocks.
@@ -301,17 +302,17 @@ Speed is  57202.4 c/s/p after      1.7 s at N =      30
  |  AMR:  Total number of true cells =  43512
  |  Smallest cell dx:    0.7500000000000000   Largest cell dx:    3.0000000000000000
  |
-Timing for last SC_amr (BATSRUS):    0.20 sec
-Timing for last load_balance (SC_amr):    0.02 sec
+Timing for last SC_amr (BATSRUS):    0.21 sec
+Timing for last load_balance (SC_amr):    0.04 sec
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
 saved ifile= 3 type=x=0_mhd    at n_step=     40
 saved ifile= 4 type=y=0_mhd    at n_step=     40
 saved ifile= 5 type=z=0_mhd    at n_step=     40
-Speed is 320395.8 c/s/p after      2.6 s at N =      40
+Speed is 308801.4 c/s/p after      2.6 s at N =      40
 saved ifile= 3 type=x=0_mhd    at n_step=     50
 saved ifile= 4 type=y=0_mhd    at n_step=     50
 saved ifile= 5 type=z=0_mhd    at n_step=     50
-Speed is  59096.4 c/s/p after      4.9 s at N =      50
+Speed is  57300.0 c/s/p after      4.9 s at N =      50
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
  parallel_refine starting to refine  238  block(s) on PE 0
  renumber_octree: finished renumbering 2346  blocks.
@@ -322,17 +323,17 @@ Speed is  59096.4 c/s/p after      4.9 s at N =      50
  |  AMR:  Total number of true cells =  150056
  |  Smallest cell dx:    0.3750000000000000   Largest cell dx:    3.0000000000000000
  |
-Timing for last SC_amr (BATSRUS):    0.54 sec
-Timing for last load_balance (SC_amr):    0.05 sec
+Timing for last SC_amr (BATSRUS):    0.55 sec
+Timing for last load_balance (SC_amr):    0.06 sec
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
 saved ifile= 3 type=x=0_mhd    at n_step=     60
 saved ifile= 4 type=y=0_mhd    at n_step=     60
 saved ifile= 5 type=z=0_mhd    at n_step=     60
-Speed is 191265.9 c/s/p after      7.8 s at N =      60
+Speed is 200010.7 c/s/p after      7.9 s at N =      60
 saved ifile= 3 type=x=0_mhd    at n_step=     70
 saved ifile= 4 type=y=0_mhd    at n_step=     70
 saved ifile= 5 type=z=0_mhd    at n_step=     70
-Speed is  57906.3 c/s/p after     14.9 s at N =      70
+Speed is  56884.3 c/s/p after     15.1 s at N =      70
  ----- End of Session    1  ------
  ----- Starting Session  2  ------
  SC_set_parameters: READ iSession = 2  iLine= 154  nLine = 1000
@@ -358,26 +359,18 @@ T                       UseUserB0
 T			UseUserInitSession
 T                       UseUserUpdateStates
 
-#USERINPUTBEGIN ---------------
- User read_input SOLAR CORONA starts
-
-#GL98FLUXROPE
-T                       UseFluxRope
-0.7                     cme_a
-1.8                     cme_r1
-1.0                     cme_r0
-0.93                    cme_a1
-0.0                     cme_alpha
-0.0                     cme_rho1
-0.0                     cme_rho2
-0.8                     ModulationRho
-0.8                     ModulationP
-80.0                    LongitudeGL98
--10.0                   LatitudeGL98
-0.0                     OrientationGL98
-
-#USERINPUTEND ---------------
- User read_input SOLAR CORONA ends
+#CME
+T			UseCme
+T			DoAddFluxRope
+80.0                    LongitudeCme
+-10.0                   LatitudeCme
+0.0                     OrientationCme
+GL			TypeCme
+0.7			Stretch
+1.8			Distance
+1.0			Radius
+0.93			Bstrength
+0.0			Density
 
 #STOP
 71		MaxIteration
@@ -405,15 +398,15 @@ T                       UseFluxRope
  EEE: cme_a1 =    0.9300000000000000 [Gauss]
  EEE: cme_rho1 =    0.0000000000000000 [kg/m^3]
  EEE: cme_rho2 =    0.0000000000000000 [kg/m^3]
- EEE: ModulationRho =    0.8000000000000000
- EEE: ModulationP   =    0.8000000000000000
- EEE: LongitudeGL98 =   80.0000000000000000 [degrees]
- EEE: LatitudeGL98 =  -10.0000000000000000 [degrees]
- EEE: OrientationGL98 =    0.0000000000000000 [degrees]
+ EEE: ModulationRho =    0.0000000000000000
+ EEE: ModulationP   =    0.0000000000000000
+ EEE: LongitudeCme =   80.0000000000000000 [degrees]
+ EEE: LatitudeCme =  -10.0000000000000000 [degrees]
+ EEE: OrientationCme =    0.0000000000000000 [degrees]
  EEE: 
  ----- End of Session    2  ------
  ----- Starting Session  3  ------
- SC_set_parameters: READ iSession = 3  iLine= 200  nLine = 1000
+ SC_set_parameters: READ iSession = 3  iLine= 209  nLine = 1000
 
 #USER_FLAGS
 T                       UseUserInnerBCs		UseUserInnerBcs
@@ -430,32 +423,18 @@ T                       UseUserB0
 T			UseUserInitSession
 T                       UseUserUpdateStates
 
-#USERINPUTBEGIN ---------------
- User read_input SOLAR CORONA starts
-
-#TD99FLUXROPE
-T                       UseTD99Perturbation
-F                       UseVariedCurrent
-0.000E+00               CurrentStartTime
-0.000E+00               CurrentRiseTime
-T                       DoTD99FluxRope
-F                       DoEquilItube
-F                       DoRevCurrent
-8.000E-01               aratio_TD99 in [-]
-2.000E+11               Itube_TD99 in [A]
-7.000E+08               Rtube_TD99 in [m]
-3.000E+08               atube_TD99 in [m]
-1.000E+08               d_TD99     in [m]
-1.000E+13               Mass_TD99  in [kg]
-180.0                   LongitudeTD99 in [deg]
-15.0                    LatitudeTD99    in [deg]
-30.0                    OrientationTD99 in [deg]
-F                       DoBqField
-1.820E+13               q_TD99 in [T*m**2]
-6.000E+08               L_TD99 in [m]
-
-#USERINPUTEND ---------------
- User read_input SOLAR CORONA ends
+#CME
+T			UseCme
+T			DoAddFluxRope
+180.0                   LongitudeCme
+15.0                    LatitudeCme
+30.0                    OrientationCme
+TD			TypeCme
+2.000E+11               Current
+7.000E+08               RadiusMajor
+3.000E+08               RadiusMinor
+1.000E+08               Depth
+1.000E+13               Mass
 
 #STOP
 100		MaxIteration
@@ -480,12 +459,12 @@ F                       DoBqField
  EEE: atube_TD99  =    3.0000000000000000E+02 [Mm]
  EEE: atube/Rtube =    0.4285714285714285 [-]
  EEE: Itube_TD99  =    2.0000000000000000E+11 [A]
- EEE: aratio_TD99 =    0.8000000000000000 [-]
+ EEE: aratio_TD99 =    0.0000000000000000 [-]
  EEE: Mass_TD99   =    1.0000000000000000E+16 [g] 
  EEE: Rho0_TD99   =    1.7697790719308596E-17 [g/cm^3]
  EEE: 
- EEE: q_TD99      =    1.8200000000000000E+13 [T m^2]
- EEE: L_TD99      =    6.0000000000000000E+02 [Mm]
+ EEE: q_TD99      =    0.0000000000000000 [T m^2]
+ EEE: L_TD99      =    0.0000000000000000 [Mm]
  EEE: 
  EEE: Free energy of flux rope is    2.1237352340423935E+32 Ergs.
  EEE: Separation of flux rope ends is    6.9282032302755090E+02 Mm,
@@ -494,36 +473,32 @@ F                       DoBqField
 saved ifile= 3 type=x=0_mhd    at n_step=     80 time=   0:03:11 h:m:s
 saved ifile= 4 type=y=0_mhd    at n_step=     80 time=   0:03:11 h:m:s
 saved ifile= 5 type=z=0_mhd    at n_step=     80 time=   0:03:11 h:m:s
-Speed is  58915.8 c/s/p after     22.9 s at N =      80 (1.9154E+02 s)
+Speed is  55937.4 c/s/p after     23.3 s at N =      80 (1.9154E+02 s)
 saved ifile= 3 type=x=0_mhd    at n_step=     90 time=   0:08:40 h:m:s
 saved ifile= 4 type=y=0_mhd    at n_step=     90 time=   0:08:40 h:m:s
 saved ifile= 5 type=z=0_mhd    at n_step=     90 time=   0:08:40 h:m:s
-Speed is  57101.2 c/s/p after     30.1 s at N =      90 (5.2013E+02 s)
+Speed is  58002.3 c/s/p after     30.4 s at N =      90 (5.2013E+02 s)
 saved ifile= 3 type=x=0_mhd    at n_step=    100 time=   0:15:35 h:m:s
 saved ifile= 4 type=y=0_mhd    at n_step=    100 time=   0:15:35 h:m:s
 saved ifile= 5 type=z=0_mhd    at n_step=    100 time=   0:15:35 h:m:s
-Speed is  59423.5 c/s/p after     37.0 s at N =     100 (9.3573E+02 s)
+Speed is  58027.9 c/s/p after     37.5 s at N =     100 (9.3573E+02 s)
 -------------------------------------------------------------------------------
 TIMING TREE of depth 2 from step      71 to     100    on PE    0
 name                  #iter  #calls      sec   s/iter   s/call  percent
 -------------------------------------------------------------------------------
-BATSRUS                   1       1    21.20   21.197   21.197   100.00
+BATSRUS                   1       1    21.51   21.511   21.511   100.00
 -------------------------------------------------------------------------------
-advance                  29      29    18.85    0.650    0.650    88.92
-save_logfile             29      29     1.12    0.038    0.038     5.26
-save_plot                 3       9     0.64    0.214    0.071     3.03
-exch_msgs                 1       1     0.07    0.067    0.067     0.32
-#others                                 0.52    0.522              2.46
+advance                  29      29    19.05    0.657    0.657    88.58
+save_logfile             29      29     1.07    0.037    0.037     4.99
+save_plot                 3       9     0.80    0.268    0.089     3.74
+exch_msgs                 1       1     0.06    0.056    0.056     0.26
+#others                                 0.52    0.523              2.43
 -------------------------------------------------------------------------------
 
    100 of    100 iterations completed.   Expected time to completion:      0.00
 
 
-    Finished Numerical SimWarning: Floating underflow occurred
-Warning: Floating underflow occurred
-Warning: Floating underflow occurred
-Warning: Floating underflow occurred
-ulation
+    Finished Numerical Simulation
     -----------------------------
    Simulated Time T =   0.93573E+03 (   15.595463 min,     0.259924 hrs)
  => Writing restart files ...
@@ -535,26 +510,31 @@ saved ifile= 1 type=restart    at n_step=    100 time=   0:15:35 h:m:s
 SORTED TIMING from step       0 to     100    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                  37.08    100.00         1         1
+BATSRUS                  37.59    100.00         1         1
 -------------------------------------------------------------------------------
-advance                  30.99     83.57       100       100
-calc_fluxes               8.41     22.68       100     55520
-exch_msgs                 5.94     16.02       105       208
-calc_facevalues           4.56     12.30       100     55520
-update_states             3.88     10.47       100     55520
-save_logfile              3.25      8.77       100       100
-calc_sources              2.16      5.82       100     55520
-calc_face_bfo             1.60      4.31        80     30760
-update_check              1.57      4.23       100       200
-save_plot                 1.22      3.30        10        30
-barrier-expl2             0.88      2.38       100       200
-SC_amr                    0.82      2.20         3         3
-calc_fluxes_bfo           0.52      1.40        80     30760
-send_cons_flux            0.41      1.12       100       200
-int_domain                0.30      0.81       100       100
-barrier-expl1             0.19      0.51       100       200
-write_restart_files       0.08      0.23         1         1
-load_balance              0.08      0.21         3         3
+advance                  31.41     83.55       100       100
+calc_fluxes               8.34     22.20       100     55520
+exch_msgs                 5.91     15.71       105       208
+calc_facevalues           4.53     12.05       100     55520
+update_states       Warning: Floating underflow occurred
+Warning: Floating underflow occurred
+Warning: Floating underflow occurred
+Warning: Floating invalid operand occurred
+Warning: Floating underflow occurred
+      3.87     10.29       100     55520
+save_logfile              3.20      8.53       100       100
+calc_sources              2.94      7.83       100     55520
+calc_face_bfo             1.59      4.23        80     30760
+update_check              1.55      4.12       100       200
+save_plot                 1.37      3.64        10        30
+SC_amr                    0.81      2.16         3         3
+barrier-expl2             0.64      1.71       100       200
+calc_fluxes_bfo           0.54      1.44        80     30760
+send_cons_flux            0.36      0.96       100       200
+int_domain                0.31      0.82       100       100
+barrier-expl1             0.18      0.47       100       200
+load_balance              0.10      0.26         3         3
+write_restart_files       0.05      0.14         1         1
 set_bcs                   0.04      0.10        60       960
 -------------------------------------------------------------------------------
 Error_report for Time step reduction, min(factor)

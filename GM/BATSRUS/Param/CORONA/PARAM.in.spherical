@@ -194,8 +194,6 @@ T                       UseUserB0
 T			UseUserInitSession
 T                       UseUserUpdateStates
 
-#USERINPUTBEGIN ---------------
-
 #GL98FLUXROPE
 T                       UseFluxRope
 0.7                     cme_a
@@ -210,8 +208,6 @@ T                       UseFluxRope
 80.0                    LongitudeGL98
 -10.0                   LatitudeGL98
 0.0                     OrientationGL98
-
-#USERINPUTEND ---------------
 
 #STOP
 71
@@ -234,30 +230,18 @@ T                       UseUserB0
 T			UseUserInitSession
 T                       UseUserUpdateStates
 
-#USERINPUTBEGIN ---------------
-
-#TD99FLUXROPE
-T                       UseTD99Perturbation
-F                       UseVariedCurrent
-0.000E+00               CurrentStartTime
-0.000E+00               CurrentRiseTime
-T                       DoTD99FluxRope
-F                       DoEquilItube
-F                       DoRevCurrent
-8.000E-01               aratio_TD99 in [-]              
-5.000E+12               Itube_TD99 in [A] 
-7.000E+08               Rtube_TD99 in [m]
-3.000E+08               atube_TD99 in [m]
-1.000E+08               d_TD99     in [m]
-1.000E+13               Mass_TD99  in [kg]
-180.0                   LongitudeTD99 in [deg]
-15.0                    LatitudeTD99    in [deg]
-30.0                    OrientationTD99 in [deg]
-F                       DoBqField
-1.820E+13               q_TD99 in [T*m**2]
-6.000E+08               L_TD99 in [m]
-
-#USERINPUTEND ---------------
+#CME
+T			UseCme
+T			DoAddFluxRope
+180.0                   LongitudeCme
+15.0                    LatitudeCme
+30.0                    OrientationCme
+TD			TypeCme
+5.000E+12               Current
+7.000E+08               RadiusMajor
+3.000E+08               RadiusMinor
+1.000E+08               Depth
+1.000E+13               Mass
 
 #STOP
 100
