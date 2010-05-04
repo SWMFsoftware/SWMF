@@ -33,7 +33,7 @@ F			UseUserLogFiles
 F			UseUserWritePlot
 F			UseUserAMR
 F			UseUserEchoInput
-T			UseUserB0
+F			UseUserB0
 T			UseUserInitSession
 T			UseUserUpdateStates
 
