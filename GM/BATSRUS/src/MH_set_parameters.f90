@@ -70,7 +70,7 @@ subroutine MH_set_parameters(TypeAction)
   use EEE_ModMain, ONLY: EEE_set_parameters
   use ModMagnetogram, ONLY: set_parameters_magnetogram, &
        read_magnetogram_file, read_potential_field
-  use ModExpansionFactors,ONLY: NameModelSW, CoronalT0Dim
+  use ModExpansionFactors,ONLY: NameModelSW, CoronalT0Dim, read_wsa_coeff
   use ModCoronalHeating,  ONLY: read_corona_heating, &
        read_active_region_heating, &
        read_longscale_heating, init_coronal_heating, UseCoronalHeating, &
@@ -1868,9 +1868,12 @@ subroutine MH_set_parameters(TypeAction)
      case("#SAVEPOTENTIALFIELD")
         call set_parameters_magnetogram(NameCommand)
 
-     case('#EMPIRICALSW')
-        call read_var('NameModelSW',NameModelSW)
+     case("#EMPIRICALSW")
+        call read_var('NameModelSW', NameModelSW)
         UseEmpiricalSW = NameModelSW /= 'none'
+
+     case("#WSACOEFF")
+        call read_wsa_coeff
 
      case("#CORONALHEATING")
         call read_corona_heating
