@@ -196,6 +196,46 @@ T                       UseUserUpdateStates
 
 #USERINPUTBEGIN ---------------
 
+#GL98FLUXROPE
+T                       UseFluxRope
+0.7                     cme_a
+1.8                     cme_r1
+1.0                     cme_r0
+0.93                    cme_a1
+0.0                     cme_alpha
+0.0                     cme_rho1
+0.0                     cme_rho2
+0.8                     ModulationRho
+0.8                     ModulationP
+80.0                    LongitudeGL98
+-10.0                   LatitudeGL98
+0.0                     OrientationGL98
+
+#USERINPUTEND ---------------
+
+#STOP
+71
+-1.0
+
+#RUN #############################################################
+
+#USER_FLAGS
+T                       UseUserInnerBCs
+F                       UseUserSource
+T                       UseUserPerturbation
+F                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+T                       UseUserB0
+T			UseUserInitSession
+T                       UseUserUpdateStates
+
+#USERINPUTBEGIN ---------------
+
 #TD99FLUXROPE
 T                       UseTD99Perturbation
 F                       UseVariedCurrent
@@ -216,21 +256,6 @@ F                       DoRevCurrent
 F                       DoBqField
 1.820E+13               q_TD99 in [T*m**2]
 6.000E+08               L_TD99 in [m]
-
-#GL98FLUXROPE
-T                       UseFluxRope
-0.7                     cme_a
-1.8                     cme_r1
-1.0                     cme_r0
-0.93                    cme_a1
-0.0                     cme_alpha
-0.0                     cme_rho1
-0.0                     cme_rho2
-0.8                     ModulationRho
-0.8                     ModulationP
-80.0                    LongitudeGL98
--10.0                   LatitudeGL98
-0.0                     OrientationGL98
 
 #USERINPUTEND ---------------
 
