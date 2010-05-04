@@ -3,7 +3,6 @@
 module ModUser
   use ModReadParam, ONLY: lStringLine
   use ModUserEmpty,                                     &
-       IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_initial_perturbation,       &
@@ -20,111 +19,21 @@ module ModUser
   character (len=*), parameter :: &
        NameUserModule = 'EMPIRICAL SC - Cohen, Sokolov'
 
-  character(len=lStringLine) :: NameModel
-
 contains
-  !============================================================================
-  subroutine user_read_inputs
-    use EEE_ModMain,    ONLY: EEE_set_parameters
-    use ModMain
-    use ModProcMH,      ONLY: iProc
-    use ModReadParam,   ONLY: read_line, read_command, read_var
-    use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
-    use ModMagnetogram, ONLY: set_parameters_magnetogram
-    use ModWaves, ONLY: read_frequency, UseAlfvenWaves, read_wave_pressure
-    implicit none
-
-    character (len=100) :: NameCommand
-    !--------------------------------------------------------------------------
-    UseUserInitSession = .true.
-
-    if(iProc == 0 .and. lVerbose > 0)then
-       call write_prefix;
-       write(iUnitOut,*)'User read_input SOLAR CORONA starts'
-    endif
-
-    do
-       if(.not.read_line() ) EXIT
-       if(.not.read_command(NameCommand)) CYCLE
-
-       select case(NameCommand)
-       case("#PFSSM")
-          call read_var('UseUserB0'  ,UseUserB0)
-          if(UseUserB0)then
-             call set_parameters_magnetogram("#MAGNETOGRAM")
-             call read_var('dt_UpdateB0',dt_UpdateB0)
-             DoUpdateB0 = dt_updateb0 > 0.0
-          end if
-       case("#WSACOEFF")
-          call read_wsa_coeff
-       case("#ARCH","#TD99FLUXROPE","#GL98FLUXROPE")
-          call EEE_set_parameters(NameCommand)
-
-       case("#EMPIRICALSW")
-          call read_var('NameModel',NameModel)
-       case("#FREQUENCY")
-          call read_frequency
-       case("#ALFVENSPEED")
-          call read_var('UseAlfvenWaves', UseAlfvenWaves)
-       case("#WAVEPRESSURE")
-          call read_wave_pressure
-
-
-       case('#USERINPUTEND')
-          if(iProc == 0 .and. lVerbose > 0)then
-             call write_prefix;
-             write(iUnitOut,*)'User read_input SOLAR CORONA ends'
-          endif
-          EXIT
-
-       case default
-          if(iProc == 0) then
-             call write_myname; write(*,*) &
-                  'ERROR: Invalid user defined #COMMAND in user_read_inputs. '
-             write(*,*) '--Check user_read_inputs for errors'
-             write(*,*) '--Check to make sure a #USERINPUTEND command was used'
-             write(*,*) '  *Unrecognized command was: '//NameCommand
-             call stop_mpi('ERROR: Correct PARAM.in or user_read_inputs!')
-          end if
-       end select
-    end do
-
-  end subroutine user_read_inputs
 
   !============================================================================
 
   subroutine user_init_session
     use EEE_ModMain,    ONLY: EEE_initialize
-    use ModIO,          ONLY: write_prefix, iUnitOut,NamePlotDir
-    use ModMagnetogram, ONLY: read_magnetogram_file
-    use ModMain,        ONLY: UseMagnetogram
+    use ModIO,          ONLY: write_prefix, iUnitOut
     use ModPhysics,     ONLY: BodyNDim_I,BodyTDim_I,g
     use ModProcMH,      ONLY: iProc
-    use ModReadParam,   ONLY: i_line_command
     implicit none
     !--------------------------------------------------------------------------
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session:'
        call write_prefix; write(iUnitOut,*) ''
-    end if
-    if(.not.UseMagnetogram)then
-       if(i_line_command("#PFSSM", iSessionIn = 1) < 0)then
-          write(*,*) 'In session 1, a magnetogram file has to be read via #PFSSM'
-          call stop_mpi('ERROR: Correct PARAM.in!')
-       end if
-       
-       if(i_line_command("#PFSSM") > 0)then
-          call read_magnetogram_file(NamePlotDir)
-       end if
-    end if
-
-    if(i_line_command("#EMPIRICALSW", iSessionIn = 1) < 0)then
-       write(*,*) 'An empirical model has to be set via #EMPIRICALSW'
-       call stop_mpi('ERROR: Correct PARAM.in!')
-    end if
-    if(i_line_command("#EMPIRICALSW") > 0)then
-       call set_empirical_model(trim(NameModel),BodyTDim_I(1))
     end if
 
     call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),g)
@@ -279,28 +188,29 @@ contains
     use ModNumConst
     use ModPhysics,    ONLY: GBody,BodyRho_I,Si2No_V,UnitTemperature_
     use ModExpansionFactors,  ONLY: UMin,CoronalT0Dim
-    implicit none
 
     integer, intent(in)  :: iCell,jCell,kCell,iBlock
     real, intent(out)    :: DensCell,PresCell,GammaCell
-    real :: UFinal       !The solar wind speed at the far end of the Parker spiral,
-                         !which originates from the given cell
+    real :: UFinal       !The solar wind speed at the far end of the 
+                         !Parker spiral, which originates from the given cell
     real :: URatio       !The coronal based values for temperature density 
                          !are scaled as functions of UFinal/UMin ratio
     real :: Temperature
     !--------------------------------------------------------------------------
 
-    call get_gamma_emp(x_BLK(iCell,jCell,kCell,iBlock),&
-         y_BLK(iCell,jCell,kCell,iBlock),&
-         z_BLK(iCell,jCell,kCell,iBlock),&
+    call get_gamma_emp( &
+         x_BLK(iCell,jCell,kCell,iBlock), &
+         y_BLK(iCell,jCell,kCell,iBlock), &
+         z_BLK(iCell,jCell,kCell,iBlock), &
          GammaCell)
-    call get_bernoulli_integral(x_BLK(iCell,jCell,kCell,iBlock)/&
-         R_BLK(iCell,jCell,kCell,iBlock),&
-         y_BLK(iCell,jCell,kCell,iBlock)/R_BLK(iCell,jCell,kCell,iBlock),&
-         z_BLK(iCell,jCell,kCell,iBlock)/R_BLK(iCell,jCell,kCell,iBlock),UFinal)
-    URatio=UFinal/UMin
+    call get_bernoulli_integral( &
+         x_BLK(iCell,jCell,kCell,iBlock)/r_BLK(iCell,jCell,kCell,iBlock), &
+         y_BLK(iCell,jCell,kCell,iBlock)/r_BLK(iCell,jCell,kCell,iBlock), &
+         z_BLK(iCell,jCell,kCell,iBlock)/r_BLK(iCell,jCell,kCell,iBlock), &
+         UFinal)
+    URatio = UFinal/UMin
 
-    !This is the temperature variation. In coronal holes the temperature is reduced 
+    ! In coronal holes the temperature is reduced 
     Temperature = CoronalT0Dim*Si2No_V(UnitTemperature_) / (min(URatio,2.0))
 
     DensCell  = ((1.0/URatio)**2) &          !This is the density variation
@@ -321,7 +231,6 @@ contains
     use ModPhysics,   ONLY: Si2No_V,UnitU_,UnitRho_,UnitP_,UnitB_
     use ModGeometry
     use ModEnergy,    ONLY: calc_energy_cell
-    implicit none
 
     integer :: i,j,k,iBLK
     logical :: oktest,oktest_me
@@ -371,12 +280,12 @@ contains
   !============================================================================
 
   subroutine user_set_ics
+
     use ModMain,      ONLY: globalBLK,nI,nJ,nK
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
     use ModPhysics,   ONLY: inv_gm1,BodyTDim_I
     use ModGeometry
-    implicit none
 
     integer :: i,j,k,iBLK
     logical :: oktest,oktest_me
@@ -401,6 +310,7 @@ contains
 
     State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = 1.0e-31
     do k=1,nK; do j=1,nJ; do i=1,nI
+
        x = x_BLK(i,j,k,iBLK)
        y = y_BLK(i,j,k,iBLK)
        z = z_BLK(i,j,k,iBLK)
@@ -425,10 +335,10 @@ contains
 
   !============================================================================
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
+
     use EEE_ModMain,    ONLY: EEE_get_B0
     use ModPhysics,     ONLY: Io2No_V,Si2No_V,UnitB_
     use ModMagnetogram, ONLY: get_magnetogram_field
-    implicit none
 
     real, intent(in):: xInput,yInput,zInput
     real, intent(out), dimension(3):: B0_D
@@ -447,7 +357,8 @@ contains
 
   !============================================================================
 
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iStage, iBlock)
+
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB, B0_DGB
@@ -456,16 +367,16 @@ contains
     use ModGeometry,ONLY: R_BLK
     use ModEnergy,  ONLY: calc_energy_cell
     use ModExpansionFactors, ONLY: gammaSS
-    implicit none
+
     integer,intent(in):: iStage,iBlock
     integer:: i,j,k
     real:: DensCell,PresCell,GammaCell,Beta
-    call update_states_MHD(iStage,iBlock)
-    !\
-    ! Begin update of pressure and relaxation energy::
-    !/
-    !  if (iStage/=nStage) return
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    !------------------------------------------------------------------------
+    call update_states_MHD(iStage, iBlock)
+
+    ! Update pressure and relaxation energy
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
        call get_plasma_parameters_cell(i,j,k,iBlock,&
             DensCell,PresCell,GammaCell)
        if(R_BLK(i,j,k,iBlock)>2.5)&
@@ -479,10 +390,9 @@ contains
        State_VGB(Ew_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock) &
             *(1.0/(GammaCell-1.0)-inv_gm1)
     end do; end do; end do
+
     call calc_energy_cell(iBlock)
-    !\
-    ! End update of pressure and relaxation energy::
-    !/
+
   end subroutine user_update_states
 
   !========================================================================
@@ -499,7 +409,7 @@ contains
     real, intent(out):: VarValue
     character (LEN=10), intent(in):: TypeVar 
     real, intent(in), optional :: Radius
-    !
+
     integer:: iBLK
     real:: unit_energy,unit_mass
     real, external:: integrate_BLK
@@ -598,10 +508,10 @@ contains
 
   !============================================================================
   subroutine user_set_boundary_cells(iBLK)
+
     use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, r_Blk
     use ModBoundaryCells, ONLY: SaveBoundaryCells
     use ModPhysics,       ONLY: rBody
-    implicit none
 
     integer, intent(in):: iBLK
 
@@ -613,7 +523,6 @@ contains
     call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
 
   end subroutine user_set_boundary_cells
-
 
 end module ModUser
 
