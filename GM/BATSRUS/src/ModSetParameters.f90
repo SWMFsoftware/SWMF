@@ -67,6 +67,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModIoUnit, ONLY: io_unit_new
 
   !CORONA SPECIFIC PARAMETERS
+  use EEE_ModMain, ONLY: EEE_set_parameters
   use ModMagnetogram, ONLY: set_parameters_magnetogram, &
        read_magnetogram_file, read_potential_field
   use ModExpansionFactors,ONLY: NameModelSW, CoronalT0Dim
@@ -78,6 +79,7 @@ subroutine MH_set_parameters(TypeAction)
        read_modified_cooling, check_cooling_param, read_chromosphere
   use ModWaves, ONLY: UseAlfvenWaves, check_waves, &
        read_wave_pressure, read_frequency, read_spectrum
+
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -1539,7 +1541,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#MAGNETOMETER")
         DoReadMagnetometerFile = .true.
-        save_magnetometer_data =.true.
+        save_magnetometer_data = .true.
         call read_var('MagInputFile', MagInputFile)
         
         if (iProc==0) call check_dir(NamePlotDir)
@@ -1902,6 +1904,9 @@ subroutine MH_set_parameters(TypeAction)
 
      case('#SPECTRUM')
         call read_spectrum
+
+     case("#CME", "#ARCH", "#TD99FLUXROPE", "#GL98FLUXROPE", "#SHEARFLOW")
+        call EEE_set_parameters(NameCommand)
 
      case default
         if(iProc==0) then
