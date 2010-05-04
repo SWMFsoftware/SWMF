@@ -49,4 +49,17 @@ module EEE_ModCommonVariables
   real, dimension(nIoUnit) :: &
        Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V
 
+
+  ! Switch on CME (boundary and/or initial conditions)
+  logical:: UseCme = .false.
+  
+  ! Use Gibbson-Law, Titov-Demoulin, Shear-Flow model
+  logical:: UseGL  = .false., UseTD = .false., UseShearFlow = .false.
+
+  ! Add flux rope as an initial condition or apply boundary conditions only
+  logical:: DoAddFluxRope = .false.
+
+  ! CME location and orientation
+  real :: LongitudeCme = 0.0, LatitudeCme = 0.0, OrientationCme = 0.0
+
 end module EEE_ModCommonVariables

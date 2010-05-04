@@ -6,12 +6,12 @@ module EEE_ModShearFlow
 
   private
 
-  public :: set_parameters_shearflow,get_shearflow
+  public :: set_parameters_shearflow
+  public :: get_shearflow
 
   logical, public :: UseShearFlow=.false.
   real :: FlowAmplitude, FlowWidthAngle, MaxBrActiveRegion
   real :: StartTime, StopTime, RampUpTime, RampDownTime
-  real :: Longitude, Latitude
 
   real :: xFlow_D(3), MaxBr
 
@@ -19,27 +19,44 @@ contains
 
   !============================================================================
 
-  subroutine set_parameters_shearflow
-    use ModReadParam, ONLY: read_var
-    implicit none
-    !--------------------------------------------------------------------------
-    call read_var('UseShearFlow',      UseShearFlow)
-    call read_var('FlowAmplitude',     FlowAmplitude)
-    call read_var('FlowWidthAngle',    FlowWidthAngle)
-    call read_var('MaxBrActiveRegion', MaxBrActiveRegion)
-    call read_var('StartTime',         StartTime)
-    call read_var('StopTime',          StopTime)
-    call read_var('RampUpTime',        RampUpTime)
-    call read_var('RampDownTime',      RampDownTime)
-    call read_var('Longitude',         Longitude)
-    call read_var('Latitude',          Latitude)
+  subroutine set_parameters_shearflow(NameCommand)
 
-    if(RampUpTime<=0.0)then
-       call CON_stop('RampUpTime in #SHEARFLOW should be greater than zero')
-    end if
-    if(RampDownTime<=0.0)then
-       call CON_stop('RampDownTime in #SHEARFLOW should be greater than zero')
-    end if
+    use ModReadParam, ONLY: read_var
+    use EEE_ModCommonVariables, ONLY: LongitudeCme, LatitudeCme
+
+    character(len=*), intent(in):: NameCommand
+
+    character(len=*), parameter:: NameSub = 'set_parameters_shearflow'
+    !--------------------------------------------------------------------------
+    select case(NameCommand)
+    case("#SHEARFLOW")
+       call read_var('UseShearFlow',      UseShearFlow)
+       call read_var('FlowAmplitude',     FlowAmplitude)
+       call read_var('FlowWidthAngle',    FlowWidthAngle)
+       call read_var('MaxBrActiveRegion', MaxBrActiveRegion)
+       call read_var('StartTime',         StartTime)
+       call read_var('StopTime',          StopTime)
+       call read_var('RampUpTime',        RampUpTime)
+       call read_var('RampDownTime',      RampDownTime)
+       call read_var('LongitudeCme',      LongitudeCme)
+       call read_var('LatitudeCme',       LatitudeCme)
+    case("#CME")
+       call read_var('FlowAmplitude',     FlowAmplitude)
+       call read_var('FlowWidthAngle',    FlowWidthAngle)
+       call read_var('MaxBrActiveRegion', MaxBrActiveRegion)
+       call read_var('StartTime',         StartTime)
+       call read_var('StopTime',          StopTime)
+       call read_var('RampUpTime',        RampUpTime)
+       call read_var('RampDownTime',      RampDownTime)
+    case default
+       call CON_stop(NameSub//' unknown NameCommand='//NameCommand)
+    end select
+
+    if(RampUpTime<=0.0) call CON_stop(NameSub// &
+         ': RampUpTime in #SHEARFLOW should be greater than zero')
+
+    if(RampDownTime<=0.0) call CON_stop(NameSub// &
+         ': RampDownTime in #SHEARFLOW should be greater than zero')
 
   end subroutine set_parameters_shearflow
 
@@ -72,9 +89,9 @@ contains
     !--------------------------------------------------------------------------
     if(DoFirst)then
        DoFirst = .false.
-       xFlow_D(1) = cos(Latitude*cDegToRad)*cos(Longitude*cDegToRad)
-       xFlow_D(2) = cos(Latitude*cDegToRad)*sin(Longitude*cDegToRad)
-       xFlow_D(3) = sin(Latitude*cDegToRad)
+       xFlow_D(1) = cos(LatitudeCme*cDegToRad)*cos(LongitudeCme*cDegToRad)
+       xFlow_D(2) = cos(LatitudeCme*cDegToRad)*sin(LongitudeCme*cDegToRad)
+       xFlow_D(3) = sin(LatitudeCme*cDegToRad)
 
        FlowWidthAngle = FlowWidthAngle*cDegToRad
        MaxBr = abs(MaxBrActiveRegion)*Si2No_V(UnitB_)

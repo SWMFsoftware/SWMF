@@ -1,9 +1,9 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
 Module EEE_ModMain
-  use EEE_ModGetStateInit, ONLY: EEE_get_state_init
-  use EEE_ModGetStateBC,   ONLY: EEE_get_state_BC
-  use EEE_ModGetB0,        ONLY: EEE_get_B0
+
+  use EEE_ModGetB0, ONLY: EEE_get_B0
+
   implicit none
   save
 
@@ -16,7 +16,7 @@ Module EEE_ModMain
   public :: EEE_get_B0
 
 contains
-
+  !============================================================================
   subroutine EEE_initialize(BodyNDim,BodyTDim,gamma)
     use EEE_ModCommonVariables
     implicit none
@@ -97,26 +97,138 @@ contains
   !============================================================================
 
   subroutine EEE_set_parameters(NameCommand)
+
     use ModReadParam,     ONLY: read_var
     use EEE_ModGL98,      ONLY: set_parameters_GL98
     use EEE_ModTD99,      ONLY: set_parameters_TD99
     use EEE_ModArch,      ONLY: set_parameters_arch
     use EEE_ModShearFlow, ONLY: set_parameters_shearflow
-    implicit none
+    use EEE_ModCommonVariables, ONLY: &
+         UseCme, DoAddFluxRope, UseTD, UseGL, UseShearFLow, DoAddFluxRope, &
+         LongitudeCme, LatitudeCme, OrientationCme
 
     character(len=*), intent(in) :: NameCommand
+
+    character(len=20):: TypeCme
+
+    character(len=*), parameter:: NameSub = 'EEE_ModMain::EEE_set_parameters'
     !--------------------------------------------------------------------------
     select case(NameCommand)
-    case("#TD99FLUXROPE")
-       call set_parameters_TD99
-    case("#GL98FLUXROPE")
-       call set_parameters_GL98
+    case("#CME")
+       call read_var("UseCme", UseCme)
+       if(UseCme)then
+          call read_var("DoAddFluxRope",  DoAddFluxRope)
+          call read_var("LongitudeCme",   LongitudeCme)
+          call read_var("LatitudeCme",    LatitudeCme)
+          call read_var("OrientationCme", OrientationCme)
+          call read_var("TypeCme", TypeCme, IsUpperCase=.true.)
+          select case(TypeCme)
+          case("TITOV-DEMOULIN", "TD")
+             UseTD = .true.
+             call set_parameters_TD99(NameCommand)
+          case("GIBBSON-LOW", "GL")
+             UseGL = .true.
+             call set_parameters_GL98(NameCommand)
+          case("SHEARFLOW", "SF")
+             UseShearFlow = .true.
+             call set_parameters_shearflow(NameCommand)
+          case default
+             call CON_stop(NameSub//': invalid value for TypeCme='//TypeCme)
+          end select
+       end if
+
+       ! The remaining commands are preserved for backwards compatibility
+       ! and possibly for expert use (more options than #CME command)
     case("#ARCH")
        call set_parameters_arch
+    case("#TD99FLUXROPE")
+       UseCme = .true.
+       UseTD  = .true.
+       call set_parameters_TD99(NameCommand)
+    case("#GL98FLUXROPE")
+       UseCme = .true.
+       UseGL  = .true.
+       call set_parameters_GL98(NameCommand)
     case("#SHEARFLOW")
-       call set_parameters_shearflow
+       UseCme       = .true.
+       UseShearFlow = .true.
+       call set_parameters_shearflow(NameCommand)
     end select
 
   end subroutine EEE_set_parameters
+
+  !============================================================================
+
+  subroutine EEE_get_state_BC(x_D,Rho,U_D,B_D,p,Time,n_step,iteration_number)
+
+    use EEE_ModCommonVariables, ONLY: UseCme, UseTD, UseShearFlow
+    use EEE_ModTD99, ONLY: get_transformed_TD99fluxrope, DoBqField
+    use EEE_ModShearFlow, ONLY: get_shearflow
+
+    real, intent(in) :: x_D(3), Time
+    real, intent(out) :: Rho, U_D(3), B_D(3), p
+    integer, intent(in) :: n_step,iteration_number
+
+    real :: Rho1, U1_D(3), B1_D(3), p1
+    !--------------------------------------------------------------------------
+
+    ! initialize perturbed state variables
+    Rho = 0.0; U_D = 0.0; B_D = 0.0; p = 0.0
+
+    if(.not.UseCme) RETURN
+
+    if (UseTD) then
+       call get_transformed_TD99fluxrope(x_D,B1_D,&
+            U1_D,n_step,Iteration_Number,Rho1,Time)
+
+       if(.not.DoBqField) U1_D=0.0
+
+       Rho = Rho + Rho1; U_D = U_D + U1_D; B_D = B_D + B1_D
+    end if
+
+    if(UseShearFlow)then
+       call get_shearflow(x_D, Time, U1_D, iteration_number)
+
+       U_D = U_D + U1_D
+    end if
+
+  end subroutine EEE_get_state_BC
+
+  !============================================================================
+
+  subroutine EEE_get_state_init(x_D, Rho, B_D, p, n_step, iteration_number)
+
+    use EEE_ModCommonVariables, ONLY: UseCme, DoAddFluxRope, UseTD, UseGL
+    use EEE_ModGL98, ONLY: get_GL98_fluxrope, adjust_GL98_fluxrope
+    use EEE_ModTD99, ONLY: get_transformed_TD99fluxrope
+
+    real, intent(in) :: x_D(3)
+    real, intent(out) :: Rho, B_D(3), p
+    integer, intent(in) :: n_step,iteration_number
+
+    real :: U_D(3)
+    real :: Rho1, U1_D(3), B1_D(3), p1
+    !--------------------------------------------------------------------------
+
+    ! initialize perturbed state variables
+    Rho = 0.0; U_D = 0.0; B_D = 0.0; p = 0.0
+
+    if(.not. (UseCme .and. DoAddFluxRope)) RETURN
+
+    if(UseTD)then
+       ! Add Titov & Demoulin (TD99) flux rope
+       call get_transformed_TD99fluxrope(x_D, B1_D, &
+            U1_D, n_step, iteration_number, Rho1)
+       Rho = Rho + Rho1; U_D = U_D + U1_D; B_D = B_D + B1_D
+    endif
+
+    if(UseGL)then
+       ! Add Gibson & Low (GL98) flux rope
+       call get_GL98_fluxrope(x_D, Rho1, p1, B1_D)
+       call adjust_GL98_fluxrope(Rho1, p1)
+       Rho = Rho + Rho1; B_D = B_D + B1_D; p = p + p1
+    end if
+
+  end subroutine EEE_get_state_init
 
 end Module EEE_ModMain

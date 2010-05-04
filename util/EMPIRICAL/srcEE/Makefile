@@ -13,14 +13,12 @@ include Makefile.DEPEND
 
 OBJECTS = \
 	EEE_ModCommonVariables.o \
+	EEE_ModMain.o \
 	EEE_ModTD99.o \
 	EEE_ModGL98.o \
 	EEE_ModArch.o \
-	EEE_ModShearFlow.o \
-	EEE_ModGetStateInit.o \
-	EEE_ModGetStateBC.o \
 	EEE_ModGetB0.o \
-	EEE_ModMain.o
+	EEE_ModShearFlow.o
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}

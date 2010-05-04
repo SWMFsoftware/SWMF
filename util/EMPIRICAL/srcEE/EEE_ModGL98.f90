@@ -7,34 +7,47 @@ module EEE_ModGL98
 
   private
 
-  public :: set_parameters_GL98,get_GL98_fluxrope,adjust_GL98_fluxrope
+  public :: set_parameters_GL98
+  public :: get_GL98_fluxrope
+  public :: adjust_GL98_fluxrope
 
-  logical, public :: UseFluxRope=.false.
   real :: cme_a,cme_r1,cme_r0,cme_a1,cme_alpha,cme_rho1,cme_rho2
   real :: ModulationRho,ModulationP
-  real :: LongitudeGL98,LatitudeGL98,OrientationGL98
 
 contains
 
   !============================================================================
 
-  subroutine set_parameters_GL98
+  subroutine set_parameters_GL98(NameCommand)
     use ModReadParam, ONLY: read_var
-    implicit none
+    character(len=*), intent(in):: NameCommand
+
+    character(len=*), parameter:: NameSub = 'set_parameters_GL98'
     !--------------------------------------------------------------------------
-    call read_var('UseFluxRope',     UseFluxRope)
-    call read_var('cme_a',           cme_a)
-    call read_var('cme_r1',          cme_r1)
-    call read_var('cme_r0',          cme_r0)
-    call read_var('cme_a1',          cme_a1)
-    call read_var('cme_alpha',       cme_alpha)
-    call read_var('cme_rho1',        cme_rho1)
-    call read_var('cme_rho2',        cme_rho2)
-    call read_var('ModulationRho',   ModulationRho)
-    call read_var('ModulationP',     ModulationP)
-    call read_var('LongitudeGL98',   LongitudeGL98)
-    call read_var('LatitudeGL98',    LatitudeGL98)
-    call read_var('OrientationGL98', OrientationGL98)
+    select case(NameCommand)
+    case("#GL98FLUXROPE")
+       call read_var('UseFluxRope',     DoAddFluxRope)
+       call read_var('cme_a',           cme_a)
+       call read_var('cme_r1',          cme_r1)
+       call read_var('cme_r0',          cme_r0)
+       call read_var('cme_a1',          cme_a1)
+       call read_var('cme_alpha',       cme_alpha)
+       call read_var('cme_rho1',        cme_rho1)
+       call read_var('cme_rho2',        cme_rho2)
+       call read_var('ModulationRho',   ModulationRho)
+       call read_var('ModulationP',     ModulationP)
+       call read_var('LongitudeCme',   LongitudeCme)
+       call read_var('LatitudeCme',    LatitudeCme)
+       call read_var('OrientationCme', OrientationCme)
+    case("#CME")
+       call read_var('Stretch',     cme_a)
+       call read_var('Distance',    cme_r1)
+       call read_var('Radius',      cme_r0)
+       call read_var('Bstrength',   cme_a1)
+       call read_var('Density',     cme_rho1)
+    case default
+       call CON_stop(NameSub//' unknown NameCommand='//NameCommand)
+    end select
 
   end subroutine set_parameters_GL98
 
@@ -107,10 +120,10 @@ contains
        ! Construct the rotational matrix RotateGL98_DD,
        !/
        RotateGL98_DD  = matmul( &
-            rot_matrix_z(OrientationGL98*cDegToRad),&
-            rot_matrix_y((LatitudeGL98-90)*cDegToRad))
+            rot_matrix_z(OrientationCme*cDegToRad),&
+            rot_matrix_y((LatitudeCme-90)*cDegToRad))
        RotateGL98_DD = matmul(RotateGL98_DD, &
-            rot_matrix_z(-LongitudeGL98*cDegToRad))
+            rot_matrix_z(-LongitudeCme*cDegToRad))
 
        if(iProc==0)then
           write(*,*) prefix
@@ -131,9 +144,9 @@ contains
           write(*,*) prefix, 'cme_rho2 = ',cme_rho2,'[kg/m^3]'
           write(*,*) prefix, 'ModulationRho = ',ModulationRho
           write(*,*) prefix, 'ModulationP   = ',ModulationP
-          write(*,*) prefix, 'LongitudeGL98 = ',LongitudeGL98,'[degrees]'
-          write(*,*) prefix, 'LatitudeGL98 = ',LatitudeGL98,'[degrees]'
-          write(*,*) prefix, 'OrientationGL98 = ',OrientationGL98,'[degrees]'
+          write(*,*) prefix, 'LongitudeCme = ',LongitudeCme,'[degrees]'
+          write(*,*) prefix, 'LatitudeCme = ',LatitudeCme,'[degrees]'
+          write(*,*) prefix, 'OrientationCme = ',OrientationCme,'[degrees]'
           write(*,*) prefix
        end if
     end if

@@ -11,19 +11,18 @@ module EEE_ModTD99
 
   !----------------------------------------------------------------------
   ! Logical variables related to the magnetic field computation::
-  logical, public :: UseTD99Perturbation=.false.
-  logical, public :: DoTD99FluxRope=.false.
+  logical, public :: DoBqField=.false.
+
+  logical :: UseVariedCurrent=.false.
+
   logical :: DoEquilItube=.false.
   logical :: DoRevCurrent=.false.
-  logical, public :: DoBqField=.false.
-  logical, public :: UseVariedCurrent=.false.
   logical :: DoMaintainEpot=.false.
   real :: CurrentRiseTime,CurrentStartTime
 
   !----------------------------------------------------------------------
   ! Variables related to the position of the flux rope::
   real, parameter :: Li_TD99=0.5
-  real :: LongitudeTD99,LatitudeTD99,OrientationTD99
 
   !----------------------------------------------------------------------
   ! Variables related to the flux rope properties::
@@ -51,29 +50,43 @@ contains
 
   !============================================================================
 
-  subroutine set_parameters_TD99
+  subroutine set_parameters_TD99(NameCommand)
     use ModReadParam, ONLY: read_var
     implicit none
+    character(len=*), intent(in):: NameCommand
+
+    character(len=*), parameter:: NameSub = 'set_parameters_TD99'
     !--------------------------------------------------------------------------
-    call read_var('UseTD99Perturbation' ,UseTD99Perturbation)
-    call read_var('UseVariedCurrent'    ,UseVariedCurrent)
-    call read_var('CurrentStartTime'    ,CurrentStartTime)
-    call read_var('CurrentRiseTime '    ,CurrentRiseTime)
-    call read_var('DoTD99FluxRope'      ,DoTD99FluxRope)
-    call read_var('DoEquilItube'        ,DoEquilItube)
-    call read_var('DoRevCurrent'        ,DoRevCurrent)
-    call read_var('aratio_TD99'         ,aratio_TD99)
-    call read_var('Itube_TD99'          ,Itube_TD99)
-    call read_var('Rtube_TD99'          ,Rtube_TD99)
-    call read_var('atube_TD99'          ,atube_TD99)
-    call read_var('d_TD99'              ,d_TD99)
-    call read_var('Mass_TD99'           ,Mass_TD99)
-    call read_var('LongitudeTD99'       ,LongitudeTD99)
-    call read_var('LatitudeTD99'        ,LatitudeTD99)
-    call read_var('OrientationTD99'     ,OrientationTD99)
-    call read_var('DoBqField'           ,DoBqField)
-    call read_var('q_TD99'              ,q_TD99)
-    call read_var('L_TD99'              ,L_TD99)
+    select case(NameCommand)
+    case("#TD99FLUXROPE")
+       call read_var('UseCme',              UseCme)
+       call read_var('UseVariedCurrent'   , UseVariedCurrent)
+       call read_var('CurrentStartTime'   , CurrentStartTime)
+       call read_var('CurrentRiseTime '   , CurrentRiseTime)
+       call read_var('DoAddFluxRope'      , DoAddFluxRope)
+       call read_var('DoEquilItube'       , DoEquilItube)
+       call read_var('DoRevCurrent'       , DoRevCurrent)
+       call read_var('aratio_TD99'        , aratio_TD99)
+       call read_var('Itube_TD99'         , Itube_TD99)
+       call read_var('Rtube_TD99'         , Rtube_TD99)
+       call read_var('atube_TD99'         , atube_TD99)
+       call read_var('d_TD99'             , d_TD99)
+       call read_var('Mass_TD99'          , Mass_TD99)
+       call read_var('LongitudeCme'       , LongitudeCme)
+       call read_var('LatitudeCme'        , LatitudeCme)
+       call read_var('OrientationCme'     , OrientationCme)
+       call read_var('DoBqField'          , DoBqField)
+       call read_var('q_TD99'             , q_TD99)
+       call read_var('L_TD99'             , L_TD99)
+    case("#CME")
+       call read_var('Current',     Itube_TD99)
+       call read_var('RadiusMajor', Rtube_TD99)
+       call read_var('RadiusMinor', atube_TD99)
+       call read_var('Depth',       d_TD99)
+       call read_var('Mass',        Mass_TD99)
+    case default
+       call CON_stop(NameSub//' unknown NameCommand='//NameCommand)
+    end select
 
   end subroutine set_parameters_TD99
 
@@ -145,7 +158,7 @@ contains
     !/
     !--------------------------------------------------------------------
     R1Face_D = matmul(RotateTD99_DD,RFace_D)
-    if (DoTD99FluxRope) then
+    if (DoAddFluxRope) then
        call compute_TD99_FluxRope(R1Face_D,B1FRope_D,RhoFRope)
        if (DoRevCurrent) then
           Itemp = Itube_TD99; Itube_TD99 = -Itemp
@@ -242,11 +255,11 @@ contains
     !/
     !--------------------------------------------------------------------
     RotateTD99_DD = matmul(rot_matrix_y(-0.5*cPi),&
-         rot_matrix_x(-OrientationTD99*cDegToRad))
+         rot_matrix_x(-OrientationCme*cDegToRad))
     RotateTD99_DD = matmul(RotateTD99_DD,          &
-         rot_matrix_y(LatitudeTD99*cDegToRad))
+         rot_matrix_y(LatitudeCme*cDegToRad))
     RotateTD99_DD = matmul(RotateTD99_DD,          &
-         rot_matrix_z(-LongitudeTD99*cDegToRad))
+         rot_matrix_z(-LongitudeCme*cDegToRad))
 
     if (iProc==0) then
        write(*,*) prefix
