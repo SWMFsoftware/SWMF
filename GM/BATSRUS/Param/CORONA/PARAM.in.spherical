@@ -37,23 +37,18 @@ T			UseUserB0
 T			UseUserInitSession
 T			UseUserUpdateStates
 
-#USERINPUTBEGIN ------------------------
-
-#PFSSM
-T			UseUserB0
-1.0			Ro_PFSSM
-2.5			Rs_PFSSM
-0.0			H_PFSSM
-Param/CORONA/MDI_small.dat    File_PFSSM
-12			iHead_PFSSM
+#MAGNETOGRAM
+T			UseMagnetogram
+1.0			rMagnetogram
+2.5			rSourceSurface
+0.0			HeightInnerBc
+Param/CORONA/MDI_small.dat    NameMagnetogramFile
+12			nHeaderLine
 -1.0			PhiShift
 1.0			UnitB
--1.0			dt_UpdateB0
 
 #EMPIRICALSW
-WSA			NameModel
-
-#USERINPUTEND ----------------------------
+WSA			NameModelSW
 
 #GAMMA
 1.5000E+00		Gamma
@@ -194,24 +189,22 @@ T                       UseUserB0
 T			UseUserInitSession
 T                       UseUserUpdateStates
 
-#GL98FLUXROPE
-T                       UseFluxRope
-0.7                     cme_a
-1.8                     cme_r1
-1.0                     cme_r0
-0.93                    cme_a1
-0.0                     cme_alpha
-0.0                     cme_rho1
-0.0                     cme_rho2
-0.8                     ModulationRho
-0.8                     ModulationP
-80.0                    LongitudeGL98
--10.0                   LatitudeGL98
-0.0                     OrientationGL98
+#CME
+T			UseCme
+T			DoAddFluxRope
+80.0                    LongitudeCme
+-10.0                   LatitudeCme
+0.0                     OrientationCme
+GL			TypeCme
+0.7			Stretch
+1.8			Distance
+1.0			Radius
+0.93			Bstrength
+0.0			Density
 
 #STOP
-71
--1.0
+71			MaxIteration  
+-1.0			tSimulationMax
 
 #RUN #############################################################
 
@@ -244,5 +237,5 @@ TD			TypeCme
 1.000E+13               Mass
 
 #STOP
-100
--1.0
+100			MaxIteration  
+-1.0			tSimulationMax

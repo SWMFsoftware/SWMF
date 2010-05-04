@@ -37,23 +37,18 @@ T			UseUserB0
 T			UseUserInitSession
 T			UseUserUpdateStates
 
-#USERINPUTBEGIN ------------------------
-
-#PFSSM
-T			UseUserB0
-1.0			Ro_PFSSM
-2.5			Rs_PFSSM
-0.0			H_PFSSM
-Param/CORONA/CR1935_WSO.dat    File_PFSSM
-12			iHead_PFSSM
+#MAGNETOGRAM
+T			UseMagnetogram
+1.0			rMagnetogram
+2.5			rSourceSurface
+0.0			HeightInnerBc
+Param/CORONA/CR1935_WSO.dat    NameMagnetogramFile
+12			nHeaderLine
 -1.0			PhiShift
 0.01			UnitB
--1.0			dt_UpdateB0
 
 #EMPIRICALSW
-WSA			NameModel
-
-#USERINPUTEND ----------------------------
+WSA			NameModelSW
 
 #BODY
 T			UseBody
@@ -63,7 +58,6 @@ T			UseBody
 
 #GAMMA
 1.5000E+00		Gamma
-
 
 #OUTERBOUNDARY
 float	                TypeBcEast
@@ -94,11 +88,8 @@ Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc                      TypeLimiter
 1.2			LimiterBeta
 
-#TVDRESCHANGE
-T                       UseTvdResChange
-
 #RESCHANGEBOUNDARY
-T
+T			DoSaveBoundaryCells
 
 #TIMESTEPPING
 2                       nStage
@@ -166,10 +157,10 @@ GL			TypeCme
 0.0			Density
 
 #STOP
-71
--1.0
+71			MaxIteration  
+-1.0			tSimulationMax
 
-#RUN ######################################################################
+#RUN #############################################################
 
 #USER_FLAGS
 T                       UseUserInnerBCs
@@ -200,5 +191,5 @@ TD			TypeCme
 1.000E+13               Mass
 
 #STOP
-100
--1.0
+100			MaxIteration  
+-1.0			tSimulationMax
