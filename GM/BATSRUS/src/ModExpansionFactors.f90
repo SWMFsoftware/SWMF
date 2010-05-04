@@ -96,7 +96,25 @@ module ModExpansionFactors
   real::GammaSS=1.10
 
 contains
+  !==========================================================================
+  subroutine read_wsa_coeff
+    use ModReadParam,   ONLY: read_var
+    !-----------------------------------------------------------------------
+    call read_var('constant speed',ArgesAlpha_I(1))
+    call read_var('modulation of speed',ArgesAlpha_I(2))
+    call read_var('power index',ArgesAlpha_I(3))
+    call read_var('coeff',ArgesAlpha_I(4))
+    call read_var('coeff',ArgesAlpha_I(5))
+    call read_var('angle',ArgesAlpha_I(6))
+    call read_var('power index',ArgesAlpha_I(7))
+    call read_var('power index',ArgesAlpha_I(8))
+    call read_var('lower bound',ArgesAlpha_I(9))
+    call read_var('upper bound',ArgesAlpha_I(10))
+
+  end subroutine read_wsa_coeff
+  !==========================================================================
   subroutine set_expansion_factors
+
     real :: dS,dSMax
     real,dimension(nDim) :: R_D !The vector r,phi,theta
     real,dimension(nDim) :: BTemp_D,BSun_D,BSS_D
@@ -403,8 +421,7 @@ contains
     gammaSS=( (cHalf*UMin**2+cSunGravitySI)/(CoronalT0Dim*cBoltzmann/cProtonMass) ) &
          /( (cHalf*UMin**2+cSunGravitySI)/(CoronalT0Dim*cBoltzmann/cProtonMass)-cOne )
   contains
-    !----------------------------------------------------------------
-    !----------
+    !==========================================================================
     subroutine advance_line_point(RInOut_D,Dir)
       real,intent(inout),dimension(nDim) :: RInOut_D
       real,intent(in) :: Dir
@@ -415,18 +432,18 @@ contains
            &*f_d(RInOut_D))
       call correct_angles(RInOut_D)
     end subroutine advance_line_point
-    !----------------------------------------------------------------
-    !--
+    !==========================================================================
     subroutine start_at_grid_point(iR,iPhi,iTheta)
       integer,intent(in) :: iR,iPhi,iTheta
       R_D(R_)=Ro_PFSSM+real(iR)*dR
       R_D(Phi_)=real(iPhi)*dPhi
       R_D(Theta_)=colatitude(iTheta)
       R_D(R_)=min(max(R_D(R_),Ro_PFSSM + 0.25*dR),Rs_PFSSM-0.25*dR)
-    end subroutine start_at_grid_point
-    ! This fucnction calculates the value of 
-    ! F(i)= B(i)/|B|/(1,r*sin(colatitude),r)
+    end subroutine start_at_grid_point 
+    !==========================================================================
     function f_d(RIn_D)
+      ! This fucnction calculates the value of 
+      ! F(i)= B(i)/|B|/(1,r*sin(colatitude),r)
       real,dimension(nDim) :: f_d
       real,dimension(nDim),intent(in) :: RIn_D
       real,parameter :: cTol= 1.0e-10
@@ -445,7 +462,7 @@ contains
       !step
       f_d=f_d/sqrt(sum(f_d**2))
     end function f_d
-
+    !==========================================================================
     function theta_b(Phi,Theta)
       real,intent(in) :: Phi,Theta
       real :: theta_b
@@ -460,6 +477,7 @@ contains
 
     end function theta_b
   end subroutine set_expansion_factors
+  !==========================================================================
   subroutine get_interpolated(Array_N,xInput,yInput,zInput,Output)
     real,intent(in)   :: Array_N(-nRExt:nR,0:nPhi,0:nTheta)
     real, intent(in)  :: xInput,yInput,zInput
@@ -543,6 +561,7 @@ contains
          & Node_D(Theta_):Node_D(Theta_)+1))
 
   end subroutine get_interpolated
+
 end module ModExpansionFactors
 !=================================set_empirical_model=============
 subroutine set_empirical_model(TypeRead,BodyT0)
@@ -743,20 +762,3 @@ subroutine write_expansion_tec
   close(iUnit)
 
 end subroutine write_expansion_tec
-!==========================================================================
-subroutine read_wsa_coeff
-  use ModExpansionFactors,ONLY: ArgesAlpha_I
-  use ModReadParam,   ONLY: read_var
-  !-----------------------
-  call read_var('constant speed',ArgesAlpha_I(1))
-  call read_var('modulation of speed',ArgesAlpha_I(2))
-  call read_var('power index',ArgesAlpha_I(3))
-  call read_var('coeff',ArgesAlpha_I(4))
-  call read_var('coeff',ArgesAlpha_I(5))
-  call read_var('angle',ArgesAlpha_I(6))
-  call read_var('power index',ArgesAlpha_I(7))
-  call read_var('power index',ArgesAlpha_I(8))
-  call read_var('lower bound',ArgesAlpha_I(9))
-  call read_var('upper bound',ArgesAlpha_I(10))
-end subroutine read_wsa_coeff
-!===============================
