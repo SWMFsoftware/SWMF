@@ -178,21 +178,21 @@ contains
 
     select case(NameCommand)
     case("#MAGNETOGRAM")
-       call read_var('Ro_PFSSM'   ,Ro_PFSSM)
-       call read_var('Rs_PFSSM'   ,Rs_PFSSM)
-       call read_var('H_PFSSM'    ,H_PFSSM)
-       call read_var('File_PFSSM' ,File_PFSSM)
-       call read_var('iHead_PFSSM',iHead_PFSSM)
-       call read_var('Phi_Shift'  ,Phi_Shift)
-       call read_var('UnitB'      ,UnitB)
+       call read_var('rMagnetogram',        Ro_PFSSM)
+       call read_var('rSourceSurface',      Rs_PFSSM)
+       call read_var('HeightInnerBc',       H_PFSSM)
+       call read_var('NameMagnetogramFile', File_PFSSM)
+       call read_var('nHeaderLine',         iHead_PFSSM)
+       call read_var('PhiShift',            Phi_Shift)
+       call read_var('UnitB',               UnitB)
 
     case("#SAVEPOTENTIALFIELD")
        call read_var('DoSavePotentialField', DoSavePotentialField)
 
     case("#READPOTENTIALFIELD")
        call read_var('NamePotentialFieldFile', NamePotentialFieldFile)
-       call read_var('H_PFSSM'    ,H_PFSSM)
-       call read_var('UnitB'      ,UnitB)
+       call read_var('HeightInnerBc',          H_PFSSM)
+       call read_var('UnitB',                  UnitB)
 
     case default
        call CON_stop(NameSub//' invalid NameCommand='//NameCommand)
