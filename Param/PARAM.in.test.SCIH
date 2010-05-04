@@ -141,21 +141,16 @@ T			UseUserUpdateStates
 
 #MAGNETOGRAM
 T			UseUserB0
-1.0			Ro_PFSSM
-2.5			Rs_PFSSM
-0.0			H_PFSSM
+1.0			rMagnetogram
+2.5			rSourceSurface
+0.0			HeightInnerBc
 SC/Param/CR1935_WSO.dat
-12			iHead_PFSSM
+12			nHeaderLine
 -1.0			PhiShift
 0.01			UnitB
 
-#USERINPUTBEGIN ------------------------
-
-
 #EMPIRICALSW
-WSA			NameModel
-
-#USERINPUTEND ----------------------------
+WSA			NameModelSW
 
 #BODY
 T			Usebody
