@@ -104,8 +104,8 @@ contains
     use EEE_ModArch,      ONLY: set_parameters_arch
     use EEE_ModShearFlow, ONLY: set_parameters_shearflow
     use EEE_ModCommonVariables, ONLY: &
-         UseCme, DoAddFluxRope, UseTD, UseGL, UseShearFLow, DoAddFluxRope, &
-         LongitudeCme, LatitudeCme, OrientationCme
+         UseCme, DoAddFluxRope, UseTD, UseGL, UseShearFLow, UseArch, &
+         DoAddFluxRope, LongitudeCme, LatitudeCme, OrientationCme
 
     character(len=*), intent(in) :: NameCommand
 
@@ -126,12 +126,14 @@ contains
           case("TITOV-DEMOULIN", "TD")
              UseTD = .true.
              call set_parameters_TD99(NameCommand)
-          case("GIBBSON-LOW", "GL")
+          case("GIBSON-LOW", "GL")
              UseGL = .true.
              call set_parameters_GL98(NameCommand)
-          case("SHEARFLOW", "SF")
+          case("BREAKOUT")
              UseShearFlow = .true.
              call set_parameters_shearflow(NameCommand)
+             UseArch = .true.
+             call set_parameters_arch(NameCommand)
           case default
              call CON_stop(NameSub//': invalid value for TypeCme='//TypeCme)
           end select
@@ -140,7 +142,7 @@ contains
        ! The remaining commands are preserved for backwards compatibility
        ! and possibly for expert use (more options than #CME command)
     case("#ARCH")
-       call set_parameters_arch
+       call set_parameters_arch(NameCommand)
     case("#TD99FLUXROPE")
        UseCme = .true.
        UseTD  = .true.

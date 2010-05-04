@@ -12,7 +12,7 @@ module EEE_ModGL98
   public :: adjust_GL98_fluxrope
 
   real :: cme_a,cme_r1,cme_r0,cme_a1,cme_alpha,cme_rho1,cme_rho2
-  real :: ModulationRho,ModulationP
+  real :: ModulationRho, ModulationP
 
 contains
 

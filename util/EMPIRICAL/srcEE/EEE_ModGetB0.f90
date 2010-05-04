@@ -14,7 +14,8 @@ contains
 
   subroutine EEE_get_B0(x_D,B0_D)
 
-    use EEE_ModArch, ONLY: UseArch, get_arch
+    use EEE_ModCommonVariables, ONLY: UseArch
+    use EEE_ModArch,            ONLY: get_arch
 
     real, intent(in)  :: x_D(3)
     real, intent(out) :: B0_D(3)

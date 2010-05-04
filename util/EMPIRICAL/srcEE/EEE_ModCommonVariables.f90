@@ -1,6 +1,8 @@
 module EEE_ModCommonVariables
+
   use ModConst
   use ModMpi
+
   implicit none
   save
 
@@ -53,8 +55,11 @@ module EEE_ModCommonVariables
   ! Switch on CME (boundary and/or initial conditions)
   logical:: UseCme = .false.
   
-  ! Use Gibbson-Law, Titov-Demoulin, Shear-Flow model
-  logical:: UseGL  = .false., UseTD = .false., UseShearFlow = .false.
+  ! Use Gibbson-Law, Titov-Demoulin flux ropes
+  logical:: UseGL  = .false., UseTD = .false.
+  
+  ! Use shear-flow boundary condition, use arcade magnetic field
+  logical:: UseShearFlow = .false., UseArch = .false.
 
   ! Add flux rope as an initial condition or apply boundary conditions only
   logical:: DoAddFluxRope = .false.

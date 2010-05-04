@@ -7,29 +7,43 @@ module EEE_ModArch
 
   private
 
-  public :: set_parameters_arch,get_arch
+  public :: set_parameters_arch, get_arch
 
-  logical, public :: UseArch=.false.
-  real :: DipoleStrengthSi,rDipole,AngleBetweenDipoles
-  real :: Longitude,Latitude,Orientation
+  real    :: DipoleStrengthSi,rDipole,AngleBetweenDipoles
   integer :: nDipole
 
 contains
 
   !============================================================================
 
-  subroutine set_parameters_arch
+  subroutine set_parameters_arch(NameCommand)
+
     use ModReadParam, ONLY: read_var
-    implicit none
+
+    character(len=*), intent(in):: NameCommand
+
+    character(len=*), parameter:: NameSub = 'set_parameters_arch'
     !--------------------------------------------------------------------------
-    call read_var('UseArch',          UseArch)
-    call read_var('DipoleStrengthSi', DipoleStrengthSi)
-    call read_var('rDipole',          rDipole)
-    call read_var('nDipole', nDipole)
-    if(nDipole > 1) call read_var('AngleBetweenDipoles', AngleBetweenDipoles)
-    call read_var('Longitude',   Longitude)
-    call read_var('Latitude',    Latitude)
-    call read_var('Orientation', Orientation)
+    select case(NameCommand)
+    case("#ARCH")
+       call read_var('UseArch',          UseArch)
+       call read_var('DipoleStrengthSi', DipoleStrengthSi)
+       call read_var('rDipole',          rDipole)
+       call read_var('nDipole', nDipole)
+       if(nDipole > 1) &
+            call read_var('AngleBetweenDipoles', AngleBetweenDipoles)
+       call read_var('LongitudeCme',   LongitudeCme)
+       call read_var('LatitudeCme',    LatitudeCme)
+       call read_var('OrientationCme', OrientationCme)
+    case("#CME")
+       call read_var('DipoleStrengthSi', DipoleStrengthSi)
+       call read_var('rDipole',          rDipole)
+       call read_var('nDipole',          nDipole)
+       if(nDipole > 1) &
+            call read_var('AngleBetweenDipoles', AngleBetweenDipoles)
+    case default
+       call CON_stop(NameSub//' unknown NameCommand='//NameCommand)
+    end select
 
     if(rDipole>=1.0 .or. rDipole<0.0)then
        call CON_stop('rDipole in #ARCH should be inside the Sun')
@@ -76,9 +90,9 @@ contains
        end do
 
        ! Orientation rotates clockwise
-       Rotate_DD = matmul(rot_matrix_x(Orientation*cDegToRad), &
-            rot_matrix_y(Latitude*cDegToRad))
-       Rotate_DD = matmul(Rotate_DD,rot_matrix_z(-Longitude*cDegToRad))
+       Rotate_DD = matmul(rot_matrix_x(OrientationCme*cDegToRad), &
+            rot_matrix_y(LatitudeCme*cDegToRad))
+       Rotate_DD = matmul(Rotate_DD,rot_matrix_z(-LongitudeCme*cDegToRad))
     end if
 
 
