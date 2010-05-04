@@ -140,7 +140,7 @@ T			UseUserInitSession
 T			UseUserUpdateStates
 
 #MAGNETOGRAM
-T			UseUserB0
+T			UseMagnetogram
 1.0			rMagnetogram
 2.5			rSourceSurface
 0.0			HeightInnerBc

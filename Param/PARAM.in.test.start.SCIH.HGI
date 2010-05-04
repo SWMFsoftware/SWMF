@@ -43,27 +43,22 @@ F			UseUserLogFiles
 F			UseUserWritePlot
 F			UseUserAMR
 F			UseUserEchoInput
-T			UseUserB0
+F			UseUserB0
 T			UseUserInitSession
 T			UseUserUpdateStates
 
-#USERINPUTBEGIN ----------------
-
-#PFSSM
-T			UseUserB0
-1.0			Ro_PFSSM
-2.5			Rs_PFSSM
-0.0			H_PFSSM
-SC/CR1922_MDI.dat       File_PFSSM
-12			iHead_PFSSM
--1.0			PhiShift
-2.5			UnitB
--1.0			dt_UpdateB0
+#MAGNETOGRAM
+T			UseMagnetogram
+1.0			rMagnetogram   
+2.5			rSourceSurface 
+0.0			HeightInnerBc  
+SC/CR1922_MDI.dat       	       
+12			nHeaderLine    
+-1.0			PhiShift       
+2.5			UnitB          
 
 #EMPIRICALSW
 WSA			SWModelType
-
-#USERINPUTEND   ----------------
 
 #BODY
 T			UseBody
