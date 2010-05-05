@@ -11,8 +11,10 @@ module EEE_ModGL98
   public :: get_GL98_fluxrope
   public :: adjust_GL98_fluxrope
 
-  real :: cme_a,cme_r1,cme_r0,cme_a1,cme_alpha,cme_rho1,cme_rho2
-  real :: ModulationRho, ModulationP
+  real :: cme_a=0.0, cme_r1=0.0, cme_r0=0.0, cme_a1=0.0, cme_alpha=0.0
+  real :: cme_rho1=0.0, cme_rho2=0.0
+
+  real :: ModulationRho=0.0, ModulationP=0.0
 
 contains
 
@@ -376,7 +378,6 @@ contains
   !============================================================================
 
   subroutine adjust_GL98_fluxrope(Rho,p)
-    implicit none
 
     real, intent(inout) :: Rho,p
     !--------------------------------------------------------------------------
