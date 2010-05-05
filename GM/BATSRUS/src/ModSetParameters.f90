@@ -466,6 +466,7 @@ subroutine MH_set_parameters(TypeAction)
           "#IMPLSCHEME", "#IMPLICITSCHEME", &
           "#IMPLSTEP", "#IMPLICITSTEP",     &
           "#IMPLCHECK", "#IMPLICITCHECK",   &
+          "#IMPLENERGY", "#IMPLICITENERGY", &
           "#NEWTON", "#JACOBIAN", "#PRECONDITIONER", &
           "#KRYLOV", "#KRYLOVSIZE")
         call read_implicit_param(NameCommand)           !^CFG END IMPLICIT

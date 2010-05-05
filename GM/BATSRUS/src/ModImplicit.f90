@@ -213,7 +213,10 @@ contains
        end select
 
     case('#PARTIMPL', '#PARTIMPLICIT')
-       call read_var('UsePartImplicit2',UsePartImplicit2)
+       call read_var('UsePartImplicit2', UsePartImplicit2)
+
+    case('#IMPLENERGY', '#IMPLICITENERGY')
+       call read_var('UseImplicitEnergy', UseImplicitEnergy)
 
     case('#SEMIIMPLICIT', '#SEMIIMPL')
        call read_var('UseSemiImplicit', UseSemiImplicit)
