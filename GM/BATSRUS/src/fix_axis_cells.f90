@@ -1,8 +1,9 @@
 subroutine fix_axis_cells
 
   use ModProcMH, ONLY: iComm
-  use ModMain, ONLY: nI, nJ, nK, nBlock, UnusedBlk
-  use ModAdvance, ONLY: nVar, State_VGB, rFixAxis, r2FixAxis
+  use ModMain, ONLY: nI, nJ, nK, nBlock, UnusedBlk, iTest, jTest, kTest, &
+       BlkTest
+  use ModAdvance, ONLY: nVar, State_VGB, Energy_GBI, rFixAxis, r2FixAxis
   use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
        x_Blk, y_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB,&
        r_to_gen
@@ -22,7 +23,18 @@ subroutine fix_axis_cells
   real :: r, x, y, Volume, InvVolume, SumX, SumXAvg, InvSumX2, dLeft, dRight
   real :: State_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
 
+  logical:: DoTest, DoTestMe
+  character(len=*), parameter:: NameSub = 'fix_axis_cells'
   !--------------------------------------------------------------------------
+  call set_oktest(NameSub, DoTest, DoTestMe)
+
+  if(DoTestMe)then
+     if(.not.UnusedBlk(BlkTest)) &
+          write(*,*) NameSub,' initial state, energy=', &
+          State_VGB(:,iTest,jTest,kTest,BlkTest), &
+          Energy_GBI(iTest,jTest,kTest,BlkTest,:)
+  end if
+
   if(TypeGeometry == 'cylindrical')then
      call fix_axis_cells_cyl
      RETURN
@@ -62,6 +74,7 @@ subroutine fix_axis_cells
         if(TypeGeometry == 'spherical_genr') r = r_to_gen(r)
         iR = ceiling( (r - XyzMin_D(1))/MinDxValue + 0.1)
 
+        ! Average small cells in the kMin:kMax ring(s)
         do k=kMin, kMax; 
            Volume = 1.0/vInv_CB(i,1,k,iBlock)
            Buffer_VIII(Volume_,iR,Geom_,iHemisphere) = &
@@ -72,7 +85,9 @@ subroutine fix_axis_cells
                    + Volume*State_VGB(:,i,j,k,iBlock)
            end do
         end do
-        do j=1,nJ
+
+        ! Calculate moments of the values of the kOut ring
+        do j = 1, nJ
            x = x_BLK(i,j,kOut,iBlock)
            y = y_BLK(i,j,kOut,iBlock)
            State_V = State_VGB(:,i,j,kOut,iBlock)
@@ -96,9 +111,11 @@ subroutine fix_axis_cells
      end do
   end do
      
+  ! Collect all contributions around the axis
   call MPI_allreduce(Buffer_VIII, SumBuffer_VIII, nVar*nR*Geom_*2, MPI_REAL, &
        MPI_SUM, iComm, iError)
 
+  ! Overwrite cells around the axis with a linear slope
   do iBlock = 1, nBlock
      if(unusedBlk(iBlock) .or. .not. far_field_BCs_BLK(iBlock)) CYCLE
 
@@ -118,7 +135,7 @@ subroutine fix_axis_cells
         CYCLE
      endif
 
-     do i=1,nI
+     do i = 1, nI
         r = r_Blk(i,1,1,iBlock)
         if(TypeGeometry == 'spherical_lnr') r = alog(r)
         if(TypeGeometry == 'spherical_genr') r = r_to_gen(r)
@@ -146,7 +163,7 @@ subroutine fix_axis_cells
         end do
 
         ! Apply fit to each cell within the supercell
-        do k=kMin, kMax; do j=1, nJ
+        do k = kMin, kMax; do j = 1, nJ
 
            State_VGB(:,i,j,k ,iBlock) = State_V &
                 + dStateDx_V*x_BLK(i,j,k,iBlock) &
@@ -159,6 +176,13 @@ subroutine fix_axis_cells
   end do
 
   deallocate(Buffer_VIII, SumBuffer_VIII)
+
+  if(DoTestMe)then
+     if(.not.UnusedBlk(BlkTest)) &
+          write(*,*) NameSub,' final state, energy=', &
+          State_VGB(:,iTest,jTest,kTest,BlkTest), &
+          Energy_GBI(iTest,jTest,kTest,BlkTest,:)
+  end if
 
 end subroutine fix_axis_cells
 !=============================================================================
