@@ -88,25 +88,65 @@ contains
     !
     
     integer, intent(in) :: iBlock
-    integer :: i,j,k
+    integer :: i, j, k
     !--------------------------------------------------------------------------
     do iFluid = 1, nFluid
        call select_fluid
        do k=1, nK; do j=1, nJ; do i=1, nI
           StateOld_VCB(iP, i, j, k,iBlock) = &
-               gm1*(EnergyOld_CBI(i, j, k, iBlock, iFluid) - 0.5*   &
-               sum(StateOld_VCB(iRhoUx:iRhoUz,i, j, k, iBlock)**2)  &
-               /StateOld_VCB(iRho,i, j, k, iBlock) )
+               gm1*(EnergyOld_CBI(i,j,k,iBlock,iFluid) - 0.5*   &
+               sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)  &
+               /StateOld_VCB(iRho,i,j,k,iBlock) )
        end do; end do; end do
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
        
        do k=1, nK; do j=1, nJ; do i=1, nI
-          StateOld_VCB(iP, i, j, k,iBlock) = StateOld_VCB(iP, i, j, k,iBlock) &
+          StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
                - gm1*0.5*sum(StateOld_VCB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
     end do
+
   end subroutine calc_old_pressure
+
+  !============================================================================
+
+  subroutine calc_old_energy(iBlock)
+
+    ! Calculate energy from pressure for the old state
+    !
+    !   E = P/(gamma-1) + 0.5*rho*u^2 + 0.5*b1^2
+    
+    integer, intent(in) :: iBlock
+    integer :: i, j, k
+    !--------------------------------------------------------------------------
+
+    do iFluid = 1, nFluid
+       call select_fluid
+       ! Calculate thermal plus kinetic energy
+       do k=1, nK; do j=1, nJ; do i=1, nI
+          if (StateOld_VCB(iRho,i,j,k,iBlock) <= 0.0)then
+             EnergyOld_CBI(i,j,k,iBlock,iFluid) = 0.0
+          else
+             EnergyOld_CBI(i, j, k, iBlock, iFluid) = &
+                  inv_gm1*StateOld_VCB(iP,i,j,k,iBlock) &
+                  + 0.5*(sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)/&
+                  StateOld_VCB(iRho,i,j,k,iBlock))
+          end if
+       end do; end do; end do
+       
+       if(iFluid > 1 .or. .not. IsMhd) CYCLE
+
+       ! Add magnetic energy for ion fluid
+       do k=1, nK; do j=1, nJ; do i=1, nI
+          EnergyOld_CBI(i,j,k,iBlock, iFluid) = &
+               EnergyOld_CBI(i,j,k,iBlock, iFluid) + &
+               0.5*sum(StateOld_VCB(Bx_:Bz_,i,j,k,iBlock)**2)
+       end do; end do; end do
+
+    end do
+
+  end subroutine calc_old_energy
 
   !============================================================================
 
