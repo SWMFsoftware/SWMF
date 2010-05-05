@@ -31,6 +31,9 @@ module ModImplicit
   ! in all the blocks to get second order flux at expl/impl interfaces
   logical :: UsePartImplicit2=.false. 
 
+  ! Use energy or pressure as the implicit variable
+  logical :: UseImplicitEnergy = .true.
+
   ! Do a conservative update at the end of the iterative solver 
   ! This does not work well without full Newton iteration
   logical :: UseConservativeImplicit=.false.  

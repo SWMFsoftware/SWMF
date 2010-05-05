@@ -89,7 +89,7 @@ subroutine advance_impl
   use ModLinearSolver, ONLY: gmres, bicgstab, cg, prehepta, &
        Uhepta, Lhepta, multiply_dilu
   use ModMpi
-  use ModEnergy, ONLY: calc_old_pressure
+  use ModEnergy, ONLY: calc_old_pressure, calc_old_energy
 
   implicit none
 
@@ -165,6 +165,8 @@ subroutine advance_impl
         do iBLK=1,nBlock
            if(iTypeAdvance_B(iBLK) /= ExplBlock_)CYCLE
            ImplOld_VCB(:,:,:,:,iBLK) = State_VGB(:,1:nI,1:nJ,1:nK,iBLK)
+
+           if(.not. UseImplicitEnergy) CYCLE
            ! Overwrite pressure with energy
            do iFluid = 1, nFluid
               call select_fluid
@@ -393,12 +395,17 @@ subroutine advance_impl
      ! Restore StateOld and E_o_BLK in the implicit blocks
      do implBLK=1,nImplBlk
         iBLK=impl2iBLK(implBLK)
-        StateOld_VCB(:,:,:,:,iBLK)=ImplOld_VCB(:,:,:,:,iBLK)
-        do iFluid = 1, nFluid
-           call select_fluid
-           EnergyOld_CBI(:,:,:,iBLK,iFluid) = ImplOld_VCB(iP,:,:,:,iBLK)
-        end do
-        call calc_old_pressure(iBlk) ! restore StateOld_VCB(P_...)
+        StateOld_VCB(:,:,:,:,iBLK) = ImplOld_VCB(:,:,:,:,iBLK)
+
+        if(UseImplicitEnergy) then
+           do iFluid = 1, nFluid
+              call select_fluid
+              EnergyOld_CBI(:,:,:,iBLK,iFluid) = ImplOld_VCB(iP,:,:,:,iBLK)
+           end do
+           call calc_old_pressure(iBlk) ! restore StateOld_VCB(P_...)
+        else
+           call calc_old_energy(iBlk) ! restore EnergyOld_CBI
+        end if
      end do
   end if
 

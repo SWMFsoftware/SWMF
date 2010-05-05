@@ -101,11 +101,14 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
         iBLK = impl2iBLK(implBLK)
         Var_VGB(:,:,:,:,implBLK) = &
              State_VGB(:,imin:imax,jmin:jmax,kmin:kmax,iBLK)
-        do iFluid = 1, nFluid
-           call select_fluid
-           Var_VGB(iP,:,:,:,implBLK) = &
-                Energy_GBI(imin:imax,jmin:jmax,kmin:kmax,iBLK,iFluid)
-        end do
+
+        if(UseImplicitEnergy)then
+           do iFluid = 1, nFluid
+              call select_fluid
+              Var_VGB(iP,:,:,:,implBLK) = &
+                   Energy_GBI(imin:imax,jmin:jmax,kmin:kmax,iBLK,iFluid)
+           end do
+        end if
      end do
   end if
 
@@ -124,8 +127,10 @@ subroutine impl2expl(Var_VC, iBLK)
 
   use ModSize,     ONLY : nI, nJ, nK
   use ModAdvance,  ONLY : nVar, State_VGB, Energy_GBI
-  use ModEnergy,   ONLY : calc_pressure_cell
+  use ModEnergy,   ONLY : calc_pressure_cell, calc_energy_cell
   use ModMultiFluid, ONLY: iFluid, nFluid, iP_I, iP
+  use ModImplicit, ONLY: UseImplicitEnergy
+  
   implicit none
 
   real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
@@ -137,11 +142,15 @@ subroutine impl2expl(Var_VC, iBLK)
 
   State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBLK) = Var_VC
 
-  do iFluid = 1, nFluid
-     iP = iP_I(iFluid)
-     Energy_GBI(1:nI,1:nJ,1:nK,iBLK,iFluid) = Var_VC(iP,:,:,:)
-  end do
-  call calc_pressure_cell(iBLK)
+  if(UseImplicitEnergy)then
+     do iFluid = 1, nFluid
+        iP = iP_I(iFluid)
+        Energy_GBI(1:nI,1:nJ,1:nK,iBLK,iFluid) = Var_VC(iP,:,:,:)
+     end do
+     call calc_pressure_cell(iBLK)
+  else
+     call calc_energy_cell(iBLK)
+  end if
 
   call timing_stop('impl2expl')
 
@@ -797,7 +806,8 @@ subroutine getsource(iBLK,Var_VCB,SourceImpl_VC)
   use ModMain
   use ModVarIndexes
   use ModAdvance, ONLY : Source_VC  ! To communicate to calc_sources
-  use ModImplicit, ONLY : nw,E_
+  use ModImplicit, ONLY : nw, UseImplicitEnergy
+
   implicit none
 
   integer, intent(in) :: iBLK
@@ -810,8 +820,8 @@ subroutine getsource(iBLK,Var_VCB,SourceImpl_VC)
 
   call timing_start('getsource')
 
-  qUseDivbSource   =UseDivbSource
-  UseDivbSource    =.false.
+  qUseDivbSource = UseDivbSource
+  UseDivbSource  = .false.
   
   call impl2expl(Var_VCB,iBLK)
   globalBLK = iBLK
@@ -821,8 +831,11 @@ subroutine getsource(iBLK,Var_VCB,SourceImpl_VC)
   call calc_sources
 
   SourceImpl_VC = Source_VC(1:nVar,:,:,:)
-  ! Overwrite pressure source terms with energy source term
-  SourceImpl_VC(iP_I,:,:,:) = Source_VC(Energy_:Energy_+nFluid-1,:,:,:)
+  
+  if(UseImplicitEnergy)then
+     ! Overwrite pressure source terms with energy source term
+     SourceImpl_VC(iP_I,:,:,:) = Source_VC(Energy_:Energy_+nFluid-1,:,:,:)
+  end if
 
   UseDivbSource   =qUseDivbSource
   call timing_stop('getsource')
@@ -845,6 +858,7 @@ subroutine get_face_flux(StateCons_VC,B0_DC,nI,nJ,nK,iDim,iBlock,Flux_VC)
        HallJx, HallJy, HallJz, UseHallGradPe, DoTestCell
   use ModHallResist, ONLY: UseHallResist, HallJ_CD
   use ModMultiFluid, ONLY: iFluid, nFluid, iP_I, iP
+  use ModImplicit,   ONLY: UseImplicitEnergy
 
   implicit none
 
@@ -879,12 +893,12 @@ subroutine get_face_flux(StateCons_VC,B0_DC,nI,nJ,nK,iDim,iBlock,Flux_VC)
      Primitive_V = StateCons_VC( :,i, j, k)
      call conservative_to_primitive(Primitive_V)
 
-     Conservative_V(1:nVar) = StateCons_VC( :,i, j, k)
-     do iFluid=1, nFluid
-        iP = iP_I(iFluid)
-        Conservative_V(iP) = Primitive_V(iP)
-        Conservative_V(nVar+iFluid) = StateCons_VC( iP,i, j, k)
-     end do
+     !!! Conservative_V(1:nVar) = StateCons_VC( :,i, j, k)
+     !!! do iFluid=1, nFluid
+     !!!    iP = iP_I(iFluid)
+     !!!    Conservative_V(iP) = Primitive_V(iP)
+     !!!    Conservative_V(nVar+iFluid) = StateCons_VC( iP,i, j, k)
+     !!! end do
 
      if(UseHallResist)then
         HallJx = HallJ_CD(i, j, k, x_)
@@ -905,8 +919,10 @@ subroutine get_face_flux(StateCons_VC,B0_DC,nI,nJ,nK,iDim,iBlock,Flux_VC)
 
      Flux_VC(1:nVar,i,j,k)= Flux_V(1:nVar)*Area
 
-     ! Replace pressure flux with energy flux
-     Flux_VC(iP_I,i,j,k) = Flux_V(Energy_:Energy_+nFluid-1)*Area
+     if(UseImplicitEnergy)then
+        ! Replace pressure flux with energy flux
+        Flux_VC(iP_I,i,j,k) = Flux_V(Energy_:Energy_+nFluid-1)*Area
+     end if
 
   end do; end do; end do
 
@@ -982,24 +998,34 @@ end subroutine get_cmax_face
 !==============================================================================
 subroutine conservative_to_primitive(State_V)
 
-  use ModImplicit, ONLY: nw
+  use ModImplicit, ONLY: nw, UseImplicitEnergy
   use ModVarIndexes, ONLY: Bx_, Bz_, IsMhd, nFluid
   use ModMultiFluid, ONLY: select_fluid,           &
-       iFluid, iRho, iRhoUx, iUx, iRhoUz, iUz, iP
+       iFluid, iRho, iRhoUx, iUx, iRhoUz, iUz, iP, &
+       iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
   use ModPhysics, ONLY: gm1
+
   implicit none
+
   real, intent(inout):: State_V(nw)
-  real :: InvRho
+  real :: InvRho, InvRho_I(nFluid)
   !---------------------------------------------------------------------------
-  do iFluid = 1, nFluid
-     call select_fluid
-     InvRho = 1.0/State_V(iRho)
-     State_V(iP) = gm1*(State_V(iP) - &
-          0.5*sum(State_V(iRhoUx:iRhoUz)**2)*InvRho)
-     if(iFluid == 1 .and. IsMhd) &
-          State_V(iP) = State_V(iP) - 0.5*gm1*sum(State_V(Bx_:Bz_)**2)
-     State_V(iUx:iUz) = InvRho*State_V(iRhoUx:iRhoUz)
-  end do
+  if(UseImplicitEnergy)then
+     do iFluid = 1, nFluid
+        call select_fluid
+        InvRho = 1.0/State_V(iRho)
+        State_V(iP) = gm1*(State_V(iP) - &
+             0.5*sum(State_V(iRhoUx:iRhoUz)**2)*InvRho)
+        if(iFluid == 1 .and. IsMhd) &
+             State_V(iP) = State_V(iP) - 0.5*gm1*sum(State_V(Bx_:Bz_)**2)
+        State_V(iUx:iUz) = InvRho*State_V(iRhoUx:iRhoUz)
+     end do
+  else
+     InvRho_I = 1.0/State_V(iRho_I)
+     State_V(iUx_I) = InvRho_I*State_V(iRhoUx_I)
+     State_V(iUy_I) = InvRho_I*State_V(iRhoUy_I)
+     State_V(iUz_I) = InvRho_I*State_V(iRhoUz_I)
+  end if
 
 end subroutine conservative_to_primitive
 

@@ -251,7 +251,7 @@ subroutine impl_jacobian(implBLK,JAC)
            if(UseB    .and. divbsrc .and. &
                 (     (iw >= RhoUx_ .and. iw <= RhoUz_) &
                 .or.  (iW >= Bx_    .and. iW <= Bz_   ) &
-                .or.   iw == E_                         &
+                .or.  (iw == E_ .and. UseImplicitEnergy) &
                 ) )then
               if(UseCovariant .and. jw>=Bx_ .and. jw<=Bz_)then
                  ! The source terms are always multiplied by coeff
@@ -427,6 +427,7 @@ contains
        sPowell_VC(Bx_:Bz_,i,j,k) = Impl_VC(RhoUx_:RhoUz_,i,j,k) &
             /Impl_VC(Rho_,i,j,k) 
 
+       if(.not. UseImplicitEnergy) CYCLE
        ! Q(E)   = U.B
        sPowell_VC(E_,i,j,k) = &
             sum(Impl_VC(Bx_:Bz_,i,j,k)*Impl_VC(RhoUx_:RhoUz_,i,j,k)) &
@@ -471,6 +472,8 @@ contains
             +wnrm(rhoUy_)/wnrm(By_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(Bz_,rhoUz_,i,j,k,1)=JAC(Bz_,rhoUz_,i,j,k,1)&
             +wnrm(rhoUz_)/wnrm(Bz_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
+
+       if(.not.UseImplicitEnergy) CYCLE
 
        ! Q(E)= -divB*rhoU.B/rho
        ! dQ(E)/drho = +divB*rhoU.B/rho**2
