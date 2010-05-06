@@ -1088,12 +1088,12 @@ if resolution change is allowed.
 							default="-1" />
 	<parameter name="MaxFaceBoundary" type="integer" min="-2" max="6"
 							default="0" />
-	<parameter name="DoFixOuterBoundary" type="logical" 
-							default="F"/>
+	<parameter name="DoFixOuterBoundary" type="logical" default="F"
+					if="$MaxFaceBoundary&gt;0" />
 #FACEBOUNDARY
 6		MinFaceBoundary
 -2		MaxFaceBoundary
-F		DoFixOuterBoundary
+F		DoFixOuterBoundary (read if MaxFaceBoundary is > 0)
 
 General notes: face based boundary conditions are 1st order accurate 
 in general, while cell based boundary conditions can be 2nd order accurate.
@@ -1709,6 +1709,23 @@ The default is UseSemiImplicit false.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!! PARAMETERS FOR FULL AND PART IMPLICIT TIME INTEGRATION !!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="IMPLICITENERGY" alias="IMPLENERGY">
+	<parameter name="UseImplicitEnergy" type="logical" default="T" />
+
+#IMPLICITENERGY
+F			UseImplicitEnergy
+
+If UseImplicitEnergy is true, use the energy variable(s) as unknown(s) in the 
+implicit scheme, otherwise use the pressure variables(s). Note that the
+explicit scheme that provides the right hand side of the implicit scheme
+may still be conservative, and thus the overall scheme may still provide 
+correct jump conditions across shocks (to be tested). Using pressure seems
+to provide a more accurate and robust scheme, but the implementation is
+not yet fully tested. 
+
+Until then the default is UseImplicitEnergy=F.
+</command>
+
 <command name="IMPLICITCRITERIA" alias="STEPPINGCRITERIA">
 	<parameter name="TypeImplCrit" type="string" case="lower"
 	input="select">
@@ -5308,14 +5325,15 @@ Default is no dipole field for the second body.
 <command name="MAGNETOGRAM">
 	<parameter name="UseMagnetogram" type="logical" default="F"	/>
 	<if expr="$UseMagnetogram">
-		<parameter name="Ro_PFSSM" type="real" 
+		<parameter name="rMagnetogram" type="real" 
 						default="1.0" />
-		<parameter name="Rs_PFSSM" type="real" 
+		<parameter name="rSourceSurface" type="real" 
 						default="2.5" />
-		<parameter name="H_PFSSM" type="real" 
+		<parameter name="HeightInnerBc" type="real" 
 						default="0.0" />
-		<parameter name="File_PFSSM" type="string" input="select" />
-		<parameter name="iHead_PFSSM" type="integer"
+		<parameter name="NameHarmonicsFile" type="string" 
+						length="100" />
+		<parameter name="nHeaderLine" type="integer" min="0"
 						default="12" />
 		<parameter name="PhiShift" type="real" 
 						default="-1.0" />
@@ -5323,37 +5341,48 @@ Default is no dipole field for the second body.
 						default="3.0" />
 	</if>
 #MAGNETOGRAM
-T			UseMagnetogram
-1.0			Ro_PFSSM
-2.5			Rs_PFSSM
-0.0			H_PFSSM
-mfile.dat               File_PFSSM
-12			iHead_PFSSM
+T			UseMagnetogram (rest of parameters read if true)
+1.0			rMagnetogram
+2.5			rSourceSurface
+0.0			HeightInnerBc
+Param/CORONA/CR1935_WSO.dat    NameHarmonicsFile
+12			nHeaderLine
 -1.0			PhiShift
-3.0			UnitB
+0.01			UnitB
 
-Reads the harmonic file for the coronal magnetic field. Ro and Rs stands for 
-the photosphere and source surface heliocentric radii. H is the height above 
-the photosphere of the boundary surface, non-zero values for this parameter 
-are nod recommended to unexperienced users. 
+If UseMagnetogram=T then read the harmonics file for the coronal 
+magnetic field and use it to set B0 to the potential field solution. 
 
-iHead is the number of header lines (so that the first harmonic amplitude is 
-in the line iHead_PFSSM+1. 
+rMagnetogram and rSourceSurface are the photosphere and source surface 
+heliocentric radii, respectively. B0 becomes radial at rSourceSurface
+(typically taken to be 2.5 solar radii).
+
+HeightInnerBc is the height above the photosphere of the boundary surface, 
+non-zero values for this parameter are not recommended to unexperienced users. 
+
+NameHarmonicsFile is the name of the file containing the harmonics.
+nHeaderLine is the number of header lines in the harmonics file. 
 
 PhiShift is the offset in the longitude (calculated as the diffference in 
 lonigitude of the magnetogram central meridian and 180 degrees. PhiShift=0 
-means that the synoptic map is averaged over the whole Currington rotation. 
-With PhiShift = -1.0 the code calculate the actual value for PhiShift by
+means that the synoptic map is averaged over the whole Carrington rotation. 
+With PhiShift = -1.0 the code calculates the actual value for PhiShift by
 exctracting the central meridian coordinate from the harmonics file. 
 
 UnitB may be used both as a fudge-factor to upscale the (usually reduced) 
-observational data and to accomodate data measured in the units rather than 
-Gs. Wilcox data (in microTl) may be only used with UnitB~0.01-0.03.
+observational data and to accomodate data measured in the units
+different from Gauss. 
+Wilcox data (in micro-Tesla) may be only used with UnitB=0.01-0.03.
+
+Default is UseMagnetogram=F.
  
 </command>
 
 <command name="EMPIRICALSW">
-	<parameter name="NameModelSW" type="string" input="select"/>
+	<parameter name="NameModelSW" type="string" input="select">
+		<option name="none" default="T"/>
+		<option name="WSA"/>
+	</parameter>
 
 #EMPIRICALSW
 WSA             NameModelSW
@@ -5362,15 +5391,45 @@ Depending on the expansion factors, calculated using the magnetogram field,
 for NameModelSW=WSA the spatial distribution of varied gamma is calculated.
 Through the Bernoulli integral the solar wind at 1AU should fit the WSA
 solar wind semi-empirical model, with the prescribed distribution of the
-varied gamma. Default value is NameModelSW=none
+varied gamma. Default value is NameModelSW=none.
 </command>
+
+<command name="WSACOEFF">
+    <parameter name="ConstantSpeed"   type="real" min="0" default="240"/>
+    <parameter name="ModulationSpeed" type="real" min="0" default="675"/>
+    <parameter name="PowerIndex1"     type="real" min="0" default="4.5"/>
+    <parameter name="Coeff1"          type="real"         default="1.0"/>
+    <parameter name="coeff2"          type="real"         default="0.8"/>
+    <parameter name="Angle"           type="real" min="0" default="2.8"/>
+    <parameter name="PowerIndex2"     type="real" min="0" default="1.25"/>
+    <parameter name="PowerIndex3"     type="real" min="0" default="3.0"/>
+    <parameter name="LowerBound"      type="real" min="0" default="0.0"/>
+    <parameter name="UpperBound"      type="real" min="$LowerBound" 
+							default="9999.0"/>
+#WSACOEFF
+240.0		ConstantSpeed [km/s]
+675.0		ModulationSpeed [km/s]
+4.5  		PowerIndex1
+1.0  		Coeff1
+0.8  		Coeff2
+2.8  		Angle [deg]
+1.25 		PowerIndex2
+3.0  		PowerIndex3
+0.0  		LowerBound
+9999.0		UpperBound
+
+Read in various parameters for the Wang-Sheely-Arge model. The exact meaning
+of the parameters should be obtained from publications on the WSA model.
+Default values are show. 
+</command>
+
 <command name="CORONALHEATING">
 	<parameter name="TypeCoronalHeating" type="string" case="lower"
 		input="select" >
+		<option name="none"     default="T"/>
 		<option name="exponential"         />
 		<option name="unsignedflux"        />
 		<option name="NonWKB"              />
-		<option name="none"                />
 	</parameter>
 	<if expr="$TypeCoronalHeating =~ /exponential/">
 		<parameter name="DecayLengthExp" type="real" 
@@ -5415,7 +5474,7 @@ is used to uniformly multiply the heating rate by this factor (default 1.0).
 For TypeCoronalHeating='NonWKB' coronal heating is applied using the wave
 dissapation model of Cranmer 2010. No additional input parameters are needed.
 
-The default is UseCoronalHeating=.false.
+The default is TypeCoronalHeating="none"
 </command>
 
 <command name="LONGSCALEHEAT">
@@ -5505,32 +5564,34 @@ comments in src/ModRadiativeCooling.f90). Default value for UseRadCooling is
 </command>
 
 <command name="TRANSITIONREGION">
-	 <parameter name="DoExtendTransitionRegion" type="logical" default="F" />
-	 <if expr="$DoExtendTransitionRegion">
-		<parameter name="ArHeatFactorCgs" type="real" 
-						default="3.0E+5" />
-		<parameter name="ArHeatB0" type="real" 
-						default="1.0E+4" />
-	</if>
-#TRANSITIONREGION
-T                    DoExtendTransitionRegion
-3.0E+5               TeModSi
-1.0E+4               DeltaTeModSi
-
-Applied in calculations, which are to resolve the Transition Region (TR). To achieve
-this, at temperatures below TeModSi the heat conduction coefficient is artificially
-inhanced and the radiation loss rate is modified accordingly. The profile of temperature and
-density in this case are maintained to be the same as in the actual transition region,
-however, the spatial scale becomes much longer, so that the TR may be modelled at grids of a 
-realistic resolution. Default value is DoExtendTransitionRegion = .false.
+	 <parameter name="DoExpandTransitionRegion" type="logical" 
+								default="F"/>
+	<parameter name="TeTransitionRegionSi" type="real" 
+							default="3.0E+5" />
+	<parameter name="DeltaTeModSi" type="real"      default="1.0E+4" 
+					if="$DoExtendTransitionRegion"/>
 
 #TRANSITIONREGION
-F                   DoExtendTransitionRegion
-5.0e+5              TeTopTransitionRegionSi
+T                    DoExpandTransitionRegion
+3.0E+5               TeTransitionRegionSi
+1.0E+4               DeltaTeSi  (read if DoExtendTransitionRegion is true)
 
-If the transition region command is present while the TR is not extended (hence, unresolved)
-the special boundary condition for density (REB - radiation energy balance condition) is used
-at the "coronal base", while the temperature is fixed at Te=TeTopTransitionRegion
+The artificial expansion of the transition region is needed to resolve the 
+Transition Region (TR) which is an extremely thin region in reality. 
+To achieve the expansion, at temperatures below TeTransitionRegionSi the heat
+conduction coefficient is artificially enhanced and the radiation loss
+rate is modified accordingly. The profile of temperature and density
+in this case are maintained to be the same as in the actual transition
+region, however, the spatial scale becomes much longer, so that the TR
+may be modelled with feasible grid resolution. 
+
+If DoExpandTransitionRegion is false, the #TRANSITIONREGION command 
+can be used to set the temperature of the top of the transition region.
+Then the special boundary condition (REB - radiation energy balance)
+is used at the "coronal base", while the temperature is fixed at 
+Te=TeTopTransitionRegion.
+
+Default value is DoExpandTransitionRegion = .false.
 </command>
 
 <command name="ALFVENWAVES">
