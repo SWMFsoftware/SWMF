@@ -1658,20 +1658,46 @@ UsePointImplicit=.true., BetaPointImplicit=1.0 and IsAsymmetric=.true.
 	<parameter name="UseFullImplicit" type="logical" default="F"/>
 	<parameter name="CflImpl" type="real" min="0" default="100"
 		if="$UsePartImplicit or $UseFullImplicit"/>
-	<rule
-	expr="$UsePointImplicit + $UsePartImplicit + $UseFullImplicit &lt;= 1">
-		At most one of these logicals can be true!
+	<rule expr="not ($UsePartImplicit and $UseFullImplicit)">
+		UsePartImplicit and UseFullImplicit cannot be both true!
+	</rule>
+	<rule expr="not ($UsePointImplicit and $UseFullImplicit)">
+		UsePointImplicit and UseFullImplicit cannot be both true!
 	</rule>
 
 #IMPLICIT
 F               UsePointImplicit
 F               UsePartImplicit
-F               UseFullImplicit
+T               UseFullImplicit
 100.0           CflImpl (read if UsePartImplicit or UseFullImplicit is true)
 
-Default is false for all logicals. Only one of them can be set to true!
-The CFL number is used in the implicit blocks of the fully or partially
-implicit schemes. Ignored if UseDtFixed is true.
+If UsePointImplicit=T is set, the source terms defined in the user module
+are evaluated with a point implicit scheme. See the #POINTIMPLICIT command
+for additional parameters (and another way of switching the point implicit 
+scheme on).
+
+If UsePartImplicit=T is set, the code uses the explicit/implicit scheme.
+This means that some of the grid blocks are advanced with explicit
+time stepping, while the rest is advance with implicit time stepping.
+See the #FIXEDTIMESTEP and #IMPLICITCRITERIA command on how the 
+explicit and implicit blocks get selected.
+
+If UseFullImplicit=T is set, the code uses a fully implicit time
+stepping scheme. This is usually more costly than the explicit/implicit
+scheme unless the whole computational domain requires implicit
+time stepping. 
+
+Note 1: If UseFullImplicit is true, UsePartImplicit and UsePointImplicit 
+must be false.
+
+Note 2: UsePartImplicit=T and UsePointImplicit=T may be used together:
+source terms are point implicit in the explicit blocks. 
+
+The ImplCFL parameter determines the CFL number used in the implicit blocks 
+of the fully or partially implicit schemes. This is ignored if UseDtFixed=T 
+is set in the #FIXEDTIMESTEP command.
+
+Default is false for all logicals. 
 </command>
 
 <command name="SEMIIMPLICIT">
@@ -1718,12 +1744,12 @@ F			UseImplicitEnergy
 If UseImplicitEnergy is true, use the energy variable(s) as unknown(s) in the 
 implicit scheme, otherwise use the pressure variables(s). Note that the
 explicit scheme that provides the right hand side of the implicit scheme
-may still be conservative, and thus the overall scheme may still provide 
-correct jump conditions across shocks (to be tested). Using pressure seems
-to provide a more accurate and robust scheme, but the implementation is
-not yet fully tested. 
+may still be conservative, and thus the overall scheme can provide 
+correct jump conditions across standing (or slowly moving) shocks.
+Away from shocks, using pressure as an implicit variable provides a more 
+accurate and robust scheme than using the energy variable.
 
-Until then the default is UseImplicitEnergy=F.
+The default is UseImplicitEnergy=T for sake of backwards compatibility.
 </command>
 
 <command name="IMPLICITCRITERIA" alias="STEPPINGCRITERIA">
