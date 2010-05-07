@@ -1274,7 +1274,13 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseBorisCorrection', boris_correction)   
         if(boris_correction) then
            call read_var('BorisClightFactor', boris_cLight_factor)
-           UseBorisSimple = .false.
+           if(IsMhd)then
+              UseBorisSimple = .false.
+           else
+              ! For non-MHD equations only simplified Boris correction is possible
+              UseBorisSimple   = .true.
+              boris_correction = .false.
+           end if
         else
            boris_cLIGHT_factor = 1.0
         end if                                       !^CFG END BORISCORR
