@@ -291,34 +291,48 @@ contains
             Energy_GBI(iTest,jTest,kTest,iBlock,1)
 
     endif                                    !^CFG END BORISCORR
-    if(UseBorisSimple) then                  !^CFG IF SIMPLEBORIS BEGIN
+    if(UseBorisSimple .and. IsMhd) then      !^CFG IF SIMPLEBORIS BEGIN
+       ! Update using simplified Boris correction, i.e. update
+       !
+       !    RhoUBorisSimple = (1+B^2/(rho*c^2)) * RhoU
+       !
+       ! instead of RhoU. See Gombosi et al JCP 2002, 177, 176 (eq. 38-39)
+
        if(UseB0)then
           B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
        else
           B0_DC=0.00
        end if
-       ! Convert simple Boris variables back to MHD variables
 
        do k=1,nK; do j=1,nJ; do i=1,nI
+
+          ! State_VGB now contains an MHD update: RhoU_new = RhoU_old + DeltaRhoU
+
           fullBx = B0_DC(x_,i,j,k) + StateOld_VCB(Bx_,i,j,k,iBlock)
           fullBy = B0_DC(y_,i,j,k) + StateOld_VCB(By_,i,j,k,iBlock)
           fullBz = B0_DC(z_,i,j,k) + StateOld_VCB(Bz_,i,j,k,iBlock)
           fullBB = fullBx**2 + fullBy**2 + fullBz**2
           rhoc2  = StateOld_VCB(rho_,i,j,k,iBlock)*c2LIGHT
-          gA2_Boris=fullBB/rhoc2
+          gA2_Boris = fullBB/rhoc2
 
-          ! rhoU_BorisSimple = rhoU*(1+BB/(rho*c2))
+          ! RhoU_new' = RhoU_new + B^2/(rho*c^2) RhoU_old
+          !           = DeltaRhoU + RhoU_old + B^2/(rho*c^2) RhoU_old
+          !           = DeltaRhoU + RhoUBorisSimple_old 
+          !           = RhoUBorisSimple_new
           State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBlock) = &
-               State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBlock)+&
+               State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBlock) + &
                StateOld_VCB(rhoUx_:rhoU_+nDim,i,j,k,iBlock)*ga2_Boris
 
 
+          ! Convert RhoUBorisSimple_new to 
+          ! RhoU = RhoUBorisSimple/(1+B^2/(rho*c^2))
+          !      = RhoUBorisSimple * rho c^2/(rho c^2 + B^2)
           fullBx = B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)
           fullBy = B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)
           fullBz = B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock)
           fullBB = fullBx**2 + fullBy**2 + fullBz**2
           rhoc2  = State_VGB(rho_,i,j,k,iBlock)*c2LIGHT
-          gA2_Boris=rhoc2/(fullBB+rhoc2)
+          gA2_Boris = rhoc2/(fullBB + rhoc2)
 
           ! rhoU = 1/[1+BB/(rho c^2)]* rhoU_BorisSimple
           State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBlock) = gA2_Boris * &
