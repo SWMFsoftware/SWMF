@@ -170,7 +170,7 @@ contains
     !    pressure.
 
     use ModMain,    ONLY: nDim, nI, nJ, nK, x_, y_, z_, &
-         UseB0, UseBoris => boris_correction
+         UseB0, UseBoris => boris_correction, UseBorisSimple
     use ModAdvance, ONLY: State_VGB, Source_VC, B0_DGB, &
          bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
     use ModPhysics, ONLY: InvClight2 => Inv_C2light, ElectronTemperatureRatio
@@ -243,7 +243,7 @@ contains
 
        end if
 
-       if(UseBoris)then                       !^CFG IF BORISCORR BEGIN
+       if(UseBoris .or. UseBorisSimple)then
           ! Simplified Boris correction
           ! (see the ASTRONUM 2009 proceedings paper by Toth et al.)
           ! Divide the number density by
@@ -254,7 +254,7 @@ contains
 
           Ga2 = sum(FullB_D**2)*InvClight2*InvNumDens
           NumDens_I = NumDens_I/(1 + Ga2/MassIon_I)
-       end if                                 !^CFG END BORISCORR
+       end if
 
        ! Multiply by n_s/n_e for all ion fluids
        ForceX_I = NumDens_I*InvNumDens*Force_D(x_)
@@ -301,7 +301,7 @@ contains
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplPerturbed, IsPointImplMatrixSet, DsDu_VVC
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, UseB0,&
-                          UseBoris => boris_correction
+                          UseBoris => boris_correction, UseBorisSimple
     use ModAdvance, ONLY: State_VGB, Source_VC, B0_DGB
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
     use ModGeometry,ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
@@ -392,7 +392,7 @@ contains
        InvNumDens = 1.0/NumDens
 
        NumDensBoris_I = NumDens_I
-       if(UseBoris)then                       !^CFG IF BORISCORR BEGIN
+       if(UseBoris .or. UseBorisSimple)then
           ! See the ASTRONUM 2009 proceedings paper by Toth et al.
           !
           ! Boris correction: divide the number density by
@@ -403,7 +403,7 @@ contains
 
           Ga2 = sum(FullB_D**2)*InvClight2*InvNumDens
           NumDensBoris_I = NumDens_I/(1 + Ga2/MassIon_I)
-       end if                                 !^CFG END BORISCORR
+       end if
 
        Temp_I     = State_V(iPIon_I)/NumDens_I
        AverageTemp= sum(State_V(iPIon_I))*InvNumDens
