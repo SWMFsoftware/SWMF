@@ -2403,6 +2403,7 @@ contains
 
     do iFluid = iFluidMin, iFluidMax
        call select_fluid
+
        if(iFluid == 1 .and. UseB)then
           if(DoAW)then                                 !^CFG IF AWFLUX BEGIN
              ! For AW flux UnLeft_I,UnRight_I are already set by get_physical_flux
@@ -2411,7 +2412,7 @@ contains
           end if                                       !^CFG END AWFLUX
 
           if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
-             call get_boris_speed
+             call get_boris_speed             
           else                                         !^CFG END BORISCORR
              call get_mhd_speed
           endif                                        !^CFG IF BORISCORR    
@@ -2422,24 +2423,8 @@ contains
           end if                                 !^CFG END AWFLUX
           call get_hd_speed
        end if
+
     end do
-
-    if(nFluid > 1 .and. iFluidMin == 1 .and. iFluidMax >= IonLast_)then
-
-       ! For ion fluids the maximum speed is taken to be 
-       ! the maximum of the individual HD speed and the total MHD speed
-       do iFluid = 2, IonLast_
-          if(present(Cmax_I))   CmaxDt_I(iFluid) = &
-               max(CmaxDt_I(1), CmaxDt_I(iFluid))
-          if(present(Cmax_I))   Cmax_I(iFluid)   = &
-               max(Cmax_I(1),   Cmax_I(iFluid))
-          if(present(Cleft_I))  Cleft_I(iFluid)  = &
-               min(Cleft_I(1),  Cleft_I(iFluid))
-          if(present(Cright_I)) Cright_I(iFluid) = &
-               max(Cright_I(1), Cright_I(iFluid))
-       end do
-
-    end if
 
     ! Take time step limit for the fluids that were calculated so far
     if (present(Cmax_I)) &
@@ -2579,6 +2564,8 @@ contains
       real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
            B1B0L, B1B0R
 
+      integer:: jFluid
+
       character(len=*), parameter:: NameSub=NameMod//'::get_mhd_speed'
       !------------------------------------------------------------------------
 
@@ -2588,11 +2575,11 @@ contains
       p      = State_V(p_)
       RhoU_D = Rho*State_V(Ux_:Uz_)
       if(.not. IsMhd)then
-         do iFluid = 2, nIonFluid
-            Rho1= State_V(iRhoIon_I(iFluid))
+         do jFluid = 2, nIonFluid
+            Rho1= State_V(iRhoIon_I(jFluid))
             Rho = Rho + Rho1
-            p   = p   + State_V(iPIon_I(iFluid))
-            RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(iFluid):iUzIon_I(iFluid))
+            p   = p   + State_V(iPIon_I(jFluid))
+            RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))
          end do
          if(.not.UseElectronPressure) p = p * (1 + ElectronPressureRatio)
       end if
