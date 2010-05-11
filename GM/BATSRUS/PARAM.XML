@@ -2355,19 +2355,15 @@ nSatellite parameter (default is 0).
 
 For each satellite the StringSatellite parameter determines what
 is saved into the satellite file(s).
-The StringSatellite can contain the following 3 parts in arbitrary order
+The StringSatellite can contain the following parts in arbitrary order
 \begin{verbatim}
 satellitevar   = 'mhd', 'ful' or 'var' (unitless output)
                  'MHD', 'FUL' or 'VAR' (dimensional output)
 optionalvar    = 'ray', 'none', 'step', 'time', and/or 'date'
 \end{verbatim}
-The 'satellitevar' part is required. If the optional 'optionalvar' part 
-contains 'ray' then the ray variables 'theta1 phi1 theta2 phi2 status' 
-are saved. The strings 'step', 'time' and 'date' define the corresponding
-time information. The value 'none' means that no time information is saved.
-
-The 'satellitevar' string defines the variables to print in the satellite
-output file.  It also controls whether or not the variables will come out in
+The 'satellitevar' part is required and determines the list
+of variables to be saved along the satellite trajectory. 
+It also controls whether or not the variables will come out in
 dimensional or non-dimensional form by the capitalization of the
 satellitevars string: ALL CAPS means dimensional, all lower means 
 dimensionless. 
@@ -2384,23 +2380,22 @@ rho, rho, rhouy, rhouz, ux, uy, uz,Bx, By, Bz, B1x, B1y, B1z,
 E, P, Jx, Jy, Jz, theta1, theta2, phi1, phi2, status.
 \end{verbatim}
 
-If 'trajectorytype' is 'file' (default) than the trajectory of the 
-satellite is read from the file given by the NameTrajectoryFile parameter.
-If 'trajectorytype' is 'eqn' then the trajectory is defined by an
-equation, which is hard coded in subroutine satellite_trajectory_formula
-in satellites.f90.
-
-The 'timetype' values mean the following:
+If the optional 'optionalvar' part contains 'ray' then the ray variables 
+'theta1 phi1 theta2 phi2 status' are saved as well. 
+The strings 'step', 'time' and 'date' define the corresponding
+time information. The value 'none' means that no time information is saved.
 \begin{verbatim}
  none  = there will be no indication of time in the logfile 
          (not even the number of steps),
- step  = number of time steps (n_steps),
+ step  = number of time steps,
  date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc,
  time  = time is given as a real number - elapsed time since the start of
          the run.  Units are determined by satellitevar and unitUSER_t.
+
+ ray   = theta1 phi1 theta2 phi2 status
 \end{verbatim}
- More than one 'timetype' can be listed. They can be put together in any
- combination.\\
+More than one 'optionalvar' can be listed. They can be put together in any
+combination.\\
 
 \noindent
 The DnOutput and DtOutput parameters determine the frequency of extracting
