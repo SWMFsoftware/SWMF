@@ -1834,6 +1834,8 @@ contains
     real:: FluxBx, FluxBy, FluxBz
     !--------------------------------------------------------------------------
 
+  
+
     ! Calculate conservative state
     StateCons_V(1:nVar)  = State_V
 
@@ -1889,7 +1891,11 @@ contains
        end if
        ! Store normal velocity (needed for source terms with div U)
        Un_I(iFluid) = Un
+       
     end do
+
+    ! Set flux for electron pressure
+    if(UseElectronPressure) Flux_V(Pe_) = HallUn*State_V(Pe_)
 
     ! The extra fluxes should be added at the same time as fluid 1 fluxes
     ! if(iFluidMin /= 1) RETURN
@@ -2067,9 +2073,6 @@ contains
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
       end if
 
-      ! f_n[Pe] = u_e,n*p_e
-      if(UseElectronPressure)Flux_V(Pe_) = Un*State_V(Pe_)
-
       ! f_i[scalar] = Un*scalar
       do iVar = ScalarFirst_, ScalarLast_
          Flux_V(iVar) = Un*State_V(iVar)
@@ -2209,9 +2212,6 @@ contains
          Flux_V(By_) = UnPlus*FullBy - UyPlus*FullBn
          Flux_V(Bz_) = UnPlus*FullBz - UzPlus*FullBn
       end if
-
-      ! f_n[Pe] = u_e,n*p_e
-      if(UseElectronPressure)Flux_V(Pe_) = HallUn*State_V(Pe_)
 
       ! f_n[p] = u_n*p
       Flux_V(p_) = Un*p
