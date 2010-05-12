@@ -261,6 +261,10 @@ test3:
 	@echo "test3_run..." >> test3_ie.diff
 	@echo "test3_run..." >> test3_im.diff
 	make test3_run
+	@echo "test3_restart..." >> test3_gm.diff
+	@echo "test3_restart..." >> test3_ie.diff
+	@echo "test3_restart..." >> test3_im.diff
+	make test3_restart
 	@echo "test3_check..." >> test3_gm.diff
 	@echo "test3_check..." >> test3_ie.diff
 	@echo "test3_check..." >> test3_im.diff
@@ -280,30 +284,36 @@ test3_rundir:
 #	cp Param/midn_05.dat ${TESTDIR}/midn_05.dat
 #	cp Param/noon_05.dat ${TESTDIR}/noon_05.dat
 
-# Note: The RCM .dat file is copied to .txt to avoid conversion to .plt
 test3_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cp ${TESTDIR}/IM/plots/2d__max_t00000010.dat \
-		${TESTDIR}/IM/plots/t10.txt
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; Restart.pl
+	cd ${TESTDIR}/IE/ionosphere; mv IE.log IE_all.log
+
+# Note: The RCM .dat file is copied to .txt to avoid conversion to .plt
+test3_restart:
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIEIM PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}/IM/plots/; cp 2d__max_t00000020.dat t20.txt
+	cd ${TESTDIR}/IE/ionosphere; tail -3 IE.log >> IE_all.log
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
 
 test3_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test3/GM_log_n000001.log \
 		> test3_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
-		${TESTDIR}/RESULTS/IE/IE.log \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IE/IE_all.log \
 		output/test3/IE.log \
 		> test3_ie.diff)
-	gunzip -c output/test3/IM_2d__max_t00000010.dat.gz \
-		> ${TESTDIR}/RESULTS/IM/t10.dat
+	gunzip -c output/test3/IM_2d__max_t00000020.dat.gz \
+		> ${TESTDIR}/RESULTS/IM/t20.dat
 # Remove date stamp from tecplot files
 	cd ${TESTDIR}/RESULTS/IM; \
-		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t10.txt t10.dat
+		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t20.dat t20.txt
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
-		${TESTDIR}/RESULTS/IM/t10.txt \
-		${TESTDIR}/RESULTS/IM/t10.dat \
+		${TESTDIR}/RESULTS/IM/t20.txt \
+		${TESTDIR}/RESULTS/IM/t20.dat \
 		> test3_im.diff)
 	ls -l test3*.diff
 
