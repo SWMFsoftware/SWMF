@@ -1,7 +1,7 @@
 Begin session: 1
 
 #ECHO
-T
+T			DoEcho
 
 #TIMEACCURATE
 F			DoTimeAccurate
@@ -11,16 +11,16 @@ F			DoTimeAccurate
 100			DnShowProgressLong
 
 #DESCRIPTION
-Test for GM-IM-IE.
+Test for GM-IM-IE.	StringDescription
 
 #PLANET
 EARTH			NamePlanet
 
-#SAVERESTART
-F			DoSaveRestart
-
 #ROTATION
 F			UseRotation
+
+#SAVERESTART
+F			DoSaveRestart
 
 #STARTTIME
 2000			iYear
@@ -35,6 +35,7 @@ F			UseRotation
 IM                      NameComp
 F                       UseComp
 
+! In steady state mode coupling frequencies are given by DnCouple
 #COUPLE2
 GM			NameComp1
 IE			NameComp2
@@ -66,8 +67,7 @@ initial			NameArea
 8.0			Resolution
 all			NameArea
 
-! Far tail for wind satellite and inflow
-
+! Far tail and inflow
 #GRIDRESOLUTION
 2.0			Resolution
 box			NameArea
@@ -79,7 +79,6 @@ box			NameArea
   16.0			xMaxBox
 
 ! r currents resolution for the ionosphere
-
 #GRIDRESOLUTION
 1/4			Resolution
 shell0			NameArea
@@ -93,23 +92,20 @@ T                       body1
 28.0                   Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK
 25000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK
 
-#TVDRESCHANGE
-T
-
 #TIMESTEPPING
 1			nStage
 0.80			CflExlp
 
 #OUTERBOUNDARY
-outflow			TypeBC_I(east_)
-vary			TypeBC_I(west_)
-float			TypeBC_I(south_)
-float			TypeBC_I(north_)
-float			TypeBC_I(bot_)
-float			TypeBC_I(top_)
+outflow			TypeBcEast
+vary			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
 
 #INNERBOUNDARY
-ionosphere		
+ionosphere		TypeBcInner
 
 #SCHEME
 1			nOrder
@@ -122,19 +118,19 @@ RAW			StringLogfile
 -1.			DtSaveLogfile
 
 SATELLITE
-2
-MHD file RAY		StringSatellite
+2			nSatellite
+MHD ray			StringSatellite
 -1	              	DnOutput
 1.    			DtOutput
 midn_05.dat		NameTrajectoryFile
-MHD file RAY		StringSatellite
+MHD ray			StringSatellite
 -1	              	DnOutput
 1.    			DtOutput
 noon_05.dat		NameTrajectoryFile
 
-#UPSTREAM_INPUT_FILE
-T                                                     UseUpstreamInputFile
-GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat   NameUpstreamFile
+#SOLARWINDFILE
+T			UseSolarwindFile
+GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat
 
 #END_COMP GM   ----------------------------------------
 
@@ -168,20 +164,18 @@ End session: 1
 Begin session: 2
 
 #TIMEACCURATE
-T	
+T			IsTimeAccurate
 
 #COMPONENT
 IM			NameComp
 T			UseComp
 
-#COUPLEORDER
-5			nCouple
-IE GM			NameSourceTarget
-IE IM			NameSourceTarget
-GM IE			NameSourceTarget
-GM IM			NameSourceTarget
-IM GM			NameSourceTarget
+! Fast coupling order is ONLY useful if GM and IE are not sharing processors! 
+! With fast coupling order restarts are not exact, but close.
+INCLUDE
+Param/CoupleOrderFast
 
+! In time accurate mode coupling frequencies are given by DtCouple
 #COUPLE2
 GM			NameComp1
 IE			NameComp2
@@ -207,20 +201,20 @@ F			DoCoupleOnTime
 #BEGIN_COMP GM ----------------------------------------
 
 #IM
-20.0                    TauImP
-F			DoImSatTrace 
+20.0                    TauCoupleIm
+F			DoImSatTrace
 
 #SAVEPLOT
 3			nPlotFile
-idl x=0 FUL			StringPlot
+idl x=0 FUL		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.0			DxSavePlot
-idl y=0 FUL			StringPlot
+idl y=0 FUL		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 -1.0			DxSavePlot
-idl z=0 FUL			StringPlot
+idl z=0 FUL		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 -1.0			DxSavePlot
@@ -260,12 +254,26 @@ max tec                 StringPlot
 -1			MaxIter
 10.0			TimeMax
 
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+10.0			DtSaveRestart
+
 End session: 2
 #END ############################################################
-#IONOSPHERE
-5			iConductanceModel
-F			UseFullCurrent
-F			UseFakeRegion2
-150.0			F107Flux
-5.0			StarLightPedConductance
-0.25			PolarCapPedConductance
+
+! The 3rd session allows comparison of continuous run with restart
+
+#RUN ############################################################
+Begin session: 3
+
+
+#SAVERESTART
+F			DoSaveRestart
+
+#STOP
+-1			MaxIter
+20.0			TimeMax
+
+End session: 3
+#END ############################################################
