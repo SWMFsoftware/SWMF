@@ -1,9 +1,11 @@
 Module ModCrcmInitialize
   use ModCrcmGrid
+  use ModCrcmPlanet,ONLY: nspec
   implicit none
   
   real :: xmm(nm),xk(nk),dphi,dmm(nm),dk(nk),delE(neng1),&
-          dmu(npit1),xjac(nspec1,np1,nm),amu(nspec1)
+          dmu(npit1),xjac(nspec,np1,nm)
 
-  logical :: IsRestart =.false.
+  logical :: IsRestart =.false., IsEmptyInitial=.true.
+
 end Module ModCrcmInitialize
