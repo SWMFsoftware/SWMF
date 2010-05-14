@@ -2,7 +2,7 @@ subroutine CRCM_set_parameters(NameAction)
 
   use ModIoUnit, ONLY: UnitTmp_, io_unit_new
   use ModReadParam
-  use ModCrcmInitialize, ONLY: IsRestart
+  use ModCrcmInitialize, ONLY: IsRestart, IsEmptyInitial
   use ModCrcmPlot,       ONLY: DtOutput, DoSavePlot
   use ModFieldTrace,     ONLY: UseEllipse
   use ModCrcm,           ONLY: UseMcLimiter, BetaLimiter
@@ -28,6 +28,9 @@ subroutine CRCM_set_parameters(NameAction)
      case('#SAVEPLOT')
         call read_var('DtSavePlot',DtOutput)
         DoSavePlot = .true.
+
+     case('#INITIALF2')
+        call read_var('IsEmptyInitial',IsEmptyInitial)
 
      case('#TYPEBOUNDARY')
         call read_var('TypeBoundary',TypeBoundary)
