@@ -10,7 +10,7 @@ subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, nPointL
   ! and the number of variables to pass to IM
   use ModGmImCoupling, ONLY: allocate_gm_im, RCM_lat, RCM_lon
   use ModRayTrace, ONLY: DoExtractUnitSi
-
+  use ModMain, ONLY: DoMultiFluidIMCoupling
   use CON_line_extract, ONLY: line_get
   implicit none
   integer, intent(in)           :: iSizeIn, jSizeIn
@@ -21,8 +21,13 @@ subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, nPointL
   character (len=*), parameter :: NameSub='GM_get_for_im_trace'
   !---------------------------------------------------------------------
 
-  if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
-       call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  if(DoMultiFluidIMCoupling)then
+     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  else
+     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  end if
 
   ! Allocate arrays
   call allocate_gm_im(iSizeIn, jSizeIn)
@@ -51,15 +56,17 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   use ModGeometry,ONLY: x2
   use ModProcMH,  ONLY: iProc
 
-  use ModMain, ONLY: Time_Simulation
+  use ModMain, ONLY: Time_Simulation, DoMultiFluidIMCoupling
 
   use ModGmImCoupling, ONLY: &
        RCM_lat, RCM_lon, &
        write_integrated_data_tec, write_integrated_data_idl, &
-       MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p, NoValue
+       MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p, NoValue,&
+       MHD_HpRho, MHD_OpRho, MHD_Hpp, MHD_Opp
 
   use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
-       InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
+       InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_,  &
+       HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_,xEnd_, CLOSEDRAY
 
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_,&
                            MassFluid_I, IonFirst_, nVar
@@ -91,8 +98,13 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   real    :: SolarWind_V(nVar)
   !--------------------------------------------------------------------------
 
-  if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
-       call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  if(DoMultiFluidIMCoupling)then
+     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  else
+     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  end if
 
   if(iProc /= 0)then
      ! Clean and return
@@ -110,18 +122,42 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   MHD_Xeq     = RayResult_VII(Z0x_    ,:,:)
   MHD_Yeq     = RayResult_VII(Z0y_    ,:,:)
   MHD_Beq     = RayResult_VII(Z0b_    ,:,:)
-  MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
-  MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
-
-  ! Put impossible values if ray was not found for a lat-lon grid cell
-  where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-     MHD_Xeq     = NoValue
-     MHD_Yeq     = NoValue
-     MHD_SUM_vol = -1.0
-     MHD_SUM_rho = 0.0
-     MHD_SUM_p   = 0.0
-     MHD_Beq     = NoValue
-  end where
+  if(.not.DoMultiFluidIMCoupling)then
+     MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
+     MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
+  else
+     MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
+     MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
+     MHD_HpRho= RayResult_VII(HpRhoInvB_,:,:)
+     MHD_OpRho= RayResult_VII(OpRhoInvB_,:,:)
+     MHD_HpP= RayResult_VII(HpPInvB_,:,:)
+     MHD_OpP= RayResult_VII(OpPInvB_,:,:)
+  end if
+  
+  ! Put impossible values if the ray is not closed
+  if(.not.DoMultiFluidIMCoupling)then
+     where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+        MHD_Xeq     = NoValue
+        MHD_Yeq     = NoValue
+        MHD_SUM_vol = -1.0
+        MHD_SUM_rho = 0.0
+        MHD_SUM_p   = 0.0
+        MHD_Beq     = NoValue
+     end where
+  else
+     where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+        MHD_Xeq     = NoValue
+        MHD_Yeq     = NoValue
+        MHD_SUM_vol = -1.0
+        MHD_SUM_rho = 0.0
+        MHD_SUM_p   = 0.0
+        MHD_Hprho = 0.0
+        MHD_Oprho = 0.0
+        MHD_HpP   = 0.0
+        MHD_OpP   = 0.0
+        MHD_Beq     = NoValue
+     end where
+  end if
   
   ! Put impossible value for volume when inside inner boundary
   where(MHD_SUM_vol == 0.0) MHD_SUM_vol = -1.0
@@ -181,6 +217,14 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   Buffer_IIV(6,:,6) = SolarWind_V(By_) * No2Si_V(UnitB_)
   Buffer_IIV(7,:,6) = SolarWind_V(Bz_) * No2Si_V(UnitB_)
   Buffer_IIV(8,:,6) = SolarWind_V(p_)  * No2Si_V(UnitP_)
+
+  if(DoMultiFluidIMCoupling)then
+     Buffer_IIV(:,:,7) = MHD_HpRho / MHD_SUM_vol * No2Si_V(UnitN_) 
+     Buffer_IIV(:,:,8) = MHD_Oprho / MHD_SUM_vol * No2Si_V(UnitN_) 
+     Buffer_IIV(:,:,9)   = MHD_HpP / MHD_SUM_vol * No2Si_V(UnitP_)
+     Buffer_IIV(:,:,10)  = MHD_OpP / MHD_SUM_vol * No2Si_V(UnitP_)
+  end if
+
 
   !^CFG END RAYTRACE
 end subroutine GM_get_for_im_crcm
