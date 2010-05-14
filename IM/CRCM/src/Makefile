@@ -8,13 +8,13 @@ include Makefile.RULES
 
 OBJECTS = \
 	ModGrid.o\
+	ModPlanet.o\
 	ModCrcm.o\
 	ModInitialize.o\
 	ModCrcmPlot.o\
 	ModTsyInput.o\
 	ModGmCRCM.o\
 	ModIeCrcm.o\
-	ModPlanet.o\
 	ModFieldTrace.o\
 	plot_fieldline.o\
 	trace_dipole.o\
