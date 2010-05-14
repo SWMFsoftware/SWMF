@@ -223,8 +223,15 @@ subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   !-------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-  if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
-       call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  if (nIntegralIn > 6) DoMultiFluidGMCoupling = .true.
+
+  if(DoMultiFluidGMCoupling)then
+     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  else
+     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  end if
 
   if(nVarLine /= nVar) then
      write(*,*)'nVarLine=',nVarLine
@@ -343,10 +350,10 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   !use CON_time, ONLY : get_time
   use ModCrcmGrid,  ONLY: iSize=>np, jSize=>nt
-  use ModCrcm,      ONLY: Pressure_C
-  use ModGmCrcm,    ONLY: Density_C =>rrio, iLatMin, DoMultiFluidGMCoupling
+  use ModCrcm,      ONLY: Pressure_IC
+  use ModGmCrcm,    ONLY: Den_IC, iLatMin, DoMultiFluidGMCoupling
   use ModFieldTrace,ONLY: iba
-  use ModCrcmInitialize,ONLY: amu
+  use ModCrcmPlanet,ONLY: nspec,amu_I
   use ModNumConst,  ONLY: cRadToDeg
   use ModConst,     ONLY: cProtonMass
   implicit none
@@ -400,15 +407,17 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   !Fill pressure and density
   do i=1,iSize; do j=1,jSize
-     if( i<iLatMin .or.  i > iba(j) ) then
-        Buffer_IIV(i,j,pres_) = -1.
-        Buffer_IIV(i,j,dens_) = -1.
+     if(.not.DoMultiFluidGMCoupling)then
+        if( i<iLatMin .or.  i > iba(j) ) then
+           Buffer_IIV(i,j,pres_) = -1.
+           Buffer_IIV(i,j,dens_) = -1.
+        else
+           Buffer_IIV(i,j,pres_) = sum(Pressure_IC(:,i,j))
+           Buffer_IIV(i,j,dens_) = &
+                sum(Den_IC (1:nspec-1,i,j)*cProtonMass*amu_I(1:nspec-1))
+        end if
      else
-        Buffer_IIV(i,j,pres_) = Pressure_C(i,j)
-        Buffer_IIV(i,j,dens_) = Density_C (i,j)*cProtonMass*amu(1)
-     end if
-
-     if(DoMultiFluidGMCoupling)then
+        call con_stop('CRCM not set for Multi-fluid');
         !  Multifluid case                                                         
 !!!! ADD MULTIFLUID SUPPORT LATER!!!
 !        if( i<iLatMin .or.  i <= iba(j)) then
@@ -607,7 +616,7 @@ subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
      ! Only worry about the northern hemisphere....  IE can fix the southern hemisphere.
 
      if (iLat <= nLat .and. iLon <= nLon) then
-        Buff_V(1) = Buff_V(1) - w * FAC_C(iLat,iLon)/2 ! / 1.0e6
+        Buff_V(1) = Buff_V(1) - w * FAC_C(iLat,iLon)/2.0 ! / 1.0e6
         ! Fill with -1 for now. In the future we will determine these values
         Buff_V(2) = -1.0
         Buff_V(3) = -1.0
