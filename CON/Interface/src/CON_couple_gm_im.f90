@@ -415,10 +415,12 @@ contains
     !/
 
     ! Number of integrals to pass
-    integer, parameter :: nIntegral=6
+    integer  :: nIntegral
+!    integer, parameter :: nIntegral=6
 
     ! Names of variables to pass
-    character (len=*), parameter :: NameVar='Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF'
+    character (len=100) :: NameVar
+!    character (len=*), parameter :: NameVar='Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF'
 
     ! Number of variables and points saved into the line data
     integer :: nVarLine, nPointLine
@@ -460,6 +462,15 @@ contains
     if(DoTest)write(*,*)NameSub,' starting, iProc=',iProcWorld
     if(DoTest)write(*,*)NameSub,', iProc, GMi_iProc0, i_proc0(IM_)=', &
          iProcWorld,i_proc0(GM_),i_proc0(IM_)
+
+    if(DoMultiFluidIMCoupling) then
+       NameVar='vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp'
+       nIntegral = 10
+    else
+       NameVar='vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p'
+       nIntegral = 6
+    endif
+
 
     !\
     ! Allocate buffers both in GM and IM
