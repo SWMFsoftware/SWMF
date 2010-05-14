@@ -1,5 +1,6 @@
 Module ModFieldTrace
-  use ModCrcmGrid,ONLY: ir=>np, ip=>nt, iw=>nm , ik=>nk, neng, energy, nspec 
+  use ModCrcmGrid,ONLY: ir=>np, ip=>nt, iw=>nm , ik=>nk, neng, energy
+  use ModCrcmPlanet,ONLY: nspec, amu_I
   implicit none
   real :: bo(ir,ip),ro(ir,ip),xmlto(ir,ip),sinA(ir,ip,ik),&
        Have(ir,ip,ik),pp(nspec,ir,ip,iw,ik),vel(nspec,ir,ip,iw,ik),&
@@ -22,7 +23,7 @@ contains
   ! Output: iba,irm,iw2,vel,ekev,pp,sinA,Have,alscone             
   !***********************************************************************
   subroutine fieldpara(t,dt,c,q,rc,re,xlati,xmlt,phi,si,&
-       amu,xme)! uncomment when T04 tracing fixed ! ,xmp)
+       xme)! uncomment when T04 tracing fixed ! ,xmp)
     use ModTsyInput, ONLY: tf,dsth,tdst,byw,bzw,timf,xnswa,vswa,tsw,&
          ndst,nimf,nsw,js,iyear,iday,imod
     use ModNumConst, ONLY: pi => cPi, cDegToRad
@@ -34,7 +35,7 @@ contains
     
     integer, parameter :: np=1000,nd=3
     real :: rc, re,xme,dt,t,c
-    real xlati(ir),phi(ip),si(ik),amu(nspec),&
+    real xlati(ir),phi(ip),si(ik),&
          si3(np),bm1(np),rm(np),rs(np),dss(np),&
          h3(np),bs(np),bba(np),&
          x1(ir),xmlt(ip),xli(0:ir),&
@@ -329,7 +330,7 @@ contains
     !.....Calculate p, E, v, et (mc^2) at grid boundaries, and lifetime for
     !     loss cone particles
     do n=1,nspec
-       xmass=1.673e-27*amu(n)
+       xmass=1.673e-27*amu_I(n)
        c2mo=c*c*xmass
        c4mo2=c2mo*c2mo
        do j=1,ip
