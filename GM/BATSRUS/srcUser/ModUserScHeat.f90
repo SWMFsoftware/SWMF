@@ -252,9 +252,6 @@ contains
 
        select case(NameCommand)
 
-       case("#WSACOEFF")
-          call read_wsa_coeff
-
        case("#WAVEDISSIPATION")
           call read_var('UseWaveDissipation', UseWaveDissipation)
           if(UseWaveDissipation) &
@@ -307,6 +304,7 @@ contains
     use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitB_, UnitX_, UnitU_, UnitEnergyDens_, UnitTemperature_
     use ModProcMH,      ONLY: iProc
+    use ModReadParam,   ONLY: i_session_read
     use ModWaves,       ONLY: UseWavePressure, UseAlfvenWaves
 
     real :: HeatCondParSi
@@ -345,7 +343,7 @@ contains
     DissipationScaleFactor = DissipationScaleFactorSi*Si2No_V(UnitX_) &
          *sqrt(Si2No_V(UnitB_))
 
-    if(NameThisComp == 'SC')then
+    if(NameThisComp == 'SC' .and. i_session_read()==1)then
        if(UseLdem) call read_ldem
 
        if(iProc == 0) call write_alfvenwave_boundary
@@ -488,13 +486,13 @@ contains
     use ModExpansionFactors
     use ModMultiFluid, ONLY: MassIon_I
     use ModNumConst,   ONLY: cTolerance
-    use ModPhysics,    ONLY: g, inv_gm1, AverageIonCharge, &
+    use ModPhysics,    ONLY: g, inv_gm1, rBody, AverageIonCharge, &
          Si2No_V, No2Si_V, UnitU_, UnitTemperature_, UnitEnergyDens_
 
     real, intent(in) :: x, y, z, Br, HeatFlux
     real, intent(out):: Ewave
 
-    real :: ExpansionFactorInv, Uf
+    real :: ExpansionFactorInv, Uf, dTedr
     real :: RhoBase, Tbase, VAlfvenSi, TbaseSi, HeatFluxSi, WaveEnergyDensSi
 
     real, parameter :: RhoVAt1AU = 5.4e-15 !kg/(m2*s)
@@ -523,8 +521,14 @@ contains
        !v_\infty from WSA model:
        call get_bernoulli_integral(x, y, z, Uf)
 
-       ! Currently, the coronal model starts at the electron temperature max
-       HeatFluxSi = HeatFlux*No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
+       if(UseHeatFluxInBernoulli)then
+          HeatFluxSi = HeatFlux*No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
+       else
+          ! Assume vanishing electron thermal conductive flux
+          dTedr = -(2.0/7.0)*Tbase/(rBody + H_PFSSM)
+          HeatFluxSi = -HeatCondPar*Tbase**2.5*dTedr &
+               *No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
+       end if
 
        WaveEnergyDensSi = (RhoV*(0.5*Uf**2 + cSunGravitySi - g*inv_gm1*&
             cBoltzmann/(cProtonMass*MassIon_I(1))*(1.0+AverageIonCharge) &
