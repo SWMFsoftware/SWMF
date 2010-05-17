@@ -143,12 +143,12 @@ subroutine write_runtime_values()
      if(UseRotatingBc)then
         call write_prefix; write(iUnitOut,'(10X,a)') 'Corotation is used'
      end if
-     if(UseGravity)then
-        call write_prefix; write(iUnitOut,'(10X,a,ES13.5)') &
-             'Gravity is used, gBody=',gBody
-     end if
   else
      call write_prefix; write(iUnitOut,'(10X,''UseBody1: .false.'')')
+  end if
+  if(UseGravity)then
+     call write_prefix; write(iUnitOut,'(10X,a,ES13.5)') &
+          'Gravity is used, gBody=', gBody
   end if
   call write_prefix; write(iUnitOut,*)
   !^CFG IF SECONDBODY BEGIN
