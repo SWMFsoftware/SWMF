@@ -1,3 +1,6 @@
+#ECHO
+T			DoEcho
+
 #PROGRESS
 10                      DnProgressShort
 100                     DnProgressLong
@@ -16,17 +19,21 @@ T                       DoSaveRestart
 #TIMEACCURATE
 T                       DoTimeAccurate
 
-#PLANET
-NONE                    NamePlanet
-
-#DIPOLE
-0.0                     DipoleStrength
-
 #INCLUDE
 restartIN/restart.H
 
-#INCLUDE
-Grid.3D
+#GRAVITY
+T			UseGravity
+3			GravityDir
+-273.066667             GravitySi [m/s^2]
+
+#OUTERBOUNDARY
+reflect			TypeBcEast
+reflect			TypeBcWest
+reflect			TypeBcSouth
+reflect			TypeBcNorth
+TempGrad   	 	TypeBcBottom
+no_inflow   		TypeBcTop
 
 #USERFLAGS
 F                       UseUserInnerBcs
