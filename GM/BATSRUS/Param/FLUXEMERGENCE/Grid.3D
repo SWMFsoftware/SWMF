@@ -1,10 +1,3 @@
-#GAMMA
-1.666666		Gamma
-
-#GRAVITY
-T			UseGravity
-3			GravityDir
-
 #GRID
 2			nRootBlockX 
 2			nRootBlockY 
@@ -15,20 +8,6 @@ T			UseGravity
 35			yMax 
 -35			zMin
 70			zMax
-
-#OUTERBOUNDARY
-reflect			TypeBcEast
-reflect			TypeBcWest
-reflect			TypeBcSouth
-reflect			TypeBcNorth
-TempGrad   	 	TypeBcBottom
-no_inflow   		TypeBcTop
-
-#NORMALIZATION
-READ                    TypeNormalization
-1.5E05                  No2SiUnitx
-6.5E03                  No2SiUnitU 
-2.7E-4                  No2SiUnitRho
 
 #GRIDRESOLUTION
 35./256	 		Resolution
