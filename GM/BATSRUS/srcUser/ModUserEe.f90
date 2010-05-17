@@ -143,14 +143,13 @@ contains
   subroutine user_init_session
     use ModProcMH,      ONLY: iProc
     use ModLookupTable, ONLY: i_lookup_table
-    use ModPhysics,     ONLY: Gbody, AverageIonCharge
+    use ModPhysics,     ONLY: AverageIonCharge
     use ModMultiFluid,  ONLY: MassIon_I
     use ModConst,       ONLY: cProtonMass, cBoltzmann
     implicit none
     
     character (len=*), parameter :: NameSub = 'user_init_session'
     !------------------------------------------------------------------------
-    Gbody = -1 
     mu    =  MassIon_I(1)/(1 + AverageIonCharge)
     rstari = mu/(cBoltzmann/cProtonMass)  
 
