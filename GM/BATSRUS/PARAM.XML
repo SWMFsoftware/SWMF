@@ -4934,14 +4934,20 @@ in time accurate mode.
 		<option name="Y direction"  value="2"			/>
 		<option name="Z direction"  value="3"			/>
 	</parameter>
+	<parameter name="GravitySi" type="real" min="0" default="10.0"
+							if="$iDirGravity"/>
+
 #GRAVITY
 T			UseGravity (rest of parameters read if true)
-0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+3			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+10.0			GravitySi [m/s^2] (read if iDirGravity is not 0)
 
 If UseGravity is false, the gravitational force of the central body
 is neglected. If UseGravity is true and iDirGravity is 0, the
-gravity points towards the origin. If iDirGravity is 1, 2 or 3,
-the gravitational force is parallel with the X, Y or Z axes, respectively.
+gravity points towards the origin and the gravitational force is
+determined by the mass of the central body. If iDirGravity is 1, 2 or 3,
+the gravitational force is parallel with the X, Y or Z axes, respectively,
+and the gravitational acceleration is given by the GravitySi parameter.
 
 Default values depend on problem_type.
 <!-- ^CFG IF SECONDBODY BEGIN -->

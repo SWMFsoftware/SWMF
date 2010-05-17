@@ -1732,7 +1732,10 @@ subroutine MH_set_parameters(TypeAction)
      case("#GRAVITY")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseGravity',UseGravity)
-        if(UseGravity)call read_var('iDirGravity',GravityDir)
+        if(UseGravity)then
+           call read_var('iDirGravity',GravityDir)
+           if(GravityDir /= 0) call read_var('GravitySi', GravitySi)
+        end if
 
      case("#SECONDBODY")                        !^CFG IF SECONDBODY BEGIN
         if(.not.is_first_session())CYCLE READPARAM
