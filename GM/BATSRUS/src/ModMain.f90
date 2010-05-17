@@ -202,8 +202,9 @@ Module ModMain
   logical :: UseIonHeatConduction = .false.
 
   ! Logical and type for gravity
-  logical :: UseGravity
-  integer :: GravityDir
+  logical :: UseGravity = .false.
+  integer :: GravityDir = 0
+  real    :: GravitySi = 0.0
 
   !\
   ! Rotation and coordinate system
