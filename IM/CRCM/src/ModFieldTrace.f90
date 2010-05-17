@@ -2,12 +2,14 @@ Module ModFieldTrace
   use ModCrcmGrid,ONLY: ir=>np, ip=>nt, iw=>nm , ik=>nk, neng, energy
   use ModCrcmPlanet,ONLY: nspec, amu_I
   implicit none
-  real :: bo(ir,ip),ro(ir,ip),xmlto(ir,ip),sinA(ir,ip,ik),&
-       Have(ir,ip,ik),pp(nspec,ir,ip,iw,ik),vel(nspec,ir,ip,iw,ik),&
-       ekev(ir,ip,iw,ik),rmir(ir,ip,ik),alscone(nspec,ir,ip,iw,ik),&
-       tanA2(ir,ip,0:ik+1),&
-       volume(ir,ip),bm(ir,ip,ik),gamma(ir,ip,iw,ik),parmod(10),rb,&
-       xo(ir,ip),yo(ir,ip),tya(ir,ip,0:ik+1),gridoc(ir,ip)
+  real, allocatable :: &
+       bo(:,:), ro(:,:), xmlto(:,:), sinA(:,:,:), &
+       Have(:,:,:), pp(:,:,:,:,:), vel(:,:,:,:,:),&
+       ekev(:,:,:,:), rmir(:,:,:), alscone(:,:,:,:,:),&
+       tanA2(:,:,:), volume(:,:), bm(:,:,:), gamma(:,:,:,:),&
+       xo(:,:), yo(:,:), tya(:,:,:), gridoc(:,:)
+
+  real:: parmod(10), rb
 
   integer :: irm(ip),irm0(ip),iba(ip)
 
@@ -15,6 +17,18 @@ Module ModFieldTrace
 
   logical :: UseEllipse = .true.
 contains
+  subroutine init_mod_field_trace
+    
+    if(allocated(bo)) RETURN
+    allocate( bo(ir,ip),ro(ir,ip),xmlto(ir,ip),sinA(ir,ip,ik),&
+         Have(ir,ip,ik),pp(nspec,ir,ip,iw,ik),vel(nspec,ir,ip,iw,ik),&
+         ekev(ir,ip,iw,ik),rmir(ir,ip,ik),alscone(nspec,ir,ip,iw,ik),&
+         tanA2(ir,ip,0:ik+1),&
+         volume(ir,ip),bm(ir,ip,ik),gamma(ir,ip,iw,ik),&
+         xo(ir,ip),yo(ir,ip),tya(ir,ip,0:ik+1),gridoc(ir,ip) )
+
+  end subroutine init_mod_field_trace
+
   !***********************************************************************
   !                             fieldpara
   ! Routine calculates kinetic energy, velocity, y, latitude and altitude

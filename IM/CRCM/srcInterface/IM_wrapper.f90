@@ -14,6 +14,9 @@ subroutine IM_set_param(CompInfo, TypeAction)
   use CON_coupler, ONLY: Couple_CC, GM_, IM_, IE_
   use ModGmCrcm,  ONLY: UseGm
   use ModIeCrcm,  ONLY: UseIE
+  use ModCrcm,    ONLY: init_mod_crcm
+  use ModFieldTrace, ONLY: init_mod_field_trace
+
   implicit none
 
   character (len=*), intent(in)     :: TypeAction ! which action to perform
@@ -60,6 +63,8 @@ subroutine IM_set_param(CompInfo, TypeAction)
      !end if
   case('GRID')
      call IM_set_grid
+     call init_mod_crcm
+     call init_mod_field_trace
   case default
      call CON_stop(NameSub//' IM_ERROR: invalid TypeAction='//TypeAction)
   end select
@@ -616,6 +621,7 @@ subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
      ! Only worry about the northern hemisphere....  IE can fix the southern hemisphere.
 
      if (iLat <= nLat .and. iLon <= nLon) then
+
         Buff_V(1) = Buff_V(1) - w * FAC_C(iLat,iLon)/2.0 ! / 1.0e6
         ! Fill with -1 for now. In the future we will determine these values
         Buff_V(2) = -1.0
