@@ -134,8 +134,14 @@ subroutine set_physics_constants
      OmegaBody = 0.0
   end if
 
-  ! Note: The mass of the body is in SI units
-  Gbody  = -cGravitation*MassBodySi*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
+  if(GravityDir == 0)then
+     ! Note: The mass of the body is in SI units
+     Gbody  = -cGravitation*MassBodySi*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
+  else
+     ! Normalize gravitational acceleration
+     Gbody  = GravitySi*(Si2No_V(UnitU_)**2 / Si2No_V(UnitX_))
+  end if
+
   !^CFG IF SECONDBODY BEGIN
   GBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
   !^CFG END SECONDBODY
