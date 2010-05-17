@@ -519,13 +519,18 @@ contains
                i_proc0(IM_),2,i_comm(),iError)
        end if
        if(is_proc0(IM_))then
-          !setup BufferLine in IM when not sharing proc with GM
+          ! get nVarLine and nPointLine from GM 0 processor
           call MPI_recv(nVarLine,1,MPI_INTEGER,i_proc0(GM_),&
                1,i_comm(),iStatus_I,iError)
           call MPI_recv(nPointLine,1,MPI_INTEGER,i_proc0(GM_),&
                1,i_comm(),iStatus_I,iError)
-          if (.not. allocated(BufferLine_VI)) &
-               allocate(BufferLine_VI(nVarLine, nPointLine))
+          ! setup BufferLine in IM when not sharing proc with GM
+          ! If IM and GM share procs not equal to zero proc then 
+          ! BufferLine_VI must be first dealloacted and then reallocated 
+          ! with proper size
+          if (allocated(BufferLine_VI)) deallocate(BufferLine_VI)
+          allocate(BufferLine_VI(nVarLine, nPointLine))
+
           !recieve variables from GM
           call MPI_recv(Integral_IIV,nSize,MPI_REAL,&
                i_proc0(GM_),1,i_comm(),iStatus_I,iError)
