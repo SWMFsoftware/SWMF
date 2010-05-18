@@ -62,9 +62,9 @@ subroutine IM_set_param(CompInfo, TypeAction)
      !        NameSub,': CHECK iSession =',i_session_read()
      !end if
   case('GRID')
-     call IM_set_grid
      call init_mod_crcm
      call init_mod_field_trace
+     call IM_set_grid
   case default
      call CON_stop(NameSub//' IM_ERROR: invalid TypeAction='//TypeAction)
   end select
@@ -72,9 +72,9 @@ subroutine IM_set_param(CompInfo, TypeAction)
 end subroutine IM_set_param
 !============================================================================
 subroutine IM_set_grid
-  use ModCrcmGrid,      ONLY: np, nt, xlat
-  use ModCrcmInitialize,ONLY: phi
-  use ModNumConst
+
+  use ModCrcmGrid,      ONLY: np, nt, xlat, phi
+  use ModNumConst,      ONLY: cDegToRad
   use CON_coupler,      ONLY: set_grid_descriptor, is_proc, IM_
 
   implicit none
@@ -94,42 +94,33 @@ subroutine IM_set_grid
 
   Radius_I(1) = (6375.0+120.0)*1000.0 ! radial size of the ionosphere in meters
 
+  if(DoTest)then
+     write(*,*)NameSub,' ir,ip=',np,nt
+     write(*,*)NameSub,' size(xlat)=',size(xlat),' size(phi)=',size(phi)
+     write(*,*)NameSub,' xlat      =',xlat
+     write(*,*)NameSub,' phi       =',phi
+     write(*,*)NameSub,' rIono     =',Radius_I(1)
+  end if
+
   ! RB grid size in generalized coordinates
   call set_grid_descriptor( IM_,                 & ! component index
        nDim=2,                                   & ! dimensionality
        nRootBlock_D=(/1,1/),                     & ! single block
        nCell_D=(/np, nt/),                       & ! size of cell based grid
-       XyzMin_D=(/cHalf, cHalf/),                & ! min gen.coords for cells
-       XyzMax_D=(/np+0.5,nt+0.5/),               & ! max gen.coords for cells
+       XyzMin_D=(/0.5,    0.5/),                 & ! min gen.coords for cells
+       XyzMax_D=(/np+0.5, nt+0.5/),              & ! max gen.coords for cells
        TypeCoord='SMG',                          & ! solar magnetic coord
        Coord1_I=(90.0-xlat(1:np))*cDegToRad,     & ! colatitude in radians
        Coord2_I=phi,                             & ! longitude in radians
        Coord3_I=Radius_I,                        & ! radial size in meters
        IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
 
-!  call set_grid_descriptor( IM_,                 & ! component index
-!       nDim=2,                                   & ! dimensionality
-!       nRootBlock_D=(/1,1/),                     & ! single block
-!       nCell_D=(/np, nt/),                       & ! size of cell based grid
-!       XyzMin_D=(/cHalf, cHalf/),                & ! min gen.coords for cells
-!       XyzMax_D=(/np-0.5,nt-0.5/),               & ! max gen.coords for cells
-!       TypeCoord='SMG',                          & ! solar magnetic coord
-!       Coord1_I=(90.0-xlat(1:np))*cDegToRad,     & ! colatitude in radians
-!       Coord2_I=mod(cRadToDeg*phi+180.0,360.0)*cDegToRad,  & ! longitude in radians
-!       Coord3_I=Radius_I,                        & ! radial size in meters
-!       IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
-!
-  if(DoTest)then
-     write(*,*)NameSub,' ir,ip=',np,nt
-     write(*,*)NameSub,' size(xlati)=',size(xlat),' size(phi)=',size(phi)
-     write(*,*)NameSub,' xlati=',xlat
-     write(*,*)NameSub,' phi=',phi
-  end if
-
 end subroutine IM_set_grid
 !==============================================================================
 
 subroutine IM_init_session(iSession, TimeSimulation)
+
+  use ModCrcmGrid,      ONLY: np, xlat
 
   implicit none
 
