@@ -342,8 +342,8 @@ contains
     implicit none
 
     integer, intent(in) :: n
-    real, intent(in)    :: x_C(nR,nTheta,nPhi)
-    real, intent(out)   :: y_C(nR,nTheta,nPhi)
+    real, intent(in)    :: x_C(nR*nTheta*nPhi)
+    real, intent(out)   :: y_C(nR*nTheta*nPhi)
     !--------------------------------------------------------------------------
 
     ! Calculate y = laplace x in two steps
