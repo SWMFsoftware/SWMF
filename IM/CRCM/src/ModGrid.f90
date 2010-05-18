@@ -10,10 +10,11 @@ Module ModCrcmGrid
   integer,parameter :: neng=12  ! dimension of the CRCM energy grid
   integer,parameter :: npit=12  ! dimension of the CRCM pitch-angle grid
 
-  
+  ! These have to be initialized so that IM_set_grid does not fail on non-IM PEs
+  real:: xlat(np) = 0.0, phi(nt1)=0.0
 
-  real :: xlat(np),xlatr(np),xmlt(nt),phi(nt1),dlat(np1),energy(neng),&
-          sinAo(npit)
+  real :: xlatr(np), xmlt(nt), dlat(np1), energy(neng), sinAo(npit)
+
 end Module ModCrcmGrid
 
 
