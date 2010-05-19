@@ -21,14 +21,11 @@ subroutine PRESSURES
 
   integer :: I,J,K,L,I_1,I_2
   real    :: RFAC,SUME,SUMA,SUMN,SUMTE,SUMTN,J_FAC
-  real    :: bFieldMagnitude_III(nPoint,nR,nT)
   !---------------------------------------------------------------------   
   !\
   ! Start the main species loop
   !/
 
-  call get_B_field(bFieldMagnitude_III)
-  
   do S = 1, NS
      if (SCALC(S).eq.1) then
         !   RFAC is 4*PI*SQRT(2)*(kg->amu * keV->J)^1.5 *(m->km)^6 *(cm->m)^3

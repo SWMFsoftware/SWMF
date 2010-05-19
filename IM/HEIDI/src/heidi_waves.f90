@@ -136,14 +136,11 @@ SUBROUTINE ANISCH
   integer :: iUnitWdc=22
   integer :: iUnitJper=3
 
-  real    :: bFieldMagnitude_III(nPoint,nR,nT) 
   
   DATA pmas/1.672E-24/, keVerg/1.602E-9/,    &
        cv/3E10/, esu/4.803E-10/, gausgam/1.E-5/
 
 !-------------------------------------------------------------------------
-
-  call get_B_field(bFieldMagnitude_III)  
 
 
   kprint=	25		! 27 (E=51), 30 (E=100), 33 (E=200)
