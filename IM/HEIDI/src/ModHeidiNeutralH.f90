@@ -32,6 +32,8 @@ contains
     ! Read the Rairden Geocorona Hydrogen density file.
     !/
 
+    RhoHUniform_I = 0.0
+
     open(UNITTMP_,FILE=NameInputDirectory//'RairdenHydrogenGeocorona.dat',status='old')
     
     do i = 1, 4
@@ -68,9 +70,24 @@ contains
     
     do iStep =1, nPoint
        r = RadialDistance_I(iStep)
-       i = 1 + abs((r - rMin))/dR
-       Weight = (r-Rad_I(i))/dR
-       RhoH_I(iStep) = Weight*RhoHUniform_I(i+1) + (1-Weight)*RhoHUniform_I(i)
+!       i = 1 + abs((r - rMin))/dR
+!       Weight = (r-Rad_I(i))/dR
+       
+       
+       if (r>=rmax) then
+          RhoH_I(iStep) = RhoHUniform_I(nUniform)
+       else
+
+          !r = RadialDistance_I(iStep)
+          i = 1 + abs((r - rMin))/dR
+          Weight = (r-Rad_I(i))/dR
+       
+
+          RhoH_I(iStep) = Weight*RhoHUniform_I(i+1) + (1-Weight)*RhoHUniform_I(i)
+       end if
+
+
+
     end do
   
   end subroutine get_rairden_density

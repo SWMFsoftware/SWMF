@@ -13,7 +13,7 @@ contains
     use ModHeidiIO,    ONLY: time
     use ModHeidiMain,  ONLY: LZ,BHeidi_III, SHeidi_III, RHeidi_III,&
          bGradB1xHeidi_III, bGradB1yHeidi_III, bGradB1zHeidi_III,&
-         BxHeidi_III, ByHeidi_III, BzHeidi_III, t,dt,nPointEq,Xyz_VIII,Z
+         BxHeidi_III, ByHeidi_III, BzHeidi_III, t,dt,nPointEq,Xyz_VIII!,Z
     use ModCoordTransform, ONLY: cross_product, rot_xyz_sph
     use ModPlotFile,       ONLY: save_plot_file
 
@@ -58,102 +58,100 @@ contains
     real :: DirBx, DirBy, DirBz, Tx, Ty,Tz
     real, dimension(3) :: GradB2_D
     real :: GradBxyz_D(3),GradBCrossBxyz_D(3),XyzSph_DD(3,3),GradBCrossBsph_D(3)
+    real :: B_all(nPoint, nR,3), Coord(2,nPoint,nR)
 
     character(LEN=500):: StringVarName, StringHeader, NameFile
     character(len=20) :: TypePosition
     character(len=20) :: TypeFile = 'ascii'
+
+!    real:: bField_VIII(3,nPoint,nR,nPhi)
+
     !----------------------------------------------------------------------------------
 
 
-!!$    open(unit=11,file='newa.out')
-!!$    call  get_analytical_field(LZ*Re, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
+!!$    open(unit=11,file='AnalyticDipole.out')
+!!$    call  get_analytical_field(LZ*Re, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
 !!$         RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III, 1.0, 1.0)
 !!$
 !!$!    call  get_stretched_dipole(Z, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
 !!$!         RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.0)
 !!$    
 !!$    do iPhi =1, 1!nPhi
-!!$       do iR = 1, nR
+!!$       do iR = 6, 7!nR
 !!$          do iPoint =1, nPoint
+!!$           
 !!$             
 !!$             write(11,*) iPoint, iR, iPhi, bFieldMagnitude_III(iPoint,iR,iPhi), &
+!!$                  bField_VIII(1,iPoint,iR,iPhi),bField_VIII(2,iPoint,iR,iPhi),&
+!!$                  bField_VIII(3,iPoint,iR,iPhi),&
 !!$                  RadialDistance_III(iPoint,iR,iPhi), Length_III(iPoint,iR,iPhi), &
-!!$                  GradBCrossB_VIII(:,iPoint,iR,iPhi),GradB_VIII(:,iPoint,iR,iPhi)
+!!$                  GradB_VIII(:,iPoint,iR,iPhi), GradBCrossB_VIII(:,iPoint,iR,iPhi)
 !!$
-!!$             !write(11,*) iPoint, iR, iPhi, GradB_VIII(:,iPoint,iR,iPhi), GradBCrossB_VIII(:,iPoint,iR,iPhi)
-!!$             
+!!$                          
 !!$          end do
 !!$       end do
 !!$    end do
 !!$    
 !!$    close(11)
 !!$    STOP
-    
+!!$
     select case(TypeBFieldGrid)
-       
+
     case('mhd')
-       
+
        if (t <2.*dt) then
           write(*,*) 'simulation time=',t       
-          
- !         call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
- !              RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdII, 1.0, 1.0)
- 
-!         call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-!               RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.0)
 
-         call  get_stretched_dipole(Z, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-               RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.0)
+                   call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
+                        RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III, 1.0, 1.0)
 
-!        call  get_stretched_dipole(LZ, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-!               RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.0)
-
-
+          !call  get_stretched_dipole(Z, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
+          !     RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.0)
 
        else
-          open(unit=12,file='mhd1.out')
+          open(unit=12,file='mhd.out')
 
           bFieldMagnitude_III = BHeidi_III
           RadialDistance_III  = RHeidi_III 
           Length_III          = SHeidi_III 
-                    
+
           call get_gradB0(nPoint,nR,nPhi,Lz*Re,Phi_I, GradB0x_VIII, GradB0y_VIII, GradB0z_VIII)
 
-                    
+          dBdt_III=0.0
+
           ! Contribution from dipole
           do iPhi = 1, nPhi
              do iR = 1, nR
                 do iPoint =1, nPoint
-                   
 
-!                   write(*,*) 'Length',Length_III(iPoint,iR,iPhi),SHeidi_III(iPoint,iR,iPhi)
+                   Lat = atan(cPi/2. - Xyz_VIII(3,iPoint,iR,iPhi)/&
+                        sqrt(Xyz_VIII(1,iPoint,iR,iPhi)**2 + Xyz_VIII(2,iPoint,iR,iPhi)**2))
+                   !                   write(*,*) 'Length',Length_III(iPoint,iR,iPhi),SHeidi_III(iPoint,iR,iPhi)
 
                    DirBx     = BxHeidi_III(iPoint,iR,iPhi)/BHeidi_III(iPoint,iR,iPhi)
                    DirBy     = ByHeidi_III(iPoint,iR,iPhi)/BHeidi_III(iPoint,iR,iPhi)
                    DirBz     = BzHeidi_III(iPoint,iR,iPhi)/BHeidi_III(iPoint,iR,iPhi)
-                   
+
                    Tx = DirBx * GradB0x_VIII(1,iPoint,iR,iPhi) + &
                         DirBy * GradB0y_VIII(1,iPoint,iR,iPhi) + &
                         DirBz * GradB0z_VIII(1,iPoint,iR,iPhi)  
-                   
+
                    Ty = DirBx * GradB0x_VIII(2,iPoint,iR,iPhi) + &
                         DirBy * GradB0y_VIII(2,iPoint,iR,iPhi) + &
                         DirBz * GradB0z_VIII(2,iPoint,iR,iPhi)  
-                   
+
                    Tz = DirBx * GradB0x_VIII(3,iPoint,iR,iPhi) + &
                         DirBy * GradB0y_VIII(3,iPoint,iR,iPhi) + &
                         DirBz * GradB0z_VIII(3,iPoint,iR,iPhi)  
 
                    ! Contains both dipolar and B1 contribution.
-                   
+
                    GradBxyz_D(1) = Tx !+ bGradB1xHeidi_III(iPoint,iR,iPhi)
                    GradBxyz_D(2) = Ty !+ bGradB1yHeidi_III(iPoint,iR,iPhi)
                    GradBxyz_D(3) = Tz !+ bGradB1zHeidi_III(iPoint,iR,iPhi)
 
-                   ! Grad(B*B)
-                   GradB2_D(1) =  BHeidi_III(iPoint,iR,iPhi) * GradBxyz_D(1) 
-                   GradB2_D(2) =  BHeidi_III(iPoint,iR,iPhi) * GradBxyz_D(2) 
-                   GradB2_D(3) =  BHeidi_III(iPoint,iR,iPhi) * GradBxyz_D(3) 
+                   ! Grad(B^2) = B Grad B
+                   GradB2_D =  BHeidi_III(iPoint,iR,iPhi) * GradBxyz_D
 
                    GradBCrossBxyz_D(:) = cross_product(GradB2_D(1), GradB2_D(2),GradB2_D(3),&
                         BxHeidi_III(iPoint,iR,iPhi),ByHeidi_III(iPoint,iR,iPhi),BzHeidi_III(iPoint,iR,iPhi))
@@ -164,126 +162,165 @@ contains
                    ! Rotation Matrix from cartesian to spherical
                    XyzSph_DD = rot_xyz_sph(Xyz_VIII(1,iPoint,iR,iPhi),&
                         Xyz_VIII(2,iPoint,iR,iPhi), Xyz_VIII(3,iPoint,iR,iPhi))    
-                   
+
                    GradB_VIII(:,iPoint,iR,iPhi)       = matmul(GradBxyz_D, XyzSph_DD)
 
                    GradBCrossBSph_D = matmul(GradBCrossBxyz_D,XyzSph_DD) 
                    GradBCrossB_VIII(1,iPoint,iR,iPhi) =  GradBCrossBSph_D(1)
                    GradBCrossB_VIII(2,iPoint,iR,iPhi) =  GradBCrossBSph_D(2) *  1./(Re*LZ(iR))
                    GradBCrossB_VIII(3,iPoint,iR,iPhi) =  GradBCrossBSph_D(3) * 1./(Re*LZ(iR)* cos(Lat))
-                   
+
 
                    ! IN CARTESIAN COORD
                    !GradB_VIII(:,iPoint,iR,iPhi)       = GradBxyz_D
                    !GradBCrossB_VIII(:,iPoint,iR,iPhi) = GradBCrossBxyz_D
-                                      
-                   
+
+
                 end do
              end do
           end do
 
-       
+
+          do iPhi =1, 1
+             do iR =6, 7!nR
+                do iPoint =1, nPoint
+
+                   write(12,*) iPoint, iR, iPhi, bFieldMagnitude_III(iPoint,iR,iPhi), &
+                         BxHeidi_III(iPoint,iR,iPhi), ByHeidi_III(iPoint,iR,iPhi),&
+                         BzHeidi_III(iPoint,iR,iPhi),&
+                         RadialDistance_III(iPoint,iR,iPhi), Length_III(iPoint,iR,iPhi), &
+                         GradB_VIII(:,iPoint,iR,iPhi),GradBCrossB_VIII(:,iPoint,iR,iPhi)
+                end do
+             end do
+          end do
+          close(12)
+
+
+!          STOP
+
        do iPhi =1, 1
           do iR =1, nR
              do iPoint =1, nPoint
-                
-                write(12,*) iPoint, iR, iPhi, bFieldMagnitude_III(iPoint,iR,iPhi), &
-                     RadialDistance_III(iPoint,iR,iPhi), Length_III(iPoint,iR,iPhi), &
-                     GradBCrossB_VIII(:,iPoint,iR,iPhi),GradB_VIII(:,iPoint,iR,iPhi)
-
-                !write(12,*) iPoint, iR, iPhi, GradB_VIII(:,iPoint,iR,iPhi),GradBCrossB_VIII(:,iPoint,iR,iPhi)
-
+                B_all(iPoint, iR,1)   = BxHeidi_III(iPoint,iR,iPhi)
+                B_all(iPoint, iR,2)   = ByHeidi_III(iPoint,iR,iPhi)
+                B_all(iPoint, iR,3)   = BzHeidi_III(iPoint,iR,iPhi)
+                Coord(1,iPoint, iR)   = Xyz_VIII(1,iPoint,iR,iPhi)/6.371e6
+                Coord(2,iPoint, iR)   = Xyz_VIII(3,iPoint,iR,iPhi)/6.371e6
              end do
           end do
        end do
-       close(12)
-       
+
+       NameFile = 'BField_mhd.out'
+       StringHeader = 'Magnetic field'
+       StringVarName = 'x  z  bx  by  bz 0LT'
+       TypePosition = 'rewind'
+
+       call save_plot_file(NameFile, & 
+            TypePositionIn = TypePosition,&
+            TypeFileIn     = TypeFile,&
+            StringHeaderIn = StringHeader, &
+            nStepIn = 0, &
+            TimeIn = 0.0, &
+            NameVarIn = StringVarName, &
+            nDimIn = 2, & 
+            CoordIn_DII = Coord,&
+            VarIn_IIV = B_all)
+       TypePosition = 'rewind' 
+       write(*,*) 'SAVE B'
+
+
+!!$       NameFile = 'BFieldMagn.out'
+!!$     StringHeader = 'Magnetic field in the equatorial plane'
+!!$     StringVarName = 'R MLT B'
+!!$     TypePosition = 'rewind'
+!!$     
+!!$     call save_plot_file(NameFile, & 
+!!$          TypePositionIn = TypePosition,&
+!!$          TypeFileIn     = TypeFile,&
+!!$          StringHeaderIn = StringHeader, &
+!!$          nStepIn = 0, &
+!!$          TimeIn = 0.0, &
+!!$          !ParamIn_I = (/real(nR), real(NT)/), &
+!!$          NameVarIn = StringVarName, &
+!!$          nDimIn = 2, & 
+!!$          CoordMinIn_D = (/1.75, 0.0/),&
+!!$          CoordMaxIn_D = (/6.5, 24.0/),&
+!!$          VarIn_VII = BHeidi_III(nPointEq:nPointEq,:,:))
+!!$     TypePosition = 'rewind' 
+     
+!STOP
 
 
     end if
-!!$
-!!$          NameFile = 'BField_mhd.out'
-!!$          StringHeader = 'Magnetic field in the equatorial plane'
-!!$          StringVarName = 'R MLT B'
-!!$          TypePosition = 'rewind'
-!!$
-!!$          call save_plot_file(NameFile, & 
-!!$               TypePositionIn = TypePosition,&
-!!$               TypeFileIn     = TypeFile,&
-!!$               StringHeaderIn = StringHeader, &
-!!$               nStepIn = 0, &
-!!$               TimeIn = 0.0, &
-!!$               NameVarIn = StringVarName, &
-!!$               nDimIn = 2, & 
-!!$               CoordMinIn_D = (/1.75, 0.0/),&
-!!$               CoordMaxIn_D = (/6.5, 24.0/),&
-!!$               VarIn_VII = bFieldMagnitude_III(nPointEq:nPointEq,:,:))
-!!$          TypePosition = 'rewind' 
 
-       case('uniform')
-          do iPhi =1, nPhi
-             do iR =1, nR 
-                LatMax =  acos(sqrt(1./L_I(iR)))
-                LatMin = -LatMax
-                dLat   = (LatMax-LatMin)/(nPoint-1)
-                Lat = LatMin
 
-                do iPoint = 1, nPoint
-                   SinLat2 = sin(Lat)**2
-                   CosLat2 = 1.0 - SinLat2  
-                   bFieldMagnitude_III(iPoint,iR,iPhi) = DipoleStrength*sqrt(1.0+3.0*SinLat2)/(L_I(iR)*CosLat2)**3
-                   RadialDistance_III(iPoint,iR,iPhi) = L_I(iR)*CosLat2
-                   Length_III(iPoint,iR,iPhi) = dipole_length(L_I(ir),LatMin,Lat) 
-                   Lat = Lat + dLat
-                end do
+
+       !########################################################
+
+    case('uniform')
+       do iPhi =1, nPhi
+          do iR =1, nR 
+             LatMax =  acos(sqrt(1./L_I(iR)))
+             LatMin = -LatMax
+             dLat   = (LatMax-LatMin)/(nPoint-1)
+             Lat = LatMin
+
+             do iPoint = 1, nPoint
+                SinLat2 = sin(Lat)**2
+                CosLat2 = 1.0 - SinLat2  
+                bFieldMagnitude_III(iPoint,iR,iPhi) = DipoleStrength*sqrt(1.0+3.0*SinLat2)/(L_I(iR)*CosLat2)**3
+                RadialDistance_III(iPoint,iR,iPhi) = L_I(iR)*CosLat2
+                Length_III(iPoint,iR,iPhi) = dipole_length(L_I(ir),LatMin,Lat) 
+                Lat = Lat + dLat
              end do
           end do
+       end do
 
-          !\
-          ! Dipole magnetic field with non-uniform number of points along the field line. 
-          ! More refined at the equator, coarser towards the poles
-          !/
+       !\
+       ! Dipole magnetic field with non-uniform number of points along the field line. 
+       ! More refined at the equator, coarser towards the poles
+       !/
 
-       case('nonuniform')
-          do iPhi =1, nPhi
-             do iR =1, nR 
-                LatMax =  acos(sqrt(1./L_I(iR)))
-                LatMin = -LatMax
-                dLat   = (LatMax-LatMin)/(nPoint-1)
-                Lat = LatMin
+    case('nonuniform')
+       do iPhi =1, nPhi
+          do iR =1, nR 
+             LatMax =  acos(sqrt(1./L_I(iR)))
+             LatMin = -LatMax
+             dLat   = (LatMax-LatMin)/(nPoint-1)
+             Lat = LatMin
 
-                LatMin2 = LatMin**2
-                LatMax2 = LatMax**2
-                LatMinMax = LatMin*LatMax
+             LatMin2 = LatMin**2
+             LatMax2 = LatMax**2
+             LatMinMax = LatMin*LatMax
 
-                beta1 = 6.0*(-nPoint+cTiny*nPoint+1.0)*(nPoint-1.0) 
-                beta2 = nPoint*(2.0*LatMax2*nPoint + 2.0*LatMinMax*nPoint + 2.0*LatMin2*nPoint &
-                     - 4.0*LatMinMax - LatMin2 - LatMax2)
-                BetaF = - beta1/beta2  
+             beta1 = 6.0*(-nPoint+cTiny*nPoint+1.0)*(nPoint-1.0) 
+             beta2 = nPoint*(2.0*LatMax2*nPoint + 2.0*LatMinMax*nPoint + 2.0*LatMin2*nPoint &
+                  - 4.0*LatMinMax - LatMin2 - LatMax2)
+             BetaF = - beta1/beta2  
 
-                do iPoint = 1, nPoint
-                   Lat = LatMin+(iPoint-1)*dLat
-                   SinLat2 = sin(Lat)**2
-                   CosLat2 = 1.0 - SinLat2
-                   bFieldMagnitude_III(iPoint,iR,iPhi) = DipoleStrength*sqrt(1.0+3.0*SinLat2)/(L_I(iR)*CosLat2)**3
-                   RadialDistance_III(iPoint,iR,iPhi) = L_I(iR)*CosLat2
-                   Length_III(iPoint,iR,iPhi) = dipole_length(L_I(iR),LatMin,Lat) 
-                   dLatNew =(BetaF*(LatMin+(iPoint-1)*dLat)**2+cTiny)*dLat
-                   Lat = Lat+dLatNew
-                end do
+             do iPoint = 1, nPoint
+                Lat = LatMin+(iPoint-1)*dLat
+                SinLat2 = sin(Lat)**2
+                CosLat2 = 1.0 - SinLat2
+                bFieldMagnitude_III(iPoint,iR,iPhi) = DipoleStrength*sqrt(1.0+3.0*SinLat2)/(L_I(iR)*CosLat2)**3
+                RadialDistance_III(iPoint,iR,iPhi) = L_I(iR)*CosLat2
+                Length_III(iPoint,iR,iPhi) = dipole_length(L_I(iR),LatMin,Lat) 
+                dLatNew =(BetaF*(LatMin+(iPoint-1)*dLat)**2+cTiny)*dLat
+                Lat = Lat+dLatNew
              end do
           end do
+       end do
 
-          !\
-          ! Stretched dipole magnetic field, with azimuthal symmetry. 
-          !/
+       !\
+       ! Stretched dipole magnetic field, with azimuthal symmetry. 
+       !/
 
 
-       case('stretched')
-          call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-               RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.1)
+    case('stretched')
+       call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
+            RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.1)
 
-       end select
+    end select
 
 
     do iPhi =1, nPhi
@@ -452,7 +489,7 @@ contains
   !================================================================================== 
   subroutine get_gradB0(nPoint,nR,nPhi,L_I,Phi_I, GradB0x_VIII, GradB0y_VIII, GradB0z_VIII)
 
-    
+
     use ModHeidiMain, ONLY:LZ
 
     implicit none
@@ -485,25 +522,25 @@ contains
              x = r * cos(Lat) * cos(Phi_I(iPhi))
              y = r * cos(Lat) * sin(Phi_I(iPhi))
              z = r * sin(Lat)
-            
+
              a = (sqrt(x**2 + y**2 +z**2))**7
-             
+
              gradB0xX = -3. * z *(4. * x**2 - y**2 -z**2)/a
              gradB0xY = (-15. * z * x * y)/a
              gradB0xZ = 3. * x *(-4. * z**2 + x**2 + y**2)/a
-             
+
              gradB0yX = (-15. * z * x * y)/a
              gradB0yY = 3. * z *(-4. * y**2 + x**2 + z**2)/a
              gradB0yZ = 3. * y *(-4. * z**2 + x**2 + y**2)/a
-             
+
              gradB0zX = 3. * x *(-4. * z**2 + x**2 + y**2)/a
              gradB0zY = 3. * y *(-4. * z**2 + x**2 + y**2)/a
              gradB0zZ = 3. * z *(-2. * z**2 + 3. * x**2 + 3.* y**2)/a
-                     
+
              gradB0x_VIII(1,iPoint,iR,iPhi) = DipoleFactor * gradB0xX
              gradB0x_VIII(2,iPoint,iR,iPhi) = DipoleFactor * gradB0xY
              gradB0x_VIII(3,iPoint,iR,iPhi) = DipoleFactor * gradB0xZ
-             
+
              gradB0y_VIII(1,iPoint,iR,iPhi) = DipoleFactor * gradB0yX
              gradB0y_VIII(2,iPoint,iR,iPhi) = DipoleFactor * gradB0yY             
              gradB0y_VIII(3,iPoint,iR,iPhi) = DipoleFactor * gradB0yZ
@@ -1140,11 +1177,11 @@ contains
 
   end subroutine get_stretched_dipole
   !==================================================================================
-  subroutine get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
+  subroutine get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,bField_VIII,&
        RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,alpha,beta)
 
     use ModCoordTransform, ONLY: xyz_to_sph,rot_xyz_sph
-    use ModHeidiMain,      ONLY: LZ,Phi
+    use ModHeidiMain,      ONLY: LZ!,Phi
     use ModNumConst,       ONLY: cPi
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
@@ -1192,19 +1229,19 @@ contains
              if ((aimag(root(i)) <= 1.e-5).and. (real(root(i))<=1.0) .and. (real(root(i))>=0.0)) &
                   cos2Lat1 = real(root(i))
           end do
-          
+
           LatMax = acos(sqrt(cos2Lat1))
           LatMin = -LatMax
           dLat   = (LatMax-LatMin)/(nPoint-1)
           Lat = LatMin
-          
+
           do iPoint = 1, nPoint
-             
+
              !\
              ! Radial distance for the stretched dipole is calclulated as a function of the 
              ! dipole radial distance; Easy calculation for this case.
              !/
-                       
+
              cos2Lat = (cos(Lat))**2
              sin2Lat = (sin(Lat))**2
              cos2Phi = (cos(Phi_I(iPhi)))**2
@@ -1213,23 +1250,27 @@ contains
              RadialDistance_III(iPoint,iR,iPhi) = Re*LZ(iR) * cos2Lat *&
                   sqrt( cos2Lat *(cos2Phi + beta**2 * sin2Phi) + alpha**2 *sin2Lat          )
              rad =  RadialDistance_III(iPoint,iR,iPhi)
-             
-             x = rad * cos(Lat) * cos(Phi(iPhi))
-             y = rad * cos(Lat) * sin(Phi(iPhi))
+
+             x = rad * cos(Lat) * cos(Phi_I(iPhi))
+             y = rad * cos(Lat) * sin(Phi_I(iPhi))
              z = rad * sin(Lat)
+             
              r = (x**2 + (beta*y)**2 +(alpha*z)**2)
              a = (sqrt(r))**5
+
+                          
+
              ! \
              !  Magnetic field components for the uniformly stretched dipole in y and z.
              !/
              Bx = DipoleFactor * (3. * z * x * alpha)/a
              By = DipoleFactor * (3. * z * y * alpha)/a
              Bz = DipoleFactor * (2. * (z*alpha)**2 - x**2 -(y*beta)**2 )/(a * alpha)
+             
+             
              !\
              ! Components of gradient of B in cartesian coordinates.
              !/
-
-             !write(*,*) iPoint, iR,iPhi, x,y,z,dBdx,dBdy,dBdz
 
              dBdx = DipoleFactor * (3. * ((4. * z**4 * alpha**4 + 9. * z**2 * x**2 * alpha**4 + 9. * z**2 &
                   * y**2 * alpha**4 - 4. * z**2 * x**2 * alpha**2 - 4. * z**2 * alpha**2  &
@@ -1249,7 +1290,7 @@ contains
                   z**4 * alpha**4 * beta**2 - 2. * y**2 * beta**4 * x**2 - y**4 * beta**6 &
                   - x**4 * beta**2 - 15. * beta**2 * z**2 * x**2 * alpha**4)/alpha**2/r**6)
 
-             
+
              dBdz = DipoleFactor * (-3. * ((4. * z**4 * alpha**4 + 9 * z**2 * x**2 * alpha**4 + 9. * z**2 &
                   * y**2 * alpha**4 - 4. * z**2 * x**2 * alpha**2 - 4. * z**2 * alpha**2 *&
                   y**2 * beta**2 + x**4 + y**4 * beta**4 + 2. * x**2 * y**2 * beta**2)/   &
@@ -1263,7 +1304,7 @@ contains
              !\
              ! Gradient drift components (Vx,Vy,Vz = grad(B**2/2.) x B)
              !/
-             
+
              Vx = (DipoleFactor)**3 *(3. * y * (-21. * z**4 * x**2 * alpha**6 + 6. * z**2 * x**4 * alpha**4 + &
                   18. * z**6 * alpha**8 - 9. * z**2 * alpha**6 * x**4 + 36. * z**4 *      &
                   alpha**8 * x**2 + 36. * z**4 * alpha**8 * y**2 - 9. * z**2 * alpha**6 * &
@@ -1278,7 +1319,7 @@ contains
                   * z**2 * x**4 * alpha**4 - 16. * z**2 * alpha**2 * beta**4 * x**2 * y**2&
                   + 15. * beta**4 * z**2 * x**2 * alpha** 4. * y**2)/alpha**3 * r**(-17./2.))
 
-             
+
              Vy = (DipoleFactor)**3 *(-3. * x * (-51. * z**4 * x**2 * alpha**6 + 21. * z**2 * x**4 * alpha**4 &
                   + 18. * z**6 * alpha**8 - 9. * z**2 * alpha**6 * x**4 + 36. * z**4 *    &
                   alpha**8 * x**2 + 36. * z**4 * alpha**8 * y**2 - 9. * z**2 * alpha**6 * &
@@ -1292,7 +1333,7 @@ contains
                   * x**4 * y**2 * beta**2 + x**6 - 16. * z**6 * alpha**6 - 9. * z**2 *    &
                   alpha**6 * y**2 * x**2 - 9. * z**2 * alpha**6 * y**4 * beta**2)/alpha**3&
                   * r**(-17./2.))
- 
+
 
              Vz = (DipoleFactor)**3 *(9. * x * z * y * (-15. * z**2 * x**2 * alpha**4 + 15. * z**2 * alpha**4 &
                   * y**2 * beta**2 + 6. * z**2 * x**2 * alpha**2 + 6. * z**2 * alpha**2 * &
@@ -1302,13 +1343,13 @@ contains
                   z**4 * alpha**4 * beta**2 + x**4 * beta**2 + 2. * x**2 * beta**4 * y**2 &
                   + y**4 * beta**6 + 15. * beta**2 * z**2 * x**2 * alpha**4)/alpha * r**(-17./2.))
 
-             
+
              dBdt_III(iPoint,iR,iPhi) = 0.0
-              
+
              ! Magnetic field components in cartesian coordinates
-             bField_VIII(1,nPoint,nR,nPhi) = Bx
-             bField_VIII(2,nPoint,nR,nPhi) = By
-             bField_VIII(3,nPoint,nR,nPhi) = Bz
+             bField_VIII(1,iPoint,iR,iPhi) = Bx
+             bField_VIII(2,iPoint,iR,iPhi) = By
+             bField_VIII(3,iPoint,iR,iPhi) = Bz
              !Magnitude of the B field
              bFieldMagnitude_III(iPoint,iR,iPhi) = sqrt(Bx**2 + By**2 + Bz**2)
 
@@ -1317,14 +1358,14 @@ contains
              GradBxyz_D(1) =  dBdx
              GradBxyz_D(2) =  dBdy
              GradBxyz_D(3) =  dBdz
-             
+
              GradBCrossBxyz_D(1) = Vx
              GradBCrossBxyz_D(2) = Vy
              GradBCrossBxyz_D(3) = Vz
-             
+
              GradBSph_D       = matmul(GradBxyz_D,       XyzSph_DD)
              GradBCrossBSph_D = matmul(GradBCrossBxyz_D, XyzSph_DD)
-             
+
              GradB_VIII(1,iPoint, iR, iPhi) = GradBSph_D(1)
              GradB_VIII(2,iPoint, iR, iPhi) = GradBSph_D(2)
              GradB_VIII(3,iPoint, iR, iPhi) = GradBSph_D(3)
@@ -1344,7 +1385,7 @@ contains
 
 
              Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,Lat,Phi_I(iPhi), alpha, beta)  
-             
+
              Lat = Lat + dLat 
 
           end do
@@ -1352,7 +1393,7 @@ contains
     end do
 
   end subroutine get_analytical_field
-!=========================================================================================
+  !=========================================================================================
   subroutine test_general_b
 
     integer, parameter   :: nPoint = 10001
