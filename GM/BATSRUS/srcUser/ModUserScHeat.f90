@@ -214,6 +214,7 @@ module ModUser
   real :: DissipationScaleFactorSi  ! unit = m*T^0.5
   real :: DissipationScaleFactor
   real :: DeltaBPerB = 0.0
+  real :: DeltaUSi = 0.0
 
   real :: TeFraction, TiFraction
   real :: EtaPerpSi
@@ -260,6 +261,7 @@ contains
 
        case("#WAVEBOUNDARY")
           call read_var('DeltaBPerB', DeltaBPerB)
+          call read_var('DeltaUSi', DeltaUSi)
 
        case('#LDEM')
           call read_var('UseLdem', UseLdem)
@@ -298,7 +300,7 @@ contains
          cElectronMass
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModLdem,        ONLY: read_ldem, UseLdem
-    use ModMain,        ONLY: NameThisComp
+    use ModMain,        ONLY: NameThisComp, UseB0, UseMagnetogram
     use ModMultiFluid,  ONLY: MassIon_I
     use ModNumConst,    ONLY: cTwoPi
     use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge, &
@@ -342,6 +344,8 @@ contains
 
     DissipationScaleFactor = DissipationScaleFactorSi*Si2No_V(UnitX_) &
          *sqrt(Si2No_V(UnitB_))
+
+    if(.not.UseB0)UseMagnetogram=.false.
 
     if(NameThisComp == 'SC' .and. i_session_read()==1)then
        if(UseLdem) call read_ldem
@@ -492,7 +496,7 @@ contains
     real, intent(in) :: x, y, z, Br, HeatFlux
     real, intent(out):: Ewave
 
-    real :: ExpansionFactorInv, Uf, dTedr
+    real :: ExpansionFactorInv, Uf, dTedr, DeltaU
     real :: RhoBase, Tbase, VAlfvenSi, TbaseSi, HeatFluxSi, WaveEnergyDensSi
 
     real, parameter :: RhoVAt1AU = 5.4e-15 !kg/(m2*s)
@@ -510,7 +514,11 @@ contains
     Ewave = 0.0
     if(ExpansionFactorInv < 1e-3) RETURN
 
-    if(DeltaBPerB > cTolerance)then
+    if(DeltaUSi > cTolerance)then
+       DeltaU = DeltaUSi*Si2No_V(UnitU_)
+       call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
+       Ewave = RhoBase*DeltaU**2
+    elseif(DeltaBPerB > cTolerance)then
        Ewave = (DeltaBPerB*Br)**2
     else
 
@@ -549,7 +557,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
-    use ModMain,       ONLY: nI, nJ, nK, globalBLK
+    use ModMain,       ONLY: nI, nJ, nK, globalBLK, UseB0
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          BodyRho_I, BodyTDim_I, UnitU_, AverageIonCharge
@@ -559,7 +567,7 @@ contains
     integer :: i, j, k, iBlock
     integer :: IterCount
     real :: x, y, z, r, RhoBase, Rho, NumDensIon, NumDensElectron
-    real :: Tcorona, Tbase, Temperature
+    real :: Tcorona, Tbase, Temperature, B_D(3)
     real :: Ur, Ur0, Ur1, del, Ubase, rTransonic, Uescape, Usound
 
     real, parameter :: Epsilon = 1.0e-6
@@ -642,7 +650,12 @@ contains
        State_VGB(RhoUx_,i,j,k,iBlock) = Rho*Ur*x/r *Usound
        State_VGB(RhoUy_,i,j,k,iBlock) = Rho*Ur*y/r *Usound
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
-       State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
+       if(UseB0)then
+          State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
+       else
+          call get_coronal_b0(x, y, z, B_D)
+          State_VGB(Bx_:Bz_,i,j,k,iBlock) = B_D
+       end if
        State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 1.0e-12 !0.0
        NumDensIon = Rho/MassIon_I(1)
        NumDensElectron = NumDensIon*AverageIonCharge
@@ -801,7 +814,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK, B0_DGB, UseElectronPressure
     use ModIO,         ONLY: write_myname
-    use ModMain,       ONLY: unusedBLK, nBlock, x_, y_, z_
+    use ModMain,       ONLY: unusedBLK, nBlock, x_, y_, z_, UseB0
     use ModPhysics,    ONLY: inv_gm1, No2Io_V, UnitEnergydens_, UnitX_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, Pe_
 
@@ -833,10 +846,16 @@ contains
     case('emag')
        do iBlock = 1, nBlock
           if(unusedBLK(iBlock)) CYCLE
-          tmp1_BLK(:,:,:,iBlock) = & 
-               ( B0_DGB(x_,:,:,:,iBlock) + State_VGB(Bx_,:,:,:,iBlock))**2 &
-               +(B0_DGB(y_,:,:,:,iBlock) + State_VGB(By_,:,:,:,iBlock))**2 &
-               +(B0_DGB(z_,:,:,:,iBlock) + State_VGB(Bz_,:,:,:,iBlock))**2
+          if(UseB0)then
+             tmp1_BLK(:,:,:,iBlock) = & 
+                  ( B0_DGB(x_,:,:,:,iBlock) + State_VGB(Bx_,:,:,:,iBlock))**2 &
+                  +(B0_DGB(y_,:,:,:,iBlock) + State_VGB(By_,:,:,:,iBlock))**2 &
+                  +(B0_DGB(z_,:,:,:,iBlock) + State_VGB(Bz_,:,:,:,iBlock))**2
+          else
+             tmp1_BLK(:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock)**2 &
+                  + State_VGB(By_,:,:,:,iBlock)**2 &
+                  + State_VGB(Bz_,:,:,:,iBlock)**2
+          end if
        end do
        VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
 
@@ -949,7 +968,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
     use ModNumConst, ONLY: cTiny
-    use ModMain,     ONLY: x_, y_, z_, time_loop
+    use ModMain,     ONLY: x_, y_, z_, time_loop, UseB0
 
     integer, intent(in) :: iBlock, iArea
     logical,intent(out) :: DoRefine
@@ -968,14 +987,25 @@ contains
     ! Calculate r.B in all physical cells and ghost cells 
     ! in the Z/Theta direction to find current sheet 
     ! passing between blocks
-    do k=0, nK+1; do j=1, nJ; do i=1, nI
-       rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-            * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
-            +           y_BLK(i,j,k,iBlock)   &
-            * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
-            +           z_BLK(i,j,k,iBlock)   &
-            * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
-    end do; end do; end do;
+    if(UseB0)then
+       do k=0, nK+1; do j=1, nJ; do i=1, nI
+          rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
+               * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
+               +           y_BLK(i,j,k,iBlock)   &
+               * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
+               +           z_BLK(i,j,k,iBlock)   &
+               * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
+       end do; end do; end do
+    else
+       do k=0, nK+1; do j=1, nJ; do i=1, nI
+          rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
+               * State_VGB(Bx_,i,j,k,iBlock) &
+               +           y_BLK(i,j,k,iBlock)   &
+               * State_VGB(By_,i,j,k,iBlock) &
+               +           z_BLK(i,j,k,iBlock)   &
+               * State_VGB(Bz_,i,j,k,iBlock)
+       end do; end do; end do
+    end if
 
     DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny
 
@@ -1045,7 +1075,7 @@ contains
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
          iSide, iFace, jFace, kFace
-    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK
+    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK, UseB0
     use ModMultiFluid,  ONLY: MassIon_I
     use ModPhysics,     ONLY: OmegaBody, AverageIonCharge
     use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, &
@@ -1055,7 +1085,7 @@ contains
 
     real :: RhoBase, NumDensIon, NumDensElectron, Tbase, FullBr
     real :: Runit_D(3), U_D(3)
-    real :: B1_D(3), B1t_D(3), B1r_D(3), FullB_D(3)
+    real :: B1_D(3), B1t_D(3), B1r_D(3), FullB_D(3), B0_D(3)
     real :: Ewave, HeatFlux
     !--------------------------------------------------------------------------
 
@@ -1067,9 +1097,16 @@ contains
     B1t_D = B1_D - B1r_D
 
     VarsGhostFace_V(Ux_:Uz_) = -U_D
-    VarsGhostFace_V(Bx_:Bz_) = B1t_D !- B1r_D
 
-    FullB_D = B0Face_D + B1t_D
+    if(UseB0)then
+       VarsGhostFace_V(Bx_:Bz_) = B1t_D !- B1r_D
+       FullB_D = B0Face_D + B1t_D
+    else
+       call get_coronal_b0(FaceCoords_D(x_), FaceCoords_D(y_), &
+            FaceCoords_D(z_), B0_D)
+       VarsGhostFace_V(Bx_:Bz_) = B1t_D + sum(Runit_D*B0_D)*Runit_D
+       FullB_D = VarsGhostFace_V(Bx_:Bz_)
+    end if
     FullBr = sum(Runit_D*FullB_D)
 
     call get_plasma_parameters_base(FaceCoords_D, RhoBase, Tbase)
