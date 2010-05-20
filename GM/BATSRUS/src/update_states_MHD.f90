@@ -72,7 +72,7 @@ subroutine update_states_MHD(iStage,iBlock)
 
   if(DoTestMe)write(*,*) NameSub, ' original testvar and energy=', &
        State_VGB(VarTest, iTest, jTest, kTest, iBlock), &
-       Energy_GBI(iTest,jTest,kTest,iBlock,1)
+       Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
   call update_explicit
 
@@ -81,7 +81,7 @@ subroutine update_states_MHD(iStage,iBlock)
 
      if(DoTestMe)write(*,*) NameSub, ' after multiion update1=', &
           State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
-          Energy_GBI(iTest,jTest,kTest,iBlock,1)
+          Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
   end if
 
@@ -100,14 +100,14 @@ subroutine update_states_MHD(iStage,iBlock)
 
      if(DoTestMe)write(*,*) NameSub, ' after point impl state=', &
           State_VGB(VarTest, iTest,jTest,kTest,iBlock), &
-          Energy_GBI(iTest,jTest,kTest,iBlock,1)
+          Energy_GBI(iTest,jTest,kTest,iBlock,:)
   end if
 
   if(UseMultiIon .and. IsMhd)then
      call multi_ion_update(iBlock, IsFinal = .true.)
      if(DoTestMe)write(*,*) NameSub,' after multiion update2=', &
           State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
-          Energy_GBI(iTest,jTest,kTest,iBlock,1)
+          Energy_GBI(iTest,jTest,kTest,iBlock,:)
   end if
 
   if(UseHyperbolicDivb .and. HypDecay > 0) &
@@ -116,7 +116,7 @@ subroutine update_states_MHD(iStage,iBlock)
 
   if(DoTestMe)write(*,*) NameSub, ' final state=', &
        State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
-       Energy_GBI(iTest,jTest,kTest,iBlock,1)
+       Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
 contains
 
@@ -135,7 +135,7 @@ contains
 
     if(DoTestMe)write(*,*) NameSub, ' after flux/source=', &
          State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
-         Energy_GBI(iTest,jTest,kTest,iBlock,1)
+         Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
     if(UseMultiSpecies)then
        ! Fix negative species densities
@@ -166,7 +166,7 @@ contains
 
        if(DoTestMe)write(*,*) NameSub, ' after energy dB correct=', &
             State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
-            Energy_GBI(iTest,jTest,kTest,iBlock,1)
+            Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
     end if
 
@@ -288,7 +288,7 @@ contains
 
        if(DoTestMe)write(*,*) NameSub, ' after Boris update=', &
             State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
-            Energy_GBI(iTest,jTest,kTest,iBlock,1)
+            Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
     endif                                    !^CFG END BORISCORR
     if(UseBorisSimple .and. IsMhd) then      !^CFG IF SIMPLEBORIS BEGIN
@@ -342,7 +342,7 @@ contains
 
        if(DoTestMe)write(*,*) NameSub, ' after BorisSimple update=', &
             State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
-            Energy_GBI(iTest,jTest,kTest,iBlock,1)
+            Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
     end if                                   !^CFG END SIMPLEBORIS
 
@@ -351,7 +351,7 @@ contains
 
     if(DoTestMe)write(*,*) NameSub, ' after pressure/energy update=', &
          State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
-         Energy_GBI(iTest,jTest,kTest,iBlock,1)
+         Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
   end subroutine update_explicit
 
