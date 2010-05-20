@@ -18,7 +18,7 @@ SWMF_path/util/DATAREAD/srcMagnetogram by typing:
 4. Type:
 	cp your_magnetoram_file.fits fitsfile.fits
 5. Convert the fits file to ASCII format by running the idl program 
-fits_to_ascii.pro. You will be asked to insert the maximum order of 
+run_fits_to_ascii.pro. You will be asked to insert the maximum order of 
 harmonics and the Carrington Rotation number. It is recommended (but not 
 required ) to use not more than 90 harmonics, since the computation time 
 can be very long. 

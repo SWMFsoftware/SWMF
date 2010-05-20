@@ -5,6 +5,7 @@ module ModMagHarmonics
   !The logical is to be set. 
 
   logical,parameter :: UseSinLatitudeGrid = .true.
+  logical,parameter :: UseChebyshevNode   = .true.
   
   ! **********************Choice of this parameter**********************
   ! *Sin(Latitude): WSO : http://wso.stanford.edu                      *
@@ -34,7 +35,7 @@ module ModMagHarmonics
   ! * Field in Gauss: MDI,GONG,SOLIS                                   *
   ! * Field in microTesla(0.01Gs): WSO, MWO                            *
   ! ********************************************************************
-  real,allocatable,dimension(:,:)::g_nm,h_nm, Br_DD
+  real,allocatable,dimension(:,:)::g_nm,h_nm, Br_II
   real::dR=1.0,dPhi=1.0,dTheta,dSinTheta=1.0
   integer:: nPhi=72, nTheta=29
   integer:: nHarmonics=180
@@ -61,6 +62,9 @@ module ModMagHarmonics
   real, allocatable:: FactRatio1(:)
   integer, parameter:: MaxInt=100000
   real:: Sqrt_I(MaxInt)
+
+
+  real, allocatable, dimension(:) :: ChebyshevWeightE_I, ChebyshevWeightW_I
 
 contains
 
@@ -133,7 +137,7 @@ contains
          FactRatio1(nHarmonics+1))
 
     !Allocate the magnetic field array, at the spherical grid.
-    allocate( tempBr(0:nPhi*nTheta-1), Br_DD(0:nPhi-1,0:nTheta-1))
+    allocate( tempBr(0:nPhi*nTheta-1), Br_II(0:nPhi-1,0:nTheta-1))
     
     p_nm = 0.0
     g_nm = 0.0
@@ -142,7 +146,7 @@ contains
     
     
     tempBr = 0.0 
-    Br_DD  = 0.0
+    Br_II  = 0.0
     allocate(Coord_DII(2,nPhi,nTheta),State_VII(1,nPhi,nTheta))
     
     iRM=0
@@ -160,10 +164,10 @@ contains
           ! 1900 gauss.
           if (abs(tempBr(iRM*nPhi+jRM)) > 1900.0) &
                tempBr(iRM*nPhi+jRM)=1900.0*sign(1.,tempBr(iRM*nPhi+jRM))
-          Br_DD(jRM,iRM) = tempBr(iRM*nPhi+jRM)
+          Br_II(jRM,iRM) = tempBr(iRM*nPhi+jRM)
           Coord_DII(1,jRM+1,iRM+1) = dPhi * cRadToDeg * jRM
           Coord_DII(2,jRM+1,iRM+1) = r_latitude(iRM)*cRadToDeg
-          State_VII(1,jRM+1,iRM+1) = Br_DD(jRM,iRM)
+          State_VII(1,jRM+1,iRM+1) = Br_II(jRM,iRM)
        end do
     end do
     write(line,'(a,i4,a)')'CR',CarringtonRotation,'.out'
@@ -173,6 +177,161 @@ contains
     deallocate(tempBr)
   end subroutine read_raw_magnetogram
 
+  !============================================================================
+  subroutine Chebyshev_transform
+
+    ! **************** Chebyshev transformation ********************************
+    ! * In this subroutine, the Chebyshev weight has already been used.        *
+    ! * It is equal spacing in theta direction in this transformation to avoid *
+    ! * bad performances in the pole region.                                   *
+    ! * The number of the data after remeshed in theta direction should be a   *
+    ! * odd number.                                                            *
+    ! **************************************************************************
+
+    integer :: nThetaIn, nThetaOut,  iw, iu
+    integer :: iLower, iUpper
+    real    :: dThetaChebyshev, dThetaInterpolate, BrSouthPole, BrNorthPole
+    real,allocatable,dimension(:) :: ChebyshevWeightEu_I
+    real,allocatable,dimension(:) :: ThetaIn_I, ThetaOut_I
+    real,allocatable,dimension(:,:):: tmpBr_II
+
+    !--------------------------------------------------------------------------
+    write(*,*) 'Use Chebyshev transform'
+
+    nThetaIn = nTheta           
+    !Notice the number of point in theta direction is an odd number
+    if (mod(nThetaIn,2) == 0) then
+       nThetaOut=nThetaIn+1
+    else
+       nThetaOut=nThetaIn
+    end if
+    
+    write(*,*) 'Original nTheta=', nThetaIn
+    write(*,*) 'New nTheta=     ', nThetaOut
+
+    allocate(tmpBr_II(0:nPhi-1,0:nThetaOut-1))
+    allocate(ThetaIn_I(0:nThetaIn-1))
+    allocate(ThetaOut_I(0:nThetaOut-1))
+
+    do iTheta=0,nThetaIn-1
+       ThetaIn_I(iTheta)=colatitude(iTheta)
+       !write(*,*) (cPi/2.0-ThetaIn_I(iTheta))*cRadToDeg
+    end do
+    dThetaChebyshev=cPi/(nThetaOut-1)
+    !write(*,*) 'New Theta:'
+    do iTheta=0,nThetaOut-1
+       ThetaOut_I(iTheta)=cPi-iTheta*dThetaChebyshev
+       !write(*,*) (cPi/2.0-ThetaOut_I(iTheta))*cRadToDeg
+    end do
+
+    iLower = -1
+    iUpper = -1
+    tmpBr_II = 0
+
+    !do iTheta=0,nThetaIn-1
+    !   write(*,*) ThetaIn_I(iTheta), ThetaOut_I(iTheta) 
+    !   write(*,*) floor((cos(ThetaOut_I(iTheta))-cos(ThetaIn_I(0)))/dSinTheta)
+    !end do
+
+    BrNorthPole = sum(Br_II(:,nThetaIn-1))/nPhi
+    BrSouthPole = sum(Br_II(:,0))/nPhi
+    
+    
+    !*****************************************************
+    !*  Use linear interpolation to do the data remesh   *
+    !*****************************************************
+    do iPhi=0,nPhi-1
+       do iTheta=0, nThetaOut-1
+          ! A search is needed in case the sin(latitude) grid is not uniform
+          !do iTheta_search=0,nThetaIn-2
+          !   if(ThetaOut_I(iTheta) <= ThetaIn_I(iTheta_search) .and. &
+          !      ThetaOut_I(iTheta) >= ThetaIn_I(iTheta_search+1)) then
+          !      iLower=iTheta_search+1
+          !      iUpper=iTheta_search
+          !      exit
+          !   else
+          !      iLower=-1
+          !      iUpper=-1
+          !   end if
+          !end do
+          iUpper= floor((cos(ThetaOut_I(iTheta))-cos(ThetaIn_I(0)))/dSinTheta)
+          iLower= iUpper+1
+          
+          if (iUpper /= -1 .and. iUpper /= nThetaIn-1 ) then
+             dThetaInterpolate=ThetaIn_I(iUpper)-ThetaIn_I(iLower)
+             tmpBr_II(iPhi,iTheta) = Br_II(iPhi,iLower)* &
+                  (ThetaIn_I(iUpper)-ThetaOut_I(iTheta))/dThetaInterpolate &
+                                  +Br_II(iPhi,iUpper)* &
+                  (ThetaOut_I(iTheta)-ThetaIn_I(iLower))/dThetaInterpolate
+          else
+             if (iUpper == nThetaIn-1) then
+                !tempBrLon=sum(Br_II(:,nThetaIn-1))/nPhi
+                !write(*,*) tempBrLon
+                dThetaInterpolate=ThetaIn_I(nThetaIn-1)
+                tmpBr_II(iPhi,iTheta) = BrNorthPole & 
+                     *(ThetaIn_I(nThetaIn-1)-ThetaOut_I(iTheta)) &
+                     /dThetaInterpolate &
+                     + Br_II(iPhi,nThetaIn-1) &
+                     *(ThetaOut_I(iTheta))/dThetaInterpolate
+             end if
+             if (iUpper == -1) then
+                !tempBrLon=sum(Br_II(:,0))/nPhi
+                !write(*,*) tempBrLon
+                dThetaInterpolate=cPi-ThetaIn_I(0)
+                tmpBr_II(iPhi,iTheta) = Br_II(iPhi,0)* &
+                     (cPi-ThetaOut_I(iTheta))/dThetaInterpolate &
+                     +BrSouthPole* &
+                     (ThetaOut_I(iTheta)-ThetaIn_I(0))/dThetaInterpolate
+             end if
+          end if
+          !if (iPhi .eq. 0) then
+          !      write(*,*) 'New~'
+          !      write(*,*)  sin(ThetaIn_I(iTheta)), ThetaIn_I(iLower), ThetaIn_I(iUpper)
+          !      write(*,*)  tmpBr_II(iPhi,iTheta),  Br_II(iPhi,index_lower),  Br_II(iPhi,index_upper)
+          !end if
+       end do
+    end do
+
+    nTheta=nThetaOut
+
+    if(allocated(Br_II)) deallocate(Br_II)
+    allocate(Br_II(0:nPhi-1,0:nTheta-1))
+    Br_II = tmpBr_II
+   
+
+    allocate(ChebyshevWeightE_I(0: nThetaOut-1))
+    allocate(ChebyshevWeightW_I(0: nThetaOut-1))
+    allocate(ChebyshevWeightEu_I(0:(nThetaOut-1)/2))
+    
+    !***************************************************************************
+    !* Start to calculate the weight for the transformation in theta direction.
+    !***************************************************************************
+    ChebyshevWeightW_I    = 0.0
+
+    ChebyshevWeightE_I    = 1.0
+    ChebyshevWeightE_I(0) = 0.5
+    ChebyshevWeightE_I(nThetaOut-1) = 0.5
+    
+    ChebyshevWeightEu_I    = 1.0
+    ChebyshevWeightEu_I(0) = 0.5
+    ChebyshevWeightEu_I((nThetaOut-1)/2) = 0.5
+
+    do iw=0,nThetaOut-1
+       do iu=0,(nThetaOut-1)/2
+          ChebyshevWeightW_I(iw) = ChebyshevWeightW_I(iw) + &
+                                    ChebyshevWeightEu_I(iu)*(-2.0)/(4*(iu)**2-1)* & 
+                                    cos(iw*iu*cPi/((nThetaOut-1)/2))
+       end do
+    end do
+    ChebyshevWeightW_I=ChebyshevWeightW_I/(nThetaOut-1)
+
+    !do iw=0,nThetaOut_I-1
+    !   write(*,*) iw, ChebyshevWeightE(iw), ChebyshevWeightW(iw), ChebyshevWeightE(iw)*ChebyshevWeightW(iw)
+    !end do
+    
+  end subroutine Chebyshev_transform
+
+
   !=========================================================================
   subroutine calc_harmonics
 
@@ -180,6 +339,8 @@ contains
     ! magnetogram data
 
     integer :: iUnit, iError, nError, m, n
+    real    :: dThetaChebyshev
+    
     !-------------------------------------------------------------------------
 
     write(*,*)'Calculating harmonic coefficients'
@@ -197,18 +358,34 @@ contains
        factRatio1(m+1) = factRatio1(m)*Sqrt_I(2*m-1)/Sqrt_I(2*m)
     enddo
 
-    allocate(PNMTheta_III(nHarmonics+1,nHarmonics+1,0:nTheta-1))
-    PNMTheta_III = 0.0
 
     !Save Legandre polynoms
-    do iTheta=0,nTheta-1
-
-       Theta=colatitude(iTheta) 
-       CosTheta=cos(Theta)
-       SinTheta=max(sin(Theta), 1E-9)
-       call calc_legandre_polynoms
-       PNMTheta_III(:,:,iTheta) = p_nm
-    end do
+    if (UseChebyshevNode) then
+       call Chebyshev_transform
+       !write(*,*) 'nTheta=', nTheta
+       allocate(PNMTheta_III(nHarmonics+1,nHarmonics+1,0:nTheta-1))
+       PNMTheta_III = 0.0
+       dThetaChebyshev=cPi/(nTheta-1)
+       do iTheta=0,nTheta-1
+          Theta=cPi-iTheta*dThetaChebyshev
+          !write(*,*) Theta
+          CosTheta=cos(Theta)
+          SinTheta=max(sin(Theta), 1E-9)
+          call calc_legandre_polynoms
+          PNMTheta_III(:,:,iTheta) = p_nm
+       end do
+    else
+       allocate(PNMTheta_III(nHarmonics+1,nHarmonics+1,0:nTheta-1))
+       PNMTheta_III = 0.0
+       do iTheta=0,nTheta-1
+          Theta=colatitude(iTheta)
+          !write(*,*) Theta
+          CosTheta=cos(Theta)
+          SinTheta=max(sin(Theta), 1E-9)
+          call calc_legandre_polynoms
+          PNMTheta_III(:,:,iTheta) = p_nm
+       end do
+    end if
     allocate(CosMPhi_II(0:nPhi-1,0:nHarmonics),&
              SinMPhi_II(0:nPhi-1,0:nHarmonics) )
     !Save sins-cosins
@@ -262,26 +439,35 @@ contains
 
        SumArea=0.0
 
+
        do iTheta=0,nTheta-1
 
-          Theta=colatitude(iTheta) 
-          SinTheta=max(sin(Theta), 0.0)
-          if(UseSinLatitudeGrid)then
-             da = dSinTheta * dPhi
+          if (UseChebyshevNode) then
+             !write(*,*) 'Running here'
+             ! Use Chebyshev Weight in theta direction
+             da=ChebyshevWeightE_I(iTheta)*ChebyshevWeightW_I(iTheta)*dPhi
           else
-             da=SinTheta*dTheta*dPhi
+             Theta=colatitude(iTheta) 
+             SinTheta=max(sin(Theta), 0.0)
+             if(UseSinLatitudeGrid)then
+                da = dSinTheta * dPhi
+             else
+                da =SinTheta*dTheta*dPhi
+             end if
           end if
+          
+          
           ! Calculate the set of Legandre polynoms (with Schmidt normalization), 
           ! for a given CosTheta,SinTheta
           ! For non-radial magnetogram (LOS), a division in SinTheta is needed.
 
           
           gArray(iNM) = gArray(iNM)+&
-               sum(Br_DD(:,iTheta)*&
+               sum(Br_II(:,iTheta)*&
                   CosMPhi_II(:,mArray(iNM)) )*da*PNMTheta_III(&
                   nArray(iNM)+1,mArray(iNM)+1,iTheta)!/SinTheta
           hArray(iNM) = hArray(iNM)+&
-               sum(Br_DD(:,iTheta)*&
+               sum(Br_II(:,iTheta)*&
                   SinMPhi_II(:,mArray(iNM)) )*da*PNMTheta_III(&
                   nArray(iNM)+1,mArray(iNM)+1,iTheta)!/SinTheta
           SumArea = SumArea+da*nPhi
