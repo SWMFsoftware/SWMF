@@ -184,7 +184,7 @@ contains
     real, dimension(3)          :: RFace_D,B1r_D,B1t_D,FullB_D
     real                        :: vAlfvenSi, wEnergyDensSi, wEnergyDensBc
     real                        :: ExpansionFactorInv,x,y,z
-    logical                     :: IsClosedWSA = .false.
+    logical                     :: IsClosedWSA 
     character(len=*),parameter  :: NameSub = "user_face_bc"
     !--------------------------------------------------------------------------
     ! vector normal to the face
@@ -254,7 +254,8 @@ contains
              ! no wave energy in closed field lines
              wEnergyDensBc = 0.0
              IsClosedWSA = .true.
-            else
+          else
+!             IsClosedWSA = .false.
              vAlfvenSi = (FullB/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
              call get_total_wave_energy_dens(x, y, z, vAlfvenSi, wEnergyDensSi)
              wEnergyDensBc = wEnergyDensSi * Si2No_V(UnitP_)*WaveInnerBcFactor
