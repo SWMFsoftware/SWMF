@@ -1,6 +1,7 @@
 module ModEnergy
 
   use ModProcMH,  ONLY: iProc
+  use ModMain,    ONLY: BlkTest,iTest,jTest,kTest,ProcTest
   use ModMultiFluid
   use ModSize,    ONLY: nI, nJ, nK, gcn, MaxBlock
   use ModAdvance, ONLY: State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
@@ -19,7 +20,18 @@ contains
 
     integer, intent(in) :: iBlock
     integer::i,j,k
+    logical:: DoTest,DoTestMe
+    character(len=*),parameter:: NameSub='calc_energy_or_pressure'
     !--------------------------------------------------------------------------
+    if(iBlock==BlkTest .and. iProc==ProcTest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    end if
+
+    if(DoTestMe)write(*,*)NameSub,': UseNonConservative, DoConserveNeutrals, nConservCrit=', &
+         UseNonConservative, DoConserveNeutrals, nConservCrit
+
     if(.not. UseNonConservative)then
        if(DoConserveNeutrals) then
           ! All cells are conservative
@@ -160,8 +172,19 @@ contains
    
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
-    integer :: i,j,k    
-    !--------------------------------------------------------------------------
+    integer :: i, j, k    
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub='calc_pressure'
+    !--------------------------------------------------------------------------                                                                                                                                                                      
+    if(iBlock==BlkTest .and. iProc==ProcTest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest = .false.; DoTestMe = .false.
+    end if
+
+    if(DoTestMe)write(*,*)NameSub,': iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax=', &
+         iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax
+
     do iFluid = iFluidMin, iFluidMax
        call select_fluid
        do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
@@ -175,8 +198,13 @@ contains
        do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
           State_VGB(iP, i, j, k,iBlock) = State_VGB(iP, i, j, k,iBlock) &
                - gm1*0.5*sum(State_VGB(Bx_:Bz_,i, j, k,iBlock)**2)
-       end do; end do; end do          
+       end do; end do; end do
     end do
+
+    if(DoTestMe)then
+       write(*,*)NameSub,':Energy_GBI=',Energy_GBI(iTest,jTest,kTest,iBlock,:)
+       write(*,*)NameSub,':State_VGB=',State_VGB(:,iTest,jTest,kTest,iBlock)
+    end if
     
   end subroutine calc_pressure
 

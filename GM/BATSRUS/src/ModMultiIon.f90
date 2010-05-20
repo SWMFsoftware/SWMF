@@ -195,9 +195,24 @@ contains
     integer :: i, j, k
 
     character(len=*), parameter:: NameSub = 'multi_ion_source_expl'
+    logical :: DoTest, DoTestMe, DoTestCell
     !----------------------------------------------------------------------
+    
+    if(iProc == ProcTest .and. iBlock==BLkTest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest = .false. ; DoTestMe = .false.
+    end if
+
+    if(DoTestMe)then
+       write(*,*)NameSub,': initial Source_VC=', Source_VC(VarTest,iTest,jTest,kTest)
+       write(*,*)NameSub,':         State_VGB=',State_VGB(:,iTest,jTest,kTest,iBlock)
+    end if
+
     do k=1,nK; do j=1,nJ; do i=1,nI
 
+       DoTestCell = DoTestMe .and. iTest==i .and. jTest==j .and. kTest==k 
+       
        vInv = vInv_CB(i,j,k,iBlock)
 
        State_V = State_VGB(:,i,j,k,iBlock)
@@ -216,6 +231,8 @@ contains
 
        ! Lorentz force: J x B
        Force_D = cross_product(Current_D, FullB_D)
+       
+       if(DoTestCell)write(*,*)NameSub,':Force_D=', Force_D
 
        ! Subtract electron pressure gradient force
        if(UseMultiIon .and. &
@@ -240,6 +257,7 @@ contains
              Force_D(z_) = Force_D(z_) &
                   - (Pe_Z(i,j,k+1) - Pe_Z(i,j,k))/dz_BLK(iBlock)
           end if
+          if(DoTestCell)write(*,*)NameSub,': after grad Pe, Force_D=', Force_D
 
        end if
 
@@ -261,6 +279,12 @@ contains
        ForceY_I = NumDens_I*InvNumDens*Force_D(y_)
        ForceZ_I = NumDens_I*InvNumDens*Force_D(z_)
 
+       if(DoTestCell)then
+          write(*,*)Namesub,':ForceX_I, ForceY_I, ForceZ_I=', &
+               ForceX_I, ForceY_I, ForceZ_I
+          write(*,*)Namesub,': InvNumDens, NumDens_I=', InvNumDens, NumDens_I
+       end if
+
        ! Store ion momentum sources
        Source_VC(iRhoUxIon_I,i,j,k) = Source_VC(iRhoUxIon_I,i,j,k) + ForceX_I
        Source_VC(iRhoUyIon_I,i,j,k) = Source_VC(iRhoUyIon_I,i,j,k) + ForceY_I
@@ -272,9 +296,12 @@ contains
             ( State_V(iRhoUxIon_I)*ForceX_I &
             + State_V(iRhoUyIon_I)*ForceY_I &
             + State_V(iRhoUzIon_I)*ForceZ_I &
-            ) / State_VGB(iRhoIon_I,i,j,k,iBlock)
+            ) / State_V(iRhoIon_I)
 
     end do; end do; end do
+
+    if(DoTestMe)write(*,*)NameSub,': final Source_VC=',&
+         Source_VC(VarTest,iTest,jTest,kTest)
 
   end subroutine multi_ion_source_expl
 
@@ -461,7 +488,7 @@ contains
           end if
 
           ! Set corresponding matrix element
-          if (IsAnalyticJacobian) then
+          if (IsAnalyticJacobian .and. UsePointImplicit) then
              do kDim = 1,nDim
                 iUk = iUxIon_I(iIon) + kDim - 1
                 do iDim = 1,nDim
