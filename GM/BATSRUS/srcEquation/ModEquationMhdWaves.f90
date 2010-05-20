@@ -77,7 +77,7 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
-       0.0, & ! ExtraEInt_ 
+       0.0, & ! Ew_ 
        (0.0, iWave=WaveFirst_,WaveLast_), & 
        1.0, & ! p_
        1.0 /) ! Energy_ 
@@ -91,7 +91,7 @@ module ModVarIndexes
        'Bx ', & ! Bx_
        'By ', & ! By_
        'Bz ', & ! Bz_
-       'Ew ', & ! ExtraEInt_  
+       'Ew ', & ! Ew_  
        ('I??', iWave=1,nWave), & ! Waves to be reset
        'p  ', & ! p_
        'e  '/)  ! Energy_        
@@ -138,7 +138,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! Specify scalar to be advected
-  integer, parameter :: ScalarFirst_ = ExtraEInt_, ScalarLast_ = WaveLast_
+  integer, parameter :: ScalarFirst_ = Ew_, ScalarLast_ = WaveLast_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
