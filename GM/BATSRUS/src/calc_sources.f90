@@ -238,19 +238,20 @@ subroutine calc_sources
         ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
         Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) - (g-1)*Pe*DivU
 
-        ! The energy equation contains the work of electron pressure
-        ! -u.grad Pe = -div(u Pe) + Pe div u
-        ! The -div(u Pe) is implemented as a flux in ModFaceFlux. 
-        ! Here we add the Pe div u source term
-        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Pe*DivU
+        if(.not.UseMultiIon)then
+           ! The energy equation contains the work of electron pressure
+           ! -u.grad Pe = -div(u Pe) + Pe div u
+           ! The -div(u Pe) is implemented as a flux in ModFaceFlux. 
+           ! Here we add the Pe div u source term
+           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Pe*DivU
 
-        ! Add "geometrical source term" p/r to the radial momentum equation
-        ! The "radial" direction is along the Y axis
-        ! NOTE: here we have to use signed radial distance!
-        if(UseRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-             + Pe/y_BLK(i,j,k,iBlock)
+           ! Add "geometrical source term" p/r to the radial momentum equation
+           ! The "radial" direction is along the Y axis
+           ! NOTE: here we have to use signed radial distance!
+           if(UseRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+                + Pe/y_BLK(i,j,k,iBlock)
+        end if
      end do; end do; end do
-
      if(DoTestMe.and.VarTest==Pe_)call write_source('After Pe div Ue')
   end if
 
