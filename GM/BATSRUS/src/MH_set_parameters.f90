@@ -692,6 +692,8 @@ subroutine MH_set_parameters(TypeAction)
               plot_area='ieb'
            elseif (index(plot_string,'lcb')>0)then
               plot_area='lcb'
+              call read_var('Radius', plot_range(1,ifile))
+              call read_var('nLon',   plot_range(2,ifile))
            elseif (index(plot_string,'sph')>0)then
    	      plot_area='sph'
 	      call read_var('Radius',plot_range(1,ifile))
@@ -840,15 +842,19 @@ subroutine MH_set_parameters(TypeAction)
               plot_dimensional(ifile) = index(plot_string,'POS')>0
               if(plot_area /= 'lin')call stop_mpi(&
                    'Variable "pos" can only be used with area "lin" !')
-           elseif (index(plot_string,'eqr')>0)then
+           elseif(index(plot_string,'eqr')>0)then
               plot_var ='eqr'
               plot_dimensional(ifile) = .true.
-           elseif (index(plot_string,'ieb')>0)then
+           elseif(index(plot_string,'NUL')>0.or.index(plot_string,'nul')>0)then
               plot_var ='nul'
               plot_dimensional(ifile) = .true.
-           elseif (index(plot_string,'lcb')>0)then
-              plot_var ='nul'
-              plot_dimensional(ifile) = .true.
+              plot_vars(ifile)=''
+              plot_pars(ifile)=''
+           elseif(index(plot_string,'INT')>0.or.index(plot_string,'int')>0)then
+              plot_var ='int'
+              plot_dimensional(ifile) = index(plot_string,'INT')>0
+              plot_vars(ifile)=''
+              plot_pars(ifile)=''
            elseif(index(plot_string,'BBK')>0.or.index(plot_string,'bbk')>0)then
               plot_var='blk'
               plot_dimensional(ifile) = index(plot_string,'BBK')>0

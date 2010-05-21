@@ -1806,7 +1806,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
      allocate(&
           RayIntegral_VII(nRayIntegral,nRay_D(1),nRay_D(2)), &
           RayResult_VII(nRayIntegral,nRay_D(1),nRay_D(2)), STAT=iError)
-     call check_allocate(iError,NameSub//' RayIntegral_VI,RayResult_VI')
+     call check_allocate(iError,NameSub//' RayIntegral_VII,RayResult_VII')
      RayIntegral_VII = 0.0
      RayResult_VII   = 0.0
 
@@ -2675,8 +2675,8 @@ subroutine lcb_plot(iFile)
   use ModProcMH,         ONLY: iProc, iComm
   use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, rBody
   use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
-  use ModIO,             ONLY: StringDateOrTime, NamePlotDir
-  use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII
+  use ModIO,             ONLY: StringDateOrTime, NamePlotDir, plot_range, plot_type
+  use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII, InvB_,RhoInvB_,pInvB_
   use ModMpi
   implicit none
 
@@ -2688,16 +2688,23 @@ subroutine lcb_plot(iFile)
   integer :: i,j,k, nLine, iStart,iMid,iEnd, jStart,jMid,jEnd, iLon, nLon, iD, iLC
   integer :: iPoint, nPoint, nVarOut, iHemisphere, nFile, iError, nTP, iDirZ
   real :: PlotVar_V(0:4+nVar)
-  real :: Radius, RadiusIono, Lon, zL,zU, zUs=40., xV,yV
+  real :: Radius, RadiusIono, Lon, zL,zU, zUs=40., xV,yV, Integrals(3)
   real :: XyzIono_D(3), Xyz_D(3)
   real :: Gsm2Smg_DD(3,3) = reshape( (/ 1.,0.,0.,  0.,1.,0.,  0.,0.,1. /), (/3,3/) )
   real :: Smg2Gsm_DD(3,3) = reshape( (/ 1.,0.,0.,  0.,1.,0.,  0.,0.,1. /), (/3,3/) )
   real, allocatable :: PlotVar_VI(:,:), XyzPt_DI(:,:), zPt_I(:)
-  logical :: Map1,Map2, Odd, Skip
+  logical :: Map1,Map2, Odd, Skip, SaveIntegrals
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   call CON_set_do_test(NameSub,DoTest, DoTestMe)
   if(DoTest)write(*,*)NameSub,': starting'
+
+  ! Extract grid info from plot_range (see MH_set_parameters for plot_type lcb)
+  Radius = plot_range(1, iFile)
+  nLon   = plot_range(2, iFile)
+
+  SaveIntegrals=.false.
+  if(index(plot_type(iFile),'int')>0) SaveIntegrals=.true.
 
   RadiusIono = (6378.+100.)/6378.
   nTP=int( (rBody-RadiusIono)/.1 )
@@ -2718,11 +2725,12 @@ subroutine lcb_plot(iFile)
 
      open( UnitTmp_, FILE=trim(FileName), STATUS="replace")
      write(UnitTmp_,'(a)')'TITLE="IE B traces (GM Coordinates)"'
-     write(UnitTmp_,'(a)')'VARIABLES="X [R]", "Y [R]", "Z [R]"'
+     if(SaveIntegrals)then
+        write(UnitTmp_,'(a)')'VARIABLES="X [R]", "Y [R]", "Z [R]", "1/B", "n/B", "p/B"'
+     else
+        write(UnitTmp_,'(a)')'VARIABLES="X [R]", "Y [R]", "Z [R]"'
+     end if
   end if
-
-  Radius = 6.
-  nLon=36
 
   do iDirZ = -1,1,2
      !compute the last closed points on cylinder for positive and negative Z values
@@ -2752,10 +2760,12 @@ subroutine lcb_plot(iFile)
               XyzPt_DI(:,i) = matmul(Smg2Gsm_DD,XyzPt_DI(:,i))
            end do
 
-           call integrate_ray_accurate_1d(nPts, XyzPt_DI, 'extract_I')
+           call integrate_ray_accurate_1d(nPts, XyzPt_DI, 'InvB,RhoInvB,pInvB,extract_I')
 
            if(iProc == 0)then
 
+              Integrals = -1.
+              
               call line_get(nVarOut, nPoint)
               if(nPoint>0)then
                  !PlotVar_VI variables = 'iLine l x y z rho ux uy uz bx by bz p'
@@ -2780,6 +2790,9 @@ subroutine lcb_plot(iFile)
                           if(Map1 .and. Map2)then
                              iLC=k/2
                              jStart=iStart; jMid=iMid; jEnd=iEnd
+                             Integrals(1) = sum(RayResult_VII(   InvB_,:,iLC))
+                             Integrals(2) = sum(RayResult_VII(RhoInvB_,:,iLC))
+                             Integrals(3) = sum(RayResult_VII(  pInvB_,:,iLC))
                           end if
                        else
                           iEnd = iPoint-1
@@ -2810,6 +2823,9 @@ subroutine lcb_plot(iFile)
                     if(Map1 .and. Map2)then
                        iLC=k/2
                        jStart=iStart; jMid=iMid; jEnd=iEnd
+                       Integrals(1) = sum(RayResult_VII(   InvB_,:,iLC))
+                       Integrals(2) = sum(RayResult_VII(RhoInvB_,:,iLC))
+                       Integrals(3) = sum(RayResult_VII(  pInvB_,:,iLC))
                     end if
                  end if
 
@@ -2824,30 +2840,46 @@ subroutine lcb_plot(iFile)
                        ! Map from the ionosphere to first point
                        call map_planet_field(time_simulation, Xyz_D, 'GSM NORM', &
                             RadiusIono+i*.1, XyzIono_D, iHemisphere)
-                       write(UnitTmp_, *) XyzIono_D
+                       if(SaveIntegrals)then
+                          write(UnitTmp_, *) XyzIono_D,Integrals
+                       else
+                          write(UnitTmp_, *) XyzIono_D
+                       end if
                     end do
                     do i=jMid-1,jStart+1,-1
                        PlotVar_V = PlotVar_VI(:, i)
                        Xyz_D = PlotVar_V(2:4) * Si2No_V(UnitX_)
-                       write(UnitTmp_, *) Xyz_D
+                       if(SaveIntegrals)then
+                          write(UnitTmp_, *) Xyz_D,Integrals
+                       else
+                          write(UnitTmp_, *) Xyz_D
+                       end if
                     end do
                     do i=jMid,jEnd
                        PlotVar_V = PlotVar_VI(:, i)
                        Xyz_D = PlotVar_V(2:4) * Si2No_V(UnitX_)
-                       write(UnitTmp_, *) Xyz_D
+                       if(SaveIntegrals)then
+                          write(UnitTmp_, *) Xyz_D,Integrals
+                       else
+                          write(UnitTmp_, *) Xyz_D
+                       end if
                     end do
                     do i=nTP-1,0,-1
                        ! Map from last point to the ionosphere
                        call map_planet_field(time_simulation, Xyz_D, 'GSM NORM', &
                             RadiusIono+i*.1, XyzIono_D, iHemisphere)
-                       write(UnitTmp_, *) XyzIono_D
+                       if(SaveIntegrals)then
+                          write(UnitTmp_, *) XyzIono_D,Integrals
+                       else
+                          write(UnitTmp_, *) XyzIono_D
+                       end if
                     end do
                  end if
 
                  deallocate(PlotVar_VI)
               end if
               call line_clean
-           end if
+           end if  !iProc==0
 
            if(allocated(RayIntegral_VII)) deallocate(RayIntegral_VII)
            if(allocated(RayResult_VII))   deallocate(RayResult_VII)

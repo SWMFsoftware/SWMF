@@ -2517,34 +2517,30 @@ example), the start and end times should be set for all of them.
 			</part>
 			<part name="plotvar" type="string" required="T"
 				input="select">
-				<option name="MHD variables"	  value="MHD" 
-								  default="T"/>
-				<option name="MHD vars. scaled"   value="mhd"/>
-				<option name="HD variables"	  value="HD"/>
-				<option name="HD vars. scaled"	  value="hd"/>
-				<option name="All variables"      value="FUL"/>
-				<option name="All vars. scaled"   value="ful"/>
-				<option name="Raw variables"      value="RAW"/>
-				<option name="Raw vars. scaled"   value="raw"/>
+				<option name="MHD variables"    value="MHD" default="T"/>
+				<option name="MHD vars. scaled" value="mhd"/>
+				<option name="HD variables"    value="HD"/>
+				<option name="HD vars. scaled" value="hd"/>
+				<option name="All variables"    value="FUL"/>
+				<option name="All vars. scaled" value="ful"/>
+				<option name="Raw variables"    value="RAW"/>
+				<option name="Raw vars. scaled" value="raw"/>
 				<option name="Ray tracing vars."  value="RAY"/>
 				<option name="Ray tracing scaled" value="ray"/>
-				<option name="Flux variables"     value="FLX"/>
-				<option name="Flux vars. scaled"  value="flx"/>
+				<option name="Flux variables"    value="FLX"/>
+				<option name="Flux vars. scaled" value="flx"/>
 				<option name="Solar variables"    value="SOL"/>
 				<option name="Solar vars. scaled" value="sol"/>
 				<option name="Radio wave intensity" value="rwi"/>
-				<option name="Position variables" value="POS"
-						     if="$plotarea eq 'lin'" />
-				<option name="Position vars. scaled"
-					value="pos"  if="$plotarea eq 'lin'"/>
-				<option name="Equatorial rays"
-					value="eqr"  if="$plotarea eq 'eqr'"/>
-				<option name="Basic block variables"
-					value="BBK" />
-				<option name="Basic block vars. scaled"
-					value="bbk" />
+				<option name="Position variables"    value="POS"  if="$plotarea eq 'lin'" />
+				<option name="Position vars. scaled" value="pos"  if="$plotarea eq 'lin'"/>
+				<option name="Equatorial rays" value="eqr"  if="$plotarea eq 'eqr'"/>
+				<option name="Basic block variables"    value="BBK" />
+				<option name="Basic block vars. scaled"	value="bbk" />
 				<option name="Set variables"    value="VAR" />
-				<option name="Set scaled vars." value="var"/>
+				<option name="Set vars. scaled" value="var"/>
+				<option name="Integrated variables"    value="INT" />
+				<option name="Integrated vars. scaled" value="int"/>
 				<option name="NULL - irrelevant" value="nul"/>
 			</part>
 		</parameter>
@@ -2619,6 +2615,10 @@ example), the start and end times should be set for all of them.
 			<parameter name="RadiusMin" type="real" min="1" default="3"/>
 			<parameter name="RadiusMax" type="real" min="1" default="10"/>
 		</if>
+		<if expr="$plotarea =~ /\blcb\b/">
+			<parameter name="Radius"  type="integer" min="0." default="6."/>
+			<parameter name="nLon"    type="real"    min="4"  default="36"/>
+		</if>
 		<parameter name="DxSavePlot" type="real" min="-1.0" 
 							default="-1.0"
 	if="($plotform=~/\bidl/ and $plotarea!~/\b(sph|los|rfr|lin|eqr)\b/)" />
@@ -2628,7 +2628,7 @@ example), the start and end times should be set for all of them.
 		</if>
 	</for>
 #SAVEPLOT
-10			nPlotfile
+15			nPlotfile
 3d  MHD tec		StringPlot ! 3d plot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
@@ -2736,6 +2736,13 @@ ieb nul tec             StringPlot  !IE grid field line plots
 lcb nul tec             StringPlot  !last closed field line plots
 1000                    DnSavePlot
 -1.                     DtSavePlot
+6.			Radius
+36			nLon
+lcb int tec             StringPlot  !last closed field line plots with integrals stored
+1000                    DnSavePlot
+-1.                     DtSavePlot
+6.			Radius
+36			nLon
 
 Default is nPlotFile=0. \\
 
@@ -2746,8 +2753,8 @@ plotform plotarea plotvar
 
 plotform = 'tec', 'idl', 'idl_real4', 'idl_real8', 'idl_ascii'
 plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d' 'rfr', 'eqr', 'ieb', 'lcb'
-plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'euv', 'sxr', 'pos', 'var', 'bbk' 'rwi' - normalized
-plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'EUV', 'SXR', 'pos', 'VAR', 'BBK' 'RWI' - dimensional
+plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'euv', 'sxr', 'pos', 'var', 'bbk' 'rwi' 'int' 'nul' - normalized
+plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'EUV', 'SXR', 'pos', 'VAR', 'BBK' 'RWI' 'INT' 'NUL' - dimensional
 \end{verbatim}
 NOTES: The plotvar option 'sol' is only valid for plotarea 'los';
        The plotvar option 'euv' is only valid for plotarea 'los';
@@ -2812,6 +2819,10 @@ values or as non-dimensional values:
  'bbk' - vars: dx pe blk blkall
          pars: 
  'rwi' - vars: Intensity
+         pars: 
+ 'int' - vars: 1/B n/B p/B
+         pars: 
+ 'nul' - vars: 
          pars: 
 \end{verbatim}
 The plot_string is always followed by the plotting frequencies
