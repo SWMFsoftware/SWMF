@@ -11,6 +11,7 @@ OBJECTS = \
 	ModPlanet.o\
 	ModCrcm.o\
 	ModInitialize.o\
+	ModRestart.o\
 	ModCrcmPlot.o\
 	ModTsyInput.o\
 	ModGmCRCM.o\
