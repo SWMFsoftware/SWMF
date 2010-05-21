@@ -504,7 +504,7 @@ program potential_field
 
   PlotVar_VG(6,1:nR,1:nTheta,1:nPhi) = Potential_C
 
-  call save_plot_file('potential.out', &
+  call save_plot_file('potentialtest.out', &
        StringHeaderIn='potential field', &
        NameVarIn='r theta phi br btheta bphi divb rhs pot', &
        Coord1In_I=RadiusNode_I, &
