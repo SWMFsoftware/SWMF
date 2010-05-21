@@ -181,14 +181,14 @@ end subroutine IM_finalize
 !===========================================================================
 
 subroutine IM_save_restart(TimeSimulation)
-
+  use ModCrcmRestart, ONLY: crcm_write_restart
   implicit none
 
   real,     intent(in) :: TimeSimulation   ! seconds from start time
   character(len=*), parameter :: NameSub='IM_save_restart'
 
   !-------------------------------------------------------------------------
-!  call rbe_save_result(.true., .false.)
+  call crcm_write_restart
 
 end subroutine IM_save_restart
 !===========================================================================
