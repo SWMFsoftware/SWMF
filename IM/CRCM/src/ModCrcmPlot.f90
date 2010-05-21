@@ -12,7 +12,7 @@ contains
        Beq_C,Volume_C,Potential_C,FAC_C,Time,Dt)
     use ModIoUnit,     ONLY: UnitTmp_
     use ModPlotFile,   ONLY: save_plot_file
-    use ModCrcmInitialize, ONLY: IsRestart
+    use ModCrcmRestart, ONLY: IsRestart
     use ModCrcmPlanet,   ONLY: nspec,NamePlotVar,iPplot_I,iPhotplot_I,& 
                                iNplot_I,Beq_,Vol_,Pot_,FAC_,nVar
     use ModCrcmGrid,   ONLY: PhiIono_C => phi, LatIono_C => xlatr
