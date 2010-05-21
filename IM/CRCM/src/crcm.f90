@@ -11,6 +11,7 @@ subroutine crcm_run(delta_t)
                             iLatMin,DoMultiFluidGMCoupling
   use ModIeCrcm,      ONLY: pot
   use ModCrcmPlot,    ONLY: Crcm_plot, DtOutput, DoSavePlot
+  use ModCrcmRestart, ONLY: IsRestart, crcm_read_restart
   implicit none
 
 
@@ -23,12 +24,15 @@ subroutine crcm_run(delta_t)
   logical, save :: IsFirstCall =.true.
   !----------------------------------------------------------------------------
 
-  nstep=nint(delta_t/dt)
-  if (nstep == 0) then
-     nstep = 1
+  if (dt==0) then
+     nstep = 0
+     dt = 0.0
+  else
+     nstep=nint(delta_t/dt)
+     dt=delta_t/nstep         ! new dt
   endif
 
-  dt=delta_t/nstep         ! new dt
+
   
   ! do field line integration and determine vel, ekev, momentum (pp), etc.
   rc=(re_m+Hiono*1000.)/re_m        ! ionosphere distance in RE`
@@ -78,8 +82,14 @@ subroutine crcm_run(delta_t)
 
 
   ! setup initial distribution
-  if (IsFirstCall) then
+  if (IsFirstCall .and. .not.IsRestart) then
+     !set initial state when no restarting
      call initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
+     IsFirstCall=.false.
+  elseif ( IsFirstCall .and. IsRestart) then
+     !set initial state when restarting
+     call crcm_read_restart
+     ib0=iba
      IsFirstCall=.false.
   endif
 
