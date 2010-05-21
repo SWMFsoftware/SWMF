@@ -43,7 +43,10 @@ contains
     real, allocatable:: Br0_II(:,:)
     !----------------------------------------------------------
     open(iUnit, file=NameFileIn, status='old', iostat=iError)
-    
+    if(iError /= 0)then
+       write(*,*) 'Error: could not open input file ',NameFileIn
+       stop
+    end if
     do 
        read(iUnit,'(a)', iostat = iError ) String
        if(index(String,'#CR')>0)then
@@ -337,13 +340,11 @@ contains
 
   subroutine matvec(x_C, y_C, n)
 
-    use ModPotentialField, ONLY: nR, nTheta, nPhi, B0_DG
-
-    implicit none
+    use ModPotentialField, ONLY: B0_DG
 
     integer, intent(in) :: n
-    real, intent(in)    :: x_C(nR*nTheta*nPhi)
-    real, intent(out)   :: y_C(nR*nTheta*nPhi)
+    real, intent(in)    :: x_C(n)
+    real, intent(out)   :: y_C(n)
     !--------------------------------------------------------------------------
 
     ! Calculate y = laplace x in two steps
