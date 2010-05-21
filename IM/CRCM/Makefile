@@ -87,7 +87,7 @@ rundir:
 			ln -s ${EMPIRICALIEDIR}/data EIE;\
 		fi;)
 	cd ${RUNDIR}/IM; \
-		mkdir plots
+		mkdir plots restartIN restartOUT
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/crcm.exe .   ; \
