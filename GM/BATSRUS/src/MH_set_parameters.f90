@@ -2873,6 +2873,9 @@ contains
 
        if(DoTestMe)write(*,*)'iFile, plot_area=',iFile, plot_area
 
+       !Don't do anything to plot_type for specific plots.
+       if(plot_area == 'lcb')CYCLE
+
        ! Fix plot range for sph, x=0, y=0, z=0 areas
        select case(plot_area)
        case('sph')
