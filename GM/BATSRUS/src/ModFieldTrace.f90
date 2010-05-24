@@ -2717,11 +2717,13 @@ subroutine lcb_plot(iFile)
 
   if(iProc == 0)then
      FileName=trim(NamePlotDir)//'LCB-GM'
+     if(iFile <  10) write(FileName, '(a,i1)') trim(FileName)//"_",iFile
+     if(iFile >= 10) write(FileName, '(a,i2)') trim(FileName)//"_",iFile
      if(time_accurate)then
         call get_time_string
         FileName = trim(FileName) // "_t" // StringDateOrTime
      end if
-     write(FileName,'(a,i7.7,a)') trim(FileName)//"_n", n_step,".dat"
+     write(FileName,'(a,i7.7,a)') trim(FileName)//"_n",n_step,".dat"
 
      open( UnitTmp_, FILE=trim(FileName), STATUS="replace")
      write(UnitTmp_,'(a)')'TITLE="IE B traces (GM Coordinates)"'
