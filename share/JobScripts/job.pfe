@@ -7,18 +7,38 @@
 #   cd run
 #   qsub job.pfe
 #
+# Note that the run directory should be moved to the /nobackup filesystem,
+# otherwise the quota on the home directory will fill up before the run ends.
+# Even on the /nobackup system there is a limit on the number of files.
+# You can use
+#
+# quota -v
+#
+# to see the limits and usage.
 # To avoid having too many output files run
 #
 #    PostProc.pl -g -r=360 >& PostProc.log &
 #
-# on the head node (post-processes every 10 minutes).
+# on the head node (post-processes every 6 minutes). To check CPU usage, type
 #
+# acct_ytd
+
 #PBS -S /bin/csh
 #PBS -N SWMF
 
 # set the number of CPU-s by changing select: nProc = select*mpiprocs
-# ncpus should be 8 because there are 8 cores on each node.
-#PBS -l select=16:ncpus=8
+# ncpus should be fixed to 8 (or 12) because there are 8 (or 12) cores on 
+# each node. The faster nodes mean faster execution, but also more charged
+# to the account. 
+
+# To run on the 8-core Harpertown nodes (default now)
+#PBS -l select=16:ncpus=8:model=har
+
+# To run on the 8-core Nehalem nodes (2.4 times faster than Hapertown)
+### PBS -l select=16:ncpus=8:model=neh
+
+# To run on the 12-core Westmere nodes use this (2 times faster than Hapertown)
+### PBS -lselect=16:ncpus=12:model=wes
 #PBS -l walltime=8:00:00
 #PBS -j oe
 #PBS -m e
