@@ -1314,7 +1314,7 @@ subroutine find_test_cell
      if(iProc==PROCtest)then
         if(1<=BLKtest.and.BLKtest<=nBlockMax)then
            if(unusedBLK(BLKtest))then
-              write(*,*)'Test cell is in an unused block'
+              if(lVerbose>0) write(*,*)'Test cell is in an unused block'
            else
               XyzTestCell_D = (/ &
                    x_BLK(Itest,Jtest,Ktest,BLKtest), &
@@ -1323,8 +1323,8 @@ subroutine find_test_cell
               pass_message = .true.
            end if
         else
-           write(*,*)'BLKtest=',BLKtest,' is out of 1..nBlockMax=',&
-                nBlockMax
+           if(lVerbose>0) write(*,*)'BLKtest=',BLKtest,&
+                ' is out of 1..nBlockMax=',nBlockMax
         end if
      end if
      call MPI_Bcast(pass_message,1,MPI_LOGICAL,PROCtest,iComm,iError)
