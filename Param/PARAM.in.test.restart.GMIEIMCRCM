@@ -115,6 +115,9 @@ max tec                 StringPlot
 
 #BEGIN_COMP IM ----------------------------------------
 
+#INCLUDE
+IM/restartIN/restart.H
+
 #RESTART
 T			DoRestart
 

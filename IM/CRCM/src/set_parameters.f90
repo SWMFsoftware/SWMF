@@ -5,7 +5,7 @@ subroutine CRCM_set_parameters(NameAction)
   use ModCrcmInitialize, ONLY: IsEmptyInitial
   use ModCrcmPlot,       ONLY: DtOutput, DoSavePlot
   use ModFieldTrace,     ONLY: UseEllipse
-  use ModCrcm,           ONLY: UseMcLimiter, BetaLimiter
+  use ModCrcm,           ONLY: UseMcLimiter, BetaLimiter, time
   use ModCrcmRestart,    ONLY: IsRestart
   implicit none
 
@@ -48,6 +48,9 @@ subroutine CRCM_set_parameters(NameAction)
      case('#LIMITER')
         call read_var('UseMcLimiter', UseMcLimiter)
         if(UseMcLimiter) call read_var('BetaLimiter', BetaLimiter)
+
+     case('#TIMESIMULATION')
+        call read_var('TimeSimulation',time)
      
      end select
   enddo
