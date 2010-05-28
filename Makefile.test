@@ -410,19 +410,23 @@ test5_check:
 test6:
 	@echo "test6_compile..." > test6_gm.diff
 	@echo "test6_compile..." > test6_ie.diff
-	@echo "test6_compile..." > test6_im.diff
+	@echo "test6_compile..." > test6_im_crcm.diff
 	make test6_compile
 	@echo "test6_rundir..." >> test6_gm.diff
 	@echo "test6_rundir..." >> test6_ie.diff
-	@echo "test6_rundir..." >> test6_im.diff
+	@echo "test6_rundir..." >> test6_im_crcm.diff
 	make test6_rundir
 	@echo "test6_run..." >> test6_gm.diff
 	@echo "test6_run..." >> test6_ie.diff
-	@echo "test6_run..." >> test6_im.diff
+	@echo "test6_run..." >> test6_im_crcm.diff
 	make test6_run
 	@echo "test6_check..." >> test6_gm.diff
 	@echo "test6_check..." >> test6_ie.diff
-	@echo "test6_check..." >> test6_im.diff
+	@echo "test6_check..." >> test6_im_crcm.diff
+	make test6_restart
+	@echo "test6_check..." >> test6_gm.diff
+	@echo "test6_check..." >> test6_ie.diff
+	@echo "test6_check..." >> test6_im_crcm.diff
 	make test6_check
 
 test6_compile:
@@ -438,8 +442,16 @@ test6_rundir:
 
 test6_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
+	cd ${TESTDIR}; Restart.pl
+	cd ${TESTDIR}/IE/ionosphere; mv IE.log IE_all.log
 
+test6_restart:
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIEIMCRCM PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}/IE/ionosphere; tail -12 IE.log >> IE_all.log
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
+
+# check last snapshot from CRCM output
 test6_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
@@ -449,12 +461,14 @@ test6_check:
 		${TESTDIR}/RESULTS/IE/IE.log \
 		output/test6/IE.log \
 		> test6_ie.diff)
-	gunzip -c output/test6/IM_eq.outs.gz \
-		> ${TESTDIR}/RESULTS/IM/CRCMeq_ref.outs
+	tail -2504 ${TESTDIR}/RESULTS/IM/CRCMeq.outs \
+		> ${TESTDIR}/RESULTS/IM/CRCMeq.out
+	gunzip -c output/test6/IM_eq.out.gz \
+		> ${TESTDIR}/RESULTS/IM/CRCMeq_ref.out
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/IM/CRCMeq.outs \
-		${TESTDIR}/RESULTS/IM/CRCMeq_ref.outs \
-		> test6_im.diff)
+		${TESTDIR}/RESULTS/IM/CRCMeq.out \
+		${TESTDIR}/RESULTS/IM/CRCMeq_ref.out \
+		> test6_im_crcm.diff)
 	ls -l test6*.diff
 
 ### test_lc: Lower Corona test ###

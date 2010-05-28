@@ -10,23 +10,17 @@ T			DoTimeAccurate
 1			DnShowProgressShort
 100			DnShowProgressLong
 
-#DESCRIPTION
-Test for GM-IM-IE.
+#INCLUDE
+RESTART.in		NameRestartFile
 
-#PLANET
-EARTH			NamePlanet
+#DESCRIPTION
+Restart test for GM-IM-IE.
+
+#SAVERESTART
+F			DoSaveRestart
 
 #ROTATION
 F			UseRotation
-
-#STARTTIME
-2000			iYear
-3			iMonth
-21			iDay
-10			iHour
-45			iMinute
-0			iSecond
-0.0			FracSecond
 
 #COUPLE2
 GM			NameComp1
@@ -46,62 +40,10 @@ IM			NameComp2
 -1                      	DnCouple
 1.0                    DtCouple
 
-! The command below is most useful for implicit time stepping
-! For this test limiting the time step by the coupling times
-! actually makes testing the restart simpler.
-COUPLETIME
-GM			NameComp
-F			DoCoupleOnTime
-
 #BEGIN_COMP GM ----------------------------------------
 
-#GRID
-1			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
--224.			xMin
-32.			xMax
--128.			yMin
-128.			yMax
--128.			zMin
-128.			zMax
-
-! Maximum resolution initially
-
-#GRIDRESOLUTION
-2.0			Resolution
-initial			NameArea
-
-! Minimum resolution in the computational domain
-
-#GRIDRESOLUTION
-8.0			Resolution
-all			NameArea
-
-! Far tail and inflow
-#GRIDRESOLUTION
-2.0			Resolution
-box			NameArea
- -20.0			xMinBox
- -16.0			yMinBox
- -16.0			zMinBox
-  20.0			xMaxBox
-  16.0			yMaxBox
-  16.0			xMaxBox
-
-! r currents resolution for the ionosphere
-#GRIDRESOLUTION
-1/4			Resolution
-shell0			NameArea
-2.5			r1Shell
-3.5			r2Shell
-
-#MAGNETOSPHERE
-T                       UseBody
-2.5                     rBody
-3.0                     rCurrents
-28.0                    BodyNDim
-25000.0                 BodyTDim
+#INCLUDE
+GM/restartIN/restart.H
 
 #TIMESTEPPING
 1			nStage
@@ -128,34 +70,25 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#SOLARWIND
-5.0                     SwNDim  [n/cc]
-100000.0                SwTDim  [K]
--400.0                  SwUxDim [km/s]
-0.0                     SwUyDim [km/s]
-0.0                     SwUzDim [km/s]
-0.0                     SwBxDim [nT]
-0.0                     SwByDim [nT]
--5.0                    SwBzDim [nT]
-
 IM
 20.0                    TauImP
 F			DoImSatTrace 
 
 #SAVEPLOT
 3			nPlotFile
-idl x=0 FUL			StringPlot
+idl x=0 FUL		StringPlot
 -1			DnSavePlot
 1.			DtSavePlot
 -1.0			DxSavePlot
-idl y=0 FUL			StringPlot
+idl y=0 FUL		StringPlot
 -1			DnSavePlot
 1.0			DtSavePlot
 -1.0			DxSavePlot
-idl z=0 FUL			StringPlot
+idl z=0 FUL		StringPlot
 -1			DnSavePlot
 1.0			DtSavePlot
 -1.0			DxSavePlot
+
 
 #END_COMP GM   ----------------------------------------
 
@@ -183,7 +116,7 @@ max tec                 StringPlot
 #BEGIN_COMP IM ----------------------------------------
 
 #RESTART
-F
+T			DoRestart
 
 #SAVEPLOT
 1.0			DtOutput
@@ -191,14 +124,11 @@ F
 #TYPEBOUNDARY
 circle                  TypeBoundary
 
-#INITIALF2
-F			IsEmptyF2
-
 #END_COMP IM   ----------------------------------------
 
-! Use TimeMax=10.0 for continuous test and 5.0 sec for restart test.
 #STOP
 -1			MaxIter
-5.0			TimeMax
+10.0			TimeMax
 
 End session: 1
+#END ############################################################
