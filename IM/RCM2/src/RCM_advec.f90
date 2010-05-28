@@ -1297,12 +1297,20 @@ subroutine set_satvar(headvar_I, distvar_II, iSatIn, nHeadVar, nDistVar)
   ! Internal Vars:
   integer            :: iLoc, jLoc, IntTemp(1), k
   real               :: xnorm, ynorm, diff_colat(isize), diff_aloct(jsize)
+  real               :: wrapped_colat(0:isize+1), wrapped_aloct(0:jsize+1)
   real               :: IM_bilinear
   character(len=100) :: StringTime
   real               :: Volume
   !-------------------------------------------------------------------------
   HeadVar_I = -1.0
   DistVar_II= -1.0
+
+  wrapped_colat(:) = colat(0:isize+1,1)
+  wrapped_colat(0) = 2.*wrapped_colat(1)-wrapped_colat(2)
+  wrapped_colat(isize+1) = 2.*wrapped_colat(isize)-wrapped_colat(isize-1)
+  wrapped_aloct(:) = aloct(1,0:jsize+1)
+  wrapped_aloct(0) = 2.*wrapped_aloct(1)-wrapped_aloct(2)
+  wrapped_aloct(jsize+1) = 2.*wrapped_aloct(jsize)-wrapped_aloct(jsize-1)
 
   !\
   ! Get satellite location in generalized coordinates.
@@ -1316,7 +1324,8 @@ subroutine set_satvar(headvar_I, distvar_II, iSatIn, nHeadVar, nDistVar)
      if(diff_colat(iLoc) > 0) iLoc = iLoc - 1
      if(diff_aloct(jLoc) > 0) jLoc = jLoc - 1
      ! If satellite is out of bounds, mark it as such.
-     if( (diff_colat(1)>0) .or. (diff_colat(isize)<0) ) then
+     !DDZ-old if statement     if( (diff_colat(1)>0) .or. (diff_colat(isize)<0) ) then
+     if(iLoc<0 .or. iLoc>isize .or. jLoc<0 .or. jLoc>jsize)then
         SatLoc_3I(3,2,iSatIn) = -1
         iLoc = 1
      end if
@@ -1325,10 +1334,10 @@ subroutine set_satvar(headvar_I, distvar_II, iSatIn, nHeadVar, nDistVar)
      jLoc = 1
   end if
 
-  xnorm = (SatLoc_3I(1,2,iSatIn) - colat(iLoc,jLoc)) &
-           / (colat(iLoc+1,jLoc+1) - colat(iLoc,jLoc)) + 1.0
-  ynorm = (SatLoc_3I(2,2,iSatIn) - aloct(iLoc,jLoc)) &
-       / (aloct(2,2) - aloct(1,1)) + 1.0     ! grid is uniform in j direction
+  xnorm = (SatLoc_3I(1,2,iSatIn) - wrapped_colat(iLoc)) &
+       /  (wrapped_colat(iLoc+1) - wrapped_colat(iLoc)) + 1.0
+  ynorm = (SatLoc_3I(2,2,iSatIn) - wrapped_aloct(jLoc)) &
+       /  (wrapped_aloct(jLoc+1) - wrapped_aloct(jLoc)) + 1.0
   
   !\
   ! Set variables.
@@ -1342,6 +1351,20 @@ subroutine set_satvar(headvar_I, distvar_II, iSatIn, nHeadVar, nDistVar)
     
   ! If sat resides on CLOSED field line, get those variables!
   if (SatLoc_3I(3,2,iSatIn) == 3) then 
+
+     ! If sat has illegal norm variables, write error to screen and skip rest of routine
+     if(xnorm<1. .or. xnorm>2. .or. ynorm<1. .or. ynorm>2.)then
+        write(*,*)'RCM_advec: set_satvar: iSatIn=',iSatIn,' NORM ERROR...'
+        !         write(*,*)'xnorm,ynorm=',xnorm,ynorm,'  iLoc,jLoc=',iLoc,jLoc
+        !         write(*,*)'isize,jsize=',isize,jsize
+        !         write(*,*)'SatLoc_3I=',SatLoc_3I(:,:,iSatIn)
+        !         write(*,*)'SatLoc_3I(1,2,iSatIn)=',SatLoc_3I(1,2,iSatIn)
+        !         write(*,*)'  colat=',colat(:,1)
+        !         write(*,*)'SatLoc_3I(2,2,iSatIn)=',SatLoc_3I(2,2,iSatIn)
+        !         write(*,*)'  aloct=',aloct(1,:)
+        RETURN
+     end if
+
      ! Interpolated position (for debugging/validation)
      HeadVar_I(7) = 90.0 - IM_bilinear(colat(iLoc:iLoc+1,jLoc:jLoc+1), &
           1,2,1,2,(/xnorm,ynorm/)) * cRadToDeg
