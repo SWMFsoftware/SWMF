@@ -71,7 +71,8 @@ subroutine get_im_pressure(iBlock, pIm_CD, dIm_CD,TauCoeffIm_C)
 
   integer :: i,j,k, n, iLat1,iLat2, iLon1,iLon2
 
-  real :: rLat,rLon, LatWeight1,LatWeight2, LonWeight1,LonWeight2
+  real :: Lat,Lon, LatWeight1,LatWeight2, LonWeight1,LonWeight2
+  real :: LatMaxIm
 
   integer :: iIonSecond, nIons
   !--------------------------------------------------------------------------
@@ -84,9 +85,10 @@ subroutine get_im_pressure(iBlock, pIm_CD, dIm_CD,TauCoeffIm_C)
 
   TauCoeffIm_C = 1.0
 
-  !\
+  ! Maximum latitude (ascending or descending) of the IM grid 
+  LatMaxIm = max(RCM_lat(1), RCM_lat(iSize))
+
   ! Check to see if cell centers are on closed fieldline
-  !/
   do k=1,nK; do j=1,nJ; do i=1,nI
 
      ! Default is negative, which means that do not nudge GM values
@@ -98,63 +100,67 @@ subroutine get_im_pressure(iBlock, pIm_CD, dIm_CD,TauCoeffIm_C)
 
         ! Map the point down to the RCM grid 
         ! Note: ray values are in SM coordinates!
-        rLat = ray(1,1,i,j,k,iBlock)
-        rLon = ray(2,1,i,j,k,iBlock)
+        Lat = ray(1,1,i,j,k,iBlock)
+
+        ! Do not modify pressure along field lines outside the IM grid
+        if(Lat > LatMaxIm) CYCLE
+
+        Lon = ray(2,1,i,j,k,iBlock)
 
         if(UseOldMethod)then
            ! RCM_lat: 1->iSize varies approximately from 89->10
            iLat1=1
            do n=2,iSize
-              if(rLat < 0.5*(RCM_lat(n-1)+RCM_lat(n))) iLat1 = n
+              if(Lat < 0.5*(RCM_lat(n-1)+RCM_lat(n))) iLat1 = n
            end do
            iLat2=iLat1
 
            ! RCM_lon: 1->jSize varies approximately from 0->353
            iLon1=1
            do n=2,jSize
-              if(rLon > 0.5*(RCM_lon(n-1)+RCM_lon(n))) iLon1 = n
+              if(Lon > 0.5*(RCM_lon(n-1)+RCM_lon(n))) iLon1 = n
            end do
-           if(rLon > 0.5*(RCM_lon(jsize)+RCM_lon(1)+360.)) iLon1=1
+           if(Lon > 0.5*(RCM_lon(jsize)+RCM_lon(1)+360.)) iLon1=1
            iLon2=iLon1
         else
            if (RCM_lat(1) > RCM_lat(2)) then
               ! RCM_lat is in descending order
               do iLat1 = 2, iSize
-                 if(rLat > RCM_lat(iLat1)) EXIT
+                 if(Lat > RCM_lat(iLat1)) EXIT
               end do
               iLat2 = iLat1-1
-              LatWeight1 = (rLat - RCM_lat(iLat2))/(RCM_lat(iLat1) - RCM_lat(iLat2))
+              LatWeight1 = (Lat - RCM_lat(iLat2))/(RCM_lat(iLat1) - RCM_lat(iLat2))
               LatWeight2 = 1 - LatWeight1
            else
               ! IM lat is in ascending order
               do iLat1 = 2, iSize
-                 if(rLat < RCM_lat(iLat1)) EXIT
+                 if(Lat < RCM_lat(iLat1)) EXIT
               end do
               iLat2 = iLat1-1
               LatWeight1 = &
-                   (rLat - RCM_lat(iLat2))/(RCM_lat(iLat1) - RCM_lat(iLat2))
+                   (Lat - RCM_lat(iLat2))/(RCM_lat(iLat1) - RCM_lat(iLat2))
               LatWeight2 = 1 - LatWeight1              
            endif
 
            ! Note: RCM_lon is in ascending order
-           if(rLon < RCM_lon(1)) then
+           if(Lon < RCM_lon(1)) then
               ! periodic before 1
               iLon1 = 1
               iLon2 = jSize
-              LonWeight1 =     (rLon           + 360 - RCM_lon(iLon2)) &
+              LonWeight1 =     (Lon           + 360 - RCM_lon(iLon2)) &
                    /           (RCM_lon(iLon1) + 360 - RCM_lon(iLon2))
-           elseif(rlon > RCM_lon(jSize)) then
+           elseif(Lon > RCM_lon(jSize)) then
               ! periodic after jSize
               iLon1 = 1
               iLon2 = jSize
-              LonWeight1 = (rLon                 - RCM_lon(iLon2)) &
+              LonWeight1 = (Lon                 - RCM_lon(iLon2)) &
                    /       (RCM_lon(iLon1) + 360 - RCM_lon(iLon2))
            else
               do iLon1 = 2, jSize
-                 if(rLon < RCM_lon(iLon1)) EXIT
+                 if(Lon < RCM_lon(iLon1)) EXIT
               end do
               iLon2 = iLon1-1
-              LonWeight1 = (rLon           - RCM_lon(iLon2)) &
+              LonWeight1 = (Lon           - RCM_lon(iLon2)) &
                    /       (RCM_lon(iLon1) - RCM_lon(iLon2))
            end if
            LonWeight2 = 1 - LonWeight1
