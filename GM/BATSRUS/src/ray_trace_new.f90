@@ -2673,7 +2673,7 @@ subroutine lcb_plot(iFile)
   use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, time_accurate, n_step
   use ModNumConst,       ONLY: cRadToDeg, cDegToRad
   use ModProcMH,         ONLY: iProc, iComm
-  use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, rBody
+  use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, UnitRho_, UnitP_, UnitB_, rBody
   use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
   use ModIO,             ONLY: StringDateOrTime, NamePlotDir, plot_range, plot_type
   use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII, InvB_,RhoInvB_,pInvB_
@@ -2706,7 +2706,8 @@ subroutine lcb_plot(iFile)
   SaveIntegrals=.false.
   if(index(plot_type(iFile),'int')>0) SaveIntegrals=.true.
 
-  RadiusIono = (6378.+100.)/6378.
+  !Use a value of 1. for these plots.
+  RadiusIono = 1.
   nTP=int( (rBody-RadiusIono)/.1 )
 
   if(.not.allocated(XyzPt_DI)) allocate(XyzPt_DI(3,nPts), zPt_I(nPts))
@@ -2792,9 +2793,9 @@ subroutine lcb_plot(iFile)
                           if(Map1 .and. Map2)then
                              iLC=k/2
                              jStart=iStart; jMid=iMid; jEnd=iEnd
-                             Integrals(1) = sum(RayResult_VII(   InvB_,:,iLC))
-                             Integrals(2) = sum(RayResult_VII(RhoInvB_,:,iLC))
-                             Integrals(3) = sum(RayResult_VII(  pInvB_,:,iLC))
+                             Integrals(1) = sum(RayResult_VII(   InvB_,:,iLC)) / No2Si_V(UnitB_)
+                             Integrals(2) = sum(RayResult_VII(RhoInvB_,:,iLC)) * No2Si_V(UnitRho_)
+                             Integrals(3) = sum(RayResult_VII(  pInvB_,:,iLC)) * No2Si_V(UnitP_)
                           end if
                        else
                           iEnd = iPoint-1
@@ -2923,7 +2924,7 @@ subroutine ieb_plot(iFile)
   use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, rBody
   use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
   use ModIO,             ONLY: StringDateOrTime, NamePlotDir
-  use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII
+  use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII, rIonosphere
   implicit none
 
   integer, intent(in) :: iFile
@@ -2957,7 +2958,8 @@ subroutine ieb_plot(iFile)
   do i=1,nLon
      IE_lon(i) = 10.*(i-1)
   end do
-  Radius = (6378.+100.)/6378.
+  !  Radius = (6378.+100.)/6378.
+  Radius = rIonosphere
   nTP=int( (rBody-Radius)/.1 )
 
   call integrate_ray_accurate(nLat, nLon, IE_lat, IE_lon, Radius, 'extract_I')
