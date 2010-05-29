@@ -8,7 +8,7 @@ module ModGmImCoupling
   use CON_coupler, ONLY: Grid_C, IM_, ncells_decomposition_d
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,n_step,nBlockMax,unusedBLK, DoMultiFluidIMCoupling
+  use ModMain, ONLY: nI,nJ,nK,n_step,nBlockMax,unusedBLK,DoMultiFluidIMCoupling
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModRaytrace, ONLY : ray,rayface
   use ModPhysics, ONLY: No2Si_V, Si2No_V, &
@@ -16,7 +16,7 @@ module ModGmImCoupling
        Bdp, DipoleStrengthSi, rCurrents, rBody
   implicit none
 
-  character (len=*), parameter :: NameMod='ModGmImCoupling'
+  character(len=*), parameter :: NameMod='ModGmImCoupling'
 
   ! IM Grid size
   integer :: nCells_D(2), iSize,jSize
@@ -29,20 +29,18 @@ module ModGmImCoupling
   real, save, dimension(:), allocatable :: &
        MHD_lat_boundary
   real, save, dimension(:,:), allocatable :: &
-       MHD_PE_vol,  MHD_SUM_vol, MHD_tmp, &
-       MHD_PE_rho,  MHD_SUM_rho, MHD_HpRho, MHD_OpRho, &
-       MHD_PE_p,    MHD_SUM_p, MHD_HpP, MHD_OpP, &
-       MHD_PE_Beq,  MHD_Beq, &
-       MHD_PE_Xeq,  MHD_Xeq, &
-       MHD_PE_Yeq,  MHD_Yeq, &
+       MHD_SUM_vol, MHD_tmp, &
+       MHD_SUM_rho, MHD_HpRho, MHD_OpRho, &
+       MHD_SUM_p, MHD_HpP, MHD_OpP, &
+       MHD_Beq, &
+       MHD_Xeq, &
+       MHD_Yeq, &
        MHD_Fluxerror
   real, parameter :: noValue=-99999.
   real :: eqB,xL,yL,zL
   real :: colat,Ci,Cs,FCiCs,factor,Vol,Ri,s2,s6,s8,factor1,factor2
 
   integer :: iError
-
-  logical :: dbg0=.false.
 
   integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6
 
@@ -60,16 +58,10 @@ contains
     character(len=*), parameter:: NameSub=NameMod//'::allocate_gm_im'
 
     if(allocated(MHD_lat_boundary)) deallocate(MHD_lat_boundary)
-    if(allocated(MHD_PE_vol))       deallocate(MHD_PE_vol)
     if(allocated(MHD_SUM_vol))      deallocate(MHD_SUM_vol)
-    if(allocated(MHD_PE_rho))       deallocate(MHD_PE_rho)
     if(allocated(MHD_SUM_rho))      deallocate(MHD_SUM_rho)
-    if(allocated(MHD_PE_p))         deallocate(MHD_PE_p)
     if(allocated(MHD_SUM_p))        deallocate(MHD_SUM_p)
     if(allocated(MHD_tmp))          deallocate(MHD_tmp)
-    if(allocated(MHD_PE_Beq))       deallocate(MHD_PE_Beq)
-    if(allocated(MHD_PE_Xeq))       deallocate(MHD_PE_Xeq)
-    if(allocated(MHD_PE_Yeq))       deallocate(MHD_PE_Yeq)
     if(allocated(MHD_Beq))          deallocate(MHD_Beq)
     if(allocated(MHD_Xeq))          deallocate(MHD_Xeq)
     if(allocated(MHD_Yeq))          deallocate(MHD_Yeq)
@@ -141,30 +133,6 @@ contains
     allocate( MHD_Yeq(isize,jsize), stat=iError )
     call alloc_check(iError,"MHD_Yeq")
     MHD_Yeq = 0.
-
-    allocate( MHD_PE_vol(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_PE_vol")
-    MHD_PE_vol = 0.
-
-    allocate( MHD_PE_rho(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_PE_rho")
-    MHD_PE_rho = 0.
-
-    allocate( MHD_PE_p(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_PE_p")
-    MHD_PE_p = 0.
-
-    allocate( MHD_PE_Beq(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_PE_Beq")
-    MHD_PE_Beq = noValue
-
-    allocate( MHD_PE_Xeq(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_PE_Xeq")
-    MHD_PE_Xeq = noValue
-
-    allocate( MHD_PE_Yeq(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_PE_Yeq")
-    MHD_PE_Yeq = noValue
 
     allocate( MHD_tmp(isize,jsize), stat=iError )
     call alloc_check(iError,"MHD_tmp")
@@ -308,10 +276,6 @@ contains
 
     integer :: iLoc_I(1),iEquator,iNorthPole
 
-    if(dbg0)then
-       if(iProc==0)write(*,*)' -D-'
-    end if
-
     if(.not.DoMultiFluidIMCoupling)then
        where(MHD_SUM_vol>0.)
           MHD_SUM_p   = MHD_SUM_p/MHD_SUM_vol
@@ -330,10 +294,6 @@ contains
 
     !Set volume floor
     MHD_SUM_vol = max(1.E-8,MHD_SUM_vol)
-
-    if(dbg0)then
-       if(iProc==0)write(*,*)' -E-'
-    end if
 
     ! If the field-line tracer returned a good value, we may need to
     ! add contribution to V from the part of the field line that
@@ -411,10 +371,6 @@ contains
        end if
     end do
 
-    if(dbg0)then
-       if(iProc==0)write(*,*)' -F-'
-    end if
-
     ! find index for latitude closest to equator
     iLoc_I   = minloc(abs(RCM_lat))
     iEquator = iLoc_I(1)
@@ -447,10 +403,6 @@ contains
 
     end do
 
-    if(dbg0)then
-       if(iProc==0)write(*,*)' -H-'
-    end if
-
     ! Set impossible values for open fieldlines
     ! except for Xeq and Yeq where the last closed values are used
     ! which is useful when the equatorial grid is plotted
@@ -474,8 +426,13 @@ contains
        endif
     end do
 
+    ! Dimensionalize values
+    ! Note: dimensions of "MHD_sum_vol" is Distance/Magnetic field.
+    ! The distance unit is planetary radius in GM, and the same is
+    ! used in RCM, so only the magnetic unit is converted to SI units.
+    ! Similarly Xeq and Yeq (equatorial crossing coords) remain in 
+    ! normalized units.
     if(.not. DoMultiFluidIMCoupling)then
-       !dimensionalize values
        where(MHD_SUM_vol > 0.)
           MHD_SUM_vol = MHD_SUM_vol / No2Si_V(UnitB_)
           MHD_SUM_rho = MHD_SUM_rho * No2Si_V(UnitRho_)
@@ -511,10 +468,6 @@ contains
        MHD_Beq = -1.
     end where
 
-    if(dbg0)then
-       if(iProc==0)write(*,*)' -I-'
-    end if
-
     if(DoTestTec .or. DoTestIdl)then
        do j=1,jsize-1; do i=1,isize-1
           if ( MHD_SUM_vol(i  ,j) > 0.0 .AND. &
@@ -541,9 +494,6 @@ contains
        end do; end do
        MHD_fluxerror(:,jsize) = MHD_Fluxerror (:,1)
        MHD_fluxerror(isize,:) = MHD_FLuxerror(isize-1,:)
-    end if
-    if(dbg0)then
-       if(iProc==0)write(*,*)' -J-'
     end if
 
   end subroutine process_integrated_data
