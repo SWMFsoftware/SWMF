@@ -1,15 +1,20 @@
-Module ModCrcmPlot
+module ModCrcmPlot
+
   implicit none
+
   private ! except
   public :: Crcm_plot
   character(len=5),  public    :: TypePlot   = 'ascii'
   logical,           public    :: DoSavePlot = .false.
-  real,              public    :: DtOutput = 10.0
-  character(len=17), parameter :: NameHeader = 'CRCM output_var11'  
+  real,              public    :: DtOutput   = 10.0
+
+  character(len=*), parameter :: NameHeader = 'CRCM output'
+
 contains
-  !=============================================================================
+  !============================================================================
   subroutine Crcm_plot(nLat,nLon, X_C,Y_C,Pressure_IC,PressureHot_IC,Den_IC, &
        Beq_C,Volume_C,Potential_C,FAC_C,Time,Dt)
+
     use ModIoUnit,     ONLY: UnitTmp_
     use ModPlotFile,   ONLY: save_plot_file
     use ModCrcmRestart, ONLY: IsRestart
@@ -28,16 +33,16 @@ contains
     real, allocatable   :: CoordIono_DII(:,:,:)
     integer             :: iLat,iLon,iSpecies
     integer, parameter  :: x_=1, y_=2, nDim=2
-    real                :: theta, phi
+    real                :: Theta, Phi
     character(len=20)   :: NamePlotEq  = 'IM/plots/CRCMeq.outs'
     character(len=22)   :: NamePlotIono= 'IM/plots/CRCMiono.outs'
-!    character(len=79), parameter :: NamePlotVar='x y P[nP] Phot[nP] n[/m3] Beq[T] Vol[m3/Wb] Pot[Volts] FAC[Amp/m2] g'
-    real, parameter              :: gamma = 1.66666666666667
-    logical, save                :: IsFirstCall = .true.
+    character(len=6)    :: TypePosition  ! 'rewind' or 'append'
+    real, parameter     :: Gamma = 5./3.
+    logical             :: IsFirstCall = .true.
     !--------------------------------------------------------------------------
     
-    allocate(Coord_DII(nDim,nLat,nLon+1), CoordIono_DII(nDim,nLat,nLon+1),&
-             PlotState_IIV(nLat,nLon+1,nVar))
+    allocate(Coord_DII(nDim,nLat,nLon+1), CoordIono_DII(nDim,nLat,nLon+1), &
+         PlotState_IIV(nLat,nLon+1,nVar))
 
     PlotState_IIV = 0.0
 
@@ -102,52 +107,27 @@ contains
     PlotState_IIV(:,nLon+1,Pot_) = Potential_C(:,1)    
     PlotState_IIV(:,nLon+1,FAC_) = FAC_C(:,1)    
 
+    TypePosition = 'append'
+    if(IsFirstCall .and. .not. IsRestart) TypePosition = 'rewind'
+    IsFirstCall = .false.
 
-    !write plot
-    if (IsRestart) then
-       !eq plot
-       call save_plot_file(NamePlotEq, TypePositionIn='append',              &
-            TypeFileIn=TypePlot,StringHeaderIn = NameHeader,                 &
-            NameVarIn = NamePlotVar, nStepIn= nint(Time/Dt),TimeIn=Time,     &
-            nDimIn=2,CoordIn_DII=Coord_DII,                                  &
-            VarIn_IIV = PlotState_IIV, ParamIn_I = (/gamma/))
-       ! iono plot
-       call save_plot_file(NamePlotIono, TypePositionIn='append',              &
-            TypeFileIn=TypePlot,StringHeaderIn = NameHeader,                 &
-            NameVarIn = NamePlotVar, nStepIn= nint(Time/Dt),TimeIn=Time,     &
-            nDimIn=2,CoordIn_DII=CoordIono_DII,                              &
-            VarIn_IIV = PlotState_IIV, ParamIn_I = (/gamma/))
-    else
-       if(IsFirstCall) then
-          !eq plot
-          call save_plot_file(NamePlotEq, TypePositionIn='rewind',           &
-               TypeFileIn=TypePlot,StringHeaderIn = NameHeader,              &
-               NameVarIn = NamePlotVar, nStepIn= nint(Time/Dt),TimeIn=Time,  &
-               nDimIn=2,CoordIn_DII=Coord_DII,                               &
-               VarIn_IIV = PlotState_IIV, ParamIn_I = (/gamma/))
-          !iono plot
-          call save_plot_file(NamePlotIono, TypePositionIn='rewind',           &
-               TypeFileIn=TypePlot,StringHeaderIn = NameHeader,              &
-               NameVarIn = NamePlotVar, nStepIn= nint(Time/Dt),TimeIn=Time,  &
-               nDimIn=2,CoordIn_DII=CoordIono_DII,                           &
-               VarIn_IIV = PlotState_IIV, ParamIn_I = (/gamma/))
-          IsFirstCall = .false.
-       else
-          ! eq plot
-          call save_plot_file(NamePlotEq, TypePositionIn='append',           &
-               TypeFileIn=TypePlot,StringHeaderIn = NameHeader,              &
-               NameVarIn = NamePlotVar, nStepIn= nint(Time/Dt),TimeIn=Time,  &
-               nDimIn=2,CoordIn_DII=Coord_DII,                               &
-               VarIn_IIV = PlotState_IIV, ParamIn_I = (/gamma/))
-          !iono plot
-          call save_plot_file(NamePlotIono, TypePositionIn='append',           &
-               TypeFileIn=TypePlot,StringHeaderIn = NameHeader,              &
-               NameVarIn = NamePlotVar, nStepIn= nint(Time/Dt),TimeIn=Time,  &
-               nDimIn=2,CoordIn_DII=CoordIono_DII,                           &
-               VarIn_IIV = PlotState_IIV, ParamIn_I = (/gamma/))
-          end if
-    end if
+    !equatorial plot
+    call save_plot_file(NamePlotEq, TypePositionIn=TypePosition,          &
+         TypeFileIn=TypePlot,StringHeaderIn = NameHeader,                 &
+         NameVarIn = NamePlotVar, nStepIn= nint(Time/Dt),TimeIn=Time,     &
+         nDimIn=2,CoordIn_DII=Coord_DII,                                  &
+         VarIn_IIV = PlotState_IIV, ParamIn_I = (/Gamma/))
+
+    ! ionospheric plot
+    call save_plot_file(NamePlotIono, TypePositionIn=TypePosition,        &
+         TypeFileIn=TypePlot,StringHeaderIn = NameHeader,                 &
+         NameVarIn = NamePlotVar, nStepIn= nint(Time/Dt),TimeIn=Time,     &
+         nDimIn=2,CoordIn_DII=CoordIono_DII,                              &
+         VarIn_IIV = PlotState_IIV, ParamIn_I = (/Gamma/))
     
-    deallocate(Coord_DII,CoordIono_DII, PlotState_IIV)
+    deallocate(Coord_DII, CoordIono_DII, PlotState_IIV)
+
   end subroutine Crcm_plot
-end Module ModCrcmPlot
+
+end module ModCrcmPlot
+
