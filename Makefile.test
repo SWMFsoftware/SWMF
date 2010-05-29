@@ -254,23 +254,23 @@ test2_check:
 test3:
 	@echo "test3_compile..." > test3_gm.diff
 	@echo "test3_compile..." > test3_ie.diff
-	@echo "test3_compile..." > test3_im.diff
+	@echo "test3_compile..." > test3_im_rcm.diff
 	make test3_compile
 	@echo "test3_rundir..." >> test3_gm.diff
 	@echo "test3_rundir..." >> test3_ie.diff
-	@echo "test3_rundir..." >> test3_im.diff
+	@echo "test3_rundir..." >> test3_im_rcm.diff
 	make test3_rundir
 	@echo "test3_run..." >> test3_gm.diff
 	@echo "test3_run..." >> test3_ie.diff
-	@echo "test3_run..." >> test3_im.diff
+	@echo "test3_run..." >> test3_im_rcm.diff
 	make test3_run
 	@echo "test3_restart..." >> test3_gm.diff
 	@echo "test3_restart..." >> test3_ie.diff
-	@echo "test3_restart..." >> test3_im.diff
+	@echo "test3_restart..." >> test3_im_rcm.diff
 	make test3_restart
 	@echo "test3_check..." >> test3_gm.diff
 	@echo "test3_check..." >> test3_ie.diff
-	@echo "test3_check..." >> test3_im.diff
+	@echo "test3_check..." >> test3_im_rcm.diff
 	make test3_check
 
 test3_compile:
@@ -317,27 +317,27 @@ test3_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/IM/t20.txt \
 		${TESTDIR}/RESULTS/IM/t20.dat \
-		> test3_im.diff)
+		> test3_im_rcm.diff)
 	ls -l test3*.diff
 
 ### Test4: GM+RIM+HEIDI ###############
 
 test4:
 	@echo "test4_compile..." > test4_gm.diff
-	@echo "test4_compile..." > test4_ie.diff
-	@echo "test4_compile..." > test4_im.diff
+	@echo "test4_compile..." > test4_ie_rim.diff
+	@echo "test4_compile..." > test4_im_heidi.diff
 	make test4_compile
 	@echo "test4_rundir..." >> test4_gm.diff
-	@echo "test4_rundir..." >> test4_ie.diff
-	@echo "test4_rundir..." >> test4_im.diff
+	@echo "test4_rundir..." >> test4_ie_rim.diff
+	@echo "test4_rundir..." >> test4_im_heidi.diff
 	make test4_rundir
 	@echo "test4_run..." >> test4_gm.diff
-	@echo "test4_run..." >> test4_ie.diff
-	@echo "test4_run..." >> test4_im.diff
+	@echo "test4_run..." >> test4_ie_rim.diff
+	@echo "test4_run..." >> test4_im_heidi.diff
 	make test4_run
 	@echo "test4_check..." >> test4_gm.diff
-	@echo "test4_check..." >> test4_ie.diff
-	@echo "test4_check..." >> test4_im.diff
+	@echo "test4_check..." >> test4_ie_rim.diff
+	@echo "test4_check..." >> test4_im_heidi.diff
 	make test4_check
 
 test4_compile:
@@ -363,11 +363,11 @@ test4_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -t -r=1e-6 \
 		${TESTDIR}/RESULTS/IE/IE.log \
 		output/test4/IE.log \
-		> test4_ie.diff)
+		> test4_ie_rim.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -t -a=1e-8 -r=1e-30 \
                 ${TESTDIR}/RESULTS/IM/hydrogen/test1_h_prs.002 \
                 output/test4/IM_test1_h_prs.002\
-                > test4_im.diff)
+                > test4_im_heidi.diff)
 	ls -l test4*.diff
 
 ### test5: Lower Corona test to be extended to LC+SC+IH###
