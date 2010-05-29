@@ -2729,7 +2729,7 @@ subroutine lcb_plot(iFile)
      open( UnitTmp_, FILE=trim(FileName), STATUS="replace")
      write(UnitTmp_,'(a)')'TITLE="IE B traces (GM Coordinates)"'
      if(SaveIntegrals)then
-        write(UnitTmp_,'(a)')'VARIABLES="X [R]", "Y [R]", "Z [R]", "1/B", "n/B", "p/B"'
+        write(UnitTmp_,'(a)')'VARIABLES="X [R]", "Y [R]", "Z [R]", "1/B", "n", "p"'
      else
         write(UnitTmp_,'(a)')'VARIABLES="X [R]", "Y [R]", "Z [R]"'
      end if
@@ -2793,9 +2793,14 @@ subroutine lcb_plot(iFile)
                           if(Map1 .and. Map2)then
                              iLC=k/2
                              jStart=iStart; jMid=iMid; jEnd=iEnd
-                             Integrals(1) = sum(RayResult_VII(   InvB_,:,iLC)) / No2Si_V(UnitB_)
-                             Integrals(2) = sum(RayResult_VII(RhoInvB_,:,iLC)) * No2Si_V(UnitRho_)
-                             Integrals(3) = sum(RayResult_VII(  pInvB_,:,iLC)) * No2Si_V(UnitP_)
+                             Integrals(1) = &
+                                  sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitX_)/No2Si_V(UnitB_)
+                             Integrals(2) = &
+                                  sum(RayResult_VII(RhoInvB_,:,iLC))/ &
+                                  sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitRho_)
+                             Integrals(3) = &
+                                  sum(RayResult_VII(  pInvB_,:,iLC))/ &
+                                  sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitP_)
                           end if
                        else
                           iEnd = iPoint-1
@@ -2826,9 +2831,14 @@ subroutine lcb_plot(iFile)
                     if(Map1 .and. Map2)then
                        iLC=k/2
                        jStart=iStart; jMid=iMid; jEnd=iEnd
-                       Integrals(1) = sum(RayResult_VII(   InvB_,:,iLC))
-                       Integrals(2) = sum(RayResult_VII(RhoInvB_,:,iLC))
-                       Integrals(3) = sum(RayResult_VII(  pInvB_,:,iLC))
+                       Integrals(1) = &
+                            sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitX_)/No2Si_V(UnitB_)
+                       Integrals(2) = &
+                            sum(RayResult_VII(RhoInvB_,:,iLC))/ &
+                            sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitRho_)
+                       Integrals(3) = &
+                            sum(RayResult_VII(  pInvB_,:,iLC))/ &
+                            sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitP_)
                     end if
                  end if
 
@@ -2924,7 +2934,7 @@ subroutine ieb_plot(iFile)
   use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, rBody
   use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
   use ModIO,             ONLY: StringDateOrTime, NamePlotDir
-  use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII, rIonosphere
+  use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII
   implicit none
 
   integer, intent(in) :: iFile
@@ -2958,8 +2968,7 @@ subroutine ieb_plot(iFile)
   do i=1,nLon
      IE_lon(i) = 10.*(i-1)
   end do
-  !  Radius = (6378.+100.)/6378.
-  Radius = rIonosphere
+  Radius = (6378.+100.)/6378.
   nTP=int( (rBody-Radius)/.1 )
 
   call integrate_ray_accurate(nLat, nLon, IE_lat, IE_lon, Radius, 'extract_I')

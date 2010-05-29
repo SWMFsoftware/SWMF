@@ -55,7 +55,7 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
        InvB_, RhoInvB_, pInvB_, xEnd_, yEnd_, zEnd_, CLOSEDRAY, GmSm_DD
   use ModNumConst, ONLY: cRadToDeg, cDegToRad
   use ModProcMH,         ONLY: iProc, iComm
-  use ModPhysics, ONLY: No2Si_V, UnitP_, UnitRho_, UnitB_,rCurrents, UnitJ_
+  use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_,rCurrents, UnitJ_
   use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
   implicit none
 
@@ -133,9 +133,9 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
            RayResult_VII(rhoInvB_,:,:) = 0.
            RayResult_VII(  pInvB_,:,:) = 0.
         end where
-        Buffer_IIV(:,:,2) = RayResult_VII(   InvB_,:,:) / No2Si_V(UnitB_)
-        Buffer_IIV(:,:,3) = RayResult_VII(rhoInvB_,:,:) * No2Si_V(UnitRho_)
-        Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
+        Buffer_IIV(:,:,2) = RayResult_VII(   InvB_,:,:) * No2Si_V(UnitX_)/No2Si_V(UnitB_)
+        Buffer_IIV(:,:,3) = RayResult_VII(rhoInvB_,:,:)/RayResult_VII(InvB_,:,:) * No2Si_V(UnitRho_)
+        Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:)/RayResult_VII(InvB_,:,:) * No2Si_V(UnitP_)
 
         ! Transformation matrix from default (GM) to SM coordinates
         GmSm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
