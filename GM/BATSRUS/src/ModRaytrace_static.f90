@@ -86,8 +86,7 @@ module ModRaytrace
   logical :: oktest_ray=.false.
 
   ! Constants to distinguish various ray types
-  !    (6378.+100.)/6378. = 1.015678896
-  real, parameter :: rIonosphere = 1.015678896, rIonosphere2 = rIonosphere**2
+  real, parameter :: rIonosphere = 1.0, rIonosphere2 = rIonosphere**2
   real, parameter :: &
        CLOSEDRAY= -(rIonosphere + 0.05), &
        OPENRAY  = -(rIonosphere + 0.1), &
