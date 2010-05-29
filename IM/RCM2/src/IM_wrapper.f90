@@ -472,7 +472,9 @@ subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
      end if
   end if
   vm(1:isize,1:jsize)   = Buffer_IIV(:,:,vol_)
-  ! Convert GM volume into IM volume variable. Change units (m -> km) first
+  ! Convert GM volume into IM volume variable. The "volume" is int(dl/B), so
+  ! it has units of Distance/MagneticField. Distance is in planetary radius
+  ! in GM as well as in RCM. Magnetic field comes in SI units, RCM needs nT:
   vm(1:isize,1:jsize) = vm(1:isize,1:jsize) / 1.0e+9
   where(vm(1:isize,1:jsize)>0.) &
        vm(1:isize,1:jsize)=vm(1:isize,1:jsize)**(-2./3.) 
