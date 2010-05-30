@@ -670,25 +670,25 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            zN = Xyz_VIII(3, nStep - nStepInside, iR, iT)
                       
 
-           write(*,*) 'iT,iR', iT, iR
-           write(*,*) 'xS', xS
-           write(*,*) 'yS', yS
-           write(*,*)' zS', zS
-
-           write(*,*) 'xN', xN
-           write(*,*) 'yN', yN
-           write(*,*)' zN', zN
-           write(*,*) '#######################'
+           !write(*,*) 'iT,iR', iT, iR
+           !write(*,*) 'xS', xS
+           !write(*,*) 'yS', yS
+           !write(*,*) 'zS', zS
+           !
+           !write(*,*) 'xN', xN
+           !write(*,*) 'yN', yN
+           !write(*,*) 'zN', zN
+           !write(*,*) '#######################'
 
            if (xS == 0.0) xS =  xN
            if (yS == 0.0) yS =  yN
            if (zS == 0.0) xS = -zN
 
            LatBoundaryS = -atan(zS/(sqrt(xS**2 + yS**2)))
-           write(*,*) 'LatBoundaryS', LatBoundaryS
+           !write(*,*) 'LatBoundaryS', LatBoundaryS
 
            LatBoundaryN = atan(zN/(sqrt(xN**2 + yN**2)))
-           write(*,*) 'LatBoundaryN', LatBoundaryN 
+           !write(*,*) 'LatBoundaryN', LatBoundaryN 
 
            call fill_dipole_north(nStepInside, LZ(iR), Phi(iT), LatBoundaryN, XyzDipoleN_VI, bDipoleN_VI,&
                 bDipoleMagnN_I, sDipoleN_I, rDipoleN_I)
