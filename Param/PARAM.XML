@@ -566,31 +566,38 @@ The default is DnRun = 1 for all the active components.
 	<for name="iCouple" from="1" to="$nCouple">
 		<parameter name="NameSourceTarget" type="string"
 							input="select">
-			<option name="SC IH" default="$iCouple==1" />
-			<option name="IH SC" default="$iCouple==2" />
-			<option name="SC SP" default="$iCouple==3" />
-			<option name="IH SP" default="$iCouple==4" />
-			<option name="IH GM" default="$iCouple==5" />
-                        <option name="GM IE" default="$iCouple==6" />
-                        <option name="GM IM" default="$iCouple==7" />
-			<option name="GM PW" default="$iCouple==8" />
-                        <option name="GM RB" default="$iCouple==9" />
-                        <option name="UA IE" default="$iCouple==10" />
-                        <option name="IE IM" default="$iCouple==11" />
-                        <option name="IM GM" default="$iCouple==12" />
-			<option name="PW GM" default="$iCouple==13" />
-                        <option name="IE UA" default="$iCouple==14" />
-                        <option name="IE GM" default="$iCouple==15" />
-			<option name="IE PW" default="$iCouple==16" />
-			<option name="IE PS" default="$iCouple==17" />
-			<option name="IE RB" default="$iCouple==18" />
-			<option name="IH OH" default="$iCouple==19" />
-			<option name="OH IH" default="$iCouple==20" />
+			<option name="LC SC" default="$iCouple==1" />
+			<option name="SC LC" default="$iCouple==2" />
+			<option name="SC IH" default="$iCouple==3" />
+			<option name="IH SC" default="$iCouple==4" />
+			<option name="SC SP" default="$iCouple==5" />
+			<option name="IH SP" default="$iCouple==6" />
+			<option name="IH GM" default="$iCouple==7" />
+                        <option name="GM IE" default="$iCouple==8" />
+                        <option name="GM IM" default="$iCouple==9" />
+			<option name="GM PW" default="$iCouple==10" />
+                        <option name="GM RB" default="$iCouple==11" />
+                        <option name="UA IE" default="$iCouple==12" />
+                        <option name="UA LA" default="$iCouple==13" />
+                        <option name="LA UA" default="$iCouple==14" />
+                        <option name="IM GM" default="$iCouple==15" />
+                        <option name="IM IE" default="$iCouple==16" />
+			<option name="PW GM" default="$iCouple==17" />
+                        <option name="IE GM" default="$iCouple==18" />
+                        <option name="IE IM" default="$iCouple==19" />
+			<option name="IE PW" default="$iCouple==20" />
+			<option name="IE PS" default="$iCouple==21" />
+			<option name="IE RB" default="$iCouple==22" />
+                        <option name="IE UA" default="$iCouple==23" />
+			<option name="IH OH" default="$iCouple==24" />
+			<option name="OH IH" default="$iCouple==25" />
 		</parameter>
 	</for>
 
 #COUPLEORDER
-20                nCouple
+25                nCouple
+LC SC             NameSourceTarget
+SC LC             NameSourceTarget
 SC IH             NameSourceTarget
 IH SC             NameSourceTarget
 SC SP             NameSourceTarget
@@ -601,14 +608,17 @@ GM IM             NameSourceTarget
 GM PW             NameSourceTarget
 GM RB             NameSourceTarget
 UA IE             NameSourceTarget
-IE IM             NameSourceTarget
+UA LA             NameSourceTarget
+LA UA             NameSourceTarget
 IM GM             NameSourceTarget
+IM IE             NameSourceTarget
 PW GM             NameSourceTarget
-IE UA             NameSourceTarget
 IE GM             NameSourceTarget
+IE IM             NameSourceTarget
 IE PW             NameSourceTarget
 IE PS             NameSourceTarget
 IE RB             NameSourceTarget
+IE UA             NameSourceTarget
 IH OH             NameSourceTarget
 OH IH             NameSourceTarget
 
@@ -618,11 +628,38 @@ two-character ID for the source and target components separated by
 spaces. The order of the couplings is most important for the
 couplings done at the beginning of the session. Some components need
 to get information from the others before they can initialize properly.
+For example IM gets information from GM. 
 
-The default coupling order is shown above. It is based on the propagation 
-of information from component to component.
+With respect coupling between IE and the other components 
+there are two strategies:
+
+1. All components send information to IE first, then IE solves for the potential,
+   and sends info back to all the other components.
+
+2. IE sends information based on its current state first, then receives info
+   from the other components, and solves for the potential in parallel with the
+   other components.
+
+The default coupling order shown above follows the first strategy. In this case
+IE runs in a serial mode, so it should share processors with one of the 
+components that are coupled to IE. 
+
+The second strategy leads to parallel execution IF the layout puts IE on a processor
+that is NOT shared with the slowest of the components (typically GM, sometimes IM). 
+To use the second strategy it is simplest to add the
+
+#INCLUDE
+Param/CoupleOrderFast
+
+command into the PARAM.in file. The Param/CoupleOrderFast contains the 
+coupling order that allows parallel execution of IE.
+
+NOTE: The #COUPLEORDER command defines only the order of the couplings, 
+so it can list couplings that are not active in a run. 
 
 NOTE: The order of the 'SC SP' and 'IH SP' couplings should not be reversed!
+
+The default coupling order is shown above. 
 </command>
 
 <command name="COUPLE1" multiple="T">

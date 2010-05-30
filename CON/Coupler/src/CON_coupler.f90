@@ -75,15 +75,15 @@ module CON_coupler
        UA_, IE_, &
        UA_, LA_, &
        LA_, UA_, &
-       IE_, IM_, &
        IM_, GM_, &
        IM_, IE_, &
        PW_, GM_, &
-       IE_, UA_, &
        IE_, GM_, &
+       IE_, IM_, &
        IE_, PW_, &
        IE_, PS_, &
        IE_, RB_, &
+       IE_, UA_, &
        IH_, OH_, &
        OH_, IH_  &
        /), (/2, MaxCouple/) )
