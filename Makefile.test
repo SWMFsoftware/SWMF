@@ -420,9 +420,9 @@ test6:
 	@echo "test6_run..." >> test6_ie.diff
 	@echo "test6_run..." >> test6_im_crcm.diff
 	make test6_run
-	@echo "test6_check..." >> test6_gm.diff
-	@echo "test6_check..." >> test6_ie.diff
-	@echo "test6_check..." >> test6_im_crcm.diff
+	@echo "test6_restart..." >> test6_gm.diff
+	@echo "test6_restart..." >> test6_ie.diff
+	@echo "test6_restart..." >> test6_im_crcm.diff
 	make test6_restart
 	@echo "test6_check..." >> test6_gm.diff
 	@echo "test6_check..." >> test6_ie.diff
@@ -448,7 +448,7 @@ test6_run:
 test6_restart:
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIEIMCRCM PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}/IE/ionosphere; tail -12 IE.log >> IE_all.log
+	cd ${TESTDIR}/IE/ionosphere; tail -6 IE.log >> IE_all.log
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
 
 # check last snapshot from CRCM output
@@ -458,7 +458,7 @@ test6_check:
 		output/test6/GM.log \
 		> test6_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IE/IE.log \
+		${TESTDIR}/RESULTS/IE/IE_all.log \
 		output/test6/IE.log \
 		> test6_ie.diff)
 	tail -2504 ${TESTDIR}/RESULTS/IM/CRCMeq.outs \
