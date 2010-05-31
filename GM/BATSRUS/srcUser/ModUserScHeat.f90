@@ -1,6 +1,14 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
 module ModLdem
+
+  ! Reads the 3D LDEM (local differential emission measure) moments.
+  ! Currently, only the lowest measured layer is used (usely at 1.035 Rsun)
+  ! The rejected data points (negative data) are filled in by interpolation
+  ! using the Delaunay triangulation. The resulting boundary electron density
+  ! and mean electron temperature can be used as boundary condition for the
+  ! solar wind.
+
   implicit none
   save
 
@@ -207,8 +215,8 @@ module ModUser
   include 'user_module.h' !list of public methods
 
   real, parameter :: VersionUserModule = 1.0
-  character (len=*), parameter :: &
-       NameUserModule = 'Global Corona'
+  character (len=*), parameter :: NameUserModule = &
+       'Two-temperature solar wind with Alfven waves - van der Holst'
 
   logical ::  UseWaveDissipation = .false.
   real :: DissipationScaleFactorSi  ! unit = m*T^0.5
@@ -224,6 +232,9 @@ module ModUser
   logical :: IsNewBlockTe_B(MaxBlock) = .true.
   real :: HeatCondPar
   real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+  real :: VAlfvenMin = 1.0e5  !100 km/s
+  real :: RhoVAt1AU = 5.4e-15 !kg/(m2*s)
+
 
 contains
 
@@ -268,7 +279,11 @@ contains
           call read_var('NameLdemFile', NameLdemFile)
 
        case('#BERNOULLI')
+          ! It is not advised to use the time-dependent heat flux in the
+          ! Bernoulli function.
           call read_var('UseHeatFluxInBernoulli', UseHeatFluxInBernoulli)
+          call read_var('VAlfvenMin', VAlfvenMin)
+          call read_var('RhoVAt1AU', RhoVAt1AU)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -496,13 +511,11 @@ contains
     real, intent(in) :: x, y, z, Br, HeatFlux
     real, intent(out):: Ewave
 
-    real :: ExpansionFactorInv, Uf, dTedr, DeltaU
+    real :: ExpansionFactorInv, Uf, Uratio, dTedr, DeltaU
     real :: RhoBase, Tbase, VAlfvenSi, TbaseSi, HeatFluxSi, WaveEnergyDensSi
 
-    real, parameter :: RhoVAt1AU = 5.4e-15 !kg/(m2*s)
+    real :: RhoV
     real, parameter :: AreaRatio = (cAU/rSun)**2
-    real, parameter :: RhoV =  AreaRatio * RhoVAt1AU
-    real, parameter :: VAlfvenMin = 1.0e5  !100 km/s
     !--------------------------------------------------------------------------
 
     ! Inverse expansion factor
@@ -512,6 +525,9 @@ contains
     call get_interpolated(ExpansionFactorInv_N, x, y, z, ExpansionFactorInv)
 
     Ewave = 0.0
+
+    ! Closed field line regions can not support Alfven wave solutions
+    ! (of the infinite domain)
     if(ExpansionFactorInv < 1e-3) RETURN
 
     if(DeltaUSi > cTolerance)then
@@ -522,13 +538,15 @@ contains
        Ewave = (DeltaBPerB*Br)**2
     else
 
+       RhoV =  AreaRatio * RhoVAt1AU
+
        call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
        VAlfvenSi = (Br/sqrt(RhoBase))*No2Si_V(UnitU_)
        TbaseSi = Tbase*No2Si_V(UnitTemperature_)
 
        !v_\infty from WSA model:
        call get_bernoulli_integral(x, y, z, Uf)
-
+       Uratio = Uf/Umin
        if(UseHeatFluxInBernoulli)then
           HeatFluxSi = HeatFlux*No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
        else
@@ -538,7 +556,10 @@ contains
                *No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
        end if
 
-       WaveEnergyDensSi = (RhoV*(0.5*Uf**2 + cSunGravitySi - g*inv_gm1*&
+       ! divide RhoV by Uratio since RhoV is generally smaller away from
+       ! the current sheet
+       WaveEnergyDensSi = (RhoV/Uratio/rBody**2*(0.5*Uf**2 &
+            + cSunGravitySi/rBody - g*inv_gm1*&
             cBoltzmann/(cProtonMass*MassIon_I(1))*(1.0+AverageIonCharge) &
             *TbaseSi) - ExpansionFactorInv*HeatFluxSi) &
             /max(abs(VAlfvenSi)*ExpansionFactorInv, VAlfvenMin)
@@ -1075,7 +1096,8 @@ contains
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
          iSide, iFace, jFace, kFace
-    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK, UseB0
+    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK, UseB0, &
+         UseHeatConduction
     use ModMultiFluid,  ONLY: MassIon_I
     use ModPhysics,     ONLY: OmegaBody, AverageIonCharge
     use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, &
@@ -1092,19 +1114,21 @@ contains
     Runit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
 
     U_D   = VarsTrueFace_V(Ux_:Uz_)
-    B1_D  = VarsTrueFace_V(Bx_:Bz_)
-    B1r_D = sum(Runit_D*B1_D)*Runit_D
-    B1t_D = B1_D - B1r_D
-
     VarsGhostFace_V(Ux_:Uz_) = -U_D
 
     if(UseB0)then
+       B1_D  = VarsTrueFace_V(Bx_:Bz_)
+       B1r_D = sum(Runit_D*B1_D)*Runit_D
+       B1t_D = B1_D - B1r_D
        VarsGhostFace_V(Bx_:Bz_) = B1t_D !- B1r_D
        FullB_D = B0Face_D + B1t_D
     else
        call get_coronal_b0(FaceCoords_D(x_), FaceCoords_D(y_), &
             FaceCoords_D(z_), B0_D)
-       VarsGhostFace_V(Bx_:Bz_) = B1t_D + sum(Runit_D*B0_D)*Runit_D
+       B1_D  = VarsTrueFace_V(Bx_:Bz_) - B0_D
+       B1r_D = sum(Runit_D*B1_D)*Runit_D
+       B1t_D = B1_D - B1r_D
+       VarsGhostFace_V(Bx_:Bz_) = B1t_D + B0_D
        FullB_D = VarsGhostFace_V(Bx_:Bz_)
     end if
     FullBr = sum(Runit_D*FullB_D)
@@ -1115,10 +1139,15 @@ contains
     NumDensIon = VarsGhostFace_V(Rho_)/MassIon_I(1)
     NumDensElectron = NumDensIon*AverageIonCharge
     if(UseElectronPressure)then
-       VarsGhostFace_V(p_) = NumDensIon*Tbase
+       VarsGhostFace_V(p_) = max(NumDensIon*Tbase, VarsTrueFace_V(p_))
        VarsGhostFace_V(Pe_) = NumDensElectron*Tbase
     else
-       VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Tbase
+       if(UseHeatConduction)then
+          VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Tbase
+       else
+          VarsGhostFace_V(p_) = &
+               max((NumDensIon + NumDensElectron)*Tbase, VarsTrueFace_V(p_))
+       end if
     end if
 
     ! Contribution of the heat flux on Bernoulli equation
