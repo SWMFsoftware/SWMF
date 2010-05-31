@@ -27,15 +27,14 @@ test_help:
 test:
 	@rm -f *.diff
 	-@(make test_comp)
+	-@(make test_lc)
 	-@(make test_pw)
 	-@(make test_rb)
 	-@(make test_esmf)
 	-@(make test1)
 	-@(make test2)
 	-@(make test3)
-	-@(make test4)
 	-@(make test6)
-	-@(make test_lc)
 	-@(make test_check)
 
 test_check:
