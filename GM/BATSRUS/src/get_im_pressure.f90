@@ -250,8 +250,9 @@ subroutine apply_im_pressure
 
   use ModMain,    ONLY: nI, nJ, nK, nBlock, iNewGrid, TauCoupleIm, &
        time_accurate, Dt, DoCoupleImPressure,DoCoupleImDensity, unusedBLK
-  use ModAdvance, ONLY: State_VGB, Energy_GBI, &
-       Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_
+  use ModAdvance, ONLY: State_VGB, Energy_GBI, UseAnisoPressure
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_, &
+       Ppar_
   use ModPhysics, ONLY: Si2No_V, UnitT_, inv_gm1
   use ModImPressure
   use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
@@ -352,6 +353,14 @@ subroutine apply_im_pressure
                    * (pIm_CD(iFluid,:,:,:) - &
                    State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock))
            end do
+           if(UseAnisoPressure)then
+              where(pIm_CD(1,:,:,:) > 0.0) &
+                   State_VGB(Ppar_,1:nI,1:nJ,1:nK,iBlock) = &
+                   State_VGB(Ppar_,1:nI,1:nJ,1:nK,iBlock)   &
+                   + min(1.0, Factor * Dt) * TauCoeffIm_C &
+                   * (pIm_CD(1,:,:,:) - &
+                   State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock))
+           end if
         end if
         if(DoCoupleImDensity)then
            do iFluid = 1, nIons
@@ -368,10 +377,18 @@ subroutine apply_im_pressure
            do iFluid = 1, nIons
               where(pIm_CD(iFluid,:,:,:) > 0.0) &
                    State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock) = Factor* &
-                   (TauCoupleIM*State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock) + &
+                   (TauCoupleIM*State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock)+&
                    pIm_CD(iFluid,:,:,:))
            end do
         end if
+        if(UseAnisoPressure)then
+           where(pIm_CD(1,:,:,:) > 0.0) &
+                State_VGB(Ppar_,1:nI,1:nJ,1:nK,iBlock) = Factor* &
+                (TauCoupleIM*State_VGB(Ppar_,1:nI,1:nJ,1:nK,iBlock) + &
+                pIm_CD(1,:,:,:))
+        end if
+
+
         if(DoCoupleImDensity)then
            do iFluid = 1, nIons
               where(dIm_CD(iFluid,:,:,:) > 0.0) &
