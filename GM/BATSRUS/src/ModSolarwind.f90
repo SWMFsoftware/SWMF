@@ -401,9 +401,10 @@ contains
 
   subroutine normalize_solar_wind_data
 
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
     use ModPhysics, ONLY: &
          Io2No_V, UnitTemperature_, UnitN_, UnitRho_, UnitP_, UnitU_, UnitB_, &
-          LowDensityRatio, ElectronPressureRatio
+         LowDensityRatio, ElectronPressureRatio
     use ModMultiFluid
     use ModConst
 
@@ -468,9 +469,9 @@ contains
           end if
        end if
 
-       ! Modify pressure with electron pressure                                                                                                                      
-       if(UseTemperature) Solarwind_V(p_) = Solarwind_V(p_) * &
-            (1.0 + ElectronPressureRatio)
+       ! Modify total pressure with electron pressure
+       if(UseTemperature .and. .not.UseElectronPressure) &
+            Solarwind_V(p_) = Solarwind_V(p_) * (1.0 + ElectronPressureRatio)
 
        ! Set or normalize other fluids for multi-fluid equations
        do iFluid = 2, nFluid
@@ -527,7 +528,17 @@ contains
        end do ! iFluid
 
        ! Fix total pressure if necessary
-       if(IsMhd .and. UseMultiIon) Solarwind_V(p_) = sum(Solarwind_V(iPIon_I))
+       if(IsMhd .and. UseMultiIon)then
+          Solarwind_V(p_) = sum(Solarwind_V(iPIon_I))
+          if(.not.UseElectronPressure) &
+               Solarwind_V(p_) = (1+ElectronPressureRatio)*Solarwind_V(p_)
+       end if
+
+       if(UseAnisoPressure .and. .not. IsInput_V(Ppar_)) &
+            Solarwind_V(pPar_) = Solarwind_V(p_)
+
+       if(UseElectronPressure .and. .not. IsInput_V(Pe_)) &
+            Solarwind_V(Pe_) = Solarwind_V(p_)*ElectronPressureRatio
 
        ! Put back results in big array
        Solarwind_VI(:,iData) = Solarwind_V
