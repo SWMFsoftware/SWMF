@@ -1699,6 +1699,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
 
            if plotmod eq 'polar' then $
               aspectx=1 $
+           else if fixaspect ne 1 then $
+              aspectx = abs(fixaspect) $
            else begin
               if !x.range(1) ne !x.range(0) then    $
                  width=abs(!x.range(1)-!x.range(0)) $
