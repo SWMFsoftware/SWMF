@@ -8,7 +8,7 @@ pi=acos(-1.)
 doask=0
 ; Do not erase before new plot
 noerase=0
-; Want to fix the aspect ratio as a default
+; Aspect ratio: 0 - not fixed (fill screen), 1 - use coordinates, other values - set aspect ratio
 fixaspect=1
 ; Randomize vector positions for VEL every time
 velrandom=0
