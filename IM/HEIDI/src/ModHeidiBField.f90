@@ -1,11 +1,12 @@
 module ModHeidiBField
-  
+
   implicit none
   
 contains
 !==================================================================================
   subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
        RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
+    
     
     use ModHeidiInput, ONLY: TypeBfieldGrid
     use ModNumConst,   ONLY: cTiny, cPi
@@ -15,7 +16,8 @@ contains
          BxHeidi_III, ByHeidi_III, BzHeidi_III, t,dt,nPointEq,Xyz_VIII
     use ModCoordTransform, ONLY: cross_product, rot_xyz_sph
     use ModPlotFile,       ONLY: save_plot_file
-    use ModPlanetConst,    ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
+!    use ModPlanetConst,    ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
+      
     
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
@@ -58,12 +60,15 @@ contains
     character(LEN=500):: StringVarName, StringHeader, NameFile
     character(len=20) :: TypePosition
     character(len=20) :: TypeFile = 'ascii'
-    real :: Re, DipoleFactor
-
+ !   real :: Re, DipoleFactor
+    real, parameter :: Re=6.378e6, DipoleFactor=-8.06e15
     !----------------------------------------------------------------------------------
-    Re = rPlanet_I(Earth_)
-    DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
     
+!    write(*,*) 'pi', cPi, cTiny
+!    Re = rPlanet_I(Earth_)
+!    DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
+    
+
     select case(TypeBFieldGrid)
 
     case('mhd')
@@ -272,9 +277,13 @@ contains
 
 
     case('stretched')
+       
+!       call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
+ !           RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III, 1.0, 1.0/1.0)
+       
        call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-            RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.1)
-
+           RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.1)
+       !write(*,*) 'HERE'
     end select
 
 
@@ -446,7 +455,7 @@ contains
 
 
     use ModHeidiMain,   ONLY:LZ
-    use ModPlanetConst, ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
+!    use ModPlanetConst, ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
 
     implicit none
     integer, intent(in)    :: nPoint        ! Number of points along the field line
@@ -461,11 +470,11 @@ contains
     integer :: iPhi, iR, iPoint
     real    :: gradB0xX, gradB0xY, gradB0xZ, gradB0yX, gradB0yY, gradB0yZ
     real    :: gradB0zX, gradB0zY,gradB0zZ
-    real    :: Re, DipoleFactor
-
+!    real    :: Re, DipoleFactor
+    real, parameter :: Re=6.378e6, DipoleFactor=-8.06e15
     !----------------------------------------------------------------------------------
-    Re = rPlanet_I(Earth_)
-    DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
+ !   Re = rPlanet_I(Earth_)
+ !   DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
     
     !\
     !Calculates the gradient of B0 components in cartesian coordinates
@@ -785,7 +794,7 @@ contains
     use ModNumConst,    ONLY: cTiny, cPi
     use ModHeidiIO,     ONLY: time
     use ModHeidiMain,   ONLY: LZ
-    use ModPlanetConst, ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
+!    use ModPlanetConst, ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -820,11 +829,12 @@ contains
     real                   :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w,c1
     real                   :: beta,t
     real, parameter        :: DipoleStrength =  -0.32   ! nTm^-3
-    real                   :: Re, DipoleFactor
+!    real                   :: Re, DipoleFactor
+    real, parameter :: Re=6.378e6, DipoleFactor=-8.06e15
     !----------------------------------------------------------------------------------
 
-    Re = rPlanet_I(Earth_)
-    DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
+    !Re = rPlanet_I(Earth_)
+    !DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
 
     t = 0.0!t/3600.
     w = 2*cPi/50.
@@ -1126,7 +1136,7 @@ contains
              GradBCrossB_VIII(2,iPoint,iR,iPhi) = 1./(L_I(iR))*Vtheta * (DipoleFactor)**3
              GradBCrossB_VIII(3,iPoint,iR,iPhi) = 1./(L_I(iR)* cos(Lat)) *Vphi * (DipoleFactor)**3
 
-             mag = DipoleFactor*(sqrt(Br**2+Btheta**2+Bphi**2))
+             mag = abs(DipoleFactor)*(sqrt(Br**2+Btheta**2+Bphi**2))
 
              bFieldMagnitude_III(iPoint,iR,iPhi) = mag
              Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,Lat,Phi_I(iPhi), alpha, beta)  
@@ -1144,7 +1154,7 @@ contains
     use ModCoordTransform, ONLY: xyz_to_sph,rot_xyz_sph
     use ModHeidiMain,      ONLY: LZ!,Phi
     use ModNumConst,       ONLY: cPi
-    use ModPlanetConst,    ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
+!    use ModPlanetConst,    ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -1171,12 +1181,14 @@ contains
     complex                :: root(3)
     integer                :: nroot, i, iR, iPhi,iPoint 
     real :: cos2Lat,sin2Lat,cos2Phi,sin2Phi
-    real :: Re, DipoleFactor
+!    real :: Re, DipoleFactor
+    real, parameter :: Re=6.378e6, DipoleFactor=-8.06e15
     !----------------------------------------------------------------------------------
     
-    Re = rPlanet_I(Earth_)
-    DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
+ !   Re = rPlanet_I(Earth_)
+ !   DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
 
+    
     dd = 0.0
     do iPhi =1, nPhi
        sigma = cos(Phi_I(iPhi))
