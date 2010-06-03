@@ -206,7 +206,7 @@ contains
     use ModPlotFile,    ONLY: save_plot_file
 
     real, allocatable :: Potential_G(:,:,:)
-    real, allocatable :: Br_G(:,:,:), Btheta_G(:,:,:), Bphi_G(:,:,:)
+    real, allocatable :: Br_G(:,:,:), rBtheta_G(:,:,:), rBphi_G(:,:,:)
     real, allocatable :: B_DN(:,:,:,:)
 
     real :: r, Theta, Phi
@@ -220,8 +220,8 @@ contains
     ! Staggered components of the magnetic field
     allocate( &
          Br_G(1:nR+1,0:nTheta+1,0:nPhi+1), &
-         Btheta_G(0:nR+1,1:nTheta+1,0:nPhi+1), &
-         Bphi_G(0:nR+1,0:nTheta+1,1:nPhi+1) )
+         rBtheta_G(0:nR+1,1:nTheta+1,0:nPhi+1), &
+         rBphi_G(0:nR+1,0:nTheta+1,1:nPhi+1) )
 
     do iPhi = 0, nPhi+1
        do iTheta = 0, nTheta+1
@@ -236,9 +236,9 @@ contains
     do iPhi = 0, nPhi+1
        do iTheta = 1, nTheta+1
           do iR = 0, nR+1
-             Btheta_G(iR,iTheta,iPhi) = &
+             rBtheta_G(iR,iTheta,iPhi) = &
                   (Potential_G(iR,iTheta,iPhi)-Potential_G(iR,iTheta-1,iPhi)) &
-                  / (Radius_I(iR)*dThetaNode_I(iTheta))
+                  / dThetaNode_I(iTheta)
           end do
        end do
     end do
@@ -246,9 +246,9 @@ contains
     do iPhi = 1, nPhi+1
        do iTheta = 0, nTheta+1
           do iR = 0, nR+1
-             Bphi_G(iR,iTheta,iPhi) = &
+             rBphi_G(iR,iTheta,iPhi) = &
                   (Potential_G(iR,iTheta,iPhi)-Potential_G(iR,iTheta,iPhi-1)) &
-                  / (Radius_I(iR)*SinTheta_I(iTheta)*dPhiNode_I(iPhi))
+                  / (SinTheta_I(iTheta)*dPhiNode_I(iPhi))
           end do
        end do
     end do
@@ -267,13 +267,13 @@ contains
 
              B_DN(1,iR,iPhi,nTheta+1-iTheta) = Br_G(iR,iTheta,iPhi)
              B_DN(3,iR,iPhi,nTheta+1-iTheta) = &
-                  trilinear(Btheta_G, 0, nR+1, 1, nTheta+1, 0, nPhi+1, &
+                  trilinear(rBtheta_G, 0, nR+1, 1, nTheta+1, 0, nPhi+1, &
                   (/r,Theta,Phi/), x_I=Radius_I, y_I=ThetaNode_I, &
-                  z_I=Phi_I, DoExtrapolate=.false.)
+                  z_I=Phi_I, DoExtrapolate=.false.) / r
              B_DN(2,iR,iPhi,nTheta+1-iTheta) = &
-                  trilinear(Bphi_G, 0, nR+1, 0, nTheta+1, 1, nPhi+1, &
+                  trilinear(rBphi_G, 0, nR+1, 0, nTheta+1, 1, nPhi+1, &
                   (/r,Theta,Phi/), x_I=Radius_I, y_I=Theta_I, &
-                  z_I=PhiNode_I, DoExtrapolate=.false.)
+                  z_I=PhiNode_I, DoExtrapolate=.false.) / r
 
           end do
        end do
