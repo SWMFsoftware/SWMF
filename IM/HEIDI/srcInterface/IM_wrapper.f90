@@ -10,19 +10,18 @@ subroutine IM_set_param(CompInfo,TypeAction)
   use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
   use ModHeidiIO,   ONLY: IsFramework, StringPrefix
   use ModIoUnit,    ONLY: STDOUT_
+  
 
   implicit none
-  character (len=*), parameter :: NameSub='IM_set_param'
-
+  character (len=*), parameter      :: NameSub='IM_set_param'
   ! Arguments
   type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
-  character (len=*), intent(in)     :: TypeAction ! What to do
-
-  !LOCAL VARIABLES:
-  character (len=100) :: NameCommand, StringPlot
-  logical             :: DoEcho=.false.
-  logical             :: UseStrict=.true.  
-  integer             :: iUnitOut
+  character (len=*),  intent(in)    :: TypeAction ! What to do
+  !Local Variables:
+  character (len=100)               :: NameCommand, StringPlot
+  logical                           :: DoEcho=.false.
+  logical                           :: UseStrict=.true.  
+  integer                           :: iUnitOut
   !---------------------------------------------------------------------------
   select case(TypeAction)
 
@@ -69,7 +68,6 @@ subroutine IM_set_param(CompInfo,TypeAction)
 end subroutine IM_set_param
 
 !============================================================================
-
 subroutine IM_set_grid
 
   use ModNumConst,  ONLY: cTwoPi
@@ -80,9 +78,9 @@ subroutine IM_set_grid
   implicit none
 
   character (len=*), parameter :: NameSub='IM_set_grid'
-  logical :: IsInitialized=.false.
-  logical :: DoTest, DoTestMe
-  integer :: i, j  
+  logical                      :: IsInitialized=.false.
+  logical                      :: DoTest, DoTestMe
+  integer                      :: i, j  
   !-------------------------------------------------------------------------
 
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
@@ -91,10 +89,12 @@ subroutine IM_set_grid
   if(IsInitialized) return
 
   IsInitialized = .true.
-
+  
+  !\
   ! IM grid: the equatorial grid is described by Coord1_I and Coord2_I
   ! Occasional +0.0 is used to convert from single to double precision
-
+  !/
+ 
   call set_grid_descriptor( IM_,           & ! component index
        nDim     = 2,                       & ! dimensionality
        nRootBlock_D = (/1,1/),             & ! number of blocks
@@ -114,32 +114,28 @@ subroutine IM_set_grid
 end subroutine IM_set_grid
 !==============================================================================
 subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
-
+  !\
   ! Provide current for IE
   ! The value should be interpolated from nPoints with
   ! indexes stored in Index and weights stored in Weight
   ! The variables should be put into Buff_V(??)
-
+  !/
   use CON_router,   ONLY: IndexPtrType, WeightPtrType
   use ModIonoHeidi, ONLY: IONO_NORTH_RCM_JR,IONO_SOUTH_RCM_JR, IONO_nTheta, IONO_nPsi
 
   implicit none
-  character(len=*), parameter :: NameSub='IM_get_for_ie'
-
-  integer,intent(in)            :: nPoint, iPointStart, nVar
-  real,intent(out)              :: Buff_V(nVar)
-  type(IndexPtrType),intent(in) :: Index
-  type(WeightPtrType),intent(in):: Weight
-
-  integer :: iLat, iLon, iBlock, iPoint
-  real    :: w
-
+  
+  character(len=*), parameter    :: NameSub='IM_get_for_ie'
+  integer,intent(in)             :: nPoint, iPointStart, nVar
+  real,intent(out)               :: Buff_V(nVar)
+  type(IndexPtrType),intent(in)  :: Index
+  type(WeightPtrType),intent(in) :: Weight
+  integer                        :: iLat, iLon, iBlock, iPoint
+  real                           :: w
   !---------------------------------------------------------------------------
   Buff_V = 0.0
-
-
+  
   do iPoint = iPointStart, iPointStart + nPoint - 1
-
      iLat   = Index % iCB_II(1,iPoint)
      iLon   = Index % iCB_II(2,iPoint)
      iBlock = Index % iCB_II(3,iPoint)
@@ -156,7 +152,7 @@ subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
         write(*,*)'iLat,iLon=',iLat, IONO_nTheta*2, iLon, IONO_nPsi
         call CON_stop(NameSub//' SWMF_ERROR index out of range')
      end if
-
+     
      ! Only worry about the northern hemisphere....  IE can fix the southern hemisphere.
      if (iLat <= IONO_nTheta .and. iLon <= IONO_nPsi) &
           Buff_V(1) = Buff_V(1) + w * IONO_NORTH_RCM_JR(iLat,iLon)
@@ -178,8 +174,7 @@ subroutine IM_put_from_ie_mpi(nTheta, nPhi, Potential_II)
 
   integer, intent(in):: nTheta, nPhi
   real,    intent(in):: Potential_II(nTheta, nPhi, 1)
-
-  character(len=100):: NameFile
+  character(len=100) :: NameFile
   !-------------------------------------------------------------------------
   write(NameFile,'(a,i5.5,a)') &
        "IM/plots/potential_t",nint(Time),".out"
@@ -257,9 +252,7 @@ subroutine IM_put_from_ie_complete
   write(*,*) "Supposed to be applying periodic boundaries...?"
 
 end subroutine IM_put_from_ie_complete
-
 !==============================================================================
-
 subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
 
   ! This should be similar to RBE coupling
@@ -303,9 +296,7 @@ subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
   !  write(*,*) 'This is not working'
 
 end subroutine IM_put_from_gm
-
 !==============================================================================
-
 subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      nVarLineIn, nPointLineIn, BufferLine_VI, NameVar)
 
@@ -320,7 +311,8 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   use ModHeidiBField,    ONLY: dipole_length
   use ModCoordTransform, ONLY: xyz_to_sph
   use ModNumConst,       ONLY: cPi
-
+  use ModPlanetConst,    ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
+  
   implicit none
 
   integer, intent(in)          :: nRadiusIn, nLonIn
@@ -353,13 +345,11 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   integer, parameter           :: nStepInside = 10, nStepInterp = 40
   integer, parameter           :: nStep = 2*(nStepInside + nStepInterp)+1
   real,    parameter           :: rBoundary = 3.0
-  real,    parameter           :: DipoleFactor = 7.19e15
-  real,    parameter           :: Re = 6.371e6
-
-  real, dimension(3,nStepInside)       :: bDipoleS_VI,bDipoleN_VI,XyzDipoleN_VI,XyzDipoleS_VI
-  real, dimension(nStepInside)         :: sDipoleS_I, sDipoleN_I,rDipoleS_I,rDipoleN_I
-  real, dimension(nStepInside)         :: bDipoleMagnS_I, bDipoleMagnN_I
-  real, dimension(nStepInside,nR,nT)   :: BDipoleN_III, BxDipoleN_III, ByDipoleN_III, BzDipoleN_III
+  
+  real, dimension(3,nStepInside+1)     :: bDipoleS_VI,bDipoleN_VI,XyzDipoleN_VI,XyzDipoleS_VI
+  real, dimension(nStepInside+1)       :: sDipoleS_I, sDipoleN_I,rDipoleS_I,rDipoleN_I
+  real, dimension(nStepInside+1)       :: bDipoleMagnS_I, bDipoleMagnN_I
+  real, dimension(nStepInside+1,nR,nT) :: BDipoleN_III, BxDipoleN_III, ByDipoleN_III, BzDipoleN_III
   real, dimension(3,nStep)             :: XyzDipole_VI, bDipole_VI
   real, dimension(nStep)               :: bDipoleMagn_I, sDipole_I, rDipole_I
   real, dimension(3,nStepInside,nR,nT) :: XyzDipoleN_VIII,XyzDipoleS_VIII
@@ -377,7 +367,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   real, allocatable                    :: B_I(:), Length_I(:),RadialDist_I(:)
   real, allocatable                    :: bGradB1x_I(:), bGradB1y_I(:), bGradB1z_I(:)
   real, allocatable                    :: Bx_I(:), By_I(:), Bz_I(:)
-  real, allocatable                    :: X_I(:),Y_I(:),Z_I(:),Latitude_I(:)
+  real, allocatable                    :: X_I(:),Y_I(:),Z_I(:)
   real                                 :: LatBoundaryN, LatBoundaryS
   real                                 :: LatMax, LatMin, Lat, dLat,x,y,z,a,dLength
   real                                 :: Tr,Ttheta, r,gradB0R1,gradB0R2, gradB0Theta1,gradB0Theta2
@@ -388,25 +378,32 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   real                                 :: sMax
   real                                 :: LatDipole(nStep,nR),LatDipoleN(nStepInside,nR),LatDipoleS(nStepInside,nR)
   real                                 :: xS, yS, zS, xN, yN, zN
-  real ::  LengthExS(nR,nT,2), LengthExN(nR,nT,2)
+  real                                 :: LengthExS(nR,nT,2), LengthExN(nR,nT,2)
+  real                                 :: Re, DipoleFactor
   !---------------------------------------------------------------------------
+  
+  Re = rPlanet_I(Earth_)
+  DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
+  
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
-
+  !\
   ! Save total number of points along all field lines
+  !/
   nPointLine = nPointLineIn
   nVarLine   = nVarLineIn
-
-  ! Alloocate buffer
+  !\
+  ! Allocate buffer
+  !/
   if (allocated(StateLine_VI)) deallocate(StateLine_VI)
   if (.not.allocated(StateLine_VI)) allocate(StateLine_VI(nVarLine,nPointLine))
-
+  !\
   ! Copy into local variables
+  !/
   StateLine_VI = BufferLine_VI
 
-  ! StateLine_VI = PlotVar_V
   if(DoTest)then
      write(*,*)NameSub,' nVarLine,nPointLine=',nVarLine,nPointLine
-
+     
      ! Set the file name
      write(NameFile,'(a,i5.5,a)') &
           "IM/plots/ray_data_t",nint(Time),".out"
@@ -418,11 +415,12 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         write(UnitTmp_, *) StateLine_VI(:, iPoint)
      end do
      close(UnitTmp_)
-
+     !\
      ! Now save the mapping files (+0.0 for real precision)
+     !/
      write(NameFile,'(a,i5.5,a)') &
           "IM/plots/map_north_t",nint(Time),".out"
-
+     
      call save_plot_file( &
           NameFile, &
           StringHeaderIn = 'Mapping to northern ionosphere', &
@@ -443,13 +441,14 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
           CoordMaxIn_D = (/RadiusMax+0.0, 360.0/), &
           VarIn_VII    = Map_DSII(:,2,:,:))
   end if
-
+  !\
   ! Convert Units here. Input is in SI !!!
   ! Check Map_DSII for open-closed field lines, also use it for mapping
   ! to the ionosphere for electric potential.
+  !/
 
   !\
-  ! Create index array that converts radial and local time index to line index
+  ! Create index array that converts radial and local time index to line index.
   !/
 
   iPoint = 0
@@ -465,7 +464,6 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   !\
   ! Count the maximum size of the field line array (iMax)
   !/
-
   iMax = 0 ; iLineLast = -1; i = 1
   do iPoint =1 ,nPointLine
      if (StateLine_VI(1,iPoint) == iLineLast) then
@@ -477,41 +475,39 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      iLineLast = StateLine_VI(1,iPoint)
   end do
 
+  allocate(X_I(iMax), Y_I(iMax), Z_I(iMax))
+  allocate(B_I(iMax), Length_I(iMax), RadialDist_I(iMax))
+  allocate(bGradB1x_I(iMax), bGradB1y_I(iMax), bGradB1z_I(iMax));
+  allocate(Bx_I(iMax), By_I(iMax), Bz_I(iMax));
 
-  allocate(Latitude_I(iMax))
-  allocate(X_I(iMax));         allocate(Y_I(iMax));          allocate(Z_I(iMax))
-  allocate(B_I(iMax));         allocate(Length_I(iMax));     allocate(RadialDist_I(iMax))
-  allocate(bGradB1x_I(iMax));  allocate(bGradB1y_I(iMax));   allocate(bGradB1z_I(iMax));
-  allocate(Bx_I(iMax));        allocate(By_I(iMax));         allocate(Bz_I(iMax));
-  
   iLineFirst = StateLine_VI(1,1)
   iLineLast = -1
   i = 1
   j = 1
-
+  
   LengthExN=0.0
   LengthExS=0.0
   sTemp = 0.0 
   
-!  do iPoint = 1, 15
-  do iPoint = 1, nPointLine
+  do iPoint = 1, nPointLine !+ 1
+     ! Check if this is the point after the last one, or if it is a new line segment
 
-     if ((StateLine_VI(1,iPoint) /= iLineLast) .and. (iPoint > 1)) then   
+     !     if(iPoint > nPointLine .or. &
+     !          (iPoint > 1 .and. StateLine_VI(1,min(nPointLine,iPoint)) /= iLineLast)) then
+
+     if(iPoint > 1 .and. StateLine_VI(1,iPoint) /= iLineLast) then
+
         np = i-1  ! np = number of points on each half field line
         
-        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(1:np-1),   X_I(2:np), XHeidinew_I,LengthHeidinew_I)
-        
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(1:np-1), X_I(2:np), XHeidinew_I,LengthHeidinew_I)
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   X_I(2:np), XHeidi_I, LengthHeidi_I)
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   Y_I(2:np), YHeidi_I, LengthHeidi_I)
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   Z_I(2:np), ZHeidi_I, LengthHeidi_I)
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   B_I(2:np), BHeidi_I, LengthHeidi_I)
-        
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   RadialDist_I(2:np),RHeidi_I,LengthHeidi_I) 
-        
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   bGradB1x_I(2:np), bGradB1xHeidi_I, LengthHeidi_I) 
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   bGradB1y_I(2:np), bGradB1yHeidi_I, LengthHeidi_I) 
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   bGradB1z_I(2:np), bGradB1zHeidi_I, LengthHeidi_I) 
-        
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   Bx_I(2:np), BxHeidi_I, LengthHeidi_I) 
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   By_I(2:np), ByHeidi_I, LengthHeidi_I) 
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   Bz_I(2:np), BzHeidi_I, LengthHeidi_I) 
@@ -524,36 +520,15 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         iDir = iRiTiDir_DI(3,iLine)
         
         if (iDir ==1) then  ! Northern hemisphere
-           
            dLength =  Length_I(np-1)/(nStepInterp-1)
            do k = 1, nStepInterp
               LengthHeidi_I(k) = k * dLength
            end do
-
-
            Xyz_VIII(1,(nPointEq+ 1):(nStep - nStepInside),iR,iT) = XHeidi_I
            Xyz_VIII(2,(nPointEq+ 1):(nStep - nStepInside),iR,iT) = YHeidi_I
            Xyz_VIII(3,(nPointEq+ 1):(nStep - nStepInside),iR,iT) = ZHeidi_I
            BHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = BHeidi_I
-           
-
-!!$           write(*,*) 'iPoint,iDir, iLine,iR,iT ',iPoint,iDir, iLine,iR,iT 
-!!$
-!!$           write(*,*) 'XHeidi_I',XHeidi_I
-!!$           write(*,*) '###########################'
-!!$
-!!$           write(*,*) 'YHeidi_I',YHeidi_I
-!!$           write(*,*) '###########################'
-!!$
-!!$           write(*,*) 'ZHeidi_I',ZHeidi_I
-!!$           write(*,*) '###########################'
-
-
-
-           !STemp((nPointEq+ 1):(nStep - nStepInside),iR,iT)      = LengthHeidinew_I
            STemp((nPointEq+ 1):(nStep - nStepInside),iR,iT)      = LengthHeidi_I
-
-          
            RHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = RHeidi_I
            bGradB1xHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1xHeidi_I
            bGradB1yHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1yHeidi_I
@@ -561,80 +536,60 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            BxHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = BxHeidi_I(:)
            ByHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = ByHeidi_I(:)
            BzHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = BzHeidi_I(:)
-           
            LengthExN(iR,iT,iDir) = Length_I(2)
-
-
         end if
 
         if (iDir ==2) then     ! Southern hemisphere
-
            LengthExS(iR,iT,iDir) = Length_I(2)
-
            dLength =  Length_I(np-1)/(nStepInterp-1)
            do k = 1, nStepInterp
               LengthHeidi_I(k) = k * dLength
            end do
-
            Xyz_VIII(1,(nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = XHeidi_I(nStepInterp:1:-1)
            Xyz_VIII(2,(nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = YHeidi_I(nStepInterp:1:-1)
            Xyz_VIII(3,(nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = ZHeidi_I(nStepInterp:1:-1)
-
            BHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = BHeidi_I(nStepInterp:1:-1)
-
            STemp((nStepInside + 1):(nStepInside + nStepInterp),iR,iT)  = LengthHeidi_I(:) 
-
-
            RHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = RHeidi_I(nStepInterp:1:-1) 
-
            bGradB1xHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = bGradB1xHeidi_I(nStepInterp:1:-1) 
            bGradB1yHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = bGradB1yHeidi_I(nStepInterp:1:-1) 
            bGradB1zHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = bGradB1zHeidi_I(nStepInterp:1:-1) 
-
            BxHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = BxHeidi_I(nStepInterp:1:-1) 
            ByHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = ByHeidi_I(nStepInterp:1:-1) 
            BzHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = BzHeidi_I(nStepInterp:1:-1) 
-
         end if
-
+        
         Xyz_VIII(1,nPointEq,iR,iT) = X_I(1)
         Xyz_VIII(2,nPointEq,iR,iT) = Y_I(1)
         Xyz_VIII(3,nPointEq,iR,iT) = Z_I(1)
-
         BHeidi_III(nPointEq,iR,iT) = B_I(1)
-!        SHeidi_III(nPointEq,iR,iT) = Length_I(1)
-
-
         STemp(nPointEq,iR,iT) = 0.5*(LengthExS(iR,iT,2) + LengthExN(iR,iT,1))
         RHeidi_III(nPointEq,iR,iT) = RadialDist_I(1)
-
         bGradB1xHeidi_III(nPointEq,iR,iT) = bGradB1x_I(1)
         bGradB1yHeidi_III(nPointEq,iR,iT) = bGradB1y_I(1)
         bGradB1zHeidi_III(nPointEq,iR,iT) = bGradB1z_I(1)
-
         BxHeidi_III(nPointEq,iR,iT) = Bx_I(1)
         ByHeidi_III(nPointEq,iR,iT) = By_I(1)
         BzHeidi_III(nPointEq,iR,iT) = Bz_I(1)
 
         i = 1
         iLineLast = StateLine_VI(1,iPoint)
-     end if
 
+        !if (iPoint > nPointLine) EXIT
+
+     end if
+     
      X_I(i) = StateLine_VI(X_,iPoint)
      Y_I(i) = StateLine_VI(Y_,iPoint)
      Z_I(i) = StateLine_VI(Z_,iPoint)
-
      B_I(i) = sqrt(StateLine_VI(BX_,iPoint)**2+ &
           StateLine_VI(BY_,iPoint)**2 + StateLine_VI(BZ_,iPoint)**2)
      Length_I(i) = StateLine_VI(S_,iPoint)
-
      RadialDist_I(i) = sqrt(StateLine_VI(X_,iPoint)**2 + &
           StateLine_VI(Y_,iPoint)**2 + StateLine_VI(Z_,iPoint)**2 )
-
      bGradB1x_I(i) = StateLine_VI(gx_,iPoint)
      bGradB1y_I(i) = StateLine_VI(gy_,iPoint)
      bGradB1z_I(i) = StateLine_VI(gz_,iPoint)
-
      Bx_I(i) = StateLine_VI(BX_,iPoint)
      By_I(i) = StateLine_VI(BY_,iPoint)
      Bz_I(i) = StateLine_VI(BZ_,iPoint)
@@ -642,25 +597,23 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      iLineLast = StateLine_VI(1,iPoint)
      i = i + 1
 
+     
   end do
 
-
-  deallocate(Latitude_I)
   deallocate(X_I);         deallocate(Y_I);         deallocate(Z_I);
   deallocate(B_I);         deallocate(Length_I);    deallocate(RadialDist_I);
   deallocate(bGradB1x_I);  deallocate(bGradB1y_I);  deallocate(bGradB1z_I);
   deallocate(Bx_I);        deallocate(By_I);        deallocate(Bz_I);
 
   !\
-  ! Convert to Heidi grid B field
+  ! Convert the MHD variables (B field) to Heidi grid
   !/
 
   ns = nStepInside
-
+  
   do iT = 1,nT-1
      do iR = 1, nR
         if (LZ(iR) > rBoundary) then
-          
            xS = Xyz_VIII(1, nStepInside+1, iR, iT)
            yS = Xyz_VIII(2, nStepInside+1, iR, iT)
            zS = Xyz_VIII(3, nStepInside+1, iR, iT)
@@ -668,65 +621,42 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            xN = Xyz_VIII(1, nStep - nStepInside, iR, iT)
            yN = Xyz_VIII(2, nStep - nStepInside, iR, iT)
            zN = Xyz_VIII(3, nStep - nStepInside, iR, iT)
-                      
-
-           !write(*,*) 'iT,iR', iT, iR
-           !write(*,*) 'xS', xS
-           !write(*,*) 'yS', yS
-           !write(*,*) 'zS', zS
-           !
-           !write(*,*) 'xN', xN
-           !write(*,*) 'yN', yN
-           !write(*,*) 'zN', zN
-           !write(*,*) '#######################'
 
            if (xS == 0.0) xS =  xN
            if (yS == 0.0) yS =  yN
            if (zS == 0.0) xS = -zN
-
+           
            LatBoundaryS = -atan(zS/(sqrt(xS**2 + yS**2)))
-           !write(*,*) 'LatBoundaryS', LatBoundaryS
-
-           LatBoundaryN = atan(zN/(sqrt(xN**2 + yN**2)))
-           !write(*,*) 'LatBoundaryN', LatBoundaryN 
-
-           call fill_dipole_north(nStepInside, LZ(iR), Phi(iT), LatBoundaryN, XyzDipoleN_VI, bDipoleN_VI,&
+           LatBoundaryN =  atan(zN/(sqrt(xN**2 + yN**2)))
+           
+           call fill_dipole_north(nStepInside+1, LZ(iR), Phi(iT), LatBoundaryN, XyzDipoleN_VI, bDipoleN_VI,&
                 bDipoleMagnN_I, sDipoleN_I, rDipoleN_I)
-           call fill_dipole_south(nStepInside, LZ(iR), Phi(iT), LatBoundaryS, XyzDipoleS_VI, bDipoleS_VI,&
+           call fill_dipole_south(nStepInside+1, LZ(iR), Phi(iT), LatBoundaryS, XyzDipoleS_VI, bDipoleS_VI,&
                 bDipoleMagnS_I,sDipoleS_I, rDipoleS_I)
            
-           Xyz_VIII(:,1:nStepInside,iR,iT)                 = XyzDipoleS_VI(:,:)
-           Xyz_VIII(:,(nStep-nStepInside +1):nStep,iR,iT)  = XyzDipoleN_VI(:,:)
+           Xyz_VIII(:,1:nStepInside,iR,iT)                 = XyzDipoleS_VI(:,1:nStepInside)
+           Xyz_VIII(:,(nStep-nStepInside +1):nStep,iR,iT)  = XyzDipoleN_VI(:,2:nStepInside+1)
            
-           BHeidi_III(1:nStepInside,iR,iT)                 = bDipoleMagnS_I(:)
-           BHeidi_III((nStep-nStepInside +1):nStep,iR,iT)  = bDipoleMagnN_I(:)
+           BHeidi_III(1:nStepInside,iR,iT)                 = bDipoleMagnS_I(1:nStepInside)
+           BHeidi_III((nStep-nStepInside +1):nStep,iR,iT)  = bDipoleMagnN_I(2:nStepInside+1)
            
-           RHeidi_III(1:nStepInside,iR,iT)                 = rDipoleS_I(:)   
-           RHeidi_III((nStep-nStepInside +1):nStep,iR,iT)  = rDipoleN_I(:)
+           RHeidi_III(1:nStepInside,iR,iT)                 = rDipoleS_I(1:nStepInside)   
+           RHeidi_III((nStep-nStepInside +1):nStep,iR,iT)  = rDipoleN_I(2:nStepInside+1)
            
-           SHeidi_III(1:nStepInside,iR,iT)                 = sDipoleS_I(:)   
+           SHeidi_III(1:nStepInside,iR,iT)                 = sDipoleS_I(1:nStepInside)   
 
-           ! i = 11, 51
-           do i = nStepInside+1, nStepInside + nStepInterp!+1
+           do i = nStepInside+1, nStepInside + nStepInterp
               SHeidi_III(i,iR,iT) = sDipoleS_I(nStepInside) + STemp(i,iR,iT)
-              !write(*,*) 'i,  sDipoleS_I(nStepInside), STemp(i,iR,iT), SHeidi_III(i,iR,iT)',&
-              !     i,  sDipoleS_I(nStepInside) ,STemp(i,iR,iT), SHeidi_III(i,iR,iT)
            end do
 
-           do i = 51, 51
-              SHeidi_III(i,iR,iT) = sDipoleS_I(nStepInside) + STemp(50,iR,iT)+ STemp(51,iR,iT)
-              !write(*,*) 'i,  sDipoleS_I(nStepInside), STemp(i,iR,iT), SHeidi_III(i,iR,iT)',&
-              !     i,  sDipoleS_I(nStepInside) ,STemp(i,iR,iT), SHeidi_III(i,iR,iT)
+           do i = nPointEq, nPointEq
+              SHeidi_III(i,iR,iT) = sDipoleS_I(nStepInside) + STemp(nPointEq-1,iR,iT)+ STemp(nPointEq,iR,iT)
            end do
-
-
-
-
-           !  i = 52, 91
+           
            do i = nStepInside + nStepInterp + 2, nStep - nStepInside
               SHeidi_III(i,iR,iT) = SHeidi_III(nStepInside + nStepInterp+1, iR, iT) + STemp(i,iR,iT) 
            end do
-           !i = 92, 101
+           
            do i = nStep-nStepInside+1 , nStep
               j = i - (nStep-nStepInside) 
               SHeidi_III(i,iR,iT) = SHeidi_III(nStep-nStepInside,iR,iT) + sDipoleN_I(j)
@@ -736,15 +666,14 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            ! Fill in dipole values for mhd field lines beyond rBoundary: LatBoundary = atan(z/sqrt(x^2+y^2))
            !/
            
-           BxHeidi_III(1:nStepInside,iR,iT)                = bDipoleS_VI(1,1:10) 
-           BxHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = bDipoleN_VI(1,1:10)
+           BxHeidi_III(1:nStepInside,iR,iT)                = bDipoleS_VI(1,1:nStepInside) 
+           BxHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = bDipoleN_VI(1,2:nStepInside+1)
            
-           ByHeidi_III(1:nStepInside,iR,iT)                = bDipoleS_VI(2,1:10) 
-           ByHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = bDipoleN_VI(2,1:10)
+           ByHeidi_III(1:nStepInside,iR,iT)                = bDipoleS_VI(2,1:nStepInside) 
+           ByHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = bDipoleN_VI(2,2:nStepInside+1)
 
-           BzHeidi_III(1:nStepInside,iR,iT)                = bDipoleS_VI(3,1:10) 
-           BzHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = bDipoleN_VI(3,1:10)
-           
+           BzHeidi_III(1:nStepInside,iR,iT)                = bDipoleS_VI(3,1:nStepInside) 
+           BzHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = bDipoleN_VI(3,2:nStepInside+1)
            
         end if
 
@@ -762,6 +691,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      end do  ! L loop
   end do     ! Phi loop
 
+  ! Fill in periodic boundary conditions
   Xyz_VIII(:,:,:,nT)        = Xyz_VIII(:,:,:,1)
   BHeidi_III(:,:,nT)        = BHeidi_III(:,:,1)
   RHeidi_III(:,:,nT)        = RHeidi_III(:,:,1)
@@ -772,6 +702,20 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   bGradB1xHeidi_III(:,:,nT) = bGradB1xHeidi_III(:,:,1)
   bGradB1yHeidi_III(:,:,nT) = bGradB1yHeidi_III(:,:,1)  
   bGradB1zHeidi_III(:,:,nT) = bGradB1zHeidi_III(:,:,1)
+
+  ! This should be gone !!!
+  Xyz_VIII(:,:,nR,:)        = Xyz_VIII(:,:,nR-1,:)
+  BHeidi_III(:,nR,:)        = BHeidi_III(:,nR-1,:)
+  RHeidi_III(:,nR,:)        = RHeidi_III(:,nR-1,:)
+  SHeidi_III(:,nR,:)        = SHeidi_III(:,nR-1,:)
+  BxHeidi_III(:,nR,:)       = BxHeidi_III(:,nR-1,:)
+  ByHeidi_III(:,nR,:)       = ByHeidi_III(:,nR-1,:)
+  BzHeidi_III(:,nR,:)       = BzHeidi_III(:,nR-1,:)
+  bGradB1xHeidi_III(:,nR,:) = bGradB1xHeidi_III(:,nR-1,:)
+  bGradB1yHeidi_III(:,nR,:) = bGradB1yHeidi_III(:,nR-1,:)  
+  bGradB1zHeidi_III(:,nR,:) = bGradB1zHeidi_III(:,nR-1,:)
+
+
 
 !~~~~~~~~~~~~~~~~~~~~~~~ Write out files for testing ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -793,15 +737,16 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
        VarIn_VII = BHeidi_III(nPointEq:nPointEq,:,:))
   TypePosition = 'rewind' 
 
-  
-  open(unit=12,file='interface.out')
-  write(12,*) 'from interface'
-  write(12,*)'iPoint  iR  b  bx  by  bz  x  y  z  s Lat'
+
+  ! Use UnitTmp_ (or 9)
+  open(unit=9,file='interface.out')
+  write(9,*) 'from interface'
+  write(9,*)'iPoint  iR  b  bx  by  bz  x  y  z  s Lat'
   
   do iPhi =1, 1
-     do iR =6, 7
+     do iR =6, 8,2
         do iPoint =1, nStep
-           write(12,*) iPoint, iR, BHeidi_III(iPoint,iR,iPhi),&
+           write(9,*) iPoint, iR, BHeidi_III(iPoint,iR,iPhi),&
                 BxHeidi_III(iPoint,iR,iPhi), ByHeidi_III(iPoint,iR,iPhi),&
                 BzHeidi_III(iPoint,iR,iPhi), Xyz_VIII(1,iPoint,iR,iPhi),Xyz_VIII(2,iPoint,iR,iPhi),&
                 Xyz_VIII(3,iPoint,iR,iPhi),SHeidi_III(iPoint,iR,iPhi),&
@@ -809,37 +754,10 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         end do
      end do
   end do
-  close(12)
-  
-     STOP
+  close(9)
+ 
 
-!!$  open(unit=5,file='line.dat')
-!!$    write(5,*) 'iStep,iR,iT,S'
-!!$    do iT = 1,1
-!!$       do iR = 5, 5
-!!$          do iStep =1, nStep
-!!$             
-!!$             write(5,*) iStep,iR,iT,SHeidi_III(iStep,iR,iT)
-!!$  
-!!$          end do
-!!$       end do
-!!$    end do
-
-
-
-!    open(unit=7,file='line_dipole.dat')
-!    write(7,*) 'iStep,iR,iT,S'
-!    !do iT = 1,1
-!       do iR = 5, 5
-!          do iStep =1, nStep
-!             
-!             write(7,*) iStep,iR,iT,sDipole_II(iStep,iR),LatDipole(iStep,iR),&
-!                  sDipoleN_II(iStep,iR),LatDipoleN(iStep,iR),&
-!                  sDipoleS_II(iStep,iR),LatDipoleS(iStep,iR)
-!  
-!          end do
-!       end do
-!    !end do
+!  call stop_mpi('DEBUG')
 
 end subroutine IM_put_from_gm_line
 
@@ -847,7 +765,6 @@ end subroutine IM_put_from_gm_line
 
 subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
   ! Puts satellite locations and names from GM into IM variables.
-!!!DTW 200
 
   use ModHeidiSatellites
   use ModNumConst,   ONLY: cDegToRad
@@ -1151,21 +1068,6 @@ subroutine interpolate_linear_b (nP,Length_I,B_I,nPoint,LengthHeidi_I,BHeidi_I)
 end subroutine interpolate_linear_b
 
 !===============================================================================
-subroutine reverse(n,A,InvA)
-
-  implicit none
-
-  integer           :: n 
-  real,dimension(n) :: A ,invA
-  integer           :: i,j
-  !-------------------------------------------------------------------------
-  do i = 1, n
-     j = n -i +1
-     InvA(i) = A(j)
-  end do
-
-end subroutine reverse
-!===============================================================================
 real function Lagrange(lHeidi, lMhd_I, bMhd_I, nStepMHD, nOrder)
 
   implicit none
@@ -1260,7 +1162,8 @@ end subroutine interpolate_mhd
 subroutine fill_dipole(nStep, L, Phi, XyzDipole_VI, bDipole_VI, bDipoleMagn_I, sDipole_I, rDipole_I)
   
   use ModHeidiBField,    ONLY: dipole_length
-  
+  use ModPlanetConst,    ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
+
   implicit none
   
   integer, intent(in)  :: nStep
@@ -1271,10 +1174,13 @@ subroutine fill_dipole(nStep, L, Phi, XyzDipole_VI, bDipole_VI, bDipoleMagn_I, s
   real                 :: LatDipole_I(nStep)
   real                 :: LatMax, LatMin, Lat, dLat
   real                 :: r, x, y, z, a
-  real,   parameter    :: DipoleFactor = 7.19e15, Re = 6.371e6    
   integer              :: iStep
+  real                 :: Re, DipoleFactor
+  !---------------------------------------------------------------------------
+  
+  Re = rPlanet_I(Earth_)
+  DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
 
-!-------------------------------------------------------------------------
 
   LatMax =  acos(sqrt(1./L))
   LatMin = -LatMax
@@ -1310,7 +1216,8 @@ subroutine fill_dipole_south(nStep, L, Phi, LatBoundary, XyzDipoleS_VI, bDipoleS
      bDipoleMagnS_I, sDipoleS_I, rDipoleS_I)
   
   use ModHeidiBField,    ONLY: dipole_length
-
+  use ModPlanetConst,    ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
+  
   implicit none
 
   integer, intent(in)  :: nStep
@@ -1320,9 +1227,13 @@ subroutine fill_dipole_south(nStep, L, Phi, LatBoundary, XyzDipoleS_VI, bDipoleS
   real                 :: LatDipoleS_I(nStep)
   real                 :: LatMax, LatMin, Lat, dLat
   real                 :: x, y, z, r, a
-  real,   parameter    :: DipoleFactor = 7.19e15, Re = 6.371e6  
   integer              :: iStep
-!-------------------------------------------------------------------------
+  real                 :: Re, DipoleFactor
+  !---------------------------------------------------------------------------
+  
+  Re = rPlanet_I(Earth_)
+  DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
+
   LatMin = LatBoundary
   LatMax =  acos(sqrt(1./L))
   dLat   = (LatMax-LatMin)/(nStep-1)         
@@ -1352,12 +1263,14 @@ subroutine fill_dipole_south(nStep, L, Phi, LatBoundary, XyzDipoleS_VI, bDipoleS
      
   end do
 
+
 end subroutine fill_dipole_south
 !===============================================================================
 subroutine fill_dipole_north(nStep, L, Phi, LatBoundary, XyzDipoleN_VI, bDipoleN_VI,&
      bDipoleMagnN_I, sDipoleN_I, rDipoleN_I)
   
   use ModHeidiBField,    ONLY: dipole_length
+  use ModPlanetConst,    ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
 
   implicit none
 
@@ -1368,10 +1281,15 @@ subroutine fill_dipole_north(nStep, L, Phi, LatBoundary, XyzDipoleN_VI, bDipoleN
   real                 :: LatDipoleN_I(nStep)
   real                 :: LatMax, LatMin, Lat, dLat
   real                 :: x, y, z, r, a
-  real,   parameter    :: DipoleFactor = 7.19e15, Re = 6.371e6  
   integer              :: iStep
-!-------------------------------------------------------------------------
-  LatMin = LatBoundary
+  real                 :: Re, DipoleFactor
+  !---------------------------------------------------------------------------
+  
+  Re = rPlanet_I(Earth_)
+  DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
+
+
+ LatMin = LatBoundary
   LatMax =  acos(sqrt(1./L))
   dLat   = (LatMax-LatMin)/(nStep-1)         
   Lat = LatMin
@@ -1400,8 +1318,7 @@ subroutine fill_dipole_north(nStep, L, Phi, LatBoundary, XyzDipoleN_VI, bDipoleN
      
   end do
 
-
 end subroutine fill_dipole_north
-
+!===============================================================================
 
 
