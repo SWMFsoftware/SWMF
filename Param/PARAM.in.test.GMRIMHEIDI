@@ -1,6 +1,9 @@
 #ECHO
 T			DoEcho
 
+VERBOSE
+100
+
 #TEST
 IM_put_from_gm_line
 
@@ -16,6 +19,9 @@ Test for GM-RIM-HEIDI
 
 #PLANET
 EARTH			NamePlanet
+
+#IDEALAXES
+
 
 #SAVERESTART
 F			DoSaveRestart
@@ -44,41 +50,78 @@ IE			NameComp2
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
+USERFLAGS
+F                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+VERBOSE
+100
+
+#SAVEINITIAL
+T
+
+#SAVEPLOT
+3			nPlotFile
+idl x=0 FUL			StringPlot
+1			DnSavePlot
+-10.			DtSavePlot
+-1.0			DxSavePlot
+idl y=0 FUL			StringPlot
+1			DnSavePlot
+-10.0			DtSavePlot
+-1.0			DxSavePlot
+idl z=0 FUL			StringPlot
+1			DnSavePlot
+-10.0			DtSavePlot
+-1.0			DxSavePlot
+
+
 #GRID
 1			nRootBlockX
 1			nRootBlockY
 1			nRootBlockZ
--224.			xMin
+-32.			xMin
  32.			xMax
--128.			yMin
- 128.			yMax
--128.			zMin
- 128.			zMax
+-22.			yMin
+ 22.			yMax
+-22.			zMin
+ 22.			zMax
 
 ! Maximum resolution initially
 #GRIDRESOLUTION
-2.0			Resolution
+1/8			Resolution
 initial			NameArea
 
 ! Minimum resolution in the computational domain
 #GRIDRESOLUTION
-8.0			Resolution
+1/2			Resolution
 all			NameArea
 
 ! Far tail for wind satellite and inflow
 #GRIDRESOLUTION
-2.0			Resolution
+1/8			Resolution
 box			NameArea
- -20.0			xMinBox
- -16.0			yMinBox
- -16.0			zMinBox
-  20.0			xMaxBox
-  16.0			yMaxBox
-  16.0			xMaxBox
+ -10.0			xMinBox
+ -10.0			yMinBox
+ -10.0			zMinBox
+  10.0			xMaxBox
+  10.0			yMaxBox
+  10.0			xMaxBox
 
 ! r currents resolution for the ionosphere
 #GRIDRESOLUTION
-1/4			Resolution
+1/16			Resolution
 shell0			NameArea
 2.5			Radius1
 3.5			Radius2
@@ -120,33 +163,29 @@ VAR                     StringLog
 dt rho mx my mz p bx by bz pmin pmax cpcpn cpcps dst dstdivb dstflx
 3.0 3.5 5.0             StringRFlux
 
+SOLARWIND
+5.0			SwNDim  [n/cc]
+100000.0		SwTDim  [K]
+-400.0			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+0.0			SwBxDim [nT]
+0.0			SwByDim [nT]
+0.0			SwBzDim [nT]
 
-SATELLITE
-5
-MHD
--1
-60
-Satellites/geotail.dat
-MHD
--1
-60
-Satellites/goes08.dat
-MHD
--1
-60
-Satellites/goes10.dat
-MHD
--1
-60
-Satellites/polar.dat
-MHD
--1
-60
-Satellites/wind.dat
+#SOLARWIND
+0.0			SwNDim  [n/cc]
+0.0        		SwTDim  [K]
+0.0			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+0.0			SwBxDim [nT]
+0.0			SwByDim [nT]
+0.0			SwBzDim [nT]
 
-!- PARAMETERS for Smart Steady State Startup --
 
-#SOLARWINDFILE
+
+SOLARWINDFILE
 T				                 UseSolarWindFile
 GM/Param/TESTSUITE/Inputfiles/imf20020417.dat     NameSolarWindFile
 
@@ -216,7 +255,7 @@ IE			NameComp2
 GM			NameComp1
 IM			NameComp2
 -1                      DnCouple
-10.0                    DtCouple
+20.0                    DtCouple
 
 #COUPLE1
 IE			NameComp1
@@ -279,10 +318,10 @@ test			TypeStorm
 1.26			rw
 
 #SPECIES
-T			UseElectron	
+F			UseElectron	
 T			UseHPlus
-T			UseHePlus
-T			UseOPlus
+F			UseHePlus
+F			UseOPlus
 T			UseIon
 F			UsePhotoelElectron
 F			UsePlasmaSheetElectron
@@ -343,8 +382,8 @@ F 			UseConstantStepPA
 F 			UseWaves
 
 #BFIELD
-analytic		TypeBField
-uniform                 TypeBFieldGrid
+numeric 		TypeBField
+mhd                     TypeBFieldGrid
 
 #SAVERESTART
 T			DoSaveRestart
