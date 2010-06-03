@@ -1,0 +1,110 @@
+
+#STARTTIME
+2002			iYear
+04			iMonth
+17			iDay
+00			iHour
+00			iMinute
+00			iSecond
+0.0 			FracSecond
+
+#STOP
+160.0			tSimulationMax [sec]
+
+#TIMESTEP
+20.                     TimeStep [sec] 
+
+#GRID
+20			nRadialGrid
+24			nPhiGrid
+42			nEnergyGrid
+71  			nPitchGrid
+24			nPointFieldLine
+
+#STORM
+test			TypeStorm
+
+
+#INNERBOUNDARY
+1e6			Height [m]
+
+#ENERGYSETUP
+0.01			EnergyLowerBoundary[keV]
+0.006			LowestEnergyCellWidth [keV]
+1.26			rw
+
+#SPECIES
+T			UseElectron	
+T			UseHPlus
+T			UseHePlus
+T			UseOPlus
+T			UseIon
+F			UsePhotoelElectron
+F			UsePlasmaSheetElectron
+
+#INDICES
+4 			WhichKp
+3.0			Kp
+15.0			ApIndex
+154.0			SunspotAverage
+
+	
+#BOUNDARY
+7			TypeBoundary
+
+
+#INITIAL
+7			TypeInitial
+0.0			MaxwellianScallingFactor
+0.03			CharacteristicEnergy
+
+#OUTPUT
+T			DoSaveDistributionFunctionEverywhere	
+F			DoSaveEquatorialDistributionFunction
+T			DoSaveEnergyDeposition
+F			DoSaveTotalPrecipitationFlux
+F			DoSaveDifferentialPrecipitationFlux	
+F			DoSaveParticleEnergyLosses
+T			DoSaveThermalPlasmaDensity
+F			DoSaveCflForAdvection
+T			DoSaveDriftVelocities
+F			DoSaveEvsLDistributions
+F			DoSaveParticleLifetimes
+T			DoSavePressureDensityDst
+T			DoSaveUnformatted
+T			DoSaveContinuousSourcesLosses
+T			DoSaveNightsideBCDistribution
+F			DoSaveDifferentialNumberFlux
+
+
+#OUTPUTINFO
+test1			NameRun
+40.			nFrequency [sec]
+
+#INJECTIONFREQUENCY
+120.			iFrequency [sec]
+
+
+#CONVECTION
+w96			TypeConvection
+
+#INITIALTHERMALPLASMA
+F			DoReadDGCPM	
+
+#SOLARWIND
+T		        DoReadSolarWind
+
+#PITCHANGLE
+F 			UseConstantStepPA	
+
+#INCLUDEWAVES
+F 			UseWaves
+
+#BFIELD
+numeric     		TypeBField
+stretched               TypeBFieldGrid
+
+#SAVERESTART
+T			DoSaveRestart
+40.0			DtSaveRestart
+ascii			TypeFile
