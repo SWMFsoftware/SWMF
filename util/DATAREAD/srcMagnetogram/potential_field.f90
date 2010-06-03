@@ -13,9 +13,9 @@ module ModPotentialField
 
   real, dimension(:), allocatable :: &
        Radius_I, Theta_I, Phi_I, SinTheta_I, &
-       dRadius_I, dTheta_I, dPhi_I, &
+       dRadius_I, dTheta_I, dPhi_I, dCosTheta_I, &
        RadiusNode_I, ThetaNode_I, PhiNode_I, SinThetaNode_I, &
-       dRadiusNode_I, dThetaNode_I, dPhiNode_I
+       dRadiusNode_I, dThetaNode_I, dPhiNode_I, dCosThetaNode_I
 
   real, allocatable:: Br_II(:,:), Potential_C(:,:,:), Rhs_C(:,:,:), &
        B0_DG(:,:,:,:), DivB_C(:,:,:), PlotVar_VG(:,:,:,:)
@@ -130,7 +130,8 @@ contains
     allocate( &
          Radius_I(0:nR+1), Theta_I(0:nTheta+1), Phi_I(0:nPhi+1), &
          dRadius_I(nR), dTheta_I(nTheta), dPhi_I(nPhi), &
-         SinTheta_I(0:nTheta+1), SinThetaNode_I(nTheta+1), &
+         SinTheta_I(0:nTheta+1), dCosTheta_I(nTheta), &
+         SinThetaNode_I(nTheta+1), dCosThetaNode_I(nTheta+1), &
          RadiusNode_I(nR+1), ThetaNode_I(nTheta+1), PhiNode_I(nPhi+1), &
          dRadiusNode_I(nR+1), dThetaNode_I(nTheta+1), dPhiNode_I(nPhi+1))
 
@@ -159,6 +160,7 @@ contains
           z = max(-1.0, min(1.0, 1 - (iTheta-1)*dZ))
           ThetaNode_I(iTheta) = acos(z)
        end do
+       dCosThetaNode_I(1:nTheta+1) = dZ
     else
        dTheta = cPi/nTheta
        do iTheta = 0, nTheta+1
@@ -171,17 +173,17 @@ contains
     end if
     SinTheta_I = sin(Theta_I)
     SinThetaNode_I = sin(ThetaNode_I)
+    dCosTheta_I(1:nTheta) = &
+         abs(cos(ThetaNode_I(1:nTheta)) - cos(ThetaNode_I(2:nTheta+1)))
 
     dTheta_I     = ThetaNode_I(2:nTheta+1) - ThetaNode_I(1:nTheta)
     dThetaNode_I = Theta_I(1:nTheta+1)     - Theta_I(0:nTheta)
 
     dPhi = cTwoPi/nPhi
     do iPhi = 0, nPhi+1
-       Phi_I(iPhi) = (iPhi - 0.5)*dPhi
+       Phi_I(iPhi) = (iPhi - 1)*dPhi
     end do
-    do iPhi = 1, nPhi+1
-       PhiNode_I(iPhi) = (iPhi - 1)*dPhi
-    end do
+    PhiNode_I = Phi_I(1:nPhi+1) - 0.5*dPhi
     dPhi_I = PhiNode_I(2:nPhi+1) - PhiNode_I(1:nPhi)
     dPhiNode_I = Phi_I(1:nPhi+1) - Phi_I(0:nPhi)
 
@@ -233,15 +235,29 @@ contains
        end do
     end do
 
-    do iPhi = 0, nPhi+1
-       do iTheta = 1, nTheta+1
-          do iR = 0, nR+1
-             rBtheta_G(iR,iTheta,iPhi) = &
-                  (Potential_G(iR,iTheta,iPhi)-Potential_G(iR,iTheta-1,iPhi)) &
-                  / dThetaNode_I(iTheta)
+    if(UseCosTheta)then
+       do iPhi = 0, nPhi+1
+          do iTheta = 1, nTheta+1
+             do iR = 0, nR+1
+                rBtheta_G(iR,iTheta,iPhi) = &
+                     ( Potential_G(iR,iTheta,iPhi) &
+                     - Potential_G(iR,iTheta-1,iPhi)) &
+                     *SinThetaNode_I(iTheta)/dCosThetaNode_I(iTheta)
+             end do
           end do
        end do
-    end do
+    else
+       do iPhi = 0, nPhi+1
+          do iTheta = 1, nTheta+1
+             do iR = 0, nR+1
+                rBtheta_G(iR,iTheta,iPhi) = &
+                     ( Potential_G(iR,iTheta,iPhi) &
+                     - Potential_G(iR,iTheta-1,iPhi)) &
+                     / dThetaNode_I(iTheta)
+             end do
+          end do
+       end do
+    end if
 
     do iPhi = 1, nPhi+1
        do iTheta = 0, nTheta+1
@@ -286,7 +302,7 @@ contains
          ParamIn_I = (/ rMin, rMax, PhiShift, 0.0 /), &
          nDimIn=3, VarIn_VIII=B_DN, &
          Coord1In_I=RadiusNode_I, &
-         Coord2In_I=PhiNode_I, &
+         Coord2In_I=Phi_I(1:nPhi+1), &
          Coord3In_I=cHalfPi-Theta_I(nTheta:1:-1))
 
   end subroutine save_potential_field
@@ -358,7 +374,8 @@ contains
   subroutine get_gradient(x_C, Grad_DG)
 
     use ModPotentialField, ONLY: nR, nTheta, nPhi, Radius_I, SinTheta_I, &
-         dRadiusNode_I, dThetaNode_I, dPhiNode_I, Br_II, set_boundary
+         dRadiusNode_I, dThetaNode_I, dPhiNode_I, Br_II, set_boundary, &
+         UseCosTheta, SinThetaNode_I, dCosThetaNode_I
 
     real, intent(in):: x_C(nR,nTheta,nPhi)
     real, intent(out):: Grad_DG(3,nR+1,nTheta+1,nPhi+1)
@@ -388,15 +405,28 @@ contains
        end do
     end do
 
-    do iPhi = 1, nPhi
-       do iTheta = 1, nTheta+1
-          do iR = 1, nR
-             Grad_DG(2,iR,iTheta,iPhi) = &
-                  (x_G(iR,iTheta,iPhi) - x_G(iR,iTheta-1,iPhi)) &
-                  / (Radius_I(iR)*dThetaNode_I(iTheta))
+    if(UseCosTheta)then
+       do iPhi = 1, nPhi
+          do iTheta = 1, nTheta+1
+             do iR = 1, nR
+                Grad_DG(2,iR,iTheta,iPhi) = &
+                     (x_G(iR,iTheta,iPhi) - x_G(iR,iTheta-1,iPhi)) &
+                     *SinThetaNode_I(iTheta) &
+                     / (Radius_I(iR)*dCosThetaNode_I(iTheta))
+             end do
           end do
        end do
-    end do
+    else
+       do iPhi = 1, nPhi
+          do iTheta = 1, nTheta+1
+             do iR = 1, nR
+                Grad_DG(2,iR,iTheta,iPhi) = &
+                     (x_G(iR,iTheta,iPhi) - x_G(iR,iTheta-1,iPhi)) &
+                     / (Radius_I(iR)*dThetaNode_I(iTheta))
+             end do
+          end do
+       end do
+    end if
 
     do iPhi = 1, nPhi+1
        do iTheta = 1, nTheta
@@ -415,7 +445,8 @@ contains
   subroutine get_divergence(b_DG, DivB_C)
 
     use ModPotentialField, ONLY: nR, nTheta, nPhi, Radius_I, dRadius_I, &
-         dTheta_I, dPhi_I, SinTheta_I, RadiusNode_I, SinThetaNode_I
+         dTheta_I, dPhi_I, SinTheta_I, dCosTheta_I, RadiusNode_I, &
+         SinThetaNode_I
 
     real, intent(in) :: b_DG(3,nR+1,nTheta+1,nPhi+1)
     real, intent(out):: DivB_C(nR,nTheta,nPhi)
@@ -432,7 +463,7 @@ contains
                   + &
                   ( SinThetaNode_I(iTheta+1)*b_DG(2,iR,iTheta+1,iPhi)   &
                   - SinThetaNode_I(iTheta)  *b_DG(2,iR,iTheta  ,iPhi) ) &
-                  / (Radius_I(iR)*SinTheta_I(iTheta)*dTheta_I(iTheta)) &
+                  / (Radius_I(iR)*dCosTheta_I(iTheta)) &
                   + &
                   ( b_DG(3,iR,iTheta,iPhi+1) &
                   - b_DG(3,iR,iTheta,iPhi) ) &
