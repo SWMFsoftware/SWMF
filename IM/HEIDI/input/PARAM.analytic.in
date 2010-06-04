@@ -103,6 +103,7 @@ F 			UseWaves
 #BFIELD
 analytic     		TypeBField
 uniform                 TypeBFieldGrid
+static			TypeBFieldTemp
 
 #SAVERESTART
 T			DoSaveRestart
