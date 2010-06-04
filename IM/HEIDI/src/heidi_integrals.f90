@@ -5,7 +5,7 @@
 
 subroutine get_IntegralH(IntegralH_III)
 
-  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR, io, jo,lo
+  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR, io, jo,lo,dT
   use ModConst,      ONLY: cPi,  cTiny
   use ModHeidiInput, ONLY: TypeBField
   use ModHeidiMain,  ONLY: Phi, LZ, mu
@@ -29,8 +29,8 @@ subroutine get_IntegralH(IntegralH_III)
   integer              :: iPhi, iR,iPitch
   real                 :: dBdt_III(nPoint,nR,nT)
   !----------------------------------------------------------------------------------
-
-  if (TypeBField == 'analytic') then
+  select case(TypeBField)
+  case('analytic')
      alpha=1.+alog(2.+sqrt(3.))/2./sqrt(3.)
      beta=alpha/2.-cPi*sqrt(2.)/12.
      a1=0.055
@@ -49,9 +49,8 @@ subroutine get_IntegralH(IntegralH_III)
            end do
         end do
      end do
-  endif
-
-  if (TypeBField == 'numeric') then
+     
+  case('numeric')
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
           RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
      do iPhi = 1, nT
@@ -68,17 +67,17 @@ subroutine get_IntegralH(IntegralH_III)
            IntegralH_III(1,iR,iPhi) = IntegralH_III(2,iR,iPhi)
         end do
      end do
-  endif
-
+  end select
+  
 end subroutine get_IntegralH
 
 !============================================================
 subroutine get_IntegralI(IntegralI_III)
 
-  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
+  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR, dT
   use ModConst,      ONLY: cPi,  cTiny
   use ModHeidiInput, ONLY: TypeBField
-  use ModHeidiMain,  ONLY: Phi, LZ, mu
+  use ModHeidiMain,  ONLY: Phi, LZ, mu, T
   use ModHeidiBField
 
   implicit none
@@ -98,8 +97,8 @@ subroutine get_IntegralI(IntegralI_III)
   integer              :: iPhi, iR,iPitch
   real                 :: dBdt_III(nPoint, nR, nT)
   !----------------------------------------------------------------------------------
-
-  if (TypeBField == 'analytic') then
+  select case(TypeBField)
+  case('analytic')
      alpha=1.+alog(2.+sqrt(3.))/2./sqrt(3.)
      beta=alpha/2.-cPi*sqrt(2.)/12.
      a1=0.055
@@ -120,10 +119,8 @@ subroutine get_IntegralI(IntegralI_III)
            end do
         end do
      end do
-  endif
 
-
-  if (TypeBField == 'numeric') then
+  case('numeric')
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
           RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
      do iPhi = 1, nT
@@ -138,7 +135,8 @@ subroutine get_IntegralI(IntegralI_III)
            end do
         end do
      end do
-  endif
+  end select
+  
   IntegralI_III(1,:,:)   = IntegralI_III(2,:,:)
   IntegralI_III(nPa,:,:) = IntegralI_III(nPa-1,:,:)
 
@@ -146,10 +144,9 @@ end subroutine get_IntegralI
 !============================================================
 subroutine get_neutral_hydrogen(NeutralHydrogen_III)
 
-  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
+  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR,dT
   use ModConst,      ONLY: cPi,  cTiny
-  use ModHeidiInput, ONLY: TypeBField
-  use ModHeidiMain,  ONLY: Phi, LZ, mu
+  use ModHeidiMain,  ONLY: Phi, LZ, mu, T
   use ModHeidiBField
   use ModHeidiHydrogenGeo
 
@@ -639,10 +636,6 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
   !    end do
   ! end do
   ! close(3)
-
-
-
-
 
 
 end subroutine get_grad_curv_drift

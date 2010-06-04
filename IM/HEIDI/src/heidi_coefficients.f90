@@ -17,24 +17,23 @@ subroutine Heidi_cepara
   use ModHeidiDrifts
   use ModIoUnit,     ONLY: io_unit_new,UNITTMP_
   use ModHeidiIO,    ONLY: NameInputDirectory
-  use ModHeidiInput, ONLY: TypeBField
-  use ModPlotFile, only: save_plot_file 
+  use ModHeidiInput, ONLY: TypeBField, TypeBFieldTemp
+  use ModPlotFile,   ONLY: save_plot_file 
 
   implicit none
 
-  integer           :: I,K,L,I1,LUP,ier,J
+  integer           :: I, K, L, I1, LUP, ier, J
   integer           :: iUnit 
-  real              :: x,y		
-  real              :: FACI,fac,cosd,acosd
-  real              :: RLAMBDA(71),PA(71),HDNS(NR,NT,NPA)
-  real              :: LH(20),HDNSIN(20,71)
+  real              :: x, y		
+  real              :: FACI, fac, cosd, acosd
+  real              :: RLAMBDA(71), PA(71), HDNS(NR,NT,NPA)
+  real              :: LH(20), HDNSIN(20,71)
   character(len=80) :: TITLE
-  real              :: PitchAngle_I(nPA), NeutralHydrogen(nR,nT,nPa)
-
+  real              :: PitchAngle_I(nPA)
+  character(LEN=500) :: StringVarName, StringHeader, NameFile                              
+  character(len=20)  :: TypePosition       
+  character(len=20)  :: TypeFile = 'ascii' 
   external          :: cosd,acosd
- character(LEN=500):: StringVarName, StringHeader, NameFile                              
- character(len=20) :: TypePosition       
- character(len=20) :: TypeFile = 'ascii' 
   !---------------------------------------------------------------------
   !\
   ! Open a file with the bounce-averaged H dens [m-3] in geocorona
@@ -48,8 +47,8 @@ subroutine Heidi_cepara
   end do
   if (S.ge.1) then	! Only needed for ion charge exchange
      
-     
-     if (TypeBField == 'analytic') then
+     select case(TypeBField)
+     case('analytic')
         open(UNITTMP_,file=NameInputDirectory//'hgeo71.in',STATUS='OLD')
         LUP=71
         do I = 1,20
@@ -59,12 +58,9 @@ subroutine Heidi_cepara
            end do	! L loop
         end do	        ! I loop
         close(UNITTMP_)
-
         do L = 1, LUP
            PA(L) = COSD(PA(L))
         end do
-        
-        
         do L=1,LO
            do j = 1, jo
               do I=1,IO
@@ -73,58 +69,45 @@ subroutine Heidi_cepara
               enddo
            end do
         end do
-     end if
-
-     if (TypeBField == 'numeric') then
-        call get_neutral_hydrogen(NeutralHydrogen)
         
-        do L=1,LO
-           do j =1, jo
-              do I=1,IO
-                 HDNS(i,j,l) = NeutralHydrogen(i,j,l)
-              enddo
+     case('numeric')
+        select case(TypeBFieldTemp)
+        case('static')
+           if (t <(t+2.*dt)) then
+              call get_neutral_hydrogen(NeutralHydrogen)
+              do L=1,LO
+                 do j =1, jo
+                    do I=1,IO
+                       HDNS(i,j,l) = NeutralHydrogen(i,j,l)
+                    enddo
+                 end do
+              end do
+           end if
+           
+        case('dynamic')
+           call get_neutral_hydrogen(NeutralHydrogen)
+           do L=1,LO
+              do j =1, jo
+                 do I=1,IO
+                    HDNS(i,j,l) = NeutralHydrogen(i,j,l)
+                 enddo
+              end do
            end do
-        end do
-     end if
-     
-
-NameFile = 'neutralH.out'
-StringHeader = 'neutral in the equatorial plane'                                 
-StringVarName = 'R MLT funi '                                                           
-TypePosition = 'rewind'                                                                 
-
-!do l = 1, lo                                                                            
-!   call save_plot_file(NameFile, &                                                      
-!        TypePositionIn = TypePosition,&                                                 
-!        TypeFileIn     = TypeFile,&                                                     
-!        StringHeaderIn = StringHeader, &                                                
-!        nStepIn = 0, &                                                                  
-!        TimeIn = 0.0, &                                                                 
-!        ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &             
-!        NameVarIn = StringVarName, &                                                    
-!        nDimIn = 2, &                                                                   
-!        CoordMinIn_D = (/1.75, 0.0/),&                                                  
-!        CoordMaxIn_D = (/6.5, 24.0/),&                                                  
-!        VarIn_VII = NeutralHydrogen(:,:,l:l))                                                    
-!   TypePosition = 'append'                                                              
-!end do
-
-
+        end select
+     end select
   end if
-
-
-
-3 format(A61,F5.2)
-4 format(2F7.3,2X,1PE12.5)
-  !\
-  ! Calculate charge exchange cross-section of species S with H
-  ! and then the charge exchange decay rate ACHAR
-  !/
-
-  !\
-  ! H+ charge exchange
-  !/
-
+  
+3    format(A61,F5.2)
+4    format(2F7.3,2X,1PE12.5)
+     !\
+     ! Calculate charge exchange cross-section of species S with H
+     ! and then the charge exchange decay rate ACHAR
+     !/
+     
+     !\
+     ! H+ charge exchange
+     !/
+     
   if (SCALC(2).eq.1) then
      do K = 2,KO
         X=ALOG10(EKEV(K))
@@ -203,7 +186,7 @@ subroutine OTHERPARA
   use ModHeidiIO
   use ModHeidiMain
   use ModHeidiDrifts
-  use ModHeidiInput, ONLY: TypeBField
+  use ModHeidiInput, ONLY: TypeBField,TypeBFieldTemp
   use ModInit, ONLY :i3,nst
   
   implicit none
@@ -215,8 +198,7 @@ subroutine OTHERPARA
   real    :: COULDE(NE,NPA),COULDI(NE,NPA),AFIR,ASEC
   real    :: VF(NSTH),RA(NSTH),MUBOUN,MULC,TMAS(NSTH),TM1(NSTH)
   
-  real, dimension(nR,nT,nE,nPA) :: dEdt_IIII,VPhi_IIII,VR_IIII
-  real, dimension(nR,nT,nE,nPA)    :: dMudt_III 
+ ! real, dimension(nR,nT,nE,nPA) :: dEdt_IIII,VPhi_IIII,VR_IIII
 
   external:: erf
 
@@ -256,65 +238,64 @@ subroutine OTHERPARA
 
   
   if (TypeBField == 'numeric') then
-     call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
+     select case(TypeBFieldTemp)
+     case('static')
+        if (t <(t+2.*dt)) then
+           call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
+        end if
+     case('dynamic')
+        call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
+     end select
   end if
   
-
-   
   do i = 1, io      
      do L = 1, UPA(I)    ! Kp independent part of azimuthal drift
         do K = 1, KO
            do j = 1,  jo
-              GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
-              P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
-
-              if (TypeBField == 'numeric') then
+              select case(TypeBField)
+              case('analytic')
+                 GPA=1.-FUNI(L,I,J)/6./FUNT(L,I,J)
+                 P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
+              case('numeric')
                  P2(I,J,K,L)=(C/Me-ISS*VPhi_IIII(i,j,k,l))*DT/DPHI
-              end if
-              
+              end select
            end do
         end do
      end do
   end do
   
   do i = 1, io 
-     do L=UPA(I)+1,LO
+     do L = UPA(I)+1, LO
         do K = 1, KO
            do j = 1,  jo
-              P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
-              
-              if (TypeBField == 'numeric') then
+              select case(TypeBField)
+              case('analytic')
+                 P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
+              case('numeric')
                  P2(I,J,K,L)=(C/Me - ISS*VPhi_IIII(i,j,k,l))*DT/DPHI
-              end if
-
-
+              end select
            end do
         end do
      end do
   end do
-
-   
-
-
-   do l = 1, lo
-      do k = 1, ko
-         do I = 1, IO
-            VrConv(I,J6,k,l)=0.
-            VrConv(I,J18,k,l)=0.
-
-            if (TypeBField == 'numeric') then
-               VR(i,j6,k,l)  = VrConv(i,j6,k,l) + ISS* VR_IIII(i,j6,k,l)*DT/DL1
-               VR(i,j18,k,l) = VrConv(i,j18,k,l)+ ISS* VR_IIII(i,j18,k,l)*DT/DL1
-            end if
-
-            VR(i,j6,k,l) = VrConv(I,J6,k,l)
-            VR(i,j6,k,l) = VrConv(I,J6,k,l)
-
-         end do	! I loop processing VR
-      end do
-   end do
-
-
+  
+  do l = 1, lo
+     do k = 1, ko
+        do i = 1, IO
+           VrConv(I,J6,k,l)=0.
+           VrConv(I,J18,k,l)=0.
+           select case(TypeBField)
+           case('numeric')
+              VR(i,j6,k,l)  = VrConv(i,j6,k,l) + ISS* VR_IIII(i,j6,k,l)*DT/DL1
+              VR(i,j18,k,l) = VrConv(i,j18,k,l)+ ISS* VR_IIII(i,j18,k,l)*DT/DL1
+           case('analytic')
+              VR(i,j6,k,l) = VrConv(I,J6,k,l)
+              VR(i,j6,k,l) = VrConv(I,J6,k,l)
+           end select
+        end do	! I loop processing VR
+     end do
+  end do
+  
   !\
   ! We assume Te=Ti=1eV (kT=1eV)
   !/
@@ -498,7 +479,7 @@ subroutine MAGCONV(I3,NST)
   use ModHeidiDGCPM
   use ModProcIM
   use ModIoUnit,  only : io_unit_new
-  use ModHeidiInput, ONLY: TypeBField
+  use ModHeidiInput, ONLY: TypeBField,TypeBFieldTemp
 
   implicit none
 
@@ -540,8 +521,7 @@ subroutine MAGCONV(I3,NST)
   integer :: edayplus
   real    :: univ_time
 
-  real, dimension(nR,nT,nE,nPA) :: dEdt_IIII,VPhi_IIII,VR_IIII
-  real, dimension(nR,nT,nE,nPA)    :: dMudt_III 
+  !real, dimension(nR,nT,nE,nPA) :: dEdt_IIII,VPhi_IIII,VR_IIII
 real :: ISS
 
   !---------------------------------------------------------------------  
@@ -592,15 +572,20 @@ real :: ISS
   ! Calculate base convection electric field
   !/
 
-
-  if (TypeBField == 'numeric') then
-     call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
-  end if
-
+  select case(TypeBField)
+  case('numeric')
+     select case(TypeBFieldTemp)
+     case('static')
+        if (t <(t+2.*dt)) then
+           call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
+        end if
+     case('dynamic')
+        call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
+     end select
+  end select
+  
   ISS=-1			! sign of specie's charge
   if (S.ge.2) ISS=1
-  
-
   
   if (ABASE(IA+1).eq.1) then
      
@@ -608,24 +593,20 @@ real :: ISS
         do i=1,io
            do l =1, lo
               do k = 1, ko
-                 
-                 VrConv(i,j,k,l)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
+                 VrConv(i,j,k,l) = -A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
                       DT/DL1*(RE*RE/ME)
-                 VR(i,j,k,l) = VrConv(i,j,k,l) 
-                 if (TypeBField == 'numeric') then
+                 select case(TypeBField)
+                 case('analytic')
+                    VR(i,j,k,l) = VrConv(i,j,k,l) 
+                 case('numeric')
                     VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
-                 end if
-
+                 end select
               end do
            end do
            P1(I,J)=A*LAMGAM*LZ(I)**(LAMGAM+1.)*sin(PHI(J)+0.5*DPHI)*   &
                 DT/DPHI*(RE*RE/ME)
            BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*sin(phi(j))
-           
-           
         end do
-
-
         !\
         ! Compute the V-S potential outside the edges of the radial grid. 
         ! Needed for the current calculation.
@@ -633,8 +614,6 @@ real :: ISS
         BASEPOT(1,j)    = A*RE*(LZ(1)-DL1)**(LAMGAM)*sin(phi(j))
         BASEPOT(io+2,j) = A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
      end do
-
-
 
      do J = 1, nphicells   ! Fill in DGCPM potentials
         do I = 1, nthetacells
@@ -663,18 +642,20 @@ real :: ISS
            KSD=1.+RoRg*(Ro/RR)
            do l = 1, lo
               do k = 1, ko
-                    VrConv(i,j,k,l)=-DT/DL1*RE/ME*RR**3*KEPS/KSD*(EOJ1+KGAM*SJ/KSD   &
-                         *(EOJ+KPHI/RR)*RoRg*KBETA/RR*(KS(2)+Kr*KS(4)))
+                 VrConv(i,j,k,l)=-DT/DL1*RE/ME*RR**3*KEPS/KSD*(EOJ1+KGAM*SJ/KSD   &
+                      *(EOJ+KPHI/RR)*RoRg*KBETA/RR*(KS(2)+Kr*KS(4)))
+                 select case(TypeBField)
+                 case('analytic')
                     VR(i,j,k,l) = VrConv(i,j,k,l)
-                    if (TypeBField == 'numeric') then
+                 case('numeric')
                     VR(i,j,k,l) = VrConv(i,j,k,l) +ISS* VR_IIII(i,j,k,l)*DT/DL1
-                 end if
-
+                 end select
               end do
            end do
         end do
      end do
-     do J=1,JO   ! Fill in azimuthal drift values
+     
+     do J = 1, JO   ! Fill in azimuthal drift values
         SJ=sin(PHI(J)+0.5*DPHI)
         CJ=cos(PHI(J)+0.5*DPHI)
         Ro=KBETA*(KS(1)+KS(2)*CJ+Kr*(KS(3)+KS(4)*CJ))
@@ -716,19 +697,19 @@ real :: ISS
      ! Unshielded Volland-Stern field
      !/
   else if (ABASE(IA+1).eq.4) then
-
      KEPS=Ppc0/DLMAG
      do J=1,JO   !  Fill in drift values
         do i=1,io
            do l =1, lo
               do k = 1, ko
-                    VrConv(i,j,k,l)=-KEPS*cos(PHI(J))*(LZ(I)+0.5*DL1)**3   &
-                         *DT/DL1*(RE/ME)
+                 VrConv(i,j,k,l)=-KEPS*cos(PHI(J))*(LZ(I)+0.5*DL1)**3   &
+                      *DT/DL1*(RE/ME)
+                 select case(TypeBField)
+                 case('analytic')
                     VR(i,j,k,l) = VrConv(i,j,k,l)
-                    if (TypeBField == 'numeric') then
-                       VR(i,j,k,l) = VrConv(i,j,k,l) +ISS* VR_IIII(i,j,k,l)*DT/DL1
-                    end if
-                    
+                 case('numeric')
+                    VR(i,j,k,l) = VrConv(i,j,k,l) +ISS* VR_IIII(i,j,k,l)*DT/DL1
+                 end select
               end do
            end do
            P1(I,J)=KEPS*LZ(I)**2*sin(PHI(J)+0.5*DPHI)*   &
@@ -749,17 +730,18 @@ real :: ISS
      !/
 
   else if (ABASE(IA+1).ge.5) then
-     
      do J = 1, JO   !  Zero out drift values
         do i = 1, io
            do l =1, lo
               do k =1, ko
-                    VrConv(i,j,k,l) = 0.0
+                 VrConv(i,j,k,l) = 0.0
+                 select case(TypeBField)
+                 case('analytic')
                     VR(i,j,k,l) = VrConv(i,j,k,l)
-                    if (TypeBField == 'numeric') then
-                       VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
-                    end if
-                 end do
+                 case('numeric')
+                    VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
+                 end select
+              end do
            end do
            P1(I,J) = 0.0
         end do
@@ -842,12 +824,13 @@ real :: ISS
            EPP=-(FPOT12(i+1,jj)-FPOT12(i+1,j))/RR/DPHI
            do l = 1, lo
               do k = 1, ko
-                 VrConv(i,j,k,l)=VrConv(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
-                 VR(i,j,k,l) = VrConv(i,j,k,l)
-                 if (TypeBField == 'numeric') then
+                 VrConv(i,j,k,l) = VrConv(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
+                 select case(TypeBField)
+                 case('analytic')
+                    VR(i,j,k,l) = VrConv(i,j,k,l)
+                 case('numeric')
                     VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
-                 end if
-                 
+                 end select
               end do
            end do
         end do
@@ -947,10 +930,12 @@ real :: ISS
            do l = 1, lo
               do k = 1, ko
                  VrConv(i,j,k,l) = EPP*DT/DL1*RR**3*RE/ME
-                 VR(i,j,k,l) = VrConv(i,j,k,l)
-                 if (TypeBField == 'numeric') then
+                 select case(TypeBField)
+                 case('analytic')
+                    VR(i,j,k,l) = VrConv(i,j,k,l)
+                 case('numeric')
                     VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
-                 end if
+                 end select
               end do
            end do
         end do
@@ -1012,11 +997,13 @@ real :: ISS
            FAC=EPP*DT/DL1*RR**3*RE/ME
            do l = 1, lo
               do k = 1, ko
-                    VrConv(i,j,k,l)=VrConv(i,j,k,l)+FAC
+                 VrConv(i,j,k,l)=VrConv(i,j,k,l)+FAC
+                 select case(TypeBField)
+                 case('analytic')
                     VR(i,j,k,l) = VrConv(i,j,k,l)
-                    if (TypeBField == 'numeric') then
-                       VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
-                    end if
+                 case('numeric')
+                    VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
+                 end select
               end do
            end do
         end do
@@ -1184,10 +1171,12 @@ real :: ISS
               do l = 1, lo
                  do k = 1, ko
                     VrConv(i,j,k,l) = VrConv(i,j,k,l)+EPP*DT/DL1*RR**3*RE/ME
-                    VR(i,j,k,l) = VrConv(i,j,k,l)
-                    if (TypeBField == 'numeric') then
+                    select case(TypeBField)
+                    case('analytic')
+                       VR(i,j,k,l) = VrConv(i,j,k,l)
+                    case('numeric')
                        VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
-                    end if
+                    end select
                  end do
               end do
            end do

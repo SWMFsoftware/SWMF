@@ -45,5 +45,12 @@ Module ModHeidiMain
   real, dimension(nPoint,nR,nT) :: bGradB1xHeidi_III,bGradB1yHeidi_III, bGradB1zHeidi_III 
   real, dimension(nPoint,nR,nT) :: BxHeidi_III, ByHeidi_III, BzHeidi_III
   real, dimension(3,nPoint,nR,nT) :: Xyz_VIII
+
+  !~~~~~~~~~~~~~~~~~~
+  real :: NeutralHydrogen(nR,nT,nPa)
+  real, dimension(nR,nT,nE,nPA) :: dEdt_IIII,VPhi_IIII,VR_IIII
+  real, dimension(nR,nT,nE,nPA)    :: dMudt_III 
+  real     :: bFieldMagnitude_III(nPoint,nR,nT)
+  
 end Module ModHeidiMain
 

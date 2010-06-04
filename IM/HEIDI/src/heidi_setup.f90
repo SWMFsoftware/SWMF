@@ -220,13 +220,13 @@ end subroutine BFIELD_SETUP
 !======================================================================
 subroutine ARRAYS
 
-  use ModHeidiSize
+  use ModHeidiSize, ONLY: dT
   use ModHeidiIO
   use ModHeidiMain
   use ModHeidiWaves
   use ModProcIM, ONLY: iProc
   use ModPlotFile, only: save_plot_file
-  use ModHeidiInput, ONLY: TypeBField
+  use ModHeidiInput, ONLY: TypeBField, TypeBFieldTemp
 
 
   implicit none
@@ -237,7 +237,7 @@ subroutine ARRAYS
   real     :: sind
   real     :: amla0(Slen)
   real     :: CONE(NR+4),PA(NPA),MUB(NPA),sumd,sumw,LZMAX,LZMIN
-  real     :: bFieldMagnitude_III(nPoint,nR,nT)
+  !real     :: bFieldMagnitude_III(nPoint,nR,nT)
   external :: sind, ASIND,COSD,ACOSD
   data amla0/0.0,0.2,0.4,0.6,0.8,1.0,1.5,2.0,2.5,3.0,3.5, &
        4.0,4.5,5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0/
@@ -488,15 +488,23 @@ subroutine ARRAYS
      end do
   end do
 
-  call get_B_field(bFieldMagnitude_III)
-
- 
-
-  call get_IntegralH(funt)
-  call get_IntegralI(funi)
-
-  if (TypeBField=='numeric') then
-
+  select case(TypeBFieldTemp)
+  case('static')
+     if (t <(t+2.*dt)) then
+        call get_B_field(bFieldMagnitude_III)
+        call get_IntegralH(funt)
+        call get_IntegralI(funi)
+     end if
+     
+  case('dynamic')
+     call get_B_field(bFieldMagnitude_III)
+     call get_IntegralH(funt)
+     call get_IntegralI(funi)
+     
+  end select
+  
+  select case(TypeBFieldTemp)
+  case('numeric')
      NameFile = 'BField.out'
      StringHeader = 'Magnetic field in the equatorial plane'
      StringVarName = 'R MLT B'
@@ -538,14 +546,11 @@ subroutine ARRAYS
         TypePosition = 'append' 
      end do
      
-     
-     
      NameFile = 'funt.out'
      StringHeader = 'Magnetic field in the equatorial plane'
      StringVarName = 'R MLT funt'
      TypePosition = 'rewind'
-     
-     
+          
      do l = 1, lo
         call save_plot_file(NameFile, & 
              TypePositionIn = TypePosition,&
@@ -562,7 +567,7 @@ subroutine ARRAYS
         TypePosition = 'append' 
      end do
      
-  endif
+  end select
 
 
   !\
