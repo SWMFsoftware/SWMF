@@ -13,7 +13,7 @@ module ModPotentialField
 
   real, dimension(:), allocatable :: &
        Radius_I, Theta_I, Phi_I, SinTheta_I, &
-       dRadius_I, dTheta_I, dPhi_I, dCosTheta_I, &
+       dRadius_I, dPhi_I, dCosTheta_I, &
        RadiusNode_I, ThetaNode_I, PhiNode_I, SinThetaNode_I, &
        dRadiusNode_I, dThetaNode_I, dPhiNode_I, dCosThetaNode_I
 
@@ -129,7 +129,7 @@ contains
 
     allocate( &
          Radius_I(0:nR+1), Theta_I(0:nTheta+1), Phi_I(0:nPhi+1), &
-         dRadius_I(nR), dTheta_I(nTheta), dPhi_I(nPhi), &
+         dRadius_I(nR), dPhi_I(nPhi), &
          SinTheta_I(0:nTheta+1), dCosTheta_I(nTheta), &
          SinThetaNode_I(nTheta+1), dCosThetaNode_I(nTheta+1), &
          RadiusNode_I(nR+1), ThetaNode_I(nTheta+1), PhiNode_I(nPhi+1), &
@@ -160,7 +160,6 @@ contains
           z = max(-1.0, min(1.0, 1 - (iTheta-1)*dZ))
           ThetaNode_I(iTheta) = acos(z)
        end do
-       dCosThetaNode_I(1:nTheta+1) = dZ
     else
        dTheta = cPi/nTheta
        do iTheta = 0, nTheta+1
@@ -173,11 +172,13 @@ contains
     end if
     SinTheta_I = sin(Theta_I)
     SinThetaNode_I = sin(ThetaNode_I)
-    dCosTheta_I(1:nTheta) = &
-         abs(cos(ThetaNode_I(1:nTheta)) - cos(ThetaNode_I(2:nTheta+1)))
-
-    dTheta_I     = ThetaNode_I(2:nTheta+1) - ThetaNode_I(1:nTheta)
-    dThetaNode_I = Theta_I(1:nTheta+1)     - Theta_I(0:nTheta)
+    if(UseCosTheta)then
+       dCosTheta_I = dZ
+       dCosThetaNode_I = dZ
+    else
+       dCosTheta_I(1:nTheta) = SinTheta_I(1:nTheta)*dTheta
+       dThetaNode_I = dTheta
+    end if
 
     dPhi = cTwoPi/nPhi
     do iPhi = 0, nPhi+1
@@ -221,12 +222,12 @@ contains
 
     ! Staggered components of the magnetic field
     allocate( &
-         Br_G(1:nR+1,0:nTheta+1,0:nPhi+1), &
+         Br_G(1:nR+1,1:nTheta,1:nPhi+1), &
          rBtheta_G(0:nR+1,1:nTheta+1,0:nPhi+1), &
          rBphi_G(0:nR+1,0:nTheta+1,1:nPhi+1) )
 
-    do iPhi = 0, nPhi+1
-       do iTheta = 0, nTheta+1
+    do iPhi = 1, nPhi+1
+       do iTheta = 1, nTheta
           do iR = 1, nR+1
              Br_G(iR,iTheta,iPhi) = &
                   (Potential_G(iR,iTheta,iPhi)-Potential_G(iR-1,iTheta,iPhi)) &
@@ -445,7 +446,7 @@ contains
   subroutine get_divergence(b_DG, DivB_C)
 
     use ModPotentialField, ONLY: nR, nTheta, nPhi, Radius_I, dRadius_I, &
-         dTheta_I, dPhi_I, SinTheta_I, dCosTheta_I, RadiusNode_I, &
+         dPhi_I, SinTheta_I, dCosTheta_I, RadiusNode_I, &
          SinThetaNode_I
 
     real, intent(in) :: b_DG(3,nR+1,nTheta+1,nPhi+1)
