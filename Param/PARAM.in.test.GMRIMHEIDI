@@ -384,6 +384,7 @@ F 			UseWaves
 #BFIELD
 numeric 		TypeBField
 mhd                     TypeBFieldGrid
+dynamic			TypeBFieldTemp
 
 #SAVERESTART
 T			DoSaveRestart
