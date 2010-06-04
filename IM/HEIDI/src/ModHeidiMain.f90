@@ -6,10 +6,13 @@ Module ModHeidiMain
   ! Include the parameter settings for MPI parallel processing
   use ModMpi
   use ModHeidiSize
+
+  ! Basic physical constants: Earth radius and dipole coefficient
+  real :: Re, DipoleFactor
   
   ! Define "constants" of the simulation
   ! Formerly: Common block CONST
-  real :: q,me,mp,re,dkp,fluxfact(NS),pi
+  real :: q,me,mp,dkp,fluxfact(NS),pi
   real ::dayr(48),rkph(48),f107r(48),apr(48),rsunr(48)
   
   ! Define independent variables and grid-related factors

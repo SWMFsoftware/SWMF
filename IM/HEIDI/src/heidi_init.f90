@@ -1,20 +1,25 @@
 subroutine heidi_init
 
-  use ModHeidiMain, only: T, f107R
+  use ModHeidiMain, only: T, f107R, Re, DipoleFactor
   use ModHeidiDrifts, only: j18,j6
   use ModProcIM, only: iProc
   use ModHeidiIO
   use ModInit
 
+  use CON_planet, ONLY: get_planet
   implicit none
 
   !--------------------------------------------------------------------------
 
-  if (iProc.eq.0) then
+  if (iProc == 0) then
      call IonoHeidiInit(year,day,ut)
   endif
 
   if (.not. IsFramework) T = TIME
+
+  call get_planet(RadiusPlanetOut = Re, DipoleStrengthOut = DipoleFactor)
+  DipoleFactor = DipoleFactor/Re**3
+
   if (iProc == 0) then
      call write_prefix; write(iUnitStdOut,*) 'TIME =',TIME
   end if

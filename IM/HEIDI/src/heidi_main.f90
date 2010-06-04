@@ -30,12 +30,11 @@ program heidi_main
   use ModProcIM
   use ModHeidiMain
 
+  use CON_planet, ONLY: init_planet_const, set_planet_defaults, get_planet
+
   implicit none 
 
-  !****************************************************************************
-  ! Initiallize MPI and get number of processors and rank of given processor
-  !****************************************************************************
-
+  logical :: IsUninitialized = .true.
   !---------------------------------------------------------------------------
   call MPI_INIT(iError)
   iComm= MPI_COMM_WORLD
@@ -43,78 +42,37 @@ program heidi_main
   call MPI_COMM_RANK(iComm, iProc, iError)
   call MPI_COMM_SIZE(iComm, nProc, iError)   
 
-  !***************************************************************************
-  ! Read the input file
-  !***************************************************************************     
-
   IsFramework = .false.
 
+  ! Initialize the planet, default planet is Earth
+  call init_planet_const 
+  call set_planet_defaults
+
+  ! Read and check input file
   call heidi_read
   call heidi_check
-  call IM_init_session(1, 0.0)
+
+  if(IsUninitialized)then
+     call heidi_init
+     IsUninitialized = .false.
+  end if
 
   do i3 = nst, nstep
      call heidi_run
   end do			! end time loop
 
-  call IM_finalize(0.0)
+  close(iUnitSal)           ! Closes continuous output file
+  close(iUnitSw1)           ! Closes sw1 input file
+  close(iUnitSw2)           ! Closes sw2 input file
+  close(iUnitMpa)           ! Closes MPA input file
+  close(iUnitSopa)          ! Closes SOPA input file
+  close(iUnitPot)           ! Closes FPOT input file
 
-contains
-  !==========================================================================
-  subroutine IM_init_session(iSession, TimeSimulation)
-
-    implicit none
-    integer,  intent(in) :: iSession         ! session number (starting from 1)
-    real,     intent(in) :: TimeSimulation   ! seconds from start time
-    logical              :: IsUninitialized = .true.
-    !-----------------------------------------------------------------------
-
-    if(IsUninitialized)then
-       call heidi_init
-       IsUninitialized = .false.
-    end if
-  end subroutine IM_init_session
-
-  !==========================================================================  
-
-  subroutine IM_finalize(TimeSimulation)
-
-    use ModProcIM
-    use ModInit, ONLY: nS
-    use ModHeidiIO, ONLY :iUnitSw1,iUnitSw2,&
-         iUnitMpa,iUnitSopa,iUnitPot,iUnitSal
-
-    implicit none
-    real, intent(in) :: TimeSimulation   ! seconds from start time
-    !-----------------------------------------------------------------------
-
-    close(iUnitSal)           ! Closes continuous output file
-    close(iUnitSw1)           ! Closes sw1 input file
-    close(iUnitSw2)           ! Closes sw2 input file
-    close(iUnitMpa)           ! Closes MPA input file
-    close(iUnitSopa)          ! Closes SOPA input file
-    close(iUnitPot)           ! Closes FPOT input file
-
-    call MPI_BARRIER(iComm,iError) 
-    call MPI_finalize(iError)
-
-  end subroutine IM_finalize
-  !==========================================================================  
-
-  subroutine IM_run(TimeSimulation,TimeSimulationLimit)
-
-    implicit none
-    real, intent(inout) :: TimeSimulation   ! current time of component
-    real, intent(in)    :: TimeSimulationLimit ! simulation time not to be exceeded
-    !-----------------------------------------------------------------------
-
-    call heidi_run 
-
-  end subroutine IM_run
-  !==========================================================================  
+  call MPI_BARRIER(iComm,iError) 
+  call MPI_finalize(iError)
 
 end program heidi_main
-
+!==========================================================================
 subroutine CON_stop(StringError)
 
   use ModProcIM, ONLY: iProc, iComm
