@@ -441,7 +441,7 @@ contains
              ! Also calculate magnetic potential Psi_PFSSM
              !/
              do m=0,N_PFSSM
-                if((iTheta==0.or.iTheta==nTheta).and.m>1)CYCLE
+                !if((iTheta==0.or.iTheta==nTheta).and.m>1)CYCLE
                 do n=m,N_PFSSM
                    !\
                    ! c_n corresponds to Todd's c_l::
