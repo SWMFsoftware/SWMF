@@ -10,6 +10,7 @@
 ; reading numbers and strings from input:
 ;    asknum, askstr, str2arr, arr2arr, readplotpar, readlimits
 ; transforming initial data:
+;    readtransform, do_transform, do_my_transform, 
 ;    regulargrid, polargrid, unpolargrid, spheregrid, getaxes
 ;    interpol_logfiles, interpol_log
 ; calculating functions of the data
@@ -256,12 +257,11 @@ if n_elements(filename) eq 0 then filename='file.out'
 gettype,filename,filetype
 openfile,1,filename,filetype
 gethead,1,filetype,$
-  headline,phys,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
+  headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
 close,1
 print,'filename  = ',filename, format="(a,a)"
 print,'filetype  = ',filetype, format="(a,a)"
 print,'headline  = ',headline, format="(a,a)"
-print,'phys      = ',phys,     format="(a,a)"
 print,'it        = ',it,       format="(a,i8)"
 print,'time      = ',time,     format="(a,g15.8)"
 print,'gencoord  = ',gencoord, format="(a,i8)"
@@ -276,7 +276,7 @@ print,'eqpars    =',variables(ndim+nw:*)
 
 end
 ;=============================================================================
-pro gethead,unit,filetype,headline,physics,it,time,gencoord, $
+pro gethead,unit,filetype,headline,it,time,gencoord, $
             ndim,neqpar,nw,nx,eqpar,variables,pictsize=pictsize
 
 ;; on_error,2
@@ -375,22 +375,15 @@ if keyword_set(pictsize) then begin
         'real4' :pictsize = headlen + 8*(1+nw)+4*(ndim+nw)*nxs
     endcase
 endif else begin
-                                ; Get variables and physics
+                                ; Set variables 
     variables=strsplit(varname,/extract)
-    tmp=strsplit(strtrim(headline,2),'_',/extract)
-    if n_elements(tmp) eq 2 then begin
-        headline=tmp(0)
-        physics=tmp(1)
-                                ; work around for a bug
-        if physics eq '123' or physics eq '223' then physics='mhd23'
-    endif
 endelse
 
 end
 
 ;=============================================================================
 pro get_pict,unit,filetype,npict,x,w,$
-    headline,physics,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
+    headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
     rBody,error
 
    on_error,2
@@ -422,7 +415,7 @@ pro get_pict,unit,filetype,npict,x,w,$
    endif
 
    ; Read header information
-   gethead,unit,filetype,headline,physics,$
+   gethead,unit,filetype,headline,$
        it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
 
    ; set rBody if listed among the parameters
@@ -751,22 +744,25 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
 end
 ;===========================================================================
 pro readtransform,ndim,nx,gencoord,transform,nxreg,xreglimits,wregpad,$
-    physics,nvector,vectors,grid,doask
+                  nvector,vectors,grid,doask
 
    on_error,2
 
    if (gencoord or transform eq 'unpolar') and ndim eq 2 then begin
       if transform eq '' then begin
         transform='none'
-        askstr,"transform (r=regular/p=polar/u=unpolar/n=none)",transform,1
+        askstr,"transform (r=regular/p=polar/u=unpolar/m=my/n=none)",$
+          transform,1
       endif else $
-        askstr,"transform (r=regular/p=polar/u=unpolar/n=none)",transform,doask
+        askstr,"transform (r=regular/p=polar/u=unpolar/m=my/n=none)",$
+        transform,doask
 
       ; Complete name
       case transform of
           'r': transform='regular'
           'p': transform='polar'
           'u': transform='unpolar'
+          'm': transform='my'
           'n': transform='none'
          else:
       endcase
@@ -802,30 +798,33 @@ pro readtransform,ndim,nx,gencoord,transform,nxreg,xreglimits,wregpad,$
            wregpad=0
         end
         transform eq 'polar' or transform eq 'unpolar':begin
-           getvectors,physics,nvector,vectors
-           grid=lindgen(nx(0),nx(1))
+            asknum,'Number of vector variables',nvector,doask
+            getvectors,nvector,vectors
+            grid=lindgen(nx(0),nx(1))
         end
         transform eq 'none':grid=lindgen(nx(0),nx(1))
         else: print,'Unknown value for transform:',transform
       endcase
    endif else if (gencoord or transform eq 'unpolar') and ndim eq 3 then begin
        if transform eq '' then begin
-           transform="none" & askstr, $
-             "transform (p=polar/s=sphere/u=unpolar/n=none)",transform,1
+           transform="none"
+           askstr,"transform (p=polar/s=sphere/u=unpolar/m=my/n=none)",$
+             transform,1
        endif else $
-         askstr, $
-         "transform (p=polar/s=sphere/u=unpolar/n=none)",transform,doask
+         askstr,"transform (p=polar/s=sphere/u=unpolar/m=my/n=none)",$
+         transform,doask
        case transform of
            'p': transform='polar'
            's': transform='sphere'
            'u': transform='unpolar'
+           'm': transform='my'
            'n': transform='none'
            else:
        endcase
        case 1 of
            transform eq 'polar' or transform eq 'unpolar' or $
              transform eq 'sphere' :begin
-               getvectors,physics,nvector,vectors
+               getvectors,nvector,vectors
                grid=lindgen(nx(0),nx(1),nx(2))
            end
            transform eq 'none': grid=lindgen(nx(0),nx(1),nx(2))
@@ -843,45 +842,70 @@ pro readtransform,ndim,nx,gencoord,transform,nxreg,xreglimits,wregpad,$
 end
 
 ;===========================================================================
-pro getvectors,physics,nvector,vectors
+pro getvectors,nvector,vectors
 
-   nvector = 0
-   physic=strtrim(physics)
-   if strlen(physics) lt 3 then return
-   phys=strmid(physic,0,strlen(physic)-2)
-   ndir=0
-   reads,strmid(physic,strlen(physic)-1,1),ndir
-   case phys of
-   'rho':nvector=0
-   'flx':nvector=0
-   'hd' :begin
-         nvector=1
-         vectors=1
-         end
-   'hdadiab':begin
-         nvector=1
-         vectors=1
-         end
-   'mhdiso':begin
-         nvector=2
-         vectors=[1,ndir+1]
-         end
-   'mhd':begin
-         nvector=2
-         vectors=[1,ndir+2]
-         end
-   else:begin
-      if nvector eq 0 then begin
-         print,'Unrecognised physics: ',physics
-         print,'Vector variables to transform for WREG'
-         asknum,'nvector',nvector,doask
-         if nvector gt 0 then begin
-            vectors=intarr(nvector)
-            read,PROMPT='Indices of first components in w? ',vectors
-         endif
-      endif
-      end
-   endcase
+if nvector eq 0 then begin
+    print,'Vector variables to transform for WREG'
+    asknum,'nvector',nvector,doask
+    if nvector gt 0 then begin
+        vectors=intarr(nvector)
+        read,PROMPT='Indices of first components in w? ',vectors
+    endif
+endif
+
+end
+
+;===========================================================================
+pro do_my_transform,ifile,variables,x,w,xreg,wreg,usereg
+
+print,'transform="my" so "pro do_my_transform" has to be written and compiled!'
+retall
+
+; example: convert 2nd and 3rd indexes from radian to degrees in 3D
+; check first if the conversion has been done already
+;if max(x(*,*,*,1:2)) lt 10.0 then $
+;  x(*,*,*,1:2) = x(*,*,*,1:2)*180/!pi
+
+end
+
+;===========================================================================
+pro do_transform,transform,ifile,gencoord,variables,nw,x,w, $
+                 xreg,wreg,nxreg,xreglimits,x_old,nxreg_old,xreglimits_old,$
+                 wregpad,triangles,symmtri,nvector,vectors,usereg,$
+                 dotransform,doask
+
+usereg = (not gencoord and transform eq 'unpolar') or $
+  (gencoord and (transform eq 'polar' or transform eq 'regular' $
+                 or transform eq 'sphere'))
+
+if keyword_set(dotransform) then begin
+    askstr, 'dotransform (y/n) ',dotransform,doask
+    if dotransform eq 'n' then return
+endif
+
+if transform eq 'my' or transform eq 'm' then $
+  do_my_transform,ifile,variables,x,w,xreg,wreg,usereg $
+else if usereg then case transform of
+    'regular':begin
+        regulargrid,x_old,nxreg_old,xreglimits_old,$
+          x,xreg,nxreg,xreglimits, $
+          w,wreg,nw,wregpad,triangles,symmtri
+    end
+    'polar'  :begin
+        polargrid,nvector,vectors,x,w,xreg,wreg
+        variables(0:1)=['r','phi']
+    end
+    'sphere' :begin
+        spheregrid  ,nvector,vectors,x,w,xreg,wreg
+        variables(0:2)=['r','theta','phi']
+    end
+    'unpolar':begin
+        unpolargrid,nvector,vectors,x,w,xreg,wreg
+        variables(0:1)=['x','y']
+    end
+    else     :print,'Unknown value for transform:',transform
+endcase
+
 end
 
 ;===========================================================================

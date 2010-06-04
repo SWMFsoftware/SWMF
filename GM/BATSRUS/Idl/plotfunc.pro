@@ -43,13 +43,8 @@
    if nfile gt 1 then begin
       print,'More than one files were read...'
       print,'Probably w is from file ',filenames(nfile-1)
-      physics=physicss(nfile-1)
       nfile=1
    endif
-
-   ;;;askstr,'physics (e.g. mhd12)      ',physics,doask
-
-   physics=strtrim(physics,2)
 
    print,'======= CURRENT PLOTTING PARAMETERS ================'
    print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
@@ -83,32 +78,12 @@
       nplot,plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
 
    readtransform,ndim,nx,gencoord,transform,nxreg,xreglimits,wregpad,$
-		physics,nvector,vectors,grid,doask
+     nvector,vectors,grid,doask
 
-   usereg=(not gencoord and transform eq 'unpolar') or $
-          (gencoord and (transform eq 'polar' or transform eq 'regular' $
-                         or transform eq 'sphere'))
-
-   ; Redo triangulization if required
-   if usereg then begin
-      askstr,'dotransform (y/n)         ',dotransform,doask
-      if dotransform eq 'y' then case transform of
-      'regular': regulargrid,x_old,nxreg_old,xreglimits_old,$
-                 x,xreg,nxreg,xreglimits,w,wreg,nw,wregpad,triangles,symmtri
-      'polar':   begin
-                    polargrid,nvector,vectors,x,w,xreg,wreg
-                    variables(0:1)=['r','phi']
-                 end
-      'sphere':  begin
-		    spheregrid  ,nvector,vectors,x,w,xreg,wreg
-		    variables(0:2)=['r','theta','phi']
-		 end
-      'unpolar': begin
-                    unpolargrid,nvector,vectors,x,w,xreg,wreg
-                    variables(0:1)=['x','y']
-                 end
-      endcase
-   endif
+   ; ifile=0, also pass dotransform and doask
+   do_transform,transform,0,gencoord,variables,nw,x,w, $
+     xreg,wreg,nxreg,xreglimits,x_old,nxreg_old,xreglimits_old,$
+     wregpad,triangles,symmtri,nvector,vectors,usereg,dotransform,doask
 
    print,'======= DETERMINE PLOTTING RANGES ==================='
 

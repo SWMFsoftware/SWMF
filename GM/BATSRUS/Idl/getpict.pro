@@ -66,11 +66,7 @@ asknum,'npict',npict,doask
 print
 
 
-str2arr,physics,physicss,nfile
-physics=''
 for ifile=0,nfile-1 do begin
-
-   phys=physicss(ifile)
 
    ; Read data from file
 
@@ -79,7 +75,7 @@ for ifile=0,nfile-1 do begin
 
    openfile,10,filenames(ifile),filetypes(ifile)
 
-   get_pict,10,filetypes(ifile),npict,x,w,headline,phys,it,time,$
+   get_pict,10,filetypes(ifile),npict,x,w,headline,it,time,$
           gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error
 
    print,         'headline  =',strtrim(headline,2)
@@ -89,9 +85,6 @@ for ifile=0,nfile-1 do begin
    print,FORMAT='("nx        = ",3(i8))',nx
    print,         'eqpar     =',eqpar
    print,         'variables =',variables
-   ;;; askstr,'physics (eg. mhd12)',phys,doask
-   physicss(ifile)=phys
-   physics=physics + phys + ' '
 
    if nfile gt 1 then begin
      case ifile of
@@ -112,26 +105,16 @@ for ifile=0,nfile-1 do begin
    endif else print,'Read x and w'
 
    readtransform,ndim,nx,gencoord,transform,nxreg,xreglimits,wregpad,$
-		physics,nvector,vectors,grid,doask
+     nvector,vectors,grid,doask
 
-   if (gencoord and (transform eq 'polar' or transform eq 'regular')) or $
-      (not gencoord and transform eq 'unpolar') then begin
+   do_transform,transform,ifile,gencoord,variables,nw,x,w, $
+     xreg,wreg,nxreg,xreglimits,x_old,nxreg_old,xreglimits_old,$
+     wregpad,triangles,symmtri,nvector,vectors,usereg
+
+   if usereg then begin
       if nfile eq 1 then $
            print,'...transform to xreg and wreg' $
       else print,'...transform to xreg and wreg',ifile,FORMAT='(a,i1)'
-      case transform of
-         'regular':regulargrid,x_old,nxreg_old,xreglimits_old,$
-                   x,xreg,nxreg,xreglimits,w,wreg,nw,wregpad,triangles,symmtri
-         'polar'  :begin
-                     polargrid,nvector,vectors,x,w,xreg,wreg
-                     variables(0:1)=['r','phi']
-                   end
-	 'unpolar':begin
-                     unpolargrid,nvector,vectors,x,w,xreg,wreg
-                     variables(0:1)=['x','y']
-                   end
-         else     :print,'Unknown value for transform:',transform
-      endcase
 
       if nfile gt 1 then case ifile of
          0: wreg0=wreg

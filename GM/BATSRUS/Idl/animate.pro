@@ -74,21 +74,15 @@
 
    ;====== OPEN FILE(S) AND READ AND PRINT HEADER(S)
 
-   str2arr,physics,physicss,nfile
-   physics=''
    anygencoord=0
    for ifile=0,nfile-1 do begin
       openfile,10,filenames(ifile),filetypes(ifile)
-      phys=physicss(ifile)
       gethead,10,filetypes(ifile), $
-         headline,phys,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
+         headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
       anygencoord=anygencoord or gencoord
       print,         'headline                  =',strtrim(headline,2)
       print,FORMAT='("variables                 =",100(a," "),$)',variables
       print,FORMAT='(" (ndim=",i2,", nw=",i2,")")',ndim,nw
-      ;;; askstr,'physics (e.g. mhd12)      ',phys,doask
-      physicss(ifile)=phys
-      physics=physics + phys + ' '
    endfor
 
    print,'======= PLOTTING PARAMETERS ========================='
@@ -96,7 +90,7 @@
       nplot,plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
 
    readtransform,ndim,nx,anygencoord,transform,nxreg,xreglimits,wregpad,$
-                 physicss(nfile-1),nvector,vectors,grid,doask
+     nvector,vectors,grid,doask
 
    print,'======= DETERMINE PLOTTING RANGES ==================='
 
@@ -119,26 +113,17 @@
             else               nextpict=dpict(ifile)
 
             get_pict,ifile+10,filetypes(ifile),nextpict,x,w,$
-                headline, phys, it, time, gencoord, ndim, neqpar, nw, nx,$
+                headline, it, time, gencoord, ndim, neqpar, nw, nx,$
                 eqpar, variables, rBody, err
 
             if keyword_set(wsubtract) then w=w-wsubtract
             wnames=variables(ndim:ndim+nw-1)
-            usereg=(not gencoord and transform eq 'unpolar') or $
-               (gencoord and (transform eq 'polar' or transform eq 'regular' $
-                              or transform eq 'sphere'))
             error=err or error
 
-
             if not error then begin
-               if usereg then case transform of
-	          'regular':regulargrid,x_old,nxreg_old,xreglimits_old,$
-                            x,xreg,nxreg,xreglimits, $
-                            w,wreg,nw,w(0,0,*),triangles,symmtri
-		  'polar'  :polargrid  ,nvector,vectors,x,w,xreg,wreg
-		  'sphere' :spheregrid  ,nvector,vectors,x,w,xreg,wreg
-		  'unpolar':unpolargrid,nvector,vectors,x,w,xreg,wreg
-	       endcase
+                do_transform,transform,ifile,gencoord,variables,nw,x,w, $
+                  xreg,wreg,nxreg,xreglimits,x_old,nxreg_old,xreglimits_old,$
+                  wregpad,triangles,symmtri,nvector,vectors,usereg
 
                first= npict eq 0 and ifile eq 0
                getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,$
@@ -224,8 +209,8 @@
          else               nextpict=dpict(ifile)
 
          if npict gt 1 or nfile gt 1 or noautorange then begin
-            get_pict,ifile+10,filetypes(ifile),nextpict,x,w,$
-               headline,phys,it,time,gencoord,ndim,neqpar,nw,nx,$
+            get_pict, ifile+10, filetypes(ifile), nextpict, x, w, $
+               headline, it, time, gencoord, ndim, neqpar, nw, nx,$
                eqpar, variables, rBody, err
 
             error=error or err
@@ -237,27 +222,9 @@
 
             wnames=variables(ndim:ndim+nw-1)
 
-            usereg=(not gencoord and transform eq 'unpolar') or $
-               (gencoord and (transform eq 'polar' or transform eq 'regular' $
-                              or transform eq 'sphere'))
-
-            if usereg then case transform of
-		'regular':regulargrid,x_old,nxreg_old,xreglimits_old,$
-                                x,xreg,nxreg,xreglimits, $
-				w,wreg,nw,wregpad,triangles,symmtri
-		'polar'  :begin
-                            polargrid,nvector,vectors,x,w,xreg,wreg
-                            variables(0:1)=['r','phi']
-                          end
-		'sphere' :begin
-			    spheregrid  ,nvector,vectors,x,w,xreg,wreg
-			    variables(0:2)=['r','theta','phi']
-			  end
-		'unpolar':begin
-                            unpolargrid,nvector,vectors,x,w,xreg,wreg
-                            variables(0:1)=['x','y']
-                          end
-            endcase
+            do_transform,transform,ifile,gencoord,variables,nw,x,w, $
+              xreg,wreg,nxreg,xreglimits,x_old,nxreg_old,xreglimits_old,$
+              wregpad,triangles,symmtri,nvector,vectors,usereg
 
 	    linestyle=0
             if multix*multiy lt nplot*nfile then linestyle=ifile
