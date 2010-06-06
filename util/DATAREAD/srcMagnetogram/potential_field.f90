@@ -209,10 +209,12 @@ contains
     use ModPlotFile,    ONLY: save_plot_file
 
     real, allocatable :: Potential_G(:,:,:)
-    real, allocatable :: Br_G(:,:,:), rBtheta_G(:,:,:), rBphi_G(:,:,:)
+    real, allocatable :: Br_G(:,:,:), rBtheta_G(:,:,:), rSinThetaBphi_G(:,:,:)
+    real, allocatable :: rBthetaPerSinTheta_G(:,:,:)
     real, allocatable :: B_DN(:,:,:,:)
+    real, allocatable :: MinCosTheta_I(:), MinCosThetaNode_I(:)
 
-    real :: r, Theta, Phi
+    real :: r, Theta, Phi, MinCosTheta, SinTheta
     integer :: iR, iTheta, iPhi
     !--------------------------------------------------------------------------
 
@@ -222,11 +224,18 @@ contains
 
     ! Staggered components of the magnetic field
     allocate( &
-         Br_G(1:nR+1,1:nTheta,1:nPhi+1), &
-         rBtheta_G(0:nR+1,1:nTheta+1,0:nPhi+1), &
-         rBphi_G(0:nR+1,0:nTheta+1,1:nPhi+1) )
+         Br_G(nR+1,nTheta,nPhi), &
+         rBtheta_G(0:nR+1,nTheta+1,nPhi), &
+         rSinThetaBphi_G(0:nR+1,nTheta,nPhi+1) )
 
-    do iPhi = 1, nPhi+1
+    if(UseCosTheta)then
+       allocate(MinCosTheta_I(nTheta), MinCosThetaNode_I(nTheta+1), &
+            rBthetaPerSinTheta_G(0:nR+1,nTheta+1,nPhi))
+       MinCosTheta_I = -cos(Theta_I(1:nTheta))
+       MinCosThetaNode_I = -cos(ThetaNode_I)
+    end if
+
+    do iPhi = 1, nPhi
        do iTheta = 1, nTheta
           do iR = 1, nR+1
              Br_G(iR,iTheta,iPhi) = &
@@ -237,18 +246,18 @@ contains
     end do
 
     if(UseCosTheta)then
-       do iPhi = 0, nPhi+1
+       do iPhi = 1, nPhi
           do iTheta = 1, nTheta+1
              do iR = 0, nR+1
-                rBtheta_G(iR,iTheta,iPhi) = &
+                rBthetaPerSinTheta_G(iR,iTheta,iPhi) = &
                      ( Potential_G(iR,iTheta,iPhi) &
                      - Potential_G(iR,iTheta-1,iPhi)) &
-                     *SinThetaNode_I(iTheta)/dCosThetaNode_I(iTheta)
+                     /dCosThetaNode_I(iTheta)
              end do
           end do
        end do
     else
-       do iPhi = 0, nPhi+1
+       do iPhi = 1, nPhi
           do iTheta = 1, nTheta+1
              do iR = 0, nR+1
                 rBtheta_G(iR,iTheta,iPhi) = &
@@ -261,11 +270,11 @@ contains
     end if
 
     do iPhi = 1, nPhi+1
-       do iTheta = 0, nTheta+1
+       do iTheta = 1, nTheta
           do iR = 0, nR+1
-             rBphi_G(iR,iTheta,iPhi) = &
+             rSinThetaBphi_G(iR,iTheta,iPhi) = &
                   (Potential_G(iR,iTheta,iPhi)-Potential_G(iR,iTheta,iPhi-1)) &
-                  / (SinTheta_I(iTheta)*dPhiNode_I(iPhi))
+                  / dPhiNode_I(iPhi)
           end do
        end do
     end do
@@ -273,28 +282,57 @@ contains
     ! The magnetic field on the final grid used in BATSRUS
     ! Note, the coordinates are in longitutude and latitude, but the
     ! magnetic field is in Bphi, Btheta = -Blatitude
-    allocate(B_DN(3,1:nR+1,1:nPhi+1,1:nTheta))
+    allocate(B_DN(3,nR+1,nPhi+1,nTheta))
 
-    do iPhi = 1, nPhi+1
-       do iTheta = 1, nTheta
-          do iR = 1, nR+1
-             r = RadiusNode_I(iR)
-             Theta = Theta_I(iTheta)
-             Phi = Phi_I(iPhi)
+    if(UseCosTheta)then
+       do iPhi = 1, nPhi
+          do iTheta = 1, nTheta
+             do iR = 1, nR+1
+                r = RadiusNode_I(iR)
+                Theta = Theta_I(iTheta)
+                SinTheta = sin(Theta)
+                MinCosTheta = -cos(Theta)
+                Phi = Phi_I(iPhi)
 
-             B_DN(1,iR,iPhi,nTheta+1-iTheta) = Br_G(iR,iTheta,iPhi)
-             B_DN(3,iR,iPhi,nTheta+1-iTheta) = &
-                  trilinear(rBtheta_G, 0, nR+1, 1, nTheta+1, 0, nPhi+1, &
-                  (/r,Theta,Phi/), x_I=Radius_I, y_I=ThetaNode_I, &
-                  z_I=Phi_I, DoExtrapolate=.false.) / r
-             B_DN(2,iR,iPhi,nTheta+1-iTheta) = &
-                  trilinear(rBphi_G, 0, nR+1, 0, nTheta+1, 1, nPhi+1, &
-                  (/r,Theta,Phi/), x_I=Radius_I, y_I=Theta_I, &
-                  z_I=PhiNode_I, DoExtrapolate=.false.) / r
-
+                B_DN(1,iR,iPhi,nTheta+1-iTheta) = Br_G(iR,iTheta,iPhi)
+                B_DN(2,iR,iPhi,nTheta+1-iTheta) = &
+                     trilinear(rSinThetaBphi_G, &
+                     0, nR+1, 1, nTheta, 1, nPhi+1, &
+                     (/r,MinCosTheta,Phi/), x_I=Radius_I, y_I=MinCosTheta_I, &
+                     z_I=PhiNode_I, DoExtrapolate=.false.) / (r*SinTheta)
+                B_DN(3,iR,iPhi,nTheta+1-iTheta) = &
+                     trilinear(rBthetaPerSinTheta_G, &
+                     0, nR+1, 1, nTheta+1, 1, nPhi, &
+                     (/r,MinCosTheta,Phi/), x_I=Radius_I, &
+                     y_I=MinCosThetaNode_I, &
+                     z_I=Phi_I(1:nPhi), DoExtrapolate=.false.) *SinTheta/r
+             end do
           end do
        end do
-    end do
+    else
+       do iPhi = 1, nPhi
+          do iTheta = 1, nTheta
+             do iR = 1, nR+1
+                r = RadiusNode_I(iR)
+                Theta = Theta_I(iTheta)
+                SinTheta = sin(Theta)
+                Phi = Phi_I(iPhi)
+
+                B_DN(1,iR,iPhi,nTheta+1-iTheta) = Br_G(iR,iTheta,iPhi)
+                B_DN(2,iR,iPhi,nTheta+1-iTheta) = &
+                     trilinear(rSinThetaBphi_G, &
+                     0, nR+1, 1, nTheta, 1, nPhi+1, &
+                     (/r,Theta,Phi/), x_I=Radius_I, y_I=Theta_I(1:nTheta), &
+                     z_I=PhiNode_I, DoExtrapolate=.false.) / (r*SinTheta)
+                B_DN(3,iR,iPhi,nTheta+1-iTheta) = &
+                     trilinear(rBtheta_G, 0, nR+1, 1, nTheta+1, 1, nPhi, &
+                     (/r,Theta,Phi/), x_I=Radius_I, y_I=ThetaNode_I, &
+                     z_I=Phi_I(1:nPhi), DoExtrapolate=.false.) / r
+             end do
+          end do
+       end do
+    end if
+    B_DN(:,:,nPhi+1,:) = B_DN(:,:,1,:)
 
     call save_plot_file('potentialfield.out', TypeFileIn='real8', &
          StringHeaderIn = 'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
@@ -492,7 +530,7 @@ program potential_field
   implicit none
 
   integer :: nKrylov=400, nIter=10000
-  real    :: Tolerance = 0.0001
+  real    :: Tolerance = 1e-4
   integer :: n, iError, iTheta
   !--------------------------------------------------------------------------
 
