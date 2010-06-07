@@ -11,7 +11,7 @@ subroutine crcm_run(delta_t)
                             iLatMin,DoMultiFluidGMCoupling
   use ModIeCrcm,      ONLY: pot
   use ModCrcmPlot,    ONLY: Crcm_plot, DtOutput, DoSavePlot
-  use ModCrcmRestart, ONLY: IsRestart, crcm_read_restart
+  use ModCrcmRestart, ONLY: IsRestart
   implicit none
 
 
@@ -86,9 +86,7 @@ subroutine crcm_run(delta_t)
      !set initial state when no restarting
      call initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
      IsFirstCall=.false.
-  elseif ( IsFirstCall .and. IsRestart) then
-     !set initial state when restarting
-     call crcm_read_restart
+  elseif(IsFirstCall .and. IsRestart) then
      ib0=iba
      IsFirstCall=.false.
   endif
@@ -141,6 +139,8 @@ subroutine crcm_init
   use ModNumConst,    ONLY: cDegToRad,cRadToDeg,cPi
   use ModCrcmPlanet,  ONLY: re_m, dipmom, Hiono, amu_I
   use ModCrcmInitialize
+  use ModCrcmRestart, ONLY: IsRestart, crcm_read_restart
+
   implicit none
 
   integer i,n,k
@@ -209,6 +209,11 @@ subroutine crcm_init
         enddo
      enddo
   enddo
+
+  if(IsRestart) then
+     !set initial state when restarting
+     call crcm_read_restart
+  endif
 
 end subroutine crcm_init
 
