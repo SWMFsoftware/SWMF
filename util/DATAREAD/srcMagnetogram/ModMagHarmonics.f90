@@ -198,13 +198,16 @@ contains
     !--------------------------------------------------------------------------
     write(*,*) 'Use Chebyshev transform'
 
-    nThetaIn = nTheta           
+    nThetaIn = nTheta
+    nThetaOut = ceiling(nThetaIn * cPi/2)
     !Notice the number of point in theta direction is an odd number
-    if (mod(nThetaIn,2) == 0) then
-       nThetaOut=nThetaIn+1
+    if (mod(nThetaOut,2) == 0) then
+       nThetaOut=nThetaOut+1
     else
-       nThetaOut=nThetaIn
+       nThetaOut=nThetaOut
     end if
+
+    !nThetaOut = 283
     
     write(*,*) 'Original nTheta=', nThetaIn
     write(*,*) 'New nTheta=     ', nThetaOut
@@ -506,7 +509,7 @@ contains
     
     do nn=0,nHarmonics
        do mm=0,nn
-          write(iUnit, '(2I5,2f15.3)') nn,mm,g_nm(nn+1,mm+1),h_nm(nn+1,mm+1)
+          write(iUnit, '(2I5,2f20.10)') nn,mm,g_nm(nn+1,mm+1),h_nm(nn+1,mm+1)
        enddo
     end do
     
