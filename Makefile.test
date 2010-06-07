@@ -1,3 +1,4 @@
+
 #^CMP COPYRIGHT UM
 #^CMP FILE TESTING
 
@@ -21,7 +22,7 @@ test_help:
 	@echo "    test1                      (run GM-IE-PW test only)"
 	@echo "    test2                      (run SC-IH test only )"
 	@echo "    test3                      (run GM-IE-IM test only)"
-	@echo "    test4                      (run GM-RIM-HEIDI test only)"
+	@echo "    test4                      (run GM-IE-HEIDI test only)"
 	@echo "    test6                      (run GM-IE-CRCM test only)"
 
 test:
@@ -319,36 +320,36 @@ test3_check:
 		> test3_im_rcm.diff)
 	ls -l test3*.diff
 
-### Test4: GM+RIM+HEIDI ###############
+### Test4: GM+IE+HEIDI ###############
 
 test4:
 	@echo "test4_compile..." > test4_gm.diff
-	@echo "test4_compile..." > test4_ie_rim.diff
+	@echo "test4_compile..." > test4_ie.diff
 	@echo "test4_compile..." > test4_im_heidi.diff
 	make test4_compile
 	@echo "test4_rundir..." >> test4_gm.diff
-	@echo "test4_rundir..." >> test4_ie_rim.diff
+	@echo "test4_rundir..." >> test4_ie.diff
 	@echo "test4_rundir..." >> test4_im_heidi.diff
 	make test4_rundir
 	@echo "test4_run..." >> test4_gm.diff
-	@echo "test4_run..." >> test4_ie_rim.diff
+	@echo "test4_run..." >> test4_ie.diff
 	@echo "test4_run..." >> test4_im_heidi.diff
 	make test4_run
 	@echo "test4_check..." >> test4_gm.diff
-	@echo "test4_check..." >> test4_ie_rim.diff
+	@echo "test4_check..." >> test4_ie.diff
 	@echo "test4_check..." >> test4_im_heidi.diff
 	make test4_check
 
 test4_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/RIM,IM/HEIDI
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/HEIDI
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
 	make SWMF PIDL
 
 test4_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.GMRIMHEIDI ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMRIMHEIDI ${TESTDIR}/LAYOUT.in
+	cp Param/PARAM.in.test.GMIEHEIDI ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMIEHEIDI ${TESTDIR}/LAYOUT.in
 
 test4_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -362,7 +363,7 @@ test4_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -t -r=1e-6 \
 		${TESTDIR}/RESULTS/IE/IE.log \
 		output/test4/IE.log \
-		> test4_ie_rim.diff)
+		> test4_ie.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -t -a=1e-8 -r=1e-30 \
                 ${TESTDIR}/RESULTS/IM/hydrogen/test1_h_prs.002 \
                 output/test4/IM_test1_h_prs.002\
