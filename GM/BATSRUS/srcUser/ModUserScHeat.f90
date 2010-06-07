@@ -233,8 +233,8 @@ module ModUser
   real :: HeatCondPar
   real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
   real :: VAlfvenMin = 1.0e5  !100 km/s
-  real :: RhoVAt1AU = 5.4e-15 !kg/(m2*s)
-
+  real :: Umax = 8e5 ! 800 km/s
+  real :: RhoVAt1AU = 4.5e-15 !kg/(m2*s) ! in fast wind NpV=2.7x10^8 /cm2s
 
 contains
 
@@ -313,6 +313,7 @@ contains
     use ModAdvance,     ONLY: UseElectronPressure
     use ModConst,       ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
          cElectronMass
+    use ModExpansionFactors, ONLY: WSAspeed_N
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModLdem,        ONLY: read_ldem, UseLdem
     use ModMain,        ONLY: NameThisComp, UseB0, UseMagnetogram
@@ -366,6 +367,8 @@ contains
        if(UseLdem) call read_ldem
 
        if(iProc == 0) call write_alfvenwave_boundary
+
+       Umax = maxval(WSAspeed_N)
     end if
 
     ! electron heat conduct coefficient for single charged ions
@@ -538,27 +541,28 @@ contains
        Ewave = (DeltaBPerB*Br)**2
     else
 
-       RhoV =  AreaRatio * RhoVAt1AU
-
        call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
        VAlfvenSi = (Br/sqrt(RhoBase))*No2Si_V(UnitU_)
        TbaseSi = Tbase*No2Si_V(UnitTemperature_)
 
-       !v_\infty from WSA model:
-       call get_bernoulli_integral(x, y, z, Uf)
-       Uratio = Uf/Umin
        if(UseHeatFluxInBernoulli)then
           HeatFluxSi = HeatFlux*No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
        else
           ! Assume vanishing electron thermal conductive flux
-          dTedr = -(2.0/7.0)*Tbase/(rBody + H_PFSSM)
+          dTedr = -(2.0/7.0)*Tbase/rBody
           HeatFluxSi = -HeatCondPar*Tbase**2.5*dTedr &
                *No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
        end if
 
-       ! divide RhoV by Uratio since RhoV is generally smaller away from
-       ! the current sheet
-       WaveEnergyDensSi = (RhoV/Uratio/rBody**2*(0.5*Uf**2 &
+       !v_\infty from WSA model:
+       call get_bernoulli_integral(x, y, z, Uf)
+       Uratio = Umax/Uf
+
+       ! contrast ratio between mass flux in high and slow speed wind is here
+       ! approximated by sqrt(Uratio)
+       RhoV =  RhoVAt1AU*sqrt(Uratio)
+       
+       WaveEnergyDensSi = (RhoV*AreaRatio/rBody**2*(0.5*Uf**2 &
             + cSunGravitySi/rBody - g*inv_gm1*&
             cBoltzmann/(cProtonMass*MassIon_I(1))*(1.0+AverageIonCharge) &
             *TbaseSi) - ExpansionFactorInv*HeatFluxSi) &
