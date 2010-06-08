@@ -322,13 +322,17 @@ subroutine set_inputs
            call read_in_logical(UseNewellAveraged, iError)
            call read_in_logical(UseNewellMono, iError)
            call read_in_logical(UseNewellWave, iError)
+           call read_in_logical(DoNewellRemoveSpikes, iError)
+           call read_in_logical(DoNewellAverage, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #NEWELLAURORA'
               write(*,*) '#NEWELLAURORA'
-              write(*,*) 'UseNewellAurora   (logical)'
-              write(*,*) 'UseNewellAveraged (logical)'
-              write(*,*) 'UseNewellMono (logical)'
-              write(*,*) 'UseNewellWave (logical)'
+              write(*,*) 'UseNewellAurora       (logical)'
+              write(*,*) 'UseNewellAveraged     (logical)'
+              write(*,*) 'UseNewellMono         (logical)'
+              write(*,*) 'UseNewellWave         (logical)'
+              write(*,*) 'UseNewellRemoveSpikes (logical)'
+              write(*,*) 'UseNewellAverage      (logical)'
               IsDone = .true.
            endif
 

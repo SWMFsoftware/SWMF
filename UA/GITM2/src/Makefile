@@ -1,6 +1,6 @@
-ABDIR   = ../srcSphereAB
+ABDIR   = ${UADIR}/srcSphereAB
 IODIR   = ${DATAREADINDICESDIR}
-GLDIR   = ../srcGlow
+GLDIR   = ${UADIR}/srcGlow
 
 SEARCH_EXTRA = -I${ABDIR} -I${IODIR} -I${EMPIRICALUADIR} -I${EMPIRICALIEDIR}
 
@@ -113,12 +113,12 @@ GITM_general:
 GITM_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_
 	cd Tmp_; \
-		ar -x ../${ABDIR}/libSphere.a; \
+		ar -x ${ABDIR}/libSphere.a; \
 		ar -x ${LIBDIR}/libEMPIRICALIE.a; \
 		ar -x ${LIBDIR}/libEMPIRICALUA.a; \
 		ar -x ${LIBDIR}/libINDICES.a; \
 		ar -x ${LIBDIR}/libSHARE.a; \
-		ar -x ../${GLDIR}/libGLOW.a
+		ar -x ${GLDIR}/libGLOW.a
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o ${LBLAS} ${Lflag1}
 	rm -rf Tmp_
 

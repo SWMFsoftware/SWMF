@@ -22,7 +22,7 @@ module ModNewell
   integer, parameter :: nMlts  = 96
   integer, parameter :: nMLats = 160
   integer, parameter :: nProbs = 3
-  integer, parameter :: ndF    = 9
+  integer, parameter :: ndF    = 12
 
   real, dimension(nMlts, nMlats) :: &
        B1aDiff,B2aDiff,B1aDiffn,B2aDiffn,rFaDiff,rFaDiffn,B1pDiff,B2pDiff, &
@@ -33,7 +33,8 @@ module ModNewell
        NumberFluxDiff, EnergyFluxDiff, &
        NumberFluxMono, EnergyFluxMono, &
        NumberFluxWave, EnergyFluxWave, &
-       NumberFluxIons, EnergyFluxIons
+       NumberFluxIons, EnergyFluxIons, &
+       Area
 
   real, dimension(ndF, nMlts, nMlats) :: &
        ProbDiff, ProbMono, ProbWave
@@ -47,10 +48,21 @@ contains
 
   subroutine init_newell
 
+    use ModConstants, only: pi
+    integer :: iLat
+
     call report("Newell Aurora Initializing",2)
 
     call read_all_regression_files
     call read_all_probability_files
+
+    ! This assumes about 500 km altitude and 1/2 deg and 1/4 hour resolution
+    area = 120.0 * 120.0 * 0.5 * 3.75
+
+    do iLat = 1,nMLats/2-1
+       area(:,iLat)         = area(:,iLat) * cos((50.0 + 0.5*(iLat-1))*pi/180.0)
+       area(:,iLat+nMLats/2)= area(:,iLat) * cos((50.0 + 0.5*(iLat-1))*pi/180.0)
+    enddo
 
     call report("Newell Aurora Initialized",2)
 
@@ -62,11 +74,11 @@ contains
 
     use ModSizeGITM
     use ModGITM
-    use ModInputs, only: iDebugLevel, UseNewellAveraged
+    use ModInputs
 
     integer, intent(in) :: iBlock
     integer :: iLon, iLat, iMlat, iMlt, iMlat2
-    real :: numflux
+    real :: numflux, hps, hpn
 
     call start_timing("run_newell")
 
@@ -120,17 +132,32 @@ contains
        where (NumberFluxIons > 5.0e8)  NumberFluxIons = 0.0
        where (NumberFluxIons > 1.0e8)  NumberFluxIons = 1.0e8
 
-       call smooth(EnergyFluxDiff)
-       call smooth(NumberFluxDiff)
+       if (DoNewellRemoveSpikes .or. DoNewellAverage) then
 
-       call smooth(EnergyFluxMono)
-       call smooth(NumberFluxMono)
+          call calc_hp(EnergyFluxDiff, hps, hpn)
+          write(*,*) "Before Smooth, Diffuse : ", hps, hpn
+          call smooth(EnergyFluxDiff)
+          call smooth(NumberFluxDiff)
+          call calc_hp(EnergyFluxDiff, hps, hpn)
+          write(*,*) "After Smooth, Diffuse : ", hps, hpn
 
-       call smooth(EnergyFluxWave)
-       call smooth(NumberFluxWave)
+          call calc_hp(EnergyFluxMono, hps, hpn)
+          write(*,*) "Before Smooth, Mono : ", hps, hpn
+          call smooth(EnergyFluxMono)
+          call smooth(NumberFluxMono)
+          call calc_hp(EnergyFluxMono, hps, hpn)
+          write(*,*) "After Smooth, Mono : ", hps, hpn
 
-       !call smooth(EnergyFluxIons)
-       !call smooth(NumberFluxIons)
+          call calc_hp(EnergyFluxWave, hps, hpn)
+          write(*,*) "Before Smooth, Wave : ", hps, hpn
+          call smooth(EnergyFluxWave)
+          call smooth(NumberFluxWave)
+          write(*,*) "After Smooth, Wave : ", hps, hpn
+
+          !call smooth(EnergyFluxIons)
+          !call smooth(NumberFluxIons)
+
+       endif
 
     endif
 
@@ -354,64 +381,100 @@ contains
 
   ! -------------------------------------------------------------------
 
+  subroutine calc_hp(value,outs,outn)
+
+    real, dimension(nMlts, nMlats), intent(in) :: value
+    real, intent(out) :: outs, outn
+
+    outs = sum(value(:,1:nMLats/2-1) * Area(:,1:nMLats/2-1))
+    outn = sum(value(:,nMLats/2:nMLats) * Area(:,nMLats/2:nMLats))
+
+  end subroutine calc_hp
+
+  ! -------------------------------------------------------------------
+
   subroutine smooth(value)
+
+    use ModSizeGITM
+    use ModInputs
 
     implicit none
 
     real, dimension(nMlts, nMlats) :: value, valueout
 
-    integer, parameter :: nP = 2
-    integer :: iMlt, iLat, iM, iL, n, iMa, iLa
+    integer :: nPL = 2, nPM = 2, nMin = 2
+    integer :: iMlt, iLat, iM, iL, n, iMa, iLa, iHem
+    integer :: iLatStart, iLatEnd
     real    :: ave, std
+
+    ! for removing bad points, we want the zone of consideration to be at 
+    ! least 2 cells on each side (i.e., 5x5).  For averaging, allow only 1 cell.
+    if (DoNewellAverage) nMin = 1
+
+    ! How many points to average over in Lat and MLT.
+    ! Newell is at 1/2 deg resolution in lat, so averaging would be over 
+    nPL = max(1,floor(180.0 / float(nBlocksLat*nLats) + 0.499))
+    ! no *2, because this is for each side
+
+    ! Newell is at 1/4 hour MLT, which is 3.75 deg so averaging would be over
+    nPM = max(1,floor(360.0 / float(nBlocksLon*nLons)/3.75/2 + 0.499))
+
+    write(*,*) "nPL, nPM in smooth : ", nPL, nPM
 
     valueout = value*0.0
     do iMlt = 1, nMlts
-       do iLat = 1, nMlats
-          if (value(iMlt, iLat) > 0.0) then
-             n = 0
-             ave = 0.0
-             do iM = iMlt-nP, iMlt+nP
-                iMa = iM
-                iMa = mod(iMa + nMlts, nMlts)
-                if (iMa == 0) iMa = nMlts
-                do iL = iLat-nP, iLat+nP
-                   iLa = iL
-                   iLa = mod(iLa + nMlats, nMlats)
-                   if (iLa == 0) iLa = nMlats
-                   if (value(iMa,iLa) > 0.0) then
-                      ave = ave + value(iMa,iLa)
-                      n   = n + 1
-                   endif
-                enddo
-             enddo
-             if (n > (2*nP+1)*(2*nP+1)/2) then 
-                ave = ave/n
-                std = 0.0
-                do iM = iMlt-nP, iMlt+nP
+       do iHem = 1,2
+          if (iHem == 1) then
+             iLatStart = 2
+             iLatEnd = nMlats/2-1
+          endif
+          if (iHem == 2) then
+             iLatStart = nMlats/2+1
+             iLatEnd = nMlats-1
+          endif
+
+          do iLat = iLatStart, iLatEnd
+             if (value(iMlt, iLat) > 0.0) then
+                n = 0
+                ave = 0.0
+                do iM = iMlt-nPM, iMlt+nPM
                    iMa = iM
                    iMa = mod(iMa + nMlts, nMlts)
                    if (iMa == 0) iMa = nMlts
-                   do iL = iLat-nP, iLat+nP
-                      iLa = iL
-                      iLa = mod(iLa + nMlats, nMlats)
-                      if (iLa == 0) iLa = nMlats
+                   do iLa = iLat-nPL, iLat+nPL
                       if (value(iMa,iLa) > 0.0) then
-                         std = std + abs(ave - value(iMa,iLa))
+                         ave = ave + value(iMa,iLa)
+                         n   = n + 1
                       endif
                    enddo
                 enddo
-                std = std/n
+                if (n > (2*nPL+1)*(2*nPM+1)/2) then 
+                   ave = ave/n
+                   std = 0.0
+                   do iM = iMlt-nPM, iMlt+nPM
+                      iMa = iM
+                      iMa = mod(iMa + nMlts, nMlts)
+                      if (iMa == 0) iMa = nMlts
+                      do iLa = iLat-nPL, iLat+nPL
+                         if (value(iMa,iLa) > 0.0) then
+                            std = std + (ave - value(iMa,iLa))**2
+                         endif
+                      enddo
+                   enddo
+                   std = sqrt(std/n)
                 ! We only want to kill points that are 2 stdev ABOVE the average
                 ! value.
-                if (abs(value(iMlt,iLat)-ave) > 2*std) then
+                   if (abs(value(iMlt,iLat)-ave) > 2*std .or. &
+                        DoNewellAverage) then
                    !write(*,*) "ave : ", valueout(iMlt,iLat), ave, &
                    !   std, abs(ave - value(iMlt,iLat)), 2*std
-                   valueout(iMlt,iLat) = ave
-                else
-                   valueout(iMlt,iLat) = value(iMlt,iLat)
+                      valueout(iMlt,iLat) = ave
+                   else
+                      valueout(iMlt,iLat) = value(iMlt,iLat)
+                   endif
                 endif
              endif
-          endif
+          enddo
        enddo
     enddo
 

@@ -30,7 +30,9 @@ module ModInputs
   logical :: UseNewellAveraged = .true.
   logical :: UseNewellMono     = .false.
   logical :: UseNewellWave     = .false.
-  
+  logical :: DoNewellRemoveSpikes = .true.
+  logical :: DoNewellAverage      = .true.
+
   character (len=iCharLen_) :: TypeLimiter = "minmod"
 
   integer, dimension(7) :: iStartTime

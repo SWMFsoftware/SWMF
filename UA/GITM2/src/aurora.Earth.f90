@@ -55,15 +55,15 @@ subroutine aurora(iBlock)
         eflx_ergs = ElectronEnergyFlux(j,i) !/ (1.0e-7 * 100.0 * 100.0)
         av_kev    = ElectronAverageEnergy(j,i)
 
-        UserData2d(j,i,1,2,iBlock) = av_kev
-        UserData2d(j,i,1,3,iBlock) = eflx_ergs
-
         ! For diffuse auroral models
 
         ED_Flux = 0.0
         HasSomeAurora = .false.
 
         if (eflx_ergs > 0.02) then
+
+           UserData2d(j,i,1,2,iBlock) = av_kev
+           UserData2d(j,i,1,3,iBlock) = eflx_ergs
 
            HasSomeAurora = .true.
            avee = av_kev * 1000.0        ! keV -> eV
@@ -75,9 +75,7 @@ subroutine aurora(iBlock)
            ! needs.
            a = (eflux/avee) * 2*sqrt(1 / (pi*(avee/2)**3))
 
-           ED_flux(ED_N_energies) = 0.0 !!! But why ???
-           
-           do n=1,ED_N_Energies-1
+           do n=1,ED_N_Energies
               ! I think that this is wrong
               ! ED_flux(n) = &
               !     a*sqrt(ed_energies(n))*exp(-1.5*ed_energies(n)/avee)/pi
@@ -98,15 +96,15 @@ subroutine aurora(iBlock)
            av_kev = ElectronEnergyFluxMono(j, i) / &
                     ElectronNumberFluxMono(j, i) * 6.242e11 ! eV
 
-!           write(*,*) "Mono : ", av_kev
+           UserData2d(j,i,1,4,iBlock) = av_kev / 1000.0
+           UserData2d(j,i,1,5,iBlock) = ElectronEnergyFluxMono(j, i)
 
            ! Mono-Energetic goes into one bin only!
            do n=2,ED_N_Energies-1
-              if (ED_flux(n-1) < av_kev .and. av_kev <= ED_flux(n)) then
+              if (av_kev < ED_energies(n-1) .and. av_kev >= ED_energies(n)) then
                  ED_flux(n) = ED_Flux(n) + &
                       ElectronNumberFluxMono(j, i) / &
-                      (ED_Flux(n) - ED_Flux(n-1))
-!                 write(*,*) "found : ", av_kev, ED_flux(n)
+                      (ED_Energies(n-1) - ED_Energies(n))
                  HasSomeAurora = .true.
               endif
            enddo
@@ -119,31 +117,45 @@ subroutine aurora(iBlock)
            av_kev = ElectronEnergyFluxWave(j, i) / &
                     ElectronNumberFluxWave(j, i) * 6.242e11 ! eV
 
+           UserData2d(j,i,1,6,iBlock) = av_kev / 1000.0
+           UserData2d(j,i,1,7,iBlock) = ElectronEnergyFluxWave(j, i)
+
            ! Waves goes into five bins only!
            k = 0
-           do n=4,ED_N_Energies-4
-              if (ED_flux(n-1) < av_kev .and. av_kev <= ED_flux(n)) then
+           do n=3,ED_N_Energies-3
+              if (av_kev < ED_energies(n-1) .and. av_kev >= ED_energies(n)) then
                  k = n
               endif
            enddo
-           if (k > 4) then 
+           if (k > 3) then 
               f1 = 1.0
               f2 = 1.2
               f3 = 1.3
               f4 = f2
               f5 = f1
-              de1 = ED_Flux(k-2) - ED_Flux(k-3)
-              de2 = ED_Flux(k-1) - ED_Flux(k-2)
-              de3 = ED_Flux(k)   - ED_Flux(k-1)
-              de4 = ED_Flux(k+1) - ED_Flux(k)
-              de5 = ED_Flux(k+2) - ED_Flux(k-1)
-              detotal = (de1+de2+de3+de4+de5) * (f1+f2+f3+f4+f5) / 5
-              ED_flux(k-2) = ED_Flux(k-2) + f1*ElectronNumberFluxWave(j, i) / detotal
-              ED_flux(k-1) = ED_Flux(k-1) + f2*ElectronNumberFluxWave(j, i) / detotal
-              ED_flux(k  ) = ED_Flux(k  ) + f3*ElectronNumberFluxWave(j, i) / detotal
-              ED_flux(k+1) = ED_Flux(k+1) + f4*ElectronNumberFluxWave(j, i) / detotal
-              ED_flux(k+2) = ED_Flux(k+2) + f5*ElectronNumberFluxWave(j, i) / detotal
+              de1 = ED_energies(k-3)-ED_energies(k-2)
+              de2 = ED_energies(k-2)-ED_energies(k-1)
+              de3 = ED_energies(k-1)-ED_energies(k)  
+              de4 = ED_energies(k)  -ED_energies(k+1)
+              de5 = ED_energies(k+1)-ED_energies(k+2)
+!              detotal = (de1+de2+de3+de4+de5) * (f1+f2+f3+f4+f5) / 5
+              detotal = (f1+f2+f3+f4+f5)
+!              ED_flux = 0.0
+              ED_flux(k-2) = ED_Flux(k-2)+f1*ElectronNumberFluxWave(j, i)/detotal/de1
+              ED_flux(k-1) = ED_Flux(k-1)+f2*ElectronNumberFluxWave(j, i)/detotal/de2
+              ED_flux(k  ) = ED_Flux(k  )+f3*ElectronNumberFluxWave(j, i)/detotal/de3
+              ED_flux(k+1) = ED_Flux(k+1)+f4*ElectronNumberFluxWave(j, i)/detotal/de4
+              ED_flux(k+2) = ED_Flux(k+2)+f5*ElectronNumberFluxWave(j, i)/detotal/de5
+!              ED_flux(k-2) = ED_Flux(k-2) + f1*ElectronNumberFluxWave(j, i) / detotal
+!              ED_flux(k-1) = ED_Flux(k-1) + f2*ElectronNumberFluxWave(j, i) / detotal
+!              ED_flux(k  ) = ED_Flux(k  ) + f3*ElectronNumberFluxWave(j, i) / detotal
+!              ED_flux(k+1) = ED_Flux(k+1) + f4*ElectronNumberFluxWave(j, i) / detotal
+!              ED_flux(k+2) = ED_Flux(k+2) + f5*ElectronNumberFluxWave(j, i) / detotal
            endif
+
+           do n=1,ED_N_Energies
+              UserData2d(j,i,1,7+n,iBlock) = ED_flux(n)
+           enddo
 
         endif
 
