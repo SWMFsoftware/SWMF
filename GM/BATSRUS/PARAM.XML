@@ -1704,8 +1704,11 @@ Default is false for all logicals.
 	<parameter name="UseSemiImplicit" type="logical" default="F"/>
 	<parameter name="TypeSemiImplicit" type="string" input="select"
 							if="$UseSemiImplicit">
-		<option name="radiation" default="T"/>
+		<option name="radiationsplit" default="T"/>
+		<option name="radiation"/>
+		<option name="radcondsplit"/>
 		<option name="radcond"/>
+		<option name="cond"/>
 	</parameter>
 #SEMIIMPLICIT
 T                       UseSemiImplicit
@@ -1716,14 +1719,24 @@ but some of them are evaluated implicitly.
 
 The TypeSemiImplicit parameter determines which terms and corresponding 
 variables are done semi-implicitly. The "radiation" option solves for the 
-gray diffusion energy density and it sets the internal energy 
-and pressure in a point implicit manner. The "radcond" option solves 
-implicitly the radiation diffusion and electron heat conduction together with
+gray or multigroup diffusion energy density. For gray diffusion the 
+internal energy and pressure is calculated in a point implicit manner. 
+
+The "radiationsplit" option solves each radiation group separately.
+The energy exchange term is calculated point-implicitly. The
+internal energy is updated in a conservative way.
+
+The "radcond" option solves implicitly the radiation diffusion
+and electron heat conduction together with
 the radiation and internal energy densities being the unknowns.
 To use gray diffusion configure BATSRUS with the default:
 Config.pl -setvar=nWave=1
 To use the multi-group radiation select nWave larger than one.
-The multi-group radiation diffusion is not yet verified.
+
+The "radcondsplit" option will solve each radiation group and the 
+electrons separately...
+
+The "cond" option solves for electron heat conduction only.
 
 The default is UseSemiImplicit false.
 </command>
