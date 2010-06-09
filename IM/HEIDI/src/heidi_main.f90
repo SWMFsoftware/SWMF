@@ -1,10 +1,3 @@
-! File name: heidi_main.f90
-!
-! Contains: the main driver program for HEIDI
-!	HEIDI
-!
-! Last Modified: March 2006, Mike Liemohn
-!
 !************************************************************************
 ! PROGRAM HEIDI - 
 !   ***  Hot Electron and Ion Drift Integrator  ***
@@ -18,7 +11,7 @@
 ! Converted from mram05.f into heidi010.f90, March 2006, Mike Liemohn
 !***********************************************************************
 
-!.......NR=no. grids in radial direction, NT=no. grids in azimuth,
+!       NR=no. grids in radial direction, NT=no. grids in azimuth,
 !	NE=no. of energy grids, NS=no. of species (e-, H+, He+, O+),
 !	NPA=no. of grids in equatorial pitch angle
 !***********************************************************************
@@ -43,11 +36,15 @@ program heidi_main
   call MPI_COMM_SIZE(iComm, nProc, iError)   
 
   IsFramework = .false.
+  IsBFieldNew = .true.
 
   ! Initialize the planet, default planet is Earth
   call init_planet_const 
   call set_planet_defaults
 
+  call get_planet(RadiusPlanetOut = Re, DipoleStrengthOut = DipoleFactor)
+  DipoleFactor = DipoleFactor*Re**3
+  
   ! Read and check input file
   call heidi_read
   call heidi_check
@@ -59,7 +56,11 @@ program heidi_main
 
   do i3 = nst, nstep
      call heidi_run
+     IsBFieldNew = .false.
   end do			! end time loop
+
+  
+  
 
   close(iUnitSal)           ! Closes continuous output file
   close(iUnitSw1)           ! Closes sw1 input file
@@ -84,7 +85,7 @@ subroutine CON_stop(StringError)
   !-----------------------------------------------------------------------
 
   write(*,*)'Stopping execution! iProc=',iProc,' with msg:'
-  write(*,*)StringError
+  write(*,*) StringError
   call MPI_abort(iComm, nError, iError)
   stop
 

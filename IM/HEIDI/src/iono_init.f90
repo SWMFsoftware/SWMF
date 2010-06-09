@@ -1,43 +1,31 @@
-
-!*************************************************************************
-!
 ! INITIALIZATION Routines
-!
-!*************************************************************************
-
-!-------------------------------------------------------------------------
-! ionosphere_fine_grid
-!
-!
-!
-!-------------------------------------------------------------------------
-
+!=========================================================================
 subroutine IonoHeidiInit(year, day, ut)
   !\
   ! This routine sets the fine grid meshes for the
   ! northern and southern hemispheres.
   !/
   use ModIonoHeidi
-  use ModNumConst, only: cPi
+  use ModNumConst, ONLY: cPi
+
   implicit none
 
   integer, intent(in) :: year, day
-  real, intent(in) :: ut
-
-  integer :: i,j
-  real :: dTheta_l, dPsi_l
-        
+  real,    intent(in) :: ut
+  integer             :: i,j
+  real                :: dTheta_l, dPsi_l
+  !-------------------------------------------------------------------------        
   dTheta_l = 0.50*cPi/real(IONO_nTheta-1)
   dPsi_l = 2.0*cPi/real(IONO_nPsi-1)
-  
+
   do j = 1, IONO_nPsi
      IONO_NORTH_Theta(1,j) = 0.001
      IONO_NORTH_Psi(1,j) = real(j-1)*dPsi_l
-     
+
      do i = 1, IONO_nTheta
         IONO_NORTH_Theta(i,j) = cPi*(0.5*real(i-1)/real(IONO_nTheta))
         IONO_NORTH_Psi(i,j) = IONO_NORTH_Psi(1,j)
-     end do  
+     end do
 
      IONO_NORTH_Theta(IONO_nTheta,j) = 0.50*cPi
      IONO_NORTH_Psi(IONO_nTheta,j) = IONO_NORTH_Psi(1,j)
@@ -49,7 +37,7 @@ subroutine IonoHeidiInit(year, day, ut)
      do i = 1, IONO_nTheta
         IONO_SOUTH_Theta(i,j) = cPi*(0.5+0.5*real(i-1)/real(IONO_nTheta))
         IONO_SOUTH_Psi(i,j) = IONO_SOUTH_Psi(1,j)
-     end do  
+     end do
 
      IONO_SOUTH_Theta(IONO_nTheta,j) = cPi-0.001
      IONO_SOUTH_Psi(IONO_nTheta,j) = IONO_SOUTH_Psi(1,j)
@@ -63,35 +51,24 @@ subroutine IonoHeidiInit(year, day, ut)
   IONO_SOUTH_RCM_JR = 0.00
 
 end subroutine IonoHeidiInit
-
-!*************************************************************************
-!
-! INPUT/OUTPUT Routines
-!
-!*************************************************************************
-
-!-------------------------------------------------------------------------
-! ionosphere_write_output
-!
-!
-!
-!-------------------------------------------------------------------------
-
+!=========================================================================
 subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
   !\
+  ! INPUT/OUTPUT Routines ; ionosphere_write_output
   ! This routine writes out the fine grid 
   ! ionospheric solutions for the
   ! northern and southern hemispheres to
   ! a data file.
   !/
   use ModIonoHeidi
-  use ModHeidiIO, only: NameOutputDir
-  use ModNumConst, only: cPi
-  use ModIoUnit, ONLY : io_unit_new
+  use ModHeidiIO,  ONLY: NameOutputDir
+  use ModNumConst, ONLY: cPi
+  use ModIoUnit,   ONLY: io_unit_new
+
   implicit none
 
-  integer, intent(in) :: ifile
-  real, intent(in) :: time
+  integer,           intent(in) :: ifile
+  real,              intent(in) :: time
   character (len=*), intent(in) :: IO_prefix
   character (len=*), intent(in) :: IO_suffix
 
@@ -101,18 +78,13 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
   integer, parameter :: min_vars = 2
   integer, parameter :: uam_vars = 3
 
-  integer :: output_type, variables, year, iError
-
-  integer :: Iunit, i, j
-  character (len=11), Parameter :: iono_dir="ionosphere/"
-  character (len=2), Parameter :: iono_dir_path="./"
-  character (len=4) :: IO_ext=".dat"
-  character (len=7) :: NUMiter
-  character (len=2) :: syear,smonth, sday, shour, sminute, ssecond
-  character (len=4) :: sms
-
-  real :: day,hour,minute
-
+  integer :: output_type, variables, year,Iunit, i, j
+  character (len=11), parameter :: iono_dir="ionosphere/"
+  character (len=2),  parameter :: iono_dir_path="./"
+  character (len=4)             :: IO_ext=".dat"
+  character (len=2)             :: sday, shour, sminute
+  real                          :: day,hour,minute
+  !-------------------------------------------------------------------------
   variables = min_vars
   output_type = idl_type
 
@@ -130,7 +102,6 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
      output_type = tec_type
   endif
 
-  !Iunit = 74
   Iunit = io_unit_new()
 
   if (output_type == idl_type) then
@@ -139,10 +110,7 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
      IO_ext = ".tec"
   endif
 
-!  day  = int(time)
-!  hour = int((time - day)*24.0)
-!  minute = int(((time - day)*24.0 - hour)*60.0)
-!!! time is in seconds from the beginning of the run, not decimal days
+  ! Time is in seconds from the beginning of the run, not decimal days
   day = int(time/86400.)
   hour = int((time - day)/3600.)
   minute = int((time - day - hour*3600.)/60.)
@@ -152,39 +120,18 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
   else
      write (sday,'(i2)') int(day)
   endif
-  
+
   if (hour < 10) then
      write (shour,'(a1,i1)') '0',int(hour)
   else
      write (shour,'(i2)') int(hour)
   endif
-  
+
   if (minute < 10) then
      write (sminute,'(a1,i1)') '0',int(minute)
   else
      write (sminute,'(i2)') int(minute)
   endif
-  
-!     open(unit=Iunit,file=iono_dir//"it"//&
-!          syear//smonth//sday//"_"&
-!          //shour//sminute//ssecond//"_"&
-!          //sms//IO_ext, &
-!          status="unknown")
-
-!!! For use with day, hour, minute output format:
-!  open(unit=Iunit,file=iono_dir//"it"//&
-!       sday//shour//sminute//IO_ext, &
-!       status="unknown", iostat=iError)
-!  if (iError /= 0) then
-!     write(*,*) "Error in opening file : ",iono_dir//"it"//&
-!       sday//shour//sminute//IO_ext
-!     stop
-!  endif
-
-!!! For use with mram-given output suffix:
-
-  !write(*,*) "file : ",NameOutputDir//iono_dir//"it_"//&
-   !    IO_suffix//IO_ext
 
   open(unit=Iunit,file=NameOutputDir//iono_dir//"it_"//&
        IO_suffix//IO_ext, &
@@ -293,5 +240,5 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
   close(UNIT=Iunit)
 
 end subroutine IonoHeidiWriteOutput
+!=========================================================================
 
- 

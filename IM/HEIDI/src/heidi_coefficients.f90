@@ -1,39 +1,26 @@
-! File name: heidi_coefficients.f90
-!
-! Contains: drift and diffusion coefficient definition routines for HEIDI
-!	Heidi_cepara
-!	OTHERPARA
-!	MAGCONV
 !======================================================================
-!			       Heidi_cepara
+!			       heidi_cepara
 ! Calculates the cross-section of charge exchange of ring current
 ! ion species with the neutral hydrogen and the charge exchange rate
 ! Also calculates the atmospheric loss rate (out the loss cone)
 !======================================================================
-subroutine Heidi_cepara
+subroutine heidi_cepara
 
   use ModHeidiSize
   use ModHeidiMain
   use ModHeidiDrifts
-  use ModIoUnit,     ONLY: io_unit_new,UNITTMP_
+  use ModIoUnit,     ONLY: UNITTMP_
   use ModHeidiIO,    ONLY: NameInputDirectory
-  use ModHeidiInput, ONLY: TypeBField, TypeBFieldTemp
-  use ModPlotFile,   ONLY: save_plot_file 
-
+  use ModHeidiInput, ONLY: TypeBField
+  
   implicit none
 
-  integer           :: I, K, L, I1, LUP, ier, J
-  integer           :: iUnit 
-  real              :: x, y		
-  real              :: FACI, fac, cosd, acosd
-  real              :: RLAMBDA(71), PA(71), HDNS(NR,NT,NPA)
-  real              :: LH(20), HDNSIN(20,71)
-  character(len=80) :: TITLE
-  real              :: PitchAngle_I(nPA)
-  character(LEN=500) :: StringVarName, StringHeader, NameFile                              
-  character(len=20)  :: TypePosition       
-  character(len=20)  :: TypeFile = 'ascii' 
-  external          :: cosd,acosd
+  integer            :: I, K, L, LUP, ier, J
+  real               :: x, y, fac, cosd 
+  real               :: RLAMBDA(71), PA(71), HDNS(NR,NT,NPA)
+  real               :: LH(20), HDNSIN(20,71)
+  character(len=80)  :: TITLE
+  external           :: cosd
   !---------------------------------------------------------------------
   !\
   ! Open a file with the bounce-averaged H dens [m-3] in geocorona
@@ -41,13 +28,14 @@ subroutine Heidi_cepara
   ! (Mei-Ching's fit by a poly of order 4 good for L from 1 to 6.5)
   !/
 
-  S = 0
-  do I = 2, NS
-     S=S+SCALC(I)   ! S=0, no ions in calc, S>0, ions in calc
+  s = 0
+  do i = 2, nS
+     s = s + sCalc(I)   ! S=0, no ions in calc, S>0, ions in calc
   end do
-  if (S.ge.1) then	! Only needed for ion charge exchange
+  if (s .ge. 1) then	! Only needed for ion charge exchange
      
      select case(TypeBField)
+
      case('analytic')
         open(UNITTMP_,file=NameInputDirectory//'hgeo71.in',STATUS='OLD')
         LUP=71
@@ -71,30 +59,20 @@ subroutine Heidi_cepara
         end do
         
      case('numeric')
-        select case(TypeBFieldTemp)
-        case('static')
-           if (t <(t+2.*dt)) then
-              call get_neutral_hydrogen(NeutralHydrogen)
-              do L=1,LO
-                 do j =1, jo
-                    do I=1,IO
-                       HDNS(i,j,l) = NeutralHydrogen(i,j,l)
-                    enddo
-                 end do
-              end do
-           end if
-           
-        case('dynamic')
+        
+        if (IsBFieldNew) then 
            call get_neutral_hydrogen(NeutralHydrogen)
-           do L=1,LO
-              do j =1, jo
-                 do I=1,IO
-                    HDNS(i,j,l) = NeutralHydrogen(i,j,l)
-                 enddo
-              end do
+        end if
+        
+        do L = 1, LO
+           do j = 1, jo
+              do I = 1, IO
+                 HDNS(i,j,l) = NeutralHydrogen(i,j,l)
+              enddo
            end do
-        end select
+        end do
      end select
+  
   end if
   
 3    format(A61,F5.2)
@@ -186,9 +164,8 @@ subroutine OTHERPARA
   use ModHeidiIO
   use ModHeidiMain
   use ModHeidiDrifts
-  use ModHeidiInput, ONLY: TypeBField,TypeBFieldTemp
-  use ModInit, ONLY :i3,nst
-  
+  use ModHeidiInput, ONLY: TypeBField
+    
   implicit none
 
   integer :: i,j,k,l,is,iss,ier
@@ -196,10 +173,8 @@ subroutine OTHERPARA
   real    :: bane,badif,c,gpa,cce,cde,edre
   real    :: erf
   real    :: COULDE(NE,NPA),COULDI(NE,NPA),AFIR,ASEC
-  real    :: VF(NSTH),RA(NSTH),MUBOUN,MULC,TMAS(NSTH),TM1(NSTH)
+  real    :: VF(NSTH),RA(NSTH),MUBOUN,TMAS(NSTH),TM1(NSTH)
   
- ! real, dimension(nR,nT,nE,nPA) :: dEdt_IIII,VPhi_IIII,VR_IIII
-
   external:: erf
 
 
@@ -238,14 +213,10 @@ subroutine OTHERPARA
 
   
   if (TypeBField == 'numeric') then
-     select case(TypeBFieldTemp)
-     case('static')
-        if (t <(t+2.*dt)) then
-           call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
-        end if
-     case('dynamic')
+     if (IsBFieldNew) then
         call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
-     end select
+        call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
+     end if
   end if
   
   do i = 1, io      
@@ -479,7 +450,7 @@ subroutine MAGCONV(I3,NST)
   use ModHeidiDGCPM
   use ModProcIM
   use ModIoUnit,  only : io_unit_new
-  use ModHeidiInput, ONLY: TypeBField,TypeBFieldTemp
+  use ModHeidiInput, ONLY: TypeBField
 
   implicit none
 
@@ -487,7 +458,7 @@ subroutine MAGCONV(I3,NST)
   integer :: L,IOpot,JOpot   
   real    :: KR,SPJ,CPJ,PJ,DLMAG,Ppc0,Eom,EOJ,EOJ1,NY(4),FAC,CRo
   real    :: KGAM,KS(4),KALP,KBETA,KPHI,KEX,KEY,LP,DLP,PCO,PHIPOFF
-  real    :: Ro,RR,RoRg,KEPS,KSD,SJ,CJ,PHIP,EPR,EPP,ERF,DP1,FACP
+  real    :: Ro,RR,RoRg,KEPS,KSD,SJ,CJ,PHIP,EPR,EPP,DP1,FACP
   real    :: DPP,DP2,sLP,dLPdphi,Jreducer
   real    :: sind,cosd
   real    :: jfac_temp(NR+3,NT)
@@ -507,7 +478,7 @@ subroutine MAGCONV(I3,NST)
   !  &                  9.54e4,9.72e4,9.9e4,1.008e5/
   data dt_saw/600./
 
-  external :: ERF,sind,cosd
+  external :: sind,cosd
 
   ! Variables to send to Aaron's subroutine
   real :: eyear, eday, ehour, eminute, esecond, eby, ebz, evsw
@@ -572,17 +543,11 @@ real :: ISS
   ! Calculate base convection electric field
   !/
 
-  select case(TypeBField)
-  case('numeric')
-     select case(TypeBFieldTemp)
-     case('static')
-        if (t <(t+2.*dt)) then
-           call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
-        end if
-     case('dynamic')
+  if (TypeBField=='numeric') then
+     if (IsBFieldNew) then
         call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
-     end select
-  end select
+     end if
+  end if
   
   ISS=-1			! sign of specie's charge
   if (S.ge.2) ISS=1

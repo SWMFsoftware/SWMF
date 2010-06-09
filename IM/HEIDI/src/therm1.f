@@ -4,7 +4,7 @@ c      INCLUDE 'plane.f'		! Craig's thermal density model
 **  Driver program for Craig's plane.f subroutine
       
       use ModIoUnit, ONLY : io_unit_new
-
+      use ModHeidiMain, ONLY: Re
 
       INCLUDE 'numv.h'
       REAL T,KP,AP,R,DT,NECR(NL,0:NLT),KPN,KPO
@@ -18,7 +18,7 @@ c      INCLUDE 'plane.f'		! Craig's thermal density model
 	print *, 'Starting therm1.f'
       DT=20.
       DKP=-DT/3./3600.	! Kp decreases by 1 every 3 hours
-      RE=6.371E6
+      !RE=6.378E6
 	IKP=1 ! IKP=0 means no KP update from IC, else update from file
       NAME='d0301'
 c      YEAR=1999	!1998	!1991  !1998	!1997	!1998	!1997	!1999

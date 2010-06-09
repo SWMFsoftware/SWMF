@@ -1,11 +1,6 @@
-! File name: heidi_waves_010.f90
-!
 ! Contains: wave-particle interaction routines for HEIDI
 !	WAPARA
 !	ANISCH
-!
-! Last Modified: March 2006, Mike Liemohn
-!
 ! **********************************************************************
 !                              WAPARA 
 !       Routine calculates normalized waves pa diffusion coeff

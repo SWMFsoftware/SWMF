@@ -148,8 +148,7 @@ subroutine CONSTANT(NKP)
 
   KPT=-1./3./3600. ! model rate of decay of Kp in s-1
   DKP=KPT*DT*2.	   ! discrete step size of Kp
-  ME=7.9E15	   ! Magnetic moment of the earth
-  RE=6.371E6	   ! Earth's radius (m)
+  ME=DipoleFactor	   ! Magnetic moment of the earth
   MP=1.673E-27     ! Mass of H+ in kg
   Q=1.6E-19	   ! Electron charge, eV -> J conversion
   PI=3.141592654
@@ -226,7 +225,7 @@ subroutine ARRAYS
   use ModHeidiWaves
   use ModProcIM, ONLY: iProc
   use ModPlotFile, only: save_plot_file
-  use ModHeidiInput, ONLY: TypeBField, TypeBFieldTemp
+  use ModHeidiInput, ONLY: TypeBField
 
 
   implicit none
@@ -237,7 +236,6 @@ subroutine ARRAYS
   real     :: sind
   real     :: amla0(Slen)
   real     :: CONE(NR+4),PA(NPA),MUB(NPA),sumd,sumw,LZMAX,LZMIN
-  !real     :: bFieldMagnitude_III(nPoint,nR,nT)
   external :: sind, ASIND,COSD,ACOSD
   data amla0/0.0,0.2,0.4,0.6,0.8,1.0,1.5,2.0,2.5,3.0,3.5, &
        4.0,4.5,5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0/
@@ -488,23 +486,13 @@ subroutine ARRAYS
      end do
   end do
 
-  select case(TypeBFieldTemp)
-  case('static')
-     if (t <(t+2.*dt)) then
-        call get_B_field(bFieldMagnitude_III)
-        call get_IntegralH(funt)
-        call get_IntegralI(funi)
-     end if
-     
-  case('dynamic')
+  if (IsBfieldNew) then 
      call get_B_field(bFieldMagnitude_III)
      call get_IntegralH(funt)
      call get_IntegralI(funi)
-     
-  end select
+  end if
   
-  select case(TypeBFieldTemp)
-  case('numeric')
+  if (TypeBField == 'numeric') then
      NameFile = 'BField.out'
      StringHeader = 'Magnetic field in the equatorial plane'
      StringVarName = 'R MLT B'
@@ -516,7 +504,6 @@ subroutine ARRAYS
           StringHeaderIn = StringHeader, &
           nStepIn = 0, &
           TimeIn = 0.0, &
-          !ParamIn_I = (/real(nR), real(NT)/), &
           NameVarIn = StringVarName, &
           nDimIn = 2, & 
           CoordMinIn_D = (/1.75, 0.0/),&
@@ -567,7 +554,7 @@ subroutine ARRAYS
         TypePosition = 'append' 
      end do
      
-  end select
+  end if
 
 
   !\

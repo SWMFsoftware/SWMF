@@ -1,98 +1,70 @@
 module ModHeidiBField
 
   implicit none
-  
+
 contains
-!==================================================================================
+  !==================================================================================
   subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
        RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
-    
-    
+
     use ModHeidiInput, ONLY: TypeBfieldGrid
-    use ModNumConst,   ONLY: cTiny, cPi
-    use ModHeidiIO,    ONLY: time
+    use ModNumConst,   ONLY: cTiny
     use ModHeidiMain,  ONLY: LZ,BHeidi_III, SHeidi_III, RHeidi_III,&
          bGradB1xHeidi_III, bGradB1yHeidi_III, bGradB1zHeidi_III,&
-         BxHeidi_III, ByHeidi_III, BzHeidi_III, t,dt,nPointEq,Xyz_VIII
+         BxHeidi_III, ByHeidi_III, BzHeidi_III, t, dt, Xyz_VIII, &
+         Re
     use ModCoordTransform, ONLY: cross_product, rot_xyz_sph
     use ModPlotFile,       ONLY: save_plot_file
-!    use ModPlanetConst,    ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
-      
-    
 
-    integer, intent(in)    :: nPoint                              ! Number of points along the field line
-    integer, intent(in)    :: nR                                  ! Number of points in the readial direction
-    integer, intent(in)    :: nPhi                                ! Number of points in the azimuthal direction
-    real,    intent(in)    :: L_I(nR)                             ! L shell value
-    real,    intent(in)    :: Phi_I(nPhi)                         ! Phi values
+    integer, intent(in)    :: nPoint , nR, nPhi
+    real,    intent(in)    :: L_I(nR),Phi_I(nPhi)        
     real,    intent(inout) :: bFieldMagnitude_III(nPoint,nR,nPhi) ! Magnitude of magnetic field 
     real,    intent(out)   :: Length_III(nPoint,nR,nPhi)          ! Length of the field line
     real,    intent(out)   :: RadialDistance_III(nPoint,nR,nPhi)  ! Radial distance 
     real,    intent(out)   :: dLength_III(nPoint-1,nR,nPhi)       ! Length interval between i and i+1
-    
     !Local Variables    
     real                   :: LatMin, LatMax, Lat,dLat,LatMin2, LatMax2, LatMinMax
-    real                   :: SinLat2, CosLat2, SinLat4 
-    real                   :: BetaF,dLatNew,beta1,beta2
-    real                   :: alpha2, alpha4
-    real                   :: bField_VIII(3,nPoint,nR,nPhi)
-    real                   :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
-    real                   :: GradB_VIII(3,nPoint,nR,nPhi)
-    double precision       :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi,GradR, GradTheta, GradPhi,dBdt
-    real                   :: delta, dSdTheta
-    real                   :: a,b,c,gamma,cos2Lat,cosLat,L
+    real                   :: SinLat2, CosLat2, BetaF, dLatNew, beta1, beta2
     integer                :: iR, iPhi,iPoint     
-
-    real                   :: cos2LatMin,cos2LatMax,cos2Lat1,cos2Lat2,cos2Lat3
-    complex                :: root(3)
-    integer                :: nroot, i
-    real                   :: dd
-    !Parameters
-    real, parameter        :: DipoleStrength =  -0.32   ! nTm^-3
-    real :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w,c1
-    real, dimension(3,nPoint,nR,nPhi) :: GradB0x_VIII, GradB0y_VIII, GradB0z_VIII
-    real :: beta,alpha
-    real :: DirBx, DirBy, DirBz, Tx, Ty,Tz
-    real, dimension(3) :: GradB2_D
-    real :: GradBxyz_D(3),GradBCrossBxyz_D(3),XyzSph_DD(3,3),GradBCrossBsph_D(3)
-    real :: B_all(nPoint, nR ,3), Coord(2,nPoint,nR)
-
-    character(LEN=500):: StringVarName, StringHeader, NameFile
-    character(len=20) :: TypePosition
-    character(len=20) :: TypeFile = 'ascii'
- !   real :: Re, DipoleFactor
-    real, parameter :: Re=6.378e6, DipoleFactor=-8.06e15
+    real, dimension(nPoint,nR,nPhi)    :: dBdt_III
+    real, dimension(3,nPoint,nR,nPhi) :: GradB_VIII, GradBCrossB_VIII, bField_VIII,&
+         GradB0x_VIII, GradB0y_VIII, GradB0z_VIII
+    real, dimension(3)  :: GradB2_D, GradBCrossBsph_D(3),GradBxyz_D(3),GradBCrossBxyz_D(3)
+    real, dimension(3,3):: XyzSph_DD
+    real, parameter     :: DipoleStrength =  -0.32   ! nTm^-3
+    real                :: DirBx, DirBy, DirBz, Tx, Ty,Tz
+    character(LEN=500)  :: StringVarName, StringHeader, NameFile
+    character(len=20)   :: TypePosition
+    character(len=20)   :: TypeFile = 'ascii'
+    ! Temp var; Should be removed
+    real, dimension(nPoint, nR ,3) :: B_all
+    real, dimension(2,nPoint,nR)   :: Coord
     !----------------------------------------------------------------------------------
-    
-!    write(*,*) 'pi', cPi, cTiny
-!    Re = rPlanet_I(Earth_)
-!    DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
-    
-
     select case(TypeBFieldGrid)
 
+       !\
+       ! Magnetic field from BATS_R_US code; only in the coupled mode.
+       !/
     case('mhd')
        if (t <2.*dt) then
           write(*,*) 'simulation time=',t       
           call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
                RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III, 1.1, 1.0/1.1)
        else
-          
           bFieldMagnitude_III = BHeidi_III
           RadialDistance_III  = RHeidi_III 
           Length_III          = SHeidi_III 
-
-          call get_gradB0(nPoint,nR,nPhi,Lz*Re,Phi_I, GradB0x_VIII, GradB0y_VIII, GradB0z_VIII)
+          call get_gradB0(nPoint,nR,nPhi,Phi_I, GradB0x_VIII, GradB0y_VIII, GradB0z_VIII)
 
           dBdt_III=0.0
 
-          ! Contribution from dipole
+          ! Calculation of gradB and gradBcrossB
           do iPhi = 1, nPhi
              do iR = 1, nR
                 do iPoint =1, nPoint
                    Lat = atan(Xyz_VIII(3,iPoint,iR,iPhi)/&
                         sqrt(Xyz_VIII(1,iPoint,iR,iPhi)**2 + Xyz_VIII(2,iPoint,iR,iPhi)**2))
-                    
+
                    DirBx     = BxHeidi_III(iPoint,iR,iPhi)/BHeidi_III(iPoint,iR,iPhi)
                    DirBy     = ByHeidi_III(iPoint,iR,iPhi)/BHeidi_III(iPoint,iR,iPhi)
                    DirBz     = BzHeidi_III(iPoint,iR,iPhi)/BHeidi_III(iPoint,iR,iPhi)
@@ -111,9 +83,9 @@ contains
 
                    ! Contains both dipolar and B1 contribution.
 
-                   GradBxyz_D(1) = Tx !+ bGradB1xHeidi_III(iPoint,iR,iPhi)
-                   GradBxyz_D(2) = Ty !+ bGradB1yHeidi_III(iPoint,iR,iPhi)
-                   GradBxyz_D(3) = Tz !+ bGradB1zHeidi_III(iPoint,iR,iPhi)
+                   GradBxyz_D(1) = Tx + bGradB1xHeidi_III(iPoint,iR,iPhi)
+                   GradBxyz_D(2) = Ty + bGradB1yHeidi_III(iPoint,iR,iPhi)
+                   GradBxyz_D(3) = Tz + bGradB1zHeidi_III(iPoint,iR,iPhi)
 
                    ! Grad(B^2) = B Grad B
                    GradB2_D =  BHeidi_III(iPoint,iR,iPhi) * GradBxyz_D
@@ -134,89 +106,46 @@ contains
                    GradBCrossB_VIII(1,iPoint,iR,iPhi) =  GradBCrossBSph_D(1)
                    GradBCrossB_VIII(2,iPoint,iR,iPhi) =  GradBCrossBSph_D(2) *  1./(Re*LZ(iR))
                    GradBCrossB_VIII(3,iPoint,iR,iPhi) =  GradBCrossBSph_D(3) * 1./(Re*LZ(iR)* cos(Lat))
-                   
+
                 end do
              end do
           end do
 
-
-!!$          do iPhi =1, 1
-!!$             do iR =6, 7!nR
-!!$                do iPoint =1, nPoint
-!!$
-!!$                   write(12,*) iPoint, iR, iPhi, bFieldMagnitude_III(iPoint,iR,iPhi), &
-!!$                         BxHeidi_III(iPoint,iR,iPhi), ByHeidi_III(iPoint,iR,iPhi),&
-!!$                         BzHeidi_III(iPoint,iR,iPhi),&
-!!$                         RadialDistance_III(iPoint,iR,iPhi), Length_III(iPoint,iR,iPhi), &
-!!$                         GradB_VIII(:,iPoint,iR,iPhi),GradBCrossB_VIII(:,iPoint,iR,iPhi)
-!!$                end do
-!!$             end do
-!!$          end do
-!!$          close(12)
-
-
-!          STOP
-
-       do iPhi =1, 1
-          do iR =1, nR
-             do iPoint =1, nPoint
-                B_all(iPoint, iR,1)   = BxHeidi_III(iPoint,iR,iPhi)
-                B_all(iPoint, iR,2)   = ByHeidi_III(iPoint,iR,iPhi)
-                B_all(iPoint, iR,3)   = BzHeidi_III(iPoint,iR,iPhi)
-                Coord(1,iPoint, iR)   = Xyz_VIII(1,iPoint,iR,iPhi)/6.371e6
-                Coord(2,iPoint, iR)   = Xyz_VIII(3,iPoint,iR,iPhi)/6.371e6
+          ! Write out values for testing; Should be removed
+          do iPhi =1, 1
+             do iR =1, nR
+                do iPoint =1, nPoint
+                   B_all(iPoint, iR,1)   = BxHeidi_III(iPoint,iR,iPhi)
+                   B_all(iPoint, iR,2)   = ByHeidi_III(iPoint,iR,iPhi)
+                   B_all(iPoint, iR,3)   = BzHeidi_III(iPoint,iR,iPhi)
+                   Coord(1,iPoint, iR)   = Xyz_VIII(1,iPoint,iR,iPhi)/Re
+                   Coord(2,iPoint, iR)   = Xyz_VIII(3,iPoint,iR,iPhi)/Re
+                end do
              end do
           end do
-       end do
 
-       NameFile = 'BField_mhd.out'
-       StringHeader = 'Magnetic field'
-       StringVarName = 'x  z  bx  by  bz 0LT'
-       TypePosition = 'rewind'
+          NameFile = 'BField_mhd.out'
+          StringHeader = 'Magnetic field'
+          StringVarName = 'x  z  bx  by  bz 0LT'
+          TypePosition = 'rewind'
 
-       call save_plot_file(NameFile, & 
-            TypePositionIn = TypePosition,&
-            TypeFileIn     = TypeFile,&
-            StringHeaderIn = StringHeader, &
-            nStepIn = 0, &
-            TimeIn = 0.0, &
-            NameVarIn = StringVarName, &
-            nDimIn = 2, & 
-            CoordIn_DII = Coord,&
-            VarIn_IIV = B_all)
-       TypePosition = 'rewind' 
-       write(*,*) 'SAVE B'
-       
+          call save_plot_file(NameFile, & 
+               TypePositionIn = TypePosition,&
+               TypeFileIn     = TypeFile,&
+               StringHeaderIn = StringHeader, &
+               nStepIn = 0, &
+               TimeIn = 0.0, &
+               NameVarIn = StringVarName, &
+               nDimIn = 2, & 
+               CoordIn_DII = Coord,&
+               VarIn_IIV = B_all)
+          TypePosition = 'rewind' 
+       end if
 
-
-!!$       NameFile = 'BFieldMagn.out'
-!!$     StringHeader = 'Magnetic field in the equatorial plane'
-!!$     StringVarName = 'R MLT B'
-!!$     TypePosition = 'rewind'
-!!$     
-!!$     call save_plot_file(NameFile, & 
-!!$          TypePositionIn = TypePosition,&
-!!$          TypeFileIn     = TypeFile,&
-!!$          StringHeaderIn = StringHeader, &
-!!$          nStepIn = 0, &
-!!$          TimeIn = 0.0, &
-!!$          !ParamIn_I = (/real(nR), real(NT)/), &
-!!$          NameVarIn = StringVarName, &
-!!$          nDimIn = 2, & 
-!!$          CoordMinIn_D = (/1.75, 0.0/),&
-!!$          CoordMaxIn_D = (/6.5, 24.0/),&
-!!$          VarIn_VII = BHeidi_III(nPointEq:nPointEq,:,:))
-!!$     TypePosition = 'rewind' 
-     
-!STOP
-
-
-    end if
-
-
-
-       !########################################################
-
+       !\
+       ! Dipole magnetic field with uniform number of points along the field line. 
+       ! More refined at the equator, coarser towards the poles
+       !/
     case('uniform')
        do iPhi =1, nPhi
           do iR =1, nR 
@@ -275,15 +204,13 @@ contains
        ! Stretched dipole magnetic field, with azimuthal symmetry. 
        !/
 
-
     case('stretched')
-       
-!       call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
- !           RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III, 1.0, 1.0/1.0)
-       
+
+       !call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
+       !RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III, 1.0, 1.0/1.0)
+
        call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-           RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.1)
-       !write(*,*) 'HERE'
+            RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.1)
     end select
 
 
@@ -295,23 +222,21 @@ contains
        end do
     end do
 
-
-
-
   end subroutine initialize_b_field
   !==================================================================================
   subroutine find_mirror_points (nPoint, PitchAngle, bField_I, bMirror,iMirror_II)
 
-    integer, intent(in) :: nPoint                ! Number of points along the field line
-    real, intent(in)    :: PitchAngle            ! Pitch angle values
-    real, intent(in)    :: bField_I(nPoint)      ! Magnetic field values
-    real, intent(out)   :: bMirror               ! B magnitude at mirror points    
-    real                :: bMin,bMax                  ! Minimum value of magnetic field along a field line
-    integer             :: iMinB,iMaxB           ! Location of minimum B
-    integer,intent(out) :: iMirror_II(2)  ! Location of each mirror point for all pitch angles
+    use ModNumConst,   ONLY: cTiny
+
+    integer, intent(in) :: nPoint           ! Number of points along the field line
+    real, intent(in)    :: PitchAngle       ! Pitch angle values
+    real, intent(in)    :: bField_I(nPoint) ! Magnetic field values
+    real, intent(out)   :: bMirror          ! B magnitude at mirror points    
+    real                :: bMin,bMax        ! Minimum value of magnetic field along a field line
+    integer             :: iMinB,iMaxB      ! Location of minimum B
+    integer,intent(out) :: iMirror_II(2)    ! Location of each mirror point for all pitch angles
     integer             :: i_I(1),j_I(1)
-    integer             :: iPoint, iPitch
-    real, parameter     :: cTiny = 1.e-6
+    integer             :: iPoint
     real                :: PALossCone
     !----------------------------------------------------------------------------------
     i_I  = minloc(bField_I)
@@ -402,30 +327,22 @@ contains
     ! Calculate integral of ds/sqrt((B-Bm)/Bm) between the mirror points using 
     !/
 
-    integer             :: nPoint
-    integer, intent(in) :: iMirror_I(2)
-    real, intent(in)    :: bMirror  
-    real, intent(in)    :: dLength_I(nPoint-1)
-    real, intent(in)    :: bField_I(nPoint) 
-    real, intent(out)   :: HalfPathLength,Sb
-    real, intent(in)    :: L
-    real                :: Inv2L
+    integer, intent(in) :: nPoint, iMirror_I(2)
+    real,    intent(in) :: bMirror, dLength_I(nPoint-1), bField_I(nPoint),L
+    real,    intent(out):: HalfPathLength,Sb
+    real                :: Inv2L, DeltaS1, DeltaS2,b1,b2, Coeff,CoeffSb
     integer             :: iPoint, iFirst, iLast
-    real                :: DeltaS1, DeltaS2,b1,b2, Coeff,CoeffSb
     !----------------------------------------------------------------------------------
     iFirst = iMirror_I(1)
     iLast  = iMirror_I(2)
     HalfPathLength = 0.0
     Sb = 0.0
 
-
     if (iFirst >iLast) RETURN
 
     Inv2L = 1.0/(2.*L)
     Coeff = Inv2L*sqrt(bMirror)
     CoeffSb = sqrt(bMirror)
-
-
 
     DeltaS1 = abs((bMirror-bField_I(iFirst))*(dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
     HalfPathLength = HalfPathLength + Coeff*2.*DeltaS1/(sqrt(bMirror-bField_I(iFirst)))
@@ -434,7 +351,6 @@ contains
     do iPoint = iFirst, iLast-1
        b1 = bField_I(iPoint)
        b2 = bField_I(iPoint+1)
-
 
        HalfPathLength = HalfPathLength + Coeff*2.*dLength_I(iPoint)/(b1 - b2) &
             *( sqrt(bMirror  - b2) - sqrt(bMirror  - b1) )
@@ -447,21 +363,18 @@ contains
     HalfPathLength= HalfPathLength + Coeff*2.*DeltaS2/(sqrt(bMirror-bField_I(iLast)))
     Sb = Sb + CoeffSb*2.*DeltaS2/(sqrt(bMirror-bField_I(iLast)))
 
-
   end subroutine half_bounce_path_length
 
   !================================================================================== 
-  subroutine get_gradB0(nPoint,nR,nPhi,L_I,Phi_I, GradB0x_VIII, GradB0y_VIII, GradB0z_VIII)
+  subroutine get_gradB0(nPoint,nR,nPhi,Phi_I, GradB0x_VIII, GradB0y_VIII, GradB0z_VIII)
 
-
-    use ModHeidiMain,   ONLY:LZ
-!    use ModPlanetConst, ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
+    use ModHeidiMain,   ONLY: LZ, Re, DipoleFactor
 
     implicit none
     integer, intent(in)    :: nPoint        ! Number of points along the field line
     integer, intent(in)    :: nR            ! Number of points in the radial direction
     integer, intent(in)    :: nPhi          ! Number of points in the azimuthal direction
-    real,    intent(in)    :: L_I(nR), Phi_I(nPhi) 
+    real,    intent(in)    ::  Phi_I(nPhi) 
     real, dimension(3,nPoint,nR,nPhi), intent(out) :: GradB0x_VIII, GradB0y_VIII, GradB0z_VIII
 
     !Local Variables
@@ -470,12 +383,8 @@ contains
     integer :: iPhi, iR, iPoint
     real    :: gradB0xX, gradB0xY, gradB0xZ, gradB0yX, gradB0yY, gradB0yZ
     real    :: gradB0zX, gradB0zY,gradB0zZ
-!    real    :: Re, DipoleFactor
-    real, parameter :: Re=6.378e6, DipoleFactor=-8.06e15
     !----------------------------------------------------------------------------------
- !   Re = rPlanet_I(Earth_)
- !   DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
-    
+
     !\
     !Calculates the gradient of B0 components in cartesian coordinates
     !/
@@ -506,17 +415,17 @@ contains
              gradB0zY = 3. * y *(-4. * z**2 + x**2 + y**2)/a
              gradB0zZ = 3. * z *(-2. * z**2 + 3. * x**2 + 3.* y**2)/a
 
-             gradB0x_VIII(1,iPoint,iR,iPhi) = DipoleFactor * gradB0xX
-             gradB0x_VIII(2,iPoint,iR,iPhi) = DipoleFactor * gradB0xY
-             gradB0x_VIII(3,iPoint,iR,iPhi) = DipoleFactor * gradB0xZ
+             gradB0x_VIII(1,iPoint,iR,iPhi) = abs(DipoleFactor) * gradB0xX
+             gradB0x_VIII(2,iPoint,iR,iPhi) = abs(DipoleFactor) * gradB0xY
+             gradB0x_VIII(3,iPoint,iR,iPhi) = abs(DipoleFactor) * gradB0xZ
 
-             gradB0y_VIII(1,iPoint,iR,iPhi) = DipoleFactor * gradB0yX
-             gradB0y_VIII(2,iPoint,iR,iPhi) = DipoleFactor * gradB0yY             
-             gradB0y_VIII(3,iPoint,iR,iPhi) = DipoleFactor * gradB0yZ
+             gradB0y_VIII(1,iPoint,iR,iPhi) = abs(DipoleFactor) * gradB0yX
+             gradB0y_VIII(2,iPoint,iR,iPhi) = abs(DipoleFactor) * gradB0yY             
+             gradB0y_VIII(3,iPoint,iR,iPhi) = abs(DipoleFactor) * gradB0yZ
 
-             gradB0z_VIII(1,iPoint,iR,iPhi) = DipoleFactor * gradB0zX
-             gradB0z_VIII(2,iPoint,iR,iPhi) = DipoleFactor * gradB0zY
-             gradB0z_VIII(3,iPoint,iR,iPhi) = DipoleFactor * gradB0zZ
+             gradB0z_VIII(1,iPoint,iR,iPhi) = abs(DipoleFactor) * gradB0zX
+             gradB0z_VIII(2,iPoint,iR,iPhi) = abs(DipoleFactor) * gradB0zY
+             gradB0z_VIII(3,iPoint,iR,iPhi) = abs(DipoleFactor) * gradB0zZ
 
              Lat = Lat + dLat
 
@@ -548,7 +457,6 @@ contains
 
   real function stretched_dipole_length(L,LatMin,LatMax,Phi,alpha,beta)
 
-
     use ModHeidiSize, only: nPoint
 
     implicit none
@@ -558,8 +466,6 @@ contains
     real               :: dLat, dSdTheta(nPoint)
     real               :: x(nPoint), y, Phi,Lat
     real               :: alpha, beta              ! Stretching parameters
-    real               :: alpha2,alpha4,gamma
-    real               :: cos2Lat,cosLat,a,b,c
     integer            :: i
     !----------------------------------------------------------------------------------
     y = cos(Phi)
@@ -608,7 +514,10 @@ contains
 
   !==================================================================================
 
-  real function second_adiab_invariant(x)		
+  real function second_adiab_invariant(x)
+
+    use ModNumConst, ONLY: cPi
+
     !\
     ! This is an approximate formula for second adiabatic invariant 
     ! = the integral of sqrt(1 - B/Bm)ds for a dipole B field. 
@@ -617,12 +526,11 @@ contains
 
     real, intent(in)     :: x ! cosine of the equatorial pitch angle
     real                 :: y, alpha, beta, a1, a2, a3, a4
-    real, parameter      :: Pi = 3.141592654
     !----------------------------------------------------------------------------------
 
     y=sqrt(1.-x*x)
     alpha=1.+alog(2.+sqrt(3.))/2./sqrt(3.)
-    beta=alpha/2.-Pi*sqrt(2.)/12.
+    beta=alpha/2.-cPi*sqrt(2.)/12.
     a1=0.055
     a2=-0.037
     a3=-0.074
@@ -636,7 +544,8 @@ contains
 
   !==================================================================================
 
-  real function  analytic_h(x)		
+  real function  analytic_h(x)	
+    use ModNumConst, ONLY: cPi
     !\
     ! This is an approximate formula for second adiabatic invariant 
     ! = the integral of ds/sqrt(1 - B/Bm) for a dipole B field. 
@@ -645,12 +554,12 @@ contains
 
     real, intent(in)     :: x ! cosine of the equatorial pitch angle 
     real                 :: y, alpha, beta, a1, a2, a3, a4
-    real, parameter      :: Pi = 3.141592654
+
     !----------------------------------------------------------------------------------
 
     y=sqrt(1-X*X)
     alpha=1.+alog(2.+sqrt(3.))/2./sqrt(3.)
-    beta=alpha/2.-Pi*sqrt(2.)/12.
+    beta=alpha/2.-cPi*sqrt(2.)/12.
     a1=0.055
     a2=-0.037
     a3=-0.074
@@ -791,10 +700,8 @@ contains
   subroutine get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
        RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,alpha)
 
-    use ModNumConst,    ONLY: cTiny, cPi
-    use ModHeidiIO,     ONLY: time
-    use ModHeidiMain,   ONLY: LZ
-!    use ModPlanetConst, ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
+    use ModNumConst,    ONLY:  cPi
+    use ModHeidiMain,   ONLY: LZ, DipoleFactor
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -811,30 +718,22 @@ contains
     real                   :: LatMax                              ! Maximum Latitude 
     real                   :: Lat                                 ! Latitude
     real                   :: dLat                                ! Latitude cell size
-    real                   :: SinLat2, CosLat2, SinLat4 
-    real                   :: LatMin2, LatMax2, LatMinMax
-    real                   :: BetaF,dLatNew,beta1,beta2
+    real                   ::  beta2
     real                   :: alpha2, alpha4
     real                   :: bField_VIII(3,nPoint,nR,nPhi)
     real                   :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
     real                   :: GradB_VIII(3,nPoint,nR,nPhi)
     double precision       :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi,GradR, GradTheta, GradPhi,dBdt
-    real                   :: delta, dSdTheta
-    real                   :: a,b,c,gamma,cos2Lat,cosLat,L
+    real                   :: a,b,c,gamma
     integer                :: iR, iPhi,iPoint     
-    real                   :: cos2LatMin,cos2LatMax,cos2Lat1,cos2Lat2,cos2Lat3
+    real                   :: cos2Lat1
     complex                :: root(3)
     integer                :: nroot, i
     real                   :: dd
-    real                   :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w,c1
+    real                   :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w
     real                   :: beta,t
     real, parameter        :: DipoleStrength =  -0.32   ! nTm^-3
-!    real                   :: Re, DipoleFactor
-    real, parameter :: Re=6.378e6, DipoleFactor=-8.06e15
     !----------------------------------------------------------------------------------
-
-    !Re = rPlanet_I(Earth_)
-    !DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
 
     t = 0.0!t/3600.
     w = 2*cPi/50.
@@ -1128,13 +1027,13 @@ contains
 
              dBdt_III(iPoint,iR,iPhi) = dBdtTemp
              ! Gradient B
-             GradB_VIII(1,iPoint, iR, iPhi) = DipoleFactor*GradR
-             GradB_VIII(2,iPoint, iR, iPhi) = DipoleFactor*GradTheta
-             GradB_VIII(3,iPoint, iR, iPhi) = DipoleFactor*GradPhi               
+             GradB_VIII(1,iPoint, iR, iPhi) = abs(DipoleFactor) * GradR
+             GradB_VIII(2,iPoint, iR, iPhi) = abs(DipoleFactor) * GradTheta
+             GradB_VIII(3,iPoint, iR, iPhi) = abs(DipoleFactor) * GradPhi               
              ! drift Velocity components
-             GradBCrossB_VIII(1,iPoint,iR,iPhi) = Vr * (DipoleFactor)**3
-             GradBCrossB_VIII(2,iPoint,iR,iPhi) = 1./(L_I(iR))*Vtheta * (DipoleFactor)**3
-             GradBCrossB_VIII(3,iPoint,iR,iPhi) = 1./(L_I(iR)* cos(Lat)) *Vphi * (DipoleFactor)**3
+             GradBCrossB_VIII(1,iPoint,iR,iPhi) = Vr * (abs(DipoleFactor))**3
+             GradBCrossB_VIII(2,iPoint,iR,iPhi) = 1./(L_I(iR))*Vtheta * (abs(DipoleFactor))**3
+             GradBCrossB_VIII(3,iPoint,iR,iPhi) = 1./(L_I(iR)* cos(Lat)) *Vphi * (abs(DipoleFactor))**3
 
              mag = abs(DipoleFactor)*(sqrt(Br**2+Btheta**2+Bphi**2))
 
@@ -1151,10 +1050,8 @@ contains
   subroutine get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,bField_VIII,&
        RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,alpha,beta)
 
-    use ModCoordTransform, ONLY: xyz_to_sph,rot_xyz_sph
-    use ModHeidiMain,      ONLY: LZ!,Phi
-    use ModNumConst,       ONLY: cPi
-!    use ModPlanetConst,    ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
+    use ModCoordTransform, ONLY: rot_xyz_sph
+    use ModHeidiMain,      ONLY: LZ, Re, DipoleFactor
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -1173,22 +1070,15 @@ contains
     !Local Variables    
     real                   :: LatMin, LatMax,dLat,Lat             
     double precision       :: r, x, y, z, Bx, By, Bz, Vx,Vy,Vz, dBdx, dBdy, dBdz
-    real                   :: Vr, Vtheta, Vphi,Br,Btheta, Bphi, dBdR,dBdTheta,dBdPhi
-    real                   :: cos2LatMin,cos2LatMax,cos2Lat1,cos2Lat2,cos2Lat3
+    real                   :: cos2Lat1
     real                   :: aa, bb, cc, dd, gamma,sigma, a, rad
     real                   :: GradBxyz_D(3),GradBCrossBxyz_D(3),XyzSph_DD(3,3)
     real                   :: GradBSph_D(3),GradBCrossBSph_D(3)
     complex                :: root(3)
     integer                :: nroot, i, iR, iPhi,iPoint 
     real :: cos2Lat,sin2Lat,cos2Phi,sin2Phi
-!    real :: Re, DipoleFactor
-    real, parameter :: Re=6.378e6, DipoleFactor=-8.06e15
     !----------------------------------------------------------------------------------
-    
- !   Re = rPlanet_I(Earth_)
- !   DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
 
-    
     dd = 0.0
     do iPhi =1, nPhi
        sigma = cos(Phi_I(iPhi))
@@ -1231,11 +1121,11 @@ contains
              x = rad * cos(Lat) * cos(Phi_I(iPhi))
              y = rad * cos(Lat) * sin(Phi_I(iPhi))
              z = rad * sin(Lat)
-             
+
              r = (x**2 + (beta*y)**2 +(alpha*z)**2)
              a = (sqrt(r))**5
 
-                          
+
 
              ! \
              !  Magnetic field components for the uniformly stretched dipole in y and z.
@@ -1243,13 +1133,13 @@ contains
              Bx = DipoleFactor * (3. * z * x * alpha)/a
              By = DipoleFactor * (3. * z * y * alpha)/a
              Bz = DipoleFactor * (2. * (z*alpha)**2 - x**2 -(y*beta)**2 )/(a * alpha)
-             
-             
+
+
              !\
              ! Components of gradient of B in cartesian coordinates.
              !/
 
-             dBdx = DipoleFactor * (3. * ((4. * z**4 * alpha**4 + 9. * z**2 * x**2 * alpha**4 + 9. * z**2 &
+             dBdx = abs(DipoleFactor) * (3. * ((4. * z**4 * alpha**4 + 9. * z**2 * x**2 * alpha**4 + 9. * z**2 &
                   * y**2 * alpha**4 - 4. * z**2 * x**2 * alpha**2 - 4. * z**2 * alpha**2  &
                   * y**2 * beta**2 + x**4 + y**4 * beta**4 + 2. * x**2 * y**2 * beta**2)/ &
                   alpha**2/r**5)**(-1./2.) * x * (-12. * z**2 * x**2 * alpha**4 + 3 * z**2&
@@ -1258,7 +1148,7 @@ contains
                   - x**4 - 2. * x**2 * y**2 * beta**2 - y**4 * beta**4 - 15. * z**2 * y**2&
                   * alpha**4)/alpha**2/r**6)
 
-             dBdy = DipoleFactor * (3. * ((4. * z**4 * alpha**4 + 9. * z**2 * x**2 * alpha**4 + 9. * z**2 &
+             dBdy = abs(DipoleFactor) * (3. * ((4. * z**4 * alpha**4 + 9. * z**2 * x**2 * alpha**4 + 9. * z**2 &
                   * y**2 * alpha**4 - 4. * z**2 * x**2 * alpha**2 - 4. * z**2 * alpha**2  &
                   * y**2 * beta**2 + x**4 + y**4 * beta**4 + 2. * x**2 * y**2 * beta**2)/ &
                   alpha**2/r**5)**(-1./2.) * y * (3. * z**2 * x**2 * alpha**4 - 12. * z**2&
@@ -1268,7 +1158,7 @@ contains
                   - x**4 * beta**2 - 15. * beta**2 * z**2 * x**2 * alpha**4)/alpha**2/r**6)
 
 
-             dBdz = DipoleFactor * (-3. * ((4. * z**4 * alpha**4 + 9 * z**2 * x**2 * alpha**4 + 9. * z**2 &
+             dBdz = abs(DipoleFactor) * (-3. * ((4. * z**4 * alpha**4 + 9 * z**2 * x**2 * alpha**4 + 9. * z**2 &
                   * y**2 * alpha**4 - 4. * z**2 * x**2 * alpha**2 - 4. * z**2 * alpha**2 *&
                   y**2 * beta**2 + x**4 + y**4 * beta**4 + 2. * x**2 * y**2 * beta**2)/   &
                   alpha**2/r**5)**(-1./2.) * z * (-8. * z**2 * x**2 * alpha**2 - 8. * z**2&
@@ -1282,7 +1172,7 @@ contains
              ! Gradient drift components (Vx,Vy,Vz = grad(B**2/2.) x B)
              !/
 
-             Vx = (DipoleFactor)**3 *(3. * y * (-21. * z**4 * x**2 * alpha**6 + 6. * z**2 * x**4 * alpha**4 + &
+             Vx = (abs(DipoleFactor))**3 *(3. * y * (-21. * z**4 * x**2 * alpha**6 + 6. * z**2 * x**4 * alpha**4 + &
                   18. * z**6 * alpha**8 - 9. * z**2 * alpha**6 * x**4 + 36. * z**4 *      &
                   alpha**8 * x**2 + 36. * z**4 * alpha**8 * y**2 - 9. * z**2 * alpha**6 * &
                   x**2 * y**2 * beta**2 + 27. * z**2 * x**2 * alpha**4 * y**2 * beta**2 - &
@@ -1297,7 +1187,7 @@ contains
                   + 15. * beta**4 * z**2 * x**2 * alpha** 4. * y**2)/alpha**3 * r**(-17./2.))
 
 
-             Vy = (DipoleFactor)**3 *(-3. * x * (-51. * z**4 * x**2 * alpha**6 + 21. * z**2 * x**4 * alpha**4 &
+             Vy = (abs(DipoleFactor))**3 *(-3. * x * (-51. * z**4 * x**2 * alpha**6 + 21. * z**2 * x**4 * alpha**4 &
                   + 18. * z**6 * alpha**8 - 9. * z**2 * alpha**6 * x**4 + 36. * z**4 *    &
                   alpha**8 * x**2 + 36. * z**4 * alpha**8 * y**2 - 9. * z**2 * alpha**6 * &
                   x**2 * y**2 * beta**2 + 27. * z**2 * x**2 * alpha**4 * y**2 * beta**2 - &
@@ -1312,7 +1202,7 @@ contains
                   * r**(-17./2.))
 
 
-             Vz = (DipoleFactor)**3 *(9. * x * z * y * (-15. * z**2 * x**2 * alpha**4 + 15. * z**2 * alpha**4 &
+             Vz = (abs(DipoleFactor))**3 *(9. * x * z * y * (-15. * z**2 * x**2 * alpha**4 + 15. * z**2 * alpha**4 &
                   * y**2 * beta**2 + 6. * z**2 * x**2 * alpha**2 + 6. * z**2 * alpha**2 * &
                   y**2 * beta**2 - 8. * z**4 * alpha**4 - 2. * x**2 * y**2 * beta**2 -    &
                   y**4 * beta**4 - x**4 - 15. * z**2 * y**2 * alpha**4 - 6. * z**2 *      &

@@ -89,8 +89,7 @@ module ModHeidiInput
   ! "#BFIELD"
   character(len=20) :: TypeBField = 'analytic'
   character(len=20) :: TypeBfieldGrid = 'uniform'
-  character(len=20) :: TypeBfieldTemp = 'static'
-  ! "#SAVERESTART"
+    ! "#SAVERESTART"
   logical           :: DoSaveRestart = .true.
   real              :: DtSaveRestart = 40.0
   character(len=20) :: TypeFile = 'ascii'
@@ -106,8 +105,8 @@ contains
     use ModProcIM, ONLY: iComm
     use ModHeidiIO, ONLY: IsFramework
 
-    character (len=100) :: NameCommand, StringPart_I(100)
-    integer :: iSession = -1, nStringPart
+    character (len=100) :: NameCommand
+    integer :: iSession = -1
     logical :: UseStrict
     ! GIPHT BEGIN INDEXES
 
@@ -204,7 +203,6 @@ contains
        case("#BFIELD")
           call read_var('TypeBField', TypeBField, IsLowerCase=.true.)  
           call read_var('TypeBFieldGrid', TypeBFieldGrid, IsLowerCase=.true.)
-          call read_var('TypeBFieldTemp',TypeBFieldTemp, IsLowerCase=.true.)
        case("#INITIALTHERMALPLASMA")
           call read_var('DoReadDGCPM', DoReadDGCPM)
        case("#SOLARWIND")

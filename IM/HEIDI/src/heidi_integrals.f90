@@ -5,11 +5,10 @@
 
 subroutine get_IntegralH(IntegralH_III)
 
-  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR, io, jo,lo,dT
+  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
   use ModConst,      ONLY: cPi,  cTiny
   use ModHeidiInput, ONLY: TypeBField
   use ModHeidiMain,  ONLY: Phi, LZ, mu
-  use ModNumConst,   ONLY: cDegToRad
   use ModHeidiBField
 
   implicit none 
@@ -30,6 +29,7 @@ subroutine get_IntegralH(IntegralH_III)
   real                 :: dBdt_III(nPoint,nR,nT)
   !----------------------------------------------------------------------------------
   select case(TypeBField)
+
   case('analytic')
      alpha=1.+alog(2.+sqrt(3.))/2./sqrt(3.)
      beta=alpha/2.-cPi*sqrt(2.)/12.
@@ -49,7 +49,7 @@ subroutine get_IntegralH(IntegralH_III)
            end do
         end do
      end do
-     
+
   case('numeric')
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
           RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
@@ -68,16 +68,16 @@ subroutine get_IntegralH(IntegralH_III)
         end do
      end do
   end select
-  
+
 end subroutine get_IntegralH
 
 !============================================================
 subroutine get_IntegralI(IntegralI_III)
 
-  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR, dT
+  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
   use ModConst,      ONLY: cPi,  cTiny
   use ModHeidiInput, ONLY: TypeBField
-  use ModHeidiMain,  ONLY: Phi, LZ, mu, T
+  use ModHeidiMain,  ONLY: Phi, LZ, mu
   use ModHeidiBField
 
   implicit none
@@ -136,7 +136,7 @@ subroutine get_IntegralI(IntegralI_III)
         end do
      end do
   end select
-  
+
   IntegralI_III(1,:,:)   = IntegralI_III(2,:,:)
   IntegralI_III(nPa,:,:) = IntegralI_III(nPa-1,:,:)
 
@@ -144,9 +144,9 @@ end subroutine get_IntegralI
 !============================================================
 subroutine get_neutral_hydrogen(NeutralHydrogen_III)
 
-  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR,dT
+  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
   use ModConst,      ONLY: cPi,  cTiny
-  use ModHeidiMain,  ONLY: Phi, LZ, mu, T
+  use ModHeidiMain,  ONLY: Phi, LZ, mu, T, Re
   use ModHeidiBField
   use ModHeidiHydrogenGeo
 
@@ -225,9 +225,9 @@ end subroutine get_B_field
 !============================================================
 subroutine get_coef(dEdt_IIII,dMudt_III)
 
-  use ModHeidiSize,   ONLY: nPoint,nPointEq, nPa, nT, nR,nE,DT
+  use ModHeidiSize,   ONLY: nPoint,nPointEq, nPa, nT, nR,nE
   use ModConst,       ONLY: cTiny  
-  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND,Z, funi, funt,dPhi
+  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND,Z, funi, funt,dPhi, DipoleFactor
   use ModHeidiDrifts, ONLY: VR, P1,P2
   use ModHeidiBField
   use ModHeidiBACoefficients
@@ -257,7 +257,6 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
   real                              :: TermMuR, TermMuPhi1,TermMuPhi2,TermMuPhi,TermMut
   real                              :: TermMuR1, TermMuR2,TermMuR3
   real                              :: GradEqBR, GradEqBPhi
-  real, parameter                   :: Me = 7.9e15 ,Re = 6.371e6 
   integer                           :: iPhi, iR, iPitch,iE
   real                              :: dBdt_III(nPoint,nR,nT),dIdR_III(nPa,nR,nT),dIdPhi_III(nPa,nR,nT)
   real                              :: dIdt_III(nPa,nR,nT)
@@ -271,6 +270,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
   character(len=20) :: TypeFile = 'ascii'  
   !----------------------------------------------------------------------------------
   dIdt_III = 0.0
+
 
   call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
        RadialDistance_III, Length_III, dLength_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
@@ -519,9 +519,9 @@ end subroutine get_coef
 
 subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
 
-  use ModHeidiSize,   ONLY: nPoint,nPointEq, nPa, nT, nR,nE,DT
+  use ModHeidiSize,   ONLY: nPoint,nPointEq, nPa, nT, nR,nE
   use ModConst,       ONLY: cTiny  
-  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND,wmu,DPHI,Z
+  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND, wmu, DPHI, Z, Re, DipoleFactor
   use ModHeidiDrifts, ONLY: VrConv, P1,P2
   use ModHeidiBField
   use ModHeidiBACoefficients
@@ -547,7 +547,6 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
   real                              :: TermMuR, TermMuPhi
   real                              :: TermMuR1, TermMuR2
   real                              :: GradEqBR, GradEqBPhi
-  real, parameter                   :: Me = 7.9e15 ,Re = 6.371e6 
   integer                           :: iPhi, iR, iPitch,iE
   real                              :: dBdt_III(nPoint,nR,nT)
 
@@ -581,7 +580,7 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
                    bMirror_I(iPitch), iMirror_I(:),dLength_III(:,iR,iPhi),&
                    DriftPhi_I(:),BouncedDriftPhi,RadialDistance_III(:,iR,iPhi)) 
               if (Sb==0.0) Sb = cTiny
-              VR_IIII(iR,iPhi,iE,iPitch) = BouncedDriftR/Sb/6.371e6
+              VR_IIII(iR,iPhi,iE,iPitch) = BouncedDriftR/Sb/Re
               VPhi_IIII(iR,iPhi,iE,iPitch) = BouncedDriftPhi/Sb
            end do
            VR_IIII(iR,iPhi,iE,1)      = VR_IIII(iR,iPhi,iE,2) 
