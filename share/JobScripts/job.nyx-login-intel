@@ -3,15 +3,18 @@
 #PBS -A csem
 #PBS -q route
 #PBS -N SWMF
-#PBS -l nodes=4:ppn=4
+#PBS -l nodes=4:ppn=4:qos=csem
 #PBS -l pmem=500mb
 #PBS -l walltime=2:00:00
 
 # cd to job submission directory
 cd $PBS_O_WORKDIR
 
-#get queue status
+# get queue status
 qstat -u $USER -n
+
+# look at what else is running
+resinfo.pl -n csem
 
 # run job
 mpirun ./SWMF.exe > runlog_`date +%y%m%d%H%M`
