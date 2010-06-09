@@ -75,20 +75,28 @@ test_numeric_rundir:
 	cd input; cp PARAM.numeric.in ../${TESTDIR2}/PARAM.in
 
 test_analytic_run: 
-	cd ${TESTDIR1}; ${MPIRUN} ./HEIDI.exe
+	if [ "$(MPIRUN)" = "mpirun -np 4" ]; then \
+		cd ${TESTDIR1}; ./HEIDI.exe; \
+	else \
+		cd ${TESTDIR1}; ${MPIRUN} ./HEIDI.exe; \
+	fi;
 
 test_numeric_run: 
-	cd ${TESTDIR2}; ${MPIRUN} ./HEIDI.exe
+	if [ "$(MPIRUN)" = "mpirun -np 4" ]; then \
+		cd ${TESTDIR2}; ./HEIDI.exe; \
+	else \
+		cd ${TESTDIR2}; ${MPIRUN} ./HEIDI.exe; \
+	fi;
 
 test_analytic_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-10 \
-		${TESTDIR1}/IM/${OUTDIR}/hydrogen/test1_h_prs.004  ${CHECKDIR}/test1_h_prs_analytic.004 \
+		${TESTDIR1}/IM/${OUTDIR}/hydrogen/test1_h_prs.002  ${CHECKDIR}/test1_h_prs_analytic.002 \
 			> test_analytic.diff
 	ls -l test_analytic.diff
 
 test_numeric_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-10 \
-		${TESTDIR2}/IM/${OUTDIR}/hydrogen/test1_h_prs.004  ${CHECKDIR}/test1_h_prs_numeric.004 \
+		${TESTDIR2}/IM/${OUTDIR}/hydrogen/test1_h_prs.002  ${CHECKDIR}/test1_h_prs_numeric.002 \
 			> test_numeric.diff
 	ls -l test_numeric.diff
 
