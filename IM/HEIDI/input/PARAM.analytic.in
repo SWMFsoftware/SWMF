@@ -9,7 +9,7 @@
 0.0 			FracSecond
 
 #STOP
-160.0			tSimulationMax [sec]
+80.0			tSimulationMax [sec]
 
 #TIMESTEP
 20.                     TimeStep [sec] 
@@ -34,9 +34,9 @@ test			TypeStorm
 1.26			rw
 
 #SPECIES
-T			UseElectron	
+F			UseElectron	
 T			UseHPlus
-T			UseHePlus
+F			UseHePlus
 T			UseOPlus
 T			UseIon
 F			UsePhotoelElectron
@@ -103,7 +103,6 @@ F 			UseWaves
 #BFIELD
 analytic     		TypeBField
 uniform                 TypeBFieldGrid
-static			TypeBFieldTemp
 
 #SAVERESTART
 T			DoSaveRestart
