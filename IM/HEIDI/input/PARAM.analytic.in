@@ -24,7 +24,6 @@
 #STORM
 test			TypeStorm
 
-
 #INNERBOUNDARY
 1e6			Height [m]
 
@@ -82,7 +81,7 @@ test1			NameRun
 40.			nFrequency [sec]
 
 #INJECTIONFREQUENCY
-120.			iFrequency [sec]
+40.			iFrequency [sec]
 
 
 #CONVECTION
