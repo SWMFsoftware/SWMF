@@ -83,6 +83,13 @@ for icdf=0,ncdf-1 do begin
 ; Make sure timevar is a 1D array or make it one
     siz = size(cdftime)
     if siz(0) eq 2 then cdftime = reform(cdftime(0,*))
+    
+; Work around endian bug of IDL 7.0 if necessary
+    if max(cdftime) lt 1.0 then begin
+       cdftime   = swap_endian(cdftime)
+       cdfbfield = swap_endian(cdfbfield)
+       cdfpos    = swap_endian(cdfpos)
+    endif
 
     if strpos(cdffilenames(icdf),'ge') gt -1 then begin
         print,"Geotail ? Dividing B by 10 !"
