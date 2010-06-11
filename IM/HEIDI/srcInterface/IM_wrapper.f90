@@ -8,7 +8,7 @@ subroutine IM_set_param(CompInfo,TypeAction)
   use ModHeidiMain
   use ModReadParam, ONLY: i_session_read
   use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
-  use ModHeidiIO,   ONLY: IsFramework, StringPrefix
+  use ModHeidiIO!,   ONLY: IsFramework, StringPrefix
   use ModIoUnit,    ONLY: STDOUT_
   
 
@@ -23,32 +23,51 @@ subroutine IM_set_param(CompInfo,TypeAction)
   logical                           :: UseStrict=.true.  
   integer                           :: iUnitOut
   !---------------------------------------------------------------------------
-  select case(TypeAction)
+  write(*,*) 'HEIDI set_param Action=', TypeAction
 
+  select case(TypeAction)
   case('VERSION')
+     write(*,*) 'VERSION'
+
      call put(CompInfo,                         &
           Use=.true.,                           &
           NameVersion='RAM_HEIDI (Liemohn)',    &
           Version=1.1)
 
   case('MPI')
+     write(*,*) 'MPI'
+
      call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
      if(nProc>4)call CON_stop( NameSub // &
           ' IM_ERROR this version can run on 4 PE !')
      IsFramework = .true.
 
+
   case('CHECK')
+     write(*,*) 'CHECK'
+
      !We should check and correct parameters here
      if(iProc==0)write(*,*) NameSub,': CHECK iSession =',i_session_read()
      call heidi_check
 
+
   case('GRID')
+     write(*,*) 'GRID'
+
      call IM_set_grid  
 
+     
+
   case('READ')
+     write(*,*) 'READ'
+
      call heidi_read
 
+     write(*,*) 'READ--------->DT,TMAX,TINT,TIME',DT,TMAX,TINT,TIME
+
   case('STDOUT')
+     write(*,*) 'STDOUT'
+
      iUnitOut = STDOUT_
      if(nProc==1)then
         StringPrefix='IM:'
@@ -57,6 +76,8 @@ subroutine IM_set_param(CompInfo,TypeAction)
      end if
 
   case('FILEOUT')
+     write(*,*) 'FILEOUT'
+
      call get(CompInfo,iUnitOut=iUnitOut)
      StringPrefix=''
 
@@ -994,19 +1015,35 @@ end subroutine IM_finalize
 
 subroutine IM_run(SimTime, SimTimeLimit)
 
-  use ModHeidiSize, only: dt, dtMax
-
+  use ModHeidiSize,  ONLY: dt, dtMax, tmax
+  use ModHeidiMain,  ONLY: t
+  use ModHeidiIO,    ONLY: time
+  use ModInit,       ONLY: i3
+    
   implicit none
 
   real, intent(inout) :: SimTime      ! current time of component
-  real, intent(in)    :: SimTimeLimit ! simulation time not to be exceeded
-
+  real, intent(in)    :: SimTimeLimit ! simulation time (until next coupling) not to be exceeded
+  
   !--------------------------------------------------------------------------
-  Dt = min(DtMax, (SimTimeLimit - SimTime)/2 )
+!  tSimulationMax  = SimTimeLimit 
+!  
+!  tMax = SimTimeLimit
+
+
+  dT = min(DtMax, (SimTimeLimit - SimTime)/2 )
+  
+  write(*,*) 'WRAPPER TIMES====>Dt, DtMax, SimTimeLimit, SimTime:', &
+       Dt, DtMax, SimTimeLimit, SimTime
+
+  write(*,*)'IM_run before heidi_run t,time,i3=',t,time,i3
 
   call heidi_run 
+  i3 = i3 + 1
 
-  SimTime = SimTime + dt*2
+  write(*,*)'IM_run after  heidi_run t,time,i3=',t,time,i3
+
+  SimTime = SimTime + dT*2
 
 end subroutine IM_run
 
