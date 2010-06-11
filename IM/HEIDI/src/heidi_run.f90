@@ -88,7 +88,12 @@ subroutine heidi_run
   !\
   ! Update boundary condition
   !/
-  if (mod(I3,NIBC).eq.0) call GEOSB
-    call FCHECK(23)
+!  if (mod(I3,NIBC).eq.0) call GEOSB
+!    call FCHECK(23)
+
+  write(*,*) 'IM_RUN   i3, nibc', i3, nibc
+  
+  if (mod(I3,NIBC).eq.0)     call GEOSB
+  call FCHECK(23)
 
 end subroutine heidi_run

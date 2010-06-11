@@ -51,6 +51,7 @@ subroutine get_IntegralH(IntegralH_III)
      end do
 
   case('numeric')
+     write(*,*) 'GET_INTEGRALH======>call initialize_b_field'
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
           RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
      do iPhi = 1, nT
@@ -121,6 +122,7 @@ subroutine get_IntegralI(IntegralI_III)
      end do
 
   case('numeric')
+     write(*,*) 'GET_INTEGRALI======>call initialize_b_field'
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
           RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
      do iPhi = 1, nT
@@ -169,6 +171,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
   real                 :: dBdt_III(nPoint,nR,nT)
 
   !----------------------------------------------------------------------------------
+  write(*,*) 'GET_NEUTRAL_HYDROGEN======>call initialize_b_field'
 
   call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
        RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
@@ -217,6 +220,7 @@ subroutine get_B_field(bFieldMagnitude_III)
   real                 :: dBdt_III(nPoint,nR,nT)
 
   !----------------------------------------------------------------------------------
+  write(*,*) 'GET_B_FIELD======>call initialize_b_field'
   call initialize_b_field(Z, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
        RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
@@ -271,7 +275,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
   !----------------------------------------------------------------------------------
   dIdt_III = 0.0
 
-
+  write(*,*) 'GET_COEF======>call initialize_b_field'
   call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
        RadialDistance_III, Length_III, dLength_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
@@ -552,6 +556,7 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
 
   !----------------------------------------------------------------------------------
 
+  write(*,*) 'GET_GRAD_CURV_DRIFT======>call initialize_b_field'
   call initialize_b_field(Z, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
        RadialDistance_III, Length_III, dLength_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
 

@@ -20,18 +20,29 @@
 subroutine heidi_read
 
   use ModHeidiIO
-  use ModHeidiMain,  ONLY: ithermfirst
+  use ModHeidiMain,  ONLY: ithermfirst, Re, DipoleFactor
   use ModIoUnit,     ONLY: UNITTMP_
-  use ModHeidiInput, ONLY: set_parameters
-  use ModProcIM,     ONLY:iProc
-
+  use ModHeidiInput, ONLY: set_parameters,tSimulationMax
+  use ModProcIM,     ONLY: iProc
+  use CON_planet,    ONLY: init_planet_const, set_planet_defaults, get_planet
+  
   implicit none
 
   integer          :: k,i
   character(len=1) :: header
 
   !------------------------------------------------------------------------
-  !Initialize scalc
+  
+! Initialize the planet, default planet is Earth
+  call init_planet_const 
+  call set_planet_defaults
+
+  call get_planet(RadiusPlanetOut = Re, DipoleStrengthOut = DipoleFactor)
+  DipoleFactor = DipoleFactor*Re**3
+
+
+
+!Initialize scalc
   scalc = 0
 
   if (iProc==0) then 
@@ -41,6 +52,9 @@ subroutine heidi_read
   call set_parameters
 
   Dt = DTmax
+  tmax=80.0
+
+  write(*,*) 'DT,TMAX,TINT,TIME',DT,TMAX,TINT,TIME
 
   if (iProc==0) then
      call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT
@@ -148,7 +162,7 @@ subroutine CONSTANT(NKP)
 
   KPT=-1./3./3600. ! model rate of decay of Kp in s-1
   DKP=KPT*DT*2.	   ! discrete step size of Kp
-  ME=DipoleFactor	   ! Magnetic moment of the earth
+  ME=abs(DipoleFactor)	   ! Magnetic moment of the earth
   MP=1.673E-27     ! Mass of H+ in kg
   Q=1.6E-19	   ! Electron charge, eV -> J conversion
   PI=3.141592654
@@ -486,12 +500,15 @@ subroutine ARRAYS
      end do
   end do
 
-  if (IsBfieldNew) then 
-     call get_B_field(bFieldMagnitude_III)
-     call get_IntegralH(funt)
-     call get_IntegralI(funi)
+  if (TypeBField == 'numeric') then
+     !if (IsBfieldNew) then 
+        call get_B_field(bFieldMagnitude_III)
+        call get_IntegralH(funt)
+        call get_IntegralI(funi)
+     !end if
   end if
-  
+
+
   if (TypeBField == 'numeric') then
      NameFile = 'BField.out'
      StringHeader = 'Magnetic field in the equatorial plane'

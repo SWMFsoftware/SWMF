@@ -59,9 +59,6 @@ program heidi_main
      IsBFieldNew = .false.
   end do			! end time loop
 
-  
-  
-
   close(iUnitSal)           ! Closes continuous output file
   close(iUnitSw1)           ! Closes sw1 input file
   close(iUnitSw2)           ! Closes sw2 input file

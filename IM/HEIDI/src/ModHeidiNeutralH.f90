@@ -160,7 +160,7 @@ contains
 
     L_I(1) = 2.0
     PitchAngle = cPi/10.
-
+    
     call initialize_b_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 

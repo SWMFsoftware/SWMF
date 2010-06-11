@@ -60,9 +60,9 @@ subroutine heidi_cepara
         
      case('numeric')
         
-        if (IsBFieldNew) then 
+        !if (IsBFieldNew) then 
            call get_neutral_hydrogen(NeutralHydrogen)
-        end if
+        !end if
         
         do L = 1, LO
            do j = 1, jo
@@ -213,10 +213,10 @@ subroutine OTHERPARA
 
   
   if (TypeBField == 'numeric') then
-     if (IsBFieldNew) then
+!     if (IsBFieldNew) then
         call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
         call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
-     end if
+ !    end if
   end if
   
   do i = 1, io      
@@ -544,9 +544,9 @@ real :: ISS
   !/
 
   if (TypeBField=='numeric') then
-     if (IsBFieldNew) then
+     !if (IsBFieldNew) then
         call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
-     end if
+     !end if
   end if
   
   ISS=-1			! sign of specie's charge

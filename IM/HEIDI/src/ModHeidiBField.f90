@@ -47,7 +47,8 @@ contains
        !/
     case('mhd')
        if (t <2.*dt) then
-          write(*,*) 'simulation time=',t       
+          write(*,*) 'INITIALIZE B FIED'
+          write(*,*) 'Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt       
           call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
                RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III, 1.1, 1.0/1.1)
        else

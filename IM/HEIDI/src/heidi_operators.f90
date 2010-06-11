@@ -107,6 +107,7 @@ subroutine DRIFTR
   !\
   ! Set up injection boundary fluxes
   !/
+  C(1) = 0.0
   if (AMOD(T,TINJ).lt.2.*DT .or. T.eq.TIME) then
      do L=1,LO
         do K=1,KO
@@ -162,8 +163,15 @@ subroutine DRIFTR
            !\
            ! Update the solution for next time step
            !/
+           
 
            do I=2,ILMP(J)
+!              write(*,*) 'I',I
+!              write(*,*) 'FBND(I)', FBND(I)
+!              write(*,*) 'C(I)',C(I)
+!              write(*,*) 'C(I-1)',C(I-1)
+!              write(*,*) 'FBND(I-1)',FBND(I-1)
+!              write(*,*) 'F2(I,J,K,L,S)',F2(I,J,K,L,S)
               F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(I)*FBND(I)+C(I-1)*FBND(I-1)
 	   end do ! I loop 
 	   do I=ILMP(J)+1,IO

@@ -45,9 +45,9 @@ subroutine get_E_mu_dot
 
   case('numeric')
 
-     if (IsBFieldNew) then
+     !if (IsBFieldNew) then
         call get_coef(dEdt_IIII,dMudt_III)
-     end if
+     !end if
      
      do I = 1, IO
         do J = 1, JO

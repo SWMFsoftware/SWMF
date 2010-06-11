@@ -3,7 +3,7 @@ subroutine heidi_init
   use ModHeidiMain,   ONLY: T, f107R
   use ModHeidiDrifts, ONLY: j18,j6
   use ModProcIM,      ONLY: iProc
-  use ModInit,        ONLY: nSt, nKp, nIBC, i2,nPr, xn, lnc
+  use ModInit,        ONLY: nSt, nKp, nIBC, i2,nPr, xn, lnc, i3
   use ModHeidiIO
 
   implicit none
@@ -27,6 +27,7 @@ subroutine heidi_init
 
   call CONSTANT(NKP)
   I2=(NST-1)/NKP + 1
+  I3 = NST
   if (IKP.ge.3) F107=F107R(I2)
   call ARRAYS
   call heidi_cepara
