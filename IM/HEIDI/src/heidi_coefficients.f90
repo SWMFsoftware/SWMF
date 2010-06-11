@@ -60,9 +60,10 @@ subroutine heidi_cepara
         
      case('numeric')
         
-        !if (IsBFieldNew) then 
+        if (IsBFieldNew) then 
+           write(*,*) 'heidi_coefficients: heidi_cepara--->get_neutral_hydrogen'
            call get_neutral_hydrogen(NeutralHydrogen)
-        !end if
+        end if
         
         do L = 1, LO
            do j = 1, jo
@@ -186,10 +187,6 @@ subroutine OTHERPARA
   ! Parameters used in calculating drifts at boundaries
   !/
 
-
-
-
-
   C=1.44E-2*RE**2		! Constant of corotation, [C]=V*m
   ISS=-1			! sign of specie's charge
   if (S.ge.2) ISS=1
@@ -213,10 +210,10 @@ subroutine OTHERPARA
 
   
   if (TypeBField == 'numeric') then
-!     if (IsBFieldNew) then
+     if (IsBFieldNew) then
+        write(*,*) 'heidi_coefficients: OTHERPARA---> get_grad_curv_drift'
         call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
-        call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
- !    end if
+     end if
   end if
   
   do i = 1, io      
@@ -544,9 +541,10 @@ real :: ISS
   !/
 
   if (TypeBField=='numeric') then
-     !if (IsBFieldNew) then
+     if (IsBFieldNew) then
+        write(*,*) 'heidi_coefficients: MAGCONV---> get_grad_curv_drift'
         call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
-     !end if
+     end if
   end if
   
   ISS=-1			! sign of specie's charge

@@ -37,7 +37,7 @@ program heidi_main
 
   IsFramework = .false.
   IsBFieldNew = .true.
-
+  
   ! Initialize the planet, default planet is Earth
   call init_planet_const 
   call set_planet_defaults
@@ -55,6 +55,10 @@ program heidi_main
   end if
 
   do i3 = nst, nstep
+     write(*,*) '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+     write(*,*) 'MAIN TIME: T, time=', T, time
+     write(*,*) '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+
      call heidi_run
      IsBFieldNew = .false.
   end do			! end time loop

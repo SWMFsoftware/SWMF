@@ -45,9 +45,10 @@ subroutine get_E_mu_dot
 
   case('numeric')
 
-     !if (IsBFieldNew) then
+     if (IsBFieldNew) then
+        write(*,*) 'heidi_emudt--->get_coef'
         call get_coef(dEdt_IIII,dMudt_III)
-     !end if
+     end if
      
      do I = 1, IO
         do J = 1, JO
@@ -76,10 +77,9 @@ subroutine get_E_mu_dot
   end select
 
 
-  write(*,*) '######################'
-  write(*,*) 'TIME, VPHI, VR dedt,dmudt', t, VPhi_IIII(5,5,5,5), VR_IIII(5,5,5,5),&
-       dEdt_IIII(5,5,5,5),dMudt_III(5,5,5,5)
-  write(*,*) 'IsBfieldNew, time, dt=', IsBfieldNew, t, dt
-  write(*,*) '##############'
-
+  write(*,*) '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+  write(*,*) 'Simulation Time (T), TimeStep (dT), IsBfieldNew, dEdt, dMudt = ', &
+       T, dT, IsBfieldNew, EDot(5,5,5,5), MuDot(5,5,5,5)
+  write(*,*) '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+  
 end subroutine get_E_mu_dot

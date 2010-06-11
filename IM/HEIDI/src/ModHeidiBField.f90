@@ -211,9 +211,8 @@ contains
        !RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III, 1.0, 1.0/1.0)
 
        call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-            RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.1)
+            RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.0)
     end select
-
 
     do iPhi =1, nPhi
        do iR =1, nR 

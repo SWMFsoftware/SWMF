@@ -24,25 +24,13 @@ subroutine heidi_read
   use ModIoUnit,     ONLY: UNITTMP_
   use ModHeidiInput, ONLY: set_parameters,tSimulationMax
   use ModProcIM,     ONLY: iProc
-  use CON_planet,    ONLY: init_planet_const, set_planet_defaults, get_planet
-  
+    
   implicit none
 
   integer          :: k,i
   character(len=1) :: header
-
   !------------------------------------------------------------------------
-  
-! Initialize the planet, default planet is Earth
-  call init_planet_const 
-  call set_planet_defaults
-
-  call get_planet(RadiusPlanetOut = Re, DipoleStrengthOut = DipoleFactor)
-  DipoleFactor = DipoleFactor*Re**3
-
-
-
-!Initialize scalc
+  !Initialize scalc
   scalc = 0
 
   if (iProc==0) then 
@@ -54,15 +42,12 @@ subroutine heidi_read
   Dt = DTmax
   tmax=80.0
 
-  write(*,*) 'DT,TMAX,TINT,TIME',DT,TMAX,TINT,TIME
-
   if (iProc==0) then
      call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT
      call write_prefix; write(iUnitStdOut,*)  'DT,TMAX,TINT,TIME',DT,TMAX,TINT,TIME
-     call write_prefix; write(iUnitStdOut,*)  'IO,JO,KO,LO,ISO',IO,JO,KO,LO,ISO
+     !call write_prefix; write(iUnitStdOut,*)  'IO,JO,KO,LO,ISO',IO,JO,KO,LO,ISO
      call write_prefix; write(iUnitStdOut,*)  '(SCALC(k),k=1,NS)',(SCALC(k),k=1,NS)
-     call write_prefix; write(iUnitStdOut,*)  'YEAR,month,day,UT',YEAR,month,day,UT
-     call write_prefix; write(iUnitStdOut,*)  'R,AP,KP',R,AP,KP
+     !call write_prefix; write(iUnitStdOut,*)  'R,AP,KP',R,AP,KP
      call write_prefix; write(iUnitStdOut,*)  '(INI(k),k=1,NS)',(INI(k),k=1,NS)
      call write_prefix; write(iUnitStdOut,*)  '(IBC(k),k=1,NS)',(IBC(k),k=1,NS)
      call write_prefix; write(iUnitStdOut,*)  'NAME=', NameRun
@@ -200,15 +185,13 @@ subroutine BFIELD_SETUP(cone)
   !------------------------------------------------------------------------
   degrad=pi/180.
 
+
   do IML=1,ISO 
      do i=1,IO
         camlra=amla(iml)*degrad
         BE(I,IML)=0.32/LZ(I)**3*sqrt(1.+3.*sin(camlra)**2)  &
              /cos(camlra)**6		  ! in gauss
         BFC(I)=ME/Z(I)**3/40./sqrt(PI*Q)	  ! in SI units
-
-
-        
      end do
   end do
 
@@ -288,7 +271,7 @@ subroutine ARRAYS
      end if
      call CON_stop('ERROR in heidi_setup.f90')
   end if
-
+  
   DR=DL1*RE                   !Grid size for Z=RO
   do I = 1, IO
      LZ(I)=LZMIN+(I-2)*DL1
@@ -500,15 +483,22 @@ subroutine ARRAYS
      end do
   end do
 
-  if (TypeBField == 'numeric') then
-     !if (IsBfieldNew) then 
-        call get_B_field(bFieldMagnitude_III)
-        call get_IntegralH(funt)
-        call get_IntegralI(funi)
-     !end if
+  write(*,*) 'heidi_setup---> IsBfieldNew = ', IsBfieldNew
+  
+  if (IsBfieldNew) then 
+     
+     write(*,*) 'heidi_setup: ARRAYS---> get_B_field'
+     call get_B_field(bFieldMagnitude_III)
+     
+     write(*,*) 'heidi_setup: ARRAYS---> get_IntegralH'
+     call get_IntegralH(funt)
+     
+     write(*,*) 'heidi_setup: ARRAYS---> get_IntegralI'
+     call get_IntegralI(funi)
+     
   end if
-
-
+  
+  
   if (TypeBField == 'numeric') then
      NameFile = 'BField.out'
      StringHeader = 'Magnetic field in the equatorial plane'
@@ -617,7 +607,6 @@ subroutine ARRAYS
   !\
   ! Variables for pressure and anisotropy calculations
   !/
-
 
   do L=1,LO    
      do K=1,KO
