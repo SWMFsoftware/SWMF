@@ -23,6 +23,8 @@ subroutine IM_set_param(CompInfo,TypeAction)
   logical                           :: UseStrict=.true.  
   integer                           :: iUnitOut
   !---------------------------------------------------------------------------
+
+  IsBFieldNew = .true.
   write(*,*) 'HEIDI set_param Action=', TypeAction
 
   select case(TypeAction)
@@ -324,7 +326,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   use ModHeidiMain,      ONLY: nR, nT, LZ, BHeidi_III, SHeidi_III, RHeidi_III,&
        bGradB1xHeidi_III,bGradB1yHeidi_III, bGradB1zHeidi_III,&
        BxHeidi_III, ByHeidi_III, BzHeidi_III,Xyz_VIII
-  use ModHeidiMain,      ONLY: Phi
+  use ModHeidiMain,      ONLY: Phi, IsBFieldNew
   use ModHeidiIO,        ONLY: Time
   use ModHeidiSize,      ONLY: RadiusMin, RadiusMax, nPointEq
   use ModIoUnit,         ONLY: UnitTmp_
@@ -776,7 +778,6 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      end do
   end do
   close(9)
- 
 
 !  call stop_mpi('DEBUG')
 
@@ -1016,7 +1017,7 @@ end subroutine IM_finalize
 subroutine IM_run(SimTime, SimTimeLimit)
 
   use ModHeidiSize,  ONLY: dt, dtMax, tmax
-  use ModHeidiMain,  ONLY: t
+  use ModHeidiMain,  ONLY: t, IsBFieldNew
   use ModHeidiIO,    ONLY: time
   use ModInit,       ONLY: i3
     
@@ -1026,10 +1027,6 @@ subroutine IM_run(SimTime, SimTimeLimit)
   real, intent(in)    :: SimTimeLimit ! simulation time (until next coupling) not to be exceeded
   
   !--------------------------------------------------------------------------
-!  tSimulationMax  = SimTimeLimit 
-!  
-!  tMax = SimTimeLimit
-
 
   dT = min(DtMax, (SimTimeLimit - SimTime)/2 )
   
@@ -1039,11 +1036,15 @@ subroutine IM_run(SimTime, SimTimeLimit)
   write(*,*)'IM_run before heidi_run t,time,i3=',t,time,i3
 
   call heidi_run 
+  
+
   i3 = i3 + 1
 
   write(*,*)'IM_run after  heidi_run t,time,i3=',t,time,i3
 
   SimTime = SimTime + dT*2
+  
+  write(*,*) 'WRAPPER: SimTime=', SimTime
 
 end subroutine IM_run
 

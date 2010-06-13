@@ -24,12 +24,23 @@ subroutine heidi_read
   use ModIoUnit,     ONLY: UNITTMP_
   use ModHeidiInput, ONLY: set_parameters,tSimulationMax
   use ModProcIM,     ONLY: iProc
-    
+  use CON_planet, ONLY: init_planet_const, set_planet_defaults, get_planet 
+  
   implicit none
 
   integer          :: k,i
   character(len=1) :: header
   !------------------------------------------------------------------------
+  
+! Initialize the planet, default planet is Earth
+  call init_planet_const 
+  call set_planet_defaults
+
+  call get_planet(RadiusPlanetOut = Re, DipoleStrengthOut = DipoleFactor)
+  DipoleFactor = DipoleFactor*Re**3
+
+
+
   !Initialize scalc
   scalc = 0
 
@@ -40,7 +51,7 @@ subroutine heidi_read
   call set_parameters
 
   Dt = DTmax
-  tmax=80.0
+  
 
   if (iProc==0) then
      call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT
@@ -175,23 +186,22 @@ subroutine BFIELD_SETUP(cone)
   use ModHeidiMain
   use ModHeidiWaves
   use ModHeidiIO
-  use ModProcIM, ONLY:iProc
-
+  use ModProcIM,   ONLY: iProc
+  use ModNumConst, ONLY: cPi
   implicit none
 
   real     :: CONE(NR+4),degrad,camlra,asind
   integer  :: i,iml
   external :: asind
   !------------------------------------------------------------------------
-  degrad=pi/180.
-
+  degrad=cPi/180.
 
   do IML=1,ISO 
      do i=1,IO
         camlra=amla(iml)*degrad
         BE(I,IML)=0.32/LZ(I)**3*sqrt(1.+3.*sin(camlra)**2)  &
              /cos(camlra)**6		  ! in gauss
-        BFC(I)=ME/Z(I)**3/40./sqrt(PI*Q)	  ! in SI units
+        BFC(I)=abs(DipoleFactor)/Z(I)**3/40./sqrt(cPi*Q)	  ! in SI units
      end do
   end do
 
@@ -220,9 +230,10 @@ subroutine ARRAYS
   use ModHeidiIO
   use ModHeidiMain
   use ModHeidiWaves
-  use ModProcIM, ONLY: iProc
-  use ModPlotFile, only: save_plot_file
+  use ModProcIM,     ONLY: iProc
+  use ModPlotFile,   ONLY: save_plot_file
   use ModHeidiInput, ONLY: TypeBField
+  use ModNumConst,   ONLY: cPi
 
 
   implicit none
@@ -277,11 +288,11 @@ subroutine ARRAYS
      LZ(I)=LZMIN+(I-2)*DL1
   end do
   Z(1:IO)=RE*LZ(1:IO)
-  degrad=pi/180.
+  degrad=cPi/180.
 
   call BFIELD_SETUP(cone)
 
-  DPHI = 2.*PI/JO		      ! Grid size for local time [rad]
+  DPHI = 2.* cPI/JO		      ! Grid size for local time [rad]
   if(mod(NLT,JO).ne.0) then
 
      if (iProc==0) then
@@ -293,7 +304,7 @@ subroutine ARRAYS
   do J = 1, JO+1
      PHI(J)=(J-1)*DPHI	            ! Magnetic local time in radian
   end do
-  MLT(1:JO+1)=PHI(1:JO+1)*12./PI    ! Magnetic local time in hour 
+  MLT(1:JO+1)=PHI(1:JO+1)*12./cPi    ! Magnetic local time in hour 
 
   do I = 1, NS
      MAS(I)=MP*M1(I)		    ! Mass of each species (kg)
@@ -487,8 +498,8 @@ subroutine ARRAYS
   
   if (IsBfieldNew) then 
      
-     write(*,*) 'heidi_setup: ARRAYS---> get_B_field'
-     call get_B_field(bFieldMagnitude_III)
+!     write(*,*) 'heidi_setup: ARRAYS---> get_B_field'
+!     call get_B_field(bFieldMagnitude_III)
      
      write(*,*) 'heidi_setup: ARRAYS---> get_IntegralH'
      call get_IntegralH(funt)
@@ -499,69 +510,69 @@ subroutine ARRAYS
   end if
   
   
-  if (TypeBField == 'numeric') then
-     NameFile = 'BField.out'
-     StringHeader = 'Magnetic field in the equatorial plane'
-     StringVarName = 'R MLT B'
-     TypePosition = 'rewind'
-     
-     call save_plot_file(NameFile, & 
-          TypePositionIn = TypePosition,&
-          TypeFileIn     = TypeFile,&
-          StringHeaderIn = StringHeader, &
-          nStepIn = 0, &
-          TimeIn = 0.0, &
-          NameVarIn = StringVarName, &
-          nDimIn = 2, & 
-          CoordMinIn_D = (/1.75, 0.0/),&
-          CoordMaxIn_D = (/6.5, 24.0/),&
-          VarIn_VII = bFieldMagnitude_III(nPointEq:nPointEq,:,:))
-     TypePosition = 'rewind' 
-     
-     NameFile = 'funi.out'
-     StringHeader = 'Magnetic field in the equatorial plane'
-     StringVarName = 'R MLT funi '
-     TypePosition = 'rewind'
-     
-     
-     do l = 1, lo
-        call save_plot_file(NameFile, & 
-             TypePositionIn = TypePosition,&
-             TypeFileIn     = TypeFile,&
-             StringHeaderIn = StringHeader, &
-             nStepIn = 0, &
-             TimeIn = 0.0, &
-             ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
-             NameVarIn = StringVarName, &
-             nDimIn = 2, & 
-             CoordMinIn_D = (/1.75, 0.0/),&
-             CoordMaxIn_D = (/6.5, 24.0/),&
-             VarIn_VII = funi(l:l,:,:))
-        TypePosition = 'append' 
-     end do
-     
-     NameFile = 'funt.out'
-     StringHeader = 'Magnetic field in the equatorial plane'
-     StringVarName = 'R MLT funt'
-     TypePosition = 'rewind'
-          
-     do l = 1, lo
-        call save_plot_file(NameFile, & 
-             TypePositionIn = TypePosition,&
-             TypeFileIn     = TypeFile,&
-             StringHeaderIn = StringHeader, &
-             nStepIn = 0, &
-             TimeIn = 0.0, &
-             ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
-             NameVarIn = StringVarName, &
-             nDimIn = 2, & 
-             CoordMinIn_D = (/1.75, 0.0/),&
-             CoordMaxIn_D = (/6.5, 24.0/),&
-             VarIn_VII = funt(l:l,:,:))
-        TypePosition = 'append' 
-     end do
-     
-  end if
+!!$  if (TypeBField == 'numeric') then
+!!$     NameFile = 'BField.out'
+!!$     StringHeader = 'Magnetic field in the equatorial plane'
+!!$     StringVarName = 'R MLT B'
+!!$     TypePosition = 'rewind'
+!!$     
+!!$     call save_plot_file(NameFile, & 
+!!$          TypePositionIn = TypePosition,&
+!!$          TypeFileIn     = TypeFile,&
+!!$          StringHeaderIn = StringHeader, &
+!!$          nStepIn = 0, &
+!!$          TimeIn = 0.0, &
+!!$          NameVarIn = StringVarName, &
+!!$          nDimIn = 2, & 
+!!$          CoordMinIn_D = (/1.75, 0.0/),&
+!!$          CoordMaxIn_D = (/6.5, 24.0/),&
+!!$          VarIn_VII = bFieldMagnitude_III(nPointEq:nPointEq,:,:))
+!!$     TypePosition = 'rewind' 
+!!$     
+!!$     NameFile = 'funi.out'
+!!$     StringHeader = 'Magnetic field in the equatorial plane'
+!!$     StringVarName = 'R MLT funi '
+!!$     TypePosition = 'rewind'
+!!$     
+!!$     
+!!$     do l = 1, lo
+!!$        call save_plot_file(NameFile, & 
+!!$             TypePositionIn = TypePosition,&
+!!$             TypeFileIn     = TypeFile,&
+!!$             StringHeaderIn = StringHeader, &
+!!$             nStepIn = 0, &
+!!$             TimeIn = 0.0, &
+!!$             ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
+!!$             NameVarIn = StringVarName, &
+!!$             nDimIn = 2, & 
+!!$             CoordMinIn_D = (/1.75, 0.0/),&
+!!$             CoordMaxIn_D = (/6.5, 24.0/),&
+!!$             VarIn_VII = funi(l:l,:,:))
+!!$        TypePosition = 'append' 
+!!$     end do
+!!$     
+!!$     NameFile = 'funt.out'
+!!$     StringHeader = 'Magnetic field in the equatorial plane'
+!!$     StringVarName = 'R MLT funt'
+!!$     TypePosition = 'rewind'
+!!$          
+!!$     do l = 1, lo
+!!$        call save_plot_file(NameFile, & 
+!!$             TypePositionIn = TypePosition,&
+!!$             TypeFileIn     = TypeFile,&
+!!$             StringHeaderIn = StringHeader, &
+!!$             nStepIn = 0, &
+!!$             TimeIn = 0.0, &
+!!$             ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
+!!$             NameVarIn = StringVarName, &
+!!$             nDimIn = 2, & 
+!!$             CoordMinIn_D = (/1.75, 0.0/),&
+!!$             CoordMaxIn_D = (/6.5, 24.0/),&
+!!$             VarIn_VII = funt(l:l,:,:))
+!!$        TypePosition = 'append' 
+!!$     end do
+!!$     
+!!$  end if
 
 
   !\
@@ -668,7 +679,7 @@ subroutine ARRAYS
               !	  which should be ~4.3E13/M(amu)^1.5
               !/
               do S = 1, NS
-                 CON1=8.*sqrt(2.)*PI*(Q*1.E3/MP/M1(S))**1.5*1.E-18*RE**2
+                 CON1=8.*sqrt(2.)*cPi*(Q*1.E3/MP/M1(S))**1.5*1.E-18*RE**2
                  CONSL(1:KO,S)=CON1
                  if (IFAC.eq.1) CONSL(1:KO,S)=CONSL(1:KO,S)/FLUXFACT(S)/EKEV(1:KO)
               end do
@@ -881,6 +892,7 @@ subroutine THERMAL
   use ModHeidiDGCPM
   use ModHeidiIO
   use ModProcIM
+  use ModNumConst, ONLY: cPi
 
   implicit none
 
@@ -987,7 +999,7 @@ subroutine THERMAL
      do l = 1, LO
         do j = 1,JO
            do i = 1,io
-              F2(I,J,1,L,1)=sqrt(5.*Q/MAS(1)*(PI*EO)**3)*XNE(I,J)*EKEV(1)* &
+              F2(I,J,1,L,1)=sqrt(5.*Q/MAS(1)*(cPi*EO)**3)*XNE(I,J)*EKEV(1)* &
                    exp(-EKEV(1)/EO)*FFACTOR(I,J,1,L)
            end do
         end do

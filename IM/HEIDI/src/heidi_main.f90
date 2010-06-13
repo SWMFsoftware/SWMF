@@ -44,7 +44,8 @@ program heidi_main
 
   call get_planet(RadiusPlanetOut = Re, DipoleStrengthOut = DipoleFactor)
   DipoleFactor = DipoleFactor*Re**3
-  
+
+
   ! Read and check input file
   call heidi_read
   call heidi_check

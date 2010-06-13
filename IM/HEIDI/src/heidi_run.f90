@@ -2,14 +2,17 @@ subroutine heidi_run
   
   use ModInit
   use ModHeidiIO,   ONLY: isw, nStep,iwpi,ires,&
-       write_prefix,iUnitStdOut
-  use ModHeidiMain, ONLY: s,t,dt,scalc
+       write_prefix,iUnitStdOut, IsFramework
+  use ModHeidiMain, ONLY: s,t,dt,scalc,IsBFieldNew
   use ModProcIM, ONLY: iProc
   
   implicit none 
   !------------------------------------------------------------------------------
 
-!  call OTHERPARA
+  if (IsFramework) then
+     call heidi_cepara
+     call otherpara
+  end if
   call GETKPA(i3,nst,i2,nkp)
   if (ISW.gt.0) call GETSWIND
   call FCHECK(1)
@@ -95,5 +98,7 @@ subroutine heidi_run
   
   if (mod(I3,NIBC).eq.0)     call GEOSB
   call FCHECK(23)
+
+  IsBFieldNew=.false.
 
 end subroutine heidi_run

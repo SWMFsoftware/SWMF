@@ -15,6 +15,7 @@ contains
          Re
     use ModCoordTransform, ONLY: cross_product, rot_xyz_sph
     use ModPlotFile,       ONLY: save_plot_file
+    use ModInit, ONLY:i3
 
     integer, intent(in)    :: nPoint , nR, nPhi
     real,    intent(in)    :: L_I(nR),Phi_I(nPhi)        
@@ -46,12 +47,15 @@ contains
        ! Magnetic field from BATS_R_US code; only in the coupled mode.
        !/
     case('mhd')
-       if (t <2.*dt) then
-          write(*,*) 'INITIALIZE B FIED'
+       write(*,*) 'TimStepCounter', i3
+       if (i3==1) then
+          write(*,*) 'CASE MHD--------->INITIALIZE B FIED'
           write(*,*) 'Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt       
           call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
                RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III, 1.1, 1.0/1.1)
        else
+          
+          write(*,*) 'REAL MHD------>Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt
           bFieldMagnitude_III = BHeidi_III
           RadialDistance_III  = RHeidi_III 
           Length_III          = SHeidi_III 
