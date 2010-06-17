@@ -463,7 +463,7 @@ if (UseTurbulentCond) then
 
   ! This includes Radiative Cooling....
   RadCooling = 0.0
-  LowAtmosRadRate(:,:,:,iBlock) = 0.0
+
   call calc_planet_sources(iBlock)
 
   ! The Emissions array was never set. Should this be here or earlier ????
