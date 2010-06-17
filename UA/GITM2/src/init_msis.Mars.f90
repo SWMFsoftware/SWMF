@@ -292,20 +292,20 @@ subroutine init_msis
      Temperature(:,nLats+1,:,iBlock) = Temperature(:,nLats,:,iBlock)
      Temperature(:,nLats+2,:,iBlock) = Temperature(:,nLats,:,iBlock)
 
-     SurfaceAlbedo(:,:,iBlock) = 0.0
-     dSurfaceTemp(:,:,iBlock) = 0.0
-     dSubSurfaceTemp(:,:,iBlock) = 0.0
-     SurfaceTemp(:,:,iBlock) = 170.0
-     SubsurfaceTemp(:,:,iBlock) = 180.0
-    
-     do ilon = 1,nlons
-        do ilat = 1,nlats
-           jlat = nint((latitude(ilat,iblock)*180.0/pi+93.75)/7.5)
-           klon = nint((longitude(ilon,iblock)*180.0/pi+5.0)/10.0)
-           SurfaceAlbedo(ilon,ilat,iblock) = dummyalbedo(jlat,klon)
-           tinertia(ilon,ilat,iblock) = dummyti(jlat,klon)
-        enddo
-    enddo
+      SurfaceAlbedo(:,:,iBlock) = 0.0
+      dSurfaceTemp(:,:,iBlock) = 0.0
+      dSubSurfaceTemp(:,:,iBlock) = 0.0
+      SurfaceTemp(:,:,iBlock) = 170.0
+      SubsurfaceTemp(:,:,iBlock) = 180.0
+     
+      do ilon = 1,nlons
+         do ilat = 1,nlats
+            jlat = nint((latitude(ilat,iblock)*180.0/pi+93.75)/7.5)
+            klon = nint((longitude(ilon,iblock)*180.0/pi+5.0)/10.0)
+            SurfaceAlbedo(ilon,ilat,iblock) = dummyalbedo(jlat,klon)
+            tinertia(ilon,ilat,iblock) = dummyti(jlat,klon)
+         enddo
+     enddo
 
     !\
      ! Calculating MeanMajorMass -----------------------------
@@ -314,6 +314,7 @@ subroutine init_msis
      !\
      ! Initialize MeanMajorMass to 0.0
      !/
+     NDensityS = exp(nDensityS)
      MeanMajorMass(-1:nLons+2,-1:nLats+2,-1:nAlts+2) = 0.0
      MeanIonMass(-1:nLons+2,-1:nLats+2,-1:nAlts+2) = 0.0
 
