@@ -182,6 +182,16 @@ module ModPlanet
        integer, PARAMETER :: LL_NLAYRAD  = LL_LAYERS+1   
        integer, PARAMETER :: LL_NLEVRAD  = LL_LAYERS+2
 
+! Bottom layer subsurface temperature
+       real, parameter :: CoreTemp = 175.0
+
+! Surface and subsurface temperature constants
+       real, parameter :: Pa = 5.927E+7
+       real, parameter :: Pd = 88775.0
+
+! Stefan-Boltzmann constant in SI
+       real, parameter :: SBconstant = 5.67E-8
+
 !      Ls variable
        real :: ell_s
 !C======================================================================C
@@ -420,6 +430,7 @@ module ModPlanet
 !      WREFCO2, WREFH2O
 
 !#####################################################
+real*4 :: dummyalbedo(24,36), dummyti(24,36)
 
 contains
 
@@ -485,6 +496,16 @@ contains
 
     write(*,*) 'Reading in the Mars_input.txt'
 
+    open(UNIT = 67, FILE = 'UA/DataIn/ALBEDO_ASCII', &
+         STATUS='OLD', ACTION = 'READ')
+    read(67,*) dummyalbedo
+    close(UNIT = 67)
+    
+    open(UNIT = 68, FILE = 'UA/DataIn/THERMAL_ASCII', &
+         STATUS='OLD', ACTION = 'READ')  
+    read(68,*) dummyti
+    close(UNIT = 68)
+
     open(UNIT = UnitTmp_, FILE = 'UA/DataIn/NewMarsAtm_2p5km.txt', &
          STATUS='OLD', ACTION = 'READ')
 
@@ -518,7 +539,7 @@ contains
     InNDensityS = Alog(inNDensityS)
     close(Unit = UnitTmp_)
 
-    
+  
 
     !######## Nelli, April 07 ################################
     !              
@@ -1306,7 +1327,7 @@ contains
 !##########################################################
 
   subroutine init_radcooling
-  return
+    return
   end subroutine init_radcooling
 
   subroutine init_magheat

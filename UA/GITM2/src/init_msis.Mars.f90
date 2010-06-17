@@ -65,7 +65,7 @@ subroutine init_msis
   integer, parameter:: ninitialAlts = 25
   integer :: iBlock
   integer :: iiLon,iiLat,iiAlt,iminiono,ialtlow(1)
-  integer :: iLon,iLat,iAlt, iSpecies, iIon, iError
+  integer :: iLon,iLat,iAlt, iSpecies, iIon, iError, jlat,klon
 
   logical :: Done = .False.
   character (len=iCharLen_) :: cLine
@@ -292,68 +292,28 @@ subroutine init_msis
      Temperature(:,nLats+1,:,iBlock) = Temperature(:,nLats,:,iBlock)
      Temperature(:,nLats+2,:,iBlock) = Temperature(:,nLats,:,iBlock)
 
+     SurfaceAlbedo(:,:,iBlock) = 0.0
+     dSurfaceTemp(:,:,iBlock) = 0.0
+     dSubSurfaceTemp(:,:,iBlock) = 0.0
+     SurfaceTemp(:,:,iBlock) = 170.0
+     SubsurfaceTemp(:,:,iBlock) = 180.0
+    
+     do ilon = 1,nlons
+        do ilat = 1,nlats
+           jlat = nint((latitude(ilat,iblock)*180.0/pi+93.75)/7.5)
+           klon = nint((longitude(ilon,iblock)*180.0/pi+5.0)/10.0)
+           SurfaceAlbedo(ilon,ilat,iblock) = dummyalbedo(jlat,klon)
+           tinertia(ilon,ilat,iblock) = dummyti(jlat,klon)
+        enddo
+    enddo
 
-     ! do iSpecies = 1, nSpeciesTotal
-     !   write(*,*) 'iSpecies =', iSpecies
-     !
-     !   do iAlt = -1, nAlts + 2
-     !     write(*,*) 'iAlt =', iAlt
-     !
-     !     do iLat = -1, nLats + 2
-     !       write(*,*) 'iLat =', iLat
-     !
-     !       do iLon = -1, nLons + 2
-     !         write(*,*) 'iLon =', iLon
-     !
-     !        write(*,*) 'NDensityS(', iLon, iLat, iAlt, iSpecies,') =', &
-     !                    NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
-     !       write(*,*) 'Temperature(', iLon, iLat, iAlt,') =', &
-     !                   Temperature(iLon,iLat,iAlt,iBlock)
-     !
-     !       enddo
-     !     enddo
-     !   enddo
-     ! enddo
-
-
-     !\
-     ! Diagnostic Outputs
-     !/
-     !112 FORMAT(F6.1,1X,F8.4,1X,ES10.3,1X,ES10.3,1X,ES10.3,1X,ES10.3,1X,ES10.3, &
-     !              1X,ES10.3,1X,ES10.3,1X,ES10.3,1X,ES10.3,1X,ES10.3,1X,ES10.3, &
-     !              1X,ES10.3,1X,ES10.3)
-     !
-     !  open(UNIT = 26, FILE = 'test_neutrals.txt', STATUS='NEW',ACTION = 'WRITE')
-     !
-     !  do iiAlt = -1,nAlts + 2 
-     !        write(26,112) &
-     !      	newalt(iiAlt), &
-     !       	Temperature(iiLon,iiLat,iiAlt,iBlock), &
-     !       	NDensityS(iiLon,iiLat,iiAlt,iH_,iBlock), &
-     !       	NDensityS(iiLon,iiLat,iiAlt,iH2_,iBlock), &
-     !       	NDensityS(iiLon,iiLat,iiAlt,iCH_,iBlock), &
-     !       	NDensityS(iiLon,iiLat,iiAlt,i1CH2_,iBlock), &
-     !       	NDensityS(iiLon,iiLat,iiAlt,i3CH2_,iBlock), &
-     !       	NDensityS(iiLon,iiLat,iiAlt,iCH3_,iBlock), &
-     !       	NDensityS(iiLon,iiLat,iiAlt,iCH4_,iBlock), &
-     !       	NDensityS(iiLon,iiLat,iiAlt,iC2H4_,iBlock), &
-     !       	NDensityS(iiLon,iiLat,iiAlt,iN4S_,iBlock), &
-     !       	NDensityS(iiLon,iiLat,iiAlt,iN2_,iBlock), &
-     !       	NDensityS(iiLon,iiLat,iiAlt,iHCN_,iBlock), &
-     !       	NDensityS(iiLon,iiLat,iiAlt,iH2CN_,iBlock), &
-     !  end do
-     !
-     !  close(Unit = 26)
-
-
-     !\
+    !\
      ! Calculating MeanMajorMass -----------------------------
      !/
 
      !\
      ! Initialize MeanMajorMass to 0.0
      !/
-     NDensityS = exp(nDensityS)/10.
      MeanMajorMass(-1:nLons+2,-1:nLats+2,-1:nAlts+2) = 0.0
      MeanIonMass(-1:nLons+2,-1:nLats+2,-1:nAlts+2) = 0.0
 

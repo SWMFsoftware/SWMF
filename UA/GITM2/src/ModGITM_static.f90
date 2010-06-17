@@ -50,7 +50,8 @@ module ModGITM
        KappaTemp, Ke,dKe
 
   real, dimension(nLons, nLats, nBlocksMax) :: &
-       SurfaceAlbedo=0.0, SurfaceTemp=0.0
+       SurfaceAlbedo, SurfaceTemp,SubsurfaceTemp, tinertia, &
+       dSubsurfaceTemp, dSurfaceTemp
 
   real :: cp(nLons, nLats, 0:nAlts+1,nBlocksMax)
   real :: ViscCoef(nLons, nLats, 0:nAlts+1)

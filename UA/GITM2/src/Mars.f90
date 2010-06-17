@@ -206,12 +206,18 @@ subroutine calc_planet_sources(iBlock)
 
      LowAtmosRadRate(1:nLons,1:nLats,1:nAlts,iBlock)=0.0
 
+     SurfaceTemp(1:nLons,1:nLats,iBlock) = SurfaceTemp(1:nLons,1:nLats,iBlock)+&
+          dSurfaceTemp(1:nLons,1:nLats,iBlock)*DtLTERadiation
+     
+     SubsurfaceTemp(1:nLons,1:nLats,iBlock) = SubsurfaceTemp(1:nLons,1:nLats,iBlock)+&
+          dSubsurfaceTemp(1:nLons,1:nLats,iBlock)*DtLTERadiation
+     
      do iLat = 1, nLats
         do iLon = 1, nLons
 
            !     Mars GITM ground temperature (on its grid) -------------------
            if (Altitude_GB(iLon,iLat,0,iBlock) .lt. 0) then
-              SurfaceTemp(iLon,iLat,iBlock)=180.0+100.0*AveCosSza(iLon,iLat,iBlock)
+!              SurfaceTemp(iLon,iLat,iBlock)=180.0+100.0*AveCosSza(iLon,iLat,iBlock)
               Temperature(iLon,iLat,0,iBlock)=SurfaceTemp(iLon,iLat,iBlock)/&
                    TempUnit(iLon,iLat,0)
               Temperature(iLon,iLat,-1,iBlock)=SurfaceTemp(iLon,iLat,iBlock)/&
@@ -230,8 +236,8 @@ subroutine calc_planet_sources(iBlock)
            L_NLAYRAD  = L_LAYERS+1   
            L_NLEVRAD  = L_LAYERS+2
 
-!           call calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
-!                L_NLAYRAD,L_NLEVRAD)
+           call calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
+                L_NLAYRAD,L_NLEVRAD)
 
         end do !Latitude Loop
      end do    !Longitude Loop
@@ -1409,6 +1415,16 @@ write(*,*) GWAccel(1,1,:,1)
        !         TOTAL(2) = 0.0
 
        lowatmosradrate(iLon,iLat,L_NLAYRAD-L1,iBlock)=TOTAL(L1)
+
+       dSubsurfaceTemp(iLon,iLat,iBlock) = -2.0*PI/sqrt(Pa*Pd)*&
+            (SubsurfaceTemp(iLon,iLat,iBlock)-&
+            SurfaceTemp(iLon,iLat,iBlock))+2.0*PI/Pa*&
+            (CoreTemp-SubsurfaceTemp(iLon,iLat,iBlock))
+       
+       dSurfaceTemp(iLon,iLat,iBlock) = 1.0/(0.5*tinertia(iLon,iLat,iBlock)*&
+            sqrt(Pd/PI))*(fluxdnv(L_NLAYRAD)*(1.0-SurfaceAlbedo(iLon,iLat,iBlock))+&
+            fluxdni(L_NLAYRAD)-SBconstant*SurfaceTemp(iLon,iLat,iBlock)**4.0)+&
+            2.0*PI/Pd*(SubsurfaceTemp(iLon,iLat,iBlock)-SurfaceTemp(iLon,iLat,iBlock))
 
     end do
 
