@@ -155,10 +155,6 @@ subroutine calc_planet_sources(iBlock)
 
   !      grtemp(1:nLons,1:nLats,iBlock)=280.0 !240.0
 
-  !     Mars GITM surface albedo (on its grid) -------------------
-
-  SurfaceAlbedo(1:nLons,1:nLats,iBlock)=0.24
-
   ! Calculating the solar flux at Mars 
 
   ! SunOrbitEccentricity = sqrt(2.64236)
