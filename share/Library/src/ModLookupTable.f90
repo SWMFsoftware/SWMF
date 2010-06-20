@@ -33,7 +33,7 @@ module ModLookupTable
      character(len=100):: NameFile         ! file name containing the table
      character(len=10) :: TypeFile         ! file type (ascii, real4, real8)
      character(len=100):: StringDescription! description of table
-     character(len=500):: NameVar         ! name of indexes and values
+     character(len=500):: NameVar          ! name of indexes and values
      integer:: nValue                      ! number of values in each element
      integer:: nIndex_I(2)                 ! number of columns and rows
      real   :: IndexMin_I(2)               ! minimum values for indexes
@@ -48,7 +48,7 @@ module ModLookupTable
 
   ! Array for variable names
   integer, parameter:: MaxVar = 200
-  character(len=500):: NameVar
+  character(len=1000):: NameVar
   character(len=20):: NameVar_I(MaxVar)
 
 contains
@@ -108,6 +108,8 @@ contains
     call read_var('StringDescription', Ptr%StringDescription)
     call read_var('NameVar',           NameVar)
 
+    Ptr%NameVar = NameVar
+
     ! Expand " varZ(21)" to " varZ01 varZ02 ... varZ21"
     do
        ! Find left paren in varX varY varZ(21) ...
@@ -133,7 +135,7 @@ contains
        end if
 
        ! Move end of string far enough for inserting expanded varnames
-       NameVar(i+nNum*(lName+lNum):500) = NameVar(k+1:len_trim(NameVar))
+       NameVar(i+nNum*(lName+lNum):1000) = NameVar(k+1:len_trim(NameVar))
 
        ! Expand variable names by repating name and adding numerical value
        do iNum = 1, nNum
@@ -143,9 +145,8 @@ contains
           i = i + lNum
        end do
     end do
-    Ptr%NameVar = NameVar
 
-    call split_string(Ptr%NameVar, MaxVar, NameVar_I, Ptr%nValue)
+    call split_string(NameVar, MaxVar, NameVar_I, Ptr%nValue)
     ! Do not count the names of the indexes
     Ptr%nValue = Ptr%nValue - 2
     ! Figure out which index is logarithmic
