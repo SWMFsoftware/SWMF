@@ -33,7 +33,7 @@ module ModLookupTable
      character(len=100):: NameFile         ! file name containing the table
      character(len=10) :: TypeFile         ! file type (ascii, real4, real8)
      character(len=100):: StringDescription! description of table
-     character(len=1000):: NameVar         ! name of indexes and values
+     character(len=500):: NameVar         ! name of indexes and values
      integer:: nValue                      ! number of values in each element
      integer:: nIndex_I(2)                 ! number of columns and rows
      real   :: IndexMin_I(2)               ! minimum values for indexes
@@ -48,7 +48,7 @@ module ModLookupTable
 
   ! Array for variable names
   integer, parameter:: MaxVar = 200
-  character(len=1000):: NameVar
+  character(len=500):: NameVar
   character(len=20):: NameVar_I(MaxVar)
 
 contains
@@ -133,7 +133,7 @@ contains
        end if
 
        ! Move end of string far enough for inserting expanded varnames
-       NameVar(i+nNum*(lName+lNum):1000) = NameVar(k+1:len_trim(NameVar))
+       NameVar(i+nNum*(lName+lNum):500) = NameVar(k+1:len_trim(NameVar))
 
        ! Expand variable names by repating name and adding numerical value
        do iNum = 1, nNum
