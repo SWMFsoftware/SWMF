@@ -1,20 +1,20 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
-module ModUser
+Module ModUser
   use ModMain, ONLY: nBLK
   use ModSize, ONLY: nI,nJ,nK
   use ModVarIndexes
+  use ModWaves,  ONLY: DeltaLogFrequency
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_face_bcs,                   &
        IMPLEMENTED5 => user_get_log_var,                &
-       IMPLEMENTED6 => user_get_b0,                     &
-       IMPLEMENTED7 => user_update_states,              &
-       IMPLEMENTED8 => user_specify_refinement,         &
-       IMPLEMENTED9=> user_set_boundary_cells,         &
-       IMPLEMENTED10=> user_set_plot_var
+       IMPLEMENTED6 => user_update_states,              &
+       IMPLEMENTED7 => user_specify_refinement,         &
+       IMPLEMENTED8 => user_set_boundary_cells,         &
+       IMPLEMENTED9 => user_set_plot_var
   
   include 'user_module.h' !list of public methods
   
@@ -24,17 +24,15 @@ module ModUser
 
   logical                       :: IsInitWave = .false.
   logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
-  real,dimension(nWave)         :: LogFreq_I ! frequency grid
   real                          :: LogFreqCutOff,WaveInnerBcFactor
-  real                          :: SpectralIndex, SpectralCoeff, dLogFreq
-  integer                       :: WaveFirstBc_, WaveLastBc_, nWaveHalf
   real                          :: xTrace = 0.0, zTrace = 0.0
   real                          :: xTestSpec,yTestSpec,zTestSpec
+  integer                       :: nWaveHalf
   character(len=10)             :: TypeWaveInnerBc
 contains
   !============================================================================
   subroutine user_read_inputs
-    use ModMain
+    use ModMain,        ONLY: UseUserInitSession, lVerbose
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
@@ -60,9 +58,6 @@ contains
        case("#WAVEINNERBC")
           call read_var('TypeWaveInnerBc', TypeWaveInnerBc)
           call read_var('WaveInnerBcFactor',WaveInnerBcFactor)
-          call read_var('WaveFirstBc_',WaveFirstBc_)
-          call read_var('WaveLastBc_',WaveLastBc_)
-          call read_var('SpectralIndex',SpectralIndex)
          
        case("#DAMPWAVES")
           call read_var('DoDampCutoff',DoDampCutoff)
@@ -101,7 +96,7 @@ contains
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: i_line_command
- 
+    use ModWaves,       ONLY: check_waves
     !--------------------------------------------------------------------------
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -110,7 +105,9 @@ contains
     end if
 
     if(i_line_command("#INITSPECTRUM") > 0 .and. IsInitWave) then
-       call init_wave_spectrum
+       call check_waves
+       nWaveHalf = max(nWave/2,1)
+   
     end if
 
       if(iProc == 0)then
@@ -120,78 +117,31 @@ contains
     end if
 
   end subroutine user_init_session
-  !====================================================================
-  subroutine set_freq_grid
-
-    use ModProcMH,      ONLY: iProc
-    use ModNumConst,    ONLY: cPi
-    use ModWaves,       ONLY: FreqMinSI, FreqMaxSI
-    
-    integer                    :: iFreq
-    real                       :: LogFreqMinRadian
-    character(len=*),parameter :: NameSub='set_freq_grid'
-    !-----------------------------------------------------------------
-    nWaveHalf = max(nWave/2, 1)
-    LogFreqMinRadian = log(2*cPi*FreqMinSI) 
-    dLogFreq = log(FreqMaxSI/FreqMinSI)/(nWaveHalf-1)
-    if(iProc == 0) write(*,*) &
-         'Setting Frequency grid, dLogfreq = ',dLogFreq
-
-    ! calculate frequencies
-    ! Plus waves - parallel to B
-    do iFreq = 1,nWaveHalf
-       LogFreq_I(iFreq)=LogFreqMinRadian+(iFreq-1)*dLogFreq
-    end do
-    ! Minus waves- antiparallel to B
-    do iFreq = 1,nWaveHalf
-       LogFreq_I(nWaveHalf+iFreq)=LogFreqMinRadian +(iFreq-1)*dLogFreq
-    end do
-   end subroutine set_freq_grid
-  !===================================================================
-  subroutine init_wave_spectrum
-   
-    use ModProcMH,      ONLY: iProc
-
-    character(len=*),parameter    :: NameSub= 'init_wave_spectrum'
-    ! ------------------------------------------------------------------
-    call set_freq_grid
-    SpectralIndex = SpectralIndex + 1 ! State_VGB(iWave) represents I*w
-    SpectralCoeff = -(1.0/SpectralIndex)
-    if (iProc == 0) &
-         write(*,*) 'Spectral coefficient is ',SpectralCoeff
-
-  end subroutine init_wave_spectrum
   !============================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
    
     use ModSize,             ONLY: East_,West_,South_,North_,Bot_,Top_,nDim
     use ModMain,             ONLY: x_,y_,z_, UseRotatingFrame
     use ModExpansionFactors!, ONLY: ExpansionFactorInv_N,get_interpolated,&
-                           !        get_total_wave_energy_dens
-    use ModAdvance,          ONLY: State_VGB, B0_DGB
+                           !       get_total_wave_energy_dens
+    use ModAdvance,          ONLY: State_VGB
     use ModPhysics,          ONLY: OmegaBody,No2Si_V,Si2No_V,UnitU_,UnitP_
     use ModNumConst,         ONLY: cTolerance
-    use ModFaceBc,           ONLY: FaceCoords_D, VarsTrueFace_V, &
-                                   iFace, jFace, kFace, iSide, iBlockBc, B0Face_D
-    use ModWaves,            ONLY: AlfvenWavePlusFirst_,AlfvenWavePlusLast_,&
-                                   AlfvenWaveMinusFirst_,AlfvenWaveMinusLast_ , &
-                                   UseWavePressureLtd      
-
+    use ModFaceBc,           ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
+                                   iFace, jFace, kFace, iSide, iBlockBc
+    use ModWaves,            ONLY: set_wave_state
+    
     real, intent(out)           :: VarsGhostFace_V(nVar)
-    real                        :: WavesGhostFace_I(nWaveHalf)
     integer                     :: iCell,jCell,kCell
-    real                        :: DensCell,PresCell,TBase,FullBr, FullB  
-    real, dimension(3)          :: RFace_D,B1r_D,B1t_D,FullB_D
+    real                        :: DensCell,PresCell,TBase,TotalB  
+    real, dimension(3)          :: RFace_D,B1r_D,B1t_D, TotalB_D
     real                        :: vAlfvenSi, wEnergyDensSi, wEnergyDensBc
-    real                        :: ExpansionFactorInv,x,y,z
-    logical                     :: IsClosedWSA 
+    real                        :: ExpansionFactorInv
+    logical                     :: IsClosedWSA = .false. 
     character(len=*),parameter  :: NameSub = "user_face_bc"
     !--------------------------------------------------------------------------
     ! vector normal to the face
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
-    x = FaceCoords_D(x_)
-    y = FaceCoords_D(y_)
-    z = FaceCoords_D(z_)
     !\
     ! Magnetic field reltaed quantities
     !/
@@ -200,12 +150,7 @@ contains
    
     ! B1 tangential
     B1t_D = VarsTrueFace_V(Bx_:Bz_) - B1r_D
-
-    ! Total mangnetic field - add B0
-    FullB_D = B0Face_D + B1t_D
-    FullBr = sum(RFace_D*FullB_D)
-    FullB = sum(FullB_D**2)
-   
+    
     !\
     ! Update BCs for velocity and induction field: reflective BC
     !/
@@ -247,70 +192,41 @@ contains
     ! Update BCs for wave spectrum
     !/
     if(IsInitWave) then
-       select case(TypeWaveInnerBc)
-       case('WSA')
-          call get_interpolated(ExpansionFactorInv_N,x,y,z,ExpansionFactorInv)
-          if(ExpansionFactorInv < cTolerance) then
-             ! no wave energy in closed field lines
-             wEnergyDensBc = 0.0
-             IsClosedWSA = .true.
-          else
-!             IsClosedWSA = .false.
-             vAlfvenSi = (FullB/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
-             call get_total_wave_energy_dens(x, y, z, vAlfvenSi, wEnergyDensSi)
-             wEnergyDensBc = wEnergyDensSi * Si2No_V(UnitP_)*WaveInnerBcFactor
-          end if
-       case('Turb')
-          wEnergyDensBc = FullB*WaveInnerBcFactor
-       end select
+       ! Check if this is closed or open field region
+       call get_interpolated(ExpansionFactorInv_N,FaceCoords_D(x_),&
+            FaceCoords_D(y_),FaceCoords_D(z_),ExpansionFactorInv)
+       if(ExpansionFactorInv < cTolerance) IsClosedWSA = .true.
        
-       if(wEnergyDensBc < 0.0)then
-          write(*,*) 'Negative TOTAL wave energy at inner BC'
-          call stop_MPI('Error in user_face_bcs')
-       end if
-       !\
-       ! Set BC for each frequency group
-       !/
+       ! set wave energy at inner boundary in open field region only
        if (IsClosedWSA) then  
           VarsGhostFace_V(WaveFirst_:WaveLast_) = 0.0
        else
-          call get_wave_group_bc(wEnergyDensBc,WavesGhostFace_I)
-        
-          if (FullBr .le. 0.0) then
-             
-             ! full absorption of "Plus"  waves - float bc
-             VarsGhostFace_V(AlfvenWavePlusFirst_:AlfvenWavePlusLast_) =&
-                  VarsTrueFace_V(AlfvenWavePlusFirst_:AlfvenWavePlusLast_)
-             ! Set spectrum of "Minus" waves
-             VarsGhostFace_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) = &
-                  WavesGhostFace_I
-      
-          else
-   
-             ! full absorption of "Minus" waves - float bc
-             VarsGhostFace_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) =&
-                  VarsTrueFace_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_)
-             ! Set spectrum of "Plus" waves
-             VarsGhostFace_V(AlfvenWavePlusFirst_:AlfvenWavePlusLast_) = &
-                  WavesGhostFace_I
-   
-          end if
-       end if
+          ! total wave energy depends on magnetic field magnitude
+          TotalB_D = B0Face_D + VarsTrueFace_V(Bx_:Bz_)  
+          TotalB = sum(TotalB_D**2)
 
-       if(any(VarsGhostFace_V(WaveFirst_:WaveLast_) < 0.0)) then
-          write(*,*) 'Negative GROUP wave energy at BC. WavesGhostFace ='
-          write(*,*) VarsGhostFace_V(WaveFirst_:Wavelast_)
-          write(*,*) 'Br = ', FullBr
-          call stop_MPI('ERROR in user_face_bcs')
-       end if
-     
-       !\
-       ! BC for total wave pressure
-       !/
-       if(UseWavePressureLtd) then
-          VarsGhostFace_V(Ew_) = wEnergyDensBc
-       else
-          VarsGhostFace_V(Ew_) = 0.0
+          select case(TypeWaveInnerBc)
+          case('WSA')
+             
+             vAlfvenSi = (TotalB/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
+             call get_total_wave_energy_dens(FaceCoords_D(x_),FaceCoords_D(y_),&
+                  FaceCoords_D(z_), vAlfvenSi, wEnergyDensSi)
+             wEnergyDensBc = wEnergyDensSi * Si2No_V(UnitP_)*WaveInnerBcFactor
+         
+          case('Turb')
+
+             wEnergyDensBc = TotalB*WaveInnerBcFactor
+
+          end select
+       
+          if(wEnergyDensBc < 0.0)then
+             write(*,*) 'Negative TOTAL wave energy at inner BC'
+             call stop_MPI('Error in user_face_bcs')
+          end if
+       
+          ! Set BC for each frequency group
+          call set_wave_state(wEnergyDensBc,VarsGhostFace_V,RFace_D,B0Face_D) 
+       
        end if
     end if
 
@@ -325,36 +241,6 @@ contains
     end if
 
   end subroutine user_face_bcs
-  !===========================================================================
-  subroutine get_wave_group_bc(wEnergyDensBc,WavesGhostFace_I)
-   
-  ! This subroutine decomposes the total wave energy into individual frequency
-  ! groups according to the spectral index
-  !
-  ! Note that this subroutine is designed for the inner boundary. The actual
-  ! emmitted frequency range can be narrower than frequency grid. 
-    
-    real, intent(out)           :: WavesGhostFace_I(1:nWaveHalf)
-    real,intent(in)             :: wEnergyDensBc
-    integer                     :: iWave
-    character(len=*),parameter  :: NameSub = "get_wave_group_bc"
-    !--------------------------------------------------------------------------
-    do iWave = 1, nWaveHalf
-       if(iWave .lt. WaveFirstBc_ .or. iWave .gt. WaveLastBc_) then
-          ! no wave energy outside of emitted freq. range
-          WavesGhostFace_I(iWave)= 0.0
-       else
-          ! spectral decomposition
-          WavesGhostFace_I(iWave) = SpectralCoeff * dLogFreq * wEnergyDensBc* &
-               exp(LogFreq_I(iWave)*SpectralIndex)
-       end if
-    end do
-    if(any(WavesGhostFace_I(1:nwaveHalf) < 0.0)) then
-       write(*,*) 'Negative element in WavesGhostFace_I'
-       call stop_MPI(NameSub)
-    end if
-      
-  end subroutine get_wave_group_bc
   !===========================================================================
   subroutine get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
        DensCell,PresCell)
@@ -376,11 +262,6 @@ contains
                          !are scaled as functions of UFinal/UMin ratio
     real :: Temperature
     !--------------------------------------------------------------------------
-
-    !call get_gamma_emp(x_BLK(iCell,jCell,kCell,iBlock),&
-    !     y_BLK(iCell,jCell,kCell,iBlock),&
-    !     z_BLK(iCell,jCell,kCell,iBlock),&
-    !     GammaCell)
     call get_bernoulli_integral(x_BLK(iCell,jCell,kCell,iBlock)/&
          R_BLK(iCell,jCell,kCell,iBlock),&
          y_BLK(iCell,jCell,kCell,iBlock)/R_BLK(iCell,jCell,kCell,iBlock),&
@@ -388,7 +269,7 @@ contains
     URatio=UFinal/UMin
 
     !This is the temperature variation
-    Temperature = CoronalT0Dim*Si2No_V(UnitTemperature_)/(min(URatio,2.0))
+    Temperature = CoronalT0Dim*Si2No_V(UnitTemperature_)/(min(URatio,1.5))
 
     DensCell  = (1.0/URatio) &          !This is the density variation
          *BodyRho_I(1)*exp(-GBody/Temperature &
@@ -415,54 +296,26 @@ contains
 
     iBLK = globalBLK
 
-    select case(TypeGeometry)
-    case('cartesian')
-       Rmax = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
-    case('spherical_lnr')
-       Rmax = max(2.1E+01,exp(XyzMax_D(1)))
-    end select
-
     ! The sqrt is for backward compatibility with older versions of the Sc
     U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
     
     State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = 1.0e-30 !Initialize the wave spectrum
     do k=1,nK; do j=1,nJ; do i=1,nI
-       x = x_BLK(i,j,k,iBLK)
-       y = y_BLK(i,j,k,iBLK)
-       z = z_BLK(i,j,k,iBLK)
-       R = max(R_BLK(i,j,k,iBLK),cTolerance)
-       ROne = max(1.0,R)
+       r = r_BLK(i,j,k,iBLK)
        State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
        call get_plasma_parameters_cell(i,j,k,iBLK,&
             Dens_BLK,Pres_BLK)
        State_VGB(rho_,i,j,k,iBLK) = Dens_BLK
        State_VGB(P_,i,j,k,iBLK)   = Pres_BLK
-       State_VGB(RhoUx_,i,j,k,iBLK) = Dens_BLK &
-            *U0*((ROne-1.0)/(Rmax-1.0))*x/R
-       State_VGB(RhoUy_,i,j,k,iBLK) = Dens_BLK &
-            *U0*((ROne-1.0)/(Rmax-1.0))*y/R
-       State_VGB(RhoUz_,i,j,k,iBLK) = Dens_BLK &
-            *U0*((ROne-1.0)/(Rmax-1.0))*z/R
+       State_VGB(RhoUx_,i,j,k,iBLK) = Dens_BLK *U0*x/R
+       State_VGB(RhoUy_,i,j,k,iBLK) = Dens_BLK *U0*y/R
+       State_VGB(RhoUz_,i,j,k,iBLK) = Dens_BLK *U0*z/R
        State_VGB(Ew_,i,j,k,iBLK) = nWave*1.0e-30
 
     end do; end do; end do
 
   end subroutine user_set_ics
   !============================================================================
-  subroutine user_get_b0(xInput,yInput,zInput,B0_D)
- 
-    use ModPhysics,     ONLY: Si2No_V,UnitB_
-    use ModMagnetogram, ONLY: get_magnetogram_field
-
-    real, intent(in):: xInput,yInput,zInput
-    real, intent(out), dimension(3):: B0_D
-    !---------------------------------------------
-
-    call get_magnetogram_field(xInput,yInput,zInput,B0_D)
-    B0_D = B0_D*Si2No_V(UnitB_)
-
-   end subroutine user_get_b0
-  !===========================================================================
   subroutine user_update_states(iStage,iBlock)
 
     use ModAdvance, ONLY: State_VGB, B0_DGB
@@ -507,18 +360,21 @@ contains
 
     use ModAdvance, ONLY: State_VGB
     use ModPhysics, ONLY: Gamma0
+    use ModWaves,   ONLY: FrequencySi_W
+    use ModNumConst,ONLY: cPi
 
     integer,intent(in)      :: iBlock
     integer                 :: i, j, k, iWave
-    real                    :: dWavePres = 0.0
-    real                    :: LogFreqCutOff
+    real                    :: dWavePres = 0.0, LogFreqRadian
+    real                    :: LogFreqCutOff 
     character(len=*),parameter :: NameSub="dissipate_waves"
     ! -----------------------------------------------------------------
     if (DoDampCutOff) then
        do k=1,nK ; do j=1, nJ ; do i=1,nI
           call calc_cutoff_freq(i,j,k,iBlock,LogFreqCutOff)
           do iWave=WaveFirst_, WaveLast_
-             if (LogFreq_I(iWave) .ge. LogFreqCutOff .and. &
+             LogFreqRadian = log(2*cPi*FrequencySi_W(iWave))
+             if (LogFreqRadian .ge. LogFreqCutOff .and. &
                   State_VGB(iWave,i,j,k,iBlock) > 0.0) then
                 dWavePres = -State_VGB(iWave,i,j,k,iBlock)
              end if
@@ -547,7 +403,8 @@ contains
     use ModIoUnit,   ONLY: io_unit_new
     use ModAdvance,  ONLY: State_VGB
     use ModPhysics,  ONLY: No2Si_V, UnitX_, UnitP_
-    use ModWaves,    ONLY: AlfvenWaveMinusFirst_,AlfvenWavePlusFirst_
+    use ModWaves,    ONLY: AlfvenWaveMinusFirst_,AlfvenWavePlusFirst_, &
+                           FrequencySi_W
 
     implicit none
     
@@ -561,7 +418,6 @@ contains
     character(len=7)                 :: NameProc
     character(len=*),parameter       :: NameSub='write_cell_spectrum'
     !-------------------------------------------------------------------
-   
     do iBLK=1,nBLK
        if(unusedBLK(iBLK)) CYCLE
        do k=1,nK ; do j=1,nJ ; do i=1,nI
@@ -575,7 +431,7 @@ contains
                      State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)
                 IwMinusSi = No2Si_V(UnitP_)* &
                      State_VGB(AlfvenWaveMinusFirst_+iFreq-1,i,j,k,iBLK)
-                Spectrum_II(iFreq,1) = LogFreq_I(iFreq)
+                Spectrum_II(iFreq,1) = log(FrequencySi_W(iFreq))
                 Spectrum_II(iFreq,2) = IwPlusSi
                 Spectrum_II(iFreq,3) = IwMinusSi
                 
@@ -616,7 +472,7 @@ contains
     use ModIoUnit,    ONLY: io_unit_new
     use ModAdvance,   ONLY: State_VGB
     use ModPhysics,   ONLY: No2Si_V, UnitX_, UnitP_
-    use ModWaves,     ONLY: AlfvenWaveMinusFirst_,AlfvenWavePlusFirst_
+    use ModWaves,     ONLY: AlfvenWaveMinusFirst_,AlfvenWavePlusFirst_,FrequencySi_W
 
     implicit none
     
@@ -681,7 +537,7 @@ contains
                       IwMinusSi = No2Si_V(UnitP_)* &
                            State_VGB(AlfvenWaveMinusFirst_+iFreq-1,i,j,k,iBLK)
                       Cut_II(iRow,1) = y
-                      Cut_II(iRow,2) = LogFreq_I(iFreq)
+                      Cut_II(iRow,2) = log(FrequencySi_W(iFreq))
                       Cut_II(iRow,3) = IwPlusSi
                       Cut_II(iRow,4) = IwMinusSi
                       iRow=iRow+1
