@@ -1,6 +1,89 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
 Module ModUser
+
+! User Module for Solar Corona with a spectrum of Alfven waves
+! Description (Oran, Jun 20, 2010)
+
+! The following user routines are implemented:
+! --------------------------------------------
+! 1. user_read_inputs : read input commands for wave related quantities
+!
+!  #INITSPECTRUM : allows the user to set the logical flag IsInitWave. 
+!                  If true, the wave spectrum will be initialized. Should be used only in the
+!                  first session of the simulation.
+!  #WAVEINNERBC  : allows the user to choose type of inner boundary condition for Alfven waves.
+!                  TypeWaveInnerBc (string) -  Two options are implemented:
+!                  'WSA' - uses the WSA model to get the solar wind velocity at 1AU, then calculates
+!                          the total wave energy at coronal base from the Bernoulli integral.
+!                  'turb' - calculates the total wave energy from the local magnetic field.
+!                  WaveInnerbcFactor (real) -  allows scaling of the resulting total 
+!                  wave energy by the same factor for all boundary faces.
+!  #DAMPWAVES    : allows the user to choose frequency dependent wave damping mechanism.
+!                  DoDampCutoff (logical) - if true, Alfven waves will be totaly damped at
+!                                             and above the local ion cyclotron frequency.
+!                  DoDampSurface (logical) - if true, Alfven waves will be damped according
+!                                            to the local surface waves dissipation length.
+!  #SPECTROGRAM  : allows the user to choose a line parallel to one of the axes along which
+!                  the full wave spectrum will be extracted and written to a file for plotting.
+!                  >>>
+!                  xTrace, yTrace, zTrace are the coordinates of the line
+!  #TESTSPEC     : allows the user to output the spectrum in a single cell for testing purposes.
+! -----------------------------------------------------------------------------
+! 2. user_init_session : call the subroutine check_waves (in ModWaves.f90) to initialize the wave
+!                        spectrum if IsInitWave is set to TRUE.                         
+! -----------------------------------------------------------------------------
+! 3. user_set_ic : intilize MHD parameters according to an isothermal atmosphere solution.
+! -----------------------------------------------------------------------------
+! 4. user_face_bc : set inner boundary conditions for MHD variables and Alfven waves.
+!                   Magnetic field B1 is set to equal to its tangential component.
+!                   Reflective boundary conditions for velocity.
+!                   Density and pressure set according to isothermal atmosphere.
+!                   Alfven Waves: wave energy is present in the inner boundary only
+!                                 in the open field lines region (to avoid blowing out
+!                                 of Helmet streamers). The total wave energy at the face
+!                                 is calculated according to the type of boundary condition
+!                                 (see desctription of #WAVEINNERBC in section 1 above).   
+!                                 Once the total wave energy is obtained, it is deconstructed
+!                                 into the frequency bins according to the assumed spectral shape
+!                                 by calling set_wave_state (in ModWaves.f90).
+!                   Rotating frame : if the non rotating frame is used, the x and y velocity components
+!                                    are adjusted.
+! -----------------------------------------------------------------------------                            
+! 5. user_get_log_var : allows the user to output spectral data to a dedicated log file.
+!                       In order to use this option, the user must include the command #SAVELOGFILE
+!                       in the PARAM.in file, with the following format:
+!                       #SAVELOGFILE
+!                       T
+!                       var
+!                       dn
+!                       dt
+!                       'string'
+!
+!                       where 'string' can be set to 'spec' or 'cellspec' (refer to the the SWMF
+!                       user manual for further details on this command).
+!                       When 'spec' is chosen, the full wave spectrum along a line is extracted
+!                       according to the parameters set in #SPECTROGROM (see above). The data is
+!                       written to a file called Spectrum_n_xxx_peyyy.tec, where xxx stands
+!                       for simulation time/iteration number and yyy to the processor number. 
+!                       Files from different processors should be combined later.
+!                       When 'cellspc', the full spectrum in a single cell is written to a file
+!                       The cell is chosen by its x,y,z coordinates set in #TESTSPEC (see above).
+!                       The output is written to a file Cell_Spectrum_n_xxx_peyyy.tec. Since only
+!                       one processor is involved, no post-processing is necessary.
+! -----------------------------------------------------------------------------------------------
+! 6. user_update_states : calls update states_MHD, followed by a call to dissipate_waves, which
+!                         removes wave energy from the spectrum and adds it to the plasma pressure.
+! -----------------------------------------------------------------------------------------------
+! 7. user_specify_refinement : improve refinement in the current sheet region.
+! -----------------------------------------------------------------------------------------------
+! 8. user_set_boundary_cells :required when "extra" boundary conditions are used.
+! -----------------------------------------------------------------------------------------------
+! 9. user_set_plot_var : implement plot varaibles related to Alfven waves.
+!                        'wpres' - total wave pressure (summed over spectrum).
+!                        'poynt' - Poynting flux of Alfven waves neglecting plasma speed.
+!                        'poyntur' - Poynting flux of Alfven waves.
+! -----------------------------------------------------------------------------------------------
   use ModMain, ONLY: nBLK
   use ModSize, ONLY: nI,nJ,nK
   use ModVarIndexes
@@ -353,221 +436,47 @@ contains
     if (IsInitWave .and. DoDampCutOff) call dissipate_waves(iBlock)
    
     !call calc_energy_cell(iBlock)
- 
-  end subroutine user_update_states
-  !=======================================================================
-   subroutine dissipate_waves(iBlock)
+  contains
+    subroutine dissipate_waves(iBlock)
 
-    use ModAdvance, ONLY: State_VGB
-    use ModPhysics, ONLY: Gamma0
-    use ModWaves,   ONLY: FrequencySi_W
-    use ModNumConst,ONLY: cPi
+      use ModAdvance, ONLY: State_VGB
+      use ModPhysics, ONLY: Gamma0
+      use ModWaves,   ONLY: FrequencySi_W
+      use ModNumConst,ONLY: cPi
 
-    integer,intent(in)      :: iBlock
-    integer                 :: i, j, k, iWave
-    real                    :: dWavePres = 0.0, LogFreqRadian
-    real                    :: LogFreqCutOff 
-    character(len=*),parameter :: NameSub="dissipate_waves"
-    ! -----------------------------------------------------------------
-    if (DoDampCutOff) then
-       do k=1,nK ; do j=1, nJ ; do i=1,nI
-          call calc_cutoff_freq(i,j,k,iBlock,LogFreqCutOff)
-          do iWave=WaveFirst_, WaveLast_
-             LogFreqRadian = log(2*cPi*FrequencySi_W(iWave))
-             if (LogFreqRadian .ge. LogFreqCutOff .and. &
-                  State_VGB(iWave,i,j,k,iBlock) > 0.0) then
-                dWavePres = -State_VGB(iWave,i,j,k,iBlock)
-             end if
-          end do
-       end do; end do; end do
-    end if
+      integer,intent(in)      :: iBlock
+      integer                 :: i, j, k, iWave
+      real                    :: dWavePres = 0.0, LogFreqRadian
+      real                    :: LogFreqCutOff 
+      character(len=*),parameter :: NameSub="dissipate_waves"
+      ! -----------------------------------------------------------------
+      if (DoDampCutOff) then
+         do k=1,nK ; do j=1, nJ ; do i=1,nI
+            call calc_cutoff_freq(i,j,k,iBlock,LogFreqCutOff)
+            do iWave=WaveFirst_, WaveLast_
+               LogFreqRadian = log(2*cPi*FrequencySi_W(iWave))
+               if (LogFreqRadian .ge. LogFreqCutOff .and. &
+                    State_VGB(iWave,i,j,k,iBlock) > 0.0) then
+                  dWavePres = -State_VGB(iWave,i,j,k,iBlock)
+               end if
+            end do
+         end do; end do; end do
+      end if
 
-    ! Add more dissipation mechanisms here
+      ! Add more dissipation mechanisms here
   
 
-    ! Remove dissipated energy density from spectrum
-    State_VGB(iWave,i,j,k,iBlock) = &
-         State_VGB(iWave,i,j,k,iBlock) + dWavePres
+      ! Remove dissipated energy density from spectrum
+      State_VGB(iWave,i,j,k,iBlock) = &
+           State_VGB(iWave,i,j,k,iBlock) + dWavePres
 
-    ! pass dissipated wave energy density to the MHD pressure
-    State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) - &
-        0.5*(Gamma0-1)*dWavePres
+      ! pass dissipated wave energy density to the MHD pressure
+      State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) - &
+           0.5*(Gamma0-1)*dWavePres
 
-  end subroutine dissipate_waves
-  !=====================================================================
-   subroutine write_cell_spectrum
-    
-    use ModProcMH
-    use ModMain,     ONLY: iteration_number,unusedBLK,nBlockALL
-    use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK
-    use ModIoUnit,   ONLY: io_unit_new
-    use ModAdvance,  ONLY: State_VGB
-    use ModPhysics,  ONLY: No2Si_V, UnitX_, UnitP_
-    use ModWaves,    ONLY: AlfvenWaveMinusFirst_,AlfvenWavePlusFirst_, &
-                           FrequencySi_W
+    end subroutine dissipate_waves
 
-    implicit none
-    
-    real,dimension(nWaveHalf,3)      :: Spectrum_II 
-    real                             :: x,y,z, IwPlusSi,IwMinusSi
-    integer                          :: iFreq,i,j,k,iBLK
-    integer                          :: iUnit,iError,aError
-    logical                          :: DoSaveCellSpec = .false.
-    character(len=40)                :: FileNameTec 
-    character(len=11)                :: NameStage
-    character(len=7)                 :: NameProc
-    character(len=*),parameter       :: NameSub='write_cell_spectrum'
-    !-------------------------------------------------------------------
-    do iBLK=1,nBLK
-       if(unusedBLK(iBLK)) CYCLE
-       do k=1,nK ; do j=1,nJ ; do i=1,nI
-          x=x_BLK(i,j,k,iBLK)
-          y=y_BLK(i,j,k,iBLK)
-          z=z_BLK(i,j,k,iBLK)
-          if((x == xTestSpec) .and. (y == yTestSpec) .and. (z == zTestSpec)) then
-             DoSaveCellSpec = .true.
-             do iFreq=1,nWaveHalf
-                IwPlusSi  = No2Si_V(UnitP_)* &
-                     State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)
-                IwMinusSi = No2Si_V(UnitP_)* &
-                     State_VGB(AlfvenWaveMinusFirst_+iFreq-1,i,j,k,iBLK)
-                Spectrum_II(iFreq,1) = log(FrequencySi_W(iFreq))
-                Spectrum_II(iFreq,2) = IwPlusSi
-                Spectrum_II(iFreq,3) = IwMinusSi
-                
-             end do
-          end if
-       end do; end do ; end do
-    end do
-    
-    if (DoSaveCellSpec) then
-       !\
-       ! write data file
-       !/
-       write(NameStage,'(i6.6)') iteration_number
-       write(NameProc,'(a,i4.4)') "_pe",iProc
-       FileNameTec = 'SC/IO2/Cell_Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.spec'
-       if(iProc == 0) write(*,*) 'SC: writing file ',FileNameTec
-      
-       iUnit=io_unit_new()
-       open(unit=iUnit, file=FileNameTec, form='formatted', access='sequential',&
-            status='replace',iostat=iError)
-       write(iUnit, '(a)') 'Title: BATSRUS SC Spectrogram'
-       write(iUnit, '(a)') 'Variables = "log(w)","I+[Jm-3]","I-[Jm-3]" '
-       write(iUnit,'(a,i3.3,a,i5.5,a)') 'Zone I= ',nWaveHalf,' F=point'
-       do iFreq=1,nWaveHalf
-          write(iUnit, fmt="(30(e14.6))") &
-               Spectrum_II(iFreq,:)
-       end do
-       close(iUnit)
-    end if
-     
-  end subroutine write_cell_spectrum
-   !=====================================================================
-   subroutine write_spectrogram
-    
-    use ModProcMH
-    use ModMain,      ONLY: iteration_number,unusedBLK,nBlockALL
-    use ModGeometry,  ONLY: x_BLK,y_BLK, z_BLK, dz_BLK,dx_BLK
-    use ModIoUnit,    ONLY: io_unit_new
-    use ModAdvance,   ONLY: State_VGB
-    use ModPhysics,   ONLY: No2Si_V, UnitX_, UnitP_
-    use ModWaves,     ONLY: AlfvenWaveMinusFirst_,AlfvenWavePlusFirst_,FrequencySi_W
-
-    implicit none
-    
-    real, allocatable,dimension(:,:) :: Cut_II ! Array to store log variables
-    integer                          :: nCell,nRow,iRow 
-    real                             :: dx, dz, x,y,z, IwPlusSi,IwMinusSi
-    integer                          :: iFreq,i,j,k,iBLK
-    integer                          :: iUnit,iError,aError
-    character(len=40)                :: FileNameTec 
-    character(len=11)                :: NameStage
-    character(len=7)                 :: NameProc
-    character(len=*),parameter       :: NameSub='write_spectrogram'
-    !-------------------------------------------------------------------
-    write(NameStage,'(i6.6)') iteration_number
-    write(NameProc,'(a,i4.4)') "_pe",iProc
-    FileNameTec = 'SC/IO2/Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.tec'
-    if(iProc == 0) write(*,*) 'SC: writing file ',FileNameTec
-    !\
-    ! count cells along x=xTrace, z=zTrace line parallel to y axis
-    !/
-    nCell=0
-    do iBLK=1,nBLK
-       if(unusedBLK(iBLK)) CYCLE
-       do k=1,nK ; do j=1,nJ ; do i=1,nI
-          x=x_BLK(i,j,k,iBLK)
-          dx=dx_BLK(iBLK)
-          z=z_BLK(i,j,k,iBLK)
-          dz=dz_BLK(iBLK)
-          if((z < zTrace+dz) .and. (z >= zTrace) .and. &
-             (x < xTrace+dx) .and. (x >= xTrace)) then
-             nCell=nCell+1
-          end if
-       end do; end do ; end do
-    end do
-    if (nCell > 0 )then !write spectrogram output file
-     
-       nRow=nCell*nWaveHalf
-       !\
-       ! Allocate plot arrays
-       !/
-       ALLOCATE(Cut_II(nRow,4),STAT=aError)
-       !\
-       ! Fill plot array
-       !/
-       if (aError .ne. 0) then
-          call stop_mpi('Allocation failed for spectrogram array')
-       else
-          iRow=1
-          do iBLK=1,nBLK
-             if(unusedBLK(iBLK)) CYCLE
-             do k=1,nK ; do j=1,nJ ; do i=1,nI
-                x=x_BLK(i,j,k,iBLK)
-                y=y_BLK(i,j,k,iBLK)
-                z=z_BLK(i,j,k,iBLK)
-                dx=dx_BLK(iBLK)
-                dz=dz_BLK(iBLK)
-                if((z < zTrace+dz) .and. (z >= zTrace) .and. &
-                   (x < xTrace+dx) .and. (x >= xTrace)) then
-                   do iFreq=1,nWaveHalf
-                      IwPlusSi  = No2Si_V(UnitP_)* &
-                           State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)
-                      IwMinusSi = No2Si_V(UnitP_)* &
-                           State_VGB(AlfvenWaveMinusFirst_+iFreq-1,i,j,k,iBLK)
-                      Cut_II(iRow,1) = y
-                      Cut_II(iRow,2) = log(FrequencySi_W(iFreq))
-                      Cut_II(iRow,3) = IwPlusSi
-                      Cut_II(iRow,4) = IwMinusSi
-                      iRow=iRow+1
-                   end do
-                end if
-             end do; end do ; end do
-          end do
-       end if
-       !\
-       ! write data file
-       !/
-       iUnit=io_unit_new()
-       open(unit=iUnit, file=FileNameTec, form='formatted', access='sequential',&
-            status='replace',iostat=iError)
-       write(iUnit, '(a)') 'Title: BATSRUS SC Spectrogram'
-       write(iUnit, '(a)') 'Variables = "Y[R]", "log(w)","I+[Jm-3]","I-[Jm-3]" '
-       write(iUnit,'(a,i3.3,a,i5.5,a)') 'Zone I= ',nWaveHalf,' J= ',nCell,' F=point'
-       do iRow=1,nRow
-          write(iUnit, fmt="(30(e14.6))") &
-               Cut_II(iRow,:)
-       end do
-       close(iUnit)
-
-       if(allocated(Cut_II)) deallocate(Cut_II,STAT=aError)
-       if(aError .ne. 0) then
-          write(*,*) NameSub, 'Deallocation of spectrogram array failed'
-          call stop_mpi(NameSub)
-       end if
-    end if
-  end subroutine write_spectrogram
+  end subroutine user_update_states 
   !=====================================================================
   subroutine calc_cutoff_freq(i,j,k,iBLK , LogFreqCutOff)
 
@@ -595,133 +504,217 @@ contains
     LogFreqCutOff = log((cElectronCharge*BtotSi)/cProtonMass)
 
   end subroutine calc_cutoff_freq
-  !=======================================================================
-  subroutine calc_poynt_flux(i,j,k,iBLK, UseUr, PoyntFluxSi)
-
-    Use ModMain,       ONLY: x_,y_,z_
-    use ModAdvance,    ONLY: State_VGB, B0_DGB
-    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
-    use ModPhysics,    ONLY: No2Si_V, UnitB_, UnitRho_,UnitU_,UnitP_
-    use ModConst,      ONLY: cMu
-    implicit none
-    
-    integer,intent(in)         :: i,j,k,iBLK
-    logical,intent(in)         :: UseUr
-    real,intent(out)           :: PoyntFluxSi
-    real,dimension(3)          :: r_D,BSi_D,USi_D
-    real                       :: x,y,z,BrSi,UrSi, RhoSi  
-    real                       :: vAlfvenRadialSi ! in radial direction
-    character(len=*),parameter :: NameSub='calc_poynt_flux'
-    ! -----------------------------------------------------------------
-    !  Poynting flux is calculated in SI UNITS
-    !  This subroutine is used for finding flux leaving a spherical surface
-    ! (radius depends on calling routine), thus only the radial component is calculated.
-    
-    ! get radial unit vector
-    x = x_BLK(i,j,k,iBLK)
-    y = y_BLK(i,j,k,iBLK)
-    z = z_BLK(i,j,k,iBLK)
-    r_D = (/x,y,z/)
-    r_D = r_D/sqrt(sum(r_D**2)) ! unit vector in radial direction
-
-    ! get B, Br vectors in SI units
-    BSi_D = (State_VGB(Bx_:Bz_,i,j,k,iBLK) + B0_DGB(x_:z_,i,j,k,iBLK)) &
-         * No2Si_V(UnitB_)
-    BrSi = sum(r_D*BSi_D)
-    
-    ! get density in SI units
-    RhoSi = No2Si_V(UnitRho_)*State_VGB(rho_,i,j,k,iBLK)
-    ! calculate radial component of Alfven speed
-    vAlfvenRadialSi = abs(BrSi/sqrt(RhoSi*cMu)) ! for outgoing waves
-    
-    ! add Ur to vAlfven if bulk velocity is not neglected
-    if(UseUr) then
-       USi_D = No2Si_V(UnitU_)*State_VGB(Ux_:Uz_,i,j,k,iBLK)
-       UrSi = sum(r_D*USi_D)
-        
-       vAlfvenRadialSi = UrSi+vAlfvenRadialSi
-    end if
-     
-    PoyntFluxSi=vAlfvenRadialSi*No2Si_V(UnitP_)* & 
-         sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK))
-
-  end subroutine calc_poynt_flux
   !========================================================================
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
     
     use ModIO,         ONLY: write_myname
-    use ModMain,       ONLY: unusedBLK,x_,y_,z_
-    use ModVarIndexes !ONLY: Ew_,Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
-    use ModGeometry,   ONLY: R_BLK
-    use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0_DGB
-    use ModPhysics,    ONLY: inv_gm1,No2Si_V,UnitEnergydens_, &
-                             UnitX_,UnitU_,UnitRho_
-
-    real, intent(out)              :: VarValue
+    
+    real, intent(out)              :: VarValue 
     character (LEN=10), intent(in) :: TypeVar 
     real, intent(in), optional     :: Radius
-    integer                        :: iBLK
-    real                           :: unit_energy,unit_mass
-    real, external                 :: integrate_BLK
     !--------------------------------------------------------------------------
-    unit_energy = 1.0e7*No2Si_V(UnitEnergydens_)*No2Si_V(UnitX_)**3
-    unit_mass   = 1.0e3*No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3
-    !\
-    ! Define log variable to be saved::
-    !/
+    ! This subroutine is used to output the wave spectrum to a file.
+    ! No extravariables are defined for the log file here.
+    VarValue = 0.0
+    
     select case(TypeVar)
     case('spec')
+       ! write spectrum to file, extracted along a line (parallel to an axis).
+       ! See description of #SPECTROGRAM command in the beginning of this module.
        call write_spectrogram
     case('cellspec')
+       ! write spectrum to file, extracted from a single cell. Cell is chosen by #CELLSPEC
+       ! command (see description in the biginning of this module).
        call write_cell_spectrum
-    case('em_t','Em_t','em_r','Em_r')
-       do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = & 
-               (B0_DGB(x_,:,:,:,iBLK)+State_VGB(Bx_,:,:,:,iBLK))**2+&
-               (B0_DGB(y_,:,:,:,iBLK)+State_VGB(By_,:,:,:,iBLK))**2+&
-               (B0_DGB(z_,:,:,:,iBLK)+State_VGB(Bz_,:,:,:,iBLK))**2
-       end do
-       VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
-    case('ek_t','Ek_t','ek_r','Ek_r')
-       do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = &
-               (State_VGB(rhoUx_,:,:,:,iBLK)**2 +&
-               State_VGB(rhoUy_,:,:,:,iBLK)**2 +&
-               State_VGB(rhoUz_,:,:,:,iBLK)**2)/&
-               State_VGB(rho_  ,:,:,:,iBLK)             
-       end do
-       VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
-    case('et_t','Et_t','et_r','Et_r')
-       do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = State_VGB(P_,:,:,:,iBLK)
-       end do
-       VarValue = unit_energy*inv_gm1*integrate_BLK(1,tmp1_BLK)
-    case('ew_t','Ew_t','ew_r','Ew_r')
-       do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = State_VGB(Ew_,:,:,:,iBLK)
-       end do
-       VarValue = unit_energy*integrate_BLK(1,tmp1_BLK)
-    case('ms_t','Ms_t')
-       do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = &
-               State_VGB(rho_,:,:,:,iBLK)/R_BLK(:,:,:,iBLK)
-       end do
-       VarValue = unit_mass*integrate_BLK(1,tmp1_BLK)
-    case('vol','Vol')
-       tmp1_BLK(:,:,:,iBLK) = 1.0
-       VarValue = integrate_BLK(1,tmp1_BLK)
     case default
        VarValue = -7777.
        call write_myname;
        write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
     end select
+
+  contains
+      subroutine write_cell_spectrum
+    
+        use ModProcMH
+        use ModMain,     ONLY: iteration_number,unusedBLK,nBlockALL
+        use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK, dx_BLK, dy_BLK,dz_BLK
+        use ModIoUnit,   ONLY: io_unit_new
+        use ModAdvance,  ONLY: State_VGB
+        use ModPhysics,  ONLY: No2Si_V, UnitX_, UnitP_
+        use ModWaves,    ONLY: AlfvenWaveMinusFirst_,AlfvenWavePlusFirst_, &
+             FrequencySi_W
+    
+        real,dimension(nWaveHalf,3)      :: Spectrum_II 
+        real                             :: x,y,z, dxHalf, dyHalf,dzHalf
+        real                             :: IwPlusSi,IwMinusSi
+        integer                          :: iFreq,i,j,k,iBLK
+        integer                          :: iUnit,iError,aError
+        logical                          :: DoSaveCellSpec = .false.
+        character(len=40)                :: FileNameTec 
+        character(len=11)                :: NameStage
+        character(len=7)                 :: NameProc
+        character(len=*),parameter       :: NameSub='write_cell_spectrum'
+        !-------------------------------------------------------------------
+        do iBLK=1,nBLK
+           if(unusedBLK(iBLK)) CYCLE
+           do k=1,nK ; do j=1,nJ ; do i=1,nI
+              x=x_BLK(i,j,k,iBLK)
+              y=y_BLK(i,j,k,iBLK)
+              z=z_BLK(i,j,k,iBLK)
+              dxHalf = dx_BLK(iBLK)/2.0
+              dyHalf = dy_BLK(iBLK)/2.0
+              dzHalf = dz_BLK(iBLK)/2.0
+              
+              if((xTestSpec >= x - dxHalf ) .and. (xTestSpec <= x + dxHalf) .and. &
+                 (yTestSpec >= y - dyHalf ) .and. (yTestSpec <= y + dyHalf) .and. &
+                 (zTestSpec >= z - dzHalf ) .and. (zTestSpec <= z + dzHalf) ) then
+
+                 DoSaveCellSpec = .true.
+                 do iFreq=1,nWaveHalf
+                    IwPlusSi  = No2Si_V(UnitP_)* &
+                         State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)
+                    IwMinusSi = No2Si_V(UnitP_)* &
+                         State_VGB(AlfvenWaveMinusFirst_+iFreq-1,i,j,k,iBLK)
+                    Spectrum_II(iFreq,1) = log(FrequencySi_W(iFreq))
+                    Spectrum_II(iFreq,2) = IwPlusSi
+                    Spectrum_II(iFreq,3) = IwMinusSi
+                    
+                 end do
+              end if
+           end do; end do ; end do
+        end do
+    
+        if (DoSaveCellSpec) then
+           !\
+           ! write data file
+           !/
+           write(NameStage,'(i6.6)') iteration_number
+           write(NameProc,'(a,i4.4)') "_pe",iProc
+           FileNameTec = 'SC/IO2/Cell_Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.spec'
+           if(iProc == 0) write(*,*) 'SC: writing file ',FileNameTec
+           
+           iUnit=io_unit_new()
+           open(unit=iUnit, file=FileNameTec, form='formatted', access='sequential',&
+                status='replace',iostat=iError)
+           write(iUnit, '(a)') 'Title: BATSRUS SC Spectrogram'
+           write(iUnit, '(a)') 'Variables = "log(w)","I+[Jm-3]","I-[Jm-3]" '
+           write(iUnit,'(a,i3.3,a,i5.5,a)') 'Zone I= ',nWaveHalf,' F=point'
+           do iFreq=1,nWaveHalf
+              write(iUnit, fmt="(30(e14.6))") &
+                   Spectrum_II(iFreq,:)
+           end do
+           close(iUnit)
+        end if
+     
+      end subroutine write_cell_spectrum
+ 
+      subroutine write_spectrogram
+    
+        use ModProcMH
+        use ModMain,      ONLY: iteration_number,unusedBLK,nBlockALL
+        use ModGeometry,  ONLY: x_BLK,y_BLK, z_BLK, dz_BLK,dx_BLK
+        use ModIoUnit,    ONLY: io_unit_new
+        use ModAdvance,   ONLY: State_VGB
+        use ModPhysics,   ONLY: No2Si_V, UnitX_, UnitP_
+        use ModWaves,     ONLY: AlfvenWaveMinusFirst_,AlfvenWavePlusFirst_,FrequencySi_W
+        
+        implicit none
+        
+        real, allocatable,dimension(:,:) :: Cut_II ! Array to store log variables
+        integer                          :: nCell,nRow,iRow 
+        real                             :: dx, dz, x,y,z, IwPlusSi,IwMinusSi
+        integer                          :: iFreq,i,j,k,iBLK
+        integer                          :: iUnit,iError,aError
+        character(len=40)                :: FileNameTec 
+        character(len=11)                :: NameStage
+        character(len=7)                 :: NameProc
+        character(len=*),parameter       :: NameSub='write_spectrogram'
+        !-------------------------------------------------------------------
+        write(NameStage,'(i6.6)') iteration_number
+        write(NameProc,'(a,i4.4)') "_pe",iProc
+        FileNameTec = 'SC/IO2/Spectrum_n_'//trim(NameStage)//trim(NameProc)//'.tec'
+        if(iProc == 0) write(*,*) 'SC: writing file ',FileNameTec
+        !\
+        ! count cells along x=xTrace, z=zTrace line parallel to y axis
+        !/
+        nCell=0
+        do iBLK=1,nBLK
+           if(unusedBLK(iBLK)) CYCLE
+           do k=1,nK ; do j=1,nJ ; do i=1,nI
+              x=x_BLK(i,j,k,iBLK)
+              dx=dx_BLK(iBLK)
+              z=z_BLK(i,j,k,iBLK)
+              dz=dz_BLK(iBLK)
+              if((z < zTrace+dz) .and. (z >= zTrace) .and. &
+                   (x < xTrace+dx) .and. (x >= xTrace)) then
+                 nCell=nCell+1
+              end if
+           end do; end do ; end do
+        end do
+        if (nCell > 0 )then !write spectrogram output file
+     
+           nRow=nCell*nWaveHalf
+           !\
+           ! Allocate plot arrays
+           !/
+           ALLOCATE(Cut_II(nRow,4),STAT=aError)
+           !\
+           ! Fill plot array
+           !/
+           if (aError .ne. 0) then
+              call stop_mpi('Allocation failed for spectrogram array')
+           else
+              iRow=1
+              do iBLK=1,nBLK
+                 if(unusedBLK(iBLK)) CYCLE
+                 do k=1,nK ; do j=1,nJ ; do i=1,nI
+                    x=x_BLK(i,j,k,iBLK)
+                    y=y_BLK(i,j,k,iBLK)
+                    z=z_BLK(i,j,k,iBLK)
+                    dx=dx_BLK(iBLK)
+                    dz=dz_BLK(iBLK)
+                    if((z < zTrace+dz) .and. (z >= zTrace) .and. &
+                         (x < xTrace+dx) .and. (x >= xTrace)) then
+                       do iFreq=1,nWaveHalf
+                          IwPlusSi  = No2Si_V(UnitP_)* &
+                               State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)
+                          IwMinusSi = No2Si_V(UnitP_)* &
+                               State_VGB(AlfvenWaveMinusFirst_+iFreq-1,i,j,k,iBLK)
+                          Cut_II(iRow,1) = y
+                          Cut_II(iRow,2) = log(FrequencySi_W(iFreq))
+                          Cut_II(iRow,3) = IwPlusSi
+                          Cut_II(iRow,4) = IwMinusSi
+                          iRow=iRow+1
+                       end do
+                    end if
+                 end do; end do ; end do
+              end do
+           end if
+           !\
+           ! write data file
+           !/
+           iUnit=io_unit_new()
+           open(unit=iUnit, file=FileNameTec, form='formatted', access='sequential',&
+                status='replace',iostat=iError)
+           write(iUnit, '(a)') 'Title: BATSRUS SC Spectrogram'
+           write(iUnit, '(a)') 'Variables = "Y[R]", "log(w)","I+[Jm-3]","I-[Jm-3]" '
+           write(iUnit,'(a,i3.3,a,i5.5,a)') 'Zone I= ',nWaveHalf,' J= ',nCell,' F=point'
+           do iRow=1,nRow
+              write(iUnit, fmt="(30(e14.6))") &
+                   Cut_II(iRow,:)
+           end do
+           close(iUnit)
+           
+           if(allocated(Cut_II)) deallocate(Cut_II,STAT=aError)
+           if(aError .ne. 0) then
+              write(*,*) NameSub, 'Deallocation of spectrogram array failed'
+              call stop_mpi(NameSub)
+           end if
+        end if
+      end subroutine write_spectrogram
+
   end subroutine user_get_log_var
- !===========================================================================
+!===========================================================================
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
@@ -742,15 +735,14 @@ contains
     logical,          intent(out)  :: IsFound
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
-    real                         :: PoyntFlux, UnitEnergy
-    integer                      :: i,j,k, I_Index
+    real                         :: PoyntFlux
+    integer                      :: i,j,k
     logical                      :: IsError
     !-------------------------------------------------------------------    
     !UsePlotVarBody = .true. 
     !PlotVarBody = 0.0 
     IsFound=.true.
 
-    UnitEnergy=1.0e7*No2Si_V(UnitEnergydens_)*No2Si_V(UnitX_)**3
     !\                                                                              
     ! Define plot variable to be saved::
     !/ 
@@ -765,12 +757,6 @@ contains
        NameTecVar = 'wPres'
        NameTecUnit = NameTecUnit_V(UnitP_)
        NameIdlUnit = NameIdlUnit_V(UnitP_)
-    !case('wdiss')
-    !   do k=-1,nK+2 ; do j=-1,nJ+2 ; do  i=-1,nI+2
-    !      PlotVar_G(i,j,k)=WaveDissip_CB(i,j,k,iBlock)
-    !   end do ; end do ; end do
-    !   PlotVar_G=UnitEnergy*PlotVar_G
-    !   NameTecVar = 'wDissip'
     case('poynt')
        ! neglect radial bulk velociy
        do i=-1,nI+2 ; do j=-1,nJ+2; do k=-1,nK+2
@@ -792,6 +778,59 @@ contains
     case default
        IsFound= .false.
     end select
+
+  contains
+    subroutine calc_poynt_flux(i,j,k,iBLK, UseUr, PoyntFluxSi)
+
+      Use ModMain,       ONLY: x_,y_,z_
+      use ModAdvance,    ONLY: State_VGB, B0_DGB
+      use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+      use ModPhysics,    ONLY: No2Si_V, UnitB_, UnitRho_,UnitU_,UnitP_
+      use ModConst,      ONLY: cMu
+      implicit none
+      
+      integer,intent(in)         :: i,j,k,iBLK
+      logical,intent(in)         :: UseUr
+      real,intent(out)           :: PoyntFluxSi
+      real,dimension(3)          :: r_D,BSi_D,USi_D
+      real                       :: x,y,z,BrSi,UrSi, RhoSi  
+      real                       :: vAlfvenRadialSi ! in radial direction
+      character(len=*),parameter :: NameSub='calc_poynt_flux'
+      ! -----------------------------------------------------------------
+      !  Poynting flux is calculated in SI UNITS
+      !  This subroutine is used for finding flux leaving a spherical surface
+      ! (radius depends on calling routine), thus only the radial component is calculated.
+    
+      ! get radial unit vector
+      x = x_BLK(i,j,k,iBLK)
+      y = y_BLK(i,j,k,iBLK)
+      z = z_BLK(i,j,k,iBLK)
+      r_D = (/x,y,z/)
+      r_D = r_D/sqrt(sum(r_D**2)) ! unit vector in radial direction
+
+      ! get B, Br vectors in SI units
+      BSi_D = (State_VGB(Bx_:Bz_,i,j,k,iBLK) + B0_DGB(x_:z_,i,j,k,iBLK)) &
+           * No2Si_V(UnitB_)
+      BrSi = sum(r_D*BSi_D)
+    
+      ! get density in SI units
+      RhoSi = No2Si_V(UnitRho_)*State_VGB(rho_,i,j,k,iBLK)
+      ! calculate radial component of Alfven speed
+      vAlfvenRadialSi = abs(BrSi/sqrt(RhoSi*cMu)) ! for outgoing waves
+    
+      ! add Ur to vAlfven if bulk velocity is not neglected
+      if(UseUr) then
+         USi_D = No2Si_V(UnitU_)*State_VGB(Ux_:Uz_,i,j,k,iBLK)
+         UrSi = sum(r_D*USi_D)
+        
+         vAlfvenRadialSi = UrSi+vAlfvenRadialSi
+      end if
+     
+      PoyntFluxSi=vAlfvenRadialSi*No2Si_V(UnitP_)* & 
+           sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK))
+
+    end subroutine calc_poynt_flux
+ 
   end subroutine user_set_plot_var
   !=========================================================================== 
   subroutine user_specify_refinement(iBlock, iArea, DoRefine)
