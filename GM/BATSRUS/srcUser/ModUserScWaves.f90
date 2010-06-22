@@ -1,3 +1,4 @@
+
 !^CFG COPYRIGHT UM
 !==============================================================================
 Module ModUser
@@ -106,7 +107,7 @@ Module ModUser
   logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
   real                          :: WaveInnerBcFactor
   real                          :: xTrace = 0.0, zTrace = 0.0
-  real                          :: xTestSpectrum,yTestSpectrum,zTestSpectrum
+  real                          :: xTestSpectrum, yTestSpectrum, zTestSpectrum
   character(len=10)             :: TypeWaveInnerBc
 
 contains
@@ -139,7 +140,7 @@ contains
     use ModMain,        ONLY: UseUserInitSession, lVerbose
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
-    use ModIO,          ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
+    use ModIO,          ONLY: write_prefix, write_myname, iUnitOut, NamePlotDir
  
     character (len=100) :: NameCommand
     !--------------------------------------------------------------------------
@@ -157,23 +158,23 @@ contains
        select case(NameCommand)
           
        case("#INITSPECTRUM")
-          call read_var('IsInitWave',IsInitWave)
+          call read_var('IsInitWave', IsInitWave)
        
        case("#WAVEINNERBC")
           call read_var('TypeWaveInnerBc', TypeWaveInnerBc)
-          call read_var('WaveInnerBcFactor',WaveInnerBcFactor)
+          call read_var('WaveInnerBcFactor', WaveInnerBcFactor)
          
        case("#DAMPWAVES")
-          call read_var('DoDampCutoff',DoDampCutoff)
-          call read_var('DoDampSurface',DoDampSurface)
+          call read_var('DoDampCutoff', DoDampCutoff)
+          call read_var('DoDampSurface', DoDampSurface)
 
        case("#SPECTROGRAM")
-          call read_var('xTrace',xTrace)
-          call read_var('zTrace',zTrace)
+          call read_var('xTrace', xTrace)
+          call read_var('zTrace', zTrace)
        case("#CELLSPECTRUM")
-          call read_var('xTestSpectrum',xTestSpectrum)
-          call read_var('yTestSpectrum',yTestSpectrum)
-          call read_var('zTestSpectrum',zTestSpectrum)
+          call read_var('xTestSpectrum', xTestSpectrum)
+          call read_var('yTestSpectrum', yTestSpectrum)
+          call read_var('zTestSpectrum', zTestSpectrum)
       
          case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -213,10 +214,10 @@ contains
     !                                    are adjusted.
     ! -----------------------------------------------------------------------------                            
     use ModSize,             ONLY: East_, West_, South_, North_, Bot_, Top_, nDim
-    use ModMain,             ONLY: x_,y_,z_, UseRotatingFrame
+    use ModMain,             ONLY: x_, y_, z_, UseRotatingFrame
     use ModExpansionFactors, ONLY: ExpansionFactorInv_N, get_interpolated
     use ModAdvance,          ONLY: State_VGB
-    use ModPhysics,          ONLY: OmegaBody,No2Si_V,Si2No_V,UnitU_,UnitP_
+    use ModPhysics,          ONLY: OmegaBody, No2Si_V, Si2No_V, UnitU_, UnitP_
     use ModNumConst,         ONLY: cTolerance
     use ModFaceBc,           ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
                                    iFace, jFace, kFace, iSide, iBlockBc
@@ -226,9 +227,9 @@ contains
 
 
 
-    integer                     :: iCell,jCell,kCell
-    real                        :: DensCell,PresCell,TBase,TotalB  
-    real, dimension(3)          :: RFace_D,B1r_D,B1t_D, TotalB_D
+    integer                     :: iCell, jCell, kCell
+    real                        :: DensCell, PresCell, TBase, TotalB  
+    real, dimension(3)          :: RFace_D, B1r_D, B1t_D, TotalB_D
     real                        :: vAlfvenSi, wEnergyDensSi, wEnergyDensBc
     real                        :: ExpansionFactorInv
     logical                     :: IsClosedWSA = .false. 
@@ -269,26 +270,26 @@ contains
     case(Top_)
        kCell  = kFace-1
     case default
-       write(*,*)'ERROR: iSide = ',iSide
+       write(*,*)'ERROR: iSide = ', iSide
        call stop_mpi('incorrect iSide value in user_face_bcs')
     end select
 
-    call get_plasma_parameters_cell(iCell,jCell,kCell,iBlockBc,&
-         DensCell,PresCell)
+    call get_plasma_parameters_cell(iCell, jCell, kCell, iBlockBc,&
+         DensCell, PresCell)
     VarsGhostFace_V(Rho_) = &
          max(-VarsTrueFace_V(Rho_) + 2.0*(DensCell), &
          VarsTrueFace_V(Rho_))
     TBase = PresCell/DensCell
     VarsGhostFace_V(P_) = &
-         max(VarsGhostFace_V(Rho_)*TBase,VarsTrueFace_V(P_))
+         max(VarsGhostFace_V(Rho_)*TBase, VarsTrueFace_V(P_))
     
     !\
     ! Update BCs for wave spectrum
     !/
     if(IsInitWave) then
        ! Check if this is closed or open field region
-       call get_interpolated(ExpansionFactorInv_N,FaceCoords_D(x_),&
-            FaceCoords_D(y_),FaceCoords_D(z_),ExpansionFactorInv)
+       call get_interpolated(ExpansionFactorInv_N, FaceCoords_D(x_),&
+            FaceCoords_D(y_), FaceCoords_D(z_), ExpansionFactorInv)
        if(ExpansionFactorInv < cTolerance) IsClosedWSA = .true.
        
        ! set wave energy at inner boundary in open field region only
@@ -303,7 +304,7 @@ contains
           case('WSA')
              
              vAlfvenSi = (TotalB/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
-             call get_total_wave_energy_dens(FaceCoords_D(x_),FaceCoords_D(y_),&
+             call get_total_wave_energy_dens(FaceCoords_D(x_), FaceCoords_D(y_),&
                   FaceCoords_D(z_), vAlfvenSi, wEnergyDensSi)
              wEnergyDensBc = wEnergyDensSi * Si2No_V(UnitP_)*WaveInnerBcFactor
          
@@ -319,7 +320,7 @@ contains
           end if
        
           ! Set BC for each frequency group
-          call set_wave_state(wEnergyDensBc,VarsGhostFace_V,RFace_D,B0Face_D) 
+          call set_wave_state(wEnergyDensBc, VarsGhostFace_V, RFace_D, B0Face_D) 
        
        end if
     end if
@@ -336,38 +337,38 @@ contains
 
   end subroutine user_face_bcs
   !===========================================================================
-  subroutine get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
-       DensCell,PresCell)
+  subroutine get_plasma_parameters_cell(iCell, jCell, kCell, iBlock,&
+       DensCell, PresCell)
      
     ! This subroutine computes the cell values for density and pressure 
     ! assuming an isothermal atmosphere
     
-    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, R_BLK
     use ModNumConst
-    use ModPhysics,    ONLY: GBody,BodyRho_I,Si2No_V,UnitTemperature_
-    use ModExpansionFactors,  ONLY: UMin,CoronalT0Dim
+    use ModPhysics,    ONLY: GBody, BodyRho_I, Si2No_V, UnitTemperature_
+    use ModExpansionFactors,  ONLY: UMin, CoronalT0Dim
     implicit none
 
-    integer, intent(in)  :: iCell,jCell,kCell,iBlock
-    real, intent(out)    :: DensCell,PresCell
+    integer, intent(in)  :: iCell, jCell, kCell, iBlock
+    real, intent(out)    :: DensCell, PresCell
     real :: UFinal       !The solar wind speed at the far end of the Parker spiral,
                          !which originates from the given cell
     real :: URatio       !The coronal based values for temperature density 
                          !are scaled as functions of UFinal/UMin ratio
     real :: Temperature
     !--------------------------------------------------------------------------
-    call get_bernoulli_integral(x_BLK(iCell,jCell,kCell,iBlock)/&
-         R_BLK(iCell,jCell,kCell,iBlock),&
-         y_BLK(iCell,jCell,kCell,iBlock)/R_BLK(iCell,jCell,kCell,iBlock),&
-         z_BLK(iCell,jCell,kCell,iBlock)/R_BLK(iCell,jCell,kCell,iBlock),UFinal)
+    call get_bernoulli_integral(x_BLK(iCell, jCell, kCell, iBlock)/&
+         R_BLK(iCell, jCell, kCell, iBlock),&
+         y_BLK(iCell, jCell, kCell, iBlock)/R_BLK(iCell, jCell, kCell, iBlock),&
+         z_BLK(iCell, jCell, kCell, iBlock)/R_BLK(iCell, jCell, kCell, iBlock), UFinal)
     URatio=UFinal/UMin
 
     !This is the temperature variation
-    Temperature = CoronalT0Dim*Si2No_V(UnitTemperature_)/(min(URatio,1.5))
+    Temperature = CoronalT0Dim*Si2No_V(UnitTemperature_)/(min(URatio, 1.5))
 
     DensCell  = (1.0/URatio) &          !This is the density variation
          *BodyRho_I(1)*exp(-GBody/Temperature &
-         *(1.0/max(R_BLK(iCell,jCell,kCell,iBlock),0.90)-1.0))
+         *(1.0/max(R_BLK(iCell, jCell, kCell, iBlock), 0.90)-1.0))
 
     PresCell = DensCell*Temperature
 
@@ -379,16 +380,16 @@ contains
 
     use ModMain,      ONLY: globalBLK
     use ModAdvance,   ONLY: State_VGB 
-    use ModPhysics,   ONLY: inv_gm1,BodyTDim_I
+    use ModPhysics,   ONLY: inv_gm1, BodyTDim_I
     use ModGeometry
     implicit none
 
-    integer :: i,j,k,iBLK
+    integer :: i, j, k, iBLK
     logical :: oktest,oktest_me
     real    :: Dens, Pres
-    real    :: x,y,z,R,ROne,Rmax,U0
+    real    :: x, y, z, R, ROne, Rmax, U0
     !--------------------------------------------------------------------------
-    call set_oktest('user_set_ics',oktest,oktest_me)
+    call set_oktest('user_set_ics', oktest, oktest_me)
 
     iBLK = globalBLK
 
@@ -426,8 +427,8 @@ contains
                           AlfvenWavePlusFirst_,  AlfvenWavePlusLast_, &
                           AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_ 
 
-    integer,intent(in)           :: iStage,iBlock
-    integer                      :: i,j,k
+    integer,intent(in)           :: iStage, iBlock
+    integer                      :: i, j, k
     character(len=*),parameter   :: NameSub='user_update_states'
     !--------------------------------------------
     !\
@@ -437,7 +438,7 @@ contains
        write(*,*) NameSub,' : negative wave energy before MHD'
     end if
     
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iStage, iBlock)
     
     if(any(State_VGB(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK,iBlock)<0.0)) then
        write(*,*) NameSub, ': negative wave energy after MHD'
@@ -507,13 +508,13 @@ contains
       ! which is the ion cyclotron frequency (in radians) 
       ! \omega_{c.o.}=zeB/m. For ions z=1. 
       
-      use ModMain,                ONLY: x_,y_,z_
+      use ModMain,                ONLY: x_, y_, z_
       use ModAdvance,             ONLY: State_VGB, B0_DGB
       use ModConst,               ONLY: cElectronCharge, cProtonMass,cTiny
-      use ModPhysics,             ONLY: No2Si_V,UnitB_
+      use ModPhysics,             ONLY: No2Si_V, UnitB_
       
       real, intent(out)           :: LogFreqCutOff
-      integer, intent(in)         :: i,j,k,iBLK
+      integer, intent(in)         :: i, j, k, iBLK
       real                        :: BtotSi
       real,dimension(3)           :: FullB_D
       character(len=*),parameter  :: NameSub = 'calc_cutoff_freq'
@@ -530,7 +531,7 @@ contains
     
   end subroutine user_update_states
   !========================================================================
-  subroutine user_get_log_var(VarValue,TypeVar,Radius)
+  subroutine user_get_log_var(VarValue, TypeVar, Radius)
     
     ! user_get_log_var : allows the user to output spectral data to a dedicated log file.
     !                       In order to use this option, the user must modify the PARAM.in file:
@@ -590,8 +591,8 @@ contains
       subroutine write_cell_spectrum
     
         use ModProcMH
-        use ModMain,     ONLY: iteration_number,unusedBLK,nBlockALL
-        use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK, dx_BLK, dy_BLK,dz_BLK
+        use ModMain,     ONLY: iteration_number, unusedBLK, nBlockALL
+        use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK
         use ModIoUnit,   ONLY: io_unit_new
         use ModAdvance,  ONLY: State_VGB
         use ModPhysics,  ONLY: No2Si_V, UnitX_, UnitP_
@@ -599,10 +600,10 @@ contains
              FrequencySi_W
     
         real,dimension(nWaveHalf,3)      :: Spectrum_II 
-        real                             :: x,y,z, dxHalf, dyHalf,dzHalf
+        real                             :: x, y, z, dxHalf, dyHalf,dzHalf
         real                             :: IwPlusSi,IwMinusSi
-        integer                          :: iFreq,i,j,k,iBLK
-        integer                          :: iUnit,iError,aError
+        integer                          :: iFreq, i, j, k, iBLK
+        integer                          :: iUnit, iError, aError
         logical                          :: DoSaveCellSpectrum = .false.
         character(len=40)                :: FileNameTec 
         character(len=11)                :: NameStage
@@ -665,20 +666,20 @@ contains
       subroutine write_spectrogram
     
         use ModProcMH
-        use ModMain,      ONLY: iteration_number,unusedBLK,nBlockALL
-        use ModGeometry,  ONLY: x_BLK,y_BLK, z_BLK, dz_BLK,dx_BLK
+        use ModMain,      ONLY: iteration_number, unusedBLK, nBlockALL
+        use ModGeometry,  ONLY: x_BLK, y_BLK, z_BLK, dz_BLK, dx_BLK
         use ModIoUnit,    ONLY: io_unit_new
         use ModAdvance,   ONLY: State_VGB
         use ModPhysics,   ONLY: No2Si_V, UnitX_, UnitP_
-        use ModWaves,     ONLY: AlfvenWaveMinusFirst_,AlfvenWavePlusFirst_,FrequencySi_W
+        use ModWaves,     ONLY: AlfvenWaveMinusFirst_, AlfvenWavePlusFirst_, FrequencySi_W
         
         implicit none
         
         real, allocatable,dimension(:,:) :: Cut_II ! Array to store log variables
-        integer                          :: nCell,nRow,iRow 
-        real                             :: dx, dz, x,y,z, IwPlusSi,IwMinusSi
+        integer                          :: nCell, nRow, iRow 
+        real                             :: dx, dz, x, y, z, IwPlusSi, IwMinusSi
         integer                          :: iFreq,i,j,k,iBLK
-        integer                          :: iUnit,iError,aError
+        integer                          :: iUnit, iError, aError
         character(len=40)                :: FileNameTec 
         character(len=11)                :: NameStage
         character(len=7)                 :: NameProc
@@ -796,7 +797,7 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     real                         :: PoyntFlux
-    integer                      :: i,j,k
+    integer                      :: i, j, k
     logical                      :: IsError
     !-------------------------------------------------------------------    
     !UsePlotVarBody = .true. 
@@ -842,18 +843,18 @@ contains
   contains
     subroutine calc_poynt_flux(i,j,k,iBLK, UseUr, PoyntFluxSi)
 
-      Use ModMain,       ONLY: x_,y_,z_
+      Use ModMain,       ONLY: x_, y_, z_
       use ModAdvance,    ONLY: State_VGB, B0_DGB
-      use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
-      use ModPhysics,    ONLY: No2Si_V, UnitB_, UnitRho_,UnitU_,UnitP_
+      use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, R_BLK
+      use ModPhysics,    ONLY: No2Si_V, UnitB_, UnitRho_, UnitU_, UnitP_
       use ModConst,      ONLY: cMu
       implicit none
       
-      integer,intent(in)         :: i,j,k,iBLK
+      integer,intent(in)         :: i, j, k, iBLK
       logical,intent(in)         :: UseUr
       real,intent(out)           :: PoyntFluxSi
-      real,dimension(3)          :: r_D,BSi_D,USi_D
-      real                       :: x,y,z,BrSi,UrSi, RhoSi  
+      real,dimension(3)          :: r_D, BSi_D, USi_D
+      real                       :: x, y, z, BrSi, UrSi, RhoSi  
       real                       :: vAlfvenRadialSi ! in radial direction
       character(len=*),parameter :: NameSub='calc_poynt_flux'
       ! -----------------------------------------------------------------
