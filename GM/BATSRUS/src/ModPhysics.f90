@@ -115,6 +115,11 @@ module ModPhysics
   ! Minimum threshold for electron pressure and extra internal energy
   real :: PeMinSi = -1.1e5, PeMin, ExtraEintMinSi = 0.0, ExtraEintMin
 
+  ! Boundary pressure for subsonic outflow
+  logical:: UseOutflowPressure = .false.
+  real :: pOutflowSi = -1.0, pOutflow = -1.0
+
+
   ! Relaxation time for anisotropic pressure
   real :: TauWaveParticleSi = -1.0, TauWaveParticle
   real :: TauInstabilitySi = -1.0, TauInstability

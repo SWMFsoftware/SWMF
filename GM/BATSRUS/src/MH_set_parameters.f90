@@ -1713,6 +1713,10 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('SwByDim' ,SW_By_dim)
         call read_var('SwBzDim' ,SW_Bz_dim)
 
+     case("#OUTFLOWPRESSURE")
+        call read_var('UseOutflowPressure', UseOutflowPressure)
+        if(UseOutflowPressure) call read_var('pOutflowSi', pOutflowSi)
+
      case("#MAGNETOSPHERE","#BODY")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseBody',body1)

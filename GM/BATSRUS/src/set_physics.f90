@@ -296,6 +296,8 @@ subroutine set_physics_constants
      CellState_VI(iRhoUz,:) = FaceState_VI(iUz,:)*FaceState_VI(iRho,:)
   end do
 
+  if(UseOutflowPressure) pOutflow = pOutflowSi*Si2No_V(UnitP_)
+
   PeMin = PeMinSi*Si2No_V(UnitP_)
   ExtraEintMin = ExtraEintMinSi*Si2No_V(UnitEnergyDens_)
 

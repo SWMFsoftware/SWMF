@@ -131,6 +131,8 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         call stop_mpi('The neighbors are not deifned at the periodic boundary')
      case('float','outflow')
         call BC_cont(1,nVar)
+        if(UseOutflowPressure .and. TypeBc_I(iSide) == 'outflow') &
+             call  BC_fixed(p_,p_,(/ (pOutflow, iVar = 1, nVar) /) )
         !^CFG IF IMPLICIT BEGIN
         if(UseRadDiffusion) &
              call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
