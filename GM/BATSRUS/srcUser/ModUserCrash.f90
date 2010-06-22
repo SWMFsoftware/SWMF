@@ -262,17 +262,21 @@ contains
 
        case("#GAMMALAW") ! UQ only
           call read_var('UseGammaLaw', UseGammaLaw)
-          do iMaterial = 0, nMaterial - 1
-             call read_var('Gamma'//NameMaterial_I(iMaterial), &
-                  Gamma_I(iMaterial))
-          end do
+          if(UseGammaLaw)then
+             do iMaterial = 0, nMaterial - 1
+                call read_var('Gamma'//NameMaterial_I(iMaterial), &
+                     Gamma_I(iMaterial))
+             end do
+          end if
 
        case("#FIXEDIONCHARGE") ! UQ only
           call read_var('UseFixedIonCharge', UseFixedIonCharge)
-          do iMaterial = 0, nMaterial - 1
-             call read_var('IonCharge'//NameMaterial_I(iMaterial), &
-                  IonCharge_I(iMaterial))
-          end do
+          if(UseFixedIonCharge)then
+             do iMaterial = 0, nMaterial - 1
+                call read_var('IonCharge'//NameMaterial_I(iMaterial), &
+                     IonCharge_I(iMaterial))
+             end do
+          end if
 
        case("#THREEDIM")
           call read_var('IsThreeDim', IsThreeDim)
