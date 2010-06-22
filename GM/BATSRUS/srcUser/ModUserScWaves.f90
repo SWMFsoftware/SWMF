@@ -28,14 +28,11 @@ Module ModUser
 !                  the full wave spectrum will be extracted and written to a file for plotting.
 !                  >>>
 !                  xTrace, yTrace, zTrace are the coordinates of the line
-!  #TESTSPEC     : allows the user to output the spectrum in a single cell for testing purposes.
+!  #CELLSPECTRUM : allows the user to output the spectrum in a single cell for testing purposes.
 ! -----------------------------------------------------------------------------
-! 2. user_init_session : call the subroutine check_waves (in ModWaves.f90) to initialize the wave
-!                        spectrum if IsInitWave is set to TRUE.                         
+! 2. user_set_ic : intilize MHD parameters according to an isothermal atmosphere solution.
 ! -----------------------------------------------------------------------------
-! 3. user_set_ic : intilize MHD parameters according to an isothermal atmosphere solution.
-! -----------------------------------------------------------------------------
-! 4. user_face_bc : set inner boundary conditions for MHD variables and Alfven waves.
+! 3. user_face_bc : set inner boundary conditions for MHD variables and Alfven waves.
 !                   Magnetic field B1 is set to equal to its tangential component.
 !                   Reflective boundary conditions for velocity.
 !                   Density and pressure set according to isothermal atmosphere.
@@ -50,7 +47,7 @@ Module ModUser
 !                   Rotating frame : if the non rotating frame is used, the x and y velocity components
 !                                    are adjusted.
 ! -----------------------------------------------------------------------------                            
-! 5. user_get_log_var : allows the user to output spectral data to a dedicated log file.
+! 4. user_get_log_var : allows the user to output spectral data to a dedicated log file.
 !                       In order to use this option, the user must include the command #SAVELOGFILE
 !                       in the PARAM.in file, with the following format:
 !                       #SAVELOGFILE
@@ -60,26 +57,27 @@ Module ModUser
 !                       dt
 !                       'string'
 !
-!                       where 'string' can be set to 'spec' or 'cellspec' (refer to the the SWMF
+!                       where 'string' can be set to 'spectrogram' or 'cellspecrum' (refer to the the SWMF
 !                       user manual for further details on this command).
-!                       When 'spec' is chosen, the full wave spectrum along a line is extracted
-!                       according to the parameters set in #SPECTROGROM (see above). The data is
+!                       'spectrogram' : the full wave spectrum along a line is extracted
+!                       according to the parameters set in #SPECTROGRAM (see above). The data is
 !                       written to a file called Spectrum_n_xxx_peyyy.tec, where xxx stands
 !                       for simulation time/iteration number and yyy to the processor number. 
 !                       Files from different processors should be combined later.
-!                       When 'cellspc', the full spectrum in a single cell is written to a file
-!                       The cell is chosen by its x,y,z coordinates set in #TESTSPEC (see above).
+!                       
+!                       'cellspectrum' : the full spectrum in a single cell is written to a file
+!                       The cell is chosen by its x,y,z coordinates set in #CELLSPECTRUM (see above).
 !                       The output is written to a file Cell_Spectrum_n_xxx_peyyy.tec. Since only
 !                       one processor is involved, no post-processing is necessary.
 ! -----------------------------------------------------------------------------------------------
-! 6. user_update_states : calls update states_MHD, followed by a call to dissipate_waves, which
+! 5. user_update_states : calls update states_MHD, followed by a call to dissipate_waves, which
 !                         removes wave energy from the spectrum and adds it to the plasma pressure.
 ! -----------------------------------------------------------------------------------------------
-! 7. user_specify_refinement : improve refinement in the current sheet region.
+! 6. user_specify_refinement : improve refinement in the current sheet region.
 ! -----------------------------------------------------------------------------------------------
-! 8. user_set_boundary_cells :required when "extra" boundary conditions are used.
+! 7. user_set_boundary_cells :required when "extra" boundary conditions are used.
 ! -----------------------------------------------------------------------------------------------
-! 9. user_set_plot_var : implement plot varaibles related to Alfven waves.
+! 8. user_set_plot_var : implement plot varaibles related to Alfven waves.
 !                        'wpres' - total wave pressure (summed over spectrum).
 !                        'poynt' - Poynting flux of Alfven waves neglecting plasma speed.
 !                        'poyntur' - Poynting flux of Alfven waves.
@@ -90,31 +88,54 @@ Module ModUser
   use ModWaves,  ONLY: DeltaLogFrequency
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_init_session,               &
-       IMPLEMENTED3 => user_set_ics,                    &
-       IMPLEMENTED4 => user_face_bcs,                   &
-       IMPLEMENTED5 => user_get_log_var,                &
-       IMPLEMENTED6 => user_update_states,              &
-       IMPLEMENTED7 => user_specify_refinement,         &
-       IMPLEMENTED8 => user_set_boundary_cells,         &
-       IMPLEMENTED9 => user_set_plot_var
+       IMPLEMENTED2 => user_set_ics,                    &
+       IMPLEMENTED3 => user_face_bcs,                   &
+       IMPLEMENTED4 => user_get_log_var,                &
+       IMPLEMENTED5 => user_update_states,              &
+       IMPLEMENTED6 => user_specify_refinement,         &
+       IMPLEMENTED7 => user_set_boundary_cells,         &
+       IMPLEMENTED8 => user_set_plot_var
   
   include 'user_module.h' !list of public methods
-  
-   real, parameter               :: VersionUserModule = 1.0
-  character (len=*), parameter  :: &
-       NameUserModule = 'Alfven Waves Driven Solar Wind'
 
+  real, parameter               :: VersionUserModule = 1.0
+  character (len=*), parameter  :: NameUserModule = 'Alfven Waves Driven Solar Wind'
+  
+  ! varaibles read by user_read_inputs and used by other subroutines
   logical                       :: IsInitWave = .false.
   logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
-  real                          :: LogFreqCutOff,WaveInnerBcFactor
+  real                          :: WaveInnerBcFactor
   real                          :: xTrace = 0.0, zTrace = 0.0
-  real                          :: xTestSpec,yTestSpec,zTestSpec
-  integer                       :: nWaveHalf
+  real                          :: xTestSpectrum,yTestSpectrum,zTestSpectrum
   character(len=10)             :: TypeWaveInnerBc
+
 contains
   !============================================================================
   subroutine user_read_inputs
+
+    !  user_read_inputs : read input commands for wave related quantities
+    !
+    !  #INITSPECTRUM : allows the user to set the logical flag IsInitWave. 
+    !                  If true, the wave spectrum will be initialized. Should be used only in the
+    !                  first session of the simulation.
+    !  #WAVEINNERBC  : allows the user to choose type of inner boundary condition for Alfven waves.
+    !                  TypeWaveInnerBc (string) -  Two options are implemented:
+    !                  'WSA' - uses the WSA model to get the solar wind velocity at 1AU, then calculates
+    !                          the total wave energy at coronal base from the Bernoulli integral.
+    !                  'turb' - calculates the total wave energy from the local magnetic field.
+    !                  WaveInnerbcFactor (real) -  allows scaling of the resulting total 
+    !                  wave energy by the same factor for all boundary faces.
+    !  #DAMPWAVES    : allows the user to choose frequency dependent wave damping mechanism.
+    !                  DoDampCutoff (logical) - if true, Alfven waves will be totaly damped at
+    !                                             and above the local ion cyclotron frequency.
+    !                  DoDampSurface (logical) - if true, Alfven waves will be damped according
+    !                                            to the local surface waves dissipation length.
+    !  #SPECTROGRAM  : allows the user to choose a line parallel to one of the axes along which
+    !                  the full wave spectrum will be extracted and written to a file for plotting.
+    !                  >>>
+    !                  xTrace, yTrace, zTrace are the coordinates of the line
+    !  #CELLSPECTRUM : allows the user to output the spectrum in a single cell for testing purposes.
+    ! -----------------------------------------------------------------------------
     use ModMain,        ONLY: UseUserInitSession, lVerbose
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
@@ -122,7 +143,7 @@ contains
  
     character (len=100) :: NameCommand
     !--------------------------------------------------------------------------
-    UseUserInitSession = .true.
+    !UseUserInitSession = .true.
 
     if(iProc == 0 .and. lVerbose > 0)then
        call write_prefix;
@@ -149,10 +170,10 @@ contains
        case("#SPECTROGRAM")
           call read_var('xTrace',xTrace)
           call read_var('zTrace',zTrace)
-       case("#TESTSPEC")
-          call read_var('xTestSpec',xTestSpec)
-          call read_var('yTestSpec',yTestSpec)
-          call read_var('zTestSpec',zTestSpec)
+       case("#CELLSPECTRUM")
+          call read_var('xTestSpectrum',xTestSpectrum)
+          call read_var('yTestSpectrum',yTestSpectrum)
+          call read_var('zTestSpectrum',zTestSpectrum)
       
          case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -174,35 +195,23 @@ contains
 
   end subroutine user_read_inputs
   !============================================================================
-  subroutine user_init_session
-
-    use ModIO,          ONLY: write_prefix, iUnitOut
-    use ModProcMH,      ONLY: iProc
-    use ModReadParam,   ONLY: i_line_command
-    use ModWaves,       ONLY: check_waves
-    !--------------------------------------------------------------------------
-    if(iProc == 0)then
-       call write_prefix; write(iUnitOut,*) ''
-       call write_prefix; write(iUnitOut,*) 'user_init_session:'
-       call write_prefix; write(iUnitOut,*) ''
-    end if
-
-    if(i_line_command("#INITSPECTRUM") > 0 .and. IsInitWave) then
-       call check_waves
-       nWaveHalf = max(nWave/2,1)
-   
-    end if
-
-      if(iProc == 0)then
-       call write_prefix; write(iUnitOut,*) ''
-       call write_prefix; write(iUnitOut,*) 'user_init_session finished'
-       call write_prefix; write(iUnitOut,*) ''
-    end if
-
-  end subroutine user_init_session
-  !============================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
    
+    ! user_face_bc : set inner boundary conditions for MHD variables and Alfven waves.
+    !                   Magnetic field B1 is set to equal to its tangential component.
+    !                   Reflective boundary conditions for velocity.
+    !                   Density and pressure set according to isothermal atmosphere.
+    !                   Alfven Waves: wave energy is present in the inner boundary only
+    !                                 in the open field lines region (to avoid blowing out
+    !                                 of Helmet streamers). The total wave energy at the face
+    !                                 is calculated according to the type of boundary condition
+    !                                 (see desctription of #WAVEINNERBC in section 1 above).   
+    !                                 Once the total wave energy is obtained, it is deconstructed
+    !                                 into the frequency bins according to the assumed spectral shape
+    !                                 by calling set_wave_state (in ModWaves.f90).
+    !                   Rotating frame : if the non rotating frame is used, the x and y velocity components
+    !                                    are adjusted.
+    ! -----------------------------------------------------------------------------                            
     use ModSize,             ONLY: East_,West_,South_,North_,Bot_,Top_,nDim
     use ModMain,             ONLY: x_,y_,z_, UseRotatingFrame
     use ModExpansionFactors!, ONLY: ExpansionFactorInv_N,get_interpolated,&
@@ -364,6 +373,8 @@ contains
   !============================================================================
   subroutine user_set_ics
 
+    ! user_set_ic : intilize MHD parameters according to an isothermal atmosphere solution.
+
     use ModMain,      ONLY: globalBLK
     use ModAdvance,   ONLY: State_VGB 
     use ModPhysics,   ONLY: inv_gm1,BodyTDim_I
@@ -401,6 +412,10 @@ contains
   !============================================================================
   subroutine user_update_states(iStage,iBlock)
 
+    ! user_update_states : calls update states_MHD, followed by a call to dissipate_waves, which
+    !                      removes wave energy from the spectrum and adds it to the plasma pressure.
+    ! ---------------------------------------------------------------------------------------------
+
     use ModAdvance, ONLY: State_VGB, B0_DGB
 
     use ModGeometry,ONLY: R_BLK
@@ -411,7 +426,6 @@ contains
 
     integer,intent(in)           :: iStage,iBlock
     integer                      :: i,j,k
-    real                         :: DensCell,PresCell
     character(len=*),parameter   :: NameSub='user_update_states'
     !--------------------------------------------
     !\
@@ -438,6 +452,16 @@ contains
     !call calc_energy_cell(iBlock)
   contains
     subroutine dissipate_waves(iBlock)
+
+      ! Implements frequency dependent wave damping mechanism.  This subroutine removes wave
+      ! energy from the spectrum and adds it to the plasma pressure.
+      ! Usage: The user can control the damping by setting logical flags via the input
+      !        command #DAMPWAVES. Currently two mechanisms are available:
+      !       DoDampCutoff (logical) - if true, Alfven waves will be totaly damped at
+      !                                and above the local ion cyclotron frequency.
+      !       DoDampSurface (logical) - if true, Alfven waves will be damped according
+      !                                 to the local surface waves dissipation length.
+      !                                 (implemented by R. Evans)
 
       use ModAdvance, ONLY: State_VGB
       use ModPhysics, ONLY: Gamma0
@@ -475,55 +499,83 @@ contains
            0.5*(Gamma0-1)*dWavePres
 
     end subroutine dissipate_waves
+    subroutine calc_cutoff_freq(i,j,k,iBLK , LogFreqCutOff)
 
-  end subroutine user_update_states 
-  !=====================================================================
-  subroutine calc_cutoff_freq(i,j,k,iBLK , LogFreqCutOff)
-
-    ! This subroutine calculates the cut-off frequency for Alfven waves, 
-    ! which is the ion cyclotron frequency (in radians) 
-    ! \omega_{c.o.}=zeB/m. For ions z=1. 
-     
-    use ModMain,                ONLY: x_,y_,z_
-    use ModAdvance,             ONLY: State_VGB, B0_DGB
-    use ModConst,               ONLY: cElectronCharge, cProtonMass,cTiny
-    use ModPhysics,             ONLY: No2Si_V,UnitB_
-
-    real, intent(out)           :: LogFreqCutOff
-    integer, intent(in)         :: i,j,k,iBLK
-    real                        :: BtotSi
-    real,dimension(3)           :: FullB_D
-    character(len=*),parameter  :: NameSub = 'calc_cutoff_freq'
-    ! -----------------------------------------------------------------
-    FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBLK) + B0_DGB(x_:z_,i,j,k,iBLK)
-   
-    BtotSi = No2Si_V(UnitB_)*sqrt(sum(FullB_D**2))
-    if(BtotSi <=0.0) then
-       write(*,*) 'Btot negative, ',BtotSi
-    end if
-    LogFreqCutOff = log((cElectronCharge*BtotSi)/cProtonMass)
-
-  end subroutine calc_cutoff_freq
+      ! This subroutine calculates the cut-off frequency for Alfven waves, 
+      ! which is the ion cyclotron frequency (in radians) 
+      ! \omega_{c.o.}=zeB/m. For ions z=1. 
+      
+      use ModMain,                ONLY: x_,y_,z_
+      use ModAdvance,             ONLY: State_VGB, B0_DGB
+      use ModConst,               ONLY: cElectronCharge, cProtonMass,cTiny
+      use ModPhysics,             ONLY: No2Si_V,UnitB_
+      
+      real, intent(out)           :: LogFreqCutOff
+      integer, intent(in)         :: i,j,k,iBLK
+      real                        :: BtotSi
+      real,dimension(3)           :: FullB_D
+      character(len=*),parameter  :: NameSub = 'calc_cutoff_freq'
+      ! -----------------------------------------------------------------
+      FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBLK) + B0_DGB(x_:z_,i,j,k,iBLK)
+      
+      BtotSi = No2Si_V(UnitB_)*sqrt(sum(FullB_D**2))
+      if(BtotSi <=0.0) then
+         write(*,*) 'Btot negative, ',BtotSi
+      end if
+      LogFreqCutOff = log((cElectronCharge*BtotSi)/cProtonMass)
+      
+    end subroutine calc_cutoff_freq
+    
+  end subroutine user_update_states
   !========================================================================
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
     
-    use ModIO,         ONLY: write_myname
-    
+    ! user_get_log_var : allows the user to output spectral data to a dedicated log file.
+    !                       In order to use this option, the user must modify the PARAM.in file:
+    !                       - set the user flag UseUserLogVar to T                       
+    !                       - include the command #SAVELOGFILE, with the following format:
+    !                       #SAVELOGFILE
+    !                       T
+    !                       var
+    !                       dn
+    !                       dt
+    !                       'string'
+    !
+    !                       where 'string' can be set to 'spectrogram' or 'cellspectrum' (refer to the the SWMF
+    !                       user manual for further details on this command).
+    !                       'spectrogram' : the full wave spectrum along a line is extracted
+    !                       according to the parameters set in #SPECTROGRAM (see above). The data is
+    !                       written to a file called Spectrum_n_xxx_peyyy.tec, where xxx stands
+    !                       for simulation time/iteration number and yyy to the processor number. 
+    !                       Files from different processors should be combined later.
+    !                       
+    !                       'cellspectrum' : the full spectrum in a single cell is written to a file
+    !                       The cell is chosen by its x,y,z coordinates set in #CELLSPECTRUM (see above).
+    !                       The output is written to a file Cell_Spectrum_n_xxx_peyyy.tec. Since only
+    !                       one processor is involved, no post-processing is necessary.
+    ! -----------------------------------------------------------------------------------------------
+
+    use ModIO,                 ONLY: write_myname
+    use ModVarIndexes,         ONLY: nWave
+
     real, intent(out)              :: VarValue 
     character (LEN=10), intent(in) :: TypeVar 
     real, intent(in), optional     :: Radius
+    integer                        :: nWaveHalf
+ 
     !--------------------------------------------------------------------------
     ! This subroutine is used to output the wave spectrum to a file.
     ! No extravariables are defined for the log file here.
     VarValue = 0.0
-    
+    nWaveHalf = max(nWave/2,1)
+   
     select case(TypeVar)
-    case('spec')
+    case('spectrogram')
        ! write spectrum to file, extracted along a line (parallel to an axis).
        ! See description of #SPECTROGRAM command in the beginning of this module.
        call write_spectrogram
-    case('cellspec')
-       ! write spectrum to file, extracted from a single cell. Cell is chosen by #CELLSPEC
+    case('cellspectrum')
+       ! write spectrum to file, extracted from a single cell. Cell is chosen by #CELLSPECTRUM
        ! command (see description in the biginning of this module).
        call write_cell_spectrum
     case default
@@ -549,7 +601,7 @@ contains
         real                             :: IwPlusSi,IwMinusSi
         integer                          :: iFreq,i,j,k,iBLK
         integer                          :: iUnit,iError,aError
-        logical                          :: DoSaveCellSpec = .false.
+        logical                          :: DoSaveCellSpectrum = .false.
         character(len=40)                :: FileNameTec 
         character(len=11)                :: NameStage
         character(len=7)                 :: NameProc
@@ -565,11 +617,11 @@ contains
               dyHalf = dy_BLK(iBLK)/2.0
               dzHalf = dz_BLK(iBLK)/2.0
               
-              if((xTestSpec >= x - dxHalf ) .and. (xTestSpec <= x + dxHalf) .and. &
-                 (yTestSpec >= y - dyHalf ) .and. (yTestSpec <= y + dyHalf) .and. &
-                 (zTestSpec >= z - dzHalf ) .and. (zTestSpec <= z + dzHalf) ) then
+              if((xTestSpectrum >= x - dxHalf ) .and. (xTestSpectrum <= x + dxHalf) .and. &
+                 (yTestSpectrum >= y - dyHalf ) .and. (yTestSpectrum <= y + dyHalf) .and. &
+                 (zTestSpectrum >= z - dzHalf ) .and. (zTestSpectrum <= z + dzHalf) ) then
 
-                 DoSaveCellSpec = .true.
+                 DoSaveCellSpectrum = .true.
                  do iFreq=1,nWaveHalf
                     IwPlusSi  = No2Si_V(UnitP_)* &
                          State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)
@@ -584,7 +636,7 @@ contains
            end do; end do ; end do
         end do
     
-        if (DoSaveCellSpec) then
+        if (DoSaveCellSpectrum) then
            !\
            ! write data file
            !/
@@ -719,6 +771,12 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
+    ! user_set_plot_var : implement plot varaibles related to Alfven waves.
+    !                     'wpres' - total wave pressure (summed over spectrum).
+    !                     'poynt' - Poynting flux of Alfven waves neglecting plasma speed.
+    !                     'poyntur' - Poynting flux of Alfven waves.
+    ! ----------------------------------------------------------------------------------
+
     use ModAdvance, ONLY: State_VGB
     use ModPhysics, ONLY: NameTecUnit_V, NameIdlUnit_V, &
          No2Si_V,UnitPoynting_,UnitP_,UnitX_,UnitEnergyDens_
@@ -835,6 +893,9 @@ contains
   !=========================================================================== 
   subroutine user_specify_refinement(iBlock, iArea, DoRefine)
 
+    ! user_specify_refinement : improve refinement in the current sheet region.
+    ! ------------------------------------------------------------------------
+
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
     use ModNumConst, ONLY: cTiny
@@ -871,6 +932,10 @@ contains
 
   !============================================================================
   subroutine user_set_boundary_cells(iBLK)
+
+    ! user_set_boundary_cells :required when "extra" boundary conditions are used.
+    ! --------------------------------------------------------------------------
+
     use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, r_Blk
     use ModBoundaryCells, ONLY: SaveBoundaryCells
     use ModPhysics,       ONLY: rBody
