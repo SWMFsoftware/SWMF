@@ -385,7 +385,7 @@ contains
 
     integer :: i,j,k,iBLK
     logical :: oktest,oktest_me
-    real    :: Dens_BLK,Pres_BLK
+    real    :: Dens, Pres
     real    :: x,y,z,R,ROne,Rmax,U0
     !--------------------------------------------------------------------------
     call set_oktest('user_set_ics',oktest,oktest_me)
@@ -400,12 +400,12 @@ contains
        r = r_BLK(i,j,k,iBLK)
        State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
        call get_plasma_parameters_cell(i,j,k,iBLK,&
-            Dens_BLK,Pres_BLK)
-       State_VGB(rho_,i,j,k,iBLK) = Dens_BLK
-       State_VGB(P_,i,j,k,iBLK)   = Pres_BLK
-       State_VGB(RhoUx_,i,j,k,iBLK) = Dens_BLK *U0*x/R
-       State_VGB(RhoUy_,i,j,k,iBLK) = Dens_BLK *U0*y/R
-       State_VGB(RhoUz_,i,j,k,iBLK) = Dens_BLK *U0*z/R
+            Dens,Pres)
+       State_VGB(rho_,i,j,k,iBLK) = Dens
+       State_VGB(P_,i,j,k,iBLK)   = Pres
+       State_VGB(RhoUx_,i,j,k,iBLK) = Dens *U0*x/R
+       State_VGB(RhoUy_,i,j,k,iBLK) = Dens *U0*y/R
+       State_VGB(RhoUz_,i,j,k,iBLK) = Dens *U0*z/R
        State_VGB(Ew_,i,j,k,iBLK) = nWave*1.0e-30
 
     end do; end do; end do
