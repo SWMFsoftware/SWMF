@@ -33,7 +33,7 @@ Module ModUser
 ! 2. user_set_ic : intilize MHD parameters according to an isothermal atmosphere solution.
 ! -----------------------------------------------------------------------------
 ! 3. user_face_bc : set inner boundary conditions for MHD variables and Alfven waves.
-!                   Magnetic field B1 is set to equal to its tangential component.
+!                   Magnetic field B1 is set to equal its tangential component.
 !                   Reflective boundary conditions for velocity.
 !                   Density and pressure set according to isothermal atmosphere.
 !                   Alfven Waves: wave energy is present in the inner boundary only
@@ -212,10 +212,9 @@ contains
     !                   Rotating frame : if the non rotating frame is used, the x and y velocity components
     !                                    are adjusted.
     ! -----------------------------------------------------------------------------                            
-    use ModSize,             ONLY: East_,West_,South_,North_,Bot_,Top_,nDim
+    use ModSize,             ONLY: East_, West_, South_, North_, Bot_, Top_, nDim
     use ModMain,             ONLY: x_,y_,z_, UseRotatingFrame
-    use ModExpansionFactors!, ONLY: ExpansionFactorInv_N,get_interpolated,&
-                           !       get_total_wave_energy_dens
+    use ModExpansionFactors, ONLY: ExpansionFactorInv_N, get_interpolated
     use ModAdvance,          ONLY: State_VGB
     use ModPhysics,          ONLY: OmegaBody,No2Si_V,Si2No_V,UnitU_,UnitP_
     use ModNumConst,         ONLY: cTolerance
@@ -224,6 +223,9 @@ contains
     use ModWaves,            ONLY: set_wave_state
     
     real, intent(out)           :: VarsGhostFace_V(nVar)
+
+
+
     integer                     :: iCell,jCell,kCell
     real                        :: DensCell,PresCell,TBase,TotalB  
     real, dimension(3)          :: RFace_D,B1r_D,B1t_D, TotalB_D
