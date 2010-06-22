@@ -996,6 +996,19 @@ user          - user defined
 \end{verbatim}
 </command>
 
+<command name="OUTFLOWPRESSURE">
+	<parameter name="UseOutflowPressure" type="logical" default="F"/>
+	<parameter name="pOutflowSi" type="real" min="0" defaulte="1e5"
+						if="$UseOutflowPressure"/>
+
+#OUTFLOWPRESSUURE
+T			UseOutflowPressure
+1e5			pOutflowSi (read if UseOutflowPressure is true)
+
+Set pressure for "outflow" boundary condition. This matters for
+subsonic outflow. Default is UseOutflowPressure=.false.
+</command>
+
 <command name="INNERBOUNDARY">
 	<parameter name="TypeBcInner" type="string" case="lower"
 	input="select">
