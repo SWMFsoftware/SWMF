@@ -74,9 +74,12 @@ module ModWaves
 
 
 contains
+  !============================================================================ 
   subroutine read_spectrum
     use ModReadParam,  ONLY: read_var
-
+   !--------------------------------------------------------------------------
+    call read_var('NameSpectralFunction',NameSpectralFunction)
+ 
   end subroutine read_spectrum
   !============================================================================
   subroutine check_waves
