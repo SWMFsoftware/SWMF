@@ -60,6 +60,8 @@ module ModWaves
        SpectrumPlus_W  = 2.0/nWave , &
        SpectrumMinus_W = 2.0/nWave
 
+  ! Set the defualt type of spectral function. Default may be changed by using
+  ! the $SPECTRUM command in PARM.in
   character(LEN=10)::  NameSpectralFunction = 'uniform'
 
   !Parameters for different kinds of the specrral function
@@ -67,6 +69,10 @@ module ModWaves
   !real:: TRadSpectrum, EnergyMin
 
   !For power law: I\propto 1/f^{PowerIndex}, f> FreqStartSi
+ 
+  !This is the default power index the spectral function. 
+  ! The power law can be set to a different value by the #SPECTRUM command.
+  ! Note: PowerIndex is only used when NameSpectralFunction=='powerlaw'
   real:: PowerIndex = 5.0/3.0, FreqStartSi = -1.0
 
   real :: WaveEnergy = 0.0 !Auxiliary variable
@@ -76,10 +82,16 @@ module ModWaves
 contains
   !============================================================================ 
   subroutine read_spectrum
+
+    ! Set type of spectral function, when #SPECTRUM command is used.
+    ! Default type is 'uniform', representing a uniform (gray) spectrum.
+    ! In this case the value of PowerIndex will not be used.
+    ! If NameSpectralFunction=='powerlaw', PowerIndex should be set to the right value.
+  
     use ModReadParam,  ONLY: read_var
-   !--------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call read_var('NameSpectralFunction',NameSpectralFunction)
- 
+    call read_var('PowerIndex',PowerIndex)
   end subroutine read_spectrum
   !============================================================================
   subroutine check_waves
