@@ -243,27 +243,26 @@ contains
        call advance_lin_advection_minus(CFL,nCell,nGCLeft,nGCRight,Fminus_I,& 
             2.0,.true.,IsNegativeEnergy)
     
-       ! exact sln. for square pulse
-       !do iCell = 1, nCell
-       !   FrefPlus = 0.0
-       !   FrefMinus = 0.0
-       !   if(iCell>=5+nStep .and. iCell<=15+nStep) FrefPlus = 1.0
-       !   if(iCell>= nCell-15-nStep .and. iCell<=nCell-5-nStep) FrefMinus = 1.0
-       !   !end do
-    
-       ! write sln to file
-       write(NameStage,'(i4.4)') iStep
-       FileNameTec = 'LinAdvOut/Linear_advection_n_'//trim(NameStage)//'.dat'
-       open(UNITTMP_,file=FileNameTec,form='formatted', access='sequential',&
-            status='replace')
-       write(UNITTMP_, '(a)') 'Title: Test Linear Advection'
-       write(UNITTMP_, '(a)') 'Variables = "Cell","I+","I-"'
-       write(UNITTMP_, '(a,i3.3,a,i5.5,a)') 'Zone I= ',nCell,' F=point'
-       do iCell =1,nCell
-          write(UNITTMP_,'(i3.3,e14.6,e14.6)') iCell,Fplus_I(iCell), Fminus_I(iCell)
-       end do
-       close(UNITTMP_)
     end do
+    
+    ! write sln to file
+    ! Deafault output file name
+    FileNameTec = 'test_linear_advection.tmp'
+
+    ! use this filename when an output file for each iteration is desired
+    ! write(NameStage,'(i4.4)') iStep
+    ! FileNameTec = 'LinAdvOut/Linear_advection_n_'//trim(NameStage)//'.dat'
+      
+    open(UNITTMP_,file=FileNameTec,form='formatted', access='sequential',&
+         status='replace')
+    write(UNITTMP_, '(a)') 'Title: Test Linear Advection'
+    write(UNITTMP_, '(a)') 'Variables = "Cell","I+","I-"'
+    write(UNITTMP_, '(a,i3.3,a,i5.5,a)') 'Zone I= ',nCell,' F=point'
+    do iCell =1,nCell
+       write(UNITTMP_,'(i3.3,e14.6,e14.6)') iCell,Fplus_I(iCell), Fminus_I(iCell)
+    end do
+    close(UNITTMP_)
+    
 end subroutine test_linear_advection
   !====================SUPERBEE LIMITER =======================================!
   real function df_lim(F_I)
