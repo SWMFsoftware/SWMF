@@ -13,6 +13,7 @@ test_help:
 	@echo "    test MPIRUN=               (run all tests serially)"
 	@echo "    test MPIRUN='mpirun -np 3' (run test with mpirun -np 3)"
 	@echo "    test MPIRUN='mprun -np 2'  (run test with mprun -np 2)"
+	@echo "    test_share_library         (run test share/Library only)"
 	@echo "    test_comp                  (run component tests only)"
 	@echo "    test_lc                    (run LC/BATSRUS only)"
 	@echo "    test_pw                    (run PW/PWOM test only)"
@@ -27,6 +28,7 @@ test_help:
 
 test:
 	@rm -f *.diff
+	-@(make test_share_library)
 	-@(make test_comp)
 	-@(make test_lc)
 	-@(make test_pw)
@@ -40,17 +42,25 @@ test:
 	-@(make test_check)
 
 test_check:
-	@ls -ltr ??/*/*.diff *.diff > test_swmf.res
+	-@ls -ltr share/Library/test/*.diff ??/*/*.diff *.diff > test_swmf.res
 	@cat test_swmf.res
 	@echo '=============================================================='\
 		>> test_swmf.res
-	@head -100 ??/*/*.diff *.diff >> test_swmf.res
+	-@head -100 share/Library/test/*.diff ??/*/*.diff *.diff \
+		>> test_swmf.res
 	@echo ' '
 	@echo 'See test_swmf.res and test_swmf.log for more detail...'
 	@echo ' '
 	@echo '=============================================================='\
 		>> test_swmf.res
 	-@cat GM/BATSRUS/test_func.speed >> test_swmf.res
+
+### Unit tests of the share/Library
+
+test_share_library:
+	rm -f share/Library/test/*.diff
+	cd share/Library/test; make test
+	ls -l share/Library/test/*.diff
 
 ### Component tests ###
 
