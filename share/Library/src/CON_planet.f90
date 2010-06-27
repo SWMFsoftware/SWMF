@@ -19,7 +19,7 @@ module CON_planet
   !USES:
   use ModNumConst, ONLY: cTwoPi
   use ModPlanetConst
-  use ModTimeConvert, ONLY: TimeType
+  use ModTimeConvert, ONLY: TimeType, time_int_to_real
 
   !REVISION HISTORY:
   ! 01Aug03 - Aaron Ridly <ridley@umich.edu> and 
@@ -123,10 +123,12 @@ contains
          iSecondEquinoxPlanet_I(Earth_), &
          FracSecondEquinoxPlanet_I(Earth_), &
          0.0_Real8_, '20000320073500')
+    call time_int_to_real(TimeEquinox)
     TypeBField       = TypeBFieldPlanet_I(Earth_)
     DipoleStrength   = DipoleStrengthPlanet_I(Earth_)
     MagAxisThetaGeo  = bAxisThetaPlanet_I(Earth_)     
     MagAxisPhiGeo    = bAxisPhiPlanet_I(Earth_)       
+
     
   end subroutine set_planet_defaults
 
