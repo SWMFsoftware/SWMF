@@ -222,7 +222,7 @@ contains
     implicit none
     
     integer,parameter                          :: nGCLeft=1, nGCRight=1     
-    integer,parameter                          :: nCell= 80,nStep=100
+    integer,parameter                          :: nCell= 80,nStep=40
     integer                                    :: iCell, iStep
     real                                       :: FrefPlus, FrefMinus
     real,dimension(nCell),parameter            ::CFL = 0.9
