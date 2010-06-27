@@ -372,11 +372,13 @@ contains
     ! testing the read_lookup_table_param is left for the functionality tests
 
     type(TableType), pointer :: Ptr, Ptr2
-    integer :: iTable
+    integer :: iTable, iProc, iError
     real :: p_I(3), pGood_I(3)
 
     character(len=*), parameter:: NameSub = 'test_lookup_table'
     !------------------------------------------------------------------------
+    call MPI_comm_rank(MPI_COMM_WORLD,iProc,iError)
+
     nTable = 1
     Ptr => Table_I(1)
     Ptr%NameCommand = "save"
@@ -391,7 +393,7 @@ contains
     Ptr%IndexMax_I  = (/log10(1000.0), 10.0/)
     Ptr%dIndex_I    = (Ptr%IndexMax_I - Ptr%IndexMin_I)/(Ptr%nIndex_I - 1)
 
-    write(*,*)'testing i_lookup_table'
+    if(iProc==0) write(*,*)'testing i_lookup_table'
     iTable = i_lookup_table("xxx")
     if(iTable /= -1)then
        write(*,*)'iTable = ',iTable,' should be -1'
@@ -403,10 +405,10 @@ contains
        call CON_stop(NameSub)
     end if
 
-    write(*,*)'testing make_lookup_table'
+    if(iProc==0) write(*,*)'testing make_lookup_table'
     call make_lookup_table(1, eos_rho_e, MPI_COMM_WORLD)
 
-    write(*,*)'testing interpolate_lookup_table'    
+    if(iProc==0) write(*,*)'testing interpolate_lookup_table'    
     call interpolate_lookup_table(1, 1.0, 2.0, p_I)
     ! rho=1.0 is exactly in the middle, e=2.0 is also an index, so exact result
 
@@ -416,7 +418,7 @@ contains
        call CON_stop(NameSub)
     end if
 
-    write(*,*)'testing load_lookup_table'
+    if(iProc==0) write(*,*)'testing load_lookup_table'
 
     ! Load the saved file into the second table
     nTable = 2
@@ -428,7 +430,7 @@ contains
 
     call load_lookup_table(2)
 
-    write(*,*)'testing i_lookup_table for table 2'
+    if(iProc==0) write(*,*)'testing i_lookup_table for table 2'
     iTable = i_lookup_table("RhoE2")
     if(iTable /= 2)then
        write(*,*)'iTable = ',iTable,' should be 2'
@@ -449,7 +451,7 @@ contains
        call CON_stop(NameSub)
     end if
 
-    write(*,*)'testing interpolate_lookup_table for loaded table'
+    if(iProc==0) write(*,*)'testing interpolate_lookup_table for loaded table'
     call interpolate_lookup_table(2, 1.0, 2.0, p_I)
     if(any(abs(p_I - pGood_I) > 1e-5))then
        write(*,*)'p_I=',p_I,' is different from pGood_I=',pGood_I
