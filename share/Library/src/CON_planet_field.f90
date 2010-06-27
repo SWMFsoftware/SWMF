@@ -509,11 +509,12 @@ contains
     integer :: iHemisphere
     !------------------------------------------------------------------------
 
-    call init_axes(TimeEquinox % Time)
-
     write(*,*)
     write(*,'(a)')'TEST GET_PLANET_FIELD'
     write(*,*)
+
+    write(*,*) 'TimeEquinox=', TimeEquinox
+    call init_axes(TimeEquinox % Time)
 
     xSmg_D = (/1.0, 1.0, 0.1/)
     write(*,'(a,3f5.0)')'Location xSmg_D = ',xSmg_D
