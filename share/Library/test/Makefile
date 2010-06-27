@@ -154,13 +154,11 @@ test_linear_advection_exe:
 
 test_linear_advection:
 	@echo test_linear_advection starting	>  test_linear_advection.diff
-	@rm -rf LinAdvOut		
-	@mkdir LinAdvOut
 	@make test_linear_advection_exe		>> test_linear_advection.diff
 	@echo ./test_linear_advection.exe	>> test_linear_advection.diff
 	-@(./test_linear_advection.exe)
 	-@(${SCRIPTDIR}/DiffNum.pl \
-		LinAdvOut/Linear_advection_n_0100.dat \
+		test_linear_advection.tmp \
 		test_linear_advection.log	>  test_linear_advection.diff)
 	@ls -l test_linear_advection.diff
 
@@ -414,4 +412,4 @@ test_utilities:
 	@ls -l test_utilities.diff
 
 distclean: clean
-	rm -rf *.tmp *.diff test*.out LinAdvOut
+	rm -rf *.tmp *.diff test*.out
