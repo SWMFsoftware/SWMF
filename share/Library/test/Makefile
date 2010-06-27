@@ -11,21 +11,22 @@ MPIRUN = mpirun -np 2
 help:
 	@echo "You can test the following modules in ../src:"
 	@echo
-	@echo "   test_time_convert     - test ModTimeConvert"
+	@echo "   test_axes             - test CON_axes"
 	@echo "   test_coord_transform  - test ModTimeConvert"
 	@echo "   test_freq             - test ModFreq"
-	@echo "   test_linear_solver    - test ModLinearSolver"
+	@echo "   test_geopack          - test CON_geopack"
+	@echo "   test_line_extract     - test CON_line_extract"
 	@echo "   test_linear_advection - test ModLinearAdvection"
-	@echo "   test_sort             - test ModSort"
-	@echo "   test_io_unit          - test ModIoUnit"
-	@echo "   test_interpolate      - test ModInterpolate"
+	@echo "   test_linear_solver    - test ModLinearSolver"
 	@echo "   test_lookup_table     - test ModLookupTable"
+	@echo "   test_sort             - test ModSort"
+	@echo "   test_interpolate      - test ModInterpolate"
+	@echo "   test_io_unit          - test ModIoUnit"
+	@echo "   test_planet_field     - test CON_planet_field"
 	@echo "   test_plot_file        - test ModPlotFile"
 	@echo "   test_ray_trace        - test CON_ray_trace"
-	@echo "   test_line_extract     - test CON_line_extract"
-	@echo "   test_geopack          - test CON_geopack"
-	@echo "   test_axes             - test CON_axes"
-	@echo "   test_planet_field     - test CON_planet_field"
+	@echo "   test_time_convert     - test ModTimeConvert"
+	@echo "   test_utilities        - test ModUtilities"
 	@echo "   test                  - test all the above"
 	@echo
 	@echo "To test everything with easy to read output try"
@@ -52,7 +53,8 @@ test: \
 	test_axes \
 	test_planet_field \
 	test_plot_file \
-	test_linear_advection
+	test_linear_advection \
+	test_utilities
 
 #######################################################################
 OBJ_TIME_CONVERT = \
@@ -447,6 +449,7 @@ test_lookup_table:
 	@echo
 	@echo test_lookup_table done
 	@echo -----------------------------------------------------------------
+
 #######################################################################
 
 OBJ_UTILITIES = \
@@ -464,8 +467,11 @@ test_utilities:
 	@echo
 	@make test_utilities_exe
 	@echo
-	@echo './test_utilities.exe'
-	-@(./test_utilities.exe)
+	@rm -f test_utilites.tmp test_utilites.diff
+	@echo './test_utilities.exe > test_utilites.tmp'
+	-@(./test_utilities.exe > test_utilities.tmp)
+	-@(diff test_utilities.tmp test_utilities.log > test_utilities.diff)
+	-@(ls -l test_utilities.diff)
 	@echo
 	@echo test_utilities done
 	@echo -----------------------------------------------------------------
