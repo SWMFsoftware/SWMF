@@ -1074,7 +1074,6 @@ contains
     if(.not.DoInitializeAxes) write(*,*)'test failed: DoInitializeAxes=',&
          DoInitializeAxes,' should be true'
 
-write(*,*) "+++++++++++++++++++ CON_axes.f90 +++++ test_axese"
     call time_int_to_real(TimeEquinox)
     if(TimeEquinox % Time <= 0.0) write(*,*)'test failed: TimeEquinox =',&
          TimeEquinox,' should have a large positive double in the %Time field'
@@ -1082,7 +1081,7 @@ write(*,*) "+++++++++++++++++++ CON_axes.f90 +++++ test_axese"
     write(*,'(a)')'Testing init_axes'
     dLongitudeHgi = -1.0
     dLongitudeHgr = 0.0
-write(*,*) '****** call from CON_axes.f90 : init_axes ************'
+
     call init_axes(TimeEquinox % Time)
 
     if(tStart /= TimeEquinox % Time)write(*,*)'test init_axes failed: ',&
