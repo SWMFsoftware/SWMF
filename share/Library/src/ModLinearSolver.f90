@@ -1613,7 +1613,7 @@ contains
     State_GV(:,rhou_)= 2.0*State_GV(:,rho_);
     State_GV(:,p_)   = 3.0; State_GV(5:10,p_) = 6.0
 
-    open(UNITTMP_, file='linear_solver.out', status='replace')
+    open(UNITTMP_, file='test_linear_solver.out', status='replace')
     Time = 0.0
     call save_plot(0, Time, nCell, nVar, State_GV)
     do iStep = 1, nStep
