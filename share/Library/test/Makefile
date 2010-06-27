@@ -15,16 +15,16 @@ help:
 	@echo "   test_coord_transform  - test ModTimeConvert"
 	@echo "   test_freq             - test ModFreq"
 	@echo "   test_geopack          - test CON_geopack"
+	@echo "   test_interpolate      - test ModInterpolate"
+	@echo "   test_io_unit          - test ModIoUnit"
 	@echo "   test_line_extract     - test CON_line_extract"
 	@echo "   test_linear_advection - test ModLinearAdvection"
 	@echo "   test_linear_solver    - test ModLinearSolver"
 	@echo "   test_lookup_table     - test ModLookupTable"
-	@echo "   test_sort             - test ModSort"
-	@echo "   test_interpolate      - test ModInterpolate"
-	@echo "   test_io_unit          - test ModIoUnit"
 	@echo "   test_planet_field     - test CON_planet_field"
 	@echo "   test_plot_file        - test ModPlotFile"
 	@echo "   test_ray_trace        - test CON_ray_trace"
+	@echo "   test_sort             - test ModSort"
 	@echo "   test_time_convert     - test ModTimeConvert"
 	@echo "   test_utilities        - test ModUtilities"
 	@echo "   test                  - test all the above"
@@ -39,22 +39,23 @@ help:
 	@echo
 	@echo "The default value for MPIRUN is mpirun -np 2."
 
-test: \
-	test_time_convert \
+test:   test_axes \
 	test_coord_transform \
 	test_freq \
-	test_sort \
+	test_geopack \
 	test_io_unit \
 	test_interpolate \
-	test_lookup_table \
-	test_ray_trace \
 	test_line_extract \
-	test_geopack \
-	test_axes \
+	test_linear_advection \
+	test_linear_solver \
+	test_lookup_table \
 	test_planet_field \
 	test_plot_file \
-	test_linear_advection \
+	test_ray_trace \
+	test_sort \
+	test_time_convert \
 	test_utilities
+	@ls -l *.diff
 
 #######################################################################
 OBJ_TIME_CONVERT = \
@@ -67,16 +68,13 @@ test_time_convert_exe:
 	${LINK.f90} -o test_time_convert.exe ${OBJ_TIME_CONVERT} ${Lflag2}
 
 test_time_convert:
-	@echo -----------------------------------------------------------------
-	@echo test_time_convert starting
-	@echo
-	@make test_time_convert_exe
-	@echo
-	@echo ./test_time_convert.exe
-	-@(./test_time_convert.exe)
-	@echo
-	@echo test_time_convert done
-	@echo -----------------------------------------------------------------
+	@echo test_time_convert starting        > test_time_convert.diff
+	@make test_time_convert_exe            >> test_time_convert.diff
+	@echo ./test_time_convert.exe          >> test_time_convert.diff
+	-@(./test_time_convert.exe > test_time_convert.tmp)
+	-@(diff test_time_convert.tmp test_time_convert.log \
+						> test_time_convert.diff)
+	@ls -l test_time_convert.diff
 
 #######################################################################
 OBJ_COORD_TRANSFORM = \
@@ -91,18 +89,14 @@ test_coord_transform_exe:
 
 test_coord_transform: 
 	@echo -----------------------------------------------------------------
-	@echo test_coord_transform starting
-	@echo
-	@make test_coord_transform_exe
-	@echo
-	@echo './test_coord_transform.exe > test_coord_transform.tmp'
+	@echo test_coord_transform starting     > test_coord_transform.diff
+	@make test_coord_transform_exe         >> test_coord_transform.diff
+	@echo ./test_coord_transform.exe       >> test_coord_transform.diff
 	-@(./test_coord_transform.exe > test_coord_transform.tmp)
-	@echo 'DiffNum.pl test_coord_transform.tmp test_coord_transform.log'
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-12 \
-		test_coord_transform.tmp test_coord_transform.log)
-	@echo
-	@echo test_coord_transform done
-	@echo -----------------------------------------------------------------
+		test_coord_transform.tmp test_coord_transform.log \
+						> test_coord_transform.diff)
+	@ls -l test_coord_transform.diff
 
 #######################################################################
 OBJ_FREQ = \
@@ -115,16 +109,12 @@ test_freq_exe:
 	${LINK.f90} -o test_freq.exe ${OBJ_FREQ} ${Lflag2}
 
 test_freq:
-	@echo -----------------------------------------------------------------
-	@echo test_freq starting
-	@echo
-	@make test_freq_exe
-	@echo
-	@echo './test_freq.exe'
-	-@(./test_freq.exe)
-	@echo
-	@echo test_freq done
-	@echo -----------------------------------------------------------------
+	@echo test_freq starting		>  test_freq.diff
+	@make test_freq_exe			>> test_freq.diff
+	@echo './test_freq.exe'			>> test_freq.diff
+	-@(./test_freq.exe > test_freq.tmp)
+	-@(diff test_freq.tmp test_freq.log)	>  test_freq.diff
+	@ls -l test_freq.diff
 
 #######################################################################
 OBJ_LINEAR_SOLVER = \
@@ -142,16 +132,15 @@ test_linear_solver_exe:
 	${LINK.f90} -o test_linear_solver.exe ${OBJ_LINEAR_SOLVER} ${Lflag1}
 
 test_linear_solver:
-	@echo -----------------------------------------------------------------
-	@echo test_linear_solver starting
-	@echo
-	@make test_linear_solver_exe
-	@echo
-	@echo './test_linear_solver.exe'
-	-@(./test_linear_solver.exe)
-	@echo
-	@echo test_linear_solver done
-	@echo -----------------------------------------------------------------
+	@echo test_linear_solver starting 	>  test_linear_solver.diff
+	@make test_linear_solver_exe		>> test_linear_solver.diff
+	@echo ./test_linear_solver.exe		>> test_linear_solver.diff
+	-@(./test_linear_solver.exe > test_linear_solver.tmp)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-12 \
+		test_linear_solver.tmp test_linear_solver.log \
+						>  test_linear_solver.diff)
+	@ls -l test_linear_solver.diff
+
 #######################################################################
 OBJ_LINEAR_ADVECTION = \
 	test_linear_advection.o \
@@ -163,26 +152,17 @@ test_linear_advection_exe:
 	${LINK.f90} -o test_linear_advection.exe ${OBJ_LINEAR_ADVECTION} ${Lflag1}
 
 test_linear_advection:
-	@echo -----------------------------------------------------------------
-	@echo test_linear_advection starting
-	@echo
-	rm -rf LinAdvOut		
-	mkdir LinAdvOut
-	@make test_linear_advection_exe
-	@echo
-	@echo './test_linear_advection.exe'
+	@echo test_linear_advection starting	>  test_linear_advection.diff
+	@rm -rf LinAdvOut		
+	@mkdir LinAdvOut
+	@make test_linear_advection_exe		>> test_linear_advection.diff
+	@echo ./test_linear_advection.exe	>> test_linear_advection.diff
 	-@(./test_linear_advection.exe)
-	@echo 
-	@echo 'Output files saves in directory LinAdvOut.'
-	@echo
-	@echo DiffNum.pl LinAdvOut/Linear_advection_n_0100.dat linear_advection.ref
 	-@(${SCRIPTDIR}/DiffNum.pl \
-	LinAdvOut/Linear_advection_n_0100.dat linear_advection.ref) > \
-	linear_advection.diff
-	@echo
-	@echo test_linear_advection done
-	@echo -----------------------------------------------------------------
-	ls -la linear_advection.diff
+		LinAdvOut/Linear_advection_n_0100.dat test_linear_advection.log \
+		> test_linear_advection.diff)
+	@ls -l test_linear_advection.diff
+
 #######################################################################
 OBJ_SORT = \
 	test_sort.o \
@@ -194,16 +174,12 @@ test_sort_exe:
 	${LINK.f90} -o test_sort.exe ${OBJ_SORT} ${Lflag2}
 
 test_sort:
-	@echo -----------------------------------------------------------------
-	@echo test_sort starting
-	@echo
-	@make test_sort_exe
-	@echo
-	@echo './test_sort.exe'
-	-@(./test_sort.exe)
-	@echo
-	@echo test_sort done
-	@echo -----------------------------------------------------------------
+	@echo test_sort starting		>  test_sort.diff
+	@make test_sort_exe			>> test_sort.diff
+	@echo ./test_sort.exe			>> test_sort.diff
+	-@(./test_sort.exe > test_sort.tmp)
+	-@(diff test_sort.tmp test_sort.log 	>  test_sort.diff)
+	@ls -l test_sort.diff
 
 #######################################################################
 OBJ_IO_UNIT = \
@@ -216,16 +192,12 @@ test_io_unit_exe:
 	${LINK.f90} -o test_io_unit.exe ${OBJ_IO_UNIT} ${Lflag2}
 
 test_io_unit:
-	@echo -----------------------------------------------------------------
-	@echo test_io_unit starting
-	@echo
-	@make test_io_unit_exe
-	@echo
-	@echo ./test_io_unit.exe
-	-@(./test_io_unit.exe)
-	@echo
-	@echo test_io_unit done
-	@echo -----------------------------------------------------------------
+	@echo test_io_unit starting			>  test_io_unit.diff
+	@make test_io_unit_exe				>> test_io_unit.diff
+	@echo ./test_io_unit.exe			>> test_io_unit.diff
+	-@(./test_io_unit.exe > test_io_unit.tmp)
+	-@(diff test_io_unit.tmp test_io_unit.log	>  test_io_unit.diff)
+	@ls -l test_io_unit.diff
 
 #######################################################################
 OBJ_INTERPOLATE = \
@@ -238,16 +210,13 @@ test_interpolate_exe:
 	${LINK.f90} -o test_interpolate.exe ${OBJ_INTERPOLATE} ${Lflag2}
 
 test_interpolate:
-	@echo -----------------------------------------------------------------
-	@echo test_interpolate starting
-	@echo
-	@make test_interpolate_exe
-	@echo
-	@echo './test_interpolate_exe'
-	-@(./test_interpolate.exe)
-	@echo
-	@echo test_interpolate done
-	@echo -----------------------------------------------------------------
+	@echo test_interpolate starting		>  test_interpolate.diff
+	@make test_interpolate_exe		>> test_interpolate.diff
+	@echo ./test_interpolate_exe		>> test_interpolate.diff
+	-@(./test_interpolate.exe > test_interpolate.tmp)
+	-@(diff test_interpolate.tmp test_interpolate.log \
+						>  test_interpolate.diff)
+	@ls -l test_interpolate.diff
 
 #######################################################################
 OBJ_RAY_TRACE = \
@@ -262,18 +231,13 @@ test_ray_trace_exe:
 		test_ray_trace.o ${OBJ_RAY_TRACE} ${Lflag1}
 
 test_ray_trace:
-	@echo -----------------------------------------------------------------
-	@echo test_ray_trace starting
-	@echo
-	@make test_ray_trace_exe
-	@echo
-	@echo '${MPIRUN} test_ray_trace.exe > test_ray_trace.tmp'
+	@echo test_ray_trace starting		>  test_ray_trace.diff
+	@make test_ray_trace_exe		>> test_ray_trace.diff
+	@echo ${MPIRUN} test_ray_trace.exe	>> test_ray_trace.diff
 	-@${MPIRUN} test_ray_trace.exe > test_ray_trace.tmp
-	@echo 'diff test_ray_trace.tmp test_ray_trace.log'
-	-@(diff test_ray_trace.tmp test_ray_trace.log)
-	@echo
-	@echo test_ray_trace done
-	@echo -----------------------------------------------------------------
+	-@(diff test_ray_trace.tmp test_ray_trace.log \
+						>  test_ray_trace.diff)
+	@ls -l test_ray_trace.diff
 
 #######################################################################
 OBJ_LINE_EXTRACT = \
@@ -289,16 +253,13 @@ test_line_extract_exe: ${OBJ_LINE_EXTRACT}
 	${LINK.f90} -o test_line_extract.exe ${OBJ_LINE_EXTRACT} ${Lflag1}
 
 test_line_extract:
-	@echo -----------------------------------------------------------------
-	@echo test_line_extract starting
-	@echo
-	@make test_line_extract_exe
-	@echo
-	@echo '${MPIRUN} test_line_extract.exe'
-	-@(${MPIRUN} test_line_extract.exe)
-	@echo
-	@echo test_line_extract done
-	@echo -----------------------------------------------------------------
+	@echo test_line_extract starting	>  test_line_extract.diff
+	@make test_line_extract_exe		>> test_line_extract.diff
+	@echo ${MPIRUN} test_line_extract.exe	>> test_line_extract.diff
+	-@(${MPIRUN} test_line_extract.exe > test_line_extract.tmp)
+	-@(diff test_line_extract.tmp test_line_extract.log \
+						>  test_line_extract.diff)
+	@ls -l test_line_extract.diff
 
 #######################################################################
 OBJ_GEOPACK = \
@@ -312,19 +273,13 @@ test_geopack_exe:
 	${LINK.f90} -o test_geopack.exe ${OBJ_GEOPACK} ${Lflag2}
 
 test_geopack:
-	@echo -----------------------------------------------------------------
-	@echo test_geopack starting
-	@echo
-	@make test_geopack_exe
-	@echo
-	@echo './test_geopack.exe > test_geopack.tmp'
+	@echo test_geopack starting			>  test_geopack.diff
+	@make test_geopack_exe				>> test_geopack.diff
+	@echo ./test_geopack.exe			>> test_geopack.diff
 	-@(./test_geopack.exe > test_geopack.tmp)
-	@echo DiffNum.pl -b -r=1e-8 test_geopack.tmp test_geopack.log
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
-		test_geopack.tmp test_geopack.log)
-	@echo
-	@echo test_geopack done
-	@echo -----------------------------------------------------------------
+		test_geopack.tmp test_geopack.log	>  test_geopack.diff)
+	@ls -l test_geopack.diff
 
 #######################################################################
 OBJ_AXES = \
@@ -349,16 +304,13 @@ test_axes_exe:
 	${LINK.f90} -o test_axes.exe ${OBJ_AXES} ${Lflag1}
 
 test_axes: 
-	@echo -----------------------------------------------------------------
-	@echo test_axes starting
-	@echo
-	@make test_axes_exe
-	@echo
-	@echo './test_axes.exe'
-	-@(./test_axes.exe)
-	@echo
-	@echo test_axes done
-	@echo -----------------------------------------------------------------
+	@echo test_axes starting			>  test_axes.diff
+	@make test_axes_exe				>> test_axes.diff
+	@echo ./test_axes.exe				>> test_axes.diff
+	-@(./test_axes.exe > test_axes.tmp)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-12 \
+		test_axes.tmp test_axes.log 		> test_axes.diff)
+	@ls -l test_axes.diff
 
 #######################################################################
 OBJ_PLANET_FIELD = \
@@ -382,19 +334,16 @@ test_planet_field_exe:
 	${LINK.f90} -o test_planet_field.exe ${OBJ_PLANET_FIELD} ${Lflag1}
 
 test_planet_field: 
-	@echo -----------------------------------------------------------------
-	@echo test_planet_field starting
+	@echo test_planet_field starting	>  test_planet_field.diff
+	@make test_planet_field_exe		>> test_planet_field.diff
 	@echo
-	make test_planet_field_exe
-	@echo
-	@echo './test_planet_field.exe > test_planet_field.tmp'
+	@echo ./test_planet_field.exe 		>> test_planet_field.diff
 	-(./test_planet_field.exe > test_planet_field.tmp)
-	@echo DiffNum.pl -b -r=1e-6 test_planet_field.tmp test_planet_field.log
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
-		 test_planet_field.tmp test_planet_field.log)
-	@echo
-	@echo test_planet_field done
-	@echo -----------------------------------------------------------------
+		test_planet_field.tmp test_planet_field.log \
+						>  test_planet_field.diff)
+	@ls -l test_planet_field.diff
+
 #######################################################################
 
 OBJ_PLOT_FILE = \
@@ -409,16 +358,14 @@ test_plot_file_exe:
 	${LINK.f90} -o test_plot_file.exe ${OBJ_PLOT_FILE} ${Lflag2}
 
 test_plot_file:
-	@echo -----------------------------------------------------------------
-	@echo test_plot_file starting
-	@echo
-	@make test_plot_file_exe
-	@echo
-	@echo './test_plot_file.exe'
-	-@(./test_plot_file.exe)
-	@echo
-	@echo test_plot_file done
-	@echo -----------------------------------------------------------------
+	@echo test_plot_file starting	>  test_plot_file.diff
+	@make test_plot_file_exe	>> test_plot_file.diff
+	@echo ./test_plot_file.exe	>> test_plot_file.diff
+	-@(./test_plot_file.exe > test_plot_file.tmp)
+	-@(diff test_plot_file.tmp test_plot_file.log \
+					>  test_plot_file.diff)
+	@ls -l test_plot_file.diff
+
 #######################################################################
 
 OBJ_LOOKUP_TABLE = \
@@ -438,17 +385,13 @@ test_lookup_table_exe:
 	${LINK.f90} -o test_lookup_table.exe ${OBJ_LOOKUP_TABLE} ${Lflag1}
 
 test_lookup_table:
-	@echo -----------------------------------------------------------------
-	@echo test_lookup_table starting
-	@echo
-	@make test_lookup_table_exe
-	@echo
-	@echo '${MPIRUN} test_lookup_table.exe'
-	-@(${MPIRUN} test_lookup_table.exe) | grep -i -C2 'error' \
-		> test_lookup_table.diff
-	@echo
-	@echo test_lookup_table done
-	@echo -----------------------------------------------------------------
+	@echo test_lookup_table starting	>  test_lookup_table.diff
+	@make test_lookup_table_exe		>> test_lookup_table.diff
+	@echo ${MPIRUN} test_lookup_table.exe  >> test_lookup_table.diff
+	-@(${MPIRUN} test_lookup_table.exe > test_lookup_table.tmp)
+	-@(diff test_lookup_table.tmp test_lookup_table.log \
+						> test_lookup_table.diff)
+	@ls -l test_lookup_table.diff
 
 #######################################################################
 
@@ -462,19 +405,13 @@ test_utilities_exe:
 	${LINK.f90} -o test_utilities.exe ${OBJ_UTILITIES} ${Lflag2}
 
 test_utilities:
-	@echo -----------------------------------------------------------------
-	@echo test_utilities starting
-	@echo
-	@make test_utilities_exe
-	@echo
-	@rm -f test_utilites.tmp test_utilites.diff
-	@echo './test_utilities.exe > test_utilites.tmp'
+	@echo test_utilities starting		>  test_utilities.diff
+	@make test_utilities_exe		>> test_utilities.diff
+	@echo ./test_utilities.exe		>> test_utilities.diff
 	-@(./test_utilities.exe > test_utilities.tmp)
-	-@(diff test_utilities.tmp test_utilities.log > test_utilities.diff)
-	-@(ls -l test_utilities.diff)
-	@echo
-	@echo test_utilities done
-	@echo -----------------------------------------------------------------
+	-@(diff test_utilities.tmp test_utilities.log \
+						>  test_utilities.diff)
+	@ls -l test_utilities.diff
 
 distclean: clean
-	rm -f *.tmp
+	rm -rf *.tmp *.diff test*.out LinAdvOut
