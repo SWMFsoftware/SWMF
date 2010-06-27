@@ -55,6 +55,7 @@ test:   test_axes \
 	test_sort \
 	test_time_convert \
 	test_utilities
+	@echo ---------------------------------------------------------
 	@ls -l *.diff
 
 #######################################################################
@@ -88,7 +89,6 @@ test_coord_transform_exe:
 		${Lflag2}
 
 test_coord_transform: 
-	@echo -----------------------------------------------------------------
 	@echo test_coord_transform starting     > test_coord_transform.diff
 	@make test_coord_transform_exe         >> test_coord_transform.diff
 	@echo ./test_coord_transform.exe       >> test_coord_transform.diff
@@ -149,7 +149,8 @@ OBJ_LINEAR_ADVECTION = \
 test_linear_advection_exe:
 	@(cd ../src; make ModLinearAdvection.o)
 	@make test_linear_advection.o
-	${LINK.f90} -o test_linear_advection.exe ${OBJ_LINEAR_ADVECTION} ${Lflag1}
+	${LINK.f90} -o test_linear_advection.exe ${OBJ_LINEAR_ADVECTION} \
+		${Lflag1}
 
 test_linear_advection:
 	@echo test_linear_advection starting	>  test_linear_advection.diff
@@ -159,8 +160,8 @@ test_linear_advection:
 	@echo ./test_linear_advection.exe	>> test_linear_advection.diff
 	-@(./test_linear_advection.exe)
 	-@(${SCRIPTDIR}/DiffNum.pl \
-		test_linear_advection.tmp test_linear_advection.log \
-		> test_linear_advection.diff)
+		LinAdvOut/Linear_advection_n_0100.dat \
+		test_linear_advection.log	>  test_linear_advection.diff)
 	@ls -l test_linear_advection.diff
 
 #######################################################################
@@ -309,7 +310,7 @@ test_axes:
 	@echo ./test_axes.exe				>> test_axes.diff
 	-@(./test_axes.exe > test_axes.tmp)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-12 \
-		test_axes.tmp test_axes.log 		> test_axes.diff)
+		test_axes.tmp test_axes.log 		>  test_axes.diff)
 	@ls -l test_axes.diff
 
 #######################################################################
@@ -336,7 +337,6 @@ test_planet_field_exe:
 test_planet_field: 
 	@echo test_planet_field starting	>  test_planet_field.diff
 	@make test_planet_field_exe		>> test_planet_field.diff
-	@echo
 	@echo ./test_planet_field.exe 		>> test_planet_field.diff
 	-(./test_planet_field.exe > test_planet_field.tmp)
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
@@ -387,10 +387,10 @@ test_lookup_table_exe:
 test_lookup_table:
 	@echo test_lookup_table starting	>  test_lookup_table.diff
 	@make test_lookup_table_exe		>> test_lookup_table.diff
-	@echo ${MPIRUN} test_lookup_table.exe  >> test_lookup_table.diff
+	@echo ${MPIRUN} test_lookup_table.exe   >> test_lookup_table.diff
 	-@(${MPIRUN} test_lookup_table.exe > test_lookup_table.tmp)
 	-@(diff test_lookup_table.tmp test_lookup_table.log \
-						> test_lookup_table.diff)
+						>  test_lookup_table.diff)
 	@ls -l test_lookup_table.diff
 
 #######################################################################
