@@ -11,16 +11,26 @@
 ! This module is almost self contained. Only ModIoUnit, ModMpi, ModKind 
 ! and the external subroutine CON\_stop are used.
 !
-! F77 and C++ codes will need some F90 interface to access these utilities.
-
-!REVISION HISTORY:
-!  17Mar04 - Gabor Toth <gtoth@umich.edu> - initial prototype/prolog/code
-!            Based on the self-contained part of SWMF_methods.
-!EOP
+! F77 and C++ codes need an F90 interface to access these utilities.
 
 module ModUtilities
 
-  logical :: DoFlush = .true.
+  implicit none
+
+  private ! except
+
+  public:: check_dir
+  public:: fix_dir_name
+  public:: flush_unit
+  public:: split_string
+  public:: join_string
+  public:: upper_case
+  public:: lower_case
+  public:: sleep
+  public:: check_allocate
+  public:: test_mod_utility
+
+  logical, public :: DoFlush = .true.
 
 contains
   !BOP ========================================================================
@@ -30,7 +40,6 @@ contains
 
     !USES:
     use ModIoUnit, ONLY: UNITTMP_
-    implicit none
 
     !INPUT ARGUMENTS:
     character(len=*), intent(in) :: NameDir
@@ -94,8 +103,6 @@ contains
   !INTERFACE:
   subroutine fix_dir_name(NameDir)
 
-    implicit none
-
     !INPUT/OUTPUT ARGUMENTS:
     character(len=*), intent(inout) :: NameDir
 
@@ -110,11 +117,13 @@ contains
     integer :: i
     !--------------------------------------------------------------------------
     i = len_trim(NameDir)
-    if(i>0 .and. NameDir(i:i) /= '/')then
-       if(i >= len(NameDir)) call CON_stop(NameSub// &
-            "ERROR cannot append / for directory name "//NameDir)
-       NameDir(i+1:i+1) = '/'
-    end if
+    if(i == 0) RETURN
+    if(NameDir(i:i) == '/') RETURN
+
+    if(i >= len(NameDir)) call CON_stop(NameSub// &
+         "ERROR cannot append / to directory name "//NameDir)
+
+    NameDir(i+1:i+1) = '/'
 
   end subroutine fix_dir_name
 
@@ -127,7 +136,6 @@ contains
 #ifdef compNAGF95
     use F90_UNIX_IO,only: flush 
 #endif
-    implicit none
 
     !INPUT ARGUMENTS:
     integer, intent(in) :: iUnit
@@ -179,56 +187,148 @@ contains
   end subroutine flush_unit
 
   !BOP ========================================================================
-  !ROUTINE: split_string - split space separated list into string array
+  !ROUTINE: split_string - split string into array of substrings
   !INTERFACE:
-  subroutine split_string(String, MaxString, String_I, nString, StringSepIn)
-
-    implicit none
+  subroutine split_string(String, MaxString, String_I, nString, &
+       StringSepIn, UseArraySyntaxIn)
 
     !INPUT ARGUMENTS:
-    character (len=*), intent(in):: String
-    integer, intent(in) :: MaxString
-    character, optional, intent(in):: StringSepIn
+    character(len=*),    intent(in):: String    ! string to be split
+    integer,             intent(in):: MaxString ! maximum array size
+
+    !OPTIONAL ARGUMENTS
+    character, optional, intent(in):: StringSepIn      ! separator string
+    logical,   optional, intent(in):: UseArraySyntaxIn ! expand Var(10:20:2)
+
     !OUTPUT ARGUMENTS:
-    character (len=*), intent(out):: String_I(MaxString)
-    integer, intent(out):: nString
+    character (len=*), intent(out):: String_I(MaxString) ! array of substrings
+    integer,           intent(out):: nString             ! number of substrings
 
     !DESCRIPTION:
-    ! Cut the input string into words. The words are separated with 1 or more
-    ! spaces. Leading and trailing spaces are ignored. For example
+    ! Cut the input string into an array of substrings. The separator
+    ! character is either StringSepIn or space (default). 
+    ! Multiple consecutive separator characters are treated as one.
+    ! Leading and trailing spaces are ignored. For example
     !\begin{verbatim}
     ! ' IE  GM ' --> nString=2, String\_I=(/'IE','GM'/)
     !\end{verbatim}
+    ! When UseArraySyntax is present, then expand strings containing
+    ! parens into an array of substrings ending with numbers, e.g.
+    !\begin{verbatim}
+    ! 'Var(4)'      --> nString=4,  String\_I=(/'Var1','Var2','Var3','Var4'/)
+    ! 'Var(11)'     --> nString=11, String\_I=(/'Var01','Var02',...,'Var11'/)
+    ! 'Var(3:5)'    --> nString=3,  String\_I=(/'Var3','Var4','Var5'/)
+    ! 'Var(7:11:2)' --> nString=3,  String\_I=(/'Var07','Var09','Var11'/)
+    !\end{verbatim}
     !EOP
 
-    character(len=*), parameter :: NameSub = 'split_string'
-
     character:: StringSep
+    logical:: UseArraySyntax
 
     character(len=len(String)+1) :: StringTmp
 
     integer :: i,l
+
+    character(len=*), parameter :: NameSub = 'split_string'
     !--------------------------------------------------------------------------
-    if(present(StringSepIn))then
-       StringSep = StringSepIn
-    else
-       StringSep = ' '
-    endif
+    StringSep = ' '
+    if(present(StringSepIn)) StringSep = StringSepIn
+
+    UseArraySyntax = .false.
+    if(present(UseArraySyntaxIn)) UseArraySyntax = UseArraySyntaxIn
+    
     nString   = 0
     StringTmp = String
     l         = len_trim(StringTmp)
     StringTmp = trim(StringTmp) // StringSep
     do
        StringTmp = adjustl(StringTmp)       ! Remove leading spaces
-       i = index(StringTmp,StringSep)       ! Find end of first part   
+       i = index(StringTmp, StringSep)      ! Find end of first part   
        if(i <= 1) RETURN                    ! Nothing before the separator
        nString = nString +1                 ! Count parts
 
        String_I(nString) = StringTmp(1:i-1) ! Put part into string array
        StringTmp=StringTmp(i+1:l+1)         ! Delete part+separator from string
 
+       if(UseArraySyntax) call expand_array(String_I(nString))
+
        if(nString == MaxString) RETURN      ! Check for maximum number of parts
     end do
+
+  contains
+    !========================================================================
+    subroutine expand_array(String1)
+
+      ! Expand String1 if it contains array syntax, e.g.
+      ! "Var(04)"     to   "Var01", "Var02", "Var03", "Var04"
+      ! "Var(2:4)"    to   "Var2", "Var3", "Var4"
+      ! "Var(8:12:2)" to   "Var08", "Var10", "Var12"
+
+      character(len=*), intent(inout):: String1
+
+      character(len=len(String1)) :: String2
+      character(len=6):: StringFormat
+
+      integer:: j, k, l, m, lNum, iFirst, iLast, Di, iNum, iError
+      !---------------------------------------------------------------------
+      ! Find the opening paren if any
+      j = index(String1,'(')
+      if(j < 1) RETURN
+      k = index(String1,')')
+
+      if(k < j) &
+           call CON_stop(NameSub//' missing closing paren in String='//String)
+
+      ! Check for colon
+      l = index(String1,':')
+      if(l > j)then
+         ! read initial index value before the first colon        
+         read(String1(j+1:l-1),*,IOSTAT=iError) iFirst
+         if(iError /= 0 .or. iFirst < 1) call CON_stop(NameSub// &
+              ' invalid initial index value in String='//String)
+      else
+         iFirst = 1
+         l = j
+      end if
+      
+      ! Check for a second colon
+      m = index(String1,':',back=.true.)
+      if(m > l)then
+         ! read index stride value after the seecond colon        
+         read(String1(m+1:k-1),*,IOSTAT=iError) Di
+         if(iError /= 0 .or. Di < 1) call CON_stop(NameSub// &
+              ' invalid index stride value in String='//String)
+      else
+         Di = 1
+         m  = k
+      end if
+
+      ! read the last index value between the l and m positions
+      read(String1(l+1:m-1),*,IOSTAT=iError) iLast
+      if(iError /= 0 .or. iLast < iFirst) call CON_stop(NameSub// &
+           ' invalid maximum index value in String='//String)
+
+      ! Set length of numerical string and the format string
+      lNum = m - l - 1
+      write(StringFormat,'(a,i1,a,i1,a)') "(i",lNum,".",lNum,")"
+
+      ! Set the beginning part of the string to the variable name
+      String2 = ''
+      String2(1:j-1) = String1(1:j-1)
+
+      ! Expand variable names by repating name and adding numerical value
+      nString = nString - 1
+      do iNum = iFirst, iLast, Di
+ 
+         write(String2(j:j+lNum),StringFormat) iNum
+         nString = nString + 1
+         String_I(nString) = String2
+
+         if(nString == MaxString) RETURN
+         
+      end do
+    end subroutine expand_array
+
   end subroutine split_string
 
   !BOP ========================================================================
@@ -236,8 +336,6 @@ contains
   !INTERFACE:
 
   subroutine join_string(nString, String_I, String, StringSepIn)
-
-    implicit none
 
     !INPUT ARGUMENTS:
     integer,             intent(in):: nString
@@ -274,8 +372,6 @@ contains
   !INTERFACE:
   subroutine upper_case(String)
 
-    implicit none
-
     !INPUT/OUTPUT ARGUMENTS:
     character (len=*), intent(inout) :: String
 
@@ -287,8 +383,8 @@ contains
     integer :: i, iC
     !--------------------------------------------------------------------------
     do i = 1, len_trim(String)
-       iC=ichar(String(i:i))
-       if(iC>=iA.and.iC<=iZ) String(i:i)=char(iC+Di)
+       iC = ichar(String(i:i))
+       if(iC >= iA .and. iC <= iZ) String(i:i) = char(iC+Di)
     end do
 
   end subroutine upper_case
@@ -297,8 +393,6 @@ contains
   !ROUTINE: lower_case - convert string to all lower case
   !INTERFACE:
   subroutine lower_case(String)
-
-    implicit none
 
     !INPUT/OUTPUT ARGUMENTS:
     character (len=*), intent(inout) :: String
@@ -311,8 +405,8 @@ contains
     integer :: i, iC
     !--------------------------------------------------------------------------
     do i = 1, len_trim(String)
-       iC=ichar(String(i:i))
-       if(iC>=iA.and.iC<=iZ) String(i:i)=char(iC+Di)
+       iC = ichar(String(i:i))
+       if(iC >= iA .and. iC <= iZ) String(i:i) = char(iC+Di)
     end do
 
   end subroutine lower_case
@@ -324,7 +418,7 @@ contains
     !USES
     use ModMpi, ONLY : MPI_wtime
     use ModKind
-    implicit none
+
     !INPUT ARGUMENTS:
     real, intent(in) :: DtCpu  ! CPU time to sleep (in seconds)
     !LOCAL VARIABLES:
@@ -359,32 +453,74 @@ contains
   !============================================================================
   subroutine test_mod_utility
 
-  ! Test split_string, read a string containing separators then print substrings
-  ! Do this multiple times with various settings
-
+    ! Test split_string, read a string containing separators 
+    ! then print substrings
+    ! Do this multiple times with various settings
    
+    character(len=500):: String
     integer, parameter :: MaxString = 20
     integer :: nString
     character(len=30) :: String_I(MaxString)  
-  
-    integer, parameter :: nTest = 4
-    character :: StringSep_I(nTest) = (/ ' ', ',', ':', ';'/)
-    character(len=*), parameter :: String = &
-            'SC EE;IH:SP,GM IM ;RB ,IE UA '
-    
-    !character(len=*), parameter :: NameSub = 'test_split_string'
-    integer :: iTest, iString
+    integer :: iString
 
-    write(*,*) '[string]', String
-    do iTest = 1, nTest
-       call split_string(String, MaxString, String_I, nString, StringSep_I(iTest))
-       write(*,*) '[test',iTest, ']'
-       write(*,*) 'with separator ', StringSep_I(iTest), &
-       		   ' split to', nString, 'part(s) as'
-       do iString = 1, nString
-       	  write(*,*) String_I(iString)	 
-       end do	  	  
+    character(len=*), parameter :: NameSub = 'test_mod_utility'
+    !-----------------------------------------------------------------------
+    write(*,'(a)') 'testing check_dir'
+    write(*,'(a)') 'check directory "."'
+    call check_dir('.')
+    write(*,'(a)') 'check_dir returned successfully'
+    write(*,'(a)') 'check directory "xxx/"'
+    call check_dir('xxx/')
+    write(*,*)
+    write(*,'(a)') 'testing fix_dir_name'
+    String = ''
+    call fix_dir_name(String)
+    write(*,'(a)') 'fixed empty string=' // trim(String)
+    String = 'GM/BATSRUS/data'
+    write(*,'(a)') 'original    string=' // trim(String)
+    call fix_dir_name(String)
+    write(*,'(a)') 'fixed first string=' // trim(String)
+    call fix_dir_name(String)
+    write(*,'(a)') 'fixed again string=' // trim(String)
+
+    write(*,*)
+    write(*,'(a)') 'testing split_string'
+    String = '  a(3)  bb(04:06) c,ddd ee,ff gg(8:12:2) '
+    write(*,'(a)') 'String=' // trim(String)
+
+    call split_string(String, MaxString, String_I, nString)
+    write(*,'(a,i3,a)') 'with space separator split to', nString, ' parts:'
+    do iString = 1, nString
+       write(*,'(a)') trim(String_I(iString))
     end do
+
+    call split_string(String, MaxString, String_I, nString, ',')
+    write(*,'(a,i3,a)') 'with comma separator split to', nString, ' parts:'
+    do iString = 1, nString
+       write(*,'(a)') trim(String_I(iString))
+    end do
+
+    call split_string(String, MaxString, String_I, nString, &
+         UseArraySyntaxIn=.true.)
+    write(*,'(a,i3,a)') 'with UseArraySyntax split to', nString,' parts:'
+    do iString = 1, nString
+       write(*,'(a)') trim(String_I(iString))
+    end do
+
+    write(*,*)
+    write(*,'(a)') 'testing join_string'
+    call join_string(nString, String_I, String, ' ')
+    write(*,'(a)') 'joined string='//trim(String)
+
+    write(*,*)
+    write(*,'(a)') 'testing upper_case and lower_case'
+    String = 'abCD 123:'
+    write(*,'(a)') 'mixed case string='//trim(String)
+    call upper_case(String)
+    write(*,'(a)') 'upper case string='//trim(String)
+    call lower_case(String)
+    write(*,'(a)') 'lower case string='//trim(String)
+
   end subroutine test_mod_utility
 
 end module ModUtilities
