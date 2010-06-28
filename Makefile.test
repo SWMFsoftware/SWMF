@@ -59,6 +59,7 @@ test_check:
 
 test_share_library:
 	rm -f share/Library/test/*.diff
+	cd share/Library/src; make LIB
 	cd share/Library/test; make test
 	ls -l share/Library/test/*.diff
 
