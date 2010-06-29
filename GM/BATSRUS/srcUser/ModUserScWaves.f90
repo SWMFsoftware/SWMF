@@ -294,7 +294,7 @@ contains
        
        ! set wave energy at inner boundary in open field region only
        if (IsClosedWSA) then  
-          VarsGhostFace_V(WaveFirst_:WaveLast_) = 0.0
+          VarsGhostFace_V(WaveFirst_:WaveLast_) = 1.0e-30
        else
           ! total wave energy depends on magnetic field magnitude
           TotalB_D = B0Face_D + VarsTrueFace_V(Bx_:Bz_)  
@@ -322,6 +322,11 @@ contains
           ! Set BC for each frequency group
           call set_wave_state(wEnergyDensBc, VarsGhostFace_V, RFace_D, B0Face_D) 
        
+          if(any(VarsGhostFace_V(WaveFirst_:WaveLast_)< 0.0)) then
+             write(*,*) 'Negative wave energy at inner BC'
+             call stop_MPI('Error in user_face_bc')
+          end if
+
        end if
     end if
 
@@ -398,6 +403,9 @@ contains
     
     State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = 1.0e-30 !Initialize the wave spectrum
     do k=1,nK; do j=1,nJ; do i=1,nI
+       x = x_BLK(i,j,k,iBLK)
+       y = y_BLK(i,j,k,iBLK)
+       z = z_BLK(i,j,k,iBLK)
        r = r_BLK(i,j,k,iBLK)
        State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
        call get_plasma_parameters_cell(i,j,k,iBLK,&
@@ -902,7 +910,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
     use ModNumConst, ONLY: cTiny
-    use ModMain,     ONLY: x_, y_, z_
+    use ModMain,     ONLY: x_, y_, z_, time_loop
 
     integer, intent(in) :: iBlock, iArea
     logical,intent(out) :: DoRefine
@@ -912,7 +920,7 @@ contains
     character (len=*), parameter :: NameSub = 'user_specify_refinement'
     !-------------------------------------------------------------------
 
-    if(far_field_BCs_BLK(iBlock))then
+    if(.not. time_loop .or. far_field_BCs_BLK(iBlock))then
        DoRefine = .false.
        RETURN
     end if
