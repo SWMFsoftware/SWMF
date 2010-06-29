@@ -1,19 +1,21 @@
 !-*- mode: f90 -*- 
 !^CFG COPYRIGHT UM
+!
 !BOP
 !
 !MODULE: ModUtilities - Simple Methods for CON and Components
-!
-!DESCRIPTION:
-! Simple methods which are used by CON and can be used 
-! by the science components too. 
-!
-! This module is almost self contained. Only ModIoUnit, ModMpi, ModKind 
-! and the external subroutine CON\_stop are used.
-!
-! F77 and C++ codes need an F90 interface to access these utilities.
-
+!INTERFACE:
 module ModUtilities
+
+  !DESCRIPTION:
+  ! Simple methods which are used by CON and can be used 
+  ! by the science components too. 
+  !
+  ! This module is almost self contained. Only ModIoUnit, ModMpi, ModKind 
+  ! and the external subroutine CON\_stop are used.
+  !
+  ! F77 and C++ codes need an F90 interface to access these utilities.
+  !EOP
 
   implicit none
 
