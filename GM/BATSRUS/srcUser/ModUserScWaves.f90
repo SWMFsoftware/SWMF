@@ -10,9 +10,6 @@ Module ModUser
 ! --------------------------------------------
 ! 1. user_read_inputs : read input commands for wave related quantities
 !
-!  #INITSPECTRUM : allows the user to set the logical flag IsInitWave. 
-!                  If true, the wave spectrum will be initialized. Should be used only in the
-!                  first session of the simulation.
 !  #WAVEINNERBC  : allows the user to choose type of inner boundary condition for Alfven waves.
 !                  TypeWaveInnerBc (string) -  Two options are implemented:
 !                  'WSA' - uses the WSA model to get the solar wind velocity at 1AU, then calculates
@@ -86,7 +83,7 @@ Module ModUser
   use ModMain, ONLY: nBLK
   use ModSize, ONLY: nI,nJ,nK
   use ModVarIndexes
-  use ModWaves,  ONLY: DeltaLogFrequency
+  use ModWaves,  ONLY: DeltaLogFrequency, UseAlfvenWaves
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_set_ics,                    &
@@ -103,7 +100,6 @@ Module ModUser
   character (len=*), parameter  :: NameUserModule = 'Alfven Waves Driven Solar Wind'
   
   ! varaibles read by user_read_inputs and used by other subroutines
-  logical                       :: IsInitWave = .false.
   logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
   real                          :: WaveInnerBcFactor
   real                          :: xTrace = 0.0, zTrace = 0.0
@@ -116,9 +112,6 @@ contains
 
     !  user_read_inputs : read input commands for wave related quantities
     !
-    !  #INITSPECTRUM : allows the user to set the logical flag IsInitWave. 
-    !                  If true, the wave spectrum will be initialized. Should be used only in the
-    !                  first session of the simulation.
     !  #WAVEINNERBC  : allows the user to choose type of inner boundary condition for Alfven waves.
     !                  TypeWaveInnerBc (string) -  Two options are implemented:
     !                  'WSA' - uses the WSA model to get the solar wind velocity at 1AU, then calculates
@@ -157,9 +150,6 @@ contains
 
        select case(NameCommand)
           
-       case("#INITSPECTRUM")
-          call read_var('IsInitWave', IsInitWave)
-       
        case("#WAVEINNERBC")
           call read_var('TypeWaveInnerBc', TypeWaveInnerBc)
           call read_var('WaveInnerBcFactor', WaveInnerBcFactor)
@@ -286,7 +276,7 @@ contains
     !\
     ! Update BCs for wave spectrum
     !/
-    if(IsInitWave) then
+    if(UseAlfvenWaves) then
        ! Check if this is closed or open field region
        call get_interpolated(ExpansionFactorInv_N, FaceCoords_D(x_),&
             FaceCoords_D(y_), FaceCoords_D(z_), ExpansionFactorInv)
@@ -383,7 +373,7 @@ contains
 
     ! user_set_ic : intilize MHD parameters according to an isothermal atmosphere solution.
 
-    use ModMain,      ONLY: globalBLK
+    use ModMain
     use ModAdvance,   ONLY: State_VGB 
     use ModPhysics,   ONLY: inv_gm1, BodyTDim_I
     use ModGeometry
@@ -392,10 +382,8 @@ contains
     integer :: i, j, k, iBLK
     logical :: oktest,oktest_me
     real    :: Dens, Pres
-    real    :: x, y, z, R, ROne, Rmax, U0
+    real    :: x, y, z, R, U0
     !--------------------------------------------------------------------------
-    call set_oktest('user_set_ics', oktest, oktest_me)
-
     iBLK = globalBLK
 
     ! The sqrt is for backward compatibility with older versions of the Sc
@@ -411,7 +399,7 @@ contains
        call get_plasma_parameters_cell(i,j,k,iBLK,&
             Dens,Pres)
        State_VGB(rho_,i,j,k,iBLK) = Dens
-       State_VGB(P_,i,j,k,iBLK)   = Pres
+       State_VGB(p_,i,j,k,iBLK)   = Pres
        State_VGB(RhoUx_,i,j,k,iBLK) = Dens *U0*x/R
        State_VGB(RhoUy_,i,j,k,iBLK) = Dens *U0*y/R
        State_VGB(RhoUz_,i,j,k,iBLK) = Dens *U0*z/R
@@ -452,13 +440,10 @@ contains
        write(*,*) NameSub, ': negative wave energy after MHD'
     end if
 
-    if (UseWavePressure .and. (.not. UseWavePressureLtd)) &
-         State_VGB(Ew_,i,j,k,iBlock) = nWave*1.0e-30
-
     !\
     ! Dissipate wave energy after advection
     !/
-    if (IsInitWave .and. DoDampCutOff) call dissipate_waves(iBlock)
+    if (UseAlfvenWaves .and. DoDampCutOff) call dissipate_waves(iBlock)
    
     !call calc_energy_cell(iBlock)
   contains
