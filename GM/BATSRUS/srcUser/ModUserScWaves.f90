@@ -401,8 +401,8 @@ contains
     ! The sqrt is for backward compatibility with older versions of the Sc
     U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
     
-    State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = 1.0e-30 !Initialize the wave spectrum
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    State_VGB(:,:,:,:,iBLK) = 1.0e-30 !Initialize the wave spectrum
+    do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
        x = x_BLK(i,j,k,iBLK)
        y = y_BLK(i,j,k,iBLK)
        z = z_BLK(i,j,k,iBLK)
