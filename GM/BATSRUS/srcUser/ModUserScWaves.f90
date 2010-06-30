@@ -211,7 +211,7 @@ contains
     use ModNumConst,         ONLY: cTolerance
     use ModFaceBc,           ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
                                    iFace, jFace, kFace, iSide, iBlockBc
-    use ModWaves,            ONLY: set_wave_state
+    use ModWaves,            ONLY: set_wave_state, UseWavePressureLtd
     
     real, intent(out)           :: VarsGhostFace_V(nVar)
 
@@ -222,7 +222,7 @@ contains
     real, dimension(3)          :: RFace_D, B1r_D, B1t_D, TotalB_D
     real                        :: vAlfvenSi, wEnergyDensSi, wEnergyDensBc
     real                        :: ExpansionFactorInv
-    logical                     :: IsClosedWSA = .false. 
+   
     character(len=*),parameter  :: NameSub = "user_face_bc"
     !--------------------------------------------------------------------------
     ! vector normal to the face
@@ -280,11 +280,12 @@ contains
        ! Check if this is closed or open field region
        call get_interpolated(ExpansionFactorInv_N, FaceCoords_D(x_),&
             FaceCoords_D(y_), FaceCoords_D(z_), ExpansionFactorInv)
-       if(ExpansionFactorInv < cTolerance) IsClosedWSA = .true.
+       if(ExpansionFactorInv < cTolerance) then
        
        ! set wave energy at inner boundary in open field region only
-       if (IsClosedWSA) then  
+    
           VarsGhostFace_V(WaveFirst_:WaveLast_) = 1.0e-30
+          if(UseWavePressureLtd) VarsGhostFace_V(Ew_) = nWave * 0.5e-30
        else
           ! total wave energy depends on magnetic field magnitude
           TotalB_D = B0Face_D + VarsTrueFace_V(Bx_:Bz_)  
@@ -445,7 +446,6 @@ contains
     !/
     if (UseAlfvenWaves .and. DoDampCutOff) call dissipate_waves(iBlock)
    
-    !call calc_energy_cell(iBlock)
   contains
     subroutine dissipate_waves(iBlock)
 
