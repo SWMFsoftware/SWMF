@@ -15,9 +15,9 @@ module ModUser
 
   real,              parameter :: VersionUserModule = 0.9
   character (len=*), parameter :: NameUserModule = &
-       'Rubin single species Europa MHD module, Dec 2009'
+       'Rubin single species Europa MHD module, Jun 2010'
 
-  real, public, dimension(1:nI, 1:nJ, 1:nK, nBLK) :: Neutral_BLK, MassLoad_BLK
+  real, public, dimension(1:nI, 1:nJ, 1:nK, nBLK) :: Neutral_BLK
   real :: n0, dn, H, v, alpha, mi_mean, kin, distr
   real :: vNorm, alphaNorm, kinNorm, nNorm
 
@@ -91,39 +91,35 @@ contains
     integer :: i,j,k
     real :: theta
     
+    ! neutral density in SI units
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! angle of cell position relative to ram direction 
        theta=acos((-SW_Ux*x_BLK(i,j,k,globalBLK)-SW_Uy*y_BLK(i,j,k,globalBLK)&
             -SW_Uz*z_BLK(i,j,k,globalBLK))/R_BLK(i,j,k,globalBLK)/&
             (SW_Ux**2+SW_Uy**2+SW_Uz**2)**0.5)
 
-       ! neutral density used for mass loading in SI units
        if(distr==0) then
           ! uniform neutral density distribution
           if(theta<=cPi/2) then
              ! ram side
-             MassLoad_BLK(i,j,k,globalBLK) = 2*dn*n0*exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
+             Neutral_BLK(i,j,k,globalBLK) = 2*dn*n0*exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
                   /(H/rPlanetSi))
           else
              ! wake side
-             MassLoad_BLK(i,j,k,globalBLK) = 2*(1-dn)*n0*exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
+             Neutral_BLK(i,j,k,globalBLK) = 2*(1-dn)*n0*exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
                   /(H/rPlanetSi))
           end if
        else if(distr==1) then
           ! cosine neutral density distribution
           if(theta<=cPi/2) then
              ! ram side (100%), normalization factor 1/4
-             MassLoad_BLK(i,j,k,globalBLK) = 4*cos(theta)*n0*exp(-(R_BLK(i,j,k,globalBLK)&
+             Neutral_BLK(i,j,k,globalBLK) = 4*cos(theta)*n0*exp(-(R_BLK(i,j,k,globalBLK)&
                   - Rbody)/(H/rPlanetSi))
           else
              ! wake side is set to 0
-             MassLoad_BLK(i,j,k,globalBLK) = 0
+             Neutral_BLK(i,j,k,globalBLK) = 0
           end if
        end if
-
-       ! neutral density for ion neutral friction (charge exchange)
-       Neutral_BLK(i,j,k,globalBLK) = n0*exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
-            /(H/rPlanetSi))
 
        if(globalBLK==BlkTest.and.k==kTest.and.j==jTest.and.i==iTest) then
           write(*,*)'X= ',x_BLK(i,j,k,globalBLK),'Y= ',y_BLK(i,j,k,globalBLK),&
@@ -187,7 +183,7 @@ contains
     SE     = 0.0
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       Srho(i,j,k) = MassLoad_BLK(i,j,k,globalBLK)*nNorm*mi_mean*v*vNorm &   !! newly ionized neutrals
+       Srho(i,j,k) = Neutral_BLK(i,j,k,globalBLK)*nNorm*mi_mean*v*vNorm &   !! newly ionized neutrals
             - alpha*alphaNorm*State_VGB(rho_,i,j,k,globalBLK)*ne(i,j,k)*Si2No_V(UnitN_) !! loss due to recombination
        
        SrhoUx(i,j,k) = - State_VGB(rho_,i,j,k,globalBLK)*( &
@@ -202,11 +198,9 @@ contains
             Neutral_BLK(i,j,k,globalBLK)*nNorm*kin*kinNorm  &               !! loss due to charge exchange
             + alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_))*uz(i,j,k)          !! loss due to recombination
 
-
-       SP(i,j,k) = 1/3*(v*vNorm*mi_mean*MassLoad_BLK(i,j,k,globalBLK)&
-            + kin*kinNorm*State_VGB(rho_,i,j,k,globalBLK)* &
-            Neutral_BLK(i,j,k,globalBLK))*nNorm*uxyz(i,j,k)  &              !! newly generated ions
-            - State_VGB(p_,i,j,k,globalBLK)*kin*kinNorm* &
+       SP(i,j,k) = 1/3*(v*vNorm*mi_mean + kin*kinNorm*State_VGB(rho_,i,j,k,globalBLK))* &
+            Neutral_BLK(i,j,k,globalBLK)*nNorm*uxyz(i,j,k)  &               !! newly generated ions
+            - State_VGB(p_,i,j,k,globalBLK)*kin *kinNorm* &
             Neutral_BLK(i,j,k,globalBLK)*nNorm &                            !! loss due to charge exchange
             - State_VGB(p_,i,j,k,globalBLK)*alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_) !! loss due to recombination
 
