@@ -3,7 +3,7 @@
 #PBS -A crash
 #PBS -q cac
 #PBS -N CRASH
-#PBS -l nodes=16:ppn=8:qos=crash
+#PBS -l nodes=16:ppn=8,qos=crash
 #PBS -l walltime=48:00:00
 
 # cd to job submission directory
