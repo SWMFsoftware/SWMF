@@ -21,7 +21,7 @@ subroutine aurora(iBlock)
 
   logical :: IsFirstTime(nBlocksMax) = .true.
 
-  real :: f1, f2, f3, f4, f5
+  real :: f1, f2, f3, f4, f5, power
   real :: de1, de2, de3, de4, de5, detotal
 
   if (IsFirstTime(iBlock)) then
@@ -49,8 +49,15 @@ subroutine aurora(iBlock)
        Altitude_GB(1:nLons, 1:nLats, 1:nAlts, iBlock),&
        IonPrecipitationBulkIonRate, IonPrecipitationHeatingRate)
 
+  if (iBlock == 1) then
+     HemisphericPowerNorth = 0.0
+     HemisphericPowerSouth = 0.0
+  endif
+
   do i=1,nLats
      do j=1,nLons
+
+        UserData2d(j,i,1,2:nUserOutputs,iBlock) = 0.0
 
         eflx_ergs = ElectronEnergyFlux(j,i) !/ (1.0e-7 * 100.0 * 100.0)
         av_kev    = ElectronAverageEnergy(j,i)
@@ -60,14 +67,26 @@ subroutine aurora(iBlock)
         ED_Flux = 0.0
         HasSomeAurora = .false.
 
-        if (eflx_ergs > 0.02) then
+        if (eflx_ergs > 0.1) then
 
            UserData2d(j,i,1,2,iBlock) = av_kev
            UserData2d(j,i,1,3,iBlock) = eflx_ergs
 
+!           if (avee > 10.0) write(*,*) "avee, eflux : ",av_kev,eflx_ergs, &
+!                j,i,MLatitude(j, i, nAlts+1, iBlock), MLT(j, i, nAlts+1)
+
            HasSomeAurora = .true.
            avee = av_kev * 1000.0        ! keV -> eV
            eflux = eflx_ergs * 6.242e11  ! ergs/cm2/s -> eV/cm2/s
+
+           power = eflux * Element_Charge * 100.0 * 100.0 * &    ! (eV/cm2/s -> J/m2/s)
+                dLatDist_FB(j, i, nAlts, iBlock) * dLonDist_FB(j, i, nAlts, iBlock)
+
+           if (latitude(i,iBlock) < 0.0) then
+              HemisphericPowerSouth = HemisphericPowerSouth + power
+           else
+              HemisphericPowerNorth = HemisphericPowerNorth + power
+           endif
 
            ! I think that this wrong
            ! a= sqrt(27.0/(2.0*3.14159)) * eflux /(avee**2.5)
@@ -96,6 +115,16 @@ subroutine aurora(iBlock)
            av_kev = ElectronEnergyFluxMono(j, i) / &
                     ElectronNumberFluxMono(j, i) * 6.242e11 ! eV
 
+           power = ElectronNumberFluxMono(j, i) * &
+                Element_Charge * 100.0 * 100.0 * &    ! (eV/cm2/s -> J/m2/s)
+                dLatDist_FB(j, i, nAlts, iBlock) * dLonDist_FB(j, i, nAlts, iBlock)
+
+           if (latitude(i,iBlock) < 0.0) then
+              HemisphericPowerSouth = HemisphericPowerSouth + power
+           else
+              HemisphericPowerNorth = HemisphericPowerNorth + power
+           endif
+
            UserData2d(j,i,1,4,iBlock) = av_kev / 1000.0
            UserData2d(j,i,1,5,iBlock) = ElectronEnergyFluxMono(j, i)
 
@@ -116,6 +145,16 @@ subroutine aurora(iBlock)
 
            av_kev = ElectronEnergyFluxWave(j, i) / &
                     ElectronNumberFluxWave(j, i) * 6.242e11 ! eV
+
+           power = ElectronNumberFluxWave(j, i) * &
+                Element_Charge * 100.0 * 100.0 * &    ! (eV/cm2/s -> J/m2/s)
+                dLatDist_FB(j, i, nAlts, iBlock) * dLonDist_FB(j, i, nAlts, iBlock)
+
+           if (latitude(i,iBlock) < 0.0) then
+              HemisphericPowerSouth = HemisphericPowerSouth + power
+           else
+              HemisphericPowerNorth = HemisphericPowerNorth + power
+           endif
 
            UserData2d(j,i,1,6,iBlock) = av_kev / 1000.0
            UserData2d(j,i,1,7,iBlock) = ElectronEnergyFluxWave(j, i)
@@ -140,7 +179,6 @@ subroutine aurora(iBlock)
               de5 = ED_energies(k+1)-ED_energies(k+2)
 !              detotal = (de1+de2+de3+de4+de5) * (f1+f2+f3+f4+f5) / 5
               detotal = (f1+f2+f3+f4+f5)
-!              ED_flux = 0.0
               ED_flux(k-2) = ED_Flux(k-2)+f1*ElectronNumberFluxWave(j, i)/detotal/de1
               ED_flux(k-1) = ED_Flux(k-1)+f2*ElectronNumberFluxWave(j, i)/detotal/de2
               ED_flux(k  ) = ED_Flux(k  )+f3*ElectronNumberFluxWave(j, i)/detotal/de3
@@ -153,13 +191,13 @@ subroutine aurora(iBlock)
 !              ED_flux(k+2) = ED_Flux(k+2) + f5*ElectronNumberFluxWave(j, i) / detotal
            endif
 
-           do n=1,ED_N_Energies
-              UserData2d(j,i,1,7+n,iBlock) = ED_flux(n)
-           enddo
-
         endif
 
         if (HasSomeAurora) then
+
+           do n=1,ED_N_Energies
+              UserData2d(j,i,1,7+n,iBlock) = ED_flux(n)
+           enddo
 
            call R_ELEC_EDEP (ED_Flux, 15, ED_Energies, 3, ED_Ion, 7)
            call R_ELEC_EDEP (ED_Flux, 15, ED_Energies, 3, ED_Heating, 11)
