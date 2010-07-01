@@ -39,7 +39,7 @@ C gLon = Geographin Longitude
            mid = alon
            if (mid < 0.0) mid = mid + 360.0
 
-           do i=mid*10.0-100,mid*10.0+100
+           do i=int(mid*10.0)-100,int(mid*10.0)+100
 
               ang = real(i)/10.0*dtor
               stfcpa = ste*ctp*cos(ang)-cte*stp
