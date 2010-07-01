@@ -41,6 +41,9 @@ subroutine calc_chemistry(iBlock)
 
   logical :: UseNeutralConstituent(nSpeciesTotal)
   logical :: UseIonConstituent(nIons)
+
+  real :: sza_fac
+
   !---------------------------------------------------------------------------
 
   if (iDebugLevel > 3) then
@@ -97,6 +100,8 @@ subroutine calc_chemistry(iBlock)
   do iLon = 1, nLons
      do iLat = 1, nLats
         do iAlt = 1, nAlts
+
+           sza_fac = max(0.05,cos(sza(iLon,iLat,iBlock)))
 
            y1 = max(1.0,k1*exp(m1*altitude_GB(iLon,iLat,iAlt,iBlock)/1000.0))
            y2 = max(1.0,k2*exp(m2*altitude_GB(iLon,iLat,iAlt,iBlock)/1000.0))
@@ -1579,7 +1584,7 @@ subroutine calc_chemistry(iBlock)
 !              rr = 6.0e-7
 
               rr=5.88e-7*(1+0.2*(f107-65)/100)*exp(-2.115e-18* &
-                   (Neutrals(iO2_)*1.e-6)**0.8855)
+                   (Neutrals(iO2_)*1.e-6)**0.8855) * sza_fac
 
               Reaction = &
                    rr * &
