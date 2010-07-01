@@ -2,7 +2,6 @@ testing check_dir
 check directory "."
 check_dir returned successfully
 check directory "xxx/"
-check_dir SWMF_ERROR: could not open file in directory xxx/, iError=   2
 ERROR: check_dir ERROR: Cannot find/write into directory xxx/
 Do not actually stop in the test
 
