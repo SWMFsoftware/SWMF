@@ -16,7 +16,7 @@ module ModSources
   real, dimension(nLons, nLats, nAlts,nBlocksMax) :: &
        EuvHeating,eEuvHeating, &
        RadCooling, RadCoolingRate, RadCoolingErgs, EuvHeatingErgs, &
-       LowAtmosRadRate=0.0
+       LowAtmosRadRate
 
   real, dimension(nLons,nLats,nAlts,3) :: GWAccel = 0.0
 
