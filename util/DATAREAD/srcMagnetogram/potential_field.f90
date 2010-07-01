@@ -574,13 +574,18 @@ program potential_field
 
   PlotVar_VG(6,1:nR,1:nTheta,1:nPhi) = Potential_C
 
-  call save_plot_file('potentialtest.out', &
-       StringHeaderIn='potential field', &
-       NameVarIn='r theta phi br btheta bphi divb rhs pot', &
-       Coord1In_I=RadiusNode_I, &
-       Coord2In_I=ThetaNode_I, &
-       Coord3In_I=PhiNode_I, &
-       VarIn_VIII=PlotVar_VG)
+!  call save_plot_file('potentialtest.out', &
+!       StringHeaderIn='potential field', &
+!       NameVarIn='r theta phi br btheta bphi divb rhs pot', &
+!       Coord1In_I=RadiusNode_I, &
+!       Coord2In_I=ThetaNode_I, &
+!       Coord3In_I=PhiNode_I, &
+!       VarIn_VIII=PlotVar_VG)
+
+  call save_plot_file('potentialtest.out', StringHeaderIn='potential field', &
+       NameVarIn='r theta phi pot', Coord1In_I=Radius_I(1:nR), &
+       Coord2In_I=Theta_I(1:nTheta), Coord3In_I=Phi_I(1:nPhi), &
+       VarIn_VIII=PlotVar_VG(6:6,1:nR,1:nTheta,1:nPhi))
 
   deallocate(PlotVar_VG)
 
