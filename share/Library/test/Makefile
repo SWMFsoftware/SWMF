@@ -235,7 +235,7 @@ test_ray_trace:
 	@make test_ray_trace_exe		>> test_ray_trace.diff
 	@echo ./test_ray_trace.exe		>> test_ray_trace.diff
 	-@(./test_ray_trace.exe > test_ray_trace.tmp)
-	-@(diff -b test_ray_trace.tmp test_ray_trace.log \
+	-@(diff test_ray_trace.tmp test_ray_trace.log \
 						>  test_ray_trace.diff)
 	@ls -l test_ray_trace.diff
 
@@ -340,8 +340,8 @@ test_planet_field:
 	@echo test_planet_field starting	>  test_planet_field.diff
 	@make test_planet_field_exe		>> test_planet_field.diff
 	@echo ./test_planet_field.exe 		>> test_planet_field.diff
-	-(./test_planet_field.exe > test_planet_field.tmp)
-	-(${SCRIPTDIR}/DiffNum.pl -t -r=1e-6 \
+	-@(./test_planet_field.exe > test_planet_field.tmp)
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-6 \
 		test_planet_field.tmp test_planet_field.log \
 						>  test_planet_field.diff)
 	@ls -l test_planet_field.diff
