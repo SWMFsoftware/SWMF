@@ -135,24 +135,24 @@ contains
        if (DoNewellRemoveSpikes .or. DoNewellAverage) then
 
           call calc_hp(EnergyFluxDiff, hps, hpn)
-          write(*,*) "Before Smooth, Diffuse : ", hps, hpn
+!          write(*,*) "Before Smooth, Diffuse : ", hps, hpn
           call smooth(EnergyFluxDiff)
           call smooth(NumberFluxDiff)
           call calc_hp(EnergyFluxDiff, hps, hpn)
-          write(*,*) "After Smooth, Diffuse : ", hps, hpn
+!          write(*,*) "After Smooth, Diffuse : ", hps, hpn
 
           call calc_hp(EnergyFluxMono, hps, hpn)
-          write(*,*) "Before Smooth, Mono : ", hps, hpn
+!          write(*,*) "Before Smooth, Mono : ", hps, hpn
           call smooth(EnergyFluxMono)
           call smooth(NumberFluxMono)
           call calc_hp(EnergyFluxMono, hps, hpn)
-          write(*,*) "After Smooth, Mono : ", hps, hpn
+!          write(*,*) "After Smooth, Mono : ", hps, hpn
 
           call calc_hp(EnergyFluxWave, hps, hpn)
-          write(*,*) "Before Smooth, Wave : ", hps, hpn
+!          write(*,*) "Before Smooth, Wave : ", hps, hpn
           call smooth(EnergyFluxWave)
           call smooth(NumberFluxWave)
-          write(*,*) "After Smooth, Wave : ", hps, hpn
+!          write(*,*) "After Smooth, Wave : ", hps, hpn
 
           !call smooth(EnergyFluxIons)
           !call smooth(NumberFluxIons)
@@ -177,6 +177,8 @@ contains
              else
                 iMlat2 = iMlat+nMlats/2
              endif
+
+             iMlat2 = min(max(iMlat2,1),nMlats)
 
              ! Diffuse Energy Flux
 
@@ -419,18 +421,18 @@ contains
     ! Newell is at 1/4 hour MLT, which is 3.75 deg so averaging would be over
     nPM = max(1,floor(360.0 / float(nBlocksLon*nLons)/3.75/2 + 0.499))
 
-    write(*,*) "nPL, nPM in smooth : ", nPL, nPM
+!    write(*,*) "nPL, nPM in smooth : ", nPL, nPM
 
     valueout = value*0.0
     do iMlt = 1, nMlts
        do iHem = 1,2
           if (iHem == 1) then
-             iLatStart = 2
-             iLatEnd = nMlats/2-1
+             iLatStart = nPl+1
+             iLatEnd = nMlats/2-nPl-1
           endif
           if (iHem == 2) then
-             iLatStart = nMlats/2+1
-             iLatEnd = nMlats-1
+             iLatStart = nMlats/2+nPl+1
+             iLatEnd = nMlats-nPl-1
           endif
 
           do iLat = iLatStart, iLatEnd
