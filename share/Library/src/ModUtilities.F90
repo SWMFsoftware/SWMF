@@ -89,9 +89,6 @@ contains
          iostat = iError)
 
     if (iError /= 0) then
-       write(*,'(a,i4)')NameSub//&
-            ' SWMF_ERROR: could not open file in directory '//trim(NameDir)//&
-            ', iError=',iError
        call CON_stop(NameSub//' ERROR: Cannot find/write into directory '&
             //trim(NameDir))
     else
@@ -473,8 +470,8 @@ contains
     write(*,'(a)') 'check_dir returned successfully'
     write(*,'(a)') 'check directory "xxx/"'
     call check_dir('xxx/')
-    write(*,*)
-    write(*,'(a)') 'testing fix_dir_name'
+
+    write(*,'(/,a)') 'testing fix_dir_name'
     String = ''
     call fix_dir_name(String)
     write(*,'(a)') 'fixed empty string=' // trim(String)
@@ -485,8 +482,7 @@ contains
     call fix_dir_name(String)
     write(*,'(a)') 'fixed again string=' // trim(String)
 
-    write(*,*)
-    write(*,'(a)') 'testing split_string'
+    write(*,'(/,a)') 'testing split_string'
     String = '  a(3)  bb(04:06) c,ddd ee,ff gg(8:12:2) '
     write(*,'(a)') 'String=' // trim(String)
 
@@ -509,13 +505,11 @@ contains
        write(*,'(a)') trim(String_I(iString))
     end do
 
-    write(*,*)
-    write(*,'(a)') 'testing join_string'
+    write(*,'(/,a)') 'testing join_string'
     call join_string(nString, String_I, String, ' ')
     write(*,'(a)') 'joined string='//trim(String)
 
-    write(*,*)
-    write(*,'(a)') 'testing upper_case and lower_case'
+    write(*,'(/,a)') 'testing upper_case and lower_case'
     String = 'abCD 123:'
     write(*,'(a)') 'mixed case string='//trim(String)
     call upper_case(String)
