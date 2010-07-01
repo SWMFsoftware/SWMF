@@ -80,7 +80,8 @@ test_time_convert:
 #######################################################################
 OBJ_COORD_TRANSFORM = \
 	test_coord_transform.o \
-	../src/ModCoordTransform.o
+	../src/ModCoordTransform.o \
+	../src/ModNumConst.o
 
 test_coord_transform_exe:
 	@(cd ../src; make ModCoordTransform.o)
@@ -264,7 +265,8 @@ test_line_extract:
 OBJ_GEOPACK = \
 	test_geopack.o \
 	../src/CON_geopack.o \
-	../src/ModCoordTransform.o
+	../src/ModCoordTransform.o \
+	../src/ModNumConst.o
 
 test_geopack_exe:
 	@(cd ../src; make ModCoordTransform.o CON_geopack.o)
@@ -295,6 +297,7 @@ OBJ_AXES = \
 	../src/ModUtilities.o \
 	../src/ModKind.o \
 	../src/ModConst.o \
+	../src/ModNumConst.o \
 	../src/ModPlanetConst.o 
 
 test_axes_exe:
@@ -322,6 +325,7 @@ OBJ_PLANET_FIELD = \
 	../src/ModMpiInterfaces.o \
 	../src/ModPlanetConst.o \
 	../src/ModCoordTransform.o \
+	../src/ModNumConst.o \
 	../src/ModIoUnit.o \
 	../src/ModReadParam.o \
 	../src/ModTimeConvert.o \
@@ -347,13 +351,14 @@ test_planet_field:
 OBJ_PLOT_FILE = \
 	test_plot_file.o \
 	../src/ModIoUnit.o \
+	../src/ModMpi.o \
 	../src/ModUtilities.o \
 	../src/ModPlotFile.o
 
 test_plot_file_exe:
 	@(cd ../src; make ModPlotFile.o)
 	@make test_plot_file.o
-	${LINK.f90} -o test_plot_file.exe ${OBJ_PLOT_FILE} ${Lflag2}
+	${LINK.f90} -o test_plot_file.exe ${OBJ_PLOT_FILE} ${Lflag1}
 
 test_plot_file:
 	@echo test_plot_file starting	>  test_plot_file.diff
@@ -395,12 +400,13 @@ test_lookup_table:
 
 OBJ_UTILITIES = \
 	test_utilities.o \
-	../src/ModUtilities.o 
+	../src/ModMpi.o \
+	../src/ModUtilities.o
 
 test_utilities_exe:
 	@(cd ../src; make ModUtilities.o)
 	@make test_utilities.o
-	${LINK.f90} -o test_utilities.exe ${OBJ_UTILITIES} ${Lflag2}
+	${LINK.f90} -o test_utilities.exe ${OBJ_UTILITIES} ${Lflag1}
 
 test_utilities:
 	@echo test_utilities starting		>  test_utilities.diff
