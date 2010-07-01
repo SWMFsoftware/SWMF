@@ -8,6 +8,7 @@ module BATL_lib
   use BATL_geometry
   use BATL_grid
   use BATL_amr
+  use BATL_amr_criteria
   use BATL_pass_cell
   use BATL_pass_face
 
@@ -56,6 +57,9 @@ module BATL_lib
   ! Inherited from BATL_amr
   public:: iAmrChange_B
   public:: AmrRemoved_, AmrUnchanged_, AmrMoved_, AmrRefined_, AmrCoarsened_
+
+  ! Inherited from BATL_amr_criteria
+  public:: set_amr_criteria, clean_amr_criteria, read_amr_criteria_param
 
   ! Inherited from BATL_pass_cell
   public:: message_pass_cell
