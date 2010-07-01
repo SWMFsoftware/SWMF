@@ -43,10 +43,11 @@ end subroutine set_nVarsUser3d
 subroutine set_nVarsUser2d
 
   use ModUserGITM
+  use ModSources, only:ED_N_Energies
 
   ! Make sure to include Lat, Lon, and Alt
 
-  nVarsUser2d = 6
+  nVarsUser2d = 10+ED_N_Energies
 
   if (nVarsUser2d-3 > nUserOutputs) &
        call stop_gitm("Too many user outputs!! Increase nUserOutputs!!")
@@ -77,11 +78,13 @@ end subroutine set_nVarsUser1d
 subroutine output_header_user(cType, iOutputUnit_)
 
   use ModUserGITM
+  use ModSources, only:ED_Energies, ED_N_Energies
 
   implicit none
 
   character (len=5), intent(in) :: cType
   integer, intent(in)           :: iOutputUnit_
+  integer :: n
 
   ! ------------------------------------------
   ! 3D Output Header
@@ -128,7 +131,13 @@ subroutine output_header_user(cType, iOutputUnit_)
      write(iOutputUnit_,"(I7,A1,a)")  4, " ", "Potential (kV)"
      write(iOutputUnit_,"(I7,A1,a)")  5, " ", "Average Energy (keV)"
      write(iOutputUnit_,"(I7,A1,a)")  6, " ", "Total Energy (ergs)"
-
+     write(iOutputUnit_,"(I7,A1,a)")  7, " ", "Discrete Average Energy (keV)"
+     write(iOutputUnit_,"(I7,A1,a)")  8, " ", "Discrete Total Energy (ergs)"
+     write(iOutputUnit_,"(I7,A1,a)")  9, " ", "Wave Average Energy (keV)"
+     write(iOutputUnit_,"(I7,A1,a)") 10, " ", "Wave Total Energy (ergs)"
+     do n=1,ED_N_Energies
+        write(iOutputUnit_,"(I7,A6,1P,E9.3,A11)") 10+n, " Flux@",ED_energies(n), "eV (/cm2/s)"
+     enddo
   endif
 
   write(iOutputUnit_,*) ""
