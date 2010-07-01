@@ -29,8 +29,8 @@ Module ModCrcmPlanet
        //'HpPhot[nP] ePhot[nP] N[/m3] HpN[/m3] '&
        //'eN[/m3] Beq[T] Vol[m3/Wb] Pot[Volts] FAC[Amp/m2] g'
 
-  integer, dimension(nspec+1) :: iPplot_I    =(/1,2,3,/) 
-  integer, dimension(nspec+1) :: iPhotplot_I =(/4,5,6,/) 
-  integer, dimension(nspec+1) :: iNplot_I    =(/7,8,9,/)
+  integer, dimension(nspec+1) :: iPplot_I    =(/1,2,3/) 
+  integer, dimension(nspec+1) :: iPhotplot_I =(/4,5,6/) 
+  integer, dimension(nspec+1) :: iNplot_I    =(/7,8,9/)
   integer, parameter          :: Beq_=10,Vol_=11,Pot_=12, FAC_=13, nVar=13
 end Module ModCrcmPlanet
