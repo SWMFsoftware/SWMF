@@ -23,7 +23,7 @@ module BATL_amr_criteria
 contains
   !============================================================================
 
-  subroutine set_amr_criteria(nVar,State_VGB, UseLocalStep)
+  subroutine set_amr_criteria(nVar,State_VGB)
 
     use BATL_grid, ONLY: CellSize_DB
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
@@ -35,7 +35,6 @@ contains
     integer,  intent(in)   :: nVar
     real,    intent(inout):: &                            ! state variables
          State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-    logical, intent(in)   :: UseLocalStep
 
     real, dimension(MaxDim) :: Factor_D
 
