@@ -122,7 +122,7 @@ module ModGITM
 
   real :: SubsolarLatitude, SubsolarLongitude 
   real :: MagneticPoleColat, MagneticPoleLon
-
+  real :: HemisphericPowerNorth, HemisphericPowerSouth
 
   integer, parameter :: iEast_ = 1, iNorth_ = 2, iUp_ = 3, iMag_ = 4
   integer, parameter :: iVIN_ = 1, iVEN_ = 2, iVEI_ = 3

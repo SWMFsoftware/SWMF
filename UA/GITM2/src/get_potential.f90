@@ -42,6 +42,9 @@ subroutine get_potential(iBlock)
 
   if (IsFirstTime) then
 
+     HemisphericPowerNorth=0.0
+     HemisphericPowerSouth=0.0
+
      if (UseNewellAurora) then
         call init_newell
         UseIMF = .true.

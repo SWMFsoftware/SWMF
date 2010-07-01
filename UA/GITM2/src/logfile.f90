@@ -77,6 +77,7 @@ subroutine logfile(dir)
 
   real    :: minTemp, maxTemp, localVar, minVertVel, maxVertVel
   real    :: AverageTemp, AverageVertVel, TotalVolume, Bx, By, Bz, Vx, Hpi
+  real    :: HPn, HPs
   integer :: iError
 
   if (.not. IsOpenLogFile .and. iProc == 0) then
@@ -127,7 +128,7 @@ subroutine logfile(dir)
        write(iLogFileUnit_,'(a)') &
             "   iStep yyyy mm dd hh mm ss  ms      dt "// &
             "min(T) max(T) mean(T) min(VV) max(VV) mean(VV) F107 F107A "// &
-            "By Bz Vx HPI"
+            "By Bz Vx HP HPn HPs"
           
 
   endif
@@ -163,6 +164,14 @@ subroutine logfile(dir)
   call MPI_REDUCE(LocalVar, AverageVertVel, 1, MPI_REAL, MPI_SUM, &
        0, iCommGITM, iError)
 
+  LocalVar = HemisphericPowerNorth
+  call MPI_REDUCE(LocalVar, HPn, 1, MPI_REAL, MPI_SUM, &
+       0, iCommGITM, iError)
+
+  LocalVar = HemisphericPowerSouth
+  call MPI_REDUCE(LocalVar, HPs, 1, MPI_REAL, MPI_SUM, &
+       0, iCommGITM, iError)
+
   if (iProc == 0) then
 
      AverageTemp = AverageTemp / TotalVolume
@@ -170,15 +179,16 @@ subroutine logfile(dir)
 
      call get_f107(CurrentTime, f107, iError)
      call get_f107A(CurrentTime, f107A, iError)
-      call get_IMF_By(CurrentTime, by, iError)
-      call get_IMF_Bz(CurrentTime, bz, iError)
-      call get_sw_v(CurrentTime, Vx, iError)
-      call get_hpi(CurrentTime,Hpi,iError)
+     call get_IMF_By(CurrentTime, by, iError)
+     call get_IMF_Bz(CurrentTime, bz, iError)
+     call get_sw_v(CurrentTime, Vx, iError)
+     call get_hpi(CurrentTime,Hpi,iError)
 
-     write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,6f13.5,6f9.1)") &
+     write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,6f13.5,8f9.1)") &
           iStep, iTimeArray, dt, minTemp, maxTemp, AverageTemp, &
           minVertVel, maxVertVel, AverageVertVel,&
-         f107,f107A,By,Bz,Vx, Hpi
+          f107,f107A,By,Bz,Vx, Hpi, HPn/1.0e9, &
+          HPs/1.0e9
 
      call flush_unit(iLogFileUnit_)
   endif
