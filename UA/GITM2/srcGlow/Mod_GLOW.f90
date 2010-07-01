@@ -6,11 +6,11 @@ module Mod_GLOW
   integer, parameter  :: NEX = 20       !Number of ionized/excited spc
   integer, parameter  :: NW = 20        !Number of airglow emission wavelengths
   integer, parameter  :: NC = 10        !Number of component production terms
-  integer, parameter  :: ALTSMAX=400        !for each emission  
+  integer, parameter  :: ALTSMAX=400      !for each emission  
   integer, parameter  :: NST = 6        !Number of states produced by photo-
                                           !ionization/dissociation
-  integer, parameter  :: NEI = 10       !number of states produced by e- impact 
-   integer, parameter  :: LMAX = 123     !Number of wavelength ints for solar flux
+  integer, parameter  :: NEI = 10       !Number of states produced by e- impact 
+  integer, parameter  :: LMAX = 123     !Number of wavelength ints for solar flux
   integer, parameter  :: iO2PP = 1
   integer, parameter  :: iO2DP = 2
   integer, parameter  :: iO4SP = 3
@@ -20,6 +20,8 @@ module Mod_GLOW
   integer, parameter  :: iNOP  = 7
   integer, parameter  :: i_Glow = 15
 
+  integer, allocatable, dimension(:) :: IIMAXX
+
   real, parameter     :: PI = 3.141592653589793
   integer :: IDate,ipc,ildb,JMAX,NBINS,GFIRST,ETFIRST,EPFIRST
   real    :: UT, GLAT, GLONG,ISCALE,JLOCAL,KCHEM, &
@@ -28,7 +30,7 @@ module Mod_GLOW
 
   real, allocatable, dimension(:) :: ZZ, ZO, ZN2, ZO2, ZNO,PHITOP
   real, allocatable, dimension(:) :: ZNS, ZND, ZRHO, ZE, ZTN
-  real, allocatable, dimension(:) :: ZTI, ZTE, Z, IIMAXX, EHEAT
+  real, allocatable, dimension(:) :: ZTI, ZTE, Z, EHEAT
   real, allocatable, dimension(:) :: TEZ, ECALC,XNO,ENER,DEL
   real, allocatable, dimension(:,:) :: ZXDEN,ZMAJ,ZCOL,PESPEC,SESPEC
   real, allocatable, dimension(:,:) :: SION,UFLX,DFLX,ZETA,PIA
