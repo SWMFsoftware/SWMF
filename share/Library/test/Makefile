@@ -235,7 +235,7 @@ test_ray_trace:
 	@make test_ray_trace_exe		>> test_ray_trace.diff
 	@echo ./test_ray_trace.exe		>> test_ray_trace.diff
 	-@(./test_ray_trace.exe > test_ray_trace.tmp)
-	-@(diff test_ray_trace.tmp test_ray_trace.log \
+	-@(diff -b test_ray_trace.tmp test_ray_trace.log \
 						>  test_ray_trace.diff)
 	@ls -l test_ray_trace.diff
 
