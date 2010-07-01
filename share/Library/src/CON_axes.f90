@@ -142,14 +142,18 @@ module CON_axes
   !USES:
 
   use ModKind
-  use ModNumConst, ONLY: cHalfPi, cRadToDeg, cTwoPi8, cUnit_DD, cTiny
-  use ModConst
-  use ModCoordTransform
+  use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z, &
+       show_rot_matrix, cross_product, dir_to_xyz, xyz_to_dir
   use ModTimeConvert, ONLY : time_int_to_real,time_real_to_int
-  use CON_planet
+  use CON_planet, ONLY: UseSetMagAxis, UseSetRotAxis, UseAlignedAxes, &
+       UseRealMagAxis, UseRealRotAxis, MagAxisThetaGeo, MagAxisPhiGeo, &
+       MagAxisTheta, MagAxisPhi, RotAxisTheta, RotAxisPhi, &
+       UseRotation, TiltRotation, RadiusPlanet, OmegaPlanet, OmegaOrbit, &
+       TimeEquinox, AngleEquinox, DoUpdateB0, DtUpdateB0
   use CON_geopack, ONLY: &
        HgiGse_DD, dLongitudeHgiDeg, dLongitudeHgi, &
        CON_recalc, CON_sun, SunEMBDistance, JulianDay
+  use ModNumConst, ONLY: cHalfPi, cRadToDeg, cTwoPi, cTwoPi8, cUnit_DD, cTiny
 
   use ModPlanetConst
 
