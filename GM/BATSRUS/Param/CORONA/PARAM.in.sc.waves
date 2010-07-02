@@ -1,0 +1,179 @@
+#ECHO
+T			DoEcho
+
+#DESCRIPTION
+Input file for creating a steady state solar corona driven by Alfven waves
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#SAVERESTART
+T			DoSaveRestart
+16000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#BEGIN_COMP SC ----------------------------------------
+
+#COORDSYSTEM
+HGR                     TypeCoordSystem
+
+#BODY
+T                       UseBody
+1.0                     rBody
+6.0E+8                  BodyNDim
+2.0E+6                  BodyTDim
+
+#BODY
+F                       UseBody
+
+#EXTRABOUNDARY
+T			UseExtraBoundary
+user			TypeBc_I(ExtraBc_)
+F			DoFixExtraBoundar
+
+#USECURLB0
+T
+2.5
+
+#GRID
+1			nRootBlockX
+1                       nRootBlockY
+1                       nRootBlockZ
+-24.0                   xMin
+ 24.0                   xMax
+-24.0                   yMin
+ 24.0                   yMax
+-24.0                   zMin
+ 24.0                   zMax
+
+#GRIDLEVEL
+7			nLevelArea 
+all			NameArea
+
+#GRIDLEVEL
+9                       nLevelArea 
+shell0                  NameArea
+1.0                     Radius1
+1.35                    Radius2
+
+#GRIDRESOLUTION
+0.2                     AreaResolution
+user                    NameArea
+
+#GRIDLEVEL
+7                       nLevelArea 
+initial                 NameArea
+
+#GAMMA
+1.5			Gamma
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc			TypeLimiter mc
+1.2			LimiterBeta 1.2
+
+#TVDRESCHANGE
+T			UseTvdResChange
+
+#RESCHANGEBOUNDARY
+T			SaveBoundaryCells
+
+#DIVB
+T
+F
+F
+F
+
+#TIMESTEPPING
+2                       nStage
+0.6                    CflExpl
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+RAW                     StringLogfile
+1                      DnSaveLogfile
+-1.                     DtSaveLogfile
+
+#OUTERBOUNDARY
+float                   TypeBcEast
+float                   TypeBcWest
+float                   TypeBcSouth
+float                   TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+#AMR
+6000                    DnRefine
+F 
+
+#USER_FLAGS
+T              UseUserInnerBcs
+F              UseUserSource
+F              UseUserPerturbation
+F              UseUserOuterBcs
+T              UseUserICs
+T              UseUserSpecifyRefinement
+F              UseUserLogFiles
+F              UseUserWritePlot
+F              UseUserAMR
+F              UseUserEchoInput
+F              UseUserB0
+F              UseUserInitSession
+T              UseUSerUpdateStates
+
+#MAGNETOGRAM
+T
+1.0
+2.5
+0.01
+CR2077_MDI_180.dat
+12
+-1.0
+2.00
+
+#EMPIRICALSW
+WSA
+
+#ALFVENWAVES
+T
+
+#FREQUENCY
+1e-3
+100
+
+#WAVEPRESSURE
+T
+T
+
+#USERINPUTBEGIN ------------------------------------
+
+#WAVEINNERBC
+WSA
+1.0
+
+#USERINPUTEND ---------------------------------------
+
+#SAVEINITIAL
+T
+
+#SAVEBINARY
+F                       DoSaveBinary
+
+#SAVEPLOT
+1                       nPlotFiles
+x=0 VAR tec             StringPlot
+1000                    DnSavePlot
+-1.                     DtSavePlot
+I05 I25 rho bx by bz ux uy uz p
+rbody
+
+#END_COMP SC   ----------------------------------------
+
+#STOP
+16000                   MaxIter
+-1.0                    TimeMax
+
+#END  ############################################################
+
+
