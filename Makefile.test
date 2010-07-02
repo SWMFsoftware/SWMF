@@ -519,6 +519,26 @@ test_lc_check:
 		> test_lc.diff)
 	ls -l test_lc.diff
 
+### test_sc_wave: Solar Corona with Alfven wave spectrum test ###
+
+test_sc_waves:
+	@echo "test_sc_waves_compile..." > test_sc_waves.diff
+	make test_sc_waves_compile
+	@echo "test_sc_rundir..." >> test_sc_waves.diff
+	make test_sc_waves_rundir
+
+test_sc_waves_compile:
+	./Config.pl -v=Empty,SC/BATSRUS 
+	./Config.pl -o=SC:u=ScWaves,e=MhdWaves,setvar=nWave=40
+	./Config.pl -g=SC:4,4,4,2000,1
+	make
+
+test_sc_waves_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp GM/BATSRUS/Param/CORONA/PARAM.in.sc.waves ${TESTDIR}/PARAM.in
+	cp GM/BATSRUS/Param/CORONA/CR2077_MDI_180.dat ${TESTDIR}/CR2077_MDI_180.dat
+	cp Param/LAYOUT.in.test.SC ${TESTDIR}/LAYOUT.in
 
 ### ESMF test ###
 #
