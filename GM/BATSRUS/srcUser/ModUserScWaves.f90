@@ -569,11 +569,11 @@ contains
     case('linespect')
        ! write spectrum to file, extracted along a line (parallel to an axis).
        ! See description of #SPECTROGRAM command in the beginning of this module.
-       call write_spectrogram
+       call write_spectrogram(nWaveHalf)
     case('cellspect')
        ! write spectrum to file, extracted from a single cell. Cell is chosen by #CELLSPECTRUM
        ! command (see description in the biginning of this module).
-       call write_cell_spectrum
+       call write_cell_spectrum(nWaveHalf)
     case default
        VarValue = -7777.
        call write_myname;
@@ -581,27 +581,30 @@ contains
     end select
 
   contains
-      subroutine write_cell_spectrum
+      subroutine write_cell_spectrum(nWaveHalf)
     
-        use ModProcMH
-        use ModMain,     ONLY: iteration_number, unusedBLK, nBlockALL
-        use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK
-        use ModIoUnit,   ONLY: io_unit_new
-        use ModAdvance,  ONLY: State_VGB
-        use ModPhysics,  ONLY: No2Si_V, UnitX_, UnitP_
-        use ModWaves,    ONLY: AlfvenWaveMinusFirst_,AlfvenWavePlusFirst_, &
-             FrequencySi_W
-    
-        real,dimension(nWaveHalf,3)      :: Spectrum_II 
-        real                             :: x, y, z, dxHalf, dyHalf,dzHalf
-        real                             :: IwPlusSi,IwMinusSi
-        integer                          :: iFreq, i, j, k, iBLK
-        integer                          :: iUnit, iError, aError
-        logical                          :: DoSaveCellSpectrum = .false.
-        character(len=40)                :: FileNameTec 
-        character(len=11)                :: NameStage
-        character(len=7)                 :: NameProc
-        character(len=*),parameter       :: NameSub='write_cell_spectrum'
+        use ModProcMH,     ONLY: iProc
+        use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
+        use ModMain,       ONLY: iteration_number, unusedBLK, nBlockALL
+        use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK
+        use ModIoUnit,     ONLY: io_unit_new
+        use ModAdvance,    ONLY: State_VGB
+        use ModPhysics,    ONLY: No2Si_V, UnitX_, UnitP_
+        use ModWaves,      ONLY: AlfvenWavePlusFirst_,AlfvenWavePlusLast_, &
+                                 AlfvenWaveMinusFirst_,AlfvenWaveMinusLast_, &
+                                 FrequencySi_W
+
+        implicit none
+
+        integer, intent(in)                              :: nWaveHalf
+        real                                             :: x, y, z, dxHalf, dyHalf,dzHalf
+        real,dimension(WaveFirst_:WaveFirst_+nWaveHalf)  :: IwPlusSi_W, IwMinusSi_W
+        integer                                          :: iUnit, iError, iFreq, i, j, k, iBLK
+        logical                                          :: DoSaveCellSpectrum = .false.
+        character(len=40)                                :: FileNameTec 
+        character(len=11)                                :: NameStage
+        character(len=7)                                 :: NameProc
+        character(len=*),parameter                       :: NameSub='write_cell_spectrum'
         !-------------------------------------------------------------------
         do iBLK=1,nBLK
            if(unusedBLK(iBLK)) CYCLE
@@ -616,18 +619,19 @@ contains
               if((xTestSpectrum >= x - dxHalf ) .and. (xTestSpectrum <= x + dxHalf) .and. &
                  (yTestSpectrum >= y - dyHalf ) .and. (yTestSpectrum <= y + dyHalf) .and. &
                  (zTestSpectrum >= z - dzHalf ) .and. (zTestSpectrum <= z + dzHalf) ) then
-
+                 
+                 ! This cell is the chosen test cell for plotting
                  DoSaveCellSpectrum = .true.
-                 do iFreq=1,nWaveHalf
-                    IwPlusSi  = No2Si_V(UnitP_)* &
-                         State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)
-                    IwMinusSi = No2Si_V(UnitP_)* &
-                         State_VGB(AlfvenWaveMinusFirst_+iFreq-1,i,j,k,iBLK)
-                    Spectrum_II(iFreq,1) = log(FrequencySi_W(iFreq))
-                    Spectrum_II(iFreq,2) = IwPlusSi
-                    Spectrum_II(iFreq,3) = IwMinusSi
+                 
+                 IwPlusSi_W  = No2Si_V(UnitP_)* &
+                      State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_,i,j,k,iBLK)
+                 IwMinusSi_W = No2Si_V(UnitP_)* &
+                      State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_,i,j,k,iBLK)
+                
+                 !   Spectrum_II(iFreq,1) = FrequencySi_W(AlfvenWavePlusFirst_:AlfveWavePlusLast_)
+                 !   Spectrum_II(iFreq,2) = IwPlusSi
+                 !   Spectrum_II(iFreq,3) = IwMinusSi
                     
-                 end do
               end if
            end do; end do ; end do
         end do
@@ -644,39 +648,55 @@ contains
            iUnit=io_unit_new()
            open(unit=iUnit, file=FileNameTec, form='formatted', access='sequential',&
                 status='replace',iostat=iError)
-           write(iUnit, '(a)') 'Title: BATSRUS SC Spectrogram'
+           write(iUnit, '(a)') 'Title: BATSRUS SC Cell Spectrum'
            write(iUnit, '(a)') 'Variables = "log(w)","I+[Jm-3]","I-[Jm-3]" '
            write(iUnit,'(a,i3.3,a,i5.5,a)') 'Zone I= ',nWaveHalf,' F=point'
-           do iFreq=1,nWaveHalf
+          
+           do iFreq= WaveFirst_, WaveFirst_ + nWaveHalf
               write(iUnit, fmt="(30(e14.6))") &
-                   Spectrum_II(iFreq,:)
+                   FrequencySi_W(iFreq), IwPlusSi_W(iFreq), IwMinusSi_W(iFreq)
            end do
            close(iUnit)
         end if
      
       end subroutine write_cell_spectrum
  
-      subroutine write_spectrogram
-    
-        use ModProcMH
+      subroutine write_spectrogram(nWaveHalf)
+
+        ! This subroutine creates and then writes to a file a 2D array containing the spectrum
+        ! at each location along a straight line whose location is defined
+        ! in the PARAM.in file. The logical array IsInRangeCell_C is used to mark whether a cell
+        ! falls along the line.
+        ! The array Cut_II is structured in a way that allows to plot a TECPLOT 2D plot whose axes are
+        ! a single physical coordinate and frequency (w). For each point on that plane, the
+        ! wave energy densities of the two modes are filled in.
+        ! The array contains nRow = nCell *nWaveHalf, where nCell is the number of cells found.
+        ! Each coordinate is repeated for nWaveHalf rows, corresponding to the different frequencies.
+
+        use ModProcMH,    ONLY: iProc
         use ModMain,      ONLY: iteration_number, unusedBLK, nBlockALL
         use ModGeometry,  ONLY: x_BLK, y_BLK, z_BLK, dz_BLK, dx_BLK
         use ModIoUnit,    ONLY: io_unit_new
         use ModAdvance,   ONLY: State_VGB
         use ModPhysics,   ONLY: No2Si_V, UnitX_, UnitP_
-        use ModWaves,     ONLY: AlfvenWaveMinusFirst_, AlfvenWavePlusFirst_, FrequencySi_W
+        use ModWaves,     ONLY: AlfvenWavePlusFirst_,AlfvenWavePlusLast_, &
+                                AlfvenWaveMinusFirst_,AlfvenWaveMinusLast_, &
+                                FrequencySi_W
+       
         
         implicit none
         
-        real, allocatable,dimension(:,:) :: Cut_II ! Array to store log variables
-        integer                          :: nCell, nRow, iRow 
-        real                             :: dx, dz, x, y, z, IwPlusSi, IwMinusSi
-        integer                          :: iFreq,i,j,k,iBLK
-        integer                          :: iUnit, iError, aError
-        character(len=40)                :: FileNameTec 
-        character(len=11)                :: NameStage
-        character(len=7)                 :: NameProc
-        character(len=*),parameter       :: NameSub='write_spectrogram'
+        integer,intent(in)                               :: nWaveHalf
+        real, allocatable,dimension(:,:)                 :: Cut_II ! Array for output
+        logical,dimension(nI,nJ,nK)                      :: IsInRangeCell_C = .false.
+        integer                                          :: nCell, nRow, iRow 
+        real                                             :: dx, dz, x, y, z
+        integer                                          :: iFreq,i,j,k,iBLK
+        integer                                          :: iUnit, iError, aError
+        character(len=40)                                :: FileNameTec 
+        character(len=11)                                :: NameStage
+        character(len=7)                                 :: NameProc
+        character(len=*),parameter                       :: NameSub='write_spectrogram'
         !-------------------------------------------------------------------
         write(NameStage,'(i6.6)') iteration_number
         write(NameProc,'(a,i4.4)') "_pe",iProc
@@ -695,6 +715,7 @@ contains
               dz=dz_BLK(iBLK)
               if((z < zTrace+dz) .and. (z >= zTrace) .and. &
                    (x < xTrace+dx) .and. (x >= xTrace)) then
+                 IsInRangeCell_C(i,j,k) = .true.
                  nCell=nCell+1
               end if
            end do; end do ; end do
@@ -716,28 +737,22 @@ contains
               do iBLK=1,nBLK
                  if(unusedBLK(iBLK)) CYCLE
                  do k=1,nK ; do j=1,nJ ; do i=1,nI
-                    x=x_BLK(i,j,k,iBLK)
-                    y=y_BLK(i,j,k,iBLK)
-                    z=z_BLK(i,j,k,iBLK)
-                    dx=dx_BLK(iBLK)
-                    dz=dz_BLK(iBLK)
-                    if((z < zTrace+dz) .and. (z >= zTrace) .and. &
-                         (x < xTrace+dx) .and. (x >= xTrace)) then
-                       do iFreq=1,nWaveHalf
-                          IwPlusSi  = No2Si_V(UnitP_)* &
-                               State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)
-                          IwMinusSi = No2Si_V(UnitP_)* &
-                               State_VGB(AlfvenWaveMinusFirst_+iFreq-1,i,j,k,iBLK)
-                          Cut_II(iRow,1) = y
-                          Cut_II(iRow,2) = log(FrequencySi_W(iFreq))
-                          Cut_II(iRow,3) = IwPlusSi
-                          Cut_II(iRow,4) = IwMinusSi
+                   
+                    if (IsInRangeCell_C(i,j,k)) then
+                       do iFreq=WaveFirst_, WaveFirst_ + nWaveHalf
+                          
+                          Cut_II(iRow,1) = y_BLK(i,j,k,iBLK)
+                          Cut_II(iRow,2) = FrequencySi_W(iFreq)
+                          Cut_II(iRow,3) = No2Si_V(UnitP_)*State_VGB(iFreq,i,j,k,iBLK)
+                          Cut_II(iRow,4) = No2Si_V(UnitP_)*State_VGB(iFreq + nWaveHalf,i,j,k,iBLK)
                           iRow=iRow+1
+
                        end do
                     end if
                  end do; end do ; end do
               end do
            end if
+           write(*,*) 'nRow= ',nRow
            !\
            ! write data file
            !/
@@ -745,7 +760,7 @@ contains
            open(unit=iUnit, file=FileNameTec, form='formatted', access='sequential',&
                 status='replace',iostat=iError)
            write(iUnit, '(a)') 'Title: BATSRUS SC Spectrogram'
-           write(iUnit, '(a)') 'Variables = "Y[R]", "log(w)","I+[Jm-3]","I-[Jm-3]" '
+           write(iUnit, '(a)') 'Variables = "Y[R]", "w","I+[Jm-3]","I-[Jm-3]" '
            write(iUnit,'(a,i3.3,a,i5.5,a)') 'Zone I= ',nWaveHalf,' J= ',nCell,' F=point'
            do iRow=1,nRow
               write(iUnit, fmt="(30(e14.6))") &
