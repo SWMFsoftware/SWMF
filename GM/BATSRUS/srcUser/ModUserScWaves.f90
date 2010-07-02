@@ -55,15 +55,15 @@ Module ModUser
 !                       dt
 !                       'string'
 !
-!                       where 'string' can be set to 'spectrogram' or 'cellspecrum' (refer to the the SWMF
+!                       where 'string' can be set to 'linespect' or 'cellspect' (refer to the the SWMF
 !                       user manual for further details on this command).
-!                       'spectrogram' : the full wave spectrum along a line is extracted
+!                       'linespect' : the full wave spectrum along a line is extracted
 !                       according to the parameters set in #SPECTROGRAM (see above). The data is
 !                       written to a file called Spectrum_n_xxx_peyyy.tec, where xxx stands
 !                       for simulation time/iteration number and yyy to the processor number. 
 !                       Files from different processors should be combined later.
 !                       
-!                       'cellspectrum' : the full spectrum in a single cell is written to a file
+!                       'cellspect' : the full spectrum in a single cell is written to a file
 !                       The cell is chosen by its x,y,z coordinates set in #CELLSPECTRUM (see above).
 !                       The output is written to a file Cell_Spectrum_n_xxx_peyyy.tec. Since only
 !                       one processor is involved, no post-processing is necessary.
@@ -537,15 +537,15 @@ contains
     !                       dt
     !                       'string'
     !
-    !                       where 'string' can be set to 'spectrogram' or 'cellspectrum' (refer to the the SWMF
+    !                       where 'string' can be set to 'linespect' or 'cellspect' (refer to the the SWMF
     !                       user manual for further details on this command).
-    !                       'spectrogram' : the full wave spectrum along a line is extracted
+    !                       'linespect' : the full wave spectrum along a line is extracted
     !                       according to the parameters set in #SPECTROGRAM (see above). The data is
     !                       written to a file called Spectrum_n_xxx_peyyy.tec, where xxx stands
     !                       for simulation time/iteration number and yyy to the processor number. 
     !                       Files from different processors should be combined later.
     !                       
-    !                       'cellspectrum' : the full spectrum in a single cell is written to a file
+    !                       'cellspect' : the full spectrum in a single cell is written to a file
     !                       The cell is chosen by its x,y,z coordinates set in #CELLSPECTRUM (see above).
     !                       The output is written to a file Cell_Spectrum_n_xxx_peyyy.tec. Since only
     !                       one processor is involved, no post-processing is necessary.
@@ -566,11 +566,11 @@ contains
     nWaveHalf = max(nWave/2,1)
    
     select case(TypeVar)
-    case('spectrogram')
+    case('linespect')
        ! write spectrum to file, extracted along a line (parallel to an axis).
        ! See description of #SPECTROGRAM command in the beginning of this module.
        call write_spectrogram
-    case('cellspectrum')
+    case('cellspect')
        ! write spectrum to file, extracted from a single cell. Cell is chosen by #CELLSPECTRUM
        ! command (see description in the biginning of this module).
        call write_cell_spectrum
