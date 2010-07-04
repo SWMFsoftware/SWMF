@@ -101,6 +101,7 @@ Module ModUser
   
   ! varaibles read by user_read_inputs and used by other subroutines
   logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
+  logical                       :: UseParkerIcs
   real                          :: WaveInnerBcFactor
   real                          :: xTrace = 0.0, zTrace = 0.0
   real                          :: xTestSpectrum, yTestSpectrum, zTestSpectrum
@@ -150,6 +151,9 @@ contains
 
        select case(NameCommand)
           
+       case("#USEPARKERICS")
+          call read_var('UseParkerIcs', UsePArkerIcs)
+              
        case("#WAVEINNERBC")
           call read_var('TypeWaveInnerBc', TypeWaveInnerBc)
           call read_var('WaveInnerBcFactor', WaveInnerBcFactor)
@@ -333,8 +337,8 @@ contains
 
   end subroutine user_face_bcs
   !===========================================================================
-  subroutine get_plasma_parameters_cell(iCell, jCell, kCell, iBlock,&
-       DensCell, PresCell)
+  subroutine get_plasma_parameters_cell(i, j, k, iBlock,&
+       Density, Pressure)
      
     ! This subroutine computes the cell values for density and pressure 
     ! assuming an isothermal atmosphere
@@ -345,72 +349,155 @@ contains
     use ModExpansionFactors,  ONLY: UMin, CoronalT0Dim
     implicit none
 
-    integer, intent(in)  :: iCell, jCell, kCell, iBlock
-    real, intent(out)    :: DensCell, PresCell
+    integer, intent(in)  :: i, j, k, iBlock
+    real, intent(out)    :: Density, Pressure
     real :: UFinal       !The solar wind speed at the far end of the Parker spiral,
                          !which originates from the given cell
     real :: URatio       !The coronal based values for temperature density 
                          !are scaled as functions of UFinal/UMin ratio
     real :: Temperature
     !--------------------------------------------------------------------------
-    call get_bernoulli_integral(x_BLK(iCell, jCell, kCell, iBlock)/&
-         R_BLK(iCell, jCell, kCell, iBlock),&
-         y_BLK(iCell, jCell, kCell, iBlock)/R_BLK(iCell, jCell, kCell, iBlock),&
-         z_BLK(iCell, jCell, kCell, iBlock)/R_BLK(iCell, jCell, kCell, iBlock), UFinal)
+    call get_bernoulli_integral(x_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
+                                y_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
+                                z_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock), UFinal)
+    
     URatio=UFinal/UMin
 
     !This is the temperature variation
-    Temperature = CoronalT0Dim*Si2No_V(UnitTemperature_)/(min(URatio, 1.5))
+    Temperature = CoronalT0Dim*Si2No_V(UnitTemperature_)/(min(URatio, 1.0))
 
-    DensCell  = (1.0/URatio) &          !This is the density variation
+    Density  = (1.0/URatio) &          !This is the density variation
          *BodyRho_I(1)*exp(-GBody/Temperature &
-         *(1.0/max(R_BLK(iCell, jCell, kCell, iBlock), 0.90)-1.0))
+         *(1.0/max(R_BLK(i, j, k, iBlock), 0.90)-1.0))
 
-    PresCell = DensCell*Temperature
+    Pressure = Density*Temperature
 
   end subroutine get_plasma_parameters_cell
   !============================================================================
   subroutine user_set_ics
 
-    ! user_set_ic : intilize MHD parameters according to an isothermal atmosphere solution.
+    ! Initialize solution. MHD initiial state can be set either according to a
+    ! Parker solution or an isothermal atmosphere solution.
+    ! Magnetic fiels B1 is set to zero.
+    ! Wave energy of each frequency group is set to 1.0e-30.
 
-    use ModMain
-    use ModAdvance,   ONLY: State_VGB 
-    use ModPhysics,   ONLY: inv_gm1, BodyTDim_I
-    use ModGeometry
+    use ModVarIndexes
+    use ModAdvance,          ONLY: State_VGB
+    use ModGeometry,         ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
+    use ModMain,             ONLY: nI, nJ, nK, globalBLK, UseB0
+    use ModPhysics,          ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
+         BodyRho_I, BodyTDim_I, UnitU_
+    use ModExpansionFactors, ONLY: CoronalT0Dim
+
     implicit none
 
     integer :: i, j, k, iBLK
-    logical :: oktest,oktest_me
-    real    :: Dens, Pres
-    real    :: x, y, z, R, U0
+    integer :: IterCount
+    real :: x, y, z, r
+    real :: U0, Ur, Ur0, Ur1, del, Ubase, rTransonic, Uescape, Usound
+    real, parameter :: Epsilon = 1.0e-6
+    real    :: Density, Pressure, Tcorona
     !--------------------------------------------------------------------------
     iBLK = globalBLK
+   
+    ! Variables needed for Parker solution
+    Tcorona = CoronalT0Dim*Si2No_V(UnitTemperature_)
 
-    ! The sqrt is for backward compatibility with older versions of the Sc
-    U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
+    ! normalize with isothermal sound speed.
+    Usound = sqrt(Tcorona)
+    Uescape = sqrt(-GBody*2.0)/Usound
+    rTransonic = 0.25*Uescape**2
+    if(.not.(rTransonic>exp(1.0))) call stop_mpi('sonic point inside Sun')
+
+    Ubase = rTransonic**2*exp(1.5 - 2.0*rTransonic)
     
-    State_VGB(:,:,:,:,iBLK) = 1.0e-30 !Initialize the wave spectrum
-    do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
+   
+    do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
        x = x_BLK(i,j,k,iBLK)
        y = y_BLK(i,j,k,iBLK)
        z = z_BLK(i,j,k,iBLK)
        r = r_BLK(i,j,k,iBLK)
-       State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
-       call get_plasma_parameters_cell(i,j,k,iBLK,&
-            Dens,Pres)
-       State_VGB(rho_,i,j,k,iBLK) = Dens
-       State_VGB(p_,i,j,k,iBLK)   = Pres
-       State_VGB(RhoUx_,i,j,k,iBLK) = Dens *U0*x/R
-       State_VGB(RhoUy_,i,j,k,iBLK) = Dens *U0*y/R
-       State_VGB(RhoUz_,i,j,k,iBLK) = Dens *U0*z/R
-       State_VGB(Ew_,i,j,k,iBLK) = nWave*1.0e-30
+      
+       if (UseParkerIcs) then
 
-    end do; end do; end do
+          !\
+          ! Initialize wind with Parker's solution
+          ! construct solution which obeys
+          !   rho x u_r x r^2 = constant
+          !/      
+          if(r > rTransonic)then
+             !\
+             ! Inside supersonic region
+             !/
+             Ur0 = 1.0
+             IterCount = 0
+             do
+                IterCount = IterCount + 1
+                Ur1 = sqrt(Uescape**2/r - 3.0 + 2.0*log(16.0*Ur0*r**2/Uescape**4))
+                del = abs(Ur1 - Ur0)
+                if(del < Epsilon)then
+                   Ur = Ur1
+                   EXIT
+                elseif(IterCount < 1000)then
+                   Ur0 = Ur1
+                   CYCLE
+                else
+                   call stop_mpi('PARKER > 1000 it.')
+                end if
+             end do
+          else
+             !\
+             ! Inside subsonic region
+             !/
+             Ur0 = 1.0
+             IterCount = 0
+             do
+                IterCount = IterCount + 1
+                Ur1 = (Uescape**2/(4.0*r))**2 &
+                     *exp(0.5*(Ur0**2 + 3.0 - Uescape**2/r))
+                del = abs(Ur1 - Ur0)
+                if(del < Epsilon)then
+                   Ur = Ur1
+                   EXIT
+                elseif(IterCount < 1000)then
+                   Ur0 = Ur1
+                   CYCLE
+                else
+                   call stop_mpi('PARKER > 1000 it.')
+                end if
+             end do
+          end if
 
-  end subroutine user_set_ics
-  !============================================================================
-  subroutine user_update_states(iStage,iBlock)
+       Density = rBody**2*Density*Ubase/(r**2*Ur)
+       State_VGB(Rho_,i,j,k,iBLK) = Density
+       State_VGB(RhoUx_,i,j,k,iBLK) = Density*Ur*x/r *Usound
+       State_VGB(RhoUy_,i,j,k,iBLK) = Density*Ur*y/r *Usound
+       State_VGB(RhoUz_,i,j,k,iBLK) = Density*Ur*z/r *Usound
+    
+    else
+       ! Intilize velocity and density according to an isothermal atmosphere solution.
+
+       U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
+       State_VGB(Rho_,i,j,k,iBLK) = Density
+       State_VGB(RhoUx_,i,j,k,iBLK) = Density *U0*x/r
+       State_VGB(RhoUy_,i,j,k,iBLK) = Density *U0*y/r
+       State_VGB(RhoUz_,i,j,k,iBLK) = Density *U0*z/r
+      
+    end if
+
+    call get_plasma_parameters_cell(i, j, k, iBLK, Density, Pressure)
+    State_VGB(p_,i,j,k,iBLK) = Pressure
+
+    ! initialize the rest of state variables.
+    State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
+    State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK) = 1.0e-30
+    State_VGB(Ew_,i,j,k,iBLK) = nWave*0.5e-30
+
+ end do; end do; end do
+
+end subroutine user_set_ics
+!============================================================================
+subroutine user_update_states(iStage,iBlock)
 
     ! user_update_states : calls update states_MHD, followed by a call to dissipate_waves, which
     !                      removes wave energy from the spectrum and adds it to the plasma pressure.
