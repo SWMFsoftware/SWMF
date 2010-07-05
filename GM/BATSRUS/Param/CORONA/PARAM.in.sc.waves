@@ -47,7 +47,7 @@ T
  24.0                   zMax
 
 #GRIDLEVEL
-7			nLevelArea 
+3			nLevelArea 
 all			NameArea
 
 #GRIDLEVEL
@@ -61,7 +61,7 @@ shell0                  NameArea
 user                    NameArea
 
 #GRIDLEVEL
-7                       nLevelArea 
+6                       nLevelArea 
 initial                 NameArea
 
 #GAMMA
