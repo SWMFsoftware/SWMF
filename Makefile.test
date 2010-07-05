@@ -528,6 +528,7 @@ test_sc_waves:
 	make test_sc_waves_rundir
 
 test_sc_waves_compile:
+	rm -f SC/BATSRUS/src/Makefile
 	./Config.pl -v=Empty,SC/BATSRUS 
 	./Config.pl -o=SC:u=ScWaves,e=MhdWaves,setvar=nWave=40
 	./Config.pl -g=SC:4,4,4,2000,1
