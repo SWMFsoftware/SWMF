@@ -561,7 +561,7 @@ contains
     !                      removes wave energy from the spectrum and adds it to the plasma pressure.
     ! ---------------------------------------------------------------------------------------------
 
-    use ModAdvance, ONLY: State_VGB, B0_DGB
+    use ModAdvance, ONLY: State_VGB, B0_DGB, nVar
 
     use ModGeometry,ONLY: R_BLK
     use ModEnergy,  ONLY: calc_energy_cell
@@ -576,9 +576,9 @@ contains
     !\
     ! Advect solution
     !/
-    if(any(State_VGB(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK,iBlock)<0.0)) then
-       write(*,*) NameSub,' : negative wave energy before MHD'
-    end if
+    if(any(State_VGB(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK,iBlock)<0.0)) &
+       call write_negative_wave_energy( 'before MHD' )
+   
 
     call update_states_MHD(iStage, iBlock)
 
@@ -592,6 +592,27 @@ contains
     if (UseAlfvenWaves .and. DoDampCutOff) call dissipate_waves(iBlock)
 
   contains
+    subroutine write_negative_wave_energy( TypeMessage )
+      character(LEN=*), intent(in) :: TypeMessage
+      integer:: iVar
+      !-----------------------
+
+      write(*,'(a)') NameSub//' : negative wave energy '//TypeMessage
+      
+      do k=1,nK; do j=1,nJ; do i=1,nI
+         if (any(State_VGB(WaveFirst_:WaveLast_, i, j, k, iBlock)<0.0)) then
+            write(*,*)'Negative energy in the point with ijk iBLK= ', i, j, k, iBlock
+            write(*,*)'At the radius of ', R_BLK(i, j, k, iBlock)
+            write(*,*)'The state vector is:  iVar   State_VGB(iVar, ijkiBlock)'
+            do iVar = 1,nVar 
+               write(*,*)iVar, State_VGB(iVar, i, j, k, iBlock)
+            end do
+         end if
+      end do; end do; end do
+      call CON_stop('Stopped')
+    
+    end subroutine write_negative_wave_energy
+    !=======================================
     subroutine dissipate_waves(iBlock)
 
       ! Implements frequency dependent wave damping mechanism.  This subroutine removes wave
