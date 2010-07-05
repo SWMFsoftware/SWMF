@@ -126,11 +126,11 @@ T              UseUSerUpdateStates
 T
 1.0
 2.5
-0.01
-CR2077_MDI_180.dat
+0.0
+SC/Param/CR1935_WSO.dat
 12
 -1.0
-2.00
+0.01
 
 #EMPIRICALSW
 WSA
