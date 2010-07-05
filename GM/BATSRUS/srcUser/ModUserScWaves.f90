@@ -101,7 +101,7 @@ Module ModUser
 
   ! varaibles read by user_read_inputs and used by other subroutines
   logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
-  logical                       :: UseParkerIcs
+  logical                       :: UseParkerIcs=.false.
   real                          :: WaveInnerBcFactor
   real                          :: xTrace = 0.0, zTrace = 0.0
   real                          :: xTestSpectrum, yTestSpectrum, zTestSpectrum
@@ -359,9 +359,11 @@ contains
     !are scaled as functions of UFinal/UMin ratio
     real :: Temperature
     !--------------------------------------------------------------------------
-    call get_bernoulli_integral(x_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
+    call get_bernoulli_integral(&
+         x_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
          y_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
-         z_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock), UFinal)
+         z_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
+         UFinal)
 
     URatio=UFinal/UMin
 
@@ -395,7 +397,7 @@ contains
 
     implicit none
 
-    integer :: i, j, k, iBLK
+    integer :: i, j, k, iBLK, iVar
     integer :: IterCount
     real :: x, y, z, r
     real :: U0, Ur, Ur0, Ur1, del, Ubase, rTransonic, Uescape, Usound
@@ -484,9 +486,13 @@ contains
           State_VGB(p_,i,j,k,iBLK) = Pressure
 
           ! initialize the rest of state variables.
-          State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
-          State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK) = 1.0e-30
-          State_VGB(Ew_,i,j,k,iBLK) = nWave*0.5e-30
+          do iVar = Bx_, Bz_
+             State_VGB(iVar, i, j, k, iBLK) = 0.0
+          end do
+          do iVar = WaveFirst_, WaveLast_
+             State_VGB(iVar, i, j, k, iBLK) = 1.0e-30
+          end do
+          State_VGB(Ew_, i, j, k, iBLK) = nWave*0.5e-30
        end do; end do; end do
 
     else
@@ -508,7 +514,7 @@ contains
 
 
 
-       State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = 1.0e-31
+       State_VGB(:,:,:,:,iBLK) = 1.0e-31
 
        do k=1,nK; do j=1,nJ; do i=1,nI
 
