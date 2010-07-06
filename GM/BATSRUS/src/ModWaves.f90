@@ -245,9 +245,10 @@ contains
        end if
     else
        State_V(WaveFirst_:WaveLast_) = EWaveTotal * Spectrum_W
-       if( UseWavePressureLtd )&
-            State_V(Ew_) = sum(State_V(WaveFirst_:WaveLast_))
     end if
+    if( UseWavePressureLtd )&
+         State_V(Ew_) = sum(State_V(WaveFirst_:WaveLast_))
+   
   end subroutine set_wave_state
   !============================================================================
   subroutine update_wave_group_advection(iBlock)
