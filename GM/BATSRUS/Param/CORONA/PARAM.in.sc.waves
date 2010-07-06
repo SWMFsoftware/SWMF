@@ -7,6 +7,14 @@ Input file for creating a steady state solar corona driven by Alfven waves
 #TIMEACCURATE
 F			DoTimeAccurate
 
+#STARTTIME
+2008 			iYear
+11			iMonth
+20			iDay
+7			iHour
+0			iMinute
+4			iSecond
+
 #SAVERESTART
 T			DoSaveRestart
 16000			DnSaveRestart
@@ -47,7 +55,7 @@ T
  24.0                   zMax
 
 #GRIDLEVEL
-3			nLevelArea 
+4			nLevelArea 
 all			NameArea
 
 #GRIDLEVEL
@@ -61,7 +69,7 @@ shell0                  NameArea
 user                    NameArea
 
 #GRIDLEVEL
-6                       nLevelArea 
+9                       nLevelArea 
 initial                 NameArea
 
 #GAMMA
@@ -127,7 +135,7 @@ T
 1.0
 2.5
 0.0
-SC/Param/CR1935_WSO.dat
+CR2077_MDI_180.dat
 12
 -1.0
 0.01
