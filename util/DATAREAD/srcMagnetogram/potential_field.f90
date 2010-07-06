@@ -2,10 +2,26 @@ module ModPotentialField
 
   implicit none
 
+
   logical :: DoReadMagnetogram = .true.
   logical :: UseCosTheta = .true. 
 
+
   integer         :: nR = 90, nTheta = 90, nPhi = 90
+  integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 2
+
+!  integer         :: nR = 32, nTheta = 32, nPhi = 32
+!  integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 2
+
+!  integer         :: nR = 64, nTheta = 64, nPhi = 64
+!  integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 1
+
+!  integer         :: nR = 128, nTheta = 128, nPhi = 128
+!  integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 1
+
+!  integer         :: nR = 256, nTheta = 256, nPhi = 256
+!  integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 1
+
   real, parameter :: rMin = 1.0, rMax = 2.5
   real :: PhiShift
 
@@ -15,7 +31,7 @@ module ModPotentialField
        Radius_I, Theta_I, Phi_I, SinTheta_I, &
        dRadius_I, dPhi_I, dCosTheta_I, &
        RadiusNode_I, ThetaNode_I, PhiNode_I, SinThetaNode_I, &
-       dRadiusNode_I, dThetaNode_I, dPhiNode_I, dCosThetaNode_I
+       dRadiusNode_I, dTheta_I, dThetaNode_I, dPhiNode_I, dCosThetaNode_I
 
   real, allocatable:: Br_II(:,:), Potential_C(:,:,:), Rhs_C(:,:,:), &
        B0_DG(:,:,:,:), DivB_C(:,:,:), PlotVar_VG(:,:,:,:)
@@ -130,7 +146,7 @@ contains
     allocate( &
          Radius_I(0:nR+1), Theta_I(0:nTheta+1), Phi_I(0:nPhi+1), &
          dRadius_I(nR), dPhi_I(nPhi), &
-         SinTheta_I(0:nTheta+1), dCosTheta_I(nTheta), &
+         SinTheta_I(0:nTheta+1), dTheta_I(nTheta), dCosTheta_I(nTheta), &
          SinThetaNode_I(nTheta+1), dCosThetaNode_I(nTheta+1), &
          RadiusNode_I(nR+1), ThetaNode_I(nTheta+1), PhiNode_I(nPhi+1), &
          dRadiusNode_I(nR+1), dThetaNode_I(nTheta+1), dPhiNode_I(nPhi+1))
@@ -170,11 +186,20 @@ contains
           ThetaNode_I(iTheta) = (iTheta - 1)*dTheta
        end do
     end if
+    dTheta_I = ThetaNode_I(2:nTheta+1) - ThetaNode_I(1:nTheta)
     SinTheta_I = sin(Theta_I)
     SinThetaNode_I = sin(ThetaNode_I)
     if(UseCosTheta)then
        dCosTheta_I = dZ
+!       dCosTheta_I(1)      = SinTheta_I(1)*(ThetaNode_I(2) - ThetaNode_I(1))
+!       dCosTheta_I(nTheta) = SinTheta_I(nTheta)*(ThetaNode_I(nTheta+1) - ThetaNode_I(nTheta))
+       dCosTheta_I(1:nTheta) = SinTheta_I(1:nTheta)*dTheta_I
+
        dCosThetaNode_I = dZ
+!       dCosThetaNode_I(2) = SinThetaNode_I(2)*(Theta_I(2)-Theta_I(1))
+!       dCosThetaNode_I(nTheta) = SinThetaNode_I(nTheta)*(Theta_I(nTheta)-Theta_I(nTheta-1))
+       dCosThetaNode_I(2:nTheta) = SinThetaNode_I(2:nTheta)*(Theta_I(2:nTheta)-Theta_I(1:nTheta-1))
+
     else
        dCosTheta_I(1:nTheta) = SinTheta_I(1:nTheta)*dTheta
        dThetaNode_I = dTheta
@@ -413,15 +438,20 @@ contains
   subroutine get_gradient(x_C, Grad_DG)
 
     use ModPotentialField, ONLY: nR, nTheta, nPhi, Radius_I, SinTheta_I, &
-         dRadiusNode_I, dThetaNode_I, dPhiNode_I, Br_II, set_boundary, &
-         UseCosTheta, SinThetaNode_I, dCosThetaNode_I
+         dRadiusNode_I, dTheta_I, dCosTheta_I, dThetaNode_I, dPhiNode_I, &
+         Br_II, set_boundary, &
+         UseCosTheta, RadiusNode_I, Theta_I, SinThetaNode_I, dCosThetaNode_I, &
+         iRTest, iThetaTest, iPhiTest, rMax, ThetaNode_I, Phi_I, PhiNode_I
 
     real, intent(in):: x_C(nR,nTheta,nPhi)
     real, intent(out):: Grad_DG(3,nR+1,nTheta+1,nPhi+1)
 
     real, allocatable, save :: x_G(:,:,:)
 
-    integer:: iR, iTheta, iPhi
+    integer:: iR, iTheta, iPhi, iDim
+
+    real:: r, GradExact_D(3)
+
     !--------------------------------------------------------------------------
     if(.not.allocated(x_G))then
        allocate(x_G(0:nR+1,0:nTheta+1,0:nPhi+1))
@@ -473,9 +503,25 @@ contains
              Grad_DG(3,iR,iTheta,iPhi) = &
                   (x_G(iR,iTheta,iPhi) - x_G(iR,iTheta,iPhi-1)) &
                   / (Radius_I(iR)*SinTheta_I(iTheta)*dPhiNode_I(iPhi))
+
+!!!                  *dTheta_I(iTheta) / (Radius_I(iR)*dCosTheta_I(iTheta)*dPhiNode_I(iPhi))
           end do
        end do
     end do
+
+    !iR = iRTest; iPhi = iPhiTest; iTheta = iThetaTest
+    !
+    !r = Radius_I(iR)
+    !GradExact_D  = (/ &
+    !     (1+2*rMax**3/RadiusNode_I(iR)**3)/(1+2*rMax**3)*sin(Theta_I(iTheta))*cos(Phi_I(iPhi)), &
+    !     (r-rMax**3/r**2)/(1+2*rMax**3)/r*cos(ThetaNode_I(iTheta))*cos(Phi_I(iPhi)), &
+    !     -(r-rMax**3/r**2)/(1+2*rMax**3)/r*sin(PhiNode_I(iPhi)) /)
+    !
+    !write(*,*) 'magnetogram at test cell=', Br_II(iTheta,iPhi)
+    !do iDim = 1, 3
+    !   write(*,*) 'Grad, Exact, Error=', Grad_DG(iDim,iR,iTheta,iPhi), GradExact_D(iDim), &
+    !        Grad_DG(iDim,iR,iTheta,iPhi) - GradExact_D(iDim)
+    !end do
 
   end subroutine get_gradient
 
@@ -484,13 +530,15 @@ contains
   subroutine get_divergence(b_DG, DivB_C)
 
     use ModPotentialField, ONLY: nR, nTheta, nPhi, Radius_I, dRadius_I, &
-         dPhi_I, SinTheta_I, dCosTheta_I, RadiusNode_I, &
-         SinThetaNode_I
+         dPhi_I, SinTheta_I, dTheta_I, dCosTheta_I, RadiusNode_I, &
+         SinThetaNode_I, Phi_I, &
+         iRTest, iThetaTest, iPhiTest, rMax
 
     real, intent(in) :: b_DG(3,nR+1,nTheta+1,nPhi+1)
     real, intent(out):: DivB_C(nR,nTheta,nPhi)
 
-    integer:: iR, iTheta, iPhi
+    real:: r, DivExact_D(3), Div_D(3)
+    integer:: iR, iTheta, iPhi, iDim
     !--------------------------------------------------------------------------
     do iPhi = 1, nPhi
        do iTheta = 1, nTheta
@@ -507,9 +555,45 @@ contains
                   ( b_DG(3,iR,iTheta,iPhi+1) &
                   - b_DG(3,iR,iTheta,iPhi) ) &
                   / (Radius_I(iR)*SinTheta_I(iTheta)*dPhi_I(iPhi))
+
+!!!                 *dTheta_I(iTheta) / (Radius_I(iR)*dCosTheta_I(iTheta)*dPhi_I(iPhi))
           end do
        end do
     end do
+
+    !iR = iRTest; iPhi = iPhiTest; iTheta = iThetaTest
+    !r = Radius_I(iR)
+    !
+    !Div_D(1) = ( RadiusNode_I(iR+1)**2*b_DG(1,iR+1,iTheta,iPhi)   &
+    !     - RadiusNode_I(iR)**2  *b_DG(1,iR  ,iTheta,iPhi) ) &
+    !     / (Radius_I(iR)**2 *dRadius_I(iR))
+    !
+    !Div_D(2) = ( SinThetaNode_I(iTheta+1)*b_DG(2,iR,iTheta+1,iPhi)   &
+    !     - SinThetaNode_I(iTheta)  *b_DG(2,iR,iTheta  ,iPhi) ) &
+    !     / (Radius_I(iR)*dCosTheta_I(iTheta))
+    !
+    !Div_D(3) = ( b_DG(3,iR,iTheta,iPhi+1) - b_DG(3,iR,iTheta,iPhi) ) &
+    !     / (Radius_I(iR)*SinTheta_I(iTheta)*dPhi_I(iPhi))
+    !
+    !DivExact_D = &
+    !     (/ 2*SinTheta_I(iTheta), &
+    !     (1-SinTheta_I(iTheta)**2)/SinTheta_I(iTheta), &
+    !     - 1/SinTheta_I(iTheta) /)
+    !
+    !DivExact_D = DivExact_D &
+    !     *(r-rMax**3/r**2)/(1+2*rMax**3)/r**2*cos(Phi_I(iPhi))
+    !
+    !do iDim = 1, 3
+    !   write(*,*) 'Div_D, Exact, Error=', Div_D(iDim), DivExact_D(iDim), &
+    !        Div_D(iDim) - DivExact_D(iDim)
+    !end do
+    !   
+    !write(*,*)'testlaplace=', DivB_C(iR,iTheta,iPhi)
+    !write(*,*)'location   =',maxloc(abs(DivB_C))
+    !write(*,*)'max laplace=',maxval(abs(DivB_C))
+    !write(*,*)'avg laplace=',sum(abs(DivB_C))/(nR*nTheta*nPhi)
+    !
+    !stop
 
   end subroutine get_divergence
 
@@ -530,8 +614,8 @@ program potential_field
   implicit none
 
   integer :: nKrylov=400, nIter=10000
-  real    :: Tolerance = 1e-4
-  integer :: n, iError, iTheta
+  real    :: Tolerance = 1e-4, r
+  integer :: n, iError, iR, iPhi, iTheta, i_D(3)
   !--------------------------------------------------------------------------
 
   if(DoReadMagnetogram) call read_magnetogram
@@ -540,14 +624,41 @@ program potential_field
 
   if(.not.DoReadMagnetogram)then
      allocate(Br_II(nTheta,nPhi))
-     do iTheta = 1, nTheta
-        Br_II(iTheta,:) = cos(Theta_I(iTheta))
-     end do
+     do iPhi = 1, nPhi; do iTheta = 1, nTheta; 
+        Br_II(iTheta,iPhi) = sin(Theta_I(iTheta))*cos(Phi_I(iPhi))
+        do iR = 1, nR
+           r = Radius_I(iR)
+           Potential_C(iR,iTheta,iPhi) = (r - rMax**3/r**2)/(1 + 2*rMax**3)*Br_II(iTheta,iPhi)
+        end do
+     end do; end do
+
+     write(*,*)'rTest    =',Radius_I(iRTest)
+     write(*,*)'PhiTest  =',Phi_I(iPhiTest)
+     write(*,*)'ThetaTest=',Theta_I(iThetaTest)
+     write(*,*)'BrTest   =',Br_II(iThetaTest,iPhiTest)
+     write(*,*)'PotTest  =',Potential_C(iRTest,iThetaTest,iPhiTest)
+
   end if
 
   n = nR*nTheta*nPhi
   UseBr = .true.
   call matvec(Potential_C, Rhs_C, n)
+
+  if(.not.DoReadMagnetogram)then
+
+     write(*,*)'Error at nR/2,nTheta/2,nPhi/2=',Rhs_C(nR/2,nTheta/2,nPhi/2)
+     write(*,*)'Error at nR/2,nTheta/2,1=',Rhs_C(nR/2,1,nPhi/2)
+     write(*,*)'Error at 1,nTheta/2,nPhi/2=',Rhs_C(1,nTheta/2,nPhi/2)
+     write(*,*)'Error at 1,1,nPhi/2=',Rhs_C(1,1,nPhi/2)
+     write(*,*)'Error at 1,1,1=',Rhs_C(1,1,1)
+
+     i_D = maxloc(abs(Rhs_C))
+     iR = i_D(1); iTheta=i_D(2); iPhi=i_D(3)
+     write(*,*)'iR, iTheta, iPhi, Rhs=', i_D, Rhs_C(iR,iTheta,iPhi)
+     write(*,*)'r, theta, phi=',Radius_I(iR), Theta_I(iTheta), Phi_I(iPhi)
+     stop
+  end if
+
   Rhs_C = -Rhs_C
 
   UseBr = .false.
