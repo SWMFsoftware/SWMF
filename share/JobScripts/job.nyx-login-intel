@@ -3,7 +3,7 @@
 #PBS -A csem
 #PBS -q route
 #PBS -N SWMF
-#PBS -l nodes=4:ppn=4:qos=csem
+#PBS -l nodes=4:ppn=4,qos=csem
 #PBS -l pmem=500mb
 #PBS -l walltime=2:00:00
 
