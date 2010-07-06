@@ -13,7 +13,8 @@ F			DoTimeAccurate
 20			iDay
 7			iHour
 0			iMinute
-4			iSecond
+0			iSecond
+0.0
 
 #SAVERESTART
 T			DoSaveRestart
@@ -138,7 +139,7 @@ T
 CR2077_MDI_180.dat
 12
 -1.0
-0.01
+2.0
 
 #EMPIRICALSW
 WSA
