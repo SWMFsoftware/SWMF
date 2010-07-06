@@ -291,7 +291,7 @@ contains
           ! set wave energy at inner boundary in open field region only
 
           VarsGhostFace_V(WaveFirst_:WaveLast_) = 1.0e-30
-          if(UseWavePressureLtd) VarsGhostFace_V(Ew_) = nWave * 0.5e-30
+          if(UseWavePressureLtd) VarsGhostFace_V(Ew_) = sum(VarsGhostFace_V(WaveFirst_:WaveLast_))
        else
           ! total wave energy depends on magnetic field magnitude
           TotalB_D = B0Face_D + VarsTrueFace_V(Bx_:Bz_)  
@@ -394,6 +394,7 @@ contains
     use ModPhysics,          ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          BodyRho_I, BodyTDim_I, UnitU_
     use ModExpansionFactors, ONLY: CoronalT0Dim
+    use ModWaves,            ONLY: UseWavePressureLtd
 
     implicit none
 
@@ -492,7 +493,9 @@ contains
           do iVar = WaveFirst_, WaveLast_
              State_VGB(iVar, i, j, k, iBLK) = 1.0e-30
           end do
-          State_VGB(Ew_, i, j, k, iBLK) = nWave*0.5e-30
+          if(UseWavePressureLtd)&
+               State_VGB(Ew_, i, j, k, iBLK) = &
+               sum(State_VGB(WaveFirst_:WaveLast_, i, j, k, iBLK))
        end do; end do; end do
 
     else
@@ -545,7 +548,9 @@ contains
           ! initialize the rest of state variables.
           State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
           State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK) = 1.0e-30
-          State_VGB(Ew_,i,j,k,iBLK) = nWave*0.5e-30
+          if(UseWavePressureLtd)&
+               State_VGB(Ew_, i, j, k, iBLK) = &
+               sum(State_VGB(WaveFirst_:WaveLast_, i, j, k, iBLK))
 
        end do; end do; end do
 
