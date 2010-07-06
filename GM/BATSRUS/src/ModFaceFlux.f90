@@ -2388,7 +2388,7 @@ contains
 
     use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, iP
     use ModMain, ONLY: Climit
-    use ModWaves, ONLY: UseWavePressure, GammaWave, WaveEnergy
+    use ModWaves, ONLY: UseWavePressure, GammaWave, WaveEnergy, UseAlfvenWaves
 
     real,    intent(in) :: State_V(nVar)
     real,    intent(in) :: B0x, B0y, B0z
@@ -2680,6 +2680,19 @@ contains
       HallUnLeft  = UnLeft_I(eFluid_)
       HallUnRight = UnRight_I(eFluid_)
 
+      if(UseAlfvenWaves) then
+         FullBx = StateLeft_V(Bx_) + B0x
+         FullBy = StateLeft_V(By_) + B0y
+         FullBz = StateLeft_V(Bz_) + B0z
+         FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
+         Fast = max(Fast, sqrt( FullBn*FullBn / StateLeft_V(Rho_) ))
+         
+         FullBx = StateRight_V(Bx_) + B0x
+         FullBy = StateRight_V(By_) + B0y
+         FullBz = StateRight_V(Bz_) + B0z
+         FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
+         Fast = max(Fast, sqrt( FullBn*FullBn / StateRight_V(Rho_) ))
+      end if
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
          if(HallCoeff > 0.0)then
             Cleft_I(1)   = min(UnLeft, UnRight, HallUnLeft, HallUnRight)
