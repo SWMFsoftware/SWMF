@@ -359,7 +359,7 @@ subroutine apply_im_pressure
                    State_VGB(Ppar_,1:nI,1:nJ,1:nK,iBlock)   &
                    + min(1.0, Factor * Dt) * TauCoeffIm_C &
                    * (pIm_CD(1,:,:,:) - &
-                   State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock))
+                   State_VGB(Ppar_,1:nI,1:nJ,1:nK,iBlock))
            end if
         end if
         if(DoCoupleImDensity)then
