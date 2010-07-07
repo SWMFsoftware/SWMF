@@ -22,6 +22,7 @@ subroutine set_physics_constants
 
   real :: MassBodySi
   real :: MassBody2Si                 !^CFG IF SECONDBODY
+  real :: pCoef
 
   integer :: i, iBoundary, iArea, iFile
 
@@ -256,6 +257,10 @@ subroutine set_physics_constants
      endif
 
      if(nFluid > 1)then
+        ! Ratio of total pressure and sum of ion pressures depends on UseElectronPressure
+        pCoef = 1 + ElectronPressureRatio
+        if(UseElectronPressure) pCoef = 1.0
+
         iFluid=IonFirst_
         call select_fluid
         FaceState_VI(iRho, East_:Top_) = &
@@ -264,8 +269,7 @@ subroutine set_physics_constants
         FaceState_VI(iUy,  East_:Top_) = SW_Uy
         FaceState_VI(iUz,  East_:Top_) = SW_Uz
         ! Use solar wind temperature and reduced density to get pressure
-        FaceState_VI(iP,   East_:Top_) = SW_p/(1+ElectronPressureRatio) &
-             *(1.0-LowDensityRatio*(nFluid-IonFirst_))
+        FaceState_VI(iP,   East_:Top_) = SW_p/pCoef*(1.0-LowDensityRatio*(nFluid-IonFirst_))
 
         do iFluid = IonFirst_+1, nFluid
            call select_fluid
@@ -274,14 +278,14 @@ subroutine set_physics_constants
            FaceState_VI(iUy,  East_:Top_) = SW_Uy
            FaceState_VI(iUz,  East_:Top_) = SW_Uz
            ! Use solar wind temperature and reduced density to get pressure 
-           FaceState_VI(iP,   East_:Top_) = SW_p/(1+ElectronPressureRatio) &
+           FaceState_VI(iP,   East_:Top_) = SW_p/pCoef &
                 *LowDensityRatio*MassIon_I(1)/MassFluid_I(iFluid)
         end do
 
 
         ! Fix total pressure if necessary (density and temperature are kept)
         if(UseMultiIon .and. IsMhd) FaceState_VI(P_,East_:Top_) = &
-             (1+ElectronPressureRatio)*sum(FaceState_VI(iP_I(2:nFluid),1))
+             pCoef*sum(FaceState_VI(iP_I(2:nFluid),1))
      end if
   end if
 
