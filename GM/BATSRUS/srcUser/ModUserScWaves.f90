@@ -101,7 +101,7 @@ Module ModUser
 
   ! varaibles read by user_read_inputs and used by other subroutines
   logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
-  logical                       :: UseParkerIcs=.false.
+  logical                       :: UseParkerIcs=.false., DoExcludeWaveBcStreamer = .true.
   real                          :: WaveInnerBcFactor
   real                          :: xTrace = 0.0, zTrace = 0.0
   real                          :: xTestSpectrum, yTestSpectrum, zTestSpectrum
@@ -157,6 +157,7 @@ contains
                call stop_mpi('Parker solution is not fully implemented')
 
        case("#WAVEINNERBC")
+          call read_var('DoExcludeWaveBcStreamer', DoExcludeWaveBcStreamer)
           call read_var('TypeWaveInnerBc', TypeWaveInnerBc)
           call read_var('WaveInnerBcFactor', WaveInnerBcFactor)
 
@@ -198,11 +199,11 @@ contains
     !                   Magnetic field B1 is set to equal to its tangential component.
     !                   Reflective boundary conditions for velocity.
     !                   Density and pressure set according to isothermal atmosphere.
-    !                   Alfven Waves: wave energy is present in the inner boundary only
-    !                                 in the open field lines region (to avoid blowing out
-    !                                 of Helmet streamers). The total wave energy at the face
+    !                   Alfven Waves: The total wave energy at the face
     !                                 is calculated according to the type of boundary condition
-    !                                 (see desctription of #WAVEINNERBC in section 1 above).   
+    !                                 (see desctription of #WAVEINNERBC in section 1 above).
+    !                                 The logical UseWavesBcInStreamer determines whether waves are
+    !                                 'emitted' from the inner boundary at the closed field region (streamer).
     !                                 Once the total wave energy is obtained, it is deconstructed
     !                                 into the frequency bins according to the assumed spectral shape
     !                                 by calling set_wave_state (in ModWaves.f90).
@@ -220,8 +221,6 @@ contains
     use ModWaves,            ONLY: set_wave_state, UseWavePressureLtd
 
     real, intent(out)           :: VarsGhostFace_V(nVar)
-
-
 
     integer                     :: iCell, jCell, kCell
     real                        :: DensCell, PresCell, TBase, TotalB  
@@ -286,9 +285,9 @@ contains
        ! Check if this is closed or open field region
        call get_interpolated(ExpansionFactorInv_N, FaceCoords_D(x_),&
             FaceCoords_D(y_), FaceCoords_D(z_), ExpansionFactorInv)
-       if(ExpansionFactorInv < cTolerance) then
+       if( DoExcludeWaveBcStreamer .and. ExpansionFactorInv < cTolerance) then
 
-          ! set wave energy at inner boundary in open field region only
+          ! set wave energy at inner boundary to 'zero' at closed field region (streamer belt).
 
           VarsGhostFace_V(WaveFirst_:WaveLast_) = 1.0e-30
           if(UseWavePressureLtd) VarsGhostFace_V(Ew_) = sum(VarsGhostFace_V(WaveFirst_:WaveLast_))
