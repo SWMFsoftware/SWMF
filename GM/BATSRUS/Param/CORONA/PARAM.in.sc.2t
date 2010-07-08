@@ -172,7 +172,7 @@ float			TypeBcTop
 Param/CORONA/Grid
 
 #GRIDLEVEL
-2			nLevelArea
+3			nLevelArea
 initial			NameArea
 
 #AMR
