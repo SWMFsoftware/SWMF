@@ -233,7 +233,7 @@ subroutine WRESULT(LNC,XN,IFIR)
   use ModHeidiDGCPM
   use ModIoUnit, only : io_unit_new,UnitTmp_
   use ModPlotFile, only: save_plot_file
-  use ModHeidiInput, only: DtSaveRestart,TypeFile
+  use ModHeidiInput, only: DtSaveRestart,TypeFile, TypeConvection
   use ModProcIM, only: iProc
 
   implicit none
@@ -951,13 +951,15 @@ subroutine WRESULT(LNC,XN,IFIR)
 	   write (UnitTmp_,*) 'FAC density from all species into one ',   &
                 'hemisphere [A m-2]'
 	   write (UnitTmp_,31) (Lsh(I),I=1,Ir)
-	   
-           do J=1,JO
-              write (UnitTmp_,29) MLT(J),(Jfac(I,J),I=1,Ir)
-	   end do
-           !	 END IF
-           close (UnitTmp_)
-	end if
+	  
+    if ((TypeConvection /= '1') .or. (TypeConvection /= 'kpvsmaynardchen'))  then
+       do J=1,JO
+          write (UnitTmp_,29) MLT(J),(Jfac(I,J),I=1,Ir)
+       end do
+       close (UnitTmp_)
+    end if
+ 
+ end if
 
 
 	if (IRES(13).eq.1) then

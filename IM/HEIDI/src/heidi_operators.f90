@@ -104,6 +104,10 @@ subroutine DRIFTR
   real    :: fbc
   save f01,f02
   !----------------------------------------------------------------------
+  ! Initialize F to zero values
+  F = 0.0
+  
+  
   !\
   ! Set up injection boundary fluxes
   !/
