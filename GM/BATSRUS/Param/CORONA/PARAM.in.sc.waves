@@ -30,7 +30,7 @@ HGR                     TypeCoordSystem
 T                       UseBody
 1.0                     rBody
 6.0E+8                  BodyNDim
-2.0E+6                  BodyTDim
+3.0E+6                  BodyTDim
 
 #BODY
 F                       UseBody
@@ -158,7 +158,6 @@ T
 #USERINPUTBEGIN ------------------------------------
 
 #WAVEINNERBC
-T
 WSA
 1.0
 
