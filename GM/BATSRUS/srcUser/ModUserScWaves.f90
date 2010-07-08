@@ -101,8 +101,7 @@ Module ModUser
 
   ! varaibles read by user_read_inputs and used by other subroutines
   logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
-  logical                       :: UseParkerIcs=.false., DoExcludeWaveBcStreamer = .true.
-  real                          :: WaveInnerBcFactor
+  real                          :: WaveInnerBcFactor = 1.0
   real                          :: xTrace = 0.0, zTrace = 0.0
   real                          :: xTestSpectrum, yTestSpectrum, zTestSpectrum
   character(len=10)             :: TypeWaveInnerBc
@@ -151,13 +150,8 @@ contains
 
        select case(NameCommand)
 
-       case("#USEPARKERICS")
-          call read_var('UseParkerIcs', UsePArkerIcs)
-          if(UseParkerIcs)&
-               call stop_mpi('Parker solution is not fully implemented')
 
        case("#WAVEINNERBC")
-          call read_var('DoExcludeWaveBcStreamer', DoExcludeWaveBcStreamer)
           call read_var('TypeWaveInnerBc', TypeWaveInnerBc)
           call read_var('WaveInnerBcFactor', WaveInnerBcFactor)
 
@@ -226,7 +220,6 @@ contains
     real                        :: DensCell, PresCell, TBase, TotalB  
     real, dimension(3)          :: RFace_D, B1r_D, B1t_D, TotalB_D
     real                        :: vAlfvenSi, wEnergyDensSi, wEnergyDensBc
-    real                        :: ExpansionFactorInv
 
     character(len=*),parameter  :: NameSub = "user_face_bc"
     !--------------------------------------------------------------------------
@@ -282,50 +275,41 @@ contains
     ! Update BCs for wave spectrum
     !/
     if(UseAlfvenWaves) then
-       ! Check if this is closed or open field region
-       call get_interpolated(ExpansionFactorInv_N, FaceCoords_D(x_),&
-            FaceCoords_D(y_), FaceCoords_D(z_), ExpansionFactorInv)
-       if( DoExcludeWaveBcStreamer .and. ExpansionFactorInv < cTolerance) then
-
-          ! set wave energy at inner boundary to 'zero' at closed field region (streamer belt).
-
-          VarsGhostFace_V(WaveFirst_:WaveLast_) = 1.0e-30
-          if(UseWavePressureLtd) VarsGhostFace_V(Ew_) = sum(VarsGhostFace_V(WaveFirst_:WaveLast_))
-       else
-          ! total wave energy depends on magnetic field magnitude
-          TotalB_D = B0Face_D + VarsTrueFace_V(Bx_:Bz_)  
-          TotalB = sum(TotalB_D**2)
-
-          select case(TypeWaveInnerBc)
-          case('WSA')
-
-             vAlfvenSi = (TotalB/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
-             call get_total_wave_energy_dens(FaceCoords_D(x_), FaceCoords_D(y_),&
-                  FaceCoords_D(z_), vAlfvenSi, wEnergyDensSi)
-             wEnergyDensBc = wEnergyDensSi * Si2No_V(UnitP_)*WaveInnerBcFactor
-
-          case('Turb')
-
-             wEnergyDensBc = TotalB*WaveInnerBcFactor
-
-          end select
-
-          if(wEnergyDensBc < 0.0)then
-             write(*,*) 'Negative TOTAL wave energy at inner BC'
-             call stop_MPI('Error in user_face_bcs')
-          end if
-
-          ! Set BC for each frequency group
-          call set_wave_state(wEnergyDensBc, VarsGhostFace_V, RFace_D, B0Face_D) 
-
-          if(any(VarsGhostFace_V(WaveFirst_:WaveLast_)< 0.0)) then
-             write(*,*) 'Negative wave energy at inner BC'
-             call stop_MPI('Error in user_face_bc')
-          end if
-
+       
+       ! total wave energy depends on magnetic field magnitude
+       TotalB_D = B0Face_D + VarsTrueFace_V(Bx_:Bz_)  
+       TotalB = sum(TotalB_D**2)
+       
+       select case(TypeWaveInnerBc)
+       case('WSA')
+          
+          vAlfvenSi = (TotalB/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
+          call get_total_wave_energy_dens(FaceCoords_D(x_), FaceCoords_D(y_),&
+               FaceCoords_D(z_), vAlfvenSi, wEnergyDensSi)
+          wEnergyDensBc = wEnergyDensSi * Si2No_V(UnitP_)*WaveInnerBcFactor
+          
+       case('Turb')
+          
+          wEnergyDensBc = TotalB*WaveInnerBcFactor
+          
+       end select
+       
+       if(wEnergyDensBc < 0.0)then
+          write(*,*) 'Negative TOTAL wave energy at inner BC'
+          call stop_MPI('Error in user_face_bcs')
        end if
+       
+       ! Set BC for each frequency group
+       call set_wave_state(wEnergyDensBc, VarsGhostFace_V, RFace_D, B0Face_D) 
+       
+       if(any(VarsGhostFace_V(WaveFirst_:WaveLast_)< 0.0)) then
+          write(*,*) 'Negative wave energy at inner BC'
+          call stop_MPI('Error in user_face_bc')
+       end if
+       
     end if
 
+ 
     !\
     ! Apply corotation
     !/
@@ -407,155 +391,61 @@ contains
     iBLK = globalBLK
 
 
-    if (UseParkerIcs) then
-       ! Variables needed for Parker solution
-       Tcorona = CoronalT0Dim*Si2No_V(UnitTemperature_)
 
-       ! normalize with isothermal sound speed.
-       Usound = sqrt(Tcorona)
-       Uescape = sqrt(-GBody*2.0)/Usound
-       rTransonic = 0.25*Uescape**2
-       if(.not.(rTransonic>exp(1.0))) call stop_mpi('sonic point inside Sun')
-
-       Ubase = rTransonic**2*exp(1.5 - 2.0*rTransonic)
-
-
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-          x = x_BLK(i,j,k,iBLK)
-          y = y_BLK(i,j,k,iBLK)
-          z = z_BLK(i,j,k,iBLK)
-          r = r_BLK(i,j,k,iBLK)
-
-
-
-          !\
-          ! Initialize wind with Parker's solution
-          ! construct solution which obeys
-          !   rho x u_r x r^2 = constant
-          !/      
-          if(r > rTransonic)then
-             !\
-             ! Inside supersonic region
-             !/
-             Ur0 = 1.0
-             IterCount = 0
-             do
-                IterCount = IterCount + 1
-                Ur1 = sqrt(Uescape**2/r - 3.0 + 2.0*log(16.0*Ur0*r**2/Uescape**4))
-                del = abs(Ur1 - Ur0)
-                if(del < Epsilon)then
-                   Ur = Ur1
-                   EXIT
-                elseif(IterCount < 1000)then
-                   Ur0 = Ur1
-                   CYCLE
-                else
-                   call stop_mpi('PARKER > 1000 it.')
-                end if
-             end do
-          else
-             !\
-             ! Inside subsonic region
-             !/
-             Ur0 = 1.0
-             IterCount = 0
-             do
-                IterCount = IterCount + 1
-                Ur1 = (Uescape**2/(4.0*r))**2 &
-                     *exp(0.5*(Ur0**2 + 3.0 - Uescape**2/r))
-                del = abs(Ur1 - Ur0)
-                if(del < Epsilon)then
-                   Ur = Ur1
-                   EXIT
-                elseif(IterCount < 1000)then
-                   Ur0 = Ur1
-                   CYCLE
-                else
-                   call stop_mpi('PARKER > 1000 it.')
-                end if
-             end do
-          end if
-
-          Density = rBody**2*Density*Ubase/(r**2*Ur)
-          State_VGB(Rho_,i,j,k,iBLK) = Density
-          State_VGB(RhoUx_,i,j,k,iBLK) = Density*Ur*x/r *Usound
-          State_VGB(RhoUy_,i,j,k,iBLK) = Density*Ur*y/r *Usound
-          State_VGB(RhoUz_,i,j,k,iBLK) = Density*Ur*z/r *Usound
-
-          call get_plasma_parameters_cell(i, j, k, iBLK, Density, Pressure)
-          State_VGB(p_,i,j,k,iBLK) = Pressure
-
-          ! initialize the rest of state variables.
-          do iVar = Bx_, Bz_
-             State_VGB(iVar, i, j, k, iBLK) = 0.0
-          end do
-          do iVar = WaveFirst_, WaveLast_
-             State_VGB(iVar, i, j, k, iBLK) = 1.0e-30
-          end do
-          if(UseWavePressureLtd)&
-               State_VGB(Ew_, i, j, k, iBLK) = &
-               sum(State_VGB(WaveFirst_:WaveLast_, i, j, k, iBLK))
-       end do; end do; end do
-
-    else
-
-       ! Intilize velocity and density according to an isothermal atmosphere solution.
-       ! The sqrt is for backward compatibility with older versions of the Sc
-
-       U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
-
-       select case(TypeGeometry)
-       case('cartesian')
-          Rmax = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
-       case('spherical_lnr')
-          Rmax = max(2.1E+01,exp(XyzMax_D(1)))
-       case('spherical_genr')
-          Rmax = max(2.1E+01,gen_to_r(XyzMax_D(1)))
-       end select
-
-
-
-
-       State_VGB(:,:,:,:,iBLK) = 1.0e-31
-
-       do k=1,nK; do j=1,nJ; do i=1,nI
-
-          x = x_BLK(i,j,k,iBLK)
-          y = y_BLK(i,j,k,iBLK)
-          z = z_BLK(i,j,k,iBLK)
-          R = max(R_BLK(i,j,k,iBLK),cTolerance)
-
-          ROne = max(1.0,R)
-
-          State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
-
-          call get_plasma_parameters_cell(i,j,k,iBLK,&
-               Density, Pressure)
-
-          State_VGB(rho_,i,j,k,iBLK) = Density
-          State_VGB(P_,i,j,k,iBLK)   = Pressure
-
-          State_VGB(RhoUx_,i,j,k,iBLK) = Density &
-               *U0*((ROne-1.0)/(Rmax-1.0))*x/R
-
-          State_VGB(RhoUy_,i,j,k,iBLK) = Density &
-               *U0*((ROne-1.0)/(Rmax-1.0))*y/R
-
-          State_VGB(RhoUz_,i,j,k,iBLK) = Density &
-               *U0*((ROne-1.0)/(Rmax-1.0))*z/R
-
-          ! initialize the rest of state variables.
-          State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
-          State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK) = 1.0e-30
-          if(UseWavePressureLtd)&
-               State_VGB(Ew_, i, j, k, iBLK) = &
-               sum(State_VGB(WaveFirst_:WaveLast_, i, j, k, iBLK))
-
-       end do; end do; end do
-
-
-    end if
-
+    ! Intilize velocity and density according to an isothermal atmosphere solution.
+    ! The sqrt is for backward compatibility with older versions of the Sc
+    
+    U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
+    
+    select case(TypeGeometry)
+    case('cartesian')
+       Rmax = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
+    case('spherical_lnr')
+       Rmax = max(2.1E+01,exp(XyzMax_D(1)))
+    case('spherical_genr')
+       Rmax = max(2.1E+01,gen_to_r(XyzMax_D(1)))
+    end select
+    
+    
+    
+    
+    State_VGB(:,:,:,:,iBLK) = 1.0e-31
+    
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       
+       x = x_BLK(i,j,k,iBLK)
+       y = y_BLK(i,j,k,iBLK)
+       z = z_BLK(i,j,k,iBLK)
+       R = max(R_BLK(i,j,k,iBLK),cTolerance)
+       
+       ROne = max(1.0,R)
+       
+       State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
+       
+       call get_plasma_parameters_cell(i,j,k,iBLK,&
+            Density, Pressure)
+       
+       State_VGB(rho_,i,j,k,iBLK) = Density
+       State_VGB(P_,i,j,k,iBLK)   = Pressure
+       
+       State_VGB(RhoUx_,i,j,k,iBLK) = Density &
+            *U0*((ROne-1.0)/(Rmax-1.0))*x/R
+       
+       State_VGB(RhoUy_,i,j,k,iBLK) = Density &
+            *U0*((ROne-1.0)/(Rmax-1.0))*y/R
+       
+       State_VGB(RhoUz_,i,j,k,iBLK) = Density &
+            *U0*((ROne-1.0)/(Rmax-1.0))*z/R
+       
+       ! initialize the rest of state variables.
+       State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
+       State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK) = 1.0e-30
+       if(UseWavePressureLtd)&
+            State_VGB(Ew_, i, j, k, iBLK) = &
+            sum(State_VGB(WaveFirst_:WaveLast_, i, j, k, iBLK))
+       
+    end do; end do; end do
+    
 
   end subroutine user_set_ics
   !============================================================================
