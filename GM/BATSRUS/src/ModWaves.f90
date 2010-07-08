@@ -300,26 +300,19 @@ contains
              F2_I(nWaveHalf+1)=F2_I(nWaveHalf)
              call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
                   BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
-             if(IsNegativeEnergy)then
-                write(*,*) 'Negative energy density in xyz=',&
-                     x_BLK(i, j, k, iBlock), y_BLK(i, j, k, iBlock), z_BLK(i, j, k, iBlock), &
-                     ' ijk=', i, j, k, ' iBlock=',iBlock
-                call stop_mpi('Stopped')
-             end if
+             if(IsNegativeEnergy)call write_and_stop
+
              State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
 
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock)
+           
              F2_I(nWaveHalf+1) = F2_I(nWaveHalf)
              call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
                   BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
-             if(IsNegativeEnergy)then
-                write(*,*) 'Negative energy density in xyz=',&
-                     x_BLK(i, j, k, iBlock), y_BLK(i, j, k, iBlock), z_BLK(i, j, k, iBlock), &
-                     ' ijk=', i, j, k, ' iBlock=',iBlock
-                call stop_mpi('Stopped')
-             end if
+             if(IsNegativeEnergy)call write_and_stop
+               
              State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           else
@@ -327,14 +320,11 @@ contains
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock)
              F2_I(0) = F2_I(1) 
+             
              call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
                   BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
-             if(IsNegativeEnergy)then
-                write(*,*) 'Negative energy density in xyz=',&
-                     x_BLK(i, j, k, iBlock), y_BLK(i, j, k, iBlock), z_BLK(i, j, k, iBlock), &
-                     ' ijk=', i, j, k, ' iBlock=',iBlock
-                call stop_mpi('Stopped')
-             end if 
+             if(IsNegativeEnergy) call write_and_stop
+                
              State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
 
@@ -343,12 +333,8 @@ contains
              F2_I(0) = F2_I(1)
              call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
                   BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
-             if(IsNegativeEnergy)then
-                write(*,*) 'Negative energy density in xyz=',&
-                     x_BLK(i, j, k, iBlock), y_BLK(i, j, k, iBlock), z_BLK(i, j, k, iBlock), &
-                     ' ijk=', i, j, k, ' iBlock=',iBlock
-                call stop_mpi('Stopped')
-             end if
+             if(IsNegativeEnergy) call write_and_stop
+               
              State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           end if
@@ -370,9 +356,11 @@ contains
                max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock), 1e-30)
 
           if(DivU_C(i,j,k) > 0.0)then
+             F_I(nWave + 1)=F_I(nWave)
              call advance_lin_advection_minus( CFL_I, nWave, 1, 1, F_I, &
                   UseConservativeBC= .true.) 
           else
+             F_I(0) = F_I(1)
              call advance_lin_advection_plus( CFL_I, nWave, 1, 1, F_I, &
                   UseConservativeBC= .true.)
           end if
@@ -381,7 +369,24 @@ contains
 
        end do; end do; end do
     end if
+    contains
+      !====================
+      subroutine write_and_stop
+        use ModVarIndexes, ONLY: nVar, NameVar_V
+        integer:: iVar
+        !--------------
+        write(*,*) 'Negative energy density in xyz=',&
+             x_BLK(i, j, k, iBlock), y_BLK(i, j, k, iBlock), z_BLK(i, j, k, iBlock), &
+             ' ijk=', i, j, k, ' iBlock=',iBlock
+        write(*,*)'Var      State_VGB(iVar, i, j, k, iBlock)'
+
+        do iVar=1,nVar
+          write(*,*) NameVar_V(iVar), State_VGB(iVar, i, j, k, iBlock)
+        end do
+
+        call stop_mpi('Stopped')
+      end subroutine write_and_stop
 
   end subroutine update_wave_group_advection
-
+  
 end module ModWaves
