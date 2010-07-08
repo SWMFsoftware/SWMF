@@ -100,8 +100,6 @@ test_numeric_check:
 			> test_numeric.diff
 	ls -l test_numeric.diff
 
-
-
 rundir:
 	mkdir -p ${RUNDIR}/IM
 	@(cd ${RUNDIR}; \
@@ -123,8 +121,8 @@ rundir:
 
 clean: install
 	@(if [ -r "Makefile.conf" ]; then  \
-	cd src;                      make clean;\
-	cd ../srcInterface;             make clean;\
+		cd src;             make clean;\
+		cd ../srcInterface; make clean;\
 	fi)
 
 distclean: 
@@ -132,8 +130,8 @@ distclean:
 
 allclean: install
 	@(if [ -r "Makefile.conf" ]; then \
-		cd src;                      make distclean;\
-		cd ../srcInterface;          make distclean;\
+		cd src;             make distclean;\
+		cd ../srcInterface; make distclean;\
 	fi)
 	rm -f *~
 
