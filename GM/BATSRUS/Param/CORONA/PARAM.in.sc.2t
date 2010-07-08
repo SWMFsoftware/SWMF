@@ -1,0 +1,208 @@
+#ECHO
+T			DoEcho
+
+#COMPONENT
+SC
+
+#DESCRIPTION
+Test for two-temperature SC
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#STARTTIME
+2008			iYear
+11			iMonth
+20			iDay
+7			iHour
+13			iMinute
+0			iSecond
+0.0			FracSecond
+
+#COORDSYSTEM
+HGR			TypeCoordSystem
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#PLASMA
+1.0			IonMass [amu]
+1.0			AverageIonCharge [e]
+1.0			ElectronTemperatureRatio
+
+#BODY
+T			UseBody
+1.035			rBody
+1.0e8			BodyNDim
+1.5e6			BodyTDim
+
+#BODY
+F			UseBody
+
+#USER_FLAGS
+T			UseUserInnerBcs
+T			UseUserSource
+F			UseUserPerturbation
+F			UseUserOuterBcs
+T			UseUserICs
+T			UseUserSpecifyRefinement
+T			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+F			UseUserB0
+T			UseUserInitSession
+F			UseUserUpdateStates
+
+#USECURLB0
+T			UseCurlB0
+0.0			rCurrentFreeB0
+
+READPOTENTIALFIELD
+T			UseMagnetogram
+potentialfield.out	NamePotentialFieldFile
+0.0			H_PFSSM
+1.0			UnitB
+
+#MAGNETOGRAM
+T			UseMagnetogram
+1.0			rMagnetogram
+2.5			rSourceSurface
+0.0			HeightInnerBc
+Param/CORONA/CR2077_GNG.dat	NameMagnetogramFile
+12			nHeaderLine
+0.0			PhiShift
+1.0			UnitB
+
+#EMPIRICALSW
+WSA			NameModel
+
+#WSACOEFF
+240.0			constant speed km/s       !1
+675.0			modulation of speed km/s  !2
+4.5			power index               !3
+1.0			coeff                     !4
+0.8			coeff                     !5
+2.8			[deg] angle               !6
+1.25			power index               !7
+3.0			power index               !8
+0.0			lower bound               !9
+800.0			upper bound               !10
+
+#USERINPUTBEGIN ------------------------
+
+#BERNOULLI
+F			UseHeatFluxInBernoulli
+3e5			VAlfvenMin
+4.5e-15			RhoVAt1AU
+
+#LDEM
+T			UseLdem
+CR2077_LDEM_moments.out	NameLdemFile
+
+#WAVEDISSIPATION
+T			UseWaveDissipation
+3.2e6			DissipationScaleFactorSi
+
+#USERINPUTEND ----------------------------
+
+#RESISTIVITY
+T			UseResistivity
+user			TypeResistivity
+0.0			Eta0Si     ! not used
+
+#RESISTIVITYOPTIONS
+F			UseResistiveFlux
+F			UseJouleHeating
+T			UseHeatExchange
+
+#HEATCONDUCTION
+T			UseHeatConduction
+spitzer			TypeHeatConduction
+
+#HEATFLUXREGION
+T			UseHeatFluxRegion
+5.0			rCollisional
+10.0			rCollisionless
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#MESSAGEPASS
+all			TypeMessagePass
+
+#RESCHANGE
+T			UseAccurateResChange
+
+#RESCHANGEBOUNDARY
+T			SaveBoundaryCells
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#EXTRABOUNDARY
+T			UseExtraBoundary
+user			TypeBc_I(ExtraBc_)
+F			DoFixExtraBoundary
+
+#FACEBOUNDARY
+0			MinBoundary
+0			MaxBoundary
+F			DoFixOuterBoundary
+
+#OUTERBOUNDARY
+float			TypeBcEast
+float			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
+
+#INCLUDE
+Param/CORONA/Grid
+
+#GRIDLEVEL
+2			nLevelArea
+initial			NameArea
+
+#AMR
+20			DnRefine
+F			DoAutomaticRefinement 
+
+#SAVEPLOT
+3			nPlotFiles
+x=0 VAR idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz te ti bx by bz I01 I02
+g rbody
+y=0 VAR idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz te ti bx by bz I01 I02
+g rbody
+z=0 VAR idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz te ti bx by bz I01 I02
+g rbody
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#STOP
+50	                MaxIteration
+-1.0                    tSimulationMax

@@ -19,6 +19,7 @@ test:
 	-@(make test_graydiffusion)
 	-@(make test_corona)
 	-@(make test_coronasph)
+	-@(make test_corona_2t)
 	-@(make test_outerhelio)
 	-@(make test_earthsph)
 	-@(make test_2bodyplot)
@@ -54,6 +55,7 @@ test_help:
 	@echo "    test_comet                 (run comet test)"
 	@echo "    test_corona                (run Solar Corona test)"
 	@echo "    test_coronasph             (run spherical Solar Corona test)"
+	@echo "    test_corona_2t             (run 2T Solar Corona test)"
 	@echo "    test_earthsph              (run spherical Earth test)"
 	@echo "    test_eosgodunov            (run EOS/Godunov test)"
 	@echo "    test_fluxemergence         (run flux emergence test)"
@@ -600,6 +602,40 @@ test_coronasph_check:
 		Param/CORONA/TestOutput/log_n000001.sph \
 		${TESTDIR}/RESULTS/SC/log_n000001.log > test_coronasph.diff
 	ls -l test_coronasph.diff
+
+### STANDALONE TWO-TEMPERATURE SOLAR CORONA TESTS ###
+
+test_corona_2t:
+	@echo "test_corona_2t_compile..." > test_corona_2t.diff
+	make test_corona_2t_compile
+	@echo "test_corona_2t_rundir..." >> test_corona_2t.diff
+	make test_corona_2t_rundir
+	@echo "test_corona_2t_run..." >> test_corona_2t.diff
+	make test_corona_2t_run
+	@echo "test_corona_2t_check..." >> test_corona_2t.diff
+	make test_corona_2t_check
+
+test_corona_2t_compile:
+	./Config.pl -u=ScHeat -e=MhdWavesPe -g=4,4,4,3000,1
+	make BATSRUS PIDL
+
+test_corona_2t_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.sc.2t PARAM.in
+	gunzip -c data/../../../SC/BATSRUS/data/input/CR2077_LDEM_moments.out.gz \
+		> ${TESTDIR}/CR2077_LDEM_moments.out
+
+test_corona_2t_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+
+test_corona_2t_check:
+	${SCRIPTDIR}/DiffNum.pl -t \
+		Param/CORONA/TestOutput/log_n000000.sc.2t \
+		${TESTDIR}/RESULTS/SC/log_n000000.log > test_corona_2t.diff
+	ls -l test_corona_2t.diff
+
 
 ### STANDALONE OUTER HELIOSPHERE TESTS ###
 
