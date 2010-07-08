@@ -541,7 +541,7 @@ sub create_makefile_rules{
 
 sub link_swmf_data{
 
-    if($Code eq "BATSRUS" and not -d "dataCRASH"){
+    if($Code eq "BATSRUS" and not -f "dataCRASH"){
 	my $CrashData = "";
 	foreach ("$ENV{HOME}/CRASH_data", "/csem1/CRASH_data"){
 	    next unless -d $_;
