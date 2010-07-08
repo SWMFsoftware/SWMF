@@ -363,14 +363,6 @@ contains
 
     if(.not.UseB0)UseMagnetogram=.false.
 
-    if(NameThisComp == 'SC' .and. i_session_read()==1)then
-       if(UseLdem) call read_ldem
-
-       if(iProc == 0) call write_alfvenwave_boundary
-
-       Umax = maxval(WSAspeed_N)
-    end if
-
     ! electron heat conduct coefficient for single charged ions
     ! = 9.2e-12 W/(m*K^(7/2))
     HeatCondParSi = 3.2*3.0*cTwoPi/CoulombLog &
@@ -381,6 +373,14 @@ contains
     HeatCondPar = HeatCondParSi &
          *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)**3.5 &
          *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+
+    if(NameThisComp == 'SC' .and. i_session_read()==1)then
+       if(UseLdem) call read_ldem
+
+       if(iProc == 0) call write_alfvenwave_boundary
+
+       Umax = maxval(WSAspeed_N)
+    end if
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
