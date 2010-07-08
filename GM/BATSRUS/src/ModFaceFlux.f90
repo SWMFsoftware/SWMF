@@ -2388,7 +2388,8 @@ contains
 
     use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, iP
     use ModMain, ONLY: Climit
-    use ModWaves, ONLY: UseWavePressure, GammaWave, WaveEnergy, UseAlfvenWaves
+    use ModWaves, ONLY: UseWavePressure, UseWavePressureLtd, &
+         GammaWave, WaveEnergy, UseAlfvenWaves
 
     real,    intent(in) :: State_V(nVar)
     real,    intent(in) :: B0x, B0y, B0z
@@ -2592,9 +2593,17 @@ contains
       else
          Sound2 = g*p*InvRho
       end if
-      if(UseWavePressure)&
-         Sound2 = Sound2 + GammaWave * (GammaWave - 1)*&
-         sum(State_V(WaveFirst_:WaveLast_))*InvRho
+      if(UseWavePressure)then
+         if(UseWavePressureLtd)then
+            Sound2 = Sound2 + &
+                 GammaWave * (GammaWave - 1)*&
+                 max(StateLeft_V(Ew_)/StateLeft_V(Rho_),&
+                 StateRight_V(Ew_)/StateRight_V(Rho_))
+         else
+            Sound2 = Sound2 + GammaWave * (GammaWave - 1)*&
+                 sum(State_V(WaveFirst_:WaveLast_))*InvRho
+         end if
+      end if
      
       Un     = InvRho*sum( RhoU_D*Normal_D )
 
