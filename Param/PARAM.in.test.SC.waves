@@ -1,0 +1,234 @@
+#ECHO
+T			DoEcho
+
+#DESCRIPTION
+Input file for creating a steady state solar corona driven by Alfven waves
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#SAVERESTART
+F			DoSaveRestart
+2000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#STARTTIME
+1998			iYear
+5			iMonth
+1			iDay
+0			iHour
+0			iMinute
+0			iSecond
+0.0 			FracSecond
+
+#BEGIN_COMP SC ----------------------------------------
+
+#COORDSYSTEM
+HGR                     TypeCoordSystem
+
+#BODY
+T                       UseBody
+1.0                     rBody
+6.0E+8                  BodyNDim
+3.0E+6                  BodyTDim
+
+#BODY
+F                       UseBody
+
+#EXTRABOUNDARY
+T			UseExtraBoundary
+user			TypeBc_I(ExtraBc_)
+F			DoFixExtraBoundar
+
+#USECURLB0
+T
+2.5
+
+#GRID
+1			nRootBlockX
+1                       nRootBlockY
+1                       nRootBlockZ
+-24.0                   xMin
+ 24.0                   xMax
+-24.0                   yMin
+ 24.0                   yMax
+-24.0                   zMin
+ 24.0                   zMax
+
+#GRIDLEVEL
+5			nLevelArea 
+all			NameArea
+
+#GRIDLEVEL
+9                       nLevelArea 
+shell0                  NameArea
+1.0                     Radius1
+1.35                    Radius2
+
+#GRIDRESOLUTION
+0.2                     AreaResolution
+user                    NameArea
+
+#GRIDLEVEL
+3                       nLevelArea 
+initial                 NameArea
+
+#GAMMA
+1.5			Gamma
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc			TypeLimiter mc
+1.2			LimiterBeta 1.2
+
+#TVDRESCHANGE
+T			UseTvdResChange
+
+#RESCHANGEBOUNDARY
+T			SaveBoundaryCells
+
+#DIVB
+T
+F
+F
+F
+
+#TIMESTEPPING
+2                       nStage
+0.6                    CflExpl
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+RAW                     StringLogfile
+1                      DnSaveLogfile
+-1.                     DtSaveLogfile
+
+#OUTERBOUNDARY
+float                   TypeBcEast
+float                   TypeBcWest
+float                   TypeBcSouth
+float                   TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+#AMR
+90                    DnRefine
+F 
+
+#USER_FLAGS
+T              UseUserInnerBcs
+F              UseUserSource
+F              UseUserPerturbation
+F              UseUserOuterBcs
+T              UseUserICs
+T              UseUserSpecifyRefinement
+F              UseUserLogFiles
+F              UseUserWritePlot
+F              UseUserAMR
+F              UseUserEchoInput
+F              UseUserB0
+F              UseUserInitSession
+T              UseUSerUpdateStates
+
+#MAGNETOGRAM
+T
+1.0
+2.5
+0.0
+SC/Param/CR1935_WSO.dat
+12
+-1.0
+0.01
+
+#EMPIRICALSW
+WSA
+
+#ALFVENWAVES
+T
+
+#FREQUENCY
+1e-3
+100
+
+#WAVEPRESSURE
+T
+T
+
+#USERINPUTBEGIN ------------------------------------
+
+#WAVEINNERBC
+WSA
+1.0
+
+#USERINPUTEND ---------------------------------------
+
+#SAVEPLOT
+3			nPlotFiles
+y=0 MHD idl		StringPlot
+1000                   	DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+y=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+z=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+
+
+
+#END_COMP SC   ----------------------------------------
+
+#STOP
+100			MaxIteration
+-1.0			tSimulationMax
+
+#RUN ########################################################################
+
+#BEGIN_COMP SC --------------------------------------------------------------
+
+#AMR
+-1			DnRefine
+
+#END_COMP SC -----------------------------------------------------------------
+
+#STOP
+200
+-1.0
+
+#END #########################################################################
+
+! Switch on the IH component
+#COMPONENT
+IH			NameComp
+T			UseComp
+
+#COUPLE2
+SC                      NameSource
+IH                      NameTarget
+100                     DnCouple
+-1.0                    DtCouple
+
+#STOP
+201			MaxIteration
+-1.0			tSimulationMax
+
+#RUN #########################################################################
+
+#STOP
+300			MaxIteration
+-1.			tSimulationMax
+
+#END
+
+
+#STOP
+16000                   MaxIter
+-1.0                    TimeMax
+
+#END  ############################################################
+
+
