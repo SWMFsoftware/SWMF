@@ -54,12 +54,12 @@ contains
 
     !Check for positivity
     if(any(F_I(1:nX)<0.0))then
-       write(*,*)'Before advection F_I <=0 in '//NameSub
-       write(*,*) F_I
+       write(*,*)'Before advection F_I < 0 in '//NameSub
        if(present(IsNegativeEnergy))then
           IsNegativeEnergy = .true.
           return
        else
+          write(*,*)'F_I:', F_I
           call CON_stop('Error in '//NameSub )
        end if
     end if
@@ -97,8 +97,8 @@ contains
 
     FInOut_I(1-nGCLeft:nX+nGCRight) = F_I(1-nGCLeft:nX+nGCRight)
     if(any(FInOut_I(1:nX)<0.0))then
-       write(*,*)'After advection F_I <=0 in '//NameSub
-       write(*,*)F_I
+       write(*,*)'After advection F_I <0 in '//NameSub
+       write(*,*)'F_I:',F_I
        if(present(IsNegativeEnergy))then
           IsNegativeEnergy = .true.
           return
@@ -163,12 +163,13 @@ contains
 
     !Check for positivity
     if(any(F_I(1:nX)<0.0))then
-       write(*,*)'Before advection F_I <=0 in '//NameSub
-       write(*,*) F_I
+       write(*,*)'Before advection F_I <0 in '//NameSub
+
         if(present(IsNegativeEnergy))then
           IsNegativeEnergy = .true.
           return
        else
+          write(*,*) 'F_I:', F_I
           call CON_stop('Error in '//NameSub )
        end if
     end if
@@ -203,8 +204,8 @@ contains
     FInOut_I(1:nX)=F_I(1:nX)
 
     if(any(FInOut_I(1:nX)<0.0))then
-       write(*,*)'After advection F_I <=0 in '//NameSub
-       write(*,*)F_I
+       write(*,*)'After advection F_I <0 in '//NameSub
+       write(*,*)'F_I:', F_I
        if(present(IsNegativeEnergy))then
           IsNegativeEnergy = .true.
           return
