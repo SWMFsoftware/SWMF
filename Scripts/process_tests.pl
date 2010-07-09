@@ -19,6 +19,7 @@ my %WeightTest = (
     "CCHM:test_lc"                        => "1.0",
     "CCHM:GM/BATSRUS/test_corona"         => "1.0",
     "CCHM:GM/BATSRUS/test_coronasph"      => "1.0",
+    "CCHM:GM/BATSRUS/test_corona_2t"      => "1.0",
     "CCHM:GM/BATSRUS/test_fluxemergence"  => "1.0",
     "CCHM:GM/BATSRUS/test_outerhelio"     => "1.0",
 
