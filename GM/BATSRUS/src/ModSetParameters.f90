@@ -17,6 +17,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModProject                                        !^CFG IF PROJECTION
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
   use ModBlockData, ONLY: clean_block_data
+  use BATL_lib, ONLY: read_amr_criteria_param
   use ModAMR
   use ModParallel, ONLY : proc_dims
   use ModRaytrace                                       !^CFG IF RAYTRACE
@@ -1148,6 +1149,10 @@ subroutine MH_set_parameters(TypeAction)
              call stop_mpi(NameSub//' ERROR: nRefineCrit must be 0, 1, 2 or 3')
         do i=1,nRefineCrit
            call read_var('TypeRefine',RefineCrit(i))
+           if(UseBatl)then
+              call read_var('CoarsenLimit', CoarsenLimit_I(i))
+              call read_var('RefineLimit',  RefineLimit_I(i))
+           end if
            if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
               call read_var('TypeTransient_I(i)',TypeTransient_I(i))
               call read_var('UseSunEarth'       ,UseSunEarth)
@@ -1159,6 +1164,9 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('InvD2Ray',InvD2Ray)
            end if
         end do
+
+     case("#AMRCRIT")
+        call read_amr_criteria_param
 
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)

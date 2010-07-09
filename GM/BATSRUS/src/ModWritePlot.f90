@@ -571,7 +571,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        UseMultiIon, nIonFluid, MassIon_I, &
        IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
   use ModWaves, ONLY: UseWavePressure
-
+  use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit
   implicit none
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
@@ -1208,6 +1208,24 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 !!$!^CFG END RAYTRACE
 
         ! GRID INFORMATION
+     case('crit1')
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 1) PlotVar(:,:,:,iVar) = AmrCrit_IB(1,iBlk)
+     case('crit2')
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 2) PlotVar(:,:,:,iVar) = AmrCrit_IB(2,iBlk)
+     case('crit3')
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 3) PlotVar(:,:,:,iVar) = AmrCrit_IB(3,iBlk)
+     case('crit4')
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 4) PlotVar(:,:,:,iVar) = AmrCrit_IB(4,iBlk)
+     case('crit5')
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 5) PlotVar(:,:,:,iVar) = AmrCrit_IB(5,iBlk)
+     case('crit6')
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 6) PlotVar(:,:,:,iVar) = AmrCrit_IB(6,iBlk)
+     case('crit7')
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 7) PlotVar(:,:,:,iVar) = AmrCrit_IB(7,iBlk)
+     case('crit8')
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 8) PlotVar(:,:,:,iVar) = AmrCrit_IB(8,iBlk)
+     case('crit9')
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 9) PlotVar(:,:,:,iVar) = AmrCrit_IB(9,iBlk)
      case('dx')
         PlotVar(:,:,:,iVar) = dx_BLK(iBLK)
      case('dy')

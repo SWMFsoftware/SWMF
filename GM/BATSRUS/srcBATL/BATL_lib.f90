@@ -60,7 +60,7 @@ module BATL_lib
 
   ! Inherited from BATL_amr_criteria
   public:: set_amr_criteria, clean_amr_criteria, read_amr_criteria_param
-
+  public:: AmrCrit_IB, nAmrCrit
   ! Inherited from BATL_pass_cell
   public:: message_pass_cell
 
@@ -125,6 +125,7 @@ contains
   !============================================================================
   subroutine clean_batl
 
+    call clean_amr_criteria
     ! Free up memory by cleaning the grid and tree data
     call clean_grid
     call clean_tree

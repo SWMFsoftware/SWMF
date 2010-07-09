@@ -4,7 +4,8 @@ subroutine amr(DoMessagePass)
   use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,MaxBlock,&
        unusedBLK,lVerbose,UseB,UseB0, UseBatl, Dt_BLK, nTrueCellsALL
   use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK
-  use ModAMR, ONLY : automatic_refinement
+  use ModAMR, ONLY : automatic_refinement, RefineLimit_I, CoarsenLimit_I, &
+       nRefineCrit
   use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
        nVar, State_VGB
   use ModBlockData, ONLY: clean_block_data
@@ -12,7 +13,7 @@ subroutine amr(DoMessagePass)
   use ModMpi
 
   use ModParallel,      ONLY: UsePlotMessageOptions
-  use BATL_lib,         ONLY: regrid_batl, Unused_B, iNode_B, &
+  use BATL_lib,         ONLY: regrid_batl, set_amr_criteria, Unused_B, iNode_B, &
        iStatusNew_A, Refine_, Coarsen_
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
   use ModUser,          ONLY: user_amr_criteria
@@ -29,6 +30,8 @@ subroutine amr(DoMessagePass)
 
   logical :: DoTest, DoTestMe
   character(len=*), parameter:: NameSub = 'amr'
+
+  real :: refine_criteria(4, nBLK)
   !----------------------------------------------------------------------------
   call set_oktest(NameSub, DoTest, DoTestMe)
   if(UseBatl)then
@@ -42,18 +45,20 @@ subroutine amr(DoMessagePass)
      end if
      if(automatic_refinement) then
         if(DoTestMe)write(*,*) NameSub,' sets user criteria'
-        do iBlock = 1, nBlock
-           if(Unused_B(iBlock)) CYCLE
-           call user_amr_criteria(iBlock, UserCriteria, 'user', IsFound)
-           if(UserCriteria > 0.5)then
-              iStatusNew_A(iNode_B(iBlock)) = Refine_
-           else
-              iStatusNew_A(iNode_B(iBlock)) = Coarsen_
-           end if
-        end do
+
+        if(nRefineCrit > 0)then
+           refine_criteria = 0.0
+           call amr_criteria(refine_criteria)
+           call set_amr_criteria(nVar, State_VGB, &
+                nRefineCrit, refine_criteria(1:nRefineCrit,1:nBlock), RefineLimit_I, CoarsenLimit_I)
+        else
+           call set_amr_criteria(nVar, State_VGB)
+        end if
+
         if(DoTestMe)write(*,*) NameSub,' call regrid'
         call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe)
         if(DoTestMe)write(*,*) NameSub,' call set_batsrus_grid'
+
         call set_batsrus_grid
 
         call count_true_cells
