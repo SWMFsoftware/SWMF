@@ -227,7 +227,8 @@
               wregpad,triangles,symmtri,nvector,vectors,usereg
 
 	    linestyle=0
-            if multix*multiy lt nplot*nfile then linestyle=ifile
+            if multix*multiy lt nplot*nfile then $
+              linestyle=fix(nplot*ifile)/(multix*multiy)
 
             if(keyword_set(timetitle))then begin
                 t = time
