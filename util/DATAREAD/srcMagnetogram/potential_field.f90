@@ -6,7 +6,6 @@ module ModPotentialField
   logical :: DoReadMagnetogram = .true.
   logical :: UseCosTheta = .true. 
 
-
   integer         :: nR = 90, nTheta = 90, nPhi = 90
   integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 2
 
@@ -38,8 +37,7 @@ module ModPotentialField
 
   ! Variables for hepta preconditioner
   logical, parameter:: UsePreconditioner = .false.
-  logical:: DoPrecond = .false.
-  real, parameter:: AlphaPrecond = -0.5 ! Gustaffson modification
+  real, parameter:: AlphaPrecond = 1.0 ! Gustaffson modification
 
   ! Seven diagonals for the preconditioner
   real, dimension(:), allocatable :: &
@@ -430,7 +428,7 @@ contains
   subroutine matvec(x_C, y_C, n)
 
     use ModPotentialField, ONLY: B0_DG, &
-         nR, nTheta, DoPrecond, d_I, e_I, e1_I, e2_I, f_I, f1_I, f2_I
+         UsePreconditioner, nR, nTheta, d_I, e_I, e1_I, e2_I, f_I, f1_I, f2_I
     use ModLinearSolver, ONLY: Lhepta, Uhepta
 
     integer, intent(in) :: n
@@ -443,7 +441,7 @@ contains
     call get_divergence(B0_DG, y_C)
 
     ! Preconditioning: y'= U^{-1}.L^{-1}.y
-    if(DoPrecond)then
+    if(UsePreconditioner)then
        call Lhepta(       n,1,nR,nR*nTheta,y_C,d_I,e_I,e1_I,e2_I)
        call Uhepta(.true.,n,1,nR,nR*nTheta,y_C,f_I,f1_I,f2_I)
     end if
@@ -625,13 +623,13 @@ program potential_field
 
   use ModPotentialField
   use ModB0Matvec, ONLY: get_gradient, get_divergence, matvec
-  use ModLinearSolver, ONLY: gmres, bicgstab, prehepta, Lhepta, Uhepta
+  use ModLinearSolver, ONLY: bicgstab, prehepta, Lhepta, Uhepta
   use ModPlotFile, ONLY: save_plot_file
 
   implicit none
 
-  integer :: nKrylov=400, nIter=10000
-  real    :: Tolerance = 1e-4, r
+  integer :: nIter=10000
+  real    :: Tolerance = 1e-8, r
   integer :: n, i, iError, iR, iPhi, iTheta, i_D(3)
   !--------------------------------------------------------------------------
 
@@ -642,59 +640,69 @@ program potential_field
   if(.not.DoReadMagnetogram)then
      allocate(Br_II(nTheta,nPhi))
      do iPhi = 1, nPhi; do iTheta = 1, nTheta; 
-        Br_II(iTheta,iPhi) = sin(Theta_I(iTheta))*cos(Phi_I(iPhi))
-        do iR = 1, nR
-           r = Radius_I(iR)
-           Potential_C(iR,iTheta,iPhi) = &
-                (r - rMax**3/r**2)/(1 + 2*rMax**3)*Br_II(iTheta,iPhi)
-        end do
+        !Br_II(iTheta,iPhi) = sin(Theta_I(iTheta))*cos(Phi_I(iPhi))
+        !do iR = 1, nR
+        !   r = Radius_I(iR)
+        !   Potential_C(iR,iTheta,iPhi) = &
+        !        (r - rMax**3/r**2)/(1 + 2*rMax**3)*Br_II(iTheta,iPhi)
+        !end do
+
+        Br_II = 1.0
      end do; end do
 
-     write(*,*)'rTest    =',Radius_I(iRTest)
-     write(*,*)'PhiTest  =',Phi_I(iPhiTest)
-     write(*,*)'ThetaTest=',Theta_I(iThetaTest)
-     write(*,*)'BrTest   =',Br_II(iThetaTest,iPhiTest)
-     write(*,*)'PotTest  =',Potential_C(iRTest,iThetaTest,iPhiTest)
+     !write(*,*)'rTest    =',Radius_I(iRTest)
+     !write(*,*)'PhiTest  =',Phi_I(iPhiTest)
+     !write(*,*)'ThetaTest=',Theta_I(iThetaTest)
+     !write(*,*)'BrTest   =',Br_II(iThetaTest,iPhiTest)
+     !write(*,*)'PotTest  =',Potential_C(iRTest,iThetaTest,iPhiTest)
 
   end if
 
   n = nR*nTheta*nPhi
-  UseBr = .true.
-  DoPrecond = .false.
-  call matvec(Potential_C, Rhs_C, n)
-  Rhs_C = -Rhs_C
 
   if(UsePreconditioner)then
      allocate(d_I(n), e_I(n), f_I(n), e1_I(n), f1_I(n), e2_I(n), f2_I(n))
      i = 0
      do iPhi = 1, nPhi; do iTheta = 1, nTheta; do iR = 1, nR
         i = i + 1
-        d_I(i)  = 0.0
-        e_I(i)  = 0.0
-        f_I(i)  = 0.0
-        e1_I(i) = 0.0
-        f1_I(i) = 0.0
-        e2_I(i) = 0.0
-        f2_I(i) = 0.0
+        e_I(i)  = RadiusNode_I(iR)**2 &
+             /(Radius_I(iR)**2 * dRadiusNode_I(iR) * dRadius_I(iR))
+        if(iR==1) e_I(i) = 0.0
+
+        f_I(i)  = RadiusNode_I(iR+1)**2 &
+             /(Radius_I(iR)**2 * dRadiusNode_I(iR+1) * dRadius_I(iR))
+        if(iR==nR) f_I(i) = 0.0
+
+        e1_I(i) = SinThetaNode_I(iTheta)**2 / &
+             (Radius_I(iR)**2 * dCosThetaNode_I(iTheta)  *dCosTheta_I(iTheta))
+        if(iTheta == 1) e1_I(i) = 0.0
+
+        f1_I(i) = SinThetaNode_I(iTheta+1)**2 /&
+             (Radius_I(iR)**2 * dCosThetaNode_I(iTheta+1)*dCosTheta_I(iTheta))
+        if(iTheta == nTheta) f1_I(i) = 0.0
+
+        e2_I(i) = 1/(Radius_I(iR)**2 * SinTheta_I(iTheta)**2 &
+             * dPhiNode_I(iPhi) * dPhi_I(iPhi))
+        if(iPhi == 1) e2_I(i) = 0.0
+
+        f2_I(i) = 1/(Radius_I(iR)**2 * SinTheta_I(iTheta)**2 &
+             * dPhiNode_I(iPhi+1) * dPhi_I(iPhi))
+        if(iPhi == nPhi) f2_I(i) = 0.0
+
+        d_I(i)  = -(e_I(i) + f_I(i) + e1_I(i) + f1_I(i) + e2_I(i) + f2_I(i))
+
      end do; end do; end do
 
      ! A -> LU
      call prehepta(n, 1, nR, nR*nTheta, AlphaPrecond, &
           d_I, e_I, f_I, e1_I, f1_I, e2_I, f2_I)
-
-     ! Left side preconditioning: U^{-1}.L^{-1}.A.x = U^{-1}.L^{-1}.rhs
-
-     ! rhs'=U^{-1}.L^{-1}.rhs
-     call Lhepta(        n, 1, nR, nR*nTheta, Rhs_C, d_I, e_I, e1_I, e2_I)
-     call Uhepta(.true., n, 1, nR, nR*nTheta, Rhs_C,      f_I, f1_I, f2_I)
-
-     DoPrecond = .true.
   end if
 
-  UseBr = .false.
-  !    call gmres(matvec, Rhs_C, Potential_C, .false., n, &
-  !         nKrylov, Tolerance, 'rel', nIter, iError, DoTest=.true.)
+  UseBr = .true.
+  call matvec(Potential_C, Rhs_C, n)
+  Rhs_C = -Rhs_C
 
+  UseBr = .false.
   call bicgstab(matvec, Rhs_C, Potential_C, .false., n, &
        Tolerance, 'rel', nIter, iError, DoTest=.true.)
 
