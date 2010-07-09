@@ -104,8 +104,8 @@ module ModVarIndexes
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
-  ! The only scalar to be advected is electron pressure
-  integer, parameter :: ScalarFirst_ = p_-1, ScalarLast_ = p_-1
+  ! There are no extra scalars (Pe has its own flux)
+  integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
