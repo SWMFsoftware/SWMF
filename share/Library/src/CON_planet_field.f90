@@ -460,7 +460,7 @@ contains
   end subroutine map_planet_field11
 
   !BOP ========================================================================
-  !IROUTINE: map_planet_field33 - map planet field from a position to some radius
+  !IROUTINE: map_planet_field33 - map planet field from a position to a radius
   !INTERFACE:
   subroutine map_planet_field33(TimeSim, xIn, yIn, zIn, TypeCoord, &
        rMap, xMap, yMap, zMap, iHemisphere, DoNotConvertBack, DdirDxyz_DD)
@@ -534,7 +534,8 @@ contains
     write(*,'(a,3es14.6)')'Location xGse_D =',xGse_D
     call get_planet_field(0.0,xGse_D,'GSE NORM',bGse_D)
     write(*,'(a,3es14.6)')'Field    bGse_D = ',bGse_D
-    write(*,'(a,3es14.6)')'Rotated  bGse_D = ',matmul(SmgGsm_DD,matmul(GsmGse_DD,bGse_D))
+    write(*,'(a,3es14.6)')'Rotated  bGse_D = ', &
+         matmul(SmgGsm_DD,matmul(GsmGse_DD,bGse_D))
 
     TimeSim = 6*3600
     write(*,'(a,3es14.6)')'Test at time=', TimeSim
