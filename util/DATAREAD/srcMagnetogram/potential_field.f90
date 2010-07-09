@@ -36,6 +36,15 @@ module ModPotentialField
   real, allocatable:: Br_II(:,:), Potential_C(:,:,:), Rhs_C(:,:,:), &
        B0_DG(:,:,:,:), DivB_C(:,:,:), PlotVar_VG(:,:,:,:)
 
+  ! Variables for hepta preconditioner
+  logical, parameter:: UsePreconditioner = .false.
+  logical:: DoPrecond = .false.
+  real, parameter:: AlphaPrecond = -0.5 ! Gustaffson modification
+
+  ! Seven diagonals for the preconditioner
+  real, dimension(:), allocatable :: &
+       d_I, e_I, e1_I, e2_I, f_I, f1_I, f2_I
+
 contains
 
   !=================================================================
@@ -420,7 +429,9 @@ contains
 
   subroutine matvec(x_C, y_C, n)
 
-    use ModPotentialField, ONLY: B0_DG
+    use ModPotentialField, ONLY: B0_DG, &
+         nR, nTheta, DoPrecond, d_I, e_I, e1_I, e2_I, f_I, f1_I, f2_I
+    use ModLinearSolver, ONLY: Lhepta, Uhepta
 
     integer, intent(in) :: n
     real, intent(in)    :: x_C(n)
@@ -430,6 +441,12 @@ contains
     ! Calculate y = laplace x in two steps
     call get_gradient(x_C, B0_DG)
     call get_divergence(B0_DG, y_C)
+
+    ! Preconditioning: y'= U^{-1}.L^{-1}.y
+    if(DoPrecond)then
+       call Lhepta(       n,1,nR,nR*nTheta,y_C,d_I,e_I,e1_I,e2_I)
+       call Uhepta(.true.,n,1,nR,nR*nTheta,y_C,f_I,f1_I,f2_I)
+    end if
 
   end subroutine matvec
 
@@ -608,14 +625,14 @@ program potential_field
 
   use ModPotentialField
   use ModB0Matvec, ONLY: get_gradient, get_divergence, matvec
-  use ModLinearSolver, ONLY: gmres, bicgstab
+  use ModLinearSolver, ONLY: gmres, bicgstab, prehepta, Lhepta, Uhepta
   use ModPlotFile, ONLY: save_plot_file
 
   implicit none
 
   integer :: nKrylov=400, nIter=10000
   real    :: Tolerance = 1e-4, r
-  integer :: n, iError, iR, iPhi, iTheta, i_D(3)
+  integer :: n, i, iError, iR, iPhi, iTheta, i_D(3)
   !--------------------------------------------------------------------------
 
   if(DoReadMagnetogram) call read_magnetogram
@@ -628,7 +645,8 @@ program potential_field
         Br_II(iTheta,iPhi) = sin(Theta_I(iTheta))*cos(Phi_I(iPhi))
         do iR = 1, nR
            r = Radius_I(iR)
-           Potential_C(iR,iTheta,iPhi) = (r - rMax**3/r**2)/(1 + 2*rMax**3)*Br_II(iTheta,iPhi)
+           Potential_C(iR,iTheta,iPhi) = &
+                (r - rMax**3/r**2)/(1 + 2*rMax**3)*Br_II(iTheta,iPhi)
         end do
      end do; end do
 
@@ -642,24 +660,36 @@ program potential_field
 
   n = nR*nTheta*nPhi
   UseBr = .true.
+  DoPrecond = .false.
   call matvec(Potential_C, Rhs_C, n)
-
-  if(.not.DoReadMagnetogram)then
-
-     write(*,*)'Error at nR/2,nTheta/2,nPhi/2=',Rhs_C(nR/2,nTheta/2,nPhi/2)
-     write(*,*)'Error at nR/2,nTheta/2,1=',Rhs_C(nR/2,1,nPhi/2)
-     write(*,*)'Error at 1,nTheta/2,nPhi/2=',Rhs_C(1,nTheta/2,nPhi/2)
-     write(*,*)'Error at 1,1,nPhi/2=',Rhs_C(1,1,nPhi/2)
-     write(*,*)'Error at 1,1,1=',Rhs_C(1,1,1)
-
-     i_D = maxloc(abs(Rhs_C))
-     iR = i_D(1); iTheta=i_D(2); iPhi=i_D(3)
-     write(*,*)'iR, iTheta, iPhi, Rhs=', i_D, Rhs_C(iR,iTheta,iPhi)
-     write(*,*)'r, theta, phi=',Radius_I(iR), Theta_I(iTheta), Phi_I(iPhi)
-     stop
-  end if
-
   Rhs_C = -Rhs_C
+
+  if(UsePreconditioner)then
+     allocate(d_I(n), e_I(n), f_I(n), e1_I(n), f1_I(n), e2_I(n), f2_I(n))
+     i = 0
+     do iPhi = 1, nPhi; do iTheta = 1, nTheta; do iR = 1, nR
+        i = i + 1
+        d_I(i)  = 0.0
+        e_I(i)  = 0.0
+        f_I(i)  = 0.0
+        e1_I(i) = 0.0
+        f1_I(i) = 0.0
+        e2_I(i) = 0.0
+        f2_I(i) = 0.0
+     end do; end do; end do
+
+     ! A -> LU
+     call prehepta(n, 1, nR, nR*nTheta, AlphaPrecond, &
+          d_I, e_I, f_I, e1_I, f1_I, e2_I, f2_I)
+
+     ! Left side preconditioning: U^{-1}.L^{-1}.A.x = U^{-1}.L^{-1}.rhs
+
+     ! rhs'=U^{-1}.L^{-1}.rhs
+     call Lhepta(        n, 1, nR, nR*nTheta, Rhs_C, d_I, e_I, e1_I, e2_I)
+     call Uhepta(.true., n, 1, nR, nR*nTheta, Rhs_C,      f_I, f1_I, f2_I)
+
+     DoPrecond = .true.
+  end if
 
   UseBr = .false.
   !    call gmres(matvec, Rhs_C, Potential_C, .false., n, &
