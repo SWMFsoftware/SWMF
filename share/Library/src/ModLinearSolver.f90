@@ -624,7 +624,7 @@ contains
        rwork(1:2,qy_) = rwork(1,y0_)*rwork(1:2,qz_) + &
             rwork(2,y0_)*rwork(1:2,qz_+1)
 
-       rnrm = sqrt( sum( rwork(1:2,y0_)*rwork(1:2,qy_) ) )
+       rnrm = sqrt( max(0.0, sum( rwork(1:2,y0_)*rwork(1:2,qy_) )) )
 
        select case(typestop)
        case('rel')
