@@ -2,7 +2,6 @@ module ModPotentialField
 
   implicit none
 
-
   logical :: DoReadMagnetogram = .true.
   logical :: UseCosTheta = .true. 
 
@@ -36,7 +35,7 @@ module ModPotentialField
        B0_DG(:,:,:,:), DivB_C(:,:,:), PlotVar_VG(:,:,:,:)
 
   ! Variables for hepta preconditioner
-  logical, parameter:: UsePreconditioner = .false.
+  logical, parameter:: UsePreconditioner = .true. ! .true.
   real, parameter:: AlphaPrecond = 1.0 ! Gustaffson modification
 
   ! Seven diagonals for the preconditioner
@@ -200,12 +199,12 @@ contains
        dCosTheta_I = dZ
 !       dCosTheta_I(1)      = SinTheta_I(1)*(ThetaNode_I(2) - ThetaNode_I(1))
 !       dCosTheta_I(nTheta) = SinTheta_I(nTheta)*(ThetaNode_I(nTheta+1) - ThetaNode_I(nTheta))
-       dCosTheta_I(1:nTheta) = SinTheta_I(1:nTheta)*dTheta_I
+!       dCosTheta_I(1:nTheta) = SinTheta_I(1:nTheta)*dTheta_I
 
        dCosThetaNode_I = dZ
 !       dCosThetaNode_I(2) = SinThetaNode_I(2)*(Theta_I(2)-Theta_I(1))
 !       dCosThetaNode_I(nTheta) = SinThetaNode_I(nTheta)*(Theta_I(nTheta)-Theta_I(nTheta-1))
-       dCosThetaNode_I(2:nTheta) = SinThetaNode_I(2:nTheta)*(Theta_I(2:nTheta)-Theta_I(1:nTheta-1))
+!       dCosThetaNode_I(2:nTheta) = SinThetaNode_I(2:nTheta)*(Theta_I(2:nTheta)-Theta_I(1:nTheta-1))
 
     else
        dCosTheta_I(1:nTheta) = SinTheta_I(1:nTheta)*dTheta
@@ -442,8 +441,8 @@ contains
 
     ! Preconditioning: y'= U^{-1}.L^{-1}.y
     if(UsePreconditioner)then
-       call Lhepta(       n,1,nR,nR*nTheta,y_C,d_I,e_I,e1_I,e2_I)
-       call Uhepta(.true.,n,1,nR,nR*nTheta,y_C,f_I,f1_I,f2_I)
+       call Lhepta(        n, 1, nR, nR*nTheta, y_C, d_I, e_I, e1_I, e2_I)
+       call Uhepta(.true., n, 1, nR, nR*nTheta, y_C,      f_I, f1_I, f2_I)
     end if
 
   end subroutine matvec
@@ -629,7 +628,7 @@ program potential_field
   implicit none
 
   integer :: nIter=10000
-  real    :: Tolerance = 1e-8, r
+  real    :: Tolerance = 1e-5, r
   integer :: n, i, iError, iR, iPhi, iTheta, i_D(3)
   !--------------------------------------------------------------------------
 
@@ -640,14 +639,14 @@ program potential_field
   if(.not.DoReadMagnetogram)then
      allocate(Br_II(nTheta,nPhi))
      do iPhi = 1, nPhi; do iTheta = 1, nTheta; 
-        !Br_II(iTheta,iPhi) = sin(Theta_I(iTheta))*cos(Phi_I(iPhi))
+        Br_II(iTheta,iPhi) = sin(Theta_I(iTheta))*cos(Phi_I(iPhi))
         !do iR = 1, nR
         !   r = Radius_I(iR)
         !   Potential_C(iR,iTheta,iPhi) = &
         !        (r - rMax**3/r**2)/(1 + 2*rMax**3)*Br_II(iTheta,iPhi)
         !end do
 
-        Br_II = 1.0
+        !Br_II = 1.0
      end do; end do
 
      !write(*,*)'rTest    =',Radius_I(iRTest)
@@ -661,41 +660,55 @@ program potential_field
   n = nR*nTheta*nPhi
 
   if(UsePreconditioner)then
+
      allocate(d_I(n), e_I(n), f_I(n), e1_I(n), f1_I(n), e2_I(n), f2_I(n))
+
      i = 0
      do iPhi = 1, nPhi; do iTheta = 1, nTheta; do iR = 1, nR
         i = i + 1
         e_I(i)  = RadiusNode_I(iR)**2 &
              /(Radius_I(iR)**2 * dRadiusNode_I(iR) * dRadius_I(iR))
-        if(iR==1) e_I(i) = 0.0
 
         f_I(i)  = RadiusNode_I(iR+1)**2 &
              /(Radius_I(iR)**2 * dRadiusNode_I(iR+1) * dRadius_I(iR))
-        if(iR==nR) f_I(i) = 0.0
 
         e1_I(i) = SinThetaNode_I(iTheta)**2 / &
              (Radius_I(iR)**2 * dCosThetaNode_I(iTheta)  *dCosTheta_I(iTheta))
-        if(iTheta == 1) e1_I(i) = 0.0
+
+        !e1_I(i) = 0.0
 
         f1_I(i) = SinThetaNode_I(iTheta+1)**2 /&
              (Radius_I(iR)**2 * dCosThetaNode_I(iTheta+1)*dCosTheta_I(iTheta))
-        if(iTheta == nTheta) f1_I(i) = 0.0
+
+        !f1_I(i) = 0.0
 
         e2_I(i) = 1/(Radius_I(iR)**2 * SinTheta_I(iTheta)**2 &
              * dPhiNode_I(iPhi) * dPhi_I(iPhi))
-        if(iPhi == 1) e2_I(i) = 0.0
+
+        !e2_I(i) = 0.0
 
         f2_I(i) = 1/(Radius_I(iR)**2 * SinTheta_I(iTheta)**2 &
              * dPhiNode_I(iPhi+1) * dPhi_I(iPhi))
-        if(iPhi == nPhi) f2_I(i) = 0.0
+
+        !f2_I(i) = 0.0
 
         d_I(i)  = -(e_I(i) + f_I(i) + e1_I(i) + f1_I(i) + e2_I(i) + f2_I(i))
+
+        if(iR     == 1)      d_I(i)  = d_I(i) + e_I(i) ! inner BC
+        if(iR     == 1)      e_I(i)  = 0.0
+        if(iR     == nR)     d_I(i)  = d_I(i) - f_I(i) ! outer BC
+        if(iR     == nR)     f_I(i)  = 0.0
+        if(iTheta == 1)      e1_I(i) = 0.0
+        if(iTheta == nTheta) f1_I(i) = 0.0
+        if(iPhi   == 1)      e2_I(i) = 0.0
+        if(iPhi   == nPhi)   f2_I(i) = 0.0
 
      end do; end do; end do
 
      ! A -> LU
      call prehepta(n, 1, nR, nR*nTheta, AlphaPrecond, &
           d_I, e_I, f_I, e1_I, f1_I, e2_I, f2_I)
+
   end if
 
   UseBr = .true.
@@ -732,9 +745,9 @@ program potential_field
 !       VarIn_VIII=PlotVar_VG)
 
   call save_plot_file('potentialtest.out', StringHeaderIn='potential field', &
-       NameVarIn='r theta phi pot', Coord1In_I=Radius_I(1:nR), &
+       NameVarIn='r theta phi divb rhs pot', Coord1In_I=Radius_I(1:nR), &
        Coord2In_I=Theta_I(1:nTheta), Coord3In_I=Phi_I(1:nPhi), &
-       VarIn_VIII=PlotVar_VG(6:6,1:nR,1:nTheta,1:nPhi))
+       VarIn_VIII=PlotVar_VG(4:6,1:nR,1:nTheta,1:nPhi))
 
   deallocate(PlotVar_VG)
 
