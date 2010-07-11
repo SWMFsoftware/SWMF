@@ -233,7 +233,6 @@ module ModUser
   real :: HeatCondPar
   real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
   real :: VAlfvenMin = 1.0e5  !100 km/s
-  real :: Umax = 8e5 ! 800 km/s
   real :: RhoVAt1AU = 4.5e-15 !kg/(m2*s) ! in fast wind NpV=2.7x10^8 /cm2s
 
 contains
@@ -378,8 +377,6 @@ contains
        if(UseLdem) call read_ldem
 
        if(iProc == 0) call write_alfvenwave_boundary
-
-       Umax = maxval(WSAspeed_N)
     end if
 
     if(iProc == 0)then
@@ -518,6 +515,7 @@ contains
     real :: RhoBase, Tbase, VAlfvenSi, TbaseSi, HeatFluxSi, WaveEnergyDensSi
 
     real :: RhoV
+    real, parameter :: Umax = 8e5 ! 800 km/s
     real, parameter :: AreaRatio = (cAU/rSun)**2
     !--------------------------------------------------------------------------
 
