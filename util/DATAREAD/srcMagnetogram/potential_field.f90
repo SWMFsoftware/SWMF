@@ -2,8 +2,9 @@ module ModPotentialField
 
   implicit none
 
-  logical :: DoReadMagnetogram = .true.
-  logical :: UseCosTheta = .true. 
+  logical, parameter :: DoReadMagnetogram = .true.
+  logical, parameter :: UseCosTheta       = .true. 
+  logical, parameter :: UsePreconditioner = .true.
 
   integer         :: nR = 90, nTheta = 90, nPhi = 90
   integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 2
@@ -32,11 +33,10 @@ module ModPotentialField
        dRadiusNode_I, dTheta_I, dThetaNode_I, dPhiNode_I, dCosThetaNode_I
 
   real, allocatable:: Br_II(:,:), Potential_C(:,:,:), Rhs_C(:,:,:), &
-       B0_DG(:,:,:,:), DivB_C(:,:,:), PlotVar_VG(:,:,:,:)
+       B0_DG(:,:,:,:), DivB_C(:,:,:), PlotVar_VC(:,:,:,:)
 
   ! Variables for hepta preconditioner
-  logical, parameter:: UsePreconditioner = .true. ! .true.
-  real, parameter:: AlphaPrecond = 1.0 ! Gustaffson modification
+  real, parameter:: PrecondParam = 1.0 ! see ModLinearSolver
 
   ! Seven diagonals for the preconditioner
   real, dimension(:), allocatable :: &
@@ -197,14 +197,12 @@ contains
     SinThetaNode_I = sin(ThetaNode_I)
     if(UseCosTheta)then
        dCosTheta_I = dZ
-!       dCosTheta_I(1)      = SinTheta_I(1)*(ThetaNode_I(2) - ThetaNode_I(1))
-!       dCosTheta_I(nTheta) = SinTheta_I(nTheta)*(ThetaNode_I(nTheta+1) - ThetaNode_I(nTheta))
-!       dCosTheta_I(1:nTheta) = SinTheta_I(1:nTheta)*dTheta_I
-
        dCosThetaNode_I = dZ
-!       dCosThetaNode_I(2) = SinThetaNode_I(2)*(Theta_I(2)-Theta_I(1))
-!       dCosThetaNode_I(nTheta) = SinThetaNode_I(nTheta)*(Theta_I(nTheta)-Theta_I(nTheta-1))
-!       dCosThetaNode_I(2:nTheta) = SinThetaNode_I(2:nTheta)*(Theta_I(2:nTheta)-Theta_I(1:nTheta-1))
+
+       ! The definitions below work better for l=m=1 harmonics test
+       !dCosTheta_I(1:nTheta) = SinTheta_I(1:nTheta)*dTheta_I
+       !dCosThetaNode_I(2:nTheta) = SinThetaNode_I(2:nTheta)* &
+       !     (Theta_I(2:nTheta)-Theta_I(1:nTheta-1))
 
     else
        dCosTheta_I(1:nTheta) = SinTheta_I(1:nTheta)*dTheta
@@ -224,7 +222,7 @@ contains
          Rhs_C(nR,nTheta,nPhi), &
          B0_DG(3,nR+1,nTheta+1,nPhi+1), &
          DivB_C(nR,nTheta,nPhi), &
-         PlotVar_VG(6,nR+1,nTheta+1,nPhi+1))
+         PlotVar_VC(3,nR,nTheta,nPhi))
 
     Potential_C       =   0.0
     Rhs_C             =   0.0
@@ -517,23 +515,25 @@ contains
              Grad_DG(3,iR,iTheta,iPhi) = &
                   (x_G(iR,iTheta,iPhi) - x_G(iR,iTheta,iPhi-1)) &
                   / (Radius_I(iR)*SinTheta_I(iTheta)*dPhiNode_I(iPhi))
-
-!!!                  *dTheta_I(iTheta) / (Radius_I(iR)*dCosTheta_I(iTheta)*dPhiNode_I(iPhi))
           end do
        end do
     end do
 
+    ! Calculate discretization error for the l=m=1 harmonics
     !iR = iRTest; iPhi = iPhiTest; iTheta = iThetaTest
     !
     !r = Radius_I(iR)
     !GradExact_D  = (/ &
-    !     (1+2*rMax**3/RadiusNode_I(iR)**3)/(1+2*rMax**3)*sin(Theta_I(iTheta))*cos(Phi_I(iPhi)), &
-    !     (r-rMax**3/r**2)/(1+2*rMax**3)/r*cos(ThetaNode_I(iTheta))*cos(Phi_I(iPhi)), &
+    !     (1+2*rMax**3/RadiusNode_I(iR)**3)/(1+2*rMax**3) &
+    !     *sin(Theta_I(iTheta))*cos(Phi_I(iPhi)), &
+    !     (r-rMax**3/r**2)/(1+2*rMax**3)/r &
+    !     *cos(ThetaNode_I(iTheta))*cos(Phi_I(iPhi)), &
     !     -(r-rMax**3/r**2)/(1+2*rMax**3)/r*sin(PhiNode_I(iPhi)) /)
     !
     !write(*,*) 'magnetogram at test cell=', Br_II(iTheta,iPhi)
     !do iDim = 1, 3
-    !   write(*,*) 'Grad, Exact, Error=', Grad_DG(iDim,iR,iTheta,iPhi), GradExact_D(iDim), &
+    !   write(*,*) 'Grad, Exact, Error=', &
+    !        Grad_DG(iDim,iR,iTheta,iPhi), GradExact_D(iDim), &
     !        Grad_DG(iDim,iR,iTheta,iPhi) - GradExact_D(iDim)
     !end do
 
@@ -569,12 +569,11 @@ contains
                   ( b_DG(3,iR,iTheta,iPhi+1) &
                   - b_DG(3,iR,iTheta,iPhi) ) &
                   / (Radius_I(iR)*SinTheta_I(iTheta)*dPhi_I(iPhi))
-
-!!!                 *dTheta_I(iTheta) / (Radius_I(iR)*dCosTheta_I(iTheta)*dPhi_I(iPhi))
           end do
        end do
     end do
 
+    ! Calculate discretization error for the l=m=1 harmonics
     !iR = iRTest; iPhi = iPhiTest; iTheta = iThetaTest
     !r = Radius_I(iR)
     !
@@ -603,9 +602,9 @@ contains
     !end do
     !   
     !write(*,*)'testlaplace=', DivB_C(iR,iTheta,iPhi)
-    !write(*,*)'location   =',maxloc(abs(DivB_C))
-    !write(*,*)'max laplace=',maxval(abs(DivB_C))
-    !write(*,*)'avg laplace=',sum(abs(DivB_C))/(nR*nTheta*nPhi)
+    !write(*,*)'location   =', maxloc(abs(DivB_C))
+    !write(*,*)'max laplace=', maxval(abs(DivB_C))
+    !write(*,*)'avg laplace=', sum(abs(DivB_C))/(nR*nTheta*nPhi)
     !
     !stop
 
@@ -639,21 +638,24 @@ program potential_field
   if(.not.DoReadMagnetogram)then
      allocate(Br_II(nTheta,nPhi))
      do iPhi = 1, nPhi; do iTheta = 1, nTheta; 
-        Br_II(iTheta,iPhi) = sin(Theta_I(iTheta))*cos(Phi_I(iPhi))
-        !do iR = 1, nR
-        !   r = Radius_I(iR)
-        !   Potential_C(iR,iTheta,iPhi) = &
-        !        (r - rMax**3/r**2)/(1 + 2*rMax**3)*Br_II(iTheta,iPhi)
-        !end do
+        ! magnetogram proportional to the l=m=n harmonics
+        n = 1 ! or 2
+        Br_II(iTheta,iPhi) = sin(Theta_I(iTheta))**n *cos(n*Phi_I(iPhi))
 
-        !Br_II = 1.0
+        ! Exact solution
+        do iR = 1, nR
+           r = Radius_I(iR)
+           Potential_C(iR,iTheta,iPhi) = Br_II(iTheta,iPhi) &
+                * (r**n - rMax**(2*n+1)/r**(n+1)) &
+                / (n    + (n+1)*rMax**(2*n+1))
+        end do
      end do; end do
 
-     !write(*,*)'rTest    =',Radius_I(iRTest)
-     !write(*,*)'PhiTest  =',Phi_I(iPhiTest)
-     !write(*,*)'ThetaTest=',Theta_I(iThetaTest)
-     !write(*,*)'BrTest   =',Br_II(iThetaTest,iPhiTest)
-     !write(*,*)'PotTest  =',Potential_C(iRTest,iThetaTest,iPhiTest)
+     write(*,*)'rTest    =',Radius_I(iRTest)
+     write(*,*)'PhiTest  =',Phi_I(iPhiTest)
+     write(*,*)'ThetaTest=',Theta_I(iThetaTest)
+     write(*,*)'BrTest   =',Br_II(iThetaTest,iPhiTest)
+     write(*,*)'PotTest  =',Potential_C(iRTest,iThetaTest,iPhiTest)
 
   end if
 
@@ -706,7 +708,7 @@ program potential_field
      end do; end do; end do
 
      ! A -> LU
-     call prehepta(n, 1, nR, nR*nTheta, AlphaPrecond, &
+     call prehepta(n, 1, nR, nR*nTheta, PrecondParam, &
           d_I, e_I, f_I, e1_I, f1_I, e2_I, f2_I)
 
   end if
@@ -722,34 +724,27 @@ program potential_field
   UseBr = .true.
   write(*,*)'nIter, Tolerance, iError=', nIter, Tolerance, iError
 
-  PlotVar_VG = 0.0
-
-  call get_gradient(Potential_C, B0_DG)
-  PlotVar_VG(1:3,:,:,:) = B0_DG
+  PlotVar_VC = 0.0
 
   ! report maximum divb
+  call get_gradient(Potential_C, B0_DG)
   call get_divergence(B0_DG, DivB_C)
   write(*,*) 'max(abs(divb)) = ', maxval(abs(DivB_C))
-  PlotVar_VG(4,1:nR,1:nTheta,1:nPhi) = DivB_C
 
-  PlotVar_VG(5,1:nR,1:nTheta,1:nPhi) = Rhs_C
+  PlotVar_VC(1,:,:,:) = DivB_C
+  PlotVar_VC(2,:,:,:) = Rhs_C
+  PlotVar_VC(3,:,:,:) = Potential_C
 
-  PlotVar_VG(6,1:nR,1:nTheta,1:nPhi) = Potential_C
+  ! Save divb, potential and RHS for testing purposes
+  call save_plot_file('potentialtest.out', TypeFileIn='real8', &
+       StringHeaderIn='potential field', &
+       NameVarIn='r theta phi divb rhs pot', &
+       Coord1In_I=Radius_I(1:nR), &
+       Coord2In_I=Theta_I(1:nTheta), &
+       Coord3In_I=Phi_I(1:nPhi), &
+       VarIn_VIII=PlotVar_VC)
 
-!  call save_plot_file('potentialtest.out', &
-!       StringHeaderIn='potential field', &
-!       NameVarIn='r theta phi br btheta bphi divb rhs pot', &
-!       Coord1In_I=RadiusNode_I, &
-!       Coord2In_I=ThetaNode_I, &
-!       Coord3In_I=PhiNode_I, &
-!       VarIn_VIII=PlotVar_VG)
-
-  call save_plot_file('potentialtest.out', StringHeaderIn='potential field', &
-       NameVarIn='r theta phi divb rhs pot', Coord1In_I=Radius_I(1:nR), &
-       Coord2In_I=Theta_I(1:nTheta), Coord3In_I=Phi_I(1:nPhi), &
-       VarIn_VIII=PlotVar_VG(4:6,1:nR,1:nTheta,1:nPhi))
-
-  deallocate(PlotVar_VG)
+  deallocate(PlotVar_VC)
 
   call save_potential_field
 
