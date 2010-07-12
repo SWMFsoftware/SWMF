@@ -3546,6 +3546,10 @@ Default for DnRefine is -1, i.e. no run time refinement.
 			<option name="Transient" value="transient" />
 			<option name="User defined" value="user" />
 		</parameter>
+		<parameter name="CoarsenLimit" type="real" min="0" max="1"
+						default="0.5" if="$UseBatl"/>
+		<parameter name="RefineLimit" type="real" min="0" max="1"
+						default="0.5" if="$UseBatl"/>
 		<if expr="$TypeRefine =~ /transient/">
 			<parameter name="TypeTransient" type="string"
 			case="lower" input="select">
@@ -3582,10 +3586,41 @@ T			UseSunEarth   ! Only if 'Transient'
 0.00E+00		zEarth        ! Only if UseSunEarth
 5.00E-01		InvD2Ray      ! Only if UseSunEarth
 
-The default values depend on problem_type.
+#AMRCRITERIA
+2			nRefineCrit (number of refinement criteria: 1,2 or 3)
+gradP			TypeRefine
+0.2			CoarsenLimit  ! Only if UseBatl is true
+0.8			RefineLimit   ! Only if UseBatl is true
+user			TypeRefine
+0.5			CoarsenLimit  ! Only if UseBatl is true
+0.5			RefineLimit   ! Only if UseBatl is true
 
-At most three criteria can be given. If nRefineCrit is set to zero,
-the blocks are not ordered. This can be used to refine or coarsen
+This command defines the criteria to select blocks for refinement or
+coarsening when the #AMR command is used with DoAutoRefine=T parameter. 
+Up to 3 criteria can be used. Refinement is done if ANY
+of the criteria demand it, and the block can be refined
+(a block cannot be refined if the refinement level would exceed
+the maximum level or too many blocks would be created.
+
+Coarsening is done if ALL the criteria allow it and the block
+can be coarsened (a block cannot be coarsened if the block level
+is already at the minimum level, or too many blocks would be coarsened). 
+
+When the BATL library is used (see the #BATL command) then the 
+CoarsenLimit and RefineLimit parameters set the coarsening and 
+refinement thresholds for the NORMALIZED (divided by the largest value) 
+criteria. When the BATL library is not used the criteria are sorted by
+their value and a certain per cent of the blocks with the largest/lowest
+criteria get refined/coarsened, as determined by the 
+PercentCoarsen and PercentRefine parameters of the #AMR command.
+
+The default settings currently depend on the component used,
+but it is best to set the criteria explicitly if the #AMR command
+is used with DoAutoRefine=T, because the defaults may change, and 
+they are not optimal for most applications.
+
+If nRefineCrit is set to zero, the blocks are not ordered. 
+This can be used to refine or coarsen
 all the blocks limited by the minimum and maximum levels only
 (see commands #AMRLEVELS and #AMRRESOLUTION). If nRefineCrit is 1, 2, or 3
 then the criteria can be chosen from the following list:
