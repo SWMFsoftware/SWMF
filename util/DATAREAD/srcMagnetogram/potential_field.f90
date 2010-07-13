@@ -6,7 +6,7 @@ module ModPotentialField
   logical, parameter :: UseCosTheta       = .true. 
   logical, parameter :: UsePreconditioner = .true.
 
-  integer         :: nR = 90, nTheta = 90, nPhi = 90
+  integer         :: nR = 150, nTheta = 180, nPhi = 360
   integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 2
 
 !  integer         :: nR = 32, nTheta = 32, nPhi = 32
@@ -33,7 +33,7 @@ module ModPotentialField
        dRadiusNode_I, dTheta_I, dThetaNode_I, dPhiNode_I, dCosThetaNode_I
 
   real, allocatable:: Br_II(:,:), Potential_C(:,:,:), Rhs_C(:,:,:), &
-       B0_DG(:,:,:,:), DivB_C(:,:,:), PlotVar_VC(:,:,:,:)
+       B0_DF(:,:,:,:), DivB_C(:,:,:), PlotVar_VC(:,:,:,:)
 
   ! Variables for hepta preconditioner
   real, parameter:: PrecondParam = 1.0 ! see ModLinearSolver
@@ -220,9 +220,9 @@ contains
     allocate( &
          Potential_C(nR,nTheta,nPhi), &
          Rhs_C(nR,nTheta,nPhi), &
-         B0_DG(3,nR+1,nTheta+1,nPhi+1), &
+         B0_DF(3,nR+1,nTheta+1,nPhi+1), &
          DivB_C(nR,nTheta,nPhi), &
-         PlotVar_VC(3,nR,nTheta,nPhi))
+         PlotVar_VC(6,nR,nTheta,nPhi))
 
     Potential_C       =   0.0
     Rhs_C             =   0.0
@@ -233,145 +233,62 @@ contains
 
   subroutine save_potential_field
 
-    use ModInterpolate, ONLY: trilinear
     use ModNumConst,    ONLY: cHalfPi
     use ModPlotFile,    ONLY: save_plot_file
 
-    real, allocatable :: Potential_G(:,:,:)
-    real, allocatable :: Br_G(:,:,:), rBtheta_G(:,:,:), rSinThetaBphi_G(:,:,:)
-    real, allocatable :: rBthetaPerSinTheta_G(:,:,:)
-    real, allocatable :: B_DN(:,:,:,:)
-    real, allocatable :: MinCosTheta_I(:), MinCosThetaNode_I(:)
+    integer :: iR, jR, iTheta, iPhi
+    real    :: rI, rJ, rInv
+    real, allocatable :: B_DX(:,:,:,:)
 
-    real :: r, Theta, Phi, MinCosTheta, SinTheta
-    integer :: iR, iTheta, iPhi
-    !--------------------------------------------------------------------------
+    !-------------------------------------------------------------------------
 
-    allocate(Potential_G(0:nR+1,0:nTheta+1,0:nPhi+1))
-    Potential_G = 0.0
-    call set_boundary(Potential_C, Potential_G)
+    allocate(B_DX(3,nR+1,nPhi+1,nTheta))
 
-    ! Staggered components of the magnetic field
-    allocate( &
-         Br_G(nR+1,nTheta,nPhi), &
-         rBtheta_G(0:nR+1,nTheta+1,nPhi), &
-         rSinThetaBphi_G(0:nR+1,nTheta,nPhi+1) )
+    ! Average the magnetic field to the R face centers
 
-    if(UseCosTheta)then
-       allocate(MinCosTheta_I(nTheta), MinCosThetaNode_I(nTheta+1), &
-            rBthetaPerSinTheta_G(0:nR+1,nTheta+1,nPhi))
-       MinCosTheta_I = -cos(Theta_I(1:nTheta))
-       MinCosThetaNode_I = -cos(ThetaNode_I)
-    end if
+    ! For the radial component only the theta index changes
+    do iPhi = 1, nPhi; do iTheta = 1, nTheta; do iR = 1, nR+1
+       B_DX(1,iR,iPhi,nTheta+1-iTheta) = B0_DF(1,iR,iTheta,iPhi)
+    end do; end do; end do
 
-    do iPhi = 1, nPhi
-       do iTheta = 1, nTheta
-          do iR = 1, nR+1
-             Br_G(iR,iTheta,iPhi) = &
-                  (Potential_G(iR,iTheta,iPhi)-Potential_G(iR-1,iTheta,iPhi)) &
-                  / dRadiusNode_I(iR)
-          end do
-       end do
-    end do
+    ! Use radius as weights to average Bphi and Btheta 
+    ! Also swap phi and theta components (2,3) -> (3,2)
+    do iPhi = 1, nPhi; do iTheta = 1, nTheta; do iR = 1, nR
 
-    if(UseCosTheta)then
-       do iPhi = 1, nPhi
-          do iTheta = 1, nTheta+1
-             do iR = 0, nR+1
-                rBthetaPerSinTheta_G(iR,iTheta,iPhi) = &
-                     ( Potential_G(iR,iTheta,iPhi) &
-                     - Potential_G(iR,iTheta-1,iPhi)) &
-                     /dCosThetaNode_I(iTheta)
-             end do
-          end do
-       end do
-    else
-       do iPhi = 1, nPhi
-          do iTheta = 1, nTheta+1
-             do iR = 0, nR+1
-                rBtheta_G(iR,iTheta,iPhi) = &
-                     ( Potential_G(iR,iTheta,iPhi) &
-                     - Potential_G(iR,iTheta-1,iPhi)) &
-                     / dThetaNode_I(iTheta)
-             end do
-          end do
-       end do
-    end if
+       ! Use first order approximation at lower boundary. Reduces noise.
+       jR = max(1,iR-1)
 
-    do iPhi = 1, nPhi+1
-       do iTheta = 1, nTheta
-          do iR = 0, nR+1
-             rSinThetaBphi_G(iR,iTheta,iPhi) = &
-                  (Potential_G(iR,iTheta,iPhi)-Potential_G(iR,iTheta,iPhi-1)) &
-                  / dPhiNode_I(iPhi)
-          end do
-       end do
-    end do
+       rI   = Radius_I(iR)
+       rJ   = Radius_I(jR)
+       rInv = 0.25/RadiusNode_I(iR)
 
-    ! The magnetic field on the final grid used in BATSRUS
-    ! Note, the coordinates are in longitutude and latitude, but the
-    ! magnetic field is in Bphi, Btheta = -Blatitude
-    allocate(B_DN(3,nR+1,nPhi+1,nTheta))
+       B_DX(3,iR,iPhi,nTheta+1-iTheta) = rInv* &
+            ( rI*(B0_DF(2,iR,iTheta,iPhi) + B0_DF(2,iR,iTheta,iPhi+1)) &
+            + rJ*(B0_DF(2,jR,iTheta,iPhi) + B0_DF(2,jR,iTheta,iPhi+1)) )
 
-    if(UseCosTheta)then
-       do iPhi = 1, nPhi
-          do iTheta = 1, nTheta
-             do iR = 1, nR+1
-                r = RadiusNode_I(iR)
-                Theta = Theta_I(iTheta)
-                SinTheta = sin(Theta)
-                MinCosTheta = -cos(Theta)
-                Phi = Phi_I(iPhi)
+       B_DX(2,iR,iPhi,nTheta+1-iTheta) = rInv* &
+            ( rI*(B0_DF(3,iR,iTheta,iPhi) + B0_DF(3,iR,iTheta+1,iPhi)) &
+            + rJ*(B0_DF(3,jR,iTheta,iPhi) + B0_DF(3,jR,iTheta+1,iPhi)) )
 
-                B_DN(1,iR,iPhi,nTheta+1-iTheta) = Br_G(iR,iTheta,iPhi)
-                B_DN(2,iR,iPhi,nTheta+1-iTheta) = &
-                     trilinear(rSinThetaBphi_G, &
-                     0, nR+1, 1, nTheta, 1, nPhi+1, &
-                     (/r,MinCosTheta,Phi/), x_I=Radius_I, y_I=MinCosTheta_I, &
-                     z_I=PhiNode_I, DoExtrapolate=.false.) / (r*SinTheta)
-                B_DN(3,iR,iPhi,nTheta+1-iTheta) = &
-                     trilinear(rBthetaPerSinTheta_G, &
-                     0, nR+1, 1, nTheta+1, 1, nPhi, &
-                     (/r,MinCosTheta,Phi/), x_I=Radius_I, &
-                     y_I=MinCosThetaNode_I, &
-                     z_I=Phi_I(1:nPhi), DoExtrapolate=.false.) *SinTheta/r
-             end do
-          end do
-       end do
-    else
-       do iPhi = 1, nPhi
-          do iTheta = 1, nTheta
-             do iR = 1, nR+1
-                r = RadiusNode_I(iR)
-                Theta = Theta_I(iTheta)
-                SinTheta = sin(Theta)
-                Phi = Phi_I(iPhi)
+    end do; end do; end do
 
-                B_DN(1,iR,iPhi,nTheta+1-iTheta) = Br_G(iR,iTheta,iPhi)
-                B_DN(2,iR,iPhi,nTheta+1-iTheta) = &
-                     trilinear(rSinThetaBphi_G, &
-                     0, nR+1, 1, nTheta, 1, nPhi+1, &
-                     (/r,Theta,Phi/), x_I=Radius_I, y_I=Theta_I(1:nTheta), &
-                     z_I=PhiNode_I, DoExtrapolate=.false.) / (r*SinTheta)
-                B_DN(3,iR,iPhi,nTheta+1-iTheta) = &
-                     trilinear(rBtheta_G, 0, nR+1, 1, nTheta+1, 1, nPhi, &
-                     (/r,Theta,Phi/), x_I=Radius_I, y_I=ThetaNode_I, &
-                     z_I=Phi_I(1:nPhi), DoExtrapolate=.false.) / r
-             end do
-          end do
-       end do
-    end if
-    B_DN(:,:,nPhi+1,:) = B_DN(:,:,1,:)
+    ! set tangential components to zero at the top
+    B_DX(2:3,nR+1,:,:) = 0.0
+
+    ! Apply periodicity in Phi to fill the nPhi+1 ghost cell
+    B_DX(:,:,nPhi+1,:) = B_DX(:,:,1,:)
 
     call save_plot_file('potentialfield.out', TypeFileIn='real8', &
          StringHeaderIn = 'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
          nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
          //' Ro_PFSSM Rs_PFSSM PhiShift nRExt', &
          ParamIn_I = (/ rMin, rMax, PhiShift, 0.0 /), &
-         nDimIn=3, VarIn_VIII=B_DN, &
+         nDimIn=3, VarIn_VIII=B_DX, &
          Coord1In_I=RadiusNode_I, &
          Coord2In_I=Phi_I(1:nPhi+1), &
          Coord3In_I=cHalfPi-Theta_I(nTheta:1:-1))
+
+    deallocate(B_DX)
 
   end subroutine save_potential_field
 
@@ -424,7 +341,7 @@ contains
 
   subroutine matvec(x_C, y_C, n)
 
-    use ModPotentialField, ONLY: B0_DG, &
+    use ModPotentialField, ONLY: B0_DF, &
          UsePreconditioner, nR, nTheta, d_I, e_I, e1_I, e2_I, f_I, f1_I, f2_I
     use ModLinearSolver, ONLY: Lhepta, Uhepta
 
@@ -434,8 +351,8 @@ contains
     !--------------------------------------------------------------------------
 
     ! Calculate y = laplace x in two steps
-    call get_gradient(x_C, B0_DG)
-    call get_divergence(B0_DG, y_C)
+    call get_gradient(x_C, B0_DF)
+    call get_divergence(B0_DF, y_C)
 
     ! Preconditioning: y'= U^{-1}.L^{-1}.y
     if(UsePreconditioner)then
@@ -727,18 +644,24 @@ program potential_field
   PlotVar_VC = 0.0
 
   ! report maximum divb
-  call get_gradient(Potential_C, B0_DG)
-  call get_divergence(B0_DG, DivB_C)
+  call get_gradient(Potential_C, B0_DF)
+  call get_divergence(B0_DF, DivB_C)
   write(*,*) 'max(abs(divb)) = ', maxval(abs(DivB_C))
 
-  PlotVar_VC(1,:,:,:) = DivB_C
-  PlotVar_VC(2,:,:,:) = Rhs_C
-  PlotVar_VC(3,:,:,:) = Potential_C
+  PlotVar_VC(1,:,:,:) = Potential_C
+  PlotVar_VC(2,:,:,:) = &
+       0.5*(B0_DF(1,1:nR,1:nTheta,1:nPhi) + B0_DF(1,2:nR+1,1:nTheta,1:nPhi))
+  PlotVar_VC(3,:,:,:) = &
+       0.5*(B0_DF(2,1:nR,1:nTheta,1:nPhi) + B0_DF(2,1:nR,2:nTheta+1,1:nPhi))
+  PlotVar_VC(4,:,:,:) = &
+       0.5*(B0_DF(3,1:nR,1:nTheta,1:nPhi) + B0_DF(3,1:nR,1:nTheta,2:nPhi+1))
+  PlotVar_VC(5,:,:,:) = DivB_C
+  PlotVar_VC(6,:,:,:) = Rhs_C
 
   ! Save divb, potential and RHS for testing purposes
   call save_plot_file('potentialtest.out', TypeFileIn='real8', &
        StringHeaderIn='potential field', &
-       NameVarIn='r theta phi divb rhs pot', &
+       NameVarIn='r theta phi pot br btheta bphi divb rhs', &
        Coord1In_I=Radius_I(1:nR), &
        Coord2In_I=Theta_I(1:nTheta), &
        Coord3In_I=Phi_I(1:nPhi), &
