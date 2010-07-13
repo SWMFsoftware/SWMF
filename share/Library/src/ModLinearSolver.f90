@@ -1062,7 +1062,7 @@ contains
     !           last have distance M2 from the main diagonal blocks.
     !
     ! PrecondParam:      The parameter for Gustafsson modification:
-    !           +5 Gauss-Seidel prec: invert the original diagonal blocks
+    !           +5 Jacobi       prec: multiply the diagonal elements
     !           +4 Block-Jacobi prec: invert the original diagonal blocks
     !           +3 Gauss-Seidel prec: invert the original diagonal blocks
     !                               and premultiply upper diagonal blocks
