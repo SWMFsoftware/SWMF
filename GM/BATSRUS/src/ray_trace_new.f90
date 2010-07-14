@@ -1494,7 +1494,8 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use CON_planet_field, ONLY: map_planet_field
   use CON_axes, ONLY: transform_matrix
   use ModRaytrace
-  use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0, DoMultiFluidIMCoupling
+  use ModMain,    ONLY: nBlock, UnusedBlk, Time_Simulation, TypeCoordSystem, &
+       UseB0, DoMultiFluidIMCoupling
   use ModPhysics, ONLY: rBody
   use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Bx_, Bz_, B0_DGB
   use ModProcMH
@@ -1508,6 +1509,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use CON_line_extract,  ONLY: line_init, line_collect
   use CON_planet,        ONLY: DipoleStrength
   use ModMultiFluid
+
   implicit none
 
   !INPUT ARGUMENTS:
@@ -1526,7 +1528,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   ! spherical grid.
 
   real    :: Theta, Phi, Lat, Lon, XyzIono_D(3), Xyz_D(3)
-  integer :: iLat, iLon, iHemisphere, iRay
+  integer :: iBlock, iLat, iLon, iHemisphere, iRay
   integer :: iProcFound, iBlockFound, i, j, k
   integer :: nStateVar, iIonSecond
   integer :: iError
@@ -1541,7 +1543,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc,&
        ' with nLat, nLon, Radius=',nLat,nLon,Radius
 
-  iLatTest = 23; iLonTest = 3
+  iLatTest = 49; iLonTest = 1
 
   call timing_start('integrate_ray')
 
@@ -1577,25 +1579,31 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   ! (Re)initialize CON_ray_trace
   call ray_init(iComm)
 
-  ! Copy magnetic field into Bxyz_DGB
-  Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
-
-  ! Fill in all ghost cells
+  ! Fill in all ghost cells without monotone restrict
   call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
-       ProlongOrder=2, nVar=3, Sol_VGB=Bxyz_DGB)
+       ProlongOrder=1, nVar=nVar, Sol_VGB=State_VGB)
 
-  ! Add B0 for faster interpolation
-  if(UseB0) Bxyz_DGB(1:3,:,:,:,1:nBlock) = &
-       Bxyz_DGB(1:3,:,:,:,1:nBlock) + B0_DGB(:,:,:,:,1:nBlock)
+  ! Copy magnetic field into Bxyz_DGB
+  do iBlock = 1, nBlock
+     if(unusedBLK(iBlock))CYCLE
+     Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
+     ! Add B0
+     if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
+          Bxyz_DGB(:,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
+  end do
 
   if(DoIntegrateRay)then
      ! Copy density and pressure into Extra_VGB
      Extra_VGB(1,:,:,:,1:nBlock) = State_VGB(rho_,:,:,:,1:nBlock)
      Extra_VGB(2,:,:,:,1:nBlock) = State_VGB(p_  ,:,:,:,1:nBlock)
 
-     ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
-     call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
-          ProlongOrder=2, nVar=2, Sol_VGB=Extra_VGB)
+     if(DoMultiFluidIMCoupling) then 
+        ! Copy density and pressure into Extra_VGB
+        ExtraMulti_VGB(1:2,:,:,:,1:nBlock) = &
+             State_VGB(iRho_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
+        ExtraMulti_VGB(3:4,:,:,:,1:nBlock) = &
+             State_VGB(iP_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
+     endif
 
      allocate(&
           RayIntegral_VII(nRayIntegral,nLat,nLon), &
@@ -1604,17 +1612,6 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
      RayIntegral_VII = 0.0
      RayResult_VII   = 0.0
 
-     if(DoMultiFluidIMCoupling) then 
-        ! Copy density and pressure into Extra_VGB
-        ExtraMulti_VGB(1:2,:,:,:,1:nBlock) = &
-             State_VGB(iRho_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
-        ExtraMulti_VGB(3:4,:,:,:,1:nBlock) = &
-             State_VGB(iP_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
-        
-        ! Fill in all ghost cells (faces+edges+co5Brners) without monotone restrict
-        call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
-          ProlongOrder=2, nVar=4, Sol_VGB=ExtraMulti_VGB)
-     endif
   end if
 
   ! Transformation matrix between the SM and GM coordinates
@@ -1713,7 +1710,6 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use ModAdvance,        ONLY: nVar, State_VGB, Rho_, p_, Bx_, Bz_, B0_DGB
   use ModProcMH
   use ModMpi
-  use ModMessagePass,    ONLY: message_pass_dir
   use ModNumConst,       ONLY: cDegToRad, cTiny
   use ModCoordTransform, ONLY: sph_to_xyz
   use ModUtilities,      ONLY: check_allocate
@@ -1786,10 +1782,6 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   ! Copy magnetic field into Bxyz_DGB
   Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
 
-  ! Fill in all ghost cells
-  call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
-       ProlongOrder=2, nVar=3, Sol_VGB=Bxyz_DGB)
-
   ! Add B0 for faster interpolation
   if(UseB0) Bxyz_DGB(1:3,:,:,:,1:nBlock) = &
        Bxyz_DGB(1:3,:,:,:,1:nBlock) + B0_DGB(:,:,:,:,1:nBlock)
@@ -1798,10 +1790,13 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
      ! Copy density and pressure into Extra_VGB
      Extra_VGB(1,:,:,:,1:nBlock) = State_VGB(rho_,:,:,:,1:nBlock)
      Extra_VGB(2,:,:,:,1:nBlock) = State_VGB(p_  ,:,:,:,1:nBlock)
-
-     ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
-     call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
-          ProlongOrder=2, nVar=2, Sol_VGB=Extra_VGB)
+     if(DoMultiFluidIMCoupling) then 
+        ! Copy density and pressure into Extra_VGB
+        ExtraMulti_VGB(1:2,:,:,:,1:nBlock) = &
+             State_VGB(iRho_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
+        ExtraMulti_VGB(3:4,:,:,:,1:nBlock) = &
+             State_VGB(iP_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
+     endif
 
      allocate(&
           RayIntegral_VII(nRayIntegral,nRay_D(1),nRay_D(2)), &
@@ -1810,17 +1805,6 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
      RayIntegral_VII = 0.0
      RayResult_VII   = 0.0
 
-     if(DoMultiFluidIMCoupling) then 
-        ! Copy density and pressure into Extra_VGB
-        ExtraMulti_VGB(1:2,:,:,:,1:nBlock) = &
-             State_VGB(iRho_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
-        ExtraMulti_VGB(3:4,:,:,:,1:nBlock) = &
-             State_VGB(iP_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
-        
-        ! Fill in all ghost cells (faces+edges+co5Brners) without monotone restrict
-        call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
-          ProlongOrder=2, nVar=4, Sol_VGB=ExtraMulti_VGB)
-     endif
   end if
 
   ! Transformation matrix between the SM and GM coordinates
