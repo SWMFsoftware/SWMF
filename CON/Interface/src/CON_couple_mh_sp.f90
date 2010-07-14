@@ -47,7 +47,42 @@ Module CON_couple_mh_sp
   character(LEN=*),parameter::NameSub='couple_mh_sp'
   real,dimension(3,3)::ScToIh_DD,ScToSp_DD,IhToSp_DD
   real :: tNow
+
 contains
+  !========================================================================
+  subroutine xyz_point_mapping(&
+       SP_nDim,SP_Xyz_D,MH_nDim,MH_Xyz_D,IsInterfacePoint)
+    use ModConst
+    integer,intent(in)::SP_nDim,MH_nDim
+    real,dimension(SP_nDim),intent(in)::SP_Xyz_D
+    real,dimension(MH_nDim),intent(out)::MH_Xyz_D
+    logical,intent(out)::IsInterfacePoint
+    MH_Xyz_D=XyzTemp_DI(:,iPoint)
+    IsInterfacePoint=.true.
+  end subroutine xyz_point_mapping
+  !==================================================================
+  subroutine SP_put_a_line_point(nPartial,&
+       iPutStart,&
+       Put,&
+       w,&
+       DoAdd,&
+       Buff_I,nVar)
+    implicit none
+    integer,intent(in)::nPartial,iPutStart,nVar
+    type(IndexPtrType),intent(in)::Put
+    type(WeightPtrType),intent(in)::w
+    logical,intent(in)::DoAdd
+    real,dimension(nVar),intent(in)::Buff_I
+    integer::iCell
+    real:: Weight
+    !-------------------------------------------------------------------------
+    Weight=w%Weight_I(iPutStart)
+    if(DoAdd)then
+       bDxyz_I = bDxyz_I + Buff_I*Weight
+    else
+       bDxyz_I = Buff_I*Weight
+    end if
+  end subroutine SP_put_a_line_point
   !==================================================================
   subroutine couple_mh_sp_init
     use CON_physics, ONLY: get_time
@@ -392,40 +427,6 @@ contains
       end do
     end subroutine trace_line
   end subroutine couple_mh_sp_init
-  !========================================================================
-  subroutine xyz_point_mapping(&
-       SP_nDim,SP_Xyz_D,MH_nDim,MH_Xyz_D,IsInterfacePoint)
-    use ModConst
-    integer,intent(in)::SP_nDim,MH_nDim
-    real,dimension(SP_nDim),intent(in)::SP_Xyz_D
-    real,dimension(MH_nDim),intent(out)::MH_Xyz_D
-    logical,intent(out)::IsInterfacePoint
-    MH_Xyz_D=XyzTemp_DI(:,iPoint)
-    IsInterfacePoint=.true.
-  end subroutine xyz_point_mapping
-  !==================================================================
-  subroutine SP_put_a_line_point(nPartial,&
-       iPutStart,&
-       Put,&
-       w,&
-       DoAdd,&
-       Buff_I,nVar)
-    implicit none
-    integer,intent(in)::nPartial,iPutStart,nVar
-    type(IndexPtrType),intent(in)::Put
-    type(WeightPtrType),intent(in)::w
-    logical,intent(in)::DoAdd
-    real,dimension(nVar),intent(in)::Buff_I
-    integer::iCell
-    real:: Weight
-    !-------------------------------------------------------------------------
-    Weight=w%Weight_I(iPutStart)
-    if(DoAdd)then
-       bDxyz_I = bDxyz_I + Buff_I*Weight
-    else
-       bDxyz_I = Buff_I*Weight
-    end if
-  end subroutine SP_put_a_line_point
   !==================================================================!
   subroutine transform_to_sp_from(iComp)
     integer,intent(in)::iComp
