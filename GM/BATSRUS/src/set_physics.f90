@@ -292,7 +292,7 @@ subroutine set_physics_constants
         !--
         if(UseMultiIon .and. IsMhd) then
            FaceState_VI(P_,East_:Top_) = 0.
-           do iFluid = 2,nFluid
+           do iFluid = 2,max(2,nFluid)
               FaceState_VI(P_,East_:Top_) = FaceState_VI(P_,East_:Top_) + &
                    pCoef*FaceState_VI(iP_I(iFluid),1)
            end do
