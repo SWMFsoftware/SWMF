@@ -262,13 +262,13 @@ contains
        rJ   = Radius_I(jR)
        rInv = 0.25/RadiusNode_I(iR)
 
-       B_DX(3,iR,iPhi,nTheta+1-iTheta) = rInv* &
-            ( rI*(B0_DF(2,iR,iTheta,iPhi) + B0_DF(2,iR,iTheta,iPhi+1)) &
-            + rJ*(B0_DF(2,jR,iTheta,iPhi) + B0_DF(2,jR,iTheta,iPhi+1)) )
-
        B_DX(2,iR,iPhi,nTheta+1-iTheta) = rInv* &
-            ( rI*(B0_DF(3,iR,iTheta,iPhi) + B0_DF(3,iR,iTheta+1,iPhi)) &
-            + rJ*(B0_DF(3,jR,iTheta,iPhi) + B0_DF(3,jR,iTheta+1,iPhi)) )
+            ( rI*(B0_DF(3,iR,iTheta,iPhi) + B0_DF(3,iR,iTheta,iPhi+1)) &
+            + rJ*(B0_DF(3,jR,iTheta,iPhi) + B0_DF(3,jR,iTheta,iPhi+1)) )
+
+       B_DX(3,iR,iPhi,nTheta+1-iTheta) = rInv* &
+            ( rI*(B0_DF(2,iR,iTheta,iPhi) + B0_DF(2,iR,iTheta+1,iPhi)) &
+            + rJ*(B0_DF(2,jR,iTheta,iPhi) + B0_DF(2,jR,iTheta+1,iPhi)) )
 
     end do; end do; end do
 
@@ -544,7 +544,7 @@ program potential_field
   implicit none
 
   integer :: nIter=10000
-  real    :: Tolerance = 1e-5, r
+  real    :: Tolerance = 1e-10, r
   integer :: n, i, iError, iR, iPhi, iTheta, i_D(3)
   !--------------------------------------------------------------------------
 
