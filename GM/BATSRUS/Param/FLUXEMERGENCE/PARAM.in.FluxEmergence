@@ -77,7 +77,7 @@ T                       UseRope
 -1.5                    qfac
 1.e1                    lamb
 1.			buoyancy
-1.e1                    b0_rope
+1.                      b0_rope
 
 #USERINPUTEND ---------------------
 
@@ -140,7 +140,7 @@ F			DoFixBodyLevel
 2			nORDER
 Linde                   TypeFlux
 mc3			TypeLimiter
-1.5			LimiterBeta
+1.2			LimiterBeta
 
 #TIMESTEPPING
 2			nStage
@@ -191,7 +191,7 @@ SAVEINITIAL
 T
 
 #STOP
-50			MaxIteration
+10			MaxIteration
 -1			tSimulationMax
 
 #END

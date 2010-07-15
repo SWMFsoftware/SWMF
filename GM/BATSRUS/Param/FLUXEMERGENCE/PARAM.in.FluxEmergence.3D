@@ -149,7 +149,7 @@ F			DoFixBodyLevel
 2			nORDER
 Linde                   TypeFlux
 mc3			TypeLimiter
-1.5			LimiterBeta
+1.2			LimiterBeta
 
 #TIMESTEPPING
 2			nStage
@@ -200,7 +200,7 @@ SAVEINITIAL
 T
 
 #STOP
-50			MaxIteration
+10			MaxIteration
 -1			tSimulationMax
 
 #END

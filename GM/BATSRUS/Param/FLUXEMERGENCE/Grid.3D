@@ -37,7 +37,7 @@ box			NameArea
 35			yMaxBox
 8.75 			zMaxBox
 
-#GRIDLEVEL
+GRIDLEVEL
 4			nLevel
 box			NameArea
 -35			xMinBox
