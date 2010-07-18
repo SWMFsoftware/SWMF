@@ -5265,6 +5265,99 @@ F		UseSpitzerForm
 2.50E+00	ExponentHeat [-]	! Only if not UseSpitzerForm
 </command>
 
+<command name="HEATCONDUCTION">
+	 <parameter name="UseHeatConduction"    type="logical" default="F"/>
+	 <if expr="$UseHeatConduction">
+                <parameter name="TypeHeatConduction" type="string" case="lower"
+                        input="select" >
+                        <option name="spitzer" default="T"/>
+                        <option name="user"               />
+                </parameter>
+	 </if>
+
+#HEATCONDUCTION
+T			UseHeatConduction
+spitzer			TypeHeatConduction
+
+If UseHeatConduction is false, no heat conduction is included.
+If UseHeatConduction is true, then one can select the collisional
+heat conduction of Spitzer or a user defined heat conduction.
+Both heat conduction formulations are field-aligned and are only applied
+to the electrons.
+
+For TypeHeatConduction='spitzer' a spatially uniform Coulomb logarithm
+of 20 is assumed, resulting in a heat conduction coefficient of
+9.2e-12 W m^-1 K^-7/2. Fully ionized hydrogen plasma is assumed.
+
+For TypeHeatConduction='user' the heat conduction coefficient of the
+field-aligned heat conduction is read from the user_material_properties
+subroutine in the ModUser module. Optional parameters should be read with
+subroutine user_read_inputs of the ModUser file.
+
+The default is UseHeatConduction=.false.
+
+</command>
+
+<command name="IONHEATCONDUCTION">
+	 <parameter name="UseIonHeatConduction"    type="logical" default="F"/>
+	 <if expr="$UseIonHeatConduction">
+                <parameter name="TypeIonHeatConduction" type="string" case="lower"
+                        input="select" >
+                        <option name="spitzer" default="T"/>
+                        <option name="user"               />
+                </parameter>
+	 </if>
+
+#IONHEATCONDUCTION
+T			UseIonHeatConduction
+spitzer			TypeIonHeatConduction
+
+If UseIonHeatConduction is false, no proton heat conduction is included.
+If UseIonHeatConduction is true, then one can select the classical
+Coulomb-mediated ion heat conduction or a user defined heat conduction.
+Both heat conduction formulations are field-aligned and are only applied to
+the protons.
+
+For TypeIonHeatConduction='spitzer' a spatially uniform Coulomb logarithm
+of 20 is assumed, resulting in a heat conduction coefficient of
+2.6e-13 W m^-1 K^-7/2 for protons.
+
+For TypeIonHeatConduction='user' the heat conduction coefficient of the
+field-aligned heat conduction is read from the user_material_properties
+subroutine in the ModUser module. Optional parameters should be read with
+subroutine user_read_inputs of the ModUser file.
+
+The default is UseIonHeatConduction=.false.
+
+</command>
+
+<command name="HEATFLUXREGION">
+	 <parameter name="UseHeatFluxRegion"  type="logical" default="F"/>
+	 <if expr="$UseHeatFluxRegion">
+	     <parameter name="rCollisional"   type="real" />
+	     <parameter name="rCollisionless" type="real" />
+         </if>
+
+#HEATFLUXREGION
+T                       UseHeatFluxRegion
+5.0                     rCollisional
+10.0                    rCollisionless
+
+If UseHeatFluxRegion is false, both the electron and ion heat conduction
+(as set by the #HEATCONDUCTION and #IONHEATCONDUCTION commands), are
+applied everywhere.
+
+If UseHeatFluxRegion is true, both the electron and ion heat conduction
+are applied between the inner boundary (either Sun or planet) and
+rCollisional. No heat conduction is applied beyond rCollisionless.
+Between rCollisional and rCollisionless, both the electron and ion heat
+conduction coefficients are reduced as a linear function of the radius
+from its full value at rCollisional to zero at rCollisionless.
+
+The default is UseHeatFluxRegion=.false.
+
+</command>
+
 <command name="RESISTIVITY">
 	<parameter name="UseResistivity" type="logical" default="F"	/>
 	<if expr="$UseResistivity">
