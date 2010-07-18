@@ -48,7 +48,6 @@ module ModLookupTable
 
   ! Array for variable names
   integer, parameter:: MaxVar = 200
-  character(len=1000):: NameVar
   character(len=20):: NameVar_I(MaxVar)
 
 contains
@@ -61,10 +60,6 @@ contains
     character(len=100):: NameTable
     integer :: iTable, iIndex
     type(TableType), pointer:: Ptr
-
-    character(len=10):: StringFormat
-    character(len=20):: Name ! name of repeated variable
-    integer:: i, j, k, lName, lNum, nNum, iNum
 
     character(len=*), parameter:: NameSub = 'read_lookup_table_param'
     !-----------------------------------------------------------------------
@@ -106,47 +101,11 @@ contains
     end select
 
     call read_var('StringDescription', Ptr%StringDescription)
-    call read_var('NameVar',           NameVar)
+    call read_var('NameVar',           Ptr%NameVar)
 
-    Ptr%NameVar = NameVar
+    call split_string(Ptr%NameVar, MaxVar, NameVar_I, Ptr%nValue, &
+         UseArraySyntaxIn=.true.)
 
-    ! Expand " varZ(21)" to " varZ01 varZ02 ... varZ21"
-    do
-       ! Find left paren in varX varY varZ(21) ...
-       j = index(NameVar,'(')
-       if(j<1) EXIT
-       ! Find the space before the name (varZ)
-       i     = index(NameVar(1:j),' ',BACK=.true.)
-
-       ! Set the name string and its length
-       lName = j - i      ! includes leading space and variable name
-       Name  = NameVar(i:j-1)
-
-       ! Find the closing paren, and read the number of repetitions
-       k = index(NameVar,')')
-       read(NameVar(j+1:k-1),*) nNum
-
-       ! Set length of numerical part and the format string
-       lNum = k - j - 1
-       if(nNum < 10)then
-          StringFormat = "(i1)"
-       else
-          StringFormat = "(i2.2)"
-       end if
-
-       ! Move end of string far enough for inserting expanded varnames
-       NameVar(i+nNum*(lName+lNum):1000) = NameVar(k+1:len_trim(NameVar))
-
-       ! Expand variable names by repating name and adding numerical value
-       do iNum = 1, nNum
-          NameVar(i:i+lName-1) = Name
-          i = i + lName
-          write(NameVar(i:i+lNum),StringFormat) iNum
-          i = i + lNum
-       end do
-    end do
-
-    call split_string(NameVar, MaxVar, NameVar_I, Ptr%nValue)
     ! Do not count the names of the indexes
     Ptr%nValue = Ptr%nValue - 2
     ! Figure out which index is logarithmic
