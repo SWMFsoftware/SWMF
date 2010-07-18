@@ -376,7 +376,7 @@ if keyword_set(pictsize) then begin
     endcase
 endif else begin
                                 ; Set variables 
-    variables=strsplit(varname,/extract)
+    str2arr,varname,variables,nvar,/arraysyntax
 endelse
 
 end
@@ -646,12 +646,13 @@ pro askstr,prompt,var,doask
 end
 
 ;=============================================================================
-pro str2arr,s,a,n,sep
+pro str2arr,s,a,n,sep,arraysyntax=arraysyntax
 
 ; If s is an array copy it to a.
 ; If s is a string then split string s at the sep characters 
-; (default is space) into array a.
-; If n is 0, it will be the size of the array on output
+;      (default is space) into array a. 
+;      Array syntax is expanded: "Var(6:10:2)" --> ["Var06","Var08","Var10"] 
+; If n is 0, it will be set to the size of the array on output
 ; If n is defined, fill up the rest of the array with the last defined element
 ; If n is defined but smaller than the number of elements in s, print a warning
 
@@ -665,6 +666,57 @@ else                           $
    a0=strsplit(s,/extract)
 
 n0=n_elements(a0)
+
+if keyword_set(arraysyntax) then begin
+    a1 = strarr(100)
+    n1 = 0
+    for i0 = 0, n0-1 do begin
+ 
+        s1 = a0(i0)
+
+        ; copy the element into a1 in case it is not array-syntax
+        a1(n1) = s1
+        n1 = n1 + 1
+                                ; check for closing paren 
+        if strpos(s1,')') eq strlen(s1)-1 then begin
+                                ; chop it off
+            s1 = strmid(s1,0,strlen(s1)-1)
+                                ; split at opening paren
+            s1 = strsplit(s1,'(',/extract)
+            if n_elements(s1) eq 2 then begin
+                s2 = s1(1)
+                s1 = s1(0)
+                                ; split second part at colons
+                s2 = strsplit(s2,':',/extract)
+                                ; set defaults for minimum and stride
+                imin   = 1
+                stride = 1
+                                ; set index for maximum value (0 or 1)
+                npart  = n_elements(s2)
+                iimax = npart-1 < 1
+                                ; set maximum value
+                imax  = fix(s2(iimax))
+                                ; set minimum value if present
+                if npart gt 1 then imin   = fix(s2(0))
+                                ; set stride if present
+                if npart gt 2 then stride = fix(s2(2))
+
+                                ; create format string
+                width   = string(strlen(s2(iimax)),format='(i1)')
+                formstr = "(a,i"+width+"."+width+")"
+
+                                ; add new elements to a1 array
+                n1 = n1 - 1
+                for i = imin,imax,stride do begin
+                    a1(n1) = string(s1,i,format=formstr)
+                    n1 = n1 + 1
+                endfor
+            endif
+        endif
+    endfor
+    a0 = a1(0:n1-1)
+    n0 = n1
+endif
 
 if not keyword_set(n) then begin
    a=a0
