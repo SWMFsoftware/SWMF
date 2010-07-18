@@ -90,8 +90,10 @@ subroutine write_plot_common(ifile)
   if(oktest_me)write(*,*)'ifile=',ifile,' plot_type=',plot_type1, &
        ' form = ',plot_form(ifile)
 
-  call split_string(plot_vars1,nplotvarmax,plotvarnames,nplotvar)
-  call split_string(plot_pars1,neqparmax,eqparnames,neqpar)
+  call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar, &
+       UseArraySyntaxIn=.true.)
+  call split_string(plot_pars1, neqparmax, eqparnames, neqpar, &
+       UseArraySyntaxIn=.true.)
   call set_eqpar(ifile-plot_,neqpar,eqparnames,eqpar)
 
   allnames=trim(plot_vars1)//' '//trim(plot_pars(iFile))
