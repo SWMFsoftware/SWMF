@@ -62,7 +62,6 @@ module BATL_amr_criteria
   real, public, allocatable  :: AmrCrit_IB(:,:)
 
   ! Threshold limits for refine or unrefined the grid (length nCrit) 
-  real                               :: SumCoarsenCrit, SumRefineCrit
   real, allocatable, dimension(:)    :: CoarsenCrit_I, RefineCrit_I, &
        CoarsenAmrCrit_I, RefineCritAll_I, GlobalMaxCritAll_I, MaxCritAll_I 
 
@@ -107,8 +106,6 @@ contains
     Crit_D    = 0.0
     Numerator   = 0.0
     Denominator = 0.0
-    MaxCritAll_I = 0.0
-    GlobalMaxCritAll_I =0.0
 
     if(nCrit > nVar) &
          call CON_stop("set_amr_criteria :: More criteria then variables")
@@ -117,10 +114,14 @@ contains
        nAmrCrit = nCrit + nCritExt
        if(nAmrCrit /= nAmrCritOld) then
           nAmrCritOld=nAmrCrit
-          if(allocated(GlobalMaxCritAll_I)) &
-               deallocate(MaxCritAll_I,GlobalMaxCritAll_I, CoarsenAmrCrit_I, RefineCritAll_I)
+          if(allocated(GlobalMaxCritAll_I)) deallocate( &
+               MaxCritAll_I, &
+               GlobalMaxCritAll_I, &
+               CoarsenAmrCrit_I, RefineCritAll_I)
           allocate(MaxCritAll_I(nAmrCrit), GlobalMaxCritAll_I(nAmrCrit), &
                CoarsenAmrCrit_I(nAmrCrit), RefineCritAll_I(nAmrCrit))
+          MaxCritAll_I = 0.0
+          GlobalMaxCritAll_I =0.0
        end if
     else
        nAmrCrit    = nCrit
@@ -286,16 +287,6 @@ contains
           end if
        end do
 
-       ! Decide refinement based mean of normalized error factor  
-       Crit = sum(AmrCrit_IB(:,iBlock))
-       if( Crit > SumRefineCrit )then
-          iStatusNew_A(iNode_B(iBlock)) = Refine_
-          DoCoarsen = .false.
-          CYCLE BLOCK2
-       else if(Crit > SumCoarsenCrit) then
-          DoCoarsen = .false.
-       end if
-
        if(DoCoarsen) iStatusNew_A(iNode_B(iBlock)) =  Coarsen_
 
     end do BLOCK2
@@ -313,8 +304,6 @@ contains
     nAmrCritOld    = 0
     cAmrWavefilter = 1.0e-2
     nBlockOld      = 0
-    SumCoarsenCrit = 9999999.9
-    SumRefineCrit  = 9999999.9
 
     call read_var('AmrWavefilter',cAmrWavefilter)  
     call read_var('nCrit', nCrit)
@@ -333,8 +322,6 @@ contains
        call read_var('CoarsenCrit',CoarsenCrit_I(iCrit))
        call read_var('RefineCrit',RefineCrit_I(iCrit))
     end do
-    call read_var('SumCoarsenCrit', SumCoarsenCrit)
-    call read_var('SumRefineCrit',  SumRefineCrit)
 
   end subroutine read_amr_criteria_param
   !============================================================================
