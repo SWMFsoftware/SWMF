@@ -5287,7 +5287,10 @@ to the electrons.
 
 For TypeHeatConduction='spitzer' a spatially uniform Coulomb logarithm
 of 20 is assumed, resulting in a heat conduction coefficient of
-9.2e-12 W m^-1 K^-7/2. Fully ionized hydrogen plasma is assumed.
+\begin{verbatim}
+9.2e-12 W m^-1 K^-7/2.
+\end{verbatim}
+Fully ionized hydrogen plasma is assumed.
 
 For TypeHeatConduction='user' the heat conduction coefficient of the
 field-aligned heat conduction is read from the user_material_properties
@@ -5320,7 +5323,10 @@ the protons.
 
 For TypeIonHeatConduction='spitzer' a spatially uniform Coulomb logarithm
 of 20 is assumed, resulting in a heat conduction coefficient of
-2.6e-13 W m^-1 K^-7/2 for protons.
+\begin{verbatim}
+2.6e-13 W m^-1 K^-7/2
+\end{verbatim}
+for protons.
 
 For TypeIonHeatConduction='user' the heat conduction coefficient of the
 field-aligned heat conduction is read from the user_material_properties
