@@ -281,23 +281,10 @@ subroutine set_physics_constants
            FaceState_VI(iP,   East_:Top_) = SW_p/pCoef &
                 *LowDensityRatio*MassIon_I(1)/MassFluid_I(iFluid)
         end do
-
-
         ! Fix total pressure if necessary (density and temperature are kept)
-        !\\
-        !if(UseMultiIon .and. IsMhd) FaceState_VI(P_,East_:Top_) = &
-        !     pCoef*sum(FaceState_VI(iP_I(2:nFluid),1))
-        !--
-        !  Code above is not understood by gfortran and broken out below for compatibility.
-        !--
-        if(UseMultiIon .and. IsMhd) then
-           FaceState_VI(P_,East_:Top_) = 0.
-           do iFluid = 2,max(2,nFluid)
-              FaceState_VI(P_,East_:Top_) = FaceState_VI(P_,East_:Top_) + &
-                   pCoef*FaceState_VI(iP_I(iFluid),1)
-           end do
-        end if
-        !//
+        ! the min(2,nFluid) instead of 2 is needed so it compiles with gfortran
+        if(UseMultiIon .and. IsMhd) FaceState_VI(P_,East_:Top_) = &
+             pCoef*sum(FaceState_VI(iP_I(min(2,nFluid):nFluid),1))
      end if
   end if
 
