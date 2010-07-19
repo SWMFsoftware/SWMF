@@ -11,7 +11,7 @@
 
 module ModUser
   use ModMain,        ONLY: GlobalBlk
-  use ModSize,        ONLY: gcn,nI,nJ,nK, MaxBlock
+  use ModSize,        ONLY: nI,nJ,nK,MinI,MaxI,MinJ,MaxJ,MinK,MaxK,MaxBlock
   use ModUserEmpty ,                                   &
        IMPLEMENTED1 => user_read_inputs,               &
        IMPLEMENTED2 => user_init_session,              &
@@ -73,7 +73,7 @@ module ModUser
   integer :: iTablePPerE = -1, iTableCvTe = -1, iTablePERhoT = -1, &
        iTableChianti = -1, iTableInitialState = -1, iTableOpacity
   ! Temperature at cell center
-  real:: Temperature_GB(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock)
+  real, allocatable:: Temperature_GB(:,:,:,:)
   
 contains
   
@@ -164,6 +164,9 @@ contains
          'iTableInitialState, PPerE, CvTe, PressureEn , Chianti, opacity = ', &
          iTableInitialState, iTablePPerE, iTableCvTe, iTablePERhoT, &
          iTableChianti, iTableOpacity
+
+    if(.not.allocated(Temperature_GB)) &
+         allocate(Temperature_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
   end subroutine user_init_session
   !==========================================================================
