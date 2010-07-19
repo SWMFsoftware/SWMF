@@ -56,7 +56,7 @@ T                       UseUserUpdateStates
 
 #USERINPUTBEGIN
 #RADMHD
--18			z_photo
+-18.			z_photo
 20.			UnsignedFluxHeight
 T                       UseThinRadiation	
 1.e-6			RhoThinCutoff
@@ -69,14 +69,14 @@ F			UseUniformInitialState
 1.2e4			InitialTemperature
 0.			InitialBx
 0.			InitialBy
-0.5			InitialBz
+0.1			InitialBz 0.5
 6.e8			NumberDensFloor
 
 #ROPE
 F                       UseRope
-0                       x2c
+0.                      x2c
 -30.                    x3c
-2                       ra
+2.                      ra
 -1.5                    qfac
 1.e1                    lamb
 1.			buoyancy
@@ -120,7 +120,7 @@ ascii                   TypeFile
 
 #CORONALHEATING
 unsignedflux            TypeCoronalHeating
-4640			Decaylength
+4640.			Decaylength
 1.			HeatNormalization
 
 PARALLELCONDUCTION		
@@ -201,6 +201,6 @@ T
 
 #STOP
 10			MaxIteration
--1			tSimulationMax
+-1.			tSimulationMax
 
 #END

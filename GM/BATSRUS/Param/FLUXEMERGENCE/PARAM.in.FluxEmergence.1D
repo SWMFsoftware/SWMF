@@ -64,7 +64,7 @@ T                       UseUserUpdateStates
 
 #USERINPUTBEGIN
 #RADMHD
--18			z_photo
+-18.			z_photo
 20.			UnsignedFluxHeight
 T                       UseThinRadiation	
 1.e-6			RhoThinCutoff
@@ -84,7 +84,7 @@ T			UseUniformInitialState
 F                       UseRope
 0                       x2c
 -30.                    x3c
-2                       ra
+2.                      ra
 -1.5                    qfac
 1.e1                    lamb
 1.			buoyancy
@@ -184,7 +184,7 @@ HELIOSPHERIC            TypeIoUnit
 1                       nPlotfiles
 x=0 VAR tec             StringPlot
 -1                      DnSavePlot
-12                     	DtSavePlot
+12.                    	DtSavePlot
 rho Ux Uy Uz P tempe Bx By Bz       NameVars
 g eta                   NamePars
 
