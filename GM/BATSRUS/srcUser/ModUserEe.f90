@@ -293,7 +293,7 @@ contains
          Temperature_GB(:,:,k,GlobalBLK) = TeSi
          ! Add random perturbation to energy and pressure values of 
          ! cells below the photosphere height
-         if(z_BLK(4,4,k,GlobalBlk) .lt. z_photo)then
+         if(z_BLK(4,4,k,GlobalBlk) .lt. -1000.)then
             do i=1, nI; do j=1,nJ
                call random_number(RandomChange)
                RandomChange = (RandomChange-0.5)*2
