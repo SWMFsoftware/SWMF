@@ -121,7 +121,7 @@ test_fluxemergence_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_restart; mv runlog_restart RESULTS/run_restart
 
 test_fluxemergence_check:	
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-6 \
+	${SCRIPTDIR}/DiffNum.pl -t -r=2e-5 -a=2e-5 \
 		Param/FLUXEMERGENCE/TestOutput/log_fluxemergence.log \
 		${TESTDIR}/RESULTS/run_restart/GM/log_n000011.log > test_fluxemergence.diff
 	ls -l test_fluxemergence.diff
