@@ -3,6 +3,7 @@ use strict;
 
 my %WeightMachine = (
     "pleiades"     => "1.0",
+    "gfortran"     => "1.0",
     "grendel"      => "0.5",
     "grid"         => "1.0",
     "mesh"         => "1.0",
