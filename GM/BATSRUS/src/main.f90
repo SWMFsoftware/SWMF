@@ -380,3 +380,7 @@ subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
   real, intent(inout) :: FaceState_V(nVar)
   call stop_mpi('ERROR: read_pw_buffer is for SWMF')
 end subroutine read_pw_buffer
+!=============================================================================
+subroutine add_laser_energy_deposition
+  call stop_mpi('ERROR: add_laser_energy_deposition is for SWMF')
+end subroutine add_laser_energy_deposition

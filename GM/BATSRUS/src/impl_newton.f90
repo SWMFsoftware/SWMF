@@ -6,7 +6,7 @@ subroutine impl_newton_init
 
   use ModProcMH
   use ModMain, ONLY : Itest,Jtest,Ktest,VARtest,n_step,dt,nOrder, &
-       UseRadDiffusion
+       UseRadDiffusion, UseLaserPackage
   use ModAdvance, ONLY : FluxType
   use ModImplicit
   use ModMpi
@@ -25,6 +25,12 @@ subroutine impl_newton_init
 
   if(UseSemiImplicit)then
      call get_semi_impl_rhs(Impl_VGB, ResExpl_VCB)
+
+     !\
+     ! If the laser package is used, this is the place to apply it
+     !/
+     if(UseLaserPackage) call add_laser_energy_deposition
+
      !!! We don't really need ResImpl_VCB, but it is easier if it is set
      ResImpl_VCB(:,:,:,:,1:nImplBLK) = ResExpl_VCB(:,:,:,:,1:nImplBLK)
   else
