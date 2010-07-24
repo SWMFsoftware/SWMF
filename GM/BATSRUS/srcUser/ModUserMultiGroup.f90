@@ -483,7 +483,7 @@ contains
        write(iUnit, "(i7,es13.5,3i3)") n_step, Time_Simulation, 1, 1, 2
        write(iUnit, "(3i8)")           nWave
        write(iUnit, "(100es13.5)")     0.0
-       write(iUnit, "(a)")             'Ephoton(eV) Egroup(eV) Bgroup(eV)'
+       write(iUnit, "(a)")             'Ephoton[eV] Egroup[eV] Bgroup[eV]'
 
        do iWave = 1, nWave
           call get_planck_g_from_temperature(iWave, TeFinalSi, PlanckSi)
