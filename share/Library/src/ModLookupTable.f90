@@ -8,7 +8,7 @@ module ModLookupTable
   use ModReadParam, ONLY: read_var
   use ModPlotFile,  ONLY: read_plot_file, save_plot_file
   use ModUtilities, ONLY: split_string, lower_case
-  use ModInterpolate, ONLY: bilinear
+  use ModInterpolate, ONLY: bilinear, find_cell
   use ModMpi
 
   implicit none
@@ -26,6 +26,11 @@ module ModLookupTable
   integer, public :: nTable = 0     ! actual number of tables
 
   ! private variables
+
+  interface interpolate_lookup_table
+     module procedure interpolate_with_known_arg   !Both arguments are known
+     module procedure interpolate_with_known_val   !Table value is given
+  end interface
 
   type TableType
      character(len=100):: NameTable        ! unique name for identification
@@ -57,48 +62,79 @@ contains
 
     ! Read parameters for one table. The table is identified by a name string
 
-    character(len=100):: NameTable
-    integer :: iTable, iIndex
+    character(len=100):: NameTable, NameFile, NameCommand, TypeFile
+    integer :: iTable, iIndex, nTable2Read, iTableLoop, nFile2Read
+    integer, parameter:: MaxString = 200
+    character(LEN=100), dimension(MaxString):: NameTable_I, NameFile_I
     type(TableType), pointer:: Ptr
 
     character(len=*), parameter:: NameSub = 'read_lookup_table_param'
     !-----------------------------------------------------------------------
     call read_var('NameTable', NameTable)
 
-    ! Check if the table has been set already (say in a previous session)
-    iTable = i_lookup_table(NameTable)
-    if(iTable < 0)then
-       ! new table
-       nTable = nTable + 1
+    !If NameTable includes the combination like Prefix{Xe Be Pl}Suffix
+    !the tables PrefixXeSuffix, PrefixBeSuffix and PrefixPlSuffix will be
+    !created. This may make sense only for loading everal similar tables
+    !like: Xe_eos, Be_eos, Pl_eos, therefore the loop over the tables
+    !ends just after reading the file names
 
-       if(nTable > MaxTable)then
-          write(*,*)NameSub,' MaxTable =',MaxTable
-          call CON_stop(NameSub//': number of tables exceeded MaxTable')
+    call check_braces(NameTable, NameTable_I, nTable2Read)
+
+    do iTableLoop = 1, nTable2Read
+
+       NameTable = NameTable_I(iTableLoop)
+
+       ! Check if the table has been set already (say in a previous session)
+       
+       
+       iTable = i_lookup_table(NameTable)
+       if(iTable < 0)then
+          ! new table
+          nTable = nTable + 1
+          
+          if(nTable > MaxTable)then
+             write(*,*)NameSub,' MaxTable =',MaxTable
+             call CON_stop(NameSub//': number of tables exceeded MaxTable')
+          end if
+       
+          iTable = nTable
        end if
 
-       iTable = nTable
-    end if
+       ! For sake of more concise source code, use a pointer to the table
+       Ptr => Table_I(iTable)
+       Ptr%NameTable = NameTable
+       if(iTableLoop == 1)then
 
-    ! For sake of more concise source code, use a pointer to the table
-    Ptr => Table_I(iTable)
-    Ptr%NameTable = NameTable
+          ! Read the parameters for this table
+          call read_var('NameCommand', NameCommand)
+          call lower_case(NameCommand)
+          select case(NameCommand)
+          case("load","save")
+             call read_var('NameFile', NameFile)
 
-    ! Read the parameters for this table
-    call read_var('NameCommand', Ptr%NameCommand)
-    call lower_case(Ptr%NameCommand)
-    select case(Ptr%NameCommand)
-    case("load","save")
-       call read_var('NameFile', Ptr%NameFile)
-       call read_var('TypeFile', Ptr%TypeFile)
-       if(Ptr%NameCommand == "load")then
-          call load_lookup_table(iTable)
-          RETURN
+             call check_braces(NameFile, NameFile_I, nFile2Read)
+             if(nTable2read /= nFile2Read)call CON_stop(&
+                  'The number of tables to load is not equal to the number of files to read')
+
+             call read_var('TypeFile', TypeFile)
+             
+          case("make")
+             ! will be done below
+          case default
+             call CON_stop(NameSub//': unknown command='//Ptr%NameCommand)
+          end select
+
+          Ptr%NameCommand = NameCommand
+          Ptr%NameFile = NameFile_I(iTableLoop)
+          Ptr%TypeFile = TypeFile
+          if(NameCommand == "load")&
+             call load_lookup_table(iTable)
+
        end if
-    case("make")
-       ! will be done below
-    case default
-       call CON_stop(NameSub//': unknown command='//Ptr%NameCommand)
-    end select
+    end do
+   
+    if(NameCommand == "load") RETURN
+   
 
     call read_var('StringDescription', Ptr%StringDescription)
     call read_var('NameVar',           Ptr%NameVar)
@@ -124,6 +160,42 @@ contains
     end do
     ! Calculate increments
     Ptr%dIndex_I = (Ptr%IndexMax_I - Ptr%IndexMin_I)/(Ptr % nIndex_I - 1)
+  contains
+    subroutine check_braces(Name, Name_I, nString)
+      character(LEN=*), intent(in) :: Name
+      character(LEN=100), intent(out) :: Name_I(MaxString)
+      integer, intent(out) :: nString
+      
+      integer:: iBracePosition1, iBracePosition2, iString
+      
+      !-----------------------------------------
+      
+      iBracePosition1 = index(Name,'{')
+      iBracePosition2 = index(Name,'}')
+      
+      if(iBracePosition1 < 1 .or. iBracePosition2 < 1 .or.&
+           iBracePosition2< iBracePosition1 )then
+         nString = 1 
+         Name_I(1) = Name
+         return
+      end if
+      
+      call split_string(Name(iBracePosition1 + 1:iBracePosition2 - 1),&
+           MaxString, Name_I, nString)
+      
+      if(iBracePosition1 > 1)then
+         do iString = 1, nString
+            Name_I(iString) = Name(1:iBracePosition1-1)//trim(Name_I(iString))
+         end do
+      end if
+      
+      if(iBracePosition2 < len_trim(Name))then
+         do iString = 1, nString
+            Name_I(iString) =trim(Name_I(iString))//Name(iBracePosition2 + 1: len_trim(Name))
+         end do
+      end if
+      
+    end subroutine check_braces
 
   end subroutine read_lookup_table_param
 
@@ -288,7 +360,7 @@ contains
 
   !===========================================================================
 
-  subroutine interpolate_lookup_table(iTable, Arg1In, Arg2In, Value_V, &
+  subroutine interpolate_with_known_arg(iTable, Arg1In, Arg2In, Value_V, &
        DoExtrapolate)
 
     ! Return the array of values Value_V corresponding to arguments
@@ -322,7 +394,73 @@ contains
          (Arg_I - Ptr%IndexMin_I)/Ptr%dIndex_I  + 1, &
          DoExtrapolate = DoExtrapolate)
 
-  end subroutine interpolate_lookup_table
+  end subroutine interpolate_with_known_arg
+
+  !===========================================================================
+
+  subroutine interpolate_with_known_val(iTable, iVal, ValIn, Arg2In, Value_V, &
+       Arg1Out, DoExtrapolate)
+
+    ! Return the array of values Value_V corresponding to arguments
+    ! Arg1In and Arg2In in iTable. Use a bilinear interpolation.
+    ! If DoExtrapolate is not present, stop with an error if the arguments
+    ! are out of range. If it is present and false, return the value of
+    ! the closest element in the table. If it is present and true, do a 
+    ! linear extrapolation.
+
+    integer, intent(in) :: iTable            ! table
+    integer, intent(in) :: iVal              ! which value is known
+    real,    intent(in) :: ValIn             ! known table value
+    real,    intent(in) :: Arg2In            ! second input argument
+    real,    intent(out):: Value_V(:)        ! output values
+    
+    real, optional, intent(out) :: Arg1Out        ! optional calculated Arg
+    logical, optional, intent(in):: DoExtrapolate ! optional extrapolation
+
+    real :: Arg1, Arg2
+    type(TableType), pointer:: Ptr
+
+    real    :: Dx1, Dx2, Dy1, Dy2
+    integer :: i1, i2, j1, j2
+    
+    character(len=*), parameter:: NameSub='interpolate_lookup_table'
+    !--------------------------------------------------------------------------
+    
+    Ptr => Table_I(iTable)
+
+    Arg2 = Arg2In
+    
+    If(Ptr%IsLogIndex_I(2)) Arg2 = log10(Arg2)
+
+    call find_cell(1, Ptr%nIndex_I(2), &
+         (Arg2- Ptr%IndexMin_I(2))/Ptr%dIndex_I(2)+ 1 , &
+         j1, Dy1, &
+         DoExtrapolate=DoExtrapolate, &
+         StringError = 'Called from '//NameSub)
+
+    j2 = j1 + 1; Dy2 = 1.0 - Dy1
+
+
+    call find_cell(1, Ptr%nIndex_I(1), &
+         ValIn, &
+         i1, Dx1, &
+         Dy2*Ptr%Value_VII(iVal,:,j1) + &
+         Dy1*Ptr%Value_VII(iVal,:,j2), &
+         DoExtrapolate, &
+         'Called from '//NameSub)
+    i2 = i1 + 1; Dx2 = 1.0 - Dx1
+
+    ! If value is outside table, use the last value (works well for constant)
+    Value_V = Dy2*( Dx2*Ptr%Value_VII(:,i1,j1)   &
+         +          Dx1*Ptr%Value_VII(:,i2,j1))  &
+         +    Dy1*( Dx2*Ptr%Value_VII(:,i1,j2)   &
+         +          Dx1*Ptr%Value_VII(:,i2,j2))
+    if(present(Arg1Out))then
+       Arg1Out = (i1 - 1 + Dx1)*Ptr%dIndex_I(1) + Ptr%IndexMin_I(1)
+       if(Ptr%IsLogIndex_I(1)) Arg1Out = 10**Arg1Out
+    end if
+       
+  end subroutine interpolate_with_known_val
 
   !===========================================================================
 
@@ -332,7 +470,7 @@ contains
 
     type(TableType), pointer :: Ptr, Ptr2
     integer :: iTable, iProc, iError
-    real :: p_I(3), pGood_I(3)
+    real :: p_I(3), pGood_I(3), Arg
 
     character(len=*), parameter:: NameSub = 'test_lookup_table'
     !------------------------------------------------------------------------
@@ -414,6 +552,13 @@ contains
     call interpolate_lookup_table(2, 1.0, 2.0, p_I)
     if(any(abs(p_I - pGood_I) > 1e-5))then
        write(*,*)'p_I=',p_I,' is different from pGood_I=',pGood_I
+       call CON_stop(NameSub)
+    end if
+    
+    call interpolate_lookup_table(2, 3, 3.0, 2.0, p_I, Arg) 
+    if(any(abs(p_I - pGood_I) > 1e-5) .or. abs(Arg - 1.0) >  1e-5)then
+       write(*,*)'p_I=',p_I, ' Arg =', Arg,&
+            ' are different from pGood_I=',pGood_I, ' ArgGood = 1.0'
        call CON_stop(NameSub)
     end if
 
