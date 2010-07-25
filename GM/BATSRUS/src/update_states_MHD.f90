@@ -16,6 +16,8 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModEnergy
   use ModWaves, ONLY: nWave, UseWavePressure, UseWavePressureLtd,&
        WaveFirst_,WaveLast_, update_wave_group_advection
+  use ModResistivity,   ONLY: UseResistivity, &          !^CFG IF DISSFLUX
+       calc_resistivity_source                           !^CFG IF DISSFLUX
   
   implicit none
 
@@ -56,6 +58,16 @@ subroutine update_states_MHD(iStage,iBlock)
           State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock)
      EnergyOld_CBI(:,:,:,iBlock,:) = Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)
   end if
+
+  ! Add Joule heating: dP/dt += (gamma-1)*eta*j**2    !^CFG IF DISSFLUX BEGIN
+  ! and heat exchange between electrons and ions (mult-ion is not coded).
+  if(.not.UseMultiIon .and. UseResistivity .and. &
+       (UseElectronPressure .or. UseNonConservative)) then
+     call calc_resistivity_source(iBlock)   
+     if(DoTestMe)write(*,*) NameSub, ' after add_resistive_source=', &
+          State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+          Energy_GBI(iTest,jTest,kTest,iBlock,:)
+  end if                     !^CFG END DISSFLUX
 
   !Get Residual.
   do k = 1,nK; do j = 1,nJ; do i = 1,nI

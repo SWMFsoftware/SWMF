@@ -12,8 +12,6 @@ subroutine calc_sources
        neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModPhysics
   use ModNumConst
-  use ModResistivity,   ONLY: UseResistivity, &          !^CFG IF DISSFLUX
-       calc_resistivity_source                           !^CFG IF DISSFLUX
   use ModUser,          ONLY: user_calc_sources,user_material_properties
   use ModCoordTransform
   use ModImplicit,      ONLY: UseFullImplicit            !^CFG IF IMPLICIT
@@ -148,11 +146,11 @@ subroutine calc_sources
 
   ! Joule heating: dP/dt += (gamma-1)*eta*j**2    !^CFG IF DISSFLUX BEGIN
   ! Heat exchange between electrons and ions (mult-ion is not coded).
-  if(.not.UseMultiIon .and. UseResistivity .and. &
-       (UseElectronPressure .or. UseNonConservative))then  
-     call calc_resistivity_source(iBlock)
-     if(DoTestMe.and.VarTest==P_)call write_source('After resistive src')
-  end if                                       !^CFG END DISSFLUX
+  !if(.not.UseMultiIon .and. UseResistivity .and. &
+  !     (UseElectronPressure .or. UseNonConservative))then  
+  !   call calc_resistivity_source(iBlock)
+  !   if(DoTestMe.and.VarTest==P_)call write_source('After resistive src')
+  !end if                                       !^CFG END DISSFLUX
 
   if(UseWavePressure)then
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
