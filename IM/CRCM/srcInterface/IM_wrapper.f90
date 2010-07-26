@@ -413,14 +413,20 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
         end if
      else
         call con_stop('CRCM not set for Multi-fluid');
-        !  Multifluid case                                                         
-!!!! ADD MULTIFLUID SUPPORT LATER!!!
-!        if( i<iLatMin .or.  i <= iba(j)) then
-!           Buffer_IIV(i,j,Hpres_) = -1.
-!           Buffer_IIV(i,j,Opres_) = -1.
-!           Buffer_IIV(i,j,Hdens_) = -1.
-!           Buffer_IIV(i,j,Odens_) = -1.
-!        else
+        !  Multifluid case
+        if( i<iLatMin .or.  i <= iba(j)) then
+           Buffer_IIV(i,j,Hpres_) = -1.
+           Buffer_IIV(i,j,Opres_) = -1.
+           Buffer_IIV(i,j,Hdens_) = -1.
+           Buffer_IIV(i,j,Odens_) = -1.
+        else
+           Buffer_IIV(i,j,Hpres_) = Pressure_IC(1,i,j)
+           Buffer_IIV(i,j,Hdens_) = &
+                Den_IC (1,i,j)*cProtonMass*amu_I(1)
+           Buffer_IIV(i,j,Opres_) = Pressure_IC(2,i,j)
+           Buffer_IIV(i,j,Odens_) = &
+                Den_IC (2,i,j)*cProtonMass*amu_I(2)
+
 !           Buffer_IIV(i,j,Hpres_) = Buffer_IIV(i,j,Hpres_) + &
 !                vm(i,j)**2.5*eeta(i,j,k)*ABS(alamc(k))
 !           Buffer_IIV(i,j,Hdens_) = Buffer_IIV(i,j,Hdens_) + &
@@ -429,7 +435,7 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 !                vm(i,j)**2.5*eeta(i,j,k)*ABS(alamc(k))
 !           Buffer_IIV(i,j,Odens_) = Buffer_IIV(i,j,Odens_) + &
 !                eeta(i,j,k)*vm(i,j)**1.5 * xmass(ikflavc(k))
-!        end if
+        end if
      end if
 
      ! Only a not-a-number can be less than zero and larger than one
@@ -478,10 +484,10 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
        Buffer_IIV(:,:,pres_) = Buffer_IIV(:,:,pres_) *1.0e-9
 
   ! Units of rcm_mass_density are kg/m3
-  where(Buffer_IIV(:,:,dens_) > 0.0) &
-       Buffer_IIV(:,:,dens_) = Buffer_IIV(:,:,dens_)
+!  where(Buffer_IIV(:,:,dens_) > 0.0) &
+!       Buffer_IIV(:,:,dens_) = Buffer_IIV(:,:,dens_)
 
-  if(DoMultiFluidGMCoupling)then
+!  if(DoMultiFluidGMCoupling)then
      !!!! ADD MultiFluid Coupling Later !!!
 !     ! MultiFluid                                                                  
 !     where(Buffer_IIV(:,:,Hpres_) > 0.0) &
@@ -493,7 +499,7 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 !          Buffer_IIV(:,:,Hdens_) = Buffer_IIV(:,:,Hdens_) / 6.37E+15
 !     where(Buffer_IIV(:,:,Odens_) > 0.0) &
 !          Buffer_IIV(:,:,Odens_) = Buffer_IIV(:,:,Odens_) / 6.37E+15
-  endif
+!  endif
 
   if(DoTestMe)write(*,*) NameSub,' finished'
 

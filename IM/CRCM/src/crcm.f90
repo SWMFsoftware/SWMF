@@ -8,7 +8,7 @@ subroutine crcm_run(delta_t)
   use ModFieldTrace,  ONLY: fieldpara, brad=>ro, ftv=>volume, xo,yo,rb,irm,&
                             ekev,iba,bo,pp,Have, sinA, vel, alscone, iw2
   use ModGmCrcm,      ONLY: Den_IC,Temp_IC,StateIntegral_IIV,AveP_,AveDens_, &
-                            iLatMin,DoMultiFluidGMCoupling
+                            iLatMin,DoMultiFluidGMCoupling,AveDen_I,AveP_I
   use ModIeCrcm,      ONLY: pot
   use ModCrcmPlot,    ONLY: Crcm_plot, DtOutput, DoSavePlot
   use ModCrcmRestart, ONLY: IsRestart
@@ -77,7 +77,45 @@ subroutine crcm_run(delta_t)
         end do
      end do
   else
-     call CON_STOP('CRCM not set to use multifluid')
+     !Multifluid Case
+     !Set Ion density and temperature
+     do iSpecies = 1, nspec-1
+        do iLon=1,nt
+           do iLat=1,irm(iLon) 
+              if (iLat < iLatMin) then
+                 !Inside MHD boundary set den and temp to value at boundary
+                 Den_IC(iSpecies,iLat,iLon) = &
+                      StateIntegral_IIV(iLatMin,iLon,AveDen_I(iSpecies))
+                 Temp_IC(iSpecies,iLat,iLon) = &
+                      StateIntegral_IIV(iLatMin,iLon,AveP_I(iSpecies))&
+                      /(StateIntegral_IIV(iLatMin,iLon,AveDen_I(iSpecies))) &
+                        * 6.2415e18 !J-->eV
+!                 Den_IC(iSpecies,iLat,iLon) = dFactor_I(iSpecies) * 1.0e6
+!                 Temp_IC(iSpecies,iLat,iLon) = tFactor_I(iSpecies)* 5000.0
+              else
+                 !Outside MHD boundary set den and temp from MHD
+                 Den_IC(iSpecies,iLat,iLon) = &
+                      StateIntegral_IIV(iLat,iLon,AveDen_I(iSpecies))
+                 Temp_IC(iSpecies,iLat,iLon) = &
+                      StateIntegral_IIV(iLat,iLon,AveP_I(iSpecies))&
+                      /(StateIntegral_IIV(iLatMin,iLon,AveDen_I(iSpecies))) &
+                         * 6.2415e18 !J-->eV  
+              endif
+           end do
+        end do
+     end do
+     !Set Electron density and temperature
+     do iLon=1,nt
+        do iLat=1,irm(iLon) 
+           ! Density set by quasineutrality
+           Den_IC(nspec,iLat,iLon)  = sum(Den_IC(1:nspec-1,iLat,iLon))
+           ! Temp is set by 1/7 of weighted sum of ion temperatures
+           Temp_IC(nspec,iLat,iLon) = 0.128205 * sum( &
+                Den_IC(1:nspec-1,iLat,iLon)*Temp_IC(1:nspec-1,iLat,iLon)) &
+                / Den_IC(nspec,iLat,iLon)
+        end do
+     end do
+    !call CON_STOP('CRCM not set to use multifluid')
   endif
 
 
