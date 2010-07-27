@@ -22,7 +22,6 @@ module ModPotentialField
 !  integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 1
 
   real, parameter :: rMin = 1.0, rMax = 2.5
-  real :: PhiShift
 
   logical :: UseBr = .true.
 
@@ -44,7 +43,7 @@ module ModPotentialField
 
 contains
 
-  !=================================================================
+  !===========================================================================
   subroutine read_magnetogram
 
     ! Read the raw magnetogram file into a 2d array
@@ -58,12 +57,12 @@ contains
     integer:: iError
     integer:: nCarringtonRotation
     integer:: nTheta0, nPhi0, nThetaRatio, nPhiRatio
-    integer:: iTheta, iPhi, iTheta0, iTheta1, iPhi0, iPhi1
-    real :: BrAverage
+    integer:: iTheta, iPhi, iTheta0, iTheta1, jPhi0, jPhi1, jPhi, kPhi
+    real :: BrAverage, Weight
     character (len=100) :: String
 
     real, allocatable:: Br0_II(:,:)
-    !----------------------------------------------------------
+    !------------------------------------------------------------------------
     open(iUnit, file=NameFileIn, status='old', iostat=iError)
     if(iError /= 0)then
        write(*,*) 'Error: could not open input file ',NameFileIn
@@ -113,27 +112,43 @@ contains
     end if
 
     allocate(Br_II(nTheta,nPhi))
+    Br_II = 0.0
 
     do iPhi = 1, nPhi
-       iPhi0 = nPhiRatio*(iPhi-1) + 1
-       iPhi1 = iPhi0 + nPhiRatio - 1
-       do iTheta = 1, nTheta
-          iTheta0 = nThetaRatio*(iTheta-1) + 1
-          iTheta1 = iTheta0 + nThetaRatio - 1
+       jPhi0 = nPhiRatio*(iPhi-1) - nPhiRatio/2 + 1
+       jPhi1 = nPhiRatio*(iPhi-1) + nPhiRatio/2 + 1
+
+       do jPhi = jPhi0, jPhi1
+
+          if( modulo(nPhiRatio,2) == 0 .and. &
+               (jPhi == jPhi0 .or. jPhi == jPhi1) )then
+             ! For even coarsening ratio use 0.5 weight at the two ends
+             Weight = 0.5
+          else
+             Weight = 1.0
+          end if
+
+          ! Apply periodicity
+          kPhi = modulo(jPhi-1,nPhi0) + 1
+
+          do iTheta = 1, nTheta
+             iTheta0 = nThetaRatio*(iTheta-1) + 1
+             iTheta1 = iTheta0 + nThetaRatio - 1
           
-          Br_II(iTheta,iPhi) = sum( Br0_II(iTheta0:iTheta1, iPhi0:iPhi1)) &
-               / (nThetaRatio*nPhiRatio)
+             Br_II(iTheta,iPhi) = Br_II(iTheta,iPhi) &
+                  + Weight * sum( Br0_II(iTheta0:iTheta1, kPhi))
+          end do
        end do
     end do
+
+    Br_II = Br_II / (nThetaRatio*nPhiRatio)
+
 
     ! remove monopole
     BrAverage = sum(Br_II)/(nTheta*nPhi)
     Br_II = Br_II - BrAverage
 
     deallocate(Br0_II)
-
-    ! longitude = 0 is shifted by -PhiShift (BATSRUS will shift by -PhiShift)
-    PhiShift = 360.0/nPhi0 *0.5*(nPhiRatio-1)
 
     close(iUnit)
 
@@ -282,7 +297,7 @@ contains
          StringHeaderIn = 'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
          nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
          //' Ro_PFSSM Rs_PFSSM PhiShift nRExt', &
-         ParamIn_I = (/ rMin, rMax, PhiShift, 0.0 /), &
+         ParamIn_I = (/ rMin, rMax, 0.0, 0.0 /), &
          nDimIn=3, VarIn_VIII=B_DX, &
          Coord1In_I=RadiusNode_I, &
          Coord2In_I=Phi_I(1:nPhi+1), &
