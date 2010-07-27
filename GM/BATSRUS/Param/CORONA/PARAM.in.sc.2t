@@ -99,6 +99,7 @@ F			UseHeatFluxInBernoulli
 #LDEM
 T			UseLdem
 CR2077_LDEM_moments.out	NameLdemFile
+1			iRadiusLdem
 
 #WAVEDISSIPATION
 T			UseWaveDissipation

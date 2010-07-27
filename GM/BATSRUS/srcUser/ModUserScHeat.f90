@@ -19,6 +19,7 @@ module ModLdem
 
   logical, public :: UseLdem = .false.
   character(len=100), public :: NameLdemFile
+  integer, public :: iRadiusLdem = 1
 
   real, allocatable :: ThetaLdem_I(:), PhiLdem_I(:), VarLdem_VII(:,:,:)
   integer :: nThetaLdem, nPhiLdem
@@ -52,11 +53,19 @@ contains
     real, allocatable :: Coord_DI(:,:), Var_VI(:,:)
 
     integer, parameter :: Theta_ = 2, Phi_ = 3
+
+    character (len=*), parameter :: NameSub = 'read_ldem'
     !--------------------------------------------------------------------------
 
     nCell_D = 1
     call read_plot_file(NameLdemFile, nVarOut = nVar, nOut_D = nCell_D)
 
+    if(iRadiusLdem < 1 .or. iRadiusLdem > nCell_D(1))then
+       write(*,*) NameSub//' ERROR: iRadiusLdem is out of range [1,', &
+            nCell_D(1),']'
+       call stop_mpi(' Correct PARAM.in file')
+    end if
+       
     allocate(Coord_DIII(3,nCell_D(1),nCell_D(2),nCell_D(3)), &
          Var_VIII(nVar,nCell_D(1),nCell_D(2),nCell_D(3)))
 
@@ -67,10 +76,10 @@ contains
          Var_VII(2,nCell_D(2),nCell_D(3)))
 
     ! For now: the smallest radius is assumed to be the solar boundary
-    Coord_DII(:,:,:) = Coord_DIII(Theta_:Phi_,1,:,:)
+    Coord_DII(:,:,:) = Coord_DIII(Theta_:Phi_,iRadiusLdem,:,:)
 
     ! Keep only the two lowest moments
-    Var_VII(:,:,:) = Var_VIII(1:2,1,:,:)
+    Var_VII(:,:,:) = Var_VIII(1:2,iRadiusLdem,:,:)
 
     ! 3D data is no longer needed
     deallocate(Coord_DIII, Var_VIII)
@@ -241,7 +250,7 @@ contains
 
   subroutine user_read_inputs
 
-    use ModLdem,      ONLY: UseLdem, NameLdemFile
+    use ModLdem,      ONLY: UseLdem, NameLdemFile, iRadiusLdem
     use ModMain,      ONLY: UseUserInitSession, lVerbose
     use ModProcMH,    ONLY: iProc
     use ModReadParam, ONLY: read_line, read_command, read_var
@@ -276,6 +285,7 @@ contains
        case('#LDEM')
           call read_var('UseLdem', UseLdem)
           call read_var('NameLdemFile', NameLdemFile)
+          call read_var('iRadiusLdem', iRadiusLdem)
 
        case('#BERNOULLI')
           ! It is not advised to use the time-dependent heat flux in the
