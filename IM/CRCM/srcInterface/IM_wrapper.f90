@@ -412,7 +412,6 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
                 sum(Den_IC (1:nspec-1,i,j)*cProtonMass*amu_I(1:nspec-1))
         end if
      else
-        call con_stop('CRCM not set for Multi-fluid');
         !  Multifluid case
         if( i<iLatMin .or.  i <= iba(j)) then
            Buffer_IIV(i,j,Hpres_) = -1.
