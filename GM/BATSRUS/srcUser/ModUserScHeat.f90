@@ -576,7 +576,8 @@ contains
             *TbaseSi) - ExpansionFactorInv*HeatFluxSi) &
             /max(abs(VAlfvenSi)*ExpansionFactorInv, VAlfvenMin)
 
-       Ewave = WaveEnergyDensSi*Si2No_V(UnitEnergyDens_)
+       ! Make sure that the wave energy is never negative
+       Ewave = max(WaveEnergyDensSi,0.0)*Si2No_V(UnitEnergyDens_)
 
     end if
 
