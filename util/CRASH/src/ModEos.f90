@@ -102,7 +102,7 @@ module CRASH_ModEos
 
   ! test material with the EOS e \propto T^4, p \propto T^4
   integer, parameter:: Test_ = 90 
-  integer, parameter :: nZ_I(Xe_:Au_)=(/54, 4, 6, 79 /)
+  integer, parameter :: nZ_I(Xe_:Ay_)=(/54, 4, 6, 79, 6/)
 
   real, parameter, dimension(Xe_:Ay_),public :: cAtomicMassCRASH_I=&
        (/cAtomicMass_I(54),   &!  Xe
@@ -110,17 +110,83 @@ module CRASH_ModEos
          cAPolyimide,         &!  Pl
          cAtomicMass_I(79),   &!  Au
          cAAcrylic/)
-  character(LEN=*),parameter,public,dimension(Xe_:Ay_)::&
-       NameMaterial_I = (/'Xe','Be','Pl','Au','Ay'/)
+
+  character(LEN=2), public ::&
+       NameMaterial_I(Xe_:Ay_) = (/'Xe','Be','Pl','Au','Ay'/)
+
+  logical, public, dimension(Xe_:Ay_) :: &
+       UseEosTable_I = .false., UseOpacityTable_I = .false.
+
+  integer :: P_      =  1, &
+             E_      =  2, &
+             Pe_     =  3, &
+             Ee_     =  4, &
+             Cv_     =  5, &
+             Cve_    =  6, &
+             Gamma_  =  7, &
+             GammaE_ =  8, &
+             TeTi_   =  9, &
+             Cond_   = 10, &
+             Z_      = 11, &
+             Z2_     = 12
+
+  integer :: nVarEos =12   
   
-  !For better efficiency the if statments to treat gold are commented
-  !out in ModExcitationData
+  character(LEN=100):: NameVarEos = &
+       'P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2'
 
 
 contains
 
   !============================================================================
+  subroutine read_name_var_eos
+    use ModReadParam, ONLY: read_var
+    use ModUtilities, ONLY: split_string, lower_case
+    
+    integer, parameter:: MaxString = 200
+    character(LEN=20):: NameVar_I(MaxString)
+    integer:: iVar
+    !---------------------
 
+    call read_var('NameVarEos', NameVarEos)
+    call split_string(NameVarEos, MaxString,  NameVar_I, nVarEos)
+    
+    !Reset named indices
+    P_ = -1; E_ = -1; Pe_ = -1; Ee_ = -1
+    Cv_ = -1; Cve_ = -1; Gamma_ = -1; GammaE_ = -1
+    Cond_ = -1; TeTi_ = -1; Z_ = -1; Z2_ = -1
+
+    do iVar = 1, nVarEos
+       call lower_case(NameVar_I(iVar))
+       select case(trim(NameVar_I(iVar)))
+       case('p')
+          P_ = iVar
+       case('e')
+          E_ = iVar
+       case('pe')
+          Pe_ = iVar
+       case('ee')
+          Ee_ = iVar
+       case('cv')
+          Cv_ = iVar
+       case('cve')
+          Cve_= iVar
+       case('gamma')
+          Gamma_= iVar
+       case('gammae')
+          GammaE_ = iVar
+       case('cond')
+          Cond_ = iVar
+       case('teti', 'tite')
+          TeTi_ = iVar
+       case('z')
+          Z_ = iVar
+       case('z2')
+          Z2_= iVar
+       end select
+    end do
+  end subroutine read_name_var_eos
+  !===============================
   subroutine read_eos_parameters
 
     ! Usage (with default values shown):
@@ -149,7 +215,7 @@ contains
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
        OpacityPlanckOut_I, OpacityRosselandOut_I,            &
        HeatCond, TeTiRelax, iError)
-
+    use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
     ! Eos function for single material
 
     integer, intent(in):: iMaterial     ! index of material
@@ -189,27 +255,89 @@ contains
     integer, optional, intent(out) :: iError       ! error flag
 
     real   :: Natomic
+    real   :: Te, Value_V(1:nVarEos)
+    integer:: iTable
+    character(LEN=*), parameter:: NameSub = 'eos_material'
     !-------------------------------------------------------------------------
     if(iMaterial == Test_)then
        call eos_esimt4(TeIn, eTotalIn, pTotalIn, &
             TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut)
        if(present(iError))iError = 0
        RETURN
-    elseif(iMaterial == Plastic_)then
-       call set_mixture(nPolyimide, nZPolyimide_I, CPolyimide_I)
+    end if
 
-       !Get the atomic concentration
-       Natomic = Rho / ( cAtomicMass * cAPolyimide )
+    !Get the atomic concentration
+    Natomic = Rho /  ( cAtomicMass * cAtomicMassCRASH_I(iMaterial) )
+
+    if(UseEosTable_I(iMaterial))then
+       iTable = i_lookup_table(NameMaterial_I(iMaterial)//'_eos')
+       
+       if(present(TeIn))then
+
+          Te = TeIn * cKToEV
+          call interpolate_lookup_table(iTable, Te, Natomic, Value_V, DoExtrapolate=.false.)
+
+       elseif(present(eTotalIn))then
+
+          ! Get an energy per the atomic cell, express in eV
+          ! Find temperature from dentity and internal energy
+          call interpolate_lookup_table(iTable, E_, eTotalIn/ (cEV * Natomic), Natomic, &
+               Value_V, Arg1Out = Te, DoExtrapolate=.false.)
+       
+
+       elseif(present(pTotalIn))then
+          ! Divide pressure by Na , express in eV
+          !Find temperature from dentity and pressure
+          call interpolate_lookup_table(iTable, P_,  pTotalIn / (cEV * Natomic), Natomic, &
+               Value_V, Arg1Out = Te, DoExtrapolate=.false.)
+          
+     
+       elseif(present(eElectronIn))then
+          ! Get an energy per the atomic cell, express in eV
+          ! Find temperature from dentity and internal energy
+          call interpolate_lookup_table(iTable, Ee_, eElectronIn/ (cEV * Natomic), Natomic, &
+               Value_V, Arg1Out = Te, DoExtrapolate=.false.)
+
+
+       elseif(present(pElectronIn))then
+
+          ! Divide pressure by Na , express in eV
+          !Find temperature from dentity and pressure
+          call interpolate_lookup_table(iTable, Pe_,  pElectronIn / (cEV * Natomic), Natomic, &
+               Value_V, Arg1Out = Te, DoExtrapolate=.false.)
+          
+      
+       else
+          call CON_stop(NameSub// &
+               ': none of Te, eTotal, or pTotal is among the input parameters')
+       end if
+
+       if(present(TeOut))      TeOut     = Te*cEVToK
+       if(present(eTotalOut))  eTotalOut = Natomic*cEV*Value_V(E_)
+       if(present(pTotalOut))  pTotalOut = Natomic*cEV*Value_V(P_)
+       if(present(eElectronOut)) eElectronOut = Natomic*cEV*Value_V(Ee_)
+       if(present(pElectronOut)) pElectronOut = Natomic*cEV*Value_V(Pe_)
+       if(present(GammaEOut))  GammaEOut = Value_V(GammaE_)
+       if(present(GammaOut))   GammaOut  = Value_V(Gamma_)
+       if(present(CvTotalOut)) CvTotalOut = (Natomic*cBoltzmann)*Value_V(Cv_)
+       if(present(CvElectronOut)) CvElectronOut = (Natomic*cBoltzmann)*Value_V(Cve_)
+   
+       if(present(HeatCond))   HeatCond  = Value_V(Cond_)
+       if(present(TeTiRelax))  TeTiRelax = Value_V(TeTi_)
+
+       
+       return
+    end if
+
+    if(iMaterial == Plastic_)then
+       call set_mixture(nPolyimide, nZPolyimide_I, CPolyimide_I)
+       
     elseif(iMaterial == Ay_)then
        call set_mixture(nAcrylic, nZAcrylic_I, cAcrylic_I)
 
-       !Get the atomic concentration
-       Natomic = Rho / ( cAtomicMass * cAAcrylic)
     else
        call set_element(nZ_I(iMaterial))
 
-       ! Get the atomic concentration
-       Natomic=Rho/(cAtomicMass*cAtomicMass_I(nZ_I(iMaterial)))
     end if
     call eos_generic(Natomic, &
          TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
@@ -396,7 +524,7 @@ contains
     if(present(GammaOut))   call get_gamma(GammaSOut=GammaOut)
     if(present(eElectronOut)) eElectronOut = Natomic*cEV*internal_energy_e()
     if(present(pElectronOut))  pElectronOut = pressure_e()
-    if(present(GammaEOut))   call get_gamma(GammaSeOut=GammaOut)
+    if(present(GammaEOut))   call get_gamma(GammaSeOut=GammaEOut)
     if(present(OpacityPlanckOut_I).or.present(OpacityRosselandOut_I))then
        call meshhv
        call abscon
