@@ -398,11 +398,15 @@ contains
 
   !===========================================================================
 
-  subroutine interpolate_with_known_val(iTable, iVal, ValIn, Arg2In, Value_V, &
+  subroutine interpolate_with_known_val(&
+       iTable, iVal, ValIn, Arg2In, Value_V, &
        Arg1Out, DoExtrapolate)
 
-    ! Return the array of values Value_V corresponding to arguments
-    ! Arg1In and Arg2In in iTable. Use a bilinear interpolation.
+    ! Return the array of values Value_V corresponding to the argument
+    ! Arg2In in iTable, with Arg1 being calculated from the condition, that 
+    ! Value_V(iVal) equals the given value, ValIn.
+    !
+    ! Use a bilinear interpolation.
     ! If DoExtrapolate is not present, stop with an error if the arguments
     ! are out of range. If it is present and false, return the value of
     ! the closest element in the table. If it is present and true, do a 
