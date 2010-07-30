@@ -23,6 +23,7 @@ OBJECTS=\
 	ModFermiGas.o\
 	ModHydrogenicModel.o \
         ModIonizPotential.o \
+	ModMolecularData.o \
 	ModPartition.o \
 	ModPlastic.o \
 	ModStatSum.o \

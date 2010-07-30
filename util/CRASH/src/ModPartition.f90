@@ -315,6 +315,8 @@ Contains
 
     use CRASH_ModFermiGas,ONLY: UseFermiGas, LogGe, &
          LogGeMinBoltzmann,LogGeMinFermi
+    use CRASH_ModMolecularData, ONLY: UseDiatomicMolecules,&
+         get_chemical_equilibrium
 
     ! Concentration of heavy particles (atoms+ions) in the plasma 
     ! (# of particles per m^3):
@@ -346,6 +348,13 @@ Contains
     call set_Z
     call set_averages_and_deviators(DoZOnly=.false.)
     call check_applicability(iError)
+    
+    !The chemical equilibrium is calculated only for weakly ionized plasma
+    !However, the fractions of neutral atoms are used which are not exactly
+    !equal to 0ne:
+
+    if(UseDiatomicMolecules.and.zAv < 0.1)&
+         call get_chemical_equilibrium( Te, Na, Population_II(0,1:nMix))
   contains
 
     ! Calculating Z averaged iteratively
