@@ -413,7 +413,7 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
         end if
      else
         !  Multifluid case
-        if( i<iLatMin .or.  i <= iba(j)) then
+        if( i<iLatMin .or.  i > iba(j)) then
            Buffer_IIV(i,j,Hpres_) = -1.
            Buffer_IIV(i,j,Opres_) = -1.
            Buffer_IIV(i,j,Hdens_) = -1.
