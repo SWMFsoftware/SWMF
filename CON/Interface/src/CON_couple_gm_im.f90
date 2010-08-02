@@ -61,6 +61,7 @@ contains
 
     ! General error code
     integer :: iError
+    integer :: nFluid
 
     if(IsInitialized) RETURN
     IsInitialized = .true.
@@ -80,6 +81,7 @@ contains
     ! Set number of satellites shared between GM and IM for tracing.
     call GM_satinit_for_im(nShareSats)
 
+    ! Send number of satellites GM to IM
     if(iProc0Im /= iProc0Gm)then
        if(is_proc0(GM_)) &
             call MPI_send(nShareSats,1,MPI_INTEGER,iProc0Im,&
@@ -91,6 +93,29 @@ contains
 
     ! Get the logical variable between GM and IM coupling: if multifluid coupling
     call GM_get_multi_for_im(DoMultiFluidIMCoupling)
+
+    ! Send DoMultiFluidIMCoupling from GM to IM
+    if(iProc0Im /= iProc0Gm)then
+       if(is_proc0(GM_)) then
+          if (DoMultiFluidIMCoupling) then
+             call MPI_send(2,1,MPI_INTEGER,iProc0Im,&
+                  2,iCommWorld,iError)
+          else
+             call MPI_send(1,1,MPI_INTEGER,iProc0Im,&
+                  2,iCommWorld,iError)
+          end if
+       end if
+       if(is_proc0(IM_)) then
+          call MPI_recv(nFluid,1,MPI_INTEGER,iProc0Gm,&
+               2,iCommWorld,iStatus_I,iError)
+          if (nFluid == 2) then
+             DoMultiFluidIMCoupling = .true.
+          else
+             DoMultiFluidIMCoupling = .false.
+          endif
+       end if
+    end if
+
 
   end subroutine couple_gm_im_init
 
