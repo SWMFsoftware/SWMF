@@ -5,6 +5,7 @@ module ModPotentialField
   logical, parameter :: DoReadMagnetogram = .true.
   logical, parameter :: UseCosTheta       = .true. 
   logical, parameter :: UsePreconditioner = .true.
+  logical, parameter :: DoSaveTecplot    = .false.
 
   integer         :: nR = 150, nTheta = 180, nPhi = 360
   integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 2
@@ -248,13 +249,16 @@ contains
 
   subroutine save_potential_field
 
+    use ModIoUnit,      ONLY: io_unit_new
     use ModNumConst,    ONLY: cHalfPi
     use ModPlotFile,    ONLY: save_plot_file
 
     integer :: iR, jR, iTheta, iPhi
+    real    :: r, CosTheta, SinTheta, CosPhi, SinPhi
+    real    :: Br, Btheta, Bphi
     real    :: rI, rJ, rInv
     real, allocatable :: B_DX(:,:,:,:)
-
+    integer :: iUnit, iError
     !-------------------------------------------------------------------------
 
     allocate(B_DX(3,nR+1,nPhi+1,nTheta))
@@ -302,6 +306,47 @@ contains
          Coord1In_I=RadiusNode_I, &
          Coord2In_I=Phi_I(1:nPhi+1), &
          Coord3In_I=cHalfPi-Theta_I(nTheta:1:-1))
+
+    if(DoSaveTecplot)then
+       iUnit = io_unit_new()
+
+       open ( unit = iUnit, &
+            file = 'potentialfield.dat', &
+            form = 'formatted', &
+            access = 'sequential', &
+            status = 'replace', iostat = iError )
+
+       write ( iUnit, '(a)' ) 'Title = "'     // trim ('PFSSM') // '"'
+       write ( iUnit, '(a)' ) &
+         'Variables = ' // trim ('"X [Rs]", "Y [Rs]", "Z [Rs]","Bx [G]",'// &
+	' "By [G]", "Bz [G]"')
+       write ( iUnit, '(a)' ) 'ZONE T="Rectangular zone"'
+       write ( iUnit, '(a,i6,a,i6,a,i6,a)' ) &
+            ' I = ', nR+1, ', J=', nTheta, ', K=', nPhi+1, ', ZONETYPE=Ordered'
+       write( iUnit, '(a)' ) ' DATAPACKING=POINT'
+       write( iUnit, '(a)' ) ' DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )'
+
+       do iPhi = 1, nPhi+1; do iTheta = 1, nTheta; do iR = 1, nR+1
+          Br     = B_DX(1,iR,iTheta,iPhi)
+          Btheta = B_DX(3,iR,iTheta,iPhi)
+          Bphi   = B_DX(2,iR,iTheta,iPhi)
+          r = RadiusNode_I(iR)
+          SinTheta = SinTheta_I(iTheta)
+          CosTheta = cos(Theta_I(iTheta))
+          SinPhi   = sin(Phi_I(iPhi))
+          CosPhi   = cos(Phi_I(iPhi))
+
+          write (iUnit,'(6f10.3)') &
+               r*SinTheta*CosPhi, &
+               r*SinTheta*SinPhi, &
+               r*CosTheta, &
+               Br*SinTheta*CosPhi + Btheta*CosTheta*CosPhi - Bphi*SinPhi, &
+               Br*SinTheta*SinPhi + Btheta*CosTheta*SinPhi + Bphi*CosPhi, &
+               Br*CosTheta        - Btheta*SinTheta
+       end do; end do; end do
+
+       close(iUnit)
+    end if
 
     deallocate(B_DX)
 
