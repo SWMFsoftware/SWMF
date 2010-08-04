@@ -5,7 +5,7 @@ module ModPotentialField
   logical, parameter :: DoReadMagnetogram = .true.
   logical, parameter :: UseCosTheta       = .true. 
   logical, parameter :: UsePreconditioner = .true.
-  logical, parameter :: DoSaveTecplot    = .false.
+  logical, parameter :: DoSaveTecplot     = .false.
 
   integer         :: nR = 150, nTheta = 180, nPhi = 360
   integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 2
@@ -327,16 +327,16 @@ contains
        write( iUnit, '(a)' ) ' DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )'
 
        do iPhi = 1, nPhi+1; do iTheta = 1, nTheta; do iR = 1, nR+1
-          Br     = B_DX(1,iR,iTheta,iPhi)
-          Btheta = B_DX(3,iR,iTheta,iPhi)
-          Bphi   = B_DX(2,iR,iTheta,iPhi)
+          Br     = B_DX(1,iR,iPhi,nTheta+1-iTheta)
+          Btheta = B_DX(3,iR,iPhi,nTheta+1-iTheta)
+          Bphi   = B_DX(2,iR,iPhi,nTheta+1-iTheta)
           r = RadiusNode_I(iR)
           SinTheta = SinTheta_I(iTheta)
           CosTheta = cos(Theta_I(iTheta))
           SinPhi   = sin(Phi_I(iPhi))
           CosPhi   = cos(Phi_I(iPhi))
 
-          write (iUnit,'(6f10.3)') &
+          write (iUnit,fmt="(6(E14.6))") &
                r*SinTheta*CosPhi, &
                r*SinTheta*SinPhi, &
                r*CosTheta, &
