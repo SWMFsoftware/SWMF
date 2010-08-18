@@ -149,6 +149,12 @@ subroutine read_restart(dir)
 
      if (iDebugLevel > 4) write(*,*) "=====> Reading Temperature"
      read(iRestartUnit_)  Temperature(:,:,:,iBlock)
+     
+     if (isMars) then 
+        SurfaceTemp = 0.0
+        SurfaceTemp(:,:,iBlock) = Temperature(1:nLons,:1:nLats,0,iBlock)
+     endif
+
      if (iDebugLevel > 4) write(*,*) "=====> Reading ITemperature"
      read(iRestartUnit_) ITemperature(:,:,:,iBlock)
      if (iDebugLevel > 4) write(*,*) "=====> Reading eTemperature"
