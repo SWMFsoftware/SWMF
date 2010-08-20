@@ -1,4 +1,4 @@
-subroutine trace_dipole(Re,LatStart,nStep,nStepInside,&
+subroutine trace_dipoleIM(Re,LatStart,nStep,nStepInside,&
      LineLength_I,Bfield_I,RadialDist_I,L)
   use ModCrcmPlanet,  ONLY: MagCoef => dipmom
   implicit none
@@ -102,11 +102,11 @@ contains
     
     asinh = log( x + sqrt(x**2.0 + 1.0) )
   end function asinh
-end subroutine trace_dipole
+end subroutine trace_dipoleIM
 
 !==============================================================================
 
-subroutine trace_dipole_test
+subroutine trace_dipoleIM_test
   implicit none
   real, parameter   :: Re = 6378000.0
   real              :: LatStart = 1.10714871779
@@ -135,7 +135,7 @@ subroutine trace_dipole_test
 !       2.9999231E-07,3.8897971E-07,5.5333624E-07,8.6292482E-07,1.4844210E-06,&
 !       2.8568163E-06/)
   
-  call trace_dipole(Re,LatStart,nStep,nStepInside,&
+  call trace_dipoleIM(Re,LatStart,nStep,nStepInside,&
      LineLength_I,Bfield_I,RadialDist_I,L)  
   
   write(*,*) 'Latitude:',LatStart
@@ -143,4 +143,4 @@ subroutine trace_dipole_test
   do i=1,nStep
      write(*,*) i, LineLength_I(i), RadialDist_I(i), Bfield_I(i)
   enddo
-end subroutine trace_dipole_test
+end subroutine trace_dipoleIM_test
