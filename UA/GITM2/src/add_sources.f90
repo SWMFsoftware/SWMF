@@ -48,32 +48,7 @@ subroutine add_sources
           Conduction + ChemicalHeatingRate
 
 
-!do ialt = 1,nalts
-!   write(*,*) altitude_gb(1,1,ialt,1),euvheating(1, 1, ialt, iBlock) *tempunit(1,1,ialt)
-!enddo
-!stop
-!         - RadCooling(1:nLons, 1:nLats, 1:nAlts, iBlock) &
-! LowAtmosRadRate(1:nLons, 1:nLats, 1:nAlts, iBlock) &
-!          /TempUnit(1:nLons,1:nLats,1:nAlts)&
-!     write(*,*) Temperature(1,1,1:nAlts,1)
-     userdata1D(1,1,:,1) = Temperature(1, 1, 1:nAlts, 1)
-     userdata1D(1,1,:,2) = userdata1d(1,1,:,2)  + Dt * ( &
-          LowAtmosRadRate(1, 1, 1:nAlts, iBlock) &
-          /TempUnit(1,1,1:nAlts)&
-         - RadCooling(1, 1, 1:nAlts, iBlock) &
-           + EuvHeating(1, 1, 1:nAlts, iBlock) &
-           + AuroralHeating(1,1,1:nAlts) + JouleHeating(1,1,1:nAlts)) + &
-          Conduction(1,1,1:nAlts) + ChemicalHeatingRate(1,1,1:nAlts)
 
-     userdata1D(1,1,:,7) =  Dt * ( &
-          LowAtmosRadRate(1, 1, 1:nAlts, iBlock)/ &
-          TempUnit(1,1,1:nAlts))
-      userdata1D(1,1,:,8) = Dt * EuvHeating(1, 1, 1:nAlts, iBlock)
-      userdata1D(1,1,:,9) = -Dt * RadCooling(1, 1, 1:nAlts, iBlock)
-      userdata1D(1,1,:,10) = Conduction(1,1,1:nAlts)
-      do ialt = 1, nalts
-         userdata1D(1,1,iAlt,1:10) = userdata1D(1,1,ialt,1:10) * tempunit(1,1,iAlt)
-      enddo
       !-------------------------------------------
      ! This is an example of a user output:
  
@@ -136,16 +111,14 @@ iAlt = 10
 
      !! To turn off IonDrag, turn UseIonDrag=.false. in UAM.in
 
-     iondrag = 0.0
-     verticaliondrag = 0.0
      Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) = &
           Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) + Dt * ( &
-          IonDrag) + Viscosity! + GWAccel
-!write(*,*) GWaccel(1,1,40,1)
+          IonDrag) + Viscosity + GWAccel
+
      
      !! To turn off IonDrag, turn UseIonDrag=.false. in UAM.in
      !! To turn off NeutralFriction, turn UseNeutralFriction=.false. in UAM.in
-neutralfriction = 0.0
+
      do iSpecies = 1, nSpecies
         VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) =&
              VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) + &
@@ -155,9 +128,7 @@ neutralfriction = 0.0
    
      enddo
 
-     userdata1d(1,1,1:nAlts,20) = dt*verticalionDrag(1,1,:,1)
-     userdata1d(1,1,1:nAlts,21) = NeutralFriction(1,1,:,1)
-
+    
      call planet_limited_fluxes(iBlock)
 
      call calc_electron_temperature(iBlock)
