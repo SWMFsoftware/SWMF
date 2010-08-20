@@ -5,7 +5,7 @@ Module ModCrcm
 
   SAVE
 
-  real    :: dt =1., dtmax=1. ! tyical time step of crcm
+  real    :: dt =5., dtmax=5. ! tyical time step of crcm
   real    :: Time = 0.0
   logical :: UseMcLimiter=.false.
   real    :: BetaLimiter = 1.5
