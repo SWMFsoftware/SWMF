@@ -204,6 +204,15 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
      bo1=StateIntegral_IIV(iLat,iLon,3)
   endif
   
+  !Check that nAlt < np
+  if (nAlt > np) then 
+     !write(*,*) 'nAlt,np',nAlt,np
+     !call CON_STOP('RB error: nAlt > np in mhd_trace. Increase np and recompile.')
+     !Treat line as open
+     nAlt=0
+     return
+  endif
+  
   ! Calculate the flux tube volume per magnetic flux (volume1)
   
   do ii=1,nAlt-1

@@ -791,7 +791,8 @@ subroutine fieldpara(t,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
   common/geopack/aa(10),sps,cps,bb(3),ps,cc(11),kk(2),dd(8)
 
   external tsyndipoleSM,MHD_B
-  parameter (np=1000,nd=3)
+  parameter (np=2545,nd=3)
+  real, parameter :: LengthMax = 50.0
   real xlati(ir),phi(ip),w(0:iw+1),si(0:ik+1),xmass(ns),&
        si3(np),bm1(np),rm(np),rs(np),dss(np),&
        h3(np),bs(np),bba(np),&
@@ -901,6 +902,12 @@ subroutine fieldpara(t,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
            exit LATITUDE
         endif
         
+        ! Excessively long lines are considered open 
+        if (dssa(npf1) > LengthMax) then
+           irm(j)=i-1
+           exit LATITUDE
+        endif
+
         dss2=dssa(npf1)/2.      ! find the middle point
         call locate1(dssa,npf1,dss2,im)
         im1=im
