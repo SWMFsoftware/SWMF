@@ -171,8 +171,8 @@ sub set_planet{
           $nAlt = 50;
           $MaxBlock = 4;
     }elsif($Planet eq 'Mars'){
-          $nLon = 2;
-          $nLat = 2;
+          $nLon = 9;
+          $nLat = 9;
           $nAlt = 120;
           $MaxBlock = 4;
     } elsif($Planet eq 'Titan'){
