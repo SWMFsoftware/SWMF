@@ -47,7 +47,7 @@ contains
     ! common/geopack/aa(10),sps,cps,bb(3),ps,cc(11),kk(2),dd(8)
     ! external tsyndipoleSM,MHD_B
     
-    integer, parameter :: np=1000,nd=3
+    integer, parameter :: np=2545,nd=3
     real :: rc, re,xme,dt,t,c
     real xlati(ir),phi(ip),si(ik),&
          si3(np),bm1(np),rm(np),rs(np),dss(np),&
@@ -65,11 +65,12 @@ contains
     real    :: bnibm_n,sim,bmmx,rmm, bs_n,tya33,h33,xmass,c2mo,c4mo2,ro2,pp1
     real    :: pijkm,pc,c2m,e,q,tcone1,tcone2,x
     integer :: iLatTest = -1, iLonTest=-1
-!    integer :: iLatTest = 30, iLonTest=1
+!    integer :: iLatTest = 51, iLonTest=27
 
     integer :: imax
     real :: R_12,R_24,xmltr,xBoundary(ip),MajorAxis,MinorAxis,&
             MajorAxis2,MinorAxis2, sin2, Req2, xo1,xc, xCenter,rell2
+    real, parameter :: LengthMax = 50.0
     !--------------------------------------------------------------------------
 
     a_I(0)=1.
@@ -123,7 +124,7 @@ contains
           ! uncomment when T04 Tracing fixed
           !if (imod.le.2) call tsy_trace(i,rlim,re,rc,xlati1,phi1,t,ps,parmod,&
           !     imod,np,npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
-          if (imod.eq.3) call MHD_trace(xlati1,phi(j),re,i,j,np, &
+          if (imod.eq.3) call Mhd_trace_IM(xlati1,phi(j),re,i,j,np, &
                npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
 
 
@@ -164,9 +165,17 @@ contains
              irm(j)=i-1
              exit LATITUDE
           endif
+          
+          ! Excessively long lines are considered open 
+          if (dssa(npf1) > LengthMax) then
+             irm(j)=i-1
+             exit LATITUDE
+          endif
 
           dss2=dssa(npf1)/2.      ! find the middle point
-          call locate1(dssa,npf1,dss2,im)
+          !write(*,*) '!!! start1, iLat,iLon,npf1',i,j,npf1
+          call locate1IM(dssa,npf1,dss2,im)
+          !write(*,*) '!!! end1'
           im1=im
           if ((dssa(im+1)-dss2).lt.(dss2-dssa(im))) im1=im+1
 
@@ -306,16 +315,17 @@ contains
 
           ! Calculate y, rmir (dist. of mirror point), T(y), bounced average [H]
           do m=1,ik
+             !write(*,*) '!!! iLat,iLon',i,j
              sim=si(m)                 ! get Bm @ given K & location
-             call lintp(si3,bm1,im2,sim,bmmx)
+             call lintpIM(si3,bm1,im2,sim,bmmx)
              bm(i,j,m)=bmmx
              sinA(i,j,m)=sqrt(bo(i,j)/bmmx)
              if (sinA(i,j,m).gt.1.) sinA(i,j,m)=1.
-             call lintp(si3,rm,im2,sim,rmm)
+             call lintpIM(si3,rm,im2,sim,rmm)
              rmir(i,j,m)=rmm
-             call lintp(si3,tya3,im2,sim,tya33)
+             call lintpIM(si3,tya3,im2,sim,tya33)
              tya(i,j,m)=tya33
-             call lintp(si3,h3,im2,sim,h33)
+             call lintpIM(si3,h3,im2,sim,h33)
              Have(i,j,m)=h33  ! bounce-ave [H]
           enddo
 
@@ -415,7 +425,7 @@ contains
           do i=1,irm(j)
              x1(i)=ro(i,j)
           enddo
-          call locate1(x1,irm(j),rb,ib)
+          call locate1IM(x1,irm(j),rb,ib)
           iba(j)=ib
        enddo
     endif
@@ -459,8 +469,8 @@ contains
 !    ttf=t+(1.+tsmo)*tf
 !
 !    !  parmod(1): solar wind pressure in nPa
-!    call locate1(tsw,nsw,tti,j1)
-!    call locate1(tsw,nsw,ttf,j_2)
+!    call locate1IM(tsw,nsw,tti,j1)
+!    call locate1IM(tsw,nsw,ttf,j_2)
 !    j2=j_2+1
 !    if (j1.eq.0) j1=1
 !    if (j2.gt.nsw) j2=nsw
@@ -474,8 +484,8 @@ contains
 !    if (parmod(1).lt.2.0) parmod(1)=2.0  ! set min parmod(1) to 2.0
 !
 !    !  parmod(2): Dst
-!    call locate1(tdst,ndst,tti,j1)
-!    call locate1(tdst,ndst,ttf,j_2)
+!    call locate1IM(tdst,ndst,tti,j1)
+!    call locate1IM(tdst,ndst,ttf,j_2)
 !    j2=j_2+1
 !    if (j1.eq.0) j1=1
 !    if (j2.gt.ndst) j2=ndst
@@ -486,8 +496,8 @@ contains
 !    parmod(2)=dst
 !
 !    !  parmod(3:4): IMF By, Bz in nT
-!    call locate1(timf,nimf,tti,j1)
-!    call locate1(timf,nimf,ttf,j_2)
+!    call locate1IM(timf,nimf,tti,j1)
+!    call locate1IM(timf,nimf,ttf,j_2)
 !    j2=j_2+1
 !    if (j1.eq.0) j1=1
 !    if (j2.gt.nimf) j2=nimf
@@ -514,9 +524,9 @@ contains
 !    !  parmod(5:10) for t04_s: w04(1:6) defined in Tsyganenko and Sitnov, 2005
 !    if (imod.eq.2) then
 !       tti=t-100.*3600.              ! 100 hours before t
-!       call locate1(tsw,nsw,tti,j1)    
+!       call locate1IM(tsw,nsw,tti,j1)    
 !       if (j1.eq.0) j1=1
-!       call locate1(tsw,nsw,t,j2)
+!       call locate1IM(tsw,nsw,t,j2)
 !       if (j2.eq.0) j2=1
 !       w04(1:6)=0.
 !       do j=j1,j2      ! average over preceding hours
@@ -660,7 +670,7 @@ contains
 !  end subroutine tsy_trace
 
   !=============================================================================
-  subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
+  subroutine mhd_trace_IM (Lat,Lon,re,iLat,iLon,np, &
        nAlt,FieldLength_I,Bfield_I,volume1,ro1,xmlt1,bo1,RadialDist_I)
 
     use ModGmCrcm
@@ -684,7 +694,7 @@ contains
 
     real xa(np),ya(np),za(np),x0(3),xend(3),f(3),t0,tend,h,h1,aza(np)
     real dir,pas,xwrk(4,nd),rlim,Bmid,dss(np),ss,yint(np)
-    character(len=*), parameter :: NameSub='mhd_trace'
+    character(len=*), parameter :: NameSub='mhd_trace_IM'
     Logical IsFoundLine,UseDipole
     !---------------------------------------------------------------------------
 
@@ -720,13 +730,13 @@ contains
 
     ! Fill in points below rBody
     if (IsFoundLine) &
-         call trace_dipole(Re,Lat,nAlt,MinAlt,FieldLength_I,&
+         call trace_dipoleIM(Re,Lat,nAlt,MinAlt,FieldLength_I,&
          Bfield_I,RadialDist_I,Ro1)
 
     ! Field lines fully inside rBody
     if (Lat <= Latmin) then
        nAlt=2*MinAlt
-       call trace_dipole(Re,Lat,nAlt,MinAlt,FieldLength_I,&
+       call trace_dipoleIM(Re,Lat,nAlt,MinAlt,FieldLength_I,&
             Bfield_I,RadialDist_I,Ro1)
        xmlt1= mod((Lon)*12./cPi+12.0,24.0)   ! mlt in hr           
        if (xmlt1.lt.0.) xmlt1=xmlt1+24.
@@ -757,8 +767,18 @@ contains
        bo1=StateIntegral_IIV(iLat,iLon,3)
     endif
 
+    !Check that nAlt < np
+    if (nAlt > np) then 
+       !write(*,*) 'nAlt,np',nAlt,np
+       !call CON_STOP('IM error: nAlt > np in mhd_trace_IM. Increase np and recompile.')
+       !Treat line as open
+       nAlt=0
+       return
+    endif
+    
     ! Calculate the flux tube volume per magnetic flux (volume1)
 
+    !write(*,*) '!!! iLat,iLon,nAlt',iLat,iLon,nAlt
     do ii=1,nAlt-1
        Bmid=0.5*(Bfield_I(ii)+Bfield_I(ii+1))
        dss(ii)=FieldLength_I(ii+1)-FieldLength_I(ii)
@@ -766,10 +786,10 @@ contains
     enddo
     call closed(nAlt-1,yint,dss,ss)  ! use closed form
     if (iLat >= 1 .and. iLat <= ir) volume1=ss*re   ! volume / flux
-  end subroutine mhd_trace
+  end subroutine mhd_trace_IM
   
   !============================================================================
-  subroutine lintp(xx,yy,n,x,y)
+  subroutine lintpIM(xx,yy,n,x,y)
     !-----------------------------------------------------------------------
     !  Routine does 1-D interpolation.  xx must be increasing or decreasing
     !  monotonically.  x is between xx(j) and xx(j+1)
@@ -780,15 +800,15 @@ contains
     !  Make sure xx is increasing or decreasing monotonically
     do i=2,n
        if (xx(n).gt.xx(1).and.xx(i).lt.xx(i-1)) then
-          write(*,*) ' lintp: xx is not increasing monotonically '
+          write(*,*) ' lintpIM: xx is not increasing monotonically '
           write(*,*) n,(xx(j),j=1,n)
-          call CON_stop('RBE ERROR')
+          call CON_stop('IM ERROR')
        endif
        if (xx(n).lt.xx(1).and.xx(i).gt.xx(i-1)) then
-          write(*,*) ' lintp: xx is not decreasing monotonically '
+          write(*,*) ' lintpIM: xx is not decreasing monotonically '
           write(*,*) 'i,xx(i),xx(i-1) ',i,xx(i-1),xx(i)
           write(*,*) n,(xx(j),j=1,n)
-          call CON_stop('RBE ERROR')
+          call CON_stop('IM ERROR')
        endif
     enddo
     
@@ -802,7 +822,7 @@ contains
        write(*,*) ' Error: ier.eq.1'
        write(*,*) ' x  ',x
        write(*,*) ' xx  ',xx
-       call CON_stop('RBE ERROR')
+       call CON_stop('IM ERROR')
     endif
     !
     !    initialize lower and upper values
@@ -836,7 +856,7 @@ contains
     d=xx(j+1)-xx(j)
     y=(yy(j)*(xx(j+1)-x)+yy(j+1)*(x-xx(j)))/d
     
-  end subroutine lintp
+  end subroutine lintpIM
   
 
   !============================================================================
