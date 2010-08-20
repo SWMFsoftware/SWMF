@@ -226,24 +226,31 @@ trouble = .false.
 !---- KM=((PO*3.9)+(PN2*3.42))*TT*1.E-06 +(PCO*COKM)+(PCO2*CO2KM)
 !---- KT=((PO*75.9)+(PN2*56.))*TT +(PCO*COKT)+(PCO2*CO2KT)
 ! -------------------------------------------------------------------------------
-      do iLon = -1,nLons+2
+
+     do iLon = -1,nLons+2
         do iLat = -1,nLats+2
            do iAlt = 0, nAlts+1
 
 ! co2 factors:
+
           is = int((ttot(iLon,iLat,iAlt)-173.3)/100.)
+
           if (is <= 1) is = 1
           if (is >= 7) is = 7
+
           rrco2 = RGAS*AMU/Mass(iCO2_)
+
           if (ttot(iLon,iLat,iAlt) < 500.)    &
                crn = 1.64-(ttot(iLon,iLat,iAlt)-500.)*2.5e-4
           co2km(iLon,iLat,iAlt)=cmrf(is)+(cmrf(is+1)-cmrf(is))*  &
                (ttot(iLon,iLat,iAlt)- (is*100.+73.3))*0.01 
+
           co2km(iLon,iLat,iAlt)=co2km(iLon,iLat,iAlt)*1.e-06
           cpco2=3.5*RGAS*AMU/Mass(iCO2_)
           co2kt(iLon,iLat,iAlt)=(cpco2-rrco2)*co2km(iLon,iLat,iAlt)*crn
 !
 ! co factors:
+
           is=int(ttot(iLon,iLat,iAlt)/100.)
           if (is <= 1) is=1
           if (is >= 7) is=7
@@ -302,6 +309,7 @@ trouble = .false.
 ! Simplified from Yue's
 ! Prandtl = 10. Small to Start!
 !
+
      do iLat = 1, nLats
         do iLon = 1, nLons
               KappaTemp(iLon,iLat,iAlt,iBlock) = &
@@ -320,9 +328,9 @@ trouble = .false.
 !   * Scaling of Molecular Viscosity for spun-up stability
 !    ViscCoef(:,:,iAlt) =  kmmix(1:nLons,1:nLats,iAlt)*10.0
 !   * No scaling of molecular vciscosity
-     ViscCoef(:,:,iAlt) =  kmmix(1:nLons,1:nLats,iAlt)
+     ViscCoef(1:nLons,1:nLats,iAlt) =  kmmix(1:nLons,1:nLats,iAlt)
 
-     ViscCoef(:,:,iAlt) =  ViscCoef(:,:,iAlt) + 500.0*&
+     ViscCoef(1:nLons,1:nLats,iAlt)  =  ViscCoef(1:nLons,1:nLats,iAlt)  + 500.0*&
                            Rho(1:nLons,1:nLats,iAlt,iBlock)*KappaEddyDiffusion(1:nLons,1:nLats,iAlt,iBlock)
 !     Visc_3D(:,:,iAlt,iBlock) =  kmmix(1:nLons,1:nLats,iAlt)
 
@@ -426,6 +434,5 @@ subroutine calc_viscosity(iBlock)
 
   integer, intent(in) :: iBlock
 
-  call calc_rates(iBlock)
 
 end subroutine calc_viscosity

@@ -262,6 +262,10 @@ subroutine initialize_gitm(TimeIn)
      call init_aerosol
   endif
 
+  if (   .not. (index(cPlanet,"Mars") == 0) ) then
+     call init_isochem
+  endif
+
   if (.not. DoRestart) then
 
      Potential = 0.0
@@ -355,13 +359,14 @@ subroutine initialize_gitm(TimeIn)
 
      else
 
-        do iBlock = 1, nBlocks
-
-           IDensityS(:,:,:,:,iBlock)    = 1.00e8
-           IDensityS(:,:,:,ie_,iBlock)  = 1.00e8*(nIons-1)
-
-        enddo
-
+        if (IsEarth) then
+           do iBlock = 1, nBlocks
+              
+              IDensityS(:,:,:,:,iBlock)    = 1.00e8
+              IDensityS(:,:,:,ie_,iBlock)  = 1.00e8*(nIons-1)
+              
+           enddo
+        endif
      endif
 
   endif

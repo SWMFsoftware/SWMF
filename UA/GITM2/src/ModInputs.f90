@@ -151,6 +151,9 @@ module ModInputs
   logical :: UseIonGravity          = .true.
   logical :: UseNeutralDrag         = .true.
   logical :: UseExB                 = .true.
+  logical :: UseImplicitChemistry = .false.
+  logical :: IsAsymmetric          = .false.
+  Real :: BetaPointImpl         = 1.0
 
   logical :: UseDynamo              = .false.
 

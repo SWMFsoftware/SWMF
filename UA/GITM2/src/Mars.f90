@@ -212,12 +212,13 @@ subroutine calc_planet_sources(iBlock)
         do iLon = 1, nLons
 
            !     Mars GITM ground temperature (on its grid) -------------------
-           if (Altitude_GB(iLon,iLat,0,iBlock) .lt. 0) then
-!              SurfaceTemp(iLon,iLat,iBlock)=180.0+100.0*AveCosSza(iLon,iLat,iBlock)
+           if (minval(Altitude_GB(:,:,0,iBlock)) .lt. 0) then
+
               Temperature(iLon,iLat,0,iBlock)=SurfaceTemp(iLon,iLat,iBlock)/&
                    TempUnit(iLon,iLat,0)
               Temperature(iLon,iLat,-1,iBlock)=SurfaceTemp(iLon,iLat,iBlock)/&
                    TempUnit(iLon,iLat,-1)
+
            endif
 
            ! Determining the top of the lower atmosphere radiative zone
@@ -818,7 +819,7 @@ end subroutine init_isochem
 
      !   MAIN DO LOOPS... OVER LONGITUDE AND LATITUDE
      GWAccel(:,:,:,:) = 0.0
-     write(*,*) "yes"
+
      if (CurrentTime-StartTime .lt. 3600) then
         return
      endif
@@ -2699,6 +2700,11 @@ write(*,*) GWAccel(1,1,:,1)
           !C       BE TREATED CAREFULLY
 
           IF(XK2(N) .EQ. 0.0) GO TO 28
+
+!!!! next line added by ridley and pawlowski
+          XK(2*N-1) = max(abs(XK(2*n-1)),1.0e-30)*sign(1.0,XK(2*n-1))
+
+
           IF (ABS (XK2(N)/XK(2*N-1)) .LT. 1.E-30) XK2(N)=0.0
 
 28        CONTINUE

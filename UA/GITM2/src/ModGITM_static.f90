@@ -32,6 +32,9 @@ module ModGITM
        NDensity, eTemperature, ITemperature, &
        IPressure, ePressure
 
+real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nSpeciesAll, nBlocksMax) :: &
+       SpeciesDensity, SpeciesDensityOld
+  
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, &
        nSpecies, nBlocksMax) :: &
        LogRhoS, LogNS, VerticalVelocity
@@ -54,7 +57,7 @@ module ModGITM
        dSubsurfaceTemp, dSurfaceTemp
 
   real :: cp(nLons, nLats, 0:nAlts+1,nBlocksMax)
-  real :: ViscCoef(nLons, nLats, 0:nAlts+1)
+  real :: ViscCoef(0:nLons+1,0:nLats+1, 0:nAlts+1)
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: &
        MeanIonMass, MeanMajorMass

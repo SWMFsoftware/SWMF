@@ -91,6 +91,9 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   dAlt_F(0:nAlts+2)   = Altitude_G(0:nAlts+2) - Altitude_G(-1:nAlts+1)
   dAlt_F(-1)          = dAlt_F(0)
   InvDAlt_F           = 1.0/dAlt_F
+  SpeciesDensityOld(iLon,iLat,:,1:nSpeciesTotal,iBlock) = NDensityS(iLon,iLat,:,:,iBlock)
+  SpeciesDensityOld(iLon,iLat,:,nSpeciesTotal+1:nSpeciesAll,iBlock) = &
+       IDensityS(iLon,iLat,:,1:nIons-1,iBlock)
 
   call advance_vertical_1d
 
@@ -172,5 +175,9 @@ subroutine advance_vertical(iLon,iLat,iBlock)
              IDensityS(iLon,iLat,:,iIon,iBlock)
      enddo
   endif
+
+SpeciesDensity(iLon,iLat,:,1:nSpeciesTotal,iBlock) = NDensityS(iLon,iLat,:,:,iBlock)
+  SpeciesDensity(iLon,iLat,:,nSpeciesTotal+1:nSpeciesAll,iBlock) = &
+       IDensityS(iLon,iLat,:,1:nIons-1,iBlock)
 
 end subroutine advance_vertical

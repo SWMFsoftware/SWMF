@@ -14,13 +14,13 @@ subroutine euv_ionization_heat(iBlock)
 
   integer, intent(in) :: iBlock
 
-  integer :: iAlt, iWave, iSpecies, iIon, iError
+  integer :: iAlt, iWave, iSpecies, iIon, iError, iLon,iLat
   real, dimension(nLons,nLats) :: Tau, Intensity
 
   logical :: IsFirstTime(nBlocksMax) = .true.
 
   real :: photoion(Num_WaveLengths_High, nIons-1)
-  real :: photoabs(Num_WaveLengths_High, nSpecies)
+  real :: photoabs(Num_WaveLengths_High, nSpeciesTotal)
   real :: photodis(Num_WaveLengths_High, nSpeciesTotal)
 
   real :: NeutralDensity(nLons, nLats, nSpecies)
@@ -47,16 +47,13 @@ subroutine euv_ionization_heat(iBlock)
   EuvDissRateS(:,:,:,:,iBlock) = 0.0
 
   photoion(1:Num_Wavelengths_High,1:nIons-1) = 0.0
-  photoabs(1:Num_Wavelengths_High,1:nSpecies)= 0.0
+  photoabs(1:Num_Wavelengths_High,1:nSpeciesTotal)= 0.0
   photodis(1:Num_Wavelengths_High,1:nSpeciesTotal) = 0.0
 
   ! This transfers the specific photo absorption and ionization cross
   ! sections into general variables, so we can use loops...
 
-!  call fill_photo(photoion, photoabs, photodis)
-  call fill_photo( photoion(1:Num_Wavelengths_High,1:nIons-1), &
-  photoabs(1:Num_Wavelengths_High,1:nSpecies), &
-  photodis(1:Num_Wavelengths_High,1:nSpeciesTotal) )
+  call fill_photo(photoion, photoabs, photodis)
 
   do iAlt = 1, nAlts
 
@@ -79,8 +76,8 @@ subroutine euv_ionization_heat(iBlock)
                 EuvIonRateS(:,:,iAlt,iIon,iBlock) + &
                 Intensity*PhotoIon(iWave,iIon)
         enddo
-
-        do iSpecies = 1, nSpeciesTotal
+ 
+       do iSpecies = 1, nSpeciesTotal
            EuvDissRateS(:,:,iAlt,iSpecies,iBlock) = &
                 EuvDissRateS(:,:,iAlt,iSpecies,iBlock) + &
                 Intensity*PhotoDis(iWave,iSpecies)
@@ -90,19 +87,26 @@ subroutine euv_ionization_heat(iBlock)
            EHeat = EHeat + &
                 Intensity*PhotonEnergy(iWave)* &
                 photoabs(iWave, iSpecies) * NeutralDensity(:,:,iSpecies)
+
         enddo
 
      enddo
-
+     
      EuvHeating(:,:,iAlt,iBlock)  = EHeat*HeatingEfficiency_CB(:,:,iAlt,iBlock)
      eEuvHeating(:,:,iAlt,iBlock) = EHeat*eHeatingEfficiency_CB(:,:,iAlt,iBlock)
-
+     do ilon = 1, nlons 
+        do ilat =1 ,nlats
+           if (Altitude_GB(iLon,iLat,iAlt,iBlock) .lt. 80000.0) then
+              EUVHeating(iLon,iLat,iAlt,iBlock) =0.0
+              eEUVHeating(iLon,iLat,iAlt,iBlock) =0.0
+           endif
+        enddo
+     enddo
   enddo
 
   !\
   ! Zero out EuvHeating if specified not to use it.
   !/
-
 
   if (UseSolarHeating) then
      do iAlt = 1, nAlts
@@ -378,7 +382,9 @@ subroutine calc_scaled_euv
      Flux_of_EUV(NN) = 0.5*(EUV_Flux(N)+Solar_Flux(NN))
   enddo
 
+
   Flux_of_EUV = Flux_of_EUV/(SunOrbitEccentricity**2)
+
 
   do N=1,Num_WaveLengths_High
      wvavg(N)=(WAVEL(N)+WAVES(N))/2.
@@ -477,10 +483,6 @@ subroutine init_euv
 
   enddo
 
-  PhotoAbs_CO  = 0.0
-  PhotoAbs_CO2 = 0.0
-  PhotoIon_CO  = 0.0
-  PhotoIon_CO2 = 0.0
 
   DO N = 1, Num_WaveLengths_Low
 
@@ -495,8 +497,12 @@ subroutine init_euv
      PhotoAbs_O2(NN)      = Photoabsorption_O2(N)
      PhotoAbs_O(NN)       = Photoabsorption_O(N) 
      PhotoAbs_N2(NN)      = Photoabsorption_N2(N)
+     PhotoAbs_CO2(NN)   = Photoabsorption_CO2(N)
+     PhotoAbs_CO(NN)   = Photoabsorption_CO(N)
 
      PhotoIon_O2(NN)      = Photoionization_O2(N)
+     PhotoIon_CO2(NN)   = Photoionization_CO2(N)
+     PhotoIon_CO(NN)   = Photoionization_CO(N)
      PhotoIon_OPlus4S(NN) = Photoionization_O(N)*BranchingRatio_OPlus4S(N)
      PhotoIon_N2(NN)      = Photoionization_N2(N)
      PhotoIon_N(NN)       = Photoionization_N(N)
@@ -506,42 +512,27 @@ subroutine init_euv
      BranchingRatio_N2(NN) = BranchingRatio_N2_to_NPlus(N)
      BranchingRatio_O2(NN) = BranchingRatio_O2_to_OPlus(N)
 
-     ! Since these are the 37 Torr bands, we should put the cross
-     ! sections provided by Steve Bougher here...
-     !  ** I use 80 wavelength centered bins (old scheme). 
-     !    -- last two (79 and 80) : soft xrays (10-50A)
-     !    -- 42-78 bins : Torr 37 wavelength bands or lines (50-1050 A)
-     !    -- 1-41 : some lines (including Lyman-alpha) plus SR bands
-     !              and continuum
-     !---------------------------------------------------------------
-     ! There are differences in the Spectrum!!!  We need to investigate
-     ! this further!!!
-     !---------------------------------------------------------------
-
-     PhotoAbs_CO(NN)  = S2PhotoAbsCO(41+N) * 1.0e-18 / 10000.0
-     PhotoAbs_CO2(NN) = S2PhotoAbsCO2(41+N) * 1.0e-18 / 10000.0
-     PhotoIon_CO(NN)  = S2PhotoIonCO(41+N) * 1.0e-18 / 10000.0
-     PhotoIon_CO2(NN) = S2PhotoIonCO2(41+N) * 1.0e-18 / 10000.0
-
-  enddo
+enddo
 
   ! Convert everything from /cm2 to /m2
 
-  DO N = 1, Num_WaveLengths_High
+     PhotoAbs_O2      = PhotoAbs_O2  / 10000.0
+     PhotoAbs_O       = PhotoAbs_O   / 10000.0
+     PhotoAbs_N2      = PhotoAbs_N2  / 10000.0
+     PhotoAbs_CH4     = PhotoAbs_CH4 / 10000.0
+     PhotoAbs_CO2      = PhotoAbs_CO2        / 10000.0
+     PhotoAbs_CO      = PhotoAbs_CO        / 10000.0
 
-     PhotoAbs_O2(N)      = PhotoAbs_O2(N)  / 10000.0
-     PhotoAbs_O(N)       = PhotoAbs_O(N)   / 10000.0
-     PhotoAbs_N2(N)      = PhotoAbs_N2(N)  / 10000.0
-     PhotoAbs_CH4(N)     = PhotoAbs_CH4(N) / 10000.0
+     PhotoIon_O2      = PhotoIon_O2        / 10000.0
+     PhotoIon_CO2      = PhotoIon_CO2        / 10000.0
+     PhotoIon_CO      = PhotoIon_CO        / 10000.0
+     PhotoIon_OPlus4S = PhotoIon_OPlus4S   / 10000.0
+     PhotoIon_N2      = PhotoIon_N2        / 10000.0
+     PhotoIon_N       = PhotoIon_N         / 10000.0
+     PhotoIon_OPlus2D = PhotoIon_OPlus2D   / 10000.0
+     PhotoIon_OPlus2P = PhotoIon_OPlus2P   / 10000.0
+     
 
-     PhotoIon_O2(N)      = PhotoIon_O2(N)        / 10000.0
-     PhotoIon_OPlus4S(N) = PhotoIon_OPlus4S(N)   / 10000.0
-     PhotoIon_N2(N)      = PhotoIon_N2(N)        / 10000.0
-     PhotoIon_N(N)       = PhotoIon_N(N)         / 10000.0
-     PhotoIon_OPlus2D(N) = PhotoIon_OPlus2D(N)   / 10000.0
-     PhotoIon_OPlus2P(N) = PhotoIon_OPlus2P(N)   / 10000.0
-
-  enddo
 
 !  do n = 1, nS2WaveLengths
 !
@@ -625,8 +616,9 @@ subroutine Set_Euv(iError)
 
   close(iInputUnit_)
   nSeeTimes = iline - 1
-    
+
   if (nSeeTimes .gt. 3) iError = 0
+
 end subroutine Set_Euv
 
 
