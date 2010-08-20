@@ -42,35 +42,32 @@ subroutine crcm_run(delta_t)
   !set boundary density and temperature inside iba
   if (.not. DoMultiFluidGMCoupling) then
      ! When not Multifluid we get the total density from Rho_MHD as follows:
-     ! Rho = (m1n1+m2n2+...) = (m1n1+m2n1*dFactor1+...) = 
-     !     = n1*(m1+sum(m*dfactor))
-     ! n1 = Rho_MHD/(m1+sum(m*dfactor))
-     ! n_total = n1+n2+...= Rho_MHD/(m1+sum(m*dfactor)) * (1+sum(dfactor))
-     ! FactorTotalDens = sum(dfactor)/sum(m*dfactor)
-     FactorTotalDens = sum(dFactor_I(1:nspec-1))&
-          /sum(amu_I(1:nspec-1)*dFactor_I(1:nspec-1))
+     ! Rho = (m1n1+m2n2+...) = n * sum(m_i*dFactor_i)
+     ! where sum(dFactor_i)=1 (over ions) and n_i=dFactor_i*n 
+     ! n_i = dFactor_i*Rho_MHD/(sum(m_i*dFactor_i))
+     ! n_total = Rho_MHD/sum(m_i*dfactor_i)
+     ! FactorTotalDens = sum(m_i*dfactor_i)
+     FactorTotalDens = sum(dFactor_I(1:nspec-1)*amu_I(1:nspec-1))
      do iSpecies = 1, nspec
         do iLon=1,nt
            do iLat=1,irm(iLon) 
               if (iLat < iLatMin) then
                  !Inside MHD boundary set den and temp to value at boundary
                  Den_IC(iSpecies,iLat,iLon) = dFactor_I(iSpecies) * &
-                      StateIntegral_IIV(iLatMin,iLon,AveDens_)
+                      StateIntegral_IIV(iLatMin,iLon,AveDens_)/FactorTotalDens
                  Temp_IC(iSpecies,iLat,iLon) = tFactor_I(iSpecies) * &
-                      StateIntegral_IIV(iLatMin,iLon,AveP_)&
-                      /(StateIntegral_IIV(iLatMin,iLon,AveDens_) &
-                         *FactorTotalDens )       &
+                      StateIntegral_IIV(iLatMin,iLon,AveP_) * FactorTotalDens &
+                      / StateIntegral_IIV(iLatMin,iLon,AveDens_) &
                       * 6.2415e18 !J-->eV
 !                 Den_IC(iSpecies,iLat,iLon) = dFactor_I(iSpecies) * 1.0e6
 !                 Temp_IC(iSpecies,iLat,iLon) = tFactor_I(iSpecies)* 5000.0
               else
                  !Outside MHD boundary set den and temp from MHD
                  Den_IC(iSpecies,iLat,iLon) = dFactor_I(iSpecies) * &
-                      StateIntegral_IIV(iLat,iLon,AveDens_)
+                      StateIntegral_IIV(iLat,iLon,AveDens_)/FactorTotalDens
                  Temp_IC(iSpecies,iLat,iLon) = tFactor_I(iSpecies) * &
-                      StateIntegral_IIV(iLat,iLon,AveP_)&
-                      /(StateIntegral_IIV(iLatMin,iLon,AveDens_) &
-                         *FactorTotalDens )       &                       
+                      StateIntegral_IIV(iLat,iLon,AveP_) * FactorTotalDens &
+                      / StateIntegral_IIV(iLat,iLon,AveDens_) &
                       * 6.2415e18 !J-->eV  
               endif
            end do
@@ -98,7 +95,7 @@ subroutine crcm_run(delta_t)
                       StateIntegral_IIV(iLat,iLon,AveDen_I(iSpecies))
                  Temp_IC(iSpecies,iLat,iLon) = &
                       StateIntegral_IIV(iLat,iLon,AveP_I(iSpecies))&
-                      /(StateIntegral_IIV(iLatMin,iLon,AveDen_I(iSpecies))) &
+                      /(StateIntegral_IIV(iLat,iLon,AveDen_I(iSpecies))) &
                          * 6.2415e18 !J-->eV  
               endif
            end do
@@ -130,24 +127,24 @@ subroutine crcm_run(delta_t)
   endif
 
   ! calculate boundary flux (fb) at the CRCM outer boundary at the equator
-  call boundary(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
+  call boundaryIM(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
   
   ! calculate the drift velocity
   call driftV(nspec,np,nt,nm,nk,irm,re_m,Hiono,dipmom,dphi,xlat, &
        dlat,ekev,pot,vl,vp) 
   
   ! calculate the depreciation factor, achar, due to charge exchange loss
-  call cepara(nspec,np,nt,nm,nk,irm,dt,vel,ekev,Have,achar)
+  call ceparaIM(nspec,np,nt,nm,nk,irm,dt,vel,ekev,Have,achar)
   
   ! Calculate the strong diffusion lifetime for electrons
   call StDiTime(dt,vel,ftv,rc,re_m,dipmom,iba)
 
   ! time loop
   do n=1,nstep
-     call drift(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
+     call driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
           fb,f2,ib0)
-     call charexchange(np,nt,nm,nk,nspec,iba,achar,f2)
-     call losscone(np,nt,nm,nk,nspec,iba,alscone,f2)
+     call charexchangeIM(np,nt,nm,nk,nspec,iba,achar,f2)
+     call lossconeIM(np,nt,nm,nk,nspec,iba,alscone,f2)
      call StrongDiff(iba)                               
      Time = Time+dt
  enddo
@@ -305,7 +302,7 @@ end subroutine initial_f2
 
 
 !-------------------------------------------------------------------------------
-subroutine boundary(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
+subroutine boundaryIM(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
   !-----------------------------------------------------------------------------
   ! Routine setup the boundary distribution for the CRCM. Distribution at the
   ! boundary is assumed to be Maxwellian. Boundary temperature and density are
@@ -338,11 +335,11 @@ subroutine boundary(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
      enddo
   enddo
 
-end subroutine boundary
+end subroutine boundaryIM
 
 
 !-------------------------------------------------------------------------------
-subroutine cepara(nspec,np,nt,nm,nk,irm,dt,vel,ekev,Have,achar)
+subroutine ceparaIM(nspec,np,nt,nm,nk,irm,dt,vel,ekev,Have,achar)
   !-----------------------------------------------------------------------------
   ! Routine calculates the depreciation factor of H+, achar, due to charge
   ! exchange loss
@@ -375,7 +372,7 @@ subroutine cepara(nspec,np,nt,nm,nk,irm,dt,vel,ekev,Have,achar)
      enddo
   enddo
 
-end subroutine cepara
+end subroutine ceparaIM
 
 
 !-------------------------------------------------------------------------------
@@ -461,7 +458,7 @@ end subroutine driftV
 
 
 !-------------------------------------------------------------------------------
-subroutine drift(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
+subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
      fb,f2,ib0)
   !-----------------------------------------------------------------------------
   ! Routine updates f2 due to drift
@@ -537,7 +534,7 @@ subroutine drift(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
                           f2d(i,j)=0.
                        else
                           write(*,*)' f2d < 0 in drift ',n,i,j,k,m
-                          stop
+                          call CON_STOP('CRCM dies in driftIM')
                        endif
                     endif
                  enddo
@@ -552,11 +549,11 @@ subroutine drift(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
   ! Update ib0
   ib0(1:nt)=iba(1:nt)
 
-end subroutine drift
+end subroutine driftIM
 
 
 !-------------------------------------------------------------------------------
-subroutine charexchange(np,nt,nm,nk,nspec,iba,achar,f2)
+subroutine charexchangeIM(np,nt,nm,nk,nspec,iba,achar,f2)
   !-----------------------------------------------------------------------------
   ! Routine updates f2 due to charge exchange loss
   !
@@ -576,7 +573,7 @@ subroutine charexchange(np,nt,nm,nk,nspec,iba,achar,f2)
      enddo
   enddo
  
-end subroutine charexchange
+end subroutine charexchangeIM
 
 !******************************************************************************
 !                                StDiTime                                      
@@ -641,9 +638,9 @@ end subroutine StrongDiff
 
 
 !-------------------------------------------------------------------------------
-subroutine losscone(np,nt,nm,nk,nspec,iba,alscone,f2)
+subroutine lossconeIM(np,nt,nm,nk,nspec,iba,alscone,f2)
   !-----------------------------------------------------------------------------
-  ! Routine calculate the change of f2 due to losscone loss
+  ! Routine calculate the change of f2 due to lossconeIM loss
   ! 
   ! Input: np,nt,nm,nk,nspec,iba,alscone
   ! Input/Output: f2
@@ -666,7 +663,7 @@ subroutine losscone(np,nt,nm,nk,nspec,iba,alscone,f2)
      enddo
   enddo
 
-end subroutine losscone
+end subroutine lossconeIM
 
 
 !-------------------------------------------------------------------------------
@@ -739,7 +736,7 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
 !!!! Map flux to fixed energy and pitch-angle grids (energy, sinAo)
            do k=1,neng
               do m=1,npit
-                 call lintp2a(ekev2D,sinA1D,flux2D,nm,nk,aloge(k),sinAo(m),flx_lo)
+                 call lintp2aIM(ekev2D,sinA1D,flux2D,nm,nk,aloge(k),sinAo(m),flx_lo)
                  flux(n,i,j,k,m)=10.**flx_lo
               enddo
            enddo
@@ -947,7 +944,7 @@ end subroutine FLS_2D
 
 
 !-------------------------------------------------------------------------------
-subroutine lintp2a(x,y,v,nx,ny,x1,y1,v1)
+subroutine lintp2aIM(x,y,v,nx,ny,x1,y1,v1)
   !-----------------------------------------------------------------------------
   !  This sub program takes 2-d interplation. x is 2-D and y is 1-D.
   !
@@ -960,7 +957,7 @@ subroutine lintp2a(x,y,v,nx,ny,x1,y1,v1)
   real x(nx,ny),y(ny),v(nx,ny),x1,y1,v1,a,a1,b,x1d(1000)   ! max(nx)=1000
   real q00,q01,q10,q11
 
-  call locate1(y,ny,y1,j)
+  call locate1IM(y,ny,y1,j)
   j1=j+1
   if (j.eq.0.or.j1.gt.ny) then
      b=1.
@@ -971,7 +968,7 @@ subroutine lintp2a(x,y,v,nx,ny,x1,y1,v1)
   endif
 
   x1d(1:nx)=x(1:nx,j)
-  call locate1(x1d,nx,x1,i)
+  call locate1IM(x1d,nx,x1,i)
   i1=i+1
   if (i.eq.0.or.i1.gt.nx) then
      a=1.
@@ -982,7 +979,7 @@ subroutine lintp2a(x,y,v,nx,ny,x1,y1,v1)
   endif
 
   x1d(1:nx)=x(1:nx,j1)
-  call locate1(x1d,nx,x1,i2)
+  call locate1IM(x1d,nx,x1,i2)
   i3=i2+1
   if (i2.eq.0.or.i3.gt.nx) then
      a1=1.
@@ -998,11 +995,11 @@ subroutine lintp2a(x,y,v,nx,ny,x1,y1,v1)
   q11=a1*b
   v1=q00*v(i,j)+q01*v(i2,j1)+q10*v(i1,j)+q11*v(i3,j1)
 
-end subroutine lintp2a
+end subroutine lintp2aIM
 
 
 !--------------------------------------------------------------------------
-subroutine locate1(xx,n,x,j)
+subroutine locate1IM(xx,n,x,j)
   !--------------------------------------------------------------------------
   !  Routine return a value of j such that x is between xx(j) and xx(j+1).
   !  xx must be increasing or decreasing monotonically.
@@ -1024,14 +1021,14 @@ subroutine locate1(xx,n,x,j)
   ! Make sure xx is increasing or decreasing monotonically
   do i=2,n
      if (xx(n).gt.xx(1).and.xx(i).lt.xx(i-1)) then
-        write(*,*) ' locate1: xx is not increasing monotonically '
+        write(*,*) ' locate1IM: xx is not increasing monotonically '
         write(*,*) n, (xx(j),j=1,n)
-        stop
+        call CON_STOP('CRCM stopped in locate1IM')
      endif
      if (xx(n).lt.xx(1).and.xx(i).gt.xx(i-1)) then
-        write(*,*) ' locate1: xx is not decreasing monotonically '
+        write(*,*) ' locate1IM: xx is not decreasing monotonically '
         write(*,*) ' n, xx  ',n,xx
-        stop
+        call CON_STOP('CRCM stopped in locate1IM')
      endif
   enddo
 
@@ -1048,7 +1045,7 @@ subroutine locate1(xx,n,x,j)
   end do test
   j=jl
 
-end subroutine locate1
+end subroutine locate1IM
 
 
 !Old CLOSED SUBROUTINE
