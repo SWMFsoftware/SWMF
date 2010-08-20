@@ -20,7 +20,7 @@ Module ModCrcmPlanet
 
 
   !set density and temp factor
-  real, dimension(nspec) :: dFactor_I =(/1.0,0.25,1.0/)
+  real, dimension(nspec) :: dFactor_I =(/0.85,0.15,1.0/)
   real, dimension(nspec) :: tFactor_I =(/1.0,1.0,0.128205/)
 
   !set plot parameters
