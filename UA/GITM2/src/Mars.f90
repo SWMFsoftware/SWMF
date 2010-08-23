@@ -796,7 +796,8 @@ end subroutine init_isochem
      use ModTime
 
      integer, parameter :: NLAY=nAlts
-     real, parameter :: KAP = 0.000025
+!    real, parameter :: KAP = 0.000025
+     real, parameter :: KAP = 0.0000025
      !  declare  GWAccel  for compilation testing purposes only; this will
      !  be commented out when the  Mod..  files are available
 
@@ -815,7 +816,8 @@ end subroutine init_isochem
      PSFC = 400.0
      RCO2 = 189.0
      VAR  = 400.0**2
-     cpco2=3.5*RGAS*AMU/Mass(iCO2_)
+!    cpco2=3.5*RGAS*AMU/Mass(iCO2_)
+     cpco2=3.5*RGAS*1.0E-07*AMU/Mass(iCO2_)*1000.
 
      !   MAIN DO LOOPS... OVER LONGITUDE AND LATITUDE
      GWAccel(:,:,:,:) = 0.0
@@ -1164,8 +1166,8 @@ end subroutine init_isochem
      !  Set all GWAccel values to zero.. so there will be
      ! no effect upon the zonal wind speed, but all components
      ! of this subroutine will have been exercised
-!     GWAccel = 0.0
-write(*,*) GWAccel(1,1,:,1)
+      GWAccel = 0.0
+!     write(*,*) GWAccel(1,1,:,1)
    END subroutine CALC_GW
 
   !---------------------------------------------------------+
