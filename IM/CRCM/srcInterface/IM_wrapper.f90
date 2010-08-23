@@ -402,16 +402,15 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   !Fill pressure and density
   do i=1,iSize; do j=1,jSize
-     if(.not.DoMultiFluidGMCoupling)then
-        if( i<iLatMin .or.  i > iba(j) ) then
-           Buffer_IIV(i,j,pres_) = -1.
-           Buffer_IIV(i,j,dens_) = -1.
-        else
-           Buffer_IIV(i,j,pres_) = sum(Pressure_IC(:,i,j))
-           Buffer_IIV(i,j,dens_) = &
-                sum(Den_IC (1:nspec-1,i,j)*cProtonMass*amu_I(1:nspec-1))
-        end if
+     if( i<iLatMin .or.  i > iba(j) ) then
+        Buffer_IIV(i,j,pres_) = -1.
+        Buffer_IIV(i,j,dens_) = -1.
      else
+        Buffer_IIV(i,j,pres_) = sum(Pressure_IC(:,i,j))
+        Buffer_IIV(i,j,dens_) = &
+             sum(Den_IC (1:nspec-1,i,j)*cProtonMass*amu_I(1:nspec-1))
+     end if
+     if(DoMultiFluidGMCoupling)then
         !  Multifluid case
         if( i<iLatMin .or.  i > iba(j)) then
            Buffer_IIV(i,j,Hpres_) = -1.
@@ -425,7 +424,7 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
            Buffer_IIV(i,j,Opres_) = Pressure_IC(2,i,j)
            Buffer_IIV(i,j,Odens_) = &
                 Den_IC (2,i,j)*cProtonMass*amu_I(2)
-
+           
 !           Buffer_IIV(i,j,Hpres_) = Buffer_IIV(i,j,Hpres_) + &
 !                vm(i,j)**2.5*eeta(i,j,k)*ABS(alamc(k))
 !           Buffer_IIV(i,j,Hdens_) = Buffer_IIV(i,j,Hdens_) + &
