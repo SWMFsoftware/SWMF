@@ -179,7 +179,7 @@ subroutine crcm_init
   implicit none
 
   integer i,n,k
-  real xlat_data(0:np+1)
+  
   real rw,rsi,rs1
   real xjac1,sqrtm
 
@@ -187,13 +187,6 @@ subroutine crcm_init
   re_m = rPlanet_I(Earth_)                            ! earth's radius (m)
   dipmom=abs(DipoleStrengthPlanet_I(Earth_)*re_m**3)  ! earth's dipole moment
   
-
-  xlat_data=(/11.812,13.777,15.742,17.705,19.665,21.622,23.576,25.527,27.473, &
-       29.414,31.350,33.279,35.200,37.112,39.012,40.897,42.763,44.604, &
-       46.409,48.163,49.837,51.382,52.725,53.823,54.720,55.488,56.175, &
-       56.812,57.413,57.990,58.547,59.090,59.622,60.144,60.659,61.168, &
-       61.671,62.170,62.666,63.159,63.649,64.137,64.624,65.109,65.593, &
-       66.077,66.560,67.043,67.526,68.009,68.492,68.975,69.458/)
 
   ! CRCM xlat and xmlt grids
   do i=1,np

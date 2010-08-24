@@ -15,8 +15,13 @@ my $MakefilePlanet = "Makefile.planet";
 my $Planet;
 my $NewPlanet;
 
-# Make sure that Makefile.planet exists
+#Grid variables
+my $MakefileGrid = "Makefile.grid";
+my $Grid;
+my $NewGrid;
+# Make sure that Makefile.planet and Makefile.grid exists
 `touch $MakefilePlanet`;
+`touch $MakefileGrid`;
 
 
 my $config = "share/Scripts/Config.pl";
@@ -29,11 +34,14 @@ if(-f $config){
 &print_help if $Help;
 
 # Select planet: Current choices are Earth with  H+,O+,He+,e or H+,O+,e, or H+,e
+# Select Grid:   Current choices are default and expanded
 # More planet configurations will be added in future
 foreach (@Arguments){
     if(/^-earthhohe$/i)         {$NewPlanet="EarthHOHe";           next};
     if(/^-earthho$/i)           {$NewPlanet="EarthHO";             next};
     if(/^-earthh$/i)            {$NewPlanet="EarthH";              next};
+    if(/^-griddefault$/i)       {$NewGrid="GridDefault";           next};
+    if(/^-gridexpanded$/i)      {$NewGrid="GridExpanded";          next};
     if(/^-s$/)                  {$Show=1;                          next};
 
 
@@ -42,6 +50,8 @@ foreach (@Arguments){
 &get_settings;
 
 &set_planet if $NewPlanet and $NewPlanet ne $Planet;
+
+&set_grid   if $NewGrid and $NewGrid ne $Grid;
 
 &show_settings if $Show; 
 
@@ -56,6 +66,17 @@ sub get_settings{
     while(<FILE>){
         if(/\s*PLANET\s*=\s*(\w+)/){
 	    $Planet=$1;
+	    last;
+	}
+    }
+    close FILE;
+
+    open(FILE, $MakefileGrid) or 
+	die "$ERROR could not open $MakefilePlanet\n";
+
+    while(<FILE>){
+	if(/\s*Grid\s*=\s*(\w+)/){
+	    $Grid=$1;
 	    last;
 	}
     }
@@ -82,10 +103,27 @@ sub set_planet{
 
     &shell_command("echo PLANET=$NewPlanet > Makefile.planet");
 }
+#############################################################################
+
+sub set_grid{
+    my $Files;
+    $Grid = $NewGrid;
+
+    my $Dir = "src";
+    die "Directory $Dir is missing\n" unless -d $Dir;
+
+    $Files .= " $Dir/ModGrid_default.f90"   if $Grid eq "GridDefault";
+    $Files .= " $Dir/ModGrid_expanded.f90"  if $Grid eq "GridExpanded";
+
+    &shell_command("cp $Files src/ModGrid.f90");
+
+    &shell_command("echo Grid=$NewGrid > Makefile.grid");
+}
 ############################################################################
 
 sub show_settings{
     print "Planet=$Planet\n";
+    print "Grid=$Grid\n";
 }
 
 ############################################################################
@@ -99,6 +137,9 @@ sub print_help{
 
 -EarthH          Configure CRCM for Earth with H+,e. 
 
+-GridDefault     Configure CRCM with the default grid
+
+-GridExpanded    Configure CRCM with a grid expanded to higher lat
 
 These flags are case insensitive.
 
