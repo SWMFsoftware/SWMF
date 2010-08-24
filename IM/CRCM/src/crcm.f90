@@ -466,8 +466,8 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
   real dt,dlat(np),dphi,brad(np,nt),vl(nspec,0:np,nt,nm,nk),vp(nspec,np,nt,nm,nk)
   real rb,fb(nspec,nt,nm,nk),f2(nspec,np,nt,nm,nk)
   real f2d(np,nt),cmax,cl1,cp1,cmx,dt1,fb0(nt),fb1(nt),fo_log,fb_log,f_log
-  real slope,cl(np,nt),cp(np,nt),fal(0:np,nt),fap(np,nt)
-
+  real slope,cl(np,nt),cp(np,nt),fal(0:np,nt),fap(np,nt),fupl(0:np,nt),fupp(np,nt)
+  logical :: UseUpwind=.false.
   nloop: do n=1,nspec
      mloop: do m=1,nk
         kloop: do k=1,iw2(m)
@@ -513,12 +513,13 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
 
            ! run drift nrun times
            do nn=1,nrun
-              call FLS_2D(np,nt,iba,fb0,fb1,cl,cp,f2d,fal,fap)
+              UseUpwind=.false.
+              call FLS_2D(np,nt,iba,fb0,fb1,cl,cp,f2d,fal,fap,fupl,fupp)
               fal(0,1:nt)=f2d(1,1:nt)
-              do j=1,nt
+              jloop: do j=1,nt
                  j_1=j-1
                  if (j_1.lt.1) j_1=j_1+nt
-                 do i=1,iba(j)
+                 iloop: do i=1,iba(j)
                     f2d(i,j)=f2d(i,j)+dt1/dlat(i)* &
                          (vl(n,i-1,j,k,m)*fal(i-1,j)-vl(n,i,j,k,m)*fal(i,j))+ &
                          cp(i,j_1)*fap(i,j_1)-cp(i,j)*fap(i,j)
@@ -526,19 +527,41 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
                        if (f2d(i,j).gt.-1.e-30) then
                           f2d(i,j)=0.
                        else
-                          write(*,*)' f2d < 0 in drift ',n,i,j,k,m
-                          call CON_STOP('CRCM dies in driftIM')
+                          write(*,*)'IM WARNING: f2d < 0 in drift ',n,i,j,k,m
+                          write(*,*)'IM WARNING: Retrying step with upwind scheme'
+                          UseUpwind=.true.
+                          exit jloop
                        endif
                     endif
+                 enddo iloop
+              enddo jloop
+              ! When regular scheme fails, try again with upwind scheme before 
+              ! returning an error
+              if (UseUpwind) then
+                 fupl(0,1:nt)=f2d(1,1:nt)
+                 do j=1,nt
+                    j_1=j-1
+                    if (j_1.lt.1) j_1=j_1+nt
+                    do i=1,iba(j)
+                       f2d(i,j)=f2d(i,j)+dt1/dlat(i)* &
+                        (vl(n,i-1,j,k,m)*fupl(i-1,j)-vl(n,i,j,k,m)*fupl(i,j))+ &
+                        cp(i,j_1)*fupp(i,j_1)-cp(i,j)*fupp(i,j)
+                       if (f2d(i,j).lt.0.) then
+                          if (f2d(i,j).gt.-1.e-30) then
+                             f2d(i,j)=0.
+                          else
+                             write(*,*)'IM ERROR: f2d < 0 in drift ',n,i,j,k,m
+                             call CON_STOP('CRCM dies in driftIM')
+                          endif
+                       endif
+                    enddo
                  enddo
-              enddo
+              endif
            enddo
            f2(n,1:np,1:nt,k,m)=f2d(1:np,1:nt)
-
         enddo kloop
      enddo mloop
   enddo nloop
-
   ! Update ib0
   ib0(1:nt)=iba(1:nt)
 
@@ -787,8 +810,8 @@ end subroutine crcm_output
 
 
 !-------------------------------------------------------------------------------
-subroutine FLS_2D(np,nt,iba,fb0,fb1,cl,cp,f2d,fal,fap)
-  !-------------------------------------------------------------------------------
+subroutine FLS_2D(np,nt,iba,fb0,fb1,cl,cp,f2d,fal,fap,fupl,fupp)
+!-------------------------------------------------------------------------------
   !  Routine calculates the inter-flux, fal(i+0.5,j) and fap(i,j+0.5), using
   !  2nd order flux limited scheme with super-bee flux limiter method
   !
@@ -802,6 +825,7 @@ subroutine FLS_2D(np,nt,iba,fb0,fb1,cl,cp,f2d,fal,fap)
   real cl(np,nt),cp(np,nt),f2d(np,nt),fal(0:np,nt),fap(np,nt),fwbc(0:np+2,nt)
   real fb0(nt),fb1(nt),x,fup,flw,xsign,corr,xlimiter,r
 
+  real,intent(out) :: fupl(0:np,nt), fupp(np,nt)
   fwbc(1:np,1:nt)=f2d(1:np,1:nt)        ! fwbc is f2d with boundary condition
 
   ! Set up boundary condition
@@ -822,42 +846,42 @@ subroutine FLS_2D(np,nt,iba,fb0,fb1,cl,cp,f2d,fal,fap)
      iloop: do i=1,np
         ! find fal
         xsign=sign(1.,cl(i,j))
-        fup=0.5*(1.+xsign)*fwbc(i,j)+0.5*(1.-xsign)*fwbc(i+1,j)       ! upwind
+        fupl(i,j)=0.5*(1.+xsign)*fwbc(i,j)+0.5*(1.-xsign)*fwbc(i+1,j) ! upwind
         flw=0.5*(1.+cl(i,j))*fwbc(i,j)+0.5*(1.-cl(i,j))*fwbc(i+1,j)   ! LW
         x=fwbc(i+1,j)-fwbc(i,j)
-        if (abs(x).le.1.e-27) fal(i,j)=fup
+        if (abs(x).le.1.e-27) fal(i,j)=fupl(i,j)
         if (abs(x).gt.1.e-27) then
            if (xsign.eq.1.) r=(fwbc(i,j)-fwbc(i-1,j))/x
            if (xsign.eq.-1.) r=(fwbc(i+2,j)-fwbc(i+1,j))/x
-           if (r.le.0.) fal(i,j)=fup
+           if (r.le.0.) fal(i,j)=fupl(i,j)
            if (r.gt.0.) then
               if(UseMcLimiter)then
                  xlimiter = min(BetaLimiter*r, BetaLimiter, 0.5*(1+r))
               else
                  xlimiter = max(min(2.*r,1.),min(r,2.))
               end if
-              corr=flw-fup
-              fal(i,j)=fup+xlimiter*corr
+              corr=flw-fupl(i,j)
+              fal(i,j)=fupl(i,j)+xlimiter*corr
            endif
         endif
         ! find fap
         xsign=sign(1.,cp(i,j))
-        fup=0.5*(1.+xsign)*fwbc(i,j)+0.5*(1.-xsign)*fwbc(i,j1)   ! upwind
+        fupp(i,j)=0.5*(1.+xsign)*fwbc(i,j)+0.5*(1.-xsign)*fwbc(i,j1) ! upwind
         flw=0.5*(1.+cp(i,j))*fwbc(i,j)+0.5*(1.-cp(i,j))*fwbc(i,j1)   ! LW
         x=fwbc(i,j1)-fwbc(i,j)
-        if (abs(x).le.1.e-27) fap(i,j)=fup
+        if (abs(x).le.1.e-27) fap(i,j)=fupp(i,j)
         if (abs(x).gt.1.e-27) then
            if (xsign.eq.1.) r=(fwbc(i,j)-fwbc(i,j_1))/x
            if (xsign.eq.-1.) r=(fwbc(i,j2)-fwbc(i,j1))/x
-           if (r.le.0.) fap(i,j)=fup
+           if (r.le.0.) fap(i,j)=fupp(i,j)
            if (r.gt.0.) then
               if(UseMcLimiter)then
                  xlimiter = min(BetaLimiter*r, BetaLimiter, 0.5*(1+r))
               else
                  xlimiter = max(min(2.*r,1.),min(r,2.))
               end if
-              corr=flw-fup
-              fap(i,j)=fup+xlimiter*corr
+              corr=flw-fupp(i,j)
+              fap(i,j)=fupp(i,j)+xlimiter*corr
            endif
         endif
      enddo iloop
