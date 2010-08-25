@@ -5,7 +5,7 @@ Module ModCrcmGrid
   integer,parameter :: np1=76,nt1=48,neng1=12,npit1=12!,nspec1=1  
   integer,parameter :: nm=35,nk=28 ! dimension of CRCM magnetic moment and K
 
-  integer,parameter :: np=78    ! dimension of the CRCM latitude grid
+  integer,parameter :: np=76    ! dimension of the CRCM latitude grid
   integer,parameter :: nt=48    ! dimension of the CRCM local-time grid
   integer,parameter :: neng=12  ! dimension of the CRCM energy grid
   integer,parameter :: npit=12  ! dimension of the CRCM pitch-angle grid
@@ -14,7 +14,7 @@ Module ModCrcmGrid
   real:: xlat(np) = 0.0, phi(nt1)=0.0
 
 
-  real, parameter,dimension(0:77) :: xlat_data=(/ &
+  real, parameter :: xlat_data(0:77)=(/ &
        9.8403398252184129, 11.8094287214197298, 13.7766188250317825, &
 15.7417393813253206, 17.7045308431118862, 19.6647678141488633, 21.6221087849777582, &
 23.5762054159508949, 25.5266205749613988, 27.4728078468756607, 29.4141730052358952, &
