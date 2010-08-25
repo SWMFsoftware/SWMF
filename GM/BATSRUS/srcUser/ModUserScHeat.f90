@@ -556,10 +556,7 @@ contains
        if(UseHeatFluxInBernoulli)then
           HeatFluxSi = HeatFlux*No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
        else
-          ! Assume vanishing electron thermal conductive flux
-          dTedr = -(2.0/7.0)*Tbase/rBody
-          HeatFluxSi = -HeatCondPar*Tbase**2.5*dTedr &
-               *No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
+          HeatFluxSi = 0.0
        end if
 
        !v_\infty from WSA model:
