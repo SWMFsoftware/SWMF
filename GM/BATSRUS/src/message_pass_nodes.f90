@@ -943,10 +943,11 @@ subroutine assign_node_numbers
 
   integer, parameter :: NodesPerBlock=(nI+1)*(nJ+1)*(nK+1)
   integer :: iBlockStart
-  integer :: i, j, k, iNode, iBLK, iError
+  integer :: i, j, k, iNode, iBLK, iError, iPE
   integer :: nOffset, nOffsetPrevious
   integer, allocatable, dimension(:) :: NodeOffset, NodeOffsetMax, nOffset_P
-  logical :: boundary
+  logical :: boundary, DoAllReduce=.true.
+  integer :: iStatus(MPI_STATUS_SIZE)
 
   !------------------------------------------
 
@@ -1052,11 +1053,27 @@ subroutine assign_node_numbers
      end do; end do; end do
   end do
 
-  ! Gather offsets from all PE-s. NodeOffset is initialized to 0.
-  call MPI_allreduce(NodeOffset,NodeOffsetMax,nBlockALL*NodesPerBlock, &
-       MPI_INTEGER,MPI_MAX,iComm,iError)
-  NodeOffset = NodeOffsetMax
-  nNodeALL   = nNodeALL - sum(nOffset_P)
+  ! Gather offsets from all PE-s. NodeOffset was initialized to 0 so MPI_MAX works.
+  if(DoAllReduce)then
+     call MPI_allreduce(NodeOffset,NodeOffsetMax,nBlockALL*NodesPerBlock, &
+          MPI_INTEGER,MPI_MAX,iComm,iError)
+     NodeOffset = NodeOffsetMax
+     nNodeALL   = nNodeALL - sum(nOffset_P)
+  else
+     if(iProc == 0) then
+        do iPE=1,nProc-1
+           itag = iPE
+           call MPI_recv(NodeOffsetMax,nBlockALL*NodesPerBlock, &
+                MPI_INTEGER,iPE,itag,iComm,iStatus,iError)
+           NodeOffset = max(NodeOffset,NodeOffsetMax)
+        end do
+     else
+        itag = iProc
+        call MPI_send(NodeOffset,nBlockALL*NodesPerBlock, &
+             MPI_INTEGER,0,itag,iComm,iError)
+     end if
+     call MPI_Bcast(NodeOffset,nBlockALL*NodesPerBlock,MPI_Integer,0,iComm,iError)
+  end if
 
   ! Loop to fix NodeNumberGlobal_NB for offset
   TREE3: do iBlk  = 1, nBlock
