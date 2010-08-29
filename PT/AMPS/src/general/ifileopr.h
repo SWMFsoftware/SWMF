@@ -28,7 +28,7 @@ public:
     line=-1;
   };
 
-  FILE* openfile(char* ifile) {
+  FILE* openfile(const char* ifile) {
     sprintf(fname,"%s",ifile); 
     line=0;
     if ((fd=fopen(ifile,"r"))==NULL) {
@@ -107,6 +107,8 @@ public:
   bool GetInputStr(char* str,long int n){
     int i,j;
 
+    str[0]='\0';
+
     if (!feof(fd)) do {
       line++;
       fgets(str,n,fd);
@@ -118,7 +120,7 @@ public:
       for (i=0;str[i]!='\0';i++) if ((str[i]=='!')||(str[i]=='\r')) str[i]='\0';
     } while ((str[0]=='\0')&&(!feof(fd)));
 
-    if (feof(fd)!=0) {
+    if (str[0]=='\0') {
       str[0]='\0',init_str[0]='\0';   
       return false; 
     }
