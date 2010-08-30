@@ -493,6 +493,10 @@ subroutine MAGCONV(I3,NST)
 real :: ISS
 
   !---------------------------------------------------------------------  
+ 
+ ! Initialize the field aligned current
+ Jfac = 0.0
+
 
   PHIPOFF=0.
   DP1=.4*PI
