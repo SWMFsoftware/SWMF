@@ -202,6 +202,7 @@ contains
           write(NameVar, "(a, i2.2)") trim(NameVar) // ' p', i
        end do
     end if
+
     ! Allocate arrays with a shape that is convenient for saving data
     allocate(Coord_ID(n1*n2*n3,nDim), Var_IV(n1*n2*n3,nVar))
 
@@ -244,7 +245,7 @@ contains
           if(present(VarIn_IIIV)) Var_IV(n,iVar) = VarIn_IIIV(i,j,k,iVar)
        end do; end do; end do; 
     end do
-   
+
     ! Check if all variables were set
     if(any(Var_IV == huge(1.0))) call CON_stop(NameSub // & 
          ' variables were not defined')
@@ -297,11 +298,12 @@ contains
        write(UnitTmp_) n_D(1:nDim)
        write(UnitTmp_) real(Param_I, Real4_)
        write(UnitTmp_) NameVar
-       write(UnitTmp_) real(Coord_ID, Real4_)
-       ! write out variables 1 by 1 to avoid segmentation fault 
-       ! for very large Var_IV array
+       ! Use implied loops instead of array syntax to avoid segmentation fault
+       ! on some machines
+       write(UnitTmp_) &
+            ((real(Coord_ID(n,iDim), Real4_), n=1,n1*n2*n3), iDim=1,nDim)
        do iVar = 1, nVar
-          write(UnitTmp_) real(Var_IV(:,iVar), Real4_)
+          write(UnitTmp_) (real(Var_IV(n,iVar), Real4_), n=1,n1*n2*n3)
        end do
 
     case default
