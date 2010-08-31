@@ -929,120 +929,100 @@ contains
 
        ! Find number of types and allocate arrays
        nType = maxval(iTypeNode_A, MASK=iTree_IA(Status_,:)>=Used_)
+    else
+       nType = 1
+    end if
 
-       ! Allocate load balance tables: 
-       ! number of blocks per type and per processor and type
-       allocate(&
-            iNodeType_I(nType), nNodeType_I(nType), &
-            iProcType_I(nType), iBlock_P(0:nProc-1), &
-            nBlockType_PI(0:nProc-1,nType))
+    ! Allocate load balance tables: 
+    ! number of blocks per type and per processor and type
+    allocate(&
+         iNodeType_I(nType), nNodeType_I(nType), &
+         iProcType_I(nType), iBlock_P(0:nProc-1), &
+         nBlockType_PI(0:nProc-1,nType))
 
-       ! Initialize number of type, counter, processor index and block index
-       ! for various node types
-       nNodeType_I = 0
-       iNodeType_I = 0
-       iProcType_I = 0
-       iBlock_P    = 0
+    ! Initialize number of type, counter, processor index and block index
+    ! for various node types
+    nNodeType_I = 0
+    iNodeType_I = 0
+    iProcType_I = 0
+    iBlock_P    = 0
 
+    if(present(iTypeNode_A))then
        ! Count number of nodes for each type. 
        do iNode = 1, nNode
           if(iTree_IA(Status_,iNode)<=0) CYCLE
           iType = iTypeNode_A(iNode)
           if(iType > 0) nNodeType_I(iType) = nNodeType_I(iType) + 1
        end do
-
-       ! write(*,*)'nType, nNodeType_I=', nType, nNodeType_I
-
-       ! Construct load balance table for various types
-       do iType = 1, nType
-          ! minimum number of blocks of type iType for each processor
-          nBlockType_PI(:,iType) = nNodeType_I(iType)/nProc
-
-          ! The processors with extra blocks are filled in 
-          ! from nProc-1 backwards
-          iProcStart = nProc - modulo(sum(nNodeType_I(1:iType)),nProc)
-          iProcStop  = iProcStart + modulo(nNodeType_I(iType),nProc) - 1
-          do iProcExtraBlock = iProcStart, iProcStop
-             iProcTo = modulo(iProcExtraBlock,nProc)
-             nBlockType_PI(iProcTo,iType) = nBlockType_PI(iProcTo,iType) + 1
-          end do
-
-          ! convert nBlockType_PI to cummulative load table for easier use
-          do iProcTo = 1, nProc-1
-             nBlockType_PI(iProcTo,iType) = nBlockType_PI(iProcTo,iType) &
-                  + nBlockType_PI(iProcTo-1,iType)
-          end do
-
-          ! write(*,*)'iType, nBlockType_PI=', iType, nBlockType_PI
-       end do
-
-       ! Distribute the nodes over the processors
-       do iMorton = 1, nNodeUsed
-
-          ! Get the node index and type
-          iNode = iNodeMorton_I(iMorton)
-          iType = iTypeNode_A(iNode)
-
-          ! Increase the index for this node type
-          iNodeType_I(iType) = iNodeType_I(iType) + 1
-
-          ! Select target processor. 
-          ! Use iProcType_I to remember last proc. used for the given type
-          do iProcTo = iProcType_I(iType), nProc-1
-             if(iNodeType_I(iType) <= nBlockType_PI(iProcTo,iType))then
-                iProcType_I(iType) = iProcTo
-                EXIT
-             end if
-          end do
-
-          ! Assign future processor index for node
-          iProcNew_A(iNode) = iProcTo
-
-          if(DoMove)then
-             ! Assign block index right away
-             iBlock_P(iProcTo) = iBlock_P(iProcTo) + 1
-             iBlockTo = iBlock_P(iProcTo)
-             iTree_IA(Block_,iNode) = iBlockTo
-             Unused_BP(iBlockTo,iProcTo) = .false.
-          end if
-
-       end do
-
-       ! write(*,*)'iProcNew_A=', iProcNew_A(1:nNode)
-
-       deallocate(iNodeType_I, nNodeType_I, iProcType_I, iBlock_P, &
-            nBlockType_PI)
-
     else
-
-       ! An upper estimate on the number of nodes per processor
-       nNodePerProc = (nNodeUsed-1)/nProc + 1
-
-       do iMorton = 1, nNodeUsed
-          iNode = iNodeMorton_I(iMorton)
-
-          iProcTo  = (iMorton-1)/nNodePerProc
-
-          ! Assign future processor index for node
-          iProcNew_A(iNode) = iProcTo
-
-          if(DoMove)then
-             ! Assign block index right away
-             iBlockTo = modulo(iMorton-1, nNodePerProc) + 1
-
-             if(iBlockTo > MaxBlock)then
-                write(*,*) NameSub,': nNodeUsed, nNodePerProc=',&
-                     nNodeUsed, nNodePerProc
-                write(*,*) NameSub,': iBlockTo, MaxBlock=',iBlockTo, MaxBlock
-                call CON_stop(NameSub//' ERROR: iBlockTo > MaxBlock')
-             end if
-
-             iTree_IA(Block_,iNode) = iBlockTo
-             Unused_BP(iBlockTo,iProcTo) = .false.
-          end if
-
-       end do
+       nNodeType_I(1) = nNodeUsed
     end if
+
+    ! write(*,*)'nType, nNodeType_I=', nType, nNodeType_I
+
+    ! Construct load balance table for various types
+    do iType = 1, nType
+       ! minimum number of blocks of type iType for each processor
+       nBlockType_PI(:,iType) = nNodeType_I(iType)/nProc
+
+       ! The processors with extra blocks are filled in 
+       ! from nProc-1 backwards
+       iProcStart = nProc - modulo(sum(nNodeType_I(1:iType)),nProc)
+       iProcStop  = iProcStart + modulo(nNodeType_I(iType),nProc) - 1
+       do iProcExtraBlock = iProcStart, iProcStop
+          iProcTo = modulo(iProcExtraBlock,nProc)
+          nBlockType_PI(iProcTo,iType) = nBlockType_PI(iProcTo,iType) + 1
+       end do
+
+       ! convert nBlockType_PI to cummulative load table for easier use
+       do iProcTo = 1, nProc-1
+          nBlockType_PI(iProcTo,iType) = nBlockType_PI(iProcTo,iType) &
+               + nBlockType_PI(iProcTo-1,iType)
+       end do
+
+       ! write(*,*)'iType, nBlockType_PI=', iType, nBlockType_PI
+    end do
+
+    ! Distribute the nodes over the processors
+    do iMorton = 1, nNodeUsed
+
+       ! Get the node index and type
+       iNode = iNodeMorton_I(iMorton)
+       if(present(iTypeNode_A))then
+          iType = iTypeNode_A(iNode)
+       else
+          iType = 1
+       end if
+
+       ! Increase the index for this node type
+       iNodeType_I(iType) = iNodeType_I(iType) + 1
+
+       ! Select target processor. 
+       ! Use iProcType_I to remember last proc. used for the given type
+       do iProcTo = iProcType_I(iType), nProc-1
+          if(iNodeType_I(iType) <= nBlockType_PI(iProcTo,iType))then
+             iProcType_I(iType) = iProcTo
+             EXIT
+          end if
+       end do
+
+       ! Assign future processor index for node
+       iProcNew_A(iNode) = iProcTo
+
+       if(DoMove)then
+          ! Assign block index right away
+          iBlock_P(iProcTo) = iBlock_P(iProcTo) + 1
+          iBlockTo = iBlock_P(iProcTo)
+          iTree_IA(Block_,iNode) = iBlockTo
+          Unused_BP(iBlockTo,iProcTo) = .false.
+       end if
+
+    end do
+
+    ! write(*,*)'iProcNew_A=', iProcNew_A(1:nNode)
+
+    deallocate(iNodeType_I, nNodeType_I, iProcType_I, iBlock_P, &
+         nBlockType_PI)
 
     if(DoMove) call move_tree
 
