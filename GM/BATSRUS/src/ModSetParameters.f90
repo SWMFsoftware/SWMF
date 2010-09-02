@@ -542,7 +542,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#EXTRAINTERNALENERGY")
         call read_var('ExtraEintMinSi', ExtraEintMinSi)
 
-     case("#RADIATION")                             !^CFG IF IMPLICIT BEGIN 
+     case("#RADIATION","#HEATFLUXLIMITER")          !^CFG IF IMPLICIT BEGIN 
         call read_rad_diffusion_param(NameCommand)
 
      case("#HEATCONDUCTION", "#WEAKFIELDCONDUCTION", &
