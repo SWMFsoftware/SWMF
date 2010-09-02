@@ -84,6 +84,28 @@ module ModRadDiffusion
   ! temporary radiation energy array needed by set_block_field
   real, allocatable :: Erad1_WG(:,:,:,:)
 
+  ! The electron heat flux limiter corrects the electron heat conduction if
+  ! the electron temperature length scale is only a few collisonal mean free
+  ! paths of the electrons or smaller.
+  ! Only the threshold model is currently implemented.
+  ! If we define the free streaming flux as
+  !   F_fs = n_e*k_B*T_e*v_th, where v_th = sqrt(k_B*T_e/m_e)
+  ! is a characteristic thermal velocity, then the threshold model
+  ! limits the heat conduction flux F = -\kappa grad(Te), with heat
+  ! conduction coefficient \kappa, by
+  !   F = -min(\kappa, f*F_fs / |grad(Te)|) * grad(Te)
+  ! Here, f is the electron flux limiter.
+  !
+  ! Variables associated with the threshold electron heat flux limiter.
+  logical :: UseElectronFluxLimiter = .false.
+  ! The heat flux limiter (fraction of free streaming flux that is used
+  ! in the threshold model)
+  real :: ElectronFluxLimiter = 0.06
+  ! electron temperature array needed for calculating the elctron temperature
+  ! gradient in the heat flux limiter
+  real, allocatable :: Te_G(:,:,:)
+  ! temporary electron temperature array needed by set_block_field
+  real, allocatable :: Te1_G(:,:,:)
 
   logical :: UseTemperature
 
@@ -118,6 +140,10 @@ contains
           end if
           call read_var('TradMinSi', TradMinSi)
        end if
+
+    case("#HEATFLUXLIMITER")
+       call read_var('UseElectronFluxLimiter', UseElectronFluxLimiter)
+       call read_var('ElectronFluxLimiter', ElectronFluxLimiter)
 
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -171,6 +197,9 @@ contains
 
        allocate(Erad_WG(nWave,-1:nI+2,-1:nJ+2,-1:nK+2))
        allocate(Erad1_WG(nWave,-1:nI+2,-1:nJ+2,-1:nK+2))
+
+       allocate(Te_G(-1:nI+2,-1:nJ+2,-1:nK+2))
+       allocate(Te1_G(-1:nI+2,-1:nJ+2,-1:nK+2))
 
        ! Default to zero, unless reset
        iTeImpl = 0; iTrImplFirst = 0; iTrImplLast = 0;
@@ -412,6 +441,7 @@ contains
 
   subroutine get_impl_rad_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
+     use BATL_size,  ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,  ONLY: State_VGB, UseElectronPressure, nWave, WaveFirst_, &
          WaveLast_
     use ModConst,    ONLY: cBoltzmann
@@ -440,33 +470,60 @@ contains
     real :: NatomicSi, CveSi, Cve, CviSi, Cvi, PiSi, TiSi, Ti, PeSi
     real :: TeTiCoefSi, TeTiCoef, TeTiCoefPrime
 
+    integer :: iMin, iMax, jMin, jMax, kMin, kMax
     integer :: iDim, Di, Dj, Dk, iDiff, nDimInUse
     real :: Coeff, Dxyz_D(MaxDim)
 
     real :: PlanckSi_W(nWave), Planck_W(nWave), Planck
+
+    ! Variables for the electron heat flux limiter
+    real :: NeSi = 0.0
+    logical :: IsNewBlockTe = .false.
 
     character(len=*), parameter:: NameSub='get_impl_rad_diff_state'
     !--------------------------------------------------------------------------
 
     nDimInUse = nDim; if(TypeGeometry == 'rz') nDimInUse = 2
 
+    ! For the electron flux limiter, we need Te in the ghostcells
+    if(UseElectronFluxLimiter)then
+       iMin = MinI; iMax = MaxI
+       jMin = MinJ; jMax = MaxJ
+       kMin = MinK; kMax = MaxK
+    else
+       iMin = 1; iMax = nI
+       jMin = 1; iMax = nJ
+       kMin = 1; kMax = nK
+    end if
+
     do iImplBlock = 1, nImplBLK
 
        iBlock = impl2iBLK(iImplBlock)
+
        IsNewBlockRadDiffusion = .true.
+       IsNewBlockTe = .true.
 
        if(iTeImpl > 0)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          ! The ghost cells in Te_G are only needed for the electron heat flux
+          ! limiter.
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, TeOut = TeSi)
-             Te = TeSi*Si2No_V(UnitTemperature_)
-             if(UseTemperature)then
-                StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = Te
-             else
-                StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = cRadiationNo*Te**4
-             end if
+             Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
+
+          if(UseTemperature)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = Te_G(i,j,k)
+             end do; end do; end do
+          else
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
+                     cRadiationNo*Te_G(i,j,k)**4
+             end do; end do; end do
+          end if
        end if
+
        if(iTrImplFirst > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              StateImpl_VGB(iTrImplFirst:iTrImplLast,i,j,k,iImplBlock) = &
@@ -826,10 +883,14 @@ contains
     subroutine get_diffusion_coef
 
       use ModAdvance,      ONLY: nWave
+      use ModConst,        ONLY: cElectronMass
       use ModFaceGradient, ONLY: set_block_field2
 
       real :: OpacityRosseland_W(nWave), DiffRad_W(nWave)
       real :: Grad2ByErad2_W(nWave)
+
+      ! Variables for electron heat flux limiter
+      real :: FreeStreamFluxSi, GradTe, GradTeSi
       !------------------------------------------------------------------------
 
       if(iDiffRadFirst > 0)then
@@ -864,6 +925,32 @@ contains
       end if
 
       if(iDiffHeat > 0)then
+
+         if(UseElectronFluxLimiter)then
+            ! Correct ghost cells as needed for gradient calculation
+            if(IsNewBlockTe)then
+               call set_block_field2(iBlock, 1, Te1_G, Te_G)
+
+               IsNewBlockTe = .false.
+            end if
+
+            GradTe = ((Te_G(i+1,j,k) - Te_G(i-1,j,k))*InvDx2)**2
+            if(nDim > 1) GradTe = GradTe + &
+                 ((Te_G(i,j+1,k) - Te_G(i,j-1,k))*InvDy2)**2
+            if(nDimInUse > 2) GradTe = GradTe + &
+                 ((Te_G(i,j,k+1) - Te_G(i,j,k-1))*InvDz2)**2
+            GradTe = sqrt(GradTe)
+
+            GradTeSi = GradTe*No2Si_V(UnitTemperature_)/No2Si_V(UnitX_)
+
+            FreeStreamFluxSi = ElectronFluxLimiter &
+                 *NeSi*cBoltzmann*TeSi*sqrt(cBoltzmann*TeSi/cElectronMass)
+
+            ! The threshold heat flux limiter model
+            if(HeatCondSi*GradTeSi > FreeStreamFluxSi) &
+                 HeatCondSi = FreeStreamFluxSi/GradTeSi
+         end if
+
          HeatCond = HeatCondSi &
               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
