@@ -98,6 +98,7 @@ contains
     real               :: Time, Coord
     logical            :: IsCartesian
     real, allocatable  :: Param_I(:), Coord_ID(:,:), Var_IV(:,:)
+    real(Real4_), allocatable:: Param4_I(:), Coord4_ID(:,:), Var4_I(:)
 
     integer :: n_D(0:MaxDim)
     integer :: i, j, k, i_D(3), iDim, iVar, n, nDimOut, iError
@@ -293,19 +294,26 @@ contains
             position = TypePosition, status=TypeStatus, iostat=iError)
        if(iError /= 0)call CON_stop(NameSub // &
             ' could not open real4 file=' // trim(NameFile))
+
        write(UnitTmp_) StringHeader
        write(UnitTmp_) nStep, real(Time, Real4_), nDimOut, nParam, nVar
        write(UnitTmp_) n_D(1:nDim)
-       write(UnitTmp_) real(Param_I, Real4_)
+       allocate(Param4_I(nParam))
+       Param4_I = Param_I
+       write(UnitTmp_) Param4_I
+       deallocate(Param4_I)
        write(UnitTmp_) NameVar
-       ! Use implied loops instead of array syntax to avoid segmentation fault
-       ! on some machines
-       write(UnitTmp_) &
-            ((real(Coord_ID(n,iDim), Real4_), n=1,n1*n2*n3), iDim=1,nDim)
+       ! Copy into single precision arrays to avoid compiler issues.
+       allocate(Coord4_ID(n1*n2*n3, nDim))
+       Coord4_ID = Coord_ID
+       write(UnitTmp_) Coord4_ID
+       deallocate(Coord4_ID)
+       allocate(Var4_I(n1*n2*n3))
        do iVar = 1, nVar
-          write(UnitTmp_) (real(Var_IV(n,iVar), Real4_), n=1,n1*n2*n3)
+          Var4_I = Var_IV(:,iVar)
+          write(UnitTmp_) Var4_I
        end do
-
+       deallocate(Var4_I)
     case default
        call CON_stop(NameSub // ' unknown TypeFile =' // trim(TypeFile))
     end select
