@@ -5,18 +5,20 @@ module ModUser
   ! in ModUserEmpty.f90
 
   use ModUserEmpty,                                     &
-       IMPLEMENTED1 => user_update_states,              &
-       IMPLEMENTED2 => user_calc_sources,               &
-       IMPLEMENTED3 => user_set_outerbcs,               &
-       IMPLEMENTED4 => user_read_inputs,                &
-       IMPLEMENTED5 => user_set_plot_var,               &
-       IMPLEMENTED6 => user_init_session,               &
-       IMPLEMENTED7 => user_set_ics,                    &
-       IMPLEMENTED8 => user_material_properties,        &
-       IMPLEMENTED9 => user_amr_criteria
+       IMPLEMENTED1  => user_update_states,              &
+       IMPLEMENTED2  => user_calc_sources,               &
+       IMPLEMENTED3  => user_set_outerbcs,               &
+       IMPLEMENTED4  => user_read_inputs,                &
+       IMPLEMENTED5  => user_set_plot_var,               &
+       IMPLEMENTED6  => user_init_session,               &
+       IMPLEMENTED7  => user_set_ics,                    &
+       IMPLEMENTED8  => user_material_properties,        &
+       IMPLEMENTED9  => user_amr_criteria,               &
+       IMPLEMENTED10 => user_get_log_var
 
   use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, VarTest, &
-       UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates
+       UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates, &
+       UseUserLogFiles
   use ModSize, ONLY: nI, nJ, nK
   use ModVarIndexes, ONLY: LevelXe_, LevelPl_, LevelAu_, LevelAy_
   use CRASH_ModEos, ONLY: MassMaterial_I => cAtomicMassCRASH_I
@@ -196,6 +198,7 @@ contains
     character(len=*), parameter :: NameSub = 'user_read_inputs'
     !------------------------------------------------------------------------
 
+    UseUserLogFiles     = .true. ! to allow integration of rhoxe, rhobe...
     UseUserUpdateStates = .true. ! for internal energy and cylindrical symm.
     UseUserInitSession  = .true. ! to set units for level set variables
     UseUserIcs          = .true. ! to read in Hyades file
@@ -1784,6 +1787,64 @@ contains
     PlotVarBody    = 0.0
 
   end subroutine user_set_plot_var
+
+  !============================================================================
+  subroutine user_get_log_var(VarValue, TypeVar, Radius)
+
+    use ModAdvance,    ONLY: State_VGB, tmp1_BLK
+    use ModVarIndexes, ONLY: &
+         Rho_, LevelXe_, LevelBe_, LevelPl_, LevelAu_, LevelAy_
+    use CRASH_ModEos,  ONLY: Xe_, Be_, Plastic_, Au_, Ay_
+    use ModMain,       ONLY: nI, nJ, nK, nBlock, UnusedBlk
+    use ModGeometry,   ONLY: DomainVolume
+
+    real, external :: integrate_BLK
+
+    real, intent(out)            :: VarValue
+    character (len=*), intent(in):: TypeVar
+    real, intent(in), optional :: Radius
+
+    integer:: iMaterial, iLevel, iBlock, i, j, k
+
+    character (len=*), parameter :: NameSub = 'user_get_log_var'
+    !-------------------------------------------------------------------------
+    select case(TypeVar)
+    case('rhoxe', 'rhobe', 'rhopl', 'rhoau', 'rhoay')
+       select case(TypeVar)
+       case('rhoxe')
+          iLevel = LevelXe_; iMaterial = Xe_
+       case('rhobe')
+          iLevel = LevelBe_; iMaterial = Be_
+       case('rhopl')
+          iLevel = LevelPl_; iMaterial = Plastic_
+       case('rhoau')
+          iLevel = LevelAu_; iMaterial = Au_
+       case('rhoay')
+          iLevel = LevelAy_; iMaterial = Ay_
+       end select
+       tmp1_BLK(:,:,:,1:nBlock) = 0.0
+       if(UseMixedCell)then
+          do iBlock = 1, nBlock
+             if(unusedBLK(iBlock)) CYCLE
+             tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = MassMaterial_I(iMaterial) &
+                  *State_VGB(iLevel,1:nI,1:nJ,1:nK,iBlock)
+          end do
+       else
+          do iBlock = 1, nBlock
+             if(unusedBLK(iBlock)) CYCLE
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                if(iMaterial == &
+                     maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock),1) - 1) &
+                     tmp1_BLK(i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
+             end do; end do; end do
+          end do
+       end if
+       VarValue = integrate_BLK(1,tmp1_BLK)/DomainVolume
+    case default
+       VarValue = -7777.0
+    end select
+       
+  end subroutine user_get_log_var
 
   !===========================================================================
 
