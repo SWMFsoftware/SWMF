@@ -24,6 +24,8 @@ Module ModCrcmGrid
 
   real :: xlatr(np), xmlt(nt), dlat(np1), energy(neng), sinAo(npit)
 
+  logical, parameter :: UseExpandedGrid =.false.
+
 end Module ModCrcmGrid
 
 

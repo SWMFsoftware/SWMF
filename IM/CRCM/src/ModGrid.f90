@@ -13,7 +13,7 @@ Module ModCrcmGrid
   ! These have to be initialized so that IM_set_grid does not fail on non-IM PEs
   real:: xlat(np) = 0.0, phi(nt1)=0.0
 
-  real,parameter:: xlat_data(0:52)=(/&
+  real,parameter, dimension(0:52):: xlat_data=(/&
        11.812,13.777,15.742,17.705,19.665,21.622,23.576,25.527,27.473, &
        29.414,31.350,33.279,35.200,37.112,39.012,40.897,42.763,44.604, &
        46.409,48.163,49.837,51.382,52.725,53.823,54.720,55.488,56.175, &
@@ -23,6 +23,8 @@ Module ModCrcmGrid
 
 
   real :: xlatr(np), xmlt(nt), dlat(np1), energy(neng), sinAo(npit)
+
+  logical, parameter :: UseExpandedGrid =.false.
 
 end Module ModCrcmGrid
 
