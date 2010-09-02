@@ -254,7 +254,8 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, &
        B0_DGB, State_VGB, Energy_GBI, DivB1_GB
-  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,x1,x2,y1,y2,z1,z2
+  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,x1,x2,y1,y2,z1,z2, &
+       DomainVolume
   use ModRaytrace,   ONLY: ray  !^CFG  IF RAYTRACE
   use ModSatelliteFile, ONLY: get_satellite_ray !^CFG  IF RAYTRACE
   use ModSatelliteFile, ONLY: xSatellite
@@ -270,7 +271,6 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
 
   character (len=10) :: NameLogVar
 
-  real :: Volume
   real :: StateIntegral_V(nVar)
   real :: SatRayVar_I(5), SatRayVarSum_I(5)
 
@@ -300,7 +300,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
 
   LogVar_I(1:nLogTot) = 0.0
   tmp1_BLK=1.00
-  volume  =integrate_BLK(nProc,tmp1_BLK)
+  DomainVolume  =integrate_BLK(nProc,tmp1_BLK)
 
   ! Obtain data to calculate log variables
   if(iSat>=1)then
@@ -388,7 +388,8 @@ contains
 
 !!$! MHD variables averaged over the computational domain
     case('e')
-       LogVar_I(iVarTot) = integrate_BLK(1,Energy_GBI(:,:,:,:,iFluid))/volume
+       LogVar_I(iVarTot) = &
+            integrate_BLK(1,Energy_GBI(:,:,:,:,iFluid))/DomainVolume
     case('pmin')
        ! Divide by nProc so that adding up the processors can work
        LogVar_I(iVarTot) = minval_BLK(nProc,tmp2_BLK)/nProc
@@ -402,7 +403,7 @@ contains
                State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBLK) / &
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
-       LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/volume
+       LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('uy')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) CYCLE
@@ -410,7 +411,7 @@ contains
                State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBLK) / &
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
-       LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/volume
+       LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('uz')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) CYCLE
@@ -418,7 +419,7 @@ contains
                State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK) / &
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
-       LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/volume
+       LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('ekinx')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) CYCLE
@@ -426,7 +427,7 @@ contains
                State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBLK)**2/&
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
-       LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
+       LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('ekiny')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
@@ -434,7 +435,7 @@ contains
                State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBLK)**2/&
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
-       LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
+       LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('ekinz')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
@@ -442,7 +443,7 @@ contains
                State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK)**2/&
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
-       LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
+       LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('ekin')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
@@ -452,7 +453,7 @@ contains
                State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK)**2)&
                /State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
-       LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
+       LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/DomainVolume
 
     case('jin','jout','jinmax','joutmax')
 
@@ -657,7 +658,7 @@ contains
           if(unusedBLK(iBLK)) CYCLE
           tmp1_BLK(1:nI,1:nJ,1:nK,iBlk) = ray(i,j,1:nI,1:nJ,1:nK,iBlk)
        end do
-       LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/volume
+       LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
        ! RAYTRACE variables at Itest, Jtest, Ktest, BLKtest, PROCtest
     case('theta1pnt')
        if(iProc == ProcTest) &
@@ -835,12 +836,12 @@ contains
        if(Ew_ == 1)then
           if(UseWavePressure)then
              LogVar_I(iVarTot) = &
-                  sum(StateIntegral_V(WaveFirst_:WaveLast_))/Volume
+                  sum(StateIntegral_V(WaveFirst_:WaveLast_))/DomainVolume
           else
              LogVar_I(iVarTot) = 0.0
           end if
        else
-          LogVar_I(iVarTot) = StateIntegral_V(Ew_)/Volume
+          LogVar_I(iVarTot) = StateIntegral_V(Ew_)/DomainVolume
        end if
 
     case default
@@ -852,7 +853,7 @@ contains
           NameVar = NameVar_V(jVar)
           call lower_case(NameVar)
           if(NameVar /= NameLogVarLower) CYCLE
-          LogVar_I(iVarTot) = StateIntegral_V(jVar)/Volume
+          LogVar_I(iVarTot) = StateIntegral_V(jVar)/DomainVolume
           RETURN
        end do
        if (UseUserLogFiles) then
