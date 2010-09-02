@@ -1,5 +1,5 @@
 Module ModFieldTrace
-  use ModCrcmGrid,ONLY: ir=>np, ip=>nt, iw=>nm , ik=>nk, neng, energy
+  use ModCrcmGrid,ONLY: ir=>np, ip=>nt, iw=>nm , ik=>nk, neng, energy, UseExpandedGrid
   use ModCrcmPlanet,ONLY: nspec, amu_I
   implicit none
   real, allocatable :: &
@@ -72,15 +72,19 @@ contains
             MajorAxis2,MinorAxis2, sin2, Req2, xo1,xc, xCenter,rell2
     real, parameter :: LengthMax = 50.0
     !--------------------------------------------------------------------------
-
+    ekev=0.0
+    
     a_I(0)=1.
     b_I(0)=1.
     do iTaylor=1,nTaylor
        a_I(iTaylor)=a_I(iTaylor-1)*(2.*iTaylor-3.)/(2.*iTaylor)
        b_I(iTaylor)=b_I(iTaylor-1)*(2.*iTaylor-1.)/(2.*iTaylor)
     enddo
-
-    rb=10.               ! nightside outer boundary in RE
+    if (UseExpandedGrid) then
+       rb=15.0               ! nightside outer boundary in RE
+    else
+       rb=10.0               ! nightside outer boundary in RE
+    endif
     iopt=1               ! dummy parameter in t96_01 and t04_s 
     rlim=2.*rb
     xmltlim=2.           ! limit of field line warping in hour
@@ -412,7 +416,16 @@ contains
              Req2=ro(i,j)*ro(i,j)
              xo1=-ro(i,j)*cos(xmltr)
              xc=xo1-xCenter
-             rell2=MinorAxis2*(1.-xc*xc/MajorAxis2)/sin2 ! r^2 onellipse at x=xc
+             if (sin2 > 0.0) then
+                ! r^2 onellipse at x=xc
+                rell2= & 
+                     MinorAxis2*(1.-xc*xc/MajorAxis2)/sin2 
+             elseif(xmlto(i,j) == 0.0) then
+                rell2= R_24**2.0 
+             elseif(xmlto(i,j) == 12.0) then
+                rell2 = R_12**2.0
+             endif
+                
              if (Req2.le.rell2) then
                 iba(j)=i
                 exit find_ib
@@ -727,7 +740,7 @@ contains
 
     ! Add points for the other end inside rBody
     nAlt = iAlt-1 + MinAlt
-
+    
     ! Fill in points below rBody
     if (IsFoundLine) &
          call trace_dipoleIM(Re,Lat,nAlt,MinAlt,FieldLength_I,&
@@ -747,7 +760,9 @@ contains
 
     !Check if FieldLine is open
     if (.not. IsFoundLine) then
-       nAlt=0
+       nAlt = 0
+       ro1  = 0.0
+       xmlt1= 0.0
        return
     endif
 
