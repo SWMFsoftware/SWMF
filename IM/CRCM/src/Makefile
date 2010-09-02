@@ -12,11 +12,11 @@ OBJECTS = \
 	ModCrcm.o\
 	ModInitialize.o\
 	ModRestart.o\
-	ModCrcmPlot.o\
 	ModTsyInput.o\
 	ModGmCRCM.o\
 	ModIeCrcm.o\
 	ModFieldTrace.o\
+	ModCrcmPlot.o\
 	plot_fieldline.o\
 	trace_dipole.o\
 	set_parameters.o\

@@ -21,6 +21,7 @@ contains
     use ModCrcmPlanet,   ONLY: nspec,NamePlotVar,iPplot_I,iPhotplot_I,& 
                                iNplot_I,Beq_,Vol_,Pot_,FAC_,nVar
     use ModCrcmGrid,   ONLY: PhiIono_C => phi, LatIono_C => xlatr
+    use ModFieldTrace, ONLY: iba
     integer, intent(in) :: nLat, nLon
     real,    intent(in) :: X_C(nLat,nLon), Y_C(nLat,nLon), Time, Dt
     real,    intent(in) :: Pressure_IC(nspec,nLat,nLon), &
@@ -45,7 +46,8 @@ contains
          PlotState_IIV(nLat,nLon+1,nVar))
 
     PlotState_IIV = 0.0
-
+    Coord_DII     = 0.0
+    CoordIono_DII = 0.0
     !Set Coords
     Coord_DII(x_,:, 1:nLon) = X_C(:,1:nLon)
     Coord_DII(y_,:, 1:nLon) = Y_C(:,1:nLon)
@@ -68,25 +70,28 @@ contains
 
     !Set plot data
     do iSpecies = 1,nspec
-       PlotState_IIV(:,1:nLon,iPplot_I(iSpecies+1))= &
-            Pressure_IC(iSpecies,:,1:nLon) 
-       PlotState_IIV(:,1:nLon,iPhotplot_I(iSpecies+1))= &
-            PressureHot_IC(iSpecies,:,1:nLon)
-       PlotState_IIV(:,1:nLon,iNplot_I(iSpecies+1))= &
-            Den_IC(iSpecies,:,1:nLon)  
-       PlotState_IIV(:,1:nLon,iPplot_I(1))= &
-            PlotState_IIV(:,1:nLon,iPplot_I(1))+Pressure_IC(iSpecies,:,1:nLon) 
-       PlotState_IIV(:,1:nLon,iPhotplot_I(1))= &
-            PlotState_IIV(:,1:nLon,iPhotplot_I(1))&
-            + PressureHot_IC(iSpecies,:,1:nLon)
-       PlotState_IIV(:,1:nLon,iNplot_I(1))= &
-            PlotState_IIV(:,1:nLon,iNplot_I(1))+Den_IC(iSpecies,:,1:nLon)  
+       do iLon=1,nLon
+       PlotState_IIV(1:iba(iLon),iLon,iPplot_I(iSpecies+1))= &
+            Pressure_IC(iSpecies,1:iba(iLon),iLon) 
+       PlotState_IIV(1:iba(iLon),iLon,iPhotplot_I(iSpecies+1))= &
+            PressureHot_IC(iSpecies,1:iba(iLon),iLon)
+       PlotState_IIV(1:iba(iLon),iLon,iNplot_I(iSpecies+1))= &
+            Den_IC(iSpecies,1:iba(iLon),iLon)  
+       PlotState_IIV(1:iba(iLon),iLon,iPplot_I(1))= &
+            PlotState_IIV(1:iba(iLon),iLon,iPplot_I(1))+Pressure_IC(iSpecies,1:iba(iLon),iLon) 
+       PlotState_IIV(1:iba(iLon),iLon,iPhotplot_I(1))= &
+            PlotState_IIV(1:iba(iLon),iLon,iPhotplot_I(1))&
+            + PressureHot_IC(iSpecies,1:iba(iLon),iLon)
+       PlotState_IIV(1:iba(iLon),iLon,iNplot_I(1))= &
+            PlotState_IIV(1:iba(iLon),iLon,iNplot_I(1))+Den_IC(iSpecies,1:iba(iLon),iLon)  
     end do
-    PlotState_IIV(:,1:nLon,Beq_) = Beq_C   (:,1:nLon)    
-    PlotState_IIV(:,1:nLon,Vol_) = Volume_C(:,1:nLon)    
-    PlotState_IIV(:,1:nLon,Pot_) = Potential_C(:,1:nLon)    
-    PlotState_IIV(:,1:nLon,FAC_) = FAC_C   (:,1:nLon)    
-
+ end do
+    do iLon=1,nLon
+       PlotState_IIV(1:iba(iLon),iLon,Beq_) = Beq_C   (1:iba(iLon),iLon)    
+       PlotState_IIV(1:iba(iLon),iLon,Vol_) = Volume_C(1:iba(iLon),iLon)    
+       PlotState_IIV(1:iba(iLon),iLon,Pot_) = Potential_C(1:iba(iLon),iLon)    
+       PlotState_IIV(1:iba(iLon),iLon,FAC_) = FAC_C   (1:iba(iLon),iLon)    
+    enddo
     !fill ghost cells of plot data
     PlotState_IIV(:,nLon+1,iPplot_I(1))= &
          PlotState_IIV(:,1,iPplot_I(1))
