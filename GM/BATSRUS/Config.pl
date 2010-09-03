@@ -85,8 +85,10 @@ print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock",
 &set_equation if $Equation;
 
 # Set additional variable information
-&set_nwave if $nWave and $nWaveNew ne $nWave;
-&set_nmaterial if $nMaterial and $nMaterialNew ne $nMaterial;
+die "$ERROR nWave was not found in equation module\n" if $nWaveNew and not $nWave;
+&set_nwave     if $nWaveNew ne $nWave;
+die "$ERROR nMaterial was not found in equation module\n" if $nMaterialNew and not $nMaterial;
+&set_nmaterial if $nMaterialNew ne $nMaterial;
 
 # Set or list the user modules
 &set_user_module if $UserModule;
@@ -137,14 +139,10 @@ sub get_settings{
 
     open(FILE, $EquationMod) or die "$ERROR could not open $EquationMod\n";
     $nWave=0;
-    while(<FILE>){
-        next if /^\s*!/; # skip commented out lines
-        $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
-    }
-
     $nMaterial=0;
     while(<FILE>){
         next if /^\s*!/; # skip commented out lines
+        $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
         $nMaterial=$1    if /\bnMaterial\s*=\s*(\d+)/i;
     }
     close FILE;
