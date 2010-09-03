@@ -35,7 +35,6 @@ my $EquationMod = "$Src/ModEquation.f90";
 my $EquationModSafe = "$Src/ModEquation.f90.safe";
 my $Equation;
 my $UserModule;
-my $Setvar;
 
 # Grid size variables
 my $NameSizeFile = "$Src/ModSize.f90";
@@ -46,13 +45,20 @@ my $MaxImplBlock;
 
 # additional variable information
 my $nWave;
+my $nWaveNew;
 my $nMaterial;
+my $nMaterialNew;
 
 # For SC/BATSRUS and IH/BATSRUS src/ is created during configuration of SWMF
 if(not -d $Src){exit 0};
 
 # Read previous grid size, equation and user module
 &get_settings;
+
+# Initial the new variable value to the original to ensure that
+# we enter the set_nwave, etc routines if we want to change these variable values
+$nWaveNew = $nWave;
+$nMaterialNew = $nMaterial;
 
 foreach (@Arguments){
     if(/^-e$/)                {$Equation=1;                    next};
@@ -62,7 +68,8 @@ foreach (@Arguments){
     if(/^-s$/)                {$Show=1;                        next};
     if(/^-dynamic$/)          {`cd $Src; make DYNAMIC`;        next};
     if(/^-static$/)           {`cd $Src; make STATIC`;         next};
-    if(/^-setvar=(.*)$/)      {$Setvar=$1;                     next};
+    if(/^-nWave=(.*)$/)       {$nWaveNew=$1;                   next};
+    if(/^-nMaterial=(.*)$/)   {$nMaterialNew=$1;               next};
 
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
@@ -78,7 +85,8 @@ print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock",
 &set_equation if $Equation;
 
 # Set additional variable information
-&set_var if $Setvar;
+&set_nwave if $nWave and $nWaveNew ne $nWave;
+&set_nmaterial if $nMaterial and $nMaterialNew ne $nMaterial;
 
 # Set or list the user modules
 &set_user_module if $UserModule;
@@ -126,6 +134,20 @@ sub get_settings{
 
     $GridSize = "$nI,$nJ,$nK,$MaxBlock";
     $GridSize .= ",$MaxImplBlock";                            #^CFG IF IMPLICIT
+
+    open(FILE, $EquationMod) or die "$ERROR could not open $EquationMod\n";
+    $nWave=0;
+    while(<FILE>){
+        next if /^\s*!/; # skip commented out lines
+        $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
+    }
+
+    $nMaterial=0;
+    while(<FILE>){
+        next if /^\s*!/; # skip commented out lines
+        $nMaterial=$1    if /\bnMaterial\s*=\s*(\d+)/i;
+    }
+    close FILE;
 
 }
 
@@ -206,41 +228,41 @@ sub set_equation{
 
 ##############################################################################
 
-sub set_var{
+sub set_nwave{
 
-    # Create a %Setvars hash from the Setvar string
-    my %Setvars;
-    my @Setvars = split( /,/, $Setvar);
+    # Check the number of wave bins (to be set)
+    die "$ERROR nWave=$nWaveNew must be 1 or more\n" if $nWaveNew < 1;
 
-    my $i;
-    for ($i=0; $i<=$#Setvars; ++$i){
-	my %OneSetvar;
-	my @OneSetvar = split( /=/, $Setvars[$i]);
+    $nWave = $nWaveNew;
 
-        my $Var = $OneSetvar[0];
-        my $Value = $OneSetvar[1];
+    print "Writing new nWave = $nWaveNew into $EquationMod...\n";
 
-	if($Var eq "nWave"){
-	    $nWave = $Value;
-            # Check the number of wave bins (to be set)
-	    die "$ERROR nWave=$nWave must be 1 or more\n" if $nWave < 1;
-	}elsif($Var eq "nMaterial"){
-	    $nMaterial = $Value;
-            # Check the number of material level indices (to be set)
-	    die "$ERROR nMaterial=$nMaterial must be 1 or more\n" if $nMaterial < 1;
-	}else{
-	    die "$ERROR unkown variable $Var in setvar\n";
-	}
+    @ARGV = ($EquationMod);
 
-	print "Writing new $Var = $Value into $EquationMod...\n";
+    while(<>){
+	if(/^\s*!/){print; next} # Skip commented out lines
+	s/\b(nWave\s*=[^0-9]*)(\d+)/$1$nWaveNew/i;
+	print;
+    }
+}
 
-	@ARGV = ($EquationMod);
+#############################################################################
 
-	while(<>){
-	    if(/^\s*!/){print; next} # Skip commented out lines
-	    s/\b($Var\s*=[^0-9]*)(\d+)/$1$Value/i;
-	    print;
-	}
+sub set_nmaterial{
+
+    # Check the number of material level indices (to be set)
+    die "$ERROR nMaterial=$nMaterialNew must be 1 or more\n" if $nMaterialNew < 1;
+
+    $nMaterial = $nMaterialNew;
+
+    print "Writing new nMaterial = $nMaterialNew into $EquationMod...\n";
+
+    @ARGV = ($EquationMod);
+
+    while(<>){
+	if(/^\s*!/){print; next} # Skip commented out lines
+	s/\b(nMaterial\s*=[^0-9]*)(\d+)/$1$nMaterialNew/i;
+	print;
     }
 }
 
@@ -290,6 +312,12 @@ sub current_settings{
     $Settings .= 
 	"Allocation of large arrays        : IsDynamic=$IsDynamic\n";
 
+    $Settings .=
+	"Number of wave bins               : nWave=$nWave\n" if $nWave;
+
+    $Settings .=
+	"Number of materials               : nMaterial=$nMaterial\n" if $nMaterial;
+
     open(FILE, $UserMod) or die "$ERROR Could not open $UserMod\n";
     my $Module='???';
     my $Version='???';
@@ -320,7 +348,7 @@ sub current_settings{
 	$Equation = $1; last;
     }
 
-    $Settings     .= "Equation   = $Equation\n";
+    $Settings .= "Equation   = $Equation\n";
 
 }
 
@@ -356,14 +384,13 @@ Additional options for BATSRUS/Config.pl:
 
 -static         Use static allocation for large arrays.
 
--setvar=nWave=NWAVE,nMaterial=NMATERIAL
-                Set additional variables for the selected EQUATION module.
-                NWAVE is the number of wave bins used for radiation or wave
-                turbulence.
-                NMATERIAL is the number of material level indeces.
-                Resetting the EQUATION module will remove the stored NWAVE
-                and NMATERIAL.
+-nWave=NWAVE
+                Set the number of wave bins used for radiation or wave
+                turbulence to NWAVE for the selected EQUATION module.
 
+-nMaterial=NMATERIAL
+                Set the number of material levels to NMATERIAL
+                for the selected EQUATION module.
 
 Examples for BATSRUS/Config.pl:
 

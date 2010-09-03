@@ -1743,7 +1743,7 @@ The "radcond" option solves implicitly the radiation diffusion
 and electron heat conduction together with
 the radiation and internal energy densities being the unknowns.
 To use gray diffusion configure BATSRUS with the default:
-Config.pl -setvar=nWave=1
+Config.pl -nWave=1
 To use the multi-group radiation select nWave larger than one.
 
 The "radcondsplit" option will solve each radiation group and the 
