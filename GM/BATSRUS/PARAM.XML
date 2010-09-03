@@ -5191,55 +5191,39 @@ to numerical errors. A recommended value is 300K.
 The default for UseRadFluxLimiter is false.
 </command>
 
-
-<command name="IMPLICITTEMPERATURE">
-	<parameter name="UseTemperatureDiffusion" type="logical" default="F"/>
-	<if expr="$UseTemperatureDiffusion">
-		<parameter name="UseTemperatureVariable" type="logical" 
-								default="F"/>
-		<parameter name="TypeStopCriterion" type="string" case="lower"
-								input="select">
-			<option name="blockjacobi" default="T" />
-			<option name="gs"   />
-			<option name="dilu" />
-			<option name="mbilu"/>
-		</parameter>
-		<parameter name="TypeStopCriterion" type="string" case="lower"
-						 	    input="select">
-		    <option name="rel"  default="T" />
-		    <option name="abs"              />
-		 </parameter>
-		 <parameter name="MaxErrorResidual" type="real" 
-			min="0" default="1.0e-5"/>
+<command name="HEATFLUXLIMITER">
+	<parameter name="UseHeatFluxLimiter" type="logical" default="F"/>
+	<if expr="$UseHeatFluxLimiter">
+		<parameter name="HeatFluxLimiter" type="real" min="0"
+							default="0.06"/>
 	</if>
+#HEATLUXLIMITER
+T			UseHeatFluxLimiter
+0.06			HeatFluxLimiter
 
-#IMPLICITTEMPERATURE
-T                       UseTemperatureDiffusion
-T                       UseTemperatureVariable
-gs                      TypePreconditioner
-rel                     TypeStopCriterion
-1e-8                    MaxErrorResidual
+If UseHeatFluxLimiter is set to false, the original Spitzer-Harm formulation
+for the collisional isotropic electron thermal heat conduction is used as set
+by the #SEMIIMPLICIT command.
 
-If UseTemperatureDiffusion is set to true, the radiation hydrodynamics 
-with gray nonequilibrium diffusion approximation uses a semi-implicit
-scheme. The explicit hydro step is followed by an implicit radiation step
-using a preconditioned conjugate gradient method. 
+If UseHeatFluxLimiter is set to true, this isotropic heat conduction is
+modified to correct the heat conduction coefficient if the electron
+temperature length scale is only a few collisonal mean free paths of the
+electrons or smaller. The flux limited heat conduction that is used in
+this case is the threshold model.
 
-If UseTemperatureVariable is true, the code solves for the electron
-and radiation temperatures, otherwise the radiation energy and the 
-Planck function $a*Te^4$ are the variables. 
+If we define the free streaming flux as  F_fs = n_e*k_B*T_e*v_th,
+where v_th = sqrt(k_B*T_e/m_e) is a characteristic thermal velocity, then
+the threshold model limits the heat conduction flux F = -kappa*grad(Te),
+with heat conduction coefficient kappa, by
+   F = -min(kappa, f*F_fs / |grad(Te)|) * grad(Te)
+Here, f is the heat flux limiter.
 
-The TypePreconditioner determines which preconditioner is used. Current
-options are "blockjacobi", "gs" (Gauss-Seidel), dilu (diagonal incomplete 
-lower-upper decomposition) and "mbilu" (modified block ILU).
+A possible application of interest for the heat flux limiter is
+laser-irradiated plasmas. For this limiter to work properly, the
+thermodynamic quanties in the user_material_properties subroutine in the
+ModUser module need to be defined (see ModUserCrash for an example).
 
-The TypeStopCriterion is either "rel" indicating that the required reduction 
-of the residual norm is relative to the initial residual, or "abs" indicating
-that the absolute value of the norm is used.
-
-The MaxErrorResidual sets the limit for the relative or absolute residual.
-
-The default is false for UseTemperatureDiffusion.
+The default for UseHeatFluxLimiter is false.
 </command>
 
 <command name="MASSLOADING">
