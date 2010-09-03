@@ -1,7 +1,7 @@
 #ECHO
 T			DoEcho
 
-VERBOSE
+#VERBOSE
 100
 
 #TEST
@@ -65,8 +65,6 @@ F                       UseUserB0
 F                       UseUserInitSession
 F                       UseUserUpdateStates
 
-VERBOSE
-100
 
 #SAVEINITIAL
 T
@@ -86,7 +84,6 @@ idl z=0 FUL			StringPlot
 -10.0			DtSavePlot
 -1.0			DxSavePlot
 
-
 #GRID
 1			nRootBlockX
 1			nRootBlockY
@@ -100,7 +97,7 @@ idl z=0 FUL			StringPlot
 
 ! Maximum resolution initially
 #GRIDRESOLUTION
-1/8			Resolution
+1			Resolution
 initial			NameArea
 
 ! Minimum resolution in the computational domain
@@ -110,7 +107,7 @@ all			NameArea
 
 ! Far tail for wind satellite and inflow
 #GRIDRESOLUTION
-1/8			Resolution
+1/4			Resolution
 box			NameArea
  -10.0			xMinBox
  -10.0			yMinBox
@@ -121,7 +118,7 @@ box			NameArea
 
 ! r currents resolution for the ionosphere
 #GRIDRESOLUTION
-1/16			Resolution
+1/8			Resolution
 shell0			NameArea
 2.5			Radius1
 3.5			Radius2
@@ -163,7 +160,7 @@ VAR                     StringLog
 dt rho mx my mz p bx by bz pmin pmax cpcpn cpcps dst dstdivb dstflx
 3.0 3.5 5.0             StringRFlux
 
-SOLARWIND
+#SOLARWIND
 5.0			SwNDim  [n/cc]
 100000.0		SwTDim  [K]
 -400.0			SwUxDim [km/s]
@@ -172,22 +169,6 @@ SOLARWIND
 0.0			SwBxDim [nT]
 0.0			SwByDim [nT]
 0.0			SwBzDim [nT]
-
-#SOLARWIND
-0.0			SwNDim  [n/cc]
-0.0        		SwTDim  [K]
-0.0			SwUxDim [km/s]
-0.0			SwUyDim [km/s]
-0.0			SwUzDim [km/s]
-0.0			SwBxDim [nT]
-0.0			SwByDim [nT]
-0.0			SwBzDim [nT]
-
-
-
-SOLARWINDFILE
-T				                 UseSolarWindFile
-GM/Param/TESTSUITE/Inputfiles/imf20020417.dat     NameSolarWindFile
 
 #IE
 T                       DoTraceIe
@@ -347,13 +328,13 @@ F			DoSaveDifferentialNumberFlux
 
 #OUTPUTINFO
 test1			NameRun
-60.			nFrequency [sec]
+40.			nFrequency [sec]
 
 #INJECTIONFREQUENCY
-120.			iFrequency [sec]
+40.			iFrequency [sec]
 
 #CONVECTION
-w96sc 			TypeConvection
+w96 			TypeConvection
 
 #INITIALTHERMALPLASMA
 F			DoReadDGCPM	
@@ -370,7 +351,7 @@ F 			UseWaves
 #BFIELD
 numeric 		TypeBField
 mhd                     TypeBFieldGrid
-dynamic			TypeBFieldGrid
+
 
 #SAVERESTART
 T			DoSaveRestart
@@ -395,6 +376,6 @@ max tec                 StringPlot
 
 #STOP
 -1			MaxIteration
-30.0    	        tSimulationMax [sec]
+60.0    	        tSimulationMax [sec]
 
 #END ############################################################
