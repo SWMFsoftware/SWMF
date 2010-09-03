@@ -491,7 +491,7 @@ contains
        kMin = MinK; kMax = MaxK
     else
        iMin = 1; iMax = nI
-       jMin = 1; iMax = nJ
+       jMin = 1; jMax = nJ
        kMin = 1; kMax = nK
     end if
 
