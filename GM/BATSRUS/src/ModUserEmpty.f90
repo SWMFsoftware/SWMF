@@ -240,7 +240,7 @@ contains
   !===========================================================================
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
-       EinternalIn, TeIn, NatomicOut, &
+       EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
        EinternalOut, TeOut, PressureOut, &
        CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
        OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
@@ -262,6 +262,7 @@ contains
     real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
     real, optional, intent(in)  :: TeIn                    ! [K]
     real, optional, intent(out) :: NatomicOut              ! [1/m^3]
+    real, optional, intent(out) :: AverageIonChargeOut     ! dimensionless
     real, optional, intent(out) :: EinternalOut            ! [J/m^3]
     real, optional, intent(out) :: TeOut                   ! [K]
     real, optional, intent(out) :: PressureOut             ! [Pa]

@@ -97,10 +97,10 @@ module ModRadDiffusion
   ! Here, f is the electron flux limiter.
   !
   ! Variables associated with the threshold electron heat flux limiter.
-  logical :: UseElectronFluxLimiter = .false.
+  logical :: UseHeatFluxLimiter = .false.
   ! The heat flux limiter (fraction of free streaming flux that is used
   ! in the threshold model)
-  real :: ElectronFluxLimiter = 0.06
+  real :: HeatFluxLimiter = 0.06
   ! electron temperature array needed for calculating the elctron temperature
   ! gradient in the heat flux limiter
   real, allocatable :: Te_G(:,:,:)
@@ -142,8 +142,8 @@ contains
        end if
 
     case("#HEATFLUXLIMITER")
-       call read_var('UseElectronFluxLimiter', UseElectronFluxLimiter)
-       call read_var('ElectronFluxLimiter', ElectronFluxLimiter)
+       call read_var('UseHeatFluxLimiter', UseHeatFluxLimiter)
+       call read_var('HeatFluxLimiter', HeatFluxLimiter)
 
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -467,7 +467,7 @@ contains
     real :: HeatCondSi, HeatCond, TeTiRelaxSi, TeTiRelax
     real :: Grad2ByErad2, DiffRad, InvDx2, InvDy2, InvDz2
     real :: InvDx, InvDy
-    real :: NatomicSi, CveSi, Cve, CviSi, Cvi, PiSi, TiSi, Ti, PeSi
+    real :: NatomicSi, Zav, CveSi, Cve, CviSi, Cvi, PiSi, TiSi, Ti, PeSi
     real :: TeTiCoefSi, TeTiCoef, TeTiCoefPrime
 
     integer :: iMin, iMax, jMin, jMax, kMin, kMax
@@ -477,7 +477,6 @@ contains
     real :: PlanckSi_W(nWave), Planck_W(nWave), Planck
 
     ! Variables for the electron heat flux limiter
-    real :: NeSi = 0.0
     logical :: IsNewBlockTe = .false.
 
     character(len=*), parameter:: NameSub='get_impl_rad_diff_state'
@@ -486,7 +485,7 @@ contains
     nDimInUse = nDim; if(TypeGeometry == 'rz') nDimInUse = 2
 
     ! For the electron flux limiter, we need Te in the ghostcells
-    if(UseElectronFluxLimiter)then
+    if(UseHeatFluxLimiter)then
        iMin = MinI; iMax = MaxI
        jMin = MinJ; jMax = MaxJ
        kMin = MinK; kMax = MaxK
@@ -542,7 +541,8 @@ contains
                   i, j, k, iBlock, &
                   OpacityPlanckOut_W = OpacityPlanckSi_W, &
                   OpacityRosselandOut_W = OpacityRosselandSi_W, &
-                  CvOut=CveSi, TeOut = TeSi, NatomicOut=NatomicSi, &
+                  CvOut = CveSi, TeOut = TeSi, NatomicOut = NatomicSi, &
+                  AverageIonChargeOut = Zav, &
                   HeatCondOut = HeatCondSi, TeTiRelaxOut = TeTiRelaxSi, &
                   PlanckOut_W = PlanckSi_W)
 
@@ -565,8 +565,9 @@ contains
                   i, j, k, iBlock, &
                   OpacityPlanckOut_W = OpacityPlanckSi_W, &
                   OpacityRosselandOut_W = OpacityRosselandSi_W, &
-                  CvOut = CvSi, TeOut = TeSi, HeatCondOut=HeatCondSi, &
-                  PlanckOut_W = PlanckSi_W)
+                  AverageIonChargeOut = Zav, &
+                  CvOut = CvSi, TeOut = TeSi, NatomicOut = NatomicSi, &
+                  HeatCondOut=HeatCondSi, PlanckOut_W = PlanckSi_W)
 
              Te = TeSi*Si2No_V(UnitTemperature_)
              Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
@@ -890,7 +891,7 @@ contains
       real :: Grad2ByErad2_W(nWave)
 
       ! Variables for electron heat flux limiter
-      real :: FreeStreamFluxSi, GradTe, GradTeSi
+      real :: FreeStreamFluxSi, GradTe, GradTeSi, NeSi
       !------------------------------------------------------------------------
 
       if(iDiffRadFirst > 0)then
@@ -926,7 +927,7 @@ contains
 
       if(iDiffHeat > 0)then
 
-         if(UseElectronFluxLimiter)then
+         if(UseHeatFluxLimiter)then
             ! Correct ghost cells as needed for gradient calculation
             if(IsNewBlockTe)then
                call set_block_field2(iBlock, 1, Te1_G, Te_G)
@@ -943,7 +944,8 @@ contains
 
             GradTeSi = GradTe*No2Si_V(UnitTemperature_)/No2Si_V(UnitX_)
 
-            FreeStreamFluxSi = ElectronFluxLimiter &
+            NeSi = Zav*NatomicSi
+            FreeStreamFluxSi = HeatFluxLimiter &
                  *NeSi*cBoltzmann*TeSi*sqrt(cBoltzmann*TeSi/cElectronMass)
 
             ! The threshold heat flux limiter model
