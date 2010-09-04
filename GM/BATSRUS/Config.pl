@@ -137,16 +137,16 @@ sub get_settings{
     $GridSize = "$nI,$nJ,$nK,$MaxBlock";
     $GridSize .= ",$MaxImplBlock";                            #^CFG IF IMPLICIT
 
-    open(FILE, $EquationMod) or die "$ERROR could not open $EquationMod\n";
     $nWave=0;
     $nMaterial=0;
-    while(<FILE>){
-        next if /^\s*!/; # skip commented out lines
-        $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
-        $nMaterial=$1    if /\bnMaterial\s*=\s*(\d+)/i;
+    if(open(FILE, $EquationMod)){
+	while(<FILE>){
+	    next if /^\s*!/; # skip commented out lines
+	    $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
+	    $nMaterial=$1    if /\bnMaterial\s*=\s*(\d+)/i;
+	}
+	close FILE;
     }
-    close FILE;
-
 }
 
 #############################################################################
