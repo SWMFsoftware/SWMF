@@ -55,11 +55,6 @@ if(not -d $Src){exit 0};
 # Read previous grid size, equation and user module
 &get_settings;
 
-# Initial the new variable value to the original to ensure that
-# we enter the set_nwave, etc routines if we want to change these variable values
-$nWaveNew = $nWave;
-$nMaterialNew = $nMaterial;
-
 foreach (@Arguments){
     if(/^-e$/)                {$Equation=1;                    next};
     if(/^-u$/)                {$UserModule=1;                  next};
@@ -68,8 +63,16 @@ foreach (@Arguments){
     if(/^-s$/)                {$Show=1;                        next};
     if(/^-dynamic$/)          {`cd $Src; make DYNAMIC`;        next};
     if(/^-static$/)           {`cd $Src; make STATIC`;         next};
-    if(/^-nWave=(.*)$/)       {$nWaveNew=$1;                   next};
-    if(/^-nMaterial=(.*)$/)   {$nMaterialNew=$1;               next};
+    if(/^-nWave=(.*)$/)       {
+	$nWaveNew=$1;
+	# Check the number of wave bins (to be set)
+	die "$ERROR nWave=$nWaveNew must be 1 or more\n" if $nWaveNew < 1;
+	next};
+    if(/^-nMaterial=(.*)$/)   {
+	$nMaterialNew=$1;
+	# Check the number of material level indices (to be set)
+	die "$ERROR nMaterial=$nMaterialNew must be 1 or more\n" if $nMaterialNew < 1;
+	next};
 
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
@@ -85,10 +88,17 @@ print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock",
 &set_equation if $Equation;
 
 # Set additional variable information
+open(FILE, $EquationMod);
+while(<FILE>){
+    next if /^\s*!/; # skip commented out lines
+    $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
+    $nMaterial=$1    if /\bnMaterial\s*=\s*(\d+)/i;
+}
+close FILE;
 die "$ERROR nWave was not found in equation module\n" if $nWaveNew and not $nWave;
-&set_nwave     if $nWaveNew ne $nWave;
+&set_nwave     if $nWaveNew and $nWaveNew ne $nWave;
 die "$ERROR nMaterial was not found in equation module\n" if $nMaterialNew and not $nMaterial;
-&set_nmaterial if $nMaterialNew ne $nMaterial;
+&set_nmaterial if $nMaterialNew and $nMaterialNew ne $nMaterial;
 
 # Set or list the user modules
 &set_user_module if $UserModule;
@@ -141,11 +151,11 @@ sub get_settings{
     $nMaterial=0;
     if(open(FILE, $EquationMod)){
 	while(<FILE>){
-	    next if /^\s*!/; # skip commented out lines
-	    $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
-	    $nMaterial=$1    if /\bnMaterial\s*=\s*(\d+)/i;
-	}
-	close FILE;
+            next if /^\s*!/; # skip commented out lines
+            $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
+            $nMaterial=$1    if /\bnMaterial\s*=\s*(\d+)/i;
+        }
+        close FILE;
     }
 }
 
@@ -228,9 +238,6 @@ sub set_equation{
 
 sub set_nwave{
 
-    # Check the number of wave bins (to be set)
-    die "$ERROR nWave=$nWaveNew must be 1 or more\n" if $nWaveNew < 1;
-
     $nWave = $nWaveNew;
 
     print "Writing new nWave = $nWaveNew into $EquationMod...\n";
@@ -247,9 +254,6 @@ sub set_nwave{
 #############################################################################
 
 sub set_nmaterial{
-
-    # Check the number of material level indices (to be set)
-    die "$ERROR nMaterial=$nMaterialNew must be 1 or more\n" if $nMaterialNew < 1;
 
     $nMaterial = $nMaterialNew;
 
