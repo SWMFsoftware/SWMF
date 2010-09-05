@@ -3271,7 +3271,8 @@ pro plot_log, logfilenames, func, $
               xrange=xrange, yranges=yranges, timeshifts=timeshifts,   $
               smooths=smooths,                                         $
               colors=colors, linestyles=linestyles, symbols=symbols,   $
-              title=title, xtitle=xtitle, ytitles=ytitles, timeunit=timeunit
+              title=title, xtitle=xtitle, ytitles=ytitles, timeunit=timeunit,$
+              legends=legends, legendpos=legendpos
 
 ; Plot variables listed in the space separated func string from the
 ; files listed in the string array logfilenames.
@@ -3286,6 +3287,8 @@ pro plot_log, logfilenames, func, $
 ; the X title (default is Time [hr]) and 
 ; the Y titles (defaults are the function names) with the 
 ; title, xtitle and ytitles(nfunc) arrays, respectively.
+; Show the legends (default are the file names) at the position given by
+; legendpos array (xmin, xmax, ymin, ymax in a [0,1]x[0,1] box).
 ; Set the optional variables to zero to get the default behavior.
 
 nlog = n_elements(logfilenames)
@@ -3335,11 +3338,12 @@ if n_elements(colors) lt nlog then colors = intarr(nlog) + 255
 
 ; If none of colors, linestyles or symbols are defined, make colors different
 if max(linestyles) eq 0 and max(symbols) eq 0 and min(colors) eq 255 then $
-  colors = [255,150,250,50,100,200,75,125,175]
+  colors = [255,150,250,50,100,200,25,220,125]
 
 ; Define default title
-if n_elements(title) eq 1 and size(title,/type) eq 7 then $
-  title0=title else title0=strjoin(logfilenames,' ')
+if n_elements(title) eq 1 and size(title,/type) eq 7 then title0=title $
+else if n_elements(legendpos) ne 4 then title0=strjoin(logfilenames,' ') $
+else                                    title0=' '
 
 ; Define default xtitle
 if n_elements(xtitle) eq 1 and size(xtitle,/type) eq 7 then xtitle0=xtitle $
@@ -3473,6 +3477,23 @@ for iter = iter0, 2 do begin
                 endelse
             endelse
         endfor
+        if n_elements(legendpos) eq 4 then begin
+            ; get vertical position of legend
+            ypos=legendpos(3) - (ilog+0.5)/nlog*(legendpos(3)-legendpos(2))
+            ; draw a line (or a point) with the appropriate color/linetype/symbol
+            plot,legendpos(0:1),[ypos,ypos],    $
+              color     = colors(ilog),         $
+              psym      = symbols(ilog),        $
+              linestyle = linestyles(ilog),     $
+              thick     = thick,                $
+              /normal, xrange=[0,1], yrange=[0,1], $
+              /noerase, xstyle=-1, ystyle=-1
+            
+            ; print out legend or logfile name
+            if n_elements(legends) ge nlog then legend=legends(ilog) $
+            else                                legend=logfilenames(ilog)
+            xyouts,legendpos(1),ypos,'  '+legend
+        endif
     endfor
 endfor 
 

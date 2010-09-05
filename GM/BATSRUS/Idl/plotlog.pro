@@ -12,6 +12,7 @@ plot_log, logfilenames, logfunc, wlog,  wlognames,         $
   xrange=xrange, yranges=yranges, timeshifts=timeshifts, $
   smooths=smooths,                                       $
   colors=colors, symbols=symbols, linestyles=linestyles, $
-  title=title, xtitle=xtitle, ytitles=ytitles, timeunit=timeunit
+  title=title, xtitle=xtitle, ytitles=ytitles, timeunit=timeunit, $
+  legends=legends, legendpos=legendpos
 
 end

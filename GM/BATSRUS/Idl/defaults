@@ -102,5 +102,7 @@ colors=255   ; set to an array with colors for each function
 linestyles=0 ; set to an array with line styles for each function
 symbols=0    ; set to an array with symbols for each function
 smooths=0    ; set to an array with smoothing width for each logfile
+legends=''   ; legends for the lines, defaults are logfilenames
+legendpos=0  ; position for the legends: [xmin, xmax, ymin, ymax]
 
 end
