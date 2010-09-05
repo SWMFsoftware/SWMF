@@ -3264,10 +3264,13 @@ end
 ;=============================================================================
 
 pro plot_log, logfilenames, func, $
-              wlog0, wlognames0, wlog1, wlognames1, wlog2, wlognames2,$
-              xrange=xrange, yranges=yranges, timeshifts=timeshifts, $
-              smooths=smooths, $
-              colors=colors, linestyles=linestyles, symbols=symbols, $
+              wlog0, wlognames0, wlog1, wlognames1, wlog2, wlognames2, $
+              wlog3, wlognames3, wlog4, wlognames4, wlog5, wlognames5, $
+              wlog6, wlognames6, wlog7, wlognames7, wlog8, wlognames8, $
+              wlog9, wlognames9,                                       $
+              xrange=xrange, yranges=yranges, timeshifts=timeshifts,   $
+              smooths=smooths,                                         $
+              colors=colors, linestyles=linestyles, symbols=symbols,   $
               title=title, xtitle=xtitle, ytitles=ytitles, timeunit=timeunit
 
 ; Plot variables listed in the space separated func string from the
@@ -3332,7 +3335,7 @@ if n_elements(colors) lt nlog then colors = intarr(nlog) + 255
 
 ; If none of colors, linestyles or symbols are defined, make colors different
 if max(linestyles) eq 0 and max(symbols) eq 0 and min(colors) eq 255 then $
-  colors = [255,150,250]
+  colors = [255,150,250,50,100,200,75,125,175]
 
 ; Define default title
 if n_elements(title) eq 1 and size(title,/type) eq 7 then $
@@ -3377,6 +3380,34 @@ for iter = iter0, 2 do begin
             2: begin
                 wlog=wlog2
                 wlognames = wlognames2
+            end
+            3: begin
+                wlog=wlog3
+                wlognames = wlognames3
+            end
+            4: begin
+                wlog=wlog4
+                wlognames = wlognames4
+            end
+            5: begin
+                wlog=wlog5
+                wlognames = wlognames5
+            end
+            6: begin
+                wlog=wlog6
+                wlognames = wlognames6
+            end
+            7: begin
+                wlog=wlog7
+                wlognames = wlognames7
+            end
+            8: begin
+                wlog=wlog8
+                wlognames = wlognames8
+            end
+            9: begin
+                wlog=wlog9
+                wlognames = wlognames9
             end
         endcase
         
