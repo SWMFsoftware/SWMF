@@ -3490,7 +3490,7 @@ for iter = iter0, 2 do begin
               /noerase, xstyle=-1, ystyle=-1
             
             ; print out legend or logfile name
-            if n_elements(legends) ge nlog then legend=legends(ilog) $
+            if n_elements(legends) eq nlog then legend=legends(ilog) $
             else                                legend=logfilenames(ilog)
             xyouts,legendpos(1),ypos,'  '+legend
         endif
