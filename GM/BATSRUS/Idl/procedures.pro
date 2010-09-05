@@ -2039,15 +2039,18 @@ day  = t mod 365
 year = t/365
 
 if year gt 0 then $
-  stime = 'time='+string(year,day,hour,format='(i3,"y",i3.3,"d",i2.2,"h")') $
+  stime = string(year,day,hour,format='(i3,"y",i3.3,"d",i2.2,"h")') $
 else if day gt 0 then $
-  stime = 'time='+string(day,hour,min,format='(i4,"d",i2.2,"h",i2.2,"m")') $
+  stime = string(day,hour,min,format='(i4,"d",i2.2,"h",i2.2,"m")') $
 else if hour gt 0 then $
-  stime = 'time='+string(hour,min,sec,format='(i4,"h",i2.2,"m",i2.2,"s")') $
+  stime = string(hour,min,sec,format='(i4,"h",i2.2,"m",i2.2,"s")') $
 else $
-  stime = 'time='+string(time, format='(g12.5)')
+  stime = string(time, format='(g12.5)')
 
-snx = string(nx, format='(i6,2(",",i4))')
+if n_elements(nx) eq 1 then snx = string(nx, format='(i6)')
+if n_elements(nx) eq 2 then snx = string(nx, format='(i6,",",i4)')
+if n_elements(nx) eq 3 then snx = string(nx, format='(i6,",",i4,",",i4)')
+
 sit = string(it, format='(i8)')
 
 siz = size(info)
@@ -2060,9 +2063,9 @@ if siz(1) eq 7 then begin
 endif else begin
     if info lt 1 then return
     s = ''
-    if info gt 2 then s = 'nx=' + snx + ' '
+    if info gt 2 then s = 'nx=' + snx + ', '
     if info gt 1 then s = s + 'it=' + sit + ', '
-    s = s + stime
+    s = s + 'time=' + stime
 endelse
 
 xyouts, 5+(ix*!d.x_size)/multix, 8+(iy*!d.y_size)/multiy, /DEV, s
