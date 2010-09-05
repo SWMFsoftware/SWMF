@@ -34,11 +34,11 @@ if nlogfile ge 6 then $
   get_log, logfilenames(5), wlog5, wlognames5, logtime5, timeunit, verbose='5'
 if nlogfile ge 7 then $
   get_log, logfilenames(6), wlog6, wlognames6, logtime6, timeunit, verbose='6'
-if nlogfile ge 7 then $
+if nlogfile ge 8 then $
   get_log, logfilenames(7), wlog7, wlognames7, logtime7, timeunit, verbose='7'
-if nlogfile ge 7 then $
+if nlogfile ge 9 then $
   get_log, logfilenames(8), wlog8, wlognames8, logtime8, timeunit, verbose='8'
-if nlogfile ge 7 then $
+if nlogfile gt 9 then $
   get_log, logfilenames(9), wlog9, wlognames9, logtime9, timeunit, verbose='9'
 
 end
