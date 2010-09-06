@@ -43,14 +43,10 @@ module ModUser
   ! Material level values in the order of Xe, Be, Plastic, Gold, Acrylic
   ! The levels that are not in use default to MaterialLast_
   integer, parameter :: LevelXe_ = MaterialFirst_
-  integer, parameter :: LevelBe_ = LevelXe_ + Be_ &
-       + min(0, nMaterial-Be_-1)
-  integer, parameter :: LevelPl_ = LevelXe_ + Plastic_ &
-       + min(0, nMaterial-Plastic_-1)
-  integer, parameter :: LevelAu_ = LevelXe_ + Au_ &
-       + min(0, nMaterial-Au_-1)
-  integer, parameter :: LevelAy_ = LevelXe_ + Ay_ &
-       + min(0, nMaterial-Ay_-1)
+  integer, parameter :: LevelBe_ = min(MaterialFirst_+Be_,MaterialLast_)
+  integer, parameter :: LevelPl_ = min(MaterialFirst_+Plastic_,MaterialLast_)
+  integer, parameter :: LevelAu_ = min(MaterialFirst_+Au_,MaterialLast_)
+  integer, parameter :: LevelAy_ = min(MaterialFirst_+Ay_,MaterialLast_)
 
   ! The Maximum Level set index that is used
   integer, parameter :: LevelMax = MaterialLast_
@@ -254,7 +250,16 @@ contains
           call read_var('UseVolumeFraction', UseVolumeFraction)
        case("#MIXEDCELL")
           call read_var('UseMixedCell', UseMixedCell)
-          if(UseMixedCell)call read_var('MixLimit', MixLimit)
+          if(UseMixedCell)then
+             call read_var('MixLimit', MixLimit)
+
+             ! The mixed cell implementation is limited to 3 materials only
+             if(nMaterial>3) call stop_mpi(NameSub // " Gold and Acrylic "// &
+                  "are not yet supported in the mixed cell approach")
+             if(nMaterial<3) call stop_mpi(NameSub // " the mixed cell "// &
+                  "implementation needs 3 materials, including plastic")
+          end if
+
        case("#CYLINDRICAL")
           call read_var('IsCylindrical', IsCylindrical)
           if(IsCylindrical)then
@@ -2277,7 +2282,7 @@ contains
 
        if(IsMix)then
           ! Use number densities for eos() or weights in look up tables.
-          RhoToARatioSi_I = &
+          if(UsePl) RhoToARatioSi_I = &
                State_V(LevelXe_:LevelXe_+Plastic_)*No2Si_V(UnitRho_)
           Weight_I = State_V(LevelXe_:LevelMax)/LevelSum
        end if
