@@ -302,7 +302,6 @@ point_lun,-unit,pointer0
 case ftype of
     'log': begin
         readf,unit,headline
-        headline=headline+'_mhd13'
         readf,unit,varname
         nw=n_elements(strsplit(varname))-2
         varname ='hour '+varname
@@ -1613,7 +1612,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
               ax,az,contourlevel,linestyle,$
               velvector,velspeed,velseed,velpos,velx,vely,veltri,$
               cut,cut0,rcut,plotdim,$
-              nfunc,multix,multiy,fixaspect,plotix,plotiy,funcs,funcs1,funcs2,fmin,fmax,f
+              nfunc,multix,multiy,fixaspect,plotix,plotiy,$
+              funcs,funcs1,funcs2,fmin,fmax,f
 ;===========================================================================
   on_error,2
 
