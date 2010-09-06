@@ -1,7 +1,13 @@
 module ModVarIndexes
 
-  use ModSingleFluid,    Redefine1 => IsMhd
-  use ModExtraVariables, Redefine2 => ExtraEint_
+  use ModSingleFluid, &
+       Redefine1 => IsMhd
+ 
+  use ModExtraVariables, &
+       Redefine2 => ExtraEint_, &
+       Redefine3 => nMaterial, &
+       Redefine4 => MaterialFirst_, &
+       Redefine5 => MaterialLast_
 
   implicit none
 
@@ -10,7 +16,13 @@ module ModVarIndexes
   ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation='HD+Ionization+Levels'
 
-  integer, parameter :: nVar = 9
+  ! loop variable for implied do-loop over material levels
+  integer, private :: iMaterial
+
+  ! Number of material levels
+  integer, parameter :: nMaterial = 3
+
+  integer, parameter :: nVar = 6 + nMaterial
 
   logical, parameter :: IsMhd = .false.
 
@@ -19,16 +31,15 @@ module ModVarIndexes
   ! The energies are handled as an extra variable, so that we can use
   ! both conservative and non-conservative scheme and switch between them.
   integer, parameter :: &
-       Rho_       =  1,          &
-       RhoUx_     =  2, Ux_ = 2, &
-       RhoUy_     =  3, Uy_ = 3, &
-       RhoUz_     =  4, Uz_ = 4, &
-       LevelXe_   =  5,          &       ! Xenon
-       LevelBe_   =  6,          &       ! Berillium
-       LevelPl_   =  7,          &       ! Plastic 
-       ExtraEint_ =  8,          &
-       p_         =  nVar,       &
-       Energy_    = nVar+1
+       Rho_           = 1,                          &
+       RhoUx_         = 2, Ux_ = 2,                 &
+       RhoUy_         = 3, Uy_ = 3,                 &
+       RhoUz_         = 4, Uz_ = 4,                 &
+       MaterialFirst_ = 5,                          &
+       MaterialLast_  = MaterialFirst_+nMaterial-1, &
+       ExtraEint_     = MaterialLast_+1,            &
+       p_             = nVar,                       &
+       Energy_        = nVar+1
 
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1
@@ -45,9 +56,7 @@ module ModVarIndexes
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
        0.0, & ! RhoUz_
-       0.0, & ! LevelXe_
-       0.0, & ! LevelBe_
-       0.0, & ! LevelPl_
+       (0.0, iMaterial=MaterialFirst_,MaterialLast_), &
        0.0, & ! ExtraEint_
        1.0, & ! p_
        1.0 /) ! Energy_
@@ -58,24 +67,22 @@ module ModVarIndexes
        'Mx  ', & ! RhoUx_
        'My  ', & ! RhoUy_
        'Mz  ', & ! RhoUz_
-       'Xe  ', & ! LevelXe_ 
-       'Be  ', & ! LevelBe_
-       'Pl  ', & ! LevelPl_ 
+       ('M?  ', iMaterial=MaterialFirst_,MaterialLast_), &
        'EInt', & ! ExtraEint_
        'P   ', & ! p_
        'E   '/)  ! Energy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Xe Be Pl EInt E'
+       'Rho Mx My Mz EInt E'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Xe Be Pl EInt P'
+       'Rho Ux Uy Uz EInt P'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "Xe", "Be", "Pl", "EInt" "p"'
+       '"`r", "U_x", "U_y", "U_z", "EInt" "p"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
@@ -85,7 +92,7 @@ module ModVarIndexes
   real :: UnitUser_V(nVar+nFluid) = 1.0
 
   ! Advected are the three level sets and the extra internal energy
-  integer, parameter :: ScalarFirst_ = LevelXe_, ScalarLast_ = ExtraEint_
+  integer, parameter :: ScalarFirst_ = MaterialFirst_, ScalarLast_ = ExtraEint_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.

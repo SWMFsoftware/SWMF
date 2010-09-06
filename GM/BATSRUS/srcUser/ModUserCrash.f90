@@ -20,8 +20,9 @@ module ModUser
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates, &
        UseUserLogFiles
   use ModSize, ONLY: nI, nJ, nK
-  use ModVarIndexes, ONLY: LevelXe_, LevelPl_, LevelAu_, LevelAy_
-  use CRASH_ModEos, ONLY: MassMaterial_I => cAtomicMassCRASH_I
+  use ModVarIndexes, ONLY: nMaterial, MaterialFirst_, MaterialLast_
+  use CRASH_ModEos, ONLY: MassMaterial_I => cAtomicMassCRASH_I, &
+       Be_, Plastic_, Au_, Ay_
   use BATL_amr, ONLY: BetaProlong
 
   include 'user_module.h' !list of public methods
@@ -33,15 +34,26 @@ module ModUser
   ! There are at most 5 materials: Xe, Be, Plastic, Gold, Acrylic
   integer, parameter :: MaxMaterial = 5
 
+  ! Do we use the plastic, gold and acrylic levels ?
+  ! Note that the material index range in ModEos starts with zero.
+  logical, parameter :: UsePl = nMaterial > Plastic_
+  logical, parameter :: UseAu = nMaterial > Au_
+  logical, parameter :: UseAy = nMaterial > Ay_
+
+  ! Material level values in the order of Xe, Be, Plastic, Gold, Acrylic
+  ! The levels that are not in use default to MaterialLast_
+  integer, parameter :: LevelXe_ = MaterialFirst_
+  integer, parameter :: LevelBe_ = LevelXe_ + Be_ &
+       + min(0, nMaterial-Be_-1)
+  integer, parameter :: LevelPl_ = LevelXe_ + Plastic_ &
+       + min(0, nMaterial-Plastic_-1)
+  integer, parameter :: LevelAu_ = LevelXe_ + Au_ &
+       + min(0, nMaterial-Au_-1)
+  integer, parameter :: LevelAy_ = LevelXe_ + Ay_ &
+       + min(0, nMaterial-Ay_-1)
+
   ! The Maximum Level set index that is used
-  integer, parameter :: LevelMax = max(LevelPl_, LevelAu_, LevelAy_)
-
-  ! The number of materials that is used
-  integer, parameter :: nMaterial = LevelMax - LevelXe_ + 1
-
-  ! Do we use the gold and acrylic levels ?
-  logical, parameter :: UseAu = LevelAu_ > 1
-  logical, parameter :: UseAy = LevelAy_ > 1
+  integer, parameter :: LevelMax = MaterialLast_
 
   ! Fully 3D simulation?
   logical :: IsThreeDim = .false.
@@ -408,7 +420,7 @@ contains
          UnitTemperature_, UnitN_, PeMin, ExtraEintMin
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes,  ONLY: Rho_, RhoUx_, RhoUz_, p_, ExtraEint_, &
-         LevelBe_, LevelXe_, LevelPl_, Pe_, Erad_, WaveFirst_, WaveLast_
+         Pe_, Erad_, WaveFirst_, WaveLast_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
     use ModConst,       ONLY: cPi, cAtomicMass
     use CRASH_ModEos,   ONLY: eos, Xe_, Plastic_
@@ -570,16 +582,17 @@ contains
        end if ! nDimHyades /= 2
 
        if(UseMixedCell)then
-          if(UseAy) call stop_mpi(NameSub //" Acrylic is not yet supported " &
-            //"in the mixed cell approach")
+          if(nMaterial>3) call stop_mpi(NameSub // " Gold and Acrylic "// &
+               "are not yet supported in the mixed cell approach")
+          if(nMaterial<3) call stop_mpi(NameSub //"mixed cell needs plastic")
 
           ! Use atomic concentrations instead of smooth level set functions
 
           ! Used materials: Xe, Be, Pl, and optionally Au
           if(maxval( State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) ) <= 0.0)then
              ! Ignore Au
-             State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = &
-                  1.0/(3*MassMaterial_I(Xe_:Plastic_))
+             State_VGB(LevelXe_:LevelMax,i,j,k,iBlock) = &
+                  1.0/(3*MassMaterial_I(Xe_:nMaterial-1))
           else
              State_VGB(LevelXe_:LevelMax,i,j,k,iBlock) = &
                   max(0.0, State_VGB(LevelXe_:LevelMax,i,j,k,iBlock))
@@ -612,7 +625,7 @@ contains
 
           State_VGB(Pe_,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
 
-          if(UseEqualTemperatureHyades .and. &
+          if(UsePl .and. UseEqualTemperatureHyades .and. &
                any(State_VGB(LevelPl_:LevelMax,i,j,k,iBlock) > 0.0))then
              ! equal electron/ion temperature for plastic and gold
              do iMaterial = Plastic_, nMaterial - 1
@@ -627,7 +640,7 @@ contains
                      max(PeMin,State_VGB(p_,i,j,k,iBlock) - p)
                 State_VGB(p_,i,j,k,iBlock) = p
              end do
-          else if(State_VGB(LevelPl_,i,j,k,iBlock) > 0.0 &
+          else if(UsePl .and. State_VGB(LevelPl_,i,j,k,iBlock) > 0.0 &
                .and. TeSi < TeMaxColdPlSi)then
              ! Subtract electron pressure from the total pressure
              State_VGB(p_,i,j,k,iBlock)  = max(PeMin, &
@@ -1213,7 +1226,7 @@ contains
     use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
     use ModSize,        ONLY: nI, nJ, nK
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
-         LevelXe_, Erad_, UseElectronPressure, Pe_
+         Erad_, UseElectronPressure, Pe_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, y2
     use ModTriangulate, ONLY: calc_triangulation, mesh_triangulation, &
          find_triangle
@@ -1400,7 +1413,7 @@ contains
        end if
        State_VGB(p_,i,j,k,iBlock)  = DataHyades_V(iPHyades)
 
-       if(AssFactor > 0.0)then
+       if(UsePl .and. AssFactor > 0.0)then
           ! Reduce plastic pressure
           if(State_VGB(LevelPl_,i,j,k,iBlock)>0. .or. &
                UseAy .and. State_VGB(LevelAy_,i,j,k,iBlock)>0.) &
@@ -1563,7 +1576,7 @@ contains
   subroutine user_calc_sources
 
     use ModMain,     ONLY: nI, nJ, nK, GlobalBlk
-    use ModAdvance,  ONLY: State_VGB, LevelXe_, &
+    use ModAdvance,  ONLY: State_VGB, &
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
     use ModGeometry, ONLY: vInv_CB
 
@@ -1602,8 +1615,7 @@ contains
     use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
          UnitTemperature_, cRadiationNo, No2Si_V, UnitEnergyDens_
     use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK, TypeGeometry
-    use ModVarIndexes, ONLY: Rho_, p_, LevelXe_, LevelBe_, LevelPl_, &
-         LevelAu_, LevelAy_, nWave, WaveFirst_, WaveLast_
+    use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_
     use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_, Au_, Ay_
     use BATL_size,    ONLY: nI, nJ, nK, nG, MinI, MaxI
 
@@ -1735,6 +1747,22 @@ contains
        end if
        if(IsDimensional) PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax) = &
             No2Io_V(UnitRho_)*PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax)
+    case('xe', 'be', 'pl', 'au', 'ay')
+       select case(NameVar)
+       case('xe')
+          iLevel = LevelXe_; iMaterial = Xe_
+       case('be')
+          iLevel = LevelBe_; iMaterial = Be_
+       case('pl')
+          iLevel = LevelPl_; iMaterial = Plastic_
+       case('au')
+          iLevel = LevelAu_; iMaterial = Au_
+       case('ay')
+          iLevel = LevelAy_; iMaterial = Ay_
+       end select
+       PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax) = &
+            State_VGB(iLevel,MinI:MaxI,jMin:jMax,kMin:kMax,iBlock)
+
     case('rhoxe', 'rhobe', 'rhopl', 'rhoau', 'rhoay')
        select case(NameVar)
        case('rhoxe')
@@ -1792,8 +1820,7 @@ contains
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK
-    use ModVarIndexes, ONLY: &
-         Rho_, LevelXe_, LevelBe_, LevelPl_, LevelAu_, LevelAy_
+    use ModVarIndexes, ONLY: Rho_
     use CRASH_ModEos,  ONLY: Xe_, Be_, Plastic_, Au_, Ay_
     use ModMain,       ONLY: nI, nJ, nK, nBlock, UnusedBlk
     use ModGeometry,   ONLY: DomainVolume
@@ -1851,7 +1878,7 @@ contains
   subroutine user_init_session
 
     use ModProcMH,      ONLY: iProc, iComm
-    use ModVarIndexes,  ONLY: LevelXe_, Rho_, UnitUser_V
+    use ModVarIndexes,  ONLY: Rho_, UnitUser_V
     use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
     use ModPhysics,     ONLY: cRadiationNo, Si2No_V, UnitTemperature_, &
          No2Io_V, UnitX_
@@ -2160,7 +2187,7 @@ contains
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, UnitEnergyDens_, &
          inv_gm1, g, Si2No_V, cRadiationNo, UnitTemperature_
-    use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_, nWave, &
+    use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, &
          WaveFirst_, WaveLast_, Pe_
     use ModLookupTable,ONLY: interpolate_lookup_table
     use ModConst,      ONLY: cAtomicMass
@@ -2194,7 +2221,8 @@ contains
     real    :: Value_V(nMaterial*nThermo), Opacity_V(2*nMaterial)
     real    :: GroupOpacity_W(2*nWave)
     real, dimension(0:nMaterial-1) :: &
-         pPerE_I, EperP_I, RhoToARatioSi_I, Weight_I
+         pPerE_I, EperP_I, Weight_I
+    real :: RhoToARatioSi_I(0:Plastic_) = 0.0
     real :: Level_I(3), LevelLeft, LevelRight
 
     ! multi-group variables
@@ -2238,7 +2266,7 @@ contains
                 Weight_I(Xe_)      = max(LevelLeft,  LevelRight) &
                      /               abs(LevelLeft - LevelRight)
                 Weight_I(Be_)      = 1 - Weight_I(Xe_)
-                Weight_I(Plastic_:nMaterial-1) = 0.0
+                if(UsePl) Weight_I(Plastic_:nMaterial-1) = 0.0
              end if
           end if
        end if
@@ -2249,7 +2277,8 @@ contains
 
        if(IsMix)then
           ! Use number densities for eos() or weights in look up tables.
-          RhoToARatioSi_I = State_V(LevelXe_:LevelMax)*No2Si_V(UnitRho_)
+          RhoToARatioSi_I = &
+               State_V(LevelXe_:LevelXe_+Plastic_)*No2Si_V(UnitRho_)
           Weight_I = State_V(LevelXe_:LevelMax)/LevelSum
        end if
     end if
@@ -2660,8 +2689,7 @@ contains
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
     use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, LevelBe_, LevelXe_, LevelPl_, &
-         Rho_, RhoUx_
+    use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_
     use ModAMR,      ONLY: RefineCritMin_I, CoarsenCritMax
     use ModPhysics,  ONLY: Io2No_V, UnitRho_, UnitU_
     use ModGeometry, ONLY: x_BLK, dx_BLK, MinDxValue

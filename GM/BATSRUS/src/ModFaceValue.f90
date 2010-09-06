@@ -90,7 +90,8 @@ contains
        call read_var('UseScalarPerRhoLimiter', UseScalarToRhoRatioLtd)
        if(.not. UseScalarToRhoRatioLtd)RETURN
        call read_var('NameVarLimitRatio', NameVarLimitRatio)
-       call split_string(NameVarLimitRatio, nVar, NameVar_I, nVarLimitRatio)
+       call split_string(NameVarLimitRatio, nVar, NameVar_I, nVarLimitRatio, &
+            UseArraySyntaxIn=.true.)
        if(allocated(iVarLimitRatio_I)) deallocate(iVarLimitRatio_I)
        allocate(iVarLimitRatio_I(nVarLimitRatio))
        do i = 1, nVarLimitRatio

@@ -8,7 +8,10 @@ module ModVarIndexes
        Redefine3 => nWave, &
        Redefine4 => WaveFirst_, &
        Redefine5 => WaveLast_, &
-       Redefine6 => ExtraEint_
+       Redefine6 => ExtraEint_, &
+       Redefine7 => nMaterial, &
+       Redefine8 => MaterialFirst_, &
+       Redefine9 => MaterialLast_
 
   implicit none
 
@@ -19,30 +22,32 @@ module ModVarIndexes
 
   logical, parameter :: IsMhd = .false.
 
-  ! loop variable for implied do-loop over spectrum
-  integer, private :: iWave
+  ! loop variable for implied do-loop over material levels and spectrum
+  integer, private :: iMaterial, iWave
 
+  ! Number of material levels
+  integer, parameter :: nMaterial = 3
   ! Number of wave bins in spectrum
   integer, parameter :: nWave = 1
-  integer, parameter :: nVar = 9 + nWave
+
+  integer, parameter :: nVar = 6 + nMaterial + nWave
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
   ! The energies are handled as an extra variable, so that we can use
   ! both conservative and non-conservative scheme and switch between them.
   integer, parameter :: &
-       Rho_       = 1,                  &
-       RhoUx_     = 2, Ux_ = 2,         &
-       RhoUy_     = 3, Uy_ = 3,         &
-       RhoUz_     = 4, Uz_ = 4,         &
-       LevelXe_   = 5,                  & ! Xenon
-       LevelBe_   = 6,                  & ! Berillium
-       LevelPl_   = 7,                  & ! Plastic
-       WaveFirst_ = 8,                  &
-       WaveLast_  = WaveFirst_+nWave-1, &
-       ExtraEint_ = WaveLast_+1,        &
-       p_         = nVar,               &
-       Energy_    = nVar+1
+       Rho_           = 1,                          &
+       RhoUx_         = 2, Ux_ = 2,                 &
+       RhoUy_         = 3, Uy_ = 3,                 &
+       RhoUz_         = 4, Uz_ = 4,                 &
+       MaterialFirst_ = 5,                          &
+       MaterialLast_  = MaterialFirst_+nMaterial-1, &
+       WaveFirst_     = MaterialLast_+1,            &
+       WaveLast_      = WaveFirst_+nWave-1,         &
+       ExtraEint_     = WaveLast_+1,                &
+       p_             = nVar,                       &
+       Energy_        = nVar+1
 
   ! This is for backward compatibility with single group radiation
   integer, parameter :: Erad_ = WaveFirst_
@@ -62,9 +67,7 @@ module ModVarIndexes
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
        0.0, & ! RhoUz_
-       0.0, & ! LevelXe_
-       0.0, & ! LevelBe_
-       0.0, & ! LevelPl_
+       (0.0, iMaterial=MaterialFirst_,MaterialLast_), &
        (1.0, iWave=WaveFirst_,WaveLast_), &
        0.0, & ! ExtraEint_
        1.0, & ! p_
@@ -76,9 +79,7 @@ module ModVarIndexes
        'Mx  ', & ! RhoUx_
        'My  ', & ! RhoUy_
        'Mz  ', & ! RhoUz_
-       'Xe  ', & ! LevelXe_ 
-       'Be  ', & ! LevelBe_
-       'Pl  ', & ! LevelPl_
+       ('M?  ', iMaterial=MaterialFirst_,MaterialLast_), &
        ('I?? ', iWave=WaveFirst_,WaveLast_), &
        'EInt', & ! ExtraEint_
        'P   ', & ! p_
@@ -86,15 +87,15 @@ module ModVarIndexes
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Xe Be Pl Ew EInt E'
+       'Rho Mx My Mz Ew EInt E'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Xe Be Pl Ew EInt P'
+       'Rho Ux Uy Uz Ew EInt P'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "Xe", "Be", "Pl", "I", "EInt", "p"'
+       '"`r", "U_x", "U_y", "U_z", "I", "EInt", "p"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
@@ -104,7 +105,7 @@ module ModVarIndexes
   real :: UnitUser_V(nVar+nFluid) = 1.0
 
   ! Advected are the three level sets and the extra internal energy
-  integer, parameter :: ScalarFirst_ = LevelXe_, ScalarLast_ = ExtraEint_
+  integer, parameter :: ScalarFirst_ = MaterialFirst_, ScalarLast_ = ExtraEint_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.

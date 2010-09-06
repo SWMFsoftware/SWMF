@@ -1985,6 +1985,8 @@ contains
 
     integer :: iWave
     character(len=3):: NameWave
+    integer :: iMaterial
+    character(len=2):: NameMaterial
     !-------------------------------------------------------------------------
 
     ! Fix the NameVar_V string for waves
@@ -1992,6 +1994,14 @@ contains
        do iWave = 1, nWave
           write(NameWave,'(a,i2.2)') 'I',iWave
           NameVar_V(WaveFirst_+iWave-1) = NameWave
+       end do
+    end if
+
+    ! Fix the NameVar_V string for material levels
+    if(MaterialLast_ > 1)then
+       do iMaterial = 1, nMaterial
+          write(NameMaterial,'(a,i1.1)') 'M',iMaterial
+          NameVar_V(MaterialFirst_+iMaterial-1) = NameMaterial
        end do
     end if
 

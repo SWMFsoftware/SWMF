@@ -415,7 +415,7 @@ test_levelset:
 	make test_levelset_check
 
 test_levelset_compile:
-	./Config.pl -e=HdCrash -u=Crash -g=4,4,1,2000,1
+	./Config.pl -e=HdCrash -u=Crash -g=4,4,1,2000,1 -nMaterial=3
 	make CRASH
 	make PIDL
 
@@ -448,7 +448,7 @@ test_hyades2d:
 	make test_hyades2d_check
 
 test_hyades2d_compile:
-	./Config.pl -e=HdRadCrash -u=Crash -g=10,10,1,200,200
+	./Config.pl -e=HdRadCrash -u=Crash -g=10,10,1,200,200 -nMaterial=3
 	make CRASH
 	make PIDL
 
@@ -487,7 +487,7 @@ test_mixedcell:
 	make test_mixedcell_check
 
 test_mixedcell_compile:
-	./Config.pl -e=HdCrash -u=Crash -g=4,4,2,2000,1
+	./Config.pl -e=HdCrash -u=Crash -g=4,4,2,2000,1 -nMaterial=3
 	make CRASH
 	make PIDL
 

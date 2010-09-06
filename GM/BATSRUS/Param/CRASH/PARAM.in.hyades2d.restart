@@ -86,7 +86,7 @@ mc3			TypeLimiter
 F			UseLogRhoLimiter
 F       	        UseLogPLimiter
 T               	UseRhoRatioLimiter
-Xe Be Pl EInt		NameVarLimitRatio
+M(1:3) EInt		NameVarLimitRatio
 
 #SAVELOGFILE
 T			DoSaveLogfile

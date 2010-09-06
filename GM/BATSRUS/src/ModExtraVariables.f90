@@ -11,7 +11,8 @@ module ModExtraVariables
   integer, parameter :: nWave = 1
   integer, parameter :: WaveFirst_ = 1, WaveLast_ = 1
 
-  ! Gold, Acrylic material level for CRASH
-  integer, parameter :: LevelAu_ = 1, LevelAy_ = 1
+  ! The named index range for material levels
+  integer, parameter :: nMaterial = 1
+  integer, parameter :: MaterialFirst_ = 1, MaterialLast_ = 1
 
 end module ModExtraVariables
