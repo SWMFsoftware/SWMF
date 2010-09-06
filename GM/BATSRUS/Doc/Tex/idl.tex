@@ -5,10 +5,14 @@
 
 \section{IDL Visualization \label{section:idl_visualization}}
 
-This chapter describes the use of the IDL macros for plotting results.
+This section describes the use of the IDL macros for plotting results.
 These macros were originally developed for the Versatile Advection Code,
-and modified and improved for \BATSRUS. 
-All the IDL macros provided for \BATSRUS\ are in the {\bf Idl} directory.
+and modified and improved for \BATSRUS. Since the macros are written
+in a rather general manner, they can be used to visualize all kinds
+of model or observational data as long as it can be read. For example
+the plot files from the Polar Wind Outflow Model of the SWMF can 
+also be visualized with these macros.
+All the IDL macros are in the {\bf Idl} directory of BATS-R-US.
 
 \subsection{IDL path and startup file \label{s-idl-path}}
 
@@ -78,7 +82,7 @@ exit
 .r getpict
 \end{verbatim}
    The procedure will prompt you for the {\bf filename}, 
-   and it determines the {\bf filetype} and {\bf npictinfiles}
+   and it determines the {\bf filetypes} and {\bf npictinfiles}
    (the number of snapshots in the file) automatically. Then it asks for
    the frame-number {\bf npict} (1, 2,... npictinfiles) 
    of the snapshot to be read from the file. When {\bf npictinfiles=1},
@@ -89,9 +93,7 @@ filetype(s)   = binary
 npictinfile(s)=      1
 npict=       1
 \end{verbatim}
-   The header of the file is read and echoed on the screen. The
-   type of equation is given {\bf physics} (e.g. 'mhd23') 
-   which is normally read from the headline of the file {\bf ExampleA\_mhd23}.
+   The header of the file is read and echoed on the screen. 
    A typical result:
 \begin{verbatim}
 headline  =ExampleA
@@ -99,7 +101,6 @@ ndim      = 2, neqpar= 1, nw= 8
 nx        =    50   50
 eqpar     =       1.666667
 variables = x y rho ux uy uz p bx by bz gamma
-physics (eg. mhd12)=mhd23
 it      =           0, time=       0.0000000
 Read x and w
 GRID            INT       = Array(50, 50)
@@ -109,16 +110,15 @@ GRID            INT       = Array(50, 50)
    Note that IDL, unlike FORTRAN, starts indexing from 0 instead of 1. 
    The {\bf GRID} index array is useful for defining
    cuts of the computational domain for plotting, see details 
-   in section~\ref{s-plot-part}. 
+   in subsection~\ref{s-plot-part}. 
 
-   If your file contained data on a structured grid, you get the "IDL$>$"
-   prompt back, and you can do whatever you want with {\bf x}, {\bf w}, 
+   After reading the data you can do whatever you want with {\bf x}, {\bf w}, 
    and all the other variables 
    {\bf headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables}
    defined by the header. 
-
-   You can use the {\bf {\bf plotfunc}} script to get some 
-   sophisticated plots or you can use any of the IDL procedures directly, e.g.
+   You can use the {\bf plotfunc} script (see subsection~\ref{s-plotfunc}
+   to get some sophisticated plots or you can use any of the IDL procedures 
+   directly to examine and/or plot the data, e.g.
 \begin{verbatim}
 print,time,it
 print,nx
@@ -153,23 +153,23 @@ plotgrid,x,/lines
    {\bf nx} array are 1. The AMR grids of \BATSRUS\ and AMRVAC are
    unstructured, while VAC can produce generalized grids.
 
-   In either case the {\bf getpict} macro will ask if you want a
-   transformation of the {\bf x} and {\bf w} variables.
-   The default behaviour is no transformation (just hit the "Enter" key).
+   The default behavior is to leave the grid in its original form.
    This choice saves the time of transformation, and uses the original grid 
-   and variables, but there are only a few plotmodes available for 
-   unstructured grids: contour, contfill, contlabel and contbar.
-   For a generalized grid there are two more options: vector and stream.
-
-   Alternatively, you can transform the data onto a regular grid, 
-   which makes all the plotmodes fully available. 
-   To achieve that select 'regular' transformation with
+   and variables, but only some of the plotmodes are available for 
+   generalized and unstructured grids: contour, contfill, contlabel, contbar,
+   vector and stream. Others (e.g. surface, tv, tvbar, velovect) are not.
+   To allow all plotmodes (and cuts across the grid), the data
+   has to be transformed (interpolated) onto a regular grid.
+   To achieve that select the 'regular' transformation with
 \begin{verbatim}
 transform (r=regular/p=polar/u=unpolar/n=none)=none ? r
 \end{verbatim}
-   Now the code will interpolate the irregular grid onto a 
-   regular one using IDL's {\bf triangulate} and {\bf trigrid} procedures.  
-   The size of the regular grid is asked now
+   The size of the regular grid can be given by setting the {\bf nxreg} array
+\begin{verbatim}
+nxreg=[100,100]
+\end{verbatim}
+   If {\bf nxreg} is not set, then  the size of the regular grid will be asked
+   when the data is read with {\bf getpict} or {\bf animate}:
 \begin{verbatim}
 Generalized coordinates, dimensions for regular grid
 nxreg(0) (use negative sign to limit x)=      100
@@ -184,8 +184,13 @@ nxreg(1) (use negative sign to limit y)=      100
 surface,wreg(*,*,0)
 \end{verbatim}
    It is possible to restrict the transformation to a rectangular
-   part of the original 2D data by using a negative sign for nxreg(0) and/or
-   nxreg(1), e.g.
+   part of the original 2D data by setting the {\bf xreglimits} array
+\begin{verbatim}
+xreglimits=[-15, -10, 30.5, 10]
+\end{verbatim}
+   Note that the order of the elements is xmin, ymin, xmax, ymax.
+   Another way to do this is adding a negative sign when prompted for 
+   nxreg(0) and nxreg(1), e.g.
 \begin{verbatim}
 nxreg(0) (use negative sign to limit x)? -100
 xreglimits(0) (xmin)? -15.
@@ -196,11 +201,7 @@ xreglimits(3) (ymax)? 10.
 \end{verbatim}
    Now the $100\times 50$ {\bf xreg} array is limited to the range 
    [-15.,30.5] in x, and [-10.,10.] in y, and this is where the {\bf wreg} 
-   array is defined. The {\bf xreglimits} array can be set explicitly too,
-\begin{verbatim}
-xreglimits=[-15, -10, 30.5, 10]
-\end{verbatim}
-   Note that the order of the elements is xmin, ymin, xmax, ymax.
+   array is defined. 
    To return to the default behaviour, which is plotting the whole 
    computational domain, set
 \begin{verbatim}
@@ -223,6 +224,45 @@ dotransform='y'
    to force {\bf plotfunc} to redo the transformation as necessary.
    After that you can return to dotransform='n' to save the time of
    transformation.
+
+\subsection{Other grid transformations \label{s-gridtransform}}
+
+   The {\bf transform} parameter can be used to perform various
+   grid transformations by setting it to one of the following values
+\begin{verbatim}
+r, regular - interpolate onto a regular Cartesian grid (previous subsection)
+p, polar   - convert from Cartesian X-Y(-Z) to polar R-Phi(-Z) coordinates
+u, unpolar - convert from polar R-Phi(-Z) to Cartesian X-Y(-Z) coordinates
+s, sphere  - convert from Cartesian X-Y-Z to spherical R-Theta-Phi coordinates
+m, my      - perform the transformation in the {\bf do_my_transform} procedure
+\end{verbatim}
+The {\bf polar, unpolar, sphere} options are standard geometric
+transformations of the coordinates {\bf x} and the vector variables in
+{\bf w} to {\bf xreg} and {\bf wreg}. The angles have to be in
+radians.  The number of vector variables is read into {\bf nvector}
+and the indexes of the first components of these vector variables are
+read into the {\bf vectors} array.
+
+The {\bf transform='my'} 
+option allows to define an arbitrary grid/data transformation
+that has to be implemented into a {\bf do\_my\_transform.pro}
+procedure that needs to be compiled as
+\begin{verbatim}
+.r do_my_transform
+\end{verbatim}
+The following simple example converts the second and third coordinates 
+of 3D data from radians to degrees:
+\begin{verbatim}
+do_my_transform,ifile,variables,x,w,xreg,wreg,usereg
+   if max(x(*,*,*,1:2)) lt 10.0 then $
+      x(*,*,*,1:2) = x(*,*,*,1:2)*180/!pi
+end
+\end{verbatim}
+The if statement prevents accidental multiple transformations 
+by {\bf plotfunc} or converting coordinates of a file that uses 
+degrees to start with.
+As the number of arguments indicate, this feature can be used for much more 
+complicated transformations too.
 
 \subsection{Comparison of data \label{s-compare}}
 
@@ -310,12 +350,24 @@ rholow =w0(*,*,0)
 rhohigh=coarsen(w1(*,*,0), 3)
 print,total(abs(rholow-rhohigh))/100/50
 \end{verbatim}
-   will give the average deviation in density. The coarsening is done in
-   finite volume sense, i.e. the fine cells within the coarsened cell are
-   averaged out. The {\bf coarsen} function works properly for
-   uniform Cartesian grids only. Pointwise values can be compared
-   with the use of the {\bf triplet} function (see section \ref{s-plot-part}).
+will give the average deviation in density. The coarsening is done in
+finite volume sense, i.e. the fine cells within the coarsened cell are
+averaged out. The {\bf coarsen} function works properly for
+uniform Cartesian grids only. Pointwise values can be compared
+with the use of the {\bf triplet} and {\bf quadruplet} functions 
+(see section \ref{s-plot-part}).
 
+One can also visualize the difference between two data files 
+with the {\bf plotfunc} macro (see next subsection) by setting
+\begin{verbatim}
+w=w1-w0
+\end{verbatim}
+   if the two files use the same grid, or
+\begin{verbatim}
+wreg=wreg1-wreg0
+\end{verbatim}
+if the files use different unstructured grids but they are 
+interpolated onto the same regular grid.
 
 \subsection{Plotting data with plotfunc \label{s-plotfunc}}
 
@@ -324,10 +376,8 @@ print,total(abs(rholow-rhohigh))/100/50
 \begin{verbatim}
 .r plotfunc
 \end{verbatim}
-   You will see the value of {\bf physics} for the last file read and some 
-   parameters with standard default values for different plotting routines:
+   You will see some plotting parameters with their current values:
 \begin{verbatim}
-physics (e.g. mhd12)      =mhd23
 ======= CURRENT PLOTTING PARAMETERS ================
 ax,az=  30, 30, contourlevel= 30, velvector= 200, velspeed (0..5)= 5
 multiplot= 0 (default), axistype (coord/cells)=coord, fixaspect=1
@@ -344,7 +394,7 @@ bottomline=3, headerline=0
    from {\bf headline, nx}.
    You can change these values explicitly (e.g. {\bf bottomline=0}), or change 
    their default values in {\bf Idl/defaults}. 
-   See sections \ref{s-plotmode} and \ref{s-plot-part} on the other parameters.
+   See sections \ref{s-plotmode} and \ref{s-plot-part} for more detail.
 
    Now, you will be prompted 
    for the name of function(s) and the corresponding plotting mode(s):
@@ -372,7 +422,7 @@ GRID            INT       = Array(50, 50)
    {\bf surface}. This padding rule is used for all the arrays described 
    by strings. See section~\ref{s-plotmode} for more details on plotmodes.
 
-   The {\bf plottitle} parameter is usually set to {\bf default} which
+   The {\bf plottitle} parameter is usually set to {\bf 'default'} which
    means that the function name is used for the title, but you can set it
    explicitly, e.g. {\bf plottitle='Density;Momentum'}. Here the 
    separator character is a semicolon, thus the titles may contain spaces.
@@ -402,20 +452,20 @@ fmax=[1.1, 1.]
    or any expression using the standard variable, 
    coordinate and equation parameter names 
 \begin{verbatim}
-x y z   rho p ux uy uz uu bx by bz bb   gamma
+x y z   rho p ux uy uz uu u bx by bz bb b  gamma
 \end{verbatim}
-   where "uu" and "bb" are the velocity and magnetic field squared, 
-   respectively. Note that "x ... bb" are arrays, while  "gamma" is
-   a scalar. Here uu and bb are the squared velocity and magnetic field.
-   For example the maximum Alfv\'en 
+   where "uu" and "bb" are the velocity and magnetic field squared, while
+   "u" and "b" are the velocity and magnetic field magnitudes, 
+   respectively. Note that "x ... b" are arrays, while  "gamma" is
+   a scalar.  For example the maximum Alfv\'en 
    speed could be given as {\bf func='sqrt(bb/rho)'}, but this is already 
    defined in funcdef.pro as 'calfven'. 
 
    Expressions can also be formed from variables read from the data files
-   even if they not occur among the standard variables listed above.
+   even if they do not occur among the standard variables listed above.
    These variables should be referred to by the corresponding string 
    in wnames enclosed between curly brackets.
-   For example the 10 based logarithm of the oxygen density that is named 
+   For example the 10 based logarithm of the oxygen ion density that is named 
    'OpRho' in wnames can be written as
 \begin{verbatim}
 alog10({OpRho})
@@ -490,8 +540,8 @@ ovelovect             arrows at every grid point (for overplot)
    For any of the 2D plotmodes, you can add the following strings
 \begin{verbatim}
 Option  Description
------------------------------------------------------------------
-log     show the 10 based logarithm of the function
+---------------------------------------------------------------------
+log     show the 10 based logarithm of the function if it is positive
 grid    show grid points with plus signs
 mesh    show the mesh (lines connecting grid points) 
            only for structured grid
@@ -655,6 +705,10 @@ velpos(*,*)=x(triplet(0,49,2, 0,49,2, 0,1,1))
    The {\bf velpos} array can also be used to position streamlines for 
    plotmode='stream' and 'stream2'.
 
+Finally the {\bf rcut} parameter can be used to cut out a circle around
+the origin. While the {\bf body} modifier in the plotmode simply covers
+the circle, the {\bf rcut} removes all the data inside that radius,
+so it has no effect on the range of values.
 
 \subsection{Multiplot \label{s-multiplot}}
 
@@ -662,14 +716,15 @@ velpos(*,*)=x(triplet(0,49,2, 0,49,2, 0,1,1))
    on the number of files and and the number of functions. 
    The default arrangement be can overriden by setting the
    {\bf multiplot} array. For example, setting 
-   {\bf multiplot=[2,3,0]} gives 2 by 3 subplots filled in row-wise.
-   If the third element is 1, the subplots are filled in column-wise.
-   Setting {\tt multiplot=3} is identical with {\bf multiplot=[3,1,1]}
-   (a single row of plots),
-   setting {\tt multiplot=-3} is identical with {\bf multiplot=[1,3,1]}
-   (a single column of plots),
-   while {\tt multiplot=0} gives the default behaviour
-   (the number of rows and columns is about the same).
+\begin{verbatim}
+multiplot=[2,3,0]
+\end{verbatim} 
+gives 2 by 3 subplots filled in row-wise. If the third element is 1,
+the subplots are filled in column-wise.  Setting {\bf multiplot=3} is
+identical with {\bf multiplot=[3,1,1]} (a single row of plots),
+{\bf multiplot=-3} is identical with {\bf multiplot=[1,3,1]}
+(a single column of plots), while {\bf multiplot=0} gives the default
+behaviour (the number of rows and columns is about the same).
 
    Functions can be plot on top of each other by setting the {\bf multiplot}
    array such that the number of subplots is smaller than the number of
@@ -830,15 +885,30 @@ bottomline=1
    in a single plot. 
    Now the time is shown for each plot individually, and setting
    {\bf bottomline=1} limits the time stamp to the most essential
-   information, time. An alternative approach is to set the 
-   {\bf timetitle} string to format the time and show it as the plot title.
-   For example
+   information, time. The {\bf bottomline=2} shows the iteration number
+   and the time, while {\bf bottomline=3} also shows the grid size.
+   This information can be customized by setting {\bf bottomline} to
+   a string valued expression, e.g.
+\begin{verbatim}
+bottomline='"Time="+stime+", Grid="+snx+", Iteration="+sit'
+\end{verbatim}
+where {\bf stime, snx, sit} are formatted strings of time, iteration number
+and grid size. An even more complicated example is to use expressions and
+string formatting explicitly, e.g.
+\begin{verbatim}
+bottomline='"Time="+string(time*1e9,format="(f5.1)")+" ns"'
+\end{verbatim}
+that will show time in units of nanoseconds.
+
+An alternative approach (that works with animate only) is to set the 
+{\bf timetitle} string to format the time and show it as the plot title.
+For example
 \begin{verbatim}
 timetitle='("t=",f8.1,"s")'
 \end{verbatim}
-   will show the time as {\bf t=240000.0s}. The time units and the
-   initial time (offset) can be set with {\bf timetitleunit} 
-   and {\bf timetitlestart}. For example
+will show the time as {\bf t=240000.0s}. The time units and the
+initial time (offset) can be set with {\bf timetitleunit} 
+and {\bf timetitlestart}. For example
 \begin{verbatim}
 timetitleunit=3600.0
 timetitlestart=60.0
@@ -849,7 +919,7 @@ timetitle='(``t='',f5.2,''h'')'
    while the offset is given in the time units defined by timetitleunit.
 
    Set timetitle to an empty string and/or timetitleunit and timetitlestart
-   to zero to return to the default behaviour. 
+   to zero to return to the default behavior. 
    If {\bf npict*nfile*nplot} is greater than the number 
    of subplots defined by {\bf multiplot}, an animation is done. 
    Type 
@@ -960,28 +1030,32 @@ Mfastz          fast Mach number along z dimension: uz/cfastz
 Mfast           maximum fast Mach number: |u|/cfast
 \end{verbatim}
 
-\subsection{Reading the logfile with getlog \label{s-getlog}}
+\subsection{Reading logfiles with getlog \label{s-getlog}}
 
-One or more (at most three) logfiles can be read by
+One or more (at most ten) logfiles can be read by
 \begin{verbatim}
 .r getlog
 \end{verbatim}
-   which reads data from the file(s) determined by the {\bf logfilename} 
-   parameter. This can be space separated list of file names and/or it
-   may include wild card characters. The data in the
-   logfile(s) is put into the {\bf wlog} ({\bf wlog1, wlog2}) real arrays,
-   while the name of the variables is put into the {\bf wlognames} 
-   ({\bf wlognames1, wlognames2}) string arrays. Based on the
-   the variable names (e.g. 't' or 'time', 'hour' or 'hours',
-   'yr mo dy hr mn sc ms' or 'year month day hour min sec msec') 
-   and the associated time data the time in hours is calculated 
-   and stored in the {\bf logtime} ({\bf logtime1, logtime2}) 1D real arrays. 
-   If no time variables are found, the {\bf logtime} array is set to the
-   row index.
+which reads data from the file(s) determined by the {\bf logfilename} 
+parameter. This can be a space separated list of file names and/or it
+may include wild card characters. The data in the
+logfile(s) is put into the {\bf wlog} ({\bf wlog1, wlog2 ...}) real arrays,
+while the names of the variables are put into the {\bf wlognames} 
+({\bf wlognames1, wlognames2, ...}) string arrays. If the logfile contains
+the variable names (e.g. 't' or 'time', 'hour' or 'hours',
+'yr mo dy hr mn sc ms' or 'year month day hour min sec msec') 
+then the time is calculated and stored in the {\bf logtime} 
+({\bf logtime1, logtime2, ...}) 1D real arrays. 
+The time unit is defined by the {\bf timeunit} string
+(possible values are {\bf 'h', 'm', 's', 'millisec', 'microsec', 'ns'});
+the default units are hours. 
+If no time variables are found, the {\bf logtime} array is set to the
+row index.
 
-   The {\bf wlog(nrow,ncol)} real array contains the rows and columns of the
-   logfile, the {\bf wlognames(ncol)} string array the names and the
-   {\bf logtime(nrow)} array the time in hour. A simple example is 
+After running {\bf getlog}, the {\bf wlog(nrow,ncol)} real array 
+contains the rows and columns of the logfile, 
+the {\bf wlognames(ncol)} string array the names and the
+{\bf logtime(nrow)} array the times. A simple example is 
 \begin{verbatim}
 .r getlog
 logfilename(s) =log_n020001.log
@@ -1008,9 +1082,11 @@ You can use the IDL plotting procedures directly to visualize the data, e.g.
 plot,logtime,wlog(*,3),xtitle='hour',ytitle='rho_mean'
 \end{verbatim}
 checks the global mass conservation. 
-Use the {\bf plotlog} script to get more sophisticated plots,
 
-\subsection{Plotting the logfile with plotlog \label{s-plotlog}}
+The {\bf plotlog} script described next can be used to get 
+much more sophisticated plots. 
+
+\subsection{Plotting logfile data with plotlog \label{s-plotlog}}
 
 Once the data in the logfile(s) have been read with {\bf getlog},
 it can be easily visualized with the {\bf plotlog} script.
@@ -1047,10 +1123,41 @@ by setting the {\bf linestyles} or {\bf symbols} arrays. For example
 \begin{verbatim}
 colors=[255,255]
 linestyles=[1,2]
+symbols=[-4,-5]
 \end{verbatim}
 will show a dotted and a dashed line with the same default color
-(usually white or black). 
+(usually white or black) and with diamonds and trianlges at
+the data points, respectively.
 
+It is possible to add legends to the plot by defining the {\bf legendpos}
+array that contains the {\bf xmin, xmax, ymin, ymax} coordinates 
+in normalized (0 to 1) coordinates. The legends consist of 
+horizontal lines and/or symbols extending from xmin to xmax with the 
+same colors, line types, and symbols as used for the data. 
+Each horizontal line/symbol is followed by a string that is either
+the name of the corresponding logfile, or the corresponding
+element of the {\bf legends} string array consisting of {\bf nlog} strings.
+For example
+\begin{verbatim}
+legendpos=[0.1,0.12,0.5,0.7]
+\end{verbatim}
+will draw horizontal lines from 0.1 to 0.12 with vertical coordinates
+starting from 0.7 all the way down to 0.5. For symbols it is better
+to use a single point, e.g.:
+\begin{verbatim}
+legendpos=[0.11,0.11,0.5,0.7]
+\end{verbatim}
+The horizontal lines or symbols will be foolowed by the file names by default.
+Different legend strings can be given as
+\begin{verbatim}
+legends=['run1 with no AMR', $
+         'run2 with 1 level of AMR', $
+         'run2 with 2 levels of AMR']
+\end{verbatim}
+The legends can be switched off with 
+\begin{verbatim}
+legendpos=0
+\end{verbatim}
 Finally the data can be smoothed with the {\bf smooths} array. 
 The smoothing width can be defined for each logfile separately. 
 A value less than 2 means that the data is not smoothed for that file.
@@ -1059,6 +1166,38 @@ For example
 smooths=[100,0]
 \end{verbatim}
 will smooth the data from the first file only with a 100 point wide stencil.
+
+\subsection{Reading and plotting logfile data with getpict and plotfunc}
+
+While the {\bf getlog} and {\bf plotlog} scripts provide easy and flexible
+ways to plot data in logfiles, they do not allow to combine various columns
+into new functions. One can work around this by reading the data
+with {\bf getlog} first, then manipulate the {\bf wlog} array(s) 
+directly, and then plot the modified data with {\bf plotlog}. 
+
+An alternative approach is to use the {\bf getpict} script to read
+the logfile data into the {\bf x} and {\bf w} arrays:
+\begin{verbatim}
+.r getpict
+filename(s)   =*.log
+filetype(s)   = log
+npictinfile(s)=       1
+npict=       1
+headline  =Volume averages, fluxes, etc
+ndim      = 1, neqpar= 0, nw=13
+it        =       0, time=      0.00000
+nx        =     1182
+eqpar     =      0.00000
+variables = hour it t dt rho mx my mz bx by bz e Pmin Pmax
+Read x and w
+GRID            LONG      = Array[1182]
+\end{verbatim}
+The file type {\bf log} is recognized from the filename extension which
+has to be {\bf '.log'} or {\bf '.sat'}. After reading the logfile,
+the {\bf x} array contains the {\bf logtime} in hours 
+(currently the timeunit is not adjustable in this approach), 
+while the {\bf w} array will contain the various log functions. 
+Now the logfile data can be plot as standard 1D data with {\bf plotfunc}.
 
 \subsection{Saving plots into postscript and graphics files 
                 \label{s-postscript}}
@@ -1089,16 +1228,32 @@ close_device
 The first optional argument of the {\bf set\_device} procedure is the filename.
 If it is not given, the default filename 'idl.ps' is used.
 There are several keyword arguments too: {\tt /port} for
-portrait (default is landscape), {\tt /eps} for encapsulated postscript
-file, {\tt percent=80} for an 80\% size reduction, and {\tt psfont=12}
+portrait, {\tt /land} for landscape (this is the default, but some
+versions of IDL require the explicit /land option), 
+{\tt /eps} for encapsulated postscript file, 
+{\tt percent=80} for an 80\% size reduction, and {\tt psfont=12}
 to select a specific font. The {\bf close\_device} procedure
-has no arguments, it simply closes the postscript device, and opens the
-'X' device.
-
+simply closes the postscript device, and opens the 'X' device.
+If the optional {\tt /pdf} argument is present, the output PostScript or EPS
+file is converted to PDF using the {\tt convert} program (by ImageMagick,
+has to be installed).
+If the {\tt /delete} argument is present as well, the original PS or EPS file
+is removed. 
 You can use .r animate instead of .r plotfunc (e.g. for multiple files or 
 for time series) in combination with {\tt set\_device} and 
 {\tt close\_device}, but make sure that only one plot is produced by setting
 {\bf npictmax=1}, and use {\bf firstpict} to select the snapshot.
+Here is an example showing many of the optional arguments:
+\begin{verbatim}
+npictmax=1
+firstpict=12
+set_device,'figure2.eps',/eps,/port,percent=80,psfont=12
+.r animate
+close_device,/pdf,/delete
+\end{verbatim}
+This will produce a 'figure2.pdf' file provided that the {\tt convert} program
+is installed and working properly.
+
 To save all frames of an animation into a series of Postscript files, 
 do not use {\bf set\_device} but set
 \begin{verbatim}
