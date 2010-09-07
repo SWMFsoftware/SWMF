@@ -223,21 +223,22 @@ contains
         oktest=.false.; oktest_me=.false.
       end if
 
-      jet_width = jet_width*cPi/180.
-      Qprod_day = Qprod_day*2.0
-      Qprod_nit = Qprod_nit*2.0
-      if ( jpattern == 1 ) Qprod_jet = Qprod_jet*4.0*cPi
-      if ( jpattern == 2 ) Qprod_jeta = Qprod_jeta*4.0*cPi
-      if ( Ajet < cTiny ) then
-        Qprod_jet = cZero
-      else
-        Qprod_jet = Qprod_jet/Ajet
-      endif
-      if ( Ajet1 < cTiny ) then
-        Qprod_jeta = cZero
-      else
-        Qprod_jeta = Qprod_jeta/Ajet1
-      endif
+!       jet_width = jet_width*cPi/180.
+!       Qprod_day = Qprod_day*2.0
+!       Qprod_nit = Qprod_nit*2.0
+!       if ( jpattern == 1 ) Qprod_jet = Qprod_jet*4.0*cPi
+!       if ( jpattern == 2 ) Qprod_jeta = Qprod_jeta*4.0*cPi
+!       if ( Ajet < cTiny ) then
+!         Qprod_jet = cZero
+!       else
+!         Qprod_jet = Qprod_jet/Ajet
+!       endif
+!       if ( Ajet1 < cTiny ) then
+!         Qprod_jeta = cZero
+!       else
+!         Qprod_jeta = Qprod_jeta/Ajet1
+!       endif
+
 
 !this is set after set_IC_comet, but this part is not used there.
       FaceState_VI(Bx_,  body1_) = SW_Bx
@@ -500,7 +501,7 @@ endif
     use ModPointImplicit, ONLY: &
          UsePointImplicit, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
 
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, n_step
+    use ModMain,    ONLY: GlobalBlk,nI,nJ,nK,n_step,iTest,jTest,kTest,BlkTest
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, p_, Energy_
     use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK,R_BLK
@@ -510,6 +511,11 @@ endif
 
     integer :: iBlock, i, j, k
     real    :: Coef
+
+    integer, save :: step = 0
+    logical, save :: FirstCall = .TRUE.
+
+
 !****************    yingdong defined for comet    **************
 !    integer, parameter ::  x_jet = 0.855363194, y_jet = -0.49384417, &
 !       z_jet = 0.156434465 	!borrelly jet pattern
@@ -525,6 +531,33 @@ endif
 
     iBlock = GlobalBlk
 
+    if (FirstCall) then
+       FirstCall = .False.
+       step = n_step
+
+       jet_width = jet_width*cPi/180.
+       Qprod_day = Qprod_day*2.0
+       Qprod_nit = Qprod_nit*2.0
+       if ( jpattern == 1 ) Qprod_jet = Qprod_jet*4.0*cPi
+       if ( jpattern == 2 ) Qprod_jeta = Qprod_jeta*4.0*cPi
+       if ( Ajet < cTiny ) then
+          Qprod_jet = cZero
+       else
+          Qprod_jet = Qprod_jet/Ajet
+       endif
+       if ( Ajet1 < cTiny ) then
+          Qprod_jeta = cZero
+       else
+          Qprod_jeta = Qprod_jeta/Ajet1
+       endif
+       
+!        if (iProc == 0) then
+!          open(unit=321,file='Source_VCs.log',status='unknown', action ='write', position='rewind')
+!          write(321,*) "iter rho_ rhoUx_ rhoUy_ rhoUz_ p_ Energy_"
+!          close(321)
+!        end if
+
+    end if
 
 !*********************************************************
     ! Add implicit source here
@@ -751,6 +784,27 @@ endif
         1.0/3.0*( (Unx-ux)**2+(Uny-uy)**2+(Unz-uz)**2 ) - &
         term2*State_VGB(p_,1:nI,1:nJ,1:nK,globalBLK)	!Pi->P
 !          term2*State_VGB(p_,1:nI,1:nJ,1:nK,globalBLK)*cHalf
+
+!     open(unit=321,file='Source_VCs.log',status='old', action ='write', position='append')
+!     if(globalBLK==BLKtest) then
+!        do k=1,nK ;  
+!           do j=1,nJ ;    
+!              do i=1,nI ;
+!                 if(itest==i.and.jtest==j.and.ktest==k) then
+!                    if (step == n_step) then
+!                       write(321,123) n_step, Source_VC(rho_,i,j,k), Source_VC(rhoUx_,i,j,k),&
+!                            Source_VC(rhoUy_,i,j,k),Source_VC(rhoUz_,i,j,k),&
+!                            Source_VC(p_,i,j,k), Source_VC(Energy_,i,j,k)  
+!                       123 format (i7,6(1x,E16.10))
+!                       step = n_step + 1
+!                    end if
+!                 endif
+!              enddo
+!           enddo
+!        enddo
+!     endif
+!    close(321)
+
 
     if(IsPointImplMatrixSet)then
        ! Set the non-zero dS/dU matrix elements here
