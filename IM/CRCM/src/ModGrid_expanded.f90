@@ -37,7 +37,8 @@ Module ModCrcmGrid
 85.4404094624754862, 87.1942709870800599, 88.9996559369669313/)
 
 
-  real :: xlatr(np), xmlt(nt), dlat(np1), energy(neng), sinAo(npit)
+  real :: xlatr(np), xmlt(nt), dlat(np1), energy(neng), sinAo(npit),&
+          Ebound(neng+1)
   
   logical, parameter :: UseExpandedGrid =.true.
 

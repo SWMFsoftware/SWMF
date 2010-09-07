@@ -3,9 +3,10 @@ module ModCrcmPlot
   implicit none
 
   private ! except
-  public :: Crcm_plot
+  public :: Crcm_plot, Crcm_plot_fls
   character(len=5),  public    :: TypePlot   = 'ascii'
   logical,           public    :: DoSavePlot = .false.
+  logical,           public    :: DoSaveFlux = .false.
   real,              public    :: DtOutput   = 10.0
 
   character(len=*), parameter :: NameHeader = 'CRCM output'
@@ -133,6 +134,70 @@ contains
     deallocate(Coord_DII, CoordIono_DII, PlotState_IIV)
 
   end subroutine Crcm_plot
+  !============================================================================
 
+  subroutine Crcm_plot_fls(rc,flux,time)
+    use ModIoUnit,    ONLY: UnitTmp_
+    use ModCrcmGrid,  ONLY:nLat=>np, nLon=>nt, nEnergy=>neng, nPitchAng=>npit,&
+                           energy,sinAo,xlat,xmlt,Ebound
+    use ModCrcmPlanet,ONLY:nSpecies=>nspec
+    use ModFieldTrace,ONLY:ro,bo,xmlto,irm
+    use ModCrcmRestart, ONLY: IsRestart
+    
+    real, intent(in) :: rc,flux(nSpecies,nLat,nLon,nEnergy,nPitchAng),time
+    
+    real          :: parmod(1:10)=0.0,lat,ro1,xmlt1,bo1
+    integer       :: iLat,iLon,k,m,n,i,nprint
+    logical, save :: IsFirstCall = .true.
+    !--------------------------------------------------------------------------
+    nprint=ifix(time/DtOutput)
+
+    do n=1,nSpecies
+       if (IsFirstCall .and. .not. IsRestart) then
+          if (n==1) &
+               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_h.fls',status='unknown')
+          if (n==2 .and. n /= nSpecies) &
+               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_o.fls',status='unknown')
+          if (n==3 .and. n /= nSpecies) &
+               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_he.fls',status='unknown')
+          if (n==nSpecies) &
+               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_e.fls',status='unknown')
+          write(UnitTmp_,"(f10.6,5i6,6x,'! rc in Re,nr,ip,je,ig,ntime')") &
+               rc,nLat-1,nLon,nEnergy,nPitchAng,nprint
+          write(UnitTmp_,'(6f9.3)') (energy(k),k=1,nEnergy)
+          !write(UnitTmp_,'(6f9.3)') (Ebound(k),k=1,nEnergy+1)
+          write(UnitTmp_,'(6f9.5)') (sinAo(m),m=1,nPitchAng)
+          write(UnitTmp_,'(10f8.3)') (xlat(i),i=2,nLat)
+       else
+          open(unit=UnitTmp_,file='IM/plots/CrcmFlux_h.fls',status='old', &
+               position='append')
+       endif
+
+       write(UnitTmp_,'(f8.3,10f9.2,"    ! hour,  parmod")') &
+            time/3600.,parmod(1:10)
+       do iLat=2,nLat             ! Write fluxes @ fixed E & y grids
+          do iLon=1,nLon
+             lat=xlat(iLat)
+             if (iLat.gt.irm(iLon)) lat=xlat(irm(iLon))
+             ro1=ro(iLat,iLon)
+             if (iLat.gt.irm(iLon)) ro1=ro(irm(iLon),iLon)
+             bo1=bo(iLat,iLon)
+             if (iLat.gt.irm(iLon)) bo1=bo(irm(iLon),iLon)
+             xmlt1=xmlto(iLat,iLon)
+             if (iLat.gt.irm(iLon)) xmlt1=xmlto(irm(iLon),iLon)
+             write(UnitTmp_,'(f7.2,f6.1,2f8.3,1pe11.3)') &
+                  lat,xmlt(iLon),ro1,xmlt1,bo1
+             do k=1,nEnergy
+                write(UnitTmp_,'(1p,12e11.3)') &
+                     (flux(n,iLat,iLon,k,m),m=1,nPitchAng)
+             enddo
+          enddo
+       enddo
+       close(UnitTmp_)
+    enddo
+    IsFirstCall=.false.
+    
+
+  end subroutine Crcm_plot_fls
 end module ModCrcmPlot
 

@@ -10,7 +10,8 @@ subroutine crcm_run(delta_t)
   use ModGmCrcm,      ONLY: Den_IC,Temp_IC,StateIntegral_IIV,AveP_,AveDens_, &
                             iLatMin,DoMultiFluidGMCoupling,AveDen_I,AveP_I
   use ModIeCrcm,      ONLY: pot
-  use ModCrcmPlot,    ONLY: Crcm_plot, DtOutput, DoSavePlot
+  use ModCrcmPlot,    ONLY: Crcm_plot, Crcm_plot_fls, DtOutput, DoSavePlot,&
+                            DoSaveFlux
   use ModCrcmRestart, ONLY: IsRestart
   implicit none
 
@@ -158,7 +159,10 @@ subroutine crcm_run(delta_t)
 
   if (DoSavePlot.and.&
        (floor((Time+1.0e-5)/DtOutput))/=floor((Time+1.0e-5-delta_t)/DtOutput))&
-       call Crcm_plot(np,nt,xo,yo,Pressure_IC,phot,Den_IC,bo,ftv,pot,FAC_C,Time,dt)
+       then
+     call Crcm_plot(np,nt,xo,yo,Pressure_IC,phot,Den_IC,bo,ftv,pot,FAC_C,Time,dt)
+     if (DoSaveFlux) call Crcm_plot_fls(rc,flux,time)
+  endif
 end subroutine Crcm_run
 
 !-----------------------------------------------------------------------------
@@ -210,6 +214,11 @@ subroutine crcm_init
        0.430830,0.601490,0.753790,0.863790,0.94890,0.98827/)
   dmu=(/0.000207365,0.000868320,0.00167125,0.00489855,0.0165792,0.0404637, &
        0.078819500,0.121098000,0.14729600,0.16555900,0.1738560,0.2486830/)
+  do k=2,neng
+     Ebound(k)=sqrt(energy(k-1)*energy(k))
+  enddo
+  Ebound(1) = energy(1)**2.0/Ebound(2)
+  Ebound(neng+1)=energy(neng)**2.0/Ebound(neng)
 
   ! CRCM magnetic moment, xmm1
   xmm(1)=energy(1)*cElectronCharge/(dipmom/(2*re_m)**3.0)
