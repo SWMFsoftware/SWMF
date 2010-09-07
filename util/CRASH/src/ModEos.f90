@@ -214,7 +214,7 @@ contains
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
        OpacityPlanckOut_I, OpacityRosselandOut_I,            &
-       HeatCond, TeTiRelax, iError)
+       HeatCond, TeTiRelax, Ne, iError)
     use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
     ! Eos function for single material
 
@@ -234,7 +234,7 @@ contains
     real,    optional, intent(in)  :: pTotalIn     ! pressure
     real,    optional, intent(in)  :: eElectronIn  ! internal energu density of electrons
     real,    optional, intent(in)  :: pElectronIn  ! pressure of electrons
-
+    
     ! One or more of the output parameters can be present
     real,    optional, intent(out) :: TeOut        ! temperature
     real,    optional, intent(out) :: pTotalOut    ! pressure
@@ -246,6 +246,7 @@ contains
     real,    optional, intent(out) :: eElectronOut ! internal energy density
     real,    optional, intent(out) :: GammaEOut    ! polytropic index
     real,    optional, intent(out) :: CvElectronOut! specific heat / unit volume
+    real,    optional, intent(out) :: Ne           ! electron concentration [m-3]
 
     real,    optional, intent(out), &              ! Opacities
                    dimension(nGroup) :: OpacityPlanckOut_I, OpacityRosselandOut_I
@@ -324,7 +325,7 @@ contains
    
        if(present(HeatCond))   HeatCond  = Value_V(Cond_)
        if(present(TeTiRelax))  TeTiRelax = Value_V(TeTi_)
-
+       if(present(Ne))         Ne = Value_V(Z_) * NAtomic
        
        return
     end if
@@ -344,7 +345,7 @@ contains
          TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
          eElectronOut, pElectronOut, GammaEOut, CvElectronOut, & 
          OpacityPlanckOut_I, OpacityRosselandOut_I,            &
-         HeatCond, TeTiRelax, iError)
+         HeatCond, TeTiRelax, Ne, iError)
 
   end subroutine eos_material
 
@@ -355,7 +356,7 @@ contains
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
        OpacityPlanckOut_I, OpacityRosselandOut_I,            & 
-       HeatCond, TeTiRelax, iError)
+       HeatCond, TeTiRelax, Ne, iError)
     !\
     !!   WARNING !!!
     !You cannot use total pressure and total energy density as input or output
@@ -385,6 +386,7 @@ contains
     real,    optional, intent(out) :: eElectronOut ! internal energy density
     real,    optional, intent(out) :: GammaEOut    ! polytropic index
     real,    optional, intent(out) :: CvElectronOut! specific heat / unit volume
+    real,    optional, intent(out) :: Ne           ! electron concentration, [m-3]
 
     real,    optional, intent(out), &              !Opacities m^-1
                    dimension(nGroup) :: OpacityPlanckOut_I, OpacityRosselandOut_I
@@ -425,7 +427,7 @@ contains
          TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
          eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
          OpacityPlanckOut_I, OpacityRosselandOut_I,            & 
-         HeatCond, TeTiRelax, iError)
+         HeatCond, TeTiRelax, Ne,  iError)
 
   end subroutine eos_mixture
 
@@ -436,9 +438,9 @@ contains
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, & 
        OpacityPlanckOut_I, OpacityRosselandOut_I,            &
-       HeatCond, TeTiRelax, iError)
+       HeatCond, TeTiRelax, Ne, iError)
     use CRASH_ModTransport, ONLY: electron_heat_conductivity, te_ti_relaxation
-
+    use CRASH_ModPartition, ONLY: zAv
     !\
     !!   WARNING !!!
     !You cannot use total pressure and total energy density as input or output
@@ -465,6 +467,7 @@ contains
     real,    optional, intent(out) :: eElectronOut ! internal energy density
     real,    optional, intent(out) :: GammaEOut    ! polytropic index
     real,    optional, intent(out) :: CvElectronOut! specific heat / unit volume
+    real,    optional, intent(out) :: Ne           ! electron concentration, [m-3]
 
     real,    optional, intent(out), &              ! Opacities m^-1
                    dimension(nGroup) :: OpacityPlanckOut_I, OpacityRosselandOut_I
@@ -539,7 +542,7 @@ contains
     if(present(TeTiRelax))  TeTiRelax = te_ti_relaxation()
     if(present(CvTotalOut)) CvTotalOut = (Natomic*cBoltzmann)*heat_capacity()
     if(present(CvElectronOut)) CvElectronOut = (Natomic*cBoltzmann)*heat_capacity_e()
-
+    if(present(Ne)) Ne = NAtomic * zAv
   end subroutine eos_generic
   !=========================
   subroutine fix_hyades_state(iMaterial, StateCgs_V, PMinSi)
