@@ -20,7 +20,7 @@ module ModUser
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates, &
        UseUserLogFiles
   use ModSize, ONLY: nI, nJ, nK
-  use ModVarIndexes, ONLY: nMaterial, MaterialFirst_, MaterialLast_
+  use ModVarIndexes, ONLY: nMaterial, MaterialFirst_, MaterialLast_, Pe_
   use CRASH_ModEos, ONLY: MassMaterial_I => cAtomicMassCRASH_I, &
        Be_, Plastic_, Au_, Ay_
   use BATL_amr, ONLY: BetaProlong
@@ -78,6 +78,9 @@ module ModUser
   logical :: UseGold = .false.
   real :: WidthGold  = 50.0      ! width   [micron]
   real :: RhoDimGold = 20000.0   ! density [kg/m3]
+
+  ! Use conservative or non-conservative levelsets
+  logical :: UseNonConsLevelSet = .false.
 
   ! Use volume fraction method at the material interface
   logical :: UseVolumeFraction = .false.
@@ -153,7 +156,12 @@ module ModUser
 
   ! Indexes for lookup tables
   integer:: iTablePPerE = -1, iTableEPerP = -1, iTableThermo = -1
-  integer, parameter:: Cv_=1, Gamma_=2, TeTi_=2, Cond_=3, Te_=4, nThermo=4
+  ! If UseElectronPressure is true (Pe_>1) then nThermo=6, otherwise it is 5
+  integer, parameter:: nThermo=4+min(2,Pe_)
+  ! Named indices for thermo lookup table
+  ! If UseElectronPressure is false, default TeTi_ to Cond_ to keep
+  ! the compiler happy
+  integer, parameter:: Te_=1, Cv_=2, Gamma_=3, Zavg_=4, Cond_=5, TeTi_=nThermo
 
   integer:: iTableOpacity = -1
   integer:: iTableOpacity_I(0:MaxMaterial-1) = -1
@@ -208,6 +216,7 @@ contains
 
     UseUserLogFiles     = .true. ! to allow integration of rhoxe, rhobe...
     UseUserUpdateStates = .true. ! for internal energy and cylindrical symm.
+    UseUserSource       = .true. ! for non-cons levelset and pressure equation
     UseUserInitSession  = .true. ! to set units for level set variables
     UseUserIcs          = .true. ! to read in Hyades file
     !                              and initialize the level set variables
@@ -246,8 +255,13 @@ contains
           call read_var('UseGold',    UseGold)
           call read_var('WidthGold',  WidthGold)
           call read_var('RhoDimGold', RhoDimGold)
+
+       case("#LEVELSET")
+          call read_var('UseNonConsLevelSet', UseNonConsLevelSet)
+
        case("#VOLUMEFRACTION")
           call read_var('UseVolumeFraction', UseVolumeFraction)
+
        case("#MIXEDCELL")
           call read_var('UseMixedCell', UseMixedCell)
           if(UseMixedCell)then
@@ -611,7 +625,7 @@ contains
 
        ! Multiply level set functions with density unless the 
        ! non-conservative approach is used
-       if(.not.UseUserSource) &
+       if(.not.UseNonConsLevelSet) &
             State_VGB(LevelXe_:LevelMax,i,j,k,iBlock) = &
             State_VGB(LevelXe_:LevelMax,i,j,k,iBlock) &
             *State_VGB(Rho_,i,j,k,iBlock)
@@ -1461,10 +1475,7 @@ contains
 
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
-         UseNonConservative, IsConserv_CB, &
-         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
-         UseElectronPressure
-    use ModGeometry, ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
+         UseNonConservative, IsConserv_CB, UseElectronPressure
     use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModEnergy,   ONLY: calc_energy_cell
@@ -1475,7 +1486,7 @@ contains
     integer, intent(in):: iStage,iBlock
 
     integer:: i, j, k
-    real   :: PressureSi, EinternalSi, GammaEos, DivU
+    real   :: PressureSi, EinternalSi
     logical:: IsConserv
 
     character(len=*), parameter :: NameSub = 'user_update_states'
@@ -1484,22 +1495,6 @@ contains
        call update_states_electron
 
        RETURN
-    end if
-
-    ! Fix adiabatic compression source for pressure
-    if(UseNonConservative)then
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          DivU          =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
-          if(nJ>1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
-          if(nK>1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
-          DivU = vInv_CB(i,j,k,iBlock)*DivU
-
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, GammaOut=GammaEos)
-
-          Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-               -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*DivU
-       end do; end do; end do
     end if
 
     call update_states_MHD(iStage,iBlock)
@@ -1580,31 +1575,47 @@ contains
 
   subroutine user_calc_sources
 
-    use ModMain,     ONLY: nI, nJ, nK, GlobalBlk
-    use ModAdvance,  ONLY: State_VGB, &
-         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
-    use ModGeometry, ONLY: vInv_CB
+    use ModMain,       ONLY: nI, nJ, nK, GlobalBlk
+    use ModAdvance,    ONLY: State_VGB, &
+         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
+         UseNonConservative, UseElectronPressure
+    use ModGeometry,   ONLY: vInv_CB
+    use ModPhysics,    ONLY: g
+    use ModVarIndexes, ONLY: p_, Pe_
 
-    integer :: i, j, k, iBlock
-    real :: DivU
+    integer :: i, j, k, iBlock, iP
+    real :: DivU, GammaEos
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !-------------------------------------------------------------------
+    if(.not.UseNonConsLevelSet .and. .not.UseNonConservative) RETURN
+
+    iP = p_
+    if(UseElectronPressure) iP = Pe_
 
     iBlock = globalBlk
 
-    ! Add Level*div(u) as a source term so level sets beome advected scalars
-    ! Note that all levels use the velocity of the first (and only) fluid
-
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       ! Note that the velocity of the first (and only) fluid is used
        DivU            =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
        if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
        if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
        DivU = vInv_CB(i,j,k,iBlock)*DivU
 
-       Source_VC(LevelXe_:LevelMax,i,j,k) = &
+
+       ! Add Level*div(u) as a source term so level sets beome advected scalars
+       if(UseNonConsLevelSet) &
+            Source_VC(LevelXe_:LevelMax,i,j,k) = &
             Source_VC(LevelXe_:LevelMax,i,j,k) &
             + State_VGB(LevelXe_:LevelMax,i,j,k,iBlock)*DivU
 
+       ! Fix adiabatic compression source for pressure
+       if(UseNonConservative)then
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, GammaOut=GammaEos)
+
+          Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
+               -(GammaEos-g)*State_VGB(iP,i,j,k,iBlock)*DivU
+       end if
     end do; end do; end do
 
   end subroutine user_calc_sources
@@ -1641,7 +1652,6 @@ contains
     real    :: OpacityPlanckSi_W(nWave)
     real    :: OpacityRosselandSi_W(nWave)
     integer :: i, j, k, iMaterial, iLevel, iWave, iVar
-    real    :: Value_V(nMaterial*nThermo) ! Cv,Gamma,Kappa,Te for the materials
 
     ! Do not use MinJ,MinK,MaxJ,MaxK here to avoid pgf90 compilation error...
     integer, parameter:: jMin = 1 - 2*min(1,nJ-1), jMax = nJ + 2*min(1,nJ-1)
@@ -1898,10 +1908,10 @@ contains
     !-------------------------------------------------------------------
 
     ! The units always have to be reset, because set_physics sets them
-    if(UseUserSource)then
-       UnitUser_V(LevelXe_:LevelMax) = No2Io_V(UnitX_)
-    else if(UseMixedCell) then
+    if(UseMixedCell) then
        UnitUser_V(LevelXe_:LevelMax) = UnitUser_V(Rho_)
+    elseif(UseNonConsLevelSet)then
+       UnitUser_V(LevelXe_:LevelMax) = No2Io_V(UnitX_)
     else
        UnitUser_V(LevelXe_:LevelMax) = UnitUser_V(Rho_)*No2Io_V(UnitX_)
     end if
@@ -1986,7 +1996,7 @@ contains
     real, intent(in)   :: Arg1, Arg2
     real, intent(out)  :: Value_V(:)
 
-    real:: Rho, p, e, Cv, Gamma, HeatCond, Te, TeTiRelax
+    real:: Rho, p, e, Te, Cv, Gamma, Zavg, HeatCond, TeTiRelax
     real:: OpacityPlanck_W(nWave), OpacityRosseland_W(nWave)
     integer:: iMaterial
     character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
@@ -2038,31 +2048,37 @@ contains
        p   = Arg2*Rho
        do iMaterial = 0, nMaterial-1
           if(UseElectronPressure)then
-             call eos(iMaterial, Rho, pElectronIn=p, CvElectronOut=Cv, &
-                  TeTiRelax=TeTiRelax, HeatCond=HeatCond, TeOut=Te)
+             call eos(iMaterial, Rho, pElectronIn=p, &
+             TeOut=Te, CvElectronOut=Cv, GammaEOut=Gamma, zAverageOut=Zavg, &
+             HeatCond=HeatCond, TeTiRelax=TeTiRelax)
 
-             Value_V(Cv_  +iMaterial*nThermo) = Cv
-             Value_V(TeTi_+iMaterial*nThermo) = TeTiRelax
-             Value_v(Cond_+iMaterial*nThermo) = HeatCond
-             Value_V(Te_  +iMaterial*nThermo) = Te
+             Value_V(Te_   +iMaterial*nThermo) = Te
+             Value_V(Cv_   +iMaterial*nThermo) = Cv
+             Value_V(Gamma_+iMaterial*nThermo) = Gamma
+             Value_V(Zavg_ +iMaterial*nThermo) = Zavg
+             Value_v(Cond_ +iMaterial*nThermo) = HeatCond
+             Value_V(TeTi_ +iMaterial*nThermo) = TeTiRelax
           else
 
              call eos(iMaterial, Rho, PtotalIn=p, &
-                  CvTotalOut=Cv, GammaOut=Gamma, HeatCond=HeatCond, TeOut=Te)
+                  TeOut=Te, CvTotalOut=Cv, GammaOut=Gamma, zAverageOut=Zavg, &
+                  HeatCond=HeatCond)
 
              ! Note that material index starts from 0
              if(Te > 0.0)then
+                Value_V(Te_   +iMaterial*nThermo) = Te
                 Value_V(Cv_   +iMaterial*nThermo) = Cv
                 Value_V(Gamma_+iMaterial*nThermo) = Gamma
+                Value_V(Zavg_ +iMaterial*nThermo) = Zavg
                 Value_V(Cond_ +iMaterial*nThermo) = HeatCond
-                Value_V(Te_   +iMaterial*nThermo) = Te
              else
                 ! The eos() function returned impossible values, take ideal gas
-                Value_V(Cv_   +iMaterial*nThermo) = 1.5*Rho
-                Value_V(Gamma_+iMaterial*nThermo) = 5./3.
-                Value_V(Cond_ +iMaterial*nThermo) = 0.0
                 Value_V(Te_   +iMaterial*nThermo) = &
                      p/Rho*cProtonMass/cBoltzmann
+                Value_V(Cv_   +iMaterial*nThermo) = 1.5*Rho
+                Value_V(Gamma_+iMaterial*nThermo) = 5./3.
+                Value_V(Zavg_ +iMaterial*nThermo) = 0.0
+                Value_V(Cond_ +iMaterial*nThermo) = 0.0
              end if
           end if
        end do
@@ -2124,6 +2140,8 @@ contains
 
     subroutine calc_table_gammalaw
 
+      ! Only for single temperature mode (UseElectronPressure=.false.)
+
       use ModConst, ONLY: cAtomicMass
 
       real :: NatomicSi
@@ -2155,10 +2173,11 @@ contains
                call eos(iMaterial, Rho, PtotalIn=p, TeOut=Te)
             end if
 
+            Value_V(Te_   +iMaterial*nThermo) = Te
             Value_V(Cv_   +iMaterial*nThermo) = p/Te/(Gamma_I(iMaterial)-1)
             Value_V(Gamma_+iMaterial*nThermo) = Gamma_I(iMaterial)
+            Value_V(Zavg_ +iMaterial*nThermo) = IonCharge_I(iMaterial)
             Value_V(Cond_ +iMaterial*nThermo) = 0.0
-            Value_V(Te_   +iMaterial*nThermo) = Te
          end do
       else
          write(*,*)NameSub,' iTable=', iTable
@@ -2223,10 +2242,11 @@ contains
     logical :: IsMix
     integer :: iMaterial, jMaterial
     real    :: pSi, RhoSi, TeSi, EinternalSi, LevelSum
-    real    :: Value_V(nMaterial*nThermo), Opacity_V(2*nMaterial)
+    real    :: Value_V(nMaterial*nThermo)
+    ! Our gray opacity table are for three materials
+    real    :: Opacity_V(2*max(3,nMaterial))
     real    :: GroupOpacity_W(2*nWave)
-    real, dimension(0:nMaterial-1) :: &
-         pPerE_I, EperP_I, Weight_I
+    real, dimension(0:nMaterial-1) :: pPerE_I, EperP_I, Weight_I
     real :: RhoToARatioSi_I(0:Plastic_) = 0.0
     real :: Level_I(3), LevelLeft, LevelRight
 
@@ -2296,9 +2316,6 @@ contains
           NatomicOut = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial))
        end if
     end if
-
-    ! The average ion charge is set to zero for now
-    if(present(AverageIonChargeOut)) AverageIonChargeOut = 0.0
 
     if(UseElectronPressure)then
        call get_electron_thermo
@@ -2431,11 +2448,13 @@ contains
             if(IsMix)then
                call eos(RhoToARatioSi_I, eTotalIn=EinternalIn, &
                     pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
-                    GammaOut=GammaOut, HeatCond=HeatCondOut)
+                    GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                    HeatCond=HeatCondOut)
             else
                call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
                     pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
-                    GammaOut=GammaOut, HeatCond=HeatCondOut)
+                    GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                    HeatCond=HeatCondOut)
             end if
          end if
       elseif(present(TeIn))then
@@ -2445,12 +2464,12 @@ contains
             call eos(RhoToARatioSi_I, TeIn=TeIn, &
                  eTotalOut=EinternalOut, pTotalOut=pSi, &
                  CvTotalOut=CvOut, GammaOut=GammaOut, &
-                 HeatCond=HeatCondOut)
+                 zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
          else
             call eos(iMaterial, Rho=RhoSi, TeIn=TeIn, &
                  eTotalOut=EinternalOut, pTotalOut=pSi, &
                  CvTotalOut=CvOut, GammaOut=GammaOut, &
-                 HeatCond=HeatCondOut)
+                 zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
          end if
       else
          ! Pressure is simply part of State_V
@@ -2471,12 +2490,12 @@ contains
                   call eos(RhoToARatioSi_I, pTotalIn=pSi, &
                        EtotalOut=EinternalOut, TeOut=TeSi, &
                        CvTotalOut=CvOut, GammaOut=GammaOut, &
-                       HeatCond=HeatCondOut)
+                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
                else
                   call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                        EtotalOut=EinternalOut, TeOut=TeSi, &
                        CvTotalOut=CvOut, GammaOut=GammaOut, &
-                       HeatCond=HeatCondOut)
+                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
                end if
             end if
          end if
@@ -2485,7 +2504,7 @@ contains
       if(present(PressureOut)) PressureOut = pSi
 
       if(present(TeOut) .or. present(CvOut) .or. present(GammaOut) .or. &
-           present(HeatCondOut) .or. &
+           present(AverageIonChargeOut) .or. present(HeatCondOut) .or. &
            present(OpacityPlanckOut_W) .or. &
            present(OpacityRosselandOut_W) .or. &
            present(PlanckOut_W))then
@@ -2498,37 +2517,40 @@ contains
             call interpolate_lookup_table(iTableThermo, RhoSi, pSi/RhoSi, &
                  Value_V, DoExtrapolate = .false.)
 
-            ! Value_V: elements 1,4,7 are Cv, 2,5,8 are Gamma, 3,6,9 are Te
             if(UseVolumeFraction)then
+               TeSi = sum(Weight_I*Value_V(Te_   :nMaterial*nThermo:nThermo))
                if(present(CvOut))  CvOut  &
                     = sum(Weight_I*Value_V(Cv_   :nMaterial*nThermo:nThermo))
                if(present(GammaOut)) GammaOut &
                     = sum(Weight_I*Value_V(Gamma_:nMaterial*nThermo:nThermo))
+               if(present(AverageIonChargeOut)) AverageIonChargeOut &
+                    = sum(Weight_I*Value_V(Zavg_ :nMaterial*nThermo:nThermo))
                if(present(HeatCondOut)) HeatCondOut &
-                    = sum(Weight_I*Value_V(Cond_:nMaterial*nThermo:nThermo))
-               TeSi = sum(Weight_I*Value_V(Te_  :nMaterial*nThermo:nThermo))
+                    = sum(Weight_I*Value_V(Cond_ :nMaterial*nThermo:nThermo))
             else
-               if(present(CvOut))  &
-                    CvOut       = Value_V(Cv_   +iMaterial*nThermo)
-               if(present(GammaOut)) &
-                    GammaOut    = Value_V(Gamma_+iMaterial*nThermo)
-               if(present(HeatCondOut)) &
-                    HeatCondOut = Value_V(Cond_ +iMaterial*nThermo)
-               TeSi             = Value_V(Te_   +iMaterial*nThermo)
+               TeSi = Value_V(Te_   +iMaterial*nThermo)
+               if(present(CvOut))  CvOut &
+                    = Value_V(Cv_   +iMaterial*nThermo)
+               if(present(GammaOut)) GammaOut &
+                    = Value_V(Gamma_+iMaterial*nThermo)
+               if(present(AverageIonChargeOut)) AverageIonChargeOut &
+                    = Value_V(Zavg_ +iMaterial*nThermo)
+               if(present(HeatCondOut)) HeatCondOut &
+                    = Value_V(Cond_ +iMaterial*nThermo)
             end if
 
          elseif(TeSi < 0.0) then
             ! If TeSi is not set yet then we need to calculate things here
             if(IsMix) then
                call eos(RhoToARatioSi_I, pTotalIn=pSi, &
-                    TeOut=TeSi, eTotalOut = EinternalOut, &
+                    eTotalOut = EinternalOut, TeOut=TeSi, &
                     CvTotalOut=CvOut, GammaOut=GammaOut, &
-                    HeatCond=HeatCondOut)
+                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
             else
                call eos(iMaterial, RhoSi, pTotalIn=pSi, &
-                    TeOut=TeSi, eTotalOut = EinternalOut, &
+                    eTotalOut = EinternalOut, TeOut=TeSi, &
                     CvTotalOut=CvOut, GammaOut=GammaOut, &
-                    HeatCond=HeatCondOut)
+                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
             end if
          end if
       end if
@@ -2561,10 +2583,12 @@ contains
             if(IsMix)then
                call eos(RhoToARatioSi_I, eElectronIn=EinternalIn, &
                     pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                    GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             else
                call eos(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
                     pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                    GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             end if
          end if
@@ -2575,11 +2599,13 @@ contains
             call eos(RhoToARatioSi_I, TeIn=TeIn, &
                  eElectronOut=EinternalOut, &
                  pElectronOut=pSi, CvElectronOut=CvOut, &
+                 GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                  HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
          else
             call eos(iMaterial, Rho=RhoSi, TeIn=TeIn, &
                  eElectronOut=EinternalOut, &
                  pElectronOut=pSi, CvElectronOut=CvOut, &
+                 GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                  HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
          end if
       else
@@ -2600,13 +2626,15 @@ contains
             else
                if(IsMix)then
                   call eos(RhoToARatioSi_I, pElectronIn=pSi, &
-                       TeOut=TeSi, eElectronOut=EinternalOut, &
-                       CvElectronOut=CvOut, HeatCond=HeatCondOut, &
+                       eElectronOut=EinternalOut, TeOut=TeSi, &
+                       CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
                        TeTiRelax=TeTiRelaxOut)
                else
                   call eos(iMaterial, RhoSi, pElectronIn=pSi, &
-                       TeOut=TeSi, eElectronOut=EinternalOut, &
-                       CvElectronOut=CvOut, HeatCond=HeatCondOut, &
+                       eElectronOut=EinternalOut, TeOut=TeSi, &
+                       CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
                        TeTiRelax=TeTiRelaxOut)
                end if
             end if
@@ -2615,7 +2643,8 @@ contains
 
       if(present(PressureOut)) PressureOut = pSi
 
-      if(present(TeOut) .or. present(CvOut) .or. &
+      if(present(TeOut) .or. present(CvOut) .or. present(GammaOut) .or. &
+           present(AverageIonChargeOut) .or. &
            present(HeatCondOut) .or. present(TeTiRelaxOut) .or. &
            present(OpacityPlanckOut_W) .or. &
            present(OpacityRosselandOut_W) .or. &
@@ -2629,33 +2658,45 @@ contains
                  Value_V, DoExtrapolate = .false.)
 
             if(UseVolumeFraction)then
+               TeSi = sum(Weight_I*Value_V(Te_   :nMaterial*nThermo:nThermo))
                if(present(CvOut))  CvOut  &
-                    = sum(Weight_I*Value_V(Cv_  :nMaterial*nThermo:nThermo))
-               if(present(TeTiRelaxOut)) TeTiRelaxOut &
-                    = sum(Weight_I*Value_V(TeTi_:nMaterial*nThermo:nThermo))
+                    = sum(Weight_I*Value_V(Cv_   :nMaterial*nThermo:nThermo))
+               if(present(GammaOut)) GammaOut &
+                    = sum(Weight_I*Value_V(Gamma_:nMaterial*nThermo:nThermo))
+               if(present(AverageIonChargeOut)) AverageIonChargeOut &
+                    = sum(Weight_I*Value_V(Zavg_ :nMaterial*nThermo:nThermo))
                if(present(HeatCondOut)) HeatCondOut &
-                    = sum(Weight_I*Value_V(Cond_:nMaterial*nThermo:nThermo))
-               TeSi = sum(Weight_I*Value_V(Te_  :nMaterial*nThermo:nThermo))
+                    = sum(Weight_I*Value_V(Cond_ :nMaterial*nThermo:nThermo))
+               if(present(TeTiRelaxOut)) TeTiRelaxOut &
+                    = sum(Weight_I*Value_V(TeTi_ :nMaterial*nThermo:nThermo))
             else
-               if(present(CvOut))  &
-                    CvOut       = Value_V(Cv_   +iMaterial*nThermo)
-               if(present(TeTiRelaxOut)) &
-                    TeTiRelaxOut= Value_V(TeTi_ +iMaterial*nThermo)
-               if(present(HeatCondOut)) &
-                    HeatCondOut = Value_V(Cond_ +iMaterial*nThermo)
-               TeSi             = Value_V(Te_   +iMaterial*nThermo)
+               TeSi = Value_V(Te_   +iMaterial*nThermo)
+               if(present(CvOut)) CvOut &
+                    = Value_V(Cv_   +iMaterial*nThermo)
+               if(present(GammaOut)) GammaOut &
+                    = Value_V(Gamma_+iMaterial*nThermo)
+               if(present(AverageIonChargeOut)) AverageIonChargeOut &
+                    = Value_V(Zavg_ +iMaterial*nThermo)
+               if(present(HeatCondOut)) HeatCondOut &
+                    = Value_V(Cond_ +iMaterial*nThermo)
+               if(present(TeTiRelaxOut)) TeTiRelaxOut &
+                    = Value_V(TeTi_ +iMaterial*nThermo)
             end if
 
          elseif(TeSi < 0.0) then
             ! If TeSi is not set yet then we need to calculate things here
             if(IsMix) then
                call eos(RhoToARatioSi_I, pElectronIn=pSi, &
-                    TeOut=TeSi, CvElectronOut=CvOut, &
+                    eElectronOut=EinternalOut, TeOut=TeSi, &
+                    CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                    zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             else
                call eos(iMaterial, RhoSi, pElectronIn=pSi, &
-                    TeOut=TeSi, CvElectronOut=CvOut, &
-                    HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+                    eElectronOut=EinternalOut, TeOut=TeSi, &
+                    CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                    TeTiRelax=TeTiRelaxOut)
             end if
          end if
       end if
