@@ -1476,10 +1476,9 @@ contains
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, UseElectronPressure
-    use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
+    use ModPhysics,  ONLY: inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModEnergy,   ONLY: calc_energy_cell
-    use ModVarIndexes, ONLY: nWave
 
     implicit none
 
@@ -1633,7 +1632,7 @@ contains
     use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK, TypeGeometry
     use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_
     use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_, Au_, Ay_
-    use BATL_size,    ONLY: nI, nJ, nK, nG, MinI, MaxI
+    use BATL_size,    ONLY: nI, nJ, nK, MinI, MaxI
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -1646,7 +1645,6 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    character(len=10) :: NameWave
     real    :: p, Rho, pSi, RhoSi, TeSi, WaveEnergy
     real    :: PiSi, TiSi, NatomicSi
     real    :: OpacityPlanckSi_W(nWave)
@@ -1723,6 +1721,11 @@ contains
                i, j, k, iBlock, &
                OpacityRosselandOut_W = OpacityRosselandSi_W)
           PlotVar_G(i,j,k) = OpacityRosselandSi_W(1)
+       end do; end do; end do
+    case('zavg')
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, AverageIonChargeOut = PlotVar_G(i,j,k))
        end do; end do; end do
     case('cond')
        do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
@@ -1809,22 +1812,6 @@ contains
     case default
        IsFound = .false.
     end select
-
-    do iWave = 1, nWave
-       write(NameWave, "(a,i2.2)") 'erad', iWave
-       if(NameVar == NameWave)then
-          iVar = WaveFirst_ + iWave -1
-
-          do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
-             NameIdlUnit = 'J/m^3'
-             PlotVar_G(i,j,k) = State_VGB(iVar,i,j,k,iBlock) &
-                  *No2Si_V(UnitEnergyDens_)
-          end do; end do; end do
-
-          IsFound = .true.
-          EXIT
-       end if
-    end do
 
     UsePlotVarBody = .false.
     PlotVarBody    = 0.0
@@ -2101,7 +2088,7 @@ contains
           write(*,*) 'ERROR ',NameSub, &
                ' number of table elements=', size(Value_V),&
                ' does not agree with 2*nWave=', 2*nWave
-          call stop_mpi(NameSub//': Config.pl -setvar=nWave=..; make CRASH')
+          call stop_mpi(NameSub//': Config.pl -nWave=..; make CRASH')
        end if
        ! Calculate multigroup specific opacities for one material
        ! for given Rho and Te
