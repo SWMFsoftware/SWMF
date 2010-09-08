@@ -14,6 +14,8 @@ subroutine BATS_setup
        automatic_refinement
   use ModAdvance, ONLY : iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
   use ModNumConst
+  use ModAdjoint, ONLY : DoAdjoint                 !ADJOINT SPECIFIC
+  use ModRestartFile, ONLY : UseRestartInSeries  
 
   implicit none
 
@@ -24,6 +26,12 @@ subroutine BATS_setup
 
 
   !---------------------------------------------------------------------------
+
+  if (DoAdjoint)then                          !ADJOINT SPECIFIC BEGIN
+     ! For adjoint, use final solution as a restart
+     restart = .true.
+     UseRestartInSeries = .true.
+  end if                                      !ADJOINT SPECIFIC END
 
   ! Allocate and initialize variables dependent on number of PEs
   call allocate_vars  
@@ -50,14 +58,16 @@ contains
     ! Set up problem geometry, blocks, and grid structure.
 
     use ModIO, ONLY: restart
-    use ModRestartFile, ONLY: read_octree_file, NameRestartInDir
+    use ModRestartFile, ONLY: read_octree_file, NameRestartInDir, &
+         UseRestartInSeries, string_append_iter
 
-    use ModMain, ONLY: UseBatl
+    use ModMain, ONLY: UseBatl, iteration_number
     use BATL_lib, ONLY: init_grid_batl, read_tree_file
     use ModBatlInterface, ONLY: set_batsrus_grid
 
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
+    character(len=100) :: NameFile
     logical :: local_refine(nBLK)
 
     integer:: iBlock
@@ -99,7 +109,9 @@ contains
        ! Read initial solution block geometry from octree restart file.
 
        if(UseBatl)then
-          call read_tree_file(trim(NameRestartInDir)//'octree.rst')
+          NameFile = trim(NameRestartInDir)//'octree.rst'
+          if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
+          call read_tree_file(NameFile)
           call init_grid_batl
           call set_batsrus_grid
        else
@@ -137,7 +149,8 @@ contains
     use ModUser,        ONLY: user_initial_perturbation
     use ModIO,          ONLY: restart
     use ModIO,          ONLY: restart_Bface       !^CFG IF CONSTRAINB
-    use ModRestartFile, ONLY: read_restart_files
+    use ModRestartFile, ONLY: read_restart_files, &
+         tSimulationRead                          !ADJOINT SPECIFIC
     use ModCovariant,   ONLY: UseVertexBasedGrid,do_fix_geometry_at_reschange 
     !\
     ! Set intial conditions for solution in each block.
@@ -176,6 +189,7 @@ contains
     !/
     if(restart)then
        call read_restart_files
+       if (DoAdjoint) time_simulation = tSimulationRead     !ADJOINT SPECIFIC
        !Vertex based geometry at the resolution interfaces 
        !should be fixed while setting the block geometry
        if(UseVertexBasedGrid)then
@@ -183,9 +197,9 @@ contains
              if(do_fix_geometry_at_reschange(iBlock))&
                   call fix_geometry_at_reschange(iBlock)
           end Do
-       end if                                               
+       end if
     end if
- 
+
     do globalBLK = 1, nBlockMax
        !\
        ! Initialize solution block.
@@ -245,7 +259,7 @@ contains
           call set_satellite_file_status(iSat,'close')
        end do
     end if
-    
+
     if (save_magnetometer_data .and. iProc == 0) then
        call open_magnetometer_output_file
     end if
@@ -272,6 +286,8 @@ subroutine BATS_init_session
   use ModRadDiffusion, ONLY: init_rad_diffusion            !^CFG IF IMPLICIT
   use ModHeatConduction, ONLY: init_heat_conduction        !^CFG IF IMPLICIT
   use ModUser, ONLY: user_initial_perturbation
+  use ModRestartFile, ONLY: UseRestartOutSeries
+  use ModAdjoint, ONLY : DoAdjoint                 !ADJOINT SPECIFIC
   implicit none
 
   ! Local variables
@@ -321,7 +337,15 @@ subroutine BATS_init_session
 
   if(UseProjection)call project_B              !^CFG IF PROJECTION
 
+  !if (.not.DoAdjoint)then                      !ADJOINT SPECIFIC
   call BATS_save_files('INITIAL')
+
+  ! save initial condition (primarily for adjoint purposes)
+  if (UseRestartOutSeries)then
+     call BATS_save_files('NORMAL')
+  end if
+  !end if                                       !ADJOINT SPECIFIC
+
 
 end subroutine BATS_init_session
 
@@ -337,13 +361,14 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
   use ModAmr, ONLY: dn_refine
   use ModPhysics, ONLY : No2Si_V, UnitT_, TauWaveParticle, TauInstability
-  use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure
+  use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure, State_VGB
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
   use ModImplicit, ONLY: UseImplicit, UseFullImplicit, &   !^CFG IF IMPLICIT
        UseSemiImplicit                                     !^CFG IF IMPLICIT
   use ModIonoVelocity, ONLY: apply_iono_velocity
   use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
+  use ModAdjoint, ONLY: DoAdjoint                          !ADJOINT SPECIFIC
 
   implicit none
 
@@ -400,7 +425,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseImplicit.and.nBlockImplALL>0)then !^CFG IF IMPLICIT BEGIN
      call advance_impl
   else                                    !^CFG END IMPLICIT
-     call advance_expl(.true.)
+     call advance_expl(.true., -1)
   endif                                   !^CFG IF IMPLICIT  
 
   if(UseIM)call apply_im_pressure         !^CFG IF RCM
@@ -417,7 +442,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseSemiImplicit .and. Dt>0) call advance_impl   !^CFG IF IMPLICIT
 
   if(UseTimeStepControl .and. time_accurate .and. Dt>0) call control_time_step
-  
+
   if(UsePartSteady) then
      ! Select steady and unsteady blocks
      if(.not. (Time_Accurate .and. Time_Simulation == 0.0))then
@@ -431,7 +456,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   end if
 
   call advect_all_points
-  
+
   call timing_stop('advance')
 
   if(time_accurate)&
@@ -488,9 +513,200 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if (UseProjection) call project_B    !^CFG IF PROJECTION
 
-  call BATS_save_files('NORMAL')
+  if (.not.DoAdjoint) then             !ADJOINT SPECIFIC
+     call BATS_save_files('NORMAL')
+  end if                               !ADJOINT SPECIFIC
 
 end subroutine BATS_advance
+
+
+!ADJOINT SPECIFIC BEGIN
+!===========================================================================
+subroutine BATS_advance_adjoint                 
+  !\
+  ! Advance adjoint solution with one time step
+  !/
+  use ModKind
+  use ModProcMH
+  use ModMain
+  use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
+  use ModImplicit, ONLY:  UseSemiImplicit                 !^CFG IF IMPLICIT
+  use ModAdvance, ONLY: State_VGB
+  use ModAdjoint
+
+  implicit none
+
+  ! Local variables
+  character(len=*), parameter :: NameSub = 'BATS_advance_adjoint'
+
+  logical :: DoTest, DoTestMe
+  !-------------------------------------------------------------------------
+
+  call set_oktest(NameSub,DoTest,DoTestMe)
+
+  ! We are advancing in time
+  time_loop = .true.
+
+  ! initialize adjoint if on first iteration
+  if (iteration_number == nIter)then
+     call init_adjoint_solution
+     call adjoint_fill_buffer
+     iteration_number = iteration_number-1
+     n_step = n_step - 1
+     RETURN
+  end if
+
+  ! position in buffer
+  iBuffer = mod(iteration_number+1, nBuffer-1)
+
+  write(*,*)' In advance_adjoint: iBuffer pre-fill  = ',iBuffer
+
+  ! fill buffer if necessary
+  if (iBuffer <= 0)then
+     call adjoint_fill_buffer
+     iBuffer = nBuffer-1
+  end if
+
+  write(*,*)' In advance_adjoint: iBuffer post-fill  = ',iBuffer
+
+  ! Now, current state is in iBuffer, future is in iBuffer+1
+
+  ! decrement iteration
+  n_step = n_step - 1
+  iteration_number = iteration_number-1
+
+  ! current time and time step (future minus current)
+  time_simulation = Buffer_time_simulation(iBuffer)
+  dt = Buffer_time_simulation(iBuffer+1) - time_simulation
+
+  write(*,*)' In advance_adjoint: time_simulation = ',time_simulation
+
+  call timing_start('advance_adjoint')
+
+  ! TODO:
+  ! if(UseSemiImplicit) call advance_impl   !^CFG IF IMPLICIT
+  ! call exchange_messages
+  ! call advance_expl(.true., -1)
+  ! add source ... another exchange_messages?
+
+  ! TEMPORARY: for now, just set adjoint to state (debug mode)
+  Adjoint_VGB(:,:,:,:,:) = Buffer_State_VGB(:,:,:,:,:,iBuffer)
+
+  call timing_stop('advance_adjoint')
+
+  if(DoTest)write(*,*)NameSub,' iProc,new n_step,Time_Simulation=',&
+       iProc,n_step,Time_Simulation
+
+  ! save adjoint files
+  ! TODO: use DnSaveAdjoint, DtSaveAdjoint, adjoint directory
+  !State_VGB(:,:,:,:,:) = Adjoint_VGB(:,:,:,:,:)
+  !call BATS_save_files('NORMAL')
+
+end subroutine BATS_advance_adjoint
+!ADJOINT SPECIFIC END
+
+!ADJOINT SPECIFIC BEGIN
+!=============================================================================
+subroutine adjoint_fill_buffer
+
+  use ModRestartFile, ONLY: UseRestartInSeries, read_restart_files, &
+       tSimulationRead, string_append_iter
+  use ModMain,        ONLY: time_simulation, t_max
+  use ModAdvance,     ONLY: State_VGB
+  use ModAdjoint
+
+  character(len=*), parameter:: NameSub = 'adjoint_fill_buffer'
+  integer :: ibuf, iteration_number_orig
+  real :: told
+
+  !\
+  ! Read checkpoint, advance solution to fill buffer
+  !/
+  write(*,*)'reading checkpoint in advance_fill_buffer'
+  UseRestartInSeries = .true.
+  iteration_number_orig = iteration_number
+  iteration_number = (nBuffer-1)*int(iteration_number/(nBuffer-1))
+  call read_restart_files
+  ! need simulation time ... already read in as part of restart file
+  !told = time_simulation
+  !time_simulation = tSimulationRead
+  ! new approach: parse restart header
+  call parse_restart_header
+  ! Update ghost cells, etc.
+  call exchange_messages
+  !call BATS_init_session
+
+  Buffer_State_VGB(:,:,:,:,:,1) = State_VGB(:,:,:,:,:)
+  Buffer_time_simulation(1) = time_simulation
+  do ibuf=2, nBuffer
+     call BATS_advance(t_max)
+     write(*,*)' after advancing buffer, iteration_number=',iteration_number
+     Buffer_State_VGB(:,:,:,:,:,ibuf) = State_VGB(:,:,:,:,:)
+     Buffer_time_simulation(ibuf) = time_simulation
+  end do
+
+  write(*,*)' after filling buffer, told,time(nbuffer) = ', &
+       told,Buffer_time_simulation(nBuffer)
+
+  ! reset iteration number to original
+  iteration_number = iteration_number_orig
+
+contains
+
+  ! parses n**_restart.H for simulation time
+  subroutine parse_restart_header
+    
+    use ModProcMH, ONLY: iComm, iProc, nProc
+    use ModIoUnit, ONLY: UNITTMP_
+
+    character(len=*), parameter :: NameSub='parse_restart_header'
+    character(len=100) :: NameFile='restart.H', StringLine
+    logical :: IsFound
+    integer :: i, iReadError, iError
+
+    ! include iteration number
+    call string_append_iter(NameFile,iteration_number)
+
+    ! root reads and broadcasts
+    if(iProc==0)then
+       inquire(file=NameFile,EXIST=IsFound)
+       if(.not.IsFound)call stop_mpi(NameSub//trim(NameFile)//" cannot be found")
+       open(UNITTMP_,file=NameFile,status="old")
+       IsFound = .false.
+       do
+          read(UNITTMP_,'(a)',ERR=100,END=100) StringLine
+          if(StringLine=='#TIMESIMULATION')then
+             ! Include text from file following the command
+             read(UNITTMP_,'(a)')StringLine
+             ! Remove anything after a space or TAB
+             i=index(StringLine,' ');     if(i>0)StringLine(i:len(StringLine))=' '
+             i=index(StringLine,char(9)); if(i>0)StringLine(i:len(StringLine))=' '
+             ! Read time_simulation (real) from string
+             read(StringLine,*,iostat=iReadError) time_simulation
+             if(iReadError/=0) call stop_mpi(NameSub//trim(NameFile)//&
+                  " error parsing line after #TIMESIMULATION")
+             IsFound = .true.
+          end if
+100       continue
+          close (UNITTMP_)
+          ! The file ended, stop reading
+          EXIT
+       end do
+       if (.not.IsFound)then
+          call stop_mpi(NameSub//trim(NameFile)//&
+               " TIMESIMULATION not found in restart header")
+       end if
+    end if
+
+    ! Broadcast time_simulation to all processors
+    call MPI_Bcast(time_simulation,1,MPI_REAL,0,iComm,iError)
+
+  end subroutine parse_restart_header
+
+end subroutine adjoint_fill_buffer
+
+!ADJOINT SPECIFIC END
+
 
 !=============================================================================
 subroutine BATS_amr_refinement
@@ -586,7 +802,7 @@ subroutine BATS_init_constrain_b
      call Bcenter2Bface(iBlock)
      ! Calculate energy (it is not set in set_ICs)
      ! because the projection scheme will need it
-     !!! call calc_energy(iBlock)
+!!! call calc_energy(iBlock)
   end do
 
   call proj_get_divb(tmp1_BLK)
@@ -600,10 +816,10 @@ subroutine BATS_init_constrain_b
   if(divbmax_now>cTiny)then
      if(iProc==iLoc_I(5))then
         call write_prefix; write(iUnitOut,*) NameSub, &
-          ' divB,loc,x,y,z=',divbmax_now,iLoc_I,&
-          x_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4)),&
-          y_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4)),&
-          z_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4))
+             ' divB,loc,x,y,z=',divbmax_now,iLoc_I,&
+             x_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4)),&
+             y_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4)),&
+             z_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4))
      end if
 
      if(iProc == 0.and.lVerbose>0)then
@@ -672,13 +888,14 @@ subroutine BATS_save_files(TypeSaveIn)
   use ModMain
   use ModIO
   use ModUtilities, ONLY : upper_case
+  use ModAdjoint, ONLY : DoAdjoint          !ADJOINT SPECIFIC
   implicit none
   character(len=*), intent(in) :: TypeSaveIn
 
   character(len=len(TypeSaveIn)) :: TypeSave
   logical :: DoExchangeAgain, DoAssignNodeNumbers, IsFound, DoSaveRestartTmp
   integer :: iFile
-  
+
   character(len=*), parameter :: NameSub='BATS_save_files'
   !--------------------------------------------------------------------------
 
@@ -739,6 +956,9 @@ contains
 
   subroutine save_files
 
+    logical :: DoSave = .false.
+    integer :: t_output_current
+
     do ifile=1,nfile
        if(dn_output(ifile)>=0)then
           if(dn_output(ifile)==0)then
@@ -747,8 +967,15 @@ contains
              call save_file
           end if
        else if(time_accurate .and. dt_output(ifile)>0.)then
-          if(int(time_simulation/dt_output(ifile))>t_output_last(ifile))then
-             t_output_last(ifile)=int(time_simulation/dt_output(ifile))
+          t_output_current = int(time_simulation/dt_output(ifile))
+          DoSave = .false.
+          if(t_output_current>t_output_last(ifile)) DoSave = .true.
+          if (DoAdjoint) then                     !ADJOINT SPECIFIC BEGIN
+             DoSave = .false.
+             if(t_output_current < t_output_last(ifile)) DoSave = .true.
+          end if                                  !ADJOINT SPECIFIC BEGIN
+          if(DoSave)then
+             t_output_last(ifile)=t_output_current
              call save_file
           end if
        end if
@@ -788,7 +1015,8 @@ contains
     real :: tSimulationBackup = 0.0
     !---------------------------------------------------------------------
 
-    if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0) return
+    if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0 &
+         .and. (n_step/=0 .or. ifile/=restart_) ) return
 
     if(ifile==restart_) then
        ! Case for restart file
@@ -883,7 +1111,7 @@ contains
        !
        ! Distinguish between time_accurate and .not. time_accurate:
        !
-       
+
        if (time_accurate) then
           call set_satellite_flags(iSat)
           ! write one line for a single trajectory point
@@ -905,14 +1133,14 @@ contains
 
     elseif(ifile == magfile_) then
        !Cases for magnetometer files
-    
+
        if(time_accurate) then  
           if(.not.save_magnetometer_data)return 
           call timing_start('save_magnetometer')
           call write_magnetometers   
           call timing_stop('save_magnetometer')  
        end if
-       
+
     end if
 
     n_output_last(ifile)=n_step
@@ -959,7 +1187,7 @@ contains
           call set_satellite_file_status(iSat,'close')
        end do
     end if
-    
+
     if (save_magnetometer_data .and. iProc==0) call close_magnetometer_output_file   
 
     if (save_logfile.and.iProc==0.and.unit_log>0) close(unit_log)

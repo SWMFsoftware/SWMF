@@ -631,6 +631,204 @@ contains
 
 end subroutine calc_sources
 
+
+!ADJOINT SPECIFIC BEGIN
+!============================================================================
+subroutine calc_sources_adjoint
+
+  use ModProcMH
+  use ModMain
+  use ModVarIndexes
+  use ModGeometry,      ONLY: dx_BLK, dy_BLK, dz_BLK, R_BLK,&
+       body_BLK, Rmin_BLK, vInv_CB, TypeGeometry, y_BLK, true_cell
+  use ModGeometry,      ONLY: R2_BLK                   !^CFG IF SECONDBODY
+  use ModAdvance
+  use ModParallel,      ONLY: NOBLK, neiLEV, &
+       neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
+  use ModPhysics
+  use ModNumConst
+  use ModUser,          ONLY: user_calc_sources,user_material_properties,&
+       user_calc_sources_adjoint
+  use ModCoordTransform
+  use ModImplicit,      ONLY: UseFullImplicit            !^CFG IF IMPLICIT
+  use ModRadDiffusion,  ONLY: calc_source_rad_diffusion  !^CFG IF IMPLICIT
+  use ModMultiFluid
+  use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
+  use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
+  use ModCovariant,     ONLY: UseCovariant 
+  use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
+  use ModCoronalHeating,ONLY: UseCoronalHeating,&
+                              get_block_heating,CoronalHeating_C
+  use ModRadiativeCooling,ONLY: RadCooling_C,UseRadCooling,&
+                              get_radiative_cooling, add_chromosphere_heating
+  use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
+                              UseChromosphereHeating
+  use ModAdjoint
+  implicit none
+
+  integer :: i, j, k, iDim, iVar
+  logical :: UseRzGeometry
+  real :: Pe, Pwave, DivU
+  real :: Coef, GammaMinus1
+
+  ! Variable for div B diffusion
+  real :: Dr
+
+  real,dimension(3)::CurlB0CrossB_D
+
+  ! Variables needed for Boris source terms also used for div(u)
+  real :: FullB_DC(nDim,nI,nJ,nK),FullBx, FullBy, FullBz, Ux, Uy, Uz, RhoInv
+  real :: E_D(3), DivE
+
+  ! Varibles needed for anisotropic pressure
+  real :: b_D(3), GradU_DD(3,3), bDotGradparU
+  logical :: IsFirehose, IsMirror 
+
+  ! Electron temperature in K:
+  real :: TeSi_C(nI,nJ,nK)
+
+  real :: rtemp
+
+  integer:: iBlock
+
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub = 'calc_sources_adjoint'
+  !---------------------------------------------------------------------------
+  iBlock = GlobalBlk
+
+  UseRzGeometry = TypeGeometry == 'rz'
+
+  
+  if(UseUserSource)then
+     call user_calc_sources_adjoint
+  end if
+  
+  !^CFG IF  IMPLICIT BEGIN
+  if(UseRadDiffusion .and. UseFullImplicit) &
+       call stop_mpi(NameSub // ' Not yet supported')
+  !^CFG END IMPLICIT
+
+  ! Add JxB term for nonconservativ MHD scheme (like LFM)
+  if(UseB .and. .not.IsMhd .and. .not.UseMultiIon)then
+     call stop_mpi(NameSub // ' Not yet supported')
+  end if
+  
+  if(UseMultiIon)then
+     call stop_mpi(NameSub // ' Not yet supported')
+  end if
+  
+  ! These source terms apply to all the fluids
+  do iFluid = 1, nFluid
+     call select_fluid
+     ! Add gravity and/or centrifugal force
+     if(UseGravity.or.UseRotatingFrame) then
+        call stop_mpi(NameSub // ' Not yet supported')
+     end if
+
+     ! Add Coriolis forces
+     if(UseRotatingFrame)then
+        call stop_mpi(NameSub // ' Not yet supported')
+     end if
+  end do
+  
+  if(boris_correction &                             !^CFG IF BORISCORR BEGIN
+       .and. boris_cLIGHT_factor < 0.9999 & 
+       .and. index(test_string,'nodivE')<1) then
+     call stop_mpi(NameSub // ' Not yet supported')
+  end if                                                 !^CFG END BORISCORR
+
+  
+  if(UseCurlB0)then
+     call stop_mpi(NameSub // ' Not yet supported')
+  end if
+
+  if(UseDivbSource)then
+     call stop_mpi(NameSub // ' Not yet supported')
+  else
+     if(UseB) call stop_mpi(NameSub // ' Not yet supported')
+  end if
+
+  if(TypeGeometry == 'rz')then
+     if(UseB)call stop_mpi('RZ geometry is not implemented for MHD')
+     do k=1,nK; do j=1, nJ; do i=1, nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
+        !Source_VC(iRhoUy_I,i,j,k) = Source_VC(iRhoUy_I,i,j,k) &
+        !     + State_VGB(iP_I,i,j,k,iBlock) / y_BLK(i,j,k,iBlock)
+        
+        ! Update adjoint answer with dependence on state
+        AdjointPrev_VGB(iP_I,i,j,k,iBlock) = & 
+               AdjointPrev_VGB(iP_I,i,j,k,iBlock) + &
+               AdjSource_VC(iRhoUy_I,i,j,k)/y_BLK(i,j,k,iBlock)
+     end do; end do; end do
+  end if
+  
+  if(UseElectronPressure)then
+     call stop_mpi(NameSub // ' Not yet supported')
+  end if
+
+  if(UseRadCooling.and.(.not.UseElectronPressure))then
+     call stop_mpi(NameSub // ' Not yet supported')
+  end if
+
+  if(UseCoronalHeating)then
+     call stop_mpi(NameSub // ' Not yet supported')
+  end if
+
+  if(UseCoronalHeating.and.DoExtendTransitionRegion .or. UseRadCooling)&
+       call stop_mpi(NameSub // ' Not yet supported')
+
+  if(UseWavePressure)then
+     call stop_mpi(NameSub // ' Not yet supported')
+  end if
+
+
+  ! Calculate source terms for ion pressure
+  if(UseNonconservative .or. UseAnisoPressure)then
+     do iFluid = 1, nFluid
+        call select_fluid
+
+        if(UseAnisoPressure)then
+           call stop_mpi(NameSub // ' Not yet supported')
+        end if
+
+        ! Adiabatic heating: -(g-1)*P*Div(U)
+        ! TODO
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           if(.not.true_cell(i,j,k,iBlock)) CYCLE
+           DivU = uDotArea_XI(i+1,j,k,iFluid) - uDotArea_XI(i,j,k,iFluid)
+           if(nJ > 1) DivU = DivU + &
+                uDotArea_YI(i,j+1,k,iFluid) - uDotArea_YI(i,j,k,iFluid)
+           if(nK > 1) DivU = DivU + &
+                uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid)
+           DivU = vInv_CB(i,j,k,iBlock)*DivU
+
+           !Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
+           !     - (g - 1)*State_VGB(iP,i,j,k,iBlock)*DivU
+
+           ! update AdjuDotArea_** via dep of Source on DivU
+           rtemp = -(g-1) * State_VGB(iP,i,j,k,iBlock) * &
+               vInv_CB(i,j,k,iBlock) * AdjSource_VC(iP,i,j,k)
+           AdjuDotArea_XI(i+1,j,k,1) = AdjuDotArea_XI(i+1,j,k,1)+rtemp
+           if(nJ>1)AdjuDotArea_YI(i,j+1,k,1) = AdjuDotArea_YI(i,j+1,k,1)+rtemp
+           if(nK>1)AdjuDotArea_ZI(i,j,k+1,1) = AdjuDotArea_ZI(i,j,k+1,1)+rtemp
+           AdjuDotArea_XI(i,j,k,1) = AdjuDotArea_XI(i,j,k,1) - rtemp
+           if(nJ>1)AdjuDotArea_YI(i,j,k,1) = AdjuDotArea_YI(i,j,k,1)-rtemp
+           if(nK>1)AdjuDotArea_ZI(i,j,k,1) = AdjuDotArea_ZI(i,j,k,1)-rtemp
+           
+           ! update adjoint answer (in Prev) with dep of Source on U
+           AdjointPrev_VGB(iP,i,j,k,iBlock) = & 
+               AdjointPrev_VGB(p_,i,j,k,iBlock) - &
+               (g-1)*DivU*AdjSource_VC(iP,i,j,k)
+
+        end do; end do; end do
+
+     end do
+  end if
+
+end subroutine calc_sources_adjoint
+!ADJOINT SPECIFIC END
+
+
 !=============================================================================
 
 subroutine calc_divb(iBlock)

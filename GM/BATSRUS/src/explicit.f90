@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 !===========================================================================
 
-subroutine advance_expl(DoCalcTimestep)
+subroutine advance_expl(DoCalcTimestep, iStageMax)
 
   use ModMain
   use ModFaceFlux,  ONLY: calc_face_flux
@@ -22,6 +22,7 @@ subroutine advance_expl(DoCalcTimestep)
   implicit none
 
   logical, intent(in) :: DoCalcTimestep
+  integer, intent(in) :: iStageMax ! advance only part way
   integer :: iStage, iBlock
 
   character (len=*), parameter :: NameSub = 'advance_expl'
@@ -39,7 +40,7 @@ subroutine advance_expl(DoCalcTimestep)
 
   STAGELOOP: do iStage = 1, nStage
 
-     if(DoTestMe)write(*,*)NameSub,' starting stage=',iStage
+     if(DoTestMe) write(*,*)NameSub,' starting stage=',iStage
 
      ! If heating model depends on global B topology, update here
      if(UseUnsignedFluxModel) call get_coronal_heat_factor
@@ -74,6 +75,7 @@ subroutine advance_expl(DoCalcTimestep)
 
         ! Save conservative flux correction for this solution block
         call save_cons_flux(GlobalBlk)
+        
      end do
 
      if(DoTestMe)write(*,*)NameSub,' done res change only'
@@ -190,6 +192,9 @@ subroutine advance_expl(DoCalcTimestep)
 
      if(DoTestMe)write(*,*)NameSub,' finished stage=',istage
 
+     ! exit if exceeded requested maximum stage limit
+     if ((iStageMax >= 0) .and. (iStage >= iStageMax)) EXIT STAGELOOP
+
   end do STAGELOOP  ! Multi-stage solution update loop.
 
   do iBlock = 1, nBlock
@@ -227,3 +232,154 @@ subroutine update_secondbody
   
 end subroutine update_secondbody
 !^CFG END SECONDBODY
+
+
+!ADJOINT SPECIFIC BEGIN
+!===========================================================================
+
+subroutine advance_expl_adjoint(DoCalcTimestep)
+
+  use ModMain
+  use ModFaceFlux,  ONLY: calc_face_flux, calc_face_flux_adjoint
+  use ModFaceValue, ONLY: calc_face_value, calc_face_value_adjoint
+  use ModAdvance,   ONLY: UseUpdateCheck, DoFixAxis,set_b0_face, &
+       State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI
+  use ModGeometry,  ONLY: Body_BLK
+  use ModCovariant, ONLY: is_axial_geometry 
+  use ModBlockData, ONLY: set_block_data
+  use ModPhysics,   ONLY: No2Si_V, UnitT_
+  use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
+       nCorrectedFaceValues, CorrectedFlux_VXB, &
+       CorrectedFlux_VYB, CorrectedFlux_VZB
+
+  use BATL_lib, ONLY: message_pass_face
+  use ModAdjoint
+
+  implicit none
+
+  logical, intent(in) :: DoCalcTimestep
+  integer :: iStage, iBlock
+
+  character (len=*), parameter :: NameSub = 'advance_expl_adjoint'
+
+  real :: TimeOrig
+  logical :: DoTest, DoTestMe
+  !-------------------------------------------------------------------------
+  call set_oktest(NameSub, DoTest, DoTestMe)
+
+  !\
+  ! Multi-stage update of adjoint for one explicit iteration
+  !/
+
+  ! Zero out adjoint ghost values
+  AdjointPrev_VGB(1:nVar,1:nI,1:nJ,1:nK,:) = Adjoint_VGB(1:nVar,1:nI,1:nJ,1:nK,:)
+  AdjEnergyPrev_GBI(1:nI,1:nJ,1:nK,:,:) = AdjEnergy_GBI(1:nI,1:nJ,1:nK,:,:)
+  Adjoint_VGB = 0.0
+  AdjEnergy_GBI = 0.0
+  Adjoint_VGB(1:nVar,1:nI,1:nJ,1:nK,:) = AdjointPrev_VGB(1:nVar,1:nI,1:nJ,1:nK,:)
+  AdjEnergy_GBI(1:nI,1:nJ,1:nK,:,:) = AdjEnergyPrev_GBI(1:nI,1:nJ,1:nK,:,:)
+  
+
+  ! Zero out AdjointPrev
+  AdjointPrev_VGB   = 0.0
+  AdjEnergyPrev_GBI = 0.0
+
+  ! Should be time at start of forward iteration
+  TimeOrig = time_simulation
+
+  STAGELOOP: do iStage = nStage, 1, -1
+
+     if(DoTestMe) write(*,*)NameSub,' starting adjoint stage=',iStage
+
+     call barrier_mpi2('expl1_adjoint')
+
+     ! advance forward state
+     if (nStage > 1)then
+        ! recall state from Old storage if already advanced before
+        if (iStage /= nStage)then
+           State_VGB(1:nVar,1:nI,1:nJ,1:nK,:) = & 
+                StateOld_VCB(1:nVar,1:nI,1:nJ,1:nK,:)
+           EnergyOld_CBI(1:nI,1:nJ,1:nK,:,:) = &
+                Energy_GBI(1:nI,1:nJ,1:nK,:,:)
+           call exchange_messages ! Old did not store ghost values
+        end if
+
+        ! advance state to iStage-1
+        if (iStage > 1) call advance_expl(.true., iStage-1)
+     end if
+
+     ! Do not yet support this for adjoint
+     if(is_axial_geometry() .and. DoFixAxis) &
+          call stop_mpi(NameSub // ' Not yet supported')
+
+     ! amr/res-change flux corrections not supported yet
+
+     ! Multi-block adjoint solution update
+     do globalBLK = 1, nBlock
+
+        if (unusedBLK(globalBLK)) CYCLE
+
+        ! Forward solution calculations to fill face values, fluxes, etc.
+        call set_b0_face(globalBLK)
+        call calc_face_value(.false., GlobalBlk)
+        if(body_BLK(globalBLK))call set_BCs(Time_Simulation, .false.)
+        call calc_face_flux(.false., GlobalBlk)
+        call apply_cons_flux(GlobalBlk)
+        call calc_sources
+        call update_states(iStage,globalBLK) 
+
+        ! Update adjoint solution state in each cell.
+        ! AdjSource_VC initialized/set here
+        ! AdjFlux_V* initialized/set here
+        ! AdjointPrev (answer) is updated here
+        ! State on block is recalled to stage-beginning value
+        call timing_start('update_states_adjoint')
+        call update_states_adjoint(iStage,globalBLK)
+        call timing_stop('update_states_adjoint')
+
+        ! Compute adjoint source terms for each cell.
+        ! AdjuDotArea_*I initialized/set here
+        call timing_start('calc_sources_adjoint')
+        call calc_sources_adjoint
+        call timing_stop('calc_sources_adjoint')
+
+        ! Compute adjoint interface fluxes for each cell.
+        call timing_start('calc_fluxes_adjoint')
+        call calc_face_flux_adjoint(.false., GlobalBlk)
+        call timing_stop('calc_fluxes_adjoint')
+
+        ! body BCs not yet supported for adjoint
+        if(body_BLK(globalBLK))call stop_mpi(NameSub // ' Not yet supported')
+
+        ! TODO: Calculate interface values for L/R states of each face
+        call timing_start('calc_facevalues_adjoint')
+        call calc_face_value_adjoint(.false., GlobalBlk)
+        call timing_stop('calc_facevalues_adjoint')
+
+        ! apply BCs for interface states as needed -- B0 not supported for adjoint
+        !call set_b0_face_adjoint(globalBLK)
+
+     end do ! Multi-block solution update loop.
+
+     if(DoTestMe)write(*,*)NameSub,' done update blocks adjoint'
+
+     call barrier_mpi2('expl2_adjoint')
+
+     ! TODO: Take care of ghosts in Adjoint_VGB, Energy_GBI
+     ! should be additive, then zero out ghost values
+     call exchange_messages_adjoint
+
+     if(DoTestMe)write(*,*)NameSub,' finished adjoint stage=',istage
+
+  end do STAGELOOP  ! Multi-stage solution update loop.
+
+  ! add Prev to current adjoint, result is the final answer
+  Adjoint_VGB(1:nVar,1:nI,1:nJ,1:nK,:) = &
+       Adjoint_VGB(1:nVar,1:nI,1:nJ,1:nK,:) + AdjointPrev_VGB(1:nVar,1:nI,1:nJ,1:nK,:) 
+
+
+  if(DoTestMe)write(*,*)NameSub,' finished'
+
+end subroutine advance_expl_adjoint
+
+!ADJOINT SPECIFIC END

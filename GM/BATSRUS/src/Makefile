@@ -17,6 +17,7 @@ MOD1 = ModCT.o       #^CFG IF CONSTRAINB
 MOD2 = ModImplicit.o ModRadDiffusion.o ModHeatConduction.o #^CFG IF IMPLICIT
 MOD3 = ModRaytrace.o #^CFG IF RAYTRACE
 MOD4 = ModProject.o  #^CFG IF PROJECTION
+MOD5 = ModAdjoint.o  #^CFG IF ADJOINT
 HEATING = ModCoronalHeating.o ModRadiativeCooling.o 
 
 MODULES = \
@@ -65,7 +66,7 @@ MODULES = \
 	ModUser.o \
 	ModWaves.o \
 	${HEATING} \
-	${MOD1}	${MOD2}	${MOD3} ${MOD4} 
+	${MOD1}	${MOD2}	${MOD3} ${MOD4} ${MOD5}
 
 # OBJECT FILES FOR MAIN EXECUTABLE
 

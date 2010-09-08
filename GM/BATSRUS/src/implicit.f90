@@ -186,7 +186,7 @@ subroutine advance_impl
 
      ! advance explicit blocks, calc timestep 
      if(.not.UseDtFixed)cfl=ExplCfl
-     call advance_expl(.true.) 
+     call advance_expl(.true., -1) 
 
      if(.not.UsePartImplicit2)then
         ! update ghost cells for the implicit blocks to time level n+1

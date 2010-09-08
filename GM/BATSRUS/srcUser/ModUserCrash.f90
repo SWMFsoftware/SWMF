@@ -4,7 +4,7 @@ module ModUser
   ! This is the default user module which contains empty methods defined
   ! in ModUserEmpty.f90
 
-  use ModUserEmpty,                                     &
+  use ModUserEmpty,                                      &
        IMPLEMENTED1  => user_update_states,              &
        IMPLEMENTED2  => user_calc_sources,               &
        IMPLEMENTED3  => user_set_outerbcs,               &
@@ -14,7 +14,9 @@ module ModUser
        IMPLEMENTED7  => user_set_ics,                    &
        IMPLEMENTED8  => user_material_properties,        &
        IMPLEMENTED9  => user_amr_criteria,               &
-       IMPLEMENTED10 => user_get_log_var
+       IMPLEMENTED10 => user_get_log_var,                &
+       IMPLEMENTED11 => user_update_states_adjoint,      &
+       IMPLEMENTED12 => user_calc_sources_adjoint
 
   use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, VarTest, &
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates, &
@@ -1479,6 +1481,8 @@ contains
     use ModPhysics,  ONLY: inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModEnergy,   ONLY: calc_energy_cell
+    use ModAdjoint, ONLY: DoAdjoint, AdjUserUpdate1_, & ! ADJOINT SPECIFIC
+         AdjUserUpdate2_, store_block_buffer            ! ADJOINT SPECIFIC
 
     implicit none
 
@@ -1497,6 +1501,8 @@ contains
     end if
 
     call update_states_MHD(iStage,iBlock)
+
+    if (DoAdjoint) call store_block_buffer(iBlock,AdjUserUpdate1_)  ! ADJOINT SPECIFIC
 
     ! update of pressure, ionization and total energies
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -1531,6 +1537,8 @@ contains
             - inv_gm1*State_VGB(p_,i,j,k,iBlock))
 
     end do; end do; end do
+    
+    if (DoAdjoint) call store_block_buffer(iBlock,AdjUserUpdate2_)  ! ADJOINT SPECIFIC
 
     call calc_energy_cell(iBlock)
 
@@ -1569,6 +1577,156 @@ contains
     end subroutine update_states_electron
 
   end subroutine user_update_states
+
+  !BEGIN ADJOINT SPECIFIC
+  !============================================================================
+
+  subroutine user_update_states_adjoint(iStage,iBlock)
+
+    use ModSize,     ONLY: nI, nJ, nK
+    use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
+         UseNonConservative, IsConserv_CB, &
+         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
+         UseElectronPressure
+    use ModGeometry, ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
+    use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
+         UnitP_, UnitEnergyDens_, ExtraEintMin
+    use ModEnergy,   ONLY: calc_energy_cell_adjoint
+    use ModVarIndexes, ONLY: nWave
+    use ModAdjoint
+
+    implicit none
+
+    integer, intent(in):: iStage,iBlock
+
+    integer:: i, j, k
+    real   :: PressureSi, EinternalSi, GammaEos, DivU
+    logical:: IsConserv
+    real   :: Etemp, rtemp
+    real   :: EinternalSi_U(nVar) = 0.0
+    real   :: pressureSi_U(nVar) = 0.0
+
+    character(len=*), parameter :: NameSub = 'user_update_states_adjoint'
+    !------------------------------------------------------------------------
+
+    if(UseElectronPressure)then
+       call stop_mpi(NameSub // " Not yet implemented.")
+       !call update_states_electron
+       RETURN
+    end if    
+
+    ! recall state from block buffer
+    call recall_block_buffer(iBlock,AdjUserUpdate2_) 
+
+    ! energy cell calculation, adjoint version
+    call calc_energy_cell_adjoint(iBlock)
+
+    ! recall state from block buffer
+    call recall_block_buffer(iBlock,AdjUserUpdate1_) 
+
+    ! update of pressure, ionization and total energies -- adjoint version
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       ! Total internal energy ExtraEint + P/(\gamma -1) transformed to SI
+
+       if(allocated(IsConserv_CB))then
+          IsConserv = IsConserv_CB(i,j,k,iBlock)
+       else
+          IsConserv = .not. UseNonConservative
+       end if
+
+       if(IsConserv)then
+          ! At this point p=(g-1)(e-rhov^2/2) with the ideal gamma g.
+          ! Use this p to get total internal energy density.
+          EinternalSi = No2Si_V(UnitEnergyDens_)*&
+               (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
+               State_VGB(ExtraEint_,i,j,k,iBlock))
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, &
+               EinternalIn=EinternalSi, PressureOut=PressureSi)
+          ! TODO: need PressureSi_U
+          ! set EinternalSi_U
+          EinternalSi_U = 0.
+          EinternalSi_U(ExtraEint_) = No2Si_V(UnitEnergyDens_)          
+          EinternalSi_U(p_)         = No2Si_V(UnitEnergyDens_)*inv_gm1
+
+          ! Set true pressure
+          State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+       else
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, EinternalOut=EinternalSi)
+          ! TODO: need EinternalSi_U
+       end if
+
+       Etemp = Si2No_V(UnitEnergyDens_)*EinternalSi - inv_gm1*State_VGB(p_,i,j,k,iBlock)
+       if (ExtraEintMin > Etemp) then
+          Adjoint_VGB(p_,i,j,k,iBlock) =  Adjoint_VGB(p_,i,j,k,iBlock) - &
+               inv_gm1*Adjoint_VGB(ExtraEint_,i,j,k,iBlock)
+          Adjoint_VGB(:,i,j,k,iBlock) = Adjoint_VGB(:,i,j,k,iBlock) + &
+               Si2No_V(UnitEnergyDens_)*EinternalSi*EinternalSi_U * &
+               Adjoint_VGB(ExtraEint_,i,j,k,iBlock)
+       end if
+
+       if (IsConserv)then
+          Adjoint_VGB(:,i,j,k,iBlock) = Adjoint_VGB(:,i,j,k,iBlock) + &
+               Si2No_V(UnitP_)*PressureSi_U*Adjoint_VGB(p_,i,j,k,iBlock)
+       end if
+
+       ! Set ExtraEint = Total internal energy - P/(gamma -1)
+       State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, Etemp)
+
+    end do; end do; end do
+
+    ! recall state from block buffer
+    call recall_block_buffer(iBlock,AdjUserUpdate1_) 
+
+    call update_states_MHD_adjoint(iStage,iBlock)
+    
+    ! recall state from block buffer
+    call recall_block_buffer(iBlock,AdjPreUpdate_) 
+
+
+    ! Fix adiabatic compression source for pressure
+    AdjuDotArea_XI = 0.
+    AdjuDotArea_YI = 0.
+    AdjuDotArea_ZI = 0.
+    if(UseNonConservative)then
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          DivU          =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
+          if(nJ>1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
+          if(nK>1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
+          DivU = vInv_CB(i,j,k,iBlock)*DivU
+
+          ! TODO: adjoint version of this function for GammaEos_State
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, GammaOut=GammaEos)
+
+          !   Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+          !        -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*DivU
+
+          ! update AdjuDotArea_** via dep of Source on DivU
+          rtemp = - (GammaEos-g) * State_VGB(p_,i,j,k,iBlock) * &
+               vInv_CB(i,j,k,iBlock) * AdjSource_VC(p_,i,j,k)
+          AdjuDotArea_XI(i+1,j,k,1) = AdjuDotArea_XI(i+1,j,k,1)+rtemp
+          if(nJ>1)AdjuDotArea_YI(i,j+1,k,1) = AdjuDotArea_YI(i,j+1,k,1)+rtemp
+          if(nK>1)AdjuDotArea_ZI(i,j,k+1,1) = AdjuDotArea_ZI(i,j,k+1,1)+rtemp
+          AdjuDotArea_XI(i,j,k,1) = AdjuDotArea_XI(i,j,k,1)-rtemp
+          if(nJ>1)AdjuDotArea_YI(i,j,k,1) = AdjuDotArea_YI(i,j,k,1)-rtemp
+          if(nK>1)AdjuDotArea_ZI(i,j,k,1) = AdjuDotArea_ZI(i,j,k,1)-rtemp
+          
+          ! update adjoint with dep of Source on U
+          Adjoint_VGB(p_,i,j,k,iBlock) = & 
+               Adjoint_VGB(p_,i,j,k,iBlock) - &
+               (GammaEos-g)*DivU*AdjSource_VC(p_,i,j,k)
+
+          ! TODO: still need dependence of GammaEos on state
+          
+
+       end do; end do; end do
+    end if
+
+  end subroutine user_update_states_adjoint
+  !ADJOINT SPECIFIC END
+
 
   !============================================================================
 
@@ -1618,6 +1776,62 @@ contains
     end do; end do; end do
 
   end subroutine user_calc_sources
+
+
+  !ADJOINT SPECIFIC BEGIN
+  !============================================================================
+
+  subroutine user_calc_sources_adjoint
+
+    use ModMain,     ONLY: nI, nJ, nK, GlobalBlk
+    use ModAdvance,  ONLY: State_VGB, &
+         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
+    use ModGeometry, ONLY: vInv_CB
+    use ModAdjoint
+
+    integer :: i, j, k, iBlock, d
+    real :: DivU, rtemp
+    character (len=*), parameter :: NameSub = 'user_calc_sources_adjoint'
+    !-------------------------------------------------------------------
+
+    iBlock = globalBlk
+
+    ! Add Level*div(u) as a source term so level sets beome advected scalars
+    ! Note that all levels use the velocity of the first (and only) fluid
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       DivU            =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
+       if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
+       if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
+       DivU = vInv_CB(i,j,k,iBlock)*DivU
+
+       Source_VC(LevelXe_:LevelMax,i,j,k) = &
+            Source_VC(LevelXe_:LevelMax,i,j,k) &
+            + State_VGB(LevelXe_:LevelMax,i,j,k,iBlock)*DivU
+
+       ! update AdjuDotArea_** via dep of Source on DivU
+       rtemp = 0.0
+       do d = LevelXe_,LevelMax
+          rtemp = rtemp + State_VGB(d,i,j,k,iBlock) * AdjSource_VC(d,i,j,k)
+       end do
+
+       AdjuDotArea_XI(i+1,j,k,1) = AdjuDotArea_XI(i+1,j,k,1) + rtemp
+       AdjuDotArea_YI(i,j+1,k,1) = AdjuDotArea_YI(i,j+1,k,1) + rtemp
+       AdjuDotArea_ZI(i,j,k+1,1) = AdjuDotArea_ZI(i,j,k+1,1) + rtemp
+       AdjuDotArea_XI(i,j,k,1) = AdjuDotArea_XI(i,j,k,1) - rtemp
+       AdjuDotArea_YI(i,j,k,1) = AdjuDotArea_YI(i,j,k,1) - rtemp
+       AdjuDotArea_ZI(i,j,k,1) = AdjuDotArea_ZI(i,j,k,1) - rtemp
+
+       ! update adjoint with dep of Source on U
+       Adjoint_VGB(LevelXe_:LevelMax,i,j,k,iBlock) = & 
+            Adjoint_VGB(LevelXe_:LevelMax,i,j,k,iBlock) + &
+            AdjSource_VC(LevelXe_:LevelMax,i,j,k)*DivU
+
+    end do; end do; end do
+
+  end subroutine user_calc_sources_adjoint
+  !ADJOINT SPECIFIC END
+
 
   !===========================================================================
 

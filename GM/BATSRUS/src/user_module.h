@@ -25,3 +25,5 @@
   public :: user_normalization
   public :: user_set_resistivity
   public :: user_material_properties
+  public :: user_calc_sources_adjoint
+  public :: user_update_states_adjoint

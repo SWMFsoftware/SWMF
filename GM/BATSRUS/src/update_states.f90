@@ -6,6 +6,7 @@ subroutine update_states(iStage,iBlock)
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
   use ModUser, ONLY: user_update_states
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
+  use ModAdjoint, ONLY : AdjPreUpdate_, store_block_buffer, DoAdjoint  ! ADJOINT SPECIFIC
   implicit none
 
   integer, intent(in) :: iStage,iBlock
@@ -42,6 +43,8 @@ subroutine update_states(iStage,iBlock)
           Flux_VZ(VARtest,Itest,Jtest,Ktest+1)
      write(*,*)'source=',Source_VC(VARtest,Itest,Jtest,Ktest)
   end if
+
+  if (DoAdjoint) call store_block_buffer(iBlock,AdjPreUpdate_)   ! ADJOINT SPECIFIC
 
   if(UseUserUpdateStates)then
      call user_update_states(iStage,iBlock)
@@ -101,6 +104,33 @@ subroutine update_states(iStage,iBlock)
   end if
 
 end subroutine update_states
+
+! BEGIN ADJOINT SPECIFIC
+!============================================================================
+subroutine update_states_adjoint(iStage,iBlock) 
+  use ModMain
+  use ModUser, ONLY: user_update_states_adjoint
+  use ModAdjoint, ONLY: AdjPreUpdate_, recall_block_buffer
+  implicit none
+
+  integer, intent(in) :: iStage,iBlock
+
+  character(len=*), parameter:: NameSub = 'update_states_adjoint'
+  !--------------------------------------------------------------------------
+
+  if(UseUserUpdateStates)then
+     call user_update_states_adjoint(iStage,iBlock)
+  else
+     call update_states_MHD_adjoint(iStage,iBlock)
+  end if
+
+  ! Restore stage-beginning state values from buffer
+  call recall_block_buffer(iBlock,AdjPreUpdate_) 
+
+end subroutine update_states_adjoint
+! ADJOINT SPECIFIC END
+
+
 
 !============================================================================
 subroutine update_check(iStage)

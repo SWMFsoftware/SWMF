@@ -15,7 +15,8 @@ module ModFaceValue
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
 
-  public :: read_face_value_param, calc_face_value, correct_monotone_restrict
+  public :: read_face_value_param, calc_face_value, correct_monotone_restrict, &
+       calc_face_value_adjoint
 
   ! Local variables:
   ! Parameters for the limiter applied near resolution changes
@@ -27,7 +28,7 @@ module ModFaceValue
   logical :: UseLogLimiter    = .false., UseLogLimiter_V(nVar) = .false.
   logical :: UseLogRhoLimiter = .false.
   logical :: UseLogPLimiter   = .false.
-  
+
   ! Parameters for limiting the variable divided by density 
   logical :: UseScalarToRhoRatioLtd = .false.
   logical :: NameV
@@ -48,6 +49,10 @@ module ModFaceValue
   real   :: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
   real   :: Primitive_VI(1:nVar,-1:MaxIJK+2)
   logical:: IsTrueCell_I(-1:MaxIJK+2)
+
+  !primitive variables (here/global for adjoint purposes)
+  real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2):: Primitive_VG
+  real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2):: AdjPrimitive_VG !ADJOINT SPECIFIC
 
   integer :: iVar
 
@@ -655,8 +660,6 @@ contains
     real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full,& !^CFG IF BORISCORR
          uBC2Inv,Ga2Boris                           !^CFG IF BORISCORR
     real:: B0_DG(3,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
-    !primitive variables
-    real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2):: Primitive_VG
 
     logical::DoTest,DoTestMe
     character(len=*), parameter :: NameSub = 'calc_face_value'
@@ -997,28 +1000,7 @@ contains
       end do; end do; end do
 
     end subroutine ratio_to_scalar_faceZ
-    !==========================================================================
-    subroutine calc_primitives_MHD
-      use ModMultiFluid
-      Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
-      RhoInv=cOne/Primitive_VG(Rho_,i,j,k)
-      Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
-      do iFluid = 2, nFluid
-         call select_fluid
-         RhoInv=cOne/Primitive_VG(iRho,i,j,k)
-         Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iRhoUx:iRhoUz,i,j,k)
-      end do
-      if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
-           RhoInv*Primitive_VG(iVarLimitRatio_I,i,j,k)
 
-      if(UseLogLimiter)then
-         do iVar=1,nVar
-            if(UseLogLimiter_V(iVar)) &
-                 Primitive_VG(iVar,i,j,k) = log(Primitive_VG(iVar,i,j,k))
-         end do
-      end if
-
-    end subroutine calc_primitives_MHD
     !==========================================================================
     !^CFG IF BORISCORR BEGIN
     subroutine calc_primitives_boris                                       
@@ -1090,6 +1072,32 @@ contains
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
            iMin,iMax,jMin,jMax,kMin,kMax)
     end subroutine get_faceZ_first
+    !==========================================================================
+    subroutine calc_primitives_MHD
+      use ModMultiFluid
+      Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
+      ! TEMPORARY
+      !if (iBlock == 1) then
+      !   write(*,*)'(i,j,k): state = ',i,j,k,State_VGB(1,i,j,k,iBlock)
+      !end if
+      RhoInv=cOne/Primitive_VG(Rho_,i,j,k)
+      Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
+      do iFluid = 2, nFluid
+         call select_fluid
+         RhoInv=cOne/Primitive_VG(iRho,i,j,k)
+         Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iRhoUx:iRhoUz,i,j,k)
+      end do
+      if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
+           RhoInv*Primitive_VG(iVarLimitRatio_I,i,j,k)
+
+      if(UseLogLimiter)then
+         do iVar=1,nVar
+            if(UseLogLimiter_V(iVar)) &
+                 Primitive_VG(iVar,i,j,k) = log(Primitive_VG(iVar,i,j,k))
+         end do
+      end if
+
+    end subroutine calc_primitives_MHD
     !==========================================================================
     !^CFG IF BORISCORR BEGIN
     subroutine BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1809,6 +1817,645 @@ contains
       !^CFG END BORISCORR
     end subroutine get_faceZ_second
   end subroutine calc_face_value
+
+
+  !ADJOINT SPECIFIC BEGIN
+  !===========================================================================
+  subroutine calc_face_value_adjoint(DoResChangeOnly, iBlock)
+
+    ! Adjoint version
+
+    use ModMain
+    use ModVarIndexes
+    use ModGeometry, ONLY : true_cell,body_BLK
+    use ModNumConst
+    use ModPhysics, ONLY: c2LIGHT,inv_c2LIGHT  !^CFG IF BORISCORR BEGIN
+    use ModB0                                  !^CFG END BORISCORR
+    use ModAdvance, ONLY: State_VGB,&
+         LeftState_VX,      &  ! Face Left  X
+         RightState_VX,     &  ! Face Right X
+         LeftState_VY,      &  ! Face Left  Y
+         RightState_VY,     &  ! Face Right Y
+         LeftState_VZ,      &  ! Face Left  Z
+         RightState_VZ         ! Face Right Z
+
+    use ModParallel, ONLY : &
+         neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
+
+    use ModAdjoint
+
+    implicit none
+
+    logical, intent(in):: DoResChangeOnly
+    integer, intent(in):: iBlock
+
+
+    integer:: i,j,k,iSide,iFluid
+    real:: RhoInv
+    real:: AdjRhoInv
+
+    real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full,& !^CFG IF BORISCORR
+         uBC2Inv,Ga2Boris                           !^CFG IF BORISCORR
+    real:: B0_DG(3,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
+    !primitive variables
+    real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2):: Primitive_VG
+    !primitive adjoint variables
+    real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2):: AdjPrimitive_VG
+
+    logical::DoTest,DoTestMe
+    character(len=*), parameter :: NameSub = 'calc_face_value_adjoint'
+    !-------------------------------------------------------------------------
+
+    UseLogLimiter   = nOrder == 2 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
+    UseLogLimiter_V = .false.
+    if(UseLogLimiter)then
+       if(UseLogRhoLimiter)then
+          do iFluid = 1, nFluid
+             UseLogLimiter_V(iRho_I(iFluid)) = .true.
+          end do
+       end if
+       if(UseLogPLimiter)then
+          do iFluid = 1, nFluid
+             UseLogLimiter_V(iP_I(iFluid))   = .true.
+          end do
+       end if
+    end if
+
+    if(.not.DoResChangeOnly & !In order not to call it twice
+         .and.nOrder==2     & !Is not needed for nOrder=1
+         .and. (UseAccurateResChange .or. UseTvdResChange)) &
+         call stop_mpi(NameSub // ' Not yet supported')
+
+
+    ! State Primitive variables are already filled in from forward call
+    ! LeftState, RightState are also valid, as calculated by the end
+    !  of calc_face_value
+
+    ! Initialize adjoint variables
+    AdjPrimitive_VG = 0.0
+
+    !\
+    ! Now the first or second order face values are calculated
+    ! Adjoint: this is first
+    !/
+    select case(nOrder)
+    case(1)
+       !\
+       ! First order reconstruction
+       !/
+       if (.not.DoResChangeOnly) then
+          call get_faceX_first_adjoint(&
+               1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
+          if(nJ > 1) call get_faceY_first_adjoint(&
+               iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
+          if(nK > 1) call get_faceZ_first_adjoint(&
+               iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
+       else
+          if(neiLeast(iBlock)==+1)&
+               call get_faceX_first_adjoint(1,1,1,nJ,1,nK)
+          if(neiLwest(iBlock)==+1)&
+               call get_faceX_first_adjoint(nIFace,nIFace,1,nJ,1,nK)
+          if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+               call get_faceY_first_adjoint(1,nI,1,1,1,nK)
+          if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+               call get_faceY_first_adjoint(1,nI,nJFace,nJFace,1,nK)
+          if(nK > 1 .and. neiLbot(iBlock)==+1) &
+               call get_faceZ_first_adjoint(1,nI,1,nJ,1,1)
+          if(nK > 1 .and. neiLtop(iBlock)==+1) &
+               call get_faceZ_first_adjoint(1,nI,1,nJ,nKFace,nKFace)
+       end if
+    case(2)
+       ! For second order scheme (nOrder==2)   
+       ! use second order limited reconstruction.
+       ! When prolong_order==1 we can use first order reconstruction 
+       ! at resolution changes.
+       ! However, constrained transport requires facevalues !^CFG IF CONSTRAINB
+       ! to be independent of the resolution changes.       !^CFG IF CONSTRAINB
+
+       
+       if(UseScalarToRhoRatioLtd)then
+          if(DoResChangeOnly)then
+             if(neiLeast(iBlock)==+1) &
+                  call ratio_to_scalar_faceX_adjoint(1,1,1,nJ,1,nK)
+             if(neiLwest(iBlock)==+1) &
+                  call ratio_to_scalar_faceX_adjoint(nIFace,nIFace,1,nJ,1,nK)
+             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+                  call ratio_to_scalar_faceY_adjoint(1,nI,1,1,1,nK)
+             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+                  call ratio_to_scalar_faceY_adjoint(1,nI,nJFace,nJFace,1,nK)
+             if(nK > 1 .and. neiLbot(iBlock)==+1) &
+                  call ratio_to_scalar_faceZ_adjoint(1,nI,1,nJ,1,1)
+             if(nK > 1 .and. neiLtop(iBlock)==+1) &
+                  call ratio_to_scalar_faceZ_adjoint(1,nI,1,nJ,nKFace,nKFace)
+          else
+             call ratio_to_scalar_faceX_adjoint(1,nIFace,jMinFaceX,jMaxFaceX, &
+                  kMinFaceX,kMaxFaceX)
+             if(nJ > 1) call ratio_to_scalar_faceY_adjoint(iMinFaceY,iMaxFaceY,1,nJFace, &
+                  kMinFaceY,kMaxFaceY)
+             if(nK > 1) call ratio_to_scalar_faceZ_adjoint(iMinFaceZ,iMaxFaceZ, &
+                  jMinFaceZ,jMaxFaceZ,1,nKFace)
+          end if
+       end if
+
+
+       if(UseLogLimiter .and. .not.DoLimitMomentum)then
+          if(DoResChangeOnly)then
+             call stop_mpi(NameSub // ' Not yet supported')
+          else
+             call logfaceX_to_faceX_adjoint(1,nIFace,jMinFaceX,jMaxFaceX, &
+                  kMinFaceX,kMaxFaceX)
+             if(nJ > 1) call logfaceY_to_faceY_adjoint(iMinFaceY,iMaxFaceY,1,nJFace, &
+                  kMinFaceY,kMaxFaceY)
+             if(nK > 1) call logfaceZ_to_faceZ_adjoint(iMinFaceZ,iMaxFaceZ, &
+                  jMinFaceZ,jMaxFaceZ,1,nKFace)
+          end if
+       end if
+
+       if(prolong_order==1 &
+            .and..not.UseConstrainB & !^CFG IF CONSTRAINB
+            )then
+          call stop_mpi(NameSub // ' Not yet supported')
+       else if(DoResChangeOnly) then
+          ! Second order face values at resolution changes
+          if(neiLeast(iBlock)==+1)&
+               call get_faceX_second_adjoint(1,1,1,nJ,1,nK)
+          if(neiLwest(iBlock)==+1)&
+               call get_faceX_second_adjoint(nIFace,nIFace,1,nJ,1,nK)
+          if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+               call get_faceY_second_adjoint(1,nI,1,1,1,nK)
+          if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+               call get_faceY_second_adjoint(1,nI,nJFace,nJFace,1,nK)
+          if(nK > 1 .and. neiLbot(iBlock)==+1) &
+               call get_faceZ_second_adjoint(1,nI,1,nJ,1,1)
+          if(nK > 1 .and. neiLtop(iBlock)==+1) &
+               call get_faceZ_second_adjoint(1,nI,1,nJ,nKFace,nKFace)
+       endif
+
+       if (.not.DoResChangeOnly)then
+          call get_faceX_second_adjoint(&
+               1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
+          if(nJ > 1) call get_faceY_second_adjoint(&
+               iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
+          if(nK > 1) call get_faceZ_second_adjoint(&
+               iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
+       end if
+    end select  !end second order
+
+
+    ! first, calculate the CELL values for the variables to be limited
+    ! for non-boris corrections they are: density, velocity, pressure
+    ! for boris correction momentum is used instead of the velocity
+    ! Adjoint: this is second
+    if(DoLimitMomentum)then                     !^CFG IF BORISCORR BEGIN
+       call stop_mpi(NameSub // ' Not yet supported')
+    else                                         !^CFG END BORISCORR
+       if(UseAccurateResChange)then
+          call stop_mpi(NameSub // ' Not yet supported')
+       else
+          do k=kMinFaceX,kMaxFaceX
+             do j=jMinFaceX,jMaxFaceX
+                do i=1-nOrder,nI+nOrder
+                   call calc_primitives_MHD_adjoint   !needed for x-faces
+                end do
+             end do
+          end do
+          if(nJ > 1)then
+             do k=kMinFaceY,kMaxFaceY; do i=iMinFaceY,iMaxFaceY
+                do j=1-nOrder,jMinFaceX-1
+                   call calc_primitives_MHD_adjoint   ! additional calculations for 
+                end do                        ! y -faces
+                do j=jMaxFaceX+1,nJ+nOrder
+                   call calc_primitives_MHD_adjoint   ! additional calculations for 
+                end do	                      ! y-faces
+             end do; end do
+          end if
+          if(nK > 1)then
+             do j=jMinFaceZ,jMaxFaceZ; do i=iMinFaceZ,iMaxFaceZ
+                do k=1-nOrder,kMinFaceX-1
+                   call calc_primitives_MHD_adjoint   ! additional calculations for 
+                end do                        ! z-faces
+                do k=kMaxFaceX+1,nK+nOrder
+                   call calc_primitives_MHD_adjoint   ! additional calculations for 
+                end do	                      ! z-faces
+             end do; end do
+          end if
+       end if
+    end if                                       !^CFG IF BORISCORR
+
+  contains
+
+    ! NOTE: in the adjoint versions of the below routines,
+    ! Left/RightState_V* is assumed to be post-forward routine.  For
+    ! example, in the log limiter case, the exponential has already
+    ! been taken.  These routines perform the reverse of the forward step
+    ! on the state to prepare the state for use in get_face*_*_adjoint
+
+    !==========================================================================
+    subroutine logfaceX_to_faceX_adjoint(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      !------------------------------------------------------------------------
+      do iVar=1,nVar
+         if(.not.UseLogLimiter_V(iVar))CYCLE
+         ! Reverse operation on state
+         LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              log(LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+         RightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              log(RightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+         ! adjoint operation
+         AdjLeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              AdjLeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
+              (1.0+exp(LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax)))
+         AdjRightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              AdjRightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
+              (1.0+exp(RightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax)))
+      end do
+
+    end subroutine logfaceX_to_faceX_adjoint
+    !==========================================================================
+    subroutine logfaceY_to_faceY_adjoint(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      !------------------------------------------------------------------------
+      do iVar=1,nVar
+         if(.not.UseLogLimiter_V(iVar))CYCLE
+         ! Reverse operation on state
+         LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              log(LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+         RightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              log(RightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+         ! adjoint operation
+         AdjLeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              AdjLeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
+              (1.0+exp(LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax)))
+         AdjRightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              AdjRightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
+              (1.0+exp(RightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax)))
+      end do
+
+    end subroutine logfaceY_to_faceY_adjoint
+    !==========================================================================
+    subroutine logfaceZ_to_faceZ_adjoint(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      !------------------------------------------------------------------------
+      do iVar=1,nVar
+         if(.not.UseLogLimiter_V(iVar))CYCLE
+         ! Reverse operation on state
+         LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              log(LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+         RightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              log(RightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+         ! adjoint operation
+         AdjLeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              AdjLeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
+              (1.0+exp(LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax)))
+         AdjRightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              AdjRightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
+              (1.0+exp(RightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax)))
+      end do
+
+    end subroutine logfaceZ_to_faceZ_adjoint
+    !==========================================================================
+    subroutine ratio_to_scalar_faceX_adjoint(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer :: i, j, k
+      !------------------------------------------------------------------------
+      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+         ! Reverse operation on state
+         LeftState_VX(iVarLimitRatio_I,i,j,k) = &
+              LeftState_VX(iVarLimitRatio_I,i,j,k)/LeftState_VX(Rho_,i,j,k)
+         RightState_VX(iVarLimitRatio_I,i,j,k) = &
+              RightState_VX(iVarLimitRatio_I,i,j,k)/RightState_VX(Rho_,i,j,k)
+         ! adjoint operation
+         AdjLeftState_VX(Rho_,i,j,k) = AdjLeftState_VX(Rho_,i,j,k) + &
+              dot_product(LeftState_VX(iVarLimitRatio_I,i,j,k),&
+              AdjLeftState_VX(iVarLimitRatio_I,i,j,k))
+         AdjLeftState_VX(iVarLimitRatio_I,i,j,k) = &
+              AdjLeftState_VX(iVarLimitRatio_I,i,j,k)*(1.0+Leftstate_VX(Rho_,i,j,k))
+         AdjRightState_VX(Rho_,i,j,k) = AdjRightState_VX(Rho_,i,j,k) + &
+              dot_product(RightState_VX(iVarLimitRatio_I,i,j,k),&
+              AdjRightState_VX(iVarLimitRatio_I,i,j,k))
+         AdjRightState_VX(iVarLimitRatio_I,i,j,k) = &
+              AdjRightState_VX(iVarLimitRatio_I,i,j,k)*(1.0+Rightstate_VX(Rho_,i,j,k))
+      end do; end do; end do
+
+    end subroutine ratio_to_scalar_faceX_adjoint
+    !==========================================================================
+    subroutine ratio_to_scalar_faceY_adjoint(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer :: i, j, k
+      !------------------------------------------------------------------------
+      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+         ! Reverse operation on state
+         LeftState_VY(iVarLimitRatio_I,i,j,k) = &
+              LeftState_VY(iVarLimitRatio_I,i,j,k)/LeftState_VY(Rho_,i,j,k)
+         RightState_VY(iVarLimitRatio_I,i,j,k) = &
+              RightState_VY(iVarLimitRatio_I,i,j,k)/RightState_VY(Rho_,i,j,k)
+         ! adjoint operation
+         AdjLeftState_VY(Rho_,i,j,k) = AdjLeftState_VY(Rho_,i,j,k) + &
+              dot_product(LeftState_VY(iVarLimitRatio_I,i,j,k),&
+              AdjLeftState_VY(iVarLimitRatio_I,i,j,k))
+         AdjLeftState_VY(iVarLimitRatio_I,i,j,k) = &
+              AdjLeftState_VY(iVarLimitRatio_I,i,j,k)*(1.0+Leftstate_VY(Rho_,i,j,k))
+         AdjRightState_VY(Rho_,i,j,k) = AdjRightState_VY(Rho_,i,j,k) + &
+              dot_product(RightState_VY(iVarLimitRatio_I,i,j,k),&
+              AdjRightState_VY(iVarLimitRatio_I,i,j,k))
+         AdjRightState_VY(iVarLimitRatio_I,i,j,k) = &
+              AdjRightState_VY(iVarLimitRatio_I,i,j,k)*(1.0+Rightstate_VY(Rho_,i,j,k))
+      end do; end do; end do
+
+    end subroutine ratio_to_scalar_faceY_adjoint
+    !==========================================================================
+    subroutine ratio_to_scalar_faceZ_adjoint(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer :: i, j, k
+      !------------------------------------------------------------------------
+      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+         ! Reverse operation on state
+         LeftState_VZ(iVarLimitRatio_I,i,j,k) = &
+              LeftState_VZ(iVarLimitRatio_I,i,j,k)/LeftState_VZ(Rho_,i,j,k)
+         RightState_VZ(iVarLimitRatio_I,i,j,k) = &
+              RightState_VZ(iVarLimitRatio_I,i,j,k)/RightState_VZ(Rho_,i,j,k)
+         ! adjoint operation
+         AdjLeftState_VZ(Rho_,i,j,k) = AdjLeftState_VZ(Rho_,i,j,k) + &
+              dot_product(LeftState_VZ(iVarLimitRatio_I,i,j,k),&
+              AdjLeftState_VZ(iVarLimitRatio_I,i,j,k))
+         AdjLeftState_VZ(iVarLimitRatio_I,i,j,k) = &
+              AdjLeftState_VZ(iVarLimitRatio_I,i,j,k)*(1.0+Leftstate_VZ(Rho_,i,j,k))
+         AdjRightState_VZ(Rho_,i,j,k) = AdjRightState_VZ(Rho_,i,j,k) + &
+              dot_product(RightState_VZ(iVarLimitRatio_I,i,j,k),&
+              AdjRightState_VZ(iVarLimitRatio_I,i,j,k))
+         AdjRightState_VZ(iVarLimitRatio_I,i,j,k) = &
+              AdjRightState_VZ(iVarLimitRatio_I,i,j,k)*(1.0+Rightstate_VZ(Rho_,i,j,k))
+      end do; end do; end do
+
+    end subroutine ratio_to_scalar_faceZ_adjoint
+
+    !==========================================================================
+    subroutine calc_primitives_MHD
+      use ModMultiFluid
+      Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
+      ! TEMPORARY
+      !if (iBlock == 1) then
+      !   write(*,*)'(i,j,k): state = ',i,j,k,State_VGB(1,i,j,k,iBlock)
+      !end if
+      RhoInv=cOne/Primitive_VG(Rho_,i,j,k)
+      Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
+      do iFluid = 2, nFluid
+         call select_fluid
+         RhoInv=cOne/Primitive_VG(iRho,i,j,k)
+         Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iRhoUx:iRhoUz,i,j,k)
+      end do
+      if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
+           RhoInv*Primitive_VG(iVarLimitRatio_I,i,j,k)
+
+      if(UseLogLimiter)then
+         do iVar=1,nVar
+            if(UseLogLimiter_V(iVar)) &
+                 Primitive_VG(iVar,i,j,k) = log(Primitive_VG(iVar,i,j,k))
+         end do
+      end if
+
+    end subroutine calc_primitives_MHD
+    
+    !==========================================================================
+    subroutine calc_primitives_MHD_adjoint
+
+      use ModMultiFluid
+
+      real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2):: Primitive_VG_A
+
+      Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
+      RhoInv=cOne/Primitive_VG(Rho_,i,j,k)
+      Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
+
+      Primitive_VG_A = Primitive_VG   ! store in A
+
+      do iFluid = 2, nFluid
+         call select_fluid
+         RhoInv=cOne/Primitive_VG(iRho,i,j,k)
+         Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iRhoUx:iRhoUz,i,j,k)
+      end do
+      if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
+           RhoInv*Primitive_VG(iVarLimitRatio_I,i,j,k)
+
+      if(UseLogLimiter)then
+         do iVar=1,nVar
+            if(UseLogLimiter_V(iVar)) &
+                 Primitive_VG(iVar,i,j,k) = log(Primitive_VG(iVar,i,j,k))
+         end do
+      end if
+
+      ! Adjoint section
+      AdjRhoInv = 0.0
+
+      if(UseLogLimiter) call stop_mpi(NameSub // ' Not yet supported')
+
+      if(UseScalarToRhoRatioLtd)then
+         Primitive_VG = Primitive_VG_A  ! restore from A
+         AdjRhoInv = AdjRhoInv + dot_product(Primitive_VG(iVarLimitRatio_I,i,j,k),&
+              AdjPrimitive_VG(iVarLimitRatio_I,i,j,k))
+         AdjPrimitive_VG(iVarLimitRatio_I,i,j,k) = &
+              AdjPrimitive_VG(iVarLimitRatio_I,i,j,k) + &
+              RhoInv*AdjPrimitive_VG(iVarLimitRatio_I,i,j,k)
+      end if
+
+      ! mutifluid not yet supported
+      if (iFluid > 1)call stop_mpi(NameSub // ' Not yet supported')
+
+      ! reset Primitive_VG
+      Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
+      RhoInv=cOne/Primitive_VG(Rho_,i,j,k)
+      !Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)  
+      AdjRhoInv = AdjRhoInv + dot_product(Primitive_VG(RhoUx_:RhoUz_,i,j,k),&
+           AdjPrimitive_VG(RhoUx_:RhoUz_,i,j,k))
+      AdjPrimitive_VG(RhoUx_:RhoUz_,i,j,k) = AdjPrimitive_VG(RhoUx_:RhoUz_,i,j,k) &
+           + RhoInv*AdjPrimitive_VG(Ux_:Uz_,i,j,k)
+
+
+      AdjPrimitive_VG(Rho_,i,j,k) =  AdjPrimitive_VG(Rho_,i,j,k) &
+           - RhoInv**2 * AdjRhoInv
+
+      ! Update AdjointVGB
+      Adjoint_VGB(1:nVar,i,j,k,iBlock) = Adjoint_VGB(1:nVar,i,j,k,iBlock) &
+           + AdjPrimitive_VG(:,i,j,k)
+
+    end subroutine calc_primitives_MHD_adjoint
+    !=========================================================================
+    subroutine get_faceX_first_adjoint(iMin,iMax,jMin,jMax,kMin,kMax)
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX_adjoint(&
+           iMin,iMax,jMin,jMax,kMin,kMax)
+      !^CFG IF BORISCORR BEGIN
+      if(DoLimitMomentum)call stop_mpi(NameSub // ' Not yet supported')
+      !^CFG END BORISCORR
+      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+         AdjPrimitive_VG(:,i-1,j,k) = AdjPrimitive_VG(:,i-1,j,k) + AdjLeftState_VX(:,i,j,k)
+         AdjPrimitive_VG(:,i  ,j,k) = AdjPrimitive_VG(:,i  ,j,k) + AdjRightState_VX(:,i,j,k)
+      end do; end do; end do
+    end subroutine get_faceX_first_adjoint
+    !========================================================================
+    subroutine get_faceY_first_adjoint(iMin,iMax,jMin,jMax,kMin,kMax)
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY_adjoint(&
+           iMin,iMax,jMin,jMax,kMin,kMax)
+      !^CFG IF BORISCORR BEGIN
+      if(DoLimitMomentum) call stop_mpi(NameSub // ' Not yet supported')
+      !^CFG END BORISCORR
+      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+         AdjPrimitive_VG(:,i,j-1,k) = AdjPrimitive_VG(:,i,j-1,k) + AdjLeftState_VY(:,i,j,k)
+         AdjPrimitive_VG(:,i,j  ,k) = AdjPrimitive_VG(:,i,j  ,k) + AdjRightState_VY(:,i,j,k)
+      end do; end do; end do
+    end subroutine get_faceY_first_adjoint
+    !========================================================================
+    subroutine get_faceZ_first_adjoint(iMin,iMax,jMin,jMax,kMin,kMax)
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ_adjoint(&
+           iMin,iMax,jMin,jMax,kMin,kMax)
+      !^CFG IF BORISCORR BEGIN
+      if(DoLimitMomentum)call stop_mpi(NameSub // ' Not yet supported')
+      !^CFG END BORISCORR
+      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+         AdjPrimitive_VG(:,i,j,k-1) = AdjPrimitive_VG(:,i,j,k-1) + AdjLeftState_VZ(:,i,j,k)
+         AdjPrimitive_VG(:,i,j,k  ) = AdjPrimitive_VG(:,i,j,k  ) + AdjRightState_Vz(:,i,j,k)
+      end do; end do; end do
+    end subroutine get_faceZ_first_adjoint
+    !=========================================================================
+    subroutine get_faceX_second_adjoint(iMin,iMax,jMin,jMax,kMin,kMax)
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      integer::i1, iMinSharp, iMaxSharp
+      !----------------------------------------------------------------------
+      call stop_mpi(NameSub // ' Not yet supported')
+      iMinSharp = iMin
+      iMaxSharp = iMax
+      if(BetaLimiter > BetaLimiterResChange)then
+         if(neiLeast(iBlock) /= 0) iMinSharp = &
+              max(iMin, min(iMax + 1,      1 + nFaceLimiterResChange))
+         if(neiLwest(iBlock) /= 0) iMaxSharp = &
+              min(iMax, max(iMin - 1, nI + 1 - nFaceLimiterResChange))
+      endif
+
+      do k=kMin, kMax; do j=jMin, jMax; 
+         Primitive_VI(:,iMin-2:iMax+1)=Primitive_VG(:,iMin-2:iMax+1,j,k)
+         if(body_BLK(iBlock))then
+            IsTrueCell_I(iMin-2:iMax+1) = true_cell(iMin-2:iMax+1,j,k,iBlock)
+            if(iMinSharp <= iMaxSharp) &
+                 call limiter_body(iMinSharp, iMaxSharp, BetaLimiter)
+            if(iMin < iMinSharp) &
+                 call limiter_body(iMin, iMinSharp-1, BetaLimiterResChange)
+            if(iMax > iMaxSharp) &
+                 call limiter_body(iMaxSharp+1, iMax, BetaLimiterResChange)
+         else
+            if(iMinSharp <= iMaxSharp) &
+                 call limiter(iMinSharp, iMaxSharp, BetaLimiter)            
+            if(iMin < iMinSharp) &
+                 call limiter(iMin, iMinSharp-1, BetaLimiterResChange)
+            if(iMax > iMaxSharp) &
+                 call limiter(iMaxSharp+1, iMax, BetaLimiterResChange)
+         end if
+         do i=iMin,iMax
+            i1=i-1
+            LeftState_VX(:,i,j,k)  = Primitive_VI(:,i1) + dVarLimL_VI(:,i1)
+            RightState_VX(:,i,j,k) = Primitive_VI(:,i ) - dVarLimR_VI(:,i )
+         end do
+      end do; end do
+      !^CFG IF BORISCORR BEGIN
+      !if(DoLimitMomentum) call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
+      !^CFG END BORISCORR
+    end subroutine get_faceX_second_adjoint
+    !==========================================================================
+    subroutine get_faceY_second_adjoint(iMin,iMax,jMin,jMax,kMin,kMax)
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      integer::j1, jMinSharp, jMaxSharp
+      !----------------------------------------------------------------------
+      call stop_mpi(NameSub // ' Not yet supported')
+      jMinSharp = jMin
+      jMaxSharp = jMax
+      if(BetaLimiter > BetaLimiterResChange)then
+         if(neiLsouth(iBlock) /= 0) jMinSharp = &
+              max(jMin, min(jMax + 1,      1 + nFaceLimiterResChange))
+         if(neiLnorth(iBlock) /= 0) jMaxSharp = &
+              min(jMax, max(jMin - 1, nJ + 1 - nFaceLimiterResChange))
+      endif
+
+      do k=kMin, kMax; do i=iMin,iMax
+         Primitive_VI(:,jMin-2:jMax+1)=Primitive_VG(:,i,jMin-2:jMax+1,k)
+         if(body_BLK(iBlock))then
+            IsTrueCell_I(jMin-2:jMax+1) = true_cell(i,jMin-2:jMax+1,k,iBlock)
+            if(jMinSharp <= jMaxSharp) &
+                 call limiter_body(jMinSharp, jMaxSharp, BetaLimiter)
+            if(jMin < jMinSharp) &
+                 call limiter_body(jMin, jMinSharp-1, BetaLimiterResChange)
+            if(jMax > jMaxSharp) &
+                 call limiter_body(jMaxSharp+1, jMax, BetaLimiterResChange)
+         else
+            if(jMinSharp <= jMaxSharp) &
+                 call limiter(jMinSharp, jMaxSharp, BetaLimiter)            
+            if(jMin < jMinSharp) &
+                 call limiter(jMin, jMinSharp-1, BetaLimiterResChange)
+            if(jMax > jMaxSharp) &
+                 call limiter(jMaxSharp+1, jMax, BetaLimiterResChange)
+         end if
+         do j=jMin, jMax
+            j1=j-1
+            LeftState_VY(:,i,j,k)  = Primitive_VI(:,j1) + dVarLimL_VI(:,j1)
+            RightState_VY(:,i,j,k) = Primitive_VI(:,j ) - dVarLimR_VI(:,j )
+         end do
+      end do; end do
+      !^CFG IF BORISCORR BEGIN
+      !if(DoLimitMomentum) call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
+      !^CFG END BORISCORR
+    end subroutine get_faceY_second_adjoint
+    !==========================================================================
+    subroutine get_faceZ_second_adjoint(iMin,iMax,jMin,jMax,kMin,kMax)
+      integer,intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer::k1, kMinSharp, kMaxSharp
+      !----------------------------------------------------------------------
+      call stop_mpi(NameSub // ' Not yet supported')
+      kMinSharp = kMin
+      kMaxSharp = kMax
+      if(BetaLimiter > BetaLimiterResChange)then
+         if(neiLbot(iBlock) /= 0) kMinSharp = &
+              max(kMin, min(kMax + 1,      1 + nFaceLimiterResChange))
+         if(neiLtop(iBlock) /= 0) kMaxSharp = &
+              min(kMax, max(kMin - 1, nK + 1 - nFaceLimiterResChange))
+      endif
+      do j=jMin,jMax; do i=iMin,iMax; 
+         Primitive_VI(:,kMin-2:kMax+1)=Primitive_VG(:,i,j,kMin-2:kMax+1)
+         if(body_BLK(iBlock))then
+            IsTrueCell_I(kMin-2:kMax+1) = true_cell(i,j,kMin-2:kMax+1,iBlock)
+            if(kMinSharp <= kMaxSharp) &
+                 call limiter_body(kMinSharp, kMaxSharp, BetaLimiter)
+            if(kMin < kMinSharp) &
+                 call limiter_body(kMin, kMinSharp-1, BetaLimiterResChange)
+            if(kMax > kMaxSharp) &
+                 call limiter_body(kMaxSharp+1, kMax, BetaLimiterResChange)
+         else
+            if(kMinSharp <= kMaxSharp) &
+                 call limiter(kMinSharp, kMaxSharp, BetaLimiter)            
+            if(kMin < kMinSharp) &
+                 call limiter(kMin, kMinSharp-1, BetaLimiterResChange)
+            if(kMax > kMaxSharp) &
+                 call limiter(kMaxSharp+1, kMax, BetaLimiterResChange)
+         end if
+         do k=kMin,kMax
+            k1=k-1
+            LeftState_VZ(:,i,j,k)  = Primitive_VI(:,k1) + dVarLimL_VI(:,k1)
+            RightState_VZ(:,i,j,k) = Primitive_VI(:,k ) - dVarLimR_VI(:,k )
+         end do
+      end do; end do
+      !^CFG IF BORISCORR BEGIN
+      !if(DoLimitMomentum) call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
+      !^CFG END BORISCORR
+    end subroutine get_faceZ_second_adjoint
+  end subroutine calc_face_value_adjoint
+  !ADJOINT SPECIFIC END
+
+
 
   !============================================================================
   ! Limiters:

@@ -2169,6 +2169,8 @@ one			TypeRestartOutFile
 This command determines if the restart information is saved as an individual 
 file for each block (block) or into a single direct access file containing all
 blocks (one).  The default value is 'one'.
+Appending 'series' to the string results in a series of restart files
+written out every time plots are saved. 
 </command>
 
 <command name="SAVERESTART">

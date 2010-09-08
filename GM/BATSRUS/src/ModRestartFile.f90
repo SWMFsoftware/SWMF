@@ -8,7 +8,7 @@ module ModRestartFile
   use ModMain,       ONLY: GlobalBlk, Global_Block_Number, nI, nJ, nK, Gcn, &
        nBlock, UnusedBlk, ProcTest, BlkTest, iTest, jTest, kTest, &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
-       NameThisComp, UseBatl
+       NameThisComp, UseBatl, iteration_number
   use ModVarIndexes, ONLY: nVar, DefaultState_V
   use ModAdvance,    ONLY: State_VGB
   use ModCovariant,  ONLY: NameGridFile
@@ -31,11 +31,19 @@ module ModRestartFile
   public read_restart_files
   public read_octree_file
   public init_mod_restart_file
+  public string_append_iter
 
   ! Directories for input and output restart files
   character(len=100), public :: NameRestartInDir ="GM/restartIN/"
   character(len=100), public :: NameRestartOutDir="GM/restartOUT/"
 
+  ! Flags to include iteration number in restart files
+  logical, public :: UseRestartInSeries=.false.
+  logical, public :: UseRestartOutSeries=.false.
+
+  ! simulation time read in upon restart
+  real, public    :: tSimulationRead
+    
   ! Local variables
   character(len=*), parameter :: StringRestartExt=".rst"
   character(len=*), parameter :: NameHeaderFile  ="restart.H"
@@ -137,8 +145,24 @@ contains
        if (iProc==0) call check_dir(NameRestartOutDir)
     case("#RESTARTINFILE")
        call read_var('TypeRestartInFile',TypeRestartInFile)
+       if (TypeRestartInFile == 'oneseries')then
+          TypeRestartInFile = 'one'
+          UseRestartInSeries = .true.
+       end if
+       if (TypeRestartInFile == 'blockseries')then
+          TypeRestartInFile = 'block'
+          UseRestartInSeries = .true.
+       end if
     case("#RESTARTOUTFILE")
        call read_var('TypeRestartOutFile',TypeRestartOutFile)
+       if (TypeRestartOutFile == 'oneseries')then
+          TypeRestartOutFile = 'one'
+          UseRestartOutSeries = .true.
+       end if
+       if (TypeRestartOutFile == 'blockseries')then
+          TypeRestartOutFile = 'block'
+          UseRestartOutSeries = .true.
+       end if
     case default
        call stop_mpi(NameSub//' unknown NameCommand='//NameCommand)
     end select
@@ -155,7 +179,9 @@ contains
     call timing_start(NameSub)
 
     if(UseBatl)then
-       call write_tree_file(trim(NameRestartOutDir)//'octree.rst')
+       write(NameFile,'(a)') trim(NameRestartOutDir)//'octree.rst'
+       if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
+       call write_tree_file(NameFile)
     else
        call write_octree_file
     end if
@@ -228,7 +254,10 @@ contains
 
     if (iProc/=0) RETURN
 
-    open(unit_tmp,file=trim(NameRestartOutDir)//NameHeaderFile)
+    write(NameFile,'(a)') trim(NameRestartOutDir)//NameHeaderFile
+    if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
+    
+    open(unit_tmp,file=NameFile)
 
     write(unit_tmp,'(a)')'#CODEVERSION'
     write(unit_tmp,'(f5.2,a35)')CodeVersion,'CodeVersion'
@@ -405,7 +434,6 @@ contains
 
     integer   :: iVar, i, j, k, iError, iBlockRestart
     character :: StringDigit
-    real      :: tSimulationRead
 
     character (len=*), parameter :: NameSub='read_restart_file'
     logical :: DoTest, DoTestMe
@@ -425,6 +453,7 @@ contains
 
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
          trim(NameRestartInDir)//NameBlkFile,iBlockRestart,StringRestartExt
+    if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
 
     open(unit_tmp, file=NameFile, status='old', form='UNFORMATTED',&
          iostat = iError)
@@ -551,6 +580,8 @@ contains
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
          trim(NameRestartOutDir)//NameBlkFile,iBlockRestart,StringRestartExt
 
+    if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
+
     open(unit_tmp, file=NameFile, status="replace", form='UNFORMATTED')
 
     write(Unit_tmp)  dt_BLK(iBlock),time_Simulation
@@ -605,19 +636,21 @@ contains
     end if                                       !^CFG END IMPLICIT
 
     if(DoTestMe)write(*,*) NameSub,' nByteReal, nByteRealRead, lRecord=',&
-          nByteReal, nByteRealRead, lRecord
+          nByteReal, nByteRealRead, lRecord   
 
     if(DoRead)then
        if(nByteReal /= nByteRealRead) &
             lRecord = (lRecord * nByteRealRead)/nByteReal
 
        NameFile = trim(NameRestartInDir)//NameDataFile
+       if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
 
        open(Unit_Tmp, file=NameFile, &
             RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
             status = 'old', iostat=iError)
     else
        NameFile = trim(NameRestartOutDir)//NameDataFile
+       if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
        ! Delete and open file from proc 0
        if(iProc==0) open(Unit_Tmp, file=NameFile, &
                RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
@@ -691,7 +724,7 @@ contains
           end if                                       !^CFG END IMPLICIT
           if(.not.IsRead) &
                read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC
-
+          
           Dt_BLK(iBlock) = Dt4
           Dx_BLK(iBlock) = Dxyz4_D(1)
           Dy_BLK(iBlock) = Dxyz4_D(2)
@@ -815,8 +848,9 @@ contains
     logical :: isRoot
     type (adaptive_block_ptr) :: octree
 
-    open(UNITTMP_, file=trim(NameRestartInDir)//"octree"//octree_ext, &
-         status="old", form="UNFORMATTED")
+    NameFile = trim(NameRestartInDir)//"octree"//octree_ext
+    if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
+    open(UNITTMP_, file=NameFile, status="old", form="UNFORMATTED")
     read(UNITTMP_) r_proc_dims(1),r_proc_dims(2),r_proc_dims(3)
     read(UNITTMP_) total_number_of_blocks_needed
 
@@ -972,8 +1006,10 @@ contains
     if (iProc /= 0) return
 
     call write_prefix; write(iUnitOut,*) '=> Writing restart files ...'
-    open(UNITTMP_, file=trim(NameRestartOutDir)//"octree"//octree_ext, &
-         status="replace", form="UNFORMATTED")
+
+    NameFile = trim(NameRestartOutDir)//"octree"//octree_ext
+    if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
+    open(UNITTMP_, file=NameFile,  status="replace", form="UNFORMATTED")
     write(UNITTMP_) proc_dims(1),proc_dims(2),proc_dims(3)
     write(UNITTMP_) nBlockALL
 
@@ -1026,5 +1062,21 @@ contains
     end if
 
   end subroutine write_octree_soln_block
+
+  !============================================================================
+
+  subroutine string_append_iter(NameFile,iter)
+
+    character (len=*), parameter :: NameSub='string_append_iter'
+    character (len=100), intent(inout) :: NameFile
+    integer, intent(in) :: iter
+    !--------------------------------------------------------------------
+    
+    if (iter < 0) call stop_mpi(NameSub//' iter cannot be negative')
+
+    write(NameFile,'(a,i8.8,a)') 'n',iter,'_'//trim(NameFile)
+
+  end subroutine string_append_iter
+
 
 end module ModRestartFile

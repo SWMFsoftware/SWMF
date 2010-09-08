@@ -262,7 +262,7 @@ subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, Var_VCB, &
   ! Res_VCB = Var_VCB(t+dt)
   call implicit2explicit(Var_VCB)
   call exchange_messages
-  call advance_expl(DoCalcTimestep)
+  call advance_expl(DoCalcTimestep, -1)
   call explicit2implicit(1,nI,1,nJ,1,nK,Res_VCB)
 
   if(DoSubtract) Res_VCB(:,:,:,:,1:nImplBLK) = Res_VCB(:,:,:,:,1:nImplBLK) &

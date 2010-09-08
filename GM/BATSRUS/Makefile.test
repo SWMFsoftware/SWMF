@@ -63,6 +63,7 @@ test_help:
 	@echo "    test_graydiffusion         (run gray-diffusion set test)"
 	@echo "    test_hallmhd               (run Hall MHD test)"
 	@echo "    test_hyades2d              (run Hyades2D test)"
+	@echo "    test_adjhyades2d           (run Adjoint Hyades2D test)"
 	@echo "    test_levelset              (run levelset test)"
 	@echo "    test_magnetometer          (run magnetometer test)"
 	@echo "    test_mars                  (run Mars test)"
@@ -473,6 +474,40 @@ test_hyades2d_check:
 		Param/CRASH/TestOutput/log_hyades2d.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_hyades2d.diff
 	ls -l test_hyades2d.diff
+
+### ADJOINT HYADES2D TEST ###
+
+test_adjhyades2d:
+	@echo "test_adjhyades2d_compile..." > test_adjhyades2d.diff
+	make test_adjhyades2d_compile
+	@echo "test_adjhyades2d_rundir..." >> test_adjhyades2d.diff
+	make test_adjhyades2d_rundir DEFAULT_EXE=CRASH.exe
+	@echo "test_adjhyades2d_run1..." >> test_adjhyades2d.diff
+	make test_adjhyades2d_run1
+	@echo "test_adjhyades2d_run2..." >> test_adjhyades2d.diff
+	make test_adjhyades2d_run2
+
+test_adjhyades2d_compile:
+	./Config.pl -e=HdRadCrash -u=Crash -g=10,10,1,200,200
+	make CRASH
+	make PIDL
+
+test_adjhyades2d_rundir: test_rundir
+	gunzip -c dataCRASH/input/hyades2d_1.1ns.out.gz \
+		> ${TESTDIR}/hyades2d_1.1ns.out
+	gunzip -c dataCRASH/input/opacities.out.gz \
+	        > ${TESTDIR}/table_opacities.out
+
+test_adjhyades2d_run1:
+	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.adjhyades2d_1 PARAM.in
+	cd ${TESTDIR}; mpirun -np 1 ./CRASH.exe > runlog1
+
+test_adjhyades2d_run2:
+	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.adjhyades2d_2 PARAM.in
+	mkdir -p ${TESTDIR}/adjointOUT
+	(cd ${TESTDIR}/GM; rm -rf restartIN; ln -s restartOUT restartIN)
+	cd ${TESTDIR}; mpirun -np 1 ./CRASH.exe > runlog2
+
 
 ### MIXED CELL TEST ###
 

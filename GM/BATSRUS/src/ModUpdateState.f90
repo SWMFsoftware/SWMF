@@ -18,7 +18,9 @@ subroutine update_states_MHD(iStage,iBlock)
        WaveFirst_,WaveLast_, update_wave_group_advection
   use ModResistivity,   ONLY: UseResistivity, &          !^CFG IF DISSFLUX
        calc_resistivity_source                           !^CFG IF DISSFLUX
-  
+  use ModAdjoint, ONLY: DoAdjoint, AdjPreEnergyP_,&      ! ADJOINT SPECIFIC
+       store_block_buffer
+
   implicit none
 
   integer, intent(in) :: iStage, iBlock
@@ -358,6 +360,8 @@ contains
 
     end if                                   !^CFG END SIMPLEBORIS
 
+    if (DoAdjoint) call store_block_buffer(iBlock,AdjPreEnergyP_)   !ADJOINT SPECIFIC
+
     ! Update energy or pressure based on UseConservative and IsConserv_CB
     call calc_energy_or_pressure(iBlock)
 
@@ -432,3 +436,105 @@ subroutine fix_anisotropy
   end do
 
 end subroutine fix_anisotropy
+
+!ADJOINT SPECIFIC BEGIN
+!==============================================================================
+
+subroutine update_states_MHD_adjoint(iStage,iBlock)
+  use ModProcMH
+  use ModMain
+  use ModAdvance
+  use ModPhysics
+  use ModNumConst
+  use ModEnergy
+  use ModAdjoint  
+  use ModGeometry, ONLY : vInv_CB
+
+  implicit none
+
+  integer, intent(in) :: iStage, iBlock
+
+  integer :: i,j,k, iVar
+  integer :: IV(nFluid)
+
+  real:: DtFactor
+  real:: DtLocal
+  real:: Adjoint_V(nVar)
+  real:: AdjEnergy_I(nFluid)
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub = 'update_states_mhd_adjoint'
+  !--------------------------------------------------------------------------
+  if(iBlock==BLKtest .and. iProc==PROCtest)then
+     call set_oktest(NameSub,DoTest,DoTestMe)
+  else
+     DoTest=.false.; DoTestMe=.false.
+  endif
+
+  !\
+  ! Set variables depending on stage number
+  !/
+  DtFactor = iStage*(Cfl/nStage)
+
+  ! recall state from block buffer
+  call recall_block_buffer(iBlock,AdjPreEnergyP_) 
+
+  ! Do energy/pressure update first (affects Adjoint_VGB and AdjEnergy_GBI
+  call calc_energy_or_pressure_adjoint(iBlock)
+
+  ! update adjoint answer (stored in Prev)
+  AdjointPrev_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock) = & 
+       AdjointPrev_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock) + &
+       Adjoint_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock)
+  AdjEnergyPrev_GBI(1:nI,1:nJ,1:nK,iBlock,:) = &
+       AdjEnergyPrev_GBI(1:nI,1:nJ,1:nK,iBlock,:) + &
+       AdjEnergy_GBI(1:nI,1:nJ,1:nK,iBlock,:)
+  
+  ! zero out flux adjoint terms
+  AdjFlux_VX = 0.
+  AdjFlux_VY = 0.
+  AdjFlux_VZ = 0.
+  do k = 1,nFluid
+     IV(k)=nVar+k
+  end do
+  !IV = (/Energy_:Energy_+nFluid/)
+  !IV = (k,k=Energy_,Energy_+nFluid-1)
+
+  do k = 1,nK; do j = 1,nJ; do i = 1,nI
+     DtLocal=DtFactor*time_BLK(i,j,k,iBlock)
+
+     ! set flux adjoint terms, include vInv_CB: Adjoint_V(1:nVar)
+     Adjoint_V = DtLocal*vInv_CB(i,j,k,iBlock)*Adjoint_VGB(:,i,j,k,iBlock)
+     AdjFlux_VX(1:nVar,i  ,j  ,k  ) = AdjFlux_VX(1:nVar,i  ,j  ,k  ) + Adjoint_V
+     AdjFlux_VX(1:nVar,i+1,j  ,k  ) = AdjFlux_VX(1:nVar,i+1,j  ,k  ) - Adjoint_V
+     AdjFlux_VY(1:nVar,i  ,j  ,k  ) = AdjFlux_VY(1:nVar,i  ,j  ,k  ) + Adjoint_V
+     AdjFlux_VY(1:nVar,i  ,j+1,k  ) = AdjFlux_VY(1:nVar,i  ,j+1,k  ) - Adjoint_V
+     AdjFlux_VZ(1:nVar,i  ,j  ,k  ) = AdjFlux_VZ(1:nVar,i  ,j  ,k  ) + Adjoint_V
+     AdjFlux_VZ(1:nVar,i  ,j  ,k+1) = AdjFlux_VZ(1:nVar,i  ,j  ,k+1) - Adjoint_V
+
+     AdjEnergy_I = DtLocal*vInv_CB(i,j,k,iBlock)*AdjEnergy_GBI(i,j,k,iBlock,:)
+     AdjFlux_VX(IV,i  ,j  ,k  ) = AdjFlux_VX(IV,i  ,j  ,k  ) + AdjEnergy_I
+     AdjFlux_VX(IV,i+1,j  ,k  ) = AdjFlux_VX(IV,i+1,j  ,k  ) - AdjEnergy_I
+     AdjFlux_VY(IV,i  ,j  ,k  ) = AdjFlux_VY(IV,i  ,j  ,k  ) + AdjEnergy_I
+     AdjFlux_VY(IV,i+1,j  ,k  ) = AdjFlux_VY(IV,i  ,j+1,k  ) - AdjEnergy_I
+     AdjFlux_VZ(IV,i  ,j  ,k  ) = AdjFlux_VZ(IV,i  ,j  ,k  ) + AdjEnergy_I
+     AdjFlux_VZ(IV,i+1,j  ,k  ) = AdjFlux_VZ(IV,i  ,j  ,k+1) - AdjEnergy_I
+
+     ! set adjoint source to adjoint multiplied by DtLocal
+     AdjSource_VC(1:nVar,i,j,k) = DtLocal*Adjoint_VGB(:,i,j,k,iBlock)
+     AdjSource_VC(nVar+1:nVar+nFluid,i,j,k) = DtLocal*AdjEnergy_GBI(i,j,k,iBlock,:)
+
+  end do; end do; end do
+  
+  ! Zero out adjoint for this block; the information contained in the
+  ! adjoint up to this point has already been incorporated into
+  ! AdjointPrev, AdjSource, and AdjFlux.  From this point on,
+  ! Adjoint_VGB will contain the sensitivities w.r.t the State from
+  ! the previous stage.
+  Adjoint_VGB(:,:,:,:,iBlock)   = 0.0
+  AdjEnergy_GBI(:,:,:,iBlock,:) = 0.0
+
+end subroutine update_states_mhd_adjoint            
+!ADJOINT SPECIFIC END
+
+
+

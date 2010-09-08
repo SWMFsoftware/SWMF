@@ -173,6 +173,15 @@ contains
     call stop_user(NameSub)
   end subroutine user_calc_sources
 
+  !====================================================================
+
+  subroutine user_calc_sources_adjoint
+
+    character (len=*), parameter :: NameSub = 'user_calc_sources_adjoint'
+    !-------------------------------------------------------------------
+    call stop_user(NameSub)
+  end subroutine user_calc_sources_adjoint
+
   !=====================================================================
 
   subroutine user_init_point_implicit
@@ -204,6 +213,16 @@ contains
     !-------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_update_states
+  
+  !=====================================================================
+  subroutine user_update_states_adjoint(iStage,iBlock)
+
+    integer,intent(in)::iStage,iBlock
+
+    character (len=*), parameter :: NameSub = 'user_update_states_adjoint'
+    !-------------------------------------------------------------------
+    call stop_user(NameSub)
+  end subroutine user_update_states_adjoint
 
   !=====================================================================
   subroutine user_normalization

@@ -86,8 +86,11 @@ module ModFaceFlux
   integer :: iRight, jRight, kRight
 
   real :: StateLeft_V(nVar) = 0.0, StateRight_V(nVar) = 0.0
+  real :: AdjStateLeft_V(nVar) = 0.0, AdjStateRight_V(nVar) = 0.0   !ADJOINT SPECIFIC
   real :: FluxLeft_V(nFlux) = 0.0, FluxRight_V(nFlux) = 0.0
+  real :: AdjFluxLeft_V(nFlux) = 0.0, AdjFluxRight_V(nFlux) = 0.0   !ADJOINT SPECIFIC
   real :: StateLeftCons_V(nFlux) = 0.0, StateRightCons_V(nFlux) = 0.0
+  real :: AdjStateLeftCons_V(nFlux) = 0.0, AdjStateRightCons_V(nFlux) = 0.0  !ADJOINT SPECIFIC
   real :: DissipationFlux_V(nFlux) = 0.0
   real :: B0x = 0.0, B0y = 0.0, B0z = 0.0
   real :: DiffBb = 0.0 !     (1/4)(BnL-BnR)^2
@@ -102,8 +105,11 @@ module ModFaceFlux
 
   ! Normal velocities for all fluids plus electrons
   real :: Unormal_I(nFluid+1) = 0.0
+  real :: AdjUnormal_I(nFluid+1) = 0.0          !ADJOINT SPECIFIC
   real :: UnLeft_I(nFluid+1)  = 0.0
   real :: UnRight_I(nFluid+1) = 0.0
+  real :: AdjUnLeft_I(nFluid+1)  = 0.0          !ADJOINT SPECIFIC
+  real :: AdjUnRight_I(nFluid+1) = 0.0          !ADJOINT SPECIFIC
 
   real :: bCrossArea_D(3) = (/ 0.0, 0.0, 0.0 /) !B x Area for current -> BxJ
   real :: Enormal = 0.0                         !normal electric field -> div E
@@ -652,6 +658,214 @@ contains
     end subroutine get_flux_z
 
   end subroutine calc_face_flux
+
+
+  !ADJOINT SPECIFIC BEGIN
+  !===========================================================================
+  subroutine calc_face_flux_adjoint(DoResChangeOnly, iBlock)
+
+    use ModAdvance,  ONLY: UseRS7,TypeFlux => FluxType
+    use ModParallel, ONLY: &
+         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
+    use ModMain, ONLY: nIFace, nJFace, nKFace, &
+         jMinFaceX, jMaxFaceX, kMinFaceX, kMaxFaceX, &
+         iMinFaceY, iMaxFaceY, kMinFaceY,kMaxFaceY, &
+         iMinFaceZ,iMaxFaceZ, jMinFaceZ, jMaxFaceZ, &
+         UseHyperbolicDivb
+    use ModAdjoint
+
+    character(len=*), parameter :: NameSub = 'calc_face_flux_adjoint'
+
+    logical, intent(in) :: DoResChangeOnly
+    integer, intent(in) :: iBlock
+    !--------------------------------------------------------------------------
+
+    DoLf     = TypeFlux == 'Rusanov'     !^CFG IF RUSANOVFLUX
+    DoHll    = TypeFlux == 'Linde'       !^CFG IF LINDEFLUX
+    DoHlld   = TypeFlux == 'HLLD'        !^CFG IF HLLDFLUX
+    DoAw     = TypeFlux == 'Sokolov'     !^CFG IF AWFLUX
+    DoRoeOld = TypeFlux == 'RoeOld'      !^CFG IF ROEFLUX
+    DoRoe    = TypeFlux == 'Roe'         !^CFG IF ROEFLUX
+    DoGodunov= TypeFlux == 'Godunov'
+
+    UseDifferentNeutralFlux = UseNeutralFluid .and. TypeFluxNeutral /= TypeFlux
+    DoLfNeutral             = TypeFluxNeutral == 'Rusanov'
+    DoHllNeutral            = TypeFluxNeutral == 'Linde'
+
+    UseRS7 = DoRoe  ! This is always true for the current implementation
+
+    UseLindeFix = (UseHyperbolicDivb &
+         .or. DoHll      &               !^CFG IF LINDEFLUX
+         .or. DoHllD     &               !^CFG IF HLLDFLUX
+         .or. DoAw       &               !^CFG IF AWFLUX
+          ).and.UseB
+    ! Make sure that Hall MHD recalculates the magnetic field 
+    ! in the current block that will be used for the Hall term
+    IsNewBlockHall   = .true.
+    IsNewBlockGradPe = .true.
+    IsNewBlockRadDiffusion = .true.      !^CFG IF IMPLICIT
+    IsNewBlockHeatCond    = .true.       !^CFG IF IMPLICIT
+    IsNewBlockIonHeatCond = .true.       !^CFG IF IMPLICIT
+
+    if(UseResistivity) &                               !^CFG IF DISSFLUX
+         call stop_mpi(NameSub // ' Not yet supported') !^CFG IF DISSFLUX
+
+    if(UseHallResist .and. UseMultiSpecies) &
+         call stop_mpi(NameSub // ' Not yet supported')
+
+    if (DoResChangeOnly) then
+       if(neiLeast(iBlock) == 1) &
+            call get_flux_adjoint_x(1,1,1,nJ,1,nK)
+       if(neiLwest(iBlock) == 1) &
+            call get_flux_adjoint_x(nIFace,nIFace,1,nJ,1,nK)
+       if(nJ > 1 .and. neiLsouth(iBlock) == 1) &
+            call get_flux_adjoint_y(1,nI,1,1,1,nK)
+       if(nJ > 1 .and. neiLnorth(iBlock) == 1) &
+            call get_flux_adjoint_y(1,nI,nJFace,nJFace,1,nK)
+       if(nK > 1 .and. neiLbot(iBlock)   == 1) &
+            call get_flux_adjoint_z(1,nI,1,nJ,1,1)
+       if(nK > 1 .and. neiLtop(iBlock)   == 1) &
+            call get_flux_adjoint_z(1,nI,1,nJ,nKFace,nKFace)
+    else
+       call get_flux_adjoint_x(1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
+       if(nJ > 1) &
+            call get_flux_adjoint_y(iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
+       if(nK > 1) &
+            call get_flux_adjoint_z(iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
+    end if
+
+  contains
+    !==========================================================================
+
+    subroutine get_flux_adjoint_x(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      use ModAdvance, ONLY: State_VGB
+      integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      !-----------------------------------------------------------------------
+      call set_block_values(iBlock, x_)
+
+      do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+
+         call set_cell_values_x
+         
+         if(UseMultiIon) call stop_mpi(' Not yet supported')
+
+         !VdtFace_x(iFace, jFace, kFace)       = CmaxDt*Area
+         !uDotArea_XI(iFace, jFace, kFace,:)   = Unormal_I*Area
+         AdjUnormal_I = AdjuDotArea_XI(iFace, jFace, kFace,:)*Area
+         !bCrossArea_DX(:, iFace, jFace, kFace)= bCrossArea_D
+         !EDotFA_X(iFace, jFace, kFace)        = Enormal*Area !^CFG IF BORISCORR
+
+         if(UseRS7.and..not.IsBoundary)then
+            call stop_mpi(' Not yet supported')
+         else
+            DeltaBnL=cZero;DeltaBnR=cZero
+         end if
+
+         if(UseB0)then
+            call stop_mpi(' Not yet supported')
+         end if
+
+         StateLeft_V  = LeftState_VX( :, iFace, jFace, kFace)
+         StateRight_V = RightState_VX(:, iFace, jFace, kFace)
+
+         ! call numerical flux adjoint 
+         call get_numerical_flux_adjoint(AdjFlux_VX(:,iFace, jFace, kFace))
+
+         AdjLeftState_VX(:, iFace, jFace, kFace)  = AdjStateLeft_V
+         AdjRightState_VX(:, iFace, jFace, kFace) = AdjStateRight_V
+
+      end do; end do; end do
+    end subroutine get_flux_adjoint_x
+
+    !==========================================================================
+
+    subroutine get_flux_adjoint_y(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      use ModAdvance, ONLY: State_VGB
+      integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      !------------------------------------------------------------------------
+      call set_block_values(iBlock, y_)
+
+      do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+
+         call set_cell_values_y
+
+         if(UseMultiIon) call stop_mpi(' Not yet supported')
+         
+         !VdtFace_y(iFace, jFace, kFace)       = CmaxDt*Area
+         !uDotArea_YI(iFace, jFace, kFace, :)  = Unormal_I*Area
+         AdjUnormal_I = AdjuDotArea_YI(iFace, jFace, kFace, :)*Area
+         !bCrossArea_DY(:, iFace, jFace, kFace)= bCrossArea_D
+         !EDotFA_Y(iFace, jFace, kFace)        = Enormal*Area !^CFG IF BORISCORR
+
+         if(UseRS7.and..not.IsBoundary)then
+            call stop_mpi(' Not yet supported')
+         else
+            DeltaBnL=cZero;DeltaBnR=cZero
+         end if
+
+         if(UseB0)then
+            call stop_mpi(' Not yet supported')
+         end if
+
+         StateLeft_V  = LeftState_VY( :, iFace, jFace, kFace)
+         StateRight_V = RightState_VY(:, iFace, jFace, kFace)
+
+         call get_numerical_flux_adjoint(AdjFlux_VY(:, iFace, jFace, kFace))
+
+         AdjLeftState_VY(:, iFace, jFace, kFace)  = AdjStateLeft_V
+         AdjRightState_VY(:, iFace, jFace, kFace) = AdjStateRight_V
+
+      end do; end do; end do
+    end subroutine get_flux_adjoint_y
+
+    !==========================================================================
+
+    subroutine get_flux_adjoint_z(iMin, iMax, jMin, jMax, kMin, kMax)
+
+      use ModAdvance, ONLY: State_VGB
+      integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
+      !------------------------------------------------------------------------
+      call set_block_values(iBlock, z_)
+
+      do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+
+         call set_cell_values_z
+
+         if(UseMultiIon) call stop_mpi(' Not yet supported')         
+
+         !VdtFace_z(iFace, jFace, kFace)       = CmaxDt*Area
+         !uDotArea_ZI(iFace, jFace, kFace, :)  = Unormal_I*Area
+         AdjUnormal_I = AdjuDotArea_ZI(iFace, jFace, kFace, :)*Area
+         !bCrossArea_DZ(:, iFace, jFace, kFace)= bCrossArea_D
+         !EDotFA_Z(iFace, jFace, kFace)        = Enormal*Area !^CFG IF BORISCORR
+
+         if(UseRS7.and..not.IsBoundary)then
+            call stop_mpi(' Not yet supported')
+         else
+            DeltaBnL=cZero;DeltaBnR=cZero
+         end if
+
+         if(UseB0)then
+            call stop_mpi(' Not yet supported')            
+         end if
+
+         StateLeft_V  = LeftState_VZ( :, iFace, jFace, kFace)
+         StateRight_V = RightState_VZ(:, iFace, jFace, kFace)
+
+         call get_numerical_flux_adjoint(AdjFlux_VZ(:, iFace, jFace, kFace))
+         
+         AdjLeftState_VZ(:, iFace, jFace, kFace)  = AdjStateLeft_V
+         AdjRightState_VZ(:, iFace, jFace, kFace) = AdjStateRight_V
+
+
+      end do; end do; end do
+    end subroutine get_flux_adjoint_z
+
+  end subroutine calc_face_flux_adjoint
+  !ADJOINT SPECIFIC END
+
 
   !===========================================================================
   subroutine set_block_values(iBlock, iDim)
@@ -1812,6 +2026,291 @@ contains
 
   end subroutine get_numerical_flux
 
+  !ADJOINT SPECIFIC BEGIN
+  !==========================================================================
+
+  subroutine get_numerical_flux_adjoint(AdjFlux_V)
+
+    use ModAdvance, ONLY: DoReplaceDensity, State_VGB
+    use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
+    use ModCoordTransform, ONLY: cross_product
+    use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
+    use ModFaceGradient, ONLY: get_face_gradient
+    use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
+
+    real,    intent(inout):: AdjFlux_V(nFlux)
+
+    real :: State_V(nVar)
+    real :: AdjState_V(nVar)
+
+    real :: Cmax
+    real :: DiffBn_D(3), DiffE
+    real :: EnLeft, EnRight, PeLeft, PeRight, Jx, Jy, Jz
+    real :: AdjEnLeft, AdjEnRight, AdjPeLeft, AdjPeRight
+    real :: uLeft_D(3), uRight_D(3) !,cDivBWave
+    real :: dB0_D(3)
+
+    real, save :: Pe_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real       :: GradPe_D(3)
+    real       :: InvNumDens, Coef
+    !-----------------------------------------------------------------------
+
+    if(UseMultiSpecies .and. DoReplaceDensity)then
+       StateLeft_V (Rho_)=sum( StateLeft_V(SpeciesFirst_:SpeciesLast_) )
+       StateRight_V(Rho_)=sum( StateRight_V(SpeciesFirst_:SpeciesLast_) )
+    end if
+
+    ! Calculate current for the face if needed for (Hall) resistivity
+    if(HallCoeff > 0.0 .or. Eta > 0.0) &
+         call stop_mpi(' Not yet supported')
+    
+    if(Eta > 0.0)then                  !^CFG IF DISSFLUX BEGIN
+       call stop_mpi(' Not yet supported')
+    end if                             !^CFG END DISSFLUX
+
+    if(HallCoeff > 0.0)then
+       call stop_mpi(' Not yet supported')
+    end if
+
+    if(UseHallGradPe)then
+       call stop_mpi(' Not yet supported')
+    end if
+
+    !^CFG IF IMPLICIT BEGIN
+    if(.not.UseSemiImplicit)then
+       call stop_mpi(' Not yet supported')
+    end if
+    !^CFG END IMPLICIT
+
+    if(UseB)then
+       call stop_mpi(' Not yet supported')
+    end if
+
+    ! Calculate average state (used by most solvers and also by bCrossArea_D)
+    State_V = 0.5*(StateLeft_V + StateRight_V)
+    ! initialize adjoints
+    AdjStateLeft_V  = 0.0
+    AdjStateRight_V = 0.0
+    AdjState_V      = 0.0
+
+    ! Multiply AdjFlux by Area
+    AdjFlux_V = AdjFlux_V*Area
+
+    if(UseLindeFix)then
+       call stop_mpi(' Not yet supported')
+    end if
+
+    if(UseDifferentNeutralFlux)then
+       call stop_mpi(' Not yet supported')
+    end if
+
+    if(UseDifferentNeutralFlux)then
+       call stop_mpi(' Not yet supported')
+       iFluidMin = 1; iFluidMax = IonLast_
+    else
+       iFluidMin = 1; iFluidMax = nFluid
+    end if
+
+    ! need this forward call to fill in Flux*_V 
+    if(UseDifferentNeutralFlux .or. .not.DoGodunov &
+         .and. .not.DoHlld &                                !^CFG IF HLLDFLUX
+         )then
+       ! All solvers, except HLLD and Godunov, use left and right fluxes
+       call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
+            StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft)
+
+       call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
+            StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight)
+
+       if(UseRS7)then
+          call stop_mpi(' Not yet supported')
+          !call modify_flux(FluxLeft_V, UnLeft_I(1))
+          !call modify_flux(FluxRight_V, UnRight_I(1))
+       end if
+    end if
+
+
+    !if(DoLf)     call lax_friedrichs_flux       !^CFG IF RUSANOVFLUX
+    if(DoHll)    call harten_lax_vanleer_flux_adjoint   !^CFG IF LINDEFLUX
+    !if(DoHlld)   call hlld_flux                 !^CFG IF HLLDFLUX
+    !if(DoAw)     call artificial_wind           !^CFG IF AWFLUX
+    !if(DoRoeOld) call roe_solver(Flux_V)        !^CFG IF ROEFLUX
+    !if(DoRoe)    call roe_solver_new            !^CFG IF ROEFLUX
+    !if(DoGodunov)call godunov_flux
+    if (.not.DoHll) call stop_mpi(' Not yet supported')  !^CFG IF LINDEFLUX
+
+    if(UseB .and. (UseMultiIon .or. .not. IsMhd))then
+       call stop_mpi(' Not yet supported')
+    end if
+
+
+
+    if(UseDifferentNeutralFlux .or. .not.DoGodunov &
+         .and. .not.DoHlld &                                !^CFG IF HLLDFLUX
+         )then
+       ! Get physical flux, adjoint version
+       call get_physical_flux_adjoint(StateLeft_V, AdjStateLeft_V, B0x, B0y, B0z,&
+            AdjStateLeftCons_V, AdjFluxLeft_V, AdjUnLeft_I, AdjEnLeft, AdjPeLeft)
+
+       call get_physical_flux_adjoint(StateRight_V, AdjStateRight_V, B0x, B0y, B0z,&
+            AdjStateRightCons_V, AdjFluxRight_V, AdjUnRight_I, AdjEnRight, AdjPeRight)
+
+       if(UseRS7)then
+          call stop_mpi(' Not yet supported')
+          !call modify_flux(FluxLeft_V, UnLeft_I(1))
+          !call modify_flux(FluxRight_V, UnRight_I(1))
+       end if
+    end if
+
+    ! Update AdjState*_V with dep of State_V on State*_V
+    AdjStateLeft_V  = AdjStateLeft_V  + 0.5*AdjState_V
+    AdjStateRight_V = AdjStateRight_V + 0.5*AdjState_V
+
+    ! Add diffusive flux across the pole if required
+    if(Area == 0.0 .and. UsePoleDiffusion) call stop_mpi(' Not yet supported')
+
+    ! Increase maximum speed with resistive diffusion speed if necessary
+    if(Eta > 0.0) call stop_mpi(' Not yet supported') !^CFG IF DISSFLUX
+
+    ! Increase maximum speed with diffusion speed if necessary
+    !^CFG IF IMPLICIT BEGIN
+    if(.not. UseSemiImplicit)then
+       call stop_mpi(' Not yet supported')
+    end if
+    !^CFG END IMPLICIT
+
+    ! Further limit timestep due to the hyperbolic cleaning equation
+    if(UseHyperbolicDivb) call stop_mpi(' Not yet supported')
+
+    ! Zero out AdjFlux_V
+    AdjFlux_V = 0.0
+
+  contains
+  
+    !^CFG IF LINDEFLUX BEGIN
+    !==========================================================================
+    subroutine harten_lax_vanleer_flux_adjoint
+
+      real, dimension(nFluid) :: CleftStateLeft_I,   CleftStateHat_I, &
+           Cmax_I, CrightStateRight_I, CrightStateHat_I
+      real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
+      real :: AdjCleft, AdjCright, AdjWeightLeft, AdjWeightRight, AdjDiffusion
+      integer :: iVar
+      integer, dimension(1) :: iloc
+      real, dimension(nFluid) :: AdjCleftStateLeft_I = 0.0, &
+           AdjCleftStateHat_I = 0.0, AdjCrightStateRight_I = 0.0, &
+           AdjCrightStateHat_I = 0.0
+      !-----------------------------------------------------------------------
+
+      ! need these speeds for adjoint calculations
+      call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
+           Cleft_I =CleftStateLeft_I)
+
+      call get_speed_max(StateRight_V, B0x, B0y, B0z, &
+           Cright_I=CrightStateRight_I)
+
+      call get_speed_max(State_V, B0x, B0y, B0z, &
+           Cmax_I = Cmax_I, &
+           Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
+
+
+      if(UseNeutralFluid)then
+         call stop_mpi(' Not yet supported')
+      else
+         Cmax   = maxval(Cmax_I)
+         Cleft  =min(0.0, minval(CleftStateLeft_I), minval(CleftStateHat_I))
+         Cright =max(0.0, maxval(CrightStateRight_I), maxval(CrightStateHat_I))
+
+         WeightLeft  = Cright/(Cright - Cleft)
+         WeightRight = 1.0 - WeightLeft
+         Diffusion   = Cright*WeightRight
+
+         !Flux_V = &
+         !     (WeightRight*FluxRight_V+WeightLeft*FluxLeft_V&
+         !     - Diffusion*(StateRightCons_V-StateLeftCons_V))
+
+         Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
+
+         ! Update AdjWeight* with dep of Unormal_I on Weight*
+         AdjWeightLeft  = dot_product(UnLeft_I ,AdjUnormal_I)
+         AdjWeightRight = dot_product(UnRight_I,AdjUnormal_I)
+                  
+         ! Update AdjUn*_I with dep of Unormal_I on Un*_I
+         AdjUnLeft_I    = WeightLeft* AdjUnormal_I
+         AdjUnRight_I   = WeightRight*AdjUnormal_I
+         
+         ! Update AdjWeight* with dep of Flux_V on Weight*
+         AdjWeightLeft  = AdjWeightLeft  + dot_product(FluxLeft_V , AdjFlux_V)
+         AdjWeightRight = AdjWeightRight + dot_product(FluxRight_V, AdjFlux_V)
+
+         ! Update AdjDiffusion with dep of Flux_V on Diffusion
+         AdjDiffusion = -dot_product((StateRightCons_V-StateLeftCons_V), AdjFlux_V)
+
+         ! Update AdjFlux*_V with dep of Flux_V on Flux*_V
+         AdjFluxLeft_V  = WeightLeft *AdjFlux_V
+         AdjFluxRight_V = WeightRight*AdjFlux_V
+
+         ! Update AdjState*Cons_V with dep of Flux_V on State*Cons_V
+         AdjStateLeftCons_V  = Diffusion*dot_product(StateLeftCons_V ,AdjFlux_V)
+         AdjStateRightCons_V = Diffusion*dot_product(StateRightCons_V,AdjFlux_V)
+
+         ! Update AdjC* with dep of Weight*,Diffusion on C*
+         AdjCleft  = (AdjWeightLeft-AdjWeightRight-Cright*AdjDiffusion) &
+              * WeightLeft/(Cright-Cleft)
+         AdjCright = (AdjWeightLeft-AdjWeightRight-Cright*AdjDiffusion) &
+              * WeightRight/(Cright-Cleft) + AdjDiffusion*WeightRight
+
+         ! Update AdjC*State*_I with dep of C* on C*State*_I
+         if (Cleft > 0.)then
+            if (minval(CleftStateLeft_I) <= minval(CleftStateHat_I))then
+               iloc = minloc(CleftStateLeft_I)
+               AdjCleftStateLeft_I(iloc(1)) = AdjCleft
+            else
+               iloc = minloc(CleftStateHat_I)
+               AdjCleftStateHat_I(iloc(1)) = AdjCleft
+            end if
+         end if
+         if (Cright > 0.)then
+            if (maxval(CrightStateRight_I) >= maxval(CrightStateHat_I))then
+               iloc = maxloc(CrightStateRight_I)
+               AdjCrightStateRight_I(iloc(1)) = AdjCright
+            else
+               iloc = maxloc(CrightStateHat_I)
+               AdjCrightStateHat_I(iloc(1)) = AdjCright
+            end if
+         end if
+
+      end if
+
+      ! adjoint version of speed calculations
+      call get_speed_max_adjoint(StateLeft_V,  AdjStateLeft_V, B0x, B0y, B0z, &
+           AdjCleft_I = AdjCleftStateLeft_I)
+
+      call get_speed_max_adjoint(StateRight_V, AdjStateRight_V, B0x, B0y, B0z, &
+           AdjCright_I = AdjCrightStateRight_I)
+
+      call get_speed_max_adjoint(State_V, AdjState_V, B0x, B0y, B0z, &
+           AdjCleft_I = AdjCleftStateHat_I, AdjCright_I = AdjCrightStateHat_I)
+
+
+      Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft !^CFG IF BORISCORR
+      if(UseMultiIon)  call stop_mpi(' Not yet supported')
+
+      ! these variables are not yet supported for adjoint
+      AdjEnLeft  = 0.0
+      AdjEnRight = 0.0
+      AdjPeLeft  = 0.0
+      AdjPeRight = 0.0
+
+    end subroutine harten_lax_vanleer_flux_adjoint
+    !^CFG END LINDEFLUX
+
+
+  end subroutine get_numerical_flux_adjoint
+
+  !ADJOINT SPECIFIC END
+
+
   !===========================================================================
 
   subroutine get_physical_flux(State_V, B0x, B0y, B0z, &
@@ -2382,6 +2881,197 @@ contains
 
   end subroutine get_physical_flux
 
+
+  !ADJOINT SPECIFIC BEGIN
+  !===========================================================================
+  subroutine get_physical_flux_adjoint(State_V, AdjState_V, B0x, B0y, B0z, &
+       AdjStateCons_V, AdjFlux_V, AdjUn_I, AdjEn, AdjPe)
+
+    use ModMultiFluid
+    use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
+    use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
+    use ModPhysics,  ONLY: gm1
+
+    real,    intent(in)  :: State_V(nVar)         ! input primitive state
+    real,    intent(out) :: AdjState_V(nVar)      ! input primitive state
+    real,    intent(in)  :: B0x, B0y, B0z         ! B0
+    real,    intent(in)  :: AdjStateCons_V(nFlux) ! conservative states with energy
+    real,    intent(in)  :: AdjFlux_V(nFlux)      ! fluxes for all states
+    real,    intent(in)  :: AdjUn_I(nFluid+1)     ! normal velocities
+    real,    intent(in)  :: AdjEn                 ! normal electric field
+    real,    intent(in)  :: AdjPe                 ! electron pressure for multiion
+
+    real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
+    real:: FluxBx, FluxBy, FluxBz, AdjUn
+    real:: AdjHallUn
+
+    character(len=*), parameter:: NameSub=NameMod//'::get_physical_flux_adjoint'
+    !--------------------------------------------------------------------------
+
+    ! Calculate conservative state
+    !StateCons_V(1:nVar)  = State_V
+
+    if(UseMultiIon)then
+       call stop_mpi(NameSub // ' Not yet supported')
+    end if
+
+    ! Set magnetic variables
+    if(UseB)then
+       call stop_mpi(NameSub // ' Not yet supported')
+    end if
+
+    ! Make sure this is initialized
+    HallUn = 0.0
+    AdjHallUn = 0.0
+    
+    ! Set the normal electron velocity used for Hall MHD and/or 
+    ! the electron pressure source term
+    !AdjUn_I(eFluid_) = 0.  ! not supported for adjoint
+    
+    !^CFG IF  IMPLICIT BEGIN
+    if(.not.UseSemiImplicit)then
+       call stop_mpi(NameSub // ' Not yet supported')
+    end if
+    !^CFG END IMPLICIT
+    
+    if(UseB) then
+       call stop_mpi(NameSub // ' Not yet supported')
+    end if
+    
+    ! The extra fluxes should be added at the same time as fluid 1 fluxes
+    ! if(iFluidMin /= 1) RETURN
+
+    ! Set flux for electron pressure
+    if(UseElectronPressure) call stop_mpi(NameSub // ' Not yet supported')
+
+
+    ! do iFluid = iFluidMin, iFluidMax
+    do iFluid = 1, nFluid
+       call select_fluid
+
+       ! Store normal velocity adjoint
+       AdjUn = AdjUn_I(iFluid)
+
+       if(iFluid == 1 .and. IsMhd)then
+          call stop_mpi(NameSub // ' Not yet supported')
+       else
+          ! If there is no MHD fluid, calculate fluxes for magnetic field
+          ! together with hydro fluxes for the first fluid
+          if(UseB .and. iFluid == 1) call stop_mpi(NameSub // ' Not yet supported')
+
+          ! Calculate HD flux for individual ion and neutral fluids
+          call get_hd_flux_adjoint
+       end if
+       
+    end do
+
+
+  contains
+
+    !==========================================================================
+    subroutine get_hd_flux_adjoint
+
+      use ModAdvance, ONLY: UseElectronPressure
+      use ModPhysics, ONLY: inv_gm1
+      use ModWaves
+
+      ! Variables for conservative state and flux calculation
+      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal
+      real :: AdjRho, AdjUx, AdjUy, AdjUz, Adjp, Adje, AdjRhoUn, AdjpTotal
+      integer :: iVar
+      !-----------------------------------------------------------------------
+      ! Extract primitive variables
+      Rho     = State_V(iRho)
+      Ux      = State_V(iUx)
+      Uy      = State_V(iUy)
+      Uz      = State_V(iUz)
+      p       = State_V(iP)
+
+      ! Calculate energy
+      e = inv_gm1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
+
+      pTotal = p
+
+      ! Normal velocity
+      Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
+      RhoUn  = Rho*Un
+
+      ! Needed for adiabatic source term for electron pressure
+      AdjUn = AdjUn + AdjHallUn
+
+      ! f_i[scalar] = Un*scalar; adjoint version
+      do iVar = ScalarFirst_, ScalarLast_
+         !Flux_V(iVar) = Un*State_V(iVar)
+         AdjUn = AdjUn + AdjFlux_V(iVar)*State_V(iVar)
+         AdjState_V(iVar) = AdjState_V(iVar) + Un*AdjFlux_V(iVar)
+      end do
+
+
+      AdjUn = AdjUn + AdjFlux_V(iEnergy)*(pTotal + e)
+      AdjpTotal = Un*AdjFlux_V(iEnergy)
+      Adje = Un*AdjFlux_V(iEnergy)
+
+      ! f_i[p] = u_i*p; adjoint version
+      AdjUn = AdjUn + AdjFlux_V(iP)*p
+      Adjp  = AdjFlux_V(iP)*Un
+
+      ! Update adjoint for Flux_V equation
+      AdjRhoUn = AdjFlux_V(iRho) + AdjFlux_V(iRhoUx)*Ux &
+           + AdjFlux_V(iRhoUy)*Uy + AdjFlux_V(iRhoUz)*Uz
+      AdjpTotal = AdjpTotal + AdjFlux_V(iRhoUx)*NormalX &
+           + AdjFlux_V(iRhoUy)*NormalY + AdjFlux_V(iRhoUz)*NormalZ
+      AdjUx = AdjFlux_V(iRhoUx)*RhoUn
+      AdjUy = AdjFlux_V(iRhoUy)*RhoUn
+      AdjUz = AdjFlux_V(iRhoUz)*RhoUn
+
+      
+      ! Normal velocity adjoint update
+      AdjUx  = AdjUx + AdjUn*NormalX
+      AdjUy  = AdjUy + AdjUn*NormalY
+      AdjUz  = AdjUz +  AdjUn*NormalZ
+      
+      ! RhoUn adjoint update
+      AdjRho = AdjRhoUn*Un
+      AdjUn  = AdjUn + AdjRhoUn*Rho
+      
+      if(UseWavePressure) &
+           call stop_mpi(NameSub // ' Not yet supported')
+      if(UseElectronPressure .and. .not.UseMultiIon) &
+           call stop_mpi(NameSub // ' Not yet supported')
+
+      ! update  Adjp
+      Adjp = Adjp + AdjpTotal
+
+      ! Update AdjRho, AdjU*, Adje with dep of StateCons_V on Rho,U*,e
+      AdjRho = AdjRho + AdjStateCons_V(iRhoUx)*Ux + AdjStateCons_V(iRhoUy)*Uy +&
+           AdjStateCons_V(iRhoUz)*Uz 
+      AdjUx  = AdjUx  + AdjStateCons_V(iRhoUx) *Rho
+      AdjUy  = AdjUy  + AdjStateCons_V(iRhoUy) *Rho
+      AdjUz  = AdjUz  + AdjStateCons_V(iRhoUz) *Rho
+      Adje   = Adje   + AdjStateCons_V(iEnergy)*Rho
+
+      ! Update/set Adjp,AdjRho,AdjU* with dep of e on these quantities
+      e = inv_gm1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
+      AdjRho = AdjRho + Adje*0.5*(Ux**2 + Uy**2 + Uz**2)
+      AdjUx  = AdjUx  + Adje*Rho*Ux
+      AdjUy  = AdjUy  + Adje*Rho*Uy
+      AdjUz  = AdjUz  + Adje*Rho*Uz
+      Adjp   =          Adje*inv_gm1 
+
+      ! Update appropriate quantities in AdjState_V
+      AdjState_V(iRho) = AdjState_V(iRho) + AdjRho
+      AdjState_V(iUx)  = AdjState_V(iUx)  + AdjUx
+      AdjState_V(iUy)  = AdjState_V(iUy)  + AdjUy
+      AdjState_V(iUz)  = AdjState_V(iUz)  + AdjUz
+      AdjState_V(iP)   = AdjState_V(iP)   + Adjp
+      
+      
+    end subroutine get_hd_flux_adjoint
+
+  end subroutine get_physical_flux_adjoint
+  !ADJOINT SPECIFIC END
+
+
   !===========================================================================
 
   subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, cLeft_I, cRight_I)
@@ -2834,6 +3524,120 @@ contains
     end subroutine get_hd_speed
 
   end subroutine get_speed_max
+
+
+  !ADJOINT SPECIFIC BEGIN
+  !===========================================================================
+  subroutine get_speed_max_adjoint(State_V, AdjState_V, B0x, B0y, B0z, &
+    AdjCLeft_I, AdjCRight_I)
+
+    use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, iP
+    use ModMain, ONLY: Climit
+    use ModWaves, ONLY: UseWavePressure, UseWavePressureLtd, &
+         GammaWave, WaveEnergy, UseAlfvenWaves
+
+    real,    intent(in)  :: State_V(nVar)
+    real,    intent(out) :: AdjState_V(nVar)
+    real,    intent(in)  :: B0x, B0y, B0z
+    real, optional, intent(in) :: AdjCleft_I(nFluid)  ! maximum left speed
+    real, optional, intent(in) :: AdjCright_I(nFluid) ! maximum right speed
+
+    real :: CmaxDt_I(nFluid)
+    real :: UnLeft, UnRight                         !^CFG IF AWFLUX
+    integer :: iVar
+    !--------------------------------------------------------------------------
+
+    do iFluid = iFluidMin, iFluidMax
+       call select_fluid
+
+       if(iFluid == 1 .and. UseB)then
+          if(DoAW)then                                 !^CFG IF AWFLUX BEGIN
+             call stop_mpi(' Not yet supported')
+          end if                                       !^CFG END AWFLUX
+
+          if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
+             call stop_mpi(' Not yet supported')
+          else                                         !^CFG END BORISCORR
+             call stop_mpi(' Not yet supported')
+          endif                                        !^CFG IF BORISCORR    
+       else
+          if(DoAw)then                           !^CFG IF AWFLUX BEGIN
+             call stop_mpi(' Not yet supported')
+          end if                                 !^CFG END AWFLUX
+          call get_hd_speed_adjoint
+       end if
+
+    end do
+
+    ! Limit propagation speeds if required
+    if (Climit > 0.0) then
+       call stop_mpi(' Not yet supported')
+    end if
+
+  contains
+
+    !========================================================================
+    subroutine get_hd_speed_adjoint
+
+      use ModAdvance, ONLY: UseElectronPressure, State_VGB
+      use ModPhysics, ONLY: g
+
+      real :: InvRho, Sound2, Sound, Un, p
+      real :: AdjUn, AdjSound, AdjSound2
+
+      character(len=*), parameter:: NameSub=NameMod//'::get_hd_speed_adjoint'
+      !------------------------------------------------------------------------
+
+      ! Calculate sound speed and normal speed
+      InvRho = 1.0/State_V(iRho)
+      p = State_V(iP)
+      
+      if(UseElectronPressure .and. .not.UseMultiIon) p = p + State_V(Pe_)
+      Sound2 = g*p*InvRho
+
+      if(UseWavePressure) &
+           call stop_mpi(NameSub // ' Not yet supported')
+
+      if(Sound2 <= 0.0)then
+         call stop_mpi(NameSub//' negative soundspeed2; forward sol not physical')
+      end if
+
+      Sound = sqrt(Sound2)
+      Un    = sum(State_V(iUx:iUz)*Normal_D)
+
+
+      !if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
+      !   call stop_mpi(NameSub // ' Not yet supported')
+      !else                                           !^CFG END AWFLUX
+      !   if(present(Cleft_I))  Cleft_I(iFluid)  = Un - Sound
+      !   if(present(Cright_I)) Cright_I(iFluid) = Un + Sound
+      !end if                                         !^CFG IF AWFLUX
+
+      ! Set AdjUn with dep of C*_I on Un
+      AdjUn = 0.0
+      if(present(AdjCleft_I))  AdjUn = AdjUn + AdjCleft_I(iFluid)
+      if(present(AdjCright_I)) AdjUn = AdjUn + AdjCright_I(iFluid)
+
+      ! Set AdjSound with dep of C*_I on Sound
+      AdjSound = 0.0
+      if(present(AdjCleft_I))  AdjSound = AdjSound - AdjCleft_I(iFluid)
+      if(present(AdjCright_I)) AdjSound = AdjSound + AdjCright_I(iFluid)
+
+      ! Update AdjState_V with dep of Un on State_V
+      AdjState_V(iUx:iUz) = AdjState_V(iUx:iUz) + AdjUn*Normal_D
+
+      ! Set AdjSound2 with dep of Sound on Sound2
+      AdjSound2 = 0.5*AdjSound/Sound
+
+      ! Update AdjState_V with dep of Sound2 on State_V
+      AdjState_V(iP) = AdjState_V(iP) + g*InvRho*AdjSound2
+      AdjState_V(iRho) = AdjState_V(iRho) - Sound2*InvRho*AdjSound2
+
+    end subroutine get_hd_speed_adjoint
+
+  end subroutine get_speed_max_adjoint
+  !ADJOINT SPECIFIC END
+
 
 end module ModFaceFlux
 
