@@ -36,7 +36,7 @@ Config.pl -install
 # Some platforms require additional flags or have other compilers as
 # an option. Choose the appropriate platform/compiler combination, e.g.:
 
-Config.pl -compiler=g95 -mpi=Intel
+Config.pl -install -compiler=g95 -mpi=Intel
 
 ######################
 # Create the manuals #
