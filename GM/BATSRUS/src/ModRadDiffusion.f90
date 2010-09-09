@@ -1562,10 +1562,13 @@ contains
        end if
 
        if(UseElectronPressure)then
+          ! electron pressure -> electron internal energy Ee
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, EinternalOut=EeSi)
+          Ee = EeSi*Si2No_V(UnitEnergyDens_)
+
           ! electron energy update: Ee_new = Ee_old + Cv'*Delta(a*Te^4)
-          Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
-               + State_VGB(ExtraEint_,i,j,k,iBlock) &
-               + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+          Ee = Ee + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
                *(StateImpl_VG(iTeImpl,i,j,k)-ImplOld_VCB(iTeImpl,i,j,k,iBlock))
 
           ! ion pressure -> Einternal
@@ -1615,16 +1618,6 @@ contains
           write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
           call stop_mpi(NameSub//' negative Eint')
        end if
-       if(UseElectronPressure .and. Ee < 0.0)then
-          write(*,*)NameSub,': ERROR Rho, p, TeOrigSi=', &
-               State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_), &
-               State_VGB(Pe_,i,j,k,iBlock)*No2Si_V(UnitP_), &
-               ImplOld_VCB(iTeImpl,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
-
-          write(*,*)NameSub,': ERROR negative electron Eint=', Ee
-          write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
-          call stop_mpi(NameSub//' negative electron Eint')
-       end if
        
        if(UseIdealEos)then
           ! ions (electrons are already updated)
@@ -1643,10 +1636,6 @@ contains
 
           ! Set true electron pressure
           State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
-
-          ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
-          State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
 
        else
           ! ions + electrons

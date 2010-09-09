@@ -202,6 +202,7 @@ contains
   !============================================================================
   subroutine user_read_inputs
 
+    use ModAdvance,          ONLY: UseElectronPressure
     use ModReadParam
     use CRASH_ModEos,        ONLY: read_eos_parameters, NameMaterial_I
     use CRASH_ModMultiGroup, ONLY: read_opacity_parameters
@@ -217,7 +218,7 @@ contains
     !------------------------------------------------------------------------
 
     UseUserLogFiles     = .true. ! to allow integration of rhoxe, rhobe...
-    UseUserUpdateStates = .true. ! for internal energy and cylindrical symm.
+    UseUserUpdateStates = .not.UseElectronPressure ! for internal energy
     UseUserSource       = .true. ! for non-cons levelset and pressure equation
     UseUserInitSession  = .true. ! to set units for level set variables
     UseUserIcs          = .true. ! to read in Hyades file
@@ -676,11 +677,7 @@ contains
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
             i, j, k, iBlock, EinternalOut=EinternalSi)
 
-       if(UseElectronPressure)then
-          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-               EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
-       else
+       if(.not.UseElectronPressure)then
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
                - inv_gm1*State_VGB(P_,i,j,k,iBlock))
@@ -1476,8 +1473,8 @@ contains
   subroutine user_update_states(iStage,iBlock)
 
     use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, p_, Pe_, ExtraEint_, &
-         UseNonConservative, IsConserv_CB, UseElectronPressure
+    use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
+         UseNonConservative, IsConserv_CB
     use ModPhysics,  ONLY: inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModEnergy,   ONLY: calc_energy_cell
@@ -1496,20 +1493,6 @@ contains
     !------------------------------------------------------------------------
 
     call update_states_MHD(iStage,iBlock)
-
-    if(UseElectronPressure)then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, EinternalOut=EinternalSi)
-
-          ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
-          State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               Si2No_V(UnitEnergyDens_)*EinternalSi &
-               - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
-       end do; end do; end do
-
-       RETURN
-    end if
 
     if (DoAdjoint) call store_block_buffer(iBlock,AdjUserUpdate1_)  ! ADJOINT SPECIFIC
 
@@ -1561,13 +1544,11 @@ contains
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, &
-         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
-         UseElectronPressure
+         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
     use ModGeometry, ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
     use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModEnergy,   ONLY: calc_energy_cell_adjoint
-    use ModVarIndexes, ONLY: nWave
     use ModAdjoint
 
     implicit none
@@ -1583,12 +1564,6 @@ contains
 
     character(len=*), parameter :: NameSub = 'user_update_states_adjoint'
     !------------------------------------------------------------------------
-
-    if(UseElectronPressure)then
-       call stop_mpi(NameSub // " Not yet implemented.")
-       !call update_states_electron
-       RETURN
-    end if    
 
     ! recall state from block buffer
     call recall_block_buffer(iBlock,AdjUserUpdate2_) 
