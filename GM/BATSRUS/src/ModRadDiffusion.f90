@@ -1533,7 +1533,7 @@ contains
          DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
     use ModMain,       ONLY: nI, nJ, nK, Dt, UseRadDiffusion
     use ModPhysics,    ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
-         UnitP_, UnitRho_, UnitTemperature_, PeMin, ExtraEintMin
+         UnitP_, UnitRho_, UnitTemperature_, ExtraEintMin
     use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Pe_, nWave, WaveFirst_
 
@@ -1562,12 +1562,11 @@ contains
        end if
 
        if(UseElectronPressure)then
-          ! electron pressure update: Pnew = Pold + (gamma-1)*Cv'*Delta(a*Te^4)
-          State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-               + gm1*DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+          ! electron energy update: Ee_new = Ee_old + Cv'*Delta(a*Te^4)
+          Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
+               + State_VGB(ExtraEint_,i,j,k,iBlock) &
+               + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
                *(StateImpl_VG(iTeImpl,i,j,k)-ImplOld_VCB(iTeImpl,i,j,k,iBlock))
-
-          State_VGB(Pe_,i,j,k,iBlock) = max(State_VGB(Pe_,i,j,k,iBlock), PeMin)
 
           ! ion pressure -> Einternal
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
@@ -1597,8 +1596,7 @@ contains
           if(UseElectronPressure .and. iVar > 1)then
              ! Add energy exchange between electrons and each radiation group
              ! for split semi-implicit scheme
-             State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-                  + gm1*Dt*Relaxation
+             Ee = Ee + Dt*Relaxation
           else
              ! Add energy exchange between ions and electrons
              ! or ions+electrons and radiation (when UseElectronPressure=F)
@@ -1617,6 +1615,16 @@ contains
           write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
           call stop_mpi(NameSub//' negative Eint')
        end if
+       if(UseElectronPressure .and. Ee < 0.0)then
+          write(*,*)NameSub,': ERROR Rho, p, TeOrigSi=', &
+               State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_), &
+               State_VGB(Pe_,i,j,k,iBlock)*No2Si_V(UnitP_), &
+               ImplOld_VCB(iTeImpl,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+
+          write(*,*)NameSub,': ERROR negative electron Eint=', Ee
+          write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
+          call stop_mpi(NameSub//' negative electron Eint')
+       end if
        
        if(UseIdealEos)then
           ! ions (electrons are already updated)
@@ -1627,8 +1635,6 @@ contains
           State_VGB(p_,i,j,k,iBlock) = gm1*Einternal
 
           ! electrons
-          Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
-               + State_VGB(ExtraEint_,i,j,k,iBlock)
           EeSi = Ee*No2Si_V(UnitEnergyDens_)
 
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
@@ -1639,16 +1645,21 @@ contains
           State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
 
           ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
-          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-               Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
+          State_VGB(ExtraEint_,i,j,k,iBlock) = &
+               Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
 
        else
           ! ions + electrons
           EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
+
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
                EinternalIn = EinternalSi, PressureOut = PressureSi)
+
+          ! Set true total pressure
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+
+          ! Set ExtraEint = electron internal energy - Ptotal/(gamma -1)
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock))
 

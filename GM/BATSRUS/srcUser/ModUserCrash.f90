@@ -37,7 +37,7 @@ module ModUser
   integer, parameter :: MaxMaterial = 5
 
   ! Do we use the plastic, gold and acrylic levels ?
-  ! Note that the material index range in ModEos starts with zero.
+  ! Definitions in ModEos: Xe_=0, Be_=1, Plastic_=2, Au_=3, Ay_=4
   logical, parameter :: UsePl = nMaterial > Plastic_
   logical, parameter :: UseAu = nMaterial > Au_
   logical, parameter :: UseAy = nMaterial > Ay_
@@ -1476,7 +1476,7 @@ contains
   subroutine user_update_states(iStage,iBlock)
 
     use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
+    use ModAdvance,  ONLY: State_VGB, p_, Pe_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, UseElectronPressure
     use ModPhysics,  ONLY: inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin
@@ -1494,13 +1494,22 @@ contains
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
+
+    call update_states_MHD(iStage,iBlock)
+
     if(UseElectronPressure)then
-       call update_states_electron
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, EinternalOut=EinternalSi)
+
+          ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
+          State_VGB(ExtraEint_,i,j,k,iBlock) = &
+               Si2No_V(UnitEnergyDens_)*EinternalSi &
+               - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
+       end do; end do; end do
 
        RETURN
     end if
-
-    call update_states_MHD(iStage,iBlock)
 
     if (DoAdjoint) call store_block_buffer(iBlock,AdjUserUpdate1_)  ! ADJOINT SPECIFIC
 
@@ -1541,40 +1550,6 @@ contains
     if (DoAdjoint) call store_block_buffer(iBlock,AdjUserUpdate2_)  ! ADJOINT SPECIFIC
 
     call calc_energy_cell(iBlock)
-
-  contains
-
-    subroutine update_states_electron
-
-      use ModAdvance, ONLY: Pe_
-
-      real :: PeSi, Ee, EeSi
-      !------------------------------------------------------------------------
-
-      call update_states_MHD(iStage,iBlock)
-
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         ! At this point Pe=(g-1)*Ee with the ideal gamma g.
-         ! Use this Pe to get electron internal energy density.
-
-         Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
-              + State_VGB(ExtraEint_,i,j,k,iBlock)
-         EeSi = Ee*No2Si_V(UnitEnergyDens_)
-
-         call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-              i, j, k, iBlock, &
-              EinternalIn=EeSi, PressureOut=PeSi)
-
-         ! Set true electron pressure
-         State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
-
-         ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
-         State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-              Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
-
-      end do; end do; end do
-
-    end subroutine update_states_electron
 
   end subroutine user_update_states
 
@@ -1744,7 +1719,8 @@ contains
     real :: DivU, GammaEos
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !-------------------------------------------------------------------
-    if(.not.UseNonConsLevelSet .and. .not.UseNonConservative) RETURN
+    if(.not.UseNonConsLevelSet .and. .not.UseNonConservative &
+         .and. .not.UseElectronPressure) RETURN
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
@@ -1766,7 +1742,7 @@ contains
             + State_VGB(LevelXe_:LevelMax,i,j,k,iBlock)*DivU
 
        ! Fix adiabatic compression source for pressure
-       if(UseNonConservative)then
+       if(UseNonConservative .or. UseElectronPressure)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, GammaOut=GammaEos)
 
@@ -1950,6 +1926,11 @@ contains
        do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, TeTiRelaxOut = PlotVar_G(i,j,k))
+       end do; end do; end do
+    case('gamma')
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, GammaOut = PlotVar_G(i,j,k))
        end do; end do; end do
     case('usersphere')
        ! Test function for LOS images: sphere with "density" 
