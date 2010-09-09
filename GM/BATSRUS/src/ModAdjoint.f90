@@ -58,7 +58,6 @@ Module ModAdjoint
 
   !\
   ! Enumerated types for temporary block buffer storage of state
-  ! ABB = "Adjoint Block Buffer"
   !/
   integer, parameter :: &
        AdjPreUpdate_   = 1,       &
