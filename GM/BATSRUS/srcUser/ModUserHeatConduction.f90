@@ -9,7 +9,8 @@ module ModUser
        IMPLEMENTED5 => user_update_states,              &
        IMPLEMENTED6 => user_set_plot_var,               &
        IMPLEMENTED7 => user_material_properties,        &
-       IMPLEMENTED8 => user_normalization
+       IMPLEMENTED8 => user_normalization,              &
+       IMPLEMENTED9 => user_calc_sources
 
   include 'user_module.h' !list of public methods
 
@@ -226,9 +227,9 @@ contains
 
   subroutine user_update_states(iStage, iBlock)
 
-    use ModAdvance,  ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
+    use ModAdvance,    ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
          UseElectronPressure
-    use ModImplicit, ONLY: UseSemiImplicit
+    use ModImplicit,   ONLY: UseSemiImplicit
     use ModVarIndexes, ONLY: Pe_
 
     integer, intent(in) :: iStage, iBlock
@@ -253,55 +254,39 @@ contains
        call update_states_MHD(iStage,iBlock)
     end if
 
-    if(TypeProblem == 'lowrie') call update_states_electron
-
-  contains
-
-    subroutine update_states_electron
-
-      use ModAdvance,    ONLY: State_VGB
-      use ModMain,       ONLY: nI, nJ, nK
-      use ModPhysics,    ONLY: inv_gm1, Si2No_V, No2Si_V, UnitEnergyDens_, &
-           UnitP_
-      use ModVarIndexes, ONLY: Pe_, ExtraEint_
-
-      integer :: i, j, k
-      real :: PeSi, Ee, EeSi
-      !------------------------------------------------------------------------
-
-      call update_states_MHD(iStage,iBlock)
-
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         ! At this point Pe=(g-1)*Ee with the ideal gamma g.
-         ! Use this Pe to get electron internal energy density.
-
-         Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
-              + State_VGB(ExtraEint_,i,j,k,iBlock)
-         EeSi = Ee*No2Si_V(UnitEnergyDens_)
-
-         call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-              i, j, k, iBlock, &
-              EinternalIn=EeSi, PressureOut=PeSi)
-
-         ! Set true electron pressure
-         State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
-
-         ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
-         State_VGB(ExtraEint_,i,j,k,iBlock) = &
-              Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
-
-         if(State_VGB(ExtraEint_,i,j,k,iBlock)<0.0)then
-            write(*,*)NameSub,': ERROR extra internal energy =', &
-                 State_VGB(ExtraEint_,i,j,k,iBlock)
-            write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
-            call stop_mpi(NameSub//': ERROR negative extra internal energy')
-         end if
-
-      end do; end do; end do
-
-    end subroutine update_states_electron
-
   end subroutine user_update_states
+
+  !============================================================================
+
+  subroutine user_calc_sources
+
+    use ModMain,       ONLY: nI, nJ, nK, GlobalBlk
+    use ModAdvance,    ONLY: State_VGB, &
+         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
+    use ModGeometry,   ONLY: vInv_CB
+    use ModPhysics,    ONLY: g
+    use ModVarIndexes, ONLY: Pe_
+
+    integer :: i, j, k, iBlock, iP
+    real :: DivU
+    character (len=*), parameter :: NameSub = 'user_calc_sources'
+    !--------------------------------------------------------------------------
+    iBlock = globalBlk
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       ! Note that the velocity of the first (and only) fluid is used
+       DivU            =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
+       if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
+       if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
+       DivU = vInv_CB(i,j,k,iBlock)*DivU
+
+
+       ! Reduce gamma to 4/3 for electrons (lowrie test)
+       Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
+            -(GammaRel-g)*State_VGB(Pe_,i,j,k,iBlock)*DivU
+    end do; end do; end do
+
+  end subroutine user_calc_sources
 
   !============================================================================
 
@@ -476,8 +461,7 @@ contains
              State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = &
                   matmul(Rot_II,RhoU_D(x_:y_))
              State_VGB(Pe_,i,j,k,iBlock) = Pe
-             State_VGB(ExtraEint_,i,j,k,iBlock) = &
-                  Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
+             State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
              State_VGB(p_,i,j,k,iBlock) = p
           end do
 
@@ -1030,7 +1014,7 @@ contains
     use ModPhysics,    ONLY: gm1, inv_gm1, No2Si_V, Si2No_V, &
          UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
          UnitX_, UnitT_, UnitU_, UnitN_, cRadiationNo, g, Clight
-    use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_, ExtraEint_
+    use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_
 
     real, intent(in) :: State_V(nVar)
     integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
@@ -1094,7 +1078,7 @@ contains
     else
        if(TypeProblem == 'lowrie')then
           pSi = State_V(Pe_)*No2Si_V(UnitP_)
-          Ee = inv_gm1*State_V(Pe_) + State_V(ExtraEint_)
+          Ee = State_V(Pe_)/(GammaRel - 1)
           Te = sqrt(sqrt(Ee/cRadiationNo))
        else
           if(UseElectronPressure)then
