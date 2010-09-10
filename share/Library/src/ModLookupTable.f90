@@ -16,6 +16,7 @@ module ModLookupTable
 
   private ! except
 
+  public:: init_lookup_table        ! set parameters of  the lookup table(s)
   public:: read_lookup_table_param  ! read parameters of the lookup table(s)
   public:: i_lookup_table           ! function returning the index of table
   public:: make_lookup_table        ! create table from calculations (and save)
@@ -56,7 +57,104 @@ module ModLookupTable
   character(len=20):: NameVar_I(MaxVar)
 
 contains
+  !==========================================================================
+  subroutine init_lookup_table(NameTable, NameCommand, NameVar, &
+    nIndex_I, IndexMin_I, IndexMax_I, &
+    NameFile, TypeFile, StringDescription)
 
+    character(len=*), intent(in):: NameTable, NameCommand 
+
+    character(len=*),   optional, intent(in):: NameVar
+    integer,            optional, intent(in):: nIndex_I(2)
+    real, dimension(2), optional, intent(in):: IndexMin_I, IndexMax_I
+    character(len=*),   optional, intent(in):: &
+                                     NameFile, TypeFile, StringDescription
+
+
+    integer :: iTable, iIndex, nTable2Read, nFile2Read
+    type(TableType), pointer:: Ptr
+
+    character(len=*), parameter:: NameSub = 'init_lookup_table'
+    !---------------------------------------
+
+    !If NameTable includes the combination like Prefix{Xe Be Pl}Suffix
+    !the tables PrefixXeSuffix, PrefixBeSuffix and PrefixPlSuffix will be
+    !created. This may make sense only for loading everal similar tables
+    !like: Xe_eos, Be_eos, Pl_eos, therefore the loop over the tables
+    !ends just after reading the file names
+    
+
+    ! Check if the table has been set already (say in a previous session)
+       
+       
+    iTable = i_lookup_table(NameTable)
+    if(iTable < 0)then
+       ! new table
+       nTable = nTable + 1
+       
+       if(nTable > MaxTable)then
+          write(*,*)NameSub,' MaxTable =',MaxTable
+          call CON_stop(NameSub//': number of tables exceeded MaxTable')
+       end if
+       
+       iTable = nTable
+    end if
+       
+    ! For sake of more concise source code, use a pointer to the table
+    Ptr => Table_I(iTable)
+    Ptr%NameTable = NameTable
+    
+    Ptr%NameCommand = NameCommand
+    call lower_case(Ptr%NameCommand)
+    
+    select case(Ptr%NameCommand)
+    case("load","save")
+       Ptr%NameFile = NameFile
+       Ptr%TypeFile = TypeFile
+       
+    case("make")
+       ! will be done below
+    case default
+       call CON_stop(NameSub//': unknown command='//Ptr%NameCommand)
+    end select
+    
+    
+    if(NameCommand == "load")&
+         call load_lookup_table(iTable)
+
+   
+    if(NameCommand == "load") RETURN
+   
+
+    if(present(StringDescription))&
+         Ptr%StringDescription = StringDescription
+ 
+    Ptr%NameVar = NameVar
+
+    call split_string(Ptr%NameVar, MaxVar, NameVar_I, Ptr%nValue, &
+         UseArraySyntaxIn=.true.)
+
+    ! Do not count the names of the indexes
+    Ptr%nValue = Ptr%nValue - 2
+   
+    ! Figure out which index is logarithmic
+   
+    Ptr%nIndex_I   = nIndex_I
+    Ptr%IndexMin_I = IndexMin_I
+    Ptr%IndexMax_I = IndexMax_I
+    
+    Ptr%IsLogIndex_I = index(NameVar_I(1:2), "log") == 1
+  
+    ! Take logarithm of the ranges if logarithmic
+    do iIndex = 1, 2
+       if(Ptr%IsLogIndex_I(iIndex)) then
+          Ptr%IndexMin_I(iIndex) = log10(Ptr%IndexMin_I(iIndex))
+          Ptr%IndexMax_I(iIndex) = log10(Ptr%IndexMax_I(iIndex))
+       end if
+    end do
+    ! Calculate increments
+    Ptr%dIndex_I = (Ptr%IndexMax_I - Ptr%IndexMin_I)/(Ptr % nIndex_I - 1)
+  end subroutine init_lookup_table
   !==========================================================================
   subroutine read_lookup_table_param
 
@@ -72,13 +170,19 @@ contains
     !-----------------------------------------------------------------------
     call read_var('NameTable', NameTable)
 
+    call read_var('NameCommand', NameCommand)
+    call lower_case(NameCommand)
+
     !If NameTable includes the combination like Prefix{Xe Be Pl}Suffix
     !the tables PrefixXeSuffix, PrefixBeSuffix and PrefixPlSuffix will be
-    !created. This may make sense only for loading everal similar tables
+    !created. This may make sense only for loading several similar tables
     !like: Xe_eos, Be_eos, Pl_eos, therefore the loop over the tables
     !ends just after reading the file names
 
     call check_braces(NameTable, NameTable_I, nTable2Read)
+
+    if(nTable2read /=1.and.NameCommand/="load")call CON_stop(&
+         'Multiple names can be used only for tables to be loaded')
 
     do iTableLoop = 1, nTable2Read
 
@@ -106,12 +210,13 @@ contains
        if(iTableLoop == 1)then
 
           ! Read the parameters for this table
-          call read_var('NameCommand', NameCommand)
-          call lower_case(NameCommand)
+         
           select case(NameCommand)
-          case("load","save")
+          case("save")
+             call read_var('NameFile', NameFile_I(1))
+             call read_var('TypeFile', TypeFile)
+          case("load")
              call read_var('NameFile', NameFile)
-
              call check_braces(NameFile, NameFile_I, nFile2Read)
              if(nTable2read /= nFile2Read)call CON_stop(&
                   'The number of tables to load is not equal to the number of files to read')
@@ -123,35 +228,36 @@ contains
           case default
              call CON_stop(NameSub//': unknown command='//Ptr%NameCommand)
           end select
-
-          Ptr%NameCommand = NameCommand
-          Ptr%NameFile = NameFile_I(iTableLoop)
-          Ptr%TypeFile = TypeFile
-          if(NameCommand == "load")&
-             call load_lookup_table(iTable)
-
        end if
+
+       Ptr%NameCommand = NameCommand
+       Ptr%NameFile = NameFile_I(iTableLoop)
+       Ptr%TypeFile = TypeFile
+       if(NameCommand == "load")&
+            call load_lookup_table(iTable)
+
+ 
     end do
    
     if(NameCommand == "load") RETURN
-   
-
+    
+    
     call read_var('StringDescription', Ptr%StringDescription)
     call read_var('NameVar',           Ptr%NameVar)
-
+    
     call split_string(Ptr%NameVar, MaxVar, NameVar_I, Ptr%nValue, &
          UseArraySyntaxIn=.true.)
-
+    
     ! Do not count the names of the indexes
     Ptr%nValue = Ptr%nValue - 2
     ! Figure out which index is logarithmic
     Ptr%IsLogIndex_I = index(NameVar_I(1:2), "log") == 1
-       
+    
     do iIndex = 1, 2
        call read_var('nIndex',     Ptr%nIndex_I(iIndex))
        call read_var('IndexMin',   Ptr%IndexMin_I(iIndex))
        call read_var('IndexMax',   Ptr%IndexMax_I(iIndex))
-          
+       
        ! Take logarithm of the ranges if logarithmic
        if(Ptr%IsLogIndex_I(iIndex)) then
           Ptr%IndexMin_I(iIndex) = log10(Ptr%IndexMin_I(iIndex))
@@ -161,42 +267,42 @@ contains
     ! Calculate increments
     Ptr%dIndex_I = (Ptr%IndexMax_I - Ptr%IndexMin_I)/(Ptr % nIndex_I - 1)
   contains
+    
     subroutine check_braces(Name, Name_I, nString)
       character(LEN=*), intent(in) :: Name
       character(LEN=100), intent(out) :: Name_I(MaxString)
       integer, intent(out) :: nString
-      
+
       integer:: iBracePosition1, iBracePosition2, iString
-      
+
       !-----------------------------------------
-      
+
       iBracePosition1 = index(Name,'{')
       iBracePosition2 = index(Name,'}')
-      
+
       if(iBracePosition1 < 1 .or. iBracePosition2 < 1 .or.&
            iBracePosition2< iBracePosition1 )then
          nString = 1 
          Name_I(1) = Name
          return
       end if
-      
+
       call split_string(Name(iBracePosition1 + 1:iBracePosition2 - 1),&
            MaxString, Name_I, nString)
-      
+
       if(iBracePosition1 > 1)then
          do iString = 1, nString
             Name_I(iString) = Name(1:iBracePosition1-1)//trim(Name_I(iString))
          end do
       end if
-      
+
       if(iBracePosition2 < len_trim(Name))then
          do iString = 1, nString
             Name_I(iString) =trim(Name_I(iString))//Name(iBracePosition2 + 1: len_trim(Name))
          end do
       end if
-      
-    end subroutine check_braces
 
+    end subroutine check_braces
   end subroutine read_lookup_table_param
 
   !===========================================================================
@@ -479,22 +585,19 @@ contains
     character(len=*), parameter:: NameSub = 'test_lookup_table'
     !------------------------------------------------------------------------
     call MPI_comm_rank(MPI_COMM_WORLD,iProc,iError)
-
-    nTable = 1
-    Ptr => Table_I(1)
-    Ptr%NameCommand = "save"
-    Ptr%NameFile    = "test_lookup_table1.out"
-    Ptr%TypeFile    = "ascii"
-    Ptr%NameTable   = "RhoE"
-    Ptr%NameVar     = "logrho e pXe pBe pPl"
-    Ptr%nValue      = 3
-    Ptr%IsLogIndex_I= (/.true., .false./)
-    Ptr%nIndex_I    = (/15, 10/)
-    Ptr%IndexMin_I  = (/log10(0.001),   1.0/)
-    Ptr%IndexMax_I  = (/log10(1000.0), 10.0/)
-    Ptr%dIndex_I    = (Ptr%IndexMax_I - Ptr%IndexMin_I)/(Ptr%nIndex_I - 1)
+    call init_lookup_table(&
+         NameTable   = "RhoE",                  &
+         NameCommand = "save",                  &
+         NameVar     = "logrho e pXe pBe pPl",  &
+         NameFile    = "test_lookup_table1.out",& 
+         TypeFile    = "ascii",                 &
+         nIndex_I    = (/15, 10/),              &
+         IndexMin_I  = (/0.001,   1.0/),        &
+         IndexMax_I  = (/1000.0, 10.0/))
+    
 
     if(iProc==0) write(*,*)'testing i_lookup_table'
+   
     iTable = i_lookup_table("xxx")
     if(iTable /= -1)then
        write(*,*)'iTable = ',iTable,' should be -1'
@@ -505,10 +608,11 @@ contains
        write(*,*)'iTable = ',iTable,' should be 1'
        call CON_stop(NameSub)
     end if
+    Ptr=>Table_I(1)
 
     if(iProc==0) write(*,*)'testing make_lookup_table'
     call make_lookup_table(1, eos_rho_e, MPI_COMM_WORLD)
-
+    
     if(iProc==0) write(*,*)'testing interpolate_lookup_table'    
     call interpolate_lookup_table(1, 1.0, 2.0, p_I)
     ! rho=1.0 is exactly in the middle, e=2.0 is also an index, so exact result
@@ -522,14 +626,13 @@ contains
     if(iProc==0) write(*,*)'testing load_lookup_table'
 
     ! Load the saved file into the second table
-    nTable = 2
-    Ptr2 => Table_I(2)
-    Ptr2%NameTable   = "RhoE2"
-    Ptr2%NameCommand = "load"
-    Ptr2%NameFile    = "test_lookup_table1.out"
-    Ptr2%TypeFile    = "ascii"
+    call init_lookup_table(&
+         NameTable   = "RhoE2"                 ,&
+         NameCommand = "load"                  ,&
+         NameFile    = "test_lookup_table1.out",&
+         TypeFile    = "ascii")
 
-    call load_lookup_table(2)
+    
 
     if(iProc==0) write(*,*)'testing i_lookup_table for table 2'
     iTable = i_lookup_table("RhoE2")
@@ -537,6 +640,7 @@ contains
        write(*,*)'iTable = ',iTable,' should be 2'
        call CON_stop(NameSub)
     end if
+    Ptr2=>Table_I(iTable)
 
     if(Ptr2%StringDescription /= Ptr%StringDescription) &
          call CON_stop(NameSub // &
