@@ -12,14 +12,15 @@ program save_eos_table
   use CRASH_ModEos, ONLY:UseEosTable_I, check_eos_table
   use ModMpi
   implicit none
+  integer:: iError
   !----------------
   UseCoulombCorrection = .true.
   UseExcitation = .true.
   UseEosTable_I = .true.
   
-  
-  call check_eos_table(MPI_COMM_WORLD,.true.)
-  
+  call MPI_Init(iError)
+  call check_eos_table(MPI_COMM_WORLD)!.true.)
+  call MPI_Finalize(iError)
 end program save_eos_table
 !============================================================================
 ! The following subroutines are here so that we can use SWMF library routines

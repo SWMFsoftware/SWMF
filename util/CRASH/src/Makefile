@@ -30,6 +30,7 @@ OBJECTS=\
 	ModTransport.o \
 	${IOMIX}
 
+MPIRUN = 
 
 OBJECTS_EXE= test_ionization.o test_godunov.o test_Fermi.o test_absorption.o \
 	     save_eos_table.o
@@ -125,7 +126,7 @@ save_eos_table.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
 EOS:  DEPEND 
 	make EOS.exe
-	EOS.exe
+	${MPIRUN} EOS.exe
 
 EOS.exe: save_eos_table.o
 	@(if [ ${OS} = "Darwin" ];         then make EOS_for_Darwin; \
