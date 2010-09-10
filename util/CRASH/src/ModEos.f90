@@ -295,7 +295,7 @@ contains
              call init_lookup_table(&
                NameTable = NameMaterial_I(iMaterial)//'_eos', &
                NameCommand = 'make'                         , &
-               NameVar = 'logTe LogNa '//NameVarEos         , &
+               NameVar = 'logTe logNa '//NameVarEos         , &
                nIndex_I = IndexDefault_I                    , &
                IndexMin_I = (/TeDefault_II(1, iMaterial), &
                               NaDefault_II(1, iMaterial)/)  , &
@@ -305,7 +305,7 @@ contains
              call init_lookup_table(&
                NameTable = NameMaterial_I(iMaterial)//'_eos', &
                NameCommand = 'save'                         , &
-               NameVar = 'logTe LogNa '//NameVarEos         , &
+               NameVar = 'logTe logNa '//NameVarEos         , &
                nIndex_I = IndexDefault_I                    , &
                IndexMin_I = (/TeDefault_II(1, iMaterial), &
                               NaDefault_II(1, iMaterial)/)  , &
@@ -362,7 +362,7 @@ contains
        GammaEOut    = ValueTmp_V(GammaE_),&
        CvElectronOut = ValueTmp_V(Cve_)  ,& 
        HeatCond      = ValueTmp_V(Cond_) ,&
-       &TeTiRelax    = ValueTmp_V(TeTi_) ,&
+       TeTiRelax    = ValueTmp_V(TeTi_)  ,&
        zAverageOut   = ValueTmp_V(Z_)    ,&
        z2AverageOut  = ValueTmp_V(Z2_)   )
 

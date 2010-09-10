@@ -16,7 +16,7 @@ program save_eos_table
   UseCoulombCorrection = .true.
   UseExcitation = .true.
   UseEosTable_I = .true.
-  write(*,*)UseEosTable_I
+  
   
   call check_eos_table(MPI_COMM_WORLD,.true.)
   
