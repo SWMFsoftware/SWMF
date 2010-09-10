@@ -19,7 +19,7 @@ program save_eos_table
   UseEosTable_I = .true.
   
   call MPI_Init(iError)
-  call check_eos_table(MPI_COMM_WORLD)!.true.)
+  call check_eos_table(MPI_COMM_WORLD,.true.)
   call MPI_Finalize(iError)
 end program save_eos_table
 !============================================================================
