@@ -31,7 +31,8 @@ OBJECTS=\
 	${IOMIX}
 
 
-OBJECTS_EXE= test_ionization.o test_godunov.o test_Fermi.o test_absorption.o
+OBJECTS_EXE= test_ionization.o test_godunov.o test_Fermi.o test_absorption.o \
+	     save_eos_table.o
 
 
 
@@ -117,6 +118,28 @@ OPAC_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_ ;
 	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
 	${LINK.f90} -o OPAC.exe opacity.o Tmp_/*.o \
+		${Lflag1}    ; 
+	rm -rf Tmp_ 
+
+save_eos_table.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+
+EOS:  DEPEND 
+	make EOS.exe
+	EOS.exe
+
+EOS.exe: save_eos_table.o
+	@(if [ ${OS} = "Darwin" ];         then make EOS_for_Darwin; \
+	else                                    make EOS_general; fi)
+
+EOS_general:
+	${LINK.f90} -o EOS.exe save_eos_table.o \
+		-L${LIBDIR} -lCRASH  -lSHARE -lTIMING \
+		${Lflag1}
+
+EOS_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_ ;
+	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
+	${LINK.f90} -o EOS.exe save_eos_table.o Tmp_/*.o \
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
 

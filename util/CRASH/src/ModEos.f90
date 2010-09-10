@@ -1,6 +1,5 @@
 !^CFG COPYRIGHT UM
 module CRASH_ModEos
-
   ! Equation Of State (EOS) for ionized plasma
   !
   ! Thermodynamic variables and other notations
@@ -77,7 +76,7 @@ module CRASH_ModEos
   use CRASH_ModFermiGas, ONLY: UseFermiGas, LogGeMinBoltzmann, LogGeMinFermi
   use CRASH_ModMultiGroup, ONLY: meshhv, abscon, nGroup, &
        OpacityPlanck_I, OpacityRosseland_I, opacys
-
+  use ModLookupTable, ONLY: MaxTable
   implicit none
 
   private !Except
@@ -92,7 +91,11 @@ module CRASH_ModEos
   public:: cAAcrylic
 
   public:: UsePreviousTe ! inherited from CRASH_ModStatSum
-  public:: eos, read_eos_parameters, fix_hyades_state
+
+  !This the main eos function, which may be implemented both via 
+  !internal or external  eos tables and via the built-in EOS model 
+  public:: eos
+
   interface eos
      module procedure eos_material
      module procedure eos_mixture
@@ -114,9 +117,18 @@ module CRASH_ModEos
   character(LEN=2), public ::&
        NameMaterial_I(Xe_:Ay_) = (/'Xe','Be','Pl','Au','Ay'/)
 
+
+  ! The logicals determine if we use or not tabulated EOS
+  ! and opacities  
+  
   logical, public, dimension(Xe_:Ay_) :: &
        UseEosTable_I = .false., UseOpacityTable_I = .false.
+  
+  !Subroutine which may be used to set/reset UseEosTable_I
 
+  public:: read_if_use_eos_table
+ 
+  !The columns in the EOS table
   integer :: P_      =  1, &
              E_      =  2, &
              Pe_     =  3, &
@@ -130,15 +142,70 @@ module CRASH_ModEos
              Z_      = 11, &
              Z2_     = 12
 
+  !The number of columns in the EOS table
   integer :: nVarEos =12   
   
+  !The variable names in the EOS table
   character(LEN=100):: NameVarEos = &
        'P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2'
 
+  !The following subroutine may be used to reset the
+  !list of variables tabulated in the EOS tables.
+  !Accordingly the named indexes are resen as well as
+  !nVarEos. The list may be shortened but not extended.
+  !The named indices for the excluded variables are set to
+  !-1.
 
+  public:: read_name_var_eos 
+
+  !The following subroutine:
+  !1. Checks if the tables are available for the
+  !   materials for which UseEosTable_I is True
+  !2. If the table is described in the PARAM.in file and should be
+  !   made, it is made  
+  !3. If the table is not described in the PARAM.in file form it with
+  !   the default ranges and fill in using the built-in EOS model
+
+  public:: check_eos_table
+
+  !Arrays which relate the iTable for the EOS table with 
+  !the material number:
+  integer:: iMaterial4EosTable_I(MaxTable) = -1
+  integer:: iTableEos4Material_I(Xe_:Ay_) = -1
+
+  !\
+  ! Miscellaneous subroutnies (probably, redundant)
+  !/
+  public:: read_eos_parameters, fix_hyades_state
+
+  !\
+  ! Defaultparameters for EOS tables:
+  !/
+  integer, parameter :: IndexDefault_I(2)=(/201, 201/), Min_=1, Max_=2
+  real,dimension(Min_:Max_,Xe_:Ay_), parameter::&
+       TeDefault_II = reshape(&
+       (/1.0e-2, 1.0e+3, & !Xe_
+         1.0e-3, 2.0e+3, & !Be_
+         1.0e-3, 1.0e+2, & !Plastic
+         1.0e-3, 1.0e+2, & !Au_
+         1.0e-3, 1.0e+2  & !Ay_
+         /), (/2,5/)),    &
+       NaDefault_II = reshape(&
+       (/1.0e+24, 1.0e+29, & !Xe_
+         1.0e+23, 2.0e+29, & !Be_
+         1.0e+24, 1.5e+29, & !Plastic
+         1.0e+24, 1.2e+29, & !Au_
+         1.0e+24, 1.5e+29  & !Ay_
+         /), (/2,5/))
+  !Note that at 1 Atm and at the room temperature
+  !In gas: N~3.10^{25} m-3
+  !In solids: N<10^{29} m-3
 contains
 
   !============================================================================
+  ! This subroutine may be used to exclude undesired columns 
+  ! from the eos lookup tables
+  ! ================================
   subroutine read_name_var_eos
     use ModReadParam, ONLY: read_var
     use ModUtilities, ONLY: split_string, lower_case
@@ -183,31 +250,143 @@ contains
           Z_ = iVar
        case('z2')
           Z2_= iVar
+       case default
+          call CON_stop(NameVar_I(iVar)//' is not allowed in the eos lookup tables')
        end select
     end do
   end subroutine read_name_var_eos
   !===============================
-  subroutine read_eos_parameters
-
-    ! Usage (with default values shown):
-    !
-    ! #EOS
-    ! T                     UseFermiGas
-    ! 4.0                   LogGeMinBoltzmann
-    ! 0.0                   LogGeMinFermi
-    ! 
-    ! Recommended value for the last parameter: -4.0
-
+  subroutine read_if_use_eos_table
+    !Usage
+    !#USEEOSTABLE
+    !T                      Use Eos Table for Xe
+    !T                      Use Eos Table for Be
+    !T                      Use Eos Table for Pl
+    !T                      Use Eos Table for Au
+    !T                      Use Eos Table for Ay
     use ModReadParam, ONLY: read_var
-    !-----------------------------------------------------------------------
-    ! For now. But it should/could read other things
-    call read_var('UseFermiGas',         UseFermiGas      )
-    call read_var('LogGeMinBoltzmann',   LogGeMinBoltzmann)
-    call read_var('LogGeMinFermi',       LogGeMinFermi    )
 
-  end subroutine read_eos_parameters
+    integer:: iMaterial
+    !------------------!
+    do iMaterial = Xe_, Ay_
+       call read_var(&
+            'Use EOS table for '//NameMaterial_I(iMaterial),&
+            UseEosTable_I(iMaterial))
+    end do
+       
+  end subroutine read_if_use_eos_table
+  !============================
+  subroutine check_eos_table(iComm,Save)
+    use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
+    use ModLookupTable, ONLY: init_lookup_table
 
-  !============================================================================
+    integer, optional, intent(in) :: iComm
+    logical, optional, intent(in) :: Save 
+    integer:: iMaterial, iTable
+    !-------------------
+    
+    do iMaterial = Xe_,Ay_
+       if(.not.UseEosTable_I(iMaterial))CYCLE
+       iTable =  i_lookup_table(NameMaterial_I(iMaterial)//'_eos')
+
+       if(iTable<0)then
+          !Declare the table with the default parameters
+          if(.not.present(Save))then
+             call init_lookup_table(&
+               NameTable = NameMaterial_I(iMaterial)//'_eos', &
+               NameCommand = 'make'                         , &
+               NameVar = 'logTe LogNa '//NameVarEos         , &
+               nIndex_I = IndexDefault_I                    , &
+               IndexMin_I = (/TeDefault_II(1, iMaterial), &
+                              NaDefault_II(1, iMaterial)/)  , &
+               IndexMax_I = (/TeDefault_II(2, iMaterial), &
+                              NaDefault_II(2, iMaterial)/)    )
+          else
+             call init_lookup_table(&
+               NameTable = NameMaterial_I(iMaterial)//'_eos', &
+               NameCommand = 'save'                         , &
+               NameVar = 'logTe LogNa '//NameVarEos         , &
+               nIndex_I = IndexDefault_I                    , &
+               IndexMin_I = (/TeDefault_II(1, iMaterial), &
+                              NaDefault_II(1, iMaterial)/)  , &
+               IndexMax_I = (/TeDefault_II(2, iMaterial), &
+                              NaDefault_II(2, iMaterial)/)  , &
+               NameFile   = &
+                 NameMaterial_I(iMaterial)//'_eos_CRASH.dat', &
+               TypeFile = 'ascii'                           , &
+               StringDescription = &
+                 'CRASH EOS for '//NameMaterial_I(iMaterial)  )
+          end if
+          iTable =  i_lookup_table(NameMaterial_I(iMaterial)//'_eos')
+       end if
+
+       !The table is at least declared. Check if it is filled in
+       
+       iTableEos4Material_I(iMaterial) = iTable
+       iMaterial4EosTable_I(iTable)    = iMaterial
+       
+       !Temporary disable the use of table in EOS
+       UseEosTable_I(iMaterial) = .false.
+       
+       !Fill in the table
+       call make_lookup_table(iTable, calc_eos_table, iComm)
+       
+       !Recover the true value for UseEos:
+       UseEosTable_I(iMaterial) = .true.
+    end do
+  end subroutine check_eos_table
+  !============================
+  subroutine calc_eos_table(iTable, Arg1, Arg2, Value_V)
+    integer, intent(in):: iTable
+    real, intent(in)   :: Arg1, Arg2
+    real, intent(out)  :: Value_V(:)
+    
+    real:: ValueTmp_V(-1:nVarEos)
+    real:: Rho, Te
+    integer::iMaterial
+    !-----------------
+    iMaterial = iMaterial4EosTable_I(iTable)
+    
+    Rho = Arg2 * cAtomicMass * cAtomicMassCRASH_I(iMaterial)
+    Te  = Arg1 * cEvToK
+    
+    ValueTmp_V = 0.0
+    call eos_material(iMaterial,Rho,&
+       TeIn = Te, &
+       eTotalOut = ValueTmp_V(E_)    ,&
+       pTotalOut = ValueTmp_V(P_)    ,&
+       GammaOut  = ValueTmp_V(Gamma_),&
+       CvTotalOut= ValueTmp_V(Cv_)   ,&
+       eElectronOut = ValueTmp_V(Ee_),&
+       pElectronOut = ValueTmp_V(Pe_),&
+       GammaEOut    = ValueTmp_V(GammaE_),&
+       CvElectronOut = ValueTmp_V(Cve_)  ,& 
+       HeatCond      = ValueTmp_V(Cond_) ,&
+       &TeTiRelax    = ValueTmp_V(TeTi_) ,&
+       zAverageOut   = ValueTmp_V(Z_)    ,&
+       z2AverageOut  = ValueTmp_V(Z2_)   )
+
+    ValueTmp_V(-1:0) = 0.0
+    ValueTmp_V(E_)   =  ValueTmp_V(E_)/(cEV * Arg2)
+    ValueTmp_V(P_)   =  ValueTmp_V(P_)/(cEV * Arg2)
+    ValueTmp_V(Ee_)  =  ValueTmp_V(Ee_)/(cEV * Arg2)
+    ValueTmp_V(Pe_)  =  ValueTmp_V(Pe_)/(cEV * Arg2)
+    ValueTmp_V(Cv_)  =  ValueTmp_V(Cv_)/(cBoltzmann * Arg2)
+    ValueTmp_V(Cve_) =  ValueTmp_V(Cve_)/(cBoltzmann * Arg2)
+
+    Value_V(1:nVarEos) = ValueTmp_V(1:nVarEos)
+  end subroutine calc_eos_table
+  
+  !============================
+  !\
+  ! Beginning of EOS functions
+  !/
+  !For two different kinds of input parameters for
+  !to characterize the material (either the material number,
+  !or the vector of their contents in a mixture) we apply
+  !eos_material or eos_mixture. Both subroutine call eos_generic
+  !and have very similar set of optional input and output parameters.
+  !=================================================================
 
   subroutine eos_material(iMaterial,Rho,&
        TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
@@ -215,7 +394,7 @@ contains
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
        OpacityPlanckOut_I, OpacityRosselandOut_I,            &
        HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut, iError)
-    use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
+    use ModLookupTable, ONLY: interpolate_lookup_table
     ! Eos function for single material
 
     integer, intent(in):: iMaterial     ! index of material
@@ -273,7 +452,7 @@ contains
     Natomic = Rho /  ( cAtomicMass * cAtomicMassCRASH_I(iMaterial) )
 
     if(UseEosTable_I(iMaterial))then
-       iTable = i_lookup_table(NameMaterial_I(iMaterial)//'_eos')
+       iTable = iTableEos4Material_I(iMaterial)
        
        if(present(TeIn))then
 
@@ -554,6 +733,31 @@ contains
     if(present(zAverageOut)) zAverageOut = zAv
     if(present(z2AverageOut))z2AverageOut = Z2
   end subroutine eos_generic
+  !====================
+  !End of EOS functions
+  !=============================
+  !\
+  ! Miscellaneous subroutnies (probably, redundant)
+  !/
+  subroutine read_eos_parameters
+
+    ! Usage (with default values shown):
+    !
+    ! #EOS
+    ! T                     UseFermiGas
+    ! 4.0                   LogGeMinBoltzmann
+    ! 0.0                   LogGeMinFermi
+    ! 
+    ! Recommended value for the last parameter: -4.0
+
+    use ModReadParam, ONLY: read_var
+    !-----------------------------------------------------------------------
+    ! For now. But it should/could read other things
+    call read_var('UseFermiGas',         UseFermiGas      )
+    call read_var('LogGeMinBoltzmann',   LogGeMinBoltzmann)
+    call read_var('LogGeMinFermi',       LogGeMinFermi    )
+
+  end subroutine read_eos_parameters
   !=========================
   subroutine fix_hyades_state(iMaterial, StateCgs_V, PMinSi)
     use ModConst

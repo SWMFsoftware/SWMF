@@ -112,7 +112,7 @@ Contains
   real function d_pressure_over_d_te()
     use CRASH_ModFermiGas,ONLY:RPlus,RMinus
     !----------------------------------------------------------
-    if(zAv==0)then
+    if(zAv<=cTiny)then
        d_pressure_over_d_te = 1.0
        return
     end if
@@ -150,7 +150,7 @@ Contains
 
 
     !-------------------
-    if(zAv==0)then
+    if(zAv<=0)then
        compressibility_at_const_te = 1.0
        return
     end if
@@ -175,7 +175,7 @@ Contains
 
     real :: Compr
     !-------------------
-    if(zAv==0)then
+    if(zAv<=0)then
        compressibility_at_const_te_e = 0.0
        return
     end if
@@ -204,7 +204,7 @@ Contains
     real,parameter::Gamma0=5.0/3.0
     !--------------------------------------!
 
-    if(zAv==0.0)then
+    if(zAv<=cTiny)then
        if(present(GammaOut))   GammaOut=Gamma0
        if(present(GammaSOut))  GammaSOut=Gamma0
        if(present(GammaMaxOut))GammaMaxOut=Gamma0
