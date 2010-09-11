@@ -187,6 +187,7 @@ F
 
 #SAVEPLOT
 1.0			DtOutput
+F			DoSaveFlux
 
 #TYPEBOUNDARY
 circle                  TypeBoundary
