@@ -6,6 +6,7 @@ include Makefile.DEPEND
 
 MY_LIB = ${LIBDIR}/libCRASH.a
 
+DEBUG = ${DEBUGFLAG}
 
 IOMIX=\
 	ModIonMix.o \
