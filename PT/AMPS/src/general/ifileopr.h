@@ -111,7 +111,7 @@ public:
 
     if (!feof(fd)) do {
       line++;
-      fgets(str,n,fd);
+      if (fgets(str,n,fd)==NULL) error();
 
       for (i=0;(str[i]!='\0')&&(str[i]!='\n')&&(str[i]==' ');i++);
       for (j=0;(str[i+j]!='\0')&&(str[i+j]!='\n');j++) str[j]=str[i+j];
