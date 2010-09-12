@@ -25,7 +25,7 @@ MPILIB = -lmpi
 
 SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 
-DEBUGFLAG = -g traceback -check all
+DEBUGFLAG = -check all
 DEBUG     = 
 
 OPT0 = -O0
