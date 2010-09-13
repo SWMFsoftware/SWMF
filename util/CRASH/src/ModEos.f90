@@ -173,6 +173,11 @@ module CRASH_ModEos
   integer:: iMaterial4EosTable_I(MaxTable) = -1
   integer:: iTableEos4Material_I(Xe_:Ay_) = -1
 
+  !Arrays which relate the iTable for the opacity table with 
+  !the material number:
+  integer:: iMaterial4OpacTable_I(MaxTable) = -1
+  integer:: iTableOpac4Material_I(Xe_:Ay_) = -1
+
   !\
   ! Miscellaneous subroutnies (probably, redundant)
   !/
@@ -276,13 +281,15 @@ contains
        
   end subroutine read_if_use_eos_table
   !============================
-  subroutine check_eos_table(iComm,Save)
+  subroutine check_eos_table(iComm,Save,TypeFile)
     use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
     use ModLookupTable, ONLY: init_lookup_table
 
     integer, optional, intent(in) :: iComm
     logical, optional, intent(in) :: Save 
+    character(LEN=*), optional, intent(in)::TypeFile
     integer:: iMaterial, iTable
+    character(LEN=5)::TypeFileHere
     !-------------------
     
     do iMaterial = Xe_,Ay_
@@ -302,6 +309,8 @@ contains
                IndexMax_I = (/TeDefault_II(2, iMaterial), &
                               NaDefault_II(2, iMaterial)/)    )
           else
+             TypeFileHere = 'real8'
+             if(present(TypeFile))TypeFileHere = TypeFile
              call init_lookup_table(&
                NameTable = NameMaterial_I(iMaterial)//'_eos', &
                NameCommand = 'save'                         , &
@@ -313,7 +322,7 @@ contains
                               NaDefault_II(2, iMaterial)/)  , &
                NameFile   = &
                  NameMaterial_I(iMaterial)//'_eos_CRASH.dat', &
-               TypeFile = 'ascii'                           , &
+               TypeFile = TypeFileHere                      , &
                StringDescription = &
                  'CRASH EOS for '//NameMaterial_I(iMaterial)  )
           end if
@@ -437,7 +446,7 @@ contains
     integer, optional, intent(out) :: iError       ! error flag
 
     real   :: Natomic
-    real   :: Te, Value_V(1:nVarEos)
+    real   :: Te, Value_V(1:nVarEos), Opacity_V(1:2*nGroup)
     integer:: iTable
     character(LEN=*), parameter:: NameSub = 'eos_material'
     !-------------------------------------------------------------------------
@@ -509,8 +518,21 @@ contains
        if(present(Ne))         Ne = Value_V(Z_) * NAtomic
        if(present(zAverageOut))zAverageOut = Value_V(Z_)
        if(present(z2AverageOut))z2AverageOut = Value_V(Z2_)
-       
-       return
+       if(present(OpacityPlanckOut_I).or.&
+            present(OpacityRosselandOut_I))then
+          if(UseOpacityTable_I(iMaterial))then
+             iTable = iTableOpac4Material_I(iMaterial)
+             call interpolate_lookup_table(iTable, Te, Rho, Opacity_V, DoExtrapolate=.false.)
+             if(present(OpacityPlanckOut_I))OpacityPlanckOut_I=Opacity_V(1:nGroup) * Rho
+             if(present(OpacityRosselandOut_I))&
+                  OpacityRosselandOut_I=Opacity_V(nGroup+1:2*nGroup) * Rho
+             return
+          end if
+          !Else: we need to calculate opacities only
+       else
+          !Opacities are not needed, all the other parameters are calculated
+          return
+       end if
     end if
 
     if(iMaterial == Plastic_)then
@@ -521,15 +543,23 @@ contains
 
     else
        call set_element(nZ_I(iMaterial))
-
+       
     end if
-    call eos_generic(Natomic, &
-         TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
-         TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
-         eElectronOut, pElectronOut, GammaEOut, CvElectronOut, & 
-         OpacityPlanckOut_I, OpacityRosselandOut_I,            &
-         HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut, iError)
-
+    if(UseEosTable_I(iMaterial))then
+       !We need only opacities
+       call eos_generic(Natomic, &
+                  TeIn = Te, &
+                  OpacityPlanckOut_I = OpacityPlanckOut_I, &
+                  OpacityRosselandOut_I = OpacityRosselandOut_I , &
+                  iError= iError)
+    else
+       call eos_generic(Natomic, &
+            TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
+            TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
+            eElectronOut, pElectronOut, GammaEOut, CvElectronOut, & 
+            OpacityPlanckOut_I, OpacityRosselandOut_I,            &
+            HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut, iError)
+    end if
   end subroutine eos_material
 
   !============================================================================
