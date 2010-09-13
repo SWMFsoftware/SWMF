@@ -204,7 +204,8 @@ contains
 
     use ModAdvance,          ONLY: UseElectronPressure
     use ModReadParam
-    use CRASH_ModEos,        ONLY: read_eos_parameters, NameMaterial_I
+    use CRASH_ModEos,        ONLY: read_eos_parameters, NameMaterial_I, &
+                                   read_if_use_eos_table
     use CRASH_ModMultiGroup, ONLY: read_opacity_parameters
     use ModGeometry,         ONLY: TypeGeometry, UseCovariant
     use ModWaves,            ONLY: FreqMinSI, FreqMaxSI
@@ -355,11 +356,15 @@ contains
           ! Multiply plastic pressure and negative Uy/Ur by AssFactor
           call read_var('AssFactor', AssFactor)
 
+       case("#USEEOSTABLE")
+          call read_if_use_eos_table
+
        case('#USERINPUTEND')
           EXIT
        case default
           call stop_mpi('ERROR in ModUserCrash: unknown command='//NameCommand)
        end select
+       
     end do
 
   end subroutine user_read_inputs
@@ -2057,7 +2062,7 @@ contains
     use ModConst,       ONLY: cKevToK, cHPlanckEV
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI
     use CRASH_ModMultiGroup, ONLY: set_multigroup
-    use CRASH_ModEos,        ONLY: NameMaterial_I
+    use CRASH_ModEos,        ONLY: NameMaterial_I, check_eos_table
 
     integer:: iMaterial
     logical:: IsFirstTime = .true.
@@ -2072,6 +2077,8 @@ contains
     else
        UnitUser_V(LevelXe_:LevelMax) = UnitUser_V(Rho_)*No2Io_V(UnitX_)
     end if
+    
+    call check_eos_table(iComm = iComm, Save = .true.)
 
     ! The rest of the initialization should be done once
     if(.not.IsFirstTime) RETURN
