@@ -4,53 +4,6 @@ T			DoEcho
 #BATL
 T			UseBatl
 
-#LOOKUPTABLE
-pPerE(rho,e/rho)        NameTable
-save                    NameCommand
-table_pPerE.out         NameFile
-real8                   TypeFile
-pPerE(rho,e/rho) for Xe, Be, Plastic
-logrho logE/Rho pPerEXe pPerEBe pPerEPl
-20                      nIndex1
-0.01                    Index1Min
-1e6                     Index1Max
-20                      nIndex2
-1e5                     Index2Min
-1e14                    Index2Max
-
-#LOOKUPTABLE
-ePerP(rho,p/rho)        NameTable
-save                    NameCommand
-table_ePerP.out         NameFile
-real8                   TypeFile
-ePerP(rho,p/rho) for Xe, Be, Plastic
-logrho logpPerRho ePerPXe ePerPBe ePerPPl
-20                      nIndex1
-0.01                    Index1Min
-1e6                     Index1Max
-20                      nIndex2
-1e5                     Index2Min
-1e13                    Index2Max
-
-! notation:
-! T -> electron temperature
-! C -> specific heat
-! G -> gamma
-! Z -> average ion charge
-! H -> electron heat conduction coef
-#LOOKUPTABLE
-Thermo(rho,p/rho)	NameTable
-save			NameCommand
-table_thermo.out	NameFile
-real8			TypeFile
-Thermo(rho,p/rho) for Xe, Be, Plastic
-logrho logpPerRho TXe CXe GXe ZXe HXe TBe CBe GBe ZBe HBe TPl CPl GPl ZPl HPl
-20                      nIndex1
-0.01                    Index1Min
-1e6                     Index1Max
-20                      nIndex2
-1e5                     Index2Min
-1e13                    Index2Max
 
 #LOOKUPTABLE
 Opacity(rho,T)          NameTable
@@ -102,6 +55,13 @@ reflect			TypeBcZmin
 reflect			TypeBcZmax
 
 #USERINPUTBEGIN  ----------------------
+ 
+#USEEOSTABLE
+T
+T
+T
+F
+F
 
 MIXEDCELL
 T			UseMixedCell

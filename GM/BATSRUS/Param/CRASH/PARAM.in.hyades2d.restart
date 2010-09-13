@@ -21,6 +21,13 @@ MIXEDCELL
 T			UseMixedCell
 0.97			MixLimit
 
+#USEEOSTABLE
+T
+T
+T
+F
+F
+
 #USERINPUTEND    ----------------------
 
 #TIMEACCURATE
@@ -47,21 +54,9 @@ larsen                  TypeRadFluxLimiter
 300.0			TradMinSi
 
 #LOOKUPTABLE
-pPerE(rho,e/rho)        NameTable
+{Xe Be Pl}_eos          NameTable
 load                    NameCommand
-table_pPerE.out         NameFile
-real8                   TypeFile
-
-#LOOKUPTABLE
-ePerP(rho,p/rho)        NameTable
-load                    NameCommand
-table_ePerP.out         NameFile
-real8                   TypeFile
-
-#LOOKUPTABLE
-Thermo(rho,p/rho)    NameTable
-load                    NameCommand
-table_thermo.out     NameFile
+{Xe Be Pl}_eos_CRASH.dat         
 real8                   TypeFile
 
 #LOOKUPTABLE
