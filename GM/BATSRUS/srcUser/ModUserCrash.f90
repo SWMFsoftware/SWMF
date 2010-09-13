@@ -82,7 +82,7 @@ module ModUser
   real :: RhoDimGold = 20000.0   ! density [kg/m3]
 
   ! Use conservative or non-conservative levelsets
-  logical :: UseNonConsLevelSet = .false.
+  logical :: UseNonConsLevelSet = .true.
 
   ! Use volume fraction method at the material interface
   logical :: UseVolumeFraction = .false.
@@ -676,13 +676,13 @@ contains
              Natomic = NatomicSi*Si2No_V(UnitN_)
              State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti_G(i,j,k)
           end if
-       end if
 
-       ! Calculate internal energy
-       call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-            i, j, k, iBlock, EinternalOut=EinternalSi)
+       else
 
-       if(.not.UseElectronPressure)then
+          ! Calculate internal energy
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, EinternalOut=EinternalSi)
+
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
                - inv_gm1*State_VGB(P_,i,j,k,iBlock))
