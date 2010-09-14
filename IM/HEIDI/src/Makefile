@@ -30,6 +30,7 @@ OBJECTS = \
 	ModHeidiBField.o\
 	ModHeidiNeutralH.o\
 	ModHeidiBACoefficients.o\
+	ModHeidiAsymStretchedB.o\
 	heidi_emudt.o\
 	heidi_integrals.o\
 	heidi_setup.o\
