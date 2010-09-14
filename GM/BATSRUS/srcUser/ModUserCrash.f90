@@ -367,6 +367,8 @@ contains
        
     end do
 
+    if(UseMixedCell) UseNonConsLevelSet = .false.
+
   end subroutine user_read_inputs
   !============================================================================
   subroutine user_set_outerbcs(iBlock, iSide, TypeBc, IsFound)
