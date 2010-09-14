@@ -98,6 +98,9 @@ float			zMaxBc
 
 #USERINPUTBEGIN ----------------
 
+#LEVELSET
+F			UseNonConsLevelSet
+
 #TUBE
 0.0			xEndTube
 287.5			rInnerTube
