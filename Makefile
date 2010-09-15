@@ -178,6 +178,12 @@ SWMF:	ENV_CHECK
 	@cd ${CONTROLDIR}; make SWMFEXE  
 	@echo ' '
 
+CRASH:	ENV_CHECK
+	@cd ${GMDIR}; Config.pl -u=Crash -e=Crash
+	@cd ${CONTROLDIR}; make CRASHEXE  
+	@echo ' '
+
+
 #
 #       SWMF library (for external code)
 #
