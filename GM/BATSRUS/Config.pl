@@ -63,15 +63,15 @@ foreach (@Arguments){
     if(/^-s$/)                {$Show=1;                        next};
     if(/^-dynamic$/)          {`cd $Src; make DYNAMIC`;        next};
     if(/^-static$/)           {`cd $Src; make STATIC`;         next};
-    if(/^-nWave=(.*)$/)       {
-	$nWaveNew=$1;
+    if(/^-nWave=(.*)$/i)      {
 	# Check the number of wave bins (to be set)
-	die "$ERROR nWave=$nWaveNew must be 1 or more\n" if $nWaveNew < 1;
+	die "$ERROR nWave=$1 must be 1 or more\n" if $1 < 1;
+	$nWaveNew=$1;
 	next};
-    if(/^-nMaterial=(.*)$/)   {
-	$nMaterialNew=$1;
+    if(/^-nMaterial=(.*)$/i)  {
 	# Check the number of material level indices (to be set)
-	die "$ERROR nMaterial=$nMaterialNew must be 1 or more\n" if $nMaterialNew < 1;
+	die "$ERROR nMaterial=$1 must be 1 or more\n" if $1 < 1;
+	$nMaterialNew=$1;
 	next};
 
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
@@ -393,6 +393,11 @@ List available options for equations and user modules:
 Select the MHD equations, the Default user module:
 
     Config.pl -e=MHD -u=Default
+
+Select the CRASH equation and user modules and 
+set the number of materials to 5 and number of radiation groups to 30:
+
+    Config.pl -e=Crash -u=Crash -nMaterial=5 -nWave=30
 
 Set block size to 8x8x8, number of blocks to 400",
 " and implicit blocks to 100", #^CFG IF IMPLICIT
