@@ -162,14 +162,22 @@ contains
     integer :: iLevel, iError,iBlock
     !-------------------------------------------------------------------------
     if(.not.restart .and. nRefineLevelIC>0)then
+       call timing_start('amr_ics')
        do iLevel=1,nRefineLevelIC
+          call timing_start('amr_ics_set')
           do globalBLK = 1, nBlockMax
              call set_ICs
           end do
+          call timing_stop('amr_ics_set')
 
           ! Allow the user to add a perturbation and use that for physical refinement.
-          if (UseUserPerturbation) call user_initial_perturbation
+          if (UseUserPerturbation)then
+             call timing_start('amr_ics_perturb')
+             call user_initial_perturbation
+             call timing_stop('amr_ics_perturb')
+          end if
 
+          call timing_start('amr_ics_amr')
           if (UseBatl) then
              ! Do physics based AMR with the message passing
              call amr(.true.)
@@ -178,9 +186,15 @@ contains
              call amr_physics
              call number_soln_blocks
           end if
+          call timing_stop('amr_ics_amr')
        end do
+
        ! Move coordinates, but not data (?), there are new blocks
+       call timing_start('amr_ics_balance')
        call load_balance(.true.,.false.,.true.)
+       call timing_stop('amr_ics_balance')
+
+       call timing_stop('amr_ics')
     end if
 
     !\
