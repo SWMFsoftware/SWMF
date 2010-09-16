@@ -2570,11 +2570,11 @@ contains
                   OpacityPlanckOut_I=OpacityPlanckOut_W, &
                   OpacityRosselandOut_I=OpacityRosselandOut_W)
 
-             OpacityPlanckOut_W = OpacityPlanckOut_W &
-                  *PlanckScaleFactor_I(iMaterial)
+             if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
+                  = OpacityPlanckOut_W*PlanckScaleFactor_I(iMaterial)
 
-             OpacityRosselandOut_W = OpacityRosselandOut_W &
-                  *RosselandScaleFactor_I(iMaterial)
+             if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
+                  = OpacityRosselandOut_W*RosselandScaleFactor_I(iMaterial)
              
           end if
 
