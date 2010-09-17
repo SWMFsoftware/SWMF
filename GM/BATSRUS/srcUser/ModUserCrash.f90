@@ -157,7 +157,7 @@ module ModUser
   real :: AssFactor = -1.0
 
   ! Indexes for lookup tables
-  integer:: iTablePPerE = -1, iTableEPerP = -1, iTableThermo = -1
+  integer:: iTablePPerRho = -1, iTableThermo = -1
   ! If UseElectronPressure is true (Pe_>1) then nThermo=6, otherwise it is 5
   integer, parameter:: nThermo=4+min(2,Pe_)
   ! Named indices for thermo lookup table
@@ -2113,8 +2113,7 @@ contains
 
     if(iProc==0) write(*,*) NameSub, 'EradBc1,EradBc2=', EradBc1, EradBc2
 
-    iTablePPerE     = i_lookup_table('pPerE(rho,e/rho)')
-    iTableEPerP     = i_lookup_table('ePerP(rho,p/rho)')
+    iTablePPerRho   = i_lookup_table('pPerRho(e/rho,rho)')
     iTableThermo    = i_lookup_table('Thermo(rho,p/rho)')
     iTableOpacity   = i_lookup_table('Opacity(rho,T)')
     do iMaterial = 0, nMaterial - 1
@@ -2125,14 +2124,12 @@ contains
     iTableSesame = i_lookup_table('Sesame(rho,T)')
 
     if(iProc==0) write(*,*) NameSub, &
-         ' iTablePPerE, EPerP, Thermo, Opacity, Opacity_I, iTableSesame = ', &
-         iTablePPerE, iTableEPerP, iTableThermo, iTableOpacity, &
+         ' iTablePPerRho, Thermo, Opacity, Opacity_I, iTableSesame = ', &
+         iTablePPerRho, iTableThermo, iTableOpacity, &
          iTableOpacity_I, iTableSesame
 
-    if(iTablePPerE > 0) &
-         call make_lookup_table(iTablePPerE, calc_table_value, iComm)
-    if(iTableEPerP > 0) &
-         call make_lookup_table(iTableEPerP, calc_table_value, iComm)
+    if(iTablePPerRho > 0) &
+         call make_lookup_table(iTablePPerRho, calc_table_value, iComm)
     if(iTableThermo > 0) &
          call make_lookup_table(iTableThermo, calc_table_value, iComm)
     if(iTableOpacity > 0) &
@@ -2176,11 +2173,11 @@ contains
     end if
 
 
-    if(iTable == iTablePPerE)then
+    if(iTable == iTablePPerRho)then
        ! Calculate p/e for Xe_, Be_ and Plastic_ for given Rho and e/Rho
        ! Au_ and Ay_ are optional
-       Rho = Arg1
-       e   = Arg2*Rho
+       Rho = Arg2
+       e   = Arg1*Rho
        do iMaterial = 0, nMaterial-1
           if(UseElectronPressure)then
              call eos(iMaterial, Rho, eElectronIn=e, pElectronOut=p)
@@ -2189,22 +2186,7 @@ contains
           end if
 
           ! Material index starts from 0 :-( hence the +1
-          Value_V(iMaterial+1) = p/e
-       end do
-    elseif(iTable == iTableEPerP)then
-       ! Calculate e/p for Xe_, Be_ and Plastic_ for given Rho and p/Rho
-       ! Au_ and Ay_ are optional
-       Rho = Arg1
-       p   = Arg2*Rho
-       do iMaterial = 0, nMaterial-1
-          if(UseElectronPressure)then
-             call eos(iMaterial, Rho, pElectronIn=p, eElectronOut=e)
-          else
-             call eos(iMaterial, Rho, PtotalIn=p, eTotalOut=e)
-          end if
-
-          ! Material index starts from 0 :-( hence the +1
-          Value_V(iMaterial+1) = e/p
+          Value_V(iMaterial+1) = p/Rho
        end do
     elseif(iTable == iTableThermo)then
        ! Calculate cV, gamma, HeatCond and Te for Xe_, Be_ and Plastic_ 
@@ -2312,19 +2294,11 @@ contains
 
       real :: NatomicSi
       !------------------------------------------------------------------------
-      if(iTable == iTablePPerE)then
-         ! Calculate p/e for Xe_, Be_ and Plastic_ for given Rho and e/Rho
-         Rho = Arg1
-         e   = Arg2*Rho
+      if(iTable == iTablePPerRho)then
+         ! Calculate p/rho for Xe_, Be_ and Plastic_ for given e/Rho and Rho
+         ! p/rho = e/rho*(gamma-1)
          do iMaterial = 0, nMaterial-1
-            Value_V(iMaterial+1) = Gamma_I(iMaterial) - 1.0
-         end do
-      elseif(iTable == iTableEPerP)then
-         ! Calculate e/p for Xe_, Be_ and Plastic_ for given Rho and p/Rho
-         Rho = Arg1
-         p   = Arg2*Rho
-         do iMaterial = 0, nMaterial-1
-            Value_V(iMaterial+1) = 1.0/(Gamma_I(iMaterial) - 1.0)
+            Value_V(iMaterial+1) = Arg1*(Gamma_I(iMaterial) - 1.0)
          end do
       elseif(iTable == iTableThermo)then
          ! Calculate cV, gamma, HeatCond and Te for Xe_, Be_ and Plastic_
@@ -2412,7 +2386,8 @@ contains
     ! Our gray opacity table are for three materials
     real    :: Opacity_V(2*max(3,nMaterial))
     real    :: GroupOpacity_W(2*nWave)
-    real, dimension(0:nMaterial-1) :: pPerE_I, EperP_I, Weight_I
+    real, dimension(0:nMaterial-1) :: pPerRho_I, Weight_I
+    real :: ePerRho
     real :: RhoToARatioSi_I(0:Plastic_) = 0.0
     real :: Level_I(3), LevelLeft, LevelRight
 
@@ -2600,15 +2575,15 @@ contains
       ! Do this for various cases: mixed cell or not, lookup tables or not
       if(present(EinternalIn))then
          ! Obtain the pressure from EinternalIn
-         if(iTablePPerE > 0)then
+         if(iTablePPerRho > 0)then
             ! Use lookup table
             if(RhoSi <= 0 .or. EinternalSi <= 0) call lookup_error( &
-                 'pPerE(Rho,Einternal)', RhoSi, EinternalSi)
+                 'pPerRho(Rho,Einternal)', RhoSi, EinternalSi)
 
-            call interpolate_lookup_table(iTablePPerE, RhoSi, &
-                 EinternalSi/RhoSi, pPerE_I, DoExtrapolate = .false.)
+            call interpolate_lookup_table(iTablePPerRho, &
+                 EinternalSi/RhoSi, RhoSi, pPerRho_I, DoExtrapolate = .false.)
             ! Use a number density weighted average
-            pSi = EinternalSi*sum(Weight_I*pPerE_I)
+            pSi = RhoSi*sum(Weight_I*pPerRho_I)
          else
             ! Use EOS function
             if(IsMix)then
@@ -2642,15 +2617,24 @@ contains
          pSi = State_V(p_)*No2Si_V(UnitP_)
          if(present(EinternalOut))then
             ! Obtain the internal energy from pressure
-            if(iTableEPerP > 0)then
+            ! Use the reversed lookup procedure
+            if(iTablePPerRho > 0)then
 
                if(RhoSi <= 0 .or. pSi <= 0) call lookup_error( &
-                    'ePerP(Rho,p)', RhoSi, pSi)
+                    'PPerRho(p/Rho,Rho,E/Rho_out)', pSi, RhoSi)
 
-               call interpolate_lookup_table(iTableEPerP, RhoSi, &
-                    pSi/RhoSi, EPerP_I, DoExtrapolate = .false.)
-               ! Use a number density weighted average
-               EinternalOut = pSi*sum(Weight_I*EPerP_I)
+               EinternalOut = 0.0
+               do jMaterial = 0, nMaterial-1
+                  if(Weight_I(jMaterial) < 1e-6) CYCLE
+                  call interpolate_lookup_table(iTablePPerRho, &
+                       iVal=jMaterial+1, &
+                       ValIn=pSi/RhoSi, Arg2In=RhoSi, &
+                       Value_V=pPerRho_I, Arg1Out=ePerRho, &
+                       DoExtrapolate = .false.)
+                  ! Use a number density weighted average
+                  EinternalOut = EinternalOut &
+                       + Weight_I(jMaterial)*ePerRho*RhoSi
+               end do
             else
                if(IsMix)then
                   call eos(RhoToARatioSi_I, pTotalIn=pSi, &
@@ -2733,17 +2717,16 @@ contains
       ! Do this for mixed cell or not, lookup tables or not
       if(present(EinternalIn))then
          ! Obtain electron pressure from the true electron internal energy
-         if(iTablePPerE > 0)then
+         if(iTablePPerRho > 0)then
             ! Use lookup table
-
             if(RhoSi <= 0 .or. EinternalSi <= 0) call lookup_error( &
-                 'pPerE_e(Rho,Eint)', RhoSi, EinternalSi)
+                 'pPerRho_e(Rho,Eint)', RhoSi, EinternalSi)
 
-            call interpolate_lookup_table(iTablePPerE, RhoSi, &
-                 EinternalSi/RhoSi, pPerE_I, DoExtrapolate = .false.)
+            call interpolate_lookup_table(iTablePPerRho, &
+                 EinternalSi/RhoSi, RhoSi, pPerRho_I, DoExtrapolate = .false.)
 
             ! Use a number density weighted average
-            pSi = EinternalSi*sum(Weight_I*pPerE_I)
+            pSi = RhoSi*sum(Weight_I*pPerRho_I)
          else
             ! Use inline electron EOS
             if(IsMix)then
@@ -2779,16 +2762,24 @@ contains
          ! Use this pressure to calculate the true electron internal energy
          pSi = State_V(Pe_)*No2Si_V(UnitP_)
          if(present(EinternalOut))then
-            if(iTableEPerP > 0)then
+            if(iTablePPerRho > 0)then
 
                if(RhoSi <= 0 .or. pSi <= 0) call lookup_error( &
-                    'EperP_e(Rho,p)', RhoSi, pSi)
+                    'PPerRho_e(p/Rho,Rho,E/Rho_out)', pSi, RhoSi)
 
-               call interpolate_lookup_table(iTableEPerP, RhoSi, &
-                    pSi/RhoSi, EPerP_I, DoExtrapolate = .false.)
+               EinternalOut = 0.0
+               do jMaterial = 0, nMaterial-1
+                  if(Weight_I(jMaterial) < 1e-6) CYCLE
+                  call interpolate_lookup_table(iTablePPerRho, &
+                       iVal=jMaterial+1, &
+                       ValIn=pSi/RhoSi, Arg2In=RhoSi, &
+                       Value_V=pPerRho_I, Arg1Out=ePerRho, &
+                       DoExtrapolate = .false.)
+                  ! Use a number density weighted average
+                  EinternalOut = EinternalOut &
+                       + Weight_I(jMaterial)*ePerRho*RhoSi
 
-               ! Use a number density weighted average
-               EinternalOut = pSi*sum(Weight_I*EPerP_I)
+               end do
             else
                if(IsMix)then
                   call eos(RhoToARatioSi_I, pElectronIn=pSi, &
