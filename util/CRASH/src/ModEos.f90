@@ -548,7 +548,7 @@ contains
     if(UseEosTable_I(iMaterial))then
        !We need only opacities
        call eos_generic(Natomic, &
-                  TeIn = Te, &
+                  TeIn = Te*cEvToK, &
                   OpacityPlanckOut_I = OpacityPlanckOut_I, &
                   OpacityRosselandOut_I = OpacityRosselandOut_I , &
                   iError= iError)
