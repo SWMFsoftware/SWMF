@@ -94,7 +94,7 @@ contains
   subroutine find_triangle(&
        nPoint, nTriangle, CoordIn_D, XyNode_DI, iNodeTriangle_II,&
        iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, IsTriangleFound, &
-       nX, nY, nTriangle_C, iTriangle_IC)
+       nTriangle_C, iTriangle_IC)
 
     ! Determine the triangle containing a given point. Calculate the
     ! weights for the 3 nodes if the weights are present.
@@ -115,36 +115,37 @@ contains
     real,    optional, intent(out):: Weight1, Weight2, Weight3
     logical, optional, intent(out):: IsTriangleFound
     
-    ! Size of optional lookup table
-    integer, optional, intent(in):: nX, nY
-
-    ! Number and indexes of triangles intersecting each cell
-    integer, optional, pointer   :: nTriangle_C(:,:)
-    integer, optional, pointer   :: iTriangle_IC(:,:,:)
+    ! Number and indexes of triangles intersecting cells in a uniform mesh
+    integer, optional, intent(inout):: nTriangle_C(:,:)
+    integer, optional, pointer      :: iTriangle_IC(:,:,:)
 
     integer, parameter:: x_=1, y_=2
 
     integer :: iTriangle
 
-    real, save:: xMin, xMax, yMin, yMax, DxInv, DyInv
+    ! Size of optional lookup mesh
+    integer:: nX, nY
+    ! Limits of domain and resolution of mesh
+    real   :: xMin, xMax, yMin, yMax, DxInv, DyInv
+
     integer:: iNode_I(3)
     real   :: x_I(3), y_I(3)
     integer:: i, j, n, iLoop, iMin, iMax, jMin, jMax
     !--------------------------------------------------------------------------
 
-    if(present(nX) .and. present(nY) .and. &
-       present(nTriangle_C) .and. present(iTriangle_IC))then
+    if(present(nTriangle_C) .and. present(iTriangle_IC))then
 
-       if(.not.associated(nTriangle_C))then
+       nX    = size(nTriangle_C, DIM=1)
+       nY    = size(nTriangle_C, DIM=2)
 
-          xMin  = minval(XyNode_DI(1,:))
-          xMax  = maxval(XyNode_DI(1,:))
-          yMin  = minval(XyNode_DI(2,:))
-          yMax  = maxval(XyNode_DI(2,:))
-          DxInv = nX/(xMax - xMin)
-          DyInv = nY/(yMax - yMin)
+       xMin  = minval(XyNode_DI(1,:))
+       xMax  = maxval(XyNode_DI(1,:))
+       yMin  = minval(XyNode_DI(2,:))
+       yMax  = maxval(XyNode_DI(2,:))
+       DxInv = nX/(xMax - xMin)
+       DyInv = nY/(yMax - yMin)
 
-          allocate(nTriangle_C(nX,nY))
+       if(nTriangle_C(1,1)<0)then
           do iLoop = 1, 2
              nTriangle_C = 0
              do iTriangle = 1, nTriangle
@@ -171,11 +172,10 @@ contains
                 allocate(iTriangle_IC(n,nX,nY))
              end if
           end do
-
        end if
 
        i = max(1, min(nX, floor(DxInv*(CoordIn_D(1) - xMin)) + 1))
-       j = max(1, min(nX, floor(DyInv*(CoordIn_D(2) - yMin)) + 1))
+       j = max(1, min(nY, floor(DyInv*(CoordIn_D(2) - yMin)) + 1))
 
        do n = 1, nTriangle_C(i,j)
           iTriangle = iTriangle_IC(n,i,j)
@@ -222,7 +222,7 @@ contains
       iNode1 = iNodeTriangle_II(1,iTriangle)
       iNode2 = iNodeTriangle_II(2,iTriangle)
       iNode3 = iNodeTriangle_II(3,iTriangle)
-
+      !--------------------------------------------------------------------
       ! fill in x,y pairs for current triangle nodes
       x1 = XyNode_DI(1,iNode1)
       y1 = XyNode_DI(2,iNode1)
@@ -257,6 +257,7 @@ contains
        else
           is_inside_triangle = .false.
        end if
+
      end function is_inside_triangle
 
   end subroutine find_triangle
@@ -1841,7 +1842,8 @@ contains
     real   :: Area, Weight1, Weight2, Weight3
     integer:: i1, i2, n
     integer, parameter:: nX=100, nY=100
-    integer, pointer, save:: nTriangle_C(:,:), iTriangle_IC(:,:,:)
+    integer:: nTriangle_C(nX,nY)
+    integer, pointer, save:: iTriangle_IC(:,:,:)
     !------------------------------------------------------------------------
     
     ! Create a slanted mesh
@@ -1933,11 +1935,11 @@ contains
          ' error: Weight1..3=, ', Weight1, Weight2, Weight3, &
          ' should be ', 0.5/Area, (Area-0.6)/Area, 0.1/Area
 
-    nullify(nTriangle_C, iTriangle_IC)
-    call find_triangle(&
-         nPoint, nTriangle, (/11.1, 3.1/), CoordXy_DI, iNodeTriangle_II,&
+    nTriangle_C(1,1) = -1
+    call find_triangle(                                                     &
+         nPoint, nTriangle, (/11.1, 3.1/), CoordXy_DI, iNodeTriangle_II,    &
          iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, IsTriangleFound,&
-         nX, nY, nTriangle_C, iTriangle_IC)
+         nTriangle_C, iTriangle_IC)
 
     if(.not. IsTriangleFound) write(*,*) NameSub, &
          ' error: IsTriangleFound 2nd should be true'
@@ -1965,10 +1967,10 @@ contains
          ' error: Weight1..3=, ', Weight1, Weight2, Weight3, &
          ' should be ', 0.5/Area, (Area-0.6)/Area, 0.1/Area
 
-    call find_triangle(&
-         nPoint, nTriangle, (/53.0, 9.0/), CoordXy_DI, iNodeTriangle_II,&
+    call find_triangle(                                                     &
+         nPoint, nTriangle, (/53.0, 9.0/), CoordXy_DI, iNodeTriangle_II,    &
          iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, IsTriangleFound,&
-         100, 100, nTriangle_C, iTriangle_IC)
+         nTriangle_C, iTriangle_IC)
 
     if(.not. IsTriangleFound) write(*,*) NameSub, &
          ' error: IsTriangleFound 3rd should be true'
