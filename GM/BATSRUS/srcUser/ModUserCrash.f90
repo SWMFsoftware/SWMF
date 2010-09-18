@@ -105,7 +105,8 @@ module ModUser
   integer           :: nCellHyadesMesh      = -1 ! number of mesh points
   integer           :: nCellHyadesMesh_D(3) = -1 ! no. mesh cells per dimension
   integer           :: nVarHyadesMesh       = -1 ! number of variables
-  real, allocatable :: DataHyadesMesh_VC(:,:)    ! cell centered Hyades data
+  real, allocatable :: CoordHyadesMesh_DC(:,:)   ! mesh centered Hyades coords
+  real, allocatable :: DataHyadesMesh_VC(:,:)    ! mesh centered Hyades data
   integer           :: iXHyadesMesh         = -1 ! index of x coordinate
   integer           :: iRHyadesMesh         = -1 ! index of r coordinate
   integer           :: iUxHyades            = -1 ! index of x velocity
@@ -118,6 +119,7 @@ module ModUser
   integer           :: nCellHyades          = -1 ! number of mesh points
   integer           :: nCellHyades_D(3)     = -1 ! no. mesh cells per dimension
   integer           :: nVarHyades           = -1 ! number of variables
+  real, allocatable :: CoordHyades_DC(:,:)       ! cell centered Hyades coords
   real, allocatable :: DataHyades_VC(:,:)        ! cell centered Hyades data
   integer           :: iXHyades             = -1 ! index of x coordinate
   integer           :: iRHyades             = -1 ! index of r coordinate
@@ -464,14 +466,17 @@ contains
     !------------------------------------------------------------------------
 
     iBlock = GlobalBlk
+    call timing_start(NameSub)
 
     if(UseHyadesFile)then
+       call timing_start('interpolate_hyades')
        ! interpolate Hyades output
        if(nDimHyades == 1)then
           call interpolate_hyades1d(iBlock)
        else
           call interpolate_hyades2d(iBlock)
        end if
+       call timing_stop('interpolate_hyades')
     end if
 
     if(UseElectronPressure .and. (UseTube .or. UseGold))then
@@ -696,6 +701,7 @@ contains
 
     end do; end do; end do
 
+    call timing_stop(NameSub)
   contains
     !==========================================================================
     subroutine set_small_radiation_energy
@@ -742,7 +748,7 @@ contains
     integer           :: nString
 
     ! Variables for reading in coordinates and variables
-    real, allocatable:: Coord_DI(:,:), Var_VI(:,:)
+    real, allocatable:: Var_VI(:,:)
 
     ! Variables for setting level set functions
     integer :: i, iCell, iMaterial, jMaterial
@@ -928,11 +934,12 @@ contains
     allocate( &
          DataHyadesMesh_VC(nDimHyades + nVarHyadesMesh, nCellHyadesMesh), &
          DataHyades_VC(nDimHyades + nVarHyades, nCellHyades), &
-         Coord_DI(nDimHyades,nCellHyadesMesh), &
+         CoordHyades_DC(nDimHyades,nCellHyades), &
+         CoordHyadesMesh_DC(nDimHyades,nCellHyadesMesh), &
          Var_VI(nVarHyadesAll,nCellHyadesMesh) )
 
     call read_plot_file(NameHyadesFile, &
-         CoordOut_DI = Coord_DI, VarOut_VI = Var_VI)
+         CoordOut_DI = CoordHyadesMesh_DC, VarOut_VI = Var_VI)
 
     iCell = 0
     iCellMesh = 0
@@ -941,7 +948,7 @@ contains
 
        ! Convert from CGS to normalized units and store in DataHyadesMesh_VC
        DataHyadesMesh_VC(:nDimHyades,iCellMesh) = &
-            Coord_DI(:,iCellMesh)*Hyades2No_V(:nDimHyades)
+            CoordHyadesMesh_DC(:,iCellMesh)*Hyades2No_V(:nDimHyades)
        ! the staggered velocity components
        do iVar = nDimHyades + 1, nDimHyades + nVarHyadesMesh
           DataHyadesMesh_VC(iVar,iCellMesh) = &
@@ -949,7 +956,7 @@ contains
             *Hyades2No_V(iVarMesh_I(iVar))
        end do
 
-       ! The first rows in HYADES does only contain mesh data
+       ! The first rows in HYADES only contains mesh data
        if(UseZoneCenter .and. (i == 1 .or. j == 1)) CYCLE
 
        iCell = iCell + 1
@@ -972,7 +979,7 @@ contains
        end do
     end do; end do
 
-    deallocate(Coord_DI, Var_VI)
+    deallocate(Var_VI)
 
     if(iMaterialHyades > 0)then
        ! Vacuum (5) --> Polyimid
@@ -1264,7 +1271,9 @@ contains
 
     integer, save              :: nTriangle, nTriangleMesh
     integer, allocatable, save :: &
-         iNodeTriangle_II(:,:), iNodeTriangleMesh_II(:,:)
+         iNodeTriangle_II(:,:), iNodeTriangleMesh_II(:,:), &
+         nTriangle_C(:,:), nTriangleMesh_C(:,:)
+    integer, pointer, save     :: iTriangle_IC(:,:,:), iTriangleMesh_IC(:,:,:)
     real, allocatable,    save :: DataHyades_V(:), DataHyadesMesh_V(:)
     real                       :: LevelHyades_V(0:nMaterial-1)
     real                       :: EradHyades_V(nWave)
@@ -1282,6 +1291,7 @@ contains
        ! allocate variables and do triangulation
        allocate(iNodeTriangle_II(3,2*nCellHyades))
        allocate(DataHyades_V(nDimHyades + nVarHyades))
+
        if(UseDelaunay)then
           call calc_triangulation( &
                nCellHyades, DataHyades_VC( (/iXHyades, iRHyades/), :), &
@@ -1292,6 +1302,10 @@ contains
                DataHyades_VC( (/iXHyades, iRHyades/), :), &
                iNodeTriangle_II, nTriangle)
        end if
+       ! Use a uniform mesh for fast search algorithm
+       allocate(nTriangle_C(4*nCellHyades_D(1),4*nCellHyades_D(2)))
+       nTriangle_C(1,1) = -1
+       CoordHyades_DC = DataHyades_VC( (/iXHyades, iRHyades/),:)
 
        allocate(DataHyadesMesh_V(nDimHyades + nVarHyadesMesh))
        if(UseZoneCenter)then
@@ -1306,6 +1320,8 @@ contains
                   DataHyadesMesh_VC( (/iXHyadesMesh, iRHyadesMesh/), :), &
                   iNodeTriangleMesh_II, nTriangleMesh)
           end if
+          allocate(nTriangle_C(4*nCellHyadesMesh_D(1),4*nCellHyadesMesh_D(2)))
+          nTriangle_C(1,1) = -1
        end if
     end if
 
@@ -1343,9 +1359,10 @@ contains
              ! Find the Hyades triangle around this position
              call find_triangle(&
                   nCellHyades, nTriangle, &
-                  (/x, r/), DataHyades_VC( (/iXHyades, iRHyades/),:), &
-                  iNodeTriangle_II(:,1:nTriangle), &
-                  iNode1, iNode2, iNode3, Weight1, Weight2, Weight3)
+                  (/x, r/), CoordHyades_DC, &
+                  iNodeTriangle_II, &
+                  iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, &
+                  nTriangle_C=nTriangle_C, iTriangle_IC=iTriangle_IC)
           end if
 
           ! Check if the 3 points consist of the same material or not
@@ -1406,9 +1423,11 @@ contains
                 ! Find the Hyades triangle around this position
                 call find_triangle(&
                      nCellHyadesMesh, nTriangleMesh, (/x, r/), &
-                     DataHyadesMesh_VC( (/iXHyadesMesh, iRHyadesMesh/),:), &
-                     iNodeTriangleMesh_II(:,1:nTriangleMesh), &
-                     iNode1, iNode2, iNode3, Weight1, Weight2, Weight3)
+                     CoordHyadesMesh_DC, &
+                     iNodeTriangleMesh_II, &
+                     iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, &
+                     nTriangle_C=nTriangleMesh_C, &
+                     iTriangle_IC=iTriangleMesh_IC)
              end if
              ! Weight of the 3 nodes of the triangle
              WeightNode_I    = (/ Weight1, Weight2, Weight3 /)
