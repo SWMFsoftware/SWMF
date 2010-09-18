@@ -1320,8 +1320,9 @@ contains
                   DataHyadesMesh_VC( (/iXHyadesMesh, iRHyadesMesh/), :), &
                   iNodeTriangleMesh_II, nTriangleMesh)
           end if
-          allocate(nTriangle_C(4*nCellHyadesMesh_D(1),4*nCellHyadesMesh_D(2)))
-          nTriangle_C(1,1) = -1
+          allocate( &
+               nTriangleMesh_C(4*nCellHyadesMesh_D(1),4*nCellHyadesMesh_D(2)))
+          nTriangleMesh_C(1,1) = -1
        end if
     end if
 
