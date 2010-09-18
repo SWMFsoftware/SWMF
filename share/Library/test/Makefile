@@ -26,6 +26,7 @@ help:
 	@echo "   test_ray_trace        - test CON_ray_trace"
 	@echo "   test_sort             - test ModSort"
 	@echo "   test_time_convert     - test ModTimeConvert"
+	@echo "   test_triangulate      - test ModTriangulate"
 	@echo "   test_utilities        - test ModUtilities"
 	@echo "   test                  - test all the above"
 	@echo
@@ -419,3 +420,29 @@ test_utilities:
 
 distclean: clean
 	rm -rf *.tmp *.diff test*.out
+
+
+#######################################################################
+
+OBJ_TRIANGULATE = \
+	test_triangulate.o \
+	../src/ModTriangulate.o
+
+test_triangulate_exe:
+	@(cd ../src; make ModTriangulate.o)
+	@make test_triangulate.o
+	${LINK.f90} -o test_triangulate.exe ${OBJ_TRIANGULATE} ${Lflag2}
+
+test_triangulate:
+	@echo test_triangulate starting		>  test_triangulate.diff
+	@make test_triangulate_exe		>> test_triangulate.diff
+	@echo ./test_triangulate_exe		>> test_triangulate.diff
+	./test_triangulate.exe 
+
+
+#-@(./test_triangulate.exe > test_triangulate.tmp)
+#-@(diff test_triangulate.tmp test_triangulate.log \
+					>  test_triangulate.diff)
+#@ls -l test_triangulate.diff
+
+#######################################################################
