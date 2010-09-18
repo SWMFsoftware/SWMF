@@ -7,32 +7,18 @@ T			DoEcho
 T			UseBatl
 
 #LOOKUPTABLE
-pPerE(rho,e/rho)        NameTable
+pPerRho(e/rho,rho)	NameTable
 save                    NameCommand
-table_pPerE.out         NameFile
+table_pPerRho.out	NameFile
 real4                   TypeFile
-pPerE(rho,e/rho) for Xe, Be, Plastic
-logrho logE/Rho pPerEXe pPerEBe pPerEPl
+pPerRho(e/rho,rho) for Xe, Be, Plastic
+logE/Rho logrho pPerRhoXe pPerRhoBe pPerRhoPl
 20                      nIndex1
-0.01                    Index1Min
-1e6                     Index1Max
+1e5                     Index1Min
+1e14                    Index1Max
 20                      nIndex2
-1e5                     Index2Min
-1e14                    Index2Max
-
-#LOOKUPTABLE
-ePerP(rho,p/rho)        NameTable
-save                    NameCommand
-table_ePerP.out         NameFile
-real4                   TypeFile
-ePerP(rho,p/rho) for Xe, Be, Plastic
-logrho logpPerRho ePerPXe ePerPBe ePerPPl
-20                      nIndex1
-0.01                    Index1Min
-1e6                     Index1Max
-20                      nIndex2
-1e5                     Index2Min
-1e13                    Index2Max
+0.01                    Index2Min
+1e6                     Index2Max
 
 ! notation:
 ! T -> electron temperature
@@ -93,8 +79,8 @@ float			xMinBc
 float			xMaxBc
 float			yMinBc
 float			yMaxBc
-float			zMinBc
-float			zMaxBc
+reflect			zMinBc
+reflect			zMaxBc
 
 #USERINPUTBEGIN ----------------
 
