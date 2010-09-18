@@ -55,6 +55,7 @@ test:   test_axes \
 	test_ray_trace \
 	test_sort \
 	test_time_convert \
+	test_triangulate \
 	test_utilities
 	@echo ---------------------------------------------------------
 	@ls -l *.diff
@@ -437,12 +438,9 @@ test_triangulate:
 	@echo test_triangulate starting		>  test_triangulate.diff
 	@make test_triangulate_exe		>> test_triangulate.diff
 	@echo ./test_triangulate_exe		>> test_triangulate.diff
-	./test_triangulate.exe 
-
-
-#-@(./test_triangulate.exe > test_triangulate.tmp)
-#-@(diff test_triangulate.tmp test_triangulate.log \
-					>  test_triangulate.diff)
-#@ls -l test_triangulate.diff
+	-@(./test_triangulate.exe > test_triangulate.tmp)
+	-@(diff test_triangulate.tmp test_triangulate.log \
+						>  test_triangulate.diff)
+	@ls -l test_triangulate.diff
 
 #######################################################################

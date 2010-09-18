@@ -7,6 +7,7 @@ module ModTriangulate
   public calc_triangulation  ! Delaunay triangulation of a set of points in 2D
   public find_triangle       ! Find the triangle containing a point
   public triangle_area       ! Returns the area of a triangle
+  public test_triangulation  ! Unit test
 
 contains
 
@@ -92,7 +93,8 @@ contains
 
   subroutine find_triangle(&
        nPoint, nTriangle, CoordIn_D, XyNode_DI, iNodeTriangle_II,&
-       iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, IsTriangleFound)
+       iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, IsTriangleFound, &
+       nX, nY, nTriangle_C, iTriangle_IC)
 
     ! Determine the triangle containing a given point. Calculate the
     ! weights for the 3 nodes if the weights are present.
@@ -112,54 +114,79 @@ contains
 
     real,    optional, intent(out):: Weight1, Weight2, Weight3
     logical, optional, intent(out):: IsTriangleFound
+    
+    ! Size of optional lookup table
+    integer, optional, intent(in):: nX, nY
+
+    ! Number and indexes of triangles intersecting each cell
+    integer, optional, pointer   :: nTriangle_C(:,:)
+    integer, optional, pointer   :: iTriangle_IC(:,:,:)
 
     integer, parameter:: x_=1, y_=2
 
-    real    :: x1, x2, x3, y1, y2, y3
-    real    :: Area1, Area2, Area3, AreaSum
-    integer :: iTriangle, iLoc_I(1)
+    integer :: iTriangle
+
+    real, save:: xMin, xMax, yMin, yMax, DxInv, DyInv
+    integer:: iNode_I(3)
+    real   :: x_I(3), y_I(3)
+    integer:: i, j, n, iLoop, iMin, iMax, jMin, jMax
     !--------------------------------------------------------------------------
 
-    do iTriangle = 1, nTriangle 
+    if(present(nX) .and. present(nY) .and. &
+       present(nTriangle_C) .and. present(iTriangle_IC))then
 
-       iNode1 = iNodeTriangle_II(1,iTriangle)
-       iNode2 = iNodeTriangle_II(2,iTriangle)
-       iNode3 = iNodeTriangle_II(3,iTriangle)
+       if(.not.associated(nTriangle_C))then
 
-       ! fill in x,y pairs for current triangle nodes
-       x1 = XyNode_DI(1,iNode1)
-       y1 = XyNode_DI(2,iNode1)
+          xMin  = minval(XyNode_DI(1,:))
+          xMax  = maxval(XyNode_DI(1,:))
+          yMin  = minval(XyNode_DI(2,:))
+          yMax  = maxval(XyNode_DI(2,:))
+          DxInv = nX/(xMax - xMin)
+          DyInv = nY/(yMax - yMin)
 
-       x2 = XyNode_DI(1,iNode2)
-       y2 = XyNode_DI(2,iNode2)
+          allocate(nTriangle_C(nX,nY))
+          do iLoop = 1, 2
+             nTriangle_C = 0
+             do iTriangle = 1, nTriangle
+                iNode_I = iNodeTriangle_II(:,iTriangle)
+                x_I   = XyNode_DI(1,iNode_I)
+                y_I   = XyNode_DI(2,iNode_I)
+                iMin = max(1,  floor(DxInv*(minval(x_I) - xMin)) + 1)
+                iMax = min(nX, floor(DxInv*(maxval(x_I) - xMin)) + 1)
+                jMin = max(1,  floor(DyInv*(minval(y_I) - yMin)) + 1)
+                jMax = min(nY, floor(DyInv*(maxval(y_I) - yMin)) + 1)
 
-       x3 = XyNode_DI(1,iNode3)
-       y3 = XyNode_DI(2,iNode3)
+                nTriangle_C(iMin:iMax,jMin:jMax) = &
+                     nTriangle_C(iMin:iMax,jMin:jMax) + 1
 
-       ! Check if triangle contains point or if point lies on edge.
-       ! Area1 is twice the area of the triangle formed by Node2, Node3 
-       ! and the point. Area1 is zero if the point lies on the Node2-Node3
-       ! edge and positive if point lies to the left of the Node2-Node3 vector.
+                if(iLoop == 1)CYCLE
+                
+                do j = jMin, jMax; do i = iMin, iMax
+                   n = nTriangle_C(i,j)
+                   iTriangle_IC(n,i,j) = iTriangle
+                end do; end do
+             end do
+             if(iLoop == 1) then
+                n = maxval(nTriangle_C)
+                allocate(iTriangle_IC(n,nX,nY))
+             end if
+          end do
 
-       Area1 = (CoordIn_D(y_)-y2)*(x3-x2) - (CoordIn_D(x_)-x2)*(y3-y2)
-       Area2 = (CoordIn_D(y_)-y3)*(x1-x3) - (CoordIn_D(x_)-x3)*(y1-y3)
-       Area3 = (CoordIn_D(y_)-y1)*(x2-x1) - (CoordIn_D(x_)-x1)*(y2-y1)
-
-       ! The point is inside the triangle if all areas are positive
-       if (Area1 >= 0.0 .and. Area2 >= 0.0 .and. Area3 >=0.0) then
-          if(present(IsTriangleFound)) IsTriangleFound = .true.
-          if(present(Weight1)) then
-             ! The node weights are proportional to the area of 
-             ! the opposite triangle.
-             AreaSum = max(Area1 + Area2 + Area3, tiny(1.0))
-             Weight1 = Area1/AreaSum
-             Weight2 = Area2/AreaSum
-             Weight3 = Area3/AreaSum
-          end if
-          RETURN
        end if
-       
-    enddo
+
+       i = max(1, min(nX, floor(DxInv*(CoordIn_D(1) - xMin)) + 1))
+       j = max(1, min(nX, floor(DyInv*(CoordIn_D(2) - yMin)) + 1))
+
+       do n = 1, nTriangle_C(i,j)
+          iTriangle = iTriangle_IC(n,i,j)
+          if(is_inside_triangle()) RETURN
+       end do
+
+    else
+       do iTriangle = 1, nTriangle 
+          if(is_inside_triangle()) RETURN
+       end do
+    end if
 
     ! If no triangle contains the CoordIn_D point and IsTriangleFound is
     ! present then return a false value
@@ -169,10 +196,8 @@ contains
     end if
 
     ! If IsTriangleFound is not present then set iNode1 to the closest node
-    iLoc_I = minloc( (XyNode_DI(x_,:)-CoordIn_D(x_))**2 &
-         +           (XyNode_DI(y_,:)-CoordIn_D(y_))**2 )
-
-    iNode1 = iLoc_I(1)
+    iNode1 = minloc( (XyNode_DI(x_,:)-CoordIn_D(x_))**2 &
+         +           (XyNode_DI(y_,:)-CoordIn_D(y_))**2 , DIM=1)
 
     ! Set iNode2 and iNode3 to valid values so that general interpolation
     ! formulas can work but assign same index to signal that there is no
@@ -186,6 +211,53 @@ contains
        Weight2 = 0.0
        Weight3 = 0.0
     end if
+
+  contains
+    !=======================================================================
+    logical function is_inside_triangle()
+
+      real    :: x1, x2, x3, y1, y2, y3
+      real    :: Area1, Area2, Area3, AreaSum
+      
+      iNode1 = iNodeTriangle_II(1,iTriangle)
+      iNode2 = iNodeTriangle_II(2,iTriangle)
+      iNode3 = iNodeTriangle_II(3,iTriangle)
+
+      ! fill in x,y pairs for current triangle nodes
+      x1 = XyNode_DI(1,iNode1)
+      y1 = XyNode_DI(2,iNode1)
+
+      x2 = XyNode_DI(1,iNode2)
+      y2 = XyNode_DI(2,iNode2)
+
+      x3 = XyNode_DI(1,iNode3)
+      y3 = XyNode_DI(2,iNode3)
+
+      ! Check if triangle contains point or if point lies on edge.
+      ! Area1 is twice the area of the triangle formed by Node2, Node3 
+      ! and the point. Area1 is zero if the point lies on the Node2-Node3
+      ! edge and positive if point lies to the left of the Node2-Node3 vector.
+
+      Area1 = (CoordIn_D(y_)-y2)*(x3-x2) - (CoordIn_D(x_)-x2)*(y3-y2)
+      Area2 = (CoordIn_D(y_)-y3)*(x1-x3) - (CoordIn_D(x_)-x3)*(y1-y3)
+      Area3 = (CoordIn_D(y_)-y1)*(x2-x1) - (CoordIn_D(x_)-x1)*(y2-y1)
+
+      ! The point is inside the triangle if all areas are positive
+      if (Area1 >= 0.0 .and. Area2 >= 0.0 .and. Area3 >=0.0) then
+         if(present(IsTriangleFound)) IsTriangleFound = .true.
+         if(present(Weight1)) then
+            ! The node weights are proportional to the area of 
+            ! the opposite triangle.
+            AreaSum = max(Area1 + Area2 + Area3, tiny(1.0))
+            Weight1 = Area1/AreaSum
+            Weight2 = Area2/AreaSum
+            Weight3 = Area3/AreaSum
+          end if
+          is_inside_triangle = .true.
+       else
+          is_inside_triangle = .false.
+       end if
+     end function is_inside_triangle
 
   end subroutine find_triangle
 
@@ -1755,5 +1827,163 @@ contains
     ledg = e
 
   end subroutine vbedg
+
+  !============================================================================
+  subroutine test_triangulation
+
+    character(len=*), parameter:: NameSub = 'test_triangulation'
+
+    integer, parameter:: n1 = 5, n2 = 3, nPoint = n1*n2
+    real   :: CoordXy_DI(2,n1*n2)
+    integer:: iNodeTriangle_II(3,2*n1*n2)
+    logical:: IsTriangleFound
+    integer:: nTriangle, iNode1, iNode2, iNode3
+    real   :: Area, Weight1, Weight2, Weight3
+    integer:: i1, i2, n
+    integer, parameter:: nX=100, nY=100
+    integer, pointer, save:: nTriangle_C(:,:), iTriangle_IC(:,:,:)
+    !------------------------------------------------------------------------
+    
+    ! Create a slanted mesh
+    n = 0
+    do i2 = 1, n2
+       do i1 = 1, n1
+          n = n + 1
+          CoordXy_DI(:,n) = (/ 10.0*i1 + i2, 3.0*i2 /)
+       end do
+    end do
+
+    write(*,'(a)')'Testing mesh_triangulation'
+    call mesh_triangulation(n1, n2, CoordXy_DI, &
+         iNodeTriangle_II, nTriangle)
+
+    if(nTriangle /= 2*(n1-1)*(n2-1))write(*,*) NameSub, &
+         ' error: nTriangle=', nTriangle, ' should be', 2*(n1-1)*(n2-1)
+
+    if(any( iNodeTriangle_II(:,1) /= (/ 2, n1+1, 1 /))) write(*,*) NameSub, &
+         ' error: iNodeTriangle_II(:,1) =', iNodeTriangle_II(:,1) , &
+         ' should be ', 2, n1+1, 1
+
+    if(any( iNodeTriangle_II(:,nTriangle) /= (/ n1*(n2-1), n1*n2, n1*n2-1 /)))&
+         write(*,*) NameSub, &
+         ' error: iNodeTriangle_II(:,1) =', iNodeTriangle_II(:,nTriangle) , &
+         ' should be ', n1*(n2-1), n1*n2, n1*n2-1
+ 
+    write(*,'(a)')'Testing calc_triangulation'
+    
+    call calc_triangulation(nPoint, CoordXy_DI, &
+         iNodeTriangle_II, nTriangle)
+
+    if(nTriangle /= 2*(n1-1)*(n2-1))write(*,*) NameSub, &
+         ' error: nTriangle=', nTriangle, ' should be', 2*(n1-1)*(n2-1)
+
+    if(any( iNodeTriangle_II(:,1) /= (/ n1+1, 1, 2 /))) write(*,*) NameSub, &
+         ' error: iNodeTriangle_II(:,1) =', iNodeTriangle_II(:,1) , &
+         ' should be ', n1+1, 1, 2
+
+    if(any( iNodeTriangle_II(:,nTriangle) /= (/ n1*n2-1, n1*(n2-1), n1*n2 /)))&
+         write(*,*) NameSub, &
+         ' error: iNodeTriangle_II(:,1) =', iNodeTriangle_II(:,nTriangle) , &
+         ' should be ', n1*n2-1, n1*(n2-1), n1*n2
+
+    write(*,'(a)')'Testing triangle_area'
+
+    Area = triangle_area(CoordXy_DI(:,iNodeTriangle_II(:,1)))
+    if(abs(Area - 15.0) > 1e-6) write(*,*) NameSub, &
+         ' error: Area = ', Area, ' should be 15'
+ 
+    write(*,'(a)')'Testing find_triangle'
+    ! test point outside of region with IsTriangleFound logical
+    call find_triangle(&
+         nPoint, nTriangle, (/10.9, 2.9/), CoordXy_DI, iNodeTriangle_II,&
+         iNode1, iNode2, iNode3, IsTriangleFound=IsTriangleFound)
+
+    if(IsTriangleFound) write(*,*) NameSub, &
+         ' error: IsTriangleFound should be false'
+
+    ! test point outside of region without IsTriangleFound logical
+    call find_triangle(&
+         nPoint, nTriangle, (/10.9, 2.9/), CoordXy_DI, iNodeTriangle_II,&
+         iNode1, iNode2, iNode3, Weight1, Weight2, Weight3)
+
+    if(any( (/iNode1, iNode2, iNode3/) /= (/ 1, 1, 1 /))) write(*,*) NameSub, &
+          ' error: iNode1..3=', iNode1, iNode2, iNode3, &
+          ' should be ', 1, 1, 1
+
+    if(maxval( abs( (/ Weight1 - 1.0, Weight2, Weight3 /)) ) > 1e-6) &
+         write(*,*) NameSub, &
+         ' error: Weight1..3=, ', Weight1, Weight2, Weight3, &
+         ' should be 1, 0, 0'
+    
+    ! test point inside the first triangle
+    call find_triangle(&
+         nPoint, nTriangle, (/11.1, 3.1/), CoordXy_DI, iNodeTriangle_II,&
+         iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, IsTriangleFound)
+
+    if(.not. IsTriangleFound) write(*,*) NameSub, &
+         ' error: IsTriangleFound 1st should be true'
+
+    if(any( (/iNode1, iNode2, iNode3/) /= iNodeTriangle_II(:,1) )) &
+          write(*,*) NameSub, 'error: iNode1..3=', iNode1, iNode2, iNode3, &
+          ' should be ', iNodeTriangle_II(:,1)
+
+    if( 1e-6 < maxval(abs( &
+         (/Weight1-0.5/Area, Weight2-(Area-0.6)/Area, Weight3-0.1/Area/)))) &
+         write(*,*) NameSub, &
+         ' error: Weight1..3=, ', Weight1, Weight2, Weight3, &
+         ' should be ', 0.5/Area, (Area-0.6)/Area, 0.1/Area
+
+    nullify(nTriangle_C, iTriangle_IC)
+    call find_triangle(&
+         nPoint, nTriangle, (/11.1, 3.1/), CoordXy_DI, iNodeTriangle_II,&
+         iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, IsTriangleFound,&
+         nX, nY, nTriangle_C, iTriangle_IC)
+
+    if(.not. IsTriangleFound) write(*,*) NameSub, &
+         ' error: IsTriangleFound 2nd should be true'
+
+    if(nTriangle_C(1,1) /= 1)write(*,*) NameSub, &
+         'error nTriangle_C(1,1)=',nTriangle_C(1,1),' should be 1'
+
+    if(iTriangle_IC(1,1,1) /= 1)write(*,*) NameSub, &
+         'error iTriangle_IC(1,1,1)=',iTriangle_IC(1,1,1),' should be 1'
+
+    if(nTriangle_C(nX,nY) /= 1)write(*,*) NameSub, &
+         'error nTriangle_C(nX,nY)=',nTriangle_C(nX,nY),' should be 1'
+
+    if(iTriangle_IC(1,nX,nY) /= nTriangle)write(*,*) NameSub, &
+         'error iTriangle_IC(1,nX,nY)=',iTriangle_IC(1,nX,nY),&
+         ' should be ', nTriangle
+
+    if(any( (/iNode1, iNode2, iNode3/) /= iNodeTriangle_II(:,1) )) &
+          write(*,*) NameSub, 'error: iNode1..3=', iNode1, iNode2, iNode3, &
+          ' should be ', iNodeTriangle_II(:,1)
+
+    if( 1e-6 < maxval(abs( &
+         (/Weight1-0.5/Area, Weight2-(Area-0.6)/Area, Weight3-0.1/Area/)))) &
+         write(*,*) NameSub, &
+         ' error: Weight1..3=, ', Weight1, Weight2, Weight3, &
+         ' should be ', 0.5/Area, (Area-0.6)/Area, 0.1/Area
+
+    call find_triangle(&
+         nPoint, nTriangle, (/53.0, 9.0/), CoordXy_DI, iNodeTriangle_II,&
+         iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, IsTriangleFound,&
+         100, 100, nTriangle_C, iTriangle_IC)
+
+    if(.not. IsTriangleFound) write(*,*) NameSub, &
+         ' error: IsTriangleFound 3rd should be true'
+
+    if(any( (/iNode1, iNode2, iNode3/) /= iNodeTriangle_II(:,nTriangle) )) &
+          write(*,*) NameSub, 'error: iNode1..3=', iNode1, iNode2, iNode3, &
+          ' should be ', iNodeTriangle_II(:,nTriangle)
+
+    if( 1e-6 < maxval(abs( &
+         (/Weight1, Weight2, Weight3-1.0/)))) &
+         write(*,*) NameSub, &
+         ' error: Weight1..3=, ', Weight1, Weight2, Weight3, &
+         ' should be 0, 0, 1'
+
+
+  end subroutine test_triangulation
 
 end module ModTriangulate
