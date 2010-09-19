@@ -979,6 +979,10 @@ contains
        end do
     end do; end do
 
+    CoordHyades_DC = DataHyades_VC( (/iXHyades, iRHyades/),:)
+    ! Make CoordHyadesMesh_DC dimensionless
+    if(UseZoneCenter) CoordHyadesMesh_DC = DataHyadesMesh_VC(:nDimHyades,:)
+
     deallocate(Var_VI)
 
     if(iMaterialHyades > 0)then
@@ -1157,7 +1161,7 @@ contains
     use BATL_size,           ONLY: nJ, nK, MinI, MaxI
     use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
     use ModAdvance,    ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
-         Erad_, UseElectronPressure, Pe_
+         Erad_, UseElectronPressure
     use ModGeometry,   ONLY: x_BLK
     use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
          UnitP_, cRadiationNo, UnitEnergyDens_
@@ -1258,7 +1262,7 @@ contains
     use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
     use ModSize,        ONLY: nI, nJ, nK
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
-         Erad_, UseElectronPressure, Pe_
+         Erad_, UseElectronPressure
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, y2
     use ModTriangulate, ONLY: calc_triangulation, mesh_triangulation, &
          find_triangle
@@ -1294,31 +1298,25 @@ contains
 
        if(UseDelaunay)then
           call calc_triangulation( &
-               nCellHyades, DataHyades_VC( (/iXHyades, iRHyades/), :), &
-               iNodeTriangle_II, nTriangle)
+               nCellHyades, CoordHyades_DC, iNodeTriangle_II, nTriangle)
        else
-          call mesh_triangulation( &
-               nCellHyades_D(1), nCellHyades_D(2), &
-               DataHyades_VC( (/iXHyades, iRHyades/), :), &
-               iNodeTriangle_II, nTriangle)
+          call mesh_triangulation(nCellHyades_D(1), nCellHyades_D(2), &
+               CoordHyades_DC, iNodeTriangle_II, nTriangle)
        end if
        ! Use a uniform mesh for fast search algorithm
        allocate(nTriangle_C(4*nCellHyades_D(1),4*nCellHyades_D(2)))
        nTriangle_C(1,1) = -1
-       CoordHyades_DC = DataHyades_VC( (/iXHyades, iRHyades/),:)
 
        allocate(DataHyadesMesh_V(nDimHyades + nVarHyadesMesh))
        if(UseZoneCenter)then
           allocate(iNodeTriangleMesh_II(3,2*nCellHyadesMesh))
           if(UseDelaunay)then
-             call calc_triangulation( nCellHyadesMesh, &
-                  DataHyadesMesh_VC( (/iXHyadesMesh, iRHyadesMesh/), :), &
+             call calc_triangulation( nCellHyadesMesh, CoordHyadesMesh_DC, &
                   iNodeTriangleMesh_II, nTriangleMesh)
           else
              call mesh_triangulation( &
                   nCellHyadesMesh_D(1), nCellHyadesMesh_D(2), &
-                  DataHyadesMesh_VC( (/iXHyadesMesh, iRHyadesMesh/), :), &
-                  iNodeTriangleMesh_II, nTriangleMesh)
+                  CoordHyadesMesh_DC, iNodeTriangleMesh_II, nTriangleMesh)
           end if
           allocate( &
                nTriangleMesh_C(4*nCellHyadesMesh_D(1),4*nCellHyadesMesh_D(2)))
