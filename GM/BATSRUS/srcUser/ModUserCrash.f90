@@ -979,10 +979,6 @@ contains
        end do
     end do; end do
 
-    CoordHyades_DC = DataHyades_VC( (/iXHyades, iRHyades/),:)
-    ! Make CoordHyadesMesh_DC dimensionless
-    if(UseZoneCenter) CoordHyadesMesh_DC = DataHyadesMesh_VC(:nDimHyades,:)
-
     deallocate(Var_VI)
 
     if(iMaterialHyades > 0)then
@@ -1295,6 +1291,10 @@ contains
        ! allocate variables and do triangulation
        allocate(iNodeTriangle_II(3,2*nCellHyades))
        allocate(DataHyades_V(nDimHyades + nVarHyades))
+
+       CoordHyades_DC = DataHyades_VC( (/iXHyades, iRHyades/),:)
+       ! Make CoordHyadesMesh_DC dimensionless
+       if(UseZoneCenter) CoordHyadesMesh_DC = DataHyadesMesh_VC(:nDimHyades,:)
 
        if(UseDelaunay)then
           call calc_triangulation( &

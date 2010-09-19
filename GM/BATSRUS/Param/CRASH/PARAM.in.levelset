@@ -13,10 +13,10 @@ table_pPerRho.out	NameFile
 real4                   TypeFile
 pPerRho(e/rho,rho) for Xe, Be, Plastic
 logE/Rho logrho pPerRhoXe pPerRhoBe pPerRhoPl
-20                      nIndex1
+200                     nIndex1
 1e5                     Index1Min
 1e14                    Index1Max
-20                      nIndex2
+200                     nIndex2
 0.01                    Index2Min
 1e6                     Index2Max
 
@@ -33,10 +33,10 @@ table_thermo.out	NameFile
 real4			TypeFile
 Thermo(rho,p/rho) for Xe, Be, Plastic
 logrho logpPerRho TXe CXe GXe ZXe HXe TBe CBe GBe ZBe HBe TPl CPl GPl ZPl HPl
-20                      nIndex1
+200                     nIndex1
 0.01                    Index1Min
 1e6                     Index1Max
-20                      nIndex2
+200                     nIndex2
 1e5                     Index2Min
 1e13                    Index2Max
 
