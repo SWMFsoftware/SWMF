@@ -293,7 +293,8 @@ contains
 
     use ModPhysics, ONLY : rBody, xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
     use ModPhysics, ONLY : FaceState_VI,Si2No_V,No2Si_V,UnitX_,UnitN_,UnitU_, &
-         UnitTemperature_, UnitJ_, UnitPoynting_,OrbitPeriod
+         UnitTemperature_, UnitJ_, UnitPoynting_,OrbitPeriod, &
+         UseOutflowPressure, pOutflow
     use ModUser, ONLY: user_face_bcs
     use ModMain
     use ModMultiFluid
@@ -349,8 +350,12 @@ contains
        VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)
        VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
 
-    case('float','outflow')
+    case('float')
        VarsGhostFace_V = VarsTrueFace_V
+
+    case('outflow')
+       VarsGhostFace_V = VarsTrueFace_V
+       if(UseOutflowPressure) VarsGhostFace_V(p_) = pOutflow
 
     case('heliofloat')
        VarsGhostFace_V = VarsTrueFace_V
