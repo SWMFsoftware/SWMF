@@ -188,11 +188,11 @@ subroutine PW_get_electrodynamics
   uExBtheta_C(:,1) = uExBtheta_C(:,2)
   uExBphi_C  (:,1) = uExBphi_C  (:,2)
   
-  if (.not.DoMoveLine) Then 
-     uExBtheta_C(:,:) = 0.0
-     uExBphi_C  (:,:) = 0.0
-     uExBr_C    (:,:) = 0.0
-  endif
+!  if (.not.DoMoveLine) Then 
+!     uExBtheta_C(:,:) = 0.0
+!     uExBphi_C  (:,:) = 0.0
+!     uExBr_C    (:,:) = 0.0
+!  endif
 
   if (.not.UseJr) Then 
      Jr_G(:,:) = 0.0

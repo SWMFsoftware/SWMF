@@ -7,7 +7,8 @@ subroutine PW_set_parameters(NameAction)
                                 UsePhotoElectronHeatFlux,UseAuroralHeatFlux, &
                                 UseCuspHeatFlux
   use ModPwTime
-  use ModPwPlots, ONLY : TypePlot
+  use ModPwPlots, ONLY: TypePlot
+  use ModPwWaves, ONLY: UseWaveAcceleration 
   implicit none
   
 
@@ -104,6 +105,8 @@ subroutine PW_set_parameters(NameAction)
         call read_var('UseJouleHeating',UseJouleHeating)
      case('#ROTATION')
         call read_var('UseCentrifugal',UseCentrifugal)
+     case('#WAVES')
+        call read_var('UseWaveAcceleration',UseWaveAcceleration)
      case('#TIMESTEP')
         call read_var('DtHorizontal',DtHorizontal)
         DtHorizontalOrig = DtHorizontal

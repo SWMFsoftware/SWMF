@@ -9,6 +9,7 @@ subroutine PW_initialize
   use ModTimeConvert, ONLY: time_int_to_real
   use ModPwTime
   use ModAurora, ONLY: init_aurora
+  use ModPwWaves,ONLY: wave_init
   use CON_axes,         ONLY: init_axes
   implicit none
 
@@ -66,12 +67,14 @@ subroutine PW_initialize
        UthetaLine_I(nLine),UphiLine_I(nLine),          &
        UxLine_I(nLine),UyLine_I(nLine),UzLine_I(nLine),       &
        OmegaLine_I(nLine),                      &
-       JrLine_I(nLine),EfluxLine_I(nLine),AvELine_I(nLine), &
+       JrLine_I(nLine),EfluxLine_I(nLine),AvELine_I(nLine),&
        iThetaLine_I(nLine),iPhiLine_I(nLine), &
        NameRestartIn(nLine), NameRestart(nLine), NameGraphics(nLine),&
        NameOutput(nLine),  iUnitRestart(nLine),iUnitRestartIn(nLine),&
        iUnitGraphics(nLine),iUnitOutput(nLine), iLineGlobal(nLine), &
        Dt_I(nLine))
+  
+  call wave_init(nAlt)
 
   !**************************************************************************
   !  Define file names and unit numbers, and open for reading and writing.

@@ -22,6 +22,7 @@ MODULES = \
 	ModPwTime.o\
 	ModLatLon.o\
 	ModPwPlot.o\
+	ModWaves.o\
 	${MODULES_PLANET}
 
 METHODS = \

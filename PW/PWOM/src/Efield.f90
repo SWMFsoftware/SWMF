@@ -3,7 +3,9 @@ SUBROUTINE PW_calc_efield(nCell,State_GV)
   use ModCommonVariables,only: nDim,nIon,iRho_I,iU_I,iP_I,MassElecIon_I,&
        Source_CV,uE_,pE_,DrBnd,Mass_I,Efield,GRAVTY,&
        dArea,CurrMx,MaxGrid,Te_,nVar, NamePlanet, Ion1_,AltD
-  use ModPWOM, ONLY:UseCentrifugal
+  use ModPWOM,    ONLY:UseCentrifugal
+  use ModPwWaves, ONLY: UseWaveAcceleration, WaveAcceleration_C, &
+                        calc_wave_acceleration
   implicit none
   
   integer,intent(in) :: nCell
@@ -96,11 +98,16 @@ SUBROUTINE PW_calc_efield(nCell,State_GV)
         call calc_centrifugal(nDim, State_GV(1:nDim,iU_I(iIon)),aCentrifugal_C)
      endif
 
+     if (UseWaveAcceleration) then
+        call calc_wave_acceleration
+     endif
+
      DO K=1,NDIM
         Source_CV(K,iU_I(iIon))=Source_CV(K,iU_I(iIon))&
              +Source_CV(K,iRho_I(iIon))*State_GV(K,iU_I(iIon))&
              +State_GV(K,iRho_I(iIon))&
-             *(aCentrifugal_C(K)+GRAVTY(K)+4.803242E-10*EFIELD(K)/Mass_I(iIon))
+             *(aCentrifugal_C(K)+WaveAcceleration_C(K) &
+              +GRAVTY(K)+4.803242E-10*EFIELD(K)/Mass_I(iIon))
         
         Source_CV(K,iP_I(iIon))=Source_CV(K,iP_I(iIon)) &
              +State_GV(K,iU_I(iIon))&

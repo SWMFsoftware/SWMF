@@ -176,12 +176,10 @@ subroutine move_line
        (/ PhiLine_I(iLine)/Dphi+1.0,ThetaLine_I(iLine)/Dtheta+1.0 /) )
 
   ! save ExB velocity to get joule heating
-  if (UseJouleHeating .and. DoMoveLine) then
+  if (UseJouleHeating) then
      uJoule2 = (&
        UthetaLine_I(iLine)**2.0&
        +(UphiLine_I(iLine) - OmegaPlanet*rPlanet*sin(ThetaLine_I(iLine)))**2.0)
-  else
-     uJoule2 = 0.0
   endif
   
   xLineOld_I(iLine) = xLine_I(iLine)
@@ -200,11 +198,17 @@ subroutine move_line
 
   UzLine_I(iLine)   = &
        -UthetaLine_I(iLine)*sin(ThetaLine_I(iLine))
-  
-  xLine_I(iLine) = UxLine_I(iLine)*DtHorizontal + xLineOld_I(iLine)
-  yLine_I(iLine) = UyLine_I(iLine)*DtHorizontal + yLineOld_I(iLine)
-  zLine_I(iLine) = UzLine_I(iLine)*DtHorizontal + zLineOld_I(iLine) 
 
+  if (DoMoveLine) then
+     xLine_I(iLine) = UxLine_I(iLine)*DtHorizontal + xLineOld_I(iLine)
+     yLine_I(iLine) = UyLine_I(iLine)*DtHorizontal + yLineOld_I(iLine)
+     zLine_I(iLine) = UzLine_I(iLine)*DtHorizontal + zLineOld_I(iLine) 
+  else
+     xLine_I(iLine) =  xLineOld_I(iLine)
+     yLine_I(iLine) =  yLineOld_I(iLine)
+     zLine_I(iLine) =  zLineOld_I(iLine) 
+  endif
+  
   if(DoTestMe)then
      write(*,*) NameSub, ': iLine=',iLine
      write(*,*) NameSub, ': Theta, Phi=',ThetaLine_I(iLine)*cRadToDeg, &
