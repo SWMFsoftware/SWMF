@@ -299,8 +299,10 @@ sub current_settings{
     #^CFG END IMPLICIT
 
     # Check if the large arrays are static or dynamic
-    my $IsDynamic = `grep IsDynamic $Src/ModAdvance.f90 | grep true` ?
-	"yes" : "no";
+    my $IsDynamic;
+    $IsDynamic = `grep IsDynamic $Src/ModAdvance.f90 | grep true` ?
+	"yes" : "no" if -e "$Src/ModAdvance.f90";
+
     $Settings .= 
 	"Allocation of large arrays        : IsDynamic=$IsDynamic\n";
 
