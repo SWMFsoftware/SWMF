@@ -1,0 +1,249 @@
+#ECHO
+T
+
+VERBOSE
+100
+
+BATL
+T			UseBatl
+
+#TIMING
+T                       UseTiming      (rest of parameters read if true)
+-2                      DnTiming       (-3 none, -2 final, -1 each session/AMR)
+-1                      nDepthTiming   (-1 for arbitrary depth)
+tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
+
+
+#TEST
+krylov
+
+LOOKUPTABLE
+pPerRho(e/rho,rho)	NameTable
+load                    NameCommand
+table_pPerRho.out	NameFile
+real4                   TypeFile
+pPerRho(e/rho,rho) for Xe, Be, Plastic
+logE/Rho logrho pPerRhoXe pPerRhoBe pPerRhoPl
+200                     nIndex1
+1e5                     Index1Min
+1e14                    Index1Max
+200                     nIndex2
+0.01                    Index2Min
+1e6                     Index2Max
+
+! notation:
+! T -> electron temperature
+! C -> specific heat
+! G -> gamma
+! Z -> average ion charge
+! H -> electron heat conduction coef
+LOOKUPTABLE
+Thermo(rho,p/rho)	NameTable
+load			NameCommand
+table_thermo.out	NameFile
+real8			TypeFile
+Thermo(rho,p/rho) for Xe, Be, Plastic
+logrho logpPerRho TXe CXe GXe ZXe HXe TBe CBe GBe ZBe HBe TPl CPl GPl ZPl HPl
+200			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+200			nIndex2
+1e5			Index2Min
+1e13			Index2Max
+
+LOOKUPTABLE
+Opacity(rho,T)		NameTable
+load                    NameCommand
+table_opacities.out	NameFile
+ascii			TypeFile
+
+#PLANET
+NONE
+
+#IOUNITS
+SI
+
+#NORMALIZATION
+READ
+1.0e-6			Micron
+1.0e+3			km/s
+1000.0			g/cm^3
+
+#USERINPUTBEGIN  ----------------------
+
+#USEEOSTABLE
+T			Use Eos Table for Xe
+T			Use Eos Table for Be
+T			Use Eos Table for Pl
+F			Use Eos Table for Au
+F			Use Eos Table for Ay
+
+#MIXEDCELL
+F			UseMixedCell
+0.97			MixLimit
+
+#THREEDIM
+T			IsThreeDim
+
+#HYADES
+T			UseHyadesFile
+hyades2d_1.3ns.out	NameHyadesFile
+
+#USERAMR
+20.0			 RhoMinAmr
+2500.0			 xMaxAmr
+1.0			 BetaProlong
+
+#USERINPUTEND    ----------------------
+
+SEMIIMPLICIT
+T			UseSemiImplicit
+radiation		TypeSemiImplicit
+
+KRYLOV
+bicgstab		TypeKrylov
+nul			TypeInitKrylov
+1.0e-6			ErrorMaxKrylov
+900			MaxMatvecKrylov
+
+PRECONDITIONER
+left			TypePrecondSide (left, symmetric, right)
+bilu			TypePrecond (MBILU)
+
+RADIATION
+T			UseGrayDiffusion
+T			UseRadFluxLimiter
+larsen			TypeRadFluxLimiter
+300.0			TradMinSi
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#CHECKGRIDSIZE
+4			nI
+4			nJ
+4			nK
+1000			MinBlockALL
+
+#GRID
+160			nRootBlockX
+16			nRootBlockY
+16			nRootBlockZ
+-150.0			xMin
+3900.0			xMax
+   0.0			yMin
+ 450.0			yMax
+   0.0			zMin
+ 450.0			zMax
+
+AMRINITPHYSICS
+3			nRefineLevelIC
+
+#AMRLEVELS
+0			MinBlockLevel
+2			MaxBlockLevel
+F			DoFixBodyLevel
+
+AMR
+1			DnRefine
+T			DoAutoRefine
+30.0			PercentCoarsen
+30.0			PercentRefine
+99999			MaxTotalBlocks
+
+#AMRCRITERIA
+1			nRefineCrit
+user			TypeRefine
+0.5			LimitCoarsen
+0.5			LimitRefine
+
+#UPDATECHECK
+F			DoUpdateCheck
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#OUTERBOUNDARY
+float			xMinBc
+float			xMaxBc
+reflect			yMinBc
+float			yMaxBc
+reflect			zMinBc
+float			zMaxBc
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
+
+#LIMITER
+F			UseLogRhoLimiter
+F			UseLogPLimiter
+T			UseRhoRatioLimiter
+EInt			NameVarLimitRatio
+
+#RESCHANGE
+T			UseAccurateResChange
+
+#SAVERESTART
+F			DoSaverestart
+-1			DnSaveRestart
+1.3e-8			DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.0			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#PLOTFILENAME
+nanosecond		NameMaxTimeUnit
+
+#SAVEPLOT
+2			nPlotfile
+y=0 var idl		PlotString
+-1                      DnSavePlot
+1.0e-9                  DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz Eint p level rhoxe rhobe rhopl dx
+gamma
+z=0 var idl		PlotString
+-1                      DnSavePlot
+1.0e-9                  DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz Eint p level rhoxe rhobe rhopl dx
+gamma
+idl los var		StringPlot ! line of sight plot
+-1                      DnSavePlot
+1.0e-9                  DtSavePlot
++2000.0                 ObsPosX
+-12000.0                ObsPosY
+0.0                     ObsPosZ
+-9.46232                OffsetAngle -atan(2000/12000)
+2000.                   rSizeImage
+0.                      xOffset
+0.                      yOffset
+0.                      rOccult
+0.                      MuLimbDarkening
+400                     nPix
+rho rhoxe rhobe rhopl radiograph
+g			NamePar
+
+#GRIDSYMMETRY
+F			IsMirrorX
+T			IsMirrorY
+T			IsMirrorZ
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#STOP
+20			MaxIteration
+-1.3e-8			tSimulationMax
+
+#END
