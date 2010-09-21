@@ -1,0 +1,18 @@
+#!/bin/csh
+# Usage: msub job.hera
+
+#MSUB -l nodes=4
+#MSUB -l partition=hera
+#MSUB -l walltime=0:30:00
+#MSUB -q pdebug
+#MSUB -V
+#MSUB -o /g/g99/toth2/Tmp/CRASH/SCALING/run_nNNN/runlog
+
+date
+cd /g/g99/toth2/Tmp/CRASH/SCALING/run_nNNN
+
+# Number of cores = 16 times the number of nodes
+srun -nNNN CRASH.exe
+./PostProc.pl -M RESULT/BATL
+
+exit
