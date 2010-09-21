@@ -13,8 +13,8 @@ COMPILE.f90     = ${CUSTOMPATH_F}gfortran
 LINK.f90	= ${CUSTOMPATH_MPI}mpif90
 AR = ar -rs
 
-SINGLEPREC =
-DOUBLEPREC = -fdefault-real-8
+SINGLEPREC = -frecord-marker=4
+DOUBLEPREC = -frecord-marker=4 -fdefault-real-8
 PRECISION  = ${DOUBLEPREC}
 
 MPILIB = 
