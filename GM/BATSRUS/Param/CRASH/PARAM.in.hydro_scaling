@@ -1,10 +1,10 @@
 #ECHO
 T
 
-VERBOSE
-100
+#DESCRIPTION
+Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_gray
 
-BATL
+#BATL
 T			UseBatl
 
 #TIMING
@@ -13,13 +13,12 @@ T                       UseTiming      (rest of parameters read if true)
 -1                      nDepthTiming   (-1 for arbitrary depth)
 tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
 
-
 #TEST
 krylov
 
 LOOKUPTABLE
 pPerRho(e/rho,rho)	NameTable
-load                    NameCommand
+save                    NameCommand
 table_pPerRho.out	NameFile
 real4                   TypeFile
 pPerRho(e/rho,rho) for Xe, Be, Plastic
@@ -39,7 +38,7 @@ logE/Rho logrho pPerRhoXe pPerRhoBe pPerRhoPl
 ! H -> electron heat conduction coef
 LOOKUPTABLE
 Thermo(rho,p/rho)	NameTable
-load			NameCommand
+save			NameCommand
 table_thermo.out	NameFile
 real8			TypeFile
 Thermo(rho,p/rho) for Xe, Be, Plastic
@@ -139,7 +138,7 @@ T			IsTimeAccurate
 AMRINITPHYSICS
 3			nRefineLevelIC
 
-#AMRLEVELS
+AMRLEVELS
 0			MinBlockLevel
 2			MaxBlockLevel
 F			DoFixBodyLevel
@@ -151,7 +150,7 @@ T			DoAutoRefine
 30.0			PercentRefine
 99999			MaxTotalBlocks
 
-#AMRCRITERIA
+AMRCRITERIA
 1			nRefineCrit
 user			TypeRefine
 0.5			LimitCoarsen
@@ -191,19 +190,19 @@ F			DoSaverestart
 -1			DnSaveRestart
 1.3e-8			DtSaveRestart
 
-#SAVELOGFILE
+SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
 1			DnSaveLogfile
 -1.0			DtSaveLogfile
 
-#SAVEINITIAL
+SAVEINITIAL
 T			DoSaveInitial
 
 #PLOTFILENAME
 nanosecond		NameMaxTimeUnit
 
-#SAVEPLOT
+SAVEPLOT
 2			nPlotfile
 y=0 var idl		PlotString
 -1                      DnSavePlot

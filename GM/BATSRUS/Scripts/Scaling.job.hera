@@ -6,13 +6,12 @@
 #MSUB -l walltime=0:30:00
 #MSUB -q pdebug
 #MSUB -V
-#MSUB -o /g/g99/toth2/Tmp/CRASH/SCALING/run_nNNN/runlog
+#MSUB -o /g/g99/toth2/Tmp/CRASH/SCALING/run_n64/runlog
 
 date
-cd /g/g99/toth2/Tmp/CRASH/SCALING/run_nNNN
+cd /g/g99/toth2/Tmp/CRASH/SCALING/run_n64
 
 # Number of cores = 16 times the number of nodes
-srun -nNNN CRASH.exe
-./PostProc.pl -M RESULT/BATL
+srun -n64 CRASH.exe
 
 exit

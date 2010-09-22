@@ -44,7 +44,7 @@ my $Dir = "SCALING";
 my $JobScript = "Scripts/Scaling.job".$Machine;
 
 if($CompileCode){
-    `Config.pl -e=HdCrash -u=Crash -g=4,4,4,1000,1`;
+    `Config.pl -e=HdCrash -u=Crash -g=4,4,4,700,1`;
     `make CRASH PIDL`;
 }
 
@@ -66,6 +66,8 @@ if($SetupRun){
 	my $nRootX   = $res*40;
 	my $nRootYZ  = $res*4;
 	my $rundir = "$Dir/run_n$nCore";
+
+	# Set grid size in PARAM.in
 	@ARGV = ("$rundir/PARAM.in");
 	while(<>){
 	    s/\d+(\s+nRootBlockX)/$nRootX$1/;
@@ -73,6 +75,7 @@ if($SetupRun){
 	    print;
 	}
 
+	# Set number of nodes/cores in job
 	@ARGV = ("$rundir/job");
 	if($IsPfe){
 	    my $nNode = int($nCore/8+0.99);
@@ -84,7 +87,7 @@ if($SetupRun){
 	    my $nNode = int($nCore/16+0.99);
 	    while(<>){
                 s/(\#MSUB -l nodes)=\d+/$1=$nNode/;
-		s/NNN/$nCore/;
+		s/(run_n|srun \-n)\d+/$1$nCore/;
                 print;
             }
 	}
@@ -94,7 +97,7 @@ if($SetupRun){
 if($SubmitRun){
     foreach $nCore (@nCore){
 	my $rundir = "$Dir/run_n$nCore";
-	`cd $rundir; qsub job` if $IsPfe;
-	`cd $rundir; msub job | tail -1 > jobid`;
+	`cd $rundir; qsub job`                   if $IsPfe;
+	`cd $rundir; msub job | tail -1 > jobid` if $IsHera;
     }
 }
