@@ -26,7 +26,7 @@ subroutine write_progress(inopt)
           " University of Michigan, 1995-2007"
      write(iUnitOut,*)
      if(IsStandAlone)then
-        call write_prefix; write(iUnitOut,'(a,f4.2,a,i4,a)') &
+        call write_prefix; write(iUnitOut,'(a,f4.2,a,i6,a)') &
              ' BATSRUS version ',CodeVersion,&
              ' is running as '//NameThisComp//' on ',nProc,' PE(s)'
         write(iUnitOut,*)
