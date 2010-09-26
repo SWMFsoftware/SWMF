@@ -81,7 +81,7 @@ contains
 
     ! Local variables
 
-    logical, parameter :: UseRSend = .true.
+    logical, parameter :: UseRSend = .false.
 
     integer :: nWidth
     integer :: nCoarseLayer
