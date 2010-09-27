@@ -100,8 +100,8 @@ F 			UseConstantStepPA
 F 			UseWaves
 
 #BFIELD
-analytic     		TypeBField
-uniform                 TypeBFieldGrid
+analytic     		TypeBCalc
+uniform_dipole          TypeBField
 1.0 			StretchingFactorA
 1.0 			StretchingFactorB
 
