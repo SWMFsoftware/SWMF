@@ -120,6 +120,7 @@ module BATL_tree
 
   ! Maximum number of nodes including unused and skipped ones
   integer :: MaxNode = 0
+  integer :: iNodeNew = 0
 
   ! The index along the Morton curve is global so that it can be used by the 
   ! recursive subroutine order_children 
@@ -175,6 +176,7 @@ contains
          iNodeNei_IIIB, DiLevelNei_IIIB)
 
     MaxNode = 0
+    iNodeNew = 0
 
   end subroutine clean_tree
   !==========================================================================
@@ -182,16 +184,25 @@ contains
   integer function i_node_new()
 
     ! Find a skipped element in the iTree_IA array
-    
-    integer :: iNode
     !-----------------------------------------------------------------------
-    do iNode = 1, MaxNode
-       if(iTree_IA(Status_, iNode) == Unset_)then
-          i_node_new = iNode
+    ! Try next node first
+    if(iNodeNew < MaxNode)then
+       iNodeNew = iNodeNew + 1
+       if(iTree_IA(Status_, iNodeNew) == Unset_)then
+          i_node_new = iNodeNew
+          RETURN
+       end if
+    end if
+
+    ! Search from beginning
+    do iNodeNew = 1, MaxNode
+       if(iTree_IA(Status_, iNodeNew) == Unset_)then
+          i_node_new = iNodeNew
           RETURN
        end if
     end do
-    ! Could not find any skipped node
+
+    ! Could not find any usable node
     call CON_stop('i_node_new: ran out of nodes')
 
   end function i_node_new
@@ -635,6 +646,7 @@ contains
 
   subroutine find_neighbor(iBlock)
 
+    use BATL_size, ONLY: iRatio_D
     use BATL_geometry, ONLY: IsCylindrical, IsSpherical, IsPeriodic_D
 
     integer, intent(in):: iBlock
@@ -652,7 +664,8 @@ contains
 
     ! Calculate scaling factor from integer index to 0<x,y,z<1 real coordinates
     Scale_D = 1.0/nRoot_D
-    Scale_D(1:nDimAmr) = Scale_D(1:nDimAmr)/MaxCoord_I(iLevel)
+    where(iRatio_D == 2) &
+         Scale_D = Scale_D/MaxCoord_I(iLevel)
 
     if(DoTestMe)then
        write(*,*)'iNode, iLevel, Scale_D=', iNode, iLevel, Scale_D
@@ -796,8 +809,9 @@ contains
        end do
     end do
 
-    ! Set number of nodes in the tree (note the EXIT above)
+    ! Set number of nodes and starting point for new nodes (note EXIT above)
     nNode = iNode - 1
+    iNodeNew = nNode
 
     ! Fix the node indexes along the Morton curve
     do iMorton = 1, nNodeUsed
