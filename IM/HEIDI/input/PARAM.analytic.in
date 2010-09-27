@@ -102,6 +102,9 @@ F 			UseWaves
 #BFIELD
 analytic     		TypeBField
 uniform                 TypeBFieldGrid
+1.0 			StretchingFactorA
+1.0 			StretchingFactorB
+
 
 #SAVERESTART
 T			DoSaveRestart
