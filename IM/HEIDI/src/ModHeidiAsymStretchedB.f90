@@ -1,13 +1,15 @@
 module get_gradB_components
 
   use ModHeidiMain,      ONLY: DipoleFactor
+  use ModHeidiInput,     ONLY: StretchingFactorA, StretchingFactorB
+
 contains
   !========================================================================
-  subroutine get_dBdx(x, y, z, a, b, dBdx)
+  subroutine get_dBdx(x, y, z, dBdx)
 
     implicit none
 
-    real, intent(IN) :: x, y, z, a, b
+    real, intent(IN) :: x, y, z
     real, intent(OUT):: dBdx
     ! Local variables used for optimization
     real :: t1,   t2,   t3,   t4,   t5,   t6,   t7,   t8,   t9,   t10
@@ -22,8 +24,11 @@ contains
     real :: t241, t251, t262, t266, t287, t289, t292, t322, t331, t338      
     real :: t352, t355, t382, t387, t391, t422, t429, t433, t440, t443
     real :: t444, t446, t451, t457, t475, t506, t513, t514, t515, t519
-
+    real :: a, b
     !------------------------------------------------------------------------
+    a = StretchingFactorA
+    b = StretchingFactorB
+    
     !\
     ! Calculations are done by Maple using CodeGeneration with optimize flag.
     !/
@@ -215,11 +220,11 @@ contains
 
   end subroutine get_dBdx
   !========================================================================
-  subroutine get_dBdy(x, y, z, a, b, dBdy)
+  subroutine get_dBdy(x, y, z, dBdy)
 
     implicit none
 
-    real, intent(IN) :: x, y, z, a, b
+    real, intent(IN) :: x, y, z
     real, intent(OUT):: dBdy
     ! Local variables used for optimization
     real :: t1,   t2,   t3,   t4,   t8,   t9,   t10,  t11,  t12,  t13
@@ -232,8 +237,11 @@ contains
     real :: t219, t228, t238, t248, t254, t257, t258, t266, t269, t272
     real :: t274, t275, t278, t296, t309, t336, t342, t356, t359, t367
     real :: t373, t374, t378, t383, t388, t415, t422, t423, t424, t428
-
+    real :: a, b
     !------------------------------------------------------------------------
+    a = StretchingFactorA
+    b = StretchingFactorB
+
     !\
     ! Calculations are done by Maple using CodeGeneration with optimize flag.
     !/
@@ -405,11 +413,11 @@ contains
 
   end subroutine get_dBdy
   !========================================================================
-  subroutine get_dBdz(x, y, z, a, b, dBdz)
+  subroutine get_dBdz(x, y, z, dBdz)
 
     implicit none
 
-    real, intent(IN) :: x, y, z, a, b
+    real, intent(IN) :: x, y, z
     real, intent(OUT):: dBdz
     ! Local variables used for optimization
     real :: t1,   t2,   t3,   t4,   t5,   t7,   t8,   t9,   t10,  t11
@@ -419,8 +427,11 @@ contains
     real :: t86,  t89,  t91,  t94,  t98,  t102, t103, t106, t112, t113
     real :: t118, t121, t124, t125, t128, t136, t137, t140, t161, t164
     real :: t191, t192, t201, t218, t226, t233, t234, t235, t239
-
+    real :: a, b
     !------------------------------------------------------------------------
+    a = StretchingFactorA
+    b = StretchingFactorB
+
     !\
     ! Calculations are done by Maple using CodeGeneration with optimize flag.
     !/
@@ -536,11 +547,11 @@ contains
   end subroutine get_dBdz
 
   !========================================================================
-  subroutine get_GradB2CrossB_x(x, y, z, a, b, Vx)
+  subroutine get_GradB2CrossB_x(x, y, z, Vx)
 
     implicit none
 
-    real, intent(IN) :: x, y, z, a, b
+    real, intent(IN) :: x, y, z
     real, intent(OUT):: Vx
     ! Local variables used for optimization
     real :: t1,   t2,   t3,   t4,   t9,   t10,  t11,  t12,  t13,  t14
@@ -561,7 +572,11 @@ contains
     real :: t598, t601, t619, t623, t628, t633, t662, t665, t674, t685
     real :: t686, t708, t712, t740, t752, t761, t798, t813, t814, t815
     real :: t816, t821
+    real :: a, b
     !------------------------------------------------------------------------
+    a = StretchingFactorA
+    b = StretchingFactorB
+    
     !\
     ! Calculations are done by Maple using CodeGeneration with optimize flag.
     !/
@@ -863,11 +878,11 @@ contains
 
   end subroutine get_GradB2CrossB_x
   !========================================================================
-  subroutine get_GradB2CrossB_y(x, y, z, a, b, Vy)
+  subroutine get_GradB2CrossB_y(x, y, z, Vy)
 
     implicit none
 
-    real, intent(IN) :: x, y, z, a, b
+    real, intent(IN) :: x, y, z
     real, intent(OUT):: Vy
     ! Local variables used for optimization
     real :: t1,   t2,   t3,   t4,   t7,   t8,   t9,   t10,  t11,  t12
@@ -891,7 +906,11 @@ contains
     real :: t676, t679, t682, t693, t720, t722, t733, t744, t751, t784
     real :: t800, t810, t841, t858, t888, t894, t922, t947, t963, t964
     real :: t965, t966, t971
+    real :: a, b
     !------------------------------------------------------------------------
+    a = StretchingFactorA
+    b = StretchingFactorB
+    
     !\
     ! Calculations are done by Maple using CodeGeneration with optimize flag.
     !/
@@ -1256,11 +1275,11 @@ contains
 
   end subroutine get_GradB2CrossB_y
   !========================================================================
-  subroutine get_GradB2CrossB_z(x, y, z, a, b, Vz)
+  subroutine get_GradB2CrossB_z(x, y, z, Vz)
 
     implicit none
 
-    real, intent(IN) :: x, y, z, a, b
+    real, intent(IN) :: x, y, z
     real, intent(OUT):: Vz
     ! Local variables used for optimization
     real :: t1,   t2,   t3,   t4,   t5,   t11,  t12,  t13,  t14,  t15
@@ -1274,8 +1293,11 @@ contains
     real :: t265, t270, t272, t275, t276, t279, t281, t290, t311, t314
     real :: t322, t330, t334, t342, t350, t366, t368, t379, t383, t392
     real :: t417, t466, t478, t479, t480, t481, t485
-
+    real :: a, b
     !------------------------------------------------------------------------
+    a = StretchingFactorA
+    b = StretchingFactorB
+    
     !\
     ! Calculations are done by Maple using CodeGeneration with optimize flag.
     !/

@@ -232,7 +232,7 @@ subroutine ARRAYS
   use ModHeidiWaves
   use ModProcIM,     ONLY: iProc
   use ModPlotFile,   ONLY: save_plot_file
-  use ModHeidiInput, ONLY: TypeBField
+  use ModHeidiInput, ONLY: TypeBCalc
   use ModNumConst,   ONLY: cPi
 
 
@@ -510,7 +510,7 @@ subroutine ARRAYS
   end if
   
   
-!!$  if (TypeBField == 'numeric') then
+!!$  if (TypeBCalc == 'numeric') then
 !!$     NameFile = 'BField.out'
 !!$     StringHeader = 'Magnetic field in the equatorial plane'
 !!$     StringVarName = 'R MLT B'

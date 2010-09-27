@@ -7,7 +7,7 @@ contains
   subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
        RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
-    use ModHeidiInput, ONLY: TypeBfieldGrid
+    use ModHeidiInput, ONLY: TypeBField, StretchingFactorA, StretchingFactorB
     use ModNumConst,   ONLY: cTiny
     use ModHeidiMain,  ONLY: LZ,BHeidi_III, SHeidi_III, RHeidi_III,&
          bGradB1xHeidi_III, bGradB1yHeidi_III, bGradB1zHeidi_III,&
@@ -41,7 +41,7 @@ contains
     real, dimension(nPoint, nR ,3) :: B_all
     real, dimension(2,nPoint,nR)   :: Coord
     !----------------------------------------------------------------------------------
-    select case(TypeBFieldGrid)
+    select case(TypeBField)
 
        !\
        ! Magnetic field from BATS_R_US code; only in the coupled mode.
@@ -52,7 +52,7 @@ contains
           write(*,*) 'CASE MHD--------->INITIALIZE B FIED'
           write(*,*) 'Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt       
           call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
-               RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III, 1.1, 1.0/1.1)
+               RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
        else
           
           write(*,*) 'REAL MHD------>Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt
@@ -151,7 +151,7 @@ contains
        ! Dipole magnetic field with uniform number of points along the field line. 
        ! More refined at the equator, coarser towards the poles
        !/
-    case('uniform')
+    case('uniform_dipole')
        do iPhi =1, nPhi
           do iR =1, nR 
              LatMax =  acos(sqrt(1./L_I(iR)))
@@ -175,7 +175,7 @@ contains
        ! More refined at the equator, coarser towards the poles
        !/
 
-    case('nonuniform')
+    case('nonuniformDipole')
        do iPhi =1, nPhi
           do iR =1, nR 
              LatMax =  acos(sqrt(1./L_I(iR)))
@@ -209,17 +209,17 @@ contains
        ! Stretched dipole magnetic field, with azimuthal symmetry. 
        !/
 
-    case('stretched')
+    case('stretched_dipole')
 
        !call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
        !RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III, 1.0, 1.0/1.0)
 
        call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-            RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.0)
+            RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
     
-    case('aym_stretched')
+    case('aym_stretched_dipole')
        call get_asym_stretched_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,bField_VIII,&
-            RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,1.0,1.0)
+            RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
     end select
 
 
@@ -707,9 +707,11 @@ contains
 
   !=================================================================================
   subroutine get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,alpha)
+       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
-    use ModNumConst,    ONLY:  cPi
+    
+    use ModHeidiInput,  ONLY: StretchingFactorA
+    use ModNumConst,    ONLY: cPi
     use ModHeidiMain,   ONLY: LZ, DipoleFactor
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
@@ -717,7 +719,6 @@ contains
     integer, intent(in)    :: nPhi                                ! Number of points in the azimuthal direction
     real,    intent(in)    :: L_I(nR)                             ! L shell value
     real,    intent(in)    :: Phi_I(nPhi)                         ! Phi values
-    real,    intent(in)    :: alpha                               ! Stretching factor
     real,    intent(inout) :: bFieldMagnitude_III(nPoint,nR,nPhi) ! Magnitude of magnetic field 
     real,    intent(out)   :: Length_III(nPoint,nR,nPhi)          ! Length of the field line
     real,    intent(out)   :: RadialDistance_III(nPoint,nR,nPhi)
@@ -727,7 +728,7 @@ contains
     real                   :: LatMax                              ! Maximum Latitude 
     real                   :: Lat                                 ! Latitude
     real                   :: dLat                                ! Latitude cell size
-    real                   ::  beta2
+    real                   :: beta2
     real                   :: alpha2, alpha4
     real                   :: bField_VIII(3,nPoint,nR,nPhi)
     real                   :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
@@ -738,11 +739,12 @@ contains
     real                   :: cos2Lat1
     complex                :: root(3)
     integer                :: nroot, i
-    real                   :: dd
+    real                   :: dd, alpha
     real                   :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w
     real                   :: beta,t
     real, parameter        :: DipoleStrength =  -0.32   ! nTm^-3
     !----------------------------------------------------------------------------------
+    alpha = StretchingFactorA
 
     t = 0.0!t/3600.
     w = 2*cPi/50.
@@ -1057,8 +1059,9 @@ contains
   end subroutine get_stretched_dipole
   !==================================================================================
   subroutine get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,bField_VIII,&
-       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,alpha,beta)
+       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
+    use ModHeidiInput,     ONLY: StretchingFactorA, StretchingFactorB
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModHeidiMain,      ONLY: LZ, Re, DipoleFactor
 
@@ -1067,7 +1070,6 @@ contains
     integer, intent(in)    :: nPhi                                ! Number of points in the azimuthal direction
     real,    intent(in)    :: L_I(nR)                             ! L shell value
     real,    intent(in)    :: Phi_I(nPhi)                         ! Phi values
-    real,    intent(in)    :: alpha, beta                         ! Stretching factors
     real,    intent(out)   :: bFieldMagnitude_III(nPoint,nR,nPhi) ! Magnitude of magnetic field 
     real,    intent(out)   :: Length_III(nPoint,nR,nPhi)          ! Length of the field line
     real,    intent(out)   :: RadialDistance_III(nPoint,nR,nPhi)
@@ -1079,7 +1081,7 @@ contains
     !Local Variables    
     real                   :: LatMin, LatMax,dLat,Lat             
     double precision       :: r, x, y, z, Bx, By, Bz, Vx,Vy,Vz, dBdx, dBdy, dBdz
-    real                   :: cos2Lat1
+    real                   :: cos2Lat1, alpha, beta
     real                   :: aa, bb, cc, dd, gamma,sigma, a, rad
     real                   :: GradBxyz_D(3),GradBCrossBxyz_D(3),XyzSph_DD(3,3)
     real                   :: GradBSph_D(3),GradBCrossBSph_D(3)
@@ -1087,6 +1089,8 @@ contains
     integer                :: nroot, i, iR, iPhi,iPoint 
     real :: cos2Lat,sin2Lat,cos2Phi,sin2Phi
     !----------------------------------------------------------------------------------
+    alpha = StretchingFactorA
+    beta  = StretchingFactorB
 
     dd = 0.0
     do iPhi =1, nPhi
@@ -1271,7 +1275,7 @@ contains
   end subroutine get_analytical_field
   !=========================================================================================
   subroutine get_asym_stretched_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,bField_VIII,&
-       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III,a,b)
+       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModHeidiMain,      ONLY: LZ, Re, DipoleFactor
@@ -1282,7 +1286,6 @@ contains
     integer, intent(in)    :: nPhi                                ! Number of points in the azimuthal direction
     real,    intent(in)    :: L_I(nR)                             ! L shell value
     real,    intent(in)    :: Phi_I(nPhi)                         ! Phi values
-    real,    intent(in)    :: a, b                         ! Stretching factors
     real,    intent(out)   :: bFieldMagnitude_III(nPoint,nR,nPhi) ! Magnitude of magnetic field 
     real,    intent(out)   :: Length_III(nPoint,nR,nPhi)          ! Length of the field line
     real,    intent(out)   :: RadialDistance_III(nPoint,nR,nPhi)
@@ -1292,7 +1295,7 @@ contains
     real,    intent(out)   :: dBdt_III(nPoint,nR,nPhi)
     real                   :: bField_VIII(3,nPoint,nR,nPhi)
     !Local Variables    
-    real                   :: LatMin, LatMax,dLat,Lat             
+    real                   :: LatMin, LatMax,dLat,Lat, a, b             
     double precision       :: r, x, y, z, Bx, By, Bz, Vx,Vy,Vz, dBdx, dBdy, dBdz
     real                   :: cos2Lat1
     real                   :: aa, bb, cc, dd, gamma,sigma, rad, alpha
@@ -1302,6 +1305,10 @@ contains
     integer                :: nroot, i, iR, iPhi,iPoint 
     real :: cos2Lat,sin2Lat,cos2Phi,sin2Phi
     !----------------------------------------------------------------------------------
+    
+    a = StretchingFactorA
+    b = StretchingFactorB
+    
     dd = 0.0
     do iPhi =1, nPhi
        sigma = cos(Phi_I(iPhi))
@@ -1360,15 +1367,15 @@ contains
              !\
              ! Components of gradient of B in cartesian coordinates.
              !/
-             call get_dBdx(x, y, z, a, b, dBdx)
-             call get_dBdy(x, y, z, a, b, dBdy)
-             call get_dBdz(x, y, z, a, b, dBdz)
+             call get_dBdx(x, y, z, dBdx)
+             call get_dBdy(x, y, z, dBdy)
+             call get_dBdz(x, y, z, dBdz)
              !\
              ! Gradient drift components (Vx,Vy,Vz = grad(B**2/2.) x B)
              !/
-             call get_GradB2CrossB_x(x, y, z, a, b, Vx)
-             call get_GradB2CrossB_y(x, y, z, a, b, Vy)
-             call get_GradB2CrossB_z(x, y, z, a, b, Vz)
+             call get_GradB2CrossB_x(x, y, z, Vx)
+             call get_GradB2CrossB_y(x, y, z, Vy)
+             call get_GradB2CrossB_z(x, y, z, Vz)
              
              dBdt_III(iPoint,iR,iPhi) = 0.0
 

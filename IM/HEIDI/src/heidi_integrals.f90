@@ -7,7 +7,7 @@ subroutine get_IntegralH(IntegralH_III)
 
   use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
   use ModConst,      ONLY: cPi,  cTiny
-  use ModHeidiInput, ONLY: TypeBField
+  use ModHeidiInput, ONLY: TypeBCalc
   use ModHeidiMain,  ONLY: Phi, LZ, mu
   use ModHeidiBField
 
@@ -28,7 +28,7 @@ subroutine get_IntegralH(IntegralH_III)
   integer              :: iPhi, iR,iPitch
   real                 :: dBdt_III(nPoint,nR,nT)
   !----------------------------------------------------------------------------------
-  select case(TypeBField)
+  select case(TypeBCalc)
 
   case('analytic')
      alpha=1.+alog(2.+sqrt(3.))/2./sqrt(3.)
@@ -77,7 +77,7 @@ subroutine get_IntegralI(IntegralI_III)
 
   use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
   use ModConst,      ONLY: cPi,  cTiny
-  use ModHeidiInput, ONLY: TypeBField
+  use ModHeidiInput, ONLY: TypeBCalc
   use ModHeidiMain,  ONLY: Phi, LZ, mu
   use ModHeidiBField
 
@@ -98,7 +98,7 @@ subroutine get_IntegralI(IntegralI_III)
   integer              :: iPhi, iR,iPitch
   real                 :: dBdt_III(nPoint, nR, nT)
   !----------------------------------------------------------------------------------
-  select case(TypeBField)
+  select case(TypeBCalc)
   case('analytic')
      alpha=1.+alog(2.+sqrt(3.))/2./sqrt(3.)
      beta=alpha/2.-cPi*sqrt(2.)/12.

@@ -87,8 +87,10 @@ module ModHeidiInput
   ! "#INCLUDEWAVES"
   logical :: UseWaves = .false.
   ! "#BFIELD"
-  character(len=20) :: TypeBField = 'analytic'
-  character(len=20) :: TypeBfieldGrid = 'uniform'
+  character(len=20) :: TypeBCalc = 'analytic'
+  character(len=20) :: TypeBField = 'uniform'
+  real              :: StretchingFactorA = 1.0
+  real              :: StretchingFactorB = 1.0
     ! "#SAVERESTART"
   logical           :: DoSaveRestart = .true.
   real              :: DtSaveRestart = 40.0
@@ -201,8 +203,10 @@ contains
        case("#CONVECTION")
           call read_var('TypeConvection', TypeConvection, IsLowerCase=.true.)
        case("#BFIELD")
-          call read_var('TypeBField', TypeBField, IsLowerCase=.true.)  
-          call read_var('TypeBFieldGrid', TypeBFieldGrid, IsLowerCase=.true.)
+          call read_var('TypeBCalc', TypeBCalc, IsLowerCase=.true.)  
+          call read_var('TypeBField', TypeBField, IsLowerCase=.true.)
+          call read_var('StretchingFactorA', StretchingFactorA)
+          call read_var('StretchingFactorB', StretchingFactorB)
        case("#INITIALTHERMALPLASMA")
           call read_var('DoReadDGCPM', DoReadDGCPM)
        case("#SOLARWIND")

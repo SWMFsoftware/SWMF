@@ -2,7 +2,7 @@ subroutine get_E_mu_dot
 
   use ModHeidiSize,   ONLY: dT, io, jo, ko, lo
   use ModHeidiDrifts, ONLY: MuDot, EDot, vR
-  use ModHeidiInput,  ONLY: TypeBField
+  use ModHeidiInput,  ONLY: TypeBCalc
   use ModHeidiMain,   ONLY: T, Mu, dMu, wMu, dE, ebnd,funi, funt, dL1, LZ, uPa,&
        dEdt_IIII,VPhi_IIII,VR_IIII, dMudt_III, IsBFieldNew
 
@@ -12,7 +12,7 @@ subroutine get_E_mu_dot
   integer :: i,j,k,l
   !-----------------------------------------------------------------------------
 
-  select case(TypeBField)
+  select case(TypeBCalc)
 
   case('analytic')
      do I = 1, IO
