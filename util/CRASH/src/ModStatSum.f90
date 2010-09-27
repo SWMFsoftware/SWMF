@@ -263,8 +263,11 @@ Contains
   !Set the element and its Ionization Potentials
   subroutine set_element( nZIn)
     integer,intent(in) :: nZIn
-    !--------------------------!
-    call set_mixture(nMixIn=1, nZIn_I=(/nZIn/), ConcentrationIn_I=(/1.0/))
+    integer:: nZIn_I(1)
+    real, parameter:: One_I(1) = (/ 1.0 /)
+    !-----------------------------------------------------------------------
+    nZIn_I(1) = nZIn
+    call set_mixture(nMixIn=1, nZIn_I=nZIn_I, ConcentrationIn_I=One_I)
   end subroutine set_element
   !==========================================================================
   subroutine set_temperature(Uin, NaIn, iError)

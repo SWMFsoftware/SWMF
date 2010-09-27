@@ -290,61 +290,60 @@ contains
     character(LEN=*), optional, intent(in)::TypeFile
     integer:: iMaterial, iTable
     character(LEN=5)::TypeFileHere
-    !-------------------
-    
+    real:: IndexMin_I(2), IndexMax_I(2)
+    !----------------------------------------------------------------------
+
     do iMaterial = Xe_,Ay_
        if(.not.UseEosTable_I(iMaterial))CYCLE
        iTable =  i_lookup_table(NameMaterial_I(iMaterial)//'_eos')
+       IndexMin_I = (/TeDefault_II(1,iMaterial), NaDefault_II(1,iMaterial)/)
+       IndexMax_I = (/TeDefault_II(2,iMaterial), NaDefault_II(2,iMaterial)/)
 
        if(iTable<0)then
           !Declare the table with the default parameters
           if(.not.present(Save))then
              call init_lookup_table(&
-               NameTable = NameMaterial_I(iMaterial)//'_eos', &
-               NameCommand = 'make'                         , &
-               NameVar = 'logTe logNa '//NameVarEos         , &
-               nIndex_I = IndexDefault_I                    , &
-               IndexMin_I = (/TeDefault_II(1, iMaterial), &
-                              NaDefault_II(1, iMaterial)/)  , &
-               IndexMax_I = (/TeDefault_II(2, iMaterial), &
-                              NaDefault_II(2, iMaterial)/)    )
+                  NameTable = NameMaterial_I(iMaterial)//'_eos', &
+                  NameCommand = 'make'                         , &
+                  NameVar = 'logTe logNa '//NameVarEos         , &
+                  nIndex_I = IndexDefault_I                    , &
+                  IndexMin_I = IndexMin_I                      , &
+                  IndexMax_I = IndexMax_I                        )
           else
              TypeFileHere = 'real8'
              if(present(TypeFile))TypeFileHere = TypeFile
              call init_lookup_table(&
-               NameTable = NameMaterial_I(iMaterial)//'_eos', &
-               NameCommand = 'save'                         , &
-               NameVar = 'logTe logNa '//NameVarEos         , &
-               nIndex_I = IndexDefault_I                    , &
-               IndexMin_I = (/TeDefault_II(1, iMaterial), &
-                              NaDefault_II(1, iMaterial)/)  , &
-               IndexMax_I = (/TeDefault_II(2, iMaterial), &
-                              NaDefault_II(2, iMaterial)/)  , &
-               NameFile   = &
-                 NameMaterial_I(iMaterial)//'_eos_CRASH.dat', &
-               TypeFile = TypeFileHere                      , &
-               StringDescription = &
-                 'CRASH EOS for '//NameMaterial_I(iMaterial)  )
+                  NameTable = NameMaterial_I(iMaterial)//'_eos', &
+                  NameCommand = 'save'                         , &
+                  NameVar = 'logTe logNa '//NameVarEos         , &
+                  nIndex_I = IndexDefault_I                    , &
+                  IndexMin_I = IndexMin_I                      , &
+                  IndexMax_I = IndexMax_I                      , &
+                  NameFile   = &
+                  NameMaterial_I(iMaterial)//'_eos_CRASH.dat', &
+                  TypeFile = TypeFileHere                      , &
+                  StringDescription = &
+                  'CRASH EOS for '//NameMaterial_I(iMaterial)  )
           end if
           iTable =  i_lookup_table(NameMaterial_I(iMaterial)//'_eos')
        end if
 
        !The table is at least declared. Check if it is filled in
-       
+
        iTableEos4Material_I(iMaterial) = iTable
        iMaterial4EosTable_I(iTable)    = iMaterial
-       
+
        !Temporary disable the use of table in EOS
        UseEosTable_I(iMaterial) = .false.
-       
+
        !Fill in the table
        call make_lookup_table(iTable, calc_eos_table, iComm)
-       
+
        !Recover the true value for UseEos:
        UseEosTable_I(iMaterial) = .true.
     end do
   end subroutine check_eos_table
-  !============================
+  !============================================================================
   subroutine calc_eos_table(iTable, Arg1, Arg2, Value_V)
     integer, intent(in):: iTable
     real, intent(in)   :: Arg1, Arg2
