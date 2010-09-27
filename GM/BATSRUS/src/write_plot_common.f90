@@ -772,6 +772,9 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar) = State_VGB(By_,:,:,:,iBLK)
      case('b1z')
         PlotVar(:,:,:,iVar) = State_VGB(Bz_,:,:,:,iBLK)
+     case('pperp')
+        PlotVar(:,:,:,iVar) = (3*State_VGB(iP,:,:,:,iBLK) & 
+             -State_VGB(Ppar_,:,:,:,iBLK))/2.0
      case('jx')
         if(UseCovariant)then                       
            call covar_curlb_plotvar(x_,iBLK,PlotVar(:,:,:,iVar))  
@@ -1375,7 +1378,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitB_)
      case('e','e1','ew','erad')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitEnergyDens_)
-     case('p','pth')
+     case('p','pth','pperp')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitP_)
         plotvar_inBody(iVar)=plotvar_inBody(iVar)*No2Io_V(UnitP_)
 

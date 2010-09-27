@@ -936,6 +936,8 @@ contains
             /(1 + AverageIonCharge*ElectronTemperatureRatio)
     case('p')
        LogVar_I(iVarTot) = StateSat_V(iP)
+    case('pperp')
+       LogVar_I(iVarTot) = (3*StateSat_V(iP)-StateSat_V(Ppar_))/2.0
     case('ux')
        LogVar_I(iVarTot) = StateSat_V(iRhoUx)/StateSat_V(iRho)
     case('uy')
@@ -1040,7 +1042,7 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitB_)
      case('e','epnt','ew','erad')
         LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitEnergyDens_)
-     case('p','ppnt','pmin','pmax')
+     case('p','ppnt','pmin','pmax','pperp')
         LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitP_)
      case('ux','uy','uz','uxpnt','uypnt','uzpnt')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitU_)
