@@ -83,7 +83,7 @@ module ModVarIndexes
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'rho mx my mz bx by bz e'
+       'rho mx my mz bx by bz p ppar e'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
