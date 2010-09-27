@@ -134,8 +134,14 @@ subroutine calc_sources
            if(nK > 1) DivU = DivU + &
                 uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid)
            DivU = vInv_CB(i,j,k,iBlock)*DivU
-           Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
-                - (g - 1)*State_VGB(iP,i,j,k,iBlock)*DivU
+           if(UseAnisoPressure)then
+                Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
+                - (State_VGB(iP,i,j,k,iBlock) &
+                - State_VGB(Ppar_,i,j,k,iBlock)/3.0)*DivU
+           else
+              Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
+                   - (g - 1)*State_VGB(iP,i,j,k,iBlock)*DivU
+           end if
         end do; end do; end do
 
         if(DoTestMe .and. VarTest==iP)call write_source('After p div U')
