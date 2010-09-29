@@ -7,6 +7,9 @@ Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_gray
 #BATL
 T			UseBatl
 
+MESSAGEPASS
+dir			TypeMessagePass
+
 #TIMING
 T                       UseTiming      (rest of parameters read if true)
 -2                      DnTiming       (-3 none, -2 final, -1 each session/AMR)
@@ -15,46 +18,6 @@ tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
 
 #TEST
 krylov
-
-LOOKUPTABLE
-pPerRho(e/rho,rho)	NameTable
-save                    NameCommand
-table_pPerRho.out	NameFile
-real4                   TypeFile
-pPerRho(e/rho,rho) for Xe, Be, Plastic
-logE/Rho logrho pPerRhoXe pPerRhoBe pPerRhoPl
-200                     nIndex1
-1e5                     Index1Min
-1e14                    Index1Max
-200                     nIndex2
-0.01                    Index2Min
-1e6                     Index2Max
-
-! notation:
-! T -> electron temperature
-! C -> specific heat
-! G -> gamma
-! Z -> average ion charge
-! H -> electron heat conduction coef
-LOOKUPTABLE
-Thermo(rho,p/rho)	NameTable
-save			NameCommand
-table_thermo.out	NameFile
-real8			TypeFile
-Thermo(rho,p/rho) for Xe, Be, Plastic
-logrho logpPerRho TXe CXe GXe ZXe HXe TBe CBe GBe ZBe HBe TPl CPl GPl ZPl HPl
-200			nIndex1
-0.01			Index1Min
-1e6			Index1Max
-200			nIndex2
-1e5			Index2Min
-1e13			Index2Max
-
-LOOKUPTABLE
-Opacity(rho,T)		NameTable
-load                    NameCommand
-table_opacities.out	NameFile
-ascii			TypeFile
 
 #PLANET
 NONE
@@ -94,6 +57,18 @@ hyades2d_1.3ns.out	NameHyadesFile
 1.0			 BetaProlong
 
 #USERINPUTEND    ----------------------
+
+LOOKUPTABLE
+{Xe Be Pl}_eos          NameTable
+load                    NameCommand
+{Xe Be Pl}_eos_CRASH.dat         
+real8                   TypeFile
+
+LOOKUPTABLE
+Opacity(rho,T)		NameTable
+load                    NameCommand
+table_opacities.out	NameFile
+ascii			TypeFile
 
 SEMIIMPLICIT
 T			UseSemiImplicit
@@ -190,10 +165,13 @@ F			DoSaverestart
 -1			DnSaveRestart
 1.3e-8			DtSaveRestart
 
-SAVELOGFILE
+PLOTDIR
+plot_128		NamePlotDir
+
+#SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
-1			DnSaveLogfile
+100			DnSaveLogfile
 -1.0			DtSaveLogfile
 
 SAVEINITIAL
@@ -242,7 +220,7 @@ T			IsMirrorZ
 0.8			CflExpl
 
 #STOP
-20			MaxIteration
+100			MaxIteration
 -1.3e-8			tSimulationMax
 
 #END
