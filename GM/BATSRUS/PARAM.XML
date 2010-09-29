@@ -3824,6 +3824,148 @@ density and pressure cannot change by more than the given percentages
 in a single timestep.
 </command>
 
+<command name="CONTROLTIMESTEP" alias="TIMESTEPCONTROL">
+	<parameter name="UseTimeStepControl" type="logical" default="F"/>
+#CONTROLTIMESTEP
+T			UseTimeStepControl
+
+#TIMESTEPCONTROL
+T			UseTimeStepControl
+
+Setting UseTimeStepControl=T switches on the new time step control scheme
+that controls the time step based on the relative change in selected set
+of variables. The variables can be selected with the #CONTROLVAR command.
+The various thresholds in the relative increase and decrease of these 
+variables can be set by the #CONTROLINCREASE and #CONTROLDECREASE commands.
+The #CONTROLFACTOR command determines how much the time step changes
+when the various thresholds are reached.
+
+The default is UseTimeStepControl false.
+</command>
+
+<command name="CONTROLVAR">
+	<parameter name="NameVarControl"  type="string" length="100" 
+			case="lower" default="rho p"/>
+#CONTROLVAR
+rho p			NameVarControl
+
+The NameVarControl string contains the list of variables that are monitored
+to control the time step. The variable names, separated by spaces, 
+should be chosen from the NameVar_V(1:nVar) array in the equation module. 
+The names are not case sensitive. Typically only the positive variables,
+like density and pressure, should be monitored. 
+
+Note that this command is only effective if the time step control is switched 
+on by th #CONTROLTIMESTEP command.
+
+The default is the control density and pressure as shown by the example.
+</command>
+
+<command name="CONTROLDECREASE">
+	<parameter name="RejectStepLevel" type="real" min="0" max="1"
+								default="0.3"/>
+	<parameter name="ReduceStepLevel" type="real" min="0" max="1"
+								default="0.6"/>
+	<parameter name="IncreaseStepLevel" type="real" min="0" max="1"
+								default="0.8"/>
+#CONTROLDECREASE
+0.3			RejectStepLevel
+0.6			ReduceStepLevel
+0.8			IncreaseStepLevel
+
+This command sets thresholds for the relative decrease in the control
+variables in the time step control scheme. The relative decrease is 
+defined as D = min(VarNew/VarOld) where the minimum is taken over all cells 
+in the computational domain and all the control variables. 
+
+If D is below the RejectStepLevel threshold, the time step is rejected, 
+and it will be redone with a smaller time step/CFL number.
+
+If D is above RejectStepLevel but below the ReduceStepLevel then the 
+time step is accepted, but the next time step/CFL number will be reduced.
+
+If D is above RejectStepLevel but below IncreaseStepLevel, the time
+step is accepted and there is no change in the time step/CFL number.
+
+If is above the IncreaseStepLevel threshold, then the time step/CFL number
+is increased, but it will never exceed the original value.
+
+This command is only effective if the time step control is switched on with
+the #CONTROLTIMESTEP command. The control variables are selected by the
+#CONTROLVAR command, the factors that change the time step or the CFL number
+are set by the #CONTROLFACTOR command.
+
+Default values are shown.
+</command>
+
+<command name="CONTROLINCREASE">
+	<parameter name="RejectStepLevel"   type="real" min="1" default="3.0"/>
+	<parameter name="ReduceStepLevel"   type="real" min="1" default="1.5"/>
+	<parameter name="IncreaseStepLevel" type="real" min="1" default="1.2"/>
+#CONTROLINCREASE
+3.0			RejectStepLevel
+1.5			ReduceStepLevel
+1.2			IncreaseStepLevel
+
+This command sets thresholds for the relative increase in the control
+variables in the time step control scheme. The relative increase is 
+defined as I = max(VarNew/VarOld) where the maximum is taken over all cells 
+in the computational domain and all the control variables. 
+
+If I is above the RejectStepLevel threshold, the time step is rejected, 
+and it will be redone with a smaller time step/CFL number.
+
+If I is below RejectStepLevel but above the ReduceStepLevel then the 
+time step is accepted, but the next time step/CFL number will be reduced.
+
+If I is below ReduceStepLevel but above IncreaseStepLevel, the time
+step is accepted and there is no change in the time step/CFL number.
+
+If I is below the IncreaseStepLevel threshold, then the time step/CFL number
+is increased, but it will never exceed the original value.
+
+This command is only effective if the time step control is switched on with
+the #CONTROLTIMESTEP command. The control variables are selected by the
+#CONTROLVAR command, and the factors that change the time step or the 
+CFL number are set by the #CONTROLFACTOR command.
+
+Default values are shown.
+</command>
+
+<command name="CONTROLFACTOR">
+	<parameter name="RejectStepFactor" type="real" min="0" max="1"
+							default="0.5"/>
+	<parameter name="ReduceStepFactor" type="real" min="0" max="1"
+							default="0.95"/>
+	<parameter name="IncreaseStepFactor" type="real" min="1"
+							default="1.05"/>
+#CONTROLFACTOR
+0.5			RejectStepFactor
+0.95			ReduceStepFactor
+1.05			IncreaseStepFactor
+
+This command sets how much the time step/CFL number is changed by the
+time step control scheme. 
+
+If the update is rejected then the next time step/CFL factor is 
+multiplied by RejectStepFactor. 
+
+If the update is accepted but the time step needs to be reduced, 
+then the next time step/CFL factor is multiplied by ReduceStepFactor. 
+
+If the update is accepted and the relative changes in the control variables 
+are within the range determined by the IncreaseStepLevel parameters of the 
+#CONTROLDECREASE and #CONTROLINCREASE commands, then the time step/CFL number
+is multiplied by IncreaseStepFactor, but the original values cannot be 
+exceeded.
+
+This command is only effective if the time step control is switched on with
+the #CONTROLTIMESTEP command. The control variables are selected by the
+#CONTROLVAR command.
+
+Default values are shown.
+</command>
+
 <command name="MULTISPECIES">
 	<parameter name="DoReplaceDensity" type="logical" default="T"/>
 	<parameter name="SpeciesPercentCheck" type="real" min="0" max="100"
