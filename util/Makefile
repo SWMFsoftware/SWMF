@@ -4,7 +4,8 @@ INSTALLFILE = \
 	EMPIRICAL/srcIE/Makefile.DEPEND \
 	EMPIRICAL/srcUA/Makefile.RULES \
 	NOMPI/src/Makefile.RULES \
-	CRASH/src/Makefile.DEPEND
+	CRASH/src/Makefile.DEPEND \
+	CRASH/src/Makefile.RULES
 
 install:
 	touch ${INSTALLFILE}

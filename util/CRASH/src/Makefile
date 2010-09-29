@@ -2,11 +2,13 @@
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
-include Makefile.DEPEND  
+include Makefile.DEPEND
+include Makefile.RULES  
+
 
 MY_LIB = ${LIBDIR}/libCRASH.a
 
-DEBUG = ${DEBUGFLAG}
+#DEBUG = ${DEBUGFLAG}
 
 IOMIX=\
 	ModIonMix.o \
@@ -188,7 +190,7 @@ test_abs:
 	  rm -f test_re*
 
 distclean: clean 
-	rm -f Makefile.DEPEND; \
+	rm -f Makefile.DEPEND Makefile.RULES; \
         rm -rf Tmp_;
 	rm -f test*diff *report*
 
