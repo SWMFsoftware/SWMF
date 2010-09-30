@@ -5,16 +5,20 @@ module ModAbsorption
   use ModConst
   implicit none
 contains
-  subroutine calc_absorption(iCell, jCell, kCell, iBlock, Omega, Absorption)
+  subroutine calc_absorption(State_V, Omega, Absorption)
+    use CRASH_ModTransport
+    use ModUser,ONLY: user_material_properties
     !The subroutine calculates the absorption coefficient, Absorption [m-1],
     ! at the circular frequency, omega.
-    integer, intent(in)::iCell, jCell, kCell, iBlock !Cell and block number
+    real,intent(in):: State_V(nVar)
     real, intent(in):: Omega     !Circular frequency, [rad/s]
     real, intent(out):: Absorption  !The absorption coefficient, [m-1]
-    real:: Value_V(nVar)  !State vector
+    real:: NAtomicSI, ZAverage, TeSI, TeEV
     reaL:: Rho  !Mass density, SI
     !---------------------
-    Value_V(1:nVar) = State_VGB(1:nVar, iCell, jCell, kCell, iBlock)
-    Rho = Value_V(rho_) * No2SI_V(UnitRho_)
+    
+    call user_material_properties(State_V=State_V, NAtomicOut=NAtomicSI, TeOut=TeSI,&
+         AverageIonChargeOut= ZAverage)
+  
   end subroutine calc_absorption
 end module ModAbsorption
