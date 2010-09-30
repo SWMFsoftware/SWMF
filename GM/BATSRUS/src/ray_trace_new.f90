@@ -1849,7 +1849,7 @@ subroutine plot_ray_equator(iFile)
   use ModNumConst,       ONLY: cTwoPi
   use ModIoUnit,         ONLY: UnitTmp_
   use ModPlotFile,       ONLY: save_plot_file
-  use ModRayTrace,       ONLY: RayMap_DSII
+  use ModRayTrace,       ONLY: RayMap_DSII, DoExtractBGradB1
   use CON_line_extract,  ONLY: line_get, line_clean
   use CON_axes,          ONLY: transform_matrix
 
@@ -1869,10 +1869,9 @@ subroutine plot_ray_equator(iFile)
   integer :: nRadius, nLon
   real    :: rMin, rMax
   integer :: iR, iLon
-  integer :: iPoint, nPoint, nVarOut
-  real, allocatable :: Radius_I(:), Longitude_I(:), PlotVar_VI(:,:)
+  integer :: iPoint, nPoint, nVarOut, nVarPlot=nVar+4
+  real, allocatable :: Radius_I(:),Longitude_I(:),PlotVar_VI(:,:),PlotVar_V(:)
   real    :: SmGm_DD(3,3)
-  real    :: PlotVar_V(0:4+nVar)
 
   character(len=100) :: NameFile, NameFileEnd=''
 
@@ -1902,16 +1901,19 @@ subroutine plot_ray_equator(iFile)
 
   if(iProc/=0) RETURN
 
+  ! Set number of variables at each point along line; allocate accordingly.
+  if(DoExtractBGradB1) nVarPlot = nVar + 7
+  allocate(PlotVar_V(0:nVarPlot))
+
   if(time_accurate) NameFileEnd = "_t"//StringDateOrTime
   write(NameFileEnd,'(a,i7.7,a)') trim(NameFileEnd) // '_n',n_step, '.out'
 
   ! Transformation matrix between the SM and GM coordinates
   SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
 
-  ! Set the file name
-
   call line_get(nVarOut, nPoint)
-  if(nVarOut /= 4+nVar)call stop_mpi(NameSub//': nVarOut error')
+
+  if(nVarOut /= nVarPlot)call stop_mpi(NameSub//': nVarOut error')
   allocate(PlotVar_VI(0:nVarOut, nPoint))
   call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
 
@@ -1919,7 +1921,12 @@ subroutine plot_ray_equator(iFile)
 
   open(UnitTmp_, FILE=NameFile, STATUS="replace")
   write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nRadius, nLon, nPoint
-  write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p'
+  if(DoExtractBGradB1) then
+     write(UnitTmp_, *) &
+          'iLine l x y z rho ux uy uz bx by bz p bgradb1x bgradb1y bgradb1z' 
+  else 
+     write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p' 
+  end if
 
   do iPoint = 1, nPoint
      ! Convert vectors to SM coordinates
@@ -1932,6 +1939,7 @@ subroutine plot_ray_equator(iFile)
   end do
   close(UnitTmp_)
   deallocate(PlotVar_VI)
+  deallocate(PlotVar_V)
   call line_clean
 
   ! Now save the mapping files
