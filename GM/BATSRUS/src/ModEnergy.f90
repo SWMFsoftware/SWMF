@@ -5,8 +5,9 @@ module ModEnergy
   use ModMultiFluid
   use ModSize,    ONLY: nI, nJ, nK, gcn, MaxBlock
   use ModAdvance, ONLY: State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
-       UseNonConservative, nConservCrit, IsConserv_CB
+       UseNonConservative, nConservCrit, IsConserv_CB, UseElectronPressure
   use ModPhysics, ONLY: Gm1, Inv_Gm1
+  use ModVarIndexes, ONLY: Pe_
 
   implicit none
 
@@ -66,16 +67,30 @@ contains
                   gm1*( Energy_GBI(i,j,k,iBlock,iFluid)               &
                   - 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
                   /State_VGB(iRho,i,j,k,iBlock) )
+
+             if(nFluid == 1 .and. UseElectronPressure)then
+                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+                     - State_VGB(Pe_,i,j,k,iBlock)
+             end if
+
           else
+
              Energy_GBI(i,j,k,iBlock,iFluid) =                        &
                   inv_gm1*State_VGB(iP,i,j,k,iBlock)                  &
                   + 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
                   /State_VGB(iRho,i,j,k,iBlock)
+
+             if(nFluid == 1 .and. UseElectronPressure)then
+                Energy_GBI(i,j,k,iBlock,iFluid) = &
+                     Energy_GBI(i,j,k,iBlock,iFluid) &
+                     + inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
+             end if
+
           end if
        end do; end do; end do
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE FLUIDLOOP
-       
+
        do k=1, nK; do j=1, nJ; do i=1, nI
           if(IsConserv_CB(i,j,k,iBlock)) then
              State_VGB(iP, i, j, k,iBlock) = State_VGB(iP, i, j, k,iBlock) &
@@ -144,6 +159,11 @@ contains
                gm1*(EnergyOld_CBI(i,j,k,iBlock,iFluid) - 0.5*   &
                sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)  &
                /StateOld_VCB(iRho,i,j,k,iBlock) )
+
+          if(nFluid == 1 .and. UseElectronPressure)then
+             StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
+                  - StateOld_VCB(Pe_,i,j,k,iBlock)
+          end if
        end do; end do; end do
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
@@ -179,6 +199,12 @@ contains
                   inv_gm1*StateOld_VCB(iP,i,j,k,iBlock) &
                   + 0.5*(sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)/&
                   StateOld_VCB(iRho,i,j,k,iBlock))
+          end if
+
+          if(nFluid == 1 .and. UseElectronPressure)then
+             EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
+                  EnergyOld_CBI(i,j,k,iBlock,iFluid) &
+                  + inv_gm1*StateOld_VCB(Pe_,i,j,k,iBlock)
           end if
        end do; end do; end do
        
@@ -227,9 +253,15 @@ contains
                gm1*(Energy_GBI(i, j, k, iBlock, iFluid) - 0.5*   &
                sum(State_VGB(iRhoUx:iRhoUz,i, j, k, iBlock)**2)  &
                /State_VGB(iRho,i, j, k, iBlock) )
+
+          if(nFluid == 1 .and. UseElectronPressure)then
+             State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+                  - State_VGB(Pe_,i,j,k,iBlock)
+          end if
        end do; end do; end do
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
+
        do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
           State_VGB(iP, i, j, k,iBlock) = State_VGB(iP, i, j, k,iBlock) &
                - gm1*0.5*sum(State_VGB(Bx_:Bz_,i, j, k,iBlock)**2)
@@ -321,6 +353,12 @@ contains
                   inv_gm1*State_VGB(iP,i,j,k,iBlock) &
                   +0.5*(sum(State_VGB(iRhoUx:iRhoUz, i, j, k, iBlock)**2)/&
                   State_VGB(iRho, i, j, k, iBlock))
+          end if
+
+          if(nFluid == 1 .and. UseElectronPressure)then
+             Energy_GBI(i,j,k,iBlock,iFluid) = &
+                  Energy_GBI(i,j,k,iBlock,iFluid) &
+                  + inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
           end if
        end do; end do; end do
        

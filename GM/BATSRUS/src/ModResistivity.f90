@@ -198,9 +198,9 @@ contains
     JouleHeating = 0.0
     HeatExchange = 0.0
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
-
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
        if(UseJouleHeating)then
           call get_current(i,j,k,iBlock,Current_D)
           JouleHeating = gm1 * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
@@ -237,10 +237,6 @@ contains
                   *State_VGB(Rho_,i,j,k,iBlock)/IonMassPerCharge**2 &
                   *(State_VGB(Ppar_,i,j,k,iBlock) - State_VGB(p_,i,j,k,iBlock))
           end if
-
-          ! Remove Joule heating and apply heat exchange to ion energy
-          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               - inv_gm1*(JouleHeating + HeatExchange)
        else
           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
        end if

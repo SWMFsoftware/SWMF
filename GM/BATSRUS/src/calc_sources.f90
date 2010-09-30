@@ -204,30 +204,22 @@ subroutine calc_sources
              CoronalHeating_C(i,j,k) * (g-1.0)
      end do; end do; end do
   end if
-  if(UseRadCooling.and.(.not.UseElectronPressure))then
+
+  if(UseRadCooling)then
      do k=1,nK; do j=1,nJ; do i=1,nI
         call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k),&
              RadCooling_C(i,j,k))
 
-        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
-             RadCooling_C(i,j,k)
-        Source_VC(p_,     i,j,k) = Source_VC(p_,     i,j,k) + &
-             RadCooling_C(i,j,k) * (g-1.0)
+        if(UseElectronPressure)then
+           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k)+ RadCooling_C(i,j,k)*gm1
+        else
+           Source_VC(p_,i,j,k)  = Source_VC(p_,i,j,k) + RadCooling_C(i,j,k)*gm1
+        end if
+        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k)+RadCooling_C(i,j,k)
      end do; end do; end do
   end if
 
   if(UseElectronPressure)then
-     if(UseRadCooling)then
-        do k=1,nK; do j=1,nJ; do i=1,nI
-           call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k),&
-                RadCooling_C(i,j,k))
-
-           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
-             RadCooling_C(i,j,k)
-           Source_VC(Pe_,    i,j,k) = Source_VC(Pe_,    i,j,k) + &
-                RadCooling_C(i,j,k) * (g-1.0)
-        end do; end do; end do
-     end if
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE
         DivU = uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_)
@@ -243,16 +235,10 @@ subroutine calc_sources
         Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) - (g-1)*Pe*DivU
 
         if(.not.UseMultiIon)then
-           ! The energy equation contains the work of electron pressure
-           ! -u.grad Pe = -div(u Pe) + Pe div u
-           ! The -div(u Pe) is implemented as a flux in ModFaceFlux. 
-           ! Here we add the Pe div u source term
-           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Pe*DivU
-
            ! Add "geometrical source term" p/r to the radial momentum equation
            ! The "radial" direction is along the Y axis
            ! NOTE: here we have to use signed radial distance!
-           if(UseRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+           if(UseRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k)&
                 + Pe/y_BLK(i,j,k,iBlock)
         end if
      end do; end do; end do

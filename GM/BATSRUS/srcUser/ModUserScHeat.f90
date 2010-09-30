@@ -763,10 +763,12 @@ contains
        call get_radiative_cooling( &
             State_VGB(:,i,j,k,iBlock), RadiativeCooling)
 
+       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k)+RadiativeCooling
+
        if(UseElectronPressure)then
           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + gm1*RadiativeCooling
        else
-          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k)+RadiativeCooling
+          Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + gm1*RadiativeCooling
        end if
     end do; end do; end do
 

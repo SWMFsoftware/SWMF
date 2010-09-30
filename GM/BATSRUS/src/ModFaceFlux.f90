@@ -1967,7 +1967,7 @@ contains
 
       ! (4) energy flux: (e + p)*u
       ! also add the work done by the radiation and electron pressure gradient
-      e = inv_gm1*p + 0.5*sum(StateStar_V(RhoUx_:RhoUz_)**2)/Rho
+      e = inv_gm1*(p + PeStar) + 0.5*sum(StateStar_V(RhoUx_:RhoUz_)**2)/Rho
       Flux_V(Energy_) = (e + pTotal)*Un
 
       Cmax      = max(wR, -wL)
@@ -2453,8 +2453,8 @@ contains
              Flux_V(Pe_) = Flux_V(Pe_) + gm1*HeatFlux
           else
              Flux_V(p_) = Flux_V(p_) + gm1*HeatFlux
-             Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
           end if
+          Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
        end if
        if(UseIonHeatConduction)then
           Flux_V(p_) = Flux_V(p_) + gm1*IonHeatFlux
@@ -2501,22 +2501,15 @@ contains
       ! Electric field squared/c^2
       E2Half  = 0.5*(Ex**2 + Ey**2 + Ez**2)
 
-      ! Calculate energy
+      ! Calculate energy and total pressure
       e = inv_gm1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
 
-      ! The full momentum contains the ExB/c^2 term:
-      ! rhoU_Boris = rhoU - ((U x B) x B)/c^2 = rhoU + (U B^2 - B U.B)/c^2
-      UDotB   = Ux*FullBx + Uy*FullBy + Uz*FullBz
-      FullB2  = FullBx**2 + FullBy**2 + FullBz**2
-      StateCons_V(RhoUx_)  = Rho*Ux + (Ux*FullB2 - FullBx*UdotB)*inv_c2LIGHT
-      StateCons_V(RhoUy_)  = Rho*Uy + (Uy*FullB2 - FullBy*UdotB)*inv_c2LIGHT
-      StateCons_V(RhoUz_)  = Rho*Uz + (Uz*FullB2 - FullBz*UdotB)*inv_c2LIGHT
-
-      ! The full energy contains the electric field energy
-      StateCons_V(Energy_) = e + E2Half
-
-      ! Calculate some intermediate values for flux calculations
       pTotal  = p + 0.5*B2 + B0x*Bx + B0y*By + B0z*Bz
+
+      if(UseElectronPressure)then
+         pTotal = pTotal + State_V(Pe_)
+         if(nFluid == 1) e = e + inv_gm1*State_V(Pe_)
+      end if
 
       if(UseWavePressure)then
          if(.not.UseWavePressureLtd)then
@@ -2530,9 +2523,18 @@ contains
       !        = p + bb/2 + (p - ppar)/2
       if(UseAnisoPressure) pTotal = pTotal + 0.5*(p - State_V(Ppar_))
 
-      if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
-
       pTotal2 = pTotal + E2Half
+
+      ! The full momentum contains the ExB/c^2 term:
+      ! rhoU_Boris = rhoU - ((U x B) x B)/c^2 = rhoU + (U B^2 - B U.B)/c^2
+      UDotB   = Ux*FullBx + Uy*FullBy + Uz*FullBz
+      FullB2  = FullBx**2 + FullBy**2 + FullBz**2
+      StateCons_V(RhoUx_)  = Rho*Ux + (Ux*FullB2 - FullBx*UdotB)*inv_c2LIGHT
+      StateCons_V(RhoUy_)  = Rho*Uy + (Uy*FullB2 - FullBy*UdotB)*inv_c2LIGHT
+      StateCons_V(RhoUz_)  = Rho*Uz + (Uz*FullB2 - FullBz*UdotB)*inv_c2LIGHT
+
+      ! The full energy contains the electric field energy
+      StateCons_V(Energy_) = e + E2Half
 
       ! Normal direction
       Un     = Ux*NormalX + Uy*NormalY + Uz*NormalZ
@@ -2614,15 +2616,14 @@ contains
       ! Calculate energy
       e = inv_gm1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
 
-      ! Calculate conservative state
-      StateCons_V(RhoUx_)  = Rho*Ux
-      StateCons_V(RhoUy_)  = Rho*Uy
-      StateCons_V(RhoUz_)  = Rho*Uz
-      StateCons_V(Energy_) = e
-
       ! Calculate some intermediate values for flux calculations
       B0B1    = B0x*Bx + B0y*By + B0z*Bz
-      pTotal  = p + 0.5*B2 + B0B1 
+      pTotal  = p + 0.5*B2 + B0B1
+
+      if(UseElectronPressure)then
+         pTotal = pTotal + State_V(Pe_)
+         if(nFluid == 1) e = e + inv_gm1*State_V(Pe_)
+      end if
 
       if(UseWavePressure)then
          if(.not.UseWavePressureLtd)then
@@ -2636,7 +2637,11 @@ contains
       !        = p + bb/2 + (p - ppar)/2
       if(UseAnisoPressure) pTotal = pTotal + 0.5*(p - State_V(Ppar_))
 
-      if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
+      ! Calculate conservative state
+      StateCons_V(RhoUx_)  = Rho*Ux
+      StateCons_V(RhoUy_)  = Rho*Uy
+      StateCons_V(RhoUz_)  = Rho*Uz
+      StateCons_V(Energy_) = e
 
       ! Normal direction
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
@@ -2749,6 +2754,12 @@ contains
               Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
       end if
 
+      ! Correct energy flux, so that the electron contribution to the energy
+      ! flux is U_e*(e_e + p_e)=u_e*(1/(gamma-1) + 1)*p_e
+      if(UseElectronPressure .and. nFluid == 1 .and. HallCoeff > 0) &
+           Flux_V(Energy_) = Flux_V(Energy_) &
+           + (HallUn - Un)*(inv_gm1 + 1)*State_V(Pe_)
+
       if(UseAlfvenWaves)then
          AlfvenSpeed = FullBn/sqrt(Rho)
 
@@ -2840,17 +2851,21 @@ contains
       ! Calculate energy
       e = inv_gm1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
 
+      pTotal = p
+
+      if(UseElectronPressure .and. .not.UseMultiIon)then
+         pTotal = pTotal + State_V(Pe_)
+         if(nFluid == 1) e = e + inv_gm1*State_V(Pe_)
+      end if
+
+      if(UseWavePressure) &
+           pTotal = pTotal + (GammaWave-1.0)*sum(State_V(WaveFirst_:WaveLast_))
+
       ! Calculate conservative state
       StateCons_V(iRhoUx)  = Rho*Ux
       StateCons_V(iRhoUy)  = Rho*Uy
       StateCons_V(iRhoUz)  = Rho*Uz
       StateCons_V(iEnergy) = e
-
-      pTotal = p
-
-      if(UseWavePressure) &
-           pTotal = pTotal + (GammaWave-1.0)*sum(State_V(WaveFirst_:WaveLast_))
-      if(UseElectronPressure .and. .not.UseMultiIon) pTotal = pTotal + State_V(Pe_)
 
       ! Normal velocity
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
