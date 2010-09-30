@@ -126,7 +126,7 @@ module CRASH_ModEos
   
   !Subroutine which may be used to set/reset UseEosTable_I
 
-  public:: read_if_use_eos_table
+  public:: read_if_use_eos_table, read_if_use_opac_table
  
   !The columns in the EOS table
   integer :: P_      =  1, &
@@ -158,6 +158,14 @@ module CRASH_ModEos
 
   public:: read_name_var_eos 
 
+  !The number of columns in the Opac table
+  integer :: nVarOpac =2   
+  
+  !The variable names in the opacity table
+  character(LEN=100):: NameVarOpac = &
+       'Opac(1) Ross(1)'
+  
+
   !The following subroutine:
   !1. Checks if the tables are available for the
   !   materials for which UseEosTable_I is True
@@ -167,6 +175,16 @@ module CRASH_ModEos
   !   the default ranges and fill in using the built-in EOS model
 
   public:: check_eos_table
+
+  !The following subroutine:
+  !1. Checks if the opacity tables are available for the
+  !   materials for which UseOpacityTable_I is True
+  !2. If the table is described in the PARAM.in file and should be
+  !   made, it is made  
+  !3. If the table is not described in the PARAM.in file form it with
+  !   the default ranges and fill in using the built-in opacity model
+
+  public:: check_opac_table
 
   !Arrays which relate the iTable for the EOS table with 
   !the material number:
@@ -280,6 +298,26 @@ contains
     end do
        
   end subroutine read_if_use_eos_table
+  !===============================
+  subroutine read_if_use_opac_table
+    !Usage
+    !#USEOPACTABLE
+    !T                      Use Opac Table for Xe
+    !T                      Use Opac Table for Be
+    !T                      Use Opac Table for Pl
+    !T                      Use Opac Table for Au
+    !T                      Use Opac Table for Ay
+    use ModReadParam, ONLY: read_var
+
+    integer:: iMaterial
+    !------------------!
+    do iMaterial = Xe_, Ay_
+       call read_var(&
+            'Use Opac table for '//NameMaterial_I(iMaterial),&
+            UseOpacityTable_I(iMaterial))
+    end do
+       
+  end subroutine read_if_use_opac_table
   !============================
   subroutine check_eos_table(iComm,Save,TypeFile)
     use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
@@ -290,60 +328,61 @@ contains
     character(LEN=*), optional, intent(in)::TypeFile
     integer:: iMaterial, iTable
     character(LEN=5)::TypeFileHere
-    real:: IndexMin_I(2), IndexMax_I(2)
-    !----------------------------------------------------------------------
-
+    !-------------------
+    
     do iMaterial = Xe_,Ay_
        if(.not.UseEosTable_I(iMaterial))CYCLE
        iTable =  i_lookup_table(NameMaterial_I(iMaterial)//'_eos')
-       IndexMin_I = (/TeDefault_II(1,iMaterial), NaDefault_II(1,iMaterial)/)
-       IndexMax_I = (/TeDefault_II(2,iMaterial), NaDefault_II(2,iMaterial)/)
 
        if(iTable<0)then
           !Declare the table with the default parameters
           if(.not.present(Save))then
              call init_lookup_table(&
-                  NameTable = NameMaterial_I(iMaterial)//'_eos', &
-                  NameCommand = 'make'                         , &
-                  NameVar = 'logTe logNa '//NameVarEos         , &
-                  nIndex_I = IndexDefault_I                    , &
-                  IndexMin_I = IndexMin_I                      , &
-                  IndexMax_I = IndexMax_I                        )
+               NameTable = NameMaterial_I(iMaterial)//'_eos', &
+               NameCommand = 'make'                         , &
+               NameVar = 'logTe logNa '//NameVarEos         , &
+               nIndex_I = IndexDefault_I                    , &
+               IndexMin_I = (/TeDefault_II(Min_, iMaterial), &
+                              NaDefault_II(Min_, iMaterial)/)  , &
+               IndexMax_I = (/TeDefault_II(Max_, iMaterial), &
+                              NaDefault_II(Max_, iMaterial)/)    )
           else
              TypeFileHere = 'real8'
              if(present(TypeFile))TypeFileHere = TypeFile
              call init_lookup_table(&
-                  NameTable = NameMaterial_I(iMaterial)//'_eos', &
-                  NameCommand = 'save'                         , &
-                  NameVar = 'logTe logNa '//NameVarEos         , &
-                  nIndex_I = IndexDefault_I                    , &
-                  IndexMin_I = IndexMin_I                      , &
-                  IndexMax_I = IndexMax_I                      , &
-                  NameFile   = &
-                  NameMaterial_I(iMaterial)//'_eos_CRASH.dat', &
-                  TypeFile = TypeFileHere                      , &
-                  StringDescription = &
-                  'CRASH EOS for '//NameMaterial_I(iMaterial)  )
+               NameTable = NameMaterial_I(iMaterial)//'_eos', &
+               NameCommand = 'save'                         , &
+               NameVar = 'logTe logNa '//NameVarEos         , &
+               nIndex_I = IndexDefault_I                    , &
+               IndexMin_I = (/TeDefault_II(Min_, iMaterial), &
+                              NaDefault_II(Min_, iMaterial)/)  , &
+               IndexMax_I = (/TeDefault_II(Max_, iMaterial), &
+                              NaDefault_II(max_, iMaterial)/)  , &
+               NameFile   = &
+                 NameMaterial_I(iMaterial)//'_eos_CRASH.dat', &
+               TypeFile = TypeFileHere                      , &
+               StringDescription = &
+                 'CRASH EOS for '//NameMaterial_I(iMaterial)  )
           end if
           iTable =  i_lookup_table(NameMaterial_I(iMaterial)//'_eos')
        end if
 
        !The table is at least declared. Check if it is filled in
-
+       
        iTableEos4Material_I(iMaterial) = iTable
        iMaterial4EosTable_I(iTable)    = iMaterial
-
+       
        !Temporary disable the use of table in EOS
        UseEosTable_I(iMaterial) = .false.
-
+       
        !Fill in the table
        call make_lookup_table(iTable, calc_eos_table, iComm)
-
+       
        !Recover the true value for UseEos:
        UseEosTable_I(iMaterial) = .true.
     end do
   end subroutine check_eos_table
-  !============================================================================
+  !============================
   subroutine calc_eos_table(iTable, Arg1, Arg2, Value_V)
     integer, intent(in):: iTable
     real, intent(in)   :: Arg1, Arg2
@@ -384,7 +423,119 @@ contains
 
     Value_V(1:nVarEos) = ValueTmp_V(1:nVarEos)
   end subroutine calc_eos_table
-  
+   !============================
+  subroutine check_opac_table(iComm,Save,TypeFile)
+    use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
+    use ModLookupTable, ONLY: init_lookup_table
+    
+    integer, optional, intent(in) :: iComm
+    logical, optional, intent(in) :: Save 
+    character(LEN=*), optional, intent(in)::TypeFile
+    integer:: iMaterial, iTable
+    character(LEN=5)::TypeFileHere
+    !-------------------
+    nVarOpac = 2 * nGroup
+
+    !Construct NameVarOpac
+
+    NameVarOpac = ''
+
+    if(nGroup==1)then
+       NameVarOpac = 'Planck Ross'
+    elseif(2 <= nGroup.and.nGroup <= 9)then
+       write(NameVarOpac,'(a,i1,a,i1,a)')&
+            'Planck(', nGroup, ')  Ross(',nGroup,')'
+    elseif(10 <= nGroup.and.nGroup <= 99)then
+       write(NameVarOpac,'(a,i2,a,i2,a)')&
+            'Planck(', nGroup, ')  Ross(',nGroup,')'
+    elseif(100 <= nGroup.and.nGroup <= 999)then
+       write(NameVarOpac,'(a,i3,a,i3,a)')&
+            'Planck(', nGroup, ')  Ross(',nGroup,')'
+    elseif(1000 <= nGroup.and.nGroup <= 9999)then
+       write(NameVarOpac,'(a,i4,a,i4,a)')&
+            'Planck(', nGroup, ')  Ross(',nGroup,')'
+    else
+       call CON_stop(&
+            'The opacity table cannot be set with the declared nGroup=')
+    end if
+    do iMaterial = Xe_,Ay_
+       if(.not.UseOpacityTable_I(iMaterial))CYCLE
+       iTable =  i_lookup_table(NameMaterial_I(iMaterial)//'_opac')
+
+       if(iTable<0)then
+          !Declare the table with the default parameters
+          if(.not.present(Save))then
+             call init_lookup_table(&
+               NameTable = NameMaterial_I(iMaterial)//'_opac', &
+               NameCommand = 'make'                         , &
+               NameVar = 'logRho logTe'//NameVarOpac         , &
+               nIndex_I = IndexDefault_I                    , &
+               IndexMin_I = (/NaDefault_II(Min_, iMaterial)*  &
+                   cAtomicMass * cAtomicMassCRASH_I(iMaterial),  &
+                              TeDefault_II(Min_, iMaterial)/)  , &
+               IndexMax_I = (/NaDefault_II(Max_, iMaterial)*  &
+                   cAtomicMass * cAtomicMassCRASH_I(iMaterial),  &
+                             TeDefault_II(Max_, iMaterial)/)    )
+          else
+             TypeFileHere = 'real8'
+             if(present(TypeFile))TypeFileHere = TypeFile
+             call init_lookup_table(&
+               NameTable = NameMaterial_I(iMaterial)//'_eos', &
+               NameCommand = 'save'                         , &
+               NameVar = 'logTe logNa '//NameVarEos         , &
+               nIndex_I = IndexDefault_I                    , &
+               IndexMin_I = (/NaDefault_II(Min_, iMaterial)*  &
+                   cAtomicMass * cAtomicMassCRASH_I(iMaterial),  &
+                              TeDefault_II(Min_, iMaterial)/)  , &
+               IndexMax_I = (/NaDefault_II(Max_, iMaterial)*  &
+                   cAtomicMass * cAtomicMassCRASH_I(iMaterial),  &
+                             TeDefault_II(Max_, iMaterial)/), &
+               NameFile   = &
+                 NameMaterial_I(iMaterial)//'_opac_CRASH.dat', &
+               TypeFile = TypeFileHere                      , &
+               StringDescription = &
+                 'CRASH Opacity for '//NameMaterial_I(iMaterial)  )
+          end if
+          iTable =  i_lookup_table(NameMaterial_I(iMaterial)//'_opac')
+       end if
+
+       !The table is at least declared. Check if it is filled in
+       
+       iTableOpac4Material_I(iMaterial) = iTable
+       iMaterial4OpacTable_I(iTable)    = iMaterial
+       
+       !Temporary disable the use of table in EOS
+       UseOpacityTable_I(iMaterial) = .false.
+       
+       !Fill in the table
+       call make_lookup_table(iTable, calc_opac_table, iComm)
+       
+       !Recover the true value for UseEos:
+       UseOpacityTable_I(iMaterial) = .true.
+    end do
+  end subroutine check_opac_table
+  !============================
+  subroutine calc_opac_table(iTable, Arg1, Arg2, Value_V)
+    integer, intent(in):: iTable
+    real, intent(in)   :: Arg1, Arg2
+    real, intent(out)  :: Value_V(:)
+    
+    real:: Rho, Te
+    integer::iMaterial
+    !-----------------
+    iMaterial = iMaterial4EosTable_I(iTable)
+    
+    Rho = Arg1 
+    Te  = Arg2 * cEvToK
+    
+    Value_V = 0.0
+    call eos_material(iMaterial,Rho,&
+       TeIn = Te, &
+       OpacityPlanckOut_I = Value_V(1:nGroup),&
+       OpacityRosselandOut_I = Value_V(1+nGroup:2*nGroup) )
+
+    Value_V(:) = Value_V(:)/Arg1
+  end subroutine calc_opac_table
   !============================
   !\
   ! Beginning of EOS functions
@@ -445,7 +596,7 @@ contains
     integer, optional, intent(out) :: iError       ! error flag
 
     real   :: Natomic
-    real   :: Te, Value_V(1:nVarEos), Opacity_V(1:2*nGroup)
+    real   :: TeEV, Value_V(1:nVarEos), Opacity_V(1:2*nGroup)
     integer:: iTable
     character(LEN=*), parameter:: NameSub = 'eos_material'
     !-------------------------------------------------------------------------
@@ -464,29 +615,29 @@ contains
        
        if(present(TeIn))then
 
-          Te = TeIn * cKToEV
-          call interpolate_lookup_table(iTable, Te, Natomic, Value_V, DoExtrapolate=.false.)
+          TeEV = TeIn * cKToEV
+          call interpolate_lookup_table(iTable, TeEV, Natomic, Value_V, DoExtrapolate=.false.)
 
        elseif(present(eTotalIn))then
 
           ! Get an energy per the atomic cell, express in eV
           ! Find temperature from dentity and internal energy
           call interpolate_lookup_table(iTable, E_, eTotalIn/ (cEV * Natomic), Natomic, &
-               Value_V, Arg1Out = Te, DoExtrapolate=.false.)
+               Value_V, Arg1Out = TeEV, DoExtrapolate=.false.)
        
 
        elseif(present(pTotalIn))then
           ! Divide pressure by Na , express in eV
           !Find temperature from dentity and pressure
           call interpolate_lookup_table(iTable, P_,  pTotalIn / (cEV * Natomic), Natomic, &
-               Value_V, Arg1Out = Te, DoExtrapolate=.false.)
+               Value_V, Arg1Out = TeEV, DoExtrapolate=.false.)
           
      
        elseif(present(eElectronIn))then
           ! Get an energy per the atomic cell, express in eV
           ! Find temperature from dentity and internal energy
           call interpolate_lookup_table(iTable, Ee_, eElectronIn/ (cEV * Natomic), Natomic, &
-               Value_V, Arg1Out = Te, DoExtrapolate=.false.)
+               Value_V, Arg1Out = TeEV, DoExtrapolate=.false.)
 
 
        elseif(present(pElectronIn))then
@@ -502,7 +653,7 @@ contains
                ': none of Te, eTotal, or pTotal is among the input parameters')
        end if
 
-       if(present(TeOut))      TeOut     = Te*cEVToK
+       if(present(TeOut))      TeOut     = TeEV*cEVToK
        if(present(eTotalOut))  eTotalOut = Natomic*cEV*Value_V(E_)
        if(present(pTotalOut))  pTotalOut = Natomic*cEV*Value_V(P_)
        if(present(eElectronOut)) eElectronOut = Natomic*cEV*Value_V(Ee_)
@@ -521,7 +672,7 @@ contains
             present(OpacityRosselandOut_I))then
           if(UseOpacityTable_I(iMaterial))then
              iTable = iTableOpac4Material_I(iMaterial)
-             call interpolate_lookup_table(iTable, Te, Rho, Opacity_V, DoExtrapolate=.false.)
+             call interpolate_lookup_table(iTable, Rho, TeEV, Opacity_V, DoExtrapolate=.false.)
              if(present(OpacityPlanckOut_I))OpacityPlanckOut_I=Opacity_V(1:nGroup) * Rho
              if(present(OpacityRosselandOut_I))&
                   OpacityRosselandOut_I=Opacity_V(nGroup+1:2*nGroup) * Rho
@@ -547,7 +698,7 @@ contains
     if(UseEosTable_I(iMaterial))then
        !We need only opacities
        call eos_generic(Natomic, &
-                  TeIn = Te*cEvToK, &
+                  TeIn = TeEV * cEvToK, &
                   OpacityPlanckOut_I = OpacityPlanckOut_I, &
                   OpacityRosselandOut_I = OpacityRosselandOut_I , &
                   iError= iError)
