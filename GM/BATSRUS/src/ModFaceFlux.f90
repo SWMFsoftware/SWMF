@@ -2508,7 +2508,7 @@ contains
 
       if(UseElectronPressure)then
          pTotal = pTotal + State_V(Pe_)
-         if(nFluid == 1) e = e + inv_gm1*State_V(Pe_)
+         if(nIonFluid == 1 .and. iFluid == 1) e = e + inv_gm1*State_V(Pe_)
       end if
 
       if(UseWavePressure)then
@@ -2622,7 +2622,7 @@ contains
 
       if(UseElectronPressure)then
          pTotal = pTotal + State_V(Pe_)
-         if(nFluid == 1) e = e + inv_gm1*State_V(Pe_)
+         if(nIonFluid == 1 .and. iFluid == 1) e = e + inv_gm1*State_V(Pe_)
       end if
 
       if(UseWavePressure)then
@@ -2754,11 +2754,14 @@ contains
               Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
       end if
 
-      ! Correct energy flux, so that the electron contribution to the energy
-      ! flux is U_e*(e_e + p_e)=u_e*(1/(gamma-1) + 1)*p_e
-      if(UseElectronPressure .and. nFluid == 1 .and. HallCoeff > 0) &
-           Flux_V(Energy_) = Flux_V(Energy_) &
-           + (HallUn - Un)*(inv_gm1 + 1)*State_V(Pe_)
+      if(nIonFluid == 1 .and. iFluid == 1)then
+         ! Correct energy flux, so that the electron contribution to the energy
+         ! flux is U_e*(e_e + p_e)=u_e*(1/(gamma-1) + 1)*p_e.
+         ! We add (U_e-U_ion)*(1/(gamma-1) + 1)*p_e.
+         if(UseElectronPressure .and. HallCoeff > 0) &
+              Flux_V(Energy_) = Flux_V(Energy_) &
+              + (HallUn - Un)*(inv_gm1 + 1)*State_V(Pe_)
+      end if
 
       if(UseAlfvenWaves)then
          AlfvenSpeed = FullBn/sqrt(Rho)
@@ -2853,13 +2856,16 @@ contains
 
       pTotal = p
 
-      if(UseElectronPressure .and. .not.UseMultiIon)then
-         pTotal = pTotal + State_V(Pe_)
-         if(nFluid == 1) e = e + inv_gm1*State_V(Pe_)
-      end if
+      if(nIonFluid == 1 .and. iFluid == 1)then
+         if(UseElectronPressure)then
+            pTotal = pTotal + State_V(Pe_)
+            e = e + inv_gm1*State_V(Pe_)
+         end if
 
-      if(UseWavePressure) &
-           pTotal = pTotal + (GammaWave-1.0)*sum(State_V(WaveFirst_:WaveLast_))
+         if(UseWavePressure)then
+            pTotal = pTotal + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+         end if
+      end if
 
       ! Calculate conservative state
       StateCons_V(iRhoUx)  = Rho*Ux
