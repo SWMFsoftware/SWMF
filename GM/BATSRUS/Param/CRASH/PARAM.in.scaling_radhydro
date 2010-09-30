@@ -13,12 +13,12 @@ T                       UseTiming      (rest of parameters read if true)
 -1                      nDepthTiming   (-1 for arbitrary depth)
 tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
 
-TEST
+#TEST
 krylov
 
 #LOOKUPTABLE
 OpacityXe(rho,T)	NameTable
-load			NameCommand
+save			NameCommand
 table_xe_opacities.out	NameFile
 real8			TypeFile
 Opacity(rho,Te) for Xe
@@ -32,7 +32,7 @@ logrho logT p(30) r(30)
 
 #LOOKUPTABLE
 OpacityBe(rho,T)	NameTable
-load			NameCommand
+save			NameCommand
 table_be_opacities.out	NameFile
 real8			TypeFile
 Opacity(rho,Te) for Be
@@ -46,7 +46,7 @@ logrho logT p(30) r(30)
 
 #LOOKUPTABLE
 OpacityPl(rho,T)	NameTable
-load			NameCommand
+save			NameCommand
 table_pl_opacities.out	NameFile
 real8			TypeFile
 Opacity(rho,Te) for plastic
@@ -60,7 +60,7 @@ logrho logT p(30) r(30)
 
 #LOOKUPTABLE
 OpacityAu(rho,T)	NameTable
-load			NameCommand
+save			NameCommand
 table_au_opacities.out	NameFile
 real8			TypeFile
 Opacity(rho,Te) for Au
@@ -74,7 +74,7 @@ logrho logT p(30) r(30)
 
 #LOOKUPTABLE
 OpacityAy(rho,T)	NameTable
-load			NameCommand
+save			NameCommand
 table_ay_opacities.out	NameFile
 real8			TypeFile
 Opacity(rho,Te) for Ay
@@ -173,15 +173,15 @@ T			IsTimeAccurate
 rz			TypeGeometry
 
 #GRID
-80			nRootBlockX
-8			nRootBlockY
+160			nRootBlockX
+16			nRootBlockY
 1			nRootBlockZ
 -150.0			xMin
 3900.0			xMax
    0.0			yMin
  450.0			yMax
- 450.0			zMin
-   0.0			zMax
+   0.0			zMin
+ 450.0			zMax
 
 #AMRINITPHYSICS
 3			nRefineLevelIC
@@ -233,7 +233,7 @@ F			DoSaveRestart
 1.3e-8			DtSaveRestart
 
 #PLOTDIR
-plot_128                NamePlotDir
+plot_128		NamePlotDir
 
 #SAVELOGFILE
 T			DoSaveLogfile
