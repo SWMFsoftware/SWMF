@@ -4,14 +4,22 @@
 #MSUB -l nodes=4
 #MSUB -l partition=hera
 #MSUB -l walltime=0:30:00
-#MSUB -q pdebug
+#MSUB -q pbatch
 #MSUB -V
-#MSUB -o /g/g99/toth2/Tmp/CRASH/SCALING/run_n64/runlog
+#MSUB -o /g/g99/toth2/Tmp/CRASH/SCALING/run/runlog
 
 date
-cd /g/g99/toth2/Tmp/CRASH/SCALING/run_n64
+cd /g/g99/toth2/Tmp/CRASH/SCALING/run
+
+# run CRASH (the number of processors is already specified above)
+# switch on BATL and set plot directory just before the run starts
+perl -pi -e 's/^BATL/\#BATL/' PARAM.in
+perl -pi -e 's/.*NamePlotDir/plot_128\t\tNamePlotDir/' PARAM.in
 
 # Number of cores = 16 times the number of nodes
 srun -n64 CRASH.exe
+
+# load opacity tables in next run(s)
+perl -pi -e 's/save/load/' PARAM.in
 
 exit

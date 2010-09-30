@@ -4,17 +4,19 @@ my $Help         = ($h or $help);
 &print_help if $Help;
 
 my $Verbose      = $v;
-my $Dryrun       = $n;
+my $Dryrun       = $d;
 my $WeakScaling  = $weak;
 my $CompileCode  = $compile;
 my $CreateRundir = $rundir;
 my $SubmitRun    = $submit;
+my $RadHydro     = $radhydro;
+my $nCores       = $n;
 
 use strict;
 
 my $Machine = `hostname`;
 $Machine =~ s/\d*\n//;
-print "Machine=$Machine\n";
+print "Machine=$Machine\n" if $Verbose;
 my $IsHera;
 my $IsPfe;
 $IsHera = 1  if $Machine eq "hera";
@@ -26,22 +28,37 @@ die "Unknown machine=$Machine\n" unless $IsHera or $IsPfe;
 my $nNode;
 my $nCore;
 my @nCore;
-if($WeakScaling){
+if($nCores){
+    @nCore  = split(/,/,$nCores);
+}elsif($WeakScaling){
     @nCore  = (8,64,512,4096);
 }else{
     @nCore  = (128,256,512,1024,2048,4096,8192);
 }
+print "Number of cores=@nCore\n" if $Verbose;
 
-# Input file
+# Input files
+my $ParamFile;
+if($RadHydro){
+    $ParamFile = "Param/CRASH/PARAM.in.scaling_radhydro";
+}else{
+    $ParamFile = "Param/CRASH/PARAM.in.scaling_hydro";
+}
+my $JobScript  = "Scripts/Scaling.job.".$Machine;
 my $HyadesFile = "hyades2d_1.3ns.out";
 
 # Where to put the run directories
-# my $Dir = "/nobackup/gtoth1/SCALING";
 my $Dir = "SCALING";
-&shell("mkdir -p $Dir");
-my $Rundir = "SCALING/run";
+&shell("mkdir $Dir") unless -d $Dir;
+my $Rundir = "SCALING/run"; # default for strong scaling
 
-my $JobScript = "Scripts/Scaling.job.".$Machine;
+if($CompileCode){
+    if($RadHydro){
+	&shell("Config.pl -e=Crash -nMaterial=5 -nWave=30 -u=Crash");
+    }else{
+	&shell("Config.pl -e=HdCrash -nMaterial=3 -u=Crash");
+    }
+}
 
 if(not $WeakScaling){
 
@@ -61,27 +78,28 @@ if(not $WeakScaling){
 	    }
 	}
 
+	# Create job scripts and plot directories
 	foreach $nCore (@nCore){
-	    $nNode = $nCore/8  if $IsPfe;
-	    $nNode = $nCore/16 if $IsHera;
 	    &shell("cp $JobScript $Rundir/job_$nCore");
-	    &edit_jobscript("$Rundir/job_$nCore");
+	    &edit_jobscript("$Rundir/job_$nCore",$nCore);
 	    &shell("mkdir $Rundir/plot_$nCore/");
 	}
 	print "Creating $Rundir done\n";
     }
     if($CompileCode){
-	&shell("Config.pl -e=HdCrash -u=Crash -nMaterial=3");
 	foreach $nCore (@nCore){
 	    my $nBlock = int(2*196608/$nCore + 0.99);
 	    print "Compiling $Rundir/CRASH_$nCore.exe for nBlock=$nBlock\n";
-	    &shell("Config.pl -g=4,4,4,$nBlock,1");
+	    if($RadHydro){
+		&shell("Config.pl -g=4,4,1,$nBlock,$nBlock");
+	    }else{
+		&shell("Config.pl -g=4,4,4,$nBlock,1");
+	    }
 	    &shell("make CRASH");
 	    &shell("cp src/CRASH.exe $Rundir/CRASH_$nCore.exe");
 	}
 	print "Compilations done\n";
     }
-
     if($SubmitRun){
 	foreach $nCore (@nCore){
 	    &submit_run($Rundir,"job_$nCore");
@@ -91,7 +109,11 @@ if(not $WeakScaling){
 }else{
     # Weak scaling uses many run directories and a single executable
     if($CompileCode){
-	&shell("Config.pl -e=HdCrash -u=Crash -g=4,4,4,700,1");
+	if($RadHydro){
+	    &shell("Config.pl -g=4,4,1,700,700");
+	}else{
+	    &shell("Config.pl -g=4,4,4,700,1");
+	}
 	&shell("make CRASH");
     }
 
@@ -118,7 +140,7 @@ if(not $WeakScaling){
 		}
 	    }
 	    # Set number of nodes/cores in job
-	    &edit_jobscript("$rundir/job");
+	    &edit_jobscript("$rundir/job",$nCore);
 	}
     }
 
@@ -130,23 +152,24 @@ if(not $WeakScaling){
 }
 
 exit;
-#################################################################################
+###############################################################################
 sub make_rundir{
     die "$Rundir already exists\n" if -d $Rundir and not $Dryrun;
     &shell("make rundir RUNDIR=$Rundir DEFAULT_EXE=CRASH.exe");
     &shell("gunzip -c dataCRASH/input/$HyadesFile.gz > $Rundir/$HyadesFile");
-    &shell("cp Param/CRASH/PARAM.in.hydro_scaling $Rundir/PARAM.in");
+    &shell("cp $ParamFile $Rundir/PARAM.in");
 }
-#################################################################################
+###############################################################################
 sub submit_run{
     my $rundir = shift;
     my $job    = shift;
     &shell("cd $rundir; qsub $job") if $IsPfe;
     &shell("cd $rundir; msub $job | tail -1 > ${job}id") if $IsHera;
 }
-#################################################################################
+###############################################################################
 sub edit_jobscript{
     my $jobscript = shift;
+    my $nCore     = shift;
 
     if($Dryrun){
 	print "edit $jobscript\n";
@@ -170,18 +193,18 @@ sub edit_jobscript{
 	    # Change plot directory
 	    s/plot_\d+/plot_$nCore/;
 	    # Change executable and runlog filenames
-	    s/CRASH\w*\.exe > runlog\w*/CRASH_$nCore.exe > runlog_$nCore/;
+	    s/CRASH\w*\.exe > (runlog[^\d+])\d+/CRASH_$nCore.exe > $1$nCore/;
 	}
 	print;
     }
 }
-#################################################################################
+###############################################################################
 sub shell{
     my $command = shift;
     print "$command\n" if $Verbose;
     `$command` unless $Dryrun;
 }
-#################################################################################
+###############################################################################
 sub print_help{
     print "
 This script can setup weak and strong scaling runs on hera and Pleiades.
@@ -190,18 +213,37 @@ files to customize the code.
 
 Usage:
 
-Scripts/Scaling.pl [-v] [-n] [-weak] [-compile] [-rundir] [-setup] [-submit]
+Scripts/Scaling.pl [-v] [-d] [-n=CORES] [-weak | -radhydro] 
+                   [-rundir] [-compile] [-submit]
 
 -v        Switch on verbose mode.
--n        Switch on dry mode (do not execute commands).
+-d        Dry run mode (do not execute commands).
+-n=CORES  Set number of cores as a comma separated list of numbers.
+          Default depends on scaling type and machine.
 -weak     Do weak scaling. Default is strong scaling.
--compile  Compile the executables.
--rundir   Create the run directory/directories.
--submit   Submit the jobs.
+-radhydro Do 2D radhydro problem (only strong scaling). Default is 3D hydro.
+-rundir   Create the run directory/directories (step 1)
+-compile  Compile the executable(s) (step 2)
+-submit   Submit the jobs (step 3)
 
-You can do these steps separately too.
-The machine name is determined automatically.
-The script stops if it is not recognized.
+Examples:
+
+Create rundirectory for strong scaling 2D radhydro problem:
+
+  Scripts/Scaling.pl -radhydro -rundir
+
+Compile executables for 128 and 256 cores:
+
+  Scripts/Scaling.pl -n=128,256 -radhydro -compile
+
+Submit job for 128 cores:
+
+  Scripts/Scaling.pl -n=128 -radhydro -submit
+
+Show what would be done for a full weak scaling of the 3D hydro problem:
+
+  Scripts/Scaling.pl -d -v -weak -rundir -compile -submit
+
 ";
     exit;
 }
