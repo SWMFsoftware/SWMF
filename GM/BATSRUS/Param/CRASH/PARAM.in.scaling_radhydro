@@ -1,0 +1,303 @@
+#ECHO
+T
+
+#DESCRIPTION
+Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_multigroupcond
+
+#BATL
+T			UseBatl
+
+#TIMING
+T                       UseTiming      (rest of parameters read if true)
+-2                      DnTiming       (-3 none, -2 final, -1 each session/AMR)
+-1                      nDepthTiming   (-1 for arbitrary depth)
+tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
+
+TEST
+krylov
+
+#LOOKUPTABLE
+OpacityXe(rho,T)	NameTable
+load			NameCommand
+table_xe_opacities.out	NameFile
+real8			TypeFile
+Opacity(rho,Te) for Xe
+logrho logT p(30) r(30)
+200			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+200			nIndex2
+5800			Index2Min (about 0.5eV)
+1e8			Index2Max (about 10keV)
+
+#LOOKUPTABLE
+OpacityBe(rho,T)	NameTable
+load			NameCommand
+table_be_opacities.out	NameFile
+real8			TypeFile
+Opacity(rho,Te) for Be
+logrho logT p(30) r(30)
+200			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+200			nIndex2
+5800			Index2Min (about 0.5eV)
+1e8			Index2Max (about 10keV)
+
+#LOOKUPTABLE
+OpacityPl(rho,T)	NameTable
+load			NameCommand
+table_pl_opacities.out	NameFile
+real8			TypeFile
+Opacity(rho,Te) for plastic
+logrho logT p(30) r(30)
+200			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+200			nIndex2
+5800			Index2Min (about 0.5eV)
+1e8			Index2Max (about 10keV)
+
+#LOOKUPTABLE
+OpacityAu(rho,T)	NameTable
+load			NameCommand
+table_au_opacities.out	NameFile
+real8			TypeFile
+Opacity(rho,Te) for Au
+logrho logT p(30) r(30)
+200			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+200			nIndex2
+5800			Index2Min (about 0.5eV)
+1e8			Index2Max (about 10keV)
+
+#LOOKUPTABLE
+OpacityAy(rho,T)	NameTable
+load			NameCommand
+table_ay_opacities.out	NameFile
+real8			TypeFile
+Opacity(rho,Te) for Ay
+logrho logT p(30) r(30)
+200			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+200			nIndex2
+5800			Index2Min (about 0.5eV)
+1e8			Index2Max (about 10keV)
+
+#PLANET
+NONE
+
+#IOUNITS
+SI
+
+#NORMALIZATION
+READ
+1.0e-6			Micron
+1.0e+3			km/s
+1000.0			g/cm^3
+
+#USERINPUTBEGIN  ----------------------
+
+#USEEOSTABLE
+T			Use Eos Table for Xe
+T			Use Eos Table for Be
+T			Use Eos Table for Pl
+T			Use Eos Table for Au
+T			Use Eos Table for Ay
+
+#MIXEDCELL
+F			UseMixedCell
+0.97			MixLimit
+
+#OPACITY
+T			UseExcitation
+F			UseCoulombCorrection
+T			DoStateElimination
+
+#GROUPRANGE
+0.1			EnergyPhotonMin
+20000.0			EnergyPhotonMax
+
+#THREEDIM
+T			IsThreDim
+
+#HYADES
+T			UseHyadesFile
+hyades2d_1.3ns.out	NameHyadesFile
+
+#USERAMR
+20.0			RhoMinAmr
+2500.0			xMaxAmr
+1.0			BetaProlong
+
+#TEMPERATUREHYADES
+T			UseEqualTemperatureHyades
+
+#USERINPUTEND    ----------------------
+
+#SEMIIMPLICIT
+T                       UseSemiImplicit
+radcondsplit		TypeSemiImplicit
+
+#KRYLOV
+cg			TypeKrylov
+nul                     TypeInitKrylov
+1.0e-5                  ErrorMaxKrylov
+200                     MaxMatvecKrylov
+
+#PRECONDITIONER
+left                    TypePrecondSide (left, symmetric, right)
+dilu                    TypePrecond (MBILU)
+
+#RADIATION
+T                       UseGrayDiffusion
+T                       UseRadFluxLimiter
+larsen                  TypeRadFluxLimiter
+300.0			TradMinSi
+
+#ELECTRONPRESSURE
+1.0			PeMinSi
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#CHECKGRIDSIZE
+4			nI
+4			nJ
+4			nK
+1000			MinBlockALL
+
+#GRIDGEOMETRY
+rz			TypeGeometry
+
+#GRID
+80			nRootBlockX
+8			nRootBlockY
+1			nRootBlockZ
+-150.0			xMin
+3900.0			xMax
+   0.0			yMin
+ 450.0			yMax
+ 450.0			zMin
+   0.0			zMax
+
+#AMRINITPHYSICS
+3			nRefineLevelIC
+
+#AMRLEVELS
+0			MinBlockLevel
+2			MaxBlockLevel
+F			DoFixBodyLevel
+
+#AMR
+1			DnRefine
+T			DoAutoRefine
+30.0			PercentCoarsen
+30.0			PercentRefine
+99999                   MaxTotalBlocks
+
+#AMRCRITERIA
+1			nRefineCrit
+user			TypeRefine
+0.5			LimitCoarsen
+0.5			LimitRefine
+
+#UPDATECHECK
+F			DoUpdateCheck
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#OUTERBOUNDARY
+float			xMinBc
+float			xMaxBc
+reflect			yMinBc
+float			yMaxBc
+reflect			zMinBc
+float			zMaxBc
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
+
+#RESCHANGE
+T                       UseAccurateResChange
+
+#SAVERESTART
+F			DoSaveRestart
+-1			DnSaveRestart
+1.3e-8			DtSaveRestart
+
+#PLOTDIR
+plot_128                NamePlotDir
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+100			DnSaveLogfile
+-1.0			DtSaveLogfile
+
+SAVEINITIAL
+T			DoSaveInitial
+
+#PLOTFILENAME
+nanosecond		NameMaxTimeUnit
+
+SAVEPLOT
+3			nPlotfile
+z=0 var idl		PlotString
+-1                      DnSavePlot
+1.0e-10                 DtSavePlot
+-1.0			DxSavePlot
+rho ux uy Eint p pe level xe be pl au ay tekev trkev tikev cond teti dx
+gamma
+z=0 var idl             PlotString
+-1                      DnSavePlot
+1.0e-10                 DtSavePlot
+-1.0                    DxSavePlot
+I(1:29:2) tekev trkev level
+gamma
+idl los var		StringPlot ! line of sight plot
+-1                      DnSavePlot
+1.0e-9                  DtSavePlot
++2000.0                 ObsPosX
+-12000.0                ObsPosY
+0.0                     ObsPosZ
+-9.46232                OffsetAngle -atan(2000/12000)
+2000.                   rSizeImage
+0.                      xOffset
+0.                      yOffset
+0.                      rOccult
+0.                      MuLimbDarkening
+400                     nPix
+rho rhoxe rhobe rhopl rhoau rhoay radiograph	NameVar
+g			NamePar
+
+#GRIDSYMMETRY
+F			IsMirrorX
+T			IsMirrorY
+T			IsMirrorZ
+
+#TIMESTEPPING
+2			nStage
+0.01			CflExpl
+
+#STOP
+10			MaxIteration
+1.3e-8			tSimulationMax
+
+#RUN ##########################################################################
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#STOP
+100			MaxIteration
+1.3e-8			tSimulationMax
+
+#END
