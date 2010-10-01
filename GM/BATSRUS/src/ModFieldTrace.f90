@@ -1869,7 +1869,7 @@ subroutine plot_ray_equator(iFile)
   integer :: nRadius, nLon
   real    :: rMin, rMax
   integer :: iR, iLon
-  integer :: iPoint, nPoint, nVarOut, nVarPlot=nVar+4
+  integer :: iPoint, nPoint, nVarOut, nVarPlot
   real, allocatable :: Radius_I(:),Longitude_I(:),PlotVar_VI(:,:),PlotVar_V(:)
   real    :: SmGm_DD(3,3)
 
@@ -1902,7 +1902,13 @@ subroutine plot_ray_equator(iFile)
   if(iProc/=0) RETURN
 
   ! Set number of variables at each point along line; allocate accordingly.
-  if(DoExtractBGradB1) nVarPlot = nVar + 7
+  if(DoExtractBGradB1)then
+     ! length + coordinates + variables + grad(B1)
+     nVarPlot = nVar + 7
+  else
+     ! length + coordinates + variables
+     nVarPlot = nVar + 4
+  end if
   allocate(PlotVar_V(0:nVarPlot))
 
   if(time_accurate) NameFileEnd = "_t"//StringDateOrTime
