@@ -2,8 +2,9 @@
 # Usage: msub job.hera
 
 #MSUB -l nodes=4
+### MSUB -l qos=exempt
 #MSUB -l partition=hera
-#MSUB -l walltime=0:30:00
+#MSUB -l walltime=1:00:00
 #MSUB -q pbatch
 #MSUB -V
 #MSUB -o /g/g99/toth2/Tmp/CRASH/SCALING/run/runlog
