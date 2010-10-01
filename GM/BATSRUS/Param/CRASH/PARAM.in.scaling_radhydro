@@ -169,13 +169,10 @@ T			IsTimeAccurate
 4			nK
 1000			MinBlockALL
 
-#GRIDGEOMETRY
-rz			TypeGeometry
-
 #GRID
-160			nRootBlockX
-16			nRootBlockY
-1			nRootBlockZ
+80			nRootBlockX
+8			nRootBlockY
+8			nRootBlockZ
 -150.0			xMin
 3900.0			xMax
    0.0			yMin
@@ -297,7 +294,7 @@ T			IsMirrorZ
 0.8			CflExpl
 
 #STOP
-100			MaxIteration
+20			MaxIteration
 1.3e-8			tSimulationMax
 
 #END
