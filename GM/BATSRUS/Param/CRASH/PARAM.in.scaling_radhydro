@@ -13,7 +13,7 @@ T                       UseTiming      (rest of parameters read if true)
 -1                      nDepthTiming   (-1 for arbitrary depth)
 tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
 
-#TEST
+TEST
 krylov
 
 #LOOKUPTABLE
