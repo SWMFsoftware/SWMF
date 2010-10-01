@@ -480,9 +480,9 @@ contains
              TypeFileHere = 'real8'
              if(present(TypeFile))TypeFileHere = TypeFile
              call init_lookup_table(&
-               NameTable = NameMaterial_I(iMaterial)//'_eos', &
+               NameTable = NameMaterial_I(iMaterial)//'_opac', &
                NameCommand = 'save'                         , &
-               NameVar = 'logTe logNa '//NameVarEos         , &
+               NameVar = 'logRho logTe '//NameVarOpac         , &
                nIndex_I = IndexDefault_I                    , &
                IndexMin_I = (/NaDefault_II(Min_, iMaterial)*  &
                    cAtomicMass * cAtomicMassCRASH_I(iMaterial),  &
