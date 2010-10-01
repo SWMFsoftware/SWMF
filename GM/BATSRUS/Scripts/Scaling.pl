@@ -88,10 +88,15 @@ if(not $WeakScaling){
     }
     if($CompileCode){
 	foreach $nCore (@nCore){
-	    my $nBlock = int(2*196608/$nCore + 0.99);
+	    my $nBlock;
+	    if($RadHydro){
+		$nBlock = int(128000/$nCore + 0.99);
+	    }else{
+		$nBlock = int(2*196608/$nCore + 0.99);
+	    }
 	    print "Compiling $Rundir/CRASH_$nCore.exe for nBlock=$nBlock\n";
 	    if($RadHydro){
-		&shell("Config.pl -g=4,4,1,$nBlock,$nBlock");
+		&shell("Config.pl -g=4,4,4,$nBlock,$nBlock");
 	    }else{
 		&shell("Config.pl -g=4,4,4,$nBlock,1");
 	    }
@@ -110,7 +115,7 @@ if(not $WeakScaling){
     # Weak scaling uses many run directories and a single executable
     if($CompileCode){
 	if($RadHydro){
-	    &shell("Config.pl -g=4,4,1,700,700");
+	    &shell("Config.pl -g=4,4,4,700,700");
 	}else{
 	    &shell("Config.pl -g=4,4,4,700,1");
 	}
@@ -187,14 +192,16 @@ sub edit_jobscript{
 	}elsif($IsHera){
 	    my $nNode = int($nCore/16+0.99);
 	    s/(\#MSUB -l nodes)=\d+/$1=$nNode/;
+	    s/\#+ (MSUB -l qos=exempt)/\#$1/ if $nCore > 4096;
 	    s/(run_n|srun \-n)\d+/$1$nCore/;
 	}
 	if(not $WeakScaling){
 	    # Change plot directory
 	    s/plot_\d+/plot_$nCore/;
 	    # Change executable and runlog filenames
-	    s/CRASH\w*\.exe > (runlog[^\d+])\d+/CRASH_$nCore.exe > $1$nCore/;
-	}
+	    s/CRASH\w*\.exe/CRASH_$nCore.exe/;
+	    s/(runlog[^\d\n]*)\d*/$1_$nCore/;
+        }
 	print;
     }
 }
@@ -221,14 +228,14 @@ Scripts/Scaling.pl [-v] [-d] [-n=CORES] [-weak | -radhydro]
 -n=CORES  Set number of cores as a comma separated list of numbers.
           Default depends on scaling type and machine.
 -weak     Do weak scaling. Default is strong scaling.
--radhydro Do 2D radhydro problem (only strong scaling). Default is 3D hydro.
+-radhydro Do 3D radhydro problem (only strong scaling). Default is 3D hydro.
 -rundir   Create the run directory/directories (step 1)
 -compile  Compile the executable(s) (step 2)
 -submit   Submit the jobs (step 3)
 
 Examples:
 
-Create rundirectory for strong scaling 2D radhydro problem:
+Create rundirectory for strong scaling of radhydro problem:
 
   Scripts/Scaling.pl -radhydro -rundir
 
