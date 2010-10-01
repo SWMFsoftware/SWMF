@@ -523,7 +523,7 @@ contains
     real:: Rho, Te
     integer::iMaterial
     !-----------------
-    iMaterial = iMaterial4EosTable_I(iTable)
+    iMaterial = iMaterial4OpacTable_I(iTable)
     
     Rho = Arg1 
     Te  = Arg2 * cEvToK

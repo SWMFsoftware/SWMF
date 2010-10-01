@@ -207,7 +207,7 @@ contains
     use ModAdvance,          ONLY: UseElectronPressure
     use ModReadParam
     use CRASH_ModEos,        ONLY: read_eos_parameters, NameMaterial_I, &
-                                   read_if_use_eos_table
+         read_if_use_eos_table, read_if_use_opac_table
     use CRASH_ModMultiGroup, ONLY: read_opacity_parameters
     use ModGeometry,         ONLY: TypeGeometry, UseCovariant
     use ModWaves,            ONLY: FreqMinSI, FreqMaxSI
@@ -360,6 +360,9 @@ contains
 
        case("#USEEOSTABLE")
           call read_if_use_eos_table
+
+       case("#USEOPACTABLE")
+          call read_if_use_opac_table
 
        case('#USERINPUTEND')
           EXIT
@@ -2082,7 +2085,8 @@ contains
     use ModConst,       ONLY: cKevToK, cHPlanckEV
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI
     use CRASH_ModMultiGroup, ONLY: set_multigroup
-    use CRASH_ModEos,        ONLY: NameMaterial_I, check_eos_table
+    use CRASH_ModEos,        ONLY: NameMaterial_I, check_eos_table, &
+         check_opac_table
 
     integer:: iMaterial
     logical:: IsFirstTime = .true.
@@ -2130,6 +2134,9 @@ contains
     EradBc2 = cRadiationNo*(TrkevBc2*cKeVtoK*Si2No_V(UnitTemperature_))**4
 
     if(iProc==0) write(*,*) NameSub, 'EradBc1,EradBc2=', EradBc1, EradBc2
+
+    ! create table after call set_multigroup so that nGroup is known
+    call check_opac_table(iComm = iComm, Save = .true.)
 
     iTablePPerRho   = i_lookup_table('pPerRho(e/rho,rho)')
     iTableThermo    = i_lookup_table('Thermo(rho,p/rho)')
