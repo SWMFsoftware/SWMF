@@ -645,7 +645,7 @@ contains
           ! Divide pressure by Na , express in eV
           !Find temperature from dentity and pressure
           call interpolate_lookup_table(iTable, Pe_,  pElectronIn / (cEV * Natomic), Natomic, &
-               Value_V, Arg1Out = Te, DoExtrapolate=.false.)
+               Value_V, Arg1Out = TeEV, DoExtrapolate=.false.)
           
       
        else
