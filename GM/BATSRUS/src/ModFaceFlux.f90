@@ -1967,7 +1967,8 @@ contains
 
       ! (4) energy flux: (e + p)*u
       ! also add the work done by the radiation and electron pressure gradient
-      e = inv_gm1*(p + PeStar) + 0.5*sum(StateStar_V(RhoUx_:RhoUz_)**2)/Rho
+      e = inv_gm1*(p + PeStar) + 0.5*sum(StateStar_V(RhoUx_:RhoUz_)**2)/Rho &
+           + pWaveStar/(GammaWave - 1)
       Flux_V(Energy_) = (e + pTotal)*Un
 
       Cmax      = max(wR, -wL)
@@ -1986,7 +1987,10 @@ contains
 
       !^CFG IF IMPLICIT BEGIN
       if(.not.UseSemiImplicit)then
-         if(UseRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
+         if(UseRadDiffusion)then
+            Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
+            Flux_V(Energy_) = Flux_V(Energy_) + EradFlux
+         end if
       end if
       !^CFG END IMPLICIT
 
@@ -2447,7 +2451,10 @@ contains
 
     !^CFG IF  IMPLICIT BEGIN
     if(.not.UseSemiImplicit)then
-       if(UseRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
+       if(UseRadDiffusion)then
+          Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
+          Flux_V(Energy_) = Flux_V(Energy_) + EradFlux
+       end if
        if(UseHeatConduction)then
           if(UseElectronPressure)then
              Flux_V(Pe_) = Flux_V(Pe_) + gm1*HeatFlux
@@ -2477,7 +2484,7 @@ contains
       use ModWaves
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e
+      real :: Rho, Ux, Uy, Uz, p, e, Ew
       real :: B2, FullB2, pTotal, pTotal2, UDotB, DpPerB
       real :: Ex, Ey, Ez, E2Half
       integer :: iVar
@@ -2512,11 +2519,14 @@ contains
       end if
 
       if(UseWavePressure)then
-         if(.not.UseWavePressureLtd)then
-            pTotal = pTotal + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+         if(UseWavePressureLtd)then
+            Ew = State_V(Ew_)
          else
-            pTotal = pTotal + (GammaWave-1)*State_V(Ew_)
+            Ew = sum(State_V(WaveFirst_:WaveLast_))
          end if
+         pTotal = pTotal + (GammaWave - 1)*Ew
+         if(nIonFluid == 1 .and. iFluid == 1 .and. .not.UseAlfvenWaves) &
+              e = e + Ew
       end if
 
       ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
@@ -2593,9 +2603,8 @@ contains
       use ModWaves
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e
+      real :: Rho, Ux, Uy, Uz, p, e, Ew
       real :: HallUx, HallUy, HallUz, InvRho
-      real :: pAlfven
       real :: B2, B0B1, FullB2, pTotal, DpPerB
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
       integer :: iVar
@@ -2626,11 +2635,14 @@ contains
       end if
 
       if(UseWavePressure)then
-         if(.not.UseWavePressureLtd)then
-            pTotal = pTotal + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+         if(UseWavePressureLtd)then
+            Ew = State_V(Ew_)
          else
-            pTotal = pTotal + (GammaWave-1)*State_V(Ew_)
+            Ew = sum(State_V(WaveFirst_:WaveLast_))
          end if
+         pTotal = pTotal + (GammaWave - 1)*Ew
+         if(nIonFluid == 1 .and. iFluid == 1 .and. .not.UseAlfvenWaves) &
+              e = e + Ew
       end if
 
       ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
@@ -2841,7 +2853,7 @@ contains
       use ModWaves
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal
+      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal, Ew
       integer :: iVar
       !-----------------------------------------------------------------------
       ! Extract primitive variables
@@ -2863,7 +2875,9 @@ contains
          end if
 
          if(UseWavePressure)then
-            pTotal = pTotal + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+            Ew = sum(State_V(WaveFirst_:WaveLast_))
+            pTotal = pTotal + (GammaWave - 1)*Ew
+            e = e + Ew
          end if
       end if
 

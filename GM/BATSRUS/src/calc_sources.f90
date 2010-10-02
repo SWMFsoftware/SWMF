@@ -20,7 +20,8 @@ subroutine calc_sources
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
   use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
   use ModCovariant,     ONLY: UseCovariant 
-  use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
+  use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C, &
+       UseAlfvenWaves
   use ModCoronalHeating,ONLY: UseCoronalHeating,&
                               get_block_heating,CoronalHeating_C
   use ModRadiativeCooling,ONLY: RadCooling_C,UseRadCooling,&
@@ -135,9 +136,9 @@ subroutine calc_sources
                 uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid)
            DivU = vInv_CB(i,j,k,iBlock)*DivU
            if(UseAnisoPressure)then
-                Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
-                - (State_VGB(iP,i,j,k,iBlock) &
-                - State_VGB(Ppar_,i,j,k,iBlock)/3.0)*DivU
+              Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
+                   - (State_VGB(iP,i,j,k,iBlock) &
+                   - State_VGB(Ppar_,i,j,k,iBlock)/3.0)*DivU
            else
               Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
                    - (g - 1)*State_VGB(iP,i,j,k,iBlock)*DivU
@@ -176,7 +177,8 @@ subroutine calc_sources
            Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
                 - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
         end do
-        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + DivU*Pwave
+        if(UseAlfvenWaves) &
+             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + DivU*Pwave
 
         ! Add "geometrical source term" p/r to the radial momentum equation
         ! The "radial" direction is along the Y axis

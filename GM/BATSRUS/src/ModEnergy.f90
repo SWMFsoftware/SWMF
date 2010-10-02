@@ -1,13 +1,14 @@
 module ModEnergy
 
-  use ModProcMH,  ONLY: iProc
-  use ModMain,    ONLY: BlkTest,iTest,jTest,kTest,ProcTest
+  use ModProcMH,     ONLY: iProc
+  use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
   use ModMultiFluid
-  use ModSize,    ONLY: nI, nJ, nK, gcn, MaxBlock
-  use ModAdvance, ONLY: State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
+  use ModSize,       ONLY: nI, nJ, nK, gcn, MaxBlock
+  use ModAdvance,    ONLY: State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
        UseNonConservative, nConservCrit, IsConserv_CB, UseElectronPressure
-  use ModPhysics, ONLY: Gm1, Inv_Gm1
-  use ModVarIndexes, ONLY: Pe_
+  use ModPhysics,    ONLY: Gm1, Inv_Gm1
+  use ModVarIndexes, ONLY: Pe_, WaveFirst_, WaveLast_
+  use ModWaves,      ONLY: UseWavePressure, UseAlfvenWaves, GammaWave
 
   implicit none
 
@@ -77,7 +78,7 @@ contains
 
        if(nIonFluid == 1 .and. iFluid == 1)then
           if(UseElectronPressure)then
-             do k=1, nK; do j=1, nJ; do i=1, nI
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(IsConserv_CB(i,j,k,iBlock))then
                    State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                         - State_VGB(Pe_,i,j,k,iBlock)
@@ -85,6 +86,18 @@ contains
                    Energy_GBI(i,j,k,iBlock,iFluid) = &
                         Energy_GBI(i,j,k,iBlock,iFluid) &
                         + inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
+                end if
+             end do; end do; end do
+          end if
+          if(UseWavePressure .and. .not.UseAlfvenWaves)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                if(IsConserv_CB(i,j,k,iBlock))then
+                   State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+                        - gm1*sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+                else
+                   Energy_GBI(i,j,k,iBlock,iFluid) = &
+                        Energy_GBI(i,j,k,iBlock,iFluid) &
+                        + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
                 end if
              end do; end do; end do
           end if
@@ -164,9 +177,15 @@ contains
 
        if(nIonFluid == 1 .and. iFluid == 1)then
           if(UseElectronPressure)then
-             do k=1, nK; do j=1, nJ; do i=1, nI
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
                      - StateOld_VCB(Pe_,i,j,k,iBlock)
+             end do; end do; end do
+          end if
+          if(UseWavePressure .and. .not.UseAlfvenWaves)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
+                     - gm1*sum(StateOld_VCB(WaveFirst_:WaveLast_,i,j,k,iBlock))
              end do; end do; end do
           end if
        end if
@@ -209,10 +228,17 @@ contains
 
        if(nIonFluid == 1 .and. iFluid == 1)then
           if(UseElectronPressure)then
-             do k=1, nK; do j=1, nJ; do i=1, nI
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
                      EnergyOld_CBI(i,j,k,iBlock,iFluid) &
                      + inv_gm1*StateOld_VCB(Pe_,i,j,k,iBlock)
+             end do; end do; end do
+          end if
+          if(UseWavePressure .and. .not. UseAlfvenWaves)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
+                     EnergyOld_CBI(i,j,k,iBlock,iFluid) &
+                     + sum(StateOld_VCB(WaveFirst_:WaveLast_,i,j,k,iBlock))
              end do; end do; end do
           end if
        end if
@@ -265,12 +291,18 @@ contains
        end do; end do; end do
 
        if(nIonFluid == 1 .and. iFluid == 1)then
-          do k=1, nK; do j=1, nJ; do i=1, nI
-             if(UseElectronPressure)then
+          if(UseElectronPressure)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                      - State_VGB(Pe_,i,j,k,iBlock)
-             end if
-          end do; end do; end do
+             end do; end do; end do
+          end if
+          if(UseWavePressure .and. .not.UseAlfvenWaves)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+                     - gm1*sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+             end do; end do; end do
+          end if
        end if
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
@@ -370,13 +402,20 @@ contains
        end do; end do; end do
 
        if(nIonFluid == 1 .and. iFluid == 1)then
-          do k=1, nK; do j=1, nJ; do i=1, nI
-             if(UseElectronPressure)then
+          if(UseElectronPressure)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 Energy_GBI(i,j,k,iBlock,iFluid) = &
                      Energy_GBI(i,j,k,iBlock,iFluid) &
                      + inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
-             end if
-          end do; end do; end do
+             end do; end do; end do
+          end if
+          if(UseWavePressure .and. .not.UseAlfvenWaves)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                Energy_GBI(i,j,k,iBlock,iFluid) = &
+                     Energy_GBI(i,j,k,iBlock,iFluid) &
+                     + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+             end do; end do; end do
+          end if
        end if
        
        if(iFluid > 1 .or. .not. IsMhd) CYCLE

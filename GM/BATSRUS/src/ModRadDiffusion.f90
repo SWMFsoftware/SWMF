@@ -395,7 +395,6 @@ contains
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
     use ModMain,       ONLY: nI, nJ, nK
     use ModUser,       ONLY: user_material_properties
-    use ModVarIndexes, ONLY: Energy_
 
     integer, intent(in) :: iBlock
 
@@ -427,9 +426,6 @@ contains
 
        ! dErad/dt = + AbsorptionEmission
        Source_VC(Erad_,i,j,k) = Source_VC(Erad_,i,j,k) + AbsorptionEmission
-
-       ! dE/dt    = - AbsorptionEmission
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) - AbsorptionEmission
 
     end do; end do; end do
 

@@ -1005,6 +1005,7 @@ subroutine conservative_to_primitive(State_V)
        iFluid, iRho, iRhoUx, iUx, iRhoUz, iUz, iP, &
        iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
   use ModPhysics, ONLY: gm1
+  use ModWaves, ONLY: UseWavePressure, UseAlfvenWaves, WaveFirst_, WaveLast_
 
   implicit none
 
@@ -1020,9 +1021,12 @@ subroutine conservative_to_primitive(State_V)
         State_V(iP) = gm1*(State_V(iP) - &
              0.5*sum(State_V(iRhoUx:iRhoUz)**2)*InvRho)
 
-       if(nIonFluid == 1 .and. iFluid == 1)then
-          if(UseElectronPressure) State_V(iP) = State_V(iP) - State_V(Pe_)
-       end if
+        if(nIonFluid == 1 .and. iFluid == 1)then
+           if(UseElectronPressure) State_V(iP) = State_V(iP) - State_V(Pe_)
+           if(UseWavePressure .and. .not.UseAlfvenWaves) &
+                State_V(iP) = State_V(iP) &
+                - gm1*sum(State_V(WaveFirst_:WaveLast_))
+        end if
 
         if(iFluid == 1 .and. IsMhd) &
              State_V(iP) = State_V(iP) - 0.5*gm1*sum(State_V(Bx_:Bz_)**2)
