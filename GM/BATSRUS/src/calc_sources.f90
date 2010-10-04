@@ -20,8 +20,7 @@ subroutine calc_sources
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
   use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
   use ModCovariant,     ONLY: UseCovariant 
-  use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C, &
-       UseAlfvenWaves
+  use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
   use ModCoronalHeating,ONLY: UseCoronalHeating,&
                               get_block_heating,CoronalHeating_C
   use ModRadiativeCooling,ONLY: RadCooling_C,UseRadCooling,&
@@ -32,7 +31,7 @@ subroutine calc_sources
 
   integer :: i, j, k, iDim, iVar
   logical :: UseRzGeometry
-  real :: Pe, Pwave, DivU
+  real :: Pe, DivU
   real :: Coef, GammaMinus1
 
   ! Variable for div B diffusion
@@ -170,21 +169,18 @@ subroutine calc_sources
         ! Store div U so it can be used in ModWaves
         DivU_C(i,j,k) = DivU
 
-        Pwave = (GammaWave - 1) &
-             *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-
         do iVar = WaveFirst_, WaveLast_
            Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
                 - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
         end do
-        if(UseAlfvenWaves) &
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + DivU*Pwave
 
         ! Add "geometrical source term" p/r to the radial momentum equation
         ! The "radial" direction is along the Y axis
         ! NOTE: here we have to use signed radial distance!
-        if(UseRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-             + Pwave/y_BLK(i,j,k,iBlock)
+        if(UseRzGeometry) &
+             Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+             + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) &
+             *(GammaWave - 1)/y_BLK(i,j,k,iBlock)
      end do; end do; end do
   end if
 
@@ -662,7 +658,7 @@ subroutine calc_sources_adjoint
 
   integer :: i, j, k, iDim, iVar
   logical :: UseRzGeometry
-  real :: Pe, Pwave, DivU
+  real :: Pe, DivU
   real :: Coef, GammaMinus1
 
   ! Variable for div B diffusion

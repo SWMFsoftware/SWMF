@@ -2525,8 +2525,7 @@ contains
             Ew = sum(State_V(WaveFirst_:WaveLast_))
          end if
          pTotal = pTotal + (GammaWave - 1)*Ew
-         if(nIonFluid == 1 .and. iFluid == 1 .and. .not.UseAlfvenWaves) &
-              e = e + Ew
+         if(nIonFluid == 1 .and. iFluid == 1) e = e + Ew
       end if
 
       ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
@@ -2641,8 +2640,7 @@ contains
             Ew = sum(State_V(WaveFirst_:WaveLast_))
          end if
          pTotal = pTotal + (GammaWave - 1)*Ew
-         if(nIonFluid == 1 .and. iFluid == 1 .and. .not.UseAlfvenWaves) &
-              e = e + Ew
+         if(nIonFluid == 1 .and. iFluid == 1) e = e + Ew
       end if
 
       ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
@@ -2781,10 +2779,14 @@ contains
          do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
             Flux_V(iVar) = Flux_V(iVar) + AlfvenSpeed*State_V(iVar) !!PLUS
          end do
+         Flux_V(Energy_) = Flux_V(Energy_) + AlfvenSpeed &
+              *sum(State_V(AlfvenWavePlusFirst_:AlfvenWavePlusLast_))
 
          do iVar = AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_
             Flux_V(iVar) = Flux_V(iVar) - AlfvenSpeed*State_V(iVar) !!MINUS
          end do
+         Flux_V(Energy_) = Flux_V(Energy_) - AlfvenSpeed &
+              *sum(State_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_))
       end if
 
       !^CFG IF SIMPLEBORIS BEGIN

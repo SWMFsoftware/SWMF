@@ -721,7 +721,7 @@ contains
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
          B0_DGB
     use ModGeometry,       ONLY: r_BLK
-    use ModMain,           ONLY: nI, nJ, nK, GlobalBlk, Cfl, UseB0
+    use ModMain,           ONLY: nI, nJ, nK, GlobalBlk, UseB0
     use ModPhysics,        ONLY: gm1, rBody
     use ModVarIndexes,     ONLY: Rho_, Bx_, Bz_, Energy_, p_, Pe_, &
          WaveFirst_, WaveLast_
@@ -756,7 +756,7 @@ contains
        else
           CoronalHeating = 0.0
        end if
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + CoronalHeating
+       Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + gm1*CoronalHeating
 
        CYCLE
 
