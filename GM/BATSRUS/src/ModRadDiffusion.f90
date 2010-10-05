@@ -1523,7 +1523,7 @@ contains
 
   subroutine update_impl_rad_diff(iBlock, iImplBlock, StateImpl_VG)
 
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseIdealEos
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModEnergy,     ONLY: calc_energy_cell
     use ModImplicit,   ONLY: nw, iTeImpl, iTrImplFirst, iTrImplLast, &
          DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
@@ -1615,11 +1615,7 @@ contains
           call stop_mpi(NameSub//' negative Eint')
        end if
        
-       if(UseIdealEos)then
-          ! ions (electrons are already updated)
-          State_VGB(p_,i,j,k,iBlock) = gm1*Einternal
-
-       elseif(UseElectronPressure)then
+       if(UseElectronPressure)then
           ! ions
           State_VGB(p_,i,j,k,iBlock) = gm1*Einternal
 
@@ -1644,7 +1640,7 @@ contains
           ! Set true total pressure
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
 
-          ! Set ExtraEint = electron internal energy - Ptotal/(gamma -1)
+          ! Set ExtraEint = Total internal energy - Ptotal/(gamma -1)
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock))
 
