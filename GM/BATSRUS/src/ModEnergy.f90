@@ -292,13 +292,13 @@ contains
 
        if(nIonFluid == 1 .and. iFluid == 1)then
           if(UseElectronPressure)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
                 State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                      - State_VGB(Pe_,i,j,k,iBlock)
              end do; end do; end do
           end if
           if(UseWavePressure)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
                 State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                      - gm1*sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
              end do; end do; end do
@@ -403,14 +403,14 @@ contains
 
        if(nIonFluid == 1 .and. iFluid == 1)then
           if(UseElectronPressure)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
                 Energy_GBI(i,j,k,iBlock,iFluid) = &
                      Energy_GBI(i,j,k,iBlock,iFluid) &
                      + inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
              end do; end do; end do
           end if
           if(UseWavePressure)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
                 Energy_GBI(i,j,k,iBlock,iFluid) = &
                      Energy_GBI(i,j,k,iBlock,iFluid) &
                      + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
