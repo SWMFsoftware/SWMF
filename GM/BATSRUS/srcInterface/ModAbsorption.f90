@@ -48,7 +48,7 @@ module ModAbsorption
 
 contains
   subroutine calc_absorption(State_V, Absorption)
-    use CRASH_ModTransport
+    !use CRASH_ModTransport
     use ModUser,ONLY: user_material_properties
     !The subroutine calculates the absorption coefficient, Absorption [m-1],
     ! at the circular frequency, omega.
