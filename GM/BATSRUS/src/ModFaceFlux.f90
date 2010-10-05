@@ -1967,8 +1967,7 @@ contains
 
       ! (4) energy flux: (e + p)*u
       ! also add the work done by the radiation and electron pressure gradient
-      e = inv_gm1*(p + PeStar) + 0.5*sum(StateStar_V(RhoUx_:RhoUz_)**2)/Rho &
-           + pWaveStar/(GammaWave - 1)
+      e = inv_gm1*p + 0.5*sum(StateStar_V(RhoUx_:RhoUz_)**2)/Rho
       Flux_V(Energy_) = (e + pTotal)*Un
 
       Cmax      = max(wR, -wL)
@@ -1981,9 +1980,14 @@ contains
          do iVar = WaveFirst_, WaveLast_
             Flux_V(iVar) = Factor*StateStar_V(iVar)*Un
          end do
+         Flux_V(Energy_) = Flux_V(Energy_) &
+              + Factor*sum(StateStar_V(WaveFirst_:WaveLast_))*Un
       end if
-      if(UseElectronPressure) &
-           Flux_V(Pe_) = (Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
+      if(UseElectronPressure)then
+         Flux_V(Pe_) = (Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
+         Flux_V(Energy_) = Flux_V(Energy_) &
+              + (Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
+      end if
 
       !^CFG IF IMPLICIT BEGIN
       if(.not.UseSemiImplicit)then
