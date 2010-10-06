@@ -1986,7 +1986,7 @@ contains
       if(UseElectronPressure)then
          Flux_V(Pe_) = (Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
          Flux_V(Energy_) = Flux_V(Energy_) &
-              + (Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
+              + inv_gm1*(Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
       end if
 
       !^CFG IF IMPLICIT BEGIN
