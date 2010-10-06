@@ -119,7 +119,8 @@ test_fluxemergence_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_3d
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_restart; mv runlog_restart RESULTS/run_restart
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_restart; \
+				mv runlog_restart RESULTS/run_restart
 
 test_fluxemergence_check:	
 	${SCRIPTDIR}/DiffNum.pl -t \
