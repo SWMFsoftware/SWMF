@@ -325,8 +325,8 @@ subroutine set_physics_constants
 
   ! Saving initial coordinates of second body:
   if(UseOrbit)then
-     xBody2init = xBody2
-     yBody2init = yBody2
+     PhaseBody2    = atan2(ybody2, xbody2)
+     DistanceBody2 = sqrt(xbody2**2+ybody2**2)
   end if
   !^CFG END SECONDBODY 
 
@@ -389,7 +389,7 @@ subroutine set_units
      No2Si_V(UnitU_)   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass/MassIon_I(1))
      No2Si_V(UnitRho_) = 1000000*cProtonMass*MassIon_I(1)*SW_n_dim
   case("NONE", "READ")
-     ! Already set in MH_set_parameters
+     ! Already set in set_parameters
   case("USER")
      call user_normalization
   case default

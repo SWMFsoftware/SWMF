@@ -213,14 +213,14 @@ end subroutine advance_expl
 subroutine update_secondbody
   use ModMain,     ONLY: time_simulation,globalBLK,nBlock
   use ModConst,    ONLY: cTwoPi
-  use ModPhysics,  ONLY: xBody2,yBody2,OrbitPeriod,xBody2init,yBody2init
+  use ModPhysics,  ONLY: xBody2,yBody2,OrbitPeriod,PhaseBody2,DistanceBody2
 
   implicit none
   !-------------------------------------------------------------------------
 
   ! Update second body coordinates
-  xBody2 = xBody2init*cos(cTwoPi*time_simulation/OrbitPeriod)
-  yBody2 = xBody2init*sin(cTwoPi*time_simulation/OrbitPeriod)
+  xBody2 = DistanceBody2*cos(cTwoPi*Time_Simulation/OrbitPeriod+PhaseBody2)
+  yBody2 = DistanceBody2*sin(cTwoPi*Time_Simulation/OrbitPeriod+PhaseBody2)
 
   do globalBLK = 1, nBlock
      call set_boundary_cells(globalBLK)

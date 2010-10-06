@@ -132,7 +132,7 @@ module ModPhysics
   !/
   real :: rPlanetDimBody2=0.0, rBody2=0.0, rCurrentsBody2=0.0
   real :: xBody2=0.0, yBody2=0.0, zBody2=0.0
-  real :: xBody2init=0.0, yBody2init=0.0
+  real :: PhaseBody2=0.0, DistanceBody2=0.0
   real :: RhoDimBody2=0.0, tDimBody2=0.0, RhoBody2=0.0, pBody2=0.0
   real :: gBody2=0.0
   real :: OrbitPeriod=0.0
