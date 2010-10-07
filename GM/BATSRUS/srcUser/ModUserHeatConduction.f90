@@ -228,11 +228,17 @@ contains
   subroutine user_update_states(iStage, iBlock)
 
     use ModAdvance,    ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
-         UseElectronPressure
+         State_VGB, UseElectronPressure
+    use ModEnergy,     ONLY: calc_energy_cell
     use ModImplicit,   ONLY: UseSemiImplicit
-    use ModVarIndexes, ONLY: Pe_
+    use ModMain,       ONLY: nI, nJ, nK
+    use ModPhysics,    ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_
+    use ModVarIndexes, ONLY: Pe_, ExtraEint_
 
     integer, intent(in) :: iStage, iBlock
+
+    integer :: i, j, k
+    real :: Ee, EeSi, PeSi
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
@@ -252,6 +258,31 @@ contains
           Source_VC(1:nVar,:,:,:) = 0.0
        end if
        call update_states_MHD(iStage,iBlock)
+    end if
+
+    if(TypeProblem == 'lowrie')then
+       call update_states_MHD(iStage,iBlock)
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          ! At this point Pe=(g-1)*Ee with the ideal gamma g.
+          ! Use this Pe to get electron internal energy density.
+          Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
+               + State_VGB(ExtraEint_,i,j,k,iBlock)
+          EeSi = Ee*No2Si_V(UnitEnergyDens_)
+
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, &
+               EinternalIn=EeSi, PressureOut=PeSi)
+
+          ! Set true electron pressure
+          State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
+
+          ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
+          State_VGB(ExtraEint_,i,j,k,iBlock) = &
+               Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
+       end do; end do; end do
+
+       call calc_energy_cell(iBlock)       
     end if
 
   end subroutine user_update_states
@@ -461,7 +492,8 @@ contains
              State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = &
                   matmul(Rot_II,RhoU_D(x_:y_))
              State_VGB(Pe_,i,j,k,iBlock) = Pe
-             State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
+             State_VGB(ExtraEint_,i,j,k,iBlock) = &
+                  Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
              State_VGB(p_,i,j,k,iBlock) = p
           end do
 

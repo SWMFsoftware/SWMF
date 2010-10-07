@@ -1559,9 +1559,8 @@ contains
 
        if(UseElectronPressure)then
           ! electron pressure -> electron internal energy Ee
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, EinternalOut=EeSi)
-          Ee = EeSi*Si2No_V(UnitEnergyDens_)
+          Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
+               + State_VGB(ExtraEint_,i,j,k,iBlock)
 
           ! electron energy update: Ee_new = Ee_old + Cv'*Delta(a*Te^4)
           Ee = Ee + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
@@ -1628,6 +1627,10 @@ contains
 
           ! Set true electron pressure
           State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
+
+          ! Set ExtraEint = Electron internal energy - Pe/(gamma -1)
+          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+               Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
 
        else
           ! ions + electrons

@@ -204,7 +204,6 @@ contains
   !============================================================================
   subroutine user_read_inputs
 
-    use ModAdvance,          ONLY: UseElectronPressure
     use ModReadParam
     use CRASH_ModEos,        ONLY: read_eos_parameters, NameMaterial_I, &
          read_if_use_eos_table, read_if_use_opac_table
@@ -221,7 +220,7 @@ contains
     !------------------------------------------------------------------------
 
     UseUserLogFiles     = .true. ! to allow integration of rhoxe, rhobe...
-    UseUserUpdateStates = .not.UseElectronPressure ! for internal energy
+    UseUserUpdateStates = .true. ! for internal energy
     UseUserSource       = .true. ! for non-cons levelset and pressure equation
     UseUserInitSession  = .true. ! to set units for level set variables
     UseUserIcs          = .true. ! to read in Hyades file
@@ -463,7 +462,7 @@ contains
     real    :: DxyGold = -1.0
     real    :: TeSi, PeSi, Natomic, NatomicSi, RhoSi, pSi, p, Te
 
-    integer :: iBlock, i, j, k, iMaterial
+    integer :: iBlock, i, j, k, iMaterial, iP
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !------------------------------------------------------------------------
@@ -650,6 +649,9 @@ contains
 
     end do; end do; end do
 
+    iP = p_
+    if(UseElectronPressure) iP = Pe_
+
     ! Set the remaining State_VGB quantities that involve
     ! user_material_properties
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -686,17 +688,15 @@ contains
              Natomic = NatomicSi*Si2No_V(UnitN_)
              State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti_G(i,j,k)
           end if
-
-       else
-
-          ! Calculate internal energy
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, EinternalOut=EinternalSi)
-
-          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-               EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - inv_gm1*State_VGB(P_,i,j,k,iBlock))
        end if
+
+       ! Calculate internal energy
+       call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+            i, j, k, iBlock, EinternalOut=EinternalSi)
+
+       State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+            EinternalSi*Si2No_V(UnitEnergyDens_) &
+            - inv_gm1*State_VGB(iP,i,j,k,iBlock))
 
        if(UseRadDiffusion) &
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
@@ -1502,19 +1502,20 @@ contains
 
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
-         UseNonConservative, IsConserv_CB
+         UseNonConservative, IsConserv_CB, UseElectronPressure
     use ModPhysics,  ONLY: inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModEnergy,   ONLY: calc_energy_cell
     use ModAdjoint, ONLY: DoAdjoint, AdjUserUpdate1_, & ! ADJOINT SPECIFIC
          AdjUserUpdate2_, store_block_buffer            ! ADJOINT SPECIFIC
+    use ModVarIndexes, ONLY: Pe_
 
     implicit none
 
     integer, intent(in):: iStage,iBlock
 
     integer:: i, j, k
-    real   :: PressureSi, EinternalSi
+    real   :: PressureSi, EinternalSi, Ee, EeSi, PeSi
     logical:: IsConserv
 
     character(len=*), parameter :: NameSub = 'user_update_states'
@@ -1524,39 +1525,64 @@ contains
 
     if (DoAdjoint) call store_block_buffer(iBlock,AdjUserUpdate1_)  ! ADJOINT SPECIFIC
 
-    ! update of pressure, ionization and total energies
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       ! Total internal energy ExtraEint + P/(\gamma -1) transformed to SI
+    if(UseElectronPressure)then
 
-       if(allocated(IsConserv_CB))then
-          IsConserv = IsConserv_CB(i,j,k,iBlock)
-       else
-          IsConserv = .not. UseNonConservative
-       end if
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          ! At this point Pe=(g-1)*Ee with the ideal gamma g.
+          ! Use this Pe to get electron internal energy density.
+          Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
+               + State_VGB(ExtraEint_,i,j,k,iBlock)
+          EeSi = Ee*No2Si_V(UnitEnergyDens_)
 
-       if(IsConserv)then
-          ! At this point p=(g-1)(e-rhov^2/2) with the ideal gamma g.
-          ! Use this p to get total internal energy density.
-          EinternalSi = No2Si_V(UnitEnergyDens_)*&
-               (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
-               State_VGB(ExtraEint_,i,j,k,iBlock))
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
-               EinternalIn=EinternalSi, PressureOut=PressureSi)
+               EinternalIn=EeSi, PressureOut=PeSi)
 
-          ! Set true pressure
-          State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
-       else
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, EinternalOut=EinternalSi)
-       end if
+          ! Set true electron pressure
+          State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
 
-       ! Set ExtraEint = Total internal energy - P/(gamma -1)
-       State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-            Si2No_V(UnitEnergyDens_)*EinternalSi &
-            - inv_gm1*State_VGB(p_,i,j,k,iBlock))
+          ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
+          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+               Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
+       end do; end do; end do
 
-    end do; end do; end do
+    else
+
+       ! update of pressure, ionization and total energies
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          ! Total internal energy ExtraEint + P/(\gamma -1) transformed to SI
+
+          if(allocated(IsConserv_CB))then
+             IsConserv = IsConserv_CB(i,j,k,iBlock)
+          else
+             IsConserv = .not. UseNonConservative
+          end if
+
+          if(IsConserv)then
+             ! At this point p=(g-1)(e-rhov^2/2) with the ideal gamma g.
+             ! Use this p to get total internal energy density.
+             EinternalSi = No2Si_V(UnitEnergyDens_)*&
+                  (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
+                  State_VGB(ExtraEint_,i,j,k,iBlock))
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, &
+                  EinternalIn=EinternalSi, PressureOut=PressureSi)
+
+             ! Set true pressure
+             State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+          else
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, EinternalOut=EinternalSi)
+          end if
+
+          ! Set ExtraEint = Total internal energy - P/(gamma -1)
+          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+               Si2No_V(UnitEnergyDens_)*EinternalSi &
+               - inv_gm1*State_VGB(p_,i,j,k,iBlock))
+
+       end do; end do; end do
+
+    end if
     
     if (DoAdjoint) call store_block_buffer(iBlock,AdjUserUpdate2_)  ! ADJOINT SPECIFIC
 
@@ -1722,8 +1748,8 @@ contains
     real :: DivU, GammaEos
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !-------------------------------------------------------------------
-    if(.not.UseNonConsLevelSet .and. .not.UseNonConservative &
-         .and. .not.UseElectronPressure) RETURN
+    if(.not.(UseNonConsLevelSet .or. &
+         (UseNonConservative.and. .not.UseElectronPressure))) RETURN
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
@@ -1745,7 +1771,7 @@ contains
             + State_VGB(LevelXe_:LevelMax,i,j,k,iBlock)*DivU
 
        ! Fix adiabatic compression source for pressure
-       if(UseNonConservative .or. UseElectronPressure)then
+       if(UseNonConservative .and. .not.UseElectronPressure)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, GammaOut=GammaEos)
 
