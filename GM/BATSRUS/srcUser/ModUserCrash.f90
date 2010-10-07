@@ -1528,20 +1528,22 @@ contains
     if(UseElectronPressure)then
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          ! At this point Pe=(g-1)*Ee with the ideal gamma g.
-          ! Use this Pe to get electron internal energy density.
+          ! From update_states_MHD, we obtained Pe^*, e^* with ideal gamma
+          ! and ExtraEInt^* with pure advection.
+          ! Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
+          ! Internal electron energy Ee^n+1 = Pe^*/(g-1) + ExtraEInt^*
           Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
                + State_VGB(ExtraEint_,i,j,k,iBlock)
           EeSi = Ee*No2Si_V(UnitEnergyDens_)
 
+          ! Determine pe^n+1 = EOS(rho^n+1, Ee^n+1)
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, &
-               EinternalIn=EeSi, PressureOut=PeSi)
+               i, j, k, iBlock, EinternalIn=EeSi, PressureOut=PeSi)
 
           ! Set true electron pressure
           State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
 
-          ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
+          ! Set ExtraEint^n+1 = Ee^n+1 - Pe^n+1/(gamma -1)
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
        end do; end do; end do
@@ -1559,23 +1561,28 @@ contains
           end if
 
           if(IsConserv)then
-             ! At this point p=(g-1)(e-rhov^2/2) with the ideal gamma g.
-             ! Use this p to get total internal energy density.
+             ! From update_states_MHD, we obtained p^*, e^* with ideal gamma
+             ! and ExtraEInt^* with pure advection.
+             ! Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
+             ! Internal energy Eint^n+1 = p^*/(g-1) + ExtraEInt^*
              EinternalSi = No2Si_V(UnitEnergyDens_)*&
                   (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
                   State_VGB(ExtraEint_,i,j,k,iBlock))
+
+             ! Determine p^n+1 = EOS( rho^n+1, Eint^n+1)
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
                   EinternalIn=EinternalSi, PressureOut=PressureSi)
 
-             ! Set true pressure
+             ! Set normalized pressure
              State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
           else
+             ! Calculate internal energy Eint^n+1 from pressure p^n+1
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, EinternalOut=EinternalSi)
           end if
 
-          ! Set ExtraEint = Total internal energy - P/(gamma -1)
+          ! Set ExtraEint^n+1 = Eint^n+1 - p^n+1/(g -1)
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                Si2No_V(UnitEnergyDens_)*EinternalSi &
                - inv_gm1*State_VGB(p_,i,j,k,iBlock))
@@ -1586,6 +1593,8 @@ contains
     
     if (DoAdjoint) call store_block_buffer(iBlock,AdjUserUpdate2_)  ! ADJOINT SPECIFIC
 
+    ! Calculate e^n+1 using updated P^n+1 (Pe^n+1) for single (two-)temperature
+    ! Note that this is identical to e^n+1 = e^* + ExtraEInt^* - ExtraEint^n+1
     call calc_energy_cell(iBlock)
 
   end subroutine user_update_states
