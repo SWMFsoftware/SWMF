@@ -2110,6 +2110,7 @@ contains
          No2Io_V, UnitX_
     use ModConst,       ONLY: cKevToK, cHPlanckEV
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI
+    use ModIo,          ONLY: restart
     use CRASH_ModMultiGroup, ONLY: set_multigroup
     use CRASH_ModEos,        ONLY: NameMaterial_I, check_eos_table, &
          check_opac_table
@@ -2151,7 +2152,7 @@ contains
     end if
 
     ! Read in Hyades output
-    if(UseHyadesFile) call read_hyades_file
+    if(UseHyadesFile .and. .not. restart) call read_hyades_file
 
     ! Now set the number of groups and the frequency range in ModMultiGroup:
     call set_multigroup(nWave, FreqMinSI, FreqMaxSI)
