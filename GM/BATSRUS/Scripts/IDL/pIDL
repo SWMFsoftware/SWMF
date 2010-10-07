@@ -55,7 +55,7 @@ print "Number of header files=",$#HeaderFiles+1,"\n" unless $Quiet;
 
 # Success, go ahead and process files
 my $HeaderFile;
-foreach $HeaderFile (@HeaderFiles){
+foreach $HeaderFile (sort @HeaderFiles){
     my $BaseFile = $HeaderFile; $BaseFile =~ s/\.h$//;
     print "PostIDL.exe < $HeaderFile\n" unless $Quiet;
     my $OutFile = "$BaseFile.out";
