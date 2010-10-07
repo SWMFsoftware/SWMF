@@ -9,6 +9,7 @@ my $MakeMovie = ($m or $movie or $M or $MOVIE);
 my $KeepMovieOnly = ($M or $MOVIE);
 my $Rsync   = ($rsync or $sync);
 my $AllParam = ($param or $allparam);
+my $Pattern  = $p;
 
 use strict;
 use File::Find;
@@ -102,7 +103,7 @@ REPEAT:{
 		&shell("./pION");
 	    }
 	}elsif( $Dir =~ /^SC|LC|IH|OH|GM$/ ){
-	    &shell("./pIDL $MovieFlag");
+	    &shell("./pIDL $MovieFlag $Pattern");
 	    if($Gzip){
 		&shell("./pTEC A g");
 	    }else{
@@ -305,7 +306,7 @@ sub print_help{
 
 Usage:
 
-   PostProc.pl [-h] [-v] [-c] [-g] [-m | -M] [-r=REPEAT | DIR]
+   PostProc.pl [-h] [-v] [-c] [-g] [-m | -M] [-r=REPEAT | DIR] [-p=PATTERN]
 
    -h -help    Print help message and exit.
 
@@ -322,6 +323,8 @@ Usage:
 
    -r=REPEAT   Repeat post processing every REPEAT seconds.
                Cannot be used with the DIR argument.
+
+   -p=PATTERN  Pass pattern to pIDL so it only processes the files that match.
 
    -param      Will rsync PARAM.* and LAYOUT.* to rsync directory
 
@@ -356,10 +359,10 @@ PostProc.pl -M -cat
 
 PostProc.pl -g -rsync=ME@OTHERMACHINE:My/Results -v
 
-   Repeat post-processing every 360 seconds, gzip files and pipe 
-   standard output and error into a log file:
+   Repeat post-processing every 360 seconds for files matching "IO2/x=",
+   and pipe standard output and error into a log file:
 
-PostProc.pl -r=360 -g >& PostProc.log &
+PostProc.pl -r=360 -p=IO2/x= >& PostProc.log &
 
    Collect processed output into a directory tree named OUTPUT/New
    and rsync it into the run/OUTPUT/New directory on another machine:
