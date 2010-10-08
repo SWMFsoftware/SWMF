@@ -7,6 +7,7 @@ my $Repeat  = ($r or $repeat);
 my $Concat  = ($c or $cat and not $Repeat);
 my $MakeMovie = ($m or $movie or $M or $MOVIE);
 my $KeepMovieOnly = ($M or $MOVIE);
+my $nThread = ($n or 1);
 my $Rsync   = ($rsync or $sync);
 my $AllParam = ($param or $allparam);
 my $Pattern  = $p;
@@ -103,7 +104,7 @@ REPEAT:{
 		&shell("./pION");
 	    }
 	}elsif( $Dir =~ /^SC|LC|IH|OH|GM$/ ){
-	    &shell("./pIDL $MovieFlag $Pattern");
+	    &shell("./pIDL $MovieFlag -n=$nThread $Pattern");
 	    if($Gzip){
 		&shell("./pTEC A g");
 	    }else{
@@ -306,7 +307,8 @@ sub print_help{
 
 Usage:
 
-   PostProc.pl [-h] [-v] [-c] [-g] [-m | -M] [-r=REPEAT | DIR] [-p=PATTERN]
+   PostProc.pl [-h] [-v] [-c] [-g] [-m | -M] [-r=REPEAT | DIR] 
+               [-n=NTHREAD] [-p=PATTERN]
 
    -h -help    Print help message and exit.
 
@@ -320,6 +322,8 @@ Usage:
    -m -movie   Create movies from series of IDL files and keep IDL files.
 
    -M -MOVIE   Create movies from series of IDL files and remove IDL files.
+
+   -n=NTHREAD  Pass -n=NTHREAD option to pIDL for parallel execution.
 
    -r=REPEAT   Repeat post processing every REPEAT seconds.
                Cannot be used with the DIR argument.
@@ -350,9 +354,9 @@ Examples:
 PostProc.pl
 
    Post-process the plot files, create movies from IDL output (remove original
-   files), and concatenate satellite and log files:
+   files), concatenate satellite and log files, and run PostIDL.exe on 4 cores:
 
-PostProc.pl -M -cat
+PostProc.pl -M -cat -n=4
 
    Post-process the plot files, compress them, rsync to another machine
    and print verbose info:
