@@ -35,20 +35,22 @@ function form1() {   //
 <div class=\"indent\">
 <table>
   ";
+  $numvars = count($variables);
+  if ($numvars > 6) {
+    echo "<b>NOTE: Not expecting more than 6 variables in file, fix form</b>";
+//    exit();
+  }
   $i = 0;
   foreach ($variables as $value) {
     $i++;
-    if ($i > 6) {
-      echo "<b>Not expecting more than 6 variables, fix form</b>";
-      exit();
-    }
     if ($i <= 2) {
       echo "
 <INPUT TYPE=hidden name=contplot${i} value=\"N\">
 <INPUT TYPE=hidden name=contrange${i} value=\"MM\">
 <INPUT TYPE=hidden name=contrangevalue${i} value=\"\">
       ";
-    } else {
+      //    } else {
+    } else if ($i <= 6) {
       // Set CHECKED for defcont
       $defcontY = ""; $defcontN = " CHECKED";
       $tmpname = "defcontplot$i";
