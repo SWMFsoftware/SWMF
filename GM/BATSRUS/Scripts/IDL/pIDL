@@ -8,6 +8,8 @@ my $KeepMovieOnly = ($M or $MOVIE);
 my $Verbose       = ($v or $V or $verbose or $VERBOSE);
 my $Quiet         = ($q or $quiet or $Q or $QUIET);
 my $Ccmc          = ($CCMC or $ccmc);
+my $nThread       = $n;
+
 use strict;
 
 my $ERROR = "ERROR in pIDL";
@@ -41,9 +43,8 @@ chdir $Dir or die "$ERROR: could not change directory into $Dir\n";
 
 # Collect header files
 opendir(DIR,'.');
-my @HeaderFiles = grep /^$Pattern.*\.h$/, readdir(DIR);
+my @HeaderFiles = sort grep /^$Pattern.*\.h$/, readdir(DIR);
 closedir(DIR);
-
 
 if(@HeaderFiles){
     die "$ERROR: $PostIdl is not available, please make PIDL\n" 
@@ -51,32 +52,25 @@ if(@HeaderFiles){
 }elsif(not $MakeMovie){
     die "$WARNING: no header files were found\n";
 }
-print "Number of header files=",$#HeaderFiles+1,"\n" unless $Quiet;
 
 # Success, go ahead and process files
+my $nHeaderFile = $#HeaderFiles+1;
+print "Number of header files=$nHeaderFile\n" unless $Quiet;
 my $HeaderFile;
-foreach $HeaderFile (sort @HeaderFiles){
-    my $BaseFile = $HeaderFile; $BaseFile =~ s/\.h$//;
-    print "PostIDL.exe < $HeaderFile\n" unless $Quiet;
-    my $OutFile = "$BaseFile.out";
-    my $Output= `$PostIdl < $HeaderFile 2>&1` unless -s $OutFile and $Ccmc;
-    my $Error = ($Output =~ /error/i or $?);
-    my $Warning = join("\n",grep /warning/i, split("\n",$Output));
-    print "$Warning\n" if $Warning and not ($Quiet or $Error);
-    print $Output if $Verbose or $Error;
-    die "$ERROR: error found in the output of $PostIdl\n" if $Error; 
-    die "$ERROR: no out file $OutFile was produced\n" unless -s $OutFile;
-    unless($Keep){
-	if($BaseFile =~ /3d_/){
-	    unless($Ccmc){
-		rename $HeaderFile, $BaseFile.".info";
-	    }
-	}else{
-	    unlink $HeaderFile;
+
+if($nThread > 1){
+    foreach my $iThread (1..$nThread){
+	# parent process does nothing
+	next if fork();
+	for (my $iFile = $iThread-1; $iFile<$nHeaderFile; $iFile+=$nThread){
+	    $HeaderFile = $HeaderFiles[$iFile];
+	    &process_file($HeaderFile);
 	}
-	unlink glob("$BaseFile*.idl");
-	print "unlink ",join(" ",glob("$BaseFile*.idl")),"\n" if $Verbose;
+	exit;
     }
+    foreach (1..$nThread){wait};
+}else{
+    foreach $HeaderFile (@HeaderFiles){&process_file($HeaderFile)}
 }
 
 # Done unless movie is to be made from the .out files
@@ -180,6 +174,31 @@ sub system{
     `$Command`;
 }
 
+sub process_file{
+    my $HeaderFile = shift;
+    my $BaseFile = $HeaderFile; $BaseFile =~ s/\.h$//;
+    print "PostIDL.exe < $HeaderFile\n" unless $Quiet;
+    my $OutFile = "$BaseFile.out";
+    my $Output= `$PostIdl < $HeaderFile 2>&1` unless -s $OutFile and $Ccmc;
+    my $Error = ($Output =~ /error/i or $?);
+    my $Warning = join("\n",grep /warning/i, split("\n",$Output));
+    print "$Warning\n" if $Warning and not ($Quiet or $Error);
+    print $Output if $Verbose or $Error;
+    die "$ERROR: error found in the output of $PostIdl\n" if $Error; 
+    die "$ERROR: no out file $OutFile was produced\n" unless -s $OutFile;
+    unless($Keep){
+	if($BaseFile =~ /3d_/){
+	    unless($Ccmc){
+		rename $HeaderFile, $BaseFile.".info";
+	    }
+	}else{
+	    unlink $HeaderFile;
+	}
+	unlink glob("$BaseFile*.idl");
+	print "unlink ",join(" ",glob("$BaseFile*.idl")),"\n" if $Verbose;
+    }
+}
+
 ##############################################################################
 
 sub print_help{
@@ -190,7 +209,7 @@ Purpose:
    Create .outs movies from the .out files if requested.
 
 Usage:
-   pIDL [-h] [-v] [-k] [-m|M] [BASENAME]
+   pIDL [-h] [-v] [-k] [-m|M] [-n=NUMBER] [BASENAME]
 
    -h -help    - print this help message
    -v -verbose - print verbose information
@@ -198,12 +217,16 @@ Usage:
    -k -keep    - keep the .h and .idl files. Default is to delete them.
    -m -movie   - create movie from the .out files and keep the .out files
    -M -MOVIE   - create movie from the .out files and delete the .out files
+   -n=NUMBER   - execute PostIDL.exe in parallel on NUMBER cores. Default is 1
    BASENAME    - the beginning of the filenames to be processed.
                  Default value is BASENAME='IO2/'
 
 Examples:
    Process all files in the IO2/ directory and remove .idl files:
 pIDL
+
+   Do the same in parallel using 4 threads
+pIDL -n=4
 
    Process all files in the IO2/ directory, create .outs movies and remove
    all the .h, .idl and .out files:
