@@ -61,6 +61,7 @@ subroutine calc_chemical_sources(iLon,iLat,iAlt,iBlock,IonSources, &
        IonLosses,NeutralSources, &
        NeutralLosses,ChemicalHeatingSub,Emission)
 
+  use ModSources
 
   integer, intent(in) :: ilon,ilat,ialt,iBlock
   real, intent(out) :: IonSources(nIons),IonLosses(nIons)
@@ -70,7 +71,6 @@ subroutine calc_chemical_sources(iLon,iLat,iAlt,iBlock,IonSources, &
   real :: Source, Reaction, rr
  
   integer :: iNeutral, iion
-
   
   real :: lon, lat, alt
   real, dimension(1:2) :: msis_temp
@@ -80,8 +80,7 @@ subroutine calc_chemical_sources(iLon,iLat,iAlt,iBlock,IonSources, &
 
   real :: percent,o2total,o2ptotal
 
-
-   !---------------------------------------------------------------------------
+  !---------------------------------------------------------------------------
  
   if (.not.UseIonChemistry) return
 

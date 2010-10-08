@@ -70,7 +70,7 @@ subroutine calc_rates(iBlock)
           (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
           TempUnit(1:nLons,1:nLats,iAlt))**0.75
         
-     ViscCoef(:,:,iAlt) = 4.5e-5 * &
+     ViscCoef(1:nLons,1:nLats,iAlt) = 4.5e-5 * &
           (Temperature(1:nLons,1:nLats,iAlt,iBlock)*&
           TempUnit(1:nLons,1:nLats,iAlt)/ 1000.)**(-0.71)
 
@@ -168,7 +168,7 @@ subroutine calc_viscosity(iBlock)
   integer, intent(in) :: iBlock
 
   ! This is Earth-based, and 
-  ViscCoef = 4.5e-5 * &
+  ViscCoef(1:nLons,1:nLats,0:nAlts+1) = 4.5e-5 * &
        (Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock)*&
        TempUnit(1:nLons,1:nLats,0:nAlts+1)/ 1000.)**(-0.71)
 

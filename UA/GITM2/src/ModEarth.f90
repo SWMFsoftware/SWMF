@@ -32,6 +32,7 @@ module ModPlanet
   integer, parameter  :: ie_     = 10
   integer, parameter  :: nIons   = ie_
   integer, parameter  :: nIonsAdvect = 1
+  integer, parameter  :: nSpeciesAll = nSpeciesTotal + nIons - 1
   
   character (len=20) :: cSpecies(nSpeciesTotal)
   character (len=20) :: cIons(nIons)
