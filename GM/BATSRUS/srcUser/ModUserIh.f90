@@ -23,7 +23,7 @@ module ModUser
   character(len=10) :: TypeIcs
   real              :: RhoInitialNo, pInitialNo, rMinShell, rMaxShell
   real              :: uSwFinalSi, BrSourceSi, RhoSourceSi, pSourceSi
-  real              :: rSourceNo, UrSourceSi
+  real              :: rSourceNo, UrSourceSi, pShellNo, RhoShellNo
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -54,8 +54,10 @@ contains
              call read_var('RhoInitialNo', RhoInitialNo)
              call read_var('pInitialNo', pInitialNo)
              if(TypeIcs=='shell') then
-                call read_var('rMinShell', rMinShell)
-                call read_var('rMaxShell', rMaxShell)
+                call read_var('RhoShellNo', RhoShellNo)
+                call read_var('pShellNo',   pShellNo)
+                call read_var('rMinShell',  rMinShell)
+                call read_var('rMaxShell',  rMaxShell)
              end if
           case('parker')
              if (TypeCoordSystem /= 'HGR') then
@@ -129,11 +131,11 @@ contains
           
           if ( R_BLK(i,j,k,iBlock) .ge. rMinShell .and. &
                R_BLK(i,j,k,iBlock) .le. rMaxShell ) then
+             State_VGB(rho_,i,j,k,iBlock) = RhoShellNo*BodyRho_I(1)       
+             State_VGB(p_,  i,j,k,iBlock) = pShellNo*BodyP_I(1)
+          else
              State_VGB(rho_,i,j,k,iBlock) = RhoInitialNo*BodyRho_I(1)       
              State_VGB(p_,  i,j,k,iBlock) = pInitialNo*BodyP_I(1)
-          else
-             State_VGB(rho_,i,j,k,iBlock) = BodyRho_I(1)       
-             State_VGB(p_,  i,j,k,iBlock) = BodyP_I(1)
           end if  
        end do; end do ; end do
 
