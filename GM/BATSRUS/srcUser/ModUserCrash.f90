@@ -1734,13 +1734,15 @@ contains
     use ModMain,       ONLY: nI, nJ, nK, GlobalBlk
     use ModAdvance,    ONLY: State_VGB, &
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
-         UseNonConservative, UseElectronPressure
+         IsConserv_CB, UseNonConservative, UseElectronPressure
     use ModGeometry,   ONLY: vInv_CB
     use ModPhysics,    ONLY: g
     use ModVarIndexes, ONLY: p_, Pe_
 
     integer :: i, j, k, iBlock, iP
     real :: DivU, GammaEos
+    logical :: IsConserv
+
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !-------------------------------------------------------------------
     if(.not.(UseNonConsLevelSet .or. UseNonConservative)) RETURN
@@ -1764,8 +1766,14 @@ contains
             Source_VC(LevelXe_:LevelMax,i,j,k) &
             + State_VGB(LevelXe_:LevelMax,i,j,k,iBlock)*DivU
 
+       if(allocated(IsConserv_CB))then
+          IsConserv = IsConserv_CB(i,j,k,iBlock)
+       else
+          IsConserv = .not. UseNonConservative
+       end if
+
        ! Fix adiabatic compression source for pressure
-       if(UseNonConservative)then
+       if(.not.IsConserv)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, GammaOut=GammaEos)
 
