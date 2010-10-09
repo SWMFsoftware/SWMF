@@ -517,9 +517,9 @@ endif
 
 
 !****************    yingdong defined for comet    **************
-!    integer, parameter ::  x_jet = 0.855363194, y_jet = -0.49384417, &
+!    real, parameter ::  x_jet = 0.855363194, y_jet = -0.49384417, &
 !       z_jet = 0.156434465 	!borrelly jet pattern
-    integer, parameter ::  x_jet = 1., y_jet = 0., z_jet = 0.
+    real, parameter ::  x_jet = 1., y_jet = 0., z_jet = 0.
 	!encke sunward jet pattern
     real :: lambda, sMassdn, sMassj, &
 		jtheta, rcyl
