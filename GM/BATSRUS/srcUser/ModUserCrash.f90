@@ -1514,8 +1514,8 @@ contains
 
     integer, intent(in):: iStage,iBlock
 
-    integer:: i, j, k
-    real   :: PressureSi, EinternalSi, Ee, EeSi, PeSi
+    integer:: i, j, k, iP
+    real   :: PressureSi, EinternalSi
     logical:: IsConserv
 
     character(len=*), parameter :: NameSub = 'user_update_states'
@@ -1525,72 +1525,58 @@ contains
 
     if (DoAdjoint) call store_block_buffer(iBlock,AdjUserUpdate1_)  ! ADJOINT SPECIFIC
 
-    if(UseElectronPressure)then
+    iP = p_
+    if(UseElectronPressure) iP = Pe_
 
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          ! From update_states_MHD, we obtained Pe^*, e^* with ideal gamma
-          ! and ExtraEInt^* with pure advection.
-          ! Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
-          ! Internal electron energy Ee^n+1 = Pe^*/(g-1) + ExtraEInt^*
-          Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
-               + State_VGB(ExtraEint_,i,j,k,iBlock)
-          EeSi = Ee*No2Si_V(UnitEnergyDens_)
+    ! update of pressure, ionization and total energies
+    do k=1,nK; do j=1,nJ; do i=1,nI
 
-          ! Determine pe^n+1 = EOS(rho^n+1, Ee^n+1)
+       if(allocated(IsConserv_CB))then
+          IsConserv = IsConserv_CB(i,j,k,iBlock)
+       else
+          IsConserv = .not. UseNonConservative
+       end if
+
+       if(IsConserv)then
+          ! Single temperature:
+          !   From update_states_MHD, we obtained p^*, e^* with ideal gamma
+          !   and ExtraEInt^* with pure advection.
+          !   Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
+          !   Total internal energy Eint^n+1 = p^*/(g-1) + ExtraEInt^*
+          ! Two temperature:
+          !   From update_states_MHD, we obtained Pe^*, e^* with ideal gamma
+          !   and ExtraEInt^* with pure advection.
+          !   Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
+          !   Electron internal energy Eint^n+1 = Pe^*/(g-1) + ExtraEInt^*
+          EinternalSi = No2Si_V(UnitEnergyDens_)*&
+               (inv_gm1*State_VGB(iP,i,j,k,iBlock) + &
+               State_VGB(ExtraEint_,i,j,k,iBlock))
+
+          ! Single temperature: determine p^n+1 = EOS( rho^n+1, Eint^n+1)
+          ! Two temperature:   determine Pe^n+1 = EOS( rho^n+1, Eint^n+1)
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, EinternalIn=EeSi, PressureOut=PeSi)
+               i, j, k, iBlock, &
+               EinternalIn=EinternalSi, PressureOut=PressureSi)
 
-          ! Set true electron pressure
-          State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
+          ! Set normalized pressure (electron pressure for two temperature)
+          State_VGB(iP,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+       else
+          ! Single temperature:
+          !   Calculate total internal energy Eint^n+1 from pressure p^n+1
+          ! Two temperature:
+          !   Calculate electron internal energy Eint^n+1 from
+          !   electron pressure Pe^n+1
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, EinternalOut=EinternalSi)
+       end if
 
-          ! Set ExtraEint^n+1 = Ee^n+1 - Pe^n+1/(gamma -1)
-          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-               Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
-       end do; end do; end do
+       ! Set ExtraEint^n+1 = Eint^n+1 - p^n+1/(g -1)
+       State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+            Si2No_V(UnitEnergyDens_)*EinternalSi &
+            - inv_gm1*State_VGB(iP,i,j,k,iBlock))
 
-    else
+    end do; end do; end do
 
-       ! update of pressure, ionization and total energies
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          ! Total internal energy ExtraEint + P/(\gamma -1) transformed to SI
-
-          if(allocated(IsConserv_CB))then
-             IsConserv = IsConserv_CB(i,j,k,iBlock)
-          else
-             IsConserv = .not. UseNonConservative
-          end if
-
-          if(IsConserv)then
-             ! From update_states_MHD, we obtained p^*, e^* with ideal gamma
-             ! and ExtraEInt^* with pure advection.
-             ! Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
-             ! Internal energy Eint^n+1 = p^*/(g-1) + ExtraEInt^*
-             EinternalSi = No2Si_V(UnitEnergyDens_)*&
-                  (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
-                  State_VGB(ExtraEint_,i,j,k,iBlock))
-
-             ! Determine p^n+1 = EOS( rho^n+1, Eint^n+1)
-             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  i, j, k, iBlock, &
-                  EinternalIn=EinternalSi, PressureOut=PressureSi)
-
-             ! Set normalized pressure
-             State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
-          else
-             ! Calculate internal energy Eint^n+1 from pressure p^n+1
-             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  i, j, k, iBlock, EinternalOut=EinternalSi)
-          end if
-
-          ! Set ExtraEint^n+1 = Eint^n+1 - p^n+1/(g -1)
-          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-               Si2No_V(UnitEnergyDens_)*EinternalSi &
-               - inv_gm1*State_VGB(p_,i,j,k,iBlock))
-
-       end do; end do; end do
-
-    end if
-    
     if (DoAdjoint) call store_block_buffer(iBlock,AdjUserUpdate2_)  ! ADJOINT SPECIFIC
 
     ! Calculate e^n+1 using updated P^n+1 (Pe^n+1) for single (two-)temperature
@@ -1757,8 +1743,7 @@ contains
     real :: DivU, GammaEos
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !-------------------------------------------------------------------
-    if(.not.(UseNonConsLevelSet .or. &
-         (UseNonConservative.and. .not.UseElectronPressure))) RETURN
+    if(.not.(UseNonConsLevelSet .or. UseNonConservative)) RETURN
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
@@ -1780,7 +1765,7 @@ contains
             + State_VGB(LevelXe_:LevelMax,i,j,k,iBlock)*DivU
 
        ! Fix adiabatic compression source for pressure
-       if(UseNonConservative .and. .not.UseElectronPressure)then
+       if(UseNonConservative)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, GammaOut=GammaEos)
 
