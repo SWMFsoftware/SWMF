@@ -229,21 +229,10 @@ contains !=========================================================
 
        nRayInsideIntSphere = sum(RayInsideIntSphere_I)
 
-       !if (nIteration .eq. 2) call stop_MPI( &
-       !     '+++##%#%$@#$#! stop_MPI: Preved 8 from'// &
-       !     ' ModRadioWaveImage, ray_bunch_intensity() before '// &
-       !     ' call ray_path(), nIter=2')
-
        call ray_path(get_plasma_density, nRay, ExcludeRay_I, Slope_DI, &
-            DeltaS_I, Tolerance, DensityCr, Intensity_I, RayFlag_I, NewEntry)
+            DeltaS_I, Tolerance, DensityCr, Intensity_I, RayFlag_I)
        RayPath_I = RayPath_I + DeltaS_I
        MinRayPath = minval(RayPath_I)
-
-       !if (nIteration .eq. 1) call stop_MPI( &
-       !     '+++##%#%$@#$#! stop_MPI: Preved 6 from'// &
-       !     ' ModRadioWaveImage, ray_bunch_intensity() after '// &
-       !     ' call ray_path(), nIter=1')
-
 
     end do
 

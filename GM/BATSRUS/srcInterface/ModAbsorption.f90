@@ -7,6 +7,8 @@ module ModAbsorption
   use MH_domain_decomposition
   use CON_global_message_pass
   use CON_integrator
+  use ModDensityAndGradient, ONLY: Density_I, DeltaSNew_I, GradDensity_DI, &
+       NameVector
   use ModMain, ONLY: nDim
   use ModProcMH, ONLY: iProc,iComm
   use ModMpi
@@ -30,14 +32,10 @@ module ModAbsorption
 
   logical,save::DoInit=.true.
 
-  character(LEN=10),save::NameVector,NameMask
-
   type(RouterType),save::Router
   type(GridDescriptorType),save::LineGrid,MhGrid
   type(DomainDecompositionType),save::LineDD
 
-  real,allocatable,save,dimension(:)::Density_I,DeltaSNew_I
-  real,allocatable,save,dimension(:,:)::GradDensity_DI
   real,allocatable,save,dimension(:)::AbsorptionCoeff_I
 
   !PUBLIC MEMBERS:
@@ -195,10 +193,6 @@ contains
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::Buff_I
     integer::iCell
-
-    ! call stop_MPI('+++stop_MPI: in put_density_value, '// &
-    !     'before the first statement')
-
 
     iCell=Put%iCB_II(1,iPutStart)
     if(DoAdd)then

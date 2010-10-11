@@ -3,10 +3,12 @@ module ModRadioWaveRaytracing
   use ModNumConst
   use ModCoordTransform
   use CON_global_vector, ONLY: associate_with_global_vector
-  use ModDensityAndGradient, ONLY: get_plasma_density, NameVector, &
-       GradDensity_DI, Density_I, DeltaSNew_I
+  use ModDensityAndGradient, ONLY: NameVector, &
+       GradDensity_DI, Density_I, DeltaSNew_I, EnergyDeposition_I
   use ModPhysics, ONLY : No2Si_V, UnitRho_, UnitX_
   use ModProcMH, ONLY: iProc
+  use ModMain,ONLY: UseLaserPackage
+  use ModAbsorption, ONLY: AbsorptionCoeff_I
 
   implicit none
 
@@ -16,7 +18,7 @@ module ModRadioWaveRaytracing
 contains !=========================================================
 
   subroutine ray_path(get_plasma_density, nRay, ExcludeRay_I, Slope_DI, &
-       DeltaS_I, ToleranceInit, DensityCr, Intensity_I, RayFlag_I, NewEntry)
+       DeltaS_I, ToleranceInit, DensityCr, Intensity_I, RayFlag_I)
 
     !
     !   The subroutine ray_path() makes raytracing and emissivity integration
@@ -97,16 +99,6 @@ contains !=========================================================
     !     error, the flagged rays should be considered as "bad" and thrown
     !     away from the resultant Intensity_I. Set all the elements of
     !     RayFlag_I to .false. before calling ray_path() for the first time.
-    ! NewEntry:       Set this logical variable to .true. before the first
-    !     call to ray_path(). This value forces the ray_path() to allocate
-    !     internal dynamic arrays and take several initial actions. During
-    !     subsequent calls to ray_path() the NewEntry will keep the value
-    !     .false.. Setting the NewEntry to .true. during the same run will
-    !     cause another allocation of the internal allocatables, with possibly
-    !     different dimensions. This variable was introduced out of the 
-    !     speed considerations: the automatic arrays work slower than the
-    !     allocatable ones, because the allocation occurs only once at the!
-    !     first call.
     ! 
     ! Written by Leonid Benkevitch.
     !
@@ -121,28 +113,32 @@ contains !=========================================================
        end subroutine get_plasma_density
     end interface
 
-    integer, intent(in) :: nRay                                  
-    ! # of pixels in the raster
-    real, intent(inout), dimension(3,nRay) :: Slope_DI
-    real, intent(inout), dimension(nRay) :: Intensity_I, DeltaS_I
-    real, intent(in) ::  ToleranceInit, DensityCr
-    logical, intent(inout), dimension(nRay) :: RayFlag_I      
-    ! RayFlag_I: .true. if a ray is OK, .false. otherwise
-    logical, intent(inout) :: NewEntry                        
-    ! NewEntry: must be set to .true. before a call with new value of nRay
+    integer, intent(in) :: nRay   ! # of pixels in the raster
+    real,    intent(inout), dimension(3,nRay) :: Slope_DI
+    real,    intent(inout), dimension(nRay) :: Intensity_I, DeltaS_I
+    real,    intent(in) ::  ToleranceInit, DensityCr
+
+    ! .true. if a ray is OK, .false. otherwise:
+    logical, intent(inout), dimension(nRay),optional :: RayFlag_I
+
+    ! a ray is excluded from processing if it is .true. 
     logical, intent(inout), dimension(nRay) :: ExcludeRay_I   
-    ! ExcludeRay_I: a ray is excluded from processing if it is .true.
+
+    logical, save:: IsNewEntry = .true.
+   
     integer, parameter :: nSplitDeltaS = 2
 
-    real, save, dimension(3)       :: Slope1_D, Omega_D
-    real, save, dimension(3)       :: ProjSlopeOnMinusGradEps_D
-    real, save, dimension(3)       :: StepX_D, StepY_D, RelGradRefrInx_D 
-    real, save, dimension(3)       :: GradDielPerm_D, PositionHalfBack_D
+    real,    save, dimension(3)       :: Slope1_D, Omega_D
+    real,    save, dimension(3)       :: ProjSlopeOnMinusGradEps_D
+    real,    save, dimension(3)       :: StepX_D, StepY_D, RelGradRefrInx_D 
+    real,    save, dimension(3)       :: GradDielPerm_D, PositionHalfBack_D
 
     real, save, pointer, dimension(:,:) :: Position_DI
     real, save, pointer, dimension(:)   :: DistanceToCritSurf_I
-    logical, save, pointer, dimension(:)   :: GentleRay_I       
+
     ! GentleRay_I: .true. for shallow rays; is set to .false. for steep rays.
+    logical, save, pointer, dimension(:)   :: GentleRay_I       
+    
 
     real :: HalfDeltaS                        ! DeltaS halved
     real :: DielPerm, DielPermHalfBack, Dens2DensCr, Dens2DensCr1, Dens2DensCr2
@@ -153,36 +149,36 @@ contains !=========================================================
     real :: ParabLen, GradDielPerm
     real, save :: Tolerance, ToleranceSqr, DensityCrInv, AbsoluteMinimumStep
     real, save :: AbsRho2GOverCm3
-    real, save :: PerCentProcessedRays
-    real, save :: minDeltaS, maxDeltaS, minDensity, maxDensity
-    integer, save :: i, j, iRay, nCall, MidRay
+    
+    integer, save :: nCall=0
+    integer:: iRay
 
-    if (NewEntry) then
-       NewEntry = .false.
+    if (IsNewEntry) then
+       IsNewEntry = .false.
        call associate_with_global_vector(Position_DI,NameVector)
        allocate(DistanceToCritSurf_I(nRay))
        DistanceToCritSurf_I = cZero
        allocate(GentleRay_I(nRay))
        GentleRay_I = .true.
        DensityCrInv = cOne/DensityCr
-       Tolerance = min(ToleranceInit,0.1)  
-       ! i.e. minimum ten points between a vacuum and a critical surface and
+
+       !  minimum ten points between a vacuum and a critical surface and
        !  minimum 10 points over 1 rad of the curvature
-       ToleranceSqr = Tolerance**2         
+       Tolerance = min(ToleranceInit,0.1)  
+
+       
+       ToleranceSqr = Tolerance**2 
+       
+       ! One (ten-thousandth) hundredth of average step 
        AbsoluteMinimumStep = 1e-2*sum(DeltaS_I)/nRay 
-       ! One (ten-thousandth) hundredth of average step
+       
        AbsRho2GOverCm3 = No2Si_V(UnitRho_)*1e-3
-       if (iProc .eq. 0) write(*,*) 'First Entry to ray_path()'
-       MidRay = int(nRay/2)
-       nCall = 0
     end if
 
     nCall = nCall + 1
-    PerCentProcessedRays = real(count(.not.ExcludeRay_I))/real(nRay)*100.0
+   
 
-    if (iProc .eq. 0) write(*,*) '+++ ray_path(): nCall = ', nCall, &
-         ';  entering get_plasma_density()...'
-
+    !Start the predictor step of the GIRARD scheme: 
     do iRay = 1, nRay
        if (ExcludeRay_I(iRay)) CYCLE  ! Do not process the rays that are done
        Position_DI(:,iRay) = Position_DI(:,iRay) + &
@@ -203,34 +199,21 @@ contains !=========================================================
     !
     Density_I = Density_I*AbsRho2GOverCm3
     GradDensity_DI = GradDensity_DI*AbsRho2GOverCm3
+    
+    if(present(RayFlag_I))then
+       !In making radio images this is a bad pixel which should be further processed 
+       RayFlag_I = Density_I>= DensityCr       ! .true. indicates "bad ray"
+       ExcludeRay_I = ExcludeRay_I .or. RayFlag_I ! "bad rays" are done
+    else
+       !In solving the laser deposition energy the total remnant energy 
+       !should be deposited if the ray pamatrates through the critical surface
+       where( Density_I>= DensityCr.and..not.ExcludeRay_I)
+          ExcludeRay_I = .true.
+          EnergyDeposition_I = Intensity_I
+       endwhere
+    end if
 
-    RayFlag_I = Density_I .ge. DensityCr       ! .true. indicates "bad ray"
-    ExcludeRay_I = ExcludeRay_I .or. RayFlag_I ! "bad rays" are done
-
-    if (iProc .eq. 0) write(*,*)'+++ ray_path(): exit from get_plasma_density'
-    if ((iProc .eq. 0) .and. (mod(nCall,10) .eq. 0)) then
-       minDeltaS =  99999999999.
-       maxDeltaS = -99999999999.
-       minDensity =  99999999999.
-       maxDensity = -99999999999.
-       do i = 1, nRay
-          if (ExcludeRay_I(i)) CYCLE 
-          if (DeltaS_I(i) .lt. minDeltaS) minDeltaS = DeltaS_I(i)
-          if (DeltaS_I(i) .gt. maxDeltaS) maxDeltaS = DeltaS_I(i)
-          if (Density_I(i) .lt. minDensity) minDensity = Density_I(i)
-          if (Density_I(i) .gt. maxDensity) maxDensity = Density_I(i)
-       end do
-       write(*,*) 'Processing ', PerCentProcessedRays, ' % of all rays'
-       write(*,*) '# of bad rays: ', count(RayFlag_I)
-       write(*,*) 'minval(DeltaS_I) = ', minDeltaS
-       write(*,*) 'maxval(DeltaS_I) = ', maxDeltaS
-       write(*,*) 'minval(DeltaSNew_I) = ', minval(DeltaSNew_I)
-       write(*,*) 'maxval(DeltaSNew_I) = ', maxval(DeltaSNew_I)
-       write(*,*) 'minval(Density_I) = ', minDensity
-       write(*,*) 'maxval(Density_I) = ', maxDensity
-       write(*,*) 'Density_I(nRay/2) =', Density_I(MidRay)
-       write(*,*) 'GradDensity_DI(:,nRay/2) = ',GradDensity_DI(:,MidRay)
-    end if !(iProc .eq. 0)
+  
 
     do iRay = 1, nRay
 
@@ -354,9 +337,15 @@ contains !=========================================================
 
 
           ParabLen = sqrt(sum((2*StepX_D)**2) + sum(StepY_D**2))
-
-          Intensity_I(iRay) = Intensity_I(iRay)  &
-               + ParabLen*(Dens2DensCr**2)*(cHalf - Dens2DensCr)**2
+          if(.not.UseLaserPackage)then
+             Intensity_I(iRay) = Intensity_I(iRay)  &
+                  + ParabLen*(Dens2DensCr**2)*(cHalf - Dens2DensCr)**2
+          else
+             EnergyDeposition_I(iRay) = Intensity_I(iRay) * &
+                  ParabLen * AbsorptionCoeff_I(iRay)
+             Intensity_I(iRay) = Intensity_I(iRay) * &
+                  (1 - ParabLen * AbsorptionCoeff_I(iRay)) 
+          end if
 
        else 
 
@@ -381,10 +370,15 @@ contains !=========================================================
 
           Position_DI(:,iRay) = Position_DI(:,iRay) &
                + Slope_DI(:,iRay)*HalfDeltaS
-
-          Intensity_I(iRay) = Intensity_I(iRay) &
-               + DeltaS_I(iRay)*(Dens2DensCr**2)*(cHalf - Dens2DensCr)**2
-
+          if(UseLaserPackage)then
+             EnergyDeposition_I(iRay) = Intensity_I(iRay) *  &
+                  DeltaS_I(iRay) * AbsorptionCoeff_I(iRay)
+             Intensity_I(iRay) = Intensity_I(iRay) * &
+                  (1 - DeltaS_I(iRay) * AbsorptionCoeff_I(iRay)) 
+          else
+             Intensity_I(iRay) = Intensity_I(iRay) &
+                  + DeltaS_I(iRay)*(Dens2DensCr**2)*(cHalf - Dens2DensCr)**2
+          end if
        end if
 
        !
@@ -442,27 +436,9 @@ contains !=========================================================
        end if
     end do
 
-    !if (nCall .eq. 1) call stop_MPI( &
-    !     '++++++++++++++++stop_MPI: Preved 7 from'// &
-    !     ' ModRadioWaveRaytracing at the end of '// &
-    !     ' ray_path(), nCall=1')
-
+   
   end subroutine ray_path
 
 end module ModRadioWaveRaytracing
 
-!=================================THE LASER PACKAGE STARTS HERE=================!
-!We did not introduce the separate file for the laser package, otherwise it had to
-!be added into too many makefiles. Our intent is to make ray_path routine re-usable,
-!which is another reason to put the package here.
-!===============================================================================!
 
-subroutine add_laser_energy_deposition
-  !This routine should add the laser energy deposition to the "Explicit residual"
-  !within the semi-implicit scheme. Effectively, in this way the heat conduction
-  !equation, which otherwise is solved within the semi-implicit scheme WITH ZERO
-  !right-hand-side, is solved with the right-hand-side including the laser energy
-  !deposition
-  use ModImplicit, ONLY: ResExpl_VCB
-  use ModRadioWaveRaytracing, ONLY: ray_path
-end subroutine add_laser_energy_deposition

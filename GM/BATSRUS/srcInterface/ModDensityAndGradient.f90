@@ -27,11 +27,11 @@ module ModDensityAndGradient
   type(RouterType),save::Router
   type(GridDescriptorType),save::LineGrid,MhGrid
   type(DomainDecompositionType),save::LineDD
-  real,allocatable,save,dimension(:)::Density_I,DeltaSNew_I
+  real,allocatable,save,dimension(:)::Density_I,DeltaSNew_I,EnergyDeposition_I
   real,allocatable,save,dimension(:,:)::GradDensity_DI
 
   !PUBLIC MEMBERS:
-  public::get_plasma_density,NameVector,GradDensity_DI,Density_I,DeltaSNew_I
+  public::get_plasma_density,NameVector,GradDensity_DI,Density_I,DeltaSNew_I,EnergyDeposition_I
   !EOP
 
 contains
