@@ -3244,9 +3244,12 @@ contains
       if(UseAnisoPressure .and. FullB2 > 0)then 
          Discr = sqrt(max(0.0, Fast2**2  &
               + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &  
-              - (3*Ppar + GammaPe)*Pperp*InvRho**2*BnInvB2*(2-BnInvB2) &
-              + (3*Ppar + GammaPe)*Ppar*(InvRho*BnInvB2)**2 &
-              - (3*Ppar + GammaPe)*InvRho*Alfven2NormalBoris)))
+              - 3*Ppar*Pperp*InvRho**2*BnInvB2*(2 - BnInvB2) &
+              + 3*Ppar*Ppar*(InvRho*BnInvB2)**2 &
+              - (3*Ppar + GammaPe)*InvRho*Alfven2NormalBoris &
+              + GammaPe*InvRho**2*(4*Ppar*BnInvB2 &
+              - 3*Ppar - Pperp*BnInvB2)*BnInvB2)))
+              
       else
          Discr = sqrt(max(0.0, Fast2**2 - 4.0*Sound2*Alfven2NormalBoris))
       end if
@@ -3274,7 +3277,7 @@ contains
          if(present(Cleft_I))  Cleft_I(1)  = min(UnBoris - Fast, Un - Slow)
          if(present(Cright_I)) Cright_I(1) = max(UnBoris + Fast, Un + Slow)
       end if                                              !^CFG IF AWFLUX
-
+         
     end subroutine get_boris_speed
     !^CFG END BORISCORR
     !========================================================================
@@ -3369,22 +3372,27 @@ contains
       Alfven2Normal = InvRho*FullBn**2
 
       ! Calculate Fast speed for anisopressure.
-      ! Formulae refer to V. B. Baranov, 1970
+      ! Formulae refer to V. B. Baranov, 1970 and MAPLE calculation
       if(UseAnisoPressure) FullB2 = FullBx**2+FullBy**2+FullBz**2
       if(UseAnisoPressure .and. FullB2 > 0)then
-         GammaPe = 0.0 
-         if(UseElectronPressure) GammaPe = g*State_V(Pe_) ! considering Pe
          Ppar  = State_V(Ppar_)
          Pperp = (3*p - Ppar)/2.
+         GammaPe = 0.0 
+         if(UseElectronPressure)then
+            GammaPe = g*State_V(Pe_) ! considering Pe
+            Pperp = Pperp - 3*State_V(Pe_)/2. ! Pe was added to p previously
+         end if
          BnInvB2 = FullBn**2/FullB2
          Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 &
               + GammaPe)                        ! define Sound2 in this way
          Fast2 = Sound2 + Alfven2 
          Discr = sqrt(max(0.0, Fast2**2  &
               + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &  
-              - (3*Ppar + GammaPe)*Pperp*InvRho**2*BnInvB2*(2-BnInvB2) &
-              + (3*Ppar + GammaPe)*Ppar*(InvRho*BnInvB2)**2 &
-              - (3*Ppar + GammaPe)*InvRho*Alfven2Normal)))
+              - 3*Ppar*Pperp*InvRho**2*BnInvB2*(2 - BnInvB2) &
+              + 3*Ppar*Ppar*(InvRho*BnInvB2)**2 &
+              - (3*Ppar + GammaPe)*InvRho*Alfven2Normal &
+              + GammaPe*InvRho**2*(4*Ppar*BnInvB2 &
+              - 3*Ppar - Pperp*BnInvB2)*BnInvB2)))
       else
          Fast2  = Sound2 + Alfven2
          Discr  = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
