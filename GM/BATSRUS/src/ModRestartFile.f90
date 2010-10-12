@@ -2,11 +2,11 @@
 
 module ModRestartFile
 
-  use ModProcMH,     ONLY: iProc
+  use ModProcMH,     ONLY: iProc, nProc, iComm
   use ModIO,         ONLY: Unit_Tmp, nFile, Dt_Output, Dn_Output, Restart_, &
        restart, save_restart_file, write_prefix, iUnitOut
   use ModMain,       ONLY: GlobalBlk, Global_Block_Number, nI, nJ, nK, Gcn, &
-       nBlock, UnusedBlk, ProcTest, BlkTest, iTest, jTest, kTest, &
+       nBlockAll, nBlock, UnusedBlk, ProcTest, BlkTest, iTest, jTest, kTest, &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
        NameThisComp, UseBatl, iteration_number
   use ModVarIndexes, ONLY: nVar, DefaultState_V
@@ -17,10 +17,11 @@ module ModRestartFile
   use ModIO,         ONLY: Restart_Bface                    !^CFG IF CONSTRAINB
   use ModCT,         ONLY: BxFace_BLK,ByFace_BLK,BzFace_BLK !^CFG IF CONSTRAINB
   use ModMain,       ONLY: UseConstrainB                    !^CFG IF CONSTRAINB
-  use ModImplicit,   ONLY: n_prev, ImplOld_VCB, dt_prev          !^CFG IF IMPLICIT
+  use ModImplicit,   ONLY: n_prev, ImplOld_VCB, dt_prev     !^CFG IF IMPLICIT
   use ModKind,       ONLY: Real4_, Real8_
+  use ModIoUnit,     ONLY: UnitTmp_
 
-  use BATL_lib, ONLY: write_tree_file, iMortonNode_A, iNode_B
+  use BATL_lib,      ONLY: write_tree_file, iMortonNode_A, iNode_B
 
   implicit none
 
@@ -45,20 +46,25 @@ module ModRestartFile
   real, public    :: tSimulationRead
     
   ! Local variables
-  character(len=*), parameter :: StringRestartExt=".rst"
-  character(len=*), parameter :: NameHeaderFile  ="restart.H"
-  character(len=*), parameter :: NameDataFile    ="data.rst"
-  character(len=*), parameter :: NameBlkFile     ="blk"
+  character(len=*), parameter :: StringRestartExt = ".rst"
+  character(len=*), parameter :: NameBlkFile      = "blk"
+  character(len=*), parameter :: NameHeaderFile   = "restart.H"
+  character(len=*), parameter :: NameDataFile     = "data.rst"
+  character(len=*), parameter :: NameIndexFile    = "index.rst"
 
   logical :: RestartBlockLevels=.false. ! Load LEVmin,LEVmax in octree restart
   integer :: nByteRealRead = 8     ! Real precision in restart files
 
-  ! One can use 'block' or 'one' format for input and output restart files
+  ! One can use 'block', 'proc' or 'one' format for input and output 
+  ! restart files.
   ! The input format is set to 'block' for backwards compatibility
-  character (len=10)  :: TypeRestartInFile ='block'
+  character (len=20)  :: TypeRestartInFile ='block'
 
   ! The output format is platform dependent and it is reset in restart_init
-  character (len=10)  :: TypeRestartOutFile='one'  
+  character (len=20)  :: TypeRestartOutFile='one'  
+
+  ! Variables for file and record index for 'proc' type restart files
+  integer, allocatable:: iFileMorton_I(:), iRecMorton_I(:)
 
   character(len=100) :: NameFile
 
@@ -107,6 +113,7 @@ contains
     use ModMain,      ONLY: UseStrict
 
     character(len=*), intent(in) :: NameCommand
+    integer:: i
     character(len=*), parameter:: NameSub = 'read_restart_parameters'
     !--------------------------------------------------------------------------
 
@@ -145,24 +152,16 @@ contains
        if (iProc==0) call check_dir(NameRestartOutDir)
     case("#RESTARTINFILE")
        call read_var('TypeRestartInFile',TypeRestartInFile)
-       if (TypeRestartInFile == 'oneseries')then
-          TypeRestartInFile = 'one'
-          UseRestartInSeries = .true.
-       end if
-       if (TypeRestartInFile == 'blockseries')then
-          TypeRestartInFile = 'block'
-          UseRestartInSeries = .true.
-       end if
+       i = index(TypeRestartInFile, 'series')
+       UseRestartInSeries = i > 0
+       if(i > 0) TypeRestartInFile = TypeRestartInFile(1:i-1)
+
     case("#RESTARTOUTFILE")
        call read_var('TypeRestartOutFile',TypeRestartOutFile)
-       if (TypeRestartOutFile == 'oneseries')then
-          TypeRestartOutFile = 'one'
-          UseRestartOutSeries = .true.
-       end if
-       if (TypeRestartOutFile == 'blockseries')then
-          TypeRestartOutFile = 'block'
-          UseRestartOutSeries = .true.
-       end if
+       i = index(TypeRestartOutFile, 'series')
+       UseRestartOutSeries = i > 0
+       if(i > 0) TypeRestartOutFile = TypeRestartOutFile(1:i-1)
+
     case default
        call stop_mpi(NameSub//' unknown NameCommand='//NameCommand)
     end select
@@ -180,19 +179,27 @@ contains
 
     if(UseBatl)then
        write(NameFile,'(a)') trim(NameRestartOutDir)//'octree.rst'
-       if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
+       if (UseRestartOutSeries) &
+            call string_append_iter(NameFile,iteration_number)
        call write_tree_file(NameFile)
     else
        call write_octree_file
     end if
-    if(iProc==0)call write_restart_header
+    if(iProc==0) call write_restart_header
     select case(TypeRestartOutFile)
     case('block')
-       do iBlock = 1,nBlock
+       do iBlock = 1, nBlock
           if (.not.unusedBLK(iBlock)) call write_restart_file(iBlock)
        end do
-    case('direct','one')
-       call write_one_restart_file
+    case('proc')
+       allocate(iFileMorton_I(nBlockAll), iRecMorton_I(nBlockAll))
+       iFileMorton_I = 0
+       iRecMorton_I  = 0
+       call write_direct_restart_file
+       call write_restart_index
+       deallocate(iFileMorton_I, iRecMorton_I)
+    case('one')
+       call write_direct_restart_file
     case default
        call stop_mpi('Unknown TypeRestartOutFile='//TypeRestartOutFile)
     end select
@@ -215,8 +222,13 @@ contains
        do iBlock = 1, nBlock
           if (.not.unusedBLK(iBlock)) call read_restart_file(iBlock)
        end do
-    case('direct','one')
-       call read_one_restart_file
+    case('proc')
+       allocate(iFileMorton_I(nBlockAll), iRecMorton_I(nBlockAll))
+       call read_restart_index
+       call read_direct_restart_file
+       deallocate(iFileMorton_I, iRecMorton_I)
+    case('one')
+       call read_direct_restart_file
     case default
        call stop_mpi('Unknown TypeRestartInFile='//TypeRestartinFile)
     end select
@@ -235,7 +247,7 @@ contains
 
     use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem,&
          nBlockAll, Body1, Time_Accurate, iStartTime_I, IsStandAlone
-    use ModMain,       ONLY: UseBody2,UseOrbit                     !^CFG IF SECONDBODY
+    use ModMain,       ONLY: UseBody2,UseOrbit            !^CFG IF SECONDBODY
     use ModVarIndexes, ONLY: NameEquation, nVar, nFluid
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, &             
@@ -247,14 +259,12 @@ contains
     use ModReadParam,ONLY: i_line_command
     use ModIO,       ONLY: NameMaxTimeUnit
 
-    implicit none
-
     integer :: iFluid
     !--------------------------------------------------------------------------
 
     if (iProc/=0) RETURN
 
-    write(NameFile,'(a)') trim(NameRestartOutDir)//NameHeaderFile
+    NameFile = trim(NameRestartOutDir)//NameHeaderFile
     if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
     
     open(unit_tmp,file=NameFile)
@@ -424,8 +434,59 @@ contains
 
   end subroutine write_restart_header
 
-  !============================================================================
+  !===========================================================================
+  subroutine write_restart_index
 
+    use ModMpi, ONLY: MPI_reduce, MPI_INTEGER, MPI_SUM
+
+    integer, allocatable:: Int_I(:)
+    integer:: iMorton, iError
+    !-------------------------------------------------------------------------
+    if(nProc > 1)then
+       ! Collect file and record indexes onto the root processor
+       allocate(Int_I(nBlockAll))
+       call MPI_reduce(iFileMorton_I, Int_I, nBlockAll, MPI_INTEGER, &
+            MPI_SUM, 0, iComm, iError)
+       iFileMorton_I = Int_I
+       call MPI_reduce(iRecMorton_I, Int_I, nBlockAll, MPI_INTEGER, &
+            MPI_SUM, 0, iComm, iError)
+       iRecMorton_I = Int_I
+       deallocate(Int_I)
+    end if
+
+    if(iProc /= 0) RETURN
+
+    ! Save index file
+    NameFile = trim(NameRestartOutDir)//NameIndexFile
+    if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
+    open(UnitTmp_, FILE=NameFile, STATUS='replace')
+    write(UnitTmp_,*) nBlockAll
+    do iMorton = 1, nBlockAll
+       write(UnitTmp_,*) iFileMorton_I(iMorton), iRecMorton_I(iMorton)
+    end do
+    close(UnitTmp_)
+    
+  end subroutine write_restart_index
+  !===========================================================================
+  subroutine read_restart_index
+
+    integer:: iMorton, nBlockAllRead
+    !-------------------------------------------------------------------------
+    NameFile = trim(NameRestartInDir)//NameIndexFile
+    if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
+    open(UnitTmp_, FILE=NameFile, STATUS='old')
+    read(UnitTmp_,*) nBlockAllRead
+
+    if(nBlockAllRead /= nBlockAll) &
+         call stop_mpi('Incorrect nBlockAll value in //trim(NameFile)')
+
+    do iMorton = 1, nBlockAll
+       read(UnitTmp_,*) iFileMorton_I(iMorton), iRecMorton_I(iMorton)
+    end do
+    close(UnitTmp_)
+
+  end subroutine read_restart_index
+  !============================================================================
   subroutine read_restart_file(iBlock)
 
     use ModEnergy, ONLY: calc_energy_cell
@@ -604,12 +665,13 @@ contains
 
   !============================================================================
 
-  subroutine open_one_restart_file(DoRead)
+  subroutine open_direct_restart_file(DoRead, iFile)
 
-    logical, intent(in) :: DoRead
+    logical, intent(in)           :: DoRead
+    integer, intent(in), optional :: iFile 
 
     integer :: lRecord, l, iError
-    character(len=*), parameter :: NameSub='open_one_restart_file'
+    character(len=*), parameter :: NameSub='open_direct_restart_file'
     logical :: DoTest, DoTestme
     !-------------------------------------------------------------------------
 
@@ -643,45 +705,55 @@ contains
             lRecord = (lRecord * nByteRealRead)/nByteReal
 
        NameFile = trim(NameRestartInDir)//NameDataFile
-       if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
+       if (present(iFile)) &
+            write(NameFile, '(a,i6.6)') trim(NameFile)//'_p', iFile
+       if (UseRestartInSeries) &
+            call string_append_iter(NameFile, iteration_number)
 
        open(Unit_Tmp, file=NameFile, &
             RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
             status = 'old', iostat=iError)
     else
        NameFile = trim(NameRestartOutDir)//NameDataFile
-       if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
-       ! Delete and open file from proc 0
-       if(iProc==0) open(Unit_Tmp, file=NameFile, &
-               RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
-               status = 'replace', iostat=iError)
+       if (present(iFile)) &
+            write(NameFile, '(a,i6.6)') trim(NameFile)//'_p', iFile
+       if (UseRestartOutSeries) &
+            call string_append_iter(NameFile,iteration_number)
 
-       ! Make sure that all processors wait until the file is re-opened
-       call barrier_mpi
-
-       if(iProc > 0)open(Unit_Tmp, file=NameFile, &
+       ! Delete and open file (only from proc 0 for type 'one')
+       if(iProc==0 .or. TypeRestartOutFile == 'proc') &
+            open(Unit_Tmp, file=NameFile, &
             RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
-            status = 'old', iostat=iError)
+            status = 'replace', iostat=iError)
+
+       if(TypeRestartOutFile == 'one') then
+          ! Make sure that all processors wait until the file is re-opened
+          call barrier_mpi
+          if(iProc > 0)open(Unit_Tmp, file=NameFile, &
+               RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
+               status = 'old', iostat=iError)
+       end if
     end if
     if(iError /= 0)then
        write(*,*) NameSub,': ERROR for DoRead=',DoRead
        call stop_mpi(NameSub//': could not open file='//NameFile)
     end if
 
-  end subroutine open_one_restart_file
+  end subroutine open_direct_restart_file
 
   !============================================================================
 
-  subroutine read_one_restart_file
+  subroutine read_direct_restart_file
 
-    character (len=*), parameter :: NameSub='read_one_restart_file'
-    integer :: i, j, k, iBlock, iRec, iVar
+    character (len=*), parameter :: NameSub='read_direct_restart_file'
+    integer :: i, j, k, iBlock, iMorton, iRec, iVar, iFile, iFileLast = -1
     logical :: IsRead, DoTest, DoTestMe
     !-------------------------------------------------------------------------
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    call open_one_restart_file(DoRead = .true.)
+    if(TypeRestartInFile == 'one') &
+         call open_direct_restart_file(DoRead = .true.)
 
     if(DoTestMe)write(*,*) NameSub,' starting with nBlock=', nBlock
 
@@ -690,9 +762,23 @@ contains
        if(UnusedBlk(iBlock)) CYCLE
        ! Use the global block index as the record number
        if(UseBatl)then
-          iRec = iMortonNode_A(iNode_B(iBlock))
+          iMorton = iMortonNode_A(iNode_B(iBlock))
        else
-          iRec = iBlockRestartALL_A(global_block_number(iBlock))
+          iMorton = iBlockRestartALL_A(global_block_number(iBlock))
+       end if
+
+       if(TypeRestartInFile == 'proc')then
+          ! Find the appropriate 'proc' restart file and the record number
+          iFile = iFileMorton_I(iMorton)
+          iRec  = iRecMorton_I(iMorton)          
+          if(iFile /= iFileLast) then
+             if(iFileLast > 0) close(UnitTmp_)
+             call open_direct_restart_file(DoRead = .true., iFile = iFile)
+             iFileLast = iFile
+          end if
+       else
+          ! For 'one' restart file record index is given by Morton index
+          iRec = iMorton
        end if
 
        if(DoTestMe) write(*,*) NameSub,' iBlock, iRec=', iBlock, iRec
@@ -776,26 +862,43 @@ contains
 
     close(Unit_Tmp)
 
-  end subroutine read_one_restart_file
+  end subroutine read_direct_restart_file
 
   !============================================================================
 
-  subroutine write_one_restart_file
+  subroutine write_direct_restart_file
 
-    character (len=*), parameter :: NameSub='write_one_restart_file'
-    integer :: iBlock, iRec, iVar
+    character (len=*), parameter :: NameSub='write_direct_restart_file'
+    integer :: iBlock, iMorton, iRec, iVar
     !--------------------------------------------------------------------
 
-    call open_one_restart_file(DoRead = .false.)
+    if(TypeRestartOutFile == 'one')then
+       call open_direct_restart_file(DoRead = .false.)
+    else
+       ! For 'proc' type open file with processor index 
+       ! and write block records in the order they are stored
+       call open_direct_restart_file(DoRead = .false., iFile = iProc)
+       iRec = 0
+    end if
 
     do iBlock = 1, nBlock
 
        if(UnusedBlk(iBlock)) CYCLE
        ! Use the global block index as the record number
        if(UseBatl)then
-          iRec = iMortonNode_A(iNode_B(iBlock))
+          iMorton = iMortonNode_A(iNode_B(iBlock))
        else
-          iRec = global_block_number(iBlock)
+          iMorton = global_block_number(iBlock)
+       end if
+
+       if(TypeRestartOutFile == 'proc')then
+          ! Write block into next record and store info for index file
+          iRec = iRec + 1
+          iFileMorton_I(iMorton) = iProc
+          iRecMorton_I(iMorton)  = iRec
+       else
+          ! For 'one' restart file record index is given by Morton index
+          iRec = iMorton
        end if
 
        if(UseConstrainB)then                          !^CFG IF CONSTRAINB BEGIN
@@ -829,7 +932,7 @@ contains
 
     close(Unit_Tmp)
 
-  end subroutine write_one_restart_file
+  end subroutine write_direct_restart_file
 
   !============================================================================
 
@@ -837,16 +940,14 @@ contains
     use ModProcMH
     use ModParallel, ONLY : nBLK,proc_dims
     use ModOctree
-    use ModIoUnit, Only : UNITTMP_
     use ModIO, ONLY : iUnitOut, write_prefix
-
-    implicit none
 
     integer :: i,j,k, total_number_of_blocks_needed, BlksPerPE, iError,nError
     integer, dimension(3) :: r_proc_dims
     character (len=4), Parameter :: octree_ext=".rst"
     logical :: isRoot
     type (adaptive_block_ptr) :: octree
+    !------------------------------------------------------------------------
 
     NameFile = trim(NameRestartInDir)//"octree"//octree_ext
     if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
@@ -900,11 +1001,8 @@ contains
     use ModProcMH
     use ModMain, ONLY : nBlockMax, unusedBLK
     use ModGeometry, ONLY : xyzStart, dxyz
-    use ModIoUnit, ONLY : UNITTMP_
     use ModAMR, ONLY : local_cube,local_cubeBLK,availableBLKs
     use ModOctree
-    ! use ModMpi
-    implicit none
 
     type (adaptive_block_ptr) :: octree
     integer, intent(inout) :: BlksPerPE
@@ -993,17 +1091,15 @@ contains
     use ModMain, ONLY : nBlockALL
     use ModParallel, ONLY : proc_dims
     use ModOctree
-    use ModIoUnit, ONLY : UNITTMP_
     use ModIO, ONLY : write_prefix, iUnitOut
-    implicit none
 
     integer :: i, j, k
 
     type (adaptive_block_ptr) :: octree
 
     character (len=4), Parameter :: octree_ext=".rst"
-
-    if (iProc /= 0) return
+    !------------------------------------------------------------------------
+    if (iProc /= 0) RETURN
 
     call write_prefix; write(iUnitOut,*) '=> Writing restart files ...'
 
@@ -1030,8 +1126,6 @@ contains
   recursive subroutine write_octree_soln_block(octree)
     use ModProcMH
     use ModOctree
-    use ModIoUnit, ONLY : UNITTMP_
-    implicit none
 
     type (adaptive_block_ptr) :: octree
 
@@ -1040,7 +1134,7 @@ contains
     logical :: sol_blk_used
 
     type (adaptive_block_ptr) :: child
-
+    !------------------------------------------------------------------------
     if (associated(octree % ptr)) then
        numberBLK = octree % ptr % number
        childNumber = octree % ptr % child_number
@@ -1065,18 +1159,24 @@ contains
 
   !============================================================================
 
-  subroutine string_append_iter(NameFile,iter)
+  subroutine string_append_iter(NameFile, nIter)
 
     character (len=*), parameter :: NameSub='string_append_iter'
     character (len=100), intent(inout) :: NameFile
-    integer, intent(in) :: iter
+    integer, intent(in) :: nIter
+
+    ! Note: Fortran cannot write parts of a string into the same string!
+    character(len=100):: NameFileOld
+    integer:: i
     !--------------------------------------------------------------------
     
-    if (iter < 0) call stop_mpi(NameSub//' iter cannot be negative')
+    if (nIter < 0) call stop_mpi(NameSub//' nIter cannot be negative')
 
-    write(NameFile,'(a,i8.8,a)') 'n',iter,'_'//trim(NameFile)
+    NameFileOld = NameFile
+    i = index(NameFileOld,'/',back=.true.)
+    write(NameFile,'(a,i8.8,a)') &
+         NameFileOld(1:i)//'n', nIter, '_'//NameFileOld(i+1:90)
 
   end subroutine string_append_iter
-
 
 end module ModRestartFile
