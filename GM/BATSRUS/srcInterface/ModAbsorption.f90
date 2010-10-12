@@ -5,6 +5,7 @@
 module ModAbsorption
 !USES:
   use MH_domain_decomposition
+  use ModConst
   use CON_global_message_pass
   use CON_integrator
   use ModDensityAndGradient, ONLY: Density_I, DeltaSNew_I, GradDensity_DI, &
@@ -14,7 +15,7 @@ module ModAbsorption
   use ModMpi
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes
-  use ModPhysics
+  use ModPhysics, ONLY: Si2No_V
   use ModConst
   !DESCRIPTION:
   !This file is an instantiation of the general advance_vector routine
@@ -39,26 +40,60 @@ module ModAbsorption
   real,allocatable,save,dimension(:)::AbsorptionCoeff_I
 
   !PUBLIC MEMBERS:
-  public:: get_density_and_absorption, NameVector
-  public:: GradDensity_DI, Density_I, DeltaSNew_I, AbsorptionCoeff_I
-  real,public:: Omega  !Circular frequency, [rad/s]
-  !EOP
+  character(LEN=10)::NameMask
+  public:: get_density_and_absorption, NameMask
+  public:: AbsorptionCoeff_I
+
+  !Circular frequency, [rad/s]
+
+  real,public:: Omega = 3* &     !Third harmonic
+       cTwoPi * cLightSpeed/(1.06e-6) !of the Nd Laser
+
+  !Critical density
+
+  real,public:: DensityCrSI  = &
+       (3* &     !Third harmonic
+       cTwoPi * cLightSpeed/(1.06e-6)) & !of the Nd Laser
+       *cEps * cElectronMass/cElectronCharge**2
+  
 
 contains
-  subroutine calc_absorption(State_V, Absorption)
-    !use CRASH_ModTransport
-    use ModUser,ONLY: user_material_properties
+  subroutine calc_absorption(NAtomicSI, ZAverage, TeSI, RhoSI, Absorption)
     !The subroutine calculates the absorption coefficient, Absorption [m-1],
-    ! at the circular frequency, omega.
-    real,intent(in):: State_V(nVar)
+    ! at the circular frequency, omega and convert then to the domiensionless
+    !form
 
+    use ModPhysics, ONLY: No2Si_V, UnitX_
+
+    real,intent(in):: NAtomicSI, ZAverage, TeSI, RhoSI
     real, intent(out):: Absorption  !The absorption coefficient, [m-1]
-    real:: NAtomicSI, ZAverage, TeSI, TeEV
-    reaL:: Rho  !Mass density, SI
+    
+    real:: AveragedElectronSpeed, CollisionCrossSection
+    real:: EffectiveCollisionRate, Dens2DensCr
+    real,parameter::CoulombLog = 5.0
+    
+    
     !---------------------
     
-    call user_material_properties(State_V=State_V, NAtomicOut=NAtomicSI, TeOut=TeSI,&
-         AverageIonChargeOut= ZAverage)
+    
+    Dens2DensCr = min(1.0, RhoSI/DensityCrSi)
+    ! calculate the effective collision frequency
+    
+    AveragedElectronSpeed = sqrt(8.0*cBoltzmann &
+         *TeSi/(cPi*cElectronMass))
+
+    CollisionCrossSection = &
+         cPi*2.0/3.0*(cElectronCharge**2/(4.0*cPi*cEps*(cBoltzmann*TeSi) ) )**2
+
+    EffectiveCollisionRate = CollisionCrossSection* &
+         (NatomicSi*ZAverage**2)*AveragedElectronSpeed*CoulombLog 
+
+
+    Absorption = EffectiveCollisionRate/cLightSpeed*Dens2DensCr/&
+         sqrt(1 - Dens2DensCr/(1 + (EffectiveCollisionRate/Omega)**2) )
+    
+    !Convert to the dimensionless form:
+    Absorption =  Absorption*No2Si_V(UnitX_)
   
   end subroutine calc_absorption
   !===============================
@@ -72,7 +107,6 @@ contains
     integer,intent(in)::nRay
     integer::iError
  
-    call timing_start('get_plasma_density')
     if(DoInit)then
        DoInit=.false.
        call set_standard_grid_descriptor(&
@@ -103,6 +137,7 @@ contains
     call MPI_BCAST(Density_I(1),         nRay,MPI_REAL,0,iComm,iError)
     call MPI_BCAST(DeltaSNew_I(1),       nRay,MPI_REAL,0,iComm,iError)
     call MPI_BCAST(AbsorptionCoeff_I(1),       nRay,MPI_REAL,0,iComm,iError)
+    
     !call bcast_global_vector(&
     !      NameVector,&
     !      0,&
@@ -117,6 +152,8 @@ contains
     use ModAdvance,ONLY: State_VGB,StateOld_VCB, &
          rho_
     use ModGeometry,ONLY:Dx_BLK,Dy_BLK,Dz_BLK
+    use ModPhysics, ONLY:No2Si_V, UnitRho_
+    use ModUser,ONLY: user_material_properties
     use CON_router
     !INPUT ARGUMENTS:
     integer,intent(in)::nPartial,iGetStart,nVar
@@ -126,7 +163,9 @@ contains
 
     integer::iGet, i, j, k, iBlock
     real :: Weight, Absorption
-    !----------------------------------------------------------
+
+    real:: NAtomicSI, ZAverage, TeSI, RhoSI
+    !----------\------------------------------------------------
     ! call stop_MPI('+++stop_MPI: in get_density_local, '// &
     !     'before the first statement')
  
@@ -135,21 +174,33 @@ contains
     k      = Get%iCB_II(3,iGetStart)
     iBlock = Get%iCB_II(4,iGetStart)
     Weight = W%Weight_I(iGetStart)
+
+    call user_material_properties(State_V=State_VGB(:,i,j,k,iBlock), &
+         NAtomicOut=NAtomicSI, TeOut=TeSI,&
+         AverageIonChargeOut= ZAverage)
+
     State_V(1)= Weight*(&
          State_VGB(rho_,i+1,j,k,iBlock)-State_VGB(rho_,i-1,j,k,iBlock))&
-         /(2*Dx_BLK(iBlock))
+         /(2*Dx_BLK(iBlock)) * ZAverage
     State_V(2)= Weight*(&
          State_VGB(rho_,i,j+1,k,iBlock)-State_VGB(rho_,i,j-1,k,iBlock))&
-         /(2*Dy_BLK(iBlock))
+         /(2*Dy_BLK(iBlock)) * ZAverage
     State_V(3)= Weight*(&
          State_VGB(rho_,i,j,k+1,iBlock)-State_VGB(rho_,i,j,k-1,iBlock))&
-         /(2*Dz_BLK(iBlock))
+         /(2*Dz_BLK(iBlock)) * ZAverage
     State_V(nDim+1)= Weight*&
-         State_VGB(rho_,i,j,k,iBlock)
+         State_VGB(rho_,i,j,k,iBlock) * ZAverage
     State_V(nDim+1+1)=Weight*&
          min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
+
     !Save Absorption coeff
-    call calc_absorption(State_VGB(:, i, j, k, iBlock), Absorption)
+    call calc_absorption(&
+         NAtomicSI= NAtomicSI, &
+         ZAverage = ZAverage, &
+         TeSI     = TeSi, &
+         RhoSI    =       &
+         State_VGB(rho_,i,j,k,iBlock) * ZAverage * No2Si_V(UnitRho_),&
+         Absorption = Absorption)
     State_V(nDim+3)=Weight*Absorption
 
     do iGet=iGetStart+1,iGetStart+nPartial-1
@@ -158,24 +209,34 @@ contains
        k      = Get%iCB_II(3,iGet)
        iBlock = Get%iCB_II(4,iGet)
        Weight = W%Weight_I(iGet)
+
+       call user_material_properties(State_V=State_VGB(:,i,j,k,iBlock), &
+         NAtomicOut=NAtomicSI, TeOut=TeSI,&
+         AverageIonChargeOut= ZAverage)
+
+
        State_V(1)= State_V(1)+Weight*(&
             State_VGB(rho_,i+1,j,k,iBlock)-State_VGB(rho_,i-1,j,k,iBlock))&
-            /Dx_BLK(iBlock)
+            /Dx_BLK(iBlock) * ZAverage
        State_V(2)= State_V(2)+Weight*(&
             State_VGB(rho_,i,j+1,k,iBlock)-State_VGB(rho_,i,j-1,k,iBlock))&
-            /Dy_BLK(iBlock)
+            /Dy_BLK(iBlock) * ZAverage
        State_V(3)= State_V(3)+Weight*(&
             State_VGB(rho_,i,j,k+1,iBlock)-State_VGB(rho_,i,j,k-1,iBlock))&
-            /Dz_BLK(iBlock)
+            /Dz_BLK(iBlock) * ZAverage
        State_V(nDim+1)  = State_V(nDim+1)+Weight*&
-            State_VGB(rho_,i,j,k,iBlock)
+            State_VGB(rho_,i,j,k,iBlock) * ZAverage
        State_V(nDim+1+1)= State_V(nDim+1+1)+Weight*&
             min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
+
        !Add Absorption coeff
-       call calc_absorption(State_VGB(:, i, j, k, iBlock), Absorption)
+
+       
        State_V(nDim+3) = State_V(nDim+3) + Weight*Absorption
 
     end do
+    !Convert density to SI
+    State_V(1:4) = State_V(1:4) * No2Si_V(UnitRho_)
   end subroutine get_density_local
 
   !====================================================================
@@ -195,6 +256,7 @@ contains
     integer::iCell
 
     iCell=Put%iCB_II(1,iPutStart)
+    
     if(DoAdd)then
        GradDensity_DI(:,iCell)= GradDensity_DI(:,iCell)+&
             Buff_I(1:nDim)
@@ -207,9 +269,9 @@ contains
             Buff_I(nDim+3)
     else
        GradDensity_DI(:,iCell)= &
-            Buff_I(1:nDim)
+            Buff_I(1:nDim) 
        Density_I(iCell)= &
-            Buff_I(nDim+1)
+            Buff_I(nDim+1) 
        DeltaSNew_I(iCell) = &
             Buff_I(nDim+1+1)
        

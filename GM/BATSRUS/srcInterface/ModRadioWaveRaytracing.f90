@@ -1,3 +1,4 @@
+
 module ModRadioWaveRaytracing
 
   use ModNumConst
@@ -148,7 +149,6 @@ contains !=========================================================
     real :: GradDielPermSqr, GradEpsDotSlope
     real :: ParabLen, GradDielPerm
     real, save :: Tolerance, ToleranceSqr, DensityCrInv, AbsoluteMinimumStep
-    real, save :: AbsRho2GOverCm3
     
     integer, save :: nCall=0
     integer:: iRay
@@ -171,8 +171,6 @@ contains !=========================================================
        
        ! One (ten-thousandth) hundredth of average step 
        AbsoluteMinimumStep = 1e-2*sum(DeltaS_I)/nRay 
-       
-       AbsRho2GOverCm3 = No2Si_V(UnitRho_)*1e-3
     end if
 
     nCall = nCall + 1
@@ -192,13 +190,6 @@ contains !=========================================================
     !
 
     call get_plasma_density(nRay)
-
-
-    !
-    ! Convert into g/cm^3
-    !
-    Density_I = Density_I*AbsRho2GOverCm3
-    GradDensity_DI = GradDensity_DI*AbsRho2GOverCm3
     
     if(present(RayFlag_I))then
        !In making radio images this is a bad pixel which should be further processed 

@@ -31,6 +31,10 @@ subroutine impl_newton_init
      !/
      if(UseLaserPackage) call add_laser_energy_deposition
 
+     !The laser package adds the laser energy deposition in the form of
+     !numerous pointwise sources of energy, divided by the timestep, 
+     !Delta t.
+
      !!! We don't really need ResImpl_VCB, but it is easier if it is set
      ResImpl_VCB(:,:,:,:,1:nImplBLK) = ResExpl_VCB(:,:,:,:,1:nImplBLK)
   else

@@ -89,6 +89,7 @@ contains
     use ModAdvance,ONLY: State_VGB,StateOld_VCB, &
          rho_
     use ModGeometry,ONLY:Dx_BLK,Dy_BLK,Dz_BLK
+    use ModPhysics, ONLY : No2Si_V, UnitRho_
     use CON_router
     !INPUT ARGUMENTS:
     integer,intent(in)::nPartial,iGetStart,nVar
@@ -141,6 +142,8 @@ contains
             min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
 
     end do
+    !Convert density to SI
+    State_V(1:nDim+1) = State_V(1:nDim+1) * No2Si_V(UnitRho_)
   end subroutine get_density_local
 
   !====================================================================
@@ -164,18 +167,20 @@ contains
 
 
     iCell=Put%iCB_II(1,iPutStart)
+    !Convert densities from kg/m3 to g/cm3, 
+    !the transformation coefficient is 1.0e-3
     if(DoAdd)then
        GradDensity_DI(:,iCell)= GradDensity_DI(:,iCell)+&
-            Buff_I(1:nDim)
+            Buff_I(1:nDim) * 1.0e-3
        Density_I(iCell)= Density_I(iCell)+&
-            Buff_I(nDim+1)
+            Buff_I(nDim+1) * 1.0e-3
        DeltaSNew_I(iCell) = DeltaSNew_I(iCell)+&
             Buff_I(nDim+1+1)
     else
        GradDensity_DI(:,iCell)= &
-            Buff_I(1:nDim)
+            Buff_I(1:nDim)  * 1.0e-3
        Density_I(iCell)= &
-            Buff_I(nDim+1)
+            Buff_I(nDim+1)  * 1.0e-3
        DeltaSNew_I(iCell) = &
             Buff_I(nDim+1+1)
     end if

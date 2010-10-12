@@ -118,6 +118,7 @@ contains !=========================================================
     logical :: deb = .false.
     real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
     logical, save :: DoAllocate = .true.
+    !------------------------------------
 
     !
     ! Total number of rays and pixels in the raster
