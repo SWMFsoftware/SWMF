@@ -408,3 +408,7 @@ end subroutine read_pw_buffer
 subroutine add_laser_energy_deposition
   call stop_mpi('ERROR: add_laser_energy_deposition is for SWMF')
 end subroutine add_laser_energy_deposition
+!=========================================
+subroutine read_laser_pulse_param
+  call stop_mpi('ERROR: read_laser_pulse_param is for SWMF')
+end subroutine read_laser_pulse_param
