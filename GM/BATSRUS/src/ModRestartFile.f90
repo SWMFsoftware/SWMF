@@ -61,7 +61,7 @@ module ModRestartFile
   character (len=20)  :: TypeRestartInFile ='block'
 
   ! The output format is platform dependent and it is reset in restart_init
-  character (len=20)  :: TypeRestartOutFile='one'  
+  character (len=20)  :: TypeRestartOutFile='proc'
 
   ! Variables for file and record index for 'proc' type restart files
   integer, allocatable:: iFileMorton_I(:), iRecMorton_I(:)
@@ -81,23 +81,23 @@ module ModRestartFile
 contains
 
   subroutine init_mod_restart_file
-    use ModMPI, ONLY: MPI_HEADER_FILE
-
-    if(MPI_HEADER_FILE == 'mpif90_Linux_openmpi.h')then
-       ! There are some issues when the 'one' restart file is used 
-       ! on grendel and nyx with openmpi (although it may have nothing
-       ! to do with openmpi itself.
-       TypeRestartOutFile = 'block'
-    else
-       ! On other machines the format 'one' works correctly.
-       TypeRestartOutFile = 'one'
-    end if
-    if(iProc==0)then
-       call write_prefix;
-       write(iUnitOut,*) &
-            'init_mod_restart_file: setting TypeRestartOutFile = ',&
-            trim(TypeRestartOutFile)
-    end if
+    !use ModMPI, ONLY: MPI_HEADER_FILE
+    !
+    !if(MPI_HEADER_FILE == 'mpif90_Linux_openmpi.h')then
+    !   ! There are some issues when the 'one' restart file is used 
+    !   ! on grendel and nyx with openmpi (although it may have nothing
+    !   ! to do with openmpi itself.
+    !   TypeRestartOutFile = 'proc'
+    !else
+    !   ! On other machines the format 'one' works correctly.
+    !   TypeRestartOutFile = 'one'
+    !end if
+    !if(iProc==0)then
+    !   call write_prefix;
+    !   write(iUnitOut,*) &
+    !        'init_mod_restart_file: setting TypeRestartOutFile = ',&
+    !        trim(TypeRestartOutFile)
+    !end if
 
     NameRestartInDir(1:2)  = NameThisComp
     NameRestartOutDir(1:2) = NameThisComp
