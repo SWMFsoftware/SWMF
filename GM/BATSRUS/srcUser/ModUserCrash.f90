@@ -363,6 +363,9 @@ contains
        case("#USEOPACTABLE")
           call read_if_use_opac_table
 
+       case('#LASERPULSE')
+          call read_laser_pulse_param
+
        case('#USERINPUTEND')
           EXIT
        case default
