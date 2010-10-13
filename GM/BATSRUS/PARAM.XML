@@ -897,18 +897,32 @@ Default value is "GM/restartIN".
 </command>
 
 <command name="RESTARTINFILE" if="$_IsFirstSession">
-	<parameter name="TypeRestartInFile" type="string" input="select">
-		<option name="separate files/block" value="block" default="T"/>
-		<option name="single data.rst file" value="one"/>
+	<parameter name="StringRestartInFile" type="strings" min="1" max="2">
+		<part name="TypeRestartInFile" type="string" input="select" 
+								required="T">
+			<option name="separate files/proc" value="proc"
+								default="T"/>
+			<option name="separate files/block" value="block"/>
+			<option name="single data.rst file" value="one"/>
+		</part>
+		<part name="StringSeries" type="string" input="select"
+								required="F">
+			<option name="series"/>
+		</part>
 	</parameter>
 
 #RESTARTINFILE
-one			TypeRestartInFile
+one series			TypeRestartInFile
 
-This command is normally saved in the restart header file, and it describes
-how the restart data was saved: 
-into separate files for each grid block ('block') 
+This command is saved in the restart header file which is included during
+restart, so normally the user does not have to use this command at all.
+The TypeRestartInFile parameter describes how the restart data was saved: 
+into separate files for each processor ('proc'),
+into separate files for each grid block ('block')
 or into a single direct access file ('one').
+The optional 'series' string means that a series of restart files
+were saved with the iteration number added to the beginning of the file names.
+
 The default value is 'block' for sake of backwards compatibility.
 </command>
 
@@ -1338,7 +1352,7 @@ the large radius of the torus (see the #TORUSSIZE command).
 </command>
 
 <command name="LIMITRADIUS" alias="LIMITGENCOORD1" if="$_IsFirstSession">
-	<parameter name="rMin" type="real" min="0" default="0"/>
+	<parameter name="rMin" type="real" default="0"/>
 	<parameter name="rMax" type="real" min="$rMin" default="1000"/>
 #LIMITRADIUS
  10.0			rMin
@@ -2158,19 +2172,33 @@ Default value is "GM/restartOUT".
 </command>
 
 <command name="RESTARTOUTFILE">
-	<parameter name="TypeRestartOutFile" type="string" input="select">
-		<option name="separate files/block" value="block"/>
-		<option name="single data.rst file" value="one" default="T"/>
+	<parameter name="StringRestartOutFile" type="strings" min="1" max="2">
+		<part name="TypeRestartOutFile" type="string" input="select" 
+								required="T">
+			<option name="separate files/proc" value="proc"
+								default="T"/>
+			<option name="separate files/block" value="block"/>
+			<option name="single data.rst file" value="one"/>
+		</part>
+		<part name="StringSeries" type="string" input="select"
+								required="F">
+			<option name="series"/>
+		</part>
 	</parameter>
 
 #RESTARTOUTFILE
-one			TypeRestartOutFile
+one series			TypeRestartOutFile
 
 This command determines if the restart information is saved as an individual 
-file for each block (block) or into a single direct access file containing all
-blocks (one).  The default value is 'one'.
-Appending 'series' to the string results in a series of restart files
-written out every time plots are saved. 
+file for each block (block), as direct access files for each processor (proc)
+or into a single direct access file containing all blocks (one).  
+
+Normally saving restart files overwrites the previous files.
+Adding 'series' after the type results in a series of restart files
+with names starting as nITERATION_. This will be used by the adjoint method.
+
+The default value is 'proc', because several machines fail (corrupted records)
+with 'one' while 'block' can fail due to too many files.
 </command>
 
 <command name="SAVERESTART">
