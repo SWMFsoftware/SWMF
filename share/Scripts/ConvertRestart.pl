@@ -18,6 +18,7 @@
 # 03/08/2006 G. Toth - converts new restart file format and added use strict.
 # 06/15/2007 G. Toth - add -e option to explicitly specify target endianness.
 # 06/18/2007 G. Toth - add in-place conversion
+# 10/13/2010 G. Toth - handle index.rst and series of restart files.
 #
 #EOP
 
@@ -33,19 +34,22 @@ my $indir =$ARGV[0];
 $indir =~ s/\/$//;
 my $outdir=($ARGV[1] or $indir."__tmp");
 
-my $headerfile="restart.H";
-my $datafile  ="data.rst";
-my $octreefile="octree.rst";
+my $headerfile = "restart.H";
+my $datafile   = "data.rst";
+my $octreefile = "octree.rst";
+my $indexfile  = "index.rst";
 
 my $CODE    = "ConvertRestart.pl";
 my $ERROR   = "ERROR in $CODE";
 my $WARNING = "WARNING in $CODE";
 
-# Check things
-opendir(INDIR, $indir) or die "$ERROR: cannot open input directory $indir!\n";
-
 $indir ne $outdir or 
     die "$ERROR: input and output directories must be different!\n";
+
+# Check things
+opendir(INDIR, $indir) or die "$ERROR: cannot open input directory $indir!\n";
+my @allfiles = readdir INDIR;
+close INDIR;
 
 # No end of line in files
 undef $/;
@@ -56,7 +60,8 @@ print "$CODE: This is a $machine endian machine.\n" unless $Quiet;
 
 # Figure out the endianness of the restart files 
 # by reading the first record length from octree.rst
-my $file = "$indir/$octreefile";
+my @file = grep /$octreefile/, @allfiles;
+my $file = "$indir/$file[0]";
 open(INFILE, $file) or die "$ERROR: cannot open $file\n"; 
 my $rec; read(INFILE, $rec, 4);
 close INFILE;
@@ -88,8 +93,10 @@ if(not -d $outdir){
     die "$ERROR: cannot create output directory $outdir!\n" if $?;
 }
 
-# Copy restart.H from indir to outdir and obtain real precision
-my $file = "$indir/$headerfile";
+# Obtain real precision from restart.H 
+my @file = grep /$headerfile/, @allfiles;
+print "files=@file\n";
+my $file = "$indir/$file[0]";
 open(INFILE, $file) or die "$ERROR: cannot open $file\n"; 
 $_=<INFILE>; 
 close INFILE;
@@ -98,13 +105,8 @@ close INFILE;
 /([48])\s*nByteReal/i or die "$ERROR: could not find nByteReal in $file\n";
 my $nByteReal = $1;
 
-$file="$outdir/$headerfile";
-open(OUTFILE, ">$file") or die "$ERROR: cannot open $file\n"; 
-print OUTFILE $_;
-close OUTFILE;
-
-# There is 1 octree.rst file and one data.rst or many blk*.rst files
-my @rstfiles = grep /^(blk\d*|octree|data)\.rst$/, readdir INDIR;
+# Collect all *.rst* and *restart.H files
+my @rstfiles = grep /\.rst|$headerfile/, @allfiles;
 print "$CODE: Number of files in $indir is ",1+$#rstfiles,
     " with $nByteReal byte reals.\n" unless $Quiet;
 
@@ -122,15 +124,17 @@ foreach $rstfile (@rstfiles){
     $_=<INFILE>;
     close INFILE;
 
-    if($nByteReal == 4 or $rstfile eq $octreefile){
+    if(-t $rstfile){
+	# these are ASCII files, nothing to do
+    }elsif($nByteReal == 4 or $rstfile =~ /$octreefile/){
 	# single precision files are easy to convert
 	&convert4;
-    }elsif($rstfile eq $datafile){
+    }elsif($rstfile =~ /$datafile/){
 	# $datafile is a binary direct access file with fixed record length.
 	# Since there are no record markers it is trivial to swap the byte 
 	# order.
 	&convert8;
-    }else{
+    }elsif($rstfile =~ /blk/){
 	# double precision blk files need conversion of 4 byte data markers
 	# and 8 byte data
 	&convert_dbl;
