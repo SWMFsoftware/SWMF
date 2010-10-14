@@ -1602,7 +1602,7 @@ contains
           end if
        end do
 
-       if(Einternal < 0.0)then
+       if(Einternal < 0.0 .and. .not.UseElectronPressure)then
           write(*,*)NameSub,': ERROR Rho, p, TOrigSi=', &
                State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_), &
                State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_), &
@@ -1613,10 +1613,10 @@ contains
           write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
           call stop_mpi(NameSub//' negative Eint')
        end if
-       
+
        if(UseElectronPressure)then
           ! ions
-          State_VGB(p_,i,j,k,iBlock) = gm1*Einternal
+          State_VGB(p_,i,j,k,iBlock) = max(1e-30, gm1*Einternal)
 
           ! electrons
           EeSi = Ee*No2Si_V(UnitEnergyDens_)
