@@ -47,8 +47,7 @@ SCRIPT_CONF = ${SCRIPTDIR}/Configure.protex #^CMP IF CONFIGURE
 BATSRUS_SCRIPTS = \
 	${DIR}/GM/BATSRUS/TestBatsrus.protex \
 	${DIR}/GM/BATSRUS/TestSuite.protex \
-	${DIR}/GM/BATSRUS/TestCompare.protex \
-	${DIR}/GM/BATSRUS/Scripts/ConvertRestart.protex
+	${DIR}/GM/BATSRUS/TestCompare.protex
 
 BATSRUS_SCRIPTS:
 	@rm -f BATSRUS_SCRIPTS.tex
@@ -70,6 +69,7 @@ SWMFREF = \
 	${SCRIPTDIR}/ParamEditor.protex \
 	${SCRIPTDIR}/PostProc.protex \
 	${SCRIPTDIR}/Restart.protex \
+	${SCRIPTDIR}/ConvertRestart.protex \
 	${SCRIPTDIR}/depend.protex \
 	${SCRIPTDIR}/FixMakefileDef.protex \
 	${SCRIPTDIR}/CheckDataName.protex \
