@@ -23,11 +23,58 @@ contains
   end function irradiance_t
 end module ModLaserPulse
 !===========================
+module ModBeams
+  implicit none
+  SAVE
+  !Beam geometry: 'rz', '2d', '3d'
+  character(LEN=2):: TypeBeam='rz'
+  !\
+  ! Geometry of the 'rz'-beam:
+  !/
+  !
+  !\     |
+  !\\    |
+  !\\\   |
+  ! \\\  |
+  !  \\\ |
+  !   \\\|
+  !    \\|_ _ _ _ _
+  !     \|    I
+  !      | This height is yCr   
+  !______|____V____ axis of symmetry
+  !      |
+  !      |
+  !     /|
+  !    //|    In the presented case nRayPerBeam = 1 
+  !   ///|    (half of all rays except for the Central Ray (CR))
+  !  /// |    The intensity falls as exp(-r^2/rBeam^2),
+  ! ///  |    where r is the transverse distance from the CR
+  !///   |
+  !//slope (approximately +60 deg in the presented case))
+  !/-----|
+  !
+  !< This coordinate is xPlane
+
+  integer:: nRayPerBeam
+
+  integer:: nBeam = 0
+  real   :: rBeamMuM = 1.0, xPlaneMum = -60.0
+  real   :: BeamParam_II(3,192)
+
+  !Named indexes:
+  integer, parameter:: SlopeDeg_ = 1, yCrMuM_ = 2, AmplitudeRel_ = 3 
+  
+end module ModBeams
+
 subroutine read_laser_pulse_param
   use ModReadparam
   use ModLaserPulse
+  use ModBeams
   use ModMain, ONLY: UseLaserPackage
   implicit none
+
+  character (len=100) :: NameCommand
+
   !-------------
   !Usage
   !#LASERPULSE
@@ -36,13 +83,61 @@ subroutine read_laser_pulse_param
   !1.1e-9           tPulse
   !1.0e-10          tRaise
   !1.0e-10          tDecay
+  !
+  !#RZBEAMS or #BEAMS2D or #BEAMS3D
+  !30               nRayPerBeam
+  !438.0            rBeamMuM            
+  !-100.0           xPlaneMuM
+  !parallel         TypeConvergence
+  !
+  !#BEAM
+  !10.0              SlopeDeg
+  !0.0              yCrMuM
+  !1.0              AmplitudeRel
+  !
+  !#BEAM
+  !20.0             SlopeDeg
+  !200.0            yCrMuM
+  !0.7              AmplitudeRel
+  !
+  !#BEAM
+  !30.0             SlopeDeg
+  !400.0            yCrMuM
+  !0.7              AmplitudeRel
+  !
+  !#END_LASERPULSE                                
+  !
   !-------------
   call read_var('UseLaserPackage', UseLaserPackage)
+  if(.not.UseLaserPackage) return
   call read_var('IrradianceSI'   , IrradianceSI   )
   call read_var('tPulse'         , tPulse         )
   call read_var('tRaise'         , tRaise         )
   call read_var('tDecay'         , tDecay         )
-  
+  do
+     if(.not.read_line() ) EXIT
+     if(.not.read_command(NameCommand)) CYCLE
+     select case(NameCommand)
+     case('#END_LASERPULSE')
+        return
+     case('#RZBEAMS')
+        TypeBeam = 'rz'
+        call read_var('nRayPerBeam', nRayPerBeam)
+        call read_var('rBeamMuM'   , rBeamMuM   )
+        call read_var('xPlaneMuM'  , xPlaneMuM  )
+     case('#BEAM')
+        nBeam = nBeam +1
+        call read_var('SlopeDeg', &
+             BeamParam_II(SlopeDeg_, nBeam))
+        call read_var('yCrMuM', &
+             BeamParam_II(yCrMuM_, nBeam))
+        call read_var('AmplitudeRel', &
+             BeamParam_II(AmplitudeRel_, nBeam))
+     case default
+        call stop_mpi(&
+             'ERROR in read_laser_pulse_param: unknown command='//NameCommand)
+     end select
+  end do
 end subroutine read_laser_pulse_param
 !===========================
 module ModLaserPackage

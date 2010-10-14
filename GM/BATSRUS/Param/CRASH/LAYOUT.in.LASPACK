@@ -1,0 +1,7 @@
+This is the layout for running GM.
+
+Name First Last Stride
+======================
+#COMPONENTMAP
+GM       0 9999    1   ! GM runs on all PE-s
+#END

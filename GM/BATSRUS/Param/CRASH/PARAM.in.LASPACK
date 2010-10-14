@@ -1,0 +1,265 @@
+#ECHO
+T
+
+#DESCRIPTION
+Input file for the laser package
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+1.1e-9			DtSaveRestart
+
+#COMPONENT
+GM                      NameComp
+T                       UseComp
+
+#BEGIN_COMP GM -------------------------------------------------------------
+
+#LOOKUPTABLE
+OpacityXe(rho,T)	NameTable
+load			NameCommand
+table_xe_opacities.out	NameFile
+real8			TypeFile
+Opacity(rho,Te) for Xe
+logrho logT p(16) r(16)
+800			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+800			nIndex2
+5800			Index2Min (about 0.5eV)
+1e8			Index2Max (about 10keV)
+
+#LOOKUPTABLE
+OpacityBe(rho,T)	NameTable
+load			NameCommand
+table_be_opacities.out	NameFile
+real8			TypeFile
+Opacity(rho,Te) for Be
+logrho logT p(16) r(16)
+800			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+800			nIndex2
+5800			Index2Min (about 0.5eV)
+1e8			Index2Max (about 10keV)
+
+#LOOKUPTABLE
+OpacityPl(rho,T)	NameTable
+load			NameCommand
+table_pl_opacities.out	NameFile
+real8			TypeFile
+Opacity(rho,Te) for plastic
+logrho logT p(16) r(16)
+800			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+800			nIndex2
+5800			Index2Min (about 0.5eV)
+1e8			Index2Max (about 10keV)
+
+#LOOKUPTABLE
+OpacityAu(rho,T)	NameTable
+load			NameCommand
+table_au_opacities.out	NameFile
+real8			TypeFile
+Opacity(rho,Te) for Au
+logrho logT p(16) r(16)
+800			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+800			nIndex2
+5800			Index2Min (about 0.5eV)
+1e8			Index2Max (about 10keV)
+
+#LOOKUPTABLE
+OpacityAy(rho,T)	NameTable
+load			NameCommand
+table_ay_opacities.out	NameFile
+real8			TypeFile
+Opacity(rho,Te) for Ay
+logrho logT p(16) r(16)
+800			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+800			nIndex2
+5800			Index2Min (about 0.5eV)
+1e8			Index2Max (about 10keV)
+
+#PLANET
+NONE
+
+#IOUNITS
+SI
+
+#NORMALIZATION
+READ
+1.0e-6			Micron
+1.0e+3			km/s
+1000.0			g/cm^3
+
+#USERINPUTBEGIN  ----------------------
+
+#LASERPULSE
+T                UseLaserPackage
+3.8e12           IrradianceSI
+1.1e-9           tPulse
+1.0e-10          tRaise
+1.0e-10          tDecay
+
+#RZBEAMS 
+30               nRayPerBeam
+438.0            rBeamMuM            
+-290.0           xPlaneMuM
+
+
+#BEAM
+10.0              SlopeDeg
+0.0              yCrMuM
+1.0              AmplitudeRel
+
+#BEAM
+20.0             SlopeDeg
+200.0            yCrMuM
+0.7              AmplitudeRel
+
+#BEAM
+30.0             SlopeDeg
+400.0            yCrMuM
+0.7              AmplitudeRel
+
+#END_LASERPULSE
+
+#USEEOSTABLE
+T			Use Eos Table for Xe
+T			Use Eos Table for Be
+T			Use Eos Table for Pl
+T			Use Eos Table for Au
+T			Use Eos Table for Ay
+
+#MIXEDCELL
+F			UseMixedCell
+0.97			MixLimit
+
+#OPACITY
+T			UseExcitation
+F			UseCoulombCorrection
+T			DoStateElimination
+
+#GROUPRANGE
+1.0			EnergyPhotonMin
+2000.0			EnergyPhotonMax
+
+#PLASTIC
+18000.0			TeMaxColdPlasticSi
+
+#USERINPUTEND    ----------------------
+
+#SEMIIMPLICIT
+T                       UseSemiImplicit
+radcond  	        TypeSemiImplicit
+
+#KRYLOV
+cg                      TypeKrylov
+nul                     TypeInitKrylov
+1.0e-8                  ErrorMaxKrylov
+1200                    MaxMatvecKrylov
+
+#PRECONDITIONER
+left                    TypePrecondSide (left, symmetric, right)
+dilu                    TypePrecond (MBILU)
+
+#RADIATION
+T                       UseGrayDiffusion
+T                       UseRadFluxLimiter
+larsen                  TypeRadFluxLimiter
+300.0			TradMinSi
+
+#ELECTRONPRESSURE
+1.0			PeMinSi
+
+
+#CHECKGRIDSIZE
+4			nI
+4			nJ
+1			nK
+1000			MinBlockALL
+
+#GRIDGEOMETRY
+rz			TypeGeometry
+
+#GRID
+320			nRootBlockX 300
+32			nRootBlockY  30
+1			nRootBlockZ
+-300.0			xMin
+4000.0			xMax
+   0.0			yMin
+ 450.0			yMax
+ -12.5			zMin
+  12.5			zMax
+
+
+#UPDATECHECK
+F			DoUpdateCheck
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#OUTERBOUNDARY
+float			xMinBc
+float			xMaxBc
+reflect			yMinBc
+float			yMaxBc
+reflect			zMinBc
+reflect			zMaxBc
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
+			TypeRestartOutFile
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.0			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#PLOTFILENAME
+nanosecond		NameMaxTimeUnit
+
+#SAVEPLOT
+2			nPlotfile
+z=0 VAR idl		PlotString
+-1                      DnSavePlot
+1.0e-10                 DtSavePlot
+-1.0			DxSavePlot
+rho ux uy Eint p pe level xe be pl au ay tekev trkev tikev cond teti dx
+gamma
+z=0 var idl             PlotString
+-1                      DnSavePlot
+1.0e-10                 DtSavePlot
+-1.0                    DxSavePlot
+I01 I02 I03 I04 I05 I06 I07 I08 I09 I10 I11 I12 I13 I14 I15 I16 tekev trkev level
+gamma
+
+#TIMESTEPPING
+2			nStage
+0.7			CflExpl  0.01 to start
+
+#END_COMP GM --------------------------------------------
+
+
+#STOP
+-10			MaxIteration
+1.1e-9			tSimulationMax
+
+
+#END
