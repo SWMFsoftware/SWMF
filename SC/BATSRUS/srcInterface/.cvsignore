@@ -11,3 +11,5 @@ SC_wrapper.f90
 ModDensityAndGradient.f90
 ModRadioWaveImage.f90
 ModRadioWaveRaytracing.f90
+ModAbsorption.f90
+ModLaserPackage.f90
