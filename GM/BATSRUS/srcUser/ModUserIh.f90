@@ -18,12 +18,30 @@ module ModUser
   character(len=*), parameter :: &
        NameUserModule = 'HELIOSPHERE, Sokolov'
 
-  ! These values are to be read from the PARAM.in file and used to
-  ! set the initial conditions in IH
-  character(len=10) :: TypeIcs
-  real              :: RhoInitialNo, pInitialNo, rMinShell, rMaxShell
-  real              :: uSwFinalSi, BrSourceSi, RhoSourceSi, pSourceSi
-  real              :: rSourceNo, UrSourceSi, pShellNo, RhoShellNo
+  ! These variables are assigned values read from the PARAM.in file
+  ! Used to set the initial conditions of test problems
+
+  character(len=20) :: TypeIcs
+  ! Uniform background  
+  real              :: RhoInitialNo, pInitialNo
+
+  ! For ICs containing uniform flow ('UniformU' , 'SphereAdvect')
+  real              :: uInitialNo, FlowAngle ! Flow limited to YZ plane
+
+  ! Constant density sphere in uniform flow, initially at origin
+  real              :: rSphere, RhoSphereNo         
+
+  ! Spherical shell in static background
+  real              :: rMinShell, rMaxShell, pShellNo, RhoShellNo
+ 
+ ! For Parker spiral IC's:
+  ! Input from PARAM.in file, solar wind values at 1AU in IO units:
+  real              :: BrOneAuIo, RhoOneAuIo, pOneAuIo, UrOneAuIo
+
+  ! Solar wind values scaled to r = rSource, in Normalized units
+  real              :: BrSourceNo, RhoSourceNo, pSourceNo
+  real              :: rSourceNo, UrSourceNo
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -49,30 +67,36 @@ contains
        select case(NameCommand)
        case('#USERICS')
           call read_var('TypeIcs', TypeIcs)
+          call read_var('RhoInitialNo', RhoInitialNo)
+          call read_var('pInitialNo', pInitialNo)
           select case(TypeIcs)
-          case('uniform','shell')
-             call read_var('RhoInitialNo', RhoInitialNo)
-             call read_var('pInitialNo', pInitialNo)
-             if(TypeIcs=='shell') then
-                call read_var('RhoShellNo', RhoShellNo)
-                call read_var('pShellNo',   pShellNo)
-                call read_var('rMinShell',  rMinShell)
-                call read_var('rMaxShell',  rMaxShell)
+          case('UniformU','SphereAdvect')
+             call read_var('uInitialNo',uInitialNo)
+             call read_var('FlowAngle', FlowAngle)  
+             if (TypeIcs=='SphereAdvect') then
+                call read_var('rSphere', rSphere)
+                call read_var('RhoSphereNo',RhoSphereNo)
              end if
-          case('parker')
-             if (TypeCoordSystem /= 'HGR') then
-                write(*,*) 'ERROR in PARAM.in: Cannot use Parker solution in HGR'
-                call CON_stop('Correct PARAM.in')
-             else
-                call read_var('rSourceNo',   rSourceNo )
-                call read_var('BrSourceSi',  BrSourceSi)
-                call read_var('RhoSourceSi', RhoSourceSi)
-                call read_var('pSourceSi',   pSourceSi)
-                call read_var('UrSourceSi',  UrSourceSi)
-                call read_var('uSwFinalSi', uSwFinalSi )
-             end if
+          case('shell')
+             call read_var('RhoShellNo', RhoShellNo)
+             call read_var('pShellNo',   pShellNo)
+             call read_var('rMinShell',  rMinShell)
+             call read_var('rMaxShell',  rMaxShell)
           end select
 
+       case('#PARKERICS')
+          TypeIcs = 'parker'
+          if (TypeCoordSystem /= 'HGR') then
+             write(*,*) 'ERROR in PARAM.in: Cannot use Parker solution in HGR'
+             call CON_stop('Correct PARAM.in')
+          else
+             call read_var('rSourceNo',   rSourceNo )
+             call read_var('BrOneAuSi',  BrOneAuIo)
+             call read_var('RhoOneAuSi', RhoOneAuIo)
+             call read_var('pOneAuSi',   pOneAuIo)
+             call read_var('UrOneAuSi',  UrOneAuIo)
+          end if
+         
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
@@ -97,30 +121,58 @@ contains
   subroutine user_set_ics
     
     use ModAdvance,    ONLY: State_VGB
-    use ModMain,       ONLY: globalBLK
-    use ModVarIndexes, ONLY: rho_, p_
+    use ModMain,       ONLY: globalBLK,unusedBLK
+    use ModVarIndexes, ONLY: rho_, p_,Uy_,Uz_, Bx_,Bz_
     use ModPhysics,    ONLY: BodyRho_I, BodyP_I
-    use ModGeometry,   ONLY: R_BLK
+    use ModGeometry,   ONLY: R_BLK, y_BLK
     use ModSize,       ONLY: nI, nJ, nK, gcn
+    use ModNumConst,   ONLY: cDegToRad
 
     implicit none
 
     integer                     :: i, j, k, iBlock
+    real                        :: FlowAngleRad, Uy0, Uz0
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !----------------------------------------------------------------------
     iBlock = globalBLK
 
+     if (unusedBLK(iBlock)) RETURN
+         
     select case(TypeIcs)
-    case('uniform')
-       ! This case describes an IC of a plasma at rest with no
+    case('UniformU','SphereAdvect')
+       ! These cases describe an IC with uniform 1D flow of plasma with no
        ! density or pressure gradients and no magnetic field.
        ! The initial density and pressure are controled by the user
-       ! through a combination of the normalized quantity RhoInitialNo
-       ! and the #BODY command.
+       ! Only flow in the YZ plane is implemented.
+       ! The 'SphereAdvect' case also includes an embedded higer/lower
+       ! density sphere, initially at the origin.  
 
-       State_VGB(:,:,:,:,iBlock)    = 0.0
-       State_VGB(rho_,:,:,:,iBlock) = RhoInitialNo*BodyRho_I(1)       
-       State_VGB(p_,  :,:,:,iBlock) = pInitialNo*BodyP_I(1)
+       ! Calculate Uy and Uz. Flow angle is measured from the y axis
+       FlowAngleRad = cDegToRad*FlowAngle
+       Uy0 = uInitialNo*cos(FlowAngleRad)
+       Uz0 = uInitialNo*sin(FlowAngleRad)
+       !\
+       ! Start filling in cells (including ghost cells)
+       !/
+       State_VGB(Uy_,:,:,:,iBlock) = Uy0
+       State_VGB(Uz_,:,:,:,iBlock) = Uz0
+       State_VGB(p_,  :,:,:,iBlock) = pInitialNo 
+       ! no magnetic field
+       State_VGB(Bx_:Bz_,:,:,:,iBlock) = 0.0
+
+       do k=-1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn
+          
+          if (R_BLK(i,j,k,iBlock) .le. rSphere .and. &
+               TypeIcs == 'SphereAdvect')then
+             ! inside the sphere
+             State_VGB(rho_,i,j,k,iBlock) = RhoSphereNo       
+          else
+             ! in background flow
+             State_VGB(rho_,i,j,k,iBlock) = RhoInitialNo!*BodyRho_I(1)       
+
+          end if  
+       end do; end do ; end do
+
     case('shell')
        ! this case describes a shell with density and/or pressure
        ! embedded in a uniform background at rest, without a magnetic field.
@@ -143,7 +195,8 @@ contains
        call set_parker_spiral
           
     case default
-       write(*,*) NameSub, ' WARNING: No TypeIcs was selected. Using defaults' 
+       write(*,*) 'You are using user_set_ics with invalid TypeIcs =',TypeIcs
+       call CON_stop('Correct PARAM.in')
     end select
 
   contains
@@ -152,7 +205,7 @@ contains
       ! Set state to the steady state isothermal Parker spiral solution.
      
       ! IMPORTANT: This initial condition is valid for the co-rotating frame
-      ! so it must be used only when working in the HGR coordinate system.
+      ! so it must be transformed when working in the HGR coordinate system.
       ! A CON_stop will be issued otherwise).
 
       ! OUTLINE:
@@ -161,17 +214,18 @@ contains
       ! Depending on plasma parameters at that location, the Parker solution
       ! everywhere is derived.
       ! Note: the source surface here is not to be confused with the
-      ! source surface used for the PFSS model used for the solar corona.
+      ! source surface defined for the PFSS model used for the solar corona.
+
       ! The magnetic and velocity fields are given by the Parker spiral solution
       ! in the co-rotating frame. The density is then derived from conservation
       ! of mass.
 
       ! INPUTS (to be read from PARAM.in file):
       ! rSource - heliocentric radius of source surface
-      ! BrSource
-      ! Rho Source
-      ! pSource
-      ! UrSource
+      ! BrOneAu
+      ! RhoOneAu
+      ! pOneAu
+      ! UrOneAu
       ! uSwFinal - final speed of solar wind, at infinity
      
       ! OUTPUT:
@@ -184,9 +238,9 @@ contains
       use ModSize,           ONLY: nI, nJ, nK, gcn
       use ModGeometry,       ONLY: x_BLK, y_BLK, z_BLK, r_BLK, true_cell
       use ModCoordTransform, ONLY: rot_xyz_sph
-      use ModPhysics,        ONLY: gBody, Si2No_V, &
+      use ModPhysics,        ONLY: gBody, Si2No_V, Io2No_V, &
                                    UnitB_, UnitU_,UnitRho_,UnitP_,UnitX_
-      use ModConst,          ONLY: RotationPeriodSun, rSun
+      use ModConst,          ONLY: RotationPeriodSun, rSun, cAU
 
       implicit none
 
@@ -200,21 +254,27 @@ contains
       ! Variables for Parker solution
       real     :: uSwFinalNo, BrSourceNo, RhoSourceNo, pSourceNo, UrSourceNo
       real     :: UsoundNo, rTransonicNo, rSunNo
+      
       real     :: V0, V1, MassFlux, Rho, Const, dv
       integer  :: Iteration
+      real     :: cAuNo
 
       character(len=*),parameter :: NameSub = 'set_parker_spiral'
       !--------------------------------------------------------------------
       iBlock = globalBLK
 
-      ! normalize 
-      uSwFinalNo  = Si2No_V(UnitU_  ) * uSwFinalSi
-      BrSourceNo  = Si2No_V(UnitB_  ) * BrSourceSi
-      RhoSourceNo = Si2No_V(UnitRho_) * RhoSourceSi
-      pSourceNo   = Si2No_V(UnitP_  ) * pSourceSi
-      UrSourceNo  = Si2No_v(UnitU_  ) * UrSourceSi
+      cAuNo = cAU*Si2No_V(UnitX_)
+
+      ! scale and normalize 
+      UrSourceNo  = Io2No_V(UnitU_  ) * UrOneAuIo
+      BrSourceNo  = Io2No_V(UnitB_  ) * BrOneAuIo*(cAuNo/rSourceNo)**2
+      RhoSourceNo = Io2No_V(UnitRho_) * RhoOneAuIo*(cAuNo/rSourceNo)**2
+      pSourceNo   = Io2No_V(UnitP_  ) * pOneAuIo
+      ! get rSun in current normalized unit, needed for components that are not
+      ! normalized by rSun.
       rSunNo      = Si2No_V(UnitX_  ) * rSun
-      MassFlux = RhoSourceNo*UrSourceNo*rSourceNo**2
+
+      MassFlux = RhoSourceNo*UrSourceNo*rSourceNo**2 ! conserved!
       
       ! Speed of sound (isothermal, gamma=1)
       UsoundNo = sqrt(pSourceNo/RhoSourceNo)
@@ -303,7 +363,7 @@ contains
   subroutine user_set_boundary_cells(iBLK)
 
     ! Set the boundary cell information IsBoundaryCell_GI(:,:,:,ExtraBc_) 
-    ! for a sphere of radius 1 around the origin.
+    ! for a sphere of radius rBody around the origin.
     ! Allow resolution change.
 
     use ModGeometry
