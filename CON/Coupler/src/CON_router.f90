@@ -71,12 +71,12 @@ Module CON_router
 !GridDescriptor%nDim grid point indexes plus one more index for !
 !the block number. Also we allow to use exactly                 ! 
 !GridDescriptor%nDim indexes, without the block number which    !
-!only seems to be on sence for the component which is localized !
+!only seems to be of sence for the component which is localized !
 !at one PE only, or which has exactly one block per PE          !
 !\begin{verbatim}
       integer::nIndexesSource,nIndexesTarget  
 !\end{verbatim}
-!The total amounts of the buffer segmentsto be sent-received    !
+!The total amounts of the buffer segments to be sent-received   !
 !to/from the PE. The total amounts of the grid points from which!
 !the data should be got or to which the data should be put,some !
 !data points may be counted more than one time                  !
@@ -105,46 +105,6 @@ Module CON_router
 !EOP
 contains
 !BOP
-!IROUTINE: clean_router - destructor for the type
-!INTERFACE:
-  subroutine clean_router(Router)
-    !INPUT ARGUMENTS:
-    type(RouterType),intent(inout)::Router
-!EOP
-    integer::iPE,iError
-    do iPE=0,Router%nProc-1
-       if(associated(Router%iGet_P(iPE)%iCB_II))&
-            deallocate(Router%iGet_P(iPE)%iCB_II)
-       if(associated(Router%Get_P(iPE)%Weight_I))&
-            deallocate(Router%Get_P(iPE)%Weight_I)
-       if(associated(Router%iPut_P(iPE)%iCB_II))&
-            deallocate(Router%iPut_P(iPE)%iCB_II)
-       if(associated(Router%Put_P(iPE)%Weight_I))&
-            deallocate(Router%Put_P(iPE)%Weight_I)
-       if(associated(Router%DoAdd_P(iPE)%DoAdd_I))&
-            deallocate(Router%DoAdd_P(iPE)%DoAdd_I)
-    end do
-    if(associated(Router%nGet_P))&
-         deallocate(Router%nGet_P)
-    if(associated(Router%nPut_P))&
-         deallocate(Router%nPut_P)
-    if(associated(Router%nSend_P))&
-         deallocate(Router%nSend_P)
-    if(associated(Router%nRecv_P))&
-         deallocate(Router%nRecv_P)
-    if(associated(Router%iGet_P))&
-         deallocate(Router%iGet_P)
-    if(associated(Router%Get_P))&
-         deallocate(Router%Get_P)
-    if(associated(Router%iPut_P))&
-         deallocate(Router%iPut_P)
-    if(associated(Router%Put_P))&
-         deallocate(Router%Put_P)
-    if(associated(Router%DoAdd_P))&
-         deallocate(Router%DoAdd_P)
-    if(UseUnionComm.and..not.Router%IsLocal.and.Router%IsProc)&
-         call MPI_COMM_FREE(Router%iCommUnion,iError)
-  end subroutine clean_router
 !===============================================================!
 !BOP
 !IROUTINE: init_router - initialize the type
@@ -168,8 +128,8 @@ contains
     integer::iProc0Source,iProc0Target,iProcUnion
     integer::iGroupUnion,iGroupSource,iGroupTarget
 
-!---------------------------------------------------------------!
-!Check if the grids are both local or both global               !
+    !---------------------------------------------------------------!
+    !Check if the grids are both local or both global               !
 
     if(is_local_grid(GridDescriptorSource%DD%Ptr).and.&
          is_local_grid(GridDescriptorTarget%DD%Ptr))then
@@ -179,6 +139,7 @@ contains
             compid_grid(GridDescriptorTarget%DD%Ptr))&
             call CON_stop(&
             'Do not couple Local grids of different components!')
+
        Router%iProc=i_proc(LocalCompID_)
        Router%nProc=n_proc(LocalCompID_)
        Router%iComm=i_comm(LocalCompID_)
@@ -186,6 +147,7 @@ contains
        Router%iProc0Source=0
        Router%iProc0Target=0
        Router%IsProc=is_proc(LocalCompID_)
+
     elseif((.not.is_local_grid(GridDescriptorSource%DD%Ptr))&
          .and.(.not.is_local_grid(GridDescriptorTarget%DD%Ptr)))&
          then
@@ -198,6 +160,8 @@ contains
                compid_grid(GridDescriptorSource%DD%Ptr))
        iProc0Target=i_proc0(&
                compid_grid(GridDescriptorTarget%DD%Ptr))
+
+
        if(UseUnionComm)then
           if(.not.allocated(iAux_P))then
              allocate(iAux_P(0:n_proc()-1),stat=iError)
@@ -270,6 +234,8 @@ contains
        call CON_stop(&
             'Do not couple a Local grid with a global one')
     end if
+
+
     Router%nIndexesSource=ndim_grid(&
        GridDescriptorSource%DD%Ptr)+1
     if(present(nIndexesSource))then
@@ -281,6 +247,7 @@ contains
           call CON_stop('nIndexesSource should be at least IndexMin')
        end if
     end if
+
     Router%nIndexesTarget=ndim_grid(&
        GridDescriptorTarget%DD%Ptr)+1
 
@@ -294,6 +261,8 @@ contains
        end if
     end if
     nProc=Router%nProc
+    
+    !Allocation:
     allocate(Router%nGet_P(0:nProc-1),stat=iError)
     call check_allocate(iError,'nGet_P')
     allocate(Router%nPut_P(0:nProc-1),stat=iError)
@@ -305,7 +274,8 @@ contains
     allocate(Router%iGet_P(0:nProc-1),stat=iError)
     call check_allocate(iError,'iGet_P') 
     allocate(Router%Get_P(0:nProc-1),stat=iError)
-    call check_allocate(iError,'Get_P') 
+    call check_allocate(iError,'Get_P')
+ 
     do iPE=0,nProc-1
        nullify(Router%iGet_P(iPE)%iCB_II)
        nullify(Router%Get_P(iPE)%Weight_I)
@@ -456,13 +426,14 @@ contains
 !Optional, if not present then the nearest_grid_points is used  !
        interpolate)
     use ModIOUnit,ONLY:io_unit_new
-    use ModUtilities,ONLY:
     !INPUT ARGUMENTS:
+
     interface
        logical function is_interface_block(lGlobalNode)
          implicit none
          integer,intent(in)::lGlobalNode 
        end function is_interface_block
+
        subroutine interface_point_coords(&
                   GridDescriptor,&
                   lGlobalTreeNode,&
@@ -480,6 +451,7 @@ contains
          real,intent(inout)::Xyz_D(nDim)
          integer,intent(inout)::Index_I(nIndexes)
        end subroutine interface_point_coords
+
        subroutine mapping(&
             nDimFrom,XyzFrom_D,nDimTo,XyzTo_D,IsInterfacePoint)
          implicit none                                                  
@@ -488,6 +460,7 @@ contains
          real,dimension(nDimTo),intent(out)::XyzTo_D
          logical,intent(out)::IsInterfacePoint
        end subroutine mapping
+
        subroutine interpolate(&
             nDim,&
             Xyz_D,&
@@ -549,17 +522,29 @@ contains
     logical::DoCheckBlock,DoCheckPoint,DoInterpolate
     integer::iError,iFile
     logical::DoTest,DoTestMe
+    !-------------------------
+    
+    !For given PE the number in the communicator is:
     iProc=Router%iProc
+    !
+
+    !Return if the processor does not belong to the communicator
     if(iProc<0)return
-    DoTest=.false.;DoTestMe=.false.
+
+    DoTest=.false.; DoTestMe=.false.
+
+
     !Check a presence of mapping array.
     !Associate pointer if required.
 
     UseMappingVector=present(NameMappingVector)
+
     if(UseMappingVector)&
          call associate_with_global_vector(&
          XyzMapping_DI,NameMappingVector)
+
     UseMask=present(NameMask)
+
     if(UseMask)then
        call associate_with_global_mask(&
             Used_I,NameMask)
@@ -573,6 +558,7 @@ contains
     DoTestMe=DoTest.and.iProc==Router%iProc0Target
 
     UseMappingFunction=present(mapping)
+  
     if(.not.(UseMappingFunction.or.UseMappingVector).and.&
          GridDescriptorTarget%nDim/=GridDescriptorSource%nDim)&
             call CON_stop(&
@@ -854,46 +840,49 @@ contains
   end subroutine set_router
 !===============================================================!
 !===============================================================!
-!This subroutine works for a case of mapping FROM SOURCE
-!BOP
-!IROUTINE: construct_router_from_source - work for a case of mapping FROM SOURCE
-!INTERFACE: 
   subroutine construct_router_from_source(&
-!The Descriptor for Source grid points   
-       GridDescriptorSource,& 
-!The Descriptor for Target grid points    
-       GridDescriptorTarget,& 
-!The Router to be set 
-       Router,&
-!Logical function which allows to skip the block if there is no !
-!interface points in it. Optional, if not present then all the  !
-!blocks are checked for the presence of the interface points    !
-       is_interface_block,&
-!The subroutine which defines if the grid point is inside the   !
-!interface layer. Optional, if not present, then all the grid   !
-!points (at the source grid) are considered as the interface    !
-!layer points 
-       interface_point_coords, &
-!Mapping transformation which, in the treated case, maps the    !
-!source grid point to an image point into the target domain,    !
-!in case this mapping is implemented through a routine          !
-       mapping,&
-!Mapping transformation which, in the treated case, maps the    !
-!source grid point to an image point into the target domain,    !
-!in case this mapping is implemented through a global vector    !    
-       NameMappingVector,&    
-!First or second order interpolation procedures are available   !
-!(see CON_grid_descriptor) to find the grid point at the target !
-!grid and the interpoltion weights for the image point:         !
-!nearest_grid_points and bilinear_interpolation.                !
-!Optional, if not present then the nearest_grid_points is used  !
-       interpolate) !First or second order interpolation
+       !The Descriptor for Source grid points:   
+       GridDescriptorSource,& !<<<<<<<<<<<<<<
+       !The Descriptor for Target grid points:   
+       GridDescriptorTarget,& !<<<<<<<<<<<<<<
+       !The Router to be set 
+       Router,&               !<<<<<<<<<<<<<<
+       !Logical function which allows to skip the block if there is no !
+       !interface points in it. Optional, if not present then all the  !
+       !blocks are checked for the presence of the interface points    !
+       is_interface_block,&   !<<<<<<<<<<<<<<
+       !The subroutine which defines if the grid point is inside the   !
+       !interface layer. Optional, if not present, then all the grid   !
+       !points (at the source grid) are considered as the interface    !
+       !layer points 
+       interface_point_coords, &  !<<<<<<<<<<
+       !Mapping transformation which, in the treated case, maps the    !
+       !source grid point to an image point into the target domain,    !
+       !in case this mapping is implemented through a routine          !
+       mapping,&              !<<<<<<<<<<<<<<
+       !Mapping transformation which, in the treated case, maps the    !
+       !source grid point to an image point into the target domain,    !
+       !in case this mapping is implemented through a global vector    !    
+       NameMappingVector,&    !<<<<<<<<<<<<<<
+       !If mapping throught a global vector is used, some points can
+       !be avoided in setting the router using the named mask array
+       NameMask,&             !<<<<<<<<<<<<<<
+       !First or second order interpolation procedures are available   !
+       !(see CON_grid_descriptor) to find the grid point at the target !
+       !grid and the interpoltion weights for the image point:         !
+       !nearest_grid_points and bilinear_interpolation.                !
+       !Optional, if not present then the nearest_grid_points is used  !
+       interpolate)           !<<<<<<<<<<<<<<
+    use ModIOUnit,ONLY:io_unit_new
+
     !INPUT ARGUMENTS:
+
     interface
        logical function is_interface_block(lGlobalNode)
          implicit none
          integer,intent(in)::lGlobalNode 
        end function is_interface_block
+       
        subroutine interface_point_coords(&
                   GridDescriptor,&
                   lGlobalTreeNode,&
@@ -909,8 +898,9 @@ contains
          logical,intent(out)::IsInterfacePoint
          integer,intent(in)::nDim
          real,intent(inout)::Xyz_D(nDim)
-         integer, dimension(nIndexes),intent(inout)::Index_I
+         integer,intent(inout)::Index_I(nIndexes)
        end subroutine interface_point_coords
+
        subroutine mapping(&
             nDimFrom,XyzFrom_D,nDimTo,XyzTo_D,IsInterfacePoint)
          implicit none                                                  
@@ -919,6 +909,7 @@ contains
          real,dimension(nDimTo),intent(out)::XyzTo_D
          logical,intent(out)::IsInterfacePoint
        end subroutine mapping
+
        subroutine interpolate(&
             nDim,&
             Xyz_D,&
@@ -943,6 +934,7 @@ contains
     optional::mapping,interpolate
 
     character(LEN=*),intent(in),optional::NameMappingVector
+    character(LEN=*),intent(in),optional::NameMask
 
     type(GridDescriptorType),intent(in):: GridDescriptorSource
     type(GridDescriptorType),intent(in):: GridDescriptorTarget
@@ -953,49 +945,82 @@ contains
     integer::iGlobalGridPoint,nGridPointsPerBlock
     logical::IsInterfacePoint
     integer::iImages,nImages,nImagesPart,iToPut
-    integer::iProcTo,iProcFrom,iPE
+    integer::iProcTo,iBlockFrom,iProcFrom,iPE
     integer,dimension(0:Router%nProc-1)::&
          nGetUbound_P,nPutUbound_P
 
     real,dimension(GridDescriptorTarget%nDim)::XyzTarget_D
     real,dimension(GridDescriptorSource%nDim)::XyzSource_D
 
+    integer,dimension(GridDescriptorSource%nDim)::iCell_D
     integer, dimension(Router%nIndexesSource)::IndexGet_I
+
     integer,dimension(0:Router%nIndexesTarget,&
                       2**GridDescriptorTarget%nDim)::&
                       IndexPut_II
+
     integer,dimension(2**GridDescriptorTarget%nDim)::&
                       iProcLookUp_I
+
     integer::nProcToPut,iProcToPut
     logical::DoCountOnly,DoCountRed
+
     real,dimension(2**GridDescriptorTarget%nDim)::Weight_I 
 
     real,dimension(:,:),pointer::XyzMapping_DI
-    logical::UseMappingVector,UseMappingFunction
-    logical::DoInterpolate,DoCheckBlock,DoCheckPoint
-    integer::iError
 
+    logical,dimension(:),pointer::Used_I
+    logical::UseMask,UseMappingVector,UseMappingFunction
+    logical::DoInterpolate,DoCheckBlock,DoCheckPoint
+    integer::iError,iFile
+    logical::DoTest,DoTestMe
+    !------------------------
+    
+    !For given PE the number in the communicator is:
     iProc=Router%iProc
+    !
+
+    !Return if the processor does not belong to the communicator
     if(iProc<0)return
+
+    DoTest=.false.; DoTestMe=.false.
+
 
     !Check a presence of mapping array.
     !Associate pointer if required.
     
     UseMappingVector=present(NameMappingVector)
-    UseMappingFunction=present(mapping)
-    DoCheckBlock=present(is_interface_block)
-    DoCheckPoint=present(interface_point_coords)
-    DoInterpolate=present(interpolate)
+
     if(UseMappingVector)&
          call associate_with_global_vector(&
          XyzMapping_DI,NameMappingVector)
-    
+
+    UseMask=present(NameMask)
+
+    if(UseMask)then
+       call associate_with_global_mask(&
+            Used_I,NameMask)
+    end if
+    if(UseMask)then
+       call CON_set_do_test('router_'//NameMask,DoTest,DoTestMe)
+    else
+       if(UseMappingVector)call CON_set_do_test(&
+            'router_'//NameMappingVector,DoTest,DoTestMe)
+    end if
+    DoTestMe=DoTest.and.iProc==Router%iProc0Target
+   
+
+    UseMappingFunction=present(mapping)
     
     if(.not.(UseMappingFunction.or.UseMappingVector).and.&
          GridDescriptorTarget%nDim/=GridDescriptorSource%nDim)&
             call CON_stop(&
             'Mapping is needed for Target%nDim/=Source%nDim')
     nProc=Router%nProc
+
+    DoCheckBlock=present(is_interface_block)
+    DoCheckPoint=present(interface_point_coords)
+    DoInterpolate=present(interpolate)
 
     !Check dimensions
 
@@ -1004,21 +1029,29 @@ contains
        call check_router_allocation(Router,iProc,nProc)
 
 
-!Store Upper bounds to control if the alllocated index array    !
-!have a sufficient length
+       !Store Upper bounds to control if the alllocated index array    !
+       !have sufficient size
        do iPE=0,nProc-1
           nGetUbound_P(iPE)=ubound(Router%iGet_P(iPE)%iCB_II,2)
           nPutUbound_P(iPE)=ubound(Router%iPut_P(iPE)%iCB_II,2)
        end do
 
        DoCountOnly=.false.
-!If the check shows that the allocated array is not sufficient, ! 
-!DoCountOnly will be set to true. The loop then will be repeated!
-! for the second time
+
+       !If the check shows that the allocated array is not sufficient, ! 
+       !DoCountOnly will be set to true. The loop then will be repeated!
+       ! for the second time
+
+       if(DoTestMe)then
+          iFile=io_unit_new()
+          open(iFile,file='router_'//NameMask,status='replace')
+          write(iFile,*)'iPointGlobal Xyz_D'
+          write(iFile,*)'iProcFrom   iCB indexes  Weitht  Sum(Weight)'//&
+               'iImages '
+       end if
 
 
-
-!Initialize the counters
+       !Initialize the counters
        Router%nGet_P=0
        Router%nPut_P=0
        Router%nSend_P=0
@@ -1027,67 +1060,91 @@ contains
        nGridPointsPerBlock=n_grid_points_per_block(&
             GridDescriptorSource)
 
-!Block loop
+       !Block loop
        do iBlockAll=1,n_block_total(GridDescriptorSource%DD%Ptr)
 
-!Skip non-end octree nodes, if any                              !
+          !Skip non-end octree nodes, if any                              !
           lGlobalNode=i_global_node_a(&
                GridDescriptorSource%DD%Ptr,iBlockAll)
+
+          call pe_and_blk(&
+               GridDescriptorSource%DD%Ptr,lGlobalNode,&
+               iProcFrom,iBlockFrom)
                
 
-!Skip the block if desired: if there is known to be no interface!
-! point in it
+          !Skip the block if desired: if there is known to be no interface!
+          ! point in it
           if( DoCheckBlock)then
              if(.not.is_interface_block(lGlobalNode))CYCLE
           end if
 
-!GlobalCellNumber Loop, for a given (octree) block              !
+          !GlobalCellNumber Loop, for a given (octree) block              !
           do iGlobalGridPoint=&
                          1+nGridPointsPerBlock*(iBlockAll-1),&
                          nGridPointsPerBlock*iBlockAll
-
-             call pe_and_blk(&
-                  GridDescriptorSource%DD%Ptr,lGlobalNode,&
-                  iProcFrom,IndexGet_I(Router%nIndexesSource))
-
-             call global_i_grid_point_to_icb(&
-                  GridDescriptorSource,&
-                  iGlobalGridPoint,&
-                  lGlobalNode,& 
-                  IndexGet_I(1:GridDescriptorSource%nDim)) 
-           
-             XyzSource_D=xyz_grid_d(&
-                  GridDescriptorSource,&
-                  lGlobalNode,&
-                  IndexGet_I(1:GridDescriptorSource%nDim))
-
-             if( DoCheckPoint)then
-                call interface_point_coords(&
-                     GridDescriptorSource,&
-                     lGlobalNode,&
-                     GridDescriptorSource%nDim,&
-                     XyzSource_D,&
-                     Router%nIndexesSource,&
-                     IndexGet_I,&
-                     IsInterfacePoint)
-                if(.not.IsInterfacePoint)CYCLE 
+             if(UseMask)then
+                if(.not.Used_I(iGlobalGridPoint))&
+                     CYCLE
              end if
-             if(UseMappingVector)then
+             
+             !Treat separately a case when
+             !a single-index global vector 
+             !is a source
+             
+             IndexGet_I(1) = iGlobalGridPoint
+             !This value will be rewritten otherwise
+             
+             if(Router%nIndexesSource==1.and.&
+                  UseMappingVector)then
                 XyzTarget_D=XyzMapping_DI(&
                      1:GridDescriptorTarget%nDim,&
-                     iGlobalGridPoint) 
-             else if(UseMappingFunction)then
-                call mapping(GridDescriptorSource%nDim,&
-                             XyzSource_D,&
-                             GridDescriptorTarget%nDim,&
-                             XyzTarget_D,&
-                             IsInterfacePoint)
-                if(.not.IsInterfacePoint)CYCLE 
+                     iGlobalGridPoint)
              else
-                XyzTarget_D=XyzSource_D
-             end if
-
-
+                call global_i_grid_point_to_icb(&
+                     GridDescriptorSource,&
+                     iGlobalGridPoint,&
+                     lGlobalNode, &
+                     iCell_D) 
+                if(Router%nIndexesSource/=1)then
+                   IndexGet_I(Router%nIndexesSource)=iBlockFrom
+                   IndexGet_I(1:GridDescriptorSource%nDim) =&
+                        iCell_D
+                end if
+                
+                
+                if(UseMappingVector)then
+                   XyzTarget_D=XyzMapping_DI(&
+                        1:GridDescriptorTarget%nDim,&
+                        iGlobalGridPoint) 
+                else 
+                   XyzSource_D=xyz_grid_d(&
+                        GridDescriptorSource,&
+                        lGlobalNode,&
+                        IndexGet_I(1:GridDescriptorSource%nDim))
+                   
+                   if( DoCheckPoint)then
+                      call interface_point_coords(&
+                           GridDescriptorSource,&
+                           lGlobalNode,&
+                           GridDescriptorSource%nDim,&
+                           XyzSource_D,&
+                           Router%nIndexesSource,&
+                           IndexGet_I,&
+                           IsInterfacePoint)
+                      if(.not.IsInterfacePoint)CYCLE 
+                   end if
+                   if(UseMappingFunction)then
+                      call mapping(GridDescriptorSource%nDim,&
+                           XyzSource_D,&
+                           GridDescriptorTarget%nDim,&
+                           XyzTarget_D,&
+                           IsInterfacePoint)
+                      if(.not.IsInterfacePoint)CYCLE 
+                   else
+                      XyzTarget_D=XyzSource_D
+                   end if   !Mapping function
+                end if  !MappingVector
+             end if  !Global vector as a source
              if( DoInterpolate)then
                 call interpolate(&
                      GridDescriptorTarget%nDim,&
@@ -1097,8 +1154,8 @@ contains
                      IndexPut_II,&
                      nImages,&
                      Weight_I)
-                else
-                   call nearest_grid_points(&
+             else
+                call nearest_grid_points(&
                      GridDescriptorTarget%nDim,&   
                      XyzTarget_D,&
                      GridDescriptorTarget,&
@@ -1106,17 +1163,19 @@ contains
                      IndexPut_II,&
                      nImages,&
                      Weight_I)
-                end if
+             end if
+             
+             !See interface
+             !--------------------------------------!
+             !Lookup
 
-!See interface
-!--------------------------------------------------------------!
-!Lookup
              nImagesPart=0     !At all CPUs
 
              do iImages=1,nImages
                 iProcTo=IndexPut_II(0,iImages)
-!At the target PEs the number of terms in the partial sums are ! 
-!found
+                !At the target PEs the number of terms 
+                !in the partial sums are found
+
                 if(iProc==iProcTo)then
                    nImagesPart=nImagesPart+1
                    Router%nPut_P(iProcFrom)=&
@@ -1126,8 +1185,8 @@ contains
                         nPutUbound_P(iProcFrom)
                 end if
 
-!At the source processor the PE list is defined which will get !
-!the  partial sums
+                !At the source processor the PE list is defined !
+                !which will get the  partial sums
                 if(iProc==iProcFrom)then
                    if(iImages==1)then
                       iProcLookUp_I(1)=iProcTo
@@ -1151,7 +1210,7 @@ contains
                          DoCountOnly=DoCountOnly.or.&
                               Router%nGet_P(iProcTo)>&
                               nGetUbound_P(iProcTo)
-                      end if
+                      end if  
                    end if
                 end if
              end do
@@ -1190,10 +1249,10 @@ contains
                            Weight_I(Router%nGet_P(iProcTo))&
                            =cOne
                    end do
-! The efficient way to properly find doadd's is not found yet
-! For a while the target state vector which is filled in                 
-! with this subroutine, should be nullified before applying the 
-!global message pass  
+                   ! The efficient way to properly find doadd's is not found yet
+                   ! For a while the target state vector which is filled in                 
+                   ! with this subroutine, should be nullified before applying the 
+                   !global message pass  
                 end if
              end if
           end do !Global cell
