@@ -24,10 +24,11 @@ contains
 end module ModLaserPulse
 !===========================
 module ModBeams
+  use ModPhysics,  ONLY: Si2No_V, UnitX_
   implicit none
   SAVE
   !Beam geometry: 'rz', '2d', '3d'
-  character(LEN=2):: TypeBeam='rz'
+  character(LEN=2):: TypeBeam='unknown'
   !\
   ! Geometry of the 'rz'-beam:
   !/
@@ -59,11 +60,106 @@ module ModBeams
 
   integer:: nBeam = 0
   real   :: rBeamMuM = 1.0, xPlaneMum = -60.0
+
+  real   :: rBeam, xPlane
+
   real   :: BeamParam_II(3,192)
 
   !Named indexes:
-  integer, parameter:: SlopeDeg_ = 1, yCrMuM_ = 2, AmplitudeRel_ = 3 
-  
+  integer, parameter:: SlopeDeg_ = 1, yCrMuM_ = 2, AmplitudeRel_ = 3
+
+  integer:: nRayTotal = -1
+  real, allocatable, dimension(:,:):: XyzRay_DI, SlopeRay_DI 
+  real, allocatable, dimension(:)  :: Amplitude_I
+ 
+contains
+  subroutine get_rays
+    !Convert MuM = 1e-6 m to dimensionless:
+
+    rBeam  =  rBeamMuM * 1.0e-6 * Si2No_V(UnitX_)
+    xPlane = xPlaneMuM * 1.0e-6 * Si2No_V(UnitX_)
+
+    select case(TypeBeam)
+    case('rz','RZ')
+       call rz_beam_rays
+    case('2d','2D','3d', '3D')
+       call stop_mpi('TypeBeam='//TypeBeam//' is not yet implemented')
+    case default
+       call stop_mpi('Unknown TypeBeam='//TypeBeam)
+    end select
+    
+    !Normalize amplitudes:
+    Amplitude_I(1:nRayTotal) = Amplitude_I(1:nRayTotal)/&
+         sum(Amplitude_I(1:nRayTotal))
+  end subroutine get_rays
+  !======================
+  subroutine rz_beam_rays
+    use ModGeometry, ONLY: TypeGeometry, y1
+    use ModConst,    ONLY: cDegToRad 
+    
+    real:: CosTheta, SinTheta,  yCrCentral, yPlaneCentral, yPlane
+    real:: rDistance, BeamAmplitude
+    integer:: iRay, iBeam
+
+
+    if(TypeGeometry/='rz')call CON_stop(&
+         'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
+
+    !Allocation is excessive, nRayTotal is not yet known:
+
+    allocate(  XyzRay_DI(3, nBeam * (2 * nRayPerBeam +1)))
+    allocate(SLopeRay_DI(3, nBeam * (2 * nRayPerBeam +1)))
+    allocate(Amplitude_I(nBeam * (2 * nRayPerBeam +1)))
+
+    nRayTotal = 0
+    do iBeam = 1, nBeam
+       cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
+
+       !Positive direction of the slope is taken for the beams
+       !converging to the axis:
+
+       sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
+
+       !Transform yCrMuM to dimensionless
+       yCrCentral =  BeamParam_II(yCrMuM_, iBeam) &
+            * 1.0e-6 * Si2No_V(UnitX_)
+
+       yPlaneCentral = yCrCentral + xPlane*SinTheta/CosTheta
+
+       BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
+ 
+       do iRay = -nRayPerBeam, nRayPerBeam
+          !We neglect exp(-2.25)\approx0.1 and chose the beam margin
+          !to be at 1.5 rBeam from the central ray:
+
+           rDistance = iRay * rBeam * 1.5 /nRayPerBeam 
+           yPlane = yPlaneCentral + rDistance/CosTheta
+
+           !Do not include rays with the starting point 
+           !being otside the computational domain:
+           if(abs(yPlane) >= y1)CYCLE
+           nRayTotal = nRayTotal +1
+           
+           Amplitude_I(nRayTotal) = BeamAmplitude * &
+                exp(-(rDistance/rBeam)**2) *   &
+                abs( yCrCentral + rDistance/CosTheta)
+
+           if(yPlane > 0)then
+
+              XyzRay_DI(:, nRayTotal) = (/xPlane, yPlane, 0.0/)
+              SlopeRay_DI(:, nRayTotal) = &
+                   (/CosTheta, SinTheta, 0.0/)
+
+           else
+
+              XyzRay_DI(:, nRayTotal) = (/xPlane, -yPlane, 0.0/)
+              SlopeRay_DI(:, nRayTotal) = &
+                   (/CosTheta, -SinTheta, 0.0/)
+
+           end if
+       end do
+    end do
+  end subroutine rz_beam_rays
 end module ModBeams
 
 subroutine read_laser_pulse_param
@@ -151,17 +247,17 @@ module ModLaserPackage
   !the irradiance (power). Therefore, the pointwise sources of energy calculated by
   !this subroutine are multipled by :
   !LaserIrradiance*Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
-
+  
   use ModRadioWaveRaytracing, ONLY: ray_path
   implicit none
-
+  
   real, allocatable, save:: SourceE_CB(:,:,:,:)
   real, dimension(:,:), pointer:: Position_DI
   logical, save:: DoInit = .true.
   integer, save:: nRay = -1
-
+  
   type(RouterType),save::Router
-
+  
   !------------
 contains
   !================================
@@ -175,7 +271,7 @@ contains
     !--------------------------------------
     if(nRay < 0)call stop_mpi(&
          'get_rays should be called before the first use of laser package')
-
+    
     !Allocate arrays for rays
     allocate(SourceE_CB(nI,nJ,nK,MaxBlock))
 
