@@ -141,6 +141,9 @@ subroutine read_laser_pulse_param
 end subroutine read_laser_pulse_param
 !===========================
 module ModLaserPackage
+  use CON_global_message_pass
+  use ModAbsorption, ONLY: &
+       LineGrid,MhGrid
   !Here ResExpl_VCB is the energy source array, to which the laser energy deposition 
   !should be added. This array is the dimensionless form of the energy source in each
   !control volume, divided by the time step, Delta t. The dimensional characteristic
@@ -156,6 +159,9 @@ module ModLaserPackage
   real, dimension(:,:), pointer:: Position_DI
   logical, save:: DoInit = .true.
   integer, save:: nRay = -1
+
+  type(RouterType),save::Router
+
   !------------
 contains
   !================================
@@ -182,13 +188,84 @@ contains
     call allocate_vector(NameVector, 3, nRay)
     call associate_with_global_vector(Position_DI, NameVector)
     
+    call init_router(&
+         GridDescriptorSource = LineGrid, &
+         GridDescriptorTarget = MhGrid, &
+         Router=Router,                 &
+         nIndexesSource = 1)
+    
+
   end subroutine init_laser_package
   !================================
   subroutine get_impl_energy_source
+    use ModAbsorption, ONLY: NameMask
+    use ModDensityAndGradient, ONLY: NameVector
+
+    
+
+    !--------------------------
     if(DoInit) call init_laser_package
     SourceE_CB(:,:,:,:) = 0.0
-    
+
+    call construct_router_from_source(&
+         GridDescriptorSource = LineGrid, &
+         GridDescriptorTarget = MhGrid, &
+         Router=Router,                 &
+         NameMappingVector=NameVector,  &
+         NameMask=NameMask,             &
+         interpolate=interpolation_fix_reschange)
+   
+    call global_message_pass(Router=Router,&
+         nVar=1,&    !Energy deposition
+         fill_buffer=get_energy_deposition,&
+         apply_buffer=put_energy_deposition)
+
+
+
   end subroutine get_impl_energy_source
+  !=============================
+  subroutine get_energy_deposition(&
+       nPartial,iGetStart,Get,W,State_V,nVar)
+    use CON_router
+    !INPUT ARGUMENTS:
+    integer,intent(in)::nPartial,iGetStart,nVar
+    type(IndexPtrType),intent(in)::Get
+    type(WeightPtrType),intent(in)::W
+    real,dimension(nVar),intent(out)::State_V
+
+    integer::iCell
+
+    iCell=Get%iCB_II(1,iGetStart)
+
+   
+  end subroutine get_energy_deposition
+
+  !====================================================================
+
+  subroutine put_energy_deposition(nPartial,&
+       iPutStart,&
+       Put,&
+       W,&
+       DoAdd,&
+       Buff_I,nVar)
+    implicit none
+    integer,intent(in)::nPartial,iPutStart,nVar
+    type(IndexPtrType),intent(in)::Put
+    type(WeightPtrType),intent(in)::W
+    logical,intent(in)::DoAdd
+    real,dimension(nVar),intent(in)::Buff_I
+    integer::iPut, i, j, k, iBlock
+    real :: Weight
+
+ 
+    i      = Put%iCB_II(1,iPutStart)
+    j      = Put%iCB_II(2,iPutStart)
+    k      = Put%iCB_II(3,iPutStart)
+    iBlock = Put%iCB_II(4,iPutStart)
+    Weight = W%Weight_I(iPutStart)
+    
+
+  end subroutine put_energy_deposition
 end module ModLaserPackage
 
 subroutine add_laser_energy_deposition
