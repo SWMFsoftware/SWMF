@@ -1,6 +1,6 @@
 !^CFG COPYRIGHT UM
 !BOP
-!MODULE: ModDensityAndGradient - provide the density and gradients at SC_Xyz_DI
+!MODULE: ModAbsorption - provide the density and gradients 
 !INTERFACE:
 module ModAbsorption
 !USES:
@@ -34,8 +34,8 @@ module ModAbsorption
   logical,save::DoInit=.true.
 
   type(RouterType),save::Router
-  type(GridDescriptorType),save::LineGrid,MhGrid
-  type(DomainDecompositionType),save::LineDD
+  type(GridDescriptorType),save,public::LineGrid,MhGrid
+  type(DomainDecompositionType),save,public::LineDD
 
   real,allocatable,save,dimension(:)::AbsorptionCoeff_I
 
@@ -52,9 +52,10 @@ module ModAbsorption
   !Critical density
 
   real,public:: DensityCrSI  = &
-       (3* &     !Third harmonic
-       cTwoPi * cLightSpeed/(1.06e-6)) & !of the Nd Laser
-       *cEps * cElectronMass/cElectronCharge**2
+       (3* &                                !For third harmonic
+       cTwoPi * cLightSpeed/(1.06e-6))**2 & !of the Nd Laser
+       *cEps * cElectronMass/cElectronCharge**2 *&
+       cAtomicMass * 9.0121823              !and for Beryllium
   
 
 contains
@@ -178,6 +179,9 @@ contains
     call user_material_properties(State_V=State_VGB(:,i,j,k,iBlock), &
          NAtomicOut=NAtomicSI, TeOut=TeSI,&
          AverageIonChargeOut= ZAverage)
+
+    !Increase Z for weakly ionized plasma at first iterations
+    ZAverage = max(ZAverage, 1.0)
 
     State_V(1)= Weight*(&
          State_VGB(rho_,i+1,j,k,iBlock)-State_VGB(rho_,i-1,j,k,iBlock))&
