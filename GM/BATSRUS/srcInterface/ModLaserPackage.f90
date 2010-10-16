@@ -248,11 +248,13 @@ module ModLaserPackage
   !this subroutine are multipled by :
   !LaserIrradiance*Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
   
+  use ModBeams, ONLY: nRayTotal, XyzRay_DI, SlopeRay_DI, Amplitude_I
   use ModRadioWaveRaytracing, ONLY: ray_path
   implicit none
   
   real, allocatable, save:: SourceE_CB(:,:,:,:)
   real, dimension(:,:), pointer:: Position_DI
+  real, allocatable, save:: Slope_DI(:,:), Intensity_I(:)
   logical, save:: DoInit = .true.
   integer, save:: nRay = -1
   
@@ -265,12 +267,14 @@ contains
     use ModSize, ONLY: MaxBlock, nI, nJ, nK
     use ModDensityAndGradient, ONLY: Density_I, GradDensity_DI,DeltaSNew_I, &
          NameVector
-    use ModAbsorption, ONLY: AbsorptionCoeff_I
+    use ModAbsorption, ONLY: AbsorptionCoeff_I, get_density_and_absorption
     use ModMain,ONLY:NameThisComp
     use CON_global_vector, ONLY: allocate_vector, associate_with_global_vector
+    use ModBeams, ONLY: get_rays
     !--------------------------------------
-    if(nRay < 0)call stop_mpi(&
-         'get_rays should be called before the first use of laser package')
+    DoInit = .false.
+    call get_rays
+    nRay = nRayTotal
     
     !Allocate arrays for rays
     allocate(SourceE_CB(nI,nJ,nK,MaxBlock))
@@ -281,8 +285,17 @@ contains
     end if
 
     NameVector=NameThisComp//'_Rays_DI'
-    call allocate_vector(NameVector, 3, nRay)
+    call allocate_vector(NameVector, 3, nRayTotal)
     call associate_with_global_vector(Position_DI, NameVector)
+    allocate(Slope_DI(3, nRayTotal))
+    allocate(Intensity_I(nRayTotal))
+
+    !Initialize all arrays:
+    Position_DI(:, 1:nRayTotal) = XyzRay_DI(:,   1:nRayTotal)
+    Slope_DI(:,    1:nRayTotal) = SlopeRay_DI(:, 1:nRayTotal)
+    Intensity_I(   1:nRayTotal) = Amplitude_I(   1:nRayTotal)
+    
+    call get_density_and_absorption(nRayTotal)
     
     call init_router(&
          GridDescriptorSource = LineGrid, &
