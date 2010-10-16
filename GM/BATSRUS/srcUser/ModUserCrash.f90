@@ -671,18 +671,16 @@ contains
                .and. any(State_VGB(LevelPl_:LevelMax,i,j,k,iBlock) > 0.0))then
              ! equal electron/ion temperature for plastic and gold
              iMaterial = maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock), 1)-1
-             if(iMaterial >= Plastic_)then
-                RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
-                pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
-                call eos(iMaterial, RhoSi, PtotalIn=pSi, TeOut=TeSi)
-                Te = TeSi*Si2No_V(UnitTemperature_)
-                Natomic = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial)) &
-                     *Si2No_V(UnitN_)
-                p = Natomic*Te
-                State_VGB(Pe_,i,j,k,iBlock) = &
-                     max(PeMin,State_VGB(p_,i,j,k,iBlock) - p)
-                State_VGB(p_,i,j,k,iBlock) = p
-             end if
+             RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
+             pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
+             call eos(iMaterial, RhoSi, PtotalIn=pSi, TeOut=TeSi)
+             Te = TeSi*Si2No_V(UnitTemperature_)
+             Natomic = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial)) &
+                  *Si2No_V(UnitN_)
+             p = Natomic*Te
+             State_VGB(Pe_,i,j,k,iBlock) = &
+                  max(PeMin,State_VGB(p_,i,j,k,iBlock) - p)
+             State_VGB(p_,i,j,k,iBlock) = p
           else if(UsePl .and. State_VGB(LevelPl_,i,j,k,iBlock) > 0.0 &
                .and. TeSi < TeMaxColdPlSi)then
              ! Subtract electron pressure from the total pressure

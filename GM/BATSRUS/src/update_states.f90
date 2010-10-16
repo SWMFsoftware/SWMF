@@ -826,12 +826,6 @@ subroutine select_conservative
 
   integer :: iBlock, iCrit, i, j, k
 
-  real :: UxDx_G( 0:nI+1, 1:nJ,   1:nK  )
-  real :: UyDy_G( 1:nI,   0:nJ+1, 1:nK  )
-  real :: UzDz_G( 1:nI,   1:nJ,   0:nK+1)
-  real :: DivU_C( 1:nI,   1:nJ, 1:nK)
-  real :: aFast_C(1:nI,   1:nJ, 1:nK)
-
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
   call set_oktest('select_conservative',DoTest,DoTestMe)
