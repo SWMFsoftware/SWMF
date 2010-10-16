@@ -121,27 +121,29 @@ foreach $rstfile (@rstfiles){
 
     my $file="$indir/$rstfile";
     open(INFILE, $file) or die "$ERROR: cannot open $file!\n";
-    $_=<INFILE>;
-    close INFILE;
-
-    if(-t $rstfile){
-	# these are ASCII files, nothing to do
-    }elsif($nByteReal == 4 or $rstfile =~ /$octreefile/){
-	# single precision files are easy to convert
-	&convert4;
-    }elsif($rstfile =~ /$datafile/){
-	# $datafile is a binary direct access file with fixed record length.
-	# Since there are no record markers it is trivial to swap the byte 
-	# order.
-	&convert8;
-    }elsif($rstfile =~ /blk/){
-	# double precision blk files need conversion of 4 byte data markers
-	# and 8 byte data
-	&convert_dbl;
-    }
     my $file = "$outdir/$rstfile";
     open OUTFILE, ">$file" or die "$ERROR: cannot open $file\n";
-    print OUTFILE $_;
+
+    while(read(INFILE, $_, 1000000)){
+
+	if(-t $rstfile){
+	    # these are ASCII files, nothing to do
+	}elsif($nByteReal == 4 or $rstfile =~ /$octreefile/){
+	    # single precision files are easy to convert
+	    &convert4;
+	}elsif($rstfile =~ /$datafile/){
+	    # $datafile is a binary direct access file with fixed record length.
+	    # Since there are no record markers it is trivial to swap the byte 
+	    # order.
+	    &convert8;
+	}elsif($rstfile =~ /blk/){
+	    # double precision blk files need conversion of 4 byte data markers
+	    # and 8 byte data
+	    &convert_dbl;
+	}
+	print OUTFILE $_;
+    }
+    close INFILE;
     close OUTFILE;
 }
 
