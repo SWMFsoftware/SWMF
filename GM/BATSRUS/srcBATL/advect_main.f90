@@ -371,7 +371,8 @@ contains
 
     use BATL_lib, ONLY: MaxDim, nBlock, Unused_B, &
          iComm, nProc, iProc, iNode_B, &
-         TypeGeometry, CellSize_DB, Xyz_DGB, CoordMin_DB, CoordMax_DB
+         TypeGeometry, CellVolume_B, CellSize_DB, Xyz_DGB, CoordMin_DB, &
+         CoordMax_DB
 
     use ModMpi,    ONLY: MPI_REAL, MPI_INTEGER, MPI_MIN, MPI_SUM, MPI_reduce
     use ModIoUnit, ONLY: UnitTmp_
@@ -401,7 +402,7 @@ contains
              write(UnitTmp_) CellSize_DB(1,iBlock), &
                   Xyz_DGB(:,i,j,k,iBlock), State_VGB(:,i,j,k,iBlock), &
                   exact_density(Xyz_DGB(:,i,j,k,iBlock)), &
-                  CellSize_DB(1,iBlock), real(iNode_B(iBlock)), &
+                  CellVolume_B(iBlock), real(iNode_B(iBlock)), &
                   real(iProc), real(iBlock)
           end do; end do; 
        end do
@@ -439,7 +440,7 @@ contains
        write(UnitTmp_,'(i8,a)')     nVar+5,        ' nplotvar'
        write(UnitTmp_,'(i8,a)')     1,             ' neqpar'
        write(UnitTmp_,'(10es13.5)') 0.0            ! eqpar
-       write(UnitTmp_,'(a)')        'rho exact dx node proc block none' 
+       write(UnitTmp_,'(a)')        'rho exact volume node proc block none' 
        write(UnitTmp_,'(a)')        '1 1 1'        ! units
        write(UnitTmp_,'(l8,a)')     .true.         ! save binary .idl files
        write(UnitTmp_,'(i8,a)')     nByteReal,     ' nByteReal'
