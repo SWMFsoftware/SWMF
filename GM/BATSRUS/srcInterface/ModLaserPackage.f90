@@ -238,8 +238,8 @@ end subroutine read_laser_pulse_param
 !===========================
 module ModLaserPackage
   use CON_global_message_pass
-  use ModAbsorption, ONLY: &
-       LineGrid,MhGrid
+  use ModAbsorption, ONLY: DensityCrSi,&
+       LineGrid, MhGrid, get_density_and_absorption
   !Here ResExpl_VCB is the energy source array, to which the laser energy deposition 
   !should be added. This array is the dimensionless form of the energy source in each
   !control volume, divided by the time step, Delta t. The dimensional characteristic
@@ -254,10 +254,13 @@ module ModLaserPackage
   
   real, allocatable, save:: SourceE_CB(:,:,:,:)
   real, dimension(:,:), pointer:: Position_DI
-  real, allocatable, save:: Slope_DI(:,:), Intensity_I(:)
+  real, allocatable, save:: Slope_DI(:,:), Intensity_I(:), DeltaS_I(:)
+  logical, allocatable,save:: Unused_I(:), IsRayFlag_I(:)
   logical, save:: DoInit = .true.
   integer, save:: nRay = -1
   
+  real:: DeltaS = 1.0, Tolerance = 0.1
+
   type(RouterType),save::Router
   
   !------------
@@ -267,7 +270,7 @@ contains
     use ModSize, ONLY: MaxBlock, nI, nJ, nK
     use ModDensityAndGradient, ONLY: Density_I, GradDensity_DI,DeltaSNew_I, &
          NameVector
-    use ModAbsorption, ONLY: AbsorptionCoeff_I, get_density_and_absorption
+    use ModAbsorption, ONLY: AbsorptionCoeff_I
     use ModMain,ONLY:NameThisComp
     use CON_global_vector, ONLY: allocate_vector, associate_with_global_vector
     use ModBeams, ONLY: get_rays
@@ -288,12 +291,16 @@ contains
     call allocate_vector(NameVector, 3, nRayTotal)
     call associate_with_global_vector(Position_DI, NameVector)
     allocate(Slope_DI(3, nRayTotal))
-    allocate(Intensity_I(nRayTotal))
+    allocate(Intensity_I(nRayTotal), DeltaS_I(nRayTotal))
+    allocate(Unused_I(nRayTotal), IsRayFlag_I(nRayTotal))
 
     !Initialize all arrays:
     Position_DI(:, 1:nRayTotal) = XyzRay_DI(:,   1:nRayTotal)
     Slope_DI(:,    1:nRayTotal) = SlopeRay_DI(:, 1:nRayTotal)
     Intensity_I(   1:nRayTotal) = Amplitude_I(   1:nRayTotal)
+    Unused_I = .false.; IsRayFlag_I = .false.
+
+    DeltaS_I = DeltaS
     
     call get_density_and_absorption(nRayTotal)
     
@@ -309,27 +316,36 @@ contains
   subroutine get_impl_energy_source
     use ModAbsorption, ONLY: NameMask
     use ModDensityAndGradient, ONLY: NameVector
-
-    
+        
 
     !--------------------------
     if(DoInit) call init_laser_package
     SourceE_CB(:,:,:,:) = 0.0
 
-    call construct_router_from_source(&
-         GridDescriptorSource = LineGrid, &
-         GridDescriptorTarget = MhGrid, &
-         Router=Router,                 &
-         NameMappingVector=NameVector,  &
-         NameMask=NameMask,             &
-         interpolate=interpolation_fix_reschange)
+    !Initialize all arrays:
+    Position_DI(:, 1:nRayTotal) = XyzRay_DI(:,   1:nRayTotal)
+    Slope_DI(:,    1:nRayTotal) = SlopeRay_DI(:, 1:nRayTotal)
+    Intensity_I(   1:nRayTotal) = Amplitude_I(   1:nRayTotal)
+    Unused_I = .false.; IsRayFlag_I = .false.
+    DeltaS_I = DeltaS
+
+    do while(any(.not. Unused_I))
+       call ray_path(get_density_and_absorption, nRay, Unused_I, Slope_DI, &
+            DeltaS_I, Tolerance, DensityCrSi, Intensity_I, IsRayFlag_I)
+       call construct_router_from_source(&
+            GridDescriptorSource = LineGrid, &
+            GridDescriptorTarget = MhGrid, &
+            Router=Router,                 &
+            NameMappingVector=NameVector,  &
+            NameMask=NameMask,             &
+            interpolate=interpolation_fix_reschange)
    
-    call global_message_pass(Router=Router,&
-         nVar=1,&    !Energy deposition
-         fill_buffer=get_energy_deposition,&
-         apply_buffer=put_energy_deposition)
-
-
+       call global_message_pass(Router=Router,&
+            nVar=1,&    !Energy deposition
+            fill_buffer=get_energy_deposition,&
+            apply_buffer=put_energy_deposition)
+       
+    end do
 
   end subroutine get_impl_energy_source
   !=============================
