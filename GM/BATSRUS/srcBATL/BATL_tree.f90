@@ -1,6 +1,7 @@
 module BATL_tree
 
-  use BATL_size, ONLY: MaxBlock, nBlock, MaxDim, nDim, nDimAmr
+  use BATL_size, ONLY: MaxBlock, nBlock, MaxDim, nDim, iRatio_D, &
+       nDimAmr, iDimAmr_D
 
   implicit none
   save
@@ -251,8 +252,8 @@ contains
     integer, intent(in) :: iNode
 
     integer :: iChild, DiChild, iLevelChild, iProc, iBlock
-    integer :: iCoord_D(nDimAmr)
-    integer :: iDim, iNodeChild
+    integer :: iCoord_D(nDim)
+    integer :: iDim, iDimAmr, iNodeChild
 
     character(len=*), parameter:: NameSub='refine_tree_node'
     !----------------------------------------------------------------------
@@ -271,7 +272,7 @@ contains
     if(nLevel > MaxLevel) &
          call CON_stop('Error in refine_tree_node: too many levels')
 
-    iCoord_D = 2*iTree_IA(Coord1_:Coord0_+nDimAmr, iNode) - 1
+    iCoord_D = 2*iTree_IA(Coord1_:Coord0_+nDim, iNode) - 1
 
     do iChild = Child1_, ChildLast_
 
@@ -292,14 +293,17 @@ contains
 
        ! Calculate the coordinates of the child node
        DiChild = iChild - Child1_
-       do iDim = 1, nDimAmr
-          iTree_IA(Coord0_+iDim, iNodeChild) = &
-               iCoord_D(iDim) + ibits(DiChild, iDim-1, 1)
-       end do
 
-       ! The non-AMR coordinates remain the same as for the parent node
-       do iDim = nDimAmr+1, MaxDim
-          iTree_IA(Coord0_+iDim, iNodeChild) = iTree_IA(Coord0_+iDim, iNode)
+       iDimAmr = 0
+       do iDim = 1, MaxDim
+          if(iRatio_D(iDim) == 2)then
+             iDimAmr = iDimAmr + 1
+             iTree_IA(Coord0_+iDim,iNodeChild) = &
+                  iCoord_D(iDim) + ibits(DiChild, iDimAmr-1, 1)
+          else
+             ! The non-AMR coordinates remain the same as for the parent node
+             iTree_IA(Coord0_+iDim,iNodeChild) = iTree_IA(Coord0_+iDim,iNode)
+          endif
        end do
 
     end do
@@ -570,8 +574,9 @@ contains
     !------------------------------------------------------------------------
     iLevel = iTree_IA(Level_, iNode)
 
-    MaxIndex_D = nRoot_D
-    MaxIndex_D(1:nDimAmr) = MaxCoord_I(iLevel)*MaxIndex_D(1:nDimAmr)
+    ! For non-AMR directions MaxIndex_D = nRoot_D
+    ! For AMR     directions MaxIndex_D = nRoot_D*MaxCoord_I(iLevel)
+    MaxIndex_D = ((MaxCoord_I(iLevel)-1)*(iRatio_D-1) + 1)*nRoot_D
 
     ! Convert to real by adding -1.0 or 0.0 for the two edges, respectively
     PositionMin_D = (iTree_IA(Coord1_:CoordLast_,iNode) - 1.0)/MaxIndex_D
@@ -592,6 +597,7 @@ contains
     real :: Coord_D(MaxDim)
     integer :: iLevel, iChild
     integer :: Ijk_D(MaxDim), iCoord_D(nDimAmr), iBit_D(nDimAmr)
+    integer :: iCoordTmp_D(nDimAmr)
     !----------------------------------------------------------------------
     ! Scale coordinates so that 1 <= Coord_D <= nRoot_D+1
     Coord_D = 1.0 + nRoot_D*max(0.0, min(1.0, CoordIn_D))
@@ -607,15 +613,18 @@ contains
     ! Get normalized coordinates within root node and scale it up
     ! to the largest resolution: 0 <= iCoord_D <= MaxCoord_I(nLevel)-1
     iCoord_D = min(MaxCoord_I(nLevel) - 1, &
-         int((Coord_D(1:nDimAmr) - Ijk_D(1:nDimAmr))*MaxCoord_I(nLevel)))
+        int((Coord_D(iDimAmr_D) - Ijk_D(iDimAmr_D))*MaxCoord_I(nLevel)))
 
     ! Go down the tree using bit information
     do iLevel = nLevel-1,0,-1
+       ! Get the binary bits based on the coordinates
        iBit_D = ibits(iCoord_D, iLevel, 1)
+       ! Construct child index as iChild = Sum Bit_i*2**i 
+       ! The powers of 2 are stored in MaxCoord_I
        iChild = sum(iBit_D*MaxCoord_I(0:nDimAmr-1)) + Child1_
-       iNode = iTree_IA(iChild, iNode)
+       iNode  = iTree_IA(iChild,iNode)
 
-       if(iTree_IA(Status_, iNode) == Used_) RETURN
+       if(iTree_IA(Status_,iNode) == Used_) RETURN
     end do
 
     ! Did not find the point so set iNode as unset
@@ -849,10 +858,10 @@ contains
     if(iProc == 0)then
        open(UnitTmp_, file=NameFile, status='replace', form='unformatted')
 
-       write(UnitTmp_) nNode, nInfo
-       write(UnitTmp_) nDim, nDimAmr
+       write(UnitTmp_) nDim, nInfo, nNode
+       write(UnitTmp_) iRatio_D(1:nDim)
        write(UnitTmp_) nRoot_D(1:nDim)
-       write(UnitTmp_) iTree_IA(:,1:nNode)
+       write(UnitTmp_) iTree_IA(1:nInfo,1:nNode)
 
        close(UnitTmp_)
     end if
@@ -870,25 +879,30 @@ contains
 
     ! Read tree information from a file
 
-    integer :: nInfoIn, nNodeIn, nDimIn, nDimAmrIn, nRootIn_D(nDim)
+    integer :: nDimIn, nInfoIn, nNodeIn, iRatioIn_D(nDim), nRootIn_D(nDim)
     character(len=*), parameter :: NameSub = 'read_tree_file'
     !----------------------------------------------------------------------
 
     open(UnitTmp_, file=NameFile, status='old', form='unformatted')
 
-    read(UnitTmp_) nNodeIn, nInfoIn
-    if(nNodeIn > MaxNode)then
-       write(*,*) NameSub,' nNodeIn, MaxNode=',nNodeIn, MaxNode 
-       call CON_stop(NameSub//' too many nodes in tree file!')
-    end if
-    read(UnitTmp_) nDimIn, nDimAmrIn
+    read(UnitTmp_) nDimIn, nInfoIn, nNodeIn
     if(nDimIn /= nDim)then
        write(*,*) NameSub,' nDimIn, nDim=',nDimIn, nDim
        call CON_stop(NameSub//' nDim is different in tree file!')
     end if
-    if(nDimAmrIn /= nDimAmr)then
-       write(*,*) NameSub,' nDimAmrIn, nDimAmr=',nDimAmrIn, nDimAmr
-       call CON_stop(NameSub//' nDimAmr is different in tree file!')
+    if(nInfoIn /= nInfo)then
+       write(*,*) NameSub,' nInfoIn, nInfo=',nInfoIn, nInfo
+       call CON_stop(NameSub//' nInfo is different in tree file!')
+    end if
+    if(nNodeIn > MaxNode)then
+       write(*,*) NameSub,' nNodeIn, MaxNode=',nNodeIn, MaxNode 
+       call CON_stop(NameSub//' too many nodes in tree file!')
+    end if
+    read(UnitTmp_) iRatioIn_D
+    if( any(iRatioIn_D /= iRatio_D(1:nDim)) )then
+       write(*,*) NameSub, &
+            ' iRatioIn_D=', iRatioIn_D,' iRatio_D=', iRatio_D(1:nDim)
+       call CON_stop(NameSub//' iRatio_D is different in tree file!')
     end if
     read(UnitTmp_) nRootIn_D
 
