@@ -859,6 +859,13 @@ subroutine select_conservative
      do iBlock = 1, nBlock
         if( UnusedBlk(iBlock) ) CYCLE
 
+        if(UseElectronPressure)then
+           do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
+                   + State_VGB(Pe_,i,j,k,iBlock)
+           end do; end do; end do
+        end if
+
         do iCrit = 1, nConservCrit
            select case(TypeConservCrit_I(iCrit))
            case('p')
@@ -930,8 +937,18 @@ subroutine select_conservative
                 write(*,*)'select_conservative: TypeCrit, IsConserv=',&
                 TypeConservCrit_I(iCrit), &
                 IsConserv_CB(iTest,jTest,kTest,iBlock)
-        end do
-     end do
+
+        end do ! iCrit
+
+        if(UseElectronPressure)then
+           do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
+                   - State_VGB(Pe_,i,j,k,iBlock)
+           end do; end do; end do
+        end if
+
+     end do ! iBlock
+
   else
      ! If there are no physics based criteria we start from 
      ! the assumption of conservative everywhere
