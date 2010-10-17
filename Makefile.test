@@ -537,7 +537,7 @@ test_sc_waves_compile:
 test_sc_waves_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR}
-	cp GM/BATSRUS/Param/CORONA/PARAM.in.sc.waves ${TESTDIR}/PARAM.in
+	cp Param/PARAM.in.test.SC.waves ${TESTDIR}/PARAM.in
 	cp GM/BATSRUS/Param/CORONA/CR2077_MDI_180.dat ${TESTDIR}/CR2077_MDI_180.dat
 	cp Param/LAYOUT.in.test.SC ${TESTDIR}/LAYOUT.in
 
@@ -702,3 +702,19 @@ test_ramscb_check:
 		> test_ramscb_ie.diff)
 	ls -l test_ramscb*.diff
 
+test_lp:
+	@echo "test_lp..." > test_ramscb_gm.diff
+	make test_lp_compile
+	@echo "test_p_rundir..." >> test_ramscb_gm.diff
+	make test_lp_rundir
+
+test_lp_compile:
+	Config.pl -v=Empty,GM/BATSRUS
+	cd GM/BATSRUS;Config.pl -g=4,4,1,1000,1000 -nMaterial=5
+	make CRASH
+
+test_lp_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp -f ${GMDIR}/Param/CRASH/PARAM.in.LASPACK ${TESTDIR}/PARAM.in
+	cp -f ${GMDIR}/Param/CRASH/LAYOUT.in.LASPACK ${TESTDIR}/LAYOUT.in
