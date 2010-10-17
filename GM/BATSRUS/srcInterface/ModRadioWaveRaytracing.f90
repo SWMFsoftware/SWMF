@@ -1,4 +1,4 @@
-
+!^CFG COPYRIGHT UM
 module ModRadioWaveRaytracing
 
   use ModNumConst
@@ -10,16 +10,19 @@ module ModRadioWaveRaytracing
   use ModProcMH, ONLY: iProc
   use ModMain,ONLY: UseLaserPackage
   use ModAbsorption, ONLY: AbsorptionCoeff_I
+  use ModGeometry, ONLY: XyzMin_D, XyzMax_D, nDim
+  use ModMain,     ONLY: TypeBC_I
 
   implicit none
 
   public :: ray_path
+  Logical:: UseParallel = .false.
 
 
 contains !=========================================================
 
-  subroutine ray_path(get_plasma_density, nRay, ExcludeRay_I, Slope_DI, &
-       DeltaS_I, ToleranceInit, DensityCr, Intensity_I, RayFlag_I)
+  subroutine ray_path(get_plasma_density, nRay, UnusedRay_I, Slope_DI, &
+       DeltaS_I, ToleranceInit, DensityCr, Intensity_I, IsBehindCr_I)
 
     !
     !   The subroutine ray_path() makes raytracing and emissivity integration
@@ -62,16 +65,16 @@ contains !=========================================================
     !
     ! get_plasma_density():  external subroutine that returns the plasma
     !     Density_I and its gradient GradDensity_DI. It also provides the
-    !     recommended step size DeltaSNew_I and asserts the RayFlag_I (sets
+    !     recommended step size DeltaSNew_I and asserts the IsBehindCr_I (sets
     !     it to .true.) for a ray should it (illegally) penetrate into the
     !     region with "negative" dielectric permittivity.
     ! nRay:           number of rays being processed.
-    ! ExcludeRay_I:  the caller program can use this logical array to stop
+    ! UnusedRay_I:  the caller program can use this logical array to stop
     !     processing of any individual ray when it already finished travelling
     !     inside of a specified part of space. Set the corresponding element
-    !     of ExcludeRay_I to .true. to leave it unprocessed during the
+    !     of UnusedRay_I to .true. to leave it unprocessed during the
     !     subsequent calls to ray_path(). Before the first call to ray_path()
-    !     all the elements of ExcludeRay_I should be set to .false.; then all
+    !     all the elements of UnusedRay_I should be set to .false.; then all
     !     the rays will be processed.
     ! Position_DI:    Cartesian position vectors of the rays.
     ! Slope_DI:       Direction cosines of the rays.
@@ -93,13 +96,13 @@ contains !=========================================================
     !     each element of the Intensity_I is incremented by the integral along
     !     the step DeltaS_I. Set all the elements of Intensity_I to 0.0 before
     !     the first call to the ray_path().
-    ! RayFlag_I:      the .true. elements of this logical array indicate that
+    ! IsBehindCr_I:      the .true. elements of this logical array indicate that
     !     the corresponding rays penetrated into the "prohibited" region of
     !     space with the plasma density above its critical value. Normally, it
     !     should never happen. However, in case the algorithm made such an
     !     error, the flagged rays should be considered as "bad" and thrown
     !     away from the resultant Intensity_I. Set all the elements of
-    !     RayFlag_I to .false. before calling ray_path() for the first time.
+    !     IsBehindCr_I to .false. before calling ray_path() for the first time.
     ! 
     ! Written by Leonid Benkevitch.
     !
@@ -120,10 +123,10 @@ contains !=========================================================
     real,    intent(in) ::  ToleranceInit, DensityCr
 
     ! .true. if a ray is OK, .false. otherwise:
-    logical, intent(inout), dimension(nRay),optional :: RayFlag_I
+    logical, intent(inout), dimension(nRay):: IsBehindCr_I
 
     ! a ray is excluded from processing if it is .true. 
-    logical, intent(inout), dimension(nRay) :: ExcludeRay_I   
+    logical, intent(inout), dimension(nRay) :: UnusedRay_I   
 
     logical, save:: IsNewEntry = .true.
    
@@ -148,10 +151,14 @@ contains !=========================================================
     ! where L is inverse grad of \epsilon, Alpha is the incidence angle
     real :: GradDielPermSqr, GradEpsDotSlope
     real :: ParabLen, GradDielPerm
-    real, save :: Tolerance, ToleranceSqr, DensityCrInv, AbsoluteMinimumStep
+    real, save :: &
+         Tolerance=0.1, ToleranceSqr=1.0e-2, DensityCrInv=1, AbsoluteMinimumStep=1
     
     integer, save :: nCall=0
     integer:: iRay
+
+    character(LEN=20):: TypeBoundaryDown_D(nDim), TypeBoundaryUp_D(nDim)
+    !---------------
 
     if (IsNewEntry) then
        IsNewEntry = .false.
@@ -171,6 +178,8 @@ contains !=========================================================
        
        ! One (ten-thousandth) hundredth of average step 
        AbsoluteMinimumStep = 1e-2*sum(DeltaS_I)/nRay 
+       TypeBoundaryDown_D = TypeBc_I(1:2*nDim-1:2)
+       TypeBoundaryUp_D   = TypeBc_I(2:2*nDim:2)
     end if
 
     nCall = nCall + 1
@@ -178,10 +187,11 @@ contains !=========================================================
 
     !Start the predictor step of the GIRARD scheme: 
     do iRay = 1, nRay
-       if (ExcludeRay_I(iRay)) CYCLE  ! Do not process the rays that are done
+       if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
        Position_DI(:,iRay) = Position_DI(:,iRay) + &
             Slope_DI(:,iRay)*cHalf*DeltaS_I(iRay) 
        ! Now Position_DI moved by 1/2 DeltaS !!!
+       call check_bc
     end do
 
     !
@@ -191,16 +201,17 @@ contains !=========================================================
 
     call get_plasma_density(nRay)
     
-    if(present(RayFlag_I))then
-       !In making radio images this is a bad pixel which should be further processed 
-       RayFlag_I = Density_I>= DensityCr       ! .true. indicates "bad ray"
-       ExcludeRay_I = ExcludeRay_I .or. RayFlag_I ! "bad rays" are done
-    else
-       !In solving the laser deposition energy the total remnant energy 
-       !should be deposited if the ray pamatrates through the critical surface
-       where( Density_I>= DensityCr.and..not.ExcludeRay_I)
-          ExcludeRay_I = .true.
+    
+    !In making radio images this is a bad pixel which should be further processed 
+    IsBehindCr_I = Density_I>= DensityCr.and..not.UnusedRay_I
+    UnusedRay_I = UnusedRay_I .or. IsBehindCr_I ! "bad rays" are done
+    
+    !In solving the laser deposition energy the total remnant energy 
+    !should be deposited if the ray pamatrates through the critical surface
+    if(UseLaserPackage)then
+       where( IsBehindCr_I)
           EnergyDeposition_I = Intensity_I
+          Intensity_I = 0.0
        endwhere
     end if
 
@@ -208,7 +219,7 @@ contains !=========================================================
 
     do iRay = 1, nRay
 
-       if (ExcludeRay_I(iRay)) CYCLE  ! Do not process the rays that are done
+       if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
 
 
        HalfDeltaS = cHalf*DeltaS_I(iRay)
@@ -372,6 +383,8 @@ contains !=========================================================
           end if
        end if
 
+       call check_bc
+
        !
        !   The code below makes gradual increases of the DeltaS up to the value
        ! specified in DeltaSNew. The smooth step increase is required so as
@@ -399,8 +412,8 @@ contains !=========================================================
           !
           ! For shallow rays the DeltaS is increased unconditionally
           !
-          DeltaS_I(iRay) = (2 - DeltaS_I(iRay)/DeltaSNew_I(iRay)) &
-               *DeltaS_I(iRay)
+          DeltaS_I(iRay) = max(2 - DeltaS_I(iRay)/DeltaSNew_I(iRay),1.0)*&
+               min(DeltaSNew_I(iRay), DeltaS_I(iRay))
        else 
           !
           ! If the iRay-th ray is marked as steep (i.e. "not gentle" or "not
@@ -421,13 +434,38 @@ contains !=========================================================
           if (DielPermHalfBack .gt. &
                DistanceToCritSurf_I(iRay)*sqrt(GradDielPermSqr)) then
              GentleRay_I(iRay) = .true.
-             DeltaS_I(iRay) = (2 - DeltaS_I(iRay)/DeltaSNew_I(iRay)) &
-                  *DeltaS_I(iRay)
+             DeltaS_I(iRay) = max(2 - DeltaS_I(iRay)/DeltaSNew_I(iRay), 1.0)*&
+                  min(DeltaSNew_I(iRay), DeltaS_I(iRay))
           end if
        end if
     end do
-
-   
+  contains
+    !==================
+    subroutine check_bc
+      integer::iDim
+      do iDim = 1, nDim
+         if(Position_DI(iDim, iRay) < XyzMin_D(iDim))then
+            if(TypeBoundaryDown_D(iDim)=='reflect')then
+               Position_DI(iDim, iRay) = &
+                    2 * XyzMin_D(iDim) -  Position_DI(iDim, iRay)
+               Slope_DI(iDim, iRay) = - Slope_DI(iDim, iRay)
+            else
+               UnusedRay_I(iRay) = .true.
+               return
+            end if
+         else if(Position_DI(iDim, iRay) > XyzMax_D(iDim))then
+            if(TypeBoundaryUp_D(iDim)=='reflect')then
+               Position_DI(iDim, iRay) = &
+                    2 * XyzMax_D(iDim) -  Position_DI(iDim, iRay)
+               Slope_DI(iDim, iRay) = - Slope_DI(iDim, iRay)
+            else
+               UnusedRay_I(iRay) = .true.
+               return
+            end if
+         end if
+      end do
+    end subroutine check_bc
+    !====================
   end subroutine ray_path
 
 end module ModRadioWaveRaytracing
