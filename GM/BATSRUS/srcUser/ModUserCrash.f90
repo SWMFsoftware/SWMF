@@ -451,6 +451,7 @@ contains
 
     use ModProcMH,      ONLY: iProc
     use ModMain,        ONLY: GlobalBlk, nI, nJ, nK, UseRadDiffusion
+    use ModMain,        ONLY: UseLaserPackage
     use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_, &
          UnitTemperature_, UnitN_, PeMin, ExtraEintMin
@@ -642,6 +643,8 @@ contains
           end if
 
        end if
+       if(nMaterial==5.and.UseLaserPackage)&
+            call unperturbed_5_materials
 
        ! Multiply level set functions with density unless the 
        ! non-conservative approach is used
@@ -720,7 +723,303 @@ contains
            (500.0 * Si2No_V(UnitTemperature_))**4
 
     end subroutine set_small_radiation_energy
+    !========================================
+    subroutine unperturbed_5_materials
+      use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
+      use ModPhysics,     ONLY: cRadiationNo
+      use ModVarIndexes,  ONLY: nWave, WaveFirst_, WaveLast_
+      use ModVarIndexes,  ONLY: RhoUy_
+      use ModGeometry,    ONLY: xMin=>x1, x2, y1, y2
+      
+      real    :: BeLevInit = 30.
+      real    :: XeLevInit = -92.5
+      real    :: PlLevInit = -92.5
+      real    :: xPl = 0.0                        ! [um]
+      real    :: yPl                              ! [um]
+      real    :: Distance, DistanceBe, DistanceXe, DistancePl     ! [um]
+      real    :: DxPl
+      real    :: Tr = 0.0259                      ! [eV?]
 
+
+      real    :: xAu, xAy1, xAy2
+
+      real    :: TrSi, EgSi
+
+      integer :: iWave
+      !---------------
+
+
+       ! Set boundaries for different materials
+
+       xBe = 30.0 * 1.0e-6 * Si2No_V(UnitRho_) 
+       yPl = rInnerTube
+       xAu = 100. * 1.0e-6 * Si2No_V(UnitRho_)
+       xAy1 = 300. * 1.0e-6 * Si2No_V(UnitRho_)
+       xAy2 = 900. * 1.0e-6 * Si2No_V(UnitRho_)
+
+
+
+       ! Initialize level sets throughout the domain.
+       if ((x >= xmin).and.(x < 0.).and.(y < rInnerTube)) then
+          ! Set material as Be.
+
+          DistanceBe = abs(xBe - x)
+          DistancePl = abs(yPl - y)
+          Distance = min(DistanceBe, DistancePl)
+          State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
+          State_VGB(LevelXe_,i,j,k,iBlock) = -DistanceBe
+          State_VGB(LevelPl_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAy1-xBe+DistanceBe)**2)
+          State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistanceBe**2 + DistancePl**2)
+          State_VGB(LevelAy_,i,j,k,iBlock) = -sqrt((xAu-x)**2 + DistancePl**2)
+
+
+          State_VGB(Rho_,i,j,k,iBlock) = 6.5 * Si2No_V(UnitRho_)
+
+
+       elseif ((x >= 0.).and.(x < xBe).and.(y < rInnerTube)) then
+!         Set material as Be.
+
+          DistanceBe = abs(xBe - x)
+          DistancePl = abs(yPl - y)
+          Distance = min(DistanceBe, DistancePl)
+          State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
+          State_VGB(LevelXe_,i,j,k,iBlock) = -DistanceBe
+          State_VGB(LevelPl_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAy1-xBe+DistanceBe)**2)
+          State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistanceBe**2 + DistancePl**2)
+          State_VGB(LevelAy_,i,j,k,iBlock) = -sqrt((xAu-x)**2 + DistancePl**2)
+
+
+
+          State_VGB(Rho_,i,j,k,iBlock) = 1.85e+03 * Si2No_V(UnitRho_) 
+
+
+       elseif ((x >= xBe).and.(x < x2).and.(y < rInnerTube)) then
+!         ...in Xe
+
+          DistanceBe = abs(x - xBe)
+          DistancePl = abs(yPl - y)
+          Distance = min(DistanceBe, DistancePl)
+          State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+          State_VGB(LevelXe_,i,j,k,iBlock) =  Distance
+          if (x <= xAu) then
+             State_VGB(LevelPl_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAy1-x)**2)
+             State_VGB(LevelAu_,i,j,k,iBlock) = -abs(DistancePl)
+             State_VGB(LevelAy_,i,j,k,iBlock) = -abs(sqrt((xAu-x)**2 + DistancePl**2))
+
+
+          elseif ((x > xAu).and.(x <= xAy1)) then
+             State_VGB(LevelPl_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAy1-x)**2)
+             State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAu-x)**2)
+             State_VGB(LevelAy_,i,j,k,iBlock) = -DistancePl
+
+
+          elseif ((x > xAy1).and.(x <= xAy2)) then
+             State_VGB(LevelPl_,i,j,k,iBlock) = -abs(DistancePl)             
+             State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAu-x)**2)
+             State_VGB(LevelAy_,i,j,k,iBlock) = &
+                  -min(DistancePl+(rOuterTube-rInnerTube), &
+                       sqrt((x-xAy1)**2 + DistancePl**2))
+
+          else
+             State_VGB(LevelPl_,i,j,k,iBlock) = -abs(DistancePl)             
+             State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAu-x)**2)
+             State_VGB(LevelAy_,i,j,k,iBlock) = &
+                  -sqrt((DistancePl+(rOuterTube-rInnerTube))**2 + (x-xAy2)**2)
+
+
+          endif
+
+          State_VGB(Rho_,i,j,k,iBlock) = 6.5 * Si2No_V(UnitRho_)
+
+       elseif ((y >= rInnerTube).and.(y <= rOuterTube)) then
+
+          DistanceBe = abs(x - xBe)
+          DistancePl = y - yPl
+          Distance = min(DistanceBe, DistancePl)
+
+          if ((x >= xmin).and.(x < 0.)) then
+             ! No tube here... in Be atmosphere
+             State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistanceBe**2+DistancePl**2)
+             State_VGB(LevelPl_,i,j,k,iBlock) = -(xAy1+abs(x))
+             State_VGB(LevelAu_,i,j,k,iBlock) = -(abs(x)+xBe)
+             State_VGB(LevelAy_,i,j,k,iBlock) = -(abs(x)+xAu)
+
+
+             State_VGB(Rho_,i,j,k,iBlock) = 0.0065
+
+          elseif ((x >= 0.).and.(x < xBe)) then
+             ! In Be disk
+             State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistanceBe**2+DistancePl**2)
+             State_VGB(LevelPl_,i,j,k,iBlock) = -(xAy1-x)
+             State_VGB(LevelAu_,i,j,k,iBlock) = -DistanceBe
+             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
+
+             State_VGB(Rho_,i,j,k,iBlock) = 1.85e+03*Si2No_V(UnitRho_)
+
+          elseif ((x >= xBe).and.(x < xAu)) then
+             ! No tube here... in gold washer
+             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+             State_VGB(LevelPl_,i,j,k,iBlock) = -(xAy1-x)
+             State_VGB(LevelAu_,i,j,k,iBlock) = &
+                  min(abs(DistancePl), (xAu-x), (x-xBe) )
+             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
+
+
+             State_VGB(Rho_,i,j,k,iBlock) = 2.0e+04 * Si2No_V(UnitRho_)
+
+          elseif ((x > xAu).and.(x <= xAy1)) then
+             ! No tube here.. in acrylic washer
+             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+             State_VGB(LevelPl_,i,j,k,iBlock) = -(xAy1-x)
+             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
+             State_VGB(LevelAy_,i,j,k,iBlock) = &
+                  min( abs(DistancePl), abs(xAy1-x), abs(x-xAu) )
+
+
+             State_VGB(Rho_,i,j,k,iBlock) = 1.13e+03 * Si2No_V(UnitRho_) 
+
+          elseif ((x > xAy1).and.(x <= xAy2)) then
+             ! In plastic tube wall in region surrounded by acrylic washer
+             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+             State_VGB(LevelPl_,i,j,k,iBlock) = &
+                  min( min(abs(DistancePl), abs(xAy2-x)), abs(x-xAy1) )
+             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
+             State_VGB(LevelAy_,i,j,k,iBlock) = &
+                  -min(abs(rOuterTube-y), abs(x-xAy1))
+
+             State_VGB(Rho_,i,j,k,iBlock) = 1.43e+03 * Si2No_V(UnitRho_)
+
+          else ! x > xAy2
+             ! Within Pl tube wall.
+             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+             State_VGB(LevelPl_,i,j,k,iBlock) = &
+                  min(abs(DistancePl), sqrt((rOuterTube-y)**2 + (x-xAy2)**2))
+             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
+             State_VGB(LevelAy_,i,j,k,iBlock) = &
+                  -sqrt((rOuterTube-y)**2 + (x-xAy2)**2)
+
+             State_VGB(Rho_,i,j,k,iBlock) = 1.43e+03 * Si2No_V(UnitRho_)
+          endif
+
+
+       elseif (y > rOuterTube) then
+
+          DistanceBe = abs(x - xBe)
+          DistancePl = y - yPl
+          Distance = min(DistanceBe, DistancePl)
+
+          if ((x >= xmin).and.(x < 0.)) then
+             ! Be atmosphere
+             State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistancePl**2+DistanceBe**2)
+             State_VGB(LevelPl_,i,j,k,iBlock) = &
+                  -min( (xAy2-x), sqrt((xAy1-x)**2 + (y-rOuterTube)**2) )
+             State_VGB(LevelAu_,i,j,k,iBlock) = -DistanceBe
+             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
+
+
+             State_VGB(Rho_,i,j,k,iBlock) = 6.5 * Si2No_V(UnitRho_)
+
+          elseif ((x >= 0.).and.(x < xBe)) then
+
+             ! In Be disk
+             State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistancePl**2+DistanceBe**2)
+             State_VGB(LevelPl_,i,j,k,iBlock) =  &
+                  -min( (xAy2-x), sqrt((xAy1-x)**2 + (y-rOuterTube)**2) )
+             State_VGB(LevelAu_,i,j,k,iBlock) = -DistanceBe
+             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
+
+             State_VGB(Rho_,i,j,k,iBlock) = 1.85e+03 * Si2No_V(UnitRho_)
+
+          elseif ((x >= xBe).and.(x < xAu)) then
+             ! in gold washer
+             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+             State_VGB(LevelPl_,i,j,k,iBlock) =  &
+                  -min( xAy2-x, sqrt( (xAy1-x)**2 + (y-rOuterTube)**2 ) )
+             State_VGB(LevelAu_,i,j,k,iBlock) = &
+                  min(abs(DistancePl), (xAu-x), (x-xBe) )
+             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
+
+
+             State_VGB(Rho_,i,j,k,iBlock) = 20.e+03 * Si2No_V(UnitRho_)
+          elseif ((x >= xAu).and.(x < xAy1)) then
+             ! in acrylic washer
+             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+             State_VGB(LevelPl_,i,j,k,iBlock) = &
+                  -sqrt( (xAy1-x)**2 + (y-rOuterTube)**2 )
+             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
+             State_VGB(LevelAy_,i,j,k,iBlock) = &
+                  min( DistancePl, (x-xAu) , &  
+                       sqrt( (xAy1-x)**2 + (y-rOuterTube)**2 ) )
+
+             State_VGB(Rho_,i,j,k,iBlock) = 1.13e+03 * Si2No_V(UnitRho_)
+
+          elseif ((x >= xAy1).and.(x < xAy2)) then
+             ! in acrylic sleeve
+             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+             State_VGB(LevelPl_,i,j,k,iBlock) = &
+                  -min( (xAy2-x), (y-rOuterTube) )
+             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
+             State_VGB(LevelAy_,i,j,k,iBlock) = &
+                  min(  (y-rOuterTube), (x-xAu) , (xAy2-x) )
+
+
+             State_VGB(Rho_,i,j,k,iBlock) = 1.13e+03 * Si2No_V(UnitRho_)
+
+          else
+             ! in "vacuum"
+             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+             State_VGB(LevelPl_,i,j,k,iBlock) = min(abs(DistancePl), (x-xAy2))
+             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
+             State_VGB(LevelAy_,i,j,k,iBlock) = -(x-xAy2)
+
+
+             State_VGB(Rho_,i,j,k,iBlock) = 6.5 * Si2No_V(UnitRho_)
+          endif
+
+       endif
+
+
+       TeSi = 2.1e6 *(0.025/180.) 
+       Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+       Ti_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+
+
+
+       State_VGB(RhoUx_,i,j,k,iBlock) =  0.0
+       State_VGB(RhoUy_,i,j,k,iBlock) =  0.0
+       State_VGB(RhoUz_,i,j,k,iBlock) =  0.0
+
+
+
+       if (nWave == 1) then
+          ! Set small initial radiation-energy density everywhere.
+          State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Tr**4
+       else
+          TrSi = 11600.
+
+          do iWave = 1, nWave
+             call get_energy_g_from_temperature(iWave, TrSi,EgSI=EgSi)
+             State_VGB(WaveFirst_+iWave-1,i,j,k,iBlock) = &
+                  EgSi*Si2No_V(UnitEnergyDens_)
+
+
+          enddo
+       endif
+
+      
+    end subroutine unperturbed_5_materials
   end subroutine user_set_ics
 
   !============================================================================
