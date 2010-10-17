@@ -23,6 +23,13 @@ module BATL_size
   ! Number of dimensions in which grid adaptation is done
   integer, parameter :: nDimAmr = iRatio + jRatio + kRatio - 3
 
+  ! Indexes of AMR dimensions. 
+  ! The magic formulas should be correct from 1 to nDimAmr. 
+  integer, parameter, private :: iDimAmrTmp_D(MaxDim) = &
+       (/ 1 + (2-iRatio)*(3-jRatio), 6-iRatio-jRatio, 3 /)
+
+  integer, parameter :: iDimAmr_D(nDimAmr) = iDimAmrTmp_D(1:nDimAmr)
+
   ! Maximum number of ghost cells
   integer, parameter :: nG = 2
 
