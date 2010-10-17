@@ -521,7 +521,7 @@ contains
   subroutine test_amr
 
     use BATL_mpi,  ONLY: iProc, nProc, barrier_mpi
-    use BATL_size, ONLY: MaxDim, nDim, &
+    use BATL_size, ONLY: MaxDim, nDim, nIJK_D, iDimAmr_D, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nBlock
     use BATL_tree, ONLY: init_tree, set_tree_root, refine_tree_node, &
          coarsen_tree_node, distribute_tree, move_tree, show_tree, clean_tree,&
@@ -540,7 +540,7 @@ contains
     integer, parameter:: nVar = nDim
     real, allocatable:: State_VGB(:,:,:,:,:), Dt_B(:)
 
-    integer:: iBlock
+    integer:: iBlock, iDim
 
     logical:: DoTestMe
     character(len=*), parameter :: NameSub = 'test_amr'
@@ -564,8 +564,9 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        State_VGB(:,:,:,:,iBlock)    = Xyz_DGB(1:nDim,:,:,:,iBlock)
-       ! set the time step to dt = dx
-       Dt_B(iBlock) = DomainSize_D(1) / (nI*nRootTest_D(1))
+       ! set the time step to the cells size in the first AMR direction
+       iDim = iDimAmr_D(1)
+       Dt_B(iBlock) = DomainSize_D(iDim) / (nIjk_D(iDim)*nRootTest_D(iDim))
     end do
 
     if(DoTestMe) write(*,*)'test prolong and balance'
@@ -619,10 +620,11 @@ contains
                  maxloc(abs(State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
                  -    Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock)))
          end if
-
-         if(abs(Dt_B(iBlock) - CellSize_DB(1,iBlock)) > 1e-6) &
+         
+         iDim = iDimAmr_D(1)
+         if(abs(Dt_B(iBlock) - CellSize_DB(iDim,iBlock)) > 1e-6) &
               write(*,*)NameSub,' error for iProc,iBlock,dt,dx=', &
-              iProc, iBlock, Dt_B(iBlock), CellSize_DB(1,iBlock)
+              iProc, iBlock, Dt_B(iBlock), CellSize_DB(iDim,iBlock)
 
       end do
 
