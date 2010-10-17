@@ -289,6 +289,7 @@ contains
     integer::iProc,iComm,iProcNew
     integer::nU_I(2)
     logical::UseMask
+    !----------------
     if(.not.GD%DD%Ptr%IsLocal)&
          call CON_stop(&
          'Use bcast_in_router if a global vector has a global GD')
@@ -305,14 +306,21 @@ contains
          NameVector)
     iBlockAll=0
     iFinal=0
+
+    !Start PE is used for the first block
     iProcNew=pe_decomposition(GD%DD%Ptr,&
          i_global_node_a(GD%DD%Ptr,1))
+
     DIFFBLOCK:do while(iBlockAll<nBlockAll)
+      
        iBlockAll=iBlockAll+1
        iStart=iFinal+1
        iFinal=iFinal+nGridPointsPerBlock
        iProc= iProcNew
        SAMEBLOCK:do while(iBlockAll<nBlockAll)
+          !Find a sequence of block set at the same
+          !PE = iProc
+
           iProcNew=pe_decomposition(&
                GD%DD%Ptr,&
                i_global_node_a(GD%DD%Ptr,iBlockAll+1))
@@ -320,16 +328,25 @@ contains
           iBlockAll=iBlockAll+1
           iFinal=iFinal+nGridPointsPerBlock
        end do SAMEBLOCK
+
        if(UseMask)then
           iLoop=iStart-1
+
           FINDTRUE:do while (iLoop<iFinal)
+
+             !Find the start of a sequence of true points
+
              iLoop=iLoop+1
              if(.not.Mask_I(iMask)%I(iLoop))CYCLE FINDTRUE
              iStart=iLoop
              FINDFALSE:do while (iLoop<iFinal)
+
+                !Find the end of a sequence of true points
+
                 if(.not.Mask_I(iMask)%I(iLoop+1))EXIT FINDFALSE
                 iLoop=iLoop+1
              end do FINDFALSE
+
              call MPI_BCAST(Vector_I(iVector)%I(1,iStart),&
                   (iLoop-iStart+1)*nU_I(1),&
                   MPI_REAL,&
@@ -337,7 +354,7 @@ contains
           end do FINDTRUE
        else
           call MPI_BCAST(Vector_I(iVector)%I(1,iStart),&
-               (iLoop-iStart+1)*nU_I(1),&
+               (iFinal-iStart+1)*nU_I(1),&
                MPI_REAL,&
                iProc,iComm,iError)
        end if
