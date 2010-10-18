@@ -134,6 +134,7 @@ contains
        end if
 
        do iDim = 1, nDim
+
           do iDimSide = 1, 2
              ! Opposite side will receive the fluxes
              iRecvSide = 3 - iDimSide
@@ -161,6 +162,7 @@ contains
              elseif(DiLevel == -1)then
                 call do_receive
              endif
+
           end do ! iDimSide
        end do ! iDim
     end do ! iBlock
@@ -183,6 +185,7 @@ contains
        call MPI_irecv(BufferR_IP(1,iProcSend), iBufferR_P(iProcSend), &
             MPI_REAL, iProcSend, 1, iComm, iRequestR_I(iRequestR), &
             iError)
+
     end do
 
     ! post sends
@@ -246,7 +249,7 @@ contains
     !==========================================================================
     subroutine buffer_to_flux
 
-      ! Copy buffer into recv block of State_VGB
+      ! Copy buffer into Flux_V*B
 
       integer:: iBufferR, iTag, iDim, iDimSide, iSubFace1, iSubFace2, i, j, k
       !------------------------------------------------------------------------
@@ -476,7 +479,7 @@ contains
          kSend = (3*kDir + 3 + kSide)/2
          do jSide = (1-jDir)/2, 1-(1+jDir)/2, 3-jRatio
             jSend = (3*jDir + 3 + jSide)/2
-            do iSide = (1-iDir)/2, 1-(1+iDir)/2
+            do iSide = (1-iDir)/2, 1-(1+iDir)/2, 3-iRatio
                iSend = (3*iDir + 3 + iSide)/2
 
                iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlock)
