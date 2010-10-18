@@ -33,7 +33,7 @@ perl -pi -e 's/.*NamePlotDir/plot_128\t\tNamePlotDir/' PARAM.in
 mpiexec CRASH.exe > runlog
 
 # load opacity tables in next run(s)
-perl -pi -e 's/save/load/' PARAM.in
+perl -pi -e 's/^LOOKUPTABLE/\#LOOKUPTABLE/; s/save/load/' PARAM.in
 
 # exit here unless we want to do more runs with modified PARAM.in
 exit
