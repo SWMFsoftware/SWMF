@@ -64,25 +64,19 @@ load                    NameCommand
 {Xe Be Pl}_eos_CRASH.dat         
 real8                   TypeFile
 
-LOOKUPTABLE
-Opacity(rho,T)		NameTable
-load                    NameCommand
-table_opacities.out	NameFile
-ascii			TypeFile
-
 #TIMEACCURATE
 T			IsTimeAccurate
 
 #CHECKGRIDSIZE
-4			nI
-4			nJ
-4			nK
-1000			MinBlockALL
+8			nI
+8			nJ
+8			nK
+100			MinBlockALL
 
 #GRID
-160			nRootBlockX
-16			nRootBlockY
-16			nRootBlockZ
+80			nRootBlockX
+8			nRootBlockY
+8			nRootBlockZ
 -150.0			xMin
 3900.0			xMax
    0.0			yMin
