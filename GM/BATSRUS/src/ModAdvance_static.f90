@@ -25,6 +25,8 @@ Module ModAdvance
   logical, parameter:: UseAnisoPressure    = Ppar_ > 1
   logical, parameter:: UseIdealEos = ExtraEint_ == 1
 
+  logical :: UseWavePressure = .false.
+
   !\ One of the two possible ways to treat the MHD-like systems
   !  (oartially symmetrizable, following the Godunov definition).
   !  If the UseRS7=.true. then the 7 waves Riemann Solver (RS) with 

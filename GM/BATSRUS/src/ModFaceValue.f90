@@ -29,6 +29,10 @@ module ModFaceValue
   logical :: UseLogRhoLimiter = .false.
   logical :: UseLogPLimiter   = .false.
 
+  ! Parameters for limiting the total pressure (p + p_e + p_wave)
+  logical :: UsePtotalLtd     = .false.
+  logical :: UsePtotalLimiter = .false.
+
   ! Parameters for limiting the variable divided by density 
   logical :: UseScalarToRhoRatioLtd = .false.
   logical :: NameV
@@ -109,6 +113,10 @@ contains
           if(iVar > nVar) call CON_stop(NameSub// &
                ' could not find NameVarLimitRatio='//NameVar_I(i))
        end do
+
+    case("#LIMITPTOTAL")
+       call read_var('UsePtotalLtd', UsePtotalLtd)
+
     case default
        call CON_stop(NameSub//' invalid command='//trim(NameCommand))
     end select
@@ -631,13 +639,15 @@ contains
     ! To improve the code stability, ONLY those values are calculated, which
     ! are actually used by the calc_facefluxes.
 
+    use ModMultiFluid, ONLY: nIonFluid
     use ModMain
     use ModVarIndexes
     use ModGeometry, ONLY : true_cell,body_BLK
     use ModNumConst
+    use ModPhysics, ONLY: GammaWave
     use ModPhysics, ONLY: c2LIGHT,inv_c2LIGHT  !^CFG IF BORISCORR BEGIN
     use ModB0                                  !^CFG END BORISCORR
-    use ModAdvance, ONLY: State_VGB,&
+    use ModAdvance, ONLY: State_VGB, UseElectronPressure, UseWavePressure, &
          LeftState_VX,      &  ! Face Left  X
          RightState_VX,     &  ! Face Right X
          LeftState_VY,      &  ! Face Left  Y
@@ -652,7 +662,6 @@ contains
 
     logical, intent(in):: DoResChangeOnly
     integer, intent(in):: iBlock
-
 
     integer:: i,j,k,iSide,iFluid
     real:: RhoInv
@@ -685,6 +694,8 @@ contains
           end do
        end if
     end if
+
+    UsePtotalLimiter = nOrder == 2 .and. nIonFluid == 1 .and. UsePtotalLtd
 
     if(.not.DoResChangeOnly & !In order not to call it twice
          .and.nOrder==2     & !Is not needed for nOrder=1
@@ -886,6 +897,7 @@ contains
                   jMinFaceZ,jMaxFaceZ,1,nKFace)
           end if
        end if
+
        if(UseScalarToRhoRatioLtd)then
           if(DoResChangeOnly)then
              if(neiLeast(iBlock)==+1) &
@@ -909,6 +921,31 @@ contains
                   jMinFaceZ,jMaxFaceZ,1,nKFace)
           end if
        end if
+
+       if(UsePtotalLimiter)then
+          if(DoResChangeOnly)then
+             if(neiLeast(iBlock)==+1) &
+                  call ptotal_to_p_faceX(1,1,1,nJ,1,nK)
+             if(neiLwest(iBlock)==+1) &
+                  call ptotal_to_p_faceX(nIFace,nIFace,1,nJ,1,nK)
+             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+                  call ptotal_to_p_faceY(1,nI,1,1,1,nK)
+             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+                  call ptotal_to_p_faceY(1,nI,nJFace,nJFace,1,nK)
+             if(nK > 1 .and. neiLbot(iBlock)==+1) &
+                  call ptotal_to_p_faceZ(1,nI,1,nJ,1,1)
+             if(nK > 1 .and. neiLtop(iBlock)==+1) &
+                  call ptotal_to_p_faceZ(1,nI,1,nJ,nKFace,nKFace)
+          else
+             call ptotal_to_p_faceX(1,nIFace,jMinFaceX,jMaxFaceX, &
+                  kMinFaceX,kMaxFaceX)
+             if(nJ > 1) call ptotal_to_p_faceY(iMinFaceY,iMaxFaceY,1,nJFace, &
+                  kMinFaceY,kMaxFaceY)
+             if(nK > 1) call ptotal_to_p_faceZ(iMinFaceZ,iMaxFaceZ, &
+                  jMinFaceZ,jMaxFaceZ,1,nKFace)
+          end if
+       end if
+
     end select  !end second order
 
   contains
@@ -1000,6 +1037,78 @@ contains
       end do; end do; end do
 
     end subroutine ratio_to_scalar_faceZ
+    !==========================================================================
+    subroutine ptotal_to_p_faceX(iMin, iMax, jMin, jMax, kMin, kMax)
+
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
+      integer :: i, j, k
+      !------------------------------------------------------------------------
+      if(UseElectronPressure)then
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            LeftState_VX(p_,i,j,k) = LeftState_VX(p_,i,j,k) &
+                 - LeftState_VX(Pe_,i,j,k)
+            RightState_VX(p_,i,j,k) = RightState_VX(p_,i,j,k) &
+                 - RightState_VX(Pe_,i,j,k)
+         end do; end do; end do
+      end if
+      if(UseWavePressure)then
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            LeftState_VX(p_,i,j,k) = LeftState_VX(p_,i,j,k) &
+                 - (GammaWave-1)*sum(LeftState_VX(WaveFirst_:WaveLast_,i,j,k))
+            RightState_VX(p_,i,j,k) = RightState_VX(p_,i,j,k) &
+                 - (GammaWave-1)*sum(RightState_VX(WaveFirst_:WaveLast_,i,j,k))
+         end do; end do; end do
+      end if
+
+    end subroutine ptotal_to_p_faceX
+    !==========================================================================
+    subroutine ptotal_to_p_faceY(iMin, iMax, jMin, jMax, kMin, kMax)
+
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
+      integer :: i, j, k
+      !------------------------------------------------------------------------
+      if(UseElectronPressure)then
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            LeftState_VY(p_,i,j,k) = LeftState_VY(p_,i,j,k) &
+                 - LeftState_VY(Pe_,i,j,k)
+            RightState_VY(p_,i,j,k) = RightState_VY(p_,i,j,k) &
+                 - RightState_VY(Pe_,i,j,k)
+         end do; end do; end do
+      end if
+      if(UseWavePressure)then
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            LeftState_VY(p_,i,j,k) = LeftState_VY(p_,i,j,k) &
+                 - (GammaWave-1)*sum(LeftState_VY(WaveFirst_:WaveLast_,i,j,k))
+            RightState_VY(p_,i,j,k) = RightState_VY(p_,i,j,k) &
+                 - (GammaWave-1)*sum(RightState_VY(WaveFirst_:WaveLast_,i,j,k))
+         end do; end do; end do
+      end if
+
+    end subroutine ptotal_to_p_faceY
+    !==========================================================================
+    subroutine ptotal_to_p_faceZ(iMin, iMax, jMin, jMax, kMin, kMax)
+
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
+      integer :: i, j, k
+      !------------------------------------------------------------------------
+      if(UseElectronPressure)then
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            LeftState_VZ(p_,i,j,k) = LeftState_VZ(p_,i,j,k) &
+                 - LeftState_VZ(Pe_,i,j,k)
+            RightState_VZ(p_,i,j,k) = RightState_VZ(p_,i,j,k) &
+                 - RightState_VZ(Pe_,i,j,k)
+         end do; end do; end do
+      end if
+      if(UseWavePressure)then
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            LeftState_VZ(p_,i,j,k) = LeftState_VZ(p_,i,j,k) &
+                 - (GammaWave-1)*sum(LeftState_VZ(WaveFirst_:WaveLast_,i,j,k))
+            RightState_VZ(p_,i,j,k) = RightState_VZ(p_,i,j,k) &
+                 - (GammaWave-1)*sum(RightState_VZ(WaveFirst_:WaveLast_,i,j,k))
+         end do; end do; end do
+      end if
+
+    end subroutine ptotal_to_p_faceZ
 
     !==========================================================================
     !^CFG IF BORISCORR BEGIN
@@ -1028,6 +1137,18 @@ contains
       Primitive_VG(Uz_,i,j,k)= Primitive_VG(rhoUz_,i,j,k)*&
            Ga2Boris - BzFull*uBC2Inv
 
+      ! Transform p to Ptotal
+      if(UsePtotalLimiter)then
+         if(UseElectronPressure)then
+            Primitive_VG(p_,i,j,k) = Primitive_VG(p_,i,j,k) &
+                 + Primitive_VG(Pe_,i,j,k)
+         end if
+         if(UseWavePressure)then
+            Primitive_VG(p_,i,j,k) = Primitive_VG(p_,i,j,k) &
+                 + (GammaWave-1)*sum(Primitive_VG(WaveFirst_:WaveLast_,i,j,k))
+         end if
+      end if
+
       if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
            Primitive_VG(iVarLimitRatio_I,i,j,k)/Primitive_VG(Rho_,i,j,k)
 
@@ -1035,42 +1156,57 @@ contains
     !=========================================================================
     !^CFG END BORISCORR
     subroutine get_faceX_first(iMin,iMax,jMin,jMax,kMin,kMax)
+
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      !-----------------------------------------------------------------------
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VX(:,i,j,k)=Primitive_VG(:,i-1,j,k)
          RightState_VX(:,i,j,k)=Primitive_VG(:,i,j,k)              
       end do; end do; end do
+
       !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
       !^CFG END BORISCORR
+
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
            iMin,iMax,jMin,jMax,kMin,kMax)
+
     end subroutine get_faceX_first
     !========================================================================
     subroutine get_faceY_first(iMin,iMax,jMin,jMax,kMin,kMax)
+
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      !----------------------------------------------------------------------
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VY(:,i,j,k)=Primitive_VG(:,i,j-1,k)
          RightState_VY(:,i,j,k)=Primitive_VG(:,i,j,k)              
       end do; end do; end do
+
       !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum) call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
       !^CFG END BORISCORR
+
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
            iMin,iMax,jMin,jMax,kMin,kMax)
+
     end subroutine get_faceY_first
     !========================================================================
     subroutine get_faceZ_first(iMin,iMax,jMin,jMax,kMin,kMax)
+
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      !----------------------------------------------------------------------
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k-1)
-         RightState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k)              
+         RightState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k)
       end do; end do; end do
+
       !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum)call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
       !^CFG END BORISCORR
+
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
            iMin,iMax,jMin,jMax,kMin,kMax)
+
     end subroutine get_faceZ_first
     !==========================================================================
     subroutine calc_primitives_MHD
@@ -1087,6 +1223,19 @@ contains
          RhoInv=cOne/Primitive_VG(iRho,i,j,k)
          Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iRhoUx:iRhoUz,i,j,k)
       end do
+
+      ! Transform p to Ptotal
+      if(UsePtotalLimiter)then
+         if(UseElectronPressure)then
+            Primitive_VG(p_,i,j,k) = Primitive_VG(p_,i,j,k) &
+                 + Primitive_VG(Pe_,i,j,k)
+         end if
+         if(UseWavePressure)then
+            Primitive_VG(p_,i,j,k) = Primitive_VG(p_,i,j,k) &
+                 + (GammaWave-1)*sum(Primitive_VG(WaveFirst_:WaveLast_,i,j,k))
+         end if
+      end if
+
       if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
            RhoInv*Primitive_VG(iVarLimitRatio_I,i,j,k)
 

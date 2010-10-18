@@ -14,6 +14,9 @@ module ModPhysics
   real:: g = Gamma0, inv_g = 1.0/Gamma0, inv_gm1 = 1.0/(Gamma0 - 1.0)
   real:: gm1 = Gamma0 - 1.0, gm2 = Gamma0 - 2.0, gp1 = Gamma0 + 1.0
 
+  ! gamma of the waves
+  real :: GammaWave = 1.5
+
   ! electron charge in normalized units
   real:: ElectronCharge
 

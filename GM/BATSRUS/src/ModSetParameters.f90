@@ -1183,7 +1183,8 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('LimiterBeta', BetaLimiter)
         end if
 
-     case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE')
+     case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
+          '#LIMITPTOTAL')
         call read_face_value_param(NameCommand)
 
      case("#NONCONSERVATIVE")

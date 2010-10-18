@@ -1,4 +1,6 @@
 module ModWaves
+  use ModAdvance,    Only: UseWavePressure
+  use ModPhysics,    ONLY: GammaWave
   use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_
   use ModSize,       ONLY: nI, nJ, nK
   implicit none
@@ -45,14 +47,11 @@ module ModWaves
   !Again, the wave pressure logicals and named indexes should be modified
   !only via the user routines.
 
-  logical:: UseWavePressure = .false.
-
   !For multi-component wave pressure the limitatation of different
   !frequency groups does not ensure the proper limitation of the total 
   !pressure therefore, it is reasonble to collect the total wave pressure
   !and limit it accordingly 
   logical:: UseWavePressureLtd = .false.
-  real :: GammaWave = 1.50
 
   !Spectral functions: all functions are normalized by unity
 
