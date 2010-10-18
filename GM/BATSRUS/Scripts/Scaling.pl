@@ -91,15 +91,12 @@ if(not $WeakScaling){
 	    my $nBlock;
 	    if($RadHydro){
 		$nBlock = int(128000/$nCore + 0.99);
-	    }else{
-		$nBlock = int(2*196608/$nCore + 0.99);
-	    }
-	    print "Compiling $Rundir/CRASH_$nCore.exe for nBlock=$nBlock\n";
-	    if($RadHydro){
 		&shell("Config.pl -g=4,4,4,$nBlock,$nBlock");
 	    }else{
+		$nBlock = int(2*196608/$nCore + 0.99);
 		&shell("Config.pl -g=4,4,4,$nBlock,1");
 	    }
+	    print "Compiling $Rundir/CRASH_$nCore.exe for nBlock=$nBlock\n";
 	    &shell("make CRASH");
 	    &shell("cp src/CRASH.exe $Rundir/CRASH_$nCore.exe");
 	}
@@ -115,9 +112,9 @@ if(not $WeakScaling){
     # Weak scaling uses many run directories and a single executable
     if($CompileCode){
 	if($RadHydro){
-	    &shell("Config.pl -g=4,4,4,700,700");
+	    &shell("Config.pl -g=8,8,8,100,100");
 	}else{
-	    &shell("Config.pl -g=4,4,4,700,1");
+	    &shell("Config.pl -g=8,8,8,100,1");
 	}
 	&shell("make CRASH");
     }
@@ -127,10 +124,11 @@ if(not $WeakScaling){
 	    $Rundir = "$Dir/run_n$nCore";
 	    &make_rundir;
 	    &shell("cp $JobScript $Rundir/job");
+	    &shell("cp src/CRASH.exe $Rundir/");
 
-	    my $res = $nCore**(1/3);
-	    my $nRootX   = $res*40;
-	    my $nRootYZ  = $res*4;
+	    my $res = int($nCore**(1/3)+0.5);
+	    my $nRootX   = $res*20;
+	    my $nRootYZ  = $res*2;
 	    my $rundir = "$Dir/run_n$nCore";
 
 	    if($Dryrun){
@@ -160,7 +158,7 @@ exit;
 ###############################################################################
 sub make_rundir{
     die "$Rundir already exists\n" if -d $Rundir and not $Dryrun;
-    &shell("make rundir RUNDIR=$Rundir DEFAULT_EXE=CRASH.exe");
+    &shell("make rundir RUNDIR=$Rundir");
     &shell("gunzip -c dataCRASH/input/$HyadesFile.gz > $Rundir/$HyadesFile");
     &shell("cp $ParamFile $Rundir/PARAM.in");
 }
