@@ -206,12 +206,12 @@ module CRASH_ModEos
   !/
   integer, parameter :: IndexDefault_I(2)=(/201, 201/), Min_=1, Max_=2
   real,dimension(Min_:Max_,Xe_:Ay_), parameter::&
-       TeDefault_II = reshape(&
-       (/1.0e-2, 1.0e+3, & !Xe_
-         1.0e-3, 2.0e+3, & !Be_
-         1.0e-3, 1.0e+2, & !Plastic
-         1.0e-3, 1.0e+2, & !Au_
-         1.0e-3, 1.0e+2  & !Ay_
+       TeDefault_II = reshape(&     ! original minimum
+       (/3.0e-2, 1.0e+3, & !Xe_     1e-2
+         3.0e-2, 2.0e+3, & !Be_     1e-3
+         5.0e-2, 1.0e+2, & !Plastic 1e-3
+         2.0e-1, 1.0e+2, & !Au_     1e-3
+         5.0e-2, 1.0e+2  & !Ay_     1e-3
          /), (/2,5/)),    &
        NaDefault_II = reshape(&
        (/1.0e+24, 1.0e+29, & !Xe_
@@ -223,6 +223,7 @@ module CRASH_ModEos
   !Note that at 1 Atm and at the room temperature
   !In gas: N~3.10^{25} m-3
   !In solids: N<10^{29} m-3
+  ! electron temperature of 1e-3 eV is approximately 11.6 K
 contains
 
   !============================================================================
