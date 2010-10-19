@@ -1,0 +1,758 @@
+CON_world::setup_from_file SWMF_WARNING for IH iProcLast= 999 changed to    1
+CON_world::setup_from_file SWMF_WARNING for OH iProcLast= 999 changed to    1
+#=============================================================================#
+# ID  Version                                               nproc proc0 stride#
+#-----------------------------------------------------------------------------#
+# CON SWMF by Univ. of Michigan                version 2.30     2     0     1 #
+#-----------------------------------------------------------------------------#
+# IH  IH_BATSRUS (Univ. of Michigan)           version 9.00     2     0     1 #
+# OH  OH_BATSRUS (Univ. of Michigan)           version 9.00     2     0     1 #
+#=============================================================================#
+CON_io::read_inputs: iSession=  1
+ModReadParam::read_file: read and broadcast nLine= 284 lines of text
+
+#STRICT
+F		UseStrict
+
+#SAVERESTART
+F		DoSaveRestart
+
+#TIMEACCURATE
+T		DoTimeAccurate
+
+#TEST
+OH_fill_buffer_only		StringTest
+
+#BEGIN_COMP IH --------------------------------------------------------------
+IH: init_mod_restart_file: setting TypeRestartOutFile = one
+ IH_set_parameters: READ iSession = 1  iLine= 16  nLine = 133
+IH:
+IH:#COORDSYSTEM
+IH:HGI                     TypeCoordSystem
+IH:
+IH:#GRAVITY
+IH:F                       UseGravity (rest of parameters read if true)
+IH:
+IH:#BODY
+IH:T                       UseBody
+IH:500.0                    rBody (Rs)
+IH:1.00e3                  BodyNDim(1) [/cc] number density for ions
+IH:1.00E5                  BodyTDim(1) [K] temperature for ions
+IH:
+IH:#BODY
+IH:F		UseBody
+IH:
+IH:#USERFLAGS
+IH:F                       UseUserInnerBcs
+IH:F                       UseUserSource
+IH:F                       UseUserPerturbation
+IH:F                       UseUserOuterBcs
+IH:T                       UseUserICs
+IH:F                       UseUserSpecifyRefinement
+IH:F                       UseUserLogFiles
+IH:F                       UseUserWritePlot
+IH:F                       UseUserAMR
+IH:F                       UseUserEchoInput
+IH:F                       UseUserB0
+IH:F                       UseUserInitSession
+IH:F                       UseUserUpdateStates
+IH:
+IH:#USERINPUTBEGIN -----------------------------------------------------------
+IH: User read_input INNER HELIOSPHERE starts
+IH:
+IH:#USERICS
+IH:SphereAdvect	TypeIcs
+IH:1.0		RhoInitialNo
+IH:100.0		pInitialNo
+IH:100.0		uInitialNo
+IH:30.0		FlowAngle (Deg, in xy plane from X )
+IH:500.0		rSphere
+IH:2.0		RhoSphereNo
+IH:
+IH:#USERINPUTEND -------------------------------------------------------------
+IH: User read_input INNERHELIOSPHERE ends
+IH:
+IH:#OUTERBOUNDARY
+IH:coupled		TypeBcEast
+IH:coupled		TypeBcWest
+IH:coupled		TypeBcSouth
+IH:coupled		TypeBcNorth
+IH:coupled		TypeBcBottom
+IH:coupled		TypeBcTop
+IH:
+IH:#GRID
+IH:2                     	nRootBlockX
+IH:2                     	nRootBlockY
+IH:2                     	nRootBlockZ
+IH:-2061.0	                xMin
+IH: 2061.0                 xMax
+IH:-2061.0                  yMin
+IH: 2061.0                  yMax
+IH:-2061.0                  zMin
+IH: 2061.0                  zMax
+IH:
+IH:#GRIDLEVEL
+IH:2                       nLevelArea
+IH:all                     NameArea
+IH:
+IH:#GRIDRESOLUTION
+IH:256.0                         nLevel		AreaResolution
+IH:box                       NameArea
+IH:-2048.		xMinBox
+IH:-2048.		yMinBox
+IH:-2048.		zMinBox
+IH:2048.		xMaxBox
+IH:2048.		yMaxBox
+IH:2048.		zMaxBox
+IH:
+IH:#GRIDLEVEL
+IH:5		nLevelArea
+IH:initial		NameArea
+IH:
+IH:#DIVB
+IH:T		UseDivbSource
+IH:F		UseDivbDiffusion
+IH:F		UseProjection
+IH:F		UseConstrainB
+IH:
+IH:#TIMESTEPPING
+IH:2			nStage
+IH:0.8			CflExpl
+IH:
+IH:#SCHEME
+IH:2			nOrder
+IH:Rusanov			TypeFlux
+IH:mc3		TypeLimiter
+IH:1.2		LimiterBeta
+IH:
+IH:#SAVEINITIAL
+IH:T		DoSaveInitial
+IH:
+IH:#SAVELOGFILE
+IH:T			DoSaveLogfile
+IH:RAW			StringLogfile
+IH:-1			DnSaveLogfile
+IH:1.			DtSaveLogfile
+IH:
+IH:#SAVEPLOT
+IH:1			nPlotFiles
+IH:z=0 MHD idl		StringPlot
+IH:-1		DnSavePlot
+IH:500.		DtSavePlot
+IH:-1.		DxSavePlot
+IH:
+IH:#RESCHANGEBOUNDARY
+IH:F		SaveBoundaryCells
+#END_COMP IH -----------------------------------------------------------------
+
+#BEGIN_COMP OH ---------------------------------------------------------------
+OH: init_mod_restart_file: setting TypeRestartOutFile = one
+ OH_set_parameters: READ iSession = 1  iLine= 136  nLine = 272
+OH:
+OH:#COORDSYSTEM
+OH:HGI		TypeCoordSystem
+OH:
+OH:#BODY
+OH:T                       UseBody
+OH:7.5                     rBody (AU)
+OH:1.00e3                  BodyNDim(1) [/cc] number density for ions
+OH:1.00E5                  BodyTDim(1) [K] temperature for ions
+OH:
+OH:#BODY
+OH:F		UseBody
+OH:
+OH:#GRAVITY
+OH:F                       UseGravity (rest of parameters read if true)
+OH:
+OH:#USERFLAGS
+OH:F                       UseUserInnerBcs
+OH:F                       UseUserSource
+OH:F                       UseUserPerturbation
+OH:F                       UseUserOuterBcs
+OH:T                       UseUserICs
+OH:F                       UseUserSpecifyRefinement
+OH:F                       UseUserLogFiles
+OH:F                       UseUserWritePlot
+OH:F                       UseUserAMR
+OH:F                       UseUserEchoInput
+OH:F                       UseUserB0
+OH:F                       UseUserInitSession
+OH:F                       UseUserUpdateStates
+OH:
+OH:#USERINPUTBEGIN --------------------------------------------------------
+OH: User read_input INNER HELIOSPHERE starts
+OH:
+OH:#USERICS
+OH:UniformU		TypeIcs
+OH:1.		RhoInitialNo
+OH:100.		pInitialNo
+OH:100.0		uInitialNo
+OH:30.0		FlowAngle
+OH:
+OH:#USERINPUTEND ----------------------------------------------------------
+OH: User read_input INNERHELIOSPHERE ends
+OH:
+OH:#GRID
+OH:1			nRootBlockX
+OH:1			nRootBlockY
+OH:1			nRootBlockZ
+OH:-160.5034		xMin
+OH:160.5034		xMin		xMax
+OH:-160.5034		xMin		yMin
+OH:160.5034		xMin		yMax
+OH:-160.5034		xMin		zMin
+OH:160.5034		xMin		zMax
+OH:
+OH:#GRIDLEVEL
+OH:2			nLevelArea
+OH:all			NameArea
+OH:
+OH:#GRIDLEVEL
+OH:7			nLevelArea (usually 11)
+OH:initial			NameArea
+OH:
+OH:#GRIDRESOLUTION
+OH:0.65367                nLevel		AreaResolution
+OH:box                  NameArea
+OH:-10.45872		xMinBox
+OH:10.45872		yMinBox
+OH:-10.45872		zMinBox
+OH:10.45872		xMaxBox
+OH:-10.45872		yMaxBox
+OH:10.45872		zMaxBox
+OH:
+OH:#GRIDRESOLUTION
+OH:20.005632		AreaResolution
+OH:box		NameArea
+OH:-160.5034		xMinBox
+OH:-160.5034				yMinBox
+OH:-160.5034				zMinBox
+OH:160.5034				xMaxBox
+OH:160.5034			yMaxBox
+OH:160.5034				zMaxBox
+OH:
+OH:#EXTRABOUNDARY
+OH:T		UseExtraBoundary
+OH:coronatoih		TypeBc_I(ExtraBc_)
+OH:F		DoFixExtraBoundary
+OH:
+OH:#HELIOBUFFERGRID
+OH:7.5		rBuffMin
+OH:8.5               was 10.002816		rBuffMax
+OH:180		nThetaBuff
+OH:360		nPhiBuff
+OH:
+OH:#OUTERBOUNDARY
+OH:float		TypeBcEast
+OH:float		TypeBcWest
+OH:float		TypeBcSouth
+OH:float		TypeBcNorth
+OH:float		TypeBcBottom
+OH:float		TypeBcTop
+OH:
+OH:#SCHEME
+OH:2			nOrder
+OH:Rusanov			TypeFlux
+OH:mc3		TypeLimiter
+OH:1.2		LimiterBeta
+OH:
+OH:#TIMESTEPPING
+OH:2                       nStage (1 or 2)
+OH:0.80                    CflExpl
+OH:
+OH:#RESCHANGEBOUNDARY
+OH:T		SaveBoundaryCells
+OH:
+OH:#DIVB
+OH:T		UseDivbSource
+OH:F		UseDivbDiffusion
+OH:F		UseProjection
+OH:F		UseConstrainB
+OH:
+OH:#SAVELOGFILE
+OH:T			DoSaveLogfile
+OH:RAW			StringLogfile
+OH:1			DnSaveLogfile
+OH:-1.			DtSaveLogfile
+OH:
+OH:#SAVEINITIAL
+OH:T			DoSaveInitial
+OH:
+OH:#SAVEPLOT
+OH:1			nPlotFile
+OH:z=0 MHD idl		StringPlot
+OH:-1			DnOutput		DnSavePlot
+OH:500.			DtOuput		DtSavePlot
+OH:-1.		DxSavePlot
+#END_COMP OH -----------------------------------------------------------
+
+#COUPLE2
+OH		NameSource
+IH		NameTarget
+-1		DnCouple
+20000.		DtCouple
+
+#STOP
+-1		MaxIteration
+1000000.0		tSimulationMax
+ IH_set_parameters: CHECK iSession = 1
+  
+IH:init_mod_advance allocated arrays
+IH:init_mod_geometry allocated arrays
+IH:init_mod_nodes allocated arrays
+IH:init_mod_raytrace allocated arrays
+ OH_set_parameters: CHECK iSession = 1
+  
+OH:init_mod_advance allocated arrays
+OH:init_mod_geometry allocated arrays
+OH:init_mod_nodes allocated arrays
+OH:init_mod_raytrace allocated arrays
+ ----- Starting Session  1  ------
+
+IH: BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+IH:          for 3D Heliospheric Flows
+IH: University of Michigan, 1995-2007
+
+IH: EQUATIONS:   MHD
+IH: USER MODULE: HELIOSPHERE, Sokolov 1.00
+
+IH: IH_BATS_setup starting initial refinement level  1
+IH: IH_parallel_refine starting to refine  8  block(s) on PE 0
+IH: IH_BATS_setup starting initial refinement level  2
+IH: IH_parallel_refine starting to refine  64  block(s) on PE 0
+IH: IH_BATS_setup starting initial refinement level  3
+IH: IH_BATS_setup starting initial refinement level  4
+IH: IH_BATS_setup starting initial refinement level  5
+IH: renumber_octree: finished renumbering 512  blocks.
+IH:     total blocks =  512
+IH:
+IH:    Begin Numerical Simulation
+IH:    --------------------------
+IH:
+IH:
+IH:    Physical Parameters
+IH:    -------------------
+IH:
+IH:          I/O Unit type: HELIOSPHERIC            Normalization: SOLARWIND
+IH:
+IH:          Gamma:         1.66666667
+IH:
+IH:          UseBody1: .false.
+IH:
+IH:          UseBody2: .false.
+IH:
+IH:          ClightFactor:  1.00000E+00, Clight:      8.08238E+03
+IH:
+IH:
+IH:    MHD Numerical Solution Parameters
+IH:    ---------------------------------
+IH:
+IH:          2nd-order scheme with mc3 limiter
+IH:              BetaLimiter = 1.20
+IH:          Rusanov flux function
+IH:          Time accurate calculation
+IH:          Explicit time stepping
+IH:              nStage: 2
+IH:              Cfl:    0.80
+IH:
+IH:    Other Runtime Parameters
+IH:    ------------------------
+IH:
+IH: Available processors: nProc =  2
+IH:
+IH: After initial grid setup:
+IH:   nBlockMax =  316  nBLK =  3000
+IH:   Total number of blocks used =  512
+IH:   Total number of cells =  32768
+IH:   Total number of true cells =  32768
+IH:   Smallest cell dx:    1.2881250000000000E+02   Largest cell dx:    1.2881250000000000E+02
+IH:
+IH: root blocks:        2       2       2
+IH: nIJK_D:             4       4       4
+IH: x:             -2061.00000000   2061.00000000
+IH: y:             -2061.00000000   2061.00000000
+IH: z:             -2061.00000000   2061.00000000
+IH:
+IH:saved ifile= 3 type=z=0_mhd    at n_step=      0 time=   0:00:00 h:m:s
+
+OH: BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+OH:          for 3D Heliospheric Flows
+OH: University of Michigan, 1995-2007
+
+OH: EQUATIONS:   MHD
+OH: USER MODULE: HELIOSPHERE, Sokolov 1.00
+
+OH: OH_BATS_setup starting initial refinement level  1
+OH: OH_parallel_refine starting to refine  1  block(s) on PE 0
+OH: OH_BATS_setup starting initial refinement level  2
+OH: OH_parallel_refine starting to refine  8  block(s) on PE 0
+OH: OH_BATS_setup starting initial refinement level  3
+OH: OH_parallel_refine starting to refine  64  block(s) on PE 0
+OH: OH_BATS_setup starting initial refinement level  4
+OH: OH_parallel_refine starting to refine  8  block(s) on PE 0
+OH: OH_BATS_setup starting initial refinement level  5
+OH: OH_parallel_refine starting to refine  8  block(s) on PE 0
+OH: OH_BATS_setup starting initial refinement level  6
+OH: OH_parallel_refine starting to refine  176  block(s) on PE 0
+OH: OH_BATS_setup starting initial refinement level  7
+OH: OH_parallel_refine starting to refine  216  block(s) on PE 0
+OH: renumber_octree: finished renumbering 3368  blocks.
+OH:     total blocks =  3368
+OH:
+OH:    Begin Numerical Simulation
+OH:    --------------------------
+OH:
+OH:
+OH:    Physical Parameters
+OH:    -------------------
+OH:
+OH:          I/O Unit type: HELIOSPHERIC            Normalization: SOLARWIND
+OH:
+OH:          Gamma:         1.66666667
+OH:
+OH:          UseBody1: .false.
+OH:
+OH:          UseBody2: .false.
+OH:
+OH:          ClightFactor:  1.00000E+00, Clight:      8.08238E+03
+OH:
+OH:
+OH:    MHD Numerical Solution Parameters
+OH:    ---------------------------------
+OH:
+OH:          2nd-order scheme with mc3 limiter
+OH:              BetaLimiter = 1.20
+OH:          Rusanov flux function
+OH:          Time accurate calculation
+OH:          Explicit time stepping
+OH:              nStage: 2
+OH:              Cfl:    0.80
+OH:
+OH:    Other Runtime Parameters
+OH:    ------------------------
+OH:
+OH: Available processors: nProc =  2
+OH:
+OH: After initial grid setup:
+OH:   nBlockMax =  3000  nBLK =  3000
+OH:   Total number of blocks used =  3368
+OH:   Total number of cells =  215552
+OH:   Total number of true cells =  208344
+OH:   Smallest cell dx:    0.6269664062500000   Largest cell dx:   10.0314624999999999
+OH:
+OH: root blocks:        1       1       1
+OH: nIJK_D:             4       4       4
+OH: x:              -160.50340000    160.50340000
+OH: y:              -160.50340000    160.50340000
+OH: z:              -160.50340000    160.50340000
+OH:
+OH:saved ifile= 3 type=z=0_mhd    at n_step=      0 time=   0:00:00 h:m:s
+ Allocated OH_from_ih bounds= 8 130682
+ OH_fill_buffer_only at iter= 0
+ OH_match_ibc in test mode: no filling of cells outside the buffer grid.
+ Fill in the cells near the inner boundary from the buffer
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0 OH on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                     10.20    100.00         1         1
+-------------------------------------------------------------------------------
+SETUP                    10.20    100.00         1         1
+IH_OH_couple              5.79     56.75         1         1
+OH_IH_couple              2.30     22.55         1         1
+exch_msgs                 0.27      2.69         2         3
+OH_load_balance           0.21      2.07         1         1
+save_plot                 0.15      1.48         1         2
+save_logfile              0.08      0.81         1         2
+IH_load_balance           0.03      0.28         1         1
+int_domain                0.02      0.19         1         2
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+IH:saved ifile= 3 type=z=0_mhd    at n_step=      2 time=   3:13:26 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=      2 time=   3:22:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=      3 time=   5:33:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=      3 time=   5:33:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=      4 time=   8:55:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=      4 time=   8:46:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=      5 time=  11:06:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=      5 time=  11:06:40 h:m:s
+Progress:      10 steps,   40000.0     s simulation time,     11.78 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=      6 time=  14:29:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=      6 time=  14:20:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=      7 time=  16:40:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=      7 time=  16:40:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=      8 time=  20:02:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=      8 time=  19:53:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=      9 time=  22:13:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=      9 time=  22:13:20 h:m:s
+Progress:      20 steps,   80000.0     s simulation time,     21.29 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     10 time=  25:35:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     10 time=  25:26:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     11 time=  27:46:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     11 time=  27:46:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     12 time=  31:09:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     12 time=  31:00:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     13 time=  33:20:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     13 time=  33:20:00 h:m:s
+Progress:      30 steps,   120000.     s simulation time,     30.85 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     14 time=  36:42:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     14 time=  36:33:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     15 time=  38:53:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     15 time=  38:53:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     16 time=  42:15:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     16 time=  42:06:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     17 time=  44:26:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     17 time=  44:26:40 h:m:s
+Progress:      40 steps,   160000.     s simulation time,     40.58 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     18 time=  47:49:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     18 time=  47:40:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     19 time=  50:00:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     19 time=  50:00:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     20 time=  53:22:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     20 time=  53:13:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     21 time=  55:33:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     21 time=  55:33:20 h:m:s
+Progress:      50 steps,   200000.     s simulation time,     50.23 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     22 time=  58:55:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     22 time=  58:46:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     23 time=  61:06:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     23 time=  61:06:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     24 time=  64:29:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     24 time=  64:20:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     25 time=  66:40:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     25 time=  66:40:00 h:m:s
+Progress:      60 steps,   240000.     s simulation time,     59.80 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     26 time=  70:02:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     26 time=  69:53:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     27 time=  72:13:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     27 time=  72:13:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     28 time=  75:35:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     28 time=  75:26:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     29 time=  77:46:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     29 time=  77:46:40 h:m:s
+Progress:      70 steps,   280000.     s simulation time,     69.40 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     30 time=  81:09:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     30 time=  81:00:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     31 time=  83:20:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     31 time=  83:20:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     32 time=  86:42:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     32 time=  86:33:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     33 time=  88:53:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     33 time=  88:53:20 h:m:s
+Progress:      80 steps,   320000.     s simulation time,     79.07 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     34 time=  92:15:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     34 time=  92:06:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     35 time=  94:26:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     35 time=  94:26:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     36 time=  97:49:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     36 time=  97:40:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     37 time= 100:00:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     37 time= 100:00:00 h:m:s
+Progress:      90 steps,   360000.     s simulation time,     88.73 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     38 time= 103:22:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     38 time= 103:13:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     39 time= 105:33:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     39 time= 105:33:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     40 time= 108:55:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     40 time= 108:46:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     41 time= 111:06:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     41 time= 111:06:40 h:m:s
+Progress:     100 steps,   400000.     s simulation time,     98.34 s CPU time
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     100 OH on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    98.34   98.339   98.339   100.00
+-------------------------------------------------------------------------------
+IH_run                   41      41     9.94    0.243    0.243    10.11
+OH_run                   41      41    85.97    2.097    2.097    87.42
+IH_OH_couple             20      20     1.02    0.051    0.051     1.03
+OH_IH_couple             20      20     1.40    0.070    0.070     1.43
+#others                                 0.00    0.003              0.00
+-------------------------------------------------------------------------------
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     42 time= 114:29:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     42 time= 114:20:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     43 time= 116:40:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     43 time= 116:40:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     44 time= 120:02:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     44 time= 119:53:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     45 time= 122:13:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     45 time= 122:13:20 h:m:s
+Progress:     110 steps,   440000.     s simulation time,    107.97 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     46 time= 125:35:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     46 time= 125:26:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     47 time= 127:46:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     47 time= 127:46:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     48 time= 131:09:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     48 time= 131:00:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     49 time= 133:20:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     49 time= 133:20:00 h:m:s
+Progress:     120 steps,   480000.     s simulation time,    117.48 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     50 time= 136:42:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     50 time= 136:33:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     51 time= 138:53:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     51 time= 138:53:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     52 time= 142:15:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     52 time= 142:06:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     53 time= 144:26:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     53 time= 144:26:40 h:m:s
+Progress:     130 steps,   520000.     s simulation time,    127.03 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     54 time= 147:49:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     54 time= 147:40:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     55 time= 150:00:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     55 time= 150:00:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     56 time= 153:22:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     56 time= 153:13:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     57 time= 155:33:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     57 time= 155:33:20 h:m:s
+Progress:     140 steps,   560000.     s simulation time,    136.53 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     58 time= 158:55:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     58 time= 158:46:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     59 time= 161:06:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     59 time= 161:06:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     60 time= 164:29:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     60 time= 164:20:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     61 time= 166:40:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     61 time= 166:40:00 h:m:s
+Progress:     150 steps,   600000.     s simulation time,    146.08 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     62 time= 170:02:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     62 time= 169:53:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     63 time= 172:13:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     63 time= 172:13:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     64 time= 175:35:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     64 time= 175:26:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     65 time= 177:46:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     65 time= 177:46:40 h:m:s
+Progress:     160 steps,   640000.     s simulation time,    155.65 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     66 time= 181:09:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     66 time= 181:00:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     67 time= 183:20:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     67 time= 183:20:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     68 time= 186:42:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     68 time= 186:33:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     69 time= 188:53:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     69 time= 188:53:20 h:m:s
+Progress:     170 steps,   680000.     s simulation time,    165.19 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     70 time= 192:15:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     70 time= 192:06:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     71 time= 194:26:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     71 time= 194:26:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     72 time= 197:49:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     72 time= 197:40:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     73 time= 200:00:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     73 time= 200:00:00 h:m:s
+Progress:     180 steps,   720000.     s simulation time,    174.64 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     74 time= 203:22:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     74 time= 203:13:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     75 time= 205:33:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     75 time= 205:33:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     76 time= 208:55:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     76 time= 208:46:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     77 time= 211:06:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     77 time= 211:06:40 h:m:s
+Progress:     190 steps,   760000.     s simulation time,    184.16 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     78 time= 214:29:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     78 time= 214:20:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     79 time= 216:40:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     79 time= 216:40:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     80 time= 220:02:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     80 time= 219:53:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     81 time= 222:13:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     81 time= 222:13:20 h:m:s
+Progress:     200 steps,   800000.     s simulation time,    193.65 s CPU time
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     200 OH on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1   193.65  193.647  193.647   100.00
+-------------------------------------------------------------------------------
+IH_run                   81      81    19.59    0.242    0.242    10.12
+OH_run                   81      81   169.18    2.089    2.089    87.37
+IH_OH_couple             40      40     2.07    0.052    0.052     1.07
+OH_IH_couple             40      40     2.80    0.070    0.070     1.44
+#others                                 0.01    0.005              0.00
+-------------------------------------------------------------------------------
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     82 time= 225:35:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     82 time= 225:26:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     83 time= 227:46:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     83 time= 227:46:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     84 time= 231:09:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     84 time= 231:00:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     85 time= 233:20:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     85 time= 233:20:00 h:m:s
+Progress:     210 steps,   840000.     s simulation time,    203.13 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     86 time= 236:42:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     86 time= 236:33:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     87 time= 238:53:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     87 time= 238:53:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     88 time= 242:15:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     88 time= 242:06:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     89 time= 244:26:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     89 time= 244:26:40 h:m:s
+Progress:     220 steps,   880000.     s simulation time,    212.66 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     90 time= 247:49:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     90 time= 247:40:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     91 time= 250:00:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     91 time= 250:00:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     92 time= 253:22:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     92 time= 253:13:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     93 time= 255:33:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     93 time= 255:33:20 h:m:s
+Progress:     230 steps,   920000.     s simulation time,    222.22 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     94 time= 258:55:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     94 time= 258:46:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     95 time= 261:06:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     95 time= 261:06:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     96 time= 264:29:02 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     96 time= 264:20:06 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     97 time= 266:40:00 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     97 time= 266:40:00 h:m:s
+Progress:     240 steps,   960000.     s simulation time,    232.22 s CPU time
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     98 time= 270:02:22 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     98 time= 269:53:26 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=     99 time= 272:13:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=     99 time= 272:13:20 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=    100 time= 275:35:42 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=    100 time= 275:26:46 h:m:s
+IH:saved ifile= 3 type=z=0_mhd    at n_step=    101 time= 277:46:40 h:m:s
+OH:saved ifile= 3 type=z=0_mhd    at n_step=    101 time= 277:46:40 h:m:s
+
+    Finished Numerical Simulation
+    -----------------------------
+   Simulated Time T =   0.10000E+07 (16666.666667 min,   277.777778 hrs)
+IH: error report: no errors...
+OH: error report: no errors...
+
+    Finished Finalizing SWMF
+    ------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to     249 OH on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                    241.80    100.00         1         1
+-------------------------------------------------------------------------------
+advance                 216.95     89.72       202       202
+-------------------------------------------------------------------------------
+OH_run                  211.28     87.38       101       101
+calc_fluxes              71.21     29.45       202    391880
+exch_msgs                59.23     24.49       202       404
+calc_facevalues          41.38     17.11       202    391880
+IH_run                   24.44     10.11       101       101
+save_plot                14.81      6.13       199       200
+OH_update_states         10.55      4.36       101    340168
+calc_face_bfo             9.39      3.88       101    163216
+OH_set_BCs                5.09      2.10       101     32926
+OH_calc_sources           4.74      1.96       101    340168
+save_logfile              3.86      1.60       200       201
+OH_IH_couple              3.50      1.45        50        50
+OH_update_check           3.44      1.42       101       202
+calc_fluxes_bfo           2.81      1.16       101    163216
+IH_OH_couple              2.57      1.06        50        50
+IH_update_states          1.60      0.66       101     51712
+IH_calc_sources           0.75      0.31       101     51712
+int_domain                0.74      0.30       200       201
+send_cons_flux            0.63      0.26       202       404
+IH_update_check           0.60      0.25       101       202
+barrier-expl2             0.58      0.24       202       404
+barrier-expl1             0.31      0.13       202       404
+-------------------------------------------------------------------------------
