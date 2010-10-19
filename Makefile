@@ -456,7 +456,7 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 
 #^CMP IF OH BEGIN
 #
-# configure and collect source files for SC/BATSRUS component
+# configure and collect source files for OH/BATSRUS component
 #
 OH/BATSRUS/src/Makefile:
 	cd OH/BATSRUS; \
@@ -480,17 +480,22 @@ OH/BATSRUS/src/Makefile:
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
 			../../OH/BATSRUS/
 	echo '*' > OH/BATSRUS/src/.cvsignore
+	cd OH/BATSRUS/src; rm -f main.f90
 	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
 		OH/BATSRUS/srcInterface/OH_wrapper.f90
 	cp -f IH/BATSRUS_share/src/IH_get_for_mh_with_xyz.f90 \
 		OH/BATSRUS/srcInterface/OH_get_for_mh_with_xyz.f90
+	cp -f IH/BATSRUS_share/src/IH_get_for_mh.f90\
+		OH/BATSRUS/srcInterface/OH_get_for_mh.f90
+	cp -f IH/BATSRUS_share/src/IH_put_from_mh.f90\
+		OH/BATSRUS/srcInterface/OH_put_from_mh.f90
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
 	's/IH/OH/g;s/_sc/_ih/;s/BATSRUS/OH_BATSRUS/;s/Inner/Outer/;'\
-		OH_wrapper.f90 OH_get_for_ih_with_xyz.f90; \
-		perl -i -pe 's/SC/IH/' OH_get_for_ih_with_xyz.f90
+		OH_wrapper.f90 OH_get_for_mh_with_xyz.f90; \
+		perl -i -pe 's/SC/IH/' OH_get_for_mh_with_xyz.f90
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
-	's/IH/OH/g;s/Ih/Oh/g;s/SC/IH/g;s/Sc/Ih/g' ModBuffer.f90
-	cd OH/BATSRUS/src; rm -f main.f90
+	's/IH/OH/g;s/Ih/Oh/g;s/SC/IH/g;s/Sc/Ih/g' ModBuffer.f90\
+		OH_get_for_mh.f90 OH_put_from_mh.f90;
 
 # rename OH source files to avoid name conflicts
 OH_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90 \
