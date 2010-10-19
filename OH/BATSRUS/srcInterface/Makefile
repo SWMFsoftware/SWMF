@@ -17,7 +17,9 @@ OBJECTS = \
 	ModAbsorption.o \
 	ModLaserPackage.o \
         OH_set_buffer_grid.o\
+	OH_get_for_mh.o\
         OH_get_for_mh_with_xyz.o\
+	OH_put_from_mh.o\
 	OH_wrapper.o
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src -I../srcBATL
