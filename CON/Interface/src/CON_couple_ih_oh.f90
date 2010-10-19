@@ -1,19 +1,19 @@
 !^CMP COPYRIGHT UM
-!^CMP FILE OH
 !^CMP FILE IH
+!^CMP FILE OH
 !BOP
-!MODULE: CON_couple_ih_oh - couple OH to IH outer boundary (one way)
+!MODULE: CON_couple_ih_oh - couple IH and OH both ways
 !INTERFACE:
 module CON_couple_ih_oh
 
   !DESCRIPTION:
   ! This coupler uses the SWMF parallel coupling toolkit.
   ! The IH grid is coupled to a buffer grid in OH. The buffer grid
-  ! uses the same coordinate system as OH, so the transformation is
-  ! done in the IH wrapper.
+  ! uses the same coordinate system as IH, so the transformation is
+  ! done in the OH wrapper.
   !
   ! The OH grid is coupled to the outer ghost cells of the IH grid directly.
-  ! Both OH and IH use AMR grids, the buffer is a simple spherical grid.
+  ! Both IH and OH use AMR grids, the buffer is a simple spherical grid.
   
   !USES:
   use CON_coupler
@@ -25,13 +25,12 @@ module CON_couple_ih_oh
   !
   !PUBLIC MEMBER FUNCTIONS:
   public:: couple_oh_ih_init
-  public:: couple_oh_ih,couple_ih_oh
+  public:: couple_ih_oh,couple_oh_ih
 
   !REVISION HISTORY:
   ! 7/23/03 Sokolov I.V.<igorsok@umich.edu> - prototype for ih-gm
   ! 7/04/04                                 - version for ih-sc
   ! 7/20/04                                 - version for sc-buffer
-  ! 6/03/08 Oran R. <oran@umich.edu>        - version for ih-oh
   !EOP
 
   !To trace the possible changes in the grids and/or mapping
@@ -40,10 +39,10 @@ module CON_couple_ih_oh
   integer :: IH_iGridInOhIh=-2
 
   ! OH <-> IH conversion matrices
-  real :: OhToIh_DD(3,3),IhToOh_DD(3,3)
+  real :: IhToOh_DD(3,3),OhToIh_DD(3,3)
 
   ! Maximum time difference [s] without remap 
-  ! The 600 s corresponds to about 0.1 degree rotation between IH and OH
+  ! The 600 s corresponds to about 0.1 degree rotation between OH and IH
   real :: dTimeMappingMax = 600.0
  
   type(RouterType),save             :: RouterOhIh
@@ -56,13 +55,39 @@ module CON_couple_ih_oh
        save,target                  :: BuffDD
   logical :: DoInitialize=.true., DoTest, DoTestMe
   real :: tNow
-  character(len=*), parameter :: NameMod='couple_oh_ih'
-  logical::IsSphericalIh=.false.
+  character(len=*), parameter :: NameMod='couple_ih_oh'
+  logical::IsSphericalIh=.false. , UseGenRIh = .false., UseLogRIh = .false.
   integer::iError
-contains
+  
+  !Parameters of the stretched grid, if needed
+  integer :: nGenRGridIh
+  real    :: DeltaGen
 
+  ! Number of variables to be coupled
+  integer :: nVarCouple
+
+contains
   !===============================================================!
   subroutine couple_oh_ih_init
+
+    ! Number of waves in different models
+    integer :: nWave, nWaveOh, nWaveIh
+
+    ! send-receive electron pressure ? (value=0 then no, value=1 then yes)
+    integer :: nElectronPressure
+
+    interface
+       integer function IH_n_wave()
+         implicit none
+       end function IH_n_wave
+    end interface
+
+    interface
+       integer function OH_n_wave()
+         implicit none
+       end function OH_n_wave
+    end interface
+
     interface
        subroutine OH_set_buffer_grid(Dd)
          use CON_domain_decomposition
@@ -72,10 +97,40 @@ contains
        end subroutine OH_set_buffer_grid
     end interface
 
+    !--------------------------------------------------------------------------
+
     if(.not.DoInitialize)return
     DoInitialize=.false.
     
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
+
+    if(is_proc0(IH_))nWaveIh = IH_n_wave()
+    call MPI_BCAST(nWaveIh,1,MPI_INTEGER,i_proc0(IH_),i_comm(),iError)
+
+    if(is_proc0(OH_))nWaveOh = OH_n_wave()
+    call MPI_BCAST(nWaveOh,1,MPI_INTEGER,i_proc0(OH_),i_comm(),iError)
+
+    if(nWaveIh==nWaveOh .and. nWaveIh>=2)then
+       nWave = nWaveIh
+    else
+       nWave = 0
+    end if
+
+    nElectronPressure = 0
+    if(index(Grid_C(OH_)%NameVar,' Pe') > 0 .and. &
+         index(Grid_C(IH_)%NameVar,' Pe') > 0) nElectronPressure = 1
+
+    nVarCouple = 8 + nWave + nElectronPressure
+
+    IsSphericalIh = index(Grid_C(IH_) % TypeGeometry,'spherical') > 0 
+    UseLogRIh     = index(Grid_C(IH_) % TypeGeometry,'lnr'      ) > 0
+    UseGenRIh     = index(Grid_C(IH_) % TypeGeometry,'genr'     ) > 0
+    if(UseGenRIh) then
+       nGenRGridIh = size(Grid_C(IH_) % Coord1_I,1)
+       if(nGenRGridIh==1) &
+            call CON_stop('Stretched grid in IH is not properly initialized')
+       DeltaGen = 1.0/(nGenRGridIH - 1)
+    end if
 
     call init_coupler(              &    
        iCompSource=OH_,             & ! component index for source
@@ -102,12 +157,13 @@ contains
          SourceGD=IH_SourceGrid,&
          TargetGD=BuffGD, &
          RouterToBuffer=RouterIhBuff,    &
-         nVar=8,&
+         nVar = nVarCouple, &
          NameBuffer='OH_from_ih')  !Version for the first order in time
+
   end subroutine couple_oh_ih_init
   !===============================================================!
   !BOP
-  !IROUTINE: couple_oh_ih - get OH solution at IH outer ghostpoints
+  !IROUTINE: couple_oh_ih - get OH solution at IJ outer ghostpoints
   !INTERFACE:
   subroutine couple_oh_ih(TimeCoupling)
     !INPUT ARGUMENTS:
@@ -147,7 +203,7 @@ contains
 
     ! Redo the router if any of the grids changed or 
     ! the two coordinate systems have rotated away too much
-    if(OH_iGridRealization/=i_realization(OH_).or.&     
+    if(OH_iGridRealization/=i_realization(IH_).or.&     
          IH_iGridInOhIh/=i_realization(IH_) .or. &
          (Grid_C(OH_) % TypeCoord /= Grid_C(IH_) % TypeCoord &
          .and. TimeCoupling - TimeCouplingLast > dTimeMappingMax)) then  
@@ -155,7 +211,7 @@ contains
        ! a target point (IH) to the source (OH)
        !(it is time dependent in general)
 
-       IhToOh_DD = transform_matrix(TimeCoupling, &
+       IHToOh_DD = transform_matrix(TimeCoupling, &
             Grid_C(IH_) % TypeCoord, Grid_C(OH_) % TypeCoord)
 
        !Recalculate the tramsposed matrix, used in transforming vectors
@@ -176,9 +232,10 @@ contains
        TimeCouplingLast    = TimeCoupling
        tNow=TimeCoupling
     end if
+
     call couple_comp(&
          RouterOhIh,&
-         nVar=8,&
+         nVar = nVarCouple, &
          fill_buffer=OH_get_for_ih_and_transform,&
          apply_buffer=IH_put_from_mh)
 
@@ -193,14 +250,24 @@ contains
          IH_TargetGrid%DD%Ptr,lGlobalTreeNode)
     !For spherical domain
     is_boundary_block=IsBoundary_D(R_).and.IsSphericalIh
+    
+    !Now if IsSphericalIh ==.true. then is_boundary_block is .true.
+    !only if the right block boundary along the radial coordinate
+    !is the IH domain boundary.
+    !Else is_boundary_block = .false.
 
     !For cartesian box   
      IsBoundary_D= IsBoundary_D.or.&
          is_left_boundary_d(&
          IH_TargetGrid%DD%Ptr,lGlobalTreeNode)
+     !Now IsBoundary_D(iDim) is true if any of the boundaries along 
+     !the direction iDim is the IH boundary
 
     is_boundary_block=is_boundary_block.or. &
          (any(IsBoundary_D).and.(.not.IsSphericalIh))
+    !Now if IsSphericalIh = .true. the value of is_boundary_block does
+    !not change. Otherwise is_boundary_block is true if any of the
+    !block boundaries is the boundary of the IH domain
    
     
   end function is_boundary_block
@@ -241,16 +308,41 @@ contains
   end subroutine outer_cells 
   !========================================================!
   subroutine map_ih_oh(&
-       IH_nDim,IH_Xyz_D,OH_nDim,OH_Xyz_D,IsInterfacePoint)
+       IH_nDim,IH_XyzIn_D,OH_nDim,OH_Xyz_D,IsInterfacePoint)
 
     integer,intent(in)::OH_nDim,IH_nDim
-    real,dimension(IH_nDim),intent(in)::IH_Xyz_D
+    real,dimension(IH_nDim),intent(in)::IH_XyzIn_D
     real,dimension(OH_nDim),intent(out)::OH_Xyz_D
     logical,intent(out)::IsInterfacePoint
+    
+    real, dimension(IH_nDim) :: IH_Xyz_D
+    integer, parameter :: R_ = 1, Phi_=2, Theta_ = 3, x_ = 1, y_ = 2, z_ = 3
+    real :: R, Gen, Phi, Theta, rSinTheta
+    !--------------------------------------- 
+    !In each mapping the corrdinates of the TARGET grid point (IH)
+    !shoud be be transformed to the SOURCE (OH) generalized coords.
+    if(.not.IsSphericalIh)then
+       IH_Xyz_D = IH_XyzIn_D
+    else
+       !transform to dimensionless cartesian Xyz
+       R = IH_Xyz_D(R_)
+       if(UseLogRIh)then
+          R = exp(R)
+       elseif(UseGenRIh)then
+       end if
+      
+       Phi = IH_Xyz_D(Phi_) 
+       Theta = IH_Xyz_D(Theta_)
+       rSinTheta = R *sin(Theta)
+       
+       IH_Xyz_D(x_) = rSinTheta * cos(Phi) 
+       IH_Xyz_D(y_) = rSinTheta * sin(Phi) 
+       IH_Xyz_D(z_) = R * cos(Theta)
+    end if
+    
 
     OH_Xyz_D = matmul(IhToOh_DD, IH_Xyz_D)*&
          Grid_C(IH_)%UnitX/Grid_C(OH_)%UnitX
-
     IsInterfacePoint=.true.
 
   end subroutine map_ih_oh
@@ -264,9 +356,13 @@ contains
     type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
     real,dimension(nVar+3)::State3_V
-    integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7,&
-         BuffX_=9,BuffZ_=11
+    integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7
+    integer::BuffX_,BuffZ_
     !------------------------------------------------------------
+
+    BuffX_ = nVarCouple + 1
+    BuffZ_ = nVarCouple + 3
+
     call OH_get_for_mh_with_xyz(&
        nPartial,iGetStart,Get,w,State3_V,nVar+3)
     State_V=State3_V(1:nVar)
@@ -314,7 +410,7 @@ contains
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
     call IH_synchronize_refinement(RouterIhBuff%iProc0Source,&
-                                   RouterIhBuff%iCommUnion)
+                                   RouterIHBuff%iCommUnion)
 
 
     if(IH_iGridInIhOh/=i_realization(IH_))then  
@@ -329,10 +425,11 @@ contains
 
     call couple_buffer_grid(&
          RouterIhBuff,&
-         nVar=8,&
+         nVar = nVarCouple, &
          fill_buffer=IH_get_for_mh,&
          NameBuffer='OH_from_ih',&
          TargetID_=OH_)
+
     if(.not.DoneMatchIBC)then
        DoneMatchIBC=.true.
        if(is_proc(OH_))call OH_match_ibc
@@ -344,7 +441,7 @@ contains
        write(NameFile,'(a,i4.4,a)')'./OH/from_ih_',iCoupling,'.dat'
        open(iFile,FILE=NameFile,STATUS='unknown')
        do iPoint=1,nU_I(2)
-          write(iFile,*)point_state_v('OH_from_ih',8,iPoint)
+          write(iFile,*)point_state_v('OH_from_ih', nVarCouple, iPoint)
        end do
        close(iFile)
     end if
@@ -352,24 +449,52 @@ contains
   end subroutine couple_ih_oh
   !======================================================!
   subroutine buffer_grid_point(&
-       nDimFrom,Sph_D,nDimTo,IH_Xyz_D,IsInterfacePoint)         
+       nDimFrom,Sph_D,nDimTo,IH_Coord_D,IsInterfacePoint)         
 
     ! Transform from the spherical buffer grid to the Cartesian IH grid
 
     integer,intent(in)                    :: nDimFrom, nDimTo       
     real,dimension(nDimFrom), intent(in)  :: Sph_D
-    real,dimension(nDimTo),   intent(out) :: IH_Xyz_D
+    real,dimension(nDimTo),   intent(out) :: IH_Coord_D
     logical,intent(out)::IsInterfacePoint
 
     ! The order of spherical indexes as in BATSRUS
-    ! This is a left handed system !!! should be replaced !!!
+    ! This is a left handed system 
     integer,parameter::r_=1,Psi_=2,Theta_=3,x_=1,y_=2,z_=3
-    real :: rSinTheta
+    
+    real :: rSinTheta, BuffXyz_D(x_:z_)
     !-----------------------------------------------------------------------
-    RSinTheta    = Sph_D(r_)*sin(Sph_D(Theta_))!To be modified
-    IH_Xyz_D(x_) = RSinTheta*cos(Sph_D(Psi_))  !\if IH grid
-    IH_Xyz_D(y_) = RSinTheta*sin(Sph_D(Psi_))  !/is spherical
-    IH_Xyz_D(z_) = Sph_D(r_)*cos(Sph_D(Theta_))!To be modified
+    !In each mapping the corrdinates of the TARGET grid point (Buffer)
+    !shoud be be transformed to the SOURCE (IH) generalized coords.
+    
+    if(.not.IsSphericalIh)then
+   
+       RSinTheta    = Sph_D(r_)*sin(Sph_D(Theta_))!To be modified
+    
+       BuffXyz_D(x_) = RSinTheta*cos(Sph_D(Psi_))  
+       BuffXyz_D(y_) = RSinTheta*sin(Sph_D(Psi_))  
+       BuffXyz_D(z_) = Sph_D(r_)*cos(Sph_D(Theta_))
+    
+       !\
+       ! The buffer grid coordinates are normalized by the unit of length
+       ! of OH. Therefore,
+       !/
+       IH_Coord_D = BuffXyz_D *&
+            Grid_C(OH_)%UnitX/Grid_C(IH_)%UnitX
+    else
+       !\
+       ! The buffer grid coordinates are normalized by the unit of length
+       ! of OH. Therefore,
+       !/
+       Ih_Coord_D(R_) =  Sph_D(r_) *&
+            Grid_C(OH_)%UnitX/Grid_C(IH_)%UnitX
+       
+       if(UseLogRIh) then
+          Ih_Coord_D(R_) = log(Ih_Coord_D(R_))
+       end if
+       Ih_Coord_D(Psi_:Theta_) = Sph_D(Psi_:Theta_) 
+    
+    end if
 
     IsInterfacePoint=.true.
   end subroutine buffer_grid_point
