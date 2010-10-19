@@ -125,7 +125,7 @@ RAW			StringLogfile
 1			nPlotFiles
 z=0 MHD idl
 -1
-100.
+500.
 -1.
 
 #RESCHANGEBOUNDARY
@@ -267,14 +267,10 @@ T			DoSaveInitial
 1			nPlotFile
 z=0 MHD idl		StringPlot
 -1			DnOutput
-100.			DtOuput
+500.			DtOuput
 -1.
 
 #END_COMP OH -----------------------------------------------------------
-
-COMPONENT
-OH
-F
 
 #COUPLE2
 OH
@@ -284,6 +280,6 @@ IH
 
 #STOP
 -1
-2000000.0
+1000000.0
 
 #END
