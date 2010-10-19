@@ -2,7 +2,7 @@
 module ModFaceValue
 
   use ModSize, ONLY: nI, nJ, nK
-  use ModVarIndexes, ONLY: nVar
+  use ModVarIndexes
 
   implicit none
 
@@ -640,8 +640,12 @@ contains
     ! are actually used by the calc_facefluxes.
 
     use ModMultiFluid, ONLY: nIonFluid
-    use ModMain
-    use ModVarIndexes
+    use ModMain,     ONLY: nOrder, prolong_order, BlkTest, UseB0, &
+         UseConstrainB, nIFace, nJFace, nKFace, &
+         jMinFaceX, jMaxFaceX, kMinFaceX, kMaxFaceX,&
+         iMinFaceY, iMaxFaceY, kMinFaceY, kMaxFaceY,&
+         iMinFaceZ, iMaxFaceZ, jMinFaceZ, jMaxFaceZ
+
     use ModGeometry, ONLY : true_cell,body_BLK
     use ModNumConst
     use ModPhysics, ONLY: GammaWave
