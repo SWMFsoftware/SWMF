@@ -527,7 +527,7 @@ test7_check:
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test7/OH_log_n000000.log \
 		> test7_oh.diff)
-	ls -l test2*.diff
+	ls -l test7*.diff
 
 ### test_lc: Lower Corona test ###
 
