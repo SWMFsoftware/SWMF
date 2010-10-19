@@ -75,9 +75,7 @@ subroutine MH_set_parameters(TypeAction)
        read_magnetogram_file, read_potential_field
   use ModExpansionFactors,ONLY: NameModelSW, CoronalT0Dim, read_wsa_coeff
   use ModCoronalHeating,  ONLY: read_corona_heating, &
-       read_active_region_heating, &
-       read_longscale_heating, init_coronal_heating, UseCoronalHeating, &
-       DoOpenClosedHeat
+       init_coronal_heating, UseCoronalHeating, DoOpenClosedHeat
   use ModRadiativeCooling,ONLY: UseRadCooling,&
        read_modified_cooling, check_cooling_param, read_chromosphere
   use ModWaves, ONLY: UseAlfvenWaves, check_waves, &
@@ -269,7 +267,6 @@ subroutine MH_set_parameters(TypeAction)
      ! Initialize user module and allow user to modify things
      if(UseUserInitSession)call user_init_session
 
-     
      ! if using open closed heating initialize auxilary WSA grid
      if(DoOpenClosedHeat .and. i_line_command("#OPENCLOSEDHEAT")>0)&
           call set_empirical_model('WSA', CoronalT0Dim)
@@ -1893,7 +1890,7 @@ subroutine MH_set_parameters(TypeAction)
         !CORONA SPECIFIC COMMANDS
 
      case("#MAGNETOGRAM", "#READPOTENTIALFIELD")
-        call read_var('UseMagnetogram'  ,UseMagnetogram)
+        call read_var('UseMagnetogram', UseMagnetogram)
         if(UseMagnetogram)&
              call set_parameters_magnetogram(NameCommand)
 
@@ -1905,22 +1902,16 @@ subroutine MH_set_parameters(TypeAction)
         UseEmpiricalSW = NameModelSW /= 'none'
 
      case("#WSACOEFF")
-        call read_wsa_coeff
+        call read_wsa_coeff 
 
-     case("#CORONALHEATING")
-        call read_corona_heating
- 
-     case("#LONGSCALEHEAT")
-        call read_longscale_heating
+     case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING")
+        call read_corona_heating(NameCommand)
 
      case("#OPENCLOSEDHEAT")
         call read_var('DoOpenClosedHeat', DoOpenClosedHeat)
 
-     case("#ACTIVEREGIONHEAT")
-        call read_active_region_heating
-
-     case("#RADCOOLING")
-        call read_var('UseRadCooling',UseRadCooling)
+     case("#RADIATIVECOOLING")
+        call read_var('UseRadCooling', UseRadCooling)
 
      case("#CHROMOSPHERE")
         call read_chromosphere
@@ -1929,7 +1920,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_modified_cooling
 
      case("#ALFVENWAVES")
-        call read_var('UseAlfvenWaves',UseAlfvenWaves)
+        call read_var('UseAlfvenWaves', UseAlfvenWaves)
 
      case("#WAVEPRESSURE")
         call read_wave_pressure

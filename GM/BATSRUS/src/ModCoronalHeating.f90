@@ -875,46 +875,46 @@ module ModCoronalHeating
 
   logical,private:: DoInit = .true. 
 contains
-  subroutine read_corona_heating
+  !==========================================================================
+  subroutine read_corona_heating(NameCommand)
     use ModReadParam,   ONLY: read_var
-    !----------------------------------
-    call read_var('TypeCoronalHeating', TypeCoronalHeating)
+    
+    character(len=*), intent(in):: NameCommand
+    !----------------------------------------------------------------------
+    select case(NameCommand)
+    case("#CORONALHEATING")
+       call read_var('TypeCoronalHeating', TypeCoronalHeating)
 
-    !Initialize logicals
-    UseCoronalHeating = .true.
-
-    UseUnsignedFluxModel = .false.
-    UseCranmerHeating      = .false.
-    UseExponentialHeating= .false.
-
-
-    select case(TypeCoronalHeating)
-    case('F','none')
-       UseCoronalHeating = .false.
-       
-    case('exponential')
-       UseExponentialHeating = .true.
-       call read_var('DecayLengthExp', DecayLengthExp)
-       call read_var('HeatingAmplitudeCgs', HeatingAmplitudeCgs)
-
-    case('unsignedflux','Abbett')
-       UseUnsignedFluxModel = .true.
-       call read_var('DecayLength', DecayLength)
-       call read_var('HeatNormalization', HeatNormalization)
-
-    case('Cranmer','NonWKB')
-       UseCranmerHeating     = .true.
-
-    case default
-       call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
-            //TypeCoronalHeating)
+       !Initialize logicals
+       UseCoronalHeating = .true.
+       UseUnsignedFluxModel = .false.
+       UseCranmerHeating    = .false.
+       UseExponentialHeating= .false.
+       select case(TypeCoronalHeating)
+       case('F','none')
+          UseCoronalHeating = .false.
+       case('exponential')
+          UseExponentialHeating = .true.
+          call read_var('DecayLengthExp', DecayLengthExp)
+          call read_var('HeatingAmplitudeCgs', HeatingAmplitudeCgs)
+          
+       case('unsignedflux','Abbett')
+          UseUnsignedFluxModel = .true.
+          call read_var('DecayLength', DecayLength)
+          call read_var('HeatNormalization', HeatNormalization)
+       case('Cranmer','NonWKB')
+          UseCranmerHeating     = .true.
+       case default
+          call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
+               // TypeCoronalHeating)
+       end select
     end select
+
   end subroutine read_corona_heating
-  !===========================
+  !=========================================================================
   subroutine init_coronal_heating
     use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitT_
-    use ModAlfvenWaveHeating
-    !--------------------
+    use ModAlfvenWaveHeating, ONLY: set_adiabatic_law_4_waves
 
     if(.not.DoInit)return
     DoInit = .false.
@@ -927,29 +927,7 @@ contains
     call set_adiabatic_law_4_waves
 
   end subroutine init_coronal_heating
-  !===========================
-  subroutine read_active_region_heating
-    use ModReadParam,   ONLY: read_var
-    !---------------------------------
-    call read_var('UseArComponent', UseArComponent)
-    if(UseArComponent) then
-       call read_var('ArHeatFactorCgs', ArHeatFactorCgs)
-       call read_var('ArHeatB0', ArHeatB0)
-       call read_var('DeltaArHeatB0', DeltaArHeatB0)
-    endif
-  end subroutine read_active_region_heating
-  !===========================
-  subroutine read_longscale_heating
-    use ModReadParam,   ONLY: read_var
-    use ModReadParam,   ONLY: read_var
-    !---------------------------------
-    call read_var('DoChHeat', DoChHeat)
-    if(.not.DoChHeat)return
-    call read_var('HeatChCgs', HeatChCgs)
-    call read_var('DecayLengthCh', DecayLengthCh)
-  end subroutine read_longscale_heating
-  !===========================
-  
+  !=========================================================================
   subroutine get_cell_heating(i, j, k, iBlock, CoronalHeating)
 
     use ModGeometry,       ONLY: r_BLK, x_BLK, y_BLK, z_BLK
