@@ -1,0 +1,289 @@
+#ECHO
+T			DoEcho
+
+#STRICT
+F
+
+#SAVERESTART
+F
+
+#TIMEACCURATE
+T
+
+#TEST
+OH_fill_buffer_only
+
+#BEGIN_COMP IH --------------------------------------------------------------
+
+#COORDSYSTEM
+HGI                     TypeCoordSystem
+
+#GRAVITY
+F                       UseGravity (rest of parameters read if true)
+0                       iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+
+#BODY
+T                       UseBody
+500.0                    rBody (Rs)
+1.00e3                  BodyNDim(1) [/cc] number density for ions
+1.00E5                  BodyTDim(1) [K] temperature for ions
+
+#BODY
+F
+
+#USERFLAGS
+F                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN -----------------------------------------------------------
+
+#USERICS
+SphereAdvect	TypeIcs
+1.0		RhoInitialNo
+100.0		pInitialNo
+100.0		uInitialNo
+30.0		FlowAngle (Deg, in xy plane from X )
+500.0		rSphere
+2.0		RhoSphereNo
+
+#USERINPUTEND -------------------------------------------------------------
+
+#OUTERBOUNDARY
+coupled
+coupled
+coupled
+coupled
+coupled
+coupled
+
+#GRID
+2                     	nRootBlockX
+2                     	nRootBlockY
+2                     	nRootBlockZ
+-2061.0	                xMin
+ 2061.0                 xMax
+-2061.0                  yMin
+ 2061.0                  yMax
+-2061.0                  zMin
+ 2061.0                  zMax
+
+#GRIDLEVEL
+2                       nLevelArea
+all                     NameArea
+
+#GRIDRESOLUTION
+256.0                         nLevel
+box                       NameArea
+-2048.
+-2048.
+-2048.
+2048.
+2048.
+2048.
+
+#GRIDLEVEL
+5
+initial
+
+#DIVB
+T
+F
+F
+F
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc3
+1.2
+
+#SAVEINITIAL
+T
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+-1			DnSaveLogfile
+1.			DtSaveLogfile
+
+#SAVEPLOT
+1			nPlotFiles
+z=0 MHD idl
+-1
+100.
+-1.
+
+#RESCHANGEBOUNDARY
+F
+
+#END_COMP IH -----------------------------------------------------------------
+
+#BEGIN_COMP OH ---------------------------------------------------------------
+
+#COORDSYSTEM
+HGI
+
+#BODY
+T                       UseBody
+7.5                     rBody (AU)
+1.00e3                  BodyNDim(1) [/cc] number density for ions
+1.00E5                  BodyTDim(1) [K] temperature for ions
+
+#BODY
+F
+
+#GRAVITY
+F                       UseGravity (rest of parameters read if true)
+0                       iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+
+#USERFLAGS
+F                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#USERICS
+UniformU
+1.
+100.
+100.0
+30.0
+
+#USERINPUTEND ----------------------------------------------------------
+
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-160.5034		xMin
+160.5034		xMin
+-160.5034		xMin
+160.5034		xMin
+-160.5034		xMin
+160.5034		xMin
+
+#GRIDLEVEL
+2			nLevelArea
+all			NameArea
+
+#GRIDLEVEL
+7			nLevelArea (usually 11)
+initial			NameArea
+
+#GRIDRESOLUTION
+0.65367                nLevel
+box                  NameArea
+-10.45872
+10.45872
+-10.45872
+10.45872
+-10.45872
+10.45872
+
+#GRIDRESOLUTION
+20.005632
+box
+-160.5034
+-160.5034		
+-160.5034		
+160.5034		
+160.5034	
+160.5034		
+
+#EXTRABOUNDARY
+T
+coronatoih
+F
+
+#HELIOBUFFERGRID
+7.5
+8.5               was 10.002816
+180
+360
+
+#OUTERBOUNDARY
+float      
+float    
+float
+float
+float
+float
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc3
+1.2
+
+#TIMESTEPPING
+2                       nStage (1 or 2)
+0.80                    CflExpl
+
+#RESCHANGEBOUNDARY
+T
+
+#DIVB
+T
+F
+F
+F
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+z=0 MHD idl		StringPlot
+-1			DnOutput
+100.			DtOuput
+-1.
+
+#END_COMP OH -----------------------------------------------------------
+
+COMPONENT
+OH
+F
+
+#COUPLE2
+OH
+IH
+-1
+20000.
+
+#STOP
+-1
+2000000.0
+
+#END
