@@ -25,7 +25,7 @@ test_help:
 	@echo "    test3                      (run GM-IE-IM test only)"
 	@echo "    test4                      (run GM-IE-HEIDI test only)"
 	@echo "    test6                      (run GM-IE-CRCM test only)"
-
+	@echo "    test7                      (run IH-OH test only)"
 test:
 	@rm -f *.diff
 	-@(make test_share_library)
@@ -39,6 +39,7 @@ test:
 	-@(make test3)
 	-@(make test4)
 	-@(make test6)
+	-@(make test7)
 	-@(make test_check)
 
 test_check:
@@ -482,6 +483,51 @@ test6_check:
 		${TESTDIR}/RESULTS/IM/CRCMeq_ref.out \
 		> test6_im_crcm.diff)
 	ls -l test6*.diff
+
+### test7: IH+OH test ###
+
+test7:
+	@echo "test7_compile..." > test7_ih.diff
+	@echo "test7_compile..." > test7_oh.diff
+	make test7_compile
+	@echo "test7_rundir..." >> test7_ih.diff
+	@echo "test7_rundir..." >> test7_oh.diff
+	make test7_rundir
+	@echo "test7_run..." >> test7_ih.diff
+	@echo "test7_run..." >> test7_oh.diff
+	make test7_run
+	@echo "test7_check..." >> test7_ih.diff
+	@echo "test7_check..." >> test7_oh.diff
+	make test7_check
+
+test7_compile:
+	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
+	./Config.pl -g=IH:4,4,4,3000,1,OH:4,4,4,3000,1
+	./Config.pl -o=IH:u=Ih,e=Mhd -o=OH:u=Ih,e=Mhd
+	cd IH/BATSRUS; ./Config.pl -dynamic; cd ../..
+	cd OH/BATSRUS; ./Config.pl -dynamic; cd ../..
+	make SWMF PIDL
+
+test7_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.IHOH.HGI ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.IHOH ${TESTDIR}/LAYOUT.in
+
+test7_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test7_check:
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IH/log_n000000.log \
+		output/test7/IH_log_n000000.log \
+		> test7_ih.diff)
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/OH/log_n000000.log \
+		output/test7/OH_log_n000000.log \
+		> test7_oh.diff)
+	ls -l test2*.diff
 
 ### test_lc: Lower Corona test ###
 
