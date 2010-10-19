@@ -18,75 +18,8 @@ T                       UseComp
 
 #BEGIN_COMP GM -------------------------------------------------------------
 
-#LOOKUPTABLE
-OpacityXe(rho,T)	NameTable
-load			NameCommand
-table_xe_opacities.out	NameFile
-real8			TypeFile
-Opacity(rho,Te) for Xe
-logrho logT p(16) r(16)
-800			nIndex1
-0.01			Index1Min
-1e6			Index1Max
-800			nIndex2
-5800			Index2Min (about 0.5eV)
-1e8			Index2Max (about 10keV)
-
-#LOOKUPTABLE
-OpacityBe(rho,T)	NameTable
-load			NameCommand
-table_be_opacities.out	NameFile
-real8			TypeFile
-Opacity(rho,Te) for Be
-logrho logT p(16) r(16)
-800			nIndex1
-0.01			Index1Min
-1e6			Index1Max
-800			nIndex2
-5800			Index2Min (about 0.5eV)
-1e8			Index2Max (about 10keV)
-
-#LOOKUPTABLE
-OpacityPl(rho,T)	NameTable
-load			NameCommand
-table_pl_opacities.out	NameFile
-real8			TypeFile
-Opacity(rho,Te) for plastic
-logrho logT p(16) r(16)
-800			nIndex1
-0.01			Index1Min
-1e6			Index1Max
-800			nIndex2
-5800			Index2Min (about 0.5eV)
-1e8			Index2Max (about 10keV)
-
-#LOOKUPTABLE
-OpacityAu(rho,T)	NameTable
-load			NameCommand
-table_au_opacities.out	NameFile
-real8			TypeFile
-Opacity(rho,Te) for Au
-logrho logT p(16) r(16)
-800			nIndex1
-0.01			Index1Min
-1e6			Index1Max
-800			nIndex2
-5800			Index2Min (about 0.5eV)
-1e8			Index2Max (about 10keV)
-
-#LOOKUPTABLE
-OpacityAy(rho,T)	NameTable
-load			NameCommand
-table_ay_opacities.out	NameFile
-real8			TypeFile
-Opacity(rho,Te) for Ay
-logrho logT p(16) r(16)
-800			nIndex1
-0.01			Index1Min
-1e6			Index1Max
-800			nIndex2
-5800			Index2Min (about 0.5eV)
-1e8			Index2Max (about 10keV)
+#INCLUDE
+Tables/5Materials
 
 #PLANET
 NONE
