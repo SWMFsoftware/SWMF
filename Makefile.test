@@ -716,5 +716,7 @@ test_lp_compile:
 test_lp_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR}
-	cp -f ${GMDIR}/Param/CRASH/PARAM.in.LASPACK ${TESTDIR}/PARAM.in
-	cp -f ${GMDIR}/Param/CRASH/LAYOUT.in.LASPACK ${TESTDIR}/LAYOUT.in
+	cd ${TESTDIR};  ln -s  ${DIR}/bin/CRASH.exe .;rm -rf Param; \
+	ln -s  ${GMDIR}/Param/CRASH Param; ln -s ${GMDIR}/dataCRASH data;\
+	cp -f Param/PARAM.in.LASPACK PARAM.in;\
+	cp -f Param/LAYOUT.in.LASPACK LAYOUT.in
