@@ -16,13 +16,13 @@ T			DoSaveRestart
 GM                      NameComp
 T                       UseComp
 
+#PLANET
+NONE
+
 #BEGIN_COMP GM -------------------------------------------------------------
 
 #INCLUDE
 Tables/5Materials
-
-#PLANET
-NONE
 
 #IOUNITS
 SI

@@ -756,13 +756,14 @@ test_lp:
 
 test_lp_compile:
 	Config.pl -v=Empty,GM/BATSRUS
-	cd GM/BATSRUS;Config.pl -g=4,4,1,1000,1000 -nMaterial=5
-	make CRASH
+	cd GM/BATSRUS;Config.pl -g=4,4,1,1000,1000
+	make CRASH NMATERIAL=5 NWAVE=30
 
 test_lp_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR}
 	cd ${TESTDIR};  ln -s  ${DIR}/bin/CRASH.exe .;rm -rf Param; \
 	ln -s  ${GMDIR}/Param/CRASH Param; ln -s ${GMDIR}/dataCRASH data;\
+	ln -s ${GMDIR}/dataCRASH/LookupTables Tables;\
 	cp -f Param/PARAM.in.LASPACK PARAM.in;\
 	cp -f Param/LAYOUT.in.LASPACK LAYOUT.in
