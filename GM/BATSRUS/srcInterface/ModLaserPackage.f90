@@ -238,7 +238,7 @@ end subroutine read_laser_pulse_param
 !===========================
 module ModLaserPackage
   use CON_global_message_pass
-  use ModAbsorption, ONLY: DensityCrSi,&
+  use ModAbsorption, ONLY: DensityCrSi, NameMask,&
        LineGrid, MhGrid, get_density_and_absorption
   !Here ResExpl_VCB is the energy source array, to which the laser energy deposition 
   !should be added. This array is the dimensionless form of the energy source in each
@@ -250,12 +250,14 @@ module ModLaserPackage
   
   use ModBeams, ONLY: nRayTotal, XyzRay_DI, SlopeRay_DI, Amplitude_I
   use ModRadioWaveRaytracing, ONLY: ray_path
+  use ModDensityAndGradient, ONLY: EnergyDeposition_I
   implicit none
   
   real, allocatable, save:: SourceE_CB(:,:,:,:)
   real, dimension(:,:), pointer:: Position_DI
+  logical,dimension(:), pointer:: DoRay_I
   real, allocatable, save:: Slope_DI(:,:), Intensity_I(:), DeltaS_I(:)
-  logical, allocatable,save:: Unused_I(:), IsRayFlag_I(:)
+  logical, allocatable,save:: Unused_I(:), IsBehindCr_I(:)
   logical, save:: DoInit = .true.
   integer, save:: nRay = -1
   
@@ -273,6 +275,7 @@ contains
     use ModAbsorption, ONLY: AbsorptionCoeff_I
     use ModMain,ONLY:NameThisComp
     use CON_global_vector, ONLY: allocate_vector, associate_with_global_vector
+    use CON_global_vector, ONLY: allocate_mask, associate_with_global_mask
     use ModBeams, ONLY: get_rays
     !--------------------------------------
     DoInit = .false.
@@ -285,20 +288,29 @@ contains
     if(nRay >0)then
        allocate(Density_I(nRay), GradDensity_DI(3,nRay),DeltaSNew_I(nRay))
        allocate(AbsorptionCoeff_I(nRay))
+       allocate(EnergyDeposition_I(nRay))
     end if
 
     NameVector=NameThisComp//'_Rays_DI'
     call allocate_vector(NameVector, 3, nRayTotal)
     call associate_with_global_vector(Position_DI, NameVector)
+ 
+
+    NameMask = NameThisComp//'_UsedRay'
+    call allocate_mask(NameMask, nRayTotal)
+    call associate_with_global_mask(DoRay_I, NameMask)
+
     allocate(Slope_DI(3, nRayTotal))
     allocate(Intensity_I(nRayTotal), DeltaS_I(nRayTotal))
-    allocate(Unused_I(nRayTotal), IsRayFlag_I(nRayTotal))
+    allocate(Unused_I(nRayTotal), IsBehindCr_I(nRayTotal))
 
     !Initialize all arrays:
     Position_DI(:, 1:nRayTotal) = XyzRay_DI(:,   1:nRayTotal)
     Slope_DI(:,    1:nRayTotal) = SlopeRay_DI(:, 1:nRayTotal)
     Intensity_I(   1:nRayTotal) = Amplitude_I(   1:nRayTotal)
-    Unused_I = .false.; IsRayFlag_I = .false.
+    DoRay_I = .true.
+
+    Unused_I = .false.; IsBehindCr_I = .false.
 
     DeltaS_I = DeltaS
     
@@ -326,12 +338,19 @@ contains
     Position_DI(:, 1:nRayTotal) = XyzRay_DI(:,   1:nRayTotal)
     Slope_DI(:,    1:nRayTotal) = SlopeRay_DI(:, 1:nRayTotal)
     Intensity_I(   1:nRayTotal) = Amplitude_I(   1:nRayTotal)
-    Unused_I = .false.; IsRayFlag_I = .false.
+    DoRay_I = .true.
+
+    Unused_I = .false.; IsBehindCr_I = .false.
     DeltaS_I = DeltaS
 
-    do while(any(.not. Unused_I))
+    do while(.not.all(Unused_I))
+       EnergyDeposition_I=0.0
+       !Propagate each of rays through the distance of DeltaS
        call ray_path(get_density_and_absorption, nRay, Unused_I, Slope_DI, &
-            DeltaS_I, Tolerance, DensityCrSi, Intensity_I, IsRayFlag_I)
+            DeltaS_I, Tolerance, DensityCrSi, Intensity_I, IsBehindCr_I)
+       DoRay_I = (.not.Unused_I).or.IsBehindCr_I
+
+       !Save EnergyDeposition_I to SourceE_CB
        call construct_router_from_source(&
             GridDescriptorSource = LineGrid, &
             GridDescriptorTarget = MhGrid, &
@@ -341,27 +360,27 @@ contains
             interpolate=interpolation_fix_reschange)
    
        call global_message_pass(Router=Router,&
-            nVar=1,&    !Energy deposition
+            nVar=1,&    !Energy deposition only
             fill_buffer=get_energy_deposition,&
             apply_buffer=put_energy_deposition)
-       
+       DoRay_I = (.not.Unused_I)
     end do
 
   end subroutine get_impl_energy_source
   !=============================
   subroutine get_energy_deposition(&
-       nPartial,iGetStart,Get,W,State_V,nVar)
+       nPartial,iGetStart,Get,W,Buff_V,nVar)
     use CON_router
     !INPUT ARGUMENTS:
     integer,intent(in)::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::W
-    real,dimension(nVar),intent(out)::State_V
+    real,dimension(nVar),intent(out)::Buff_V
 
     integer::iCell
 
     iCell=Get%iCB_II(1,iGetStart)
-
+    Buff_V(1) = EnergyDeposition_I(iCell)
    
   end subroutine get_energy_deposition
 
@@ -372,23 +391,25 @@ contains
        Put,&
        W,&
        DoAdd,&
-       Buff_I,nVar)
+       Buff_V,nVar)
     implicit none
     integer,intent(in)::nPartial,iPutStart,nVar
     type(IndexPtrType),intent(in)::Put
     type(WeightPtrType),intent(in)::W
     logical,intent(in)::DoAdd
-    real,dimension(nVar),intent(in)::Buff_I
+    real,dimension(nVar),intent(in)::Buff_V
     integer::iPut, i, j, k, iBlock
     real :: Weight
 
- 
-    i      = Put%iCB_II(1,iPutStart)
-    j      = Put%iCB_II(2,iPutStart)
-    k      = Put%iCB_II(3,iPutStart)
-    iBlock = Put%iCB_II(4,iPutStart)
-    Weight = W%Weight_I(iPutStart)
-    
+    do iPut = iPutStart, iPutStart - 1 + nPartial
+       i      = Put%iCB_II(1,iPut)
+       j      = Put%iCB_II(2,iPut)
+       k      = Put%iCB_II(3,iPut)
+       iBlock = Put%iCB_II(4,iPut)
+       Weight = W%Weight_I(iPut)
+       
+       SourceE_CB(i, j, k, iBlock) = Buff_V(1) * Weight
+    end do
 
   end subroutine put_energy_deposition
 end module ModLaserPackage
