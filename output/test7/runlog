@@ -455,17 +455,17 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=      0 time=   0:00:00 h:m:s
 SORTED TIMING at step       0 OH on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-SWMF                     10.20    100.00         1         1
+SWMF                     14.71    100.00         1         1
 -------------------------------------------------------------------------------
-SETUP                    10.20    100.00         1         1
-IH_OH_couple              5.79     56.75         1         1
-OH_IH_couple              2.30     22.55         1         1
-exch_msgs                 0.27      2.69         2         3
-OH_load_balance           0.21      2.07         1         1
-save_plot                 0.15      1.48         1         2
-save_logfile              0.08      0.81         1         2
-IH_load_balance           0.03      0.28         1         1
-int_domain                0.02      0.19         1         2
+SETUP                    14.71    100.00         1         1
+IH_OH_couple              7.72     52.49         1         1
+OH_IH_couple              3.39     23.04         1         1
+exch_msgs                 0.46      3.10         2         3
+OH_load_balance           0.31      2.10         1         1
+save_plot                 0.23      1.56         1         2
+save_logfile              0.17      1.18         1         2
+IH_load_balance           0.04      0.25         1         1
+int_domain                0.03      0.19         1         2
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
 IH:saved ifile= 3 type=z=0_mhd    at n_step=      2 time=   3:13:26 h:m:s
@@ -476,7 +476,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=      4 time=   8:55:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=      4 time=   8:46:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=      5 time=  11:06:40 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=      5 time=  11:06:40 h:m:s
-Progress:      10 steps,   40000.0     s simulation time,     11.78 s CPU time
+Progress:      10 steps,   40000.0     s simulation time,     22.32 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=      6 time=  14:29:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=      6 time=  14:20:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=      7 time=  16:40:00 h:m:s
@@ -485,7 +485,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=      8 time=  20:02:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=      8 time=  19:53:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=      9 time=  22:13:20 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=      9 time=  22:13:20 h:m:s
-Progress:      20 steps,   80000.0     s simulation time,     21.29 s CPU time
+Progress:      20 steps,   80000.0     s simulation time,     37.51 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     10 time=  25:35:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     10 time=  25:26:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     11 time=  27:46:40 h:m:s
@@ -494,7 +494,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     12 time=  31:09:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     12 time=  31:00:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     13 time=  33:20:00 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     13 time=  33:20:00 h:m:s
-Progress:      30 steps,   120000.     s simulation time,     30.85 s CPU time
+Progress:      30 steps,   120000.     s simulation time,     52.54 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     14 time=  36:42:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     14 time=  36:33:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     15 time=  38:53:20 h:m:s
@@ -503,7 +503,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     16 time=  42:15:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     16 time=  42:06:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     17 time=  44:26:40 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     17 time=  44:26:40 h:m:s
-Progress:      40 steps,   160000.     s simulation time,     40.58 s CPU time
+Progress:      40 steps,   160000.     s simulation time,     67.76 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     18 time=  47:49:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     18 time=  47:40:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     19 time=  50:00:00 h:m:s
@@ -512,7 +512,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     20 time=  53:22:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     20 time=  53:13:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     21 time=  55:33:20 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     21 time=  55:33:20 h:m:s
-Progress:      50 steps,   200000.     s simulation time,     50.23 s CPU time
+Progress:      50 steps,   200000.     s simulation time,     82.98 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     22 time=  58:55:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     22 time=  58:46:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     23 time=  61:06:40 h:m:s
@@ -521,7 +521,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     24 time=  64:29:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     24 time=  64:20:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     25 time=  66:40:00 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     25 time=  66:40:00 h:m:s
-Progress:      60 steps,   240000.     s simulation time,     59.80 s CPU time
+Progress:      60 steps,   240000.     s simulation time,     98.40 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     26 time=  70:02:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     26 time=  69:53:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     27 time=  72:13:20 h:m:s
@@ -530,7 +530,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     28 time=  75:35:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     28 time=  75:26:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     29 time=  77:46:40 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     29 time=  77:46:40 h:m:s
-Progress:      70 steps,   280000.     s simulation time,     69.40 s CPU time
+Progress:      70 steps,   280000.     s simulation time,    113.40 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     30 time=  81:09:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     30 time=  81:00:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     31 time=  83:20:00 h:m:s
@@ -539,7 +539,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     32 time=  86:42:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     32 time=  86:33:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     33 time=  88:53:20 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     33 time=  88:53:20 h:m:s
-Progress:      80 steps,   320000.     s simulation time,     79.07 s CPU time
+Progress:      80 steps,   320000.     s simulation time,    128.51 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     34 time=  92:15:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     34 time=  92:06:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     35 time=  94:26:40 h:m:s
@@ -548,7 +548,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     36 time=  97:49:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     36 time=  97:40:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     37 time= 100:00:00 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     37 time= 100:00:00 h:m:s
-Progress:      90 steps,   360000.     s simulation time,     88.73 s CPU time
+Progress:      90 steps,   360000.     s simulation time,    143.53 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     38 time= 103:22:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     38 time= 103:13:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     39 time= 105:33:20 h:m:s
@@ -557,17 +557,17 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     40 time= 108:55:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     40 time= 108:46:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     41 time= 111:06:40 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     41 time= 111:06:40 h:m:s
-Progress:     100 steps,   400000.     s simulation time,     98.34 s CPU time
+Progress:     100 steps,   400000.     s simulation time,    158.75 s CPU time
 -------------------------------------------------------------------------------
 TIMING TREE of depth 2 from step       0 to     100 OH on PE    0
 name                  #iter  #calls      sec   s/iter   s/call  percent
 -------------------------------------------------------------------------------
-SWMF                      1       1    98.34   98.339   98.339   100.00
+SWMF                      1       1   158.75  158.753  158.753   100.00
 -------------------------------------------------------------------------------
-IH_run                   41      41     9.94    0.243    0.243    10.11
-OH_run                   41      41    85.97    2.097    2.097    87.42
-IH_OH_couple             20      20     1.02    0.051    0.051     1.03
-OH_IH_couple             20      20     1.40    0.070    0.070     1.43
+IH_run                   41      41    16.71    0.408    0.408    10.53
+OH_run                   41      41   134.80    3.288    3.288    84.91
+IH_OH_couple             20      20     4.99    0.249    0.249     3.14
+OH_IH_couple             20      20     2.25    0.113    0.113     1.42
 #others                                 0.00    0.003              0.00
 -------------------------------------------------------------------------------
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     42 time= 114:29:02 h:m:s
@@ -578,7 +578,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     44 time= 120:02:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     44 time= 119:53:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     45 time= 122:13:20 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     45 time= 122:13:20 h:m:s
-Progress:     110 steps,   440000.     s simulation time,    107.97 s CPU time
+Progress:     110 steps,   440000.     s simulation time,    173.78 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     46 time= 125:35:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     46 time= 125:26:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     47 time= 127:46:40 h:m:s
@@ -587,7 +587,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     48 time= 131:09:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     48 time= 131:00:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     49 time= 133:20:00 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     49 time= 133:20:00 h:m:s
-Progress:     120 steps,   480000.     s simulation time,    117.48 s CPU time
+Progress:     120 steps,   480000.     s simulation time,    189.16 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     50 time= 136:42:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     50 time= 136:33:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     51 time= 138:53:20 h:m:s
@@ -596,7 +596,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     52 time= 142:15:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     52 time= 142:06:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     53 time= 144:26:40 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     53 time= 144:26:40 h:m:s
-Progress:     130 steps,   520000.     s simulation time,    127.03 s CPU time
+Progress:     130 steps,   520000.     s simulation time,    204.01 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     54 time= 147:49:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     54 time= 147:40:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     55 time= 150:00:00 h:m:s
@@ -605,7 +605,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     56 time= 153:22:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     56 time= 153:13:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     57 time= 155:33:20 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     57 time= 155:33:20 h:m:s
-Progress:     140 steps,   560000.     s simulation time,    136.53 s CPU time
+Progress:     140 steps,   560000.     s simulation time,    219.39 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     58 time= 158:55:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     58 time= 158:46:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     59 time= 161:06:40 h:m:s
@@ -614,7 +614,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     60 time= 164:29:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     60 time= 164:20:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     61 time= 166:40:00 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     61 time= 166:40:00 h:m:s
-Progress:     150 steps,   600000.     s simulation time,    146.08 s CPU time
+Progress:     150 steps,   600000.     s simulation time,    234.70 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     62 time= 170:02:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     62 time= 169:53:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     63 time= 172:13:20 h:m:s
@@ -623,7 +623,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     64 time= 175:35:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     64 time= 175:26:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     65 time= 177:46:40 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     65 time= 177:46:40 h:m:s
-Progress:     160 steps,   640000.     s simulation time,    155.65 s CPU time
+Progress:     160 steps,   640000.     s simulation time,    249.88 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     66 time= 181:09:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     66 time= 181:00:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     67 time= 183:20:00 h:m:s
@@ -632,7 +632,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     68 time= 186:42:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     68 time= 186:33:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     69 time= 188:53:20 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     69 time= 188:53:20 h:m:s
-Progress:     170 steps,   680000.     s simulation time,    165.19 s CPU time
+Progress:     170 steps,   680000.     s simulation time,    260.28 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     70 time= 192:15:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     70 time= 192:06:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     71 time= 194:26:40 h:m:s
@@ -641,7 +641,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     72 time= 197:49:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     72 time= 197:40:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     73 time= 200:00:00 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     73 time= 200:00:00 h:m:s
-Progress:     180 steps,   720000.     s simulation time,    174.64 s CPU time
+Progress:     180 steps,   720000.     s simulation time,    270.25 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     74 time= 203:22:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     74 time= 203:13:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     75 time= 205:33:20 h:m:s
@@ -650,7 +650,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     76 time= 208:55:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     76 time= 208:46:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     77 time= 211:06:40 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     77 time= 211:06:40 h:m:s
-Progress:     190 steps,   760000.     s simulation time,    184.16 s CPU time
+Progress:     190 steps,   760000.     s simulation time,    279.72 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     78 time= 214:29:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     78 time= 214:20:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     79 time= 216:40:00 h:m:s
@@ -659,18 +659,18 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     80 time= 220:02:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     80 time= 219:53:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     81 time= 222:13:20 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     81 time= 222:13:20 h:m:s
-Progress:     200 steps,   800000.     s simulation time,    193.65 s CPU time
+Progress:     200 steps,   800000.     s simulation time,    289.20 s CPU time
 -------------------------------------------------------------------------------
 TIMING TREE of depth 2 from step       0 to     200 OH on PE    0
 name                  #iter  #calls      sec   s/iter   s/call  percent
 -------------------------------------------------------------------------------
-SWMF                      1       1   193.65  193.647  193.647   100.00
+SWMF                      1       1   289.20  289.197  289.197   100.00
 -------------------------------------------------------------------------------
-IH_run                   81      81    19.59    0.242    0.242    10.12
-OH_run                   81      81   169.18    2.089    2.089    87.37
-IH_OH_couple             40      40     2.07    0.052    0.052     1.07
-OH_IH_couple             40      40     2.80    0.070    0.070     1.44
-#others                                 0.01    0.005              0.00
+IH_run                   81      81    30.48    0.376    0.376    10.54
+OH_run                   81      81   245.82    3.035    3.035    85.00
+IH_OH_couple             40      40     8.69    0.217    0.217     3.01
+OH_IH_couple             40      40     4.20    0.105    0.105     1.45
+#others                                 0.01    0.006              0.00
 -------------------------------------------------------------------------------
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     82 time= 225:35:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     82 time= 225:26:46 h:m:s
@@ -680,7 +680,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     84 time= 231:09:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     84 time= 231:00:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     85 time= 233:20:00 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     85 time= 233:20:00 h:m:s
-Progress:     210 steps,   840000.     s simulation time,    203.13 s CPU time
+Progress:     210 steps,   840000.     s simulation time,    298.60 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     86 time= 236:42:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     86 time= 236:33:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     87 time= 238:53:20 h:m:s
@@ -689,7 +689,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     88 time= 242:15:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     88 time= 242:06:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     89 time= 244:26:40 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     89 time= 244:26:40 h:m:s
-Progress:     220 steps,   880000.     s simulation time,    212.66 s CPU time
+Progress:     220 steps,   880000.     s simulation time,    307.99 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     90 time= 247:49:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     90 time= 247:40:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     91 time= 250:00:00 h:m:s
@@ -698,7 +698,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     92 time= 253:22:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     92 time= 253:13:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     93 time= 255:33:20 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     93 time= 255:33:20 h:m:s
-Progress:     230 steps,   920000.     s simulation time,    222.22 s CPU time
+Progress:     230 steps,   920000.     s simulation time,    317.46 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     94 time= 258:55:42 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     94 time= 258:46:46 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     95 time= 261:06:40 h:m:s
@@ -707,7 +707,7 @@ OH:saved ifile= 3 type=z=0_mhd    at n_step=     96 time= 264:29:02 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     96 time= 264:20:06 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     97 time= 266:40:00 h:m:s
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     97 time= 266:40:00 h:m:s
-Progress:     240 steps,   960000.     s simulation time,    232.22 s CPU time
+Progress:     240 steps,   960000.     s simulation time,    326.95 s CPU time
 OH:saved ifile= 3 type=z=0_mhd    at n_step=     98 time= 270:02:22 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     98 time= 269:53:26 h:m:s
 IH:saved ifile= 3 type=z=0_mhd    at n_step=     99 time= 272:13:20 h:m:s
@@ -729,30 +729,30 @@ OH: error report: no errors...
 SORTED TIMING from step       0 to     249 OH on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-SWMF                    241.80    100.00         1         1
+SWMF                    336.31    100.00         1         1
 -------------------------------------------------------------------------------
-advance                 216.95     89.72       202       202
+advance                 296.38     88.13       202       202
 -------------------------------------------------------------------------------
-OH_run                  211.28     87.38       101       101
-calc_fluxes              71.21     29.45       202    391880
-exch_msgs                59.23     24.49       202       404
-calc_facevalues          41.38     17.11       202    391880
-IH_run                   24.44     10.11       101       101
-save_plot                14.81      6.13       199       200
-OH_update_states         10.55      4.36       101    340168
-calc_face_bfo             9.39      3.88       101    163216
-OH_set_BCs                5.09      2.10       101     32926
-OH_calc_sources           4.74      1.96       101    340168
-save_logfile              3.86      1.60       200       201
-OH_IH_couple              3.50      1.45        50        50
-OH_update_check           3.44      1.42       101       202
-calc_fluxes_bfo           2.81      1.16       101    163216
-IH_OH_couple              2.57      1.06        50        50
-IH_update_states          1.60      0.66       101     51712
-IH_calc_sources           0.75      0.31       101     51712
-int_domain                0.74      0.30       200       201
-send_cons_flux            0.63      0.26       202       404
-IH_update_check           0.60      0.25       101       202
-barrier-expl2             0.58      0.24       202       404
-barrier-expl1             0.31      0.13       202       404
+OH_run                  287.04     85.35       101       101
+calc_fluxes              93.32     27.75       202    391880
+exch_msgs                77.68     23.10       202       404
+calc_facevalues          56.82     16.89       202    391880
+IH_run                   35.17     10.46       101       101
+save_plot                19.09      5.68       199       200
+OH_update_states         17.28      5.14       101    340168
+calc_face_bfo            12.68      3.77       101    163216
+IH_OH_couple              9.21      2.74        50        50
+OH_calc_sources           6.62      1.97       101    340168
+save_logfile              6.55      1.95       200       201
+OH_set_BCs                6.53      1.94       101     32926
+OH_update_check           5.22      1.55       101       202
+OH_IH_couple              4.88      1.45        50        50
+calc_fluxes_bfo           3.59      1.07       101    163216
+barrier-expl2             2.96      0.88       202       404
+barrier-expl1             2.21      0.66       202       404
+IH_update_states          2.06      0.61       101     51712
+IH_update_check           1.41      0.42       101       202
+IH_calc_sources           0.95      0.28       101     51712
+int_domain                0.81      0.24       200       201
+send_cons_flux            0.81      0.24       202       404
 -------------------------------------------------------------------------------
