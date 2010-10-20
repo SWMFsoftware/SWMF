@@ -773,11 +773,11 @@ contains
           State_VGB(LevelAy_,i,j,k,iBlock) = -sqrt((xAu-x)**2 + DistancePl**2)
 
 
-          State_VGB(Rho_,i,j,k,iBlock) = 6.5 * Si2No_V(UnitRho_)
+          State_VGB(Rho_,i,j,k,iBlock) = 6.5e-3 * Si2No_V(UnitRho_)
 
 
        elseif ((x >= 0.).and.(x < xBe).and.(y < rInnerTube)) then
-!         Set material as Be.
+          ! Set material as Be.
 
           DistanceBe = abs(xBe - x)
           DistancePl = abs(yPl - y)
@@ -794,7 +794,7 @@ contains
 
 
        elseif ((x >= xBe).and.(x < x2).and.(y < rInnerTube)) then
-!         ...in Xe
+          ! ...in Xe
 
           DistanceBe = abs(x - xBe)
           DistancePl = abs(yPl - y)
@@ -846,7 +846,7 @@ contains
              State_VGB(LevelAy_,i,j,k,iBlock) = -(abs(x)+xAu)
 
 
-             State_VGB(Rho_,i,j,k,iBlock) = 0.0065
+             State_VGB(Rho_,i,j,k,iBlock) = 0.0065*Si2No_V(UnitRho_)
 
           elseif ((x >= 0.).and.(x < xBe)) then
              ! In Be disk
@@ -924,7 +924,7 @@ contains
              State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
 
 
-             State_VGB(Rho_,i,j,k,iBlock) = 6.5 * Si2No_V(UnitRho_)
+             State_VGB(Rho_,i,j,k,iBlock) = 6.5e-3 * Si2No_V(UnitRho_)
 
           elseif ((x >= 0.).and.(x < xBe)) then
 
