@@ -178,12 +178,8 @@ SWMF:	ENV_CHECK
 	@cd ${CONTROLDIR}; make SWMFEXE  
 	@echo ' '
 
-NWAVE=1
-
-NMATERIAL=3 
 
 CRASH:	ENV_CHECK
-	@cd ${GMDIR}; Config.pl -u=Crash -e=Crash -nWave=${NWAVE} -nMaterial=${NMATERIAL}
 	@cd ${CONTROLDIR}; make CRASHEXE  
 	@echo ' '
 

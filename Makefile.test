@@ -756,8 +756,9 @@ test_lp:
 
 test_lp_compile:
 	Config.pl -v=Empty,GM/BATSRUS
-	cd GM/BATSRUS;Config.pl -g=4,4,1,1000,1000
-	make CRASH NMATERIAL=5 NWAVE=30
+	cd GM/BATSRUS;Config.pl -g=4,4,1,1000,1000 -e=Crash -u=Crash \
+	-nMaterial=5 -nWave=30
+	make CRASH
 
 test_lp_rundir:
 	rm -rf ${TESTDIR}
