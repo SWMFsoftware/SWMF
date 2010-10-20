@@ -144,7 +144,6 @@ contains
     !      0,&
     !      Router%iComm)
   
-    call timing_stop('get_plasma_density')
   end subroutine get_density_and_absorption
   !================================================
   subroutine get_density_local(&

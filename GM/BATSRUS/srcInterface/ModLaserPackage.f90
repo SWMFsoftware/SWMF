@@ -94,7 +94,7 @@ contains
   end subroutine get_rays
   !======================
   subroutine rz_beam_rays
-    use ModGeometry, ONLY: TypeGeometry, y1
+    use ModGeometry, ONLY: TypeGeometry, y2
     use ModConst,    ONLY: cDegToRad 
     
     real:: CosTheta, SinTheta,  yCrCentral, yPlaneCentral, yPlane
@@ -137,7 +137,7 @@ contains
 
            !Do not include rays with the starting point 
            !being otside the computational domain:
-           if(abs(yPlane) >= y1)CYCLE
+           if(abs(yPlane) >= y2)CYCLE
            nRayTotal = nRayTotal +1
            
            Amplitude_I(nRayTotal) = BeamAmplitude * &
@@ -332,7 +332,13 @@ contains
         
     integer:: iStep
     !--------------------------
-    if(DoInit) call init_laser_package
+    if(DoInit) then
+       call init_laser_package
+       if(iProc==0)then
+          write(*,*)'Initialized laser package with nRay=', nRay
+          write(*,*)'Critical density equals ',DensityCrSi
+       end if
+    end if
     SourceE_CB(:,:,:,:) = 0.0
 
     !Initialize all arrays:
