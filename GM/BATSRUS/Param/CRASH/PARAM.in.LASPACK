@@ -65,25 +65,11 @@ T                UseLaserPackage
 
 #END_LASERPULSE
 
-#USEEOSTABLE
-T			Use Eos Table for Xe
-T			Use Eos Table for Be
-T			Use Eos Table for Pl
-T			Use Eos Table for Au
-T			Use Eos Table for Ay
 
 #MIXEDCELL
 F			UseMixedCell
 0.97			MixLimit
 
-#OPACITY
-T			UseExcitation
-F			UseCoulombCorrection
-T			DoStateElimination
-
-#GROUPRANGE
-1.0			EnergyPhotonMin
-2000.0			EnergyPhotonMax
 
 #PLASTIC
 18000.0			TeMaxColdPlasticSi
