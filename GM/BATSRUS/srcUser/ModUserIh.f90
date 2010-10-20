@@ -26,7 +26,7 @@ module ModUser
   real              :: RhoInitialNo, pInitialNo
 
   ! For ICs containing uniform flow ('UniformU' , 'SphereAdvect')
-  real              :: uInitialNo, FlowAngle ! Flow limited to YZ plane
+  real              :: uInitialNo, FlowAngle ! Flow limited to XY plane
 
   ! Constant density sphere in uniform flow, initially at origin
   real              :: rSphere, RhoSphereNo         
@@ -121,58 +121,69 @@ contains
   subroutine user_set_ics
     
     use ModAdvance,    ONLY: State_VGB
-    use ModMain,       ONLY: globalBLK,unusedBLK
-    use ModVarIndexes, ONLY: rho_, p_,Uy_,Uz_, Bx_,Bz_
+    use ModMain,       ONLY: globalBLK, unusedBLK, TypeCoordSystem
+    use ModVarIndexes
     use ModPhysics,    ONLY: BodyRho_I, BodyP_I
-    use ModGeometry,   ONLY: R_BLK, y_BLK
+    use ModGeometry,   ONLY: R_BLK, x_BLK,y_BLK
     use ModSize,       ONLY: nI, nJ, nK, gcn
     use ModNumConst,   ONLY: cDegToRad
-
+    use ModConst,      ONLY: RotationPeriodSun
     implicit none
 
     integer                     :: i, j, k, iBlock
-    real                        :: FlowAngleRad, Uy0, Uz0
+    real                        :: FlowAngleRad, Ux0, Uy0
+    real                        :: Omega = RotationPeriodSun
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !----------------------------------------------------------------------
     iBlock = globalBLK
 
      if (unusedBLK(iBlock)) RETURN
-         
-    select case(TypeIcs)
+   
+     select case(TypeIcs)
     case('UniformU','SphereAdvect')
        ! These cases describe an IC with uniform 1D flow of plasma with no
        ! density or pressure gradients and no magnetic field.
-       ! The initial density and pressure are controled by the user
-       ! Only flow in the YZ plane is implemented.
-       ! The 'SphereAdvect' case also includes an embedded higer/lower
+       ! The 'SphereAdvect' case also includes an embedded higher/lower
        ! density sphere, initially at the origin.  
 
-       ! Calculate Uy and Uz. Flow angle is measured from the y axis
+       ! Calculate Ux and Uy in inertial frame.
+       ! Flow angle is measured from the x axis
        FlowAngleRad = cDegToRad*FlowAngle
-       Uy0 = uInitialNo*cos(FlowAngleRad)
-       Uz0 = uInitialNo*sin(FlowAngleRad)
+       Ux0 = uInitialNo*cos(FlowAngleRad)
+       Uy0 = uInitialNo*sin(FlowAngleRad)
        !\
        ! Start filling in cells (including ghost cells)
-       !/
-       State_VGB(Uy_,:,:,:,iBlock) = Uy0
-       State_VGB(Uz_,:,:,:,iBlock) = Uz0
-       State_VGB(p_,  :,:,:,iBlock) = pInitialNo 
-       ! no magnetic field
-       State_VGB(Bx_:Bz_,:,:,:,iBlock) = 0.0
-
-       do k=-1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn
-          
+       !/ 
+       do k=-1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn          
           if (R_BLK(i,j,k,iBlock) .le. rSphere .and. &
                TypeIcs == 'SphereAdvect')then
              ! inside the sphere
              State_VGB(rho_,i,j,k,iBlock) = RhoSphereNo       
           else
              ! in background flow
-             State_VGB(rho_,i,j,k,iBlock) = RhoInitialNo!*BodyRho_I(1)       
+             State_VGB(rho_,i,j,k,iBlock) = RhoInitialNo
 
           end if  
        end do; end do ; end do
+       
+       ! velocity
+       State_VGB(RhoUx_,:,:,:,iBlock) = Ux0*&
+            State_VGB(rho_,:,:,:,iBlock)
+       State_VGB(RhoUy_,:,:,:,iBlock) = Uy0*&
+            State_VGB(rho_,:,:,:,iBlock)
+       if(TypeCoordSystem=='HGR') then
+          ! transform velocity to rotating frame
+          ! rotation axis is parallel to Z axis.
+          State_VGB(RhoUx_,:,:,:,iBlock) = State_VGB(RhoUx_,:,:,:,iBlock)&
+               + Omega*y_BLK(:,:,:,iBlock)*State_VGB(Rho_,:,:,:,iBlock)
+          State_VGB(RhoUy_,:,:,:,iBlock) = State_VGB(RhoUy_,:,:,:,iBlock)&
+               - Omega*x_BLK(:,:,:,iBlock)*State_VGB(Rho_,:,:,:,iBlock)
+       end if
 
+       State_VGB(RhoUz_,:,:,:,iBlock) = 0.0
+       State_VGB(Bx_:Bz_,:,:,:,iBlock) = 0.0
+       State_VGB(p_,  :,:,:,iBlock) = pInitialNo*BodyP_I(1) 
+     
     case('shell')
        ! this case describes a shell with density and/or pressure
        ! embedded in a uniform background at rest, without a magnetic field.
@@ -190,7 +201,6 @@ contains
              State_VGB(p_,  i,j,k,iBlock) = pInitialNo*BodyP_I(1)
           end if  
        end do; end do ; end do
-
     case('parker')
        call set_parker_spiral
           
@@ -199,6 +209,7 @@ contains
        call CON_stop('Correct PARAM.in')
     end select
 
+   
   contains
     subroutine set_parker_spiral
 
