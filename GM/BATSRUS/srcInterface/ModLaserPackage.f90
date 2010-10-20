@@ -328,8 +328,9 @@ contains
   subroutine get_impl_energy_source
     use ModAbsorption, ONLY: NameMask
     use ModDensityAndGradient, ONLY: NameVector
+    use ModProcMH, ONLY: iProc
         
-
+    integer:: iStep
     !--------------------------
     if(DoInit) call init_laser_package
     SourceE_CB(:,:,:,:) = 0.0
@@ -338,18 +339,25 @@ contains
     Position_DI(:, 1:nRayTotal) = XyzRay_DI(:,   1:nRayTotal)
     Slope_DI(:,    1:nRayTotal) = SlopeRay_DI(:, 1:nRayTotal)
     Intensity_I(   1:nRayTotal) = Amplitude_I(   1:nRayTotal)
+    EnergyDeposition_I          = 0.0
     DoRay_I = .true.
 
     Unused_I = .false.; IsBehindCr_I = .false.
     DeltaS_I = DeltaS
-
+    iStep = 0
     do while(.not.all(Unused_I))
        EnergyDeposition_I=0.0
        !Propagate each of rays through the distance of DeltaS
        call ray_path(get_density_and_absorption, nRay, Unused_I, Slope_DI, &
             DeltaS_I, Tolerance, DensityCrSi, Intensity_I, IsBehindCr_I)
        DoRay_I = (.not.Unused_I).or.IsBehindCr_I
-
+       iStep = iStep + 1
+       if(iProc==0)then
+          write(*,*)'Laser package at iStep =',iStep
+          write(*,*)'Used rays #=',count(.not.Unused_I)
+          write(*,*)'Rays penetrated into overdense plasma, #=',count(IsBehindCr_I)
+          write(*,*)'Total energy deposition =',sum(EnergyDeposition_I,MASK=DoRay_I)
+       end if
        !Save EnergyDeposition_I to SourceE_CB
        call construct_router_from_source(&
             GridDescriptorSource = LineGrid, &

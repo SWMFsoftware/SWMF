@@ -251,6 +251,7 @@ contains !=========================================================
           if (Curv .ge. ToleranceSqr) then
              DeltaS_I(iRay) = DeltaS_I(iRay)/(2*sqrt(Curv/ToleranceSqr))
              Position_DI(:,iRay) = PositionHalfBack_D
+             if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
              CYCLE
           end if
 
@@ -270,6 +271,7 @@ contains !=========================================================
                   /sqrt(GradDielPermSqr)
              DeltaS_I(iRay) =  cHalf*Tolerance*DistanceToCritSurf_I(iRay)
              Position_DI(:,iRay) = PositionHalfBack_D
+             if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
              CYCLE
           end if
 
