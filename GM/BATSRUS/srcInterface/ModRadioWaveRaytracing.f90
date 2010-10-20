@@ -347,6 +347,14 @@ contains !=========================================================
           else
              EnergyDeposition_I(iRay) = Intensity_I(iRay) * &
                   ParabLen * AbsorptionCoeff_I(iRay)
+             if(EnergyDeposition_I(iRay)>=Intensity_I(iRay))then
+                !Mark this ray as if it is behind the critical surface
+                EnergyDeposition_I(iRay) = Intensity_I(iRay)
+                UnusedRay_I(iRay) = .true.
+                Intensity_I(iRay) = 0.0
+                IsBehindCr_I(iRay) = .true.
+                CYCLE
+             end if
              Intensity_I(iRay) = Intensity_I(iRay) * &
                   (1 - ParabLen * AbsorptionCoeff_I(iRay)) 
           end if
@@ -377,6 +385,14 @@ contains !=========================================================
           if(UseLaserPackage)then
              EnergyDeposition_I(iRay) = Intensity_I(iRay) *  &
                   DeltaS_I(iRay) * AbsorptionCoeff_I(iRay)
+             if(EnergyDeposition_I(iRay)>=Intensity_I(iRay))then
+                !Mark this ray as if it in behind the critical surface
+                EnergyDeposition_I(iRay) = Intensity_I(iRay)
+                Intensity_I(iRay) = 0.0
+                UnusedRay_I(iRay) = .true.
+                IsBehindCr_I(iRay) = .true.
+                CYCLE
+             end if
              Intensity_I(iRay) = Intensity_I(iRay) * &
                   (1 - DeltaS_I(iRay) * AbsorptionCoeff_I(iRay)) 
           else
