@@ -519,11 +519,11 @@ test7_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test7_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=2e-30\
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test7/IH_log_n000000.log \
 		> test7_ih.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=2e-30\
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test7/OH_log_n000000.log \
 		> test7_oh.diff)
