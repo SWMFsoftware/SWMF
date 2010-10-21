@@ -180,6 +180,12 @@ contains !=========================================================
        AbsoluteMinimumStep = 1e-2*sum(DeltaS_I)/nRay 
        TypeBoundaryDown_D = TypeBc_I(1:2*nDim-1:2)
        TypeBoundaryUp_D   = TypeBc_I(2:2*nDim:2)
+       if(iProc==0)then
+          write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D
+          write(*,*)'TypeBoundaryUp_D=',TypeBoundaryUp_D
+          write(*,*)'AbsoluteMinimumStep=',AbsoluteMinimumStep
+       end if
+          
     end if
 
     nCall = nCall + 1
