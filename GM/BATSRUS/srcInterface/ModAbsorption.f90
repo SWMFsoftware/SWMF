@@ -151,7 +151,7 @@ contains
     !USES:
     use ModAdvance,ONLY: State_VGB,StateOld_VCB, &
          rho_
-    use ModGeometry,ONLY:Dx_BLK,Dy_BLK,Dz_BLK
+    use ModGeometry,ONLY:Dx_BLK,Dy_BLK,Dz_BLK, TypeGeometry
     use ModPhysics, ONLY:No2Si_V, UnitRho_
     use ModUser,ONLY: user_material_properties
     use CON_router
@@ -193,9 +193,14 @@ contains
          /(2*Dz_BLK(iBlock)) * ZAverage
     State_V(nDim+1)= Weight*&
          State_VGB(rho_,i,j,k,iBlock) * ZAverage
-    State_V(nDim+1+1)=Weight*&
-         min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
-
+    if(TypeGoemtry=='rz')then
+       State_V(nDim+2) = Weight*min(Dx_BLK(iBlock), Dy_BLK(iBlock))
+    else
+       State_V(nDim+1+1)=Weight*&
+            min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
+    end if
+    write(*,*)Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock)
+    call CON_stop('here')
     !Save Absorption coeff
     call calc_absorption(&
          NAtomicSI= NAtomicSI, &
@@ -229,9 +234,13 @@ contains
             /Dz_BLK(iBlock) * ZAverage
        State_V(nDim+1)  = State_V(nDim+1)+Weight*&
             State_VGB(rho_,i,j,k,iBlock) * ZAverage
-       State_V(nDim+1+1)= State_V(nDim+1+1)+Weight*&
-            min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
-
+       if(TypeGeometry=='rz')then
+          State_V(nDim+2) = State_V(nDim+2)+ Weight*&
+               min(Dx_BLK(iBlock),Dy_BLK(iBlock))
+       else
+          State_V(nDim+1+1)= State_V(nDim+1+1)+Weight*&
+               min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
+       end if
        !Add Absorption coeff
 
        
