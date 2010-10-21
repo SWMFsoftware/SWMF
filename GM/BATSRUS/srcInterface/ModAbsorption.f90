@@ -79,23 +79,23 @@ contains
     
     Dens2DensCr = min(1.0, RhoSI/DensityCrSi)
     ! calculate the effective collision frequency
-    
+    !write(*,*)'RhoSi=',RhoSi,' Dens2DensCr=',Dens2DensCr
     AveragedElectronSpeed = sqrt(8.0*cBoltzmann &
          *TeSi/(cPi*cElectronMass))
-
+    !write(*,*)'TeSi=',TeSi,' AverageElectronSpeed=',AveragedElectronSpeed
     CollisionCrossSection = &
          cPi*2.0/3.0*(cElectronCharge**2/(4.0*cPi*cEps*(cBoltzmann*TeSi) ) )**2
-
+    !write(*,*)'Collision Cross Section =', CollisionCrossSection
     EffectiveCollisionRate = CollisionCrossSection* &
          (NatomicSi*ZAverage**2)*AveragedElectronSpeed*CoulombLog 
-
+    !write(*,*)'NAtomicSi=',NAtomicSi, ' EffectiveCollisionRate=',EffectiveCollisionRate
 
     Absorption = EffectiveCollisionRate/cLightSpeed*Dens2DensCr/&
          sqrt(1 - Dens2DensCr/(1 + (EffectiveCollisionRate/Omega)**2) )
-    
+    !write(*,*)'Dimensional absorption=', Absorption
     !Convert to the dimensionless form:
     Absorption =  Absorption*No2Si_V(UnitX_)
-  
+    !call CON_stop
   end subroutine calc_absorption
   !===============================
   subroutine get_density_and_absorption(nRay)
@@ -143,7 +143,8 @@ contains
     !      NameVector,&
     !      0,&
     !      Router%iComm)
-  
+    !if(iProc==0)write(*,*)AbsorptionCoeff_I
+    !call CON_stop
   end subroutine get_density_and_absorption
   !================================================
   subroutine get_density_local(&
@@ -193,14 +194,12 @@ contains
          /(2*Dz_BLK(iBlock)) * ZAverage
     State_V(nDim+1)= Weight*&
          State_VGB(rho_,i,j,k,iBlock) * ZAverage
-    if(TypeGoemtry=='rz')then
+    if(TypeGeometry=='rz')then
        State_V(nDim+2) = Weight*min(Dx_BLK(iBlock), Dy_BLK(iBlock))
     else
        State_V(nDim+1+1)=Weight*&
             min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
     end if
-    write(*,*)Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock)
-    call CON_stop('here')
     !Save Absorption coeff
     call calc_absorption(&
          NAtomicSI= NAtomicSI, &
