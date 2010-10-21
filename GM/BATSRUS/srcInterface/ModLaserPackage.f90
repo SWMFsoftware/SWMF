@@ -327,7 +327,7 @@ contains
   !================================
   subroutine get_impl_energy_source
     use ModAbsorption, ONLY: NameMask
-    use ModDensityAndGradient, ONLY: NameVector
+    use ModDensityAndGradient, ONLY: NameVector, DeltaSNew_I
     use ModProcMH, ONLY: iProc
         
     integer:: iStep
@@ -363,6 +363,7 @@ contains
           write(*,*)'Used rays #=',count(.not.Unused_I)
           write(*,*)'Rays penetrated into overdense plasma, #=',count(IsBehindCr_I)
           write(*,*)'Total energy deposition =',sum(EnergyDeposition_I,MASK=DoRay_I)
+          write(*,*)'Min DeltaSNew_I=',minval(DeltaSNew_I,MASK=DoRay_I)
        end if
        !Save EnergyDeposition_I to SourceE_CB
        call construct_router_from_source(&
