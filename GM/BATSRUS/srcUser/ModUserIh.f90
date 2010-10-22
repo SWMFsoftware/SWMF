@@ -154,7 +154,7 @@ contains
        !\
        ! Start filling in cells (including ghost cells)
        !/ 
-       do k=-1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn          
+       do k= 1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn          
           if (R_BLK(i,j,k,iBlock) .le. rSphere .and. &
                TypeIcs == 'SphereAdvect')then
              ! inside the sphere
