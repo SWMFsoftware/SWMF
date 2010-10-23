@@ -6,7 +6,7 @@ subroutine impl_newton_init
 
   use ModProcMH
   use ModMain, ONLY : Itest,Jtest,Ktest,VARtest,n_step,dt,nOrder, &
-       UseRadDiffusion, UseLaserPackage
+       UseRadDiffusion
   use ModAdvance, ONLY : FluxType
   use ModImplicit
   use ModMpi
@@ -25,11 +25,6 @@ subroutine impl_newton_init
 
   if(UseSemiImplicit)then
      call get_semi_impl_rhs(Impl_VGB, ResExpl_VCB)
-
-     !\
-     ! If the laser package is used, this is the place to apply it
-     !/
-     if(UseLaserPackage) call add_laser_energy_deposition
 
      !The laser package adds the laser energy deposition in the form of
      !numerous pointwise sources of energy, divided by the timestep, 

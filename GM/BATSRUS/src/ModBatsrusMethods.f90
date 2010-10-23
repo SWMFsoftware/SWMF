@@ -451,6 +451,12 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
 
+  !\
+  ! If the laser package is used, this is the place to apply it
+  !/
+  if(UseLaserPackage) call add_laser_energy_deposition
+
+
   call exchange_messages
 
   if(UseSemiImplicit .and. Dt>0) call advance_impl   !^CFG IF IMPLICIT

@@ -435,38 +435,80 @@ subroutine add_laser_energy_deposition
   !equation, which otherwise is solved within the semi-implicit scheme WITH ZERO
   !right-hand-side, is solved with the right-hand-side including the laser energy
   !deposition
-  use ModSize, ONLY: nI, nJ, nK
-  use ModImplicit, ONLY: ResExpl_VCB, iTeImpl, nImplBlk, impl2iblk
-  !Here ResExpl_VCB is the energy source array, to which the laser energy deposition 
-  !should be added. This array is the dimensionless form of the energy source in each
-  !control volume, divided by the time step, Delta t. The dimensional characteristic
-  !of the laser emission with the meaning of the energy delivired to the plasma is
+  use ModSize, ONLY: nI, nJ, nK, MaxBlock
+ 
+  !The dimensional characteristic
+  !of the laser emission with the meaning of the energy delivered to the plasma is
   !the irradiance (power). Therefore, the pointwise sources of energy calculated by
   !this subroutine are multipled by :
   !LaserIrradiance*Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
 
   use ModPhysics, ONLY: Si2No_V, UnitEnergydens_, UnitX_, UnitT_
   use ModLaserPackage, ONLY: get_impl_energy_source, SourceE_CB
-  use ModMain, ONLY: Time_Simulation
+  use ModMain, ONLY: Time_Simulation, dt, UnusedBLK
+  use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
+       UseNonConservative, IsConserv_CB, UseElectronPressure
+  use ModPhysics,  ONLY: inv_gm1, Si2No_V, No2Si_V, &
+       UnitP_, UnitEnergyDens_, ExtraEintMin, g
+  use ModVarIndexes, ONLY: Pe_
+  use ModGeometry, ONLY: vInv_CB
+  use ModUser, ONLY: user_material_properties
+    
   use ModLaserPulse, ONLY: irradiance_t
+  use ModEnergy, ONLY: calc_energy_cell
   implicit none
-  real:: Irradiance
-  integer :: iImplBlock, iBlock, i, j, k, iVar
+  real:: Irradiance, EInternalSi, PressureSi
+  integer :: iBlock, i, j, k, iP
+  logical,parameter :: UseExtraEInt = ExtraEInt_ > 1
 
   character(len=*), parameter:: NameSub = 'add_laser_energy_deposition'
   !----------------
   Irradiance = irradiance_t(Time_Simulation) * &
-       Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
+       Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_) * dt
 
   call get_impl_energy_source
 
-  do iImplBlock = 1, nImplBLK
-     iBlock = impl2iBLK(iImplBlock)
+  iP = p_
+  if(UseElectronPressure) iP = Pe_
+  if(UseNonConservative)call stop_mpi(NameSub//' does not work with non-conservative')
+  do iBlock = 1, MaxBlock
+     if(UnusedBLK(iBlock))CYCLE
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        ResExpl_VCB(iTeImpl,i,j,k,iImplBlock) = &
-             ResExpl_VCB(iTeImpl,i,j,k,iImplBlock) + &
-             SourceE_CB(i,j,k,iBlock) * Irradiance
+        if(UseExtraEInt)then
+           ! Single temperature:
+           !   From update_states_MHD, we obtained p^*, e^* with ideal gamma
+           !   and ExtraEInt^* with pure advection.
+           !   Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
+           !   Total internal energy Eint^n+1 = p^*/(g-1) + ExtraEInt^*
+           ! Two temperature:
+           !   From update_states_MHD, we obtained Pe^*, e^* with ideal gamma
+           !   and ExtraEInt^* with pure advection.
+           !   Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
+           !   Electron internal energy Eint^n+1 = Pe^*/(g-1) + ExtraEInt^*
+           EinternalSi = No2Si_V(UnitEnergyDens_)*&
+                (inv_gm1*State_VGB(iP,i,j,k,iBlock) + &
+                State_VGB(ExtraEint_,i,j,k,iBlock) + &
+                SourceE_CB(i,j,k,iBlock) * Irradiance)
+
+           ! Single temperature: determine p^n+1 = EOS( rho^n+1, Eint^n+1)
+           ! Two temperature:   determine Pe^n+1 = EOS( rho^n+1, Eint^n+1)
+           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                i, j, k, iBlock, &
+                EinternalIn=EinternalSi, PressureOut=PressureSi)
+
+           ! Set normalized pressure (electron pressure for two temperature)
+           State_VGB(iP,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+
+           ! Set ExtraEint^n+1 = Eint^n+1 - p^n+1/(g -1)
+           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+                Si2No_V(UnitEnergyDens_)*EinternalSi &
+                - inv_gm1*State_VGB(iP,i,j,k,iBlock))
+        else
+           State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock)+ &
+                SourceE_CB(i,j,k,iBlock) * Irradiance * (g - 1)
+        end if
      end do; end do; end do
+     call calc_energy_cell(iBlock)
   end do
   
 end subroutine add_laser_energy_deposition
