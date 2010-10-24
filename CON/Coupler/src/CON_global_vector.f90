@@ -140,7 +140,7 @@ contains
     nullify(Mask_I(nMask)%I)
     allocate(Mask_I(nMask)%I(nI),stat=iError)
     call check_allocate(iError,'Global mask '//NameMask)
-    Mask_I(nMask)%I=.false.
+    Mask_I(nMask)%I=.true.
   end subroutine allocate_mask_ilength
   !===========================================================!
   subroutine allocate_mask_for_gd(NameMask,GD)
