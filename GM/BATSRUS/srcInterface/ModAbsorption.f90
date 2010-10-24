@@ -17,6 +17,7 @@ module ModAbsorption
   use ModVarIndexes
   use ModPhysics, ONLY: Si2No_V
   use ModConst
+  use ModProcMH, ONLY:iProc
   !DESCRIPTION:
   !This file is an instantiation of the general advance_vector routine
   !as applied for extracting the data for the plasma density, its gradient
@@ -127,6 +128,7 @@ contains
          GridDescriptorTarget=LineGrid,&
          Router=Router,&
          NameMappingVector=NameVector,&
+         NameMask=NameMask, &
          interpolate=interpolation_fix_reschange)
    
     call global_message_pass(Router=Router,&
