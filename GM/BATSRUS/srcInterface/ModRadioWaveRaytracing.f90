@@ -267,23 +267,23 @@ contains !=========================================================
           !
 
           if (Curv .ge. ToleranceSqr) then
-             DeltaS_I(iRay) = max(&
-                  DeltaS_I(iRay)/(2*sqrt(Curv/ToleranceSqr)),&
-                  StepMin)
+             DeltaS_I(iRay) = 0.99 * &
+                  DeltaS_I(iRay)/(2*sqrt(Curv/ToleranceSqr))
              Position_DI(:,iRay) = PositionHalfBack_D
              if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
              CYCLE
           end if
-
-          !Check if the absorption is too high
-          if(AbsorptionCoeff_I(iRay) * DeltaS_I(iRay)>=0.5)then
-             DeltaS_I(iRay) =  max(&
-                   cHalf/AbsorptionCoeff_I(iRay),&
-                  StepMin)
-             Position_DI(:,iRay) = PositionHalfBack_D
-             CYCLE
+          if(UseLaserPackage)then
+             !Check if the absorption is too high
+             if(AbsorptionCoeff_I(iRay) * DeltaS_I(iRay)>=0.5)then
+                DeltaS_I(iRay) =  max(&
+                     cHalf/AbsorptionCoeff_I(iRay),&
+                     StepMin)
+                Position_DI(:,iRay) = PositionHalfBack_D
+                if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
+                CYCLE
+             end if
           end if
-
           !
           ! Test if some of the next points can get into the prohibited
           ! part of space with "negative" dielectric permittivity
@@ -315,8 +315,9 @@ contains !=========================================================
        ! or make a Boris step
        !
 
-       if ((3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack) &
-            .or. (DeltaS_I(iRay) .lt. StepMin)) then
+       if ((3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack)&
+            .or.(DeltaS_I(iRay)<StepMin.and.&
+            GradEpsDotSlope<0)) then
 
           ! Switch to the opposite branch of parabolic trajectory
           !
