@@ -1207,7 +1207,7 @@ contains
                    end if
                 end do
                 if(Router%nIndexesTarget==&
-                     GridDescriptorSource%nDim+1)then
+                     GridDescriptorTarget%nDim+1)then
                    XyzTarget_D=cZero
                    do iImages=1,nImages
                       XyzTarget_D=&
