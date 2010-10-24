@@ -522,6 +522,7 @@ contains
     logical::DoCheckBlock,DoCheckPoint,DoInterpolate
     integer::iError,iFile
     logical::DoTest,DoTestMe
+    character(LEN=*),parameter::NameSub='Router'
     !-------------------------
     
     !For given PE the number in the communicator is:
@@ -556,7 +557,7 @@ contains
             'router_'//NameMappingVector,DoTest,DoTestMe)
     end if
     DoTestMe=DoTest.and.iProc==Router%iProc0Target
-
+    if(DoTestMe)write(*,*)'Router starts'
     UseMappingFunction=present(mapping)
   
     if(.not.(UseMappingFunction.or.UseMappingVector).and.&
@@ -623,7 +624,11 @@ contains
           do iGlobalGridPoint=&
                          1+nGridPointsPerBlock*(iBlockAll-1),&
                          nGridPointsPerBlock*iBlockAll
+             
              if(UseMask)then
+                if(DoTestMe)&
+                     write(iFile,*)'iGlobalPoint=',iGlobalGridPoint,&
+                     ' Used_I=', Used_I(iGlobalGridPoint)
                 if(.not.Used_I(iGlobalGridPoint))&
                      CYCLE
              end if
@@ -703,6 +708,10 @@ contains
                      IndexGet_II,&
                      nImages,&
                      Weight_I)
+             end if
+             if(nImages<1)then
+                write(*,*)'nImages=', nImages
+                call CON_stop('interpolation failed')
              end if
              if(DoTestMe)then
                 do iImages=1,nImages
@@ -1007,7 +1016,7 @@ contains
        if(UseMappingVector)call CON_set_do_test(&
             'router_'//NameMappingVector,DoTest,DoTestMe)
     end if
-    DoTestMe=DoTest.and.iProc==Router%iProc0Target
+    DoTestMe=DoTest.and.iProc==Router%iProc0Source
    
 
     UseMappingFunction=present(mapping)
@@ -1044,7 +1053,7 @@ contains
 
        if(DoTestMe)then
           iFile=io_unit_new()
-          open(iFile,file='router_'//NameMask,status='replace')
+          open(iFile,file='router_from_source_'//NameMask,status='replace')
           write(iFile,*)'iPointGlobal Xyz_D'
           write(iFile,*)'iProcFrom   iCB indexes  Weitht  Sum(Weight)'//&
                'iImages '
@@ -1258,6 +1267,8 @@ contains
           end do !Global cell
        end do    !Target block
     end do       !Check if DoCountOnly
+    if(UseMappingVector)nullify(XyzMapping_DI)
+    if(UseMask)nullify(Used_I)
   end subroutine construct_router_from_source
 !====================END========================================!
 end Module CON_router
