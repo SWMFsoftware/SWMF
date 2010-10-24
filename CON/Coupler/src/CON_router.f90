@@ -194,7 +194,7 @@ contains
                   iError)
              Router%iProc0Target=&
                   Router%iTranslated_P(iProc0Target)
-          else
+         else
              call MPI_GROUP_UNION(&
                   iGroupTarget,&
                   iGroupSource,&
@@ -523,6 +523,7 @@ contains
     integer::iError,iFile
     logical::DoTest,DoTestMe
     character(LEN=*),parameter::NameSub='Router'
+    character(LEN=100):: NameFile
     !-------------------------
     
     !For given PE the number in the communicator is:
@@ -551,10 +552,13 @@ contains
             Used_I,NameMask)
     end if
     if(UseMask)then
-       call CON_set_do_test('router_'//NameMask,DoTest,DoTestMe)
+       NameFile = 'router_'//NameMask
+       call CON_set_do_test(trim(NameFile),DoTest,DoTestMe)
+      
     else
+       NameFile ='router_'//NameMappingVector
        if(UseMappingVector)call CON_set_do_test(&
-            'router_'//NameMappingVector,DoTest,DoTestMe)
+            trim(NameFile),DoTest,DoTestMe)
     end if
     DoTestMe=DoTest.and.iProc==Router%iProc0Target
     if(DoTestMe)write(*,*)'Router starts'
@@ -590,7 +594,7 @@ contains
 !repeated for the second time                                   !
        if(DoTestMe)then
           iFile=io_unit_new()
-          open(iFile,file='router_'//NameMask,status='replace')
+          open(iFile,file=trim(NameFile),status='replace')
           write(iFile,*)'iPointGlobal Xyz_D'
           write(iFile,*)'iProcFrom   iCB indexes  Weitht  Sum(Weight)'//&
                'iImages '
@@ -958,7 +962,8 @@ contains
     integer,dimension(0:Router%nProc-1)::&
          nGetUbound_P,nPutUbound_P
 
-    real,dimension(GridDescriptorTarget%nDim)::XyzTarget_D
+    real,dimension(GridDescriptorTarget%nDim)::&
+                                  XyzTarget_D, XyzStored_D
     real,dimension(GridDescriptorSource%nDim)::XyzSource_D
 
     integer,dimension(GridDescriptorSource%nDim)::iCell_D
@@ -983,6 +988,8 @@ contains
     logical::DoInterpolate,DoCheckBlock,DoCheckPoint
     integer::iError,iFile
     logical::DoTest,DoTestMe
+    
+    character(LEN=100):: NameFile
     !------------------------
     
     !For given PE the number in the communicator is:
@@ -1011,13 +1018,18 @@ contains
             Used_I,NameMask)
     end if
     if(UseMask)then
-       call CON_set_do_test('router_'//NameMask,DoTest,DoTestMe)
+       NameFile = 'router_'//NameMask
+       call CON_set_do_test(trim(NameFile),DoTest,DoTestMe)
+       NameFile = 'from_source_'//NameFile
     else
+       NameFile ='router_'//NameMappingVector
        if(UseMappingVector)call CON_set_do_test(&
-            'router_'//NameMappingVector,DoTest,DoTestMe)
+            trim(NameFile),DoTest,DoTestMe)
+       NameFile = 'from_source_'//NameFile
     end if
+    
     DoTestMe=DoTest.and.iProc==Router%iProc0Source
-   
+    if(DoTestMe)write(*,*)'Router from source starts'
 
     UseMappingFunction=present(mapping)
     
@@ -1053,9 +1065,9 @@ contains
 
        if(DoTestMe)then
           iFile=io_unit_new()
-          open(iFile,file='router_from_source_'//NameMask,status='replace')
+          open(iFile,file=NameFile,status='replace')
           write(iFile,*)'iPointGlobal Xyz_D'
-          write(iFile,*)'iProcFrom   iCB indexes  Weitht  Sum(Weight)'//&
+          write(iFile,*)'iProcTo   iCB indexes  Weitht  Sum(Weight)'//&
                'iImages '
        end if
 
@@ -1092,6 +1104,9 @@ contains
                          1+nGridPointsPerBlock*(iBlockAll-1),&
                          nGridPointsPerBlock*iBlockAll
              if(UseMask)then
+                if(DoTestMe)&
+                     write(iFile,*)'iGlobalPoint=',iGlobalGridPoint,&
+                     ' Used_I=', Used_I(iGlobalGridPoint)
                 if(.not.Used_I(iGlobalGridPoint))&
                      CYCLE
              end if
@@ -1154,6 +1169,10 @@ contains
                    end if   !Mapping function
                 end if  !MappingVector
              end if  !Global vector as a source
+             if(DoTestMe)then
+                XyzStored_D=XyzTarget_D
+                write(iFile,*)iGlobalGridPoint,XyzTarget_D
+             end if
              if( DoInterpolate)then
                 call interpolate(&
                      GridDescriptorTarget%nDim,&
@@ -1173,7 +1192,41 @@ contains
                      nImages,&
                      Weight_I)
              end if
-             
+             if(nImages<1)then
+                write(*,*)'nImages=', nImages
+                call CON_stop('interpolation failed in router from source')
+             end if
+             if(DoTestMe)then
+                do iImages=1,nImages
+                   if(iImages==1)then
+                      write(iFile,*)IndexPut_II(:,iImages),Weight_I(iImages),&
+                           sum(Weight_I(1:nImages))
+                   else
+                      write(iFile,*)IndexPut_II(:,iImages),Weight_I(iImages),&
+                           iImages
+                   end if
+                end do
+                if(Router%nIndexesSource==&
+                     GridDescriptorSource%nDim+1)then
+                   XyzTarget_D=cZero
+                   do iImages=1,nImages
+                      XyzTarget_D=&
+                           XyzTarget_D+&
+                           xyz_grid_d(GridDescriptorTarget,&
+                           i_global_node_bp(&
+                           GridDescriptorTarget%DD%Ptr,&
+                           IndexPut_II(Router%nIndexesTarget,iImages),&
+                           IndexPut_II(0,iImages)),&
+                           IndexPut_II(1:GridDescriptorTarget%nDim,&
+                           iImages))*Weight_I(iImages)
+                      
+                   end do
+                   write(iFile,*)'Interpolated coordinate values=',&
+                        XyzTarget_D,' Error=',&
+                        sqrt(sum((XyzTarget_D-XyzStored_D)**2))
+                end if
+                write(iFile,*)
+             end if
              !See interface
              !--------------------------------------!
              !Lookup
@@ -1266,6 +1319,7 @@ contains
              end if
           end do !Global cell
        end do    !Target block
+       if(DoTestMe)close(iFile)
     end do       !Check if DoCountOnly
     if(UseMappingVector)nullify(XyzMapping_DI)
     if(UseMask)nullify(Used_I)
