@@ -475,7 +475,8 @@ subroutine add_laser_energy_deposition
 
   call get_impl_energy_source
   !For plotting the laser energy deposition pass messages
-  call message_pass_cells(
+  !DoOneLayer = .false., DoFaceOnly=.true., UseMonotoneRestrict=.false.
+  call message_pass_cells(.false., .true., .false., SourceE_CB)
 
   if(iProc==0)write(*,*)'Start add laser energy deposition'
   
