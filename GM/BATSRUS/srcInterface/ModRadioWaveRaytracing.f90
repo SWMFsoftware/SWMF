@@ -140,8 +140,8 @@ contains !=========================================================
     real, save, pointer, dimension(:,:) :: Position_DI
     real, save, pointer, dimension(:)   :: DistanceToCritSurf_I
 
-    ! GentleRay_I: .true. for shallow rays; is set to .false. for steep rays.
-    logical, save, pointer, dimension(:)   :: GentleRay_I       
+    ! IsOKRay_I: .true. for shallow rays; is set to .false. for steep rays.
+    logical, save, pointer, dimension(:)   :: IsOKRay_I       
     
 
     real :: HalfDeltaS                        ! DeltaS halved
@@ -152,7 +152,7 @@ contains !=========================================================
     real :: GradDielPermSqr, GradEpsDotSlope
     real :: ParabLen, GradDielPerm
     real, save :: &
-         Tolerance=0.1, ToleranceSqr=1.0e-2, DensityCrInv=1, AbsoluteMinimumStep=1
+         Tolerance=0.1, ToleranceSqr=1.0e-2, DensityCrInv=1, StepMin=1
     
     integer, save :: nCall=0
     integer:: iRay
@@ -165,8 +165,8 @@ contains !=========================================================
        call associate_with_global_vector(Position_DI,NameVector)
        allocate(DistanceToCritSurf_I(nRay))
        DistanceToCritSurf_I = cZero
-       allocate(GentleRay_I(nRay))
-       GentleRay_I = .true.
+       allocate(IsOKRay_I(nRay))
+       IsOKRay_I = .true.
        DensityCrInv = cOne/DensityCr
 
        !  minimum ten points between a vacuum and a critical surface and
@@ -177,13 +177,13 @@ contains !=========================================================
        ToleranceSqr = Tolerance**2 
        
        ! One (ten-thousandth) hundredth of average step 
-       AbsoluteMinimumStep = 1e-2*sum(DeltaS_I)/nRay 
+       StepMin = 1e-2*sum(DeltaS_I)/nRay 
        TypeBoundaryDown_D = TypeBc_I(1:2*nDim-1:2)
        TypeBoundaryUp_D   = TypeBc_I(2:2*nDim:2)
        if(iProc==0)then
           write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D
           write(*,*)'TypeBoundaryUp_D=',TypeBoundaryUp_D
-          write(*,*)'AbsoluteMinimumStep=',AbsoluteMinimumStep
+          write(*,*)'StepMin=',StepMin
        end if
           
     end if
@@ -241,10 +241,22 @@ contains !=========================================================
 
        DielPermHalfBack = DielPerm  - GradEpsDotSlope*HalfDeltaS
 
+       !Check positivity:
+       if( DielPermHalfBack<=0.0)then
+          IsBehindCr_I(iRay) = .true.
+          if(UseLaserPackage)then
+             EnergyDeposition_I(iRay) = Intensity_I(iRay)
+             Intensity_I(iRay) = 0.0
+          end if
+          CYCLE
+       end if
+
        Curv = (cHalf*HalfDeltaS/DielPermHalfBack)**2* &
             (GradDielPermSqr - GradEpsDotSlope**2)
+       !The curvature squared characterizes the magnitude of
+       !the tranverse gradient of the dielectric permittivity
 
-       if (GentleRay_I(iRay)) then
+       if (IsOKRay_I(iRay)) then
 
           !
           ! Check if the trajectory curvature is too sharp
@@ -255,9 +267,20 @@ contains !=========================================================
           !
 
           if (Curv .ge. ToleranceSqr) then
-             DeltaS_I(iRay) = DeltaS_I(iRay)/(2*sqrt(Curv/ToleranceSqr))
+             DeltaS_I(iRay) = max(&
+                  DeltaS_I(iRay)/(2*sqrt(Curv/ToleranceSqr)),&
+                  StepMin)
              Position_DI(:,iRay) = PositionHalfBack_D
              if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
+             CYCLE
+          end if
+
+          !Check if the absorption is too high
+          if(AbsorptionCoeff_I(iRay) * DeltaS_I(iRay)>=0.5)then
+             DeltaS_I(iRay) =  max(&
+                   cHalf/AbsorptionCoeff_I(iRay),&
+                  StepMin)
+             Position_DI(:,iRay) = PositionHalfBack_D
              CYCLE
           end if
 
@@ -265,6 +288,8 @@ contains !=========================================================
           ! Test if some of the next points can get into the prohibited
           ! part of space with "negative" dielectric permittivity
           !
+          ! Here we check the magnitude of the longitudinal gradient
+          ! of the dielectric permittivity
 
           if (3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack) then
              !
@@ -272,16 +297,18 @@ contains !=========================================================
              ! memorize the distance to the critical surface;
              ! reduce step
              !
-             GentleRay_I(iRay) = .false.
+             IsOKRay_I(iRay) = .false.
              DistanceToCritSurf_I(iRay) = DielPermHalfBack  &
                   /sqrt(GradDielPermSqr)
-             DeltaS_I(iRay) =  cHalf*Tolerance*DistanceToCritSurf_I(iRay)
+             DeltaS_I(iRay) =  max(&
+                  cHalf*Tolerance*DistanceToCritSurf_I(iRay),&
+                  StepMin)
              Position_DI(:,iRay) = PositionHalfBack_D
              if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
              CYCLE
           end if
 
-       end if ! GentleRay_I
+       end if ! IsOKRay_I
 
        !
        ! Either switch to opposite pranch of parabola
@@ -289,7 +316,7 @@ contains !=========================================================
        !
 
        if ((3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack) &
-            .or. (DeltaS_I(iRay) .lt. AbsoluteMinimumStep)) then
+            .or. (DeltaS_I(iRay) .lt. StepMin)) then
 
           ! Switch to the opposite branch of parabolic trajectory
           !
@@ -432,7 +459,7 @@ contains !=========================================================
        ! growth when Y is close to zero, and exponential saturation when Y is
        ! close to X. 
        ! 
-       if (GentleRay_I(iRay)) then
+       if (IsOKRay_I(iRay)) then
           !
           ! For shallow rays the DeltaS is increased unconditionally
           !
@@ -457,7 +484,7 @@ contains !=========================================================
           !
           if (DielPermHalfBack .gt. &
                DistanceToCritSurf_I(iRay)*sqrt(GradDielPermSqr)) then
-             GentleRay_I(iRay) = .true.
+             IsOKRay_I(iRay) = .true.
              DeltaS_I(iRay) = max(2 - DeltaS_I(iRay)/DeltaSNew_I(iRay), 1.0)*&
                   min(DeltaSNew_I(iRay), DeltaS_I(iRay))
           end if
