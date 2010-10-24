@@ -47,6 +47,11 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
      call barrier_mpi2('expl1')
 
+     !\
+     ! If the laser package is used, this is the place to apply it
+     !/
+     if(UseLaserPackage.and.iStage==nStage) call add_laser_energy_deposition
+
      do globalBLK = 1, nBlock
         if (unusedBLK(globalBLK)) CYCLE
         if(all(neiLev(:,globalBLK)/=1)) CYCLE
