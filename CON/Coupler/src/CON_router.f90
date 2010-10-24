@@ -1206,7 +1206,7 @@ contains
                            iImages
                    end if
                 end do
-                if(Router%nIndexesSource==&
+                if(Router%nIndexesTarget==&
                      GridDescriptorSource%nDim+1)then
                    XyzTarget_D=cZero
                    do iImages=1,nImages
