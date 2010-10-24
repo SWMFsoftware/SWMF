@@ -17,7 +17,7 @@ contains
     !----------------------
     irradiance_t = IrradianceSi *&
          max(0.0, min(1.0,       &
-         TimeSi/tRaise,          &
+         (TimeSi/tRaise),          &
          (tPulse -TimeSi)/tDecay))
          
   end function irradiance_t
@@ -25,6 +25,7 @@ end module ModLaserPulse
 !===========================
 module ModBeams
   use ModPhysics,  ONLY: Si2No_V, UnitX_
+  use ModProcMH, ONLY: iProc
   implicit none
   SAVE
   !Beam geometry: 'rz', '2d', '3d'
@@ -157,6 +158,7 @@ contains
                    (/CosTheta, -SinTheta, 0.0/)
 
            end if
+           !if(iProc==0)write(*,*)XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)
        end do
     end do
   end subroutine rz_beam_rays
@@ -264,6 +266,7 @@ module ModLaserPackage
   real:: DeltaS = 1.0, Tolerance = 0.1
 
   type(RouterType),save::Router
+  logical, parameter:: DoVerbose = .false.
   
   !------------
 contains
@@ -283,7 +286,7 @@ contains
     nRay = nRayTotal
     
     !Allocate arrays for rays
-    allocate(SourceE_CB(nI,nJ,nK,MaxBlock))
+    allocate(SourceE_CB(-1:nI+2, -1:nJ+2, -1:nK+2, MaxBlock))
 
     if(nRay >0)then
        allocate(Density_I(nRay), GradDensity_DI(3,nRay),DeltaSNew_I(nRay))
@@ -334,7 +337,7 @@ contains
     !--------------------------
     if(DoInit) then
        call init_laser_package
-       if(iProc==0)then
+       if(iProc==0.and.DoVerbose)then
           write(*,*)'Initialized laser package with nRay=', nRay
           write(*,*)'Critical density equals ',DensityCrSi
        end if
@@ -357,13 +360,16 @@ contains
        call ray_path(get_density_and_absorption, nRay, Unused_I, Slope_DI, &
             DeltaS_I, Tolerance, DensityCrSi, Intensity_I, IsBehindCr_I)
        DoRay_I = (.not.Unused_I).or.IsBehindCr_I
+       if(.not.any(DoRay_I))EXIT
        iStep = iStep + 1
-       if(iProc==0)then
+       if(iProc==0.and..not.all(Unused_I).and.DoVerbose)then
           write(*,*)'Laser package at iStep =',iStep
           write(*,*)'Used rays #=',count(.not.Unused_I)
           write(*,*)'Rays penetrated into overdense plasma, #=',count(IsBehindCr_I)
           write(*,*)'Total energy deposition =',sum(EnergyDeposition_I,MASK=DoRay_I)
-          write(*,*)'Min DeltaSNew_I=',minval(DeltaSNew_I,MASK=DoRay_I)
+          write(*,*)'MinumumStep=',minval(DeltaS_I,MASK=.not.Unused_I)
+          write(*,*)'MaximumStep=',maxval(DeltaS_I,MASK=.not.unused_I)
+          write(*,*)'Min DeltaSNew_I=',minval(DeltaSNew_I,MASK=.not.Unused_I)
        end if
        !Save EnergyDeposition_I to SourceE_CB
        call construct_router_from_source(&
@@ -455,6 +461,7 @@ subroutine add_laser_energy_deposition
   use ModUser, ONLY: user_material_properties
     
   use ModLaserPulse, ONLY: irradiance_t
+  use ModProcMH,ONLY: iProc
   use ModEnergy, ONLY: calc_energy_cell
   implicit none
   real:: Irradiance, EInternalSi, PressureSi
@@ -467,7 +474,11 @@ subroutine add_laser_energy_deposition
        Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_) * dt
 
   call get_impl_energy_source
+  !For plotting the laser energy deposition pass messages
+  call message_pass_cells(
 
+  if(iProc==0)write(*,*)'Start add laser energy deposition'
+  
   iP = p_
   if(UseElectronPressure) iP = Pe_
   if(UseNonConservative)call stop_mpi(NameSub//' does not work with non-conservative')
@@ -510,6 +521,6 @@ subroutine add_laser_energy_deposition
      end do; end do; end do
      call calc_energy_cell(iBlock)
   end do
-  
+  if(iProc==0)write(*,*)'End add laser energy deposition'
 end subroutine add_laser_energy_deposition
 !==========================================
