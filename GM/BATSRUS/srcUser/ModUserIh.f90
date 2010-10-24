@@ -31,9 +31,6 @@ module ModUser
   ! Constant density sphere in uniform flow, initially at origin
   real              :: rSphere, RhoSphereNo         
 
-  ! Spherical shell in static background
-  real              :: rMinShell, rMaxShell, pShellNo, RhoShellNo
- 
  ! For Parker spiral IC's:
   ! Input from PARAM.in file, solar wind values at 1AU in IO units:
   real              :: BrOneAuIo, RhoOneAuIo, pOneAuIo, UrOneAuIo
@@ -76,26 +73,23 @@ contains
              if (TypeIcs=='SphereAdvect') then
                 call read_var('rSphere', rSphere)
                 call read_var('RhoSphereNo',RhoSphereNo)
+             else
+                rSphere = 0.0
+                RhoSphereNo = RhoInitialNo
              end if
-          case('shell')
-             call read_var('RhoShellNo', RhoShellNo)
-             call read_var('pShellNo',   pShellNo)
-             call read_var('rMinShell',  rMinShell)
-             call read_var('rMaxShell',  rMaxShell)
-          end select
 
-       case('#PARKERICS')
-          TypeIcs = 'parker'
-          if (TypeCoordSystem /= 'HGR') then
-             write(*,*) 'ERROR in PARAM.in: Cannot use Parker solution in HGR'
-             call CON_stop('Correct PARAM.in')
-          else
-             call read_var('rSourceNo',   rSourceNo )
-             call read_var('BrOneAuSi',  BrOneAuIo)
-             call read_var('RhoOneAuSi', RhoOneAuIo)
-             call read_var('pOneAuSi',   pOneAuIo)
-             call read_var('UrOneAuSi',  UrOneAuIo)
-          end if
+          case('parker')
+             if (TypeCoordSystem /= 'HGR') then
+                write(*,*) 'ERROR in PARAM.in: Cannot use Parker solution in HGR'
+                call CON_stop('Correct PARAM.in')
+             else
+                call read_var('rSourceNo',   rSourceNo )
+                call read_var('BrOneAuSi',  BrOneAuIo)
+                call read_var('RhoOneAuSi', RhoOneAuIo)
+                call read_var('pOneAuSi',   pOneAuIo)
+                call read_var('UrOneAuSi',  UrOneAuIo)
+             end if
+          end select
          
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -123,7 +117,7 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModMain,       ONLY: globalBLK, unusedBLK, TypeCoordSystem
     use ModVarIndexes
-    use ModPhysics,    ONLY: BodyRho_I, BodyP_I
+    use ModPhysics,    ONLY: BodyRho_I, BodyP_I, No2Io_V, UnitRho_, UnitU_,UnitP_
     use ModGeometry,   ONLY: R_BLK, x_BLK,y_BLK
     use ModSize,       ONLY: nI, nJ, nK, gcn
     use ModNumConst,   ONLY: cDegToRad
@@ -145,7 +139,6 @@ contains
        ! density or pressure gradients and no magnetic field.
        ! The 'SphereAdvect' case also includes an embedded higher/lower
        ! density sphere, initially at the origin.  
-
        ! Calculate Ux and Uy in inertial frame.
        ! Flow angle is measured from the x axis
        FlowAngleRad = cDegToRad*FlowAngle
@@ -154,18 +147,19 @@ contains
        !\
        ! Start filling in cells (including ghost cells)
        !/ 
-       do k= 1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn          
-          if (R_BLK(i,j,k,iBlock) .le. rSphere .and. &
-               TypeIcs == 'SphereAdvect')then
-             ! inside the sphere
-             State_VGB(rho_,i,j,k,iBlock) = RhoSphereNo       
-          else
-             ! in background flow
-             State_VGB(rho_,i,j,k,iBlock) = RhoInitialNo
-
-          end if  
-       end do; end do ; end do
-       
+       if (TypeIcs =='SphereAdvect') then
+          do k= 1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn          
+             if (R_BLK(i,j,k,iBlock) .le. rSphere)then
+                ! inside the sphere
+                State_VGB(rho_,i,j,k,iBlock) = RhoSphereNo       
+             else
+                ! in background flow
+                State_VGB(rho_,i,j,k,iBlock) = RhoInitialNo
+             end if
+          end do; end do ; end do
+       else 
+          State_VGB(rho_,:,:,:,iBlock) = RhoInitialNo
+       end if
        ! velocity
        State_VGB(RhoUx_,:,:,:,iBlock) = Ux0*&
             State_VGB(rho_,:,:,:,iBlock)
@@ -184,23 +178,6 @@ contains
        State_VGB(Bx_:Bz_,:,:,:,iBlock) = 0.0
        State_VGB(p_,  :,:,:,iBlock) = pInitialNo*BodyP_I(1) 
      
-    case('shell')
-       ! this case describes a shell with density and/or pressure
-       ! embedded in a uniform background at rest, without a magnetic field.
-       ! The background density and pressure are derived from the #BODY command.
-       
-       State_VGB(:,:,:,:,iBlock)  = 0.0
-       do k=-1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn
-          
-          if ( R_BLK(i,j,k,iBlock) .ge. rMinShell .and. &
-               R_BLK(i,j,k,iBlock) .le. rMaxShell ) then
-             State_VGB(rho_,i,j,k,iBlock) = RhoShellNo*BodyRho_I(1)       
-             State_VGB(p_,  i,j,k,iBlock) = pShellNo*BodyP_I(1)
-          else
-             State_VGB(rho_,i,j,k,iBlock) = RhoInitialNo*BodyRho_I(1)       
-             State_VGB(p_,  i,j,k,iBlock) = pInitialNo*BodyP_I(1)
-          end if  
-       end do; end do ; end do
     case('parker')
        call set_parker_spiral
           
