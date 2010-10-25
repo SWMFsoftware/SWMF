@@ -454,7 +454,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   !\
   ! If the laser package is used, this is the place to apply it
   !/
-  if(UseLaserPackage.and.nStage==2) call add_laser_energy_deposition
+  if(UseLaserPackage) call add_laser_energy_deposition
 
 
   call exchange_messages

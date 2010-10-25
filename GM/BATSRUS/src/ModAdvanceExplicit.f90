@@ -50,7 +50,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      !\
      ! If the laser package is used, this is the place to apply it
      !/
-     if(UseLaserPackage.and.iStage==nStage) call add_laser_energy_deposition
+     !if(UseLaserPackage.and.iStage==nStage) call add_laser_energy_deposition
 
      do globalBLK = 1, nBlock
         if (unusedBLK(globalBLK)) CYCLE

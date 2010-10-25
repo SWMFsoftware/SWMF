@@ -155,7 +155,7 @@ contains !=========================================================
          Tolerance=0.1, ToleranceSqr=1.0e-2, DensityCrInv=1, StepMin=1
     
     integer, save :: nCall=0
-    integer:: iRay
+    integer:: iRay, iDim
 
     character(LEN=20),save:: TypeBoundaryDown_D(nDim), TypeBoundaryUp_D(nDim)
     !---------------
@@ -177,9 +177,11 @@ contains !=========================================================
        ToleranceSqr = Tolerance**2 
        
        ! One (ten-thousandth) hundredth of average step 
-       StepMin = 1e-2*sum(DeltaS_I)/nRay 
-       TypeBoundaryDown_D = TypeBc_I(1:2*nDim-1:2)
-       TypeBoundaryUp_D   = TypeBc_I(2:2*nDim:2)
+       StepMin = 1e-2*sum(DeltaS_I)/nRay
+       do iDim=1,nDim
+          TypeBoundaryDown_D(iDim) = trim(TypeBc_I(2*iDim-1))
+          TypeBoundaryUp_D(iDim)   = trim(TypeBc_I(2*iDim))
+       end do
        if(iProc==0)then
           write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D
           write(*,*)'TypeBoundaryUp_D=',TypeBoundaryUp_D
@@ -273,17 +275,17 @@ contains !=========================================================
              if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
              CYCLE
           end if
-          if(UseLaserPackage)then
-             !Check if the absorption is too high
-             if(AbsorptionCoeff_I(iRay) * DeltaS_I(iRay)>=0.5)then
-                DeltaS_I(iRay) =  max(&
-                     cHalf/AbsorptionCoeff_I(iRay),&
-                     StepMin)
-                Position_DI(:,iRay) = PositionHalfBack_D
-                if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
-                CYCLE
-             end if
-          end if
+          !if(UseLaserPackage)then
+          !   !Check if the absorption is too high
+          !   if(AbsorptionCoeff_I(iRay) * DeltaS_I(iRay)>=0.5)then
+          !      DeltaS_I(iRay) =  max(&
+          !           cHalf/AbsorptionCoeff_I(iRay),&
+          !           StepMin)
+          !      Position_DI(:,iRay) = PositionHalfBack_D
+          !      if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
+          !      CYCLE
+          !   end if
+          !end if
           !
           ! Test if some of the next points can get into the prohibited
           ! part of space with "negative" dielectric permittivity

@@ -4,6 +4,9 @@ T
 #DESCRIPTION
 Input file for the laser package
 
+TEST
+router_GM_UsedRay
+
 #TIMEACCURATE
 T			DoTimeAccurate
 
@@ -20,6 +23,8 @@ T                       UseComp
 NONE
 
 #BEGIN_COMP GM -------------------------------------------------------------
+TEST
+krylov
 
 #INCLUDE
 Tables/5Materials
@@ -171,14 +176,27 @@ gamma
 
 #TIMESTEPPING
 2			nStage
-0.7			CflExpl  0.01 to start
+0.01			CflExpl  0.01 to start
 
 #END_COMP GM --------------------------------------------
 
 
 #STOP
 -10			MaxIteration
-1.1e-9			tSimulationMax
+0.1e-10			tSimulationMax
 
+#RUN
+
+#BEGIN_COMP GM
+
+#TIMESTEPPING
+2
+0.1
+
+#END_COMP GM
+
+#STOP
+-10
+0.1e-9
 
 #END
