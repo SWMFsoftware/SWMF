@@ -157,7 +157,7 @@ contains !=========================================================
     integer, save :: nCall=0
     integer:: iRay
 
-    character(LEN=20):: TypeBoundaryDown_D(nDim), TypeBoundaryUp_D(nDim)
+    character(LEN=20),save:: TypeBoundaryDown_D(nDim), TypeBoundaryUp_D(nDim)
     !---------------
 
     if (IsNewEntry) then
