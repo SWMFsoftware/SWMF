@@ -242,9 +242,17 @@ contains
           State_V(nDim+1+1)= State_V(nDim+1+1)+Weight*&
                min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
        end if
-       !Add Absorption coeff
 
-       
+       !Save Absorption coeff
+       call calc_absorption(&
+            NAtomicSI= NAtomicSI, &
+            ZAverage = ZAverage, &
+            TeSI     = TeSi, &
+            RhoSI    =       &
+            State_VGB(rho_,i,j,k,iBlock) * ZAverage * No2Si_V(UnitRho_),&
+            Absorption = Absorption)
+
+       !Add Absorption coeff       
        State_V(nDim+3) = State_V(nDim+3) + Weight*Absorption
 
     end do

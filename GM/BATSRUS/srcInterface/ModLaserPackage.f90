@@ -242,6 +242,9 @@ module ModLaserPackage
   use CON_global_message_pass
   use ModAbsorption, ONLY: DensityCrSi, NameMask,&
        LineGrid, MhGrid, get_density_and_absorption
+  use ModProcMH, ONLY: iProc
+  use ModIOUnit, ONLY: io_unit_new
+
   !Here ResExpl_VCB is the energy source array, to which the laser energy deposition 
   !should be added. This array is the dimensionless form of the energy source in each
   !control volume, divided by the time step, Delta t. The dimensional characteristic
@@ -252,7 +255,7 @@ module ModLaserPackage
   
   use ModBeams, ONLY: nRayTotal, XyzRay_DI, SlopeRay_DI, Amplitude_I
   use ModRadioWaveRaytracing, ONLY: ray_path
-  use ModDensityAndGradient, ONLY: EnergyDeposition_I
+  use ModDensityAndGradient, ONLY: EnergyDeposition_I, Density_I
   implicit none
   
   real, allocatable, save:: SourceE_CB(:,:,:,:)
@@ -267,7 +270,10 @@ module ModLaserPackage
 
   type(RouterType),save::Router
   logical, parameter:: DoVerbose = .true.
-  
+
+  integer:: iFile, iRay
+
+  character(LEN=100)::NameFile
   !------------
 contains
   !================================
@@ -318,6 +324,18 @@ contains
     DeltaS_I = DeltaS
     
     call get_density_and_absorption(nRayTotal)
+
+    if(iProc==0)then
+       NameFile='Rays_n0000'
+       write(*,*)trim(NameFile)
+       iFile=io_unit_new()
+       open(iFile, file=trim(NameFile), status='replace')
+       do iRay = 1, nRay
+          write(iFile,*)Position_DI(1:2,iRay), Slope_DI(1:2,iRay), DeltaS_I(iRay),Density_I(iRay), Unused_I(iRay)
+       end do
+       close(iFile)
+    end if
+
     call init_router(&
          GridDescriptorSource = LineGrid, &
          GridDescriptorTarget = MhGrid, &
@@ -330,10 +348,7 @@ contains
   subroutine get_impl_energy_source
     use ModAbsorption, ONLY: NameMask
     use ModDensityAndGradient, ONLY: NameVector, DeltaSNew_I, Density_I
-    use ModProcMH, ONLY: iProc
-    use ModIOUnit, ONLY: io_unit_new
-    character(LEN=100)::NameFile
-    integer:: iStep, iFile, iRay
+    integer:: iStep
     !--------------------------
     if(DoInit) then
        call init_laser_package
