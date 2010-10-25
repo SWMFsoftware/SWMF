@@ -269,7 +269,7 @@ module ModLaserPackage
   real:: DeltaS = 1.0, Tolerance = 0.1
 
   type(RouterType),save::Router
-  logical, parameter:: DoVerbose = .true.
+  logical, parameter:: DoVerbose = .false.
 
   integer:: iFile, iRay
 
@@ -327,11 +327,11 @@ contains
 
     if(iProc==0)then
        NameFile='Rays_n0000'
-       write(*,*)trim(NameFile)
+       !write(*,*)trim(NameFile)
        iFile=io_unit_new()
        open(iFile, file=trim(NameFile), status='replace')
        do iRay = 1, nRay
-          write(iFile,*)Position_DI(1:2,iRay), Slope_DI(1:2,iRay), DeltaS_I(iRay),Density_I(iRay), Unused_I(iRay)
+          write(iFile,*)Position_DI(1:2,iRay), Density_I(iRay), GradDensity_DI(:,iRay), DeltaSNew_I(iRay)
        end do
        close(iFile)
     end if
@@ -377,7 +377,7 @@ contains
        if(iProc==0)then
           NameFile=''
           write(NameFile,'(a,i4.4)')'Rays_n',iStep+1
-          write(*,*)trim(NameFile)
+          !write(*,*)trim(NameFile)
           iFile=io_unit_new()
           open(iFile, file=trim(NameFile), status='replace')
           do iRay = 1, nRay
