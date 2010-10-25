@@ -23,4 +23,14 @@ srun -n64 CRASH.exe
 # load opacity tables in next run(s)
 perl -pi -e 's/^LOOKUPTABLE/\#LOOKUPTABLE/; s/save/load/' PARAM.in
 
+if(-e plot_128/log_n000020.log && -e plot_256/log_n000020.log)then
+    echo 'we have both'
+    diff plot_128/log_n000020.log plot_256/log_n000020.log > scaling.diff
+    cat runlog_128 runlog_256 > scaling.log
+    setenv COPY Sites/CRASH_SCALING/`date +%Y%m%d`
+    scp scaling.diff ${HEROT}:${COPY}.diff
+    scp scaling.log  ${HEROT}:${COPY}.log
+    ssh ${HEROT} chmod go+r ${COPY}.\*
+endif
+
 exit
