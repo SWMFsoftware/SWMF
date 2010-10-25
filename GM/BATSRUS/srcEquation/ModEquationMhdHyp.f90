@@ -113,7 +113,7 @@ contains
 
   subroutine init_mod_equation
 
-    ! Initialize usre units and names for the MHD variables
+    ! Initialize user units and names for the MHD variables
     call init_mhd_variables
     
   end subroutine init_mod_equation
