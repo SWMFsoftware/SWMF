@@ -112,7 +112,7 @@ if(not $WeakScaling){
     # Weak scaling uses many run directories and a single executable
     if($CompileCode){
 	if($RadHydro){
-	    &shell("Config.pl -g=8,8,8,100,100");
+	    &shell("Config.pl -g=4,4,4,250,250");
 	}else{
 	    &shell("Config.pl -g=8,8,8,100,1");
 	}
@@ -226,7 +226,7 @@ Scripts/Scaling.pl [-v] [-d] [-n=CORES] [-weak | -radhydro]
 -n=CORES  Set number of cores as a comma separated list of numbers.
           Default depends on scaling type and machine.
 -weak     Do weak scaling. Default is strong scaling.
--radhydro Do 3D radhydro problem (only strong scaling). Default is 3D hydro.
+-radhydro Do 3D radhydro problem. Default is 3D hydro.
 -rundir   Create the run directory/directories (step 1)
 -compile  Compile the executable(s) (step 2)
 -submit   Submit the jobs (step 3)
