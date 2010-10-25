@@ -222,7 +222,7 @@ contains
        call user_material_properties(State_V=State_VGB(:,i,j,k,iBlock), &
          NAtomicOut=NAtomicSI, TeOut=TeSI,&
          AverageIonChargeOut= ZAverage)
-
+       zAverage = max(zAverage, 1.0)
 
        State_V(1)= State_V(1)+Weight*(&
             State_VGB(rho_,i+1,j,k,iBlock)-State_VGB(rho_,i-1,j,k,iBlock))&
