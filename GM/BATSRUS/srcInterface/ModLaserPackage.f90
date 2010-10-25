@@ -17,7 +17,7 @@ contains
     !----------------------
     irradiance_t = IrradianceSi *&
          max(0.0, min(1.0,       &
-         (TimeSi/tRaise),          &
+         (TimeSi/tRaise)**3,     &
          (tPulse -TimeSi)/tDecay))
          
   end function irradiance_t
@@ -266,7 +266,7 @@ module ModLaserPackage
   real:: DeltaS = 1.0, Tolerance = 0.1
 
   type(RouterType),save::Router
-  logical, parameter:: DoVerbose = .false.
+  logical, parameter:: DoVerbose = .true.
   
   !------------
 contains
@@ -318,7 +318,6 @@ contains
     DeltaS_I = DeltaS
     
     call get_density_and_absorption(nRayTotal)
-    
     call init_router(&
          GridDescriptorSource = LineGrid, &
          GridDescriptorTarget = MhGrid, &
@@ -330,10 +329,11 @@ contains
   !================================
   subroutine get_impl_energy_source
     use ModAbsorption, ONLY: NameMask
-    use ModDensityAndGradient, ONLY: NameVector, DeltaSNew_I
+    use ModDensityAndGradient, ONLY: NameVector, DeltaSNew_I, Density_I
     use ModProcMH, ONLY: iProc
-        
-    integer:: iStep
+    use ModIOUnit, ONLY: io_unit_new
+    character(LEN=100)::NameFile
+    integer:: iStep, iFile, iRay
     !--------------------------
     if(DoInit) then
        call init_laser_package
@@ -359,6 +359,17 @@ contains
        !Propagate each of rays through the distance of DeltaS
        call ray_path(get_density_and_absorption, nRay, Unused_I, Slope_DI, &
             DeltaS_I, Tolerance, DensityCrSi, Intensity_I, IsBehindCr_I)
+       if(iProc==0)then
+          NameFile=''
+          write(NameFile,'(a,i4.4)')'Rays_n',iStep+1
+          write(*,*)trim(NameFile)
+          iFile=io_unit_new()
+          open(iFile, file=trim(NameFile), status='replace')
+          do iRay = 1, nRay
+             write(iFile,*)Position_DI(1:2,iRay), Slope_DI(1:2,iRay), DeltaS_I(iRay),Density_I(iRay), Unused_I(iRay)
+          end do
+          close(iFile)
+       end if
        DoRay_I = (.not.Unused_I).or.IsBehindCr_I
        if(.not.any(DoRay_I))EXIT
        iStep = iStep + 1
@@ -379,7 +390,6 @@ contains
             NameMappingVector=NameVector,  &
             NameMask=NameMask,             &
             interpolate=interpolation_fix_reschange)
-   
        call global_message_pass(Router=Router,&
             nVar=1,&    !Energy deposition only
             fill_buffer=get_energy_deposition,&
