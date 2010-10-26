@@ -553,12 +553,11 @@ contains
     end if
     if(UseMask)then
        NameFile = 'router_'//NameMask
-       call CON_set_do_test(trim(NameFile),DoTest,DoTestMe)
+       call CON_set_do_test(NameFile,DoTest,DoTestMe)
       
-    else
+    elseif(UseMappingVector)then
        NameFile ='router_'//NameMappingVector
-       if(UseMappingVector)call CON_set_do_test(&
-            trim(NameFile),DoTest,DoTestMe)
+       call CON_set_do_test(NameFile,DoTest,DoTestMe)
     end if
     DoTestMe=DoTest.and.iProc==Router%iProc0Target
     if(DoTestMe)write(*,*)'Router starts'
