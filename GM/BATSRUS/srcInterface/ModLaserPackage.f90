@@ -564,13 +564,18 @@ subroutine get_energy_deposition_block(&
   logical, intent(in) :: IsDimensional
   
   !------------------------------------
-  Value_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK) =  &
-       SourceE_CB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)
 
+  if(allocated(SourceE_CB))then
+     Value_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK) =  &
+          SourceE_CB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)
  
-  if(.not.IsDimensional)return
-  Value_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK) = &
-       Value_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK) *&
-       irradiance_t(Time_Simulation)
+     if(.not.IsDimensional)return
+     Value_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK) = &
+          Value_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK) *&
+          irradiance_t(Time_Simulation)
+
+  else
+     Value_G = 0.0
+  end if
 
 end subroutine get_energy_deposition_block
