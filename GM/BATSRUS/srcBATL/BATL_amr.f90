@@ -30,7 +30,8 @@ contains
 
     use BATL_tree, ONLY: nNode, Unused_BP, &
          iTree_IA, iProcNew_A, Proc_, Block_, Coord1_, Coord2_, Coord3_, &
-         Status_, Child1_, ChildLast_, Used_, Refine_, CoarsenNew_
+         Status_, Child1_, ChildLast_, &
+         Used_, Unused_, Refine_, Refined_, CoarsenNew_, Coarsened_
 
     use BATL_geometry, ONLY: IsCartesian
     use BATL_grid, ONLY: create_grid_block, CellVolume_GB
@@ -68,6 +69,11 @@ contains
 
     character(len=*), parameter:: NameSub = 'BATL_AMR::do_amr'
     logical:: DoTest
+    integer:: jProc
+
+    integer, parameter:: MaxTry=10
+    integer:: iTry
+    logical:: DoTryAgain
     !-------------------------------------------------------------------------
     DoTest = .false.
     if(present(DoTestIn)) DoTest = DoTestIn
@@ -97,75 +103,145 @@ contains
        end do
     end do
 
-    ! Coarsen and move blocks
-    do iNodeRecv = 1, nNode
-       if(iTree_IA(Status_,iNodeRecv) /= CoarsenNew_) CYCLE
+    LOOPTRY: do iTry = 1, MaxTry
+       DoTryAgain = .false.
 
-       if(DoTest) write(*,*)NameSub,' CoarsenNew iNode=',iNodeRecv
+       ! Coarsen and move blocks
+       do iNodeRecv = 1, nNode
+          if(iTree_IA(Status_,iNodeRecv) /= CoarsenNew_) CYCLE
 
-       iProcRecv  = iProcNew_A(iNodeRecv)
-       iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrCoarsened_)
+          !if(iProc==0 .and. iTry>1)write(*,*) &
+          !     '!!! Try again coarsening iNodeSend=',iNodeSend
 
-       do iChild = Child1_, ChildLast_
-          iNodeSend = iTree_IA(iChild,iNodeRecv)
+          if(DoTest) write(*,*)NameSub,' CoarsenNew iNode=',iNodeRecv
+
+          iProcRecv  = iProcNew_A(iNodeRecv)
+          if(iBlockAvailable_P(iProcRecv) > MaxBlock)then
+             ! Continue with other nodes and then try again
+             DoTryAgain = .true.
+             !if(iProc==0)write(*,*)'!!! failed to coarsen iProcRecv=',iProcRecv
+             CYCLE
+          end if
+
+          iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrCoarsened_)
+
+          do iChild = Child1_, ChildLast_
+             iNodeSend = iTree_IA(iChild,iNodeRecv)
+
+             iProcSend  = iTree_IA(Proc_,iNodeSend)
+             iBlockSend = iTree_IA(Block_,iNodeSend)
+
+             if(iProc == iProcSend) call send_coarsened_block
+             if(iProc == iProcRecv) call recv_coarsened_block
+
+             call make_block_available(iNodeSend, iBlockSend, iProcSend)
+          end do
+
+          ! This parent block was successfully coarsened
+          iTree_IA(Status_,iNodeRecv) = Coarsened_
+       end do
+
+       ! Move blocks
+       do iNodeSend = 1, nNode
+
+          if(iTree_IA(Status_,iNodeSend) /= Used_) CYCLE
+
+          iProcSend = iTree_IA(Proc_,iNodeSend)
+          iProcRecv = iProcNew_A(iNodeSend)
+
+          if(iProcRecv == iProcSend) CYCLE
+
+          !if(iProc==0 .and. iTry>1)write(*,*) &
+          !     '!!! Try again moving iNodeSend=',iNodeSend
+
+          iBlockSend = iTree_IA(Block_,iNodeSend)
+          if(iBlockAvailable_P(iProcRecv) > MaxBlock)then
+             ! Continue with other nodes and then try again
+             DoTryAgain = .true.
+             !if(iProc==0)write(*,*)'!!! failed to move iProcRecv=', iProcRecv
+             CYCLE
+          end if
+
+          iBlockRecv = i_block_available(iProcRecv, iNodeSend, AmrMoved_)
+
+          if(DoTest) write(*,*)NameSub, &
+               ' node to move iNode,iProcS/R,iBlockS/R=',&
+               iNodeSend, iProcSend, iProcRecv, iBlockSend, iBlockRecv
+
+          if(iProc == iProcSend) call send_block
+          if(iProc == iProcRecv) call recv_block
+
+          call make_block_available(iNodeSend, iBlockSend, iProcSend)
+       end do
+
+       ! Prolong and move blocks
+       LOOPNODE: do iNodeSend = 1, nNode
+
+          if(iTree_IA(Status_,iNodeSend) /= Refine_) CYCLE
+
+          !if(iProc==0 .and. iTry>1)write(*,*) &
+          !     '!!! Try again refining iNodeSend=',iNodeSend
 
           iProcSend  = iTree_IA(Proc_,iNodeSend)
           iBlockSend = iTree_IA(Block_,iNodeSend)
 
-          if(iProc == iProcSend) call send_coarsened_block
-          if(iProc == iProcRecv) call recv_coarsened_block
+          if(DoTest) write(*,*)NameSub,' Refine iNode=',iNodeSend
 
-          call make_block_available(iBlockSend, iProcSend)
-       end do
-    end do
+          do iChild = Child1_, ChildLast_
+             iNodeRecv = iTree_IA(iChild,iNodeSend)
 
-    ! Move blocks
-    do iNodeSend = 1, nNode
+             !if(DoTest)write(*,*)'!!! child',iChild,' of node',iNodeSend,&
+             !     ' has status=',iTree_IA(Status_,iNodeRecv)
 
-       if(iTree_IA(Status_,iNodeSend) /= Used_) CYCLE
+             ! Check if this child has been created already
+             if(iTree_IA(Status_,iNodeRecv) == Refined_) CYCLE
 
-       iProcSend = iTree_IA(Proc_,iNodeSend)
-       iProcRecv = iProcNew_A(iNodeSend)
+             ! Check if there is a free block available
+             iProcRecv  = iProcNew_A(iNodeRecv)
 
-       if(iProcRecv == iProcSend) CYCLE
+             !if(DoTest)write(*,*)'!!! iProcRecv,iBlockAvailable_P=',&
+             !     iProcRecv, iBlockAvailable_P(iProcRecv)
 
-       iBlockSend = iTree_IA(Block_,iNodeSend)
-       iBlockRecv = i_block_available(iProcRecv, iNodeSend, AmrMoved_)
+             if(iBlockAvailable_P(iProcRecv) > MaxBlock)then
+                ! Continue with other nodes and then try again
+                DoTryAgain = .true.
+                !if(iProc==0)then
+                !   write(*,*) &
+                !        '!!! failed to refine iNodeSend,iProcSend,iProcRecv=',&
+                !        iNodeSend, iProcSend, iProcRecv
+                !   do jProc = 0, nProc-1
+                !      write(*,*)'jProc, count(Unused_BP)=', &
+                !           jProc, count(Unused_BP(:,jProc))
+                !   end do
+                !end if
+                CYCLE LOOPNODE
+             end if
 
-       if(DoTest) write(*,*)NameSub, &
-            ' node to move iNode,iProcS/R,iBlockS/R=',&
-            iNodeSend, iProcSend, iProcRecv, iBlockSend, iBlockRecv
+             iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrRefined_)
 
-       if(iProc == iProcSend) call send_block
-       if(iProc == iProcRecv) call recv_block
+             if(iProc == iProcSend) call send_refined_block
+             if(iProc == iProcRecv) call recv_refined_block
 
-       call make_block_available(iBlockSend, iProcSend)
-    end do
+             ! This child block was successfully refined
+             iTree_IA(Status_,iNodeRecv) = Refined_
+          end do
+          call make_block_available(iNodeSend, iBlockSend, iProcSend)
 
-    ! Prolong and move blocks
-    do iNodeSend = 1, nNode
-       if(iTree_IA(Status_,iNodeSend) /= Refine_) CYCLE
+       end do LOOPNODE
 
-       iProcSend  = iTree_IA(Proc_,iNodeSend)
-       iBlockSend = iTree_IA(Block_,iNodeSend)
+       !if(iProc==0)then
+       !   write(*,*)'!!! Number of tries=', iTry
+       !   write(*,*)'!!! iBlockAvailable_P=', iBlockAvailable_P
+       !   do jProc = 0, nProc-1
+       !      write(*,*)'jProc, count(Unused_BP)=', &
+       !           jProc, count(Unused_BP(:,jProc))
+       !   end do
+       !end if
+       if(.not.DoTryAgain) EXIT LOOPTRY
 
-       if(DoTest) write(*,*)NameSub,' Refine iNode=',iNodeSend
+    end do LOOPTRY
 
-       do iChild = Child1_, ChildLast_
-          iNodeRecv = iTree_IA(iChild,iNodeSend)
-
-          iProcRecv  = iProcNew_A(iNodeRecv)
-          iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrRefined_)
-
-          if(DoTest) write(*,*)NameSub,' nNode,iChild,iNodeRecv,iProcRecv=',&
-               nNode,iChild,iNodeRecv,iProcRecv
-
-          if(iProc == iProcSend) call send_refined_block
-          if(iProc == iProcRecv) call recv_refined_block
-       end do
-
-       call make_block_available(iBlockSend, iProcSend)
-    end do
+    if(DoTryAgain) call CON_stop('Could not fit blocks')
 
     deallocate(Buffer_I, StateP_VG, SlopeL_V, SlopeR_V, Slope_V)
 
@@ -175,7 +251,7 @@ contains
     integer function i_block_available(iProcRecv, iNodeRecv, iAmrChange)
 
       integer, intent(in):: iProcRecv, iNodeRecv, iAmrChange
-      integer :: iBlock
+      integer :: iBlock, jProc
       character(len=*), parameter:: NameSub = 'BATL_amr::i_block_available'
       !-----------------------------------------------------------------------
       ! Assign the processor index
@@ -202,19 +278,20 @@ contains
       ! Find next available block
       do
          iBlock = iBlock + 1
-         if(iBlock > MaxBlock) call CON_stop(NameSub//' ran out of blocks')
-         if(Unused_BP(iBlock,iProcRecv))EXIT
+         iBlockAvailable_P(iProcRecv) = iBlock
+         if(iBlock > MaxBlock) RETURN
+         if(Unused_BP(iBlock,iProcRecv)) RETURN
       end do
-
-      iBlockAvailable_P(iProcRecv) = iBlock
 
     end function i_block_available
     !==========================================================================
-    subroutine make_block_available(iBlockSend, iProcSend)
+    subroutine make_block_available(iNodeSend, iBlockSend, iProcSend)
 
-      integer, intent(in):: iBlockSend, iProcSend
+      integer, intent(in):: iNodeSend, iBlockSend, iProcSend
       !-----------------------------------------------------------------------
-      Unused_BP(iBlockSend, iProcSend) = .true.
+      
+      iTree_IA(Status_,iNodeSend) = Unused_
+      Unused_BP(iBlockSend,iProcSend) = .true.
       iBlockAvailable_P(iProcSend) = &
            min(iBlockAvailable_P(iProcSend), iBlockSend)
 
