@@ -91,7 +91,7 @@ module BATL_tree
   ! Possible values for the status variable
   integer, public, parameter :: &
        Unused_=-1, Refine_=-2, DontCoarsen_=-3, Coarsen_=-4, &  !(to be) unused
-       Used_=1, RefineNew_=2, CoarsenNew_=4                     !(to be) used
+       Used_=1, RefineNew_=2, Refined_=3, CoarsenNew_=4         !(to be) used
 
   ! Number of total and used nodes (leaves of the node tree)
   integer, public :: nNode = 0, nNodeUsed = 0
@@ -1041,6 +1041,8 @@ contains
           ! Assign block index right away
           iBlock_P(iProcTo) = iBlock_P(iProcTo) + 1
           iBlockTo = iBlock_P(iProcTo)
+          if(iBlockTo > MaxBlock) &
+               call CON_stop(NameSub//' too many blocks per processor')
           iTree_IA(Block_,iNode) = iBlockTo
           Unused_BP(iBlockTo,iProcTo) = .false.
        end if
@@ -1080,17 +1082,18 @@ contains
        iTree_IA(Proc_,iNode) = iProcNew_A(iNode)
 
        if(iTree_IA(Status_,iNode) == CoarsenNew_) then
-          ! Remove the children of newly coarsened blocks from the tree
 
+          ! Remove the children of newly coarsened blocks from the tree
           do iChild = Child1_, ChildLast_
              iNodeChild = iTree_IA(iChild, iNode)
              iTree_IA(:,iNodeChild) = Unset_
           end do
           iTree_IA(Child1_:ChildLast_, iNode) = Unset_
 
-       elseif(iTree_IA(Status_,iNode) == RefineNew_)then
-          ! Make the parent of newly refined blocks unused
+       elseif(   iTree_IA(Status_,iNode) == RefineNew_ &
+            .or. iTree_IA(Status_,iNode) == Refined_)then
 
+          ! Make the parent of newly refined blocks unused
           iNodeParent = iTree_IA(Parent_, iNode)
           iTree_IA(Proc_:Block_,iNodeParent) = Unset_
           iTree_IA(Status_,iNodeParent)      = Unused_
