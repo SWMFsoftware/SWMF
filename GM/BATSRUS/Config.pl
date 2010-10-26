@@ -131,6 +131,8 @@ sub get_settings{
 	unless length($MaxImplBlock);                         
     #^CFG END IMPLICIT
 
+    # Make sure that BATL_size.f90 is up-to-date
+    `make $NameBatlFile`;
     open(FILE, $NameBatlFile) or die "$ERROR could not open $NameBatlFile\n";
     while(<FILE>){
         next if /^\s*!/; # skip commented out lines
