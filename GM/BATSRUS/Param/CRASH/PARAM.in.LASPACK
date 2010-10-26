@@ -13,7 +13,7 @@ T			DoTimeAccurate
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
-1.1e-9			DtSaveRestart
+0.1e-9			DtSaveRestart
 
 #COMPONENT
 GM                      NameComp
@@ -165,13 +165,13 @@ z=0 VAR idl		PlotString
 -1                      DnSavePlot
 1.0e-10                 DtSavePlot
 -1.0			DxSavePlot
-rho ux uy Eint p pe level xe be pl au ay tekev trkev tikev cond teti dx
+rho ux uy Eint p pe level xe be pl au ay tekev trkev tikev elaser
 gamma
 z=0 var idl             PlotString
 -1                      DnSavePlot
 1.0e-10                 DtSavePlot
 -1.0                    DxSavePlot
-I01 I02 I03 I04 I05 I06 I07 I08 I09 I10 I11 I12 I13 I14 I15 I16 tekev trkev level
+elaser
 gamma
 
 #TIMESTEPPING
@@ -183,7 +183,7 @@ gamma
 
 #STOP
 -10			MaxIteration
-0.1e-10			tSimulationMax
+0.22e-11		tSimulationMax
 
 #RUN
 
@@ -197,6 +197,20 @@ gamma
 
 #STOP
 -10
-0.1e-9
+0.5e-11
+
+#RUN
+
+#BEGIN_COMP GM
+
+#TIMESTEPPING
+2
+0.7
+
+#END_COMP GM
+
+#STOP
+-10
+1.1e-9
 
 #END
