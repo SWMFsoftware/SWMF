@@ -479,7 +479,7 @@ subroutine add_laser_energy_deposition
   use ModMain, ONLY: Time_Simulation, dt, UnusedBLK
   use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
        UseNonConservative, IsConserv_CB, UseElectronPressure
-  use ModPhysics,  ONLY: inv_gm1, Si2No_V, No2Si_V, &
+  use ModPhysics,  ONLY: inv_gm1, No2Si_V, &
        UnitP_, UnitEnergyDens_, ExtraEintMin, g
   use ModVarIndexes, ONLY: Pe_
   use ModGeometry, ONLY: vInv_CB
@@ -550,3 +550,27 @@ subroutine add_laser_energy_deposition
   if(iProc==0)write(*,*)'End add laser energy deposition'
 end subroutine add_laser_energy_deposition
 !==========================================
+subroutine get_energy_deposition_block(&
+     iBlock,MinI,MaxI, MinJ, MaxJ, MinK, MaxK, Value_G, IsDimensional)
+
+  use ModLaserPackage, ONLY: SourceE_CB
+  use ModLaserPulse,   ONLY: irradiance_t
+  use ModMain,         ONLY: Time_Simulation
+
+  implicit none
+
+  integer, intent(in) :: iBlock,MinI,MaxI, MinJ, MaxJ, MinK, MaxK
+  real, intent(out)   :: Value_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
+  logical, intent(in) :: IsDimensional
+  
+  !------------------------------------
+  Value_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK) =  &
+       SourceE_CB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)
+
+ 
+  if(.not.IsDimensional)return
+  Value_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK) = &
+       Value_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK) *&
+       irradiance_t(Time_Simulation)
+
+end subroutine get_energy_deposition_block
