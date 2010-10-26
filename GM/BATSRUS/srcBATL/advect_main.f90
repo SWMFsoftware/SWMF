@@ -250,7 +250,7 @@ contains
          TypeGeometryIn = TypeGeometry, &
          IsPeriodicIn_D = (/.true.,TypeGeometry /= 'rz',.true./) )
 
-    ! Allow only one level of refinement
+    ! Allow only MaxLevel levels of refinement
     iTree_IA(MaxLevel_,:) = MaxLevel
 
     allocate(DoRefine_B(MaxBlock))
@@ -845,12 +845,13 @@ end program advect
 
 !=============================================================================
 subroutine CON_stop(String)
+  use BATL_lib, ONLY: iProc
   use ModMpi, ONLY: MPI_abort, MPI_COMM_WORLD
   implicit none
   integer:: iError, nError
   character (len=*), intent(in) :: String
   !--------------------------------------------------------------------------
-  write(*,*)'CON_stop called with String='
+  write(*,*)'CON_stop called on processor ',iProc,' with String='
   write(*,*) String
 
   call MPI_abort(MPI_COMM_WORLD, nError, iError)
