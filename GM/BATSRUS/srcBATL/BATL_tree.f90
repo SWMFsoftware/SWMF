@@ -90,8 +90,15 @@ module BATL_tree
 
   ! Possible values for the status variable
   integer, public, parameter :: &
-       Unused_=-1, Refine_=-2, DontCoarsen_=-3, Coarsen_=-4, &  !(to be) unused
-       Used_=1, RefineNew_=2, Refined_=3, CoarsenNew_=4         !(to be) used
+       Unused_      = -1, & ! unused block (not a leave)
+       Refine_      = -2, & ! parent block to be refined
+       DontCoarsen_ = -3, & ! block not to be coarsened
+       Coarsen_     = -4, & ! child block to be coarsened
+       Used_        =  1, & ! currently used block (leave)
+       RefineNew_   =  2, & ! child block to be refined
+       Refined_     =  3, & ! refined child block
+       CoarsenNew_  =  4, & ! parent block to be coarsened
+       Coarsened_   =  5    ! coarsened parent block
 
   ! Number of total and used nodes (leaves of the node tree)
   integer, public :: nNode = 0, nNodeUsed = 0
@@ -1081,7 +1088,8 @@ contains
        ! Move the node to new processor/node
        iTree_IA(Proc_,iNode) = iProcNew_A(iNode)
 
-       if(iTree_IA(Status_,iNode) == CoarsenNew_) then
+       if(       iTree_IA(Status_,iNode) == CoarsenNew_ &
+            .or. iTree_IA(Status_,iNode) == Coarsened_) then
 
           ! Remove the children of newly coarsened blocks from the tree
           do iChild = Child1_, ChildLast_
