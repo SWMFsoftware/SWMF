@@ -71,7 +71,7 @@ contains
     logical:: DoTest
     integer:: jProc
 
-    integer, parameter:: MaxTry=10
+    integer, parameter:: MaxTry=100
     integer:: iTry
     logical:: DoTryAgain
     !-------------------------------------------------------------------------
