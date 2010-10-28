@@ -503,7 +503,7 @@ test7:
 test7_compile:
 	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
 	./Config.pl -g=IH:4,4,4,3000,1,OH:4,4,4,3000,1
-	./Config.pl -o=IH:u=Ih,e=Mhd -o=OH:u=Ih,e=Mhd
+	./Config.pl -o=IH:u=Waves,e=Mhd -o=OH:u=Waves,e=Mhd
 	cd IH/BATSRUS; ./Config.pl -dynamic; cd ../..
 	cd OH/BATSRUS; ./Config.pl -dynamic; cd ../..
 	make SWMF PIDL
@@ -511,7 +511,7 @@ test7_compile:
 test7_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.IHOH.HGI ${TESTDIR}/PARAM.in
+	cp Param/PARAM.in.test.IHOH.Couple ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.IHOH ${TESTDIR}/LAYOUT.in
 
 test7_run:
