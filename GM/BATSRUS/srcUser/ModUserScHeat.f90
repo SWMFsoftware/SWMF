@@ -236,6 +236,8 @@ module ModUser
   real :: TeFraction, TiFraction
   real :: EtaPerpSi
 
+  real :: QeByQtotal = 0.0
+
   ! Variables for the Bernoulli equation
   logical :: UseHeatFluxInBernoulli = .false.
   logical :: IsNewBlockTe_B(MaxBlock) = .true.
@@ -293,6 +295,10 @@ contains
           call read_var('UseHeatFluxInBernoulli', UseHeatFluxInBernoulli)
           call read_var('VAlfvenMin', VAlfvenMin)
           call read_var('RhoVAt1AU', RhoVAt1AU)
+
+       case('#ELECTRONHEATING')
+          ! Steven Cranmer his electron heating fraction (Apj 2009)
+          call read_var('QeByQtotal', QeByQtotal)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -756,7 +762,14 @@ contains
        else
           CoronalHeating = 0.0
        end if
-       Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + gm1*CoronalHeating
+       if(UseElectronPressure)then
+          Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+               + gm1*(1.0 - QeByQtotal)*CoronalHeating
+          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
+               + gm1*QeByQtotal*CoronalHeating
+       else
+          Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + gm1*CoronalHeating
+       end if
 
        CYCLE
 
