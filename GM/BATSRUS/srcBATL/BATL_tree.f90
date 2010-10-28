@@ -285,6 +285,9 @@ contains
 
        iNodeChild = i_node_new()
 
+       ! Increase nNode if necessary
+       nNode = max(nNode, iNodeChild)
+
        iTree_IA(iChild, iNode) = iNodeChild
 
        iTree_IA(Status_,   iNodeChild) = RefineNew_
@@ -340,6 +343,9 @@ contains
 
     ! Keep track of used nodes in the future tree
     nNodeUsed = nNodeUsed - nChild + 1
+
+    ! Increase nNode if necessary
+    nNode = max(nNode, iNode)
 
   end subroutine coarsen_tree_node
 
@@ -796,7 +802,7 @@ contains
     ! Set impossible initial value
     iNodeSkipped = MaxNode + 1
 
-    do iNode = 1, MaxNode !!! nNode ???
+    do iNode = 1, nNode
 
        if(iTree_IA(Status_, iNode) == Unset_)then
           ! Store the first skipped position
