@@ -9,7 +9,8 @@ module ModUser
        IMPLEMENTED4 => user_get_b0,                     &
        IMPLEMENTED5 => user_face_bcs,                   &
        IMPLEMENTED6 => user_set_outerbcs,               &
-       IMPLEMENTED7 => user_amr_criteria
+       IMPLEMENTED7 => user_amr_criteria,               &
+       IMPLEMENTED8 => user_set_plot_var
 
   use ModVarIndexes, ONLY: nVar
 
@@ -23,29 +24,37 @@ module ModUser
   character (len=*), parameter :: NameUserModule = &
        'Waves and GEM, Yingjuan Ma'
 
-  character (len=20) :: UserProblem='wave'
+  character (len=20)  :: UserProblem='wave'
 
-  real :: Width, Amplitude, Phase, LambdaX, LambdaY, LambdaZ
+  real                :: Width, Amplitude, Phase, LambdaX, LambdaY, LambdaZ
   real,dimension(nVar):: Width_V=0.0, Ampl_V=0.0, Phase_V=0.0, &
        KxWave_V=0.0, KyWave_V=0.0,KzWave_V=0.0
-  integer :: iPower_V(nVar)=1
-  integer :: iVar             
-  logical:: DoInitialize=.true.
-  real :: Lx=25.6, Lz=12.8, Lambda0=0.5, Ay=0.1, Tp=0.5 , B0=1.0  
+  integer   :: iPower_V(nVar)=1
+  integer   :: iVar             
+  logical   :: DoInitialize=.true.
+  real      :: Lx=25.6, Lz=12.8, Lambda0=0.5, Ay=0.1, Tp=0.5 , B0=1.0  
 
   ! The (rotated) unperturbed initial state with primitive variables
-  real :: PrimInit_V(nVar)
+  real      :: PrimInit_V(nVar)
 
   ! Velocity of wave (default is set for right going whistler wave test)
-  real :: Velocity = 169.344
+  real      :: Velocity = 169.344
   
+  ! Variables used by the user problem AdvectSphere                                     
+  real      :: pBackgrndIo, uBackgrndIo, FlowAngle ! in XY plane         
+  real      :: NumDensBackgrndIo, NumDensMaxIo
+  real      :: rSphere, rSphereRs, RhoBackgrndNo, RhoMaxNo, UxNo, UyNo
+  logical   :: DoCalcAnalytic = .false., DoInitSphere = .false.
+
 contains
 
   subroutine user_read_inputs
     use ModMain
     use ModProcMH,    ONLY: iProc
     use ModReadParam
-    use ModNumConst, ONLY : cTwoPi,cDegToRad
+   ! use ModPhysics,  ONLY: Si2No_V, Io2Si_V,Io2No_V,&
+   !      UnitRho_, UnitU_, UnitP_, UnitN_, UnitX_
+    use ModNumConst,  ONLY: cTwoPi,cDegToRad
     implicit none
 
     character (len=100) :: NameCommand
@@ -85,6 +94,18 @@ contains
           KyWave_V(iVar) = max(0.0, cTwoPi/LambdaY)          
           KzWave_V(iVar) = max(0.0, cTwoPi/LambdaZ)
 
+       case('#ADVECTSPHERE')
+          call read_var('DoInitSphere',      DoInitSphere     )
+          call read_var('NumDensBackgrndIo', NumDensBackgrndIo)
+          call read_var('pBackgrndIo',       pBackgrndIo      )
+          call read_var('uBackgrndIo',       uBackgrndIo      )
+          call read_var('FlowAngle',         FlowAngle        )
+          call read_var('rSphereRs',         rSphereRs        )
+          call read_var('NumDensMaxIo',      NumDensMaxIo     )
+          
+       case('#ANALYTIC')
+          call read_var('DoCalcAnalytic', DoCalcAnalytic)
+          
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
           EXIT
@@ -96,24 +117,73 @@ contains
   end subroutine user_read_inputs
 
   !============================================================================
-
   subroutine user_set_ics
-    use ModMain,     ONLY: globalBLK
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+
+    use ModMain,     ONLY: globalBLK, unusedBLK, TypeCoordSystem
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, &
          Bx_, By_, Bz_, rho_, p_, Pe_, UseElectronPressure
     use ModProcMH,   ONLY: iProc
-    use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V
-    use ModNumconst, ONLY: cOne,cPi, cTwoPi
+    use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, Si2No_V, Io2Si_V,&
+                           Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_
+    use ModNumconst, ONLY: cOne,cPi, cTwoPi, cDegToRad
+    use ModSize,     ONLY: nI, nJ, nK, gcn
+    use ModConst,    ONLY: cProtonMass, rSun
+
     implicit none
 
     real,dimension(nVar):: state_V,KxTemp_V,KyTemp_V
-    real :: SinSlope, CosSlope
-    integer :: i, j, k, iBlock
+    real                :: SinSlope, CosSlope, rCell
+    integer             :: i, j, k, iBlock
+  
+    character(len=*), parameter :: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
     iBlock = globalBLK
 
     select case(UserProblem)
+
+    case('AdvectSphere')
+       ! This case describes an IC with uniform 1D flow of plasma in the XY
+       ! plane, with no density or pressure gradients and no magnetic field.
+       ! A sphere with higher density is embedded in the flow, positioned at
+       ! the origin. The density profiles within the sphere is given by:
+       ! rho = (RhoMax-RhoBackgrnd)* cos^2(pi*r/2 rSphere) + RhoBackgrnd
+
+       ! Convert to normalized units                                  
+       ! Flow angle is measured from the x axis                                      
+       UxNo = uBackgrndIo*cos(cDegToRad*FlowAngle)*Io2No_V(UnitU_)
+       UyNo = uBackgrndIo*sin(cDegToRad*FlowAngle)*Io2No_V(UnitU_)
+       RhoBackgrndNo = NumDensBackgrndIo*Io2Si_V(UnitN_)* &
+            cProtonMass*Si2No_V(UnitRho_) 
+       RhoMaxNo       = NumDensMaxIo*Io2Si_V(UnitN_)* &
+            cProtonMass*Si2No_V(UnitRho_)
+       ! Convert rSphereRs to normalized units (needed for OH)
+       rSphere = rSphereRs*rSun*Si2No_V(UnitX_)
+       !\                                                                               
+       ! Start filling in cells (including ghost cells)                                 
+       !/                          
+       if (DoInitSphere) then
+          do k= 1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn
+             rCell = R_BLK(i,j,k,iBlock)
+             if (rCell .le. rSphere)then
+                ! inside the sphere                                                    
+                State_VGB(rho_,i,j,k,iBlock) =RhoBackgrndNo + &
+                     (RhoMaxNo - RhoBackgrndNo)*(cos(0.5*cPi*rCell/rSphere))**2
+             else
+                ! in background flow                                                   
+                State_VGB(rho_,i,j,k,iBlock) = RhoBackgrndNo
+             end if
+          end do; end do ; end do
+       else
+          State_VGB(rho_,:,:,:,iBlock) = RhoBackgrndNo
+       end if
+       ! velocity                                                                       
+       State_VGB(RhoUx_,:,:,:,iBlock) = UxNo*State_VGB(rho_,:,:,:,iBlock)
+       State_VGB(RhoUy_,:,:,:,iBlock) = UyNo*State_VGB(rho_,:,:,:,iBlock)
+       State_VGB(RhoUz_, :,:,:,iBlock) = 0.0
+       State_VGB(Bx_:Bz_,:,:,:,iBlock) = 0.0
+       State_VGB(p_,     :,:,:,iBlock) = pBackgrndIo*Io2No_V(UnitP_)
+
     case('wave')
 
        if(DoInitialize)then
@@ -191,7 +261,7 @@ contains
        State_VGB(Bz_,:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock) &
             + Ay* cTwoPi/ Lx &
             *sin(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*cos(cPi*z_BLK(:,:,:,iBlock)/Lz)
-       
+
     case default
        if(iProc==0) call stop_mpi( &
             'user_set_ics: undefined user problem='//UserProblem)
@@ -199,6 +269,102 @@ contains
     end select
   end subroutine user_set_ics
 
+  !=====================================================================
+  subroutine user_set_plot_var(iBlock,NameVar,IsDimensional,&
+       PlotVar_G, PlotVarBody, UsePlotVarBody,&
+       NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
+
+    use ModMain,    ONLY: nI, nJ, nK
+    use ModPhysics, ONLY: NameTecUnit_V, NameIdlUnit_V, UnitRho_,No2Io_V
+
+    integer,          intent(in)   :: iBlock
+    character(len=*), intent(in)   :: NameVar
+    logical,          intent(in)   :: IsDimensional
+    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVarBody
+    logical,          intent(out)  :: UsePlotVarBody
+    character(len=*), intent(inout):: NameTecVar
+    character(len=*), intent(inout):: NameTecUnit
+    character(len=*), intent(inout):: NameIdlUnit
+    logical,          intent(out)  :: IsFound
+
+    real,dimension(-1:nI+2, -1:nJ+2, -1:nK+2):: RhoExact_G, RhoError_G
+
+    character (len=*), parameter :: NameSub = 'user_set_plot_var'
+    !-------------------------------------------------------------------
+    IsFound = .true.
+
+    if(DoCalcAnalytic .and. UserProblem == 'AdvectSphere' ) & 
+         call calc_analytic_sln_sphere(iBlock,RhoExact_G,RhoError_G)
+
+    select case(NameVar)
+    case('rhoexact')
+       if (.not. DoCalcAnalytic) then
+          write(*,*) NameSub,': cannot plot rhoexact when #ANALYTIC is not set to T'
+          call CON_stop('Correct PARAM.in file')
+       end if
+       PlotVar_G = RhoExact_G*No2Io_V(UnitRho_)
+       NameTecVar = 'RhoExact'
+       NameTecUnit = NameTecUnit_V(UnitRho_)
+       NameIdlUnit = NameIdlUnit_V(UnitRho_)
+    case('rhoerr')
+       if (.not. DoCalcAnalytic) then
+          write(*,*) NameSub,': cannot plot rhoerror when #ANALYTIC is not set to T'
+          call CON_stop('Correct PARAM.in file')
+       end if
+       PlotVar_G = RhoError_G*No2Io_V(UnitRho_)
+       NameTecVar = 'RhoError'
+       NameTecUnit = NameTecUnit_V(UnitRho_)
+       NameIdlUnit = NameIdlUnit_V(UnitRho_)
+    case default
+       IsFound = .false.
+    end select
+
+  contains
+    subroutine calc_analytic_sln_sphere(iBlock,RhoExact_G,RhoError_G)
+
+      use ModMain,       ONLY: time_simulation
+      use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
+      use ModNumConst,   ONLY: cPi
+      use ModAdvance,    ONLY: State_VGB
+      use ModVarIndexes, ONLY: Rho_
+      use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitX_, UnitU_
+
+      integer,intent(in)  :: iBlock
+      real,dimension(-1:nI+2,-1:nJ+2,-1:nK+2),intent(out)::RhoExact_G,&
+                                                           RhoError_G
+      real    :: x, y, t
+      real    :: rFromCenter, xSphereCenter, ySphereCenter
+      integer :: i, j, k
+      !real,dimension(1:3) :: r_D, rSphereCenter_D
+
+      character(len=*),parameter  :: NameSub = 'calc_analytic_sln_sphere'
+      !-----------------------------------------------------------------
+      t = time_simulation
+      do k=-1,nK+2 ; do j= -1,nJ+2 ; do i= -1,nI+2
+         
+         x = x_BLK(i,j,k,iBlock)
+         y = y_BLK(i,j,k,iBlock)
+    
+         ! Find current location of sphere center
+         xSphereCenter = UxNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
+         ySphereCenter = UyNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
+         
+         ! Chcek if this cell is inside the sphere
+         rFromCenter = sqrt((x - xSphereCenter)**2 + (y- ySphereCenter)**2)
+         if (rFromCenter .le. rSphere) then
+            RhoExact_G(i,j,k) = RhoBackgrndNo + (RhoMaxNo - RhoBackgrndNo)* &
+                 cos(0.5*cPi*rFromCenter/rSphere)**2
+         else
+            RhoExact_G(i,j,k) = RhoBackgrndNo
+         end if
+      end do; end do ; end do
+      
+      RhoError_G = RhoExact_G - State_VGB(Rho_,:,:,:,iBlock)
+
+    end subroutine calc_analytic_sln_sphere
+ 
+  end subroutine user_set_plot_var
   !=====================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
