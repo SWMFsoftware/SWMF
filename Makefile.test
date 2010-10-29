@@ -146,7 +146,7 @@ test_rb_check:
 	ls -l test_rb.diff
 
 ### Test1: PW+IE+GM ###
-
+#
 test1:
 	@echo "test1_compile..." > test1_gm.diff
 	@echo "test1_compile..." > test1_ie.diff
