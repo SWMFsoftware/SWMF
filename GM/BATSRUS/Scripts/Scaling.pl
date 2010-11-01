@@ -195,10 +195,10 @@ sub edit_jobscript{
 	}
 	if(not $WeakScaling){
 	    # Change plot directory
-	    s/plot_\d+/plot_$nCore/;
+	    s/\bplot\b/plot_$nCore/;
 	    # Change executable and runlog filenames
 	    s/CRASH\w*\.exe/CRASH_$nCore.exe/;
-	    s/(runlog[^\d\n]*)\d*/$1_$nCore/;
+	    s/\b(runlog[^\d\n]*)\b/$1_$nCore/;
         }
 	print;
     }

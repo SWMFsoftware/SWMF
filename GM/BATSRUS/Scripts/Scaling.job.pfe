@@ -29,7 +29,7 @@ cd $PBS_O_WORKDIR
 # run CRASH (the number of processors is already specified above)
 # switch on BATL and set plot directory just before the run starts
 perl -pi -e 's/^BATL/\#BATL/' PARAM.in
-perl -pi -e 's/.*NamePlotDir/plot_128\t\tNamePlotDir/' PARAM.in
+perl -pi -e 's/.*NamePlotDir/plot\t\tNamePlotDir/' PARAM.in
 mpiexec CRASH.exe > runlog
 
 # load opacity tables in next run(s)
@@ -41,11 +41,11 @@ exit
 # switch off BATL and use message_pass_cell
 perl -pi -e 's/^\#BATL/BATL/' PARAM.in
 perl -pi -e 's/^\#MESSAGEPASS/MESSAGEPASS/' PARAM.in
-perl -pi -e 's/.*NamePlotDir/plot_128\t\tNamePlotDir/' PARAM.in
-mpiexec CRASH.exe > runlog_bats_cell_128
+perl -pi -e 's/.*NamePlotDir/plot\t\tNamePlotDir/' PARAM.in
+mpiexec CRASH.exe > runlog_bats_cell
 
 # switch off BATL and use message_pass_dir
 perl -pi -e 's/^\#BATL/BATL/' PARAM.in
 perl -pi -e 's/^MESSAGEPASS/\#MESSAGEPASS/' PARAM.in
-perl -pi -e 's/.*NamePlotDir/plot_128\t\tNamePlotDir/' PARAM.in
-mpiexec CRASH.exe > runlog_bats_dir_128
+perl -pi -e 's/.*NamePlotDir/plot\t\tNamePlotDir/' PARAM.in
+mpiexec CRASH.exe > runlog_bats_dir

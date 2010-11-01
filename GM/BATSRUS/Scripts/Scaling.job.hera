@@ -15,7 +15,7 @@ cd /g/g99/toth2/Tmp/CRASH/SCALING/run
 # run CRASH (the number of processors is already specified above)
 # switch on BATL and set plot directory just before the run starts
 perl -pi -e 's/^BATL/\#BATL/' PARAM.in
-perl -pi -e 's/.*NamePlotDir/plot_128\t\tNamePlotDir/' PARAM.in
+perl -pi -e 's/.*NamePlotDir/plot\t\tNamePlotDir/' PARAM.in
 
 # Number of cores = 16 times the number of nodes
 srun -n64 CRASH.exe
@@ -25,10 +25,13 @@ perl -pi -e 's/^LOOKUPTABLE/\#LOOKUPTABLE/; s/save/load/' PARAM.in
 
 if(-e plot_128/log_n000020.log && -e plot_256/log_n000020.log)then
     echo 'we have both'
-    diff plot_128/log_n000020.log plot_256/log_n000020.log > scaling.diff
+    ${HOME}/Tmp/CRASH/share/Scripts/DiffNum.pl -r=2e-5 \
+        plot_128/log_n000020.log plot_256/log_n000020.log > scaling.diff
     cat runlog_128 runlog_256 > scaling.log
     setenv COPY Sites/CRASH_SCALING/`date +%Y%m%d`
-    scp scaling.diff ${HEROT}:${COPY}.diff
+    if(-s scaling.diff)then
+	scp scaling.diff ${HEROT}:${COPY}.error
+    endif
     scp scaling.log  ${HEROT}:${COPY}.log
     ssh ${HEROT} chmod go+r ${COPY}.\*
 endif
