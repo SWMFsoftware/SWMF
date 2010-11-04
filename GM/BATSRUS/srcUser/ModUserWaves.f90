@@ -1,5 +1,28 @@
 !^CFG COPYRIGHT UM
 !========================================================================
+! Revision history:
+! Nov. 2010 Rona Oran - 1. Added user problem AdvectSphere and comparison
+!                       to exact solution for this test problem.
+!                       2. Allow user to choose the unit of length used
+!                       in input commands #WAVE, #WAVE2 and #ADVECTSPHERE,
+!                       without affecting the actual normalization in BATSRUS.
+!                       This simplifies the way IC's are set up in the input 
+!                       file. This option is useful in case this user module
+!                       is used by two coupled components with different
+!                       normalizations. 
+!
+!                       USAGE:
+!                       #USERINPUTUNITX
+!                       T            UseUserInputUnitX
+!                       String       TypeInputUnitX
+!                       real         UnitXSi
+!
+!                       If UseUSerInputUnitX = T the String is read.
+!                       String specifies the input unit of length.
+!                       Options are: rPlanet, rBody, rSun, cAU, Si.
+!                       In case String='Si', the third parameter is
+!                       read, allowing any value in Si units to be chosen.       
+! ======================================================================
 module ModUser
 
   use ModUserEmpty,               &
@@ -40,11 +63,16 @@ module ModUser
   ! Velocity of wave (default is set for right going whistler wave test)
   real      :: Velocity = 169.344
   
-  ! Variables used by the user problem AdvectSphere                                     
+  ! Variables used by the user problem AdvectSphere                           
   real      :: pBackgrndIo, uBackgrndIo, FlowAngle ! in XY plane         
   real      :: NumDensBackgrndIo, NumDensMaxIo
-  real      :: rSphere, rSphereRs, RhoBackgrndNo, RhoMaxNo, UxNo, UyNo
+  real      :: rSphere, rSphereIn, RhoBackgrndNo, RhoMaxNo, UxNo, UyNo
   logical   :: DoCalcAnalytic = .false., DoInitSphere = .false.
+  
+  ! Enable user units of length in input file
+   logical           :: UseUserInputUnitx = .false.
+   character(len=20) :: TypeInputUnitX
+   real              :: InputUnitXSi = 0.0
 
 contains
 
@@ -94,13 +122,29 @@ contains
           KyWave_V(iVar) = max(0.0, cTwoPi/LambdaY)          
           KzWave_V(iVar) = max(0.0, cTwoPi/LambdaZ)
 
+       case('#USERINPUTUNITX')
+          ! This option controls the normalization of the unit of length
+          ! in input commands #WAVE, #WAVE2, #ADVECTSPHERE only.
+          ! This will not affect the normalization of state variables.
+          ! Designed to allow simple input in case two coupled components
+          ! use this user module
+          call read_var('UseUserInputUnitX', UseUserInputUnitx)
+          if (UseUserInputUnitX) then
+             call read_var('TypeInputUnitX', TypeInputUnitX)
+             if(TypeInputUnitX=='Si') then
+                  call read_var('InputUnitXSi',InputUnitXSi)
+                  if(InputUnitXSi .le. 0.0) &
+                       call CON_stop('InputUnitXSi <= 0 . Correct PARAM.in')
+               end if
+          end if
+
        case('#ADVECTSPHERE')
           call read_var('DoInitSphere',      DoInitSphere     )
           call read_var('NumDensBackgrndIo', NumDensBackgrndIo)
           call read_var('pBackgrndIo',       pBackgrndIo      )
           call read_var('uBackgrndIo',       uBackgrndIo      )
           call read_var('FlowAngle',         FlowAngle        )
-          call read_var('rSphereRs',         rSphereRs        )
+          call read_var('rSphereIn',         rSphereIn        )
           call read_var('NumDensMaxIo',      NumDensMaxIo     )
           
        case('#ANALYTIC')
@@ -115,7 +159,6 @@ contains
        end select
     end do
   end subroutine user_read_inputs
-
   !============================================================================
   subroutine user_set_ics
 
@@ -125,20 +168,37 @@ contains
          Bx_, By_, Bz_, rho_, p_, Pe_, UseElectronPressure
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, Si2No_V, Io2Si_V,&
-                           Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_
+                           Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
+                           rPlanetSi, rBody
     use ModNumconst, ONLY: cOne,cPi, cTwoPi, cDegToRad
     use ModSize,     ONLY: nI, nJ, nK, gcn
-    use ModConst,    ONLY: cProtonMass, rSun
-
+    use ModConst,    ONLY: cProtonMass, rSun, cAu
     implicit none
 
     real,dimension(nVar):: state_V,KxTemp_V,KyTemp_V
-    real                :: SinSlope, CosSlope, rCell
+    real                :: SinSlope, CosSlope, rCell, Input2SiUnitX
     integer             :: i, j, k, iBlock
   
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
     iBlock = globalBLK
+
+    if(UseUserInputUnitX) then
+       select case(TypeInputUnitX)
+       case('rPlanet')
+          Input2SiUnitX = rPlanetSi
+       case('rBody')
+          Input2SiUnitX = rBody
+       case('rSun')
+          Input2SiUnitX = rSun
+       case('cAU')
+          Input2SiUnitX = cAu
+       case('Si')
+          Input2SiUnitX = InputUnitXSi
+       case default
+          call CON_stop('TypeInputUnitX is not set, correct PARAM.in')
+       end select
+    end if
 
     select case(UserProblem)
 
@@ -150,34 +210,36 @@ contains
        ! rho = (RhoMax-RhoBackgrnd)* cos^2(pi*r/2 rSphere) + RhoBackgrnd
 
        ! Convert to normalized units                                  
-       ! Flow angle is measured from the x axis                                      
+       ! Flow angle is measured from the x axis                               
        UxNo = uBackgrndIo*cos(cDegToRad*FlowAngle)*Io2No_V(UnitU_)
        UyNo = uBackgrndIo*sin(cDegToRad*FlowAngle)*Io2No_V(UnitU_)
        RhoBackgrndNo = NumDensBackgrndIo*Io2Si_V(UnitN_)* &
             cProtonMass*Si2No_V(UnitRho_) 
        RhoMaxNo       = NumDensMaxIo*Io2Si_V(UnitN_)* &
             cProtonMass*Si2No_V(UnitRho_)
-       ! Convert rSphereRs to normalized units (needed for OH)
-       rSphere = rSphereRs*rSun*Si2No_V(UnitX_)
-       !\                                                                               
-       ! Start filling in cells (including ghost cells)                                 
+       if (UseUserInputUnitX) then
+          ! Convert rSphereIn to normalized units (needed for OH)
+          rSphere = rSphereIn*Input2SiUnitX*Si2No_V(UnitX_)
+       end if
+       !\                                                                      
+       ! Start filling in cells (including ghost cells)                       
        !/                          
        if (DoInitSphere) then
           do k= 1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn
              rCell = R_BLK(i,j,k,iBlock)
              if (rCell .le. rSphere)then
-                ! inside the sphere                                                    
+                ! inside the sphere                                           
                 State_VGB(rho_,i,j,k,iBlock) =RhoBackgrndNo + &
                      (RhoMaxNo - RhoBackgrndNo)*(cos(0.5*cPi*rCell/rSphere))**2
              else
-                ! in background flow                                                   
+                ! in background flow                                         
                 State_VGB(rho_,i,j,k,iBlock) = RhoBackgrndNo
              end if
           end do; end do ; end do
        else
           State_VGB(rho_,:,:,:,iBlock) = RhoBackgrndNo
        end if
-       ! velocity                                                                       
+       ! velocity                                                              
        State_VGB(RhoUx_,:,:,:,iBlock) = UxNo*State_VGB(rho_,:,:,:,iBlock)
        State_VGB(RhoUy_,:,:,:,iBlock) = UyNo*State_VGB(rho_,:,:,:,iBlock)
        State_VGB(RhoUz_, :,:,:,iBlock) = 0.0
@@ -191,7 +253,16 @@ contains
           DoInitialize=.false.
 
           PrimInit_V = ShockLeftState_V
+      
+          if (UseUserInputUnitX) then
+             ! Convert to normalized units of length
+             Width_V(:) = Width_V(:)*rSun*Si2No_V(UnitX_)
+             KxWave_V(:) = KxWave_V(:)/(Input2SiUnitX*Si2No_V(UnitX_))        
+             KyWave_V(:) = KyWave_V(:)/(Input2SiUnitX*Si2No_V(UnitX_))    
+             KzWave_V(:) = KzWave_V(:)/(Input2SiUnitX*Si2No_V(UnitX_))    
 
+          end if
+          
           if(ShockSlope /= 0.0)then
              CosSlope = 1.0/sqrt(1+ShockSlope**2)
              SinSlope = ShockSlope*CosSlope
@@ -221,7 +292,7 @@ contains
 
           end if
        end if
-
+    
        do iVar=1,nVar
           where(abs( x_BLK(:,:,:,iBlock) + ShockSlope*y_BLK(:,:,:,iBlock) ) &
                < Width_V(iVar) )   &
@@ -300,8 +371,8 @@ contains
     select case(NameVar)
     case('rhoexact')
        if (.not. DoCalcAnalytic) then
-          write(*,*) NameSub,': cannot plot rhoexact when #ANALYTIC is not set to T'
-          call CON_stop('Correct PARAM.in file')
+          write(*,*) NameSub,': cannot calculate ',NameVar
+          call CON_stop('Set #ANALYTIC to T on PARAM.in file')
        end if
        PlotVar_G = RhoExact_G*No2Io_V(UnitRho_)
        NameTecVar = 'RhoExact'
@@ -309,8 +380,8 @@ contains
        NameIdlUnit = NameIdlUnit_V(UnitRho_)
     case('rhoerr')
        if (.not. DoCalcAnalytic) then
-          write(*,*) NameSub,': cannot plot rhoerror when #ANALYTIC is not set to T'
-          call CON_stop('Correct PARAM.in file')
+          write(*,*) NameSub,': cannot calculate ',NameVar
+          call CON_stop('Set #ANALYTIC to T on PARAM.in file')
        end if
        PlotVar_G = RhoError_G*No2Io_V(UnitRho_)
        NameTecVar = 'RhoError'
