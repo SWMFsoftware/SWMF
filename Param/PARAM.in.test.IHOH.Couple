@@ -52,6 +52,10 @@ F                       UseUserUpdateStates
 #USERPROBLEM
 AdvectSphere
 
+#USERINPUTUNITX
+T
+rSun
+
 #ADVECTSPHERE
 T		DoInitSphere
 1.0e3		NumDensBackgrndIo
@@ -172,6 +176,10 @@ F                       UseUserUpdateStates
  
 #USERPROBLEM
 AdvectSphere
+
+#USERINPUTUNITX
+T
+rSun
 
 #ADVECTSPHERE
 F		DoInitSphere
