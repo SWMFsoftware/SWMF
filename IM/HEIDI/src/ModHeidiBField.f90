@@ -40,7 +40,10 @@ contains
     ! Temp var; Should be removed
     real, dimension(nPoint, nR ,3) :: B_all
     real, dimension(2,nPoint,nR)   :: Coord
+
+
     !----------------------------------------------------------------------------------
+    
     select case(TypeBField)
 
        !\
@@ -52,7 +55,7 @@ contains
           write(*,*) 'CASE MHD--------->INITIALIZE B FIED'
           write(*,*) 'Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt       
           call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
-               RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
+               RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
        else
           
           write(*,*) 'REAL MHD------>Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt
@@ -209,19 +212,50 @@ contains
        ! Stretched dipole magnetic field, with azimuthal symmetry. 
        !/
 
-    case('stretched_dipole')
+    case('stretched_dipole1')
+
+       write(*,*) 'stretched_dipole1'
+       call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
+       RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
+
+       !call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
+       !     RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
+    
+          
+    case('stretched_dipole2')
+       write(*,*) 'stretched_dipole2'
 
        !call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
-       !RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III, 1.0, 1.0/1.0)
-
-       call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-            RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
-    
-    case('aym_stretched_dipole')
+       !     RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
+       
+       
+       !call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
+       !    RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
+       
        call get_asym_stretched_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,bField_VIII,&
-            RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
-    end select
+            RadialDistance_III, Length_III,  GradBCrossB_VIII,GradB_VIII,dBdt_III)
+       
+       NameFile = 'BField_stretched.out'
 
+
+!!$       open(unit=9,file='analytic_dip.dat')
+!!$       do iPhi =1, 1!nPhi
+!!$          do iR =1, 1!nR 
+!!$             do iPoint = 1, nPoint-1
+!!$                
+!!$                write(9,*) L_I(iR), Phi_I(iPhi), nPoint, nR, nPhi, &
+!!$                     bFieldMagnitude_III(iPoint,iR,iPhi), RadialDistance_III(iPoint,iR,iPhi), &
+!!$                     Length_III(iPoint,iR,iPhi),                 &
+!!$                     GradBCrossB_VIII(1,iPoint,iR,iPhi),GradBCrossB_VIII(2,iPoint,iR,iPhi),   &
+!!$                     GradBCrossB_VIII(3,iPoint,iR,iPhi), GradB_VIII(1,iPoint,iR,iPhi),        &
+!!$                     GradB_VIII(2,iPoint,iR,iPhi), GradB_VIII(3,iPoint,iR,iPhi), dBdt_III(iPoint,iR,iPhi)
+!!$             end do
+!!$          end do
+!!$       end do
+!!$       close(9)
+   end select
+    
+!!$    STOP
 
     do iPhi =1, nPhi
        do iR =1, nR 
@@ -508,7 +542,53 @@ contains
     end do
   end function stretched_dipole_length
 
-  !==================================================================================
+ !==================================================================================
+
+  real function asym_stretched_dipole_length(L,LatMin,LatMax,Phi,a,b)
+
+    use ModHeidiSize, only: nPoint
+
+    implicit none
+    real               :: L                       ! L shell value   
+    real               :: LatMin                  ! Minimum Latitude                                               
+    real               :: LatMax                  ! Maximum Latitude
+    real               :: dLat, dSdLambda(nPoint)
+    real               :: x(nPoint), y, Phi,Lat
+    real               :: a, b              ! Stretching parameters
+    integer            :: i
+    !----------------------------------------------------------------------------------
+    y = cos(Phi)
+    asym_stretched_dipole_length = 0.0
+    dLat   = (LatMax-LatMin)/(nPoint-1)
+    Lat = LatMin
+    
+    x(1) = sin(LatMin)
+    dSdLambda(1) = sqrt(dble(L ** 2 * (1 - x(1) ** 2) ** 2 * x(1) ** 2 * (3 * (1 - x(1) ** 2) ** 2   &
+         * y ** 2 * a ** 2 + 6 * (1 - x(1) ** 2) ** 2 * y ** 3 * a * b + 3 * (1 - x(1) ** 2) ** 2 &
+         * y ** 4 * b ** 2 - 3 * (1 - x(1) ** 2) ** 2 * y ** 2 + 2) ** 2 / ((1 - x(1) ** 2) ** 2  &
+         * y ** 2 * a ** 2 + 2 * (1 - x(1) ** 2) ** 2 * y ** 3 * a * b + (1 - x(1) ** 2) ** 2 *   &
+         y ** 4 * b ** 2 - (1 - x(1) ** 2) ** 2 * y ** 2 + 1) + L ** 2 * (1 - x(1) ** 2) ** 4 *   &
+         ((1 - x(1) ** 2) ** 2 * ((a + b * y) ** 2 * y ** 2 + (1 - y ** 2) ** 2) + x(1) ** 2)))
+    
+    do i = 2, nPoint
+       Lat = Lat + dLat
+       x(i) = sin(Lat)
+       
+       dSdLambda(i) = sqrt(dble(L ** 2 * (1 - x(i) ** 2) ** 2 * x(i) ** 2 * (3 * (1 - x(i) ** 2) ** 2   &
+            * y ** 2 * a ** 2 + 6 * (1 - x(i) ** 2) ** 2 * y ** 3 * a * b + 3 * (1 - x(i) ** 2) ** 2 &
+            * y ** 4 * b ** 2 - 3 * (1 - x(i) ** 2) ** 2 * y ** 2 + 2) ** 2 / ((1 - x(i) ** 2) ** 2  &
+            * y ** 2 * a ** 2 + 2 * (1 - x(i) ** 2) ** 2 * y ** 3 * a * b + (1 - x(i) ** 2) ** 2 *   &
+            y ** 4 * b ** 2 - (1 - x(i) ** 2) ** 2 * y ** 2 + 1) + L ** 2 * (1 - x(i) ** 2) ** 4 *   &
+            ((1 - x(i) ** 2) ** 2 * ((a + b * y) ** 2 * y ** 2 + (1 - y ** 2) ** 2) + x(i) ** 2)))
+       
+       asym_stretched_dipole_length = asym_stretched_dipole_length + 0.5*(dSdLambda(i)+dSdLambda(i-1))*dLat
+
+    end do
+  end function asym_stretched_dipole_length
+
+!==================================================================================
+
+
 
   real function asinh(x)              
 
@@ -707,10 +787,10 @@ contains
 
   !=================================================================================
   subroutine get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
-       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
+       RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
     
-    use ModHeidiInput,  ONLY: StretchingFactorA
+    use ModHeidiInput,  ONLY: StretchingFactorA,StretchingFactorB
     use ModNumConst,    ONLY: cPi
     use ModHeidiMain,   ONLY: LZ, DipoleFactor
 
@@ -722,7 +802,6 @@ contains
     real,    intent(inout) :: bFieldMagnitude_III(nPoint,nR,nPhi) ! Magnitude of magnetic field 
     real,    intent(out)   :: Length_III(nPoint,nR,nPhi)          ! Length of the field line
     real,    intent(out)   :: RadialDistance_III(nPoint,nR,nPhi)
-    real,    intent(out)   :: dLength_III(nPoint-1,nR,nPhi)       ! Length interval between i and i+1
     !Local Variables    
     real                   :: LatMin                              ! Minimum Latitude 
     real                   :: LatMax                              ! Maximum Latitude 
@@ -1049,7 +1128,8 @@ contains
              mag = abs(DipoleFactor)*(sqrt(Br**2+Btheta**2+Bphi**2))
 
              bFieldMagnitude_III(iPoint,iR,iPhi) = mag
-             Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,Lat,Phi_I(iPhi), alpha, beta)  
+             Length_III(iPoint,iR,iPhi) = stretched_dipole_length&
+                  (L_I(iR), LatMin,Lat,Phi_I(iPhi), StretchingFactorA, StretchingFactorB)  
              Lat = Lat + dLat 
 
           end do
@@ -1059,7 +1139,7 @@ contains
   end subroutine get_stretched_dipole
   !==================================================================================
   subroutine get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,bField_VIII,&
-       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
+       RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
     use ModHeidiInput,     ONLY: StretchingFactorA, StretchingFactorB
     use ModCoordTransform, ONLY: rot_xyz_sph
@@ -1073,7 +1153,6 @@ contains
     real,    intent(out)   :: bFieldMagnitude_III(nPoint,nR,nPhi) ! Magnitude of magnetic field 
     real,    intent(out)   :: Length_III(nPoint,nR,nPhi)          ! Length of the field line
     real,    intent(out)   :: RadialDistance_III(nPoint,nR,nPhi)
-    real,    intent(out)   :: dLength_III(nPoint-1,nR,nPhi)       ! Length interval between i and i+1
     real,    intent(out)   :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
     real,    intent(out)   :: GradB_VIII(3,nPoint,nR,nPhi)
     real,    intent(out)   :: dBdt_III(nPoint,nR,nPhi)
@@ -1087,7 +1166,7 @@ contains
     real                   :: GradBSph_D(3),GradBCrossBSph_D(3)
     complex                :: root(3)
     integer                :: nroot, i, iR, iPhi,iPoint 
-    real :: cos2Lat,sin2Lat,cos2Phi,sin2Phi
+    real                   :: cos2Lat,sin2Lat,cos2Phi,sin2Phi
     !----------------------------------------------------------------------------------
     alpha = StretchingFactorA
     beta  = StretchingFactorB
@@ -1134,6 +1213,7 @@ contains
              x = rad * cos(Lat) * cos(Phi_I(iPhi))
              y = rad * cos(Lat) * sin(Phi_I(iPhi))
              z = rad * sin(Lat)
+
 
              r = (x**2 + (beta*y)**2 +(alpha*z)**2)
              a = (sqrt(r))**5
@@ -1264,7 +1344,8 @@ contains
              !GradB_VIII(3,iPoint, iR, iPhi) = dBdz
 
 
-             Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,Lat,Phi_I(iPhi), alpha, beta)  
+             Length_III(iPoint,iR,iPhi) = stretched_dipole_length&
+                  (L_I(iR), LatMin,Lat,Phi_I(iPhi), StretchingFactorA, StretchingFactorB)  
 
              Lat = Lat + dLat 
 
@@ -1275,12 +1356,13 @@ contains
   end subroutine get_analytical_field
   !=========================================================================================
   subroutine get_asym_stretched_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,bField_VIII,&
-       RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
+       RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModHeidiMain,      ONLY: LZ, Re, DipoleFactor
     use get_gradB_components
-    
+    use ModPlotFile,       ONLY: save_plot_file
+   
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
     integer, intent(in)    :: nPhi                                ! Number of points in the azimuthal direction
@@ -1289,7 +1371,6 @@ contains
     real,    intent(out)   :: bFieldMagnitude_III(nPoint,nR,nPhi) ! Magnitude of magnetic field 
     real,    intent(out)   :: Length_III(nPoint,nR,nPhi)          ! Length of the field line
     real,    intent(out)   :: RadialDistance_III(nPoint,nR,nPhi)
-    real,    intent(out)   :: dLength_III(nPoint-1,nR,nPhi)       ! Length interval between i and i+1
     real,    intent(out)   :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
     real,    intent(out)   :: GradB_VIII(3,nPoint,nR,nPhi)
     real,    intent(out)   :: dBdt_III(nPoint,nR,nPhi)
@@ -1304,8 +1385,20 @@ contains
     complex                :: root(3)
     integer                :: nroot, i, iR, iPhi,iPoint 
     real :: cos2Lat,sin2Lat,cos2Phi,sin2Phi
+
+
+    character(LEN=500)  :: StringVarName, StringHeader, NameFile
+    character(len=20)   :: TypePosition
+    character(len=20)   :: TypeFile = 'ascii'
+    real, dimension(nPoint, nR ,3) :: B_all
+    real, dimension(2,nPoint,nR)   :: Coord
+
+
     !----------------------------------------------------------------------------------
-    
+   
+!    write(*,*) 'I am here'
+
+ 
     a = StretchingFactorA
     b = StretchingFactorB
     
@@ -1313,6 +1406,8 @@ contains
     do iPhi =1, nPhi
        sigma = cos(Phi_I(iPhi))
        alpha = a + b * sigma
+ !      write(*,*) 'alpha=', alpha,a,b
+       
        !\
        ! Calculate the maximum latitude for this case (from the equation of the field line).
        ! Yields a cubic equation in latitude.
@@ -1352,18 +1447,20 @@ contains
              
              rad =  RadialDistance_III(iPoint,iR,iPhi)
 
-             r = sqrt((x*alpha)**2 + y**2 + z**2)  !Radial distance  in cartesian coordinates
+            
 
              x = rad * cos(Lat) * cos(Phi_I(iPhi))
              y = rad * cos(Lat) * sin(Phi_I(iPhi))
              z = rad * sin(Lat)
 
+             r = sqrt((x*alpha)**2 + y**2 + z**2)  !Radial distance  in cartesian coordinates
+              
              ! \
              !  Magnetic field components for the uniformly stretched dipole in y and z.
              !/
-             Bx = DipoleFactor * (3. * z * x )/r**5
-             By = DipoleFactor * (3. * z * y )/r**5
-             Bz = DipoleFactor * (2. * z**2 - (x* alpha)**2 - y**2 )/r**5
+             Bx = abs(DipoleFactor) * (3. * z * x )/r**5
+             By = abs(DipoleFactor) * (3. * z * y )/r**5
+             Bz = abs(DipoleFactor) * (2. * z**2 - (x* alpha)**2 - y**2 )/r**5
              !\
              ! Components of gradient of B in cartesian coordinates.
              !/
@@ -1407,13 +1504,46 @@ contains
              GradBCrossB_VIII(2,iPoint,iR,iPhi) =  GradBCrossBSph_D(2) *  1./(L_I(iR))
              GradBCrossB_VIII(3,iPoint,iR,iPhi) =  GradBCrossBSph_D(3) * 1./(L_I(iR)* cos(Lat))
 
-             Length_III(iPoint,iR,iPhi) = stretched_dipole_length(L_I(iR), LatMin,Lat,Phi_I(iPhi), alpha, 1.0)  
+             Length_III(iPoint,iR,iPhi) = asym_stretched_dipole_length&
+                  (L_I(iR), LatMin,Lat,Phi_I(iPhi), StretchingFactorA, StretchingFactorB)  
 
              Lat = Lat + dLat 
-
+             
+             if (iPhi==1) then
+                B_all(iPoint, iR,1)   = Bx
+                B_all(iPoint, iR,2)   = By
+                B_all(iPoint, iR,3)   = Bz
+                Coord(1,iPoint, iR)   = x/Re
+                Coord(2,iPoint, iR)   = z/Re
+             end if
           end do
        end do
     end do
+
+
+    ! Write output
+    
+    NameFile = 'BField.out'
+    StringHeader = 'Magnetic field'
+    StringVarName = 'x  z  bx  by  bz 0LT'
+    TypePosition = 'rewind'
+
+       call save_plot_file(NameFile, & 
+            TypePositionIn = TypePosition,&
+            TypeFileIn     = TypeFile,&
+            StringHeaderIn = StringHeader, &
+            nStepIn = 0, &
+            TimeIn = 0.0, &
+            NameVarIn = StringVarName, &
+            nDimIn = 2, & 
+            CoordIn_DII = Coord,&
+            VarIn_IIV = B_all)
+       TypePosition = 'rewind'  
+
+
+!STOP
+
+
 
   end subroutine get_asym_stretched_field
   !=========================================================================================
