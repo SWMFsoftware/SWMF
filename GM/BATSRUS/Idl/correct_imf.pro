@@ -3,7 +3,7 @@ pro correct_imf,wIn,xIn,inputfile,outputfile
 ; wIn contains the upstream data with 15 columns:
 ;    yr mo dy hr mn sc ms bx by bz ux uy uz rho T
 ; xIn should be set to the X position of the satellite 
-     relative to the inflow boundary in units of km !
+;    relative to the inflow boundary in units of km !
 ; inputfile is the name of the original IMF file 
 ; outputfile is the name of the corrected IMF file
 
