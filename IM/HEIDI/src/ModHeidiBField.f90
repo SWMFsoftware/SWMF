@@ -232,30 +232,13 @@ contains
        !call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
        !    RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
        
+
        call get_asym_stretched_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,bField_VIII,&
             RadialDistance_III, Length_III,  GradBCrossB_VIII,GradB_VIII,dBdt_III)
-       
-       NameFile = 'BField_stretched.out'
 
 
-!!$       open(unit=9,file='analytic_dip.dat')
-!!$       do iPhi =1, 1!nPhi
-!!$          do iR =1, 1!nR 
-!!$             do iPoint = 1, nPoint-1
-!!$                
-!!$                write(9,*) L_I(iR), Phi_I(iPhi), nPoint, nR, nPhi, &
-!!$                     bFieldMagnitude_III(iPoint,iR,iPhi), RadialDistance_III(iPoint,iR,iPhi), &
-!!$                     Length_III(iPoint,iR,iPhi),                 &
-!!$                     GradBCrossB_VIII(1,iPoint,iR,iPhi),GradBCrossB_VIII(2,iPoint,iR,iPhi),   &
-!!$                     GradBCrossB_VIII(3,iPoint,iR,iPhi), GradB_VIII(1,iPoint,iR,iPhi),        &
-!!$                     GradB_VIII(2,iPoint,iR,iPhi), GradB_VIII(3,iPoint,iR,iPhi), dBdt_III(iPoint,iR,iPhi)
-!!$             end do
-!!$          end do
-!!$       end do
-!!$       close(9)
-   end select
+    end select
     
-!!$    STOP
 
     do iPhi =1, nPhi
        do iR =1, nR 
@@ -1206,8 +1189,13 @@ contains
              cos2Phi = (cos(Phi_I(iPhi)))**2
              sin2Phi = (sin(Phi_I(iPhi)))**2             
 
-             RadialDistance_III(iPoint,iR,iPhi) = Re*LZ(iR) * cos2Lat *&
+!!$             RadialDistance_III(iPoint,iR,iPhi) = Re*LZ(iR) * cos2Lat *&
+!!$                  sqrt( cos2Lat *(cos2Phi + beta**2 * sin2Phi) + alpha**2 *sin2Lat          )
+             
+             RadialDistance_III(iPoint,iR,iPhi) = LZ(iR) * cos2Lat *&
                   sqrt( cos2Lat *(cos2Phi + beta**2 * sin2Phi) + alpha**2 *sin2Lat          )
+             
+
              rad =  RadialDistance_III(iPoint,iR,iPhi)
 
              x = rad * cos(Lat) * cos(Phi_I(iPhi))
@@ -1392,30 +1380,24 @@ contains
     character(len=20)   :: TypeFile = 'ascii'
     real, dimension(nPoint, nR ,3) :: B_all
     real, dimension(2,nPoint,nR)   :: Coord
-
-
     !----------------------------------------------------------------------------------
-   
-!    write(*,*) 'I am here'
-
- 
     a = StretchingFactorA
     b = StretchingFactorB
     
+    write(*,*) 'A=',a, StretchingFactorA
+    write(*,*) 'B=',b, StretchingFactorB
+
     dd = 0.0
     do iPhi =1, nPhi
        sigma = cos(Phi_I(iPhi))
        alpha = a + b * sigma
- !      write(*,*) 'alpha=', alpha,a,b
-       
        !\
        ! Calculate the maximum latitude for this case (from the equation of the field line).
        ! Yields a cubic equation in latitude.
        !/
        gamma = alpha**2 * sigma**2 + (1-sigma**2)
-       
-       bb = alpha**2
-       aa = gamma - 1
+       bb = 1.0
+       aa = gamma - 1.0
        
        do iR =1, nR 
           cc = -1./(LZ(iR)*LZ(iR))
@@ -1425,6 +1407,7 @@ contains
                   cos2Lat1 = real(root(i))
           end do
 
+          
           LatMax = acos(sqrt(cos2Lat1))
           LatMin = -LatMax
           dLat   = (LatMax-LatMin)/(nPoint-1)
@@ -1442,25 +1425,26 @@ contains
              cos2Phi = (cos(Phi_I(iPhi)))**2
              sin2Phi = (sin(Phi_I(iPhi)))**2             
 
-             RadialDistance_III(iPoint,iR,iPhi) = Re*LZ(iR) * cos2Lat *&
+             !RadialDistance_III(iPoint,iR,iPhi) = Re*LZ(iR) * cos2Lat *&
+             !     sqrt( cos2Lat *(alpha**2 * cos2Phi + sin2Phi) + sin2Lat)
+
+             RadialDistance_III(iPoint,iR,iPhi) = LZ(iR) * cos2Lat *&
                   sqrt( cos2Lat *(alpha**2 * cos2Phi + sin2Phi) + sin2Lat)
              
              rad =  RadialDistance_III(iPoint,iR,iPhi)
-
-            
-
+             
              x = rad * cos(Lat) * cos(Phi_I(iPhi))
              y = rad * cos(Lat) * sin(Phi_I(iPhi))
              z = rad * sin(Lat)
 
              r = sqrt((x*alpha)**2 + y**2 + z**2)  !Radial distance  in cartesian coordinates
-              
              ! \
              !  Magnetic field components for the uniformly stretched dipole in y and z.
              !/
              Bx = abs(DipoleFactor) * (3. * z * x )/r**5
              By = abs(DipoleFactor) * (3. * z * y )/r**5
              Bz = abs(DipoleFactor) * (2. * z**2 - (x* alpha)**2 - y**2 )/r**5
+
              !\
              ! Components of gradient of B in cartesian coordinates.
              !/
@@ -1504,46 +1488,41 @@ contains
              GradBCrossB_VIII(2,iPoint,iR,iPhi) =  GradBCrossBSph_D(2) *  1./(L_I(iR))
              GradBCrossB_VIII(3,iPoint,iR,iPhi) =  GradBCrossBSph_D(3) * 1./(L_I(iR)* cos(Lat))
 
-             Length_III(iPoint,iR,iPhi) = asym_stretched_dipole_length&
+             Length_III(iPoint,iR,iPhi) = stretched_dipole_length&
                   (L_I(iR), LatMin,Lat,Phi_I(iPhi), StretchingFactorA, StretchingFactorB)  
+
+             !Length_III(iPoint,iR,iPhi) = asym_stretched_dipole_length&
+             !     (L_I(iR), LatMin,Lat,Phi_I(iPhi), StretchingFactorA, StretchingFactorB)  
 
              Lat = Lat + dLat 
              
-             if (iPhi==1) then
-                B_all(iPoint, iR,1)   = Bx
-                B_all(iPoint, iR,2)   = By
-                B_all(iPoint, iR,3)   = Bz
-                Coord(1,iPoint, iR)   = x/Re
-                Coord(2,iPoint, iR)   = z/Re
-             end if
+!!$             if (iPhi==1) then
+!!$                B_all(iPoint, iR,1)   = Bx
+!!$                B_all(iPoint, iR,2)   = By
+!!$                B_all(iPoint, iR,3)   = Bz
+!!$                Coord(1,iPoint, iR)   = x/Re
+!!$                Coord(2,iPoint, iR)   = z/Re
+!!$             end if
           end do
        end do
     end do
 
-
-    ! Write output
-    
-    NameFile = 'BField.out'
-    StringHeader = 'Magnetic field'
-    StringVarName = 'x  z  bx  by  bz 0LT'
-    TypePosition = 'rewind'
-
-       call save_plot_file(NameFile, & 
-            TypePositionIn = TypePosition,&
-            TypeFileIn     = TypeFile,&
-            StringHeaderIn = StringHeader, &
-            nStepIn = 0, &
-            TimeIn = 0.0, &
-            NameVarIn = StringVarName, &
-            nDimIn = 2, & 
-            CoordIn_DII = Coord,&
-            VarIn_IIV = B_all)
-       TypePosition = 'rewind'  
-
-
-!STOP
-
-
+!!$    NameFile = 'BField.out'
+!!$    StringHeader = 'Magnetic field'
+!!$    StringVarName = 'x  z  bx  by  bz 0LT'
+!!$    TypePosition = 'rewind'
+!!$
+!!$       call save_plot_file(NameFile, & 
+!!$            TypePositionIn = TypePosition,&
+!!$            TypeFileIn     = TypeFile,&
+!!$            StringHeaderIn = StringHeader, &
+!!$            nStepIn = 0, &
+!!$            TimeIn = 0.0, &
+!!$            NameVarIn = StringVarName, &
+!!$            nDimIn = 2, & 
+!!$            CoordIn_DII = Coord,&
+!!$            VarIn_IIV = B_all)
+!!$       TypePosition = 'rewind'  
 
   end subroutine get_asym_stretched_field
   !=========================================================================================
@@ -1554,10 +1533,10 @@ contains
     integer, parameter   :: nR = 1
     integer, parameter   :: nPhi =1
     real                 :: L_I(nR)
-    real                 :: Phi_I(nPhi)                      ! Phi values
+    real                 :: Phi_I(nPhi)                         ! Phi values
     real                 :: bFieldMagnitude_III(nPoint,nR,nPhi) ! Magnitude of magnetic field 
     real                 :: RadialDistance_III(nPoint,nR,nPhi)
-    real                 :: dLength_III(nPoint-1,nR,nPhi)      ! Length interval between i and i+1  
+    real                 :: dLength_III(nPoint-1,nR,nPhi)       ! Length interval between i and i+1  
     real                 :: Length_III(nPoint,nR,nPhi) 
     real                 :: GradBCrossB_VIII(3,nPoint,nR,nPhi),GradB_VIII(3,nPoint,nR,nPhi)
     real                 :: PitchAngle
