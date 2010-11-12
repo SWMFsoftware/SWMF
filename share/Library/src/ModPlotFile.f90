@@ -264,7 +264,7 @@ contains
        write(UnitTmp_, "(100es13.5)")     Param_I
        write(UnitTmp_, "(a)")             trim(NameVar)
 
-       where(abs(Var_IV) < 1e-99) Var_IV = 0.0
+       where(abs(Var_IV) < 1d-99) Var_IV = 0.0
 
        ! write out coordinates and variables line by line
        n = 0

@@ -698,6 +698,8 @@ contains
        DoTestMe = .false.; DoTest =.false.
     end if
 
+    Jx = 0.0; Jy = 0.0; Jz = 0.0
+
     InvDx = 1.0/dx_Blk(iBlock)
     InvDy = 1.0/dy_Blk(iBlock)
     InvDz = 1.0/dz_Blk(iBlock)
