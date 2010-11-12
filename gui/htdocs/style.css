@@ -52,14 +52,14 @@ body, td, th
 #main
 {
 	margin-top: 60px;
-	margin-left: 190px;
+	margin-left: 220px;
 	margin-right: 50px;
 }	
 
 #main2
 {
 	margin-top: 60px;
-	margin-left: 190px;
+	margin-left: 220px;
 	margin-right: 170px;
 }	
 
@@ -81,7 +81,7 @@ body, td, th
 	position: absolute;
 	top: 25px;
 	left: 0px;
-	width: 170px;
+	width: 210px;
 	z-index: 1;
 }
 
