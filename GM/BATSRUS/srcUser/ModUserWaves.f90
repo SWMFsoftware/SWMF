@@ -404,7 +404,7 @@ contains
       integer,intent(in)  :: iBlock
       real,dimension(-1:nI+2,-1:nJ+2,-1:nK+2),intent(out)::RhoExact_G,&
                                                            RhoError_G
-      real    :: x, y, t
+      real    :: x, y, z, t
       real    :: rFromCenter, xSphereCenter, ySphereCenter
       integer :: i, j, k
       !real,dimension(1:3) :: r_D, rSphereCenter_D
@@ -416,13 +416,14 @@ contains
          
          x = x_BLK(i,j,k,iBlock)
          y = y_BLK(i,j,k,iBlock)
+         z = z_BLK(i,j,k,iBlock)
     
          ! Find current location of sphere center
          xSphereCenter = UxNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
          ySphereCenter = UyNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
          
          ! Chcek if this cell is inside the sphere
-         rFromCenter = sqrt((x - xSphereCenter)**2 + (y- ySphereCenter)**2)
+         rFromCenter = sqrt((x-xSphereCenter)**2 + (y-ySphereCenter)**2 + z**2)
          if (rFromCenter .le. rSphere) then
             RhoExact_G(i,j,k) = RhoBackgrndNo + (RhoMaxNo - RhoBackgrndNo)* &
                  cos(0.5*cPi*rFromCenter/rSphere)**2
