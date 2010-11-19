@@ -19,7 +19,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModProject                                        !^CFG IF PROJECTION
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
   use ModBlockData, ONLY: clean_block_data
-  use BATL_lib, ONLY: read_amr_criteria_param
+  use BATL_lib, ONLY: read_amr_criteria_param, nDimBatl => nDim
   use ModAMR
   use ModParallel, ONLY : proc_dims
   use ModRaytrace                                       !^CFG IF RAYTRACE
@@ -2099,7 +2099,7 @@ contains
        JacobianEps   = 1.E-6
     end if                            !^CFG END IMPLICIT
 
-    UseDivbSource   =  UseB
+    UseDivbSource   =  UseB .and. nDimBatl > 1
     UseDivbDiffusion= .false.         !^CFG IF DIVBDIFFUSE
     UseProjection   = .false.         !^CFG IF PROJECTION
     UseConstrainB   = .false.         !^CFG IF CONSTRAINB
@@ -2710,8 +2710,7 @@ contains
   !===========================================================================
   subroutine correct_grid_geometry
 
-    use BATL_lib, ONLY: init_mpi, init_batl, nDimBatl => nDim, &
-         CoordMin_D, CoordMax_D
+    use BATL_lib, ONLY: init_mpi, init_batl, CoordMin_D, CoordMax_D
     use ModBatlInterface, ONLY: set_batsrus_grid
     !-----------------------------------------------------------------------
 
