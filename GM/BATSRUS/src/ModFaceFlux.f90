@@ -3695,7 +3695,7 @@ end module ModFaceFlux
 subroutine roe_solver(Flux_V)
 
   use ModFaceFlux, ONLY: &
-       nFlux, IsBoundary, &
+       nFlux, IsBoundary, Climit, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
        StateLeftCons_V, StateRightCons_V, CmaxDt, Unormal_I, &
        nFluxMhd, RhoMhd_, RhoUn_, RhoUt1_, RhoUt2_, &
@@ -4211,6 +4211,13 @@ subroutine roe_solver(Flux_V)
   do iWave = 1, nWaveMhd
      DeltaWave_V(iWave) = sum(dCons_V*EigenvectorL_VV(:,iWave))
   end do
+
+  ! Take absolute value of eigenvalues
+  Eigenvalue_V = abs(Eigenvalue_V)
+
+  ! Limit them if required
+  if(Climit > 0.0) Eigenvalue_V = min(Climit, Eigenvalue_V)
+
   !\
   ! Calculate the Roe Interface fluxes 
   ! F = A * 0.5 * [ F_L+F_R - sum_k(|lambda_k| * alpha_k * r_k) ]
@@ -4219,7 +4226,7 @@ subroutine roe_solver(Flux_V)
   !  Diffusion_V = matmul(abs(Eigenvalue_V)*DeltaWave_V, EigenvectorR_VV)
   do iFlux = 1, nFluxMhd
      Diffusion_V(iFlux) = &
-          sum(abs(Eigenvalue_V)*DeltaWave_V*EigenvectorR_VV(:,iFlux))
+          sum(Eigenvalue_V*DeltaWave_V*EigenvectorR_VV(:,iFlux))
   end do
 
   ! Scalar variables
