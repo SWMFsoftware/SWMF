@@ -155,10 +155,10 @@ plotgrid,x,/lines
 
    The default behavior is to leave the grid in its original form.
    This choice saves the time of transformation, and uses the original grid 
-   and variables, but only some of the plotmodes are available for 
+   and variables, but only some of the plotting modes are available for 
    generalized and unstructured grids: contour, contfill, contlabel, contbar,
    vector and stream. Others (e.g. surface, tv, tvbar, velovect) are not.
-   To allow all plotmodes (and cuts across the grid), the data
+   To allow all plotting modes (and cuts across the grid), the data
    has to be transformed (interpolated) onto a regular grid.
    To achieve that select the 'regular' transformation with
 \begin{verbatim}
@@ -415,12 +415,11 @@ GRID            INT       = Array(50, 50)
    The number of functions {\bf nfunc} is thus determined by the number of
    function names listed in {\bf func}. 
 
-   For each function you may set the {\bf plotmode} (in 1D there is no
-   choice, since only the {\bf plot} routine is useful). 
-   If you give fewer plotmode(s) than {\bf nfunc}, the rest of
-   the functions will use the last plotmode given, in the above example
+   For each function you may set the plotting mode with the {\bf plotmode} string.
+   If you give fewer plotting mode(s) than {\bf nfunc}, the rest of
+   the functions will use the last plotting mode given, in the above example
    {\bf surface}. This padding rule is used for all the arrays described 
-   by strings. See section~\ref{s-plotmode} for more details on plotmodes.
+   by strings. See section~\ref{s-plotmode} for more details on plotting modes.
 
    The {\bf plottitle} parameter is usually set to {\bf 'default'} which
    means that the function name is used for the title, but you can set it
@@ -475,8 +474,8 @@ alog10({OpRho})
    e.g. {\bf ux;uy} or {\bf bx;bz}, which can either be plotted as a 
    vectorfield by the {\bf velovect} and {\bf vector} procedures, 
    or as streamlines or fieldlines, using the 
-   {\bf stream} and {\bf stream2} plotmodes.
-   For other plotmodes the absolute value
+   {\bf stream} and {\bf stream2} plotting modes.
+   For other plotting modes the absolute value
    $\sqrt{ux^2+uy^2}$ is plotted.
    You can also put a minus sign in front of any function name, which
    will simply multiply the value of the rest of the string by $-$1. 
@@ -484,12 +483,26 @@ alog10({OpRho})
 
 \subsection{Plotting modes in string plotmode \label{s-plotmode}}
 
-   There are many plotting modes available for 2D data. These can be
-   listed in the {\bf plotmode} for each function separated by spaces.
-   If the number of plotmodes is less than the number of functions,
-   the last plotmode is applied for the rest of the functions.
+There are many plotting modes available. 
+These can be listed in the {\bf plotmode} string for each function separated 
+by spaces. If the number of plotting modes is less than the number of functions,
+the last plotting mode is applied for the rest of the functions.
 
-   For scalar functions the main plotmodes are 
+For 1D plots the following plotting modes are available: 
+\begin{verbatim}
+Plotmode   Horizontal axis     Vertical axis
+-------------------------------------------------------
+plot       linear              linear
+plot_io    linear              logarithmic
+plot_oi    logarithmic         linear
+plot_oo    logarithmic         logarithmic
+\end{verbatim}
+The default value for plotmode is 'plot', which uses linear axes.
+The names of these plotting modes are identical with the corresponding IDL
+procedures.
+
+For 2D data there are many more possibilities.
+For scalar functions the main plotting modes are 
 \begin{verbatim}
 Plotmode   Parameters     Description
 ----------------------------------------------------------------------
@@ -506,13 +519,13 @@ tvbar                     grid cells colored by value plus colorbar
 surface    ax az          surface mesh, height proportional to value
 shade      ax az          shaded surface, height proportional to value
 \end{verbatim}
-   The parameters {\bf ax} and {\bf az} define the viewing angle,
-   while the {\bf contourlevel} parameter determines the number 
-   of contourlevels. The 'tv','tvbar','surface' and 'shade' plotmodes
-   can be used for Cartesian grids only (or grids transformed to Cartesian).
+The parameters {\bf ax} and {\bf az} define the viewing angle,
+while the {\bf contourlevel} parameter determines the number 
+of contourlevels. The 'tv','tvbar','surface' and 'shade' plotting modes
+can be used for Cartesian grids only (or grids transformed to Cartesian).
 
-   For functions with 2 components (e.g. 'bx;bz') the following plotmodes
-   are available
+For functions with 2 components (e.g. 'bx;bz') the following plotting
+modes are available
 \begin{verbatim}
 Plotmode  Parameters  Description
 -----------------------------------------------------------------
@@ -525,29 +538,36 @@ vector    velvector   arrows at random/selected positions
 velovect              arrows at every grid point
 ovelovect             arrows at every grid point (for overplot)
 \end{verbatim}
-   The {\bf velvector} parameter determines the number of arrows or
-   stream/fieldlines shown. By default the position of arrows/streamlines
-   is random. The positions can be fixed with the {\bf velpos} array
-   (see section \ref{s-plot-part} for details). 
-   During an animation the arrows can move from their initial position
-   parallel to the local velocity at a speed proportional to the magnitude
-   of the velocity and the {\bf velspeed} parameter. The maximum value
-   is the default {\tt velspeed=5}, while {\tt velspeed=0} does not allow
-   the arrows to move. 
-   The 'velovect' and 'ovelovect' plotmodes 
-   can be used for Cartesian grids only.
+The {\bf velvector} parameter determines the number of arrows or
+stream/fieldlines shown. By default the position of arrows/streamlines
+is random. The positions can be fixed with the {\bf velpos} array
+(see section \ref{s-plot-part} for details). 
+During an animation the arrows can move from their initial position
+parallel to the local velocity at a speed proportional to the magnitude
+of the velocity and the {\bf velspeed} parameter. The maximum value
+is the default {\tt velspeed=5}, while {\tt velspeed=0} does not allow
+the arrows to move. 
+The 'velovect' and 'ovelovect' plotting modes 
+can be used for Cartesian grids only.
 
-   For any of the 2D plotmodes, you can add the following strings
+The following options can be added to any of the above plotting modes:
 \begin{verbatim}
 Option  Description
 ---------------------------------------------------------------------
 log     show the 10 based logarithm of the function if it is positive
+over    overplot the previous function
+noaxis  do not show the axes
+\end{verbatim}
+
+For 2D plots there are a few more options
+\begin{verbatim}
+Option  Description
+---------------------------------------------------------------------
 grid    show grid points with plus signs
 mesh    show the mesh (lines connecting grid points) 
            only for structured grid
 body    show the spherical body with radius {\bf rBody} 
            at the origin as a black circle
-over    overplot previous function
 white   draw vectors or stream lines with white color even 
            for postscript output (only useful for overplotting)
 \end{verbatim}
@@ -557,7 +577,7 @@ white   draw vectors or stream lines with white color even
    By default {\bf rBody=3} but this can be changed by hand, or by an equation
    parameter named 'rbody' or 'rBody', which is read from the data file.
 
-   Here is an example for some more complex plotmodes:
+   Here is an example for some more complex plotmode strings:
 \begin{verbatim}
 plotmode='contbargridlog streamwhiteoverbody'
 \end{verbatim} 
@@ -565,7 +585,7 @@ plotmode='contbargridlog streamwhiteoverbody'
    and a mesh, and overplot the second vector quantity with white streamlines
    and a black body at the origin.
 
-   For any of the colored plotmodes ('shade', 'contfill', 'contbar', 
+   For any of the colored plotting modes ('shade', 'contfill', 'contbar', 
    'polarfill', 'polarbar', 'tv', and 'tvbar') the colortable can be 
    changed by one of the 
 \begin{verbatim}
@@ -583,18 +603,19 @@ makect,'red'
    Here is a partial list of these:
 \begin{verbatim}
 system variable     description
--------------------------------------------------------
+--------------------------------------------------------------
 !p.charsize         overall character size
+!p.psym             symbols instead of lines in 1D plot
+!p.symsize          symbol size
+!p.thick            thickness of lines in plots
 !x.charsize         X axis character size
+!x.thick            thickness of the lines forming the X axis
 !x.ticks            number of X axis tick marks
 !x.tickv            positions of X axis tick marks
 !x.tickname         strings at X axis tick marks
 !x.minor            number of minor tickmarks
-!p.psym             symbols instead of lines in 1D plot
-!p.symsize          symbol size
-!p.thick            thickness of lines in plots
 \end{verbatim}
-  The Y and Z axis is are affected by the analogous !y. and !z. variables.
+  The Y and Z axes are affected by the analogous !y. and !z. variables.
 
 \subsection{Plotting part of the domain \label{s-plot-part}}
 
@@ -605,7 +626,7 @@ system variable     description
 !x.range=[-10.,10.]
 !y.range=[-20.,-5.]
 \end{verbatim}
-   This will work well for 'flat' plotmodes, like 'contour',
+   This will work well for 'flat' plotting modes, like 'contour',
    'contfill', etc. For unstructured grids which are not transformed
    to a regular grid, it works for all the available plotting modes.
    To switch back to the default maximum range, use
@@ -652,7 +673,7 @@ cut=0
 
    The {\bf triplet} function provides an easy way to set the {\bf cut} 
    index array to represent a coarser grid. This is particularly useful
-   for the {\bf velovect} plotmode, which tends to draw too many tiny arrows.
+   for the {\bf velovect} plotting mode, which tends to draw too many tiny arrows.
    The {\bf triplet} function can have 3, 6, 9, or 12 parameters depending on 
    the number of dimensions, and each triplet describes a subset of the 
    indices in the given direction. The three elements are the 
@@ -678,7 +699,7 @@ cut=quadruplet(50,0,39,2, 50,10,49,2)
 .r plotfunc
 \end{verbatim}
    Another way to show velocity vectors at fixed positions is the use of 
-   the "vector" plotmode after setting the number of vectors {\bf velvector} 
+   the "vector" plotting mode after setting the number of vectors {\bf velvector} 
    and the array of positions {\bf velpos(velvector,2)} containing the 
    X and Y coordinates for each vector. In principle {\bf velpos} can
    be defined as an arbitrary set of points.
@@ -706,7 +727,7 @@ velpos(*,*)=x(triplet(0,49,2, 0,49,2, 0,1,1))
    plotmode='stream' and 'stream2'.
 
 Finally the {\bf rcut} parameter can be used to cut out a circle around
-the origin. While the {\bf body} modifier in the plotmode simply covers
+the origin. While the {\bf body} modifier in the plotting mode simply covers
 the circle, the {\bf rcut} removes all the data inside that radius,
 so it has no effect on the range of values.
 
@@ -729,7 +750,7 @@ behaviour (the number of rows and columns is about the same).
    Functions can be plot on top of each other by setting the {\bf multiplot}
    array such that the number of subplots is smaller than the number of
    functions. Note that a simpler and more general method is to use the 'over'
-   option in the plotmode (see below). 
+   option in the plotmode string (see below). 
    To show the magnetic field and density in the same plot, try
 \begin{verbatim}
 func='rho bx;by'
@@ -752,7 +773,7 @@ plotmode='contfill ovelovect'
    good alignment with the 'contfill' plot. 
 
    The same effect can also be achived with the 'over' option in the 
-   plotmode and without the use of multiplot:
+   plotmode string and without the use of multiplot:
 \begin{verbatim}
 func='rho bx;by'
 plotmode='contbar streamover'
@@ -828,7 +849,7 @@ noerase=1
    for each file separately above the corresponding columns
    if {\bf headerline=2} is set.
 
-   The function(s) to be animated and the plotmode(s) for the functions 
+   The function(s) to be animated and the plotting mode(s) for the functions 
    are determined by the same {\bf func, plotmode}, and {\bf plottitle} 
    strings as for {\bf plotfunc}. If any part of the 
    {\bf autorange} string is set to {\bf 'y'},
