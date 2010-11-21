@@ -1172,12 +1172,11 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nOrder'  ,nOrder)
         nStage = nOrder
         call read_var('TypeFlux',FluxType, IsUpperCase=.true.)
-        if(nOrder>1)&                                                
-             call read_var('TypeLimiter', TypeLimiter)
-        if(TypeLimiter == 'minmod') then
-           BetaLimiter = 1.0
-        else
-           call read_var('LimiterBeta', BetaLimiter)
+        BetaLimiter = 1.0
+        if(nOrder>1)then
+           call read_var('TypeLimiter', TypeLimiter)
+           if(TypeLimiter /= 'minmod') &
+                call read_var('LimiterBeta', BetaLimiter)
         end if
 
      case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
@@ -2358,9 +2357,9 @@ contains
        FluxTypeImpl=FluxType
     end select                               !^CFG END IMPLICIT
 
-    if(UseSemiImplicit)then                  !^CFG IF IMPLICIT BEGIN
+    if(UseSemiImplicit .or. nStage == 1)then !^CFG IF IMPLICIT BEGIN
        UseBDF2 = .false.
-    elseif (time_accurate .and. nStage==2)then
+    elseif (time_accurate .and. nStage == 2)then
        UseBDF2 = .true.
     end if                                   !^CFG END IMPLICIT
 
