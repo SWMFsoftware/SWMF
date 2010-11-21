@@ -24,7 +24,7 @@ filename=''
 ; Parameters for the functions to be plotted
 func=''
 logfunc=''
-plotmode=''
+plotmode='plot'
 plottitle='default'
 timetitle=''     ; set to format string to plot time as title for time series
 timetitleunit=0  ; set to number of seconds in time unit
