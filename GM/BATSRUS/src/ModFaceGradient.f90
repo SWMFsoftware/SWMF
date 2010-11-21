@@ -621,7 +621,7 @@ contains
     InvDz = 1.0/Dz_Blk(iBlock)
 
     if(IsNewBlock)then
-       call set_block_field2(iBlock, 1, Scalar1_G, Scalar_G)
+       call set_block_field3(iBlock, 1, Scalar1_G, Scalar_G)
        if(UseCovariant) call set_block_jacobian_face(iBlock)
 
        IsNewBlock = .false.
