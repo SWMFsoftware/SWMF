@@ -766,7 +766,9 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
    askstr,'func(s) (e.g. rho p ux;uz bx+by -T) ',func,doask
    if plotdim eq 1 then begin
       print,'1D plotmode: plot'
-      plotmode='plot'
+      print,'1D +options: log,noaxis,over'
+      askstr,'plotmode(s)                ',plotmode,doask
+      if strmid(plotmode,0,4) ne 'plot' then plotmode='plot'
    endif else begin
       if plotmode eq 'plot' then plotmode=''
       print,'2D plotmode: shade/surface/cont/tv/polar/velovect/vector/stream'
@@ -1941,7 +1943,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
                                      XSTYLE=noaxis+1,YSTYLE=noaxis+1,/dither, $
                                      /NOERASE
            'plot'     :plot,xx,f,YRANGE=[f_min,f_max],$
-                            XSTYLE=noaxis+18,YSTYLE=noaxis+18,$
+                            XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
                             LINE=lstyle,/NOERASE
            'shade'    :if irr then begin
               shade_surf_irr,f>f_min,xx,yy,AX=ax,AZ=az
