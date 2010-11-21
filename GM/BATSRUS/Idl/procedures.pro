@@ -765,12 +765,12 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
 
    askstr,'func(s) (e.g. rho p ux;uz bx+by -T) ',func,doask
    if plotdim eq 1 then begin
-      print,'1D plotmode: plot'
+      print,'1D plotmode: plot/plot_io/plot_oi/plot_oo'
       print,'1D +options: log,noaxis,over'
       askstr,'plotmode(s)                ',plotmode,doask
       if strmid(plotmode,0,4) ne 'plot' then plotmode='plot'
    endif else begin
-      if plotmode eq 'plot' then plotmode=''
+      if strmid(plotmode,0,4) eq 'plot' then plotmode=''
       print,'2D plotmode: shade/surface/cont/tv/polar/velovect/vector/stream'
       print,'2D +options: bar,body,fill,grid,irr,label,log,mesh,noaxis,over,white'
       askstr,'plotmode(s)                ',plotmode,doask
@@ -1770,10 +1770,10 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
                   pos(2) = pos(2) - (pos(2) - pos(0))*0.15
 
                                 ; shrink in X direction for the Y axis of plot
-        if plotmod eq 'plot' and multix gt 1 then $
+        if strmid(plotmod,0,4) eq 'plot' and multix gt 1 then $
            pos(0) = pos(0) + (pos(2) - pos(0))*0.15
 
-        if keyword_set(fixaspect) and plotmod ne 'plot' then begin
+        if keyword_set(fixaspect) and strmid(plotmod,0,4) ne 'plot' then begin
 
            if plotmod eq 'polar' then $
               aspectx=1 $
@@ -1824,7 +1824,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         endif
 
                                 ; Omit Y axis if unneeded
-        if (plotix gt 0 and plotmod ne 'plot') then begin
+        if (plotix gt 0 and strmid(plotmod,0,4) ne 'plot') then begin
            !y.tickname = strarr(60)+' '
            !y.title = ' '
         endif
@@ -1853,7 +1853,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         f_min=f_min-1
      endif
 
-     if plotmod eq 'plot' then $
+     if strmid(plotmod,0,4) eq 'plot' then $
         if nfunc gt ppp                then lstyle=ifunc/ppp $
         else if keyword_set(linestyle) then lstyle=linestyle $
         else                                lstyle=!p.linestyle
@@ -1896,6 +1896,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
                            FILL=fill,FOLLOW=label,$
                            XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NOERASE
            'plot':plot,f,YRANGE=[f_min,f_max],$
+                       XSTYLE=noaxis+18,ystyle=18,LINE=lstyle,/NOERASE
+           'plot_io':plot_io,f,YRANGE=[f_min,f_max],$
                        XSTYLE=noaxis+18,ystyle=18,LINE=lstyle,/NOERASE
            'shade'    :begin
               shade_surf,f>f_min,ZRANGE=[f_min,f_max],$
@@ -1943,6 +1945,15 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
                                      XSTYLE=noaxis+1,YSTYLE=noaxis+1,/dither, $
                                      /NOERASE
            'plot'     :plot,xx,f,YRANGE=[f_min,f_max],$
+                            XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
+                            LINE=lstyle,/NOERASE
+           'plot_io'  :plot_io,xx,f,YRANGE=[f_min,f_max],$
+                            XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
+                            LINE=lstyle,/NOERASE
+           'plot_oi'  :plot_oi,xx,f,YRANGE=[f_min,f_max],$
+                            XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
+                            LINE=lstyle,/NOERASE
+           'plot_oo'  :plot_oo,xx,f,YRANGE=[f_min,f_max],$
                             XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
                             LINE=lstyle,/NOERASE
            'shade'    :if irr then begin
