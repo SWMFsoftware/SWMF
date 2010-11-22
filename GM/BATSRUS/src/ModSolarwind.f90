@@ -537,8 +537,13 @@ contains
        if(UseAnisoPressure .and. .not. IsInput_V(Ppar_)) &
             Solarwind_V(pPar_) = Solarwind_V(p_)
 
-       if(UseElectronPressure .and. .not. IsInput_V(Pe_)) &
-            Solarwind_V(Pe_) = Solarwind_V(p_)*ElectronPressureRatio
+       if(UseElectronPressure .and. .not. IsInput_V(Pe_))then
+          if(ElectronPressureRatio > 0.0)then
+             Solarwind_V(Pe_) = Solarwind_V(p_)*ElectronPressureRatio
+          else
+             Solarwind_V(Pe_) = Solarwind_V(p_)
+          end if
+       end if
 
        ! Put back results in big array
        Solarwind_VI(:,iData) = Solarwind_V
