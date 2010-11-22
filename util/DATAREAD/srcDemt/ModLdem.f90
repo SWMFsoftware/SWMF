@@ -65,7 +65,7 @@ contains
     if(iRadiusLdem < 1 .or. iRadiusLdem > nCell_D(1))then
        write(*,*) NameSub//' ERROR: iRadiusLdem is out of range [1,', &
             nCell_D(1),']'
-       call stop_mpi(' Correct PARAM.in file')
+       call CON_stop(' Correct PARAM.in file')
     end if
        
     allocate(Coord_DIII(3,nCell_D(1),nCell_D(2),nCell_D(3)), &
