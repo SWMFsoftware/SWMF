@@ -14,7 +14,7 @@ module ModCommonVariables
   real :: wHorizontal
   character(len=7) :: TypeSolver
   logical :: DoLog
-  real :: uJoule2
+  real :: uJoule2=0.0
   real :: AR12top(2),AR23top(2),CellVolumeTop(2)
 
   real :: cMax_O(MaxGrid), cMax_H(MaxGrid),cMax_e(MaxGrid),&

@@ -180,6 +180,8 @@ subroutine move_line
      uJoule2 = (&
        UthetaLine_I(iLine)**2.0&
        +(UphiLine_I(iLine) - OmegaPlanet*rPlanet*sin(ThetaLine_I(iLine)))**2.0)
+  else
+     uJoule2=0.0
   endif
   
   xLineOld_I(iLine) = xLine_I(iLine)
