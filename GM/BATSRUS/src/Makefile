@@ -5,7 +5,7 @@ SHELL =/bin/sh
 include ../Makefile.def
 
 SEARCH_EXTRA = \
-	-I../srcBATL -I${MAGNETOGRAMDIR} -I${EMPIRICALEEDIR} -I${CRASHDIR} 
+	-I../srcBATL -I${MAGNETOGRAMDIR} -I${DEMTDIR} -I${EMPIRICALEEDIR} -I${CRASHDIR} 
 
 include ../Makefile.conf
 include Makefile.DEPEND
@@ -243,6 +243,7 @@ ${EXE}: ${OBJECTS_EXE}
 	cd Tmp_; \
 		ar -x ../${MY_LIB}; \
 		ar -x ${LIBDIR}/libMAGNETOGRAM.a; \
+		ar -x ${LIBDIR}/libDEMT.a; \
 		ar -x ${LIBDIR}/libEMPIRICALEE.a; \
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBSHARE}

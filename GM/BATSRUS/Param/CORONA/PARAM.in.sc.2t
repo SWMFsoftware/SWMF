@@ -74,6 +74,11 @@ Param/CORONA/CR2077_GNG.dat	NameMagnetogramFile
 0.0			PhiShift
 1.0			UnitB
 
+#LDEM
+T			UseLdem
+CR2077_LDEM_moments.out	NameLdemFile
+1			iRadiusLdem
+
 #EMPIRICALSW
 WSA			NameModel
 
@@ -95,11 +100,6 @@ WSA			NameModel
 F			UseHeatFluxInBernoulli
 3e5			VAlfvenMin
 4.5e-15			RhoVAt1AU
-
-#LDEM
-T			UseLdem
-CR2077_LDEM_moments.out	NameLdemFile
-1			iRadiusLdem
 
 #WAVEDISSIPATION
 T			UseWaveDissipation

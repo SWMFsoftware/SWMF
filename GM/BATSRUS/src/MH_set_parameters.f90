@@ -80,6 +80,7 @@ subroutine MH_set_parameters(TypeAction)
        read_modified_cooling, check_cooling_param, read_chromosphere
   use ModWaves, ONLY: UseAlfvenWaves, check_waves, &
        read_wave_pressure, read_frequency, read_spectrum
+  use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
 
   implicit none
 
@@ -257,6 +258,8 @@ subroutine MH_set_parameters(TypeAction)
            call read_potential_field(NamePlotDir)
         end if
      end if
+
+     if(UseLdem) call read_ldem(NamePlotDir)
 
      if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
           call set_empirical_model(NameModelSW, BodyTDim_I(IonFirst_))
@@ -1895,6 +1898,13 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#SAVEPOTENTIALFIELD")
         call set_parameters_magnetogram(NameCommand)
+
+     case('#LDEM')
+        call read_var('UseLdem', UseLdem)
+        if(UseLdem) then
+           call read_var('NameLdemFile', NameLdemFile)
+           call read_var('iRadiusLdem', iRadiusLdem)
+        end if
 
      case("#EMPIRICALSW")
         call read_var('NameModelSW', NameModelSW)
