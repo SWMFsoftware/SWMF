@@ -154,7 +154,7 @@ contains
 
     deallocate(Coord_DII, Var_VII)
 
-    call MPI_COMM_RANK(iProc,MPI_COMM_WORLD,iError)
+    call MPI_COMM_RANK(MPI_COMM_WORLD,iProc,iError)
 
     if(iProc == 0)then
        ! Flip coordinates for plotting

@@ -259,8 +259,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
      end if
 
-     if(UseLdem) call read_ldem(NamePlotDir)
-
+    
      if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
           call set_empirical_model(NameModelSW, BodyTDim_I(IonFirst_))
 
@@ -1904,6 +1903,7 @@ subroutine MH_set_parameters(TypeAction)
         if(UseLdem) then
            call read_var('NameLdemFile', NameLdemFile)
            call read_var('iRadiusLdem', iRadiusLdem)
+           call read_ldem(NamePlotDir)
         end if
 
      case("#EMPIRICALSW")
