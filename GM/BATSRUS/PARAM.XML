@@ -5736,6 +5736,35 @@ Default is UseMagnetogram=F.
  
 </command>
 
+<command name="LDEM">
+	<parameter name="UseLdem" type="logical" default="F"	/>
+	<if expr="$UseLdem">
+		
+		<parameter name="NameLdemFile" type="string" 
+						length="100" />
+		<parameter name="iRadiusLdem" type="integer" min="0"
+						default="12" />
+	</if>
+
+#LDEM
+F			UseLdem (rest of parameters read if true)
+LDEM_moments.out	NameLdemFile
+1			iRadiusLdem
+
+If UseLdem=T then read the LDEM moments file for the coronal density and temperature.
+
+NameLdemFile is the name of the file containing the Ldem moments.
+
+iRadiusLdem gives the index of the desired radius at which data is extracted.
+The Ldem moments data is ordered into concentric spherical shells of increasing
+radius,  ranging from 1.035Rs to 1.255Rs, in increaments of 0.01Rs. The user can
+select the desired radius by varying the iRadiusLdem parameter: 
+iRadiusLdem=1 corresponds to 1.035Rs, iRadiusLdem=2 corresponds to 1.045Rs, and so forth.
+
+Default is UseLdem=F.
+ 
+</command>
+
 <command name="EMPIRICALSW">
 	<parameter name="NameModelSW" type="string" input="select">
 		<option name="none" default="T"/>
