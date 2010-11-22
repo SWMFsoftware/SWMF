@@ -5758,10 +5758,11 @@ NameLdemFile is the name of the file containing the Ldem moments.
 iRadiusLdem gives the index of the desired radius at which data is extracted.
 The Ldem moments data is ordered into concentric spherical shells of increasing
 radius,  ranging from 1.035Rs to 1.255Rs, in increaments of 0.01Rs. The user can
-select the desired radius by varying the iRadiusLdem parameter: 
-iRadiusLdem=1 corresponds to 1.035Rs, iRadiusLdem=2 corresponds to 1.045Rs, and so forth.
+select the desired radius by varying the iRadiusLdem parameter. The minimal accepted 
+value of iRadiusLdem is 1, corresponding to 1.035Rs. iRadiusLdem=2 corresponds to 
+1.045Rs, and so forth.
 
-Default is UseLdem=F.
+Default is UseLdem=F, iRadiusLdem=1
  
 </command>
 
