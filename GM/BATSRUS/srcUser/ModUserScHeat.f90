@@ -263,13 +263,16 @@ contains
     ! This subroutine computes the base values for mass density and temperature
 
     use ModLdem,             ONLY: get_ldem_moments, UseLdem
-    use ModPhysics,          ONLY: BodyRho_I, Si2No_V, UnitTemperature_
+    use ModPhysics,          ONLY: BodyRho_I, Si2No_V, UnitTemperature_, UnitN_, &
+                                   AverageIonCharge
     use ModExpansionFactors, ONLY: Umin, CoronalT0Dim
+    use ModMultiFluid,       ONLY: MassIon_I
 
     real, intent(in) :: x_D(3)
     real, intent(out):: RhoBase, Tbase
 
-
+    ! Electron density and temperature from ldem moments (cm^-3, MK respectively)
+    real :: Ne, Te
     ! The solar wind speed at the far end of the Parker spiral,
     ! which originates from the given point.
     real :: Ufinal
@@ -279,7 +282,9 @@ contains
     real :: Runit_D(3)
     !--------------------------------------------------------------------------
     if(UseLdem)then
-       call get_ldem_moments(x_D, RhoBase, Tbase)
+       call get_ldem_moments(x_D, Ne, Te)
+       RhoBase = Ne*Si2No_V(UnitN_)*MassIon_I(1)/AverageIonCharge
+       Tbase = Te*Si2No_V(UnitTemperature_)
 
        RETURN
     end if

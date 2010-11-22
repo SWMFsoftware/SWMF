@@ -147,11 +147,11 @@ contains
             sum(Var_VII(iVar,nThetaLdem,:))/nCell_D(3)
     end do
 
-    ! Make the moments (electron density and temperature) dimensionless
-    !VarLdem_VII(1,:,:) = VarLdem_VII(1,:,:)*1e6/AverageIonCharge &
-    !     *Si2No_V(UnitN_)*cProtonMass
-    !VarLdem_VII(2,:,:) = VarLdem_VII(2,:,:)*1e6*Si2No_V(UnitTemperature_)
-
+    ! Convert moments (electron density and temperature) to SI
+    ! density:     1/cm^3 -> 1/m^3
+    ! temperature: MK     -> K
+    VarLdem_VII(:,:,:) = VarLdem_VII(:,:,:)*1e6
+  
     deallocate(Coord_DII, Var_VII)
 
     call MPI_COMM_RANK(MPI_COMM_WORLD,iProc,iError)
@@ -164,10 +164,9 @@ contains
        do k = 0, nThetaLdem+1; do j = 0, nPhiLdem+1
           Coord_DII(1,j,k) = PhiLdem_I(nPhiLdem+1-j)*cRadToDeg
           Coord_DII(2,j,k) = ThetaLdem_I(nThetaLdem+1-k)*cRadToDeg
-          Var_VII(1,j,k) = VarLdem_VII(1,nThetaLdem+1-k,nPhiLdem+1-j) !&
-          !     *1e-6/cProtonMass*AverageIonCharge*No2Si_V(UnitN_)
-          Var_VII(2,j,k) = VarLdem_VII(2,nThetaLdem+1-k,nPhiLdem+1-j) !&
-          !     *1e-6*No2Si_V(UnitTemperature_)
+          ! convert to output file units
+          Var_VII(1,j,k) = VarLdem_VII(1,nThetaLdem+1-k,nPhiLdem+1-j)*1e-6
+          Var_VII(2,j,k) = VarLdem_VII(2,nThetaLdem+1-k,nPhiLdem+1-j)*1e-6
        end do; end do
 
        ! Show the patched LDEM moments
@@ -183,13 +182,13 @@ contains
 
   !============================================================================
 
-  subroutine get_ldem_moments(x_D, RhoBase, Tbase)
+  subroutine get_ldem_moments(x_D, Ne, Te)
 
     Use ModInterpolate, ONLY: bilinear
     use ModNumConst,    ONLY: cHalfPi, cTwoPi
 
     real, intent(in)  :: x_D(3)
-    real, intent(out) :: RhoBase, Tbase
+    real, intent(out) :: Ne, Te
 
     real :: r, Theta, Phi, VarLdem_V(2)
     !--------------------------------------------------------------------------
@@ -200,8 +199,8 @@ contains
     VarLdem_V = bilinear(VarLdem_VII, 2, 0, nThetaLdem+1, 0, nPhiLdem+1, &
          (/Theta,Phi/), x_I=ThetaLdem_I, y_I=PhiLdem_I, DoExtrapolate=.false.)
 
-    RhoBase = VarLdem_V(1)
-    Tbase = VarLdem_V(2)
+    Ne = VarLdem_V(1)
+    Te = VarLdem_V(2)
 
   end subroutine get_ldem_moments
 
