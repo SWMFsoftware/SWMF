@@ -272,6 +272,7 @@ ${CRASHEXE}: ${OBJECTS_EXE} ${LIBCRASH}
 	cd Tmp_; \
 		ar -x ../${MY_LIB}; \
 		ar -x ${LIBDIR}/libMAGNETOGRAM.a; \
+		ar -x ${LIBDIR}/libDEMT.a; \
 		ar -x ${LIBDIR}/libEMPIRICALEE.a; \
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBCRASH}; \
