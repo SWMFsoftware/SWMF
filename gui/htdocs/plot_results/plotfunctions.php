@@ -25,6 +25,21 @@ function GetFileList($dirname='.') {   // Finds all the figures
    return $files;
 }
 
+function GetFileListByStyle($dirname='.', $string) {   // Finds all the figures of a given style
+// Defaults to all files in alphabetical order.
+   $files = array();
+   $dir = opendir($dirname);
+   while( $file = readdir( $dir ) ) {
+     if (eregi("\.jpe?g$", $file) || eregi("\.gif$", $file) || eregi("\.png$", $file)) {
+       if (eregi("${string}", $file)) {
+         $files[] = $file; 
+       }
+     }
+   }
+   sort($files);
+   return $files;
+}
+
 function GetStyleList($dirname='.') {   // Finds all the batch macro files
 // Defaults to all files in alphabetical order.
    $files = array();
@@ -260,6 +275,16 @@ function PrintListMenu($list, $default, $name, $format) { // format = "name" or 
       $prefix = "V$i: ";
       if($format == "name") { $prefix = ""; }
       echo ">$prefix$value</OPTION>\n";
+   }
+   echo '</SELECT>';
+}
+
+function PrintPlotMenu($list, $name, $prefix) {
+   echo "<SELECT onchange=\"window.location=this.value\">\n";
+   echo "   <OPTION VALUE=\"\"> -SELECT PLOT- </OPTION>\n";
+   // Write out menu
+   foreach ($list as $value) {
+      echo "   <OPTION VALUE=\"$prefix$value\">$value</OPTION>\n";
    }
    echo '</SELECT>';
 }

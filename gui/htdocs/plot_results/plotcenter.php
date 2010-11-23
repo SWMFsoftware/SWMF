@@ -14,7 +14,6 @@ if (! $plotstyle) {  // Print initial info only
      }
    }
    echo "<br>";
-   echo '</BODY>';
    exit();
 }
 
@@ -28,7 +27,6 @@ $plotfilelist = GetPlotList("$runpath/$cmp");
 $countfiles = count($plotfilelist);
 if($countfiles < 1) {
   echo "<H2>No plotfiles found!</H2><br>";
-  echo '</BODY>';
   exit();
 }
 
@@ -42,6 +40,15 @@ include("${runpath}/images/${cmp}_${plottype}/defaultsBASE.php");
 include("plot_${loadfile}.php");
 form1();
 
-echo "</BODY>\n";
+echo "<br><br>\n";
+
+$plotslist = GetFileListByStyle("$runpath/images/${cmp}_${plottype}", "-${plotstyle}");
+$countfiles = count($plotslist);
+echo "<H2>Plots already created from selected stye: $countfiles</H2><br>";
+
+$plotpath = "/plots/PLOT_$runname/images/${cmp}_${plottype}/";
+if($countfiles > 0) {
+  PrintPlotMenu($plotslist, "plotname", "$plotpath");
+}
 
 ?>
