@@ -45,9 +45,9 @@
       if (!($fileexists)) { $newfiles = "1"; }
     }
   }
-  if ($newfiles || !(is_file("$runpath/images/${cmp}_${plottype}/animation-${number}.gif"))) {
+  if ($newfiles || !(is_file("$runpath/images/${cmp}_${plottype}/animation-${number}.mp4"))) {
     Exec("cd $runpath/images/${cmp}_${plottype};
-          convert *-${number}.png animation-${number}.gif");
+          ../../../../plot_results/movie.sh $number");
   }
 
   $time2 = time();
@@ -61,7 +61,13 @@
 <?php echo "
 <h2>Movie of files for run $runname - $cmp - $plottype - $plotstyle </h2>
 <h3>$countfiles frames in animation, proccessing time ${timedif} seconds</h3>
-<center><img src=\"${filedir}/../images/${cmp}_${plottype}/animation-${number}.gif\"></center>
+<center>
+<EMBED SRC=\"${filedir}/../images/${cmp}_${plottype}/animation-${number}.mp4\"
+ WIDTH=\"640\" HEIGHT=\"480\"
+ AUTOPLAY=\"true\" CONTROLLER=\"true\"
+ PLUGINSPAGE=\"http://www.apple.com/quicktime/download/\">
+</EMBED>
+</center>
 "; ?>
 
 </body>

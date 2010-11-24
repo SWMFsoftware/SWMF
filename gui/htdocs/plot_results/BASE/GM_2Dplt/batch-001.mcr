@@ -78,9 +78,10 @@ $!TWODAXIS YDETAIL{RANGEMAX = 24}
 ### vectors
 #$!GLOBALTWODVECTOR UVAR = 8
 #$!GLOBALTWODVECTOR VVAR = 9
+#$!STREAMATTRIBUTES MAXSTEPS = 3000
 #$!RESETVECTORLENGTH 
-#$!VarSet |SpacingX| = 5.
-#$!VarSet |SpacingY| = 5.
+#$!VarSet |SpacingX| = (5.*abs((16)-(-32))/48.)
+#$!VarSet |SpacingY| = (5.*abs((24)-(-24))/48.)
 #$!VarSet |Yval| = (|SpacingY| * int(-24 / |SpacingY|))
 #$!WHILE |Yval| < 24
 #  $!VarSet |Xoffset| = (abs(|Yval| / |SpacingY|))

@@ -30,7 +30,7 @@ function GetFileListByStyle($dirname='.', $string) {   // Finds all the figures 
    $files = array();
    $dir = opendir($dirname);
    while( $file = readdir( $dir ) ) {
-     if (eregi("\.jpe?g$", $file) || eregi("\.gif$", $file) || eregi("\.png$", $file)) {
+     if (eregi("\.jpe?g$", $file) || eregi("\.gif$", $file) || eregi("\.png$", $file) || eregi("\.mp4$", $file)) {
        if (eregi("${string}", $file)) {
          $files[] = $file; 
        }
