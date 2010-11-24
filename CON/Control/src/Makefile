@@ -156,7 +156,7 @@ CRASHEXE: TMP_CRASH
 # - TIMINGDIR :     timing/profiling library           --> libTIMING.a
 # - INDICESDIR:     space physics INDICES library      --> libINDICES.a
 # - MAGNETOGRAMDIR: magnetogram reading library        --> LibMAGNETOGRAM.a
-# - DEMTDIR:        Ldem moments reading library       --> libDEMT.a
+# - DEMTDIR:        differential emmission measure read--> libDEMT.a
 # - EMPIRICALDIR:   empirical models library           --> libEMPIRICAL.a
 # - LIBRARYDIR:     CON "infrastructure"               --> libLIBRARY.a
 # - COUPLERDIR:     coupling toolkit                   --> libCOUPLER.a
@@ -205,6 +205,7 @@ CRASH_LIB:
 	@cd ${TIMINGDIR};            make LIB
 	@cd ${DATAREADINDICESDIR};   make LIB
 	@cd ${MAGNETOGRAMDIR};       make LIB
+	@cd ${DEMTDIR}; 	     make LIB
 	@cd ${EMPIRICALEEDIR};       make LIB
 	@cd ${EMPIRICALGMDIR};       make LIB
 	@cd ${EMPIRICALIEDIR};       make LIB
@@ -290,6 +291,7 @@ TMP_CRASH: CRASH_LIB
 	mkdir Tmp_TIMING;      cd Tmp_TIMING;      ${AR_X} ${LIBTIMING} 
 	mkdir Tmp_INDICES;     cd Tmp_INDICES;     ${AR_X} ${LIBINDICES} 
 	mkdir Tmp_MAGNETOGRAM; cd Tmp_MAGNETOGRAM; ${AR_X} ${LIBMAGNETOGRAM} 
+	mkdir Tmp_DEMT;        cd Tmp_DEMT;        ${AR_X} ${LIBDEMT} 
 	mkdir Tmp_CRASH;       cd Tmp_CRASH;       ${AR_X} ${LIBCRASH} 
 	mkdir Tmp_EMPIRICALEE; cd Tmp_EMPIRICALEE; ${AR_X} ${LIBEMPIRICALEE} 
 	mkdir Tmp_EMPIRICALGM; cd Tmp_EMPIRICALGM; ${AR_X} ${LIBEMPIRICALGM} 
