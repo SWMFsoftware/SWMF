@@ -24,7 +24,7 @@ OBJECTS = \
 	SC_set_buffer_grid.o
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
-	-I${EMPIRICALEEDIR} -I../src -I../srcBATL
+	-I${DEMTDIR} -I${EMPIRICALEEDIR} -I../src -I../srcBATL
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
