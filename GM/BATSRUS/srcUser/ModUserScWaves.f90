@@ -101,35 +101,19 @@ Module ModUser
 
   ! varaibles read by user_read_inputs and used by other subroutines
   logical                       :: DoDampCutOff = .false., DoDampSurface = .false.
-  real                          :: WaveInnerBcFactor = 1.0
   real                          :: xTrace = 0.0, zTrace = 0.0
   real                          :: xTestSpectrum, yTestSpectrum, zTestSpectrum
-  character(len=10)             :: TypeWaveInnerBc
+
+  ! variables for wave BC's
+  logical :: UseScaledWaveBcs = .false.
+  real    :: PoyntFluxBase = 0.0, vAlfvenMinSi = 0.0
+  real    :: ExpFactorInvMin = 1e-3
+
 
 contains
   !============================================================================
   subroutine user_read_inputs
 
-    !  user_read_inputs : read input commands for wave related quantities
-    !
-    !  #WAVEINNERBC  : allows the user to choose type of inner boundary condition for Alfven waves.
-    !                  TypeWaveInnerBc (string) -  Two options are implemented:
-    !                  'WSA' - uses the WSA model to get the solar wind velocity at 1AU, then calculates
-    !                          the total wave energy at coronal base from the Bernoulli integral.
-    !                  'turb' - calculates the total wave energy from the local magnetic field.
-    !                  WaveInnerbcFactor (real) -  allows scaling of the resulting total 
-    !                  wave energy by the same factor for all boundary faces.
-    !  #DAMPWAVES    : allows the user to choose frequency dependent wave damping mechanism.
-    !                  DoDampCutoff (logical) - if true, Alfven waves will be totaly damped at
-    !                                             and above the local ion cyclotron frequency.
-    !                  DoDampSurface (logical) - if true, Alfven waves will be damped according
-    !                                            to the local surface waves dissipation length.
-    !  #SPECTROGRAM  : allows the user to choose a line parallel to one of the axes along which
-    !                  the full wave spectrum will be extracted and written to a file for plotting.
-    !                  >>>
-    !                  xTrace, yTrace, zTrace are the coordinates of the line
-    !  #CELLSPECTRUM : allows the user to output the spectrum in a single cell for testing purposes.
-    ! -----------------------------------------------------------------------------
     use ModMain,        ONLY: UseUserInitSession, lVerbose
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
@@ -150,10 +134,13 @@ contains
 
        select case(NameCommand)
 
-
-       case("#WAVEINNERBC")
-          call read_var('TypeWaveInnerBc', TypeWaveInnerBc)
-          call read_var('WaveInnerBcFactor', WaveInnerBcFactor)
+       case("#WAVEBOUNDARY")
+          call read_var('UseScaledWaveBcs', UseScaledWaveBcs)
+          if(UseScaledWaveBcs) then
+             call read_var('PoyntFluxBase', PoyntFluxBase)
+             call read_var('VAlfvenMinSi', VAlfvenMinSi)
+             call read_var('ExpFactorInvMin', ExpFactorInvMin)
+          end if
 
        case("#DAMPWAVES")
           call read_var('DoDampCutoff', DoDampCutoff)
@@ -189,37 +176,20 @@ contains
   !============================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
 
-    ! user_face_bc : set inner boundary conditions for MHD variables and Alfven waves.
-    !                   Magnetic field B1 is set to equal to its tangential component.
-    !                   Reflective boundary conditions for velocity.
-    !                   Density and pressure set according to isothermal atmosphere.
-    !                   Alfven Waves: The total wave energy at the face
-    !                                 is calculated according to the type of boundary condition
-    !                                 (see desctription of #WAVEINNERBC in section 1 above).
-    !                                 The logical UseWavesBcInStreamer determines whether waves are
-    !                                 'emitted' from the inner boundary at the closed field region (streamer).
-    !                                 Once the total wave energy is obtained, it is deconstructed
-    !                                 into the frequency bins according to the assumed spectral shape
-    !                                 by calling set_wave_state (in ModWaves.f90).
-    !                   Rotating frame : if the non rotating frame is used, the x and y velocity components
-    !                                    are adjusted.
-    ! -----------------------------------------------------------------------------                            
     use ModSize,             ONLY: East_, West_, South_, North_, Bot_, Top_, nDim
     use ModMain,             ONLY: x_, y_, z_, UseRotatingFrame
     use ModExpansionFactors, ONLY: ExpansionFactorInv_N, get_interpolated
     use ModAdvance,          ONLY: State_VGB
     use ModPhysics,          ONLY: OmegaBody, No2Si_V, Si2No_V, UnitU_, UnitP_
-    use ModNumConst,         ONLY: cTolerance
     use ModFaceBc,           ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
          iFace, jFace, kFace, iSide, iBlockBc
     use ModWaves,            ONLY: set_wave_state, UseWavePressureLtd
 
     real, intent(out)           :: VarsGhostFace_V(nVar)
-
     integer                     :: iCell, jCell, kCell
-    real                        :: DensCell, PresCell, TBase, TotalB  
-    real, dimension(3)          :: RFace_D, B1r_D, B1t_D, TotalB_D
-    real                        :: vAlfvenSi, wEnergyDensSi, wEnergyDensBc
+    real                        :: ExpansionFactorInv, DensCell, PresCell, TBase, B0r  
+    real, dimension(3)          :: RFace_D, B1r_D, B1t_D, B0r_D
+    real                        :: vAlfven, vAlfvenSi, wEnergyDensSi, wEnergyDensBc
 
     character(len=*),parameter  :: NameSub = "user_face_bc"
     !--------------------------------------------------------------------------
@@ -234,6 +204,8 @@ contains
     ! B1 tangential
     B1t_D = VarsTrueFace_V(Bx_:Bz_) - B1r_D
 
+    !B0 normal to the face
+    B0r_D = sum(RFace_D*B0Face_D)*RFace_D
     !\
     ! Update BCs for velocity and induction field: reflective BC
     !/
@@ -274,42 +246,34 @@ contains
     !\
     ! Update BCs for wave spectrum
     !/
-    if(UseAlfvenWaves) then
-       
-       ! total wave energy depends on magnetic field magnitude
-       TotalB_D = B0Face_D + VarsTrueFace_V(Bx_:Bz_)  
-       TotalB = sum(TotalB_D**2)
-       
-       select case(TypeWaveInnerBc)
-       case('WSA')
-          
-          vAlfvenSi = (TotalB/sqrt(VarsGhostFace_V(Rho_))) * No2Si_V(UnitU_)
-          call get_total_wave_energy_dens(FaceCoords_D(x_), FaceCoords_D(y_),&
-               FaceCoords_D(z_), vAlfvenSi, wEnergyDensSi)
-          wEnergyDensBc = wEnergyDensSi * Si2No_V(UnitP_)*WaveInnerBcFactor
-          
-       case('Turb')
-          
-          wEnergyDensBc = TotalB*WaveInnerBcFactor
-          
-       end select
-       
-       if(wEnergyDensBc < 0.0)then
-          write(*,*) 'Negative TOTAL wave energy at inner BC'
-          call stop_MPI('Error in user_face_bcs')
-       end if
-       
-       ! Set BC for each frequency group
-       call set_wave_state(wEnergyDensBc, VarsGhostFace_V, RFace_D, B0Face_D) 
-       
-       if(any(VarsGhostFace_V(WaveFirst_:WaveLast_)< 0.0)) then
-          write(*,*) 'Negative wave energy at inner BC'
-          call stop_MPI('Error in user_face_bc')
-       end if
+    B0r = sqrt(sum(B0r_D**2))
+    vAlfvenSi = (B0r/sqrt(VarsGhostFace_V(Rho_)))*No2Si_V(UnitU_)
+         
+    if(UseScaledWaveBcs) then
+       vAlfven = max(vAlfvenSi, vAlfvenMinSi)*Si2No_V(UnitU_)
+       wEnergyDensBc = PoyntFluxBase/vAlfven
+    
+    else
+       vAlfvenSi = vAlfven * No2Si_V(UnitU_)
+       call get_total_wave_energy_dens(FaceCoords_D(x_), FaceCoords_D(y_),&
+            FaceCoords_D(z_), vAlfvenSi, wEnergyDensSi)
+       wEnergyDensBc = wEnergyDensSi * Si2No_V(UnitP_)
        
     end if
 
- 
+    if(wEnergyDensBc < 0.0)then
+       write(*,*) 'Negative TOTAL wave energy at inner BC'
+       call stop_MPI('Error in user_face_bcs')
+    end if
+       
+    ! Set BC for each frequency group
+    call set_wave_state(wEnergyDensBc, VarsGhostFace_V, RFace_D, B0Face_D) 
+       
+    if(any(VarsGhostFace_V(WaveFirst_:WaveLast_)< 0.0)) then
+       write(*,*) 'Negative wave energy at inner BC'
+       call stop_MPI('Error in user_face_bc')
+    end if
+       
     !\
     ! Apply corotation
     !/
@@ -328,34 +292,46 @@ contains
     ! This subroutine computes the cell values for density and pressure 
     ! assuming an isothermal atmosphere
 
-    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, R_BLK
-    use ModNumConst
-    use ModPhysics,    ONLY: GBody, BodyRho_I, Si2No_V, UnitTemperature_
+    use ModGeometry,          ONLY: x_BLK, y_BLK, z_BLK, R_BLK
+    use ModPhysics,           ONLY: GBody, BodyRho_I, Si2No_V, UnitTemperature_, UnitN_, &
+                                    AverageIonCharge
     use ModExpansionFactors,  ONLY: UMin, CoronalT0Dim
+    use ModMultifluid,        ONLY: MassIon_I
+    use ModLdem,              ONLY: useLdem, get_ldem_moments
+
     implicit none
 
     integer, intent(in)  :: i, j, k, iBlock
     real, intent(out)    :: Density, Pressure
-    real :: UFinal       !The solar wind speed at the far end of the Parker spiral,
-    !which originates from the given cell
-    real :: URatio       !The coronal based values for temperature density 
-    !are scaled as functions of UFinal/UMin ratio
-    real :: Temperature
+    real :: Temperature, x_D(3), Ne, Te
+
+    ! Variables used for WSA-based boundary conditions
+    real :: UFinal       !The solar wind speed at the far end of the Parker spiral
+    real :: URatio       !The values for temperature and density 
+                         !are scaled as functions of UFinal/UMin ratio
     !--------------------------------------------------------------------------
-    call get_bernoulli_integral(&
-         x_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
-         y_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
-         z_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
-         UFinal)
+    if(UseLdem)then
+       ! Tomography based boundary conditions
+       x_D = (/x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock),z_BLK(i,j,k,iBlock)/)
+       call get_ldem_moments(x_D, Ne, Te)
+       Density = Ne*Si2No_V(UnitN_)*MassIon_I(1)/AverageIonCharge
+       Temperature = Te*Si2No_V(UnitTemperature_)
+    else
+       ! WSA based boundary conditions
+       call get_bernoulli_integral(&
+            x_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
+            y_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
+            z_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
+            UFinal)
 
-    URatio=UFinal/UMin
+       URatio=UFinal/UMin
 
-    !This is the temperature variation
-    Temperature = CoronalT0Dim*Si2No_V(UnitTemperature_)/(min(URatio, 1.5))
-
-    Density  = (1.0/URatio) &          !This is the density variation
-         *BodyRho_I(1)*exp(-GBody/Temperature &
-         *(1.0/max(R_BLK(i, j, k, iBlock), 0.90)-1.0))
+       !This is the temperature variation
+       Temperature = CoronalT0Dim*Si2No_V(UnitTemperature_)/(min(URatio, 1.5))
+       Density  = (1.0/URatio) &          !This is the density variation
+            *BodyRho_I(1)*exp(-GBody/Temperature &
+            *(1.0/max(R_BLK(i, j, k, iBlock), 0.90)-1.0))
+    end if
 
     Pressure = Density*Temperature
 
@@ -390,8 +366,6 @@ contains
     !--------------------------------------------------------------------------
     iBLK = globalBLK
 
-
-
     ! Intilize velocity and density according to an isothermal atmosphere solution.
     ! The sqrt is for backward compatibility with older versions of the Sc
     
@@ -405,10 +379,7 @@ contains
     case('spherical_genr')
        Rmax = max(2.1E+01,gen_to_r(XyzMax_D(1)))
     end select
-    
-    
-    
-    
+        
     State_VGB(:,:,:,:,iBLK) = 1.0e-31
     
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -445,7 +416,6 @@ contains
             sum(State_VGB(WaveFirst_:WaveLast_, i, j, k, iBLK))
        
     end do; end do; end do
-    
 
   end subroutine user_set_ics
   !============================================================================
@@ -537,24 +507,20 @@ contains
                LogFreqRadian = log(2*cPi*FrequencySi_W(iWave))
                if (LogFreqRadian .ge. LogFreqCutOff .and. &
                     State_VGB(iWave,i,j,k,iBlock) > 0.0) then
-                  dWavePres = -State_VGB(iWave,i,j,k,iBlock)
+                  dWavePres = State_VGB(iWave,i,j,k,iBlock)
+                  ! Remove dissipated energy density from spectrum
+                  State_VGB(iWave,i,j,k,iBlock) = 0.0
                end if
             end do
          end do; end do; end do
       end if
 
-      ! Add more dissipation mechanisms here
-
-
-      ! Remove dissipated energy density from spectrum
-      State_VGB(iWave,i,j,k,iBlock) = &
-           State_VGB(iWave,i,j,k,iBlock) + dWavePres
-
       ! pass dissipated wave energy density to the MHD pressure
-      State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) - &
+      State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + &
            0.5*(Gamma0-1)*dWavePres
 
     end subroutine dissipate_waves
+
     subroutine calc_cutoff_freq(i,j,k,iBLK , LogFreqCutOff)
 
       ! This subroutine calculates the cut-off frequency for Alfven waves, 
