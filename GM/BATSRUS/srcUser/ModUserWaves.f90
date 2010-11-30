@@ -172,7 +172,7 @@ contains
                            rPlanetSi, rBody
     use ModNumconst, ONLY: cOne,cPi, cTwoPi, cDegToRad
     use ModSize,     ONLY: nI, nJ, nK, gcn
-    use ModConst,    ONLY: cProtonMass, rSun, cAu
+    use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
     implicit none
 
     real,dimension(nVar):: state_V,KxTemp_V,KyTemp_V
@@ -245,6 +245,16 @@ contains
        State_VGB(RhoUz_, :,:,:,iBlock) = 0.0
        State_VGB(Bx_:Bz_,:,:,:,iBlock) = 0.0
        State_VGB(p_,     :,:,:,iBlock) = pBackgrndIo*Io2No_V(UnitP_)
+       
+       ! Transform to HGC frame - rho, p, spherically symmetric at origin, only velocity 
+       ! and/ or momentum should be transformed
+       if (TypeCoordSystem =='HGC') then
+          State_VGB(RhoUx_,:,:,:,iBlock) = State_VGB(RhoUx_,:,:,:,iBlock) &
+               + State_VGB(Rho_,:,:,:,iBlock)*RotationPeriodSun*y_BLK(:,:,:,iBlock)
+
+          State_VGB(RhoUy_,:,:,:,iBlock) = State_VGB(RhoUy_,:,:,:,iBlock) &
+               - State_VGB(Rho_,:,:,:,iBlock)*RotationPeriodSun*x_BLK(:,:,:,iBlock)
+       end if
 
     case('wave')
 
@@ -346,7 +356,10 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModMain,    ONLY: nI, nJ, nK
-    use ModPhysics, ONLY: NameTecUnit_V, NameIdlUnit_V, UnitRho_,No2Io_V
+    use ModPhysics, ONLY: NameTecUnit_V, NameIdlUnit_V, UnitRho_, No2Io_V, &
+         No2Si_V, UnitP_, UnitU_
+    use ModAdvance, ONLY: State_VGB
+    use ModVarIndexes, ONLY: RhoUx_, RhoUz_, p_, Rho_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -360,7 +373,8 @@ contains
     logical,          intent(out)  :: IsFound
 
     real,dimension(-1:nI+2, -1:nJ+2, -1:nK+2):: RhoExact_G, RhoError_G
-
+    real                                     :: FlowSpeedCell, Pressure, Density,vSound
+    integer                                  :: i, j, k
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !-------------------------------------------------------------------
     IsFound = .true.
@@ -387,6 +401,21 @@ contains
        NameTecVar = 'RhoError'
        NameTecUnit = NameTecUnit_V(UnitRho_)
        NameIdlUnit = NameIdlUnit_V(UnitRho_)
+
+    case('mach')
+       ! plot Mach number
+       do k=-1,nK+2 ; do j=-1,nJ+2 ; do i=-1,nI+2
+          Pressure = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
+          Density = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
+          FlowSpeedCell = No2Si_V(UnitU_)*sqrt(sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2))&
+               /State_VGB(Rho_,i,j,k,iBlock)
+
+          PlotVar_G(i,j,k) = FlowSpeedCell/sqrt(Pressure/Density)
+       end do; end do ; end do
+       NameTecVar = 'Mach'
+       NameTecUnit = '--'
+       NameIdlUnit = '--'
+     
     case default
        IsFound = .false.
     end select
@@ -394,9 +423,10 @@ contains
   contains
     subroutine calc_analytic_sln_sphere(iBlock,RhoExact_G,RhoError_G)
 
-      use ModMain,       ONLY: time_simulation
+      use ModMain,       ONLY: time_simulation, TypeCoordSystem
       use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
       use ModNumConst,   ONLY: cPi
+      use ModConst,      ONLY: RotationPeriodSun
       use ModAdvance,    ONLY: State_VGB
       use ModVarIndexes, ONLY: Rho_
       use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitX_, UnitU_
@@ -405,7 +435,8 @@ contains
       real,dimension(-1:nI+2,-1:nJ+2,-1:nK+2),intent(out)::RhoExact_G,&
                                                            RhoError_G
       real    :: x, y, z, t
-      real    :: rFromCenter, xSphereCenter, ySphereCenter
+      real    :: rFromCenter, xSphereCenter, ySphereCenter, rSphereCenter
+      real    :: PhiSphereCenterInertial, PhiSphereCenterRotating
       integer :: i, j, k
       !real,dimension(1:3) :: r_D, rSphereCenter_D
 
@@ -422,6 +453,18 @@ contains
          xSphereCenter = UxNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
          ySphereCenter = UyNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
          
+         ! transform if rotating frame
+         if (TypeCoordSystem =='HGC') then
+            
+            rSphereCenter = sqrt(xSphereCenter**2 + ySphereCenter**2)
+            PhiSphereCenterInertial = atan(ySphereCenter / xSphereCenter)
+            PhiSphereCenterRotating = PhiSphereCenterInertial - RotationPeriodSun*t
+            
+            xSphereCenter = rSphereCenter*cos(PhiSphereCenterRotating)
+            ySphereCenter = rSphereCenter*sin(PhiSphereCenterRotating)
+         
+         end if
+
          ! Chcek if this cell is inside the sphere
          rFromCenter = sqrt((x-xSphereCenter)**2 + (y-ySphereCenter)**2 + z**2)
          if (rFromCenter .le. rSphere) then
