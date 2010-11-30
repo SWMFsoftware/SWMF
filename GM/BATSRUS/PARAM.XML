@@ -5865,7 +5865,7 @@ dissapation model of Cranmer 2010. No additional input parameters are needed.
 The default is TypeCoronalHeating="none"
 </command>
 
-<command name="LONGSCALEHEAT">
+<command name="LONGSCALEHEATING">
 	<parameter name="DoChHeat" type="logical" default="F"	/>
 	<if expr="$DoChHeat">
 		<parameter name="HeatChCgs" type="real" 
@@ -5873,7 +5873,7 @@ The default is TypeCoronalHeating="none"
 		<parameter name="DecayLengthCh" type="real" 
 						default="0.7" />
 	</if>
-#LONGSCALEHEAT
+#LONGSCALEHEATING
 T		DoChHeat (rest of parameters read only if set to true)
 7.285E-05	HeatChCgs	[ergs/cm^3/s]
 0.0575		DecayLengthCh	[Rsun]
@@ -5889,7 +5889,7 @@ heating model selected by the CORONALHEATING command.
 The default is DoChHeat=.false.
 </command>
 
-<command name="ACTIVEREGIONHEAT">
+<command name="ACTIVEREGIONHEATING">
 	<parameter name="UseArComponent" type="logical" default="F"	/>
 	<if expr="$UseArComponent">
 		<parameter name="ArHeatFactorCgs" type="real" 
@@ -5899,7 +5899,7 @@ The default is DoChHeat=.false.
 		<parameter name="DeltaArHeatB0" type="real" 
 						default="5.0" />
 	</if>
-#ACTIVEREGIONHEAT
+#ACTIVEREGIONHEATING
 T		UseArComponent (rest of parameters read only if set to true)
 4.03E-05	ArHeatFactorCgs	[ergs/cm^3/s]
 30.0		ArHeatB0	[Gauss]
@@ -5937,9 +5937,9 @@ heating.
 Default is DoOpenClosedField = .false.
 </command>
 
-<command name="RADCOOLING">
+<command name="RADIATIVECOOLING">
 	 <parameter name="UseRadCooling" type="logical" default="F" />
-#RADCOOLING
+#RADIATIVECOOLING
 T
 
 Switches the radiation cooling on and off. For coronal solar plasma the
