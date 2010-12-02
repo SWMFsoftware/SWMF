@@ -25,8 +25,11 @@ module ModUser
   logical ::  UseWaveDissipation = .false.
   real :: DissipationScaleFactorSi  ! unit = m*T^0.5
   real :: DissipationScaleFactor
-  real :: DeltaBPerB = 0.0
-  real :: DeltaUSi = 0.0
+
+  ! variables for wave BC's
+  logical :: UseScaledWaveBcs = .false.
+  real :: WaveEnergyFactor = 0.0, WaveEnergyPower = 1./3.
+  real :: ExpFactorInvMin = 1e-3
 
   real :: TeFraction, TiFraction
   real :: EtaPerpSi
@@ -75,8 +78,12 @@ contains
                DissipationScaleFactorSi)
 
        case("#WAVEBOUNDARY")
-          call read_var('DeltaBPerB', DeltaBPerB)
-          call read_var('DeltaUSi', DeltaUSi)
+          call read_var('UseScaledWaveBcs', UseScaledWaveBcs)
+          if(UseScaledWaveBcs) then
+             call read_var('WaveEnergyFactor', WaveEnergyFactor)
+             call read_var('WaveEnergyPower', WaveEnergyPower)
+             call read_var('ExpFactorInvMin', ExpFactorInvMin)
+          end if
 
        case('#BERNOULLI')
           ! It is not advised to use the time-dependent heat flux in the
@@ -199,20 +206,20 @@ contains
     use ModMagnetogram, ONLY: r_latitude, dPhi, nTheta, nPhi
     use ModNumConst,    ONLY: cRadToDeg
     use ModPhysics,     ONLY: rBody, No2Si_V, UnitP_, UnitU_, &
-         UnitEnergyDens_, UnitB_
+         UnitEnergyDens_, UnitB_, UnitRho_
     use ModPlotFile,    ONLY: save_plot_file
     use ModWaves,       ONLY: GammaWave
 
     integer :: iPhi, iTheta
     real :: r, Theta, Phi, x, y, z
-    real :: RhoBase, Tbase, Br, B0_D(3)
+    real :: RhoBase, Tbase, Br, Btot, B0_D(3)
     real :: Ewave, DeltaU, HeatFlux
     real, allocatable :: Coord_DII(:,:,:), State_VII(:,:,:)
     character(len=32) :: FileNameOut
     !--------------------------------------------------------------------------
     FileNameOut = trim(NamePlotDir)//'Alfvenwave.outs'
 
-    allocate(Coord_DII(2,0:nPhi,0:nTheta), State_VII(4,0:nPhi,0:nTheta))
+    allocate(Coord_DII(2,0:nPhi,0:nTheta), State_VII(6,0:nPhi,0:nTheta))
 
     do iTheta = 0, nTheta
        do iPhi = 0, nPhi
@@ -229,11 +236,11 @@ contains
 
           call get_coronal_b0(x, y, z, B0_D)
           Br = (x*B0_D(1)+y*B0_D(2)+z*B0_D(3))/r
-
+          Btot = sqrt(sum(B0_D**2))
           call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
 
           HeatFlux = 0.0
-          call get_wave_energy(x, y, z, Br, HeatFlux, Ewave)
+          call get_wave_energy(x, y, z, Br, Btot, HeatFlux, Ewave)
           ! Root mean square amplitude of the velocity fluctuation
           ! This assumes equipartition (of magnetic and velocity fluctuations)
           DeltaU = sqrt(Ewave/RhoBase)
@@ -243,13 +250,16 @@ contains
           State_VII(3,iPhi,iTheta) = Ewave*abs(Br)/sqrt(Rhobase) &
                *No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)
           State_VII(4,iPhi,iTheta) = Br*No2Si_V(UnitB_)*1e4
+          State_VII(5,iPhi,iTheta) = Btot*No2Si_V(UnitB_)*1e4
+          State_VII(6,iPhi,iTheta) = RhoBase*No2Si_V(UnitRho_)
+
        end do
     end do
 
     call save_plot_file(FileNameOut, nDimIn=2, StringHeaderIn = &
          'Longitude [Deg], Latitude [Deg], Pwave [Pa], DeltaU [m/s] ' &
-         //'Ewaveflux [J/(m^2s)], Br [Gauss]', &
-         nameVarIn = 'Longitude Latitude Pwave DeltaU Ewaveflux Br', &
+         //'Ewaveflux [J/(m^2s)], Br [Gauss], Btot [Gauss], Rho [kg/m^3]', &
+         nameVarIn = 'Longitude Latitude Pwave DeltaU Ewaveflux Br Btot Rho', &
          CoordIn_DII=Coord_DII, VarIn_VII=State_VII)
 
     deallocate(Coord_DII, State_VII)
@@ -305,7 +315,7 @@ contains
 
   !============================================================================
 
-  subroutine get_wave_energy(x, y, z, Br, HeatFlux, Ewave)
+  subroutine get_wave_energy(x, y, z, Br, Btot, HeatFlux, Ewave)
 
     ! Provides the distribution of the total Alfven wave energy density
     ! at the lower boundary
@@ -314,14 +324,14 @@ contains
     use ModMultiFluid, ONLY: MassIon_I
     use ModNumConst,   ONLY: cTolerance
     use ModPhysics,    ONLY: g, inv_gm1, rBody, AverageIonCharge, &
-         Si2No_V, No2Si_V, UnitU_, UnitTemperature_, UnitEnergyDens_
+         Si2No_V, No2Si_V, UnitU_, UnitTemperature_, UnitEnergyDens_, UnitB_
 
-    real, intent(in) :: x, y, z, Br, HeatFlux
+    real, intent(in) :: x, y, z, Br, Btot, HeatFlux
     real, intent(out):: Ewave
 
     real :: ExpansionFactorInv, Uf, Uratio, dTedr, DeltaU
-    real :: RhoBase, Tbase, VAlfvenSi, TbaseSi, HeatFluxSi, WaveEnergyDensSi
-
+    real :: RhoBase, Tbase, TbaseSi, HeatFluxSi, WaveEnergyDensSi
+    real :: VAlfvenSi
     real :: RhoV
     real, parameter :: Umax = 8e5 ! 800 km/s
     real, parameter :: AreaRatio = (cAU/rSun)**2
@@ -332,22 +342,20 @@ contains
     ! true expansion factor at rBody+PFSSM_Height as needed in the
     ! Bernoulli equation.
     call get_interpolated(ExpansionFactorInv_N, x, y, z, ExpansionFactorInv)
+ 
+    call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase) 
 
     Ewave = 0.0
-
+     
     ! Closed field line regions can not support Alfven wave solutions
     ! (of the infinite domain)
-    if(ExpansionFactorInv < 1e-3) RETURN
+    if(ExpansionFactorInv < ExpFactorInvMin) RETURN
 
-    if(DeltaUSi > cTolerance)then
-       DeltaU = DeltaUSi*Si2No_V(UnitU_)
-       call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
-       Ewave = RhoBase*DeltaU**2
-    elseif(DeltaBPerB > cTolerance)then
-       Ewave = (DeltaBPerB*Br)**2
+    if(UseScaledWaveBcs)then
+      
+       Ewave = WaveEnergyFactor*(Btot)**WaveEnergyPower
     else
 
-       call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
        VAlfvenSi = (Br/sqrt(RhoBase))*No2Si_V(UnitU_)
        TbaseSi = Tbase*No2Si_V(UnitTemperature_)
 
@@ -922,7 +930,7 @@ contains
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
-    real :: RhoBase, NumDensIon, NumDensElectron, Tbase, FullBr
+    real :: RhoBase, NumDensIon, NumDensElectron, Tbase, FullBr, B0tot
     real :: Runit_D(3), U_D(3)
     real :: B1_D(3), B1t_D(3), B1r_D(3), FullB_D(3), B0_D(3)
     real :: Ewave, HeatFlux
@@ -939,6 +947,7 @@ contains
        B1t_D = B1_D - B1r_D
        VarsGhostFace_V(Bx_:Bz_) = B1t_D !- B1r_D
        FullB_D = B0Face_D + B1t_D
+       B0tot = sqrt(sum(B0Face_D**2))
     else
        call get_coronal_b0(FaceCoords_D(x_), FaceCoords_D(y_), &
             FaceCoords_D(z_), B0_D)
@@ -947,6 +956,8 @@ contains
        B1t_D = B1_D - B1r_D
        VarsGhostFace_V(Bx_:Bz_) = B1t_D + B0_D
        FullB_D = VarsGhostFace_V(Bx_:Bz_)
+       B0tot = sqrt(sum(B0_D**2))
+ 
     end if
     FullBr = sum(Runit_D*FullB_D)
 
@@ -973,7 +984,7 @@ contains
 
     ! Set Alfven waves energy density
     call get_wave_energy(FaceCoords_D(x_), FaceCoords_D(y_), FaceCoords_D(z_),&
-         FullBr, HeatFlux, Ewave)
+         FullBr, B0tot, HeatFlux, Ewave)
 
     if(FullBr > 0.0)then
        VarsGhostFace_V(WaveFirst_) = Ewave
