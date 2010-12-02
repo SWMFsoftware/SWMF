@@ -521,7 +521,7 @@ contains
     real, intent(in)   :: Arg1, Arg2
     real, intent(out)  :: Value_V(:)
     
-    real:: Rho, Te
+    real:: Rho, Te, PlanckTmp_I(nGroup), RosselandTmp_I(nGroup)
     integer::iMaterial
     !-----------------
     iMaterial = iMaterial4OpacTable_I(iTable)
@@ -532,10 +532,14 @@ contains
     Value_V = 0.0
     call eos_material(iMaterial,Rho,&
        TeIn = Te, &
-       OpacityPlanckOut_I = Value_V(1:nGroup),&
-       OpacityRosselandOut_I = Value_V(1+nGroup:2*nGroup) )
+       OpacityPlanckOut_I = PlanckTmp_I, &
+       OpacityRosselandOut_I = RosselandTmp_I )
+!       OpacityPlanckOut_I = Value_V(1:nGroup),&
+!       OpacityRosselandOut_I = Value_V(1+nGroup:2*nGroup) )
 
-    Value_V(:) = Value_V(:)/Arg1
+    Value_V(1:nGroup) = PlanckTmp_I/Arg1
+    Value_V(1+nGroup:2*nGroup) = RosselandTmp_I/Arg1
+!    Value_V(:) = Value_V(:)/Arg1
   end subroutine calc_opac_table
   !============================
   !\
