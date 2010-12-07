@@ -2,7 +2,7 @@
 !==============================================================================
 module ModFaceGradient
 
-  use ModSize, ONLY: nDim, nI, nJ, nK
+  use ModSize, ONLY: nDim, nI, nJ, nK, jRatio, kRatio, InvIjkRatio
 
   implicit none
   save
@@ -336,8 +336,9 @@ contains
           end if
 
           do k1=kL,kR,2; do j1=jL,jR,2; do i1=iL,iR,2; do iVar=1,nVar
-             Field1_VG(iVar,i1:i1+1,j1:j1+1,k1:k1+1)= &
-                  0.125*sum(Field_VG(iVar,i1:i1+1,j1:j1+1,k1:k1+1))
+             Field1_VG(iVar,i1:i1+1,j1:j1+jRatio-1,k1:k1+kRatio-1)= &
+                  sum(Field_VG(iVar,i1:i1+1,j1:j1+jRatio-1,k1:k1+kRatio-1)) &
+                  *InvIjkRatio
           end do; end do; end do; end do
 
        end if
@@ -345,54 +346,90 @@ contains
 
     ! Do six faces
     if(NeiLeast(iBlock) == 1)then
-       do k1=1, nK, 2; do j1=1, nJ, 2; do k2 = k1,k1+1; do j2 = j1,j1+1
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Fc_V = c0*Field1_VG(:,0,j2,k2) &
-               + p0*Field1_VG(:,0,jp,kp) &
-               + m0*Field1_VG(:,0,jm,km)
-          Field_VG(:,0,j2,k2) = &
-               C1*Fc_V + F1*Field_VG(:,1,j2,k2) + F2*Field_VG(:,2,j2,k2)
-       end do; end do; end do; end do
+       if(nJ == 1)then
+          Field_VG(:,0,1,1) = C1*Field_VG(:,0,1,1) &
+               + F1*Field_VG(:,1,1,1) + F2*Field_VG(:,2,1,1)
+       else
+          do k1=1, nK, 2; do j1=1, nJ, 2;
+             do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
+                jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
+                if(nK == 1)then
+                   kp = 1; km = 1
+                else
+                   kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+                end if
+                Fc_V = c0*Field1_VG(:,0,j2,k2) &
+                     + p0*Field1_VG(:,0,jp,kp) &
+                     + m0*Field1_VG(:,0,jm,km)
+                Field_VG(:,0,j2,k2) = &
+                     C1*Fc_V + F1*Field_VG(:,1,j2,k2) + F2*Field_VG(:,2,j2,k2)
+             end do; end do
+          end do; end do
+       end if
     end if
 
     if(NeiLwest(iBlock) == 1)then
-       do k1=1, nK, 2; do j1=1, nJ, 2; do k2 = k1,k1+1; do j2 = j1,j1+1
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Fc_V = c0*Field1_VG(:,nI+1,j2,k2) &
-               + p0*Field1_VG(:,nI+1,jp,kp) &
-               + m0*Field1_VG(:,nI+1,jm,km)
-          Field_VG(:,nI+1,j2,k2)= &
-               C1*Fc_V + F1*Field_VG(:,nI,j2,k2) + F2*Field_VG(:,nI-1,j2,k2)
-       end do; end do; end do; end do
+       if(nJ == 1)then
+          Field_VG(:,nI+1,1,1) = C1*Field_VG(:,nI+1,1,1) &
+               + F1*Field_VG(:,nI,1,1) + F2*Field_VG(:,nI-1,1,1)
+       else
+          do k1=1, nK, 2; do j1=1, nJ, 2
+             do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
+                jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
+                if(nK == 1)then
+                   kp = 1; km = 1
+                else
+                   kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+                end if
+                Fc_V = c0*Field1_VG(:,nI+1,j2,k2) &
+                     + p0*Field1_VG(:,nI+1,jp,kp) &
+                     + m0*Field1_VG(:,nI+1,jm,km)
+                Field_VG(:,nI+1,j2,k2) = C1*Fc_V &
+                     + F1*Field_VG(:,nI,j2,k2) + F2*Field_VG(:,nI-1,j2,k2)
+             end do; end do
+          end do; end do
+       end if
     end if
 
+    if(nJ == 1) RETURN
+
     if(NeiLsouth(iBlock) == 1)then
-       do k1=1, nK, 2; do i1=1, nI, 2; do k2 = k1,k1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Fc_V = c0*Field1_VG(:,i2,0,k2) &
-               + p0*Field1_VG(:,ip,0,kp) &
-               + m0*Field1_VG(:,im,0,km)
-          Field_VG(:,i2,0,k2) = &
-               C1*Fc_V + F1*Field_VG(:,i2,1,k2) + F2*Field_VG(:,i2,2,k2)
-       end do; end do; end do; end do
+       do k1=1, nK, 2; do i1=1, nI, 2
+          do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
+             ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
+             if(nK == 1)then
+                kp = 1; km = 1
+             else
+                kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+             end if
+             Fc_V = c0*Field1_VG(:,i2,0,k2) &
+                  + p0*Field1_VG(:,ip,0,kp) &
+                  + m0*Field1_VG(:,im,0,km)
+             Field_VG(:,i2,0,k2) = &
+                  C1*Fc_V + F1*Field_VG(:,i2,1,k2) + F2*Field_VG(:,i2,2,k2)
+          end do; end do
+       end do; end do
     end if
 
     if(NeiLnorth(iBlock) == 1)then
-       do k1=1, nK, 2; do i1=1, nI, 2; do k2 = k1,k1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Fc_V = c0*Field1_VG(:,i2,nJ+1,k2) &
-               + p0*Field1_VG(:,ip,nJ+1,kp) &
-               + m0*Field1_VG(:,im,nJ+1,km)
-          Field_VG(:,i2,nJ+1,k2) = &
-               C1*Fc_V + F1*Field_VG(:,i2,nJ,k2) + F2*Field_VG(:,i2,nJ-1,k2)
-       end do; end do; end do; end do
+       do k1=1, nK, 2; do i1=1, nI, 2
+          do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
+             ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
+             if(nK == 1)then
+                kp = 1; km = 1
+             else
+                kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+             end if
+             Fc_V = c0*Field1_VG(:,i2,nJ+1,k2) &
+                  + p0*Field1_VG(:,ip,nJ+1,kp) &
+                  + m0*Field1_VG(:,im,nJ+1,km)
+             Field_VG(:,i2,nJ+1,k2) = &
+                  C1*Fc_V + F1*Field_VG(:,i2,nJ,k2) + F2*Field_VG(:,i2,nJ-1,k2)
+          end do; end do
+       end do; end do
     end if
 
-    if(NeiLbot(iBlock) == 1)then
+    if(nK > 1 .and. NeiLbot(iBlock) == 1)then
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
           jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
@@ -404,7 +441,7 @@ contains
        end do; end do; end do; end do
     end if
 
-    if(NeiLtop(iBlock) == 1)then
+    if(nK > 1 .and. NeiLtop(iBlock) == 1)then
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
           jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
@@ -416,7 +453,34 @@ contains
        end do; end do; end do; end do
     end if
 
-    ! Do 12 edges
+    ! Do the edges
+
+    ! 4 Z edges
+    do jSide = -1,1,2; do iSide = -1,1,2
+       if(  BlkNeighborLev(iSide, jSide, 0, iBlock) /= 1.and. .not. ( &
+            BlkNeighborLev(iSide, jSide, 0, iBlock) == NOBLK .and. ( &
+            BlkNeighborLev(iSide, 0, 0, iBlock) == 1 .or. &
+            BlkNeighborLev(0, jSide, 0, iBlock) == 1))) CYCLE
+
+       i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
+       j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
+       do k1 = 1, nK, 2 ; do k2 = k1, k1 + min(1,nK-1)
+          if(nK == 1)then
+             kp = 1; km = 1
+          else
+             kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+          end if
+          Fc_V = c0*Field1_VG(:,iC,jC,k2) &
+               + p0*Field1_VG(:,iC,jC,kp) &
+               + m0*Field1_VG(:,iC,jC,km)
+          Field_VG(:,iC,jC,k2) = &
+               C1*Fc_V + F1*Field_VG(:,i1,j1,k2) + F2*Field_VG(:,i2,j2,k2)
+       end do;end do         
+    end do;end do
+
+    ! The X and Y edges are not needed in 2D
+    if(nK == 1) RETURN
+
     ! 4 X edges
     do kSide = -1,1,2; do jSide = -1,1,2
        if(  BlkNeighborLev(0, jSide, kSide, iBlock) /= 1 .and. .not. ( &
@@ -452,24 +516,6 @@ contains
           Field_VG(:,iC,j2,kC) = &
                C1*Fc_V + F1*Field_VG(:,i1,j2,k1) + F2*Field_VG(:,i2,j2,k2)
        end do;end do
-    end do;end do
-    ! 4 Z edges
-    do jSide = -1,1,2; do iSide = -1,1,2
-       if(  BlkNeighborLev(iSide, jSide, 0, iBlock) /= 1.and. .not. ( &
-            BlkNeighborLev(iSide, jSide, 0, iBlock) == NOBLK .and. ( &
-            BlkNeighborLev(iSide, 0, 0, iBlock) == 1 .or. &
-            BlkNeighborLev(0, jSide, 0, iBlock) == 1))) CYCLE
-
-       i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
-       j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
-       do k1 = 1, nK, 2 ; do k2 = k1, k1 + 1
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Fc_V = c0*Field1_VG(:,iC,jC,k2) &
-               + p0*Field1_VG(:,iC,jC,kp) &
-               + m0*Field1_VG(:,iC,jC,km)
-          Field_VG(:,iC,jC,k2) = &
-               C1*Fc_V + F1*Field_VG(:,i1,j1,k2) + F2*Field_VG(:,i2,j2,k2)
-       end do;end do         
     end do;end do
 
   end subroutine set_block_field3
