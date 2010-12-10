@@ -881,7 +881,7 @@ contains
 
       use ModAdvance,      ONLY: nWave
       use ModConst,        ONLY: cElectronMass
-      use ModFaceGradient, ONLY: set_block_field2
+      use ModFaceGradient, ONLY: set_block_field3
 
       real :: OpacityRosseland_W(nWave), DiffRad_W(nWave)
       real :: Grad2ByErad2_W(nWave)
@@ -898,7 +898,7 @@ contains
 
             if(IsNewBlockRadDiffusion)then
                Erad_WG = State_VGB(WaveFirst_:WaveLast_,:,:,:,iBlock)
-               call set_block_field2(iBlock, nWave, Erad1_WG, Erad_WG)
+               call set_block_field3(iBlock, nWave, Erad1_WG, Erad_WG)
 
                IsNewBlockRadDiffusion = .false.
             end if
@@ -926,7 +926,7 @@ contains
          if(UseHeatFluxLimiter)then
             ! Correct ghost cells as needed for gradient calculation
             if(IsNewBlockTe)then
-               call set_block_field2(iBlock, 1, Te1_G, Te_G)
+               call set_block_field3(iBlock, 1, Te1_G, Te_G)
 
                IsNewBlockTe = .false.
             end if
