@@ -553,7 +553,8 @@ sub link_swmf_data{
 
     return if -d "data";
     my $SwmfData = "";
-    foreach ("$ENV{HOME}/SWMF_data", "/csem1/SWMF_data"){
+    foreach ("$DIR/SWMF_data", "$DIR/../../SWMF_data", 
+	     "$ENV{HOME}/SWMF_data", "/csem1/SWMF_data"){
 	next unless -d $_;
 	$SwmfData = $_;
 	last;
