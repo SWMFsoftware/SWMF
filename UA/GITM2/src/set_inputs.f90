@@ -327,10 +327,10 @@ subroutine set_inputs
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #NEWELLAURORA'
               write(*,*) '#NEWELLAURORA'
-              write(*,*) 'UseNewellAurora       (logical)'
-              write(*,*) 'UseNewellAveraged     (logical)'
-              write(*,*) 'UseNewellMono         (logical)'
-              write(*,*) 'UseNewellWave         (logical)'
+              write(*,*) 'UseNewellAurora   (logical)'
+              write(*,*) 'UseNewellAveraged (logical)'
+              write(*,*) 'UseNewellMono (logical)'
+              write(*,*) 'UseNewellWave (logical)'
               write(*,*) 'UseNewellRemoveSpikes (logical)'
               write(*,*) 'UseNewellAverage      (logical)'
               IsDone = .true.
@@ -494,6 +494,20 @@ subroutine set_inputs
               write(*,*) "UseCoriolis         (logical)"
               write(*,*) "UseGravity          (logical)"
               IsDone = .true.
+           endif
+
+        case ("#DYNAMO")
+           call read_in_logical(UseDynamo, iError)
+           call read_in_real(DynamoHighLatBoundary, iError)
+           call read_in_int(nItersMax, iError)
+           call read_in_real(MaxResidual, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #DYNAMO:'
+              write(*,*) '#DYNAMO'
+              write(*,*) "UseDynamo              (logical)"
+              write(*,*) "DynamoHighLatBoundary  (real)"
+              write(*,*) "nItersMax              (integer)"
+              write(*,*) "MaxResidual            (V,real)"
            endif
 
         case ("#IONFORCING")
@@ -794,10 +808,9 @@ subroutine set_inputs
 
         case ("#EUV_DATA")
            call read_in_logical(UseEUVData, iError)
-           call read_in_string(cEUVFile,iError)
+           call read_in_string(cEUVFile, iError)
            
-           if (UseEUVData) call Set_Euv(iError)
-!           if (UseEUVData) call Set_Euv(cEUVFile,iError)
+           if (UseEUVData) call Set_Euv(cEUVFile,iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #EUV_DATA'
               write(*,*) '#EUV_DATA'
@@ -977,3 +990,4 @@ subroutine fix_vernal_time
        iTimeArray(1), iTimeArray(2), iTimeArray(3)) 
 
 end subroutine fix_vernal_time
+

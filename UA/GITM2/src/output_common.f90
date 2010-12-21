@@ -1,3 +1,6 @@
+!! output_common_original.f90
+
+
 integer function bad_outputtype()
 
   use ModInputs, only : OutputType, nOutputTypes
@@ -18,7 +21,6 @@ integer function bad_outputtype()
      if (OutputType(iOutputType) == '3DCHM')     IsFound = .true.
      if (OutputType(iOutputType) == '3DUSR')     IsFound = .true.
      if (OutputType(iOutputType) == '3DGLO')     IsFound = .true.
-     if (OutputType(iOutputType) == '3DCMS')     IsFound = .true.
 
      if (OutputType(iOutputType) == '2DGEL')     IsFound = .true.
      if (OutputType(iOutputType) == '2DMEL')     IsFound = .true.
@@ -28,9 +30,6 @@ integer function bad_outputtype()
      if (OutputType(iOutputType) == '1DGLO')     IsFound = .true.
      if (OutputType(iOutputType) == '1DTHM')     IsFound = .true.
      if (OutputType(iOutputType) == '1DNEW')     IsFound = .true.
-     if (OutputType(iOutputType) == '1DCHM')     IsFound = .true.
-     if (OutputType(iOutputType) == '1DCMS')     IsFound = .true.
-     if (OutputType(iOutputType) == '1DUSR')     IsFound = .true.
 
      if (.not. IsFound) then
         bad_outputtype = iOutputType
@@ -58,7 +57,7 @@ subroutine output(dir, iBlock, iOutputType)
   use ModTime
   use ModInputs
   use ModSources
-  use ModUserGITM, only: nVarsUser2d, nVarsUser3d, nVarsUser1d
+  use ModUserGITM, only: nVarsUser2d, nVarsUser3d
 
   implicit none
 
@@ -194,7 +193,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('3DION')
 
-     nvars_to_write = 8+nIons+6
+     nvars_to_write = 8+nIons+6+4
      call output_3dion(iBlock)
 
   case ('3DTHM')
@@ -207,16 +206,6 @@ subroutine output(dir, iBlock, iOutputType)
      nvars_to_write = 30
      call output_3dchm(iBlock)
 
-   case ('1DCHM')
-
-     nvars_to_write = 30
-     call output_1dchm(iBlock)
-
-  case ('3DCMS')
-     
-     nvars_to_write = nSpeciesTotal*2+(nIons-1)*2+3
-     call output_3dcms(iBlock)
-     
   case ('3DGLO')
 
      nvars_to_write = 3 + 3
@@ -235,7 +224,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('2DMEL')
 
-     nvars_to_write = 25
+     nvars_to_write = 29
      if (iBLK == 1) call output_2dmel(iBlock)
 
   case ('2DUSR')
@@ -247,7 +236,7 @@ subroutine output(dir, iBlock, iOutputType)
   case ('1DALL')
 
      nGCs = 0
-     nvars_to_write = 13+nSpeciesTotal+nSpecies+nIons+nSpecies+4
+     nvars_to_write = 13+nSpeciesTotal+nSpecies+nIons+nSpecies+5
      call output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iOutputUnit_)
 
   case ('1DGLO')
@@ -259,24 +248,13 @@ subroutine output(dir, iBlock, iOutputType)
  case ('1DTHM')
      
      nGCs = 0
-     nvars_to_write = 14
+     nvars_to_write = 14 + (nspeciestotal*2)
      call output_1dthm
 
   case ('1DNEW')
      nGCs = 0
      nvars_to_write = 15 + nSpeciesTotal + nSpecies + nIons + nSpecies
      call output_1dnew(iiLon, iiLat, iBlock, rLon, rLat, iOutputUnit_)
-
-  case ('1DCMS')
-     
-     nvars_to_write = nSpeciesTotal*2+(nIons-1)*2+3
-     call output_1dcms(iBlock)
-
-  case ('1DUSR')
-
-     if (iBlock == 1) call set_nVarsUser1d
-     nvars_to_write = nVarsUser1d
-     call output_1duser(iBlock, iOutputUnit_)
 
   end select
 
@@ -386,7 +364,18 @@ contains
        write(iOutputUnit_,"(I7,A1,a)")  12, " ", "NO Cooling"
        write(iOutputUnit_,"(I7,A1,a)")  13, " ", "O Cooling"
        write(iOutputUnit_,"(I7,A1,a)")  14, " ", "Total Abs EUV"
-              
+       if (cType(1:2) == "1D") then
+          do iSpecies = 1, nSpeciesTotal
+             write(iOutputUnit_,"(I7,A1,a,a)") 11 + iSpecies, " ", &
+                  "Production Rate ",cSpecies(iSpecies)
+          enddo
+          do iSpecies = 1, nSpeciesTotal
+             write(iOutputUnit_,"(I7,A1,a,a)") 11 + nSpeciesTotal + iSpecies, " ", &
+                  "Loss Rate ",cSpecies(iSpecies)
+             
+          enddo
+       endif
+       
     endif
 
     if (cType(3:5) == "CHM") then
@@ -422,30 +411,6 @@ contains
        
     endif
 
-     if (cType(3:5) == "CMS") then
-       
-       
-         do iSpecies = 1, nSpeciesTotal
-             write(iOutputUnit_,"(I7,A1,a,a)") 3 + iSpecies, " ", &
-                  " Sources ",cSpecies(iSpecies)
-          enddo
-         do iSpecies = 1, nSpeciesTotal
-             write(iOutputUnit_,"(I7,A1,a,a)") 3 + iSpecies + nSpeciesTotal, " ", &
-                  " Losses ",cSpecies(iSpecies)
-          enddo
-
-          do iSpecies = 1, nIons-1
-             write(iOutputUnit_,"(I7,A1,a,a)") 3 + iSpecies + nSpeciesTotal*2, " ", &
-                  " Sources ",cIons(iSpecies)
-          enddo
-
-          do iSpecies = 1, nIons-1
-             write(iOutputUnit_,"(I7,A1,a,a)") 3 + iSpecies + nSpeciesTotal*2 + nIons - 1, " ", &
-                  " Losses ",cIons(iSpecies)
-          enddo
-          
-    endif
-
     if (cType(3:5) == "GLO") then
 
        write(iOutputUnit_,"(I7,A1,a)")  4, " ", "6300 A Emission"
@@ -478,6 +443,10 @@ contains
        write(iOutputUnit_,"(I7,A1,a)") 23, " ", "Solver E"
        write(iOutputUnit_,"(I7,A1,a)") 24, " ", "Solver S"
        write(iOutputUnit_,"(I7,A1,a)") 25, " ", "DynamoPotential"
+       write(iOutputUnit_,"(I7,A1,a)") 26, " ", "Ed1new"
+       write(iOutputUnit_,"(I7,A1,a)") 27, " ", "Ed2new"
+       write(iOutputUnit_,"(I7,A1,a)") 28, " ", "Kphi"
+       write(iOutputUnit_,"(I7,A1,a)") 29, " ", "Klamda"
 
     endif
 
@@ -534,7 +503,7 @@ contains
 !       write(iOutputUnit_,"(I7,A1,a)") iOff+6, " ", "15N2 Mixing Ratio"
 !       write(iOutputUnit_,"(I7,A1,a)") iOff+7, " ", "13CH4 Mixing Ratio"
 
-          iOff = iOff + nSpecies - 1
+          iOff = iOff + nSpecies
           write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "RadCooling"
           write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "EuvHeating"
           write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "Conduction"
@@ -543,12 +512,16 @@ contains
 
        else
 
-          write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "B0 East"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "B0 North"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "B0 Vertical"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "B0 Magnitude"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "Ed1"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "Ed2"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "je1"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "Je2"
           write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "Magnetic Latitude"
           write(iOutputUnit_,"(I7,A1,a)") iOff+6, " ", "Magnetic Longitude"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+7, " ", "E.F. East"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+8, " ", "E.F. North"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+9, " ", "E.F. Vertical"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+10, " ", "E.F. Magnitude"
 
        endif
 
@@ -666,7 +639,7 @@ contains
   subroutine write_head_version
 
     write(iOutputUnit_,*) "VERSION"
-    write(iOutputUnit_,*) 2.4+PlanetNum
+    write(iOutputUnit_,*) 2.4
     write(iOutputUnit_,*) ""
 
   end subroutine write_head_version
@@ -863,6 +836,7 @@ subroutine output_3dion(iBlock)
 
   use ModGITM
   use ModInputs
+  use ModElectrodynamics
 
   implicit none
 
@@ -880,9 +854,14 @@ subroutine output_3dion(iBlock)
                 eTemperature(iLon,iLat,iAlt,iBlock),  &
                 ITemperature(iLon,iLat,iAlt,iBlock),  &
                 Ivelocity(iLon,iLat,iAlt,:,iBlock),   &
-                B0(iLon,iLat,iAlt,:,iBlock), &
+                ed1(iLon,iLat,iAlt), &
+ 		ed2(iLon,iLat,iAlt), &
+		je1(iLon,iLat,iAlt), &
+		je2(iLon,iLat,iAlt), &
                 mLatitude(iLon,iLat,iAlt,iBlock), &
-                mLongitude(iLon,iLat,iAlt,iBlock)
+                mLongitude(iLon,iLat,iAlt,iBlock), &
+                EField(iLon,iLat,iAlt,:), &  ! EField(Lon,lat,alt,3)
+                sqrt(sum(EField(iLon,iLat,iAlt,:)**2))   ! magnitude of E.F.
         enddo
      enddo
   enddo
@@ -953,7 +932,11 @@ subroutine output_1dthm
   do iAlt=-1,nAlts+2
      iiAlt = max(min(iAlt,nAlts),1)
  
-    
+     do iSpecies = 1, nSpeciesTotal 
+        varsS(iSpecies) = NeutralSourcesTotal(iSpecies,iiAlt)
+        varsL(iSpecies) = NeutralLossesTotal(iSpecies,iiAlt)
+     enddo
+
      write(iOutputUnit_) &
           Longitude(1,1),               &
           Latitude(1,1),                &
@@ -968,8 +951,8 @@ subroutine output_1dthm
           JouleHeating(1,1,iiAlt)*dt*TempUnit(1,1,iiAlt),         &
           -RadCooling(1,1,iiAlt,1)*dt*TempUnit(1,1,iiAlt),           &
           -OCooling(1,1,iiAlt)*dt*TempUnit(1,1,iiAlt),            &
-          EuvTotal(1,1,iiAlt,1) * dt
-      
+          EuvTotal(1,1,iiAlt,1) * dt,                             &
+          varsS, varsL
                    
   enddo
 
@@ -978,48 +961,6 @@ end subroutine output_1dthm
 !----------------------------------------------------------------
 !
 !----------------------------------------------------------------
-subroutine output_1dcms(iBlock)
-
-  use ModGITM
-  use ModInputs
-  use ModSources
-  use ModConstants
-  implicit none
-
-  integer, intent(in) :: iBlock
-  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon, iSpecies
-  real :: vars(nSpeciesTotal*2+nIons*2)
-
-  do iAlt=-1,nAlts+2
-     iiAlt = max(min(iAlt,nAlts),1)
-     
-     do iSpecies = 1, nSpeciesTotal
-        vars(iSpecies) = NeutralSourcesTotal(1,1,iiAlt,iSpecies,1)
-     enddo
-     do iSpecies = 1, nSpeciesTotal
-        vars(iSpecies+nSpeciesTotal) = NeutralLossesTotal(1,1,iiAlt,iSpecies,1)
-     enddo
-     do iSpecies = 1, nIons-1
-        vars(iSpecies+nSpeciesTotal*2) = ISourcesTotal(1,1,iiAlt,iSpecies,1)
-     enddo
-     do iSpecies = 1, nIons-1
-        vars(iSpecies+nSpeciesTotal*2+nIons-1) = ILossesTotal(1,1,iiAlt,iSpecies,1)
-     enddo
-     
-     
-     write(iOutputUnit_) &
-          Longitude(1,iBlock),               &
-          Latitude(1,iBlock),                &
-          Altitude_GB(1,1,iAlt,iBlock),   &
-          Vars
-  enddo
-
-end subroutine output_1dcms
-
-!----------------------------------------------------------------
-!
-!----------------------------------------------------------------
-
 subroutine output_3dchm(iBlock)
 
   use ModGITM
@@ -1059,90 +1000,6 @@ subroutine output_3dchm(iBlock)
   enddo
 
 end subroutine output_3dchm
-
-!----------------------------------------------------------------
-!
-!----------------------------------------------------------------
-subroutine output_1dchm(iBlock)
-
-  use ModGITM
-  use ModInputs
-  use ModSources
-  use ModConstants
-  implicit none
-
-  integer, intent(in) :: iBlock
-  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon, iReact
-  real :: vars(nReactions)
-
-  do iAlt=-1,nAlts+2
-     iiAlt = max(min(iAlt,nAlts),1)
-     do iReact = 1, nReactions
-              
-              vars(iReact) = ChemicalHeatingSpecies(1,1,iiAlt,iReact) / &
-                   Element_Charge
-              
-              enddo
-              
-              write(iOutputUnit_) &
-                   Longitude(1,1),               &
-                   Latitude(1,1),                &
-                   Altitude_GB(1,1,iAlt,1),   &
-                   Vars, &
-                   ChemicalHeatingRate(1,1,iiAlt) * &
-                   cp(1,1,iiAlt,1) *   &
-                   Rho(1,1,iiAlt,1)*TempUnit(1,1,iiAlt) / &
-                   Element_Charge
-  enddo
-
-end subroutine output_1dchm
-
-!----------------------------------------------------------------
-!
-!----------------------------------------------------------------
-subroutine output_3dcms(iBlock)
-
-  use ModGITM
-  use ModInputs
-  use ModSources
-  use ModConstants
-  implicit none
-
-  integer, intent(in) :: iBlock
-  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon, iSpecies
-  real :: vars(nSpeciesTotal*2+nIons*2)
-
-  do iAlt=-1,nAlts+2
-     iiAlt = max(min(iAlt,nAlts),1)
-     do iLat=-1,nLats+2
-        iiLat = min(max(iLat,1),nLats)
-        do iLon=-1,nLons+2
-           iiLon = min(max(iLon,1),nLons)
-           
-           do iSpecies = 1, nSpeciesTotal
-              vars(iSpecies) = NeutralSourcesTotal(iiLon,iiLat,iiAlt,iSpecies,iBlock)
-           enddo
-           do iSpecies = 1, nSpeciesTotal
-              vars(iSpecies+nSpeciesTotal) = NeutralLossesTotal(iiLon,iiLat,iiAlt,iSpecies,iBlock)
-           enddo
-           do iSpecies = 1, nIons-1
-              vars(iSpecies+nSpeciesTotal*2) = ISourcesTotal(iiLon,iiLat,iiAlt,iSpecies,iBlock)
-           enddo
-           do iSpecies = 1, nIons-1
-              vars(iSpecies+nSpeciesTotal*2+nIons-1) = ILossesTotal(iiLon,iiLat,iiAlt,iSpecies,iBlock)
-           enddo
-           
-   
-           write(iOutputUnit_) &
-                Longitude(iLon,iBlock),               &
-                Latitude(iLat,iBlock),                &
-                Altitude_GB(iLon,iLat,iAlt,iBlock),   &
-                Vars
-        enddo
-     enddo
-  enddo
-
-end subroutine output_3dcms
 
 !----------------------------------------------------------------
 !
@@ -1233,11 +1090,11 @@ subroutine output_2dgel(iBlock)
              HallConductance(iLon,iLat,iBlock), &
              ElectronAverageEnergy(iLon,iLat), &
              ElectronEnergyFlux(iLon,iLat), &
-             DivJuAlt(iLon,iLat,iBlock), &
-             PedersenFieldLine(iLon,iLat,iBlock), &
-             HallFieldLine(iLon,iLat,iBlock), &
-             DivJuFieldLine(iLon,iLat,iBlock), &
-             LengthFieldLine(iLon,iLat,iBlock)
+             DivJuAlt(iLon,iLat), &
+             PedersenFieldLine(iLon, iLat), &
+             HallFieldLine(iLon, iLat), &
+             DivJuFieldLine(iLon, iLat), &
+             LengthFieldLine(iLon, iLat)
      enddo
   enddo
 
@@ -1286,7 +1143,11 @@ subroutine output_2dmel(iBlock)
              solver_d_mc(iLon,iLat), &
              solver_e_mc(iLon,iLat), &
              solver_s_mc(iLon,iLat), &
-             DynamoPotentialMC(iLon,iLat)
+             DynamoPotentialMC(iLon,iLat), &
+             Ed1new(iLon,iLat), &
+             Ed2new(iLon,iLat), &
+             kpmMC(iLon,iLat), &
+             klmMC(iLon,iLat)
      enddo
   enddo
 

@@ -1,6 +1,6 @@
 subroutine get_msis_temperature(lon, lat, alt, t, h)
 
-  use ModIndicesInterfaces
+ use ModIndicesInterfaces
   use ModTime
   use ModInputs
   use ModPlanet
@@ -20,7 +20,7 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   real,dimension(7)    :: AP  
   real :: nO, nO2, nN2, m, r, g
 
-  integer :: iError
+   integer :: iError
   !-------------------------------------------------------
   
   ap=10.0
@@ -138,6 +138,8 @@ subroutine init_msis
 
   call tselec(sw)
 
+  if (DoRestart) return
+
   !           The following is for test and special purposes:
   !            TO TURN ON AND OFF PARTICULAR VARIATIONS CALL TSELEC(SW)
   !               WHERE SW IS A 25 ELEMENT ARRAY CONTAINING 0. FOR OFF, 1. 
@@ -193,6 +195,20 @@ subroutine init_msis
 
               MeanMajorMass(iLon,iLat,iAlt)=0
 
+              do iSpecies = 1, nSpecies
+                 MeanMajorMass(iLon,iLat,iAlt) = MeanMajorMass(iLon,iLat,iAlt) +   &
+                      Mass(iSpecies) * NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)/   &
+                      sum(NDensityS(iLon,iLat,iAlt,1:3,iBlock))
+              enddo
+  
+              TempUnit(iLon,iLat,iAlt) = &
+                   MeanMajorMass(iLon,iLat,iAlt)/ Boltzmanns_Constant
+
+              Temperature(iLon,iLat,iAlt,iBlock) = &
+                   msis_temp(2)/TempUnit(iLon,iLat,iAlt)
+
+              Rho(iLon,iLat,iAlt,iBlock) = msis_dens(6)
+
               ! The initial profile of [NO] is refered to:
               !  [Charles A. Barth, AGU, 1995]
 
@@ -207,20 +223,6 @@ subroutine init_msis
                       MAX(k+(m*geo_alt)-(geo_alt - 120.0)**2,1.0)
                    !   MAX(10**(13.-LOG10(3.)*(geo_alt-165.)/35.),1.0)
               endif
-
-              do iSpecies = 1, nSpecies
-                 MeanMajorMass(iLon,iLat,iAlt) = MeanMajorMass(iLon,iLat,iAlt) +   &
-                      Mass(iSpecies) * NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)/   &
-                      sum(NDensityS(iLon,iLat,iAlt,1:nSpecies,iBlock))
-              enddo
-  
-              TempUnit(iLon,iLat,iAlt) = &
-                   MeanMajorMass(iLon,iLat,iAlt)/ Boltzmanns_Constant
-
-              Temperature(iLon,iLat,iAlt,iBlock) = &
-                   msis_temp(2)/TempUnit(iLon,iLat,iAlt)
-
-              Rho(iLon,iLat,iAlt,iBlock) = msis_dens(6)
 
               LogNS(iLon,iLat,iAlt,:,iBlock) = &
                    log(NDensityS(iLon,iLat,iAlt,iNO_,iBlock))
@@ -285,3 +287,4 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   LogRho      = alog(msis_dens(6))
 
 end subroutine msis_bcs
+
