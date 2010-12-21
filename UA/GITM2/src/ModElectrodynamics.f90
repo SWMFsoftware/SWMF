@@ -1,15 +1,23 @@
-!!!!TESTTTTTTTTT
+
 module ModElectrodynamics
 
   use ModSizeGitm
 
-  ! This is the height integral of the divergence of the Neutral wind current
-  real, dimension(-1:nLons+2,-1:nLats+2,nBlocksMax) :: DivJuAlt
+  ! This is the divergence of the Neutral wind current
+  real, dimension(-1:nLons+2,-1:nLats+2,1:nAlts) :: DivJu
 
-  ! These are the new field line integral values dimensioned by blocks
-  real, dimension(-1:nLons+2,-1:nLats+2, nBlocksMax) :: &
-       HallFieldLine, PedersenFieldLine, DivJuFieldLine, LengthFieldLine, &
-       SigmaPP, SigmaLL, SigmaCC,  KDpm, KDlm
+  ! This is the height integral of the divergence
+  real, dimension(-1:nLons+2,-1:nLats+2) :: DivJuAlt
+
+  ! This is the field-line integral of the conductance and divergence
+  real, dimension(-1:nLons+2,-1:nLats+2) :: &
+       HallFieldLine, PedersenFieldLine, DivJuFieldLine, LengthFieldLine
+
+  ! This is the field-line integral of the conductance and divergence
+  real, dimension(-1:nLons+2,-1:nLats+2) :: &
+       SigmaPP, SigmaLL, SigmaHH, SigmaCC, SigmaPL, SigmaLP, &
+       KDpm, KDlm, Kpm, Klm
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: ed1, ed2, je1, je2
 
   ! This is the field aligned integral in magnetic coordinates
   real, dimension(:,:), allocatable :: DivJuAltMC
@@ -25,8 +33,16 @@ module ModElectrodynamics
   real, dimension(:,:), allocatable :: SigmaPLMC
   real, dimension(:,:), allocatable :: SigmaLPMC
 
-  real, dimension(:,:), allocatable :: KDpmMC, KDlmMC
-
+  real, dimension(:,:), allocatable :: KDpmMC, kpmMC
+  real, dimension(:,:), allocatable :: KDlmMC, klmMC
+! New parameters
+  real, dimension(:,:), allocatable :: SigmaCowlingMC
+  real, dimension(:,:), allocatable :: dSigmaCowlingdpMC
+  real, dimension(:,:), allocatable :: dSigmaLLdpMC
+  real, dimension(:,:), allocatable :: dKDlmdpMC
+  real, dimension(:,:), allocatable :: Ed1new
+  real, dimension(:,:), allocatable :: Ed2new
+! 
   ! These are the magnetic coordinates
   real, dimension(:,:), allocatable :: MagLatMC
   real, dimension(:,:), allocatable :: MagLocTimeMC
@@ -41,14 +57,18 @@ module ModElectrodynamics
        solver_a_mc, solver_b_mc, solver_c_mc, solver_d_mc, solver_e_mc, &
        solver_s_mc, deltalmc, deltapmc, &
        dSigmaLLdlMC, dSigmaLPdlMC, dSigmaPLdpMC, dSigmaPPdpMC, &
-       dKDpmdpMC, dKDlmdlMC, DynamoPotentialMC
+       dKDpmdpMC, dKDlmdlMC, DynamoPotentialMC, &
+       dKpmdpMC, dKlmdlMC
 
   real, dimension(:,:), allocatable :: oldpotmc
   
    real, dimension(:), allocatable :: & 
         x,y,rhs,b,d_I,e_I,e1_I,f_I,f1_I
 
-  integer :: nMagLats = 180  ! 1 degrees
+  real, dimension(:,:), allocatable :: &
+       SmallMagLocTimeMC, SmallMagLatMC, SmallPotentialMC
+
+  integer :: nMagLats = 140  ! 1 degrees
   integer :: nMagLons = 90  ! 4 degrees
 
   !----------------------------------------------------------------------
@@ -56,6 +76,9 @@ module ModElectrodynamics
 
   real, dimension(-1:nLons+2,-1:nLats+2, nBlocksMax) :: &
        HallConductance, PedersenConductance
+
+  real, dimension(-1:nLons+2,-1:nLats+2, -1: nAlts+2) :: &
+       Sigma_0, Sigma_Pedersen, Sigma_Hall
 
   real, dimension(-1:nLons+2,-1:nLats+2, -1: nAlts+2, 3) :: &
        UxB, Ju

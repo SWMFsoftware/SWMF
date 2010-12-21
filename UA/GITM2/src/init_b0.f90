@@ -4,7 +4,7 @@ subroutine init_b0
   use ModGITM
   use ModInputs
   use ModTime
-  use ModMagTrace
+!  use ModMagTrace
 
   implicit none
 
@@ -19,9 +19,13 @@ subroutine init_b0
   call report("init_b0",1)
   call start_timing("init_b0")
 
+  AltMinIono=(2*RadialDistance_GB(1,1,-1,1) - &
+       RadialDistance_GB(1,1,1,1) - RBody)/1000.0
+
   do iBlock=1,nBlocks
      if (nBlocks > 1 .and. iDebugLevel > 1) write(*,*) "==> Block : ", iBlock
      do iAlt=-1,nAlts+2
+        if (iDebugLevel > 4) write(*,*) "=====> init_b0, alt : ", iAlt, Altitude_GB(1,1, iAlt, iBlock)/1000.0
         do iLat=-1,nLats+2
            do iLon=-1,nLons+2
 
@@ -48,10 +52,6 @@ subroutine init_b0
 
               call get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon, &
                    xmag,ymag,zmag,d1,d2,d3,e1,e2,e3,cD)
-
-!              if (iAlt == 1) &
-!                   write(*,*) GeoLat, GeoLon, xmag, ymag, zmag
-
               mLatitude(iLon,iLat,iAlt,iBlock)  = alat
               mLongitude(iLon,iLat,iAlt,iBlock) = alon
               B0(iLon,iLat,iAlt,iEast_,iBlock)  = ymag
@@ -101,11 +101,8 @@ subroutine init_b0
 
   !    GyroFrequency_Electron(:,:,:,iBlock) = &
   !         Element_Charge * B0(:,:,:,Magnitude,iBlock) /  Mass_Electron
-
   !\\\
-  if (maxval(b0) > 1.0) then
-     call MMT_Init
-  endif
+!!!!!!!!!!!!!  call MMT_Init
   !///
 
   call end_timing("init_b0")
@@ -176,7 +173,8 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
   twodegrees = 2.0 * pi / 180.0
 
-  rBelow = (2*RadialDistance_GB(1,1,-1,1) - RadialDistance_GB(1,1,1,1)) / RBody
+!  rBelow = (2*RadialDistance_GB(1,1,-1,1) - RadialDistance_GB(1,1,1,1)) / RBody
+  rBelow = 1.0
 
   if (NonMagnetic) then
       xmag = 0.0
@@ -190,6 +188,9 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
           alat,alon,bmag,xmag,ymag,zmag,MagPot)
 
      LShell0 = LShell
+
+     call test_mag_point(rBelow, LShell, RBody)
+!   LShell = apex height
 
      alat = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLat)
      xmag =  xmag * 1.0e-9
@@ -205,10 +206,12 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
      ! Latitudinal component
      call APEX(DATE,GeoLat+1.0,GeoLon,GeoAlt,LShell, &
           alatp,alonp,bmag,xmag,ymag,zmag,MagPot)
+     call test_mag_point(rBelow, LShell, RBody)
      alatp = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatp)
      
      call APEX(DATE,GeoLat-1.0,GeoLon,GeoAlt,LShell, &
           alatm,alonm,bmag,xmag,ymag,zmag,MagPot)
+     call test_mag_point(rBelow, LShell, RBody)
      alatm = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatm)
 
      londiff = alonp - alonm
@@ -225,10 +228,12 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
      ! Longitudinal component
      call APEX(DATE,GeoLat,mod(GeoLon+1,360.0),GeoAlt,LShell, &
           alatp,alonp,bmag,xmag,ymag,zmag,MagPot)
+     call test_mag_point(rBelow, LShell, RBody)
      alatp = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatp)
      
      call APEX(DATE,GeoLat,mod(GeoLon-1+360,360.0),GeoAlt,LShell, &
           alatm,alonm,bmag,xmag,ymag,zmag,MagPot)
+     call test_mag_point(rBelow, LShell, RBody)
      alatm = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatm)
 
      londiff = alonp - alonm
@@ -245,19 +250,19 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
      ! Altitude component
      call APEX(DATE,GeoLat,GeoLon,GeoAlt+1,LShell, &
           alatp,alonp,bmag,xmag,ymag,zmag,MagPot)
+     call test_mag_point(rBelow, LShell, RBody)
      alatp = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatp)
      
      call APEX(DATE,GeoLat,GeoLon,GeoAlt-1,LShell, &
           alatm,alonm,bmag,xmag,ymag,zmag,MagPot)
+     call test_mag_point(rBelow, LShell, RBody)
      alatm = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatm)
 
      if (rBelow/LShell > 1.0) then
-
         write(*,*) 'Reference Altitude in init_b0 : ',rBelow*RBody/1000.0,' km'
         write(*,*) 'This seems to be too high.  Please change the first few'
         write(*,*) 'lines in get_magfield_all.'
         call stop_gitm("Must Stop!!")
-
      endif
 
      londiff = alonp - alonm
@@ -275,6 +280,7 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
      ! leaving the subroutine....
      call APEX(DATE,GeoLat,GeoLon,GeoAlt,LShell, &
           alat,alon,bmag,xmag,ymag,zmag,MagPot)
+     call test_mag_point(rBelow, LShell, RBody)
      alat = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLat)
      xmag =  xmag * 1.0e-9
      ymag =  ymag * 1.0e-9
@@ -284,15 +290,15 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
      if (DipoleStrength /= 0) then
 
-        r3 = (RBody / (RBody + GeoAlt*1000.0)) ** 3
-        LShell =  (RBody + GeoAlt*1000.0) / RBody / (sin(pi/2 - GeoLat*pi/180.0))**2.0
-        alat = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
-        alon = GeoLon
-        ymag = 0.0
-        xmag =     - DipoleStrength * cos(GeoLat*pi/180.0) * r3
-        zmag = 2.0 * DipoleStrength * sin(GeoLat*pi/180.0) * r3
+!        r3 = (RBody / (RBody + GeoAlt*1000.0)) ** 3
+!        LShell =  (RBody + GeoAlt*1000.0) / RBody / (sin(pi/2 - GeoLat*pi/180.0))**2.0
+!        alat = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
+!        alon = GeoLon
+!        ymag = 0.0
+!        xmag =     - DipoleStrength * cos(GeoLat*pi/180.0) * r3
+!        zmag = 2.0 * DipoleStrength * sin(GeoLat*pi/180.0) * r3
 
-!        call mydipole(GeoLat, GeoLon, GeoAlt, LShell, aLat, aLon, ymag, xmag, zmag)
+        call mydipole(GeoLat, GeoLon, GeoAlt, LShell, aLat, aLon, ymag, xmag, zmag)
 
         mag = sqrt(xmag*xmag + ymag*ymag + zmag*zmag)
         bx = xmag/mag
@@ -301,24 +307,62 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
         LShell0 = LShell
 
-        LShell =  (RBody + GeoAlt*1000.0) / RBody / (sin(pi/2-(GeoLat+1)*pi/180.0))**2.0
-        alatp = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,(GeoLat+1))
-        LShell =  (RBody + GeoAlt*1000.0) / RBody / (sin(pi/2-(GeoLat-1)*pi/180.0))**2.0
-        alatm = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,(GeoLat-1))
+        call mydipole(GeoLat+1, GeoLon, GeoAlt, LShell, aLatp, aLonp, ymag, xmag, zmag)
+        call mydipole(GeoLat-1, GeoLon, GeoAlt, LShell, aLatm, aLonm, ymag, xmag, zmag)
 
-        d1(iNorth_) = 0.0
+!        LShell =  (RBody + GeoAlt*1000.0) / RBody / (sin(pi/2-(GeoLat+1)*pi/180.0))**2.0
+!        alatp = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,(GeoLat+1))
+!        LShell =  (RBody + GeoAlt*1000.0) / RBody / (sin(pi/2-(GeoLat-1)*pi/180.0))**2.0
+!        alatm = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,(GeoLat-1))
+
+        londiff = alonp - alonm
+        do while (londiff > 70.0)
+           londiff = londiff - 90.0
+        enddo
+        do while (londiff < -70.0)
+           londiff = londiff + 90.0
+        enddo
+     
+        d1(iNorth_) = londiff/twodegrees
         d2(iNorth_) = (alatp - alatm)/twodegrees
 
-        d1(iEast_) = (2.0)/(twodegrees * cos(GeoLat*pi/180.0))
-        d2(iEast_) = 0.0
+        call mydipole(GeoLat, mod(GeoLon+1,360.0), GeoAlt, &
+             LShell, aLatp, aLonp, ymag, xmag, zmag)
+        call mydipole(GeoLat, mod(GeoLon-1+360.0,360.0), GeoAlt, &
+             LShell, aLatm, aLonm, ymag, xmag, zmag)
 
-        LShell =  (RBody + GeoAlt*1000.0+1000.0) / RBody / (sin(pi/2-GeoLat*pi/180.0))**2.0
-        alatp = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
-        LShell =  (RBody + GeoAlt*1000.0-1000.0) / RBody / (sin(pi/2-GeoLat*pi/180.0))**2.0
-        alatm = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
+        londiff = alonp - alonm
+        do while (londiff > 70.0)
+           londiff = londiff - 90.0
+        enddo
+        do while (londiff < -70.0)
+           londiff = londiff + 90.0
+        enddo
+     
+        d1(iEast_) = (londiff)/(twodegrees * cos(GeoLat*pi/180.0))
+        d2(iEast_) = (alatp - alatm)/(twodegrees * cos(GeoLat*pi/180.0))
 
-        d1(iUp_) = 0.0
+        call mydipole(GeoLat, GeoLon, GeoAlt+1, LShell, aLatp, aLonp, ymag, xmag, zmag)
+        call mydipole(GeoLat, GeoLon, GeoAlt-1, LShell, aLatm, aLonm, ymag, xmag, zmag)
+
+        londiff = alonp - alonm
+        do while (londiff > 70.0)
+           londiff = londiff - 90.0
+        enddo
+        do while (londiff < -70.0)
+           londiff = londiff + 90.0
+        enddo
+     
+        d1(iUp_) = (RBody+GeoAlt*1000.0)*(londiff)/(2000.0)
         d2(iUp_) = (RBody+GeoAlt*1000.0)*(alatp - alatm)/(2000.0)
+
+!        LShell =  (RBody + GeoAlt*1000.0+1000.0) / RBody / (sin(pi/2-GeoLat*pi/180.0))**2.0
+!        alatp = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
+!        LShell =  (RBody + GeoAlt*1000.0-1000.0) / RBody / (sin(pi/2-GeoLat*pi/180.0))**2.0
+!        alatm = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
+!
+!        d1(iUp_) = 0.0
+!        d2(iUp_) = (RBody+GeoAlt*1000.0)*(alatp - alatm)/(2000.0)
 
      else
 
@@ -378,9 +422,6 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
 end subroutine get_magfield_all
 
-!--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-
 subroutine mydipole(GeoLat, GeoLon, GeoAlt, LShell, aLat, aLon, BEast, BNorth, BVertical)
 
   use ModPlanet
@@ -406,41 +447,41 @@ subroutine mydipole(GeoLat, GeoLon, GeoAlt, LShell, aLat, aLon, BEast, BNorth, B
   Lon = GeoLon*pi/180.0
   r   = RBody + GeoAlt*1000.0
 
-!  x = r * cos(lat) * cos(lon)
-!  y = r * cos(lat) * sin(lon)
-!  z = r * sin(lat)
-!
-!  xt = x-xDipoleCenter
-!  yt = y-yDipoleCenter
-!  zt = z-zDipoleCenter
-!
-!  call rot_z(xt, yt, zt, xp, yp, zp, -MagneticPoleRotation)
-!  call rot_y(xp, yp, zp, xpp, ypp, zpp, -MagneticPoleTilt)
-!
-!  xypp  = sqrt(xpp**2+ypp**2)
-!  xzpp  = sqrt(xpp**2+zpp**2)
-!  yzpp  = sqrt(ypp**2+zpp**2)
-!  xyzpp = sqrt(xpp**2+ypp**2+zpp**2)
-!
-!  r3        = (RBody / xyzpp) ** 3
-!  LShell    = max(1.0,xyzpp / RBody / (xypp/xyzpp)**2.0)
-!  aLat      = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,zpp)
-!  aLon      = acos(xpp/xypp)
-!
-!  bx = DipoleStrength * r3 * 3 * xpp*zpp/xyzpp**2 
-!  by = DipoleStrength * r3 * 3 * zpp*ypp/xyzpp**2
-!  bz = DipoleStrength * r3 /xyzpp**2 * (2*zpp**2 - xypp**2)
-!
-!!  if (GeoLat == -35.0 .and. GeoAlt == 100.0) &
-!!       write(*,*) GeoLat, GeoLon, Lat, Lon, bx*1.0e5, by*1.0e5, bz*1.0e5
-!
-!  call rot_y(bx, by, bz, bxp, byp, bzp, MagneticPoleTilt)
-!  call rot_z(bxp, byp, bzp, bxpp, bypp, bzpp, MagneticPoleRotation)
-!
-!  bVertical =   bxpp * cos(lat)*cos(lon) + bypp * cos(lat)*sin(lon) + bzpp*sin(lat)
-!  bNorth    = -(bxpp * sin(lat)*cos(lon) + bypp * sin(lat)*sin(lon) - bzpp*cos(lat))
-!  bEast     = - bxpp * sin(lon)          + bypp * cos(lon)
-!
+  x = r * cos(lat) * cos(lon)
+  y = r * cos(lat) * sin(lon)
+  z = r * sin(lat)
+
+  xt = x-xDipoleCenter
+  yt = y-yDipoleCenter
+  zt = z-zDipoleCenter
+
+  call rot_z(xt, yt, zt, xp, yp, zp, -MagneticPoleRotation)
+  call rot_y(xp, yp, zp, xpp, ypp, zpp, -MagneticPoleTilt)
+
+  xypp  = sqrt(xpp**2+ypp**2)
+  xzpp  = sqrt(xpp**2+zpp**2)
+  yzpp  = sqrt(ypp**2+zpp**2)
+  xyzpp = sqrt(xpp**2+ypp**2+zpp**2)
+
+  r3        = (RBody / xyzpp) ** 3
+  LShell    = max(1.0,xyzpp / RBody / (xypp/xyzpp)**2.0)
+  aLat      = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,zpp)
+  aLon      = acos(xpp/xypp)
+
+  bx = DipoleStrength * r3 * 3 * xpp*zpp/xyzpp**2 
+  by = DipoleStrength * r3 * 3 * zpp*ypp/xyzpp**2
+  bz = DipoleStrength * r3 /xyzpp**2 * (2*zpp**2 - xypp**2)
+
+!  if (GeoLat == -35.0 .and. GeoAlt == 100.0) &
+!       write(*,*) GeoLat, GeoLon, Lat, Lon, bx*1.0e5, by*1.0e5, bz*1.0e5
+
+  call rot_y(bx, by, bz, bxp, byp, bzp, MagneticPoleTilt)
+  call rot_z(bxp, byp, bzp, bxpp, bypp, bzpp, MagneticPoleRotation)
+
+  bVertical =   bxpp * cos(lat)*cos(lon) + bypp * cos(lat)*sin(lon) + bzpp*sin(lat)
+  bNorth    = -(bxpp * sin(lat)*cos(lon) + bypp * sin(lat)*sin(lon) - bzpp*cos(lat))
+  bEast     = - bxpp * sin(lon)          + bypp * cos(lon)
+
 end subroutine mydipole
 
 subroutine rot_y(Xin, Yin, Zin, xOut, yOut, zOut, angle)
@@ -476,3 +517,19 @@ subroutine rot_z(xIn, yIn, zIn, xOut, yOut, zOut, angle)
   Zout =  Zin
 
 end subroutine rot_z
+
+
+subroutine test_mag_point(rBelow, LShell, RBody)
+
+  real, intent(in) :: rBelow, LShell, RBody
+
+  if (rBelow/LShell > 1.0) then
+     write(*,*) 'Reference Altitude in init_b0 : ',rBelow*RBody/1000.0,' km'
+     write(*,*) 'This seems to be too high.  Please change the first few'
+     write(*,*) 'lines in get_magfield_all.'
+     call stop_gitm("Must Stop!!")
+  endif
+
+end subroutine test_mag_point
+
+

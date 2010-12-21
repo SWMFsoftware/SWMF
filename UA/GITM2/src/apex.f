@@ -23,9 +23,11 @@ C gLon = Geographin Longitude
         real aLatTest, aLonTest
         integer i
 
+        CALL COFRM(DATE)
+
         if (sLat < -90.0) then
 
-           lShell = 1.0/(cos(aLat*DTOR)**2)
+           lShell = 1.0/(cos(aLat*DTOR)**2)   ! L value
            rStart = lShell * Req
 
            cte = 0.0
@@ -39,7 +41,7 @@ C gLon = Geographin Longitude
            mid = alon
            if (mid < 0.0) mid = mid + 360.0
 
-           do i=int(mid*10.0)-100,int(mid*10.0)+100
+           do i=mid*10.0-100,mid*10.0+100
 
               ang = real(i)/10.0*dtor
               stfcpa = ste*ctp*cos(ang)-cte*stp
@@ -64,7 +66,7 @@ C gLon = Geographin Longitude
            stfcpa = ste*ctp*cos(ang)-cte*stp
            stfspa = sin(ang)*ste
 
-!        write(*,*) 'xlon:',lonStart,ang_save, alon, cte, STFCPA, STFSPA, ctp
+c        write(*,*) 'xlon:',lonStart,ang_save, alon, cte, STFCPA, STFSPA, ctp
 
            GeoAlt = rStart - Req
            GeoLon = lonStart
@@ -75,7 +77,7 @@ C gLon = Geographin Longitude
 
            r = sqrt(xxx*xxx + yyy*yyy + zzz*zzz)
 
-           do while (r > req+Alt)
+           do while (r > req+Alt)   ! Alt = AltMinIono
 
               CALL FELDG(2,xxx,yyy,zzz,xMAG,yMAG,zMAG,bMag)
 
@@ -89,14 +91,13 @@ C gLon = Geographin Longitude
 
               r = sqrt(xxx*xxx + yyy*yyy + zzz*zzz)
 
-!           write(*,*) xxx,yyy,zzz,r, xmag,ymag,zmag
+c           write(*,*) xxx,yyy,zzz,r, xmag,ymag,zmag
 
            enddo
 
-!        write(*,*) 'xyz: ',xxx,yyy,zzz,r, xmag,ymag,zmag
-
            geolat = asin(zzz/r)
            geolon = asin(xxx/sqrt(xxx*xxx+yyy*yyy))
+
            if (yyy < 0.0) geolon = 6.2831855 - geolon
            geoalt = r-req
 
@@ -117,7 +118,7 @@ C gLon = Geographin Longitude
               call APEX(DATE,gLatGuess,gLonGuess,Alt,lShell,aLatTest,aLonTest,
      !             bmag,xmag,ymag,zmag,MagPot)
 
-!     write(*,*) aLat, aLatTest, aLon, aLonTest, gLatGuess, gLonGuess, iCount
+c     write(*,*) aLat, aLatTest, aLon, aLonTest, gLatGuess, gLonGuess, iCount
 
               gLatGuess = gLatGuess + (aLat-aLatTest)/4.0
 
@@ -152,8 +153,8 @@ C gLon = Geographin Longitude
            gLat = sLat
 
         endif
-
-!        write(*,*) "iCount : ",iCount, gLatGuess, gLonGuess, gLat, gLon
+c   ACTUAL
+c        write(*,*) "iCount : ",iCount, gLatGuess, gLonGuess, gLat, gLon
 
         if (iCount >= 20) then
            
@@ -210,7 +211,7 @@ C gLon = Geographin Longitude
                     gLat = gLatGuess
                     if (gLat < -90.0) gLat = -180.0 - gLat
                     if (gLat >  90.0) gLat =  180.0 - gLat
-!                    write(*,*) aLat, aLatTest, aLon, aLonTest, gLat, gLon, dLat, dLon, diff
+c                    write(*,*) aLat, aLatTest, aLon, aLonTest, gLat, gLon, dLat, dLon, diff
 
                  endif
 
@@ -230,7 +231,7 @@ C gLon = Geographin Longitude
                     gLon = gLonGuess
                     if (gLon <   0.0) gLon = gLon + 360.0
                     if (gLon > 360.0) gLon = gLon - 360.0
-!                    write(*,*) aLat, aLatTest, aLon, aLonTest, gLat, gLon, dLat, dLon, diff
+c                    write(*,*) aLat, aLatTest, aLon, aLonTest, gLat, gLon, dLat, dLon, diff
                  endif
 
               enddo
@@ -439,8 +440,10 @@ C
    20  CONTINUE                                                                 
 C                                                                               
 C **    MAXIMUM RADIUS JUST PASSED.  FIND APEX COORDS                           
-C **                                                                            
+C **        
+c	write(*,*)alt,zmag                                                                    
        CALL FNDAPX(ALT,ZMAG,A,ALAT,ALON)
+c	write(*,*)alt,zmag,a,alat,alon
        RETURN                                                                   
        END
 
@@ -612,6 +615,8 @@ C***ROUTINES CALLED  FINT
 C***COMMON BLOCKS    APXIN,DIPOLE                                         
 C***END PROLOGUE  FNDAPX                                                        
 C                                                                               
+       use ModInputs, only: AltMinIono
+
       PARAMETER (RTOD=5.72957795130823E1,DTOR=1.745329251994330E-2)
       PARAMETER (RE=6371.2,REQ=6378.160)
        COMMON /APXIN/ YAPX(3,3)                                                 
@@ -640,7 +645,10 @@ C     ****
       CALL FINT(Z(1),Z(2),Z(3),HT(1),HT(2),HT(3),0.,XINTER)
 C Ensure that XINTER is not less than original starting altitude (ALT)
       XINTER = AMAX1(ALT,XINTER)
-      A = (REQ+XINTER)/(REQ)
+c simple apex      A = (REQ+XINTER)/(REQ)
+C      write(*,*) re, re+90, xinter, re+xinter, (RE+90.)/(RE+xinter)
+C  modified apex
+      A = (RE+xinter)/(RE+AltMinIono)
 C     ****
 C     ****     FIND APEX COORDINATES , GIVING ALAT SIGN OF DIP AT
 C     ****       STARTING POINT.  ALON IS THE VALUE OF THE GEOMAGNETIC

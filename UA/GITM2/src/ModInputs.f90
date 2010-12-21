@@ -26,13 +26,14 @@ module ModInputs
   character (len=iCharLen_) :: cAMIEFileSouth
   character (len=iCharLen_) :: cAMIEFileNorth
 
+  logical :: UseIMF = .true.
+  logical :: UseHpi = .true.
+
   logical :: UseNewellAurora   = .false.
   logical :: UseNewellAveraged = .true.
   logical :: UseNewellMono     = .false.
   logical :: UseNewellWave     = .false.
-  logical :: DoNewellRemoveSpikes = .true.
-  logical :: DoNewellAverage      = .true.
-
+  
   character (len=iCharLen_) :: TypeLimiter = "minmod"
 
   integer, dimension(7) :: iStartTime
@@ -77,6 +78,8 @@ module ModInputs
   real :: StretchingFactor = 1.0
 
   logical :: UseTopography = .false.
+
+  real :: AltMinIono=100.0 ! in km
 
   real :: TempMax = 1000.0
   real :: TempMin =  200.0
@@ -141,8 +144,6 @@ module ModInputs
   logical :: UseIonDrag          = .true.
   logical :: UseViscosity        = .true.
   logical :: UseCoriolis         = .true.
-  logical :: UseGravityWave         = .false.
-
   logical :: UseHorAdvection     = .true.
   logical :: UseVerAdvection     = .true.
   logical :: UseNeutralFriction  = .true.
@@ -151,11 +152,11 @@ module ModInputs
   logical :: UseIonGravity          = .true.
   logical :: UseNeutralDrag         = .true.
   logical :: UseExB                 = .true.
-  logical :: UseImplicitChemistry = .false.
-  logical :: IsAsymmetric          = .false.
-  Real :: BetaPointImpl         = 1.0
 
   logical :: UseDynamo              = .false.
+  real    :: DynamoHighLatBoundary  = 90.0
+  integer :: nItersMax              = 500
+  real    :: MaxResidual            = 1.0
 
   logical :: UseSolarHeating   = .true.
   logical :: UseJouleHeating   = .true.
