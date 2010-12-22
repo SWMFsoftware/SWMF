@@ -33,6 +33,8 @@ module ModInputs
   logical :: UseNewellAveraged = .true.
   logical :: UseNewellMono     = .false.
   logical :: UseNewellWave     = .false.
+  logical :: DoNewellRemoveSpikes = .true.
+  logical :: DoNewellAverage      = .true.
   
   character (len=iCharLen_) :: TypeLimiter = "minmod"
 
@@ -144,6 +146,8 @@ module ModInputs
   logical :: UseIonDrag          = .true.
   logical :: UseViscosity        = .true.
   logical :: UseCoriolis         = .true.
+  logical :: UseGravityWave         = .false.
+
   logical :: UseHorAdvection     = .true.
   logical :: UseVerAdvection     = .true.
   logical :: UseNeutralFriction  = .true.
@@ -152,6 +156,9 @@ module ModInputs
   logical :: UseIonGravity          = .true.
   logical :: UseNeutralDrag         = .true.
   logical :: UseExB                 = .true.
+  logical :: UseImplicitChemistry = .false.
+  logical :: IsAsymmetric          = .false.
+  Real :: BetaPointImpl         = 1.0
 
   logical :: UseDynamo              = .false.
   real    :: DynamoHighLatBoundary  = 90.0
@@ -305,3 +312,4 @@ contains
   end subroutine set_defaults
 
 end module ModInputs
+
