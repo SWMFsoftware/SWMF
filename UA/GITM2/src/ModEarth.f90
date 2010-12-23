@@ -162,7 +162,7 @@ module ModPlanet
 !       0.75,  0.75,  0.00, 0.75, &             ! N2
 !       0.75,  0.75,  0.75, 0.00 /), (/4,4/) )  ! N
 
-  real, parameter:: AltMinIono=100.0 ! in km
+!!!!!!!  real,  AltMinIono=100.0 ! in km
 
 contains
 
