@@ -1,4 +1,5 @@
-subroutine get_potential(iBlock)
+
+subroutine init_get_potential
 
   use ModGITM
   use ModTime
@@ -9,126 +10,111 @@ subroutine get_potential(iBlock)
 
   implicit none
 
-  integer, intent(in) :: iBlock
-
-  integer :: iError, iLat, iLon, iAlt
-  logical :: IsFirstTime = .true.
-  logical :: IsFirstPotential(nBlocksMax) = .true.
-  logical :: IsFirstAurora(nBlocksMax) = .true.
-
-  logical :: UseIMF = .false.
-  logical :: UseHPI = .false.
-
-  real, dimension(-1:nLons+2,-1:nLats+2) :: TempPotential, Grid, Dynamo
-
   character (len=100), dimension(100) :: Lines
   character (len=100) :: TimeLine
-
-  real :: temp, by, bz, vx
-
-  call start_timing("Get AMIE Potential")
-  call report("get_potential",2)
-
+  real    :: bz
+  logical :: IsFirstTime = .true.
+  integer :: iError
   iError = 0
 
-  if (index(cPlanet,"Earth") == 0) then 
+  if (.not.IsFirstTime) return
 
-     potential = 0.0
-     ElectronAverageEnergy = 0.1
-     ElectronEnergyFlux = 0.0001
-     return
+  IsFirstTime = .false.
 
+  if (UseNewellAurora) then
+     call init_newell
+     UseIMF = .true.
   endif
 
-  if (IsFirstTime) then
+  if (index(cAMIEFileNorth,"none") > 0) then
 
-     HemisphericPowerNorth=0.0
-     HemisphericPowerSouth=0.0
+     Lines(1) = "#BACKGROUND"
+     Lines(2) = "UA/DataIn/"
 
-     if (UseNewellAurora) then
-        call init_newell
+     UseHPI = .true.
+     call get_IMF_Bz(CurrentTime, bz, iError)
+     call IO_SetIMFBz(bz)
+     if (iError /= 0) then
+        write(*,*) "Can not find IMF Bz."
+        write(*,*) "Setting potential to Millstone HPI."
+        Lines(3) = "millstone_hpi"    ! Change to "zero" if you want
+     else
+        write(*,*) "Setting potential to Weimer [1996]."
+        Lines(3) = "weimer96"    ! Change to "zero" if you want
         UseIMF = .true.
      endif
+     Lines(4) = "ihp"
+     Lines(5) = "idontknow"
+     Lines(6) = ""
 
-     if (index(cAMIEFileNorth,"none") > 0) then
+  else
 
-        Lines(1) = "#BACKGROUND"
-        Lines(2) = "UA/DataIn/"
+     if (index(cAMIEFileNorth,"mhd") > 0) then
 
-        UseHPI = .true.
-        call get_IMF_Bz(CurrentTime, bz, iError)
-        call IO_SetIMFBz(bz)
-        if (iError /= 0) then
-           write(*,*) "Can not find IMF Bz."
-           write(*,*) "Setting potential to Millstone HPI."
-           Lines(3) = "millstone_hpi"    ! Change to "zero" if you want
-        else
-           write(*,*) "Setting potential to Weimer [1996]."
-           Lines(3) = "weimer96"    ! Change to "zero" if you want
-           UseIMF = .true.
-        endif
-        Lines(4) = "ihp"
-        Lines(5) = "idontknow"
+        Lines(1) = "#MHDFILE"
+        Lines(2) = cAMIEFileSouth
+        write(TimeLine,'(i4)') iTimeArray(1)
+        Lines(3) = TimeLine
+        write(TimeLine,'(i2)') iTimeArray(2)
+        Lines(4) = TimeLine
+        write(TimeLine,'(i2)') iTimeArray(3)
+        Lines(5) = TimeLine
         Lines(6) = ""
 
+        UseIMF = .false.
+           
      else
 
-        if (index(cAMIEFileNorth,"mhd") > 0) then
+        Lines(1) = "#AMIEFILES"
+        Lines(2) = cAMIEFileNorth
+        Lines(3) = cAMIEFileSouth
+        Lines(4) = ""
+        Lines(5) = ""
+        Lines(6) = ""
 
-           Lines(1) = "#MHDFILE"
-           Lines(2) = cAMIEFileSouth
-           write(TimeLine,'(i4)') iTimeArray(1)
-           Lines(3) = TimeLine
-           write(TimeLine,'(i2)') iTimeArray(2)
-           Lines(4) = TimeLine
-           write(TimeLine,'(i2)') iTimeArray(3)
-           Lines(5) = TimeLine
-           Lines(6) = ""
-
-           UseIMF = .false.
-
-        else
-
-           Lines(1) = "#AMIEFILES"
-           Lines(2) = cAMIEFileNorth
-           Lines(3) = cAMIEFileSouth
-           Lines(4) = ""
-           Lines(5) = ""
-           Lines(6) = ""
-
-           UseIMF = .false.
-
-        endif
+        UseIMF = .false.
 
      endif
-
-     Lines(7) = "#DEBUG"
-     Lines(8) = "0"
-     Lines(9) = "0"
-     Lines(10) = ""
-     Lines(11) = "#END"
-
-     call EIE_set_inputs(Lines)
-
-     call EIE_Initialize(iError)
-
-     if (iError /= 0) then
-        write(*,*) &
-             "Code Error in IE_Initialize called from get_potential.f90"
-        write(*,*) "Error : ",iError
-        call stop_gitm("Stopping in get_potential")
-     endif
-
-     call IO_SetnMLTs(nLons+4)
-     call IO_SetnLats(nLats+4)
-      
-     IsFirstTime = .false.
 
   endif
 
-  call IO_SetTime(CurrentTime)
+  Lines(7) = "#DEBUG"
+  Lines(8) = "0"
+  Lines(9) = "0"
+  Lines(10) = ""
+  Lines(11) = "#END"
 
-  call IO_SetNorth
+  call EIE_set_inputs(Lines)
+
+  call EIE_Initialize(iError)
+
+  if (iError /= 0) then
+     write(*,*) &
+          "Code Error in IE_Initialize called from get_potential.f90"
+     write(*,*) "Error : ",iError
+     call stop_gitm("Stopping in get_potential")
+  endif
+
+end subroutine init_get_potential
+
+!--------------------------------------------------------------------
+! set_indices
+!--------------------------------------------------------------------
+
+subroutine set_indices
+
+  use ModGITM
+  use ModTime
+  use ModIndicesInterfaces
+  use ModInputs
+  use ModUserGITM
+  use ModNewell
+
+  implicit none
+
+  real :: temp, by, bz, vx
+  integer :: iError
+  iError = 0
 
   if (UseIMF) then
 
@@ -189,12 +175,61 @@ subroutine get_potential(iBlock)
 
   endif
 
+!  if (index(cAMIEFileNorth,"none") <= 0 .and. &
+!     index(cAMIEFileNorth,"SPS") <= 0 .and. iBlock == 1) then 
   if (index(cAMIEFileNorth,"none") <= 0 .and. &
-     index(cAMIEFileNorth,"SPS") <= 0 .and. iBlock == 1) then 
+     index(cAMIEFileNorth,"SPS") <= 0) then 
      if (iDebugLevel > 1) &
           write(*,*) "==> Reading AMIE values for time :",CurrentTime
      call get_AMIE_values(CurrentTime)
   endif
+
+end subroutine set_indices
+
+!--------------------------------------------------------------------
+! get_potential
+!--------------------------------------------------------------------
+
+subroutine get_potential(iBlock)
+
+  use ModGITM
+  use ModTime
+  use ModIndicesInterfaces
+  use ModInputs
+  use ModUserGITM
+  use ModNewell
+
+  implicit none
+
+  integer, intent(in) :: iBlock
+
+  integer :: iError, iLat, iLon, iAlt
+  logical :: IsFirstTime = .true.
+  logical :: IsFirstPotential(nBlocksMax) = .true.
+  logical :: IsFirstAurora(nBlocksMax) = .true.
+
+  real, dimension(-1:nLons+2,-1:nLats+2) :: TempPotential, Grid, Dynamo
+
+  call start_timing("get_potential")
+  call report("get_potential",2)
+
+  iError = 0
+
+  if (index(cPlanet,"Earth") == 0) then 
+
+     potential = 0.0
+     ElectronAverageEnergy = 0.1
+     ElectronEnergyFlux = 0.0001
+     return
+
+  endif
+
+  call init_get_potential
+  call IO_SetnMLTs(nLons+4)
+  call IO_SetnLats(nLats+4)
+  call IO_SetTime(CurrentTime)
+  call IO_SetNorth
+  call set_indices
 
   if (iDebugLevel > 1) write(*,*) "==> Setting up IE Grid"
 
@@ -236,7 +271,13 @@ subroutine get_potential(iBlock)
            call get_dynamo_potential( &
                 MLongitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), &
                 MLatitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), dynamo)
-           TempPotential = TempPotential + dynamo
+           do iLon = -1,nLons+2
+              do iLat = -1,nLats+2 
+                 if (abs(dynamo(iLon,iLat)) > 0) &
+                      TempPotential(iLon,iLat) = dynamo(iLon,iLat)
+              enddo
+           enddo
+!           TempPotential = TempPotential + dynamo
         endif
 
         Potential(:,:,iAlt,iBlock) = TempPotential
@@ -325,7 +366,7 @@ subroutine get_potential(iBlock)
        maxval(Potential(:,:,:,iBlock))/1000.0, &
        (maxval(Potential(:,:,:,iBlock))-minval(Potential(:,:,:,iBlock)))/1000.0
 
-  call end_timing("Get AMIE Potential")
+  call end_timing("get_potential")
 
 end subroutine get_potential
 
@@ -333,6 +374,7 @@ end subroutine get_potential
 subroutine get_dynamo_potential(lons, lats, pot)
 
   use ModGITM
+  use ModInputs, only: iDebugLevel, DynamoHighLatBoundary
   use ModElectrodynamics
 
   implicit none
@@ -357,69 +399,73 @@ subroutine get_dynamo_potential(lons, lats, pot)
 
         IsFound = .false.
 
-        iM = 1
-        do while (iM < nMagLons+1)
-           iL = 1
-           do while (iL < nMagLats)
+        if (abs(LatIn) <= DynamoHighLatBoundary) then
 
-              !\
-              ! Check to see if the point is within the current cell
-              !/
+           iM = 1
+           do while (iM < nMagLons+1)
+              iL = 2
+              do while (iL < nMagLats)
 
-              if (LatIn <  MagLatMC(iM,iL+1) .and. &
-                   LatIn >= MagLatMC(iM,iL) .and. &
-                   LonIn <  MagLonMC(iM+1,iL) .and. &
-                   LonIn >= MagLonMC(iM,iL)) then
+                 !\
+                 ! Check to see if the point is within the current cell
+                 !/
+                 
+                 if (LatIn <  MagLatMC(iM,iL+1) .and. &
+                      LatIn >= MagLatMC(iM,iL) .and. &
+                      LonIn <  MagLonMC(iM+1,iL) .and. &
+                      LonIn >= MagLonMC(iM,iL)) then
 
-                 dM=  (LonIn            -MagLonMC(iM,iL)) / &
-                      (MagLonMC(iM+1,iL)-MagLonMC(iM,iL))
+                    dM=  (LonIn            -MagLonMC(iM,iL)) / &
+                         (MagLonMC(iM+1,iL)-MagLonMC(iM,iL))
 
-                 dL=(LatIn        -MagLatMC(iM,iL))/&
-                    (MagLatMC(iM,iL+1)-MagLatMC(iM,iL))
+                    dL=(LatIn        -MagLatMC(iM,iL))/&
+                         (MagLatMC(iM,iL+1)-MagLatMC(iM,iL))
 
-                 pot(iLon, iLat) = &
-                      (1.0 - dM) * (1.0 - dL) * DynamoPotentialMC(iM  , iL  ) + &
-                      (1.0 - dM) * (      dL) * DynamoPotentialMC(iM  , iL+1) + &
-                      (      dM) * (      dL) * DynamoPotentialMC(iM+1, iL+1) + &
-                      (      dM) * (1.0 - dL) * DynamoPotentialMC(iM+1, iL  )
+                    pot(iLon, iLat) = &
+                         (1.0 - dM) * (1.0 - dL) * DynamoPotentialMC(iM  , iL  ) + &
+                         (1.0 - dM) * (      dL) * DynamoPotentialMC(iM  , iL+1) + &
+                         (      dM) * (      dL) * DynamoPotentialMC(iM+1, iL+1) + &
+                         (      dM) * (1.0 - dL) * DynamoPotentialMC(iM+1, iL  )
+                    
 
+                    iL = nMagLats
+                    iM = nMagLons
 
-                 iL = nMagLats
-                 iM = nMagLons
+                    IsFound = .true.
 
-                 IsFound = .true.
+                 endif
 
-              endif
+                 iL = iL + 1
 
-              iL = iL + 1
+              enddo
+
+              iM = iM + 1
 
            enddo
 
-           iM = iM + 1
+           ! Check for near pole
+           if (.not.IsFound) then 
 
-        enddo
+              if (LatIn >  88.0) then
+                 IsFound = .true.
+                 pot(iLon, iLat) = sum(DynamoPotentialMC(:, nMagLats)) / (nMagLons+1)
+              endif
 
-        ! Check for near pole
-        if (.not.IsFound) then 
+              if (LatIn < -88.0) then
+                 IsFound = .true.
+                 pot(iLon, iLat) = sum(DynamoPotentialMC(:, 0)) / (nMagLons+1)
+              endif
 
-           if (LatIn >  88.0) then
-              IsFound = .true.
-              pot(iLon, iLat) = sum(DynamoPotentialMC(:, nMagLats)) / (nMagLons+1)
-           endif
-
-           if (LatIn < -88.0) then
-              IsFound = .true.
-              pot(iLon, iLat) = sum(DynamoPotentialMC(:, 0)) / (nMagLons+1)
            endif
 
         endif
 
         if (.not.IsFound) then 
-           write(*,*) "Could not find point : ", &
+           if (iDebugLevel > 4) &
+                write(*,*) "=====> Could not find point : ", &
                 LatIn, lats(iLon, iLat), LonIn, lons(iLon, iLat)
-
+           pot(iLon,iLat) = 0.0
         endif
-
 
      enddo
 
