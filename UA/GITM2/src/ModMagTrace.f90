@@ -110,7 +110,7 @@ contains
           end if
 
           ! this "integral" is computed now as the length is the integral of 1.0 along fieldline
-          LengthFieldLine(iLon,iLat,iBlock) = LengthFieldLine(iLon,iLat,iBlock) + MMTlen
+          LengthFieldLine(iLon,iLat) = LengthFieldLine(iLon,iLat) + MMTlen
 
           CALL get_magfield(GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0,XMAG,YMAG,ZMAG)
 
