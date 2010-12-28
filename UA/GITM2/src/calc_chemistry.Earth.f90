@@ -1700,10 +1700,10 @@ subroutine calc_chemistry(iBlock)
                       (NeutralSources(iNeutral) - NeutralLosses(iNeutral)) * &
                       DtSub
                  
-                 NeutralSourcesTotal(iNeutral,iAlt) = NeutralSourcesTotal(iNeutral,iAlt) + &
+                 NeutralSourcesTotal(ilon,ilat,ialt,iNeutral,iblock) = NeutralSourcesTotal(ilon,ilat,ialt,iNeutral,iblock) + &
                       NeutralSources(iNeutral) * DtSub
 
-                 NeutralLossesTotal(iNeutral,iAlt) = NeutralLossesTotal(iNeutral,iAlt) + &
+                 NeutralLossesTotal(ilon,ilat,ialt,iNeutral,iblock) = NeutralLossesTotal(ilon,ilat,ialt,iNeutral,iBlock) + &
                       NeutralLosses(iNeutral) * DtSub
                  
 
