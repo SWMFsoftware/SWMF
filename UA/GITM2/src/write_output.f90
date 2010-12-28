@@ -8,6 +8,7 @@ subroutine write_output
   implicit none
 
   real, external :: get_timing
+  real :: ProjectedTime, CompletedTime, RealTime
   integer :: i, nMLTsTmp,nLatsTmp, iBlock
   logical :: IsDone
 
@@ -17,9 +18,13 @@ subroutine write_output
         if(iProc==0)write(*,"(a,i6,a,3i2.2)") "UA:GITM2 iStep ", iStep, &
              ", Time : ",iTimeArray(4:6)
      else
-        write(*,"(a,i6,a,3i2.2,a,f10.2,a)") "iStep ", iStep, &
+        RealTime = get_timing("GITM")
+        CompletedTime = (EndTime-CurrentTime)/(CurrentTime-StartTime)
+        ProjectedTime = RealTime * CompletedTime
+        write(*,"(a,i6,a,3i2.2,a,f10.2,a,f10.2)") "iStep ", iStep, &
              ", Time : ",iTimeArray(4:6), &
-             ", RealTime : ",get_timing("GITM")/60.0," min"
+             ", RealTime : ",RealTime/60.0," min, Projected : ",&
+             ProjectedTime/60.0
      endif
   endif
 
