@@ -145,7 +145,6 @@ subroutine advance_vertical_1stage( &
   real :: kSP, NuSP, AmpSP
 
 
-
   !--------------------------------------------------------------------------
 
   NS = exp(LogNS)
@@ -153,8 +152,16 @@ subroutine advance_vertical_1stage( &
   LogNum = alog(sum(NS,dim=2))
   nFilter = 10
   
+  NewVel_GD = 0.0
+  do iAlt = 1, nAlts
+     do iSpecies=1,nSpecies
+        NewVel_GD(iAlt,iUp_) = NewVel_GD(iAlt,iUp_) + &
+             NewVertVel(iAlt, iSpecies) * &
+             (Mass(iSpecies) * NS(iAlt,iSpecies) / Rho(iAlt))
+     enddo
+  enddo
 
-     NT(-1:nAlts+2) = exp(LogNum(-1:nAlts+2))
+  NT(-1:nAlts+2) = exp(LogNum(-1:nAlts+2))
   do iAlt = -1, nAlts + 2
     Press(iAlt) = NT(iAlt)*Boltzmanns_Constant*Temp(iAlt)
     LogPress(iAlt) = alog(Press(iAlt))
@@ -227,15 +234,10 @@ subroutine advance_vertical_1stage( &
 
      NewVel_GD(iAlt,iUp_) = 0.0
 
-
      if (iAlt >= (nAlts - nAltsSponge)) then
- 
-      NuSP = AmpSP*(1.0 - cos( pi*(kSP - (nAlts - iAlt))/kSP) )
-
+        NuSP = AmpSP*(1.0 - cos( pi*(kSP - (nAlts - iAlt))/kSP) )
      else
-
-       NuSP = 0.0
-
+        NuSP = 0.0
      endif
 
      do iSpecies=1,nSpecies
@@ -266,8 +268,10 @@ subroutine advance_vertical_1stage( &
 
      do iSpecies=1,nSpecies
 
-        NewVertVel(iAlt, iSpecies) = max(-MaximumVerticalVelocity, NewVertVel(iAlt, iSpecies))
-        NewVertVel(iAlt, iSpecies) = min( MaximumVerticalVelocity, NewVertVel(iAlt, iSpecies))
+        NewVertVel(iAlt, iSpecies) = max(-MaximumVerticalVelocity, &
+             NewVertVel(iAlt, iSpecies))
+        NewVertVel(iAlt, iSpecies) = min( MaximumVerticalVelocity, &
+             NewVertVel(iAlt, iSpecies))
 
         NewVel_GD(iAlt,iUp_) = NewVel_GD(iAlt,iUp_) + &
              NewVertVel(iAlt, iSpecies) * &
