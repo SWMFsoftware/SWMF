@@ -136,6 +136,9 @@ subroutine init_msis
      sw(9) = 1
   endif
 
+  sw(9) = 0
+  sw(2) = 0
+
   call tselec(sw)
 
   if (DoRestart) return
