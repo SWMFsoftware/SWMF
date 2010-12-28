@@ -12,18 +12,19 @@ contains
   !============================================================================
   real function Limiter_mc(dUp, dDown)
 
+    use ModInputs, only:BetaLimiter
+
     real :: dUp, dDown
-    real :: beta = 1.6
 
     if (dUp > 0.0) then
        if (dDown > 0.0) then
-          Limiter_mc = min(beta*dUp,beta*dDown,(dUp+dDown)*0.5)
+          Limiter_mc = min(BetaLimiter*dUp,BetaLimiter*dDown,(dUp+dDown)*0.5)
        else
           Limiter_mc = 0.0
        endif
     else
        if (dDown < 0.0) then
-          Limiter_mc = max(beta*dUp,beta*dDown,(dUp+dDown)*0.5)
+          Limiter_mc = max(BetaLimiter*dUp,BetaLimiter*dDown,(dUp+dDown)*0.5)
        else
           Limiter_mc = 0.0
        endif
