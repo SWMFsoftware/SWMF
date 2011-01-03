@@ -6,6 +6,7 @@ subroutine IE_set_param(CompInfo, TypeAction)
   use ModIonosphere
   use IE_ModIo
   use IE_ModMain
+  use ModIonoMagPerturb
 
   use ModIoUnit
   use CON_comp_info
@@ -17,6 +18,7 @@ subroutine IE_set_param(CompInfo, TypeAction)
   ! Arguments
   type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
   character (len=*), intent(in)     :: TypeAction ! What to do
+  logical :: DoReadMagnetometerFile = .false.
 
   integer :: iError
 
@@ -50,6 +52,12 @@ subroutine IE_set_param(CompInfo, TypeAction)
   case default
      call CON_stop(NameSub//' IE_ERROR: invalid TypeAction='//TypeAction)
   end select
+  
+  ! Read in magnetometer stations 
+  if(DoReadMagnetometerFile)then
+     call read_mag_input_file
+     DoReadMagnetometerFile = .false.
+  end if
 
 contains
 
@@ -245,6 +253,17 @@ contains
                   ' can only be used with conductance model 4'
              if(UseStrict)call CON_stop('Correct PARAM.in!')
           end if
+
+       case("#MAGNETOMETER")
+          DoReadMagnetometerFile = .true.
+          Save_magnetometer_data = .true.
+
+          call read_var('MagInputFile', MagInputFile)
+
+          if (iProc==0) call check_dir(NameIonoDir)
+
+          call read_var('dn_magoutput', dn_magoutput)
+          call read_var('dt_magoutput', dt_magoutput)
 
        case default
           if(iProc==0) then
@@ -1075,7 +1094,10 @@ subroutine IE_init_session(iSession, tSimulation)
   use CON_physics,   ONLY: get_time, get_planet, get_axes
   use ModIonosphere, ONLY: IONO_Bdp
   use IE_ModMain,    ONLY: time_accurate, time_simulation, ThetaTilt
-  use IE_ModIo,      ONLY: dt_output, t_output_last
+  use IE_ModIo,      ONLY: dt_output, t_output_last, dt_magoutput, t_magoutput_last
+  use ModIonoMagPerturb
+  use ModProcIE
+
   implicit none
 
   !INPUT PARAMETERS:
@@ -1096,6 +1118,7 @@ subroutine IE_init_session(iSession, tSimulation)
   if(IsUninitialized)then
      call ionosphere_fine_grid
      call ionosphere_init
+
      IsUninitialized = .false.
   end if
 
@@ -1113,7 +1136,10 @@ subroutine IE_init_session(iSession, tSimulation)
   if(time_accurate)then
      where(dt_output>0.) &
           t_output_last=int(time_simulation/dt_output)
+     if(save_magnetometer_data) &
+          t_magoutput_last = int(time_simulation/dt_magoutput)
   end if
+
 
 end subroutine IE_init_session
 
@@ -1126,6 +1152,7 @@ subroutine IE_finalize(tSimulation)
   use CON_physics, ONLY: get_time
   use ModTimeConvert, ONLY: time_real_to_int
   use ModKind, ONLY: Real8_
+  use ModIonoMagPerturb
   implicit none
 
   !INPUT PARAMETERS:
@@ -1145,6 +1172,10 @@ subroutine IE_finalize(tSimulation)
         if(iProc==0)      call ionosphere_write_output(iFile, 1)
         if(iProc==nProc-1)call ionosphere_write_output(iFile, 2)
      end do
+  end if
+
+  if(save_magnetometer_data .and. iProc==0) then 
+     call close_iono_magperturb_file
   end if
 
 end subroutine IE_finalize
