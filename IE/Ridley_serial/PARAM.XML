@@ -1,4 +1,4 @@
-<!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
+!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
 
 <commandList name="Ridley Ionosphere Model: IE Component">
 
@@ -175,6 +175,40 @@ The UseFullCurrent and UseFakeRegion2 logicals were used in the past
 to test various algorithmic choices. They should have a false value now.
 The default values are shown by the example above.
 
+</command>
+
+<command name ="MAGNETOMETER">
+	<parameter name="MagInputFile" type="string" length="100"/>
+	<parameter name="DnOutput" type="integer" min="-1"
+					default="-1"/>
+	<parameter name="DtOutput" type="real"    min="-1" 
+					default="-1.0"/>
+#MAGNETOMETER
+magin.dat		MagInputFile
+-1			DnOutput
+60.0			DtOutput
+
+The #MAGNETOMETER command is used for the calculation of the ground perturbations
+caused by two current systems: Hall and Pedersen currents. 
+
+The MagInputFile parameter describes a file that contains certain locations on the Earth 
+that the user is interested in calculating the ground magnetic perturbations. The
+file has a format like below: 
+\begin{verbatim}
+#COORD
+MAG			The coordinate system for the latitude/longitude below
+
+#START
+abc	20.0	120.0	The name of the station, latitude,longitude
+def 	-30.0	230.0
+ghi	85.0	-80.0
+
+\end{verbatim}
+
+The DnOutput paramter is the frequency the calculated perturbation is written out 
+in local steps.
+The DtOutput paramter is the frequency the calculated perturbation is written out 
+in time accurate mode.
 </command>
 
 <command name="IM">
