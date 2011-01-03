@@ -18,14 +18,14 @@ module IE_ModIo
 
   character (LEN=3)   :: plot_form(maxfile)
   character (LEN=100) :: plot_vars(maxfile)
-
+  character (LEN=80)  :: filename
   character (len=100) :: NameIonoDir='ionosphere/'
   character (len=100) :: NameFile
 
-  integer             :: dn_output(MaxFile)=-1
-  real                :: dt_output(MaxFile)=-1.0
-  integer             :: t_output_last(MaxFile)=-1
-
+  integer             :: dn_output(MaxFile)=-1, dn_magoutput = -1
+  real                :: dt_output(MaxFile)=-1.0, dt_magoutput = -1.0
+  integer             :: t_output_last(MaxFile)=-1, t_magoutput_last = -1
+  
 contains
 
   !===========================================================================

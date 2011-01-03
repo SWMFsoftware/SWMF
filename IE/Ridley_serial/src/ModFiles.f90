@@ -11,6 +11,7 @@ Module ModFiles
   character (len=100) :: weimer96_file         = 'wei96.cofcnts'
   character (len=100) :: weimer01_file         = 'wei01.cofcnts'
   character (len=100) :: AMIEFileNorth, AMIEFileSouth
+  character (len=100) :: MagInputFile
 
   integer, parameter  :: LunEField_      = 60
   integer, parameter  :: LunConductance_ = 61
