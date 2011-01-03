@@ -5135,7 +5135,7 @@ The rBody and rCurrents are given in normalized units (usually
 planetary or solar radii).
 </command>
 
-<command name = "MAGNETOMETER">
+<command name ="MAGNETOMETER">
 	<parameter name="MagInputFile" type="string" length="100"/>
 	<parameter name="DnOutput" type="integer" min="-1"
 					default="-1"/>
@@ -5149,9 +5149,7 @@ magin.dat		MagInputFile
 The #MAGNETOMETER command is used for the calculation of the ground perturbations
 caused by two current systems: 
 field aligned currents in the 'gap' region and magnetopsheric currents.
-No ionospheric current is considered here. (To include the ionospheric current,
-save idl output files in IE component.) The results are separately written out
-in the output file, according to the two different current systems.
+No ionospheric current is considered here. To include the ionospheric current effect, use the same command in IE/Ridley_serial session too, which will output the perturbation results there.
 
 The MagInputFile parameter describes a file that contains certain locations on the Earth 
 that the user is interested in calculating the ground magnetic perturbations. The
