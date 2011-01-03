@@ -475,11 +475,12 @@ subroutine IE_output
   use IE_ModIo
   use IE_ModMain
   use ModProcIE
-  
+  use ModIonoMagPerturb
+
   implicit none
 
   integer :: iFile
-  logical :: DoSaveFile
+  logical :: DoSaveFile, DoSaveMagFile
   !--------------------------------------------------------------------------
   do iFile = 1, nFile
      DoSaveFile = .false.
@@ -501,6 +502,35 @@ subroutine IE_output
         if(iProc==nProc-1)call ionosphere_write_output(iFile, 2)
      end if
   end do
+
+  ! Save magnetic perturbation data
+  if (save_magnetometer_data) then
+     DoSaveMagFile = .false.
+     if (time_accurate .and. dt_magoutput>0) then
+        if (int(time_simulation/dt_magoutput)>t_magoutput_last)then
+           t_magoutput_last = int(time_simulation/dt_magoutput)
+           DoSaveMagFile = .true.
+        end if
+     else if (dn_magoutput>=0)then
+        if (dn_magoutput==0)then
+           DoSaveMagFile = .true.
+        else if (nSolve>0 .and. mod(nSolve,dn_magoutput)==0)then
+           DoSaveMagFile = .true.
+        end if
+     end if
+     
+     if (DoSaveMagFile)then
+
+        if (.not. Initialized_Mag_File) then
+           if(save_magnetometer_data .and. iProc==0) &
+                call open_iono_magperturb_file
+           Initialized_Mag_File = .true.
+        end if
+
+        call write_iono_magperturb_file
+
+     end if
+  end if
 
 end subroutine IE_output
 
