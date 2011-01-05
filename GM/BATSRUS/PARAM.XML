@@ -2537,6 +2537,41 @@ For more than one satellite (two satellites in the above given
 example), the start and end times should be set for all of them.
 </command>
 
+<command name ="MAGNETOMETER">
+	<parameter name="NameMagInputFile" type="string" length="100"/>
+	<parameter name="DnOutput" type="integer" min="-1" default="-1"/>
+	<parameter name="DtOutput" type="real"    min="-1" default="-1"/>
+#MAGNETOMETER
+magin.dat		NameMagInputFile
+-1			DnOutput
+60.0			DtOutput
+
+The #MAGNETOMETER command is used for the calculation of the ground perturbations
+caused by two current systems: 
+field aligned currents in the 'gap' region and magnetopsheric currents.
+No ionospheric currents are considered here. To calculate the ionospheric 
+current effect, use the same command in the IE section, 
+which will output the perturbation results in IE.
+
+The NameMagInputFile parameter gives the file name that contains the
+locations on the Earth where the user is interested in calculating 
+the ground magnetic perturbations. The file has the following format:
+\begin{verbatim}
+#COORD
+MAG			The coordinate system for the latitude/longitude below
+
+#START
+abc	20.0	120.0	The name of the station, latitude, longitude
+def 	-30.0	230.0
+ghi	85.0	-80.0
+\end{verbatim}
+
+The DnOutput and DtOutput parameters determine the frequency of writing out the
+calculated perturbations in number of time steps and time interval, respectively.
+
+No magnetometer data is written out by default.
+</command>
+
 <command name="SAVEPLOT">
 	<parameter name="nPlotFile" type="integer" min="0" max="15"
 		default="1" />
@@ -5133,42 +5168,6 @@ For GM rBody=3, rCurrents=4, BodyNDim = 5/cc and BodyTDim = 25000 K.
 For LC/SC/IH/OH: rBody=1, BodyNDim = 1.5e8/cc, BodyTDim = 2.8e6 K.
 The rBody and rCurrents are given in normalized units (usually
 planetary or solar radii).
-</command>
-
-<command name ="MAGNETOMETER">
-	<parameter name="MagInputFile" type="string" length="100"/>
-	<parameter name="DnOutput" type="integer" min="-1"
-					default="-1"/>
-	<parameter name="DtOutput" type="real"    min="-1" 
-					default="-1.0"/>
-#MAGNETOMETER
-magin.dat		MagInputFile
--1			DnOutput
-60.0			DtOutput
-
-The #MAGNETOMETER command is used for the calculation of the ground perturbations
-caused by two current systems: 
-field aligned currents in the 'gap' region and magnetopsheric currents.
-No ionospheric current is considered here. To include the ionospheric current effect, use the same command in IE/Ridley_serial session too, which will output the perturbation results there.
-
-The MagInputFile parameter describes a file that contains certain locations on the Earth 
-that the user is interested in calculating the ground magnetic perturbations. The
-file has a format like below: 
-\begin{verbatim}
-#COORD
-MAG			The coordinate system for the latitude/longitude below
-
-#START
-abc	20.0	120.0	The name of the station, latitude,longitude
-def 	-30.0	230.0
-ghi	85.0	-80.0
-
-\end{verbatim}
-
-The DnOutput paramter is the frequency the calculated perturbation is written out 
-in local steps.
-The DtOutput paramter is the frequency the calculated perturbation is written out 
-in time accurate mode.
 </command>
 
 <command name="GRAVITY" if="$_IsFirstSession">
