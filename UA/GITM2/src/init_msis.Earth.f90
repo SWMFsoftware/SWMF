@@ -274,7 +274,7 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
 
   real :: msis_temp(2)
   real :: msis_dens(8)
-  real :: AP_I(7)
+  real :: AP_I(7), ffactor, no
   !----------------------------------------------------------------------------
   AP_I = AP
   CALL GTD6(iJulianDay,uTime,Alt,Lat,Lon,LST, &
@@ -284,7 +284,12 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   LogNS(iO2_) = alog(msis_dens(4))
   LogNS(iN2_) = alog(msis_dens(3))
   if (nSpecies >= iN_4S_) LogNS(min(nSpecies,iN_4S_)) = alog(msis_dens(8))
-  if (nSpecies >= iNO_)   LogNS(min(nSpecies,iNO_))   = alog(8.0e12)
+
+  if (nSpecies >= iNO_) then
+     ffactor = 6.36*log(f107)-13.8
+     no = ffactor * 1.0e13 + 8.0e13
+     LogNS(min(nSpecies,iNO_))   = alog(no)
+  endif
 
   Temp        = msis_temp(2)
   LogRho      = alog(msis_dens(6))
