@@ -152,15 +152,6 @@ subroutine advance_vertical_1stage( &
   LogNum = alog(sum(NS,dim=2))
   nFilter = 10
   
-  NewVel_GD = 0.0
-  do iAlt = 1, nAlts
-     do iSpecies=1,nSpecies
-        NewVel_GD(iAlt,iUp_) = NewVel_GD(iAlt,iUp_) + &
-             NewVertVel(iAlt, iSpecies) * &
-             (Mass(iSpecies) * NS(iAlt,iSpecies) / Rho(iAlt))
-     enddo
-  enddo
-
   NT(-1:nAlts+2) = exp(LogNum(-1:nAlts+2))
   do iAlt = -1, nAlts + 2
     Press(iAlt) = NT(iAlt)*Boltzmanns_Constant*Temp(iAlt)
