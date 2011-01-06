@@ -2566,10 +2566,19 @@ def 	-30.0	230.0
 ghi	85.0	-80.0
 \end{verbatim}
 
+The coordinate system accepts MAG (geomagnetic coordinate) or SMG 
+(solar magnetic coordinate) so far. The station name can have maximum 3 characters.
+The name, latitude, and longitude should be sperated with space in between.
+
 The DnOutput and DtOutput parameters determine the frequency of writing out the
 calculated perturbations in number of time steps and time interval, respectively.
 
-No magnetometer data is written out by default.
+The output of the ground-based magnetic perturbations is in GM/IO2/mag_n*.dat, 
+in which the location of each station in GSM cartisian coordinates, the 3 components
+(northward, eastward, and downward in SM coordiantes) of the magnetic perturbations by 
+magnetospheric currents, and the 3 components (northward, eastward, and downward 
+in SM coordiantes) of the magnetic perturbations by field-aligned currents are written 
+out. The unit of the pertrubation output is nT.
 </command>
 
 <command name="SAVEPLOT">
