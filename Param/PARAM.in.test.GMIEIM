@@ -132,6 +132,11 @@ noon_05.dat		NameTrajectoryFile
 T			UseSolarwindFile
 GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat
 
+#MAGNETOMETER
+Param/CCMC/station.dat
+-1
+5.0
+
 #END_COMP GM   ----------------------------------------
 
 #BEGIN_COMP IE ----------------------------------------
@@ -152,6 +157,11 @@ min idl                 StringPlot
 max tec                 StringPlot
 5			DnSavePlot
 -1.0			DtSavePlot
+
+#MAGNETOMETER
+Param/CCMC/station.dat
+-1
+5.0
 
 #END_COMP IE   ----------------------------------------
 

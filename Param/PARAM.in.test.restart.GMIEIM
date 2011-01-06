@@ -82,6 +82,11 @@ RAW			StringLogfile
 T			UseSolarwindFile
 GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat
 
+#MAGNETOMETER
+Param/CCMC/station.dat
+-1
+5.0
+
 #SAVEPLOT
 3			nPlotFile
 idl x=0 FUL		StringPlot
@@ -136,6 +141,11 @@ min idl                 StringPlot
 max tec                 StringPlot
 -1			DnSavePlot
 5.0			DtSavePlot
+
+#MAGNETOMETER
+Param/CCMC/station.dat
+-1
+5.0
 
 #END_COMP IE   ----------------------------------------
 
