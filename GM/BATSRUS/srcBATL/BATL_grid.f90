@@ -222,12 +222,20 @@ contains
 
   !===========================================================================
 
-  subroutine find_grid_block(XyzIn_D, iProcOut, iBlockOut, IjkOut_D)
+  subroutine find_grid_block(XyzIn_D, iProcOut, iBlockOut, IjkOut_D, DistOut_D)
+
+    ! Find the processor and block containing location XyzIn_D. 
+    ! If present, IjkOut_D returns the indexes of the closest cell center:
+    ! 1 <= IjkOut_D <= nIjk_D
+    ! If present, DistOut_D returns the signed distance to the closest 
+    ! cell center divided by the cell size.
+    ! DistOut_D can only be present if IjkOut_D is also present.
 
     real,    intent(in) :: XyzIn_D(MaxDim)        ! Cartesian coords of point
     integer, intent(out):: iBlockOut, iProcOut    ! Block and proc indexes
 
-    integer, intent(out), optional:: IjkOut_D(MaxDim) ! Cell indexes
+    integer, intent(out), optional:: IjkOut_D(MaxDim) ! Closest cell indexes
+    real,    intent(out), optional:: DistOut_D(MaxDim) ! Normalized distance
 
     real:: CoordTree_D(MaxDim), Coord_D(MaxDim)
     integer:: iNode
@@ -258,12 +266,22 @@ contains
 
     if(.not. present(IjkOut_D)) RETURN
 
-    ! Determine cell index on the processor that contains the block
+    ! Determine the closest cell index on the processor that contains the block
     if(iProc == iProcOut)then
        IjkOut_D = max(1, min(nIjk_D, 1 + floor( &
             (Coord_D - CoordMin_DB(:,iBlockOut))/CellSize_DB(:,iBlockOut))))
     else
        IjkOut_D = Unset_
+    end if
+
+    if(.not.present(DistOut_D)) RETURN
+
+    ! The signed distance to the cell center
+    if(iProc == iProcOut)then
+       DistOut_D = 0.5 - IjkOut_D &
+            + (Coord_D - CoordMin_DB(:,iBlockOut))/CellSize_DB(:,iBlockOut)
+    else
+       DistOut_D = Unset_
     end if
 
   end subroutine find_grid_block
@@ -287,7 +305,7 @@ contains
     real, parameter:: Tolerance = 1e-6
 
     integer:: i, j, k, Di, Dj, iDim, iBlockOut, iProcOut, IjkOut_D(MaxDim)
-    real:: Radius, Xyz_D(MaxDim)
+    real:: Radius, Xyz_D(MaxDim), Distance_D(MaxDim)
     real, allocatable:: CellVolumeCart_B(:), CellFaceCart_DB(:,:)
 
     logical:: DoTestMe
@@ -314,27 +332,39 @@ contains
     call show_grid
 
     if(DoTestMe) write(*,*)'Testing find_grid_block'
-    call find_grid_block(DomainMin_D, iProcOut, iBlockOut, IjkOut_D)
+    call find_grid_block(DomainMin_D, iProcOut, iBlockOut, &
+         IjkOut_D, Distance_D)
     if(iProc == iProcOut) then
        Xyz_D = Xyz_DGB(:,IjkOut_D(1),IjkOut_D(2),IjkOut_D(3),iBlockOut) &
             - 0.5*CellSize_DB(:,iBlockOut)
        if(any(abs(DomainMin_D(1:nDim) - Xyz_D(1:nDim)) > 1e-6)) then
-            write(*,*) 'Error: DomainMin_D, Xyz_D=', &
-                  DomainMin_D, Xyz_D
-            write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
-                 iProcOut, iBlockOut, IjkOut_D
-         end if
+          write(*,*) 'Error: DomainMin_D, Xyz_D=', &
+               DomainMin_D, Xyz_D
+          write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
+               iProcOut, iBlockOut, IjkOut_D
+       end if
+       if(any(abs(Distance_D(1:nDim) + 0.5) > 1e-6)) then
+          write(*,*) 'Error: Distance_D=', Distance_D(1:nDim),' should be -0.5'
+          write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
+               iProcOut, iBlockOut, IjkOut_D
+       end if
     end if
-    call find_grid_block(DomainMax_D, iProcOut, iBlockOut, IjkOut_D)
+    call find_grid_block(DomainMax_D, iProcOut, iBlockOut, &
+         IjkOut_D, Distance_D)
     if(iProc == iProcOut) then
        Xyz_D = Xyz_DGB(:,IjkOut_D(1),IjkOut_D(2),IjkOut_D(3),iBlockOut) &
             + 0.5*CellSize_DB(:,iBlockOut)
        if(any(abs(DomainMax_D(1:nDim) - Xyz_D(1:nDim)) > 1e-6)) then
-            write(*,*) 'Error: DomainMax_D, Xyz_D=', &
-                  DomainMax_D, Xyz_D
-            write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
+          write(*,*) 'Error: DomainMax_D, Xyz_D=', &
+               DomainMax_D, Xyz_D
+          write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
                  iProcOut, iBlockOut, IjkOut_D
-         end if
+       end if
+       if(any(abs(Distance_D(1:nDim) - 0.5) > 1e-6)) then
+          write(*,*) 'Error: Distance_D=', Distance_D(1:nDim),' should be +0.5'
+          write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
+               iProcOut, iBlockOut, IjkOut_D
+       end if
     end if
 
     if(nDim == 2)then
