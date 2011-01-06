@@ -184,16 +184,16 @@ The default values are shown by the example above.
 	<parameter name="DtOutput" type="real"    min="-1" 
 					default="-1.0"/>
 #MAGNETOMETER
-magin.dat		MagInputFile
+magin.dat		NameMagInputFile
 -1			DnOutput
 60.0			DtOutput
 
 The #MAGNETOMETER command is used for the calculation of the ground perturbations
 caused by two current systems: Hall and Pedersen currents. 
 
-The MagInputFile parameter describes a file that contains certain locations on the Earth 
-that the user is interested in calculating the ground magnetic perturbations. The
-file has a format like below: 
+The NameMagInputFile parameter gives the file name that contains the
+locations on the Earth where the user is interested in calculating 
+the ground magnetic perturbations. The file has the following format:
 \begin{verbatim}
 #COORD
 MAG			The coordinate system for the latitude/longitude below
@@ -205,10 +205,19 @@ ghi	85.0	-80.0
 
 \end{verbatim}
 
-The DnOutput paramter is the frequency the calculated perturbation is written out 
-in local steps.
-The DtOutput paramter is the frequency the calculated perturbation is written out 
-in time accurate mode.
+The coordinate system accepts MAG (geomagnetic coordinate) or SMG 
+(solar magnetic coordinate) so far. The station name can have maximum 3 characters.
+The name, latitude, and longitude should be sperated with space in between.
+
+The DnOutput and DtOutput parameters determine the frequency of writing out the
+calculated perturbations in number of time steps and time interval, respectively.
+
+The output of the ground-based magnetic perturbations is in GM/IO2/mag_n*.dat, 
+in which the location of each station in GSM cartisian coordinates, the 3 components
+(northward, eastward, and downward in SM coordiantes) of the magnetic perturbations by 
+magnetospheric currents, and the 3 components (northward, eastward, and downward 
+in SM coordiantes) of the magnetic perturbations by field-aligned currents are written 
+out. The unit of the pertrubation output is nT.
 </command>
 
 <command name="IM">
