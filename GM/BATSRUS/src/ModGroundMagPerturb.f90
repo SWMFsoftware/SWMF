@@ -127,7 +127,7 @@ contains
     real, intent(out)     :: MagPerturb_DI(3,nMagnetometer)
 
 
-    real, parameter       :: rIonosphere = 1.0 ! in planetary radii
+    real, parameter       :: rIonosphere = 1.01725 ! rEarth + iono_height
     integer, parameter    :: nTheta =181, nPhi =181,nCuts = 800
 
     integer               :: i, j, k, iHemisphere, iError
@@ -371,14 +371,14 @@ contains
     call set_oktest('open_magnetometer_output_files', oktest, oktest_me)
 
     write(filename,'(a,i6.6,a)')trim(NamePlotDir)//&
-         'mag_n',n_step,'.dat'
+         'GM_mag_n',n_step,'.dat'
 
     if(oktest) then
        write(*,*) 'open_magnetometer_output_files: filename:', filename
     end if
 
     iUnitMag= io_unit_new()
-    open(iUnitMag, file=filename)
+    open(iUnitMag, file=filename, status="replace")
 
     ! Write the header
     write(iUnitMag, '(i5,a)') nMagnetometer, ' magnetometers:'
