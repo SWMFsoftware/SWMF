@@ -252,7 +252,11 @@ contains
     CoordTree_D = (Coord_D - CoordMin_D)/(CoordMax_D - CoordMin_D)
 
     ! Find node containing the point
-    call find_tree_node(CoordTree_D, iNode)
+    if(present(IjkOut_D))then
+       call find_tree_cell(CoordTree_D, iNode, IjkOut_D, DistOut_D)
+    else
+       call find_tree_node(CoordTree_D, iNode)
+    end if
 
     ! Check if point was found
     if(iNode > 0)then
@@ -262,26 +266,6 @@ contains
     else
        iBlockOut = Unset_
        iProcOut  = Unset_
-    end if
-
-    if(.not. present(IjkOut_D)) RETURN
-
-    ! Determine the closest cell index on the processor that contains the block
-    if(iProc == iProcOut)then
-       IjkOut_D = max(1, min(nIjk_D, 1 + floor( &
-            (Coord_D - CoordMin_DB(:,iBlockOut))/CellSize_DB(:,iBlockOut))))
-    else
-       IjkOut_D = Unset_
-    end if
-
-    if(.not.present(DistOut_D)) RETURN
-
-    ! The signed distance to the cell center
-    if(iProc == iProcOut)then
-       DistOut_D = 0.5 - IjkOut_D &
-            + (Coord_D - CoordMin_DB(:,iBlockOut))/CellSize_DB(:,iBlockOut)
-    else
-       DistOut_D = Unset_
     end if
 
   end subroutine find_grid_block
@@ -343,12 +327,20 @@ contains
           write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
                iProcOut, iBlockOut, IjkOut_D
        end if
-       if(any(abs(Distance_D(1:nDim) + 0.5) > 1e-6)) then
-          write(*,*) 'Error: Distance_D=', Distance_D(1:nDim),' should be -0.5'
-          write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
-               iProcOut, iBlockOut, IjkOut_D
-       end if
     end if
+
+    if(any(IjkOut_D(1:nDim) /= 1)) then
+       write(*,*) 'Error: IjkOut_D=', IjkOut_D(1:nDim),' should be 1'
+       write(*,*) 'iProcOut, iBlockOut, Distance_D = ',&
+            iProcOut, iBlockOut, Distance_D
+    end if
+
+    if(any(abs(Distance_D(1:nDim) + 0.5) > 1e-6)) then
+       write(*,*) 'Error: Distance_D=', Distance_D(1:nDim),' should be -0.5'
+       write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
+            iProcOut, iBlockOut, IjkOut_D
+    end if
+
     call find_grid_block(DomainMax_D, iProcOut, iBlockOut, &
          IjkOut_D, Distance_D)
     if(iProc == iProcOut) then
@@ -360,11 +352,19 @@ contains
           write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
                  iProcOut, iBlockOut, IjkOut_D
        end if
-       if(any(abs(Distance_D(1:nDim) - 0.5) > 1e-6)) then
-          write(*,*) 'Error: Distance_D=', Distance_D(1:nDim),' should be +0.5'
-          write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
-               iProcOut, iBlockOut, IjkOut_D
-       end if
+    end if
+
+    if(any(IjkOut_D(1:nDim) /= nIJK_D(1:nDim))) then
+       write(*,*) 'Error: IjkOut_D=', IjkOut_D(1:nDim), &
+            ' should be ', nIJK_D(1:nDim)
+       write(*,*) 'iProcOut, iBlockOut, Distance_D = ',&
+            iProcOut, iBlockOut, Distance_D
+    end if
+
+    if(any(abs(Distance_D(1:nDim) - 0.5) > 1e-6)) then
+       write(*,*) 'Error: Distance_D=', Distance_D(1:nDim),' should be +0.5'
+       write(*,*) 'iProcOut, iBlockOut, IjkOut_D = ',&
+            iProcOut, iBlockOut, IjkOut_D
     end if
 
     if(nDim == 2)then
