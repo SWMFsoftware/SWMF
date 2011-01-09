@@ -1,7 +1,7 @@
 module BATL_tree
 
   use BATL_size, ONLY: MaxBlock, nBlock, MaxDim, nDim, iRatio_D, &
-       nDimAmr, iDimAmr_D
+       nDimAmr, iDimAmr_D, nIJK_D
 
   implicit none
   save
@@ -16,6 +16,7 @@ module BATL_tree
   public:: adapt_tree
   public:: get_tree_position
   public:: find_tree_node
+  public:: find_tree_cell
   public:: distribute_tree
   public:: move_tree
   public:: write_tree_file
@@ -598,6 +599,40 @@ contains
   end subroutine get_tree_position
 
   !==========================================================================
+  subroutine find_tree_cell(Coord_D, iNode, iCell_D, CellDistance_D)
+
+    ! Find the node that contains a point. The point coordinates should
+    ! be given in generalized coordinates normalized to the domain size:
+    ! CoordIn_D = (CoordOrig_D - CoordMin_D)/(CoordMax_D-CoordMin_D)
+    ! If iCell_D is present, return the cell that contains the point.
+    ! If CellDistance_D is present, return the signed distances in each dimension
+    ! normalized to the cell size. This can be used as interpolation weight.
+
+    real,           intent(in) :: Coord_D(MaxDim)
+    integer,        intent(out):: iNode
+    integer,        intent(out):: iCell_D(MaxDim)
+    real, optional, intent(out):: CellDistance_D(MaxDim)
+
+    real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
+    real:: CellCoord_D(MaxDim), CellSize_D(MaxDim)
+
+    !----------------------------------------------------------------------
+    call find_tree_node(Coord_D, iNode)
+
+    if(iNode == Unset_)then
+       iCell_D = Unset_
+       if(present(CellDistance_D)) CellDistance_D = Unset_
+       RETURN
+    end if
+
+    call get_tree_position(iNode, PositionMin_D, PositionMax_D)
+    CellCoord_D = 0.5 + &
+         nIJK_D*(Coord_D - PositionMin_D)/(PositionMax_D - PositionMin_D)
+    iCell_D = max(1, min(nIJK_D, nint(CellCoord_D)))
+    if(present(CellDistance_D)) CellDistance_D = CellCoord_D - iCell_D
+
+  end subroutine find_tree_cell
+  !==========================================================================
   subroutine find_tree_node(CoordIn_D, iNode)
 
     ! Find the node that contains a point. The point coordinates should
@@ -626,7 +661,7 @@ contains
     ! Get normalized coordinates within root node and scale it up
     ! to the largest resolution: 0 <= iCoord_D <= MaxCoord_I(nLevel)-1
     iCoord_D = min(MaxCoord_I(nLevel) - 1, &
-        int((Coord_D(iDimAmr_D) - Ijk_D(iDimAmr_D))*MaxCoord_I(nLevel)))
+         int((Coord_D(iDimAmr_D) - Ijk_D(iDimAmr_D))*MaxCoord_I(nLevel)))
 
     ! Go down the tree using bit information
     do iLevel = nLevel-1,0,-1
@@ -1254,7 +1289,8 @@ contains
     logical, parameter:: IsPeriodicTest_D(MaxDim)= (/.true., .true., .false./)
     real,    parameter:: CoordTest_D(MaxDim)     = 0.99
 
-    integer :: iNode, Int_D(MaxDim)
+    integer :: iNode, Int_D(MaxDim), Ijk_D(MaxDim)
+    real    :: Distance_D(MaxDim), DistanceGood_D(MaxDim), CellSize_D(MaxDim)
     integer, allocatable:: iTypeNode_I(:)
 
     logical :: DoTestMe
@@ -1299,10 +1335,22 @@ contains
          write(*,*) 'set_tree_root failed, coordinates of node four=',&
          iTree_IA(Coord1_:Coord0_+nDim,3), ' should be ',Int_D(1:nDim)
 
-    if(DoTestMe)write(*,*)'Testing find_tree_node'
-    call find_tree_node(CoordTest_D, iNode)
+    if(DoTestMe)write(*,*)'Testing find_tree_cell'
+    call find_tree_cell(CoordTest_D, iNode, Ijk_D, Distance_D)
     if(iNode /= nRoot)write(*,*)'ERROR: Test find point failed, iNode=',&
          iNode,' instead of',nRoot
+
+    if(any(Ijk_D(1:nDim) /= nIjk_D(1:nDim))) &
+         write(*,*)'ERROR: Test find point failed, Ijk_D=',&
+         Ijk_D(1:nDim),' instead of', nIjk_D(1:nDim)
+
+    ! Cell size in units where the whole domain is 1.0
+    CellSize_D = 1.0/(nRoot_D*nIJK_D)
+    ! Distance to the last grid cell, normalized to the cell size
+    DistanceGood_D = (CoordTest_D - (1.0 - CellSize_D/2))/CellSize_D
+    if(any(abs(Distance_D(1:nDim) - DistanceGood_D(1:nDim)) > 1e-6)) &
+         write(*,*)'ERROR: Test find point failed, Distance_D=',&
+         Distance_D(1:nDim),' instead of ', DistanceGood_D(1:nDim)
 
     if(.not.is_point_inside_node(CoordTest_D, iNode)) &
          write(*,*)'ERROR: Test find point failed'
