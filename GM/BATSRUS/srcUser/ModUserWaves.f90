@@ -169,20 +169,20 @@ contains
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, Si2No_V, Io2Si_V,&
                            Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
-                           rPlanetSi, rBody
+                           rPlanetSi, rBody, UnitT_,OmegaBody
     use ModNumconst, ONLY: cOne,cPi, cTwoPi, cDegToRad
     use ModSize,     ONLY: nI, nJ, nK, gcn
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
     implicit none
 
     real,dimension(nVar):: state_V,KxTemp_V,KyTemp_V
-    real                :: SinSlope, CosSlope, rCell, Input2SiUnitX
+    real                :: SinSlope, CosSlope, rCell, Input2SiUnitX, OmegaSun
     integer             :: i, j, k, iBlock
   
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
     iBlock = globalBLK
-
+   
     if(UseUserInputUnitX) then
        select case(TypeInputUnitX)
        case('rPlanet')
@@ -248,12 +248,15 @@ contains
        
        ! Transform to HGC frame - rho, p, spherically symmetric at origin, only velocity 
        ! and/ or momentum should be transformed
+     
        if (TypeCoordSystem =='HGC') then
+          OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
           State_VGB(RhoUx_,:,:,:,iBlock) = State_VGB(RhoUx_,:,:,:,iBlock) &
-               + State_VGB(Rho_,:,:,:,iBlock)*RotationPeriodSun*y_BLK(:,:,:,iBlock)
+               + State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*y_BLK(:,:,:,iBlock)
 
           State_VGB(RhoUy_,:,:,:,iBlock) = State_VGB(RhoUy_,:,:,:,iBlock) &
-               - State_VGB(Rho_,:,:,:,iBlock)*RotationPeriodSun*x_BLK(:,:,:,iBlock)
+               - State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*x_BLK(:,:,:,iBlock)
+         
        end if
 
     case('wave')
@@ -357,7 +360,7 @@ contains
 
     use ModMain,    ONLY: nI, nJ, nK
     use ModPhysics, ONLY: NameTecUnit_V, NameIdlUnit_V, UnitRho_, No2Io_V, &
-         No2Si_V, UnitP_, UnitU_
+         No2Si_V, UnitP_, UnitU_, Gamma0
     use ModAdvance, ONLY: State_VGB
     use ModVarIndexes, ONLY: RhoUx_, RhoUz_, p_, Rho_
 
@@ -410,7 +413,7 @@ contains
           FlowSpeedCell = No2Si_V(UnitU_)*sqrt(sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2))&
                /State_VGB(Rho_,i,j,k,iBlock)
 
-          PlotVar_G(i,j,k) = FlowSpeedCell/sqrt(Pressure/Density)
+          PlotVar_G(i,j,k) = FlowSpeedCell/sqrt(Gamma0*Pressure/Density)
        end do; end do ; end do
        NameTecVar = 'Mach'
        NameTecUnit = '--'
@@ -457,7 +460,7 @@ contains
          if (TypeCoordSystem =='HGC') then
             
             rSphereCenter = sqrt(xSphereCenter**2 + ySphereCenter**2)
-            PhiSphereCenterInertial = atan(ySphereCenter / xSphereCenter)
+            PhiSphereCenterInertial = atan2(ySphereCenter, xSphereCenter)
             PhiSphereCenterRotating = PhiSphereCenterInertial - RotationPeriodSun*t
             
             xSphereCenter = rSphereCenter*cos(PhiSphereCenterRotating)
