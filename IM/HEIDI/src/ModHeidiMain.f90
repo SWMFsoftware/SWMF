@@ -6,6 +6,7 @@ Module ModHeidiMain
   ! Include the parameter settings for MPI parallel processing
   use ModMpi
   use ModHeidiSize
+  use ModNumConst
 
   ! Basic physical constants: Earth radius and dipole coefficient
   real :: Re, DipoleFactor
@@ -44,6 +45,7 @@ Module ModHeidiMain
   integer :: nSpecies, iSpecies
 
   real :: funt(nPa,nR,nT),funi(nPa,nR,nT)
+ ! real :: cone(nR+4)
   real, dimension(nPoint,nR,nT)   :: BHeidi_III, SHeidi_III, RHeidi_III
   real, dimension(nPoint,nR,nT)   :: bGradB1xHeidi_III,bGradB1yHeidi_III, bGradB1zHeidi_III 
   real, dimension(nPoint,nR,nT)   :: BxHeidi_III, ByHeidi_III, BzHeidi_III
@@ -54,6 +56,8 @@ Module ModHeidiMain
   real     :: bFieldMagnitude_III(nPoint,nR,nT)
   
   logical :: IsBFieldNew
-  
+  real, parameter::RadToDeg = 180.0/cPi
+
+
 end Module ModHeidiMain
 
