@@ -388,7 +388,7 @@ contains
     write(iUnitMag, '(1X,a)') MagName_I(nMagnetometer)
     write(iUnitMag, '(a)')  &
          'nstep year mo dy hr mn sc msc station X Y Z '// &
-         'dBn dBe dBd facdBn facdBe facdBn'
+         'dBn dBe dBd facdBn facdBe facdBd'
 
   end subroutine open_magnetometer_output_file
 
