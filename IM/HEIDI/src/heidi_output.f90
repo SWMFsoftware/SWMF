@@ -19,7 +19,6 @@ subroutine ECFL
   implicit none
 
   real             :: cfl,cmax
-  real             :: acosd
   integer          :: i,j,k,l,Im,Km,Jm,Lm,ibad
   integer          :: ntc
   integer          :: iUnitOut 
@@ -85,7 +84,7 @@ subroutine ECFL
                  do L = 1, LO	     ! UPA(I)-1 , changed to include the l.c.
                     CFL=abs(EDOT(I,J,K,L)+(COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
                     if (CFL.gt.1.) then
-                       write (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),XNE(I,J),CFL
+                       write (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOS(MU(L)),XNE(I,J),CFL
                        Ibad=Ibad +1
                     end if
                     if (CFL.gt.CMAX) then
@@ -143,7 +142,7 @@ subroutine ECFL
                  do L=1,LO	     
                     CFL=abs(P1(I,J)+P2(I,j,K,L))
                     if (CFL.gt.1.) then
-                       write (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),&
+                       write (iUnitOut,39) LZ(I),MLT(J),EKEV(K),RADTODEG*ACOS(MU(L)),&
                             A,P1(I,J),P2(I,j,K,L),CFL
                        Ibad=Ibad +1
                     end if
@@ -173,7 +172,7 @@ subroutine ECFL
                  do L=1,LO	  
                     CFL=abs(MUDOT(I,J,K,L)) 
                     if (CFL.gt.1.) then
-                       write (iUnitOut,39) LZ(I),MLT(J),ACOSD(MU(L)),A,CFL
+                       write (iUnitOut,39) LZ(I),MLT(J),RADTODEG*ACOS(MU(L)),A,CFL
                        Ibad=Ibad +1
                     end if
                     if (CFL.gt.CMAX) then
@@ -241,7 +240,6 @@ subroutine WRESULT(LNC,XN,IFIR)
   real              :: flux,esum,csum,psum,erate,xlec,xlnc
   real              :: cfl,weight,xr2
   real              :: edr,xe,xn1
-  real              :: acosd
   real              :: LNC(NR,NS),XN(NR,NS),XNO(NR)
   real              :: NSUM,TAUD,TAUBO,TAUCHE,EO(NR)
   real              :: AVEFL(NR,NT,NE),RFAC
@@ -426,7 +424,7 @@ subroutine WRESULT(LNC,XN,IFIR)
 !!$              do J=1,JO  ! ,3
 !!$                 do I=2,IO,2   ! ,4 
 !!$                    write(UnitTmp_,45) T,LZ(I),MLT(J),KP,XNE(I,J)
-!!$                    write(UnitTmp_,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
+!!$                    write(UnitTmp_,44) (RADTODEG*ACOS(MU(IFM(L))),L=1+IFN,19+IFN)
 !!$                    write(UnitTmp_,43) EKEV(K),(F2(I,J,K,IFM(L),S)/   &
 !!$                         FFACTOR(I,j,K,IFM(L)),L=1+IFN,19+IFN)
 !!$                 end do	        ! I loop
@@ -439,7 +437,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            do I=2,IO,2   ! ,4 
               do J=1,JO  ! ,3
                  write(UnitTmp_,45) T,LZ(I),MLT(J),KP,XNE(I,J)
-                 write(UnitTmp_,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
+                 write(UnitTmp_,44) (RADTODEG*ACOS(MU(IFM(L))),L=1+IFN,19+IFN)
                  do K=2,KO,NEC
                     write(UnitTmp_,43) EKEV(K),(F2(I,J,K,IFM(L),S)/   &
                          FFACTOR(I,j,K,IFM(L)),L=1+IFN,19+IFN)
@@ -468,7 +466,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            NIC(3)=IO
            do II=1,3
               I=NIC(II)
-              write(UnitTmp_,33) T,LZ(I),KP,ACOSD(MU(2))
+              write(UnitTmp_,33) T,LZ(I),KP,RADTODEG*ACOS(MU(2))
               write(UnitTmp_,31) (MLT(J),J=1,JO,3)
               do K=1,KO,NEC
                  write(UnitTmp_,29) EKEV(K),(F2(I,J,K,2,S)/FFACTOR(I,j,K,L),   &
@@ -603,7 +601,7 @@ subroutine WRESULT(LNC,XN,IFIR)
               do J=1,JO,3
                  !	     IF(J.EQ.1.OR.J.EQ.10.OR.J.EQ.16) THEN
                  write(UnitTmp_,34) T,LZ(I),MLT(J)
-                 write(UnitTmp_,40) (ACOSD(MU(L)),L=UPA(I),LO-1,IL)
+                 write(UnitTmp_,40) (RADTODEG*ACOS(MU(L)),L=UPA(I),LO-1,IL)
                  write(UnitTmp_,*)'     EKEV  \ FLUX[1/cm2/s/ster/keV]  AVEFL'
                  if (IFAC.eq.1) then
                     do K=2,KO,NEC
@@ -679,7 +677,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            do I=2,IO,IO-2
               do J=1,JO,3
                  write (iUnitOut,37) LZ(I),MLT(J),XNE(I,J)
-                 write (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
+                 write (iUnitOut,40) (RADTODEG*ACOS(MU(L)),L=2,LO,NLC),RADTODEG*ACOS(MU(LO-1))
                  do K=2,KO,KO-2
                     write (iUnitOut,30) EKEV(K),(COULE(I,j,K,L,S)*XNE(I,J),L=2,LO,NLC),   &
                          COULE(I,j,K,LO-1,S)*XNE(I,J)
@@ -691,7 +689,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            do I=2,IO,IO-2
               do J=1,JO,3
                  write (iUnitOut,37) LZ(I),MLT(J),XNE(I,J)
-                 write (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
+                 write (iUnitOut,40) (RADTODEG*ACOS(MU(L)),L=2,LO,NLC),RADTODEG*ACOS(MU(LO-1))
                  do K=2,KO,KO-2
                     write (iUnitOut,30) EKEV(K),(COULI(I,j,K,L,S)*XNE(I,J),L=2,LO,NLC),   &
                          COULI(I,j,K,LO-1,S)*XNE(I,J)
@@ -709,7 +707,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            do I=2,IO,IO-2
               do J=1,JO,3
                  write (iUnitOut,36) LZ(I),MLT(J)
-                 write (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
+                 write (iUnitOut,40) (RADTODEG*ACOS(MU(L)),L=2,LO,NLC),RADTODEG*ACOS(MU(LO-1))
                  do K=2,KO,KO-2
                     write (iUnitOut,30) EKEV(K),(P1(I,J)+P2(I,j,K,L),L=2,LO,NLC),   &
                          P1(I,J)+P2(I,j,K,LO-1)
@@ -721,7 +719,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            do I=2,IO,IO-2
               do J=1,JO,3
                  write (iUnitOut,36) LZ(I),MLT(J)
-                 write (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
+                 write (iUnitOut,40) (RADTODEG*ACOS(MU(L)),L=2,LO,NLC),RADTODEG*ACOS(MU(LO-1))
                  do K=2,KO,KO-2
                     write (iUnitOut,30) EKEV(K),(EDOT(I,J,K,L),L=2,LO,NLC),   &
                          EDOT(I,J,K,LO-1) 
@@ -733,7 +731,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            write (iUnitOut,*) 'Mu drift Courant numbers'
            do I=2,IO,IO-2
               write (iUnitOut,*) ' L =',LZ(I)
-              write (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
+              write (iUnitOut,40) (RADTODEG*ACOS(MU(L)),L=2,LO,NLC),RADTODEG*ACOS(MU(LO-1))
               do J=1,JO,3
                  do k = 2, ko,ko-2
                     write (iUnitOut,30) MLT(J),(MUDOT(I,J,K,L),L=2,LO,NLC),   &
@@ -753,7 +751,7 @@ subroutine WRESULT(LNC,XN,IFIR)
                             (COULI(I,j,K,L,S)+COULE(I,j,K,L,S))*XNE(I,J))
 
                        if (CFL.gt.1.) then
-                          write (iUnitOut,39)LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),XNE(I,J),CFL
+                          write (iUnitOut,39)LZ(I),MLT(J),EKEV(K),RADTODEG*ACOS(MU(L)),XNE(I,J),CFL
                           Ibad=Ibad +1
                        end if
                     end do	! L loop
@@ -783,7 +781,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            write (UnitTmp_,*) 'Azimuthal drift component at various E,mu'
            do L=1,3
               do K=1,3
-                 write (UnitTmp_,36) EKEV(EV(K)),ACOSD(MU(PAV(L)))
+                 write (UnitTmp_,36) EKEV(EV(K)),RADTODEG*ACOS(MU(PAV(L)))
                  write (UnitTmp_,41) ' L \ MLT =',(MLT(J),J=1,JO,2)
                  do I=2,IO,2
                     write (UnitTmp_,42) LZ(I),(P1(I,J)+P2(I,j,EV(K),PAV(L)),J=1,JO,2)
@@ -846,7 +844,7 @@ subroutine WRESULT(LNC,XN,IFIR)
               L=UPA(I)-1
               do  J=1,1
                  write(UnitTmp_,*)' Lifetimes for ',NameSpecies,' rc ion; PA=',   &
-                      ACOSD(MU(L))
+                      RADTODEG*ACOS(MU(L))
                  write(UnitTmp_,*)' L   E[KEV]  TAUBO[HR] TAUCHE[HR] TAUD[HR]'
                  do K=2,KO
                     TAUD=2*pi*ME/abs(1.44E-2*RE-3*EKEV(K)*1000*LZ(I))/RE/   &
@@ -986,7 +984,7 @@ subroutine WRESULT(LNC,XN,IFIR)
                             StringHeaderIn = StringHeader, &
                             nStepIn = ntc, &
                             TimeIn = T, &
-                            ParamIn_I = (/EKEV(K), acosd(mu(L)),real(NE), real(NPA)/), &
+                            ParamIn_I = (/EKEV(K), RadToDeg*acos(mu(L)),real(NE), real(NPA)/), &
                             NameVarIn = StringVarName, &
                             nDimIn = 2, &
                             CoordMinIn_D = (/1.75, 0.0/),&
@@ -1059,7 +1057,7 @@ subroutine WRESULT(LNC,XN,IFIR)
                     II=J
                     if (II.lt.0) II=II+JO
                     write(iUnitOut,45) T,LZ(IO)+DL1,MLT(II),KP,0.
-                    write(iUnitOut,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
+                    write(iUnitOut,44) (RADTODEG*ACOS(MU(IFM(L))),L=1+IFN,19+IFN)
                     do K=2,KO,NEC
                        write(iUnitOut,43) EKEV(K),(FGEOS(II,K,IFM(L),S)/   &
                             FFACTOR(IO,II,K,IFM(L)),L=1+IFN,19+IFN)
@@ -1145,4 +1143,5 @@ subroutine WRESULT(LNC,XN,IFIR)
         return
 
       end subroutine PSRCLOSS
+!===========================================================
 

@@ -64,7 +64,6 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
   integer           :: n1, n2
   character(len=500):: NameVar
   real              :: Param_I(4)
-  real              :: reshape
   character(len=20) :: TypePosition
   save ntc
   !-----------------------------------------------------------------------

@@ -180,21 +180,22 @@ end subroutine CONSTANT
 !				BFIELD_SETUP
 !			Set up all the arrays
 !======================================================================
-subroutine BFIELD_SETUP(cone)
+subroutine BFIELD_SETUP(LossCone_I)
 
   use ModHeidiSize
-  use ModHeidiMain
+  use ModHeidiMain, ONLY: Be, LZ, DipoleFactor, Z, Q, Re
   use ModHeidiWaves
   use ModHeidiIO
   use ModProcIM,   ONLY: iProc
   use ModNumConst, ONLY: cPi
   implicit none
 
-  real     :: CONE(NR+4),degrad,camlra,asind
+  real     :: LossCone_I(NR+4)
+  real     :: degrad,camlra,asind
   integer  :: i,iml
   external :: asind
   !------------------------------------------------------------------------
-  degrad=cPi/180.
+  degrad = cPi/180.
 
   do IML=1,ISO 
      do i=1,IO
@@ -206,18 +207,20 @@ subroutine BFIELD_SETUP(cone)
   end do
 
   !\
-  ! CONE - pitch angle loss cone in degree
+  ! LossCone_I - pitch angle loss cone in degree
   !/
 
   do i = 1, io	
-     CONE(I)=ASIND(sqrt(((RE+HMIN)/Z(I))**3   &
+     LossCone_I(I)=ASIND(sqrt(((RE+HMIN)/Z(I))**3   &
           /sqrt(4.-3.*((RE+HMIN)/Z(I)))))
   end do
-  CONE(IO+1)=2.5    ! to calcul PA grid near 0 deg for IPA=1
-  CONE(IO+2)=1.5
-  CONE(IO+3)=1.
-  CONE(IO+4)=0.
+  LossCone_I(IO+1)=2.5    ! to calcul PA grid near 0 deg for IPA=1
+  LossCone_I(IO+2)=1.5
+  LossCone_I(IO+3)=1.
+  LossCone_I(IO+4)=0.
 
+
+  
 end subroutine BFIELD_SETUP
 
 !======================================================================
@@ -243,7 +246,8 @@ subroutine ARRAYS
   real     :: ASIND,COSD,ACOSD,CON1
   real     :: sind
   real     :: amla0(Slen)
-  real     :: CONE(NR+4),PA(NPA),MUB(NPA),sumd,sumw,LZMAX,LZMIN
+  real     :: LossCone_I(NR+4)
+  real     :: PA(NPA),MUB(NPA),sumd,sumw,LZMAX,LZMIN
   external :: sind, ASIND,COSD,ACOSD
   data amla0/0.0,0.2,0.4,0.6,0.8,1.0,1.5,2.0,2.5,3.0,3.5, &
        4.0,4.5,5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0/
@@ -290,7 +294,7 @@ subroutine ARRAYS
   Z(1:IO)=RE*LZ(1:IO)
   degrad=cPi/180.
 
-  call BFIELD_SETUP(cone)
+  call BFIELD_SETUP(LossCone_I)
 
   DPHI = 2.* cPI/JO		      ! Grid size for local time [rad]
   if(mod(NLT,JO).ne.0) then
@@ -409,10 +413,10 @@ subroutine ARRAYS
         L=0
         do while (UPA(I).eq.0)
            L=L+1
-           if(PA(L).le.CONE(I)) then
+           if(PA(L).le.LossCone_I(I)) then
               UPA(I)=L
-              SEG1=CONE(I)-PA(L)
-              SEG2=PA(L-1)-CONE(I)
+              SEG1=LossCone_I(I)-PA(L)
+              SEG2=PA(L-1)-LossCone_I(I)
               if (SEG2.lt.SEG1) UPA(I)=L-1
            end if
         end do	! While loop
@@ -443,7 +447,7 @@ subroutine ARRAYS
      UPA(2)=47
      IC=3 
      do L=48,LO-1
-        PA(L+1)=CONE(IC)
+        PA(L+1)=LossCone_I(IC)
         if(L.eq.49) then
            PA(50)=16.
         else 
