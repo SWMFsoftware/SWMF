@@ -204,9 +204,18 @@ module CRASH_ModEos
   !\
   ! Defaultparameters for EOS tables:
   !/
-  integer, parameter :: IndexDefault_I(2)=(/201, 201/), Min_=1, Max_=2
+  integer, parameter :: Min_=1, Max_=2, &
+       IndexDefaultEos_I(2) = (/501, 501/), &
+       IndexDefaultOpac_I(2)= (/201, 201/)
   real,dimension(Min_:Max_,Xe_:Ay_), parameter::&
-       TeDefault_II = reshape(&     ! original minimum
+       TeDefaultEos_II = reshape(&     ! original minimum
+       (/1.0e-2, 1.0e+3, & !Xe_     1e-2
+         1.0e-3, 2.0e+3, & !Be_     1e-3
+         5.0e-5, 1.0e+2, & !Plastic 1e-3
+         1.0e-3, 1.0e+2, & !Au_     1e-3
+         1.0e-3, 1.0e+2  & !Ay_     1e-3
+         /), (/2,5/)),    &
+       TeDefaultOpac_II = reshape(&     ! original minimum
        (/3.0e-2, 1.0e+3, & !Xe_     1e-2
          3.0e-2, 2.0e+3, & !Be_     1e-3
          5.0e-2, 1.0e+2, & !Plastic 1e-3
@@ -342,10 +351,10 @@ contains
                NameTable = NameMaterial_I(iMaterial)//'_eos', &
                NameCommand = 'make'                         , &
                NameVar = 'logTe logNa '//NameVarEos         , &
-               nIndex_I = IndexDefault_I                    , &
-               IndexMin_I = (/TeDefault_II(Min_, iMaterial), &
+               nIndex_I = IndexDefaultEos_I                 , &
+               IndexMin_I = (/TeDefaultEos_II(Min_, iMaterial), &
                               NaDefault_II(Min_, iMaterial)/)  , &
-               IndexMax_I = (/TeDefault_II(Max_, iMaterial), &
+               IndexMax_I = (/TeDefaultEos_II(Max_, iMaterial), &
                               NaDefault_II(Max_, iMaterial)/)    )
           else
              TypeFileHere = 'real8'
@@ -354,10 +363,10 @@ contains
                NameTable = NameMaterial_I(iMaterial)//'_eos', &
                NameCommand = 'save'                         , &
                NameVar = 'logTe logNa '//NameVarEos         , &
-               nIndex_I = IndexDefault_I                    , &
-               IndexMin_I = (/TeDefault_II(Min_, iMaterial), &
+               nIndex_I = IndexDefaultEos_I                 , &
+               IndexMin_I = (/TeDefaultEos_II(Min_, iMaterial), &
                               NaDefault_II(Min_, iMaterial)/)  , &
-               IndexMax_I = (/TeDefault_II(Max_, iMaterial), &
+               IndexMax_I = (/TeDefaultEos_II(Max_, iMaterial), &
                               NaDefault_II(max_, iMaterial)/)  , &
                NameFile   = &
                  NameMaterial_I(iMaterial)//'_eos_CRASH.dat', &
@@ -468,29 +477,29 @@ contains
           if(.not.present(Save))then
              call init_lookup_table(&
                NameTable = NameMaterial_I(iMaterial)//'_opac', &
-               NameCommand = 'make'                         , &
-               NameVar = 'logRho logTe '//NameVarOpac         , &
-               nIndex_I = IndexDefault_I                    , &
+               NameCommand = 'make'                          , &
+               NameVar = 'logRho logTe '//NameVarOpac        , &
+               nIndex_I = IndexDefaultOpac_I                 , &
                IndexMin_I = (/NaDefault_II(Min_, iMaterial)*  &
                    cAtomicMass * cAtomicMassCRASH_I(iMaterial),  &
-                              TeDefault_II(Min_, iMaterial)/)  , &
+                              TeDefaultOpac_II(Min_, iMaterial)/)  , &
                IndexMax_I = (/NaDefault_II(Max_, iMaterial)*  &
                    cAtomicMass * cAtomicMassCRASH_I(iMaterial),  &
-                             TeDefault_II(Max_, iMaterial)/)    )
+                             TeDefaultOpac_II(Max_, iMaterial)/)    )
           else
              TypeFileHere = 'real8'
              if(present(TypeFile))TypeFileHere = TypeFile
              call init_lookup_table(&
                NameTable = NameMaterial_I(iMaterial)//'_opac', &
-               NameCommand = 'save'                         , &
-               NameVar = 'logRho logTe '//NameVarOpac         , &
-               nIndex_I = IndexDefault_I                    , &
+               NameCommand = 'save'                          , &
+               NameVar = 'logRho logTe '//NameVarOpac        , &
+               nIndex_I = IndexDefaultOpac_I                 , &
                IndexMin_I = (/NaDefault_II(Min_, iMaterial)*  &
                    cAtomicMass * cAtomicMassCRASH_I(iMaterial),  &
-                              TeDefault_II(Min_, iMaterial)/)  , &
+                              TeDefaultOpac_II(Min_, iMaterial)/)  , &
                IndexMax_I = (/NaDefault_II(Max_, iMaterial)*  &
                    cAtomicMass * cAtomicMassCRASH_I(iMaterial),  &
-                             TeDefault_II(Max_, iMaterial)/), &
+                             TeDefaultOpac_II(Max_, iMaterial)/), &
                NameFile   = &
                  NameMaterial_I(iMaterial)//'_opac_CRASH.dat', &
                TypeFile = TypeFileHere                      , &
