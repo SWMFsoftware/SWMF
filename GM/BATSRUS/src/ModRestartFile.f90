@@ -17,7 +17,8 @@ module ModRestartFile
   use ModIO,         ONLY: Restart_Bface                    !^CFG IF CONSTRAINB
   use ModCT,         ONLY: BxFace_BLK,ByFace_BLK,BzFace_BLK !^CFG IF CONSTRAINB
   use ModMain,       ONLY: UseConstrainB                    !^CFG IF CONSTRAINB
-  use ModImplicit,   ONLY: n_prev, ImplOld_VCB, dt_prev     !^CFG IF IMPLICIT
+  use ModImplicit, ONLY: UseImplicit, &                     !^CFG IF IMPLICIT
+       n_prev, ImplOld_VCB, dt_prev                         !^CFG IF IMPLICIT
   use ModKind,       ONLY: Real4_, Real8_
   use ModIoUnit,     ONLY: UnitTmp_
 
@@ -670,13 +671,16 @@ contains
     logical, intent(in)           :: DoRead
     integer, intent(in), optional :: iFile 
 
-    integer :: lRecord, l, iError
+    integer :: lRecord, l, lReal, iError
     character(len=*), parameter :: NameSub='open_direct_restart_file'
     logical :: DoTest, DoTestme
     !-------------------------------------------------------------------------
 
     call set_oktest(NameSub, DoTest, DoTestMe)
     if(DoTestMe)write(*,*) NameSub,' starting with DoRead=',DoRead
+
+    ! Size of a single real number in units of record length
+    inquire (IOLENGTH = lReal) 1.0
 
     ! Calculate the record length for the first block
     inquire (IOLENGTH = lRecord ) &
@@ -685,15 +689,12 @@ contains
          State_VGB(1:nVar,1:nI,1:nJ,1:nK,1)
 
     if(DoRead .and. Restart_Bface .or. &         !^CFG iF CONSTRAINB BEGIN
-         .not.DoRead .and. UseConstrainB)then       
-       inquire (IOLENGTH = l) &
-            BxFace_BLK(1:nI+1,1:nJ,1:nK,1),&
-            ByFace_BLK(1:nI,1:nJ+1,1:nK,1),&
-            BzFace_BLK(1:nI,1:nJ,1:nK+1,1)
+         .not.DoRead .and. UseConstrainB)then
+       l = lReal*((nI+1)*nJ*nK + nI*(nJ+1)*nK + nI*nJ*(nK+1))
        lRecord = lRecord + l
     end if                                       !^CFG END CONSTRAINB
     if(n_prev==n_step)then                       !^CFG IF IMPLICIT BEGIN
-       inquire (IOLENGTH = l) ImplOld_VCB(:,:,:,:,1)
+       l = lReal*nVar*nI*nJ*nK
        lRecord = lRecord + l
     end if                                       !^CFG END IMPLICIT
 
@@ -794,18 +795,22 @@ contains
              ! Read with face centered magnetic field for constrained transport
              read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   B4_X, B4_Y, B4_Z
-             BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = B4_X
-             ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = B4_Y
-             BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = B4_Z
+             if(UseConstrainB)then
+                BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = B4_X
+                ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = B4_Y
+                BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = B4_Z
+             end if
              IsRead = .true.
           endif                                       !^CFG END CONSTRAINB
           if(n_prev==n_step)then                      !^CFG IF IMPLICIT BEGIN
              ! Read with previous state for sake of implicit BDF2 scheme
              read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   State4_CV
-             do iVar = 1, nVar
-                ImplOld_VCB(iVar,:,:,:,iBlock) = State4_CV(:,:,:,iVar)
-             end do
+             if(UseImplicit)then
+                do iVar = 1, nVar
+                   ImplOld_VCB(iVar,:,:,:,iBlock) = State4_CV(:,:,:,iVar)
+                end do
+             end if
              IsRead = .true.
           end if                                       !^CFG END IMPLICIT
           if(.not.IsRead) &
@@ -823,18 +828,22 @@ contains
              ! Read with face centered magnetic field for constrained transport
              read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   B8_X, B8_Y, B8_Z
-             BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = B8_X
-             ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = B8_Y
-             BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = B8_Z
+             if(UseConstrainB)then
+                BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = B8_X
+                ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = B8_Y
+                BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = B8_Z
+             end if
              IsRead = .true.
           endif                                       !^CFG END CONSTRAINB
           if(n_prev==n_step)then                      !^CFG IF IMPLICIT BEGIN
              ! Read with previous state for sake of implicit BDF2 scheme
              read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   State8_CV
-             do iVar = 1, nVar
-                ImplOld_VCB(iVar,:,:,:,iBlock) = State8_CV(:,:,:,iVar)
-             end do
+             if(UseImplicit)then
+                do iVar = 1, nVar
+                   ImplOld_VCB(iVar,:,:,:,iBlock) = State8_CV(:,:,:,iVar)
+                end do
+             end if
              IsRead = .true.
           end if                                       !^CFG END IMPLICIT
           if(.not.IsRead) &
