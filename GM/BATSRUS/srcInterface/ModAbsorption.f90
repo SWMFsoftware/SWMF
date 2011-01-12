@@ -226,13 +226,13 @@ contains
 
        State_V(1)= State_V(1)+Weight*(&
             State_VGB(rho_,i+1,j,k,iBlock)-State_VGB(rho_,i-1,j,k,iBlock))&
-            /Dx_BLK(iBlock) * ZAverage
+            /(2*Dx_BLK(iBlock)) * ZAverage
        State_V(2)= State_V(2)+Weight*(&
             State_VGB(rho_,i,j+1,k,iBlock)-State_VGB(rho_,i,j-1,k,iBlock))&
-            /Dy_BLK(iBlock) * ZAverage
+            /(2*Dy_BLK(iBlock)) * ZAverage
        State_V(3)= State_V(3)+Weight*(&
             State_VGB(rho_,i,j,k+1,iBlock)-State_VGB(rho_,i,j,k-1,iBlock))&
-            /Dz_BLK(iBlock) * ZAverage
+            /(2*Dz_BLK(iBlock)) * ZAverage
        State_V(nDim+1)  = State_V(nDim+1)+Weight*&
             State_VGB(rho_,i,j,k,iBlock) * ZAverage
        if(TypeGeometry=='rz')then
