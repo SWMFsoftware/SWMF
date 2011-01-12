@@ -220,7 +220,7 @@ contains
     write(iUnitMag, '(1x,a)')MagName_I(nMagnetometer) 
     write(iUnitMag, '(a)')  &
          'nsolve year mo dy hr mn sc msc station X Y Z '// &
-         'JhdBn JhdBe JhdBd JpBn JpBe JpBn'
+         'JhdBn JhdBe JhdBd JpBn JpBe JpBd'
   end subroutine open_iono_magperturb_file
 
   !======================================================================
