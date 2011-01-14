@@ -17,6 +17,7 @@ module BATL_tree
   public:: get_tree_position
   public:: find_tree_node
   public:: find_tree_cell
+  ! public:: interpolate_tree ! not yet complete
   public:: distribute_tree
   public:: move_tree
   public:: write_tree_file
@@ -599,40 +600,6 @@ contains
   end subroutine get_tree_position
 
   !==========================================================================
-  subroutine find_tree_cell(Coord_D, iNode, iCell_D, CellDistance_D)
-
-    ! Find the node that contains a point. The point coordinates should
-    ! be given in generalized coordinates normalized to the domain size:
-    ! CoordIn_D = (CoordOrig_D - CoordMin_D)/(CoordMax_D-CoordMin_D)
-    ! If iCell_D is present, return the cell that contains the point.
-    ! If CellDistance_D is present, return the signed distances in each dimension
-    ! normalized to the cell size. This can be used as interpolation weight.
-
-    real,           intent(in) :: Coord_D(MaxDim)
-    integer,        intent(out):: iNode
-    integer,        intent(out):: iCell_D(MaxDim)
-    real, optional, intent(out):: CellDistance_D(MaxDim)
-
-    real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
-    real:: CellCoord_D(MaxDim), CellSize_D(MaxDim)
-
-    !----------------------------------------------------------------------
-    call find_tree_node(Coord_D, iNode)
-
-    if(iNode == Unset_)then
-       iCell_D = Unset_
-       if(present(CellDistance_D)) CellDistance_D = Unset_
-       RETURN
-    end if
-
-    call get_tree_position(iNode, PositionMin_D, PositionMax_D)
-    CellCoord_D = 0.5 + &
-         nIJK_D*(Coord_D - PositionMin_D)/(PositionMax_D - PositionMin_D)
-    iCell_D = max(1, min(nIJK_D, nint(CellCoord_D)))
-    if(present(CellDistance_D)) CellDistance_D = CellCoord_D - iCell_D
-
-  end subroutine find_tree_cell
-  !==========================================================================
   subroutine find_tree_node(CoordIn_D, iNode)
 
     ! Find the node that contains a point. The point coordinates should
@@ -680,6 +647,103 @@ contains
 
   end subroutine find_tree_node
 
+  !==========================================================================
+  subroutine find_tree_cell(Coord_D, iNode, iCell_D, CellDistance_D)
+
+    ! Find the node that contains a point. The point coordinates should
+    ! be given in generalized coordinates normalized to the domain size:
+    ! CoordIn_D = (CoordOrig_D - CoordMin_D)/(CoordMax_D-CoordMin_D)
+    ! If iCell_D is present, return the cell that contains the point.
+    ! If CellDistance_D is present, return the signed distances per dimension
+    ! normalized to the cell size. This can be used as interpolation weight.
+
+    real,           intent(in) :: Coord_D(MaxDim)
+    integer,        intent(out):: iNode
+    integer,        intent(out):: iCell_D(MaxDim)
+    real, optional, intent(out):: CellDistance_D(MaxDim)
+
+    real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
+    real:: CellCoord_D(MaxDim), CellSize_D(MaxDim)
+
+    !----------------------------------------------------------------------
+    call find_tree_node(Coord_D, iNode)
+
+    if(iNode == Unset_)then
+       iCell_D = Unset_
+       if(present(CellDistance_D)) CellDistance_D = Unset_
+       RETURN
+    end if
+
+    call get_tree_position(iNode, PositionMin_D, PositionMax_D)
+    CellCoord_D = 0.5 + &
+         nIJK_D*(Coord_D - PositionMin_D)/(PositionMax_D - PositionMin_D)
+    iCell_D = max(1, min(nIJK_D, nint(CellCoord_D)))
+    if(present(CellDistance_D)) CellDistance_D = CellCoord_D - iCell_D
+
+  end subroutine find_tree_cell
+  !===========================================================================
+  subroutine interpolate_tree(Coord_D, iNodeCell_II, Weight_I)
+
+    integer, parameter:: nPoint = 2**nDim
+
+    real, intent(in)    :: Coord_D(MaxDim)
+    integer, intent(out):: iNodeCell_II(0:nDim,nPoint)
+    real,    intent(out):: Weight_I(nPoint)
+
+    ! Find the nPoint=2**nDim cell centers that surround point Coord_D 
+    ! given in normalized coordinates (0<Coord_D<1). 
+    ! The cells are described by the node index and nDim cell indexes.
+    ! Also provide the proper weights for a second order interpolation.
+
+    integer:: iCell_D(MaxDim), jCell_D(MaxDim)
+    real:: CellDistance_D(MaxDim), Weight_D(MaxDim)
+    real:: CellSize_D(MaxDim), CoordShifted_D(MaxDim)
+    integer:: iNode, i, j, k, iPoint, iDim
+    !-------------------------------------------------------------------------
+    call find_tree_cell(Coord_D, iNode, iCell_D, CellDistance_D)
+    if(iNode == Unset_)then
+       iNodeCell_II = Unset_
+       Weight_I     = Unset_
+       RETURN
+    end if
+
+    ! Initialize the cell indexes
+    jCell_D = iCell_D
+    Weight_D = 1.0
+
+    ! In the non-ignored directions the point is between iCell_D and jCell_D
+    ! Calculate interpolation weights for iCell
+    do iDim = 1, nDim
+       if(CellDistance_D(iDim) > 0.0 .or. &
+            (CellDistance_D(iDim) == 0 .and. iCell_D(iDim) == 1) )then
+          jCell_D(iDim)  = iCell_D(iDim)+1
+          Weight_D(iDim) = 1.0 - CellDistance_D(iDim)
+       else
+          iCell_D(iDim)  = iCell_D(iDim) - 1
+          Weight_D(iDim) = abs(CellDistance_D(iDim))
+       end if
+    end do
+
+    iPoint = 0
+    do k = iCell_D(3), jCell_D(3)
+       do j = iCell_D(2), jCell_D(2)
+          do i = iCell_D(1), jCell_D(1)
+             iPoint = iPoint + 1
+             iNodeCell_II(0,iPoint)                        = iNode
+             iNodeCell_II(1,iPoint)                        = i
+             if(nDim > 1) iNodeCell_II(min(2,nDim),iPoint) = j
+             if(nDim > 2) iNodeCell_II(min(3,nDim),iPoint) = k
+             Weight_I(iPoint) = product(Weight_D(1:nDim))
+
+             ! Flip weight for the other cell
+             Weight_D(1) = 1.0 - Weight_D(1)
+          end  do
+          Weight_D(2) = 1.0 - Weight_D(2)
+       end  do
+       Weight_D(3) = 1.0 - Weight_D(3)
+    end  do    
+
+  end subroutine interpolate_tree
   !==========================================================================
   logical function is_point_inside_node(Position_D, iNode)
 
@@ -1281,6 +1345,7 @@ contains
 
   subroutine test_tree
 
+    use BATL_size, ONLY: nI, nJ, nK
     use BATL_mpi, ONLY: iProc, nProc
     use BATL_geometry, ONLY: init_geometry, IsPeriodic_D
 
@@ -1291,6 +1356,10 @@ contains
 
     integer :: iNode, Int_D(MaxDim), Ijk_D(MaxDim)
     real    :: Distance_D(MaxDim), DistanceGood_D(MaxDim), CellSize_D(MaxDim)
+
+    integer :: iNodeCell_II(0:nDim,2**nDim), iNodeCellGood_II(0:3,8)
+    real    :: Weight_I(2**nDim), WeightGood_I(8)
+
     integer, allocatable:: iTypeNode_I(:)
 
     logical :: DoTestMe
@@ -1340,6 +1409,9 @@ contains
     if(iNode /= nRoot)write(*,*)'ERROR: Test find point failed, iNode=',&
          iNode,' instead of',nRoot
 
+    if(.not.is_point_inside_node(CoordTest_D, iNode)) &
+         write(*,*)'ERROR: Test find point failed'
+
     if(any(Ijk_D(1:nDim) /= nIjk_D(1:nDim))) &
          write(*,*)'ERROR: Test find point failed, Ijk_D=',&
          Ijk_D(1:nDim),' instead of', nIjk_D(1:nDim)
@@ -1352,9 +1424,56 @@ contains
          write(*,*)'ERROR: Test find point failed, Distance_D=',&
          Distance_D(1:nDim),' instead of ', DistanceGood_D(1:nDim)
 
-    if(.not.is_point_inside_node(CoordTest_D, iNode)) &
-         write(*,*)'ERROR: Test find point failed'
-    
+    if(DoTestMe)write(*,*)'Testing interpolate_tree'
+    call interpolate_tree(CoordTest_D, iNodeCell_II, Weight_I)
+    select case(nDim)
+    case(1)
+       iNodeCellGood_II(0:1,1:2) = reshape( (/ nRoot,nI,nRoot,nI+1 /), &
+            (/2,2/) )
+       WeightGood_I(1:2)         = (/ 1-Distance_D(1), Distance_D(1) /)
+    case(2)
+       iNodeCellGood_II(0:2,1:4) = reshape( &
+            (/ nRoot,nI,nJ,nRoot,nI+1,nJ,nRoot,nI,nJ+1,nRoot,nI+1,nJ+1 /), &
+            (/3,4/) )
+       WeightGood_I(1:4) = (/ &
+            (1-Distance_D(1))*(1-Distance_D(2)), &
+            Distance_D(1)    *(1-Distance_D(2)), &
+            (1-Distance_D(1))*Distance_D(2)    , &
+            Distance_D(1)    *Distance_D(2)      &
+            /)
+    case(3)
+       iNodeCellGood_II(0:3,1:8) = reshape( (/ &
+            nRoot,nI,nJ,nK, &
+            nRoot,nI+1,nJ,nK, nRoot,nI,nJ+1,nK, nRoot,nI+1,nJ+1,nK, &
+            nRoot,nI,nJ,nK+1, &
+            nRoot,nI+1,nJ,nK+1, nRoot,nI,nJ+1,nK+1, nRoot,nI+1,nJ+1,nK+1 /),&
+            (/4,8/) )
+       WeightGood_I(1:8) = (/ &
+            (1-Distance_D(1))*(1-Distance_D(2))*(1-Distance_D(3)), &
+            Distance_D(1)    *(1-Distance_D(2))*(1-Distance_D(3)), &
+            (1-Distance_D(1))*Distance_D(2)    *(1-Distance_D(3)), &
+            Distance_D(1)    *Distance_D(2)    *(1-Distance_D(3)), &
+            (1-Distance_D(1))*(1-Distance_D(2))*Distance_D(3)    , &
+            Distance_D(1)    *(1-Distance_D(2))*Distance_D(3)    , &
+            (1-Distance_D(1))*Distance_D(2)    *Distance_D(3)    , &
+            Distance_D(1)    *Distance_D(2)    *Distance_D(3)      &
+            /)
+    end select
+
+    if(any(iNodeCell_II /= iNodeCellGood_II(0:nDim,1:2**nDim))) &
+         write(*,*)'ERROR: Test interpolate_tree failed, iNodeCell_II=',&
+         iNodeCell_II,' instead of ', iNodeCellGood_II
+
+    if(any(abs(Weight_I - WeightGood_I(1:2**nDim)) > 1e-6)) &
+         write(*,*)'ERROR: Test interpolate_tree failed, Weight_I=',&
+         Weight_I,' instead of ', WeightGood_I
+
+    !if(DoTestme)then
+    !   write(*,*)'Distance    =', Distance_D(1:nDim)
+    !   write(*,*)'iNodeCell_II=', iNodeCell_II
+    !   write(*,*)'Weight_I,Sum=', Weight_I, sum(Weight_I)
+    !end if
+
     if(DoTestMe)write(*,*)'Testing distribute_tree 1st'
     call distribute_tree(.true.)
     if(DoTestMe)call show_tree('after distribute_tree 1st', .true.)
