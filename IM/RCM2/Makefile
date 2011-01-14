@@ -6,6 +6,11 @@ install:
 LIB:
 	cd src; make LIB
 
+RCM:
+	cd ${SHAREDIR}; make LIB
+	cd src; make LIB
+	cd src; make RCM
+
 test:
 	@echo "There is no test for RCM2" > notest.diff
 
