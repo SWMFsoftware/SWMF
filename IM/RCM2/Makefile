@@ -1,4 +1,4 @@
-include ../../Makefile.def
+include Makefile.def
 
 install:
 	touch src/Makefile.DEPEND

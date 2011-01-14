@@ -2,8 +2,8 @@
 
 SHELL = /bin/sh
 
-include ../../../../Makefile.def
-include ../../../../Makefile.conf
+include ../../Makefile.def
+include ../../Makefile.conf
 
 # Force it to be single precision
 #PRECISION =
