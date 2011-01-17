@@ -9,7 +9,8 @@ subroutine IM_set_param(CompInfo, TypeAction)
        plot_area, plot_var, plot_format, &
        x_h, x_o, L_dktime, sunspot_number, f107, doy, &
        ipot, ibnd_type, &
-       precipitation_tau
+       precipitation_tau, &
+       UseDecay, DecayTimescale
   use ModReadParam
   use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
 
@@ -29,6 +30,7 @@ subroutine IM_set_param(CompInfo, TypeAction)
   logical             :: UseStrict=.true.
   integer :: iFile
   real :: FractionH,FractionO, SunspotNumber,F107MonthlyMean,DayOfYear,tau_in=0.0
+  real :: tmpReal
   !-------------------------------------------------------------------------
 
   select case(TypeAction)
@@ -160,6 +162,12 @@ subroutine IM_set_param(CompInfo, TypeAction)
               if (precipitation_tau(3) < 0 .or. precipitation_tau(3) > 1.0)&
                  call CON_stop('ERROR in IM/RCM2/src/IM_wrapper.f90: '// &
                       '#LossFactorO has an illegal value')
+        case("#DECAY")
+           call read_var('UseDecay',UseDecay)
+           if(UseDecay)then
+              call read_var('DecayTimescale',tmpReal)
+              DecayTimescale=tmpReal
+           end if
         case default
            if(iProc==0) then
               write(*,'(a,i4,a)')NameSub//' IM_ERROR at line ',i_line_read(),&

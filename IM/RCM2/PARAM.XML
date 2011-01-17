@@ -255,6 +255,20 @@ Artificially increase the temperature obtained from the magnetosphere model.
 Default value is 1, i.e. no change.
 </command>
 
+<command name="DECAY">
+	<parameter name="UseDecay" type="logical" default="F"/>
+	<if expr="$UseDecay">
+		<parameter name="DecayTimescale"   type="real" min="0"
+						   default="36000."/>
+	</if>
+
+#DECAY
+F			UseDecay
+36000.  		DecayTimescale in seconds
+
+Add a decay to the ring current vi exp(-(deltaT/DecayTimescale))
+</command>
+
 </commandgroup>
 
 <rule expr="-d 'IM/restartOUT' or not $_IsFirstSession">

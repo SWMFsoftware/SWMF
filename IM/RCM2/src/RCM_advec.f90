@@ -434,6 +434,8 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
         !
         CALL Move_plasma ( dt )
         !
+        call decay ( dt )
+        !
         !Save current time for use in Disk_write_arrays
         iCurrentTime = i_time+idt
         !

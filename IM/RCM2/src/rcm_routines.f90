@@ -142,6 +142,35 @@
 !                                                                       
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
+!
+!
+    SUBROUTINE decay ( dt )
+      USE Rcm_variables
+      IMPLICIT NONE
+      REAL (rprec), INTENT (IN) :: dt
+
+      INTEGER :: i, j, kc
+      REAl (rprec) :: decayrate
+
+      ! Return if decay is not on
+      if(.not.UseDecay) return
+
+      decayrate = EXP(-(dt/DecayTimescale))
+      do kc = 2, kcsize
+         do i = 1, isize
+            do j = 1, jsize
+               if(eeta(i,j,kc)>0.)then
+                  eeta(i,j,kc) = eeta(i,j,kc) * decayrate
+               end if
+            end do
+         end do
+      end do
+
+    END SUBROUTINE decay
+!
+!                                                                       
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!
 !9. Facilities for moving particles (both edges and grid) in one time step.
 !
 !

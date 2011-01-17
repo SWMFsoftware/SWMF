@@ -49,6 +49,10 @@ MODULE Rcm_variables
 !          comment: allow doy to be floating in case will want to use fractionals
 !                   later (stanislav, 6/15/2003).
 
+    ! SWMF: set exponential decay of ring current
+    logical     :: UseDecay = .FALSE.
+    real(rprec) :: DecayTimescale = 36000.
+
     REAL (rprec), PARAMETER ::     &
          pi           = 3.141592654_rprec, &
          pi_two       = 2.0_rprec * pi, &
