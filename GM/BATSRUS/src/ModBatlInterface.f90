@@ -7,9 +7,10 @@ contains
   subroutine set_batsrus_grid
 
     use BATL_lib, ONLY: nNodeUsed, nBlock, MaxBlock, Unused_B, Unused_BP, &
-         iProc, iComm
+         iProc, iComm, iNodeMorton_I, iTree_IA, Block_, Proc_
 
     use ModAmr, ONLY: UnusedBlock_BP
+    use ModParallel, ONLY: iBlock_A, iProc_A
 
     use ModMain, ONLY: nBlockAll, nBlockBats => nBlock, nBlockMax, UnusedBlk
     
@@ -19,7 +20,7 @@ contains
          SkippedBlock_, ExplBlock_
     use ModMpi
 
-    integer:: iBlock, iError
+    integer:: iBlock, iError, iMorton, iNode
     real   :: DxMin, DxMax
     !-------------------------------------------------------------------------
 
@@ -30,6 +31,12 @@ contains
 
     UnusedBlk      = Unused_B
     UnusedBlock_BP = Unused_BP
+
+    do iMorton = 1, nNodeUsed
+       iNode = iNodeMorton_I(iMorton)
+       iBlock_A(iMorton) = iTree_IA(Block_,iNode)
+       iProc_A(iMorton) = iTree_IA(Proc_,iNode)
+    end do
 
     where(Unused_BP)
        iTypeAdvance_BP = SkippedBlock_
