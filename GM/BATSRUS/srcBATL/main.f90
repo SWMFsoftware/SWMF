@@ -1,11 +1,13 @@
 program BATL_test
 
-  use BATL_amr,       ONLY: test_amr
-  use BATL_mpi,       ONLY: init_mpi
-  use BATL_tree,      ONLY: test_tree
-  use BATL_grid,      ONLY: test_grid
-  use BATL_pass_cell, ONLY: test_pass_cell
-  use BATL_pass_face, ONLY: test_pass_face
+  use BATL_amr,        ONLY: test_amr
+  use BATL_mpi,        ONLY: init_mpi
+  use BATL_tree,       ONLY: test_tree
+  use BATL_grid,       ONLY: test_grid
+  use BATL_pass_cell,  ONLY: test_pass_cell
+  use BATL_pass_node, ONLY: test_pass_node
+  use BATL_pass_face,  ONLY: test_pass_face
+  use BATL_pass_value, ONLY: test_pass_value
   use ModMpi
 
   implicit none
@@ -20,6 +22,7 @@ program BATL_test
   call test_pass_cell
   call test_pass_face
   call test_amr
+  call test_pass_node
 
   call MPI_finalize(iError)
   

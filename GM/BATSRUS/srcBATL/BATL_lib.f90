@@ -11,6 +11,7 @@ module BATL_lib
   use BATL_amr_criteria
   use BATL_pass_cell
   use BATL_pass_face
+  use BATL_pass_node
 
   implicit none
 
@@ -37,10 +38,10 @@ module BATL_lib
   ! Inherited from BATL_tree
   public:: nNodeUsed
   public:: Unused_B, Unused_BP
-  public:: iNode_B, iMortonNode_A
+  public:: iNode_B, iMortonNode_A, iNodeMorton_I
   public:: DiLevelNei_IIIB, iNodeNei_IIIB
   public:: iStatusNew_A, Refine_, Coarsen_
-  public:: iTree_IA, MinLevel_, MaxLevel_, Unset_
+  public:: iTree_IA, MinLevel_, MaxLevel_, Unset_, Block_, Proc_
   public:: write_tree_file, read_tree_file
 
   ! Inherited from BATL_geometry
@@ -68,6 +69,9 @@ module BATL_lib
   public:: message_pass_face
   public:: store_face_flux
   public:: apply_flux_correction
+
+  ! Inherited from BATL_pass_node
+  public:: message_pass_node
 
 contains
   !============================================================================
