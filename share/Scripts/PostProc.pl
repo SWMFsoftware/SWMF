@@ -246,7 +246,7 @@ sub concat_sat_log{
 	my $BaseName = $File;
 
 	# Remove extension
-	$BaseName =~ s/_n\d+\.(log|sat)$// or
+	$BaseName =~ s/_n\d+\.(log|sat|mag)$// or
 	    die "$ERROR: file name $File does not match "
 	    .   "_nSTEPNUMBER.(log|sat) format\n";
 
