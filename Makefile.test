@@ -304,8 +304,7 @@ test3_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; Restart.pl
 	cd ${TESTDIR}/IE/ionosphere; mv IE.log IE_all.log; \
-	   			     mv IE_mag_*.dat IE_mag.dat
-	cd ${TESTDIR}/GM/IO2; mv GM_mag_n000000.dat GM_mag.dat
+	   			     mv IE_mag_*.mag IE_all.mag
 
 # Note: The RCM .dat file is copied to .txt to avoid conversion to .plt
 test3_restart:
@@ -313,8 +312,7 @@ test3_restart:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}/IM/plots/; cp 2d__max_t00000020.dat t20.txt
 	cd ${TESTDIR}/IE/ionosphere; tail -3 IE.log >> IE_all.log; \
-	   			     tail -6 IE_mag_*.dat >> IE_mag.dat
-	cd ${TESTDIR}/GM/IO2; tail -6 GM_mag_n*.dat >> GM_mag.dat
+	   			     tail -6 IE_mag_*.mag >> IE_all.mag
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
 
 test3_check:
@@ -323,17 +321,17 @@ test3_check:
 		output/test3/GM_log_n000001.log \
 		> test3_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/GM_mag.dat \
-		output/test3/GM_mag.dat \
-		> test3_gm_dB.diff)
+		${TESTDIR}/RESULTS/GM/GM_mag_n00000000.mag \
+		output/test3/GM_mag_n00000000.mag \
+		>> test3_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE_all.log \
 		output/test3/IE.log \
 		> test3_ie.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IE/IE_mag.dat \
-		output/test3/IE_mag.dat \
-		> test3_ie_dB.diff)
+		${TESTDIR}/RESULTS/IE/IE_all.mag \
+		output/test3/IE.mag \
+		>> test3_ie.diff)
 	gunzip -c output/test3/IM_2d__max_t00000020.dat.gz \
 		> ${TESTDIR}/RESULTS/IM/t20.dat
 # Remove date stamp from tecplot files
