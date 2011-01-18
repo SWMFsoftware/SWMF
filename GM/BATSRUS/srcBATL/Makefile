@@ -20,7 +20,6 @@ OBJECTS = \
 	BATL_pass_cell.o \
         BATL_pass_node.o \
         BATL_pass_face.o \
-	BATL_pass_value.o \
 	BATL_size.o \
 	BATL_tree.o
 
