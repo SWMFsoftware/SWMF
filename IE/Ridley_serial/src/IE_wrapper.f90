@@ -1094,7 +1094,8 @@ subroutine IE_init_session(iSession, tSimulation)
   use CON_physics,   ONLY: get_time, get_planet, get_axes
   use ModIonosphere, ONLY: IONO_Bdp
   use IE_ModMain,    ONLY: time_accurate, time_simulation, ThetaTilt
-  use IE_ModIo,      ONLY: dt_output, t_output_last, dt_magoutput, t_magoutput_last
+  use IE_ModIo,      ONLY: dt_output, t_output_last, dt_magoutput, &
+       t_magoutput_last
   use ModIonoMagPerturb
   use ModProcIE
 
@@ -1136,10 +1137,9 @@ subroutine IE_init_session(iSession, tSimulation)
   if(time_accurate)then
      where(dt_output>0.) &
           t_output_last=int(time_simulation/dt_output)
-     if(save_magnetometer_data) &
+     if(save_magnetometer_data .and. t_magoutput_last > -1) &
           t_magoutput_last = int(time_simulation/dt_magoutput)
   end if
-
 
 end subroutine IE_init_session
 
