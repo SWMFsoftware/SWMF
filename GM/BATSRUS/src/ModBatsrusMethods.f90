@@ -1165,9 +1165,9 @@ contains
 
     n_output_last(ifile)=n_step
 
-    if(iProc==0 .and. lVerbose>0 .and. (ifile /= logfile_ .and. &
-         (.not. (iFile > satellite_ .and. &
-         iFile <= Satellite_ + nSatellite))))then
+    if(iProc==0 .and. lVerbose>0 .and. &
+         ifile /= logfile_ .and. iFile /= magfile_ .and. &
+         (iFile <= satellite_ .or. iFile > satellite_ + nSatellite))then
        if(time_accurate)then
           call write_prefix; 
           write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &
