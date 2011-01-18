@@ -274,8 +274,8 @@ test_magnetometer_run:
 
 test_magnetometer_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
-		Param/MAGNETOMETER/TestOutput/GM_mag_n000000.dat \
-		${TESTDIR}/RESULTS/GM/GM_mag_n000000.dat \
+		Param/MAGNETOMETER/TestOutput/GM_mag_n00000000.mag \
+		${TESTDIR}/RESULTS/GM/GM_mag_n00000000.mag \
 		> test_magnetometer.diff	
 	ls -l test_magnetometer.diff
 
