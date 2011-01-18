@@ -370,8 +370,8 @@ contains
     ! Open the output file 
     call set_oktest('open_magnetometer_output_files', oktest, oktest_me)
 
-    write(filename,'(a,i6.6,a)')trim(NamePlotDir)//&
-         'GM_mag_n',n_step,'.dat'
+    write(filename,'(a,i8.8,a)')trim(NamePlotDir)//&
+         'GM_mag_n', n_step, '.mag'
 
     if(oktest) then
        write(*,*) 'open_magnetometer_output_files: filename:', filename
@@ -381,7 +381,7 @@ contains
     open(iUnitMag, file=filename, status="replace")
 
     ! Write the header
-    write(iUnitMag, '(i5,a)') nMagnetometer, ' magnetometers:'
+    write(iUnitMag, '(i5,a)',ADVANCE="NO") nMagnetometer, ' magnetometers: '
     do iMag=1,nMagnetometer-1 
        write(iUnitMag, '(1X,a)', ADVANCE='NO') MagName_I(iMag)
     end do
