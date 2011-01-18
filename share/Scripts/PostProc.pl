@@ -236,7 +236,7 @@ sub concat_sat_log{
 
     chdir "IO2" or return;
     opendir(DIR,'.');
-    my @LogSatFiles = sort(grep /\.(log|sat)$/, readdir(DIR));
+    my @LogSatFiles = sort(grep /\.(log|sat|mag)$/, readdir(DIR));
     closedir(DIR);
 
     # Concatenate the .log/.sat files with same name
@@ -314,8 +314,8 @@ Usage:
 
    -v -verbose Print verbose information.
 
-   -c -cat     Concatenate series of satellite and logfiles into one file.
-               Cannot be used with the -r(epeat) option
+   -c -cat     Concatenate series of satellite, log and magnetometer output
+               files into one file. Cannot be used with the -r(epeat) option
 
    -g -gzip    Gzip the big ASCII files.
 
@@ -354,7 +354,8 @@ Examples:
 PostProc.pl
 
    Post-process the plot files, create movies from IDL output (remove original
-   files), concatenate satellite and log files, and run PostIDL.exe on 4 cores:
+   files), concatenate satellite, log, and magnetometer files, 
+   and run PostIDL.exe on 4 cores:
 
 PostProc.pl -M -cat -n=4
 
