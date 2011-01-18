@@ -1,8 +1,5 @@
 #ECHO
-T
-
-#VERBOSE
-100
+T			DoEcho
 
 #PROGRESS
 1			DnShowProgressShort
@@ -58,7 +55,7 @@ T                       UseBody
 GM/Param/EARTH/Grid
 
 #GRIDRESOLUTION
-2.0                     Resolution
+8.0                     Resolution
 initial                 NameArea
 
 #OUTERBOUNDARY
