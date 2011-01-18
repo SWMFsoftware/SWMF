@@ -83,9 +83,9 @@ T			UseSolarwindFile
 GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat
 
 #MAGNETOMETER
-Param/CCMC/station.dat
--1
-5.0
+Param/magnetometer_location.dat
+-1			DnOutput
+5.0			DtOutput
 
 #SAVEPLOT
 3			nPlotFile
@@ -143,9 +143,9 @@ max tec                 StringPlot
 5.0			DtSavePlot
 
 #MAGNETOMETER
-Param/CCMC/station.dat
--1
-5.0
+Param/magnetometer_location.dat
+-1			DnOutput
+5.0			DtOutput
 
 #END_COMP IE   ----------------------------------------
 
