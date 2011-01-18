@@ -206,14 +206,14 @@ contains
     ! Open the output file 
     write(*,*) '=> writing magnetic perturbation output.'  
     
-    write(NameFile,'(a,3i2.2,"_",3i2.2,a)')trim(NameIonoDir)//"IE_mag_it", &
-         mod(time_array(1),100),time_array(2:6), ".dat"
+    write(NameFile,'(a,3i2.2,"_",3i2.2,a)')trim(NameIonoDir)//"IE_mag_t", &
+         mod(time_array(1),100),time_array(2:6), ".mag"
 
     iUnitMag= io_unit_new()
     open(iUnitMag, file=NameFile)
 
     ! Write the header
-    write(iUnitMag, '(i5,a)') nMagnetometer, ' magnetometers:'
+    write(iUnitMag, '(i5,a)', ADVANCE='NO') nMagnetometer, ' magnetometers: '
     do iMag=1, nMagnetometer-1
        write(iUnitMag, '(1x,a)', ADVANCE='NO') MagName_I(iMag) 
     end do
