@@ -17,7 +17,7 @@ subroutine write_plot_common(ifile)
   use ModParallel, ONLY: proc_dims
   use ModMpi
   use ModUtilities, ONLY: lower_case, split_string
-
+  use BATL_lib, ONLY: message_pass_node
   implicit none
 
   ! Arguments
@@ -33,7 +33,7 @@ subroutine write_plot_common(ifile)
   real :: PlotVarBlk(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
   real :: PlotVar_inBody(nplotvarmax)
   logical :: PlotVar_useBody(nplotvarmax)
-  real, allocatable :: PlotVarNodes_NBI(:,:,:,:,:)
+  real, allocatable :: PlotVarNodes_VNB(:,:,:,:,:)
   real, allocatable :: PlotXYZNodes_NBI(:,:,:,:,:)
 
   character (len=10) :: plotvarnames(nplotvarmax)=''
@@ -266,6 +266,10 @@ subroutine write_plot_common(ifile)
         PlotXYZNodes_NBI(:,:,:,:,2)=NodeY_NB
         PlotXYZNodes_NBI(:,:,:,:,3)=NodeZ_NB
      else
+        if(UseBatl) then
+           call stop_mpi('Geomery not suported in UseBatl')
+        end if
+
         NodeValue_NB = NodeX_NB(:,:,:,:)                   ! X
         call pass_and_average_nodes(.true.,NodeValue_NB)
         PlotXYZNodes_NBI(:,:,:,:,1)=NodeValue_NB
@@ -282,15 +286,24 @@ subroutine write_plot_common(ifile)
      end if
 
      ! Now pass and average the rest of the values
-     do i=1,nplotvar
-        NodeValue_NB=PlotVarNodes_NBI(:,:,:,:,i)
-        call pass_and_average_nodes(.true.,NodeValue_NB)
-        PlotVarNodes_NBI(:,:,:,:,i)=NodeValue_NB
-     end do
-     call write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNodes_NBI, &
+
+     if(UseBatl) then
+        ! for BATL we work on all the nplotvarmax variables
+        ! at the same sweep
+        call message_pass_node(nplotvarmax,PlotVarNodes_VNB, &
+             TypeOperationIn='Mean')
+        call set_block_hanging_node(nplotvarmax,PlotVarNodes_VNB)
+     else
+        do i=1,nplotvar
+           NodeValue_NB=PlotVarNodes_VNB(i,:,:,:,:)
+           call pass_and_average_nodes(.true.,NodeValue_NB)
+           PlotVarNodes_VNB(i,:,:,:,:)=NodeValue_NB
+        end do
+     end if
+     call write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNodes_NBI, &
           unitstr_TEC, xmin,xmax,ymin,ymax,zmin,zmax)
      deallocate(PlotXYZNodes_NBI)
-     deallocate(PlotVarNodes_NBI)
+     deallocate(PlotVarNodes_VNB)
   end if
 
   close(unit_tmp)
@@ -420,8 +433,11 @@ contains
     real,    dimension(0:nI+2, 0:nJ+2, 0:nK+2, nplotvarmax) :: nodeV
     real :: rr
 
-    if(.not.allocated(PlotVarNodes_NBI)) allocate(&
-         PlotVarNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,nplotvarmax))
+    if(.not.allocated(PlotVarNodes_VNB)) then 
+       allocate(&
+            PlotVarNodes_VNB(nplotvarmax,1:1+nI,1:1+nJ,1:1+nK,nBLK))
+       PlotVarNodes_VNB = 0.0
+    end if
 
     ! Initialize values
     nodeCount = 0; nodeV = 0.00
@@ -440,14 +456,17 @@ contains
        end do
     end do; end do; end do
 
+    ! Store NodeV (per block info) into PlotVarNodes
     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1  ! Node loop
+       ! Inefficient code, sqrt should be avoided !!!
+
        rr=sqrt( &
             NodeX_NB(i,j,k,iBLK)**2+ &
             NodeY_NB(i,j,k,iBLK)**2+ &
             NodeZ_NB(i,j,k,iBLK)**2)
        do iVar=1,nplotvar
           if (nodeCount(i,j,k,iVar) > 0) then
-             PlotVarNodes_NBI(i,j,k,iBLK,iVar) = &
+             PlotVarNodes_VNB(iVar,i,j,k,iBLK) = &
                   nodeV(i,j,k,iVar)/real(nodeCount(i,j,k,iVar))
              ! This will zero out values otherwise true with plotvar_useBody
              ! The intent of plotvar_useBody is to fill nodes inside of the 
@@ -456,11 +475,11 @@ contains
              ! the body and out. Setting the values to 0 inside 0.51 fixes it.
              if(plotvar_useBody(iVar) .and. body1)then
                 if(rr < 0.51*Rbody .and. rr < 0.51) then
-                   PlotVarNodes_NBI(i,j,k,iBLK,iVar) = 0.00
+                   PlotVarNodes_VNB(iVar,i,j,k,iBLK) = 0.00
                 end if
              end if
           else
-             PlotVarNodes_NBI(i,j,k,iBLK,iVar) = plotvar_inBody(iVar)
+             PlotVarNodes_VNB(iVar,i,j,k,iBLK) = plotvar_inBody(iVar)
           end if
        end do
     end do; end do; end do

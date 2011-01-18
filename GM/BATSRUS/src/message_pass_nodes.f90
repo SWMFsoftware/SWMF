@@ -316,6 +316,7 @@ subroutine mp_build_node_indices(JustCount)
   use ModOctree
   use ModMPNodes
   use ModAMR, ONLY : unusedBlock_BP
+  use ModMain, ONLY : UnusedBLK
   use ModPolarNeighbor
   implicit none
 
@@ -368,11 +369,13 @@ subroutine mp_build_node_indices(JustCount)
 
   do iPE = 0,nProc-1
      do iBLK = 1,nBLK
-        if (.not.associated(global_block_ptrs(iBLK, iPE+1) % ptr)) CYCLE
 
+!        if (UnusedBLK(iBLK)) CYCLE
+
+        if (.not.associated(global_block_ptrs(iBLK, iPE+1) % ptr)) CYCLE
         if (.not.global_block_ptrs(iBLK, iPE+1) % ptr % used) CYCLE
 
-        if (DoImplicitUnusedBlock)then
+       if (DoImplicitUnusedBlock)then
            if (unusedBlock_BP(iBLK,iPE)) CYCLE
         end if
 
@@ -727,6 +730,7 @@ subroutine pass_and_average_nodes(DoFixHangingNodes,Vin)
   use ModOctree
   use ModMPNodes
   use ModMpi
+  use ModMain, only : UnusedBLK
   implicit none
 
   !Subroutine arguements
@@ -742,18 +746,17 @@ subroutine pass_and_average_nodes(DoFixHangingNodes,Vin)
 
   ! Assign value to internal passing variable and do message pass
   V(:,:,:,:,1) = Vin(:,:,:,:)
-  call message_pass_nodes
 
+  call message_pass_nodes
   ! Average values passed and put back into Vin
   do iBLK=1,nBLK
-     if (.not.associated(global_block_ptrs(iBLK, iProc+1) % ptr)) CYCLE
-     if (.not.global_block_ptrs(iBLK, iProc+1) % ptr % used) CYCLE
+     if (UnusedBLK(iBLK)) CYCLE
      do i=1,nI+1; do j=1,nJ+1; do k=1,nK+1
         if(NodeCount(i,j,k,iBLK)>1) &
              Vin(i,j,k,iBLK) = sum(V(i,j,k,iBLK,1:NodeCount(i,j,k,iBLK)))/real(NodeCount(i,j,k,iBLK))
      end do; end do; end do
   end do
-
+  
   ! If we are fixing hanging nodes, call routine
   if(DoFixHangingNodes) call set_block_hanging_nodes(Vin)
 
@@ -770,6 +773,7 @@ subroutine pass_and_max_nodes(DoFixHangingNodes,Vin)
   use ModOctree
   use ModMPNodes
   use ModMpi
+  use ModMain, ONLY : UnusedBLK
   implicit none
 
   !Subroutine arguements
@@ -789,8 +793,7 @@ subroutine pass_and_max_nodes(DoFixHangingNodes,Vin)
 
   ! Max values passed and put back into Vin
   do iBLK=1,nBLK
-     if (.not.associated(global_block_ptrs(iBLK, iProc+1) % ptr)) CYCLE
-     if (.not.global_block_ptrs(iBLK, iProc+1) % ptr % used) CYCLE
+     if(UnusedBLK(iBLK)) CYCLE
      do i=1,nI+1; do j=1,nJ+1; do k=1,nK+1
         if(NodeCount(i,j,k,iBLK)>1) &
              Vin(i,j,k,iBLK) = maxval(V(i,j,k,iBLK,1:NodeCount(i,j,k,iBLK)))
@@ -812,18 +815,18 @@ subroutine set_block_hanging_nodes(Vin)
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,nBLK
   use ModOctree
+  use ModMain, ONLY : UnusedBLK
+  use ModParallel, ONLY : BLKneighborLEV
   implicit none
 
   !Subroutine arguements
-  real, intent(inout), dimension(1:1+nI,1:1+nJ,1:1+nK,nBLK) :: Vin
-
+  real, intent(inout) :: Vin(nI+1,nJ+1,nK+1,nBLK)
   !Local variables
   integer :: i,j,k, iBLK,iPE
   integer :: i1,i2, j1,j2, k1,k2, iOffset,jOffset,kOffset
-  integer :: neighborLEV, idir
+  integer :: idir
   integer, dimension(26,3) :: dLOOP
-  integer, dimension(4) :: neighborPE,neighborBLK,neighborCHILD
-
+  
   !------------------------------------------
 
   ! face=1-6, edge=7-18, corner=19-26
@@ -837,16 +840,13 @@ subroutine set_block_hanging_nodes(Vin)
   ! Fix hanging nodes
   iPE=iProc
   do iBLK=1,nBLK
-     if (.not.associated(global_block_ptrs(iBLK, iProc+1) % ptr)) CYCLE
-     if (.not.global_block_ptrs(iBLK, iProc+1) % ptr % used) CYCLE
+     if (UnusedBLK(iBLK)) CYCLE
 
      ! Just loop over faces and edges, not corners
      do idir=1,18
-        call treeNeighbor(iPE,iBLK,dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3), &
-             neighborPE,neighborBLK,neighborCHILD,neighborLEV)
 
         ! If coarser neighbor, fix hanging nodes
-        if(neighborLEV==1)then
+        if(BLKneighborLEV(dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3),iBLK) == 1)then
 
            select case(dLOOP(idir,1))
            case( 1)
@@ -924,6 +924,126 @@ subroutine set_block_hanging_nodes(Vin)
   end do
 
 end subroutine set_block_hanging_nodes
+!==========================================================================
+!==========================================================================
+!==========================================================================
+subroutine set_block_hanging_node(nVar,Stat_VNB)
+  !
+  ! This routine will fix hanging nodes by simple interpolation.
+  !
+  use ModProcMH
+  use ModMain, ONLY : nI,nJ,nK,nBLK
+  use ModOctree
+  use ModMain, ONLY : UnusedBLK
+  use ModParallel, ONLY : BLKneighborLEV
+  implicit none
+
+  !Subroutine arguements
+  integer, intent(in) :: nVar
+  real, intent(inout):: Stat_VNB(nVar,nI+1,nJ+1,nK+1,nBLK)
+  !Local variables
+  integer :: i,j,k, iBLK,iPE
+  integer :: i1,i2, j1,j2, k1,k2, iOffset,jOffset,kOffset
+  integer :: idir
+  integer, dimension(26,3) :: dLOOP
+
+  !------------------------------------------
+
+  ! face=1-6, edge=7-18, corner=19-26
+  !    1   2   3   4   5   6    7   8   9  10  11  12  13  14  15  16  17  18   19  20  21  22  23  24  25  26
+  !    W   E   N   S   T   B   WN  ES  WS  EN  NT  SB  NB  ST  TW  BE  TE  BW  WNT ESB WNB EST WST ENB WSB ENT
+  data dLOOP / &
+       1, -1,  0,  0,  0,  0,   1, -1,  1, -1,  0,  0,  0,  0,  1, -1, -1,  1,   1, -1,  1, -1,  1, -1,  1, -1, &
+       0,  0,  1, -1,  0,  0,   1, -1, -1,  1,  1, -1,  1, -1,  0,  0,  0,  0,   1, -1,  1, -1, -1,  1, -1,  1, &
+       0,  0,  0,  0,  1, -1,   0,  0,  0,  0,  1, -1, -1,  1,  1, -1,  1, -1,   1, -1, -1,  1,  1, -1, -1,  1 /
+
+  ! Fix hanging nodes
+  iPE=iProc
+  do iBLK=1,nBLK
+     if (UnusedBLK(iBLK)) CYCLE
+
+     ! Just loop over faces and edges, not corners
+     do idir=1,18
+
+        ! If coarser neighbor, fix hanging nodes
+        if(BLKneighborLEV(dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3),iBLK) == 1)then
+
+           select case(dLOOP(idir,1))
+           case( 1)
+              i1=1+nI; i2=1+nI; iOffset=0
+           case(-1)
+              i1=1;    i2=1;    iOffset=0
+           case( 0)
+              i1=2;    i2=nI;   iOffset=1
+           end select
+
+           select case(dLOOP(idir,2))
+           case( 1)
+              j1=1+nJ; j2=1+nJ; jOffset=0
+           case(-1)
+              j1=1;    j2=1;    jOffset=0
+           case( 0)
+              j1=2;    j2=nJ;   jOffset=1
+           end select
+
+           select case(dLOOP(idir,3))
+           case( 1)
+              k1=1+nK; k2=1+nK; kOffset=0
+           case(-1)
+              k1=1;    k2=1;    kOffset=0
+           case( 0)
+              k1=2;    k2=nK;   kOffset=1
+           end select
+
+           ! Correct edge nodes and some interior face nodes
+           do i=i1,i2,2; do j=j1,j2,2; do k=k1,k2,2
+              Stat_VNB(1:nVar,i,j,k,iBLK) = 0.125 * ( &
+                   Stat_VNB(1:nVar,i-iOffset,j-jOffset,k-kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i-iOffset,j-jOffset,k+kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i-iOffset,j+jOffset,k-kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i-iOffset,j+jOffset,k+kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i+iOffset,j-jOffset,k-kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i+iOffset,j-jOffset,k+kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i+iOffset,j+jOffset,k-kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i+iOffset,j+jOffset,k+kOffset,iBLK) )
+           end do; end do; end do
+
+           ! Add correction of additional interior face nodes
+           if(idir<=6)then
+              if(iOffset==1)then
+                 do i=i1-1,i2+1,2; do j=j1,j2,2; do k=k1,k2,2
+                    Stat_VNB(1:nVar,i,j,k,iBLK) = 0.25 * ( &
+                         Stat_VNB(1:nVar,i,j-jOffset,k-kOffset,iBLK) + &
+                         Stat_VNB(1:nVar,i,j-jOffset,k+kOffset,iBLK) + &
+                         Stat_VNB(1:nVar,i,j+jOffset,k-kOffset,iBLK) + &
+                         Stat_VNB(1:nVar,i,j+jOffset,k+kOffset,iBLK) )
+                 end do; end do; end do
+              end if
+              if(jOffset==1)then
+                 do i=i1,i2,2; do j=j1-1,j2+1,2; do k=k1,k2,2
+                    Stat_VNB(1:nVar,i,j,k,iBLK) = 0.25 * ( &
+                         Stat_VNB(1:nVar,i-iOffset,j,k-kOffset,iBLK) + &
+                         Stat_VNB(1:nVar,i-iOffset,j,k+kOffset,iBLK) + &
+                         Stat_VNB(1:nVar,i+iOffset,j,k-kOffset,iBLK) + &
+                         Stat_VNB(1:nVar,i+iOffset,j,k+kOffset,iBLK) )
+                 end do; end do; end do
+              end if
+              if(kOffset==1)then
+                 do i=i1,i2,2; do j=j1,j2,2; do k=k1-1,k2+1,2
+                    Stat_VNB(1:nVar,i,j,k,iBLK) = 0.25 * ( &
+                         Stat_VNB(1:nVar,i-iOffset,j-jOffset,k,iBLK) + &
+                         Stat_VNB(1:nVar,i-iOffset,j+jOffset,k,iBLK) + &
+                         Stat_VNB(1:nVar,i+iOffset,j-jOffset,k,iBLK) + &
+                         Stat_VNB(1:nVar,i+iOffset,j+jOffset,k,iBLK) )
+                 end do; end do; end do
+              end if
+           end if
+
+        end if
+     end do
+  end do
+
+end subroutine set_block_hanging_node
 
 !==========================================================================
 !==========================================================================
@@ -931,7 +1051,7 @@ end subroutine set_block_hanging_nodes
 subroutine assign_node_numbers
   use ModProcMH
   use ModIO, ONLY: write_prefix, iUnitOut
-  use ModMain, ONLY : lVerbose, nBlock, nBlockMax, nBlockALL
+  use ModMain, ONLY : UseBatl, lVerbose, nBlock, nBlockMax, nBlockALL, UnusedBLK
   use ModOctree
   use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
   use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK, x1,x2, y1,y2, z1,z2
@@ -939,6 +1059,7 @@ subroutine assign_node_numbers
   use ModNodes
   use ModMPNodes
   use ModMpi
+  use BATL_lib, ONLY: message_pass_node
   implicit none
 
   integer, parameter :: NodesPerBlock=(nI+1)*(nJ+1)*(nK+1)
@@ -946,12 +1067,14 @@ subroutine assign_node_numbers
   integer :: i, j, k, iNode, iBLK, iError, iPE
   integer :: nOffset, nOffsetPrevious
   integer, allocatable, dimension(:) :: NodeOffset, NodeOffsetMax, nOffset_P
+  real, allocatable, dimension(:,:,:,:,:) :: IndexNode_VNB
   logical :: boundary, DoAllReduce=.true.
   integer :: iStatus(MPI_STATUS_SIZE)
 
   !------------------------------------------
 
   if(.not. allocated(V))allocate(V(nI+1,nJ+1,nK+1,nBLK,8))
+  
 
   ! Write information to the screen
   if(iProc==0.and.lVerbose>0)then
@@ -986,34 +1109,46 @@ subroutine assign_node_numbers
 
   ! Assign value to internal passing variable and do message pass
   !  NOTE: convert integer to real for message pass first
-  V(:,:,:,:,1) = real(NodeNumberGlobal_NB(:,:,:,:))
-  call message_pass_nodes
 
-  ! Put minimum value back into NodeNumberGlobal_NB
-  !  NOTE: convert message passed real back to integer
-  do iBLK=1,nBLK
-     if (.not.associated(global_block_ptrs(iBLK, iProc+1) % ptr)) CYCLE
-     if (.not.global_block_ptrs(iBLK, iProc+1) % ptr % used) CYCLE
-     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-        if(NodeCount(i,j,k,iBLK)>1)then
-           boundary=.false.
-           if(periodic3D(1))then
-              if(min(x1,x2) > (NodeX_NB(i,j,k,iBLK)-0.5*abs(dx_BLK(iBLK))))boundary=.true.
-              if(max(x1,x2) < (NodeX_NB(i,j,k,iBLK)+0.5*abs(dx_BLK(iBLK))))boundary=.true.
+
+  if(UseBatl) then
+     ! Done a evel one, with allocate and dealocate. NEED to be fixed
+     allocate(IndexNode_VNB(1,nI+1,nJ+1,nK+1,nBLK))
+     IndexNode_VNB(1,:,:,:,:) = real(NodeNumberGlobal_NB(:,:,:,:))
+     call message_pass_node(1,IndexNode_VNB, &
+          TypeOperationIn='Min')
+     NodeNumberGlobal_NB(:,:,:,:) = nint(IndexNode_VNB(1,:,:,:,:))
+     deallocate(IndexNode_VNB)
+  else
+     V(:,:,:,:,1) = real(NodeNumberGlobal_NB(:,:,:,:))
+     call message_pass_nodes
+
+     ! Put minimum value back into NodeNumberGlobal_NB
+     !  NOTE: convert message passed real back to integer
+     do iBLK=1,nBLK
+        if (UnusedBLK(iBLK)) CYCLE
+        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+           if(NodeCount(i,j,k,iBLK)>1)then
+              boundary=.false.
+              if(periodic3D(1))then
+                 if(min(x1,x2) > (NodeX_NB(i,j,k,iBLK)-0.5*abs(dx_BLK(iBLK))))boundary=.true.
+                 if(max(x1,x2) < (NodeX_NB(i,j,k,iBLK)+0.5*abs(dx_BLK(iBLK))))boundary=.true.
+              end if
+              if(periodic3D(2))then
+                 if(min(y1,y2) > (NodeY_NB(i,j,k,iBLK)-0.5*abs(dy_BLK(iBLK))))boundary=.true.
+                 if(max(y1,y2) < (NodeY_NB(i,j,k,iBLK)+0.5*abs(dy_BLK(iBLK))))boundary=.true.
+              end if
+              if(periodic3D(3))then
+                 if(min(z1,z2) > (NodeZ_NB(i,j,k,iBLK)-0.5*abs(dz_BLK(iBLK))))boundary=.true.
+                 if(max(z1,z2) < (NodeZ_NB(i,j,k,iBLK)+0.5*abs(dz_BLK(iBLK))))boundary=.true.
+              end if
+              if(.not.boundary) NodeNumberGlobal_NB(i,j,k,iBLK) = &
+                   nint(minval(V(i,j,k,iBLK,1:NodeCount(i,j,k,iBLK))))
            end if
-           if(periodic3D(2))then
-              if(min(y1,y2) > (NodeY_NB(i,j,k,iBLK)-0.5*abs(dy_BLK(iBLK))))boundary=.true.
-              if(max(y1,y2) < (NodeY_NB(i,j,k,iBLK)+0.5*abs(dy_BLK(iBLK))))boundary=.true.
-           end if
-           if(periodic3D(3))then
-              if(min(z1,z2) > (NodeZ_NB(i,j,k,iBLK)-0.5*abs(dz_BLK(iBLK))))boundary=.true.
-              if(max(z1,z2) < (NodeZ_NB(i,j,k,iBLK)+0.5*abs(dz_BLK(iBLK))))boundary=.true.
-           end if
-           if(.not.boundary) NodeNumberGlobal_NB(i,j,k,iBLK) = &
-                nint(minval(V(i,j,k,iBLK,1:NodeCount(i,j,k,iBLK))))
-        end if
-     end do; end do; end do
-  end do
+        end do; end do; end do
+     end do
+  end if ! UseBatl
+
 
   !Allocate memory for storing the node offsets
   allocate( NodeOffset   (nBlockALL*NodesPerBlock), stat=iError)

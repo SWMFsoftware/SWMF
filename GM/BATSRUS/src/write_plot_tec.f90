@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNodes_NBI,&
+subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNodes_NBI,&
      unitstr_TEC,xmin,xmax,ymin,ymax,zmin,zmax)
   !
   !NOTE: This routine assumes that the blocks are sorted on PEs by their global
@@ -29,7 +29,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNode
   integer, intent(in) :: ifile, nPlotVar
   character (LEN=1000), intent(in) :: unitstr_TEC
   real, intent(in) :: PlotVarBLK(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVarMax)
-  real, intent(in) :: PlotVarNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,nPlotVarMax)
+  real, intent(in) :: PlotVarNodes_VNB(nPlotVarMax,1:1+nI,1:1+nJ,1:1+nK,nBLK)
   real, intent(in) :: PlotXYZNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,3)
   real, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
 
@@ -136,7 +136,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNode
                 (NodeXYZ_N(1,1,1,1)+NodeXYZ_N(nI+1,1,1,1))/2., &
                 (NodeXYZ_N(1,1,1,2)+NodeXYZ_N(1,nJ+1,1,2))/2., &
                 (NodeXYZ_N(1,1,1,3)+NodeXYZ_N(1,1,nK+1,3))/2., &
-                PlotVarNodes_NBI(2,2,2,iBLK,1:nPlotVar)
+                PlotVarNodes_VNB(1:nPlotVar,2,2,2,iBLK)
         end if
      end do
   case('3d_')
@@ -159,7 +159,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNode
         do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
            if(NodeUniqueGlobal_NB(i,j,k,iBLK))then
               write(unit_tmp,fmt="(30(E14.6))") &
-                   NodeXYZ_N(i,j,k,1:3),PlotVarNodes_NBI(i,j,k,iBLK,1:nPlotVar)
+                   NodeXYZ_N(i,j,k,1:3),PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBLK)
            end if
         end do; end do; end do
         ! Write point connectivity
@@ -236,8 +236,8 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNode
                        write(unit_tmp,fmt="(30(E14.6))") &
                             (factor1*NodeXYZ_N(cut1,j,k,1:3)+ &
                             factor2*NodeXYZ_N(cut2,j,k,1:3)), &
-                            (factor1*PlotVarNodes_NBI(cut1,j,k,iBLK,1:nPlotVar)+ &
-                            factor2*PlotVarNodes_NBI(cut2,j,k,iBLK,1:nPlotVar))
+                            (factor1*PlotVarNodes_VNB(1:nPlotVar,cut1,j,k,iBLK)+ &
+                            factor2*PlotVarNodes_VNB(1:nPlotVar,cut2,j,k,iBLK))
                     end do; end do
                     ! Write point connectivity
                     do k=1,nK; do j=1,nJ
@@ -300,8 +300,8 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNode
                        write(unit_tmp,fmt="(30(E14.6))") &
                             (factor1*NodeXYZ_N(i,cut1,k,1:3)+ &
                             factor2*NodeXYZ_N(i,cut2,k,1:3)), &
-                            (factor1*PlotVarNodes_NBI(i,cut1,k,iBLK,1:nPlotVar)+ &
-                            factor2*PlotVarNodes_NBI(i,cut2,k,iBLK,1:nPlotVar))
+                            (factor1*PlotVarNodes_VNB(1:nPlotVar,i,cut1,k,iBLK)+ &
+                            factor2*PlotVarNodes_VNB(1:nPlotVar,i,cut2,k,iBLK))
                     end do; end do
                     ! Write point connectivity
                     do k=1,nK; do i=1,nI
@@ -370,8 +370,8 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNode
                        write(unit_tmp,fmt="(30(E14.6))") &
                             (factor1*NodeXYZ_N(i,cut1,k,1:3)+ &
                             factor2*NodeXYZ_N(i,cut2,k,1:3)), &
-                            (factor1*PlotVarNodes_NBI(i,cut1,k,iBLK,1:nPlotVar)+ &
-                            factor2*PlotVarNodes_NBI(i,cut2,k,iBLK,1:nPlotVar))
+                            (factor1*PlotVarNodes_VNB(1:nPlotVar,i,cut1,k,iBLK)+ &
+                            factor2*PlotVarNodes_VNB(1:nPlotVar,i,cut2,k,iBLK))
                     end do; end do
                     ! Write point connectivity
                     do k=1,nK; do i=1,nI
@@ -435,8 +435,8 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNode
                        write(unit_tmp,fmt="(30(E14.6))") &
                             (factor1*NodeXYZ_N(i,cut1,k,1:3)+ &
                             factor2*NodeXYZ_N(i,cut2,k,1:3)), &
-                            (factor1*PlotVarNodes_NBI(i,cut1,k,iBLK,1:nPlotVar)+ &
-                            factor2*PlotVarNodes_NBI(i,cut2,k,iBLK,1:nPlotVar))
+                            (factor1*PlotVarNodes_VNB(1:nPlotVar,i,cut1,k,iBLK)+ &
+                            factor2*PlotVarNodes_VNB(1:nPlotVar,i,cut2,k,iBLK))
                     end do; end do
                     ! Write point connectivity
                     do k=1,nK; do i=1,nI
@@ -504,8 +504,8 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,PlotXYZNode
                     write(unit_tmp,fmt="(30(E14.6))") &
                          (factor1*NodeXYZ_N(i,j,cut1,1:3)+ &
                           factor2*NodeXYZ_N(i,j,cut2,1:3)), &
-                         (factor1*PlotVarNodes_NBI(i,j,cut1,iBLK,1:nPlotVar)+ &
-                          factor2*PlotVarNodes_NBI(i,j,cut2,iBLK,1:nPlotVar))
+                         (factor1*PlotVarNodes_VNB(1:nPlotVar,i,j,cut1,iBLK)+ &
+                          factor2*PlotVarNodes_VNB(1:nPlotVar,i,j,cut2,iBLK))
                  end do; end do
                  ! Write point connectivity
                  do j=1,nJ; do i=1,nI
@@ -651,8 +651,8 @@ contains
                 write(unit_tmp,fmt="(30(E14.6))") &
                      (factor1*NodeXYZ_N( ic1,jc,kc,:)+ &
                       factor2*NodeXYZ_N( ic2,jc,kc,:)), &
-                     (factor1*PlotVarNodes_NBI(ic1,jc,kc,iBLK,1:nPlotVar)+ &
-                      factor2*PlotVarNodes_NBI(ic2,jc,kc,iBLK,1:nPlotVar))
+                     (factor1*PlotVarNodes_VNB(1:nPlotVar,ic1,jc,kc,iBLK)+ &
+                      factor2*PlotVarNodes_VNB(1:nPlotVar,ic2,jc,kc,iBLK))
                 if(okdebug)write(*,*)'  i=',ic1,'-',ic2,' j=',jc,' k=',kc
              end if
           end if
@@ -684,8 +684,8 @@ contains
                 write(unit_tmp,fmt="(30(E14.6))") &
                      (factor1*NodeXYZ_N( ic,jc1,kc,:)+ &
                       factor2*NodeXYZ_N( ic,jc2,kc,:)), &
-                     (factor1*PlotVarNodes_NBI(ic,jc1,kc,iBLK,1:nPlotVar)+ &
-                      factor2*PlotVarNodes_NBI(ic,jc2,kc,iBLK,1:nPlotVar))
+                     (factor1*PlotVarNodes_VNB(1:nPlotVar,ic,jc1,kc,iBLK)+ &
+                      factor2*PlotVarNodes_VNB(1:nPlotVar,ic,jc2,kc,iBLK))
                 if(okdebug)write(*,*)'  i=',ic,' j=',jc1,'-',jc2,' k=',kc
              end if
           end if
@@ -717,8 +717,8 @@ contains
                 write(unit_tmp,fmt="(30(E14.6))") &
                      (factor1*NodeXYZ_N( ic,jc,kc1,:)+ &
                       factor2*NodeXYZ_N( ic,jc,kc2,:)), &
-                     (factor1*PlotVarNodes_NBI(ic,jc,kc1,iBLK,1:nPlotVar)+ &
-                      factor2*PlotVarNodes_NBI(ic,jc,kc2,iBLK,1:nPlotVar))
+                     (factor1*PlotVarNodes_VNB(1:nPlotVar,ic,jc,kc1,iBLK)+ &
+                      factor2*PlotVarNodes_VNB(1:nPlotVar,ic,jc,kc2,iBLK))
                 if(okdebug)write(*,*)'  i=',ic,' j=',jc,' k=',kc1,'-',kc2
              end if
           end if
