@@ -12,6 +12,11 @@ module BATL_size
   ! Set 1 for ignored directions! 
   integer, parameter :: nI = 8, nJ = 8, nK = 8
 
+  ! Number of Nodes per block in each direction.
+  integer,parameter :: nINode = nI + min(nI-1,1)
+  integer,parameter :: nJNode = nJ + min(nJ-1,1)
+  integer,parameter :: nKNode = nK + min(nK-1,1)
+
   ! Number of not ignored dimensions
   integer, parameter :: nDim = min(1,nI-1) + min(1,nJ-1) + min(1,nK-1)
 
@@ -44,11 +49,23 @@ module BATL_size
        MinJ = 1 - nGJ, MaxJ = nJ + nGJ, &
        MinK = 1 - nGK, MaxK = nK + nGK
 
+  ! Node index ranges including ghost cells
+  integer, parameter :: &
+       MinINode = 1, MaxINode = nINode, &
+       MinJNode = 1, MaxJNode = nJNode, &
+       MinKNode = 1, MaxKNode = nKNode
+
   ! Number of cells per block
   integer, parameter:: nIJK = nI*nJ*nK
 
+  ! Number of Nodes per block
+  integer, parameter:: nIJKNode = nINode*nJNode*nKNode
+
   ! Array for block size
   integer, parameter:: nIJK_D(MaxDim) = (/ nI, nJ, nK /)
+
+  ! Array for block size
+  integer, parameter:: nIJKNode_D(MaxDim) = (/ nINode, nJNode, nKNode /)
 
   ! Array of refinement ratios
   integer, parameter:: iRatio_D(MaxDim) = (/ iRatio, jRatio, kRatio /)
