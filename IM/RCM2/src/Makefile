@@ -1,8 +1,8 @@
 #^CFG COPYRIGHT UM
 SHELL=/bin/sh
 
-include ../../../Makefile.def
-include ../../../Makefile.conf
+include ../Makefile.def
+include ../Makefile.conf
 
 include Makefile.DEPEND
 
@@ -35,7 +35,7 @@ CLAWOBJECTS = \
   $(CLAWDIR)/src2.o 
 
 RCMLIBRARY = \
-  RCM_advec.o
+  IM_wrapper.o
 
 RCMOBJECTS = \
   ModProcIM.o\
@@ -47,7 +47,7 @@ RCMOBJECTS = \
   rcm_efield.o\
   impl_bicgstab.o \
   gamma.o\
-  IM_wrapper.o
+  RCM_advec.o
 
 OBJECTS = $(CLAWOBJECTS) $(RCMOBJECTS) $(RCMLIBRARY)
 
@@ -107,11 +107,10 @@ RCMEXTRACT = \
   extract_arrays.o
 
 RCMCONTROL = \
-  RCM_advec.o \
   control.o
 
 RCM:
-	cd $(CLAWDIR); make -f Makefile.$(OS) lib
+	cd $(CLAWDIR); make lib
 	make RCMEXE
 
 Extract: Extract.exe

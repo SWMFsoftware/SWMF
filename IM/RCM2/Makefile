@@ -1,5 +1,13 @@
 include Makefile.def
 
+help:
+	@echo ' '
+	@echo '  You can "make" the following (among others):'
+	@echo ' '
+	@echo '    RCM         stand alone executable'
+	@echo '    rundirSA    run directory for stand alone code'
+	@echo ' '
+
 install:
 	touch src/Makefile.DEPEND
 
@@ -8,7 +16,6 @@ LIB:
 
 RCM:
 	cd ${SHAREDIR}; make LIB
-	cd src; make LIB
 	cd src; make RCM
 
 test:
