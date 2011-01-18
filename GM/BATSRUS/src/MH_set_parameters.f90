@@ -1571,8 +1571,8 @@ subroutine MH_set_parameters(TypeAction)
         
         call read_var('DnOutput', dn_output(magfile_))
         call read_var('DtOutput', dt_output(magfile_)) 
-        nFile = max(nFile, magfile_ + 1) 
-        
+        nFile = max(nFile, magfile_) 
+
      case('#RESCHANGEBOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('SaveBoundaryCells',SaveBoundaryCells)
