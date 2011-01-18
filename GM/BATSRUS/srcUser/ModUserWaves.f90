@@ -34,7 +34,7 @@ module ModUser
        IMPLEMENTED6 => user_set_outerbcs,               &
        IMPLEMENTED7 => user_amr_criteria,               &
        IMPLEMENTED8 => user_set_plot_var
-
+ 
   use ModVarIndexes, ONLY: nVar
 
   include 'user_module.h' !list of public methods
@@ -68,12 +68,14 @@ module ModUser
   real      :: NumDensBackgrndIo, NumDensMaxIo
   real      :: rSphere, rSphereIn, RhoBackgrndNo, RhoMaxNo, UxNo, UyNo
   logical   :: DoCalcAnalytic = .false., DoInitSphere = .false.
-  
+
   ! Enable user units of length in input file
    logical           :: UseUserInputUnitx = .false.
    character(len=20) :: TypeInputUnitX
    real              :: InputUnitXSi = 0.0
 
+   ! aux. flags for problem types
+   logical :: DoAdvectSphere, DoWave
 contains
 
   subroutine user_read_inputs
@@ -146,7 +148,7 @@ contains
           call read_var('FlowAngle',         FlowAngle        )
           call read_var('rSphereIn',         rSphereIn        )
           call read_var('NumDensMaxIo',      NumDensMaxIo     )
-          
+         
        case('#ANALYTIC')
           call read_var('DoCalcAnalytic', DoCalcAnalytic)
           
@@ -203,6 +205,7 @@ contains
     select case(UserProblem)
 
     case('AdvectSphere')
+       DoAdvectSphere = .true.
        ! This case describes an IC with uniform 1D flow of plasma in the XY
        ! plane, with no density or pressure gradients and no magnetic field.
        ! A sphere with higher density is embedded in the flow, positioned at
@@ -262,7 +265,7 @@ contains
     case('wave')
 
        if(DoInitialize)then
-
+          DoWave = .true.
           DoInitialize=.false.
 
           PrimInit_V = ShockLeftState_V
@@ -358,12 +361,15 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModMain,    ONLY: nI, nJ, nK
-    use ModPhysics, ONLY: NameTecUnit_V, NameIdlUnit_V, UnitRho_, No2Io_V, &
-         No2Si_V, UnitP_, UnitU_, Gamma0
-    use ModAdvance, ONLY: State_VGB
-    use ModVarIndexes, ONLY: RhoUx_, RhoUz_, p_, Rho_
-
+    use ModMain,       ONLY: nI, nJ, nK, TypeCoordSystem
+    use ModPhysics,    ONLY: NameTecUnit_V, NameIdlUnit_V, No2Io_V, No2Si_V, &
+                             Si2No_V, UnitRho_, UnitP_, UnitU_,  UnitT_, Gamma0
+    use ModAdvance,    ONLY: State_VGB
+    use ModVarIndexes, ONLY: RhoUx_, RhoUy_, RhoUz_, p_, Rho_
+    use ModConst,      ONLY: RotationPeriodSun
+    use ModNumConst,   ONLY: cPi, cTwoPi
+    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
+     
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
@@ -376,8 +382,9 @@ contains
     logical,          intent(out)  :: IsFound
 
     real,dimension(-1:nI+2, -1:nJ+2, -1:nK+2):: RhoExact_G, RhoError_G
-    real                                     :: FlowSpeedCell, Pressure, Density,vSound
-    integer                                  :: i, j, k
+    real    :: FlowSpeedCell, Pressure, Density, OmegaSun
+    real    :: RhoU_D(3)
+    integer :: i, j, k
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !-------------------------------------------------------------------
     IsFound = .true.
@@ -407,10 +414,26 @@ contains
 
     case('mach')
        ! plot Mach number
+       OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
+            
        do k=-1,nK+2 ; do j=-1,nJ+2 ; do i=-1,nI+2
           Pressure = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
           Density = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
-          FlowSpeedCell = No2Si_V(UnitU_)*sqrt(sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2))&
+
+          if (TypeCoordSystem =='HGC') then
+             RhoU_D(1) = State_VGB(RhoUx_,i,j,k,iBlock) &
+                  - State_VGB(Rho_,i,j,k,iBlock)*OmegaSun*y_BLK(i,j,k,iBlock)
+
+             RhoU_D(2) = State_VGB(RhoUy_,i,j,k,iBlock) &
+                  + State_VGB(Rho_,i,j,k,iBlock)*OmegaSun*x_BLK(i,j,k,iBlock)
+         
+          elseif (TypeCoordSystem == 'HGI') then 
+             RhoU_D(1) = State_VGB(RhoUx_,i,j,k,iBlock) 
+             RhoU_D(2) = State_VGB(RhoUy_,i,j,k,iBlock) 
+          end if
+
+          RhoU_D(3) = State_VGB(RhoUz_,i,j,k,iBlock)
+          FlowSpeedCell = No2Si_V(UnitU_)*sqrt(sum(RhoU_D**2)) &
                /State_VGB(Rho_,i,j,k,iBlock)
 
           PlotVar_G(i,j,k) = FlowSpeedCell/sqrt(Gamma0*Pressure/Density)
@@ -428,11 +451,11 @@ contains
 
       use ModMain,       ONLY: time_simulation, TypeCoordSystem
       use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
-      use ModNumConst,   ONLY: cPi
+      use ModNumConst,   ONLY: cPi, cTwoPi
       use ModConst,      ONLY: RotationPeriodSun
       use ModAdvance,    ONLY: State_VGB
       use ModVarIndexes, ONLY: Rho_
-      use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitX_, UnitU_
+      use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitX_, UnitU_,UnitT_
 
       integer,intent(in)  :: iBlock
       real,dimension(-1:nI+2,-1:nJ+2,-1:nK+2),intent(out)::RhoExact_G,&
@@ -440,12 +463,14 @@ contains
       real    :: x, y, z, t
       real    :: rFromCenter, xSphereCenter, ySphereCenter, rSphereCenter
       real    :: PhiSphereCenterInertial, PhiSphereCenterRotating
+      real    :: OmegaSun, phi
       integer :: i, j, k
-      !real,dimension(1:3) :: r_D, rSphereCenter_D
-
+     
       character(len=*),parameter  :: NameSub = 'calc_analytic_sln_sphere'
       !-----------------------------------------------------------------
       t = time_simulation
+      OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
+      phi = OmegaSun*t*Si2No_V(UnitT_)
       do k=-1,nK+2 ; do j= -1,nJ+2 ; do i= -1,nI+2
          
          x = x_BLK(i,j,k,iBlock)
@@ -457,11 +482,10 @@ contains
          ySphereCenter = UyNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
          
          ! transform if rotating frame
-         if (TypeCoordSystem =='HGC') then
-            
+         if (TypeCoordSystem =='HGC') then       
             rSphereCenter = sqrt(xSphereCenter**2 + ySphereCenter**2)
             PhiSphereCenterInertial = atan2(ySphereCenter, xSphereCenter)
-            PhiSphereCenterRotating = PhiSphereCenterInertial - RotationPeriodSun*t
+            PhiSphereCenterRotating = PhiSphereCenterInertial - phi
             
             xSphereCenter = rSphereCenter*cos(PhiSphereCenterRotating)
             ySphereCenter = rSphereCenter*sin(PhiSphereCenterRotating)
@@ -582,22 +606,30 @@ contains
   subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
 
     use ModSize,     ONLY: nI, nJ, nK
-    use ModPhysics,  ONLY: ShockSlope
-    use ModMain,     ONLY: Time_Simulation, iTest, jTest, kTest, BlkTest
+    use ModPhysics,  ONLY: ShockSlope, Si2No_V, Io2Si_V,&
+                           Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
+                           rPlanetSi, rBody, UnitT_,OmegaBody
+    use ModNumconst, ONLY: cOne,cPi, cTwoPi, cDegToRad
+    use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
+   
+    use ModMain,     ONLY: Time_Simulation, iTest, jTest, kTest, BlkTest, &
+                           TypeCoordSystem
     use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, x1, x2, y1, y2, z1, z2, &
          r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
     use ModSetOuterBC
+    use ModVarIndexes
 
     integer, intent(in) :: iBlock, iSide
     logical, intent(out) :: IsFound
     character (len=20),intent(in) :: TypeBc
 
-    character (len=*), parameter :: Name='user_set_outerbcs'
-
     integer :: i,j,k,iVar
     real    :: Dx, x, y, z,r, rMin, rMax
+    real    :: OmegaSun, phi, UxAligned, UyAligned
+   
 !    logical :: DoTest = .false.
+    character (len=*), parameter :: Name='user_set_outerbcs'
     !-------------------------------------------------------------------------
 
 !    DoTest = iBlock == BlkTest
@@ -623,34 +655,82 @@ contains
        rMin = XyzMin_D(1); rMax = XyzMax_D(1);
     end if
 
-    do i=-1,nI+2
-       do j=-1,nJ+2
-          do k=-1,nK+2
-             x = x_BLK(i,j,k,iBlk)
-             y = y_BLK(i,j,k,iBlk)
-             z = z_BLK(i,j,k,iBlk)
-             r = r_BLK(i,j,k,iBLK)
-             r = alog(r)
+    if (DoWave) then
+       do i=-1,nI+2
+          do j=-1,nJ+2
+             do k=-1,nK+2
+                x = x_BLK(i,j,k,iBlk)
+                y = y_BLK(i,j,k,iBlk)
+                z = z_BLK(i,j,k,iBlk)
+                r = r_BLK(i,j,k,iBLK)
+                r = alog(r)
 
-             if( x1<x .and. x<x2 .and. y1<y .and. y<y2 .and. z1<z .and. z<z2 &
-                  .and. r > rMin .and. r < rMax) CYCLE
+                if( x1<x .and. x<x2 .and. y1<y .and. y<y2 .and. z1<z .and. z<z2 &
+                     .and. r > rMin .and. r < rMax) CYCLE
 
-!             if(DoTest)write(*,*)'i,j,k,x,y,z,r=',i,j,k,x,y,z,r
+                !             if(DoTest)write(*,*)'i,j,k,x,y,z,r=',i,j,k,x,y,z,r
 
-             do iVar = 1, nVar
+                do iVar = 1, nVar
 
-                ! Both of these are primitive variables
-                State_VGB(iVar,i,j,k,iBlk) = PrimInit_V(iVar) &
-                     + Ampl_V(iVar)*cos(Phase_V(iVar)               &
-                     + KxWave_V(iVar)*(x - Dx)                      &
-                     + KyWave_V(iVar)*y                             &
-                     + KzWave_V(iVar)*z)
+                   ! Both of these are primitive variables
+                   State_VGB(iVar,i,j,k,iBlk) = PrimInit_V(iVar) &
+                        + Ampl_V(iVar)*cos(Phase_V(iVar)               &
+                        + KxWave_V(iVar)*(x - Dx)                      &
+                        + KyWave_V(iVar)*y                             &
+                        + KzWave_V(iVar)*z)
+                end do
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlk) = &
+                     State_VGB(Ux_:Uz_,i,j,k,iBlk)*State_VGB(Rho_,i,j,k,iBlk)
              end do
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlk) = &
-                  State_VGB(Ux_:Uz_,i,j,k,iBlk)*State_VGB(Rho_,i,j,k,iBlk)
           end do
        end do
-    end do
+    end if
+
+    if (DoAdvectSphere) then
+     
+       ! Convert to normalized units                                  
+       ! Flow angle is measured from the x axis                               
+       UxNo = uBackgrndIo*cos(cDegToRad*FlowAngle)*Io2No_V(UnitU_)
+       UyNo = uBackgrndIo*sin(cDegToRad*FlowAngle)*Io2No_V(UnitU_)
+       RhoBackgrndNo = NumDensBackgrndIo*Io2Si_V(UnitN_)* &
+            cProtonMass*Si2No_V(UnitRho_) 
+       !\                                                                      
+       ! Start filling in cells (including ghost cells)                       
+       !/                          
+       State_VGB(rho_,:,:,:,iBlk) = RhoBackgrndNo
+             
+       ! Transform to HGC frame - rho, p, spherically symmetric at origin, 
+       ! only velocity and/ or momentum should be transformed
+     
+       if (TypeCoordSystem =='HGC') then
+          OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
+          phi = OmegaSun*Time_Simulation*Si2No_V(UnitT_)
+          ! calculate the uniform flow in a fixed frame that is aligned with
+          ! the HGC frame at this time
+          UxAligned =  UxNo*cos(phi) + UyNo*sin(phi)
+          UyAligned = -UxNo*sin(phi) + UyNo*cos(phi)
+
+          State_VGB(RhoUx_,:,:,:,iBlk) = UxAligned*State_VGB(rho_,:,:,:,iBlk)
+          State_VGB(RhoUy_,:,:,:,iBlk) = UyAligned*State_VGB(rho_,:,:,:,iBlk)
+     
+          ! Now transform velocity field to a rotating frame
+          State_VGB(RhoUx_,:,:,:,iBlk) = State_VGB(RhoUx_,:,:,:,iBlk) &
+               + State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*y_BLK(:,:,:,iBlk)
+
+          State_VGB(RhoUy_,:,:,:,iBlk) = State_VGB(RhoUy_,:,:,:,iBlk) &
+               - State_VGB(Rho_,:,:,:,iBlk)*OmegaSun*x_BLK(:,:,:,iBlk)
+          
+
+          ! set the rest of state variables
+          State_VGB(RhoUz_, :,:,:,iBlk) = 0.0
+          State_VGB(Bx_:Bz_,:,:,:,iBlk) = 0.0
+          State_VGB(p_,     :,:,:,iBlk) = pBackgrndIo*Io2No_V(UnitP_)
+
+       else
+        
+          call CON_stop('You can only use user_outerbcs for ADVECTSPHERE in HGC frame')
+       end if
+    end if
 
   end subroutine user_set_outerbcs
 
