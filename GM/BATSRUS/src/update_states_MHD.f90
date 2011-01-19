@@ -153,8 +153,8 @@ contains
 
     if(UseMultiSpecies)then
        ! Fix negative species densities
-       State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBlock) = &
-            max(0.0, State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBlock))
+       State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBlock) = max(0.0,&
+            State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBlock))
 
        if(DoReplaceDensity)then
           ! Add up species densities to total density
@@ -188,10 +188,12 @@ contains
        if(iStage==nStage.and.nWave>2)call update_wave_group_advection(iBlock)
        if(UseWavePressureLtd)then
           do k=1,nK;do j=1,nJ; do i=1,nI
-             State_VGB(Ew_,i,j,k,iBlock)= sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+             State_VGB(Ew_,i,j,k,iBlock)= &
+                  sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
           end do; end do; end do
        end if
     end if
+
     if(boris_correction) then                 !^CFG IF BORISCORR BEGIN
        if(UseB0)then
           B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
@@ -305,6 +307,7 @@ contains
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
     endif                                    !^CFG END BORISCORR
+
     if(UseBorisSimple .and. IsMhd) then      !^CFG IF SIMPLEBORIS BEGIN
        ! Update using simplified Boris correction, i.e. update
        !

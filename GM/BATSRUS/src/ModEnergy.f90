@@ -6,7 +6,7 @@ module ModEnergy
   use ModSize,       ONLY: nI, nJ, nK, gcn, MaxBlock
   use ModAdvance,    ONLY: State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
        UseNonConservative, nConservCrit, IsConserv_CB, UseElectronPressure
-  use ModPhysics,    ONLY: Gm1, Inv_Gm1
+  use ModPhysics,    ONLY: Gm1, Inv_Gm1, pMin_I
   use ModVarIndexes, ONLY: Pe_, WaveFirst_, WaveLast_
   use ModWaves,      ONLY: UseWavePressure
 
@@ -31,7 +31,8 @@ contains
        DoTest=.false.; DoTestMe=.false.
     end if
 
-    if(DoTestMe)write(*,*)NameSub,': UseNonConservative, DoConserveNeutrals, nConservCrit=', &
+    if(DoTestMe)write(*,*)NameSub, &
+         ': UseNonConservative, DoConserveNeutrals, nConservCrit=', &
          UseNonConservative, DoConserveNeutrals, nConservCrit
 
     if(.not. UseNonConservative)then
@@ -51,6 +52,8 @@ contains
        call calc_energy_cell(iBlock)
        RETURN
     end if
+
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, iFluid, nFluid)
 
     ! A mix of conservative and non-conservative scheme (at least for the ions)
     FLUIDLOOP: do iFluid = 1, nFluid
@@ -116,6 +119,8 @@ contains
           end if
        end do; end do; end do
     end do FLUIDLOOP
+
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, iFluid, nFluid)
 
   end subroutine calc_energy_or_pressure
 
@@ -198,6 +203,8 @@ contains
        end do; end do; end do
     end do
 
+    call limit_old_pressure(iBlock)
+
   end subroutine calc_old_pressure
 
   !============================================================================
@@ -211,6 +218,8 @@ contains
     integer, intent(in) :: iBlock
     integer :: i, j, k
     !--------------------------------------------------------------------------
+
+    call limit_old_pressure(iBlock)
 
     do iFluid = 1, nFluid
        call select_fluid
@@ -271,14 +280,15 @@ contains
     integer :: i, j, k    
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub='calc_pressure'
-    !--------------------------------------------------------------------------                                                                                                                                                                      
+    !-------------------------------------------------------------------------
     if(iBlock==BlkTest .and. iProc==ProcTest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
     else
        DoTest = .false.; DoTestMe = .false.
     end if
 
-    if(DoTestMe)write(*,*)NameSub,': iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax=', &
+    if(DoTestMe)write(*,*)NameSub, &
+         ': iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax=', &
          iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax
 
     do iFluid = iFluidMin, iFluidMax
@@ -313,18 +323,20 @@ contains
        end do; end do; end do
     end do
 
+    call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
+         iBlock, iFluidMin, iFluidMax)
+    
     if(DoTestMe)then
        write(*,*)NameSub,':Energy_GBI=',Energy_GBI(iTest,jTest,kTest,iBlock,:)
        write(*,*)NameSub,':State_VGB=',State_VGB(:,iTest,jTest,kTest,iBlock)
     end if
-    
+
   end subroutine calc_pressure
 
-  
   !ADJOINT SPECIFIC BEGIN
   !===========================================================================
   
-  subroutine calc_pressure_adjoint(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
+  subroutine calc_pressure_adjoint(iMin, iMax, jMin, jMax, kMin, kMax, iBlock,&
        iFluidMin, iFluidMax)
 
     ! Calculate pressure from energy, adjoint version
@@ -386,6 +398,9 @@ contains
     integer, intent(in) :: iFluidMin, iFluidMax
     integer::i,j,k
     !--------------------------------------------------------------------------
+
+    call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
+         iBlock, iFluidMin, iFluidMax)
 
     do iFluid = iFluidMin, iFluidMax
        call select_fluid
@@ -591,6 +606,48 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     call calc_energy(i,i,j,j,k,k,iBlock,1,1)
   end subroutine calc_energy1_point
+
+  !===========================================================================
+  subroutine limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
+       iBlock, iFluidMin, iFluidMax)
+
+    ! Keep pressure(s) in State_VGB above pMin_I limit
+
+    integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
+    integer, intent(in) :: iFluidMin, iFluidMax
+
+    integer:: i, j, k
+    !------------------------------------------------------------------------
+    do iFluid = iFluidMin, iFluidMax
+       if(pMin_I(iFluid) < 0.0) CYCLE
+       iP = iP_I(iFluid)
+       do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
+          State_VGB(iP, i, j, k, iBlock) = max(pMin_I(iFluid), &
+               State_VGB(iP, i, j, k, iBlock))
+       end do; end do; end do
+    end do
+
+  end subroutine limit_pressure
+
+  !===========================================================================
+  subroutine limit_old_pressure(iBlock)
+
+    ! Keep pressure(s) in StateOld_VCB above pMin_I limit
+
+    integer, intent(in) :: iBlock
+
+    integer:: i, j, k
+    !------------------------------------------------------------------------
+    do iFluid = 1, nFluid
+       if(pMin_I(iFluid) < 0.0) CYCLE
+       iP = iP_I(iFluid)
+       do k=1, nK; do j=1, nJ; do i=1, nI
+          StateOld_VCB(iP, i, j, k, iBlock) = max(pMin_I(iFluid), &
+               StateOld_VCB(iP, i, j, k, iBlock))
+       end do; end do; end do
+    end do
+
+  end subroutine limit_old_pressure
 
 end module ModEnergy
 

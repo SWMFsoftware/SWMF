@@ -304,6 +304,8 @@ subroutine set_physics_constants
   PeMin = PeMinSi*Si2No_V(UnitP_)
   ExtraEintMin = ExtraEintMinSi*Si2No_V(UnitEnergyDens_)
 
+  pMin_I = pMinDim_I * Io2No_V(UnitP_)
+
   TauWaveParticle = TauWaveParticleSi*Si2No_V(UnitT_)
   TauInstability  = TauInstabilitySi*Si2No_V(UnitT_)
 

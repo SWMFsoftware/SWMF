@@ -533,6 +533,11 @@ subroutine MH_set_parameters(TypeAction)
         call read_var("rInnerHall ", rInnerHall)
         call read_var("DrInnerHall", DrInnerHall)
 
+     case("#MINIMUMPRESSURE")
+        do iFluid = 1, nFluid
+           call read_var('pMinDim', pMinDim_I(iFluid))
+        end do
+
      case("#ELECTRONPRESSURE")
         call read_var('PeMinSi', PeMinSi)
 
