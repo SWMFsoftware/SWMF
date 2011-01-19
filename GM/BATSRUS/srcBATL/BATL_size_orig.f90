@@ -49,16 +49,10 @@ module BATL_size
        MinJ = 1 - nGJ, MaxJ = nJ + nGJ, &
        MinK = 1 - nGK, MaxK = nK + nGK
 
-  ! Node index ranges including ghost cells
-  integer, parameter :: &
-       MinINode = 1, MaxINode = nINode, &
-       MinJNode = 1, MaxJNode = nJNode, &
-       MinKNode = 1, MaxKNode = nKNode
-
   ! Number of cells per block
   integer, parameter:: nIJK = nI*nJ*nK
 
-  ! Number of Nodes per block
+  ! Number of nodes per block
   integer, parameter:: nIJKNode = nINode*nJNode*nKNode
 
   ! Array for block size
@@ -83,4 +77,3 @@ module BATL_size
   integer :: nBlock = 0
 
 end module BATL_size
-
