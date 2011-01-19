@@ -20,8 +20,8 @@ program BATL_test
   call test_grid
   call test_pass_cell
   call test_pass_face
-  call test_amr
   call test_pass_node
+  call test_amr
 
   call MPI_finalize(iError)
   
