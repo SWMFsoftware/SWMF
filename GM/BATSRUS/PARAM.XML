@@ -5309,6 +5309,22 @@ The default value is "all", ie. the Hall effect is applied everywhere
 if the Hall effect is switched on in the #HALLRESISTIVITY command.
 </command>
 
+<command name="MINIMUMPRESSURE">
+	<parameter name="pMinDim" type="real" min="-1" default="-1"/>
+
+#MINIMUMPRESSURE
+0.001		pMinDim [nPa] for fluid 1
+-1.0		pMinDim [nPa] for fluid 2
+
+Provide minimum pressure(s) for the ion/neutral fluid(s). If the minimum
+pressure is positive, the pressure is kept above this limit for that fluid.
+The minimum pressure is given in the input/output units for pressure,
+which varies from application to application.
+A negative value indicates that no minimum pressure is applied for that fluid.
+
+By default no minimum pressure limit is applied.
+</command>
+
 <command name="ELECTRONPRESSURE">
 	 <parameter name="PeMinSi" type="real" min="-1" default="-1"/>
 
