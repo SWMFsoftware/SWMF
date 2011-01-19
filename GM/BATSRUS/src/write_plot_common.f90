@@ -291,7 +291,7 @@ subroutine write_plot_common(ifile)
         ! for BATL we work on all the nplotvarmax variables
         ! at the same sweep
         call message_pass_node(nplotvarmax,PlotVarNodes_VNB, &
-             TypeOperationIn='Mean')
+             NameOperatorIn='Mean')
         call set_block_hanging_node(nplotvarmax,PlotVarNodes_VNB)
      else
         do i=1,nplotvar
