@@ -83,7 +83,7 @@ my %ValidPart1 = ('integer'   => '(D?[i-nI-N]|Max|Min)\d*',
 my $ValidArrayIndex1 = '[ABCDEIPQSV]';
 
 # Valid array index characters representing 3 indexes
-my $ValidArrayIndex3 = '[CFGXYZ]';
+my $ValidArrayIndex3 = '[CFGNXYZ]';
 
 #########################################
 # Definitions to parse the Fortran code #
