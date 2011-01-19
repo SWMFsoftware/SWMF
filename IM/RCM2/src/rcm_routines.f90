@@ -3422,7 +3422,7 @@ END SUBROUTINE Move_plasma_grid_NEW
                n_species (i,j,2) = density(i,j) * &
                     xmass(2) * x_h / (xmass(2)*x_h+xmass(3)*x_o)
                n_species (i,j,3) = density(i,j) * &
-                    xmass(2) * x_o / (xmass(2)*x_h+xmass(3)*x_o)
+                    xmass(3) * x_o / (xmass(2)*x_h+xmass(3)*x_o)
                n_species (i,j,1) = n_species(i,j,2) + n_species(i,j,3)
                
                temp_species (i,j,2) = temperature (i,j) * &
