@@ -243,7 +243,7 @@ module ModLaserPackage
   use ModAbsorption, ONLY: DensityCrSi, NameMask,&
        LineGrid, MhGrid, get_density_and_absorption
   use ModProcMH, ONLY: iProc
-  use ModIOUnit, ONLY: io_unit_new
+  use ModIOUnit, ONLY: UnitTmp_
 
   !Here ResExpl_VCB is the energy source array, to which the laser energy deposition 
   !should be added. This array is the dimensionless form of the energy source in each
@@ -271,7 +271,7 @@ module ModLaserPackage
   type(RouterType),save::Router
   logical, parameter:: DoVerbose = .false.
 
-  integer:: iFile, iRay
+  integer:: iRay
 
   character(LEN=100)::NameFile
   !------------
@@ -328,12 +328,13 @@ contains
     if(iProc==0)then
        NameFile='Rays_n0000'
        !write(*,*)trim(NameFile)
-       iFile=io_unit_new()
-       open(iFile, file=trim(NameFile), status='replace')
+       open(UnitTmp_, file=trim(NameFile), status='replace')
        do iRay = 1, nRay
-          write(iFile,*)Position_DI(1:2,iRay), Density_I(iRay), GradDensity_DI(:,iRay), DeltaSNew_I(iRay)
+          write(UnitTmp_,*) Position_DI(1:2,iRay), Density_I(iRay), &
+               GradDensity_DI(:,iRay), DeltaSNew_I(iRay), &
+               AbsorptionCoeff_I(iRay)
        end do
-       close(iFile)
+       close(UnitTmp_)
     end if
 
     call init_router(&
@@ -346,8 +347,9 @@ contains
   end subroutine init_laser_package
   !================================
   subroutine get_impl_energy_source
-    use ModAbsorption, ONLY: NameMask
-    use ModDensityAndGradient, ONLY: NameVector, DeltaSNew_I, Density_I
+    use ModAbsorption, ONLY: NameMask, AbsorptionCoeff_I
+    use ModDensityAndGradient, ONLY: NameVector, DeltaSNew_I, Density_I, &
+         GradDensity_DI
     integer:: iStep
     !--------------------------
     if(DoInit) then
@@ -378,12 +380,15 @@ contains
           NameFile=''
           write(NameFile,'(a,i4.4)')'Rays_n',iStep+1
           !write(*,*)trim(NameFile)
-          iFile=io_unit_new()
-          open(iFile, file=trim(NameFile), status='replace')
+          open(UnitTmp_, file=NameFile, status='replace')
           do iRay = 1, nRay
-             write(iFile,*)Position_DI(1:2,iRay), Slope_DI(1:2,iRay), DeltaS_I(iRay),Density_I(iRay), Unused_I(iRay)
+             if(Unused_I(iRay)) CYCLE
+             write(UnitTmp_,*) &
+                  iRay, Position_DI(1:2,iRay), Slope_DI(1:2,iRay), &
+                  DeltaS_I(iRay),Density_I(iRay), GradDensity_DI(:,iRay), &
+                  AbsorptionCoeff_I(iRay), EnergyDeposition_I(iRay)
           end do
-          close(iFile)
+          close(UnitTmp_)
        end if
        DoRay_I = (.not.Unused_I).or.IsBehindCr_I
        if(.not.any(DoRay_I))EXIT
@@ -454,7 +459,13 @@ contains
        iBlock = Put%iCB_II(4,iPut)
        Weight = W%Weight_I(iPut)
        
-       SourceE_CB(i, j, k, iBlock) = Buff_V(1) * Weight
+       SourceE_CB(i, j, k, iBlock) = SourceE_CB(i, j, k, iBlock) &
+            + Buff_V(1) * Weight
+
+       !write(*,*)'!!! i,j,k,iBlock,Weight,Deposition,SourceE=',&
+       !     i,j,k,iBlock,Weight,&
+       !     Buff_V(1),SourceE_CB(i,j,k,iBlock)
+
     end do
 
   end subroutine put_energy_deposition
@@ -495,6 +506,9 @@ subroutine add_laser_energy_deposition
 
   character(len=*), parameter:: NameSub = 'add_laser_energy_deposition'
   !----------------
+  if(iProc==0)write(*,*)'Start ',NameSub
+  call timing_start(NameSub)
+
   Irradiance = irradiance_t(Time_Simulation) * &
        Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_) * dt
 
@@ -503,8 +517,6 @@ subroutine add_laser_energy_deposition
   !DoOneLayer = .false., DoFaceOnly=.true., UseMonotoneRestrict=.false.
   call message_pass_cells(.false., .true., .false., SourceE_CB)
 
-  if(iProc==0)write(*,*)'Start add laser energy deposition'
-  
   iP = p_
   if(UseElectronPressure) iP = Pe_
   if(UseNonConservative)call stop_mpi(NameSub//' does not work with non-conservative')
@@ -547,7 +559,11 @@ subroutine add_laser_energy_deposition
      end do; end do; end do
      call calc_energy_cell(iBlock)
   end do
-  if(iProc==0)write(*,*)'End add laser energy deposition'
+
+  call timing_stop(NameSub)
+
+  if(iProc==0)write(*,*)'End ',NameSub
+
 end subroutine add_laser_energy_deposition
 !==========================================
 subroutine get_energy_deposition_block(&
