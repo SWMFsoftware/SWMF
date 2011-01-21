@@ -1,7 +1,7 @@
 # Local Makefile.def
 
 localdefault: help # default target
-
+DIR       = ${RBDIR}
 SCRIPTDIR = ${RBDIR}/share/Scripts
 LIBDIR    = ${RBDIR}/src
 RUNDIR    = ${RBDIR}/run
