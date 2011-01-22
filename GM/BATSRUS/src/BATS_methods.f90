@@ -382,6 +382,7 @@ subroutine BATS_advance(TimeSimulationLimit)
        UseSemiImplicit                                     !^CFG IF IMPLICIT
   use ModIonoVelocity, ONLY: apply_iono_velocity
   use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
+  use ModLaserHeating,    ONLY: add_laser_heating
   use ModAdjoint, ONLY: DoAdjoint                          !ADJOINT SPECIFIC
 
   implicit none
@@ -451,11 +452,9 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
 
-  !\
-  ! If the laser package is used, this is the place to apply it
-  !/
-  if(UseLaserPackage) call add_laser_energy_deposition
 
+  if(UseLaserHeating) call add_laser_heating
+  if(UseLaserPackage) call add_laser_energy_deposition
 
   call exchange_messages
 
