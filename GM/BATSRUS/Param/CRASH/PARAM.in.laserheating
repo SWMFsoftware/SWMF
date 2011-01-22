@@ -1,0 +1,193 @@
+#ECHO
+T
+
+#BATL
+T			UseBatl
+
+#TEST
+krylov
+
+#TESTXYZ
+-2.8901519224698779E+02
+50.9611762277879023
+0.0
+
+TEST
+set_outer_bcs
+
+#DESCRIPTION
+Input file for the laser package
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+0.1e-9			DtSaveRestart
+
+#PLANET
+NONE
+
+#INCLUDE
+Tables/5Materials
+
+#IOUNITS
+SI
+
+#NORMALIZATION
+READ
+1.0e-6			Micron
+1.0e+3			km/s
+1000.0			g/cm^3
+
+#LASERPULSE
+T                UseLaserHeating
+3.8e10           IrradianceSI
+1.0e-10          tPulse
+1.0e-11          tRaise
+1.0e-11          tDecay
+
+#LASERBEAMS 
+rz		TypeBeam
+30               nRayPerBeam
+438.0            rBeam
+-290.0           xBeam
+
+#LASERBEAM
+10.0              SlopeDeg
+0.0              yBeam
+1.0              AmplitudeRel
+
+#LASERBEAM
+20.0             SlopeDeg
+200.0            yBeam
+0.7              AmplitudeRel
+
+#LASERBEAM
+30.0             SlopeDeg
+400.0            yBeam
+0.7              AmplitudeRel
+
+#USERINPUTBEGIN  ----------------------
+
+#PLASTIC
+18000.0			TeMaxColdPlasticSi
+
+#USERINPUTEND    ------------------------------------------------------
+
+#SEMIIMPLICIT
+T                       UseSemiImplicit
+radcond 	        TypeSemiImplicit
+
+#KRYLOV
+bicgstab                TypeKrylov
+nul                     TypeInitKrylov
+1.0e-8                  ErrorMaxKrylov
+1200                    MaxMatvecKrylov
+
+#PRECONDITIONER
+left                    TypePrecondSide (left, symmetric, right)
+dilu                    TypePrecond (MBILU)
+
+#RADIATION
+T                       UseGrayDiffusion
+T                       UseRadFluxLimiter
+larsen                  TypeRadFluxLimiter
+300.0			TradMinSi
+
+#ELECTRONPRESSURE
+1.0			PeMinSi
+
+#CHECKGRIDSIZE
+4			nI
+4			nJ
+1			nK
+1000			MinBlockALL
+
+#GRIDGEOMETRY
+rz			TypeGeometry
+
+#GRID
+16			nRootBlockX 300
+8			nRootBlockY  30
+1			nRootBlockZ
+-300.0			xMin
+ 600.0			xMax
+   0.0			yMin
+ 450.0			yMax
+ -12.5			zMin
+  12.5			zMax
+
+#UPDATECHECK
+F			DoUpdateCheck
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#OUTERBOUNDARY
+float			xMinBc
+float			xMaxBc
+reflect			yMinBc
+float			yMaxBc
+reflect			zMinBc
+reflect			zMaxBc
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.0			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#PLOTFILENAME
+nanosecond		NameMaxTimeUnit
+
+#SAVEPLOT
+1			nPlotfile
+z=0 var idl		PlotString
+1                      DnSavePlot
+-1.0e-12                 DtSavePlot
+-1.0			DxSavePlot
+rho ux uy Eint p pe level xe be pl au ay tekev trkev tikev elaser
+gamma
+
+#TIMESTEPPING
+2			nStage
+0.01			CflExpl  0.01 to start
+
+#STOP
+-1			MaxIteration
+1e-11			tSimulationMax
+
+#END
+
+#RUN #############################################################
+
+#TIMESTEPPING
+2			nStage
+0.1			CflExpl
+
+#STOP
+-1			MaxIteration
+0.5e-11			tSimulationMax
+
+#RUN #############################################################
+
+#TIMESTEPPING
+2			nStage
+0.7			CflExpl
+
+#STOP
+-1			MaxIteration
+1.1e-10			tSimulationMax
+
+#END
