@@ -2336,11 +2336,6 @@ contains
        end if
        if(IsDimensional) PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax) = &
             No2Io_V(UnitRho_)*PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax)
-    case('elaser')
-       call get_energy_deposition_block(iBlock, &
-            MinI, MaxI, jMin, jMax, kMin, kMax ,&
-            PlotVar_G(MinI:MaxI,jMin:jMax,kMin:kMax) ,&
-            IsDimensional)
     case default
        IsFound = .false.
     end select
