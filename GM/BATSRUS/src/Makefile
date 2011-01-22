@@ -47,6 +47,7 @@ MODULES = \
 	ModGroundMagPerturb.o\
 	ModHallResist.o\
 	ModIO.o\
+	ModLaserHeating.o\
 	ModMain.o\
 	ModMessagePass.o\
 	ModNodes.o\
