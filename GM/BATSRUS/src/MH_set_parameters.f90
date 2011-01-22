@@ -20,6 +20,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
   use ModBlockData, ONLY: clean_block_data
   use BATL_lib, ONLY: read_amr_criteria_param, nDimBatl => nDim
+  use BATL_size, ONLY: nGI, nGJ, nGK
   use ModAMR
   use ModParallel, ONLY : proc_dims
   use ModRaytrace                                       !^CFG IF RAYTRACE
@@ -67,6 +68,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModLookupTable, ONLY: read_lookup_table_param
   use ModIonoVelocity,ONLY: read_iono_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
+  use ModLaserHeating,    ONLY: read_laser_heating_param
   use ModIoUnit, ONLY: io_unit_new
 
   !CORONA SPECIFIC PARAMETERS
@@ -320,7 +322,10 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#BATL")
         call read_var('UseBatl', UseBatl)
-
+        if(UseBatl)then
+           if(nGI /= 2 .or. nGJ /= 2 .or. nGK /= 2) call stop_mpi(NameSub// &
+                ' ERROR: nGI..nGK must be 2 in srcBATL/BATL_size.f90')
+        end if
      case("#COMPONENT")
         call read_var('NameComp', NameCompRead)
         if(NameThisComp /= NameCompRead)then
@@ -1944,6 +1949,9 @@ subroutine MH_set_parameters(TypeAction)
 
      case('#SPECTRUM')
         call read_spectrum
+
+     case("#LASERPULSE","#LASERBEAM", "#LASERBEAMS")
+        call read_laser_heating_param(NameCommand)
 
      case("#CME", "#ARCH", "#TD99FLUXROPE", "#GL98FLUXROPE", "#SHEARFLOW")
         call EEE_set_parameters(NameCommand)
