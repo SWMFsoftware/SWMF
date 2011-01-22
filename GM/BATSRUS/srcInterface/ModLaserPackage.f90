@@ -325,7 +325,7 @@ contains
     
     call get_density_and_absorption(nRayTotal)
 
-    if(iProc==0)then
+    if(DoVerbose .and. iProc==0)then
        NameFile='Rays_n0000'
        !write(*,*)trim(NameFile)
        open(UnitTmp_, file=trim(NameFile), status='replace')
@@ -376,7 +376,7 @@ contains
        !Propagate each of rays through the distance of DeltaS
        call ray_path(get_density_and_absorption, nRay, Unused_I, Slope_DI, &
             DeltaS_I, Tolerance, DensityCrSi, Intensity_I, IsBehindCr_I)
-       if(iProc==0)then
+       if(DoVerbose .and. iProc==0)then
           NameFile=''
           write(NameFile,'(a,i4.4)')'Rays_n',iStep+1
           !write(*,*)trim(NameFile)
