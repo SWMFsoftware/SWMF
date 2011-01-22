@@ -432,7 +432,7 @@ For each flag that is set, an associated routine will be called in
 the user module.  Default is .false. for all flags.
 </command>
 
-<command name="USERINPUTBEGIN">
+<command name="USERINPUTBEGIN" multiple="T">
 
 #USERINPUTBEGIN
 
@@ -442,7 +442,7 @@ The section ends with the #USERINPUTEND command.
 There is no XML based parameter checking in the user section.
 </command>
 
-<command name="USERINPUTEND">
+<command name="USERINPUTEND" multiple="T">
 
 #USERINPUTEND
 
@@ -5422,6 +5422,69 @@ thermodynamic quanties in the user_material_properties subroutine in the
 ModUser module need to be defined (see ModUserCrash for an example).
 
 The default for UseHeatFluxLimiter is false.
+</command>
+
+<command name="LASERPULSE">
+	<parameter name="UseLaserHeating" type="logical" default="F"/>
+	<if expr="$UseLaserHeating">
+		<parameter name="IrradianceSi" type="real" min="0"/>
+		<parameter name="tPulse" type="real" min="0"/>
+		<parameter name="tRaise" type="real" min="0"/>
+		<parameter name="tDecay" type="real" min="0"/>
+	</if>
+#LASERPULSE
+T		UseLaserHeating (rest of parameters are read if true)
+3.8e10		IrradianceSI [J/s]
+1.0e-10		tPulse [s]
+1.0e-11		tRaise [s]
+1.0e-11		tDecay [s]
+
+This command is used for CRASH applications and it requires a CRASH related
+user file.
+
+Read parameters for the laser pulse. The irradiance determines the energy
+per second. The length, rise, and decay times are given by the other three
+parameters. The laser heating is switched off by default.
+</command>
+
+<command name="LASERBEAMS">
+	<parameter name="TypeBeam" type="string" case="lower" input="select">
+		<option name="rz" default="T"/>
+	</parameter>
+	<parameter name="nRayPerbeam" type="integer" min="1" default="30"/>
+	<parameter name="rBeam" type="real" min="0"/>
+	<parameter name="xBeam" type="real"/>
+#LASERBEAMS
+rz		TypeBeam
+30		nRayPerBeam
+438.0		rBeam
+-290.0		xBeam
+
+This command is used for CRASH applications and it requires a CRASH related
+user file. This command should be used together with the  #LASERPULSE command.
+
+The TypeBeam determines the geometry of the beams. Only "rz" works right now.
+Each beam consists of 2*nRayPerBeam+1 rays. 
+The rays are parallel and are up to 1.5 rBeam away from the central ray.
+The xBeam determines the starting X position of the rays.
+</command>
+
+<command name="LASERBEAM" multiple="T">
+	<parameter name="SlopeDeg" type="real"/>
+	<parameter name="yBeam"    type="real"/>
+	<parameter name="AmplitudeRel" type="real" min="0"/>
+
+#LASERBEAM
+10.0		SlopeDeg
+0.0		yBeam
+1.0		AmplitudeRel
+
+This command is used for CRASH applications and it requires a CRASH related
+user file. This command should be used together with the  #LASERPULSE command.
+
+The SlopeDeg parameter determines the direction of the beam relative to the
+X axis. The yBeam has to do with the Y coordinate of the initial positions.
+The AmplitudeRel gives the relative intensity of the beam.
 </command>
 
 <command name="MASSLOADING">
