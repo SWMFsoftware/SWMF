@@ -15,7 +15,7 @@ module ModLaserHeating
   use ModCoordTransform
 
   use ModPhysics,  ONLY: No2Si_V, Si2No_V, UnitRho_, UnitX_
-  use ModMain,     ONLY: UseLaserPackage, TypeBC_I
+  use ModMain,     ONLY: TypeBC_I, UseLaserHeating
   use ModGeometry, ONLY: XyzMin_D, XyzMax_D, nDim
   use ModIOUnit,   ONLY: UnitTmp_
 
@@ -24,8 +24,6 @@ module ModLaserHeating
   SAVE
 
   private !Except
-
-  logical, public:: UseLaserHeating = .false.
 
   real, public, allocatable:: LaserHeating_CB(:,:,:,:)
 
@@ -196,8 +194,6 @@ contains
 
     integer::iError
     !-----------------------------------------------------------------------
-    ! Simple trilinear interpolation using ghost cells for now
-
     if(.not.allocated(RayValue_VI)) &
          allocate(RayValue_VI(nVarRay,nRay), RayValueAll_VI(nVarRay,nRay))
 
@@ -248,28 +244,29 @@ contains
           RayValue_VI(RhoZ_,iRay) = RayValue_VI(RhoZ_,iRay) &
                + Weight * RhoZSi
 
-          !write(*,*)'!!! i,j,k,iBlock,Weight,RhoZSi,RayValue=',&
-          !     i,j,k,iBlock,Weight,RhoZSi,RayValue_VI(RhoZ_,iRay)
-
           ! Interpolate absorption rate
           RayValue_VI(Absorption_,iRay) = RayValue_VI(Absorption_,iRay) &
                + Weight * Absorption
 
-          ! Interpolate X gradient of Rho*Z
+          ! Interpolate (X gradient of Rho)*Z
           RayValue_VI(GradXRhoZ_,iRay) = RayValue_VI(GradXRhoZ_,iRay) &
                + Weight * zAverage *            &
                ( State_VGB(Rho_,i+1,j,k,iBlock) &
                - State_VGB(Rho_,i-1,j,k,iBlock) ) &
                * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(1,iBlock)
 
-          ! Interpolate Y gradient of Rho*Z
+          ! Interpolate (Y gradient of Rho)*Z
           RayValue_VI(GradYRhoZ_,iRay) = RayValue_VI(GradYRhoZ_,iRay) &
                + Weight * zAverage *            &
                ( State_VGB(Rho_,i,j+1,k,iBlock) &
                - State_VGB(Rho_,i,j-1,k,iBlock) ) &
                * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(2,iBlock)
 
-          ! Interpolate Z gradient of Rho*Z
+          !write(*,*)'!!! i,j,k,iBlock,Weight,Rho+,Rho-,RayValue=',&
+          !     i,j,k,iBlock,Weight,State_VGB(Rho_,i,j+1,k,iBlock),&
+          !     State_VGB(Rho_,i,j-1,k,iBlock),RayValue_VI(GradYRhoZ_,iRay)
+
+          ! Interpolate (Z gradient of Rho)*Z
           RayValue_VI(GradZRhoZ_,iRay) = RayValue_VI(GradZRhoZ_,iRay) &
                + Weight * zAverage *            &
                ( State_VGB(Rho_,i,j,k+1,iBlock) &
@@ -493,7 +490,7 @@ contains
 
     !In solving the laser deposition energy the total remnant energy 
     !should be deposited if the ray pamatrates through the critical surface
-    if(UseLaserPackage)then
+    if(UseLaserHeating)then
        where( IsBehindCr_I)
           EnergyDeposition_I = Intensity_I
           Intensity_I = 0.0
@@ -521,7 +518,7 @@ contains
        !Check positivity:
        if( DielPermHalfBack<=0.0)then
           IsBehindCr_I(iRay) = .true.
-          if(UseLaserPackage)then
+          if(UseLaserHeating)then
              EnergyDeposition_I(iRay) = Intensity_I(iRay)
              Intensity_I(iRay) = 0.0
           end if
@@ -547,17 +544,17 @@ contains
              DeltaS_I(iRay) = 0.99 * &
                   DeltaS_I(iRay)/(2*sqrt(Curv/ToleranceSqr))
              Position_DI(:,iRay) = PositionHalfBack_D
-             if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
+             if(UseLaserHeating)EnergyDeposition_I(iRay) = 0.0
              CYCLE
           end if
-          !if(UseLaserPackage)then
+          !if(UseLaserHeating)then
           !   !Check if the absorption is too high
           !   if(AbsorptionCoeff_I(iRay) * DeltaS_I(iRay)>=0.5)then
           !      DeltaS_I(iRay) =  max(&
           !           cHalf/AbsorptionCoeff_I(iRay),&
           !           StepMin)
           !      Position_DI(:,iRay) = PositionHalfBack_D
-          !      if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
+          !      if(UseLaserHeating)EnergyDeposition_I(iRay) = 0.0
           !      CYCLE
           !   end if
           !end if
@@ -581,7 +578,7 @@ contains
                   cHalf*Tolerance*DistanceToCritSurf_I(iRay),&
                   StepMin)
              Position_DI(:,iRay) = PositionHalfBack_D
-             if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
+             if(UseLaserHeating)EnergyDeposition_I(iRay) = 0.0
              CYCLE
           end if
 
@@ -652,14 +649,14 @@ contains
 
 
           ParabLen = sqrt(sum((2*StepX_D)**2) + sum(StepY_D**2))
-          if(.not.UseLaserPackage)then
+          if(.not.UseLaserHeating)then
              Intensity_I(iRay) = Intensity_I(iRay)  &
                   + ParabLen*(Dens2DensCr**2)*(cHalf - Dens2DensCr)**2
           else
              EnergyDeposition_I(iRay) = Intensity_I(iRay) * &
                   ParabLen * AbsorptionCoeff_I(iRay)
 
-             ! if(UseLaserPackage)then missing ???
+             ! if(UseLaserHeating)then missing ???
 
              if(EnergyDeposition_I(iRay)>=Intensity_I(iRay))then
                 !Mark this ray as if it is behind the critical surface
@@ -696,7 +693,7 @@ contains
 
           Position_DI(:,iRay) = Position_DI(:,iRay) &
                + Slope_DI(:,iRay)*HalfDeltaS
-          if(UseLaserPackage)then
+          if(UseLaserHeating)then
              EnergyDeposition_I(iRay) = Intensity_I(iRay) *  &
                   DeltaS_I(iRay) * AbsorptionCoeff_I(iRay)
              if(EnergyDeposition_I(iRay)>=Intensity_I(iRay))then
@@ -915,56 +912,54 @@ contains
     !-------------------------------------------------------------------------
     !Usage
     !#LASERPULSE
-    !T                UseLaserPackage
+    !T                UseLaserHeating
     !3.8e12           IrradianceSI
     !1.1e-9           tPulse
     !1.0e-10          tRaise
     !1.0e-10          tDecay
     !
-    !#RZBEAMS or #BEAMS2D or #BEAMS3D
+    !#LASERPOSITION
     !30               nRayPerBeam
-    !438.0            rBeamMuM            
-    !-100.0           xPlaneMuM
+    !438.0            rBeam
+    !-100.0           xPlane
     !parallel         TypeConvergence
     !
-    !#BEAM
-    !10.0              SlopeDeg
-    !0.0              yCrMuM
+    !#LASERBEAM
+    !10.0             SlopeDeg
+    !0.0              yBeam
     !1.0              AmplitudeRel
     !
-    !#BEAM
+    !#LASERBEAM
     !20.0             SlopeDeg
-    !200.0            yCrMuM
+    !200.0            yBeam
     !0.7              AmplitudeRel
     !
-    !#BEAM
+    !#LASERBEAM
     !30.0             SlopeDeg
-    !400.0            yCrMuM
+    !400.0            yBeam
     !0.7              AmplitudeRel
-    !
-    !#END_LASERPULSE                                
     !
     !-------------
 
     select case(NameCommand)
     case("#LASERPULSE")
-       call read_var('UseLaserPackage', UseLaserPackage)
-       if(UseLaserPackage)then
+       call read_var('UseLaserHeating', UseLaserHeating)
+       if(UseLaserHeating)then
           call read_var('IrradianceSI'   , IrradianceSI   )
           call read_var('tPulse'         , tPulse         )
           call read_var('tRaise'         , tRaise         )
           call read_var('tDecay'         , tDecay         )
        end if
-    case('#RZBEAMS')
-       TypeBeam = 'rz'
+    case('#LASERBEAMS')
+       call read_var('TypeBeam',    TypeBeam   )
        call read_var('nRayPerBeam', nRayPerBeam)
-       call read_var('rBeamMuM'   , rBeamMuM   )
-       call read_var('xPlaneMuM'  , xPlaneMuM  )
-    case('#BEAM')
+       call read_var('rBeam',       rBeamMuM   )
+       call read_var('xBeam',       xPlaneMuM  )
+    case('#LASERBEAM')
        nBeam = nBeam +1
        call read_var('SlopeDeg', &
             BeamParam_II(SlopeDeg_, nBeam))
-       call read_var('yCrMuM', &
+       call read_var('yBeam', &
             BeamParam_II(yCrMuM_, nBeam))
        call read_var('AmplitudeRel', &
             BeamParam_II(AmplitudeRel_, nBeam))
@@ -985,7 +980,7 @@ contains
     nRay = nRayTotal
 
     !Allocate arrays for rays
-    allocate(LaserHeating_CB(-1:nI+2, -1:nJ+2, -1:nK+2, MaxBlock))
+    allocate(LaserHeating_CB(nI,nJ,nK,MaxBlock))
     LaserHeating_CB = 0.0
 
     if(nRay >0)then
@@ -1017,7 +1012,7 @@ contains
 
     call get_density_and_absorption(nRayTotal)
 
-    if(iProc==0)then
+    if(DoVerbose .and. iProc==0)then
        NameFile='Rays_n0000'
        !write(*,*)trim(NameFile)
        open(UnitTmp_, file=NameFile, status='replace')
@@ -1030,10 +1025,10 @@ contains
     end if
 
   end subroutine init_laser_package
-  !================================
-  subroutine get_impl_energy_source
+  !=========================================================================
+  subroutine get_energy_source
 
-    use BATL_lib, ONLY: nDim, MaxDim, interpolate_grid
+    use BATL_lib, ONLY: nDim, MaxDim, nIJK_D, interpolate_grid
     integer:: iStep
 
     integer:: iRay, iBlock, iCell, nCell
@@ -1054,7 +1049,7 @@ contains
     Intensity_I(   1:nRayTotal) = Amplitude_I(   1:nRayTotal)
     DoRay_I                     = .true.
     EnergyDeposition_I          = 0.0
-    LaserHeating_CB                  = 0.0
+    LaserHeating_CB             = 0.0
 
     Unused_I = .false.; IsBehindCr_I = .false.
     DeltaS_I = DeltaS
@@ -1064,7 +1059,7 @@ contains
        !Propagate each of rays through the distance of DeltaS
        call ray_path(get_density_and_absorption, nRay, Unused_I, Slope_DI, &
             DeltaS_I, Tolerance, DensityCrSi, Intensity_I, IsBehindCr_I)
-       if(iProc==0)then
+       if(DoVerbose .and. iProc==0)then
           NameFile=''
           write(NameFile,'(a,i4.4)')'Rays_n',iStep+1
           !write(*,*)trim(NameFile)
@@ -1080,17 +1075,20 @@ contains
        DoRay_I = (.not.Unused_I).or.IsBehindCr_I
        if(.not.any(DoRay_I))EXIT
        iStep = iStep + 1
-       if(iProc==0.and..not.all(Unused_I).and.DoVerbose)then
+       if(DoVerbose .and. iProc==0 .and. .not.all(Unused_I))then
           write(*,*)'Laser package at iStep =',iStep
           write(*,*)'Used rays #=',count(.not.Unused_I)
-          write(*,*)'Rays penetrated into overdense plasma, #=',count(IsBehindCr_I)
-          write(*,*)'Total energy deposition =',sum(EnergyDeposition_I,MASK=DoRay_I)
+          write(*,*)'Rays penetrated into overdense plasma, #=', &
+               count(IsBehindCr_I)
+          write(*,*)'Total energy deposition =', &
+               sum(EnergyDeposition_I,MASK=DoRay_I)
           write(*,*)'MinumumStep=',minval(DeltaS_I,MASK=.not.Unused_I)
           write(*,*)'MaximumStep=',maxval(DeltaS_I,MASK=.not.unused_I)
           write(*,*)'Min DeltaSNew_I=',minval(DeltaSNew_I,MASK=.not.Unused_I)
        end if
 
-       ! Save EnergyDeposition_I to LaserHeating_CB using the interpolation weights
+       ! Save EnergyDeposition_I to LaserHeating_CB 
+       ! using the interpolation weights
        iCell_D = 1 ! for ignored dimensions
        do iRay = 1, nRay
 
@@ -1104,6 +1102,10 @@ contains
              ! Extract block and cell indexes. Should work in 2D too.
              iBlock          = iCell_II(0,iCell)
              iCell_D(1:nDim) = iCell_II(1:nDim,iCell)
+
+             ! Do not deposit energy into ghost cells at the outer boundaries
+             if(  any(iCell_D(1:nDim) < 1) .or. &
+                  any(iCell_D(1:nDim) > nIJK_D(1:nDim))) CYCLE
 
              i      = iCell_D(1)
              j      = iCell_D(2)
@@ -1124,24 +1126,14 @@ contains
        DoRay_I = (.not.Unused_I)
     end do
 
-  end subroutine get_impl_energy_source
+  end subroutine get_energy_source
 
   !===========================================================================
   subroutine add_laser_heating
 
-    ! This routine should add the laser energy deposition to the "Explicit residual"
-    ! within the semi-implicit scheme. Effectively, in this way the heat conduction
-    ! equation, which otherwise is solved within the semi-implicit scheme WITH ZERO
-    ! right-hand-side, is solved with the right-hand-side including the laser energy
-    ! deposition
+    ! Calculate the source terms due to laser heating
+
     use ModSize, ONLY: nI, nJ, nK, MaxBlock
-
-    ! The dimensional characteristic
-    ! of the laser emission with the meaning of the energy delivered to the plasma is
-    ! the irradiance (power). Therefore, the pointwise sources of energy calculated by
-    ! this subroutine are multipled by :
-    ! LaserIrradiance*Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
-
     use ModPhysics, ONLY: Si2No_V, UnitEnergydens_, UnitX_, UnitT_
     use ModMain, ONLY: Time_Simulation, dt, UnusedBLK
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
@@ -1152,6 +1144,7 @@ contains
     use ModGeometry, ONLY: vInv_CB
     use ModUser, ONLY: user_material_properties
     use ModEnergy, ONLY: calc_energy_cell
+    use BATL_lib, ONLY: message_pass_cell
 
     real:: Irradiance, EInternalSi, PressureSi
     integer :: iBlock, i, j, k, iP
@@ -1165,7 +1158,9 @@ contains
     Irradiance = irradiance_t(Time_Simulation) * &
          Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_) * dt
 
-    call get_impl_energy_source
+    ! Make sure that the density is up-to-date in the ghost cells
+    call message_pass_cell(nVar, State_VGB)
+    call get_energy_source
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
