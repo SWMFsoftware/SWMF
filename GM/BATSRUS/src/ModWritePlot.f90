@@ -18,6 +18,7 @@ subroutine write_plot_common(ifile)
   use ModMpi
   use ModUtilities, ONLY: lower_case, split_string
   use BATL_lib, ONLY: message_pass_node
+
   implicit none
 
   ! Arguments
@@ -592,6 +593,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        UseMultiIon, nIonFluid, MassIon_I, &
        IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
   use ModWaves, ONLY: UseWavePressure
+  use ModLaserHeating, ONLY: LaserHeating_CB
   use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit
   implicit none
 
@@ -1233,23 +1235,32 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
         ! GRID INFORMATION
      case('crit1')
-        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 1) PlotVar(:,:,:,iVar) = AmrCrit_IB(1,iBlk)
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 1) &
+             PlotVar(:,:,:,iVar) = AmrCrit_IB(1,iBlk)
      case('crit2')
-        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 2) PlotVar(:,:,:,iVar) = AmrCrit_IB(2,iBlk)
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 2) &
+             PlotVar(:,:,:,iVar) = AmrCrit_IB(2,iBlk)
      case('crit3')
-        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 3) PlotVar(:,:,:,iVar) = AmrCrit_IB(3,iBlk)
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 3) &
+             PlotVar(:,:,:,iVar) = AmrCrit_IB(3,iBlk)
      case('crit4')
-        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 4) PlotVar(:,:,:,iVar) = AmrCrit_IB(4,iBlk)
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 4) &
+             PlotVar(:,:,:,iVar) = AmrCrit_IB(4,iBlk)
      case('crit5')
-        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 5) PlotVar(:,:,:,iVar) = AmrCrit_IB(5,iBlk)
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 5) &
+             PlotVar(:,:,:,iVar) = AmrCrit_IB(5,iBlk)
      case('crit6')
-        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 6) PlotVar(:,:,:,iVar) = AmrCrit_IB(6,iBlk)
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 6) &
+             PlotVar(:,:,:,iVar) = AmrCrit_IB(6,iBlk)
      case('crit7')
-        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 7) PlotVar(:,:,:,iVar) = AmrCrit_IB(7,iBlk)
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 7) &
+             PlotVar(:,:,:,iVar) = AmrCrit_IB(7,iBlk)
      case('crit8')
-        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 8) PlotVar(:,:,:,iVar) = AmrCrit_IB(8,iBlk)
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 8) &
+             PlotVar(:,:,:,iVar) = AmrCrit_IB(8,iBlk)
      case('crit9')
-        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 9) PlotVar(:,:,:,iVar) = AmrCrit_IB(9,iBlk)
+        if(allocated(AmrCrit_IB) .and. nAmrCrit >= 9) &
+             PlotVar(:,:,:,iVar) = AmrCrit_IB(9,iBlk)
      case('dx')
         PlotVar(:,:,:,iVar) = dx_BLK(iBLK)
      case('dy')
@@ -1297,6 +1308,15 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
            PlotVar(:,:,:,iVar) = 0.0
         end if
 
+     case('elaser')
+        if(UseLaserHeating)then
+           PlotVar(:,:,:,iVar) = 0.0
+           if(allocated(LaserHeating_CB)) &
+                PlotVar(1:nI,1:nJ,1:nK,iVar) = LaserHeating_CB(:,:,:,iBlk)
+        else
+           call get_energy_deposition_block( iBlk, &
+                -1, nI+2, -1, nJ+2, -1, nK+2, PlotVar(:,:,:,iVar), .false.)
+        end if
      case('ew','erad')
         if(Ew_ == 1)then
            if(UseWavePressure)then
@@ -1395,6 +1415,9 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
           ,'bxl','bxr','byl','byr','bzl','bzr' &         !^CFG IF CONSTRAINB
           )
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitB_)
+     case('elaser')
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar) &
+             *No2Io_V(UnitEnergyDens_)/No2Io_V(UnitT_)
      case('e','e1','ew','erad')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitEnergyDens_)
      case('p','pth','pperp')
