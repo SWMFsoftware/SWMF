@@ -312,6 +312,6 @@ Module ModMain
   ! Logical controlling the use of the laser package. Probably, this is not 
   ! a good place to declare it
   !/
-  logical :: UseLaserPackage = .false.
+  logical :: UseLaserPackage = .false., UseLaserHeating = .false.
 
 end module ModMain
