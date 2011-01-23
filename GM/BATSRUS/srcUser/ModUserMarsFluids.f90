@@ -18,6 +18,9 @@ module ModUser
 
   use ModNumConst, ONLY: cSqrtHalf, cDegToRad
 
+
+  use ModAdvance, ONLY: Pe_, UseElectronPressure
+
   include 'user_module.h' !list of public methods
 
   !\
@@ -26,7 +29,7 @@ module ModUser
   !/
   real,              parameter :: VersionUserModule = 1.2
   character (len=*), parameter :: NameUserModule = &
-       'Mars 5 Fluids MHD code, Dalal Najib'
+       'Mars 5 Fluids + Pe MHD code, Dalal Najib'
 
   character (len=10) :: SolarCond='solarmax  '
 
@@ -38,15 +41,15 @@ module ModUser
 
   !logical ::  UseMultiSpecies=.true.
   integer, parameter :: MaxSpecies=nIonFluid, MaxNuSpecies=9,  &
-       MaxReactions=11
-  integer :: nSpecies=4, nNuSpecies=3, &
+       MaxReactions=11, nNuSpecies = 3
+  integer :: nSpecies=4, &
        nReactions=10
 
   real, allocatable:: nDenNuSpecies_CBI(:,:,:,:,:), &
        TempNuSpecies_CBI(:,:,:,:),  Productrate_CB(:,:,:,:),  &
        Ionizationrate_CBI (:,:,:,:,:), MaxSiSpecies_CB(:,:,:,:),&
        MaxLiSpecies_CB(:,:,:,:),MaxSLSpecies_CB(:,:,:,:),&
-       nu_BLK(:,:,:,:),nu1_BLK(:,:,:,:)
+       nu_BLK(:,:,:,:)
 
   real, dimension(MaxReactions) :: ReactionRate_I
   real, dimension(MaxReactions,nIonFluid):: CoeffSpecies_II, &
@@ -84,8 +87,8 @@ module ModUser
   character (len=10), dimension(nIonFluid):: &
        ion_name_I=(/'Hp  ', 'O2p ', 'Op  ','CO2p'/)
 
-  ! real, dimension(MaxSpecies)::  &
-  !      MassSpecies_I=(/1., 32., 16., 44. /)  !atm
+   real, dimension(nNuSpecies)::  &
+        MassNeutral_I=(/44., 16., 1. /)  !atm
 
   !  MassSpecies_I(Hp_)=1	 !atm
   !  MassSpecies_I(CO2p_)=44     !atm
@@ -107,6 +110,12 @@ module ModUser
   real, dimension(MaxNuSpecies)::CrossSection_I,&
        CrossSectionDim_I=(/2.6e-17,1.5e-17,0.0,1.5e-17,&
        1.5e-17,0.0,1.5e-17,2.6e-17, 1.5e-17/)
+
+  real, dimension(nIonFluid,nNuSpecies)::ReducedMassNeutral_II
+
+  real, dimension(nIonFluid,nNuSpecies)::ReducedMassNeutral2_II
+  
+  real, dimension(nIonFluid,nIonFluid)::ReducedMassIon_II
 
   real:: Productrate0,Optdep
   real, dimension(MaxNuSpecies)::NuMassSpecies_I=(/44,16,1,16,16,1,16, 44, 16/)
@@ -130,10 +139,26 @@ module ModUser
   real :: Ti_body_dim=300.0, Ti_body  !ion temperature at the body
   
 
-  real :: T300_dim = 300.0, T300 , Ti_dim =300.
+  real :: T300_dim = 300.0, T300 
   real :: nu0_dim=4.0e-10,nu0
+  real:: IonNeuCoeff_II(1:nIonFluid,1:nNuSpecies)
+  real::IonIonCoeff_II(1:nIonFluid,1:nIonFluid)
 
-  real :: Te_new_dim=1000., KTe0
+  real, parameter:: IonNeuCoeffDim_II(1:nIonFluid,1:nNuSpecies)= reshape( (/ &
+       41.4, 5.63, 8.95, 4., &
+       30., 2.31, 4., 1.76, &
+       4., 0.65, 1., 0.47 /), (/4, 3/) )
+
+   real, parameter:: IonIonCoeffDim_II(1:nIonFluid,1:nIonFluid)=reshape( (/ &
+       0.90, 0.039, 0.077, 0.029, &
+       1.25, 0.16, 0.26, 0.12, &
+       1.23, 0.13, 0.22, 0.10,&
+       1.26, 0.17, 0.30, 0.14 /), (/4, 4/) )
+
+  !From Schunk and Nagy
+  !nu_in=Cin*DensNeu, here we have Cin*e+10
+  
+  real :: Te_new_dim=8000., KTe0  !0.7 ev
 
   ! coefficient of Mars magnetic field
   real, dimension(0:61,0:61) :: cmars, dmars
@@ -176,8 +201,8 @@ contains
          IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, iNewGrid, iNewDecomposition, &
          PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest
-    use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_,Si2No_V, No2Io_V, No2Si_V, LowDensityRatio,&
-         UnitT_,UnitN_,ElectronPressureRatio
+    use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_,Si2No_V, No2Io_V, No2Si_V, Io2No_V,&
+         LowDensityRatio,UnitT_,UnitN_,ElectronPressureRatio
     use ModAdvance, ONLY: State_VGB, Source_VC,VdtFace_x,&
          VdtFace_y,VdtFace_z
     use ModGeometry,ONLY: r_BLK,x_BLK,y_BLK,z_BLK,R_BLK,&
@@ -190,21 +215,27 @@ contains
     use ModProcMH,   ONLY: iProc
     !    use ModAdvance,  ONLY: Source_VC,Energy_
     !    use ModNumConst, ONLY: cZero
-    integer :: iBlock, i, j, k,iSpecies,iFluid
+    integer :: iBlock, i, j, k,iSpecies,iFluid,n
     real    :: Coef,SourcesLossMax,vdtmin
     real :: inv_rho,inv_rho2,uu2,Productrate,kTi,kTe
     real    :: NumDens, InvNumDens
     real, dimension(nIonFluid) :: NumDens_I, InvRho_I,InvRho2_I,uu2_I,&
          Ux_I, Uy_I, Uz_I, Temp_I,temps_I,&
          LossNumRho_I, SourceNumRho_I, Lossx_I,LossNumx_I,&
-         RLNumRhox_I, tmp_I
+         RLNumRhox_I, tmp_I, tmp_nu_I,col_ii_I
+
+    real :: col_ei, col_en,col_ei_I(nIonFluid), col_en_I(3),averagemass,&
+         meovmi=5.44471e-4 !me/mi=9.109e-31/1.673e-27
     real :: alt, Te_dim = 300.0, tmp, num=4.0e-11, cosSZA
     real::  totalLossRho,totalSourceRho, totalLossNumRho, &
-         totalSourceNumRho, totalLossx, totalLossNumx, SourceLossMax
+         totalSourceNumRho, totalLossx, totalLossNumx, SourceLossMax,&
+         totalIMPNumRho
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0, temps, testvar
     real :: X1, X2, X3, X4, Alt0
     real :: A0=-1143.33, A1=323.767, A2=-35.0431, A3=1.69073, A4=-0.0306575
     real :: B0=-1233.29, B1=347.764, B2=-37.4128, B3=1.79337, B4=-0.0322777
+    real :: IonNeuRate_II(1:nIonFluid,1:nNuSpecies)
+    real ::IonIonRate_II(1:nIonFluid,1:nIonFluid)
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     logical :: DoTest, DoTestMe, DoTestCell
 
@@ -217,8 +248,8 @@ contains
     if( nDenNuSpecies_CBI(1, 1, 1, iBlock, 1) < 0.0 & 
          .or. iLastGrid /= iNewGrid &
          .or. iLastDecomposition /= iNewDecomposition)then
-      call set_neutral_density(iBlock)
-      
+       call set_neutral_density(iBlock)
+
 
        if(iBlock == nBLK)then
           iLastGrid          = iNewGrid
@@ -272,6 +303,9 @@ contains
        DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
 
 
+
+      ! State_VGB(iRhoIon_I,i,j,k,iBlock)=max(State_VGB(iRhoIon_I,i,j,k,iBlock),1.0e-15)
+
        NumDens_I  = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
        NumDens    = sum(NumDens_I)
        InvNumDens = 1.0/NumDens
@@ -280,11 +314,14 @@ contains
        !Temp_I=TNu_body
        !State_VGB(iPIon_I,i,j,k,iBlock)=2*Temp_I*NumDens_I
 
-       !if(DoTestCell)then
+       if(DoTestCell)then
        !write(*,*)'iblock=',iblock
+       ! write(*,*)' in user_calc_source,State_VGB(Pe_,i,j,k,iBlock)=',State_VGB(Pe_,iTest,jTest,kTest,iBlock)  
        !write(*,*)' in user_calc_source,State_VGB(iRhoIon_I,i,j,k,iBlock)=',State_VGB(iRhoIon_I,iTest,jTest,kTest,iBlock)
-       !write(*,*)' in user_calc_source,State_VGB(iPIon_I,i,j,k,iBlock)=',State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)
-       !end if
+       !write(*,*)'0 in user_calc_source,State_VGB(iPIon_I,i,j,k,iBlock)=',State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)
+       !write(*,*)'0 in user_calc_source,State_VGB(P_,i,j,k,iBlock)=',State_VGB(P_,iTest,jTest,kTest,iBlock)
+       !write(*,*)'0 in user_calc_source,State_VGB(Pe_,i,j,k,iBlock)=',State_VGB(Pe_,iTest,jTest,kTest,iBlock)
+       end if
 
 
        InvRho_I = 1.0/State_VGB(iRho_I(2:nFluid),i,j,k,iBlock)
@@ -335,14 +372,22 @@ contains
 
        Productrate= Productrate_CB(i,j,k,iBlock)
 
-       if(DoTestCell)then
-          write(*,*)'nDenNuSpecies_CBI=',nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,:)
-          write(*,*)'Productrate_CBI=',Productrate_CB(iTest,jTest,kTest,iBlock)
-          write(*,*)'Ionizationrate_CBI=',Ionizationrate_CBI(iTest,jTest,kTest,iBlock,:)
-          write(*,*)' Rate_I(H_hv__Hp_em_)', Rate_I(H_hv__Hp_em_)
-          write(*,*)'ReactionRate_I=',ReactionRate_I
-          write(*,*)'MassIon_I=',MassIon_I
-       end if
+      ! if(DoTestCell)then
+      !    write(*,*)'nDenNuSpecies_CBI=',nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,:)
+      !    write(*,*)'Productrate_CBI=',Productrate_CB(iTest,jTest,kTest,iBlock)
+      !    write(*,*)'Ionizationrate_CBI=',Ionizationrate_CBI(iTest,jTest,kTest,iBlock,:)
+      !    write(*,*)' Rate_I(H_hv__Hp_em_)', Rate_I(H_hv__Hp_em_)
+      !    write(*,*)'ReactionRate_I=',ReactionRate_I
+      !    write(*,*)'MassIon_I=',MassIon_I
+      ! end if
+
+       !calculate Ion neutral collision rate:
+
+       do n=1,nNuSpecies
+   
+          IonNeuRate_II(:,n) = IonNeuCoeff_II(:,n)*nDenNuSpecies_CBI(i,j,k,iBlock,n)
+       end do
+
 
        ReactionRate_I(H_hv__Hp_em_)= &
             Rate_I(H_hv__Hp_em_)*nDenNuSpecies_CBI(i,j,k,iBlock,H_)
@@ -370,9 +415,11 @@ contains
 
        end if
 
-       State_VGB(P_,i,j,k,iBlock)=sum(State_VGB(iPIon_I,i,j,k,iBlock))*(1+ElectronPressureRatio)
-       
-       !Ti_dim=kTi*No2Si_V(UnitTemperature_)
+       if(.not. UseElectronPressure)then
+          State_VGB(P_,i,j,k,iBlock)=sum(State_VGB(iPIon_I,i,j,k,iBlock))*(1+ElectronPressureRatio)
+       else
+          State_VGB(P_,i,j,k,iBlock)=sum(State_VGB(iPIon_I,i,j,k,iBlock))
+       end if
 
        !charge exchange
 
@@ -384,8 +431,7 @@ contains
        ReactionRate_I(Op_CO2__O2p_CO_)= &
             Rate_I(Op_CO2__O2p_CO_)&
             * nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)&
-            *exp(log(Tnu_body_dim/Ti_dim)*0.39)
-       !write(*,*)'temp_I(3)dim=',(Temp_I(3)/Si2No_V(UnitTemperature_))
+            *exp(log(Tnu_body_dim/(max(T300_dim,(Temp_I(Op_)*No2Si_V(UnitTemperature_)))))*0.39)
        CoeffSpecies_II(O2p_, Op_)=ReactionRate_I(Op_CO2__O2p_CO_)
 
        ReactionRate_I(CO2p_O__Op_CO2_)= &
@@ -394,16 +440,22 @@ contains
        CoeffSpecies_II(Op_,CO2p_)=ReactionRate_I(CO2p_O__Op_CO2_)
 
        ReactionRate_I(Hp_O__Op_H_)= &
-       Rate_I(Hp_O__Op_H_)* nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+            Rate_I(Hp_O__Op_H_)* nDenNuSpecies_CBI(i,j,k,iBlock,O_)
        CoeffSpecies_II(Op_,Hp_)=ReactionRate_I(Hp_O__Op_H_)
 
        ReactionRate_I(Op_H__Hp_O_)= &
-       Rate_I(Op_H__Hp_O_)* nDenNuSpecies_CBI(i,j,k,iBlock,H_)
+            Rate_I(Op_H__Hp_O_)* nDenNuSpecies_CBI(i,j,k,iBlock,H_)
        CoeffSpecies_II(Hp_,Op_)=ReactionRate_I(Op_H__Hp_O_)
 
 
        ! Recombination
-       kTi=State_VGB(P_,i,j,k,iBlock)/NumDens/(1+ElectronPressureRatio)
+
+       if(.not.UseElectronPressure)then
+          kTi=State_VGB(P_,i,j,k,iBlock)/NumDens/(1 + ElectronPressureRatio)
+       else
+          kTi=State_VGB(P_,i,j,k,iBlock)/NumDens
+       end if
+
        kTe=kTi
 
        if(kTi <= 0.0)then
@@ -453,17 +505,18 @@ contains
                *State_VGB(iRhoIon_I(iFluid), i,j,k, iBlock)
        enddo
 
+       totalIMPNumRho=sum(ImpIon_I(:))
 
        if(DoTestCell)then
           write(*,*)NameSub,' State_VGB(iRhoIon_I)',State_VGB(iRhoIon_I,iTest,jTest,kTest,BLKTest)
-          do iFluid=1,nIonFluid
-              write(*,*)'iFluid=',iFluid
-              write(*,*)NameSub,' CoeffSpecies_II(iFluid,:)',CoeffSpecies_II(iFluid,:)
-          end do 
-           write(*,*)'SiSpecies_I=',SiSpecies_I
-           write(*,*)'LiSpecies_I=',LiSpecies_I
-           write(*,*)'Recb_I=',Recb_I
-        end if
+      !    do iFluid=1,nIonFluid
+      !       write(*,*)'iFluid=',iFluid
+      !       write(*,*)NameSub,' CoeffSpecies_II(iFluid,:)',CoeffSpecies_II(iFluid,:)
+      !    end do
+      !    write(*,*)'SiSpecies_I=',SiSpecies_I
+      !    write(*,*)'LiSpecies_I=',LiSpecies_I
+      !    write(*,*)'Recb_I=',Recb_I
+       end if
 
 
 
@@ -494,6 +547,29 @@ contains
             LiSpecies_I(1:nIonFluid) ) /&
             (State_VGB(iRhoIon_I(1:nIonFluid), i,j,k, iBlock)+1e-20))&
             /vInv_CB(i,j,k,iBlock)
+      
+        if(.not.UsePointImplicit_B(iBlock) )then
+           !sum of the (loss term/atom mass) due to recombination                                                  \
+                                                                                                                    
+           SourceLossMax = 10.0*maxval(abs(SiSpecies_I(1:nSpecies)-&
+                LiSpecies_I(1:nSpecies) ) /&
+                (State_VGB(iRhoIon_I(1:nIonFluid), i,j,k, iBlock)+1e-20))&
+                /vInv_CB(i,j,k,iBlock)
+           vdtmin=min(VdtFace_x(i,j,k),VdtFace_y(i,j,k),VdtFace_z(i,j,k))
+
+
+
+            if(SourceLossMax > Vdtmin) then
+              !UsePointImplicit_B(iBlock)=.true.                                                                   \
+              VdtFace_x(i,j,k) = max (SourceLossMax, VdtFace_x(i,j,k) )
+              VdtFace_y(i,j,k) = max (SourceLossMax, VdtFace_y(i,j,k) )
+              VdtFace_z(i,j,k) = max (SourceLossMax, VdtFace_z(i,j,k) )
+           end if
+
+        end if
+
+
+
        Source_VC(iRhoIon_I,i,j,k) =Source_VC(iRhoIon_I,i,j,k) &
             +SiSpecies_I &
             -LiSpecies_I
@@ -508,45 +584,145 @@ contains
             -nu_BLK(i,j,k,iBlock)*State_VGB(Ux_,i,j,k,iBlock)
 
        Source_VC(iRhoUxIon_I,i,j,k)=Source_VC(iRhoUxIon_I,i,j,k)&
-            -State_VGB(iRhoUxIon_I,i,j,k,iBlock)*Lossx_I&
-            -nu_BLK(i,j,k,iBlock)*State_VGB(iRhoUxIon_I,i,j,k,iBlock) 
+            -State_VGB(iRhoUxIon_I,i,j,k,iBlock)*LiSpecies_I*invRho_I&
+            !-nu_BLK(i,j,k,iBlock)*State_VGB(iRhoUxIon_I,i,j,k,iBlock)
+            -sum(IonNeuRate_II,DIM = 2)&
+            *State_VGB(iRhoUxIon_I,i,j,k,iBlock) 
 
        Source_VC(rhoUy_     ,i,j,k) = Source_VC(rhoUy_     ,i,j,k)  &
             -State_VGB(Uy_,i,j,k,iBlock)*totalLossx&
             -nu_BLK(i,j,k,iBlock)*State_VGB(Uy_,i,j,k,iBlock)
 
        Source_VC(iRhoUyIon_I,i,j,k)= Source_VC(iRhoUyIon_I,i,j,k)&
-            -State_VGB(iRhoUyIon_I,i,j,k,iBlock)*Lossx_I&
-            -nu_BLK(i,j,k,iBlock)*State_VGB(iRhoUyIon_I,i,j,k,iBlock)
+            -State_VGB(iRhoUyIon_I,i,j,k,iBlock)*LiSpecies_I*invRho_I&
+            !-nu_BLK(i,j,k,iBlock)*State_VGB(iRhoUyIon_I,i,j,k,iBlock)
+            -sum(IonNeuRate_II, DIM = 2)&
+            *State_VGB(iRhoUyIon_I,i,j,k,iBlock)
 
        Source_VC(rhoUz_     ,i,j,k)= Source_VC(rhoUz_     ,i,j,k)  &
             -State_VGB(Uz_,i,j,k,iBlock)*totalLossx&
             -nu_BLK(i,j,k,iBlock)*State_VGB(Uz_,i,j,k,iBlock)
 
        Source_VC(iRhoUzIon_I,i,j,k)= Source_VC(iRhoUzIon_I,i,j,k)&
-            -State_VGB(iRhoUzIon_I,i,j,k,iBlock)*Lossx_I&
-            -nu_BLK(i,j,k,iBlock)*State_VGB(iRhoUzIon_I,i,j,k,iBlock)
+            -State_VGB(iRhoUzIon_I,i,j,k,iBlock)*LiSpecies_I*invRho_I&
+           ! -nu_BLK(i,j,k,iBlock)*State_VGB(iRhoUzIon_I,i,j,k,iBlock)
+            -sum(IonNeuRate_II, DIM = 2)&
+            *State_VGB(iRhoUzIon_I,i,j,k,iBlock)
        !----- pressure and energy source terms
 
-      
+       if(UseElectronPressure)then
+          !write(*,*)'I am here using electron pressure'
+          if(state_VGB(pe_,i,j,k,iBlock)<0.0)then
+             write(*,*)'Pe negative at i,j,k,iBlock=',i,j,k,iBlock, &
+                  state_VGB(pe_, i,j,k,iBlock)
+             call stop_mpi('negative electron pressure')
+          end if
+
+
+          kTi = State_VGB(p_,i,j,k,iBlock)/NumDens
+
+          kTe= State_VGB(pe_,i,j,k,iBlock)/NumDens
+          Te_dim= kTe * No2Si_V(UnitTemperature_)
+
+          col_ei = 54.0* NumDens*No2Io_V(UnitN_)/sqrt(Te_dim)/Te_dim &
+               /Io2No_V(UnitT_)
+
+          !Ion Electron collisions Schunk and Nagy
+          col_ei_I=54.0*NumDens_I*No2Io_V(UnitN_)/sqrt(Te_dim)/Te_dim &
+               /Io2No_V(UnitT_)
+
+          !Electron Neutral collision Schunk and Nagy
+           if(Te_dim .gt. 5000)Te_dim=5000
+          col_en_I(O_)=8.9e-11*nDenNuSpecies_CBI(i,j,k,iBlock,O_)&
+               *No2Io_V(UnitN_)*(1 + 5.7e-4*Te_dim)*sqrt(Te_dim)/Io2No_V(UnitT_)
+          col_en_I(H_)=4.5e-9*nDenNuSpecies_CBI(i,j,k,iBlock,H_)&
+               *No2Io_V(UnitN_)*(1 - 1.35e-4*Te_dim)*sqrt(Te_dim)/Io2No_V(UnitT_)
+          col_en_I(CO2_)=3.68e-8*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)&
+               *No2Io_V(UnitN_)*(1 + 4.1e-11*abs(4500-Te_dim)**(2.93))/&
+               Io2No_V(UnitT_)
+
+          col_en_I=col_en_I/MassNeutral_I
+          col_en=sum(col_en_I)*meovmi
+
+          averagemass=State_VGB(rho_,i,j,k,iBlock)/NumDens
+
+          Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k)  &
+               + NumDens*(TNu_body-KTi)*nu_BLK(i,j,k,iBlock)   &
+               +0.5*gm1*State_VGB(Rho_,i,j,k,iBlock)&
+               *uu2*nu_BLK(i,j,k,iBlock)                     &
+               +totalSourceNumRho*TNu_body               &
+               -totalLossNumRho*kTi                 &
+               +0.50*(gm1)*uu2*(totalSourceRho)     &
+               -2*col_ei*meovmi*NumDens*(kTi-kTe)/averagemass
+
+
+          !Ion_neutral collisions dependent terms
+          tmp_nu_I=gm1*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
+               sum(IonNeuRate_II*ReducedMassNeutral_II,DIM= 2) +&
+               2*State_VGB(iRhoIon_I,i,j,k,iBlock)*(TNu_body-Temp_I)*&
+               sum(IonNeuRate_II*ReducedMassNeutral2_II,DIM= 2)
+
+          Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k)  &
+               + tmp_nu_I   &             
+               + SourceNumRho_I*TNu_body               &
+               - LossNumRho_I*Temp_I                 &
+               + 0.50*(gm1)*uu2_I*SiSpecies_I     &
+               - 2*col_ei_I*meovmi*NumDens*(Temp_I-kTe)/MassIon_I
+
+
+          do iFluid=1,nIonFluid
+             col_ii_I(iFluid)=sum(2*State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock)*State_VGB(iRhoIon_I,i,j,k,iBlock)&
+                  /(MassIon_I)*(Temp_I-Temp_I(iFluid))*&
+               IonIonCoeff_II(iFluid,:)*ReducedMassIon_II(:,iFluid)&
+               /(Temp_I*No2Si_V(UnitTemperature_))**(3/2))
+
+          end do
+
+          Source_VC(iPIon_I,i,j,k)=Source_VC(iPIon_I,i,j,k)+ col_ii_I
+
+          Source_VC(P_,i,j,k)=Source_VC(P_,i,j,k)+ sum(col_ii_I)
+
+          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k)  &
+               +totalPSNumRho*kTe0         &
+               -totalRLNumRhox*NumDens*kTe                  &
+               -2*col_en*NumDens*(kTe-TNu_body)   &
+               -2*sum(col_ei_I*meovmi*NumDens*(kTe-Temp_I)/MassIon_I)
+
+
+          
+
+       else
           tmp = totalSourceNumRho*TNu_body            &
                + NumDens*(TNu_body-KTi)*nu_BLK(i,j,k,iBlock) &
                + totalPSNumRho*kTe0                &
                - totalLossNumRho*kTi               &
-               - totalRLNumRhox*NumDens*KTe        
-          tmp_I = SourceNumRho_I*TNu_body            &
-               + NumDens_I*(TNu_body-Temp_I)*nu_BLK(i,j,k,iBlock) &
-               + PhoIon_I*kTe0                &
-               - LossNumRho_I*Temp_I               &
-               - RLNumRhox_I*NumDens_I*KTe         
+               - totalRLNumRhox*NumDens*kTe        
+          tmp_I = SourceNumRho_I*TNu_body +            &
+               !NumDens_I*(TNu_body-Temp_I)*nu_BLK(i,j,k,iBlock) &
+               2*State_VGB(iRhoIon_I,i,j,k,iBlock)*(TNu_body-Temp_I)*&
+               sum(IonNeuRate_II*ReducedMassNeutral2_II,DIM= 2)&
+               - LossNumRho_I*Temp_I        &                
+               + PhoIon_I*kTe0 &
+               - RLNumRhox_I*NumDens*kTe
 
-          if(DoTestCell)then
-             write(*,*)NameSub,'SourceNumRho_I=',SourceNumRho_I
-             write(*,*)NameSub,'NumDens_I=',NumDens_I
-             write(*,*)NameSub,'PhoIon_I=',PhoIon_I
-             write(*,*)NameSub,'LossNumRho_I=',LossNumRho_I
-             write(*,*)NameSub,'RLNumRhox_I=',RLNumRhox_I
-          end if
+          do iFluid=1,nIonFluid
+             col_ii_I(iFluid)=sum(2*State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock)*State_VGB(iRhoIon_I,i,j,k,iBlock)&
+                  /(MassIon_I)*(Temp_I-Temp_I(iFluid))*&
+               IonIonCoeff_II(iFluid,:)*ReducedMassIon_II(:,iFluid)&
+               /(Temp_I*No2Si_V(UnitTemperature_))**(3/2))
+
+          end do
+
+          tmp_I=tmp_I +col_ii_I
+
+
+         ! if(DoTestCell)then
+         !    write(*,*)NameSub,'SourceNumRho_I=',SourceNumRho_I
+         !    write(*,*)NameSub,'NumDens_I=',NumDens_I
+         !    write(*,*)NameSub,'PhoIon_I=',PhoIon_I
+         !    write(*,*)NameSub,'LossNumRho_I=',LossNumRho_I
+         !    write(*,*)NameSub,'RLNumRhox_I=',RLNumRhox_I
+         ! end if
 
 
           Source_VC(Energy_ ,i,j,k) =  Source_VC(Energy_ ,i,j,k)&
@@ -570,11 +746,24 @@ contains
 
 
           Source_VC(iPIon_I,i,j,k)  = Source_VC(iPIon_I,i,j,k)   &
-               + 0.5*gm1*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
-               nu_BLK(i,j,k,iBlock)  &
+               !+ 0.5*gm1*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
+               !nu_BLK(i,j,k,iBlock)  &
+               +gm1*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
+               sum(IonNeuRate_II*ReducedMassNeutral_II,DIM= 2) +&
                + 0.5*gm1*uu2_I*SiSpecies_I &
                + tmp_I
-       
+       end if
+
+
+     !  if(DoTestCell)then
+     !     write(*,*)'State_VGB(iPIon_I,i,j,,iBlock)=',&
+     !       State_VGB(iPIon_I,itest,jtest,ktest,BLKtest)
+     !     write(*,*)'State_VGB(P_,j,,iBlock)=',&
+     !     State_VGB(P_,itest,jtest,ktest,BLKtest)
+     !     write(*,*)'State_VGB(Pe_,i,j,k,iBlock)=',&
+     !     State_VGB(Pe_,itest,jtest,ktest,BLKtest)
+     !  end if
+   
     end do; end do; end do     ! end of the i,j,k loop
 
     !end of chemistry
@@ -587,7 +776,7 @@ contains
     !------------------------------------------------------------------------
 
     ! All ion momenta are implicit
-    allocate(iVarPointImpl_I(5*nIonFluid))
+    allocate(iVarPointImpl_I(5*nIonFluid + 1))
 
     do iFluid = 1, nIonFluid
        iVarPointImpl_I(5*iFluid-4) = iRhoIon_I(iFluid)
@@ -596,7 +785,8 @@ contains
        iVarPointImpl_I(5*iFluid-1) = iRhoUzIon_I(iFluid)
        iVarPointImpl_I(5*iFluid)   = iPIon_I(iFluid)
     end do
-
+    iVarPointImpl_I(5*nIonFluid + 1)   = Pe_
+    
     IsPointImplMatrixSet = .false.
     !IsAsymmetric= .false.
   end subroutine user_init_point_implicit
@@ -609,12 +799,13 @@ contains
 
     integer::iBoundary
     !--------------------------------------------------------------------------
+    
     call set_multiSp_ICs  
     !    Rbody = 1.0 + 140.0e3/Mars
     BodyRho_I(1) = sum(BodyRhoSpecies_I(1:MaxSpecies))
     !BodyRho_I(2:nFluid)=BodyRhoSpecies_I(1:MaxSpecies)
     BodyP_I(1)   =sum(BodyRhoSpecies_I(1:MaxSpecies)&
-         /MassIon_I)*Ti_body*(1+ElectronPressureRatio)
+         /MassIon_I)*Ti_body
    
     BodyP_I(2:nFluid)=Ti_body*(BodyRhoSpecies_I(1:MaxSpecies)&
          /MassIon_I)
@@ -622,6 +813,20 @@ contains
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(iRhoIon_I,body1_) = BodyRhoSpecies_I
     FaceState_VI(P_,body1_)=BodyP_I(1)
+
+
+    if(UseElectronPressure)then
+       do iBoundary=East_, Top_
+          FaceState_VI(Pe_, iBoundary)=sw_p
+          FaceState_VI(P_, iBoundary)=sw_p
+       end do
+
+       FaceState_VI(P_,body1_)=BodyP_I(1)       
+       FaceState_VI(Pe_,body1_)=BodyP_I(1)
+    else
+       FaceState_VI(P_,body1_)=BodyP_I(1)*(1+ElectronPressureRatio)
+    end if
+
 
     CellState_VI(:,body1_:Top_)=FaceState_VI(:,body1_:Top_)
     do iBoundary=body1_,Top_  
@@ -640,7 +845,6 @@ contains
        allocate(MaxLiSpecies_CB(1:nI, 1:nJ, 1:nK, nBLK))
        allocate(MaxSLSpecies_CB(1:nI, 1:nJ, 1:nK, nBLK))
        allocate(nu_BLK(1:nI,1:nJ,1:nK,nBLK))
-       allocate(nu1_BLK(1:nI,1:nJ,1:nK,nBLK))
     end if
 
   end subroutine user_init_session
@@ -937,6 +1141,7 @@ contains
     use ModPhysics
 
     real :: Productrate
+    integer :: n
     logical::oktest=.false., oktestme=.false.
     !---------------------------------------------------------------
   
@@ -1158,6 +1363,13 @@ contains
 
     Optdep =  sum(BodynDenNuSpecies_I*CrossSection_I*HNuSpecies_I)
     Productrate0 = max(exp(-Optdep), 1.0e-5)
+    
+!    do n=1,nIonFluid
+!    write(*,*)'ionFluid=',n,'IonNeuCoeffDim_II=',IonNeuCoeffDim_II(n,:)
+!    end do
+    IonNeuCoeff_II= IonNeuCoeffDim_II*No2Io_V(UnitN_)*No2Io_V(UnitT_)*1.e-10
+    
+    IonIonCoeff_II=IonIonCoeffDim_II*No2Io_V(UnitN_)*No2Io_V(UnitT_)
 
     if(oktest)then
        write(*,*)'=======in set_multisp=============='
@@ -1185,6 +1397,17 @@ contains
          Rate_I(Op_CO2__O2p_CO_))/Rate_I(O2p_em__O_O_))
     BodyRhoSpecies_I = BodyRhoSpecies_I*MassIon_I
 
+    do iFluid=1,nIonFluid
+       ReducedMassNeutral2_II(iFluid,:)=1/&
+            (MassIon_I(iFluid) + MassNeutral_I)
+       ReducedMassNeutral_II(iFluid,:)=MassNeutral_I/&
+            (MassIon_I(iFluid) + MassNeutral_I)
+       ReducedMassIon_II(iFluid,:)=1/&
+            (MassIon_I(iFluid) + MassIon_I)
+    end do
+
+
+  
     if(oktest)then
        write(*,*)' set parameters of Mars: BodyRhoSpecies_I(i)=',&
             BodyRhoSpecies_I(1:nSpecies)
@@ -1262,8 +1485,6 @@ contains
     end do; end do; end do
 
 
-    nu1_BLK(:,:,:,globalBLK)=nu_BLK(:,:,:,globalBLK)
-
     do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
        if (R_BLK(i,j,k,globalBLK)< Rbody) then
           cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
@@ -1281,8 +1502,13 @@ contains
 
           State_VGB(iPIon_I,i,j,k,globalBLK) = Ti_body*State_VGB(iRhoIon_I,i,j,k,globalBLK) &
                /MassIon_I 
-          State_VGB(P_,i,j,k,globalBLK) = &
-               max(SW_p,sum(State_VGB(iPIon_I,i,j,k,globalBLK))*(1+ElectronPressureRatio))
+          if(.not. UseElectronPressure)then
+             State_VGB(P_,i,j,k,globalBLK) = &
+                  max(SW_p,sum(State_VGB(iPIon_I,i,j,k,globalBLK))*(1+ElectronPressureRatio))
+          else
+             State_VGB(P_,i,j,k,globalBLK) = &
+                  max(SW_p,sum(State_VGB(iPIon_I,i,j,k,globalBLK)))
+          end if
        else
 
           State_VGB(:,i,j,k,globalBLK)   = CellState_VI(:,1)
@@ -1292,7 +1518,7 @@ contains
 !!$           write(*,*)'State_VGB(rho_,i,j,k,globalBLK)=',State_VGB(rho_,i,j,k,globalBLK)
           State_VGB(Ux_:bz_,i,j,k,globalBLK)   =0.0
        end if
-       
+
 
     end do;end do; end do;
 
@@ -1386,12 +1612,23 @@ contains
        State_VGB(rho_,i,j,k,globalBLK)   =&
             sum(State_VGB(iRhoIon_I,i,j,k,globalBLK))
 
-       State_VGB(P_,i,j,k,globalBLK) = &
-            max(SW_p,(sum(State_VGB(iRhoIon_I,i,j,k,globalBLK)/(MassIon_I)))*Ti_body*(1+ElectronPressureRatio))
+       if(.not. UseElectronPressure)then
+          State_VGB(P_,i,j,k,globalBLK) = &
+               max(SW_p,(sum(State_VGB(iRhoIon_I,i,j,k,globalBLK)/(MassIon_I)))*Ti_body*(1+ElectronPressureRatio))
+          State_VGB(iPIon_I,i,j,k,globalBLK)=State_VGB(P_,i,j,k,globalBLK)&
+               /(sum(State_VGB(iRhoIon_I,i,j,k,globalBLK)/(MassIon_I)))*&
+               State_VGB(iRhoIon_I,i,j,k,globalBLK)/MassIon_I/(1+ElectronPressureRatio)
 
-       State_VGB(iPIon_I,i,j,k,globalBLK)=State_VGB(P_,i,j,k,globalBLK)&
-            /(sum(State_VGB(iRhoIon_I,i,j,k,globalBLK)/(MassIon_I)))*&
-            State_VGB(iRhoIon_I,i,j,k,globalBLK)/MassIon_I/(1+ElectronPressureRatio)
+       else
+
+          State_VGB(P_,i,j,k,globalBLK) = &
+               max(SW_p,(sum(State_VGB(iRhoIon_I,i,j,k,globalBLK)/(MassIon_I)))*Ti_body)
+          State_VGB(iPIon_I,i,j,k,globalBLK)=State_VGB(P_,i,j,k,globalBLK)&
+               /(sum(State_VGB(iRhoIon_I,i,j,k,globalBLK)/(MassIon_I)))*&
+               State_VGB(iRhoIon_I,i,j,k,globalBLK)/MassIon_I
+          State_VGB(Pe_,i,j,k,globalBLK)=State_VGB(P_,i,j,k,globalBLK)
+
+       end if
 
        Temp_I=State_VGB(iPIon_I,i,j,k,globalBLK)/&
             (State_VGB(iRhoIon_I,i,j,k,globalBLK)/MassIon_I)
@@ -1432,7 +1669,7 @@ contains
     if(iBoundary == ExtraBc_)then
        VarsGhostFace_V = FaceState_VI(:,east_)
        RETURN
-    elseif(iBoundary /= Body1_)then       
+    elseif(iBoundary /= Body1_)then
        call stop_mpi(NameSub//' invalid iBoundary value')
     end if
 
@@ -1460,8 +1697,12 @@ contains
 
     VarsGhostFace_V(iPIon_I)=Ti_body*VarsGhostFace_V(iRhoIon_I)/MassIon_I
 
-    VarsGhostFace_V(P_)=sum(VarsGhostFace_V(iPIon_I))*(1+ElectronPressureRatio)
-
+    if(UseElectronPressure)then
+       VarsGhostFace_V(P_)=sum(VarsGhostFace_V(iPIon_I))
+       VarsGhostFace_V(Pe_)=sum(VarsGhostFace_V(iPIon_I))
+    else
+       VarsGhostFace_V(P_)=sum(VarsGhostFace_V(iPIon_I))*(1+ElectronPressureRatio)
+    end if
 
     ! Reflective in radial direction
     uDotR_I = (VarsTrueFace_V(iRhoUx_I)*FaceCoords_D(1)+ &
@@ -1880,7 +2121,7 @@ case('co2pflx')
     integer, intent(in):: iBlock
 
     real :: Rmax,CosSZA
-    integer:: i, j, k, q
+    integer:: i, j, k, q,n
     character (len=*), parameter :: NameSub = 'set_neutral_density'
     logical:: DoTest, DoTestMe, DoTestCell
 
@@ -2041,9 +2282,13 @@ case('co2pflx')
           nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
                nDenNuSpecies_CBI(i,j,k,iBlock,O_))*nu0
 
+
           nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1.0e-5
 
        end if
+
+       !!!!doubling neutral oxygen density
+      ! nDenNuSpecies_CBI(i,j,k,iBlock,O_)=2*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
 
     end do; end do; end do 
 
@@ -2069,7 +2314,7 @@ case('co2pflx')
                   nDenNuSpecies_CBI(i,j,k,iBlock,O_))*nu0
 
              nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1.0e-5
-
+             
           end if
 
           Ionizationrate_CBI(i,j,k,iBlock,CO2_)=&
