@@ -749,7 +749,7 @@ contains
                !+ 0.5*gm1*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
                !nu_BLK(i,j,k,iBlock)  &
                +gm1*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
-               sum(IonNeuRate_II*ReducedMassNeutral_II,DIM= 2) +&
+               sum(IonNeuRate_II*ReducedMassNeutral_II,DIM=2) &
                + 0.5*gm1*uu2_I*SiSpecies_I &
                + tmp_I
        end if
