@@ -23,7 +23,7 @@ module ModGroundMagPerturb
   real, dimension(2,Max_MagnetometerNumber) :: &
        PosMagnetometer_II
   character(len=50)  :: MagInputFile
-  character(len=3)   :: MagName_I(Max_MagnetometerNumber), MagInCoord
+  character(len=3)   :: MagName_I(Max_MagnetometerNumber), MagInCoord='MAG'
 
 contains
 
@@ -66,7 +66,7 @@ contains
     !\
     ! Calculate the magnetic perturbations in cartesian coordinates
     !/
-          
+
     do iMag = 1, nMagnetometer
        Xyz_D = Xyz_DI(:,iMag)/rPlanet_I(Earth_)
 
@@ -85,9 +85,9 @@ contains
                 Temp_BLK_z(i,j,k,iBLK)=0.0
                 CYCLE
              end if
-          
+
              call get_current(i,j,k,iBLK,Current_D)
-             
+
              Xyz_BLK = (/x_BLK(i,j,k,iBLK),y_BLK(i,j,k,iBLK), &
                   z_BLK(i,j,k,iBLK)/)
 
@@ -104,7 +104,7 @@ contains
        MagPerturb_DI(x_,iMag) = Integrate_BLK(1,Temp_BLK_x)/(4*cPi) 
        MagPerturb_DI(y_,iMag) = Integrate_BLK(1,Temp_BLK_y)/(4*cPi)
        MagPerturb_DI(z_,iMag) = Integrate_BLK(1,Temp_BLK_z)/(4*cPi)
-      
+
     end do
 
     deallocate(Temp_BLK_x,Temp_BLK_y,Temp_BLK_z)
@@ -112,7 +112,7 @@ contains
 
   !=====================================================================
   subroutine ground_mag_perturb_fac(Xyz_DI, MagPerturb_DI)
-    
+
     use ModProcMH,         ONLY: iProc, nProc, iComm
     use ModMain,           ONLY: Time_Simulation
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
@@ -160,83 +160,80 @@ contains
     where(abs(FacRcurrents_II) * No2Io_V(UnitJ_) < 1.0E-4 &
          .or. abs(FacRcurrents_II) * No2Io_V(UnitJ_) >  1.0e3)&
          FacRcurrents_II = 0.0
-    
+
     iLine=-1
     do iTheta = 1, nTheta
        Theta = (iTheta-1) * dTheta
        if(iTheta==1 .or. iTheta == nTheta)Theta = 1.0E-4
        SinTheta = sin(Theta)          
-        
+
        do iPhi=1, nPhi
-             Phi = (iPhi-1) * dPhi
-             
-             ! if the FAC is under certain threshold, do nothing
-             if (FacRcurrents_II(iTheta,iPhi) ==0.0)CYCLE
+          Phi = (iPhi-1) * dPhi
 
-             iLine = iLine +1
-             ! do parallel computation among the processors
-             if(mod(iLine,nProc) /= iProc)CYCLE
-             
-             call sph_to_xyz(rCurrents,Theta,Phi,XyzRcurrents_D)
+          ! if the FAC is under certain threshold, do nothing
+          if (FacRcurrents_II(iTheta,iPhi) ==0.0)CYCLE
 
-             ! extract the field aligned current and B field
-             JrRcurrents = FacRcurrents_II(iTheta,iPhi)
+          iLine = iLine +1
+          ! do parallel computation among the processors
+          if(mod(iLine,nProc) /= iProc)CYCLE
 
-             bRcurrents_D= bRcurrents_DII(:,iTheta,iPhi)
-             bRcurrents = sqrt(sum(bRcurrents_D**2))
+          call sph_to_xyz(rCurrents,Theta,Phi,XyzRcurrents_D)
 
-             do k=1,nCuts
-                
-                r_tmp = rCurrents - dR_Trace * k
-                ! get next position along the field line
-                call map_planet_field(Time_Simulation,XyzRcurrents_D,'SMG NORM', &
-                     r_tmp, XyzTmp_D,iHemisphere)
+          ! extract the field aligned current and B field
+          JrRcurrents = FacRcurrents_II(iTheta,iPhi)
 
-                ! get the B field at this position
-                call get_planet_field(Time_Simulation, XyzTmp_D,'SMG NORM',B_D)
-                B_D = B_D *Si2No_V(UnitB_)
-                b = sqrt(sum(B_D**2))
+          bRcurrents_D= bRcurrents_DII(:,iTheta,iPhi)
+          bRcurrents = sqrt(sum(bRcurrents_D**2))
 
-                ! get the field alinged current at this position
-                Fac = b/bRcurrents * JrRcurrents
-                ! get the (x,y,z) components of the Jr
-                j_D = Fac * B_D/b
+          do k=1,nCuts
 
-                ! the length of the field line between two cuts
-                iLat = abs(asin(XyzTmp_D(3)/sqrt(sum(XyzTmp_D**2))))
-                dL = dR_Trace * sqrt(1+3*(sin(iLat))**2)/(2*sin(iLat))
-                ! the cross section area by conversation of magnetic flux
-                dS = bRcurrents/ b * rCurrents**2 * SinTheta * dTheta *dPhi
+             r_tmp = rCurrents - dR_Trace * k
+             ! get next position along the field line
+             call map_planet_field(Time_Simulation,XyzRcurrents_D,'SMG NORM', &
+                  r_tmp, XyzTmp_D,iHemisphere)
 
-                do iMag=1,nMagnetometer
-                   Xyz_D = Xyz_DI(:,iMag)/rplanet_I(Earth_)
+             ! get the B field at this position
+             call get_planet_field(Time_Simulation, XyzTmp_D,'SMG NORM',B_D)
+             B_D = B_D *Si2No_V(UnitB_)
+             b = sqrt(sum(B_D**2))
 
-                   if(Xyz_D(3) > 0 .and. Theta > cHalfPi &
-                        .or. Xyz_D(3) < 0 .and. Theta < cHalfPi) CYCLE
+             ! get the field alinged current at this position
+             Fac = b/bRcurrents * JrRcurrents
+             ! get the (x,y,z) components of the Jr
+             j_D = Fac * B_D/b
 
-                   ! Do the Biot-Savart integral JxR/|R|^3 dV for all the magnetometers
-                   temp_D = cross_product(j_D, Xyz_D-XyzTmp_D) & 
-                        * dL * dS /(sqrt(sum((XyzTmp_D-Xyz_D)**2)))**3
-                   
-                   MagPerturb_DI(:,iMag)=MagPerturb_DI(:,iMag)+temp_D/(4*cPi)
-                   
-                end do
+             ! the length of the field line between two cuts
+             iLat = abs(asin(XyzTmp_D(3)/sqrt(sum(XyzTmp_D**2))))
+             dL = dR_Trace * sqrt(1+3*(sin(iLat))**2)/(2*sin(iLat))
+             ! the cross section area by conversation of magnetic flux
+             dS = bRcurrents/ b * rCurrents**2 * SinTheta * dTheta *dPhi
+
+             do iMag=1,nMagnetometer
+                Xyz_D = Xyz_DI(:,iMag)/rplanet_I(Earth_)
+
+                if(Xyz_D(3) > 0 .and. Theta > cHalfPi &
+                     .or. Xyz_D(3) < 0 .and. Theta < cHalfPi) CYCLE
+
+                ! Do the Biot-Savart integral JxR/|R|^3 dV for all the magnetometers
+                temp_D = cross_product(j_D, Xyz_D-XyzTmp_D) & 
+                     * dL * dS /(sqrt(sum((XyzTmp_D-Xyz_D)**2)))**3
+
+                MagPerturb_DI(:,iMag)=MagPerturb_DI(:,iMag)+temp_D/(4*cPi)
 
              end do
+
           end do
        end do
+    end do
 
-     end subroutine ground_mag_perturb_fac
+  end subroutine ground_mag_perturb_fac
   !================================================================
-     subroutine read_mag_input_file
-    
-    use ModProcMH
-    use ModMain
-    use ModIO
-    use CON_axes
+  subroutine read_mag_input_file
+
+    use ModProcMH, ONLY: iProc, iComm
+    use ModMain, ONLY: lVerbose
+    use ModIO, ONLY: FileName, Unit_Tmp, iUnitOut, write_prefix
     use ModMpi
-    use ModKind
-    use ModIoUnit  
 
     implicit none
 
@@ -279,23 +276,14 @@ contains
           if (iError /= 0) EXIT READFILE
 
           if(index(Line,'#COORD')>0) then
-             read(unit_tmp,'(a)') Line
-             if (index(Line, 'MAG')>0) then
-                MagInCoord = 'MAG'
-                write(*,*) 'Coordinates= ', MagInCoord
-             else if(index(Line, 'SMG')>0)then
-                MagInCoord = 'SMG'
-                write(*,*) 'Coordinates= ', MagInCoord
-             else
+             read(unit_tmp,'(a)') MagInCoord
+             select case(MagInCoord)
+             case('MAG','SMG')
                 call write_prefix;
-                write(*,*) NameSub, &
-                     ' WARNING: Please Use', &
-                     ' MAG(geomagnetic coordinates) for Magnetometer InputFile!!'
-                EXIT READFILE
-             end if
-          else
-             write(*,*) NameSub, &
-                  'WARNING: Specify the #COORD in the magnetometer files'
+                write(iUnitOut,'(a)') 'Magnetometer Coordinates= '//MagInCoord
+             case default
+                call stop_mpi(NameSub//' invalid MagInCoord='//MagInCoord)
+             end select
           endif
 
           if(index(Line,'#START')>0)then
@@ -404,7 +392,7 @@ contains
     use ModMpi
 
     implicit none
-    
+
     integer           :: iMag, iTime_I(7), iError
     !year,month,day,hour,minute,second,msecond
     real, dimension(3):: Xyz_D, &
@@ -422,12 +410,12 @@ contains
     MagtoGsm_DD = transform_matrix(Time_Simulation, &
          MagInCoord, TypeCoordSystem)
     GsmtoSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
-    
+
     !\
     ! Transform the Radius position into cartesian coordinates. 
     ! Transform the magnetometer position from MagInCorrd to GSM/SM
     !/
-    
+
     do iMag=1,nMagnetometer
        ! (360,360) is for the station at the center of the planet
        if ( nint(PosMagnetometer_II(1,iMag)) == 360 .and. &
@@ -451,7 +439,7 @@ contains
     !------------------------------------------------------------------
 
     call ground_mag_perturb(MagGsmXyz_DI, MagPerturb_DI) 
-    
+
     do iMag=1,nMagnetometer 
        MagPerturbGm_DI(:,iMag) = matmul(GsmtoSmg_DD, MagPerturb_DI(:,iMag))
     end do
@@ -462,15 +450,15 @@ contains
     if(nProc>1)then 
        call MPI_reduce(MagPerturbGm_DI, MagVarSum_DI, 3*nMagnetometer, &
             MPI_REAL, MPI_SUM, 0, iComm, iError)
-       
+
        if(iProc==0)MagPerturbGm_DI = MagVarSum_DI
     end if
-    
+
     !-------------------------------------------------------------------
     ! Calculate the perturbations from Field Aligned currents in Gap Region;
     ! It is in SM coordinate.
     !-------------------------------------------------------------------
-    
+
     call ground_mag_perturb_fac(MagSmgXyz_DI, MagPerturbFac_DI)
 
     !\
@@ -480,7 +468,7 @@ contains
     if(nProc>1)then 
        call MPI_reduce(MagPerturbFac_DI, MagVarSum_DI, 3*nMagnetometer, &
             MPI_REAL, MPI_SUM, 0, iComm, iError)
-       
+
        if(iProc==0)MagPerturbFac_DI = MagVarSum_DI
     end if
 
@@ -489,7 +477,7 @@ contains
     !-------------------------------------------------------------------
     if(iProc==0)then      
        do iMag=1,nMagnetometer
-          
+
           if (MagSmgXyz_DI(x_,iMag) == 0.0 .and. MagSmgXyz_DI(y_,iMag) == 0.0 &
                .and. MagSmgXyz_DI(z_,iMag) == 0.0) then 
              ! the magnetometer at the center (0,0,0)
@@ -508,18 +496,18 @@ contains
              MagPerturbGmSph_D(1)  = -TmpGmSph_D(phi_) 
              MagPerturbGmSph_D(2)  =  TmpGmSph_D(theta_) 
              MagPerturbGmSph_D(3)  = -TmpGmSph_D(r_) 
-             
+
              MagPerturbFacSph_D(1)  = -TmpFacSph_D(phi_) 
              MagPerturbFacSph_D(2)  =  TmpFacSph_D(theta_) 
              MagPerturbFacSph_D(3)  = -TmpFacSph_D(r_) 
-             
+
           endif
-          
+
           !\
           ! Write variables
           !/
           call get_date_time(iTime_I)
-          
+
           !normalize the variable to I/O unit...
           MagVarGm_D  = MagPerturbGMSph_D * No2Io_V(UnitB_)
           MagVarFac_D = MagPerturbFacSph_D * No2Io_V(UnitB_)
@@ -535,14 +523,14 @@ contains
           write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagVarGm_D
           ! Write the FACs' perturbations
           write(iUnitMag, '(3es13.5)') MagVarFac_D
-          
+
           call flush_unit(iUnitMag)
        end do
     end if
 
- end subroutine write_magnetometers
- 
- !=====================================================================
+  end subroutine write_magnetometers
+
+  !=====================================================================
 
   subroutine close_magnetometer_output_file
 
