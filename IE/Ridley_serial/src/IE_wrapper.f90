@@ -1147,8 +1147,8 @@ end subroutine IE_init_session
 subroutine IE_finalize(tSimulation)
 
   use ModProcIE
-  use IE_ModMain, ONLY: Time_Array, time_simulation, nSolve
-  use IE_ModIo, ONLY: nFile
+  use IE_ModMain, ONLY: Time_Array, time_simulation, nSolve, DoSaveLogfile
+  use IE_ModIo, ONLY: nFile, unitlog
   use CON_physics, ONLY: get_time
   use ModTimeConvert, ONLY: time_real_to_int
   use ModKind, ONLY: Real8_
@@ -1176,6 +1176,9 @@ subroutine IE_finalize(tSimulation)
 
   if(save_magnetometer_data .and. iProc==0) then 
      call close_iono_magperturb_file
+  end if
+  if(DoSaveLogfile .and. iProc==0)then
+     close(unitlog)
   end if
 
 end subroutine IE_finalize
