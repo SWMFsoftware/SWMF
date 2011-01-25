@@ -45,6 +45,7 @@ MODULES = \
 	ModFaceValue.o\
 	ModGeometry.o\
 	ModGroundMagPerturb.o\
+	ModGmGeoindices.o \
 	ModHallResist.o\
 	ModIO.o\
 	ModLaserHeating.o\
