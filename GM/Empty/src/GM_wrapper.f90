@@ -427,3 +427,16 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')  
 
 end subroutine GM_get_for_im_crcm
+
+!==========================================================================
+subroutine GM_put_mag_from_ie(Buffer_DI, iSize)
+
+  implicit none
+  integer, intent(in) :: iSize
+  real, intent(in)    :: Buffer_DI(3,iSize)
+  character(len=*), parameter :: NameSub='GM_put_mag_from_ie'
+  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+
+end subroutine GM_put_mag_from_ie
+
+!==========================================================================
