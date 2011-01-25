@@ -103,6 +103,7 @@ REPEAT:{
 	    }else{
 		&shell("./pION");
 	    }
+            &concat_sat_log if $Concat;
 	}elsif( $Dir =~ /^SC|LC|IH|OH|GM$/ ){
 	    &shell("./pIDL $MovieFlag -n=$nThread $Pattern");
 	    if($Gzip){
@@ -234,7 +235,7 @@ sub shell{
 
 sub concat_sat_log{
 
-    chdir "IO2" or return;
+    chdir "IO2" or chdir "ionosphere" or return;
     opendir(DIR,'.');
     my @LogSatFiles = sort(grep /\.(log|sat|mag)$/, readdir(DIR));
     closedir(DIR);
@@ -247,6 +248,7 @@ sub concat_sat_log{
 
 	# Remove extension
 	$BaseName =~ s/_n\d+\.(log|sat|mag)$// or
+	    $BaseName =~ s/_t[\d_]+\.(log|mag)$// or
 	    die "$ERROR: file name $File does not match "
 	    .   "_nSTEPNUMBER.(log|sat) format\n";
 
