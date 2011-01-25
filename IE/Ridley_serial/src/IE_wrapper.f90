@@ -7,6 +7,7 @@ subroutine IE_set_param(CompInfo, TypeAction)
   use IE_ModIo
   use IE_ModMain
   use ModIonoMagPerturb
+  use ModIeGeoindices, ONLY: DoCalcKp, DoCalcIndices
 
   use ModIoUnit
   use CON_comp_info
@@ -57,7 +58,7 @@ subroutine IE_set_param(CompInfo, TypeAction)
   if(DoReadMagnetometerFile)then
      call read_mag_input_file
      DoReadMagnetometerFile = .false.
-  end if
+  end if  
 
 contains
 
@@ -265,6 +266,14 @@ contains
           call read_var('dn_magoutput', dn_magoutput)
           call read_var('dt_magoutput', dt_magoutput)
 
+       case("#GEOMAGINDICES")
+          ! As more capabilities are added, switches for
+          ! selecting which indices should be calculated 
+          ! can be added here.
+          write(*,*) 'geoindices activated!'
+          DoCalcIndices=.true.
+          DoCalcKp     =.true.
+
        case default
           if(iProc==0) then
              write(*,'(a,i4,a)')NameSub//' IE_ERROR at line ',i_line_read(),&
@@ -301,6 +310,7 @@ subroutine IE_set_grid
   use IE_ModMain
   use CON_coupler
   use ModNumConst
+  use ModIeGeoindices, ONLY: DoCalcIndices, init_geoindices
 
   implicit none
   character (len=*), parameter :: NameSub='IE_set_grid'
@@ -346,6 +356,9 @@ subroutine IE_set_grid
        Coord2_I=IONO_NORTH_Psi(1,:),               &! longitudes
        Coord3_I=(/IONO_Radius + IONO_Height/),     &! radial size in meters
        iProc_A = iProc_A)                           ! processor assigment
+
+  ! Initialize geomagnetic indices.
+  if(DoCalcIndices) call init_geoindices
 
 end subroutine IE_set_grid
 
@@ -1147,7 +1160,7 @@ end subroutine IE_init_session
 subroutine IE_finalize(tSimulation)
 
   use ModProcIE
-  use IE_ModMain, ONLY: Time_Array, time_simulation, nSolve, DoSaveLogfile
+  use IE_ModMain, ONLY: Time_Array, time_simulation, nSolve, DoSaveLogFile
   use IE_ModIo, ONLY: nFile, unitlog
   use CON_physics, ONLY: get_time
   use ModTimeConvert, ONLY: time_real_to_int
@@ -1342,6 +1355,39 @@ subroutine IE_setgrid(iComponent, MLTsIn, LatsIn, iError)
   call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
 end subroutine IE_setgrid
+
+!==============================================================================
+
+subroutine IE_groundmaginit_for_gm(nShareGroundMag)
+  ! Get number of shared ground magnetometers.
+  use ModIeGeoindices, ONLY: nIndexMag
+
+  implicit none
+
+  integer, intent(out) :: nShareGroundMag
+
+  nShareGroundMag=nIndexMag
+
+end subroutine IE_groundmaginit_for_gm
+
+!==============================================================================
+
+subroutine IE_get_mag_for_gm(Buffer_DI, iSize)
+  use ModIeGeoindices, ONLY: get_index_mags, nIndexMag
+
+  implicit none
+
+  integer, intent(in):: iSize
+  real, intent(out)  :: Buffer_DI(3,iSize)
+  character(len=*), parameter :: NameSub='IE_get_mag_for_gm'
+  
+  if(nIndexMag.ne.iSize) call CON_stop( &
+       NameSub//' Number of magnetometers does not match!')
+
+  call get_index_mags(Buffer_DI)
+
+end subroutine IE_get_mag_for_gm
+
 
 !==============================================================================
 

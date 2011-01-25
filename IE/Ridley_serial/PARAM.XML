@@ -177,7 +177,17 @@ The default values are shown by the example above.
 
 </command>
 
-<command name ="MAGNETOMETER">
+<command name="GEOMAGINDICES">
+
+#GEOMAGINDICES
+
+This command activates the ionospheric contribution to GM's calculation of 
+geomagnetic indices, activated by the GM command of the same name.  While it is 
+possible to run the GM version without an IE contribution, it is not recommended.
+This command currently has no parameters associated with it.
+</command>
+
+<command name="MAGNETOMETER">
 	<parameter name="MagInputFile" type="string" length="100"/>
 	<parameter name="DnOutput" type="integer" min="-1"
 					default="-1"/>
