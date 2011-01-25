@@ -203,7 +203,7 @@ test1_check:
 		output/test1/GM_log_n000001.log \
 		> test1_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -t -r=1e-6 \
-		${TESTDIR}/RESULTS/IE/IE.log \
+		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test1/IE.log \
 		> test1_ie.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-8 \
@@ -297,23 +297,17 @@ test3_rundir:
 	cp Param/PARAM.in.test.GMIEIM ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
 
-#	cp Param/midn_05.dat ${TESTDIR}/midn_05.dat
-#	cp Param/noon_05.dat ${TESTDIR}/noon_05.dat
-
 test3_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; Restart.pl
-	cd ${TESTDIR}/IE/ionosphere; mv IE.log IE_all.log; \
-	   			     mv IE_mag_*.mag IE_all.mag
 
 # Note: The RCM .dat file is copied to .txt to avoid conversion to .plt
 test3_restart:
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIEIM PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}/IM/plots/; cp 2d__max_t00000020.dat t20.txt
-	cd ${TESTDIR}/IE/ionosphere; tail -3 IE.log >> IE_all.log; \
-	   			     tail -6 IE_mag_*.mag >> IE_all.mag
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
+		mv runlog_restart RESULTS
 
 test3_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
@@ -325,11 +319,11 @@ test3_check:
 		output/test3/GM_mag_n00000000.mag \
 		>> test3_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IE/IE_all.log \
+		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
 		output/test3/IE.log \
 		> test3_ie.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IE/IE_all.mag \
+		${TESTDIR}/RESULTS/IE/IE_mag_t000321_104500.mag \
 		output/test3/IE.mag \
 		>> test3_ie.diff)
 	gunzip -c output/test3/IM_2d__max_t00000020.dat.gz \
@@ -384,7 +378,7 @@ test4_check:
 		output/test4/GM_log_n000001.log \
 		> test4_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -t -r=1e-6 \
-		${TESTDIR}/RESULTS/IE/IE.log \
+		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test4/IE.log \
 		> test4_ie.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -t -a=1e-8 -r=1e-30 \
@@ -466,12 +460,10 @@ test6_rundir:
 test6_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; Restart.pl
-	cd ${TESTDIR}/IE/ionosphere; mv IE.log IE_all.log
 
 test6_restart:
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIEIMCRCM PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}/IE/ionosphere; tail -6 IE.log >> IE_all.log
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
 
 # check last snapshot from CRCM output
@@ -481,7 +473,7 @@ test6_check:
 		output/test6/GM.log \
 		> test6_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IE/IE_all.log \
+		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test6/IE.log \
 		> test6_ie.diff)
 	tail -2504 ${TESTDIR}/RESULTS/IM/CRCMeq.outs \
@@ -753,7 +745,7 @@ test_ramscb_check:
 		${IMDIR}/output/test9/IM_log_n000001.log \
 		> test_ramscb_im.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
-		${TESTDIR}/RESULTS/IE/IE.log \
+		${TESTDIR}/RESULTS/IE/IE*.log \
 		${IMDIR}/output/test9/IE.log \
 		> test_ramscb_ie.diff)
 	ls -l test_ramscb*.diff
