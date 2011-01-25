@@ -314,4 +314,24 @@ subroutine IE_put_from_im_complete
   write(*,*)"Don't know what IE_put_from_im_complete is really supposed to do."
 
 end subroutine IE_put_from_im_complete
+!==============================================================================
+subroutine IE_groundmaginit_for_gm(nShareGroundMag)
 
+  implicit none
+  integer, intent(out) :: nShareGroundMag
+  character(len=*), parameter :: NameSub='IE_groundmaginit_for_gm'
+  call CON_stop(NameSub//' IE_ERROR: empty version cannot be used!')
+
+end subroutine IE_groundmaginit_for_gm
+
+!==============================================================================
+subroutine IE_get_mag_for_gm(Buffer_DI, iSize)  
+
+  implicit none
+  integer, intent(in):: iSize
+  real, intent(out) :: Buffer_DI(3,iSize)
+  character(len=*), parameter :: NameSub='IE_get_mag_for_gm'
+  call CON_stop(NameSub//' IE_ERROR: empty version cannot be used!')
+
+end subroutine IE_get_mag_for_gm
+!==============================================================================
