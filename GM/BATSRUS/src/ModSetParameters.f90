@@ -63,6 +63,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModSatelliteFile, ONLY: nSatellite, &
        read_satellite_parameters, read_satellite_input_files
   use ModGroundMagPerturb
+  use ModGmGeoindices, ONLY: DoWriteIndices, DoCalcKp, nKpMins, dtWriteIndices
   use ModFaceFlux, ONLY: face_flux_set_parameters, TypeFluxNeutral, &
        UseClimit, UsePoleDiffusion
   use ModLookupTable, ONLY: read_lookup_table_param
@@ -1571,6 +1572,15 @@ subroutine MH_set_parameters(TypeAction)
 
      case('#STEADYSTATESATELLITE')
         call read_satellite_parameters(NameCommand)
+
+     case('#GEOMAGINDICES')
+        ! See ModGmGeoindices.f90 for more information.
+        DoWriteIndices = .true. ! Activiate geoindices output file.
+        DoCalcKp = .true.       ! Kp calculated (no others available.)
+        call read_var('nKpWindow', nKpMins)
+        call read_var('DtOutput' , dtWriteIndices)
+        dt_output(indexfile_) = dtWriteIndices
+        dn_output(indexfile_) = -1  ! See ModGmGeoindices.f90.
 
      case("#MAGNETOMETER")
         DoReadMagnetometerFile = .true.

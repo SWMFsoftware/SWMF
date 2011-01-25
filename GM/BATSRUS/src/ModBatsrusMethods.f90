@@ -261,6 +261,7 @@ contains
 
   subroutine initialize_files
     use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
+    use ModGmGeoindices, ONLY: DoWriteIndices, init_geoindices
     use ModGroundMagPerturb,ONLY: save_magnetometer_data, open_magnetometer_output_file
     ! Local variables
     character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
@@ -277,6 +278,8 @@ contains
     if (save_magnetometer_data .and. iProc == 0) then
        call open_magnetometer_output_file
     end if
+
+    if (DoWriteIndices) call init_geoindices()
 
     plot_type(restart_)='restart'
     plot_type(logfile_)='logfile'
@@ -1022,6 +1025,7 @@ contains
          nSatellite, set_satellite_file_status, set_satellite_flags, &
          TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position
     use ModGroundMagPerturb, ONLY: save_magnetometer_data, write_magnetometers
+    use ModGmGeoindices, ONLY: DoWriteIndices, write_geoindices
     integer :: iFileLoop, iSat
 
     ! Backup location for the Time_Simulation variable.
@@ -1160,6 +1164,10 @@ contains
           call timing_stop('save_magnetometer')  
        end if
 
+    elseif(ifile == indexfile_) then
+       ! Write geomagnetic index file.
+       if(time_accurate .and. DoWriteIndices) call write_geoindices()
+       !write(*,*) 'Iproc ', iProc, ' has survived.'
     end if
 
     n_output_last(ifile)=n_step
@@ -1189,6 +1197,7 @@ contains
 
   subroutine save_files_final
     use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
+    use ModGmGeoindices,  ONLY: DoWriteIndices, finalize_geoindices
     use ModGroundMagPerturb, ONLY:save_magnetometer_data, close_magnetometer_output_file
     implicit none
 
@@ -1207,6 +1216,7 @@ contains
        end do
     end if
 
+    if (DoWriteIndices) call finalize_geoindices()
     if (save_magnetometer_data .and. iProc==0) call close_magnetometer_output_file   
 
     if (save_logfile.and.iProc==0.and.unit_log>0) close(unit_log)
