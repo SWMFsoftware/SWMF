@@ -37,6 +37,9 @@ module CON_couple_gm_ie
   ! Size of the 2D spherical structured IE grid
   integer, save :: iSize, jSize, nCells_D(2)
 
+  ! Number of shared ground-based magnetometers
+  integer, save :: nShareGroundMag
+
 contains
 
   !BOP =======================================================================
@@ -44,13 +47,20 @@ contains
   !INTERFACE:
   subroutine couple_gm_ie_init
 
+    integer :: iError, iCommWorld, iStatus_I(MPI_STATUS_SIZE)
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='couple_gm_ie_init'
+
     !DESCRIPTION:
     ! This subroutine should be called from all PE-s
     ! Store IE grid size and calculate union communicator.
     !EOP
     !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
     if(IsInitialized) RETURN
     IsInitialized = .true.
+    
+    iCommWorld=i_comm()
 
     !!!   ! This works for a NODE BASED regular IE grid only
     !!!   nCells_D = ncells_decomposition_d(IE_) + 1
@@ -61,6 +71,25 @@ contains
 
     ! Set UseMe to .true. for the participating PE-s
     UseMe = is_proc(IE_) .or. is_proc(GM_)
+
+    ! Get number of shared magnetometers from IE.
+    if(is_proc(IE_)) &
+         call IE_groundmaginit_for_gm(nShareGroundMag)
+    ! Share with GM head node.
+    if(i_proc0(IE_) /= i_proc0(GM_))then
+       if(is_proc0(IE_)) &
+            call MPI_send(nShareGroundMag, 1, MPI_INTEGER, i_proc0(GM_),&
+            1, iCommWorld, iError)
+       if(is_proc0(GM_))&
+            call MPI_recv(nShareGroundMag, 1, MPI_INTEGER, i_proc0(IE_),&
+            1, iCommWorld, iStatus_I, iError)
+    end if
+
+    ! Broadcast to all GM nodes.
+    if(n_proc(GM_)>1 .and. is_proc(GM_)) &
+         call MPI_bcast(nShareGroundMag, 1, MPI_INTEGER, 0, i_comm(GM_), iError)
+    if(DoTest) &
+         write(*,'(a,i3.3)') 'nShareGroundMag=', nShareGroundMag
 
   end subroutine couple_gm_ie_init
 
@@ -97,6 +126,8 @@ contains
 
     ! Buffer for the potential on the 2D IE grid
     real, dimension(:,:,:), allocatable :: Buffer_IIV
+    ! Buffer for magnetometer sharing.
+    real, dimension(:,:), allocatable   :: Buffer_DI
     ! Number of variables to pass (potential,jouleheating)
     integer, parameter :: nv=2
 
@@ -128,26 +159,46 @@ contains
     !/
     allocate(Buffer_IIV(iSize,jSize,nv), stat=iError)
     call check_allocate(iError,NameSub//": Buffer_IIV")
+    if(nShareGroundMag>0) then
+       allocate(Buffer_DI(3,nShareGroundMag), stat=iError)
+       call check_allocate(iError, NameSub//": Buffer_DI")
+    end if
 
     if(DoTest)write(*,*)NameSub,', variables allocated',&
          ', iProc:',iProcWorld
-
+   
+    ! Collect standard coupling variables.
     if(is_proc(IE_)) &
          call IE_get_for_gm(Buffer_IIV,iSize,jSize,tSimulation)
+    ! Collect magnetometer values if sharing ground mags.
+    if(is_proc(IE_) .AND. (nShareGroundMag>0)) &
+         call IE_get_mag_for_gm(Buffer_DI, nShareGroundMag)
+
 
     nSize = iSize*jSize*nv
     if(i_proc0(IE_) /= i_proc0(GM_))then
+       ! Pass standard variables.
        if(is_proc0(IE_)) &
             call MPI_send(Buffer_IIV,nSize,MPI_REAL,i_Proc0(GM_),&
             1,i_comm(),iError)
        if(is_proc0(GM_)) &
             call MPI_recv(Buffer_IIV,nSize,MPI_REAL,i_Proc0(IE_),&
             1,i_comm(),iStatus_I,iError)
+       ! Pass shared magnetometers.
+       if(is_proc0(IE_) .AND. (nShareGroundMag>0)) &
+            call MPI_send(Buffer_DI,3*nShareGroundMag,MPI_REAL,i_Proc0(GM_),&
+            1,i_comm(),iError)
+       if(is_proc0(GM_) .AND. (nShareGroundMag>0)) &
+            call MPI_recv(Buffer_DI,3*nShareGroundMag,MPI_REAL,i_Proc0(IE_),&
+            1,i_comm(),iStatus_I,iError)
     end if
 
     ! Broadcast variables inside GM
     if(n_proc(GM_)>1 .and. is_proc(GM_)) &
          call MPI_bcast(Buffer_IIV,nSize,MPI_REAL,0,i_comm(GM_),iError)
+    if(n_proc(GM_)>1 .and. is_proc(GM_) .and. (nShareGroundMag>0)) &
+         call MPI_bcast(Buffer_DI,3*nShareGroundMag,MPI_REAL, &
+         0,i_comm(GM_),iError)
 
     if(DoTest)write(*,*)NameSub,', variables transferred',&
          ', iProc:',iProcWorld
@@ -161,11 +212,18 @@ contains
             write(*,*)NameSub//' iProc, Buffer(1,1)=',&
             iProcWorld,Buffer_IIV(1,1,1:2)
     end if
+    if(is_proc(GM_) .and. (nShareGroundMag>0))then
+       call GM_put_mag_from_ie(Buffer_DI, nShareGroundMag)
+       if(DoTest) &
+            write(*,*)NameSub//' iProc, Buffer(1,1)=',&
+            iProcWorld,Buffer_DI(1,1)
+    end if
 
     !\
     ! Deallocate buffer to save memory
     !/
     deallocate(Buffer_IIV)
+    if(nShareGroundMag>0) deallocate(Buffer_DI)
 
     if(DoTest)write(*,*)NameSub,', variables deallocated',&
          ', iProc:',iProcWorld
