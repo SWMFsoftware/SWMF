@@ -173,6 +173,23 @@ subroutine GM_put_from_ie(Buffer_IIV,iSize,jSize)
 end subroutine GM_put_from_ie
 
 !==========================================================================
+subroutine GM_put_mag_from_ie(Buffer_DI, iSize)
+  ! Get magnetometer "measurements" from IE.
+  use ModGmGeoindices, ONLY: nKpMag, MagPerbIE_DI
+  implicit none
+
+  integer, intent(in) :: iSize
+  real, intent(in)    :: Buffer_DI(3,iSize)
+
+  character(len=*), parameter :: NameSub='GM_put_mag_from_ie'
+  !---------------------------------------------------------------------------
+  if(nKpMag .ne. iSize)call CON_stop(NameSub// &
+       ' Number of shared magnetometers does not match!')
+  MagPerbIE_DI = Buffer_DI
+
+end subroutine GM_put_mag_from_ie
+
+!==========================================================================
 !BOP
 !ROUTINE: calc_inner_bc_velocity - calculate velocity at the inner boundary
 !INTERFACE:
