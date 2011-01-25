@@ -6,7 +6,7 @@ module IE_ModIo
   implicit none
   save
 
-  integer            :: iUnitOut=STDOUT_
+  integer            :: iUnitOut=STDOUT_, unitlog=-1
   integer, parameter :: lStringPrefix=6
   character (len=lStringPrefix) :: StringPrefix = ''
 
