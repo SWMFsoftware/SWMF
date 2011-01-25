@@ -202,7 +202,7 @@ contains
     implicit none
 
     integer :: iMag
-
+    !-----------------------------------------------------------------
     ! Open the output file 
     write(*,*) '=> writing magnetic perturbation output.'  
     
@@ -221,6 +221,7 @@ contains
     write(iUnitMag, '(a)')  &
          'nsolve year mo dy hr mn sc msc station X Y Z '// &
          'JhdBn JhdBe JhdBd JpBn JpBe JpBd'
+
   end subroutine open_iono_magperturb_file
 
   !======================================================================
@@ -396,8 +397,8 @@ contains
           ! Write the Jp perturbations
           write(iUnitMag, '(3es13.5)') MagPerturb_Jp_DI(:,iMag)
 
-          call flush_unit(iUnitMag)
        end do
+       call flush_unit(iUnitMag)
 
     end if
 
