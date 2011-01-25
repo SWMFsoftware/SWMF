@@ -950,7 +950,8 @@ subroutine IE_save_logfile
   use IE_ModMain
   use ModProcIE
   use ModMpi
-  
+  use ModIoUnit, ONLY: io_unit_new
+
   implicit none
   integer :: iError
   logical :: IsFirstTime = .true.
@@ -961,21 +962,20 @@ subroutine IE_save_logfile
 
   if(iProc/=0) return
 
-  write(NameFile,'(a)') trim(NameIonoDir)//"IE.log"
   if(IsFirstTime) then
-    IsFirstTime = .false.
-    open(unit=iUnit,file=NameFile,status="replace")
-    write(iUnit,fmt="(a)")  'Ridley Ionosphere Model, [deg] and [kV]'
-    write(iUnit,fmt="(a)") &
-         'nsolve t yy mm dd hh mm ss ms tilt cpcpn cpcps'
-  else
-    open(unit=iUnit,file=NameFile,status="old",position="append")
-  end if
-  write(iUnit,fmt="(i8,es13.5,i5,5i3,i4,f8.2,2es13.5)") &
-       nSolve, Time_Simulation, Time_Array(1:7), &
-       ThetaTilt*cRadToDeg, cpcp_north, cpcp_south
-  close(iUnit)
+     unitlog = io_unit_new()
+     write(NameFile,'(a,3i2.2,"_",3i2.2,a)') trim(NameIonoDir)//"IE_t", &
+          mod(time_array(1),100),time_array(2:6),".log"
 
+    IsFirstTime = .false.
+    open(unitlog,file=NameFile,status="replace")
+    write(unitlog,fmt="(a)")  'Ridley Ionosphere Model, [deg] and [kV]'
+    write(unitlog,fmt="(a)") &
+         't yy mm dd hh mm ss ms tilt cpcpn cpcps'
+ endif
+ write(unitlog,fmt="(es13.5,i5,5i3,i4,f8.2,2es13.5)") &
+      Time_Simulation, Time_Array(1:7), &
+      ThetaTilt*cRadToDeg, cpcp_north, cpcp_south
 end subroutine IE_save_logfile
 
 !-------------------------------------------------------------------------
