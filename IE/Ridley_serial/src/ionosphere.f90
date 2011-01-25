@@ -525,10 +525,12 @@ subroutine IE_output
            if(save_magnetometer_data .and. iProc==0) &
                 call open_iono_magperturb_file
            Initialized_Mag_File = .true.
+           ! Only save initial data time=0.0
+           if(Time_Simulation == 0.0) &
+                call write_iono_magperturb_file
+        else
+           call write_iono_magperturb_file
         end if
-
-        call write_iono_magperturb_file
-
      end if
   end if
 
@@ -951,10 +953,11 @@ subroutine IE_save_logfile
   use ModProcIE
   use ModMpi
   use ModIoUnit, ONLY: io_unit_new
+  use ModUtilities, ONLY: flush_unit
 
   implicit none
   integer :: iError
-  logical :: IsFirstTime = .true.
+  logical :: IsFirstTime = .true., DoWrite
   !--------------------------------------------------------------------------
   if (.not.DoSaveLogfile) return
 
@@ -962,20 +965,29 @@ subroutine IE_save_logfile
 
   if(iProc/=0) return
 
+  DoWrite = .true.
+
   if(IsFirstTime) then
+     IsFirstTime = .false.
      unitlog = io_unit_new()
      write(NameFile,'(a,3i2.2,"_",3i2.2,a)') trim(NameIonoDir)//"IE_t", &
           mod(time_array(1),100),time_array(2:6),".log"
 
-    IsFirstTime = .false.
-    open(unitlog,file=NameFile,status="replace")
-    write(unitlog,fmt="(a)")  'Ridley Ionosphere Model, [deg] and [kV]'
-    write(unitlog,fmt="(a)") &
-         't yy mm dd hh mm ss ms tilt cpcpn cpcps'
- endif
- write(unitlog,fmt="(es13.5,i5,5i3,i4,f8.2,2es13.5)") &
-      Time_Simulation, Time_Array(1:7), &
-      ThetaTilt*cRadToDeg, cpcp_north, cpcp_south
+     open(unitlog,file=NameFile,status="replace")
+     write(unitlog,fmt="(a)")  'Ridley Ionosphere Model, [deg] and [kV]'
+     write(unitlog,fmt="(a)") &
+          't yy mm dd hh mm ss ms tilt cpcpn cpcps'
+
+     ! Only write data if the simulation time is zero so during
+     ! restart we don't repeat the last item from a previous run.
+     DoWrite = Time_Simulation == 0.0
+  end if
+  if(DoWrite)write(unitlog,fmt="(es13.5,i5,5i3,i4,f8.2,2es13.5)") &
+       Time_Simulation, Time_Array(1:7), &
+       ThetaTilt*cRadToDeg, cpcp_north, cpcp_south
+
+  call flush_unit(unitlog)
+
 end subroutine IE_save_logfile
 
 !-------------------------------------------------------------------------
