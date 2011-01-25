@@ -94,7 +94,9 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
   use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModNumConst
   use ModFaceBc
-  use ModPhysics, ONLY: PolarRho_I, PolarU_I, PolarP_I, PolarTheta
+  use ModPhysics, ONLY: PolarRho_I, PolarU_I, PolarP_I, PolarTheta, &
+       UseCpcpBc, Rho0Cpcp, RhoPerCpcp, &
+       Io2No_V, No2Si_V, UnitRho_, UnitElectric_, UnitX_
   use ModSolarwind, ONLY: get_solar_wind_point
   use CON_axes, ONLY: transform_matrix
 
@@ -108,6 +110,10 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
   ! Variables used for polar wind boundary condition
   real :: GmToSmg_DD(3,3), CoordSm_D(3), Cos2PolarTheta, bUnit_D(3)
   logical :: IsPolarFace
+
+  ! External function for ionosphere    !^CFG IF IONOSPHERE
+  real, external :: logvar_ionosphere   !^CFG IF IONOSPHERE
+  real:: RhoCpcp
 
   character (len=*), parameter :: NameSub = 'set_face_bcs'
   logical :: DoTest, DoTestMe
@@ -124,6 +130,15 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
      GmToSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
      Cos2PolarTheta = cos(PolarTheta)**2
   end if
+
+  !^CFG IF IONOSPHERE BEGIN
+  ! Calculate inner BC density from cross polar cap potential if required
+  ! Use KeV units for Cpcp and amu/cc for density.
+  if(UseCpcpBc .and. UseIe) &
+       RhoCpcp = Io2No_V(UnitRho_)*(Rho0Cpcp + RhoPerCpcp &
+       * 0.5*(logvar_ionosphere('cpcpn') + logvar_ionosphere('cpcps')) &
+       * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
+  !^CFG END IONOSPHERE
 
   !\
   ! Apply body BCs as required.
@@ -476,6 +491,10 @@ contains
              ! Apply floating
              VarsGhostFace_V = VarsTrueFace_V
           end where
+
+          ! Apply CPCP dependent density if required      !^CFG IF IONOSPHERE
+          if(UseCpcpBc .and. UseIe) &                     !^CFG IF IONOSPHERE
+               VarsGhostFace_V(Rho_) = RhoCpcp            !^CFG IF IONOSPHERE
 
           if(PressureJumpLimit > 0.0) then
              ! Use body pressures but limit jump

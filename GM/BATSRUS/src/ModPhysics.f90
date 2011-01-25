@@ -112,6 +112,10 @@ module ModPhysics
   ! Polar boundary conditions are applied above this latitude only
   real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
 
+  ! CPCP dependent density function at the inner boundary
+  logical:: UseCpcpBc = .false.
+  real:: Rho0Cpcp = 18.0, RhoPerCpcp = 0.2
+
   ! Density ratio of major and minor ions/neutrals (e.g. in the solar wind)
   real :: LowDensityRatio = 0.0001
 

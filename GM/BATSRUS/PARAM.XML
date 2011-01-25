@@ -1184,6 +1184,33 @@ the PolarLatitude parameter determines the latitudinal extent
 of the polar boundary where the outflow is defined.
 </command>
 
+<command name="CPCPBOUNDARY">
+	<parameter name="UseCpcpBc" type="logical" default="F"/>
+	<if expr="$UseCpcpBc">
+		<parameter name="Rho0Cpcp" type="real" min="0" default="18"/>
+		<parameter name="RhoPerCpcp" type="real" min="0" default="0.2"/>
+	</if>
+#CPCPBOUNDARY
+T                       UseCpcpBc  (rest is read if true)
+30.0                    Rho0Cpcp   [amu/cc]
+10.0                    RhoPerCpcp [amu/cc / keV]
+
+If UseCpcpBC is true, the density at the inner boundary will depend on 
+the cross polar cap potential (CPCP) in a linear fashion:
+
+RhoBc = Rho0Cpcp + RhoPerCpcp * Cpcp
+
+where RhoBc and Rho0Cpcp are in I/O units (typically amu/cc), the 
+Cpcp is given in [keV], and the RhoPerCpcp factor is in density units per keV. 
+The Cpcp is the average of the northern and southern CPCPs. 
+
+This command only works for single fluid MHD. The inner boundary type has to
+be "ionosphere" and the GM and IE components have to be coupled together.
+
+By default the density at the inner boundary is determined by the body 
+density given in the #BODY command.
+</command>
+
 <command name="IMCOUPLINGSMOOTH">
 	<parameter name="dLatSmoothIm" type="real" min="-1" default="-1"/>
 

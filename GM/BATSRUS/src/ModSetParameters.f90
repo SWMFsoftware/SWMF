@@ -1759,6 +1759,13 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('PolarLatitude', PolarLatitude)
         PolarTheta = (90-PolarLatitude)*cDegToRad
 
+     case("#CPCPBOUNDARY")
+        call read_var('UseCpcpBc', UseCpcpBc)
+        if(UseCpcpBc)then
+           if(nFluid > 1)call stop_mpi("CPCBOUNDARY works for single fluid only")
+           call read_var('Rho0Cpcp',   Rho0Cpcp)
+           call read_var('RhoPerCpcp', RhoPerCpcp)
+        end if
      case("#GRAVITY")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseGravity',UseGravity)
