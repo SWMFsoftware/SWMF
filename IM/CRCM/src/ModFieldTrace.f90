@@ -63,7 +63,7 @@ contains
     real    :: rlim,xmltlim,dre,xlati1,phi1,xmlt1,ro1,volume1,bo1,dss2
     real    :: dssm,rm1,rme,rl,cost,bsn,bsndss,dssp,bsp,ss,ss1,ss2,bm_n
     real    :: bnibm_n,sim,bmmx,rmm, bs_n,tya33,h33,xmass,c2mo,c4mo2,ro2,pp1
-    real    :: pijkm,pc,c2m,e,q,tcone1,tcone2,x
+    real    :: pijkm,pc,c2m,e,q,tcone1,tcone2,x,DeltaRMax
     integer :: iLatTest = -1, iLonTest=-1
 !    integer :: iLatTest = 51, iLonTest=27
 
@@ -90,6 +90,9 @@ contains
     xmltlim=2.           ! limit of field line warping in hour
     dre=0.06             ! r interval below the surface of the Earth
     n5=16                ! no. of point below the surface of the Earth
+    DeltaRMax = 1.0
+    !DeltaRMax = 0.5
+    !DeltaRMax = 0.75
 
     ! Save irm0
     irm0(1:ip)=irm(1:ip)
@@ -175,6 +178,13 @@ contains
              irm(j)=i-1
              exit LATITUDE
           endif
+
+          ! Excessive Delta R in equatorial plane results in open lines
+          if (ro(i,j)-ro(i-1,j) > DeltaRMax .and. i>2) then
+             irm(j)=i-1
+             exit LATITUDE
+          endif
+
 
           dss2=dssa(npf1)/2.      ! find the middle point
           !write(*,*) '!!! start1, iLat,iLon,npf1',i,j,npf1
