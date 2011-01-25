@@ -169,7 +169,17 @@ contains
           write(UnitTmp_,'(6f9.5)') (sinAo(m),m=1,nPitchAng)
           write(UnitTmp_,'(10f8.3)') (xlat(i),i=2,nLat)
        else
-          open(unit=UnitTmp_,file='IM/plots/CrcmFlux_h.fls',status='old', &
+          if (n==1) &
+               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_h.fls',status='old', &
+               position='append')
+          if (n==2 .and. n /= nSpecies)&
+               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_o.fls',status='old', &
+               position='append')
+          if (n==3 .and. n /= nSpecies)&
+               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_he.fls',status='old', &
+               position='append')
+          if (n==nSpecies)&
+               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_e.fls',status='old', &
                position='append')
        endif
 
