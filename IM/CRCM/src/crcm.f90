@@ -561,8 +561,11 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
                           if (f2d(i,j).gt.-1.e-30) then
                              f2d(i,j)=0.
                           else
-                             write(*,*)'IM ERROR: f2d < 0 in drift ',n,i,j,k,m
-                             call CON_STOP('CRCM dies in driftIM')
+                             !write(*,*)'IM ERROR: f2d < 0 in drift ',n,i,j,k,m
+                             !call CON_STOP('CRCM dies in driftIM')
+                             write(*,*)'IM WARNING: f2d < 0 in drift ',n,i,j,k,m
+                             write(*,*)'IM WARNING: upwind scheme failed, setting f2d(i,j)=0.0'
+                             write(*,*)'IM WARNING: repeated failure may need to be examined'
                           endif
                        endif
                     enddo
