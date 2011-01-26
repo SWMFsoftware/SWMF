@@ -17,6 +17,9 @@ module ModGroundMagPerturb
   public:: open_magnetometer_output_file
   public:: close_magnetometer_output_file
   public:: write_magnetometers
+  public:: ground_mag_perturb
+  public:: ground_mag_perturb_fac
+  integer, public:: nMagnetometer = 1
 
   logical,            public:: save_magnetometer_data = .false.
   character(len=100), public:: MagInputFile
@@ -25,7 +28,6 @@ module ModGroundMagPerturb
 
   integer, parameter :: Max_MagnetometerNumber = 100
   integer            :: iUnitMag = -1
-  integer            :: nMagnetometer = 1
   real               :: PosMagnetometer_II(2,Max_MagnetometerNumber)
   character(len=3)   :: MagName_I(Max_MagnetometerNumber), MagInCoord='MAG'
 
