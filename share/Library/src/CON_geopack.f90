@@ -94,6 +94,8 @@ contains
   !---------------------------------------------------------------------------
   subroutine CON_mag_axis(iYear,jDay)
     !This is a part of the RECALC subroutine form geopack.f by Tsyganenko
+    ! NOTE: Code modified 1/26/2010 by DDZ to extend to 2015
+    !       with updated IGRF-11 coefficients
     integer,intent(in)::iYear,jDay
     !-----INPUT PARAMETERS:
     !
@@ -108,8 +110,15 @@ contains
     !
     IY=IYear
     IDE=jDAY
-    IF(IY.LT.1965) IY=1965
-    IF(IY.GT.2005) IY=2005
+    IF(IY.LT.1965) THEN
+       write(*,*)'No IGRF coefficients, year set to 1965 from ',IY
+       IY=1965
+    ENDIF
+    IF(IY.GT.2015) THEN
+       write(*,*)'No IGRF coefficients, year set to 2015 from ',IY
+       write(*,*)' Is it time to upgrade IGRF coefficients in CON_mag_axis?'
+       IY=2015
+    ENDIF
     !
     !  WE ARE RESTRICTED BY THE INTERVAL 1965-2005,
     !  FOR WHICH THE IGRF COEFFICIENTS ARE KNOWN; IF IYR IS OUTSIDE THIS INTERVAL
@@ -148,32 +157,44 @@ contains
        G10=29992.*F1+29873.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
        G11=-1956.*F1-1905.*F2
        H11=5604.*F1+5500.*F2
-    ELSEIF (IY.LT.1990) THEN			!1985-1990
+    ELSEIF (IY.LT.1990) THEN                        !1985-1990
        F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1985.)/5.
        F1=1.E0-F2
        G10=29873.*F1+29775.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
        G11=-1905.*F1-1848.*F2
        H11=5500.*F1+5406.*F2
-    ELSEIF (IY.LT.1995) THEN			!1990-1995
+    ELSEIF (IY.LT.1995) THEN                        !1990-1995
        F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1990.)/5.
        F1=1.E0-F2
-       G10=29775.*F1+29682.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-       G11=-1848.*F1-1789.*F2
-       H11=5406.*F1+5318.*F2
+       G10=29775.*F1+29692.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-1848.*F1-1784.*F2
+       H11=5406.*F1+5306.*F2
     ELSEIF (IY.LT.2000) THEN                        !1995-2000
-       F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1990.)/5.
+       F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1995.)/5.
        F1=1.E0-F2
-       G10=29682.*F1+29615.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-       G11=-1789.*F1-1728.*F2
-       H11=5318.*F1+5186.*F2
-    ELSE                                            !2000-2005
+       G10=29692.*F1+29619.4*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-1784.*F1-1728.2*F2
+       H11=5306.*F1+5186.1*F2
+    ELSEIF (IY.LT.2005) THEN                        !2000-2005
+       F2=(FLOAT(IY)+FLOAT(jDAY)/365.-2000.)/5.
+       F1=1.E0-F2
+       G10=29619.4*F1+29554.63*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-1728.2*F1-1669.05*F2
+       H11=5186.1*F1+5077.99*F2
+    ELSEIF (IY.LT.2010) THEN                        !2005-2010
+       F2=(FLOAT(IY)+FLOAT(jDAY)/365.-2005.)/5.
+       F1=1.E0-F2
+       G10=29554.63*F1+29496.5*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-1669.05*F1-1585.9*F2
+       H11=5077.99*F1+4945.1*F2
+    ELSE                                            !2010-2015
        !
-       !   LINEAR EXTRAPOLATION BEYOND 2000 BY USING SECULAR VELOCITY COEFFICIENTS:
+       !   LINEAR EXTRAPOLATION BEYOND 2010 BY USING SECULAR VELOCITY COEFFICIENTS:
        !
        DT=FLOAT(IY)+FLOAT(jDAY)/366.-2000.
-       G10=29615.-14.6*DT      ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-       G11=-1728.+10.7*DT
-       H11=5186.-22.5*DT
+       G10=29615.-11.4*DT      ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-1728.+16.7*DT
+       H11=5186.-28.8*DT
     ENDIF
     !
     !  NOW CALCULATE THE COMPONENTS OF THE UNIT VECTOR EzMAG IN GEO COORD.SYSTEM:
