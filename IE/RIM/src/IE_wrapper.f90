@@ -1013,4 +1013,29 @@ end subroutine IE_run
 
 !=================================================================
 
+subroutine IE_groundmaginit_for_gm(nShareGroundMag)
+  ! Get number of shared ground magnetometers.  Not implemented.
+
+  implicit none
+  integer, intent(out) :: nShareGroundMag
+
+  nShareGroundMag = 0
+
+end subroutine IE_groundmaginit_for_gm
+
+!==============================================================================
+
+subroutine IE_get_mag_for_gm(Buffer_DI, iSize)
+  
+  implicit none
+  integer, intent(in):: iSize
+  real, intent(out) :: Buffer_DI(3,iSize)
+  
+  character(len=*), parameter :: NameSub='IE_get_mag_for_gm'
+  
+  call CON_stop(NameSub//'Ground magnetometer sharing not implemented!')
+
+end subroutine IE_get_mag_for_gm
+
+!==============================================================================
 
