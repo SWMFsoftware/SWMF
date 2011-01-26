@@ -49,7 +49,7 @@ module ModGmGeoindices
        table50_i=(/5,10,20,40,70,120,200,330,500/) ! faKe_p, lat=50 deg.
 
   character(len=*), parameter :: NameKpVars = &
-       'Kp K_12 K_13 K_14 K_15 K_16 K_17 K_18 K_19 K_20 K_21 K_22 K_23'//&
+       'Kp K_12 K_13 K_14 K_15 K_16 K_17 K_18 K_19 K_20 K_21 K_22 K_23 '//&
        'K_00 K_01 K_02 K_03 K_04 K_05 K_06 K_07 K_08 K_09 K_10 K_11 '
 
 contains
