@@ -4,25 +4,29 @@ module ModGroundMagPerturb
 
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
-  use ModCoordTransform, ONLY: sph_to_xyz, rot_xyz_sph, cross_product,xyz_to_sph
+  use ModCoordTransform, ONLY: sph_to_xyz, rot_xyz_sph, cross_product, &
+       xyz_to_sph
   use ModConst,          ONLY: cHalfPi, cDegToRad
 
   implicit none
   save
+
+  private ! except
 
   public:: read_mag_input_file
   public:: open_magnetometer_output_file
   public:: close_magnetometer_output_file
   public:: write_magnetometers
 
-  logical, public    :: save_magnetometer_data = .false.
+  logical,            public:: save_magnetometer_data = .false.
+  character(len=100), public:: MagInputFile
+
+  ! Local variables
 
   integer, parameter :: Max_MagnetometerNumber = 100
   integer            :: iUnitMag = -1
   integer            :: nMagnetometer = 1
-  real, dimension(2,Max_MagnetometerNumber) :: &
-       PosMagnetometer_II
-  character(len=50)  :: MagInputFile
+  real               :: PosMagnetometer_II(2,Max_MagnetometerNumber)
   character(len=3)   :: MagName_I(Max_MagnetometerNumber), MagInCoord='MAG'
 
 contains
@@ -41,8 +45,6 @@ contains
          unusedBLK, nBlock, Time_Simulation
     use ModNumConst,       ONLY: cPi
     use ModCurrent,        ONLY: get_current
-
-    implicit none
 
     real, intent(in), dimension(3,nMagnetometer) :: Xyz_DI
     real, intent(out),dimension(3,nMagnetometer) :: MagPerturb_DI
@@ -120,8 +122,6 @@ contains
     use ModConst,          ONLY: cMu
     use ModCurrent,        ONLY: calc_field_aligned_current
     use ModMpi
-
-    implicit none
 
     real, intent(in)      :: Xyz_DI(3,nMagnetometer)
     real, intent(out)     :: MagPerturb_DI(3,nMagnetometer)
@@ -234,8 +234,6 @@ contains
     use ModMain, ONLY: lVerbose
     use ModIO, ONLY: FileName, Unit_Tmp, iUnitOut, write_prefix
     use ModMpi
-
-    implicit none
 
     integer :: iError, nStat
 
@@ -350,8 +348,6 @@ contains
     use ModIoUnit, ONLY: io_unit_new
     use ModIO,     ONLY: filename, NamePlotDir
 
-    implicit none
-
     integer :: iMag
     logical :: oktest, oktest_me
 
@@ -391,8 +387,6 @@ contains
     use ModNumConst, ONLY: cTwoPi
     use ModMpi
 
-    implicit none
-
     integer           :: iMag, iTime_I(7), iError
     !year,month,day,hour,minute,second,msecond
     real, dimension(3):: Xyz_D, &
@@ -416,7 +410,7 @@ contains
     ! Transform the magnetometer position from MagInCorrd to GSM/SM
     !/
 
-    do iMag=1,nMagnetometer
+    do iMag = 1, nMagnetometer
        ! (360,360) is for the station at the center of the planet
        if ( nint(PosMagnetometer_II(1,iMag)) == 360 .and. &
             nint(PosMagnetometer_II(2,iMag)) == 360) then 
@@ -492,7 +486,7 @@ contains
              TmpGmSph_D = matmul(MagPerturbGm_DI(:,iMag), XyzSph_DD)
              TmpFacSph_D= matmul(MagPerturbFac_DI(:,iMag), XyzSph_DD)
 
-             ! Transform to spherical coordinates (north, east, down) components
+             ! Transform to spherical (north, east, down) components
              MagPerturbGmSph_D(1)  = -TmpGmSph_D(phi_) 
              MagPerturbGmSph_D(2)  =  TmpGmSph_D(theta_) 
              MagPerturbGmSph_D(3)  = -TmpGmSph_D(r_) 
@@ -513,7 +507,7 @@ contains
           MagVarFac_D = MagPerturbFacSph_D * No2Io_V(UnitB_)
 
 
-          write(iUnitMag,'(i5)',ADVANCE='NO') n_step
+          write(iUnitMag,'(i8)',ADVANCE='NO') n_step
           write(iUnitMag,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
           write(iUnitMag,'(1X,i2)', ADVANCE='NO')  iMag
 
@@ -524,8 +518,8 @@ contains
           ! Write the FACs' perturbations
           write(iUnitMag, '(3es13.5)') MagVarFac_D
 
-          call flush_unit(iUnitMag)
        end do
+       call flush_unit(iUnitMag)
     end if
 
   end subroutine write_magnetometers
@@ -533,8 +527,6 @@ contains
   !=====================================================================
 
   subroutine close_magnetometer_output_file
-
-    implicit none
 
     close(iUnitMag)
 
