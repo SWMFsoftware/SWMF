@@ -1581,6 +1581,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DtOutput' , dtWriteIndices)
         dt_output(indexfile_) = dtWriteIndices
         dn_output(indexfile_) = -1  ! See ModGmGeoindices.f90.
+        nFile = max(nFile, indexfile_)
 
      case("#MAGNETOMETER")
         DoReadMagnetometerFile = .true.
