@@ -5376,6 +5376,22 @@ The default value is "all", ie. the Hall effect is applied everywhere
 if the Hall effect is switched on in the #HALLRESISTIVITY command.
 </command>
 
+<command name="BIERMANNBATTERY">
+	 <parameter name="UseBiermannBattery" type="logical" default="F"/>
+
+#BIERMANNBATTERY
+T		UseBiermannBattery
+
+If UseBiermannBattery is true then the Biermann battery term in the
+generalized Ohm's law is used, otherwise it is switched off.
+
+If the Hall term is used in combination with the electron pressure
+equation then the Biermann battery term is switched on by default.
+In that case the BIERMANNBATTERY command is not needed.
+
+Default is UseBiermannBattery false.
+</command>
+
 <command name="MINIMUMPRESSURE">
 	<parameter name="pMinDim" type="real" min="-1" default="-1"/>
 
