@@ -266,7 +266,7 @@ sub concat_sat_log{
 	    die "$ERROR: could not file $FirstFile for read\n";
 	while(<FILE>){
             # skip lines that contain other things than numbers
-	    next unless /^[\s\d\.eEdD\+\-]+$/; 
+	    next unless /^[\s\d\.eEdD\+\-\*]+$/; 
 	    print FIRST $_;
 	}
 	close(FIRST);
