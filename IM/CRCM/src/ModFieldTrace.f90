@@ -180,11 +180,12 @@ contains
           endif
 
           ! Excessive Delta R in equatorial plane results in open lines
-          if (ro(i,j)-ro(i-1,j) > DeltaRMax .and. i>2) then
-             irm(j)=i-1
-             exit LATITUDE
+          if (i>2) then
+             if (ro(i,j)-ro(i-1,j) > DeltaRMax) then
+                irm(j)=i-1
+                exit LATITUDE
+             endif
           endif
-
 
           dss2=dssa(npf1)/2.      ! find the middle point
           !write(*,*) '!!! start1, iLat,iLon,npf1',i,j,npf1
