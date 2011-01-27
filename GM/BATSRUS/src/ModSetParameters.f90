@@ -51,7 +51,8 @@ subroutine MH_set_parameters(TypeAction)
        NameHallRegion, x0Hall, y0Hall, z0Hall, rSphereHall, DrSphereHall, &
        xSizeBoxHall, DxSizeBoxHall, &
        ySizeBoxHall, DySizeBoxHall, &
-       zSizeBoxHall, DzSizeBoxHall
+       zSizeBoxHall, DzSizeBoxHall, &
+       UseBiermannBattery
   use ModHeatConduction, ONLY: read_heatconduction_param !^CFG IF IMPLICIT
   use ModRadDiffusion,   ONLY: read_rad_diffusion_param  !^CFG IF IMPLICIT
   use ModResistivity, ONLY: UseResistivity, &            !^CFG IF DISSFLUX
@@ -538,6 +539,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#HALLINNERREGION")
         call read_var("rInnerHall ", rInnerHall)
         call read_var("DrInnerHall", DrInnerHall)
+
+     case("#BIERMANNBATTERY")
+        call read_var("UseBiermannBattery", UseBiermannBattery)
 
      case("#MINIMUMPRESSURE")
         do iFluid = 1, nFluid

@@ -7,6 +7,9 @@ module ModHallResist
 
   private !except
 
+  ! Logical for adding the Biermann battery term
+  logical, public :: UseBiermannBattery = .false.
+
   ! Logical for adding hall resistivity
   logical, public:: UseHallResist=.false.
   logical, public:: IsNewBlockHall=.true.

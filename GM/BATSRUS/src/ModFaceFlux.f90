@@ -34,8 +34,8 @@ module ModFaceFlux
        Pe_X, Pe_Y, Pe_Z ! output: Pe for grad Pe in multi-ion MHD
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
-       IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
-
+       IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge,&
+       UseBiermannBattery
   !^CFG IF IMPLICIT BEGIN
   use ModRadDiffusion, ONLY: IsNewBlockRadDiffusion, get_radiation_energy_flux
   use ModHeatConduction, ONLY: IsNewBlockHeatCond, IsNewBlockIonHeatCond, &
@@ -1058,7 +1058,7 @@ contains
          + IonMassPerCharge_G(iRight,jRight,kRight) )
 
     ! Calculate -grad(pe)/(n_e * e) term for Hall MHD if needed
-    UseHallGradPe = HallCoeff > 0.0 .and. &
+    UseHallGradPe = (HallCoeff > 0.0 .or. UseBiermannBattery) .and. &
          (UseElectronPressure .or. ElectronPressureRatio > 0.0)
 
     Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
