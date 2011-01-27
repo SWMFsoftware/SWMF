@@ -34,6 +34,9 @@ module ModGmGeoindices
   ! when kp is calculated on a constant iteration cadence instead of a 
   ! constant time cadence.
   real :: dtWriteIndices
+
+  ! Has GeoIndices been initialized?
+  logical :: IsInitialized = .false.
   
   ! VARIABLES FOR KP CALCULATION
   integer, parameter :: nKpMag = 24 ! Currently, only the faKe_p stations.
@@ -62,7 +65,7 @@ contains
     use ModMain,      ONLY: n_step
     use ModProcMH,    ONLY: iProc
     use ModIoUnit,    ONLY: io_unit_new
-    use ModIO,        ONLY: NamePlotDir
+    use ModIO,        ONLY: NamePlotDir, restart
 
     integer            :: i
     real               :: radXY, phi
@@ -71,7 +74,9 @@ contains
     character(len=*), parameter :: NameSub='init_geoindices'
     logical :: DoTest, DoTestMe
     !------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    IsInitialized=.true.
 
     ! Initialize grid and arrays.  FaKe_p uses stations fixed in SMG coords.
     XyzKp_DI(3,:) = sin(fakepLat * cDegToRad) ! SMG Z for all stations.
@@ -87,6 +92,10 @@ contains
     ! Allocate array to follow time history of magnetometer readings.
     iSizeKpWindow = int(nKpMins / (dtWriteIndices / 60.0))
     allocate(MagPerturb_II(nKpMag, iSizeKpWindow))
+    MagPerturb_II = 0.0
+
+    ! If restarting, attempt to read restart file.
+    if(restart)call read_geoind_restart
 
     ! Open index file, write header.
     if (iProc==0) then
@@ -95,7 +104,8 @@ contains
        iUnitOut = io_unit_new()
        open(iUnitOut, file=NameFile, status='replace')
 
-       write(iUnitOut, '(a)') 'Synthetic Geomagnetic Indices'
+       write(iUnitOut, '(2a, f8.2, a, i4.4)') 'Synthetic Geomagnetic Indices', &
+            ' DtOutput=', DtWriteIndices, '   SizeKpWindow(Mins)=',iSizeKpWindow
        write(iUnitOut, '(a)', advance='NO') &
             'it year mo dy hr mn sc msc '
        if (DoCalcKp) write(iUnitOut, '(a)', advance='NO') NameKpVars
@@ -117,7 +127,10 @@ contains
     character(len=*), parameter :: NameSub='write_geoindices'
     logical :: DoTest, DoTestMe
     !------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    ! Saftey check of initialization.
+    if(not(IsInitialized)) call init_geoindices
 
     ! Calculate indices on all nodes.
     if(DoCalcKp) call calc_kp
@@ -149,8 +162,7 @@ contains
     use ModPhysics,        ONLY: No2Io_V, UnitB_
     use ModMain,           ONLY: time_simulation,TypeCoordSystem
     use ModMpi
-    use ModGroundMagPerturb, ONLY: ground_mag_perturb, &
-         ground_mag_perturb_fac
+    use ModGroundMagPerturb, ONLY: ground_mag_perturb, ground_mag_perturb_fac
 
     integer :: i, iError, nTmpMag
     real, dimension(3,3)       :: SmgToGsm_DD, GsmToSmg_DD, XyzToSph_DD
@@ -159,7 +171,7 @@ contains
     character(len=*), parameter :: NameSub='calc_kp'
     logical :: DoTest, DoTestMe
     !------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! Obtain locations in correct (GSM) coordinates.
     SmgToGsm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
@@ -168,13 +180,13 @@ contains
        XyzGsm_DI(:,i) = matmul(SmgToGsm_DD, XyzKp_DI(:,i))
     end do
   
-    ! Obtain geomagnetic pertubations, they are in SM (NED) coordiantes.
+    ! Obtain geomagnetic pertubation. Output is in NED Coordinates.
     call ground_mag_perturb(    nKpMag, XyzGsm_DI, Bmag_DI)
-    call ground_mag_perturb_fac(nKpMag,  XyzKp_DI, Bfac_DI)
+    call ground_mag_perturb_fac(nKpMag, XyzKp_DI,  Bfac_DI)
 
     ! Sum contributions.
     do i=1, nKpMag
-       Bmag_DI(:,i) = (Bmag_DI(:,i)+ Bfac_DI(:,i)) * No2Io_V(UnitB_)
+       Bmag_DI(:,i) = (Bmag_DI(:,i) + Bfac_DI(:,i)) * No2Io_V(UnitB_)
     end do
 
     ! MPI Reduce to head node.
@@ -185,10 +197,9 @@ contains
     if(iProc==0)then
        ! Shift MagPerturb to make room for new measurements.
        MagPerturb_II(:,1:iSizeKpWindow-1) = MagPerturb_II(:,2:iSizeKpWindow)
-       
+
        ! Add IE component of pertubation.
        do i=1, nKpMag
-
           ! Store H-component; add IE component.
           if (IsFirstCalc) then
              MagPerturb_II(i,:)=Bsum_DI(1,i)+MagPerbIE_DI(1,i)
@@ -218,15 +229,106 @@ contains
     character(len=*), parameter :: NameSub='finalize_geoindices'
     logical :: DoTest, DoTestMe
     !------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
     
+    if(iProc==0) close(iUnitOut)
+
     ! Clean up allocatables.
     deallocate(MagPerturb_II)
 
-    ! Close index file.
-    if(iProc==0) close(iUnitOut)
-
   end subroutine finalize_geoindices
+
+  !===========================================================================
+  subroutine write_geoind_restart
+    ! Save MagPerturb_II to file.
+    use ModIO,          ONLY: Unit_Tmp
+    use ModRestartFile, ONLY: NameRestartOutDir
+    use ModProcMH,      ONLY: iProc
+
+    integer            :: i
+    character(len=100) :: NameFile
+
+    character(len=*), parameter :: NameSub='write_geoind_restart'
+    logical :: DoTest, DoTestMe
+    !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    
+    ! Ensure that restart files are only written from head node.
+    if(iProc/=0) return
+
+    ! Open restart file.
+    write(NameFile,'(a)') trim(NameRestartOutDir)//'geoindex_restart.rst'
+    open(Unit_Tmp, file=NameFile, status='REPLACE')
+
+    if(DoTest) write(*,*) &
+         'GM: Writing geomag index restart file: ',trim(NameFile)
+
+    ! Record size of array:
+    write(Unit_Tmp,*) nKpMag, iSizeKpWindow
+    ! Save MagPerturb_II
+    do i=1, iSizeKpWindow
+       write(Unit_Tmp, *) MagPerturb_II(:,i)
+    end do
+
+    if(DoTest)write(*,'(a,3(1x,e13.3))')'GM:'//NameSub//&
+         ': End of restart file = ', MagPerturb_II(nKpMag-2:nKpMag,iSizeKpWindow)
+
+    close(Unit_Tmp)
+  end subroutine write_geoind_restart
+
+  !===========================================================================
+  subroutine read_geoind_restart
+    ! Save MagPerturb_II to file.
+    use ModIO,          ONLY: Unit_Tmp
+    use ModProcMH,      ONLY: iProc
+    use ModRestartFile, ONLY: NameRestartInDir
+
+    integer            :: i, nMagTmp, iSizeTmp
+    logical            :: DoRestart=.false., IsProc0=.false.
+    character(len=100) :: NameFile
+
+    character(len=*), parameter :: NameSub='read_geoind_restart'
+    logical :: DoTest, DoTestMe
+    !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    if(iProc==0)IsProc0=.true.
+
+    write(NameFile,'(a)') trim(NameRestartInDir)//'geoindex_restart.rst'
+
+    if(DoTest.and.IsProc0)write(*,*)'GM: Checking for geoindex_restart.rst...'
+
+    ! Check for restart file.  If one exists, use it.
+    inquire(file=NameFile, exist=DoRestart)
+    if(not(DoRestart)) then
+       if(DoTest.and.IsProc0)write(*,*)'GM: No geoindex_restart.rst found.'
+       return
+    end if
+
+    if(DoTest.and.IsProc0)write(*,*)'GM: Reading geoindex_restart.rst...'
+
+    open(Unit_Tmp, file=NameFile, status='OLD', action='READ')
+
+    ! Read size of array, ensure that it matches expected.
+    ! If not, it means that the restart is incompatable and 
+    ! cannot be used.
+    read(Unit_Tmp, *) nMagTmp, iSizeTmp
+    if(DoTest.and.IsProc0)write(*,'(a,2(1x,i4.4))')&
+         'GM: Restart shape (iMag, iWindow)=', nMagTmp, iSizeTmp
+
+    if( (nMagTmp/=nKpMag) .or. (iSizeTmp/=iSizeKpWindow) ) &
+         call CON_stop(NameSub//'Restart does not match Kp settings!')
+
+    do i=1, iSizeKpWindow
+       read(Unit_Tmp,*) MagPerturb_II(:,i)
+    end do
+
+    IsFirstCalc=.false.
+
+    if(DoTest.and.IsProc0)write(*,'(a,a,3(1x,e13.3))')NameSub,&
+         ': End of restart file = ',MagPerturb_II(nMagTmp-2:nMagTmp,iSizeKpWindow)
+
+    close(Unit_Tmp)
+  end subroutine read_geoind_restart
 
   !===========================================================================
   real function convert_to_k(deltaB, table_I)!, Kout)
@@ -252,9 +354,6 @@ contains
   
   !===========================================================================
  
-
-  
-
 end module ModGmGeoindices
 
 !==============================================================================

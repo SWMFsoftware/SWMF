@@ -172,6 +172,7 @@ contains
   !============================================================================
 
   subroutine write_restart_files
+    use ModGmGeoindices, ONLY: write_geoind_restart
 
     integer :: iBlock
     character(len=*), parameter :: NameSub='write_restart_files'
@@ -205,6 +206,7 @@ contains
        call stop_mpi('Unknown TypeRestartOutFile='//TypeRestartOutFile)
     end select
     if(iProc==0)call save_advected_points
+    if(iProc==0)call write_geoind_restart
 
     call timing_stop(NameSub)
 
