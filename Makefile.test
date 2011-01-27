@@ -318,6 +318,14 @@ test3_check:
 		${TESTDIR}/RESULTS/GM/GM_mag_n00000000.mag \
 		output/test3/GM_mag_n00000000.mag \
 		>> test3_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULTS/GM/GeoIndices_n00000068.txt \
+		output/test3/GeoIndices_n00000068.txt \
+		>> test3_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULTS/RESTART/GM/geoindex_restart.rst \
+		output/test3/geoindex_restart.rst \
+		>> test3_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
 		output/test3/IE.log \
