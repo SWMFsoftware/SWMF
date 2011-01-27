@@ -270,7 +270,6 @@ contains
           ! As more capabilities are added, switches for
           ! selecting which indices should be calculated 
           ! can be added here.
-          write(*,*) 'geoindices activated!'
           DoCalcIndices=.true.
           DoCalcKp     =.true.
 
