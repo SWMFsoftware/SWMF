@@ -146,19 +146,16 @@ contains
   subroutine calc_kp
     use ModProcMH,ONLY: iProc, nProc, iComm
     use CON_axes, ONLY: transform_matrix
-    use ModCoordTransform, ONLY: rot_xyz_sph
-    use ModPlanetConst,    ONLY: rPlanet_I, Earth_
     use ModPhysics,        ONLY: No2Io_V, UnitB_
-    use ModMain,           ONLY: r_, theta_, phi_, n_step, &
-         time_simulation,TypeCoordSystem
+    use ModMain,           ONLY: time_simulation,TypeCoordSystem
     use ModMpi
     use ModGroundMagPerturb, ONLY: ground_mag_perturb, &
-         ground_mag_perturb_fac, nMagnetometer
+         ground_mag_perturb_fac
 
     integer :: i, iError, nTmpMag
     real, dimension(3,3)       :: SmgToGsm_DD, GsmToSmg_DD, XyzToSph_DD
     real, dimension(3, nKpMag) :: Bmag_DI, Bfac_DI, Bsum_DI=0.0, XyzGsm_DI
-    real :: TmpB(3), deltaH
+    real :: deltaH
     character(len=*), parameter :: NameSub='calc_kp'
     logical :: DoTest, DoTestMe
     !------------------------------------------------------------------------
@@ -171,17 +168,13 @@ contains
        XyzGsm_DI(:,i) = matmul(SmgToGsm_DD, XyzKp_DI(:,i))
     end do
   
-    ! Obtain geomagnetic pertubation. Perserve nMagnetometer.
-    nTmpMag = nMagnetometer
-    nMagnetometer = nKpMag
-    call ground_mag_perturb(   XyzGsm_DI*rPlanet_I(Earth_), Bmag_DI)
-    call ground_mag_perturb_fac(XyzKp_DI*rPlanet_I(Earth_), Bfac_DI)
-    nMagnetometer = nTmpMag
+    ! Obtain geomagnetic pertubations, they are in SM (NED) coordiantes.
+    call ground_mag_perturb(    nKpMag, XyzGsm_DI, Bmag_DI)
+    call ground_mag_perturb_fac(nKpMag,  XyzKp_DI, Bfac_DI)
 
-    ! Convert GSM results to SMG, convert units, sum contributions.
+    ! Sum contributions.
     do i=1, nKpMag
-       Bmag_DI(:,i) = matmul(GsmToSmg_DD, Bmag_DI(:,i)) * No2Io_V(UnitB_) &
-            + Bfac_DI(:,i) * No2Io_V(UnitB_)
+       Bmag_DI(:,i) = (Bmag_DI(:,i)+ Bfac_DI(:,i)) * No2Io_V(UnitB_)
     end do
 
     ! MPI Reduce to head node.
@@ -193,17 +186,14 @@ contains
        ! Shift MagPerturb to make room for new measurements.
        MagPerturb_II(:,1:iSizeKpWindow-1) = MagPerturb_II(:,2:iSizeKpWindow)
        
-       ! Rotate results back to HDZ (NED) coordinate system.
        ! Add IE component of pertubation.
        do i=1, nKpMag
-          XyzToSph_DD = rot_xyz_sph(XyzKp_DI(:,i))
-          TmpB = matmul(Bsum_DI(:,i), XyzToSph_DD)
 
           ! Store H-component; add IE component.
           if (IsFirstCalc) then
-             MagPerturb_II(i,:)=-1.0*TmpB(phi_)+MagPerbIE_DI(1,i)
+             MagPerturb_II(i,:)=Bsum_DI(1,i)+MagPerbIE_DI(1,i)
           else
-             MagPerturb_II(i,iSizeKpWindow)=-1.0*TmpB(phi_)+MagPerbIE_DI(1,i)
+             MagPerturb_II(i,iSizeKpWindow)=Bsum_DI(1,i)+MagPerbIE_DI(1,i)
           end if
 
           ! Calculate deltaH, convert to K.
