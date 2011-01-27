@@ -63,7 +63,7 @@ contains
   !===========================================================================
   subroutine get_index_mags(MagOut_DI)
     ! Obtain index-related magnetometer data to pass to BATS-R-US.
-    use ModIonoMagPerturb, ONLY: iono_mag_perturb, nMagnetometer
+    use ModIonoMagPerturb, ONLY: iono_mag_perturb
     use ModProcIE,         ONLY: iProc, nProc, iComm
     use ModMpi
 
@@ -94,12 +94,8 @@ contains
     if( nIndexMag .ne. (i-1) ) call CON_stop(&
          NameSub//' Indexing error!  Not all magnetometers accounted for.')
 
-    ! Save nMagnetometer and restore later.
-    nTmpMag=nMagnetometer
-    nMagnetometer=nIndexMag
-
     ! Collect Hall and Peterson B pertubations, sum them.
-    call iono_mag_perturb(XyzSmg_DI, MagPerturb_Jh_DI, MagPerturb_Jp_DI)
+    call iono_mag_perturb(nIndexMag, XyzSmg_DI, MagPerturb_Jh_DI, MagPerturb_Jp_DI)
     MagPertTotal_DI = MagPerturb_Jh_DI + MagPerturb_Jp_DI
 
     ! Collect the variables from all the PEs
@@ -113,10 +109,6 @@ contains
     else
        MagOut_DI=MagPertTotal_DI
     end if
-
-
-    ! Restore nMagnetometer.
-    nMagnetometer=nTmpMag
 
   end subroutine get_index_mags
 
