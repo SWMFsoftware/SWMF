@@ -2592,11 +2592,10 @@ Offical Kp averages 13 K values from 13 mid-latitude magnetometer stations aroun
 the globe.  Synthetic Kp from BATS-R-US uses 24 stations at fixed local time 
 positions and 50 degrees magnetic latitude.
 
-Note that because the calculation of Kp requires a time-history for each 
-magnetometer, restarting BATS-R-US will reset Kp.  During quiet times, this is
-a non-issue, but restarting mid-storm will render Kp meaningless for the first
-part of the simulation.  A shorter nSizeKpWindow value will reduce the "wind-up"
-time for Kp.
+Because Kp requires a time history of geomagnetic activity, special restart
+files are saved when #GEOMAGINDICES is used.  If nSizeKpWindow changes between
+restarts, however, the files will be rendered unuseable because the time 
+history will no longer be valid for the calculation.
 
 #GEOMAGINDICES should be used with the IE command of the same name.  This activates
 magnetometers in the IE component that are key for properly capturing the magnetic
