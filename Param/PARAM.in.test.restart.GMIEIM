@@ -7,6 +7,9 @@ T			DoEcho
 1			DnShowProgressShort
 100			DnShowProgressLong
 
+#TEST
+write_geoind_restart read_geoind_restart
+
 ! Restart header for SWMF
 #INCLUDE
 RESTART.in		NameRestartFile
@@ -18,7 +21,9 @@ Restart test for GM-IM-IE.
 F			UseRotation
 
 #SAVERESTART
-F			DoSaveRestart
+T			DoSaveRestart
+-1			DnSaveRestart
+10.0			DtSaveRestart
 
 ! Fast coupling order is ONLY useful if GM and IE are not sharing processors!
 ! With fast coupling order restarts are not exact, but close.
@@ -87,6 +92,10 @@ Param/magnetometer_location.dat
 -1			DnOutput
 5.0			DtOutput
 
+#GEOMAGINDICES
+15			nSizeKpWindow
+5.0			DtOutput
+
 #SAVEPLOT
 3			nPlotFile
 idl x=0 FUL		StringPlot
@@ -132,6 +141,8 @@ F			UseFakeRegion2
 150.0			F107Flux
 5.0			StarLightPedConductance
 0.25			PolarCapPedConductance
+
+#GEOMAGINDICES
 
 #SAVEPLOT
 2			nPlotFile

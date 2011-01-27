@@ -173,6 +173,9 @@ End session: 1
 #RUN ############################################################
 Begin session: 2
 
+#TEST
+write_geoind_restart read_geoind_restart
+
 #TIMEACCURATE
 T			IsTimeAccurate
 
@@ -214,6 +217,10 @@ F			DoCoupleOnTime
 20.0                    TauCoupleIm
 F			DoImSatTrace
 
+#GEOMAGINDICES
+15			nSizeKpWindow
+5.0			DtOutput
+
 #SAVEPLOT
 3			nPlotFile
 idl x=0 FUL		StringPlot
@@ -248,6 +255,8 @@ idl z=0 FUL		StringPlot
 #END_COMP IM   ----------------------------------------
 
 #BEGIN_COMP IE ----------------------------------------
+
+#GEOMAGINDICES
 
 #SAVEPLOT
 2			nPlotFile
