@@ -15,8 +15,9 @@ module ModIonoMagPerturb
   public:: open_iono_magperturb_file
   public:: close_iono_magperturb_file
   public:: write_iono_magperturb_file
-
-  logical, public    :: save_magnetometer_data = .false.,Initialized_Mag_File=.false.
+  
+  logical, public    :: save_magnetometer_data = .false., &
+       Initialized_Mag_File=.false.
   integer            :: nMagnetometer = 1
   integer            :: iUnitMag = -1
   integer, parameter :: Max_MagnetometerNumber = 100
@@ -27,24 +28,27 @@ module ModIonoMagPerturb
 
 contains
   !======================================================================
-  subroutine iono_mag_perturb(Xyz0_DI, JhMagPerturb_DI, JpMagPerturb_DI)
+  subroutine iono_mag_perturb(nMag, Xyz0_DI, JhMagPerturb_DI, JpMagPerturb_DI)
 
-    use CON_planet_field
+    use CON_planet_field, ONLY: get_planet_field
 
     implicit none
+
+    integer,intent(in)                     :: nMag
+    real,   intent(in), dimension(3,nMag)  :: Xyz0_DI
+    real,   intent(out), dimension(3,nMag) :: JhMagPerturb_DI, JpMagPerturb_DI
+
     integer, parameter :: nTheta = IONO_nTheta, nPsi = IONO_nPsi
 
-    real, intent(in), dimension(3,nMagnetometer):: Xyz0_DI
-    real, intent(out), dimension(3,nMagnetometer) :: JhMagPerturb_DI, JpMagPerturb_DI
-    real, dimension(nTheta*2, nPsi):: Phi, Theta, Psi, ETh, EPs, SigmaH, SigmaP, &
-         sintheta, sinphi, costheta, cosphi, Br, Bn, b !,dTheta, dPsi
-    real :: dTheta(nTheta*2),dPsi(nPsi)
     real, dimension(nTheta*2, nPsi, 3) :: Jh_DII, Jp_DII, Xyz_DII, eIono_DII
-    real, dimension(3) :: bIono_D,  Xyz0_D, MagJh_D, MagJp_D, &
+    real, dimension(nTheta*2, nPsi)    :: Phi, Theta, Psi, ETh, EPs, SigmaH, SigmaP, &
+         sintheta, sinphi, costheta, cosphi, Br, Bn, b
+    real, dimension(3)                 :: bIono_D,  Xyz0_D, MagJh_D, MagJp_D, &
          XyzIono_D, tempJh_dB, tempJp_dB, TempMagJh_D,TempMagJp_D
+
+    real :: dTheta(nTheta*2),dPsi(nPsi)
     real :: sinclats, cosclats, sinlons, coslons, dv
     real :: XyzSph_DD(3,3)
-
     integer :: i, j, iMag
     !\
     ! calculate the magnetic perturbations at the location of (SMLat, SMLon)
@@ -125,7 +129,7 @@ contains
        end do
     end do
 
-    do iMag=1, nMagnetometer
+    do iMag=1, nMag
 
        Xyz0_D = Xyz0_DI(:,iMag)
 
@@ -266,20 +270,14 @@ contains
        if (iError /= 0) EXIT READFILE
 
        if(index(Line,'#COORD')>0) then
-          read(iunit,'(a)') Line
-          if (index(Line, 'MAG')>0) then
-             MagInCoord = 'MAG'
-             write(*,*) 'Coordinates= ', MagInCoord
-          else if(index(Line, 'SMG')>0)then
-             MagInCoord = 'SMG'
-             write(*,*) 'Coordinates= ', MagInCoord
-          else
+          read(iunit,'(a)') MagInCoord
+          select case(MagInCoord)
+          case('MAG','SMG')
              call write_prefix;
-             write(*,*) NameSub, &
-                  ' WARNING: Please Use', &
-                  ' MAG(geomagnetic) coords or SMG coords for Magnetometer InputFile!!'
-             EXIT READFILE
-          end if
+             write(*,*) 'Magnetometer Coordinates='//MagInCoord
+          case default
+             call stop_mpi(NameSub//' invalid MagInCoord='//MagInCoord)
+          end select
        end if
 
        if(index(Line,'#START')>0)then
@@ -317,17 +315,6 @@ contains
        PosMagnetometer_II(2,iMag) = MagmLon_I(iMag)
     end do
 
-    !   if(nProc>1)then
-    !      ! Tell the coordinates to the other processors
-    !      call MPI_Bcast(MagInCoord, 3, MPI_CHARACTER, 0, iComm, iError)
-    !      ! Tell the number of magnetometers to the other processors
-    !      call MPI_Bcast(nMagnetometer, 1, MPI_INTEGER, 0, iComm, iError)
-    !      ! Tell the magnetometer name to the other processors
-    !      call MPI_Bcast(MagName_I, nMagnetometer*3, MPI_CHARACTER,0,iComm,iError)
-    !      ! Tell the other processors the coordinates       
-    !      call MPI_Bcast(PosMagnetometer_II, 2*nMagnetometer, MPI_REAL, 0, &
-    !           iComm, iError)
-    !   end if
   end subroutine read_mag_input_file
 
   !======================================================================
@@ -364,7 +351,7 @@ contains
 
     end do
     ! calculate the magnetic perturbation caused by Hall and Perdersen currents
-    call iono_mag_perturb(Xyz_DI, MagPerturb_Jh_DI, MagPerturb_Jp_DI)
+    call iono_mag_perturb(nMagnetometer, Xyz_DI, MagPerturb_Jh_DI, MagPerturb_Jp_DI)
 
      !\
      ! Collect the variables from all the PEs
