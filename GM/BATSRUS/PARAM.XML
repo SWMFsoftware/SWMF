@@ -1174,13 +1174,9 @@ conditions for generalized coordinate grids (as shown by the example).
 
 This command defines the boundary conditions in the polar region. The number 
 density, temperature and velocity can be given (for all fluids in multifluid
-calculations). The density and temperature parameters (converted to pressure)
-are used to fix the open fieldline region in GM-IM coupled runs 
-(see #IMCOUPLING command). 
-
-The #POLARWIND command can also be used to set polar wind like inner boundary
-conditions when GM is not coupled with the PW component. In this case
-the PolarLatitude parameter determines the latitudinal extent 
+calculations). This mimics polar wind like inner boundary
+conditions when GM is not coupled with the PW component. 
+The PolarLatitude parameter determines the latitudinal extent 
 of the polar boundary where the outflow is defined.
 </command>
 
@@ -4821,18 +4817,25 @@ exchanged between GM and IM.
 	<parameter name="DoCoupleImPressure" type="logical" default="T"/>
 	<parameter name="DoCoupleImDensity"  type="logical" default="F"/>
 	<parameter name="DoFixPolarRegion"   type="logical" default="F"/>
-	<parameter name="rFixPolarRegion"    type="real" min="1" default="5"/>
-
+	<if expr="$DoFixPolarRegion">
+		<parameter name="rFixPolarRegion" type="real" min="1" 
+							default="5"/>
+		<parameter name="PolarNDim" type="real" min="0" default="20"/>
+		<parameter name="PolarTDim" type="real" min="0" default="1e5"/>
+	</if>
 #IMCOUPLING
 20.0			TauCoupleIm
 F			DoImSatTrace
 T			DoCoupleImPressure
 F			DoCoupleImDensity
-T			DoFixPolarRegion
+T			DoFixPolarRegion (rest read if true)
 5.0			rFixPolarRegion
+20.0            	PolarNDim [amu/cc] for fluid 1
+100000.0        	PolarTDim [K]      for fluid 1
+2.0        		PolarNDim [amu/cc] for fluid 2
+20000.0        		PolarTDim [K]      for fluid 2
 
-This command sets parameters for the GM-IM coupling. The parameters
-are described below:
+This command sets various parameters for the GM-IM coupling.
 
 The TauCoupleIm parameter determine how fast the GM pressure p 
 (and possibly density rho) 
@@ -4877,9 +4880,12 @@ in the #POLARBOUNDARY command in the open field line region within
 radius defined by rFixPolarRegion and where the flow points outward.
 This is a very new feature that hasn't been tested in real runs yet.
 
+If DoFixPolarRegion is true then the following parameters are also read:
+
 The rFixPolarRegion radius (given in planetary radii) sets the outer
 limit for nudging the pressure (density) in the open field line region
-towards the values set by the #POLARBOUNDARY command. 
+towards the PolarNDim and PolarTDim values. For multi-fluid MHD,
+the PolarNDim and PolarTDim parameters are read for each fluid.
 
 The default is to couple the IM pressure only and no fix is applied 
 in the polar region.

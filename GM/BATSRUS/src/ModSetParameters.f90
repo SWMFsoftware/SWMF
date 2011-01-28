@@ -1500,8 +1500,14 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DoCoupleImPressure', DoCoupleImPressure)
            call read_var('DoCoupleImDensity',  DoCoupleImDensity)
            call read_var('DoFixPolarRegion',   DoFixPolarRegion)
-           call read_var('rFixPolarRegion',    rFixPolarRegion)
-        end if                                        
+           if(DoFixPolarRegion)then
+              call read_var('rFixPolarRegion',    rFixPolarRegion)
+              do iFluid = IonFirst_, nFluid
+                 call read_var('PolarNDim',  PolarNDim_I(iFluid))
+                 call read_var('PolarTDim',  PolarTDim_I(iFluid))
+              end do
+           end if
+        end if
      case("#IMCOUPLINGSMOOTH")
         call read_var('dLatSmoothIm', dLatSmoothIm)
 
