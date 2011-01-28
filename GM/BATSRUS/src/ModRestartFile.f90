@@ -21,6 +21,7 @@ module ModRestartFile
        n_prev, ImplOld_VCB, dt_prev                         !^CFG IF IMPLICIT
   use ModKind,       ONLY: Real4_, Real8_
   use ModIoUnit,     ONLY: UnitTmp_
+  use ModGmGeoindices, ONLY: DoWriteIndices
 
   use BATL_lib,      ONLY: write_tree_file, iMortonNode_A, iNode_B
 
@@ -52,6 +53,7 @@ module ModRestartFile
   character(len=*), parameter :: NameHeaderFile   = "restart.H"
   character(len=*), parameter :: NameDataFile     = "data.rst"
   character(len=*), parameter :: NameIndexFile    = "index.rst"
+  character(len=*), parameter :: NameGeoindFile   = "geoindex.txt"
 
   logical :: RestartBlockLevels=.false. ! Load LEVmin,LEVmax in octree restart
   integer :: nByteRealRead = 8     ! Real precision in restart files
@@ -172,7 +174,6 @@ contains
   !============================================================================
 
   subroutine write_restart_files
-    use ModGmGeoindices, ONLY: write_geoind_restart
 
     integer :: iBlock
     character(len=*), parameter :: NameSub='write_restart_files'
@@ -206,7 +207,7 @@ contains
        call stop_mpi('Unknown TypeRestartOutFile='//TypeRestartOutFile)
     end select
     if(iProc==0)call save_advected_points
-    if(iProc==0)call write_geoind_restart
+    if(DoWriteIndices .and. iProc==0)call write_geoind_restart
 
     call timing_stop(NameSub)
 
@@ -240,6 +241,10 @@ contains
        if (.not.unusedBLK(iBlock)) call fix_block_geometry(iBlock)
     end do
     if(.not.UseBatl) call set_body_flag
+
+    ! Try reading geoIndices restart file if needed
+    if(DoWriteIndices .and. iProc==0)call read_geoind_restart
+
     call timing_stop(NameSub)
 
   end subroutine read_restart_files
@@ -1189,5 +1194,94 @@ contains
          NameFileOld(1:i)//'n', nIter, '_'//NameFileOld(i+1:90)
 
   end subroutine string_append_iter
+
+  !===========================================================================
+
+  subroutine write_geoind_restart
+
+    ! Save ModGmGeoindices::MagPerturb_II to a restart file on proc 0
+
+    use ModIO,          ONLY: Unit_Tmp
+    use ModProcMH,      ONLY: iProc
+    use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_II
+
+    integer            :: i
+    character(len=100) :: NameFile
+
+    character(len=*), parameter :: NameSub='write_geoind_restart'
+    logical :: DoTest, DoTestMe
+    !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    
+    ! Ensure that restart files are only written from head node.
+    if(iProc/=0) return
+
+    ! Open restart file.
+    NameFile = trim(NameRestartOutDir)//NameGeoIndFile
+    open(Unit_Tmp, file=NameFile, status='REPLACE')
+
+    ! Size of array:
+    write(Unit_Tmp,*) nKpMag, iSizeKpWindow
+    ! Save MagPerturb_II
+    do i = 1, iSizeKpWindow
+       write(Unit_Tmp, *) MagPerturb_II(:,i)
+    end do
+    close(Unit_Tmp)
+
+  end subroutine write_geoind_restart
+
+  !===========================================================================
+  subroutine read_geoind_restart
+
+    ! Read MagPerturb_II from restart file on processor 0
+
+    use ModIO,          ONLY: Unit_Tmp
+    use ModProcMH,      ONLY: iProc
+    use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_II, IsFirstCalc
+
+    integer            :: i, nMagTmp, iSizeTmp
+    logical            :: DoRestart
+    character(len=100) :: NameFile
+
+    character(len=*), parameter :: NameSub='read_geoind_restart'
+    logical :: DoTest, DoTestMe
+    !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    NameFile = trim(NameRestartInDir)//NameGeoindFile
+
+    ! Check for restart file.  If one exists, use it.
+    inquire(file=NameFile, exist=DoRestart)
+    if(.not. DoRestart) then
+       write(*,*) NameSub,": WARNING did not find geoindices restart file ",&
+            trim(NameFile)
+       RETURN
+    end if
+
+    write(*,*)'GM: ',NameSub, ' reading ',trim(NameFile)
+
+    open(Unit_Tmp, file=NameFile, status='OLD', action='READ')
+
+    ! Read size of array, ensure that it matches expected.
+    ! If not, it means that the restart is incompatible and cannot be used.
+    read(Unit_Tmp, *) nMagTmp, iSizeTmp
+
+    if( nMagTmp /= nKpMag .or. iSizeTmp /= iSizeKpWindow ) then
+       write(*,*)'ERROR: in file ',trim(NameFile)
+       write(*,*)'Restart file contains  nMagTmp, iSizeTmp=', &
+            nMagTmp, iSizeTmp
+       write(*,*)'PARAM.in contains nKpMag, iSizeKpWindow =', &
+            nKpMag, iSizeKpWindow
+       call stop_mpi(NameSub//' restart does not match Kp settings!')
+    end if
+
+    do i=1, iSizeKpWindow
+       read(Unit_Tmp,*) MagPerturb_II(:,i)
+    end do
+    close(Unit_Tmp)
+
+    IsFirstCalc=.false.
+
+  end subroutine read_geoind_restart
 
 end module ModRestartFile
