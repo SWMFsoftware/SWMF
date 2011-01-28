@@ -143,22 +143,39 @@ contains
   !=========================================================================
   subroutine set_ion_mass_per_charge(iBlock)
 
-    use ModAdvance, ONLY: State_VGB, Rho_
+    use ModAdvance, ONLY: State_VGB, Rho_, UseIdealEos
+    Use ModConst, ONLY: cMu, cElectronCharge
     use ModVarIndexes, ONLY: &
          UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V, nVar
     use ModMultiFluid, ONLY: UseMultiIon, iRhoIon_I, MassIon_I
-    use ModPhysics, ONLY: IonMassPerCharge
+    use ModPhysics, ONLY: IonMassPerCharge, No2Si_V, Si2No_V, UnitX_, &
+         UnitRho_, UnitB_, UnitT_
+    use ModUser, ONLY: user_material_properties
 
     ! Set IonMassPerCharge_G based on average mass
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
     real :: State_V(nVar)
+
+    real :: Zav, NatomicSi
     !-------------------------------------------------------------------------
 
     ! Multiply IonMassPerCharge_G by average ion mass = rho_total / n_total
 
-    if(UseMultiSpecies)then
+    if(.not.UseIdealEos)then
+       do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               AverageIonChargeOut = Zav, NatomicOut = NatomicSi)
+
+          IonMassPerCharge_G(i,j,k) = HallFactor &
+               *State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_) &
+               /(cMu*cElectronCharge*Zav*NatomicSi) &
+               *Si2No_V(UnitX_)**2*Si2No_V(UnitRho_) &
+               /(Si2No_V(UnitB_)*Si2No_V(UnitT_))
+       end do; end do; end do
+
+    elseif(UseMultiSpecies)then
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
                State_VGB(Rho_,i,j,k,iBlock) / &
