@@ -1192,8 +1192,8 @@ of the polar boundary where the outflow is defined.
 	</if>
 #CPCPBOUNDARY
 T                       UseCpcpBc  (rest is read if true)
-18.0                    Rho0Cpcp   [amu/cc]
-0.2                     RhoPerCpcp [amu/cc / keV]
+28.0                    Rho0Cpcp   [amu/cc]
+0.1                     RhoPerCpcp [amu/cc / keV]
 
 This command only works for single fluid MHD. The inner boundary type has to
 be "ionosphere" and the GM and IE components have to be coupled together.
@@ -2573,23 +2573,25 @@ example), the start and end times should be set for all of them.
 180			nSizeKpWindow [min]
 60.0			DtOutput      [sec]
 
-BATS-R-US can create synthetic geomagnetic indices by first simulating ground
-based measurements then processing these data into indices.  This allows for
-an apples-to-apples comparison of indices created by the simulation against indices
-created from observations.  It is also useful in an operational setting, where
-quick-look activity indices are paramount.  #GEOMAGINDICES activates the 
-calculation of such indices.  Results are written at a time cadence of DtOutput
-to the file GeoIndices_n[iteration].txt.  
+BATS-R-US can create synthetic geomagnetic indices by first simulating
+ground based measurements then processing these data into indices.
+This allows for an apples-to-apples comparison of indices created by
+the simulation against indices created from observations.  It is also
+useful in an operational setting, where quick-look activity indices
+are paramount.  #GEOMAGINDICES activates the calculation of such
+indices.  Results are written at a time cadence of DtOutput to the
+file geoindex_n[iteration].log
 
-At present, only a synthetic version of Kp is available.  nSizeKpWindow, set in 
-minutes and defaulting to 180 (3 hours), sets the size of the time-history window
-used in the calculation of Kp.  Standard Kp uses a 3-hour window; versions of Kp
-used as operational products use a window as short as 15-minutes.  Note that 
-altering this window requires a re-scaling of the K-index conversion tables inside
-of the code.  
-As Kp is written to file, so are the individual K-indices used in the calculation.
-Offical Kp averages 13 K values from 13 mid-latitude magnetometer stations around
-the globe.  Synthetic Kp from BATS-R-US uses 24 stations at fixed local time 
+At present, only a synthetic version of Kp is available.
+nSizeKpWindow, set in minutes and defaulting to 180 (3 hours), sets
+the size of the time-history window used in the calculation of Kp.
+Standard Kp uses a 3-hour window; versions of Kp used as operational
+products use a window as short as 15-minutes.  Note that altering this
+window requires a re-scaling of the K-index conversion tables inside
+of the code.  As Kp is written to file, so are the individual
+K-indices used in the calculation.  Offical Kp averages 13 K values
+from 13 mid-latitude magnetometer stations around the globe.
+Synthetic Kp from BATS-R-US uses 24 stations at fixed local time
 positions and 50 degrees magnetic latitude.
 
 Because Kp requires a time history of geomagnetic activity, special restart
@@ -2597,10 +2599,9 @@ files are saved when #GEOMAGINDICES is used.  If nSizeKpWindow changes between
 restarts, however, the files will be rendered unuseable because the time 
 history will no longer be valid for the calculation.
 
-#GEOMAGINDICES should be used with the IE command of the same name.  This activates
-magnetometers in the IE component that are key for properly capturing the magnetic
-pertubation from all current systems.
-
+#GEOMAGINDICES should be used with the IE command of the same name.
+This activates magnetometers in the IE component that are key for
+properly capturing the magnetic pertubation from all current systems.
 </command>
 
 <command name="MAGNETOMETER">
