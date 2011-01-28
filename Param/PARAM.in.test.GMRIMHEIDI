@@ -275,7 +275,9 @@ F			DoImSatTrace
 T			DoCoupleImPressure
 T			DoCoupleImDensity
 T			DoFixPolarRegion
-5.0			rFixPolarRegion
+5.0			rFixPolarRegio
+28.0			PolarNDim [amu/cc]
+100000.0		PolarTDim [K]
 
 #SAVEPLOT
 3			nPlotFile
