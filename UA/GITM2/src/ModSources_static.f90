@@ -30,8 +30,8 @@ module ModSources
   integer, parameter :: nReactions = 26
  real :: ChemicalHeatingSpecies(nLons, nLats, nAlts,nReactions)
   real :: ChemicalHeatingS(nReactions)
-  real :: NeutralSourcesTotal(nLons,nLats,nAlts,nSpeciesTotal,nBlocksMax)
-  real :: NeutralLossesTotal(nLons,nLats,nAlts,nSpeciesTotal,nBlocksMax)
+  real :: NeutralSourcesTotal(nSpeciesTotal,nAlts)
+  real :: NeutralLossesTotal(nSpeciesTotal,nAlts)
   real :: ISourcesTotal(nLons,nLats,nAlts,nIons-1,nBlocksMax)
   real :: ILossesTotal(nLons,nLats,nAlts,nIons-1,nBlocksMax)
 
