@@ -208,7 +208,7 @@ contains
     integer :: iMag
     !-----------------------------------------------------------------
     ! Open the output file 
-    write(*,*) '=> writing magnetic perturbation output.'  
+    write(*,*) 'IE: writing magnetic perturbation output.'  
     
     write(NameFile,'(a,3i2.2,"_",3i2.2,a)')trim(NameIonoDir)//"IE_mag_t", &
          mod(time_array(1),100),time_array(2:6), ".mag"
