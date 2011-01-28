@@ -261,7 +261,6 @@ contains
 
   subroutine initialize_files
     use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
-    use ModGmGeoindices, ONLY: DoWriteIndices, init_geoindices
     use ModGroundMagPerturb,ONLY: save_magnetometer_data, open_magnetometer_output_file
     ! Local variables
     character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
@@ -278,8 +277,6 @@ contains
     if (save_magnetometer_data .and. iProc == 0) then
        call open_magnetometer_output_file
     end if
-
-    if (DoWriteIndices) call init_geoindices()
 
     plot_type(restart_)='restart'
     plot_type(logfile_)='logfile'
@@ -1166,15 +1163,14 @@ contains
 
     elseif(ifile == indexfile_) then
        ! Write geomagnetic index file.
-       if(time_accurate .and. DoWriteIndices) call write_geoindices()
-       !write(*,*) 'Iproc ', iProc, ' has survived.'
+       if(time_accurate .and. DoWriteIndices) call write_geoindices
     end if
 
     n_output_last(ifile)=n_step
 
     if(iProc==0 .and. lVerbose>0 .and. &
-         ifile /= logfile_ .and. iFile /= magfile_ .and. &
-         (iFile <= satellite_ .or. iFile > satellite_ + nSatellite))then
+         ifile /= logfile_ .and. iFile /= magfile_ .and. iFile /= indexfile_ &
+         .and. (iFile <= satellite_ .or. iFile > satellite_ + nSatellite))then
        if(time_accurate)then
           call write_prefix; 
           write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &

@@ -64,7 +64,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModSatelliteFile, ONLY: nSatellite, &
        read_satellite_parameters, read_satellite_input_files
   use ModGroundMagPerturb
-  use ModGmGeoindices, ONLY: DoWriteIndices, DoCalcKp, nKpMins, dtWriteIndices
+  use ModGmGeoindices, ONLY: &
+       DoWriteIndices, DoCalcKp, nKpMins, dtWriteIndices, init_mod_geoindices
   use ModFaceFlux, ONLY: face_flux_set_parameters, TypeFluxNeutral, &
        UseClimit, UsePoleDiffusion
   use ModLookupTable, ONLY: read_lookup_table_param
@@ -236,6 +237,7 @@ subroutine MH_set_parameters(TypeAction)
      if(UseImplicit.or.UseSemiImplicit) &      !^CFG IF IMPLICIT
           call init_mod_implicit               !^CFG IF IMPLICIT
      if (DoAdjoint) call init_mod_adjoint      !ADJOINT SPECIFIC
+     if (DoWriteIndices) call init_mod_geoindices
 
      ! clean dynamic storage
      call clean_block_data

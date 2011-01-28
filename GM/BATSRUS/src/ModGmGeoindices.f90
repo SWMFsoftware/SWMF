@@ -58,7 +58,8 @@ module ModGmGeoindices
 contains
 
   !===========================================================================
-  subroutine init_geoindices
+  subroutine init_mod_geoindices
+
     ! Initialize variables, arrays, and output file.
     use ModNumConst,  ONLY: cDegToRad, cTwoPi
     use ModUtilities, ONLY: flush_unit
@@ -71,9 +72,11 @@ contains
     real               :: radXY, phi
     character(len=100) :: NameFile
 
-    character(len=*), parameter :: NameSub='init_geoindices'
+    character(len=*), parameter :: NameSub='init_mod_geoindices'
     logical :: DoTest, DoTestMe
     !------------------------------------------------------------------------
+    if(IsInitialized) RETURN
+
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     IsInitialized=.true.
@@ -98,7 +101,7 @@ contains
        MagPerturb_II = 0.0
 
        write(NameFile, '(a, a, i8.8, a)') trim(NamePlotDir), &
-            'GeoIndices_n', n_step, '.txt'
+            'geoindex_n', n_step, '.log'
        iUnitOut = io_unit_new()
        open(iUnitOut, file=NameFile, status='replace')
 
@@ -108,12 +111,11 @@ contains
        write(iUnitOut, '(a)', advance='NO') &
             'it year mo dy hr mn sc msc '
        if (DoCalcKp) write(iUnitOut, '(a)', advance='NO') NameKpVars
-       write(iUnitOut, '(a)') '' ! Close out header line.
+       write(iUnitOut, '(a)') '' ! Close header line.
        call flush_unit(iUnitOut)
     end if
 
-  end subroutine init_geoindices
-
+  end subroutine init_mod_geoindices
   !===========================================================================
   subroutine write_geoindices
 
@@ -154,6 +156,7 @@ contains
 
   !===========================================================================
   subroutine calc_kp
+
     use ModProcMH,ONLY: iProc, nProc, iComm
     use CON_axes, ONLY: transform_matrix
     use ModPhysics,        ONLY: No2Io_V, UnitB_
@@ -208,14 +211,15 @@ contains
           deltaH = maxval(MagPerturb_II(i,:)) - minval(MagPerturb_II(i,:))
           LocalK(i) = convert_to_k(deltaH, table50_I)
        end do
+
+       ! Kp is average of Ks.
+       faKeP = sum(LocalK)/nKpMag
+       ! Quantize to -/+ levels.
+       faKeP = (nint(faKeP * 3.0))/3.0
+
     end if
     
     IsFirstCalc=.false.
-
-    ! Kp is average of Ks.
-    faKeP = sum(LocalK)/nKpMag
-    ! Quantize to -/+ levels.
-    faKeP = (nint(faKeP * 3.0))/3.0
 
   end subroutine calc_kp
 

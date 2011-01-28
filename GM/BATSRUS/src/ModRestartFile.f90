@@ -1205,7 +1205,7 @@ contains
     use ModProcMH,      ONLY: iProc
     use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_II
 
-    integer            :: i
+    integer            :: i, j
     character(len=100) :: NameFile
 
     character(len=*), parameter :: NameSub='write_geoind_restart'
@@ -1223,8 +1223,10 @@ contains
     ! Size of array:
     write(Unit_Tmp,*) nKpMag, iSizeKpWindow
     ! Save MagPerturb_II
-    do i = 1, iSizeKpWindow
-       write(Unit_Tmp, *) MagPerturb_II(:,i)
+    do j = 1, iSizeKpWindow
+       do i = 1, nKpMag
+          write(Unit_Tmp, '(es20.12)' ) MagPerturb_II(i,j)
+       end do
     end do
     close(Unit_Tmp)
 
@@ -1239,7 +1241,7 @@ contains
     use ModProcMH,      ONLY: iProc
     use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_II, IsFirstCalc
 
-    integer            :: i, nMagTmp, iSizeTmp
+    integer            :: i, j, nMagTmp, iSizeTmp
     logical            :: DoRestart
     character(len=100) :: NameFile
 
@@ -1275,8 +1277,10 @@ contains
        call stop_mpi(NameSub//' restart does not match Kp settings!')
     end if
 
-    do i=1, iSizeKpWindow
-       read(Unit_Tmp,*) MagPerturb_II(:,i)
+    do j = 1, iSizeKpWindow
+       do i = 1, nKpMag
+          read(Unit_Tmp,*) MagPerturb_II(i,j)
+       end do
     end do
     close(Unit_Tmp)
 
