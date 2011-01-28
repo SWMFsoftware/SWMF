@@ -372,7 +372,7 @@ contains
      if(iProc==0) then
        do iMag = 1, nMagnetometer
           ! writing
-          write(iUnitMag,'(i5)',ADVANCE='NO') nSolve
+          write(iUnitMag,'(i8)',ADVANCE='NO') nSolve
           write(iUnitMag,'(i5,5(1x,i2.2),1x,i3.3)',ADVANCE='NO') &
                (Time_array(i),i=1,7)
           write(iUnitMag,'(1X,i2)', ADVANCE='NO')  iMag
