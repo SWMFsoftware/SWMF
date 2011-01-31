@@ -1,0 +1,232 @@
+#ECHO
+T			DoEcho
+
+#INCLUDE
+RESTART.in
+
+#DESCRIPTION
+Example file to restart a run for the SWPC code selection
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#SAVERESTART                                                     
+T                       DoSaveRestart
+-1                      DnSaveRestart
+1800.0                  DtSaveRestart
+
+#CHECKSTOP
+T			DoCheckStop
+-1			DnCheckStop
+200.0			DtCheckStop
+
+#CPUTIMEMAX
+28000.0                 CpuTimeMax [sec]
+
+#COUPLEORDER
+5			nCouple
+IE GM			NameSourceTarget
+IE IM			NameSourceTarget
+GM IE			NameSourceTarget
+GM IM			NameSourceTarget
+IM GM			NameSourceTarget
+
+#COUPLE2
+GM			NameComp1
+IE			NameComp2
+-1                      DnCouple
+5.0                     DtCouple
+
+#COUPLE2
+IM			NameComp1
+GM			NameComp2
+-1                      DnCouple
+10.0                    DtCouple
+
+#COUPLE1
+IE			NameComp1
+IM			NameComp2
+-1                      DnCouple
+10.0                    DtCouple
+
+#COUPLETIME
+GM			NameComp
+F			DoCoupleOnTime
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#INCLUDE
+GM/restartIN/restart.H
+
+#MAGNETOSPHERE
+T                       body1
+2.5                     Rbody
+3.0                     Rcurrents
+28.0                    Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK
+25000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK
+
+#OUTERBOUNDARY
+outflow			TypeBcEast
+vary			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBot
+float			TypeBcTop
+
+#INNERBOUNDARY
+ionosphere		TypeBcInner
+
+! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
+#CPCPBOUNDARY
+T                       UseCpcpBc  (rest is read if true)
+28.0                    Rho0Cpcp   [amu/cc]
+0.1                     RhoPerCpcp [amu/cc / keV]
+
+#SOLARWINDFILE                                                                           
+T                       UseSolarWindFile                                                 
+imf20000406_08.dat         NameSolarWindFile   
+
+#SATELLITE                             
+4			nSatellite
+MHD RAY			StringSatellite
+-1			DnOutput
+5.0			DtOutput
+geotail_20000406_08.dat
+MHD RAY			StringSatellite
+-1			DnOutput
+5.0			DtOutput
+goes08_20000406_08.dat
+MHD RAY			StringSatellite
+-1			DnOutput
+5.0			DtOutput
+goes10_20000406_08.dat
+MHD RAY			StringSatellite
+-1			DnOutput
+5.0			DtOutput
+polar_20000406_08.dat
+
+! There has to be an identical MAGNETOMETER command+parameters in IE too.
+#MAGNETOMETER
+station12.dat		NameMagInputFile
+-1			DnOutput
+60.0			DtOutput
+
+! There has to be a GEOMAGINDICES command in IE too.
+#GEOMAGINDICES
+180			nSizeKpWindow [min]
+60.0			DtOutput      [sec]
+
+#NONCONSERVATIVE
+T                       UseNonConservative
+
+#CONSERVATIVECRITERIA
+1                       nConservCrit
+parabola                TypeConservCrit_I
+ 5.0                    xParabolaConserv
+15.0                    yParabolaConserv
+
+#IM
+20.0                    TauImP
+T			DoImSatTrace 
+
+! Pressures below pMinDim are replaced with pMinDim.
+#MINIMUMPRESSURE
+1e-5			pMinDim [nPa]
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR			StringLogfile
+-1			DnSaveLogfile
+5.0			DtSaveLogfile
+dt rho mx my mz p bx by bz pmin pmax dst dstflx
+3.0			StringRFlux
+
+#SAVEPLOT
+2                       nPlotFiles
+y=0 MHD idl             StringPlot
+-1                      DnSavePlot
+300.			DtSavePlot
+-1.0			DxSavePlot
+z=0 MHD idl             StringPlot
+-1                      DnSavePlot
+300.			DtSavePlot
+-1.0			DxSavePlot
+
+#SCHEME
+2			nORDER
+Sokolov			TypeFlux
+mc3	                TypeLimiter
+1.2			BetaLimiter
+
+#BORIS
+T			UseBorisCorrection
+0.01			BorisClightFactor
+
+#TIMESTEPPING
+2			nStage
+0.85			CflExpl
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+5.0	 		DtFixedDim [sec] (read if UseDtFixed is true)
+
+#IMPLICIT
+F			UsePointImplicit
+T			UsePartImplicit
+F			UseFullImplicit
+100.0			ImplCFL
+
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP IM ---------------------------------------------------------------
+
+#RESTART
+T			DoRestart
+
+! Number density fractions for H+ and O+. Has to add up to 1.0
+#COMPOSITION
+0.9                      FractionH
+0.1                      FractionO
+
+! Decay for RCM particle densities
+#DECAY
+T 			UseDecay
+36000. 			DecayTimescale in seconds
+
+#END_COMP IM -----------------------------------------------------------------
+
+#BEGIN_COMP IE ---------------------------------------------------------------
+
+#IONOSPHERE
+5                       TypeConductanceModel
+F                       UseFullCurrent
+F			UseFakeRegion2
+178.0                   F107Flux
+1.0                     StarLightPedConductance
+0.25                    PolarCapPedConductance
+
+#BOUNDARY
+10.0                    LatBoundary
+
+! Same parameters as the MAGNETOMETER command in GM
+#MAGNETOMETER
+station12.dat		NameMagInputFile
+-1			DnOutput
+60.0			DtOutput
+
+! There has to be a GEOMAGINDICES command in GM too
+#GEOMAGINDICES
+
+#SAVEPLOT
+1			nPlotFile
+aur idl                 StringPlot
+-1                      DnSavePlot
+60.0			DtSavePlot
+
+#END_COMP IE -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+259200.0		TimeMax
+
+#END ############################################################
