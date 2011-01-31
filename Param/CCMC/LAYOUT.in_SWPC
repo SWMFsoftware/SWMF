@@ -1,0 +1,9 @@
+This is a good layout for about 64 PE-s. 
+
+Name First Last Stride
+======================
+#COMPONENTMAP
+IM       0    0    1   ! IM runs on 1 PE
+IE       0    1    1   ! IE runs on 2 PE-s
+GM       2  999    1   ! GM runs on remaining PE-s
+#END
