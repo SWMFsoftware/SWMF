@@ -41,15 +41,17 @@ module ModGmGeoindices
   ! VARIABLES FOR KP CALCULATION
   integer, parameter :: nKpMag = 24 ! Currently, only the faKe_p stations.
   integer            :: iSizeKpWindow = 0      ! Size of MagPerturb_II
-  real, parameter    :: faKepLat = 50.0        ! Fake Kp geomag. latitude.
+  real, parameter    :: KpLat = 50.0           ! Synthetic Kp geomag. latitude.
   real, allocatable  :: MagPerturb_II(:,:)     ! Magnetometer time history.
   real               :: MagPerbIE_DI(3,nKpMag)=0.0! IE contribution.
   real               :: XyzKp_DI(3, nKpMag)    ! Locations of kp mags, SMG.
-  real               :: faKeP=0.0, LocalK(nKpMag)
+  real               :: Kp=0.0
+  integer            :: kIndex_I(nKpMag)
   logical            :: IsFirstCalc=.true.
+
   ! K CONVERSION TABLES
-  real, dimension(9), parameter :: &
-       table50_i=(/5,10,20,40,70,120,200,330,500/) ! faKe_p, lat=50 deg.
+  real, parameter :: &
+       Table50_I(9)=(/5.,10.,20.,40.,70.,120.,200.,330.,500./) ! faKe_p, lat=50 deg.
 
   character(len=*), parameter :: NameKpVars = &
        'Kp K_12 K_13 K_14 K_15 K_16 K_17 K_18 K_19 K_20 K_21 K_22 K_23 '//&
@@ -82,8 +84,8 @@ contains
     IsInitialized=.true.
 
     ! Initialize grid and arrays.  FaKe_p uses stations fixed in SMG coords.
-    XyzKp_DI(3,:) = sin(fakepLat * cDegToRad) ! SMG Z for all stations.
-    radXY         = cos(fakepLat * cDegToRad) ! radial dist. from z-axis.
+    XyzKp_DI(3,:) = sin(KpLat * cDegToRad) ! SMG Z for all stations.
+    radXY         = cos(KpLat * cDegToRad) ! radial dist. from z-axis.
     do i=1, nKpMag
        phi = cTwoPi * (i-1)/24.0
        XyzKp_DI(1,i) = radXY * cos(phi)
@@ -135,21 +137,17 @@ contains
     if(DoCalcKp) call calc_kp
     !if(DoCalcDst) call calc_dst ...etc...
 
-    if(iProc > 0)RETURN ! Write only on head node.
+    if(iProc > 0) RETURN ! Write only on head node.
 
     ! Write date and time.
     call get_date_time(iTime_I)
-    write(iUnitOut, '(i7.7, 1x, i4.4, 5(1x, i2.2), 1x, i3.3)', ADVANCE='NO') &
+    write(iUnitOut, '(i7.7, i5.4, 5(i3.2), i4.3)', ADVANCE='NO') &
          n_step, iTime_I
 
-    if(DoCalcKp) then
-       write(iUnitOut, '(1x, f4.2)', ADVANCE='NO') faKeP
-       do i=1, nKpMag
-          write(iUnitOut, '(1x, f4.2)', ADVANCE='NO') LocalK(i)
-       end do
-    end if
+    if(DoCalcKp) write(iUnitOut, '(f5.2,100i2)', ADVANCE='NO') Kp, kIndex_I
 
-    write(iUnitOut, '(a)') ' ' ! Add carriage return.
+    write(iUnitOut, *) ! Add carriage return.
+
     call flush_unit(iUnitOut)
 
   end subroutine write_geoindices
@@ -202,20 +200,21 @@ contains
        do i=1, nKpMag
           ! Store H-component; add IE component.
           if (IsFirstCalc) then
-             MagPerturb_II(i,:)=Bsum_DI(1,i)+MagPerbIE_DI(1,i)
+             MagPerturb_II(i,:) = Bsum_DI(1,i)  + MagPerbIE_DI(1,i)
           else
-             MagPerturb_II(i,iSizeKpWindow)=Bsum_DI(1,i)+MagPerbIE_DI(1,i)
+             MagPerturb_II(i,iSizeKpWindow) = Bsum_DI(1,i) + MagPerbIE_DI(1,i)
           end if
 
           ! Calculate deltaH, convert to K.
-          deltaH = maxval(MagPerturb_II(i,:)) - minval(MagPerturb_II(i,:))
-          LocalK(i) = convert_to_k(deltaH, table50_I)
+          DeltaH = maxval(MagPerturb_II(i,:)) - minval(MagPerturb_II(i,:))
+          kIndex_I(i) = k_index(DeltaH, Table50_I)
        end do
 
        ! Kp is average of Ks.
-       faKeP = sum(LocalK)/nKpMag
-       ! Quantize to -/+ levels.
-       faKeP = (nint(faKeP * 3.0))/3.0
+       Kp = sum(kIndex_I)/real(nKpMag)
+
+       ! Quantize to 1/3 levels.
+       Kp = nint(3*Kp)/3.0
 
     end if
     
@@ -241,26 +240,27 @@ contains
 
   end subroutine finalize_geoindices
   !===========================================================================
-  real function convert_to_k(deltaB, table_I)!, Kout)
+  integer function k_index(DeltaB, Table_I)
+
     ! Convert a deltaB value (max-min over window) to a K-value using given
     ! conversion table 'table'.  Table should be a 9-element vector that
     ! lists the upper limit for each K window.  For example, a K of 0 is
     ! given for a deltaB .le. 5, table(1) = 5.
     
     !real :: convert_to_k = 9
-    real, intent(in) :: deltaB, table_I(9)
-    !real, intent(out):: Kout=9 
+    real, intent(in) :: DeltaB, Table_I(9)
     
     integer :: i
     !------------------------------------------------------------------------
-    do i=1, 9
-       if( (deltaB-table_I(i)) < 0) then
-          convert_to_k=i-1
-          exit
+    do i = 1, 9
+       if( DeltaB - Table_I(i) < 0) then
+          k_index = i - 1
+          RETURN
        end if
     end do
+    k_index = 9
     
-  end function convert_to_k
+  end function k_index
   
   !===========================================================================
  
