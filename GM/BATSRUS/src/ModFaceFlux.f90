@@ -119,7 +119,7 @@ module ModFaceFlux
   real :: EtaJx, EtaJy, EtaJz, Eta = -1.0
 
   ! Variables needed for Hall resistivity
-  real :: InvDxyz, HallCoeff, HallJx, HallJy, HallJz
+  real :: InvDxyz, HallCoeff, HallJx, HallJy, HallJz, BiermannCoeff
   logical :: UseHallGradPe = .false., IsNewBlockGradPe = .true.
   real :: GradXPeNe, GradYPeNe, GradZPeNe
 
@@ -1057,6 +1057,11 @@ contains
          ( IonMassPerCharge_G(iLeft, jLeft  ,kLeft)            &
          + IonMassPerCharge_G(iRight,jRight,kRight) )
 
+    BiermannCoeff = -1.0
+    if(UseBiermannBattery) BiermannCoeff = 0.5* &
+         ( IonMassPerCharge_G(iLeft, jLeft ,kLeft) &
+         + IonMassPerCharge_G(iRight,jRight,kRight) )
+
     ! Calculate -grad(pe)/(n_e * e) term for Hall MHD if needed
     UseHallGradPe = (HallCoeff > 0.0 .or. UseBiermannBattery) .and. &
          (UseElectronPressure .or. ElectronPressureRatio > 0.0)
@@ -1148,7 +1153,7 @@ contains
        if(IsNewBlockGradPe)then
           ! Obtain electron pressure
           if(UseElectronPressure)then
-             Pe_G = State_VGB(Pe_,:,:,:,iBlockFace) 
+             Pe_G = State_VGB(Pe_,:,:,:,iBlockFace)
           elseif(IsMhd)then
              Pe_G = State_VGB(p_,:,:,:,iBlockFace)*PePerPtotal
           else
@@ -1162,7 +1167,10 @@ contains
             IsNewBlockGradPe, Pe_G, GradPe_D)
 
        ! Calculate 1/(n_e * e)
-       if(UseMultiIon)then
+       if(UseBiermannBattery)then
+          InvNumDens = BiermannCoeff &
+               /(0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_)))
+       elseif(UseMultiIon)then
           InvNumDens = HallCoeff/(0.5* &
                sum((StateLeft_V(iRhoIon_I)+StateRight_V(iRhoIon_I))/MassIon_I))
        else

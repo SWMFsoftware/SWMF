@@ -294,7 +294,8 @@ subroutine BATS_init_session
   use ModMain, ONLY: UseProjection                 !^CFG IF PROJECTION
   use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
   use ModCT,   ONLY: DoInitConstrainB              !^CFG IF CONSTRAINB
-  use ModHallResist, ONLY: UseHallResist, init_hall_resist,test_face_current
+  use ModHallResist, ONLY: UseHallResist, init_hall_resist,test_face_current, &
+       UseBiermannBattery
   use ModImplicit, ONLY: UseSemiImplicit, &                !^CFG IF IMPLICIT
        TypeSemiImplicit, UseFullImplicit                   !^CFG IF IMPLICIT
   use ModRadDiffusion, ONLY: init_rad_diffusion            !^CFG IF IMPLICIT
@@ -332,7 +333,7 @@ subroutine BATS_init_session
   if(UseConstrainB .and. DoInitConstrainB)&    !^CFG IF CONSTRAINB
        call BATS_init_constrain_b              !^CFG IF CONSTRAINB
 
-  if(UseHallResist)call init_hall_resist
+  if(UseHallResist .or. UseBiermannBattery)call init_hall_resist
   !call test_face_current
 
   if(UseHeatConduction .or. UseIonHeatConduction) & !^CFG IF  IMPLICIT BEGIN
