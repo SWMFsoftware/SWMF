@@ -33,28 +33,28 @@ contains
     ! Calculations are done by Maple using CodeGeneration with optimize flag.
     !/
 
-    t1 = int(y ** 2)
+    t1 = y ** 2
     t2 = t1 ** 2
     t3 = t2 ** 2
     t4 = x ** 2
     t5 = t4 ** 2
-    t6 = int(t3 * t5)
+    t6 = t3 * t5
     t7 = a ** 2
     t8 = t7 ** 2
     t9 = t8 * a
-    t10 = int(t9 * b)
+    t10 = t9 * b
     t13 = z ** 2
     t14 = t13 ** 2
-    t15 = int(t3 * t14)
-    t16 = int(a * b)
+    t15 = t3 * t14
+    t16 = a * b
     t19 = t2 * dble(t1)
     t20 = t13 * t19
     t21 = t7 * a
-    t26 = int(t2 * t13)
+    t26 = t2 * t13
     t27 = t5 * t4
-    t28 = int(t27 * a)
+    t28 = t27 * a
     t29 = b ** 2
-    t30 = int(t29 * b)
+    t30 = t29 * b
     t34 = t29 ** 2
     t36 = t4 + dble(t1)
     t39 = sqrt(t36 / t4)
@@ -870,7 +870,7 @@ contains
     t816 = t815 ** 2
     t821 = sqrt(t813 / t3)
 
-    Vx = (abs(DipoleFactor))**3 *(-0.3D1 * t4 * t3 * y * (t85 + t145 + t201 + t249 + t294 + t345 + &
+    Vx =(-0.3D1 * t4 * t3 * y * (t85 + t145 + t201 + t249 + t294 + t345 + &
          t394 + t444 + t493 + t538 + t582 + t623 + t665 + t708 + t752 +    &
          t798) / t9 / t816 / t821)
 
@@ -923,12 +923,12 @@ contains
     t8 = t7 ** 2
     t9 = t8 * t2
     t10 = t1 ** 2
-    t11 = int(t9 * t10)
+    t11 = t9 * t10
     t12 = a ** 2
     t13 = t12 * a
     t14 = t13 * b
     t15 = z ** 2
-    t16 = int(t14 * t15)
+    t16 = t14 * t15
     t21 = sqrt(t3 / t1)
     t22 = t15 * t21
     t23 = t10 ** 2
@@ -1269,7 +1269,7 @@ contains
     t966 = t965 ** 2
     t971 = sqrt(t963 / t3)
 
-    Vy = (abs(DipoleFactor))**3 *(-0.3D1 * t4 * t3 * x * (t99 + t165 + t232 + t296 + t360 +    &
+    Vy = (-0.3D1 * t4 * t3 * x * (t99 + t165 + t232 + t296 + t360 +    &
          t412 + t475 + t529 + t577 + t631 + t682 + t733 + t784 +      &
          t841 + t894 + t947) / t21 / t966 / t971)
 
@@ -1479,7 +1479,7 @@ contains
     t481 = t480 ** 2
     t485 = sqrt(t478 / t3)
     
-    Vz = (abs(DipoleFactor))**3 *(-0.9D1 * t5 * x * z * y * (t91 + t150 + t207 + t255 + t314 + &
+    Vz =(-0.9D1 * t5 * x * z * y * (t91 + t150 + t207 + t255 + t314 + &
          t366 + t417 + t466) / t11 / t481 / t485)
 
   end subroutine get_GradB2CrossB_z
