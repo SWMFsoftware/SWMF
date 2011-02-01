@@ -389,12 +389,21 @@ contains
     real, allocatable :: B_DX(:,:,:,:)
     integer :: iUnit, iError
     real, allocatable :: sendBC_III(:,:,:), recvBC_III(:,:,:)
-    integer :: sendRequest, recvRequest
-    integer :: status(mpi_status_size)
+!    integer :: sendRequest, recvRequest
+    integer :: recvStatus(mpi_status_size)
+
+    integer:: nPhiOut
 
     !-------------------------------------------------------------------------
 
-    allocate(B_DX(3,nR+1,nPhiLocal+1,nThetaLocal))
+    ! Only the last processors in the phi direction write out the ghost cell
+    if(iProcPhi == nProcPhi - 1)then
+       nPhiOut = nPhiLocal + 1
+    else
+       nPhiOut = nPhiLocal
+    end if
+
+    allocate(B_DX(3,nR+1,nPhiOut,nThetaLocal))
     allocate(sendBC_III(3,nR+1,nThetaLocal))
     allocate(recvBC_III(3,nR+1,nThetaLocal))
 
@@ -429,42 +438,39 @@ contains
     ! set tangential components to zero at the top
     B_DX(2:3,nR+1,:,:) = 0.0
 
+    
     ! Apply periodicity in Phi to fill the nPhiLocal+1 ghost cell
-    sendBC_III = B_DX(:,:,1,:)
-    if (iProcPhi /=0 ) then 
-       call mpi_isend(sendBC_III, 3*(nR+1)*nThetaLocal, MPI_REAL, &
-                      iProcTheta*nProcPhi + iProcPhi-1, &
-                      21, iComm, sendRequest, iErrMPI)
+    if (nProcPhi > 1) then
+       sendBC_III = B_DX(:,:,1,:)
+       if (iProcPhi ==0 ) then 
+          call mpi_send(sendBC_III, 3*(nR+1)*nThetaLocal, MPI_REAL, &
+                        iProcTheta*nProcPhi + nProcPhi-1, &
+                        21, iComm,  iErrMPI)
+       end if
+
+       !    write(*,*) 'iProc ', iProc, 'send BC to iProc', iProcTheta*nProcPhi + mod(iProcPhi-1, nProcPhi-1)
+
+       if (iProcPhi == nProcPhi -1) then 
+          call mpi_recv(recvBC_III, 3*(nR+1)*nThetaLocal, MPI_REAL, &
+                        iProcTheta*nProcPhi , &
+                        21, iComm, recvStatus, iErrMPI)
+
+       end if
+       !    write(*,*) 'iProc ', iProc, 'recv BC from iProc', iProcTheta*nProcPhi + mod(iProcPhi+1, nProcPhi-1)
+
+       if (iProcPhi == nProcPhi -1) B_DX(:,:,nPhiOut,:) = recvBC_III
     else
-       call mpi_isend(sendBC_III, 3*(nR+1)*nThetaLocal, MPI_REAL, &
-                      iProcTheta*nProcPhi + nProcPhi-1, &
-                      21, iComm, sendRequest, iErrMPI)
+       B_DX(:,:,nPhiOut,:) = B_DX(:,:,1,:)
     end if
 
-!    write(*,*) 'iProc ', iProc, 'send BC to iProc', iProcTheta*nProcPhi + mod(iProcPhi-1, nProcPhi-1)
-
-    if (iProcPhi /= nProcPhi -1) then 
-       call mpi_irecv(recvBC_III, 3*(nR+1)*nThetaLocal, MPI_REAL, &
-                      iProcTheta*nProcPhi + iProcPhi +1, &
-                      21, iComm, recvRequest, iErrMPI)
-    else
-       call mpi_irecv(recvBC_III, 3*(nR+1)*nThetaLocal, MPI_REAL, &
-                      iProcTheta*nProcPhi , &
-                      21, iComm, recvRequest, iErrMPI)
-    end if
-!    write(*,*) 'iProc ', iProc, 'recv BC from iProc', iProcTheta*nProcPhi + mod(iProcPhi+1, nProcPhi-1)
-    call mpi_wait(RecvRequest, status, iErrMPI)
-
-    B_DX(:,:,nPhiLocal+1,:) = recvBC_III
-
-    call save_plot_file(NameFile, TypeFileIn='real8', &
+    call save_plot_file(NameFile, TypeFileIn='ascii', &
          StringHeaderIn = 'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
          nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
          //' Ro_PFSSM Rs_PFSSM PhiShift nRExt', &
          ParamIn_I = (/ rMin, rMax, 0.0, 0.0 /), &
          nDimIn=3, VarIn_VIII=B_DX, &
          Coord1In_I=RadiusNode_I, &
-         Coord2In_I=Phi_I(1:nPhiLocal+1), &
+         Coord2In_I=Phi_I(1:nPhiOut), &
          Coord3In_I=cHalfPi-Theta_I(nThetaLocal:1:-1))
 
 !     call save_plot_file('potentialfield_ascii.out',  &
@@ -493,11 +499,11 @@ contains
 	' "By [G]", "Bz [G]"')
        write ( iUnit, '(a)' ) 'ZONE T="Rectangular zone"'
        write ( iUnit, '(a,i6,a,i6,a,i6,a)' ) &
-            ' I = ', nR+1, ', J=', nThetaLocal, ', K=', nPhiLocal+1, ', ZONETYPE=Ordered'
+            ' I = ', nR+1, ', J=', nThetaLocal, ', K=', nPhiOut, ', ZONETYPE=Ordered'
        write( iUnit, '(a)' ) ' DATAPACKING=POINT'
        write( iUnit, '(a)' ) ' DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )'
 
-       do iPhi = 1, nPhiLocal+1; do iTheta = 1, nThetaLocal; do iR = 1, nR+1
+       do iPhi = 1, nPhiOut; do iTheta = 1, nThetaLocal; do iR = 1, nR+1
           Br     = B_DX(1,iR,iPhi,nThetaLocal+1-iTheta)
           Btheta = B_DX(3,iR,iPhi,nThetaLocal+1-iTheta)
           Bphi   = B_DX(2,iR,iPhi,nThetaLocal+1-iTheta)
@@ -1228,11 +1234,13 @@ program potential_field
   PlotVar_VC(6,:,:,:) = Rhs_C
 
   write(NameFileTest,'(a,2i2.2,a,i3.3,a)') &
-       'potentialtest_np', iProcPhi+1, iProcTheta+1, '_', iProc, '.out'
+       'potentialtest_np01', nProcTheta, nProcPhi,'_', &
+       iProcTheta + iProcPhi*nProcTheta, '.out'
   write(NameFile,'(a,2i2.2,a,i3.3,a)') &
-       'potentialfield_np', iProcPhi+1, iProcTheta+1,'_',  iProc, '.out'
+       'potentialfield_np01', nProcPhi, nProcTheta, '_', &
+       iProcPhi + (nProcTheta - 1 - iProcTheta)*nProcPhi, '.out'
   write(NameFileTec,'(a,2i2.2,a,i3.3,a)') &
-       'potentialtest_np', iProcPhi+1, iProcTheta+1, '_', iProc, '.dat'
+       'potentialtec_np01', nProcPhi, nProcTheta, '_', iProc, '.dat'
 
   ! Save divb, potential and RHS for testing purposes
   call save_plot_file(NameFileTest, TypeFileIn='real8', &
