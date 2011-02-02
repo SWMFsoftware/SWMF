@@ -18,6 +18,11 @@ POTENTIAL: potential_field.o ${LIBDIR}/libSHARE.a
 	${LINK.f90} -o POTENTIAL.exe potential_field.o \
 		-L${LIBDIR} -lSHARE ${Lflag1}
 
+
+FDIPS: FDIPS.o ${LIBDIR}/libSHARE.a
+	${LINK.f90} -o FDIPS.exe fdips.o \
+		-L${LIBDIR} -lSHARE ${Lflag1}
+
 HARMONICS:
 	make ${EXE}
 	@echo ${EXE} has been compiled.
