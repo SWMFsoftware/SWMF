@@ -361,145 +361,58 @@ contains
     !=========================================================================
     subroutine send_coarsened_block
 
-      use BATL_size, ONLY: nDim, InvIjkRatio
+      use BATL_size, ONLY:  InvIjkRatio
 
       integer :: i, j, k, i2, j2, k2, iVar, iBuffer
-      integer :: m, n, l, iC, jC, kC
-      real,allocatable :: CellState_VIII(:,:,:,:)
       integer :: nUsedNeighbor 
-      real :: InvVolume, Volume
+      real :: InvVolume
       !-----------------------------------------------------------------------
       iBuffer = 0
 
-      ! State variable storing the fine grid variables for one coarse
-      ! cell. Used for averaging for masked cells on the fine grid.
-      allocate(CellState_VIII(nVar,iRatio,jRatio,kRatio))
-
-      !If a cell on the course grid contain one none masked cell if will 
-      !get a averaged value equal form the fine grid cell which are unmasked
+      
+      ! Averaging all fine cells inside the coarse cell. WARNING may have
+      ! consequences if used with single masked cell on the fine grid.
       if(UseMask) then
          if(IsCartesian)then
-            !loop over coarse grid
             do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
-               i2 = i+iRatio-1; j2 = j+jRatio-1; k2 = k+kRatio-1
-               ! Default value for the masked cell, so it do not interfear
-               ! with the averaging in the sum for the send Buffer_I
-               CellState_VIII = 0.0
 
-               ! loop over all fine grid in a coarse grid cell
-               do m=i,i2; do n=j,j2; do l=k,k2
-                  ! Converting indexes for 
-                  ! "CellState_VIII(i:nVar,1:iRatio,1:jRatio,1:kRatio)"
-                  iC = m - i + 1
-                  jC = n - j + 1
-                  kC = l - k + 1
+               nUsedNeighbor =  count(Used_GB(i:i+iRatio-1,j:j+jRatio-1, &
+                    k:k+kRatio-1,iBlockSend))
 
-                  if(.not.Used_GB(m,n,l,iBlockSend))then
+               if(nUsedNeighbor /= 0 ) then
+                  do iVar = 1, nVar
+                     Buffer_I(iBuffer+iVar) = &
+                          sum(State_VGB(iVar,i:i+iRatio-1,j:j+jRatio-1,&
+                          k:k+kRatio-1,iBlockSend),MASK= &
+                          Used_GB(i:i+iRatio-1,j:j+jRatio-1,k:k+kRatio-1,&
+                          iBlockSend))/nUsedNeighbor
+                  end do
+               else
+                  Buffer_I(iBuffer+1:iBuffer+nVar) = 0.0
+               end if
 
-                     ! Find number on not masked neighbors 
-                     nUsedNeighbor= & 
-                          count(Used_GB(m-1:m+1,n,l,iBlockSend))
-                     if(nDim >1) nUsedNeighbor = nUsedNeighbor +& 
-                          count(Used_GB(m,n-1:n+1,l,iBlockSend))
-                     if(nDim >2) nUsedNeighbor = nUsedNeighbor +&
-                          count(Used_GB(m,n,l-1:l+1,iBlockSend))
-
-                     if(nUsedNeighbor /= 0) then
-                        ! take the average value of the surrounding cells
-                        ! as the value for the masked cell
-                        do iVar=1,nVar
-                           CellState_VIII(iVar,iC,jC,kC) = &
-                                sum(State_VGB(iVar,m-1:m+1,n,l,iBlockSend),&
-                                MASK=Used_GB(m-1:m+1,n,l,iBlockSend))
-                           if(nDim>1) CellState_VIII(iVar,iC,jC,kC) = &
-                                CellState_VIII(iVar,iC,jC,kC) + &
-                                sum(State_VGB(iVar,m,n-1:n+1,l,iBlockSend),&
-                                MASK=Used_GB(m,n-1:n+1,l,iBlockSend))
-                           if(nDim>2) CellState_VIII(iVar,iC,jC,kC) = &
-                                CellState_VIII(iVar,iC,jC,kC) + &
-                                sum(State_VGB(iVar,m,n,l-1:l+1,iBlockSend),&
-                                MASK=Used_GB(m,n,l-1:l+1,iBlockSend))
-                           CellState_VIII(iVar,iC,jC,kC) = &
-                                CellState_VIII(iVar,iC,jC,kC)/nUsedNeighbor
-                        end do
-                     end if
-                  else
-                     CellState_VIII(:,iC,jC,kC) = &
-                          State_VGB(:,m,n,l,iBlockSend)
-                  end if
-               end do; end do; end  do
-               do iVar=1,nVar
-                  Buffer_I(iBuffer+iVar) = InvIjkRatio * &
-                       sum(CellState_VIII(iVar,:,:,:))
-               end do
                iBuffer = iBuffer + nVar
-            end do; end do; end  do
+            end do; end do; end do
          else
-            !loop over coarse grid
             do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
                i2 = i+iRatio-1; j2 = j+jRatio-1; k2 = k+kRatio-1
-               ! Default value for the masked cell, so it do not interfear
-               ! with the averaging in the sum for the send Buffer_I
-               CellState_VIII = 0.0
+               nUsedNeighbor =  count(Used_GB(i:i2,j:j2,k:k2,iBlockSend))
 
-               ! loop over all fine grid in a coarse grid cell
-               do m=i,i2; do n=j,j2; do l=k,k2
-                  ! Converting indexes for 
-                  ! "CellState_VIII(i:nVar,1:iRatio,1:jRatio,1:kRatio)"
-                  iC = m - i + 1
-                  jC = n - j + 1
-                  kC = l - k + 1
-
-                  if(.not.Used_GB(m,n,l,iBlockSend))then
-
-                     ! Find the total volume of none masked cells 
-                     ! that is neighbors to the masked cell
-                     Volume = &
-                          sum(CellVolume_GB(m-1:m+1,n,l,iBlockSend),&
-                          MASK=Used_GB(m-1:m+1,n,l,iBlockSend))
-                     if(nDim >1) Volume = Volume + &
-                          sum(CellVolume_GB(m,n-1:n+1,l,iBlockSend),&
-                          MASK=Used_GB(m,n-1:n+1,l,iBlockSend))
-                     if(nDim >2) Volume = Volume + & 
-                          sum(CellVolume_GB(m,n,l-1:l+1,iBlockSend),& 
-                          MASK=Used_GB(m,n,l-1:l+1,iBlockSend))
-
-
-                     if(Volume /= 0.0) then
-                        ! take the average value of the surounding cells
-                        ! as the value for the masked cell
-                        do iVar=1,nVar
-                           CellState_VIII(iVar,iC,jC,kC) = &
-                                sum(State_VGB(iVar,m-1:m+1,n,l,iBlockSend)*&
-                                CellVolume_GB(m-1:m+1,n,l,iBlockSend),&
-                                MASK=Used_GB(m-1:m+1,n,l,iBlockSend))
-                           if(nDim>1) CellState_VIII(iVar,iC,jC,kC) = &
-                                CellState_VIII(iVar,iC,jC,kC) + &
-                                sum(State_VGB(iVar,m,n-1:n+1,l,iBlockSend)*&
-                                CellVolume_GB(m,n-1:n+1,l,iBlockSend),&
-                                MASK=Used_GB(m,n-1:n+1,l,iBlockSend))
-                           if(nDim>2) CellState_VIII(iVar,iC,jC,kC) = &
-                                CellState_VIII(iVar,iC,jC,kC) + &
-                                sum(State_VGB(iVar,m,n,l-1:l+1,iBlockSend)*&
-                                CellVolume_GB(m,n,l-1:l+1,iBlockSend),&
-                                MASK=Used_GB(m,n,l-1:l+1,iBlockSend))
-                           CellState_VIII(iVar,iC,jC,kC) = &
-                                CellState_VIII(iVar,iC,jC,kC)/Volume
-                        end do
-                     end if
-                  else
-                     CellState_VIII(:,iC,jC,kC) = &
-                          State_VGB(:,m,n,l,iBlockSend)
-                  end if
-               end do; end do; end  do
-               do iVar=1,nVar
-                  Buffer_I(iBuffer+iVar) = sum( &
-                       CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend)* &
-                       CellState_VIII(iVar,:,:,:))/&
-                       sum(CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend))
-               end do
+               if(nUsedNeighbor /= 0 ) then
+                  InvVolume = &
+                       1.0/sum(CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend),&
+                       MASK=Used_GB(i:i2,j:j2,k:k2,iBlockSend))
+                  do iVar = 1, nVar
+                     Buffer_I(iBuffer+iVar) = InvVolume * sum( &
+                          CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend)* &
+                          State_VGB(iVar,i:i2,j:j2,k:k2,iBlockSend), &
+                          MASK=Used_GB(i:i2,j:j2,k:k2,iBlockSend))
+                  end do
+               else
+                  Buffer_I(iBuffer+1:iBuffer + nVar) = 0.0
+               end if
                iBuffer = iBuffer + nVar
-            end do; end do; end  do
+            end do; end do; end do
          end if
       else
          if(IsCartesian)then
@@ -533,7 +446,6 @@ contains
       if(iProcRecv /= iProcSend) call MPI_send(Buffer_I, iBuffer, &
            MPI_REAL, iProcRecv, 1, iComm, iError)
 
-      deallocate(CellState_VIII)
     end subroutine send_coarsened_block
     !==========================================================================
     subroutine recv_coarsened_block
@@ -939,7 +851,7 @@ contains
     real, allocatable:: TestState_VG(:,:,:,:)
     logical, allocatable:: Used_GB(:,:,:,:)
     integer, allocatable:: EffectedNode_A(:)
-    integer:: iBlock, iDim, iNode, iVar
+    integer:: iBlock, iDim, iNode, iVar,i,j,k
     integer:: iChilde
 
     logical:: DoTestMe
@@ -1030,7 +942,7 @@ contains
 !       write(*,*) "iblock = ",iBlock
 !       if(Unused_B(iBlock)) CYCLE
 !       do k=MinK,MaxK;do j=MinJ,MaxJ 
-!          write(*,'(12F7.2)') State_VGB(1,:,j,k,iBlock)
+!          write(*,'(12F7.2)') State_VGB(2,:,j,k,iBlock)
 !       end do; end do;
 !    end do
 
@@ -1071,15 +983,26 @@ contains
     EffectedNode_A = unset_
     Used_GB = .true.
     
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
-       State_VGB(:,:,:,:,iBlock)    = Xyz_DGB(1:nDim,:,:,:,iBlock)
-    end do
-
     if(iTree_IA(Proc_,iTree_IA(Child1_,1)) == iProc) then
        iBlock = iTree_IA(Block_,iTree_IA(Child1_,1))
-       State_VGB(:,nI,nJ,nK,iBlock) = -7777
-       Used_GB(nI,nJ,nK,iBlock)     = .false.
+       if(iRatio == 2) then
+          i = nI
+       else
+          i = (MinI+MaxI)/2
+       end if
+       if(jRatio == 2) then
+          j = nJ
+       else
+          j = (MinJ+MaxJ)/2
+       end if
+       if(kRatio == 2) then
+          k = nK
+       else
+          k = (MinK+MaxK)/2
+       end if
+
+       State_VGB(:,i,j,k,iBlock) = -7777
+       Used_GB(i,j,k,iBlock)     = .false.
     end if
 
     call coarsen_tree_node(1)
@@ -1087,7 +1010,9 @@ contains
 
     call do_amr(nVar, State_VGB, Dt_B,Used_GB=Used_GB)
     call move_tree
+
     call check_state_amre
+
 
     deallocate(State_VGB, Dt_B,Used_GB, EffectedNode_A,TestState_VG)
 
