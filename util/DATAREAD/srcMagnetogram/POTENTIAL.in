@@ -1,0 +1,9 @@
+#GRID
+90	nR
+90	nTheta
+90	nPhi
+
+#SOLVER
+T	UsePreconditioner
+1e-5	Tolerance
+
