@@ -22,7 +22,7 @@ module BATL_amr
 contains
 
   !===========================================================================
-  subroutine do_amr(nVar, State_VGB, Dt_B, DoTestIn)
+  subroutine do_amr(nVar, State_VGB, Dt_B, DoTestIn, Used_GB)
 
     use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nI, nJ, nK, nIJK, iRatio, jRatio, kRatio
@@ -47,6 +47,9 @@ contains
     real, intent(inout), optional :: Dt_B(MaxBlock)
 
     logical, optional:: DoTestIn
+    logical, intent(in), optional:: &
+         Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+
 
     ! Dynamic arrays
     real,    allocatable :: Buffer_I(:), StateP_VG(:,:,:,:)
@@ -74,7 +77,12 @@ contains
     integer, parameter:: MaxTry=100
     integer:: iTry
     logical:: DoTryAgain
+    logical::UseMask
     !-------------------------------------------------------------------------
+
+    UseMask  = present(Used_GB)    
+
+
     DoTest = .false.
     if(present(DoTestIn)) DoTest = DoTestIn
 
@@ -88,10 +96,15 @@ contains
     iAmrChange_B = AmrUnchanged_
 
     ! nVar dependent arrays are allocated and deallocated every call
-    allocate(Buffer_I(nVar*nIJK+1), &
-         StateP_VG(nVar,iMinP:iMaxP,jMinP:jMaxP,kMinP:kMaxP), &
-         SlopeL_V(nVar), SlopeR_V(nVar), Slope_V(nVar))
-
+    if(UseMask) then
+       allocate(Buffer_I((nVar+1)*nIJK+1), &
+            StateP_VG(nVar+1,iMinP:iMaxP,jMinP:jMaxP,kMinP:kMaxP), &
+            SlopeL_V(nVar), SlopeR_V(nVar), Slope_V(nVar))
+    else
+       allocate(Buffer_I(nVar*nIJK+1), &
+            StateP_VG(nVar,iMinP:iMaxP,jMinP:jMaxP,kMinP:kMaxP), &
+            SlopeL_V(nVar), SlopeR_V(nVar), Slope_V(nVar))
+    end if
     ! Set iBlockAvailable_P to first available block
     iBlockAvailable_P = -1
     do iProcRecv = 0, nProc-1
@@ -340,6 +353,7 @@ contains
          iBuffer = iBuffer + nVar
       end do; end do; end do
 
+
       if(present(Dt_B)) Dt_B(iBlockRecv) = Buffer_I(iBuffer+1)
 
     end subroutine recv_block
@@ -347,32 +361,168 @@ contains
     !=========================================================================
     subroutine send_coarsened_block
 
-      use BATL_size, ONLY: InvIjkRatio
+      use BATL_size, ONLY: nDim, InvIjkRatio
 
       integer :: i, j, k, i2, j2, k2, iVar, iBuffer
-      real:: InvVolume
+      integer :: m, n, l, iC, jC, kC
+      real,allocatable :: CellState_VIII(:,:,:,:)
+      integer :: nUsedNeighbor 
+      real :: InvVolume, Volume
       !-----------------------------------------------------------------------
       iBuffer = 0
-      if(IsCartesian)then
-         do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
-            do iVar = 1, nVar
-               Buffer_I(iBuffer+iVar) = InvIjkRatio * &
-                    sum(State_VGB(iVar,i:i+iRatio-1,j:j+jRatio-1,k:k+kRatio-1,&
-                    iBlockSend))
-            end do
-            iBuffer = iBuffer + nVar
-         end do; end do; end do
+
+      ! State variable storing the fine grid variables for one coarse
+      ! cell. Used for averaging for masked cells on the fine grid.
+      allocate(CellState_VIII(nVar,iRatio,jRatio,kRatio))
+
+      !If a cell on the course grid contain one none masked cell if will 
+      !get a averaged value equal form the fine grid cell which are unmasked
+      if(UseMask) then
+         if(IsCartesian)then
+            !loop over coarse grid
+            do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
+               i2 = i+iRatio-1; j2 = j+jRatio-1; k2 = k+kRatio-1
+               ! Default value for the masked cell, so it do not interfear
+               ! with the averaging in the sum for the send Buffer_I
+               CellState_VIII = 0.0
+
+               ! loop over all fine grid in a coarse grid cell
+               do m=i,i2; do n=j,j2; do l=k,k2
+                  ! Converting indexes for 
+                  ! "CellState_VIII(i:nVar,1:iRatio,1:jRatio,1:kRatio)"
+                  iC = m - i + 1
+                  jC = n - j + 1
+                  kC = l - k + 1
+
+                  if(.not.Used_GB(m,n,l,iBlockSend))then
+
+                     ! Find number on not masked neighbors 
+                     nUsedNeighbor= & 
+                          count(Used_GB(m-1:m+1,n,l,iBlockSend))
+                     if(nDim >1) nUsedNeighbor = nUsedNeighbor +& 
+                          count(Used_GB(m,n-1:n+1,l,iBlockSend))
+                     if(nDim >2) nUsedNeighbor = nUsedNeighbor +&
+                          count(Used_GB(m,n,l-1:l+1,iBlockSend))
+
+                     if(nUsedNeighbor /= 0) then
+                        ! take the average value of the surrounding cells
+                        ! as the value for the masked cell
+                        do iVar=1,nVar
+                           CellState_VIII(iVar,iC,jC,kC) = &
+                                sum(State_VGB(iVar,m-1:m+1,n,l,iBlockSend),&
+                                MASK=Used_GB(m-1:m+1,n,l,iBlockSend))
+                           if(nDim>1) CellState_VIII(iVar,iC,jC,kC) = &
+                                CellState_VIII(iVar,iC,jC,kC) + &
+                                sum(State_VGB(iVar,m,n-1:n+1,l,iBlockSend),&
+                                MASK=Used_GB(m,n-1:n+1,l,iBlockSend))
+                           if(nDim>2) CellState_VIII(iVar,iC,jC,kC) = &
+                                CellState_VIII(iVar,iC,jC,kC) + &
+                                sum(State_VGB(iVar,m,n,l-1:l+1,iBlockSend),&
+                                MASK=Used_GB(m,n,l-1:l+1,iBlockSend))
+                           CellState_VIII(iVar,iC,jC,kC) = &
+                                CellState_VIII(iVar,iC,jC,kC)/nUsedNeighbor
+                        end do
+                     end if
+                  else
+                     CellState_VIII(:,iC,jC,kC) = &
+                          State_VGB(:,m,n,l,iBlockSend)
+                  end if
+               end do; end do; end  do
+               do iVar=1,nVar
+                  Buffer_I(iBuffer+iVar) = InvIjkRatio * &
+                       sum(CellState_VIII(iVar,:,:,:))
+               end do
+               iBuffer = iBuffer + nVar
+            end do; end do; end  do
+         else
+            !loop over coarse grid
+            do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
+               i2 = i+iRatio-1; j2 = j+jRatio-1; k2 = k+kRatio-1
+               ! Default value for the masked cell, so it do not interfear
+               ! with the averaging in the sum for the send Buffer_I
+               CellState_VIII = 0.0
+
+               ! loop over all fine grid in a coarse grid cell
+               do m=i,i2; do n=j,j2; do l=k,k2
+                  ! Converting indexes for 
+                  ! "CellState_VIII(i:nVar,1:iRatio,1:jRatio,1:kRatio)"
+                  iC = m - i + 1
+                  jC = n - j + 1
+                  kC = l - k + 1
+
+                  if(.not.Used_GB(m,n,l,iBlockSend))then
+
+                     ! Find the total volume of none masked cells 
+                     ! that is neighbors to the masked cell
+                     Volume = &
+                          sum(CellVolume_GB(m-1:m+1,n,l,iBlockSend),&
+                          MASK=Used_GB(m-1:m+1,n,l,iBlockSend))
+                     if(nDim >1) Volume = Volume + &
+                          sum(CellVolume_GB(m,n-1:n+1,l,iBlockSend),&
+                          MASK=Used_GB(m,n-1:n+1,l,iBlockSend))
+                     if(nDim >2) Volume = Volume + & 
+                          sum(CellVolume_GB(m,n,l-1:l+1,iBlockSend),& 
+                          MASK=Used_GB(m,n,l-1:l+1,iBlockSend))
+
+
+                     if(Volume /= 0.0) then
+                        ! take the average value of the surounding cells
+                        ! as the value for the masked cell
+                        do iVar=1,nVar
+                           CellState_VIII(iVar,iC,jC,kC) = &
+                                sum(State_VGB(iVar,m-1:m+1,n,l,iBlockSend)*&
+                                CellVolume_GB(m-1:m+1,n,l,iBlockSend),&
+                                MASK=Used_GB(m-1:m+1,n,l,iBlockSend))
+                           if(nDim>1) CellState_VIII(iVar,iC,jC,kC) = &
+                                CellState_VIII(iVar,iC,jC,kC) + &
+                                sum(State_VGB(iVar,m,n-1:n+1,l,iBlockSend)*&
+                                CellVolume_GB(m,n-1:n+1,l,iBlockSend),&
+                                MASK=Used_GB(m,n-1:n+1,l,iBlockSend))
+                           if(nDim>2) CellState_VIII(iVar,iC,jC,kC) = &
+                                CellState_VIII(iVar,iC,jC,kC) + &
+                                sum(State_VGB(iVar,m,n,l-1:l+1,iBlockSend)*&
+                                CellVolume_GB(m,n,l-1:l+1,iBlockSend),&
+                                MASK=Used_GB(m,n,l-1:l+1,iBlockSend))
+                           CellState_VIII(iVar,iC,jC,kC) = &
+                                CellState_VIII(iVar,iC,jC,kC)/Volume
+                        end do
+                     end if
+                  else
+                     CellState_VIII(:,iC,jC,kC) = &
+                          State_VGB(:,m,n,l,iBlockSend)
+                  end if
+               end do; end do; end  do
+               do iVar=1,nVar
+                  Buffer_I(iBuffer+iVar) = sum( &
+                       CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend)* &
+                       CellState_VIII(iVar,:,:,:))/&
+                       sum(CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend))
+               end do
+               iBuffer = iBuffer + nVar
+            end do; end do; end  do
+         end if
       else
-         do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
-            i2 = i+iRatio-1; j2 = j+jRatio-1; k2 = k+kRatio-1
-            InvVolume = 1.0/sum(CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend))
-            do iVar = 1, nVar
-               Buffer_I(iBuffer+iVar) = InvVolume * sum( &
-                    CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend)* &
-                    State_VGB(iVar,i:i2,j:j2,k:k2,iBlockSend))
-            end do
-            iBuffer = iBuffer + nVar
-         end do; end do; end do
+         if(IsCartesian)then
+            do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
+               do iVar = 1, nVar
+                  Buffer_I(iBuffer+iVar) = InvIjkRatio * &
+                       sum(State_VGB(iVar,i:i+iRatio-1,j:j+jRatio-1,&
+                       k:k+kRatio-1, iBlockSend))
+               end do
+               iBuffer = iBuffer + nVar
+            end do; end do; end do
+         else
+            do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
+               i2 = i+iRatio-1; j2 = j+jRatio-1; k2 = k+kRatio-1
+               InvVolume = 1.0/sum(CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend))
+               do iVar = 1, nVar
+                  Buffer_I(iBuffer+iVar) = InvVolume * sum( &
+                       CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend)* &
+                       State_VGB(iVar,i:i2,j:j2,k:k2,iBlockSend))
+               end do
+               iBuffer = iBuffer + nVar
+            end do; end do; end do
+         end if
       end if
 
       if(present(Dt_B))then
@@ -383,6 +533,7 @@ contains
       if(iProcRecv /= iProcSend) call MPI_send(Buffer_I, iBuffer, &
            MPI_REAL, iProcRecv, 1, iComm, iError)
 
+      deallocate(CellState_VIII)
     end subroutine send_coarsened_block
     !==========================================================================
     subroutine recv_coarsened_block
@@ -394,8 +545,9 @@ contains
       integer:: i, j, k
       !----------------------------------------------------------------------
 
-      if(iProcRecv /= iProcSend)then
+       if(iProcRecv /= iProcSend)then
          iBuffer = nIJK*nVar/IjkRatio
+         !if(UseMask) iBuffer = iBuffer + nIJK/IjkRatio
          if(present(Dt_B))  iBuffer = iBuffer + 1
          call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
               Status_I, iError)
@@ -416,6 +568,7 @@ contains
          iBuffer = iBuffer + nVar
       end do; end do; end do
 
+
       ! Take the smallest of the doubled (valid for full AMR only) time steps 
       ! of the children blocks
       if(present(Dt_B)) &
@@ -425,9 +578,13 @@ contains
     !==========================================================================
     subroutine send_refined_block
 
+      use BATL_size, ONLY: nDim
+
       integer:: iSide, jSide, kSide
       integer:: iMin, jMin, kMin, iMax, jMax, kMax
-      integer:: i, j, k, iBuffer
+      integer:: i, j, k, iBuffer, iVar
+      integer :: nUsedNeighbor
+      real :: Volume
       !----------------------------------------------------------------------
 
       ! Find the part of the block to be prolonged
@@ -452,18 +609,126 @@ contains
          kMin = 1; kMax = nK
       end if
 
-      iBuffer = 0
-      if(IsCartesian)then
-         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            Buffer_I(iBuffer+1:iBuffer+nVar) = State_VGB(:,i,j,k,iBlockSend)
-            iBuffer = iBuffer + nVar
-         enddo; end do; end do
+      if(UseMask) then
+         iBuffer = 0
+         if(IsCartesian)then
+            do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+
+               if(.not.Used_GB(i,j,k,iBlockSend))then
+
+                  ! Find number on not masked neighbores 
+                  nUsedNeighbor= & 
+                       count(Used_GB(i-1:i+1,j,k,iBlockSend))
+                  if(nDim >1) nUsedNeighbor= nUsedNeighbor +& 
+                       count(Used_GB(i,j-1:j+1,k,iBlockSend))
+                  if(nDim >2) nUsedNeighbor= nUsedNeighbor +&
+                       count(Used_GB(i,j,k-1:k+1,iBlockSend))
+
+                  if(nUsedNeighbor /= 0) then
+
+                     ! take the average value of the surounding cells
+                     ! as the value for the masked cell
+                     do iVar=1,nVar
+                        Buffer_I(iBuffer+iVar) = &
+                             sum(State_VGB(iVar,i-1:i+1,j,k,iBlockSend),&
+                             MASK=Used_GB(i-1:i+1,j,k,iBlockSend))
+                        if(nDim>1) Buffer_I(iBuffer+iVar) = &
+                             Buffer_I(iBuffer+iVar) + &
+                             sum(State_VGB(iVar,i,j-1:j+1,k,iBlockSend),&
+                             MASK=Used_GB(i,j-1:j+1,k,iBlockSend))
+                        if(nDim>2) Buffer_I(iBuffer+iVar) = &
+                             Buffer_I(iBuffer+iVar) + &
+                             sum(State_VGB(iVar,i,j,k-1:k+1,iBlockSend),&
+                             MASK=Used_GB(i,j,k-1:k+1,iBlockSend))
+                        Buffer_I(iBuffer+iVar) = &
+                             Buffer_I(iBuffer+iVar)/nUsedNeighbor
+                     end do
+                     ! Send the information about the masked cells to
+                     ! the prolongation operation converting 
+                     ! .true. = 1.0 and .false. = 0.0
+                     Buffer_I(iBuffer+nVar+1) = &
+                          Logical_To_Real(Used_GB(i,j,k,iBlockSend))
+                     iBuffer = iBuffer + nVar+1
+                  end if
+                  CYCLE
+               end if
+               Buffer_I(iBuffer+1:iBuffer+nVar) = &
+                    State_VGB(:,i,j,k,iBlockSend)
+               Buffer_I(iBuffer+nVar+1) = &
+                    Logical_To_Real(Used_GB(i,j,k,iBlockSend))
+               iBuffer = iBuffer + nVar+1
+            end do; end do; end  do
+         else
+            do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+
+               if(.not.Used_GB(i,j,k,iBlockSend))then
+
+                  ! Find the total volume of none masked cells 
+                  ! that is neighbors to the masked cell
+                  Volume = &
+                       sum(CellVolume_GB(i-1:i+1,j,k,iBlockSend),&
+                       MASK=Used_GB(i-1:i+1,j,k,iBlockSend))
+                  if(nDim >1) Volume = Volume + &
+                       sum(CellVolume_GB(i,j-1:j+1,k,iBlockSend),&
+                       MASK=Used_GB(i,j-1:j+1,k,iBlockSend))
+                  if(nDim >2) Volume = Volume + & 
+                       sum(CellVolume_GB(i,j,k-1:k+1,iBlockSend),& 
+                       MASK=Used_GB(i,j,k-1:k+1,iBlockSend))
+
+                  if(Volume /= 0.0) then
+
+                     do iVar=1,nVar
+                        Buffer_I(iBuffer+iVar) = &
+                             sum(State_VGB(iVar,i-1:i+1,j,k,iBlockSend)* &
+                             CellVolume_GB(i-1:i+1,j,k,iBlockSend),&
+                             MASK=Used_GB(i-1:i+1,j,k,iBlockSend))
+                        if(nDim>1) Buffer_I(iBuffer+iVar) = &
+                             Buffer_I(iBuffer+iVar) + &
+                             sum(State_VGB(iVar,i,j-1:j+1,k,iBlockSend)*&
+                             CellVolume_GB(i,j-1:j+1,k,iBlockSend),&
+                             MASK=Used_GB(i,j-1:j+1,k,iBlockSend))
+                        if(nDim>2) Buffer_I(iBuffer+iVar) = &
+                             Buffer_I(iBuffer+iVar) + &
+                             sum(State_VGB(iVar,i,j,k-1:k+1,iBlockSend)*&
+                             CellVolume_GB(i,j,k-1,iBlockSend),&
+                             MASK=Used_GB(i,j,k-1:k+1,iBlockSend))
+                        Buffer_I(iBuffer+iVar) = Buffer_I(iBuffer+iVar) *&
+                             CellVolume_GB(i,j,k,iBlockSend)/Volume
+
+                    end do
+                     ! Send the information about the masked cells to
+                     ! the prolongation operation converting 
+                     ! .true. = 1.0 and .false. = 0.0
+                     Buffer_I(iBuffer+nVar+1) = &
+                          Logical_To_Real(Used_GB(i,j,k,iBlockSend))
+                     iBuffer = iBuffer + nVar+1
+                  end if
+                  CYCLE
+               end if
+               Buffer_I(iBuffer+1:iBuffer+nVar) = &
+                    State_VGB(:,i,j,k,iBlockSend) * &
+                    CellVolume_GB(i,j,k,iBlockSend)
+               Buffer_I(iBuffer+nVar+1) = &
+                    Logical_To_Real(Used_GB(i,j,k,iBlockSend))
+               iBuffer = iBuffer + nVar+1
+            end do; end do; end  do
+         end if
       else
-         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            Buffer_I(iBuffer+1:iBuffer+nVar) = State_VGB(:,i,j,k,iBlockSend) &
-                 *CellVolume_GB(i,j,k,iBlockSend)
-            iBuffer = iBuffer + nVar
-         enddo; end do; end do
+         iBuffer = 0
+         if(IsCartesian)then
+            do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+               Buffer_I(iBuffer+1:iBuffer+nVar) = &
+                    State_VGB(:,i,j,k,iBlockSend)
+               iBuffer = iBuffer + nVar
+            enddo; end do; end do
+         else
+            do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+               Buffer_I(iBuffer+1:iBuffer+nVar) = &
+                    State_VGB(:,i,j,k,iBlockSend) &
+                    *CellVolume_GB(i,j,k,iBlockSend)
+               iBuffer = iBuffer + nVar
+            enddo; end do; end do
+         end if
       end if
 
       if(present(Dt_B))then
@@ -477,6 +742,18 @@ contains
 
     end subroutine send_refined_block
     !==========================================================================
+    function Logical_To_Real(isL)
+      logical, intent(in):: isL
+      real :: Logical_To_Real 
+      
+      if(isL)then
+         Logical_To_Real = 1.0
+      else
+         Logical_To_Real = 0.0
+      end if
+      
+    end function Logical_To_Real
+    !==========================================================================
     subroutine recv_refined_block
 
       ! Copy buffer into recv block of State_VGB
@@ -487,35 +764,55 @@ contains
 
       integer:: iP, jP, kP, iR, jR, kR
       integer, parameter:: Di=iRatio-1, Dj=jRatio-1, Dk=kRatio-1
+      integer :: nbufferVar
+      ! Using real as logical, .true. = 1.0 and .false. = 0.0
+      real:: Do2ndOrderi,Do2ndOrderj,Do2ndOrderk
       !------------------------------------------------------------------------
+      
+      Do2ndOrderi = 1.0
+      Do2ndOrderj = 1.0
+      Do2ndOrderk = 1.0
+      
+      ! If we UseMask we will have one extra variable in StatP_VG
+      ! containing a "boolean" represented as .true. = 1.0 and .false. = 0.0
+      ! The masked cell can not be used for 2nd order prolongation
+      if(UseMask) then
+         nbufferVar = nVar+1
+      else
+         nbufferVar = nVar
+      end if
 
       if(iProcRecv /= iProcSend)then
-         iBuffer = nSizeP*nVar
+         iBuffer = nSizeP*nbufferVar
          if(present(Dt_B)) iBuffer = iBuffer + 1
          call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
               Status_I, iError)
       end if
 
+
+      ! StateP_VG(nVar+1,:,:,:) is the Used_GB for the parent block
       iBuffer = 0
       do kP = kMinP, kMaxP; do jP = jMinP, jMaxP; do iP = iMinP, iMaxP
-         StateP_VG(:,iP,jP,kP) = Buffer_I(iBuffer+1:iBuffer+nVar)
-         iBuffer = iBuffer + nVar
+         StateP_VG(:,iP,jP,kP) = Buffer_I(iBuffer+1:iBuffer+nbufferVar)
+         iBuffer = iBuffer + nbufferVar
       end do; end do; end do
-
       ! Set time step to half of the parent block
       if(present(Dt_B)) Dt_B(iBlockRecv) = 0.5*Buffer_I(iBuffer+1)
 
+
+      ! 1st order prolongation
       do kR = 1, nK
          kP = (kR + Dk)/kRatio
          do jR = 1, nJ
             jP = (jR + Dj)/jRatio
             do iR = 1, nI
                iP = (iR + Di)/iRatio
-               State_VGB(:,iR,jR,kR,iBlockRecv) = StateP_VG(:,iP,jP,kP)
+               State_VGB(:,iR,jR,kR,iBlockRecv) = StateP_VG(1:nVar,iP,jP,kP)
             end do
          end do
       end do
 
+      ! Add corection for 2nd order prolongation
       do kP = 1, nK/kRatio
          kR = kRatio*(kP - 1) + 1
          do jP = 1, nJ/jRatio
@@ -523,10 +820,27 @@ contains
             do iP = 1, nI/iRatio
                iR = iRatio*(iP - 1) + 1
 
-               if(iRatio == 2)then
+               ! If one of the neighboring cells or the cell are masked we
+               ! will only be able to use 1st order prolongation in that
+               ! dimension 
 
-                  SlopeL_V = StateP_VG(:,iP  ,jP,kP)-StateP_VG(:,iP-1,jP,kP)
-                  SlopeR_V = StateP_VG(:,iP+1,jP,kP)-StateP_VG(:,iP  ,jP,kP)
+               if(UseMask) then
+                  ! If any of the neighboring cells is masked the product will 
+                  ! zero and no 2nd order prolongation can be done
+                  if(iRatio == 2) Do2ndOrderi = &
+                       product(StateP_VG(nVar+1,iP-1:iP+1,jP,kP))
+                  if(jRatio == 2) Do2ndOrderj = &
+                       product(StateP_VG(nVar+1,iP,jP-1:jP+1,kP))
+                  if(kRatio == 2) Do2ndOrderk = &
+                       product(StateP_VG(nVar+1,iP,jP,kP-1:kP+1))
+               end if
+
+               if(iRatio == 2 .and. Do2ndOrderi > 0.0 )then
+
+                  SlopeL_V = StateP_VG(1:nVar,iP  ,jP,kP)-&
+                       StateP_VG(1:nVar,iP-1,jP,kP)
+                  SlopeR_V = StateP_VG(1:nVar,iP+1,jP,kP)-&
+                       StateP_VG(1:nVar,iP  ,jP,kP)
                   Slope_V  = &
                        (sign(0.125,SlopeL_V)+sign(0.125,SlopeR_V))*min( &
                        BetaProlong*abs(SlopeL_V), &
@@ -541,10 +855,12 @@ contains
 
                end if
 
-               if(jRatio == 2)then
+               if(jRatio == 2 .and. Do2ndOrderj > 0.0 )then
 
-                  SlopeL_V = StateP_VG(:,iP,jP  ,kP)-StateP_VG(:,iP,jP-1,kP)
-                  SlopeR_V = StateP_VG(:,iP,jP+1,kP)-StateP_VG(:,iP,jP  ,kP)
+                  SlopeL_V = StateP_VG(1:nVar,iP,jP  ,kP)-&
+                       StateP_VG(1:nVar,iP,jP-1,kP)
+                  SlopeR_V = StateP_VG(1:nVar,iP,jP+1,kP)-&
+                       StateP_VG(1:nVar,iP,jP  ,kP)
                   Slope_V  = &
                        (sign(0.125,SlopeL_V)+sign(0.125,SlopeR_V))*min( &
                        BetaProlong*abs(SlopeL_V), &
@@ -559,10 +875,12 @@ contains
 
                end if
 
-               if(kRatio == 2)then
+               if(kRatio == 2 .and. Do2ndOrderk > 0.0)then
 
-                  SlopeL_V = StateP_VG(:,iP,jP,kP  )-StateP_VG(:,iP,jP,kP-1)
-                  SlopeR_V = StateP_VG(:,iP,jP,kP+1)-StateP_VG(:,iP,jP,kP)
+                  SlopeL_V = StateP_VG(1:nVar,iP,jP,kP  )-&
+                       StateP_VG(1:nVar,iP,jP,kP-1)
+                  SlopeR_V = StateP_VG(1:nVar,iP,jP,kP+1)-&
+                       StateP_VG(1:nVar,iP,jP,kP)
                   Slope_V  = &
                        (sign(0.125,SlopeL_V)+sign(0.125,SlopeR_V))*min( &
                        BetaProlong*abs(SlopeL_V), &
@@ -599,10 +917,12 @@ contains
 
     use BATL_mpi,  ONLY: iProc, nProc, barrier_mpi
     use BATL_size, ONLY: MaxDim, nDim, nIJK_D, iDimAmr_D, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nBlock
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nBlock, &
+         iRatio, jRatio, kRatio
     use BATL_tree, ONLY: init_tree, set_tree_root, refine_tree_node, &
          coarsen_tree_node, distribute_tree, move_tree, show_tree, clean_tree,&
-         iProcNew_A, Unused_B, nNode
+         iProcNew_A, Unused_B, nNode, iNode_B, iTree_IA, Proc_, Block_, &
+         Child1_, unset_, nNode
     use BATL_grid, ONLY: init_grid, create_grid, clean_grid, Xyz_DGB, &
          CellSize_DB
     use BATL_geometry, ONLY: init_geometry
@@ -616,8 +936,11 @@ contains
 
     integer, parameter:: nVar = nDim
     real, allocatable:: State_VGB(:,:,:,:,:), Dt_B(:)
-
-    integer:: iBlock, iDim
+    real, allocatable:: TestState_VG(:,:,:,:)
+    logical, allocatable:: Used_GB(:,:,:,:)
+    integer, allocatable:: EffectedNode_A(:)
+    integer:: iBlock, iDim, iNode, iVar
+    integer:: iChilde
 
     logical:: DoTestMe
     character(len=*), parameter :: NameSub = 'test_amr'
@@ -639,7 +962,7 @@ contains
          Dt_B(MaxBlockTest))
 
     do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
+1       if(Unused_B(iBlock)) CYCLE
        State_VGB(:,:,:,:,iBlock)    = Xyz_DGB(1:nDim,:,:,:,iBlock)
        ! set the time step to the cells size in the first AMR direction
        iDim = iDimAmr_D(1)
@@ -679,7 +1002,94 @@ contains
 
     call check_state
 
-    deallocate(State_VGB, Dt_B)
+    !-------------------------- MASK ---------------------------
+    if(DoTestMe) write(*,*) 'test masked cells'
+    allocate(Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlockTest),&
+    TestState_VG(nVar,nI,nJ,nK))
+
+    Used_GB = .true.
+    
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       State_VGB(:,:,:,:,iBlock)    = Xyz_DGB(1:nDim,:,:,:,iBlock)
+       ! set the time step to the cells size in the first AMR direction
+       iDim = iDimAmr_D(1)
+       Dt_B(iBlock) = DomainSize_D(iDim) / (nIjk_D(iDim)*nRootTest_D(iDim))
+    end do
+
+    call refine_tree_node(1)
+    call distribute_tree(.false.)
+
+    if(iTree_IA(Proc_,1) == iProc) then
+       iBlock = iTree_IA(Block_,1)
+       State_VGB(:,(MinI+MaxI)/2,(MinJ+MaxJ)/2,(MinK+MaxK)/2,iBlock) = -7777
+       Used_GB((MinI+MaxI)/2,(MinJ+MaxJ)/2,(MinK+MaxK)/2,iBlock)     = .false.
+    end if
+
+!    do iBlock=1,nBlock
+!       write(*,*) "iblock = ",iBlock
+!       if(Unused_B(iBlock)) CYCLE
+!       do k=MinK,MaxK;do j=MinJ,MaxJ 
+!          write(*,'(12F7.2)') State_VGB(1,:,j,k,iBlock)
+!       end do; end do;
+!    end do
+
+
+    call do_amr(nVar, State_VGB, Dt_B,Used_GB=Used_GB)
+    call move_tree
+
+    ! Nodes that needs special care in the testing
+    allocate(EffectedNode_A(nNode)) 
+    EffectedNode_A = unset_
+
+    ! 0: the masked cell, 1: x+ neighbor, 2: y+ neighbor
+    ! 3: z+ neighbor
+    ! The first childe Node of the refined node
+    iChilde = Child1_
+    EffectedNode_A(iTree_IA(iChilde,1))                 = 0
+    iChilde = iChilde + 1
+    ! As masked cell is on the corner of the childe nodes
+    ! it will also effect the neighboring cell in i-direction
+    ! The running "iChilde" cunter is using the morton indexing
+    ! to give the right neighbor independent of the with direction
+    ! is refined.
+    if(iRatio == 2) then
+       EffectedNode_A(iTree_IA(iChilde,1))              = 1
+       iChilde = iChilde + 1
+    end if
+    ! Neoghbor in j direction
+    if(jRatio == 2) then
+       EffectedNode_A(iTree_IA(iChilde,1))              = 2
+       iChilde = iChilde + iRatio
+    end if
+    ! and k direction
+    if(kRatio == 2) EffectedNode_A(iTree_IA(iChilde,1)) = 3
+
+    call check_state_amre
+
+    !--------------- END refine --------------------
+    EffectedNode_A = unset_
+    Used_GB = .true.
+    
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       State_VGB(:,:,:,:,iBlock)    = Xyz_DGB(1:nDim,:,:,:,iBlock)
+    end do
+
+    if(iTree_IA(Proc_,iTree_IA(Child1_,1)) == iProc) then
+       iBlock = iTree_IA(Block_,iTree_IA(Child1_,1))
+       State_VGB(:,nI,nJ,nK,iBlock) = -7777
+       Used_GB(nI,nJ,nK,iBlock)     = .false.
+    end if
+
+    call coarsen_tree_node(1)
+    call distribute_tree(.false.)
+
+    call do_amr(nVar, State_VGB, Dt_B,Used_GB=Used_GB)
+    call move_tree
+    call check_state_amre
+
+    deallocate(State_VGB, Dt_B,Used_GB, EffectedNode_A,TestState_VG)
 
     call clean_grid
     call clean_tree
@@ -706,6 +1116,276 @@ contains
       end do
 
     end subroutine check_state
+    !==========================================================================
+    subroutine check_state_amre
+
+      integer :: iDn, iUp, jDn, jUp, kDn, kUp
+      integer :: Di, Dj, Dk
+
+
+      do iBlock = 1, nBlock
+         if(Unused_B(iBlock)) CYCLE
+         iNode = iNode_B(iBlock)
+         select case(EffectedNode_A(iNode))
+         case(unset_)
+            if(any(abs(State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                 -     Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock)) > 1e-6))then
+               write(*,*)NameSub,' error for iProc,iBlock,maxloc=', &
+                    iProc,iBlock,&
+                    maxloc(abs(State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                    - Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock)))
+            end if
+
+            iDim = iDimAmr_D(1)
+            if(abs(Dt_B(iBlock) - CellSize_DB(iDim,iBlock)) > 1e-6) &
+                 write(*,*)NameSub,' error for iProc,iBlock,dt,dx=', &
+                 iProc, iBlock, Dt_B(iBlock), CellSize_DB(iDim,iBlock)
+         case(0) ! the masked block
+
+            if(iRatio == 2) then
+               iDn = nI-iRatio+1
+               iUp = nI
+               Di = iRatio
+            else
+               iDn = (MinI+MaxI)/2
+               iUp = iDn
+               Di = 0
+            end if
+
+            if(jRatio == 2) then
+               jDn = nJ-jRatio+1 
+               jUp = nJ
+               Dj = jRatio
+            else
+               jDn = (MinJ+MaxJ)/2
+               jUp = jDn
+               Dj = 0
+            end if
+
+            if(kRatio == 2) then
+               kDn = nK-kRatio+1
+               kUp = nK
+               Dk = kRatio
+            else
+               kDn = (MinK+MaxK)/2
+               kUp = kDn
+               Dk = 0
+            end if
+
+            TestState_VG = Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock)
+
+            ! the average of the masked Cell
+            do iVar=1,nVar
+               TestState_VG(iVar,iDn:iUp,jDn:jUp,kDn:kUp) = &
+                    sum(Xyz_DGB(iVar,iDn:iUp,jDn:jUp,kDn:kUp,iBlock))/&
+                    (iRatio*jRatio*kRatio)
+            end do
+
+            ! The neighbor cell in i direction will only have 
+            ! 1st order prolongation 
+            TestState_VG(1,iDn-Di:iUp-Di,jDn:jUp,kDn:kUp) = &
+                 sum(Xyz_DGB(1,iDn-Di:iUp-Di,jDn:jUp,kDn:kUp,iBlock))/&
+                 (iRatio*jRatio*kRatio)                 
+
+            ! The neighbor cell in j direction will only have 
+            ! 1st order prolongation 
+            if(nDim >1) then
+               TestState_VG(2,iDn:iUp,jDn-Dj:jUp-Dj,kDn:kUp) = &
+                    sum(Xyz_DGB(2,iDn:iUp,jDn-Dj:jUp-Dj,kDn:kUp,iBlock))/&
+                    (iRatio*jRatio*kRatio)
+            end if
+
+
+            ! The neighbor cell in k direction will only have 
+            ! 1st order prolongation 
+            if(nDim >2) then
+               TestState_VG(3,iDn:iUp,jDn:jUp,kDn-Dk:kUp-Dk) = &
+                    sum(Xyz_DGB(3,iDn:iUp,jDn:jUp,kDn-Dk:kUp-Dk,iBlock))/&
+                    (iRatio*jRatio*kRatio)
+            end if
+
+            !            write(*,*) "check iblock = ",iBlock
+            !            if(Unused_B(iBlock)) CYCLE
+            !            do k=MinK,MaxK;do j=MinJ,MaxJ 
+            !               write(*,'(12F7.2)') TestState_VG(1,:,j,k)
+            !            end do; end do;
+
+            if(any(abs(State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                 -     TestState_VG) > 1e-6))then
+               write(*,*)NameSub,' case 0 error for iProc,iBlock,maxloc=',&
+                    iProc,iBlock,&
+                    maxloc(abs(State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                    -    TestState_VG))
+            end if
+
+            iDim = iDimAmr_D(1)
+            if(abs(Dt_B(iBlock) - CellSize_DB(iDim,iBlock)) > 1e-6) &
+                 write(*,*)NameSub,' error for iProc,iBlock,dt,dx=', &
+                 iProc, iBlock, Dt_B(iBlock), CellSize_DB(iDim,iBlock)
+
+         case(1) ! i neigbor of mask block
+
+            if(iRatio == 2) then
+               iDn = 1
+               iUp = iRatio
+               Di  = iRatio
+            else
+               iDn = (MinI+MaxI)/2
+               iUp = iDn
+               Di = 0
+            end if
+
+            if(jRatio == 2) then
+               jDn = nJ-jRatio+1 
+               jUp = nJ
+               Dj = jRatio
+            else
+               jDn = (MinJ+MaxJ)/2
+               jUp = jDn
+               Dj = 0
+            end if
+
+            if(kRatio == 2) then
+               kDn = nK-kRatio+1
+               kUp = nK
+               Dk = kRatio
+            else
+               kDn = (MinK+MaxK)/2
+               kUp = kDn
+               Dk = 0
+            end if
+
+            TestState_VG = Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock)
+
+            ! The neighbor cell in i direction will only have 
+            ! 1st order prolongation 
+            TestState_VG(1,iDn:iUp,jDn:jUp,kDn:kUp) = &
+                 sum(Xyz_DGB(1,iDn:iUp,jDn:jUp,kDn:kUp,iBlock))/&
+                 (iRatio*jRatio*kRatio)
+
+            if(any(abs(State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                 -     TestState_VG) > 1e-6))then
+               write(*,*)NameSub,' case 1 error for iProc,iBlock,maxloc=',&
+                    iProc,iBlock,&
+                    maxloc(abs(State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                    -    TestState_VG))
+            end if
+
+            iDim = iDimAmr_D(1)
+            if(abs(Dt_B(iBlock) - CellSize_DB(iDim,iBlock)) > 1e-6) &
+                 write(*,*)NameSub,' error for iProc,iBlock,dt,dx=', &
+                 iProc, iBlock, Dt_B(iBlock), CellSize_DB(iDim,iBlock)
+
+         case(2) ! j neighbore of masked block
+
+            if(jRatio == 2) then
+               jDn = 1 
+               jUp = jRatio
+               Dj  = jRatio
+            else
+               jDn = (MinJ+MaxJ)/2
+               jUp = jDn
+               Dj  = 0
+            end if
+
+            if(iRatio == 2) then
+               iDn = nI-iRatio+1
+               iUp = nI
+               Di = iRatio
+            else
+               iDn = (MinI+MaxI)/2
+               iUp = iDn
+               Di = 0
+            end if
+
+            if(kRatio == 2) then
+               kDn = nK-kRatio+1
+               kUp = nK
+               Dk = kRatio
+            else
+               kDn = (MinK+MaxK)/2
+               kUp = kDn
+               Dk = 0
+            end if
+
+            TestState_VG = Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock)
+
+            ! The neighbor cell in j direction will only have 
+            ! 1st order prolongation 
+            TestState_VG(2,iDn:iUp,jDn:jUp,kDn:kUp) = &
+                 sum(Xyz_DGB(2,iDn:iUp,jDn:jUp,kDn:kUp,iBlock))/&
+                 (iRatio*jRatio*kRatio)
+
+            if(any(abs(State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                 -     TestState_VG) > 1e-6))then
+               write(*,*)NameSub,' case 2 error for iProc,iBlock,maxloc=',&
+                    iProc,iBlock,&
+                    maxloc(abs(State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                    -    TestState_VG))
+            end if
+
+            iDim = iDimAmr_D(1)
+            if(abs(Dt_B(iBlock) - CellSize_DB(iDim,iBlock)) > 1e-6) &
+                 write(*,*)NameSub,' error for iProc,iBlock,dt,dx=', &
+                 iProc, iBlock, Dt_B(iBlock), CellSize_DB(iDim,iBlock)
+
+         case(3) ! k neighbore of masked block
+
+            if(kRatio == 2) then
+               kDn = 1
+               kUp = kRatio
+               Dk = kRatio
+            else
+               kDn = (MinK+MaxK)/2
+               kUp = kDn
+               Dk = 0
+            end if
+
+            if(iRatio == 2) then
+               iDn = nI-iRatio+1
+               iUp = nI
+               Di = iRatio
+            else
+               iDn = (MinI+MaxI)/2
+               iUp = iDn
+               Di = 0
+            end if
+
+            if(jRatio == 2) then
+               jDn = nJ-jRatio+1 
+               jUp = nJ
+               Dj = jRatio
+            else
+               jDn = (MinJ+MaxJ)/2
+               jUp = jDn
+               Dj = 0
+            end if
+
+            TestState_VG = Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock)
+
+            ! The neighbor cell in k direction will only have 
+            ! 1st order prolongation 
+            TestState_VG(3,iDn:iUp,jDn:jUp,kDn:kUp) = &
+                 sum(Xyz_DGB(3,iDn:iUp,jDn:jUp,kDn:kUp,iBlock))/&
+                 (iRatio*jRatio*kRatio)
+
+            if(any(abs(State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                 -     TestState_VG) > 1e-6))then
+               write(*,*)NameSub,' case 3 error for iProc,iBlock,maxloc=',&
+                    iProc,iBlock,&
+                    maxloc(abs(State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                    -    TestState_VG))
+            end if
+
+            iDim = iDimAmr_D(1)
+            if(abs(Dt_B(iBlock) - CellSize_DB(iDim,iBlock)) > 1e-6) &
+                 write(*,*)NameSub,' error for iProc,iBlock,dt,dx=', &
+                 iProc, iBlock, Dt_B(iBlock), CellSize_DB(iDim,iBlock)
+
+         end select
+      end do
+
+    end subroutine check_state_amre
     !==========================================================================
     subroutine show_state
 
@@ -758,3 +1438,5 @@ contains
   end subroutine test_amr
 
 end module BATL_amr
+
+! LocalWords:  AMR nUsedNeighbor

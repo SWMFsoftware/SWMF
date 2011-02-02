@@ -168,7 +168,7 @@ contains
   !============================================================================
 
   subroutine regrid_batl(nVar, State_VGB, Dt_B, DoRefine_B, DoCoarsen_B, &
-       DoBalanceEachLevelIn, DoTestIn)
+       DoBalanceEachLevelIn, DoTestIn, Used_GB)
 
     integer, intent(in)   :: nVar                         ! number of variables
     real,    intent(inout):: &                            ! state variables
@@ -179,7 +179,9 @@ contains
     logical, intent(in), optional:: DoRefine_B(MaxBlock)  ! request to refine
     logical, intent(in), optional:: DoCoarsen_B(MaxBlock) ! request to coarsen
     logical, intent(in), optional:: DoBalanceEachLevelIn  ! balance per level?
-    logical, intent(in), optional:: DoTestIn              ! print test info
+    logical, intent(in), optional:: DoTestIn	              ! print test info
+    logical, intent(in), optional:: &
+         Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Refine, coarsen and load balance the blocks containing the nVar 
     ! state variables in State_VGB. Use second order accurate conservative
@@ -260,7 +262,7 @@ contains
 
     ! Coarsen, refine and load balance the flow variables, and set Dt_B.
     if(DoTest)write(*,*) NameSub,' call do_amr'
-    call do_amr(nVar, State_VGB, Dt_B, DoTestIn=DoTestIn)
+    call do_amr(nVar, State_VGB, Dt_B, DoTestIn=DoTestIn, Used_GB=Used_GB)
 
     ! Finalize the tree information
     if(DoTest)write(*,*) NameSub,' call move_tree'
