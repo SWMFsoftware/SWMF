@@ -25,8 +25,9 @@ module ModReadParam
   ! \begin{verbatim}
   ! #END
   ! \end{verbatim}
-  ! command. After reading, the text is broadcast to all processors that
-  ! belong to the MPI communicatore iComm. 
+  ! command. After reading, the text is broadcast to all processors, or
+  ! to the processors that belong to the MPI communicator iComm, which
+  ! is an optional argument of subroutine read\_file.
   ! The text buffer contains at most MaxLine=1000 lines, which are at most
   ! lStringLine=100 character long. Normally only the control component
   ! calls {\bf read\_file}.
@@ -208,10 +209,11 @@ contains
   !BOP =======================================================================
   !IROUTINE: read_file - read parameter file
   !INTERFACE:
-  subroutine read_file(NameFile,iComm,NameRestartFile)
+  subroutine read_file(NameFile, iCommIn, NameRestartFile)
+
     !INPUT ARGUMENTS:
     character (len=*), intent(in):: NameFile ! Name of the base param file
-    integer,           intent(in):: iComm    ! MPI communicator for broadcast
+    integer, optional, intent(in):: iCommIn  ! MPI communicator for broadcast
 
     ! Name of the restart file to be read if a #RESTART command is found
     character (len=*), intent(in), optional :: NameRestartFile 
@@ -225,7 +227,7 @@ contains
 
     integer :: iUnit_I(MaxNestedFile)
 
-    integer :: iFile, i, iError, iProc
+    integer :: iFile, i, iError, iProc, iComm
 
     logical :: IsFound
 
@@ -233,6 +235,12 @@ contains
     !-----------------------------------------------------------------------
     if(Done)call CON_stop(NameSub//&
          ' ERROR: the parameter file should be read only once!')
+
+    if(present(iCommIn))then
+       iComm = iCommIn
+    else
+       iComm = MPI_COMM_WORLD
+    end if
 
     ! Get processor rank
     call MPI_comm_rank(iComm,iProc,iError)
@@ -341,17 +349,33 @@ contains
 
     ! Initialize module variables
 
-    character (len=2), intent(in) :: NameCompIn
-    integer,           intent(in) :: iSessionIn
-    integer, optional, intent(in) :: iLineIn, nLineIn, iIoUnitIn
+    character(len=2), optional, intent(in) :: NameCompIn
+    integer,          optional, intent(in) :: iSessionIn
+    integer,          optional, intent(in) :: iLineIn, nLineIn, iIoUnitIn
+
+    integer:: iSessionNew
 
     character(len=*), parameter :: NameSub=NameMod//'::read_init'
     !------------------------------------------------------------------------
-    if(iSessionIn>MaxSession)call CON_stop(NameSub// &
+    if(present(iSessionIn))then
+       iSessionNew = iSessionIn
+    else
+       iSessionNew = 1
+    end if
+
+    if(iSessionNew > MaxSession)call CON_stop(NameSub// &
          " ERROR: too many sessions in input")
-    if(iSessionIn > iSession) iCommand = 0
-    NameComp     = NameCompIn
-    iSession     = iSessionIn
+
+    ! Set command counter to zero for a new session
+    if(iSessionNew > iSession) iCommand = 0
+
+    iSession     = iSessionNew
+
+    if(present(NameCompIn))then
+       NameComp = NameCompIn
+    else
+       NameComp = ''
+    end if
     if(present(iLineIn)) iLine = iLineIn
     if(present(nLineIn))then
        nLine     = nLineIn
