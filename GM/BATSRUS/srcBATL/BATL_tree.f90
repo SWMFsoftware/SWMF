@@ -612,7 +612,6 @@ contains
     real :: Coord_D(MaxDim)
     integer :: iLevel, iChild
     integer :: Ijk_D(MaxDim), iCoord_D(nDimAmr), iBit_D(nDimAmr)
-    integer :: iCoordTmp_D(nDimAmr)
     !----------------------------------------------------------------------
     ! Scale coordinates so that 1 <= Coord_D <= nRoot_D+1
     Coord_D = 1.0 + nRoot_D*max(0.0, min(1.0, CoordIn_D))
@@ -663,7 +662,7 @@ contains
     real, optional, intent(out):: CellDistance_D(MaxDim)
 
     real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
-    real:: CellCoord_D(MaxDim), CellSize_D(MaxDim)
+    real:: CellCoord_D(MaxDim)
 
     !----------------------------------------------------------------------
     call find_tree_node(Coord_D, iNode)
@@ -697,7 +696,7 @@ contains
 
     integer:: iCell_D(MaxDim), jCell_D(MaxDim)
     real:: CellDistance_D(MaxDim), Weight_D(MaxDim)
-    real:: CellSize_D(MaxDim), CoordShifted_D(MaxDim)
+    !real:: CellSize_D(MaxDim), CoordShifted_D(MaxDim)
     integer:: iNode, i, j, k, iPoint, iDim
     !-------------------------------------------------------------------------
     call find_tree_cell(Coord_D, iNode, iCell_D, CellDistance_D)
@@ -1048,7 +1047,7 @@ contains
     ! Optional block type. Each type is balanced separately
     integer, intent(in), optional:: iTypeNode_A(MaxNode)
 
-    integer :: nNodePerProc, iMorton, iNode, iBlockTo, iProcTo
+    integer :: iMorton, iNode, iBlockTo, iProcTo
 
     integer :: iType, nType, iProcStart, iProcStop, iProcExtraBlock
     integer, allocatable :: iNodeType_I(:), nNodeType_I(:), iProcType_I(:), &

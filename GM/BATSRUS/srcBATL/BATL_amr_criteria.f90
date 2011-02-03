@@ -78,7 +78,6 @@ contains
   subroutine set_amr_criteria(nVar, State_VGB, & 
        nCritExt, CritExt_IB, CoarsenCritExt_I, RefineCritExt_I)
 
-    use BATL_grid, ONLY: CellSize_DB
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
 	 nI, nJ, nK, MaxDim, nDim, MaxBlock, nBlock
     use BATL_tree, ONLY: iStatusNew_A, Refine_, Coarsen_, &
@@ -95,12 +94,11 @@ contains
 
     real, dimension(MaxDim) :: Crit_D
 
-    real :: Crit, maxCrit
+    real :: Crit
     real :: Numerator, Denominator
-    integer:: iBlock, iDim, iCrit, i, j, k, iVar
+    integer:: iBlock, iCrit, i, j, k, iVar
     logical :: DoCoarsen
     integer :: iError
-    integer :: nAllreduce
     !------------------------------------------------------------------------
     Crit      = 1.0
     Crit_D    = 0.0
@@ -296,7 +294,6 @@ contains
   !============================================================================
   subroutine  read_amr_criteria_param
     use ModReadParam, ONLY: read_var
-    use BATL_size, ONLY: MaxBlock    
     integer :: iCrit
     !-------------------------------------------------------------------------
     nCrit          = 0

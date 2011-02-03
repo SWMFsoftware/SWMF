@@ -72,7 +72,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'BATL_AMR::do_amr'
     logical:: DoTest
-    integer:: jProc
+    !integer:: jProc
 
     integer, parameter:: MaxTry=100
     integer:: iTry
@@ -264,7 +264,7 @@ contains
     integer function i_block_available(iProcRecv, iNodeRecv, iAmrChange)
 
       integer, intent(in):: iProcRecv, iNodeRecv, iAmrChange
-      integer :: iBlock, jProc
+      integer :: iBlock
       character(len=*), parameter:: NameSub = 'BATL_amr::i_block_available'
       !-----------------------------------------------------------------------
       ! Assign the processor index

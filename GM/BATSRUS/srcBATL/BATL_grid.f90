@@ -466,7 +466,7 @@ contains
     use BATL_mpi, ONLY: iProc, nProc, iComm
     use BATL_geometry, ONLY: init_geometry
     use ModNumConst, ONLY: i_DD
-    use ModMpi, ONLY: MPI_allreduce, MPI_real, MPI_sum
+    use ModMpi, ONLY: MPI_reduce, MPI_real, MPI_sum
 
     integer :: iBlock
 
