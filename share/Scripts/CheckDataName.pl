@@ -55,7 +55,7 @@ my $method = "$part(_$part)*";
 my $ValidMethodName = "($ValidComp)?$method";
 
 # Valid module name: CON_main IE_ModMain ModSize
-my $ValidModuleName = "(CON_$method|($ValidComp)?Mod($Part)+)";
+my $ValidModuleName = "(CON_$method|BATL_$method|($ValidComp)?Mod($Part)+)";
 
 # Valid non-module file names: CON_main.f90 IE_set_param.F90 set_b0.f90
 my $ValidMethodFileName = "$ValidMethodName\.[fF]90";
@@ -75,7 +75,7 @@ my $ValidNamedIndex = "$FirstPart($Part)*_|[A-Z][A-Z]_";
 
 # Valid first name parts depending on variable/function type:
 my %ValidPart1 = ('integer'   => '(D?[i-nI-N]|Max|Min)\d*',
-		  'logical'   => '(Is|Use|Do|Done)\d*',
+		  'logical'   => '(Is|Use|Used|Do|Done)\d*',
 		  'character' => '(Name|Type|String)\d*'
 		  );
 
@@ -90,7 +90,7 @@ my $ValidArrayIndex3 = '[CFGNXYZ]';
 #########################################
 
 # Simple Fortran types with possible (len=..) and (kind=..) attributes:
-my $SimpleType = '(real|integer|logical|character)(\s*\([^\)]+\))?';
+my $SimpleType = '(real|integer|logical|character)(\s*\([^\)]+\))?\b';
 
 # Obsolete Fortran types with *NUMBER, e.g. real*8 character*10
 my $ObsoleteType = '(real|integer|logical|character)\s*\*\s*\d+';
