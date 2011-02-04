@@ -1,3 +1,4 @@
+ModReadParam::read_file: read and broadcast nLine=   9 lines of text
  nCarringtonRotation, nTheta0, nPhi0:  1200 180 360
  BiCGSTAB tol,iter:   1.0000000000000001E-05 10000
  initial rnrm:   6.6258707507168673
