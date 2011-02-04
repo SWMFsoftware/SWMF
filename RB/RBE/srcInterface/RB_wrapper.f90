@@ -117,7 +117,10 @@ subroutine RB_init_session(iSession, TimeSimulation)
   use rbe_constant
   use rbe_cread2
   use rbe_cgrid
-
+  use ModRbTime
+  use ModTimeConvert, ONLY: time_real_to_int
+  use CON_physics, ONLY: get_time
+  
   implicit none
 
   integer,  intent(in) :: iSession         ! session number (starting from 1)
@@ -129,6 +132,10 @@ subroutine RB_init_session(iSession, TimeSimulation)
 
   call grids(re,rc,xme,xmp,q,c,js)
   
+  call get_time(tStartOut = StartTime)
+  CurrentTime = StartTime + TimeSimulation
+  call time_real_to_int(StartTime, iStartTime_I)
+
 end subroutine RB_init_session
 !==============================================================================
 
