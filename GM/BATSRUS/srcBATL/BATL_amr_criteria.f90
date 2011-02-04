@@ -63,9 +63,9 @@ module BATL_amr_criteria
 
   ! Threshold limits for refine or unrefined the grid (length nCrit) 
   real, allocatable, dimension(:)    :: CoarsenCrit_I, RefineCrit_I, &
-       CoarsenAmrCrit_I, RefineCritAll_I, GlobalMaxCritAll_I, MaxCritAll_I 
+       CoarsenAmrCrit_I, RefineCritAll_I, GlobalCritMaxAll_I, CritMaxAll_I 
 
-  integer, allocatable, dimension(:) :: CritVar_I ! Index to variables
+  integer, allocatable:: iVarCrit_I(:) ! Index to variables
   ! used in criteria
   real :: cAmrWavefilter
   real, parameter :: cEpsilon = 1.0d-16 ! avoid zero in denominator
@@ -89,12 +89,10 @@ contains
     real,    intent(inout) :: &                            ! state variables
          State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
     integer, intent(in), optional :: nCritExt ! num of external criteria
-    real, intent(inout), dimension(:,:), optional ::CritExt_IB
-    real, intent(in), dimension(:), optional :: CoarsenCritExt_I, RefineCritExt_I
+    real, intent(inout), optional :: CritExt_IB(:,:)
+    real, intent(in),    optional :: CoarsenCritExt_I(:), RefineCritExt_I(:)
 
-    real, dimension(MaxDim) :: Crit_D
-
-    real :: Crit
+    real :: Crit, Crit_D(MaxDim)
     real :: Numerator, Denominator
     integer:: iBlock, iCrit, i, j, k, iVar
     logical :: DoCoarsen
@@ -112,14 +110,14 @@ contains
        nAmrCrit = nCrit + nCritExt
        if(nAmrCrit /= nAmrCritOld) then
           nAmrCritOld=nAmrCrit
-          if(allocated(GlobalMaxCritAll_I)) deallocate( &
-               MaxCritAll_I, &
-               GlobalMaxCritAll_I, &
+          if(allocated(GlobalCritMaxAll_I)) deallocate( &
+               CritMaxAll_I, &
+               GlobalCritMaxAll_I, &
                CoarsenAmrCrit_I, RefineCritAll_I)
-          allocate(MaxCritAll_I(nAmrCrit), GlobalMaxCritAll_I(nAmrCrit), &
+          allocate(CritMaxAll_I(nAmrCrit), GlobalCritMaxAll_I(nAmrCrit), &
                CoarsenAmrCrit_I(nAmrCrit), RefineCritAll_I(nAmrCrit))
-          MaxCritAll_I = 0.0
-          GlobalMaxCritAll_I =0.0
+          CritMaxAll_I = 0.0
+          GlobalCritMaxAll_I =0.0
        end if
     else
        nAmrCrit    = nCrit
@@ -142,8 +140,9 @@ contains
        DoCoarsen = .true.
        ! Check refinement first
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          do iCrit = 1, nCrit ! Only variables indexed in CritVar_I will decide the refinement
-             iVar = CritVar_I(iCrit)
+          ! Only variables indexed in iVarCrit_I will decide the refinement
+          do iCrit = 1, nCrit 
+             iVar = iVarCrit_I(iCrit)
 
              Numerator = abs( &
                   State_VGB(iVar,i-2,j,k,iBlock)   - &
@@ -200,23 +199,22 @@ contains
                   AmrCrit_IB(iCrit,iBlock) = Crit
 
              !find max error Crit
-             !             if(present(CritExt_I) ) then 
-             !                if( Crit > AmrCrit_IB(iCrit,iBlock)) &
-             !                     AmrCrit_IB(iCrit,iBlock) = Crit
-             !             else
-             !                ! If one cell in the block needs refinement the block will
-             !                ! be refined, But only if all cells in the block want to be
-             !                ! coarsen the block will be flagged for coarsening
+             !if(present(CritExt_I) ) then 
+             !   if( Crit > AmrCrit_IB(iCrit,iBlock)) &
+             !        AmrCrit_IB(iCrit,iBlock) = Crit
+             !else
+             !   ! If one cell in the block needs refinement the block will
+             !   ! be refined, But only if all cells in the block want to be
+             !   ! coarsen the block will be flagged for coarsening
              !
-             !                if( Crit > RefineCrit_I(iCrit)) then
-             !                   iStatusNew_A(iNode_B(iBlock)) = Refine_
-             !                   DoCoarsen = .false.
-             !                   CYCLE BLOCK
-             !                else if(Crit > CoarsenCrit_I(iCrit)) then
-             !                   DoCoarsen = .false.
-             !                end if
-             !             end if
-
+             !   if( Crit > RefineCrit_I(iCrit)) then
+             !      iStatusNew_A(iNode_B(iBlock)) = Refine_
+             !      DoCoarsen = .false.
+             !      CYCLE BLOCK
+             !   else if(Crit > CoarsenCrit_I(iCrit)) then
+             !      DoCoarsen = .false.
+             !   end if
+             !end if
 
           end do !end nVar
        end do; end do; end do
@@ -236,7 +234,7 @@ contains
 
        do iBlock = 1, nBlock
           do iCrit = 1, nCritExt
-             AmrCrit_IB(nCrit+iCrit,iBlock) = CritExt_IB(iCrit,iBlock)             
+             AmrCrit_IB(nCrit+iCrit,iBlock) = CritExt_IB(iCrit,iBlock)
           end do
        end do
 
@@ -249,19 +247,19 @@ contains
 
     ! Find the max criteria values on all processors
     do iCrit = 1, nAmrCrit
-       MaxCritAll_I(iCrit) = maxval(AmrCrit_IB(iCrit,:))
+       CritMaxAll_I(iCrit) = maxval(AmrCrit_IB(iCrit,:))
     end do
     if(nProc > 1)then
-       call MPI_allreduce(MaxCritAll_I, GlobalMaxCritAll_I,nAmrCrit, MPI_REAL, &
+       call MPI_allreduce(CritMaxAll_I, GlobalCritMaxAll_I,nAmrCrit, MPI_REAL,&
             MPI_MAX,iComm, iError)
     else
-       GlobalMaxCritAll_I = MaxCritAll_I
+       GlobalCritMaxAll_I = CritMaxAll_I
     end if
 
     ! Normalize the external criteria only
     do iCrit = nCrit+1, nAmrCrit
-       if(GlobalMaxCritAll_I(iCrit) /= 0.0) &
-            AmrCrit_IB(iCrit,:) = AmrCrit_IB(iCrit,:)/GlobalMaxCritAll_I(iCrit)
+       if(GlobalCritMaxAll_I(iCrit) /= 0.0) &
+            AmrCrit_IB(iCrit,:) = AmrCrit_IB(iCrit,:)/GlobalCritMaxAll_I(iCrit)
     end do
 
     ! Set refinement and coarsening flags in iStatuNew_A
@@ -308,14 +306,14 @@ contains
     nAmrCritOld = nCrit
     if(allocated(CoarsenCrit_I)) then
        deallocate(CoarsenAmrCrit_I, RefineCritAll_I)
-       deallocate(CoarsenCrit_I, RefineCrit_I, CritVar_I,GlobalMaxCritAll_I)
+       deallocate(CoarsenCrit_I, RefineCrit_I, iVarCrit_I,GlobalCritMaxAll_I)
     end if
-    allocate(CoarsenCrit_I(nCrit), RefineCrit_I(nCrit),CritVar_I(nCrit))
+    allocate(CoarsenCrit_I(nCrit), RefineCrit_I(nCrit),iVarCrit_I(nCrit))
     allocate(CoarsenAmrCrit_I(nCrit), RefineCritAll_I(nCrit))
-    allocate(GlobalMaxCritAll_I(nCrit))
-    allocate(MaxCritAll_I(nCrit))
+    allocate(GlobalCritMaxAll_I(nCrit))
+    allocate(CritMaxAll_I(nCrit))
     do iCrit = 1, nCrit
-       call read_var('iVar',CritVar_I(iCrit))
+       call read_var('iVar',iVarCrit_I(iCrit))
        call read_var('CoarsenCrit',CoarsenCrit_I(iCrit))
        call read_var('RefineCrit',RefineCrit_I(iCrit))
     end do
@@ -325,10 +323,10 @@ contains
   subroutine clean_amr_criteria
 
     if(.not.allocated(CoarsenCrit_I)) RETURN
-    deallocate(CoarsenCrit_I, RefineCrit_I, CritVar_I)
+    deallocate(CoarsenCrit_I, RefineCrit_I, iVarCrit_I)
     deallocate(CoarsenAmrCrit_I, RefineCritAll_I)
-    deallocate(GlobalMaxCritAll_I)
-    deallocate(MaxCritAll_I)
+    deallocate(GlobalCritMaxAll_I)
+    deallocate(CritMaxAll_I)
     nCrit    = 0
     nAmrCrit = 0
     nAmrCritOld = 0

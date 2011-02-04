@@ -223,7 +223,7 @@ contains
 
     integer, optional, intent(in) :: nRootIn_D(nDim)
 
-    integer :: iRoot, jRoot, kRoot, iNode, Ijk_D(MaxDim)
+    integer :: iRoot, jRoot, kRoot, iNode, iRoot_D(MaxDim)
     !-----------------------------------------------------------------------
 
     ! Set number of root blocks: default or input arguments
@@ -237,14 +237,14 @@ contains
        do jRoot = 1, nRoot_D(2)
           do iRoot = 1, nRoot_D(1)
 
-             Ijk_D = (/ iRoot, jRoot, kRoot /)
+             iRoot_D = (/ iRoot, jRoot, kRoot /)
 
              iNode = iNode + 1
              iTree_IA(Status_, iNode)            = Used_
              iTree_IA(Parent_, iNode)            = Unset_
              iTree_IA(Child1_:ChildLast_, iNode) = Unset_
              iTree_IA(Level_ , iNode)            = 0
-             iTree_IA(Coord1_:CoordLast_, iNode) = Ijk_D
+             iTree_IA(Coord1_:CoordLast_, iNode) = iRoot_D
 
           end do
        end do
@@ -611,23 +611,24 @@ contains
 
     real :: Coord_D(MaxDim)
     integer :: iLevel, iChild
-    integer :: Ijk_D(MaxDim), iCoord_D(nDimAmr), iBit_D(nDimAmr)
+    integer :: iRoot_D(MaxDim), iCoord_D(nDimAmr), iBit_D(nDimAmr)
     !----------------------------------------------------------------------
     ! Scale coordinates so that 1 <= Coord_D <= nRoot_D+1
     Coord_D = 1.0 + nRoot_D*max(0.0, min(1.0, CoordIn_D))
 
     ! Get root node index
-    Ijk_D = min(int(Coord_D), nRoot_D)
+    iRoot_D = min(int(Coord_D), nRoot_D)
 
     ! Root node indexes are ordered
-    iNode = Ijk_D(1) + nRoot_D(1)*((Ijk_D(2)-1) + nRoot_D(2)*(Ijk_D(3)-1))
+    iNode = &
+         iRoot_D(1) + nRoot_D(1)*((iRoot_D(2)-1) + nRoot_D(2)*(iRoot_D(3)-1))
 
     if(iTree_IA(Status_,iNode) == Used_) RETURN
 
     ! Get normalized coordinates within root node and scale it up
     ! to the largest resolution: 0 <= iCoord_D <= MaxCoord_I(nLevel)-1
     iCoord_D = min(MaxCoord_I(nLevel) - 1, &
-         int((Coord_D(iDimAmr_D) - Ijk_D(iDimAmr_D))*MaxCoord_I(nLevel)))
+         int((Coord_D(iDimAmr_D) - iRoot_D(iDimAmr_D))*MaxCoord_I(nLevel)))
 
     ! Go down the tree using bit information
     do iLevel = nLevel-1,0,-1
@@ -1297,17 +1298,17 @@ contains
     ! Show complete tree information. Also write out string as an identifier.
 
     character(len=10) :: Name
-    character(len=200):: Header
+    character(len=200):: StringHeader
     integer:: iInfo, iNode, iBlock
     !-----------------------------------------------------------------------
-    Header = 'iNode'
+    StringHeader = 'iNode'
     do iInfo = 1, nInfo
        Name = NameTreeInfo_I(iInfo)
-       Header(7*iInfo+1:7*(iInfo+1)-1) = Name(1:6)
+       StringHeader(7*iInfo+1:7*(iInfo+1)-1) = Name(1:6)
     end do
 
     write(*,*) String
-    write(*,*) trim(Header)
+    write(*,*) trim(StringHeader)
     do iNode = 1, MaxNode
        if(iTree_IA(Status_, iNode) == Unset_) CYCLE
        write(*,'(100i7)') iNode, iTree_IA(:, iNode)
@@ -1353,7 +1354,7 @@ contains
     logical, parameter:: IsPeriodicTest_D(MaxDim)= (/.true., .true., .false./)
     real,    parameter:: CoordTest_D(MaxDim)     = 0.99
 
-    integer :: iNode, Int_D(MaxDim), Ijk_D(MaxDim)
+    integer :: iNode, iCoord_D(MaxDim), iCell_D(MaxDim)
     real    :: Distance_D(MaxDim), DistanceGood_D(MaxDim), CellSize_D(MaxDim)
 
     integer :: iNodeCell_II(0:nDim,2**nDim), iNodeCellGood_II(0:3,8)
@@ -1397,23 +1398,23 @@ contains
          write(*,*) 'set_tree_root failed, nRoot_D=',nRoot_D(1:nDim),&
          ' should be ',nRootTest_D(1:nDim)
 
-    Int_D = (/3,1,1/)
+    iCoord_D = (/3,1,1/)
 
-    if(any( iTree_IA(Coord1_:Coord0_+nDim,3) /= Int_D(1:nDim) )) &
+    if(any( iTree_IA(Coord1_:Coord0_+nDim,3) /= iCoord_D(1:nDim) )) &
          write(*,*) 'set_tree_root failed, coordinates of node four=',&
-         iTree_IA(Coord1_:Coord0_+nDim,3), ' should be ',Int_D(1:nDim)
+         iTree_IA(Coord1_:Coord0_+nDim,3), ' should be ',iCoord_D(1:nDim)
 
     if(DoTestMe)write(*,*)'Testing find_tree_cell'
-    call find_tree_cell(CoordTest_D, iNode, Ijk_D, Distance_D)
+    call find_tree_cell(CoordTest_D, iNode, iCell_D, Distance_D)
     if(iNode /= nRoot)write(*,*)'ERROR: Test find point failed, iNode=',&
          iNode,' instead of',nRoot
 
     if(.not.is_point_inside_node(CoordTest_D, iNode)) &
          write(*,*)'ERROR: Test find point failed'
 
-    if(any(Ijk_D(1:nDim) /= nIjk_D(1:nDim))) &
-         write(*,*)'ERROR: Test find point failed, Ijk_D=',&
-         Ijk_D(1:nDim),' instead of', nIjk_D(1:nDim)
+    if(any(iCell_D(1:nDim) /= nIJK_D(1:nDim))) &
+         write(*,*)'ERROR: Test find point failed, iCell_D=',&
+         iCell_D(1:nDim),' instead of', nIjk_D(1:nDim)
 
     ! Cell size in units where the whole domain is 1.0
     CellSize_D = 1.0/(nRoot_D*nIJK_D)
@@ -1492,7 +1493,7 @@ contains
     ! Set node type to the second coordinate index
     iTypeNode_I = iTree_IA(Coord2_,:)
     call distribute_tree(.true.,iTypeNode_I)
-    if(DoTestMe)call show_tree('after distribute_tree with type=Coord2', .true.)
+    if(DoTestMe)call show_tree('after distribute_tree with type=Coord2',.true.)
 
     ! Use default (single type)
     call distribute_tree(.true.)
