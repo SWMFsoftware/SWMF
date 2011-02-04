@@ -74,8 +74,8 @@ my $ValidArrayName = "${ValidScalarName}_[A-Z]+";
 my $ValidNamedIndex = "$FirstPart($Part)*_|[A-Z][A-Z]_";
 
 # Valid first name parts depending on variable/function type:
-my %ValidPart1 = ('integer'   => '(D?[i-nI-N]|Max|Min)\d*',
-		  'logical'   => '(Is|Use|Used|Do|Done)\d*',
+my %ValidPart1 = ('integer'   => '(D?[i-nI-N]|Max|Min|Ijk)\d*',
+		  'logical'   => '(Is|Use|Used|Unused|Do|Done)\d*',
 		  'character' => '(Name|Type|String)\d*'
 		  );
 
