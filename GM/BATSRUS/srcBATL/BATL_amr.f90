@@ -111,7 +111,8 @@ contains
     iAmrChange_B = AmrUnchanged_
 
     ! nVar dependent arrays are allocated and deallocated every call
-    allocate(Buffer_I(nVarBuffer*nIJK+1), &
+    ! Buffer_I +1 for Dt_B and +1 for DoCheckMask header information
+    allocate(Buffer_I(nVarBuffer*nIJK+2), &
          StateP_VG(nVarBuffer,iMinP:iMaxP,jMinP:jMaxP,kMinP:kMaxP), &
          SlopeL_V(nVar), SlopeR_V(nVar), Slope_V(nVar))
 
@@ -359,7 +360,8 @@ contains
       else
          DoCheckMask = .false.
       end if
-      
+  
+
       ! Averaging all used fine cells inside the coarse cell. 
       if(DoCheckMask) then
          ! Set the volume of unused cells to zero
@@ -436,7 +438,7 @@ contains
       !----------------------------------------------------------------------
 
        if(iProcRecv /= iProcSend)then
-         iBuffer = nIJK*nVar/IjkRatio
+         iBuffer = nIJK*nVar/IjkRatio 
          if(present(Dt_B))  iBuffer = iBuffer + 1
          call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
               iStatus_I, iError)
@@ -504,8 +506,11 @@ contains
       else
          DoCheckMask = .false.
       end if
+
+      iBuffer = 1
+      Buffer_I(iBuffer) = logical_to_real(DoCheckMask)
+
       if(DoCheckMask) then
-         iBuffer = 0
          ! Set the volume of unused cells to zero
          where(Used_GB(:,:,:,iBlockSend))
             CellVolume_G = CellVolume_GB(:,:,:,iBlockSend)
@@ -565,7 +570,7 @@ contains
             iBuffer = iBuffer + nVar+1
          end do; end do; end  do
       else
-         iBuffer = 0
+         iBuffer = 1
          if(IsCartesian)then
             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
                Buffer_I(iBuffer+1:iBuffer+nVar) = &
@@ -612,10 +617,11 @@ contains
       use BATL_size, ONLY: InvIjkRatio
 
       integer:: iBuffer, i, j, k
-
+      integer:: nVarUsed
       integer:: iP, jP, kP, iR, jR, kR
       integer, parameter:: Di = iRatio-1, Dj = jRatio-1, Dk = kRatio-1
 
+      logical:: DoCheckMask
       logical:: UseSlopeI, UseSlopeJ, UseSlopeK
       !------------------------------------------------------------------------
 
@@ -624,18 +630,25 @@ contains
       UseSlopeK = .true.
 
       if(iProcRecv /= iProcSend)then
-         iBuffer = nSizeP*nVarBuffer
+         iBuffer = nSizeP*nVarBuffer+1
          if(present(Dt_B)) iBuffer = iBuffer + 1
          call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
               iStatus_I, iError)
       end if
 
-
+      DoCheckMask = Buffer_I(1) > 0.5
+!      print *,"DoCheckMask",Buffer_I(1),DoCheckMask, UseMask
+      if(DoCheckMask) then
+         nVarUsed = nVarBuffer 
+      else 
+         nVarUsed = nVar
+      end if
+      
       ! StateP_VG(nVar+1,:,:,:) is the Used_GB for the parent block
-      iBuffer = 0
+      iBuffer = 1
       do kP = kMinP, kMaxP; do jP = jMinP, jMaxP; do iP = iMinP, iMaxP
-         StateP_VG(:,iP,jP,kP) = Buffer_I(iBuffer+1:iBuffer+nVarBuffer)
-         iBuffer = iBuffer + nVarBuffer
+         StateP_VG(1:nVarUsed,iP,jP,kP) = Buffer_I(iBuffer+1:iBuffer+nVarUsed)
+         iBuffer = iBuffer + nVarUsed
       end do; end do; end do
       ! Set time step to half of the parent block
       if(present(Dt_B)) Dt_B(iBlockRecv) = 0.5*Buffer_I(iBuffer+1)
@@ -666,7 +679,7 @@ contains
                   ! will only be able to use 1st order prolongation in that
                   ! dimension 
 
-                  if(UseMask) then
+                  if(DoCheckMask) then
                      ! If any of the neighbor cells are masked the product
                      ! will be zero and no 2nd order prolongation can be done
                      if(iRatio == 2) UseSlopeI = &
