@@ -345,7 +345,7 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   !use CON_time, ONLY : get_time
   use ModCrcmGrid,  ONLY: iSize=>np, jSize=>nt
-  use ModCrcm,      ONLY: Pressure_IC
+  use ModCrcm,      ONLY: Pressure_IC=>phot
   use ModGmCrcm,    ONLY: Den_IC, iLatMin, DoMultiFluidGMCoupling
   use ModFieldTrace,ONLY: iba
   use ModCrcmPlanet,ONLY: nspec,amu_I
