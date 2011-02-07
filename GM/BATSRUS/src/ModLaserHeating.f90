@@ -25,10 +25,9 @@ module ModLaserHeating
 
   private !Except
 
-  real, public, allocatable:: LaserHeating_CB(:,:,:,:)
-
+  real, public, allocatable:: LaserHeating_CB(:,:,:,:) ! Heating energy density
   public:: read_laser_heating_param  ! Read laser parameters
-  public:: add_laser_heating         ! Add laser heating as pressure/energy source
+  public:: add_laser_heating         ! Add heating as pressure/energy source
 
   ! Local variables
 
@@ -57,9 +56,9 @@ module ModLaserHeating
   real, allocatable::AbsorptionCoeff_I(:)
 
 
-  !the irradiance (power). Therefore, the pointwise sources of energy calculated by
-  !this subroutine are multipled by :
-  !LaserIrradiance*Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
+  ! the irradiance (power). The pointwise sources of energy calculated by
+  ! this subroutine are multipled by :
+  ! LaserIrradiance*Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
 
   logical,dimension(:), pointer:: DoRay_I
   real, allocatable:: Slope_DI(:,:), Intensity_I(:), DeltaS_I(:)
@@ -114,14 +113,12 @@ module ModLaserHeating
   integer:: nRayPerBeam
 
   integer:: nBeam = 0
-  real   :: rBeamMuM = 1.0, xPlaneMum = -60.0
-
-  real   :: rBeam, xPlane
+  real   :: rBeam = 1.0, xPlane = -60.0
 
   real   :: BeamParam_II(3,192)
 
   !Named indexes:
-  integer, parameter:: SlopeDeg_ = 1, yCrMuM_ = 2, AmplitudeRel_ = 3
+  integer, parameter:: SlopeDeg_ = 1, yCr_ = 2, AmplitudeRel_ = 3
 
   integer:: nRayTotal = -1
   real, allocatable, dimension(:,:):: XyzRay_DI, SlopeRay_DI 
@@ -799,7 +796,7 @@ contains
     !====================
   end subroutine ray_path
 
-  !=============================================================================
+  !============================================================================
 
   real function irradiance_t(TimeSi)
     real,intent(in)::TimeSi
@@ -813,10 +810,6 @@ contains
 
   !============================================================================
   subroutine get_rays
-    !Convert MuM = 1e-6 m to dimensionless:
-
-    rBeam  =  rBeamMuM * 1.0e-6 * Si2No_V(UnitX_)
-    xPlane = xPlaneMuM * 1.0e-6 * Si2No_V(UnitX_)
 
     select case(TypeBeam)
     case('rz','RZ')
@@ -831,8 +824,11 @@ contains
     Amplitude_I(1:nRayTotal) = Amplitude_I(1:nRayTotal)/&
          sum(Amplitude_I(1:nRayTotal))
   end subroutine get_rays
-  !======================
+
+  !===========================================================================
+
   subroutine rz_beam_rays
+
     use ModGeometry, ONLY: TypeGeometry, y2
     use ModConst,    ONLY: cDegToRad 
 
@@ -844,7 +840,7 @@ contains
     if(TypeGeometry/='rz')call CON_stop(&
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
 
-    !Allocation is excessive, nRayTotal is not yet known:
+    ! Allocation is excessive, nRayTotal is not yet known:
 
     allocate(  XyzRay_DI(3, nBeam * (2 * nRayPerBeam +1)))
     allocate(SLopeRay_DI(3, nBeam * (2 * nRayPerBeam +1)))
@@ -859,9 +855,8 @@ contains
 
        sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
 
-       !Transform yCrMuM to dimensionless
-       yCrCentral =  BeamParam_II(yCrMuM_, iBeam) &
-            * 1.0e-6 * Si2No_V(UnitX_)
+       ! Transform yCr to dimensionless
+       yCrCentral =  BeamParam_II(yCr_, iBeam)
 
        yPlaneCentral = yCrCentral + xPlane*SinTheta/CosTheta
 
@@ -953,14 +948,14 @@ contains
     case('#LASERBEAMS')
        call read_var('TypeBeam',    TypeBeam   )
        call read_var('nRayPerBeam', nRayPerBeam)
-       call read_var('rBeam',       rBeamMuM   )
-       call read_var('xBeam',       xPlaneMuM  )
+       call read_var('rBeam',       rBeam )
+       call read_var('xBeam',       xPlane )
     case('#LASERBEAM')
        nBeam = nBeam +1
        call read_var('SlopeDeg', &
             BeamParam_II(SlopeDeg_, nBeam))
        call read_var('yBeam', &
-            BeamParam_II(yCrMuM_, nBeam))
+            BeamParam_II(yCr_, nBeam))
        call read_var('AmplitudeRel', &
             BeamParam_II(AmplitudeRel_, nBeam))
     case default
@@ -969,7 +964,7 @@ contains
 
   end subroutine read_laser_heating_param
 
-  !=============================================================================
+  !============================================================================
 
   subroutine init_laser_package
 
@@ -979,7 +974,7 @@ contains
     call get_rays
     nRay = nRayTotal
 
-    !Allocate arrays for rays
+    ! Allocate arrays for rays
     allocate(LaserHeating_CB(nI,nJ,nK,MaxBlock))
     LaserHeating_CB = 0.0
 
@@ -1025,7 +1020,7 @@ contains
     end if
 
   end subroutine init_laser_package
-  !=========================================================================
+  !===========================================================================
   subroutine get_energy_source
 
     use BATL_lib, ONLY: nDim, MaxDim, nIJK_D, interpolate_grid
@@ -1034,7 +1029,7 @@ contains
     integer:: iRay, iBlock, iCell, nCell
     integer:: iCell_II(0:nDim,2**nDim), iCell_D(MaxDim), i, j, k
     real::    Weight_I(2**nDim), Weight
-    !-----------------------------------------------------------------
+    !-----------------------------------------------------------------------
     if(DoInit) then
        call init_laser_package
        if(iProc==0.and.DoVerbose)then
@@ -1164,9 +1159,14 @@ contains
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
-    if(UseNonConservative)call stop_mpi(NameSub//' does not work with non-conservative')
+
+    ! Why ???
+    if(UseNonConservative) &
+         call stop_mpi(NameSub//' does not work with non-conservative')
+
     do iBlock = 1, MaxBlock
        if(UnusedBLK(iBlock))CYCLE
+
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseExtraEInt)then
              ! Single temperature:
