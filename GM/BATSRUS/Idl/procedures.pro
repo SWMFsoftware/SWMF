@@ -3152,7 +3152,7 @@ function rel_error, w1, w2, iws
         end
         2: begin
            w    = w(*,*,iws)
-           wref = wre(*,*,iws)
+           wref = wref(*,*,iws)
         end
         3: begin
            w    = w(*,*,*,iws)
