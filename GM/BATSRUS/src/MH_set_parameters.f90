@@ -490,7 +490,8 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('Kappa0Heat'  ,Kappa0Heat)
            call read_var('ExponentHeat',ExponentHeat)
         end if
-     case("#RESISTIVITY", "#RESISTIVITYOPTIONS")
+     case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &
+          "#RESISTIVITYREGION", "#RESISTIVEREION")
         call read_resistivity_param(NameCommand)
         !                                               ^CFG END DISSFLUX
 
@@ -3112,7 +3113,7 @@ contains
          (UseTvdResChange .or. UseAccurateResChange))
     DoLimitMomentum = boris_correction .and. DoOneCoarserLayer
 
-    !!! momentum limiting fais for multiion: to be debugged
+    !!! momentum limiting fails for multiion: to be debugged
     if(UseMultiIon)DoLimitMomentum = .false.
     !!!
 

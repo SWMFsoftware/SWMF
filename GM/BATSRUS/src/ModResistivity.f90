@@ -4,17 +4,28 @@ module ModResistivity
 
   ! Resistivity related variables and methods
 
-  use ModSize, ONLY: nI, nJ, nK, MaxBlock
+  use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
 
   implicit none
 
-  logical            :: UseResistivity   = .false.
-  logical            :: UseResistiveFlux = .true.
+  private ! except
+  public:: read_resistivity_param
+  public:: init_mod_resistivity
+  public:: spitzer_resistivity
+  public:: anomalous_resistivity
+  public:: mask_resistivity
+  public:: calc_resistivity_source
+
+  logical, public           :: UseResistivity   = .false.
+  logical, public           :: UseResistiveFlux = .true.
+  character(len=30), public :: TypeResistivity='none'
+  real, public, allocatable :: Eta_GB(:,:,:,:)
+  real, public              :: Eta0, Eta0Si=0.0
+  
+  ! Local variables
   logical            :: UseJouleHeating  = .true.
   logical            :: UseHeatExchange  = .true.
 
-  character (len=30) :: TypeResistivity='none'
-  real               :: Eta0Si=0.0, Eta0
   real               :: EtaPerpSpitzerSi = 0.0
   real               :: CoulombLogarithm = 20.0
   real               :: Eta0AnomSi=0.0, Eta0Anom
@@ -22,7 +33,8 @@ module ModResistivity
   real               :: jCritAnomSi=1.0, jCritInv
   real               :: Si2NoEta
 
-  real, allocatable :: Eta_GB(:,:,:,:)
+  real:: rZeroResist = -1.0
+  real:: rFullResist = 1e30
 
   character(len=*), private, parameter :: NameMod = 'ModResistivity'
 
@@ -62,6 +74,9 @@ contains
                   //TypeResistivity)
           end select
        end if
+    case("#RESISTIVITYREGION", "#RESISTIVEREGION")
+       call read_var('rZeroResist', rZeroResist)
+       call read_var('rFullResist', rFullResist)
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
@@ -176,6 +191,38 @@ contains
     end do; end do; end do
 
   end subroutine anomalous_resistivity
+  !===========================================================================
+
+  subroutine mask_resistivity(iBlock, Eta_G)
+
+    use ModGeometry, ONLY: rMin_BLK, r_BLK
+
+    ! Mask Eta_G if required
+
+    integer, intent(in) :: iBlock
+    real,    intent(out):: Eta_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+
+    integer:: i, j, k
+    real:: r
+    !------------------------------------------------------------------------
+
+    ! Check if there is any region with masked resistivity
+    if(rZeroResist < 0.0) RETURN
+
+    ! Check if the block is fully outside the masked region
+    if(rMin_BLK(iBlock) > rFullResist) RETURN
+
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       r = r_BLK(i,j,k,iBlock)
+       if(r < rZeroResist)then
+          Eta_G(i,j,k) = 0.0
+       else if(r < rFullResist)then
+          Eta_G(i,j,k) = Eta_G(i,j,k) &
+               *(r - rZeroResist)/(rFullResist - rZeroResist)
+       end if
+    end do; end do; end do
+
+  end subroutine mask_resistivity
 
   !===========================================================================
   subroutine calc_resistivity_source(iBlock)

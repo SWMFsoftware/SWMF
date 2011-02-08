@@ -26,5 +26,7 @@ subroutine set_resistivity(iBlock)
      call stop_mpi(NameSub//' : invalid TypeResistivity='//TypeResistivity)
   end select
 
+  call mask_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+
 end subroutine set_resistivity
 
