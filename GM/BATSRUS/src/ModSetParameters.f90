@@ -491,7 +491,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('ExponentHeat',ExponentHeat)
         end if
      case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &
-          "#RESISTIVITYREGION", "#RESISTIVEREION")
+          "#RESISTIVITYREGION", "#RESISTIVEREGION")
         call read_resistivity_param(NameCommand)
         !                                               ^CFG END DISSFLUX
 
