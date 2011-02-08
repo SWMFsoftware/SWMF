@@ -355,14 +355,14 @@ Examples:
 
 PostProc.pl
 
-   Post-process the plot files, create movies from IDL output (remove original
-   files), concatenate satellite, log, and magnetometer files, 
-   and run PostIDL.exe on 4 cores:
+   Post-process the plot files, create movies from IDL output (remove originals)
+   concatenate satellite, log, and magnetometer files, move output into a 
+   directory tree "RESULTS/run23", and run PostIDL.exe on 4 cores:
 
-PostProc.pl -M -cat -n=4
+PostProc.pl -M -cat -n=4 RESULTS/run23
 
-   Post-process the plot files, compress them, rsync to another machine
-   and print verbose info:
+   Post-process the plot files, compress the ASCII files, rsync the results
+   to another machine and print verbose info:
 
 PostProc.pl -g -rsync=ME@OTHERMACHINE:My/Results -v
 
