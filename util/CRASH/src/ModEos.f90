@@ -205,8 +205,8 @@ module CRASH_ModEos
   ! Defaultparameters for EOS tables:
   !/
   integer, parameter :: Min_=1, Max_=2, &
-       IndexDefaultEos_I(2) = (/501, 501/), &
-       IndexDefaultOpac_I(2)= (/201, 201/)
+                        IndexDefaultEos_I(2) = (/501, 501/)
+  integer, public    :: IndexDefaultOpac_I(2)= (/201, 201/)
   real,dimension(Min_:Max_,Xe_:Ay_), parameter::&
        TeDefaultEos_II = reshape(&     ! original minimum
        (/1.0e-2, 1.0e+3, & !Xe_     1e-2
