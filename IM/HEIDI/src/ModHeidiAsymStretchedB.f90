@@ -22,6 +22,8 @@ contains
     real :: t252, t255, t279
     real :: a, b
 
+
+    real :: t11
     !------------------------------------------------------------------------
     a = StretchingFactorA
     b = StretchingFactorB
@@ -30,7 +32,6 @@ contains
     ! Calculations are done by Maple using CodeGeneration with optimize flag.
     !/
 
-    
     t1 = x ** 2
     t2 = y ** 2
     t3 = t1 + t2
@@ -157,6 +158,7 @@ contains
     real :: t168, t172, t175, t180, t191, t196, t228, t250
     real :: a, b
 
+    real :: t11
     !------------------------------------------------------------------------
     a = StretchingFactorA
     b = StretchingFactorB
@@ -355,7 +357,7 @@ contains
    dBdz = abs(DipoleFactor) * t181
 
 
-
+  
 
   end subroutine get_dBdz
 
@@ -376,6 +378,8 @@ contains
     real :: t224, t229, t231, t250, t254,  t255, t258, t259, t260, t262
     real :: t264, t268, t271, t274, t278,  t281, t299, t313
     real :: a, b
+
+    real :: t11
     !------------------------------------------------------------------------
     a = StretchingFactorA
     b = StretchingFactorB
@@ -494,8 +498,9 @@ contains
          t165 * a * t1 + 0.2D1 * t1 * y + 0.4D1 * t137 + 0.2D1 * y * t5) * t231 * t229) -&
          0.3D1 * t262 * y * z * (t129 * t299 * t133 / 0.2D1 - 0.5D1 * (t271 + t2 * z) * t231 * t229)
 
-    Vx = t313
+    Vx = (abs(DipoleFactor))**3 * t313
 
+   
 
   end subroutine get_GradB2CrossB_x
   !========================================================================
@@ -517,6 +522,10 @@ contains
     real :: t239, t242, t248, t249, t269, t272, t275, t290, t298, t316
     real :: t342
     real :: a, b
+
+
+
+    real :: t7
     !------------------------------------------------------------------------
     a = StretchingFactorA
     b = StretchingFactorB
@@ -651,14 +660,16 @@ contains
          0.2D1 * t2 * t298 + 0.8D1 * t64 * a * t203 + t269 * t63 + 0.4D1 * t42 *      &
          t203 + 0.2D1 * x * t2 + 0.2D1 * t242) * t171 * t169)
 
-    Vy = t342
+    Vy = (abs(DipoleFactor))**3 * t342
+    
+
 
   end subroutine get_GradB2CrossB_y
   !========================================================================
   subroutine get_GradB2CrossB_z(x, y, z, Vz)
 
     implicit none
-
+    
     real, intent(IN) :: x, y, z
     real, intent(OUT):: Vz
     ! Local variables used for optimization
@@ -823,8 +834,9 @@ contains
          0.2D1 * y * t5) * t258 * t256)) 
     
 
-    Vz = t402
+   Vz =  (abs(DipoleFactor))**3 * t402
 
+   
   end subroutine get_GradB2CrossB_z
   !========================================================================
   end module get_gradB_components
