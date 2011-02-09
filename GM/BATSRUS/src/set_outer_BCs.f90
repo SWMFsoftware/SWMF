@@ -123,16 +123,6 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         kmin1p=nK  ; kmax1p=nK  ; kmin2p=nK-1; kmax2p=nK-1
      end select
 
-     if(TypeGeometry == 'rz' .and. XyzMin_D(2) == 0.0 .and. iSide == 3)then
-        call BC_symm(1, nVar)
-        do iFluid = 1, nFluid
-           call BC_asymm(iRhoUy_I(iFluid), iRhoUz_I(iFluid))
-        end do
-        if(UseB)call BC_asymm(By_, Bz_)
-
-        CYCLE
-     end if
-
      select case(TypeBc_I(iSide))
      case('coupled')
         ! For SC-IH coupling the extra wave energy variable needs a BC
@@ -165,10 +155,18 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
            if(UseB)call BC_asymm(Bx_,Bx_)
         endif
         if(iSide==south_.or.iSide==north_)then
-           do iFluid = 1, nFluid
-              call BC_asymm(iRhoUy_I(iFluid), iRhoUy_I(iFluid))
-           end do
-           if(UseB)call BC_asymm(By_,By_)
+           if(TypeGeometry=='rz'.and.XyzMin_D(2)==0.0.and.iSide==south_)then
+              call BC_symm(1, nVar)
+              do iFluid = 1, nFluid
+                 call BC_asymm(iRhoUy_I(iFluid), iRhoUz_I(iFluid))
+              end do
+              if(UseB)call BC_asymm(By_, Bz_)
+           else
+              do iFluid = 1, nFluid
+                 call BC_asymm(iRhoUy_I(iFluid), iRhoUy_I(iFluid))
+              end do
+              if(UseB)call BC_asymm(By_,By_)
+           end if
         endif
         if(iSide==bot_.or.iSide==top_)then
            do iFluid = 1, nFluid
