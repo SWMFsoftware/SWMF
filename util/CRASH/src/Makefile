@@ -36,7 +36,7 @@ OBJECTS=\
 MPIRUN = 
 
 OBJECTS_EXE= test_ionization.o test_godunov.o test_Fermi.o test_absorption.o \
-	     save_eos_table.o
+	     save_eos_table.o test_opac_tables.o
 
 
 
@@ -122,6 +122,30 @@ OPAC_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_ ;
 	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
 	${LINK.f90} -o OPAC.exe opacity.o Tmp_/*.o \
+		${Lflag1}    ; 
+	rm -rf Tmp_ 
+
+test_opac_tables.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+
+test_opac:  DEPEND 
+	make TEST_OPAC.exe
+	./TEST_OPAC.exe
+	${SCRIPTDIR}/./DiffNum.pl Xe_opac_CRASH.dat Xe_opac_TEST.dat > test_opac.diff
+	ls -l *.diff
+
+TEST_OPAC.exe: test_opac_tables.o
+	@(if [ ${OS} = "Darwin" ];         then make TEST_OPAC_for_Darwin; \
+	else                                    make TEST_OPAC_general; fi)
+
+TEST_OPAC_general:
+	${LINK.f90} -o TEST_OPAC.exe test_opac_tables.o \
+		-L${LIBDIR} -lCRASH  -lSHARE -lTIMING \
+		${Lflag1}
+
+TEST_OPAC_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_ ;
+	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
+	${LINK.f90} -o TEST_OPAC.exe test_opac_tables.o Tmp_/*.o \
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
 
@@ -223,6 +247,15 @@ CONVERT: convert.o
 	rm -rf Tmp_; mkdir Tmp_ ;
 	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
 	${LINK.f90} -o CONVERT.exe convert.o Tmp_/*.o \
+		${Lflag1}    ; 
+	rm -rf Tmp_ 
+
+convert_ARTEP_opac.o: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+
+CONVERT_ARTEP: convert_ARTEP_opac.o
+	rm -rf Tmp_; mkdir Tmp_ ;
+	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
+	${LINK.f90} -o CONVERT_ARTEP.exe convert_ARTEP_opac.o Tmp_/*.o \
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
 
