@@ -156,7 +156,6 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         endif
         if(iSide==south_.or.iSide==north_)then
            if(TypeGeometry=='rz'.and.XyzMin_D(2)==0.0.and.iSide==south_)then
-              call BC_symm(1, nVar)
               do iFluid = 1, nFluid
                  call BC_asymm(iRhoUy_I(iFluid), iRhoUz_I(iFluid))
               end do
