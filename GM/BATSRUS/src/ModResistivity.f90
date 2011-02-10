@@ -7,8 +7,10 @@ module ModResistivity
   use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
 
   implicit none
+  save
 
   private ! except
+
   public:: read_resistivity_param
   public:: init_mod_resistivity
   public:: spitzer_resistivity
@@ -199,8 +201,8 @@ contains
 
     ! Mask Eta_G if required
 
-    integer, intent(in) :: iBlock
-    real,    intent(out):: Eta_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    integer, intent(in)   :: iBlock
+    real,    intent(inout):: Eta_G(-1:nI+2, -1:nJ+2, -1:nK+2)
 
     integer:: i, j, k
     real:: r
