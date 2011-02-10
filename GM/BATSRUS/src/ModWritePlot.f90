@@ -586,7 +586,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        plot_dimensional, Plot_
   use ModNumConst, ONLY: cTiny
   use ModHallResist, ONLY: UseHallResist, hall_factor, &
-       IsNewBlockHall, get_face_current
+       IsNewBlockCurrent, get_face_current
   use ModResistivity, ONLY: Eta_GB                         !^CFG IF DISSFLUX
   use ModPointImplicit, ONLY: UsePointImplicit_B
   use ModMultiFluid, ONLY: extract_fluid_name, &
@@ -633,7 +633,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      FullB_DG=State_VGB(Bx_:Bz_,:,:,:,iBLK)
   end if
   ! Recalculate magnetic field in block for face currents (if needed)
-  IsNewBlockHall = .true.
+  IsNewBlockCurrent = .true.
 
   do iVar = 1, nPlotVar
      NamePlotVar = plotvarnames(iVar)

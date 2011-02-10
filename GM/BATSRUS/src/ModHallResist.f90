@@ -12,7 +12,7 @@ module ModHallResist
 
   ! Logical for adding hall resistivity
   logical, public:: UseHallResist=.false.
-  logical, public:: IsNewBlockHall=.true.
+  logical, public:: IsNewBlockCurrent=.true.
   ! Coefficient for taking whistler wave speed into account
   real, public:: HallCmaxFactor = 1.0
 
@@ -213,7 +213,7 @@ contains
     real :: Bc_D(3) ! interpolated coarse cell B field
     !-------------------------------------------------------------------------
 
-    IsNewBlockHall = .false.
+    IsNewBlockCurrent = .false.
 
     ! Copy State_VGB into local array and overwrite ghost cells
     B1_DG = State_VGB(Bx_:Bz_,:,:,:,iBlock)
@@ -724,7 +724,7 @@ contains
     InvDy = 1.0/dy_Blk(iBlock)
     InvDz = 1.0/dz_Blk(iBlock)
 
-    if( IsNewBlockHall ) then
+    if( IsNewBlockCurrent ) then
        call set_block_field(iBlock)
        if(UseCovariant)then                            
           !call timing_start('set_block_jac')
@@ -1037,7 +1037,7 @@ contains
        do iBlock = 1, nBlock
           if(UnusedBlk(iBlock)) CYCLE
 
-          IsNewBlockHall = .true.
+          IsNewBlockCurrent = .true.
 
           call correct_monotone_restrict(iBlock)
 

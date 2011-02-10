@@ -27,6 +27,9 @@ subroutine calc_sources
                               get_radiative_cooling, add_chromosphere_heating
   use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
                               UseChromosphereHeating
+  use ModFaceFlux,      ONLY: Pe_G
+  use ModHallResist,    ONLY: UseBiermannBattery, UseHallResist, &
+       IonMassPerCharge_G
   implicit none
 
   integer :: i, j, k, iDim, iVar
@@ -284,6 +287,18 @@ subroutine calc_sources
                 /State_VGB(Rho_,i,j,k,iBlock)/y_BLK(i,j,k,iBlock)
         end if
      end do; end do; end do
+
+     ! For now, no Hall MHD implementation for rz-geometry
+     if(UseBiermannBattery .and. &
+          (UseElectronPressure .or. ElectronPressureRatio > 0.0))then
+
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
+                + IonMassPerCharge_G(i,j,k)/State_VGB(Rho_,i,j,k,iBlock) &
+                /y_Blk(i,j,k,iBlock) &
+                *0.5*(Pe_G(i+1,j,k) - Pe_G(i-1,j,k))/Dx_Blk(iBlock)
+        end do; end do; end do
+     end if
   end if
 
   if(UseDivbSource)then

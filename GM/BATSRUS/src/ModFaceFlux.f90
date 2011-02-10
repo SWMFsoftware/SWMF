@@ -34,8 +34,8 @@ module ModFaceFlux
        Pe_X, Pe_Y, Pe_Z ! output: Pe for grad Pe in multi-ion MHD
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
-       IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge,&
-       UseBiermannBattery
+       IsNewBlockCurrent, hall_factor, get_face_current, &
+       set_ion_mass_per_charge, UseBiermannBattery
   !^CFG IF IMPLICIT BEGIN
   use ModRadDiffusion, ONLY: IsNewBlockRadDiffusion, get_radiation_energy_flux
   use ModHeatConduction, ONLY: IsNewBlockHeatCond, IsNewBlockIonHeatCond, &
@@ -119,9 +119,12 @@ module ModFaceFlux
   real :: EtaJx, EtaJy, EtaJz, Eta = -1.0
 
   ! Variables needed for Hall resistivity
-  real :: InvDxyz, HallCoeff, HallJx, HallJy, HallJz, BiermannCoeff
+  real :: InvDxyz, HallCoeff, HallJx, HallJy, HallJz
+
+  ! Variables needed for Biermann battery term
   logical :: UseHallGradPe = .false., IsNewBlockGradPe = .true.
-  real :: GradXPeNe, GradYPeNe, GradZPeNe
+  real :: BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe
+  real, save :: Pe_G(-1:nI+2,-1:nJ+2,-1:nK+2)
 
   ! Variables for diffusion solvers (radiation diffusion, heat conduction)
   real :: DiffCoef, EradFlux, RadDiffCoef, HeatFlux, IonHeatFlux, &
@@ -379,7 +382,7 @@ contains
           ).and.UseB
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
-    IsNewBlockHall   = .true.
+    IsNewBlockCurrent   = .true.
     IsNewBlockGradPe = .true.
     IsNewBlockRadDiffusion = .true.      !^CFG IF IMPLICIT
     IsNewBlockHeatCond    = .true.       !^CFG IF IMPLICIT
@@ -701,7 +704,7 @@ contains
           ).and.UseB
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
-    IsNewBlockHall   = .true.
+    IsNewBlockCurrent   = .true.
     IsNewBlockGradPe = .true.
     IsNewBlockRadDiffusion = .true.      !^CFG IF IMPLICIT
     IsNewBlockHeatCond    = .true.       !^CFG IF IMPLICIT
@@ -1122,7 +1125,6 @@ contains
     real :: uLeft_D(3), uRight_D(3) !,cDivBWave
     real :: dB0_D(3)
 
-    real, save :: Pe_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     real       :: GradPe_D(3)
     real       :: InvNumDens, Coef
     !-----------------------------------------------------------------------
@@ -2066,7 +2068,6 @@ contains
     real :: uLeft_D(3), uRight_D(3) !,cDivBWave
     real :: dB0_D(3)
 
-    real, save :: Pe_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     real       :: GradPe_D(3)
     real       :: InvNumDens, Coef
     !-----------------------------------------------------------------------
