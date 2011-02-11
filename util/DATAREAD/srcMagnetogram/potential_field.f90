@@ -5,7 +5,7 @@ module ModPotentialField
   ! input parameter
   logical:: DoReadMagnetogram = .true.
 
-  ! grid parameters
+  ! grid and domain parameters
   integer:: nR = 150, nTheta = 180, nPhi = 360
   real   :: rMin = 1.0, rMax = 2.5
 
@@ -57,7 +57,6 @@ contains
   subroutine read_fdips_param
 
     use ModReadParam
-    use ModUtilities, ONLY: lower_case
 
     character(len=lStringLine) :: NameCommand
     character(len=10):: TypeOutput
@@ -77,12 +76,12 @@ contains
           call read_var('nTheta', nTheta)
           call read_var('nPhi  ', nPhi)
        case("#MAGNETOGRAM")
-          call read_var('NameFileIn',  NameFileIn)
+          call read_var('NameFileIn' ,  NameFileIn)
           call read_var('UseCosTheta', UseCosTheta)
-          call read_var('BrMax'     ,  BrMax)
+          call read_var('BrMax'      ,  BrMax)
        case("#TEST")
-          call read_var('iRTest',     iRTest)
-          call read_var('iPhiTest',   iPhiTest)
+          call read_var('iRTest'    , iRTest)
+          call read_var('iPhiTest'  , iPhiTest)
           call read_var('iThetaTest', iThetaTest)
        case("#SOLVER")
           call read_var('UsePreconditioner', UsePreconditioner)
@@ -113,9 +112,9 @@ contains
   !===========================================================================
   subroutine read_magnetogram
 
-    ! Read the raw magnetogram file into a 2d array
+    use ModIoUnit, ONLY: UnitTmp_
 
-    integer, parameter:: iUnit = 9   
+    ! Read the raw magnetogram file into a 2d array
 
     integer:: iError
     integer:: nCarringtonRotation
@@ -125,20 +124,22 @@ contains
     character (len=100) :: String
 
     real, allocatable:: Br0_II(:,:)
+
+    character(len=*), parameter:: NameSub = 'read_magnetogram'
     !------------------------------------------------------------------------
-    open(iUnit, file=NameFileIn, status='old', iostat=iError)
+    open(UnitTmp_, file=NameFileIn, status='old', iostat=iError)
     if(iError /= 0)then
-       write(*,*) 'Error: could not open input file ',NameFileIn
+       write(*,*) 'Error in ',NameSub,': could not open input file ',NameFileIn
        stop
     end if
     do 
-       read(iUnit,'(a)', iostat = iError ) String
+       read(UnitTmp_,'(a)', iostat = iError ) String
        if(index(String,'#CR')>0)then
-          read(iUnit,*) nCarringtonRotation
+          read(UnitTmp_,*) nCarringtonRotation
        endif
        if(index(String,'#ARRAYSIZE')>0)then
-          read(iUnit,*) nPhi0
-          read(iUnit,*) nTheta0
+          read(UnitTmp_,*) nPhi0
+          read(UnitTmp_,*) nTheta0
        endif
        if(index(String,'#START')>0) EXIT
     end do
@@ -148,10 +149,10 @@ contains
 
     allocate(Br0_II(nTheta0,nPhi0))
 
-    ! fitsfile.dat is in longitude, latitude
+    ! input file is in longitude, latitude
     do iTheta = nTheta0, 1, -1
        do iPhi = 1, nPhi0
-          read(iUnit,*) Br0_II(iTheta,iPhi)
+          read(UnitTmp_,*) Br0_II(iTheta,iPhi)
           if (abs(Br0_II(iTheta,iPhi)) > BrMax) &
                Br0_II(iTheta,iPhi) = sign(BrMax, Br0_II(iTheta,iPhi))
        end do
@@ -213,7 +214,7 @@ contains
 
     deallocate(Br0_II)
 
-    close(iUnit)
+    close(UnitTmp_)
 
   end subroutine read_magnetogram
 
@@ -250,22 +251,29 @@ contains
 
     if(UseCosTheta)then
        dZ = 2.0/nTheta
+
+       !Set Theta_I
        do iTheta = 1, nTheta
           z = 1 - (iTheta - 0.5)*dZ
           Theta_I(iTheta) = acos(z)
        end do
        Theta_I(0)        = -Theta_I(1)
        Theta_I(nTheta+1) = cTwoPi - Theta_I(nTheta)
+
+       !Set ThetaNode_I
        do iTheta = 1, nTheta + 1
           z = max(-1.0, min(1.0, 1 - (iTheta-1)*dZ))
           ThetaNode_I(iTheta) = acos(z)
        end do
     else
        dTheta = cPi/nTheta
+
+       !Set Theta_I
        do iTheta = 0, nTheta+1
           Theta_I(iTheta) = (iTheta - 0.5)*dTheta
        end do
 
+       !Set ThetaNode_I
        do iTheta = 1, nTheta+1
           ThetaNode_I(iTheta) = (iTheta - 1)*dTheta
        end do
