@@ -102,3 +102,26 @@ test_potential_check:
 		potential.log \
 		potential.ref > test_potential.diff
 	ls -l test_potential.diff
+
+###############################################################################
+
+test_fdips:
+	@echo "test_fdips_compile..." > test_fdips.diff
+	make FDIPS
+	make DIPOLE11
+	./DIPOLE11.exe
+	@echo "test_fdips_run..." >> test_fdips.diff
+	mpirun -np 4 ./FDIPS.exe > fdips.log
+	./redistribute.pl fdips_field_np010202.out fdips.out
+	@echo "test_fdips_check..." >> test_fdips.diff
+	make test_fdips_check
+
+test_fdips_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+		fdips.log \
+		fdips.ref > test_fdips.diff
+	gunzip -c fdips_ref.out.gz > fdips_ref.out
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-9 -a=1e-9 \
+		fdips.out \
+		fdips_ref.out >> test_fdips.diff
+	ls -l test_fdips.diff

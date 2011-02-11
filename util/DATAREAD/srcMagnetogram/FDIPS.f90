@@ -2,35 +2,47 @@ module ModPotentialField
   
   use ModMpi
   use ModUtilities, ONLY: flush_unit
-  use ModIoUnit, ONLY: STDOUT_
+  use ModIoUnit, ONLY: UnitTmp_, STDOUT_
 
   implicit none
 
-  logical, parameter :: DoReadMagnetogram = .true.
-  logical, parameter :: UseCosTheta       = .true. 
-  logical, parameter :: UsePreconditioner = .true.
-  logical, parameter :: DoSaveTecplot     = .false.
+  ! input parameter
+  logical:: DoReadMagnetogram = .true.
 
-  integer,parameter  :: nProcTheta = 2, nProcPhi = 2
+  ! grid and domain parameters
+  integer:: nR = 150, nTheta = 180, nPhi = 360
+  real   :: rMin = 1.0, rMax = 2.5
 
-  integer         :: nR = 9, nTheta = 10, nPhi = 20
-!  integer         :: nR = 450, nTheta = 540, nPhi = 1080
-!  integer         :: nR = 150, nTheta = 180, nPhi = 360
-  integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 2
+  ! domain decomposition
+  integer:: nProcTheta = 2, nProcPhi = 2
 
-!  integer         :: nR = 32, nTheta = 32, nPhi = 32
-!  integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 2
+  ! solver parameters
+  logical:: UsePreconditioner = .true.
+  real   :: Tolerance         = 1e-10
 
-!  integer         :: nR = 64, nTheta = 64, nPhi = 64
-!  integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 1
+  ! magnetogram parameters
+  character(len=100):: NameFileIn = 'fitsfile.dat'  ! filename
+  logical           :: UseCosTheta = .true. 
+  real              :: BrMax = 3500.0               ! Saturation level of MDI
 
-!  integer         :: nR = 128, nTheta = 128, nPhi = 128
-!  integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 1
+  ! output paramters
+  logical           :: DoSaveField   = .true.
+  character(len=100):: NameFileField = 'potentialfield'
+  character(len=5)  :: TypeFileField = 'real8'
 
-!  integer         :: nR = 256, nTheta = 256, nPhi = 256
-!  integer, parameter:: iRTest = 1, iPhiTest = 1, iThetaTest = 1
+  logical           :: DoSavePotential   = .true.
+  character(len=100):: NameFilePotential = 'potentialtest'
+  character(len=5)  :: TypeFilePotential = 'real8'
+  
+  logical           :: DoSaveTecplot   = .false.
+  character(len=100):: NameFileTecplot = 'potentialfield.dat'
 
-  real, parameter :: rMin = 1.0, rMax = 2.5
+  ! testing parameters
+  logical :: UseTiming = .true.
+  integer :: iRTest = 1, iPhiTest = 1, iThetaTest = 2
+
+  ! local variables --------------------
+  character(len=100):: NameFile
 
   logical :: UseBr = .true.
 
@@ -42,7 +54,6 @@ module ModPotentialField
 
   real, allocatable:: Br_II(:,:), Potential_C(:,:,:), Rhs_C(:,:,:), &
        B0_DF(:,:,:,:), DivB_C(:,:,:), PlotVar_VC(:,:,:,:), BrLocal_II(:,:)
-       
 
   ! Variables for hepta preconditioner
   real, parameter:: PrecondParam = 1.0 ! see ModLinearSolver
@@ -69,20 +80,98 @@ module ModPotentialField
        recvBC12_II(:,:), recvBC21_II(:,:), &
        recvBC34_II(:,:), recvBC43_II(:,:), &
        recvBC020_II(:,:), recvBC360_II(:,:)
-  character(len=100) :: NameFileTest, NameFile, NameFileTec
 
 contains
 
   !===========================================================================
+  subroutine read_fdips_param
+
+    use ModReadParam
+
+    character(len=lStringLine) :: NameCommand
+    character(len=10):: TypeOutput
+    integer:: i
+
+    character(len=*), parameter:: NameSub = 'read_fdips_param'
+    !-----------------------------------------------------------------------
+    call read_file('FDIPS.in')
+    call read_init
+
+    ! Default decomposition
+    nProcTheta = nProc
+    nProcPhi   = 1
+
+    do
+       if(.not.read_line() ) EXIT
+       if(.not.read_command(NameCommand)) CYCLE
+       select case(NameCommand)
+       case("#DOMAIN")
+          call read_var('rMin', rMin)
+          call read_var('rMax', rMax)
+       case("#GRID")
+          call read_var('nR    ', nR)
+          call read_var('nTheta', nTheta)
+          call read_var('nPhi  ', nPhi)
+       case("#PARALLEL")
+          call read_var('nProcTheta', nProcTheta)
+          call read_var('nProcPhi'  , nProcPhi)
+       case("#MAGNETOGRAM")
+          call read_var('NameFileIn' , NameFileIn)
+          call read_var('UseCosTheta', UseCosTheta)
+          call read_var('BrMax'      , BrMax)
+       case("#TIMING")
+          call read_var('UseTiming', UseTiming)
+       case("#TEST")
+          call read_var('iRTest'    , iRTest)
+          call read_var('iPhiTest'  , iPhiTest)
+          call read_var('iThetaTest', iThetaTest)
+       case("#SOLVER")
+          call read_var('UsePreconditioner', UsePreconditioner)
+          call read_var('Tolerance',         Tolerance)
+       case("#OUTPUT")
+          call read_var('TypeOutput', TypeOutput, IsLowerCase=.true.)
+          select case(TypeOutput)
+          case('field')
+             DoSaveField = .true.
+             call read_var('NameFileField', NameFileField)
+             call read_var('TypeFileField', TypeFileField)
+             ! remove .out extension if present
+             i = index(NameFileField,'.out')
+             if(i>0) NameFileField = NameFileField(1:i-1)
+          case('potential')
+             DoSavePotential = .true.
+             call read_var('NameFilePotential', NameFilePotential)
+             call read_var('TypeFilePotential', TypeFilePotential)
+             ! remove .out extension if present
+             i = index(NameFilePotential,'.out')
+             if(i>0) NameFilePotential = NameFilePotential(1:i-1)
+          case('tecplot')
+             if(nProc > 1)call CON_stop(NameSub// &
+                  ': TypeOutput=tecplot works for serial runs only')
+             DoSaveTecplot = .true.
+             call read_var('NameFileTecplot', NameFileTecplot)
+          case default
+             call CON_stop(NameSub//': unknown TypeOutput='//trim(TypeOutput))
+          end select
+       case default
+          call CON_stop(NameSub//': unknown command='//trim(NameCommand))
+       end select
+    end do
+
+    if ( nProcTheta*nProcPhi /= nProc .and. iProc==0) then
+       write(*,*)NameSub,': nProcTheta, nProcPhi, nProc=', &
+            nProcTheta, nProcPhi, nProc
+       call CON_stop(NameSub//': nProc should be nProcTheta*nProcPhi')
+    end if
+
+    ! Do timing on proc 0 only, if at all
+    if(iProc > 0)UseTiming = .false.
+
+  end subroutine read_fdips_param
+  !===========================================================================
   subroutine read_magnetogram
 
     ! Read the raw magnetogram file into a 2d array
-
-    ! Name of input file
-    character (len=*), parameter:: NameFileIn = 'fitsfile.dat'
-
-    real, parameter:: BrMax = 3500.0 ! Saturation level of MDI
-    integer, parameter:: iUnit = 9   
 
     integer:: iError
     integer:: nCarringtonRotation
@@ -92,20 +181,20 @@ contains
     character (len=100) :: String
 
     real, allocatable:: Br0_II(:,:)
+
+    character(len=*), parameter:: NameSub = 'read_magnetogram'
     !------------------------------------------------------------------------
-    open(iUnit, file=NameFileIn, status='old', iostat=iError)
-    if(iError /= 0)then
-       write(*,*) 'Error: could not open input file ',NameFileIn
-       stop
-    end if
+    open(UnitTmp_, file=NameFileIn, status='old', iostat=iError)
+    if(iError /= 0) call CON_stop(NameSub// &
+         ': could not open input file'//trim(NameFileIn))
     do 
-       read(iUnit,'(a)', iostat = iError ) String
+       read(UnitTmp_,'(a)', iostat = iError ) String
        if(index(String,'#CR')>0)then
-          read(iUnit,*) nCarringtonRotation
+          read(UnitTmp_,*) nCarringtonRotation
        endif
        if(index(String,'#ARRAYSIZE')>0)then
-          read(iUnit,*) nPhi0
-          read(iUnit,*) nTheta0
+          read(UnitTmp_,*) nPhi0
+          read(UnitTmp_,*) nTheta0
        endif
        if(index(String,'#START')>0) EXIT
     end do
@@ -115,10 +204,10 @@ contains
 
     allocate(Br0_II(nTheta0,nPhi0))
 
-    ! fitsfile.dat is in longitude, latitude
+    ! input file is in longitude, latitude
     do iTheta = nTheta0, 1, -1
        do iPhi = 1, nPhi0
-          read(iUnit,*) Br0_II(iTheta,iPhi)
+          read(UnitTmp_,*) Br0_II(iTheta,iPhi)
           if (abs(Br0_II(iTheta,iPhi)) > BrMax) &
                Br0_II(iTheta,iPhi) = sign(BrMax, Br0_II(iTheta,iPhi))
        end do
@@ -179,7 +268,7 @@ contains
 
     deallocate(Br0_II)
 
-    close(iUnit)
+    close(UnitTmp_)
 
   end subroutine read_magnetogram
 
@@ -371,12 +460,10 @@ contains
     real    :: Br, Btheta, Bphi
     real    :: rI, rJ, rInv
     real, allocatable :: B_DX(:,:,:,:)
-    integer :: iUnit, iError
+    integer :: iError
     real, allocatable :: sendBC_III(:,:,:), recvBC_III(:,:,:)
     integer :: iStatus_I(mpi_status_size)
-
     integer:: nPhiOut
-
     !-------------------------------------------------------------------------
 
     ! Only the last processors in the phi direction write out the ghost cell
@@ -420,7 +507,6 @@ contains
 
     ! set tangential components to zero at the top
     B_DX(2:3,nR+1,:,:) = 0.0
-
     
     ! Apply periodicity in Phi to fill the nPhiLocal+1 ghost cell
     if (nProcPhi > 1) then
@@ -431,72 +517,60 @@ contains
                         21, iComm,  iErrMPI)
        end if
 
-       !    write(*,*) 'iProc ', iProc, 'send BC to iProc', iProcTheta*nProcPhi + mod(iProcPhi-1, nProcPhi-1)
-
        if (iProcPhi == nProcPhi -1) then 
           call mpi_recv(recvBC_III, 3*(nR+1)*nThetaLocal, MPI_REAL, &
                         iProcTheta*nProcPhi , &
                         21, iComm, iStatus_I, iErrMPI)
 
        end if
-       !    write(*,*) 'iProc ', iProc, 'recv BC from iProc', iProcTheta*nProcPhi + mod(iProcPhi+1, nProcPhi-1)
 
        if (iProcPhi == nProcPhi -1) B_DX(:,:,nPhiOut,:) = recvBC_III
     else
        B_DX(:,:,nPhiOut,:) = B_DX(:,:,1,:)
     end if
 
-    call save_plot_file(NameFile, TypeFileIn='ascii', &
-         StringHeaderIn = 'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
-         nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
-         //' Ro_PFSSM Rs_PFSSM PhiShift nRExt', &
-         ParamIn_I = (/ rMin, rMax, 0.0, 0.0 /), &
-         nDimIn=3, VarIn_VIII=B_DX, &
-         Coord1In_I=RadiusNode_I, &
-         Coord2In_I=Phi_I(1:nPhiOut), &
-         Coord3In_I=cHalfPi-Theta_I(nThetaLocal:1:-1))
+    if(DoSaveField)then
+       ! Note the fake processor index to be used by redistribute.pl
+       write(NameFile,'(a,2i2.2,a,i3.3,a)') &
+            trim(NameFileField)//'_np01', nProcPhi, nProcTheta, '_', &
+            iProcPhi + (nProcTheta - 1 - iProcTheta)*nProcPhi, '.out'
 
-!     call save_plot_file('potentialfield_ascii.out',  &
-!         StringHeaderIn = 'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
-!         nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
-!         //' Ro_PFSSM Rs_PFSSM PhiShift nRExt', &
-!         ParamIn_I = (/ rMin, rMax, 0.0, 0.0 /), &
-!         nDimIn=3, VarIn_VIII=B_DX, &
-!         Coord1In_I=RadiusNode_I, &
-!         Coord2In_I=Phi_I(1:nPhiLocal+1), &
-!         Coord3In_I=cHalfPi-Theta_I(nThetaLocal:1:-1))
-
+       call save_plot_file(NameFile, TypeFileIn=TypeFileField, &
+            StringHeaderIn = &
+            'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
+            nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
+            //' Ro_PFSSM Rs_PFSSM PhiShift nRExt', &
+            ParamIn_I = (/ rMin, rMax, 0.0, 0.0 /), &
+            nDimIn=3, VarIn_VIII=B_DX, &
+            Coord1In_I=RadiusNode_I, &
+            Coord2In_I=Phi_I(1:nPhiOut), &
+            Coord3In_I=cHalfPi-Theta_I(nThetaLocal:1:-1))
+    end if
 
     if(DoSaveTecplot)then
-       iUnit = io_unit_new()
+       open(unit = UnitTmp_, file=NameFileTecplot, status='replace')
 
-       open ( unit = iUnit, &
-            file = NameFileTec, &
-            form = 'formatted', &
-            access = 'sequential', &
-            status = 'replace', iostat = iError )
-
-       write ( iUnit, '(a)' ) 'Title = "'     // trim ('PFSSM') // '"'
-       write ( iUnit, '(a)' ) &
+       write (UnitTmp_, '(a)') 'Title = "'     // 'PFSSM' // '"'
+       write (UnitTmp_, '(a)') &
          'Variables = ' // trim ('"X [Rs]", "Y [Rs]", "Z [Rs]","Bx [G]",'// &
 	' "By [G]", "Bz [G]"')
-       write ( iUnit, '(a)' ) 'ZONE T="Rectangular zone"'
-       write ( iUnit, '(a,i6,a,i6,a,i6,a)' ) &
-            ' I = ', nR+1, ', J=', nThetaLocal, ', K=', nPhiOut, ', ZONETYPE=Ordered'
-       write( iUnit, '(a)' ) ' DATAPACKING=POINT'
-       write( iUnit, '(a)' ) ' DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )'
+       write(UnitTmp_, '(a)') 'ZONE T="Rectangular zone"'
+       write(UnitTmp_, '(a,i6,a,i6,a,i6,a)') &
+            ' I = ', nR+1, ', J=', nTheta, ', K=', nPhi+1, ', ZONETYPE=Ordered'
+       write(UnitTmp_, '(a)')' DATAPACKING=POINT'
+       write(UnitTmp_, '(a)')' DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )'
 
-       do iPhi = 1, nPhiOut; do iTheta = 1, nThetaLocal; do iR = 1, nR+1
-          Br     = B_DX(1,iR,iPhi,nThetaLocal+1-iTheta)
-          Btheta = B_DX(3,iR,iPhi,nThetaLocal+1-iTheta)
-          Bphi   = B_DX(2,iR,iPhi,nThetaLocal+1-iTheta)
+       do iPhi = 1, nPhi+1; do iTheta = 1, nTheta; do iR = 1, nR+1
+          Br     = B_DX(1,iR,iPhi,nTheta+1-iTheta)
+          Btheta = B_DX(3,iR,iPhi,nTheta+1-iTheta)
+          Bphi   = B_DX(2,iR,iPhi,nTheta+1-iTheta)
           r = RadiusNode_I(iR)
           SinTheta = SinTheta_I(iTheta)
           CosTheta = cos(Theta_I(iTheta))
           SinPhi   = sin(Phi_I(iPhi))
           CosPhi   = cos(Phi_I(iPhi))
 
-          write (iUnit,fmt="(6(E14.6))") &
+          write (UnitTmp_,fmt="(6(E14.6))") &
                r*SinTheta*CosPhi, &
                r*SinTheta*SinPhi, &
                r*CosTheta, &
@@ -505,7 +579,7 @@ contains
                Br*CosTheta        - Btheta*SinTheta
        end do; end do; end do
 
-       close(iUnit)
+       close(UnitTmp_)
     end if
 
     deallocate(B_DX)
@@ -978,48 +1052,32 @@ program potential_field
   use ModPlotFile, ONLY: save_plot_file
   use ModUtilities, ONLY: flush_unit
   use ModIoUnit, ONLY: STDOUT_
+  use ModMpi
 
   implicit none
 
   integer :: nIter=10000
-  real    :: Tolerance = 1e-10, r
+  real    :: r, DivBMax, DivBMaxAll
   integer :: n, i, iError, iR, iPhi, iTheta, i_D(3)
   integer :: iii
-  real    :: timeS, timeE
-
-
+  real    :: TimeStart, TimeEnd
   !--------------------------------------------------------------------------
 
-  call MPI_INIT(iErrMPI)
+  call MPI_init(iErrMPI)
+  call MPI_comm_rank(iComm,iProc,iErrMPI)
+  call MPI_comm_size(iComm,nProc,iErrMPI)
 
-  call MPI_COMM_RANK(iComm,iProc,iErrMPI)
-  call MPI_COMM_SIZE(iComm,nProc,iErrMPI)
+  call read_fdips_param
 
-  if ( nProcTheta*nProcPhi /= nProc) then
-     call MPI_FINALIZE(iErrMPI)
-     write(*,*) 'The number of processors is not consistant with nProcTheta*nProcPhi'
-     stop
-  end if
-
-
-  if(DoReadMagnetogram .and. iProc == 0) then
-     call read_magnetogram
-     write(*,*) 'data is read by the root!'
-  end if
+  if(DoReadMagnetogram .and. iProc == 0) call read_magnetogram
 
   call MPI_bcast(nTheta, 1, MPI_INTEGER, 0, iComm, iErrMPI)
   call MPI_bcast(nPhi,   1, MPI_INTEGER, 0, iComm, iErrMPI)
   if (.not. allocated(Br_II)) allocate(Br_II(nTheta,nPhi))
 
-!  call flush_unit(STDOUT_)
-!  call MPI_BARRIER(iComm,iErrMPI)
-
   call MPI_bcast(Br_II, nTheta*nPhi, MPI_REAL, 0,  iComm, iErrMPI)
 
   call init_potential_field
-
-!  call MPI_BARRIER(iComm,iErrMPI)
-!  call flush_unit(STDOUT_)
 
   if(.not.DoReadMagnetogram)then
      allocate(Br_II(nTheta,nPhi))
@@ -1111,9 +1169,7 @@ program potential_field
 
   end if
 
-  if (iProc ==0) then
-     timeS = mpi_wtime()
-  end if
+  if(UseTiming) TimeStart = mpi_wtime()
 
   UseBr = .true.
   call matvec(Potential_C, Rhs_C, nMe)
@@ -1127,23 +1183,28 @@ program potential_field
   call bicgstab(matvec, Rhs_C, Potential_C, .false., nMe, &
        Tolerance, 'rel', nIter, iError, DoTest=iProc==0, iCommIn=iComm)
 
-  if (iProc  == 0) timeE = mpi_wtime()
-
   UseBr = .true.
-  write(*,*)'nIter, Tolerance, iError=', nIter, Tolerance, iError
+
+  if(UseTiming) TimeEnd = mpi_wtime()
+  if(iProc == 0) &
+       write(*,*)'nIter, Tolerance, iError=', nIter, Tolerance, iError
 
   PlotVar_VC = 0.0
 
   ! report maximum divb
   call get_gradient(Potential_C, B0_DF)
   call get_divergence(B0_DF, DivB_C)
-  call flush_unit(STDOUT_)
-  call mpi_barrier(iComm,iErrMPI)
-  write(*,*) 'max(abs(divb)) = ', maxval(abs(DivB_C))
-  if (iProc ==0) then
-     write(*,*) 'nProc, nPorcTheta, nProcPhi', nProc, nProcTheta, nProcPhi
-     write(*,*) 'running time: ', timeE-timeS
+  DivbMax = maxval(abs(DivB_C))
+  if(nProc > 1)then
+     call MPI_reduce(DivBMax, DivBMaxAll, 1, MPI_REAL, MPI_MAX, 0, &
+          iComm, iError)
+     if(iProc==0) DivBMax = DivBMaxAll
   end if
+  if(iProc ==0)then
+     write(*,*) 'max(abs(divb)) = ', DivBMax
+     write(*,*) 'nPorcTheta, nProcPhi=', nProcTheta, nProcPhi
+  end if
+  if(UseTiming) write(*,*) 'running time=', TimeEnd - TimeStart
 
   PlotVar_VC(1,:,:,:) = Potential_C
   PlotVar_VC(2,:,:,:) = &
@@ -1158,23 +1219,20 @@ program potential_field
   PlotVar_VC(5,:,:,:) = DivB_C
   PlotVar_VC(6,:,:,:) = Rhs_C
 
-  write(NameFileTest,'(a,2i2.2,a,i3.3,a)') &
-       'potentialtest_np01', nProcTheta, nProcPhi,'_', &
-       iProcTheta + iProcPhi*nProcTheta, '.out'
-  write(NameFile,'(a,2i2.2,a,i3.3,a)') &
-       'potentialfield_np01', nProcPhi, nProcTheta, '_', &
-       iProcPhi + (nProcTheta - 1 - iProcTheta)*nProcPhi, '.out'
-  write(NameFileTec,'(a,2i2.2,a,i3.3,a)') &
-       'potentialtec_np01', nProcPhi, nProcTheta, '_', iProc, '.dat'
-
-  ! Save divb, potential and RHS for testing purposes
-  call save_plot_file(NameFileTest, TypeFileIn='real8', &
-       StringHeaderIn='potential field', &
-       NameVarIn='r theta phi pot br btheta bphi divb rhs', &
-       Coord1In_I=Radius_I(1:nR), &
-       Coord2In_I=Theta_I(1:nThetaLocal), &
-       Coord3In_I=Phi_I(1:nPhiLocal), &
-       VarIn_VIII=PlotVar_VC)
+  if(DoSavePotential)then
+     ! Note the fake processor index to be used by redistribute.pl
+     write(NameFile,'(a,2i2.2,a,i3.3,a)') &
+          trim(NameFilePotential)//'_np01', nProcTheta, nProcPhi,'_', &
+          iProcTheta + iProcPhi*nProcTheta, '.out'
+     ! Save divb, potential and RHS for testing purposes
+     call save_plot_file(NameFile, TypeFileIn=TypeFilePotential, &
+          StringHeaderIn='potential field', &
+          NameVarIn='r theta phi pot br btheta bphi divb rhs', &
+          Coord1In_I=Radius_I(1:nR), &
+          Coord2In_I=Theta_I(1:nThetaLocal), &
+          Coord3In_I=Phi_I(1:nPhiLocal), &
+          VarIn_VIII=PlotVar_VC)
+  end if
 
   deallocate(PlotVar_VC)
 

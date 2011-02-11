@@ -8,20 +8,24 @@ T			UseCosTheta
 20			nTheta
 20			nPhi
 
+! Switch off timing so that output does not change from run-to-run
+#TIMING
+F			UseTiming
+
+#PARALLEL
+2			nProcTheta
+2			nProcPhi
+
 #SOLVER
 T			UsePreconditioner
 1e-10			Tolerance
 
 #OUTPUT
 field			TypeOutput
-potentialfield.out	NameFileField
+fdips_field.out		NameFileField
 ascii			TypeFileField
 
 #OUTPUT
 potential		TypeOutput
-potentialtest.out	NameFilePotential
+fdips_potential.out	NameFilePotential
 real8			TypeFilePotential
-
-#OUTPUT
-tecplot			TypeOutput
-potentialfield.dat	NameFileField

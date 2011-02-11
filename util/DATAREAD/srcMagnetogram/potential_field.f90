@@ -6,18 +6,33 @@ module ModPotentialField
   logical:: DoReadMagnetogram = .true.
 
   ! grid parameters
-  integer :: nR = 150, nTheta = 180, nPhi = 360
-  logical::  UseCosTheta = .true. 
-  real, parameter :: rMin = 1.0, rMax = 2.5
+  integer:: nR = 150, nTheta = 180, nPhi = 360
+  real   :: rMin = 1.0, rMax = 2.5
 
   ! solver parameters
   logical:: UsePreconditioner = .true.
   real   :: Tolerance         = 1e-10
 
-  ! output paramters
-  logical:: DoSaveTecplot     = .false.
-  integer :: iRTest = 1, iPhiTest = 1, iThetaTest = 2
+  ! magnetogram parameters
+  character(len=100):: NameFileIn = 'fitsfile.dat'  ! filename
+  logical           :: UseCosTheta = .true. 
+  real              :: BrMax = 3500.0               ! Saturation level of MDI
 
+  ! output paramters
+  logical           :: DoSaveField   = .true.
+  character(len=100):: NameFileField = 'potentialfield.out'
+  character(len=5)  :: TypeFileField = 'real8'
+
+  logical           :: DoSavePotential   = .true.
+  character(len=100):: NameFilePotential = 'potentialtest.out'
+  character(len=5)  :: TypeFilePotential = 'real8'
+  
+  logical           :: DoSaveTecplot   = .false.
+  character(len=100):: NameFileTecplot = 'potentialfield.dat'
+
+  integer:: iRTest = 1, iPhiTest = 1, iThetaTest = 2
+
+  ! local variables
   logical :: UseBr = .true.
 
   real, dimension(:), allocatable :: &
@@ -42,8 +57,10 @@ contains
   subroutine read_fdips_param
 
     use ModReadParam
-    character (len=lStringLine) :: NameCommand
+    use ModUtilities, ONLY: lower_case
 
+    character(len=lStringLine) :: NameCommand
+    character(len=10):: TypeOutput
     character(len=*), parameter:: NameSub = 'read_fdips_param'
     !-----------------------------------------------------------------------
     call read_file('POTENTIAL.in')
@@ -52,10 +69,17 @@ contains
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
+       case("#DOMAIN")
+          call read_var('rMin', rMin)
+          call read_var('rMax', rMax)
        case("#GRID")
           call read_var('nR    ', nR)
           call read_var('nTheta', nTheta)
           call read_var('nPhi  ', nPhi)
+       case("#MAGNETOGRAM")
+          call read_var('NameFileIn',  NameFileIn)
+          call read_var('UseCosTheta', UseCosTheta)
+          call read_var('BrMax'     ,  BrMax)
        case("#TEST")
           call read_var('iRTest',     iRTest)
           call read_var('iPhiTest',   iPhiTest)
@@ -63,6 +87,23 @@ contains
        case("#SOLVER")
           call read_var('UsePreconditioner', UsePreconditioner)
           call read_var('Tolerance',         Tolerance)
+       case("#OUTPUT")
+          call read_var('TypeOutput', TypeOutput, IsLowerCase=.true.)
+          select case(TypeOutput)
+          case('field')
+             DoSaveField = .true.
+             call read_var('NameFileField', NameFileField)
+             call read_var('TypeFileField', TypeFileField)
+          case('potential')
+             DoSavePotential = .true.
+             call read_var('NameFilePotential', NameFilePotential)
+             call read_var('TypeFilePotential', TypeFilePotential)
+          case('tecplot')
+             DoSaveTecplot = .true.
+             call read_var('NameFileTecplot', NameFileTecplot)
+          case default
+             call CON_stop(NameSub//': unknown TypeOutput='//trim(TypeOutput))
+          end select
        case default
           call CON_stop(NameSub//': unknown command='//trim(NameCommand))
        end select
@@ -74,10 +115,6 @@ contains
 
     ! Read the raw magnetogram file into a 2d array
 
-    ! Name of input file
-    character (len=*), parameter:: NameFileIn = 'fitsfile.dat'
-
-    real, parameter:: BrMax = 3500.0 ! Saturation level of MDI
     integer, parameter:: iUnit = 9   
 
     integer:: iError
@@ -274,7 +311,7 @@ contains
 
   subroutine save_potential_field
 
-    use ModIoUnit,      ONLY: io_unit_new
+    use ModIoUnit,      ONLY: UnitTmp_
     use ModNumConst,    ONLY: cHalfPi
     use ModPlotFile,    ONLY: save_plot_file
 
@@ -283,7 +320,7 @@ contains
     real    :: Br, Btheta, Bphi
     real    :: rI, rJ, rInv
     real, allocatable :: B_DX(:,:,:,:)
-    integer :: iUnit, iError
+    integer :: iError
     !-------------------------------------------------------------------------
 
     allocate(B_DX(3,nR+1,nPhi+1,nTheta))
@@ -322,7 +359,8 @@ contains
     ! Apply periodicity in Phi to fill the nPhi+1 ghost cell
     B_DX(:,:,nPhi+1,:) = B_DX(:,:,1,:)
 
-    call save_plot_file('potentialfield.out', TypeFileIn='real8', &
+    if(DoSaveField) &
+         call save_plot_file(NameFileField, TypeFileIn=TypeFileField, &
          StringHeaderIn = 'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
          nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
          //' Ro_PFSSM Rs_PFSSM PhiShift nRExt', &
@@ -333,23 +371,17 @@ contains
          Coord3In_I=cHalfPi-Theta_I(nTheta:1:-1))
 
     if(DoSaveTecplot)then
-       iUnit = io_unit_new()
+       open(unit = UnitTmp_, file=NameFileTecplot, status='replace')
 
-       open ( unit = iUnit, &
-            file = 'potentialfield.dat', &
-            form = 'formatted', &
-            access = 'sequential', &
-            status = 'replace', iostat = iError )
-
-       write ( iUnit, '(a)' ) 'Title = "'     // trim ('PFSSM') // '"'
-       write ( iUnit, '(a)' ) &
+       write (UnitTmp_, '(a)') 'Title = "'     // 'PFSSM' // '"'
+       write (UnitTmp_, '(a)') &
          'Variables = ' // trim ('"X [Rs]", "Y [Rs]", "Z [Rs]","Bx [G]",'// &
 	' "By [G]", "Bz [G]"')
-       write ( iUnit, '(a)' ) 'ZONE T="Rectangular zone"'
-       write ( iUnit, '(a,i6,a,i6,a,i6,a)' ) &
+       write(UnitTmp_, '(a)') 'ZONE T="Rectangular zone"'
+       write(UnitTmp_, '(a,i6,a,i6,a,i6,a)') &
             ' I = ', nR+1, ', J=', nTheta, ', K=', nPhi+1, ', ZONETYPE=Ordered'
-       write( iUnit, '(a)' ) ' DATAPACKING=POINT'
-       write( iUnit, '(a)' ) ' DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )'
+       write(UnitTmp_, '(a)')' DATAPACKING=POINT'
+       write(UnitTmp_, '(a)')' DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )'
 
        do iPhi = 1, nPhi+1; do iTheta = 1, nTheta; do iR = 1, nR+1
           Br     = B_DX(1,iR,iPhi,nTheta+1-iTheta)
@@ -361,7 +393,7 @@ contains
           SinPhi   = sin(Phi_I(iPhi))
           CosPhi   = cos(Phi_I(iPhi))
 
-          write (iUnit,fmt="(6(E14.6))") &
+          write (UnitTmp_,fmt="(6(E14.6))") &
                r*SinTheta*CosPhi, &
                r*SinTheta*SinPhi, &
                r*CosTheta, &
@@ -370,7 +402,7 @@ contains
                Br*CosTheta        - Btheta*SinTheta
        end do; end do; end do
 
-       close(iUnit)
+       close(UnitTmp_)
     end if
 
     deallocate(B_DX)
@@ -748,7 +780,8 @@ program potential_field
   PlotVar_VC(6,:,:,:) = Rhs_C
 
   ! Save divb, potential and RHS for testing purposes
-  call save_plot_file('potentialtest.out', TypeFileIn='real8', &
+  if(DoSavePotential) &
+       call save_plot_file(NameFilePotential, TypeFileIn=TypeFilePotential, &
        StringHeaderIn='potential field', &
        NameVarIn='r theta phi pot br btheta bphi divb rhs', &
        Coord1In_I=Radius_I(1:nR), &
