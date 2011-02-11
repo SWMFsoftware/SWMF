@@ -158,21 +158,22 @@ contains
     integer :: i, j, k
     real :: State_V(nVar)
 
-    real :: Zav, NatomicSi
+    real :: Zav, NatomicSi, Coeff
     !-------------------------------------------------------------------------
 
     ! Multiply IonMassPerCharge_G by average ion mass = rho_total / n_total
 
     if(.not.UseIdealEos)then
+       Coeff = HallFactor*No2Si_V(UnitRho_)/(cMu*cElectronCharge) &
+               *Si2No_V(UnitX_)**2*Si2No_V(UnitRho_) &
+               /(Si2No_V(UnitB_)*Si2No_V(UnitT_))
+
        do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                AverageIonChargeOut = Zav, NatomicOut = NatomicSi)
 
-          IonMassPerCharge_G(i,j,k) = HallFactor &
-               *State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_) &
-               /(cMu*cElectronCharge*Zav*NatomicSi) &
-               *Si2No_V(UnitX_)**2*Si2No_V(UnitRho_) &
-               /(Si2No_V(UnitB_)*Si2No_V(UnitT_))
+          IonMassPerCharge_G(i,j,k) = Coeff*State_VGB(Rho_,i,j,k,iBlock) &
+               /(Zav*NatomicSi)
        end do; end do; end do
 
     elseif(UseMultiSpecies)then

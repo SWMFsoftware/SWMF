@@ -247,24 +247,27 @@ subroutine calc_sources
   end if
 
   if(TypeGeometry == 'rz')then
-     ! Add "geometrical source term" p/r to the radial momentum equation.
-     ! The azimuthal component of the velocity is assumed to be zero.
-     ! The axis is along X, the "radial" direction is along the Y axis
-     ! NOTE: here we have to use signed radial distance!
-
+     ! The following geometrical source terms are added for the MHD equations
      ! Source[mr]  =(p+B^2/2-Bphi**2+mphi**2/rho)/radius
      ! Source[mphi]=(-mphi*mr/rho+Bphi*Br)/radius  (if no angular momentum fix)
      ! Source[Bphi]=((Bphi*mr-Br*mphi)/rho)/radius
 
+     ! The cylindrical coordinates are renamed to X,Y,Z
+     ! The cylindrical axis is along X
+     ! The "radial" direction is along the Y axis
+     ! The azimuthal direction is along the Z axis
+
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
+        ! Source[mr] = (p+mphi**2/rho)/radius
         Source_VC(iRhoUy_I,i,j,k) = Source_VC(iRhoUy_I,i,j,k) &
              + (State_VGB(iP_I,i,j,k,iBlock) &
              +  State_VGB(iRhoUz_I,i,j,k,iBlock)**2 &
              /  State_VGB(iRho_I,i,j,k,iBlock)) &
              / y_BLK(i,j,k,iBlock)
 
+        ! Source[mphi] = (-mphi*mr/rho)/radius
         Source_VC(iRhoUz_I,i,j,k) = Source_VC(iRhoUz_I,i,j,k) &
              - State_VGB(iRhoUz_I,i,j,k,iBlock) &
              * State_VGB(iRhoUy_I,i,j,k,iBlock)/State_VGB(iRho_I,i,j,k,iBlock)&
@@ -273,14 +276,17 @@ subroutine calc_sources
         if(UseB .and. .not.UseMultiIon)then
            !!!if(useB0)call stop_mpi('RZ geometry is not implemented for B0')
 
+           ! Source[mr] = (B^2/2-Bphi**2)/radius
            Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
                 + (0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2) &
                 -  State_VGB(Bz_,i,j,k,iBlock)**2) / y_BLK(i,j,k,iBlock)
 
+           ! Source[mphi]=Bphi*Br/radius
            Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
                 + State_VGB(Bz_,i,j,k,iBlock)*State_VGB(By_,i,j,k,iBlock) &
                 / y_BLK(i,j,k,iBlock)
 
+           ! Source[Bphi]=((Bphi*mr-Br*mphi)/rho)/radius
            Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
                 + (State_VGB(Bz_,i,j,k,iBlock)*State_VGB(RhoUy_,i,j,k,iBlock) &
                 -  State_VGB(By_,i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock))&
@@ -293,6 +299,9 @@ subroutine calc_sources
           (UseElectronPressure .or. ElectronPressureRatio > 0.0))then
 
         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+           ! Source[Bphi] = [ 1/(q_e*n_e) * (dP_e/dZ) ] / radius
            Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
                 + IonMassPerCharge_G(i,j,k)/State_VGB(Rho_,i,j,k,iBlock) &
                 /y_Blk(i,j,k,iBlock) &
