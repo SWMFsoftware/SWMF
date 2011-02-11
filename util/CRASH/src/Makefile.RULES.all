@@ -1,3 +1,3 @@
 
-$OS eq "Darwin"
-	${COMPILE.f90} ${Cflag0} -dusty ModFermiGas.f90
+1
+	${COMPILE.f90} ${Cflag0} ModFermiGas.f90
