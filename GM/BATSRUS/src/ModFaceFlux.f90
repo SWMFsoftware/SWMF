@@ -1061,12 +1061,16 @@ contains
          + IonMassPerCharge_G(iRight,jRight,kRight) )
 
     BiermannCoeff = -1.0
-    if(UseBiermannBattery) BiermannCoeff = 0.5* &
-         ( IonMassPerCharge_G(iLeft, jLeft ,kLeft) &
-         + IonMassPerCharge_G(iRight,jRight,kRight) )
+    if(UseHallResist)then
+       BiermannCoeff = HallCoeff
+    elseif(UseBiermannBattery)then
+       BiermannCoeff = 0.5* &
+            ( IonMassPerCharge_G(iLeft, jLeft ,kLeft) &
+            + IonMassPerCharge_G(iRight,jRight,kRight) )
+    end if
 
     ! Calculate -grad(pe)/(n_e * e) term for Hall MHD if needed
-    UseHallGradPe = (HallCoeff > 0.0 .or. UseBiermannBattery) .and. &
+    UseHallGradPe = BiermannCoeff > 0.0 .and. &
          (UseElectronPressure .or. ElectronPressureRatio > 0.0)
 
     Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
@@ -1169,14 +1173,12 @@ contains
             IsNewBlockGradPe, Pe_G, GradPe_D)
 
        ! Calculate 1/(n_e * e)
-       if(UseBiermannBattery)then
-          InvNumDens = BiermannCoeff &
-               /(0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_)))
-       elseif(UseMultiIon)then
-          InvNumDens = HallCoeff/(0.5* &
+       if(UseMultiIon)then
+          InvNumDens = BiermannCoeff/(0.5* &
                sum((StateLeft_V(iRhoIon_I)+StateRight_V(iRhoIon_I))/MassIon_I))
        else
-          InvNumDens = HallCoeff/(0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_)))
+          InvNumDens = BiermannCoeff &
+               /(0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_)))
        end if
 
        ! Calculate grad(Pe)/(n_e * e)

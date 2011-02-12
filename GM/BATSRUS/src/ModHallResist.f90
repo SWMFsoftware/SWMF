@@ -164,9 +164,9 @@ contains
     ! Multiply IonMassPerCharge_G by average ion mass = rho_total / n_total
 
     if(.not.UseIdealEos)then
-       Coeff = HallFactor*No2Si_V(UnitRho_)/(cMu*cElectronCharge) &
-               *Si2No_V(UnitX_)**2*Si2No_V(UnitRho_) &
-               /(Si2No_V(UnitB_)*Si2No_V(UnitT_))
+       Coeff = No2Si_V(UnitRho_)/(cMu*cElectronCharge) &
+            *Si2No_V(UnitX_)**2*Si2No_V(UnitRho_) &
+            /(Si2No_V(UnitB_)*Si2No_V(UnitT_))
 
        do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
@@ -175,7 +175,7 @@ contains
           IonMassPerCharge_G(i,j,k) = Coeff*State_VGB(Rho_,i,j,k,iBlock) &
                /(Zav*NatomicSi)
        end do; end do; end do
-
+       
     elseif(UseMultiSpecies)then
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
@@ -193,235 +193,9 @@ contains
     end if
 
   end subroutine set_ion_mass_per_charge
+
   !===========================================================================
 
-  subroutine set_block_field(iBlock)
-
-    use ModAdvance, ONLY: State_VGB, Bx_, Bz_
-    use ModParallel, ONLY:neiLeast,neiLwest,neiLsouth, &
-         neiLnorth,neiLtop,neiLbot,BlkNeighborLev,NOBLK
-
-    integer, intent(in):: iBlock
-
-    real,parameter :: C1 = 8./15., F1 = 2./3., F2 = -1./5.
-    real,parameter :: p0 = 5./32., m0 =-3./32., c0= 15./16.
-
-    integer :: i1, j1, k1, i2, j2, k2, iC, jC, kC, iSide, jSide, kSide
-    integer :: iL, iR, jL, jR, kL, kR
-    integer :: ip, im, jp, jm, kp, km, iDim
-
-    real :: B1_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2) ! temporary array
-    real :: Bc_D(3) ! interpolated coarse cell B field
-    !-------------------------------------------------------------------------
-
-    IsNewBlockCurrent = .false.
-
-    ! Copy State_VGB into local array and overwrite ghost cells
-    B1_DG = State_VGB(Bx_:Bz_,:,:,:,iBlock)
-    b_DG  = b1_DG
-
-    ! Fix ghost edge and corner ghost cells
-    do kSide = -1,1; do jSide = -1,1; do iSide = -1,1
-       ! If the corner or edge is not coarser but the face is
-       ! then average out the 8 fine cells so that the
-       ! general interpolation formulas remain 2nd order
-       ! accurate
-       if(  BlkNeighborLev(iSide,jSide,kSide,iBlock) /= 1 .and. &
-            BlkNeighborLev(iSide,jSide,kSide,iBlock) /= NOBLK .and. ( &
-            BlkNeighborLev(iSide,0,0,iBlock) == 1 .or. &
-            BlkNeighborLev(0,jSide,0,iBlock) == 1 .or. &
-            BlkNeighborLev(0,0,kSide,iBlock) == 1)) then
-
-          if(iSide==0)then
-             iL = 1; iR = nI
-          elseif(iSide==1)then
-             iL = nI+1; iR=nI+2
-          else
-             iL = -1; iR = 0
-          end if
-          if(jSide==0)then
-             jL = 1; jR = nJ
-          elseif(jSide==1)then
-             jL = nJ+1; jR=nJ+2
-          else
-             jL = -1; jR = 0
-          end if
-          if(kSide==0)then
-             kL = 1; kR = nK
-          elseif(kSide==1)then
-             kL = nK+1; kR=nK+2
-          else
-             kL = -1; kR = 0
-          end if
-
-          do k1=kL,kR,2; do j1=jL,jR,2; do i1=iL,iR,2; do iDim=1,3
-             B1_DG(iDim,i1:i1+1,j1:j1+1,k1:k1+1)= &
-                  0.125*sum(b_DG(iDim,i1:i1+1,j1:j1+1,k1:k1+1))
-          end do; end do; end do; end do
-
-       end if
-    end do; end do; end do
-
-    ! Do six faces
-    if(NeiLeast(iBlock) == 1)then
-       do k1=1, nK, 2; do j1=1, nJ, 2; do k2 = k1,k1+1; do j2 = j1,j1+1
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Bc_D = c0*B1_DG(:,0,j2,k2) &
-               + p0*B1_DG(:,0,jp,kp) &
-               + m0*B1_DG(:,0,jm,km)
-          b_DG(:,0,j2,k2) = &
-               C1*Bc_D + F1*b_DG(:,1,j2,k2) + F2*b_DG(:,2,j2,k2)
-          !b_DG(:,0,j2,k2) = min( max( b_DG(:,0,j2,k2), &
-          !     min(Bc_D, b_DG(:,1,j2,k2),b_DG(:,2,j2,k2))), &
-          !     max(Bc_D, b_DG(:,1,j2,k2),b_DG(:,2,j2,k2)))
-       end do; end do; end do; end do
-    end if
-
-    if(NeiLwest(iBlock) == 1)then
-       do k1=1, nK, 2; do j1=1, nJ, 2; do k2 = k1,k1+1; do j2 = j1,j1+1
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Bc_D = c0*B1_DG(:,nI+1,j2,k2) &
-               + p0*B1_DG(:,nI+1,jp,kp) &
-               + m0*B1_DG(:,nI+1,jm,km)
-          b_DG(:,nI+1,j2,k2)= &
-               C1*Bc_D + F1*b_DG(:,nI,j2,k2) + F2*b_DG(:,nI-1,j2,k2)
-          !b_DG(:,nI+1,j2,k2) = min( max( b_DG(:,nI+1,j2,k2), &
-          !     min(Bc_D, b_DG(:,nI,j2,k2),b_DG(:,nI-1,j2,k2))), &
-          !     max(Bc_D, b_DG(:,nI,j2,k2),b_DG(:,nI-1,j2,k2)))
-       end do; end do; end do; end do
-    end if
-
-    if(NeiLsouth(iBlock) == 1)then
-       do k1=1, nK, 2; do i1=1, nI, 2; do k2 = k1,k1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Bc_D = c0*B1_DG(:,i2,0,k2) &
-               + p0*B1_DG(:,ip,0,kp) &
-               + m0*B1_DG(:,im,0,km)
-          b_DG(:,i2,0,k2) = &
-               C1*Bc_D + F1*b_DG(:,i2,1,k2) + F2*b_DG(:,i2,2,k2)
-          !b_DG(:,i2,0,k2) = min(max( b_DG(:,i2,0,k2), &
-          !     min(Bc_D, b_DG(:,i2,1,k2),b_DG(:,i2,2,k2))), &
-          !     max(Bc_D, b_DG(:,i2,1,k2),b_DG(:,i2,2,k2)))
-       end do; end do; end do; end do
-    end if
-
-    if(NeiLnorth(iBlock) == 1)then
-       do k1=1, nK, 2; do i1=1, nI, 2; do k2 = k1,k1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Bc_D = c0*B1_DG(:,i2,nJ+1,k2) &
-               + p0*B1_DG(:,ip,nJ+1,kp) &
-               + m0*B1_DG(:,im,nJ+1,km)
-          b_DG(:,i2,nJ+1,k2) = &
-               C1*Bc_D + F1*b_DG(:,i2,nJ,k2) + F2*b_DG(:,i2,nJ-1,k2)
-          !b_DG(:,i2,nJ+1,k2) = min(max( b_DG(:,i2,nJ+1,k2), &
-          !     min(Bc_D, b_DG(:,i2,nJ,k2),b_DG(:,i2,nJ-1,k2))), &
-          !     max(Bc_D, b_DG(:,i2,nJ,k2),b_DG(:,i2,nJ-1,k2)))
-       end do; end do; end do; end do
-    end if
-
-    if(NeiLbot(iBlock) == 1)then
-       do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
-          Bc_D = c0*B1_DG(:,i2,j2,0) &
-               + p0*B1_DG(:,ip,jp,0) &
-               + m0*B1_DG(:,im,jm,0)
-          b_DG(:,i2,j2,0) = &
-               C1*Bc_D + F1*b_DG(:,i2,j2,1) + F2*b_DG(:,i2,j2,2)
-          !b_DG(:,i2,j2,0) = min(max( b_DG(:,i2,j2,0), &
-          !     min(Bc_D, b_DG(:,i2,j2,1), b_DG(:,i2,j2,2))), &
-          !     max(Bc_D, b_DG(:,i2,j2,1), b_DG(:,i2,j2,2)))
-       end do; end do; end do; end do
-    end if
-
-    if(NeiLtop(iBlock) == 1)then
-       do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
-          Bc_D = c0*B1_DG(:,i2,j2,nK+1) &
-               + p0*B1_DG(:,ip,jp,nK+1) &
-               + m0*B1_DG(:,im,jm,nK+1)
-          b_DG(:,i2,j2,nK+1) = &
-               C1*Bc_D + F1*b_DG(:,i2,j2,nK) + F2*b_DG(:,i2,j2,nK-1)
-          !b_DG(:,i2,j2,nK+1) = min(max( b_DG(:,i2,j2,nK+1), &
-          !     min(Bc_D, b_DG(:,i2,j2,nK), b_DG(:,i2,j2,nK-1))), &
-          !     max(Bc_D, b_DG(:,i2,j2,nK), b_DG(:,i2,j2,nK-1)))
-       end do; end do; end do; end do
-    end if
-
-    ! Do 12 edges
-    ! 4 X edges
-    do kSide = -1,1,2; do jSide = -1,1,2
-       if(  BlkNeighborLev(0, jSide, kSide, iBlock) /= 1 .and. .not. ( &
-            BlkNeighborLev(0, jSide, kSide, iBlock) == NOBLK .and. ( &
-            BlkNeighborLev(0, jSide, 0, iBlock) == 1 .or. &
-            BlkNeighborLev(0, 0, kSide, iBlock) == 1))) CYCLE
-
-       j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
-       k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
-       do i1 = 1,nI,2; do i2 = i1, i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          Bc_D = c0*B1_DG(:,i2,jC,kC) &
-               + p0*B1_DG(:,ip,jC,kC) &
-               + m0*B1_DG(:,im,jC,kC)
-          b_DG(:,i2,jC,kC) = &
-               C1* Bc_D + F1*b_DG(:,i2,j1,k1) + F2*b_DG(:,i2,j2,k2)
-          !b_DG(:,i2,jC,kC) = min(max( b_DG(:,i2,jC,kC), &
-          !     min(Bc_D, b_DG(:,i2,j1,k1), b_DG(:,i2,j2,k2))), &
-          !     max(Bc_D, b_DG(:,i2,j1,k1), b_DG(:,i2,j2,k2)))
-       end do;end do
-    end do;end do
-    ! 4 Y edges
-    do kSide = -1,1,2; do iSide = -1,1,2
-       if(  BlkNeighborLev(iSide, 0, kSide, iBlock) /= 1 .and. .not. ( &
-            BlkNeighborLev(iSide, 0, kSide, iBlock) == NOBLK .and. ( &
-            BlkNeighborLev(iSide, 0, 0, iBlock) == 1 .or. &
-            BlkNeighborLev(0, 0, kSide, iBlock) == 1))) CYCLE
-
-       i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
-       k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
-       do j1 = 1, nJ, 2; do j2 = j1, j1+1
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
-          Bc_D = c0*B1_DG(:,iC,j2,kC) &
-               + p0*B1_DG(:,iC,jp,kC) &
-               + m0*B1_DG(:,iC,jm,kC)
-          b_DG(:,iC,j2,kC) = &
-               C1*Bc_D + F1*b_DG(:,i1,j2,k1) + F2*b_DG(:,i2,j2,k2)
-          !b_DG(:,iC,j2,kC) = min(max( b_DG(:,iC,j2,kC), &
-          !     min(Bc_D, b_DG(:,i1,j2,k1), b_DG(:,i2,j2,k2))), &
-          !     max(Bc_D, b_DG(:,i1,j2,k1), b_DG(:,i2,j2,k2)))
-       end do;end do
-    end do;end do
-    ! 4 Z edges
-    do jSide = -1,1,2; do iSide = -1,1,2
-       if(  BlkNeighborLev(iSide, jSide, 0, iBlock) /= 1.and. .not. ( &
-            BlkNeighborLev(iSide, jSide, 0, iBlock) == NOBLK .and. ( &
-            BlkNeighborLev(iSide, 0, 0, iBlock) == 1 .or. &
-            BlkNeighborLev(0, jSide, 0, iBlock) == 1))) CYCLE
-
-       i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
-       j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
-       do k1 = 1, nK, 2 ; do k2 = k1, k1 + 1
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Bc_D = c0*B1_DG(:,iC,jC,k2) &
-               + p0*B1_DG(:,iC,jC,kp) &
-               + m0*B1_DG(:,iC,jC,km)
-          b_DG(:,iC,jC,k2) = &
-               C1*Bc_D + F1*b_DG(:,i1,j1,k2) + F2*b_DG(:,i2,j2,k2)
-          !b_DG(:,iC,jC,k2) = min(max( b_DG(:,iC,jC,k2), &
-          !     min(Bc_D, b_DG(:,i1,j1,k2), b_DG(:,i2,j2,k2))), &
-          !     max(Bc_D, b_DG(:,i1,j1,k2), b_DG(:,i2,j2,k2)))
-       end do;end do         
-    end do;end do
-
-  end subroutine set_block_field
-
- 
-  !============================================================================
   subroutine set_block_jacobian_face(iBlock)
     use ModMain, ONLY: x_, y_, z_
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
@@ -688,13 +462,16 @@ contains
 
   subroutine get_face_current(iDir, i, j, k, iBlock, Jx, Jy, Jz)
 
-    use ModProcMH,    ONLY: iProc
-    use ModMain,      ONLY: nI, nJ, nK, x_, y_, z_, &
+    use ModAdvance,      ONLY: State_VGB
+    use ModFaceGradient, ONLY: set_block_field3
+    use ModProcMH,       ONLY: iProc
+    use ModMain,         ONLY: nI, nJ, nK, x_, y_, z_, &
          iTest, jTest, kTest, BlkTest, ProcTest
-    use ModGeometry,  ONLY: Dx_BLK, Dy_BLK, Dz_BLK
-    use ModCovariant, ONLY: UseCovariant                
-    use ModParallel,  ONLY: neiLeast, neiLwest, neiLsouth, &
+    use ModGeometry,     ONLY: Dx_BLK, Dy_BLK, Dz_BLK
+    use ModCovariant,    ONLY: UseCovariant                
+    use ModParallel,     ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
+    use ModVarIndexes,   ONLY: Bx_, Bz_
     implicit none
 
     real, parameter :: cTwoThird = 2.0/3.0, cFourThird = 4.0/3.0
@@ -706,6 +483,8 @@ contains
 
     integer :: iL, iR, jL, jR, kL, kR
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
+
+    real :: b1_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
 
     logical :: DoTest, DoTestMe
     integer :: i1,j1,k1
@@ -726,8 +505,9 @@ contains
     InvDz = 1.0/dz_Blk(iBlock)
 
     if( IsNewBlockCurrent ) then
-       call set_block_field(iBlock)
-       if(UseCovariant)then                            
+       b_DG = State_VGB(bx_:bz_,:,:,:,iBlock)
+       call set_block_field3(iBlock, 3, b1_DG, b_DG)
+       if(UseCovariant)then
           !call timing_start('set_block_jac')
           !call set_block_jacobian_cell(iBlock) ! Fast but not accurate
           !if(TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr') then
@@ -737,6 +517,8 @@ contains
           !end if
           !call timing_stop('set_block_jac')
        end if                                          
+
+       IsNewBlockCurrent = .false.
     end if
 
     ! Central difference with averaging in orthogonal direction
