@@ -1360,8 +1360,7 @@ toroidal grid).
 The only example of a 2D grid is the "rz" geometry which is axially symmetric.
 In our particular implementation the "X" axis is the axis of symmetry, 
 and the "Y" axis is used for the radial direction.
-The "rz" geometry is implemented for the hydro equations (no magnetic field) 
-only assuming zero azimuthal velocity.
+The "rz" geometry is implemented for the hydro and MHD equations.
 
 BATSRUS uses a Cartesian geometry by default. Setting this command
 allows using more complicated grids. Note that setting "cartesian"
