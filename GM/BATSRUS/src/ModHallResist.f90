@@ -54,8 +54,7 @@ module ModHallResist
   public :: set_ion_mass_per_charge
   public :: set_block_jacobian_cell           
 
-  ! Local variables
-  real :: b_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
+  real, public :: b_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
 
   ! Inverse of cell size
   real :: InvDx, InvDy, InvDz

@@ -65,6 +65,59 @@ contains
 
   end subroutine get_current
 
+  !============================================================================
+
+  subroutine get_current3(i, j, k, iBlock, Current_D)
+
+    ! Calculate the current in a cell of a block
+
+    use ModHallResist, ONLY: b_DG
+    use ModGeometry,   ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK, y_BLK
+    use ModCovariant,  ONLY: UseCovariant, IsRzGeometry
+    use ModSize,       ONLY: x_, y_, z_
+
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(out):: Current_D(3)
+
+    real :: DxInvHalf, DyInvHalf, DzInvHalf
+    !--------------------------------------------------------------------------
+
+    ! Exclude cells next to the body because they produce incorrect currents
+    if(.not.all(True_Cell(i-1:i+1,j-1:j+1,k-1:k+1,iBlock)))then
+       Current_D = 0.0
+
+       RETURN
+    endif
+
+    if(UseCovariant .and. .not.IsRzGeometry)then
+       ! covariant version still need to be fixed with set_block_field3
+       call covariant_curlb(i, j, k, iBlock, Current_D, .true.)
+
+       RETURN
+    end if
+
+    DxInvHalf = 0.5/Dx_BLK(iBlock)
+    DyInvHalf = 0.5/Dy_BLK(iBlock)
+    DzInvHalf = 0.5/Dz_BLK(iBlock)
+
+    Current_D(1) = &
+         (b_DG(z_,i,j+1,k) - b_DG(z_,i,j-1,k))*DyInvHalf - &
+         (b_DG(y_,i,j,k+1) - b_DG(y_,i,j,k-1))*DzInvHalf
+
+    Current_D(2) = &
+         (b_DG(x_,i,j,k+1) - b_DG(x_,i,j,k-1))*DzInvHalf - &
+         (b_DG(z_,i+1,j,k) - b_DG(z_,i-1,j,k))*DxInvHalf
+
+    Current_D(3) = &
+         (b_DG(y_,i+1,j,k) - b_DG(y_,i-1,j,k))*DxInvHalf - &
+         (b_DG(x_,i,j+1,k) - b_DG(x_,i,j-1,k))*DyInvHalf
+
+    ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
+    if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
+         + b_DG(z_,i,j,k)/y_BLK(i,j,k,iBlock)
+
+  end subroutine get_current3
+
   !===========================================================================
 
   subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, bSm_DII, &
