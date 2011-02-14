@@ -467,8 +467,8 @@ contains
     use ModProcMH,       ONLY: iProc
     use ModMain,         ONLY: nI, nJ, nK, x_, y_, z_, &
          iTest, jTest, kTest, BlkTest, ProcTest
-    use ModGeometry,     ONLY: Dx_BLK, Dy_BLK, Dz_BLK
-    use ModCovariant,    ONLY: UseCovariant                
+    use ModGeometry,     ONLY: Dx_BLK, Dy_BLK, Dz_BLK, y_BLK
+    use ModCovariant,    ONLY: UseCovariant, IsRzGeometry
     use ModParallel,     ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
     use ModVarIndexes,   ONLY: Bx_, Bz_
@@ -507,7 +507,7 @@ contains
     if( IsNewBlockCurrent ) then
        b_DG = State_VGB(bx_:bz_,:,:,:,iBlock)
        call set_block_field3(iBlock, 3, b1_DG, b_DG)
-       if(UseCovariant)then
+       if(UseCovariant .and. .not.IsRzGeometry)then
           !call timing_start('set_block_jac')
           !call set_block_jacobian_cell(iBlock) ! Fast but not accurate
           !if(TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr') then
@@ -602,7 +602,7 @@ contains
        end if
     end if
 
-    if(UseCovariant)then               
+    if(UseCovariant .and. .not.IsRzGeometry)then
        call calc_covariant_j
     else                              
        call calc_cartesian_j
@@ -646,6 +646,10 @@ contains
               - Bz*(b_DG(y_,i-1,j,k )+b_DG(y_,i,j ,k )) &
               - Cz*(b_DG(y_,i-1,j,kR)+b_DG(y_,i,j ,kR))
 
+         ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
+         if(IsRzGeometry) Jx = Jx + 0.5*(b_DG(z_,i,j,k)+b_DG(z_,i-1,j,k)) &
+              /y_BLK(i,j,k,iBlock)
+
       case(y_)
          Jx = + InvDy*(b_DG(z_,i,j,k) - b_DG(z_,i,j-1,k)) &
               - Az*(b_DG(y_,i,j-1,kL) + b_DG(y_,i,j ,kL)) &
@@ -664,16 +668,27 @@ contains
               - Bx*(b_DG(z_,i ,j-1,k) + b_DG(z_,i ,j ,k)) &
               - Cx*(b_DG(z_,iR,j-1,k) + b_DG(z_,iR,j ,k))
 
+         ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
+         if(IsRzGeometry)then
+            if(y_BLK(i,j-1,k,iBlock)<0.0)then
+               ! Just for bookkeeping. It's effect is zeroed by zero face area
+               Jx = Jx + b_DG(z_,i,j,k)/y_BLK(i,j,k,iBlock)
+            else
+               Jx = Jx + (b_DG(z_,i,j,k)+b_DG(z_,i,j-1,k)) &
+                    /(y_BLK(i,j,k,iBlock)+y_BLK(i,j-1,k,iBlock))
+            end if
+         end if
+
       case(z_)
          Jx = -InvDz*(b_DG(y_,i,j,k) - b_DG(y_,i,j,k-1)) & 
               + Ay*(b_DG(z_,i,jL,k-1) + b_DG(z_,i,jL,k))  &
               + By*(b_DG(z_,i,j ,k-1) + b_DG(z_,i,j ,k))  &
-              + Cy*(b_DG(z_,i,jR,k-1) + b_DG(z_,i,jR,k)) 
+              + Cy*(b_DG(z_,i,jR,k-1) + b_DG(z_,i,jR,k))
 
          Jy = +InvDz*(b_DG(x_,i,j,k) - b_DG(x_,i,j,k-1)) &
               - Ax*(b_DG(z_,iL,j,k-1) + b_DG(z_,iL,j,k))  &
               - Bx*(b_DG(z_,i ,j,k-1) + b_DG(z_,i ,j,k))  &
-              - Cx*(b_DG(z_,iR,j,k-1) + b_DG(z_,iR,j,k)) 
+              - Cx*(b_DG(z_,iR,j,k-1) + b_DG(z_,iR,j,k))
 
          Jz = + Ax*(b_DG(y_,iL,j,k-1) + b_DG(y_,iL,j,k))  &
               + Bx*(b_DG(y_,i ,j,k-1) + b_DG(y_,i ,j,k))  &
@@ -681,6 +696,9 @@ contains
               - Ay*(b_DG(x_,i,jL,k-1) + b_DG(x_,i,jL,k))  &
               - By*(b_DG(x_,i,j ,k-1) + b_DG(x_,i,j ,k))  &
               - Cy*(b_DG(x_,i,jR,k-1) + b_DG(x_,i,jR,k)) 
+
+         ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
+         if(IsRzGeometry) Jx = Jx + b_DG(z_,i,j,k)/y_BLK(i,j,k,iBlock)
 
       case default
          write(*,*)'Error in get_face_current: iDir=',iDir

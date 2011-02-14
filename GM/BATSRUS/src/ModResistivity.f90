@@ -229,11 +229,11 @@ contains
   !===========================================================================
   subroutine calc_resistivity_source(iBlock)
 
-    use ModMain,       ONLY: Cfl
-    use ModGeometry,   ONLY: true_cell
+    use ModMain,       ONLY: Cfl, x_
+    use ModGeometry,   ONLY: true_cell, IsRzGeometry, y_BLK
     use ModCurrent,    ONLY: get_current
     use ModPhysics,    ONLY: gm1, inv_gm1, IonMassPerCharge
-    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_, Energy_
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_, Energy_, Bz_
     use ModAdvance,    ONLY: time_blk, State_VGB, Source_VC, &
          UseElectronPressure, UseAnisoPressure
 
@@ -253,7 +253,7 @@ contains
        if(UseJouleHeating)then
           call get_current(i,j,k,iBlock,Current_D)
           JouleHeating = gm1 * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
-       end if
+       end if          
        if(UseElectronPressure) then
           ! For single ion fluid the ion-electron collision results in a 
           ! heat exchange term for the electron pressure 
@@ -289,9 +289,18 @@ contains
        else
           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
        end if
+
+       ! rz-geometrical source terms
+       if(IsRzGeometry .and. UseResistiveFlux)then
+          ! calculate cell centered current if it is not yet done
+          if(.not.UseJouleHeating) call get_current(i,j,k,iBlock,Current_D)
+
+          ! Source[Bphi] = -eta*Jz / radius
+          Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
+               - Eta_GB(i,j,k,iBlock)*Current_D(x_)/y_BLK(i,j,k,iBlock)
+       end if
     end do; end do; end do
 
   end subroutine calc_resistivity_source
 
 end module ModResistivity
-

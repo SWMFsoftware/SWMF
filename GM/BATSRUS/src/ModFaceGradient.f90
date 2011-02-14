@@ -646,7 +646,7 @@ contains
     ! calculate the cell face gradient of Scalar_G
 
     use ModAdvance,    ONLY: State_VGB
-    use ModCovariant,  ONLY: UseCovariant
+    use ModCovariant,  ONLY: UseCovariant, IsRzGeometry
     use ModGeometry,   ONLY: Dx_Blk, Dy_Blk, Dz_Blk
     use ModMain,       ONLY: x_, y_, z_
     use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
@@ -668,7 +668,8 @@ contains
 
     if(IsNewBlock)then
        call set_block_field3(iBlock, 1, Scalar1_G, Scalar_G)
-       if(UseCovariant) call set_block_jacobian_face(iBlock)
+       if(UseCovariant .and. .not.IsRzGeometry) &
+            call set_block_jacobian_face(iBlock)
 
        IsNewBlock = .false.
     end if
@@ -793,7 +794,7 @@ contains
 
     ! multiply by the coordinate transformation matrix to obtain the
     ! cartesian gradient from the partial derivatives dScalar/dCovariant
-    if(UseCovariant) &
+    if(UseCovariant .and. .not.IsRzGeometry) &
          FaceGrad_D = matmul(FaceGrad_D,DcoordDxyz_DDFD(:,:,i,j,k,iDir))
 
   end subroutine get_face_gradient
@@ -805,7 +806,7 @@ contains
 
     use ModMain,      ONLY: x_, y_, z_
     use ModGeometry,  ONLY: Dx_BLK, Dy_BLK, Dz_BLK
-    use ModCovariant, ONLY: UseCovariant                
+    use ModCovariant, ONLY: UseCovariant, IsRzGeometry                
     use ModParallel,  ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
 
@@ -826,7 +827,8 @@ contains
 
     if(IsNewBlock)then
        call set_block_field3(iBlock, 3, Vector1_DG, Vector_DG)
-       if(UseCovariant) call set_block_jacobian_face(iBlock)
+       if(UseCovariant .and. .not. IsRzGeometry) &
+            call set_block_jacobian_face(iBlock)
 
        IsNewBlock = .false.
     end if
@@ -912,7 +914,7 @@ contains
        end if
     end if
 
-    if(UseCovariant)then               
+    if(UseCovariant .and. .not.IsRzGeometry)then               
        call calc_covariant_curl
     else
        call calc_cartesian_curl

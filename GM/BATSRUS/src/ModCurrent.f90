@@ -15,8 +15,9 @@ contains
     ! Calculate the current in a cell of a block
 
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
-    use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK
-    use ModCovariant,ONLY: UseCovariant                
+    use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK, y_BLK
+    use ModCovariant,ONLY: UseCovariant, IsRzGeometry
+    use ModSize,     ONLY: x_
 
     implicit none
     integer, intent(in) :: i,j,k,iBlock
@@ -31,7 +32,7 @@ contains
        RETURN
     endif
 
-    if(UseCovariant)then                               
+    if(UseCovariant .and. .not.IsRzGeometry)then
        call covariant_curlb(i,j,k,iBlock,Current_D,.true.)
        RETURN
     end if
@@ -57,6 +58,10 @@ contains
          -State_VGB(By_,i-1,j,k,iBlock))*DxInvHalf- &
          (State_VGB(Bx_,i,j+1,k,iBlock) &
          -State_VGB(Bx_,i,j-1,k,iBlock))*DyInvHalf
+
+    ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
+    if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
+         + State_VGB(Bz_,i,j,k,iBlock)/y_BLK(i,j,k,iBlock)
 
   end subroutine get_current
 

@@ -12,8 +12,8 @@ module ModCovariant
   real,dimension(nBLK) :: &
        FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B
 
-  logical::UseCovariant=.false.
-
+  logical:: UseCovariant = .false.
+  logical:: IsRzGeometry = .false.
 
   !For a vertex-based logically cartesian (spherical, cylindircal) grid 
   !(UseVertexBasedGrid=.true.) the node coordinates are defined

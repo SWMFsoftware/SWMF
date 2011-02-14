@@ -10,7 +10,8 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   use ModVarIndexes
   use ModAdvance, ONLY: State_VGB, Erad_
   use ModParallel, ONLY: NOBLK, NeiLev
-  use ModGeometry, ONLY: far_field_BCs_BLK, MaxBoundary, TypeGeometry, XyzMin_D
+  use ModGeometry, ONLY: far_field_BCs_BLK, MaxBoundary, TypeGeometry, &
+       XyzMin_D, IsRzGeometry
   use ModPhysics
   use ModUser, ONLY: user_set_outerBCs
   use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
@@ -155,7 +156,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
            if(UseB)call BC_asymm(Bx_,Bx_)
         endif
         if(iSide==south_.or.iSide==north_)then
-           if(TypeGeometry=='rz'.and.XyzMin_D(2)==0.0.and.iSide==south_)then
+           if(IsRzGeometry.and.XyzMin_D(2)==0.0.and.iSide==south_)then
               do iFluid = 1, nFluid
                  call BC_asymm(iRhoUy_I(iFluid), iRhoUz_I(iFluid))
               end do

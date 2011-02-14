@@ -5,7 +5,8 @@ subroutine calc_sources
   use ModMain
   use ModVarIndexes
   use ModGeometry,      ONLY: dx_BLK, dy_BLK, dz_BLK, R_BLK,&
-       body_BLK, Rmin_BLK, vInv_CB, TypeGeometry, y_BLK, true_cell
+       body_BLK, Rmin_BLK, vInv_CB, y_BLK, true_cell, &
+       IsRzGeometry
   use ModGeometry,      ONLY: R2_BLK                   !^CFG IF SECONDBODY
   use ModAdvance
   use ModParallel,      ONLY: NOBLK, neiLEV, &
@@ -33,7 +34,6 @@ subroutine calc_sources
   implicit none
 
   integer :: i, j, k, iDim, iVar
-  logical :: UseRzGeometry
   real :: Pe, DivU
   real :: Coef, GammaMinus1
 
@@ -65,8 +65,6 @@ subroutine calc_sources
   else
      DoTest=.false.; DoTestMe=.false.
   end if
-
-  UseRzGeometry = TypeGeometry == 'rz'
 
   Source_VC   = 0.0
 
@@ -180,7 +178,7 @@ subroutine calc_sources
         ! Add "geometrical source term" p/r to the radial momentum equation
         ! The "radial" direction is along the Y axis
         ! NOTE: here we have to use signed radial distance!
-        if(UseRzGeometry) &
+        if(IsRzGeometry) &
              Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
              + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) &
              *(GammaWave - 1)/y_BLK(i,j,k,iBlock)
@@ -239,14 +237,14 @@ subroutine calc_sources
            ! Add "geometrical source term" p/r to the radial momentum equation
            ! The "radial" direction is along the Y axis
            ! NOTE: here we have to use signed radial distance!
-           if(UseRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k)&
+           if(IsRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k)&
                 + Pe/y_BLK(i,j,k,iBlock)
         end if
      end do; end do; end do
      if(DoTestMe.and.VarTest==Pe_)call write_source('After Pe div Ue')
   end if
 
-  if(TypeGeometry == 'rz')then
+  if(IsRzGeometry)then
      ! The following geometrical source terms are added for the MHD equations
      ! Source[mr]  =(p+B^2/2-Bphi**2+mphi**2/rho)/radius
      ! Source[mphi]=(-mphi*mr/rho+Bphi*Br)/radius  (if no angular momentum fix)
@@ -682,7 +680,7 @@ subroutine calc_sources_adjoint
   use ModMain
   use ModVarIndexes
   use ModGeometry,      ONLY: dx_BLK, dy_BLK, dz_BLK, R_BLK,&
-       body_BLK, Rmin_BLK, vInv_CB, TypeGeometry, y_BLK, true_cell
+       body_BLK, Rmin_BLK, vInv_CB, y_BLK, true_cell, IsRzGeometry
   use ModGeometry,      ONLY: R2_BLK                   !^CFG IF SECONDBODY
   use ModAdvance
   use ModParallel,      ONLY: NOBLK, neiLEV, &
@@ -709,7 +707,6 @@ subroutine calc_sources_adjoint
   implicit none
 
   integer :: i, j, k, iDim, iVar
-  logical :: UseRzGeometry
   real :: Pe, DivU
   real :: Coef, GammaMinus1
 
@@ -737,8 +734,6 @@ subroutine calc_sources_adjoint
   character(len=*), parameter :: NameSub = 'calc_sources_adjoint'
   !---------------------------------------------------------------------------
   iBlock = GlobalBlk
-
-  UseRzGeometry = TypeGeometry == 'rz'
 
   
   if(UseUserSource)then
@@ -790,7 +785,7 @@ subroutine calc_sources_adjoint
      if(UseB) call stop_mpi(NameSub // ' Not yet supported')
   end if
 
-  if(TypeGeometry == 'rz')then
+  if(IsRzGeometry)then
      if(UseB)call stop_mpi('RZ geometry is not implemented for MHD')
      do k=1,nK; do j=1, nJ; do i=1, nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE
