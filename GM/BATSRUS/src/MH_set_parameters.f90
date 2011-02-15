@@ -483,14 +483,7 @@ subroutine MH_set_parameters(TypeAction)
           "#KRYLOV", "#KRYLOVSIZE")
         call read_implicit_param(NameCommand)           !^CFG END IMPLICIT
 
-     case("#HEATFLUX")                                  !^CFG IF DISSFLUX BEGIN
-        call read_var('UseHeatFlux'   ,UseHeatFlux)
-        call read_var('UseSpitzerForm',UseSpitzerForm)
-        if (.not.UseSpitzerForm) then
-           call read_var('Kappa0Heat'  ,Kappa0Heat)
-           call read_var('ExponentHeat',ExponentHeat)
-        end if
-     case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &
+     case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &      !^CFG IF DISSFLUX BEGIN
           "#RESISTIVITYREGION", "#RESISTIVEREGION")
         call read_resistivity_param(NameCommand)
         !                                               ^CFG END DISSFLUX

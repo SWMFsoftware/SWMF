@@ -65,12 +65,6 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
         call timing_start('calc_fluxes_bfo')
         call calc_face_flux(.true., GlobalBlk)
-
-        !^CFG IF DISSFLUX BEGIN
-        ! Update the faceflux values for heat flux 
-        if (UseHeatFlux) call add_heat_flux(.true.)
-        !^CFG END DISSFLUX
-
         call timing_stop('calc_fluxes_bfo')
 
         ! Save conservative flux correction for this solution block
@@ -109,12 +103,6 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         ! Compute interface fluxes for each cell.
         call timing_start('calc_fluxes')
         call calc_face_flux(.false., GlobalBlk)
-
-        !^CFG IF DISSFLUX BEGIN
-        ! Update the faceflux values for heat flux 
-        if (UseHeatFlux) call add_heat_flux(.false.)
-        !^CFG END DISSFLUX
-
         call timing_stop('calc_fluxes')
 
         ! Enforce flux conservation by applying corrected fluxes

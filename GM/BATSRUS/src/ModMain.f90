@@ -192,10 +192,6 @@ Module ModMain
   logical::UseCurlB0=.false.
   real::rCurrentFreeB0=-1.0
 
-  ! Logical for adding heat conduction
-  logical:: UseHeatFlux=.false.
-  logical:: UseSpitzerForm=.false.
-
   ! Logicals for adding radiation diffusion and heat conduction
   logical :: UseRadDiffusion = .false.
   logical :: UseHeatConduction = .false.

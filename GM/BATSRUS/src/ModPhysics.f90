@@ -163,11 +163,6 @@ module ModPhysics
   real    :: xEarth=0.0, yEarth=0.0, zEarth=0.0, InvD2Ray
 
   !\
-  ! Heat conduction parameters
-  !/
-  real :: Kappa0Heat=0.0, ExponentHeat=0.0
-
-  !\
   ! Units for normalization of variables
   !/
   character (len=20) :: TypeNormalization="PLANETARY"
