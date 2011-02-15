@@ -5584,19 +5584,6 @@ F			DoAccelerateMassLoading
 </command>
 
 <!-- ^CFG IF DISSFLUX BEGIN -->
-<command name="HEATFLUX">
-	<parameter name="UseHeatFlux"    type="logical" default="F"/>
-	<parameter name="UseSpitzerForm" type="logical" default="T"/>
-	<if expr="not $UseSpitzerForm">
-		<parameter name="Kappa0Heat" type="real" default="1.23E-11"/>
-		<parameter name="Kappa0Heat" type="real" default="2.5"     />
-	</if>
-#HEATFLUX
-T		UseHeatFlux
-F		UseSpitzerForm
-1.23E-11	Kappa0Heat [W/m/K]	! Only if not UseSpitzerForm
-2.50E+00	ExponentHeat [-]	! Only if not UseSpitzerForm
-</command>
 
 <command name="HEATCONDUCTION">
 	 <parameter name="UseHeatConduction"    type="logical" default="F"/>
