@@ -56,19 +56,19 @@ contains
     Az = -0.5*InvDz; Bz = 0.0; Cz = +0.5*InvDz
 
     ! Avoid the ghost cells at resolution changes by using one-sided difference
-    if(i==1 .and. abs(NeiLeast(iBlock))==1)then
+    if(i==1 .and. NeiLeast(iBlock)==1)then
        iL = i+1; iR = i+2; Ax = 2.0*InvDx; Bx =-1.5*InvDx; Cx =-0.5*InvDx
-    elseif(i==nI .and. abs(NeiLwest(iBlock))==1)then
+    elseif(i==nI .and. NeiLwest(iBlock)==1)then
        iL = i-1; iR = i-2; Ax =-2.0*InvDx; Bx = 1.5*InvDx; Cx = 0.5*InvDx
     end if
-    if(j==1 .and. abs(NeiLsouth(iBlock))==1)then
+    if(j==1 .and. NeiLsouth(iBlock)==1)then
        jL = j+1; jR = j+2; Ay = 2.0*InvDy; By =-1.5*InvDy; Cy =-0.5*InvDy
-    elseif(j==nJ .and. abs(NeiLnorth(iBlock))==1)then
+    elseif(j==nJ .and. NeiLnorth(iBlock)==1)then
        jL = j-1; jR = j-2; Ay =-2.0*InvDy; By = 1.5*InvDy; Cy = 0.5*InvDy
     end if
-    if(k==1 .and. abs(NeiLbot(iBlock))==1)then
+    if(k==1 .and. NeiLbot(iBlock)==1)then
        kL = k+1; kR = k+2; Az = 2.0*InvDz; Bz =-1.5*InvDz; Cz =-0.5*InvDz
-    elseif(k==nK .and. abs(NeiLtop(iBlock))==1)then
+    elseif(k==nK .and. NeiLtop(iBlock)==1)then
        kL = k-1; kR = k-2; Az =-2.0*InvDz; Bz = 1.5*InvDz; Cz = 0.5*InvDz
     end if
 
