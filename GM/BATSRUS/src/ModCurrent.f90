@@ -10,113 +10,97 @@ module ModCurrent
 contains
   !============================================================================
 
-  subroutine get_current(i,j,k,iBlock,Current_D)
+  subroutine get_current(i, j, k, iBlock, Current_D)
 
     ! Calculate the current in a cell of a block
 
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
     use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK, y_BLK
     use ModCovariant,ONLY: UseCovariant, IsRzGeometry
-    use ModSize,     ONLY: x_
+    use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
+         neiLnorth, neiLtop, neiLbot
+    use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
 
-    implicit none
-    integer, intent(in) :: i,j,k,iBlock
+    integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Current_D(3)
 
-    real :: DxInvHalf, DyInvHalf, DzInvHalf
+    integer :: iL, iR, jL, jR, kL, kR
+    real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
+    real :: InvDx, InvDy, InvDz
     !--------------------------------------------------------------------------
 
     ! Exclude cells next to the body because they produce incorrect currents
     if(.not.all(True_Cell(i-1:i+1,j-1:j+1,k-1:k+1,iBlock)))then
        Current_D = 0.0
+
        RETURN
     endif
 
     if(UseCovariant .and. .not.IsRzGeometry)then
        call covariant_curlb(i,j,k,iBlock,Current_D,.true.)
+
        RETURN
     end if
 
-    DxInvHalf = 0.5/Dx_BLK(iBlock)
-    DyInvHalf = 0.5/Dy_BLK(iBlock)
-    DzInvHalf = 0.5/Dz_BLK(iBlock)
+    InvDx = 1.0/Dx_Blk(iBlock)
+    InvDy = 1.0/Dy_Blk(iBlock)
+    InvDz = 1.0/Dz_Blk(iBlock)
 
-    Current_D(1) = &
-         (State_VGB(Bz_,i,j+1,k,iBlock) &
-         -State_VGB(Bz_,i,j-1,k,iBlock))*DyInvHalf - &
-         (State_VGB(By_,i,j,k+1,iBlock) &
-         -State_VGB(By_,i,j,k-1,iBlock))*DzInvHalf
+    ! Central difference
+    iR = i+1; iL = i-1;
+    jR = j+1; jL = j-1;
+    kR = k+1; kL = k-1;
 
-    Current_D(2) = &
-         (State_VGB(Bx_,i,j,k+1,iBlock) &
-         -State_VGB(Bx_,i,j,k-1,iBlock))*DzInvHalf- &
-         (State_VGB(Bz_,i+1,j,k,iBlock) &
-         -State_VGB(Bz_,i-1,j,k,iBlock))*DxInvHalf
+    Ax = -0.5*InvDx; Bx = 0.0; Cx = +0.5*InvDx
+    Ay = -0.5*InvDy; By = 0.0; Cy = +0.5*InvDy
+    Az = -0.5*InvDz; Bz = 0.0; Cz = +0.5*InvDz
 
-    Current_D(3) = &
-         (State_VGB(By_,i+1,j,k,iBlock) &
-         -State_VGB(By_,i-1,j,k,iBlock))*DxInvHalf- &
-         (State_VGB(Bx_,i,j+1,k,iBlock) &
-         -State_VGB(Bx_,i,j-1,k,iBlock))*DyInvHalf
+    ! Avoid the ghost cells at resolution changes by using one-sided difference
+    if(i==1 .and. abs(NeiLeast(iBlock))==1)then
+       iL = i+1; iR = i+2; Ax = 2.0*InvDx; Bx =-1.5*InvDx; Cx =-0.5*InvDx
+    elseif(i==nI .and. abs(NeiLwest(iBlock))==1)then
+       iL = i-1; iR = i-2; Ax =-2.0*InvDx; Bx = 1.5*InvDx; Cx = 0.5*InvDx
+    end if
+    if(j==1 .and. abs(NeiLsouth(iBlock))==1)then
+       jL = j+1; jR = j+2; Ay = 2.0*InvDy; By =-1.5*InvDy; Cy =-0.5*InvDy
+    elseif(j==nJ .and. abs(NeiLnorth(iBlock))==1)then
+       jL = j-1; jR = j-2; Ay =-2.0*InvDy; By = 1.5*InvDy; Cy = 0.5*InvDy
+    end if
+    if(k==1 .and. abs(NeiLbot(iBlock))==1)then
+       kL = k+1; kR = k+2; Az = 2.0*InvDz; Bz =-1.5*InvDz; Cz =-0.5*InvDz
+    elseif(k==nK .and. abs(NeiLtop(iBlock))==1)then
+       kL = k-1; kR = k-2; Az =-2.0*InvDz; Bz = 1.5*InvDz; Cz = 0.5*InvDz
+    end if
+
+    Current_D(x_) = &
+         + Ay*State_VGB(Bz_,i,jL,k ,iBlock) &
+         + By*State_VGB(Bz_,i,j ,k ,iBlock) &
+         + Cy*State_VGB(Bz_,i,jR,k ,iBlock) &
+         - Az*State_VGB(By_,i,j ,kL,iBlock) &
+         - Bz*State_VGB(By_,i,j ,k ,iBlock) &
+         - Cz*State_VGB(By_,i,j ,kR,iBlock)
+
+    Current_D(y_) = &
+         + Az*State_VGB(Bx_,i ,j,kL,iBlock) &
+         + Bz*State_VGB(Bx_,i ,j,k ,iBlock) &
+         + Cz*State_VGB(Bx_,i ,j,kR,iBlock) &
+         - Ax*State_VGB(Bz_,iL,j,k ,iBlock) &
+         - Bx*State_VGB(Bz_,i ,j,k ,iBlock) &
+         - Cx*State_VGB(Bz_,iR,j,k ,iBlock)
+
+    Current_D(z_) = &
+         + Ax*State_VGB(By_,iL,j ,k,iBlock) &
+         + Bx*State_VGB(By_,i ,j ,k,iBlock) &
+         + Cx*State_VGB(By_,iR,j ,k,iBlock) &
+         - Ay*State_VGB(Bx_,i ,jL,k,iBlock) &
+         - By*State_VGB(Bx_,i ,j ,k,iBlock) &
+         - Cy*State_VGB(Bx_,i ,jR,k,iBlock)
 
     ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
     if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
          + State_VGB(Bz_,i,j,k,iBlock)/y_BLK(i,j,k,iBlock)
 
   end subroutine get_current
-
-  !============================================================================
-
-  subroutine get_current3(i, j, k, iBlock, Current_D)
-
-    ! Calculate the current in a cell of a block
-
-    use ModHallResist, ONLY: b_DG
-    use ModGeometry,   ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK, y_BLK
-    use ModCovariant,  ONLY: UseCovariant, IsRzGeometry
-    use ModSize,       ONLY: x_, y_, z_
-
-    integer, intent(in) :: i, j, k, iBlock
-    real,    intent(out):: Current_D(3)
-
-    real :: DxInvHalf, DyInvHalf, DzInvHalf
-    !--------------------------------------------------------------------------
-
-    ! Exclude cells next to the body because they produce incorrect currents
-    if(.not.all(True_Cell(i-1:i+1,j-1:j+1,k-1:k+1,iBlock)))then
-       Current_D = 0.0
-
-       RETURN
-    endif
-
-    if(UseCovariant .and. .not.IsRzGeometry)then
-       ! covariant version still need to be fixed with set_block_field3
-       call covariant_curlb(i, j, k, iBlock, Current_D, .true.)
-
-       RETURN
-    end if
-
-    DxInvHalf = 0.5/Dx_BLK(iBlock)
-    DyInvHalf = 0.5/Dy_BLK(iBlock)
-    DzInvHalf = 0.5/Dz_BLK(iBlock)
-
-    Current_D(1) = &
-         (b_DG(z_,i,j+1,k) - b_DG(z_,i,j-1,k))*DyInvHalf - &
-         (b_DG(y_,i,j,k+1) - b_DG(y_,i,j,k-1))*DzInvHalf
-
-    Current_D(2) = &
-         (b_DG(x_,i,j,k+1) - b_DG(x_,i,j,k-1))*DzInvHalf - &
-         (b_DG(z_,i+1,j,k) - b_DG(z_,i-1,j,k))*DxInvHalf
-
-    Current_D(3) = &
-         (b_DG(y_,i+1,j,k) - b_DG(y_,i-1,j,k))*DxInvHalf - &
-         (b_DG(x_,i,j+1,k) - b_DG(x_,i,j-1,k))*DyInvHalf
-
-    ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
-    if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
-         + b_DG(z_,i,j,k)/y_BLK(i,j,k,iBlock)
-
-  end subroutine get_current3
 
   !===========================================================================
 

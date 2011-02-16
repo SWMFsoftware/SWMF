@@ -231,7 +231,7 @@ contains
 
     use ModMain,       ONLY: Cfl, x_
     use ModGeometry,   ONLY: true_cell, IsRzGeometry, y_BLK
-    use ModCurrent,    ONLY: get_current3
+    use ModCurrent,    ONLY: get_current
     use ModPhysics,    ONLY: gm1, inv_gm1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_, Energy_, Bz_
     use ModAdvance,    ONLY: time_blk, State_VGB, Source_VC, &
@@ -251,7 +251,7 @@ contains
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
        if(UseJouleHeating)then
-          call get_current3(i,j,k,iBlock,Current_D)
+          call get_current(i,j,k,iBlock,Current_D)
           JouleHeating = gm1 * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
        end if          
        if(UseElectronPressure) then
@@ -293,7 +293,7 @@ contains
        ! rz-geometrical source terms
        if(IsRzGeometry .and. UseResistiveFlux)then
           ! calculate cell centered current if it is not yet done
-          if(.not.UseJouleHeating) call get_current3(i,j,k,iBlock,Current_D)
+          if(.not.UseJouleHeating) call get_current(i,j,k,iBlock,Current_D)
 
           ! Source[Bphi] = -eta*Jz / radius
           Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
