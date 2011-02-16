@@ -808,7 +808,10 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                    -State_VGB(By_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK))/dz_BLK(iBLK))
            else
               do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
-                 if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+                 if( .not.true_cell(i,j,k,iBLK) ) then
+                    PlotVar(i,j,k,iVar) = 0.0
+                    CYCLE
+                 end if
                  
                  ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
                  if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
@@ -831,7 +834,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                       -State_VGB(By_,i  ,j  ,km1,iBLK))*zfactor/dz_BLK(iBLK))
               end do; end do; end do
            end if                            
-        end if                               
+        end if
      case('jy')
         if(UseCovariant)then                  
            call covar_curlb_plotvar(y_,iBLK,PlotVar(:,:,:,iVar))   
@@ -844,7 +847,10 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                    -State_VGB(Bz_,-1:nI  , 0:nJ+1, 0:nK+1,iBLK))/dx_BLK(iBLK))
            else
               do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
-                 if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+                 if( .not.true_cell(i,j,k,iBLK) ) then
+                    PlotVar(i,j,k,iVar) = 0.0
+                    CYCLE
+                 end if
                  
                  ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
                  if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
@@ -868,7 +874,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
               end do; end do; end do
            endif                                   
         end if                                     
-
      case('jz')
         if(UseCovariant)then                       
            call covar_curlb_plotvar(z_,iBLK,PlotVar(:,:,:,iVar))  
@@ -881,7 +886,10 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                    -State_VGB(Bx_,0:nI+1,-1:nJ  ,0:nK+1,iBLK))/dy_BLK(iBLK))
            else
               do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
-                 if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+                 if( .not.true_cell(i,j,k,iBLK) ) then
+                    PlotVar(i,j,k,iVar) = 0.0
+                    CYCLE
+                 end if
                  
                  ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
                  if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
