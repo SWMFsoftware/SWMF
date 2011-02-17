@@ -15,7 +15,8 @@ contains
     ! Calculate the current in a cell of a block
 
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
-    use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK, y_BLK
+    use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK, &
+         x_BLK, y_BLK, z_BLK
     use ModCovariant,ONLY: UseCovariant, IsRzGeometry
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
@@ -26,7 +27,7 @@ contains
 
     integer :: iL, iR, jL, jR, kL, kR
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
-    real :: InvDx, InvDy, InvDz
+    real :: InvDx2, InvDy2, InvDz2
     !--------------------------------------------------------------------------
 
     ! Exclude cells next to the body because they produce incorrect currents
@@ -42,63 +43,144 @@ contains
        RETURN
     end if
 
-    InvDx = 1.0/Dx_Blk(iBlock)
-    InvDy = 1.0/Dy_Blk(iBlock)
-    InvDz = 1.0/Dz_Blk(iBlock)
+    InvDx2 = 0.5/Dx_Blk(iBlock)
+    InvDy2 = 0.5/Dy_Blk(iBlock)
+    InvDz2 = 0.5/Dz_Blk(iBlock)
 
     ! Central difference
     iR = i+1; iL = i-1;
     jR = j+1; jL = j-1;
     kR = k+1; kL = k-1;
 
-    Ax = -0.5*InvDx; Bx = 0.0; Cx = +0.5*InvDx
-    Ay = -0.5*InvDy; By = 0.0; Cy = +0.5*InvDy
-    Az = -0.5*InvDz; Bz = 0.0; Cz = +0.5*InvDz
+    Ax = -InvDx2; Bx = 0.0; Cx = +InvDx2
+    Ay = -InvDy2; By = 0.0; Cy = +InvDy2
+    Az = -InvDz2; Bz = 0.0; Cz = +InvDz2
 
     ! Avoid the ghost cells at resolution changes by using one-sided difference
     if(i==1 .and. NeiLeast(iBlock)==1)then
-       iL = i+1; iR = i+2; Ax = 2.0*InvDx; Bx =-1.5*InvDx; Cx =-0.5*InvDx
+       iL = i+1; iR = i+2; Ax = 4.0*InvDx2; Bx =-3.0*InvDx2; Cx =-InvDx2
     elseif(i==nI .and. NeiLwest(iBlock)==1)then
-       iL = i-1; iR = i-2; Ax =-2.0*InvDx; Bx = 1.5*InvDx; Cx = 0.5*InvDx
+       iL = i-1; iR = i-2; Ax =-4.0*InvDx2; Bx = 3.0*InvDx2; Cx = InvDx2
     end if
     if(j==1 .and. NeiLsouth(iBlock)==1)then
-       jL = j+1; jR = j+2; Ay = 2.0*InvDy; By =-1.5*InvDy; Cy =-0.5*InvDy
+       jL = j+1; jR = j+2; Ay = 4.0*InvDy2; By =-3.0*InvDy2; Cy =-InvDy2
     elseif(j==nJ .and. NeiLnorth(iBlock)==1)then
-       jL = j-1; jR = j-2; Ay =-2.0*InvDy; By = 1.5*InvDy; Cy = 0.5*InvDy
+       jL = j-1; jR = j-2; Ay =-4.0*InvDy2; By = 3.0*InvDy2; Cy = InvDy2
     end if
     if(k==1 .and. NeiLbot(iBlock)==1)then
-       kL = k+1; kR = k+2; Az = 2.0*InvDz; Bz =-1.5*InvDz; Cz =-0.5*InvDz
+       kL = k+1; kR = k+2; Az = 4.0*InvDz2; Bz =-3.0*InvDz2; Cz =-InvDz2
     elseif(k==nK .and. NeiLtop(iBlock)==1)then
-       kL = k-1; kR = k-2; Az =-2.0*InvDz; Bz = 1.5*InvDz; Cz = 0.5*InvDz
+       kL = k-1; kR = k-2; Az =-4.0*InvDz2; Bz = 3.0*InvDz2; Cz = InvDz2
     end if
 
-    Current_D(x_) = &
-         + Ay*State_VGB(Bz_,i,jL,k ,iBlock) &
-         + By*State_VGB(Bz_,i,j ,k ,iBlock) &
-         + Cy*State_VGB(Bz_,i,jR,k ,iBlock) &
-         - Az*State_VGB(By_,i,j ,kL,iBlock) &
-         - Bz*State_VGB(By_,i,j ,k ,iBlock) &
-         - Cz*State_VGB(By_,i,j ,kR,iBlock)
+    if(UseCovariant .and. .not.IsRzGeometry)then
+       call calc_covariant_j
+    else
+       call calc_cartesian_j
+    end if
 
-    Current_D(y_) = &
-         + Az*State_VGB(Bx_,i ,j,kL,iBlock) &
-         + Bz*State_VGB(Bx_,i ,j,k ,iBlock) &
-         + Cz*State_VGB(Bx_,i ,j,kR,iBlock) &
-         - Ax*State_VGB(Bz_,iL,j,k ,iBlock) &
-         - Bx*State_VGB(Bz_,i ,j,k ,iBlock) &
-         - Cx*State_VGB(Bz_,iR,j,k ,iBlock)
+  contains
+    !==========================================================================
+    subroutine calc_cartesian_j
 
-    Current_D(z_) = &
-         + Ax*State_VGB(By_,iL,j ,k,iBlock) &
-         + Bx*State_VGB(By_,i ,j ,k,iBlock) &
-         + Cx*State_VGB(By_,iR,j ,k,iBlock) &
-         - Ay*State_VGB(Bx_,i ,jL,k,iBlock) &
-         - By*State_VGB(Bx_,i ,j ,k,iBlock) &
-         - Cy*State_VGB(Bx_,i ,jR,k,iBlock)
+      !------------------------------------------------------------------------
 
-    ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
-    if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
-         + State_VGB(Bz_,i,j,k,iBlock)/y_BLK(i,j,k,iBlock)
+      Current_D(x_) = &
+           + Ay*State_VGB(Bz_,i,jL,k ,iBlock) &
+           + By*State_VGB(Bz_,i,j ,k ,iBlock) &
+           + Cy*State_VGB(Bz_,i,jR,k ,iBlock) &
+           - Az*State_VGB(By_,i,j ,kL,iBlock) &
+           - Bz*State_VGB(By_,i,j ,k ,iBlock) &
+           - Cz*State_VGB(By_,i,j ,kR,iBlock)
+
+      Current_D(y_) = &
+           + Az*State_VGB(Bx_,i ,j,kL,iBlock) &
+           + Bz*State_VGB(Bx_,i ,j,k ,iBlock) &
+           + Cz*State_VGB(Bx_,i ,j,kR,iBlock) &
+           - Ax*State_VGB(Bz_,iL,j,k ,iBlock) &
+           - Bx*State_VGB(Bz_,i ,j,k ,iBlock) &
+           - Cx*State_VGB(Bz_,iR,j,k ,iBlock)
+
+      Current_D(z_) = &
+           + Ax*State_VGB(By_,iL,j ,k,iBlock) &
+           + Bx*State_VGB(By_,i ,j ,k,iBlock) &
+           + Cx*State_VGB(By_,iR,j ,k,iBlock) &
+           - Ay*State_VGB(Bx_,i ,jL,k,iBlock) &
+           - By*State_VGB(Bx_,i ,j ,k,iBlock) &
+           - Cy*State_VGB(Bx_,i ,jR,k,iBlock)
+
+      ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
+      if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
+           + State_VGB(Bz_,i,j,k,iBlock)/y_BLK(i,j,k,iBlock)
+
+    end subroutine calc_cartesian_j
+
+    !==========================================================================
+
+    subroutine calc_covariant_j
+      use ModCoordTransform, ONLY: inverse_matrix
+
+      real :: DxyzDcoord_DD(3,3), DcoordDxyz_DD(3,3), DbDcoord_DD(3,3)
+      !------------------------------------------------------------------------
+
+      ! Get the dCartesian/dCovariant matrix with central difference
+      DxyzDcoord_DD(x_,1) = InvDx2 &
+           *(x_BLK(i+1,j,k,iBlock) - x_BLK(i-1,j,k,iBlock))
+      DxyzDcoord_DD(y_,1) = InvDx2 &
+           *(y_BLK(i+1,j,k,iBlock) - y_BLK(i-1,j,k,iBlock))
+      DxyzDcoord_DD(z_,1) = InvDx2 &
+           *(z_BLK(i+1,j,k,iBlock) - z_BLK(i-1,j,k,iBlock))
+
+      DxyzDcoord_DD(x_,2) = InvDy2 &
+           *(x_BLK(i,j+1,k,iBlock) - x_BLK(i,j-1,k,iBlock))
+      DxyzDcoord_DD(y_,2) = InvDy2 &
+           *(y_BLK(i,j+1,k,iBlock) - y_BLK(i,j-1,k,iBlock))
+      DxyzDcoord_DD(z_,2) = InvDy2 &
+           *(z_BLK(i,j+1,k,iBlock) - z_BLK(i,j-1,k,iBlock))
+
+      DxyzDcoord_DD(x_,3) = InvDz2 &
+           *(x_BLK(i,j,k+1,iBlock) - x_BLK(i,j,k-1,iBlock))
+      DxyzDcoord_DD(y_,3) = InvDz2 &
+           *(y_BLK(i,j,k+1,iBlock) - y_BLK(i,j,k-1,iBlock))
+      DxyzDcoord_DD(z_,3) = InvDz2 &
+           *(z_BLK(i,j,k+1,iBlock) - z_BLK(i,j,k-1,iBlock))
+
+      DcoordDxyz_DD = inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
+
+      ! Calculate the partial derivatives dB/dCovariant using central
+      ! difference. At resolution changes with neighboring coarse blocks, we
+      ! switch to one-sided difference to avoid using the ghost cells.
+      DbDcoord_DD(:,1) = &
+           + Ax*State_VGB(Bx_:Bz_,iL,j,k,iBlock) &
+           + Bx*State_VGB(Bx_:Bz_,i ,j,k,iBlock) &
+           + Cx*State_VGB(Bx_:Bz_,iR,j,k,iBlock)
+
+      DbDcoord_DD(:,2) = &
+           + Ay*State_VGB(Bx_:Bz_,i,jL,k,iBlock) &
+           + By*State_VGB(Bx_:Bz_,i,j ,k,iBlock) &
+           + Cy*State_VGB(Bx_:Bz_,i,jR,k,iBlock)
+
+      DbDcoord_DD(:,3) = &
+           + Az*State_VGB(Bx_:Bz_,i,j,kL,iBlock) &
+           + Bz*State_VGB(Bx_:Bz_,i,j,k ,iBlock) &
+           + Cz*State_VGB(Bx_:Bz_,i,j,kR,iBlock)
+
+      ! Jx = Dbz/Dy - Dby/Dz
+      Current_D(x_) = &
+           + sum(DbDcoord_DD(z_,:)*DcoordDxyz_DD(:,y_)) &
+           - sum(DbDcoord_DD(y_,:)*DcoordDxyz_DD(:,z_))
+
+      ! Jy = Dbx/Dz - Dbz/Dx
+      Current_D(y_) = &
+           + sum(DbDcoord_DD(x_,:)*DcoordDxyz_DD(:,z_)) &
+           - sum(DbDcoord_DD(z_,:)*DcoordDxyz_DD(:,x_))
+
+      ! Jz = Dby/Dx - Dbx/Dy
+      Current_D(z_) = &
+           + sum(DbDcoord_DD(y_,:)*DcoordDxyz_DD(:,x_)) &
+           - sum(DbDcoord_DD(x_,:)*DcoordDxyz_DD(:,y_))
+
+    end subroutine calc_covariant_j
 
   end subroutine get_current
 
