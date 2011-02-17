@@ -4,8 +4,8 @@
 ! 02 Oct. 2010 by R. Oran:
 ! Added user_read_inputs, user_set_ics to allow testing of different
 ! initial conditions.
-! 10 Feb 2010 by R. Oran : added Parker initial conditions, removed other
-!                          option, now in ModUserWaves.f90 
+! 10 Feb 2010 by R. Oran : added Parker initial conditions, user_face_bcs.
+!                          Removed IC's options that are  now in ModUserWaves.f90 
 !========================================================================
 module ModUser
   use ModUserEmpty,               &
@@ -16,15 +16,15 @@ module ModUser
  
   include 'user_module.h' !list of public methods
 
-
-  real, parameter   :: VersionUserModule = 1.0
+  real, parameter   :: VersionUserModule = 2.0
   character(len=*), parameter :: &
-       NameUserModule = 'HELIOSPHERE, Sokolov'
+       NameUserModule = 'MHD HELIOSPHERE, Sokolov'
 
   ! For Parker spiral IC's:
-  ! Input from PARAM.in file, solar wind values at 1AU in IO units:
-  real    :: BrSourceIo, NSourceIo, TSourceIo, UrSwIo, rSourceIo
+  ! Input from PARAM.in file, solar wind values at ref. point in IO units:
+  real    :: BrRefIo, NRefIo, TRefIo, UrSwIo, rRefIo
   logical :: UseParkerIcs = .false.
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -54,11 +54,11 @@ contains
              call CON_stop('Correct PARAM.in')
           else
              UseParkerIcs = .true.
-             call read_var('rSource [AU]',   rSourceIo )
-             call read_var('BrSource [nT]',  BrSourceIo)
-             call read_var('NSource [n/cc]', NSourceIo)
-             call read_var('TSource [K]',   TSourceIo)
-             call read_var('UrSw [km/s]',  UrSwIo)
+             call read_var('rRef  [AU]',   rRefIo )
+             call read_var('BrRef [nT]',   BrRefIo)
+             call read_var('NRef  [n/cc]', NRefIo )
+             call read_var('TRef  [K]',    TRefIo )
+             call read_var('UrSw  [km/s]', UrSwIo )
           end if
                  
        case('#USERINPUTEND')
@@ -98,7 +98,7 @@ contains
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !----------------------------------------------------------------------
     iBlock = globalBLK
-   
+  
     if (unusedBLK(iBlock)) RETURN
   
     if(UseParkerIcs) then
@@ -110,9 +110,9 @@ contains
           z = z_BLK(i,j,k,iBlock)
           r = r_BLK(i,j,k,iBlock)
 
-          if (r .lt. rBody) CYCLE
+          if (r .le. rBody) CYCLE
        
-          call get_parker_sln_cell(x,y,z,State_V)   
+          call get_parker_sln_cell(x,y,z,r,State_V)   
           State_VGB(:,i,j,k,iBlock) = State_V
 
        end do ; end do ; end do
@@ -123,106 +123,102 @@ contains
 
   end subroutine user_set_ics
  !============================================================================
-  subroutine get_parker_sln_cell(x, y, z, State_V)
+  subroutine get_parker_sln_cell(x, y, z, r, State_V)
 
     ! Set state to the steady state adiabatic Parker spiral solution.     
-    
+    ! R. Oran 
+
     ! OUTLINE:
-    ! This IC is appropriate for an inner boundary which is a spherical surface
-    ! starting from outside the sonic point. 
-    ! The magnetic field is assumed to be purely radial at that surface.
+    ! This solution is appropriate only for the domain lying outside the sonic point. 
     ! The solar wind is assumed to have reached its terminal speed, which is purely
     ! radial in the inertial frame HGI.
     
     ! The magnetic field is given by the Parker spiral.
-    ! The speed in HGI is Ur=const. everywhere.
+    ! It is assumed to be purely radial at  r~10Rs.
+   
     ! The density is derived from conservation of mass: rho*Ur*r^2 = Const.
     ! The pressure is given by the adiabatic EOS: p = p0(r0/r)^2gamma
 
-    ! Depending on plasma parameters at rSource, the initial condition
-    ! everywhere is found.
-    ! Note: the source surface here is not to be confused with the
-    ! source surface defined for the PFSS model used for the solar corona.
-
+    ! Depending on plasma parameters at rRef, the solution everywhere is found. 
+  
     ! INPUTS (to be read from PARAM.in file):
-    ! rSource - heliocentric radius of source surface
-    ! BrSource
-    ! RhoSource
-    ! pSource
+    ! rRef - heliocentric radius of reference point
+    ! bRef
+    ! Rhoref
+    ! pRef
     ! UrSW
-         
+
     ! OUTPUT:
-    ! The state variables for rho, P, U, and B are initialized with
-    ! the appropriate value in each cell, including ghost cells.
+    ! The state variables for rho, P, U, and B are returned.
       
     use ModMain,           ONLY: TypeCoordSystem
     use ModVarIndexes,     ONLY: Rho_, RhoUx_, RhoUz_,Bx_,Bz_,p_, nVar
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModNumConst,       ONLY: cTwoPi
     use ModConst,          ONLY: RotationPeriodSun, cAU, cProtonMass
-    use ModPhysics,        ONLY: rBody, Si2No_V, Io2No_V, UnitN_, &
-         UnitB_, UnitU_,UnitRho_,UnitP_,UnitX_, &
-         UnitTemperature_, UnitT_
+    use ModPhysics,        ONLY: rBody, Gamma0, &
+                                 Si2No_V, Io2No_V, No2Si_V, &
+                                 UnitX_, UnitN_, UnitB_, UnitU_, UnitRho_, &
+                                 UnitP_, UnitTemperature_, UnitT_
 
-    implicit none
+    implicit none 
 
-    real,intent(in)  :: x, y, z
+    real,intent(in)  :: x, y, z, r
     real,intent(out) :: State_V(nVar)
-    real     :: r, OmegaSun
+    real     :: OmegaSun
     real     :: SinTheta             ! polar angle in spherical coordinates
     real     :: b_D(3), u_D(3),r_D(3)! Cartesian vectors
     real     :: bSph_D(3), uSph_D(3) ! Spherical B and velocity vectors
     real     :: XyzSph_DD(3,3)       ! rotation matrix from spherical to xyz
 
-    ! Parker solution parameters
-    real     :: NSource, TSource, MassFlux
-
-    ! Solar wind values at the source surfacee, in Normalized units
-    real     :: BrSource, RhoSource, pSource, rSource, UrSw
+    ! Solar wind values at reference point, in normalized units.
+    real     :: Br0, Rho0, p0, r0, UrSw, N0, T0, MassFlux
+    real     :: RotationSpeed
 
     character(len=*),parameter :: NameSub = 'get_parker_sln_cell'
     !--------------------------------------------------------------------
     ! Normalize and convert input parameters for rho, u, B, p
-    rSource   = rSourceIo * cAu * Si2No_V(UnitX_)
-    UrSw      = UrSwIo*1000*Si2No_V(UnitU_)
-    BrSource  = BrSourceIo * 1e-9 * Si2No_V(UnitB_)
-    NSource   = NSourceIo * 1e6 * Si2No_V(UnitN_)
-    RhoSource = cProtonMass * NSourceIo * 1e6 * Si2No_V(UnitRho_)
-    TSource   = TSourceIo *Si2No_V(UnitTemperature_  )
-    pSource   = RhoSource * TSource
+    r0   = rRefIo * cAu * Si2No_V(UnitX_)
+    UrSw = UrSwIo*1000*Si2No_V(UnitU_)
+    Br0  = BrRefIo * 1e-9 * Si2No_V(UnitB_)
+    N0   = NRefIo * 1e6 * Si2No_V(UnitN_)
+    Rho0 = cProtonMass * NRefIo * 1e6 * Si2No_V(UnitRho_)
+    T0   = TRefIo *Si2No_V(UnitTemperature_  )
+    p0   = Rho0 * T0
 
-    ! check whether the flow is supersonic at source surface
-    if (UrSw .lt. sqrt(pSource/RhoSource) ) then
-       write(*,*) 'UrSw is subsomic at source surface!'
+    ! Make sure the flow is supersonic at reference point
+    if (UrSw .lt. sqrt(Gamma0*p0/Rho0) ) then
+       write(*,*) 'UrSw is subsonic at reference point!'
        call CON_stop('Check #PARKERICS command!')
     end if
 
-    MassFlux = RhoSource * UrSw * rSource**2 ! conserved!     
+    MassFlux = Rho0 * UrSw * r0**2 ! conserved!     
     OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
-
+    RotationSpeed = r*No2Si_V(UnitX_)*(cTwoPi/RotationPeriodSun)*&
+         Si2No_V(UnitU_)
     !\ 
-    ! Calculate parker solution for given cell
+    ! Calculate parker solution for given position
     !/
-
     r_D = (/x,y,z/)
-    r = sqrt(sum(r_D**2))
      
-    ! calculate sine of polar angle
+    ! sine of polar angle
     SinTheta = sqrt(x**2 + y**2)/r
-    ! calculate the transformation matrix from Spherical to Cartesian
-    ! for each cell
+
+    ! Transformation matrix from Spherical to Cartesian
+    ! at this location
     XyzSph_DD = rot_xyz_sph(x,y,z) 
         
     !\
     ! Magnetic field
     !/         
     ! Magnetic field components in spherical coordinates as
-    ! given by the Parker solution.
-    bSph_D(1) = BrSource*(rSource/r)**2              ! B_r
-    bSph_D(2) = 0.0                                  ! B_theta
-    bSph_D(3) = -bSph_D(1)*OmegaSun* &               ! B_phi          
-         SinTheta/UrSw 
-        
+    ! given by the Parker solution. Note the azimuthal component:
+    ! Should depend on (r - rSourceSurface), since r >> rSourceSurface
+    ! it can be neglected.
+    bSph_D(1) = -sign(1.0,z)*Br0*(r0/r)**2              ! B_r
+    bSph_D(2) = 0.0                                     ! B_theta
+    bSph_D(3) = -bSph_D(1)*RotationSpeed*SinTheta/UrSw  ! B_phi
+
     ! Convert magnetic field vector to Cartesian coordinates
     b_D = matmul(XyzSph_DD,bSph_D)
     ! Init state variable for B
@@ -246,12 +242,6 @@ contains
        u_D(2) = u_D(2) - OmegaSun*x
             
     end if
-
-    ! check whether the flow is supersonic at this cell
-    if (sqrt(sum(u_D**2)) .lt. sqrt(pSource/RhoSource) ) then
-       write(*,*) 'Ur is subsomic at: ',x, y, z
-       call CON_stop('ERROR in get_parker_sln_cell')
-    end if
          
     ! Find density from conservation of mass 
     State_V(Rho_) = MassFlux / (sum(r_D*u_D) * r) 
@@ -262,7 +252,14 @@ contains
     !\
     ! pressure
     !/
-    State_V(p_) = pSource * State_V(Rho_) / RhoSource
+    State_V(p_) = p0 * (r0 / r)**(2*Gamma0)
+
+
+    ! Make sure the resulting flow is supersonic
+    if (UrSw  .lt. sqrt(Gamma0*State_V(p_)/State_V(Rho_)) ) then
+       write(*,*) 'Ur is subsomic at: ',x, y, z
+       call CON_stop('ERROR in get_parker_sln_cell')
+    end if
       
   end subroutine get_parker_sln_cell
   !============================================================================
@@ -274,19 +271,16 @@ contains
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
-    real :: x, y, z, State_V(nVar), U_D(3)
+    real :: x, y, z, r, State_V(nVar), U_D(3)
     !--------------------------------------------------------------------------
     x = FaceCoords_D(x_)
     y = FaceCoords_D(y_)
     z = FaceCoords_D(z_)
-
-    call get_parker_sln_cell(x, y, z, State_V)
+    r = sqrt(x**2+y**2+z**2)
+    call get_parker_sln_cell(x, y, z, r, State_V)
     VarsGhostFace_V = State_V
 
-    U_D   = VarsTrueFace_V(Ux_:Uz_)
-    VarsGhostFace_V(Ux_:Uz_) = -U_D
-
-    VarsGhostFace_V(Rho_) =  2.0*State_V(Rho_) - VarsTrueFace_V(Rho_)
+    !VarsGhostFace_V(Rho_) =  2.0*State_V(Rho_) - VarsTrueFace_V(Rho_)
   
   end subroutine user_face_bcs
   !========================================================================
