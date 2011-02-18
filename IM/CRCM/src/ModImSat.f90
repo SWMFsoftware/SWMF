@@ -4,6 +4,7 @@ Module ModImSat
   logical :: DoWriteSats  = .false.
   logical :: IsFirstWrite = .true.
   integer :: nImSats = 0, iStartIter = 0
+  real    :: DtSatOut = 60.0 !write sat output every minute
   real,               allocatable :: SatLoc_3I(:,:,:), SatFlux_II(:,:)
   real,               allocatable :: BfieldEq2_G(:,:),SatVar_I(:)
   real,               allocatable :: LonGrid_G(:), Flux_G(:,:,:,:)

@@ -15,7 +15,7 @@ subroutine crcm_run(delta_t)
   use ModCrcmRestart, ONLY: IsRestart
   use ModImTime
   use ModTimeConvert, ONLY: time_real_to_int
-  use ModImSat,       ONLY: nImSats,write_im_sat, DoWriteSats
+  use ModImSat,       ONLY: nImSats,write_im_sat, DoWriteSats, DtSatOut
   implicit none
 
 
@@ -164,18 +164,21 @@ subroutine crcm_run(delta_t)
   call crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
        sinA,energy,sinAo,delE,dmu,amu_I,xjac,pp,xmm, &
        dmm,dk,xlat,dphi,re_m,Hiono,flux,FAC_C,phot,Pressure_IC)
-
+  ! Write output
   if (DoSavePlot.and.&
        (floor((Time+1.0e-5)/DtOutput))/=floor((Time+1.0e-5-delta_t)/DtOutput))&
        then
      call Crcm_plot(np,nt,xo,yo,Pressure_IC,phot,Den_IC,bo,ftv,pot,FAC_C,Time,dt)
      if (DoSaveFlux) call Crcm_plot_fls(rc,flux,time)
-     if(DoWriteSats) then
+  endif
+  ! Write Sat Output
+  if(DoWriteSats .and. DoSavePlot .and. &
+       (floor((Time+1.0e-5)/DtSatOut))/=floor((Time+1.0e-5-delta_t)/DtSatOut))&
+       then
         do iSat=1,nImSats
            call write_im_sat(iSat,np,nt,neng,npit,flux)
         enddo
      endif
-  endif
 
 end subroutine Crcm_run
 
