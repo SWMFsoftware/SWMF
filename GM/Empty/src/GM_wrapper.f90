@@ -386,6 +386,18 @@ subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
 end subroutine GM_get_sat_for_im
 
 !==============================================================================
+
+subroutine GM_get_sat_for_im_crcm(Buffer_III, Buffer_I, nSats)
+
+  implicit none
+  
+  integer, intent(in)               :: nSats
+  real, intent(out)                 :: Buffer_III(4,2,nSats)
+  character (len=100), intent(out)  :: Buffer_I(nSats)
+  
+end subroutine GM_get_sat_for_im_crcm
+
+!==============================================================================
 subroutine GM_get_multi_for_im(DoMultiFluidIM)
   implicit none
 

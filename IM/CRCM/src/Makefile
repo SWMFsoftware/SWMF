@@ -17,6 +17,8 @@ OBJECTS = \
 	ModIeCrcm.o\
 	ModFieldTrace.o\
 	ModCrcmPlot.o\
+	ModImTime.o\
+	ModImSat.o\
 	plot_fieldline.o\
 	trace_dipole.o\
 	set_parameters.o\

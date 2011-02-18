@@ -454,10 +454,10 @@ contains
     real, allocatable :: Integral_IIV(:,:,:), BufferLine_VI(:,:)
 
     ! Buffer for satellite locations   
-    !real, dimension(:,:,:), allocatable :: SatPos_DII
+    real, dimension(:,:,:), allocatable :: SatPos_DII
     
     ! Buffer for satellite names   
-    !character (len=100), dimension(:), allocatable:: NameSat_I
+    character (len=100), dimension(:), allocatable:: NameSat_I
     
     ! MPI related variables
 
@@ -503,12 +503,12 @@ contains
     allocate(Integral_IIV(iSize,jSize,nIntegral), stat=iError)
     call check_allocate(iError,NameSub//": Integral_IIV")
 
-!    if (nShareSats > 0) then
-!       allocate(SatPos_DII(4,2,nShareSats), stat=iError)
-!       call check_allocate(iError,NameSub//": SatPos_DII")
-!       allocate(NameSat_I(nShareSats),       stat=iError)
-!       call check_allocate(iError,NameSub//": NameSat_I")
-!    end if
+    if (nShareSats > 0) then
+       allocate(SatPos_DII(4,2,nShareSats), stat=iError)
+       call check_allocate(iError,NameSub//": SatPos_DII")
+       allocate(NameSat_I(nShareSats),       stat=iError)
+       call check_allocate(iError,NameSub//": NameSat_I")
+    end if
 
     if(DoTest)write(*,*)NameSub,', variables allocated',&
          ', iProc:',iProcWorld
@@ -525,8 +525,8 @@ contains
     !\
     ! If IM sat tracing is enabled, get sat locations from GM
     !/
-!    if(is_proc(GM_).AND.(nShareSats > 0)) &
-!         call GM_get_sat_for_im(SatPos_DII, NameSat_I, nShareSats)
+    if(is_proc(GM_).AND.(nShareSats > 0)) &
+         call GM_get_sat_for_im_crcm(SatPos_DII, NameSat_I, nShareSats)
 
     !\
     ! Transfer variables from GM to IM
@@ -568,29 +568,29 @@ contains
     ! Transfer satellite names from GM to IM
     !/   
     
-!    if(nShareSats > 0 .and. i_proc0(IM_) /= i_proc0(GM_))then
-!       nSize = nShareSats*100
-!       if(is_proc0(GM_)) then
-!          call MPI_send(NameSat_I,nSize,MPI_BYTE,i_proc0(IM_),&
-!               1,i_comm(),iError)
-!       endif
-!       if(is_proc0(IM_)) then
-!          call MPI_recv(NameSat_I,nSize,MPI_BYTE,i_proc0(GM_),&
-!               1,i_comm(),iStatus_I,iError)
-!       endif
-!    
-!   ! Transfer satellite locations from GM to IM
-!       
-!       nSize = 3*2*nShareSats
-!       if(is_proc0(GM_)) then
-!          call MPI_send(SatPos_DII,nSize,MPI_REAL,i_proc0(IM_),&
-!               1,i_comm(),iError)
-!       endif
-!       if(is_proc0(IM_)) then
-!          call MPI_recv(SatPos_DII,nSize,MPI_REAL,i_proc0(GM_),&
-!               1,i_comm(),iStatus_I,iError)
-!       endif
-!    end if
+    if(nShareSats > 0 .and. i_proc0(IM_) /= i_proc0(GM_))then
+       nSize = nShareSats*100
+       if(is_proc0(GM_)) then
+          call MPI_send(NameSat_I,nSize,MPI_BYTE,i_proc0(IM_),&
+               1,i_comm(),iError)
+       endif
+       if(is_proc0(IM_)) then
+          call MPI_recv(NameSat_I,nSize,MPI_BYTE,i_proc0(GM_),&
+               1,i_comm(),iStatus_I,iError)
+       endif
+    
+   ! Transfer satellite locations from GM to IM
+       
+       nSize = 3*2*nShareSats
+       if(is_proc0(GM_)) then
+          call MPI_send(SatPos_DII,nSize,MPI_REAL,i_proc0(IM_),&
+               1,i_comm(),iError)
+       endif
+       if(is_proc0(IM_)) then
+          call MPI_recv(SatPos_DII,nSize,MPI_REAL,i_proc0(GM_),&
+               1,i_comm(),iStatus_I,iError)
+       endif
+    end if
     
     if(DoTest)write(*,*)NameSub,', variables transferred',&
          ', iProc:',iProcWorld
@@ -601,8 +601,8 @@ contains
     if(is_proc0(IM_))then
        call IM_put_from_gm_crcm(Integral_IIV,iSize,jSize,nIntegral,&
             BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
-       !if(nShareSats > 0) &
-       !     call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
+       if(nShareSats > 0) &
+            call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
        if(DoTest) &
             write(*,*)'IM got from GM: IM iProc, Buffer(1,1)=',&
             iProcWorld,Integral_IIV(1,1,:)
@@ -613,10 +613,10 @@ contains
     !/
     deallocate(Integral_IIV, BufferLine_VI)
 
-    !if (nShareSats > 0) then
-    !   deallocate(NameSat_I)
-    !   deallocate(SatPos_DII)
-    !end if
+    if (nShareSats > 0) then
+       deallocate(NameSat_I)
+       deallocate(SatPos_DII)
+    end if
 
     if(DoTest)write(*,*)NameSub,', variables deallocated',&
          ', iProc:',iProcWorld

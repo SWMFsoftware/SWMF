@@ -119,6 +119,9 @@ subroutine IM_init_session(iSession, TimeSimulation)
   use ModCrcmGrid,      ONLY: np, xlat
   use ModCrcm,    ONLY: init_mod_crcm
   use ModFieldTrace, ONLY: init_mod_field_trace
+  use ModImTime
+  use ModTimeConvert, ONLY: time_real_to_int
+  use CON_physics, ONLY: get_time
 
   implicit none
 
@@ -131,7 +134,11 @@ subroutine IM_init_session(iSession, TimeSimulation)
   call init_mod_crcm
   call init_mod_field_trace
   call crcm_init
-  
+
+  call get_time(tStartOut = StartTime)
+  CurrentTime = StartTime + TimeSimulation
+  call time_real_to_int(StartTime, iStartTime_I)
+
 end subroutine IM_init_session
 !==============================================================================
 
@@ -326,9 +333,43 @@ subroutine IM_put_from_ie_mpi
 end subroutine IM_put_from_ie_mpi
 
 !==============================================================================
-subroutine IM_put_sat_from_gm
+subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
+  ! Puts satellite locations and names from GM into IM.
+  use ModImSat, ONLY: nImSats, DoWriteSats, NameSat_I, SatLoc_3I
+  use ModNumConst,   ONLY: cDegToRad
+  
+  implicit none
+  character (len=*),parameter :: NameSub='IM_put_sat_from_gm'
 
-  call CON_stop('IM_put_sat_from_gm should not be called for IM/CRCM')
+  ! Arguments
+  integer, intent(in)            :: nSats
+  real, intent(in)               :: Buffer_III(4,2,nSats)
+  character(len=100), intent(in) :: Buffer_I(nSats)
+
+  ! Internal variables
+  integer :: iError, iSat, l1, l2
+  !--------------------------------------------------------------------------- 
+  ! Activate satellite writing in RCM
+  DoWriteSats = .true.
+  nImSats = nSats
+
+  ! Check allocation of sat tracing variables
+  if(allocated(SatLoc_3I)) deallocate(SatLoc_3I)
+  if(allocated(NameSat_I)) deallocate(NameSat_I)
+
+  allocate(SatLoc_3I(4,2,nImSats), stat=iError)
+  allocate(NameSat_I(nImSats),     stat=iError)
+
+  ! Assign incoming values, remove path and extension from name.
+  SatLoc_3I = Buffer_III
+  SatLoc_3I(4,2,:)=SatLoc_3I(4,2,:)
+  do iSat=1, nSats
+     l1 = index(Buffer_I(iSat), '/', back=.true.) + 1
+     l2 = index(Buffer_I(iSat), '.') - 1
+     if (l1-1<=0) l1=1
+     if (l2+1<=0) l2=len_trim(Buffer_I(iSat))
+     NameSat_I(iSat) = Buffer_I(iSat)(l1:l2)
+  end do
 
 end subroutine IM_put_sat_from_gm
 !==============================================================================

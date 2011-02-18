@@ -2,7 +2,7 @@
 subroutine crcm_run(delta_t)
   use ModConst,       ONLY: cLightSpeed, cElectronCharge
   use ModCrcmInitialize
-  use ModCrcm,        ONLY: f2, dt, Time, phot, Pressure_IC,FAC_C
+  use ModCrcm,        ONLY: f2,dt, Time, phot, Pressure_IC,FAC_C
   use ModCrcmPlanet,  ONLY: re_m, dipmom, Hiono, nspec, amu_I, &
                             dFactor_I,tFactor_I
   use ModFieldTrace,  ONLY: fieldpara, brad=>ro, ftv=>volume, xo,yo,rb,irm,&
@@ -13,6 +13,9 @@ subroutine crcm_run(delta_t)
   use ModCrcmPlot,    ONLY: Crcm_plot, Crcm_plot_fls, DtOutput, DoSavePlot,&
                             DoSaveFlux
   use ModCrcmRestart, ONLY: IsRestart
+  use ModImTime
+  use ModTimeConvert, ONLY: time_real_to_int
+  use ModImSat,       ONLY: nImSats,write_im_sat, DoWriteSats
   implicit none
 
 
@@ -21,7 +24,7 @@ subroutine crcm_run(delta_t)
   real flux(nspec,np,nt,neng,npit)
   real achar(nspec,np,nt,nm,nk)
   real vl(nspec,0:np,nt,nm,nk),vp(nspec,np,nt,nm,nk),fb(nspec,nt,nm,nk),rc
-  integer iLat, iLon, iSpecies
+  integer iLat, iLon, iSpecies, iSat
   logical, save :: IsFirstCall =.true.
   !----------------------------------------------------------------------------
 
@@ -33,7 +36,9 @@ subroutine crcm_run(delta_t)
      dt=delta_t/nstep         ! new dt
   endif
 
-
+  ! Update CurrentTime and iCurrentTime_I
+  CurrentTime = StartTime+Time
+  call time_real_to_int(CurrentTime,iCurrentTime_I)
   
   ! do field line integration and determine vel, ekev, momentum (pp), etc.
   rc=(re_m+Hiono*1000.)/re_m        ! ionosphere distance in RE`
@@ -150,6 +155,9 @@ subroutine crcm_run(delta_t)
      call lossconeIM(np,nt,nm,nk,nspec,iba,alscone,f2)
      call StrongDiff(iba)                               
      Time = Time+dt
+     ! Update CurrentTime and iCurrentTime_I
+     CurrentTime = StartTime+Time
+     call time_real_to_int(CurrentTime,iCurrentTime_I)
  enddo
   
   ! Calculate CRCM output: flux, fac, phot
@@ -162,7 +170,13 @@ subroutine crcm_run(delta_t)
        then
      call Crcm_plot(np,nt,xo,yo,Pressure_IC,phot,Den_IC,bo,ftv,pot,FAC_C,Time,dt)
      if (DoSaveFlux) call Crcm_plot_fls(rc,flux,time)
+     if(DoWriteSats) then
+        do iSat=1,nImSats
+           call write_im_sat(iSat,np,nt,neng,npit,flux)
+        enddo
+     endif
   endif
+
 end subroutine Crcm_run
 
 !-----------------------------------------------------------------------------
@@ -181,6 +195,8 @@ subroutine crcm_init
   use ModCrcmPlanet,  ONLY: re_m, dipmom, Hiono, amu_I
   use ModCrcmInitialize
   use ModCrcmRestart, ONLY: IsRestart, crcm_read_restart
+  use ModImTime
+  use ModTimeConvert, ONLY: time_int_to_real,time_real_to_int
 
   implicit none
 
@@ -188,6 +204,9 @@ subroutine crcm_init
   
   real rw,rsi,rs1
   real xjac1,sqrtm
+
+  call time_int_to_real(iStartTime_I,CurrentTime)
+  StartTime=CurrentTime
 
   ! Define constants
   re_m = rPlanet_I(Earth_)                            ! earth's radius (m)

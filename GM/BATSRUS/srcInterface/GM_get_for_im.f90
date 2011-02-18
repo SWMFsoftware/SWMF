@@ -230,6 +230,78 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
 end subroutine GM_get_for_im_crcm
 
 !==========================================================================
+subroutine GM_get_sat_for_im_crcm(Buffer_III, Buffer_I, nSats)
+
+  ! Subroutine to update and collect satellite locations for IM tracing
+  
+  !Modules
+  use ModProcMH, ONLY: iProc, iComm
+  use ModSatelliteFile, ONLY: Satellite_name, Xsatellite, &
+       gm_trace_sat
+  use ModMain,   ONLY: UseB0, nBlock
+  use ModMPI
+  use ModPhysics, ONLY: No2Si_V, UnitB_
+  use ModVarIndexes, ONLY : nVar,Bx_,By_,Bz_
+  implicit none
+  
+  !Arguments
+  integer, intent(in)               :: nSats
+  real, intent(out)                 :: Buffer_III(4,2,nSats)
+  character (len=100), intent(out)  :: Buffer_I(nSats)
+  
+  !Internal variables
+  character (len=*), parameter :: NameSub='GM_get_sat_for_im'
+
+  real :: sat_RayVars(5), sat_RayVarsSum(5),SatRay_D(3)
+
+  real :: StateSat_V(0:nVar+3), B0Sat_D(3)  
+  real :: Bx,By,Bz,B2
+  integer :: iSat, iError
+  !--------------------------------------------------------------------------
+  ! Store satellite names in Buffer_I
+  if (iProc == 0) then
+     Buffer_I = Satellite_name(1:nSats)
+  end if
+
+  do iSat=1, nSats
+     ! Update satellite position.
+     !call set_satellite_flags(iSat)
+     !call get_satellite_ray(iSat, sat_RayVars)
+     !
+     !! Reduce values from all 
+     !call MPI_reduce(sat_RayVars, sat_RayVarsSum, 5, MPI_REAL, MPI_SUM, &
+     !     0, iComm, iError)
+     !
+     !write(*,*) 'sat_RayVars',sat_RayVars
+     call GM_trace_sat(xSatellite(iSat,1:3),SatRay_D)
+     ! Determine magnetic field magnitude at satellite B=B0+B1
+     if(UseB0)then
+        call get_b0(xSatellite(iSat,1),xSatellite(iSat,2),xSatellite(iSat,3),&
+             B0Sat_D)
+     else
+        B0Sat_D=0.00
+     end if
+     call get_point_data(0.0,xSatellite(iSat,:),1,nBlock,1,nVar+3,StateSat_V)
+     call collect_satellite_data(xSatellite(iSat,:),StateSat_V)
+
+     Bx = StateSat_V(Bx_)+B0Sat_D(1)
+     By = StateSat_V(By_)+B0Sat_D(2)
+     Bz = StateSat_V(Bz_)+B0Sat_D(3)
+     
+     B2 = (Bx**2.0 + By**2.0 + Bz**2.0) * (No2Si_V(UnitB_))**2.0 
+     
+     ! Store results in Buffer_III
+     if (iProc == 0) then 
+        Buffer_III(1:3,1,iSat)   = Xsatellite(iSat,1:3)
+        !Buffer_III(1:3,2,iSat) = sat_RayVarsSum(1:3)
+        Buffer_III(1:3,2,iSat) = SatRay_D
+        Buffer_III(4,2,iSat)   = B2
+     end if
+  end do
+
+end subroutine GM_get_sat_for_im_crcm
+
+!==========================================================================
 subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
 
   ! Do ray tracing for IM/RAM_SCB. 
