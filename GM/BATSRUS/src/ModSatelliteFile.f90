@@ -732,6 +732,7 @@ contains
     use ModNumConst,  ONLY: cTiny, cRadToDeg
     use CON_axes,     ONLY: transform_matrix
     use CON_planet_field, ONLY: map_planet_field
+    use ModPhysics,   ONLY: rBody
     implicit none
     
     real, intent(in) :: SatXyz_D(3) ! Satellite Position
@@ -768,99 +769,106 @@ contains
     nStateVar = 4
     if(DoExtractState) nStateVar = nStateVar + nVar
     
-    ! Initialize CON_line_extract
-    call line_init(nStateVar)
+    if (sum(SatXyz_D(1:3)**2) > rBody**2) then
+       ! Initialize CON_line_extract
+       call line_init(nStateVar)
+       
+       ! Obtain the line data
+       call ray_lines(nLine, (/IsParallel/), SatXyz_D)
+       
+       ! Collect lines from all PE-s to Proc 0
+       call line_collect(iComm,0)
+       
+       if(iProc==0)then
+          call line_get(nVarOut, nPoint)
+          if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
+          allocate(PlotVar_VI(0:nVarOut, nPoint))
+          call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
+       end if
     
-    ! Obtain the line data
-    call ray_lines(nLine, (/IsParallel/), SatXyz_D)
-    
-    ! Collect lines from all PE-s to Proc 0
-    call line_collect(iComm,0)
-    
-    if(iProc==0)then
-       call line_get(nVarOut, nPoint)
-       if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
-       allocate(PlotVar_VI(0:nVarOut, nPoint))
-       call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
-    end if
-    
-    call line_clean
-
-    ! Only iProc 0 stores result 
-    if(iProc == 0) then
-       SatXyzEnd_D = PlotVar_VI(2:4,nPoint)
+       call line_clean
+       
+       
+       ! Only iProc 0 stores result 
+       if(iProc == 0) then
+          SatXyzEnd_D = PlotVar_VI(2:4,nPoint)
+          deallocate(PlotVar_VI)
+       endif
+       
+       !Now Trace in opposite direction to make sure line is closed
+       ! Initialize CON_line_extract
+       call line_init(nStateVar)
+       
+       ! Obtain the line data
+       call ray_lines(nLine, (/.not.IsParallel/), SatXyz_D)
+       
+       ! Collect lines from all PE-s to Proc 0
+       call line_collect(iComm,0)
+       
+       if(iProc==0)then
+          call line_get(nVarOut, nPoint)
+          if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
+          allocate(PlotVar_VI(0:nVarOut, nPoint))
+          call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
+       end if
+       
+       call line_clean
+       
+       ! Only iProc 0 stores result 
+       if(iProc /= 0) RETURN
+       
+       SatXyzEnd2_D = PlotVar_VI(2:4,nPoint)
+       
+       B2=sum(PlotVar_VI(5:7,1)**2)
+       
        deallocate(PlotVar_VI)
-    endif
-    
-    !Now Trace in opposite direction to make sure line is closed
-    ! Initialize CON_line_extract
-    call line_init(nStateVar)
-    
-    ! Obtain the line data
-    call ray_lines(nLine, (/.not.IsParallel/), SatXyz_D)
-    
-    ! Collect lines from all PE-s to Proc 0
-    call line_collect(iComm,0)
-    
-    if(iProc==0)then
-       call line_get(nVarOut, nPoint)
-       if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
-       allocate(PlotVar_VI(0:nVarOut, nPoint))
-       call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
-    end if
-    
-    call line_clean
-    
-    ! Only iProc 0 stores result 
-    if(iProc /= 0) RETURN
-    
-    SatXyzEnd2_D = PlotVar_VI(2:4,nPoint)
-    
-    B2=sum(PlotVar_VI(5:7,1)**2)
-    
-    deallocate(PlotVar_VI)
-    
-    ! Only iProc 0 works for returning line info
-    !  if(iProc /= 0) RETURN
-    
-    ! Check that line is closed
-    if (sum(SatXyzEnd_D(:)**2.0) > 8.0*rIonosphere**2.0 .or. &
-         sum(SatXyzEnd2_D(:)**2.0) > 8.0*rIonosphere**2.0) then
-       IsOpen=.true.
-    else
-       IsOpen=.false.
-    endif
-    
-    if (.not. IsOpen) then
-       call map_planet_field(Time_Simulation, SatXyzEnd_D, &
-            TypeCoordSystem//' NORM', rIonosphere, SatXyzIono_D, iHemisphere)
        
-       ! Transformation matrix between the SM(G) and GM coordinates
-       GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
-       ! Convert GM position into RB position
-       SatXyzIono_D = matmul(SatXyzIono_D, GmSm_DD)
+       ! Only iProc 0 works for returning line info
+       !  if(iProc /= 0) RETURN
        
-       ! Convert XYZ to Lat-Lon-IsOpen
-       ! Calculate  -90 < latitude = asin(z)  <  90
-       SatRay_D(1) = cRadToDeg * asin(SatXyzIono_D(3)/rIonosphere)
-       ! Calculate -180 < longitude = atan2(y,x) < 180
-       SatRay_D(2) = cRadToDeg * atan2(SatXyzIono_D(2),SatXyzIono_D(1))
-       if (SatXyzIono_D(2) < cTiny .and. SatXyzIono_D(1)<0.0) then 
-          SatRay_D(2)=180.0
-       endif
-       if (SatXyzIono_D(1) < cTiny .and. SatXyzIono_D(2)<0.0) then 
-          SatRay_D(2)=-90.0
+       ! Check that line is closed
+       if (sum(SatXyzEnd_D(:)**2.0) > 8.0*rIonosphere**2.0 .or. &
+            sum(SatXyzEnd2_D(:)**2.0) > 8.0*rIonosphere**2.0) then
+          IsOpen=.true.
+       else
+          IsOpen=.false.
        endif
        
-     ! set closed flag
-       SatRay_D(3)=3.0
+       if (.not. IsOpen) then
+          call map_planet_field(Time_Simulation, SatXyzEnd_D, &
+               TypeCoordSystem//' NORM', rIonosphere, SatXyzIono_D, iHemisphere)
+          
+          ! Transformation matrix between the SM(G) and GM coordinates
+          GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+          ! Convert GM position into RB position
+          SatXyzIono_D = matmul(SatXyzIono_D, GmSm_DD)
+          
+          ! Convert XYZ to Lat-Lon-IsOpen
+          ! Calculate  -90 < latitude = asin(z)  <  90
+          SatRay_D(1) = cRadToDeg * asin(SatXyzIono_D(3)/rIonosphere)
+          ! Calculate -180 < longitude = atan2(y,x) < 180
+          SatRay_D(2) = cRadToDeg * atan2(SatXyzIono_D(2),SatXyzIono_D(1))
+          if (SatXyzIono_D(2) < cTiny .and. SatXyzIono_D(1)<0.0) then 
+             SatRay_D(2)=180.0
+          endif
+          if (SatXyzIono_D(1) < cTiny .and. SatXyzIono_D(2)<0.0) then 
+             SatRay_D(2)=-90.0
+          endif
+          
+          ! set closed flag
+          SatRay_D(3)=3.0
+       else
+          SatRay_D(1)=-100.0
+          SatRay_D(2)=-200.0
+          SatRay_D(3)=0.0
+          
+       endif
     else
+       !When planet is inside rBody treat as if on closed line
        SatRay_D(1)=-100.0
        SatRay_D(2)=-200.0
-       SatRay_D(3)=0.0
-       
+       SatRay_D(3)=0.0              
     endif
-    
   end subroutine GM_trace_sat
   !============================================================================
   !^CFG END RAYTRACE
