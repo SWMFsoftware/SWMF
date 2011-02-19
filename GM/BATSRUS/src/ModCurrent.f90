@@ -1,7 +1,6 @@
 !^CFG COPYRIGHT UM      
 module ModCurrent
 
-
   use ModCoordTransform, ONLY: sph_to_xyz
   use CON_axes,          ONLY: transform_matrix
 
@@ -16,7 +15,7 @@ contains
 
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
     use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK, &
-         x_BLK, y_BLK, z_BLK
+         x_BLK, y_BLK, z_BLK, true_BLK
     use ModCovariant,ONLY: UseCovariant, IsRzGeometry
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
@@ -30,18 +29,12 @@ contains
     real :: InvDx2, InvDy2, InvDz2
     !--------------------------------------------------------------------------
 
-    ! Exclude cells next to the body because they produce incorrect currents
-    if(.not.all(True_Cell(i-1:i+1,j-1:j+1,k-1:k+1,iBlock)))then
+    ! Exclude body cells
+    if(.not.True_Cell(i,j,k,iBlock))then
        Current_D = 0.0
 
        RETURN
     endif
-
-    if(UseCovariant .and. .not.IsRzGeometry)then
-       call covariant_curlb(i,j,k,iBlock,Current_D,.true.)
-
-       RETURN
-    end if
 
     InvDx2 = 0.5/Dx_Blk(iBlock)
     InvDy2 = 0.5/Dy_Blk(iBlock)
@@ -56,21 +49,91 @@ contains
     Ay = -InvDy2; By = 0.0; Cy = +InvDy2
     Az = -InvDz2; Bz = 0.0; Cz = +InvDz2
 
-    ! Avoid the ghost cells at resolution changes by using one-sided difference
+    ! Avoid the ghost cells at resolution changes by using
+    ! second-order one-sided difference
     if(i==1 .and. NeiLeast(iBlock)==1)then
        iL = i+1; iR = i+2; Ax = 4.0*InvDx2; Bx =-3.0*InvDx2; Cx =-InvDx2
     elseif(i==nI .and. NeiLwest(iBlock)==1)then
        iL = i-1; iR = i-2; Ax =-4.0*InvDx2; Bx = 3.0*InvDx2; Cx = InvDx2
     end if
+
     if(j==1 .and. NeiLsouth(iBlock)==1)then
        jL = j+1; jR = j+2; Ay = 4.0*InvDy2; By =-3.0*InvDy2; Cy =-InvDy2
     elseif(j==nJ .and. NeiLnorth(iBlock)==1)then
        jL = j-1; jR = j-2; Ay =-4.0*InvDy2; By = 3.0*InvDy2; Cy = InvDy2
     end if
+
     if(k==1 .and. NeiLbot(iBlock)==1)then
        kL = k+1; kR = k+2; Az = 4.0*InvDz2; Bz =-3.0*InvDz2; Cz =-InvDz2
     elseif(k==nK .and. NeiLtop(iBlock)==1)then
        kL = k-1; kR = k-2; Az =-4.0*InvDz2; Bz = 3.0*InvDz2; Cz = InvDz2
+    end if
+
+    ! Use first-order one-sided difference near the body if needed.
+    ! If even first-order fails, then set the current to zero and exit.
+    if(.not.true_BLK(iBlock))then
+       if(.not.True_Cell(iL,j,k,iBlock).and..not.True_Cell(iR,j,k,iBlock))then
+          Current_D = 0.0
+          RETURN
+       elseif(.not.True_Cell(iL,j,k,iBlock))then
+          Ax = 0.0
+          if(iR==i+2)then
+             Bx =-InvDx2; Cx = InvDx2
+          elseif(iR==i-2)then
+             Bx = InvDx2; Cx =-InvDx2
+          else ! iR==i+1
+             Bx =-2.0*InvDx2; Cx = 2.0*InvDx2
+          end if
+       elseif(.not.True_Cell(iR,j,k,iBlock))then
+          Cx = 0.0
+          if(iL==i+1)then
+             Ax = 2.0*InvDx2; Bx =-2.0*InvDx2
+          else ! iL==i-1
+             Ax =-2.0*InvDx2; Bx = 2.0*InvDx2
+          end if
+       end if
+
+       if(.not.True_Cell(i,jL,k,iBlock).and..not.True_Cell(i,jR,k,iBlock))then
+          Current_D = 0.0
+          RETURN
+       elseif(.not.True_Cell(i,jL,k,iBlock))then
+          Ay = 0.0
+          if(jR==j+2)then
+             By =-InvDy2; Cy = InvDy2
+          elseif(jR==j-2)then
+             By = InvDy2; Cy =-InvDy2
+          else ! jR==j+1
+             By =-2.0*InvDy2; Cy = 2.0*InvDy2
+          end if
+       elseif(.not.True_Cell(i,jR,k,iBlock))then
+          Cy = 0.0
+          if(jL==j+1)then
+             Ay = 2.0*InvDy2; By =-2.0*InvDy2
+          else ! jL==j-1
+             Ay =-2.0*InvDy2; By = 2.0*InvDy2
+          end if
+       end if
+
+       if(.not.True_Cell(i,j,kL,iBlock).and..not.True_Cell(i,j,kR,iBlock))then
+          Current_D = 0.0
+          RETURN
+       elseif(.not.True_Cell(i,j,kL,iBlock))then
+          Az = 0.0
+          if(kR==k+2)then
+             Bz =-InvDz2; Cz = InvDz2
+          elseif(kR==k-2)then
+             Bz = InvDz2; Cz =-InvDz2
+          else ! kR==k+1
+             Bz =-2.0*InvDz2; Cz = 2.0*InvDz2
+          end if
+       elseif(.not.True_Cell(i,j,kR,iBlock))then
+          Cz = 0.0
+          if(kL==k+1)then
+             Az = 2.0*InvDz2; Bz =-2.0*InvDz2
+          else ! kL==k-1
+             Az =-2.0*InvDz2; Bz = 2.0*InvDz2
+          end if
+       end if
     end if
 
     if(UseCovariant .and. .not.IsRzGeometry)then
@@ -118,6 +181,7 @@ contains
     !==========================================================================
 
     subroutine calc_covariant_j
+
       use ModCoordTransform, ONLY: inverse_matrix
 
       real :: DxyzDcoord_DD(3,3), DcoordDxyz_DD(3,3), DbDcoord_DD(3,3)
