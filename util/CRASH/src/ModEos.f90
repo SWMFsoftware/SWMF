@@ -105,13 +105,14 @@ module CRASH_ModEos
 
   ! test material with the EOS e \propto T^4, p \propto T^4
   integer, parameter:: Test_ = 90 
-  integer, parameter :: nZ_I(Xe_:Ay_)=(/54, 4, 6, 79, 6/)
+  integer, parameter :: nZ_I(Xe_:Ay_)=(/54, &
+                                            4, 6, 79, 6/)
 
   real, parameter, dimension(Xe_:Ay_),public :: cAtomicMassCRASH_I=&
-       (/cAtomicMass_I(54),   &!  Xe
-         cAtomicMass_I(4),    &!  Be
-         cAPolyimide,         &!  Pl
-         cAtomicMass_I(79),   &!  Au
+       (/cAtomicMass_I(nZ_I(Xe_)),   &!  Xe
+         cAtomicMass_I(nZ_I(Be_)),   &!  Be
+         cAPolyimide,                &!  Pl
+         cAtomicMass_I(79),          &!  Au
          cAAcrylic/)
 
   character(LEN=2), public ::&
