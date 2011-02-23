@@ -73,6 +73,10 @@ module ModUser
   real :: RhoDimOutside = 6.5    ! density  of Xe outside tube [kg/m3]
   real :: pDimOutside   = 1.1e5  ! pressure of Xe outside tube [Pa]
 
+  !Gas parameters:
+  real :: RhoDimInside = 6.5    ! density  of Xe outside tube [kg/m3]
+ 
+
   ! Allow overwriting the Xe state inside the tube for x > xUniformXe > 0
   real :: xUniformXe = -1.0
 
@@ -256,6 +260,11 @@ contains
           call read_var('RhoDimOutside', RhoDimOutside)
           call read_var('pDimOutside',   pDimOutside)
           call read_var('xUniformXe',    xUniformXe)
+          
+       case('#RHOINSIDE')
+          call read_var('RhoDimInside',RhoDimInside)
+
+
        case("#GOLD")
           call read_var('UseGold',    UseGold)
           call read_var('WidthGold',  WidthGold)
@@ -829,7 +838,7 @@ contains
 
           endif
 
-          State_VGB(Rho_,i,j,k,iBlock) = 6.5 * Si2No_V(UnitRho_)
+          State_VGB(Rho_,i,j,k,iBlock) = RhoDimInside * Si2No_V(UnitRho_)
 
        elseif ((y >= rInnerTube).and.(y <= rOuterTube)) then
 
@@ -985,7 +994,7 @@ contains
              State_VGB(LevelAy_,i,j,k,iBlock) = -(x-xAy2)
 
 
-             State_VGB(Rho_,i,j,k,iBlock) = 6.5 * Si2No_V(UnitRho_)
+             State_VGB(Rho_,i,j,k,iBlock) = RhoDimInside * Si2No_V(UnitRho_)
           endif
 
        endif
