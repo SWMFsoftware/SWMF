@@ -955,8 +955,7 @@ contains
                         State_VNB(iVar,i,j,k,iBlock)) then
                       write (*,*) "Error for operator, variable, iBlock= ",&
                            NameOperator, iVar, iBlock, ", value=",&
-                           FineGridGlobal_IIIV(iFG,jFG,kFG,iVar)/&
-                           FineGridGlobal_IIIV(iFG,jFG,kFG,nVar+1), &
+                           FineGridGlobal_IIIV(iFG,jFG,kFG,iVar), &
                            " should be ", State_VNB(iVar,i,j,k,iBlock)
                    end if
                 end select
