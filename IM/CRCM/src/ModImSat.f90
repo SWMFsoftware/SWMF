@@ -19,6 +19,7 @@ contains
     use ModNumConst,    ONLY: cDegToRad,cRadToDeg
     use ModCrcmPlot,    ONLY: DtOutput
     use ModCrcm,        ONLY: t=>time
+    use ModCrcmPlanet,  ONLY: nSpecies=>nspec
     use ModCrcmGrid,    ONLY: LonGrid_I=>phi, LatGrid_I=>xlat, &
                               AngleGrid_I=>sinAo
     use ModFieldTrace,  ONLY: BfieldEq_C => bo
@@ -29,7 +30,7 @@ contains
     ! Arguments
     integer, intent(in) :: iSatIn
     integer,intent(in) :: nLat,nLon,nEnergy,nAngle
-    real,   intent(in) :: Flux_C(nLat,nLon,nEnergy,nAngle)
+    real,   intent(in) :: Flux_C(nSpecies,nLat,nLon,nEnergy,nAngle)
     
     ! Name of subroutine
     character(len=*), parameter :: NameSubSub = 'write_im_sat'
@@ -43,6 +44,7 @@ contains
                           LatSatGen,LonSatGen, AngSatGen
     real               :: SatB2, RatioBeqBsat
     integer            :: iSatLat, iSatLon, iSatAng, iAngle, iEnergy
+    integer,parameter  :: iSpeciesOut=1 !only save H+ flux
     character(len=8)  :: NameChannel
     !-------------------------------------------------------------------------
     
@@ -63,11 +65,11 @@ contains
     if(.not. allocated(Flux_G)) allocate(Flux_G(nLat,0:nLon+1,nEnergy,nAngle))
     if(iSatIn == 1) then
        Flux_G(1:nLat,1:nLon,1:nEnergy,1:nAngle) = &
-            Flux_C(1:nLat,1:nLon,1:nEnergy,1:nAngle) 
+            Flux_C(iSpeciesOut,1:nLat,1:nLon,1:nEnergy,1:nAngle) 
        Flux_G(1:nLat,nLon+1,1:nEnergy,1:nAngle) = &
-            Flux_C(1:nLat,1,1:nEnergy,1:nAngle) 
+            Flux_C(iSpeciesOut,1:nLat,1,1:nEnergy,1:nAngle) 
        Flux_G(1:nLat,0,1:nEnergy,1:nAngle) = &
-            Flux_C(1:nLat,nLon,1:nEnergy,1:nAngle) 
+            Flux_C(iSpeciesOut,1:nLat,nLon,1:nEnergy,1:nAngle) 
     endif
 
     ! Set BfieldEq^2 on first sat call
