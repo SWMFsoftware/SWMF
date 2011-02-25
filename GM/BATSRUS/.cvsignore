@@ -7,3 +7,4 @@ Makefile.def
 *.protex
 *.xmltex
 test_*
+.git*
