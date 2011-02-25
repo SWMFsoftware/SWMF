@@ -846,15 +846,10 @@ contains
           ! Convert XYZ to Lat-Lon-IsOpen
           ! Calculate  -90 < latitude = asin(z)  <  90
           SatRay_D(1) = cRadToDeg * asin(SatXyzIono_D(3)/rIonosphere)
-          ! Calculate -180 < longitude = atan2(y,x) < 180
-          SatRay_D(2) = cRadToDeg * atan2(SatXyzIono_D(2),SatXyzIono_D(1))
-          if (SatXyzIono_D(2) < cTiny .and. SatXyzIono_D(1)<0.0) then 
-             SatRay_D(2)=180.0
-          endif
-          if (SatXyzIono_D(1) < cTiny .and. SatXyzIono_D(2)<0.0) then 
-             SatRay_D(2)=-90.0
-          endif
-          
+          ! Calculate 0 < longitude = atan2(y,x) < 360
+          SatRay_D(2) =  &
+               modulo(cRadToDeg *atan2(SatXyzIono_D(2),SatXyzIono_D(1)),360.0)
+
           ! set closed flag
           SatRay_D(3)=3.0
        else
