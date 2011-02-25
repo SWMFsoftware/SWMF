@@ -16,7 +16,8 @@ module ModUser
        IMPLEMENTED9  => user_amr_criteria,               &
        IMPLEMENTED10 => user_get_log_var,                &
        IMPLEMENTED11 => user_update_states_adjoint,      &
-       IMPLEMENTED12 => user_calc_sources_adjoint
+       IMPLEMENTED12 => user_calc_sources_adjoint,       &
+       IMPLEMENTED13 => user_set_resistivity
 
   use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, VarTest, &
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates, &
@@ -203,6 +204,9 @@ module ModUser
   ! Option to start with reduced radiation in the initial condition.
   real :: RadiationScaleFactor = 1.0
 
+  ! Maximum allowed value of the inverse magnetic Reynolds number
+  real :: MaxNormalizedResistivity = 1e5
+
 contains
 
   !============================================================================
@@ -374,6 +378,10 @@ contains
 
        case('#LASERPULSE')
           call read_laser_pulse_param
+
+       case("#MAXRESISTIVITY")
+          ! Maximum allowed value of the inverse magnetic Reynolds number
+          call read_var('MaxNormalizedResistivity', MaxNormalizedResistivity)
 
        case('#USERINPUTEND')
           EXIT
@@ -3359,5 +3367,40 @@ contains
     z = z/(1 + Factor*(zRatioNozzle-1))
 
   end subroutine set_nozzle_yz
+
+  !============================================================================
+
+  subroutine user_set_resistivity(iBlock, Eta_G)
+    ! This subrountine set the eta for every block
+    use ModAdvance,    ONLY: State_VGB, Bz_
+    use ModConst,      ONLY: cBoltzmann, cElectronCharge, cMu
+    use ModPhysics,    ONLY: Si2No_V, UnitX_, UnitT_
+    use ModSize,       ONLY: nI, nJ, nK
+
+    integer, intent(in) :: iBlock
+    real,    intent(out):: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2) 
+
+    integer :: i, j, k
+    real :: TeSi, EtaCoef, HeatCondSi
+
+    character (len=*), parameter :: NameSub = 'user_set_resistivity'
+    !--------------------------------------------------------------------------
+
+    EtaCoef = (cBoltzmann/cElectronCharge)**2 &
+         *Si2No_V(UnitX_)**2/(cMu*Si2No_V(UnitT_))
+
+    do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       call user_material_properties(State_VGB(:,i,j,k,iBlock), TeOut=TeSi, &
+            HeatCondOut=HeatCondSi)
+
+       if(HeatCondSi==0.0)then
+          Eta_G(i,j,k) = MaxNormalizedResistivity
+       else
+          Eta_G(i,j,k) = min(EtaCoef*TeSi/HeatCondSi, MaxNormalizedResistivity)
+       end if
+
+    end do; end do; end do
+
+  end subroutine user_set_resistivity
 
 end module ModUser
