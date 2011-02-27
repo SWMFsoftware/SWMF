@@ -21,6 +21,7 @@ module ModHallResist
 
   ! Ion mass per charge may depend on space and time for multispecies
   real, public, allocatable:: IonMassPerCharge_G(:,:,:)
+  real:: IonMassPerChargeUnit
 
   ! Arrays for the implicit preconditioning
   real, public, allocatable :: HallJ_CD(:,:,:,:), &
@@ -52,6 +53,7 @@ module ModHallResist
   ! Public methods
   public :: init_hall_resist, get_face_current, hall_factor, test_face_current
   public :: set_ion_mass_per_charge
+  public :: set_ion_mass_per_charge_point
   public :: set_block_jacobian_cell           
 
   real, public :: b_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
@@ -71,8 +73,10 @@ module ModHallResist
 contains
   !============================================================================
   subroutine init_hall_resist
+    use ModConst,   ONLY: cMu, cElectronCharge
     use ModSize,    ONLY: nI, nJ, nK, nDim
-    use ModPhysics, ONLY: IonMassPerCharge
+    use ModPhysics, ONLY: IonMassPerCharge, Si2No_V, No2Si_V, UnitX_, &
+         UnitRho_, UnitT_, UnitB_
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='init_hall_resist'
@@ -103,6 +107,10 @@ contains
          IonMassPerCharge_G(0:nI+1,0:nJ+1,0:nK+1) )
 
     IonMassPerCharge_G = IonMassPerCharge
+
+    IonMassPerChargeUnit = No2Si_V(UnitRho_)/(cMu*cElectronCharge) &
+         *Si2No_V(UnitX_)**2*Si2No_V(UnitRho_) &
+         /(Si2No_V(UnitB_)*Si2No_V(UnitT_))
 
     rSqrInner1 = -1.0
     rSqrInner2 = -1.0
@@ -142,58 +150,70 @@ contains
   !=========================================================================
   subroutine set_ion_mass_per_charge(iBlock)
 
-    use ModAdvance, ONLY: State_VGB, Rho_, UseIdealEos
-    Use ModConst, ONLY: cMu, cElectronCharge
-    use ModVarIndexes, ONLY: &
-         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V, nVar
-    use ModMultiFluid, ONLY: UseMultiIon, iRhoIon_I, MassIon_I
-    use ModPhysics, ONLY: IonMassPerCharge, No2Si_V, Si2No_V, UnitX_, &
-         UnitRho_, UnitB_, UnitT_
-    use ModUser, ONLY: user_material_properties
+    use ModAdvance, ONLY: State_VGB
 
     ! Set IonMassPerCharge_G based on average mass
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: State_V(nVar)
-
-    real :: Zav, NatomicSi, Coeff
     !-------------------------------------------------------------------------
 
     ! Multiply IonMassPerCharge_G by average ion mass = rho_total / n_total
 
-    if(.not.UseIdealEos)then
-       Coeff = No2Si_V(UnitRho_)/(cMu*cElectronCharge) &
-            *Si2No_V(UnitX_)**2*Si2No_V(UnitRho_) &
-            /(Si2No_V(UnitB_)*Si2No_V(UnitT_))
-
-       do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               AverageIonChargeOut = Zav, NatomicOut = NatomicSi)
-
-          IonMassPerCharge_G(i,j,k) = Coeff*State_VGB(Rho_,i,j,k,iBlock) &
-               /(Zav*NatomicSi)
-       end do; end do; end do
-       
-    elseif(UseMultiSpecies)then
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
-               State_VGB(Rho_,i,j,k,iBlock) / &
-               sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) &
-               /MassSpecies_V)
-       end do; end do; end do
-    elseif(UseMultiIon)then
-       ! Get mass density per total number denisity
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
-               sum(State_VGB(iRhoIon_I, i, j, k, iBlock)) / &
-               sum(State_VGB(iRhoIon_I, i, j, k, iBlock) / MassIon_I)
-       end do; end do; end do
-    end if
+    do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+       call set_ion_mass_per_charge_point(State_VGB(:,i,j,k,iBlock), &
+            IonMassPerCharge_G(i,j,k))
+    end do; end do; end do
 
   end subroutine set_ion_mass_per_charge
 
   !===========================================================================
+
+  subroutine set_ion_mass_per_charge_point(State_V, IonMassPerChargeOut)
+
+    use ModAdvance,    ONLY: UseIdealEos
+    use ModVarIndexes, ONLY: nVar, Rho_, &
+         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V
+    use ModMultiFluid, ONLY: UseMultiIon, iRhoIon_I, MassIon_I
+    use ModPhysics,    ONLY: IonMassPerCharge
+    use ModUser,       ONLY: user_material_properties
+
+    real, intent(in) :: State_V(nVar)
+    real, intent(out):: IonMassPerChargeOut
+
+    real :: zAv, NatomicSi
+    !--------------------------------------------------------------------------
+
+    if(.not.UseIdealEos)then
+       call user_material_properties(State_V, &
+            AverageIonChargeOut = Zav, NatomicOut = NatomicSi)
+
+       if(Zav > 0.1)then
+          IonMassPerChargeOut = IonMassPerChargeUnit*State_V(Rho_) &
+               /(Zav*NatomicSi)
+       else
+          ! Avoid using small Zav, since then we will generate magnetic
+          ! field with the Biermann Battery term based numerical errors.
+          IonMassPerChargeOut = 0.0
+       end if
+       
+    elseif(UseMultiSpecies)then
+       IonMassPerChargeOut = IonMassPerCharge*State_V(Rho_) &
+            / sum(State_V(SpeciesFirst_:SpeciesLast_)/MassSpecies_V)
+
+    elseif(UseMultiIon)then
+       ! Get mass density per total number denisity
+       IonMassPerChargeOut = IonMassPerCharge*sum(State_V(iRhoIon_I)) &
+            / sum(State_V(iRhoIon_I) / MassIon_I)
+
+    else
+       IonMassPerChargeOut = IonMassPerCharge
+
+    end if
+
+  end subroutine set_ion_mass_per_charge_point
+
+  !============================================================================
 
   subroutine set_block_jacobian_face(iBlock)
     use ModMain, ONLY: x_, y_, z_
