@@ -35,8 +35,7 @@ module ModFaceFlux
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockCurrent, hall_factor, get_face_current, &
-       set_ion_mass_per_charge, UseBiermannBattery, &
-       set_ion_mass_per_charge_point
+       set_ion_mass_per_charge, UseBiermannBattery
   !^CFG IF IMPLICIT BEGIN
   use ModRadDiffusion, ONLY: IsNewBlockRadDiffusion, get_radiation_energy_flux
   use ModHeatConduction, ONLY: IsNewBlockHeatCond, IsNewBlockIonHeatCond, &
@@ -1056,6 +1055,30 @@ contains
     IsBoundary = true_cell(iLeft, jLeft, kLeft, iBlockFace) &
          .neqv.  true_cell(iRight,jRight,kRight,iBlockFace)
 
+    HallCoeff     = -1.0
+    BiermannCoeff = -1.0
+    if(UseHallResist .or. UseBiermannBattery)then
+       if(UseHallResist)then
+          HallCoeff = hall_factor(iDimFace, iFace, jFace, kFace, iBlockFace) &
+               *0.5*( IonMassPerCharge_G(iLeft,jLeft,kLeft) &
+               +      IonMassPerCharge_G(iRight,jRight,kRight) )
+          BiermannCoeff = HallCoeff
+       else
+          BiermannCoeff = &
+               0.5*( IonMassPerCharge_G(iLeft,jLeft,kLeft) &
+               +     IonMassPerCharge_G(iRight,jRight,kRight) )
+       end if
+    end if
+
+    ! Calculate -grad(pe)/(n_e * e) term for Hall MHD if needed
+    UseHallGradPe = BiermannCoeff > 0.0 .and. &
+         (UseElectronPressure .or. ElectronPressureRatio > 0.0)
+
+    Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
+    if(UseResistivity .and. UseResistiveFlux) Eta = 0.5* &
+         ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
+         + Eta_GB(iRight,jRight,kRight,iBlockFace))  !^CFG END DISSFLUX
+
     if(UseCovariant)then
        NormalX = Normal_D(x_); NormalY = Normal_D(y_); NormalZ = Normal_D(z_)
        AreaX = Area*NormalX; AreaY = Area*NormalY; AreaZ = Area*NormalZ
@@ -1109,38 +1132,12 @@ contains
 
     real       :: GradPe_D(3)
     real       :: InvNumDens, Coef
-    real :: IonMassPerChargeLeft, IonMassPerChargeRight
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
        StateLeft_V (Rho_)=sum( StateLeft_V(SpeciesFirst_:SpeciesLast_) )
        StateRight_V(Rho_)=sum( StateRight_V(SpeciesFirst_:SpeciesLast_) )
     end if
-
-
-    HallCoeff = -1.0
-    BiermannCoeff = -1.0
-    if(UseHallResist .or. UseBiermannBattery)then
-       call set_ion_mass_per_charge_point(StateLeft_V, IonMassPerChargeLeft)
-       call set_ion_mass_per_charge_point(StateRight_V, IonMassPerChargeRight)
-       if(UseHallResist)then
-          HallCoeff = &
-               0.5*hall_factor(iDimFace, iFace, jFace, kFace, iBlockFace)* &
-               ( IonMassPerChargeLeft + IonMassPerChargeRight)
-          BiermannCoeff = HallCoeff
-       else
-          BiermannCoeff = 0.5*(IonMassPerChargeLeft + IonMassPerChargeRight)
-       end if
-    end if
-
-    ! Calculate -grad(pe)/(n_e * e) term for Hall MHD if needed
-    UseHallGradPe = BiermannCoeff > 0.0 .and. &
-         (UseElectronPressure .or. ElectronPressureRatio > 0.0)
-
-    Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
-    if(UseResistivity .and. UseResistiveFlux) Eta = 0.5* &
-         ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
-         + Eta_GB(iRight,jRight,kRight,iBlockFace))  !^CFG END DISSFLUX
 
     ! Calculate current for the face if needed for (Hall) resistivity
     if(HallCoeff > 0.0 .or. Eta > 0.0) &
