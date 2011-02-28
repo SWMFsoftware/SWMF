@@ -469,7 +469,7 @@ contains
           k1R=nK+2-k1R; k2R=nK+2-k2R
        case default
           call stop_mpi(&
-               'Message_pass_cells: in flipping indexes, unknown idir')
+               'Message_pass_nodes: in flipping indexes, unknown idir')
        end select
     end if
 
