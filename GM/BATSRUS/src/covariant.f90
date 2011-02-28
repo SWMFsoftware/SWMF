@@ -1655,13 +1655,21 @@ subroutine covar_curlb_plotvar(iDir,iBLK,PlotVar_G)
   integer,intent(in):: iBLK
   real,dimension(-1:nI+2,-1:nJ+2,-1:nK+2),intent(out):: PlotVar_G
   real,dimension(1:nDim):: CurlB_D
-  integer::i,j,k
+  integer::i,j,k,l
   PlotVar_G=cZero
   do k=1,nK
      do j=1,nJ
         do i=1,nI
            call covariant_curlb(i,j,k,iBLK,CurlB_D,true_BLK(iBLK))
-           PlotVar_G(i,j,k)=CurlB_D(iDir)
+           if(iDir==0)then
+              PlotVar_G(i,j,k)=0.
+              do l=1,nDim
+                 PlotVar_G(i,j,k)=PlotVar_G(i,j,k) + CurlB_D(l)**2
+              end do
+              PlotVar_G(i,j,k)=sqrt(PlotVar_G(i,j,k))
+           else
+              PlotVar_G(i,j,k)=CurlB_D(iDir)
+           end if
         end do
      end do
   end do
