@@ -1,5 +1,0 @@
-MAILTO=""
-00 19 * * * ${HOME}/Sites/process_swmf.sh
-45 08 * * * ${HOME}/Sites/process_tests.sh
-45 18 * * * cd /csem1/SWMF_data; cvs update -d
-45 19 * * * cd /csem1/CRASH_data; cvs update -d
