@@ -18,6 +18,7 @@ IOMIX=\
 
 OBJECTS=\
 	ModAtomicMass.o \
+	ModAtomicNotation.o\
 	ModAtomicDataMix.o \
 	ModEos.o\
 	ModExcitation.o \

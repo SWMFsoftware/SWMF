@@ -622,7 +622,7 @@ contains
        ExcitationEnergy_III, &
        Degeneracy_III) 
     use ModIoUnit, ONLY: io_unit_new
-    use ModConst
+    use CRASH_ModAtomicNotation
     use ModUtilities,ONLY: split_string
     use CRASH_ModIonization,ONLY:put_ioniz_potential
     implicit none
