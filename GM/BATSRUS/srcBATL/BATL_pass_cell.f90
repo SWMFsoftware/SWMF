@@ -27,11 +27,12 @@ module BATL_pass_cell
   private ! except
 
   public message_pass_cell
+  public message_pass_cell_scalar
   public test_pass_cell
 
 contains
 
-  subroutine message_pass_scalar_cell(Float_GB, Int_GB, &
+  subroutine message_pass_cell_scalar(Float_GB, Int_GB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn)
     ! Wrapper function for making it easy to pass scalar data to
@@ -57,7 +58,7 @@ contains
     character(len=*), optional,intent(in) :: NameOperatorIn 
 
     character(len=*), parameter:: NameSub = &
-         'BATL_pass_cell::message_pass_scalar_cell'
+         'BATL_pass_cell::message_pass_cell_scalar'
 
     ! help array for converting between Scalar_GB and State_VGB
     ! used by message_pass_cell
@@ -90,7 +91,7 @@ contains
        Int_GB = nint(Scalar_VGB(1,:,:,:,:))
     end if
 
-  end subroutine message_pass_scalar_cell
+  end subroutine message_pass_cell_scalar
 
   !==========================================================================
 
@@ -1422,7 +1423,7 @@ contains
     ! block cells to the cells on the fine grid. Then we gather all the
     ! data on the fine grid with the proper operator.
     ! We can then compare the values on the coresponding node after
-    ! message_pass_scalar_cell is called with the fine grid values.
+    ! message_pass_cell_scalar is called with the fine grid values.
 
     ! rescale the domain to make indexing easyer
     DomainSize_D = iRatio_D*nRootTest_D*nIJK_D
@@ -1511,10 +1512,10 @@ contains
           end do; end do; end do
        end do
 
-       call message_pass_scalar_cell(Float_GB=Scalar_GB, nWidthIn=2, &
+       call message_pass_cell_scalar(Scalar_GB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, &
             DoSendCornerIn=.true., DoRestrictFaceIn=.false., &
-            DoTestIn=DoTestMe, NameOperatorIn=NameOperator_I(iOp))
+            NameOperatorIn=NameOperator_I(iOp))
 
        call MPI_ALLREDUCE(FineGridLocal_III(1,1,1), &
             FineGridGlobal_III(1,1,1),              &
