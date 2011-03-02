@@ -106,6 +106,12 @@ stretched_dipole        TypeBField
 1.0 			StretchingFactorA
 1.0 			StretchingFactorB
 
+#HGEOCORONALMODEL
+Rairden			 TypeHModel
+Solstice        	 TypeSeason
+80 			 WhichF107
+90                       WhichSZA
+1.0 			 Ct
 
 #SAVERESTART
 T			DoSaveRestart
