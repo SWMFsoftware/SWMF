@@ -31,7 +31,7 @@ module BATL_pass_cell
 
 contains
 
-  subroutine message_pass_scalar_cell(Scalar_GB, &
+  subroutine message_pass_scalar_cell(Float_GB, Int_GB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn)
     ! Wrapper function for making it easy to pass scalar data to
@@ -40,8 +40,10 @@ contains
     use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
     ! Arguments
-    real, intent(inout) :: &
-         Scalar_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, optional, intent(inout) :: &
+         Float_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    integer, optional, intent(inout) :: &
+         Int_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Optional arguments
     integer, optional, intent(in) :: nWidthIn
@@ -66,7 +68,14 @@ contains
     if(.not.allocated(Scalar_VGB)) &
          allocate(Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
-    Scalar_VGB(1,:,:,:,:) = Scalar_GB
+    if(present(Float_GB)) then
+       Scalar_VGB(1,:,:,:,:) = Float_GB
+    else if(present(Int_GB)) then
+       Scalar_VGB(1,:,:,:,:) = Int_GB
+    else
+       call CON_stop(NameSub, &
+            ' No array type spesified ')
+    end if
 
     call message_pass_cell(1,Scalar_VGB, nWidthIn=nWidthIn, &
          nProlongOrderIn=nProlongOrderIn, nCoarseLayerIn=nCoarseLayerIn, &
@@ -74,7 +83,13 @@ contains
          TimeOld_B=TimeOld_B, Time_B=Time_B, DoTestIn=DoTestIn, &
          NameOperatorIn=NameOperatorIn)
 
-    Scalar_GB = Scalar_VGB(1,:,:,:,:)
+    
+    if(present(Float_GB)) then
+       Float_GB = Scalar_VGB(1,:,:,:,:)
+    else if(present(Int_GB)) then
+       Int_GB = nint(Scalar_VGB(1,:,:,:,:))
+    end if
+
   end subroutine message_pass_scalar_cell
 
   !==========================================================================
@@ -1496,7 +1511,7 @@ contains
           end do; end do; end do
        end do
 
-       call message_pass_scalar_cell(Scalar_GB, nWidthIn=2, &
+       call message_pass_scalar_cell(Float_GB=Scalar_GB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, &
             DoSendCornerIn=.true., DoRestrictFaceIn=.false., &
             DoTestIn=DoTestMe, NameOperatorIn=NameOperator_I(iOp))
