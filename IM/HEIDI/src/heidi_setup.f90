@@ -24,7 +24,7 @@ subroutine heidi_read
   use ModIoUnit,     ONLY: UNITTMP_
   use ModHeidiInput, ONLY: set_parameters,tSimulationMax
   use ModProcIM,     ONLY: iProc
-  use CON_planet, ONLY: init_planet_const, set_planet_defaults, get_planet 
+  use CON_planet,    ONLY: init_planet_const, set_planet_defaults, get_planet 
   
   implicit none
 
@@ -501,9 +501,7 @@ subroutine ARRAYS
   write(*,*) 'heidi_setup---> IsBfieldNew = ', IsBfieldNew
   
   if (IsBfieldNew) then 
-     
-!     write(*,*) 'heidi_setup: ARRAYS---> get_B_field'
-!     call get_B_field(bFieldMagnitude_III)
+   
      
      write(*,*) 'heidi_setup: ARRAYS---> get_IntegralH'
      call get_IntegralH(funt)
@@ -515,6 +513,11 @@ subroutine ARRAYS
   
   
 !!$  if (TypeBCalc == 'numeric') then
+!!$       
+!!$ !   write(*,*) 'heidi_setup: ARRAYS---> get_B_field'
+!!$ !   call get_B_field(bFieldMagnitude_III)
+
+!!$
 !!$     NameFile = 'BField.out'
 !!$     StringHeader = 'Magnetic field in the equatorial plane'
 !!$     StringVarName = 'R MLT B'
@@ -533,6 +536,7 @@ subroutine ARRAYS
 !!$          VarIn_VII = bFieldMagnitude_III(nPointEq:nPointEq,:,:))
 !!$     TypePosition = 'rewind' 
 !!$     
+!!$
 !!$     NameFile = 'funi.out'
 !!$     StringHeader = 'Magnetic field in the equatorial plane'
 !!$     StringVarName = 'R MLT funi '
@@ -577,7 +581,10 @@ subroutine ARRAYS
 !!$     end do
 !!$     
 !!$  end if
-
+!!$
+!!$
+!!$
+!!$STOP
 
   !\
   ! Define conversion factors

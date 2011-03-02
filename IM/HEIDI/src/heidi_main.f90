@@ -24,11 +24,20 @@ program heidi_main
   use ModHeidiMain
 
   use CON_planet, ONLY: init_planet_const, set_planet_defaults, get_planet
+ 
 
-  implicit none 
+  use  NeutralHydrogenModel
+
+
+ implicit none 
 
   logical :: IsUninitialized = .true.
+
+  !real :: HDensity(38)
   !---------------------------------------------------------------------------
+
+  !call zoennchen(0.0, 0.0, HDensity)
+
   call MPI_INIT(iError)
   iComm= MPI_COMM_WORLD
 

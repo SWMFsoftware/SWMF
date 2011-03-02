@@ -1,7 +1,7 @@
 module ModHeidiBField
 
   implicit none
-
+    
 contains
   !==================================================================================
   subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
@@ -19,7 +19,7 @@ contains
 
     integer, intent(in)    :: nPoint , nR, nPhi
     real,    intent(in)    :: L_I(nR),Phi_I(nPhi)        
-    real,    intent(out) :: bFieldMagnitude_III(nPoint,nR,nPhi) ! Magnitude of magnetic field 
+    real,    intent(out)   :: bFieldMagnitude_III(nPoint,nR,nPhi) ! Magnitude of magnetic field 
     real,    intent(out)   :: Length_III(nPoint,nR,nPhi)          ! Length of the field line
     real,    intent(out)   :: RadialDistance_III(nPoint,nR,nPhi)  ! Radial distance 
     real,    intent(out)   :: dLength_III(nPoint-1,nR,nPhi)       ! Length interval between i and i+1
@@ -46,6 +46,7 @@ contains
 
     !----------------------------------------------------------------------------------
     
+
     select case(TypeBField)
 
        !\
@@ -1129,8 +1130,10 @@ contains
 
              bFieldMagnitude_III(iPoint,iR,iPhi) = mag
             
+             ! Length_III(iPoint,iR,iPhi)=dipole_length(L_I(ir),LatMin,Lat) 
+            
 
-             Length_III(iPoint,iR,iPhi) = asym_stretched_dipole_length&
+            Length_III(iPoint,iR,iPhi) = asym_stretched_dipole_length&
                   (L_I(iR), LatMin,Lat,Phi_I(iPhi), StretchingFactorA, StretchingFactorB)  
              
              !~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1391,7 +1394,7 @@ contains
     use ModCoordTransform, ONLY: rot_xyz_sph, xyz_to_sph
     use ModHeidiMain,      ONLY: LZ, Re, DipoleFactor
     use get_gradB_components
-   ! use ModPlotFile,       ONLY: save_plot_file
+    use ModPlotFile,       ONLY: save_plot_file
    
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -1424,7 +1427,8 @@ contains
     real :: t1, t2, t5, t6, t8, t10, t18, beta
     real, dimension(3)   :: Xyz_D
     real :: CosPhi2, SinPhi2
-       !----------------------------------------------------------------------------------
+    
+         !----------------------------------------------------------------------------------
     
     a = StretchingFactorA
     b = StretchingFactorB
@@ -1483,7 +1487,7 @@ contains
              ! \
              !  Magnetic field components for the uniformly stretched dipole in y and z.
              !/
-             Bx = DipoleFactor * (3. * zc * xc )/r**5 
+             Bx = (1.0/alpha) * DipoleFactor * (3. * zc * xc * alpha )/r**5 
              By = DipoleFactor * (3. * zc * yc )/r**5
              Bz = DipoleFactor * (2. * zc**2 - (xc* alpha)**2 - yc**2 )/r**5
              
@@ -1535,21 +1539,34 @@ contains
              GradBCrossB_VIII(2,iPoint,iR,iPhi) =  GradBCrossBSph_D(2) *  1./(L_I(iR))
              GradBCrossB_VIII(3,iPoint,iR,iPhi) =  GradBCrossBSph_D(3)  * 1./(L_I(iR)* cos(Lat))
              
-             Length_III(iPoint,iR,iPhi) = asym_stretched_dipole_length&
-                 (L_I(iR), LatMin,Lat,Phi_I(iPhi), StretchingFactorA, StretchingFactorB)  
-            
+             if (StretchingFactorB==0.0) then
+                Length_III(iPoint,iR,iPhi) = dipole_length(L_I(ir),LatMin,Lat) 
+             else
+                Length_III(iPoint,iR,iPhi) = asym_stretched_dipole_length&
+                     (L_I(iR), LatMin,Lat,Phi_I(iPhi), StretchingFactorA, StretchingFactorB)  
+             end if
+
               Lat = Lat + dLat
-       
+              
+
+              
+           B_all(iPoint, iR,1)   = Bx
+           B_all(iPoint, iR,2)   = By
+           B_all(iPoint, iR,3)   = Bz
+           Coord(1,iPoint, iR)   = xc/Re
+           Coord(2,iPoint, iR)   = zc/Re
+
            end do
         end do
      end do
 
-
-
+          
+!!$
 !!$    NameFile = 'BField.out'
 !!$    StringHeader = 'Magnetic field'
 !!$    StringVarName = 'x  z  bx  by  bz 0LT'
-!!$    TypePosition = 'rewind'
+!!$    
+!!$    
 !!$
 !!$       call save_plot_file(NameFile, & 
 !!$            TypePositionIn = TypePosition,&
@@ -1562,6 +1579,9 @@ contains
 !!$            CoordIn_DII = Coord,&
 !!$            VarIn_IIV = B_all)
 !!$       TypePosition = 'rewind'  
+
+
+     !  STOP
 
   end subroutine get_asym_stretched_field
   !=========================================================================================

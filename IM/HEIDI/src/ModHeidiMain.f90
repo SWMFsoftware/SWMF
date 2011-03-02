@@ -27,7 +27,8 @@ Module ModHeidiMain
   
   ! Define flux variable, and a few others
   ! Formerly: Common block CF2
-  real ::F2(NR,NT,NE,NPA,NS),A,T,FGEOS(NT,NE,NPA,NS)
+  real ::F2(NR,NT,NE,NPA,NS)=0.0
+  real ::A,T,FGEOS(NT,NE,NPA,NS)
   
   ! Define parameters based on grid variables
   ! formerly: Common block CINIT

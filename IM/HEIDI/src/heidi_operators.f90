@@ -50,10 +50,13 @@ subroutine FCHECK(MARK)
            do k=2,ko
               do j=1,jo
                  do i=2,io
-                    if ((F2(I,J,K,L,m).lt.-1.E-29).or.   &   ! -1E-29
+                    if ((F2(I,J,K,L,m).lt.-1.E-10).or.   &   ! -1E-29
                          (F2(I,J,K,L,m)-F2(I,J,K,L,m).ne.0.)) then
 !                         (F2(I,J,K,L,m)-F2(I,J,K,L,m).ge.1e-12)) then
                       call write_prefix; write(iUnitStdOut,*) 'Bad F,T,I,J,K,L,MARK:',F2(I,J,K,L,m),   &
+                            T,m,I,J,K,L,MARK,Ibad
+
+                       write(*,*) 'F,T,s,I,J,K,L,MARK, iBad:',F2(I,J,K,L,m),   &
                             T,m,I,J,K,L,MARK,Ibad
 !                       call write_prefix; write(iUnitStdOut,*) 'Radius:',(F2(I1,J,K,L,m),I1=2,IO,IO/10)
 !                       call write_prefix; write(iUnitStdOut,*) 'Azimuth:',(F2(I,J1,K,L,m),J1=1,JO,JO/10)
@@ -143,10 +146,11 @@ subroutine DRIFTR
               F(IO+1)=f01(j,k,l,s)
               F(IO+2)=f02(j,k,l,s)
            end if
-           !	   C(1)=AMIN1(0.99,AMAX1(-0.99,C(1)))
+           C(1)=AMIN1(0.99,AMAX1(-0.99,C(1)))
 	   do I=2,UR
               C(I)=VR(I,J,k,l)
-              !	     C(I)=AMIN1(0.99,AMAX1(-0.99,C(I)))
+              C(I)=AMIN1(0.99,AMAX1(-0.99,C(I)))
+              
               X=F(I+1)-F(I)
               ISIGN=1
               if(C(I).ne.abs(C(I))) ISIGN=-1
@@ -170,16 +174,13 @@ subroutine DRIFTR
            
 
            do I=2,ILMP(J)
-!              write(*,*) 'I',I
-!              write(*,*) 'FBND(I)', FBND(I)
-!              write(*,*) 'C(I)',C(I)
-!              write(*,*) 'C(I-1)',C(I-1)
-!              write(*,*) 'FBND(I-1)',FBND(I-1)
-!              write(*,*) 'F2(I,J,K,L,S)',F2(I,J,K,L,S)
               F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(I)*FBND(I)+C(I-1)*FBND(I-1)
+              if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
 	   end do ! I loop 
 	   do I=ILMP(J)+1,IO
               F2(I,J,K,L,S)=1.E-30*FFACTOR(I,j,K,L)
+              if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
+
 	   end do
 50         format(4I3,1P,10E10.2)
 
@@ -236,6 +237,9 @@ subroutine heidi_driftp
   real    :: fup,RR,corr,x
   real    :: fbc
   !----------------------------------------------------------------------
+
+ 
+
   do I=2,IO
      do K=2,KO
         do L=2,LO
@@ -248,8 +252,9 @@ subroutine heidi_driftp
            F(0)=F2(I,JO,K,L,S)
 
            do J=1,JO
-              C(J)=P1(I,J)+P2(I,j,K,L)
-              !	    C(J)=AMIN1(0.99,AMAX1(-0.99,C(J)))
+              C(J) = P1(I,J) + P2(I,j,K,L)
+              C(J)=AMIN1(0.99,AMAX1(-0.99,C(J)))
+              
               ISIGN=1
               if(C(J).ne.abs(C(J))) ISIGN=-1
               X=F(J+1)-F(J)
@@ -341,7 +346,8 @@ subroutine DRECOUL
            f(1:ko)=f2(i,j,1:ko,l,s)
            do K=1,KO
               C(K)=EDOT(I,J,K,L)+(COULE(I,j,K,L,S)+COULI(I,j,K,L,S))*XNE(I,J)
-              !	    C(K)=AMIN1(0.99,AMAX1(-0.99,C(K)))
+              C(K)=AMIN1(0.99,AMAX1(-0.99,C(K)))
+              
               ISIGN=1
               if (C(K).ne.abs(C(K))) ISIGN=-1
               X=F(K+1)-F(K)
@@ -363,7 +369,8 @@ subroutine DRECOUL
            do K=2,KO
               F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(K)*FBND(K)*DE(K)/WE(K)   &
                    +C(K-1)*FBND(K-1)*DE(K-1)/WE(K)
-
+              
+              if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
            end do
 
            !\                 
@@ -420,6 +427,8 @@ subroutine DRECOUL
            do L=UPA(I),LO
               do K=2,KO
                  F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
+
+                 if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
               end do
            end do
         end if
@@ -445,67 +454,88 @@ subroutine DRIFTMU
   real :: FBND(NPA),F(NPA),C(NPA),LIMITER,corr,fup,RR,x
   integer :: UL,ULL
   integer :: i,j,k,l,n,isign
-  real :: fbc
+  real    :: fbc
 
   !---------------------------------------------------------------------- 
+  
   do J=1,JO
      do I=2,ILMP(J)
         do K=2,KO
 	   do L=2,LO
-              F(L)=F2(I,J,K,L,S)
-	   end do	! L loop
-	   C(1)=0.
-	   FBND(1)=0.
-	   C(LO-1)=0.
-	   FBND(LO-1)=0.
-	   F(1)=0.
-	   UL=LO-2
-	   ULL=LO-1
-           !\
-           ! Dayside BC for IBC=1
-	   !/
-           if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then
-	      F(UPA(I))=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
-	      UL=UPA(I)-1
-	      ULL=UPA(I)-1
-           end if
-
-	   do L=2,UL
-!              C(L)=MUDOT(I,J,L)*VR(I,J)
-              C(L)=MUDOT(I,J,K,L) 
-             !	    C(L)=AMIN1(0.99,AMAX1(-0.99,C(L)))
-              X=F(L+1)-F(L)
-              ISIGN=1
-              if(C(L).ne.abs(C(L))) ISIGN=-1
-              FUP=0.5*(F(L)+F(L+1)-ISIGN*X)
-              if (abs(X).le.1.E-27) FBND(L)=FUP
-              if (abs(X).gt.1.E-27) then
-                 N=L+1-ISIGN
-                 RR=(F(N)-F(N-1))/X
-                 if (RR.le.0) FBND(L)=FUP
-                 if (RR.gt.0) then
-                    LIMITER=AMAX1(AMIN1(2.*RR,1.),AMIN1(RR,2.))
-                    CORR=-0.5*(C(L)-ISIGN)*X
-                    FBND(L)=FUP+LIMITER*CORR
-                 end if
-              end if
-	   end do	! second L loop
-
-	   do L=2,ULL		! f(i,j,k,1)=f(i,j,k,2)
-              F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(L)*FBND(L)*DMU(L)/WMU(L)   &
-                   +C(L-1)*FBND(L-1)*DMU(L-1)/WMU(L)
-	   end do	! third L loop
-           !\
-           ! Dayside BC for IBC=1
-	   !/
-           if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then 
-              do L=UPA(I),LO
-                 F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
-              end do	! yet another L loop
-	   endif
-        end do	! K loop
-     end do	! I loop
-  end do	! J loop
+       F(L)=F2(I,J,K,L,S)
+    end do	! L loop
+    C(1)=0.
+    FBND(1)=0.
+    C(LO-1)=0.
+    FBND(LO-1)=0.
+    F(1)=0.
+    UL=LO-2
+    ULL=LO-1
+    !\
+    ! Dayside BC for IBC=1
+    !/
+    if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then
+       F(UPA(I))=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
+       UL=UPA(I)-1
+       ULL=UPA(I)-1
+    end if
+    
+    do L=2,UL
+       C(L)=MUDOT(I,J,K,L) 
+       C(L)=AMIN1(0.99,AMAX1(-0.99,C(L)))
+       
+       X=F(L+1)-F(L)
+       ISIGN=1
+       if(C(L).ne.abs(C(L))) ISIGN=-1
+       FUP=0.5*(F(L)+F(L+1)-ISIGN*X)
+       if (abs(X).le.1.E-27) FBND(L)=FUP
+       if (abs(X).gt.1.E-27) then
+          N=L+1-ISIGN
+          RR=(F(N)-F(N-1))/X
+          if (RR.le.0) FBND(L)=FUP
+          if (RR.gt.0) then
+             LIMITER=AMAX1(AMIN1(2.*RR,1.),AMIN1(RR,2.))
+             CORR=-0.5*(C(L)-ISIGN)*X
+             FBND(L)=FUP+LIMITER*CORR
+          end if
+       end if
+    end do	! second L loop
+    
+    do L=2,ULL		
+     
+       F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(L)*FBND(L)*DMU(L)/WMU(L)   &
+            +C(L-1)*FBND(L-1)*DMU(L-1)/WMU(L)
+        if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
+        
+!!$       if (F2(I,J,K,L,S)<0.0) then
+!!$          write(*,*) 'i,j,k,l,F2(I,J,K,L,S)  aaaa',i,j,k,l,F2(I,J,K,L,S)
+!!$          STOP
+!!$       end if
+       
+       
+    end do	! third L loop
+    
+    
+    !\
+    ! Dayside BC for IBC=1
+    !/
+    if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then 
+       do L=UPA(I),LO
+          F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
+          
+          if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
+          
+!!$          if (F2(I,J,K,L,S)<0.0) then
+!!$             write(*,*) 'i,j,k,l,F2(I,J,K,L,S)  bbbbb',i,j,k,l,F2(I,J,K,L,S)
+!!$             STOP
+!!$          end if
+          
+          
+       end do	! yet another L loop
+    endif
+ end do	! K loop
+end do	! I loop
+end do	! J loop
 
 end subroutine DRIFTMU
 !======================================================================
