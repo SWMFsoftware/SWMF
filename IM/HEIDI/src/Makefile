@@ -50,7 +50,8 @@ OBJECTS = \
 	read_ring_current.o\
 	write_ring_current.o\
 	epencalc.o\
-	iono_init.o
+	iono_init.o\
+	HModel.o
 
 EXEOBJECTS = heidi_main.o ${OBJECTS}
 
@@ -86,7 +87,7 @@ ${EXE}: ${EXEOBJECTS}
 		ar -x ${LIBDIR}/libINDICES.a; \
 		ar -x ${LIBDIR}/libSHARE.a;\
 		ar -x ${LIBDIR}/libTIMING.a
-	${LINK.f90}  -o  ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}
+	${LINK.f90}  -o ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}
 	rm -rf Tmp_
 
 distclean: clean

@@ -91,13 +91,16 @@ module ModHeidiInput
   character(len=20) :: TypeBField = 'uniform'
   real              :: StretchingFactorA = 1.0
   real              :: StretchingFactorB = 1.0
-    ! "#SAVERESTART"
+  ! "#SAVERESTART"
   logical           :: DoSaveRestart = .true.
   real              :: DtSaveRestart = 40.0
   character(len=20) :: TypeFile = 'ascii'
- 
-
-
+  ! "#HGEOCORONALMODEL"
+  character(len=20) :: TypeHModel = 'Rairden'
+  character(len=20) :: TypeSeason = 'Equinox'
+  character(len=20) :: WhichF107  = '80'
+  real              :: SolarZenithAngle   = 90.0
+  real              :: Ct = 1.0
   ! GIPHT END DECLARATIONS
 
 contains
@@ -219,8 +222,13 @@ contains
           call read_var('DoSaveRestart',DoSaveRestart)
           call read_var('DtSaveRestart',DtSaveRestart)
           call read_var('TypeFile',TypeFile)
-
-
+       case("#HGEOCORONALMODEL")
+          call read_var('TypeHModel',TypeHModel)
+          call read_var('TypeSeason', TypeSeason)
+          call read_var('WhichF107', WhichF107)
+          call read_var('SolarZenithAngle', SolarZenithAngle)
+          call read_var('Ct', Ct)
+          
           ! GIPHT END COMMANDS
        case default
           !if(iProc==0) then
