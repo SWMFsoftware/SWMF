@@ -306,6 +306,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
+  use BATL_lib, ONLY: message_pass_cell
 
   implicit none
 
@@ -332,8 +333,8 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
           ProlongOrder=1, nVar=nVarSemi, Sol_VGB=StateSemi_VGB, &
           restrictface=.true.)
   case('parcond')
-     ! DoOneLayer, DoFacesOnly, UseMonotoneRestrict, nVar, State_VGB
-     call message_pass_cells8(.true., .false., .true., nVarSemi, StateSemi_VGB)
+     call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=2, &
+          nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
   case default
      call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
           //TypeSemiImplicit)
@@ -381,7 +382,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
   use ModLinearSolver, ONLY: UsePDotADotP, pDotADotPPe
-
+  use BATL_lib, ONLY: message_pass_cell
   implicit none
 
   integer, intent(in):: MaxN
@@ -423,8 +424,8 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
           ProlongOrder=1, nVar=nVarSemi, Sol_VGB=StateSemi_VGB, &
           restrictface=.true.)
   case('parcond')
-     ! DoOneLayer, DoFacesOnly, UseMonotoneRestrict, nVar, State_VGB
-     call message_pass_cells8(.true., .false., .true., nVarSemi, StateSemi_VGB)
+     call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=2, &
+          nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
   case default
      call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
           //TypeSemiImplicit)

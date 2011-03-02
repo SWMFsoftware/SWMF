@@ -49,9 +49,14 @@ module ModHeatConduction
   ! TeFraction is defined such that Te = p/rho * TeFraction
   real :: TiFraction, TeFraction
 
+  ! Array needed for second order interpolation of ghost cells
+  real, allocatable :: State1_VG(:,:,:,:)
+
   ! Heat flux for operator split scheme
   real, allocatable :: FluxImpl_X(:,:,:), FluxImpl_Y(:,:,:), FluxImpl_Z(:,:,:)
 
+  ! Heat conduction tensor
+  real, allocatable :: HeatCond_DDG(:,:,:,:,:)
   ! Heat conduction dyad pre-multiplied by the face area
   real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
 
@@ -132,6 +137,7 @@ contains
     use ModNumConst,   ONLY: cTwoPi
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          UnitU_, UnitX_, UnitB_, ElectronTemperatureRatio, AverageIonCharge
+    use ModVarIndexes, ONLY: nVar
 
     real, parameter:: CoulombLog = 20.0
     real :: HeatCondParSi, IonHeatCondParSi
@@ -206,9 +212,11 @@ contains
 
     if(UseSemiImplicit.and..not.allocated(HeatCond_DFDB))then
        allocate( &
+            State1_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2), &
             FluxImpl_X(nI+1,nJ,nK), &
             FluxImpl_Y(nI,nJ+1,nK), &
             FluxImpl_Z(nI,nJ,nK+1), &
+            HeatCond_DDG(3,3,0:nI+1,0:nJ+1,0:nK+1), &
             HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
 
        iTeImpl = 1
@@ -545,24 +553,23 @@ contains
 
   subroutine get_impl_heat_cond_state(StateImpl_VGB, DconsDsemi_VCB)
 
-    use ModAdvance,    ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
-         LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
-         RightState_VX, RightState_VY, RightState_VZ
-    use ModFaceValue,  ONLY: calc_face_value
-    use ModGeometry,   ONLY: UseCovariant
-    use ModImplicit,   ONLY: nw, nImplBLK, impl2iBlk, iTeImpl
-    use ModMain,       ONLY: nI, nJ, nK, MaxImplBlk, x_, y_, z_
-    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_,inv_gm1
-    use ModUser,       ONLY: user_material_properties
-    use ModVarIndexes, ONLY: Rho_, p_, Pe_
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
+    use ModFaceGradient, ONLY: set_block_field2
+    use ModGeometry,     ONLY: UseCovariant
+    use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk, iTeImpl
+    use ModMain,         ONLY: nDim, nI, nJ, nK, MaxImplBlk, x_, y_, z_
+    use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_,&
+         inv_gm1
+    use ModUser,         ONLY: user_material_properties
+    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_
 
     real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
-    integer :: i, j, k, iBlock, iImplBlock
+    integer :: iDim, i, j, k, iBlock, iImplBlock
     real :: TeSi, CvSi
     real :: Normal_D(3), Area
-    real :: HeatCondL_D(3), HeatCondR_D(3)
+    real :: HeatCond_DD(3,3)
     !--------------------------------------------------------------------------
 
     do iImplBlock = 1, nImplBLK
@@ -593,47 +600,133 @@ contains
           end do; end do; end do
        end if
 
-       call calc_face_value(.false.,iBlock)
+       ! The following is because we entered the semi-implicit solve with
+       ! first order ghost cells.
+       ! Perhaps better would be a second order message_pass_dir before
+       ! entering the semi-implicit solver.
+       call set_block_field2(iBlock,nVar, State1_VG, State_VGB(:,:,:,:,iBlock))
+
+       do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+          call get_heat_cond_tensor(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, HeatCond_DDG(:,:,i,j,k))
+       end do; end do; end do
 
        if(.not.UseCovariant) call set_cartesian_cell_face(x_, iBlock)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
           if(UseCovariant) call set_covariant_cell_face(x_, i, j, k, iBlock)
 
-          call get_heat_cond_coef(x_, i, j, k, iBlock, &
-               LeftState_VX(:,i,j,k), Normal_D, HeatCondL_D)
-          call get_heat_cond_coef(x_, i, j, k, iBlock, &
-               RightState_VX(:,i,j,k), Normal_D, HeatCondR_D)
-
-          HeatCond_DFDB(:,i,j,k,1,iBlock) = 0.5*(HeatCondL_D+HeatCondR_D)*Area
+          do iDim=1, nDim
+             HeatCond_DFDB(iDim,i,j,k,1,iBlock) = 0.5*Area*sum(Normal_D &
+                  *(HeatCond_DDG(:,iDim,i,j,k) + HeatCond_DDG(:,iDim,i-1,j,k)))
+          end do
        end do; end do; end do
 
        if(.not.UseCovariant) call set_cartesian_cell_face(y_, iBlock)
        do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
           if(UseCovariant) call set_covariant_cell_face(y_, i, j, k, iBlock)
 
-          call get_heat_cond_coef(y_, i, j, k, iBlock, &
-               LeftState_VY(:,i,j,k), Normal_D, HeatCondL_D)
-          call get_heat_cond_coef(y_, i, j, k, iBlock, &
-               RightState_VY(:,i,j,k), Normal_D, HeatCondR_D)
-
-          HeatCond_DFDB(:,i,j,k,2,iBlock) = 0.5*(HeatCondL_D+HeatCondR_D)*Area
+          do iDim=1, nDim
+             HeatCond_DFDB(iDim,i,j,k,2,iBlock) = 0.5*Area*sum(Normal_D &
+                  *(HeatCond_DDG(:,iDim,i,j,k) + HeatCond_DDG(:,iDim,i,j-1,k)))
+          end do
        end do; end do; end do
 
        if(.not.UseCovariant) call set_cartesian_cell_face(z_, iBlock)
        do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
           if(UseCovariant) call set_covariant_cell_face(z_, i, j, k, iBlock)
 
-          call get_heat_cond_coef(z_, i, j, k, iBlock, &
-               LeftState_VZ(:,i,j,k), Normal_D, HeatCondL_D)
-          call get_heat_cond_coef(z_, i, j, k, iBlock, &
-               RightState_VZ(:,i,j,k), Normal_D, HeatCondR_D)
-
-          HeatCond_DFDB(:,i,j,k,3,iBlock) = 0.5*(HeatCondL_D+HeatCondR_D)*Area
+          do iDim=1, nDim
+             HeatCond_DFDB(iDim,i,j,k,3,iBlock) = 0.5*Area*sum(Normal_D &
+                  *(HeatCond_DDG(:,iDim,i,j,k) + HeatCond_DDG(:,iDim,i,j,k-1)))
+          end do
        end do; end do; end do
 
     end do
 
   contains
+
+    subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock, HeatCond_DD)
+
+      use ModAdvance,    ONLY: State_VGB, UseIdealEos, UseElectronPressure
+      use ModB0,         ONLY: B0_DGB
+      use ModGeometry,   ONLY: r_BLK
+      use ModMain,       ONLY: UseB0
+      use ModNumConst,   ONLY: cTolerance
+      use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
+           UnitEnergyDens_, UnitU_, UnitX_
+      use ModUser,       ONLY: user_material_properties
+      use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_, p_, Pe_
+      use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
+
+      real, intent(in) :: State_V(nVar)
+      integer, intent(in) :: i, j, k, iBlock
+      real, intent(out) :: HeatCond_DD(3,3)
+
+      real :: TeSi, Te
+      real :: HeatCoefSi, HeatCoef
+      real :: Factor, r
+      real :: B_D(3), Bunit_D(3)
+      integer :: iDim
+      !------------------------------------------------------------------------
+
+      if(UseIdealEos)then
+         if(UseElectronPressure)then
+            Te = TeFraction*State_V(Pe_)/State_V(Rho_)
+         else
+            Te = TeFraction*State_V(p_)/State_V(Rho_)
+         end if
+         TeSi = Te*No2Si_V(UnitTemperature_)
+      else
+         ! Note we assume that the heat conduction formula for the
+         ! ideal state is still applicable for the non-ideal state
+         call user_material_properties(State_V, TeOut=TeSi)
+         Te = TeSi*Si2No_V(UnitTemperature_)
+      end if
+
+      if(DoUserHeatConduction)then
+         call user_material_properties(State_V, TeIn=TeSi, &
+              HeatCondOut=HeatCoefSi)
+         HeatCoef = HeatCoefSi &
+              *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
+              *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+      else
+         ! Spitzer form for collisional regime
+         HeatCoef = HeatCondPar*Te**2.5
+         ! Artificial modified heat conduction for a smoother transition
+         ! region, Linker et al. (2001)
+         if(DoExtendTransitionRegion) &
+              HeatCoef = HeatCoef*extension_factor(TeSi)
+      end if
+
+      if(UseHeatFluxRegion)then
+         r = r_BLK(i,j,k,iBlock)
+         if(r <= rCollisional)then
+            Factor = 1.0
+         elseif(r >= rCollisionless)then
+            Factor = 0.0
+         else
+            Factor = (rCollisionless - r)/(rCollisionless - rCollisional)
+         end if
+         HeatCoef = Factor*HeatCoef
+      end if
+
+      if(UseB0)then
+         B_D = State_V(Bx_:Bz_) + B0_DGB(:,i,j,k,iBlock)
+      else
+         B_D = State_V(Bx_:Bz_)
+      end if
+
+      ! The magnetic field should nowhere be zero. The following fix will
+      ! turn the magnitude of the field direction to zero.
+      Bunit_D = B_D / max( sqrt(sum(B_D**2)), cTolerance )
+
+      do iDim = 1, 3
+         HeatCond_DD(:,iDim) = HeatCoef*Bunit_D*Bunit_D(iDim)
+      end do
+
+    end subroutine get_heat_cond_tensor
+
+    !==========================================================================
 
     subroutine set_cartesian_cell_face(iDim, iBlock)
 
@@ -727,16 +820,20 @@ contains
             IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D)
        FluxImpl_X(i,j,k) = -sum(HeatCond_DFDB(:,i,j,k,1,iBlock)*FaceGrad_D)
     end do; end do; end do
+
     do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
        call get_face_gradient(y_, i, j, k, iBlock, &
             IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D)
        FluxImpl_Y(i,j,k) = -sum(HeatCond_DFDB(:,i,j,k,2,iBlock)*FaceGrad_D)
     end do; end do; end do
+
     do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
        call get_face_gradient(z_, i, j, k, iBlock, &
             IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D)
        FluxImpl_Z(i,j,k) = -sum(HeatCond_DFDB(:,i,j,k,3,iBlock)*FaceGrad_D)
     end do; end do; end do
+
+    ! A conservation fix is needed. Call BATL!
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        Rhs_VC(:,i,j,k) = vInv_CB(i,j,k,iBlock) &
@@ -755,6 +852,7 @@ contains
     use ModImplicit, ONLY: iTeImpl, nVarSemi
     use ModMain,     ONLY: nI, nJ, nK, nDim
     use ModNumConst, ONLY: i_DD
+    use BATL_size,   ONLY: MaxDim
 
     integer, parameter:: nStencil = 2*nDim + 1
 
@@ -762,7 +860,7 @@ contains
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
     integer :: i, j, k, iDim, Di, Dj, Dk
-    real :: DiffLeft, DiffRight, Dxyz_D(nDim)
+    real :: DiffLeft, DiffRight, Dxyz_D(MaxDim)
     !--------------------------------------------------------------------------
 
     Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
