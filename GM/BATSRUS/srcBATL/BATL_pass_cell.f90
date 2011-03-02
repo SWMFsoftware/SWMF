@@ -74,8 +74,7 @@ contains
     else if(present(Int_GB)) then
        Scalar_VGB(1,:,:,:,:) = Int_GB
     else
-       call CON_stop(NameSub, &
-            ' No array type spesified ')
+       call CON_stop(NameSub//': no array argument was specified')
     end if
 
     call message_pass_cell(1,Scalar_VGB, nWidthIn=nWidthIn, &
@@ -84,7 +83,6 @@ contains
          TimeOld_B=TimeOld_B, Time_B=Time_B, DoTestIn=DoTestIn, &
          NameOperatorIn=NameOperatorIn)
 
-    
     if(present(Float_GB)) then
        Float_GB = Scalar_VGB(1,:,:,:,:)
     else if(present(Int_GB)) then
@@ -224,10 +222,10 @@ contains
     if(present(DoRestrictFaceIn)) DoRestrictFace = DoRestrictFaceIn
 
     ! Check arguments for consistency
-    if(nProlongOrder == 2 .and. DoRestrictFace) call CON_stop(NameSub, &
+    if(nProlongOrder == 2 .and. DoRestrictFace) call CON_stop(NameSub// &
          ' cannot use 2nd order prolongation with face restriction')
 
-    if(nProlongOrder == 2 .and. nCoarseLayer>1) call CON_stop(NameSub, &
+    if(nProlongOrder == 2 .and. nCoarseLayer>1) call CON_stop(NameSub// &
          ' cannot use 2nd order prolongation nCoarseLayer > 1')
 
     UseMin =.false.
@@ -245,8 +243,8 @@ contains
     end if
 
     if(present(Time_B) .and. present(NameOperatorIn)) then
-       call CON_stop(NameSub, &
-            ' Time_B can not be used with '//trim(NameOperator))
+       call CON_stop(NameSub// &
+            ': Time_B can not be used with '//trim(NameOperator))
     end if
 
     ! Initialize logical for time interpolation/extrapolation
@@ -1486,7 +1484,7 @@ contains
           FineGridGlobal_III(:,:,:) = -1.0e8 
           iMpiOperator=MPI_MAX
        case default
-          call CON_stop(NameSub,' incorrect operator name')
+          call CON_stop(NameSub//': incorrect operator name')
        end select
 
        if(DoTestMe) write(*,*) NameSub,' testing for Operator: ',NameOperator
