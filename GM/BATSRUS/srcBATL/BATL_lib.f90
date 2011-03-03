@@ -65,6 +65,7 @@ module BATL_lib
   public:: AmrCrit_IB, nAmrCrit
   ! Inherited from BATL_pass_cell
   public:: message_pass_cell
+  public:: message_pass_cell_scalar
 
   ! Inherited from BATL_pass_face
   public:: message_pass_face
@@ -254,7 +255,7 @@ contains
     ! Load balance the tree
     if(DoTest)write(*,*) NameSub, &
          ' call distribute_tree with DoBalanceEachLevel=', DoBalanceEachLevel
-         
+
     if(DoBalanceEachLevel)then
        call distribute_tree(DoMove=.false., iTypeNode_A=iTree_IA(Level_,:)+1)
     else
