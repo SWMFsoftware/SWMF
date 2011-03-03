@@ -2,8 +2,6 @@ module ModSolarwind
 
   use ModKind
   use ModVarIndexes
-  use ModPhysics, ONLY: LowDensityRatio
-  use ModNumConst, ONLY: cTiny8
 
   implicit none
 
@@ -325,13 +323,11 @@ contains
     if (StartTime < Time_I(1)-cDay .or. StartTime > Time_I(nData)+cDay) then
        write(*,*) "**********************************************************"
        write(*,*) "*                                                        *"
-       write(*,*) "*         Warning! Warning! Warning! Warning! Warning!   *"
+       write(*,*) "*      Warning! Warning! Warning! Warning! Warning!      *"
        write(*,*) "*                                                        *"
        write(*,*) "*  Time dependent solar wind file disagrees with the     *"
-       write(*,*) "*  starting time of the                                  *"
-       write(*,*) "*  simulation by more than 24 hours.  This could cause   *"
-       write(*,*) "*  results which you                                     *"
-       write(*,*) "*  may not enjoy.                                        *"
+       write(*,*) "*  starting time of the simulation by more than 24 hours.*"
+       write(*,*) "*  This could cause results which you may not enjoy.     *"
        write(*,*) "*                                                        *"
        if (UseStrict) call stop_mpi('Correct PARAM.in or the INPUT data file')
 
@@ -410,7 +406,7 @@ contains
 
     implicit none
 
-    integer:: iVar, iData
+    integer:: iData
     integer:: T_= p_
     real :: Solarwind_V(nVar)
 
@@ -599,13 +595,15 @@ contains
     ! DoTestCell = maxval(abs(Xyz_D - (/ xTest, yTest, zTest /))) < 0.1
     if(DoTestCell) write(*,*) NameSub, 'TimeSim, Xyz_D=',TimeSimulation, Xyz_D
 
-    ! Assume that the satellite is at the east or west boundary
-    if(Solarwind_VI(Ux_,1) > 0.0)then
-       SatelliteXyz_D(1) = x1  
-    else
-       SatelliteXyz_D(1) = x2
-    endif
-
+    ! Set the X coordinate of the sattellite if not yet set.
+    if(SatelliteXyz_D(1) == 0.0)then
+       ! Assume that the satellite is at the east or west boundary
+       if(Solarwind_VI(Ux_,1) > 0.0)then
+          SatelliteXyz_D(1) = x1  
+       else
+          SatelliteXyz_D(1) = x2
+       endif
+    end if
     ! Calculate absolute time
     Time = StartTime + TimeSimulation
 
