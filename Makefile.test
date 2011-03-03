@@ -231,8 +231,6 @@ test2:
 test2_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -g=SC:4,4,4,3000,1,IH:8,8,8,400,1
-	cd SC/BATSRUS; ./Config.pl -dynamic; cd ../..
-	cd IH/BATSRUS; ./Config.pl -dynamic; cd ../..
 	make SWMF PIDL EARTH_TRAJ
 
 test2_rundir:
@@ -410,7 +408,6 @@ test5_compile:
 	./Config.pl -v=Empty,LC/BATSRUS
 	cd LC/BATSRUS; ./Config.pl -u=Lc -e=MhdWaves -setvar=nWave=2
 	./Config.pl -g=LC:6,4,4,3000,1
-	cd LC/BATSRUS; ./Config.pl -dynamic; cd ../..
 	make SWMF PIDL
 
 test5_rundir:
@@ -514,8 +511,6 @@ test7_compile:
 	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
 	./Config.pl -g=IH:4,4,4,3000,1,OH:4,4,4,3000,1
 	./Config.pl -o=IH:u=Waves,e=Mhd -o=OH:u=Waves,e=Mhd
-	cd IH/BATSRUS; ./Config.pl -dynamic; cd ../..
-	cd OH/BATSRUS; ./Config.pl -dynamic; cd ../..
 	make SWMF PIDL
 
 test7_rundir:
@@ -555,7 +550,6 @@ test_lc_compile:
 	./Config.pl -v=Empty,LC/BATSRUS
 	cd LC/BATSRUS; ./Config.pl -u=Lc -e=Mhd
 	./Config.pl -g=LC:6,4,4,3000,1
-	cd LC/BATSRUS; ./Config.pl -dynamic; cd ../..
 	make SWMF PIDL
 
 test_lc_rundir:
