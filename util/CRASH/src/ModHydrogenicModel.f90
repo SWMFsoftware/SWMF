@@ -1,5 +1,6 @@
 module ModHydrogenicModel
   use ModConst
+  use CRASH_ModAtomicNotation
   implicit none
   SAVE
   integer :: kMax = 100
