@@ -5174,32 +5174,45 @@ Temperature (Temp)     K
 
 The input files  can have the following optional commands at the beginning
 \begin{verbatim}
+#REREAD      Reread the file if the simulation runs beyond the final time
+
 #COOR
-GSM          The coordinate system of the data (GSM or GSE)
+GSM          The coordinate system of the data: GSM (default) or GSE
+
+#VAR
+rho ux uy uz bx by bz p pe
 
 #PLANE       The input data represents values on a tilted plane
-30.0         Angle to rotate in the XY plane
-30.0         Angle to rotate in the XZ plane
+20.0         Angle to rotate in the XY plane [deg]
+15.0         Angle to rotate in the XZ plane [deg]
 
-#POSITION    Origin for the plane rotation (see #PLANE)
-30.0         Y location
+#POSITION    Y-Z Position of the satellite (also origin of plane rotation)
+20.0         Y location
 30.0         Z location
 
+#SATELLITEXYZ  3D Position of the satellite
+65.0         X location
+0.0          Y location
+0.0          Z location
+
 #ZEROBX
-T            T means Bx is ignored and set to zero
+T            Bx is ignored and set to zero if true
 
 #TIMEDELAY
-3600.0       A real number in seconds by which to delay the input
+3600.0       A constant delay added to the time in the file [s]
 \end{verbatim}
+The #REREAD command tells BATS-R-US to reread the solarwind file 
+when the simulation goes past the time of the last data in the current file.
+The default behavior is to keep using the last data point.
+
+The #VAR command allows reading an extended set of variables, 
+e.g. densities of multiple species, electron pressure, etc.
 
 Finally, the data should be preceded by a {\tt #START}.  The beginning of 
 a typical solar wind input file might look like:
 \begin{verbatim}
 #COOR
 GSM
-
-#ZEROBX
-T
 
 #START
  2004  6  24   0   0  58   0  2.9  -3.1 - 3.7  -300.0  0.0  0.0  5.3  2.00E+04
@@ -5208,7 +5221,7 @@ T
 
 The maximum number of lines of data allowed in the input file is 50,000.  
 However, this can be modified by changing the variable Max_Upstream_Npts 
-in the file GM/BATSRUS/get_solar_wind_point.f90.
+in the file GM/BATSRUS/get_solar_wind_point.f90. 
 </command>
 
 <command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession">
