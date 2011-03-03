@@ -1,12 +1,13 @@
 module NeutralHydrogenModel
 
   implicit none
+
 contains
 
-  !===========================================================================================
+  !===========================================================================
   subroutine get_ostgaard_density(RadialDistance,  HDensity)
     !\
-    ! Calculates the geocoronal density as provided by the Ostgaard et al. (2003) model
+    ! Calculates the geocoronal density from Ostgaard et al. (2003) model
     !/
     use ModHeidiInput, ONLY: Ct, SolarZenithAngle
 
@@ -14,7 +15,7 @@ contains
     real, intent(out) :: HDensity
     real              :: n1, n2, alpha1, alpha2
     real              :: Exponent1, Exponent2
-    !-------------------------------------------------------------------------------------------    
+    !--------------------------------------------------------------------------
 
     call get_ostgaard_density_parameters(n1, n2, alpha1, alpha2)
 
@@ -24,14 +25,14 @@ contains
     HDensity = Ct * (n1 * exp(Exponent1) + n2 * exp(Exponent2))
 
   end subroutine get_ostgaard_density
-  !===========================================================================================
+  !============================================================================
   subroutine get_ostgaard_density_parameters(n1, n2, alpha1, alpha2)
 
     use ModNumConst,   ONLY: cDegToRad
     use ModHeidiInput, ONLY: SolarZenithAngle
 
     real, intent(out) :: n1, n2, alpha1, alpha2
-    !-------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     if (SolarZenithAngle == 90.0) then
        n1 = 10000.0  ! in cm ^-3
@@ -105,20 +106,21 @@ contains
 
 
   end subroutine get_ostgaard_density_parameters
-  !===========================================================================================
+  !============================================================================
   subroutine get_hodges_density(Theta, Phi, HDensity, R_I)
     !\
-    ! Calculates the geocoronal density as provided by the Hodges et al. (1994) model
+    ! Calculates the geocoronal density from the Hodges et al. (1994) model
     !/
     use ModNumConst,  ONLY: cPi
 
-    integer, parameter   :: nR=40 ! Number of radial distances in the Hodges model  
+    integer, parameter   :: nR=40 ! Number of radial distances in Hodges model
+
     real, intent(in)     :: Phi, Theta
-    real,    intent(out) :: HDensity(nR), R_I(nR)
+    real, intent(out)    :: HDensity(nR), R_I(nR)
     real                 :: N_I(nR), A_lm(nR), B_lm(nR), Y_lm
     real                 :: Z
     integer              :: l, m, iR
-    !-------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------
 
     HDensity = 0.0
     B_lm = 0.0
@@ -136,7 +138,7 @@ contains
     end do
   
   end subroutine get_hodges_density
-  !===========================================================================================
+  !============================================================================
   subroutine get_Ylm(Theta, Phi, l, m, Y_lm)
     
     use ModNumConst, ONLY: cPi
@@ -148,7 +150,7 @@ contains
     !Local variables
     real :: Y_00, Y_10, Y_11, Y_20, Y_21, Y_22, Y_30, Y_31, Y_32, Y_33
     real :: cos2Theta, cos3Theta, sin2Theta, sin3Theta
-    !-------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     cos2Theta = (cos(Theta))**2
     sin2Theta = (sin(Theta))**2
@@ -164,7 +166,7 @@ contains
     Y_21 = - sqrt(15./(8.*cPi)) * sin(Theta) * cos(Theta)
     Y_22 = 1./4. * sqrt(15./(2.*cPi)) * sin2Theta
     
-    Y_30 =           sqrt(7./(4.*cPi)) * (5./2. * cos3Theta - 3./2. * cos(Theta))
+    Y_30 = sqrt(7./(4.*cPi)) * (5./2. * cos3Theta - 3./2. * cos(Theta))
     Y_31 = - 1./4. * sqrt(21./(4.*cPi)) * sin(Theta) * (5. * cos2Theta -1.)
     Y_32 =   1./4. * sqrt(105./(2.*cPi)) * sin2Theta * cos(Theta)
     Y_33 = - 1./4. * sqrt(35./(4.*cPi)) * sin3Theta
@@ -183,13 +185,14 @@ contains
     if ((l==3) .and. (m==3)) Y_lm = Y_33
 
   end subroutine get_Ylm
-  !===========================================================================================
+  !============================================================================
   subroutine get_AlmBlm(l, m, A_lm, B_lm, R_I, N_I)
 
     use ModIoUnit,     ONLY : UnitTmp_
     use ModHeidiIO,    ONLY : NameInputDirectory
     use ModHeidiInput, ONLY : TypeHModel, TypeSeason, WhichF107
 
+    integer, parameter   :: n=40 ! Number of radial distances in Hodges model  
     
     integer,            intent(in)  :: l, m
     real, dimension(n), intent(out) :: A_lm, B_lm 
@@ -198,14 +201,15 @@ contains
          A_22, A_30, A_31, A_32, A_33
     real, dimension(n)              :: B_00, B_10, B_11, B_20, B_21, &
          B_22, B_30, B_31, B_32, B_33
-    integer, parameter   :: n=40 ! Number of radial distances in the Hodges model  
     character (len=100)  :: StringHeader
     integer              :: i
-    !-------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
-     open(UNITTMP_,FILE=NameInputDirectory//trim(TypeHModel)//'_'//trim(TypeSeason)//'F107_'//trim(WhichF107)//'.dat',status='old')
+     open(UNITTMP_,FILE=NameInputDirectory//trim(TypeHModel)//'_'// &
+          trim(TypeSeason)//'F107_'//trim(WhichF107)//'.dat',status='old')
      !\
-     ! According to Hodges 1994, the A and B coefficients have been scaled by 10^4 in the provided tables. 
+     ! According to Hodges 1994, the A and B coefficients have 
+     ! been scaled by 10^4 in the provided tables. 
      !/
 
      A_00 = 1.0e4
@@ -215,8 +219,9 @@ contains
      end do
      
      do i = 1, n
-        read(UnitTmp_,*) R_I(i), N_I(i), A_10(i), A_11(i), B_11(i), A_20(i), A_21(i), B_21(i),&
-             A_22(i), B_22(i), A_30(i), A_31(i), B_31(i),  A_32(i), B_32(i), A_33(i), B_33(i)
+        read(UnitTmp_,*) R_I(i), N_I(i), A_10(i), A_11(i), B_11(i), &
+             A_20(i), A_21(i), B_21(i), A_22(i), B_22(i), &
+             A_30(i), A_31(i), B_31(i),  A_32(i), B_32(i), A_33(i), B_33(i)
      end do
 
     close(UnitTmp_)
@@ -269,5 +274,5 @@ contains
     B_lm = B_lm * 1.e-4
 
   end subroutine get_AlmBlm
-  !===========================================================================================
+  !============================================================================
 end module NeutralHydrogenModel
