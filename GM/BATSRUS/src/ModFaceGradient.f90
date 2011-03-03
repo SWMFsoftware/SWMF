@@ -759,24 +759,36 @@ contains
     select case(iDir)
     case(x_)
        FaceGrad_D(x_) = InvDx*(Scalar_G(i,j,k) - Scalar_G(i-1,j,k))
-       FaceGrad_D(y_) = &
-            + Ay*(Scalar_G(i-1,jL,k) + Scalar_G(i,jL,k)) &
-            + By*(Scalar_G(i-1,j ,k) + Scalar_G(i,j ,k)) &
-            + Cy*(Scalar_G(i-1,jR,k) + Scalar_G(i,jR,k))
-       FaceGrad_D(z_) = &
-            + Az*(Scalar_G(i-1,j,kL) + Scalar_G(i,j,kL)) &
-            + Bz*(Scalar_G(i-1,j,k ) + Scalar_G(i,j,k )) &
-            + Cz*(Scalar_G(i-1,j,kR) + Scalar_G(i,j,kR))
+       if(nJ > 1)then
+          FaceGrad_D(y_) = &
+               + Ay*(Scalar_G(i-1,jL,k) + Scalar_G(i,jL,k)) &
+               + By*(Scalar_G(i-1,j ,k) + Scalar_G(i,j ,k)) &
+               + Cy*(Scalar_G(i-1,jR,k) + Scalar_G(i,jR,k))
+       else
+          FaceGrad_D(y_) = 0.0
+       end if
+       if(nK > 1)then
+          FaceGrad_D(z_) = &
+               + Az*(Scalar_G(i-1,j,kL) + Scalar_G(i,j,kL)) &
+               + Bz*(Scalar_G(i-1,j,k ) + Scalar_G(i,j,k )) &
+               + Cz*(Scalar_G(i-1,j,kR) + Scalar_G(i,j,kR))
+       else
+          FaceGrad_D(z_) = 0.0
+       end if
     case(y_)
        FaceGrad_D(x_) = &
             + Ax*(Scalar_G(iL,j-1,k) + Scalar_G(iL,j,k)) &
             + Bx*(Scalar_G(i ,j-1,k) + Scalar_G(i ,j,k)) &
             + Cx*(Scalar_G(iR,j-1,k) + Scalar_G(iR,j,k))
        FaceGrad_D(y_) = InvDy*(Scalar_G(i,j,k) - Scalar_G(i,j-1,k))
-       FaceGrad_D(z_) = &
-            + Az*(Scalar_G(i,j-1,kL) + Scalar_G(i,j,kL)) &
-            + Bz*(Scalar_G(i,j-1,k ) + Scalar_G(i,j,k )) &
-            + Cz*(Scalar_G(i,j-1,kR) + Scalar_G(i,j,kR))
+       if(nK > 1)then
+          FaceGrad_D(z_) = &
+               + Az*(Scalar_G(i,j-1,kL) + Scalar_G(i,j,kL)) &
+               + Bz*(Scalar_G(i,j-1,k ) + Scalar_G(i,j,k )) &
+               + Cz*(Scalar_G(i,j-1,kR) + Scalar_G(i,j,kR))
+       else
+          FaceGrad_D(z_) = 0.0
+       end if
     case(z_)
        FaceGrad_D(x_) = &
             + Ax*(Scalar_G(iL,j,k-1) + Scalar_G(iL,j,k)) &

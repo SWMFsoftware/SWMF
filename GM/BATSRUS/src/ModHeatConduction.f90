@@ -3,6 +3,8 @@
 !==============================================================================
 module ModHeatConduction
 
+  use BATL_size, ONLY: nDim, MaxDim
+
   implicit none
   save
 
@@ -53,7 +55,7 @@ module ModHeatConduction
   real, allocatable :: State1_VG(:,:,:,:)
 
   ! Heat flux for operator split scheme
-  real, allocatable :: FluxImpl_X(:,:,:), FluxImpl_Y(:,:,:), FluxImpl_Z(:,:,:)
+  real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
 
   ! Heat conduction tensor
   real, allocatable :: HeatCond_DDG(:,:,:,:,:)
@@ -126,12 +128,11 @@ contains
 
   subroutine init_heat_conduction
 
-    use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
-         nDim
+    use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
     use ModAdvance,    ONLY: UseElectronPressure
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
          cEps, cElectronCharge
-    use ModImplicit,   ONLY: UseSemiImplicit, iTeImpl
+    use ModImplicit,   ONLY: UseSemiImplicit, nw, iTeImpl
     use ModMain,       ONLY: MaxBlock, UseHeatConduction, UseIonHeatConduction
     use ModMultiFluid, ONLY: MassIon_I
     use ModNumConst,   ONLY: cTwoPi
@@ -213,10 +214,8 @@ contains
     if(UseSemiImplicit.and..not.allocated(HeatCond_DFDB))then
        allocate( &
             State1_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2), &
-            FluxImpl_X(nI+1,nJ,nK), &
-            FluxImpl_Y(nI,nJ+1,nK), &
-            FluxImpl_Z(nI,nJ,nK+1), &
-            HeatCond_DDG(3,3,0:nI+1,0:nJ+1,0:nK+1), &
+            FluxImpl_VFD(nw,nI+1,nJ+1,nK+1,nDim), &
+            HeatCond_DDG(MaxDim,MaxDim,0:nI+1,0:nJ+1,0:nK+1), &
             HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
 
        iTeImpl = 1
@@ -557,7 +556,8 @@ contains
     use ModFaceGradient, ONLY: set_block_field2
     use ModGeometry,     ONLY: UseCovariant
     use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk, iTeImpl
-    use ModMain,         ONLY: nDim, nI, nJ, nK, MaxImplBlk, x_, y_, z_
+    use ModMain,         ONLY: nI, nJ, nK, MaxImplBlk, x_, y_, z_
+    use ModNumConst,     ONLY: i_DD
     use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_,&
          inv_gm1
     use ModUser,         ONLY: user_material_properties
@@ -566,39 +566,42 @@ contains
     real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
-    integer :: iDim, i, j, k, iBlock, iImplBlock
+    integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iImplBlock, iP
     real :: TeSi, CvSi
     real :: Normal_D(3), Area
     real :: HeatCond_DD(3,3)
+
+    integer, parameter :: jMin = 1 - min(1,nJ-1), jMax = nJ + min(1,nJ-1)
+    integer, parameter :: kMin = 1 - min(1,nK-1), kMax = nK + min(1,nK-1)
     !--------------------------------------------------------------------------
+
+    iP = p_
+    if(UseElectronPressure) iP = Pe_
 
     do iImplBlock = 1, nImplBLK
        iBlock = impl2iBLK(iImplBlock)
 
-       if(UseIdealEos)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(UseElectronPressure)then
-                StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
-                     TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
-                     /State_VGB(Rho_,i,j,k,iBlock)
-             else
-                StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
-                     TeFraction*State_VGB(p_,i,j,k,iBlock) &
-                     /State_VGB(Rho_,i,j,k,iBlock)
-             end if
+       ! Store the electron temperature in StateImpl_VGB and the
+       ! specific heat in DconsDsemi_VCB
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(UseIdealEos)then
+             StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = TeFraction &
+                  *State_VGB(iP,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+
              DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
                   inv_gm1*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
-          end do; end do; end do
-       else
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          else
+
              call user_material_properties( &
                   State_VGB(:,i,j,k,iBlock), TeOut=TeSi, CvOut = CvSi)
+
              StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
                   TeSi*Si2No_V(UnitTemperature_)
+
              DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
                   CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
-          end do; end do; end do
-       end if
+          end if
+       end do; end do; end do
 
        ! The following is because we entered the semi-implicit solve with
        ! first order ghost cells.
@@ -606,40 +609,27 @@ contains
        ! entering the semi-implicit solver.
        call set_block_field2(iBlock,nVar, State1_VG, State_VGB(:,:,:,:,iBlock))
 
-       do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+       ! Calculate the cell centered heat conduction tensor
+       do k = kMin, kMax; do j = jMin, jMax; do i = 0, nI+1
           call get_heat_cond_tensor(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, HeatCond_DDG(:,:,i,j,k))
        end do; end do; end do
 
-       if(.not.UseCovariant) call set_cartesian_cell_face(x_, iBlock)
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-          if(UseCovariant) call set_covariant_cell_face(x_, i, j, k, iBlock)
+       ! Average the cell centered heat conduction tensor to the faces
+       ! and multiply with the area
+       do iDim = 1, nDim
+          Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+          if(.not.UseCovariant) call set_cartesian_cell_face(iDim, iBlock)
+          do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
+             if(UseCovariant) call set_covariant_cell_face(iDim,i,j,k,iBlock)
 
-          do iDim=1, nDim
-             HeatCond_DFDB(iDim,i,j,k,1,iBlock) = 0.5*Area*sum(Normal_D &
-                  *(HeatCond_DDG(:,iDim,i,j,k) + HeatCond_DDG(:,iDim,i-1,j,k)))
-          end do
-       end do; end do; end do
-
-       if(.not.UseCovariant) call set_cartesian_cell_face(y_, iBlock)
-       do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-          if(UseCovariant) call set_covariant_cell_face(y_, i, j, k, iBlock)
-
-          do iDim=1, nDim
-             HeatCond_DFDB(iDim,i,j,k,2,iBlock) = 0.5*Area*sum(Normal_D &
-                  *(HeatCond_DDG(:,iDim,i,j,k) + HeatCond_DDG(:,iDim,i,j-1,k)))
-          end do
-       end do; end do; end do
-
-       if(.not.UseCovariant) call set_cartesian_cell_face(z_, iBlock)
-       do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-          if(UseCovariant) call set_covariant_cell_face(z_, i, j, k, iBlock)
-
-          do iDim=1, nDim
-             HeatCond_DFDB(iDim,i,j,k,3,iBlock) = 0.5*Area*sum(Normal_D &
-                  *(HeatCond_DDG(:,iDim,i,j,k) + HeatCond_DDG(:,iDim,i,j,k-1)))
-          end do
-       end do; end do; end do
+             do iDir = 1, nDim
+                HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = &
+                     0.5*Area*sum( Normal_D*(HeatCond_DDG(:,iDir,i,j,k) &
+                     + HeatCond_DDG(:,iDir,i-Di,j-Dj,k-Dk)) )
+             end do
+          end do; end do; end do
+       end do
 
     end do
 
@@ -670,15 +660,9 @@ contains
       !------------------------------------------------------------------------
 
       if(UseIdealEos)then
-         if(UseElectronPressure)then
-            Te = TeFraction*State_V(Pe_)/State_V(Rho_)
-         else
-            Te = TeFraction*State_V(p_)/State_V(Rho_)
-         end if
+         Te = TeFraction*State_V(iP)/State_V(Rho_)
          TeSi = Te*No2Si_V(UnitTemperature_)
       else
-         ! Note we assume that the heat conduction formula for the
-         ! ideal state is still applicable for the non-ideal state
          call user_material_properties(State_V, TeOut=TeSi)
          Te = TeSi*Si2No_V(UnitTemperature_)
       end if
@@ -801,46 +785,48 @@ contains
     use ModFaceGradient, ONLY: get_face_gradient
     use ModGeometry,     ONLY: vInv_CB
     use ModImplicit,     ONLY: nw, iTeImpl
-    use ModMain,         ONLY: nI, nJ, nK, x_, y_, z_
+    use ModMain,         ONLY: nI, nJ, nK
+    use ModNumConst,     ONLY: i_DD
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nw,-1:nI+2,-1:nJ+2,-1:nK+2)
     real, intent(out)   :: Rhs_VC(nw,nI,nJ,nK)
     logical, intent(in) :: IsLinear
 
-    integer :: i, j, k
-    real :: FaceGrad_D(3)
+    integer :: iDim, i, j, k, Di, Dj, Dk
+    real :: FaceGrad_D(MaxDim)
     logical :: IsNewBlockHeatCond
     !--------------------------------------------------------------------------
 
     IsNewBlockHeatCond = .true.
 
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-       call get_face_gradient(x_, i, j, k, iBlock, &
-            IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D)
-       FluxImpl_X(i,j,k) = -sum(HeatCond_DFDB(:,i,j,k,1,iBlock)*FaceGrad_D)
-    end do; end do; end do
+    ! Calculate the electron thermal heat flux
+    do iDim = 1, nDim
+       Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+       do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
 
-    do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-       call get_face_gradient(y_, i, j, k, iBlock, &
-            IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D)
-       FluxImpl_Y(i,j,k) = -sum(HeatCond_DFDB(:,i,j,k,2,iBlock)*FaceGrad_D)
-    end do; end do; end do
+          ! Second-order accurate electron temperature gradient
+          call get_face_gradient(iDim, i, j, k, iBlock, &
+               IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D)
 
-    do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-       call get_face_gradient(z_, i, j, k, iBlock, &
-            IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D)
-       FluxImpl_Z(i,j,k) = -sum(HeatCond_DFDB(:,i,j,k,3,iBlock)*FaceGrad_D)
-    end do; end do; end do
+          FluxImpl_VFD(iTeImpl,i,j,k,iDim) = &
+               -sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*FaceGrad_D(:nDim))
+
+       end do; end do; end do
+    end do
 
     ! A conservation fix is needed. Call BATL!
 
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       Rhs_VC(:,i,j,k) = vInv_CB(i,j,k,iBlock) &
-            *(FluxImpl_X(i,j,k) - FluxImpl_X(i+1,j,k) &
-            + FluxImpl_Y(i,j,k) - FluxImpl_Y(i,j+1,k) &
-            + FluxImpl_Z(i,j,k) - FluxImpl_Z(i,j,k+1) )
-    end do; end do; end do
+    Rhs_VC = 0.0
+
+    do iDim = 1, nDim
+       Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          Rhs_VC(:,i,j,k) = Rhs_VC(:,i,j,k) - vInv_CB(i,j,k,iBlock) &
+               *(FluxImpl_VFD(:,i+Di,j+Dj,k+Dk,iDim) &
+               - FluxImpl_VFD(:,i,j,k,iDim))
+       end do; end do; end do
+    end do
 
   end subroutine get_heat_conduction_rhs
 
@@ -848,11 +834,12 @@ contains
 
   subroutine add_jacobian_heat_cond(iBlock, Jacobian_VVCI)
 
-    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, UseCovariant
-    use ModImplicit, ONLY: iTeImpl, nVarSemi
-    use ModMain,     ONLY: nI, nJ, nK, nDim
-    use ModNumConst, ONLY: i_DD
-    use BATL_size,   ONLY: MaxDim
+    use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
+    use ModGeometry,     ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, UseCovariant
+    use ModImplicit,     ONLY: iTeImpl, nVarSemi
+    use ModMain,         ONLY: nI, nJ, nK
+    use ModNumConst,     ONLY: i_DD
+    use BATL_size,       ONLY: MaxDim
 
     integer, parameter:: nStencil = 2*nDim + 1
 
@@ -860,83 +847,48 @@ contains
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
     integer :: i, j, k, iDim, Di, Dj, Dk
-    real :: DiffLeft, DiffRight, Dxyz_D(MaxDim)
+    real :: DiffLeft, DiffRight, InvDcoord_D(MaxDim), InvDxyz_D(MaxDim)
     !--------------------------------------------------------------------------
 
-    Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
+    InvDcoord_D = (/ 1/dx_BLK(iBlock), 1/dy_BLK(iBlock), 1/dz_Blk(iBlock)/)
+
+    if(UseCovariant) call set_block_jacobian_face(iBlock)
 
     ! the transverse diffusion is ignored in the Jacobian
-
-    if(UseCovariant)then
-       call add_jacobian_covariant
-    else
-
-       do iDim = 1, nDim
-          Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+    do iDim = 1, nDim
+       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(UseCovariant)then
+             InvDxyz_D = DcoordDxyz_DDFD(iDim,:,i,j,k,iDim)*InvDcoord_D(iDim)
              DiffLeft = vInv_CB(i,j,k,iBlock) &
-                  *HeatCond_DFDB(iDim,i,j,k,iDim,iBlock)/Dxyz_D(iDim)
+                  *sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*InvDxyz_D)
+
+             InvDxyz_D = &
+                  DcoordDxyz_DDFD(iDim,:,i+Di,j+Dj,k+Dk,iDim)*InvDcoord_D(iDim)
              DiffRight = vInv_CB(i,j,k,iBlock) &
-                  *HeatCond_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)/Dxyz_D(iDim)
+                  *sum(HeatCond_DFDB(:,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDxyz_D)
+          else
+             DiffLeft = vInv_CB(i,j,k,iBlock) &
+                  *HeatCond_DFDB(iDim,i,j,k,iDim,iBlock)*InvDcoord_D(iDim)
+             DiffRight = vInv_CB(i,j,k,iBlock) &
+                  *HeatCond_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock) &
+                  *InvDcoord_D(iDim)
+          end if
 
-             Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &
-                  Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) &
-                  - (DiffLeft + DiffRight)
+          Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &
+               Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) - (DiffLeft + DiffRight)
 
-             if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1) &
-                  DiffLeft = 0.0
-             if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ &
-                  .or. iDim==3.and.k==nK) &
-                  DiffRight = 0.0
+          if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1) &
+               DiffLeft = 0.0
+          if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ .or. iDim==3.and.k==nK) &
+               DiffRight = 0.0
 
-             Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim)   = &
-                  Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim) + DiffLeft
-             Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = &
-                  Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) + DiffRight
-          end do; end do; end do
-       end do
-    end if
-
-  contains
-
-    subroutine add_jacobian_covariant
-
-      use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
-
-      real :: InvDxyz_D(nDim)
-      !------------------------------------------------------------------------
-
-      call set_block_jacobian_face(iBlock)
-
-      do iDim = 1, nDim
-         Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
-         do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            InvDxyz_D = DcoordDxyz_DDFD(iDim,:,i,j,k,iDim)/Dxyz_D(iDim)
-            DiffLeft = vInv_CB(i,j,k,iBlock) &
-                 *sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*InvDxyz_D)
-
-            InvDxyz_D = &
-                 DcoordDxyz_DDFD(iDim,:,i+Di,j+Dj,k+Dk,iDim)/Dxyz_D(iDim)
-            DiffRight = vInv_CB(i,j,k,iBlock) &
-                 *sum(HeatCond_DFDB(:,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDxyz_D)
-
-            Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &
-                 Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) &
-                 - (DiffLeft + DiffRight)
-
-            if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1) &
-                 DiffLeft = 0.0
-            if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ &
-                 .or. iDim==3.and.k==nK) DiffRight = 0.0
-
-            Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim) = &
-                 Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim) + DiffLeft
-            Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = &
-                 Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) + DiffRight
-         end do; end do; end do
-      end do
-
-    end subroutine add_jacobian_covariant
+          Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim)   = &
+               Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim) + DiffLeft
+          Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = &
+               Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) + DiffRight
+       end do; end do; end do
+    end do
 
   end subroutine add_jacobian_heat_cond
 
@@ -945,7 +897,7 @@ contains
   subroutine update_impl_heat_cond(iBlock, iImplBlock, StateImpl_VG)
 
     use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure
-    use ModEnergy,   ONLY: calc_energy_cell, calc_pressure_cell
+    use ModEnergy,   ONLY: calc_energy_cell
     use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB
     use ModMain,     ONLY: nI, nJ, nK
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
@@ -956,74 +908,40 @@ contains
     integer, intent(in) :: iBlock, iImplBlock
     real, intent(in) :: StateImpl_VG(nw,nI,nJ,nK)
 
-    integer :: i, j, k
-    real :: Einternal, EinternalSi, PressureSi
-    real :: Ee, EeSi, PeSi
+    integer :: i, j, k, iP
+    real :: DeltaEinternal, Einternal, EinternalSi, PressureSi
     !--------------------------------------------------------------------------
 
-    if(UseElectronPressure)then
-       if(UseIdealEos)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-                  + gm1*DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-                  *( StateImpl_VG(iTeImpl,i,j,k) &
-                  -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
-          end do; end do; end do
-       else
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
-                  + State_VGB(ExtraEint_,i,j,k,iBlock) &
-                  + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-                  *( StateImpl_VG(iTeImpl,i,j,k) &
-                  -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
+    iP = p_
+    if(UseElectronPressure) iP = Pe_
 
-             EeSi = Ee*No2Si_V(UnitEnergyDens_)
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  i, j, k, iBlock, &
-                  EinternalIn = EeSi, PressureOut = PeSi)
-
-             ! Set true electron pressure
-             State_VGB(Pe_,i,j,k,iBlock) = PeSi*Si2No_V(UnitP_)
-
-             ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
-             State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-                  Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
-
-          end do; end do; end do
-       end if
-
-    else
+       DeltaEinternal = DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+            *(StateImpl_VG(iTeImpl,i,j,k) - ImplOld_VCB(iTeImpl,i,j,k,iBlock))
 
        if(UseIdealEos)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-                  + gm1*DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-                  *( StateImpl_VG(iTeImpl,i,j,k) &
-                  -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
-          end do; end do; end do
+          State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+               + gm1*DeltaEinternal
        else
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-                  + State_VGB(ExtraEint_,i,j,k,iBlock) &
-                  + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-                  *( StateImpl_VG(iTeImpl,i,j,k) &
-                  -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
 
-             EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
+          Einternal = inv_gm1*State_VGB(iP,i,j,k,iBlock) &
+               + State_VGB(ExtraEint_,i,j,k,iBlock) + DeltaEinternal
 
-             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  EinternalIn = EinternalSi, PressureOut = PressureSi)
+          EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
-             State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
-             State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-                  Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock))
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               EinternalIn = EinternalSi, PressureOut = PressureSi)
 
-          end do; end do; end do
+          State_VGB(iP,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+
+          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+               Einternal - inv_gm1*State_VGB(iP,i,j,k,iBlock))
+
        end if
-
-       call calc_energy_cell(iBlock)
-    end if
+    end do; end do; end do
+       
+    call calc_energy_cell(iBlock)
 
   end subroutine update_impl_heat_cond
 
