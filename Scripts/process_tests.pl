@@ -9,6 +9,7 @@ my %WeightMachine = (
     "mesh"         => "1.0",
     "nyx"          => "0.2",
     "nyx_pgf90"    => "1.0",
+    "nyx_ifort"    => "0.5",
     "xena"         => "0.1",
     );
 
