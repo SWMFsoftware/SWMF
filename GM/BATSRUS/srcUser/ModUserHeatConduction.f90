@@ -1020,7 +1020,7 @@ contains
              do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      TeOut = PlotVar_G(i,j,k))
-                PlotVar_G(i,j,:) = PlotVar_G(i,j,k)*Si2No_V(UnitTemperature_)
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)*Si2No_V(UnitTemperature_)
              end do; end do; end do
           end if
        case default
