@@ -8,6 +8,8 @@ module BATL_grid
 
   implicit none
 
+  SAVE
+
   private ! except
 
   public :: init_grid
@@ -582,6 +584,7 @@ contains
             *(CoordMax_D(1:nDim) - CoordMin_D(1:nDim))/nPoint_D(1:nDim)
 
        call interpolate_grid(XyzPoint_D, nCell, iCell_II, Weight_I)
+
        do iCell = 1, nCell
           Point_VIII(0,iPoint,jPoint,kPoint) = &
                Point_VIII(0,iPoint,jPoint,kPoint) + Weight_I(iCell)
@@ -590,8 +593,12 @@ contains
           iCell_D(1:nDim) = iCell_II(1:nDim,iCell)
           
           ! Interpolate the coordinates to check order of accuracy
-          Xyz_D(1:nDim) = &
-               Xyz_DGB(1:nDim,iCell_D(1),iCell_D(2),iCell_D(3),iBlock)
+          ! Note: Using array syntax in combination with the indirect
+          ! iCell_D index fails with optimization for NAG v5.1
+          do iDim = 1, nDim
+             Xyz_D(iDim) = &
+                  Xyz_DGB(iDim,iCell_D(1),iCell_D(2),iCell_D(3),iBlock)
+          end do
 
           ! Take care of periodic dimensions: shift coordinates as necessary
           do iDim = 1, nDim
@@ -615,6 +622,7 @@ contains
                iBlock, Weight_I(iCell), &
                Xyz_DGB(1:nDim,iCell_D(1),iCell_D(2),iCell_D(3),iBlock), &
                Point_VIII(1:nDim,iPoint,jPoint,kPoint)
+
        end do
     end do; end do; end do
 
