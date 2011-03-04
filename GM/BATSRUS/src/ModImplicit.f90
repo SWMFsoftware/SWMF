@@ -347,8 +347,7 @@ contains
     iVarSemiMax = nVarSemi
 
     if(UseSemiImplicit)then
-       select case(TypeSemiImplicit)
-       case('parcond')
+       if(TypeSemiImplicit == 'parcond')then
           allocate( &
                FluxImpl_VXB(nVarSemi,nJ,nK,2,MaxBlock), &
                FluxImpl_VYB(nVarSemi,nI,nK,2,MaxBlock), &
@@ -356,9 +355,7 @@ contains
           FluxImpl_VXB = 0.0
           FluxImpl_VYB = 0.0
           FluxImpl_VZB = 0.0
-       case default
-          call stop_mpi(NameSub//': nw unknown for'//TypeSemiImplicit)
-       end select
+       end if
     end if
 
     nwIJK      = nVarSemi*nIJK

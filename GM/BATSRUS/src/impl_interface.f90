@@ -298,7 +298,8 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
   use ModProcMH, ONLY: iProc
   use ModImplicit, ONLY: StateSemi_VGB, nw, nVarSemi, nImplBlk, impl2iblk, &
-       TypeSemiImplicit, iVarSemiMin, iVarSemiMax, nVarSemi
+       TypeSemiImplicit, iVarSemiMin, iVarSemiMax, nVarSemi, &
+       FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
   use ModLinearSolver, ONLY: UsePDotADotP
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
@@ -306,7 +307,8 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
-  use BATL_lib, ONLY: message_pass_cell
+  use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
+       apply_flux_correction_block
 
   implicit none
 
@@ -357,12 +359,28 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
         call stop_mpi(NameSub//': no get_rhs implemented for' &
              //TypeSemiImplicit)
      end select
-    
+  end do
+
+  if(TypeSemiImplicit == 'parcond')then
+     call message_pass_face(nVarSemi, FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
+
+     do iImplBlock = 1, nImplBLK
+        iBlock = impl2iBLK(iImplBlock)
+
+        ! zero ghost cells for Rhs_VCB
+        call apply_flux_correction_block(iBlock, nVarSemi, 0, &
+             Rhs_VCB(:,:,:,:,iImplBlock), &
+             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
+     end do
+  end if
+
+  do iImplBlock = 1, nImplBLK
+     iBlock = impl2iBLK(iImplBlock)
+
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
         Rhs_VCB(:,i,j,k,iImplBlock) = Rhs_VCB(:,i,j,k,iImplBlock) &
              / vInv_CB(i,j,k,iBlock)
      end do; end do; end do
-
   end do
 
 end subroutine get_semi_impl_rhs
@@ -371,7 +389,9 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
   ! Calculate y_I = A.x_I where A is the linearized sem-implicit operator
 
-  use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
+  use ModImplicit, ONLY: StateSemi_VGB, ResImpl_VCB, &
+       FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB, &
+       nImplBlk, impl2iblk, &
        TypeSemiImplicit, UseSplitSemiImplicit, &
        iVarSemiMin, iVarSemiMax, iVarSemi, nVarSemi, &
        ImplCoeff, DconsDsemi_VCB, KrylovType
@@ -382,7 +402,8 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
   use ModLinearSolver, ONLY: UsePDotADotP, pDotADotPPe
-  use BATL_lib, ONLY: message_pass_cell
+  use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
+       apply_flux_correction_block
   implicit none
 
   integer, intent(in):: MaxN
@@ -392,13 +413,10 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   real, intent(inout):: y_I(MaxN)
 
   integer :: iImplBlock, iBlock, i, j, k, iVar, n
-  real, allocatable, save :: Rhs_VC(:,:,:,:)
   real :: Volume
 
   character(len=*), parameter:: NameSub = 'get_semi_impl_matvec'
   !------------------------------------------------------------------------
-
-  if(.not.allocated(Rhs_VC)) allocate(Rhs_VC(nVarSemi,nI,nJ,nK))
 
   ! Fill in StateSemi so it can be message passed
   n = 0
@@ -431,7 +449,6 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
           //TypeSemiImplicit)
   end select
 
-  n=0
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
 
@@ -440,14 +457,32 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
         call get_rad_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
-             Rhs_VC, IsLinear = .true.)
+             ResImpl_VCB(:,:,:,:,iImplBlock), IsLinear = .true.)
      case('parcond')
-        call get_heat_conduction_rhs(iBlock, &
-             StateSemi_VGB(:,:,:,:,iBlock), Rhs_VC, IsLinear = .true.)
+        call get_heat_conduction_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
+             ResImpl_VCB(:,:,:,:,iImplBlock), IsLinear = .true.)
      case default
         call stop_mpi(NameSub//': no get_rhs implemented for' &
              //TypeSemiImplicit)
      end select
+  end do
+
+  if(TypeSemiImplicit == 'parcond')then
+     call message_pass_face(nVarSemi, FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
+
+     do iImplBlock = 1, nImplBLK
+        iBlock = impl2iBLK(iImplBlock)
+
+        ! zero ghost cells for ResImpl_VCB
+        call apply_flux_correction_block(iBlock, nVarSemi, 0, &
+             ResImpl_VCB(:,:,:,:,iImplBlock), &
+             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
+     end do
+  end if
+
+  n=0
+  do iImplBlock = 1, nImplBLK
+     iBlock = impl2iBLK(iImplBlock)
 
      if(UseSplitSemiImplicit)then
         do k=1,nK; do j=1,nJ; do i=1,nI
@@ -455,7 +490,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
            n = n + 1
            y_I(n) = &
                 Volume*(x_I(n)*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock)/dt &
-                - ImplCoeff * Rhs_VC(1,i,j,k))
+                - ImplCoeff * ResImpl_VCB(1,i,j,k,iImplBlock))
            pDotADotPPe = pDotADotPPe +  &
                 Volume * x_I(n)**2 * DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock)&
                 /(dt * ImplCoeff)
@@ -463,10 +498,10 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
      else
         do k=1,nK; do j=1,nJ; do i=1,nI
            Volume = 1.0/vInv_CB(i,j,k,iBlock)
-           do iVar = 1, nw
+           do iVar = 1, nVarSemi
               n = n + 1
               y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVar,i,j,k,iImplBlock)/dt&
-                   - ImplCoeff * Rhs_VC(iVar,i,j,k))
+                   - ImplCoeff * ResImpl_VCB(iVar,i,j,k,iImplBlock))
               pDotADotPPe = pDotADotPPe +  &
                    Volume * x_I(n)**2 * DconsDsemi_VCB(iVar,i,j,k,iImplBlock) &
                    /(dt * ImplCoeff)
@@ -512,7 +547,7 @@ subroutine get_semi_impl_jacobian
      case('parcond')
         call add_jacobian_heat_cond(iBlock, MAT(:,:,:,:,:,:,iImplBlock))
      case default
-        call stop_mpi(NameSub//': no get_rhs implemented for' &
+        call stop_mpi(NameSub//': no add_jacobian implemented for' &
              //TypeSemiImplicit)
      end select
 
