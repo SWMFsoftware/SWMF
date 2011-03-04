@@ -132,7 +132,7 @@ contains
     use ModAdvance,    ONLY: UseElectronPressure
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
          cEps, cElectronCharge
-    use ModImplicit,   ONLY: UseSemiImplicit, nw, iTeImpl
+    use ModImplicit,   ONLY: UseSemiImplicit, nVarSemi, iTeImpl
     use ModMain,       ONLY: MaxBlock, UseHeatConduction, UseIonHeatConduction
     use ModMultiFluid, ONLY: MassIon_I
     use ModNumConst,   ONLY: cTwoPi
@@ -214,7 +214,7 @@ contains
     if(UseSemiImplicit.and..not.allocated(HeatCond_DFDB))then
        allocate( &
             State1_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2), &
-            FluxImpl_VFD(nw,nI+1,nJ+1,nK+1,nDim), &
+            FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
             HeatCond_DDG(MaxDim,MaxDim,0:nI+1,0:nJ+1,0:nK+1), &
             HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
 
@@ -714,20 +714,13 @@ contains
 
     subroutine set_cartesian_cell_face(iDim, iBlock)
 
-      use ModGeometry, ONLY: fAx_BLK, fAy_BLK, fAz_BLK
+      use BATL_lib, ONLY: CellFace_DB
 
       integer, intent(in) :: iDim, iBlock
       !------------------------------------------------------------------------
 
+      Area = CellFace_DB(iDim,iBlock)
       Normal_D = 0.0; Normal_D(iDim) = 1.0
-      select case(iDim)
-      case(x_)
-         Area = fAx_BLK(iBlock)
-      case(y_)
-         Area = fAy_BLK(iBlock)
-      case(z_)
-         Area = fAz_BLK(iBlock)
-      end select
 
     end subroutine set_cartesian_cell_face
 
@@ -782,15 +775,17 @@ contains
 
   subroutine get_heat_conduction_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
+    use BATL_lib,        ONLY: store_face_flux
     use ModFaceGradient, ONLY: get_face_gradient
     use ModGeometry,     ONLY: vInv_CB
-    use ModImplicit,     ONLY: nw, iTeImpl
+    use ModImplicit,     ONLY: nVarSemi, iTeImpl, FluxImpl_VXB, FluxImpl_VYB, &
+         FluxImpl_VZB
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
 
     integer, intent(in) :: iBlock
-    real, intent(inout) :: StateImpl_VG(nw,-1:nI+2,-1:nJ+2,-1:nK+2)
-    real, intent(out)   :: Rhs_VC(nw,nI,nJ,nK)
+    real, intent(inout) :: StateImpl_VG(nVarSemi,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(out)   :: Rhs_VC(nVarSemi,nI,nJ,nK)
     logical, intent(in) :: IsLinear
 
     integer :: iDim, i, j, k, Di, Dj, Dk
@@ -803,7 +798,7 @@ contains
     ! Calculate the electron thermal heat flux
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-       do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
+       do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
 
           ! Second-order accurate electron temperature gradient
           call get_face_gradient(iDim, i, j, k, iBlock, &
@@ -815,7 +810,9 @@ contains
        end do; end do; end do
     end do
 
-    ! A conservation fix is needed. Call BATL!
+    ! Store the fluxes at resolution changes for restoring conservation
+    call store_face_flux(iBlock, nVarSemi, FluxImpl_VFD, &
+         FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
 
     Rhs_VC = 0.0
 
@@ -835,11 +832,11 @@ contains
   subroutine add_jacobian_heat_cond(iBlock, Jacobian_VVCI)
 
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
-    use ModGeometry,     ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, UseCovariant
+    use ModGeometry,     ONLY: vInv_CB, UseCovariant
     use ModImplicit,     ONLY: iTeImpl, nVarSemi
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
-    use BATL_size,       ONLY: MaxDim
+    use BATL_lib,        ONLY: CellSize_DB
 
     integer, parameter:: nStencil = 2*nDim + 1
 
@@ -850,7 +847,7 @@ contains
     real :: DiffLeft, DiffRight, InvDcoord_D(MaxDim), InvDxyz_D(MaxDim)
     !--------------------------------------------------------------------------
 
-    InvDcoord_D = (/ 1/dx_BLK(iBlock), 1/dy_BLK(iBlock), 1/dz_Blk(iBlock)/)
+    InvDcoord_D = 1/CellSize_DB(:,iBlock)
 
     if(UseCovariant) call set_block_jacobian_face(iBlock)
 

@@ -139,6 +139,9 @@ module ModImplicit
 
   real, allocatable :: DconsDsemi_VCB(:,:,:,:,:)
 
+  real, allocatable, dimension(:,:,:,:,:) :: &
+       FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
+
   ! Time step when the previous state was stored
   integer :: n_prev=-100
 
@@ -342,6 +345,21 @@ contains
     ! For split scheme this will be overwritten.
     iVarSemiMin = 1
     iVarSemiMax = nVarSemi
+
+    if(UseSemiImplicit)then
+       select case(TypeSemiImplicit)
+       case('parcond')
+          allocate( &
+               FluxImpl_VXB(nVarSemi,nJ,nK,2,MaxBlock), &
+               FluxImpl_VYB(nVarSemi,nI,nK,2,MaxBlock), &
+               FluxImpl_VZB(nVarSemi,nI,nJ,2,MaxBlock) )
+          FluxImpl_VXB = 0.0
+          FluxImpl_VYB = 0.0
+          FluxImpl_VZB = 0.0
+       case default
+          call stop_mpi(NameSub//': nw unknown for'//TypeSemiImplicit)
+       end select
+    end if
 
     nwIJK      = nVarSemi*nIJK
     MaxImplVar = nwIJK*MaxImplBLK
