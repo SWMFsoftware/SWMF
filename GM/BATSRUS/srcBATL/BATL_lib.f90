@@ -70,7 +70,7 @@ module BATL_lib
   ! Inherited from BATL_pass_face
   public:: message_pass_face
   public:: store_face_flux
-  public:: apply_flux_correction
+  public:: apply_flux_correction, apply_flux_correction_block
 
   ! Inherited from BATL_pass_node
   public:: message_pass_node
