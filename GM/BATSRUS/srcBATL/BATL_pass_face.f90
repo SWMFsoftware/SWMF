@@ -620,7 +620,7 @@ contains
     ! Correct State_VGB based on the flux differences stored in
     ! Flux_VXB, Flux_VYB and Flux_VZB.
 
-    use BATL_size, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+    use BATL_size, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          MaxBlock, nBlock
     use BATL_tree, ONLY: nLevel, Unused_B, iNode_B, iTree_IA, Level_
 
@@ -661,7 +661,8 @@ contains
           ! Check if this block has received any flux correction
           if(iLevel < MinLevelSend - 1) CYCLE
        end if
-       call apply_flux_correction_block(iBlock, nVar, State_VGB, &
+       call apply_flux_correction_block(iBlock, nVar, nG, &
+            State_VGB(:,:,:,:,iBlock), &
             Flux_VXB, Flux_VYB, Flux_VZB, DoResChangeOnlyIn)
     end do
 
@@ -670,8 +671,8 @@ contains
 
   !============================================================================
 
-  subroutine apply_flux_correction_block(iBlock, nVar, State_VGB, &
-       Flux_VXB, Flux_VYB, Flux_VZB, DoResChangeOnlyIn)
+  subroutine apply_flux_correction_block(iBlock, nVar, nG, &
+       State_VG, Flux_VXB, Flux_VYB, Flux_VZB, DoResChangeOnlyIn)
 
     ! Put Flux_VXB, Flux_VYB, Flux_VZB into State_VGB for the appropriate faces
 
@@ -681,9 +682,11 @@ contains
     use BATL_geometry, ONLY: IsCartesian
     use BATL_grid, ONLY: CellVolume_B, CellVolume_GB
 
-    integer, intent(in):: iBlock, nVar
+    integer, intent(in):: iBlock, nVar, nG
     real, intent(inout):: &
-         State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+         State_VG(nVar,1-nG:nI+nG,max(MinJ,1-nG):min(MaxJ,nJ+nG), &
+         max(MinK,1-nG):min(MaxK,nK+nG))
+!!!!         State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
     real, intent(inout), optional:: &
          Flux_VXB(nVar,nJ,nK,2,MaxBlock), &
          Flux_VYB(nVar,nI,nK,2,MaxBlock), &
@@ -703,7 +706,7 @@ contains
     if(.not.DoResChangeOnly .or. DiLevelNei_IIIB(-1,0,0,iBlock)==-1)then
        do k = 1, nK; do j = 1, nJ
           if(.not.IsCartesian) InvVolume = 1.0/CellVolume_GB(1,j,k,iBlock)
-          State_VGB(:,1,j,k,iBlock) = State_VGB(:,1,j,k,iBlock) &
+          State_VG(:,1,j,k) = State_VG(:,1,j,k) &
                - InvVolume*Flux_VXB(:,j,k,1,iBlock)
        end do; end do
        Flux_VXB(:,:,:,1,iBlock) = 0.0
@@ -712,7 +715,7 @@ contains
     if(.not.DoResChangeOnly .or. DiLevelNei_IIIB(+1,0,0,iBlock)==-1)then
        do k = 1, nK; do j = 1, nJ
           if(.not.IsCartesian) InvVolume = 1.0/CellVolume_GB(nI,j,k,iBlock)
-          State_VGB(:,nI,j,k,iBlock) = State_VGB(:,nI,j,k,iBlock) &
+          State_VG(:,nI,j,k) = State_VG(:,nI,j,k) &
                + InvVolume*Flux_VXB(:,j,k,2,iBlock)
        end do; end do
        Flux_VXB(:,:,:,2,iBlock) = 0.0
@@ -721,7 +724,7 @@ contains
     if(.not.DoResChangeOnly .or. DiLevelNei_IIIB(0,-1,0,iBlock)==-1)then
        do k = 1, nK; do i = 1, nI
           if(.not.IsCartesian) InvVolume = 1.0/CellVolume_GB(i,1,k,iBlock)
-          State_VGB(:,i,1,k,iBlock) = State_VGB(:,i,1,k,iBlock) &
+          State_VG(:,i,1,k) = State_VG(:,i,1,k) &
                - InvVolume*Flux_VYB(:,i,k,1,iBlock)
        end do; end do
        Flux_VYB(:,:,:,1,iBlock) = 0.0
@@ -730,7 +733,7 @@ contains
     if(.not.DoResChangeOnly .or. DiLevelNei_IIIB(0,+1,0,iBlock)==-1)then
        do k = 1, nK; do i = 1, nI
           if(.not.IsCartesian) InvVolume = 1.0/CellVolume_GB(i,nJ,k,iBlock)
-          State_VGB(:,i,nJ,k,iBlock) = State_VGB(:,i,nJ,k,iBlock) &
+          State_VG(:,i,nJ,k) = State_VG(:,i,nJ,k) &
                + InvVolume*Flux_VYB(:,i,k,2,iBlock)
        end do; end do
        Flux_VYB(:,:,:,2,iBlock) = 0.0
@@ -739,7 +742,7 @@ contains
     if(.not.DoResChangeOnly .or. DiLevelNei_IIIB(0,0,-1,iBlock)==-1)then
        do j = 1, nJ; do i = 1, nI
           if(.not.IsCartesian) InvVolume = 1.0/CellVolume_GB(i,j,1,iBlock)
-          State_VGB(:,i,j,1,iBlock) = State_VGB(:,i,j,1,iBlock) &
+          State_VG(:,i,j,1) = State_VG(:,i,j,1) &
                - InvVolume*Flux_VZB(:,i,j,1,iBlock)
        end do; end do
        Flux_VZB(:,:,:,1,iBlock) = 0.0
@@ -748,7 +751,7 @@ contains
     if(.not.DoResChangeOnly .or. DiLevelNei_IIIB(0,0,+1,iBlock)==-1)then
        do j = 1, nJ; do i = 1, nI
           if(.not.IsCartesian) InvVolume = 1.0/CellVolume_GB(i,j,nK,iBlock)
-          State_VGB(:,i,j,nK,iBlock) = State_VGB(:,i,j,nK,iBlock) &
+          State_VG(:,i,j,nK) = State_VG(:,i,j,nK) &
                + InvVolume*Flux_VZB(:,i,j,2,iBlock)
        end do; end do
        Flux_VZB(:,:,:,2,iBlock) = 0.0
