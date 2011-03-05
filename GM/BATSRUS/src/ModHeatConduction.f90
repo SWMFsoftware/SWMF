@@ -836,7 +836,7 @@ contains
     use ModImplicit,     ONLY: iTeImpl, nVarSemi
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
-    use BATL_lib,        ONLY: CellSize_DB
+    use BATL_lib,        ONLY: IsRzGeometry, CellSize_DB
 
     integer, parameter:: nStencil = 2*nDim + 1
 
@@ -849,13 +849,14 @@ contains
 
     InvDcoord_D = 1/CellSize_DB(:,iBlock)
 
-    if(UseCovariant) call set_block_jacobian_face(iBlock)
+    if(UseCovariant .and. .not.IsRzGeometry) &
+         call set_block_jacobian_face(iBlock)
 
     ! the transverse diffusion is ignored in the Jacobian
     do iDim = 1, nDim
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(UseCovariant)then
+          if(UseCovariant .and. .not.IsRzGeometry)then
              InvDxyz_D = DcoordDxyz_DDFD(iDim,:,i,j,k,iDim)*InvDcoord_D(iDim)
              DiffLeft = vInv_CB(i,j,k,iBlock) &
                   *sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*InvDxyz_D)
