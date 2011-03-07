@@ -176,11 +176,13 @@ contains
           call read_var('UseSPS',UseSPS)
           IE_NameOfEFieldModel = "SPS"
           UseGridBasedIE = .true.
+       case("#SOLVER")
+          call read_var('NameSolver',        NameSolver, IsLowerCase=.true.)
        case("#KRYLOV")
-          call read_var('UsePreconditioner',UsePreconditioner)
-          call read_var('UseInitialGuess',UseInitialGuess)
-          call read_var('Tolerance',Tolerance)
-          call read_var('MaxIteration',MaxIteration)
+          call read_var('UsePreconditioner', UsePreconditioner)
+          call read_var('UseInitialGuess',   UseInitialGuess)
+          call read_var('Tolerance',         Tolerance)
+          call read_var('MaxIteration',      MaxIteration)
        case("#DEBUG")
           call read_var('iDebugLevel',iDebugLevel)
           call read_var('iDebugProc',iDebugProc)

@@ -343,6 +343,17 @@ dynamically by the boundary of the closed field line region.
 
 <commandgroup name="Scheme parameters">
 
+<command name="SOLVER">
+	<parameter name="NameSolver" type="string" input="select" case="lower">
+		<option name="gmres"     default="T"	/>
+		<option name="bicgstab"			/>
+	</parameter>
+#SOLVER
+bicgstab		NameSolver (gmres or bicgstab)
+
+Select which solver to use. Default is GMRES, but bicgstab seems to be faster.
+</command>
+
 <command name="KRYLOV">
 	<parameter name="UsePreconditioner" type="logical" default="T"/>
 	<parameter name="UseInitialGuess"   type="logical" default="T"/>

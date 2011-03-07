@@ -57,9 +57,9 @@ subroutine ionosphere_solver(iBlock, Jr, &
 
   use ModIonosphere
   use IE_ModMain, ONLY: DoCoupleUaCurrent, LatBoundaryGm, LatBoundary, &
-       UsePreconditioner, UseInitialGuess, Tolerance, MaxIteration
+       NameSolver, UsePreconditioner, UseInitialGuess, Tolerance, MaxIteration
   use IE_ModIo, ONLY: write_prefix, iUnitOut
-  use ModLinearSolver, ONLY: gmres, prehepta, Uhepta, Lhepta
+  use ModLinearSolver, ONLY: gmres, bicgstab, prehepta, Uhepta, Lhepta
 
   implicit none
 
@@ -101,6 +101,7 @@ subroutine ionosphere_solver(iBlock, Jr, &
   external :: matvec_ionosphere
 
   SAVE
+  character(len=*), parameter:: NameSub = 'ionosphere_solver'
   !-------------------------------------------------------------------------
 
   call CON_set_do_test('ionosphere',DoTest,DoTestMe)
@@ -127,7 +128,7 @@ subroutine ionosphere_solver(iBlock, Jr, &
   dPsi2 = (dPsi/2.0)**2
 
   ! Calculate (Delta Theta)^2  (dTheta = 2 Delta Theta for i=1 and nTheta)
-  dTheta2 = (dTheta/2.0)**2
+  dTheta2        = (dTheta/2.0)**2
   dTheta2(1)     = 4*dTheta2(1)
   dTheta2(nTheta)= 4*dTheta2(nTheta)
 
@@ -210,7 +211,7 @@ subroutine ionosphere_solver(iBlock, Jr, &
      ! rhs'=U^{-1}.L^{-1}.rhs
      call Lhepta(       nX,1,nThetaUsed,nX,b,d_I,e_I,e1_I)
      call Uhepta(.true.,nX,1,nThetaUsed,nX,b,    f_I,f1_I)
-     
+
   end if
 
   if(DoTest)write(*,*)'after precond: north,sum(b,abs(b),x,d,e,f,e1,f1)=',&
@@ -219,10 +220,21 @@ subroutine ionosphere_solver(iBlock, Jr, &
 
   ! Solve A'.x = rhs'
   Residual    = Tolerance
-  nIteration  = MaxIteration
   if(.not.UseInitialGuess) x = 0.0
-  call gmres(matvec_ionosphere,b,x,UseInitialGuess,nX,&
-       MaxIteration,Residual,'abs',nIteration,iError,DoTestMe)
+
+  select case(NameSolver)
+  case('gmres')
+     nIteration = MaxIteration
+     call gmres(matvec_ionosphere, b, x, UseInitialGuess, nX, MaxIteration, &
+          Residual, 'abs', nIteration, iError, DoTestMe)
+  case('bicgstab')
+     nIteration = 3*MaxIteration
+     call bicgstab(matvec_ionosphere, b, x, UseInitialGuess, nX, &
+          Residual, 'abs', nIteration, iError, DoTestMe)
+  case default
+     call CON_stop(NameSub//': unknown NameSolver='//NameSolver)
+  end select
+
   if(DoTest .or. (iError /= 0 .and. iError /=3) ) &
        write(*,*)'iono_solve: north, iter, resid, iError=',&
        north, nIteration, Residual, iError

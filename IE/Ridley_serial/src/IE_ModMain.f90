@@ -38,9 +38,10 @@ module IE_ModMain
   !\
   ! Krylov solver (GMRES) parameters
   !/
-  logical :: UsePreconditioner = .true. ! Use preconditioner
+  character(len=10):: NameSolver='gmres' ! Name of krylov solver
+  logical :: UsePreconditioner = .true.  ! Use preconditioner
   logical :: UseInitialGuess = .true. ! Use previous solution as initial guess
-  real    :: Tolerance = 1.e-2        ! Solution accuracy: 2nd norm of residual
+  real    :: Tolerance = 1.e-2        ! Solution accuracy: abs norm of residual
   integer :: MaxIteration = 200       ! Maximum number of Krylov iterations
 
   !\
