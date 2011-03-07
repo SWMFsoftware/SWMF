@@ -2603,6 +2603,9 @@ properly capturing the magnetic pertubation from all current systems.
 	<parameter name="NameMagInputFile" type="string" length="100"/>
 	<parameter name="DnOutput" type="integer" min="-1" default="-1"/>
 	<parameter name="DtOutput" type="real"    min="-1" default="-1"/>
+	<rule expr="-f $NameMagInputFile">
+		Magnetogram position file $NameMagInputFile must exist
+	</rule>
 #MAGNETOMETER
 magin.dat		NameMagInputFile
 -1			DnOutput
