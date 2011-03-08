@@ -181,21 +181,16 @@ contains
     real, intent(in) :: State_V(nVar)
     real, intent(out):: IonMassPerChargeOut
 
-    real :: zAv, NatomicSi
+    real :: zAverage, NatomicSi
     !--------------------------------------------------------------------------
 
     if(.not.UseIdealEos)then
        call user_material_properties(State_V, &
-            AverageIonChargeOut = Zav, NatomicOut = NatomicSi)
+            AverageIonChargeOut = zAverage, NatomicOut = NatomicSi)
 
-       if(Zav > 0.1)then
-          IonMassPerChargeOut = IonMassPerChargeUnit*State_V(Rho_) &
-               /(Zav*NatomicSi)
-       else
-          ! Avoid using small Zav, since then we will generate magnetic
-          ! field with the Biermann Battery term based numerical errors.
-          IonMassPerChargeOut = 0.0
-       end if
+       ! Avoid using small zAverage, since then we will generate magnetic
+       ! field with the Biermann Battery term based numerical errors.
+       zAverage = max(zAverage, 1.0)
        
     elseif(UseMultiSpecies)then
        IonMassPerChargeOut = IonMassPerCharge*State_V(Rho_) &
