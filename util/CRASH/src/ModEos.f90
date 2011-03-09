@@ -67,9 +67,9 @@ module CRASH_ModEos
   !In this case ONLY electron energy density and electron pressure may be 
   !used.
   !/
-
-  use CRASH_ModPolyimide
-  use CRASH_ModAcrylic
+  use CRASH_ModPolyimide,ONLY:cAPolyimide
+  use CRASH_ModAcrylic, ONLY:cAAcrylic
+  use CRASH_ModAtomicDataMix, ONLY: nMixMax
   use CRASH_ModStatSum
   use CRASH_ModAtomicMass
   use CRASH_ModPowerLawEos
@@ -105,24 +105,45 @@ module CRASH_ModEos
 
   ! test material with the EOS e \propto T^4, p \propto T^4
   integer, parameter:: Test_ = 90 
-  integer, parameter :: nZ_I(Xe_:Ay_)=(/54, &
-                                            4, 6, 79, 6/)
+  integer, parameter:: nMaterialMax = 5
+  integer           :: nZ_I(0:nMaterialMax-1)=&
+                                   (/54,&  !Xenon 
+                                      4,&  !Beryllium
+                                     -4,&  !Minus number of elements in polyimide
+                                     79,&  !Gold
+                                     -3/)  !Minus number of elements in acrylic
 
-  real, parameter, dimension(Xe_:Ay_),public :: cAtomicMassCRASH_I=&
-       (/cAtomicMass_I(nZ_I(Xe_)),   &!  Xe
-         cAtomicMass_I(nZ_I(Be_)),   &!  Be
-         cAPolyimide,                &!  Pl
+  real, dimension(0:nMaterialMax-1),public :: cAtomicMassCRASH_I=&
+       (/cAtomicMass_I(54),          &!  Xe
+         cAtomicMass_I( 4),          &!  Be
+         (cAtomicMass_I(6) * 22.0 + cAtomicMass_I(1) * 10.0 + cAtomicMass_I(7) *  2.0 &
+         + cAtomicMass_I(8) *  5.0) / (22.0 + 10.0 + 2.0 +5.0),                          &!  Pl
          cAtomicMass_I(79),          &!  Au
-         cAAcrylic/)
-
+         (cAtomicMass_I(6) * 5.0 + cAtomicMass_I(8) * 2.0 + cAtomicMass_I(1) * 8.0 ) / 15/) !Ay
+ 
   character(LEN=2), public ::&
        NameMaterial_I(Xe_:Ay_) = (/'Xe','Be','Pl','Au','Ay'/)
+
+  !Arrays for mixtures
+  integer, dimension(1:nMixMax, 0:nMaterialMax-1):: nZMix_II=reshape((/&
+                                   1, 0, 0, 0, 0, 0, &
+                                   1, 0, 0, 0, 0, 0, &
+                                   6, 1, 7, 8, 0, 0, &
+                                   1, 0, 0, 0, 0, 0, &
+                                   6, 8, 1, 0, 0, 0/),(/6,5/))
+
+  real, dimension(1:nMixMax, 0:nMaterialMax-1) :: cMix_II=reshape((/&
+                                   1.0, 0.0, 0.0, 0.0, 0.0, 0.0, &
+                                   1.0, 0.0, 0.0, 0.0, 0.0, 0.0, &
+                                   22.0/39, 10.0/39, 2.0/39, 5.0/39,0.0,0.0,&
+                                   1.0, 0.0, 0.0, 0.0, 0.0, 0.0, &
+                                   5.0/15, 2.0/15, 8.0/15,0.0,0.0,0.0/),(/6,5/))
 
 
   ! The logicals determine if we use or not tabulated EOS
   ! and opacities  
   
-  logical, public, dimension(Xe_:Ay_) :: &
+  logical, public, dimension(0:nMaterialMax-1) :: &
        UseEosTable_I = .false., UseOpacityTable_I = .false.
   
   !Subroutine which may be used to set/reset UseEosTable_I
@@ -190,12 +211,12 @@ module CRASH_ModEos
   !Arrays which relate the iTable for the EOS table with 
   !the material number:
   integer:: iMaterial4EosTable_I(MaxTable) = -1
-  integer:: iTableEos4Material_I(Xe_:Ay_) = -1
+  integer:: iTableEos4Material_I(0:nMaterialMax-1) = -1
 
   !Arrays which relate the iTable for the opacity table with 
   !the material number:
   integer:: iMaterial4OpacTable_I(MaxTable) = -1
-  integer:: iTableOpac4Material_I(Xe_:Ay_) = -1
+  integer:: iTableOpac4Material_I(0:nMaterialMax-1) = -1
 
   !\
   ! Miscellaneous subroutnies (probably, redundant)
@@ -208,7 +229,7 @@ module CRASH_ModEos
   integer, parameter :: Min_=1, Max_=2, &
                         IndexDefaultEos_I(2) = (/501, 501/)
   integer, public    :: IndexDefaultOpac_I(2)= (/201, 201/)
-  real,dimension(Min_:Max_,Xe_:Ay_), parameter::&
+  real,dimension(Min_:Max_,0:nMaterialMax-1), parameter::&
        TeDefaultEos_II = reshape(&     ! original minimum
        (/1.0e-2, 1.0e+3, & !Xe_     1e-2
          1.0e-3, 2.0e+3, & !Be_     1e-3
@@ -290,7 +311,7 @@ contains
     end do
   end subroutine read_name_var_eos
   !===============================
-  subroutine read_if_use_eos_table
+  subroutine read_if_use_eos_table(nMaterial)
     !Usage
     !#USEEOSTABLE
     !T                      Use Eos Table for Xe
@@ -299,10 +320,12 @@ contains
     !T                      Use Eos Table for Au
     !T                      Use Eos Table for Ay
     use ModReadParam, ONLY: read_var
+    !--------------------
+    integer,intent(in) :: nMaterial !The number of materials
 
     integer:: iMaterial
     !------------------!
-    do iMaterial = Xe_, Ay_
+    do iMaterial = 0, nMaterial-1
        call read_var(&
             'Use EOS table for '//NameMaterial_I(iMaterial),&
             UseEosTable_I(iMaterial))
@@ -310,7 +333,7 @@ contains
        
   end subroutine read_if_use_eos_table
   !===============================
-  subroutine read_if_use_opac_table
+  subroutine read_if_use_opac_table(nMaterial)
     !Usage
     !#USEOPACTABLE
     !T                      Use Opac Table for Xe
@@ -319,10 +342,12 @@ contains
     !T                      Use Opac Table for Au
     !T                      Use Opac Table for Ay
     use ModReadParam, ONLY: read_var
+    !-------------------
+    integer, intent(in) :: nMaterial !The number of materials
 
     integer:: iMaterial
     !------------------!
-    do iMaterial = Xe_, Ay_
+    do iMaterial = 0, nMaterial-1
        call read_var(&
             'Use Opac table for '//NameMaterial_I(iMaterial),&
             UseOpacityTable_I(iMaterial))
@@ -341,7 +366,7 @@ contains
     character(LEN=5)::TypeFileHere
     !-------------------
     
-    do iMaterial = Xe_,Ay_
+    do iMaterial = 0,nMaterialMax-1
        if(.not.UseEosTable_I(iMaterial))CYCLE
        iTable =  i_lookup_table(NameMaterial_I(iMaterial)//'_eos')
 
@@ -469,7 +494,7 @@ contains
        call CON_stop(&
             'The opacity table cannot be set with the declared nGroup=')
     end if
-    do iMaterial = Xe_,Ay_
+    do iMaterial = 0,nMaterialMax-1
        if(.not.UseOpacityTable_I(iMaterial))CYCLE
        iTable =  i_lookup_table(NameMaterial_I(iMaterial)//'_opac')
 
@@ -700,12 +725,10 @@ contains
        end if
     end if
 
-    if(iMaterial == Plastic_)then
-       call set_mixture(nPolyimide, nZPolyimide_I, CPolyimide_I)
-       
-    elseif(iMaterial == Ay_)then
-       call set_mixture(nAcrylic, nZAcrylic_I, cAcrylic_I)
-
+    if(nZ_I(iMaterial)<0)then
+       call set_mixture(-nZ_I(iMaterial),&
+            nZMix_II(1:-nZ_I(iMaterial),iMaterial),&
+            cMix_II(1:-nZ_I(iMaterial), iMaterial) )
     else
        call set_element(nZ_I(iMaterial))
        
@@ -742,7 +765,7 @@ contains
     !In this case ONLY electron energy density and electron pressure may be 
     !used.
     !/
-
+    use CRASH_ModPolyimide
     ! Eos function for mixed material
     real, intent(in) :: RhoToARatio_I(Xe_:Plastic_) ! Mass densities/A
 
