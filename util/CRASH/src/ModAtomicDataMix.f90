@@ -1,13 +1,11 @@
 module CRASH_ModAtomicDataMix
   use CRASH_ModIonization
-  use CRASH_ModAtomicMass,ONLY : nZMax
+  use CRASH_ModAtomicMass,ONLY : nZMax,nMixMax
   use CRASH_ModExcitationData,ONLY: nExcitation, UseExcitation,&
        UsePressureIonization
   implicit none
   SAVE
   !Interface to databases
-
-  integer, parameter :: nMixMax = 6
 
   integer :: nMix = -1    !Number of components in the mixture
 

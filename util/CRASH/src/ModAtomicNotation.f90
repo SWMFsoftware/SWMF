@@ -62,6 +62,19 @@ contains
        call CON_stop('The spectroscopy symbol '//TypeL//' is not implemented')
     end select
   end function l_orbital
+  !===========================
+  integer function i_material(TypeMaterial)
+    character(LEN=2),intent(in)::TypeMaterial
+    integer:: iLoop
+    !------------
+    i_material = MaterialMin_-1
+    do iLoop = MaterialMin_,MaterialMax_
+       if(TypeMaterial==NameElement_I(iLoop))then
+          i_material = iLoop
+          return
+       end if
+    end do
+  end function i_material
   !====================================================================
 
 end module CRASH_ModAtomicNotation
