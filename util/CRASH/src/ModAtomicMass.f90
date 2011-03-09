@@ -1,6 +1,7 @@
 module CRASH_ModAtomicMass
  implicit none
  integer,parameter::nZMax=79
+ integer, parameter :: nMixMax = 6
 
  !Atomic masses of the first 54 elements
  !Given in atomic mass units (1 atomic mass unit = 1.66053886 × 10e-27 kilograms)
