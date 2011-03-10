@@ -938,32 +938,44 @@ contains
 
     subroutine calc_cartesian_curl
 
+      use ModGeometry, ONLY: y_BLK
       !------------------------------------------------------------------------
       select case(iDir)
       case(x_)
-         FaceCurl_D(y_) = &
-              -InvDx*(Vector_DG(z_,i,j,k) - Vector_DG(z_,i-1,j,k)) &
+         FaceCurl_D(y_) = -InvDx*(Vector_DG(z_,i,j,k) - Vector_DG(z_,i-1,j,k))
+         if(nK > 1) FaceCurl_D(y_) = FaceCurl_D(y_) &
               + Az*(Vector_DG(x_,i-1,j,kL) + Vector_DG(x_,i,j,kL)) &
               + Bz*(Vector_DG(x_,i-1,j,k ) + Vector_DG(x_,i,j,k )) &
               + Cz*(Vector_DG(x_,i-1,j,kR) + Vector_DG(x_,i,j,kR))
 
-         FaceCurl_D(z_) = &
-              +InvDx*(Vector_DG(y_,i,j,k) - Vector_DG(y_,i-1,j,k)) &
+         FaceCurl_D(z_) = +InvDx*(Vector_DG(y_,i,j,k) - Vector_DG(y_,i-1,j,k))
+         if(nJ > 1) FaceCurl_D(z_) = FaceCurl_D(z_) &
               - Ay*(Vector_DG(x_,i-1,jL,k) + Vector_DG(x_,i,jL,k)) &
               - By*(Vector_DG(x_,i-1,j ,k) + Vector_DG(x_,i,j ,k)) &
               - Cy*(Vector_DG(x_,i-1,jR,k) + Vector_DG(x_,i,jR,k)) 
 
-         FaceCurl_D(x_) = &
-              + Ay*(Vector_DG(z_,i-1,jL,k) + Vector_DG(z_,i,jL,k )) &
-              + By*(Vector_DG(z_,i-1,j ,k) + Vector_DG(z_,i,j ,k )) &
-              + Cy*(Vector_DG(z_,i-1,jR,k) + Vector_DG(z_,i,jR,k )) &
+         if(nJ > 1)then
+            FaceCurl_D(x_) = &
+                 + Ay*(Vector_DG(z_,i-1,jL,k) + Vector_DG(z_,i,jL,k )) &
+                 + By*(Vector_DG(z_,i-1,j ,k) + Vector_DG(z_,i,j ,k )) &
+                 + Cy*(Vector_DG(z_,i-1,jR,k) + Vector_DG(z_,i,jR,k ))
+         else
+            FaceCurl_D(x_) = 0.0
+         end if
+         if(nK > 1) FaceCurl_D(x_) = FaceCurl_D(x_) &
               - Az*(Vector_DG(y_,i-1,j,kL) + Vector_DG(y_,i,j ,kL)) &
               - Bz*(Vector_DG(y_,i-1,j,k ) + Vector_DG(y_,i,j ,k )) &
               - Cz*(Vector_DG(y_,i-1,j,kR) + Vector_DG(y_,i,j ,kR))
 
+         ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
+         if(IsRzGeometry) FaceCurl_D(x_) = FaceCurl_D(x_) &
+              + 0.5*(Vector_DG(z_,i,j,k) + Vector_DG(z_,i-1,j,k)) &
+              / y_BLK(i,j,k,iBlock)
+
       case(y_)
          FaceCurl_D(x_) = &
-              +InvDy*(Vector_DG(z_,i,j,k) - Vector_DG(z_,i,j-1,k)) &
+              +InvDy*(Vector_DG(z_,i,j,k) - Vector_DG(z_,i,j-1,k))
+         if(nK > 1) FaceCurl_D(x_) = FaceCurl_D(x_) &
               - Az*(Vector_DG(y_,i,j-1,kL) + Vector_DG(y_,i,j,kL)) &
               - Bz*(Vector_DG(y_,i,j-1,k ) + Vector_DG(y_,i,j,k )) &
               - Cz*(Vector_DG(y_,i,j-1,kR) + Vector_DG(y_,i,j,kR))
@@ -975,12 +987,26 @@ contains
               + Cx*(Vector_DG(y_,iR,j-1,k) + Vector_DG(y_,iR,j,k))
 
          FaceCurl_D(y_) = &
-              + Az*(Vector_DG(x_,i,j-1,kL) + Vector_DG(x_,i,j,kL)) &
-              + Bz*(Vector_DG(x_,i,j-1,k ) + Vector_DG(x_,i,j,k )) &
-              + Cz*(Vector_DG(x_,i,j-1,kR) + Vector_DG(x_,i,j,kR)) &
               - Ax*(Vector_DG(z_,iL,j-1,k) + Vector_DG(z_,iL,j,k)) &
               - Bx*(Vector_DG(z_,i ,j-1,k) + Vector_DG(z_,i ,j,k)) &
               - Cx*(Vector_DG(z_,iR,j-1,k) + Vector_DG(z_,iR,j,k))
+         if(nK > 1) FaceCurl_D(y_) = FaceCurl_D(y_) &
+              + Az*(Vector_DG(x_,i,j-1,kL) + Vector_DG(x_,i,j,kL)) &
+              + Bz*(Vector_DG(x_,i,j-1,k ) + Vector_DG(x_,i,j,k )) &
+              + Cz*(Vector_DG(x_,i,j-1,kR) + Vector_DG(x_,i,j,kR))
+
+         ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
+         if(IsRzGeometry)then
+            if(y_BLK(i,j-1,k,iBlock)<0.0)then
+               ! Just for bookkeeping. It's effect is zeroed by zero face area
+               FaceCurl_D(x_) = FaceCurl_D(x_) &
+                    + Vector_DG(z_,i,j,k)/y_BLK(i,j,k,iBlock)
+            else
+               FaceCurl_D(x_) = FaceCurl_D(x_) &
+                    + (Vector_DG(z_,i,j,k) + Vector_DG(z_,i,j-1,k)) &
+                    / (y_BLK(i,j,k,iBlock) + y_BLK(i,j-1,k,iBlock))
+            end if
+         end if
 
       case(z_)
          FaceCurl_D(x_) = &
@@ -1022,15 +1048,23 @@ contains
       case(x_)
          DvectorDcoord_DD(:,1) = &
               InvDx*(Vector_DG(:,i,j,k) - Vector_DG(:,i-1,j,k))
-         DvectorDcoord_DD(:,2) = &
-              + Ay*(Vector_DG(:,i-1,jL,k) + Vector_DG(:,i,jL,k)) &
-              + By*(Vector_DG(:,i-1,j ,k) + Vector_DG(:,i,j ,k)) &
-              + Cy*(Vector_DG(:,i-1,jR,k) + Vector_DG(:,i,jR,k))
-         DvectorDcoord_DD(:,3) = &
-              + Az*(Vector_DG(:,i-1,j,kL) + Vector_DG(:,i,j,kL)) &
-              + Bz*(Vector_DG(:,i-1,j,k ) + Vector_DG(:,i,j,k )) &
-              + Cz*(Vector_DG(:,i-1,j,kR) + Vector_DG(:,i,j,kR))
-         
+         if(nJ > 1)then
+            DvectorDcoord_DD(:,2) = &
+                 + Ay*(Vector_DG(:,i-1,jL,k) + Vector_DG(:,i,jL,k)) &
+                 + By*(Vector_DG(:,i-1,j ,k) + Vector_DG(:,i,j ,k)) &
+                 + Cy*(Vector_DG(:,i-1,jR,k) + Vector_DG(:,i,jR,k))
+         else
+            DvectorDcoord_DD(:,2) = 0.0
+         end if
+         if(nK > 1)then
+            DvectorDcoord_DD(:,3) = &
+                 + Az*(Vector_DG(:,i-1,j,kL) + Vector_DG(:,i,j,kL)) &
+                 + Bz*(Vector_DG(:,i-1,j,k ) + Vector_DG(:,i,j,k )) &
+                 + Cz*(Vector_DG(:,i-1,j,kR) + Vector_DG(:,i,j,kR))
+         else
+            DvectorDcoord_DD(:,3) = 0.0
+         end if
+
       case(y_)
          DvectorDcoord_DD(:,1) = &
               + Ax*(Vector_DG(:,iL,j-1,k) + Vector_DG(:,iL,j,k)) &
@@ -1038,10 +1072,14 @@ contains
               + Cx*(Vector_DG(:,iR,j-1,k) + Vector_DG(:,iR,j,k))
          DvectorDcoord_DD(:,2) = &
               InvDy*(Vector_DG(:,i,j,k) - Vector_DG(:,i,j-1,k))
-         DvectorDcoord_DD(:,3) = &
-              + Az*(Vector_DG(:,i,j-1,kL) + Vector_DG(:,i,j,kL)) &
-              + Bz*(Vector_DG(:,i,j-1,k ) + Vector_DG(:,i,j,k )) &
-              + Cz*(Vector_DG(:,i,j-1,kR) + Vector_DG(:,i,j,kR))
+         if(nK > 1)then
+            DvectorDcoord_DD(:,3) = &
+                 + Az*(Vector_DG(:,i,j-1,kL) + Vector_DG(:,i,j,kL)) &
+                 + Bz*(Vector_DG(:,i,j-1,k ) + Vector_DG(:,i,j,k )) &
+                 + Cz*(Vector_DG(:,i,j-1,kR) + Vector_DG(:,i,j,kR))
+         else
+            DvectorDcoord_DD(:,3) = 0.0
+         end if
 
       case(z_)
          DvectorDcoord_DD(:,1) = &

@@ -59,8 +59,9 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
   use ModAdvance, ONLY : State_VGB, Energy_GBI, nVar
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   use ModImplicit
-  use ModRadDiffusion, ONLY: get_impl_rad_diff_state
+  use ModRadDiffusion,   ONLY: get_impl_rad_diff_state
   use ModHeatConduction, ONLY: get_impl_heat_cond_state
+  use ModResistivity,    ONLY: get_impl_resistivity_state
   implicit none
 
   integer,intent(in) :: imin,imax,jmin,jmax,kmin,kmax
@@ -87,6 +88,8 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
         call get_impl_rad_diff_state(Var_VGB, DconsDsemi_VCB)
      case('parcond')
         call get_impl_heat_cond_state(Var_VGB, DconsDsemi_VCB)
+     case('resistivity')
+        call get_impl_resistivity_state(Var_VGB, DconsDsemi_VCB)
      case default
         call stop_mpi(NameSub//': no get_impl_state implemented for' &
              //TypeSemiImplicit)
@@ -164,8 +167,9 @@ subroutine implicit2explicit(Var_VCB)
   use ModAdvance, ONLY: State_VGB
   use ModImplicit, ONLY: nw, nImplBLK, impl2iBLK, &
        UseSemiImplicit, TypeSemiImplicit
-  use ModRadDiffusion, ONLY: update_impl_rad_diff
+  use ModRadDiffusion,   ONLY: update_impl_rad_diff
   use ModHeatConduction, ONLY: update_impl_heat_cond
+  use ModResistivity,    ONLY: update_impl_resistivity
   implicit none
 
   real :: Var_VCB(nw,nI,nJ,nK,MaxImplBLK)
@@ -184,6 +188,8 @@ subroutine implicit2explicit(Var_VCB)
            call update_impl_rad_diff(iBLK, implBLK, Var_VCB(:,:,:,:,implBLK))
         case('parcond')
            call update_impl_heat_cond(iBLK, implBLK, Var_VCB(:,:,:,:,implBLK))
+        case('resistivity')
+           call update_impl_resistivity(iBLK, implBLK,Var_VCB(:,:,:,:,implBLK))
         case default
            call stop_mpi(NameSub//': no update_impl implemented for' &
                 //TypeSemiImplicit)
@@ -303,8 +309,9 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModLinearSolver, ONLY: UsePDotADotP
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
-  use ModRadDiffusion, ONLY: get_rad_diffusion_rhs
+  use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
+  use ModResistivity,    ONLY: get_resistivity_rhs
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
   use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
@@ -334,7 +341,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
      call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, SendCorners=.false.,&
           ProlongOrder=1, nVar=nVarSemi, Sol_VGB=StateSemi_VGB, &
           restrictface=.true.)
-  case('parcond')
+  case('parcond','resistivity')
      call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=2, &
           nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
   case default
@@ -355,13 +362,16 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
      case('parcond')
         call get_heat_conduction_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
              Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
+     case('resistivity')
+        call get_resistivity_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
+             Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
      case default
         call stop_mpi(NameSub//': no get_rhs implemented for' &
              //TypeSemiImplicit)
      end select
   end do
 
-  if(TypeSemiImplicit == 'parcond')then
+  if(TypeSemiImplicit == 'parcond' .or. TypeSemiImplicit == 'resistivity')then
      call message_pass_face(nVarSemi, FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
 
      do iImplBlock = 1, nImplBLK
@@ -397,8 +407,9 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
        ImplCoeff, DconsDsemi_VCB, KrylovType
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
-  use ModRadDiffusion, ONLY: get_rad_diffusion_rhs
+  use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
+  use ModResistivity,    ONLY: get_resistivity_rhs
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
   use ModLinearSolver, ONLY: UsePDotADotP, pDotADotPPe
@@ -441,7 +452,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
      call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, SendCorners=.false.,&
           ProlongOrder=1, nVar=nVarSemi, Sol_VGB=StateSemi_VGB, &
           restrictface=.true.)
-  case('parcond')
+  case('parcond','resistivity')
      call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=2, &
           nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
   case default
@@ -461,13 +472,16 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
      case('parcond')
         call get_heat_conduction_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
              ResImpl_VCB(:,:,:,:,iImplBlock), IsLinear = .true.)
+     case('resistivity')
+        call get_resistivity_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
+             ResImpl_VCB(:,:,:,:,iImplBlock), IsLinear = .true.)
      case default
         call stop_mpi(NameSub//': no get_rhs implemented for' &
              //TypeSemiImplicit)
      end select
   end do
 
-  if(TypeSemiImplicit == 'parcond')then
+  if(TypeSemiImplicit == 'parcond' .or. TypeSemiImplicit == 'resistivity')then
      call message_pass_face(nVarSemi, FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
 
      do iImplBlock = 1, nImplBLK
@@ -522,8 +536,9 @@ subroutine get_semi_impl_jacobian
   use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, &
        UseSplitSemiImplicit, iVarSemi, &
        nStencil, MAT, ImplCoeff, DconsDsemi_VCB !!!, wnrm
-  use ModRadDiffusion, ONLY: add_jacobian_rad_diff
+  use ModRadDiffusion,   ONLY: add_jacobian_rad_diff
   use ModHeatConduction, ONLY: add_jacobian_heat_cond
+  use ModResistivity,    ONLY: add_jacobian_resistivity
   use ModMain, ONLY: nI, nJ, nK, Dt
   use ModGeometry, ONLY: vInv_CB
 
@@ -546,6 +561,8 @@ subroutine get_semi_impl_jacobian
         call add_jacobian_rad_diff(iBlock, MAT(:,:,:,:,:,:,iImplBlock))
      case('parcond')
         call add_jacobian_heat_cond(iBlock, MAT(:,:,:,:,:,:,iImplBlock))
+     case('resistivity')
+        call add_jacobian_resistivity(iBlock, MAT(:,:,:,:,:,:,iImplBlock))
      case default
         call stop_mpi(NameSub//': no add_jacobian implemented for' &
              //TypeSemiImplicit)

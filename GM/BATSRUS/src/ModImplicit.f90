@@ -325,6 +325,8 @@ contains
           nw = 1
        case('radcond')
           nw = nWave + 1
+       case('resistivity')
+          nw = MaxDim
        case default
           call stop_mpi(NameSub//': nw unknown for'//TypeSemiImplicit)
        end select
@@ -347,7 +349,8 @@ contains
     iVarSemiMax = nVarSemi
 
     if(UseSemiImplicit)then
-       if(TypeSemiImplicit == 'parcond')then
+       if(TypeSemiImplicit == 'parcond' .or. &
+            TypeSemiImplicit == 'resistivity')then
           allocate( &
                FluxImpl_VXB(nVarSemi,nJ,nK,2,MaxBlock), &
                FluxImpl_VYB(nVarSemi,nI,nK,2,MaxBlock), &
