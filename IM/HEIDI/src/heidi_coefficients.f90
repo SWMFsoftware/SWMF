@@ -21,6 +21,9 @@ subroutine heidi_cepara
   real               :: LH(20), HDNSIN(20,71)
   character(len=80)  :: TITLE
   external           :: cosd
+
+
+  integer :: iR
   !---------------------------------------------------------------------
   !\
   ! Open a file with the bounce-averaged H dens [m-3] in geocorona
@@ -76,6 +79,11 @@ subroutine heidi_cepara
   
   end if
   
+
+!stop
+
+
+
 3    format(A61,F5.2)
 4    format(2F7.3,2X,1PE12.5)
      !\
@@ -86,20 +94,107 @@ subroutine heidi_cepara
      !\
      ! H+ charge exchange
      !/
-     
+  
   if (SCALC(2).eq.1) then
      do K = 2,KO
         X=ALOG10(EKEV(K))
         if (X.lt.-2.) X=-2.
         Y=-18.767-0.11017*X-3.8173e-2*X**2-0.1232*X**3-5.0488e-2*X**4
         !............10**Y is cross section of H+ in m2
+      
+       
+
         do j = 1, jo
            do L=2,Lo
               achar(2:io,j,k,l,2)=exp(-(10.**Y*V(K,2)*HDNS(2:io,j,L)*DT))
            end do ! L loop
         end do    ! j loop
      end do	  ! K loop
-  end if
+  
+!!$  
+!!$
+!!$ open(unit=3, file='H+ChargeDecayRate_3PA_Phi90_E107keV_LAll.dat', status='unknown')
+!!$  write(3,*) 'Decay Rate due to H+ with H'
+!!$  write(3,*) '  Y'
+!!$  
+!!$  do K = 37, 37
+!!$     do iR = 1, nR
+!!$        write(3,*) LZ(iR), achar(iR,6,k,2,2),  achar(iR,1,6,20,2),  achar(iR,6,k,42,2)
+!!$     end do
+!!$  end do	  ! K loop
+!!$close(3)
+!!$
+!!$
+!!$  open(unit=3, file='H+ChargeDecayRate_3PA_Phi0_E107keV_LAll.dat', status='unknown')
+!!$  write(3,*) 'Decay Rate due to H+ with H'
+!!$  write(3,*) '  Y'
+!!$  
+!!$  do K = 37, 37
+!!$     do iR = 1, nR
+!!$        write(3,*) LZ(iR), achar(iR,1,k,2,2),  achar(iR,1,k,20,2),  achar(iR,1,k,42,2)
+!!$     end do
+!!$  end do	  ! K loop
+!!$close(3)
+!!$
+!!$
+!!$open(unit=3, file='H+ChargeDecayRate_3PA_Phi180_E107keV_LAll.dat', status='unknown')
+!!$  write(3,*) 'Decay Rate due to H+ with H'
+!!$  write(3,*) '  Y'
+!!$  
+!!$  do K = 37, 37
+!!$     do iR = 1, nR
+!!$        write(3,*) LZ(iR), achar(iR,12,k,2,2),  achar(iR,12,k,20,2),  achar(iR,12,k,42,2)
+!!$     end do
+!!$  end do	  ! K loop
+!!$close(3)
+
+
+!!$
+!!$
+!!$open(unit=3, file='H+ChargeDecayRate_3PA_Phi180_Eall_L5Re.dat', status='unknown')
+!!$write(3,*) 'Decay Rate due to H+ with H'
+!!$write(3,*) '  Y'
+!!$
+!!$do K = 1, ko
+!!$     do iR = 14, 14
+!!$        write(3,*) Ekev(k), achar(iR,12,k,2,2),  achar(iR,12,k,20,2),  achar(iR,12,k,42,2)
+!!$     end do
+!!$  end do	  ! K loop
+!!$close(3)
+!!$
+!!$
+!!$open(unit=3, file='H+ChargeDecayRate_3PA_Phi0_Eall_L5Re.dat', status='unknown')
+!!$write(3,*) 'Decay Rate due to H+ with H'
+!!$write(3,*) '  Y'
+!!$
+!!$do K = 1, ko
+!!$     do iR = 14, 14
+!!$        write(3,*) Ekev(k), achar(iR,1,k,2,2),  achar(iR,1,k,20,2),  achar(iR,1,k,42,2)
+!!$     end do
+!!$  end do	  ! K loop
+!!$close(3)
+!!$
+!!$
+!!$
+!!$open(unit=3, file='H+ChargeDecayRate_3PA_Phi90_Eall_L5Re.dat', status='unknown')
+!!$write(3,*) 'Decay Rate due to H+ with H'
+!!$write(3,*) '  Y'
+!!$
+!!$do K = 1, ko
+!!$     do iR = 14, 14
+!!$        write(3,*) Ekev(k), achar(iR,6,k,2,2),  achar(iR,6,k,20,2),  achar(iR,6,k,42,2)
+!!$     end do
+!!$  end do	  ! K loop
+!!$close(3)
+!!$
+
+
+
+end if
+
+
+
+
 
   !\
   ! He+ charge exchange
@@ -136,7 +231,87 @@ subroutine heidi_cepara
            end do  ! L loop
         end do     ! j loop
      end do	   ! K loop
-  end if
+     
+     !~~~~~~~~~~~
+!!$     open(unit=3, file='O+ChargeDecayRate_3PA_Phi0_E107keV_LAll.dat', status='unknown')
+!!$     write(3,*) 'Decay Rate due to O+ with H'
+!!$     write(3,*) '  Y'
+!!$     
+!!$     do K = 37, 37
+!!$        do iR = 1, nR
+!!$           write(3,*) LZ(iR), achar(iR,1,k,2,4),  achar(iR,1,k,20,4),  achar(iR,1,k,42,4)
+!!$        end do
+!!$     end do	  ! K loop
+!!$     close(3)
+!!$     
+!!$     
+!!$     open(unit=3, file='O+ChargeDecayRate_3PA_Phi180_E107keV_LAll.dat', status='unknown')
+!!$     write(3,*) 'Decay Rate due to O+ with H'
+!!$     write(3,*) '  Y'
+!!$     
+!!$     do K = 37, 37
+!!$        do iR = 1, nR
+!!$           write(3,*) LZ(iR), achar(iR,12,k,2,4),  achar(iR,12,k,20,4),  achar(iR,12,k,42,4)
+!!$        end do
+!!$     end do	  ! K loop
+!!$     close(3)
+!!$    
+!!$     
+!!$     open(unit=3, file='O+ChargeDecayRate_3PA_Phi90_E107keV_LAll.dat', status='unknown')
+!!$     write(3,*) 'Decay Rate due to O+ with H'
+!!$     write(3,*) '  Y'
+!!$     
+!!$     do K = 37, 37
+!!$        do iR = 1, nR
+!!$           write(3,*) LZ(iR), achar(iR,6,k,2,4),  achar(iR,6,k,20,4),  achar(iR,6,k,42,4)
+!!$        end do
+!!$     end do	  ! K loop
+!!$     close(3)
+!!$     
+!!$     
+!!$
+!!$ 
+!!$     
+!!$     open(unit=3, file='O+ChargeDecayRate_3PA_Phi180_Eall_L5Re.dat', status='unknown')
+!!$     write(3,*) 'Decay Rate due to O+ with H'
+!!$     write(3,*) '  Y'
+!!$     
+!!$     do K = 1, ko
+!!$        do iR = 14, 14
+!!$           write(3,*) Ekev(k), achar(iR,12,k,2,4),  achar(iR,12,k,20,4),  achar(iR,12,k,42,4)
+!!$        end do
+!!$     end do	  ! K loop
+!!$     close(3)
+!!$     
+!!$     
+!!$     open(unit=3, file='O+ChargeDecayRate_3PA_Phi0_Eall_L5Re.dat', status='unknown')
+!!$     write(3,*) 'Decay Rate due to O+ with H'
+!!$     write(3,*) '  Y'
+!!$     
+!!$     do K = 1, ko
+!!$        do iR = 14, 14
+!!$           write(3,*) Ekev(k), achar(iR,1,k,2,4),  achar(iR,1,k,20,4),  achar(iR,1,k,42,4)
+!!$        end do
+!!$     end do	  ! K loop
+!!$     close(3)
+!!$     
+!!$     open(unit=3, file='O+ChargeDecayRate_3PA_Phi90_Eall_L5Re.dat', status='unknown')
+!!$     write(3,*) 'Decay Rate due to O+ with H'
+!!$     write(3,*) '  Y'
+!!$     
+!!$     do K = 1, ko
+!!$        do iR = 14, 14
+!!$           write(3,*) Ekev(k), achar(iR,6,k,2,4),  achar(iR,6,k,20,4),  achar(iR,6,k,42,4)
+!!$        end do
+!!$     end do	  ! K loop
+!!$     close(3)
+
+
+
+end if
+
+
+!STOP
 
   !\
   ! Calculate the losses due to the collis with atmosphere
