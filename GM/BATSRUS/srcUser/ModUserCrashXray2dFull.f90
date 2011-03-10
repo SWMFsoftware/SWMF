@@ -359,7 +359,7 @@ contains
           call read_var('AssFactor', AssFactor)
 
        case("#USEEOSTABLE")
-          call read_if_use_eos_table
+          call read_if_use_eos_table(nMaterial)
 
        case('#USERINPUTEND')
           EXIT
