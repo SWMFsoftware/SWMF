@@ -150,8 +150,10 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
   use ModHeidiMain,  ONLY: Phi, LZ, mu, T, Re
   use ModHeidiBField
   use ModHeidiHydrogenGeo
-
-  implicit none
+  use ModHeidiInput, ONLY: TypeHModel
+  use NeutralHydrogenModel
+  use ModPlotFile,       ONLY: save_plot_file
+ implicit none
 
   real                 :: AvgHDensity
   real                 :: bMirror_I(nPa)
@@ -164,33 +166,83 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
   real                 :: Length_III(nPoint,nR,nT) 
   real                 :: PitchAngle_I(nPa)
   real, intent(out)    :: NeutralHydrogen_III(nR,nT,nPa)
-  real                 :: Rho_I(nPoint)
+  real                 :: Rho_III(nPoint,nR,nT),Rho_I(nPoint)
   integer              :: iPhi, iR,iPitch
   real                 :: HalfPathLength,Sb
   real                 :: dBdt_III(nPoint,nR,nT)
 
+
+  integer :: iPoint
+
+ character(LEN=500):: StringVarName, StringHeader, NameFile
+ character(len=20) :: TypePosition
+ character(len=20) :: TypeFile = 'ascii'
   !----------------------------------------------------------------------------------
   write(*,*) 'GET_NEUTRAL_HYDROGEN======>call initialize_b_field'
-
+  
   call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
        RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
-  do iPitch =1, nPa
-     PitchAngle_I(iPitch) = acos(mu(iPitch))
-     do iPhi = 1, nT
-        do iR =1, nR
-           call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
-                bMirror_I(iPitch),iMirror_I)
-           call get_rairden_density(nPoint,RadialDistance_III(:,iR,iPhi), LZ(iR), Rho_I(:))
-           call get_hydrogen_density(nPoint, LZ(iR), bFieldMagnitude_III(:,iR,iPhi), bMirror_I(iPitch)&
-                ,iMirror_I(:),dLength_III(:,iR,iPhi),Rho_I(:),AvgHDensity)
-           call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
-                bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), LZ(iR), HalfPathLength,Sb)
-           if (Sb==0.0) Sb = cTiny
-           NeutralHydrogen_III(iR,iPhi,iPitch) = AvgHDensity/Sb
+  if (TypeHModel=='Hodges') then 
+     call  get_interpolated_hodge_density(Rho_III)
+  
+     do iPitch =1, nPa
+        PitchAngle_I(iPitch) = acos(mu(iPitch))
+        do iPhi = 1, nT
+           do iR =1, nR
+              call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
+                   bMirror_I(iPitch),iMirror_I)
+             
+              Rho_I = Rho_III(:,iR,iPhi)
+              
+              call get_hydrogen_density(nPoint, LZ(iR), bFieldMagnitude_III(:,iR,iPhi), bMirror_I(iPitch)&
+                   ,iMirror_I(:),dLength_III(:,iR,iPhi),Rho_I(:),AvgHDensity)
+
+              call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
+                   bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), LZ(iR), HalfPathLength,Sb)
+              
+              if (Sb==0.0) Sb = cTiny
+              NeutralHydrogen_III(iR,iPhi,iPitch) = AvgHDensity/Sb
+              
+           end do
         end do
      end do
-  end do
+    
+  else
+     do iPitch =1, nPa
+        PitchAngle_I(iPitch) = acos(mu(iPitch))
+        do iPhi = 1, nT
+           do iR =1, nR
+              call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
+                   bMirror_I(iPitch),iMirror_I)
+              
+              call get_observedH_density(nPoint,RadialDistance_III(:,iR,iPhi), LZ(iR), Rho_I, Rho_III)
+              
+              do iPoint=1, nPoint
+                 Rho_III(iPoint, iR, iPhi) = Rho_I(iPoint)
+              end do
+
+              call get_hydrogen_density(nPoint, LZ(iR), bFieldMagnitude_III(:,iR,iPhi), bMirror_I(iPitch)&
+                   ,iMirror_I(:),dLength_III(:,iR,iPhi),Rho_I(:),AvgHDensity)
+              
+              call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
+                   bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), LZ(iR), HalfPathLength,Sb)
+              
+              if (Sb==0.0) Sb = cTiny
+              NeutralHydrogen_III(iR,iPhi,iPitch) = AvgHDensity/Sb
+              
+             
+
+           end do
+       
+
+        end do
+     end do
+    
+ end if
+
+
+
   do iPitch = 1, nPa
      do iPhi = 1, nT
         do iR = 1, nR
@@ -199,6 +251,40 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
      end do
   end do
 
+!!$ 
+!!$  NameFile = 'HGeo.out'
+!!$  StringHeader = 'Geocoronal hydrogen density in the equatorial plane'
+!!$  StringVarName = 'R MLT nH'
+!!$  TypePosition = 'rewind'
+!!$     
+!!$     call save_plot_file(NameFile, & 
+!!$          TypePositionIn = TypePosition,&
+!!$          TypeFileIn     = TypeFile,&
+!!$          StringHeaderIn = StringHeader, &
+!!$          nStepIn = 0, &
+!!$          TimeIn = 0.0, &
+!!$          NameVarIn = StringVarName, &
+!!$          nDimIn = 2, & 
+!!$          CoordMinIn_D = (/1.75, 0.0/),&
+!!$          CoordMaxIn_D = (/6.5, 24.0/),&
+!!$          VarIn_VII = Rho_III(51:51,:,:))
+!!$     TypePosition = 'rewind' 
+!!$     
+!!$STOP
+
+!!$
+!!$ do iPitch = 1, nPA
+!!$    do iPhi = 1, nT
+!!$        do iR = 1, nR
+!!$           
+!!$            write(*,*)  'NeutralHydrogen_III(iR,iPhi,1)', iPitch, iPhi, iR, &
+!!$                 NeutralHydrogen_III(iR,iPhi,iPitch)/1.e6
+!!$           
+!!$        end do
+!!$     end do
+!!$  end do
+!!$
+!!$stop
 end subroutine get_neutral_hydrogen
 !============================================================
 subroutine get_B_field(bFieldMagnitude_III)
