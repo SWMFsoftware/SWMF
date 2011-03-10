@@ -32,4 +32,5 @@ Module ModHeidiSize
   integer, parameter :: nPoint = 101
   integer, parameter :: nPointEq = (nPoint-1)/2 +1
 
+  integer, parameter :: nRHodges = 40 ! Number of points in radial distance for Hodges model.
 end Module ModHeidiSize
