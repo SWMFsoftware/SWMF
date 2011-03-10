@@ -371,10 +371,10 @@ contains
           call read_var('AssFactor', AssFactor)
 
        case("#USEEOSTABLE")
-          call read_if_use_eos_table
+          call read_if_use_eos_table(nMaterial)
 
        case("#USEOPACTABLE")
-          call read_if_use_opac_table
+          call read_if_use_opac_table(nMaterial)
 
        case('#LASERPULSE')
           call read_laser_pulse_param
