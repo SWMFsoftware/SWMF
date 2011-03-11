@@ -47,6 +47,11 @@ module BATL_tree
        Child1_   = Child0_ + 1,      &
        ChildLast_= Child0_ + nChild
 
+  ! Tell if the grid has changed (refined/coarsen) or
+  ! blocks moved.  if IsNewGrid == .true. IsNewDecomposition
+  ! should also be .true.
+  logical, public :: IsNewDecomposition, IsNewGrid
+
   ! Number of items stored in iTree_IA
   integer, parameter :: nInfo = ChildLast_
 
@@ -154,6 +159,9 @@ contains
     ! Store tree size and maximum number of blocks/processor
     MaxBlock = MaxBlockIn
     MaxNode  = ceiling(nProc*MaxBlock*(1 + 1.0/(nChild - 1)))
+
+    IsNewDecomposition = .false.
+    IsNewGrid = .false.
 
     ! Allocate and initialize all elements of tree as unset
     allocate(iTree_IA(nInfo, MaxNode));                 iTree_IA       = Unset_
@@ -543,13 +551,18 @@ contains
 
     nNodeUsedNow = nNodeUsed
 
+    IsNewGrid          = .false.
+    IsNewDecomposition = .false.
+    
     ! Coarsen first to reduce number of nodes and used blocks
     do iMorton = 1, nNodeUsedNow
        iNode   = iNodeMorton_I(iMorton)
        iStatus = iStatusNew_A(iNode)
 
        if(iStatus /= Coarsen_) CYCLE
-
+       IsNewGrid          = .true.
+       IsNewDecomposition = .true.
+       
        iNodeParent = iTree_IA(Parent_,iNode)
 
        ! Coarsen the parent node based on the request stored in the first child
@@ -564,6 +577,8 @@ contains
        iStatus = iStatusNew_A(iNode)
 
        if(iStatus /= Refine_) CYCLE
+       IsNewGrid          = .true.
+       IsNewDecomposition = .true.
 
        ! Refine tree node
        call refine_tree_node(iNode)
@@ -1148,6 +1163,8 @@ contains
 
        ! Assign future processor index for node
        iProcNew_A(iNode) = iProcTo
+
+       if(iProcTo /= iTree_IA(Proc_,iNode)) IsNewDecomposition = .true.
 
        if(DoMove)then
           ! Assign block index right away
