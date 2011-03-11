@@ -43,7 +43,7 @@ module BATL_lib
   public:: iStatusNew_A, Refine_, Coarsen_
   public:: iTree_IA, MinLevel_, MaxLevel_, Unset_, Block_, Proc_
   public:: write_tree_file, read_tree_file
-  public:: IsNewDecomposition, IsNewGrid
+  public:: IsNewDecomposition, IsNewTree
 
   ! Inherited from BATL_geometry
   public:: TypeGeometry, IsCartesian, IsRzGeometry, IsSpherical, &
@@ -264,7 +264,7 @@ contains
     end if
 
     ! No grid changes, no need for do_amr
-    ! IsNewGrid  == .true. also imply IsNewDecomposition == .true.
+    ! IsNewTree  == .true. also imply IsNewDecomposition == .true.
     if(.not.IsNewDecomposition) RETURN
 
     ! Coarsen, refine and load balance the flow variables, and set Dt_B.

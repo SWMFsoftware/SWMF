@@ -50,7 +50,7 @@ module BATL_tree
   ! Tell if the grid has changed (refined/coarsen) or
   ! blocks moved.  if IsNewGrid == .true. IsNewDecomposition
   ! should also be .true.
-  logical, public :: IsNewDecomposition, IsNewGrid
+  logical, public :: IsNewDecomposition, IsNewTree
 
   ! Number of items stored in iTree_IA
   integer, parameter :: nInfo = ChildLast_
@@ -161,7 +161,7 @@ contains
     MaxNode  = ceiling(nProc*MaxBlock*(1 + 1.0/(nChild - 1)))
 
     IsNewDecomposition = .false.
-    IsNewGrid = .false.
+    IsNewTree = .false.
 
     ! Allocate and initialize all elements of tree as unset
     allocate(iTree_IA(nInfo, MaxNode));                 iTree_IA       = Unset_
@@ -551,7 +551,7 @@ contains
 
     nNodeUsedNow = nNodeUsed
 
-    IsNewGrid          = .false.
+    IsNewTree          = .false.
     IsNewDecomposition = .false.
     
     ! Coarsen first to reduce number of nodes and used blocks
@@ -560,7 +560,7 @@ contains
        iStatus = iStatusNew_A(iNode)
 
        if(iStatus /= Coarsen_) CYCLE
-       IsNewGrid          = .true.
+       IsNewTree          = .true.
        IsNewDecomposition = .true.
        
        iNodeParent = iTree_IA(Parent_,iNode)
@@ -577,7 +577,7 @@ contains
        iStatus = iStatusNew_A(iNode)
 
        if(iStatus /= Refine_) CYCLE
-       IsNewGrid          = .true.
+       IsNewTree          = .true.
        IsNewDecomposition = .true.
 
        ! Refine tree node
