@@ -4,8 +4,9 @@ module ModResistivity
 
   ! Resistivity related variables and methods
 
+  use ModSize,   ONLY: MaxBlock
   use BATL_size, ONLY: nDim, Maxdim, nI, nJ, nK, &
-       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
   implicit none
   save
