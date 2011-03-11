@@ -460,6 +460,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
           //TypeSemiImplicit)
   end select
 
+  n = 0
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
 
@@ -479,6 +480,29 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
         call stop_mpi(NameSub//': no get_rhs implemented for' &
              //TypeSemiImplicit)
      end select
+
+     if(UsePDotADotP)then
+        if(UseSplitSemiImplicit)then
+           do k=1,nK; do j=1,nJ; do i=1,nI
+              Volume = 1.0/vInv_CB(i,j,k,iBlock)
+              n = n + 1
+              pDotADotPPe = pDotADotPPe +  &
+                   Volume*x_I(n)**2*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock)&
+                   /(dt * ImplCoeff)
+           end do; enddo; enddo
+        else
+           do k=1,nK; do j=1,nJ; do i=1,nI
+              Volume = 1.0/vInv_CB(i,j,k,iBlock)
+              do iVar = 1, nVarSemi
+                 n = n + 1
+                 pDotADotPPe = pDotADotPPe +  &
+                      Volume*x_I(n)**2*DconsDsemi_VCB(iVar,i,j,k,iImplBlock) &
+                      /(dt * ImplCoeff)
+              enddo
+           enddo; enddo; enddo
+        end if
+     end if
+
   end do
 
   if(TypeSemiImplicit == 'parcond' .or. TypeSemiImplicit == 'resistivity')then
@@ -505,10 +529,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
            y_I(n) = &
                 Volume*(x_I(n)*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock)/dt &
                 - ImplCoeff * ResImpl_VCB(1,i,j,k,iImplBlock))
-           pDotADotPPe = pDotADotPPe +  &
-                Volume * x_I(n)**2 * DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock)&
-                /(dt * ImplCoeff)
-        end do; enddo; enddo
+         end do; enddo; enddo
      else
         do k=1,nK; do j=1,nJ; do i=1,nI
            Volume = 1.0/vInv_CB(i,j,k,iBlock)
@@ -516,10 +537,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
               n = n + 1
               y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVar,i,j,k,iImplBlock)/dt&
                    - ImplCoeff * ResImpl_VCB(iVar,i,j,k,iImplBlock))
-              pDotADotPPe = pDotADotPPe +  &
-                   Volume * x_I(n)**2 * DconsDsemi_VCB(iVar,i,j,k,iImplBlock) &
-                   /(dt * ImplCoeff)
-           enddo
+            enddo
         enddo; enddo; enddo
      end if
   end do
