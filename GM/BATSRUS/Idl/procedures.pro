@@ -2141,7 +2141,7 @@ dadx(n-1) = dadx(n-2)
 return,dadx
 end
 ;===========================================================================
-function laplace,a,x,y
+function laplace,a,x,y,z
 ;
 ; Take Laplace of "a" in 1 or 2D with respect to "x" (and "y") if present.
 ;
@@ -2150,9 +2150,10 @@ on_error,2
 
 siz=size(a)
 ndim=siz(0)
+if ndim eq 3 then return,laplace3(a,x,y,z)
 if ndim eq 2 then return,laplace2(a,x,y)
 if ndim ne 1 then begin
-   print,'Function laplace is intended for 1D and 2D arrays only'
+   print,'Function laplace is intended for 1, 2 and 3D arrays only'
    retall
 endif
 
@@ -2160,7 +2161,7 @@ n  = n_elements(a)
 nx = n_elements(x)
 
 if nx ne 0 and nx ne n then begin
-   print,'Error in diff1, arrays sizes differ: nx, n=', nx, n
+   print,'Error in laplace, array sizes differ: nx, n=', nx, n
    retall
 endif
 
@@ -2196,7 +2197,7 @@ nx = n_elements(x)
 ny = n_elements(y)
 
 if (nx ne 0 or ny ne 0) and (nx ne n or ny ne n) then begin
-   print,'Error in diff1, arrays sizes differ: n, nx, ny=', n, nx, ny
+   print,'Error in laplace2, array sizes differ: n, nx, ny=', n, nx, ny
    retall
 endif
 
@@ -2222,6 +2223,65 @@ d2adx2(0   ,1:n2-1) = d2adx2(1   ,1:n2-1)
 d2adx2(n1-1,1:n2-1) = d2adx2(n1-2,1:n2-1)
 d2adx2(*,0)         = d2adx2(*,1)
 d2adx2(*,n2-1)      = d2adx2(*,n2-2)
+
+return,d2adx2
+end
+;===========================================================================
+function laplace3,a,x,y,z
+;
+; Take Laplace of "a" in 2D with respect to "x", "y" and "z" (if present).
+;
+;===========================================================================
+on_error,2
+
+siz=size(a)
+ndim=siz(0)
+
+n1 = siz(1)
+n2 = siz(2)
+n3 = siz(3)
+n  = n1*n2*n3
+nx = n_elements(x)
+ny = n_elements(y)
+nz = n_elements(z)
+
+if (nx+ny+nz ne 0) and (nx ne n or ny ne n or nz ne n) then begin
+   print,'Error in laplace3, array sizes differ: n, nx, ny, nz=', $
+     n, nx, ny, nz
+   retall
+endif
+
+d2adx2 = a
+
+if nx eq 0 then d2adx2(1:n1-2,1:n2-2,1:n3-2) = $
+  a(2:n1-1,1:n2-2,1:n3-2) + a(0:n1-3,1:n2-2,1:n3-2) + $
+  a(1:n1-2,2:n2-1,1:n3-2) + a(1:n1-2,0:n2-3,1:n3-2) + $
+  a(1:n1-2,1:n2-2,2:n3-1) + a(1:n1-2,1:n2-2,0:n3-3) - $
+  6*a(1:n1-2,1:n2-2,1:n3-2)                           $
+else            d2adx2(1:n1-2,1:n2-2,1:n3-2) = $
+  ( (a(2:n1-1,1:n2-2,1:n3-2) - a(1:n1-2,1:n2-2,1:n3-2))/ $
+    (x(2:n1-1,1:n2-2,1:n3-2) - x(1:n1-2,1:n2-2,1:n3-2))- $
+    (a(1:n1-2,1:n2-2,1:n3-2) - a(0:n1-3,1:n2-2,1:n3-2))/ $
+    (x(1:n1-2,1:n2-2,1:n3-2) - x(0:n1-3,1:n2-2,1:n3-2)) $
+  ) / (0.5*(x(2:n1-1,1:n2-2,1:n3-2) - x(0:n1-3,1:n2-2,1:n3-2))) + $
+  ( (a(1:n1-2,2:n2-1,1:n3-2) - a(1:n1-2,1:n2-1,1:n3-2))/ $
+    (y(1:n1-2,2:n2-1,1:n3-2) - y(1:n1-2,1:n2-1,1:n3-2))- $
+    (a(1:n1-2,1:n2-2,1:n3-2) - a(1:n1-2,0:n2-3,1:n3-2))/ $
+    (y(1:n1-2,1:n2-2,1:n3-2) - y(1:n1-2,0:n2-3,1:n3-2)) $
+  ) / (0.5*(y(1:n1-2,2:n2-1,1:n3-2) - y(1:n1-2,0:n2-3,1:n3-2))) + $
+  ( (a(1:n1-2,1:n2-2,2:n3-1) - a(1:n1-2,1:n2-2,1:n3-2))/ $
+    (z(1:n1-2,1:n2-2,2:n3-1) - z(1:n1-2,1:n2-2,1:n3-2))- $
+    (a(1:n1-2,1:n2-2,1:n3-2) - a(1:n1-2,1:n2-2,0:n3-3))/ $
+    (z(1:n1-2,1:n2-2,1:n3-2) - z(1:n1-2,1:n2-2,0:n3-3)) $
+  ) / (0.5*(z(1:n1-2,1:n2-2,2:n3-1) - z(1:n1-2,1:n2-2,0:n3-3)))
+
+; fill in boundaries
+d2adx2(0   ,1:n2-1,1:n3-2) = d2adx2(1   ,1:n2-1,1:n3-2)
+d2adx2(n1-1,1:n2-1,1:n3-2) = d2adx2(n1-2,1:n2-1,1:n3-2)
+d2adx2(*   ,0     ,1:n3-2) = d2adx2(*   ,1     ,1:n3-2)
+d2adx2(*   ,n2-1  ,1:n3-2) = d2adx2(*   ,n2-2  ,1:n3-2)
+d2adx2(*   ,*     ,0     ) = d2adx2(*   ,*     ,1     )
+d2adx2(*   ,*     ,n3-1  ) = d2adx2(*   ,*     ,n3-2  )
 
 return,d2adx2
 end
