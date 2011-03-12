@@ -11,7 +11,7 @@ askstr,'logfilename(s) ',logfilename,doask
 
 nlogfile=0
 if stregex(logfilename, '[?*[]', /boolean) then begin
-    spawn,'ls '+logfilename, logfilenames
+    spawn,'/bin/ls '+logfilename, logfilenames
     nlogfile = n_elements(logfilenames)
 endif else $
   str2arr,logfilename,logfilenames,nlogfile

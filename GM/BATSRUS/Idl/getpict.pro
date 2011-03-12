@@ -49,7 +49,7 @@ endif else $
    askstr,'filename(s)   ',filename,doask
 
 if stregex(filename, '[?*[]', /boolean) then begin
-    spawn,'ls '+filename, filenames
+    spawn,'/bin/ls '+filename, filenames
     nfile = n_elements(filenames)
 endif else $
   str2arr,filename,filenames,nfile

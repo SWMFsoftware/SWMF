@@ -60,7 +60,7 @@
       askstr,'filename(s)   ',filename,doask
 
    if stregex(filename, '[?*[]', /boolean) then begin
-       spawn,'ls '+filename, filenames
+       spawn,'/bin/ls '+filename, filenames
        nfile = n_elements(filenames)
    endif else $
      str2arr,filename,filenames,nfile
@@ -176,7 +176,7 @@
    endelse
 
 
-   if savemovie ne 'n' then spawn,'mkdir -p Movie'
+   if savemovie ne 'n' then spawn,'/bin/mkdir -p Movie'
    if savemovie eq 'ps' then set_plot,'PS',/INTERPOLATE
 
    doanimate= npict gt npict1 and !d.name eq 'X'
