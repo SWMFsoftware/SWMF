@@ -142,8 +142,8 @@ contains
 
     if(UseSemiImplicit .and. TypeSemiImplicit == 'resistivity')then
        ! The following will ensure that the explicit evaluation of the
-       ! resistive contibutions is switched off
-       UseResistivity = .false.
+       ! resistive diffusion is switched off
+       UseResistiveFlux = .false.
 
        allocate( &
             State1_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2), &
