@@ -3,7 +3,7 @@ subroutine amr(DoMessagePass)
   use ModProcMH
   use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,MaxBlock,&
        unusedBLK,lVerbose,UseB,UseB0, UseBatl, Dt_BLK, nTrueCellsALL
-  use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK
+  use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK,true_cell
   use ModAMR, ONLY : automatic_refinement, RefineLimit_I, CoarsenLimit_I, &
        nRefineCrit
   use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
@@ -17,7 +17,7 @@ subroutine amr(DoMessagePass)
        iStatusNew_A, Refine_, Coarsen_
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
   use ModUser,          ONLY: user_amr_criteria
-
+  use ModBatlInterface, ONLY: useBatlTest
   implicit none
 
   logical, intent(in) :: DoMessagePass
@@ -40,7 +40,7 @@ subroutine amr(DoMessagePass)
      if(DoTestMe)write(*,*)NameSub,' starts 2nd order accurate message passing'
 
      if(DoMessagePass)then
-        UsePlotMessageOptions = .true.
+        if(.not.useBatlTest) UsePlotMessageOptions = .true.
         call exchange_messages
      end if
      if(automatic_refinement) then
@@ -56,7 +56,7 @@ subroutine amr(DoMessagePass)
         end if
 
         if(DoTestMe)write(*,*) NameSub,' call regrid'
-        call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe)
+        call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe,Used_GB=true_cell)
         if(DoTestMe)write(*,*) NameSub,' call set_batsrus_grid'
 
         call set_batsrus_grid
@@ -81,7 +81,7 @@ subroutine amr(DoMessagePass)
 
      else
         call specify_refinement(DoRefine_B)
-        call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, DoTestIn=DoTestMe)
+        call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, DoTestIn=DoTestMe,Used_GB=true_cell)
         call set_batsrus_grid
 
         if(iProc == 0 .and. lVerbose>0) then

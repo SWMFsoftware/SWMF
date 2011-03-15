@@ -6,7 +6,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP,&
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_,&
        State_VGB
-  use ModGeometry, ONLY: True_Blk
+  use ModGeometry, ONLY: True_Blk, true_cell
   use ModGeometry, ONLY: UseCovariant     
   use ModPartSteady, ONLY: UsePartSteady
   use ModAMR, ONLY : availableBLKs, UnusedBlock_BP
@@ -78,7 +78,8 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   !---------------------------------------------------------------------------
   if(UseBatl)then
      call select_stepping(DoMoveCoord)       !^CFG IF IMPLICIT
-!     call regrid_batl(nVar, State_VGB)
+!!! load balance depending on block types. Pass block types!
+!     call regrid_batl(nVar, State_VGB, Used_GB=true_cell)
 !     call set_batsrus_grid
      call find_test_cell
      RETURN

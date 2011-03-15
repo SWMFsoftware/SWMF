@@ -2,6 +2,8 @@ module ModBatlInterface
 
   implicit none
 
+  logical, public :: UseBatlTest = .false.
+
 contains
   !===========================================================================
   subroutine set_batsrus_grid
@@ -13,7 +15,7 @@ contains
     use ModParallel, ONLY: iBlock_A, iProc_A
 
     use ModMain, ONLY: nBlockAll, nBlockBats => nBlock, nBlockMax, UnusedBlk
-    
+
     use ModGeometry, ONLY: dx_BLK, MinDxValue, MaxDxValue
 
     use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
@@ -59,11 +61,13 @@ contains
   !===========================================================================
   subroutine set_batsrus_block(iBlock)
 
+    use ModMain, ONLY: iNewGrid, iNewDecomposition
+
     use BATL_lib, ONLY: CellSize_DB, CoordMin_DB, DiLevelNei_IIIB, iProc, &
-         IsRzGeometry, CellFace_DFB, nI, nJ, nK
+         IsRzGeometry, CellFace_DFB, nI, nJ, nK, IsNewDecomposition, IsNewTree
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, XyzStart_BLK, &
          FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &
-         FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B  
+         FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B
 
     use ModParallel, ONLY: BLKneighborLEV,  neiLEV, &
          neiLeast, neiLwest, neiLsouth, neiLnorth, neiLbot, neiLtop, &
@@ -123,23 +127,37 @@ contains
        FaceArea2MinJ_B(iBlock) = 1e-30
        FaceArea2MinK_B(iBlock) = 1e-30
     end if
-       
+
+    ! Tell if the grid and/or the tree has changed
+    if(IsNewDecomposition) iNewDecomposition = mod(iNewDecomposition+1,10000)
+    if(IsNewTree) iNewGrid = mod( iNewGrid+1, 10000)
+    ! If regrid_batl is not called in each time step, we say that the
+    ! grid/tree is not changed from the view of BATL
+    IsNewDecomposition = .false.
+    IsNewTree          = .false.
+
   end subroutine set_batsrus_block
   !============================================================================
   subroutine set_batsrus_state
 
     ! Here we should fix B0 and other things
 
-    use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_
+    use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_, Unused_B
     use ModEnergy, ONLY: calc_energy_cell
 
     integer:: iBlock
     !-------------------------------------------------------------------------
-    RETURN
-    
-    do iBlock = 1, nBlock
-       if(iAmrChange_B(iBlock) <= AmrMoved_) CYCLE
 
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       ! The following two calls are needed for all blocks, because neighbors 
+       ! can change and that changes true_cell info for the ghost cells
+       ! and the resolution change too
+       call calc_other_soln_vars(iBlock)
+       call fix_soln_block(iBlock)
+
+       ! The energy only needed for newly refined or coarsened blocks.
+       if(iAmrChange_B(iBlock) <= AmrMoved_) CYCLE
        call calc_energy_cell(iBlock)
     end do
 

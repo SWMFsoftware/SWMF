@@ -21,6 +21,7 @@ subroutine exchange_messages
   use ModEnergy,   ONLY: calc_energy_ghost
 
   use BATL_lib, ONLY: message_pass_cell
+  use ModBatlInterface, ONLY: UseBatlTest
 
   implicit none
 
@@ -62,7 +63,11 @@ subroutine exchange_messages
 
   if (UsePlotMessageOptions) then
      if(UseBatl)then
-        call message_pass_cell(nVar, State_VGB)
+        if(UseBatlTest)then
+           call message_pass_cell(nVar, State_VGB, nProlongOrderIn=1)
+        else
+           call message_pass_cell(nVar, State_VGB)
+        end if
      else
         if(oktest)write(*,*)'calling message_pass with plot options'
         !                              Don't send just one layer
@@ -71,6 +76,7 @@ subroutine exchange_messages
         call message_pass_cells8(.false.,.false.,.false.,nVar, State_VGB)
         call message_pass_cells(.false.,.false.,.false.,DivB1_GB)
      end if
+     if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
   elseif (optimize_message_pass=='all') then
      if(oktest)write(*,*)'calling message_pass with corners: me,type=',&
           iProc,optimize_message_pass

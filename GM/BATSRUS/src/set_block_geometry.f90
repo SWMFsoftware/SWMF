@@ -81,9 +81,9 @@ end subroutine set_root_block_geometry
 !==============================================================================
 subroutine fix_block_geometry(iBLK)
 
-  use ModMain, ONLY : body1,body1_,body2_,ExtraBc_,&
+  use ModMain, ONLY : UseBatl, body1,body1_,body2_,ExtraBc_,&
        UseExtraBoundary,DoFixExtraBoundaryOrPole,unusedBLK,ProcTest,BlkTest   
-  use ModMain, ONLY : UseBody2                       !^CFG IF SECONDBODY
+  use ModMain, ONLY : UseBody2                    !^CFG IF SECONDBODY
   use ModNodes
   use ModGeometry
   use ModNumConst
@@ -155,34 +155,34 @@ subroutine fix_block_geometry(iBLK)
      !Cell center coordinates are calculated directly as the
      !transformed generalized coordinates
      call gen_to_xyz_arr(XyzStart_BLK(:,iBLK),&
-                         dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
-                         1-gcn,nI+gcn,1-gcn,nJ+gcn,1-gcn,nK+gcn,&
-                         x_BLK(:,:,:,iBLK),&
-                         y_BLK(:,:,:,iBLK),&     
-                         z_BLK(:,:,:,iBLK))
+          dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
+          1-gcn,nI+gcn,1-gcn,nJ+gcn,1-gcn,nK+gcn,&
+          x_BLK(:,:,:,iBLK),&
+          y_BLK(:,:,:,iBLK),&     
+          z_BLK(:,:,:,iBLK))
 
      R_BLK(:,:,:,iBLK)=sqrt(&
           x_BLK(:,:,:,iBLK)**2+y_BLK(:,:,:,iBLK)**2+z_BLK(:,:,:,iBLK)**2)
 
      if(UseVertexBasedGrid)then
-        
+
         !Node coordinates are calculated directly, not derived from
         !the cell centered x,y,z_BLK. In general case there is no close 
         !relation between the node coordinates and the "cell center" 
         !coordinates
 
-        
+
         XyzOfNode111_D(1)=XyzStart_BLK(1,iBLK)-dx_BLK(iBLK)*cHalf
         XyzOfNode111_D(2)=XyzStart_BLK(2,iBLK)-dy_BLK(iBLK)*cHalf
         XyzOfNode111_D(3)=XyzStart_BLK(3,iBLK)-dz_BLK(iBLK)*cHalf
 
-        
+
         call gen_to_xyz_arr(XyzOfNode111_D,&
-                            dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
-                            1,1+nI,1,1+nJ,1,1+nK,&
-                            NodeX_NB(:,:,:,iBLK),&
-                            NodeY_NB(:,:,:,iBLK),&
-                            NodeZ_NB(:,:,:,iBLK))
+             dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
+             1,1+nI,1,1+nJ,1,1+nK,&
+             NodeX_NB(:,:,:,iBLK),&
+             NodeY_NB(:,:,:,iBLK),&
+             NodeZ_NB(:,:,:,iBLK))
 
 
         !
@@ -192,23 +192,23 @@ subroutine fix_block_geometry(iBLK)
         !any(OldLevel_IIIB(:,:,:,iBLK)/=NeiLev_BLK(:,:,:,iBLK).and.
         !(OldLevel_IIIB(:,:,:,iBLK)==-1.or.NeiLev_BLK(:,:,:,iBLK).  
         !To force the fix procedure for the given block set
-        
+
         OldLevel_IIIB(:,:,:,iBLK)=0
 
      else
 
         !Node coordinates are calculated as the for the point
         !of the faces intersection
- 
+
         call calc_node_coords_covar
 
      end if
      !Face area vectors and cell volumes are expressed 
      !in terms of the node coordinates
-     
+
      call fix_covariant_geometry(iBLK)
-   
-  end if                                          
+
+  end if
 
   Rmin_BLK(iBLK)  = minval(R_BLK(:,:,:,iBLK))
 
@@ -221,9 +221,9 @@ subroutine fix_block_geometry(iBLK)
           (x_BLK(:,:,:,iBLK)-xBody2)**2 + &
           (y_BLK(:,:,:,iBLK)-yBody2)**2 + &
           (z_BLK(:,:,:,iBLK)-zBody2)**2)
-  end if                                          
+  end if
 
- 
+
   Rmin2_BLK(iBLK) = minval(R2_BLK(:,:,:,iBLK))    !^CFG END SECONDBODY
 
 
@@ -259,7 +259,7 @@ subroutine fix_block_geometry(iBLK)
        (DoFixExtraBoundaryOrPole.and..not.is_axial_geometry()) &             
        .or.UseExtraBoundary
 
-  ! set true_cell array
+  ! set true_cell array (seting IsBoundaryCell_GI)
   call set_boundary_cells(iBLK)
 
   do iBoundary = MinBoundary, min(MaxBoundary,Body1_)
@@ -269,28 +269,45 @@ subroutine fix_block_geometry(iBLK)
   end do
 
   BodyFlg_B(iBLK) = .not. all(true_cell(:,:,:,iBLK))
-                                                    
+
   if(.not.is_axial_geometry())     &              
        DoFixExtraBoundary_B(iBLK) = DoFixExtraBoundaryOrPole &
        .and.any(IsBoundaryCell_GI(:,:,:,ExtraBc_))
-                                                    
+
   IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
        UseExtraBoundary .and. IsBoundaryCell_GI(:,:,:,ExtraBc_)
 
-  do iBoundary=ExtraBc_,MaxBoundary
-     if(SaveBoundaryCells.and.iBoundary>=MinBoundarySaved)then
-        IsBoundaryCell_IGB(iBoundary,:,:,:,iBLK)=&
-             IsBoundaryCell_GI(:,:,:,iBoundary)
-        true_cell(1:nI,1:nJ,1:nK,iBLK) = true_cell(1:nI,1:nJ,1:nK,iBLK) &
-          .and. .not.IsBoundaryCell_GI(1:nI,1:nJ,1:nK,iBoundary)
-     else
-        true_cell(:,:,:,iBLK) = true_cell(:,:,:,iBLK) &
-             .and. .not.IsBoundaryCell_GI(:,:,:,iBoundary)
-        IsBoundaryBlock_IB(iBoundary,iBLK)=&
-             any(IsBoundaryCell_GI(:,:,:,iBoundary))
-     end if
-  end do
-  
+  if(UseBatl .and. SaveBoundaryCells)then
+     ! Copying  the IsBoundaryCell_GI into the 
+     ! format for iBoundary_GB
+     iBoundary_GB(:,:,:,iBlk) = domain_
+     do iBoundary = MinBoundary, MaxBoundary
+        !do iBoundary=ExtraBc_,MaxBoundary  
+        where(IsBoundaryCell_GI(:,:,:,iBoundary))
+           iBoundary_GB(:,:,:,iBlk) = iBoundary
+        end where
+     end do
+
+     ! Alow other places to set true_cell
+     true_cell(1:nI,1:nJ,1:nK,iBLK) = true_cell(1:nI,1:nJ,1:nK,iBLK) &
+          .and. iBoundary_GB(1:nI,1:nJ,1:nK,iBlk) == domain_
+
+  else
+     do iBoundary=ExtraBc_,MaxBoundary
+        if(SaveBoundaryCells.and.iBoundary>=MinBoundarySaved)then
+           IsBoundaryCell_IGB(iBoundary,:,:,:,iBLK)=&
+                IsBoundaryCell_GI(:,:,:,iBoundary)
+           true_cell(1:nI,1:nJ,1:nK,iBLK) = true_cell(1:nI,1:nJ,1:nK,iBLK) &
+                .and. .not.IsBoundaryCell_GI(1:nI,1:nJ,1:nK,iBoundary)
+        else
+           true_cell(:,:,:,iBLK) = true_cell(:,:,:,iBLK) &
+                .and. .not.IsBoundaryCell_GI(:,:,:,iBoundary)
+           IsBoundaryBlock_IB(iBoundary,iBLK)=&
+                any(IsBoundaryCell_GI(:,:,:,iBoundary))
+        end if
+     end do
+  end if
+
   BodyFlg_B(iBLK)= BodyFlg_B(iBLK) .and. any(true_cell(:,:,:,iBLK))
 
   !\
@@ -343,13 +360,13 @@ contains
        A1_DD(:,2)=B_D
 
        NodeY_NB(i+1,j+1,k+1,iBLK) = det(A1_DD)*DetInv
-       
+
        A1_DD(:,1:2)=A_DD(:,1:2)
        A1_DD(:,3)=B_D
 
        NodeZ_NB(i+1,j+1,k+1,iBLK) = det(A1_DD)*DetInv
     end do; end do; end do
-    
+
   end subroutine calc_node_coords_covar
   !===========================================================================
   real function det(A_DD)
@@ -382,10 +399,10 @@ subroutine set_boundary_cells(iBLK)
   implicit none
   integer,intent(in)::iBLK
   !----------------------------------------------------------------------------
- 
+
   IsBoundaryCell_GI=.false.  
   !^CFG IF SECONDBODY BEGIN
-  if(IsBoundaryBlock_IB(Body2_,iBLK))&               
+  if(IsBoundaryBlock_IB(Body2_,iBLK)) &
        IsBoundaryCell_GI(:,:,:,Body2_) = &
        UseBody2 .and. R2_BLK(:,:,:,iBLK) < RBody2  
   !^CFG END SECONDBODY
@@ -412,6 +429,6 @@ subroutine set_boundary_cells(iBLK)
        IsBoundaryCell_GI(:,:,:,Bot_)= z_BLK(:,:,:,iBLK)<z1
   if(IsBoundaryBlock_IB(Top_,iBLK)) &
        IsBoundaryCell_GI(:,:,:,Top_)= z_BLK(:,:,:,iBLK)>z2  
- 
+
 
 end subroutine set_boundary_cells

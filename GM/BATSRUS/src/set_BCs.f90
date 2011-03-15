@@ -15,6 +15,7 @@ subroutine set_BCs(TimeBcIn, DoResChangeOnlyIn)
   logical, intent (in) :: DoResChangeOnlyIn
   logical :: oktest, oktest_me
   character(len=*), parameter:: NameSub='set_bcs'
+  integer :: i, j, k
   !----------------------------------------------------------------------------
 
   call timing_start(NameSub)
@@ -34,13 +35,22 @@ subroutine set_BCs(TimeBcIn, DoResChangeOnlyIn)
   if(oktest_me)call write_face_state('Initial')
 
   call set_boundary_cells(iBlockBc)
+
   if(SaveBoundaryCells)then
-     do iBoundary=MinBoundarySaved,MaxBoundarySaved
-        IsBoundaryCell_GI(:,:,:,iBoundary)=&
-             IsBoundaryCell_IGB(iBoundary,:,:,:,iBlockBc)
-     end do
+     if(UseBatl) then  
+        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+           if(iBoundary_GB(i,j,k,iBlockBc) >= MinBoundarySaved) then
+              IsBoundaryCell_GI(i,j,k,iBoundary_GB(i,j,k,iBlockBc)) = .true.
+           end if
+        end do; end do; end do
+     else
+        do iBoundary=MinBoundarySaved,MaxBoundarySaved
+           IsBoundaryCell_GI(:,:,:,iBoundary)=&
+                IsBoundaryCell_IGB(iBoundary,:,:,:,iBlockBc)
+        end do
+     end if
   end if
-  
+
   !\
   ! Apply boundary conditions
   !/
@@ -49,7 +59,7 @@ subroutine set_BCs(TimeBcIn, DoResChangeOnlyIn)
           IsBoundaryCell_GI(:,:,:,iBoundary),&
           true_cell(:,:,:,globalBLK) )
   end do
-  
+
   if(oktest_me)call write_face_state('Final')
 
   call timing_stop(NameSub)
@@ -59,7 +69,7 @@ contains
   subroutine write_face_state(String)
 
     character(len=*), intent(in):: String
-    
+
     write(*,*)NameSub,' ',String,' face states:'
     write(*,*)'east  VarL_x,VarR_x=',&
          LeftState_VX(VarTest,  Itest, Jtest, Ktest),  &
