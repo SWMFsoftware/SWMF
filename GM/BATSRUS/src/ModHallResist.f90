@@ -191,7 +191,10 @@ contains
        ! Avoid using small zAverage, since then we will generate magnetic
        ! field with the Biermann Battery term based numerical errors.
        zAverage = max(zAverage, 1.0)
-       
+
+       IonMassPerChargeOut = IonMassPerChargeUnit*State_V(Rho_) &
+            /(zAverage*NatomicSi)
+
     elseif(UseMultiSpecies)then
        IonMassPerChargeOut = IonMassPerCharge*State_V(Rho_) &
             / sum(State_V(SpeciesFirst_:SpeciesLast_)/MassSpecies_V)
