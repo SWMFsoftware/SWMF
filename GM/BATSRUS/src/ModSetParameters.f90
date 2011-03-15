@@ -19,7 +19,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModProject                                        !^CFG IF PROJECTION
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
   use ModBlockData, ONLY: clean_block_data
-  use BATL_lib, ONLY: read_amr_criteria_param, nDimBatl => nDim
+  use ModBatlInterface, ONLY: UseBatlTest
+  use BATL_lib, ONLY: read_amr_criteria_param, nDimBatl => nDim, BetaProlong
   use BATL_size, ONLY: nGI, nGJ, nGK
   use ModAMR
   use ModParallel, ONLY : proc_dims
@@ -1155,6 +1156,10 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('MaxTotalBlocks',MaxTotalBlocks)
            end if
         end if
+
+     case("#BATLTEST")
+        call read_var('UseBatlTest', UseBatlTest)
+        if(UseBatlTest) BetaProlong = 1.0
 
      case("#AMRCRITERIA")
         call read_var('nRefineCrit',nRefineCrit)
