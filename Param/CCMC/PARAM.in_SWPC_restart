@@ -143,7 +143,7 @@ T                       DoCoupleImDensity
 T                       DoFixPolarRegion
 5.0                     rFixPolarRegion
 56.0                    PolarNDim [amu/cc]
-100000.0                PolarTDim [K]
+50000.0                 PolarTDim [K]
 
 IMCOUPLINGSMOOTH
 10.0                    dLatSmoothIm [deg]
