@@ -24,6 +24,11 @@ subroutine IO_set_inputs(StringInputLines)
            call read_in_string(NameOfIndexFile)
         endif
 
+        if (index(StringLine,"#SWPC_INDICES") > 0) then
+           call read_in_string(NameOfIndexFile)
+           call read_in_string(NameOfSecondIndexFile)
+        endif
+
         if (index(StringLine,"#NOAAHPI_INDICES") > 0) then
            call read_in_string(NameOfIndexFile)
         endif

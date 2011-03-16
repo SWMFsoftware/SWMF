@@ -50,6 +50,7 @@ Module ModIndices
   real :: Satellite_X_Pos, Satellite_Y_Pos, Satellite_Z_Pos
 
   character (len=100) :: NameOfIndexFile
+  character (len=100) :: NameOfSecondIndexFile
   integer             :: LunIndices_ = UnitTmp_
 
 contains

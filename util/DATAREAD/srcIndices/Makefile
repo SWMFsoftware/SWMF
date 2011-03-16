@@ -14,6 +14,7 @@ MODULES = \
 
 OBJECTS = \
 	read_NGDC_indices.o\
+	read_SWPC_indices.o\
 	read_NOAAHPI_indices.o\
 	read_MHDIMF_indices.o\
 	insert_into_indices_array.o\
