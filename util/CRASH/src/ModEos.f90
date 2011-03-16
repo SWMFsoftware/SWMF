@@ -357,13 +357,14 @@ contains
   !============================
   subroutine check_eos_table(iComm,Save,TypeFile)
     use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
-    use ModLookupTable, ONLY: init_lookup_table
+    use ModLookupTable, ONLY: init_lookup_table, get_name_description
 
     integer, optional, intent(in) :: iComm
     logical, optional, intent(in) :: Save 
     character(LEN=*), optional, intent(in)::TypeFile
-    integer:: iMaterial, iTable
+    integer:: iMaterial, iTable, iPosition
     character(LEN=5)::TypeFileHere
+    character(LEN=100)::NameDescription
     !-------------------
     
     do iMaterial = 0,nMaterialMax-1
@@ -385,6 +386,10 @@ contains
           else
              TypeFileHere = 'real8'
              if(present(TypeFile))TypeFileHere = TypeFile
+             write(NameDescription,'(a,e13.7)')&
+                  'CRASH EOS for '//NameMaterial_I(iMaterial)//&
+                  'Atomic Mass = ',&
+                  cAtomicMassCrash_I(iMaterial)
              call init_lookup_table(&
                NameTable = NameMaterial_I(iMaterial)//'_eos', &
                NameCommand = 'save'                         , &
@@ -397,10 +402,18 @@ contains
                NameFile   = &
                  NameMaterial_I(iMaterial)//'_eos_CRASH.dat', &
                TypeFile = TypeFileHere                      , &
-               StringDescription = &
-                 'CRASH EOS for '//NameMaterial_I(iMaterial)  )
+               StringDescription = trim(NameDescription))
           end if
           iTable =  i_lookup_table(NameMaterial_I(iMaterial)//'_eos')
+       else
+          call get_name_description(iTable, NameDescription)
+          if(index(NameDescription,'Mass =')>0)then
+             !Read the atomic weight from the table
+             iPosition = index(NameDescription,'=')
+             read(&
+                  NameDescription(iPosition+1:len_trim(NameDescription)),&
+                  *)cAtomicMassCRASH_I(iMaterial)
+          end if
        end if
 
        !The table is at least declared. Check if it is filled in

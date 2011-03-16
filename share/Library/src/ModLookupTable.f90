@@ -22,6 +22,7 @@ module ModLookupTable
   public:: make_lookup_table        ! create table from calculations (and save)
   public:: interpolate_lookup_table ! interpolate from lookup table
   public:: test_lookup_table        ! unit test
+  public:: get_name_description     ! provide name description
 
   integer, public, parameter:: MaxTable = 20 ! maximum number of tables
   integer, public :: nTable = 0     ! actual number of tables
@@ -571,7 +572,19 @@ contains
     end if
        
   end subroutine interpolate_with_known_val
+  !===========================================================================
+  subroutine get_name_description(iTable,NameDescription)
+    integer,            intent(in)  :: iTable
+    character(LEN=100), intent(out) :: NameDescription
 
+    type(TableType), pointer :: Ptr
+    !------------------------------
+
+    Ptr=>Table_I(iTable)
+    NameDescription = Ptr%StringDescription
+
+  end subroutine get_name_description
+    
   !===========================================================================
 
   subroutine test_lookup_table
