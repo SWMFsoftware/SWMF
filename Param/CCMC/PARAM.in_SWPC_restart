@@ -125,9 +125,29 @@ parabola                TypeConservCrit_I
  5.0                    xParabolaConserv
 15.0                    yParabolaConserv
 
-#IM
-20.0                    TauImP
-T			DoImSatTrace 
+! Setting 1
+#IMCOUPLING
+20.0                    TauCoupleIm
+T                       DoImSatTrace
+T                       DoCoupleImPressure
+T                       DoCoupleImDensity
+F                       DoFixPolarRegion
+! end of setting 1
+
+! Setting 2
+IMCOUPLING
+20.0                    TauCoupleIm
+T                       DoImSatTrace
+T                       DoCoupleImPressure
+T                       DoCoupleImDensity
+T                       DoFixPolarRegion
+5.0                     rFixPolarRegion
+56.0                    PolarNDim [amu/cc]
+100000.0                PolarTDim [K]
+
+IMCOUPLINGSMOOTH
+10.0                    dLatSmoothIm [deg]
+! end of setting 2
 
 ! Pressures below pMinDim are replaced with pMinDim.
 #MINIMUMPRESSURE
