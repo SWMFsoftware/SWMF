@@ -311,6 +311,91 @@ contains
     end do
   end subroutine read_name_var_eos
   !===============================
+  subroutine read_name_material(nMaterial)
+    use ModReadParam, ONLY: read_var
+    use ModUtilities, ONLY: split_string
+    use CRASH_ModAtomicNotation, ONLY: MaterialMin_, i_material,&
+                             nZMixStored_II, cMixStored_II
+    integer, intent(in) :: nMaterial
+    !-----------------------------------
+    !The use in the user_read_param
+    !case('#MATERIAL')
+    !call read_name_material(nMaterial)
+    !
+    !
+    !The use in the PARAM.in (within the user_input brackets)
+    !#MATERIAL
+    !Ar                             !2-symbol name of chemical element
+    !H_                             !2-symbol name of chemical element 
+    !N                              !Will be extended to N_
+    !Ay                             !The chemical formula for acrylic is stored
+    !Wa:H 2 O 1                     !The chemical formula will be used to make and save
+    !   or                          !the table Wa_eos as Wa_eos_CRASH.dat. Next time
+    !Wa                             !the use of Wa in the PARAM.in file is allowed, the 
+    !                               !atomic mass will be read from the table
+    !
+
+    integer:: iMaterial,iMix
+    character(LEN=30)::Name
+    !-----------------------
+    cAtomicMassCRASH_I = -1.0
+    nZ_I = 0
+    cMix_II  = 0.0
+    nZMix_II = 0
+    do iMaterial = 0, nMaterial-1
+       call read_var('Name material',Name)
+       if(index(Name,':')>0)then
+          call CON_stop('To be completed')
+          NameMaterial_I(iMaterial) = Name(1:2)
+          !Re-assign nZ_I(iMaterial) to -nMix
+             nZ_I(iMaterial) = -count( nZMix_II(:,iMaterial)/=0)
+
+             !Calculate atomic mass
+             cAtomicMassCRASH_I(iMaterial) = 0.0
+
+             do iMix = 1,- nZ_I(iMaterial)
+                cAtomicMassCRASH_I(iMaterial) = &
+                     cAtomicMassCRASH_I(iMaterial) +&
+                     cAtomicMass_I( nZMix_II(iMix,iMaterial) ) * &
+                     cMix_II(iMix,iMaterial)
+             end do
+       else
+          if(len_trim(Name)==1)then
+             NameMaterial_I(iMaterial)=trim(Name)//'_'
+          else
+             NameMaterial_I(iMaterial)=trim(Name)
+          end if
+          nZ_I(iMaterial) = i_material(NameMaterial_I(iMaterial))
+          if(nZ_I(iMaterial) < MaterialMin_)then
+             nZ_I(iMaterial)=0
+          elseif(nZ_I(iMaterial) <=0)then
+             !Now nZ_I(iMaterial) is the reference number in the
+             !list of the materials with stored data
+             !Apply storde data:
+
+             nZMix_II(:,iMaterial) = nZMixStored_II(:,nZ_I(iMaterial))
+             cMix_II( :,iMaterial) = cMixStored_II( :,nZ_I(iMaterial))
+             
+             !Re-assign nZ_I(iMaterial) to -nMix
+             nZ_I(iMaterial) = -count( nZMix_II(:,iMaterial)/=0)
+
+             !Calculate atomic mass
+             cAtomicMassCRASH_I(iMaterial) = 0.0
+
+             do iMix = 1,- nZ_I(iMaterial)
+                cAtomicMassCRASH_I(iMaterial) = &
+                     cAtomicMassCRASH_I(iMaterial) +&
+                     cAtomicMass_I( nZMix_II(iMix,iMaterial) ) * &
+                     cMix_II(iMix,iMaterial)
+             end do
+          else
+             cAtomicMassCRASH_I(iMaterial) = &
+                  cAtomicMass_I(nZ_I(iMaterial))
+          end if
+       end if
+    end do
+  end subroutine read_name_material
+  !===============================
   subroutine read_if_use_eos_table(nMaterial)
     !Usage
     !#USEEOSTABLE
