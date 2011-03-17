@@ -697,6 +697,13 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
+        case ("#PLOTTIMECHANGE")
+           call read_in_time(PlotTimeChangeStart, iError)
+           call read_in_time(PlotTimeChangeEnd,   iError)
+           do iOutputTypes=1,nOutputTypes
+              call read_in_real(PlotTimeChangeDt(iOutputTypes), iError)
+           enddo
+
         case ("#SAVEPLOTS", "#SAVEPLOT")
            call read_in_real(DtRestart, iError)
            call read_in_int(nOutputTypes, iError)
@@ -713,6 +720,7 @@ subroutine set_inputs
                  write(*,*) "Error in #SAVEPLOTS"
                  write(*,*) "Bad output type : ",OutputType(iError)
               endif
+              DtPlotSave = DtPlot
            endif
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #SAVEPLOT'
@@ -858,6 +866,25 @@ subroutine set_inputs
               UseVariableInputs = .true.
            endif
 
+        case ("#SWPC_INDICES")
+           cTempLines(1) = cLine
+           call read_in_string(cTempLine, iError)
+           cTempLines(2) = cTempLine
+           call read_in_string(cTempLine, iError)
+           cTempLines(3) = cTempLine
+           cTempLines(4) = " "
+           cTempLines(5) = "#END"
+
+           call IO_set_inputs(cTempLines)
+           call read_SWPC_Indices(iError)
+
+           if (iError /= 0) then 
+              write(*,*) "read indices was NOT successful (SWPC file)"
+              IsDone = .true.
+           else
+              UseVariableInputs = .true.
+           endif
+
         case ("#NOAAHPI_INDICES")
            cTempLines(1) = cLine
            call read_in_string(cTempLine, iError)
@@ -910,6 +937,18 @@ contains
        read(cInputText(iline),*,iostat=iError) variable
     endif
   end subroutine read_in_int
+
+  subroutine read_in_time(variable, iError)
+    real(Real8_), intent(out) :: variable
+    integer :: iError
+    integer :: iTimeReadIn(7)
+    if (iError == 0) then 
+       iline = iline + 1
+       read(cInputText(iline),*,iostat=iError) iTimeReadIn(1:6)
+       iTimeReadIn(7) = 0
+       call time_int_to_real(iTimeReadIn, variable)
+    endif
+  end subroutine read_in_time
 
   subroutine read_in_logical(variable, iError)
     logical, intent(out) :: variable

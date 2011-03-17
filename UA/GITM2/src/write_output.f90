@@ -28,6 +28,12 @@ subroutine write_output
      endif
   endif
 
+  DtPlot = DtPlotSave
+  if ( CurrentTime >= PlotTimeChangeStart .and. &
+       CurrentTime <= PlotTimeChangeEnd) then 
+     DtPlot = PlotTimeChangeDt
+  endif
+
   IsDone = .false.
   do i = 1, nOutputTypes
      if (floor((tSimulation-dt)/DtPlot(i)) /= &

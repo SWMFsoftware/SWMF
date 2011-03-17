@@ -4,6 +4,7 @@ module ModInputs
   use ModConstants
   use ModPlanet, only : nSpecies, Rotation_Period
   use ModIoUnit, only : UnitTmp_
+  use ModKind, only:    Real8_
 
   implicit none
 
@@ -59,6 +60,9 @@ module ModInputs
   character (len=iCharLen_), dimension(nMaxOutputTypes) :: OutputType
 
   real :: DtPlot(nMaxOutputTypes)
+  real :: DtPlotSave(nMaxOutputTypes)
+  real :: PlotTimeChangeDt(nMaxOutputTypes)
+  real(Real8_) :: PlotTimeChangeStart, PlotTimeChangeEnd
 
   real :: DtRestart   = 60.0*60.0
   real :: DtReport    =  1.0*60.0
