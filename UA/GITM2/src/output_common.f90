@@ -933,8 +933,8 @@ subroutine output_1dthm
      iiAlt = max(min(iAlt,nAlts),1)
  
      do iSpecies = 1, nSpeciesTotal 
-        varsS(iSpecies) = NeutralSourcesTotal(1,1,iialt,iSpecies,1)
-        varsL(iSpecies) = NeutralLossesTotal(1,1,iialt,iSpecies,1)
+        varsS(iSpecies) = NeutralSourcesTotal(iialt,iSpecies)
+        varsL(iSpecies) = NeutralLossesTotal(iialt,iSpecies)
      enddo
 
      write(iOutputUnit_) &
