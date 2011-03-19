@@ -35,7 +35,7 @@ chmod -R go-r doc/Tex
 
 cd ~/Sites/SWMF/util/CRASH/doc/Tex
 make PDF           >>& ~/Sites/manual.log
-chmod go+r ../*.pdf ../index.html
+chmod go+r ../*.pdf ../index.html ../RELEASENOTES
 
 cd ~/Sites/SWMF/GM/BATSRUS
 make PDF           >>& ~/Sites/manual.log
