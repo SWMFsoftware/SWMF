@@ -3,67 +3,122 @@ create and access the documentation.  To learn more about the SWMF, including
 how to compile and run the code, please consult the user manual.  To install
 the SWMF and create the user manual please follow the instructions below. 
 
-
 ###############
 # Obtain SWMF #
 ###############
 
-# Get the source code from cvs (UM only) or from the tar ball.
+# Get the source code from CVS (UM only) or from the tar balls.
 
-# !!! Getting SWMF from CVS !!!
+# The minimim requirement is the SWMF repository. 
+
+# You may also need the SWMF_data repository that contains large data files. 
+# At the UofM the SWMF_data may already be available through a shared disk as
+
+/csem1/SWMF_data 
+
+# If it is not availble through the shared disk, the SWMF_data repository 
+# can be put into the home directory or into the SWMF directory.
+
+# Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
+# are in the CRASH_data repository. On many machines at the UofM this is 
+# alread available through a shared disk as
+
+/csem1/CRASH_data
+
+# Otherwise it has to be placed into the home directory.
+
+# !!! Getting SWMF from CVS (requires CVS access) !!!
 # Set the CVS environment variables (with your user name)
 
 setenv CVSROOT Your_User_Name_On_Herot@herot.engin.umich.edu:/FRAMEWORK
 setenv CVS_RSH ssh
 
 # Check out the SWMF distribution
+cd {where_you_want_to_have_the_swmf}
 cvs checkout SWMF
-cd SWMF
 
-# !!! Opening the tar ball !!!
-mkdir SWMF
-cd SWMF
+# Check out the SWMF_data distribution into the home directory if needed
+cd
+cvs checkout SWMF_data
+
+# Check out the CRASH_data distribution into the home directory if needed
+cd
+cvs checkout CRASH_data
+
+# !!! Opening tar balls !!!
+
+# Open SWMF tar ball
+cd {where_you_want_to_have_the_swmf}
 tar -xzf {path_to_file}/SWMF_v{version_number}.tgz
 
+# If needed, open the SWMF_data tar ball into the home directory
+cd
+tar -xzf {path_to_file}/SWMF_data.tgz
+
+# If needed, open the CRASH_data tar ball into the home directory
+cd
+tar -xzf {path_to_file}/CRASH_data.tgz
 
 ################
 # Install SWMF #
 ################
 
-# For several platform/compiler combinations installation is very simple:
+# Many machines used by UofM are already recognized by the 
+# share/Scripts/Config.pl script which is called by all other 
+# Config.pl scripts in the SWMF.
+# For these platform/compiler combinations installation is very simple:
 
 Config.pl -install
 
-# Some platforms require additional flags or have other compilers as
-# an option. Choose the appropriate platform/compiler combination, e.g.:
+# On other platforms the Fortan compiler and MPI libraries should be explicitly
+# given. See the share/build and share/include directories for options.
+# Example:
 
-Config.pl -install -compiler=ifort -mpi=Altix
+Config.pl -install -compiler=ifort -mpi=openmpi
 
 ######################
 # Create the manuals #
 ######################
 
-# If you opened the tar file, you may have the manuals in the doc directory
-# Check if you have the user manual in the doc/ directory
-ls doc/SWMF.pdf
+# Please note that creating both the PDF and HTML versions require 
+# that LaTex and ps2pdf be installed on your system.  
+# In addition, creating the HTML version requires the latex2html utility 
 
-# Otherwise create PDF versions of the manuals in the doc/ directory.
+# To create the PDF versions of the manuals type
 make PDF
 
-# Create HTML version of the manuals in the doc/HTML/ directory
+# in the SWMF directory. The manuals will be in the doc/ directory.
+
+# To create the HTML version of the manuals type
 make HTML
 
-# Please note that creating both the PDF and HTML versions require that 
-# LaTex be installed on your system.  In addition, creating the HTML
-# version requires the latex2html utility 
-
+# in the SWMF directory. The HTML manuals will be in the doc/HTML directory.
 
 ####################
 # Read the manuals #
 ####################
 
-# All manuals can be accessed by opening the top index file doc/index.html
-# The contents of the documents is briefly described in this file.
-mozilla doc/index.html
+# All manuals can be accessed by opening the top index file 
+
+open doc/index.html
 
 # You may also read the PDF files directly with a PDF reader. 
+# The most important document is the user manual in
+
+doc/SWMF.pdf
+
+#################
+# Running tests #
+#################
+
+# You can try running the standard test suite by typing
+
+make test
+
+# in the main directory. This requires a machine where mpirun is available.
+# The tests run on 2 CPU cores by default. To run on (up to 4) cores use
+
+make test MPIRUN='mpirun -np 4'
+
+# the results of the tests are summarized in test_swmf.res
+# Successful passing of the test is indicated by empty *.diff files.
