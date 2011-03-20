@@ -973,7 +973,8 @@ contains
       call user_material_properties(State_VGB(:,i,j,k,iBlock), &
            i, j, k, iBlock, &
            OpacityRosselandOut_W = OpacityRosselandSi_W, &
-           HeatCondOut = HeatCondSi, TeOut = TeSi)
+           HeatCondOut = HeatCondSi, TeOut = TeSi, &
+           NatomicOut = NatomicSi, AverageIonChargeOut = Zav)
 
       call get_diffusion_coef
 
