@@ -36,13 +36,13 @@ module IE_ModMain
   integer :: nSolve = 0
 
   !\
-  ! Krylov solver (GMRES) parameters
+  ! Krylov solver parameters
   !/
-  character(len=10):: NameSolver='gmres' ! Name of krylov solver
-  logical :: UsePreconditioner = .true.  ! Use preconditioner
-  logical :: UseInitialGuess = .true. ! Use previous solution as initial guess
-  real    :: Tolerance = 1.e-2        ! Solution accuracy: abs norm of residual
-  integer :: MaxIteration = 200       ! Maximum number of Krylov iterations
+  character(len=10):: NameSolver='bicgstab' ! Name of krylov solver
+  logical :: UsePreconditioner = .true.     ! Use preconditioner
+  logical :: UseInitialGuess   = .true.     ! Use previous solution as initial guess
+  real    :: Tolerance         = 1.e-2      ! Solution accuracy: abs norm of residual
+  integer :: MaxIteration      = 200        ! Maximum number of Krylov iterations
 
   !\
   ! Logical which tells if there is any new information to use

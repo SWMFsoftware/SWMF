@@ -345,13 +345,13 @@ dynamically by the boundary of the closed field line region.
 
 <command name="SOLVER">
 	<parameter name="NameSolver" type="string" input="select" case="lower">
-		<option name="gmres"     default="T"	/>
-		<option name="bicgstab"			/>
+		<option name="gmres"     		/>
+		<option name="bicgstab"	default="T"	/>
 	</parameter>
 #SOLVER
 bicgstab		NameSolver (gmres or bicgstab)
 
-Select which solver to use. Default is GMRES, but bicgstab seems to be faster.
+Select which solver to use. Default is bicgstab since it is faster.
 </command>
 
 <command name="KRYLOV">
