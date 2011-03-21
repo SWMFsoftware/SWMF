@@ -33,7 +33,7 @@ OBJECTS = \
 .SUFFIXES: .f .o
 
 .f.o:
-	${COMPILE.f77} ${CFLAGS}  $<
+	${COMPILE.f77} ${CFLAGS} ${PRECISION} $<
 
 lib: $(OBJECTS)
 

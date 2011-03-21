@@ -9,7 +9,7 @@ MODULE Rcm_variables
     LOGICAL :: IsPartofFramework = .true.
 !
     INTEGER, PARAMETER :: iprec = SELECTED_INT_KIND (9)
-    INTEGER, PARAMETER :: rprec = SELECTED_REAL_KIND (6,37)
+    INTEGER, PARAMETER :: rprec = SELECTED_REAL_KIND (12,100)
 !
     ! SWMF: changed the value of LUN from 11 to UNITTMP_
     INTEGER, PARAMETER :: LUN = UNITTMP_
@@ -63,7 +63,7 @@ MODULE Rcm_variables
          htr          = 1.0_rprec / rth      
 !
     INTEGER (iprec), PARAMETER :: &
-       n_gc  = 2,   n_blk = 1, &
+       n_gc  = 2,  &
        isize =  78, &
        jsize =  48, &
        iesize =   3, &
@@ -126,10 +126,8 @@ MODULE Rcm_variables
 !
 !   Plasma on grid:
     REAL (rprec) :: alamc (kcsize)=0.0, etac (kcsize), fudgec (kcsize), &
-                    eeta (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize)=0.0, &
                     eeta_cutoff, cmax, &
                     precipitation_tau(iesize)=(/0.3,0.0,0.0/), &
-                    eeta_avg (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize),&
                     density     (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
                     pressure    (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
                     temperature (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
@@ -139,6 +137,12 @@ MODULE Rcm_variables
                     pressureOp  (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
                     temperatureHp(1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
                     temperatureOp(1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc)
+
+
+! SWMF: allocatable array (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize)
+    REAL (rprec), allocatable:: eeta(:,:,:) !, eeta_avg(:,:,:) never used
+
+
     INTEGER (iprec) :: ikflavc (kcsize), i_advect, i_eta_bc
     INTEGER (iprec), PARAMETER :: irdk=18, inrgdk=13, isodk=2, iondk=2
     REAL (rprec) :: dktime (irdk, inrgdk, isodk, iondk)
@@ -226,18 +230,21 @@ MODULE Rcm_variables
 !   Input ETAC values:
     INTEGER (iprec), ALLOCATABLE :: itime_etac (:)
     REAL (rprec),    ALLOCATABLE :: etac_inp(:,:)
-!
-!
-!
-! - New variables for parallelized RCM:
-!
+
+! Timing variables
     REAL (rprec) :: time0,time1
-    REAL (rprec), DIMENSION (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc,n_blk) :: &
-                  v_blk, birk_blk, &
-                  alpha_blk, beta_blk, aloct_blk, colat_blk, vcorot_blk, &
-                  sini_blk, bir_blk, &
-                  qtpedlam_blk, qtped_blk, qthall_blk, pedlam_blk, pedpsi_blk, hall_blk, &
-                  c5w_blk 
-    REAL (rprec) :: eeta_blk (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize)
+
+! - New variables for a future parallelized RCM:
+! 
+!   integer, parameter :: n_blk = 1, &
+!   REAL (rprec), DIMENSION (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc,n_blk) :: &
+!                 v_blk, birk_blk, &
+!                 alpha_blk, beta_blk, aloct_blk, colat_blk, vcorot_blk, &
+!                 sini_blk, bir_blk, &
+!                 qtpedlam_blk, qtped_blk, qthall_blk, pedlam_blk, pedpsi_blk,&
+!                 hall_blk, c5w_blk 
+! 
+! SWMF: allocatable arrays(1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize)
+!    REAL (rprec), allocatable :: eeta_blk(:,:,:)
 !
 END MODULE Rcm_variables

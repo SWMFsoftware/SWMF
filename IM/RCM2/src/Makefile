@@ -75,10 +75,10 @@ ${MY_LIB}:	$(OBJECTS) ${MAKEFILE_COMP_SELECT}
 .SUFFIXES: .f90 .F90 .f .o
 
 .f90.o:
-	${COMPILE.f90} ${CFLAGS} $<
+	${COMPILE.f90} ${CFLAGS} ${PRECISION} $<
 
 .f.o:
-	${COMPILE.f77} ${CFLAGS}  $<
+	${COMPILE.f77} ${CFLAGS} ${PRECISION} $<
 
 # IM_wrapper needs to be compiled with the same precision as others
 IM_wrapper.o: IM_wrapper.f90 \

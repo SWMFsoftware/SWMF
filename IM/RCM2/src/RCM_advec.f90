@@ -255,6 +255,12 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
 
   case(1)      ! INITIALIZE
 
+     ! SWMF: large arrays are allocated to save memory on other processors
+     if(.not.allocated(eeta))then
+        allocate(eeta(1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize))
+        eeta = 0.0
+     end if
+
      ! SWMF: Commented out because ModIoUnit::io_unit_new() provides the units
      ! IF (.NOT.Check_logical_units ( ) ) &
      !       call CON_stop('IM_ERROR: LUNs NOT AVAILABLE')
