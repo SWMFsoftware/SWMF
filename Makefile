@@ -361,14 +361,14 @@ rundir: ENV_CHECK
 	cd ${GMDIR}; make rundir                 #^CMP IF GM
 	cd ${IEDIR}; make rundir                 #^CMP IF IE
 	cd ${IHDIR}; make rundir                 #^CMP IF IH
-	cd ${OHDIR}; make rundir                 #^CMP IF OH
 	cd ${IMDIR}; make rundir                 #^CMP IF IM
 	cd ${LADIR}; make rundir                 #^CMP IF LA
+	cd ${LCDIR}; make rundir                 #^CMP IF LC
+	cd ${OHDIR}; make rundir                 #^CMP IF OH
 	cd ${PSDIR}; make rundir                 #^CMP IF PS
 	cd ${PWDIR}; make rundir                 #^CMP IF PW
 	cd ${RBDIR}; make rundir                 #^CMP IF RB
 	cd ${SCDIR}; make rundir                 #^CMP IF SC
-	cd ${LCDIR}; make rundir		 #^CMP IF LC
 	cd ${SPDIR}; make rundir                 #^CMP IF SP
 	cd ${UADIR}; make rundir                 #^CMP IF UA
 	@touch share/JobScripts/TMP_${MACHINE}
