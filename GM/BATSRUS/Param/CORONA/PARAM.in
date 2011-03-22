@@ -4,6 +4,12 @@ T			DoEcho
 #COMPONENT
 SC			NameComp
 
+#BATL
+F
+
+#BATLTEST
+F
+
 #DESCRIPTION
 Test BATSRSUS in SC mode. Remember: make rundir COMPONENT=SC
 
@@ -56,6 +62,19 @@ T			UseBody
 3.0E+8			BodyNDim
 3.5E+6			BodyTDim
 
+#BODY
+F                       UseBody
+
+#EXTRABOUNDARY
+T                       UseExtraBoundary
+user                    TypeBc_I(ExtraBc_)
+F                       DoFixExtraBoundary
+
+#FACEBOUNDARY
+0                       MinBoundary
+0                       MaxBoundary
+F                       DoFixOuterBoundary
+
 #GAMMA
 1.5000E+00		Gamma
 
@@ -67,8 +86,39 @@ float	  		TypeBcNorth
 float	 	        TypeBcBot
 float	   		TypeBcTop
 
-#INCLUDE
-Param/CORONA/Grid
+#GRID   
+1                       nRootBlockX
+1                       nRootBlockY
+1                       nRootBlockZ
+-24.0                   xMin
+ 24.0                   xMax
+-24.0                   yMin
+ 24.0                   yMax
+-24.0                   zMin
+ 24.0                   zMax
+
+#GRIDLEVEL
+2                       nLevelArea
+all                     NameArea
+
+#GRIDLEVEL
+4                       nLevel
+shell0                  NameArea
+1.0                     Radius1
+1.1                     Radius2
+
+#GRIDRESOLUTION
+0.8                    Resolution
+user                    NameArea
+
+#GRIDLEVEL
+20			nLevlel
+sphere                  NameArea
+-0.9698463              xCenterSphere
+ 0.1710101              yCenterSphere
+-0.1736482              zCenterSphere  
+1.0                      rSphere
+
 
 #GRIDLEVEL
 2			nLevelArea
