@@ -572,7 +572,7 @@ contains
        call check_freq('SWMF save restart', SaveRestart, DoTimeAccurate)
        call check_freq('SWMF check stop', CheckStop, DoTimeAccurate)
     end if
-    call adjust_freq(SaveRestart, nStep  , tSimulation, DoTimeAccurate)
+    call adjust_freq(SaveRestart, nStep+1, tSimulation+cTiny, DoTimeAccurate)
     call adjust_freq(CheckStop  , nStep+1, tSimulation+cTiny, DoTimeAccurate)
 
     do iComp1=1,MaxComp
