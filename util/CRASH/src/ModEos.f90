@@ -227,7 +227,7 @@ module CRASH_ModEos
   ! Defaultparameters for EOS tables:
   !/
   integer, parameter :: Min_=1, Max_=2, &
-                        IndexDefaultEos_I(2) = (/501, 501/)
+                        IndexDefaultEos_I(2) = (/201, 201/)
   integer, public    :: IndexDefaultOpac_I(2)= (/201, 201/)
   real,dimension(Min_:Max_,0:nMaterialMax-1), parameter::&
        TeDefaultEos_II = reshape(&     ! original minimum
@@ -337,6 +337,9 @@ contains
 
     integer:: iMaterial,iMix
     character(LEN=30)::Name
+
+    integer, parameter:: MaxString = 200
+    character(LEN=20):: NameVar_I(MaxString)
     !-----------------------
     cAtomicMassCRASH_I = -1.0
     nZ_I = 0
@@ -347,18 +350,24 @@ contains
        if(index(Name,':')>0)then
           call CON_stop('To be completed')
           NameMaterial_I(iMaterial) = Name(1:2)
+          !Truncate symbols till the colon
+          call split_string( Name(1:len_trim(Name)), &
+               MaxString,  NameVar_I, nZ_I(iMaterial))
+          
           !Re-assign nZ_I(iMaterial) to -nMix
-             nZ_I(iMaterial) = -count( nZMix_II(:,iMaterial)/=0)
-
-             !Calculate atomic mass
-             cAtomicMassCRASH_I(iMaterial) = 0.0
-
-             do iMix = 1,- nZ_I(iMaterial)
-                cAtomicMassCRASH_I(iMaterial) = &
-                     cAtomicMassCRASH_I(iMaterial) +&
-                     cAtomicMass_I( nZMix_II(iMix,iMaterial) ) * &
-                     cMix_II(iMix,iMaterial)
-             end do
+          nZ_I(iMaterial) = - nZ_I(iMaterial)/2
+          
+          
+          
+          !Calculate atomic mass
+          cAtomicMassCRASH_I(iMaterial) = 0.0
+          
+          do iMix = 1,- nZ_I(iMaterial)
+             cAtomicMassCRASH_I(iMaterial) = &
+                  cAtomicMassCRASH_I(iMaterial) +&
+                  cAtomicMass_I( nZMix_II(iMix,iMaterial) ) * &
+                  cMix_II(iMix,iMaterial)
+          end do
        else
           if(len_trim(Name)==1)then
              NameMaterial_I(iMaterial)=trim(Name)//'_'
