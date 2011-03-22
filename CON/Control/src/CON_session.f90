@@ -282,20 +282,35 @@ contains
                      min(tSimulationCouple, tCoupleExtra_C(iComp))
              end if
 
+             if(DoTestMe)write(*,*)NameSub,': iComp, tSimulationCouple=', &
+                  iComp, tSimulationCouple
+
              ! Find the time of next save restart, stop check or end of session
              tSimulationLimit = huge(1.0)
              
              if(SaveRestart % DoThis .and. SaveRestart % Dt > 0) &
                   tSimulationLimit = min(tSimulationLimit, SaveRestart % tNext)
 
+             if(DoTestMe)write(*,*)NameSub,': restart tSimulationLimit=', &
+                  tSimulationLimit
+
              if(CheckStop % DoThis .and. CheckStop % Dt > 0) &
                   tSimulationLimit = min(tSimulationLimit, CheckStop % tNext)
+
+             if(DoTestMe)write(*,*)NameSub,': checkstop tSimulationLimit=', &
+                  tSimulationLimit
 
              if(tSimulationMax > 0)&
                   tSimulationLimit = min(tSimulationLimit, tSimulationMax)
 
+             if(DoTestMe)write(*,*)NameSub,': tmax tSimulationLimit=', &
+                  tSimulationLimit
+
              ! The next wait time is the smaller of coupling and limit times
              tSimulationWait_C(iComp) = min(tSimulationCouple,tSimulationLimit)
+
+             if(DoTestMe)write(*,*)NameSub,': restart tSimulationWait_C=', &
+                  tSimulationWait_C(iComp)
 
              if(DoCoupleOnTime_C(iComp))then
                 ! Limit component time to the next waiting time
@@ -304,6 +319,9 @@ contains
                 ! Limit time by save restart, stop check and maximum time only
                 tSimulationLimit_C(iComp) = tSimulationLimit
              end if
+
+             if(DoTestMe)write(*,*)NameSub,': final tSimulationLimit_C=', &
+                  tSimulationLimit_C(iComp)
 
           end do
        end if
