@@ -266,9 +266,10 @@ contains
           ! (see the ASTRONUM 2009 proceedings paper by Toth et al.)
           ! Divide the number density by
           !
-          ! 1 + V_s^2/c^2 = 1 + B^2/(c^2*n*M_s)
+          ! 1 + V_s^2/c^2 = 1 + B^2/(c^2*n*M_s/q_s)
           !
-          ! where we used V_s^2 = (M/M_s)*B^2/rho = B^2/(n*M_s)
+          ! where we used V_s^2 = (q_s M/M_s)*B^2/rho = B^2/(n*M_s/q_s)
+          ! and q_s is the charge of species s in units of electron charge.
 
           Ga2 = sum(FullB_D**2)*InvClight2*InvNumDens
           NumDens_I = NumDens_I/(1 + Ga2/MassIon_I)
