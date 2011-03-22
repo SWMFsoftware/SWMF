@@ -130,7 +130,7 @@ noon_05.dat		NameTrajectoryFile
 
 #SOLARWINDFILE
 T			UseSolarwindFile
-GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat
+GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT_tilt.dat
 
 #MAGNETOMETER
 Param/magnetometer_location.dat
