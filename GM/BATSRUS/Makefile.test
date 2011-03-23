@@ -600,11 +600,17 @@ test_corona_rundir:
 test_corona_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; perl -pi -e 's/F(\s*UseBatl)/T$$1/' PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS_BATL; ./PostProc.pl -M RESULTS_BATL
 
 test_corona_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
 		Param/CORONA/TestOutput/log_n000001.log \
 		${TESTDIR}/RESULTS/SC/log_n000001.log > test_corona.diff
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
+		Param/CORONA/TestOutput/log_n000001.log \
+		${TESTDIR}/RESULTS_BATL/SC/log_n000001.log >> test_corona.diff
 	ls -l test_corona.diff
 
 # TEST SPHERICAL GRID FOR CORONA
