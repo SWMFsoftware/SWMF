@@ -510,6 +510,12 @@ contains
        info = 3
        if(DoTest) print *,'BiCGSTAB: nothing to do. info = ',info
        deallocate(bicg_r, bicg_u, bicg_r1, bicg_u1)
+
+       if(nonzero)then
+          qx = qx0
+          deallocate(qx0)
+       end if
+
        RETURN
     end if
 
@@ -526,6 +532,10 @@ contains
        if (abs(rho0)<assumedzero**2) then
           info = 1
           deallocate(bicg_r, bicg_u, bicg_r1, bicg_u1)
+          if(nonzero)then
+             qx = qx + qx0
+             deallocate(qx0)
+          end if
           RETURN
        endif
        beta = alpha*(rho1/rho0)
@@ -544,6 +554,10 @@ contains
        if (abs(sigma)<assumedzero**2) then
           info = 1
           deallocate(bicg_r, bicg_u, bicg_r1, bicg_u1)
+          if(nonzero)then
+             qx = qx + qx0
+             deallocate(qx0)
+          end if
           RETURN
        endif
 
