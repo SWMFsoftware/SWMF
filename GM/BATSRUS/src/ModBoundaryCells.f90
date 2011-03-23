@@ -100,13 +100,16 @@ contains
        SaveBoundaryCells=.false.
     end if
     nBoundarySaved = MaxBoundarySaved - MinBoundarySaved + 1
-    allocate(IsBoundaryCell_IGB(MinBoundarySaved:MaxBoundarySaved,&
-         1-gcn:nI+gcn, 1-gcn:nJ+gcn,  1-gcn:nK+gcn, nBLK))
 
     if(UseBatl)then
-       if(.not. allocated(iBoundary_GB)) &
-            allocate(iBoundary_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-       iBoundary_GB = domain_
+       if(.not. allocated(iBoundary_GB)) then
+          allocate(iBoundary_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+          iBoundary_GB = domain_
+       end if
+    else
+       if(.not.allocated(IsBoundaryCell_IGB)) &
+            allocate(IsBoundaryCell_IGB(MinBoundarySaved:MaxBoundarySaved,&
+            1-gcn:nI+gcn, 1-gcn:nJ+gcn,  1-gcn:nK+gcn, nBLK))
     end if
 
   end subroutine allocate_boundary_cells
@@ -120,7 +123,7 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
   use ModBoundaryCells, ONLY: MinBoundarySaved, MaxBoundarySaved, &
        IsBoundaryCell_IGB, iBoundary_GB, DomainOp, domain_
   use ModMain, ONLY : nBlock, UnusedBlk, iNewGrid, iNewDecomposition, &
-       UseBatl, nI, nJ, nK
+       UseBatl, nI, nJ, nK, body2_, Top_
   use ModGeometry, ONLY: true_cell, body_BLK, IsBoundaryBlock_IB,&
        x_BLK, y_BLK, z_BLK
   !use ModProcMH, ONLY: iProc
@@ -154,7 +157,7 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
 
         body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))   
 
-        do iBoundary = MinBoundarySaved, MaxBoundarySaved
+        do iBoundary = body2_, Top_
            IsBoundaryBlock_IB(iBoundary,iBlock)= &
                 any(iBoundary_GB(:,:,:,iBlock) == iBoundary)
         end do

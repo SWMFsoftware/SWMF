@@ -16,7 +16,11 @@ subroutine set_BCs(TimeBcIn, DoResChangeOnlyIn)
   logical :: oktest, oktest_me
   character(len=*), parameter:: NameSub='set_bcs'
   integer :: i, j, k
+  logical, allocatable :: IsBodyCell_G(:,:,:)
   !----------------------------------------------------------------------------
+
+  if(UseBatl .and. .not.allocated(IsBodyCell_G))&
+       allocate(IsBodyCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
   call timing_start(NameSub)
 
@@ -36,29 +40,31 @@ subroutine set_BCs(TimeBcIn, DoResChangeOnlyIn)
 
   call set_boundary_cells(iBlockBc)
 
-  if(SaveBoundaryCells)then
-     if(UseBatl) then  
-        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-           if(iBoundary_GB(i,j,k,iBlockBc) >= MinBoundarySaved) then
-              IsBoundaryCell_GI(i,j,k,iBoundary_GB(i,j,k,iBlockBc)) = .true.
-           end if
-        end do; end do; end do
-     else
+  if(UseBatl) then  
+
+     IsBodyCell_G(:,:,:) = &
+          iBoundary_GB(:,:,:,iBlockBc) >= MinBoundary .and. &
+          iBoundary_GB(:,:,:,iBlockBc) <= MaxBoundary
+
+     call set_face_BCs(IsBodyCell_G, true_cell(:,:,:,iBlockBc) )
+
+  else
+     if(SaveBoundaryCells)then
         do iBoundary=MinBoundarySaved,MaxBoundarySaved
            IsBoundaryCell_GI(:,:,:,iBoundary)=&
                 IsBoundaryCell_IGB(iBoundary,:,:,:,iBlockBc)
         end do
      end if
-  end if
 
-  !\
-  ! Apply boundary conditions
-  !/
-  do iBoundary = MinBoundary, MaxBoundary
-     if(IsBoundaryBlock_IB(iBoundary,globalBLK)) call set_face_BCs( &
-          IsBoundaryCell_GI(:,:,:,iBoundary),&
-          true_cell(:,:,:,globalBLK) )
-  end do
+     !\
+     ! Apply boundary conditions
+     !/
+     do iBoundary = MinBoundary, MaxBoundary
+        if(IsBoundaryBlock_IB(iBoundary,globalBLK)) call set_face_BCs( &
+             IsBoundaryCell_GI(:,:,:,iBoundary),&
+             true_cell(:,:,:,globalBLK) )
+     end do
+  end if
 
   if(oktest_me)call write_face_state('Final')
 
@@ -109,6 +115,8 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
        Io2No_V, No2Si_V, UnitRho_, UnitElectric_, UnitX_
   use ModSolarwind, ONLY: get_solar_wind_point
   use CON_axes, ONLY: transform_matrix
+  use ModBoundaryCells, ONLY: iBoundary_GB
+
 
   implicit none
 
@@ -134,9 +142,9 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
      DoTest = .false.; DoTestMe = .false.
   end if
 
-  TypeBc = TypeBc_I(iBoundary)
+  if(.not.UseBatl) TypeBc = TypeBc_I(iBoundary)
 
-  if(TypeBc == 'polarwind') then
+  if(TypeBc_I(body1_) == 'polarwind') then
      GmToSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
      Cos2PolarTheta = cos(PolarTheta)**2
   end if
@@ -153,7 +161,7 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
   !\
   ! Apply body BCs as required.
   !/                            
-                   
+
   do k = kMinFaceX, kMaxFaceX
      do j = jMinFaceX, jMaxFaceX
         do i = 1, nIFace
@@ -181,10 +189,10 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i-1:i,j,k,iBlockBc))
               FaceCoords_D(z_) = 0.5*sum(z_BLK(i-1:i,j,k,iBlockBc))
               B0Face_D = B0_DX(:,i,j,k)
-     
+
               VarsTrueFace_V= LeftState_VX(:,i,j,k)
 
-              call set_face_bc
+              call set_face_bc(i-1,j,k,i,j,k)
 
               RightState_VX(:,i,j,k) = VarsGhostFace_V
 
@@ -202,10 +210,10 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i-1:i,j,k,iBlockBc))
               FaceCoords_D(z_) = 0.5*sum(z_BLK(i-1:i,j,k,iBlockBc))
               B0Face_D = B0_DX(:,i,j,k)
-            
+
               VarsTrueFace_V = RightState_VX(:,i,j,k)
 
-              call set_face_bc
+              call set_face_bc(i,j,k,i-1,j,k)
 
               LeftState_VX(:,i,j,k) = VarsGhostFace_V
            end if
@@ -231,10 +239,10 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j-1:j,k,iBlockBc))
               FaceCoords_D(z_) = 0.5*sum(z_BLK(i,j-1:j,k,iBlockBc))
               B0Face_D     = B0_DY(:,i,j,k)
-              
+
               VarsTrueFace_V = LeftState_VY(:,i,j,k)
-          
-              call set_face_bc
+
+              call set_face_bc(i,j-1,k,i,j,k)
 
               RightState_VY(:,i,j,k) = VarsGhostFace_V           
            end if
@@ -254,7 +262,7 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
 
               VarsTrueFace_V = RightState_VY(:,i,j,k)
 
-              call set_face_bc
+              call set_face_bc(i,j,k,i,j-1,k)
 
               LeftState_VY(:,i,j,k) = VarsGhostFace_V
            end if
@@ -282,8 +290,8 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
               B0Face_D = B0_DZ(:,i,j,k)
 
               VarsTrueFace_V =  LeftState_VZ(:,i,j,k)
-        
-              call set_face_bc
+
+              call set_face_bc(i,j,k-1,i,j,k)
 
               RightState_VZ(:,i,j,k) = VarsGhostFace_V
            end if
@@ -300,21 +308,21 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j,k-1:k,iBlockBc))
               FaceCoords_D(z_) = 0.5*sum(z_BLK(i,j,k-1:k,iBlockBc))
               B0Face_D = B0_DZ(:,i,j,k)
-     
+
               VarsTrueFace_V =  RightState_VZ(:,i,j,k)
-         
-              call set_face_bc
+
+              call set_face_bc(i,j,k,i,j,k-1)
 
               LeftState_VZ(:,i,j,k) = VarsGhostFace_V
-          
+
            end if
         end do !end i loop
      end do !end j loop
   end do !end k loop
- 
+
 contains
 
- subroutine set_face_bc
+  subroutine set_face_bc(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
 
     use ModPhysics, ONLY : rBody, xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
     use ModPhysics, ONLY : FaceState_VI,Si2No_V,No2Si_V,UnitX_,UnitN_,UnitU_, &
@@ -327,8 +335,12 @@ contains
     use ModConst,   ONLY: cElectronCharge, cBoltzmann,cProtonMass
     use ModPlanetConst, ONLY: Earth_, rPlanet_I
     use ModUtilities
-    
+    use ModBoundaryCells, ONLY: iBoundary_GB
+    use ModFaceBC, ONLY:iBlockBc
     implicit none
+
+    ! indexes of the true and ghost cells on the two sides of the face
+    integer, intent(in):: iTrue, jTrue, kTrue, iGhost, jGhost, kGhost
 
     real, parameter:: PressureJumpLimit=0.0, DensityJumpLimit=0.1
     real, parameter:: LatitudeCap = 55.0
@@ -347,6 +359,11 @@ contains
     integer:: iHemisphere
     integer :: iIonSecond
     !------------------------------------------------------------------------
+
+    if(UseBatl)then
+       iBoundary = iBoundary_GB(iGhost,jGhost,kGhost,iBlockBc)
+       TypeBc = TypeBc_I(iBoundary)
+    end if
 
     ! User defined boundary conditions
     if( index(TypeBc, 'user') > 0 .or. &
@@ -392,21 +409,21 @@ contains
        SinPhi   = FaceCoords_D(y_)/ &
             sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+cTolerance**2)
        BdotU    = dot_product(VarsTrueFace_V(Bx_:Bz_),        &
-                              VarsTrueFace_V(Ux_:Uz_))/       &
-                  (dot_product(VarsTrueFace_V(Ux_:Uz_),        &
-                              VarsTrueFace_V(Ux_:Uz_))+cTolerance**2)
+            VarsTrueFace_V(Ux_:Uz_))/       &
+            (dot_product(VarsTrueFace_V(Ux_:Uz_),        &
+            VarsTrueFace_V(Ux_:Uz_))+cTolerance**2)
        UrTrue   = dot_product(VarsTrueFace_V(Ux_:Uz_),        &
-                    FaceCoords_D(x_:z_))*RInv
+            FaceCoords_D(x_:z_))*RInv
        UtTrue   = ((VarsTrueFace_V(Ux_)*FaceCoords_D(x_)+     &
-                    VarsTrueFace_V(Uy_)*FaceCoords_D(y_))*    &
-                    FaceCoords_D(z_)-VarsTrueFace_V(Uz_)*     &
-                   (FaceCoords_D(x_)**2+FaceCoords_D(y_)**2))/&
-               sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+  &
-                    cTolerance**2)*RInv
+            VarsTrueFace_V(Uy_)*FaceCoords_D(y_))*    &
+            FaceCoords_D(z_)-VarsTrueFace_V(Uz_)*     &
+            (FaceCoords_D(x_)**2+FaceCoords_D(y_)**2))/&
+            sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+  &
+            cTolerance**2)*RInv
        BpTrue   =  (VarsTrueFace_V(By_)*FaceCoords_D(x_)-     &
-                    VarsTrueFace_V(Bx_)*FaceCoords_D(y_))/    &
-                  ((FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+  &
-                    cTolerance**2)*RInv)*sinTheta
+            VarsTrueFace_V(Bx_)*FaceCoords_D(y_))/    &
+            ((FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+  &
+            cTolerance**2)*RInv)*sinTheta
        BrGhost  = UrTrue*BdotU; BtGhost = UtTrue*BdotU;
        BpGhost  = BpTrue
        VarsGhostFace_V(Bx_) = BrGhost*FaceCoords_D(x_)*RInv+  &
@@ -529,14 +546,14 @@ contains
           if(TypeBc == 'ionosphereoutflow')then      
 
              iIonSecond = min(IonFirst_ + 1, IonLast_)
-             
+
              if (TypeCoordSystem /= 'SMG') then 
                 SmgFaceCoords_D = matmul(transform_matrix(TimeBc, &
                      TypeCoordSystem, 'SMG'), FaceCoords_D)
              else 
                 SmgFaceCoords_D = FaceCoords_D
              endif
-             
+
              SinLatitudeCap = sin(LatitudeCap * cDegToRad)
              zCap = sqrt(sum(SmgFaceCoords_D**2))*SinLatitudeCap
 
@@ -552,14 +569,14 @@ contains
                    endif
                    GseToGeo_D = matmul(transform_matrix(TimeBc, 'GSE', 'GEO'),&
                         (/0,0,1/))
-                   
+
                    ! For the cap region (refer to Tom Moore 2003?)
                    ! Get the Op flux from IE calculation
                    ! Get the Hp flux from fluxpw, 
                    ! which is constant for certain solar zenith angle
                    ! Fix the velocities(V), thermal energies
                    ! Get the densities(rho), thermal pressure(P)
-                   
+
                    ! get the magnetic field
                    call get_planet_field(TimeBc, FaceCoords_D,&
                         TypeCoordSystem//'NORM', bFace_D)
@@ -587,22 +604,22 @@ contains
                    FluxIono = 2.142e7*(JouleHeating * No2Si_V(UnitPoynting_)&
                         * 1.0e3)**1.265 * 1.0e4 &
                         * Si2No_V(UnitU_) * Si2No_V(UnitN_) * (b4/b)**0.265
-                   
+
                    ! thermal energy = 0.1 + 1.6 * S^1.26 
                    ! (S is joule heating in mW/m^2 at inner boundary)
                    ! to specify the O+ temperature
                    eCap = 0.1 + 9.2 * &
                         ((b4/b)* JouleHeating*No2Si_V(UnitPoynting_) &
                         * 1.0e3)**0.35    !eV
-                   
+
                    ! Get the field aligned current at this location, 
                    ! so comes the parallel energy
                    call get_point_data(1.0, FaceCoords_D, 1, nBlock, Bx_, &
                         nVar+3, State_V)
- 
+
                    Jlocal_D = State_V(nVar+1:nVar+3)
                    Jpar = sum(bUnit_D * Jlocal_D)  !in normalized unit
-  
+
                    ! parallel energy 
                    ! (ePar = eV=e*(1500[V/mmA/m^2] * (J//-0.33)^2 [mmA/m^2]))
                    if(abs(Jpar*No2Si_V(UnitJ_))*1.0e6 > 0.33)then 
@@ -611,21 +628,21 @@ contains
                    else
                       ePar = 0.
                    end if
-                   
+
                    ! Get the velocity along B, 
                    ! superpose the parallel velocity and the thermal velocity
                    Ub_V(1) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
                         (MassFluid_I(IonFirst_)*cProtonMass))) &
                         * Si2No_V(UnitU_)
-                     
+
                    Ub_V(2) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
                         (MassFluid_I(iIonSecond)*cProtonMass))) &
                         * Si2No_V(UnitU_)
-                   
+
                    ! .OR. Pick the constant velocities and thermal energy
                    ! Ub_V(2) = 10*Io2No_V(UnitU_)  !20km/s
                    ! Ub_V(1) = 20*Io2No_V(UnitU_) 
-                    
+
                    ! SZA x is determind by 
                    ! cosx = sin(the)sin(da)+cos(the)cos(da)cos(dt)
                    ! where, the is the latitude, da is solar declination( 
@@ -641,7 +658,7 @@ contains
                    if(SmgFaceCoords_D(y_)<0.0) DtTmp =  cTwoPi - DtTmp
                    Cosx = sin(TheTmp)*sin(DaTmp) + &
                         cos(TheTmp)*cos(DaTmp)*cos(DtTmp)
-                     
+
                    ! get the magnetic field at 1000km
                    call map_planet_field(TimeBc, FaceCoords_D, &
                         TypeCoordSystem//'NORM', &
@@ -650,7 +667,7 @@ contains
                    call get_planet_field(TimeBc, XyzMap_D, &
                         TypeCoordSystem//'NORM', bFace_D)
                    b1 =  sqrt(sum(bFace_D**2))
-                     
+
                    ! get the Hp flux by mapping the flux at 1000km 
                    ! into the inner boudnary
                    if (acos(Cosx)*cRadToDeg < 90 .and. &
@@ -665,16 +682,16 @@ contains
                       FluxPw = 2.0*10.**5.5 * 1.0e4 * (b/b1) * &
                            Si2No_V(UnitU_) * Si2No_V(UnitN_)
                    endif
-                   
+
                    ! get the densities
                    VarsGhostFace_V(iRho_I(IonFirst_)) = FluxPw/Ub_V(1) *   &
                         MassFluid_I(IonFirst_)
                    VarsGhostFace_V(iRho_I(iIonSecond)) = FluxIono/Ub_V(2) * &
                         MassFluid_I(iIonSecond)     
-                     
+
                    ! Make sure it points outward
                    if(sum(bUnit_D*FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
-                     
+
                    VarsGhostFace_V(iUx_I(IonFirst_)) = Ub_V(1) * bUnit_D(x_)
                    VarsGhostFace_V(iUy_I(IonFirst_)) = Ub_V(1) * bUnit_D(y_)
                    VarsGhostFace_V(iUz_I(IonFirst_)) = Ub_V(1) * bUnit_D(z_)
@@ -682,7 +699,7 @@ contains
                    VarsGhostFace_V(iUx_I(iIonSecond)) = Ub_V(2) * bUnit_D(x_)
                    VarsGhostFace_V(iUy_I(iIonSecond)) = Ub_V(2) * bUnit_D(y_)
                    VarsGhostFace_V(iUz_I(iIonSecond)) = Ub_V(2) * bUnit_D(z_)
-                     
+
                    ! get the pressure
                    VarsGhostFace_V(iP_I(iIonSecond))   =  2./3. * eCap * &
                         cElectronCharge / cBoltzmann &
@@ -692,7 +709,7 @@ contains
                         cElectronCharge / cBoltzmann & 
                         * Si2No_V(UnitTemperature_)  &
                         * VarsGhostFace_V(iRho_I(IonFirst_))/MassFluid_I(IonFirst_)
-                     
+
                    ! for the 'all' fluid
                    VarsGhostFace_V(Rho_) = sum(VarsGhostFace_V( &
                         iRho_I(IonFirst_:iIonSecond)))
@@ -710,7 +727,7 @@ contains
                         /sum(VarsGhostFace_V(iRho_I(IonFirst_:iIonSecond)))
                    VarsGhostFace_V(P_)        = sum(VarsGhostFace_V( &
                         iP_I(IonFirst_:iIonSecond)))
-                     
+
                 else
                    call stop_mpi( &
                         'ionosphereoutflow should have IE coupled and multifluids')
@@ -729,16 +746,16 @@ contains
        VarsGhostFace_V = FaceState_V
        if(UseB0)VarsGhostFace_V(Bx_:Bz_)=VarsGhostFace_V(Bx_:Bz_) - B0Face_D
 
-    !^CFG IF SECONDBODY BEGIN
+       !^CFG IF SECONDBODY BEGIN
     case('Body2Orbit')
        VarsGhostFace_V = FaceState_V
        VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0Face_D
-       
+
        ! Setting velocity BCs to be the second body orbital velocity: 
        VarsGhostFace_V(Ux_) = -(cTwoPi*yBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_) 
        VarsGhostFace_V(Uy_) =  (cTwoPi*xBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
        VarsGhostFace_V(Uz_) =  cZero
-    !^CFG END SECONDBODY
+       !^CFG END SECONDBODY
 
     case default
        call stop_mpi('Incorrect TypeBc_I='//TypeBc)
@@ -785,7 +802,7 @@ contains
           call stop_mpi('UseRotatingBc is not compatible with TypeBc_I=' &
                //TypeBc) 
        end select
-    end if 
+    end if
   end subroutine set_face_bc
 
 end subroutine set_face_BCs
