@@ -28,6 +28,7 @@ module ModMultiFluid
 
   ! The ion masses (adjustable)
   real :: MassIon_I(nIonFluid)
+  real :: ChargeIon_I(nIonFluid)=1.0
 
   ! Allow using fully non-conservative scheme for the neutral fluids
   logical :: DoConserveNeutrals    = .true.

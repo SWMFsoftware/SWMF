@@ -58,7 +58,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModRadDiffusion,   ONLY: read_rad_diffusion_param  !^CFG IF IMPLICIT
   use ModResistivity, ONLY: UseResistivity, &            !^CFG IF DISSFLUX
        read_resistivity_param, init_mod_resistivity      !^CFG IF DISSFLUX
-  use ModMultiFluid, ONLY: MassIon_I, iFluid, DoConserveNeutrals
+  use ModMultiFluid, ONLY: MassIon_I,ChargeIon_I,nIonFluid, iFluid, &
+       DoConserveNeutrals
   use ModMultiIon, ONLY: multi_ion_set_parameters
   use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
        read_solar_wind_file, normalize_solar_wind_data
@@ -1713,9 +1714,19 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('MassFluid', MassFluid_I(iFluid))
         end do
         MassIon_I = MassFluid_I(IonFirst_:IonLast_)
-        call read_var('AverageIonCharge        ', AverageIonCharge)
+        do iFluid = 1, nIonFluid
+           call read_var('ChargeIon', ChargeIon_I(iFluid))
+        end do
+
         call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
-        ElectronPressureRatio = ElectronTemperatureRatio*AverageIonCharge
+        ElectronPressureRatio = ElectronTemperatureRatio
+
+        !averageioncharge is only useful when there is only one ion
+        if(nIonFluid==1)then  
+           AverageIonCharge = ChargeIon_I(1)
+           ElectronPressureRatio = ElectronTemperatureRatio*AverageIonCharge
+        end if
+
         PePerPtotal = ElectronPressureRatio/(1 + ElectronPressureRatio)
 
      case("#MULTISPECIES")

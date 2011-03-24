@@ -102,7 +102,7 @@ subroutine set_physics_constants
 
   ! If not multispecies, multiply with average ion mass
   if(.not. (UseMultiSpecies .or. UseMultiIon)) &
-       IonMassPerCharge = IonMassPerCharge * MassIon_I(1)
+       IonMassPerCharge = IonMassPerCharge * MassIon_I(1) /ChargeIon_I(1)
 
   !\
   ! set the (corrected) speed of light and get normalization

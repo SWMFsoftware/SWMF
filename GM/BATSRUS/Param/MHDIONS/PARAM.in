@@ -80,8 +80,9 @@ Distance units are in km
 
 #PLASMA
 1.0		MassFluid H
-16.0		MassFluid O
-1.0		AverageIonization
+32.0		MassFluid O
+1.0		ChargeIon H
+2.0		ChargeIon O
 0.25		ElectronTemperatureRatio
 
 #MHDIONS

@@ -120,7 +120,10 @@ F			DoReplaceDensity
 32.0            IonMass O2 [amu]
 16.0            IonMass O [amu]
 44.0            IonMass CO2 [amu]
-1.0             AverageIonCharge (ignored)
+1.0             IonMass H [amu]
+1.0             IonMass O2 [amu]
+1.0             IonMass O [amu]
+1.0             IonMass CO2 [amu]
 1.0             ElectronTemperatureRatio
 
 #MULTIION

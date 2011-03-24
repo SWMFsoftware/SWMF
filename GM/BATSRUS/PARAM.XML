@@ -4927,13 +4927,13 @@ in ModEquation). The number density is n=rho/IonMass.
 For a pure hydrogene plasma IonMass=1.0, while for a mix of 90 per cent 
 hydrogen and 10 per cent helium IonMass=1.4.
 
-For multifluid MHD/HD the command reads the mass of all fluids (ions and neutrals).
-For example for hydrogen and oxygen fluids:
+For multifluid MHD/HD the command reads the mass of all fluids (ions and neutrals), and charge of all ions
+For example for hydrogen and oxygen ion fluids:
 
 #PLASMA
-1.0             IonMass H [amu]
-16.0            IonMass O [amu]
-1.0             AverageIonCharge (ignored)
+1.0             fluidMass H [amu]
+16.0            fluidMass O [amu]
+1.0             IonCharge O+ [amu]
 0.2             ElectronTemperatureRatio
 
 The AverageIonCharge determines the average charge of ions (and strongly

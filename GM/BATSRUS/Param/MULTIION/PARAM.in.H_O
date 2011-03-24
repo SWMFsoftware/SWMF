@@ -27,7 +27,8 @@ F			DoNormalizeCell
 PLASMA
 1.0		MassH+
 1.0		MassO+
-1.0		Charge
+1.0		ChargeH+
+1.0		ChargeO+
 0.0		eTemp
 
 UPDATECHECK

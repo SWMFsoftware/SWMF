@@ -66,6 +66,13 @@ F			UseNonConservative
 0.		Uz
 0.1e-4		P
 
+#PLASMA
+1.0		MassH+
+32.0		MassO+
+1.0		ChargeH+
+2.0		ChargeO+
+0.0		eTemp
+
 Sheared boundary condition is used for non-zero shock slope
 #OUTERBOUNDARY
 periodic		xMinBc

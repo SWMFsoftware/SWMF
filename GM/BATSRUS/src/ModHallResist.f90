@@ -174,7 +174,7 @@ contains
     use ModAdvance,    ONLY: UseIdealEos
     use ModVarIndexes, ONLY: nVar, Rho_, &
          UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V
-    use ModMultiFluid, ONLY: UseMultiIon, iRhoIon_I, MassIon_I
+    use ModMultiFluid, ONLY: UseMultiIon, iRhoIon_I, MassIon_I,ChargeIon_I
     use ModPhysics,    ONLY: IonMassPerCharge
     use ModUser,       ONLY: user_material_properties
 
@@ -202,7 +202,7 @@ contains
     elseif(UseMultiIon)then
        ! Get mass density per total number denisity
        IonMassPerChargeOut = IonMassPerCharge*sum(State_V(iRhoIon_I)) &
-            / sum(State_V(iRhoIon_I) / MassIon_I)
+            / sum(State_V(iRhoIon_I)*ChargeIon_I / MassIon_I)
 
     else
        IonMassPerChargeOut = IonMassPerCharge

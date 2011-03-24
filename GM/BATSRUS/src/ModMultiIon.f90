@@ -185,8 +185,8 @@ contains
 
     real :: State_V(nVar)
     real, dimension(nDim)     :: Current_D, FullB_D, Force_D
-    real, dimension(nIonFluid):: ForceX_I, ForceY_I, ForceZ_I, NumDens_I
-    real :: InvNumDens
+    real, dimension(nIonFluid):: ForceX_I, ForceY_I, ForceZ_I, ChargeDens_I
+    real :: InvElectronDens
     real :: vInv, GradXPe, GradYPe, GradZPe
 
     ! Alfven Lorentz factor for Boris correction
@@ -217,8 +217,11 @@ contains
 
        State_V = State_VGB(:,i,j,k,iBlock)
 
-       NumDens_I  = State_V(iRhoIon_I) / MassIon_I
-       InvNumDens = 1.0/sum(NumDens_I)
+       ChargeDens_I = ChargeIon_I * State_V(iRhoIon_I) / MassIon_I
+       InvElectronDens = 1.0/sum(ChargeDens_I)
+       
+       if(InvElectronDens < 0.0) &
+            call stop_mpi('negative electron denisty')
 
        ! Calculate Lorentz force = J x B
        Current_D = vInv* &
@@ -268,22 +271,23 @@ contains
           !
           ! 1 + V_s^2/c^2 = 1 + B^2/(c^2*n*M_s/q_s)
           !
-          ! where we used V_s^2 = (q_s M/M_s)*B^2/rho = B^2/(n*M_s/q_s)
+          ! where we used V_s^2 = (q_s*M/M_s)*B^2/rho = B^2/(n*M_s/q_s)
           ! and q_s is the charge of species s in units of electron charge.
 
-          Ga2 = sum(FullB_D**2)*InvClight2*InvNumDens
-          NumDens_I = NumDens_I/(1 + Ga2/MassIon_I)
+          Ga2 = sum(FullB_D**2)*InvClight2*InvElectronDens
+          ChargeDens_I = ChargeDens_I/(1 + Ga2*ChargeIon_I/MassIon_I)
        end if
 
        ! Multiply by n_s/n_e for all ion fluids
-       ForceX_I = NumDens_I*InvNumDens*Force_D(x_)
-       ForceY_I = NumDens_I*InvNumDens*Force_D(y_)
-       ForceZ_I = NumDens_I*InvNumDens*Force_D(z_)
+       ForceX_I = ChargeDens_I*InvElectronDens*Force_D(x_)
+       ForceY_I = ChargeDens_I*InvElectronDens*Force_D(y_)
+       ForceZ_I = ChargeDens_I*InvElectronDens*Force_D(z_)
 
        if(DoTestCell)then
           write(*,*)Namesub,':ForceX_I, ForceY_I, ForceZ_I=', &
                ForceX_I, ForceY_I, ForceZ_I
-          write(*,*)Namesub,': InvNumDens, NumDens_I=', InvNumDens, NumDens_I
+          write(*,*)Namesub,': InvElectronDens, ChargeDens_I=', &
+               InvElectronDens, ChargeDens_I
        end if
 
        ! Store ion momentum sources
@@ -343,11 +347,12 @@ contains
     use ModSize,           ONLY: nDim
 
     ! Variables for multi-ion MHD
-    real    :: NumDens, InvNumDens, pAverage, State_V(nVar)
+    real:: InvElectronDens, pAverage, State_V(nVar)
     real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D
     real, dimension(3) :: Force_D
     real, dimension(nIonFluid) :: &
-         NumDens_I, NumDensBoris_I, Rho_I, InvRho_I, Ux_I, Uy_I, Uz_I, Temp_I
+         NumDens_I, ChargeDens_I, ChargeDensBoris_I, &
+         Rho_I, InvRho_I, Ux_I, Uy_I, Uz_I, Temp_I
 
     ! Alfven Lorentz factor for Boris correction
     real :: Ga2
@@ -359,13 +364,14 @@ contains
     ! Artificial friction
     real :: InvuCutOff2, InvTauCutOff
 
-    character (len=*), parameter :: NameSub = 'multi_ion_source_impl'
     logical :: DoTest, DoTestMe, DoTestCell
 
     ! Variables for analytic Jacobian
     integer :: iDim, jDim, kDim, iUi, iUk
     real    :: SignedB, ForceCoeff, Coeff, CoefJacobian, Du2
     real    :: Du_D(3)
+
+    character(len=*), parameter :: NameSub = 'multi_ion_source_impl'
     !-----------------------------------------------------------------------
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
@@ -415,26 +421,30 @@ contains
        if(UseB0) FullB_D =  FullB_D + B0_DGB(:,i,j,k,iBlock)
 
        ! calculate number densities
-       NumDens_I  = State_V(iRhoIon_I) / MassIon_I
-       NumDens    = sum(NumDens_I)
-       InvNumDens = 1.0/NumDens
+       NumDens_I     = State_V(iRhoIon_I) / MassIon_I
+       ChargeDens_I  = NumDens_I * ChargeIon_I
+       InvElectronDens = 1.0/sum(ChargeDens_I)
 
-       NumDensBoris_I = NumDens_I
+       if(InvElectronDens < 0.0) &
+            call stop_mpi(NameSub//': negative electron denisty')
+
+       ChargeDensBoris_I = ChargeDens_I
+       
        if(UseBoris .or. UseBorisSimple)then
           ! See the ASTRONUM 2009 proceedings paper by Toth et al.
           !
           ! Boris correction: divide the number density by
           !
-          ! 1 + V_s^2/c^2 = 1 + B^2/(c^2*n*M_s)
+          ! 1 + V_s^2/c^2 = 1 + B^2/(c^2*n*M_s/q_s)
           !
-          ! where we used V_s^2 = (M/M_s)*B^2/rho = B^2/(n*M_s)
+          ! where we used V_s^2 = (q_s*M/M_s)*B^2/rho = B^2/(n*M_s/q_s)
 
-          Ga2 = sum(FullB_D**2)*InvClight2*InvNumDens
-          NumDensBoris_I = NumDens_I/(1 + Ga2/MassIon_I)
+          Ga2 = sum(FullB_D**2)*InvClight2*InvElectronDens
+          ChargeDensBoris_I = ChargeDens_I/(1 + Ga2*ChargeIon_I/MassIon_I)
        end if
 
        Temp_I     = State_V(iPIon_I)/NumDens_I
-       AverageTemp= sum(State_V(iPIon_I))*InvNumDens
+       AverageTemp= sum(State_V(iPIon_I))/sum(NumDens_I)
 
        if(AverageTemp <= 0.0)then
           write(*,*)'ERROR: AverageTemp =',AverageTemp
@@ -444,7 +454,9 @@ contains
           write(*,*)'iRhoIon_I          =',iRhoIon_I
           write(*,*)'RhoIon_I           =',State_V(iRhoIon_I)
           write(*,*)'MassIon_I          =',MassIon_I
+          write(*,*)'ChargeIon_I        =',ChargeIon_I
           write(*,*)'NumDens_I          =',NumDens_I
+          write(*,*)'ChargeDens_I       =',ChargeDens_I
           write(*,*)'iPIon_I            =',iPIon_I
           write(*,*)'PIon_I             =',State_V(iPIon_I)
           write(*,*)'Temp_I             =',Temp_I
@@ -458,9 +470,9 @@ contains
        Uz_I     = InvRho_I*State_V(iUzIon_I)
 
        ! calculate the average positive charge velocity
-       uPlus_D(x_) = InvNumDens* sum(NumDens_I*Ux_I)
-       uPlus_D(y_) = InvNumDens* sum(NumDens_I*Uy_I)
-       uPlus_D(z_) = InvNumDens* sum(NumDens_I*Uz_I)
+       uPlus_D(x_) = InvElectronDens * sum(ChargeDens_I*Ux_I)
+       uPlus_D(y_) = InvElectronDens * sum(ChargeDens_I*Uy_I)
+       uPlus_D(z_) = InvElectronDens * sum(ChargeDens_I*Uz_I)
 
        TemperatureCoef = 1.0/(AverageTemp*sqrt(AverageTemp))
 
@@ -478,7 +490,7 @@ contains
        do iIon = 1, nIonFluid
           uIon_D = (/ Ux_I(iIon),  Uy_I(iIon), Uz_I(iIon) /)
           u_D    = uIon_D - uPlus_D
-          ForceCoeff = ElectronCharge*NumDensBoris_I(iIon)
+          ForceCoeff = ElectronCharge*ChargeDensBoris_I(iIon)
           Force_D    = ForceCoeff * cross_product(u_D, FullB_D) 
 
           if(DoTestCell)then
@@ -502,12 +514,13 @@ contains
                    DsDu_VVC(iUk, iUi, i, j, k) = DsDu_VVC(iUk, iUi, i, j, k) & 
                         + ForceCoeff*SignedB*InvRho_I(iIon)
 
-                   Coeff = ForceCoeff*SignedB*InvNumDens
+                   Coeff = ForceCoeff*SignedB*InvElectronDens
                    ! This term is with respect to any fluid
                    do jIon = 1, nIonFluid
                       iUi = iUxIon_I(jIon) + iDim - 1
                       DsDu_VVC(iUk,iUi,i,j,k) = &
-                           DsDu_VVC(iUk,iUi,i,j,k) - Coeff/MassIon_I(jIon)
+                           DsDu_VVC(iUk,iUi,i,j,k) - &
+                           Coeff*ChargeIon_I(jIon)/MassIon_I(jIon)
                    end do
                 end do
              end do

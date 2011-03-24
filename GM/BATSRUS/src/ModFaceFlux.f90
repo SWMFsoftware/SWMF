@@ -1130,8 +1130,8 @@ contains
     real :: uLeft_D(3), uRight_D(3) !,cDivBWave
     real :: dB0_D(3)
 
-    real       :: GradPe_D(3)
-    real       :: InvNumDens, Coef
+    real :: GradPe_D(3)
+    real :: InvElectronDens, Coef
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -1175,17 +1175,18 @@ contains
 
        ! Calculate 1/(n_e * e)
        if(UseMultiIon)then
-          InvNumDens = BiermannCoeff/(0.5* &
-               sum((StateLeft_V(iRhoIon_I)+StateRight_V(iRhoIon_I))/MassIon_I))
+          InvElectronDens = BiermannCoeff/(0.5* &
+               sum((StateLeft_V(iRhoIon_I)+StateRight_V(iRhoIon_I))&
+               *ChargeIon_I/MassIon_I))
        else
-          InvNumDens = BiermannCoeff &
+          InvElectronDens = BiermannCoeff &
                /(0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_)))
        end if
 
        ! Calculate grad(Pe)/(n_e * e)
-       GradXPeNe = GradPe_D(x_)*InvNumDens
-       GradYPeNe = GradPe_D(y_)*InvNumDens
-       GradZPeNe = GradPe_D(z_)*InvNumDens
+       GradXPeNe = GradPe_D(x_)*InvElectronDens
+       GradYPeNe = GradPe_D(y_)*InvElectronDens
+       GradZPeNe = GradPe_D(z_)*InvElectronDens
 
     end if
 
@@ -2072,7 +2073,7 @@ contains
     real :: dB0_D(3)
 
     real       :: GradPe_D(3)
-    real       :: InvNumDens, Coef
+    real       :: Coef
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -2624,8 +2625,8 @@ contains
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
       integer :: iVar
 
-      real :: InvNumDens, StateTmp_V(nVar), UxPlus, UyPlus, UzPlus, UnPlus
-      real, dimension(nIonFluid) :: NumDens_I, Ux_I, Uy_I, Uz_I, RhoUn_I
+      real :: InvElectronDens, StateTmp_V(nVar), UxPlus, UyPlus, UzPlus, UnPlus
+      real, dimension(nIonFluid) :: ChargeDens_I, Ux_I, Uy_I, Uz_I, RhoUn_I
       !-----------------------------------------------------------------------
 
       ! Extract primitive variables
@@ -2675,18 +2676,18 @@ contains
       if(UseMultiIon)then
          ! Calculate charge density averaged velocity U*Plus
 
-         ! calculate number densities
-         NumDens_I  = State_V(iRhoIon_I) / MassIon_I
-         InvNumDens = 1.0/sum(NumDens_I)
+         ! calculate charge densities
+         ChargeDens_I    = ChargeIon_I * State_V(iRhoIon_I) / MassIon_I
+         InvElectronDens = 1.0/sum(ChargeDens_I)
 
          Ux_I  = State_V(iUxIon_I)
          Uy_I  = State_V(iUyIon_I)
          Uz_I  = State_V(iUzIon_I)
 
          ! calculate the average positive charge velocity
-         UxPlus = InvNumDens*sum(NumDens_I*Ux_I)
-         UyPlus = InvNumDens*sum(NumDens_I*Uy_I)
-         UzPlus = InvNumDens*sum(NumDens_I*Uz_I)
+         UxPlus = InvElectronDens*sum(ChargeDens_I*Ux_I)
+         UyPlus = InvElectronDens*sum(ChargeDens_I*Uy_I)
+         UzPlus = InvElectronDens*sum(ChargeDens_I*Uz_I)
 
          UnPlus = UxPlus*NormalX + UyPlus*NormalY + UzPlus*NormalZ
       else
@@ -2822,24 +2823,24 @@ contains
       ! Calculate magnetic flux for multi-ion equations 
       ! without a global ion fluid
 
-      real :: NumDens_I(nIonFluid), InvNumDens
+      real :: ChargeDens_I(nIonFluid), InvElectronDens
       real :: UxPlus, UyPlus, UzPlus
       real :: HallUx, HallUy, HallUz
       !-----------------------------------------------------------------------
 
       ! calculate number densities
-      NumDens_I  = State_V(iRhoIon_I) / MassIon_I
-      InvNumDens = 1.0/sum(NumDens_I)
+      ChargeDens_I    = ChargeIon_I * State_V(iRhoIon_I) / MassIon_I
+      InvElectronDens = 1.0/sum(ChargeDens_I)
 
       ! calculate positive charge velocity
-      UxPlus = InvNumDens*sum(NumDens_I*State_V(iUxIon_I))
-      UyPlus = InvNumDens*sum(NumDens_I*State_V(iUyIon_I))
-      UzPlus = InvNumDens*sum(NumDens_I*State_V(iUzIon_I))
+      UxPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUxIon_I))
+      UyPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUyIon_I))
+      UzPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUzIon_I))
 
       if(HallCoeff > 0.0)then
-         HallUx = UxPlus - HallJx*InvNumDens
-         HallUy = UyPlus - HallJy*InvNumDens
-         HallUz = UzPlus - HallJz*InvNumDens
+         HallUx = UxPlus - HallJx*InvElectronDens
+         HallUy = UyPlus - HallJy*InvElectronDens
+         HallUz = UzPlus - HallJz*InvElectronDens
       else
          HallUx = UxPlus
          HallUy = UyPlus
@@ -2853,7 +2854,8 @@ contains
       Flux_V(Bz_) = HallUn*FullBz - HallUz*FullBn
 
       if(DoTestCell)then
-         write(*,*)'NumDens_I,InvNumDens=',NumDens_I,InvNumDens
+         write(*,*)'ChargeDens_I,InvElectronDens=', &
+              ChargeDens_I, InvElectronDens
          write(*,*)'UxyzPlus  =',UxPlus,UyPlus,UzPlus
          write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
          write(*,*)'FullBxyz  =',FullBx,FullBy,FullBz
