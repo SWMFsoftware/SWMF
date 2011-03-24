@@ -282,7 +282,6 @@ subroutine fix_block_geometry(iBLK)
      ! format for iBoundary_GB
      iBoundary_GB(:,:,:,iBlk) = domain_
      do iBoundary = body2_, Top_
-        !do iBoundary=ExtraBc_,MaxBoundary  
         where(IsBoundaryCell_GI(:,:,:,iBoundary))
            iBoundary_GB(:,:,:,iBlk) = iBoundary
         end where
