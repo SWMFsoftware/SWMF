@@ -74,20 +74,28 @@ module ModBoundaryCells
 contains
 
   !===========================================================================
-  subroutine allocate_boundary_cells
+  subroutine init_mod_boundary_cells
 
     use ModSize
     use ModGeometry, ONLY: MaxBoundary, ExtraBC_
     use ModMain,     ONLY: UseExtraBoundary, UseBatl
     use ModProcMH
     !-------------------------------------------------------------------------
-    if(.not.SaveBoundaryCells)then
-       if(iProc==0)write(*,*)&
-            'Do not allocate boundary cell array, if SaveBoundaryCells=',&
-            SaveBoundaryCells
-       return
+
+    if(UseBatl .and. .not. allocated(iBoundary_GB)) then
+       allocate(iBoundary_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       iBoundary_GB = domain_
     end if
-    if(allocated(IsBoundaryCell_IGB))return
+
+    if(.not.SaveBoundaryCells) return
+
+!!$    if(.not.SaveBoundaryCells)then
+!!$       if(iProc==0)write(*,*)&
+!!$            'Do not allocate boundary cell array, if SaveBoundaryCells=',&
+!!$            SaveBoundaryCells
+!!$       return
+!!$    end if
+    if(.not.UseBatl .and. allocated(IsBoundaryCell_IGB))return
 
     if(UseExtraBoundary)then
        MinBoundarySaved=ExtraBC_
@@ -101,18 +109,13 @@ contains
     end if
     nBoundarySaved = MaxBoundarySaved - MinBoundarySaved + 1
 
-    if(UseBatl)then
-       if(.not. allocated(iBoundary_GB)) then
-          allocate(iBoundary_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-          iBoundary_GB = domain_
-       end if
-    else
+    if(.not.UseBatl)then 
        if(.not.allocated(IsBoundaryCell_IGB)) &
             allocate(IsBoundaryCell_IGB(MinBoundarySaved:MaxBoundarySaved,&
             1-gcn:nI+gcn, 1-gcn:nJ+gcn,  1-gcn:nK+gcn, nBLK))
     end if
 
-  end subroutine allocate_boundary_cells
+  end subroutine init_mod_boundary_cells
 
 end module ModBoundaryCells
 
