@@ -43,7 +43,7 @@ subroutine MH_set_parameters(TypeAction)
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
        NameUserModule, VersionUserModule
-  use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
+  use ModBoundaryCells, ONLY: SaveBoundaryCells,init_mod_boundary_cells
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
   use ModHallResist,    ONLY: &
@@ -233,6 +233,7 @@ subroutine MH_set_parameters(TypeAction)
      call init_mod_advance
      DivB1_GB = 0.0
      call init_mod_geometry
+     call init_mod_boundary_cells
      call init_mod_nodes
      call init_mod_raytrace                    !^CFG IF RAYTRACE
      if(UseConstrainB) call init_mod_ct        !^CFG IF CONSTRAINB
@@ -2557,9 +2558,7 @@ contains
     end if
 
     if(SaveBoundaryCells)then
-       if(index(optimize_message_pass,'all')>0)then
-          call allocate_boundary_cells
-       else
+       if(.not. index(optimize_message_pass,'all')>0)then
           if(iProc==0)&
                write(*,'(a)')NameSub//&
                'SaveBoundaryCells does not work '&
