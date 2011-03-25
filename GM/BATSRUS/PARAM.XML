@@ -1239,6 +1239,17 @@ it offers several advantages, such as 1D and 2D AMR, and much more efficient
 dynamic grid adaptation, and correct AMR in R-Z geometry.
 </command>
 
+<command name="BATLTEST" if="$_IsFirstSession">
+        <parameter name="UseBatlTest" type="logical" default="F" />
+
+#BATLTEST
+T                       UseBatlTest
+
+For testing purposes, switch to a compatibility mode, so that BATL 
+gives the same results as the original BATSRUS. This setting is only
+useful for testing, otherwise it should not be used.
+</command>
+
 <command name="GRID" required="$_IsFirstSession" if="$_IsFirstSession">
 	<parameter name="nRootBlockX" type="integer" min="1"  default="2" />
 	<parameter name="nRootBlockY" type="integer" min="1"  default="1" />
@@ -4911,39 +4922,38 @@ monoatomic gas or plasma.
 </command>
 
 <command name="PLASMA">
-	<parameter name="IonMass"          type="real" min="0" default="1"/>
-	<parameter name="AverageIonCharge" type="real" min="0" default="1"/>
+	<parameter name="FluidMass"  type="real" min="0" default="1"/>
+	<parameter name="IonCharge"  type="real"         default="1"/>
 	<parameter name="ElectronTemperatureRatio" type="real" min="0" 
 								default="0"/>
 #PLASMA
-1.0		IonMass [amu]
-1.0		AverageIonCharge [e]
+1.0		FluidMass [amu]
+1.0		IonCharge [e]
 0.0		ElectronTemperatureRatio
 
-For single fluid, single species MHD the IonMass determines the 
+For single fluid, single species MHD the FluidMass parameter determines the 
 average mass of ions (and strongly coupled neutrals) in atomic mass units (amu).
 This parameter is only used if there are no species (UseMultiSpecies=.false.
-in ModEquation). The number density is n=rho/IonMass.
-For a pure hydrogene plasma IonMass=1.0, while for a mix of 90 per cent 
-hydrogen and 10 per cent helium IonMass=1.4.
+in ModEquation). The number density is n=rho/FluidMass.
+For a pure hydrogen plasma FluidMass=1.0, while for a mix of 90 per cent 
+hydrogen and 10 per cent helium FluidMass=1.4.
 
-For multifluid MHD/HD the command reads the mass of all fluids (ions and neutrals), and charge of all ions
-For example for hydrogen and oxygen ion fluids:
+The IonCharge parameter gives the average ion charge in units of the proton
+charge. For a fully ionized hydrogen plasma AverageIonCharge=1.0,
+for a fully ionized helium plasma IonCharge=2.0, while
+for a 10 per cent ionized hydrogene plasma IonCharge=0.1.
+
+For multifluid MHD/HD the command reads the mass of all fluids (ions and neutrals),
+and the charges of all ion fluids. For example for proton and double ionized helium 
+and neutral oxygen molecule fluids:
 
 #PLASMA
-1.0             fluidMass H [amu]
-16.0            fluidMass O [amu]
-1.0             IonCharge O+ [amu]
+1.0             FluidMass H+ [amu]
+4.0             FluidMass He++ [amu]
+32.0		FluidMass O2 [amu]
+1.0             IonCharge H+ [e]
+2.0		IonCharge He++ [e]
 0.2             ElectronTemperatureRatio
-
-The AverageIonCharge determines the average charge of ions (and strongly
-coupled neutrals) in electron charge units.
-The electron density is ne=n*AverageIonCharge. 
-For a fully ionized hydrogene plasma AverageIonCharge=1.0,
-for a fully ionized helium plasma AverageIonCharge=2.0, while
-for a 10 per cent ionized hydrogene plasma AverageIonCharge=0.1.
-The AverageIonCharge parameter is ignored in multi-ion MHD 
-where single ionization is assumed for all the fluids. 
 
 The ElectronTemperatureRatio determines the ratio of electron
 and ion temperatures. The ion temperature Te = T * ElectronTemperatureRatio
@@ -4961,9 +4971,12 @@ but in a single fluid/species MHD description using these constants is
 the best one can do. In multispecies MHD the number density can
 be determined accurately as n = sum(RhoSpecies_V/(ProtonMass*MassSpecies_V)).
 
-The default values corresponds to a fully ionized hydrogen plasma 
-where the electron temperature is negligible relative to the ion temperature. 
+The default ion/molecular masses are given in the equation module.
+The default ion charges are always 1.
+The default electron temperature ratio is zero, i.e. the electron
+pressure is assumed to be negligible relative to the (total) ion pressure. 
 This default is backwards compatible with previous versions of the code.
+
 </command>
 
 <command name="LOOKUPTABLE" multiple="T">
