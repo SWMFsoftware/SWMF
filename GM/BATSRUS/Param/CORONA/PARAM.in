@@ -75,6 +75,9 @@ F                       DoFixExtraBoundary
 0                       MaxBoundary
 F                       DoFixOuterBoundary
 
+#RESCHANGEBOUNDARY
+T			DoSaveBoundaryCells
+
 #GAMMA
 1.5000E+00		Gamma
 
@@ -137,9 +140,6 @@ F			DoAutomaticRefinement
 Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc                      TypeLimiter
 1.2			LimiterBeta
-
-#RESCHANGEBOUNDARY
-T			DoSaveBoundaryCells
 
 #TIMESTEPPING
 2                       nStage

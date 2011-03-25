@@ -87,14 +87,13 @@ contains
        iBoundary_GB = domain_
     end if
 
-    if(.not.SaveBoundaryCells) return
+    if(.not.UseBatl .and. .not.SaveBoundaryCells) then
+       if(iProc==0)write(*,*)&
+            'Do not allocate boundary cell array, if SaveBoundaryCells=',&
+            SaveBoundaryCells
+       return
+    end if
 
-!!$    if(.not.SaveBoundaryCells)then
-!!$       if(iProc==0)write(*,*)&
-!!$            'Do not allocate boundary cell array, if SaveBoundaryCells=',&
-!!$            SaveBoundaryCells
-!!$       return
-!!$    end if
     if(.not.UseBatl .and. allocated(IsBoundaryCell_IGB))return
 
     if(UseExtraBoundary)then

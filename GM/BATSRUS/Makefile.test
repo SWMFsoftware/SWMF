@@ -600,7 +600,10 @@ test_corona_rundir:
 test_corona_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
-	cd ${TESTDIR}; perl -pi -e 's/F(\s*UseBatl)/T$$1/' PARAM.in
+	cd ${TESTDIR}; perl -pi -e \
+	   's/F(\s*UseBatl)/T$$1/; \
+	    s/\#BODY/BODY/ if $$body; $$body=1 if /\#BODY/; \
+	    s/\#(EXTRABOUNDARY|SAVEBOUNDARY|FACEBOUNDARY|RESCHANGEBOUNDARY)/$$1/' PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS_BATL; ./PostProc.pl -M RESULTS_BATL
 
@@ -671,11 +674,17 @@ test_corona_2t_rundir:
 test_corona_2t_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; perl -pi -e 's/F(\s*UseBatl)/T$$1/' PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS_BATL; ./PostProc.pl -M RESULTS_BATL
 
 test_corona_2t_check:
 	${SCRIPTDIR}/DiffNum.pl -t \
 		Param/CORONA/TestOutput/log_n000000.sc.2t \
 		${TESTDIR}/RESULTS/SC/log_n000000.log > test_corona_2t.diff
+	${SCRIPTDIR}/DiffNum.pl -t \
+		Param/CORONA/TestOutput/log_n000000.sc.2t \
+		${TESTDIR}/RESULTS_BATL/SC/log_n000000.log >> test_corona_2t.diff
 	ls -l test_corona_2t.diff
 
 

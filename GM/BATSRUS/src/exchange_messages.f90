@@ -68,6 +68,7 @@ subroutine exchange_messages
         else
            call message_pass_cell(nVar, State_VGB)
         end if
+        call fix_boundary_ghost_cells(DoRestrictFace)
      else
         if(oktest)write(*,*)'calling message_pass with plot options'
         !                              Don't send just one layer
@@ -75,8 +76,8 @@ subroutine exchange_messages
         !                                               Don't monotone restrict
         call message_pass_cells8(.false.,.false.,.false.,nVar, State_VGB)
         call message_pass_cells(.false.,.false.,.false.,DivB1_GB)
+        if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
      end if
-     if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
   elseif (optimize_message_pass=='all') then
      if(oktest)write(*,*)'calling message_pass with corners: me,type=',&
           iProc,optimize_message_pass
@@ -90,11 +91,12 @@ subroutine exchange_messages
         call message_pass_cell(nVar, State_VGB, &
              nWidthIn=nWidth, nProlongOrderIn=1, &
              nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace)
+        call fix_boundary_ghost_cells(DoRestrictFace)
      else
         call message_pass_cells8(DoOneLayer, .false., DoRestrictFace, &
              nVar, State_VGB)
+        if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
      end if
-     if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
   else
      if(oktest)write(*,*)'calling message_pass: me,type=',&
           iProc,optimize_message_pass
@@ -122,11 +124,12 @@ subroutine exchange_messages
            call message_pass_cell(nVar, State_VGB, &
                 nWidthIn=nWidth, nProlongOrderIn=1, nCoarseLayerIn=nCoarseLayer,&
                 DoSendCornerIn=.not.DoFaces, DoRestrictFaceIn=DoRestrictFace)
+           call fix_boundary_ghost_cells(DoRestrictFace)
         else
            call message_pass_cells8(DoOneLayer,DoFaces,DoRestrictFace, &
                 nVar, State_VGB)
+           if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
         end if
-        if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
      case default
         call stop_mpi('Unknown optimize_message_pass='//optimize_message_pass)
      end select
