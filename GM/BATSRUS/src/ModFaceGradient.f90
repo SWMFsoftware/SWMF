@@ -347,8 +347,10 @@ contains
     ! Do six faces
     if(NeiLeast(iBlock) == 1)then
        if(nJ == 1)then
-          Field_VG(:,0,1,1) = C1*Field_VG(:,0,1,1) &
-               + F1*Field_VG(:,1,1,1) + F2*Field_VG(:,2,1,1)
+          Field_VG(:,0,1,1) = max(min( C1*Field1_VG(:,0,1,1) &
+               + F1*Field_VG(:,1,1,1) + F2*Field_VG(:,2,1,1), &
+               max(Field1_VG(:,0,1,1), Field_VG(:,1,1,1))), &
+               min(Field1_VG(:,0,1,1), Field_VG(:,1,1,1)))
        else
           do k1=1, nK, 2; do j1=1, nJ, 2;
              do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
@@ -361,8 +363,15 @@ contains
                 Fc_V = c0*Field1_VG(:,0,j2,k2) &
                      + p0*Field1_VG(:,0,jp,kp) &
                      + m0*Field1_VG(:,0,jm,km)
-                Field_VG(:,0,j2,k2) = &
-                     C1*Fc_V + F1*Field_VG(:,1,j2,k2) + F2*Field_VG(:,2,j2,k2)
+
+                ! Limit the interpolation formula with the max and min
+                ! of the 3 points surrounding the interpolated point
+                Field_VG(:,0,j2,k2) = max(min( C1*Fc_V &
+                     + F1*Field_VG(:,1,j2,k2) + F2*Field_VG(:,2,j2,k2),&
+                     max(Field1_VG(:,0,j2,k2), &
+                     Field1_VG(:,0,jp,kp), Field_VG(:,1,j2,k2))), &
+                     min(Field1_VG(:,0,j2,k2), &
+                     Field1_VG(:,0,jp,kp), Field_VG(:,1,j2,k2)))
              end do; end do
           end do; end do
        end if
@@ -370,8 +379,10 @@ contains
 
     if(NeiLwest(iBlock) == 1)then
        if(nJ == 1)then
-          Field_VG(:,nI+1,1,1) = C1*Field_VG(:,nI+1,1,1) &
-               + F1*Field_VG(:,nI,1,1) + F2*Field_VG(:,nI-1,1,1)
+          Field_VG(:,nI+1,1,1) = max(min( C1*Field1_VG(:,nI+1,1,1) &
+               + F1*Field_VG(:,nI,1,1) + F2*Field_VG(:,nI-1,1,1), &
+               max(Field1_VG(:,nI+1,1,1), Field_VG(:,nI,1,1))), &
+               min(Field1_VG(:,nI+1,1,1), Field_VG(:,nI,1,1)))
        else
           do k1=1, nK, 2; do j1=1, nJ, 2
              do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
@@ -384,8 +395,12 @@ contains
                 Fc_V = c0*Field1_VG(:,nI+1,j2,k2) &
                      + p0*Field1_VG(:,nI+1,jp,kp) &
                      + m0*Field1_VG(:,nI+1,jm,km)
-                Field_VG(:,nI+1,j2,k2) = C1*Fc_V &
-                     + F1*Field_VG(:,nI,j2,k2) + F2*Field_VG(:,nI-1,j2,k2)
+                Field_VG(:,nI+1,j2,k2) = max(min( C1*Fc_V &
+                     + F1*Field_VG(:,nI,j2,k2) + F2*Field_VG(:,nI-1,j2,k2), &
+                     max(Field1_VG(:,nI+1,j2,k2), &
+                     Field1_VG(:,nI+1,jp,kp), Field_VG(:,nI,j2,k2))), &
+                     min(Field1_VG(:,nI+1,j2,k2), &
+                     Field1_VG(:,nI+1,jp,kp), Field_VG(:,nI,j2,k2)))
              end do; end do
           end do; end do
        end if
@@ -405,8 +420,12 @@ contains
              Fc_V = c0*Field1_VG(:,i2,0,k2) &
                   + p0*Field1_VG(:,ip,0,kp) &
                   + m0*Field1_VG(:,im,0,km)
-             Field_VG(:,i2,0,k2) = &
-                  C1*Fc_V + F1*Field_VG(:,i2,1,k2) + F2*Field_VG(:,i2,2,k2)
+             Field_VG(:,i2,0,k2) = max(min( &
+                  C1*Fc_V + F1*Field_VG(:,i2,1,k2) + F2*Field_VG(:,i2,2,k2), &
+                  max(Field1_VG(:,i2,0,k2), &
+                  Field1_VG(:,ip,0,kp), Field_VG(:,i2,1,k2))), &
+                  min(Field1_VG(:,i2,0,k2), &
+                  Field1_VG(:,ip,0,kp), Field_VG(:,i2,1,k2)))
           end do; end do
        end do; end do
     end if
@@ -423,8 +442,12 @@ contains
              Fc_V = c0*Field1_VG(:,i2,nJ+1,k2) &
                   + p0*Field1_VG(:,ip,nJ+1,kp) &
                   + m0*Field1_VG(:,im,nJ+1,km)
-             Field_VG(:,i2,nJ+1,k2) = &
-                  C1*Fc_V + F1*Field_VG(:,i2,nJ,k2) + F2*Field_VG(:,i2,nJ-1,k2)
+             Field_VG(:,i2,nJ+1,k2) = max(min( C1*Fc_V &
+                  + F1*Field_VG(:,i2,nJ,k2) + F2*Field_VG(:,i2,nJ-1,k2), &
+                  max(Field1_VG(:,i2,nJ+1,k2), &
+                  Field1_VG(:,ip,nJ+1,kp), Field_VG(:,i2,nJ,k2))), &
+                  min(Field1_VG(:,i2,nJ+1,k2), &
+                  Field1_VG(:,ip,nJ+1,kp), Field_VG(:,i2,nJ,k2)))
           end do; end do
        end do; end do
     end if
@@ -436,8 +459,12 @@ contains
           Fc_V = c0*Field1_VG(:,i2,j2,0) &
                + p0*Field1_VG(:,ip,jp,0) &
                + m0*Field1_VG(:,im,jm,0)
-          Field_VG(:,i2,j2,0) = &
-               C1*Fc_V + F1*Field_VG(:,i2,j2,1) + F2*Field_VG(:,i2,j2,2)
+          Field_VG(:,i2,j2,0) = max(min( &
+               C1*Fc_V + F1*Field_VG(:,i2,j2,1) + F2*Field_VG(:,i2,j2,2), &
+               max(Field1_VG(:,i2,j2,0), &
+               Field1_VG(:,ip,jp,0), Field_VG(:,i2,j2,1))), &
+               min(Field1_VG(:,i2,j2,0), &
+               Field1_VG(:,ip,jp,0), Field_VG(:,i2,j2,1)))
        end do; end do; end do; end do
     end if
 
@@ -448,8 +475,12 @@ contains
           Fc_V = c0*Field1_VG(:,i2,j2,nK+1) &
                + p0*Field1_VG(:,ip,jp,nK+1) &
                + m0*Field1_VG(:,im,jm,nK+1)
-          Field_VG(:,i2,j2,nK+1) = &
-               C1*Fc_V + F1*Field_VG(:,i2,j2,nK) + F2*Field_VG(:,i2,j2,nK-1)
+          Field_VG(:,i2,j2,nK+1) = max(min( &
+               C1*Fc_V + F1*Field_VG(:,i2,j2,nK) + F2*Field_VG(:,i2,j2,nK-1), &
+               max(Field1_VG(:,i2,j2,nK+1), &
+               Field1_VG(:,ip,jp,nK+1), Field_VG(:,i2,j2,nK))), &
+               min(Field1_VG(:,i2,j2,nK+1), &
+               Field1_VG(:,ip,jp,nK+1), Field_VG(:,i2,j2,nK)))
        end do; end do; end do; end do
     end if
 
@@ -473,9 +504,13 @@ contains
           Fc_V = c0*Field1_VG(:,iC,jC,k2) &
                + p0*Field1_VG(:,iC,jC,kp) &
                + m0*Field1_VG(:,iC,jC,km)
-          Field_VG(:,iC,jC,k2) = &
-               C1*Fc_V + F1*Field_VG(:,i1,j1,k2) + F2*Field_VG(:,i2,j2,k2)
-       end do;end do         
+          Field_VG(:,iC,jC,k2) = max(min( &
+               C1*Fc_V + F1*Field_VG(:,i1,j1,k2) + F2*Field_VG(:,i2,j2,k2), &
+               max(Field1_VG(:,iC,jC,k2), &
+               Field1_VG(:,iC,jC,kp), Field_VG(:,i1,j1,k2))), &
+               min(Field1_VG(:,iC,jC,k2), &
+               Field1_VG(:,iC,jC,kp), Field_VG(:,i1,j1,k2)))
+       end do;end do
     end do;end do
 
     ! The X and Y edges are not needed in 2D
@@ -495,8 +530,12 @@ contains
           Fc_V = c0*Field1_VG(:,i2,jC,kC) &
                + p0*Field1_VG(:,ip,jC,kC) &
                + m0*Field1_VG(:,im,jC,kC)
-          Field_VG(:,i2,jC,kC) = &
-               C1* Fc_V + F1*Field_VG(:,i2,j1,k1) + F2*Field_VG(:,i2,j2,k2)
+          Field_VG(:,i2,jC,kC) = max(min( &
+               C1* Fc_V + F1*Field_VG(:,i2,j1,k1) + F2*Field_VG(:,i2,j2,k2), &
+               max(Field1_VG(:,i2,jC,kC), &
+               Field1_VG(:,ip,jC,kC), Field_VG(:,i2,j1,k1))), &
+               min(Field1_VG(:,i2,jC,kC), &
+               Field1_VG(:,ip,jC,kC), Field_VG(:,i2,j1,k1)))
        end do;end do
     end do;end do
     ! 4 Y edges
@@ -513,8 +552,12 @@ contains
           Fc_V = c0*Field1_VG(:,iC,j2,kC) &
                + p0*Field1_VG(:,iC,jp,kC) &
                + m0*Field1_VG(:,iC,jm,kC)
-          Field_VG(:,iC,j2,kC) = &
-               C1*Fc_V + F1*Field_VG(:,i1,j2,k1) + F2*Field_VG(:,i2,j2,k2)
+          Field_VG(:,iC,j2,kC) = max(min( &
+               C1*Fc_V + F1*Field_VG(:,i1,j2,k1) + F2*Field_VG(:,i2,j2,k2), &
+               max(Field1_VG(:,iC,j2,kC), &
+               Field1_VG(:,iC,jp,kC), Field_VG(:,i1,j2,k1))), &
+               min(Field1_VG(:,iC,j2,kC), &
+               Field1_VG(:,iC,jp,kC), Field_VG(:,i1,j2,k1)))
        end do;end do
     end do;end do
 
