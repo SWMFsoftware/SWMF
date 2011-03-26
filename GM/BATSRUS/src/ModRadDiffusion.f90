@@ -1053,7 +1053,7 @@ contains
           end do
        end do; end do
     case(6)
-       do k = j, nJ; do i = 1, nI
+       do j = 1, nJ; do i = 1, nI
           do iDiff = iDiffRadMin, iDiffRadMax
              iVar = iDiff_I(iDiff)
              Coef = 2/Clight &
