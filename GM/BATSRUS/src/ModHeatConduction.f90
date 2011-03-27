@@ -52,7 +52,7 @@ module ModHeatConduction
   real :: TiFraction, TeFraction
 
   ! Array needed for second order interpolation of ghost cells
-  real, allocatable :: State1_VG(:,:,:,:)
+  real, allocatable :: State1_VG(:,:,:,:), State2_VG(:,:,:,:)
 
   ! Heat flux for operator split scheme
   real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
@@ -214,6 +214,7 @@ contains
     if(UseSemiImplicit.and..not.allocated(HeatCond_DFDB))then
        allocate( &
             State1_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2), &
+            State2_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2), &
             FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
             HeatCond_DDG(MaxDim,MaxDim,0:nI+1,0:nJ+1,0:nK+1), &
             HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
@@ -571,8 +572,8 @@ contains
     real :: Normal_D(3), Area
     real :: HeatCond_DD(3,3)
 
-    integer, parameter :: jMin = 1 - min(1,nJ-1), jMax = nJ + min(1,nJ-1)
-    integer, parameter :: kMin = 1 - min(1,nK-1), kMax = nK + min(1,nK-1)
+    integer, parameter :: jMin1 = 1 - min(1,nJ-1), jMax1 = nJ + min(1,nJ-1)
+    integer, parameter :: kMin1 = 1 - min(1,nK-1), kMax1 = nK + min(1,nK-1)
     !--------------------------------------------------------------------------
 
     iP = p_
@@ -605,12 +606,11 @@ contains
 
        ! The following is because we entered the semi-implicit solve with
        ! first order ghost cells.
-       ! Perhaps better would be a second order message_pass_dir before
-       ! entering the semi-implicit solver.
-       call set_block_field2(iBlock,nVar, State1_VG, State_VGB(:,:,:,:,iBlock))
+       State2_VG = State_VGB(:,:,:,:,iBlock)
+       call set_block_field2(iBlock, nVar, State1_VG, State2_VG)
 
        ! Calculate the cell centered heat conduction tensor
-       do k = kMin, kMax; do j = jMin, jMax; do i = 0, nI+1
+       do k = kMin1, kMax1; do j = jMin1, jMax1; do i = 0, nI+1
           call get_heat_cond_tensor(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, HeatCond_DDG(:,:,i,j,k))
        end do; end do; end do

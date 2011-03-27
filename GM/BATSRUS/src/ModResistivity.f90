@@ -349,7 +349,6 @@ contains
 
     use BATL_lib,        ONLY: IsCartesian, message_pass_cell
     use ModAdvance,      ONLY: State_VGB
-    use ModFaceGradient, ONLY: set_block_field3
     use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk
     use ModMain,         ONLY: MaxImplBlk
     use ModNumConst,     ONLY: i_DD
@@ -374,12 +373,6 @@ contains
           StateImpl_VGB(BxImpl_:BzImpl_,i,j,k,iImplBlock) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock)
        end do; end do; end do
-
-       ! The following is because we entered the semi-implicit solve with
-       ! first order ghost cells. We need second-order resistivity coefficient
-       ! and since the resistivity may contain gradients (current),
-       ! a third-order interpolation is needed
-       call set_block_field3(iBlock,nVar, State1_VG, State_VGB(:,:,:,:,iBlock))
 
        ! Calculate the cell-centered resistivity
        call set_resistivity(iBlock)
