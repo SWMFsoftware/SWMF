@@ -519,6 +519,9 @@ contains
                 Weight = (r-Rad_I(i))/dR
                 RhoH_III(iPoint,iR,iPhi) = Weight*RhoHUniform_III(iPoint,i+1,iPhi) +&
                      (1. - Weight) * RhoHUniform_III(iPoint,i,iPhi)
+
+                if (RhoH_III(iPoint,iR,iPhi) <=0.0) RhoH_III(iPoint,iR,iPhi) = 0.0
+                
              end if
           end do
           
@@ -526,7 +529,187 @@ contains
     end do
  
 
+
+       write(*,*) 'Rho', RhoH_III(48,13,12)
+       STOP
+
   end subroutine get_interpolated_hodge_density
 
   !===========================================================================================
+ subroutine get_bailey_density(RhoH_III)
+
+    use ModHeidiInput,  ONLY: StretchingFactorA,StretchingFactorB, &
+         TypeHModel, TypeSeason, WhichF107
+    use ModHeidiSize,   ONLY: nPoint, nT, nR
+    use ModHeidiMain,   ONLY: Phi, LZ, Re
+    use ModNumConst,    ONLY: cPi
+    use ModHeidiBField, ONLY: get_cubic_root
+    use ModHeidiBField
+    
+  
+    real, intent(out) :: RhoH_III(nPoint,nR,nT)
+    
+    real :: A_lm, B_lm, Y_lm, Z
+    real :: Theta_III(nPoint, nR, nT)
+    real :: LatMin, LatMax, dLat, Lat, a, b    
+    real :: ThetaMax, ThetaMin, Theta, dTheta
+    real :: aa, bb, cc, dd, gamma,sigma, alpha
+    real :: cos2Lat1, CosPhi2, SinPhi2, cos2Lat, sin2Lat, cos2Phi, sin2Phi
+    real :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
+    real :: RadialDistance_III(nPoint,nR,nT)
+    real :: GradBCrossB_VIII(3,nPoint,nR,nT)
+    real :: GradB_VIII(3,nPoint,nR,nT)
+    real :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
+    real :: Length_III(nPoint,nR,nT) 
+    real :: dBdt_III(nPoint,nR,nT)
+    real :: n_III(nPoint,nR,nT)
+    complex :: root(3)
+    integer :: i, iPoint, iR, iPhi, nroot, l, m
+    character (len=100)  :: StringHeader
+    
+    
+    real, parameter :: A_00 = 1.00
+    real, parameter :: B_00 = 0.00
+    real, parameter :: C_00 = 0.00
+    real, parameter :: D_00 = 0.00
+    real, parameter :: D_10 = 0.00
+    real, parameter :: D_20 = 0.00
+    real, parameter :: C_10 = 0.00
+    real, parameter :: C_20 = 0.00
+    
+    real, parameter :: A_10 = -4.8992e-2
+    real, parameter :: B_10 = -1.8720e-6
+    real, parameter :: A_11 = -3.8248e-1
+    real, parameter :: B_11 =  9.0636e-6
+    real, parameter :: C_11 = -4.8547e-2
+    real, parameter :: D_11 = -2.1587e-6
+    real, parameter :: A_20 =  1.5739e-1
+    real, parameter :: B_20 = -6.1959e-6
+    real, parameter :: A_21 = -6.9198e-2 
+    real, parameter :: B_21 =  4.5477e-6
+    real, parameter :: C_21 =  2.1922e-1
+    real, parameter :: D_21 = -7.0881e-6
+    real, parameter :: A_22 = -1.0148e-1
+    real, parameter :: B_22 =  1.4873e-6 
+    real, parameter :: C_22 = -8.8242e-2
+    real, parameter :: D_22 =  4.2384e-6
+
+    real, parameter :: p    = 4.1118e13
+    real, parameter :: k    = -2.5446
+    !-------------------------------------------------------------------------------------------
+    
+    RhoH_III = 0.0
+
+    !\
+    ! Calculate the Latitude and colatitude needed for the calculation 
+    ! of the neutral hydrogen densities.
+    !/
+    a = StretchingFactorA
+    b = StretchingFactorB
+    
+    !\
+    ! Need the Radial Distance to any point along a field line
+    !/
+
+    call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
+       RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
+
+    dd = 0.0
+    do iPhi = 1, nT
+       sigma   = cos(Phi(iPhi))
+       CosPhi2 = (cos(Phi(iPhi)))**2
+       SinPhi2 = (sin(Phi(iPhi)))**2
+       alpha = a + b * cos(Phi(iPhi)) 
+       gamma = alpha**2 * CosPhi2 + SinPhi2 
+       aa = gamma - 1.0
+       bb = 1.0
+       do iR = 1, nR
+          cc = -1./(LZ(iR)*LZ(iR))
+          call get_cubic_root(aa,bb,dd,cc,root,nroot)
+          do i =1, nroot
+             if ((aimag(root(i)) <= 1.e-5).and. (real(root(i))<=1.0) .and. (real(root(i))>=0.0)) &
+                  cos2Lat1 = real(root(i))
+          end do
+          
+          LatMax = acos(sqrt(cos2Lat1))
+          ThetaMin = cPi/2. - LatMax
+          ThetaMax = cPi - LatMax
+          dTheta = (ThetaMax-ThetaMin)/(nPoint-1)
+          Theta = ThetaMax
+          
+          do iPoint = 1, nPoint
+             cos2Lat = (cos(Lat))**2
+             sin2Lat = (sin(Lat))**2
+             cos2Phi = (cos(Phi(iPhi)))**2
+             sin2Phi = (sin(Phi(iPhi)))**2   
+             Theta_III(iPoint,iR,iPhi) =  Theta
+             Theta = Theta - dTheta
+          end do
+       end do
+    end do
+    
+    !\
+    ! Start calculation the geocoronal hydrogen density according to Bailey 2011 model.
+    ! Valid only for the June 11, 2008 event.
+    !/
+    
+    RadialDistance_III = RadialDistance_III * Re/1000. ! need radial distance in km
+
+    do iPhi = 1, nT
+       do iR = 1, nR
+          do iPoint = 1, nPoint
+            
+
+             Z = 0.0
+             do l = 0, 2
+                do m = 0, l
+                   call get_Ylm(Theta_III(iPoint,iR,iPhi), Phi(iPhi), l, m, Y_lm)
+                   
+                   if ((l==0) .and. (m==0)) then
+                       A_lm = A_00 + B_00 * RadialDistance_III(iPoint, iR, iPhi)
+                       B_lm = C_00 + D_00 * RadialDistance_III(iPoint, iR, iPhi)
+                    end if
+                    
+                    if ((l==1) .and. (m==0)) then
+                       A_lm = A_10 + B_10 * RadialDistance_III(iPoint, iR, iPhi)
+                       B_lm = C_10 + D_10 * RadialDistance_III(iPoint, iR, iPhi)
+                    end if
+                    if ((l==1) .and. (m==1)) then
+                       A_lm = A_11 + B_11 * RadialDistance_III(iPoint, iR, iPhi)
+                       B_lm = C_11 + D_11 * RadialDistance_III(iPoint, iR, iPhi)
+                    end if
+                    
+                    if ((l==2) .and. (m==0)) then
+                       A_lm = A_20 + B_20 * RadialDistance_III(iPoint, iR, iPhi)
+                       B_lm = C_20 + D_20 * RadialDistance_III(iPoint, iR, iPhi)
+                    end if
+                    if ((l==2) .and. (m==1)) then
+                       A_lm = A_21 + B_21 * RadialDistance_III(iPoint, iR, iPhi)
+                       B_lm = C_21 + D_21 * RadialDistance_III(iPoint, iR, iPhi)
+                    end if
+                    if ((l==2) .and. (m==2)) then
+                       A_lm = A_22 + B_22 * RadialDistance_III(iPoint, iR, iPhi)
+                       B_lm = C_22 + D_22 * RadialDistance_III(iPoint, iR, iPhi)
+                    end if
+                    
+              
+                    Z = Z + (A_lm * cos(m * Phi(iPhi)) + B_lm * sin(m* Phi(iPhi))) * Y_lm
+                    
+                 end do
+              end do
+              
+              n_III(iPoint, iR, iPhi) = p * (RadialDistance_III(iPoint, iR, iPhi)) ** k * 1.e4  ! need the density in m^-3 NOT cm^-3!!!!
+              RhoH_III(iPoint,iR,iPhi) = sqrt(4. * cPi) * n_III(iPoint, iR, iPhi) * Z  
+
+           end do
+        end do
+     end do
+     
+     
+
+
+   end subroutine get_bailey_density
+
+  !===========================================================================================
+
 end module NeutralHydrogenModel

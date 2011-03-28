@@ -145,6 +145,10 @@ contains
 
        call get_interpolated_hodge_density(RhoH_III)
 
+    case('Bailey')
+
+       call get_bailey_density(RhoH_III)
+
     end select
 
        

@@ -208,7 +208,33 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
         end do
      end do
     
-  else
+  else if (TypeHModel=='Bailey') then 
+     call  get_bailey_density(Rho_III)
+     
+     do iPitch =1, nPa
+        PitchAngle_I(iPitch) = acos(mu(iPitch))
+        do iPhi = 1, nT
+           do iR =1, nR
+              call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
+                   bMirror_I(iPitch),iMirror_I)
+             
+              Rho_I = Rho_III(:,iR,iPhi)
+              
+              call get_hydrogen_density(nPoint, LZ(iR), bFieldMagnitude_III(:,iR,iPhi), bMirror_I(iPitch)&
+                   ,iMirror_I(:),dLength_III(:,iR,iPhi),Rho_I(:),AvgHDensity)
+
+              call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
+                   bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), LZ(iR), HalfPathLength,Sb)
+              
+              if (Sb==0.0) Sb = cTiny
+              NeutralHydrogen_III(iR,iPhi,iPitch) = AvgHDensity/Sb
+              
+           end do
+        end do
+     end do
+   
+  else 
+
      do iPitch =1, nPa
         PitchAngle_I(iPitch) = acos(mu(iPitch))
         do iPhi = 1, nT
@@ -230,12 +256,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
               
               if (Sb==0.0) Sb = cTiny
               NeutralHydrogen_III(iR,iPhi,iPitch) = AvgHDensity/Sb
-              
-             
-
            end do
-       
-
         end do
      end do
     
@@ -247,10 +268,27 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
      do iPhi = 1, nT
         do iR = 1, nR
            NeutralHydrogen_III(iR,iPhi,1) = NeutralHydrogen_III(iR,iPhi,2)
+           if (NeutralHydrogen_III(iR,iPhi,iPitch) < 0.0) &
+                NeutralHydrogen_III(iR,iPhi,iPitch) = NeutralHydrogen_III(iR,iPhi,iPitch-1)
+           !write(*,*) 'iR, iPhi, iPitch, NeutralHydrogen_III(iR,iPhi,iPitch)', &
+           !     iR, iPhi, iPitch, NeutralHydrogen_III(iR,iPhi,iPitch)
         end do
      end do
   end do
 
+
+!!$  
+!!$  do iPhi = 1, nT
+!!$     do iR = 1, nR
+!!$        do iPoint = 1, 101
+!!$           write(*,*) iPoint,iR,iPhi, Rho_III(iPoint,iR,iPhi)
+!!$        end do
+!!$     end do
+!!$  end do
+!!$  
+!!$stop
+
+!!$
 !!$ 
 !!$  NameFile = 'HGeo.out'
 !!$  StringHeader = 'Geocoronal hydrogen density in the equatorial plane'
