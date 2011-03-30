@@ -260,3 +260,13 @@ CONVERT_ARTEP: convert_ARTEP_opac.o
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
 
+convert_propaceos.o: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+
+PROPACEOS: convert_propaceos.o
+	rm -rf Tmp_; mkdir Tmp_ ;
+	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
+	${LINK.f90} -o PROPACEOS.exe convert_propaceos.o Tmp_/*.o \
+		${Lflag1}    ; 
+	rm -rf Tmp_ 
+	PROPACEOS.exe
+
