@@ -453,9 +453,12 @@ contains
           end if
        end do
        iCoord = i
-       dCoord = (Coord             - Coord_I(iCoord)) &
-            /   (Coord_I(iCoord+1) - Coord_I(iCoord))
-
+       if(Coord_I(iCoord+1) == Coord_I(iCoord))then
+          dCoord = 0.0
+       else
+          dCoord = (Coord             - Coord_I(iCoord)) &
+               /   (Coord_I(iCoord+1) - Coord_I(iCoord))
+       end if
     else
 
        ! Monotone decreasing coordinates
@@ -514,9 +517,12 @@ contains
           end if
        end do
        iCoord = i
-       dCoord = (Coord_I(iCoord) - Coord  ) &
-            /   (Coord_I(iCoord) - Coord_I(iCoord+1))
-
+       if(Coord_I(iCoord+1) == Coord_I(iCoord))then
+          dCoord = 0.0
+       else
+          dCoord = (Coord_I(iCoord) - Coord  ) &
+               /   (Coord_I(iCoord) - Coord_I(iCoord+1))
+       end if
     end if
 
   end subroutine find_cell
