@@ -861,16 +861,18 @@ contains
 
   !============================================================================
 
-  real function accurate_sum(a_I, LimitIn, iComm)
+  real function accurate_dot_product(a_I, b_I, LimitIn, iComm)
 
     ! Algorithm and implementation by G. Toth 2009
 
-    real,    intent(in)           :: a_I(:)   ! array to be added up
+    ! arrays to be multiplied and added up
+    real,    intent(in)           :: a_I(:), b_I(:)
     real,    intent(in), optional :: LimitIn  ! limit for splitting numbers
     integer, intent(in), optional :: iComm    ! MPI communicator
 
-    ! This function returns the sum of the a_I array for 1 or more processors.
-    ! This is done more accurately than by simple sum(a_I) by splitting 
+    ! This function returns the dot product of the a_I and b_I arrays
+    ! for 1 or more processors.
+    ! This is done more accurately than by simple sum(a_I*b_I) by splitting 
     ! the values into two shorter parts in the binary representation. 
     ! Eg. a=0.375353534 may be split into an upper part 0.375 (=3/8) 
     ! and a lower part a - 3/8 = 0.000353534.
@@ -878,9 +880,10 @@ contains
     ! added together, thus the round-off errors are somewhat mitigated.
     ! If LimitIn is provided, it should be an integer power of 2, 
     ! and it provides the splitting limit. In the example the limit was 1/8.
-    ! If LimitIn is missing the limit is based on maxval(abs(a_I)).
+    ! If LimitIn is missing the limit is based on maxval(abs(a_I*b_I)).
     ! If the optional MPI communicator argument iComm is provided, 
-    ! then the sum (and maxval) are done for all processors belonging to iComm.
+    ! then the dot product (and max) are done for all processors belonging to
+    ! iComm.
 
     ! Number of parts the binary numbers are cut into
     integer, parameter :: nPart = 2
@@ -897,7 +900,10 @@ contains
     if(present(LimitIn))then
        Limit = LimitIn
     else
-       Maximum = maxval(abs(a_I))
+       Maximum = 0.0
+       do i = 1, n
+          Maximum = max(Maximum, abs(a_I(i)*b_I(i)))
+       end do
        if(present(iComm))then
           if(iComm /= MPI_COMM_SELF)then
              call MPI_allreduce(Maximum, MaximumAll, 1, MPI_REAL, MPI_MAX, &
@@ -911,7 +917,7 @@ contains
 
     SumPart_I = 0.0
     do i = 1, n
-       a = a_I(i)
+       a = a_I(i)*b_I(i)
        Part_I(1) = modulo(a, Limit)
        Part_I(2) = a - Part_I(1)
        SumPart_I = SumPart_I + Part_I
@@ -925,9 +931,9 @@ contains
        end if
     endif
 
-    accurate_sum = sum(SumPart_I)
+    accurate_dot_product = sum(SumPart_I)
 
-  end function accurate_sum
+  end function accurate_dot_product
 
   !============================================================================
   real function dot_product_mpi(a_I, b_I, iComm)
@@ -940,7 +946,7 @@ contains
     !--------------------------------------------------------------------------
 
     if(UseAccurateSum)then
-       dot_product_mpi = accurate_sum(a_I*b_I, iComm=iComm)
+       dot_product_mpi = accurate_dot_product(a_I, b_I, iComm=iComm)
        RETURN
     end if
 
