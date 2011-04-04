@@ -159,6 +159,7 @@ distclean:
 		ModEUV.f90 \
 		ModSources.f90 \
 		ModPlanet.f90 \
+		ModChemistry.f90 \
 		ModRates.f90 \
 		aurora.f90 \
 		calc_chemistry.f90 \
