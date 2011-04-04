@@ -24,7 +24,7 @@ module ModVarIndexes
   logical, parameter :: IsMhd     = .true.
   real               :: MassFluid_I(2:3) = (/ 1.0, 1.0 /)
 
-  character (len=4), parameter :: NameFluid_I(nFluid)= (/ 'All', 'Sw ', 'Iono '/)
+  character (len=4), parameter :: NameFluid_I(nFluid)= (/ 'All ', 'Sw  ', 'Iono'/)
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
