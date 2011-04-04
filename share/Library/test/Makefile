@@ -460,8 +460,11 @@ EQUATIONS := $(wildcard ${EQUATIONDIR}/*.f90)
 
 test_process_var_name:
 	@echo test_process_var_name starting	>  test_process_var_name.tmp
+	@(cd ../src ; make ModUtilities.o)
 	cp ../../../GM/BATSRUS/src/ModExtraVariables.f90 .
 	cp ../../../GM/BATSRUS/src/ModSingleFluid.f90 .
+	@make ModSingleFluid.o
+	@make ModExtraVariables.o
 	for i in ${EQUATIONS} ; do\
 		cp -f $${i} ModEquation.f90 ;\
 		perl -i -pe 's/call init_mhd_variables/ /' ModEquation.f90 ;\
@@ -478,10 +481,7 @@ test_process_var_name:
 
 test_process_var_name_exe:
 	@rm -f test_process_var_name.o ModEquation.o
-	@make ModSingleFluid.o
-	@make ModExtraVariables.o
 	@make ModEquation.o
-	@(cd ../src ; make ModUtilities.o)
 	@(cd ../src; make ModProcessVarName.o)
 	@make test_process_var_name.o
 	${LINK.f90} -o test_process_var_name.exe ${OBJ_PROCESS_VAR_NAME} \
