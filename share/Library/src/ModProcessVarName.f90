@@ -1,16 +1,16 @@
 ! ^CFG COPYRIGHT UM
 ! ======================================================
-module ModProcessVarNames
+module ModProcessVarName
 
   implicit none
 
   private
-  public :: process_var_names, nVarMax
+  public :: process_var_name, nVarMax
 
-  integer,parameter :: nVarMax = 100   ! assumed maximum number of state variables
+  integer,parameter :: nVarMax = 100   ! maximum number of state variables
   integer,parameter :: nSubstance = 27 ! number of distinct fluids/species
 
-  ! Number of state variables associated with each specie / fluid to be standarized
+  ! Number of state variables associated with each substance to be standarized
   integer,parameter :: nVarPerSubstance = 7
 
   ! Number of allowed alternative names for each variable
@@ -47,7 +47,7 @@ module ModProcessVarNames
        Neu2_ = 24, &
        Neu3_ = 25, &
        Neu4_ = 26, &
-       Main_  = 27 ! main component, MHD/HD
+       Main_ = 27 ! main component, MHD/HD
 
   ! named indices for basic state variables associated with a substance
   integer,parameter :: &
@@ -89,52 +89,55 @@ module ModProcessVarNames
        'Hyp ' /)
 
   ! Array storing standarized variable names for all species / fluids
-  character(len = 20),allocatable :: SubstanceStandardNames_II(:,:)
+  character(len = 20),allocatable :: SubstanceStandardName_II(:,:)
 
   ! Array storing all possible names 
   character(len = 20),allocatable :: Dictionary_III(:, :, :)
   ! -------------------------------------------------------------------------
 contains
 
-  subroutine process_var_names(nVarName, NameVar_V, nDensity, nSpeed)
+  subroutine process_var_name(nVarName, NameVar_V, nDensity, nSpeed)
 
-    ! DESCTIPTION:
+    ! DESCRIPTION:
     ! ------------
     ! 1. Creates standard names and a dictionary for each standard name.
-    ! The dictionary only contains basic HD quantities for different species/ fluids.
-    ! Other quantities that are not associated with a specific fluid/specie are
-    ! stored separately. This allows us to avoid searching the complete dictionary when
-    ! it is not needed.
+    ! The dictionary only contains the basic hydro quantities for 
+    ! different substances. Other quantities, e.g. magnetic field, 
+    ! that are not associated with a specific substance are
+    ! stored separately. This allows us to avoid searching the complete 
+    ! dictionary when it is not needed.
     ! The dictionary is a string array:
-    !       Dictionary_III(nSubstance, nVarPerSubstance, nSynonym)
+    !    Dictionary_III(nSubstance, nVarPerSubstance, nSynonym)
     ! where nSubstance is the number of possible species/ fluids,
-    !       nVarPerSubstance = 7 enumarates the variables associated with each substance.
-    !       nSynonym = 4 is the number of alternative names representing the same
-    !               physical quantity, used by different ModEquation files.
+    !    nVarPerSubstance 
+    !              enumarates the variables associated with each substance.
+    !    nSynonym  is the number of alternative names representing the same
+    !              physical quantity, used by different ModEquation files.
     !
-    ! 2. Look up the elements of NameVar_V and replace with standard name.
-    ! The look up procedure in the dictionary is done by calling
-    ! find_substance_replace_name where substance referes to the kind of fluid/ specie.
+    ! 2. Look up the elements of NameVar_V and replace them with standard names
+    ! The look up procedure in the dictionary is done by 
+    !    call find_substance_replace_name
     ! Once a specific NameVarIn is found to be identical to a dictionary item:
-    !         nSubstance, nVarPerSubstance, nSynonym
-    ! it is replaced with SubstanceStandardNames_II(nSubstance,nVarPerSubstance)
+    ! it is replaced with SubstanceStandardName_II(iSubstance,iVarPerSubstance)
     !
-    ! 3. The number of fluids and species is found and returned by nDensity, nSpeed.
-    
-    implicit none
+    ! 3. The number of fluids and species found are returned by 
+    !      nDensity and nSpeed.
     
     integer,intent(in)                :: nVarName
     character(len=15), intent(inout)  :: NameVar_V(nVarName)
     integer,intent(out)               :: nDensity, nSpeed
-    integer                           :: nDistinctSubstanceVar_I(nVarPerSubstance)
+
+    integer                   :: nDistinctSubstanceVar_I(nVarPerSubstance)
     character(len=15)                 :: NameVarIn
     integer                           :: iName, iVar, iSubstanceFound = 0
     logical                           :: IsFoundVar 
-    ! -----------------------------------------------------------------------    
+
+    character(len=*), parameter:: NameSub = 'process_var_name'
+    ! ------------------------------------------------------------------------
     nDistinctSubstanceVar_I(:) = 1
 
     ! create standard names and dictionary arrays
-    allocate(SubstanceStandardNames_II(nSubstance, nVarPerSubstance))
+    allocate(SubstanceStandardName_II(nSubstance, nVarPerSubstance))
     allocate(Dictionary_III(nSubstance, nVarPerSubstance, nSynonym))
     call create_dictionary
 
@@ -167,7 +170,8 @@ contains
        end do
        
        ! variable name may correspond to numbered wave/material
-       ! These names are created  in BATSRUS: MH_set_parameters and need not be changed
+       ! These names are created  in BATSRUS:MH_set_parameters 
+       ! and need not be changed
        if ( (lge(NameVarIn, 'i01') .and. lle(NameVarIn, 'i99')) .or. &
             (lge(NameVarIn, 'm01') .and. lle(NameVarIn, 'm99')) ) then          
           !Do nothing
@@ -176,13 +180,12 @@ contains
        end if
  
        if(.not. IsFoundVar) then 
-          write(*,*) 'ERROR : Var name not in dictionary: '
-          write(*,*) NameVarIn
-          write(*,*) 'Please use standard variable names in ModEuqation and recompile:'
+          write(*,*) 'ERROR : Var name not in dictionary: ',NameVarIn
+          write(*,*) 'Please use standard variable names in ModEuqation '// &
+               'and recompile:'
+          !write(*,*) SubstanceStandardName_II
           write(*,*) ''
-          !write(*,*) SubstanceStandardNames_II
-          write(*,*) ''
-          call CON_stop('    ')
+          call CON_stop(NameSub//': unknown variable'//NameVarIn)
        end if
 
     end do NAMELOOP
@@ -191,9 +194,10 @@ contains
     nSpeed   = nDistinctSubstanceVar_I(RhoUx_)
       
     deallocate(Dictionary_III)
-    deallocate(SubstanceStandardNames_II)
+    deallocate(SubstanceStandardName_II)
 
   contains
+    !==========================================================================
     subroutine find_substance_replace_name
 
       ! lookup var name in dictionary, replace with standard name
@@ -211,7 +215,7 @@ contains
                   iSubstanceFound = iSubstance
                   IsFoundVar = .true.
                   NameVar_V(iName) = &
-                       SubstanceStandardNames_II(iSubstanceFound, iVar)
+                       SubstanceStandardName_II(iSubstanceFound, iVar)
                   RETURN
                end if
             end if
@@ -219,9 +223,9 @@ contains
       end do
     end subroutine find_substance_replace_name
 
-  end subroutine process_var_names
+  end subroutine process_var_name
   ! =========================================================================  
-  subroutine create_standard_names
+  subroutine create_standard_name
 
     implicit none
 
@@ -263,21 +267,21 @@ contains
     ! loop over all possible species/fluids to fill in Name arrays
     do iSubstance = 1, nSubstance
        do iVar = 1, nVarPerSubstance
-          SubstanceStandardNames_II(iSubstance,iVar) = &
+          SubstanceStandardName_II(iSubstance,iVar) = &
                trim(NameSubstanceVar_I(iVar))//NameSuffix_I(iSubstance)
        
        end do
     end do
     
-  end subroutine create_standard_names
+  end subroutine create_standard_name
   ! =========================================================================
   subroutine create_dictionary
 
     Dictionary_III(:,:,:) = ''
 
     ! first page in dictionary is a 2 by 2 array of standard names
-    call create_standard_names
-    Dictionary_III(:,:,1) = SubstanceStandardNames_II
+    call create_standard_name
+    Dictionary_III(:,:,1) = SubstanceStandardName_II
 
     !\
     ! fill in alternative names
@@ -432,4 +436,4 @@ contains
   
   ! =========================================================================
  
-end module ModProcessVarNames
+end module ModProcessVarName
