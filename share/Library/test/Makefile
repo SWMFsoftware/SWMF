@@ -422,7 +422,7 @@ test_utilities:
 	@ls -l test_utilities.diff
 
 distclean: clean
-	rm -rf *.tmp *.diff test*.out
+	rm -rf *.tmp *.diff test*.out test_process_var_name.log
 
 
 #######################################################################
@@ -455,24 +455,23 @@ OBJ_PROCESS_VAR_NAME = \
 	../src/ModUtilities.o \
 	../src/ModProcessVarName.o\
 
-EQUATIONDIR := ../../../GM/BATSRUS/srcEquation
-EQUATIONS := $(wildcard ${EQUATIONDIR}/*.f90)
+EQUATIONS = ${GMDIR}/srcEquation/*.f90
 
 test_process_var_name:
+	rm -f test_process_var_name.tmp test_process_var_name.log
 	@echo test_process_var_name starting	>  test_process_var_name.tmp
-	@(cd ../src ; make ModUtilities.o)
-	cp ../../../GM/BATSRUS/src/ModExtraVariables.f90 .
-	cp ../../../GM/BATSRUS/src/ModSingleFluid.f90 .
-	@make ModSingleFluid.o
-	@make ModExtraVariables.o
+	@(cd ../src; make ModUtilities.o ModProcessVarName.o \
+		> test_process_var_name.log 2>&1)
+	cp ${GMDIR}/src/ModExtraVariables.f90 . 
+	cp ${GMDIR}/src/ModSingleFluid.f90    .
+	@make ModSingleFluid.o ModExtraVariables.o \
+		>> test_process_var_name.log 2>&1
 	for i in ${EQUATIONS} ; do\
-		cp -f $${i} ModEquation.f90 ;\
-		perl -i -pe 's/call init_mhd_variables/ /' ModEquation.f90 ;\
-		echo working on equation file: >> test_process_var_name.tmp ; \
-		echo $${i} >> test_process_var_name.tmp;\
-		echo ======================================================;\
-		echo working on equation file: ;\
-		echo $${i};\
+		cp -f $${i} ModEquation.f90;\
+		perl -i -pe 's/call init_mhd_variables/ /' ModEquation.f90;\
+		echo working on $${i} >> test_process_var_name.tmp;\
+		echo working on $${i} >> test_process_var_name.log;\
+		echo working on equation file: $${i};\
 		make test_process_var_name_exe;\
 		make test_process_var_name_run;\
 	done
@@ -481,20 +480,19 @@ test_process_var_name:
 
 test_process_var_name_exe:
 	@rm -f test_process_var_name.o ModEquation.o
-	@make ModEquation.o
-	@(cd ../src; make ModProcessVarName.o)
-	@make test_process_var_name.o
-	${LINK.f90} -o test_process_var_name.exe ${OBJ_PROCESS_VAR_NAME} \
-		${Lflag1} 
+	@make ModEquation.o test_process_var_name.o \
+		>> test_process_var_name.log 2>&1
+	@${LINK.f90} -o test_process_var_name.exe ${OBJ_PROCESS_VAR_NAME} \
+		${Lflag1} >> test_process_var_name.log 2>&1
 
 test_process_var_name_run:
 	-@(./test_process_var_name.exe >> test_process_var_name.tmp)
 	@echo test complete >> test_process_var_name.tmp
-	@echo test complete
 
 test_process_var_name_check:
-	diff test_process_var_name.tmp	 test_process_var_name.log \
-	> test_process_var_name.diff
+	rm -f test_process_var_name.diff
+	grep -i error test_process_var_name.log > test_process_var_name.diff
+	grep -i error test_process_var_name.tmp >> test_process_var_name.diff
 	@ls -l test_process_var_name.diff
 
 #######################################################################
