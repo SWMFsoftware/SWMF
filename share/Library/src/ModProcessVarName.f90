@@ -124,7 +124,7 @@ contains
     !      nDensity and nSpeed.
     
     integer,intent(in)                :: nVarName
-    character(len=15), intent(inout)  :: NameVar_V(nVarName)
+    character(len=*), intent(inout)   :: NameVar_V(nVarName)
     integer,intent(out)               :: nDensity, nSpeed
 
     integer                   :: nDistinctSubstanceVar_I(nVarPerSubstance)
@@ -180,7 +180,7 @@ contains
        end if
  
        if(.not. IsFoundVar) then 
-          write(*,*) 'ERROR : Var name not in dictionary: ',NameVarIn
+          write(*,*) 'ERROR: Var name not in dictionary: ',NameVarIn
           write(*,*) 'Please use standard variable names in ModEuqation '// &
                'and recompile:'
           !write(*,*) SubstanceStandardName_II
@@ -211,7 +211,7 @@ contains
          do iSynonym = 1, nSynonym
             DictionaryItem = Dictionary_III(iSubstance, iVar, iSynonym)
             if(len_trim(DictionaryItem) > 0) then
-               if(NameVar_V(iName) ==  DictionaryItem) then
+               if(NameVarIn ==  DictionaryItem) then
                   iSubstanceFound = iSubstance
                   IsFoundVar = .true.
                   NameVar_V(iName) = &
