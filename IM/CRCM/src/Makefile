@@ -84,3 +84,5 @@ CRCM_orig:
 
 distclean: clean
 	rm -f Makefile.DEPEND Makefile.RULES
+	cp ModEarthHO.f90 ModPlanet.f90
+	cp ModGrid_default.f90 ModGrid.f90

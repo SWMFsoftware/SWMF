@@ -69,11 +69,15 @@ clean:
 	@(if [ -d share ]; then cd share; make clean; fi);
 
 distclean: 
+	rm -f config.log
+	cp src/ModEarthHO.f90 src/ModPlanet.f90
+	cp src/ModGrid_default.f90 src/ModGrid.f90
 	./Config.pl -uninstall
 
 allclean:
 	@touch ${INSTALLFILES}
 	@cd src; make distclean
+	rm -f config.log
 	cd srcInterface; make distclean
 	rm -f *~
 

@@ -11,18 +11,13 @@ our $WARNING;
 our %Remaining;   # Arguments not handled by share/Scripts/Config.pl
 
 # Planet variables
-my $MakefilePlanet = "Makefile.planet";
+my $ConfigLog = "config.log";
 my $Planet;
 my $NewPlanet;
-
-#Grid variables
-my $MakefileGrid = "Makefile.grid";
 my $Grid;
 my $NewGrid;
-# Make sure that Makefile.planet and Makefile.grid exists
-`touch $MakefilePlanet`;
-`touch $MakefileGrid`;
-
+# Make sure that config.log exists
+`touch $ConfigLog`;
 
 my $config = "share/Scripts/Config.pl";
 if(-f $config){
@@ -60,9 +55,13 @@ exit 0;
 
 sub get_settings{
 
-    open(FILE, $MakefilePlanet) or 
-	die "$ERROR could not open $MakefilePlanet\n";
-
+    #Define defaults
+    $Planet='EarthHO';
+    $Grid='GridDefault';
+    
+    open(FILE, $ConfigLog) or 
+	die "$ERROR could not open $ConfigLog\n";
+    
     while(<FILE>){
         if(/\s*PLANET\s*=\s*(\w+)/){
 	    $Planet=$1;
@@ -70,10 +69,10 @@ sub get_settings{
 	}
     }
     close FILE;
-
-    open(FILE, $MakefileGrid) or 
-	die "$ERROR could not open $MakefilePlanet\n";
-
+    
+    open(FILE, $ConfigLog) or 
+	die "$ERROR could not open $ConfigLog\n";
+    
     while(<FILE>){
 	if(/\s*Grid\s*=\s*(\w+)/){
 	    $Grid=$1;
@@ -82,7 +81,7 @@ sub get_settings{
     }
     close FILE;
 
-    #die "$ERROR could not find PLANET name in $MakefilePlanet\n" 
+    #die "$ERROR could not find PLANET name in $ConfigLog\n" 
     #	unless $Planet;
 }
 
@@ -101,7 +100,8 @@ sub set_planet{
 
     &shell_command("cp $Files src/ModPlanet.f90");
 
-    &shell_command("echo PLANET=$NewPlanet > Makefile.planet");
+    &shell_command("echo PLANET=$NewPlanet > config.log");
+    &shell_command("echo Grid=$NewGrid >> config.log");
 }
 #############################################################################
 
@@ -117,7 +117,8 @@ sub set_grid{
 
     &shell_command("cp $Files src/ModGrid.f90");
 
-    &shell_command("echo Grid=$NewGrid > Makefile.grid");
+    &shell_command("echo PLANET=$NewPlanet > config.log");
+    &shell_command("echo Grid=$NewGrid >> config.log");
 }
 ############################################################################
 
