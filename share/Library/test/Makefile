@@ -23,6 +23,7 @@ help:
 	@echo "   test_lookup_table     - test ModLookupTable"
 	@echo "   test_planet_field     - test CON_planet_field"
 	@echo "   test_plot_file        - test ModPlotFile"
+	@echo "   test_process_var_name - test ModProcessVarName"
 	@echo "   test_ray_trace        - test CON_ray_trace"
 	@echo "   test_sort             - test ModSort"
 	@echo "   test_time_convert     - test ModTimeConvert"
@@ -56,7 +57,7 @@ test:   test_axes \
 	test_sort \
 	test_time_convert \
 	test_triangulate \
-	test_process_var_names_all\
+	test_process_var_name \
 	test_utilities
 	@echo ---------------------------------------------------------
 	@ls -l *.diff
@@ -144,61 +145,6 @@ test_linear_solver:
 		test_linear_solver.tmp test_linear_solver.log \
 						>  test_linear_solver.diff)
 	@ls -l test_linear_solver.diff
-
-#######################################################################
-OBJ_PROCESS_VARNAMES = \
-	test_process_var_names.o \
-	ModSingleFluid.o\
-	ModExtraVariables.o\
-	ModEquation.o \
-	../src/ModUtilities.o \
-	../src/ModProcessVarNames.o\
-
-EQUATIONDIR := ../../../GM/BATSRUS/srcEquation
-EQUATIONS := $(wildcard ${EQUATIONDIR}/*.f90)
-
-test_process_var_names_all:
-	@echo test_process_varnames starting	>  test_process_var_names.tmp
-	cp ../../../GM/BATSRUS/src/ModExtraVariables.f90 .
-	cp ../../../GM/BATSRUS/src/ModSingleFluid.f90 .
-	for i in ${EQUATIONS} ; do\
-		cp $${i} ModEquation.f90 ;\
-		perl -i -pe 's/call init_mhd_variables/ /' ModEquation.f90 ;\
-		echo working on equation file: >> test_process_var_names.tmp ; \
-		echo $${i} >> test_process_var_names.tmp;\
-		echo ======================================================;\
-		echo working on equation file: ;\
-		echo $${i};\
-		make test_process_var_names_exe;\
-		make test_process_var_names_run;\
-		make test_process_var_names_clean;\
-	done
-	make test_process_var_names_check
-	rm ModEquation* ModExtraVariables* ModSingleFluid*
-
-test_process_var_names_exe:
-	@make ModSingleFluid.o
-	@make ModExtraVariables.o
-	@make ModEquation.o
-	@(cd ../src ; make ModUtilities.o)
-	@(cd ../src; make ModProcessVarNames.o)
-	@make test_process_var_names.o
-	${LINK.f90} -o test_process_var_names.exe ${OBJ_PROCESS_VARNAMES} \
-		${Lflag1} 
-
-test_process_var_names_run:
-	-@(./test_process_var_names.exe >> test_process_var_names.tmp)
-	@echo test complete >> test_process_var_names.tmp
-	@echo test complete
-
-test_process_var_names_clean:
-	rm -f *.mod *.o ../src/*.o ../src/*.mod *.*~
-	rm -f test_process_var_names.exe
-
-test_process_var_names_check:
-	diff test_process_var_names.tmp	 test_process_var_names.log \
-	> test_process_var_names.diff
-	@ls -l test_process_var_names.diff
 
 #######################################################################
 OBJ_LINEAR_ADVECTION = \
@@ -498,5 +444,57 @@ test_triangulate:
 	-@(diff test_triangulate.tmp test_triangulate.log \
 						>  test_triangulate.diff)
 	@ls -l test_triangulate.diff
+
+#######################################################################
+
+OBJ_PROCESS_VAR_NAME = \
+	test_process_var_name.o \
+	ModSingleFluid.o\
+	ModExtraVariables.o\
+	ModEquation.o \
+	../src/ModUtilities.o \
+	../src/ModProcessVarName.o\
+
+EQUATIONDIR := ../../../GM/BATSRUS/srcEquation
+EQUATIONS := $(wildcard ${EQUATIONDIR}/*.f90)
+
+test_process_var_name:
+	@echo test_process_var_name starting	>  test_process_var_name.tmp
+	cp ../../../GM/BATSRUS/src/ModExtraVariables.f90 .
+	cp ../../../GM/BATSRUS/src/ModSingleFluid.f90 .
+	for i in ${EQUATIONS} ; do\
+		cp -f $${i} ModEquation.f90 ;\
+		perl -i -pe 's/call init_mhd_variables/ /' ModEquation.f90 ;\
+		echo working on equation file: >> test_process_var_name.tmp ; \
+		echo $${i} >> test_process_var_name.tmp;\
+		echo ======================================================;\
+		echo working on equation file: ;\
+		echo $${i};\
+		make test_process_var_name_exe;\
+		make test_process_var_name_run;\
+	done
+	make test_process_var_name_check
+	rm -f ModEquation* ModExtraVariables* ModSingleFluid* 
+
+test_process_var_name_exe:
+	@rm -f test_process_var_name.o ModEquation.o
+	@make ModSingleFluid.o
+	@make ModExtraVariables.o
+	@make ModEquation.o
+	@(cd ../src ; make ModUtilities.o)
+	@(cd ../src; make ModProcessVarName.o)
+	@make test_process_var_name.o
+	${LINK.f90} -o test_process_var_name.exe ${OBJ_PROCESS_VAR_NAME} \
+		${Lflag1} 
+
+test_process_var_name_run:
+	-@(./test_process_var_name.exe >> test_process_var_name.tmp)
+	@echo test complete >> test_process_var_name.tmp
+	@echo test complete
+
+test_process_var_name_check:
+	diff test_process_var_name.tmp	 test_process_var_name.log \
+	> test_process_var_name.diff
+	@ls -l test_process_var_name.diff
 
 #######################################################################

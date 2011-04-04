@@ -1,8 +1,8 @@
-test_process_varnames starting
+test_process_var_name starting
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationCrash.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho          Rho
  Mx           Mx
  My           My
@@ -18,8 +18,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationHd.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho           Rho
  Mx            Mx
  My            My
@@ -29,8 +29,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationHdCrash.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho          Rho
  Mx           Mx
  My           My
@@ -44,8 +44,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationHdEos.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho           Rho
  Mx            Mx
  My            My
@@ -56,8 +56,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationHdEosRad.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho          Rho
  Mx           Mx
  My           My
@@ -69,8 +69,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationHdRadCrash.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho          Rho
  Mx           Mx
  My           My
@@ -85,8 +85,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhd.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho         Rho
  Mx          Mx
  My          My
@@ -99,8 +99,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdAnisoP.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho          Rho
  Mx           Mx
  My           My
@@ -114,8 +114,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdAnisoPiPe.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho          Rho
  Mx           Mx
  My           My
@@ -130,8 +130,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdComet.f90
- Original  Standerdized  nDensity= 7 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 7 nSpeed= 1
+ --------  ------------
  Rho           Rho
  RhoUx         Mx
  RhoUy         My
@@ -150,8 +150,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdCorona.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho         Rho
  Mx          Mx
  My          My
@@ -164,9 +164,30 @@ working on equation file:
  e           Energy
 test complete
 working on equation file:
+../../../GM/BATSRUS/srcEquation/ModEquationMhdCrash.f90
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
+ Rho          Rho
+ Mx           Mx
+ My           My
+ Mz           Mz
+ Bx           Bx
+ By           By
+ Bz           Bz
+ Hyp          Hyp
+ m1           m1
+ m2           m2
+ m3           m3
+ Pe           Pe
+ i01          i01
+ EInt         EInt
+ P            p
+ E            Energy
+test complete
+working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdEosRad.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho          Rho
  Mx           Mx
  My           My
@@ -181,8 +202,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdHd.f90
- Original  Standerdized  nDensity= 2 nSpeed= 2
- --------  ----------- 
+ Original  Standardized  nDensity= 2 nSpeed= 2
+ --------  ------------
  Rho            Rho
  Mx             Mx
  My             My
@@ -201,8 +222,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdHyp.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho         Rho
  Mx          Mx
  My          My
@@ -216,8 +237,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdHypPe.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho         Rho
  Mx          Mx
  My          My
@@ -232,8 +253,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdIons.f90
- Original  Standerdized  nDensity= 3 nSpeed= 3
- --------  ----------- 
+ Original  Standardized  nDensity= 3 nSpeed= 3
+ --------  ------------
  Rho           Rho
  Mx            Mx
  My            My
@@ -258,8 +279,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdIonsPe.f90
- Original  Standerdized  nDensity= 3 nSpeed= 3
- --------  ----------- 
+ Original  Standardized  nDensity= 3 nSpeed= 3
+ --------  ------------
  Rho           Rho
  Mx            Mx
  My            My
@@ -285,8 +306,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdMars.f90
- Original  Standerdized  nDensity= 5 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 5 nSpeed= 1
+ --------  ------------
  Rho          Rho
  Hp           RhoHp
  O2p          RhoO2p
@@ -303,8 +324,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdMarsFluids.f90
- Original  Standerdized  nDensity= 5 nSpeed= 5
- --------  ----------- 
+ Original  Standardized  nDensity= 5 nSpeed= 5
+ --------  ------------
  Rho             Rho
  Mx              Mx
  My              My
@@ -341,8 +362,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdMarsFluidsPe.f90
- Original  Standerdized  nDensity= 5 nSpeed= 5
- --------  ----------- 
+ Original  Standardized  nDensity= 5 nSpeed= 5
+ --------  ------------
  Rho             Rho
  Mx              Mx
  My              My
@@ -380,8 +401,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdMarsFluidsSW.f90
- Original  Standerdized  nDensity= 6 nSpeed= 6
- --------  ----------- 
+ Original  Standardized  nDensity= 6 nSpeed= 6
+ --------  ------------
  Rho              Rho
  Mx               Mx
  My               My
@@ -424,8 +445,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdNonCons.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho         Rho
  Mx          Mx
  My          My
@@ -438,8 +459,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdPe.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho         Rho
  Mx          Mx
  My          My
@@ -453,8 +474,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdPw.f90
- Original  Standerdized  nDensity= 4 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 4 nSpeed= 1
+ --------  ------------
  Rho            Rho
  RhoH           RhoH
  RhoO           RhoO
@@ -470,8 +491,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdSaturn3sp.f90
- Original  Standerdized  nDensity= 4 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 4 nSpeed= 1
+ --------  ------------
  Rho            Rho
  RhoH           RhoH
  RhoH2O         RhoH2O
@@ -487,8 +508,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdSwIono.f90
- Original  Standerdized  nDensity= 3 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 3 nSpeed= 1
+ --------  ------------
  Rho            Rho
  RhoSw          RhoSw
  RhoIon         RhoIono
@@ -503,8 +524,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdTitan.f90
- Original  Standerdized  nDensity= 8 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 8 nSpeed= 1
+ --------  ------------
  Rho          Rho
  Lp           RhoLp_
  Mp           RhoMp
@@ -524,8 +545,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdTitanPe.f90
- Original  Standerdized  nDensity= 8 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 8 nSpeed= 1
+ --------  ------------
  Rho          Rho
  Lp           RhoLp_
  Mp           RhoMp
@@ -546,8 +567,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdWaves.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho         Rho
  Mx          Mx
  My          My
@@ -562,8 +583,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdWavesAnisoPiPe.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho          Rho
  Mx           Mx
  My           My
@@ -580,8 +601,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMhdWavesPe.f90
- Original  Standerdized  nDensity= 1 nSpeed= 1
- --------  ----------- 
+ Original  Standardized  nDensity= 1 nSpeed= 1
+ --------  ------------
  Rho         Rho
  Mx          Mx
  My          My
@@ -597,8 +618,8 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMultiIon.f90
- Original  Standerdized  nDensity= 2 nSpeed= 2
- --------  ----------- 
+ Original  Standardized  nDensity= 2 nSpeed= 2
+ --------  ------------
  Rho           Rho
  Mx            Mx
  My            My
@@ -617,11 +638,28 @@ working on equation file:
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationMultiSwIono.f90
+ Original  Standardized  nDensity= 2 nSpeed= 2
+ --------  ------------
+ Rho           Rho
+ Mx            Mx
+ My            My
+ Mz            Mz
+ Bx            Bx
+ By            By
+ Bz            Bz
+ P             p
+ OpRho         RhoOp
+ OpMx          MxOp
+ OpMy          MyOp
+ OpMz          MzOp
+ OpP           pOp
+ HpE           EnergyHp
+ OpE           EnergyOp
 test complete
 working on equation file:
 ../../../GM/BATSRUS/srcEquation/ModEquationOuterHelio.f90
- Original  Standerdized  nDensity= 5 nSpeed= 5
- --------  ----------- 
+ Original  Standardized  nDensity= 5 nSpeed= 5
+ --------  ------------
  Rho            Rho
  Mx             Mx
  My             My
