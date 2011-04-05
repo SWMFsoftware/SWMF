@@ -32,6 +32,7 @@ MODULES = \
         ModNumConst.o\
 	ModPlanetConst.o\
 	ModPlotFile.o\
+	ModProcessVarName.o\
 	ModReadParam.o\
 	ModSort.o\
 	ModTimeConvert.o\
