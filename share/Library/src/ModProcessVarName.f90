@@ -98,7 +98,13 @@ contains
 
   subroutine process_var_name(nVarName, NameVar_V, nDensity, nSpeed)
 
-    ! DESCRIPTION:
+    use ModUtilities,  ONLY: lower_case
+
+    integer,intent(in)                :: nVarName
+    character(len=*), intent(inout)   :: NameVar_V(nVarName)
+    integer,intent(out)               :: nDensity, nSpeed 
+
+   ! DESCRIPTION:
     ! ------------
     ! 1. Creates standard names and a dictionary for each standard name.
     ! The dictionary only contains the basic hydro quantities for 
@@ -122,11 +128,7 @@ contains
     !
     ! 3. The number of fluids and species found are returned by 
     !      nDensity and nSpeed.
-    
-    integer,intent(in)                :: nVarName
-    character(len=*), intent(inout)   :: NameVar_V(nVarName)
-    integer,intent(out)               :: nDensity, nSpeed
-
+ 
     integer                   :: nDistinctSubstanceVar_I(nVarPerSubstance)
     character(len=15)                 :: NameVarIn
     integer                           :: iName, iVar, iSubstanceFound = 0
@@ -146,6 +148,7 @@ contains
        ! init search
        IsFoundVar = .false.
        NameVarIn = NameVar_V(iName)
+       call lower_case(NameVarIn)
 
        ! Don't look up in dictionary for: bx, by, bz, EInt, ew, pe, hyp
        do iVar = 1, nVarExtra
