@@ -1,4 +1,4 @@
-program conversion
+
   use  CRASH_ModAtomicNotation
   use CRASH_ModAtomicMass,ONLY: cAtomicMass_I
   use ModConst
@@ -98,7 +98,7 @@ program conversion
      do 
         read(11,'(a)',err=2222,end=2222)StringHeader
         iString = iString + 1
-        if(iString<iStringFirst.or.iString>iStringLast)&
+        if(iString<iStringStart.or.iString>iStringLast)&
              write(12,'(a)')trim(StringHeader)
 
      end do

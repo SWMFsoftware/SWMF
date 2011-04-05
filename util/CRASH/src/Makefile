@@ -268,5 +268,5 @@ PROPACEOS: convert_propaceos.o
 	${LINK.f90} -o PROPACEOS.exe convert_propaceos.o Tmp_/*.o \
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
-	PROPACEOS.exe
+	./PROPACEOS.exe
 
