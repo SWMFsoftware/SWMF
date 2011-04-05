@@ -5754,6 +5754,14 @@ anomalous	TypeResistivity
 2.0E+10		EtaMaxAnomSi [m2/s] (read for anomalous resistivity only)
 1.0E-9		jCritAnomSi  [A/m2] (read for anomalous resistivity only)
 
+The true SI units of resistivity are Ohm m = N m^2 / (A^2 s). 
+In BATSRUS, however, we use "normalized" units, so that the magnetic
+permeability [N/A^2] disappers from the equations. So what is 
+described here as "resistivity", is really eta/mu_0 which has units of [m^2/s],
+same as (magnetic) diffusion. Since the normalized current is defined as curl B
+(instead of curl B/mu0), the electric field is E = -u x B + eta * J in the
+normalized units.
+
 If UseResistitivy is false, no resistivity is included.
 If UseResistivity is true, then one can select a constant resistivity,
 the classical Spitzer resistivity, 
