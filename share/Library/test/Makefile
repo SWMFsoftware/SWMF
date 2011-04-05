@@ -458,24 +458,23 @@ OBJ_PROCESS_VAR_NAME = \
 EQUATIONS = ${DIR}/GM/BATSRUS/srcEquation/*.f90
 
 test_process_var_name:
-	rm -f test_process_var_name.tmp test_process_var_name.log
+	@rm -f test_process_var_name.tmp test_process_var_name.log
 	@echo test_process_var_name starting	> test_process_var_name.tmp
 	@(cd ../src; make LIB                   > test_process_var_name.log 2>&1)
-	cp ${DIR}/GM/BATSRUS/src/ModExtraVariables.f90 . 
-	cp ${DIR}/GM/BATSRUS/src/ModSingleFluid.f90    .
+	@cp ${DIR}/GM/BATSRUS/src/ModExtraVariables.f90 . 
+	@cp ${DIR}/GM/BATSRUS/src/ModSingleFluid.f90    .
 	@make ModSingleFluid.o ModExtraVariables.o \
 		>> test_process_var_name.log 2>&1
-	for i in ${EQUATIONS} ; do\
+	@for i in ${EQUATIONS} ; do\
 		cp -f $${i} ModEquation.f90;\
 		perl -i -pe 's/call init_mhd_variables/ /' ModEquation.f90;\
 		echo working on $${i} >> test_process_var_name.tmp;\
 		echo working on $${i} >> test_process_var_name.log;\
-		echo working on equation file: $${i};\
 		make test_process_var_name_exe;\
 		make test_process_var_name_run;\
 	done
-	make test_process_var_name_check
-	rm -f ModEquation* ModExtraVariables* ModSingleFluid* 
+	@make test_process_var_name_check
+	@rm -f ModEquation* ModExtraVariables* ModSingleFluid* 
 
 test_process_var_name_exe:
 	@rm -f test_process_var_name.o ModEquation.o
@@ -489,9 +488,10 @@ test_process_var_name_run:
 	@echo test complete >> test_process_var_name.tmp
 
 test_process_var_name_check:
-	rm -f test_process_var_name.diff
-	grep -i error test_process_var_name.log > test_process_var_name.diff
-	grep -i error test_process_var_name.tmp >> test_process_var_name.diff
+	@rm -f test_process_var_name.diff
+	@(perl -ne 'print if /error/i' \
+		test_process_var_name.log test_process_var_name.tmp \
+		> test_process_var_name.diff)
 	@ls -l test_process_var_name.diff
 
 #######################################################################
