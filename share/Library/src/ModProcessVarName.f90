@@ -65,7 +65,7 @@ module ModProcessVarName
        'Mx    ', &
        'My    ', &
        'Mz    ', &
-       'p     ', &
+       'P     ', &
        'Ppar  ', &
        'Energy'  /)
 
@@ -185,7 +185,7 @@ contains
                'and recompile:'
           !write(*,*) SubstanceStandardName_II
           write(*,*) ''
-          call CON_stop(NameSub//': unknown variable'//NameVarIn)
+          call CON_stop(NameSub//': unknown variable '//NameVarIn)
        end if
 
     end do NAMELOOP
@@ -208,7 +208,7 @@ contains
       character(len=15)   :: DictionaryItem
       !----------------------------------------------------------------
       do iSubstance = 1, nSubstance 
-         do iSynonym = 1, nSynonym
+         do iSynonym = 2, nSynonym
             DictionaryItem = Dictionary_III(iSubstance, iVar, iSynonym)
             if(len_trim(DictionaryItem) > 0) then
                if(NameVarIn ==  DictionaryItem) then
@@ -231,10 +231,10 @@ contains
 
     integer   :: iVar, iSubstance
     
-    character(len = 6) :: NameSuffix_I(nSubstance)
+    character(len = 6) :: NameSubstance_I(nSubstance)
     ! ---------------------------------------------------------------------
 
-    NameSuffix_I = (/ &
+    NameSubstance_I = (/ &
           'H   ',  &
           'Hp  ',  &
           'HpSw',  &
@@ -268,7 +268,7 @@ contains
     do iSubstance = 1, nSubstance
        do iVar = 1, nVarPerSubstance
           SubstanceStandardName_II(iSubstance,iVar) = &
-               trim(NameSubstanceVar_I(iVar))//NameSuffix_I(iSubstance)
+              ''//trim(NameSubstance_I(iSubstance))//NameSubstanceVar_I(iVar)
        
        end do
     end do
@@ -294,8 +294,7 @@ contains
     Dictionary_III(Main_, RhoUz_,    2) = 'mz'
     Dictionary_III(Main_, RhoUz_,    3) = 'rhouz'
     Dictionary_III(Main_, Energy_,   2) = 'e'
-    Dictionary_III(Main_, Energy_,   3) = 'E'
-    Dictionary_III(Main_, p_,        2) = 'P'
+    Dictionary_III(Main_, p_,        2) = 'p'
     Dictionary_III(Main_, Ppar_,     2) = 'ppar'
 
     ! H atoms
@@ -388,8 +387,8 @@ contains
     Dictionary_III(Sw_, RhoUx_, 2) = 'swmx'
     Dictionary_III(Sw_, RhoUy_, 2) = 'swmy'
     Dictionary_III(Sw_, RhoUz_, 2) = 'swmz'
-    Dictionary_III(Sw_, p_,     2) = 'swP'
-    Dictionary_III(Sw_, Energy_,2) = 'swE'
+    Dictionary_III(Sw_, p_,     2) = 'swp'
+    Dictionary_III(Sw_, Energy_,2) = 'swe'
 
     ! ionosphere
     Dictionary_III(Iono_, Rho_,   2) = 'ionorho'
