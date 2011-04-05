@@ -1,6 +1,6 @@
 test_process_var_name starting
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationCrash.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationCrash.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho          Rho
  Mx           Mx
@@ -12,21 +12,11 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationCrash.f90
  Pe           Pe
  i01          i01
  EInt         EInt
- P            p
+ P            P
  E            Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationHd.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
- --------  ------------
- Rho           Rho
- Mx            Mx
- My            My
- Mz            Mz
- P             p
- E             Energy
-test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationHdCrash.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationHdCrash.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho          Rho
  Mx           Mx
@@ -36,22 +26,22 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationHdCrash.f90
  m2           m2
  m3           m3
  EInt         EInt
- P            p
+ P            P
  E            Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationHdEos.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationHdEos.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho           Rho
  Mx            Mx
  My            My
  Mz            Mz
  EInt          EInt
- P             p
+ P             P
  E             Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationHdEosRad.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationHdEosRad.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho          Rho
  Mx           Mx
@@ -59,11 +49,21 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationHdEosRad.f90
  Mz           Mz
  i01          i01
  EInt         EInt
- P            p
+ P            P
  E            Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationHdRadCrash.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationHd.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
+ --------  ------------
+ Rho           Rho
+ Mx            Mx
+ My            My
+ Mz            Mz
+ P             P
+ E             Energy
+test complete
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationHdRadCrash.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho          Rho
  Mx           Mx
@@ -74,24 +74,11 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationHdRadCrash.f
  m3           m3
  i01          i01
  EInt         EInt
- P            p
+ P            P
  E            Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhd.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
- --------  ------------
- Rho         Rho
- Mx          Mx
- My          My
- Mz          Mz
- Bx          Bx
- By          By
- Bz          Bz
- p           p
- e           Energy
-test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdAnisoP.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdAnisoP.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho          Rho
  Mx           Mx
@@ -101,11 +88,11 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdAnisoP.f9
  By           By
  Bz           Bz
  Ppar         Ppar
- p            p
+ p            P
  e            Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdAnisoPiPe.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdAnisoPiPe.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho          Rho
  Mx           Mx
@@ -116,11 +103,11 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdAnisoPiPe
  Bz           Bz
  Pe           Pe
  Ppar         Ppar
- p            p
+ p            P
  e            Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdComet.f90
- Original  Standardized  nDensity= 7 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdComet.f90
+ Original  Standardized  nDensity=            7 nSpeed=            1
  --------  ------------
  Rho           Rho
  RhoUx         Mx
@@ -129,17 +116,17 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdComet.f90
  Bx            Bx
  By            By
  Bz            Bz
- H2Op          RhoH2Op
- Hp            RhoHp
- H3Op          RhoH3Op
- OHp           RhoOHp
- Op            RhoOp
- COp           RhoCOp
- p             p
+ H2Op          H2OpRho
+ Hp            HpRho
+ H3Op          H3OpRho
+ OHp           OHpRho
+ Op            OpRho
+ COp           COpRho
+ p             P
  e             Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdCorona.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdCorona.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho         Rho
  Mx          Mx
@@ -149,11 +136,11 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdCorona.f9
  By          By
  Bz          Bz
  Ew          Ew
- p           p
+ p           P
  e           Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdCrash.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdCrash.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho          Rho
  Mx           Mx
@@ -169,11 +156,11 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdCrash.f90
  Pe           Pe
  i01          i01
  EInt         EInt
- P            p
+ P            P
  E            Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdEosRad.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdEosRad.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho          Rho
  Mx           Mx
@@ -184,11 +171,24 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdEosRad.f9
  Bz           Bz
  i01          i01
  EInt         EInt
- P            p
+ P            P
  E            Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdHd.f90
- Original  Standardized  nDensity= 2 nSpeed= 2
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhd.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
+ --------  ------------
+ Rho         Rho
+ Mx          Mx
+ My          My
+ Mz          Mz
+ Bx          Bx
+ By          By
+ Bz          Bz
+ p           P
+ e           Energy
+test complete
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdHd.f90
+ Original  Standardized  nDensity=            2 nSpeed=            2
  --------  ------------
  Rho            Rho
  Mx             Mx
@@ -197,17 +197,17 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdHd.f90
  Bx             Bx
  By             By
  Bz             Bz
- p              p
- NeuRho         RhoNeu1
- NeuMx          MxNeu1
- NeuMy          MyNeu1
- NeuMz          MzNeu1
- NeuP           pNeu1
+ p              P
+ NeuRho         Neu1Rho
+ NeuMx          Neu1Mx
+ NeuMy          Neu1My
+ NeuMz          Neu1Mz
+ NeuP           Neu1P
  e              Energy
- NeuE           EnergyNeu1
+ NeuE           Neu1Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdHyp.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdHyp.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho         Rho
  Mx          Mx
@@ -217,11 +217,11 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdHyp.f90
  By          By
  Bz          Bz
  Hyp         Hyp
- p           p
+ p           P
  e           Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdHypPe.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdHypPe.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho         Rho
  Mx          Mx
@@ -232,11 +232,11 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdHypPe.f90
  Bz          Bz
  Hyp         Hyp
  Pe          Pe
- p           p
+ p           P
  e           Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdIons.f90
- Original  Standardized  nDensity= 3 nSpeed= 3
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdIons.f90
+ Original  Standardized  nDensity=            3 nSpeed=            3
  --------  ------------
  Rho           Rho
  Mx            Mx
@@ -245,23 +245,23 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdIons.f90
  Bx            Bx
  By            By
  Bz            Bz
- P             p
- HpRho         RhoHp
- HpMx          MxHp
- HpMy          MyHp
- HpMz          MzHp
- HpP           pHp
- OpRho         RhoOp
- OpMx          MxOp
- OpMy          MyOp
- OpMz          MzOp
- OpP           pOp
+ P             P
+ HpRho         HpRho
+ HpMx          HpMx
+ HpMy          HpMy
+ HpMz          HpMz
+ HpP           HpP
+ OpRho         OpRho
+ OpMx          OpMx
+ OpMy          OpMy
+ OpMz          OpMz
+ OpP           OpP
  E             Energy
- HpE           EnergyHp
- OpE           EnergyOp
+ HpE           HpEnergy
+ OpE           OpEnergy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdIonsPe.f90
- Original  Standardized  nDensity= 3 nSpeed= 3
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdIonsPe.f90
+ Original  Standardized  nDensity=            3 nSpeed=            3
  --------  ------------
  Rho           Rho
  Mx            Mx
@@ -271,40 +271,40 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdIonsPe.f9
  By            By
  Bz            Bz
  Pe            Pe
- P             p
- HpRho         RhoHp
- HpMx          MxHp
- HpMy          MyHp
- HpMz          MzHp
- HpP           pHp
- OpRho         RhoOp
- OpMx          MxOp
- OpMy          MyOp
- OpMz          MzOp
- OpP           pOp
+ P             P
+ HpRho         HpRho
+ HpMx          HpMx
+ HpMy          HpMy
+ HpMz          HpMz
+ HpP           HpP
+ OpRho         OpRho
+ OpMx          OpMx
+ OpMy          OpMy
+ OpMz          OpMz
+ OpP           OpP
  E             Energy
- HpE           EnergyHp
- OpE           EnergyOp
+ HpE           HpEnergy
+ OpE           OpEnergy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdMars.f90
- Original  Standardized  nDensity= 5 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdMars.f90
+ Original  Standardized  nDensity=            5 nSpeed=            1
  --------  ------------
  Rho          Rho
- Hp           RhoHp
- O2p          RhoO2p
- Op           RhoOp
- CO2p         RhoCO2p
+ Hp           HpRho
+ O2p          O2pRho
+ Op           OpRho
+ CO2p         CO2pRho
  Mx           Mx
  My           My
  Mz           Mz
  Bx           Bx
  By           By
  Bz           Bz
- p            p
+ p            P
  e            Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdMarsFluids.f90
- Original  Standardized  nDensity= 5 nSpeed= 5
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdMarsFluids.f90
+ Original  Standardized  nDensity=            5 nSpeed=            5
  --------  ------------
  Rho             Rho
  Mx              Mx
@@ -313,35 +313,35 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdMarsFluid
  Bx              Bx
  By              By
  Bz              Bz
- P               p
- HpRho           RhoHp
- HpMx            MxHp
- HpMy            MyHp
- HpMz            MzHp
- HpP             pHp
- O2pRho          RhoO2p
- O2pMx           MxO2p
- O2pMy           MyO2p
- O2pMz           MzO2p
- O2pP            pO2p
- OpRho           RhoOp
- OpMx            MxOp
- OpMy            MyOp
- OpMz            MzOp
- OpP             pOp
- CO2pRho         RhoCO2p
- CO2pMx          MxCO2p
- CO2pMy          MyCO2p
- CO2pMz          MzCO2p
- CO2pP           pCO2p
+ P               P
+ HpRho           HpRho
+ HpMx            HpMx
+ HpMy            HpMy
+ HpMz            HpMz
+ HpP             HpP
+ O2pRho          O2pRho
+ O2pMx           O2pMx
+ O2pMy           O2pMy
+ O2pMz           O2pMz
+ O2pP            O2pP
+ OpRho           OpRho
+ OpMx            OpMx
+ OpMy            OpMy
+ OpMz            OpMz
+ OpP             OpP
+ CO2pRho         CO2pRho
+ CO2pMx          CO2pMx
+ CO2pMy          CO2pMy
+ CO2pMz          CO2pMz
+ CO2pP           CO2pP
  E               Energy
- HpE             EnergyHp
- O2pE            EnergyO2p
- OpE             EnergyOp
- CO2pE           EnergyCO2p
+ HpE             HpEnergy
+ O2pE            O2pEnergy
+ OpE             OpEnergy
+ CO2pE           CO2pEnergy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdMarsFluidsPe.f90
- Original  Standardized  nDensity= 5 nSpeed= 5
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdMarsFluidsPe.f90
+ Original  Standardized  nDensity=            5 nSpeed=            5
  --------  ------------
  Rho             Rho
  Mx              Mx
@@ -351,35 +351,35 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdMarsFluid
  By              By
  Bz              Bz
  Pe              Pe
- P               p
- HpRho           RhoHp
- HpMx            MxHp
- HpMy            MyHp
- HpMz            MzHp
- HpP             pHp
- O2pRho          RhoO2p
- O2pMx           MxO2p
- O2pMy           MyO2p
- O2pMz           MzO2p
- O2pP            pO2p
- OpRho           RhoOp
- OpMx            MxOp
- OpMy            MyOp
- OpMz            MzOp
- OpP             pOp
- CO2pRho         RhoCO2p
- CO2pMx          MxCO2p
- CO2pMy          MyCO2p
- CO2pMz          MzCO2p
- CO2pP           pCO2p
+ P               P
+ HpRho           HpRho
+ HpMx            HpMx
+ HpMy            HpMy
+ HpMz            HpMz
+ HpP             HpP
+ O2pRho          O2pRho
+ O2pMx           O2pMx
+ O2pMy           O2pMy
+ O2pMz           O2pMz
+ O2pP            O2pP
+ OpRho           OpRho
+ OpMx            OpMx
+ OpMy            OpMy
+ OpMz            OpMz
+ OpP             OpP
+ CO2pRho         CO2pRho
+ CO2pMx          CO2pMx
+ CO2pMy          CO2pMy
+ CO2pMz          CO2pMz
+ CO2pP           CO2pP
  E               Energy
- HpE             EnergyHp
- O2pE            EnergyO2p
- OpE             EnergyOp
- CO2pE           EnergyCO2p
+ HpE             HpEnergy
+ O2pE            O2pEnergy
+ OpE             OpEnergy
+ CO2pE           CO2pEnergy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdMarsFluidsSW.f90
- Original  Standardized  nDensity= 6 nSpeed= 6
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdMarsFluidsSW.f90
+ Original  Standardized  nDensity=            6 nSpeed=            6
  --------  ------------
  Rho              Rho
  Mx               Mx
@@ -388,41 +388,41 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdMarsFluid
  Bx               Bx
  By               By
  Bz               Bz
- P                p
- HpswRho          RhoHpSw
- HpswMx           MxHpSw
- HpswMy           MyHpSw
- HpswMz           MzHpSw
- HpswP            pHpSw
- O2pRho           RhoO2p
- O2pMx            MxO2p
- O2pMy            MyO2p
- O2pMz            MzO2p
- O2pP             pO2p
- OpRho            RhoOp
- OpMx             MxOp
- OpMy             MyOp
- OpMz             MzOp
- OpP              pOp
- CO2pRho          RhoCO2p
- CO2pMx           MxCO2p
- CO2pMy           MyCO2p
- CO2pMz           MzCO2p
- CO2pP            pCO2p
- HpRho            RhoHp
- HpUx             MxHp
- HpUy             MyHp
- HpUz             MzHp
- HpP              pHp
+ P                P
+ HpswRho          HpSwRho
+ HpswMx           HpSwMx
+ HpswMy           HpSwMy
+ HpswMz           HpSwMz
+ HpswP            HpSwP
+ O2pRho           O2pRho
+ O2pMx            O2pMx
+ O2pMy            O2pMy
+ O2pMz            O2pMz
+ O2pP             O2pP
+ OpRho            OpRho
+ OpMx             OpMx
+ OpMy             OpMy
+ OpMz             OpMz
+ OpP              OpP
+ CO2pRho          CO2pRho
+ CO2pMx           CO2pMx
+ CO2pMy           CO2pMy
+ CO2pMz           CO2pMz
+ CO2pP            CO2pP
+ HpRho            HpRho
+ HpUx             HpMx
+ HpUy             HpMy
+ HpUz             HpMz
+ HpP              HpP
  E                Energy
- HpswE            EnergyHpSw
- O2pE             EnergyO2p
- OpE              EnergyOp
- CO2pE            EnergyCO2p
- HpE              EnergyHp
+ HpswE            HpSwEnergy
+ O2pE             O2pEnergy
+ OpE              OpEnergy
+ CO2pE            CO2pEnergy
+ HpE              HpEnergy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdNonCons.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdNonCons.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho         Rho
  Mx          Mx
@@ -431,11 +431,11 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdNonCons.f
  Bx          Bx
  By          By
  Bz          Bz
- p           p
+ p           P
  e           Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdPe.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdPe.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho         Rho
  Mx          Mx
@@ -445,87 +445,87 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdPe.f90
  By          By
  Bz          Bz
  Pe          Pe
- p           p
+ p           P
  e           Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdPw.f90
- Original  Standardized  nDensity= 4 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdPw.f90
+ Original  Standardized  nDensity=            4 nSpeed=            1
  --------  ------------
  Rho            Rho
- RhoH           RhoH
- RhoO           RhoO
- RhoHe          RhoHe
+ RhoH           HRho
+ RhoO           ORho
+ RhoHe          HeRho
  Mx             Mx
  My             My
  Mz             Mz
  Bx             Bx
  By             By
  Bz             Bz
- p              p
+ p              P
  e              Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdSaturn3sp.f90
- Original  Standardized  nDensity= 4 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdSaturn3sp.f90
+ Original  Standardized  nDensity=            4 nSpeed=            1
  --------  ------------
  Rho            Rho
- RhoH           RhoH
- RhoH2O         RhoH2O
- RhoN           RhoN
+ RhoH           HRho
+ RhoH2O         H2ORho
+ RhoN           NRho
  Mx             Mx
  My             My
  Mz             Mz
  Bx             Bx
  By             By
  Bz             Bz
- p              p
+ p              P
  e              Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdSwIono.f90
- Original  Standardized  nDensity= 3 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdSwIono.f90
+ Original  Standardized  nDensity=            3 nSpeed=            1
  --------  ------------
  Rho            Rho
- RhoSw          RhoSw
- RhoIon         RhoIono
+ RhoSw          SwRho
+ RhoIon         IonoRho
  Mx             Mx
  My             My
  Mz             Mz
  Bx             Bx
  By             By
  Bz             Bz
- p              p
+ p              P
  e              Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdTitan.f90
- Original  Standardized  nDensity= 8 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdTitan.f90
+ Original  Standardized  nDensity=            8 nSpeed=            1
  --------  ------------
  Rho          Rho
- Lp           RhoLp_
- Mp           RhoMp
- H1p          RhoHp
- H2p          RhoH2p
- MHCp         RhoMHCp
- HHCp         RhoHHCp
- HNIp         RhoHNIp
+ Lp           Lp_Rho
+ Mp           MpRho
+ H1p          HpRho
+ H2p          H2pRho
+ MHCp         MHCpRho
+ HHCp         HHCpRho
+ HNIp         HNIpRho
  Mx           Mx
  My           My
  Mz           Mz
  Bx           Bx
  By           By
  Bz           Bz
- p            p
+ p            P
  e            Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdTitanPe.f90
- Original  Standardized  nDensity= 8 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdTitanPe.f90
+ Original  Standardized  nDensity=            8 nSpeed=            1
  --------  ------------
  Rho          Rho
- Lp           RhoLp_
- Mp           RhoMp
- H1p          RhoHp
- H2p          RhoH2p
- MHCp         RhoMHCp
- HHCp         RhoHHCp
- HNIp         RhoHNIp
+ Lp           Lp_Rho
+ Mp           MpRho
+ H1p          HpRho
+ H2p          H2pRho
+ MHCp         MHCpRho
+ HHCp         HHCpRho
+ HNIp         HNIpRho
  Mx           Mx
  My           My
  Mz           Mz
@@ -533,26 +533,11 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdTitanPe.f
  By           By
  Bz           Bz
  Pe           Pe
- p            p
+ p            P
  e            Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdWaves.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
- --------  ------------
- Rho         Rho
- Mx          Mx
- My          My
- Mz          Mz
- Bx          Bx
- By          By
- Bz          Bz
- Ew          Ew
- i01         i01
- p           p
- e           Energy
-test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdWavesAnisoPiPe.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdWavesAnisoPiPe.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho          Rho
  Mx           Mx
@@ -565,11 +550,26 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdWavesAnis
  i02          i02
  Pe           Pe
  Ppar         Ppar
- p            p
+ p            P
  e            Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdWavesPe.f90
- Original  Standardized  nDensity= 1 nSpeed= 1
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdWaves.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
+ --------  ------------
+ Rho         Rho
+ Mx          Mx
+ My          My
+ Mz          Mz
+ Bx          Bx
+ By          By
+ Bz          Bz
+ Ew          Ew
+ i01         i01
+ p           P
+ e           Energy
+test complete
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMhdWavesPe.f90
+ Original  Standardized  nDensity=            1 nSpeed=            1
  --------  ------------
  Rho         Rho
  Mx          Mx
@@ -581,11 +581,11 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMhdWavesPe.f
  i01         i01
  i02         i02
  Pe          Pe
- p           p
+ p           P
  e           Energy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMultiIon.f90
- Original  Standardized  nDensity= 2 nSpeed= 2
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMultiIon.f90
+ Original  Standardized  nDensity=            2 nSpeed=            2
  --------  ------------
  Rho           Rho
  Mx            Mx
@@ -594,23 +594,42 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMultiIon.f90
  Bx            Bx
  By            By
  Bz            Bz
- P             p
- OpRho         RhoOp
- OpMx          MxOp
- OpMy          MyOp
- OpMz          MzOp
- OpP           pOp
- HpE           EnergyHp
- OpE           EnergyOp
+ P             P
+ OpRho         OpRho
+ OpMx          OpMx
+ OpMy          OpMy
+ OpMz          OpMz
+ OpP           OpP
+ HpE           HpEnergy
+ OpE           OpEnergy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationMultiSwIono.f90
- ERROR: Var name not in dictionary: swp            
- Please use standard variable names in ModEuqation and recompile:
- 
- ERROR: process_var_name: unknown variableswp            
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationMultiSwIono.f90
+ Original  Standardized  nDensity=            3 nSpeed=            3
+ --------  ------------
+ Rho             Rho
+ Mx              Mx
+ My              My
+ Mz              Mz
+ Bx              Bx
+ By              By
+ Bz              Bz
+ P               P
+ SwRho           SwRho
+ SwMx            SwMx
+ SwMy            SwMy
+ SwMz            SwMz
+ SwP             SwP
+ IonoRho         IonoRho
+ IonoMx          IonoMx
+ IonoMy          IonoMy
+ IonoMz          IonoMz
+ IonoP           IonoP
+ E               Energy
+ SwE             SwEnergy
+ IonoE           IonoEnergy
 test complete
-working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationOuterHelio.f90
- Original  Standardized  nDensity= 5 nSpeed= 5
+working on /home/oran/COUPLING/test/SWMF/GM/BATSRUS/srcEquation/ModEquationOuterHelio.f90
+ Original  Standardized  nDensity=            5 nSpeed=            5
  --------  ------------
  Rho            Rho
  Mx             Mx
@@ -619,30 +638,30 @@ working on /Users/gtoth/swmf/HEAD/GM/BATSRUS/srcEquation/ModEquationOuterHelio.f
  Bx             Bx
  By             By
  Bz             Bz
- p              p
- NeuRho         RhoNeu1
- NeuMx          MxNeu1
- NeuMy          MyNeu1
- NeuMz          MzNeu1
- NeuP           pNeu1
- Ne2Rho         RhoNeu2
- Ne2Mx          MxNeu2
- Ne2My          MyNeu2
- Ne2Mz          MzNeu2
- Ne2P           pNeu2
- Ne3Rho         RhoNeu3
- Ne3Mx          MxNeu3
- Ne3My          MyNeu3
- Ne3Mz          MzNeu3
- Ne3P           pNeu3
- Ne4Rho         RhoNeu4
- Ne4Mx          MxNeu4
- Ne4My          MyNeu4
- Ne4Mz          MzNeu4
- Ne4P           pNeu4
+ p              P
+ NeuRho         Neu1Rho
+ NeuMx          Neu1Mx
+ NeuMy          Neu1My
+ NeuMz          Neu1Mz
+ NeuP           Neu1P
+ Ne2Rho         Neu2Rho
+ Ne2Mx          Neu2Mx
+ Ne2My          Neu2My
+ Ne2Mz          Neu2Mz
+ Ne2P           Neu2P
+ Ne3Rho         Neu3Rho
+ Ne3Mx          Neu3Mx
+ Ne3My          Neu3My
+ Ne3Mz          Neu3Mz
+ Ne3P           Neu3P
+ Ne4Rho         Neu4Rho
+ Ne4Mx          Neu4Mx
+ Ne4My          Neu4My
+ Ne4Mz          Neu4Mz
+ Ne4P           Neu4P
  e              Energy
- NeuE           EnergyNeu1
- Ne2E           EnergyNeu2
- Ne3E           EnergyNeu3
- Ne4E           EnergyNeu4
+ NeuE           Neu1Energy
+ Ne2E           Neu2Energy
+ Ne3E           Neu3Energy
+ Ne4E           Neu4Energy
 test complete
