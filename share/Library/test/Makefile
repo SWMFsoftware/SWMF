@@ -455,15 +455,14 @@ OBJ_PROCESS_VAR_NAME = \
 	../src/ModUtilities.o \
 	../src/ModProcessVarName.o\
 
-EQUATIONS = ${GMDIR}/srcEquation/*.f90
+EQUATIONS = ${DIR}/GM/BATSRUS/srcEquation/*.f90
 
 test_process_var_name:
 	rm -f test_process_var_name.tmp test_process_var_name.log
-	@echo test_process_var_name starting	>  test_process_var_name.tmp
-	@(cd ../src; make ModUtilities.o ModProcessVarName.o \
-		> test_process_var_name.log 2>&1)
-	cp ${GMDIR}/src/ModExtraVariables.f90 . 
-	cp ${GMDIR}/src/ModSingleFluid.f90    .
+	@echo test_process_var_name starting	> test_process_var_name.tmp
+	@(cd ../src; make LIB                   > test_process_var_name.log 2>&1)
+	cp ${DIR}/GM/BATSRUS/src/ModExtraVariables.f90 . 
+	cp ${DIR}/GM/BATSRUS/src/ModSingleFluid.f90    .
 	@make ModSingleFluid.o ModExtraVariables.o \
 		>> test_process_var_name.log 2>&1
 	for i in ${EQUATIONS} ; do\
