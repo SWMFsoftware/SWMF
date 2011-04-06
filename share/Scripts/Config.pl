@@ -91,7 +91,7 @@ our $Install;               # True if code is (re)installed
 our $Uninstall;             # True if code is uninstalled
 our $ShowGridSize;          # Show grid size for caller code
 our $NewGridSize;           # New grid size to be set in caller code
-our $Hdf5;					# True if HDF5 is enabled
+our $Hdf5;                  # True if HDF5 is enabled
 
 # Default precision for installation
 my $DefaultPrecision = 'double';
@@ -134,8 +134,8 @@ foreach (@Arguments){
     if(/^-nodebug$/i)         {$NewDebug="no";                  next};
     if(/^-mpi$/i)             {$NewMpi="yes";                   next};
     if(/^-nompi$/i)           {$NewMpi="no";                    next};
-    if(/^-hdf5$/i)            {$NewHdf5="yes";                   next};
-    if(/^-nohdf5$/i)          {$NewHdf5="no";                    next};
+    if(/^-hdf5$/i)            {$NewHdf5="yes";                  next};
+    if(/^-nohdf5$/i)          {$NewHdf5="no";                   next};
     if(/^-O[0-4]$/i)          {$NewOptimize=$_;                 next};  
     if(/^-g(rid)?$/)          {$ShowGridSize=1;                 next};
     if(/^-g(rid)?=([\d,]+)$/) {$NewGridSize=$+;                 next};
@@ -298,8 +298,9 @@ sub show_settings_{
     print "The selected MPI library is  $MpiVersion.\n";
     print "The default precision for reals is $Precision precision.\n";
     print "The maximum optimization level is $Optimize\n";
-    print "Debugging flags: $Debug\n";
-    print "Linked with MPI: $Mpi\n";
+    print "Debugging flags:  $Debug\n";
+    print "Linked with MPI:  $Mpi\n";
+    print "Linked with HDF5: $Hdf5\n";
 
     print "\n";
 
@@ -683,9 +684,9 @@ Compilation:
 
 -debug         select debug options for the compiler in Makefile.conf
 -nodebug       do not use debug options for the compiler in Makefile.conf
--nompi         compile and link with the NOMPI library for serial execution
 -mpi           compile and link with the MPI library for parallel execution
--hdf5          compile and link with HDF5 library for parallel plotfile output
+-nompi         compile and link with the NOMPI library for serial execution
+-hdf5          compile and link with HDF5 library for HDF5 plot output
 -nohdf5        do not compile with HDF5 library
 -O0            set all optimization levels to -O0
 -O1            set optimization levels to at most -O1
