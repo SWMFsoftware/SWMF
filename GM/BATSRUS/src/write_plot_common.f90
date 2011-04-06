@@ -204,10 +204,6 @@ subroutine write_plot_common(ifile)
      call set_plotvar(iBLK, ifile-plot_, nPlotVar, plotvarnames, plotvar, &
           plotvar_inBody, plotvar_useBody)
 
-	 if (plot_form(ifile) == 'hdf') then
-		call write_var_hdf5(PlotVar, nPlotVar, iBLK)
-     endif
-     
      if (plot_dimensional(ifile)) call dimensionalize_plotvar(iBLK, &
           ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
 
@@ -235,6 +231,8 @@ subroutine write_plot_common(ifile)
            call write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
                 xmin,xmax,ymin,ymax,zmin,zmax, &
                 dxblk,dyblk,dzblk,nBLKcells)
+        case('hdf')
+           call write_var_hdf5(PlotVar, nPlotVar, iBLK)
         end select
      end if
 
@@ -255,10 +253,10 @@ subroutine write_plot_common(ifile)
 
   end do ! iBLK
 
-  ! Write the HDF5 output file here
+  ! Write the HDF5 output file and return
   if (plot_form(ifile) == 'hdf') then
-        call write_plot_hdf5(filename, plotVarNames, nPlotVar, ifile)
-        return
+     call write_plot_hdf5(filename, plotVarNames, nPlotVar, ifile)
+     RETURN
   endif
 
   ! Get the headers that contain variables names and units
