@@ -1,73 +1,83 @@
 module ModHdf5
-  use ModIO, ONLY: NamePlotDir, MaxFile, nplotvarmax
 
-  include "mpif.h"
+  use ModIO, ONLY: NamePlotDir, MaxFile, nplotvarmax
+  use ModMpi
+
+  implicit none
+
+  private ! except
+  public hdf5_setup
+  public write_var_hdf5
+  public write_plot_hdf5
+
+  SAVE
 
   character (len=80) :: filename
   integer :: plotFileNumber, checkpointFileNumber
 
-  logical, save :: hdf5_writeRestartFile
-  integer, save :: hdf5_plotArrayBegin = 1, hdf5_plotArrayEnd
-  integer, save :: hdf5_currentBlockIdx = 1, localNumBlocks
+  logical:: hdf5_writeRestartFile
+  integer:: hdf5_plotArrayBegin = 1, hdf5_plotArrayEnd
+  integer:: hdf5_currentBlockIdx = 1, localNumBlocks
 
-  !! Constants used by the FLASH HDF5 IO package
+  ! Constants used by the FLASH HDF5 IO package
 
-  !! Variables for dimensional indexing
-  integer, save  :: IAXIS = 1, JAXIS = 2, KAXIS = 3
-  integer, save  :: LOW = 1, HIGH = 2
+  ! Variables for dimensional indexing
+  integer :: IAXIS = 1, JAXIS = 2, KAXIS = 3
+  integer :: LOW = 1, HIGH = 2
 
-  !! Refinement tree information arrays
-  integer, allocatable, save :: which_child(:), lrefine(:), nodetype(:), bflags(:,:)
-  real, allocatable, save :: bnd_box(:,:,:), bsize(:,:), coord(:,:)
+  ! Refinement tree information arrays
+  integer, allocatable:: which_child(:), lrefine(:), nodetype(:), bflags(:,:)
+  real, allocatable:: bnd_box(:,:,:), bsize(:,:), coord(:,:)
 
-  !! FLASH-formatted unkowns array
-  real, allocatable, save  :: unk(:,:,:,:,:)
+  ! FLASH-formatted unkowns array
+  real, allocatable :: unk(:,:,:,:,:)
 
-  !! FLASH-formatted grid variables
-  integer, allocatable, save  :: gr_gid(:,:)
-  integer, save  :: gr_globalOffset, gr_globalNumBlocks
+  ! FLASH-formatted grid variables
+  integer, allocatable :: gr_gid(:,:)
+  integer :: gr_globalOffset, gr_globalNumBlocks
 
-  !! FLASH IO variables
-  integer, save :: io_outputSplitNum
-  integer, save :: io_splitNumBlks
+  ! FLASH IO variables
+  integer:: io_outputSplitNum
+  integer:: io_splitNumBlks
 
-  character (len=20), save  :: io_flashRelease
-  character (len=80), save  :: io_buildDate, io_buildDir, io_buildMachine, &
+  character (len=20) :: io_flashRelease
+  character (len=80) :: io_buildDate, io_buildDir, io_buildMachine, &
        io_fileCreationTime, io_setupTimeStamp,     &
        io_buildTimeStamp
-  character (len=400), save  :: io_setupCall, io_cflags, io_fflags
+  character (len=400) :: io_setupCall, io_cflags, io_fflags
 
-  integer, save :: io_numRealParms, io_numIntParms, io_numStrParms, io_numLogParms
-  integer :: io_numRealScalars, io_numIntScalars, io_numStrScalars, io_numLogScalars
+  integer:: io_numRealParms, io_numIntParms, io_numStrParms, io_numLogParms
+  integer:: io_numRealScalars, io_numIntScalars
+  integer:: io_numStrScalars, io_numLogScalars
 
-  integer, save :: io_intParmValues(1), io_intScalarValues(11)
-  integer, save :: io_logToIntParmValues(1), io_logToIntScalarValues(1)
-  logical, save :: io_logParmValues(1), io_logScalarValues(1)
-  real, save    :: io_realParmValues(1), io_realScalarValues(1)
+  integer:: io_intParmValues(1), io_intScalarValues(11)
+  integer:: io_logToIntParmValues(1), io_logToIntScalarValues(1)
+  logical:: io_logParmValues(1), io_logScalarValues(1)
+  real   :: io_realParmValues(1), io_realScalarValues(1)
 
-  character (len=80), save :: io_intParmNames(1)
-  character (len=80), save :: io_intScalarNames(11)    
-  character (len=80), save :: io_realParmNames(1)
-  character (len=80), save :: io_realScalarNames(1)
-  character (len=80), save :: io_strParmNames(1)
-  character (len=80), save :: io_strScalarNames(1)
-  character (len=80), save :: io_strParmValues(1)
-  character (len=80), save :: io_strScalarValues(1)
-  character (len=80), save :: io_logParmNames(1)
-  character (len=80), save :: io_logScalarNames(1)
-  character (len=80), save :: io_logParmNamesPrev(1)
+  character (len=80):: io_intParmNames(1)
+  character (len=80):: io_intScalarNames(11)    
+  character (len=80):: io_realParmNames(1)
+  character (len=80):: io_realScalarNames(1)
+  character (len=80):: io_strParmNames(1)
+  character (len=80):: io_strScalarNames(1)
+  character (len=80):: io_strParmValues(1)
+  character (len=80):: io_strScalarValues(1)
+  character (len=80):: io_logParmNames(1)
+  character (len=80):: io_logScalarNames(1)
+  character (len=80):: io_logParmNamesPrev(1)
 
-  character (len=4), save :: io_plotVarStr(nplotvarmax)
-  character (len=4), save :: io_plotGridVarStr(nplotvarmax)
-  character (len=4), save :: io_unklabels(nplotvarmax)
+  character (len=4):: io_plotVarStr(nplotvarmax)
+  character (len=4):: io_plotGridVarStr(nplotvarmax)
+  character (len=4):: io_unklabels(nplotvarmax)
 
 
-  character(len=80), save :: io_geometry
+  character(len=80):: io_geometry
 
-  integer, save :: io_nPlotVars
-  integer, save :: io_comm
+  integer:: io_nPlotVars
+  integer:: io_comm
 
-  integer, save :: NUNK_VARS
+  integer:: NUNK_VARS
 
 contains
 
@@ -85,20 +95,18 @@ contains
     use ModMain, ONLY : nBlockMax
     use ModSize, ONLY: nI, nJ, nK
 
-    implicit none
-
     character (len=80), intent(in)  :: filename
     character (len=10), intent(in)  :: plotVarNames(nplotvarmax)
     integer, intent(in)  :: nPlotVar, ifile
 
     integer  :: fileID
-    !-------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     if (iProc == 0) write (*,*) '===================================='
     if (iProc == 0) write (*,*) 'Writing HDF5 parallel plotfile'
     if (iProc == 0) write (*,*) '------------------------------------'
 
-    !! Setup this module to write a plotfile
+    ! Setup this module to write a plotfile
     hdf5_writeRestartFile = .false.
     call hdf5_setupGrid(iProc)
     call hdf5_setupIOVars(plotVarNames, nPlotVar)
@@ -108,7 +116,7 @@ contains
 
     if (iProc == 0) write (*,*) '  opening HDF5 file'
 
-    !! Open the HDF5 file and write data to it
+    ! Open the HDF5 file and write data to it
     call hdf5_initFile(fileID, filename)
     if (fileID .eq. -1) call stop_mpi('could not open HDF5 file for plotting')
 
@@ -119,28 +127,29 @@ contains
     call hdf5_closeFile(fileID)
     if (iProc == 0) write (*,*) '===================================='
 
-    !! Deallocate the variable array
+    ! Deallocate the variable array
     deallocate(unk)
 
   end subroutine write_plot_hdf5
 
   !=====================================================================
-  ! write_var_hdf5
-  !
-  !  Handles adding one block of variable data that for plotting
-  !  in the next plotfile.
-  !=====================================================================
+
   subroutine write_var_hdf5(PlotVar, nPlotVar, iBLK)
+
+    !  Handles adding one block of variable data that for plotting
+    !  in the next plotfile.
 
     use ModMain, ONLY : nI, nJ, nK, nBlockMax
     use ModIO, ONLY: nPlotVarMax
 
     integer, intent(in) :: nPlotVar, iBLK
     real, intent(in) :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVarMax)
+
+    integer:: ii, jj, kk, iPlot
     !----------------------------------------------------------------------
 
-    !! Allocate the storage array if it has not been allocated for
-    !! this plotfile yet
+    ! Allocate the storage array if it has not been allocated for
+    ! this plotfile yet
     if (.not. allocated(unk)) then
        allocate(unk(nPlotVar, nI, nJ, nK, nBlockMax))
     end if
@@ -157,49 +166,39 @@ contains
   end subroutine write_var_hdf5
 
   !=====================================================================
-  ! hdf5_setup
-  !
-  !   This subroutine is called by BATS_setup to allocate the dynamic
-  !   arrays for various modules used by the HDF5 plotting module.
-  !=====================================================================
-  subroutine hdf5_setup()
 
-    use BATL_tree, ONLY : nChild
-    use BATL_size, ONLY : nDim
-    use ModMain, ONLY : nBlock, nBlockMax
-    use ModIO, ONLY : nPlotVarMax
-    use ModSize  
+  subroutine hdf5_setup
 
-    implicit none  
+    !   This subroutine is called by BATS_setup to allocate the dynamic
+    !   arrays for various modules used by the HDF5 plotting module.
+
+    use BATL_lib, ONLY : nDim, MaxBlock
     !---------------------------------------------------------------------  
 
-    !! Allocate tree data arrays
-    allocate(bnd_box(2, 3, nBLK))
-    allocate(bsize(3, nBLK))
-    allocate(coord(3, nBLK))
-    allocate(which_child(nBLK))
-    allocate(lrefine(nBLK))
-    allocate(nodetype(nBLK))
-    allocate(bflags(1, nBLK))
+    ! Allocate tree data arrays
+    allocate(bnd_box(2, 3, MaxBlock))
+    allocate(bsize(3, MaxBlock))
+    allocate(coord(3, MaxBlock))
+    allocate(which_child(MaxBlock))
+    allocate(lrefine(MaxBlock))
+    allocate(nodetype(MaxBlock))
+    allocate(bflags(1, MaxBlock))
 
-    !! Allocate grid data array
-    allocate(gr_gid(2*nDim+1+2**nDim, nBlockMax))
+    ! Allocate grid data array
+    allocate(gr_gid(2*nDim+1+2**nDim, MaxBlock))
 
   end subroutine hdf5_setup
 
   !=====================================================================
-  ! hdf5_writeData
-  !
-  !    Handles gathering any additional information needed for plotting
-  !    and then calling the appropriate C functions to produce an HDF5
-  !    output file.
-  !=====================================================================
+
   subroutine hdf5_writeData(myPE, numProcs, fileID) 
+
+    ! Handles gathering any additional information needed for plotting
+    ! and then calling the appropriate C functions to produce an HDF5
+    ! output file.
 
     use ModSize, only : MaxBlock, nI, nJ, nK
     use ModAdvance, only : State_VGB
-
-    implicit none
     !---------------------------------------------------------------------  
 
     integer, intent(in) :: myPE, fileID
@@ -241,8 +240,8 @@ contains
     integer :: ierr
 
 
-    !! If we are writing a restart file, fill in the unkown variable array
-    !!  here
+    ! If we are writing a restart file, fill in the unkown variable array
+    !  here
     if (hdf5_writeRestartFile) then
        unk(:,:,:,:,:) = State_VGB(1:NUNK_VARS, 1:nI, 1:nJ, 1:nK, :)
     end if
@@ -270,7 +269,7 @@ contains
     !If writing a plotfile then only certain variables are written
     if(hdf5_writeRestartFile) then
 
-       !! write the header info
+       ! write the header info
        call io_h5write_header(MyPE, NUNK_VARS, fileID, io_geometry, &
             io_unklabels, io_setupCall, io_fileCreationTime, io_flashRelease, &
             io_buildDate, io_buildDir, io_buildMachine, io_cflags, io_fflags, &
@@ -279,13 +278,13 @@ contains
     else
 
        call io_h5write_header(MyPE, io_nPlotVars, fileID, io_geometry, &
-            io_plotVarStr, io_setupCall, io_fileCreationTime, io_flashRelease, &
+            io_plotVarStr, io_setupCall, io_fileCreationTime, io_flashRelease,&
             io_buildDate, io_buildDir, io_buildMachine, io_cflags, io_fflags, &
             io_setupTimeStamp, io_buildTimeStamp, io_outputSplitNum)
 
     end if
 
-    !! write the runtime parameters
+    ! write the runtime parameters
     call io_h5write_runtime_parameters(mype, &
          fileID, &
          io_numRealParms, &
@@ -302,7 +301,7 @@ contains
          io_logToIntParmValues, &
          io_outputSplitNum)
 
-    !! write the scalars
+    ! write the scalars
     call io_h5write_scalars(mype, &
          fileID, &
          io_numRealScalars, &
@@ -319,7 +318,7 @@ contains
          io_logToIntScalarValues, &
          io_outputSplitNum)
 
-    !! write the nodetype
+    ! write the nodetype
     call io_h5write_nodetype(myPE, &
          fileID, &
          nodetype, &
@@ -328,7 +327,7 @@ contains
          localOffset)
 
 
-    !! write lrefine
+    ! write lrefine
     call io_h5write_lrefine(myPE, &
          fileID, &
          lrefine, &
@@ -339,7 +338,7 @@ contains
 
     !data struct new to PM3.  which_child definitely
     !needed for restart. Adding bflags for completeness.
-    !! write which child
+    ! write which child
     call io_h5write_which_child(myPE, &
          fileID, &
          which_child, &
@@ -347,7 +346,7 @@ contains
          io_splitNumBlks, &
          localOffset)
 
-!!!Write bflags
+    ! Write bflags
     call io_h5write_bflags(myPE, &
          fileID, &
          bflags, &
@@ -355,7 +354,7 @@ contains
          io_splitNumBlks, &
          localOffset)
 
-!!!Write the global ID
+    ! Write the global ID
     call io_h5write_gid(myPE, &
          fileID, &
          gr_gid, &
@@ -364,7 +363,7 @@ contains
          localOffset)
 
 
-    !!write the processor number. 
+    !write the processor number. 
     allocate(procnumber(localNumBlocks))
     do lb = 1, localNumBlocks
        procnumber(lb) = MyPE
@@ -379,7 +378,7 @@ contains
 
     deallocate(procnumber)
 
-    !! write the bnd_box
+    ! write the bnd_box
     if(hdf5_writeRestartFile) then
        call io_h5write_bndbox(myPE, &
             fileID, &
@@ -398,8 +397,8 @@ contains
             localOffset)
     end if
 
-    !!write the block center coordinates
-    !!(not to be confused with the cell coordinates)
+    !write the block center coordinates
+    !(not to be confused with the cell coordinates)
     if(hdf5_writeRestartFile) then
        call io_h5write_coords(myPE, &
             fileID,  & 
@@ -419,7 +418,7 @@ contains
     end if
 
 
-    !!write the physical size of each block
+    !write the physical size of each block
     if(hdf5_writeRestartFile) then
        call io_h5write_blksize(myPE, &
             fileID,  & 
@@ -508,9 +507,9 @@ contains
     deallocate(globalVarMin)
     deallocate(globalVarMax)
 
-    !! Removed segment for plotting scratch variables
+    ! Removed segment for plotting scratch variables
 
-    !! Removed segment for plotting face variables
+    ! Removed segment for plotting face variables
 
 
     return
@@ -526,8 +525,6 @@ contains
   subroutine hdf5_initFile(fileID, filename)
     use ModProcMH, ONLY : iProc
 
-    implicit none
-
     integer, intent(inout) :: fileID
     character (len=80), intent(in) :: filename
     !---------------------------------------------------------------------    
@@ -541,9 +538,9 @@ contains
 
   end subroutine hdf5_initFile
 
-  subroutine hdf5_closeFile(fileID)
+  !=====================================================================
 
-    implicit none
+  subroutine hdf5_closeFile(fileID)
 
     integer, intent(in) :: fileID
     call io_h5close_file(fileID)
@@ -551,20 +548,17 @@ contains
   end subroutine hdf5_closeFile
 
   !=====================================================================
-  ! hdf5_setupTree
-  !
-  !  Initializes FLASH tree arrays for plotting
-  !=====================================================================
+
   subroutine hdf5_setupTree
 
-    use BATL_tree,     ONLY : nChild, nNodeUsed, iTree_IA, iNode_B, Level_, &
-         Parent_, Child0_
-    use BATL_grid,     ONLY : CoordMin_DB, CoordMax_DB, CellSize_DB
-    use ModMain,       ONLY : nBlockMax, nBlock, unusedBLK
-    use ModGeometry,  ONLY : x_BLK, y_BLK, z_BLK
-    use ModSize  
+    ! Initializes FLASH tree arrays for plotting
 
-    implicit none
+    use BATL_tree, ONLY : nChild, nNodeUsed, iTree_IA, iNode_B, Level_, &
+         Parent_, Child0_
+    use BATL_lib,    ONLY : CoordMin_DB, CoordMax_DB, CellSize_DB
+    use ModMain,     ONLY : nBlockMax, nBlock, unusedBLK
+    use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
+    use ModSize  
 
     integer  :: iBLK, iNode, iParent, iChild, idx
     integer :: halfI = 1, halfJ = 1, halfK = 1
@@ -578,7 +572,7 @@ contains
     do iBLK = 1, nBlockMax
        if (unusedBLK(iBLK)) CYCLE
 
-       !! The coord array stores cell-centered coordinates        
+       ! The coord array stores cell-centered coordinates        
        coord(IAXIS, idx) = x_BLK(halfI, halfJ, halfK, iBLK)
        coord(JAXIS, idx) = y_BLK(halfI, halfJ, halfK, iBLK)
        coord(KAXIS, idx) = z_BLK(halfI, halfJ, halfK, iBLK)
@@ -588,21 +582,22 @@ contains
        bnd_box(HIGH,:,idx) = CoordMax_DB(:,iBLK)
        bsize(:,idx) = CellSize_DB(:,iBLK)
 
-       !! nodetype holds no info for now
+       ! nodetype holds no info for now
        nodetype(idx) = 2
 
        iNode = iNode_B(idx)
 
-       !! In CRASH, refinement indices start at 0 as opposed to 1 with FLASH. Add
-       !! 1 to the value to comply with the FLASH standard.
+       ! In CRASH, refinement indices start at 0 as opposed to 1 with FLASH. 
+       ! Add 1 to the value to comply with the FLASH standard.
        lrefine(idx) = iTree_IA(Level_, iNode) + 1
 
-       !! Find which child this node is
+       ! Find which child this node is
        iParent = iTree_IA(Parent_, iNode)
        which_child(:) = -1
        if (iParent >= 0) then
           do iChild = 1, nChild
-             if (iTree_IA(Child0_+iChild, iParent) .eq. iNode) which_child(idx) = iChild
+             if (iTree_IA(Child0_+iChild, iParent) == iNode) &
+                  which_child(idx) = iChild
           end do
        end if
 
@@ -623,25 +618,22 @@ contains
   !=====================================================================
   subroutine hdf5_setupIOVars(plotVarNames, nPlotVar)
 
-    use BATL_geometry, ONLY : TypeGeometry
-    use BATL_size, ONLY : nDim, nDimAmr
+    use BATL_lib, ONLY : nDim, nDimAmr, TypeGeometry, nI, nJ, nK
     use BATL_tree, ONLY : nInfo => ChildLast_, nNode
     use ModMain, ONLY : nBlockAll, Time_Simulation
     use ModVarIndexes, ONLY : NameVar_V, nVar, nFluid
 
-    include "mpif.h"
-
-    !! Arguments
+    ! Arguments
     character (len=10), intent(in), optional :: plotVarNames(nplotvarmax)
     integer, intent(in), optional :: nPlotVar
 
     integer  :: iVar
-    !-------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     io_flashRelease = 'CRASH'
 
     io_geometry = TypeGeometry
 
-    !! Set compiler and setup string info as empty
+    ! Set compiler and setup string info as empty
     io_buildDate = ''
     io_buildDir = ''
     io_buildMachine = ''
@@ -654,8 +646,8 @@ contains
 
     io_outputSplitNum = 1 ! file splitting not supported
 
-    !! FLASH makes a distinction between plot var labels and unk var labels, but
-    !! CRASH will treat both the same
+    ! FLASH makes a distinction between plot var labels and unk var labels, but
+    ! CRASH will treat both the same
     if (.not. hdf5_writeRestartFile) then
        do iVar = 1, nPlotVar
           io_plotVarStr(iVar) = trim(plotVarNames(iVar)(1:4))
@@ -670,8 +662,8 @@ contains
        end do
     end if
 
-    !! Output of runtime parameters, scalars, and logfiles is not implemented yet,
-    !! so clear the corresponding variables
+    ! Output of runtime parameters, scalars, and logfiles 
+    ! is not implemented yet, so clear the corresponding variables
     io_numRealParms = 0
     io_numIntParms = 0
     io_numStrParms = 0
@@ -682,8 +674,8 @@ contains
     io_numLogScalars = 0
     ! probably don't need to alloc string and value arrays...
 
-    !! The FLASH Visit plugin requires some scalar metadata. This should be moved
-    !! to the empty io_prepareLists subroutine eventually.
+    ! The FLASH Visit plugin requires some scalar metadata. 
+    ! This should be moved to the empty io_prepareLists subroutine eventually.
     io_intScalarValues(1) = nI
     io_intScalarNames(1) = 'nxb' 
     io_intScalarValues(2) = nJ
@@ -699,7 +691,7 @@ contains
     io_intScalarValues(7) = 0
     io_intScalarNames(7) = 'splitnumparticles'
 
-    !! Restart files require node and tree info
+    ! Restart files require node and tree info
     io_intScalarValues(8) = nNode
     io_intScalarNames(8) = 'nNode'
     io_intScalarValues(9) = nInfo
@@ -713,20 +705,20 @@ contains
     io_realScalarValues(1) = Time_Simulation
     io_realScalarNames(1) = 'time'
 
-    io_chkGuardCells = .false.
+    ! io_chkGuardCells = .false.
 
-    io_comm = MPI_COMM_WORLD ! we need more MPI initialization for split file IO
+    ! we need more MPI initialization for split file IO
+    io_comm = MPI_COMM_WORLD 
 
     NUNK_VARS = nVar + nFluid
 
   end subroutine hdf5_setupIOVars
 
   !=====================================================================
-  ! hdf5_setupGrid
-  !
-  !   Initializes the grid data arrays derived from the FLASH code.
-  !=====================================================================
+
   subroutine hdf5_setupGrid(myPE)
+
+    ! Initializes the grid data arrays derived from the FLASH code.
 
     use BATL_tree,  ONLY : nChild, nNodeUsed, iTree_IA, iNodeNei_IIIB, &
          Child0_, Block_, ChildLast_, Child1_,       &
@@ -738,8 +730,6 @@ contains
     use ModSize,    ONLY : nI, nJ, nK
     use BATL_size,  ONLY : nDim
     use ModParallel,ONLY : iProc_A
-
-    implicit none
 
     integer, intent(IN)  :: myPE
 
@@ -756,13 +746,15 @@ contains
     allocate(offsetPerProc(0:nProc-1))
     allocate(localIdx_pe(0:nProc-1, nBlockMax))
 
-    !! Get the number of blocks local to this processor and the mapping
-    !! from block index to output index (where unused blocks are skipped)
+    ! Get the number of blocks local to this processor and the mapping
+    ! from block index to output index (where unused blocks are skipped)
     call hdf5_getLocalBlks(localNumBlocks, localIdx)
 
-    !! Collect results across all processors
-    call MPI_Allgather(localNumBlocks, 1, MPI_INTEGER, blocksPerProc, 1, MPI_INTEGER, iComm, ierr)
-    call MPI_Allgather(localIdx, nBlockMax, MPI_INTEGER, localIdx_pe, nBlockMax, MPI_INTEGER, iComm, ierr)
+    ! Collect results across all processors
+    call MPI_Allgather(localNumBlocks, 1, MPI_INTEGER, blocksPerProc, &
+         1, MPI_INTEGER, iComm, ierr)
+    call MPI_Allgather(localIdx, nBlockMax, MPI_INTEGER, localIdx_pe, &
+         nBlockMax, MPI_INTEGER, iComm, ierr)
 
     offsetPerProc(:) = 0
 
@@ -787,7 +779,7 @@ contains
 
        iNode = iNode_B(iBLK)
 
-       !! Begin by filling in the neighbor cells for this cell
+       ! Begin by filling in the neighbor cells for this cell
 
        if (iNodeNei_IIIB(0, 1, 1, iBLK) > 0) then
           bn = iTree_IA(Block_, iNodeNei_IIIB(0, 1, 1, iBLK))
@@ -835,9 +827,9 @@ contains
           iGid = 7
        end if
 
-       !! Store parent's node number and children's node numbers
+       ! Store parent's node number and children's node numbers
        do i = 0, 2**nDim
-          !! No AMR tree info stored yet...
+          ! No AMR tree info stored yet...
           !if (iTree_IA(Child0_+i, iNode) > 0) then
           !  gr_gid(iGid, idx) = iTree_IA(Block_, iTree_IA(Child0_+i, iNode)) &
           !    + offsetPerProc(iTree_IA(Proc_, iTree_IA(Child0_+i, iNode)))
@@ -857,18 +849,15 @@ contains
   end subroutine hdf5_setupGrid
 
   !=====================================================================
-  ! hdf5_getLocalBlks
-  !
-  !   Returns the number of blocks used on the local processor as well
-  !   as an array mapping the index of each used block to its output
-  !   array index (where unused blocks are skipped). 
-  !=====================================================================
+
   subroutine hdf5_getLocalBlks(numBlocks, localIdx)
+
+    ! Returns the number of blocks used on the local processor as well
+    ! as an array mapping the index of each used block to its output
+    ! array index (where unused blocks are skipped). 
 
     use ModMain, ONLY : nBlockMax, unusedBLK, nBlockALL
     use ModProcMH,  ONLY : iProc
-
-    implicit none
 
     integer, intent(out) :: numBlocks
     integer, dimension(nBlockMax), intent(out), optional :: localIdx
@@ -889,16 +878,13 @@ contains
   end subroutine hdf5_getLocalBlks
 
   !=====================================================================
-  ! hdf5_getBlkIndexLimits
-  !
-  !   Returns the index limits for a block, both with and without guard
-  !    cells.
-  !=====================================================================
-  subroutine hdf5_getBlkIndexLimits(blockId, blkLimits, blkLimitsGC, gridDataStruct)
+
+  subroutine hdf5_getBlkIndexLimits(blockId, blkLimits, blkLimitsGC, &
+       gridDataStruct)
+
+    ! Returns the index limits for a block, both with and without guard cells.
 
     use ModSize
-
-    implicit none
 
     integer,intent(IN) :: blockId
     integer, dimension(2,3), intent(OUT) :: blkLimits,blkLimitsGC
@@ -920,24 +906,22 @@ contains
   end subroutine hdf5_getBlkIndexLimits
 
   !=====================================================================
-  ! hdf5_getVarExtrema
-  !
-  !   Returns the global variable extrema for each unkown.
-  !=====================================================================
-  subroutine hdf5_getVarExtrema(nvars, globalVarMin, globalVarMax, gridDataStruct)
+
+  subroutine hdf5_getVarExtrema( &
+       nvars, globalVarMin, globalVarMax, gridDataStruct)
+    
+    ! Returns the global variable extrema for each unkown.
 
     use ModMain
     use ModAdvance, ONLY : State_VGB
     use ModSize
-
-    implicit none
 
     integer, intent(in) :: nvars, gridDataStruct
     real, DIMENSION(nvars), INTENT(out) :: globalVarMin, globalVarMax
 
     real, allocatable  :: varMin(:), varMax(:)
     integer  :: iBLK, i, j, k, iVar, ierr
-    !-----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     if (nvars > 0) then
 
