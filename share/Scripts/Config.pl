@@ -91,6 +91,7 @@ our $Install;               # True if code is (re)installed
 our $Uninstall;             # True if code is uninstalled
 our $ShowGridSize;          # Show grid size for caller code
 our $NewGridSize;           # New grid size to be set in caller code
+our $Hdf5;					# True if HDF5 is enabled
 
 # Default precision for installation
 my $DefaultPrecision = 'double';
@@ -101,6 +102,7 @@ my $NewPrecision;
 my $NewOptimize;
 my $NewDebug;
 my $NewMpi;
+my $NewHdf5;
 my $IsCompilerSet;
 my $Debug;
 my $Mpi;
@@ -132,6 +134,8 @@ foreach (@Arguments){
     if(/^-nodebug$/i)         {$NewDebug="no";                  next};
     if(/^-mpi$/i)             {$NewMpi="yes";                   next};
     if(/^-nompi$/i)           {$NewMpi="no";                    next};
+    if(/^-hdf5$/i)            {$NewHdf5="yes";                   next};
+    if(/^-nohdf5$/i)          {$NewHdf5="no";                    next};
     if(/^-O[0-4]$/i)          {$NewOptimize=$_;                 next};  
     if(/^-g(rid)?$/)          {$ShowGridSize=1;                 next};
     if(/^-g(rid)?=([\d,]+)$/) {$NewGridSize=$+;                 next};
@@ -191,6 +195,9 @@ if($NewPrecision and $NewPrecision ne $Precision){
 # Link with MPI vs. NOMPI library if required
 &set_mpi_ if $NewMpi and $NewMpi ne $Mpi;
 
+# Link with HDF5 library is required
+&set_hdf5_ if $NewHdf5 and $NewHdf5 ne $Hdf5;
+
 # Change optimization level if required
 &set_optimization_ if $NewOptimize and $NewOptimize ne $Optimize;
 
@@ -231,6 +238,7 @@ sub get_settings_{
 
     $Debug = "no";
     $Mpi   = "yes";
+    $Hdf5  = "no";
   TRY:{
       # Read information from $MakefileConf
       open(MAKEFILE, $MakefileConf)
@@ -247,6 +255,7 @@ sub get_settings_{
 	  $Precision = lc($1) if /^\s*PRECISION\s*=.*(SINGLE|DOUBLE)PREC/;
           $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
 	  $Mpi   = "no"  if /^\s*MPILIB\s*=.*\-lNOMPI/;
+	  $Hdf5  = "yes" if /^\s*HDFLIB\s*=.*\-lHDF5.*/;
           $Optimize = $1 if /^\s*OPT[0-4]\s*=\s*(-O[0-4])/;
       }
   }
@@ -371,6 +380,10 @@ sub install_code_{
 	if -d "util" and not $IsComponent;
     &shell_command("make install");
 
+    # By default, disable the HDF5 plotting library
+    $NewHdf5 = "no";
+    &set_hdf5_;
+
     # Now code is installed
     $Installed = 1 unless $DryRun;
 }
@@ -444,6 +457,30 @@ sub set_mpi_{
     }
     &shell_command("make NOMPI") if $Mpi eq "no";
     print "Remove executable and make it to link with the (NO)MPI library!\n";
+}
+
+##############################################################################
+
+sub set_hdf5_{
+
+    # $Hdf5 will be $Hdf5 after changes
+    $Hdf5 = $NewHdf5;
+
+    print "Enabling HDF5 library in $MakefileConf\n" if $Hdf5 eq "yes";
+    print "Disabling Hdf5 library in $MakefileConf\n" if $Hdf5 eq "no";
+    if(not $DryRun){
+	@ARGV = ($MakefileConf);
+	while(<>){
+	    # Comment/uncomment MPILIB definitions
+	    if(/HDFLIB\s*=/){
+		s/^\s*H/\#H/ if /lHDF5PLOT/ eq ($Hdf5 eq "no");
+		s/^\#\s*H/H/ if /lHDF5PLOT/ eq ($Hdf5 eq "yes");
+	    }
+	    print;
+	}
+    }
+    &shell_command("make HDF5") if $Hdf5 eq "yes";
+    &shell_command("make NOHDF5") if $Hdf5 eq "no";
 }
 
 ##############################################################################
@@ -648,6 +685,8 @@ Compilation:
 -nodebug       do not use debug options for the compiler in Makefile.conf
 -nompi         compile and link with the NOMPI library for serial execution
 -mpi           compile and link with the MPI library for parallel execution
+-hdf5          compile and link with HDF5 library for parallel plotfile output
+-nohdf5        do not compile with HDF5 library
 -O0            set all optimization levels to -O0
 -O1            set optimization levels to at most -O1
 -O2            set optimization levels to at most -O2

@@ -67,6 +67,7 @@ MODULES = \
 	ModUserEmpty.o \
 	ModUser.o \
 	ModWaves.o \
+	ModHdf5.o \
 	${HEATING} \
 	${MOD1}	${MOD2}	${MOD3} ${MOD4} ${MOD5}
 
@@ -250,7 +251,7 @@ ${EXE}: ${OBJECTS_EXE}
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBSHARE}
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o \
-		${LBLAS} ${Lflag1}
+		${LBLAS} ${HDFLIB} ${Lflag1}
 	rm -rf Tmp_
 
 # Compilation of CRASH ############
@@ -280,7 +281,7 @@ ${CRASHEXE}: ${OBJECTS_EXE} ${LIBCRASH}
 		ar -x ${LIBCRASH}; \
 		ar -x ${LIBSHARE}
 	${LINK.f90} -o ${CRASHEXE} ${OBJECTS_EXE} Tmp_/*.o \
-		${LBLAS} ${Lflag1}
+		${LBLAS} ${HDFLIB} ${Lflag1}
 	rm -rf Tmp_
 
 #########################################################################

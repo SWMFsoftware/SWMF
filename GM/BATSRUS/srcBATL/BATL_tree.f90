@@ -131,7 +131,7 @@ module BATL_tree
        268435456, 536870912, 1073741824 /)
 
   ! The number of root nodes in all dimensions, and altogether
-  integer :: nRoot_D(MaxDim) = 0, nRoot = 0
+  integer, public :: nRoot_D(MaxDim) = 0, nRoot = 0
 
   ! Maximum number of nodes including unused and skipped ones
   integer :: MaxNode = 0

@@ -786,7 +786,9 @@ subroutine MH_set_parameters(TypeAction)
                    TypeIdlFile_I(iFile) = 'real8'
               if(index(plot_string,'idl_ascii') > 0) &
                    TypeIdlFile_I(iFile) = 'ascii'
-              
+           elseif(index(plot_string, 'hdf') > 0) then
+           		plot_form(ifile)='hdf'
+           		call read_var('DxSavePlot',plot_dx(1,ifile))
            elseif(index(plot_string,'tec')>0)then 
               plot_form(ifile)='tec'
               plot_dx(1,ifile)=0.

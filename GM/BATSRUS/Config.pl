@@ -22,6 +22,7 @@ our $Verbose;
 our $Show;
 our $ShowGridSize;
 our $NewGridSize;
+our $Hdf5;
 
 &print_help if $Help;
 
@@ -48,6 +49,10 @@ my $nWave;
 my $nWaveNew;
 my $nMaterial;
 my $nMaterialNew;
+
+# HDF5 header file to modify
+my $NameHdf5File = "util/HDF5/src/Flash.h";
+my $dims = 0;
 
 # For SC/BATSRUS and IH/BATSRUS src/ is created during configuration of SWMF
 if(not -d $Src){exit 0};
@@ -82,7 +87,6 @@ foreach (@Arguments){
 print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock",
     ",$MaxImplBlock"                           #^CFG IF IMPLICIT
     ,"\n" if $ShowGridSize and not $Show;
-
 
 # Set or list the equations
 &set_equation if $Equation;
@@ -201,7 +205,33 @@ sub set_grid_size{
 	s/\b(nK\s*=[^0-9]*)(\d+)/$1$nK/i;
 	print;
     }
+    
+    
+    # Determine the number of dimensions specified and write
+    # that value to the necessary HDF5 header files
+    if ($nI - 1) {
+  	  $dims++;
+    }
 
+    if ($nJ - 1) {
+     $dims++;
+    }
+
+    if ($nK - 1) {
+	  $dims++;
+    }
+
+    @ARGV = ($NameHdf5File);
+    while(<>){
+	  s/\b(NDIM\s*[^0-9]*)(\d+)/$1$dims/i;
+      print;
+    }
+    
+    # Recompile the HDF5 library if it is currently enabled.
+    if ($Hdf5 eq "yes") {
+       &shell_command("make HDF5");
+    }
+    
 }
 
 ##############################################################################

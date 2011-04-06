@@ -11,6 +11,7 @@ subroutine write_plot_common(ifile)
   use ModGeometry, ONLY : TypeGeometry,UseCovariant
   use ModPhysics, ONLY : No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
+  use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5
   use ModIoUnit, ONLY : io_unit_new
   use ModNodes
   use ModNumConst, ONLY : cRadToDeg
@@ -159,6 +160,10 @@ subroutine write_plot_common(ifile)
      unit_tmp2 = io_unit_new()
      open(unit_tmp , file=filename_n, status="replace", err=999)
      open(unit_tmp2, file=filename_s, status="replace", err=999)
+  elseif(plot_form(ifile)=='hdf') then
+     ! Only one plotfile will be generated, so do not include PE number
+     ! in filename. ModHdf5 will handle opening the file.
+     filename = trim(NameSnapshot)//".hdf"
   else
      ! For IDL just open one file
      filename = trim(NameSnapshot)//trim(NameProc)
@@ -198,6 +203,11 @@ subroutine write_plot_common(ifile)
 
      call set_plotvar(iBLK, ifile-plot_, nPlotVar, plotvarnames, plotvar, &
           plotvar_inBody, plotvar_useBody)
+
+	 if (plot_form(ifile) == 'hdf') then
+		call write_var_hdf5(PlotVar, nPlotVar, iBLK)
+     endif
+     
      if (plot_dimensional(ifile)) call dimensionalize_plotvar(iBLK, &
           ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
 
@@ -244,6 +254,12 @@ subroutine write_plot_common(ifile)
      end if
 
   end do ! iBLK
+
+  ! Write the HDF5 output file here
+  if (plot_form(ifile) == 'hdf') then
+        call write_plot_hdf5(filename, plotVarNames, nPlotVar, ifile)
+        return
+  endif
 
   ! Get the headers that contain variables names and units
   select case(plot_form(ifile))
