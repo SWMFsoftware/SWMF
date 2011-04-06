@@ -381,10 +381,6 @@ sub install_code_{
 	if -d "util" and not $IsComponent;
     &shell_command("make install");
 
-    # By default, disable the HDF5 plotting library
-    $NewHdf5 = "no";
-    &set_hdf5_;
-
     # Now code is installed
     $Installed = 1 unless $DryRun;
 }
