@@ -52,7 +52,6 @@ my $nMaterialNew;
 
 # HDF5 header file to modify
 my $NameHdf5File = "util/HDF5/src/Flash.h";
-my $dims = 0;
 
 # For SC/BATSRUS and IH/BATSRUS src/ is created during configuration of SWMF
 if(not -d $Src){exit 0};
@@ -209,28 +208,15 @@ sub set_grid_size{
     
     # Determine the number of dimensions specified and write
     # that value to the necessary HDF5 header files
-    if ($nI - 1) {
-  	  $dims++;
-    }
-
-    if ($nJ - 1) {
-     $dims++;
-    }
-
-    if ($nK - 1) {
-	  $dims++;
-    }
-
     @ARGV = ($NameHdf5File);
+    my $nDim = 0 + ($nI>1) + ($nJ>1) + ($nK>1);
     while(<>){
-	  s/\b(NDIM\s*[^0-9]*)(\d+)/$1$dims/i;
-      print;
+	s/\b(NDIM\s*[^0-9]*)(\d+)/$1$nDim/i;
+	print;
     }
     
     # Recompile the HDF5 library if it is currently enabled.
-    if ($Hdf5 eq "yes") {
-       &shell_command("make HDF5");
-    }
+    &shell_command("make HDF5") if $Hdf5 eq "yes";
     
 }
 
