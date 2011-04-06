@@ -106,11 +106,11 @@ NOMPI:
 	cd util/NOMPI/src; make LIB
 
 NOHDF5:
-	cp -f ${GMDIR}/src/ModHdf5_empty.f90 ${GMDIR}/src/ModHdf5.f90
+	cp -f src/ModHdf5_empty.f90 src/ModHdf5.f90
 
 HDF5:
-	cp -f ${GMDIR}/src/ModHdf5_orig.f90 ${GMDIR}/src/ModHdf5.f90
-	cd util/HDF5/src; make LIB
+	cp -f src/ModHdf5_orig.f90 src/ModHdf5.f90
+	cd ${DIR}/util/HDF5/src; make LIB
 
 PIDL:
 	cd ${SHAREDIR}; make LIB
