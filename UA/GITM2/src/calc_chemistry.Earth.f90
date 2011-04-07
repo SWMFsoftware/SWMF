@@ -35,9 +35,15 @@ subroutine calc_chemistry(iBlock)
   real, dimension(nLons,nLats,nAlts) :: &
        tr3d, tr33d,te12d, tr3m0443d, tr3m083d, tr3m043d, &
        te3m0393d, te3m0853d, te33d, te3m053d,te3m073d,te12m0563d,te227d
-  
-  real :: te3m05,te3m07,te12m056, tr3m044, tr3m04, tr3m08, te3m039, te3m085, rr_opn2, &
-       te22m05
+
+  real, dimension(nLons,nLats,nAlts) :: &
+       teffective_n2, teffective_o2, teffective_no, u2, mb, mbb, &
+       k1_n2, k2_o2, k3_no
+
+  real :: k1_n2_point, k2_o2_point, k3_no_point
+
+  real :: te3m05,te3m07,te12m056, tr3m044, tr3m04, tr3m08
+  real :: te3m039, te3m085, rr_opn2, te22m05
 
   logical :: UseNeutralConstituent(nSpeciesTotal)
   logical :: UseIonConstituent(nIons)
@@ -86,6 +92,89 @@ subroutine calc_chemistry(iBlock)
 
 !  AuroralIonRateS = 0.0
 
+  u2 = IVelocity(1:nLons,1:nLats,1:nAlts,iEast_,iBlock)**2 + &
+       IVelocity(1:nLons,1:nLats,1:nAlts,iNorth_,iBlock)**2 + &
+       IVelocity(1:nLons,1:nLats,1:nAlts,iUp_,iBlock)**2
+
+  mb  = 0.0
+  mbb = 0.0
+
+  ! This is from Schunk and Nagy 2nd Ed, formula 12.13 (pg 416)
+  do iNeutral = 1, nSpeciesTotal
+     ! Collisions should be better defined
+     mbb = mbb + &
+          (Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)) / &
+          (mass(iNeutral) + MassI(iO_4SP_))
+     mb  = mb + &
+          (mass(iNeutral) * Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)) / &
+          (mass(iNeutral) + MassI(iO_4SP_))
+  enddo
+
+  mb = mb/mbb
+
+  teffective_n2 = iTemperature(1:nLons,1:nLats,1:nAlts,iBlock) + &
+       MassI(iO_4SP_)/(MassI(iO_4SP_) + Mass(iN2_)) * &
+       (Mass(iN2_) + mb)/(3*Boltzmanns_Constant) * u2
+       
+  teffective_o2 = iTemperature(1:nLons,1:nLats,1:nAlts,iBlock) + &
+       MassI(iO_4SP_)/(MassI(iO_4SP_) + Mass(iO2_)) * &
+       (Mass(iO2_) + mb)/(3*Boltzmanns_Constant) * u2
+       
+  teffective_no = iTemperature(1:nLons,1:nLats,1:nAlts,iBlock) + &
+       MassI(iO_4SP_)/(MassI(iO_4SP_) + Mass(iNO_)) * &
+       (Mass(iNO_) + mb)/(3*Boltzmanns_Constant) * u2
+       
+  where (teffective_n2 < 350.0)
+     teffective_n2 = 350.0
+  endwhere
+
+  where (teffective_n2 > 6000.0)
+     teffective_n2 = 6000.0
+  endwhere
+
+  where (teffective_o2 < 350.0)
+     teffective_o2 = 350.0
+  endwhere
+
+  where (teffective_o2 > 350.0)
+     teffective_o2 = 350.0
+  endwhere
+
+  where (teffective_no < 320.0)
+     teffective_no = 320.0
+  endwhere
+
+  where (teffective_n2 <= 1700.0)
+     k1_n2 =   1.533e-18 &
+          - 5.920e-19*(teffective_n2/300.0) &
+          + 8.600e-20*(teffective_n2/300.0)**2
+  endwhere
+  
+  where (teffective_n2 > 1700.0)
+     k1_n2 =   2.730e-18 &
+          - 1.155e-18*(teffective_n2/300.0) &
+          + 1.483e-19*(teffective_n2/300.0)**2
+  endwhere
+  
+  k2_o2 =   2.820e-17 &
+       - 7.740e-18*(teffective_o2/300.0) &
+       + 1.073e-18*(teffective_o2/300.0)**2 &
+       - 5.170e-20*(teffective_o2/300.0)**3 &
+       + 9.650e-22*(teffective_o2/300.0)**4
+  
+  where (teffective_no <= 1500.0)
+     k3_no =   8.360e-19 &
+          - 2.020e-19*(teffective_no/300.0) &
+          + 6.950e-20*(teffective_no/300.0)**2
+  endwhere
+  
+  where (teffective_no > 1500.0)
+     k3_no =   5.330e-19 &
+          - 1.640e-20*(teffective_no/300.0) &
+          + 4.720e-20*(teffective_no/300.0)**2 &
+          - 7.050e-22*(teffective_no/300.0)**3
+  endwhere
+  
   tr3d = (iTemperature(1:nLons,1:nLats,1:nAlts,iBlock) &
          + Temperature(1:nLons,1:nLats,1:nAlts,iBlock)*&
          TempUnit(1:nLons,1:nLats,1:nAlts)) / 2.0
@@ -140,6 +229,10 @@ subroutine calc_chemistry(iBlock)
            tn06 = exp(67.5/tn)
 
            rr_opn2 = min(5.0e-19,4.5e-20*tr3**2)
+
+           k1_n2_point = k1_n2(iLon,iLat,iAlt)
+           k2_o2_point = k2_o2(iLon,iLat,iAlt)
+           k3_no_point = k3_no(iLon,iLat,iAlt)
 
            DtTotal = 0.0
            EmissionTotal = 0.0
@@ -419,7 +512,9 @@ subroutine calc_chemistry(iBlock)
               ! O+(4S) + O2 -> O2+ + O + 1.55 eV
               ! -----------
 
-              rr = 2.0e-17 * tr3m04
+!!              rr = 2.0e-17 * tr3m04
+
+              rr = k2_o2_point
 
               Reaction = &
                    rr * &
@@ -854,7 +949,8 @@ subroutine calc_chemistry(iBlock)
               ! O+(4S) + N2 -> NO+ + N(4S) + 1.10 eV
               ! -----------
 
-              rr = rr_opn2
+!!              rr = rr_opn2
+               rr = k1_n2_point
 
               Reaction = &
                    rr * &
@@ -878,7 +974,8 @@ subroutine calc_chemistry(iBlock)
               ! O+(4S) + NO -> NO+ + O + 4.36 eV
               ! -----------
 
-              rr = 8.0e-19
+!!              rr = 8.0e-19
+              rr = k3_no_point
 
               Reaction = &
                    rr * &
