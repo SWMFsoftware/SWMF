@@ -59,6 +59,10 @@ our $Compiler;
 $Compiler = $Compiler{$Machine} or $Compiler = $Compiler{$OS} or
     die "$ERROR_ default compiler is not known for OS=$OS\n";
 
+# Default C compiler
+our $CompilerC = "gcc";
+$CompilerC = $1 if $Compiler =~ s/,(.+)//;
+
 # Obtain the default MPI version for mpif90.h
 our $MpiVersion;
 $MpiVersion = $MpiVersion{$Machine} or $MpiVersion = $MpiVersion{$OS} or
@@ -126,7 +130,9 @@ foreach (@Arguments){
 			       $IsComponent=0 if $value =~ /^=s/i;
 			       $Install=1;                      next};
     if(/^-uninstall$/i)       {$Uninstall=1;                    next};
-    if(/^-compiler=(.*)$/i)   {$Compiler=$1; $IsCompilerSet=1;  next};
+    if(/^-compiler=(.*)$/i)   {$Compiler=$1; 
+			       $CompilerC=$1 if $Compiler =~ s/,(.+)//;
+			       $IsCompilerSet=1;  next};
     if(/^-mpi=(.*)$/i)        {$MpiVersion=$1;                  next};
     if(/^-standalone$/i)      {$IsComponent=0;                  next};
     if(/^-component$/i)       {$IsComponent=1;                  next};
@@ -251,6 +257,7 @@ sub get_settings_{
 	      redo TRY;
 	  }
 	  $Compiler = $+ if /^\s*COMPILE.f90\s*=\s*(\$\{CUSTOMPATH_F\})?(\S+)/;
+	  $CompilerC = $1 if/^\s*COMPILE.c\s*=\s*(\S+)/;
 
 	  $Precision = lc($1) if /^\s*PRECISION\s*=.*(SINGLE|DOUBLE)PREC/;
           $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
@@ -295,6 +302,7 @@ sub show_settings_{
     }
     print "The installation is for the $OS operating system.\n";
     print "The selected F90 compiler is $Compiler.\n";
+    print "The selected C compiler is   $CompilerC.\n";
     print "The selected MPI library is  $MpiVersion.\n";
     print "The default precision for reals is $Precision precision.\n";
     print "The maximum optimization level is $Optimize\n";
@@ -349,6 +357,14 @@ sub install_code_{
 		print OUT $_;
 	    }
 	    close IN; close OUT;
+	}
+
+	# Append the C compiler
+	$Makefile = "$MakefileConfOrig.$CompilerC";
+	if(-f $Makefile){
+            &shell_command("cat $Makefile >> $MakefileConf");
+	}else{
+	    die "$ERROR_ could not find $Makefile\n";
 	}
 	
 	my $Header = "$MpiHeaderOrig${OS}_$MpiVersion.h";
@@ -643,7 +659,8 @@ This script edits the appropriate Makefile-s, copies files and executes
 shell commands. The script can also show the current settings.
 
 Usage: Config.pl [-help] [-verbose] [-show] [-dryrun] 
-                 [-install[=s|=c] [-compiler=COMP] [-mpi=VERSION]] [-uninstall]
+                 [-install[=s|=c] [-compiler=FCOMP[,CCOMP]] [-mpi=VERSION]] 
+                 [-uninstall]
                  [-single|-double] [-debug|-nodebug] [-mpi|-nompi]
                  [-O0|-O1|-O2|-O3|-O4]
 
@@ -666,7 +683,12 @@ Information:
                or reinstall the same way as it was installed originally:
                (re)creates Makefile.conf, Makefile.def, make install
 
--compiler=COMP copy Makefile.conf for a non-default F90 compiler COMP
+-compiler=FCOMP Create Makefile.conf from a non-default F90 compiler FCOMP
+               Only works together with -install flag
+
+-compiler=FCOMP,CCOMP 
+               Create Makefile.conf from a non-default F90 compiler FCOMP
+               and non-default C compiler CCOMP.
                Only works together with -install flag
 
 -mpi=VERSION   copy share/include/mpif90_OS_VERSION 
@@ -700,9 +722,13 @@ Show current settings with more detail:
 
     Config.pl -show
 
-Install code with the g95 compiler and Intel MPI and select single precision:
+Install code with the g95 compiler and Intel MPI:
 
-    Config.pl -install -compiler=g95 -mpi=Intel -single
+    Config.pl -install -compiler=g95,gcc -mpi=Intel
+
+Use the HDF5 plotting library
+
+    Config.pl -hdf5
 
 Set optimization level to -O0, switch on debugging flags and link with NOMPI:
 
