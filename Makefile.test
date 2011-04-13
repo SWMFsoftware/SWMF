@@ -297,7 +297,7 @@ test3_rundir:
 
 test3_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; Restart.pl
+	cd ${TESTDIR}; ./Restart.pl
 
 # Note: The RCM .dat file is copied to .txt to avoid conversion to .plt
 test3_restart:
@@ -464,7 +464,7 @@ test6_rundir:
 
 test6_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; Restart.pl
+	cd ${TESTDIR}; ./Restart.pl
 
 test6_restart:
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIEIMCRCM PARAM.in
