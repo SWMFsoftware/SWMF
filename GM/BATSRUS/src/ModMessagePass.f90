@@ -100,7 +100,7 @@ contains
 
     ! Buffer to hold incoming layers of ghost cell values.
     ! For all blocks and all faces
-    real, dimension(nBLK*maxsize,2) :: buffer
+    real, dimension(:,:), allocatable :: buffer
 
     ! Equal, restricted and prolonged values are stored in these arrays
     real, dimension(:,:,:,:), allocatable :: eq_buf, re_buf, pr_buf, &
@@ -118,6 +118,8 @@ contains
     logical :: oktest, oktest_me
 
     !--------------------------------------------------------------------------
+
+    if(.not.allocated(buffer)) allocate(buffer(nBLK*maxsize,2))
 
     nCoarseLayer=1
     if(present(DoTwoCoarseLayers))then
