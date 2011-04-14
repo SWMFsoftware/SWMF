@@ -482,7 +482,7 @@ contains
              if(present(TypeFile))TypeFileHere = TypeFile
              write(NameDescription,'(a,e13.7)')&
                   'CRASH EOS for '//NameMaterial_I(iMaterial)//&
-                  'Atomic Mass = ',&
+                  ' Atomic Mass = ',&
                   cAtomicMassCrash_I(iMaterial)
              call init_lookup_table(&
                NameTable = NameMaterial_I(iMaterial)//'_eos', &
