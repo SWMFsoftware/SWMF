@@ -1,9 +1,15 @@
-
+program PROPACEOS
   use  CRASH_ModAtomicNotation
   use CRASH_ModAtomicMass,ONLY: cAtomicMass_I
   use ModConst
   use ModPlotFile
+  use CRASH_ModPartition,ONLY: &
+       Z2PerA, Z2, ZAv, CoulombLog, Na, Te
+  use CRASH_ModAtomicDataMix,ONLY: nMix,Concentration_I, nZ_I
+  use CRASH_ModPartition,ONLY: Population_II,iZMin_I
+  use CRASH_ModTransport,ONLY: electron_heat_conductivity, te_ti_relaxation
   implicit none
+
   integer,parameter::iUnit = 11, nDensity=201, nTemperature = 201
   integer,parameter::nFrequency=30
   real,  &
@@ -38,7 +44,7 @@
   character(LEN=6)::NameFile
   character(LEN=2)::NameElement
   integer:: iMaterial
-  real::AtomicWeight
+  real::AtomicMass
 
 
  !The columns in the EOS table
@@ -57,18 +63,31 @@
 
   !The number of columns in the EOS table
   integer :: nVarEos =12
-  logical,parameter:: DoHeaderOnly=.true., DoCut=.false.
-  integer,parameter:: iStringStart = -1, iStringLast = -1
+  character(LEN=100):: NameVarEos = &
+       'P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2'
+  
+  character(LEN=100)::NameDescription
+  !Commented out:
+  ! logical,parameter:: DoHeaderOnly=.false., DoCut=.false.
+  ! integer,parameter:: iStringStart = -1, iStringLast = -1
  
   !--------------
+
+  Population_II= 0.0; Concentration_I = 0.0
+  nZ_I = 0
+
   write(*,*)'Enter the name of element (e.g. Ar ) - note than Ar.prp should be present'
 
   read(*,'(a)')NameElement
   if(len_trim(NameElement)==1)NameElement=trim(NameElement)//'_'
   iMaterial = i_material(NameElement)
   if(iMaterial>0)then
-     AtomicWeight = cAtomicMass_I(iMaterial)
-     write(*,*)'Atomic weight =',AtomicWeight
+     write(*,*)'iMaterial =', iMaterial
+     nZ_I(1) = iMaterial
+     AtomicMass = cAtomicMass_I(iMaterial)
+     write(*,*)'Atomic weight =',AtomicMass
+  else
+     call CON_stop('The electron heat conductivity is not supported for mixtures')
   end if
      
   NameFile = NameElement//'.prp'
@@ -76,37 +95,38 @@
   
   !Only prints out the header lines with the numbers. 
   !May be used to find unneeded pieces
-  if(DoHeaderOnly)then
-     iString = 0
-     do 
-        read(11,'(a)',err=1111,end=1111)StringHeader
-        iString = iString + 1
-        if(index(StringHeader,'*')>0&
-             .and..not.index(StringHeader,'Mean')>0)&
-             write(*,'(i6,a)')iString,':'//StringHeader
-
-     end do
-1111 continue
-     close (11)
-     stop
-  end if
+  !Commented out!!!!! 
+  !if(DoHeaderOnly)then
+  !   iString = 0
+  !   do 
+  !      read(11,'(a)',err=1111,end=1111)StringHeader
+  !      iString = iString + 1
+  !      if(index(StringHeader,'*')>0&
+  !           .and..not.index(StringHeader,'Mean')>0)&
+  !           write(*,'(i6,a)')iString,':'//StringHeader
+  !
+  !   end do
+  ! 1111 continue
+  !   close (11)
+  !   stop
+  !end if
   !May be used to delete unneeded piece
 
-  if(DoHeaderOnly)then
-     open(12, file = NameElement//'.new',status='replace') 
-     iString = 0
-     do 
-        read(11,'(a)',err=2222,end=2222)StringHeader
-        iString = iString + 1
-        if(iString<iStringStart.or.iString>iStringLast)&
-             write(12,'(a)')trim(StringHeader)
-
-     end do
-2222 continue
-     close (11)
-     close (12)
-     stop
-  end if
+  !if(DoHeaderOnly)then
+  !   open(12, file = NameElement//'.new',status='replace') 
+  !   iString = 0
+  !   do 
+  !      read(11,'(a)',err=2222,end=2222)StringHeader
+  !      iString = iString + 1
+  !      if(iString<iStringStart.or.iString>iStringLast)&
+  !           write(12,'(a)')trim(StringHeader)
+  !
+  !   end do
+!!!!!2222 continue
+  !   close (11)
+  !   close (12)
+  !   stop
+  !end if
 
 
   do iString =1,24
@@ -132,7 +152,7 @@
   !Rescale Density array
 
   Density_I = 1.0e6 * Density_I  ! 1/cm3 = 10+6 1/m3
-  Rho_I     = cAtomicMass * AtomicWeight * Density_I  !Comes in kg/m3 
+  Rho_I     = cAtomicMass * AtomicMass * Density_I  !Comes in kg/m3 
 
   !============================Opacities===============================
   !Save opacities
@@ -203,9 +223,33 @@
 
         Value_VII(Z_,  iTe, iRho) = zAvr_II(iTe, iRho)
         Value_VII(Z2_,  iTe, iRho) = zAvr_II(iTe, iRho)**2
+        ZAv =  Value_VII(Z2_,  iTe, iRho)
+        Z2  =  ZAv **2
+        Z2PerA = Z2/AtomicMass
+        Na     = Density_I(iRho)
+        Te     = Temperature_I(iTe)
+        nMix = 1
+        iZMin_I = 0
+        Concentration_I = 0.0; Concentration_I(1) = 1.0
+
+        !Concentration of neutrals is switched off at 
+        Population_II(0,1) = max(0.0, min(1.0,2.0 - Te))
+        Value_VII(Cond_,  iTe, iRho) = electron_heat_conductivity()
+        Value_VII(TeTi_,  iTe, iRho) = te_ti_relaxation()
      end do
   end do
-end program
+  write(NameDescription,'(a,e13.7)')&
+       'PROPACEOS EOS for '//NameElement//&
+       'Atomic Mass = ',AtomicMass
+  call save_plot_file( &
+       NameElement//'_eos_PROPACEOS.dat',                                &
+       TypeFileIn     = 'real8',                     &
+       StringHeaderIn = 'PROPACEOS Eos for'//NameElement, &
+       NameVarIn      = 'logTe logRho '//NameVarEos, &
+       CoordMinIn_D   = (/Temperature_I(1),Rho_I(1)/),             &                             
+       CoordMaxIn_D   = (/Temperature_I(nTemperature),Rho_I(nDensity)/),             &
+       VarIn_VII      = Value_VII)
+end program PROPACEOS
 
 ! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                                  +
