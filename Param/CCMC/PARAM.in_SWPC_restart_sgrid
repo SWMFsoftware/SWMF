@@ -197,7 +197,7 @@ z=0 MHD idl             StringPlot
 
 #SCHEME
 2			nORDER
-Sokolov			TypeFlux
+Rusanov			TypeFlux
 mc3	                TypeLimiter
 1.2			BetaLimiter
 

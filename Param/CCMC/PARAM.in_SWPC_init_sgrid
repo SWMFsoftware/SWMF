@@ -34,6 +34,9 @@ IE			NameComp2
 
 !\\\\\ spherical grid setup
 
+#COVARIANTGEOMETRY
+spherical_lnr
+
 #GRID
 2			nRootBlock_D(x_)
 2			nRootBlock_D(y_)
@@ -134,7 +137,7 @@ imf20000406_08.dat	NameSolarWindFile
 
 #SCHEME
 1			nOrder
-Sokolov			TypeFlux
+Rusanov			TypeFlux
 
 #SAVELOGFILE
 T			DoSaveLo5Dgfile
@@ -234,7 +237,7 @@ min idl                 StringPlot
 
 #SCHEME
 2			nORDER
-Sokolov			TypeFlux
+Rusanov			TypeFlux
 mc3                     TypeLimiter
 1.2			BetaLimiter
 
