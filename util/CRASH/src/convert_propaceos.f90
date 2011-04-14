@@ -204,7 +204,20 @@ program PROPACEOS
   pElectron_II = pElectron_II *0.10
   pIon_II      = pIon_II      *0.10
 
+
   pTotal_II =  pIon_II +  pElectron_II
+
+  !Convert specific heat from J/g/eV to J/m^3/K
+  !Convert energy in J/g to J/kg, 1/g=10+3 1/kg
+  !1/eV = 1/ceVToK 
+  dETotalOverDT_II    = 1.0e3 * dETotalOverDT_II   /cEVToK
+  dEElectronOverDT_II = 1.0e3 * dEElectronOverDT_II/cEVToK
+
+  !Convert from J/kg to J/m3
+  do iRho = 1, nDensity
+     dETotalOverDT_II(:,iRho) = dETotalOverDT_II(:,iRho) * Rho_I(iRHo)
+     dEElectronOverDT_II(:,iRho) = dEElectronOverDT_II(:,iRho) * Rho_I(iRHo)
+  end do
 
   allocate( Value_VII(nVarEos, nTemperature, nDensity) ) 
   Value_VII = 0.0
@@ -236,6 +249,16 @@ program PROPACEOS
         Population_II(0,1) = max(0.0, min(1.0,2.0 - Te))
         Value_VII(Cond_,  iTe, iRho) = electron_heat_conductivity()
         Value_VII(TeTi_,  iTe, iRho) = te_ti_relaxation()
+        ! GammaSe = compressibility_at_const_te_e() + &
+        !    d_pressure_e_over_d_te()**2 * (Na * Te * cEV) /(heat_capacity_e() * pressure_e())
+        ! GammaS =  compressibility_at_const_te  () + &
+        !    d_pressure_over_d_te  ()**2 * (Na * Te * cEV) /(heat_capacity  () * pressure  ())
+        ! Where:
+        !  compressibility_at_const_t = 
+        !(Na /P) \left(\partial P / \partial Na \right)_{T=const}
+        !   the temperuture derivative of the specific pressure (P/Na)
+        ! (1/Na)*(\partial P/\partial T)_{\rho=const} 
+        ! Heat capacity - dimensionless, per atom
      end do
   end do
   write(NameDescription,'(a,e13.7)')&
