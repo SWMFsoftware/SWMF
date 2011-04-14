@@ -46,9 +46,6 @@ module ModResistivity
 
   character(len=*), private, parameter :: NameMod = 'ModResistivity'
 
-  ! Array needed for third-order interpolation of ghost cells
-  real, allocatable :: State1_VG(:,:,:,:)
-
   ! resistivity pre-multiplied by the face area
   real, allocatable :: Eta_DFDB(:,:,:,:,:,:)
 
@@ -146,7 +143,6 @@ contains
        UseResistiveFlux = .false.
 
        allocate( &
-            State1_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2), &
             FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
             Eta_DFDB(MaxDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
 
