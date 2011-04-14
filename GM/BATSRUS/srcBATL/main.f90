@@ -17,14 +17,13 @@ program BATL_test
   call MPI_init(iError)
   call init_mpi(MPI_COMM_WORLD)
 
-  !call test_tree
-  !call test_grid
-  !call test_pass_cell
-  !call test_pass_face
-  !call test_pass_node
-  !call test_amr
-
-  call test_histogram_amr_criteria
+  call test_tree
+  call test_grid
+  call test_pass_cell
+  call test_pass_face
+  call test_pass_node
+  call test_amr
+  !call test_histogram_amr_criteria
 
   call MPI_finalize(iError)
   
