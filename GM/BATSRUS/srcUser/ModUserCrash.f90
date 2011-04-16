@@ -214,7 +214,7 @@ contains
 
     use ModReadParam
     use CRASH_ModEos,        ONLY: read_eos_parameters, NameMaterial_I, &
-         read_if_use_eos_table, read_if_use_opac_table
+         read_if_use_eos_table, read_if_use_opac_table,read_name_material
     use CRASH_ModMultiGroup, ONLY: read_opacity_parameters
     use ModGeometry,         ONLY: TypeGeometry, UseCovariant
     use ModWaves,            ONLY: FreqMinSI, FreqMaxSI
@@ -369,6 +369,9 @@ contains
        case("#ASS")
           ! Multiply plastic pressure and negative Uy/Ur by AssFactor
           call read_var('AssFactor', AssFactor)
+
+       case('#MATERIAL')
+          call read_name_material(nMaterial)
 
        case("#USEEOSTABLE")
           call read_if_use_eos_table(nMaterial)
