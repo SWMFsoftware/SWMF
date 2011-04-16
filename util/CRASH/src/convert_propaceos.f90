@@ -19,7 +19,8 @@ program PROPACEOS
        dimension(nTemperature,nDensity) :: &
        zAvr_II, ETotal_II, dETotalOverDT_II, dETotalOverDRho_II, EIon_II, EElectron_II, &
        dEIonOverDT_II, dEElectronOverDT_II, pTotal_II,&
-       pIon_II, pElectron_II, dPIonOverDT_, dPElectronOverDT_II
+       pIon_II, pElectron_II, dPIonOverDT_II, dPElectronOverDT_II,&
+       dPTotalOverRho_II, dPElectronOverRho_II
   
   real,  &
        dimension(nTemperature,nDensity) :: &
@@ -42,7 +43,7 @@ program PROPACEOS
   character(len=80)  :: StringHeader  
   integer::iString, iRho, iTe
   character(LEN=6)::NameFile
-  character(LEN=2)::NameElement
+  character(LEN=2)::NameMaterial
   integer:: iMaterial
   real::AtomicMass
 
@@ -78,9 +79,9 @@ program PROPACEOS
 
   write(*,*)'Enter the name of element (e.g. Ar ) - note than Ar.prp should be present'
 
-  read(*,'(a)')NameElement
-  if(len_trim(NameElement)==1)NameElement=trim(NameElement)//'_'
-  iMaterial = i_material(NameElement)
+  read(*,'(a)')NameMaterial
+  if(len_trim(NameMaterial)==1)NameMaterial=trim(NameMaterial)//'_'
+  iMaterial = i_material(NameMaterial)
   if(iMaterial>0)then
      write(*,*)'iMaterial =', iMaterial
      nZ_I(1) = iMaterial
@@ -90,7 +91,7 @@ program PROPACEOS
      call CON_stop('The electron heat conductivity is not supported for mixtures')
   end if
      
-  NameFile = NameElement//'.prp'
+  NameFile = NameMaterial//'.prp'
   open(11,file=NameFile,status='old')
   
   !Only prints out the header lines with the numbers. 
@@ -113,7 +114,7 @@ program PROPACEOS
   !May be used to delete unneeded piece
 
   !if(DoHeaderOnly)then
-  !   open(12, file = NameElement//'.new',status='replace') 
+  !   open(12, file = NameMaterial//'.new',status='replace') 
   !   iString = 0
   !   do 
   !      read(11,'(a)',err=2222,end=2222)StringHeader
@@ -140,7 +141,7 @@ program PROPACEOS
           hNu_I, zAvr_II, &
           ETotal_II, dETotalOverDT_II, dETotalOverDRho_II, EIon_II, &
           EElectron_II, dEIonOverDT_II, dEElectronOverDT_II, &
-          pIon_II, pElectron_II, dPIonOverDT_, dPElectronOverDT_II, &
+          pIon_II, pElectron_II, dPIonOverDT_II, dPElectronOverDT_II, &
           RossOpacity_II, &
           PlanckOpacity_II, &
           PlanckOpacEms_II, &
@@ -168,9 +169,9 @@ program PROPACEOS
   end do
 
   call save_plot_file( &
-         NameElement//'_opac_PROPACEOS.dat',                                &
+         NameMaterial//'_opac_PRISM.dat',                                &
          TypeFileIn     = 'real8',                     &
-         StringHeaderIn = 'PROPACEOS Opacity for'//NameElement, &
+         StringHeaderIn = 'PROPACEOS Opacity for'//NameMaterial, &
          NameVarIn      = 'logRho logTe Planck01 Planck02 Planck03 Planck04 Planck05'//&
                                       ' Planck06 Planck07 Planck08 Planck09 Planck10'//&
                                       ' Planck11 Planck12 Planck13 Planck14 Planck15'//&
@@ -207,6 +208,7 @@ program PROPACEOS
 
   pTotal_II =  pIon_II +  pElectron_II
 
+
   !Convert specific heat from J/g/eV to J/m^3/K
   !Convert energy in J/g to J/kg, 1/g=10+3 1/kg
   !1/eV = 1/ceVToK 
@@ -218,6 +220,36 @@ program PROPACEOS
      dETotalOverDT_II(:,iRho) = dETotalOverDT_II(:,iRho) * Rho_I(iRHo)
      dEElectronOverDT_II(:,iRho) = dEElectronOverDT_II(:,iRho) * Rho_I(iRHo)
   end do
+
+  !Pressure derivatives
+  dPTotalOverRho_II(:,1) = Rho_I(1)/ pTotal_II(:,1) * &
+       (pTotal_II(:,2) - pTotal_II(:,1))/(Rho_I(2)-Rho_I(1))
+
+  dPElectronOverRho_II(:,1) = Rho_I(1)/ pElectron_II(:,1) * &
+       (pElectron_II(:,2) - pElectron_II(:,1))/(Rho_I(2)-Rho_I(1))
+
+  do iRho = 2, nDensity -1
+     dPTotalOverRho_II(:,iRho) = Rho_I(iRho)/ pTotal_II(:,iRho) * &
+          (pTotal_II(:,iRho+1) - pTotal_II(:,iRho-1))/&
+          (Rho_I(iRho+1)-Rho_I(iRho -1))
+
+     dPElectronOverRho_II(:,iRho) = Rho_I(iRho)/ pElectron_II(:,iRho) * &
+          (pElectron_II(:,iRho+1) - pElectron_II(:,iRho-1))/&
+          (Rho_I(iRho+1)-Rho_I(iRho -1))
+  end do
+
+  dPTotalOverRho_II(:,nDensity) = Rho_I(nDensity)/ pTotal_II(:,nDensity) * &
+       (pTotal_II(:,nDensity) - pTotal_II(:,nDensity-1))/&
+       (Rho_I(nDensity)-Rho_I(nDensity-1))
+
+  dPElectronOverRho_II(:,nDensity) = Rho_I(nDensity)/ pElectron_II(:,nDensity) * &
+       (pElectron_II(:,nDensity) - pElectron_II(:,nDensity-1))/&
+       (Rho_I(nDensity)-Rho_I(nDensity-1))
+
+  !dyne/cm2 /eV = 0.1/ceVToK 1/K
+  dPIonOverDT_II = dPIonOverDT_II * 0.10/cEVToK
+  dPElectronOverDT_II = dPElectronOverDT_II * 0.10/cEVToK
+
 
   allocate( Value_VII(nVarEos, nTemperature, nDensity) ) 
   Value_VII = 0.0
@@ -245,10 +277,26 @@ program PROPACEOS
         iZMin_I = 0
         Concentration_I = 0.0; Concentration_I(1) = 1.0
 
-        !Concentration of neutrals is switched off at 
+        !Concentration of neutrals is switched off at 2 eV 
         Population_II(0,1) = max(0.0, min(1.0,2.0 - Te))
         Value_VII(Cond_,  iTe, iRho) = electron_heat_conductivity()
         Value_VII(TeTi_,  iTe, iRho) = te_ti_relaxation()
+
+        !Use formula (24) from HEDP.pdf:
+        
+         Value_VII(GammaE_,  iTe, iRho) = &
+              dPElectronOverRho_II(iTe, iRho) + &
+              dPElectronOverDT_II( iTe, iRho)**2&
+              *Temperature_I(iTe) * cEVToK /(pElectron_II(iTe, iRho)*&
+                                    dEElectronOverDT_II(iTe, iRho))
+         
+         Value_VII(Gamma_,  iTe, iRho) = &
+              dPTotalOverRho_II(iTe, iRho) + &
+              (dPElectronOverDT_II( iTe, iRho) +&
+               dPIonOverDT_II(iTe, iRho))**2&
+              *Temperature_I(iTe) * cEVToK /(pTotal_II(iTe, iRho)*&
+                                    dETotalOverDT_II(iTe, iRho))
+
         ! GammaSe = compressibility_at_const_te_e() + &
         !    d_pressure_e_over_d_te()**2 * (Na * Te * cEV) /(heat_capacity_e() * pressure_e())
         ! GammaS =  compressibility_at_const_te  () + &
@@ -261,17 +309,60 @@ program PROPACEOS
         ! Heat capacity - dimensionless, per atom
      end do
   end do
+
   write(NameDescription,'(a,e13.7)')&
-       'PROPACEOS EOS for '//NameElement//&
+       'PROPACEOS EOS for '//NameMaterial//&
        'Atomic Mass = ',AtomicMass
   call save_plot_file( &
-       NameElement//'_eos_PROPACEOS.dat',                                &
+       NameMaterial//'_eos_PRISM.dat',                                &
        TypeFileIn     = 'real8',                     &
-       StringHeaderIn = 'PROPACEOS Eos for'//NameElement, &
-       NameVarIn      = 'logTe logRho '//NameVarEos, &
-       CoordMinIn_D   = (/Temperature_I(1),Rho_I(1)/),             &                             
-       CoordMaxIn_D   = (/Temperature_I(nTemperature),Rho_I(nDensity)/),             &
+       StringHeaderIn = trim(NameDEscription), &
+       NameVarIn      = 'logTe logNa '//NameVarEos, &
+       CoordMinIn_D   = (/Temperature_I(1),Density_I(1)/),             &                             
+       CoordMaxIn_D   = (/Temperature_I(nTemperature),Density_I(nDensity)/),             &
        VarIn_VII      = Value_VII)
+  open(11,file='PARAM.'//NameMaterial//'.PRISM',status='replace')
+  write(11,'(a)')'----------------EOS TABLE-------------'
+  write(11,'(a)')'    '
+  write(11,'(a)')'#LOOKUPTABLE'
+  write(11,'(a)')NameMaterial//'_eos                     NameTable'
+  write(11,'(a)')'load                  NameCommand'
+  write(11,'(a)')'Tables/'//NameMaterial//'_eos_PRISM.dat'
+  write(11,'(a)')'real8                 TypeFile'
+  write(11,'(a)')'EOS(Te, Na) for '//NameMaterial
+  write(11,'(a)')'logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2'
+  write(11,'(a)')'201                   nIndex1'
+  write(11,'(e13.7,a)')Temperature_I(1),'                       Index1Min (eV)'
+  write(11,'(e13.7,a)')Temperature_I(nTemperature),&
+                                        '                       Index1Max (eV)'
+  write(11,'(a)')'201                   nIndex2'
+  write(11,'(e13.7,a)')Density_I(1),    '                       Index2Min (m-3)'
+  write(11,'(e13.7,a)')Density_I(nDensity),&
+                                        '                       Index2Max (m-3)'
+  write(11,'(a)')'  '
+  write(11,'(a)')'----------------OPACITY TABLE----------'
+  write(11,'(a)')'  '
+  write(11,'(a)')'#LOOKUPTABLE'
+  write(11,'(a)')NameMaterial//'_opac                   NameTable'
+  write(11,'(a)')'load                  NameCommand'
+  write(11,'(a)')'Tables/'//NameMaterial//'_opac_PRISM.dat'
+  write(11,'(a)')'real8                 TypeFile'
+  write(11,'(a)')'Opacity(rho,Te) for '//NameMaterial
+  write(11,'(a)')'logrho logT Planck(30) Ross(30)'
+  write(11,'(a)')'201                   nIndex1'
+  write(11,'(e13.7,a)')Rho_I(1),        '                       Index1Min (kg/m3)'
+  write(11,'(e13.7,a)')Rho_I(nDensity), '                       Index1Max (kg/m3)'
+  write(11,'(a)')'201                   nIndex2'
+  write(11,'(e13.7,a)')Temperature_I(1),'                       Index2Min (eV)'
+  write(11,'(e13.7,a)')Temperature_I(nTemperature),&
+                                        '                       Index2Max (eV)'
+  write(11,'(a)')'  '
+  write(11,'(a)')'#END'
+  write(11,'(a)')'  '
+  close(11)
+
+
+
 end program PROPACEOS
 
 ! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -303,7 +394,7 @@ subroutine read_eosopa_file_main ( iUnit, &
      hNu_I, zAvr_II, &
      ETotal_II, dETotalOverDT_II, dETotalOverDRho_II, EIon_II, &
      EElectron_II, dEIonOverDT_II, dEElectronOverDT_II, &
-     pIon_II, pElectron_II, dPIonOverDT_, dPElectronOverDT_II, &
+     pIon_II, pElectron_II, dPIonOverDT_II, dPElectronOverDT_II, &
      RossOpacity_II, &
      PlanckOpacity_II, &
      PlanckOpacEms_II, &
@@ -340,7 +431,7 @@ subroutine read_eosopa_file_main ( iUnit, &
        dimension(nTemperature,nDensity) :: &
        zAvr_II, ETotal_II, dETotalOverDT_II, dETotalOverDRho_II, EIon_II, EElectron_II, &
        dEIonOverDT_II, dEElectronOverDT_II, &
-       pIon_II, pElectron_II, dPIonOverDT_, dPElectronOverDT_II
+       pIon_II, pElectron_II, dPIonOverDT_II, dPElectronOverDT_II
 
   real, intent(out), &
        dimension(nTemperature,nDensity) :: &
@@ -395,7 +486,7 @@ subroutine read_eosopa_file_main ( iUnit, &
   dEElectronOverDT_II(:,:) = 0.0
   pIon_II(:,:) = 0.0
   pElectron_II(:,:) = 0.0
-  dPIonOverDT_(:,:) = 0.0
+  dPIonOverDT_II(:,:) = 0.0
   dPElectronOverDT_II(:,:) = 0.0
   RossOpacity_II(:,:) = 0.0
   PlanckOpacity_II(:,:) = 0.0
@@ -596,7 +687,7 @@ subroutine read_eosopa_file_main ( iUnit, &
      !write(*,*)'Start to read ion pressure T-derivative'
      ! Ion pressure T-derivative (erg/cm**3/eV)
      read (iUnit,802) StringHeader
-     read (iUnit,*) ((dPIonOverDT_(l,m),l=1,n_temp_eos_tbl), m=1,n_dens_eos_tbl)
+     read (iUnit,*) ((dPIonOverDT_II(l,m),l=1,n_temp_eos_tbl), m=1,n_dens_eos_tbl)
      write(*,*)StringHeader
 
      !write(*,*)'Start to read electron pressure T-derivative'
