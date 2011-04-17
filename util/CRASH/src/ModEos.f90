@@ -101,6 +101,8 @@ module CRASH_ModEos
      module procedure eos_mixture
   end interface
 
+  public:: read_name_material
+
   ! Local variables
 
   ! test material with the EOS e \propto T^4, p \propto T^4
