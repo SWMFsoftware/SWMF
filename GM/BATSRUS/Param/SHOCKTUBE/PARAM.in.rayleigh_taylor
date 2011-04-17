@@ -1,0 +1,114 @@
+Begin session: 1
+
+#ECHO
+T                       DoEcho
+
+#BATL
+T			UseBatl
+
+#DESCRIPTION
+Raileigh-Taylor test	StringDescription
+
+#EQUATION
+HD			NameEquation
+5			nVar
+
+#USERMODULE
+Waves and GEM, Yingjuan Ma
+1.20			VersionUserModule
+
+#CHECKGRIDSIZE
+       8                nI
+       8                nJ
+       1                nK
+     100                MinBlockALL
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#SHOCKTUBE
+4.0			Rho (left state)
+0.0			Ux
+0.0			Uy
+0.0			Uz
+1.0			P
+1.0			Rho (right state)
+0.0			Ux
+0.0			Uy
+0.0			Uz
+1.0			P
+
+#GRID
+6                    	nRootBlockX
+1                     	nRootBlockY
+1                     	nRootBlockZ
+-20.                 	xMin
+ 20.                 	xMax
+-10.                   	yMin
+ 10.                   	yMax
+-1.                   	zMin
+ 1.                   	zMax
+
+#OUTERBOUNDARY
+none                    TypeBcEast
+none                    TypeBcWest
+periodic                TypeBcSouth
+periodic                TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+#USERINPUTBEGIN ----------------
+
+#RT
+0.1			X Velocity Amplitude
+2.0			X Perturbation Width
+
+#USERINPUTEND   ----------------
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#SCHEME
+2			nOrder
+godunov			TypeFlux
+mc3			TypeLimiter
+2.0			BetaLimiter
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#GRAVITY
+T			UseGravity
+1			iDirGravity
+0.1			Gravity
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+var			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+rho ekinx ekiny mx my p pmin pmax
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1
+z=0 mhd idl             StringPlot
+-1			DnOutput
+1.0			DtOutput
+0.			DxOutput
+
+#STOP
+-1			MaxIteration
+50.0			tSimulationMax
