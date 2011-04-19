@@ -331,6 +331,20 @@ subroutine MPI_ALLGATHER(sendbuf,sendcount,sendtype,&
   ierror=0
 end subroutine MPI_ALLGATHER
 
+subroutine MPI_ALLGATHERV(sendbuf,sendcount,sendtype,&
+     recvbuf,recvcount,recvdisp,recvtype,comm,ierror)
+
+  integer, intent(in) :: sendcount,sendtype,recvcount,recvdisp,recvtype,comm
+  integer, intent(out):: ierror
+  character (LEN=*)   :: sendbuf
+  character (LEN=*)   :: recvbuf
+
+  call MPI_SIMPLE_COPY('MPI_ALLGATHERV',sendbuf,sendcount,sendtype,&
+       recvbuf,recvcount,recvtype)
+
+  ierror=0
+end subroutine MPI_ALLGATHERV
+
 subroutine MPI_ALLREDUCE(sendbuf,recvbuf,count,datatype,op,comm,ierror)
 
   integer, intent(in) :: count,datatype,op,comm
