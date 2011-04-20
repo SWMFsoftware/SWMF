@@ -147,12 +147,12 @@ module ModUser
 
   real, dimension(1:num_Ri):: IMPACT_L, IMPACT_M,IMPACT_H
 
-  integer, parameter :: maxNumSZA = 12
-  integer :: NumSZA =12
+  integer, parameter :: maxNumSZA = 17
+  integer :: NumSZA =17
   real, dimension(1:maxNumSZA,1:num_Ri):: tmp_RL0, tmp_RM0,tmp_RH0
   real, dimension(MaxSpecies,maxNumSZA+1):: BodyRhoSpecies_dim_II, coefSZAB_II
-  real, dimension(1:maxNumSZA):: SZATitan_I, cosSZA_I  
-  real, dimension(1:maxNumSZA+1):: SZABTitan_I, cosSZAB_I
+  real, dimension(1:maxNumSZA):: SZATitan_I, cosSZA_I  !for ionization
+  real, dimension(1:maxNumSZA+1):: SZABTitan_I, cosSZAB_I !for ion density
 
 
   real, dimension(1:7,1:num_Ri):: tmp_ion
@@ -269,6 +269,24 @@ contains
              fileIonDen60deg="TitanInput/TitanDen60degmin.dat"
              fileNeuDen ="TitanInput/NEUTRALDENSITY.dat"
 
+          case("Cassini3")                        
+             NumSZA = 17
+             fileSZA="TitanInput/SZALIST_17.dat"
+             fileH  ="TitanInput/PhotoRate_H_Apr11.dat"
+             fileM  ="TitanInput/PhotoRate_M_Apr11.dat"
+             fileL  ="TitanInput/PhotoRate_L_Apr11.dat"
+             fileIonDen60deg="TitanInput/TIondenSZ060_Apr11.dat"
+             fileNeuDen ="TitanInput/NeuDen_Apr11.dat"
+
+             open(unit_tmp,file="TitanInput/TIondenAl725_Apr11.dat",status="old")
+             read(unit_tmp,'(a)')linetitan
+            ! write(*,*)'linetitan',linetitan
+             do i=1,NumSZA+1
+                read(unit_tmp,*)tmp_alt,SZABTitan_I(i),&
+                     (BodyRhoSpecies_dim_II(j,i),j=1,7),tmp_ne
+             end do
+             close(unit_tmp)
+ 
           case("CassiniTA")                        
              NumSZA = 12
              fileSZA="TitanInput/SZALIST_12.dat"
@@ -285,7 +303,7 @@ contains
              open(unit_tmp,file="TitanInput/IondenAlt725.dat",status="old")
              read(unit_tmp,'(a)')linetitan
 
-             do i=1,maxNumSZA+1
+             do i=1,NumSZA+1
                 read(unit_tmp,*)tmp_alt,SZABTitan_I(i),&
                      (BodyRhoSpecies_dim_II(j,i),j=1,7),tmp_ne
              end do
@@ -909,7 +927,7 @@ contains
           if(.not.UseCosSZA)then
              coefx=coefy
              if(cosSZA < 0.9)then
-                do m=1,MaxNumSZA
+                do m=1,NumSZA
                    if((cosSZA < CosSZAB_I(m)).and.&
                         (cosSZA >= CosSZAB_I(m+1))) then
                       dtm = CosSZAB_I(m)- cosSZA
@@ -1158,7 +1176,7 @@ contains
     if(.not.UseCosSZA)then
        coefx=1.0
        if(cosSZA.lt.0.95)then
-          do m=1,MaxNumSZA
+          do m=1,NumSZA
              if((cosSZA < CosSZAB_I(m)).and.&
                   (cosSZA >= CosSZAB_I(m+1))) then
                 dtm = CosSZAB_I(m)- cosSZA
@@ -1439,7 +1457,7 @@ contains
             /max(R_BLK(i,j,k,iBlock),1.0e-3)
 
        if (cosS0 < CosSZA_I(NumSZA)) then
-          m=maxNumSZA
+          m=NumSZA
           !                    dhn = hh - tmp_hR(n)
           !                    dhnp1 = tmp_hR(n+1) - hh
           dtm = CosSZA_I(m)- cosS0
@@ -1478,7 +1496,7 @@ contains
                /(tmp_hR(n+1)-tmp_hR(n))/(CosSZA_I(m)-CosSZA_I(m+1))
 
        else                    
-          do m=1,MaxNumSZA-1
+          do m=1,NumSZA-1
              if((cosS0 <= CosSZA_I(m)).and.(cosS0 > CosSZA_I(m+1))) then
                 !                          dhn = hh - tmp_hR(n)
                 !                          dhnp1 = tmp_hR(n+1) - hh
