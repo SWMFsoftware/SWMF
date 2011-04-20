@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 !========================================================================
 module ModUser
-  ! This is the user module for Titan with electron pressure equation
+  ! This is the user module for Titan
 
   use ModSize
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_,&
@@ -36,7 +36,7 @@ module ModUser
 
   integer :: nSpecies=7, nNuSpecies=10, nReactions=25
 
-  real::IonizationEng = 15.58, kTimp !ev
+  real::IonizationEng = 0.6, kTimp !ev
 
   ! Radius within which the point implicit scheme should be used
   real :: rPointImplicit = 2.5
@@ -133,7 +133,7 @@ module ModUser
   real :: kT1000
 
   real :: Nu_C(1:nI,1:nJ,1:nK)
-  real :: nu0_dim=5.0e-10,nu0
+  real :: nu0_dim=1.0e-10,nu0
 
   logical :: UseImpact =.false.
   character*30 :: SolarCondition, type_innerbcs='reflect'
@@ -149,10 +149,15 @@ module ModUser
   real, dimension(1:num_en) :: nu_Te 
   real, dimension(1:num_en,3) :: nu_en 
 
+  integer, parameter:: num_coen= 41
+  real, dimension(1:num_en) :: co_Te 
+  real, dimension(1:num_en,2) :: co_en 
+
+
   real, dimension(1:num_Ri):: IMPACT_L, IMPACT_M,IMPACT_H
 
-  integer, parameter :: maxNumSZA = 12
-  integer :: NumSZA =12
+  integer, parameter :: maxNumSZA = 17
+  integer :: NumSZA =17
   real, dimension(1:maxNumSZA,1:num_Ri):: tmp_RL0, tmp_RM0,tmp_RH0
   real, dimension(MaxSpecies,maxNumSZA+1):: BodyRhoSpecies_dim_II, coefSZAB_II
   real, dimension(1:maxNumSZA):: SZATitan_I, cosSZA_I  
@@ -160,8 +165,8 @@ module ModUser
 
 
   real, dimension(1:7,1:num_Ri):: tmp_ion
-  real:: SW_Lp, SW_Mp,  SW_Lp_dim, SW_Mp_dim,Plas_T_ev, SW_Pi, SW_Pe
-  real:: Plas_rho, Plas_T  
+  real:: SW_Lp, SW_Mp,  SW_Lp_dim, SW_Mp_dim,Plas_Te_ev, Plas_Ti_ev, SW_Pi, SW_Pe
+  real:: Plas_rho, Plas_T, Plas_Te,  Plas_Ti  
 
   !\
   ! The following are needed in user_sources::
@@ -231,14 +236,18 @@ contains
        case('#UPSTREAM')
           call read_var('SW_LP_dim', SW_LP_dim)
           call read_var('SW_MP_dim', SW_MP_dim)        
-          call read_var('plas_T_ev', plas_T_ev)        
+          call read_var('plas_Te_ev', plas_Te_ev)        
+          call read_var('plas_Ti_ev', plas_Ti_ev)        
           SW_LP=SW_LP_dim*MassSpecies_V(rhoLp_)
           SW_MP=SW_MP_dim*MassSpecies_V(rhoMp_)
           Plas_rho =  SW_LP + SW_MP 
           SW_LP= SW_LP/Plas_rho 
           SW_MP= SW_MP/Plas_rho 
           MassFluid_I(1) = Plas_rho/(SW_LP_dim+SW_MP_dim)
-          plas_T = plas_T_ev*1.1610e4          
+          plas_T = (plas_Ti_ev+plas_Te_ev)*1.116e4
+          plas_Te = (plas_Te_ev)*1.116e4
+          plas_Ti = (plas_Ti_ev)*1.116e4
+
           if(iproc==0)then
              write(*,*)'MassFluid_I(1)=',MassFluid_I(1)           
              write(*,*)'plas_T=',plas_T
@@ -272,6 +281,24 @@ contains
              fileIonDen60deg="TitanInput/TitanDen60degmin.dat"
              fileNeuDen ="TitanInput/NEUTRALDENSITY.dat"
 
+          case("Cassini3")                        
+             NumSZA = 17
+             fileSZA="TitanInput/SZALIST_17.dat"
+             fileH  ="TitanInput/PhotoRate_H_Apr11.dat"
+             fileM  ="TitanInput/PhotoRate_M_Apr11.dat"
+             fileL  ="TitanInput/PhotoRate_L_Apr11.dat"
+             fileIonDen60deg="TitanInput/TIondenSZ060_Apr11.dat"
+             fileNeuDen ="TitanInput/NeuDen_Apr11.dat"
+
+             open(unit_tmp,file="TitanInput/TIondenAl725_Apr11.dat",status="old")
+             read(unit_tmp,'(a)')linetitan
+            ! write(*,*)'linetitan',linetitan
+             do i=1,NumSZA+1
+                read(unit_tmp,*)tmp_alt,SZABTitan_I(i),&
+                     (BodyRhoSpecies_dim_II(j,i),j=1,7),tmp_ne
+             end do
+             close(unit_tmp)
+
           case("CassiniTA")                        
              NumSZA = 12
              fileSZA="TitanInput/SZALIST_12.dat"
@@ -288,7 +315,7 @@ contains
              open(unit_tmp,file="TitanInput/IondenAlt725.dat",status="old")
              read(unit_tmp,'(a)')linetitan
 
-             do i=1,maxNumSZA+1
+             do i=1,NumSZA+1
                 read(unit_tmp,*)tmp_alt,SZABTitan_I(i),&
                      (BodyRhoSpecies_dim_II(j,i),j=1,7),tmp_ne
              end do
@@ -372,6 +399,20 @@ contains
              read(unit_tmp,*)nu_Te(i),(nu_en(i,j),j=1,3)
           end do
           close(unit_tmp)
+
+          !for electron cooling due to neutrals
+          co_en(:,:)=0.0
+          open(unit_tmp,file="TitanInput/electron_colling.dat",&
+               status="old")             
+          read(unit_tmp,'(a)')linetitan
+          read(unit_tmp,'(a)')linetitan
+          write(*,*)linetitan
+          do i=1,num_coen
+             read(unit_tmp,*)co_Te(i),(co_en(i,j),j=1,2)
+          end do
+         ! write(*,*)'co_Te(3)=', co_Te(3)
+          close(unit_tmp)
+
 
           if(iproc==0)then
              write(*,*)'tmp_hR(num_Ri)',tmp_hR(num_Ri)
@@ -494,7 +535,7 @@ contains
     real :: RhoUTimesSrhoU  !for output the testing results
 
     real :: col_ei, col_en
-    real :: loc_c(3)
+    real :: f_en(2), fcoef
     real :: tx1, txp1, Te_dim, averagemass, meovmi=5.44471e-4 !me/mi=9.109e-31/1.673e-27
     integer:: nTe
 
@@ -759,6 +800,7 @@ contains
                   state_VGB(pe_, i,j,k,iBlock)
              call stop_mpi('negative electron pressure')
           end if
+
           kTi = State_VGB(p_,i,j,k,iBlock)/totalNumRho
 
           if( kTi< (kTn/2.0))then
@@ -766,7 +808,8 @@ contains
                   state_VGB(p_, i,j,k,iBlock)
              write(*,*)'kTi, kTn=', kTi, kTn
              write(*,*)'pe, p=', state_VGB(pe_, i,j,k,iBlock),state_VGB(p_, i,j,k,iBlock)
-             call stop_mpi('ion temperature too small')
+             !call stop_mpi('ion temperature too small')
+             State_VGB(p_,i,j,k,iBlock)= totalNumRho * kTn
           end if
 
 
@@ -775,26 +818,35 @@ contains
           col_ei = 54.0* totalNumRho*No2Io_V(UnitN_)/sqrt(Te_dim)/Te_dim &
                /Io2No_V(UnitT_)*meovmi
 
-          nte=int( (log10(Te_dim)-2.0)/0.05 )+1
-          if(Te_dim <= nu_Te(1))then
-             loc_c(:)=nu_en(1,:)
-          else if(Te_dim >= nu_Te(num_en))then
-             loc_c(:)=nu_en(num_en,:)
+          nte=int( (log10(Te_dim)-2.0)/0.1)+1
+          fcoef=1.0
+          alt = (R_BLK(i,j,k,iBlock)-1.0)*2575.0
+          if(alt<1100.and.alt>900.)then
+             fcoef=0.3*(1100-alt)/200.+(alt-900.)/200.
+          end if
+         if(Te_dim <= 100.0)then
+             f_en(:)=co_en(1,:)
+          else if(Te_dim >= nu_Te(num_coen))then
+             f_en(:)=co_en(num_coen,:)
           else
-             tx1=( Te_dim- nu_Te(nte) )/( nu_Te(nte+1)-nu_Te(nte) )
+             tx1=( Te_dim- co_Te(nte) )/( co_Te(nte+1)-co_Te(nte) )
              if(tx1.gt.1.001.or.tx1.lt.-1.0e-3)then
                 write(*,*)'wrong  tx1=', tx1, log10(Te_dim), &
-                     nte, Te_dim, nu_Te(nte)
+                     nte, Te_dim, co_Te(nte), co_Te(nte+1)
+                call stop_mpi('wrong tx1')
              end if
              txp1=1.0-tx1
-             loc_c(:)=nu_en(nte,:)*txp1+nu_en(nte+1,:)*tx1
+             f_en(:)=co_en(nte,:)*txp1+co_en(nte+1,:)*tx1
           end if
-          loc_c(:)=loc_c(:)/1.0e8
-          col_en =  sum(loc_c(:)*NumDenNeutral_VC(1:3,i,j,k))*No2Io_V(UnitN_)
+          col_en =  sum(f_en(:)*NumDenNeutral_VC(1:2,i,j,k))*No2Io_V(UnitN_)
 
           averagemass=State_VGB(rho_,i,j,k,iBlock)/totalNumRho
           
 !has checked the SP and SPe agaist equation 2.52 and 2.58 in thesis
+           if(oktest_me.and.itest==i.and.j==jtest.and.ktest==k)then
+             write(*,*)'spi=', SP(i,j,k)
+             write(*,*)'spe=', SPe(i,j,k)
+          end if
 
           SP(i,j,k) = SP(i,j,k)  &
                +totalNumRho*(kTn-KTi)*Nu_C(i,j,k)   &
@@ -804,30 +856,33 @@ contains
                -totalLossNumRho*kTi                 &
                +0.50*(gm1)*uu2*(totalSourceRho)     &
                -col_ei*totalNumRho*(KTi-KTe)/averagemass        
-         
-           if(oktest_me.and.itest==i.and.j==jtest.and.ktest==k)then
-             write(*,*)'spe=', SPe(i,j,k)
-          end if
+
+!          SPe(i,j,k) = SPe(i,j,k)  &
+!               +totalPSNumRho*kTe0*fcoef-totalIMPNumRho*kTimp         &
+!               -totalRLNumRhox*totalNumRho*KTe                  &
+!               -col_en*totalNumRho*(KTe-KTn)   &
+!               -col_ei*totalNumRho*(KTe-KTi)/averagemass        
+
           SPe(i,j,k) = SPe(i,j,k)  &
-               +totalPSNumRho*kTe0-totalIMPNumRho*kTimp         &
+               +totalPSNumRho*kTe0*fcoef         &
                -totalRLNumRhox*totalNumRho*KTe                  &
-               -col_en*totalNumRho*(KTe-KTn)/28.0*meovmi*10.0   &
+               -col_en*totalNumRho*(KTe-KTn)   &
                -col_ei*totalNumRho*(KTe-KTi)/averagemass        
 
           if(oktest_me.and.itest==i.and.j==jtest.and.ktest==k)then          
-             !write(*,*)'col_ei=', col_ei
-             !write(*,*)'col_en=', col_en
+             write(*,*)'col_ei=', col_ei
+             write(*,*)'col_en=', col_en
              write(*,*)'spe=', spe(itest,jtest,ktest)
              write(*,*)'sp=', sp(itest,jtest,ktest)
              write(*,*)'ei collision term=',col_ei*totalNumRho*(KTe-KTi)/averagemass
              write(*,*)'en collision term=',col_en*totalNumRho*(KTe-KTn)*meovmi/28.0
              write(*,*)'photonelectron heating=',totalPSNumRho*kTe0 
-             !write(*,*)'totalPSNumRho=', totalPSNumRho
-             !write(*,*)'totalIMPNumRho=', totalIMPNumRho
-             !write(*,*)'PhotoIonRate=', PhotoIonRate_VC(1:3,i,j,k)
-             !write(*,*)'ImpactIonRate=', ImpactIonRate_VC(1:3,i,j,k)
+             write(*,*)'totalPSNumRho=', totalPSNumRho
+             write(*,*)'totalIMPNumRho=', totalIMPNumRho
+             write(*,*)'PhotoIonRate=', PhotoIonRate_VC(1:3,i,j,k)
+             write(*,*)'ImpactIonRate=', ImpactIonRate_VC(1:3,i,j,k)
              write(*,*)'kTe, KTi, kTn, kTe0=', kTe, kTi,kTn, kTe0
-             !write(*,*)'averagemass=', averagemass
+             write(*,*)'averagemass=', averagemass
              write(*,*)'ion-neutral collision term=', totalNumRho*(kTn-KTi)*Nu_C(i,j,k)
              write(*,*)'electron-ion collision term=', col_ei*totalNumRho*(KTi-KTe)/averagemass
 
@@ -923,12 +978,15 @@ contains
     !--------------------------------------------------------------------------
     !For Outer Boundaries
     AverageIonCharge         = 1.0
-    ElectronTemperatureRatio = 1./MassFluid_I(1) !default was 0.0
+    if(UseElectronPressure)then
+       ElectronTemperatureRatio = Plas_Te_ev/(Plas_Ti_ev+Plas_Te_ev) !default was 0.0
+       write(*,*)'electrontemperatureratio=', ElectronTemperatureRatio
+    end if
 
     do iBoundary=East_,Top_
        FaceState_VI(SpeciesFirst_:SpeciesLast_,iBoundary)  = cTiny8/1.0e5     
        if(UseElectronPressure)then
-          sw_pe=SW_P/(1.+MassFluid_I(1))
+          sw_pe=SW_P*ElectronTemperatureRatio
           sw_pi=SW_P-sw_pe
           FaceState_VI(Pe_,iBoundary)  = sw_pe
           FaceState_VI(P_,iBoundary)  = sw_pi
@@ -1018,7 +1076,7 @@ contains
           if(.not.UseCosSZA)then
              coefx=coefy
              if(cosSZA < 0.9)then
-                do m=1,MaxNumSZA
+                do m=1,NumSZA
                    if((cosSZA < CosSZAB_I(m)).and.&
                         (cosSZA >= CosSZAB_I(m+1))) then
                       dtm = CosSZAB_I(m)- cosSZA
@@ -1290,7 +1348,7 @@ contains
     if(.not.UseCosSZA)then
        coefx=1.0
        if(cosSZA.lt.0.95)then
-          do m=1,MaxNumSZA
+          do m=1,NumSZA
              if((cosSZA < CosSZAB_I(m)).and.&
                   (cosSZA >= CosSZAB_I(m+1))) then
                 dtm = CosSZAB_I(m)- cosSZA
@@ -1578,7 +1636,7 @@ contains
             /max(R_BLK(i,j,k,iBlock),1.0e-3)
 
        if (cosS0 < CosSZA_I(NumSZA)) then
-          m=maxNumSZA
+          m=NumSZA
           !                    dhn = hh - tmp_hR(n)
           !                    dhnp1 = tmp_hR(n+1) - hh
           dtm = CosSZA_I(m)- cosS0
@@ -1617,7 +1675,7 @@ contains
                /(tmp_hR(n+1)-tmp_hR(n))/(CosSZA_I(m)-CosSZA_I(m+1))
 
        else                    
-          do m=1,MaxNumSZA-1
+          do m=1,NumSZA-1
              if((cosS0 <= CosSZA_I(m)).and.(cosS0 > CosSZA_I(m+1))) then
                 !                          dhn = hh - tmp_hR(n)
                 !                          dhnp1 = tmp_hR(n+1) - hh
@@ -1759,6 +1817,10 @@ contains
     case('b_z_r')
        iVar=Bz_
        NameTecVar = 'b_z_r'
+    case ('Te')
+
+    case ('Ti')
+
     case default
        call stop_mpi(Name//': unimplemented variable='//NameVar)
     end select
