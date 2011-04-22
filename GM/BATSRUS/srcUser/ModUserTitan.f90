@@ -149,10 +149,10 @@ module ModUser
 
   integer, parameter :: maxNumSZA = 17
   integer :: NumSZA =17
-  real, dimension(1:maxNumSZA,1:num_Ri):: tmp_RL0, tmp_RM0,tmp_RH0
-  real, dimension(MaxSpecies,maxNumSZA+1):: BodyRhoSpecies_dim_II, coefSZAB_II
-  real, dimension(1:maxNumSZA):: SZATitan_I, cosSZA_I  !for ionization
-  real, dimension(1:maxNumSZA+1):: SZABTitan_I, cosSZAB_I !for ion density
+  real, dimension(1:maxNumSZA,1:num_Ri):: tmp_RL0=0, tmp_RM0=0,tmp_RH0=0
+  real, dimension(MaxSpecies,maxNumSZA+1):: BodyRhoSpecies_dim_II=1.0, coefSZAB_II
+  real, dimension(1:maxNumSZA):: SZATitan_I=0.0, cosSZA_I  !for ionization
+  real, dimension(1:maxNumSZA+1):: SZABTitan_I=0.0, cosSZAB_I !for ion density
 
 
   real, dimension(1:7,1:num_Ri):: tmp_ion
@@ -1037,6 +1037,9 @@ contains
     logical:: oktest_me=.false.,oktest=.false.
     !---------------------------------------------------------------
 
+!    write(*,*)'cPi=', cPi
+!    write(*,*)'SZATitan_I',SZATitan_I
+!    write(*,*)'cosSZA_I',cosSZA_I
     CosSZA_I=cos(SZATitan_I*cPi/180.0)
     cosSZAB_I =cos(SZABTitan_I*cPi/180.0)     
     do iSpecies =1, nSpecies
