@@ -3,22 +3,36 @@
 
 \subsection{Extracting the code from a tar file}
 
-Create a new and empty directory, and open the tar file you received, eg:
+Create a new and empty directory, and open the tar file in it, e.g., 
 \begin{verbatim}
-  mkdir bats
-  cd bats
-  tar xf distBATSRUS_v7.50_03-12-02-1200.tar  
-\end{verbatim}
-where the version number and the creation date and time are indicated
-in the file name. If the tar file is compressed with {\tt gzip}, use
-\begin{verbatim}
-  tar xzf distBATSRUS_v7.50_03-12-02-1200.tar.gz
+  mkdir crash
+  cd crash
+  mv /Users/myself/Downloads/BATSRUS.tgz .
+  tar xzf BATSRUS.tgz
 \end{verbatim}
 or, if the {\tt tar} command does not recognize the 'z' flag, use
 \begin{verbatim}
-  gunzip distBATSRUS_v7.50_03-12-02-1200.tar.gz
-  tar xf distBATSRUS_v7.50_03-12-02-1200.tar
+  gunzip BATSRUS.tgz
+  tar xf BATSRUS.tar
 \end{verbatim}
+In addition to the \BATSRUS\ tar ball, the {\tt BATSRUS\_data} repository may also be 
+needed. This repository contains large data files used for initialization or
+other purposes. At CSEM, the {\tt BATSRUS\_data} may already be available through 
+a shared disk as
+\begin{verbatim}
+  /csem1/SWMF_data/GM/BATSRUS/data
+\end{verbatim}
+If the {\tt csem1} disk is not accessible, the repository 
+can be put into the home directory or into the main \BATSRUS\ directory.
+If {\tt SWMF\_data} is installed already, it contains {\tt BATSRUS\_data} too.
+
+Some data files used by CRASH are in the {\tt CRASH\_data} repository. 
+On many machines at the CRASH center this is already available through 
+the shared disk as
+\begin{verbatim}
+  /csem1/CRASH_data
+\end{verbatim}
+Otherwise the repository has to be placed into the home directory.
 
 \subsection{Checking out the code with CVS}
 
@@ -47,75 +61,92 @@ current (HEAD) version of the BATSRUS distribution.
 
 When \BATSRUS\ is used within the SWMF, it can be downloaded with
 \begin{verbatim}
-  cvs checkout SWMF_NEW
+  cvs checkout SWMF
 \end{verbatim}
 as part of the framework and \BATSRUS\ will reside in the
 \begin{verbatim}
   GM/BATSRUS
 \end{verbatim}
-subdirectory. A standalone version of the code can be downloaded
-with
+subdirectory. A standalone version of the code can be downloaded with
 \begin{verbatim}
-  cvs checkout BATSRUS share_bats util_bats
+  cvs checkout BATSRUS
 \end{verbatim}
-To download bug fixes or new features, the 
+and then the resulting BATSRUS directory can be renamed if desired, e.g.,
 \begin{verbatim}
-  cvs update
+  mv BATSRUS crash
 \end{verbatim}
-command can be used. See {\tt man cvs} for more information.
+The {\tt BATSRUS\_data} and {\tt CRASH\_data} repositories can also be 
+checked out if needed and not available through the {\tt csem1} 
+shared disk as
+\begin{verbatim}
+  cvs checkout BATSRUS_data
+  cvs checkout CRASH_data
+\end{verbatim}
+Note that these should be placed in the home directory.
 
-%^CFG IF CONFIGURE BEGIN
-\subsection{Configuration of the code}
+To download bug fixes or new features, execute the
+\begin{verbatim}
+  cvs update -d
+\end{verbatim}
+command in the appropriate directory. See {\tt man cvs} for more information.
 
-For production runs many features of the code can be configured out.
-This makes the compile time shorter and the executable smaller.
-To configure the code with the default options listed in the file
-\begin{verbatim}
-  Configure.options
-\end{verbatim}
-simply type
-\begin{verbatim}
-  Configure.pl
-  cd Build
-\end{verbatim}
-The new {\tt Build} directory contains the configured version of the code.
-You can compile and run the code in the Build directory just as if you were
-in the main directory. The only difference is that the configured out
-options cannot be used, of course. You can switch options on and off
-from the command line. Remember that if you change the options 
-you have to remove or rename the previous Build directory first:
-\begin{verbatim}
-  rm -rf Build
-  Configure.pl -on=PROJECTION,RAYTRACE -off=BORISCORR
-  cd Build
-\end{verbatim}
-The options can also be read from an option file
-\begin{verbatim}
-  Configure.pl -o=MyOptionFile
-\end{verbatim}
-If you are developing the code, you should edit the source code
-in the unconfigured distribution. You can still use a configured
-version to test it, of course. To update newly modified files only type
-\begin{verbatim}
-  Configure.pl -u
-\end{verbatim}
-Remember, however that by default {\tt Configure.pl} configures files 
-which are part of the CVS distribution only. Other files must be listed
-explicitly:
-\begin{verbatim}
-  Configure.pl src/newfile.f90
-  Configure.pl srcIONO/*.f90
-\end{verbatim}
-For more information type {\tt Configure.pl -h}.
+Note that the code should be placed to its final directory before installation. 
+The directory of the installed code should not be moved or renamed. If it is 
+necessary to move the directory, then the code has to be uninstalled first,
+the directory moved or renamed, and then the code can be installed again.
 
-Some of the usual configurations are provided as makefile targets 
-defined in the Makefile\_CONFIGURE file and can be used by typing
-for example
-\begin{verbatim}
-  make globhelio_src
-\end{verbatim}
-Type {\tt make help} for a complete list of possible targets.
-%^CFG END CONFIGURE
+%%^CFG IF CONFIGURE BEGIN
+%\subsection{Configuration of the code}
+%
+%For production runs many features of the code can be configured out.
+%This makes the compile time shorter and the executable smaller.
+%To configure the code with the default options listed in the file
+%\begin{verbatim}
+%  Configure.options
+%\end{verbatim}
+%simply type
+%\begin{verbatim}
+%  Configure.pl
+%  cd Build
+%\end{verbatim}
+%The new {\tt Build} directory contains the configured version of the code.
+%You can compile and run the code in the Build directory just as if you were
+%in the main directory. The only difference is that the configured out
+%options cannot be used, of course. You can switch options on and off
+%from the command line. Remember that if you change the options 
+%you have to remove or rename the previous Build directory first:
+%\begin{verbatim}
+%  rm -rf Build
+%  Configure.pl -on=PROJECTION,RAYTRACE -off=BORISCORR
+%  cd Build
+%\end{verbatim}
+%The options can also be read from an option file
+%\begin{verbatim}
+%  Configure.pl -o=MyOptionFile
+%\end{verbatim}
+%If you are developing the code, you should edit the source code
+%in the unconfigured distribution. You can still use a configured
+%version to test it, of course. To update newly modified files only type
+%\begin{verbatim}
+%  Configure.pl -u
+%\end{verbatim}
+%Remember, however that by default {\tt Configure.pl} configures files 
+%which are part of the CVS distribution only. Other files must be listed
+%explicitly:
+%\begin{verbatim}
+%  Configure.pl src/newfile.f90
+%  Configure.pl srcIONO/*.f90
+%\end{verbatim}
+%For more information type {\tt Configure.pl -h}.
+%
+%Some of the usual configurations are provided as makefile targets 
+%defined in the Makefile\_CONFIGURE file and can be used by typing
+%for example
+%\begin{verbatim}
+%  make globhelio_src
+%\end{verbatim}
+%Type {\tt make help} for a complete list of possible targets.
+%%^CFG END CONFIGURE
 
 \subsection{Installing the code}
 
@@ -126,53 +157,60 @@ simply include the files with the same name in the SWMF directory.
 The rest of this subsection describes the installation procedure
 for the stand alone code.
  
-In stand alone mode the first thing to do is
+The installation requires the selection of a specific Fortran compiler and
+MPI library. For many platforms used at CSEM,
+the script can figure out the default settings all by itself. 
+On these systems, the code can be installed simply by running the command
 \begin{verbatim}
-  make install
+  Config.pl -install
 \end{verbatim}
-This will replace the original Makefile.def file, 
-create a new Makefile.conf file, 
-create src/Makefile.RULES, touch src/Makefile.DEPEND, 
-copy src/user\_files.f90, install the code in util/ and share/ etc.
+in the main directory. This
+\begin{itemize}
+\item creates {\tt Makefile.def} with the correct 
+      absolute path to the base directory, 
+\item creates {\tt Makefile.conf} that contains the operating 
+      system and compiler specific part of the Makefile
+\item copies the appropriate MPI header file from 
+      {\tt share/include} into {\tt shhare/Library/src},
+\item creates the compiler specific {\tt Makefile.RULES} from
+      {\tt Makefile.RULES.all} in the various source directories,
+\item attempts to create a symbolic link {\tt data} to {\tt SWMF\_data/GM/BATSRUS/data}
+\item attempts to create a symbolic link {\tt dataCRASH} to {\tt CRASH\_data}
+\item executes {\tt make install} which does further
+      installation steps specific to \BATSRUS. 
+\end{itemize}
+If the platform/machine is not listed at the beginning of the
+\begin{verbatim}
+  share/Scripts/Config.pl
+\end{verbatim}
+script, or a non-default compiler or MPI library is desired,
+then the compiler must be specified explicitly with the 
+{\tt -compiler} flag, and the MPI header file with the {\tt -mpi} flag. 
+For example one can select the gfortran compiler with the openmpi library using
+\begin{verbatim}
+  Config.pl -install -compiler=gfortran -mpi=openmpi
+\end{verbatim}
+On a Linux system this will copy the
+\begin{verbatim}
+  share/build/Makefile.Linux.gfortran
+  share/include/mpif90_Linux_openmpi.h
+\end{verbatim}
+files into Makefile.conf and mpif90.h, respectively. See the share/build and share/include
+directories for other options.
 
-You can install the standalone \BATSRUS\ to behave as if it
-was the GM, IH or SC component. The appropriate mode can be
-selected with the STANDALONE variable, for example
-\begin{verbatim}
-  make install STANDALONE=ih
-\end{verbatim}
-The default component is GM in the stand alone mode.
-One can also mimick the behaviour of the pre 7.72 version of \BATSRUS\
-by using STANDALONE=old but this is not recommended, encouraged
-or even supported. The effect of selecting a certain STANDALONE
-mode is to copy one of the {\tt src/stand\_alone\_*.f90} files
-into the actually used {\tt src/stand\_alone.f90} file,
-and it also sets the STANDALONE variable in the modified Makefile.def.
-The original Makefile.def contains STANDALONE=gm, so this is the
-default mode. In SWMF the STANDALONE variable is set to 'NO'
-in the main Makefile.def.
-
-If the compiler and/or the MPI header file is not the default one
-for the given platform (e.g. not f95 on a Linux machine), 
-you must provide the extra information in the COMPILER and MPIVERSION 
-variables, e.g.:
-\begin{verbatim}
-  make install COMPILER=ifort MPIVERSION=Altix
-\end{verbatim}
 In case your platform and/or compiler is not supported yet, 
 you will have to create a
 \begin{verbatim}
-  share/build/Makefile.OsCompiler
+  share/build/Makefile.OS.COMPILER
 \end{verbatim}
-file where 'Os' is the name of the operating system returned
-by the Unix command {\tt uname}, while 'Compiler' is the name
-of the F90 compiler used. For every 'Os' there is a default
-compiler, for which 'Compiler' is an empty string.
+file where 'OS' is the name of the operating system returned
+by the Unix command {\tt uname}, while 'COMPILER' is the name
+of the F90 compiler used or something closely related to that.
 
 If the MPI header file needed for your platform is not 
-found in share/include, you will have to create an
+found in share/include, you will have to create a
 \begin{verbatim}
-  mpif90_OsMpiversion.h
+  share/include/mpif90_OS_MPIVERSION.h
 \end{verbatim}
 file. This file should be created from the mpif.h file used on your system
 with a slight modification in the definition of MPI\_REAL, for example
@@ -191,230 +229,492 @@ when iRealPrec is 0. The value of iRealPrec is provided at run time.
 This modification of the MPI header file allows the code to be compiled 
 and run with single and double precision reals as well.
 
-%^CFG IF TESTING BEGIN
-\subsection{Testing the code}
-
-The fastest way of testing the installed code is to run a test problem.
-In the stand alone code type
+To uninstall \BATSRUS\ type
 \begin{verbatim}
-  ./TestBatsrus.pl
+  Config.pl -uninstall
 \end{verbatim}
-while in the framework mode type
+If the uninstallation fails (this can happen if some makefiles are missing)
+do reinstallation with
 \begin{verbatim}
-  Scripts/TestSWMF
+  Config.pl -install
 \end{verbatim}
-in the main directory (which simplly calls GM/BATSRUS/TestBatsrus.pl
-with the executable name modifed to SWMF.exe).
-This perl script will compile the code, produce a run directory,
-it will run the code, and post process the output.
-
-A more complete test is to run the test suite. 
-In stand alone mode type
+and then try uninstalling the code again.
+When \BATSRUS\ is installed, its configuration can be checked with
 \begin{verbatim}
-  ./TestSuite.pl func
+  Config.pl
 \end{verbatim}
-while in the framework use
-\begin{verbatim}
-  Scripts/TestSWMF func
-\end{verbatim}
-which simply executes
-\begin{verbatim}
-  GM/BATSRUS/TestSuite.pl -x=SWMF.exe func 
-\end{verbatim}
-Note that the two tests involving the ionosphere 
-(the IE/Ridley\_serial component of the SWMF) will only 
-run in the framework and will stop with an error message
-in the stand alone code.
-%^CFG END TESTING
-
-\subsection{Changing the default settings}
-
-To change the precision or the compiler flags you should edit 
-\begin{verbatim}
-  emacs Makefile.conf
-\end{verbatim}
-Set the {\tt PRECISION} variable to decide
-if 4 or 8 byte real numbers should be used and you can set the compiler flags
-for selecting the optimization level. Remember that you have to type
-\begin{verbatim}
-  make clean
-\end{verbatim}
-before recompiling the code with a different precision or compiler flags!
-
-The grid size of BATSRUS can be inquired and set with the Config.pl perl 
-script, e.g.:
-\begin{verbatim}
-  Config.pl -g
-\end{verbatim}
-will show the current setting, and 
-\begin{verbatim}
-  Config.pl -g=4,4,4,2000,400
-\end{verbatim}
-will set a total of 2000 $4\times4\times4$ blocks and 400 implicit blocks
-per processor. Type
+with no arguments. 
+To get a complete description of the usage of the 
+{\tt Config.pl} script type
 \begin{verbatim}
   Config.pl -h
 \end{verbatim}
-to see the usage. The script edits the {\tt src/ModSize.f90} file
-and sets the number of the blocks {\tt nBLK=MaxBlock},
-the number of implicit blocks {\tt MaxImplBLK}             %^CFG IF IMPLICIT
-and the size of the blocks {\tt nI, nJ, nK}, i.e. the number of cells
-in a block.
-See the section on the block structure in the DESIGN document for details.
 
-The allocation of the largest arrays can be static or dynamic
-(in Fortran 90 the latter is called allocatable). The default
-configuration is static which provides slightly faster execution.
-If the code is running out of memory, dynamic allocation may help.
-Type
+\subsection{Creating the manuals}
+
+Many of the manuals can be created both in PDF and HTML formats using
 \begin{verbatim}
-  cd src
-  make DYNAMIC
+  make PDF
+  make HTML
 \end{verbatim}
-to have all the large variables to be allocated at run time.
-This is achieved by the share/Scripts/StaticToDynamic.pl perl
-script, which converts the static array declarations in the
-{\tt src/Mod*\_static.f90} files into
-allocatable declarations and creates the allocate and deallocate
-statements in the output files (withouth the {\tt \_static} in their
-names. You can also make some modules static and others dynamic, for example
+in the main directory. Note that Latex has to be installed. 
+The PDF format requires {\tt dvips} and {\tt ps2pdf}, while the HTML manual requires the
+{\tt latex2html} utility. The CRASH specific manuals can be created in PDF format only using
 \begin{verbatim}
-  cd src
-  make DYNAMIC1 NAME=CT
-  make STATIC1 NAME=Advance
+  cd util/CRASH/doc/Tex
+  make PDF
 \end{verbatim}
+The manuals can be accessed by opening 
+\begin{verbatim}
+  Doc/index.html
+\end{verbatim}
+and
+\begin{verbatim}
+  util/CRASH/doc/index.html
+\end{verbatim}
+with a web browser. In particular, the PDF version of this user manual will be in
+\begin{verbatim}
+  Doc/USERMANUAL.pdf
+\end{verbatim}
+The input parameters of \BATSRUS/CRASH are described in the
+\begin{verbatim}
+  PARAM.XML
+\end{verbatim}
+in the main directory. This is the best source of information when constructing the input
+parameter file. This file is used to generate the ``Input Parameters'' section of this manual.
+
+%^CFG IF TESTING BEGIN
+\subsection{Testing the code}
+
+The fastest way of testing the installed code is to run test problems.
+The full \BATSRUS\ test suite can be run with
+\begin{verbatim}
+  make test
+\end{verbatim}
+on a machine that allows both compilation and parallel execution. 
+The number of processors can be set as
+\begin{verbatim}
+  make test MPIRUN='mpirun -np 4'
+\end{verbatim}
+These tests are typically run on 1 to 4 processors, the default is 2.
+If only serial execution is available, the tests can be run serially with
+\begin{verbatim}
+  make test MPIRUN=
+\end{verbatim}
+Running the complete test suite can take anywhere from one to several
+hours depending on the speed and number of processors, as well as on
+the speed of the Fortran compiler. The tests are all run in the 
+{\tt run\_test} directory, one after the other.
+
+A test is successful if the results agree with the reference solution
+to the required accuracy. This is checked by a script, typicall
+share/Scripts/DiffNum.pl, that compares the output with the reference
+solution.  The test passes if the resulting difference file is empty.
+See Makefile.test for details.
+
+The full set of available tests is shown by 
+\begin{verbatim}
+  make test_help
+\end{verbatim}
+A specific test can be run by typing, for example,
+\begin{verbatim}
+  make test_shocktube
+\end{verbatim}
+This will do a simple shock tube test that takes a few minutes to complete. 
+Like most other tests, this one consists of 4 stages:
+\begin{enumerate}
+\item make test\_shocktube\_compile: configuration and compilation
+\item make test\_shocktube\_rundir:  create run directory with input files
+\item make test\_shocktube\_run:     run the test
+\item make test\_shocktube\_check:   check the results
+\end{enumerate}
+These stages can be done separately. For example the code can be configured 
+and compiled and the run directory can be created on the head node of 
+a super computer, and then the run phase can be done on a compute node, 
+and the results can be checked on the head node again.
+The reference solution of the shock tube test is stored in 
+\begin{verbatim}
+  Param/SHOCKTUBE/TestOutput
+\end{verbatim}
+and the difference file will be
+\begin{verbatim}
+  test_shocktube.diff
+\end{verbatim}
+
+%^CFG END TESTING
+
+\subsection{Configuring \BATSRUS}
+
+The first step is selecting the equation and user modules. For example 
+\begin{verbatim}
+  Config.pl -e=Hd -u=Waves
+\end{verbatim}
+will select the hydrodynamics equation module and the 'waves' user module
+that can perturb variables with various waves, which is useful for tests.
+This is essentially the same as executing
+\begin{verbatim}
+  cp srcEquation/ModEquationHd.f90 src/ModEquation.f90
+  cp srcUser/ModUserWaves.f90 src/ModUser.f90
+\end{verbatim}
+but using Config.pl is simpler and safer, because the previous user module
+is saved into {\tt src/ModUser.f90.safe} in case it was replaced accidentally.
+The available equation and user modules can be listed with
+\begin{verbatim}
+  Config.pl -e -u
+\end{verbatim}
+New equation and user modules can be easily added into the srcEquation and srcUser
+directories, respectively.
+
+For some equation modules the number of materials and/or wave groups can be set, 
+for example, 
+\begin{verbatim}
+  Config.pl -e=Crash -nMaterial=3 -nWave=30
+\end{verbatim}
+will select the CRASH user module and set the number of materials to 3 and the 
+number of radiation energy groups to 30.
+
+The adaptive grid parameters can be set, for example, as
+\begin{verbatim}
+  Config.pl -g=4,4,4,2000,400
+\end{verbatim}
+This will create 3D grid blocks consisting of $4\times 4\times 4$ cells.
+The maximum number of grid blocks per processor will be 2000 and at most 
+400 of these can be used by the implicit time stepping. If the implicit
+time stepping is not required for the run, it is best to set the number
+of implicit blocks to 1. 
+
+The grid can also be 2 or even 1 dimensional. For 2D grids the number
+of cells in the third dimension is 1, for example,
+\begin{verbatim}
+  Config.pl -g=10,10,1,1000,1
+\end{verbatim}
+will have at most 1000 grid blocks per processor with $10\times 10$ grid cells
+in 2 spatial dimensions. For 1D grids both the second and third numbers are 1, 
+e.g., 
+\begin{verbatim}
+  Config.pl -g=100,1,1,500,500
+\end{verbatim}
+The current grid settings can be inquired with
+\begin{verbatim}
+  Config.pl -g
+\end{verbatim}
+which shows it in the same compact format. A more verbose and complete
+configuration information can be obtained with
+\begin{verbatim}
+  Config.pl -s
+\end{verbatim}
+
+\subsection{Compilation options}
+
+Check the SWMF test page for the currently used/recommended 
+compiler versions on the various machines. On many systems the
+{\tt module} command can be used to see the currently loaded
+compilers ({\tt module list}), the available compiler versions
+({\tt module avail}) and to unload old and load new versions
+({\tt module unload SOMETHING} and {\tt module load SOMETHINGELSE}).
+
+The optimization level can be set, for example, with
+\begin{verbatim}
+  Config.pl -O2
+\end{verbatim}
+For debugging it is best to use
+\begin{verbatim}
+  Config.pl -O0 -debug
+\end{verbatim}
+The NAG Fortran compiler is especially powerful for debugging, 
+as it can check for uninitialized real variables and it provides 
+line numbers for any failure of the code.
+In some cases the MPI library does not allow the error messages to show up
+on the terminal. If the problem can be reproduced with a serial run, 
+it is best to set
+\begin{verbatim}
+  Config.pl -O0 -debug -nompi
+\end{verbatim}
+The {\tt -nompi} flag will compile the util/NOMPI library and 
+modifies {\tt Makefile.conf} so that the code is linked with
+the NOMPI library instead of the real MPI library. 
+The code compiled with the NOMPI library can only be
+run in serial mode, however, debugging can become much easier.
+
+To undo these settings, for production runs, use 
+\begin{verbatim}
+  make clean
+  Config.pl -O4 -nodebug -mpi
+\end{verbatim}
+Note that {\tt make clean} is necessary when the optimization level 
+or debugging flags are changed. If only the NOMPI is replaced with 
+the usual MPI library (or the other way around), it is sufficient to
+delete the executable, e.g. src/BATSRUS.exe, and simply relink the code
+using {\tt make}.
+
+The code can be compiled with single precision using {\tt Config.pl -single},
+but this is neither recommended nor supported. On 64-bit platform the default
+double precision executes almost as fast as the single precision, and the 
+enhanced arithmetic accuracy is required by many algorithms.  
+The single precision option wiil likely be removed in the future.
+
+Static allocation of large arrays can be requested with {\tt Config.pl -static}, 
+but the default dynamic allocation is the recommended one, as it saves memory,
+and there is no significant difference in performance on current machines.
 
 \subsection{Compilation}
 
-{\bf IMPORTANT NOTE:
-On the Altix machine at NASA Ames (columbia),
-the current (08/12/2004) 
-default version of the Intel Fortran compiler 
-cannot be used for \BATSRUS. 
-You should load the 8.0.070 version with the command
-\begin{verbatim}
-  module load intel-comp.8.0.070
-\end{verbatim}
-You may wish to insert this line into the .cshrc file
-so it executes at login time. 
-Selecting the correct compiler version is 
-necessary both to compile and to run the code.
-Therefore the above line is needed in the job scripts
-as well.}
-
-To compile the main code type
+Once the compilation options are set, compile \BATSRUS\ with
 \begin{verbatim}
   make
 \end{verbatim}
 in the main directory. This will produce the executable 
-{\tt src/BATSRUS.exe}. For post-processing IDL and/or 
-Tecplot spherical output data 
-you need to compile the corresponding executables {\tt src/PostIDL.exe}
-and/or {\tt src/PostSPH.exe} using
+{\tt src/BATSRUS.exe}. The CRASH code, which is \BATSRUS\
+compiled together with the util/CRASH library, can be created with
+\begin{verbatim}
+  make CRASH
+\end{verbatim}
+and the executable will be {\tt src/CRASH.exe}. 
+
+For post-processing IDL and/or 
+Tecplot spherical output data, 
+the executables {\tt src/PostIDL.exe} and {\tt src/PostSPH.exe} 
+have to be compiled with 
 \begin{verbatim}
   make PIDL
   make PSPH
 \end{verbatim}
+respectively.
+The multiple snapshots included in a single IDL output file can be 
+manipulated with the {\tt src/SNAPSHOT.exe} code, 
+which can be compiled with
+\begin{verbatim}
+  make SNAPSHOT
+\end{verbatim}
 
-\subsection{Running the code}
+\subsection{Creating a run directory}
 
-The next step is to create a run directory with appropriate links
+The next step is to create a run directory with
 \begin{verbatim}
   make rundir
 \end{verbatim}
-You can specify which job scripts should be
-included with the MACHINE environment variable, e.g.
+This will create a directory named {\tt run/}. This can be renamed
+or even moved to another disk (e.g. the scratch disk of a super
+computer), if necessary. The name of the run directory can also
+be specified like this 
 \begin{verbatim}
-  make rundir MACHINE=grendel
+  make rundir RUNDIR=/scratch1/MYSELF/run15
 \end{verbatim}
-will copy the job scripts containing the name 'grendel'.
-The default MACHINE is set by the Unix hostname command.
-Before running the code you need to create/edit the input
-parameter file
+Note that an absolute path is used. 
+In some cases it is useful to create a run directory that mimics
+the use of \BATSRUS\ as some specific component of the SWMF. 
+For example, for the solar corona component use
 \begin{verbatim}
-  emacs run/PARAM.in
+  make rundir COMPONENT=SC
 \end{verbatim}
-The files in the Param directory can be used as examples or included
-with the {\tt \#INCLUDE} command.
+This will create a {\tt run/SC} subdirectory instead of the usual
+{\tt run/GM} subdirectory.
 
-Now you are ready to run the code. For an interactive run
+The freshly created run directory contains several files, symbolic links, 
+and directories. The most important one is a link to the executable BATSRUS.exe. 
+If the run directory is created with
+\begin{verbatim}
+  make rundir DEFAULT_EXE=CRASH.exe
+\end{verbatim}
+then it will contain a link to the CRASH.exe code. There are also links to
+the PostIDL.exe and PostSPH.exe codes used for post-processing the output.
+It is often a good idea to remove the links and copy the executables into
+the run directory. This allows recompiling the code without having a possibly
+unwanted effect on the run directory, or a submitted run that is still in 
+the job queue.
+
+The IO2 subdirectory will contain the output files, while the restartIN and restartOUT
+subdirectories are used for input and output restart files, respectively.
+The PostProc.pl, pIDL, pTEC, and Restart.pl scripts are copied into the 
+run directory to allow processing the output files and restarting the code.
+The links to the PostIDL.exe and PostSPH.exe codes are also for postprocessing.
+
+If the machine name (disregarding numbers at the end of the name) matches 
+one of the job files in 
+\begin{verbatim}
+  share/JobScripts
+\end{verbatim}
+then the job file will be copied
+into the run directory. For example, on {\tt pfe8} (one of the head nodes 
+of Pleiades), the {\tt job.pfe} file will be copied. This file serves as a
+template only. It has to be edited and modified before submitting a job.
+
+\subsection{Creating input files}
+
+The run directory also contains a "default" PARAM.in file, but this should always
+be replaced with another file, in practice.
+The link to the BATSRUS/Param directory is provided, so that the files in
+this directory can be copied into PARAM.in as a starting point. 
+Some of the files contain small segments of the input file, e.g. the grid
+description for some application. These segments can also be included
+into PARAM.in with the {\tt \#INCLUDE} command.
+
+It is important to check the correctness of the input file, especially before submitting
+large jobs on a super computer. In the main \BATSRUS\ directory type
+\begin{verbatim}
+  CheckParam.pl
+\end{verbatim}
+which will check {\tt run/PARAM.in}. The number of processors to be used and
+the name of the input parameter file can also be specified, for example
+\begin{verbatim}
+  CheckParam.pl -n=256 run_large/PARAM.in
+\end{verbatim}
+
+Another way to construct and check the PARAM.in file is to run the parameter editor
+(this can be done best on your local desktop or laptop machine):
+\begin{verbatim}
+  share/Scripts/ParamEditor.pl
+\end{verbatim}
+This will open {\tt run/PARAM.in} in a web browser with a user interface.
+The name of the parameter file can also be specified, e.g., 
+\begin{verbatim}
+  share/Scripts/ParamEditor.pl run_large/PARAM.in
+\end{verbatim}
+The parameter editor provides an integrated user interface with manual, 
+editing, and checking options.
+
+The PARAM.in file is always required for a run. Several applications read additional files,
+for example for initialization, boundary condition, satellite trajectories to extract data, 
+and in case of a restarted run, restart files. These all have to be in place before
+the code is run. The parameter checking also checks for the existence of many of these
+input files.
+
+\subsection{Running the code}
+
+Now you are ready to run the code. For an interactive run 
 on 8 processors type
 \begin{verbatim}
-  make mpirun
-\end{verbatim}
-which is equivalent with
-\begin{verbatim}
-  make
   cd run
   mpirun -np 8 BATSRUS.exe
 \end{verbatim}
-To run on a different number of processors either change the number
-after the {\tt -np flag} or use
+It is often a good idea to save the output and error messages into a file, especially if the code
+is executed in the background:
 \begin{verbatim}
-  make mpirun NP=2
+  mpirun -np 8 BATSRUS.exe >& runlog &
 \end{verbatim}
-On some systems the command to run MPI jobs is called {\tt mprun}
-instead of {\tt mpirun}. Then use, for example
-\begin{verbatim}
-  make mprun NP=16
-\end{verbatim}
-On some platforms it is allowed to execute BATSRUS.exe on a single node 
-without the {\tt mpirun} or {\tt mprun} commands:
-\begin{verbatim}
-  make nompirun
-\end{verbatim}
+Using {\tt runlog} as the filename allows the {\tt PostProc.pl} script
+to find it and collect it together with other output files.
+
 On many machines you have to submit the run to a batch queue.
 First edit the appropriate job script file and then submit the job,
 for example
 \begin{verbatim}
   cd run
-  emacs job.columbia 
-  qsub job.columbia
+  emacs job.pfe
+  qsub job.pfe
 \end{verbatim}
-The format the job scripts and submission commands depend on
+The content of the job scripts and submission commands depend on
 the queuing system. 
+
+\subsection{Restarting the run}
+
+There are several reasons for restarting a run
+\begin{itemize}
+\item a run may be too long for a single job submission,
+\item a run may fail for some reason, and it can be restarted with different parameters,
+\item a parameter study is done with varied parameters starting from the same state,
+\item debugging some problem that happens a few steps after the restart.
+\end{itemize}
+The {\tt Restart.pl} script makes it quite easy to restart a run. Assuming that there are
+restart files saved, simply type
+\begin{verbatim}
+  Restart.pl
+\end{verbatim}
+in the run directory. This will move the files from the {\tt restartOUT}
+directory into a restart directory tree, and the files in the restart
+directory tree will be linked to the {\tt restartIN} directory.
+The default name of the restart directory tree is based on the simulation time
+for time accurate runs, or the number of iterations for steady state runs. 
+For example, if the restart files 
+were saved at 6 hours of simulation time, the restart directory will be named
+\begin{verbatim}
+  RESTART_t006.00h
+\end{verbatim}
+The name of the restart tree can also be specified, e.g., 
+\begin{verbatim}
+  Restart.pl RESTART_debug
+\end{verbatim}
+It is also possible to select an already existing tree, e.g. 
+something that was saved by PostProc.pl (see next subsection):
+\begin{verbatim}
+  Restart.pl -i NewResults/RESTART
+\end{verbatim}
+By default the restart files overwrite each other, however, 
+the {\tt Restart.pl} script can create multiple 
+trees while the code is running, by simply checking if there 
+are new restart files in restartOUT and moving those into 
+a tree. For example
+\begin{verbatim}
+  Restart.pl -r=600 -t=h &
+\end{verbatim}
+will check for new restart files every 600 seconds (wall clock time), 
+and the restart trees will be named using hours as time units.
+To read about more options, type
+\begin{verbatim}
+  Restart.pl -h
+\end{verbatim}
 
 \subsection{Postprocessing}
 
-After the code has successfully run, the output files 
-found in {\tt run/IO2} need some post processing before 
-they can be visualized. 
+After the code has successfully run (possibly with multiple restarts) 
+the output files found in {\tt run/IO2} need some post processing before 
+they can be visualized. The most convenient way to do this is to run
+\begin{verbatim}
+  PostProc.pl
+\end{verbatim}
+in the run directory. This will process both IDL and Tecplot output files.
+For long runs it is a good idea to periodically post process the output, e.g.,
+\begin{verbatim}
+  PostProc.pl -r=600 >& PostProc.log &
+\end{verbatim}
+will post process the output every 600 seconds, and the various
+output (and possibly error) messages will be collected into 
+the {\tt PostProc.log} file. 
 
-In stand alone mode the raw IDL plot files {\tt run/IO2/*.idl}
-can be processed with
+When the run is finished, the IDL output files can be merged into 
+a single ``movie'' file with the {\tt -M} switch, 
+while the logfiles and satellite output files from multiple restarts 
+can be concatenated using the {\tt -cat} swithc:
 \begin{verbatim}
-  make pIDL
+  PostProc.pl -M -cat
 \end{verbatim}
-which is equivalent with
+When the run is complete, it is a very good idea to create an output directory tree
+that contains the {\tt PARAM.in} file, the {\tt runlog} file, the plot files as well
+as restart files together. This can be done by providing the name of the directory
+tree as an argument:
 \begin{verbatim}
-  cd run
-  ./pIDL
+  PostProc.pl -M -cat RESULTS/latest
 \end{verbatim}
-In the framework use
+When there are a huge number of output files to process, 
+the post processing can become slow. The post processing
+of the IDL files can be done in parallel on multicore
+machines using the {\tt -n} switch
 \begin{verbatim}
-  cd run/GM
-  ./pIDL
+  PostProc.pl -n=4
 \end{verbatim}
-or another appropriate subdirectory (run/SC or run/IH).
-
+This can also be combined with the {\tt -r} switch for continuous 
+post-processing when the serial post processing cannot keep up with
+the amount of data produced by the running job. The complete set
+of options can be obtained with
+\begin{verbatim}
+  PostProc.pl -h
+\end{verbatim}
+There are several lower level scripts that can be used directly if desired. 
+For example the IDL output files can be processed with
+\begin{verbatim}
+  pIDL
+\end{verbatim}
 This command will produce the new {\tt run/IO2/*.out}
 files, and delete the {\tt run/IO2/*.idl} files
 and the corresponding header files {\tt run/IO2/*.h}.
 In case you want to keep the raw data, e.g. to be safe, type
 \begin{verbatim}
-  pIDL IO2/ KEEP
+  pIDL -k
 \end{verbatim}
 For complete usage information type {\tt pIDL -h}.
 
-The raw Tecplot files {\tt IO2/*.dat} can be processed
-into the {\tt IO2/*.dat} or {\tt IO2/*.plt} files
-with the commands
-\begin{verbatim}
-  pTEC p r
-\end{verbatim}
-where 'p' means the file will be processed with preplot for ready input
-in Tecplot, and 'r' refers to the removal of the raw data and header
-files.  For complete usage information type {\tt pTEC -h}.
+The Tecplot files are processed with the {\tt pTEC} script.
+See {\tt pTEC -h} for options.
 
 Visualization of the resulting output files with IDL and TecPlot
 will be described in detail in sections \ref{section:idl_visualization}
@@ -422,25 +722,22 @@ and \ref{section:tecplot_visualization}, respectively.
 
 \subsection{Recompilation and clean up}
 
-If you change some source files, e.g. the number of blocks
-in {\tt src/ModSize.f90} the code can be simply recompiled
-with the {\tt make} command. However, if the compiler flags or the
-precision are changed in {\tt src/Makefile}, you need to clean the
+If you change some source files, e.g. the user module {\tt src/ModUser.f90},
+the code can be simply recompiled with the {\tt make} command. 
+However, if the compiler flags or the precision are changed, you need to clean the
 object files with
 \begin{verbatim}
   make clean
 \end{verbatim}
-before recompilation. This will remove all the object files.
+before recompilation. This will remove all the object files and forces recompilation.
 
 To delete all files created during installation and compilation, use
 \begin{verbatim}
-  make distclean
+  Config.pl -uninstall
 \end{verbatim}
 In addition to the object files and the MPI header file, 
 this command will remove the executables {\tt src/*.exe}, 
-the libraries {\tt src*/*.a}, the source files
-{\tt src/ModSize.f90} and {\tt src/user\_routines.f90}, 
-and the Makefiles {\tt src/Makefile.DEPEND} and {\tt src/Makefile.RULES}.
+the libraries {\tt src*/*.a} and other temporary files.
 
 For a complete list of possible make targets type
 \begin{verbatim}
