@@ -1,6 +1,9 @@
 #ECHO
 T			DoEcho
 
+#BATL
+T
+
 #PROGRESS
 10                      DnProgressShort
 100                     DnProgressLong

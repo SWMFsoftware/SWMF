@@ -17,7 +17,7 @@ initial                 NameArea
 2                       nLevel
 all                     NameArea
 
-#GRIDLEVEL
+GRIDLEVEL
 3                       nLevel
 box                     NameArea
 -20                     xMinBox
