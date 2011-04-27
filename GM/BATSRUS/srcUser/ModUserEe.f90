@@ -268,7 +268,7 @@ contains
       rhoNo = InitialDensitySi*Si2No_V(UnitRho_)
 
       ! Set the initial condition for a uniform atmosphere
-      do i=1, nI; do j=1, nJ; do k=1, nK
+      do k=1,nK; do j=1,nJ; do i=1,nI
          state_vgb(rhoUx_ ,i,j,k,GlobalBLK) = 0.
          State_VGB(rhoUy_ ,i,j,k,GlobalBLK) = 0.
          State_VGB(rhoUz_ ,i,j,k,GlobalBLK) = 0.
@@ -379,7 +379,7 @@ contains
           ! Add random perturbation to energy and pressure values of 
           ! cells below the photosphere height                  
           if(UseEnergyPert.and.(z_BLK(4,4,k,iBlock) < z_photo ))then
-             do i=1, nI; do j=1,nJ
+             do j=1, nJ; do i=1,nI
                 call random_number(RandomChange)
                 RandomChange = (RandomChange-0.5)*2
                 if(iTableEOS > 0)then
@@ -400,7 +400,7 @@ contains
           ! Set negative pressure to 1.e-10
           !/
           if(UseRope)then
-             do i=1,nI ; do j = 1, nJ
+             do j=1,nJ ; do i = 1, nI
                 rsq = (y_BLK(i,j,k,iBlock) - x2c_rope)**2 + &
                      (z_BLK(i,j,k,iBlock) - x3c_rope)**2
                 if(rsq < rasq**1.5e1)then
@@ -710,7 +710,7 @@ contains
          NameTecVar  = 'T'
          NameTecUnit = '[K]'
          NameIdlUnit = 'K'
-         do i = 0, nI+1; do j = 0, nJ+1; do k = 0, nK+1
+         do k = 0, nK+1; do j = 0, nJ+1; do i =0, nI+1
             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                  TeOut = TeSi)
             PlotVar_G(i,j,k) = TeSi
@@ -719,7 +719,7 @@ contains
          NameTecVar  = 'gamma'
          NameTecUnit = ''
          NameIdlUnit = ''
-         do i=-1,nI+2; do j=-1,nJ+2; do k=-1,nK+2
+         do k = 0, nK+1; do j = 0, nJ+1; do i =0, nI+1
             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                  GammaOut=PlotVar_G(i,j,k))
          end do; end do; end do
@@ -727,7 +727,7 @@ contains
          NameTecVar  = 'entropy'
          NameTecUnit = ''
          NameIdlUnit = ''
-         do i=-1,nI+2; do j=-1,nJ+2; do k=-1,nK+2
+         do k = 0, nK+1; do j = 0, nJ+1; do i =0, nI+1
             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                  EntropyOut=PlotVar_G(i,j,k))
          end do; end do; end do
@@ -736,7 +736,7 @@ contains
          call stop_mpi(Name//': unknown plot variables = '//NameVar)
       end select
     end subroutine user_set_plot_var
-
+    
     !========================================================================
 
     subroutine user_material_properties(State_V, i,j,k,iBlock,iDir, &
