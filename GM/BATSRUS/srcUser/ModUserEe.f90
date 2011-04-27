@@ -46,15 +46,19 @@ module ModUser
   !/
   logical :: UseVerticalDamping = .false.
   logical :: UseThinRadiation = .false.
+  logical :: UseCoronalField = .false.
   logical :: UseUniformInitialState = .false.
+  logical :: UseUniformT = .false.
+  logical :: UseEnergyPert = .false.
   real    :: InitialDensity, InitialTemperature, InitialBx, &
        InitialBy, InitialBz
   real    :: RhoThinCutoff, NumberDensFloor, TimeVerticalDamping
   real    :: z_photo, TemperatureGradient
-
+  real    :: InitialEntropy
+  real    :: BotDensity, BotPressure, BotExtraE
   !rstari = 0.594354e-3/8.31, mu = 0.594354 set in init_session
-  real ::  mu, rstari
-
+  real,parameter ::  mu = 0.594354, rstari = 0.594354e-3/8.31
+  integer :: nr, nt
   ! Flux Rope Variables
   ! x2c_rope: y coord of rope axis
   ! x3c_rope: z coord of rope axis
@@ -67,14 +71,15 @@ module ModUser
   logical :: UseRope = .false.
   real    :: x2c_rope, x3c_rope,ra_rope,qfac_rope,lamb_rope,b0_rope, &
        buoyancy_rope
+  real, public :: MassFluxNo, Area
   !\
-  ! Indexes of lookup EOS tables, CHIANTI table, initial relaxed reference state
+  ! Indexes of EOS tables, CHIANTI table, initial relaxed reference state
   !/
-  integer :: iTablePPerE = -1, iTableCvTe = -1, iTablePERhoT = -1, &
-       iTableChianti = -1, iTableInitialState = -1, iTableOpacity
-  ! Temperature at cell center
-  real, allocatable:: Temperature_GB(:,:,:,:)
-  
+  integer :: iTableEOS = -1, &
+       iTableChianti = -1, iTableInitialState = -1, iTableOpacity = -1, &
+       iTableGamma = -1
+  real, allocatable:: srcthin_GB(:,:,:,:)
+
 contains
   
   !=========================================================================
@@ -101,12 +106,15 @@ contains
           call read_var('z_photo',z_photo)
           call read_var('UnsignedFluxHeight',UnsignedFluxHeight)
           call read_Var('UseThinRadiation', UseThinRadiation)
+          call read_var('UseCoronalField',UseCoronalField)
           call read_var('RhoThinCutoff',RhoThinCutoff)
           call read_Var('UseVerticalDamping',UseVerticalDamping)
           call read_var('TimeVerticalDamping', TimeVerticalDamping)
           call read_var('TemperatureGradient',TemperatureGradient)
           call read_var('DtUptateFlux',DtUpdateFlux)
           call read_var('UseUniformInitalState', UseUniformInitialState)
+          call read_var('UseUniformT', UseUniformT)
+          call read_var('UseEnergyPert', UseEnergyPert)
           call read_var('InitialDensity', InitialDensity)
           call read_var('InitialTemperature',InitialTemperature)
           call read_var('InitialBx',InitialBx)
@@ -142,32 +150,47 @@ contains
   !==========================================================================
   subroutine user_init_session
     use ModProcMH,      ONLY: iProc
-    use ModLookupTable, ONLY: i_lookup_table
-    use ModPhysics,     ONLY: AverageIonCharge
+    use ModLookupTable, ONLY: i_lookup_table, TableType, Table_I, &
+         interpolate_lookup_table
+    use ModPhysics,     ONLY: No2Si_V, UnitX_, Si2No_V, UnitRho_, UnitP_, &
+         UnitEnergyDens_
     use ModMultiFluid,  ONLY: MassIon_I
     use ModConst,       ONLY: cProtonMass, cBoltzmann
+    use ModGeometry,    ONLY: z1
     implicit none
-    
+
+    type(TableType), pointer:: Ptr
+    real :: InitialState(1:4)
+
     character (len=*), parameter :: NameSub = 'user_init_session'
     !------------------------------------------------------------------------
-    mu    =  MassIon_I(1)/(1 + AverageIonCharge)
-    rstari = mu/(cBoltzmann/cProtonMass)  
+    !Gbody = -1 
+    !mu    =  MassIon_I(1)/(1 + AverageIonCharge)
+    !rstari = mu/(cBoltzmann/cProtonMass)  
 
     ! initialize the indexes for lookup tables
     iTableInitialState = i_lookup_table('RhoUzExtraEP(Z,Const)')
-    iTablePPerE        = i_lookup_table('pPerE(rho,e/rho)')
-    iTableCvTe         = i_lookup_table('CvTe(rho,p/rho)')
-    iTablePERhoT       = i_lookup_table('pe(rho,T)')
+    iTableEOS          = i_lookup_table('peent(T,rho)')
     iTableChianti      = i_lookup_table('prl(T,Const)')
-    iTableOpacity      = i_lookup_table('Opacity(rho,T)')
+    iTableGamma        = i_lookup_table('Gamma(T,rho)')
+    Ptr => Table_I(iTableEOS)
+    nt = Ptr%nIndex_I(1)
+    nr = Ptr%nIndex_I(2)
+    
     if(iProc==0) write(*,*) NameSub, &
-         'iTableInitialState, PPerE, CvTe, PressureEn , Chianti, opacity = ', &
-         iTableInitialState, iTablePPerE, iTableCvTe, iTablePERhoT, &
-         iTableChianti, iTableOpacity
+         'iTableInitialState, EOS , Chianti, gamma = ', &
+         iTableInitialState, iTableEOS, iTableChianti, iTableGamma
 
-    if(.not.allocated(Temperature_GB)) &
-         allocate(Temperature_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    call interpolate_lookup_table(iTableInitialState, &
+         z1*No2Si_V(UnitX_), 2.5, InitialState, &
+         DoExtrapolate = .false.)
+    BotDensity  = InitialState(1)*Si2No_V(UnitRho_)
+    BotExtraE   = InitialState(3)*Si2No_V(UnitEnergyDens_)
+    BotPressure = InitialState(4)*Si2No_V(UnitP_)
 
+    if(.not.allocated(srcthin_GB)) &
+         allocate(srcthin_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    
   end subroutine user_init_session
   !==========================================================================
   subroutine user_set_ICs
@@ -176,7 +199,7 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModVarIndexes
     implicit none
-
+    
     logical :: oktest, oktest_me
     !------------------------------------------------------------------------
     
@@ -216,18 +239,25 @@ contains
     subroutine set_uniform_ICs
       use ModLookupTable, ONLY: interpolate_lookup_table
       use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitP_, UnitN_, inv_gm1, &
-           UnitEnergyDens_, UnitTemperature_, cRadiationNo
+           UnitEnergyDens_, UnitTemperature_, cRadiationNo,gm1,gamma0, &
+           UnitX_, No2Si_V, UnitU_
+      use ModConst,       ONLY: cProtonMass, cBoltzmann
+      use ModGeometry,    ONLY: z_BLK
       implicit none
       
-      real    :: pNo, Value_V(1:2), ExtraEintNo, InitialDensitySi
+      real    :: pNo, Value_V(1:3), ExtraEintNo, InitialDensitySi, &
+           pSi, enSi, rhoNo
+      real :: g1, inv_g1, inv_g1m1, T0, z0
+      !real  :: inv_g1 = 1.0/g1, inv_g1m1 = 1.0/(g1-1.0)
+
       integer :: i,j,k
       !---------------------------------------------------------------------
       ! calculate the Extra Internal Energy and Pressure (SI)
       ! from given initial conditions: InitialDensity, InitialTemperature(CGS)
       InitialDensitySi = InitialDensity*1e3
-      if(iTablePERhoT>0)then
-         call interpolate_lookup_table(iTablePERhoT, InitialDensitySi, &
-              InitialTemperature, Value_V, DoExtrapolate = .false.)
+      if(iTableEOS>0)then
+         call interpolate_lookup_table(iTableEOS, InitialTemperature, &
+              InitialDensitySi, Value_V, DoExtrapolate = .false.)
          pNo         = Value_V(1)*Si2No_V(UnitP_)
          ExtraEintNo = (Value_V(2)-Value_V(1)*inv_gm1)*Si2No_V(UnitEnergyDens_)
       else
@@ -235,45 +265,64 @@ contains
               *Si2No_V(UnitP_)
          ExtraEintNo = 0.
       end if
+      rhoNo = InitialDensitySi*Si2No_V(UnitRho_)
 
       ! Set the initial condition for a uniform atmosphere
       do i=1, nI; do j=1, nJ; do k=1, nK
-         State_VGB(rhoUx_ ,i,j,k,GlobalBLK) = 0.
+         state_vgb(rhoUx_ ,i,j,k,GlobalBLK) = 0.
          State_VGB(rhoUy_ ,i,j,k,GlobalBLK) = 0.
          State_VGB(rhoUz_ ,i,j,k,GlobalBLK) = 0.
          State_VGB(Bx_    ,i,j,k,GlobalBLK) = 0.
          State_VGB(By_    ,i,j,k,GlobalBLK) = 0.
          State_VGB(Bz_    ,i,j,k,GlobalBLK) = 0.
-         State_VGB(rho_   ,i,j,k,GlobalBLK) = &
-              InitialDensitySi*Si2No_V(UnitRho_)
-         State_VGB(Erad_  ,i,j,k,GlobalBLK) = &
-              cRadiationNo*(InitialTemperature*Si2No_V(UnitTemperature_))**4
-         State_VGB(P_     ,i,j,k,GlobalBlk) = pNo
-         State_VGB(ExtraEInt_,i,j,k,GlobalBlk) = &
-              ExtraEintNo
-         Temperature_GB(i,j,k,GlobalBLK)       = InitialTemperature
+         State_VGB(rho_   ,i,j,k,GlobalBLK) = rhoNo              
+         State_VGB(Erad_  ,i,j,k,GlobalBLK) = 0.
+         !cRadiationNo*(InitialTemperature*Si2No_V(UnitTemperature_))**4
+         if(UseUniformT)then
+            State_VGB(P_     ,i,j,k,GlobalBlk) = pNo
+            State_VGB(ExtraEInt_,i,j,k,GlobalBlk) = &
+                 ExtraEintNo
+         else
+            if(iTableEOS < -2)then
+               g1       = 1.7
+               inv_g1   = 1.0/g1
+               inv_g1m1 = 1.0/(g1-1.0)
+               z0 = -20.0
+               State_VGB(rho_,i,j,k,GlobalBLK) = rhoNo
+               State_VGB(rho_,i,j,k,GlobalBLK) = rhoNo*(1 - &
+                    (1-inv_g1)*2.73e2*1.67e-27/(1.38e-23*InitialTemperature)* &
+                    (min(z_BLK(i,j,k,GlobalBLK), z0) - z0)&
+                    *No2Si_V(UnitX_))**inv_g1m1
+               State_VGB(p_,i,j,k,GlobalBLK) = pNo*(1 - &
+                    (1-inv_g1)*2.73e2*1.67e-27/(1.38e-23*InitialTemperature)* &
+                    (min(z_BLK(i,j,k,GlobalBLK), z0) - z0)*No2Si_V(UnitX_))** &
+                    (1+inv_g1m1)
+               State_VGB(ExtraEInt_,i,j,k,GlobalBlk) = 0.0
+            end if
+         end if
       end do; end do ; end do
       
     end subroutine set_uniform_ICs
     !========================================================================
     subroutine set_perturbed_ICs
       use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitU_, UnitEnergyDens_,&
-           UnitP_, UnitX_, No2Si_V
+           UnitP_, UnitX_, No2Si_V,inv_gm1
       use ModGeometry,    ONLY: z_BLK
       use ModLookupTable, ONLY: interpolate_lookup_table
       implicit none
-
-      real    :: RandomChange, InitialState(1:4), TeSi, Const, &
-           InitialRho, InitialUz, InitialExtraE, InitialP
-      integer :: i, j, k
+      
+      real    :: InitialState(1:4), TeSi, Const, &
+           InitialRho, InitialUz, InitialExtraE, InitialP, EInternal
+      integer :: k
       !---------------------------------------------------------------------
       Const = 2.5
-      do k =1, nK    
+      do k = -1, nK+2    
          ! interpolate the tabular data of reference initial state and get
          ! an relaxed initial state
          call interpolate_lookup_table(iTableInitialState, &
               z_BLK(1,1,k,GlobalBLK)*No2Si_V(UnitX_), Const, InitialState, &
               DoExtrapolate = .false.)
+         
          InitialRho    = InitialState(1)
          InitialUz     = InitialState(2)
          InitialExtraE = InitialState(3)
@@ -288,25 +337,6 @@ contains
               InitialExtraE*Si2No_V(UnitEnergyDens_)
          State_VGB(p_,:,:,k,GlobalBLK)            = &
               InitialP*Si2No_V(UnitP_)
-         call user_material_properties(State_VGB(:,1,1,k,GlobalBLK), &
-              TeOut = TeSi)
-         Temperature_GB(:,:,k,GlobalBLK) = TeSi
-         ! Add random perturbation to energy and pressure values of 
-         ! cells below the photosphere height
-         if(z_BLK(4,4,k,GlobalBlk) .lt. -1000.)then
-            do i=1, nI; do j=1,nJ
-               call random_number(RandomChange)
-               RandomChange = (RandomChange-0.5)*2
-               State_VGB(ExtraEint_,i,j,k,GlobalBLK) =          &
-                    State_VGB(ExtraEint_,i,j,k,GlobalBLK) +     &
-                    1.e3*RandomChange*Si2No_V(UnitEnergyDens_)
-               State_VGB(p_,i,j,k,GlobalBLK) =                  &
-                    State_VGB(p_,i,j,k,GlobalBLK) +             &
-                    1.e3*RandomChange*Si2No_V(UnitP_)
-               call user_material_properties(State_VGB(:,i,j,k,GlobalBLK), &
-                    TeOut = Temperature_GB(i,j,k,GlobalBLK))
-            end do; end do
-         end if
       end do
     end subroutine set_perturbed_ICs
     
@@ -322,10 +352,10 @@ contains
     use ModPhysics
     use ModVarIndexes
     implicit none
-    
+
     integer:: iBlock, i,j,k
-    real :: dp_ratio,prof,rsq,rasq,EInternal, PressureSi
-    
+    real :: dp_ratio,prof,rsq,rasq,EInternal, PressureSi, RandomChange
+
     character (len=*), parameter :: NameSub = 'user_initial_perturbation'
     !-----------------------------------------------------------------------   
     rasq = ra_rope*ra_rope
@@ -333,17 +363,38 @@ contains
        if( UnusedBlk(iBlock) ) CYCLE
        do k=1,nK
           ! Add initial magnetic field 
-          if(z_BLK(4,4,k,iBlock) .lt. z_photo)then
-             prof = (1 - tanh(z_BLK(4,4,k,iBlock) - z_photo))/2.
-             State_VGB(Bx_,:,:,k,iBlock) = &
-                  State_VGB(Bx_,:,:,k,iBlock) + &
-                  InitialBx*1.e-4*Si2No_V(UnitB_)*prof
-             State_VGB(By_,:,:,k,iBlock) = &
-                  State_VGB(By_,:,:,k,iBlock) + &
-                  InitialBy*1.e-4*Si2No_V(UnitB_)*prof
+          if(UseCoronalField)then
+             if(z_BLK(4,4,k,iBlock) .lt. z_photo)then
+                prof = (1 - tanh(z_BLK(4,4,k,iBlock) - z_photo))/2.
+                State_VGB(Bx_,:,:,k,iBlock) = &
+                     State_VGB(Bx_,:,:,k,iBlock) + &
+                     InitialBx*1.e-4*Si2No_V(UnitB_)*prof
+                State_VGB(By_,:,:,k,iBlock) = &
+                     State_VGB(By_,:,:,k,iBlock) + &
+                     InitialBy*1.e-4*Si2No_V(UnitB_)*prof
+             end if
+             State_VGB(Bz_,:,:,k,iBlock) = &
+                  State_VGB(Bz_,:,:,k,iBlock) + InitialBz*1.e-4*Si2No_V(UnitB_)
           end if
-          State_VGB(Bz_,:,:,k,iBlock) = &
-               State_VGB(Bz_,:,:,k,iBlock) + InitialBz*1.e-4*Si2No_V(UnitB_)
+          ! Add random perturbation to energy and pressure values of 
+          ! cells below the photosphere height                  
+          if(UseEnergyPert.and.(z_BLK(4,4,k,iBlock) < z_photo ))then
+             do i=1, nI; do j=1,nJ
+                call random_number(RandomChange)
+                RandomChange = (RandomChange-0.5)*2
+                if(iTableEOS > 0)then
+                   State_VGB(ExtraEint_,i,j,k,iBlock) =          &
+                        State_VGB(ExtraEint_,i,j,k,iBlock)*(1.0 +  &
+                        1.e-3*RandomChange)
+                end if
+                State_VGB(p_,i,j,k,iBlock) =                  &
+                     State_VGB(p_,i,j,k,iBlock)*(1.0 +        &
+                     1.e-3*RandomChange) 
+                EInternal = (1.5*State_VGB(p_,i,j,k,iBlock) + &
+                     State_VGB(ExtraEint_,i,j,k,iBlock))* &
+                     No2Si_V(UnitEnergyDens_)
+             end do; end do
+          end if
           !\
           ! If UseRope, Add flux rope in
           ! Set negative pressure to 1.e-10
@@ -384,20 +435,21 @@ contains
   
   !==========================================================================
   subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
-    use ModVarIndexes, ONLY: rho_, rhoUz_, Bz_, p_, Erad_, ExtraEInt_
-    use ModPhysics,    ONLY: No2Si_V, UnitX_, UnitP_, UnitEnergyDens_, &
-         inv_gm1, UnitTemperature_, unitRho_, cRadiationNo, cLight, Si2No_V
+    use ModVarIndexes!, ONLY: rho_, rhoUz_, Bz_, p_, Erad_, ExtraEInt_
+    use ModPhysics,    ONLY: No2Si_V, UnitX_, UnitP_, UnitEnergyDens_, UnitU_,&
+         inv_gm1, UnitTemperature_, unitRho_, cRadiationNo, Clight, Si2No_V, &
+         cStefan
     use ModGeometry,   ONLY: dz_BLK
     use ModAdvance,    ONLY: State_VGB
-    use ModImplicit,   ONLY: iEradImpl, StateSemi_VGB
+    use ModImplicit,   ONLY: iTeImpl, StateSemi_VGB
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
     integer :: i,j
-    real :: EInternalSI1p, EInternalSI2g,PressureSi, EinternalSI1g, DeltaTemp, &
-         Trad, Fincident, Coef, OpacityPlanckSi_W(1), OpacityPlanck
+    real :: EinternalSi, TeSi, PressureSi, DeltaTemp, gam0, &
+         Trad, AvgUz, Uz0
 
     character (len=*), parameter :: NameSub = 'user_set_outerbcs'
     !------------------------------------------------------------------------
@@ -405,69 +457,40 @@ contains
     select case(iSide)
     case(5)
        select case(TypeBc)
-       case('TempGrad')
-          ! set temperature gradient at the bottom boundary
-          State_VGB(rho_:p_,:,:,0,iBlock) = &
-               State_VGB(rho_:p_,:,:,1,iBlock)
-          State_VGB(rho_:p_,:,:,-1,iBlock) = &
-               State_VGB(rho_:p_,:,:,1,iBlock)
-          State_VGB(rhoUz_,:,:,0,iBlock) = &
-               -State_VGB(rhoUz_,:,:,1,iBlock)
-          State_VGB(rhoUz_,:,:,-1,iBlock) = &
-               -State_VGB(rhoUz_,:,:,1,iBlock)
-          State_VGB(Bz_,:,:,0,iBlock) = &
-               -State_VGB(Bz_,:,:,1,iBlock)
-          State_VGB(Bz_,:,:,-1,iBlock) = &
-               -State_VGB(Bz_,:,:,1,iBlock)
-
-          DeltaTemp = TemperatureGradient*dz_BLK(iBlock)*No2Si_V(UnitX_)/&
-               No2Si_V(UnitTemperature_)
-          do i=-1,nI+2; do j=-1,nJ+2
-             EInternalSI1p = No2Si_V(UnitEnergyDens_)*    &
-                  (inv_gm1*State_VGB(p_,i,j,1,iBlock) + &
-                  State_VGB(ExtraEInt_,i,j,1,iBlock))
-             EinternalSI2g = EInternalSI1p + State_VGB(rho_,i,j,0,iBlock)* &
-                  DeltaTemp*inv_gm1*No2Si_V(UnitRho_)/rstari
+       case('fixvalue')
+          State_VGB(rho_,:,:,-1:0,iBlock) = BotDensity
+          State_VGB(rhoUx_:rhoUy_,:,:,-1:0,iBlock) = 0.0
+          State_VGB(rhoUz_,:,:,0,iBlock) = -State_VGB(rhoUz_,:,:,1,iBlock)
+          State_VGB(rhoUz_,:,:,-1,iBlock) = -State_VGB(rhoUz_,:,:,2,iBlock)
+          State_VGB(Bx_:By_,:,:,-1:0,iBlock) = 0.0
+          State_VGB(Bz_,:,:,0,iBlock) = State_VGB(Bz_,:,:,1,iBlock)
+          State_VGB(Bz_,:,:,-1,iBlock) = State_VGB(Bz_,:,:,1,iBlock)
+          State_VGB(p_,:,:,-1:0,iBlock) = BotPressure
+          State_VGB(ExtraEint_,:,:,-1:0,iBlock) = BotExtraE
+          IsFound = .true.
+       case('fixdensity')
+          !State_VGB(rho_,:,:,-1,iBlock) = State_VGB(rho_,:,:,1,iBlock)
+          !State_VGB(rho_,:,:,0,iBlock) = State_VGB(rho_,:,:,1,iBlock)
+          State_VGB(rho_,:,:,-1:0,iBlock) = BotDensity
+          State_VGB(rhoUx_:rhoUy_,:,:,-1:0,iBlock) = 0.0
+          State_VGB(rhoUz_,:,:,0,iBlock) = -State_VGB(rhoUz_,:,:,1,iBlock)
+          State_VGB(rhoUz_,:,:,-1,iBlock) = -State_VGB(rhoUz_,:,:,1,iBlock)
+          State_VGB(Bx_:By_,:,:,-1:0,iBlock) = 0.0
+          State_VGB(Bz_,:,:,0,iBlock) = State_VGB(Bz_,:,:,1,iBlock)
+          State_VGB(Bz_,:,:,-1,iBlock) = State_VGB(Bz_,:,:,1,iBlock)
+          State_VGB(p_,:,:,0,iBlock) =  State_VGB(p_,:,:,2,iBlock) + &
+               State_VGB(rho_,:,:,1,iBlock)*2.0*dZ_BLK(iBlock)
+          State_VGB(p_,:,:,-1,iBlock) = State_VGB(p_,:,:,1,iBlock) + &
+               State_VGB(rho_,:,:,0,iBlock)*2.0*dZ_BLK(iBlock)
+          do i=-1, nI+2; do j=-1, nJ+2
              call user_material_properties(State_VGB(:,i,j,0,iBlock), &
-                  EInternalIn=EInternalSI2g, PressureOut=PressureSi)
-             State_VGB(p_,i,j,0,iBlock) = PressureSi/No2Si_V(UnitP_)
-             State_VGB(ExtraEInt_,i,j,0,iBlock) = (EInternalSi2g - PressureSi&
-                  *inv_gm1)/No2Si_V(UnitEnergyDens_)
-             EinternalSI1g = EInternalSI2g + State_VGB(rho_,i,j,-1,iBlock)* &
-                  DeltaTemp*inv_gm1*No2Si_V(UnitRho_)/rstari
+                  EinternalOut = EinternalSi)
+             State_VGB(ExtraEint_,i,j,0,iBlock) = EinternalSi* &
+                  Si2No_V(UnitEnergyDens_) - State_VGB(p_,i,j,0,iBlock)*inv_gm1
              call user_material_properties(State_VGB(:,i,j,-1,iBlock), &
-                  EInternalIn=EInternalSI1g, PressureOut=PressureSi)
-             State_VGB(p_,i,j,-1,iBlock) = PressureSi/No2Si_V(UnitP_)
-             State_VGB(ExtraEInt_,i,j,-1,iBlock) = (EInternalSI1g - PressureSi&
-                  *inv_gm1)/No2Si_V(UnitEnergyDens_)
-             Trad = (State_VGB(Erad_,i,j,1,iBlock)/cRadiationNo)**0.25
-             State_VGB(Erad_,i,j,0,iBlock) = cRadiationNo*(Trad + DeltaTemp)**4
-             State_VGB(Erad_,i,j,-1,iBlock) = cRadiationNo*(Trad + 2*DeltaTemp)**4
-          end do; end do
-          IsFound = .true.
-       case('usersemi')
-          DeltaTemp = TemperatureGradient*dz_BLK(iBlock)*No2Si_V(UnitX_)/&
-               No2Si_V(UnitTemperature_)
-          do i = -1, nI+1; do j = -1, nJ+1
-             call user_material_properties(State_VGB(:,i,j,0,iBlock), &
-                  i, j, 0, iBlock, OpacityPlanckOut_W = OpacityPlanckSi_W)
-             OpacityPlanck = OpacityPlanckSi_W(1)/Si2No_V(UnitX_)
-             Coef = 2.0/(3.0*OpacityPlanck*dz_BLK(iBlock))
-             Trad = (State_VGB(Erad_,i,j,1,iBlock)/cRadiationNo)**0.25 + 0.5*DeltaTemp
-             Fincident = 16./3.*cRadiationNo*TemperatureGradient*Si2No_V(UnitTemperature_)&
-                  /Si2No_V(UnitX_)*Trad**3/OpacityPlanck
-             StateSemi_VGB(iEradImpl, i, j, nK+1, iBlock) = (Fincident*4./cLight + &
-                  StateSemi_VGB(iEradImpl, i, j, nK, iBlock)*(Coef - 0.5))/(Coef + 0.5)
-          end do; end do
-          IsFound = .true.
-       case('usersemilinear')
-          do i = -1, nI+1; do j = -1, nJ+1
-             call user_material_properties(State_VGB(:,i,j,0,iBlock), &
-                  i, j, 0, iBlock, OpacityPlanckOut_W = OpacityPlanckSi_W)
-             OpacityPlanck = OpacityPlanckSi_W(1)/Si2No_V(UnitX_)
-             Coef = 2.0/(3.0*OpacityPlanck*dz_BLK(iBlock))
-             StateSemi_VGB(iEradImpl, i, j, nK+1, iBlock) = &
-                  StateSemi_VGB(iEradImpl, i, j, nK, iBlock)*(Coef - 0.5)/(Coef + 0.5)
+                  EinternalOut = EinternalSi)
+             State_VGB(ExtraEint_,i,j,-1,iBlock) = EinternalSi* &
+                  Si2No_V(UnitEnergyDens_) - State_VGB(p_,i,j,-1,iBlock)*inv_gm1
           end do; end do
           IsFound = .true.
        end select
@@ -487,298 +510,347 @@ contains
           State_VGB(rhoUz_,:,:,nK+2,iBlock) = &
                abs(State_VGB(rhoUz_,:,:,nK,iBlock))
           IsFound = .true.
-       case('usersemi','usersemilinear')
-          do i = -1, nI+1; do j = -1, nJ+1
-             call user_material_properties(State_VGB(:,i,j,nK+1,iBlock), &
-                  i, j, nK+1, iBlock, OpacityPlanckOut_W = OpacityPlanckSi_W)
-             OpacityPlanck = OpacityPlanckSi_W(1)/Si2No_V(UnitX_)
-             Coef = 2.0/(3.0*OpacityPlanck*dz_BLK(iBlock))
-             StateSemi_VGB(iEradImpl, i, j, nK+1, iBlock) = &
-                  StateSemi_VGB(iEradImpl, i, j, nK, iBlock)*(Coef - 0.5)/(Coef + 0.5)
-          end do; end do
-          IsFound = .true.
        end select
     end select
 
   end subroutine user_set_outerbcs
-  
   !==========================================================================
-
   subroutine user_calc_sources
     use ModAdvance,     ONLY: Source_VC, State_VGB
     use ModGeometry,    ONLY: z_BLK
+    use ModPhysics,     ONLY: No2Si_V,UnitEnergyDens_,UnitT_
     use ModVarIndexes,  ONLY: Energy_, rhoUz_
     implicit none
 
     integer :: i, j, k
-    real    :: RadiativeCooling, EInternalSource, rhoUzSource,&
-         DampingRhoUz, DampingEnergy
-    
+    real    :: RadiativeCooling = 0.0, EInternalSource =0.0, rhoUzSource =0.0,&
+         DampingRhoUz = 0.0, DampingEnergy = 0.0, TeSi
+
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !------------------------------------------------------------------------
     RadiativeCooling = 0.
+
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       call user_material_properties(State_VGB(:,i,j,k,GlobalBLK), &
-            TeOut = Temperature_GB(i,j,k,GlobalBLK))
        if(UseVerticalDamping) call get_vertical_damping( &
             State_VGB(:,i,j,k,GlobalBLK), &
             z_BLK(i,j,k,GlobalBLK),DampingRhoUz, DampingEnergy)
-       if(UseThinRadiation) call get_radiative_cooling(&
-            State_VGB(:,i,j,k,GlobalBLK), Temperature_GB(i,j,k,GlobalBLK), &
+       if(UseThinRadiation)then
+          call user_material_properties(State_VGB(:,i,j,k,GlobalBLK), &
+               TeOut=TeSi)
+          call get_radiative_cooling(&
+            State_VGB(:,i,j,k,GlobalBLK), TeSi, &
             z_BLK(i,j,k,GlobalBLK), RadiativeCooling)
+       end if
 
        EInternalSource = RadiativeCooling
        rhoUzSource     = DampingRhoUz
-
+       srcthin_GB(i,j,k,GlobalBLK) = RadiativeCooling*No2Si_V(UnitEnergyDens_)/ &
+            No2Si_V(UnitT_)*10.
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
             EinternalSource + DampingEnergy
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k) + rhoUzSource
     end do; end do; end do
   end subroutine user_calc_sources
-  
-  !==========================================================================
-  !----------------------------------------------!
-  !  subroutines containing energy source terms  !            
-  !----------------------------------------------!
-  subroutine get_vertical_damping(State_V, Z_V, DampingRhoUz, DampingEnergy)
-    use ModGeometry,    ONLY: z_BLK
-    use ModPhysics,     ONLY: Si2No_V, UnitT_
-    use ModVarIndexes,  ONLY: rhoUz_, rho_, nVar
-    implicit none
-    
-    real, intent(in) :: State_V(nVar), Z_V
-    real, intent(out):: DampingRhoUz, DampingEnergy
-    !-----------------------------------------------------------------------  
-    if(UseUniformInitialState)then
-       DampingRhoUz  = -State_V(rhoUz_)/ &
-            (TimeVerticalDamping*Si2No_V(UnitT_))
-       DampingEnergy = -State_V(rhoUz_)**2/State_V(rho_)/&
-            (TimeVerticalDamping*Si2No_V(UnitT_))
-    elseif(Z_V .gt. z_photo)then
-       DampingRhoUz  = -State_V(rhoUz_)/ &
-            (TimeVerticalDamping*Si2No_V(UnitT_))
-       DampingEnergy = -State_V(rhoUz_)**2/State_V(rho_)/&
-            (TimeVerticalDamping*Si2No_V(UnitT_))
-    else
-       DampingRhoUz  = 0.
-       DampingEnergy = 0.
-    end if
-  end subroutine get_vertical_damping
-  !=========================================================================
-  subroutine get_radiative_cooling(State_V, TeSi, Z_V, RadiativeCooling)
-    use ModVarIndexes, ONLY: rho_, p_, nVar
-    use ModPhysics,    ONLY: UnitRho_, UnitEnergyDens_, Si2No_V, UnitT_
-    use ModLookupTable,ONLY: interpolate_lookup_table
-    use ModConst,      ONLY: cProtonMass
-    implicit none
-    
-    real, intent(in) :: State_V(1:nVar)
-    real, intent(in) :: TeSi
-    real, intent(in) :: Z_V
-    real, intent(out):: RadiativeCooling
 
-    real, parameter :: RadiationCutoff = - 5e8, atrl = 1e4, Const = 2.5
-    real :: Fraction = 0.0, CoolingFunctionCgs = 0.0, &
-         csw, MassDensCgs, NumberDensCgs
-    real :: Chianti(1:1)
-    !------------------------------------------------------------------------
-    csw = atrl/RhoThinCutoff
-    MassDensCgs     = State_V(rho_)/Si2No_V(UnitRho_)*1.e-3
-    NumberDensCgs   = MassDensCgs/(mu*cProtonMass*1.e3)
+    !==========================================================================
+    !----------------------------------------------!
+    !  subroutines containing energy source terms  !            
+    !----------------------------------------------!
+    subroutine get_vertical_damping(State_V, Z_V, DampingRhoUz, DampingEnergy)
+      use ModGeometry,    ONLY: z_BLK
+      use ModPhysics,     ONLY: Si2No_V, UnitT_
+      use ModVarIndexes,  ONLY: rhoUz_, rho_, nVar
+      implicit none
 
-    ! calculate the thin radiative loss above the z_phto height
-    if (z_V > z_photo) then
-       ! Smoothing function is 1 if rho<RhoThinCutoff , 0 if not
-       Fraction = 0.5 - 0.5*&
-            tanh(atrl*(MassDensCgs/RhoThinCutoff - 1.))
-       ! Calculate the cooling function culve dependent on temperature
-       if (TeSi <= 3.e5 ) Fraction = Fraction*(TeSi/3.e5)**2.5
-       if (TeSi <= 8e+03)then
-          CoolingFunctionCgs = (1.0606e-06*TeSi)**11.7
-       elseif(TeSi <= 1e4)then
-          CoolingFunctionCgs = (1.397e-08*TeSi)**6.15
-       else
-          call interpolate_lookup_table(iTableChianti, TeSi, Const, &
-               Chianti, DoExtrapolate = .false.)
-          CoolingFunctionCgs = Chianti(1)
-       end if
-       ! thin radiative cooling = -\CoolinFunction * n_{e}*n_{p}
-       RadiativeCooling = -Fraction*NumberDensCgs**2*CoolingFunctionCgs
-       if(RadiativeCooling/MassDensCgs <= RadiationCutoff) &
-            RadiativeCooling = RadiationCutoff*MassDensCgs
-       RadiativeCooling = RadiativeCooling*0.1*Si2No_V(UnitEnergyDens_)/&
-            Si2No_V(UnitT_)
-    else 
-       RadiativeCooling = 0.
-    end if
-    
-  end subroutine get_radiative_cooling
+      real, intent(in) :: State_V(nVar), Z_V
+      real, intent(out):: DampingRhoUz, DampingEnergy
+      !-----------------------------------------------------------------------  
+      !if(UseUniformInitialState)then
+      !   DampingRhoUz  = -State_V(rhoUz_)/ &
+      !        (TimeVerticalDamping*Si2No_V(UnitT_))
+      !   DampingEnergy = -State_V(rhoUz_)**2/State_V(rho_)/&
+      !        (TimeVerticalDamping*Si2No_V(UnitT_))
+      !else
+      if(Z_V .gt. z_photo)then
+         DampingRhoUz  = -State_V(rhoUz_)/ &
+              (TimeVerticalDamping*Si2No_V(UnitT_))
+         DampingEnergy = -State_V(rhoUz_)**2/State_V(rho_)/&
+              (TimeVerticalDamping*Si2No_V(UnitT_))
+      else
+         DampingRhoUz  = 0.
+         DampingEnergy = 0.
+      end if
+    end subroutine get_vertical_damping
+    !=========================================================================
+    subroutine get_radiative_cooling(State_V, TeSi, Z_V, RadiativeCooling)
+      use ModVarIndexes, ONLY: rho_, p_, nVar
+      use ModPhysics,    ONLY: UnitRho_, UnitEnergyDens_, Si2No_V, UnitT_
+      use ModLookupTable,ONLY: interpolate_lookup_table
+      use ModConst,      ONLY: cProtonMass
+      implicit none
 
-  !==========================================================================
-  
-  subroutine user_update_states(iStage,iBlock)
-    use ModVarIndexes, ONLY: rho_, p_, ExtraEInt_
-    use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitRho_, UnitP_, &
-         UnitEnergyDens_, cProtonMass, inv_gm1
-    use ModEnergy,     ONLY: calc_energy_cell
-    implicit none
-    
-    integer, intent(in) :: iStage,iBlock
-    integer:: i,j,k
-    real   :: MassDensFloor, EnergyFloor, EinternalSi, PressureSi
-    character (len=*), parameter :: NameSub = 'user_update_states'
-    !--------------------------------------------------------------------
-    ! Define the minimum mass density and energy value
-    ! Corresponding to ~NumberDensFloor and 200 K plasma
-    MassDensFloor  = NumberDensFloor*1e6*cProtonMass*Si2No_V(UnitRho_)
-    EnergyFloor    = MassDensFloor*No2Si_V(UnitRho_)/rstari*200.
+      real, intent(in) :: State_V(1:nVar)
+      real, intent(in) :: TeSi
+      real, intent(in) :: Z_V
+      real, intent(out):: RadiativeCooling
 
-    call update_states_MHD(iStage,iBlock)
-    do k = -1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
-       ! check if the density or pressure is below the minimum value
-       if(State_VGB(rho_,i,j,k,iBlock) < MassDensFloor) &
-            State_VGB(rho_,i,j,k,iBlock) = MassDensFloor
-       ! Total internal energy, ExtraEInt + P/(\gamma -1),
-       EInternalSi = (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
-            State_VGB(ExtraEInt_,i,j,k,iBlock))*No2Si_V(UnitEnergyDens_)
-       if(EInternalSi < EnergyFloor) EInternalSi = EnergyFloor
-       ! get pressure and extra internal energy from the EOS table
-       call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-            EInternalIn=EInternalSi, PressureOut=PressureSi)
-       State_VGB(P_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
-       State_VGB(ExtraEInt_,i,j,k,iBlock) = Si2No_V(UnitEnergyDens_)*&
-            (EInternalSI - PressureSi*inv_gm1)
-    end do;end do; end do
-    ! calculate the total energy
-    call calc_energy_cell(iBlock)
-  end subroutine user_update_states
+      real, parameter :: RadiationCutoff = - 1.0e9, atrl = 1.0e3, Const = 2.5
+      real :: Fraction = 0.0, CoolingFunctionCgs = 0.0, &
+           csw, MassDensCgs, NumberDensCgs
+      real :: Chianti(1:1)
+      !------------------------------------------------------------------------
+      csw = atrl/RhoThinCutoff
+      MassDensCgs     = State_V(rho_)/Si2No_V(UnitRho_)*1.e-3
+      NumberDensCgs   = MassDensCgs/(mu*cProtonMass*1.e3)
 
-  !===========================================================================
+      ! calculate the thin radiative loss above the z_phto height
+      if (z_V > -30.0) then
+         ! Smoothing function is 1 if rho<RhoThinCutoff , 0 if not
+         Fraction = 0.5 - 0.5*&
+              tanh(atrl*(MassDensCgs/RhoThinCutoff - 1.))
+         ! Calculate the cooling function culve dependent on temperature
+         if (TeSi <= 8.0e+03)&
+            CoolingFunctionCgs = (1.0606e-06*TeSi)**11.7
+         if ((TeSi <= 1.0e+04).and.(TeSi > 8.0e+03) ) &
+              CoolingFunctionCgs = (1.397e-08*TeSi)**6.15
+         if(TeSi > 1.0e+04)then
+            call interpolate_lookup_table(iTableChianti, TeSi, Const, &
+                 Chianti, DoExtrapolate = .false.)
+            CoolingFunctionCgs = Chianti(1)
+         end if
+         ! thin radiative cooling = -\CoolinFunction * n_{e}*n_{p}
+         RadiativeCooling = -Fraction*NumberDensCgs**2*CoolingFunctionCgs
+         if(RadiativeCooling/MassDensCgs <= RadiationCutoff) &
+              RadiativeCooling = RadiationCutoff*MassDensCgs
+         RadiativeCooling = RadiativeCooling*0.1*Si2No_V(UnitEnergyDens_)/&
+              Si2No_V(UnitT_)
+      else 
+         RadiativeCooling = 0.
+      end if
 
-  subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
-       PlotVar_G,PlotVarBody, UsePlotVarBody, &
-       NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
-    implicit none
-    
-    integer,          intent(in) :: iBlock
-    character(len=*), intent(in) :: NameVar
-    logical,          intent(in) :: IsDimensional
-    real,             intent(out):: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
-    real,             intent(out):: PlotVarBody
-    logical,          intent(out):: UsePlotVarBody
-    character(len=*), intent(out):: NameTecVar
-    character(len=*), intent(out):: NameTecUnit
-    character(len=*), intent(out):: NameIdlUnit
-    logical,          intent(out):: IsFound
+    end subroutine get_radiative_cooling
 
-    character (len=*), parameter :: Name='user_set_plot_var'
-    !-----------------------------------------------------------------
-    UsePlotVarBody = .true.
-    PlotVarBody    = 0.0
-    IsFound        = .true.
-    select case(NameVar)
-    case('tempe')
-       NameTecVar  = 'T'
-       NameTecUnit = '[K]'
-       NameIdlUnit = 'K'
-       PlotVar_G   = Temperature_GB(:,:,:,iBlock)
-    case default 
-       IsFound = .false.
-       call stop_mpi(Name//': unknown plot variables = '//NameVar)
-    end select
-  end subroutine user_set_plot_var
-  
-  !========================================================================
-  
-  subroutine user_material_properties(State_V, i,j,k,iBlock,iDir, &
-       EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
-       EinternalOut, TeOut, PressureOut,   &
-       CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
-       OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
+    !==========================================================================
 
-    use ModLookupTable,ONLY: interpolate_lookup_table
-    use ModPhysics,    ONLY: No2Si_V, UnitEnergyDens_, UnitP_, &
-         UnitRho_, inv_gm1, gm1, gamma0
-    use ModVarIndexes, ONLY: nVar, Rho_, p_, ExtraEInt_
-    use ModAdvance,    ONLY: nWave
+    subroutine user_update_states(iStage,iBlock)
+      use ModVarIndexes, ONLY: rho_, p_, ExtraEInt_, Erad_
+      use ModAdvance,    ONLY: State_VGB
+      use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitRho_, UnitP_, &
+           UnitEnergyDens_, cProtonMass, inv_gm1, UnitTemperature_, cRadiationNo
+      use ModEnergy,     ONLY: calc_energy_cell
+      implicit none
 
-    !--------------------------------------------------------------------------
-    ! The State_V vector is in normalized units
-    real, intent(in) :: State_V(nVar)
-    integer, optional, intent(in) :: i, j, k, iBlock, iDir
-    real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
-    real, optional, intent(in)  :: TeIn                    ! [K]
-    real, optional, intent(out) :: NatomicOut              ! [1/m^3]
-    real, optional, intent(out) :: AverageIonChargeOut     ! dimensionless
-    real, optional, intent(out) :: EinternalOut            ! [J/m^3]
-    real, optional, intent(out) :: TeOut                   ! [K]
-    real, optional, intent(out) :: PressureOut             ! [Pa]   
-    real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]  
-    real, optional, intent(out) :: GammaOut
-    real, optional, intent(out) :: HeatCondOut             ! [Jm^2/(Ks)]   
-    real, optional, intent(out) :: IonHeatCondOut          ! [J/(m*K*s)]
-    real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]  
-    real, optional, intent(out) :: OpacityPlanckOut_W(nWave)      ! [1/m] 
-    real, optional, intent(out) :: OpacityRosselandOut_W(nWave)   ! [1/m] 
-    real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3] 
+      integer, intent(in) :: iStage,iBlock
+      integer:: i,j,k
+      real   :: MassDensFloor, EnergyFloor, EinternalSi, PressureSi,Gamma2, &
+           EinternalSi1, Te1   , &
+           PressureSi1, PressureSi2,  EinternalSi2,g2, TeSi2
+      character (len=*), parameter :: NameSub = 'user_update_states'
+      !--------------------------------------------------------------------
+      ! Define the minimum mass density and energy value
+      ! Corresponding to ~NumberDensFloor and 200 K plasma
+      MassDensFloor  = NumberDensFloor*1e6*cProtonMass*Si2No_V(UnitRho_)
+      EnergyFloor    = MassDensFloor*No2Si_V(UnitRho_)/rstari*2000.
 
-    real    :: pSi, enSi,RhoSi, TeSi, pPerE(1:1), PressureEnSi(2)
-    real    :: Value_V(2)
-    character (len=*), parameter :: NameSub = 'user_material_properties'
-    !-------------------------------------------------------------------------
-    ! Density, transformed to SI
-    RhoSi = No2Si_V(UnitRho_)*State_V(Rho_)
-    
-    ! Calculate Pressure and Internal Energy from EOS table or Ideal EOS
-    if(present(EinternalIn))then
-       if(iTablePPerE > 0)then
-          call interpolate_lookup_table(iTablePPerE, RhoSi, &
-               EinternalIn/RhoSi, pPerE, DoExtrapolate = .false.)
-          pSi = pPerE(1)*EinternalIn
-       else
-          pSi = EinternalIn*gm1
-       end if
-       enSi = EinternalIn
-    elseif(present(TeIn))then
-       TeSi = TeIn
-       call interpolate_lookup_table(iTablePERhoT,RhoSi,TeSi, &
-            Value_V, DoExtrapolate = .false.)
-       pSi = Value_V(1)
-       enSi= Value_V(2)
-    else
-       pSi = State_V(p_)*No2Si_V(UnitP_)
-       enSi= pSi*inv_gm1 + State_V(ExtraEInt_)*No2Si_V(UnitEnergyDens_)
-    end if
-    if(present(PressureOut)) PressureOut = pSi
-    if(present(EInternalOut)) EInternalOut = enSi
+      call update_states_MHD(iStage,iBlock)
 
-    ! Calculate Temperature from EOS table or Ideal EOS
-    if(present(TeOut) .or. present(CvOut) .or. present(HeatCondOut).or.&
-         present(OpacityPlanckOut_W).or.present(OpacityRosselandOut_W))then
-       if(iTableCvTe > 0)then
-          call interpolate_lookup_table(iTableCvTe, RhoSi, pSi/RhoSi, &
-               Value_V, DoExtrapolate = .false.)
-          TeSi = Value_V(2)     
-          if(present(CvOut)) CvOut =  Value_V(1)
-       else
-          TeSi = pSi/RhoSi*rstari
-       endif
-    endif
-    if(present(TeOut)) TeOut = TeSi
+      do k = 1,nK; do j=1,nJ; do i=1,nI
+         ! check if the density or pressure is below the minimum value
+         if(State_VGB(rho_,i,j,k,iBlock) < MassDensFloor) &
+              State_VGB(rho_,i,j,k,iBlock) = MassDensFloor
+         ! Total internal energy, ExtraEInt + P/(\gamma -1),
+         EInternalSi = (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
+              State_VGB(ExtraEInt_,i,j,k,iBlock))*No2Si_V(UnitEnergyDens_)
+         if(EInternalSi < EnergyFloor) EInternalSi = EnergyFloor
+         ! get pressure and extra internal energy from the EOS table
+         call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+              EInternalIn=EInternalSi, PressureOut=PressureSi)
+         State_VGB(P_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+         State_VGB(ExtraEInt_,i,j,k,iBlock) = Si2No_V(UnitEnergyDens_)*&
+              (EInternalSi - PressureSi*inv_gm1)
+      end do;end do; end do
+      ! calculate the total energy
+      call calc_energy_cell(iBlock)
+    end subroutine user_update_states
 
-    if(present(OpacityPlanckOut_W).or.present(OpacityRosselandOut_W))then
-       call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
-            Value_V, DoExtrapolate = .false.)
-    end if
-    if(present(OpacityPlanckOut_W))OpacityPlanckOut_W = Value_V(1)*&
-         (0.5 + 0.5*tanh((RhoSi - 1e-4)*1e5))
-    if(present(OpacityRosselandOut_W))OpacityRosselandOut_W = Value_V(2) + &
-         (0.5 - 0.5*tanh((RhoSi - 1e-4)*1e5))*1e3
+    !===========================================================================
 
-    if(present(HeatCondOut))&
-         HeatCondOut = 1.e-11*(max(TeSi,3e5))**2.5
+    subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
+         PlotVar_G,PlotVarBody, UsePlotVarBody, &
+         NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
+      use ModAdvance,  ONLY:State_VGB
+      implicit none
 
-  end subroutine user_material_properties
-  
-end module ModUser
+      integer,          intent(in) :: iBlock
+      character(len=*), intent(in) :: NameVar
+      logical,          intent(in) :: IsDimensional
+      real,             intent(out):: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+      real,             intent(out):: PlotVarBody
+      logical,          intent(out):: UsePlotVarBody
+      character(len=*), intent(out):: NameTecVar
+      character(len=*), intent(out):: NameTecUnit
+      character(len=*), intent(out):: NameIdlUnit
+      logical,          intent(out):: IsFound
+
+      
+      integer :: i,j,k
+      real :: TeSi
+      character (len=*), parameter :: Name='user_set_plot_var'
+      !-----------------------------------------------------------------
+      UsePlotVarBody = .true.
+      PlotVarBody    = 0.0
+      IsFound        = .true.
+      select case(NameVar)
+      case('srcthin')
+         NameTecVar = 'srcthin'
+         NameTecUnit = '[erg/s/cm^3]'
+         NameIdlUnit = 'erg/s'
+         PlotVar_G   = srcthin_GB(:,:,:,iBlock)
+      case('tempe')
+         NameTecVar  = 'T'
+         NameTecUnit = '[K]'
+         NameIdlUnit = 'K'
+         do i = 0, nI+1; do j = 0, nJ+1; do k = 0, nK+1
+            call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                 TeOut = TeSi)
+            PlotVar_G(i,j,k) = TeSi
+         end do; end do; end do
+      case('gamma')
+         NameTecVar  = 'gamma'
+         NameTecUnit = ''
+         NameIdlUnit = ''
+         do i=-1,nI+2; do j=-1,nJ+2; do k=-1,nK+2
+            call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                 GammaOut=PlotVar_G(i,j,k))
+         end do; end do; end do
+      case('entropy')
+         NameTecVar  = 'entropy'
+         NameTecUnit = ''
+         NameIdlUnit = ''
+         do i=-1,nI+2; do j=-1,nJ+2; do k=-1,nK+2
+            call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                 EntropyOut=PlotVar_G(i,j,k))
+         end do; end do; end do
+      case default 
+         IsFound = .false.
+         call stop_mpi(Name//': unknown plot variables = '//NameVar)
+      end select
+    end subroutine user_set_plot_var
+
+    !========================================================================
+
+    subroutine user_material_properties(State_V, i,j,k,iBlock,iDir, &
+         EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
+         EinternalOut, TeOut, PressureOut,   &
+         CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
+         OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W, &
+         EntropyOut)
+
+      use ModLookupTable,ONLY: TableType, Table_I, interpolate_lookup_table
+      use ModPhysics,    ONLY: No2Si_V, UnitEnergyDens_, UnitP_, &
+           UnitRho_, inv_gm1, gm1, gamma0
+      use ModVarIndexes, ONLY: nVar, Rho_, p_, ExtraEInt_
+      use ModAdvance,    ONLY: nWave
+      use ModConst,      ONLY: cStefan
+      use ModInterpolate,ONLY: linear
+      !--------------------------------------------------------------------------
+      ! The State_V vector is in normalized units
+      real, intent(in) :: State_V(nVar)
+      integer, optional, intent(in) :: i, j, k, iBlock, iDir
+      real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
+      real, optional, intent(in)  :: TeIn                    ! [K]
+      real, optional, intent(out) :: NatomicOut              ! [1/m^3]
+      real, optional, intent(out) :: AverageIonChargeOut     ! dimensionless
+      real, optional, intent(out) :: EinternalOut            ! [J/m^3]
+      real, optional, intent(out) :: TeOut                   ! [K]
+      real, optional, intent(out) :: PressureOut             ! [Pa]   
+      real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]  
+      real, optional, intent(out) :: GammaOut
+      real, optional, intent(out) :: HeatCondOut             ! [Jm^2/(Ks)]   
+      real, optional, intent(out) :: IonHeatCondOut          ! [J/(m*K*s)]
+      real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]  
+      real, optional, intent(out) :: OpacityPlanckOut_W(nWave)      ! [1/m] 
+      real, optional, intent(out) :: OpacityRosselandOut_W(nWave)   ! [1/m] 
+      real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3] 
+      real, optional, intent(out) :: EntropyOut
+
+      real    :: pSi, enSi,RhoSi, TeSi, pPerE(1:1), PressureEnSi(2)
+      real    :: Value_V(1:3),Value_I(1), KramerOpacity, CvSi
+      real    :: OpacityPlanckSi, OpacityRosselandSi, HeatCondSi
+
+      type(TableType), pointer:: Ptr
+      !type(TableType), target :: Table_I(MaxTable)
+
+      integer :: ii, i1, i2
+      real    :: irho, dx, iTe
+      !real :: egrid(nt,nr), pgrid(nt,nr), parr(nt), earr(nt), tarr(nt)
+      real :: parr(nt), earr(nt), tarr(nt)  
+      character (len=*), parameter :: NameSub = 'user_material_properties'
+      !-------------------------------------------------------------------------
+      ! Density, transformed to SI
+      RhoSi = No2Si_V(UnitRho_)*State_V(Rho_)
+
+      ! Calculate Pressure and Internal Energy from EOS table or Ideal EOS
+      if(present(TeIn))then
+         TeSi = TeIn
+         call interpolate_lookup_table(iTableEOS,TeSi,RhoSi, &
+              Value_V, DoExtrapolate = .false.)
+         pSi = Value_V(1)
+         enSi = Value_V(2)
+      elseif(present(EinternalOut))then
+         pSi = No2Si_V(UnitP_)*State_V(p_)
+         Ptr => Table_I(iTableEOS)
+         irho = (alog10(RhoSi) - Ptr%IndexMin_I(2))/Ptr%dIndex_I(2) + 1.0
+         i1 = floor(irho)
+         i2 = ceiling(irho)
+         dx = irho - i1
+         parr = Ptr%Value_VII(1,:,i2) + (1.0 - dx)*(Ptr%Value_VII(1,:,i1) - &
+              Ptr%Value_VII(1,:,i2))
+         tarr = (/(ii,ii=1,nt)/)
+         iTe = linear(tarr,1,nt,pSi,parr,DoExtrapolate=.false.)
+         TeSi = 10.**(Ptr%IndexMin_I(1)+ (iTe-1.0)*Ptr%dIndex_I(1))
+         call interpolate_lookup_table(iTableEOS,TeSi,RhoSi, &
+              Value_V, DoExtrapolate = .false.)
+         enSi = Value_V(2)
+      else
+         if(present(EinternalIn)) then 
+            enSi = EinternalIn
+         else
+            enSi = (State_V(p_)*1.5 + State_V(ExtraEint_))*No2Si_V(UnitP_)
+         end if
+         Ptr => Table_I(iTableEOS)
+         irho = (alog10(RhoSi) - Ptr%IndexMin_I(2))/Ptr%dIndex_I(2) + 1.0
+         i1 = floor(irho)
+         i2 = ceiling(irho)
+         dx = irho -i1
+         earr = Ptr%Value_VII(2,:,i2) + (1.0 - dx)*(Ptr%Value_VII(2,:,i1) - &
+              Ptr%Value_VII(2,:,i2))
+         tarr = (/(ii,ii=1,nt)/)
+         iTe = linear(tarr,1,nt,enSi,earr,DoExtrapolate=.false.)
+         TeSi = 10.**(Ptr%IndexMin_I(1)+ (iTe-1.0)*Ptr%dIndex_I(1))
+         call interpolate_lookup_table(iTableEOS,TeSi,RhoSi, &
+              Value_V, DoExtrapolate = .false.)
+         pSi = Value_V(1)
+      end if
+
+      if(present(PressureOut)) PressureOut = pSi
+      if(present(EInternalOut)) EInternalOut = enSi
+      if(present(TeOut)) TeOut = TeSi
+      if(present(CvOut)) CvOut =  & !CvSi
+           1./rstari*inv_gm1*RhoSi !CvSi
+
+      if(present(EntropyOut))then
+         call interpolate_lookup_table(iTableEOS, TeSi, RhoSi,&
+              Value_V, DoExtrapolate = .false.)
+         EntropyOut = Value_V(3)
+      end if
+
+      if(present(GammaOut)) then
+         call interpolate_lookup_table(iTableGamma, TeSi, RhoSi,&
+              Value_I, DoExtrapolate = .false.)
+         GammaOut = Value_I(1)
+      end if
+
+    end subroutine user_material_properties
+
+  end module ModUser

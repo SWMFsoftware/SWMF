@@ -32,7 +32,7 @@ reflect			TypeBcEast
 reflect			TypeBcWest
 reflect			TypeBcSouth
 reflect			TypeBcNorth
-TempGrad   	 	TypeBcBottom
+fixvalue   	 	TypeBcBottom
 no_inflow   		TypeBcTop
 
 #USERFLAGS
@@ -53,31 +53,34 @@ T                       UseUserUpdateStates
 #USERINPUTBEGIN -------------------
 
 #RADMHD
--18.			z_photo
-33.			UnsignedFluxHeight
-T                       UseThinRadiation	
-1.e-6			RhoThinCutoff
-T			UseVerticalDamping
-50.			TimeVerticalDamping
-0.005			TemperatureGradient
-.5 			DtUpdateFlux
-F			UseUniformInitialState
-1.e-6			InitialDensity
-1.2e4			InitialTemperature
-0.			InitialBx
-0.			InitialBy
-0.			InitialBz
-6.e8			NumberDensFloor
+0.0                     z_photo
+40.                     UnsignedFluxHeight
+T                       UseThinRadiation
+F                       UseCoronalField
+5.e-6                   RhoThinCutoff
+F                       UseVerticalDamping
+80.                     TimeVerticalDamping
+0.0                     TemperatureGradient
+0.5                     DtUpdateFlux
+F                       UseUniformInitialState
+F                       UseUniformT
+F                       UseEnergyPert
+5e-4                    InitialDensity
+6e4                     InitialTemperature
+0.                      InitialBx
+0.                      InitialBy
+0.                      InitialBz
+6.e8                    NumberDensFloor
 
 #ROPE
 T                       UseRope
-0.                      x2c
--25.                    x3c
-2.                      ra
--1.5                    qfac
-1.e1                    lamb
-1.			buoyancy
-1.                      b0_rope
+0                       x2c_rope
+-66.67                  x3c_rope
+7.07                    ra_rope
+-1.5                    qfac_rope
+4.e1                    lamb_rope
+1.                      buoyancy_rope
+3.6e1                   b0_rope_rope
 
 #USERINPUTEND ---------------------
 
@@ -88,22 +91,16 @@ InitialState.dat        NameFile
 ascii                   TypeFile
 
 #LOOKUPTABLE
-pPerE(rho,e/rho)	NameTable
-load			NameCommand
-pPerE.dat		NameFile
-ascii			TypeFile	
+peent(T,rho)            NameTable
+load                    NameCommand
+EOS.dat                 NameFile
+ascii                   TypeFile
 
 #LOOKUPTABLE
-CvTe(rho,p/rho)		NameTable
-load			NameCommand
-CvTe.dat		NameFile
-ascii			TypeFile	
-
-#LOOKUPTABLE
-pe(rho,T)		NameTable
-load			NameCommand
-pERhoT.dat		NameFile
-ascii			TypeFile	
+Gamma(T,rho)           NameTable
+load                    NameCommand
+gamma.dat                  NameFile
+ascii                   TypeFile
 
 #LOOKUPTABLE
 prl(T,Const)            NameTable
@@ -111,7 +108,7 @@ load                    NameCommand
 chianti.dat             NameFile
 ascii                   TypeFile
 
-#PLASMA
+PLASMA
 1.23839			AverageIonMass [amu]
 1.08359			AverageIonCharge [e]
 1.0			ElectronTemperatureRatio

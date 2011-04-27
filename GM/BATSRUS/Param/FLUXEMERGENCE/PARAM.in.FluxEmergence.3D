@@ -36,7 +36,7 @@ periodic		TypeBcEast
 periodic		TypeBcWest
 periodic		TypeBcSouth
 periodic		TypeBcNorth
-TempGrad	        TypeBcBottom
+fixvalue	        TypeBcBottom
 no_inflow		TypeBcTop	
 
 #USERFLAGS
@@ -56,21 +56,25 @@ T                       UseUserUpdateStates
 
 #USERINPUTBEGIN
 #RADMHD
--18.			z_photo
-20.			UnsignedFluxHeight
-T                       UseThinRadiation	
-1.e-6			RhoThinCutoff
-T			UseVerticalDamping
-50.			TimeVerticalDamping
-0.005			TemperatureGradient
-.5 			DtUpdateFlux
-F			UseUniformInitialState
-1.e-6			InitialDensity
-1.2e4			InitialTemperature
-0.			InitialBx
-0.			InitialBy
-0.1			InitialBz 0.5
-6.e8			NumberDensFloor
+0.0                     z_photo
+40.                     UnsignedFluxHeight
+T                       UseThinRadiation
+T                       UseCoronalField
+5.e-6                   RhoThinCutoff
+F                       UseVerticalDamping
+80.                     TimeVerticalDamping
+0.0                     TemperatureGradient
+0.5                     DtUpdateFlux
+F                       UseUniformInitialState
+F                       UseUniformT
+F                       UseEnergyPert
+5e-4                    InitialDensity
+6e4                     InitialTemperature
+0.                      InitialBx
+0.                      InitialBy
+1.                      InitialBz
+6.e8                    NumberDensFloor
+
 
 #ROPE
 F                       UseRope
@@ -90,22 +94,16 @@ InitialState.dat        NameFile
 ascii                   TypeFile
 
 #LOOKUPTABLE
-pPerE(rho,e/rho)	NameTable
-load			NameCommand
-pPerE.dat		NameFile
-ascii			TypeFile	
+peent(T,rho)            NameTable
+load                    NameCommand
+EOS.dat                 NameFile
+ascii                   TypeFile
 
 #LOOKUPTABLE
-CvTe(rho,p/rho)		NameTable
-load			NameCommand
-CvTe.dat		NameFile
-ascii			TypeFile	
-
-#LOOKUPTABLE
-pe(rho,T)		NameTable
-load			NameCommand
-pERhoT.dat		NameFile
-ascii			TypeFile	
+Gamma(T,rho)           NameTable
+load                    NameCommand
+gamma.dat                  NameFile
+ascii                   TypeFile
 
 #LOOKUPTABLE
 prl(T,Const)            NameTable
@@ -113,7 +111,7 @@ load                    NameCommand
 chianti.dat             NameFile
 ascii                   TypeFile
 
-#PLASMA
+PLASMA
 1.23839			AverageIonMass [amu]
 1.08359			AverageIonCharge [e]
 1.0			ElectronTemperatureRatio
@@ -122,13 +120,6 @@ ascii                   TypeFile
 unsignedflux            TypeCoronalHeating
 4640.			Decaylength
 1.			HeatNormalization
-
-PARALLELCONDUCTION		
-T			UseParallelConduction
-modified 		TypeHeatConduction
-9.e-12			HeatConductionParSi
-2.5E05			TmodifySi
-2e04			DeltaTmodifySi
 
 #MESSAGEPASS
 dir			TypeMessagePass

@@ -100,7 +100,7 @@ test_fluxemergence:
 	make test_fluxemergence_check
 
 test_fluxemergence_compile:
-	./Config.pl -e=MhdEosRad -u=Ee -g=8,8,8,500,1
+	./Config.pl -e=MhdEosRad -u=Ee -g=10,10,10,500,1
 	make
 	make PIDL
 

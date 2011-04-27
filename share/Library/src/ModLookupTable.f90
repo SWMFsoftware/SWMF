@@ -23,6 +23,7 @@ module ModLookupTable
   public:: interpolate_lookup_table ! interpolate from lookup table
   public:: test_lookup_table        ! unit test
   public:: get_name_description     ! provide name description
+  public:: TableType
 
   integer, public, parameter:: MaxTable = 20 ! maximum number of tables
   integer, public :: nTable = 0     ! actual number of tables
@@ -51,7 +52,7 @@ module ModLookupTable
   end type
 
   ! The array of tables
-  type(TableType), target :: Table_I(MaxTable)
+  type(TableType), public, target :: Table_I(MaxTable)
 
   ! Array for variable names
   integer, parameter:: MaxVar = 200

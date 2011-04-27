@@ -1,13 +1,13 @@
 #GRID
 2			nRootBlockX 
 2			nRootBlockY 
-21			nRootBlockZ
+56			nRootBlockZ
 -5.			xMin 
 5.			xMax 
 -5.			yMin
 5.			yMax 
--35.			zMin
-70.			zMax
+-140.			zMin
+140.			zMax
 
 #GRIDRESOLUTION
 5./64	 		Resolution
