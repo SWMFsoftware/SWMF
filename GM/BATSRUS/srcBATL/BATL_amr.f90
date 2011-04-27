@@ -8,6 +8,7 @@ module BATL_amr
 
   private ! except
 
+  public init_amr
   public do_amr
   public test_amr
 
@@ -22,6 +23,22 @@ module BATL_amr
 contains
 
   !===========================================================================
+
+  subroutine init_amr()
+
+    use BATL_size, ONLY: MaxBlock
+    !-------------------------------------------------------------------------
+
+    if(.not.allocated(iAmrChange_B)) &
+         allocate(iAmrChange_B(MaxBlock))
+
+    ! Initialize iAmrChange_B
+    iAmrChange_B = AmrUnchanged_
+
+  end subroutine init_amr
+
+  !===========================================================================
+
   subroutine do_amr(nVar, State_VGB, Dt_B, Used_GB, DoTestIn)
 
     use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -105,10 +122,14 @@ contains
 
     ! Small arrays are allocated once 
     if(.not.allocated(iBlockAvailable_P)) &
-         allocate(iBlockAvailable_P(0:nProc-1), iAmrChange_B(MaxBlock))
+         allocate(iBlockAvailable_P(0:nProc-1))
+    !Moved to init_amr
+    !if(.not.allocated(iAmrChange_B)) &
+    !      allocate(iAmrChange_B(MaxBlock))
+
 
     ! Initialize iAmrChange_B
-    iAmrChange_B = AmrUnchanged_
+    !iAmrChange_B = AmrUnchanged_
 
     ! nVar dependent arrays are allocated and deallocated every call
     ! Buffer_I +1 for Dt_B and +1 for DoCheckMask header information
@@ -288,7 +309,7 @@ contains
 
       integer, intent(in):: iNodeSend, iBlockSend, iProcSend
       !-----------------------------------------------------------------------
-      
+
       iTree_IA(Status_,iNodeSend) = Unused_
       Unused_BP(iBlockSend,iProcSend) = .true.
       iBlockAvailable_P(iProcSend) = &
@@ -360,7 +381,7 @@ contains
       else
          DoCheckMask = .false.
       end if
-  
+
 
       ! Averaging all used fine cells inside the coarse cell. 
       if(DoCheckMask) then
@@ -380,16 +401,16 @@ contains
                InvVolume = 1.0/Volume
                do iVar = 1, nVar
                   Buffer_I(iBuffer+iVar) = InvVolume * sum( &
-                          CellVolume_G(i:i2,j:j2,k:k2)* &
-                          State_VGB(iVar,i:i2,j:j2,k:k2,iBlockSend))
+                       CellVolume_G(i:i2,j:j2,k:k2)* &
+                       State_VGB(iVar,i:i2,j:j2,k:k2,iBlockSend))
                end do
             else
                ! None of the cells are used, use true cell volumes
                InvVolume = 1.0/sum(CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend))
                do iVar = 1, nVar
                   Buffer_I(iBuffer+iVar) = InvVolume * sum( &
-                          CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend)* &
-                          State_VGB(iVar,i:i2,j:j2,k:k2,iBlockSend))
+                       CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend)* &
+                       State_VGB(iVar,i:i2,j:j2,k:k2,iBlockSend))
                end do
             end if
             iBuffer = iBuffer + nVar
@@ -437,7 +458,7 @@ contains
       integer:: i, j, k
       !----------------------------------------------------------------------
 
-       if(iProcRecv /= iProcSend)then
+      if(iProcRecv /= iProcSend)then
          iBuffer = nIJK*nVar/IjkRatio 
          if(present(Dt_B))  iBuffer = iBuffer + 1
          call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
@@ -607,7 +628,7 @@ contains
       else
          logical_to_real = 0.0
       end if
-      
+
     end function logical_to_real
     !==========================================================================
     subroutine recv_refined_block
@@ -637,13 +658,13 @@ contains
       end if
 
       DoCheckMask = Buffer_I(1) > 0.5
-!      print *,"DoCheckMask",Buffer_I(1),DoCheckMask, UseMask
+      !      print *,"DoCheckMask",Buffer_I(1),DoCheckMask, UseMask
       if(DoCheckMask) then
          nVarUsed = nVarBuffer 
       else 
          nVarUsed = nVar
       end if
-      
+
       ! StateP_VG(nVar+1,:,:,:) is the Used_GB for the parent block
       iBuffer = 1
       do kP = kMinP, kMaxP; do jP = jMinP, jMaxP; do iP = iMinP, iMaxP
@@ -811,6 +832,7 @@ contains
     call set_tree_root( nRootTest_D(1:nDim))
     call distribute_tree(.true.)
     call create_grid
+    call init_amr
 
     if(DoTestMe) call show_tree('after create_grid')
 
@@ -865,7 +887,7 @@ contains
          TestState_VC(nVar,nI,nJ,nK))
 
     Used_GB = .true.
-    
+
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        State_VGB(:,:,:,:,iBlock)    = Xyz_DGB(1:nDim,:,:,:,iBlock)
@@ -919,7 +941,7 @@ contains
     !--------------- END refine --------------------
     iEffectedNode_A = unset_
     Used_GB = .true.
-    
+
     if(iTree_IA(Proc_,iTree_IA(Child1_,1)) == iProc) then
        iBlock = iTree_IA(Block_,iTree_IA(Child1_,1))
        if(iRatio == 2) then
@@ -969,7 +991,7 @@ contains
                  maxloc(abs(State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
                  -    Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock)))
          end if
-         
+
          iDim = iDimAmr_D(1)
          if(abs(Dt_B(iBlock) - CellSize_DB(iDim,iBlock)) > 1e-6) &
               write(*,*)NameSub,' error for iProc,iBlock,dt,dx=', &
