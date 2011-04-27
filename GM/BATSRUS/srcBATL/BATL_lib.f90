@@ -64,7 +64,9 @@ module BATL_lib
   ! Inherited from BATL_amr_criteria
   public:: set_amr_criteria, clean_amr_criteria, read_amr_criteria_param
   public:: AmrCrit_IB, nAmrCrit
-  ! Inherited from BATL_pass_cell
+  !public:: histogram_amr_criteria, read_histogram_amr_criteria_param
+  !public:: err_amr_criteria
+! Inherited from BATL_pass_cell
   public:: message_pass_cell
   public:: message_pass_cell_scalar
 
@@ -125,7 +127,7 @@ contains
     call set_tree_root(nRootIn_D)
     call distribute_tree(.true.)
     call create_grid
-
+    call init_amr
     IsBatlInitialized = .true.
 
   end subroutine init_batl
@@ -165,7 +167,7 @@ contains
     end if
     call distribute_tree(DoMove=.true.)
     call create_grid
-
+    call init_amr
   end subroutine init_grid_batl
 
   !============================================================================
@@ -263,6 +265,7 @@ contains
        call distribute_tree(DoMove=.false.)
     end if
 
+    iAmrChange_B = AmrUnchanged_
     ! No grid changes, no need for do_amr
     ! IsNewTree  == .true. also imply IsNewDecomposition == .true.
     if(.not.IsNewDecomposition) RETURN
