@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -s
 #^CFG COPYRIGHT UM
 #BOP
 #!ROUTINE: Fix8Endian.pl - change the byte order of a Fortran file of 8 byte reals
@@ -10,43 +10,63 @@
 #\begin{verbatim}
 # Usage:  Fix8Endian.pl InFile > Outfile
 #         Fix8Endian.pl < InFile > Outfile
+#         Fix8Endian.pl -i File1 File2 Fil3 ...
 #\end{verbatim}
 #!REVISION HISTORY:
 # 07/13/2001 G. Toth - initial version
 #EOP
 # No end of line record
+
 undef $/;
 
-# Read the whole file into $_
-$_=<>;
-
-# initialize pointer for the string
-$i=0;
-while ( $i < length() ){
-    # Get length of record
-    $len = unpack('L',substr($_,$i,4));
-
-    # Reverse leading 4 byte length marker
-    $lenfixed = reverse(substr($_,$i,4));
-    substr($_,$i,4)=$lenfixed;
-
-    # Read length from reversed string if it is unreasonably large
-    $len = unpack('L',$lenfixed) if $i+$len > length();
-
-    # Check if length is reasonable
-    die "At position $i record length $len is too large?!\n" 
-	if $i+$len > length();
-
-    # Reverse 8 byte reals/integers
-    for($j=$i+4; $j<$i+$len; $j+=8){
-	substr($_,$j,8)=reverse(substr($_,$j,8));
+my $InPlace = $i;
+if($InPlace){
+    foreach $file (@ARGV){
+	open (FILE, $file);
+	$_ = <FILE>;
+	close(FILE);
+	print "processing $file, length=",length($_),"\n";
+	&process_file;
+	open(FILE, ">$file");
+	print FILE $_;
+	close(FILE);
     }
-
-    # Reverse trailing 4 byte length marker
-    substr($_,$j,4)=$lenfixed;
-
-    # Step to the next record
-    $i = $j + 4;
+}else{
+    # Read the whole file into $_
+    $_ = <>;
+    &process_file;
+    print;
 }
+exit;
 
-print;
+#########################################################################
+sub process_file{
+    # initialize pointer for the string
+    $i=0;
+    while ( $i < length() ){
+	# Get length of record
+	$len = unpack('L',substr($_,$i,4));
+
+	# Reverse leading 4 byte length marker
+	$lenfixed = reverse(substr($_,$i,4));
+	substr($_,$i,4)=$lenfixed;
+
+	# Read length from reversed string if it is unreasonably large
+	$len = unpack('L',$lenfixed) if $i+$len > length();
+
+	# Check if length is reasonable
+	die "At position $i record length $len is too large?!\n" 
+	    if $i+$len > length();
+
+	# Reverse 8 byte reals/integers
+	for($j=$i+4; $j<$i+$len; $j+=8){
+	    substr($_,$j,8)=reverse(substr($_,$j,8));
+	}
+
+	# Reverse trailing 4 byte length marker
+	substr($_,$j,4)=$lenfixed;
+
+	# Step to the next record
+	$i = $j + 4;
+    }
+}
