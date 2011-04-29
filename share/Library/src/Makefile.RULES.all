@@ -5,11 +5,14 @@ $OS eq "Darwin" and $Compiler eq "f95"
 	${COMPILE.f77} ${Cflag4} -132 blas.f
 	${COMPILE.f90} ${Cflag3} ModNumConst.f90
 
-$Compiler eq "xlf90"
+# ModBlasLapack compiles with auto double off only
+$Compiler eq "xlf90" 
 	${COMPILE.f90} ${Cflag4NoP} ${SuffixMapf90} ModBlasLapack.f90
 
-$OS eq "Linux" and $Compiler eq "lf95"
+$Compiler eq "lf95" or $Compiler eq "mpxlf90"
 	${COMPILE.f90} ${Cflag4NoP} ModBlasLapack.f90
 
+# ModMpiInterface compiles with -dusty only because
+# the same MPI routines are called with different argument types
 $Compiler eq "f95"
 	${COMPILE.f90} ${Cflag0} -dusty ModMpiInterfaces.f90
