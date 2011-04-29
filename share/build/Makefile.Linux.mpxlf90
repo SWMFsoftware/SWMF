@@ -5,17 +5,13 @@ SHELL=/bin/sh
 #
 #	Space Weather Modeling Framework (SWMF) 
 #	Fortran 90/95 Compiler
-#       Mac OS (Darwin) specific part of Makefile
+#       BG/L specific part of the Makefile for parallel execution
+#	Note that serial codes (e.g. PostIDL.exe) 
+#	have to be compiled with xlf90, not mpxlf90 !!!
 #
 
-# Set suffix remapping options
-SuffixMapf90 = -qsuffix=f=f90
-SuffixMapF90 = -qsuffix=f=F90
-SuffixMapfor = -qsuffix=f=for
-SuffixMapftn = -qsuffix=f=ftn
-
-COMPILE.f77     = ${CUSTOMPATH_F}xlf90 -qfixed=132
-COMPILE.f90     = ${CUSTOMPATH_F}xlf90 ${SuffixMapf90}
+COMPILE.f77     = ${CUSTOMPATH_F}mpxlf90 -qfixed=132
+COMPILE.f90     = ${CUSTOMPATH_F}mpxlf90
 LINK.f90        = ${CUSTOMPATH_MPI}mpxlf90
 AR = ar -rs
 
