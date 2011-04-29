@@ -1,14 +1,15 @@
 #!/bin/csh
 # Usage: msub job.ubgl
 
-#MSUB -l nodes=1
 #MSUB -l partition=ubgl
+#MSUB -l nodes=1
 #MSUB -l walltime=0:30:00
 #MSUB -q pdebug
-#MSUB -V
-#MSUB -o /g/g99/toth2/crash/UBGL/run/runlog
+#MSUB -o runlog
 
 date
 cd /g/g99/toth2/crash/UBGL/run
 
-mpirun /g/g99/toth2/crash/UBGL/run/CRASH.exe
+# By default the executable runs on all cores (there are 128 cores per node).
+# To reduce the number of cores to NN use mpirun -np NN ...
+mpirun -exe `pwd`/CRASH.exe -cwd `pwd`
