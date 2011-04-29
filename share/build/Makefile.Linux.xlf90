@@ -3,9 +3,12 @@
 SHELL=/bin/sh
 
 #
-#	Space Weather Modeling Framework (SWMF) 
-#	Fortran 90/95 Compiler
-#       Mac OS (Darwin) specific part of Makefile
+#	Space Weather Modeling Framework (SWMF)
+#       xlf90 compiler specific Makefile.
+#
+#       On the BG/L replace mpif90 with xlf90 in the LINK.f90 definition,
+#       and use this file to compile serial codes (e.g. PostIDL.exe)
+#       to run on the head nodes.
 #
 
 # Set suffix remapping options
