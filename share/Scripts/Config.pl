@@ -15,6 +15,7 @@ my %Compiler = (
 		"nyx-login-intel"     => "pgf90",
 		"nyx-login-amd"       => "pgf90",
 		"hera"                => "mpiifort",
+		"ubgl"                => "mpxlf90",
 		);
 
 # Default MPI library per machine or OS
@@ -31,6 +32,7 @@ my %MpiVersion = (
 		  "nyx-login-intel"   => "openmpi",
 		  "nyx-login-amd"     => "openmpi",
 		  "hera"              => "mvapich",
+		  "ubgl"              => "mpich2",
 		  );
 
 my $WARNING_='share/Scripts/Config.pl WARNING:';
