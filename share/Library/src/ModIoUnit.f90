@@ -44,7 +44,7 @@ module ModIoUnit
 
   !LOCAL VARIABLES:
 
-  integer, parameter :: MinUnitNumber = 10    ! Smallest allowed unit number
+  integer, parameter :: MinUnitNumber = 20    ! Smallest allowed unit number
   integer, parameter :: MaxUnitNumber = 1000  ! Largest allowed unit number
 
   integer :: iUnitMax = UNITTMP_              ! The largest unit number used
