@@ -624,13 +624,13 @@ test_esmf_run:
 test_esmf_check:
 	perl -ne 'print if /error/i' ${TESTDIR}/PET*.ESMF_LogFile \
 		> test_esmf.diff
-	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-12 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		ESMF/ESMF_SWMF/output/log_n000001.log \
 		>> test_esmf.diff
 	gunzip -c ESMF/ESMF_SWMF/output/it000321_104510_000.idl.gz \
 		> ${TESTDIR}/it000321_104510_000.idl.ref
-	${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 \
+	${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-4 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
 		${TESTDIR}/it000321_104510_000.idl.ref \
 		>> test_esmf.diff
