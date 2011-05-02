@@ -73,8 +73,7 @@ module ModUser
   !\
   ! Indexes of EOS tables, CHIANTI table, initial relaxed reference state
   !/
-  integer :: iTableEOS = -1, &
-       iTableChianti = -1, iTableInitialState = -1, iTableGamma = -1
+  integer :: iTableEOS = -1, iTableChianti = -1, iTableInitialState = -1
   real, allocatable:: srcthin_GB(:,:,:,:)
 
 contains
@@ -161,13 +160,12 @@ contains
 
     ! initialize the indexes for lookup tables
     iTableInitialState = i_lookup_table('RhoUzExtraEP(Z,Const)')
-    iTableEOS          = i_lookup_table('peent(T,rho)')
+    iTableEOS          = i_lookup_table('eos(T,rho)')
     iTableChianti      = i_lookup_table('prl(T,Const)')
-    iTableGamma        = i_lookup_table('Gamma(T,rho)')
 
     if(iProc==0) write(*,*) NameSub, &
-         'iTableInitialState, EOS , Chianti, gamma = ', &
-         iTableInitialState, iTableEOS, iTableChianti, iTableGamma
+         'iTableInitialState, EOS , Chianti = ', &
+         iTableInitialState, iTableEOS, iTableChianti
 
     call interpolate_lookup_table(iTableInitialState, &
          z1*No2Si_V(UnitX_), 2.5, InitialState, &
@@ -743,7 +741,7 @@ contains
     real, optional, intent(out) :: EntropyOut
 
     real :: pSi, EinternalSi, RhoSi, TeSi
-    real :: Value_V(1:3), Value_I(1)
+    real :: Value_V(1:5)
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !------------------------------------------------------------------------
@@ -779,18 +777,8 @@ contains
     if(present(PressureOut)) PressureOut = Value_V(1)
     if(present(EInternalOut)) EInternalOut = Value_V(2)
     if(present(EntropyOut)) EntropyOut = Value_V(3)
-
-    ! the specific heat needs to be replaced by an EOS version
-    !if(present(CvOut)) CvOut = Value_V(4)
-    if(present(CvOut)) CvOut = 1./rstari*inv_gm1*RhoSi !CvSi
-
-    ! speed-of-sound gamma ???
-    !if(present(GammaOut)) GammaOut = Value_V(5)
-    if(present(GammaOut)) then
-       call interpolate_lookup_table(iTableGamma, TeSi, RhoSi, &
-            Value_I, DoExtrapolate = .false.)
-       GammaOut = Value_I(1)
-    end if
+    if(present(CvOut)) CvOut = Value_V(4)
+    if(present(GammaOut)) GammaOut = Value_V(5)
 
   end subroutine user_material_properties
 

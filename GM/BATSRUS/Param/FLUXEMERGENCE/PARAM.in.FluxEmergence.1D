@@ -104,15 +104,9 @@ InitialState.dat        NameFile
 ascii                   TypeFile
 
 #LOOKUPTABLE
-peent(T,rho)            NameTable
+eos(T,rho)		NameTable
 load                    NameCommand
 EOS.dat                 NameFile
-ascii                   TypeFile
-
-#LOOKUPTABLE
-Gamma(T,rho)           NameTable
-load                    NameCommand
-gamma.dat                  NameFile
 ascii                   TypeFile
 
 #LOOKUPTABLE
