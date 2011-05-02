@@ -36,7 +36,7 @@ OPT2 = -O2
 OPT3 = -O3
 OPT4 = -O4
 
-CFLAG = ${SEARCH} -c -qextname -qarch=auto -qtune=auto ${DEBUG}
+CFLAG = ${SEARCH} -c ${DEBUG}
 
 Cflag0  = ${CFLAG} ${PRECISION} ${OPT0}
 Cflag1  = ${CFLAG} ${PRECISION} ${OPT1}
@@ -67,7 +67,7 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag4} $<
 
 .F90.o:
-	cpp -C -P -DsysDarwin -DcompXLF90 $*.F90 | grep -v '^#' > $*.f
+	cpp -C -P -DsysDarwin -DcompMPXLF90 $*.F90 | grep -v '^#' > $*.f
 	${COMPILE.f90} -qsuffix=f=f -o $*.o ${Cflag4} $*.f
 	rm -f $*.f
 
