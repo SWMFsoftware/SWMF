@@ -100,7 +100,7 @@ contains
 
     ! Buffer to hold incoming layers of ghost cell values.
     ! For all blocks and all faces
-    real, dimension(:,:), allocatable :: buffer
+    real, save, dimension(:,:), allocatable :: buffer
 
     ! Equal, restricted and prolonged values are stored in these arrays
     real, dimension(:,:,:,:), allocatable :: eq_buf, re_buf, pr_buf, &
@@ -119,8 +119,6 @@ contains
 
     !--------------------------------------------------------------------------
 
-    if(.not.allocated(buffer)) allocate(buffer(nBLK*maxsize,2))
-
     nCoarseLayer=1
     if(present(DoTwoCoarseLayers))then
        if(DoTwoCoarseLayers) nCoarseLayer=2
@@ -136,8 +134,9 @@ contains
        RETURN
     end if
 
-
     call set_oktest('message_pass_dir',oktest, oktest_me)
+
+    if(.not.allocated(buffer)) allocate(buffer(nBLK*maxsize,2))
 
     if(present(restrictface))then
        qrestrictface=restrictface
