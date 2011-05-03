@@ -2,7 +2,7 @@
 # Usage: msub job.ubgl
 
 #MSUB -l partition=ubgl
-#MSUB -l nodes=1
+#MSUB -l nodes=128
 #MSUB -l walltime=0:30:00
 #MSUB -q pdebug
 #MSUB -o runlog
