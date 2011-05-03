@@ -6,6 +6,7 @@
 #MSUB -l walltime=0:30:00
 #MSUB -q pdebug
 #MSUB -o runlog
+#MSUB -A michigan
 
 date
 cd /g/g99/toth2/crash/UBGL/run
