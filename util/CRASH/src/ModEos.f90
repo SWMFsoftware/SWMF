@@ -101,8 +101,6 @@ module CRASH_ModEos
      module procedure eos_mixture
   end interface
 
-  public:: read_name_material
-
   ! Local variables
 
   ! test material with the EOS e \propto T^4, p \propto T^4
@@ -150,7 +148,7 @@ module CRASH_ModEos
   
   !Subroutine which may be used to set/reset UseEosTable_I
 
-  public:: read_if_use_eos_table, read_if_use_opac_table
+  public:: read_if_use_eos_table, read_if_use_opac_table, read_name_material
  
   !The columns in the EOS table
   integer :: P_      =  1, &
@@ -350,7 +348,8 @@ contains
     do iMaterial = 0, nMaterial-1
        call read_var('Name material',Name)
        if(index(Name,':')>0)then
-          call CON_stop('To be completed')
+          call CON_stop(&
+               'The use of new mixtures to be with CRASH-created tables is to be tested')
           NameMaterial_I(iMaterial) = Name(1:2)
           !Truncate symbols till the colon
           call split_string( Name(1:len_trim(Name)), &
@@ -371,14 +370,20 @@ contains
                   cMix_II(iMix,iMaterial)
           end do
        else
+          !Extend the name if needed
+ 
           if(len_trim(Name)==1)then
              NameMaterial_I(iMaterial)=trim(Name)//'_'
           else
              NameMaterial_I(iMaterial)=trim(Name)
           end if
+          !Check if this is a chemical element or a known mixture
+
           nZ_I(iMaterial) = i_material(NameMaterial_I(iMaterial))
           if(nZ_I(iMaterial) < MaterialMin_)then
+             !No internal information
              nZ_I(iMaterial)=0
+
           elseif(nZ_I(iMaterial) <=0)then
              !Now nZ_I(iMaterial) is the reference number in the
              !list of the materials with stored data
@@ -400,6 +405,8 @@ contains
                      cMix_II(iMix,iMaterial)
              end do
           else
+             !This is a chemical element, nZ_I is properly set
+             !Find the atomic mass:
              cAtomicMassCRASH_I(iMaterial) = &
                   cAtomicMass_I(nZ_I(iMaterial))
           end if
@@ -817,6 +824,12 @@ contains
        if(present(Ne))         Ne = Value_V(Z_) * NAtomic
        if(present(zAverageOut))zAverageOut = Value_V(Z_)
        if(present(z2AverageOut))z2AverageOut = Value_V(Z2_)
+       if(present(iError))then
+          iError=0
+          if(Z_>=1)then
+             if(Value_V(Z_)<=cZMin)iError=4
+          end if
+       end if
        if(present(OpacityPlanckOut_I).or.&
             present(OpacityRosselandOut_I))then
           if(UseOpacityTable_I(iMaterial))then
@@ -1059,6 +1072,7 @@ contains
     if(present(Ne)) Ne = NAtomic * zAv
     if(present(zAverageOut)) zAverageOut = zAv
     if(present(z2AverageOut))z2AverageOut = Z2
+    if(present(iError).and.zAv <= cZMin)iError=4
   end subroutine eos_generic
   !====================
   !End of EOS functions

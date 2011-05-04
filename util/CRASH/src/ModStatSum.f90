@@ -5,6 +5,9 @@ module CRASH_ModThermoDynFunc
   use ModConst
   implicit none
   save
+
+  real,parameter:: cZMin = cTiny
+
 contains
   !=======================================  
 
@@ -79,7 +82,7 @@ Contains
     use CRASH_ModFermiGas
     !------------------
 
-    if( zAv <= cTiny )then
+    if( zAv <= cZMin )then
        heat_capacity = 1.50; return
     end if
 
@@ -100,6 +103,25 @@ Contains
     heat_capacity_e = heat_capacity() - 1.50 
 
   end function heat_capacity_e 
+  !==================================
+  !Calculate the specific heat capacity at constant volume 
+  !(derivative of internal energy wrt Te) from temperature:
+  !ONLY for free electrons AND the derivative is taken at
+  !constant Z and partition functions. Used for non-LTE
+  !simulations only.
+  real function heat_capacity_nonlte()
+    use CRASH_ModFermiGas
+    !------------------
+
+    if( zAv <= cZMin )then
+       heat_capacity_nonlte = 1.50; return
+    end if
+
+    ! calculate the heat capacity:
+    heat_capacity_nonlte = 1.50 * 2.50 * RPlus * zAv &
+         -2.250 * zAv / RMinus
+
+  end function heat_capacity_nonlte
   !==========================================================================!
   !Thermodynamic derivatives for pressure
   !Thermodynamic derivatives: use abbreviations:
@@ -112,7 +134,7 @@ Contains
   real function d_pressure_over_d_te()
     use CRASH_ModFermiGas,ONLY:RPlus,RMinus
     !----------------------------------------------------------
-    if(zAv<=cTiny)then
+    if(zAv<=cZMin)then
        d_pressure_over_d_te = 1.0
        return
     end if
@@ -141,7 +163,24 @@ Contains
     d_pressure_e_over_d_te = d_pressure_over_d_te() - 1.0
 
   end function d_pressure_e_over_d_te
+  !===============================================================
+  ! Calculate (1/Na)*(\partial P/\partial T)_{\rho=const}
+  ! i.e the temperuture derivative of the specific pressure (P/Na) 
+  real function d_pressure_over_d_tz()
+    use CRASH_ModFermiGas,ONLY:RPlus,RMinus
+    !----------------------------------------------------------
+    if(zAv<=cZMin)then
+       d_pressure_over_d_tz = 1.0
+       return
+    end if
+    !\
+    !Calculate derivatives at const Na:
+    !/
 
+    !For specific pressure:
+    d_pressure_over_d_tz = 2.5*zAv*RPlus - 1.5 * zAv / RMinus
+
+  end function d_pressure_over_d_tz
   !========================================================================!
   !Calculate !(\rho/P)*(\partial P/\Partial \rho)_{T=const},
   !i.e the compressibility at constant temperature
@@ -150,7 +189,7 @@ Contains
 
 
     !-------------------
-    if(zAv<=0)then
+    if(zAv<=cZMin)then
        compressibility_at_const_te = 1.0
        return
     end if
@@ -175,7 +214,7 @@ Contains
 
     real :: Compr
     !-------------------
-    if(zAv<=0)then
+    if(zAv<=cZMin)then
        compressibility_at_const_te_e = 0.0
        return
     end if
@@ -204,13 +243,12 @@ Contains
     real,parameter::Gamma0=5.0/3.0
     !--------------------------------------!
 
-    if(zAv<=cTiny)then
+    if(zAv<=cZMin)then
        if(present(GammaOut))   GammaOut=Gamma0
        if(present(GammaSOut))  GammaSOut=Gamma0
        if(present(GammaMaxOut))GammaMaxOut=Gamma0
-
-       if(present(GammaeOut))   GammaeOut=Gamma0
-       if(present(GammaSeOut))  GammaSeOut=Gamma0
+       if(present(GammaeOut))   GammaeOut = Gamma0
+       if(present(GammaSeOut)) GammaSeOut=Gamma0
        return
     end if
     Gamma  = 1.0 + pressure  ()/( Na * cEv * internal_energy  ())
@@ -229,7 +267,7 @@ Contains
 
     if(present(GammaSOut ))GammaSOut  = GammaS
     if(present(GammaSeOut))then
-       ! Note heat_capacity_e() is zero if zAv <= cTiny
+       ! Note heat_capacity_e() is zero if zAv <= cZMin
        GammaSe = compressibility_at_const_te_e() + &
             d_pressure_e_over_d_te()**2 * (Na * Te * cEV) /(heat_capacity_e() * pressure_e())
        GammaSeOut = GammaSe
