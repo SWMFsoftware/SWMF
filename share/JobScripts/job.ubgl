@@ -1,16 +1,25 @@
 #!/bin/csh
 # Usage: msub job.ubgl
+#
+# To start an interactive job that pops up in a new X window, use 
+#   
+#   mxterm 128 0 60 -q pdebug -A michigan   # mxterm NNODE 0 NMINUTE ...
+#
+# Use checkjob JOBID to check the status of a submitted job.
 
+#MSUB -A michigan
 #MSUB -l partition=ubgl
 #MSUB -l nodes=128
 #MSUB -l walltime=0:30:00
 #MSUB -q pdebug
 #MSUB -o runlog
-#MSUB -A michigan
 
 date
-cd /g/g99/toth2/crash/UBGL/run
+# Change into the run directory that should be in the /p/gscratchc
+# The executable has to be COPIED (not linked) into the run directory
+cd /p/gscratchc/toth2/crash/run
 
-# By default the executable runs on all cores (there are 128 cores per node).
+# By default the executable runs on all nodes (the minimum number is 128)
 # To reduce the number of cores to NN use mpirun -np NN ...
 mpirun -exe `pwd`/CRASH.exe -cwd `pwd`
+
