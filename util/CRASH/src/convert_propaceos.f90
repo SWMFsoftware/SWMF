@@ -8,6 +8,7 @@ program PROPACEOS
   use CRASH_ModAtomicDataMix,ONLY: nMix,Concentration_I, nZ_I
   use CRASH_ModPartition,ONLY: Population_II,iZMin_I
   use CRASH_ModTransport,ONLY: electron_heat_conductivity, te_ti_relaxation
+  use CRASH_ModStatSum, ONLY: cZMin
   implicit none
 
   integer,parameter::iUnit = 11, nDensity=201, nTemperature = 201
@@ -72,6 +73,7 @@ program PROPACEOS
   ! logical,parameter:: DoHeaderOnly=.false., DoCut=.false.
   ! integer,parameter:: iStringStart = -1, iStringLast = -1
  
+  logical, parameter :: UseLogInterpolation = .true.
   !--------------
 
   Population_II= 0.0; Concentration_I = 0.0
@@ -154,7 +156,7 @@ program PROPACEOS
 
   Density_I = 1.0e6 * Density_I  ! 1/cm3 = 10+6 1/m3
   Rho_I     = cAtomicMass * AtomicMass * Density_I  !Comes in kg/m3 
-
+  
   !============================Opacities===============================
   !Save opacities
   !Swap indexes (Rho<=>Te), merge to a sigle table
@@ -205,52 +207,67 @@ program PROPACEOS
   pElectron_II = pElectron_II *0.10
   pIon_II      = pIon_II      *0.10
 
+  !Check positivity!
+  write(*,*) 'Total energy is not positive in ',count(ETotal_II<=0.0), ' points'
+  write(*,*) 'Electron energy is not positive in ',count(EElectron_II<=0.0), ' points'
+  write(*,*) 'Ion pressure is not positive in ',count(pIon_II<=0.0), ' points'
+  write(*,*) 'Electron pressure is not positive in ',count(pElectron_II<=0.0), ' points'
+  
 
   pTotal_II =  pIon_II +  pElectron_II
+  write(*,*) 'Total pressure is not positive in ',count(pTotal_II<=0.0), ' points'
 
+  if(.not.UseLogInterpolation)then
+     !Convert specific heat from J/g/eV to J/m^3/K
+     !Convert energy in J/g to J/kg, 1/g=10+3 1/kg
+     !1/eV = 1/ceVToK 
+     dETotalOverDT_II    = 1.0e3 * dETotalOverDT_II   /cEVToK
+     dEElectronOverDT_II = 1.0e3 * dEElectronOverDT_II/cEVToK
+     
+     !Convert from J/kg to J/m3
+     do iRho = 1, nDensity
+        dETotalOverDT_II(:,iRho) = dETotalOverDT_II(:,iRho) * Rho_I(iRHo)
+        dEElectronOverDT_II(:,iRho) = dEElectronOverDT_II(:,iRho) * Rho_I(iRHo)
+     end do
+     
+     !Pressure derivatives
+     dPTotalOverRho_II(:,1) = Rho_I(1)/ pTotal_II(:,1) * &
+          (pTotal_II(:,2) - pTotal_II(:,1))/(Rho_I(2)-Rho_I(1))
+     
+     dPElectronOverRho_II(:,1) = Rho_I(1)/ pElectron_II(:,1) * &
+          (pElectron_II(:,2) - pElectron_II(:,1))/(Rho_I(2)-Rho_I(1))
+     
+     do iRho = 2, nDensity -1
+        dPTotalOverRho_II(:,iRho) = Rho_I(iRho)/ pTotal_II(:,iRho) * &
+             (pTotal_II(:,iRho+1) - pTotal_II(:,iRho-1))/&
+             (Rho_I(iRho+1)-Rho_I(iRho -1))
+        
+        dPElectronOverRho_II(:,iRho) = Rho_I(iRho)/ pElectron_II(:,iRho) * &
+             (pElectron_II(:,iRho+1) - pElectron_II(:,iRho-1))/&
+             (Rho_I(iRho+1)-Rho_I(iRho -1))
+     end do
+     
+     dPTotalOverRho_II(:,nDensity) = Rho_I(nDensity)/ pTotal_II(:,nDensity) * &
+          (pTotal_II(:,nDensity) - pTotal_II(:,nDensity-1))/&
+          (Rho_I(nDensity)-Rho_I(nDensity-1))
+     
+     dPElectronOverRho_II(:,nDensity) = Rho_I(nDensity)/ pElectron_II(:,nDensity) * &
+          (pElectron_II(:,nDensity) - pElectron_II(:,nDensity-1))/&
+          (Rho_I(nDensity)-Rho_I(nDensity-1))
+     
+     !dyne/cm2 /eV = 0.1/ceVToK 1/K
+     dPIonOverDT_II = dPIonOverDT_II * 0.10/cEVToK
+     dPElectronOverDT_II = dPElectronOverDT_II * 0.10/cEVToK
+  else
+     call d_over_dt(In_II=ETotal_II,Out_II=dETotalOverDT_II,IsElectronV=.false.)
+     call d_over_dt(In_II=EElectron_II,Out_II=dEElectronOverDT_II,IsElectronV=.true.)
 
-  !Convert specific heat from J/g/eV to J/m^3/K
-  !Convert energy in J/g to J/kg, 1/g=10+3 1/kg
-  !1/eV = 1/ceVToK 
-  dETotalOverDT_II    = 1.0e3 * dETotalOverDT_II   /cEVToK
-  dEElectronOverDT_II = 1.0e3 * dEElectronOverDT_II/cEVToK
+     call d_over_dn(In_II=PTotal_II, Out_II=dPTotalOverRho_II,IsElectronV=.false.)
+     call d_over_dn(In_II=PElectron_II, Out_II=dPElectronOverRho_II,IsElectronV=.true.)
 
-  !Convert from J/kg to J/m3
-  do iRho = 1, nDensity
-     dETotalOverDT_II(:,iRho) = dETotalOverDT_II(:,iRho) * Rho_I(iRHo)
-     dEElectronOverDT_II(:,iRho) = dEElectronOverDT_II(:,iRho) * Rho_I(iRHo)
-  end do
-
-  !Pressure derivatives
-  dPTotalOverRho_II(:,1) = Rho_I(1)/ pTotal_II(:,1) * &
-       (pTotal_II(:,2) - pTotal_II(:,1))/(Rho_I(2)-Rho_I(1))
-
-  dPElectronOverRho_II(:,1) = Rho_I(1)/ pElectron_II(:,1) * &
-       (pElectron_II(:,2) - pElectron_II(:,1))/(Rho_I(2)-Rho_I(1))
-
-  do iRho = 2, nDensity -1
-     dPTotalOverRho_II(:,iRho) = Rho_I(iRho)/ pTotal_II(:,iRho) * &
-          (pTotal_II(:,iRho+1) - pTotal_II(:,iRho-1))/&
-          (Rho_I(iRho+1)-Rho_I(iRho -1))
-
-     dPElectronOverRho_II(:,iRho) = Rho_I(iRho)/ pElectron_II(:,iRho) * &
-          (pElectron_II(:,iRho+1) - pElectron_II(:,iRho-1))/&
-          (Rho_I(iRho+1)-Rho_I(iRho -1))
-  end do
-
-  dPTotalOverRho_II(:,nDensity) = Rho_I(nDensity)/ pTotal_II(:,nDensity) * &
-       (pTotal_II(:,nDensity) - pTotal_II(:,nDensity-1))/&
-       (Rho_I(nDensity)-Rho_I(nDensity-1))
-
-  dPElectronOverRho_II(:,nDensity) = Rho_I(nDensity)/ pElectron_II(:,nDensity) * &
-       (pElectron_II(:,nDensity) - pElectron_II(:,nDensity-1))/&
-       (Rho_I(nDensity)-Rho_I(nDensity-1))
-
-  !dyne/cm2 /eV = 0.1/ceVToK 1/K
-  dPIonOverDT_II = dPIonOverDT_II * 0.10/cEVToK
-  dPElectronOverDT_II = dPElectronOverDT_II * 0.10/cEVToK
-
-
+     call d_over_dt(In_II=PIon_II,Out_II=dPIonOverDT_II,IsElectronV=.false.)
+     call d_over_dt(In_II=PElectron_II,Out_II=dPElectronOverDT_II,IsElectronV=.true.)
+  end if
   allocate( Value_VII(nVarEos, nTemperature, nDensity) ) 
   Value_VII = 0.0
   do iRho = 1, nDensity
@@ -262,13 +279,13 @@ program PROPACEOS
         Value_VII(Ee_, iTe, iRho) = ETotal_II( iTe, iRho)/(cEV * Density_I(iRho))
 
         Value_VII(Pe_, iTe, iRho) = pElectron_II( iTe, iRho)/(cEV * Density_I(iRho))
-
+        
         Value_VII(Cv_, iTe, iRho) = dETotalOverDT_II(iTe, iRho)/(cBoltzmann * Density_I(iRho))
         Value_VII(Cve_, iTe, iRho) = dEElectronOverDT_II(iTe, iRho)/(cBoltzmann * Density_I(iRho))
 
         Value_VII(Z_,  iTe, iRho) = zAvr_II(iTe, iRho)
         Value_VII(Z2_,  iTe, iRho) = zAvr_II(iTe, iRho)**2
-        ZAv =  Value_VII(Z2_,  iTe, iRho)
+        ZAv =  Value_VII(Z_,  iTe, iRho)
         Z2  =  ZAv **2
         Z2PerA = Z2/AtomicMass
         Na     = Density_I(iRho)
@@ -283,19 +300,27 @@ program PROPACEOS
         Value_VII(TeTi_,  iTe, iRho) = te_ti_relaxation()
 
         !Use formula (24) from HEDP.pdf:
-        
-         Value_VII(GammaE_,  iTe, iRho) = &
-              dPElectronOverRho_II(iTe, iRho) + &
-              dPElectronOverDT_II( iTe, iRho)**2&
-              *Temperature_I(iTe) * cEVToK /(pElectron_II(iTe, iRho)*&
-                                    dEElectronOverDT_II(iTe, iRho))
-         
-         Value_VII(Gamma_,  iTe, iRho) = &
-              dPTotalOverRho_II(iTe, iRho) + &
-              (dPElectronOverDT_II( iTe, iRho) +&
-               dPIonOverDT_II(iTe, iRho))**2&
-              *Temperature_I(iTe) * cEVToK /(pTotal_II(iTe, iRho)*&
-                                    dETotalOverDT_II(iTe, iRho))
+        !write(*,*)ZAv,dPElectronOverRho_II(iTe, iRho),&
+        !     dPElectronOverDT_II( iTe, iRho),pElectron_II(iTe, iRho),&
+        !     dEElectronOverDT_II(iTe, iRho),iTe,iRho, EElectron_II(iTe,iRho), EElectron_II(iTe+1,iRho)
+        if(zAv > cZMin) then
+           Value_VII(GammaE_,  iTe, iRho) = &
+             dPElectronOverRho_II(iTe, iRho) + &
+             dPElectronOverDT_II( iTe, iRho)**2&
+             *Temperature_I(iTe) * cEVToK /(pElectron_II(iTe, iRho)*&
+             dEElectronOverDT_II(iTe, iRho))
+        else
+           Value_VII(GammaE_,  iTe, iRho) = 5.0/3.0
+        end if
+           
+       ! write(*,*)iRho,iTe,pTotal_II(iTe, iRho),&
+       !      dETotalOverDT_II(iTe, iRho),dEElectronOverDT_II(iTe, iRho),dEIonOverDT_II(iTe,iRho)
+        Value_VII(Gamma_,  iTe, iRho) = &
+             dPTotalOverRho_II(iTe, iRho) + &
+             (dPElectronOverDT_II( iTe, iRho) +&
+             dPIonOverDT_II(iTe, iRho))**2&
+             *Temperature_I(iTe) * cEVToK /(pTotal_II(iTe, iRho)*&
+             dETotalOverDT_II(iTe, iRho))
 
         ! GammaSe = compressibility_at_const_te_e() + &
         !    d_pressure_e_over_d_te()**2 * (Na * Te * cEV) /(heat_capacity_e() * pressure_e())
@@ -362,7 +387,151 @@ program PROPACEOS
   close(11)
 
 
+contains
+  subroutine d_over_dt(In_II,Out_II,IsElectronV)
+    real, intent(in)  :: In_II(  nTemperature, nDensity)
+    real, intent(out) :: Out_II( nTemperature, nDensity)
+    logical, intent(in)::IsElectronV
+    integer:: iTe,iRho
+    !-----------------
+    do iRho = 1, nDensity
+       !Check if the input values can be used 
+       if (zAvr_II(1, iRho)<=cZMin .and. IsElectronV) then
+          !The point itself is fake
+          Out_II(1 , iRho) = 0.0
+       elseif(zAvr_II(2, iRho)<=cZMin.and.IsElectronV)then
+          Out_II(1 , iRho) = In_II(1, iRho) /&
+                             Temperature_I(1)
+       else
+          Out_II(1 , iRho) = ( In_II(2, iRho)   + In_II(1, iRho) )/&
+                          ( Temperature_I(2) + Temperature_I(1))*&
+                          ( log(In_II(2, iRho)) - log(In_II(1, iRho)))/&
+                          (log(Temperature_I(2)) - log(Temperature_I(1)))
+       end if
+          
+          
+          
+       do iTe = 2, nTemperature-1
+          !Check if the input values can be used 
 
+          if (zAvr_II(iTe, iRho)<=cZMin.and.IsElectronV) then
+             !The point itself is fake
+             Out_II(iTe , iRho) = 0.0
+          elseif(&
+               (zAvr_II(iTe-1, iRho) > cZMin .and. zAvr_II(iTe+1, iRho) > cZMin) &
+               .or.(.not.IsElectronV) )then
+
+             !Both neighboring points used to calculate the derivatives are good
+
+             Out_II(iTe , iRho) = In_II(iTe, iRho)/&
+                          Temperature_I(iTe)*&
+               ( log(In_II(iTe+1, iRho)) - log(In_II(iTe-1, iRho)))/&
+               (log(Temperature_I(iTe+1)) - log(Temperature_I(iTe-1)))
+          elseif(zAvr_II(iTe-1, iRho) > cZMin)then
+
+             !Only iTe+1 point is bad, do not use it
+
+             Out_II(iTe , iRho) = In_II(iTe, iRho)/&
+                          Temperature_I(iTe)*&
+               ( log(In_II(iTe, iRho)) - log(In_II(iTe-1, iRho)))/&
+               (log(Temperature_I(iTe)) - log(Temperature_I(iTe-1)))
+          elseif(zAvr_II(iTe+1, iRho) > cZMin)then
+
+             !Only iTe-1 point is bad, do not use it
+
+             Out_II(iTe , iRho) = In_II(iTe, iRho)/&
+                          Temperature_I(iTe)*&
+               ( log(In_II(iTe+1, iRho)) - log(In_II(iTe, iRho)))/&
+               (log(Temperature_I(iTe+1)) - log(Temperature_I(iTe)))
+          else
+             Out_II(iTe , iRho) = In_II(iTe, iRho) /&
+                             Temperature_I(iTe)
+          end if
+       end do
+       !Check if the input values can be used 
+       if (zAvr_II(nTemperature, iRho)<=cZMin .and. IsElectronV) then
+          !The point itself is fake
+          Out_II(nTemperature , iRho) = 0.0
+       elseif(zAvr_II(nTemperature-1, iRho)<=cZMin.and.IsElectronV)then
+          Out_II(nTemperature , iRho) = In_II(nTemperature, iRho) /&
+                             Temperature_I(nTemperature)
+       else
+          Out_II(nTemperature , iRho) = ( In_II(nTemperature, iRho)   + &
+                                     In_II(nTemperature-1, iRho) )/&
+                          ( Temperature_I(nTemperature) + &
+                                       Temperature_I(nTemperature-1))*&
+                          ( log(In_II(nTemperature, iRho)) -&
+                                  log(In_II(nTemperature-1, iRho)))/&
+                          (log(Temperature_I(nTemperature)) - &
+                                      log(Temperature_I(nTemperature-1)))
+       end if
+    end do
+    Out_II=Out_II/cEVToK
+  end subroutine d_over_dt
+  
+  !-----------------------!
+  
+  subroutine d_over_dn(In_II, Out_II, IsElectronV)
+    real, intent(in)  :: In_II(  nTemperature, nDensity)
+    real, intent(out) :: Out_II( nTemperature, nDensity)
+    logical,intent(in) :: IsElectronV
+    integer:: iRho,iTe
+    do iTe=1, nTemperature
+       !Check if the input values can be used 
+
+       if (zAvr_II(iTe, 1)<=cZMin .and. IsElectronV) then
+          !The point itself is fake
+          Out_II(iTe , 1) = 1.0
+       elseif(zAvr_II(iTe, 2)<=cZMin.and.IsElectronV)then
+          Out_II(iTe , 1) = 1.0
+       else
+          Out_II(iTe,1)=( log(In_II(iTe,2))  - log(In_II(iTe,1)) )/&
+                ( log(Density_I(2)) - Log(Density_I(1)) )
+       end if
+    end do
+    do iRho = 2, nDensity-1
+       do iTe=1, nTemperature
+
+          if (zAvr_II(iTe, iRho)<=cZMin.and.IsElectronV) then
+             !The point itself is fake
+             Out_II(iTe , iRho) = 1.0
+          elseif(&
+               (zAvr_II(iTe, iRho-1) > cZMin .and. zAvr_II(iTe, iRho+1) > cZMin) &
+               .or.(.not.IsElectronV) )then
+
+             !Both neighboring points used to calculate the derivatives are good
+          
+             Out_II(iTe,iRho)=( log(In_II(iTe,iRho+1))  - log(In_II(iTe,iRho-1)) )/&
+                  ( log(Density_I(iRho+1)) - Log(Density_I(iRho-1)))
+          elseif(zAvr_II(iTe, iRho-1) > cZMin )then
+             
+             !Only iRho+1 point is bad, ignore it
+          
+             Out_II(iTe,iRho)=( log(In_II(iTe,iRho))  - log(In_II(iTe,iRho-1)) )/&
+                  ( log(Density_I(iRho)) - Log(Density_I(iRho-1)))
+          elseif(zAvr_II(iTe, iRho+1) > cZMin )then
+             
+             !Only iRho-1 point is bad, ignore it
+          
+             Out_II(iTe,iRho)=( log(In_II(iTe,iRho+1))  - log(In_II(iTe,iRho)) )/&
+                  ( log(Density_I(iRho+1)) - Log(Density_I(iRho)))
+          else
+             Out_II(iTe , iRho) = 1.0
+          end if
+       end do
+    end do
+    do iTe=1, nTemperature
+       if (zAvr_II(iTe, nDensity)<=cZMin .and. IsElectronV) then
+          !The point itself is fake
+          Out_II(iTe , nDensity) = 1.0
+       elseif(zAvr_II(iTe, nDensity-1)<=cZMin.and.IsElectronV)then
+          Out_II(iTe , nDensity) = 1.0
+       else
+          Out_II(iTe,nDensity)=( log(In_II(iTe,nDensity))  - log(In_II(iTe,nDensity-1)) )/&
+                ( log(Density_I(nDensity)) - Log(Density_I(nDensity-1)))
+       end if
+    end do
+  end subroutine d_over_dn
 end program PROPACEOS
 
 ! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
