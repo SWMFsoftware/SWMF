@@ -113,6 +113,8 @@ my $IsCompilerSet;
 my $Debug;
 my $Mpi;
 my $Optimize;
+my $ShowCompiler;
+my $ShowMpi;
 
 # Obtain current settings
 &get_settings_;
@@ -135,13 +137,15 @@ foreach (@Arguments){
     if(/^-compiler=(.*)$/i)   {$Compiler=$1; 
 			       $CompilerC=$1 if $Compiler =~ s/,(.+)//;
 			       $IsCompilerSet=1;  next};
+    if(/^-compiler$/i)        {$ShowCompiler=1;                 next};
     if(/^-mpi=(.*)$/i)        {$MpiVersion=$1;                  next};
+    if(/^-mpi$/i)             {if($Mpi ne "no" or not $Installed){$ShowMpi=1
+			       }else{$NewMpi="yes"};            next};
+    if(/^-nompi$/i)           {$NewMpi="no";                    next};
     if(/^-standalone$/i)      {$IsComponent=0;                  next};
     if(/^-component$/i)       {$IsComponent=1;                  next};
     if(/^-debug$/i)           {$NewDebug="yes";                 next};
     if(/^-nodebug$/i)         {$NewDebug="no";                  next};
-    if(/^-mpi$/i)             {$NewMpi="yes";                   next};
-    if(/^-nompi$/i)           {$NewMpi="no";                    next};
     if(/^-hdf5$/i)            {$NewHdf5="yes";                  next};
     if(/^-nohdf5$/i)          {$NewHdf5="no";                   next};
     if(/^-O[0-4]$/i)          {$NewOptimize=$_;                 next};  
@@ -177,6 +181,27 @@ if($Uninstall){
 	exit 0;
     }
 }
+
+if($ShowCompiler){
+    my @File = glob($MakefileConfOrig."*");
+    print "List of known compilers for OS=$OS:\n";
+    foreach (@File){
+	next unless s/$MakefileConfOrig\.$OS\.//;
+	print "  $_\n";
+    }
+}
+
+if($ShowMpi){
+    my @File = glob($MpiHeaderOrig."*");
+    print "List of known MPI headers for OS=$OS:\n";
+    foreach (@File){
+	next unless s/$MpiHeaderOrig$OS\_//;
+	next unless s/\.h$//;
+	print "  $_\n";
+    }
+}
+
+exit 0 if $ShowMpi or $ShowCompiler;
 
 # Execute the actions in the appropriate order
 &install_code_ if $Install;
@@ -660,8 +685,8 @@ of the SWMF/component script (starting with the text 'Additional ...').
 This script edits the appropriate Makefile-s, copies files and executes 
 shell commands. The script can also show the current settings.
 
-Usage: Config.pl [-help] [-verbose] [-show] [-dryrun] 
-                 [-install[=s|=c] [-compiler=FCOMP[,CCOMP]] [-mpi=VERSION]] 
+Usage: Config.pl [-help] [-verbose] [-dryrun] [-show] [-compiler] [-mpi] 
+                 [-install[=s|=c] [-compiler=FCOMP[,CCOMP]] [-mpi=VERSION]]
                  [-uninstall]
                  [-single|-double] [-debug|-nodebug] [-mpi|-nompi]
                  [-O0|-O1|-O2|-O3|-O4]
@@ -685,14 +710,17 @@ Information:
                or reinstall the same way as it was installed originally:
                (re)creates Makefile.conf, Makefile.def, make install
 
--compiler=FCOMP Create Makefile.conf from a non-default F90 compiler FCOMP
-               Only works together with -install flag
-
+-compiler      show available compiler choices for this operating system (OS)
+-compiler=FCOMP 
+               create Makefile.conf from a non-default F90 compiler FCOMP
+               and the default C compiler
+               only works together with -install flag
 -compiler=FCOMP,CCOMP 
-               Create Makefile.conf from a non-default F90 compiler FCOMP
+               create Makefile.conf from a non-default F90 compiler FCOMP
                and non-default C compiler CCOMP.
-               Only works together with -install flag
+               only works together with -install flag
 
+-mpi           show available MPI library choices for this OS
 -mpi=VERSION   copy share/include/mpif90_OS_VERSION 
                into share/Library/src/mpif90.h
                Only works together with -install flag
@@ -723,6 +751,10 @@ Show current settings:
 Show current settings with more detail: 
 
     Config.pl -show
+
+Show available compiler and MPI library choices:
+
+    Config.pl -compiler -mpi
 
 Install code with the g95 compiler and Intel MPI:
 
