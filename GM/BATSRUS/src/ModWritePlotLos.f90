@@ -1185,7 +1185,7 @@ contains
 
        ! interpolate density if it is needed by any of the plot variables
        if(UseRho)then
-          if(IsRzGeometry)then
+          if(nK == 1)then
              Rho = bilinear(State_VGB(Rho_,:,:,1,iBlk), &
                   -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
           elseif (IsSphGeometry) then
@@ -1207,7 +1207,7 @@ contains
           ! user_material_properties, but would need user to have implemented
           ! this.
 
-          if(IsRzGeometry)then
+          if(nK == 1)then
              Temp = bilinear(Temp_G(:,:,1), -1, nI+2, -1, nJ+2, &
                   CoordNorm_D(1:2))
           else if (IsSphGeometry) then
@@ -1322,7 +1322,7 @@ contains
                 end if
              end if
              ! Interpolate value
-             if(IsRzGeometry)then
+             if(nK == 1)then
                 Value = bilinear(PlotVar_GV(:,:,1,iVar), &
                      -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
              else
