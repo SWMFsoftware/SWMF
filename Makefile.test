@@ -328,7 +328,7 @@ test3_check:
 		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
 		output/test3/IE.log \
 		> test3_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE_mag_t000321_104500.mag \
 		output/test3/IE.mag \
 		>> test3_ie.diff)
