@@ -206,7 +206,7 @@ test1_check:
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test1/IE.log \
 		> test1_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-5 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
 		output/test1/IE_it000321_104510_000.idl \
 		>> test1_ie.diff)
