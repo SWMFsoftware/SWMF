@@ -655,7 +655,8 @@ contains
       real :: TeSi, Te
       real :: HeatCoefSi, HeatCoef
       real :: Factor, r
-      real :: B_D(3), Bunit_D(3)
+      real :: Bnorm, B_D(3), Bunit_D(3)
+      real :: FractionFieldAligned
       integer :: iDim
       !------------------------------------------------------------------------
 
@@ -702,11 +703,22 @@ contains
 
       ! The magnetic field should nowhere be zero. The following fix will
       ! turn the magnitude of the field direction to zero.
-      Bunit_D = B_D / max( sqrt(sum(B_D**2)), cTolerance )
+      Bnorm = sqrt(sum(B_D**2))
+      Bunit_D = B_D / max( Bnorm, cTolerance )
 
-      do iDim = 1, 3
-         HeatCond_DD(:,iDim) = HeatCoef*Bunit_D*Bunit_D(iDim)
-      end do
+      if(DoWeakFieldConduction)then
+         FractionFieldAligned = 0.5*(1.0+tanh((Bnorm-Bmodify)/DeltaBmodify))
+
+         do iDim = 1, 3
+            HeatCond_DD(:,iDim) = HeatCoef*( &
+                 FractionFieldAligned*Bunit_D*Bunit_D(iDim) &
+                 + (1.0 - FractionFieldAligned)*i_DD(:,iDim) )
+         end do
+      else
+         do iDim = 1, 3
+            HeatCond_DD(:,iDim) = HeatCoef*Bunit_D*Bunit_D(iDim)
+         end do
+      end if
 
     end subroutine get_heat_cond_tensor
 
