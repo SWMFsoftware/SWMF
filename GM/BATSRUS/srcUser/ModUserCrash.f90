@@ -23,6 +23,7 @@ module ModUser
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates, &
        UseUserLogFiles
   use ModSize, ONLY: nI, nJ, nK
+
   use ModVarIndexes, ONLY: nMaterial, MaterialFirst_, MaterialLast_, Pe_
   use CRASH_ModEos, ONLY: MassMaterial_I => cAtomicMassCRASH_I, &
        Be_, Plastic_, Au_, Ay_
@@ -54,9 +55,6 @@ module ModUser
   ! The Maximum Level set index that is used
   integer, parameter :: LevelMax = MaterialLast_
 
-  ! Fully 3D simulation?
-  logical :: IsThreeDim = .false.
-
   ! Nozzle that shrinks the circular cross section of the tube 
   ! into an ellipse or smaller circle
   logical :: UseNozzle = .false.
@@ -76,7 +74,7 @@ module ModUser
 
   !Gas parameters:
   real :: RhoDimInside = 6.5    ! density  of Xe outside tube [kg/m3]
- 
+
 
   ! Allow overwriting the Xe state inside the tube for x > xUniformXe > 0
   real :: xUniformXe = -1.0
@@ -264,7 +262,7 @@ contains
           call read_var('RhoDimOutside', RhoDimOutside)
           call read_var('pDimOutside',   pDimOutside)
           call read_var('xUniformXe',    xUniformXe)
-          
+
        case('#RHOINSIDE')
           call read_var('RhoDimInside',RhoDimInside)
 
@@ -331,7 +329,7 @@ contains
           end if
 
        case("#THREEDIM")
-          call read_var('IsThreeDim', IsThreeDim)
+          ! Not needed anymore
        case("#NOZZLE")
           call read_var('UseNozzle', UseNozzle)
           if(UseNozzle)then
@@ -391,7 +389,7 @@ contains
        case default
           call stop_mpi('ERROR in ModUserCrash: unknown command='//NameCommand)
        end select
-       
+
     end do
 
     if(UseMixedCell) UseNonConsLevelSet = .false.
@@ -519,7 +517,7 @@ contains
 
        if(UseNozzle) call set_nozzle_yz(x,y,z)
 
-       if(IsThreeDim)then
+       if(nK > 1)then
           r = sqrt(y**2 + z**2)
        else
           r = abs(y)
@@ -750,7 +748,7 @@ contains
       use ModVarIndexes,  ONLY: nWave, WaveFirst_, WaveLast_
       use ModVarIndexes,  ONLY: RhoUy_
       use ModGeometry,    ONLY: xMin=>x1, x2, y1, y2
-      
+
       real    :: BeLevInit = 30.
       real    :: XeLevInit = -92.5
       real    :: PlLevInit = -92.5
@@ -769,276 +767,276 @@ contains
       !---------------
 
 
-       ! Set boundaries for different materials
+      ! Set boundaries for different materials
 
-       xBe = 30.0 * 1.0e-6 * Si2No_V(UnitRho_) 
-       yPl = rInnerTube
-       xAu = 100. * 1.0e-6 * Si2No_V(UnitRho_)
-       xAy1 = 300. * 1.0e-6 * Si2No_V(UnitRho_)
-       xAy2 = 900. * 1.0e-6 * Si2No_V(UnitRho_)
+      xBe = 30.0 * 1.0e-6 * Si2No_V(UnitRho_) 
+      yPl = rInnerTube
+      xAu = 100. * 1.0e-6 * Si2No_V(UnitRho_)
+      xAy1 = 300. * 1.0e-6 * Si2No_V(UnitRho_)
+      xAy2 = 900. * 1.0e-6 * Si2No_V(UnitRho_)
 
 
 
-       ! Initialize level sets throughout the domain.
-       if ((x >= xmin).and.(x < 0.).and.(y < rInnerTube)) then
-          ! Set material as Be.
+      ! Initialize level sets throughout the domain.
+      if ((x >= xmin).and.(x < 0.).and.(y < rInnerTube)) then
+         ! Set material as Be.
 
-          DistanceBe = abs(xBe - x)
-          DistancePl = abs(yPl - y)
-          Distance = min(DistanceBe, DistancePl)
-          State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
-          State_VGB(LevelXe_,i,j,k,iBlock) = -DistanceBe
-          State_VGB(LevelPl_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAy1-xBe+DistanceBe)**2)
-          State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistanceBe**2 + DistancePl**2)
-          State_VGB(LevelAy_,i,j,k,iBlock) = -sqrt((xAu-x)**2 + DistancePl**2)
+         DistanceBe = abs(xBe - x)
+         DistancePl = abs(yPl - y)
+         Distance = min(DistanceBe, DistancePl)
+         State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
+         State_VGB(LevelXe_,i,j,k,iBlock) = -DistanceBe
+         State_VGB(LevelPl_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAy1-xBe+DistanceBe)**2)
+         State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistanceBe**2 + DistancePl**2)
+         State_VGB(LevelAy_,i,j,k,iBlock) = -sqrt((xAu-x)**2 + DistancePl**2)
 
 
-          State_VGB(Rho_,i,j,k,iBlock) = 6.5e-3 * Si2No_V(UnitRho_)
+         State_VGB(Rho_,i,j,k,iBlock) = 6.5e-3 * Si2No_V(UnitRho_)
 
 
-       elseif ((x >= 0.).and.(x < xBe).and.(y < rInnerTube)) then
-          ! Set material as Be.
+      elseif ((x >= 0.).and.(x < xBe).and.(y < rInnerTube)) then
+         ! Set material as Be.
 
-          DistanceBe = abs(xBe - x)
-          DistancePl = abs(yPl - y)
-          Distance = min(DistanceBe, DistancePl)
-          State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
-          State_VGB(LevelXe_,i,j,k,iBlock) = -DistanceBe
-          State_VGB(LevelPl_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAy1-xBe+DistanceBe)**2)
-          State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistanceBe**2 + DistancePl**2)
-          State_VGB(LevelAy_,i,j,k,iBlock) = -sqrt((xAu-x)**2 + DistancePl**2)
+         DistanceBe = abs(xBe - x)
+         DistancePl = abs(yPl - y)
+         Distance = min(DistanceBe, DistancePl)
+         State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
+         State_VGB(LevelXe_,i,j,k,iBlock) = -DistanceBe
+         State_VGB(LevelPl_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAy1-xBe+DistanceBe)**2)
+         State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistanceBe**2 + DistancePl**2)
+         State_VGB(LevelAy_,i,j,k,iBlock) = -sqrt((xAu-x)**2 + DistancePl**2)
 
 
 
-          State_VGB(Rho_,i,j,k,iBlock) = 1.85e+03 * Si2No_V(UnitRho_) 
+         State_VGB(Rho_,i,j,k,iBlock) = 1.85e+03 * Si2No_V(UnitRho_) 
 
 
-       elseif ((x >= xBe).and.(x < x2).and.(y < rInnerTube)) then
-          ! ...in Xe
+      elseif ((x >= xBe).and.(x < x2).and.(y < rInnerTube)) then
+         ! ...in Xe
 
-          DistanceBe = abs(x - xBe)
-          DistancePl = abs(yPl - y)
-          Distance = min(DistanceBe, DistancePl)
-          State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
-          State_VGB(LevelXe_,i,j,k,iBlock) =  Distance
-          if (x <= xAu) then
-             State_VGB(LevelPl_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAy1-x)**2)
-             State_VGB(LevelAu_,i,j,k,iBlock) = -abs(DistancePl)
-             State_VGB(LevelAy_,i,j,k,iBlock) = -abs(sqrt((xAu-x)**2 + DistancePl**2))
+         DistanceBe = abs(x - xBe)
+         DistancePl = abs(yPl - y)
+         Distance = min(DistanceBe, DistancePl)
+         State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+         State_VGB(LevelXe_,i,j,k,iBlock) =  Distance
+         if (x <= xAu) then
+            State_VGB(LevelPl_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAy1-x)**2)
+            State_VGB(LevelAu_,i,j,k,iBlock) = -abs(DistancePl)
+            State_VGB(LevelAy_,i,j,k,iBlock) = -abs(sqrt((xAu-x)**2 + DistancePl**2))
 
 
-          elseif ((x > xAu).and.(x <= xAy1)) then
-             State_VGB(LevelPl_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAy1-x)**2)
-             State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAu-x)**2)
-             State_VGB(LevelAy_,i,j,k,iBlock) = -DistancePl
+         elseif ((x > xAu).and.(x <= xAy1)) then
+            State_VGB(LevelPl_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAy1-x)**2)
+            State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAu-x)**2)
+            State_VGB(LevelAy_,i,j,k,iBlock) = -DistancePl
 
 
-          elseif ((x > xAy1).and.(x <= xAy2)) then
-             State_VGB(LevelPl_,i,j,k,iBlock) = -abs(DistancePl)             
-             State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAu-x)**2)
-             State_VGB(LevelAy_,i,j,k,iBlock) = &
-                  -min(DistancePl+(rOuterTube-rInnerTube), &
-                       sqrt((x-xAy1)**2 + DistancePl**2))
+         elseif ((x > xAy1).and.(x <= xAy2)) then
+            State_VGB(LevelPl_,i,j,k,iBlock) = -abs(DistancePl)             
+            State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAu-x)**2)
+            State_VGB(LevelAy_,i,j,k,iBlock) = &
+                 -min(DistancePl+(rOuterTube-rInnerTube), &
+                 sqrt((x-xAy1)**2 + DistancePl**2))
 
-          else
-             State_VGB(LevelPl_,i,j,k,iBlock) = -abs(DistancePl)             
-             State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAu-x)**2)
-             State_VGB(LevelAy_,i,j,k,iBlock) = &
-                  -sqrt((DistancePl+(rOuterTube-rInnerTube))**2 + (x-xAy2)**2)
+         else
+            State_VGB(LevelPl_,i,j,k,iBlock) = -abs(DistancePl)             
+            State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistancePl**2 + (xAu-x)**2)
+            State_VGB(LevelAy_,i,j,k,iBlock) = &
+                 -sqrt((DistancePl+(rOuterTube-rInnerTube))**2 + (x-xAy2)**2)
 
 
-          endif
+         endif
 
-          State_VGB(Rho_,i,j,k,iBlock) = RhoDimInside * Si2No_V(UnitRho_)
+         State_VGB(Rho_,i,j,k,iBlock) = RhoDimInside * Si2No_V(UnitRho_)
 
-       elseif ((y >= rInnerTube).and.(y <= rOuterTube)) then
+      elseif ((y >= rInnerTube).and.(y <= rOuterTube)) then
 
-          DistanceBe = abs(x - xBe)
-          DistancePl = y - yPl
-          Distance = min(DistanceBe, DistancePl)
+         DistanceBe = abs(x - xBe)
+         DistancePl = y - yPl
+         Distance = min(DistanceBe, DistancePl)
 
-          if ((x >= xmin).and.(x < 0.)) then
-             ! No tube here... in Be atmosphere
-             State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistanceBe**2+DistancePl**2)
-             State_VGB(LevelPl_,i,j,k,iBlock) = -(xAy1+abs(x))
-             State_VGB(LevelAu_,i,j,k,iBlock) = -(abs(x)+xBe)
-             State_VGB(LevelAy_,i,j,k,iBlock) = -(abs(x)+xAu)
+         if ((x >= xmin).and.(x < 0.)) then
+            ! No tube here... in Be atmosphere
+            State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
+            State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistanceBe**2+DistancePl**2)
+            State_VGB(LevelPl_,i,j,k,iBlock) = -(xAy1+abs(x))
+            State_VGB(LevelAu_,i,j,k,iBlock) = -(abs(x)+xBe)
+            State_VGB(LevelAy_,i,j,k,iBlock) = -(abs(x)+xAu)
 
 
-             State_VGB(Rho_,i,j,k,iBlock) = 0.0065*Si2No_V(UnitRho_)
+            State_VGB(Rho_,i,j,k,iBlock) = 0.0065*Si2No_V(UnitRho_)
 
-          elseif ((x >= 0.).and.(x < xBe)) then
-             ! In Be disk
-             State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistanceBe**2+DistancePl**2)
-             State_VGB(LevelPl_,i,j,k,iBlock) = -(xAy1-x)
-             State_VGB(LevelAu_,i,j,k,iBlock) = -DistanceBe
-             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
-
-             State_VGB(Rho_,i,j,k,iBlock) = 1.85e+03*Si2No_V(UnitRho_)
-
-          elseif ((x >= xBe).and.(x < xAu)) then
-             ! No tube here... in gold washer
-             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
-             State_VGB(LevelPl_,i,j,k,iBlock) = -(xAy1-x)
-             State_VGB(LevelAu_,i,j,k,iBlock) = &
-                  min(abs(DistancePl), (xAu-x), (x-xBe) )
-             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
-
-
-             State_VGB(Rho_,i,j,k,iBlock) = 2.0e+04 * Si2No_V(UnitRho_)
-
-          elseif ((x > xAu).and.(x <= xAy1)) then
-             ! No tube here.. in acrylic washer
-             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
-             State_VGB(LevelPl_,i,j,k,iBlock) = -(xAy1-x)
-             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
-             State_VGB(LevelAy_,i,j,k,iBlock) = &
-                  min( abs(DistancePl), abs(xAy1-x), abs(x-xAu) )
-
-
-             State_VGB(Rho_,i,j,k,iBlock) = 1.13e+03 * Si2No_V(UnitRho_) 
-
-          elseif ((x > xAy1).and.(x <= xAy2)) then
-             ! In plastic tube wall in region surrounded by acrylic washer
-             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
-             State_VGB(LevelPl_,i,j,k,iBlock) = &
-                  min( min(abs(DistancePl), abs(xAy2-x)), abs(x-xAy1) )
-             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
-             State_VGB(LevelAy_,i,j,k,iBlock) = &
-                  -min(abs(rOuterTube-y), abs(x-xAy1))
-
-             State_VGB(Rho_,i,j,k,iBlock) = 1.43e+03 * Si2No_V(UnitRho_)
-
-          else ! x > xAy2
-             ! Within Pl tube wall.
-             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
-             State_VGB(LevelPl_,i,j,k,iBlock) = &
-                  min(abs(DistancePl), sqrt((rOuterTube-y)**2 + (x-xAy2)**2))
-             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
-             State_VGB(LevelAy_,i,j,k,iBlock) = &
-                  -sqrt((rOuterTube-y)**2 + (x-xAy2)**2)
+         elseif ((x >= 0.).and.(x < xBe)) then
+            ! In Be disk
+            State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
+            State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistanceBe**2+DistancePl**2)
+            State_VGB(LevelPl_,i,j,k,iBlock) = -(xAy1-x)
+            State_VGB(LevelAu_,i,j,k,iBlock) = -DistanceBe
+            State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
+
+            State_VGB(Rho_,i,j,k,iBlock) = 1.85e+03*Si2No_V(UnitRho_)
+
+         elseif ((x >= xBe).and.(x < xAu)) then
+            ! No tube here... in gold washer
+            State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+            State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+            State_VGB(LevelPl_,i,j,k,iBlock) = -(xAy1-x)
+            State_VGB(LevelAu_,i,j,k,iBlock) = &
+                 min(abs(DistancePl), (xAu-x), (x-xBe) )
+            State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
+
+
+            State_VGB(Rho_,i,j,k,iBlock) = 2.0e+04 * Si2No_V(UnitRho_)
+
+         elseif ((x > xAu).and.(x <= xAy1)) then
+            ! No tube here.. in acrylic washer
+            State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+            State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+            State_VGB(LevelPl_,i,j,k,iBlock) = -(xAy1-x)
+            State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
+            State_VGB(LevelAy_,i,j,k,iBlock) = &
+                 min( abs(DistancePl), abs(xAy1-x), abs(x-xAu) )
+
+
+            State_VGB(Rho_,i,j,k,iBlock) = 1.13e+03 * Si2No_V(UnitRho_) 
+
+         elseif ((x > xAy1).and.(x <= xAy2)) then
+            ! In plastic tube wall in region surrounded by acrylic washer
+            State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+            State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+            State_VGB(LevelPl_,i,j,k,iBlock) = &
+                 min( min(abs(DistancePl), abs(xAy2-x)), abs(x-xAy1) )
+            State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
+            State_VGB(LevelAy_,i,j,k,iBlock) = &
+                 -min(abs(rOuterTube-y), abs(x-xAy1))
+
+            State_VGB(Rho_,i,j,k,iBlock) = 1.43e+03 * Si2No_V(UnitRho_)
+
+         else ! x > xAy2
+            ! Within Pl tube wall.
+            State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+            State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+            State_VGB(LevelPl_,i,j,k,iBlock) = &
+                 min(abs(DistancePl), sqrt((rOuterTube-y)**2 + (x-xAy2)**2))
+            State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
+            State_VGB(LevelAy_,i,j,k,iBlock) = &
+                 -sqrt((rOuterTube-y)**2 + (x-xAy2)**2)
 
-             State_VGB(Rho_,i,j,k,iBlock) = 1.43e+03 * Si2No_V(UnitRho_)
-          endif
-
-
-       elseif (y > rOuterTube) then
+            State_VGB(Rho_,i,j,k,iBlock) = 1.43e+03 * Si2No_V(UnitRho_)
+         endif
+
+
+      elseif (y > rOuterTube) then
 
-          DistanceBe = abs(x - xBe)
-          DistancePl = y - yPl
-          Distance = min(DistanceBe, DistancePl)
-
-          if ((x >= xmin).and.(x < 0.)) then
-             ! Be atmosphere
-             State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistancePl**2+DistanceBe**2)
-             State_VGB(LevelPl_,i,j,k,iBlock) = &
-                  -min( (xAy2-x), sqrt((xAy1-x)**2 + (y-rOuterTube)**2) )
-             State_VGB(LevelAu_,i,j,k,iBlock) = -DistanceBe
-             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
+         DistanceBe = abs(x - xBe)
+         DistancePl = y - yPl
+         Distance = min(DistanceBe, DistancePl)
+
+         if ((x >= xmin).and.(x < 0.)) then
+            ! Be atmosphere
+            State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
+            State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistancePl**2+DistanceBe**2)
+            State_VGB(LevelPl_,i,j,k,iBlock) = &
+                 -min( (xAy2-x), sqrt((xAy1-x)**2 + (y-rOuterTube)**2) )
+            State_VGB(LevelAu_,i,j,k,iBlock) = -DistanceBe
+            State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
 
 
-             State_VGB(Rho_,i,j,k,iBlock) = 6.5e-3 * Si2No_V(UnitRho_)
+            State_VGB(Rho_,i,j,k,iBlock) = 6.5e-3 * Si2No_V(UnitRho_)
 
-          elseif ((x >= 0.).and.(x < xBe)) then
+         elseif ((x >= 0.).and.(x < xBe)) then
 
-             ! In Be disk
-             State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistancePl**2+DistanceBe**2)
-             State_VGB(LevelPl_,i,j,k,iBlock) =  &
-                  -min( (xAy2-x), sqrt((xAy1-x)**2 + (y-rOuterTube)**2) )
-             State_VGB(LevelAu_,i,j,k,iBlock) = -DistanceBe
-             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
+            ! In Be disk
+            State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
+            State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistancePl**2+DistanceBe**2)
+            State_VGB(LevelPl_,i,j,k,iBlock) =  &
+                 -min( (xAy2-x), sqrt((xAy1-x)**2 + (y-rOuterTube)**2) )
+            State_VGB(LevelAu_,i,j,k,iBlock) = -DistanceBe
+            State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
 
-             State_VGB(Rho_,i,j,k,iBlock) = 1.85e+03 * Si2No_V(UnitRho_)
+            State_VGB(Rho_,i,j,k,iBlock) = 1.85e+03 * Si2No_V(UnitRho_)
 
-          elseif ((x >= xBe).and.(x < xAu)) then
-             ! in gold washer
-             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
-             State_VGB(LevelPl_,i,j,k,iBlock) =  &
-                  -min( xAy2-x, sqrt( (xAy1-x)**2 + (y-rOuterTube)**2 ) )
-             State_VGB(LevelAu_,i,j,k,iBlock) = &
-                  min(abs(DistancePl), (xAu-x), (x-xBe) )
-             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
+         elseif ((x >= xBe).and.(x < xAu)) then
+            ! in gold washer
+            State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+            State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+            State_VGB(LevelPl_,i,j,k,iBlock) =  &
+                 -min( xAy2-x, sqrt( (xAy1-x)**2 + (y-rOuterTube)**2 ) )
+            State_VGB(LevelAu_,i,j,k,iBlock) = &
+                 min(abs(DistancePl), (xAu-x), (x-xBe) )
+            State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
 
 
-             State_VGB(Rho_,i,j,k,iBlock) = 20.e+03 * Si2No_V(UnitRho_)
-          elseif ((x >= xAu).and.(x < xAy1)) then
-             ! in acrylic washer
-             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
-             State_VGB(LevelPl_,i,j,k,iBlock) = &
-                  -sqrt( (xAy1-x)**2 + (y-rOuterTube)**2 )
-             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
-             State_VGB(LevelAy_,i,j,k,iBlock) = &
-                  min( DistancePl, (x-xAu) , &  
-                       sqrt( (xAy1-x)**2 + (y-rOuterTube)**2 ) )
+            State_VGB(Rho_,i,j,k,iBlock) = 20.e+03 * Si2No_V(UnitRho_)
+         elseif ((x >= xAu).and.(x < xAy1)) then
+            ! in acrylic washer
+            State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+            State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+            State_VGB(LevelPl_,i,j,k,iBlock) = &
+                 -sqrt( (xAy1-x)**2 + (y-rOuterTube)**2 )
+            State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
+            State_VGB(LevelAy_,i,j,k,iBlock) = &
+                 min( DistancePl, (x-xAu) , &  
+                 sqrt( (xAy1-x)**2 + (y-rOuterTube)**2 ) )
 
-             State_VGB(Rho_,i,j,k,iBlock) = 1.13e+03 * Si2No_V(UnitRho_)
+            State_VGB(Rho_,i,j,k,iBlock) = 1.13e+03 * Si2No_V(UnitRho_)
 
-          elseif ((x >= xAy1).and.(x < xAy2)) then
-             ! in acrylic sleeve
-             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
-             State_VGB(LevelPl_,i,j,k,iBlock) = &
-                  -min( (xAy2-x), (y-rOuterTube) )
-             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
-             State_VGB(LevelAy_,i,j,k,iBlock) = &
-                  min(  (y-rOuterTube), (x-xAu) , (xAy2-x) )
+         elseif ((x >= xAy1).and.(x < xAy2)) then
+            ! in acrylic sleeve
+            State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+            State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+            State_VGB(LevelPl_,i,j,k,iBlock) = &
+                 -min( (xAy2-x), (y-rOuterTube) )
+            State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
+            State_VGB(LevelAy_,i,j,k,iBlock) = &
+                 min(  (y-rOuterTube), (x-xAu) , (xAy2-x) )
 
 
-             State_VGB(Rho_,i,j,k,iBlock) = 1.13e+03 * Si2No_V(UnitRho_)
+            State_VGB(Rho_,i,j,k,iBlock) = 1.13e+03 * Si2No_V(UnitRho_)
 
-          else
-             ! in "vacuum"
-             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
-             State_VGB(LevelPl_,i,j,k,iBlock) = min(abs(DistancePl), (x-xAy2))
-             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
-             State_VGB(LevelAy_,i,j,k,iBlock) = -(x-xAy2)
+         else
+            ! in "vacuum"
+            State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
+            State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
+            State_VGB(LevelPl_,i,j,k,iBlock) = min(abs(DistancePl), (x-xAy2))
+            State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
+            State_VGB(LevelAy_,i,j,k,iBlock) = -(x-xAy2)
 
 
-             State_VGB(Rho_,i,j,k,iBlock) = RhoDimInside * Si2No_V(UnitRho_)
-          endif
+            State_VGB(Rho_,i,j,k,iBlock) = RhoDimInside * Si2No_V(UnitRho_)
+         endif
 
-       endif
+      endif
 
 
-       TeSi = 2.1e6 *(0.025/180.) 
-       Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
-       Ti_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+      TeSi = 2.1e6 *(0.025/180.) 
+      Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+      Ti_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
 
 
 
-       State_VGB(RhoUx_,i,j,k,iBlock) =  0.0
-       State_VGB(RhoUy_,i,j,k,iBlock) =  0.0
-       State_VGB(RhoUz_,i,j,k,iBlock) =  0.0
+      State_VGB(RhoUx_,i,j,k,iBlock) =  0.0
+      State_VGB(RhoUy_,i,j,k,iBlock) =  0.0
+      State_VGB(RhoUz_,i,j,k,iBlock) =  0.0
 
 
 
-       if (nWave == 1) then
-          ! Set small initial radiation-energy density everywhere.
-          State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Tr**4
-       else
-          TrSi = 11600.
+      if (nWave == 1) then
+         ! Set small initial radiation-energy density everywhere.
+         State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Tr**4
+      else
+         TrSi = 11600.
 
-          do iWave = 1, nWave
-             call get_energy_g_from_temperature(iWave, TrSi,EgSI=EgSi)
-             State_VGB(WaveFirst_+iWave-1,i,j,k,iBlock) = &
-                  EgSi*Si2No_V(UnitEnergyDens_)
+         do iWave = 1, nWave
+            call get_energy_g_from_temperature(iWave, TrSi,EgSI=EgSi)
+            State_VGB(WaveFirst_+iWave-1,i,j,k,iBlock) = &
+                 EgSi*Si2No_V(UnitEnergyDens_)
 
 
-          enddo
-       endif
+         enddo
+      endif
 
-      
+
     end subroutine unperturbed_5_materials
   end subroutine user_set_ics
 
@@ -1276,8 +1274,8 @@ contains
        ! the staggered velocity components
        do iVar = nDimHyades + 1, nDimHyades + nVarHyadesMesh
           DataHyadesMesh_VC(iVar,iCellMesh) = &
-            Var_VI(iVarMesh_I(iVar)-nDimHyades,iCellMesh) &
-            *Hyades2No_V(iVarMesh_I(iVar))
+               Var_VI(iVarMesh_I(iVar)-nDimHyades,iCellMesh) &
+               *Hyades2No_V(iVarMesh_I(iVar))
        end do
 
        ! The first rows in HYADES only contains mesh data
@@ -1308,7 +1306,7 @@ contains
     if(iMaterialHyades > 0)then
        ! Vacuum (5) --> Polyimid
        where(nint(DataHyades_VC(iMaterialHyades, :)) == 5) &
-               DataHyades_VC(iMaterialHyades, :) = Plastic_
+            DataHyades_VC(iMaterialHyades, :) = Plastic_
        if(.not.UseAy)then
           ! Acrylic (4) --> Polyimid
           where(nint(DataHyades_VC(iMaterialHyades, :)) == Ay_) &
@@ -1651,115 +1649,113 @@ contains
     ! Interpolate points 
     do j = 1, nJ; do i = 1, nI; do k = 1, nk
 
-       if(k == 1 .or. IsThreeDim)then
-          x = x_Blk(i,j,k,iBlock)
-          y = y_Blk(i,j,k,iBlock)
-          z = z_Blk(i,j,k,iBlock)
+       x = x_Blk(i,j,k,iBlock)
+       y = y_Blk(i,j,k,iBlock)
+       z = z_Blk(i,j,k,iBlock)
 
-          if(UseNozzle) call set_nozzle_yz(x, y, z)
+       if(UseNozzle) call set_nozzle_yz(x, y, z)
 
-          if(IsThreeDim)then
-             r = sqrt(y**2 + z**2)
-          else
-             r = abs(y)
-             z = 0.0
-          end if
+       if(nK > 1)then
+          r = sqrt(y**2 + z**2)
+       else
+          r = abs(y)
+          z = 0.0
+       end if
 
-          ! Check if we are further away than the width of the box
-          if(r > y2)then
-             ! Shrink coordinates in the radial direction to y2
-             y = y*y2/r
-             z = z*y2/r
-             r = y2
-          end if
+       ! Check if we are further away than the width of the box
+       if(r > y2)then
+          ! Shrink coordinates in the radial direction to y2
+          y = y*y2/r
+          z = z*y2/r
+          r = y2
+       end if
 
+       ! Check if we are at the end of the Hyades grid
+       if(x >= DataHyades_VC(iXHyades, iCellLastHyades))then
+          iNode1 = iCellLastHyades;  Weight1 = 1.0
+          iNode2 = 1;                Weight2 = 0.0
+          iNode3 = 1;                Weight3 = 0.0
+       else
+          ! Find the Hyades triangle around this position
+          call find_triangle(&
+               nCellHyades, nTriangle, &
+               (/x, r/), CoordHyades_DC, &
+               iNodeTriangle_II, &
+               iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, &
+               nTriangle_C=nTriangle_C, iTriangle_IC=iTriangle_IC)
+       end if
+
+       ! Check if the 3 points consist of the same material or not
+       ! If the materials are different use the points with the
+       ! material that has the largest total weight
+
+       ! Weight and material of the 3 nodes of the triangle
+       WeightNode_I    = (/ Weight1, Weight2, Weight3 /)
+       iMaterialNode_I = DataHyades_VC(iMaterialHyades, &
+            (/iNode1, iNode2, iNode3/) )
+
+       if(maxval(iMaterialNode_I) /= minval(iMaterialNode_I))then
+
+          ! Add up the weights for all materials
+          do iMaterial = 0, nMaterial - 1
+             WeightMaterial_I(iMaterial) = sum(WeightNode_I, &
+                  MASK = (iMaterialNode_I == iMaterial) )
+          end do
+
+          ! Find the dominant material
+          iMaterial   = maxloc(WeightMaterial_I, 1) - 1
+          Weight      = WeightMaterial_I(iMaterial)
+
+          where(iMaterialNode_I == iMaterial) 
+             ! Reset weights so they add up to 1 for the dominant material
+             WeightNode_I = WeightNode_I / Weight
+          elsewhere
+             ! Other materials get zero weight
+             WeightNode_I = 0.0
+          end where
+
+       end if
+
+       DataHyades_V = &
+            WeightNode_I(1)*DataHyades_VC(:, iNode1) + &
+            WeightNode_I(2)*DataHyades_VC(:, iNode2) + &
+            WeightNode_I(3)*DataHyades_VC(:, iNode3)
+
+       LevelHyades_V = &
+            WeightNode_I(1)*LevelHyades_VC(:, iNode1) + &
+            WeightNode_I(2)*LevelHyades_VC(:, iNode2) + &
+            WeightNode_I(3)*LevelHyades_VC(:, iNode3)
+
+       if(UseHyadesGroupFile)then
+          EradHyades_V = &
+               WeightNode_I(1)*EradHyades_VC(:,iNode1) + &
+               WeightNode_I(2)*EradHyades_VC(:,iNode2) + &
+               WeightNode_I(3)*EradHyades_VC(:,iNode3)
+       end if
+
+       if(UseZoneCenter)then
           ! Check if we are at the end of the Hyades grid
-          if(x >= DataHyades_VC(iXHyades, iCellLastHyades))then
-             iNode1 = iCellLastHyades;  Weight1 = 1.0
-             iNode2 = 1;                Weight2 = 0.0
-             iNode3 = 1;                Weight3 = 0.0
+          if(x >= DataHyadesMesh_VC(iXHyadesMesh, iCellLastHyadesMesh))then
+             iNode1 = iCellLastHyadesMesh;  Weight1 = 1.0
+             iNode2 = 1;                    Weight2 = 0.0
+             iNode3 = 1;                    Weight3 = 0.0
           else
              ! Find the Hyades triangle around this position
              call find_triangle(&
-                  nCellHyades, nTriangle, &
-                  (/x, r/), CoordHyades_DC, &
-                  iNodeTriangle_II, &
+                  nCellHyadesMesh, nTriangleMesh, (/x, r/), &
+                  CoordHyadesMesh_DC, &
+                  iNodeTriangleMesh_II, &
                   iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, &
-                  nTriangle_C=nTriangle_C, iTriangle_IC=iTriangle_IC)
+                  nTriangle_C=nTriangleMesh_C, &
+                  iTriangle_IC=iTriangleMesh_IC)
           end if
-
-          ! Check if the 3 points consist of the same material or not
-          ! If the materials are different use the points with the
-          ! material that has the largest total weight
-
-          ! Weight and material of the 3 nodes of the triangle
+          ! Weight of the 3 nodes of the triangle
           WeightNode_I    = (/ Weight1, Weight2, Weight3 /)
-          iMaterialNode_I = DataHyades_VC(iMaterialHyades, &
-               (/iNode1, iNode2, iNode3/) )
-
-          if(maxval(iMaterialNode_I) /= minval(iMaterialNode_I))then
-
-             ! Add up the weights for all materials
-             do iMaterial = 0, nMaterial - 1
-                WeightMaterial_I(iMaterial) = sum(WeightNode_I, &
-                     MASK = (iMaterialNode_I == iMaterial) )
-             end do
-
-             ! Find the dominant material
-             iMaterial   = maxloc(WeightMaterial_I, 1) - 1
-             Weight      = WeightMaterial_I(iMaterial)
-
-             where(iMaterialNode_I == iMaterial) 
-                ! Reset weights so they add up to 1 for the dominant material
-                WeightNode_I = WeightNode_I / Weight
-             elsewhere
-                ! Other materials get zero weight
-                WeightNode_I = 0.0
-             end where
-
-          end if
-
-          DataHyades_V = &
-               WeightNode_I(1)*DataHyades_VC(:, iNode1) + &
-               WeightNode_I(2)*DataHyades_VC(:, iNode2) + &
-               WeightNode_I(3)*DataHyades_VC(:, iNode3)
-
-          LevelHyades_V = &
-               WeightNode_I(1)*LevelHyades_VC(:, iNode1) + &
-               WeightNode_I(2)*LevelHyades_VC(:, iNode2) + &
-               WeightNode_I(3)*LevelHyades_VC(:, iNode3)
-
-          if(UseHyadesGroupFile)then
-             EradHyades_V = &
-                  WeightNode_I(1)*EradHyades_VC(:,iNode1) + &
-                  WeightNode_I(2)*EradHyades_VC(:,iNode2) + &
-                  WeightNode_I(3)*EradHyades_VC(:,iNode3)
-          end if
-
-          if(UseZoneCenter)then
-             ! Check if we are at the end of the Hyades grid
-             if(x >= DataHyadesMesh_VC(iXHyadesMesh, iCellLastHyadesMesh))then
-                iNode1 = iCellLastHyadesMesh;  Weight1 = 1.0
-                iNode2 = 1;                    Weight2 = 0.0
-                iNode3 = 1;                    Weight3 = 0.0
-             else
-                ! Find the Hyades triangle around this position
-                call find_triangle(&
-                     nCellHyadesMesh, nTriangleMesh, (/x, r/), &
-                     CoordHyadesMesh_DC, &
-                     iNodeTriangleMesh_II, &
-                     iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, &
-                     nTriangle_C=nTriangleMesh_C, &
-                     iTriangle_IC=iTriangleMesh_IC)
-             end if
-             ! Weight of the 3 nodes of the triangle
-             WeightNode_I    = (/ Weight1, Weight2, Weight3 /)
-          end if
-          DataHyadesMesh_V = &
-               WeightNode_I(1)*DataHyadesMesh_VC(:, iNode1) + &
-               WeightNode_I(2)*DataHyadesMesh_VC(:, iNode2) + &
-               WeightNode_I(3)*DataHyadesMesh_VC(:, iNode3)
        end if
+       DataHyadesMesh_V = &
+            WeightNode_I(1)*DataHyadesMesh_VC(:, iNode1) + &
+            WeightNode_I(2)*DataHyadesMesh_VC(:, iNode2) + &
+            WeightNode_I(3)*DataHyadesMesh_VC(:, iNode3)
 
        ! Interpolate density, momentum and pressure
 
@@ -2000,7 +1996,7 @@ contains
     call recall_block_buffer(iBlock,AdjUserUpdate1_) 
 
     call update_states_MHD_adjoint(iStage,iBlock)
-    
+
     ! recall state from block buffer
     call recall_block_buffer(iBlock,AdjPreUpdate_) 
 
@@ -2032,14 +2028,14 @@ contains
           AdjuDotArea_XI(i,j,k,1) = AdjuDotArea_XI(i,j,k,1)-rtemp
           if(nJ>1)AdjuDotArea_YI(i,j,k,1) = AdjuDotArea_YI(i,j,k,1)-rtemp
           if(nK>1)AdjuDotArea_ZI(i,j,k,1) = AdjuDotArea_ZI(i,j,k,1)-rtemp
-          
+
           ! update adjoint with dep of Source on U
           Adjoint_VGB(p_,i,j,k,iBlock) = & 
                Adjoint_VGB(p_,i,j,k,iBlock) - &
                (GammaEos-g)*DivU*AdjSource_VC(p_,i,j,k)
 
           ! TODO: still need dependence of GammaEos on state
-          
+
 
        end do; end do; end do
     end if
@@ -2419,7 +2415,7 @@ contains
     case default
        VarValue = -7777.0
     end select
-       
+
   end subroutine user_get_log_var
 
   !===========================================================================
@@ -2451,7 +2447,7 @@ contains
     else
        UnitUser_V(LevelXe_:LevelMax) = UnitUser_V(Rho_)*No2Io_V(UnitX_)
     end if
-    
+
     call check_eos_table(iComm = iComm, Save = .true.)
 
     ! The rest of the initialization should be done once
@@ -2572,8 +2568,8 @@ contains
        do iMaterial = 0, nMaterial-1
           if(UseElectronPressure)then
              call eos(iMaterial, Rho, pElectronIn=p, &
-             TeOut=Te, CvElectronOut=Cv, GammaEOut=Gamma, zAverageOut=Zavg, &
-             HeatCond=HeatCond, TeTiRelax=TeTiRelax)
+                  TeOut=Te, CvElectronOut=Cv, GammaEOut=Gamma, zAverageOut=Zavg, &
+                  HeatCond=HeatCond, TeTiRelax=TeTiRelax)
 
              Value_V(Te_   +iMaterial*nThermo) = Te
              Value_V(Cv_   +iMaterial*nThermo) = Cv
@@ -2925,7 +2921,7 @@ contains
 
              if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
                   = OpacityRosselandOut_W*RosselandScaleFactor_I(iMaterial)
-             
+
           end if
 
        end if
@@ -3334,7 +3330,7 @@ contains
        end do; end do; end do
 
        if(any(IsAu_G(iMin:iMax,jMin:jMax,kMin:kMax)) .and. &
-         .not. all(IsAu_G(iMin:iMax,jMin:jMax,kMin:kMax))) RETURN
+            .not. all(IsAu_G(iMin:iMax,jMin:jMax,kMin:kMax))) RETURN
     end if
 
     ! If Xe density exceeds RhoMin, refine
