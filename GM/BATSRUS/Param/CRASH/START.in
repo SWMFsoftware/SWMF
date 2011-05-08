@@ -1,0 +1,41 @@
+#ECHO
+T			DoEcho
+
+#BATL
+T			UseBatl
+
+#TEST
+krylov			StringTest
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+SI			TypeIoUnit
+
+#NORMALIZATION
+READ
+1.0e-6			No2SiUnitX Micron
+1.0e+3			No2SiUnitU km/s
+1000.0			No2SiUnitRho g/cm^3
+
+#UPDATECHECK
+F			DoUpdateCheck
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#LIMITER
+F			UseLogRhoLimiter
+F			UseLogPLimiter
+T			UseRhoRatioLimiter
+EInt			NameVarLimitRatio
+
+#RESCHANGE
+T                       UseAccurateResChange
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#PLOTFILENAME
+nanosecond		NameMaxTimeUnit

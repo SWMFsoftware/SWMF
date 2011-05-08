@@ -1,20 +1,20 @@
-#ECHO
-T
+#INCLUDE
+Param/CRASH/START.in
+
+#TEST
+none
+
+#SAVEINITIAL
+F			DoSaveInitial
 
 #DESCRIPTION
 Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_multigroupcond
-
-#BATL
-T			UseBatl
 
 #TIMING
 T                       UseTiming      (rest of parameters read if true)
 -2                      DnTiming       (-3 none, -2 final, -1 each session/AMR)
 -1                      nDepthTiming   (-1 for arbitrary depth)
 tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
-
-TEST
-krylov
 
 #LOOKUPTABLE
 OpacityXe(rho,T)	NameTable
@@ -86,18 +86,6 @@ logrho logT p(30) r(30)
 5800			Index2Min (about 0.5eV)
 1e8			Index2Max (about 10keV)
 
-#PLANET
-NONE
-
-#IOUNITS
-SI
-
-#NORMALIZATION
-READ
-1.0e-6			Micron
-1.0e+3			km/s
-1000.0			g/cm^3
-
 #USERINPUTBEGIN  ----------------------
 
 #USEEOSTABLE
@@ -160,9 +148,6 @@ larsen                  TypeRadFluxLimiter
 #ELECTRONPRESSURE
 1.0			PeMinSi
 
-#TIMEACCURATE
-T			IsTimeAccurate
-
 #CHECKGRIDSIZE
 4			nI
 4			nJ
@@ -201,12 +186,6 @@ user			TypeRefine
 0.5			LimitCoarsen
 0.5			LimitRefine
 
-#UPDATECHECK
-F			DoUpdateCheck
-
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #OUTERBOUNDARY
 float			xMinBc
 float			xMaxBc
@@ -221,9 +200,6 @@ Linde			TypeFlux
 mc3			TypeLimiter
 1.5			LimiterBeta
 
-#RESCHANGE
-T                       UseAccurateResChange
-
 #SAVERESTART
 F			DoSaveRestart
 -1			DnSaveRestart
@@ -237,12 +213,6 @@ T			DoSaveLogfile
 RAW			StringLogfile
 100			DnSaveLogfile
 -1.0			DtSaveLogfile
-
-SAVEINITIAL
-T			DoSaveInitial
-
-#PLOTFILENAME
-nanosecond		NameMaxTimeUnit
 
 SAVEPLOT
 3			nPlotfile

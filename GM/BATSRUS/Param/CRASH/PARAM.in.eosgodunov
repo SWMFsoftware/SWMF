@@ -1,20 +1,8 @@
-#ECHO
-T			DoEcho
+#INCLUDE
+Param/CRASH/START.in
 
-#BATL
-T			UseBatl
-
-#PLANET
-NONE			NamePlanet
-
-#IOUNITS
-SI			TypeIoUnit
-
-#NORMALIZATION
-READ
-1.0e-6			No2SiUnitX Micron
-1.0e+3			No2SiUnitU km/s
-1000.0			No2SiUnitRho g/cm^3
+#SAVEINITIAL
+F			DoSaveInitial
 
 #USER_FLAGS
 F			UseUserInnerBcs
@@ -30,9 +18,6 @@ F			UseUserEchoInput
 F			UseUserB0
 F			UseUserInitSession
 T			UseUserUpdateStates
-
-#TIMEACCURATE
-T			IsTimeAccurate
 
 #CHECKGRIDSIZE
 10			nI
@@ -51,9 +36,6 @@ T			IsTimeAccurate
 -1.0			zMin
  1.0			zMax
 
-#UPDATECHECK
-F			UseUpdateCheck
-
 #SHOCKTUBE
 100.			rho !~30 times the normal density
 -3.0e4			Ux  !Piston speed
@@ -68,9 +50,6 @@ F			UseUpdateCheck
 0.0			Eint
 2.04e+7			P
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 Reflective boundary at the left
 #OUTERBOUNDARY
 reflect			TypeBcxMin
@@ -80,28 +59,14 @@ float			TypeBcyMax
 float			TypeBczMin
 float			TypeBczMax
 
-
-#TIMESTEPPING
-2			nStage
-0.8			CflExpl
-
 #SCHEME
 2			nOrder
 Godunov			TypeFlux
 beta			TypeLimiter
 1.2			BetaLimiter
 
-#LIMITER
-F			UseLogRhoLimiter
-F       	        UseLogPLimiter
-T               	UseRhoRatioLimiter
-EInt			NameVarLimitRatio
-
 #SAVERESTART
 F			DoSaverestart
-
-#PLOTFILENAME
-nanosecond		NameMaxTimeUnit
 
 #SAVEPLOT
 1			nPlotfile
@@ -120,4 +85,3 @@ cut HD idl_ascii	PlotString
 -1			MaxIteration
 5.0e-7			tSimulationMax
 
-#END

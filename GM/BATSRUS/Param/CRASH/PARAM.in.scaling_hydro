@@ -1,11 +1,11 @@
-#ECHO
-T
+#INCLUDE
+Param/CRASH/START.in
+
+#SAVEINITIAL
+F			DoSaveInitial
 
 #DESCRIPTION
 Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_gray
-
-#BATL
-T			UseBatl
 
 MESSAGEPASS
 dir			TypeMessagePass
@@ -16,21 +16,6 @@ T                       UseTiming      (rest of parameters read if true)
 -1                      nDepthTiming   (-1 for arbitrary depth)
 tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
 
-#TEST
-krylov
-
-#PLANET
-NONE
-
-#IOUNITS
-SI
-
-#NORMALIZATION
-READ
-1.0e-6			Micron
-1.0e+3			km/s
-1000.0			g/cm^3
-
 #USERINPUTBEGIN  ----------------------
 
 #USEEOSTABLE
@@ -39,10 +24,6 @@ T			Use Eos Table for Be
 T			Use Eos Table for Pl
 F			Use Eos Table for Au
 F			Use Eos Table for Ay
-
-#MIXEDCELL
-F			UseMixedCell
-0.97			MixLimit
 
 #THREEDIM
 T			IsThreeDim
@@ -63,9 +44,6 @@ LOOKUPTABLE
 load                    NameCommand
 {Xe Be Pl}_eos_CRASH.dat         
 real8                   TypeFile
-
-#TIMEACCURATE
-T			IsTimeAccurate
 
 #CHECKGRIDSIZE
 8			nI
@@ -105,12 +83,6 @@ user			TypeRefine
 0.5			LimitCoarsen
 0.5			LimitRefine
 
-#UPDATECHECK
-F			DoUpdateCheck
-
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #OUTERBOUNDARY
 float			xMinBc
 float			xMaxBc
@@ -125,15 +97,6 @@ Linde			TypeFlux
 mc3			TypeLimiter
 1.5			LimiterBeta
 
-#LIMITER
-F			UseLogRhoLimiter
-F			UseLogPLimiter
-T			UseRhoRatioLimiter
-EInt			NameVarLimitRatio
-
-#RESCHANGE
-T			UseAccurateResChange
-
 #SAVERESTART
 F			DoSaverestart
 -1			DnSaveRestart
@@ -147,12 +110,6 @@ T			DoSaveLogfile
 RAW			StringLogfile
 100			DnSaveLogfile
 -1.0			DtSaveLogfile
-
-SAVEINITIAL
-T			DoSaveInitial
-
-#PLOTFILENAME
-nanosecond		NameMaxTimeUnit
 
 SAVEPLOT
 2			nPlotfile
@@ -189,12 +146,7 @@ F			IsMirrorX
 T			IsMirrorY
 T			IsMirrorZ
 
-#TIMESTEPPING
-2			nStage
-0.8			CflExpl
-
 #STOP
 100			MaxIteration
 -1.3e-8			tSimulationMax
 
-#END

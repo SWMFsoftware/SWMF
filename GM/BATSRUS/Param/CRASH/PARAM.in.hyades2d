@@ -1,30 +1,17 @@
-#ECHO
-T			DoEcho
+#INCLUDE
+Param/CRASH/START.in
 
-#BATL
-T			UseBatl
-
+#LIMITER
+F			UseLogRhoLimiter
+F       	        UseLogPLimiter
+T               	UseRhoRatioLimiter
+M(1:3) EInt		NameVarLimitRatio
 
 #LOOKUPTABLE
 Opacity(rho,T)          NameTable
 load                    NameCommand
 table_opacities.out     NameFile
 ascii                   TypeFile
-
-#TEST
-krylov			StringTest
-
-#PLANET
-NONE			NamePlanet
-
-#IOUNITS
-SI			TypeIoUnit
-
-#NORMALIZATION
-READ
-1.0e-6			No2SiUnitX Micron
-1.0e+3			No2SiUnitU km/s
-1000.0			No2SiUnitRho g/cm^3
 
 #CHECKGRIDSIZE
 10			nI
@@ -63,18 +50,11 @@ T
 F
 F
 
-MIXEDCELL
-T			UseMixedCell
-0.97			MixLimit
-
 #HYADES
 T			UseHyadesFile
 hyades2d_1.1ns.out	NameHyadesFile
 
 #USERINPUTEND    ----------------------
-
-#TIMEACCURATE
-T			IsTimeAccurate
 
 #SEMIIMPLICIT
 T                       UseSemiImplicit
@@ -96,35 +76,17 @@ T                       UseRadFluxLimiter
 larsen                  TypeRadFluxLimiter
 300.0			TradMinSi
 
-#UPDATECHECK
-F			DoUpdateCheck
-
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #SCHEME
 2			nOrder
 Linde			TypeFlux
 mc3			TypeLimiter
 2.0			LimiterBeta
 
-#LIMITER
-F			UseLogRhoLimiter
-F       	        UseLogPLimiter
-T               	UseRhoRatioLimiter
-M(1:3) EInt		NameVarLimitRatio
-
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
 1			DnSaveLogfile
 -1.0			DtSaveLogfile
-
-#SAVEINITIAL
-T			DoSaveInitial
-
-#PLOTFILENAME
-nanosecond		NameMaxTimeUnit
 
 #SAVEPLOT
 1			nPlotfile

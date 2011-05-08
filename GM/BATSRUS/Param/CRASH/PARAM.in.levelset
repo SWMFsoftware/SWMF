@@ -1,10 +1,11 @@
-Begin session: 1
+#INCLUDE
+Param/CRASH/START.in
 
-#ECHO
-T			DoEcho
-
-#BATL
-T			UseBatl
+#LIMITER
+F			UseLogRhoLimiter
+F       	        UseLogPLimiter
+T               	UseRhoRatioLimiter
+M(1:3) EInt		NameVarLimitRatio
 
 #LOOKUPTABLE
 pPerRho(e/rho,rho)	NameTable
@@ -39,18 +40,6 @@ logrho logpPerRho TXe CXe GXe ZXe HXe TBe CBe GBe ZBe HBe TPl CPl GPl ZPl HPl
 200                     nIndex2
 1e5                     Index2Min
 1e13                    Index2Max
-
-#PLANET
-NONE			NamePlanet
-
-#IOUNITS
-SI			TypeIoUnit
-
-#NORMALIZATION
-READ
-1.0e-6			No2SiUnitX Micron
-1.0e+3			No2SiUnitU km/s
-1000.0			No2SiUnitRho g/cm^3
 
 #CHECKGRIDSIZE
 4			nI
@@ -96,40 +85,17 @@ F			UseNonConsLevelSet
 1.1e5			pDimOutside
 -1.0			xUniformXe
 
-MIXEDCELL
-T			UseMixedCell
-0.97			MixLimit
-
 #HYADES
 T			UseHyadesFile
 hyades_1.1ns.out	NameHyadesFile
 
 #USERINPUTEND   ----------------
 
-#TIMEACCURATE
-T			IsTimeAccurate
-
-#UPDATECHECK
-F			DoUpdateCheck
-
-#NONCONSERVATIVE
-F			UseNonConservative
-
-#TIMESTEPPING
-2			nStage
-0.8			CflExpl
-
 #SCHEME
 2			nOrder
 Godunov			TypeFlux
 minmod			TypeLimiter
 1.2			LimiterBeta
-
-#LIMITER
-F			UseLogRhoLimiter
-F       	        UseLogPLimiter
-T               	UseRhoRatioLimiter
-M(1:3) EInt		NameVarLimitRatio
 
 #SAVERESTART
 F			DoSaverestart
@@ -139,12 +105,6 @@ T			DoSaveLogfile
 RAW			StringLogfile
 1			DnSaveLogfile
 -1.0			DtSaveLogfile
-
-#SAVEINITIAL
-T			DoSaveInitial
-
-#PLOTFILENAME
-nanosecond		NameMaxTimeUnit
 
 #SAVEPLOT
 1			nPlotfile
@@ -159,6 +119,5 @@ gamma
 -1			MaxIteration
 1.3e-8			tSimulationMax
 
-End session: 1
 
 

@@ -1,0 +1,26 @@
+#ECHO
+T			DoEcho
+
+#TEST
+krylov			StringTest
+
+#INCLUDE
+restartIN/restart.H
+
+#UPDATECHECK
+F			DoUpdateCheck
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#LIMITER
+F			UseLogRhoLimiter
+F			UseLogPLimiter
+T			UseRhoRatioLimiter
+EInt			NameVarLimitRatio
+
+#RESCHANGE
+T                       UseAccurateResChange
+
+#PLOTFILENAME
+nanosecond		NameMaxTimeUnit
