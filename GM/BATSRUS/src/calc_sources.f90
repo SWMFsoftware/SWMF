@@ -294,7 +294,8 @@ subroutine calc_sources
 
      ! For now, no Hall MHD implementation for rz-geometry
      if(UseBiermannBattery .and. &
-          (UseElectronPressure .or. ElectronPressureRatio > 0.0))then
+          (UseElectronPressure .or. ElectronPressureRatio > 0.0 .or. &
+          .not.UseIdealEos))then
 
         do k = 1, nK; do j = 1, nJ; do i = 1, nI
            if(.not.true_cell(i,j,k,iBlock)) CYCLE

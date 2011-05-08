@@ -1072,7 +1072,8 @@ contains
 
     ! Calculate -grad(pe)/(n_e * e) term for Hall MHD if needed
     UseHallGradPe = BiermannCoeff > 0.0 .and. &
-         (UseElectronPressure .or. ElectronPressureRatio > 0.0)
+         (UseElectronPressure .or. ElectronPressureRatio > 0.0 .or. &
+         .not.UseIdealEos)
 
     Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
     if(UseResistivity .and. UseResistiveFlux) Eta = 0.5* &
@@ -1119,6 +1120,8 @@ contains
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
     use ModFaceGradient, ONLY: get_face_gradient
     use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
+    use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V
+    use ModUser,     ONLY: user_material_properties
 
     real,    intent(out):: Flux_V(nFlux)
 
@@ -1132,6 +1135,8 @@ contains
 
     real :: GradPe_D(3)
     real :: InvElectronDens, Coef
+    integer :: i, j, k
+    real :: NatomicSi, TeSi
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -1159,7 +1164,17 @@ contains
 
        if(IsNewBlockGradPe)then
           ! Obtain electron pressure
-          if(UseElectronPressure)then
+          if(.not.UseIdealEos .and. .not.UseElectronPressure)then
+             do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+                call user_material_properties(State_VGB(:,i,j,k,iBlockFace), &
+                     i, j, k, iBlockFace, TeOut=TeSi, NatomicOut=NatomicSi)
+                ! Single temperature mode: electron temperature is the same
+                ! as the ion temperature.
+                ! Subtract ion pressure from total pressure.
+                Pe_G(i,j,k) = State_VGB(p_,i,j,k,iBlockFace) &
+                     - NatomicSi*Si2No_V(UnitN_)*TeSi*Si2No_V(UnitTemperature_)
+             end do; end do; end do 
+          elseif(UseElectronPressure)then
              Pe_G = State_VGB(Pe_,:,:,:,iBlockFace)
           elseif(IsMhd)then
              Pe_G = State_VGB(p_,:,:,:,iBlockFace)*PePerPtotal
