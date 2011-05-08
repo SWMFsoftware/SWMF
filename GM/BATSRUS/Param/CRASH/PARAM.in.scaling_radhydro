@@ -1,11 +1,14 @@
 #INCLUDE
 Param/CRASH/START.in
 
-#TEST
-none
-
 #SAVEINITIAL
 F			DoSaveInitial
+
+#INCLUDE
+Param/CRASH/3D.in
+
+#INCLUDE
+Param/CRASH/MULTIGROUP.in
 
 #DESCRIPTION
 Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_multigroupcond
@@ -95,55 +98,19 @@ T			Use Eos Table for Pl
 T			Use Eos Table for Au
 T			Use Eos Table for Ay
 
-#MIXEDCELL
-F			UseMixedCell
-0.97			MixLimit
-
-#OPACITY
-T			UseExcitation
-F			UseCoulombCorrection
-T			DoStateElimination
-
-#GROUPRANGE
-0.1			EnergyPhotonMin
-20000.0			EnergyPhotonMax
-
-#THREEDIM
-T			IsThreDim
-
 #HYADES
 T			UseHyadesFile
 hyades2d_1.3ns.out	NameHyadesFile
+
+#TEMPERATUREHYADES
+T			UseEqualTemperatureHyades
 
 #USERAMR
 20.0			RhoMinAmr
 2500.0			xMaxAmr
 1.0			BetaProlong
 
-#TEMPERATUREHYADES
-T			UseEqualTemperatureHyades
-
 #USERINPUTEND    ----------------------
-
-#SEMIIMPLICIT
-T                       UseSemiImplicit
-radcondsplit		TypeSemiImplicit
-
-#KRYLOV
-cg			TypeKrylov
-nul                     TypeInitKrylov
-1.0e-5                  ErrorMaxKrylov
-200                     MaxMatvecKrylov
-
-#PRECONDITIONER
-left                    TypePrecondSide (left, symmetric, right)
-dilu                    TypePrecond (MBILU)
-
-#RADIATION
-T                       UseGrayDiffusion
-T                       UseRadFluxLimiter
-larsen                  TypeRadFluxLimiter
-300.0			TradMinSi
 
 #ELECTRONPRESSURE
 1.0			PeMinSi
@@ -185,14 +152,6 @@ T			DoAutoRefine
 user			TypeRefine
 0.5			LimitCoarsen
 0.5			LimitRefine
-
-#OUTERBOUNDARY
-float			xMinBc
-float			xMaxBc
-reflect			yMinBc
-float			yMaxBc
-reflect			zMinBc
-float			zMaxBc
 
 #SCHEME
 2			nOrder
@@ -243,11 +202,6 @@ idl los var		StringPlot ! line of sight plot
 400                     nPix
 rho rhoxe rhobe rhopl rhoau rhoay radiograph	NameVar
 g			NamePar
-
-#GRIDSYMMETRY
-F			IsMirrorX
-T			IsMirrorY
-T			IsMirrorZ
 
 #TIMESTEPPING
 2			nStage

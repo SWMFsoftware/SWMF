@@ -1,0 +1,13 @@
+#OUTERBOUNDARY
+float			xMinBc
+float			xMaxBc
+reflect			yMinBc
+float			yMaxBc
+reflect			zMinBc
+float			zMaxBc
+
+#GRIDSYMMETRY
+F			IsMirrorX
+T			IsMirrorY
+T			IsMirrorZ
+
