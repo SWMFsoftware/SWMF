@@ -7,11 +7,11 @@ F       	        UseLogPLimiter
 T               	UseRhoRatioLimiter
 M(1:3) EInt		NameVarLimitRatio
 
-#LOOKUPTABLE
-Opacity(rho,T)          NameTable
-load                    NameCommand
-table_opacities.out     NameFile
-ascii                   TypeFile
+#INCLUDE
+Param/CRASH/RZ.in
+
+#INCLUDE
+Param/CRASH/GRAY.in
 
 #CHECKGRIDSIZE
 10			nI
@@ -30,17 +30,6 @@ ascii                   TypeFile
  -12.5			zMin
   12.5			zMax
 
-#GRIDGEOMETRY
-rz			TypeGeometry
-
-#OUTERBOUNDARY
-float			TypeBcXmin
-float			TypeBcXmax
-reflect			TypeBcYmin
-float			TypeBcYmax
-reflect			TypeBcZmin
-reflect			TypeBcZmax
-
 #USERINPUTBEGIN  ----------------------
  
 #USEEOSTABLE
@@ -55,26 +44,6 @@ T			UseHyadesFile
 hyades2d_1.1ns.out	NameHyadesFile
 
 #USERINPUTEND    ----------------------
-
-#SEMIIMPLICIT
-T                       UseSemiImplicit
-radiation               TypeSemiImplicit
-
-#KRYLOV
-cg			TypeKrylov
-nul			TypeInitKrylov
-1.0e-8			ErrorMaxKrylov
-900			MaxMatvecKrylov
-
-#PRECONDITIONER
-left			TypePrecondSide
-bilu			TypePrecond
-
-#RADIATION
-T                       UseGrayDiffusion
-T                       UseRadFluxLimiter
-larsen                  TypeRadFluxLimiter
-300.0			TradMinSi
 
 #SCHEME
 2			nOrder
@@ -109,4 +78,3 @@ gamma
 -1			MaxIteration
 3e-9			tSimulationMax
 
-#END

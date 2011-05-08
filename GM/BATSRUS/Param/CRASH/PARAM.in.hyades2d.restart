@@ -7,13 +7,11 @@ F       	        UseLogPLimiter
 T               	UseRhoRatioLimiter
 M(1:3) EInt		NameVarLimitRatio
 
-#OUTERBOUNDARY
-float			TypeBcXmin
-float			TypeBcXmax
-reflect			TypeBcYmin
-float			TypeBcYmax
-reflect			TypeBcZmin
-reflect			TypeBcZmax
+#INCLUDE
+Param/CRASH/RZ.in
+
+#INCLUDE
+Param/CRASH/GRAY.in
 
 #USERINPUTBEGIN  ----------------------
 
@@ -25,26 +23,6 @@ F
 F
 
 #USERINPUTEND    ----------------------
-
-#SEMIIMPLICIT
-T                       UseSemiImplicit
-radiation               TypeSemiImplicit
-
-#KRYLOV
-cg                      TypeKrylov
-nul                     TypeInitKrylov
-1.0e-8                  ErrorMaxKrylov
-900                     MaxMatvecKrylov
-
-#PRECONDITIONER
-left			TypePrecondSide
-bilu			TypePrecond
-
-#RADIATION
-T                       UseGrayDiffusion
-T                       UseRadFluxLimiter
-larsen                  TypeRadFluxLimiter
-300.0			TradMinSi
 
 #LOOKUPTABLE
 {Xe Be Pl}_eos          NameTable
@@ -82,5 +60,3 @@ gamma
 #STOP
 -1			MaxIteration
 3e-9			tSimulationMax
-
-#END

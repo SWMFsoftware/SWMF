@@ -4,9 +4,6 @@ T			DoEcho
 #BATL
 T			UseBatl
 
-#TEST
-krylov			StringTest
-
 #PLANET
 NONE			NamePlanet
 

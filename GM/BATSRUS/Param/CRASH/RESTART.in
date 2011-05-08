@@ -1,9 +1,6 @@
 #ECHO
 T			DoEcho
 
-#TEST
-krylov			StringTest
-
 #INCLUDE
 restartIN/restart.H
 

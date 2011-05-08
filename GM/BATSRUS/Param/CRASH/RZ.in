@@ -1,0 +1,10 @@
+#GRIDGEOMETRY
+rz			TypeGeometry
+
+#OUTERBOUNDARY
+float			TypeBcXmin
+float			TypeBcXmax
+reflect			TypeBcYmin
+float			TypeBcYmax
+reflect			TypeBcZmin
+reflect			TypeBcZmax
