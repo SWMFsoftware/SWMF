@@ -1,0 +1,29 @@
+#USERINPUTBEGIN  ----------------------
+
+#USERAMR
+20.0			 RhoMinAmr
+2500.0			 xMaxAmr
+1.0			 BetaProlong
+
+#USERINPUTEND    ----------------------
+
+#AMRINITPHYSICS
+2			nRefineLevelIC
+
+#AMRLEVELS
+0			MinBlockLevel
+1			MaxBlockLevel
+F			DoFixBodyLevel
+
+#AMR
+1			DnRefine
+T			DoAutoRefine
+0.0			PercentCoarsen
+0.0			PercentRefine
+99999			MaxTotalBlocks
+
+#AMRCRITERIA
+1			nRefineCrit
+user			TypeRefine
+0.5			LimitCoarsen
+0.5			LimitRefine

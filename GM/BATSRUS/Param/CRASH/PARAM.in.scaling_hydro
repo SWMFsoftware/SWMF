@@ -5,7 +5,10 @@ Param/CRASH/START.in
 F			DoSaveInitial
 
 #INCLUDE
-Param/3D.in
+Param/CRASH/3D.in
+
+INCLUDE
+Param/CRASH/AMR2.in
 
 #DESCRIPTION
 Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_gray
@@ -32,11 +35,6 @@ F			Use Eos Table for Ay
 T			UseHyadesFile
 hyades2d_1.3ns.out	NameHyadesFile
 
-#USERAMR
-20.0			 RhoMinAmr
-2500.0			 xMaxAmr
-1.0			 BetaProlong
-
 #USERINPUTEND    ----------------------
 
 LOOKUPTABLE
@@ -61,27 +59,6 @@ real8                   TypeFile
  450.0			yMax
    0.0			zMin
  450.0			zMax
-
-AMRINITPHYSICS
-3			nRefineLevelIC
-
-AMRLEVELS
-0			MinBlockLevel
-2			MaxBlockLevel
-F			DoFixBodyLevel
-
-AMR
-1			DnRefine
-T			DoAutoRefine
-0.0			PercentCoarsen
-0.0			PercentRefine
-99999			MaxTotalBlocks
-
-AMRCRITERIA
-1			nRefineCrit
-user			TypeRefine
-0.5			LimitCoarsen
-0.5			LimitRefine
 
 #SCHEME
 2			nOrder
