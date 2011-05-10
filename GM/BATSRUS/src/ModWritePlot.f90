@@ -41,6 +41,9 @@ subroutine write_plot_common(ifile)
   character (len=10) :: plotvarnames(nplotvarmax)=''
   integer :: nplotvar
 
+  ! True for spherical plots
+  logical:: IsSphPlot
+
   ! Equation parameters
   integer, parameter :: neqparmax=10
   real :: eqpar(neqparmax)
@@ -132,8 +135,10 @@ subroutine write_plot_common(ifile)
   ! String containing the processor index and file extension
   if(nProc < 10000) then
      write(NameProc, '(a,i4.4,a)') "_pe", iProc, "."//plot_form(ifile)
-  else
+  elseif(nProc < 100000) then
      write(NameProc, '(a,i5.5,a)') "_pe", iProc, "."//plot_form(ifile)
+  else
+     write(NameProc, '(a,i6.6,a)') "_pe", iProc, "."//plot_form(ifile)
   end if
 
   ! Determine if file is formatted or unformatted
@@ -143,7 +148,9 @@ subroutine write_plot_common(ifile)
      TypeForm = "formatted"
   end if
 
-  if(index(plot_type1,'sph')>0)then
+  IsSphPlot = index(plot_type1,'sph')>0
+
+  if(IsSphPlot)then
      ! Put hemisphere info into the filename: the 3rd character of type
      l = len_trim(NamePlotDir) + 3
      ! two files for the northern and southern hemispheres
@@ -170,7 +177,7 @@ subroutine write_plot_common(ifile)
      open(unit_tmp, file=filename, status="replace", form=TypeForm, err=999)
   end if
 
-  if (index(plot_type1,'sph')>0) then
+  if (IsSphPlot) then
      ntheta = 1 + 180.0/plot_dx(2,ifile)
      nphi   = 360.0/plot_dx(3,ifile)
      rplot  = plot_range(1,ifile)
@@ -207,7 +214,7 @@ subroutine write_plot_common(ifile)
      if (plot_dimensional(ifile)) call dimensionalize_plotvar(iBLK, &
           ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
 
-     if (index(plot_type1,'sph')>0) then
+     if (IsSphPlot) then
         call write_plot_sph(ifile,iBLK,nplotvar,plotvar, &
              ntheta,nphi,rplot,nBLKcellsN,nBLKcellsS)
    	dxblk=1.0
@@ -238,11 +245,11 @@ subroutine write_plot_common(ifile)
 
      if (plot_form(ifile)=='idl') then
    	! Update number of cells per processor
-        if (.not. (index(plot_type1,'sph')>0)) then
-      	   nPEcells = nPEcells + nBLKcells
-        else
+        if (IsSphPlot) then
       	   nPEcellsN = nPEcellsN + nBLKcellsN
       	   nPEcellsS = nPEcellsS + nBLKcellsS
+        else
+      	   nPEcells = nPEcells + nBLKcells
         end if
 
    	! Find smallest cell size in the plotting region
@@ -270,9 +277,11 @@ subroutine write_plot_common(ifile)
   end select
 
   ! Write files for new tecplot format
-  if(plot_form(ifile)=='tec' .and. .NOT.(index(plot_type1,'sph')>0) )then
-     ! Fix of XYZ to be sure that "hanging" nodes are precicely on plane with "non-hanging" nodes.
-     ! Specifically, this fixes many grid problems for spherical plots, but doesn't hurt cartesian.
+  if(plot_form(ifile)=='tec' .and. .not.IsSphPlot)then
+     ! Fix of XYZ to be sure that "hanging" nodes are precisely on plane 
+     ! with "non-hanging" nodes.
+     ! Specifically, this fixes many grid problems for spherical plots, 
+     ! but doesn't hurt cartesian.
      allocate(PlotXYZNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,3))
 
      if(TypeGeometry == 'cartesian' .or. TypeGeometry == 'rz')then
@@ -315,20 +324,24 @@ subroutine write_plot_common(ifile)
            PlotVarNodes_VNB(i,:,:,:,:)=NodeValue_NB
         end do
      end if
-     call write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNodes_NBI, &
-          unitstr_TEC, xmin,xmax,ymin,ymax,zmin,zmax)
+     call write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB, &
+          PlotXYZNodes_NBI, unitstr_TEC, xmin,xmax,ymin,ymax,zmin,zmax)
      deallocate(PlotXYZNodes_NBI)
      deallocate(PlotVarNodes_VNB)
   end if
 
-  close(unit_tmp)
-  if( (index(plot_type1,'sph')>0) .or. plot_form(ifile)=='tec' ) &
-       close(unit_tmp2)
+  if(plot_form(iFile) == 'idl' .and. .not. IsSphPlot .and. nPeCells == 0)then
+     close(unit_tmp, status = 'DELETE')
+  else
+     close(unit_tmp)
+  end if
+
+  if(IsSphPlot .or. plot_form(ifile)=='tec') close(unit_tmp2)
 
   !! START IDL
   if (plot_form(ifile)=='idl')then
      ! Find smallest cell size and total number of cells
-     if (.not. (index(plot_type1,'sph')>0)) then
+     if (.not. IsSphPlot) then
         call MPI_reduce(dxPEmin,dxGLOBALmin,3,MPI_REAL,MPI_MIN,0,iComm,iError)
         call MPI_reduce(nPEcells,nGLOBALcells,1,MPI_INTEGER,MPI_SUM,0, &
              iComm,iError)
@@ -341,11 +354,11 @@ subroutine write_plot_common(ifile)
      end if
 
      if(oktest_me) then
-        if (.not. (index(plot_type1,'sph')>0)) then
-           write(*,*)NameSub,' dxPEmin,nPEcells=',dxPEmin,nPEcells
-        else
+        if (IsSphPlot) then
            write(*,*)NameSub,' North: nGLOBALcells=',nGLOBALcellsN
            write(*,*)NameSub,' South: nGLOBALcells=',nGLOBALcellsS
+        else
+           write(*,*)NameSub,' dxPEmin,nPEcells=',dxPEmin,nPEcells
         end if
      end if
   end if
@@ -356,7 +369,7 @@ subroutine write_plot_common(ifile)
 
      select case(plot_form(ifile))
      case('tec')
-        if (index(plot_type1,'sph')>0) then
+        if (IsSphPlot) then
            filename = trim(NameSnapshot) // ".S"
         else  
            filename = trim(NameSnapshot) // ".T"
@@ -369,9 +382,9 @@ subroutine write_plot_common(ifile)
      ! For other cases, EXIT when i=2
      do i = 1, 2
         
-        if (.not.(index(plot_type1,'sph')>0) .and. i==2) EXIT
+        if (i == 2 .and. .not. IsSphPlot) EXIT
 
-        if(index(plot_type1,'sph')>0)then
+        if(IsSphPlot)then
            ! Put hemisphere info into the filename: the 3rd character of type
            l = len_trim(NamePlotDir) + 3
            if (i==1) then
@@ -391,13 +404,13 @@ subroutine write_plot_common(ifile)
         select case(plot_form(ifile))
         case('tec')
            write(unit_tmp,'(a)')trim(unitstr_TEC)
-           if(index(plot_type1,'sph')>0)  &
+           if(IsSphPlot)  &
                 write(unit_tmp,'(2(1pe13.5),a)') plot_dx(2:3,ifile),' plot_dx'
            call get_date_time(iTime_I)
            write(unit_tmp,*) iTime_I(1:7),' year mo dy hr mn sc msc'        
            write(unit_tmp,'(2(1pe13.5),a)') thetaTilt*cRadToDeg, 0.0,  &
                                             ' thetatilt[deg] phitilt[deg]'
-           if (index(plot_type1,'sph')>0) then
+           if (IsSphPlot) then
               write(unit_tmp,'(es13.5,a)')rplot,' rplot'
               if (i==1) write(unit_tmp,'(a)')'Northern Hemisphere'
               if (i==2) write(unit_tmp,'(a)')'Southern Hemisphere'
