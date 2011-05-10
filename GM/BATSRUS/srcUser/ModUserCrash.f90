@@ -2479,8 +2479,6 @@ contains
     EradBc1 = cRadiationNo*(TrkevBc1*cKeVtoK*Si2No_V(UnitTemperature_))**4
     EradBc2 = cRadiationNo*(TrkevBc2*cKeVtoK*Si2No_V(UnitTemperature_))**4
 
-    if(iProc==0) write(*,*) NameSub, 'EradBc1,EradBc2=', EradBc1, EradBc2
-
     ! create table after call set_multigroup so that nGroup is known
     call check_opac_table(iComm = iComm, Save = .true.)
 
