@@ -13,10 +13,10 @@ T                       DoStateElimination
 
 #SEMIIMPLICIT
 T                       UseSemiImplicit
-radiationsplit          TypeSemiImplicit
+radiation		TypeSemiImplicit
 
 #KRYLOV
-cg                      TypeKrylov
+gmres			TypeKrylov
 nul                     TypeInitKrylov
 1.0e-5                  ErrorMaxKrylov
 200                     MaxMatvecKrylov

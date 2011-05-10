@@ -13,10 +13,10 @@ T                       DoStateElimination
 
 #SEMIIMPLICIT
 T                       UseSemiImplicit
-radiationsplit          TypeSemiImplicit
+radcond			TypeSemiImplicit
 
 #KRYLOV
-cg                      TypeKrylov
+gmres			TypeKrylov
 nul                     TypeInitKrylov
 1.0e-5                  ErrorMaxKrylov
 200                     MaxMatvecKrylov
@@ -31,3 +31,5 @@ T                       UseRadFluxLimiter
 larsen                  TypeRadFluxLimiter
 300.0			TradMinSi
 
+#ELECTRONPRESSURE
+1.0                     PeMinSi
