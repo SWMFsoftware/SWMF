@@ -148,7 +148,7 @@ foreach (@Arguments){
     if(/^-nodebug$/i)         {$NewDebug="no";                  next};
     if(/^-hdf5$/i)            {$NewHdf5="yes";                  next};
     if(/^-nohdf5$/i)          {$NewHdf5="no";                   next};
-    if(/^-O[0-4]$/i)          {$NewOptimize=$_;                 next};  
+    if(/^-O[0-5]$/i)          {$NewOptimize=$_;                 next};  
     if(/^-g(rid)?$/)          {$ShowGridSize=1;                 next};
     if(/^-g(rid)?=([\d,]+)$/) {$NewGridSize=$+;                 next};
 
@@ -290,7 +290,7 @@ sub get_settings_{
           $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
 	  $Mpi   = "no"  if /^\s*MPILIB\s*=.*\-lNOMPI/;
 	  $Hdf5  = "yes" if /^\s*HDFLIB\s*=.*\-lHDF5.*/;
-          $Optimize = $1 if /^\s*OPT[0-4]\s*=\s*(-O[0-4])/;
+          $Optimize = $1 if /^\s*OPT[0-5]\s*=\s*(-O[0-5])/;
       }
   }
     close(MAKEFILE);
@@ -535,7 +535,7 @@ sub set_optimization_{
     if(not $DryRun){
 	@ARGV = ($MakefileConf);
 	while(<>){
-	    if (/^\s*OPT([0-4])\s*=\s*/){
+	    if (/^\s*OPT([0-5])\s*=\s*/){
 		if($1 > $Level){
 		    $_ = "OPT$1 = -O$Level\n";
 		}else{
@@ -689,7 +689,7 @@ Usage: Config.pl [-help] [-verbose] [-dryrun] [-show] [-compiler] [-mpi]
                  [-install[=s|=c] [-compiler=FCOMP[,CCOMP]] [-mpi=VERSION]]
                  [-uninstall]
                  [-single|-double] [-debug|-nodebug] [-mpi|-nompi]
-                 [-O0|-O1|-O2|-O3|-O4]
+                 [-O0|-O1|-O2|-O3|-O4|-O5]
 
 If called without arguments, the current settings are shown.
 
@@ -740,7 +740,8 @@ Compilation:
 -O1            set optimization levels to at most -O1
 -O2            set optimization levels to at most -O2
 -O3            set optimization levels to at most -O3
--O4            set maximum optimization level
+-O4            set optimization levels to at most -O4
+-O5            set optimization levels to at most -O5
 
 Examples of use:
 
