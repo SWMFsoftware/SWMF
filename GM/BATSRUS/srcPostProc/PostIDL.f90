@@ -291,10 +291,14 @@ program PostIDL
           '...',numprocs-1,'.idl'
 
      if(read_binary)then
-        open(unit_tmp,file=filename,status='old',form='unformatted')
+        open(unit_tmp, file=filename, status='old', form='unformatted', &
+             iostat=iError)
      else
-        open(unit_tmp,file=filename,status='old')
+        open(unit_tmp, file=filename, status='old', iostat=iError)
      end if
+
+     ! Assume that missing files were empty. 
+     if(iError /=0) CYCLE
 
      ! Read file
      do
