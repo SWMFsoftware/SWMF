@@ -283,10 +283,14 @@ program PostIDL
   countcell=0
   l=len_trim(filenamehead)
   do me=0,numprocs-1
-     write(filename,'(a,i4,a)')filenamehead(1:l-2)//"_pe",me,'.idl'
-     do ll=l+1,l+6
-        if(filename(ll:ll)==' ')filename(ll:ll)='0'
-     end do
+     if(    numprocs > 100000)then
+        write(filename,'(a,i6.6,a)')filenamehead(1:l-2)//"_pe",me,'.idl'
+     elseif(numprocs > 10000)then
+        write(filename,'(a,i5.5,a)')filenamehead(1:l-2)//"_pe",me,'.idl'
+     else
+        write(filename,'(a,i4.4,a)')filenamehead(1:l-2)//"_pe",me,'.idl'
+     end if
+
      if(me==0)write(*,*)'reading files=',trim(filename),&
           '...',numprocs-1,'.idl'
 
