@@ -66,6 +66,8 @@ real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nSpeciesAll, nBlocksMax) :: 
        e_gyro, i_gyro
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3) :: Collisions
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nIonsAdvect, nSpecies) :: &
+       IonCollisions
 
   real :: B0(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 4, nBlocksMax)
   real :: MLatitude(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax)

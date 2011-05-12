@@ -92,9 +92,9 @@ subroutine calc_collisions(iBlock)
 
   integer, intent(in) :: iBlock
 
-  real, dimension(nLons, nLats, nAlts) :: Tn, Ti, e2
+  real, dimension(nLons, nLats, nAlts) :: Tn, Ti, e2, Tr, TrAltered
 
-  integer :: iError
+  integer :: iError, iSpecies
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: &
        Ne, mnd, Te, tmp
@@ -108,6 +108,8 @@ subroutine calc_collisions(iBlock)
   Tn = Temperature(1:nLons,1:nLats,1:nAlts,iBlock)*&
        TempUnit(1:nLons,1:nLats,1:nAlts)
   Ti = ITemperature(1:nLons,1:nLats,1:nAlts,iBlock)
+
+  Tr = (Tn+Ti)/2
 
   mnd = NDensity(:,:,:,iBlock)+1.0
   Ne  = IDensityS(:,:,:,ie_,iBlock)
@@ -131,6 +133,30 @@ subroutine calc_collisions(iBlock)
   if (iDebugLevel > 4) write(*,*) "=====> vin",iblock
 
   Collisions(:,:,:,iVIN_) = 2.6e-15 * (mnd + Ne)/sqrt(MeanMajorMass/AMU)
+
+!
+! From Schunk and Nagy table 4.4 & 4.5
+  TrAltered = Tr
+  where(TrAltered < 235.0) TrAltered=235.0
+  IonCollisions(1:nLons,1:nLats,1:nAlts,iO_4SP_,iO_3P_) = &
+       3.67e-17 * NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock) * &
+       sqrt(TrAltered) * (1.0-0.064*log10(TrAltered))**2
+
+  IonCollisions(1:nLons,1:nLats,1:nAlts,iO_4SP_,iO2_) =&
+       6.64e-16*NDensityS(1:nLons,1:nLats,1:nAlts,iO2_,iBlock)
+  IonCollisions(1:nLons,1:nLats,1:nAlts,iO_4SP_,iN2_) =&
+       6.82e-16*NDensityS(1:nLons,1:nLats,1:nAlts,iN2_,iBlock)
+  IonCollisions(1:nLons,1:nLats,1:nAlts,iO_4SP_,iN_4S_) =&
+       4.62e-16*NDensityS(1:nLons,1:nLats,1:nAlts,iN_4S_,iBlock)
+  ! This is an average of O2 and N2, since NO doesn't exist
+  IonCollisions(1:nLons,1:nLats,1:nAlts,iO_4SP_,iNO_) =&
+       6.73e-16*NDensityS(1:nLons,1:nLats,1:nAlts,iNO_,iBlock)
+
+  Collisions(:,:,:,iVIN_) = IonCollisions(:,:,:,iO_4SP_,1)
+  do iSpecies = 2, nSpecies
+     Collisions(:,:,:,iVIN_) = &
+          Collisions(:,:,:,iVIN_) + IonCollisions(:,:,:,iO_4SP_,iSpecies)
+  enddo
 
 !
 ! Electron Neutral Collision Frequency
