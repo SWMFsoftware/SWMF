@@ -1492,7 +1492,7 @@ subroutine calc_chemistry(iBlock)
                    Neutrals(iN_2P_)
 
               NeutralSources(iN_2D_) = NeutralSources(iN_2D_) + Reaction
-              NeutralLosses(iN_2P_)  = NeutralLosses(iN_2P_)  + Reaction
+!              NeutralLosses(iN_2P_)  = NeutralLosses(iN_2P_)  + Reaction
 
               Emission(iE10400_) = Emission(iE10400_) + Reaction
 
@@ -1839,9 +1839,9 @@ subroutine calc_chemistry(iBlock)
                          iIon, IonSources(iIon), IonLosses(iIon)
                  enddo
                  do iNeutral = 1, nSpeciesTotal
-                    write(*,*) "Neutral Source/Loss : ", &
+                    write(*,*) "Neutral Source/Loss : ", iAlt, &
                          iNeutral, NeutralSources(iNeutral), &
-                         NeutralLosses(iNeutral)
+                         NeutralLosses(iNeutral), Neutrals(iNeutral)
                  enddo
 
                  call stop_gitm("Chemistry is too fast!!")
