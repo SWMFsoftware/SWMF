@@ -78,7 +78,7 @@ program PostPwIdl
         if (UseDipole) then
            do iAlt=1,nAlt
               r=(rEarth+Coord_I(iAlt))/rEarth
-              theta=cPi/2.0-acos(sqrt((r*(sin(theta0))**2.0)))
+              theta=cPi/2.0-acos(min(sqrt((r*(sin(theta0))**2.0)),1.0))
 
               Coord1_III(iTime,iAlt,iLine) = -r * sin(theta)*sin(phi)
               Coord2_III(iTime,iAlt,iLine) =  r * sin(theta)*cos(phi)
