@@ -19,9 +19,6 @@ subroutine init_b0
   call report("init_b0",1)
   call start_timing("init_b0")
 
-  AltMinIono=(2*RadialDistance_GB(1,1,-1,1) - &
-       RadialDistance_GB(1,1,1,1) - RBody)/1000.0
-
   do iBlock=1,nBlocks
      if (nBlocks > 1 .and. iDebugLevel > 1) write(*,*) "==> Block : ", iBlock
      do iAlt=-1,nAlts+2
