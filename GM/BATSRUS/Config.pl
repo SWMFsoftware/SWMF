@@ -204,18 +204,20 @@ sub set_grid_size{
     }
     
     
-    # Determine the number of dimensions specified and write
-    # that value to the necessary HDF5 header files
-    @ARGV = ($NameHdf5File);
-    my $nDim = 0 + ($nI>1) + ($nJ>1) + ($nK>1);
-    while(<>){
-	s/\b(NDIM\s*[^0-9]*)(\d+)/$1$nDim/i;
-	print;
+    if(-f $NameHdf5File){
+	# Determine the number of dimensions specified and write
+	# that value to the necessary HDF5 header files
+    
+	@ARGV = ($NameHdf5File);
+	my $nDim = 0 + ($nI>1) + ($nJ>1) + ($nK>1);
+	while(<>){
+	    s/\b(NDIM\s*[^0-9]*)(\d+)/$1$nDim/i;
+	    print;
+	}
+    
+	# Recompile the HDF5 library if it is currently enabled.
+	&shell_command("make HDF5") if $Hdf5 eq "yes";
     }
-    
-    # Recompile the HDF5 library if it is currently enabled.
-    &shell_command("make HDF5") if $Hdf5 eq "yes";
-    
 }
 
 ##############################################################################
