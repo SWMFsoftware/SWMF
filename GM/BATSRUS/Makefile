@@ -67,7 +67,6 @@ INSTALLFILES =	src/Makefile.DEPEND \
 install: src/ModSize.f90 src/ModHdf5.f90 srcBATL/BATL_size.f90
 	touch ${INSTALLFILES}
 	./Config.pl -u=Default -e=Mhd
-	cd src; make DYNAMIC
 
 src/ModSize.f90: src/ModSize_orig.f90
 	cp -f src/ModSize_orig.f90 src/ModSize.f90

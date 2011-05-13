@@ -65,8 +65,6 @@ foreach (@Arguments){
     if(/^-e=(.*)$/)           {$Equation=$1;                   next};
     if(/^-u=(.*)$/)           {$UserModule=$1;                 next};
     if(/^-s$/)                {$Show=1;                        next};
-    if(/^-dynamic$/)          {`cd $Src; make DYNAMIC`;        next};
-    if(/^-static$/)           {`cd $Src; make STATIC`;         next};
     if(/^-nWave=(.*)$/i)      {
 	# Check the number of wave bins (to be set)
 	die "$ERROR nWave=$1 must be 1 or more\n" if $1 < 1;
@@ -316,14 +314,6 @@ sub current_settings{
 	"Max. number of implicit blocks/PE : MaxImplBlock=$MaxImplBlock\n";
     #^CFG END IMPLICIT
 
-    # Check if the large arrays are static or dynamic
-    my $IsDynamic;
-    $IsDynamic = `grep IsDynamic $Src/ModAdvance.f90 | grep true` ?
-	"yes" : "no" if -e "$Src/ModAdvance.f90";
-
-    $Settings .= 
-	"Allocation of large arrays        : IsDynamic=$IsDynamic\n";
-
     $Settings .=
 	"Number of wave bins               : nWave=$nWave\n" if $nWave;
 
@@ -391,10 +381,6 @@ Additional options for BATSRUS/Config.pl:
 -u              List all the available user modules.
 
 -u=USERMODULE   Select the user module USERMODULE. 
-
--dynamic        Use dynamic allocation for large arrays.
-
--static         Use static allocation for large arrays.
 
 -nWave=NWAVE
                 Set the number of wave bins used for radiation or wave
