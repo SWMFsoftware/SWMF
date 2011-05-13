@@ -220,6 +220,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
               endif
 
               ReferenceAlt = Altitude_GB(1,1,0,1)/1000.0
+              AltMinIono = ReferenceAlt
 !              write(*,*) "ReferenceAlt : ",aLat, aLon, ReferenceAlt
 
               call apex_to_geo(date, aLat, aLon, ReferenceAlt, &
@@ -607,6 +608,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
               SigmaLL(iLon, iLat) = SigmaLL(iLon, iLat) + len * sp_d2d2_d
               SigmaHH(iLon, iLat) = SigmaHH(iLon, iLat) + len * sh
+
               SigmaCC(iLon, iLat) = SigmaCC(iLon, iLat) + len * sp_d1d2_d
 
               KDpm(iLon, iLat) = KDpm(iLon, iLat) + len * kdpm_s
@@ -721,6 +723,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
               KlmMC(i,j) = -sign(1.0,MagLatMC(i,j)) * klm_s
               KpmMC(i,j) = kpm_s * abs(sinim)
+
            endif
 
         enddo
@@ -884,8 +887,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
           abs(SigmaPPMC(iLonNoon,iStart))) iStart = iLat
   enddo
 
-!  write(*,*) "iStart PP : ", iStart, nMagLats/2, iEnd
-
   do i = 1,nMagLons+1
      do j= iStart,nMagLats/2
         SigmaPPMC(i,j) = 0.9* SigmaPPMC(i,j-1)
@@ -898,38 +899,33 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         SigmaCCMC(i,j) = 0.9* SigmaCCMC(i,j+1)
         SigmaPLMC(i,j) = + (sigmahhmc(i,j) - sigmaccmc(i,j))
         SigmaLPMC(i,j) = - (sigmahhmc(i,j) + sigmaccmc(i,j))
-
      enddo
   enddo
 
-
-     do i = 1,nMagLons+1
+  do i = 1,nMagLons+1
      do j= 1, nMagLats/2    ! Southern hemisphere
 
-!    write(*,*)'PE=',iProc,'  min,max MagLonMC= ',minval(MagLonMC),maxval(MagLonMC)
- !     if(iproc==0)write(*,*)iproc,i,j,MagLonMC(i,j),MagLatMC(i,j)
+        k= nMagLats-j+1
 
-         k= nMagLats-j+1
-
-         SigmaLLMC(i,j) = SigmaLLMC(i,j) +SigmaLLMC(i,k)
-         SigmaPPMC(i,j) = SigmaPPMC(i,j) + SigmaPPMC(i,k)
-         KDpmMC(i,j) = KDpmMC(i,j) + KDpmMC(i,k)
-         SigmaPLMC(i,j) = SigmaPLMC(i,k) - SigmaPLMC(i,j)
-         SigmaLPMC(i,j) = SigmaLPMC(i,k) - SigmaLPMC(i,j)
-         KDlmMC(i,j) = KDlmMC(i,k) - KDlmMC(i,j)
+        SigmaLLMC(i,j) = SigmaLLMC(i,j) +SigmaLLMC(i,k)
+        SigmaPPMC(i,j) = SigmaPPMC(i,j) + SigmaPPMC(i,k)
+        KDpmMC(i,j) = KDpmMC(i,j) + KDpmMC(i,k)
+        SigmaPLMC(i,j) = SigmaPLMC(i,k) - SigmaPLMC(i,j)
+        SigmaLPMC(i,j) = SigmaLPMC(i,k) - SigmaLPMC(i,j)
+        KDlmMC(i,j) = KDlmMC(i,k) - KDlmMC(i,j)
 !  For Northern hemisphere
-         SigmaPPMC(i,k) = SigmaPPMC(i,j)
-         SigmaLLMC(i,k) = SigmaLLMC(i,j)
-         KDpmMC(i,k) = KDpmMC(i,j)
-         SigmaPLMC(i,k) = SigmaPLMC(i,j)
-         SigmaLPMC(i,k) = SigmaLPMC(i,j)
-         KDlmMC(i,k) = KDlmMC(i,j)
+        SigmaPPMC(i,k) = SigmaPPMC(i,j)
+        SigmaLLMC(i,k) = SigmaLLMC(i,j)
+        KDpmMC(i,k) = KDpmMC(i,j)
+        SigmaPLMC(i,k) = SigmaPLMC(i,j)
+        SigmaLPMC(i,k) = SigmaLPMC(i,j)
+        KDlmMC(i,k) = KDlmMC(i,j)
 
-  if(SigmaLLMC(i,j) > 10000.0) &
-    write(*,*)'SigmaLLMC:',iproc,MagLonMC(i,j),MagLatMC(i,j), MagLatMC(i,k),SigmaLLMC(i,j)
-      enddo
+        if(SigmaLLMC(i,j) > 10000.0) &
+             write(*,*)'SigmaLLMC:',iproc,MagLonMC(i,j),MagLatMC(i,j), MagLatMC(i,k),SigmaLLMC(i,j)
+     enddo
 
-   enddo   
+  enddo
 
 !==========
   ! KDlmMC 
@@ -945,8 +941,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      if (abs(KDlmMC(iLonNoon,iLat)) > &
           abs(KDlmMC(iLonNoon,iStart))) iStart = iLat
   enddo
-
-!  write(*,*) "iStart KDlm : ", iStart, nMagLats/2, iEnd
 
   do i = 1,nMagLons+1
      do j= nMagLats/2 -15,nMagLats/2
@@ -971,8 +965,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
           abs(KDpmMC(iLonNoon,iStart))) iStart = iLat
   enddo
 
-!  write(*,*) "iStart KDpm : ", iStart, nMagLats/2, iEnd
-
   do i = 1,nMagLons+1
      do j= nMagLats/2 -15,nMagLats/2
         KDpmMC(i,j) = 0.92* KDpmMC(i,j-1)
@@ -983,12 +975,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   enddo
 !============
 
-
-!!  write(*,*) "min max 2 : ", minval(sigmallmc), maxval(sigmallmc)
-
   do i=1,nMagLons+1
      do j=2,nMagLats-1
-!  if (iproc==5) write(*,*) itimeArray(1:6),iproc, i,j,MagLonMC(i,j),MagLatMC(i,j),SigmaLLMC(i,j)
         dSigmaLLdlMC(i,j) = 0.5*(SigmaLLMC(i,j+1) - SigmaLLMC(i,j-1))/deltalmc(i,j)
         dSigmaLPdlMC(i,j) = 0.5*(SigmaLPMC(i,j+1) - SigmaLPMC(i,j-1))/deltalmc(i,j)
         dkdlmdlMC(i,j) = cos(MagLatMC(i,j)*pi/180) * &
@@ -1045,30 +1033,28 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   solver_a_mc = 4 * deltalmc**2 * sigmappmc / cos(MagLatMC*pi/180)
   solver_b_mc = 4 * deltapmc**2 * cos(MagLatMC*pi/180) * sigmallmc
-   solver_c_mc = deltalmc * deltapmc * (SigmaPLmc + SigmaLPmc)  
+  solver_c_mc = deltalmc * deltapmc * (SigmaPLmc + SigmaLPmc)  
      
   solver_d_mc = 2.0 * deltalmc * deltapmc**2 *  &
        ( dSigmaPLdpMC   - sign(1.0, MagLatMC) * sin(MagLatMC*pi/180) * sigmallmc  &
-        + cos(MagLatMC*pi/180) * dSigmaLLdlMC )
-
+       + cos(MagLatMC*pi/180) * dSigmaLLdlMC )
   solver_e_mc = 2.0 *  deltalmc**2 * deltapmc * ( &
        dSigmaPPdpMC / cos(MagLatMC*pi/180) +  dSigmaLPdlMC)
-
   solver_s_mc =  4 * deltalmc**2 * deltapmc**2 * (RBody) * &
        (dkdlmdlMC + dKDpmdpMC)
 
-   do i = 1, nMagLons+1
-    do j= nMagLats/2 - 7,  nMagLats/2 + 8
-     SigmaCowlingMC(i,j) = SigmaPPMC(i,j) - (SigmaPLMC(i,j) * SigmaLPMC(i,j)/SigmaLLMC(i,j))
-   enddo
-   enddo
-    do j= nMagLats/2 - 6,  nMagLats/2 + 7     
-   do i = 2, nMagLons
-     dSigmaCowlingdpMC(i,j) = 0.5*(SigmaCowlingMC(i+1,j) - SigmaCowlingMC(i-1,j))/deltapmc(i,j)
-     dSigmaLLdpMC(i,j) = 0.5*(SigmaLLMC(i+1,j) - SigmaLLMC(i-1,j))/deltapmc(i,j)
-     dKDlmdpMC(i,j) = 0.5*(KDlmMC(i+1,j) - KDlmMC(i-1,j))/deltapmc(i,j)
+  do i = 1, nMagLons+1
+     do j= nMagLats/2 - 7,  nMagLats/2 + 8
+        SigmaCowlingMC(i,j) = SigmaPPMC(i,j) - (SigmaPLMC(i,j) * SigmaLPMC(i,j)/SigmaLLMC(i,j))
+     enddo
+  enddo
+  do j= nMagLats/2 - 6,  nMagLats/2 + 7     
+     do i = 2, nMagLons
+        dSigmaCowlingdpMC(i,j) = 0.5*(SigmaCowlingMC(i+1,j) - SigmaCowlingMC(i-1,j))/deltapmc(i,j)
+        dSigmaLLdpMC(i,j) = 0.5*(SigmaLLMC(i+1,j) - SigmaLLMC(i-1,j))/deltapmc(i,j)
+        dKDlmdpMC(i,j) = 0.5*(KDlmMC(i+1,j) - KDlmMC(i-1,j))/deltapmc(i,j)
 
-   enddo
+     enddo
      dSigmaCowlingdpMC(1,j) = (SigmaCowlingMC(2,j) - SigmaCowlingMC(1,j))/deltapmc(1,j)
      dSigmaCowlingdpMC(nMagLons+1,j) = dSigmaCowlingdpMC(1,j)
      dSigmaLLdpMC(1,j) = (SigmaLLMC(2,j) - SigmaLLMC(1,j))/deltapmc(1,j)
@@ -1080,24 +1066,26 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
    istart = (nMagLats/2) - 6
    iend = (nMagLats/2) + 7
 
-  solver_a_mc(:,iStart:iEnd) =  &
-       4 * deltalmc(:,iStart:iEnd)**2 *(SigmaCowlingMC(:,iStart:iEnd))/cos(MagLatMC(:,iStart:iEnd)*pi/180)
+   solver_a_mc(:,iStart:iEnd) =  &
+        4 * deltalmc(:,iStart:iEnd)**2 *(SigmaCowlingMC(:,iStart:iEnd))/cos(MagLatMC(:,iStart:iEnd)*pi/180)
 
-  solver_c_mc(:,iStart:iEnd) = &
-      deltalmc(:,iStart:iEnd) * deltapmc(:,iStart:iEnd) * SigmaLPMC(:,iStart:iEnd)
-  solver_d_mc(:,iStart:iEnd) = solver_d_mc(:,iStart:iEnd) &
-          - 2.0 * deltalmc(:,iStart:iEnd) * deltapmc(:,iStart:iEnd)**2 *  &
-                                                dSigmaPLdpMC(:,iStart:iEnd) 
-  solver_e_mc(:,iStart:iEnd) = 2.0 *  deltalmc(:,iStart:iEnd)**2 * deltapmc(:,iStart:iEnd) * ( &
-       dSigmaCowlingdpMC(:,iStart:iEnd) / cos(MagLatMC(:,iStart:iEnd)*pi/180) +  &
-                   dSigmaLPdlMC(:,iStart:iEnd))
+   solver_c_mc(:,iStart:iEnd) = &
+        deltalmc(:,iStart:iEnd) * deltapmc(:,iStart:iEnd) * SigmaLPMC(:,iStart:iEnd)
+   solver_d_mc(:,iStart:iEnd) = solver_d_mc(:,iStart:iEnd) &
+        - 2.0 * deltalmc(:,iStart:iEnd) * deltapmc(:,iStart:iEnd)**2 *  &
+        dSigmaPLdpMC(:,iStart:iEnd) 
 
-  solver_s_mc(:,iStart:iEnd) =  solver_s_mc(:,iStart:iEnd) + 4 * deltalmc(:,iStart:iEnd)**2 * &
-                        deltapmc(:,iStart:iEnd)**2 * (RBody) *  &
-                         (-dKDlmdpMC(:,iStart:iEnd)*SigmaPLMC(:,iStart:iEnd)/SigmaLLMC(:,iStart:iEnd) -   &
-                          (KDlmMC(:,iStart:iEnd)/SigmaLLMC(:,iStart:iEnd)**2)*  &
-                          (SigmaLLMC(:,iStart:iEnd)*dSigmaPLdpMC(:,iStart:iEnd) &
-                            - SigmaPLMC(:,iStart:iEnd)*dSigmaLLdpMC(:,iStart:iEnd)))
+   solver_e_mc(:,iStart:iEnd) = 2.0 *  deltalmc(:,iStart:iEnd)**2 * deltapmc(:,iStart:iEnd) * ( &
+        dSigmaCowlingdpMC(:,iStart:iEnd) / cos(MagLatMC(:,iStart:iEnd)*pi/180) +  &
+        dSigmaLPdlMC(:,iStart:iEnd))
+
+   solver_s_mc(:,iStart:iEnd) =  &
+        solver_s_mc(:,iStart:iEnd) + 4 * deltalmc(:,iStart:iEnd)**2 * &
+        deltapmc(:,iStart:iEnd)**2 * (RBody) *  &
+        (-dKDlmdpMC(:,iStart:iEnd)*SigmaPLMC(:,iStart:iEnd)/SigmaLLMC(:,iStart:iEnd) -   &
+        (KDlmMC(:,iStart:iEnd)/SigmaLLMC(:,iStart:iEnd)**2)*  &
+        (SigmaLLMC(:,iStart:iEnd)*dSigmaPLdpMC(:,iStart:iEnd) &
+        - SigmaPLMC(:,iStart:iEnd)*dSigmaLLdpMC(:,iStart:iEnd)))
 
   DynamoPotentialMC = 0.0
 
@@ -1176,7 +1164,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   call start_timing("dynamo_solver")
 
-
   Rhs = b
 
 !!!  write(*,*) "prehepta"
@@ -1212,7 +1199,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   call end_timing("dynamo_solver")
 
-    if (iDebugLevel > 0) &
+  if (iDebugLevel > 0) &
        write(*,*) "=> gmres : ",MaxIteration,Residual, nIteration, iError
 
   iI = 0
@@ -1230,9 +1217,9 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   do iLat=2,nMagLats/2
      do iLon=1,nMagLons
         iI = nMagLats - iLat + 1
-      DynamoPotentialMC(iLon, iLat) = OldPotMC(iLon,iI) 
+        DynamoPotentialMC(iLon, iLat) = OldPotMC(iLon,iI) 
+     enddo
   enddo
-       enddo
 
   DynamoPotentialMC(nMagLons+1,:) = DynamoPotentialMC(1,:)
 
@@ -1242,32 +1229,32 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   do j=1,nMagLats
      do i=2,nMagLons
-  Ed1new(i,j) = -(1/(RBody*cos(MagLatMC(i,j)*pi/180))) * &
+        Ed1new(i,j) = -(1/(RBody*cos(MagLatMC(i,j)*pi/180))) * &
              0.5 * (DynamoPotentialMC(i+1,j)-DynamoPotentialMC(i-1,j))/deltapmc(i,j)
-  enddo
-     Ed1new(1,j) = -(1/(RBody*cos(MagLatMC(i,j)*pi/180))) * &
-               (DynamoPotentialMC(2,j)-DynamoPotentialMC(1,j))/deltapmc(1,j)
-    Ed1new(nMagLons+1,j) = Ed1new(1,j)
      enddo
+     Ed1new(1,j) = -(1/(RBody*cos(MagLatMC(i,j)*pi/180))) * &
+          (DynamoPotentialMC(2,j)-DynamoPotentialMC(1,j))/deltapmc(1,j)
+     Ed1new(nMagLons+1,j) = Ed1new(1,j)
+  enddo
 
   do i=1,nMagLons+1
      do j=2,nMagLats-1
-              sinim = abs(2.0 * sin(MagLatMC(i,j)*pi/180) / &
-                   sqrt(4.0 - 3.0 * cos(MagLatMC(i,j)*pi/180)))
-   Ed2new(i,j) = (1/(RBody*sinIm))*   &
-            0.5 * (DynamoPotentialMC(i,j+1)-DynamoPotentialMC(i,j-1))/deltalmc(i,j)
-   enddo
-        sinim = abs(2.0 * sin(MagLatMC(i,1)*pi/180) / &
-                   sqrt(4.0 - 3.0 * cos(MagLatMC(i,1)*pi/180)))
-   Ed2new(i,1) = (1/(RBody*sinIm))*   &
-             (DynamoPotentialMC(i,2)-DynamoPotentialMC(i,1))/deltalmc(i,1)
+        sinim = abs(2.0 * sin(MagLatMC(i,j)*pi/180) / &
+             sqrt(4.0 - 3.0 * cos(MagLatMC(i,j)*pi/180)))
+        Ed2new(i,j) = (1/(RBody*sinIm))*   &
+             0.5 * (DynamoPotentialMC(i,j+1)-DynamoPotentialMC(i,j-1))/deltalmc(i,j)
+     enddo
+     sinim = abs(2.0 * sin(MagLatMC(i,1)*pi/180) / &
+          sqrt(4.0 - 3.0 * cos(MagLatMC(i,1)*pi/180)))
+     Ed2new(i,1) = (1/(RBody*sinIm))*   &
+          (DynamoPotentialMC(i,2)-DynamoPotentialMC(i,1))/deltalmc(i,1)
 
-        sinim = abs(2.0 * sin(MagLatMC(i,nMagLats)*pi/180) / &
-                   sqrt(4.0 - 3.0 * cos(MagLatMC(i,nMagLats)*pi/180)))
-   Ed2new(i,nMagLats) = (1/(RBody*sinIm))*   &
-             (DynamoPotentialMC(i,nMagLats)-DynamoPotentialMC(i,nMagLats-1))/deltalmc(i,nMagLats)
+     sinim = abs(2.0 * sin(MagLatMC(i,nMagLats)*pi/180) / &
+          sqrt(4.0 - 3.0 * cos(MagLatMC(i,nMagLats)*pi/180)))
+     Ed2new(i,nMagLats) = (1/(RBody*sinIm))*   &
+          (DynamoPotentialMC(i,nMagLats)-DynamoPotentialMC(i,nMagLats-1))/deltalmc(i,nMagLats)
 
-      enddo
+  enddo
 ! End Electric field
 
   call end_timing("calc_electrodyn")
