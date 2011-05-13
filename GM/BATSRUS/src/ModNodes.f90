@@ -8,9 +8,6 @@ Module ModNodes
   implicit none
   save
 
-  ! Logical parameter indicating static vs. dynamic allocation
-  logical, parameter :: IsDynamicNodes = .true.
-
   !\
   ! Block node-centered MHD numberings
   !/
@@ -40,7 +37,7 @@ contains
     allocate(NodeY_NB(1:nI+1,1:nJ+1,1:nK+1,nBLK))
     allocate(NodeZ_NB(1:nI+1,1:nJ+1,1:nK+1,nBLK))
     allocate(NodeValue_NB(1:nI+1,1:nJ+1,1:nK+1,nBLK))
-    if(IsDynamicNodes .and. iProc==0)then
+    if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_nodes allocated arrays'
     end if
@@ -58,7 +55,7 @@ contains
     deallocate(NodeZ_NB)
     deallocate(NodeValue_NB)
 
-    if(IsDynamicNodes .and. iProc==0)then
+    if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'clean_mod_nodes deallocated arrays'
     end if

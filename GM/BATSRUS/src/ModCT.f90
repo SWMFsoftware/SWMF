@@ -9,9 +9,6 @@ module ModCT
   implicit none
   SAVE
 
-  ! Logical parameter indicating static vs. dynamic allocation
-  logical, parameter :: IsDynamicConstrainB = .true.
-
   !\
   ! Variables for Constrained Transport
   !/
@@ -52,7 +49,7 @@ contains
     allocate(VxB_x(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
     allocate(VxB_y(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
     allocate(VxB_z(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
-    if(IsDynamicConstrainB .and. iProc==0)then
+    if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_ct allocated arrays'
     end if
@@ -72,7 +69,7 @@ contains
     deallocate(VxB_y)
     deallocate(VxB_z)
 
-    if(IsDynamicConstrainB .and. iProc==0)then
+    if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'clean_mod_ct deallocated arrays'
     end if

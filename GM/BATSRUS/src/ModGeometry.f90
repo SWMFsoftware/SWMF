@@ -9,9 +9,6 @@ Module ModGeometry
   implicit none
   SAVE
 
-  ! Logical parameter indicating static vs. dynamic allocation
-  logical, parameter :: IsDynamicGeometry = .true.
-
   !\
   ! Geometry parameters.
   !/
@@ -77,7 +74,7 @@ contains
     allocate(z_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK))
     allocate(R_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK))
     allocate(R2_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK))
-    if(IsDynamicGeometry .and. iProc==0)then
+    if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_geometry allocated arrays'
     end if
@@ -95,7 +92,7 @@ contains
     deallocate(R_BLK)
     deallocate(R2_BLK)
 
-    if(IsDynamicGeometry .and. iProc==0)then
+    if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'clean_mod_geometry deallocated arrays'
     end if

@@ -9,9 +9,6 @@ Module ModAdvance
   implicit none
   save
 
-  ! Logical parameter indicating static vs. dynamic allocation
-  logical, parameter :: IsDynamicAdvance = .true.
-
   ! Numerical flux type
   character (len=10) :: FluxType
 
@@ -211,7 +208,7 @@ contains
     iTypeAdvance_B  = SkippedBlock_
     iTypeAdvance_BP = SkippedBlock_
 
-    if(IsDynamicAdvance .and. iProc==0)then
+    if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_advance allocated arrays'
     end if
@@ -240,7 +237,7 @@ contains
 
     if(allocated(iTypeAdvance_BP)) deallocate(iTypeAdvance_BP)
 
-    if(IsDynamicAdvance .and. iProc==0)then
+    if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'clean_mod_advance deallocated arrays'
     end if

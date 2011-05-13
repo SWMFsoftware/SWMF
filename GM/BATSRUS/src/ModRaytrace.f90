@@ -10,9 +10,6 @@ module ModRaytrace
   implicit none
   save
 
-  ! Logical parameter indicating static vs. dynamic allocation
-  logical, parameter :: IsDynamicRaytrace = .true.
-
   ! Select between fast less accurate and slower but more accurate algorithms
   logical :: UseAccurateTrace    = .false. 
   logical :: UseAccurateIntegral = .true.
@@ -256,7 +253,7 @@ contains
        DoInitRay = .false.
     end if
 
-    if(IsDynamicRaytrace .and. iProc==0)then
+    if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_raytrace allocated arrays'
     end if
@@ -279,7 +276,7 @@ contains
     deallocate(Extra_VGB)
     deallocate(ExtraMulti_VGB)
 
-    if(IsDynamicRaytrace .and. iProc==0)then
+    if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'clean_mod_raytrace deallocated arrays'
     end if

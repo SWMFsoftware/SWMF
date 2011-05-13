@@ -111,7 +111,6 @@ contains
   subroutine init_mod_adjoint
 
     use ModMain,      ONLY: nIter, time_accurate
-    use ModAdvance,    ONLY:  IsDynamicAdvance
 
     character(len=*), parameter:: NameSub = 'init_mod_adjoint'
 
@@ -137,7 +136,7 @@ contains
 
        allocate(Buffer_time_simulation(nBuffer))
 
-       if(IsDynamicAdvance .and. iProc==0)then
+       if(iProc==0)then
           call write_prefix
           write(iUnitOut,'(a)') 'init_mod_adjoint allocated arrays'
        end if
