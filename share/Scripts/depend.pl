@@ -216,7 +216,7 @@ OBJECT:
 		unless $use{$base}=~/ $module\b/i;
 	}
 	# Check for 'include "filename"'
-	if(/^\s*include\s+[\"\']([^\'\"]+)/i){
+	if(/^\s*include\s+[\"\']([^\'\"]+)/i and not /\bmpif.h\b/){
 	    my $include=$1;
 	    my $includeorig=$include;
 	    # If include file is not found check the search path
