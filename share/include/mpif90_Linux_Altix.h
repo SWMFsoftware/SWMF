@@ -193,7 +193,7 @@
 
         parameter (MPI_INTEGER          = 13)
         parameter (MPI_REAL             = 14+iRealPrec)
-        parameter (MPI_DOUBLE_PRECISION = 14)
+        parameter (MPI_DOUBLE_PRECISION = 15)
         parameter (MPI_COMPLEX          = 16+iRealPrec)
         parameter (MPI_DOUBLE_COMPLEX   = 17)
         parameter (MPI_LOGICAL          = 18)
