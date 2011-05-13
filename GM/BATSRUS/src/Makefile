@@ -244,5 +244,3 @@ distclean: clean
 	rm -f ModUser.f90.safe
 	mv ModUser.f90 ModUser.f90.safe
 	rm -f ModSize.f90 ModEquation.f90 ModHdf5.f90
-	rm -f ModAdvance.f90 ModCT.f90 ModGeometry.f90 \
-		ModNodes.f90 ModRaytrace.f90
