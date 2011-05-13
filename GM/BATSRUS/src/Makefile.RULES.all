@@ -31,14 +31,6 @@ $Compiler eq "f95"
 $Compiler eq "f95" and $Debug eq "yes"
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModIO.f90
 
-# Do not use -nan for these files if arrays are static (compiler would fail)
-$Compiler eq "f95" and $Debug eq "yes" and $IsDynamic eq "no"
-	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModAdvance.f90
-	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModGeometry.f90
-	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModCT.f90
-	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModRaytrace.f90
-	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModNodes.f90
-
 # This user file does not compile with -nan
 $Compiler eq "f95" and $Debug eq "yes" and $UserModule =~ /Mars 4 species/i
 	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModUser.f90
