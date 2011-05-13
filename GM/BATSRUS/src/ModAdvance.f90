@@ -10,7 +10,7 @@ Module ModAdvance
   save
 
   ! Logical parameter indicating static vs. dynamic allocation
-  logical, parameter :: IsDynamicAdvance = .false.
+  logical, parameter :: IsDynamicAdvance = .true.
 
   ! Numerical flux type
   character (len=10) :: FluxType
@@ -68,41 +68,44 @@ Module ModAdvance
   !\
   ! Block cell-centered MHD solution
   !/
-  real:: State_VGB(nVar,1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock)
-  real:: Energy_GBI(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock, nFluid)
+  real, allocatable :: State_VGB(:,:,:,:,:)
+  real, allocatable :: Energy_GBI(:,:,:,:,:)
 
   !\
   ! Block cell-centered MHD solution old state
   !/
-  real :: StateOld_VCB(nVar, nI, nJ, nK, MaxBlock)
-  real :: EnergyOld_CBI(nI, nJ, nK, MaxBlock, nFluid)
+  real, allocatable :: StateOld_VCB(:,:,:,:,:)
+  real, allocatable :: EnergyOld_CBI(:,:,:,:,:)
 
   !\
   ! Block cell-centered intrinsic magnetic field, time, and temporary storage
   !/
-  real,  dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock) :: &
-       tmp1_BLK, tmp2_BLK
+  real, allocatable :: tmp1_BLK(:,:,:,:)
+  real, allocatable :: tmp2_BLK(:,:,:,:)
 
-  real :: time_BLK(nI, nJ, nK, MaxBlock)
+  real, allocatable :: time_BLK(:,:,:,:)
 
   ! Array for storing dB0/dt derivatives
   real, allocatable :: Db0Dt_CDB(:,:,:,:,:)
 
   ! Arrays for the total electric field
-  real, dimension(nI, nJ, nK, MaxBlock) :: Ex_CB, Ey_CB, Ez_CB
+  real, allocatable :: Ex_CB(:,:,:,:)
+  real, allocatable :: Ey_CB(:,:,:,:)
+  real, allocatable :: Ez_CB(:,:,:,:)
 
   !\
   ! Block cell-centered body forces
   !/
-  real, dimension(nI, nJ, nK, MaxBlock) :: &
-       fbody_x_BLK, fbody_y_BLK, fbody_z_BLK
+  real, allocatable :: fbody_x_BLK(:,:,:,:)
+  real, allocatable :: fbody_y_BLK(:,:,:,:)
+  real, allocatable :: fbody_z_BLK(:,:,:,:)
 
   !\
   ! Local cell-centered source terms and divB.
   !/
   real :: Source_VC(nVar+nFluid, nI, nJ, nK)
   real :: Theat0(nI,nJ,nK)
-  real :: DivB1_GB(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock)
+  real, allocatable :: DivB1_GB(:,:,:,:)
 
   real, dimension(0:nI+1, 0:nJ+1, 0:nK+1) :: &
        gradX_Ux, gradX_Uy, gradX_Uz, gradX_Bx, gradX_By, gradX_Bz, gradX_VAR,&
@@ -170,7 +173,7 @@ Module ModAdvance
   !\
   ! Block type information
   !/
-  integer              :: iTypeAdvance_B(MaxBlock)
+  integer :: iTypeAdvance_B(MaxBlock)
   integer, allocatable :: iTypeAdvance_BP(:,:)
 
   ! Named indexes for block types
@@ -187,6 +190,22 @@ contains
 
   subroutine init_mod_advance
 
+
+    if(allocated(State_VGB)) return
+    allocate(State_VGB(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,MaxBlock))
+    allocate(Energy_GBI(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,MaxBlock,nFluid))
+    allocate(StateOld_VCB(nVar,nI,nJ,nK,MaxBlock))
+    allocate(EnergyOld_CBI(nI,nJ,nK,MaxBlock,nFluid))
+    allocate(tmp1_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock))
+    allocate(tmp2_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock))
+    allocate(time_BLK(nI,nJ,nK,MaxBlock))
+    allocate(Ex_CB(nI, nJ, nK, MaxBlock))
+    allocate(Ey_CB(nI, nJ, nK, MaxBlock))
+    allocate(Ez_CB(nI, nJ, nK, MaxBlock))
+    allocate(fbody_x_BLK(nI, nJ, nK, MaxBlock))
+    allocate(fbody_y_BLK(nI, nJ, nK, MaxBlock))
+    allocate(fbody_z_BLK(nI, nJ, nK, MaxBlock))
+    allocate(DivB1_GB(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,MaxBlock))
     if(allocated(iTypeAdvance_BP)) RETURN
     allocate(iTypeAdvance_BP(MaxBlock,0:nProc-1))
     iTypeAdvance_B  = SkippedBlock_
@@ -202,6 +221,22 @@ contains
   !============================================================================
 
   subroutine clean_mod_advance
+
+    if(.not.allocated(State_VGB)) return
+    deallocate(State_VGB)
+    deallocate(Energy_GBI)
+    deallocate(StateOld_VCB)
+    deallocate(EnergyOld_CBI)
+    deallocate(tmp1_BLK)
+    deallocate(tmp2_BLK)
+    deallocate(time_BLK)
+    deallocate(Ex_CB)
+    deallocate(Ey_CB)
+    deallocate(Ez_CB)
+    deallocate(fbody_x_BLK)
+    deallocate(fbody_y_BLK)
+    deallocate(fbody_z_BLK)
+    deallocate(DivB1_GB)
 
     if(allocated(iTypeAdvance_BP)) deallocate(iTypeAdvance_BP)
 

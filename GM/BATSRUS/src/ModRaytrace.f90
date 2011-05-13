@@ -11,7 +11,7 @@ module ModRaytrace
   save
 
   ! Logical parameter indicating static vs. dynamic allocation
-  logical, parameter :: IsDynamicRaytrace = .false.
+  logical, parameter :: IsDynamicRaytrace = .true.
 
   ! Select between fast less accurate and slower but more accurate algorithms
   logical :: UseAccurateTrace    = .false. 
@@ -55,13 +55,14 @@ module ModRaytrace
   ! ray is for cell centers; rayface is for block surfaces with 
   ! a -0.5,-0.5,-0.5 shift in block normalized coordinates
 
-  real, dimension(3,2,nI+1,nJ+1,nK+1,nBLK) :: ray, rayface
+  real, allocatable :: ray(:,:,:,:,:,:)
+  real, allocatable :: rayface(:,:,:,:,:,:)
 
   ! Stored face and cell indices of the 2 rays starting from a face of a block
-  integer :: rayend_ind(3,2,nI+1,nJ+1,nK+1,nBLK)
+  integer, allocatable :: rayend_ind(:,:,:,:,:,:)
 
   ! Stored weights for the 2 rays starting from a face of a block
-  real    :: rayend_pos(4,2,nI+1,nJ+1,nK+1,nBLK)
+  real, allocatable :: rayend_pos(:,:,:,:,:,:)
 
   ! Radius where ray tracing with numerical B stops and 
   ! radius and radius squared of ionosphere
@@ -71,10 +72,12 @@ module ModRaytrace
 !!! These could be allocatable arrays ???
   
   ! Node interpolated magnetic field components without B0
-  real, dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK):: bb_x,bb_y,bb_z
+  real, allocatable :: bb_x(:,:,:,:)
+  real, allocatable :: bb_y(:,:,:,:)
+  real, allocatable :: bb_z(:,:,:,:)
 
   ! Total magnetic field with second order ghost cells
-  real, dimension(3,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: Bxyz_DGB
+  real, allocatable :: Bxyz_DGB(:,:,:,:,:)
 
   ! Prefer open and closed field lines in interpolation ?!
   logical :: UsePreferredInterpolation
@@ -121,8 +124,8 @@ module ModRaytrace
   integer, parameter :: nRayIntegral = 14
 
   ! Flow variables to be integrated (rho and P) other than the magnetic field
-  real, dimension(2,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: Extra_VGB
-  real, dimension(4,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: ExtraMulti_VGB
+  real, allocatable :: Extra_VGB(:,:,:,:,:)
+  real, allocatable :: ExtraMulti_VGB(:,:,:,:,:)
 
   ! Integrals for a local ray segment
   real :: RayIntegral_V(InvB_:OppInvB_)
@@ -236,6 +239,18 @@ contains
     logical :: DoInitRay = .true.
 
     ! Initialize ray array (write_logfile may use it before first ray tracing)
+
+    if(allocated(ray)) return
+    allocate(ray(3,2,nI+1,nJ+1,nK+1,nBLK))
+    allocate(rayface(3,2,nI+1,nJ+1,nK+1,nBLK))
+    allocate(rayend_ind(3,2,nI+1,nJ+1,nK+1,nBLK))
+    allocate(rayend_pos(4,2,nI+1,nJ+1,nK+1,nBLK))
+    allocate(bb_x(1:nI+1,1:nJ+1,1:nK+1,nBLK))
+    allocate(bb_y(1:nI+1,1:nJ+1,1:nK+1,nBLK))
+    allocate(bb_z(1:nI+1,1:nJ+1,1:nK+1,nBLK))
+    allocate(Bxyz_DGB(3,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
+    allocate(Extra_VGB(2,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
+    allocate(ExtraMulti_VGB(4,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
     if(DoInitRay)then
        ray       = 0.0
        DoInitRay = .false.
@@ -251,6 +266,18 @@ contains
   !============================================================================
 
   subroutine clean_mod_raytrace
+
+    if(.not.allocated(ray)) return
+    deallocate(ray)
+    deallocate(rayface)
+    deallocate(rayend_ind)
+    deallocate(rayend_pos)
+    deallocate(bb_x)
+    deallocate(bb_y)
+    deallocate(bb_z)
+    deallocate(Bxyz_DGB)
+    deallocate(Extra_VGB)
+    deallocate(ExtraMulti_VGB)
 
     if(IsDynamicRaytrace .and. iProc==0)then
        call write_prefix

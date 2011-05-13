@@ -146,56 +146,6 @@ OBJECTS = \
 ModUser.f90:
 	cp ModUserDefault.f90 ModUser.f90
 
-NAME = Advance
-
-STATIC1:
-	cp -f Mod${NAME}_static.f90 Mod${NAME}.f90
-
-STATIC:
-	make -s STATIC1 NAME=Advance
-	make -s STATIC1 NAME=Nodes
-	make -s STATIC1 NAME=Geometry
-	make -s STATIC1 NAME=Raytrace	#^CFG IF RAYTRACE
-	make -s STATIC1 NAME=CT		#^CFG IF CONSTRAINB
-
-# Transform modules with static declaration of large variables into 
-# modules with dynamic allocation as used modules
-DYNAMIC1: 
-	${SCRIPTDIR}/StaticToDynamic.pl ${LARGE} \
-		Mod${NAME}_static.f90 > Mod${NAME}.f90
-
-DYNAMIC:
-	make -s DYNAMIC1 NAME=Advance
-	make -s DYNAMIC1 NAME=Nodes
-	make -s DYNAMIC1 NAME=Geometry
-	make -s DYNAMIC1 NAME=Raytrace	#^CFG IF RAYTRACE
-	make -s DYNAMIC1 NAME=CT	#^CFG IF CONSTRAINB
-
-# Dependency rules for static/dynamic modules
-
-# Default variable declaration type for 1 module (select one)
-#STATIC_OR_DYNAMIC = STATIC1
-STATIC_OR_DYNAMIC = DYNAMIC1
-
-ModAdvance.f90: ModAdvance_static.f90
-	make -s ${STATIC_OR_DYNAMIC} NAME=Advance
-
-ModNodes.f90: ModNodes_static.f90
-	make -s ${STATIC_OR_DYNAMIC} NAME=Nodes
-
-ModGeometry.f90: ModGeometry_static.f90
-	make -s ${STATIC_OR_DYNAMIC} NAME=Geometry
-
-#^CFG IF CONSTRAINB BEGIN
-ModCT.f90: ModCT_static.f90
-	make -s ${STATIC_OR_DYNAMIC} NAME=CT
-#^CFG END CONSTRAINB
-
-#^CFG IF RAYTRACE BEGIN
-ModRaytrace.f90: ModRaytrace_static.f90
-	make -s ${STATIC_OR_DYNAMIC} NAME=Raytrace
-#^CFG END RAYTRACE
-
 ############################################################################
 
 DEPEND:
