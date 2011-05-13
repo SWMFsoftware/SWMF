@@ -370,6 +370,7 @@ subroutine read_tides
   real                           :: version 
   integer                        :: nAlts_gswm, nVars, iVar, iHour
   character(len=40), allocatable :: varName(:)
+  character(len=2)               :: cMonth
   integer                        :: time(7)
   real, allocatable              :: param(:,:,:,:,:)
   integer :: iError
@@ -378,10 +379,11 @@ subroutine read_tides
   call start_timing("read_tides")
 
   if (IsFirstTime) then
-     GSWM_file_name(1) ="UA/DataIn/diur_mig_99km_12.bin" 
-     GSWM_file_name(2) ="UA/DataIn/diur_nonmig_99km_12.bin" 
-     GSWM_file_name(3) ="UA/DataIn/semidiur_mig_99km_12.bin" 
-     GSWM_file_name(4) ="UA/DataIn/semidiur_nonmig_99km_12.bin" 
+     call i2s(iTimeArray(2), cMonth, 2)
+     GSWM_file_name(1) ="UA/DataIn/diur_mig_99km_"//cMonth//".bin" 
+     GSWM_file_name(2) ="UA/DataIn/diur_nonmig_99km_"//cMonth//".bin" 
+     GSWM_file_name(3) ="UA/DataIn/semidiur_mig_99km_"//cMonth//".bin" 
+     GSWM_file_name(4) ="UA/DataIn/semidiur_nonmig_99km_"//cMonth//".bin" 
      IsFirstTime = .false.
   endif
 
@@ -391,7 +393,8 @@ subroutine read_tides
 
      if (UseGswmComp(iComp)) then
 
-        write(*,*) "Reading File : ",gswm_file_name(iComp)
+        if (iDebugLevel > 0) &
+             write(*,*) "=> Reading File : ",gswm_file_name(iComp)
         open(iInputUnit_,file=gswm_file_name(iComp),&
              status="old",form="unformatted")
           
