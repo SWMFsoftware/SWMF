@@ -15,7 +15,6 @@ install:
 		touch ${INSTALLFILES}; \
 		cp -f src/ModSize_orig.f90 src/ModSize.f90; \
 		cp -f srcBATL/BATL_size_orig.f90 srcBATL/BATL_size.f90; \
-		cd src; make DYNAMIC; \
 	fi)
 
 LIB: check_src
