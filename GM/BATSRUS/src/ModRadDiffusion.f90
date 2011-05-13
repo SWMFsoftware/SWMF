@@ -467,7 +467,7 @@ contains
     real :: TeTiCoefSi, TeTiCoef, TeTiCoefPrime
 
     integer :: iMin, iMax, jMin, jMax, kMin, kMax
-    integer :: iDim, Di, Dj, Dk, iDiff, nDimInUse
+    integer :: iDim, Di, Dj, Dk, iDiff
     real :: Coeff, Dxyz_D(MaxDim)
 
     real :: PlanckSi_W(nWave), Planck_W(nWave), Planck
@@ -477,8 +477,6 @@ contains
 
     character(len=*), parameter:: NameSub='get_impl_rad_diff_state'
     !--------------------------------------------------------------------------
-
-    nDimInUse = nDim; if(TypeGeometry == 'rz') nDimInUse = 2
 
     ! For the electron flux limiter, we need Te in the ghostcells
     if(UseHeatFluxLimiter)then
@@ -652,25 +650,25 @@ contains
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(nDim > 1 .and. NeiLev(3,iBlock) == NOBLK)then
+       if(nJ > 1 .and. NeiLev(3,iBlock) == NOBLK)then
           j = 0
           do k = 1, nK; do i = 1, nI
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(nDim > 1 .and. NeiLev(4,iBlock) == NOBLK)then
+       if(nJ > 1 .and. NeiLev(4,iBlock) == NOBLK)then
           j = nJ + 1
           do k = 1, nK; do i = 1, nI
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(nDimInUse > 2 .and. NeiLev(5,iBlock) == NOBLK)then
+       if(nK > 1 .and. NeiLev(5,iBlock) == NOBLK)then
           k = 0
           do j = 1, nJ; do i = 1, nI
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(nDimInUse > 2 .and. NeiLev(6,iBlock) == NOBLK)then
+       if(nK > 1 .and. NeiLev(6,iBlock) == NOBLK)then
           k = nK + 1
           do j = 1, nJ; do i = 1, nI
              call get_ghostcell_diffcoef
@@ -723,7 +721,7 @@ contains
           end if
        end if
 
-       if(nDimInUse==3 .and. nK > 1)then
+       if(nK > 1)then
           call face_equal(3,1,nI,1,nJ,2,nK)
           if(NeiLev(5,iBlock)==0.or.NeiLev(5,iBlock)==NOBLK)then
              call face_equal(3,1,nI,1,nJ,1,1)
@@ -905,9 +903,9 @@ contains
 
             Grad2ByErad2_W = &
                  ((Erad_WG(:,i+1,j,k) - Erad_WG(:,i-1,j,k))*InvDx2)**2
-            if(nDim > 1) Grad2ByErad2_W = Grad2ByErad2_W + &
+            if(nJ > 1) Grad2ByErad2_W = Grad2ByErad2_W + &
                  ((Erad_WG(:,i,j+1,k) - Erad_WG(:,i,j-1,k))*InvDy2)**2
-            if(nDimInUse > 2) Grad2ByErad2_W = Grad2ByErad2_W + &
+            if(nK > 1) Grad2ByErad2_W = Grad2ByErad2_W + &
                  ((Erad_WG(:,i,j,k+1) - Erad_WG(:,i,j,k-1))*InvDz2)**2
             Grad2ByErad2_W = Grad2ByErad2_W/ Erad_WG(:,i,j,k)**2
 
@@ -932,9 +930,9 @@ contains
             end if
 
             GradTe = ((Te_G(i+1,j,k) - Te_G(i-1,j,k))*InvDx2)**2
-            if(nDim > 1) GradTe = GradTe + &
+            if(nJ > 1) GradTe = GradTe + &
                  ((Te_G(i,j+1,k) - Te_G(i,j-1,k))*InvDy2)**2
-            if(nDimInUse > 2) GradTe = GradTe + &
+            if(nK > 1) GradTe = GradTe + &
                  ((Te_G(i,j,k+1) - Te_G(i,j,k-1))*InvDz2)**2
             GradTe = sqrt(GradTe)
 
@@ -1070,7 +1068,7 @@ contains
 
   subroutine get_rad_diffusion_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
-    use ModGeometry, ONLY: TypeGeometry, vInv_CB
+    use ModGeometry, ONLY: vInv_CB
     use ModImplicit, ONLY: nVarSemi, iTeImpl
     use ModLinearSolver, ONLY: pDotADotPPe, UsePDotADotP
     use ModMain,     ONLY: nI, nJ, nK
@@ -1089,13 +1087,13 @@ contains
 
     if(NeiLev(1,iBlock)==1) call correct_left_ghostcell(1,0,0,1,nJ,1,nK)
     if(NeiLev(2,iBlock)==1) call correct_right_ghostcell(1,nI+1,nI+1,1,nJ,1,nK)
-    if(nDim > 1)then
+    if(nJ > 1)then
        if(NeiLev(3,iBlock)==1) &
             call correct_left_ghostcell(2,1,nI,0,0,1,nK)
        if(NeiLev(4,iBlock)==1) &
             call correct_right_ghostcell(2,1,nI,nJ+1,nJ+1,1,nK)
     end if
-    if(nDim > 2 .and. TypeGeometry /= 'rz')then
+    if(nK > 1)then
        if(NeiLev(5,iBlock)==1) &
             call correct_left_ghostcell(3,1,nI,1,nJ,0,0)
        if(NeiLev(6,iBlock)==1) &
@@ -1118,7 +1116,7 @@ contains
                   -   StateImpl_VG(iVar,i-1,j,k)) )
           end do
        end do; end do; end do
-    elseif(TypeGeometry == 'rz' .or. nDim == 2)then
+    elseif(nDim == 2)then
        ! No flux from Z direction
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           do iDiff = iDiffMin, iDiffMax
@@ -1219,7 +1217,7 @@ contains
                      -   StateImpl_VG(iVar,i-1,j,k))**2 )
              end do
           end do; end do; end do
-       elseif(TypeGeometry == 'rz' .or. nDim == 2)then
+       elseif(nDim == 2)then
           ! No flux from Z direction
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              do iDiff = iDiffMin, iDiffMax
@@ -1429,11 +1427,9 @@ contains
     use ModGeometry, ONLY: vInv_CB, dx_BLK, dy_BLK, dz_BLK, &
          fAx_BLK, fAy_BLK, fAz_BLK
     use ModImplicit, ONLY: TypeSemiImplicit, iTeImpl, UseFullImplicit, &
-         UseSemiImplicit, nVarSemi
+         UseSemiImplicit, nVarSemi, nStencil
     use ModMain,     ONLY: nI, nJ, nK
     use ModNumConst, ONLY: i_DD
-
-    integer, parameter:: nStencil = 2*nDim + 1
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
