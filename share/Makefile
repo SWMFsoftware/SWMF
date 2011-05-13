@@ -5,7 +5,7 @@ include ../Makefile.def
 #!DESCRIPTION:
 # This Makefile has three targets: install, clean and distclean
 # The install target installs the share/Library/src,
-# copies the OS and MPIVERSION dependent mpif90.h and mpif.h files into Library/src,
+# copies the OS and MPIVERSION dependent mpif90.h files into Library/src,
 # copies the OS and COMPILER dependent Makefile from build to the parent directory.
 # The OS, COMPILER and MPIVERSION variables should be set like in the following example:
 #\begin{verbatim}
@@ -18,14 +18,11 @@ include ../Makefile.def
 #EOP
 #BOC
 
-Library/src/mpif.h:
-	cd Library/src; cat precision.h mpif90.h > mpif.h
-
 INSTALL_FILES = \
 	Library/src/Makefile.DEPEND \
 	Library/src/Makefile.RULES
 
-install: Library/src/mpif.h
+install:
 	touch ${INSTALL_FILES}
 	@(if [ "${OS}" != "Darwin" ]; then \
 		rm -f Library/src/ModUtilities.f90; \
