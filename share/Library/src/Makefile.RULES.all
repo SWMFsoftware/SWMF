@@ -17,9 +17,6 @@ $Compiler eq "lf95" or $Compiler eq "mpxlf90"
 $Compiler eq "f95"
 	${COMPILE.f90} ${Cflag0} -dusty ModMpiInterfaces.f90
 
-# Use mpif90 to include the mpif.h header file
-$Compiler ne "mpxlf90" and $Compiler ne "ifort"
-	mpif90 ${Cflag0} ModMpiConstants.f90
-
-$Compiler eq ifort
+# Use LINK.f90 (usually mpif90) so the mpif.h header file can be included
+1
 	${LINK.f90} ${Cflag0} ModMpiConstants.f90
