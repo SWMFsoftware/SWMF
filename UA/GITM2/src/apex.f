@@ -647,6 +647,7 @@ C Ensure that XINTER is not less than original starting altitude (ALT)
       XINTER = AMAX1(ALT,XINTER)
 c simple apex      A = (REQ+XINTER)/(REQ)
 C      write(*,*) re, re+90, xinter, re+xinter, (RE+90.)/(RE+xinter)
+C      write(*,*) AltMinIono
 C  modified apex
       A = (RE+xinter)/(RE+AltMinIono)
 C     ****
@@ -657,6 +658,7 @@ C     ****
       IF (A.LT.1.) THEN
 	WRITE(6,20)
   20    FORMAT (' BOMBED! THIS MAKES A LESS THAN ONE')
+         write(*,*) a, re+xinter, re+altminiono, xinter, AltMinIono
 	call stop_gitm("died in apex.f")
       ENDIF
       RASQ = RTOD*ACOS(SQRT(1./A))
