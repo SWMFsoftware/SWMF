@@ -12,7 +12,14 @@ $Compiler eq "xlf90"
 $Compiler eq "lf95" or $Compiler eq "mpxlf90"
 	${COMPILE.f90} ${Cflag4NoP} ModBlasLapack.f90
 
-# ModMpiInterface compiles with -dusty only because
+# With NAG f95 ModMpiInterface compiles with -dusty only because
 # the same MPI routines are called with different argument types
 $Compiler eq "f95"
 	${COMPILE.f90} ${Cflag0} -dusty ModMpiInterfaces.f90
+
+# Use mpif90 to include the mpif.h header file
+$Compiler ne "mpxlf90" and $Compiler ne "ifort"
+	mpif90 ${Cflag0} ModMpiConstants.f90
+
+$Compiler eq ifort
+	${LINK.f90} ${Cflag0} ModMpiConstants.f90
