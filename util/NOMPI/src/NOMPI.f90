@@ -39,7 +39,7 @@
 integer function MPI_TYPE_SIZE(datatype)
 
   !USES:
-  use ModMpiConstants, ONLY: MPI_REAL, MPI_DOUBLE_PRECISION, &
+  use ModMpiOrig, ONLY: MPI_REAL, MPI_DOUBLE_PRECISION, &
        MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
   implicit none
 
@@ -156,7 +156,7 @@ subroutine MPI_LOCAL_MSG(caller,buf,count,datatype,rank,tag)
   ! Stop if RECV is issued before the corresponding SEND.
   
   !USES:
-  use ModMpiConstants, ONLY: MPI_ANY_TAG
+  use ModMpiOrig, ONLY: MPI_ANY_TAG
   implicit none
 
   !INPUT ARGUMENTS:

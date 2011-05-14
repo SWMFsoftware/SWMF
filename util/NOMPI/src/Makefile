@@ -12,10 +12,10 @@ help:
 
 MY_LIB = ${LIBDIR}/libNOMPI.a
 
-${SHAREDIR}/ModMpiConstants.o:
-	cd ${SHAREDIR}; make ModMpiConstants.o
+${SHAREDIR}/ModMpiOrig.o:
+	cd ${SHAREDIR}; make ModMpiOrig.o
 
-LIB:	${SHAREDIR}/ModMpiConstants.o
+LIB:	${SHAREDIR}/ModMpiOrig.o
 	make ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
