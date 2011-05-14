@@ -18,23 +18,6 @@ my %Compiler = (
 		"ubgl"                => "mpxlf90",
 		);
 
-# Default MPI library per machine or OS
-my %MpiVersion = (
-		  "Linux"             => "mpich",
-		  "Darwin"            => "mpich",
-		  "OSF1"              => "mpich",
-		  "AIX"               => "IBM",
-		  "IRIX64"            => "SGI",
-		  "palm"              => "Altix",
-		  "cfe"               => "Altix",
-		  "pfe"               => "Altix",
-		  "grendel"           => "openmpi",
-		  "nyx-login-intel"   => "openmpi",
-		  "nyx-login-amd"     => "openmpi",
-		  "hera"              => "mvapich",
-		  "ubgl"              => "mpich2",
-		  );
-
 my $WARNING_='share/Scripts/Config.pl WARNING:';
 my $ERROR_  ='share/Scripts/Config.pl ERROR:';
 
@@ -61,14 +44,9 @@ our $Compiler;
 $Compiler = $Compiler{$Machine} or $Compiler = $Compiler{$OS} or
     die "$ERROR_ default compiler is not known for OS=$OS\n";
 
-# Default C compiler
+# Default C++ compiler
 our $CompilerC = "gcc";
 $CompilerC = $1 if $Compiler =~ s/,(.+)//;
-
-# Obtain the default MPI version for mpif90.h
-our $MpiVersion;
-$MpiVersion = $MpiVersion{$Machine} or $MpiVersion = $MpiVersion{$OS} or
-    die "$ERROR_ default MPI version is not known for OS=$OS\n";
 
 # These are always obtained from the calling script
 our $MakefileDefOrig;       # Original Makefile.def 
@@ -81,8 +59,6 @@ our %Remaining;
 our $MakefileDef      = 'Makefile.def';
 our $MakefileConf     = 'Makefile.conf';
 our $MakefileConfOrig = 'share/build/Makefile';
-our $MpiHeader        = 'share/Library/src/mpif90.h';
-our $MpiHeaderOrig    = 'share/include/mpif90_';
 our $MakefileRules    = 'Makefile.RULES';
 our $MakefileDepend   = 'Makefile.DEPEND';
 
@@ -138,12 +114,8 @@ foreach (@Arguments){
 			       $CompilerC=$1 if $Compiler =~ s/,(.+)//;
 			       $IsCompilerSet=1;  next};
     if(/^-compiler$/i)        {$ShowCompiler=1;                 next};
-    if(/^-mpi=(.*)$/i)        {$MpiVersion=$1;                  next};
-    if(/^-mpi$/i)             {if($Mpi ne "no" or not $Installed){$ShowMpi=1
-			       }else{$NewMpi="yes"};            next};
+    if(/^-mpi$/i)             {$NewMpi="yes";                   next};
     if(/^-nompi$/i)           {$NewMpi="no";                    next};
-    if(/^-standalone$/i)      {$IsComponent=0;                  next};
-    if(/^-component$/i)       {$IsComponent=1;                  next};
     if(/^-debug$/i)           {$NewDebug="yes";                 next};
     if(/^-nodebug$/i)         {$NewDebug="no";                  next};
     if(/^-hdf5$/i)            {$NewHdf5="yes";                  next};
@@ -183,25 +155,14 @@ if($Uninstall){
 }
 
 if($ShowCompiler){
-    my @File = glob($MakefileConfOrig."*");
+    my @File= glob($MakefileConfOrig.'*');
     print "List of known compilers for OS=$OS:\n";
     foreach (@File){
 	next unless s/$MakefileConfOrig\.$OS\.//;
 	print "  $_\n";
     }
+    exit 0;
 }
-
-if($ShowMpi){
-    my @File = glob($MpiHeaderOrig."*");
-    print "List of known MPI headers for OS=$OS:\n";
-    foreach (@File){
-	next unless s/$MpiHeaderOrig$OS\_//;
-	next unless s/\.h$//;
-	print "  $_\n";
-    }
-}
-
-exit 0 if $ShowMpi or $ShowCompiler;
 
 # Execute the actions in the appropriate order
 &install_code_ if $Install;
@@ -295,19 +256,6 @@ sub get_settings_{
   }
     close(MAKEFILE);
 
-    open(MPIHEADER, $MpiHeader) or open(MPIHEADER, "../../$MpiHeader") or
-	return;
-
-    my $IsFound = 0;
-    while(<MPIHEADER>){
-	next unless /MPI_HEADER_FILE\s*=.*_(\w+)\.h/;
-	$IsFound = 1;
-	$MpiVersion = $1;
-	last;
-    }
-    close(MPIHEADER);
-    warn "$WARNING_ could not find MPI_HEADER_FILE string in $MpiHeader\n"
-	unless $IsFound;
 }
 
 ##############################################################################
@@ -329,8 +277,7 @@ sub show_settings_{
     }
     print "The installation is for the $OS operating system.\n";
     print "The selected F90 compiler is $Compiler.\n";
-    print "The selected C compiler is   $CompilerC.\n";
-    print "The selected MPI library is  $MpiVersion.\n";
+    print "The selected C++ compiler is $CompilerC.\n";
     print "The default precision for reals is $Precision precision.\n";
     print "The maximum optimization level is $Optimize\n";
     print "Debugging flags:  $Debug\n";
@@ -345,7 +292,7 @@ sub show_settings_{
 sub install_code_{
 
     my $Text = $Installed ? "Reinstalling $Code" : "Installing $Code";
-    $Text .= " as a $Component component" if $IsComponent;  
+    $Text .= " as $Component component" if $IsComponent;  
     print "$Text\n";
 
     if($IsComponent){
@@ -394,14 +341,6 @@ sub install_code_{
 	    die "$ERROR_ could not find $Makefile\n";
 	}
 	
-	my $Header = "$MpiHeaderOrig${OS}_$MpiVersion.h";
-	if(-f $Header){
-	    &shell_command("cat $Header > $MpiHeader");
-	}else{
-	    warn "$WARNING_: $Header was not found,".
-		" using generic ${MpiHeaderOrig}mpich.h\n";
-	    &shell_command("cat ${MpiHeaderOrig}mpich.h > $MpiHeader");
-	}
     }
 
     # Read info from main Makefile.def
@@ -477,6 +416,8 @@ sub set_mpi_{
     # $Mpi will be $NewMpi after changes
     $Mpi = $NewMpi;
 
+    &shell_command("make NOMPI") if $Mpi eq "no";
+
     print "Selecting MPI library in $MakefileConf\n" if $Mpi eq "yes";
     print "Selecting NOMPI library in $MakefileConf\n" if $Mpi eq "no";
     if(not $DryRun){
@@ -495,7 +436,7 @@ sub set_mpi_{
 	    print;
 	}
     }
-    &shell_command("make NOMPI") if $Mpi eq "no";
+
     print "Remove executable and make it to link with the (NO)MPI library!\n";
 }
 
@@ -557,8 +498,8 @@ sub create_makefile_rules{
 
     # Hash for general configuration settings
     my %Settings = (OS         => $OS, 
-		    Compiler   => $Compiler, 
-		    MpiVersion => $MpiVersion, 
+		    Compiler   => $Compiler,
+		    Mpi        => $Mpi,
 		    Debug      => $Debug,
 		    Machine    => $Machine,
 		    Precision  => $Precision);
@@ -685,8 +626,8 @@ of the SWMF/component script (starting with the text 'Additional ...').
 This script edits the appropriate Makefile-s, copies files and executes 
 shell commands. The script can also show the current settings.
 
-Usage: Config.pl [-help] [-verbose] [-dryrun] [-show] [-compiler] [-mpi] 
-                 [-install[=s|=c] [-compiler=FCOMP[,CCOMP]] [-mpi=VERSION]]
+Usage: Config.pl [-help] [-verbose] [-dryrun] [-show] [-compiler] 
+                 [-install[=s|=c] [-compiler=FCOMP[,CCOMP]]
                  [-uninstall]
                  [-single|-double] [-debug|-nodebug] [-mpi|-nompi]
                  [-O0|-O1|-O2|-O3|-O4|-O5]
@@ -720,11 +661,6 @@ Information:
                and non-default C compiler CCOMP.
                only works together with -install flag
 
--mpi           show available MPI library choices for this OS
--mpi=VERSION   copy share/include/mpif90_OS_VERSION 
-               into share/Library/src/mpif90.h
-               Only works together with -install flag
-
 Compilation:
 
 -single        set precision to single in Makefile.conf and make clean
@@ -753,13 +689,13 @@ Show current settings with more detail:
 
     Config.pl -show
 
-Show available compiler and MPI library choices:
+Show available compiler choices:
 
-    Config.pl -compiler -mpi
+    Config.pl -compiler
 
 Install code with the g95 compiler and Intel MPI:
 
-    Config.pl -install -compiler=g95,gcc -mpi=Intel
+    Config.pl -install -compiler=g95,gcc
 
 Use the HDF5 plotting library
 
