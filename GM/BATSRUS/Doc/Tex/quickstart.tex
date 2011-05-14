@@ -157,9 +157,9 @@ simply include the files with the same name in the SWMF directory.
 The rest of this subsection describes the installation procedure
 for the stand alone code.
  
-The installation requires the selection of a specific Fortran compiler and
-MPI library. For many platforms used at CSEM,
-the script can figure out the default settings all by itself. 
+The installation requires the selection of a specific Fortran compiler. 
+For many platforms used by CSEM and CRASH, the script can figure out 
+the default settings all by itself. 
 On these systems, the code can be installed simply by running the command
 \begin{verbatim}
   Config.pl -install
@@ -170,8 +170,6 @@ in the main directory. This
       absolute path to the base directory, 
 \item creates {\tt Makefile.conf} that contains the operating 
       system and compiler specific part of the Makefile
-\item copies the appropriate MPI header file from 
-      {\tt share/include} into {\tt shhare/Library/src},
 \item creates the compiler specific {\tt Makefile.RULES} from
       {\tt Makefile.RULES.all} in the various source directories,
 \item attempts to create a symbolic link {\tt data} to {\tt SWMF\_data/GM/BATSRUS/data}
@@ -183,20 +181,21 @@ If the platform/machine is not listed at the beginning of the
 \begin{verbatim}
   share/Scripts/Config.pl
 \end{verbatim}
-script, or a non-default compiler or MPI library is desired,
-then the compiler must be specified explicitly with the 
-{\tt -compiler} flag, and the MPI header file with the {\tt -mpi} flag. 
-For example one can select the gfortran compiler with the openmpi library using
+script, or a non-default compiler is desired, then the compiler 
+must be specified explicitly with the {\tt -compiler} flag. Type 
 \begin{verbatim}
-  Config.pl -install -compiler=gfortran -mpi=openmpi
+  Config.pl -compiler
+\end{verbatim}
+to see available choices. Then install the code with the selected compiler,
+for example 
+\begin{verbatim}
+  Config.pl -install -compiler=gfortran
 \end{verbatim}
 On a Linux system this will copy the
 \begin{verbatim}
   share/build/Makefile.Linux.gfortran
-  share/include/mpif90_Linux_openmpi.h
 \end{verbatim}
-files into Makefile.conf and mpif90.h, respectively. See the share/build and share/include
-directories for other options.
+file into Makefile.conf. 
 
 In case your platform and/or compiler is not supported yet, 
 you will have to create a
@@ -206,28 +205,6 @@ you will have to create a
 file where 'OS' is the name of the operating system returned
 by the Unix command {\tt uname}, while 'COMPILER' is the name
 of the F90 compiler used or something closely related to that.
-
-If the MPI header file needed for your platform is not 
-found in share/include, you will have to create a
-\begin{verbatim}
-  share/include/mpif90_OS_MPIVERSION.h
-\end{verbatim}
-file. This file should be created from the mpif.h file used on your system
-with a slight modification in the definition of MPI\_REAL, for example
-\begin{verbatim}
-      PARAMETER (MPI_REAL=26)
-      PARAMETER (MPI_DOUBLE_PRECISION=27,MPI_INTEGER=28)
-\end{verbatim}
-should be modified to
-\begin{verbatim}
-      PARAMETER (MPI_REAL=26+iRealPrec)
-      PARAMETER (MPI_DOUBLE_PRECISION=27,MPI_INTEGER=28)
-\end{verbatim}
-The modification defines MPI\_REAL to be the same as MPI\_DOUBLE\_PRECISION
-when the iRealPrec variable is 1, and leaves it as the original value
-when iRealPrec is 0. The value of iRealPrec is provided at run time.
-This modification of the MPI header file allows the code to be compiled 
-and run with single and double precision reals as well.
 
 To uninstall \BATSRUS\ type
 \begin{verbatim}
@@ -452,10 +429,6 @@ but this is neither recommended nor supported. On 64-bit platform the default
 double precision executes almost as fast as the single precision, and the 
 enhanced arithmetic accuracy is required by many algorithms.  
 The single precision option wiil likely be removed in the future.
-
-Static allocation of large arrays can be requested with {\tt Config.pl -static}, 
-but the default dynamic allocation is the recommended one, as it saves memory,
-and there is no significant difference in performance on current machines.
 
 \subsection{Compilation}
 
@@ -735,9 +708,9 @@ To delete all files created during installation and compilation, use
 \begin{verbatim}
   Config.pl -uninstall
 \end{verbatim}
-In addition to the object files and the MPI header file, 
+In addition to the object files, 
 this command will remove the executables {\tt src/*.exe}, 
-the libraries {\tt src*/*.a} and other temporary files.
+the libraries {\tt src*/*.a} and all other temporary files.
 
 For a complete list of possible make targets type
 \begin{verbatim}
