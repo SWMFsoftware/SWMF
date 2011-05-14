@@ -18,22 +18,20 @@
 ! 07/02/2003 G. Toth <gtoth@umich.edu> - initial version of ModMpi
 ! 07/20/2003 G. Toth - change the MPI_REAL definition
 ! 07/30/2004 G. Toth - updated the description for the modified mpif90.h files.
+! 05/13/2011 G. Toth - modified to use original mpif.h file
 !INTERFACE:
-module ModMpiOrig
-  !EOP
-  !BOC
-  use ModMpiConstantsOrig
-  !EOC
-end module ModMpiOrig
-
 !BOP
 !INTERFACE:
 module ModMpi
   !EOP
   !BOC
   use ModMpiInterfaces
-  use ModMpiConstants, &
+
+  use ModMpiOrig, &
        MPI_REAL_ORIG => MPI_REAL, MPI_COMPLEX_ORIG => MPI_COMPLEX
+
+  ! iRealPrec = 1 if the code is compiled with 8 byte reals and 0 otherwise
+  integer, parameter :: iRealPrec = (1.00000000011 - 1.0)*10000000000.0
 
   integer, parameter :: MPI_REAL = &
        iRealPrec*MPI_DOUBLE_PRECISION + (1-iRealPrec)*MPI_REAL_ORIG

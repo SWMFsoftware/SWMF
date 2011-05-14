@@ -368,7 +368,7 @@ module ModMPiInterfaces
 
   interface
      subroutine mpi_wait(request, status, ierror)
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        integer, intent(inout) :: request
        integer, intent(out) :: status(mpi_status_size)
        integer, intent(out) :: ierror
@@ -378,7 +378,7 @@ module ModMPiInterfaces
   interface
      subroutine mpi_waitall(count, array_of_requests, &
           array_of_statuses, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        integer, intent(in) :: count
        integer, intent(inout) :: array_of_requests(*)
        integer, intent(out) :: array_of_statuses(mpi_status_size,*)
@@ -1770,7 +1770,7 @@ contains
 
      subroutine mpi_recv_i0(buf, count, datatype, source, tag, comm, &
           status, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        integer, intent(out) :: buf
        integer, intent(in) :: count
        integer, intent(in) :: datatype
@@ -1788,7 +1788,7 @@ contains
 
      subroutine mpi_recv_i1(buf, count, datatype, source, tag, comm, &
           status, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        integer, intent(out) :: buf(:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
@@ -1806,7 +1806,7 @@ contains
 
      subroutine mpi_recv_i2(buf, count, datatype, source, tag, comm, &
           status, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        integer, intent(out) :: buf(:,:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
@@ -1824,7 +1824,7 @@ contains
 
      subroutine mpi_recv_r0(buf, count, datatype, source, tag, comm, &
           status, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        real, intent(out) :: buf
        integer, intent(in) :: count
        integer, intent(in) :: datatype
@@ -1842,7 +1842,7 @@ contains
 
      subroutine mpi_recv_r1(buf, count, datatype, source, tag, comm, &
           status, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        real, intent(out) :: buf(:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
@@ -1860,7 +1860,7 @@ contains
 
      subroutine mpi_recv_r2(buf, count, datatype, source, tag, comm, &
           status, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        real, intent(out) :: buf(:,:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
@@ -1878,7 +1878,7 @@ contains
 
      subroutine mpi_recv_r3(buf, count, datatype, source, tag, comm, &
           status, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        real, intent(out) :: buf(:,:,:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
@@ -1896,7 +1896,7 @@ contains
 
      subroutine mpi_recv_r4(buf, count, datatype, source, tag, comm, &
           status, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        real, intent(out) :: buf(:,:,:,:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
@@ -1914,7 +1914,7 @@ contains
 
      subroutine mpi_recv_l0(buf, count, datatype, source, tag, comm, &
           status, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        logical, intent(out) :: buf
        integer, intent(in) :: count
        integer, intent(in) :: datatype
@@ -1932,7 +1932,7 @@ contains
 
      subroutine mpi_recv_l1(buf, count, datatype, source, tag, comm, &
           status, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        logical, intent(out) :: buf(:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
@@ -1950,7 +1950,7 @@ contains
 
      subroutine mpi_recv_s0(buf, count, datatype, source, tag, comm, &
           status, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        character(len=*), intent(out) :: buf
        integer, intent(in) :: count
        integer, intent(in) :: datatype
@@ -1968,7 +1968,7 @@ contains
 
      subroutine mpi_recv_s1(buf, count, datatype, source, tag, comm, &
           status, ierror) 
-       use ModMpiConstants, only: mpi_status_size
+       use ModMpiOrig, only: mpi_status_size
        character(len=*), intent(out) :: buf(:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype

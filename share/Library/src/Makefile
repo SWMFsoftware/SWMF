@@ -26,9 +26,9 @@ MODULES = \
 	ModLinearAdvection.o\
 	ModLinearSolver.o\
 	ModLookupTable.o\
-	ModMpiConstants.o\
 	ModMpiInterfaces.o\
 	ModMpi.o\
+	ModMpiOrig.o\
         ModNumConst.o\
 	ModPlanetConst.o\
 	ModPlotFile.o\
