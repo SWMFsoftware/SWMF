@@ -70,11 +70,14 @@ tar -xzf {path_to_file}/CRASH_data.tgz
 
 Config.pl -install
 
-# On other platforms the Fortan compiler and MPI libraries should be explicitly
-# given. See the share/build and share/include directories for options.
-# Example:
+# On other platforms the Fortan compiler should be explicitly given. 
+# To see available choices, type 
 
-Config.pl -install -compiler=ifort -mpi=openmpi
+Config.pl -compiler
+
+# Then install the code with the selected compiler, e.g.
+
+Config.pl -install -compiler=ifort
 
 ######################
 # Create the manuals #
