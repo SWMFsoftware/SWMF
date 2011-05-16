@@ -2210,9 +2210,9 @@ Default value is "GM/restartOUT".
 	<parameter name="StringRestartOutFile" type="strings" min="1" max="2">
 		<part name="TypeRestartOutFile" type="string" input="select" 
 								required="T">
-			<option name="single data.rst file" value="one" 
-								default="T"/>
-			<option name="separate files/proc" value="proc"    />
+			<option name="separate files/proc" value="proc" 
+					       		   	default="T" />
+			<option name="single data.rst file" value="one" />
 			<option name="separate files/block" value="block"  />
 		</part>
 		<part name="StringSeries" type="string" input="select"
@@ -2236,8 +2236,7 @@ The most reliable format is 'proc'. If there is any issue with restarting
 with the 'one' format (some machines write empty records into the file), 
 the 'proc' should be used. The 'block' format can fail due to too many files.
 
-The default value is 'one' on most machines, and 'proc' on machines
-using Linux with openmpi.
+The default value is 'proc'.
 </command>
 
 <command name="SAVERESTART">
