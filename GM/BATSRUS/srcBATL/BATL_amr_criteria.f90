@@ -780,20 +780,6 @@ contains
     allocate(RefineLevel_I(nCritExt),CoursenLevel_I(nCritExt))
 
 
-!!$    allocate(nBlock_P(nProc))
-!!$    nBlock_P(iProc+1) = nBlock
-!!$    call MPI_Allgather(nBlock, 1,MPI_INTEGER, nBlock_P,1,&
-!!$         MPI_INTEGER,IComm,iError)
-!!$
-!!$    nTotBlocks = 0
-!!$    do iProces = 1,nProc 
-!!$       do iBlock = 1, nBlock_P(iProces)
-!!$          if(Unused_BP(iBlock,iProces-1)) CYCLE
-!!$          nTotBlocks = nTotBlocks +1
-!!$       end do
-!!$    end do
-
-
     !===================== Begin Test  =======================
 
     !--------------------- internal --------------------------
@@ -818,14 +804,21 @@ contains
              do i = MinI,MaxI
                 do iVar=1,nVar
                    TestState_VGB(iVar,i,j,k,iBlock) = &
-                        (i**(1.0/real(iNode_B(iBlock)+1)))
+                        dexp(real(i*(iNode_B(iBlock)+1)))
                 end do
              end do
           end do
        end do
     end do
 
+
     call set_amr_criteria(nVar,TestState_VGB)
+
+    !do iBlock = 1, nBlock
+    !   if(Unused_B(iBlock)) CYCLE
+    !   write(*,'(i6,f16.6)') iNode_B(iBlock),AmrCrit_IB(1,iBlock)
+    !end do
+
     do iNode = 2, nNode-1
        if(iRank_A(iNode-1) > iRank_A(iNode)) then
           write(*,*) " ERROR in ",NameSub, "Internal test"
@@ -870,7 +863,7 @@ contains
              do j = MinJ, MaxJ
                 do i = MinI,MaxI
                    TestState_VGB(2,i,j,k,iBlock) = &
-                        (i**(1.0/real(nNode-iNode_B(iBlock)+2)))
+                        dexp(real(i*(iNode_B(iBlock)+1)))
                 end do
              end do
           end do
@@ -926,7 +919,7 @@ contains
                 !do iVar=1,nVar
                 !print *,rand()
                 TestState_VGB(2,i,j,k,iBlock) = &
-                     (i**(1.0/real(iNode_B(iBlock))))
+                        dexp(real(i*(iNode_B(iBlock)+1)))
                 !end do
              end do
           end do
@@ -976,7 +969,7 @@ contains
              do i = MinI,MaxI
                 do iVar=1,nVar
                    TestState_VGB(iVar,i,j,k,iBlock) = &
-                        (i**(1.0/real(iNode_B(iBlock)+1)))
+                        dexp(real(i*(iNode_B(iBlock)+1)))
                 end do
              end do
           end do
