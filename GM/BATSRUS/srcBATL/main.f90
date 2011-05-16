@@ -7,7 +7,7 @@ program BATL_test
   use BATL_pass_cell,  ONLY: test_pass_cell
   use BATL_pass_node,  ONLY: test_pass_node
   use BATL_pass_face,  ONLY: test_pass_face
-  use BATL_amr_criteria, ONLY: test_histogram_amr_criteria
+  use BATL_amr_criteria, ONLY: test_amr_criteria
   use ModMpi
 
   implicit none
@@ -23,7 +23,7 @@ program BATL_test
   call test_pass_face
   call test_pass_node
   call test_amr
-  !call test_histogram_amr_criteria
+  call test_amr_criteria
 
   call MPI_finalize(iError)
   

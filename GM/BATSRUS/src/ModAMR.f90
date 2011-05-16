@@ -63,6 +63,7 @@ module ModAMR
   integer :: dn_refine
   integer :: min_block_level, max_block_level
   real    :: min_cell_dx, max_cell_dx
+  real    :: dt_refine
   logical :: automatic_refinement, fix_body_level
 
 

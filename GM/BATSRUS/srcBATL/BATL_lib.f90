@@ -62,10 +62,9 @@ module BATL_lib
   public:: BetaProlong
 
   ! Inherited from BATL_amr_criteria
-  public:: set_amr_criteria, clean_amr_criteria, read_amr_criteria_param
+  public:: set_amr_criteria, clean_amr_criteria, read_amr_criteria
   public:: AmrCrit_IB, nAmrCrit
-  !public:: histogram_amr_criteria, read_histogram_amr_criteria_param
-  !public:: err_amr_criteria
+
 ! Inherited from BATL_pass_cell
   public:: message_pass_cell
   public:: message_pass_cell_scalar

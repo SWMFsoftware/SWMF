@@ -44,20 +44,17 @@ subroutine amr(DoMessagePass)
         call exchange_messages
      end if
      if(automatic_refinement) then
-        if(DoTestMe)write(*,*) NameSub,' sets user criteria'
 
         if(nRefineCrit > 0)then
            refine_criteria = 0.0
            call amr_criteria(refine_criteria)
-           call set_amr_criteria(nVar, State_VGB, &
-                nRefineCrit, refine_criteria(1:nRefineCrit,1:nBlock), RefineLimit_I, CoarsenLimit_I)
+           call set_amr_criteria(nVar, State_VGB,&
+                nRefineCrit,refine_criteria,CoarsenLimit_I, RefineLimit_I)
         else
            call set_amr_criteria(nVar, State_VGB)
         end if
 
-        if(DoTestMe)write(*,*) NameSub,' call regrid'
         call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe,Used_GB=true_cell)
-        if(DoTestMe)write(*,*) NameSub,' call set_batsrus_grid'
 
         call set_batsrus_grid
 

@@ -20,7 +20,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
   use ModBlockData, ONLY: clean_block_data
   use ModBatlInterface, ONLY: UseBatlTest
-  use BATL_lib, ONLY: read_amr_criteria_param, nDimBatl => nDim, BetaProlong
+  use BATL_lib, ONLY: read_amr_criteria, &
+       nDimBatl => nDim, BetaProlong
   use BATL_size, ONLY: nGI, nGJ, nGK
   use ModAMR
   use ModParallel, ONLY : proc_dims
@@ -1155,11 +1156,25 @@ subroutine MH_set_parameters(TypeAction)
         if (dn_refine > 0)then
            call read_var('DoAutoRefine',automatic_refinement)
            if (automatic_refinement) then
-              call read_var('PercentCoarsen',percentCoarsen)
-              call read_var('PercentRefine' ,percentRefine)
-              call read_var('MaxTotalBlocks',MaxTotalBlocks)
+              if(UseBatl) then
+                 call read_amr_criteria("#AMRLIMIT")
+              else
+                 call read_var('PercentCoarsen',percentCoarsen)
+                 call read_var('PercentRefine' ,percentRefine)
+                 call read_var('MaxTotalBlocks',MaxTotalBlocks)
+              end if
            end if
         end if
+
+     case("#AMRLIMIT", "#AMRTYPE", "#AMRCRIT")
+        if(.not. UseBatl) call stop_mpi(NameSub// &
+             ' BATL is required for command='//NameCommand)
+        call read_amr_criteria(NameCommand)
+
+     case("#DOAMR")
+        call read_var('DoAmr',automatic_refinement)
+        call read_var('DnAmr',dn_refine)
+        call read_var('DtAmr',dt_refine)
 
      case("#BATLTEST")
         call read_var('UseBatlTest', UseBatlTest)
@@ -1174,6 +1189,8 @@ subroutine MH_set_parameters(TypeAction)
            if(UseBatl)then
               call read_var('CoarsenLimit', CoarsenLimit_I(i))
               call read_var('RefineLimit',  RefineLimit_I(i))
+              
+
            end if
            if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
               call read_var('TypeTransient_I(i)',TypeTransient_I(i))
@@ -1186,9 +1203,6 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('InvD2Ray',InvD2Ray)
            end if
         end do
-
-     case("#AMRCRIT")
-        call read_amr_criteria_param
 
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
