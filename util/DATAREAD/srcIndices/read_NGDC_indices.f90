@@ -112,6 +112,11 @@ subroutine read_NGDC_Indices(iOutputError)
         call Insert_into_Indices_Array(tmp, f107_)
      endif
 
+     if(index(line,'#Element: adjusted')>0)then
+        call read_values
+        call Insert_into_Indices_Array(tmp, f107_)
+     endif
+
      if(index(line,'#Element: flux')>0 .or. index(line,'#Table: Flux')>0) then
         call read_values
         call Insert_into_Indices_Array(tmp, f107_)
