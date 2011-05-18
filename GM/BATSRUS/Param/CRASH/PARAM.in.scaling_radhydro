@@ -8,7 +8,7 @@ F			DoSaveInitial
 Param/CRASH/3D.in
 
 #INCLUDE
-Param/CRASH/MULTIGROUP.in
+Param/CRASH/MULTIGROUPCOND.in
 
 #DESCRIPTION
 Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_multigroupcond
