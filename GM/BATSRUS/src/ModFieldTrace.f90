@@ -58,8 +58,7 @@ subroutine ray_trace_accurate
        ProlongOrder=1, nVar=nVar, Sol_VGB=State_VGB)
 
   ! Copy magnetic field into Bxyz_DGB
-  do iBlock = 1, nBlock
-     if(unusedBLK(iBlock))CYCLE
+  do iBlock = 1, nBlock; if(unusedBLK(iBlock))CYCLE
      Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
      ! Add B0
      if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
@@ -191,7 +190,8 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   use ModRayTrace
   use CON_ray_trace, ONLY: ray_exchange, ray_get, ray_put
 
-  use ModMain,     ONLY: iTest, jTest, kTest, BlkTest, ProcTest,DoMultiFluidIMCoupling
+  use ModMain,     ONLY: iTest, jTest, kTest, BlkTest, ProcTest, &
+       DoMultiFluidIMCoupling
   use ModGeometry, ONLY: XyzStart_BLK, Dx_BLK
   use ModProcMH
   use ModKind
@@ -914,14 +914,14 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
 
         ! Integrate density and pressure for multifluid
         if(DoMultiFluidIMCoupling) then
-           RhoPMulti_V = dx1*(   dy1*(   dz1*ExtraMulti_VGB(:,i2,j2,k2,iBlock)   &
-                +                         dz2*ExtraMulti_VGB(:,i2,j2,k1,iBlock))  &
-                +                 dy2*(   dz1*ExtraMulti_VGB(:,i2,j1,k2,iBlock)   &
-                +                         dz2*ExtraMulti_VGB(:,i2,j1,k1,iBlock))) &
-                +         dx2*(   dy1*(   dz1*ExtraMulti_VGB(:,i1,j2,k2,iBlock)   &
-                +                         dz2*ExtraMulti_VGB(:,i1,j2,k1,iBlock))  &
-                +                 dy2*(   dz1*ExtraMulti_VGB(:,i1,j1,k2,iBlock)   &
-                +                         dz2*ExtraMulti_VGB(:,i1,j1,k1,iBlock)))
+           RhoPMulti_V = dx1*( dy1*( dz1*ExtraMulti_VGB(:,i2,j2,k2,iBlock)   &
+                +                    dz2*ExtraMulti_VGB(:,i2,j2,k1,iBlock))  &
+                +              dy2*( dz1*ExtraMulti_VGB(:,i2,j1,k2,iBlock)   &
+                +                    dz2*ExtraMulti_VGB(:,i2,j1,k1,iBlock))) &
+                +        dx2*( dy1*( dz1*ExtraMulti_VGB(:,i1,j2,k2,iBlock)   &
+                +                    dz2*ExtraMulti_VGB(:,i1,j2,k1,iBlock))  &
+                +              dy2*( dz1*ExtraMulti_VGB(:,i1,j1,k2,iBlock)   &
+                +                    dz2*ExtraMulti_VGB(:,i1,j1,k1,iBlock)))
            
             RayIntegral_V(HpRhoInvB_:OppInvB_) = &
                  RayIntegral_V(HpRhoInvB_:OppInvB_) + InvBDl * RhoPMulti_V
@@ -1584,8 +1584,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
        ProlongOrder=1, nVar=nVar, Sol_VGB=State_VGB)
 
   ! Copy magnetic field into Bxyz_DGB
-  do iBlock = 1, nBlock
-     if(unusedBLK(iBlock))CYCLE
+  do iBlock = 1, nBlock; if(unusedBLK(iBlock))CYCLE
      Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
      ! Add B0
      if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
@@ -1705,7 +1704,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use CON_planet,        ONLY: DipoleStrength
   use ModRaytrace
   use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
-       UseB0, DoMultiFluidIMCoupling
+       UseB0, UnusedBlk, DoMultiFluidIMCoupling
   use ModPhysics,        ONLY: rBody
   use ModAdvance,        ONLY: nVar, State_VGB, Rho_, p_, Bx_, Bz_, B0_DGB
   use ModProcMH
@@ -1732,7 +1731,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
 
   real    :: Xyz_D(3)
   integer :: iPt, iRay
-  integer :: iProcFound, iBlockFound, i, j, k
+  integer :: iProcFound, iBlockFound, i, j, k, iBlock
   integer :: nStateVar, iIonSecond
   integer :: iError
   logical :: DoTest, DoTestMe
@@ -1779,12 +1778,12 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   ! (Re)initialize CON_ray_trace
   call ray_init(iComm)
 
-  ! Copy magnetic field into Bxyz_DGB
-  Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
-
-  ! Add B0 for faster interpolation
-  if(UseB0) Bxyz_DGB(1:3,:,:,:,1:nBlock) = &
-       Bxyz_DGB(1:3,:,:,:,1:nBlock) + B0_DGB(:,:,:,:,1:nBlock)
+  do iBlock = 1, nBlock; if(UnusedBLK(iBlock))CYCLE
+     Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
+     ! Add B0
+     if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
+          Bxyz_DGB(:,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
+  end do
 
   if(DoIntegrateRay)then
      ! Copy density and pressure into Extra_VGB
@@ -2093,11 +2092,12 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   call ray_init(iComm)
 
   ! Copy magnetic field into Bxyz_DGB
-  Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
-
-  ! Add B0 for faster interpolation
-  if(UseB0) Bxyz_DGB(1:3,:,:,:,1:nBlock) = &
-       Bxyz_DGB(1:3,:,:,:,1:nBlock) + B0_DGB(:,:,:,:,1:nBlock)
+  do iBlock = 1, nBlock; if(unusedBLK(iBlock))CYCLE
+     Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
+     ! Add B0
+     if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
+          Bxyz_DGB(:,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
+  end do
 
   ! Transformation matrix between the SM and GM coordinates
   GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
@@ -2318,22 +2318,25 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
 
   select case(NameVectorField)
   case('B')
-     ! Store B1+B0 for faster interpolation
-     if(UseB0)then
-        Bxyz_DGB(1:3,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock) &
-             + B0_DGB(:,:,:,:,1:nBlock)
-     else
-        Bxyz_DGB(1:3,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
-     end if
+     ! Copy magnetic field into Bxyz_DGB
+     do iBlock = 1, nBlock; if(unusedBLK(iBlock))CYCLE
+        Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
+        ! Add B0
+        if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
+             Bxyz_DGB(:,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
+     end do
   case('U')
      ! Store momentum field (same as velocity field after normalization)
-     Bxyz_DGB(1,:,:,:,1:nBlock) = State_VGB(RhoUx_,:,:,:,1:nBlock)
-     Bxyz_DGB(2,:,:,:,1:nBlock) = State_VGB(RhoUy_,:,:,:,1:nBlock)
-     Bxyz_DGB(3,:,:,:,1:nBlock) = State_VGB(RhoUz_,:,:,:,1:nBlock)
+     do iBlock = 1, nBlock; if(unusedBLK(iBlock))CYCLE
+        Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)
+     end do
   case('J')
-     ! Store current
-     do iBlock=1,nBlock;
-        if(unusedBLK(iBlock)) CYCLE
+     ! Store current 
+!!! this needs to be improved a lot: 
+!!! call get_current_D for cell centers
+!!! call message_pass_cell(Bxyz_DGB...)
+!!! outer boundaries???
+     do iBlock = 1, nBlock; if(unusedBLK(iBlock)) CYCLE
         Dx2Inv = 0.5/Dx_BLK(iBlock)
         Dy2Inv = 0.5/Dy_BLK(iBlock)
         Dz2Inv = 0.5/Dz_BLK(iBlock)
