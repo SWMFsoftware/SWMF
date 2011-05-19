@@ -24,7 +24,7 @@ subroutine write_plot_common(ifile)
 
   ! Arguments
 
-  integer, intent(in) :: ifile
+  integer, intent(in) :: iFile
 
   ! Local variables
 
@@ -305,8 +305,10 @@ subroutine write_plot_common(ifile)
         PlotXYZNodes_NBI(:,:,:,:,3)=NodeValue_NB
 
         ! Make near zero values exactly zero
-        where(abs(PlotXYZNodes_NBI(:,:,:,1:nBlock,:))<1.e-10) &
-             PlotXYZNodes_NBI(:,:,:,1:nBlock,:) = 0.
+        do iBlk = 1, nBlock; if(UnusedBlk(iBlk)) CYCLE
+           where(abs(PlotXYZNodes_NBI(:,:,:,iBlk,:))<1.e-10) &
+                PlotXYZNodes_NBI(:,:,:,iBlk,:) = 0.
+        end do
      end if
 
      ! Now pass and average the rest of the values
