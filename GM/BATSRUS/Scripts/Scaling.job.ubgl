@@ -10,9 +10,7 @@
 #MSUB -l walltime=0:30:00
 #MSUB -o runlog
 
-# Use -q pbatch for more than 4k nodes.
-### MSUB -q pdebug
-### MSUB -q pshort
+# Use pdebug for 128 or 512 nodes, pshort from 1k to 4k nodes, pbatch for more than 4k node
 #MSUB -q pbatch
 
 # cd into the run directory
@@ -21,14 +19,8 @@ cd /g/g99/toth2/crash/CRASH_ubgl/SCALING/run
 # set plot directory just before the run starts
 ### perl -pi -e 's/.*NamePlotDir/plot\t\tNamePlotDir/' PARAM.in
 
-# run CRASH on 128 or fewer nodes
+# run CRASH with mpirun -np ... or mpirun -mode VN
 mpirun -np 128  -exe `pwd`/CRASH.exe -cwd `pwd`
-
-# run CRASH on 2 cores per node
-### mpirun -mode VN -exe `pwd`/CRASH.exe -cwd `pwd`
 
 # load opacity tables in next run(s)
 perl -pi -e 's/^LOOKUPTABLE/\#LOOKUPTABLE/; s/save/load/' PARAM.in
-
-# exit here unless we want to do more runs with modified PARAM.in
-exit

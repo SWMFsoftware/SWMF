@@ -19,10 +19,13 @@ $Machine =~ s/\d*\n//;
 print "Machine=$Machine\n" if $Verbose;
 my $IsHera;
 my $IsPfe;
-$IsHera = 1  if $Machine eq "hera";
-$IsPfe =  1  if $Machine eq "pfe";
+my $IsUbgl;
 
-die "Unknown machine=$Machine\n" unless $IsHera or $IsPfe;
+$IsHera = 1  if $Machine eq "hera";
+$IsUbgl = 1  if $Machine eq "ubgl";
+$IsPfe  = 1  if $Machine eq "pfe";
+
+die "Unknown machine=$Machine\n" unless $IsHera or $IsPfe or $IsUbgl;
 
 # Number of nodes and cores to run on
 my $nNode;
@@ -167,7 +170,7 @@ sub submit_run{
     my $rundir = shift;
     my $job    = shift;
     &shell("cd $rundir; qsub $job") if $IsPfe;
-    &shell("cd $rundir; msub $job | tail -1 > ${job}id") if $IsHera;
+    &shell("cd $rundir; msub $job | tail -1 > ${job}id") if $IsHera or $IsUbgl;
 }
 ###############################################################################
 sub edit_jobscript{
@@ -192,6 +195,27 @@ sub edit_jobscript{
 	    s/(\#MSUB -l nodes)=\d+/$1=$nNode/;
 	    s/\#+ (MSUB -l qos=exempt)/\#$1/ if $nCore > 4096;
 	    s/(run_n|srun \-n)\d+/$1$nCore/;
+	}elsif($IsUbgl){
+	    if($nCore <= 128 or $nCore == 512){
+		# the minimum number of nodes is 128
+		my $nNode = $nCore;
+		$nNode = 128 if $nNode < 128;
+		s/^(\#MSUB -l nodes)=\w+/$1=$nNode/;
+		# run with 1 core per node using mpirun -np $nCore
+		s/^mpirun (-np \d+|-mode VN)/mpirun -np $nCore/;
+	    }else{
+		# 2 cores / node and convert to kilonode notation
+		my $nNode = int($nCore/2);
+		$nNode = ($nNode/1024)."k" if $nNode >= 1024;
+		s/^(\#MSUB -l nodes)=\w+/$1=$nNode/;
+		# run with 2 cores per node, using mpirun -mode VN
+		s/^mpirun (-np \d+|-mode VN)/mpirun -mode VN/;
+	    }
+	    s/^(\#MSUB -q) \w*/$1 pdebug/ if $nCore <= 1024;
+	    s/^(\#MSUB -q) \w*/$1 pshort/ if $nCore >  1024 and $nCore <= 8192;
+	    s/^(\#MSUB -q) \w*/$1 pbatch/ if $nCore >  8192;
+	    my $rundir = `pwd`; chop $rundir; $rundir .= "/SCALING/run_n$nCore";
+	    s/^cd .*/cd $rundir/;
 	}
 	if(not $WeakScaling){
 	    # Change plot directory
