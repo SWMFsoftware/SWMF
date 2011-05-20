@@ -1,0 +1,34 @@
+#!/bin/csh
+
+# news job.lim.ubgl
+# mjstat
+# This job script should be copied and modified by Scaling.pl
+
+#MSUB -A michigan
+#MSUB -l partition=ubgl
+#MSUB -l nodes=128
+#MSUB -l walltime=0:30:00
+#MSUB -o runlog
+
+# Use -q pbatch for more than 4k nodes.
+### MSUB -q pdebug
+### MSUB -q pshort
+#MSUB -q pbatch
+
+# cd into the run directory
+cd /g/g99/toth2/crash/CRASH_ubgl/SCALING/run
+
+# set plot directory just before the run starts
+### perl -pi -e 's/.*NamePlotDir/plot\t\tNamePlotDir/' PARAM.in
+
+# run CRASH on 128 or fewer nodes
+mpirun -np 128  -exe `pwd`/CRASH.exe -cwd `pwd`
+
+# run CRASH on 2 cores per node
+### mpirun -mode VN -exe `pwd`/CRASH.exe -cwd `pwd`
+
+# load opacity tables in next run(s)
+perl -pi -e 's/^LOOKUPTABLE/\#LOOKUPTABLE/; s/save/load/' PARAM.in
+
+# exit here unless we want to do more runs with modified PARAM.in
+exit
