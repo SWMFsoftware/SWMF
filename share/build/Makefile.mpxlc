@@ -1,0 +1,14 @@
+
+# C language related part of Makefile.conf
+
+COMPILE.c = mpxlc
+
+DEBUGC = 
+#DEBUGC = -g
+
+.SUFFIXES: .c
+
+FLAGC = ${SEARCH} -c ${OPT5} ${DEBUGC}
+
+.c.o:
+	${COMPILE.c} ${FLAGC} ${SEARCH} $<
