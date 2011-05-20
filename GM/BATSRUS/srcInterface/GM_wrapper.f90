@@ -267,7 +267,7 @@ subroutine GM_finalize(TimeSimulation)
 
   if (UseIe) call clean_mod_field_aligned_current  !^CFG IF IONOSPHERE
 
-  call error_report('PRINT',0.,iError,.true.)
+  call BATSRUS_finalize
 
 end subroutine GM_finalize
 

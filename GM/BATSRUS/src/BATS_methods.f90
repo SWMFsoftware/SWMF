@@ -146,6 +146,7 @@ contains
 
     if(DoSetLevels) call set_levels
   end subroutine grid_setup
+
   !===========================================================================
 
   subroutine set_initial_conditions
@@ -1225,3 +1226,34 @@ contains
 
 end subroutine BATS_save_files
 
+!=============================================================================
+subroutine BATSRUS_finalize
+
+  use ModAdvance,  ONLY: clean_mod_advance
+  use ModAdjoint,  ONLY: clean_mod_adjoint
+  use ModGeometry, ONLY: clean_mod_geometry
+  use ModNodes,    ONLY: clean_mod_nodes
+  use ModCT,       ONLY: clean_mod_ct                  !^CFG IF CONSTRAINB
+  use ModRaytrace, ONLY: clean_mod_raytrace            !^CFG IF RAYTRACE
+  use ModImplicit, ONLY: clean_mod_implicit            !^CFG IF IMPLICIT
+  use BATL_lib,    ONLY: clean_batl
+
+  implicit none
+
+  integer:: iError
+  !---------------------------------------------------------------------------
+  call clean_batl
+  call clean_mod_adjoint
+  call clean_mod_advance
+  call clean_mod_ct                          !^CFG IF CONSTRAINB
+  call clean_mod_implicit                    !^CFG IF IMPLICIT
+  call clean_mod_geometry
+  call clean_mod_nodes
+  call clean_mod_raytrace                    !^CFG IF RAYTRACE
+
+  ! call clean_mod_boundary_cells !!! to be implemented
+  ! call clean_mod_resistivity !!! to be implemented
+
+  call error_report('PRINT',0.,iError,.true.)
+
+end subroutine BATSRUS_finalize

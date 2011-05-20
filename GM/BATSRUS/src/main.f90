@@ -5,7 +5,6 @@ program BATSRUS
   use ModProcMH, ONLY: iComm, iProc, nProc
   use ModIoUnit, ONLY: UNITTMP_
   use ModMain, ONLY: &
-       UseBatl, &
        IsStandAlone, &
        time_accurate, time_loop, time_simulation, t_max, &
        n_step, nIter, iteration_number, &
@@ -18,7 +17,6 @@ program BATSRUS
   use ModReadParam
 
   use ModMpi
-  use BATL_lib, ONLY: clean_batl
 
   use ModAdjoint, ONLY : DoAdjoint,  &  !ADJOINT SPECIFIC
        clean_mod_adjoint                !ADJOINT SPECIFIC
@@ -185,7 +183,7 @@ program BATSRUS
 
   if(UseTimingAll)close(iUnitTiming)
 
-  call error_report('PRINT',0.,iError,.true.)
+  call BATSRUS_finalize
 
   !\
   ! Touch BATSRUS.SUCCESS
@@ -194,8 +192,6 @@ program BATSRUS
      open(UNITTMP_, file = 'BATSRUS.SUCCESS')
      close(UNITTMP_)
   end if
-
-  if(UseBatl)call clean_batl
 
   call MPI_finalize(iError)
 
