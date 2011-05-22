@@ -183,27 +183,7 @@ T               UseComp
 \end{verbatim}
 command in the second session.
 
-
-
-\subsection{Setting compiler flags in Makefile.conf and with Config.pl}
-
-The compiler flags can be modified by editing
-\begin{verbatim}
-  Makefile.conf
-\end{verbatim}
-This makefile is created during installation, and it contains the
-platform and compiler specific part of the makefile system.
-The most usual changes can be easily done with the Config.pl script.
-The precision of real numbers can be set with
-\begin{verbatim}
-  Config.pl -single
-\end{verbatim}
-or 
-\begin{verbatim}
-  Config.pl -double
-\end{verbatim}
-If the precision is modified, the script will execute 'make clean',
-so that all the files are compiled with the new real precision.
+\subsection{Setting compiler flags}
 
 The debugging flags can be switched on and off with
 \begin{verbatim}
@@ -217,42 +197,40 @@ respectively. The maximum optimization level can be set to -O2 with
 \begin{verbatim}
   Config.pl -O2
 \end{verbatim}
-The minimum level is 0, the maximum is 4 (Note that not all compilers support
-level 4 optimization).
+The minimum level is 0, the maximum is 5. Note that not all compilers support
+level 5 optimization.
 
 Note that not all the components take into account the selected
-compiler flags. For example the IM/RCM component is usually run
-with single precision and it has to be compiled with the -save
-(or similar) flag, thus it uses the flags defined in the {\tt CFLAGS} 
-variable. Also some of the files
-do not work if compiled with high optimization level.
-Such exceptions are described in the makefiles of the 
-components. 
+compiler flags. For example the IM/RCM2 component has to be compiled 
+with the -save (or similar) flag, thus it uses the flags defined in the 
+{\tt CFLAGS} variable. Also some of the compiler produce incorrect
+code if they compile certain source files with high optimization level.
+Such exceptions are described in the 
+\begin{verbatim}
+  Makefile.RULES.all
+\end{verbatim}
+files in the source code directories. The content of this file
+is processed by {\tt Config.pl} into {\tt Makefile.RULES}
+(according to the selected compiler and other parameters),  
+which is then included into the main Makefile. 
 
 \subsection{Configuration of individual components}
 
 Some of the components can be configured individually. 
-The GM/BATSRUS/Configure.pl script can configure the {\tt GM/BATSRUS} code, 
-for example.
-The configured code can be linked to {\tt GM/BATSRUS\_conf}, which can
-be selected as the GM component.
-
-The configuration also consists of selecting the 
-appropriate user file and setting the number and size of the
-adaptive blocks. The user file contains specialized
-source terms, boundary and initial conditions. It can be 
-selected by copying the appropriate file into {\tt user\_routines.f90}.
+The {\tt GM/BATSRUS} code, for example, can be configure to
+use specific equation and user modules.
 For example
 \begin{verbatim}
 cd GM/BATSRUS
-cp user/user_routines.f90.something user_routines.f90
-cd IH/BATSRUS
-cp user/user_routines.f90.heliosphere user_routines.f90
+Config.pl -e=MhdIonsPe
 \end{verbatim}
-For sake of convenient testing the heliosphere user routine is
-the default one now, so there is no need to copy the user files.
-
-The block size and the number of blocks can be set with the 
+will select the equation module for multiple ion fluids and separate
+electron pressure. The same can be done with the {\tt Config.pl} script
+in the main SWMF directory
+\begin{verbatim}
+Config.pl -o=GM:e=MhdIonsPe
+\end{verbatim}
+The grid sizes of the various components can be set with the 
 {\tt -g} flag of the {\tt Config.pl} script.
 For example the
 \begin{verbatim}
@@ -264,16 +242,7 @@ script of the selected UA component.
 On machines with limited memory it is especially important to
 set the number of blocks correctly. 
 
-Another way of reducing the total memory usage is to use dynamic
-allocation. For example the BATSRUS code can use either static or
-dynamic allocation of the largest variables. The default is static
-for sake of fast execution. To switch to dynamic allocation type
-for example
-\begin{verbatim}
-  cd GM/BATSRUS/src
-  make DYNAMIC
-\end{verbatim}
-Of course the SWMF code has to be recompiled.
+Of course, the SWMF code has to be recompiled after any of these changes.
 
 \subsection{Using stubs for all components}
 
