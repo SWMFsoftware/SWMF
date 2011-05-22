@@ -377,9 +377,6 @@ contains
        case("#USEOPACTABLE")
           call read_if_use_opac_table(nMaterial)
 
-       case('#LASERPULSE')
-          call read_laser_pulse_param
-
        case("#MAXRESISTIVITY")
           ! Maximum allowed value of the inverse magnetic Reynolds number
           call read_var('MaxNormalizedResistivity', MaxNormalizedResistivity)
