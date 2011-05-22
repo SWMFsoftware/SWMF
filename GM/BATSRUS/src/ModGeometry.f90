@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 module ModGeometry
   use ModSize
-  use ModMain,       ONLY: UseBody2, body2_
+  use ModMain,       ONLY: UseBody2, body2_, ExtraBc_
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc
   use ModCovariant                
