@@ -751,24 +751,3 @@ test_ramscb_check:
 		${IMDIR}/output/test9/IE.log \
 		> test_ramscb_ie.diff)
 	ls -l test_ramscb*.diff
-
-test_lp:
-	@echo "test_lp..." > test_ramscb_gm.diff
-	make test_lp_compile
-	@echo "test_p_rundir..." >> test_ramscb_gm.diff
-	make test_lp_rundir
-
-test_lp_compile:
-	Config.pl -v=Empty,GM/BATSRUS
-	cd GM/BATSRUS;Config.pl -g=4,4,1,1000,1000 -e=Crash -u=Crash \
-	-nMaterial=5 -nWave=30
-	make CRASH
-
-test_lp_rundir:
-	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
-	cd ${TESTDIR};  ln -s  ${DIR}/bin/CRASH.exe .;rm -rf Param; \
-	ln -s  ${GMDIR}/Param/CRASH Param; ln -s ${GMDIR}/dataCRASH data;\
-	ln -s ${GMDIR}/dataCRASH/LookupTables Tables;\
-	cp -f Param/PARAM.in.LASPACK PARAM.in;\
-	cp -f Param/LAYOUT.in.LASPACK LAYOUT.in
