@@ -35,8 +35,6 @@ OBJECTS = \
 	ModDensityAndGradient.o\
 	ModRadioWaveImage.o\
 	ModRadioWaveRaytracing.o\
-	ModAbsorption.o\
-	ModLaserPackage.o\
 	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_PW)
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src -I../srcBATL -I${CRASHDIR}
