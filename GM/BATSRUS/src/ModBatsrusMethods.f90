@@ -457,9 +457,7 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
 
-
   if(UseLaserHeating) call add_laser_heating
-  if(UseLaserPackage) call add_laser_energy_deposition
 
   call exchange_messages
 

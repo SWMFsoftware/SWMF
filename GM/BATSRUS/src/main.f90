@@ -400,25 +400,3 @@ subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
   real, intent(inout) :: FaceState_V(nVar)
   call stop_mpi('ERROR: read_pw_buffer is for SWMF')
 end subroutine read_pw_buffer
-!=============================================================================
-subroutine add_laser_energy_deposition
-  call stop_mpi('ERROR: add_laser_energy_deposition is for SWMF')
-end subroutine add_laser_energy_deposition
-!=========================================
-subroutine read_laser_pulse_param
-  call stop_mpi('ERROR: read_laser_pulse_param is for SWMF')
-end subroutine read_laser_pulse_param
-!====================================
-!==========================================
-subroutine get_energy_deposition_block(&
-     iBlock,MinI,MaxI, MinJ, MaxJ, MinK, MaxK, Value_G, IsDimensional)
-
-  implicit none
-
-  integer, intent(in) :: iBlock,MinI,MaxI, MinJ, MaxJ, MinK, MaxK
-  real, intent(out)   :: Value_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
-  logical, intent(in) :: IsDimensional
-  !------------------------------------
-  call stop_mpi('Subroutine get_energy_deposition_block is for the SWMF')
-end subroutine get_energy_deposition_block
-

@@ -305,9 +305,8 @@ Module ModMain
   integer :: nTrueCells, nTrueCellsALL
 
   !\
-  ! Logical controlling the use of the laser package. Probably, this is not 
-  ! a good place to declare it
+  ! Logical controlling the use of the laser heating.
   !/
-  logical :: UseLaserPackage = .false., UseLaserHeating = .false.
+  logical :: UseLaserHeating = .false.
 
 end module ModMain

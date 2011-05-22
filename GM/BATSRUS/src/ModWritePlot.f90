@@ -1350,9 +1350,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
            PlotVar(:,:,:,iVar) = 0.0
            if(allocated(LaserHeating_CB)) &
                 PlotVar(1:nI,1:nJ,1:nK,iVar) = LaserHeating_CB(:,:,:,iBlk)
-        else
-           call get_energy_deposition_block( iBlk, &
-                -1, nI+2, -1, nJ+2, -1, nK+2, PlotVar(:,:,:,iVar), .false.)
         end if
      case('ew','erad')
         if(Ew_ == 1)then
