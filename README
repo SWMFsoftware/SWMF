@@ -1,3 +1,4 @@
+\begin{verbatim}
 This document outlines how to install the SWMF on your system and how to
 create and access the documentation.  To learn more about the SWMF, including
 how to compile and run the code, please consult the user manual.  To install
@@ -97,6 +98,14 @@ make HTML
 
 # in the SWMF directory. The HTML manuals will be in the doc/HTML directory.
 
+# Cleaning the documentation
+cd doc/Tex
+make clean
+
+# To remove all the created documentation type
+cd doc/Tex
+make cleanall
+
 ####################
 # Read the manuals #
 ####################
@@ -125,3 +134,4 @@ make test MPIRUN='mpirun -np 4'
 
 # the results of the tests are summarized in test_swmf.res
 # Successful passing of the test is indicated by empty *.diff files.
+\end{verbatim}
