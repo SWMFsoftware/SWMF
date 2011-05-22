@@ -417,8 +417,7 @@ IH/BATSRUS/src/Makefile:
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90 \
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
-		ModLaserPackage.f90 \
-		ModDensityAndGradient.f90 ModAbsorption.f90 \
+		ModDensityAndGradient.f90 \
 		../../../IH/BATSRUS/srcInterface
 	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
@@ -465,8 +464,7 @@ OH/BATSRUS/src/Makefile:
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90 \
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
-		ModLaserPackage.f90 \
-		ModDensityAndGradient.f90 ModAbsorption.f90 \
+		ModDensityAndGradient.f90 \
 		../../../OH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
 	cp GM/BATSRUS/srcEquation/*.f90 OH/BATSRUS/srcEquation/
@@ -530,9 +528,8 @@ SC/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90 \
-		ModLaserPackage.f90 \
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
-		ModDensityAndGradient.f90 ModAbsorption.f90 \
+		ModDensityAndGradient.f90 \
 		../../../SC/BATSRUS/srcInterface
 	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
 		SC/BATSRUS/srcInterface/SC_wrapper.f90
@@ -591,9 +588,8 @@ LC/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90 \
-		ModLaserPackage.f90 \
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
-		ModDensityAndGradient.f90 ModAbsorption.f90 \
+		ModAbsorption.f90 \
 		../../../LC/BATSRUS/srcInterface
 	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
 		LC/BATSRUS/srcInterface/LC_wrapper.f90
