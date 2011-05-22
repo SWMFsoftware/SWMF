@@ -14,8 +14,6 @@ OBJECTS = \
         ModRadioWaveImage.o\
         ModRadioWaveRaytracing.o\
         ModDensityAndGradient.o\
-	ModAbsorption.o \
-	ModLaserPackage.o \
         OH_set_buffer_grid.o\
 	OH_get_for_mh.o\
         OH_get_for_mh_with_xyz.o\

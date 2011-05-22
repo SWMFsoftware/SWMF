@@ -19,8 +19,6 @@ OBJECTS = \
 	ModDensityAndGradient.o\
 	ModRadioWaveImage.o\
 	ModRadioWaveRaytracing.o \
-	ModAbsorption.o \
-	ModLaserPackage.o \
 	SC_set_buffer_grid.o
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
