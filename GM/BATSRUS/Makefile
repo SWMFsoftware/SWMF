@@ -32,9 +32,6 @@ help:
 	@echo '    test         (run all tests for BATSRUS)'
 	@echo '    test_help    (show all options for running the tests)'
 	@#^CFG END TESTING
-	@#^CFG IF CONFIGURE BEGIN
-	@echo '    config_help  (show all targets in Makefile_CONFIGURE'
-	@#^CFG END CONFIGURE
 	@echo ' '
 	@echo '    LIB     (Component library libGM for SWMF)'
 	@echo '    BATSRUS (Block Adaptive Tree Solar-Wind Roe Upwind Scheme)'
@@ -249,7 +246,7 @@ dist:
 	@echo ' '
 	@echo ' NOTE: All "run" or other created directories not included!'
 	@echo ' '
-	tar -cf tmp.tar  Makefile Makefile_CONFIGURE Makefile.test
+	tar -cf tmp.tar  Makefile Makefile.test
 	tar -rf tmp.tar  README Copyrights
 	tar -rf tmp.tar  CVS* .cvsignore	#^CFG IF CONFIGURE
 	tar -rf tmp.tar  Configure.options	#^CFG IF CONFIGURE
@@ -270,7 +267,5 @@ dist:
 	mv tmp.tar.gz BATSRUS_v${VERSION}_`date +%Y%b%d_%H%M.tgz`
 	@echo ' '
 	@ls -l BATSRUS_v*.tgz
-
-include Makefile_CONFIGURE #^CFG IF CONFIGURE
 
 include Makefile.test #^CFG IF TESTING
