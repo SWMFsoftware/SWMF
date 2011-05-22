@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
-Module ModGeometry
+module ModGeometry
   use ModSize
-  use ModMain,ONLY:body2_,ExtraBc_
+  use ModMain,       ONLY: UseBody2, body2_
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc
   use ModCovariant                
@@ -49,7 +49,7 @@ Module ModGeometry
 
   ! true cells are cells that are not inside a body
   logical, allocatable :: true_cell(:,:,:,:)
-  logical,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,body2_:Top_) ::&          
+  logical,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,body2_:Top_):: &
        IsBoundaryCell_GI
   logical,dimension(body2_:Top_,nBLK):: IsBoundaryBlock_IB 
   integer :: MinBoundary=Top_, MaxBoundary=body2_                    
@@ -73,7 +73,7 @@ contains
     allocate(y_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK))
     allocate(z_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK))
     allocate(R_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK))
-    allocate(R2_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK))
+    if(UseBody2)allocate(R2_BLK(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK))
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_geometry allocated arrays'
@@ -90,7 +90,7 @@ contains
     deallocate(y_BLK)
     deallocate(z_BLK)
     deallocate(R_BLK)
-    deallocate(R2_BLK)
+    if(UseBody2) deallocate(R2_BLK)
 
     if(iProc==0)then
        call write_prefix

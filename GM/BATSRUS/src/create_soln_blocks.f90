@@ -513,7 +513,7 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
         y_BLK(:,:,:,iBLK)    = -777777.
         z_BLK(:,:,:,iBLK)    = -777777.
         R_BLK(:,:,:,iBLK)    = -777777.
-        R2_BLK(:,:,:,iBLK)   = -777777.   !^CFG IF SECONDBODY
+        if(UseBody2) R2_BLK(:,:,:,iBLK)   = -777777.   !^CFG IF SECONDBODY
 
         UnusedBlk(iBLK)      = .true.
         iTypeAdvance_B(iBLK) = SkippedBlock_

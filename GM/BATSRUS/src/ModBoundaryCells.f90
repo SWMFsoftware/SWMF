@@ -77,8 +77,8 @@ contains
   subroutine init_mod_boundary_cells
 
     use ModSize
-    use ModGeometry, ONLY: MaxBoundary, ExtraBC_
-    use ModMain,     ONLY: UseExtraBoundary, UseBatl
+    use ModGeometry, ONLY: MaxBoundary
+    use ModMain,     ONLY: UseExtraBoundary, ExtraBC_, UseBatl
     use ModProcMH
     !-------------------------------------------------------------------------
 

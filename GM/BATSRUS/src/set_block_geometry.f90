@@ -2,7 +2,7 @@
 subroutine set_root_block_geometry
   use ModProcMH
   use ModSize
-  use ModMain, ONLY : TypeBc_I,unusedBLK,nBlock,nBlockMax
+  use ModMain, ONLY : TypeBc_I,unusedBLK,nBlock,nBlockMax,UseBody2
   use ModMain,ONLY  : Phi_,Theta_,z_             
   use ModAMR, ONLY : availableBLKs
   use ModGeometry,ONLY: xyzStart_BLK,dx_BLK,dy_BLK,dz_BLK,&
@@ -40,7 +40,7 @@ subroutine set_root_block_geometry
   y_BLK  = -777777.
   z_BLK  = -777777.
   R_BLK  = -777777.  
-  R2_BLK = -777777.           !^CFG IF SECONDBODY
+  if(UseBody2) R2_BLK = -777777.           !^CFG IF SECONDBODY
 
   ! Set the block geometry for all root blocks
 
@@ -212,20 +212,16 @@ subroutine fix_block_geometry(iBLK)
 
   Rmin_BLK(iBLK)  = minval(R_BLK(:,:,:,iBLK))
 
-  if (.not. UseBody2) then                        !^CFG IF SECONDBODY BEGIN
-     ! if no second body set R2 to zero
-     R2_BLK(:,:,:,iBLK) = cZero
-  else                    
+  if (UseBody2) then                        !^CFG IF SECONDBODY BEGIN
      ! calculate the radius as measured from the second body
      R2_BLK(:,:,:,iBLK) = sqrt( &
           (x_BLK(:,:,:,iBLK)-xBody2)**2 + &
           (y_BLK(:,:,:,iBLK)-yBody2)**2 + &
           (z_BLK(:,:,:,iBLK)-zBody2)**2)
-  end if
-
-
-  Rmin2_BLK(iBLK) = minval(R2_BLK(:,:,:,iBLK))    !^CFG END SECONDBODY
-
+     Rmin2_BLK(iBLK) = minval(R2_BLK(:,:,:,iBLK))
+  else
+     Rmin2_BLK(iBLK) = 0.0
+  end if                                    !^CFG END SECONDBODY
 
   far_field_BCs_BLK(iBLK) = &
        (((xyzStart_BLK(1,iBLK)-dx_BLK(iBLK))<XyzMin_D(1).or.&
@@ -401,9 +397,8 @@ subroutine set_boundary_cells(iBLK)
 
   IsBoundaryCell_GI=.false.  
   !^CFG IF SECONDBODY BEGIN
-  if(IsBoundaryBlock_IB(Body2_,iBLK)) &
-       IsBoundaryCell_GI(:,:,:,Body2_) = &
-       UseBody2 .and. R2_BLK(:,:,:,iBLK) < RBody2  
+  if(UseBody2 .and. IsBoundaryBlock_IB(Body2_,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,Body2_) = R2_BLK(:,:,:,iBLK) < rBody2  
   !^CFG END SECONDBODY
 
   if(IsBoundaryBlock_IB(Body1_,iBLK)) &

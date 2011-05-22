@@ -7,7 +7,6 @@ subroutine calc_sources
   use ModGeometry,      ONLY: dx_BLK, dy_BLK, dz_BLK, R_BLK,&
        body_BLK, Rmin_BLK, vInv_CB, y_BLK, true_cell, &
        IsRzGeometry
-  use ModGeometry,      ONLY: R2_BLK                   !^CFG IF SECONDBODY
   use ModAdvance
   use ModParallel,      ONLY: NOBLK, neiLEV, &
        neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
@@ -682,7 +681,6 @@ subroutine calc_sources_adjoint
   use ModVarIndexes
   use ModGeometry,      ONLY: dx_BLK, dy_BLK, dz_BLK, R_BLK,&
        body_BLK, Rmin_BLK, vInv_CB, y_BLK, true_cell, IsRzGeometry
-  use ModGeometry,      ONLY: R2_BLK                   !^CFG IF SECONDBODY
   use ModAdvance
   use ModParallel,      ONLY: NOBLK, neiLEV, &
        neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
