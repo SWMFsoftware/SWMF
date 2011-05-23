@@ -1,10 +1,12 @@
 !^CFG COPYRIGHT UM
-Module ModAdvance
+module ModAdvance
+
   use ModSize
   use ModVarIndexes
+  use ModB0
+  use ModMain,       ONLY: UseB, UseRotatingFrame, UseGravity
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc, nProc
-  use ModB0
 
   implicit none
   save
@@ -22,7 +24,9 @@ Module ModAdvance
   logical, parameter:: UseAnisoPressure    = Ppar_ > 1
   logical, parameter:: UseIdealEos = ExtraEint_ == 1
 
-  logical :: UseWavePressure = .false.
+  logical:: UseWavePressure = .false.
+
+  logical:: DoCalcElectricField = .false.
 
   !\ One of the two possible ways to treat the MHD-like systems
   !  (oartially symmetrizable, following the Godunov definition).
@@ -157,11 +161,6 @@ Module ModAdvance
   real :: bCrossArea_DZ(3,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
 
   !\
-  ! The number of the face variables, which are corrected at the
-  ! resolution changes
-  !/
-
-  !\
   ! Merge cells around the polar axis in spherical geometry
   !/
   logical :: DoFixAxis = .false.
@@ -187,23 +186,27 @@ contains
 
   subroutine init_mod_advance
 
+    if(DoCalcElectricField .and. .not.allocated(Ex_CB))then
+       allocate(Ex_CB(nI,nJ,nK,MaxBlock))
+       allocate(Ey_CB(nI,nJ,nK,MaxBlock))
+       allocate(Ez_CB(nI,nJ,nK,MaxBlock))
+    end if
+    if((UseGravity .or. UseRotatingFrame).and. .not.allocated(fbody_x_BLK))then
+       allocate(fbody_x_BLK(nI,nJ,nK,MaxBlock))
+       allocate(fbody_y_BLK(nI,nJ,nK,MaxBlock))
+       allocate(fbody_z_BLK(nI,nJ,nK,MaxBlock))
+    end if
+    if(UseB) allocate(DivB1_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
-    if(allocated(State_VGB)) return
-    allocate(State_VGB(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,MaxBlock))
-    allocate(Energy_GBI(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,MaxBlock,nFluid))
+    if(allocated(State_VGB)) RETURN
+
+    allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(Energy_GBI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock,nFluid))
     allocate(StateOld_VCB(nVar,nI,nJ,nK,MaxBlock))
     allocate(EnergyOld_CBI(nI,nJ,nK,MaxBlock,nFluid))
-    allocate(tmp1_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock))
-    allocate(tmp2_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock))
+    allocate(tmp1_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(tmp2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(time_BLK(nI,nJ,nK,MaxBlock))
-    allocate(Ex_CB(nI, nJ, nK, MaxBlock))
-    allocate(Ey_CB(nI, nJ, nK, MaxBlock))
-    allocate(Ez_CB(nI, nJ, nK, MaxBlock))
-    allocate(fbody_x_BLK(nI, nJ, nK, MaxBlock))
-    allocate(fbody_y_BLK(nI, nJ, nK, MaxBlock))
-    allocate(fbody_z_BLK(nI, nJ, nK, MaxBlock))
-    allocate(DivB1_GB(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,MaxBlock))
-    if(allocated(iTypeAdvance_BP)) RETURN
     allocate(iTypeAdvance_BP(MaxBlock,0:nProc-1))
     iTypeAdvance_B  = SkippedBlock_
     iTypeAdvance_BP = SkippedBlock_
@@ -219,22 +222,17 @@ contains
 
   subroutine clean_mod_advance
 
-    if(.not.allocated(State_VGB)) return
-    deallocate(State_VGB)
-    deallocate(Energy_GBI)
-    deallocate(StateOld_VCB)
-    deallocate(EnergyOld_CBI)
-    deallocate(tmp1_BLK)
-    deallocate(tmp2_BLK)
-    deallocate(time_BLK)
-    deallocate(Ex_CB)
-    deallocate(Ey_CB)
-    deallocate(Ez_CB)
-    deallocate(fbody_x_BLK)
-    deallocate(fbody_y_BLK)
-    deallocate(fbody_z_BLK)
-    deallocate(DivB1_GB)
-
+    if(allocated(State_VGB))        deallocate(State_VGB)
+    if(allocated(Energy_GBI))      deallocate(Energy_GBI)
+    if(allocated(StateOld_VCB))    deallocate(StateOld_VCB)
+    if(allocated(EnergyOld_CBI))   deallocate(EnergyOld_CBI)
+    if(allocated(tmp1_BLK))        deallocate(tmp1_BLK)
+    if(allocated(tmp2_BLK))        deallocate(tmp2_BLK)
+    if(allocated(time_BLK))        deallocate(time_BLK)
+    if(allocated(DivB1_GB))        deallocate(DivB1_GB)
+    if(allocated(Ex_CB))           deallocate(Ex_CB, Ey_CB, Ez_CB)
+    if(allocated(fbody_x_BLK))     deallocate(fbody_x_BLK, fbody_y_BLK, &
+         fbody_z_BLK)
     if(allocated(iTypeAdvance_BP)) deallocate(iTypeAdvance_BP)
 
     if(iProc==0)then
@@ -246,4 +244,4 @@ contains
 
   !============================================================================
 
-end Module ModAdvance
+end module ModAdvance

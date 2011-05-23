@@ -6,7 +6,8 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModMain
   use ModFaceFlux,  ONLY: calc_face_flux
   use ModFaceValue, ONLY: calc_face_value
-  use ModAdvance,   ONLY: UseUpdateCheck, DoFixAxis,set_b0_face
+  use ModAdvance,   ONLY: UseUpdateCheck, DoFixAxis,set_b0_face, &
+       DoCalcElectricField
   use ModParallel,  ONLY: neiLev
   use ModGeometry,  ONLY: Body_BLK
   use ModCovariant, ONLY: is_axial_geometry 
@@ -126,7 +127,8 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         call update_states(iStage,globalBLK)
         call timing_stop('update_states')
 
-!!!        if(iStage == nStage)call calc_electric_field(globalBLK)
+        if(DoCalcElectricField .and. iStage == nStage) &
+             call calc_electric_field(globalBLK)
 
         if(UseConstrainB .and. iStage==nStage)then    !^CFG IF CONSTRAINB BEGIN
            call timing_start('constrain_B')

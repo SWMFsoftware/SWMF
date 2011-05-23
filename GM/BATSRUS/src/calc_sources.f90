@@ -292,7 +292,7 @@ subroutine calc_sources
      end do; end do; end do
 
      ! For now, no Hall MHD implementation for rz-geometry
-     if(UseBiermannBattery .and. &
+     if(UseB .and. UseBiermannBattery .and. &
           (UseElectronPressure .or. ElectronPressureRatio > 0.0 .or. &
           .not.UseIdealEos))then
 
@@ -308,7 +308,7 @@ subroutine calc_sources
      end if
   end if
 
-  if(UseDivbSource)then
+  if(UseB .and. UseDivbSource)then
      if(UseCovariant)then   
         call calc_divb_source_covar
      else                   
@@ -351,7 +351,7 @@ subroutine calc_sources
      if(UseB)call calc_divb(iBlock)
   end if
 
-  if(UseCurlB0)then
+  if(UseB .and. UseCurlB0)then
      do k=1,nK; do j=1,nJ; do i=1,nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE
         if(R_BLK(i,j,k,iBlock)<rCurrentFreeB0)CYCLE
@@ -370,7 +370,7 @@ subroutine calc_sources
           call write_source('After curl B0')
   end if
 
-  if(boris_correction &                             !^CFG IF BORISCORR BEGIN
+  if(UseB .and. boris_correction &                     !^CFG IF BORISCORR BEGIN
        .and. boris_cLIGHT_factor < 0.9999 & 
        .and. index(test_string,'nodivE')<1) then
 
@@ -401,7 +401,7 @@ subroutine calc_sources
   do iFluid = 1, nFluid
      call select_fluid
      ! Add gravity and/or centrifugal force
-     if(UseGravity.or.UseRotatingFrame) then
+     if(UseGravity .or. UseRotatingFrame) then
         Source_VC(iRhoUx,:,:,:) = Source_VC(iRhoUx,:,:,:) + &
              State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)* &
              fbody_x_BLK(:,:,:,iBlock)

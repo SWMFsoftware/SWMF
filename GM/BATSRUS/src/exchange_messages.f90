@@ -1,19 +1,17 @@
 !^CFG COPYRIGHT UM
 subroutine exchange_messages
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,gcn,nBlockMax,unusedBLK, &
-       TypeBc_I,time_loop,&
+  use ModMain, ONLY : nI, nJ, nK, gcn, nBlockMax, unusedBLK, &
+       TypeBc_I, time_loop, UseB, &
        UseConstrainB,&              !^CFG IF CONSTRAINB 
        UseProjection,&              !^CFG IF PROJECTION
        UseDivbDiffusion,&           !^CFG IF DIVBDIFFUSE
        time_simulation,nOrder,prolong_order,optimize_message_pass, UseBatl
   use ModVarIndexes
-  use ModAdvance, ONLY : &
-       State_VGB,divB1_GB
+  use ModAdvance, ONLY : State_VGB,divB1_GB
   use ModMessagePass, ONLY: message_pass_dir
   use ModParallel, ONLY : UsePlotMessageOptions
   use ModGeometry, ONLY : far_field_BCs_BLK        
-  use ModMpi
   use ModMPCells, ONLY : DoOneCoarserLayer
   use ModBoundaryCells,ONLY:SaveBoundaryCells
   use ModPhysics, ONLY : ShockSlope
@@ -22,6 +20,8 @@ subroutine exchange_messages
 
   use BATL_lib, ONLY: message_pass_cell
   use ModBatlInterface, ONLY: UseBatlTest
+
+  use ModMpi
 
   implicit none
 
@@ -75,7 +75,7 @@ subroutine exchange_messages
         !                                      Don't send faces only
         !                                               Don't monotone restrict
         call message_pass_cells8(.false.,.false.,.false.,nVar, State_VGB)
-        call message_pass_cells(.false.,.false.,.false.,DivB1_GB)
+        if(UseB) call message_pass_cells(.false.,.false.,.false.,DivB1_GB)
         if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
      end if
   elseif (optimize_message_pass=='all') then

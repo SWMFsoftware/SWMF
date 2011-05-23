@@ -12,11 +12,11 @@ module ModGeometry
   !\
   ! Geometry parameters.
   !/
-  real  ::    x1, x2, y1, y2, z1, z2
+  real :: x1, x2, y1, y2, z1, z2
   real :: DomainVolume = -1.0
   real :: dxyz(3)
   real :: xyzStart(3)
-  real :: xyzStart_BLK(3,nBLK)
+  real :: xyzStart_BLK(3,MaxBlock)
   real :: XyzMin_D(3)
   real :: XyzMax_D(3)
 
@@ -28,32 +28,31 @@ module ModGeometry
   !/
   real :: minDXvalue, maxDXvalue
 
-  real, dimension(nBLK) :: dx_BLK, dy_BLK, dz_BLK, Rmin_BLK
-  real, dimension(nBLK) :: Rmin2_BLK                                       !^CFG IF SECONDBODY
-  real, dimension(nBLK) :: fAx_BLK, fAy_BLK, fAz_BLK, cV_BLK
+  real, dimension(MaxBlock) :: dx_BLK, dy_BLK, dz_BLK, Rmin_BLK
+  real, dimension(MaxBlock) :: Rmin2_BLK
+  real, dimension(MaxBlock) :: fAx_BLK, fAy_BLK, fAz_BLK, cV_BLK
 
   real, allocatable :: vInv_CB(:,:,:,:)
  
 
   ! Variables describing cells inside boundaries
-
  
-  logical,dimension(nBLK) :: BodyFlg_B 
-  logical,dimension(nBLK) :: DoFixExtraBoundary_B                          
+  logical,dimension(MaxBlock) :: BodyFlg_B 
+  logical,dimension(MaxBlock) :: DoFixExtraBoundary_B                          
 
   !true when at least one cell in the block (including ghost cells) is not true
-  logical :: body_BLK(nBLK)
+  logical :: body_BLK(MaxBlock)
 
   ! true when all cells in block (not including ghost cells) are true_cells 
-  logical :: true_BLK(nBLK)
+  logical :: true_BLK(MaxBlock)
 
   ! true cells are cells that are not inside a body
   logical, allocatable :: true_cell(:,:,:,:)
   logical,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,body2_:Top_):: &
        IsBoundaryCell_GI
-  logical,dimension(body2_:Top_,nBLK):: IsBoundaryBlock_IB 
+  logical,dimension(body2_:Top_,MaxBlock):: IsBoundaryBlock_IB 
   integer :: MinBoundary=Top_, MaxBoundary=body2_                    
-  logical :: far_field_BCs_BLK(nBLK)
+  logical :: far_field_BCs_BLK(MaxBlock)
 
   ! Block cell coordinates
   real, allocatable :: x_BLK(:,:,:,:)
@@ -61,19 +60,19 @@ module ModGeometry
   real, allocatable :: z_BLK(:,:,:,:)
   real, allocatable :: R_BLK(:,:,:,:)
   real, allocatable :: R2_BLK(:,:,:,:)
+
 contains
   !============================================================================
   subroutine init_mod_geometry
 
-
     if(allocated(vInv_CB)) return
-    allocate(vInv_CB(nI,nJ,nK,nBLK))
-    allocate(true_cell(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK))
-    allocate(x_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK))
-    allocate(y_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK))
-    allocate(z_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK))
-    allocate(R_BLK(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK))
-    if(UseBody2)allocate(R2_BLK(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK))
+    allocate(vInv_CB(nI,nJ,nK,MaxBlock))
+    allocate(true_cell(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(x_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(y_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(z_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(R_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    if(UseBody2) allocate(R2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_geometry allocated arrays'
@@ -83,14 +82,15 @@ contains
   !============================================================================
   subroutine clean_mod_geometry
 
-    if(.not.allocated(vInv_CB)) return
+    if(.not.allocated(vInv_CB)) RETURN
+
     deallocate(vInv_CB)
-    deallocate(true_cell)
-    deallocate(x_BLK)
-    deallocate(y_BLK)
-    deallocate(z_BLK)
-    deallocate(R_BLK)
-    if(UseBody2) deallocate(R2_BLK)
+    if(allocated(true_cell)) deallocate(true_cell)
+    if(allocated(x_BLK))     deallocate(x_BLK)
+    if(allocated(y_BLK))     deallocate(y_BLK)
+    if(allocated(z_BLK))     deallocate(z_BLK)
+    if(allocated(R_BLK))     deallocate(R_BLK)
+    if(allocated(R2_BLK))    deallocate(R2_BLK)
 
     if(iProc==0)then
        call write_prefix

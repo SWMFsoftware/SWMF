@@ -546,7 +546,7 @@ contains
              end if
           end if
           ! fbody*
-          if(UseGravity.or.UseRotatingFrame)then
+          if(UseGravity .or. UseRotatingFrame)then
              do k=1,nK; do j=1,nJ; do i=1,nI
                 iData = iData+1
                 BlockData_I(iData) = fBody_x_BLK(i,j,k,iBlockFrom)
@@ -713,7 +713,7 @@ contains
           end if
        end if
        ! fbody*
-       if(UseGravity.or.UseRotatingFrame)then
+       if(UseGravity .or. UseRotatingFrame)then
           do k=1,nK; do j=1,nJ; do i=1,nI
              iData = iData+1
              fBody_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
@@ -722,10 +722,6 @@ contains
              iData = iData+1
              fBody_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
           end do; end do; end do
-       else
-          fbody_x_BLK(:,:,:,iBlockTo) = 0.0
-          fbody_y_BLK(:,:,:,iBlockTo) = 0.0
-          fbody_z_BLK(:,:,:,iBlockTo) = 0.0
        end if
 
     end if ! DoMoveExtraData

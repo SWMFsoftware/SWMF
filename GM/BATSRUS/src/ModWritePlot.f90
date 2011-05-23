@@ -1199,7 +1199,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         endif
 
      case('absdivb')
-        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
+        if(UseB) PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
              abs(DivB1_GB(0:nI+1,0:nJ+1,0:nK+1,iBLK))
         if(.not.true_BLK(iBLK))then
            where(.not.true_cell(:,:,:,iBLK)) PlotVar(:,:,:,iVar)=0.0

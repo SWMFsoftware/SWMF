@@ -7,7 +7,6 @@ subroutine set_ics
   use ModIO, ONLY : restart
   use ModImplicit,ONLY: UsePartImplicit             !^CFG IF IMPLICIT
   use ModPhysics
-  use ModNumConst
   use ModUser, ONLY: user_set_ics
   use ModMultiFluid
   use ModEnergy, ONLY: calc_energy_ghost
@@ -39,13 +38,15 @@ subroutine set_ics
 
   time_BLK(:,:,:,iBlock) = 0.00
 
-  fbody_x_BLK(:,:,:,iBlock) = 0.00
-  fbody_y_BLK(:,:,:,iBlock) = 0.00
-  fbody_z_BLK(:,:,:,iBlock) = 0.00
+  if(UseGravity .or. UseRotatingFrame)then
+     fbody_x_BLK(:,:,:,iBlock) = 0.00
+     fbody_y_BLK(:,:,:,iBlock) = 0.00
+     fbody_z_BLK(:,:,:,iBlock) = 0.00
+  end if
 
-  Flux_VX = cZero
-  Flux_VY = cZero
-  Flux_VZ = cZero
+  Flux_VX = 0.0
+  Flux_VY = 0.0
+  Flux_VZ = 0.0
 
   call init_cons_flux(iBlock)
 
