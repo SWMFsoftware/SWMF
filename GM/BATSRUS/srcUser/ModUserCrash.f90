@@ -466,7 +466,7 @@ contains
 
     use ModProcMH,      ONLY: iProc
     use ModMain,        ONLY: GlobalBlk, nI, nJ, nK, UseRadDiffusion
-    use ModMain,        ONLY: UseLaserPackage, UseLaserHeating
+    use ModMain,        ONLY: UseLaserHeating
     use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_, &
          UnitTemperature_, UnitN_, PeMin, ExtraEintMin
@@ -658,7 +658,7 @@ contains
           end if
 
        end if
-       if(nMaterial==5.and.(UseLaserPackage .or. UseLaserHeating))&
+       if(nMaterial==5 .and. UseLaserHeating)&
             call unperturbed_5_materials
 
        ! Multiply level set functions with density unless the 
