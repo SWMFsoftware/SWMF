@@ -4688,14 +4688,17 @@ The second case is a linear interpolation between the first and third cases.
 
 <!-- ^CFG IF RAYTRACE BEGIN -->
 <command name="RAYTRACE">
-	<parameter name="UseAccurateIntegral" type="logical" default="T"   />
-	<parameter name="UseAccurateTrace"    type="logical" default="F"   />
-	<parameter name="DtExchangeRay" type="real" 
-					 min="0.01" max="60" default="0.1" />
-	<parameter name="DnRaytrace" type="integer" min="1"  default="1"   />
+	<parameter name="UseRaytrace" type="logical" default="T"/>
+	<if expr="$UseRaytrace">
+		<parameter name="UseAccurateTrace" type="logical" default="F"/>
+		<parameter name="DtExchangeRay" type="real" 
+			min="0.01" max="60" default="0.1" />
+		<parameter name="DnRaytrace" type="integer" 
+			min="1" default="1" />
+	</if>
 
 #RAYTRACE
-T			UseAccurateIntegral
+T			UseRaytrace (rest is read if true)
 T			UseAccurateTrace
 0.1			DtExchangeRay [sec]
 1			DnRaytrace
@@ -4705,9 +4708,8 @@ components. It can also be used to create plot files with open-closed
 field line information. There are two algorithms implemented for integrating 
 rays and for tracing rays.
 
-The UseAccurateIntegral parameter is kept for backwards compatibility
-only, it is ignored. The field line integrals are always calculated with 
-the accurate algorithm, which follows the lines all the way. 
+By default UseRaytrace oarameter is true if there is magnetic field in the 
+equation module. The parameter can be set to false to save memory allocation.
 
 If UseAccurateTrace is false (default), the block-wise algorithm is used,
 which interpolates at block faces. This algorithm is fast, but less 
@@ -4732,8 +4734,8 @@ a new trace (since the magnetic field is changing). A larger value implies
 that the field does not change significantly in that many time steps.
 The ray tracing is always redone if the grid changes due to an AMR.
 
-Default values are UseAccurateIntegral = .true., UseAccurateTrace = .false.,
-DtExchangeRay = 0.1 and DnRaytrace=1.
+Default values are UseAccurateIntegral = .true. (if there is magnetic field), 
+UseAccurateTrace = .false., DtExchangeRay = 0.1 and DnRaytrace=1.
 </command>
 <!-- ^CFG END RAYTRACE -->
 
