@@ -1623,7 +1623,7 @@ contains
                CoordHyades_DC, iNodeTriangle_II, nTriangle)
        end if
        ! Use a uniform mesh for fast search algorithm
-       allocate(nTriangle_C(4*nCellHyades_D(1),4*nCellHyades_D(2)))
+       allocate(nTriangle_C(nCellHyades_D(1),nCellHyades_D(2)))
        nTriangle_C(1,1) = -1
 
        allocate(DataHyadesMesh_V(nDimHyades + nVarHyadesMesh))
@@ -1638,7 +1638,7 @@ contains
                   CoordHyadesMesh_DC, iNodeTriangleMesh_II, nTriangleMesh)
           end if
           allocate( &
-               nTriangleMesh_C(4*nCellHyadesMesh_D(1),4*nCellHyadesMesh_D(2)))
+               nTriangleMesh_C(nCellHyadesMesh_D(1),nCellHyadesMesh_D(2)))
           nTriangleMesh_C(1,1) = -1
        end if
     end if
