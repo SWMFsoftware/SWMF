@@ -146,12 +146,14 @@ subroutine fix_block_geometry(iBLK)
      vInv_CB(:,:,:,iBLK) = cOne/cV                
 
      !Calculate the node coordinates
-     do i=1,1+nI; do j=1,1+nJ; do k=1,1+nK
-        NodeX_NB(i,j,k,iBLK) = 0.125*sum(x_BLK(i-1:i,j-1:j,k-1:k,iBLK))
-        NodeY_NB(i,j,k,iBLK) = 0.125*sum(y_BLK(i-1:i,j-1:j,k-1:k,iBLK))
-        NodeZ_NB(i,j,k,iBLK) = 0.125*sum(z_BLK(i-1:i,j-1:j,k-1:k,iBLK))
-     end do; end do; end do                  
-  else                                      
+     if(allocated(NodeX_NB))then
+        do i=1,1+nI; do j=1,1+nJ; do k=1,1+nK
+           NodeX_NB(i,j,k,iBLK) = 0.125*sum(x_BLK(i-1:i,j-1:j,k-1:k,iBLK))
+           NodeY_NB(i,j,k,iBLK) = 0.125*sum(y_BLK(i-1:i,j-1:j,k-1:k,iBLK))
+           NodeZ_NB(i,j,k,iBLK) = 0.125*sum(z_BLK(i-1:i,j-1:j,k-1:k,iBLK))
+        end do; end do; end do
+     end if
+  else
      !Cell center coordinates are calculated directly as the
      !transformed generalized coordinates
      call gen_to_xyz_arr(XyzStart_BLK(:,iBLK),&
