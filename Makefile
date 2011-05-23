@@ -589,7 +589,7 @@ LC/BATSRUS/src/Makefile:
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90 \
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
-		ModAbsorption.f90 \
+		ModDensityAndGradient.f90 \
 		../../../LC/BATSRUS/srcInterface
 	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
 		LC/BATSRUS/srcInterface/LC_wrapper.f90
@@ -601,7 +601,7 @@ LC/BATSRUS/src/Makefile:
 		LC/BATSRUS/srcInterface/LC_put_from_mh.f90
 	cd LC/BATSRUS/srcInterface/; perl -i -pe \
 	's/IH/LC/g;s/BATSRUS/LC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
-		LC_wrapper.f90 LC_get_for_sp.f90 LC_get_for_mh.f90 LC_put_from_mh.f90; \
+	LC_wrapper.f90 LC_get_for_sp.f90 LC_get_for_mh.f90 LC_put_from_mh.f90;\
 		perl -i -pe 's/OH/SC/' LC_get_for_mh.f90 LC_put_from_mh.f90
 	cd LC/BATSRUS/src; rm -f main.f90
 
