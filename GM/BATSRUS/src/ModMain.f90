@@ -69,7 +69,7 @@ Module ModMain
   real    :: dLatSmoothIm       = -1.0
   real    :: TauCoupleIm        = 20.0
 
-  logical :: UseRaytrace = .false.
+  logical :: UseRaytrace            = UseB
   logical :: DoMultiFluidIMCoupling = .false.
 
   ! Single space separated NameVar string containing all the variable

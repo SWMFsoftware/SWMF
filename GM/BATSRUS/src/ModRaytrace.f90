@@ -12,7 +12,6 @@ module ModRaytrace
 
   ! Select between fast less accurate and slower but more accurate algorithms
   logical :: UseAccurateTrace    = .false. 
-  logical :: UseAccurateIntegral = .true.
 
   ! Possible tasks
   logical :: DoTraceRay     = .true.  ! trace rays from all cell centers

@@ -232,11 +232,10 @@ subroutine MH_set_parameters(TypeAction)
 
      ! initialize module variables
      call init_mod_advance
-     if(allocated(DivB1_GB)) DivB1_GB = 0.0
      call init_mod_geometry
      call init_mod_boundary_cells
      call init_mod_nodes
-     call init_mod_raytrace                    !^CFG IF RAYTRACE
+     if(UseRaytrace)   call init_mod_raytrace  !^CFG IF RAYTRACE
      if(UseConstrainB) call init_mod_ct        !^CFG IF CONSTRAINB
      if(UseImplicit.or.UseSemiImplicit) &      !^CFG IF IMPLICIT
           call init_mod_implicit               !^CFG IF IMPLICIT
@@ -1481,20 +1480,12 @@ subroutine MH_set_parameters(TypeAction)
         !                                               ^CFG IF RAYTRACE BEGIN
 
      case("#RAYTRACE")
-        call read_var('UseAccurateIntegral',UseAccurateIntegral)
-        call read_var('UseAccurateTrace'   ,UseAccurateTrace)
-        if(UseAccurateTrace .and. .not. UseAccurateIntegral)then
-           if(iProc==0)then
-              write(*,'(a)')NameSub//' WARNING: '// &
-                   'UseAccurateTrace=T requires UseAccurateIntegral=T'
-              if(UseStrict)call stop_mpi('Correct PARAM.in!')
-              write(*,*)NameSub//' setting UseAccurateIntegral=T'
-           end if
-           UseAccurateIntegral = .true.
+        call read_var('UseRaytrace',UseRaytrace)
+        if(UseRaytrace)then
+           call read_var('UseAccurateTrace', UseAccurateTrace)
+           call read_var('DtExchangeRay',    DtExchangeRay)
+           call read_var('DnRaytrace',       DnRaytrace)
         end if
-        call read_var('DtExchangeRay',DtExchangeRay)
-        call read_var('DnRaytrace',   DnRaytrace)
-
      case("#IE")
         call read_var('DoTraceIE',DoTraceIE)
         !                                              ^CFG END RAYTRACE
@@ -2565,8 +2556,6 @@ contains
             'Do not use covariant with projection')       !^CFG IF PROJECTION
        if(UseConstrainB)call stop_mpi(&                   !^CFG IF CONSTRAINB
             'Do not use covariant with constrain B')      !^CFG IF CONSTRAINB
-       if(UseRaytrace) call stop_mpi(&                    !^CFG IF RAYTRACE
-            'Do not use covariant with ray tracing')      !^CFG IF RAYTRACE
        if(UseDivBDiffusion)call stop_mpi(&                !^CFG IF DIVBDIFFUSE
             'Do not use covariant with divB diffusion')   !^CFG IF DIVBDIFFUSE
     else
