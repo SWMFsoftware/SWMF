@@ -186,6 +186,7 @@ contains
 
   subroutine init_mod_advance
 
+    ! These arrays may need allocation depending on the parameters
     if(DoCalcElectricField .and. .not.allocated(Ex_CB))then
        allocate(Ex_CB(nI,nJ,nK,MaxBlock))
        allocate(Ey_CB(nI,nJ,nK,MaxBlock))
@@ -196,10 +197,14 @@ contains
        allocate(fbody_y_BLK(nI,nJ,nK,MaxBlock))
        allocate(fbody_z_BLK(nI,nJ,nK,MaxBlock))
     end if
-    if(UseB) allocate(DivB1_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
     if(allocated(State_VGB)) RETURN
 
+    ! The arrays below are allocated at the beginning (if at all)
+    if(UseB)then 
+       allocate(DivB1_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       DivB1_GB = 0.0
+    end if
     allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(Energy_GBI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock,nFluid))
     allocate(StateOld_VCB(nVar,nI,nJ,nK,MaxBlock))
