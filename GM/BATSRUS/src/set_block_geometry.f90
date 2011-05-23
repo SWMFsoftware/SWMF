@@ -9,7 +9,6 @@ subroutine set_root_block_geometry
        R2_BLK,&                !^CFG IF SECONDBODY
        TypeGeometry,is_axial_geometry,&          
        R_BLK,x_BLK,y_BLK,z_BLK,Dxyz,XyzMin_D,XyzMax_D
-  use ModNumConst
   use ModParallel, ONLY: proc_dims,periodic3D
   use ModMpi
   implicit none
@@ -62,9 +61,9 @@ subroutine set_root_block_geometry
               dx_BLK(iBLK) = Dxyz(1)  
               dy_BLK(iBLK) = Dxyz(2)
               dz_BLK(iBLK) = Dxyz(3)
-              xyzStart_BLK(1,iBLK) = Dxyz(1) * (cHalf + nI*(i-1))+XyzMin_D(1)
-              xyzStart_BLK(2,iBLK) = Dxyz(2) * (cHalf + nJ*(j-1))+XyzMin_D(2)
-              xyzStart_BLK(3,iBLK) = Dxyz(3) * (cHalf + nK*(k-1))+XyzMin_D(3)
+              xyzStart_BLK(1,iBLK) = Dxyz(1) * (0.5 + nI*(i-1))+XyzMin_D(1)
+              xyzStart_BLK(2,iBLK) = Dxyz(2) * (0.5 + nJ*(j-1))+XyzMin_D(2)
+              xyzStart_BLK(3,iBLK) = Dxyz(3) * (0.5 + nK*(k-1))+XyzMin_D(3)
               call fix_block_geometry(iBLK)
            end if
         end do
@@ -143,7 +142,7 @@ subroutine fix_block_geometry(iBLK)
      fAy_BLK(iBLK) = fAy
      fAz_BLK(iBLK) = fAz
      cV_BLK(iBLK) = cV                               
-     vInv_CB(:,:,:,iBLK) = cOne/cV                
+     vInv_CB(:,:,:,iBLK) = 1.0/cV                
 
      !Calculate the node coordinates
      if(allocated(NodeX_NB))then
@@ -174,9 +173,9 @@ subroutine fix_block_geometry(iBLK)
         !coordinates
 
 
-        XyzOfNode111_D(1)=XyzStart_BLK(1,iBLK)-dx_BLK(iBLK)*cHalf
-        XyzOfNode111_D(2)=XyzStart_BLK(2,iBLK)-dy_BLK(iBLK)*cHalf
-        XyzOfNode111_D(3)=XyzStart_BLK(3,iBLK)-dz_BLK(iBLK)*cHalf
+        XyzOfNode111_D(1)=XyzStart_BLK(1,iBLK)-dx_BLK(iBLK)*0.5
+        XyzOfNode111_D(2)=XyzStart_BLK(2,iBLK)-dy_BLK(iBLK)*0.5
+        XyzOfNode111_D(3)=XyzStart_BLK(3,iBLK)-dz_BLK(iBLK)*0.5
 
 
         call gen_to_xyz_arr(XyzOfNode111_D,&
@@ -338,13 +337,13 @@ contains
        A_DD(3,2)=y_BLK(i,j,k+1,iBLK)-y_BLK(i,j,k,iBLK)
        A_DD(3,3)=z_BLK(i,j,k+1,iBLK)-z_BLK(i,j,k,iBLK)
 
-       DetInv=cOne/det(A_DD)
+       DetInv = 1.0/det(A_DD)
 
-       B_D(1)=cHalf*(R_BLK(i+1,j,k,iBLK)-R_BLK(i,j,k,iBLK))*&
+       B_D(1)=0.5*(R_BLK(i+1,j,k,iBLK)-R_BLK(i,j,k,iBLK))*&
             (R_BLK(i+1,j,k,iBLK)+R_BLK(i,j,k,iBLK))
-       B_D(2)=cHalf*(R_BLK(i,j+1,k,iBLK)-R_BLK(i,j,k,iBLK))*&
+       B_D(2)=0.5*(R_BLK(i,j+1,k,iBLK)-R_BLK(i,j,k,iBLK))*&
             (R_BLK(i,j+1,k,iBLK)+R_BLK(i,j,k,iBLK))
-       B_D(3)=cHalf*(R_BLK(i,j,k+1,iBLK)-R_BLK(i,j,k,iBLK))*&
+       B_D(3)=0.5*(R_BLK(i,j,k+1,iBLK)-R_BLK(i,j,k,iBLK))*&
             (R_BLK(i,j,k+1,iBLK)+R_BLK(i,j,k,iBLK))
 
        A1_DD(:,2:3)=A_DD(:,2:3)
