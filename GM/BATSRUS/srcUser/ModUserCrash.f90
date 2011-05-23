@@ -73,7 +73,9 @@ module ModUser
   real :: pDimOutside   = 1.1e5  ! pressure of Xe outside tube [Pa]
 
   !Gas parameters:
-  real :: RhoDimInside = 6.5    ! density  of Xe outside tube [kg/m3]
+
+  real,parameter :: RhoDimHe =  6.5 
+  real :: RhoDimInside = RhoDimHe ! density  of Xe inside tube [kg/m3]
 
 
   ! Allow overwriting the Xe state inside the tube for x > xUniformXe > 0
@@ -558,7 +560,7 @@ contains
 
           ! Set the Xe state inside the tube for x > xUniformXe if it is set
           if(xUniformXe > 0.0 .and. x > xUniformXe .and. r < rInnerTube)then
-             State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitRho_)
+             State_VGB(Rho_,i,j,k,iBlock) = RhoDimInside*Io2No_V(UnitRho_)
              State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
              call set_small_radiation_energy
@@ -635,7 +637,12 @@ contains
           end if
 
        end if ! nDimHyades /= 2
-
+       !When the hyades file is used for Xe, and the actual matetial is
+       !different, rescale the density of xenon:
+       !if(UseHyadesFile.and.&
+       !maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock), 1)==1)&
+       !State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)*&
+       !RhoDimInside/RhoHe
        if(UseMixedCell)then
           if(nMaterial>3) call stop_mpi(NameSub // " Gold and Acrylic "// &
                "are not yet supported in the mixed cell approach")
