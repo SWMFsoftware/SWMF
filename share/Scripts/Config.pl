@@ -85,7 +85,7 @@ HDFLIB = -lHDF5PLOT
 # This string should be added into Makefile.conf when HYPRE is enabled
 my $HypreDefinition = "
 # HYPRE library definitions
-HYPRELIB     = \${UTILDIR}/HYPRE/lib
+HYPRELIB     = -L\${UTILDIR}/HYPRE/lib -lHYPRE
 HYPRESEARCH  = -I\${UTILDIR}/HYPRE/include
 ";             	    
 
