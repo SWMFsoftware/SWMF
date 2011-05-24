@@ -74,6 +74,20 @@ our $Uninstall;             # True if code is uninstalled
 our $ShowGridSize;          # Show grid size for caller code
 our $NewGridSize;           # New grid size to be set in caller code
 our $Hdf5;                  # True if HDF5 is enabled
+our $Hypre;                 # True if HYPRE lib is enabled
+
+# This string should be added into Makefile.conf when HDF5 is enabled
+my $Hdf5Definition = "
+# HDF5 library definitions
+HDFLIB = -lHDF5PLOT
+";             	    
+
+# This string should be added into Makefile.conf when HYPRE is enabled
+my $HypreDefinition = "
+# HYPRE library definitions
+HYPRELIB     = \${UTILDIR}/HYPRE/lib
+HYPRESEARCH  = -I\${UTILDIR}/HYPRE/include
+";             	    
 
 # Default precision for installation
 my $DefaultPrecision = 'double';
@@ -85,6 +99,7 @@ my $NewOptimize;
 my $NewDebug;
 my $NewMpi;
 my $NewHdf5;
+my $NewHypre;
 my $IsCompilerSet;
 my $Debug;
 my $Mpi;
@@ -122,6 +137,8 @@ foreach (@Arguments){
     if(/^-nodebug$/i)         {$NewDebug="no";                  next};
     if(/^-hdf5$/i)            {$NewHdf5="yes";                  next};
     if(/^-nohdf5$/i)          {$NewHdf5="no";                   next};
+    if(/^-hypre$/i)           {$NewHypre="yes";                 next};
+    if(/^-nohypre$/i)         {$NewHypre="no";                  next};
     if(/^-O[0-5]$/i)          {$NewOptimize=$_;                 next};  
     if(/^-g(rid)?$/)          {$ShowGridSize=1;                 next};
     if(/^-g(rid)?=([\d,]+)$/) {$NewGridSize=$+;                 next};
@@ -194,6 +211,9 @@ if($NewPrecision and $NewPrecision ne $Precision){
 # Link with HDF5 library is required
 &set_hdf5_ if $NewHdf5 and $NewHdf5 ne $Hdf5;
 
+# Link with HYPRE library is required
+&set_hypre_ if $NewHypre and $NewHypre ne $Hypre;
+
 # Change optimization level if required
 &set_optimization_ if $NewOptimize and $NewOptimize ne $Optimize;
 
@@ -235,6 +255,7 @@ sub get_settings_{
     $Debug = "no";
     $Mpi   = "yes";
     $Hdf5  = "no";
+    $Hypre = "no";
   TRY:{
       # Read information from $MakefileConf
       open(MAKEFILE, $MakefileConf)
@@ -253,6 +274,7 @@ sub get_settings_{
           $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
 	  $Mpi   = "no"  if /^\s*MPILIB\s*=.*\-lNOMPI/;
 	  $Hdf5  = "yes" if /^\s*HDFLIB\s*=.*\-lHDF5.*/;
+	  $Hypre = "yes" if /^\s*HYPRELIB/;
           $Optimize = $1 if /^\s*OPT[0-5]\s*=\s*(-O[0-5])/;
       }
   }
@@ -282,9 +304,10 @@ sub show_settings_{
     print "The selected C++ compiler is $CompilerC.\n";
     print "The default precision for reals is $Precision precision.\n";
     print "The maximum optimization level is $Optimize\n";
-    print "Debugging flags:  $Debug\n";
-    print "Linked with MPI:  $Mpi\n";
-    print "Linked with HDF5: $Hdf5\n";
+    print "Debugging flags:   $Debug\n";
+    print "Linked with MPI:   $Mpi\n";
+    print "Linked with HDF5:  $Hdf5\n";
+    print "Linked with HYPRE: $Hypre\n";
 
     print "\n";
 
@@ -452,9 +475,38 @@ sub set_mpi_{
 
 ##############################################################################
 
+sub set_hypre_{
+
+    # Check if library is present
+    if($NewHypre eq "yes" and not -d "util/HYPRE"){
+	print "cvs checkout HYPRE into util/\n";
+	return;
+    }
+
+    # $Hypre will be $NewHypre after changes
+    $Hypre = $NewHypre;
+
+    print "Enabling HYPRE library in $MakefileConf\n" if $Hypre eq "yes";
+    print "Disabling HYPRE library in $MakefileConf\n" if $Hypre eq "no";
+    if(not $DryRun){
+	@ARGV = ($MakefileConf);
+	while(<>){
+	    # Add/remove HYPRE related definitions after MPILIB
+	    $_ .= $HypreDefinition if $Hypre eq "yes" and /-lNOMPI/;
+	    chop    if $Hypre eq "no" and /-lNOMPI/;
+	    $_ = "" if $Hypre eq "no" and /HYPRE/i;
+	    print;
+	}
+    }
+    &shell_command("cd util/HYPRE; make install") if $Hypre eq "yes"
+	and not -e "util/HYPRE/lib/libHYPRE.a";
+}
+
+##############################################################################
+
 sub set_hdf5_{
 
-    # $Hdf5 will be $Hdf5 after changes
+    # $Hdf5 will be $NewHdf5 after changes
     $Hdf5 = $NewHdf5;
 
     print "Enabling HDF5 library in $MakefileConf\n" if $Hdf5 eq "yes";
@@ -462,11 +514,10 @@ sub set_hdf5_{
     if(not $DryRun){
 	@ARGV = ($MakefileConf);
 	while(<>){
-	    # Comment/uncomment MPILIB definitions
-	    if(/HDFLIB\s*=/){
-		s/^\s*H/\#H/ if /lHDF5PLOT/ eq ($Hdf5 eq "no");
-		s/^\#\s*H/H/ if /lHDF5PLOT/ eq ($Hdf5 eq "yes");
-	    }
+	    # Add/remove HDF5 related definitions
+	    $_ .= $Hdf5Definition if $Hdf5 eq "yes" and /-lNOMPI/;
+	    chop                  if $Hdf5 eq "no"  and /-lNOMPI/;
+	    $_ = ""               if $Hdf5 eq "no"  and /HDF5/i;
 	    print;
 	}
     }
@@ -640,6 +691,7 @@ Usage: Config.pl [-help] [-verbose] [-dryrun] [-show] [-compiler]
                  [-install[=s|=c] [-compiler=FC[,CC] [-serial]]
                  [-uninstall]
                  [-single|-double] [-debug|-nodebug] [-mpi|-nompi]
+                 [-hdf5|-nohdf5] [-hypre|-nohypre]
                  [-O0|-O1|-O2|-O3|-O4|-O5]
 
 If called without arguments, the current settings are shown.
@@ -680,6 +732,8 @@ Compilation:
 -nompi          compile and link with the NOMPI library for serial execution
 -hdf5           compile and link with HDF5 library for HDF5 plot output
 -nohdf5         do not compile with HDF5 library
+-hypre          compile and link with HYPRE library for linear solver
+-nohypre        do not compile with HYPRE library
 -O0             set all optimization levels to -O0
 -O1             set optimization levels to at most -O1
 -O2             set optimization levels to at most -O2
@@ -709,9 +763,9 @@ Install code with the gfortran compiler and no MPI library on the machine
 
     Config.pl -install -compiler=gfortran -serial
 
-Use the HDF5 plotting library
+Use the HDF5 plotting library and the HYPRE linear solver library
 
-    Config.pl -hdf5
+    Config.pl -hdf5 -hypre
 
 Set optimization level to -O0, switch on debugging flags and link with NOMPI:
 
