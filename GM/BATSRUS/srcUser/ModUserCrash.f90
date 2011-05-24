@@ -74,8 +74,7 @@ module ModUser
 
   !Gas parameters:
 
-  real,parameter :: RhoDimHe =  6.5 
-  real :: RhoDimInside = RhoDimHe ! density  of Xe inside tube [kg/m3]
+  real :: RhoDimInside = 6.5 ! density  of Xe inside tube [kg/m3]
 
 
   ! Allow overwriting the Xe state inside the tube for x > xUniformXe > 0
