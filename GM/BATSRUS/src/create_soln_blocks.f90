@@ -267,8 +267,8 @@ end subroutine cube_bcast_l
 
 subroutine prolong_block(nOrderIn, IsTrueCellC_G, VarC_VG, iCube, VarF_VG)
   use ModMain
-  use ModNumConst
   use ModAdvance,ONLY:nVar
+
   implicit none
 
   ! prolong coarse VarC_VG solution into fine VarF_VG
@@ -290,7 +290,7 @@ subroutine prolong_block(nOrderIn, IsTrueCellC_G, VarC_VG, iCube, VarF_VG)
   !---------------------------------------------------------------------------
 
   call get_shifts(iCube,iShift,jShift,kShift) 
-  VarF_VG = cOne ! To fill Ghostcells
+  VarF_VG = 1.0 ! To fill Ghostcells
 
   !\
   ! Prolong coarse grid solution to finer block.
@@ -354,12 +354,12 @@ subroutine prolong_block(nOrderIn, IsTrueCellC_G, VarC_VG, iCube, VarF_VG)
            do iVar=1,nVar
               SlopeRight = -VarC_DI(iVar,idir,0)+VarC_DI(iVar,idir,1)
               SlopeLeft  = +VarC_DI(iVar,idir,0)-VarC_DI(iVar,idir,-1)
-              SlopeSign  = sign(cOne,SlopeRight)
-              SlopeLim_D(iVar,idir)=SlopeSign*max(cZero,min(abs(SlopeRight),&
+              SlopeSign  = sign(1.0,SlopeRight)
+              SlopeLim_D(iVar,idir)=SlopeSign*max(0.0,min(abs(SlopeRight),&
                    SlopeSign*SlopeLeft))
            end do
         else
-           SlopeLim_D(:,idir)=cZero
+           SlopeLim_D(:,idir)=0.0
         end if
      end do
      
@@ -387,7 +387,6 @@ end subroutine prolong_block
 subroutine set_refined_block_geometry
   use ModProcMH
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,xyzStart,xyzStart_BLK
-  use ModNumConst
   use ModAMR, ONLY: local_cube,local_cubeBLK,iShiftChild_DI,nCell2_D 
   implicit none
 
@@ -412,9 +411,9 @@ subroutine set_refined_block_geometry
      !\
      ! Assign refined block geometry parameters.
      !/
-     dx_BLK(iBLK) = dxyz(1)*cHalf
-     dy_BLK(iBLK) = dxyz(2)*cHalf
-     dz_BLK(iBLK) = dxyz(3)*cHalf
+     dx_BLK(iBLK) = dxyz(1)*0.5
+     dy_BLK(iBLK) = dxyz(2)*0.5
+     dz_BLK(iBLK) = dxyz(3)*0.5
 
      call fix_block_geometry(iBLK)
   end do
@@ -442,7 +441,6 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK, &
        dx_BLK,dy_BLK,dz_BLK,dxyz,xyzStart_BLK,true_cell,true_BLK
   use ModGeometry, ONLY :  R2_BLK                           !^CFG IF SECONDBODY
-  use ModNumConst
   use ModMpi
   use ModEnergy, ONLY: calc_energy_ghost
 
@@ -680,7 +678,7 @@ contains
        !\
        ! Assign default value (to get corners).
        !/
-       State_VGB(1:nVar,:,:,:,remaining_BLK) = cOne
+       State_VGB(1:nVar,:,:,:,remaining_BLK) = 1.0
 
        !\
        ! Assign coarse solution from the eight restricted solution quadrants of
@@ -704,7 +702,7 @@ end subroutine create_coarse_soln_block
 !==============================================================================
 
 subroutine set_coarse_block_geometry(iBLK)
-  use ModNumConst
+
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,xyzStart_BLK
   use ModAMR, ONLY: iShiftChild_DI,nCell2_D
   implicit none
@@ -762,6 +760,7 @@ end subroutine fix_soln_block
 !==============================================================================
 
 subroutine calc_other_soln_vars(iBLK)
+
   use ModMain
   use ModAdvance, ONLY : fbody_x_BLK,fbody_y_BLK,fbody_z_BLK, &
        B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB
@@ -772,17 +771,19 @@ subroutine calc_other_soln_vars(iBLK)
   integer, intent(in) :: iBLK
 
   if(UseB0)then
-     B0_DGB(:,:,:,:,iBLK) = 0.00
-     B0ResChange_DXSB(:,:,:,:,iBLK) = 0.00
-     B0ResChange_DYSB(:,:,:,:,iBLK) = 0.00
-     B0ResChange_DZSB(:,:,:,:,iBLK) = 0.00
+     B0_DGB(:,:,:,:,iBLK) = 0.0
+     B0ResChange_DXSB(:,:,:,:,iBLK) = 0.0
+     B0ResChange_DYSB(:,:,:,:,iBLK) = 0.0
+     B0ResChange_DZSB(:,:,:,:,iBLK) = 0.0
 
      call set_b0(iBLK)
   end if
 
-  fbody_x_BLK(:,:,:,iBLK) = 0.00
-  fbody_y_BLK(:,:,:,iBLK) = 0.00
-  fbody_z_BLK(:,:,:,iBLK) = 0.00
+  if(allocated(fbody_x_BLK))then
+     fbody_x_BLK(:,:,:,iBLK) = 0.0
+     fbody_y_BLK(:,:,:,iBLK) = 0.0
+     fbody_z_BLK(:,:,:,iBLK) = 0.0
+  end if
 
   call init_cons_flux(iBLK)
 
