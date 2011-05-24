@@ -88,6 +88,7 @@ my $NewHdf5;
 my $IsCompilerSet;
 my $Debug;
 my $Mpi;
+my $Serial;
 my $Optimize;
 my $ShowCompiler;
 my $ShowMpi;
@@ -116,6 +117,7 @@ foreach (@Arguments){
     if(/^-compiler$/i)        {$ShowCompiler=1;                 next};
     if(/^-mpi$/i)             {$NewMpi="yes";                   next};
     if(/^-nompi$/i)           {$NewMpi="no";                    next};
+    if(/^-serial$/i)          {$NewMpi="no"; $Serial=1;         next};
     if(/^-debug$/i)           {$NewDebug="yes";                 next};
     if(/^-nodebug$/i)         {$NewDebug="no";                  next};
     if(/^-hdf5$/i)            {$NewHdf5="yes";                  next};
@@ -416,7 +418,7 @@ sub set_mpi_{
     # $Mpi will be $NewMpi after changes
     $Mpi = $NewMpi;
 
-    &shell_command("make NOMPI") if $Mpi eq "no";
+    &shell_command("make NOMPI") if $Mpi eq "no" and not $Serial;
 
     print "Selecting MPI library in $MakefileConf\n" if $Mpi eq "yes";
     print "Selecting NOMPI library in $MakefileConf\n" if $Mpi eq "no";
@@ -435,6 +437,14 @@ sub set_mpi_{
 	    }
 	    print;
 	}
+    }
+
+    if($Serial){
+	&shell_command("cp share/include/mpif.h share/Library/src");
+	&shell_command("make NOMPI");
+    }elsif(-e "share/Library/src/mpif.h"){
+	&shell_command(
+	     "rm -f share/Library/src/mpif.h share/Library/src/ModMpiOrig.o")
     }
 
     print "Remove executable and make it to link with the (NO)MPI library!\n";
@@ -627,7 +637,7 @@ This script edits the appropriate Makefile-s, copies files and executes
 shell commands. The script can also show the current settings.
 
 Usage: Config.pl [-help] [-verbose] [-dryrun] [-show] [-compiler] 
-                 [-install[=s|=c] [-compiler=FCOMP[,CCOMP]]
+                 [-install[=s|=c] [-compiler=FC[,CC] [-serial]]
                  [-uninstall]
                  [-single|-double] [-debug|-nodebug] [-mpi|-nompi]
                  [-O0|-O1|-O2|-O3|-O4|-O5]
@@ -636,48 +646,46 @@ If called without arguments, the current settings are shown.
 
 Information:
 
--h  -help      show help message.
--dryrun        dry run (do not modify anything, just show actions).
--show          show current settings.
--verbose       show verbose information.
+-h  -help       show help message.
+-dryrun         dry run (do not modify anything, just show actions).
+-show           show current settings.
+-verbose        show verbose information.
 
 (Un/Re)installation:
 
--uninstall     uninstall code (make distclean)
+-uninstall      uninstall code (make distclean)
 
--install=c     (re)install code as an SWMF component (c)
--install=s     (re)install code as a stand-alone (s) code
--install       install code as a stand-alone if it is not yet installed,
-               or reinstall the same way as it was installed originally:
-               (re)creates Makefile.conf, Makefile.def, make install
+-install=c      (re)install code as an SWMF component (c)
+-install=s      (re)install code as a stand-alone (s) code
+-install        install code as a stand-alone if it is not yet installed,
+                or reinstall the same way as it was installed originally:
+                (re)creates Makefile.conf, Makefile.def, make install
 
--compiler      show available compiler choices for this operating system (OS)
--compiler=FCOMP 
-               create Makefile.conf from a non-default F90 compiler FCOMP
-               and the default C compiler
-               only works together with -install flag
--compiler=FCOMP,CCOMP 
-               create Makefile.conf from a non-default F90 compiler FCOMP
-               and non-default C compiler CCOMP.
-               only works together with -install flag
+-compiler       show available compiler choices for this operating system (OS)
+-compiler=FC    create Makefile.conf from a non-default F90 compiler FCOMP
+                and the default C compiler
+                only works together with -install flag
+-compiler=FC,CC create Makefile.conf with a non-default F90 compiler FC
+                and non-default C compiler CC.
+                only works together with -install flag
+-serial         install the code on a machine with no MPI library.
 
 Compilation:
 
--single        set precision to single in Makefile.conf and make clean
--double        set precision to double in Makefile.conf and make clean
-
--debug         select debug options for the compiler in Makefile.conf
--nodebug       do not use debug options for the compiler in Makefile.conf
--mpi           compile and link with the MPI library for parallel execution
--nompi         compile and link with the NOMPI library for serial execution
--hdf5          compile and link with HDF5 library for HDF5 plot output
--nohdf5        do not compile with HDF5 library
--O0            set all optimization levels to -O0
--O1            set optimization levels to at most -O1
--O2            set optimization levels to at most -O2
--O3            set optimization levels to at most -O3
--O4            set optimization levels to at most -O4
--O5            set optimization levels to at most -O5
+-single         set precision to single in Makefile.conf and make clean
+-double         set precision to double in Makefile.conf and make clean
+-debug          select debug options for the compiler in Makefile.conf
+-nodebug        do not use debug options for the compiler in Makefile.conf
+-mpi            compile and link with the MPI library for parallel execution
+-nompi          compile and link with the NOMPI library for serial execution
+-hdf5           compile and link with HDF5 library for HDF5 plot output
+-nohdf5         do not compile with HDF5 library
+-O0             set all optimization levels to -O0
+-O1             set optimization levels to at most -O1
+-O2             set optimization levels to at most -O2
+-O3             set optimization levels to at most -O3
+-O4             set optimization levels to at most -O4
+-O5             set optimization levels to at most -O5
 
 Examples of use:
 
@@ -693,9 +701,13 @@ Show available compiler choices:
 
     Config.pl -compiler
 
-Install code with the g95 compiler and Intel MPI:
+Install code with the mpxlf90 Fortran compiler and mpxlc C compiler
 
-    Config.pl -install -compiler=g95,gcc
+    Config.pl -install -compiler=mpxlf90,mpxlc
+
+Install code with the gfortran compiler and no MPI library on the machine
+
+    Config.pl -install -compiler=gfortran -serial
 
 Use the HDF5 plotting library
 
