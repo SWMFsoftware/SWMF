@@ -76,9 +76,19 @@ Config.pl -install
 
 Config.pl -compiler
 
-# Then install the code with the selected compiler, e.g.
+# Then install the code with the selected Fortran compiler, e.g.
 
 Config.pl -install -compiler=ifort
+
+# A non-default C compiler can be added after a comma, e.g.
+
+Config.pl -install -compiler=mpxlf90,mpxlc
+
+# For machines with no MPI library, use
+
+Config.pl -instal -serial -compiler=....
+
+# This will only allow serial execution, of course.
 
 ######################
 # Create the manuals #
