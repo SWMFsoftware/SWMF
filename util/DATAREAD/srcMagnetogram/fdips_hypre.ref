@@ -1,0 +1,180 @@
+ModReadParam::read_file: read and broadcast nLine=  32 lines of text
+ nCarringtonRotation, nTheta0, nPhi0:  1200 180 360
+ nThetaLgr =  10 nThetaSml =  10
+ nPhiLgr   =  10 nPhiSml   =  10
+ Partitioning in nThetaAll gives:  20 Actual nThetaAll is:  20
+ Partitioning in nPhiAll gives:    20 Actual nPhiAll is:    20
+ hypre_initialize starting
+ hypre_initialize HYPRE_SStructGridAssemble done
+ hypre_initialize HYPRE_SStructGraphAssemble done
+ hypre_initialize HYPRE_SStructMatrixInitialize done
+ hypre_initialize HYPRE_SStructMatrixAssemble done
+ hypre_initialize finished
+ hypre_solver starting n, maxval, minval(Rhs_C)= 2000  61.5759033755131071 -58.5621629280770506  18.1662588524557869
+ hypre_solver set RHS
+ hypre_solver set X=0
+ hypre_solver HYPRE_SStructVectorAssemble done
+ hypre_solver passed vectors to solver
+ hypre_solver HYPRE_ParCSRGMRESSetMaxIter done
+ hypre_solver HYPRE_ParCSRGMRESSetPrecond done
+ hypre_solver HYPRE_ParCSRGMRESSetup done
+L2 norm of b: 7.114301e+02
+Initial L2 norm of residual: 7.114301e+02
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm
+-----    ------------    ---------- ------------
+                                            relative
+               residual        factor       residual
+               --------        ------       --------
+    Initial    1.000000e+00                 1.000000e+00
+    Cycle  1   2.927408e-02    0.029274     2.927408e-02 
+
+
+ Average Convergence Factor = 0.029274
+
+     Complexity:    grid = 1.923875
+                operator = 4.686342
+                   cycle = 9.371783
+
+
+
+    1    2.029309e+01    0.028524   2.852436e-02
+                                            relative
+               residual        factor       residual
+               --------        ------       --------
+    Initial    1.000000e+00                 1.000000e+00
+    Cycle  1   6.284066e-02    0.062841     6.284066e-02 
+
+
+ Average Convergence Factor = 0.062841
+
+     Complexity:    grid = 1.923875
+                operator = 4.686342
+                   cycle = 9.371783
+
+
+
+    2    5.800829e-01    0.028585   8.153758e-04
+                                            relative
+               residual        factor       residual
+               --------        ------       --------
+    Initial    1.000000e+00                 1.000000e+00
+    Cycle  1   6.974053e-02    0.069741     6.974053e-02 
+
+
+ Average Convergence Factor = 0.069741
+
+     Complexity:    grid = 1.923875
+                operator = 4.686342
+                   cycle = 9.371783
+
+
+
+    3    1.996075e-02    0.034410   2.805721e-05
+                                            relative
+               residual        factor       residual
+               --------        ------       --------
+    Initial    1.000000e+00                 1.000000e+00
+    Cycle  1   6.458240e-02    0.064582     6.458240e-02 
+
+
+ Average Convergence Factor = 0.064582
+
+     Complexity:    grid = 1.923875
+                operator = 4.686342
+                   cycle = 9.371783
+
+
+
+    4    5.329947e-04    0.026702   7.491876e-07
+                                            relative
+               residual        factor       residual
+               --------        ------       --------
+    Initial    1.000000e+00                 1.000000e+00
+    Cycle  1   6.448836e-02    0.064488     6.448836e-02 
+
+
+ Average Convergence Factor = 0.064488
+
+     Complexity:    grid = 1.923875
+                operator = 4.686342
+                   cycle = 9.371783
+
+
+
+    5    1.702407e-05    0.031940   2.392936e-08
+                                            relative
+               residual        factor       residual
+               --------        ------       --------
+    Initial    7.172175e+02                 1.000000e+00
+    Cycle  1   2.221912e+01    0.030980     3.097961e-02 
+
+
+ Average Convergence Factor = 0.030980
+
+     Complexity:    grid = 1.923875
+                operator = 4.686342
+                   cycle = 9.371783
+
+
+
+                                            relative
+               residual        factor       residual
+               --------        ------       --------
+    Initial    1.000000e+00                 1.000000e+00
+    Cycle  1   7.666865e-02    0.076669     7.666865e-02 
+
+
+ Average Convergence Factor = 0.076669
+
+     Complexity:    grid = 1.923875
+                operator = 4.686342
+                   cycle = 9.371783
+
+
+
+    6    7.566906e-07    0.044448   1.063619e-09
+                                            relative
+               residual        factor       residual
+               --------        ------       --------
+    Initial    1.000000e+00                 1.000000e+00
+    Cycle  1   7.698673e-02    0.076987     7.698673e-02 
+
+
+ Average Convergence Factor = 0.076987
+
+     Complexity:    grid = 1.923875
+                operator = 4.686342
+                   cycle = 9.371783
+
+
+
+    7    2.442655e-08    0.032281   3.433444e-11
+                                            relative
+               residual        factor       residual
+               --------        ------       --------
+    Initial    1.824919e-05                 1.000000e+00
+    Cycle  1   1.451280e-06    0.079526     7.952571e-02 
+
+
+ Average Convergence Factor = 0.079526
+
+     Complexity:    grid = 1.923875
+                operator = 4.686342
+                   cycle = 9.371783
+
+
+
+
+
+Final L2 norm of residual: 2.442648e-08
+
+
+
+ hypre_solver HYPRE_ParCSRGMRESSolve done
+ hypre_solver HYPRE_SStructVectorGetBoxValues done
+ hypre_solver finished
+ nIter, Tolerance, iError= 10000   1.0000000000000000E-10 0
+ max(abs(divb)) =    6.9107297662185374E-09
+ nProcTheta, nProcPhi= 2 2
