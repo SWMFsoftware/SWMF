@@ -17,7 +17,8 @@ F			UseTiming
 2			nProcPhi
 
 #SOLVER
-T			UsePreconditioner
+BiCGSTAB		NameSolver
+ILU			NamePreconditioner
 1e-10			Tolerance
 
 #OUTPUT

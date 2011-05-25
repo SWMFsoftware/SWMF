@@ -1,42 +1,42 @@
-ModReadParam::read_file: read and broadcast nLine=  31 lines of text
+ModReadParam::read_file: read and broadcast nLine=  32 lines of text
  nCarringtonRotation, nTheta0, nPhi0:  1200 180 360
  nThetaLgr =  10 nThetaSml =  10
  nPhiLgr   =  10 nPhiSml   =  10
- Partitioning in nTheta gives:  20 Actual nTheta is:  20
- Partitioning in nPhi gives:    20 Actual nPhi is:    20
+ Partitioning in nThetaAll gives:  20 Actual nThetaAll is:  20
+ Partitioning in nPhiAll gives:    20 Actual nPhiAll is:    20
  BiCGSTAB tol,iter:   1.0000000000000000E-10 10000
  initial rnrm:   5.5320808244769895
  2  matvecs,  ||rn||/||r0|| =   0.4223755553093021
- 4  matvecs,  ||rn||/||r0|| =   0.2589678333778295
+ 4  matvecs,  ||rn||/||r0|| =   0.2589678333778296
  6  matvecs,  ||rn||/||r0|| =   0.1579747848329644
- 8  matvecs,  ||rn||/||r0|| =   8.3710993521693713E-02
- 10  matvecs,  ||rn||/||r0|| =   2.9281408027389464E-02
- 12  matvecs,  ||rn||/||r0|| =   7.7580152659789707E-03
- 14  matvecs,  ||rn||/||r0|| =   3.0199717757978307E-03
- 16  matvecs,  ||rn||/||r0|| =   1.8189328171750137E-03
- 18  matvecs,  ||rn||/||r0|| =   1.0001011724872740E-03
- 20  matvecs,  ||rn||/||r0|| =   5.2440360507912157E-04
- 22  matvecs,  ||rn||/||r0|| =   2.4755326637485590E-04
- 24  matvecs,  ||rn||/||r0|| =   1.6662103666302983E-04
- 26  matvecs,  ||rn||/||r0|| =   1.1958383631934328E-04
- 28  matvecs,  ||rn||/||r0|| =   9.4060433312569220E-05
- 30  matvecs,  ||rn||/||r0|| =   6.9813200725551039E-05
- 32  matvecs,  ||rn||/||r0|| =   5.5086668039442673E-05
- 34  matvecs,  ||rn||/||r0|| =   3.9065309420657099E-05
- 36  matvecs,  ||rn||/||r0|| =   1.9328527446109058E-05
- 38  matvecs,  ||rn||/||r0|| =   5.5073245701173638E-06
- 40  matvecs,  ||rn||/||r0|| =   1.5088241317128049E-06
- 42  matvecs,  ||rn||/||r0|| =   5.9224795992379259E-07
- 44  matvecs,  ||rn||/||r0|| =   2.6926690314392966E-07
- 46  matvecs,  ||rn||/||r0|| =   1.3819323343337138E-07
- 48  matvecs,  ||rn||/||r0|| =   7.8995819006342894E-08
- 50  matvecs,  ||rn||/||r0|| =   5.1793217537634290E-08
- 52  matvecs,  ||rn||/||r0|| =   2.6257936320588969E-08
- 54  matvecs,  ||rn||/||r0|| =   2.2465212709258381E-08
- 56  matvecs,  ||rn||/||r0|| =   3.0354538205240167E-08
- 58  matvecs,  ||rn||/||r0|| =   1.2782511576965803E-09
- 60  matvecs,  ||rn||/||r0|| =   1.9765101746702307E-10
- 62  matvecs,  ||rn||/||r0|| =   5.5719341333363458E-11
- nIter, Tolerance, iError= 62   5.5719341333363458E-11 0
- max(abs(divb)) =    1.9881086776862844E-09
- nPorcTheta, nProcPhi= 2 2
+ 8  matvecs,  ||rn||/||r0|| =   8.3710993521693644E-02
+ 10  matvecs,  ||rn||/||r0|| =   2.9281408027389429E-02
+ 12  matvecs,  ||rn||/||r0|| =   7.7580152659789724E-03
+ 14  matvecs,  ||rn||/||r0|| =   3.0199717757978238E-03
+ 16  matvecs,  ||rn||/||r0|| =   1.8189328171750096E-03
+ 18  matvecs,  ||rn||/||r0|| =   1.0001011724872729E-03
+ 20  matvecs,  ||rn||/||r0|| =   5.2440360507912006E-04
+ 22  matvecs,  ||rn||/||r0|| =   2.4755326637485503E-04
+ 24  matvecs,  ||rn||/||r0|| =   1.6662103666302997E-04
+ 26  matvecs,  ||rn||/||r0|| =   1.1958383631934117E-04
+ 28  matvecs,  ||rn||/||r0|| =   9.4060433312567147E-05
+ 30  matvecs,  ||rn||/||r0|| =   6.9813200725547448E-05
+ 32  matvecs,  ||rn||/||r0|| =   5.5086668039435260E-05
+ 34  matvecs,  ||rn||/||r0|| =   3.9065309420674073E-05
+ 36  matvecs,  ||rn||/||r0|| =   1.9328527446017552E-05
+ 38  matvecs,  ||rn||/||r0|| =   5.5073245702530009E-06
+ 40  matvecs,  ||rn||/||r0|| =   1.5088241315808914E-06
+ 42  matvecs,  ||rn||/||r0|| =   5.9224796000985855E-07
+ 44  matvecs,  ||rn||/||r0|| =   2.6926690302995438E-07
+ 46  matvecs,  ||rn||/||r0|| =   1.3819323350181839E-07
+ 48  matvecs,  ||rn||/||r0|| =   7.8995818850801863E-08
+ 50  matvecs,  ||rn||/||r0|| =   5.1793217541080457E-08
+ 52  matvecs,  ||rn||/||r0|| =   2.6257934506638495E-08
+ 54  matvecs,  ||rn||/||r0|| =   2.2465210105038637E-08
+ 56  matvecs,  ||rn||/||r0|| =   3.0354538332151206E-08
+ 58  matvecs,  ||rn||/||r0|| =   1.2782508011028281E-09
+ 60  matvecs,  ||rn||/||r0|| =   1.9765102696469879E-10
+ 62  matvecs,  ||rn||/||r0|| =   5.5719357206187369E-11
+ nIter, Tolerance, iError= 62   5.5719357206187369E-11 0
+ max(abs(divb)) =    1.9881040147495810E-09
+ nProcTheta, nProcPhi= 2 2

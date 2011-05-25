@@ -1,6 +1,9 @@
 #^CFG COPYRIGHT UM
 
 include ../../../Makefile.def
+
+SEARCH_EXTRA = ${HYPRESEARCH}
+
 include ../../../Makefile.conf
 
 MY_LIB = ${LIBDIR}/libMAGNETOGRAM.a
@@ -18,10 +21,29 @@ POTENTIAL: potential_field.o ${LIBDIR}/libSHARE.a
 	${LINK.f90} -o POTENTIAL.exe potential_field.o \
 		-L${LIBDIR} -lSHARE ${Lflag1}
 
+OBJECTS_FDIPS= \
+	FDIPS_module.o \
+	FDIPS_nohypre.o \
+	FDIPS.o
 
-FDIPS: FDIPS.o ${LIBDIR}/libSHARE.a
-	${LINK.f90} -o FDIPS.exe fdips.o \
+FDIPS.o: FDIPS_hypre.o FDIPS_module.o
+
+FDIPS: ${OBJECTS_FDIPS} ${LIBDIR}/libSHARE.a
+	${LINK.f90} -o FDIPS.exe ${OBJECTS_FDIPS} \
 		-L${LIBDIR} -lSHARE ${Lflag1}
+
+OBJECTS_FDIPS_HYPRE= \
+	FDIPS_module.o \
+	FDIPS_hypre.o \
+	FDIPS.o
+
+FDIPS_HYPRE: ${OBJECTS_FDIPS_HYPRE} ${LIBDIR}/libSHARE.a
+	${LINK.f90} -o FDIPS.exe ${OBJECTS_FDIPS_HYPRE} \
+		-L${LIBDIR} -lSHARE ${Lflag1} ${HYPRELIB}
+
+HYPRE: hypre.o ${LIBDIR}/libSHARE.a ${HYPRELIB}/libHYPRE.a
+	${LINK.f90} -o HYPRE.exe hypre.o \
+		-L${LIBDIR} -lSHARE ${Lflag1} ${HYPRELIB}
 
 HARMONICS:
 	make ${EXE}
@@ -125,3 +147,28 @@ test_fdips_check:
 		fdips.out \
 		fdips_ref.out >> test_fdips.diff
 	ls -l test_fdips.diff
+
+###############################################################################
+
+test_fdips_hypre:
+	@echo "test_fdips_hypre_compile..." > test_fdips_hypre.diff
+	make FDIPS_HYPRE
+	make DIPOLE11
+	./DIPOLE11.exe
+	@echo "test_fdips_hypre_run..." >> test_fdips_hypre.diff
+	perl -i -pe 's/BiCGSTAB/GMRES/i;s/ILU/AMG/' FDIPS.in
+	mpirun -np 4 ./FDIPS.exe > fdips_hypre.log
+	./redistribute.pl fdips_field_np010202.out fdips.out
+	@echo "test_fdips_hypre_check..." >> test_fdips_hypre.diff
+	make test_fdips_hypre_check
+	perl -i -pe 's/GMRES/BiCGSTAB/i;s/AMG/ILU/' FDIPS.in
+
+test_fdips_hypre_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+		fdips_hypre.log \
+		fdips_hypre.ref > test_fdips_hypre.diff
+	gunzip -c fdips_ref.out.gz > fdips_ref.out
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-9 -a=1e-9 \
+		fdips.out \
+		fdips_ref.out >> test_fdips_hypre.diff
+	ls -l test_fdips_hypre.diff
