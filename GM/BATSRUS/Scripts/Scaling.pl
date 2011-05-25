@@ -10,6 +10,7 @@ my $CompileCode  = $compile;
 my $CreateRundir = $rundir;
 my $SubmitRun    = $submit;
 my $RadHydro     = $radhydro;
+my $BlockSize    = $b;
 my $nCores       = $n;
 
 use strict;
@@ -40,6 +41,10 @@ if($nCores){
 }
 print "Number of cores=@nCore\n" if $Verbose;
 
+# Grid size
+my $nBlock;
+my $nImplBlock;
+
 # Input files
 my $ParamFile;
 if($RadHydro){
@@ -65,6 +70,10 @@ if($CompileCode){
 
 if(not $WeakScaling){
 
+    $BlockSize=4 unless $BlockSize;
+    my $nRootX  = 320/$BlockSize;
+    my $nRootYZ = 32/$BlockSize;
+
     # Strong scaling uses a single run directory with many 
     # executables, plot directories and job scripts
     if($CreateRundir){
@@ -77,6 +86,9 @@ if(not $WeakScaling){
 	    while(<>){
 		s/^PLOTDIR/\#PLOTDIR/;  # use separate plot directories
 		s/^AMR/\#AMR/;          # switch on AMR
+		s/\#(CHECKGRIDSIZE)/$1/;# switch off CHECKGRIDSIZE
+		s/\d+(\s+nRootBlockX)/$nRootX$1/;
+		s/\d+(\s+nRootBlock[YZ])/$nRootYZ$1/;
 		print;
 	    }
 	}
@@ -91,14 +103,14 @@ if(not $WeakScaling){
     }
     if($CompileCode){
 	foreach $nCore (@nCore){
-	    my $nBlock;
 	    if($RadHydro){
-		$nBlock = int(128000/$nCore + 0.99);
-		&shell("Config.pl -g=4,4,4,$nBlock,$nBlock");
+		$nBlock     = int(8192000/$BlockSize**3/$nCore + 0.99);
+		$nImplBlock = $nBlock;
 	    }else{
-		$nBlock = int(2*196608/$nCore + 0.99);
-		&shell("Config.pl -g=4,4,4,$nBlock,1");
+		$nBlock     = int(25165824/$BlockSize**3/$nCore + 0.99);
+		$nImplBlock = 1;
 	    }
+	    &shell("Config.pl -g=$BlockSize,$BlockSize,$BlockSize,$nBlock,$nImplBlock");
 	    print "Compiling $Rundir/CRASH_$nCore.exe for nBlock=$nBlock\n";
 	    &shell("make CRASH");
 	    &shell("cp src/CRASH.exe $Rundir/CRASH_$nCore.exe");
@@ -113,12 +125,18 @@ if(not $WeakScaling){
 
 }else{
     # Weak scaling uses many run directories and a single executable
+    if($RadHydro){
+	$BlockSize  = 4 unless $BlockSize;
+	$nBlock     = 16384 / $BlockSize**3;
+	$nImplBlock = $nBlock;
+    }else{
+	$BlockSize  = 8 unless $BlockSize;
+	$nBlock     = 40960 / $BlockSize**3;
+	$nImplBlock = 1;
+    }
+
     if($CompileCode){
-	if($RadHydro){
-	    &shell("Config.pl -g=4,4,4,250,250");
-	}else{
-	    &shell("Config.pl -g=8,8,8,100,1");
-	}
+	&shell("Config.pl -g=$BlockSize,$BlockSize,$BlockSize,$nBlock,$nImplBlock");
 	&shell("make CRASH");
     }
 
@@ -129,9 +147,9 @@ if(not $WeakScaling){
 	    &shell("cp $JobScript $Rundir/job");
 	    &shell("cp src/CRASH.exe $Rundir/");
 
-	    my $res = int($nCore**(1/3)+0.5);
-	    my $nRootX   = $res*20;
-	    my $nRootYZ  = $res*2;
+	    my $res = int($nCore**(1/3)*16/$BlockSize + 0.5);
+	    my $nRootX   = $res*10;
+	    my $nRootYZ  = $res;
 	    my $rundir = "$Dir/run_n$nCore";
 
 	    if($Dryrun){
@@ -140,6 +158,7 @@ if(not $WeakScaling){
 		# Set grid size in PARAM.in
 		@ARGV = ("$Rundir/PARAM.in");
 		while(<>){
+		    s/\#(CHECKGRIDSIZE)/$1/;
 		    s/\d+(\s+nRootBlockX)/$nRootX$1/;
 		    s/\d+(\s+nRootBlock[YZ])/$nRootYZ$1/;
 		    print;
@@ -247,6 +266,7 @@ Scripts/Scaling.pl [-v] [-d] [-n=CORES] [-weak | -radhydro]
 
 -v        Switch on verbose mode.
 -d        Dry run mode (do not execute commands).
+-b=BLOCKSIZE Set grid blocks to have BLOCKSIZE*BLOCKSIZE*BLOCKSIZE cells.
 -n=CORES  Set number of cores as a comma separated list of numbers.
           Default depends on scaling type and machine.
 -weak     Do weak scaling. Default is strong scaling.
@@ -257,21 +277,21 @@ Scripts/Scaling.pl [-v] [-d] [-n=CORES] [-weak | -radhydro]
 
 Examples:
 
-Create rundirectory for strong scaling of radhydro problem:
-
-  Scripts/Scaling.pl -radhydro -rundir
-
-Compile executables for 128 and 256 cores:
+Compile executables for strong scaling radhydro on 128 and 256 cores:
 
   Scripts/Scaling.pl -n=128,256 -radhydro -compile
+
+Create rundirectory for strong scaling of radhydro problem:
+
+  Scripts/Scaling.pl -n=128,256 -radhydro -rundir
 
 Submit job for 128 cores:
 
   Scripts/Scaling.pl -n=128 -radhydro -submit
 
-Show what would be done for a full weak scaling of the 3D hydro problem:
+Full weak scaling of the pure hydro problem with 16 cubed blocks:
 
-  Scripts/Scaling.pl -d -v -weak -rundir -compile -submit
+  Scripts/Scaling.pl -b=16 -n=1,8,64,512,4096,32768 -weak -compile -rundir -submit
 
 ";
     exit;
