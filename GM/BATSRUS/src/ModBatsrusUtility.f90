@@ -1032,7 +1032,7 @@ subroutine error_report(str,value,iErrorIn,show_first)
   ! Parameters:
 
   ! Maximum number of different types of errors
-  integer, parameter :: maxerror=100
+  integer, parameter :: maxerror=20
 
   ! Arguments:
 
