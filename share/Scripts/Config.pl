@@ -463,6 +463,7 @@ sub set_mpi_{
     }
 
     if($Serial){
+	&create_makefile_rules;
 	&shell_command("cp share/include/mpif.h share/Library/src");
 	&shell_command("make NOMPI");
     }elsif(-e "share/Library/src/mpif.h"){
