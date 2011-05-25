@@ -205,6 +205,9 @@ if($NewPrecision and $NewPrecision ne $Precision){
 # Change debugging flags if required
 &set_debug_ if $NewDebug and $NewDebug ne $Debug;
 
+# Change optimization level if required
+&set_optimization_ if $NewOptimize and $NewOptimize ne $Optimize;
+
 # Link with MPI vs. NOMPI library if required
 &set_mpi_ if $NewMpi and $NewMpi ne $Mpi;
 
@@ -213,9 +216,6 @@ if($NewPrecision and $NewPrecision ne $Precision){
 
 # Link with HYPRE library is required
 &set_hypre_ if $NewHypre and $NewHypre ne $Hypre;
-
-# Change optimization level if required
-&set_optimization_ if $NewOptimize and $NewOptimize ne $Optimize;
 
 if($Show){
     &get_settings_;
@@ -441,6 +441,7 @@ sub set_mpi_{
     # $Mpi will be $NewMpi after changes
     $Mpi = $NewMpi;
 
+    &create_makefile_rules if $Mpi eq "no";
     &shell_command("make NOMPI") if $Mpi eq "no" and not $Serial;
 
     print "Selecting MPI library in $MakefileConf\n" if $Mpi eq "yes";
@@ -463,7 +464,6 @@ sub set_mpi_{
     }
 
     if($Serial){
-	&create_makefile_rules;
 	&shell_command("cp share/include/mpif.h share/Library/src");
 	&shell_command("make NOMPI");
     }elsif(-e "share/Library/src/mpif.h"){
