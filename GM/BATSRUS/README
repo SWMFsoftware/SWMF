@@ -91,7 +91,7 @@ Config.pl -install -compiler=mpxlf90,mpxlc
 
 # For machines with no MPI library, use
 
-Config.pl -instal -serial -compiler=....
+Config.pl -instal -nompi -compiler=....
 
 # This will only allow serial execution, of course.
 
