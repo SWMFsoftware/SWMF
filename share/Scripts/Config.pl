@@ -103,7 +103,8 @@ my $NewHypre;
 my $IsCompilerSet;
 my $Debug;
 my $Mpi;
-my $Serial;
+my $CompilerMpi;
+my $MpiHeaderFile = "share/Library/src/mpif.h";
 my $Optimize;
 my $ShowCompiler;
 my $ShowMpi;
@@ -132,7 +133,6 @@ foreach (@Arguments){
     if(/^-compiler$/i)        {$ShowCompiler=1;                 next};
     if(/^-mpi$/i)             {$NewMpi="yes";                   next};
     if(/^-nompi$/i)           {$NewMpi="no";                    next};
-    if(/^-serial$/i)          {$NewMpi="no"; $Serial=1;         next};
     if(/^-debug$/i)           {$NewDebug="yes";                 next};
     if(/^-nodebug$/i)         {$NewDebug="no";                  next};
     if(/^-hdf5$/i)            {$NewHdf5="yes";                  next};
@@ -217,10 +217,11 @@ if($NewPrecision and $NewPrecision ne $Precision){
 # Link with HYPRE library is required
 &set_hypre_ if $NewHypre and $NewHypre ne $Hypre;
 
-if($Show){
-    &get_settings_;
-    &show_settings_;
-}
+# Get new settings
+&get_settings_;
+
+# Show settings if required
+&show_settings_ if $Show;
 
 # Recreate Makefile.RULES with the current settings
 &create_makefile_rules;
@@ -267,8 +268,9 @@ sub get_settings_{
 	      close MAKEFILE;
 	      redo TRY;
 	  }
-	  $Compiler = $+ if /^\s*COMPILE.f90\s*=\s*(\$\{CUSTOMPATH_F\})?(\S+)/;
-	  $CompilerC = $1 if/^\s*COMPILE.c\s*=\s*(\S+)/;
+	  $Compiler = $+ if /^\s*COMPILE\.f90\s*=\s*(\$\{CUSTOMPATH_F\})?(\S+)/;
+	  $CompilerC= $1 if /^\s*COMPILE\.c\s*=\s*(\S+)/;
+	  $CompilerMpi = $1 if /^\s*LINK\.f90\s*=\s*(.*)/;
 
 	  $Precision = lc($1) if /^\s*PRECISION\s*=.*(SINGLE|DOUBLE)PREC/;
           $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
@@ -280,6 +282,9 @@ sub get_settings_{
   }
     close(MAKEFILE);
 
+    # Fix CompilerMpi definition as needed
+    $CompilerMpi =~ s/\{COMPILE.f90\}\#\s*/\{CUSTOMPATH_MPI\}/
+	unless -e $MpiHeaderFile;
 }
 
 ##############################################################################
@@ -297,7 +302,11 @@ sub show_settings_{
     if($IsComponent){
 	print "    as the $Component component.\n";
     }else{
-	print "    as a stand-alone code.\n";
+	if(-e $MpiHeaderFile){
+	    print "    as a stand-alone code for serial execution.\n";
+	}else{
+	    print "    as a stand-alone code.\n";
+	}
     }
     print "The installation is for the $OS operating system.\n";
     print "The selected F90 compiler is $Compiler.\n";
@@ -365,7 +374,6 @@ sub install_code_{
 	}else{
 	    die "$ERROR_ could not find $Makefile\n";
 	}
-	
     }
 
     # Read info from main Makefile.def
@@ -436,39 +444,45 @@ sub set_debug_{
 
 sub set_mpi_{
 
-    # Select the MPI or NOMPI library in $MakefileConf
+    if(-e $MpiHeaderFile){
+	warn "$WARNING code was installed with -nompi, cannot switch on MPI\n";
+	return;
+    }
 
     # $Mpi will be $NewMpi after changes
     $Mpi = $NewMpi;
 
-    &create_makefile_rules if $Mpi eq "no";
-    &shell_command("make NOMPI") if $Mpi eq "no" and not $Serial;
+    if($Mpi eq "no" and $Install){
+	&shell_command("cp share/include/mpif.h $MpiHeaderFile");
+    }
+
+    # Select the MPI or NOMPI library in $MakefileConf
 
     print "Selecting MPI library in $MakefileConf\n" if $Mpi eq "yes";
     print "Selecting NOMPI library in $MakefileConf\n" if $Mpi eq "no";
     if(not $DryRun){
 	@ARGV = ($MakefileConf);
 	while(<>){
+	    # Modify LINK.f90 definition
+	    if(/^\s*LINK.f90\s*=/){
+		s/\{CUSTOMPATH_MPI\}/\{COMPILE.f90\}\# \t/ if $Mpi eq "no";
+		s/\{COMPILE.f90\}\#\s*/\{CUSTOMPATH_MPI\}/ if $Mpi eq "yes";
+		$_ = 'LINK.f90 = ${COMPILE.f90}'."\n" if $Install;
+	    }
+
 	    # Comment/uncomment MPILIB definitions
 	    if(/MPILIB\s*=/){
 		s/^\s*M/\#M/ if /lNOMPI/ eq ($Mpi eq "yes");
 		s/^\#\s*M/M/ if /lNOMPI/ eq ($Mpi eq "no");
 	    }
-	    # Modify LINK.f90 definition
-	    if(/^\s*LINK.f90\s*=.*mpif90/){
-		s/\{CUSTOMPATH_MPI\}/\{COMPILE.f90\}\# \t/ if $Mpi eq "no";
-		s/\{COMPILE.f90\}\#\s*/\{CUSTOMPATH_MPI\}/ if $Mpi eq "yes";
-	    }
 	    print;
 	}
     }
 
-    if($Serial){
-	&shell_command("cp share/include/mpif.h share/Library/src");
-	&shell_command("make NOMPI");
-    }elsif(-e "share/Library/src/mpif.h"){
-	&shell_command(
-	     "rm -f share/Library/src/mpif.h share/Library/src/ModMpiOrig.o")
+    if($Mpi eq "no"){
+	# Make sure Makefile.RULES are up to date, then compile NOMPI
+	&create_makefile_rules;
+	&shell_command("make NOMPI") if $Mpi eq "no";
     }
 
     print "Remove executable and make it to link with the (NO)MPI library!\n";
@@ -604,10 +618,14 @@ sub create_makefile_rules{
 	    while($Rule = <INFILE>){
 		last unless $Rule =~ s/^\t//;
 
+		# Find source file name in the rule
 		$Rule =~ /([\w\.]+)\s*$/;
 
 		my $SrcFile = $1;
 		my $ObjectFile = $SrcFile; $ObjectFile =~ s/\.\w+$/.o/;
+
+		# Replace ${LINK.f90} with the $CompilerMpi
+		$Rule =~ s/\$\{LINK.f90\}/$CompilerMpi/;
 
 		print OUTFILE "$ObjectFile: $SrcFile\n\t$Rule\n";
 	    }
@@ -689,7 +707,7 @@ This script edits the appropriate Makefile-s, copies files and executes
 shell commands. The script can also show the current settings.
 
 Usage: Config.pl [-help] [-verbose] [-dryrun] [-show] [-compiler] 
-                 [-install[=s|=c] [-compiler=FC[,CC] [-serial]]
+                 [-install[=s|=c] [-compiler=FC[,CC] [-nompi]]
                  [-uninstall]
                  [-single|-double] [-debug|-nodebug] [-mpi|-nompi]
                  [-hdf5|-nohdf5] [-hypre|-nohypre]
@@ -721,7 +739,8 @@ Information:
 -compiler=FC,CC create Makefile.conf with a non-default F90 compiler FC
                 and non-default C compiler CC.
                 only works together with -install flag
--serial         install the code on a machine with no MPI library.
+-nompi          install the code on a machine with no MPI library
+                only works this way with -install flag
 
 Compilation:
 
@@ -762,7 +781,7 @@ Install code with the mpxlf90 Fortran compiler and mpxlc C compiler
 
 Install code with the gfortran compiler and no MPI library on the machine
 
-    Config.pl -install -compiler=gfortran -serial
+    Config.pl -install -compiler=gfortran -nompi
 
 Use the HDF5 plotting library and the HYPRE linear solver library
 
