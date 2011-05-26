@@ -48,8 +48,8 @@ subroutine calc_chemistry(iBlock)
   !   else 
   !      useimplicitchemistry = .true.
   !   endif
-  neutralsourcestotal = 0.0
-  neutrallossestotal = 0.0
+!  neutralsourcestotal = 0.0
+!  neutrallossestotal = 0.0
 
   do iLon = 1, nLons
      do iLat = 1, nLats
@@ -148,13 +148,13 @@ subroutine calc_chemistry(iBlock)
                       (NeutralSources(iNeutral) - NeutralLosses(iNeutral)) * &
                       DtSub
 
-                 NeutralSourcesTotal(iLon,iLat,iAlt,iNeutral,iBlock) = &
-                      NeutralSourcesTotal(iLon,iLat,iAlt,iNeutral,iBlock) + &
-                      NeutralSources(iNeutral) * DtSub
-
-                 NeutralLossesTotal(iLon,iLat,iAlt,iNeutral,iBlock) = &
-                      NeutralLossesTotal(iLon,iLat,iAlt,iNeutral,iBlock) + &
-                      NeutralLosses(iNeutral) * DtSub
+!                 NeutralSourcesTotal(iLon,iLat,iAlt,iNeutral,iBlock) = &
+!                      NeutralSourcesTotal(iLon,iLat,iAlt,iNeutral,iBlock) + &
+!                      NeutralSources(iNeutral) * DtSub
+!
+!                 NeutralLossesTotal(iLon,iLat,iAlt,iNeutral,iBlock) = &
+!                      NeutralLossesTotal(iLon,iLat,iAlt,iNeutral,iBlock) + &
+!                      NeutralLosses(iNeutral) * DtSub
 
 
                  if (Neutrals(iNeutral) < 0.0) then
@@ -251,13 +251,13 @@ subroutine calc_chemistry(iBlock)
                          (NeutralSources(iNeutral) - NeutralLosses(iNeutral)) * &
                          DtSub
 
-                    NeutralSourcesTotal(iLon,iLat,iAlt,iNeutral,iBlock) = &
-                         NeutralSourcesTotal(iLon,iLat,iAlt,iNeutral,iBlock) + &
-                         NeutralSources(iNeutral) * DtSub
+!                    NeutralSourcesTotal(iLon,iLat,iAlt,iNeutral,iBlock) = &
+!                         NeutralSourcesTotal(iLon,iLat,iAlt,iNeutral,iBlock) + &
+!                         NeutralSources(iNeutral) * DtSub
 
-                    NeutralLossesTotal(iLon,iLat,iAlt,iNeutral,iBlock) = &
-                         NeutralLossesTotal(iLon,iLat,iAlt,iNeutral,iBlock) + &
-                         NeutralLosses(iNeutral) * DtSub
+!                    NeutralLossesTotal(iLon,iLat,iAlt,iNeutral,iBlock) = &
+!                         NeutralLossesTotal(iLon,iLat,iAlt,iNeutral,iBlock) + &
+!                         NeutralLosses(iNeutral) * DtSub
 
 
                     if (Neutrals(iNeutral) < 0.0) then
