@@ -282,9 +282,8 @@ sub get_settings_{
   }
     close(MAKEFILE);
 
-    # Fix CompilerMpi definition as needed
-    $CompilerMpi =~ s/\{COMPILE.f90\}\#\s*/\{CUSTOMPATH_MPI\}/
-	unless -e $MpiHeaderFile;
+    # Fix CompilerMpi definition if needed
+    $CompilerMpi =~ s/\{COMPILE.f90\}\#\s*/\{CUSTOMPATH_MPI\}/;
 }
 
 ##############################################################################
@@ -454,6 +453,7 @@ sub set_mpi_{
 
     if($Mpi eq "no" and $Install){
 	&shell_command("cp share/include/mpif.h $MpiHeaderFile");
+	$CompilerMpi = '${COMPILE.f90}';
     }
 
     # Select the MPI or NOMPI library in $MakefileConf
