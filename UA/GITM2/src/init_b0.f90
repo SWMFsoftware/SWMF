@@ -19,6 +19,9 @@ subroutine init_b0
   call report("init_b0",1)
   call start_timing("init_b0")
 
+  AltMinIono=(2*RadialDistance_GB(1,1,-1,1) - &
+       RadialDistance_GB(1,1,1,1) - RBody)/1000.0
+
   do iBlock=1,nBlocks
      if (nBlocks > 1 .and. iDebugLevel > 1) write(*,*) "==> Block : ", iBlock
      do iAlt=-1,nAlts+2
@@ -418,6 +421,22 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 !!  endif
 
 end subroutine get_magfield_all
+
+subroutine dipole_to_geo(aLat, aLon, Alt, gLat, gLon)
+
+  use ModConstants, only: Pi
+
+  implicit none
+
+  real, intent(out) :: gLat, gLon
+  real, intent(in)  :: aLat, aLon, Alt
+
+  real :: LShell
+
+  LShell = (1.0 / cos(aLat*pi/180.0))**2
+  
+
+end subroutine dipole_to_geo
 
 subroutine mydipole(GeoLat, GeoLon, GeoAlt, LShell, aLat, aLon, BEast, BNorth, BVertical)
 
