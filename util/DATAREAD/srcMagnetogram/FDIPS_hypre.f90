@@ -14,6 +14,9 @@ module ModHypre
   ! This is defined in sstruct_mv/HYPRE_sstruct_mv.h
   integer, parameter:: HYPRE_SSTRUCT_VARIABLE_CELL = 0
 
+  ! We can use a single part with many boxes or many parts with local cell indexes
+  logical:: UseSinglePart = .false.
+
   integer, parameter:: nDim = 3
   integer, parameter:: nStencil = 2*nDim+1
 
@@ -23,8 +26,9 @@ module ModHypre
   integer(Int8_):: i8Grid, i8Graph, i8Stencil, i8Precond, i8Solver
   integer(Int8_):: i8A, i8B, i8X, i8ParA, i8ParB, i8ParX
 
-  integer:: nPart = 1 ! grid consists of a single part
+  integer:: nPart = 1 ! grid consists of one or more parts
   integer:: iPart = 0 ! index of the part
+  integer:: jPart = 0 ! index of the neighbor part
   integer:: nVar  = 1 ! there is only one variable per grid cell
   integer:: iVar  = 0 ! index of the variable
   integer:: iVarType_I(1) = (/ HYPRE_SSTRUCT_VARIABLE_CELL /)
@@ -64,37 +68,130 @@ contains
        iObjectType = HYPRE_PARCSR
     end if
 
+    if(UseSinglePart)then
+       ! one part all together
+       iPart = 0
+       nPart = 1
+
+       ! box = local domain with global index space
+       iLower_D = (/  1, iTheta0+1,      iPhi0+1 /)
+       iUpper_D = (/ nR, iTheta0+nTheta, iPhi0+nPhi /)
+    else
+       ! one part on each processor
+       iPart = iProc
+       nPart = nProc
+
+       ! part = local domain with local index space
+       iLower_D = (/  1, 1, 1 /)
+       iUpper_D = (/ nR, nTheta, nPhi /)
+    end if
+
     ! Create an empty 3D grid object
     call HYPRE_SStructGridCreate(iComm, nDim, nPart, i8Grid, iError)
 
-    ! Add the box = local domain
-    iLower_D = (/  1, iTheta0+1,      iPhi0+1 /)
-    iUpper_D = (/ nR, iTheta0+nTheta, iPhi0+nPhi /)
+    ! Add local box/part
     call HYPRE_SStructGridSetExtents(i8Grid, iPart, iLower_D, iUpper_D, iError)
 
-    ! Single cell centered variable
-    call HYPRE_SStructGridSetVariables(i8Grid, iPart, nVar, iVarType_I, iError)
+    ! Single cell centered variable on all parts
+    do jPart = 0, nPart - 1
+       call HYPRE_SStructGridSetVariables(i8Grid, jPart, nVar, iVarType_I, iError)
+    end do
 
-    ! Setup periodic boundaries in Phi direction
-    iLowerBc_D = (/  1,         1,    0 /)
-    iUpperBc_D = (/ nR, nThetaAll,    0 /)
-    jLowerBc_D = (/  1,         1, nPhiAll /)
-    jUpperBc_D = (/ nR, nThetaAll, nPhiAll /)
+    if(UseSinglePart)then
+       ! Setup periodic boundaries in Phi direction
+       iLowerBc_D = (/  1,         1,    0 /)
+       iUpperBc_D = (/ nR, nThetaAll,    0 /)
+       jLowerBc_D = (/  1,         1, nPhiAll /)
+       jUpperBc_D = (/ nR, nThetaAll, nPhiAll /)
 
-    call HYPRE_SStructGridSetNeighborPart( i8Grid, &
-         iPart, iLowerBc_D, iUpperBc_D, &
-         iPart, jLowerBc_D, jUpperBc_D, &
-         iIndexMap_D, iIndexDir_D, iError)
+       call HYPRE_SStructGridSetNeighborPart( i8Grid, &
+            iPart, iLowerBc_D, iUpperBc_D, &
+            iPart, jLowerBc_D, jUpperBc_D, &
+            iIndexMap_D, iIndexDir_D, iError)
 
-    iLowerBc_D = (/  1,         1, nPhiAll+1 /)
-    iUpperBc_D = (/ nR, nThetaAll, nPhiAll+1 /)
-    jLowerBc_D = (/  1,         1,         1 /)
-    jUpperBc_D = (/ nR, nThetaAll,         1 /)
+       iLowerBc_D = (/  1,         1, nPhiAll+1 /)
+       iUpperBc_D = (/ nR, nThetaAll, nPhiAll+1 /)
+       jLowerBc_D = (/  1,         1,         1 /)
+       jUpperBc_D = (/ nR, nThetaAll,         1 /)
 
-    call HYPRE_SStructGridSetNeighborPart( i8Grid, &
-         iPart, iLowerBc_D, iUpperBc_D, &
-         iPart, jLowerBc_D, jUpperBc_D, &
-         iIndexMap_D, iIndexDir_D, iError)
+       call HYPRE_SStructGridSetNeighborPart( i8Grid, &
+            iPart, iLowerBc_D, iUpperBc_D, &
+            iPart, jLowerBc_D, jUpperBc_D, &
+            iIndexMap_D, iIndexDir_D, iError)
+    else
+
+       ! Setup connection between parts
+
+       ! Left neighbor
+       iPart = iProc
+       if(iProcPhi > 0)then
+          jPart = iProc - 1
+       else
+          jPart = iProc + nProcPhi - 1
+       end if
+       if(DoTestMe) write(*,*)'Left   iPart, jPart=',iPart, jPart
+
+       iLowerBc_D = (/  1,      1,    0 /)
+       iUpperBc_D = (/ nR, nTheta,    0 /)
+       jLowerBc_D = (/  1,      1, nPhi /)
+       jUpperBc_D = (/ nR, nTheta, nPhi /)
+
+       call HYPRE_SStructGridSetNeighborPart( i8Grid, &
+            iPart, iLowerBc_D, iUpperBc_D, &
+            jPart, jLowerBc_D, jUpperBc_D, &
+            iIndexMap_D, iIndexDir_D, iError)
+
+       ! Right neighbor
+       if(iProcPhi < nProcPhi - 1)then
+          jPart = iProc + 1
+       else
+          jPart = iProc - (nProcPhi - 1)
+       end if
+       if(DoTestMe) write(*,*)'Right  iPart, jPart=', iPart, jPart
+
+       iLowerBc_D = (/  1,      1, nPhi+1 /)
+       iUpperBc_D = (/ nR, nTheta, nPhi+1 /)
+       jLowerBc_D = (/  1,      1,      1 /)
+       jUpperBc_D = (/ nR, nTheta,      1 /)
+
+       call HYPRE_SStructGridSetNeighborPart( i8Grid, &
+            iPart, iLowerBc_D, iUpperBc_D, &
+            jPart, jLowerBc_D, jUpperBc_D, &
+            iIndexMap_D, iIndexDir_D, iError)
+
+       ! Bottom neighbor
+       if(iProc >= nProcPhi)then
+          jPart = iProc - nProcPhi
+          if(DoTestMe) write(*,*)'Bottom iPart, jPart=', iPart, jPart
+
+          iLowerBc_D = (/  1,      0,    1 /)
+          iUpperBc_D = (/ nR,      0, nPhi /)
+          jLowerBc_D = (/  1, nTheta,    1 /)
+          jUpperBc_D = (/ nR, nTheta, nPhi /)
+
+          call HYPRE_SStructGridSetNeighborPart( i8Grid, &
+               iPart, iLowerBc_D, iUpperBc_D, &
+               jPart, jLowerBc_D, jUpperBc_D, &
+               iIndexMap_D, iIndexDir_D, iError)
+       end if
+
+       ! Top neighbor
+       if(iProc < nProc - nProcPhi)then
+          jPart = iProc + nProcPhi
+          if(DoTestMe) write(*,*)'Top    iPart, jPart=', iPart, jPart
+
+          iLowerBc_D = (/  1, nTheta+1,    1 /)
+          iUpperBc_D = (/ nR, nTheta+1, nPhi /)
+          jLowerBc_D = (/  1,        1,    1 /)
+          jUpperBc_D = (/ nR,        1, nPhi /)
+
+          call HYPRE_SStructGridSetNeighborPart( i8Grid, &
+               iPart, iLowerBc_D, iUpperBc_D, &
+               jPart, jLowerBc_D, jUpperBc_D, &
+               iIndexMap_D, iIndexDir_D, iError)
+       end if
+
+    end if
 
     ! Assemble grid from all processors
     call HYPRE_SStructGridAssemble(i8Grid, iError)
@@ -121,13 +218,14 @@ contains
     call HYPRE_SStructGraphCreate(iComm, i8Grid, i8Graph, iError)
 
     ! Tell the graph which stencil to use for each variable on each part 
-    call HYPRE_SStructGraphSetStencil(i8Graph, iPart, iVar, i8Stencil, iError)
+    do jPart = 0, nPart - 1
+       call HYPRE_SStructGraphSetStencil(i8Graph, jPart, iVar, i8Stencil, iError)
+    end do
 
-    ! Since there is only a single part, there is nothing to do, only assemble
+    ! Assemble the graph
     call HYPRE_SStructGraphAssemble(i8Graph, iError)
 
     if(DoTestMe)write(*,*) NameSub,' HYPRE_SStructGraphAssemble done'
-
 
     ! Create an empty matrix object
     call HYPRE_SStructMatrixCreate(iComm, i8Graph, i8A, iError)
