@@ -30,6 +30,9 @@ integer function bad_outputtype()
      if (OutputType(iOutputType) == '1DGLO')     IsFound = .true.
      if (OutputType(iOutputType) == '1DTHM')     IsFound = .true.
      if (OutputType(iOutputType) == '1DNEW')     IsFound = .true.
+     if (OutputType(iOutputType) == '1DCHM')     IsFound = .true.
+     if (OutputType(iOutputType) == '1DCMS')     IsFound = .true.
+     if (OutputType(iOutputType) == '1DUSR')     IsFound = .true.
 
      if (.not. IsFound) then
         bad_outputtype = iOutputType
@@ -57,7 +60,7 @@ subroutine output(dir, iBlock, iOutputType)
   use ModTime
   use ModInputs
   use ModSources
-  use ModUserGITM, only: nVarsUser2d, nVarsUser3d
+  use ModUserGITM, only: nVarsUser2d, nVarsUser3d, nVarsUser1d
 
   implicit none
 
@@ -66,10 +69,10 @@ subroutine output(dir, iBlock, iOutputType)
   integer, intent(in) :: iOutputType
 
   character (len=5) :: proc_str,cBlock, cType
-  character (len=14) :: cTime
+  character (len=14) :: cTime='', cTimeSave=''
   integer :: iiLat, iiLon, nGCs
   integer :: iLon,iLat,iAlt, nVars_to_Write, nlines, iBLK,iSpecies
-  logical :: done
+  logical :: done, IsFirstTime = .true., IsThere
 
   real :: LatFind, LonFind
   real :: rLon, rLat
@@ -159,21 +162,49 @@ subroutine output(dir, iBlock, iOutputType)
   call i2s(iTimeArray(5), cMinute, 2)
   call i2s(iTimeArray(6), cSecond, 2)
 
-  cTime = "t"//cYear//cMonth//cDay//"_"//cHour//cMinute//"00"
+  !-----------
+  ! New feature - we want to be able to write to the same file over and
+  ! over and over again, so we don't get 100,000,000 satellite files.
+  ! So, here we are going to name the file the first time, then open
+  ! that same file over and over again with an append.
+  !-----------
+
+  if (IsFirstTime .or. .not. DoAppendFiles .or. iOutputType /= -1) then
+     cTime = "t"//cYear//cMonth//cDay//"_"//cHour//cMinute//cSecond
+     if (IsFirstTime) cTimeSave = cTime
+  else
+     cTime = cTimeSave
+  endif
 
   !! ---------------------------------------------
   !! Write the binary data files
   !! ---------------------------------------------
 
   if (iOutputType == -1) then
-     open(unit=iOutputUnit_, form="unformatted", &
-          file=dir//"/"//CurrentSatelliteName//"_"//cTime//".sat",&
-          status="unknown")
+     inquire(file=dir//"/"//CurrentSatelliteName//"_"//cTime//".sat", &
+          EXIST=IsThere)
+     if (.not. DoAppendFiles .or. tSimulation < 0.1 .or. .not. IsThere) then
+        open(unit=iOutputUnit_, form="unformatted", &
+             file=dir//"/"//CurrentSatelliteName//"_"//cTime//".sat",&
+             status="unknown")
+     else
+        open(unit=iOutputUnit_, form="unformatted", &
+             file=dir//"/"//CurrentSatelliteName//"_"//cTime//".sat",&
+             status="unknown",position='append')
+     endif
   else
      if (cType /= '2DMEL' .or. iBLK == 1) then
-        open(unit=iOutputUnit_, form="unformatted", &
-             file=dir//"/"//cType//"_"//cTime//"."//cBlock,&
-             status="unknown")
+        inquire(file=dir//"/"//cType//"_"//cTime//"."//cBlock,&
+             EXIST=IsThere)
+        if (.not. DoAppendFiles .or. tSimulation < 0.1 .or. .not. IsThere) then
+           open(unit=iOutputUnit_, form="unformatted", &
+                file=dir//"/"//cType//"_"//cTime//"."//cBlock,&
+                status="unknown")
+        else
+           open(unit=iOutputUnit_, form="unformatted", &
+                file=dir//"/"//cType//"_"//cTime//"."//cBlock,&
+                status="unknown",position='append')
+        endif
      endif
   endif
 
@@ -265,13 +296,29 @@ subroutine output(dir, iBlock, iOutputType)
   if ((iProc == 0 .and. iBlock == nBlocks) .or. iOutputType == -1) then 
 
      if (iOutputType == -1) then
-        open(unit=iOutputUnit_, &
-             file=dir//"/"//CurrentSatelliteName//"_"//cTime//".header",&
-             status="unknown")
+        inquire(file=dir//"/"//CurrentSatelliteName//"_"//cTime//".header", &
+             EXIST=IsThere)
+        if (.not. DoAppendFiles .or. tSimulation < 0.1 .or. .not. IsThere) then
+           open(unit=iOutputUnit_, &
+                file=dir//"/"//CurrentSatelliteName//"_"//cTime//".header",&
+                status="unknown")
+        else
+           open(unit=iOutputUnit_, &
+                file=dir//"/"//CurrentSatelliteName//"_"//cTime//".header",&
+                status="unknown",position='append')
+        endif
      else
-        open(unit=iOutputUnit_, &
-             file=dir//"/"//cType//"_"//cTime//".header",&
-             status="unknown")
+        inquire(file=dir//"/"//cType//"_"//cTime//".header",&
+             EXIST=IsThere)
+        if (.not. DoAppendFiles .or. tSimulation < 0.1 .or. .not. IsThere) then
+           open(unit=iOutputUnit_, &
+                file=dir//"/"//cType//"_"//cTime//".header",&
+                status="unknown")
+        else
+           open(unit=iOutputUnit_, &
+                file=dir//"/"//cType//"_"//cTime//".header",&
+                status="unknown",position='append')
+        endif
      endif
 
      call write_head_blocks
@@ -289,6 +336,8 @@ subroutine output(dir, iBlock, iOutputType)
      close(unit=iOutputUnit_)
 
   endif
+
+  IsFirstTime = .false.
 
 contains
 

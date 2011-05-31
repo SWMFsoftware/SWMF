@@ -64,6 +64,8 @@ module ModInputs
   real :: PlotTimeChangeDt(nMaxOutputTypes)
   real(Real8_) :: PlotTimeChangeStart, PlotTimeChangeEnd
 
+  logical :: DoAppendFiles = .false.
+
   real :: DtRestart   = 60.0*60.0
   real :: DtReport    =  1.0*60.0
   real :: DtAurora    = 60.0*1.0

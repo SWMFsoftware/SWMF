@@ -121,9 +121,13 @@ subroutine set_inputs
                  IsDone = .true.
               else
                  call time_int_to_real(iTimeEnd, EndTime)
+                 PauseTime = EndTime + 1.0
               endif
 
            endif
+
+        case ("#PAUSETIME")
+           call read_in_time(PauseTime, iError)
 
         case ("#ISTEP")
            call read_in_int(iStep, iError)
@@ -703,6 +707,24 @@ subroutine set_inputs
            do iOutputTypes=1,nOutputTypes
               call read_in_real(PlotTimeChangeDt(iOutputTypes), iError)
            enddo
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #PLOTTIMECHANGE:'
+              write(*,*) '#PLOTTIMECHANGE'
+              write(*,*) 'yyyy mm dd hh mm ss ms (start)'
+              write(*,*) 'yyyy mm dd hh mm ss ms (end)'
+              do iOutputTypes=1,nOutputTypes
+                 write(*,*) 'dt (real)'
+              enddo
+              IsDone = .true.
+           endif
+
+        case ("#APPENDFILES")
+           call read_in_logical(DoAppendFiles, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #APPENDFILES:'
+              write(*,*) '#APPENDFILES'
+              write(*,*) 'DoAppendFiles    (logical)'
+           endif
 
         case ("#SAVEPLOTS", "#SAVEPLOT")
            call read_in_real(DtRestart, iError)
