@@ -139,14 +139,14 @@ test_fdips:
 	make test_fdips_check
 
 test_fdips_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+	-${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 		fdips.log \
-		fdips.ref > test_fdips.diff
+		fdips.ref > test_fdips_log.diff
 	gunzip -c fdips_ref.out.gz > fdips_ref.out
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-9 -a=1e-9 \
+	-${SCRIPTDIR}/DiffNum.pl -t -r=1e-9 -a=1e-9 \
 		fdips.out \
-		fdips_ref.out >> test_fdips.diff
-	ls -l test_fdips.diff
+		fdips_ref.out > test_fdips.diff
+	ls -l test_fdips_log.diff test_fdips.diff
 
 ###############################################################################
 
@@ -164,11 +164,11 @@ test_fdips_hypre:
 	perl -i -pe 's/GMRES/BiCGSTAB/i;s/AMG/ILU/' FDIPS.in
 
 test_fdips_hypre_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+	-${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 		fdips_hypre.log \
-		fdips_hypre.ref > test_fdips_hypre.diff
+		fdips_hypre.ref > test_fdips_hypre_log.diff
 	gunzip -c fdips_ref.out.gz > fdips_ref.out
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-9 -a=1e-9 \
+	-${SCRIPTDIR}/DiffNum.pl -t -r=1e-9 -a=1e-9 \
 		fdips.out \
-		fdips_ref.out >> test_fdips_hypre.diff
-	ls -l test_fdips_hypre.diff
+		fdips_ref.out > test_fdips_hypre.diff
+	ls -l test_fdips_hypre_log.diff test_fdips_hypre.diff
