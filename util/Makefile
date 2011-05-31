@@ -9,6 +9,7 @@ INSTALLFILE = \
 
 install:
 	touch ${INSTALLFILE}
+	@(if [ -d HYPRE ]; then cd HYPRE;  make install; fi);
 
 clean:
 	touch ${INSTALLFILE}
@@ -43,6 +44,7 @@ distclean:
 	cd CRASH/src;                 make distclean
 	cd CRASH/doc/Tex;             make distclean
 	cd HDF5/src;                  make distclean	
+	@(if [ -d HYPRE ]; then cd HYPRE;  make distclean; fi);
 	rm -f *~
 	rm -f ${INSTALLFILE}
 
