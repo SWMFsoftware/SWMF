@@ -6,6 +6,8 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   !call stop_mpi('RCM is OFF') !^CFG UNCOMMENT IF NOT RCM
   !^CFG IF RCM BEGIN
   use CON_coupler
+  use CON_world,      ONLY: get_comp_info
+  use CON_comp_param, ONLY: lNameVersion
   use ModImPressure                              ! Storage for IM pressure
   use ModNumConst
   use ModMain, ONLY : n_step,time_simulation, DoMultiFluidIMCoupling
@@ -18,6 +20,7 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   integer, intent(in) :: iSizeIn,jSizeIn,nVar
   real, intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVar)
   character(len=*), intent(in) :: NameVar
+  character(len=lNameVersion) :: NameVersionIm
   integer :: nCells_D(2), iError, i,j
   integer, parameter :: pres_=1, dens_=2, Hpres_=3,Opres_=4,Hdens_=5,Odens_=6
   logical :: DoTest, DoTestMe
@@ -45,7 +48,14 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      ! Allocate RCM_lat, RCM_lon, RCM_p, RCM_dens
      call im_pressure_init(iSizeIn, jSizeIn)
      ! Convert colat, lon to lat-lon in degrees and store
-     RCM_lat = (cHalfPi - Grid_C(IM_) % Coord1_I) * cRadToDeg
+     call get_comp_info(IM_, NameVersion=NameVersionIm)
+     if(NameVersionIm(1:3) .eq. 'RAM')then
+        do i=1, iSizeIn
+           RCM_lat(i) = (iSizeIn-i)*(35.0/iSizeIn)+45.0
+        end do
+     else
+        RCM_lat = (cHalfPi - Grid_C(IM_) % Coord1_I) * cRadToDeg
+     end if
      RCM_lon = Grid_C(IM_)% Coord2_I              * cRadToDeg
   end if
 
