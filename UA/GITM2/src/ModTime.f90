@@ -9,6 +9,7 @@ module ModTime
   real                  :: tSimulation = 0.0
   integer, dimension(7) :: iTimeArray
   real(Real8_)          :: CurrentTime, EndTime, StartTime, VernalTime
+  real(Real8_)          :: PauseTime
   real                  :: utime
   integer               :: iJulianDay, iDay
   integer               :: iStep = 1
