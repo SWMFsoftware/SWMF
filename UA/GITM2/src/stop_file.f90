@@ -38,6 +38,8 @@ subroutine check_stop
   call MPI_AllREDUCE(EndTimeLocal, EndTime,  &
        1, MPI_DOUBLE_PRECISION, MPI_MIN, iCommGITM, iError)
 
+  call check_start
+
 end subroutine check_stop
 
 !\
@@ -75,3 +77,53 @@ subroutine delete_stop
   endif
 
 end subroutine delete_stop
+
+!\
+! -------------------------------------------------------------------
+! -------------------------------------------------------------------
+!/
+
+subroutine check_start
+
+  use ModGITM
+  use ModTime
+  use ModInputs, only: CPUTimeMax, iOutputUnit_
+  use ModMpi
+  implicit none
+
+  real*8  :: EndTimeLocal
+  logical :: IsThere
+  integer :: iError
+
+  if ((CurrentTime-dt) < PauseTime .and. CurrentTime > PauseTime) then
+
+     write(*,*) "Pausing"
+
+     IsThere = .false.
+
+     do while (.not.IsThere) 
+
+        inquire(file="GITM.START",EXIST=IsThere)
+        if (IsThere .and. iProc == 0) then
+           if (iProc == 0) then
+              write(*,*) "GITM.START file found. Continuing."
+              open(iOutputUnit_, file = 'GITM.START', status = 'OLD')
+              close(iOutputUnit_, status = 'DELETE')
+           endif
+        endif
+
+        if (.not. IsThere) call sleep(2)
+
+        call MPI_BARRIER(iCommGITM,iError)
+
+     enddo
+
+     ! Here is where to open and read the file that will set the new pause time
+     ! and update the state of GITM.
+
+     PauseTime = PauseTime + 300.0  ! delete this when you read the new file....
+
+  endif
+
+end subroutine check_start
+
