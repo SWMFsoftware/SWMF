@@ -4,20 +4,6 @@ ModReadParam::read_file: read and broadcast nLine=  32 lines of text
  nPhiLgr   =  10 nPhiSml   =  10
  Partitioning in nThetaAll gives:  20 Actual nThetaAll is:  20
  Partitioning in nPhiAll gives:    20 Actual nPhiAll is:    20
- hypre_initialize starting
- hypre_initialize HYPRE_SStructGridAssemble done
- hypre_initialize HYPRE_SStructGraphAssemble done
- hypre_initialize HYPRE_SStructMatrixInitialize done
- hypre_initialize HYPRE_SStructMatrixAssemble done
- hypre_initialize finished
- hypre_solver starting n, maxval, minval(Rhs_C)= 2000  61.5759033755131071 -58.5621629280770506  18.1662588524557869
- hypre_solver set RHS
- hypre_solver set X=0
- hypre_solver HYPRE_SStructVectorAssemble done
- hypre_solver passed vectors to solver
- hypre_solver HYPRE_ParCSRGMRESSetMaxIter done
- hypre_solver HYPRE_ParCSRGMRESSetPrecond done
- hypre_solver HYPRE_ParCSRGMRESSetup done
 L2 norm of b: 7.114301e+02
 Initial L2 norm of residual: 7.114301e+02
 =============================================
@@ -172,9 +158,6 @@ Final L2 norm of residual: 2.442648e-08
 
 
 
- hypre_solver HYPRE_ParCSRGMRESSolve done
- hypre_solver HYPRE_SStructVectorGetBoxValues done
- hypre_solver finished
  nIter, Tolerance, iError= 10000   1.0000000000000000E-10 0
  max(abs(divb)) =    6.9107297662185374E-09
  nProcTheta, nProcPhi= 2 2

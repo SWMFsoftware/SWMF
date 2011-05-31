@@ -42,7 +42,7 @@ module ModPotentialField
   logical :: UseTiming = .true.
   real    :: TimeStart, TimeEnd
 
-  logical :: DoTestMe  = .true.
+  logical :: DoTestMe  = .false.
   integer :: iRTest = 1, iPhiTest = 1, iThetaTest = 2
 
   ! local variables --------------------
@@ -93,7 +93,7 @@ contains
 
     character(len=lStringLine) :: NameCommand
     character(len=10):: TypeOutput
-    integer:: i
+    integer:: i, iProcTest
 
     character(len=*), parameter:: NameSub = 'read_fdips_param'
     !-----------------------------------------------------------------------
@@ -125,7 +125,8 @@ contains
        case("#TIMING")
           call read_var('UseTiming', UseTiming)
        case("#TEST")
-          call read_var('DoTestMe', DoTestMe)
+          call read_var('iProcTest', iProcTest)
+          DoTestMe = iProc == iProcTest
        case("#TESTIJK")
           call read_var('iRTest'    , iRTest)
           call read_var('iPhiTest'  , iPhiTest)
@@ -178,9 +179,6 @@ contains
 
     ! Do timing on proc 0 only, if at all
     if(iProc > 0) UseTiming = .false.
-
-    ! Test on proc 0 only, if at all
-    if(iProc > 0) DoTestMe = .false.
 
   end subroutine read_fdips_param
   !===========================================================================
@@ -300,7 +298,7 @@ contains
     !--------------------------------------------------------------------------
 
     ! The processor coordinate
-    iProcTheta = floor(real(iProc)/nProcPhi)
+    iProcTheta = iProc/nProcPhi
     iProcPhi   = iProc - iProcTheta*nProcPhi
 
     ! Calculate the nTheta, nPhi. To distribute as even as possible,
@@ -312,9 +310,9 @@ contains
 
     ! Calculate the number of processors which has large/small 
     ! local number of Theta/Phi.
-    nProcThetaLgr = mod(nThetaAll,nProcTheta)
+    nProcThetaLgr = mod(nThetaAll, nProcTheta)
     nProcThetaSml = nProcTheta - nProcThetaLgr
-    nProcPhiLgr = mod(nPhiAll,nProcPhi)
+    nProcPhiLgr = mod(nPhiAll, nProcPhi)
     nProcPhiSml = nProcPhi - nProcPhiLgr
 
     ! Test if the partitioning works
