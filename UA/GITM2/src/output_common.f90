@@ -81,7 +81,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   !! construct naming strings
 
-    if (iOutputType == -1) then
+  if (iOutputType == -1) then
      cType = "1DALL"
   else
      cType = OutputType(iOutputType)
@@ -169,7 +169,9 @@ subroutine output(dir, iBlock, iOutputType)
   ! that same file over and over again with an append.
   !-----------
 
-  if (IsFirstTime .or. .not. DoAppendFiles .or. iOutputType /= -1) then
+  if ( IsFirstTime         .or. &
+       .not. DoAppendFiles .or. &
+       (iOutputType /= -1 .and. .not. Is1D)) then
      cTime = "t"//cYear//cMonth//cDay//"_"//cHour//cMinute//cSecond
      if (IsFirstTime) cTimeSave = cTime
   else
@@ -332,6 +334,10 @@ subroutine output(dir, iBlock, iOutputType)
      else
         call output_header
      endif
+
+     write(iOutputUnit_,*) ""
+     write(iOutputUnit_,*) "END"
+     write(iOutputUnit_,*) ""
 
      close(unit=iOutputUnit_)
 
