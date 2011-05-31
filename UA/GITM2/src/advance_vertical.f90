@@ -61,6 +61,11 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      VertVel(:,iSpecies) = VerticalVelocity(iLon,iLat,:,iSpecies,iBlock)
   enddo
 
+  do iSpecies = nSpecies+1, nSpeciesTotal
+     LogNS1(:,iSpecies)  = log(NDensityS(iLon,iLat,:,iSpecies,iBlock))
+     VertVel(:,iSpecies) = Velocity(iLon,iLat,:,iUp_,iBlock)
+  enddo
+
   cMax1   = cMax_GDB(iLon,iLat,:,iUp_,iBlock)
 
   do iDim = 1, 3 
@@ -111,6 +116,10 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      VerticalVelocity(iLon,iLat,:,iSpecies,iBlock) = VertVel(:,iSpecies)
   enddo
 
+  do iSpecies = nSpecies+1, nSpeciesTotal 
+     LogNS(iLon,iLat,:,iSpecies,iBlock)              = LogNS1(:,iSpecies)
+  enddo
+
   if (minval(Temp) < 0.0) then
      write(*,*) "Temperature is negative!!!"
      do iAlt = -1,nAlts+2
@@ -137,7 +146,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      call stop_gitm("Can't continue")
   endif
 
-  do iSpecies = 1, nSpecies 
+  do iSpecies = 1, nSpeciesTotal
      nDensityS(iLon,iLat,:,iSpecies,iBlock) = exp(LogNS1(:,iSpecies))
   enddo
 

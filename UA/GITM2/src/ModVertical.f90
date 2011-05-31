@@ -5,7 +5,7 @@
 module ModVertical
 
   use ModSizeGitm, only: nAlts
-  use ModPlanet, only: nSpecies, nIonsAdvect
+  use ModPlanet, only: nSpecies, nIonsAdvect, nSpeciesTotal
 
   implicit none
 
@@ -17,14 +17,14 @@ module ModVertical
 
   real, dimension(-1:nAlts+2)             :: NewLogRho, NewTemp
   real, dimension(-1:nAlts+2,3)           :: NewVel_GD
-  real, dimension(-1:nAlts+2,nSpecies)    :: NewLogNS, NewVertVel
+  real, dimension(-1:nAlts+2,nSpeciesTotal) :: NewLogNS, NewVertVel
   real, dimension(-1:nAlts+2,nIonsAdvect) :: NewLogINS
   real, dimension(-1:nAlts+2,nIonsAdvect) :: LogINS
 
   real, dimension(-1:nAlts+2) :: EddyCoef_1d
   real, dimension(1:nAlts) :: ViscCoef_1d
 
-  real, dimension(-1:nAlts+2, nSpecies) :: LogNS, VertVel
+  real, dimension(-1:nAlts+2, nSpeciesTotal) :: LogNS, VertVel
   real, dimension(nAlts, nSpecies) :: NDensityS_1D
 
   real, dimension(0:nAlts+1) :: cMax
