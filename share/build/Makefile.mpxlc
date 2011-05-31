@@ -1,7 +1,8 @@
 
 # C language related part of Makefile.conf
 
-COMPILE.c = mpxlc
+COMPILE.c     = mpxlc
+COMPILE.mpicc = mpxlc
 
 DEBUGC = 
 #DEBUGC = -g
