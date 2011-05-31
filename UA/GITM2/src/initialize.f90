@@ -9,12 +9,13 @@ subroutine initialize_gitm(TimeIn)
   use ModSphereInterface
   use ModTime
   use ModEUV
+  use ModIndicesInterfaces
   implicit none
 
   type (UAM_ITER) :: r_iter
 
   real(Real8_), intent(in) :: TimeIn
-  integer :: iLat, iAlt, iBlock, iSpecies, iLon
+  integer :: iLat, iAlt, iBlock, iSpecies, iLon, iError
 
   real :: TempAve
   real :: TempDiff
@@ -54,6 +55,9 @@ subroutine initialize_gitm(TimeIn)
      call time_real_to_int(CurrentTime, iTimeArray)
      call fix_vernal_time
   endif
+
+  call get_f107(CurrentTime, f107, iError)
+  call get_f107a(CurrentTime, f107a, iError)
 
   call init_grid
 
