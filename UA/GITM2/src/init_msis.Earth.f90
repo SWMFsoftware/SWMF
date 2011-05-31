@@ -34,6 +34,7 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   iError = 0
   
   call get_f107(CurrentTime, f107, iError)
+
   if (iError /= 0) then
      write(*,*) "Error in getting F107 value.  Is this set?"
      write(*,*) "Code : ",iError
@@ -191,6 +192,8 @@ subroutine init_msis
               NDensityS(iLon,iLat,iAlt,iAr_,iBlock)         = msis_dens(5)
               NDensityS(iLon,iLat,iAlt,iHe_,iBlock)         = msis_dens(7)
               NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)       = msis_dens(8)
+              NDensityS(iLon,iLat,iAlt,iN_2P_,iBlock)       = &
+                   NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)/100.0
               NDensityS(iLon,iLat,iAlt,iN_2D_,iBlock)       = &
                    NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)/100.0
               NDensityS(iLon,iLat,iAlt,iO_1D_,iBlock)       = &
