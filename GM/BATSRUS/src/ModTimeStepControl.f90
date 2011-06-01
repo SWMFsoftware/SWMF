@@ -119,7 +119,7 @@ contains
           VarRatio_I = State_VGB(iVarControl_I,i,j,k,iBlock) &
                /    StateOld_VCB(iVarControl_I,i,j,k,iBlock)
           RelativeChangeMin = min(RelativeChangeMin, minval(VarRatio_I))
-          RelativeChangeMax = max(RelativeChangeMin, maxval(VarRatio_I))
+          RelativeChangeMax = max(RelativeChangeMax, maxval(VarRatio_I))
        end do; end do; end do
     end do
 
@@ -150,13 +150,17 @@ contains
        end do
        ! Reduce next time step
        Factor = RejectStepFactor
+       
+       !if (RelativeChangeMax > 100.0) then
+       !   Factor = 0.1
+       !endif
 
     elseif(   RelativeChangeMin < ReduceStepLevel1 &
          .or. RelativeChangeMax > ReduceStepLevel2 )then
        ! Reduce next time step if pressure is reduced below ReduceStepLevel
        Factor = ReduceStepFactor
 
-    elseif(RelativeChangeMin    > IncreaseStepLevel1  &
+    elseif(RelativeChangeMin    < IncreaseStepLevel1  &
          .or. RelativeChangeMax > IncreaseStepLevel2 )then
        ! Increase next time step if change remained above IncreaseStepLevel
        ! and the last step was taken with DtFixed. Do not exceed DtFixedOrig
