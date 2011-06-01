@@ -470,7 +470,7 @@ contains
     use ModMain,        ONLY: UseLaserHeating
     use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_, &
-         UnitTemperature_, UnitN_, PeMin, ExtraEintMin
+         UnitTemperature_, UnitN_, UnitX_, PeMin, ExtraEintMin
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes,  ONLY: Rho_, RhoUx_, RhoUz_, p_, ExtraEint_, &
          Pe_, Erad_, WaveFirst_, WaveLast_
@@ -752,7 +752,6 @@ contains
       use ModVarIndexes,  ONLY: RhoUy_
       use ModGeometry,    ONLY: xMin=>x1, x2, y1, y2
 
-      real    :: BeLevInit = 30.
       real    :: XeLevInit = -92.5
       real    :: PlLevInit = -92.5
       real    :: xPl = 0.0                        ! [um]
@@ -772,13 +771,11 @@ contains
 
       ! Set boundaries for different materials
 
-      xBe = 30.0 * 1.0e-6 * Si2No_V(UnitRho_) 
+      xBe = 20.0 * 1.0e-6 * Si2No_V(UnitX_) 
       yPl = rInnerTube
-      xAu = 100. * 1.0e-6 * Si2No_V(UnitRho_)
-      xAy1 = 300. * 1.0e-6 * Si2No_V(UnitRho_)
-      xAy2 = 900. * 1.0e-6 * Si2No_V(UnitRho_)
-
-
+      xAu = 100. * 1.0e-6 * Si2No_V(UnitX_)
+      xAy1 = 300. * 1.0e-6 * Si2No_V(UnitX_)
+      xAy2 = 900. * 1.0e-6 * Si2No_V(UnitX_)
 
       ! Initialize level sets throughout the domain.
       if ((x >= xmin).and.(x < 0.).and.(y < rInnerTube)) then
@@ -793,9 +790,7 @@ contains
          State_VGB(LevelAu_,i,j,k,iBlock) = -sqrt(DistanceBe**2 + DistancePl**2)
          State_VGB(LevelAy_,i,j,k,iBlock) = -sqrt((xAu-x)**2 + DistancePl**2)
 
-
          State_VGB(Rho_,i,j,k,iBlock) = 6.5e-3 * Si2No_V(UnitRho_)
-
 
       elseif ((x >= 0.).and.(x < xBe).and.(y < rInnerTube)) then
          ! Set material as Be.
