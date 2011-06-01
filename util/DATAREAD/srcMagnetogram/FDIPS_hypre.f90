@@ -1,6 +1,7 @@
 module ModHypre
 
   use ModPotentialField
+  use ModKind, ONLY: Int8_
 
   implicit none
 
@@ -9,9 +10,10 @@ module ModHypre
   public:: hypre_solver
   public:: hypre_preconditioner
 
-  include "HYPREf.h"
+  ! These are defined in HYPREf.h (Fortran header file)
+  integer, parameter:: HYPRE_STRUCT = 1111, HYPRE_PARCSR = 5555
 
-  ! This is defined in sstruct_mv/HYPRE_sstruct_mv.h
+  ! This is defined in HYPRE_sstruct_mv.h (a C header file)
   integer, parameter:: HYPRE_SSTRUCT_VARIABLE_CELL = 0
 
   ! We can use a single part with many boxes or many parts with local cell indexes
@@ -19,8 +21,6 @@ module ModHypre
 
   integer, parameter:: nDim = 3
   integer, parameter:: nStencil = 2*nDim+1
-
-  integer, parameter :: Int8_ = selected_int_kind(16)
 
   ! Hypre uses C type 8-byte integers for pointers
   integer(Int8_):: i8Grid, i8Graph, i8Stencil, i8Precond, i8Solver
@@ -123,7 +123,6 @@ contains
        ! Setup connection between parts
 
        ! Left neighbor
-       iPart = iProc
        if(iProcPhi > 0)then
           jPart = iProc - 1
        else

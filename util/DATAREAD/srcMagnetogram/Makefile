@@ -2,8 +2,6 @@
 
 include ../../../Makefile.def
 
-SEARCH_EXTRA = ${HYPRESEARCH}
-
 include ../../../Makefile.conf
 
 MY_LIB = ${LIBDIR}/libMAGNETOGRAM.a
