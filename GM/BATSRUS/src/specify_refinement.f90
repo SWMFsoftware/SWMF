@@ -85,7 +85,8 @@ subroutine specify_refinement(DoRefine_B)
              iArea, ' ',trim(NameArea),' ',Area % Resolution
 
         ! No need to check area if block is finer than area resolution
-        if(Area % Resolution >= CurrentResolution) CYCLE AREALOOP
+        ! Takes care of variations from finite numerical precision
+        if((Area % Resolution/CurrentResolution - 1.0 ) >=  -1e-10) CYCLE AREALOOP
 
         ! Treat special cases first
         IsSpecialArea = .true.
