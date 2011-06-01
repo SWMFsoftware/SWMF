@@ -47,13 +47,20 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   if(.not.allocated(RCM_lat))then
      ! Allocate RCM_lat, RCM_lon, RCM_p, RCM_dens
      call im_pressure_init(iSizeIn, jSizeIn)
-     ! Convert colat, lon to lat-lon in degrees and store
+     ! Set up IM ionospheric grid and store.
+     ! Latitude specification is module specific, we must set it up
+     ! according to the IM module we have selected.
+     ! Determine version of IM:
      call get_comp_info(IM_, NameVersion=NameVersionIm)
      if(NameVersionIm(1:3) .eq. 'RAM')then
+        ! RAM-SCB has an equatorial grid, pressure is mapped to 
+        ! ionosphere by RAM using a constant, latitude based grid.
         do i=1, iSizeIn
            RCM_lat(i) = (iSizeIn-i)*(35.0/iSizeIn)+45.0
         end do
      else
+        ! RCM uses a CoLat based grid, information is stored in 
+        ! module grid information.
         RCM_lat = (cHalfPi - Grid_C(IM_) % Coord1_I) * cRadToDeg
      end if
      RCM_lon = Grid_C(IM_)% Coord2_I              * cRadToDeg
