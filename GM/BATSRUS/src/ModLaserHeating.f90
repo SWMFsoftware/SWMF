@@ -76,10 +76,11 @@ module ModLaserHeating
   !The laser pulse is assumed to have the linear raise front
   !and linear decay with the constant irradiance within the
   !pulse,  at  t_raise < t < tPulse - tDecay
+  real:: tStart = 0.0     ![s] - allows for nonzero start
   real:: tRaise = 1.0e-10 ![s]
   real:: tDecay = 1.0e-10 ![s]
   real:: tPulse = 1.1e-9  ![s]
-  real:: IrradianceSi = 3.8e12 ![J/s]
+  real:: IrradianceSi = 3.8e12 ![J/s] !This is the power; rename?
 
   !Beam geometry: 'rz', '2d', '3d'
   character(LEN=2):: TypeBeam='unknown'
@@ -140,7 +141,7 @@ contains
     !------------------------------------------------------------------------
 
     Dens2DensCr = min(1.0, RhoSI/DensityCrSi)
-    ! calculate the effective collision frequency
+    !calculate the effective collision frequency
     !write(*,*)'RhoSi=',RhoSi,' Dens2DensCr=',Dens2DensCr
     AveragedElectronSpeed = sqrt(8.0*cBoltzmann &
          *TeSi/(cPi*cElectronMass))
@@ -153,11 +154,15 @@ contains
     !write(*,*)'NAtomicSi=',NAtomicSi, &
     !          ' EffectiveCollisionRate=',EffectiveCollisionRate
 
+!!!!!!*** multiply by a scale factor for the laser package test*****
+    !Absorption = 1.0e-4*EffectiveCollisionRate/cLightSpeed*Dens2DensCr/&
+    !     sqrt(1 - Dens2DensCr/(1 + (EffectiveCollisionRate/Omega)**2) )
     Absorption = EffectiveCollisionRate/cLightSpeed*Dens2DensCr/&
          sqrt(1 - Dens2DensCr/(1 + (EffectiveCollisionRate/Omega)**2) )
     !write(*,*)'Dimensional absorption=', Absorption
     !Convert to the dimensionless form:
     Absorption =  Absorption*No2Si_V(UnitX_)
+    !write(*,*)'Dimensionless absorption=', Absorption
     !call CON_stop
 
   end subroutine calc_absorption
@@ -222,9 +227,16 @@ contains
                NAtomicOut=NAtomicSI,              &
                TeOut=TeSI,                        &
                AverageIonChargeOut=zAverage)
+!!$          if (iProc==0) then
+!!$             write(*,*)'TeSI user_material_properties',i,j,k,iBlock,TeSI
+!!$          endif
+          !call Con_Stop
 
           ! Increase Z for weakly ionized plasma to 1
           zAverage = max(zAverage, 1.0)
+
+          !write(*,*)'zAverage after call to user_material_properties',zAverage 
+          !call Con_Stop
 
           ! Rho*Z in SI units
           RhoZSi = State_VGB(rho_,i,j,k,iBlock)*ZAverage*No2Si_V(UnitRho_)
@@ -236,6 +248,9 @@ contains
                TeSI       = TeSi, &
                RhoSI      = RhoZSi,&
                Absorption = Absorption)
+
+          !write(*,*)'Dimensionless absorption=', Absorption
+          !call CON_stop
 
           ! Interpolate density*Z
           RayValue_VI(RhoZ_,iRay) = RayValue_VI(RhoZ_,iRay) &
@@ -259,9 +274,11 @@ contains
                - State_VGB(Rho_,i,j-1,k,iBlock) ) &
                * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(2,iBlock)
 
-          !write(*,*)'!!! i,j,k,iBlock,Weight,Rho+,Rho-,RayValue=',&
-          !     i,j,k,iBlock,Weight,State_VGB(Rho_,i,j+1,k,iBlock),&
-          !     State_VGB(Rho_,i,j-1,k,iBlock),RayValue_VI(GradYRhoZ_,iRay)
+!!$          write(*,*)'!!! i,j,k,iBlock,Weight,Rho+,Rho-,RayValue=',&
+!!$               i,j,k,iBlock,Weight,State_VGB(Rho_,i,j+1,k,iBlock),&
+!!$               State_VGB(Rho_,i,j-1,k,iBlock),RayValue_VI(GradYRhoZ_,iRay),&
+!!$               CellSize_DB(1,iBlock),CellSize_DB(2,iBlock),&
+!!$               CellSize_DB(3,iBlock)
 
           ! Interpolate (Z gradient of Rho)*Z
           RayValue_VI(GradZRhoZ_,iRay) = RayValue_VI(GradZRhoZ_,iRay) &
@@ -454,11 +471,11 @@ contains
           TypeBoundaryDown_D(iDim) = trim(TypeBc_I(2*iDim-1))
           TypeBoundaryUp_D(iDim)   = trim(TypeBc_I(2*iDim))
        end do
-       if(iProc==0)then
-          write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D
-          write(*,*)'TypeBoundaryUp_D=',TypeBoundaryUp_D
-          write(*,*)'StepMin=',StepMin
-       end if
+!!$       if(iProc==0)then
+!!$          write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D
+!!$          write(*,*)'TypeBoundaryUp_D=',TypeBoundaryUp_D
+!!$          write(*,*)'StepMin=',StepMin
+!!$       end if
 
     end if
 
@@ -801,10 +818,19 @@ contains
   real function irradiance_t(TimeSi)
     real,intent(in)::TimeSi
     !----------------------
-    irradiance_t = IrradianceSi *&
-         max(0.0, min(1.0,       &
-         (TimeSi/tRaise)**3,     &
-         (tPulse -TimeSi)/tDecay))
+    !irradiance_t = IrradianceSi *&
+    !     max(0.0, min(1.0,       &
+    !     (TimeSi/tRaise)**3,     &
+    !     (tPulse -TimeSi)/tDecay))
+
+!!$    !no temporal profile
+!!$    irradiance_t = IrradianceSi 
+
+    !top hat profile
+    irradiance_t = IrradianceSi * &
+         max(0.0, min(1.0,        &
+         (TimeSi/tRaise),         &
+         (tPulse - TimeSi)/tDecay))
 
   end function irradiance_t
 
@@ -862,7 +888,9 @@ contains
 
        BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
 
-       do iRay = -nRayPerBeam, nRayPerBeam
+!!$       do iRay = -nRayPerBeam, nRayPerBeam
+       do iRay = 1, nRayPerBeam  !just for beams pointed at the symmetry axix
+
           !We neglect exp(-2.25)\approx0.1 and chose the beam margin
           !to be at 1.5 rBeam from the central ray:
 
@@ -874,9 +902,34 @@ contains
           if(abs(yPlane) >= y2)CYCLE
           nRayTotal = nRayTotal +1
 
+          !flat spatial profile
+          !without radial dependence
+!!$          Amplitude_I(nRayTotal) = BeamAmplitude * &
+!!$               abs(yCrCentral)
+
+!!$          !flat spatial profile
+!!$          Amplitude_I(nRayTotal) = BeamAmplitude * &
+!!$               abs( yCrCentral + rDistance/CosTheta)
+!!$ 
+
+!!$          !gaussian profile
+!!$          Amplitude_I(nRayTotal) = BeamAmplitude * &
+!!$               exp(-(rDistance/rBeam)**2) *   &
+!!$               abs( yCrCentral + rDistance/CosTheta)
+
+          !use supergaussian spaital profile; make the supergaussian 
+          !order an adjustable parameter
+!!$          Amplitude_I(nRayTotal) = BeamAmplitude * &
+!!$               exp(-(abs(rDistance)/rBeam)**4.2) *   &
+!!$               abs( yCrCentral + rDistance/CosTheta)
+
+          !use supergaussian spaital profile; make the supergaussian 
+          !order an adjustable parameter
+          !without radial dependence
           Amplitude_I(nRayTotal) = BeamAmplitude * &
-               exp(-(rDistance/rBeam)**2) *   &
-               abs( yCrCentral + rDistance/CosTheta)
+               exp(-(abs(rDistance)/rBeam)**4.2) *   &
+               abs(yCrCentral)
+
 
           if(yPlane > 0)then
 
@@ -891,7 +944,7 @@ contains
                   (/CosTheta, -SinTheta, 0.0/)
 
           end if
-          !if(iProc==0)write(*,*)XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)
+          !if(iProc==0)write(*,*)'XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)', XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)
        end do
     end do
   end subroutine rz_beam_rays
@@ -1007,17 +1060,17 @@ contains
 
     call get_density_and_absorption(nRayTotal)
 
-    if(DoVerbose .and. iProc==0)then
-       NameFile='Rays_n0000'
-       !write(*,*)trim(NameFile)
-       open(UnitTmp_, file=NameFile, status='replace')
-       do iRay = 1, nRay
-          write(UnitTmp_,*)Position_DI(1:2,iRay), Density_I(iRay), &
-               GradDensity_DI(:,iRay), DeltaSNew_I(iRay), &
-               AbsorptionCoeff_I(iRay)
-       end do
-       close(UnitTmp_)
-    end if
+!!$    if(DoVerbose .and. iProc==0)then
+!!$       NameFile='Rays_n0000'
+!!$       write(*,*)trim(NameFile)
+!!$       open(UnitTmp_, file=NameFile, status='replace')
+!!$       do iRay = 1, nRay
+!!$          write(UnitTmp_,*)Position_DI(1:2,iRay), Density_I(iRay), &
+!!$               GradDensity_DI(:,iRay), DeltaSNew_I(iRay), &
+!!$               AbsorptionCoeff_I(iRay)
+!!$       end do
+!!$       close(UnitTmp_)
+!!$    end if
 
   end subroutine init_laser_package
   !===========================================================================
@@ -1054,33 +1107,33 @@ contains
        !Propagate each of rays through the distance of DeltaS
        call ray_path(get_density_and_absorption, nRay, Unused_I, Slope_DI, &
             DeltaS_I, Tolerance, DensityCrSi, Intensity_I, IsBehindCr_I)
-       if(DoVerbose .and. iProc==0)then
-          NameFile=''
-          write(NameFile,'(a,i4.4)')'Rays_n',iStep+1
-          !write(*,*)trim(NameFile)
-          open(UnitTmp_, file=NameFile, status='replace')
-          do iRay = 1, nRay
-             if(Unused_I(iRay)) CYCLE
-             write(UnitTmp_,*)iRay,Position_DI(1:2,iRay), Slope_DI(1:2,iRay), &
-                  DeltaS_I(iRay),Density_I(iRay), GradDensity_DI(:,iRay), &
-                  AbsorptionCoeff_I(iRay), EnergyDeposition_I(iRay)
-          end do
-          close(UnitTmp_)
-       end if
+!!$       if(DoVerbose .and. iProc==0)then
+!!$          NameFile=''
+!!$          write(NameFile,'(a,i4.4)')'Rays_n',iStep+1
+!!$          write(*,*)trim(NameFile)
+!!$          open(UnitTmp_, file=NameFile, status='replace')
+!!$          do iRay = 1, nRay
+!!$             if(Unused_I(iRay)) CYCLE
+!!$             write(UnitTmp_,*)iRay,Position_DI(1:2,iRay), Slope_DI(:,iRay), &
+!!$                  DeltaS_I(iRay),Density_I(iRay), AbsorptionCoeff_I(iRay), &
+!!$                  GradDensity_DI(:,iRay), EnergyDeposition_I(iRay)
+!!$          end do
+!!$          close(UnitTmp_)
+!!$       end if
        DoRay_I = (.not.Unused_I).or.IsBehindCr_I
        if(.not.any(DoRay_I))EXIT
        iStep = iStep + 1
-       if(DoVerbose .and. iProc==0 .and. .not.all(Unused_I))then
-          write(*,*)'Laser package at iStep =',iStep
-          write(*,*)'Used rays #=',count(.not.Unused_I)
-          write(*,*)'Rays penetrated into overdense plasma, #=', &
-               count(IsBehindCr_I)
-          write(*,*)'Total energy deposition =', &
-               sum(EnergyDeposition_I,MASK=DoRay_I)
-          write(*,*)'MinumumStep=',minval(DeltaS_I,MASK=.not.Unused_I)
-          write(*,*)'MaximumStep=',maxval(DeltaS_I,MASK=.not.unused_I)
-          write(*,*)'Min DeltaSNew_I=',minval(DeltaSNew_I,MASK=.not.Unused_I)
-       end if
+!!$       if(DoVerbose .and. iProc==0 .and. .not.all(Unused_I))then
+!!$          write(*,*)'Laser package at iStep =',iStep
+!!$          write(*,*)'Used rays #=',count(.not.Unused_I)
+!!$          write(*,*)'Rays penetrated into overdense plasma, #=', &
+!!$               count(IsBehindCr_I)
+!!$          write(*,*)'Total energy deposition =', &
+!!$               sum(EnergyDeposition_I,MASK=DoRay_I)
+!!$          write(*,*)'MinumumStep=',minval(DeltaS_I,MASK=.not.Unused_I)
+!!$          write(*,*)'MaximumStep=',maxval(DeltaS_I,MASK=.not.unused_I)
+!!$          write(*,*)'Min DeltaSNew_I=',minval(DeltaSNew_I,MASK=.not.Unused_I)
+!!$       end if
 
        ! Save EnergyDeposition_I to LaserHeating_CB 
        ! using the interpolation weights
@@ -1111,9 +1164,9 @@ contains
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   + Weight*EnergyDeposition_I(iRay)
 
-             !write(*,*)'!!! i,j,k,iBlock,Weight,Deposition,SourceE=',&
-             !     i,j,k,iBlock,Weight,&
-             !     EnergyDeposition_I(iRay),LaserHeating_CB(i,j,k,iBlock)
+!!$             write(*,*)'!!! i,j,k,iBlock,Weight,Deposition,SourceE=',&
+!!$                  i,j,k,iBlock,Weight,&
+!!$                  EnergyDeposition_I(iRay),LaserHeating_CB(i,j,k,iBlock)
 
           end do
        end do
@@ -1140,18 +1193,37 @@ contains
     use ModUser, ONLY: user_material_properties
     use ModEnergy, ONLY: calc_energy_cell
     use BATL_lib, ONLY: message_pass_cell
+    use ModConst, ONLY: cKToKev
 
-    real:: Irradiance, EInternalSi, PressureSi
+    real:: Irradiance, EInternalSi, PressureSi,TeSi
     integer :: iBlock, i, j, k, iP
     logical,parameter :: UseExtraEInt = ExtraEInt_ > 1
 
     character(len=*), parameter:: NameSub = 'add_laser_heating'
     !--------------------------------------------------------------------------
-    if(iProc==0)write(*,*)'Start ',NameSub
+!!$    if (iProc==0 .and. DoVerbose) then
+!!$       write(*,*)'Start ',NameSub
+!!$    endif
     call timing_start(NameSub)
 
     Irradiance = irradiance_t(Time_Simulation) * &
          Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_) * dt
+
+!!$     if(iProc==0 .and. DoVerbose) then
+!!$        write(*,*)'Time_Simulation, time step', &
+!!$             Time_Simulation,dt/Si2No_V(UnitT_)
+!!$     endif
+
+    ! Don't trace the rays if the energy is too small; make the limit 
+    ! an adjustable parameter
+!!$    if (Irradiance < 0.1 ) then
+!!$       call timing_stop(NameSub)
+!!$       if(iProc==0)write(*,*)'raytrace not performed; irradiance = ',Irradiance
+!!$       if(iProc==0)write(*,*)'time step =',dt/Si2No_V(UnitT_)
+!!$       if(iProc==0)write(*,*)'End ',NameSub 
+!!$       return
+!!$    endif
+
 
     ! Make sure that the density is up-to-date in the ghost cells
     call message_pass_cell(nVar, State_VGB)
@@ -1184,14 +1256,44 @@ contains
                   State_VGB(ExtraEint_,i,j,k,iBlock) + &
                   LaserHeating_CB(i,j,k,iBlock) * Irradiance)
 
+             if (iProc==0 .and. DoVerbose) then
+                if (LaserHeating_CB(i,j,k,iBlock) * Irradiance *&
+                     No2Si_V(UnitEnergyDens_)/EinternalSi > 0.1 ) then
+                   write(*,*)'Laser energy depostion greater that 10%'
+                   write(*,*)'Time_Simulation, time step:', &
+                        Time_Simulation,dt/Si2No_V(UnitT_)
+                   write(*,*)'!!i,j,k,iBlock,EinternalSi,LH_CB,Irr,LH_CB*Irr ', &
+                        i,j,k,iBlock,EinternalSi,LaserHeating_CB(i,j,k,iBlock), &
+                        Irradiance, LaserHeating_CB(i,j,k,iBlock) * Irradiance *&
+                        No2Si_V(UnitEnergyDens_)
+                endif
+                if (LaserHeating_CB(i,j,k,iBlock) * Irradiance *&
+                     No2Si_V(UnitEnergyDens_)/EinternalSi > 0.2 ) then
+                   write(*,*)'***WARNING*** Laser dep > 20%'
+                endif
+             endif
+
              ! Single temperature: determine p^n+1 = EOS( rho^n+1, Eint^n+1)
              ! Two temperature:   determine Pe^n+1 = EOS( rho^n+1, Eint^n+1)
+
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  EinternalIn=EinternalSi, PressureOut=PressureSi)
+                  EinternalIn=EinternalSi, PressureOut=PressureSi, &
+                  TeOut=TeSi)
+
+!!$              if (iProc==0) then
+!!$                 Write(*,*)'PressureSi,PSi*Si2No_V before adding laser energy'&
+!!$                     , PressureSi,PressureSi*Si2No_V(UnitP_)
+!!$              endif
 
              ! Set normalized pressure (electron pressure for two temperature)
              State_VGB(iP,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+
+!!$             if (iProc==0) then
+!!$                Write(*,*)'PressureSi,PSi*Si2No_V'&
+!!$                     , PressureSi,PressureSi*Si2No_V(UnitP_)
+!!$               !write(*,*)'TeSi,cKTokev,TeSi*cKTokev',TeSi,cKTokev,TeSi*cKToKev
+!!$             endif
 
              ! Set ExtraEint^n+1 = Eint^n+1 - p^n+1/(g -1)
              State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
@@ -1207,7 +1309,11 @@ contains
 
     call timing_stop(NameSub)
 
-    if(iProc==0)write(*,*)'End ',NameSub
+!!$    if (iProc==0 .and. DoVerbose) then
+!!$       write(*,*)'End ',NameSub
+!!$    endif
+!!!!
+!!!call stop_mpi('end of first call to add_laser_heating')
 
   end subroutine add_laser_heating
 
