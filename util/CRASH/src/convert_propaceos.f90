@@ -186,8 +186,8 @@ program PROPACEOS
                                       ' Ross16 Ross17 Ross18 Ross19 Ross20'//&
                                       ' Ross21 Ross22 Ross23 Ross24 Ross25'//&
                                       ' Ross26 Ross27 Ross28 Ross29 Ross30', &
-         CoordMinIn_D   = (/Rho_I(1), Temperature_I(1)/),             &                             
-         CoordMaxIn_D   = (/Rho_I(nDensity), Temperature_I(nTemperature)/),             &
+         CoordMinIn_D   = (/log10(Rho_I(1)), log10(Temperature_I(1))/),             &                             
+         CoordMaxIn_D   = (/log10(Rho_I(nDensity)), log10(Temperature_I(nTemperature))/),             &
          VarIn_VII      = Value_VII)
   deallocate(Value_VII)
   
@@ -268,6 +268,15 @@ program PROPACEOS
      call d_over_dt(In_II=PIon_II,Out_II=dPIonOverDT_II,IsElectronV=.false.)
      call d_over_dt(In_II=PElectron_II,Out_II=dPElectronOverDT_II,IsElectronV=.true.)
   end if
+  
+    !Check positivity!
+  write(*,*) 'Total specific heat is not positive in ',&
+       count(dETotalOverDT_II<=0.0.and.zAvr_II>cZMin), ' points'
+  write(*,*) 'Electron specific heat is not positive in ',&
+       count(dEElectronOverDT_II<=0.0.and.zAvr_II>cZMin), ' points'
+  !write(*,*) 'Ion pressure is not positive in ',count(pIon_II<=0.0), ' points'
+  !write(*,*) 'Electron pressure is not positive in ',count(pElectron_II<=0.0), ' points'
+
   allocate( Value_VII(nVarEos, nTemperature, nDensity) ) 
   Value_VII = 0.0
   do iRho = 1, nDensity
@@ -343,8 +352,8 @@ program PROPACEOS
        TypeFileIn     = 'real8',                     &
        StringHeaderIn = trim(NameDEscription), &
        NameVarIn      = 'logTe logNa '//NameVarEos, &
-       CoordMinIn_D   = (/Temperature_I(1),Density_I(1)/),             &                             
-       CoordMaxIn_D   = (/Temperature_I(nTemperature),Density_I(nDensity)/),             &
+       CoordMinIn_D   = (/log10(Temperature_I(1)),log10(Density_I(1))/),             &                             
+       CoordMaxIn_D   = (/log10(Temperature_I(nTemperature)),log10(Density_I(nDensity))/),&
        VarIn_VII      = Value_VII)
   open(11,file='PARAM.'//NameMaterial//'.PRISM',status='replace')
   write(11,'(a)')'----------------EOS TABLE-------------'
