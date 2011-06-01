@@ -454,6 +454,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#TIMESTEPPING")
         call read_var('nStage',nSTAGE)
         call read_var('CflExpl',Cfl)
+        CflOrig = Cfl
         ExplCfl = Cfl                                   !^CFG IF IMPLICIT
 
      case("#FIXEDTIMESTEP")
@@ -2133,8 +2134,9 @@ contains
     VARtest         =1
     DIMtest         =1
 
-    nSTAGE        = 2
-    cfl           = 0.80
+    nStage        = 2
+    Cfl           = 0.8
+    CflOrig       = 0.8
     UseDtFixed    = .false.
     dt            = 0.0
     dt_BLK        = 0.0

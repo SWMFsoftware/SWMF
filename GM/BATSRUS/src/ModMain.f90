@@ -36,7 +36,7 @@ Module ModMain
   ! Time stepping parameters and values.
   !/
   integer :: n_step, nOrder, nStage, iteration_number=0
-  real :: dt, DtFixed, DtFixedOrig, DtFixedDim, cfl, dt_BLK(nBLK)
+  real :: dt, DtFixed, DtFixedOrig, DtFixedDim, Cfl, CflOrig, dt_BLK(nBLK)
   logical :: time_accurate = .true.,   &
        boris_correction    = .false.,  &
        UseBorisSimple      = .false.,  &

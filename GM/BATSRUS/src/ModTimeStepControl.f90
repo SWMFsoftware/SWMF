@@ -82,7 +82,7 @@ contains
 
   subroutine control_time_step
 
-    use ModMain,    ONLY: nBlock, nI, nJ, nK, UnusedBlk, Dt, Cfl, &
+    use ModMain,    ONLY: nBlock, nI, nJ, nK, UnusedBlk, Dt, Cfl, CflOrig, &
          DtFixed, DtFixedOrig, UseDtFixed, Time_Simulation
     use ModAdvance, ONLY: Rho_, p_, &
          State_VGB, StateOld_VCB, Energy_GBI, EnergyOld_CBI, time_BLK
@@ -92,7 +92,6 @@ contains
 
     integer:: iBlock, i, j, k, iError
     real   :: RelativeChangeMin,  RelativeChangeMax, Tmp, Factor
-    real   :: CflOrig = -1.0
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub='control_time_step'
@@ -105,9 +104,6 @@ contains
        allocate( iVarControl_I(nVarControl), VarRatio_I(nVarControl) )
        iVarControl_I = (/Rho_, p_/)
     end if
-
-    ! Initialize CflOrig
-    if(CflOrig < 0.0) CflOrig = Cfl
 
     ! Calculate the largest relative drop in the control variables
     RelativeChangeMin = 1e+6
@@ -157,21 +153,22 @@ contains
 
     elseif(   RelativeChangeMin < ReduceStepLevel1 &
          .or. RelativeChangeMax > ReduceStepLevel2 )then
-       ! Reduce next time step if pressure is reduced below ReduceStepLevel
+       ! Reduce next time step if change exceeded ReduceStepLevel
        Factor = ReduceStepFactor
 
     elseif(RelativeChangeMin    < IncreaseStepLevel1  &
          .or. RelativeChangeMax > IncreaseStepLevel2 )then
-       ! Increase next time step if change remained above IncreaseStepLevel
-       ! and the last step was taken with DtFixed. Do not exceed DtFixedOrig
+       ! Increase next time step if change exceeded IncreaseStepLevel
        Factor = IncreaseStepFactor
     else
        Factor = 1.0
     end if
 
     if(UseDtFixed)then
+       ! Do not exceed DtFixedOrig
        DtFixed = min(DtFixedOrig, DtFixed*Factor)
     else
+       ! Do not exceed CflOrig
        Cfl     = min(CflOrig, Cfl*Factor)
     end if
 
