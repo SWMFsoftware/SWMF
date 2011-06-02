@@ -504,29 +504,40 @@ contains
        dB1nNorth = DyInvHalf* &
             (RightState_VY(By_,i,j+1,k)-LeftState_VY(By_,i,j+1,k))
 
-       dB1nBot = DzInvHalf * &
-            (RightState_VZ(Bz_,i,j,k)-LeftState_VZ(Bz_,i,j,k))
+       if(nK > 1)then
+          dB1nBot = DzInvHalf * &
+               (RightState_VZ(Bz_,i,j,k)-LeftState_VZ(Bz_,i,j,k))
 
-       dB1nTop = DzInvHalf * &
-            (RightState_VZ(Bz_,i,j,k+1)-LeftState_VZ(Bz_,i,j,k+1))
+          dB1nTop = DzInvHalf * &
+               (RightState_VZ(Bz_,i,j,k+1)-LeftState_VZ(Bz_,i,j,k+1))
+       end if
 
        DivBInternal_C(i,j,k) = 2*(&
             DxInvHalf*(LeftState_VX(Bx_,i+1,j,k) -RightState_VX(Bx_,i,j,k))+&
-            DyInvHalf*(LeftState_VY(By_,i,j+1,k) -RightState_VY(By_,i,j,k))+&
-            DzInvHalf*(LeftState_VZ(Bz_,i,j,k+1) -RightState_VZ(Bz_,i,j,k)))
+            DyInvHalf*(LeftState_VY(By_,i,j+1,k) -RightState_VY(By_,i,j,k)))
+
+       if(nK > 1) DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
+            2*DzInvHalf*(LeftState_VZ(Bz_,i,j,k+1) -RightState_VZ(Bz_,i,j,k))
 
        DivB1_GB(i,j,k,iBlock)  = DivBInternal_C(i,j,k) + &
-            dB1nEast + dB1nWest + dB1nSouth + dB1nNorth + dB1nTop + dB1nBot
+            dB1nEast + dB1nWest + dB1nSouth + dB1nNorth
+
+       if(nK > 1) DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
+            + dB1nTop + dB1nBot
 
        if(.not.IsMhd) CYCLE
 
-       Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
+       Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
             -B0_DX(:,i,j,k)*dB1nEast    &
             -B0_DX(:,i+1,j,k)*dB1nWest  &
             -B0_DY(:,i,j,k)*dB1nSouth   &
-            -B0_DY(:,i,j+1,k)*dB1nNorth &
+            -B0_DY(:,i,j+1,k)*dB1nNorth
+
+       if(nK > 1) &
+            Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
             -B0_DZ(:,i,j,k)*dB1nBot     &
-            -B0_DZ(:,i,j,k+1)*dB1nTop               
+            -B0_DZ(:,i,j,k+1)*dB1nTop
+
     end do; end do; end do
 
     if((.not.IsMhd).or.(.not.UseB0)) RETURN
