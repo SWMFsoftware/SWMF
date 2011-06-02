@@ -49,6 +49,8 @@ module ModConserveFlux
   real, allocatable, dimension(:,:,:,:,:) :: &
        CorrectedFlux_VXB, CorrectedFlux_VYB, CorrectedFlux_VZB
 
+  real, parameter :: FaceRatio = 1.0/2**(nDim-1)
+
 contains
 
   !===========================================================================
@@ -153,9 +155,9 @@ contains
       else
          do k=1,nK; do j=1,nJ
             CorrectedFlux_VXB(BnL_, j, k, lFaceTo, iBlock)= &
-                 LeftState_VX(Bx_, lFaceFrom, j, k)*0.25
+                 LeftState_VX(Bx_, lFaceFrom, j, k)*FaceRatio
             CorrectedFlux_VXB(BnR_, j, k, lFaceTo,iBlock)= &
-                 RightState_VX(Bx_, lFaceFrom, j, k)*0.25
+                 RightState_VX(Bx_, lFaceFrom, j, k)*FaceRatio
          end do; end do
       end if
 
@@ -203,9 +205,9 @@ contains
       else
          do k=1,nK; do i=1,nI
             CorrectedFlux_VYB(BnL_, i, k, lFaceTo, iBlock)= &
-                 LeftState_VY( By_, i, lFaceFrom, k)*0.25
+                 LeftState_VY( By_, i, lFaceFrom, k)*FaceRatio
             CorrectedFlux_VYB(BnR_, i, k, lFaceTo, iBlock)= &
-                 RightState_VY(By_, i, lFaceFrom, k)*0.25
+                 RightState_VY(By_, i, lFaceFrom, k)*FaceRatio
          end do; end do
       end if
 
@@ -240,9 +242,9 @@ contains
       else
          do j=1,nJ; do i=1,nI
             CorrectedFlux_VZB(BnL_, i, j, lFaceTo, iBlock)= &
-                 LeftState_VZ( Bz_, i, j, lFaceFrom)*0.25
+                 LeftState_VZ( Bz_, i, j, lFaceFrom)*FaceRatio
             CorrectedFlux_VZB(BnR_, i, j, lFaceTo, iBlock)= &
-                 RightState_VZ(Bz_, i, j, lFaceFrom)*0.25
+                 RightState_VZ(Bz_, i, j, lFaceFrom)*FaceRatio
          end do; end do
       end if
 
