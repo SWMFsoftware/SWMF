@@ -59,32 +59,33 @@ subroutine amr(DoMessagePass)
         call set_batsrus_grid
 
         call count_true_cells
-        if(iProc==0 .and. lVerbose>0)then
-           ! Write block/cell summary after AMR
-           call write_prefix; write(iUnitOut,*) '|'
-           call write_prefix; write(iUnitOut,*) &
-                '|  AMR:  nBlockMax = ',nBlockMax,' nBLK = ',nBLK
-           call write_prefix; write(iUnitOut,*) &
-                '|  AMR:  Total number of blocks used = ', nBlockALL
-           call write_prefix; write(iUnitOut,*) &
-                '|  AMR:  Total number of cells = ', nBlockALL*nIJK
-           call write_prefix; write(iUnitOut,*) &
-                '|  AMR:  Total number of true cells = ', nTrueCellsALL
-           call write_prefix; write(iUnitOut,*) &
-                '|  Smallest cell dx: ', minDXvalue, &
-                '  Largest cell dx: ',   maxDXvalue
-           call write_prefix; write(iUnitOut,*) '|'
-        end if
 
      else
         call specify_refinement(DoRefine_B)
         call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, DoTestIn=DoTestMe,Used_GB=true_cell)
         call set_batsrus_grid
 
-        if(iProc == 0 .and. lVerbose>0) then
-           call write_prefix; write(iUnitOut,*) &
-                'specify_refinement,  new number of blocks = ', nBlockALL
-        end if
+        !if(iProc == 0 .and. lVerbose>0) then
+        !   call write_prefix; write(iUnitOut,*) &
+        !        'specify_refinement,  new number of blocks = ', nBlockALL
+        !end if
+     end if
+
+     if(iProc==0 .and. lVerbose>0)then
+        ! Write block/cell summary after AMR
+        call write_prefix; write(iUnitOut,*) '|'
+        call write_prefix; write(iUnitOut,*) &
+             '|  AMR:  nBlockMax = ',nBlockMax,' nBLK = ',nBLK
+        call write_prefix; write(iUnitOut,*) &
+             '|  AMR:  Total number of blocks used = ', nBlockALL
+        call write_prefix; write(iUnitOut,*) &
+             '|  AMR:  Total number of cells = ', nBlockALL*nIJK
+        call write_prefix; write(iUnitOut,*) &
+             '|  AMR:  Total number of true cells = ', nTrueCellsALL
+        call write_prefix; write(iUnitOut,*) &
+             '|  Smallest cell dx: ', minDXvalue, &
+             '  Largest cell dx: ',   maxDXvalue
+        call write_prefix; write(iUnitOut,*) '|'
      end if
 
      ! Fix energy and other variables in moved/refined/coarsened blocks
