@@ -51,6 +51,9 @@ module ModImplicit
   ! Named indices for semi-implicit variables
   integer :: iTeImpl=0, iTrImplFirst=0, iTrImplLast=0, iEradImpl=0
 
+  ! Shall we zero out contribution from ghost cells
+  logical :: UseNoOverlap = .true.
+
   !\
   ! Parameters for selecting implicit blocks
   !/
@@ -261,9 +264,13 @@ contains
        call read_var('JacobianEps', JacobianEps)
 
     case('#PRECONDITIONER')
+       UseNoOverlap = .true.
        call read_var('TypePrecondSide',PrecondSide, IsLowerCase=.true.)
        call read_var('TypePrecond'    ,PrecondType, IsUpperCase=.true.)
        select case(PrecondType)
+       case('HYPRE')
+          PrecondSide = 'left'
+          UseNoOverlap = .false.
        case('JACOBI')
           PrecondParam = Jacobi_
           PrecondSide  = 'left'
@@ -277,10 +284,11 @@ contains
           PrecondSide  = 'left'
        case('BILU')
           PrecondParam = Bilu_
-       case default
-          ! MBILU preconditioner
+       case('MBILU')
           call read_var('GustafssonPar', PrecondParam)
           PrecondParam = -PrecondParam
+       case default
+          call CON_stop(NameSub//' invalid TypePrecond='//PrecondType)
        end select
 
     case('#KRYLOV')
