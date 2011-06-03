@@ -36,7 +36,7 @@ module BATL_lib
   public:: iComm, nProc, iProc          
 
   ! Inherited from BATL_tree
-  public:: nNodeUsed
+  public:: nNode, nNodeUsed
   public:: Unused_B, Unused_BP
   public:: iNode_B, iMortonNode_A, iNodeMorton_I
   public:: DiLevelNei_IIIB, iNodeNei_IIIB
