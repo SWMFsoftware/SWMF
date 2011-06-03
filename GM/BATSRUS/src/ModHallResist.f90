@@ -644,6 +644,13 @@ contains
     !==========================================================================
     subroutine calc_cartesian_j
 
+      if(nJ == 1) then
+         Ay = 0.; By = 0.; Cy = 0.; jR = j; jL = j
+      end if
+      if(nK == 1) then
+         Az = 0.; Bz = 0.; Cz = 0.; kR = k; kL = k
+      end if
+
       select case(iDir)
       case(x_)
          Jy = -InvDx* (b_DG(z_,i  ,j,k) - b_DG(z_,i-1,j,k)) &
