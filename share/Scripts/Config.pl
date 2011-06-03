@@ -515,6 +515,17 @@ sub set_hypre_{
     }
     &shell_command("cd util/HYPRE; make install") if $Hypre eq "yes"
 	and not -e "util/HYPRE/lib/libHYPRE.a";
+
+    my @files = glob("src/*Hypre_orig.f90 ??/*/src/*Hypre_orig.f90");
+    foreach my $file (@files){
+	my $outfile = $file;
+	$outfile =~ s/_orig//;
+	my $infile  = $file;
+	$infile =~ s/_orig/_empty/ if $Hypre eq "no";
+	print "set_hypre_: cp $infile $outfile\n";
+	&shell_command("cp $infile $outfile");
+    }
+
 }
 
 ##############################################################################
