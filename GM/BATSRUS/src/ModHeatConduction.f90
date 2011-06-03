@@ -845,7 +845,7 @@ contains
 
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
     use ModGeometry,     ONLY: vInv_CB, UseCovariant
-    use ModImplicit,     ONLY: iTeImpl, nVarSemi
+    use ModImplicit,     ONLY: iTeImpl, nVarSemi, UseNoOverlap
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
     use BATL_lib,        ONLY: IsRzGeometry, CellSize_DB
@@ -888,10 +888,14 @@ contains
           Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &
                Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) - (DiffLeft + DiffRight)
 
-          if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1) &
-               DiffLeft = 0.0
-          if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ .or. iDim==3.and.k==nK) &
-               DiffRight = 0.0
+          if(UseNoOverlap)then
+             if(  iDim==1.and.i==1  .or. &
+                  iDim==2.and.j==1  .or. &
+                  iDim==3.and.k==1)        DiffLeft = 0.0
+             if(  iDim==1.and.i==nI .or. &
+                  iDim==2.and.j==nJ .or. &
+                  iDim==3.and.k==nK)       DiffRight = 0.0
+          end if
 
           Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim)   = &
                Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim) + DiffLeft
