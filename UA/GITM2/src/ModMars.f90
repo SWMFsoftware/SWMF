@@ -161,7 +161,6 @@ module ModPlanet
   real , Dimension(nInAlts,nSpeciesTotal) :: InNDensityS 
   real , Dimension(nInAlts,nIons) :: InIDensityS
 
-  real, parameter:: AltMinIono=100.0 ! in km
 
   real, dimension(nLons, nLats,nBlocksMax) :: &
        fir,fvis,Tbot,TopL,Psurf,P125,iAltMinIono

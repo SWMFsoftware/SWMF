@@ -671,15 +671,18 @@ end subroutine init_radcool
 ! ----------------------------------------------------------------------
 
 subroutine init_isochem
-  use ModPlanet, only: ialtminiono,altminiono
+  use ModPlanet, only: ialtminiono
+  use ModInputs, only: altminiono
   use ModGITM, only: Altitude_GB
   use ModSizeGITM
+
 
   implicit none 
 
   integer :: iBlock, iLon, iLat, iAlt
 
   iAltMinIono = 1
+
   do iBlock = 1, nBlocks
      do iLon = 1, nLons
         do iLat = 1, nLats
