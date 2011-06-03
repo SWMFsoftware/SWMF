@@ -9,3 +9,4 @@ Makefile.RULES
 Makefile.DEPEND
 ModSize.f90
 ModHdf5.f90
+ModImplHypre.f90

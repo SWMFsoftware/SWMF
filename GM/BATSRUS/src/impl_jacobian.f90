@@ -644,100 +644,118 @@ contains
     !   end do; end do; end do
     !end do
 
-    ! dR(Bx)/dBy
-    Coeff = wnrm(By_)/wnrm(Bx_)/Dxyz(z_)**2
-    ! Main diagonal
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       JAC(Bx_,By_,i,j,k,1)= JAC(Bx_,By_,i,j,k,1) &
-            + Coeff*(BzPerN_G(i,j,k-1)+BzPerN_G(i,j,k+1))
-    end do; end do; end do
-    !J+1
-    do k=1,nK-1; do j=1,nJ; do i=1,nI
-       JAC(Bx_,By_,i,j,k,7)=JAC(Bx_,By_,i,j,k,7) - Coeff*BzPerN_G(i,j,k+1)
-    end do; end do; end do
-    !J-1
-    do k=2,nK; do j=1,nJ; do i=1,nI
-       JAC(Bx_,By_,i,j,k,6)=JAC(Bx_,By_,i,j,k,6) - Coeff*BzPerN_G(i,j,k-1)
-    end do; end do; end do
+    if(nK > 1)then
+       ! dR(Bx)/dBy
+       Coeff = wnrm(By_)/wnrm(Bx_)/Dxyz(z_)**2
+       ! Main diagonal
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          JAC(Bx_,By_,i,j,k,Stencil1_) = JAC(Bx_,By_,i,j,k,Stencil1_) &
+               + Coeff*(BzPerN_G(i,j,k-1) + BzPerN_G(i,j,k+1))
+       end do; end do; end do
+       !K+1
+       do k=1,nK-1; do j=1,nJ; do i=1,nI
+          JAC(Bx_,By_,i,j,k,Stencil7_) = JAC(Bx_,By_,i,j,k,Stencil7_) &
+               - Coeff*BzPerN_G(i,j,k+1)
+       end do; end do; end do
+       !K-1
+       do k=2,nK; do j=1,nJ; do i=1,nI
+          JAC(Bx_,By_,i,j,k,Stencil6_) = JAC(Bx_,By_,i,j,k,Stencil6_) &
+               - Coeff*BzPerN_G(i,j,k-1)
+       end do; end do; end do
 
-    ! dR(Bx)/dBz
-    Coeff = wnrm(Bz_)/wnrm(Bx_)/Dxyz(y_)**2
-    ! Main diagonal
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       JAC(Bx_,Bz_,i,j,k,1)= JAC(Bx_,Bz_,i,j,k,1) &
-            - Coeff*(ByPerN_G(i,j-1,k)+ByPerN_G(i,j+1,k))
-    end do; end do; end do
-    !J+1
-    do k=1,nK; do j=1,nJ-1; do i=1,nI
-       JAC(Bx_,Bz_,i,j,k,5)= JAC(Bx_,Bz_,i,j,k,5) + Coeff*ByPerN_G(i,j+1,k)
-    end do; end do; end do
-    !J-1
-    do k=1,nK; do j=2,nJ; do i=1,nI
-       JAC(Bx_,Bz_,i,j,k,4)= JAC(Bx_,Bz_,i,j,k,4) + Coeff*ByPerN_G(i,j-1,k)
-    end do; end do; end do
+       ! dR(By)/dBx
+       Coeff = wnrm(Bx_)/wnrm(By_)/Dxyz(z_)**2
+       ! Main diagonal
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          JAC(By_,Bx_,i,j,k,Stencil1_) = JAC(By_,Bx_,i,j,k,Stencil1_) &
+               - Coeff*(BzPerN_G(i,j,k-1) + BzPerN_G(i,j,k+1))
+       end do; end do; end do
+       !K+1
+       do k=1,nK-1; do j=1,nJ; do i=1,nI
+          JAC(By_,Bx_,i,j,k,Stencil7_) = JAC(By_,Bx_,i,j,k,Stencil7_) &
+               + Coeff*BzPerN_G(i,j,k+1)
+       end do; end do; end do
+       !K-1
+       do k=2,nK; do j=1,nJ; do i=1,nI
+          JAC(By_,Bx_,i,j,k,Stencil6_) = JAC(By_,Bx_,i,j,k,Stencil6_) &
+               + Coeff*BzPerN_G(i,j,k-1)
+       end do; end do; end do
+
+    end if
+
+    if(nJ > 1)then
+       ! dR(Bx)/dBz
+       Coeff = wnrm(Bz_)/wnrm(Bx_)/Dxyz(y_)**2
+       ! Main diagonal
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          JAC(Bx_,Bz_,i,j,k,Stencil1_) = JAC(Bx_,Bz_,i,j,k,Stencil1_) &
+               - Coeff*(ByPerN_G(i,j-1,k)+ByPerN_G(i,j+1,k))
+       end do; end do; end do
+       !J+1
+       do k=1,nK; do j=1,nJ-1; do i=1,nI
+          JAC(Bx_,Bz_,i,j,k,Stencil5_) = JAC(Bx_,Bz_,i,j,k,Stencil5_) &
+               + Coeff*ByPerN_G(i,j+1,k)
+       end do; end do; end do
+       !J-1
+       do k=1,nK; do j=2,nJ; do i=1,nI
+          JAC(Bx_,Bz_,i,j,k,Stencil4_) = JAC(Bx_,Bz_,i,j,k,Stencil4_) &
+               + Coeff*ByPerN_G(i,j-1,k)
+       end do; end do; end do
+
+       ! dR(Bz)/dBx
+       Coeff = wnrm(Bx_)/wnrm(Bz_)/Dxyz(y_)**2
+       ! Main diagonal
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          JAC(Bz_,Bx_,i,j,k,Stencil1_) = JAC(Bz_,Bx_,i,j,k,Stencil1_) &
+               + Coeff*(ByPerN_G(i,j-1,k)+ByPerN_G(i,j+1,k))
+       end do; end do; end do
+       !J+1
+       do k=1,nK; do j=1,nJ-1; do i=1,nI
+          JAC(Bz_,Bx_,i,j,k,Stencil5_) = JAC(Bz_,Bx_,i,j,k,Stencil5_) &
+               - Coeff*ByPerN_G(i,j+1,k)
+       end do; end do; end do
+       !J-1
+       do k=1,nK; do j=2,nJ; do i=1,nI
+          JAC(Bz_,Bx_,i,j,k,Stencil4_) = JAC(Bz_,Bx_,i,j,k,Stencil4_) &
+               - Coeff*ByPerN_G(i,j-1,k)
+       end do; end do; end do
+
+    end if
 
     ! dR(By)/dBz
     Coeff = wnrm(Bz_)/wnrm(By_)/Dxyz(x_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
-       JAC(By_,Bz_,i,j,k,1)= JAC(By_,Bz_,i,j,k,1) &
+       JAC(By_,Bz_,i,j,k,Stencil1_) = JAC(By_,Bz_,i,j,k,Stencil1_) &
             + Coeff*(BxPerN_G(i-1,j,k)+BxPerN_G(i+1,j,k))
     end do; end do; end do
     !I+1
     do k=1,nK; do j=1,nJ; do i=1,nI-1
-       JAC(By_,Bz_,i,j,k,3)= JAC(By_,Bz_,i,j,k,3) - Coeff*BxPerN_G(i+1,j,k)
+       JAC(By_,Bz_,i,j,k,Stencil3_) = JAC(By_,Bz_,i,j,k,Stencil3_) &
+            - Coeff*BxPerN_G(i+1,j,k)
     end do; end do; end do
     !I-1
     do k=1,nK; do j=1,nJ; do i=2,nI
-       JAC(By_,Bz_,i,j,k,2)= JAC(By_,Bz_,i,j,k,2) - Coeff*BxPerN_G(i-1,j,k)
-    end do; end do; end do
-
-    ! dR(By)/dBx
-    Coeff = wnrm(Bx_)/wnrm(By_)/Dxyz(z_)**2
-    ! Main diagonal
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       JAC(By_,Bx_,i,j,k,1)= JAC(By_,Bx_,i,j,k,1) &
-            - Coeff*(BzPerN_G(i,j,k-1)+BzPerN_G(i,j,k+1))
-    end do; end do; end do
-    !K+1
-    do k=1,nK-1; do j=1,nJ; do i=1,nI
-       JAC(By_,Bx_,i,j,k,7)=JAC(By_,Bx_,i,j,k,7) + Coeff*BzPerN_G(i,j,k+1)
-    end do; end do; end do
-    !K-1
-    do k=2,nK; do j=1,nJ; do i=1,nI
-       JAC(By_,Bx_,i,j,k,6)=JAC(By_,Bx_,i,j,k,6) + Coeff*BzPerN_G(i,j,k-1)
-    end do; end do; end do
-
-    ! dR(Bz)/dBx
-    Coeff = wnrm(Bx_)/wnrm(Bz_)/Dxyz(y_)**2
-    ! Main diagonal
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       JAC(Bz_,Bx_,i,j,k,1)= JAC(Bz_,Bx_,i,j,k,1) &
-            + Coeff*(ByPerN_G(i,j-1,k)+ByPerN_G(i,j+1,k))
-    end do; end do; end do
-    !J+1
-    do k=1,nK; do j=1,nJ-1; do i=1,nI
-       JAC(Bz_,Bx_,i,j,k,5)=JAC(Bz_,Bx_,i,j,k,5) - Coeff*ByPerN_G(i,j+1,k)
-    end do; end do; end do
-    !J-1
-    do k=1,nK; do j=2,nJ; do i=1,nI
-       JAC(Bz_,Bx_,i,j,k,4)=JAC(Bz_,Bx_,i,j,k,4) - Coeff*ByPerN_G(i,j-1,k)
+       JAC(By_,Bz_,i,j,k,Stencil2_) = JAC(By_,Bz_,i,j,k,Stencil2_) &
+            - Coeff*BxPerN_G(i-1,j,k)
     end do; end do; end do
 
     ! dR(Bz)/dBy
     Coeff = wnrm(By_)/wnrm(Bz_)/Dxyz(x_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
-       JAC(Bz_,By_,i,j,k,1)= JAC(Bz_,By_,i,j,k,1) &
+       JAC(Bz_,By_,i,j,k,Stencil1_) = JAC(Bz_,By_,i,j,k,Stencil1_) &
             - Coeff*(BxPerN_G(i-1,j,k)+BxPerN_G(i+1,j,k))
     end do; end do; end do
     !I+1
     do k=1,nK; do j=1,nJ; do i=1,nI-1
-       JAC(Bz_,By_,i,j,k,3)= JAC(Bz_,By_,i,j,k,3) + Coeff*BxPerN_G(i+1,j,k)
+       JAC(Bz_,By_,i,j,k,Stencil3_) = JAC(Bz_,By_,i,j,k,Stencil3_) &
+            + Coeff*BxPerN_G(i+1,j,k)
     end do; end do; end do
     !I-1
     do k=1,nK; do j=1,nJ; do i=2,nI
-       JAC(Bz_,By_,i,j,k,2)= JAC(Bz_,By_,i,j,k,2) + Coeff*BxPerN_G(i-1,j,k)
+       JAC(Bz_,By_,i,j,k,Stencil2_)= JAC(Bz_,By_,i,j,k,Stencil2_) &
+            + Coeff*BxPerN_G(i-1,j,k)
     end do; end do; end do
 
   end subroutine impl_hall_resist

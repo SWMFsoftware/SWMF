@@ -552,6 +552,7 @@ end subroutine get_semi_impl_matvec
 subroutine get_semi_impl_jacobian
 
   use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, &
+       PrecondType, &
        UseSplitSemiImplicit, iVarSemi, &
        nStencil, MAT, ImplCoeff, DconsDsemi_VCB !!!, wnrm
   use ModRadDiffusion,   ONLY: add_jacobian_rad_diff
@@ -559,6 +560,7 @@ subroutine get_semi_impl_jacobian
   use ModResistivity,    ONLY: add_jacobian_resistivity
   use ModMain, ONLY: nI, nJ, nK, Dt
   use ModGeometry, ONLY: vInv_CB
+  use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix
 
   implicit none
 
@@ -606,7 +608,13 @@ subroutine get_semi_impl_jacobian
            end do
         end if
      end do; end do; end do
+
+     if(PrecondType == 'HYPRE') &
+          call hypre_set_matrix_block(iImplBlock, MAT(:,:,:,:,:,:,iImplBlock))
+
   end do
+
+  if(PrecondType == 'HYPRE')call hypre_set_matrix
 
 end subroutine get_semi_impl_jacobian
 

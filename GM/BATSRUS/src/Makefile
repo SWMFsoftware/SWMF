@@ -5,7 +5,8 @@ SHELL =/bin/sh
 include ../Makefile.def
 
 SEARCH_EXTRA = \
-	-I../srcBATL -I${MAGNETOGRAMDIR} -I${DEMTDIR} -I${EMPIRICALEEDIR} -I${CRASHDIR} 
+	-I../srcBATL -I${MAGNETOGRAMDIR} -I${DEMTDIR} -I${EMPIRICALEEDIR} \
+	-I${CRASHDIR}
 
 include ../Makefile.conf
 include Makefile.DEPEND
@@ -14,7 +15,7 @@ include Makefile.RULES
 # CONFIGURABLE MODULES
 
 MOD1 = ModCT.o       #^CFG IF CONSTRAINB
-MOD2 = ModImplicit.o ModRadDiffusion.o ModHeatConduction.o #^CFG IF IMPLICIT
+MOD2 = ModImplicit.o ModImplHypre.o ModRadDiffusion.o ModHeatConduction.o #^CFG IF IMPLICIT
 MOD3 = ModRaytrace.o #^CFG IF RAYTRACE
 MOD4 = ModProject.o  #^CFG IF PROJECTION
 MOD5 = ModAdjoint.o  #^CFG IF ADJOINT
@@ -201,7 +202,7 @@ ${EXE}: ${OBJECTS_EXE}
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBSHARE}
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o \
-		${LBLAS} ${HDFLIB} ${Lflag1}
+		${LBLAS} ${HDFLIB} ${Lflag1} ${HYPRELIB}
 	rm -rf Tmp_
 
 # Compilation of CRASH ############
@@ -243,4 +244,4 @@ ${CRASHEXE}: ${OBJECTS_EXE} ${LIBCRASH}
 distclean: clean
 	rm -f ModUser.f90.safe
 	mv ModUser.f90 ModUser.f90.safe
-	rm -f ModSize.f90 ModEquation.f90 ModHdf5.f90
+	rm -f ModSize.f90 ModEquation.f90 ModHdf5.f90 ModImplHypre.f90

@@ -3,6 +3,7 @@
 module ModImplicit
 
   use ModSize
+  use BATL_size,     ONLY: nDimBatl => nDim
   use ModVarIndexes, ONLY: nVar, P_
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc
@@ -149,7 +150,11 @@ module ModImplicit
   integer :: n_prev=-100
 
   ! Heptadiagonal Jacobian matrix
-  integer, parameter:: nstencil=2*ndim+1
+  integer, parameter:: nStencil = 2*nDimBatl + 1
+  integer, parameter:: Stencil1_ = 1, Stencil2_ = 2, Stencil3_ = 3, &
+       Stencil4_ = min(4,nStencil), Stencil5_ = min(5,nStencil), &
+       Stencil6_ = min(6,nStencil), Stencil7_ = min(7,nStencil)
+
   real, allocatable :: MAT(:,:,:,:,:,:,:)
   real, allocatable :: JacobiPrec_I(:)
 
@@ -288,7 +293,7 @@ contains
           call read_var('GustafssonPar', PrecondParam)
           PrecondParam = -PrecondParam
        case default
-          call CON_stop(NameSub//' invalid TypePrecond='//PrecondType)
+          call stop_mpi(NameSub//' invalid TypePrecond='//PrecondType)
        end select
 
     case('#KRYLOV')

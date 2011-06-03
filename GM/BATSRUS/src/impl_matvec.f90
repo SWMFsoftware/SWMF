@@ -9,6 +9,7 @@ subroutine impl_matvec(qx,qy,n)
   ! N contains the number of elements in qx and qy.
 
   use ModImplicit
+  use ModImplHypre, ONLY: hypre_preconditioner
   use ModMpi
   implicit none
 
@@ -29,16 +30,21 @@ subroutine impl_matvec(qx,qy,n)
 
   nmatvec=nmatvec+1
 
-  select case(JacobianType)
-  case('free')
-     call impl_matvec_free(qx,qy,n)
-  case('with')
-     call impl_matvec_with(qx,qy,n)
-  case('prec')
-     call impl_matvec_prec(qx,qy,n)
-  case default
-     call stop_mpi('Unknown value for JacobianType')
-  end select
+  if(PrecondType == 'HYPRE')then
+     call get_semi_impl_matvec(qx, qy, n)
+     call hypre_preconditioner(n, qy)
+  else
+     select case(JacobianType)
+     case('free')
+        call impl_matvec_free(qx,qy,n)
+     case('with')
+        call impl_matvec_with(qx,qy,n)
+     case('prec')
+        call impl_matvec_prec(qx,qy,n)
+     case default
+        call stop_mpi('Unknown value for JacobianType')
+     end select
+  end if
 
   if(oktest_me.and.nImplBLK>0)&
        write(*,*)'impl_matvec final sum(x**2),sum(y**2),y(test)=',&
@@ -187,7 +193,8 @@ end subroutine impl_matvec_free
 subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
 
   use ModImplicit, ONLY: JacobiPrec_I, MAT, nVarSemi, nI, nJ, nwIJK, nIJK, &
-       nImplBlk, PrecondType
+       nImplBlk, PrecondType, Stencil1_, Stencil2_, Stencil3_, Stencil4_, &
+       Stencil5_, Stencil6_, Stencil7_
   use ModLinearSolver, ONLY: Lhepta, Uhepta, multiply_dilu
 
   implicit none
@@ -205,26 +212,26 @@ subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
      if(PrecondType == 'DILU')then
         call multiply_dilu(nIJK, nVarSemi, nI, nI*nJ,&
              PrecVec_I(nwIJK*(iImplBlock-1)+1),&
-             MAT(1,1,1,1,1,1,iImplBlock),&
-             MAT(1,1,1,1,1,2,iImplBlock),&
-             MAT(1,1,1,1,1,3,iImplBlock),&
-             MAT(1,1,1,1,1,4,iImplBlock),&
-             MAT(1,1,1,1,1,5,iImplBlock),&
-             MAT(1,1,1,1,1,6,iImplBlock),&
-             MAT(1,1,1,1,1,7,iImplBlock))
+             MAT(1,1,1,1,1,Stencil1_,iImplBlock),&
+             MAT(1,1,1,1,1,Stencil2_,iImplBlock),&
+             MAT(1,1,1,1,1,Stencil3_,iImplBlock),&
+             MAT(1,1,1,1,1,Stencil4_,iImplBlock),&
+             MAT(1,1,1,1,1,Stencil5_,iImplBlock),&
+             MAT(1,1,1,1,1,Stencil6_,iImplBlock),&
+             MAT(1,1,1,1,1,Stencil7_,iImplBlock))
      else
         call Lhepta(nIJK, nVarSemi, nI, nI*nJ,&
              PrecVec_I(nwIJK*(iImplBlock-1)+1),&
-             MAT(1,1,1,1,1,1,iImplBlock),&
-             MAT(1,1,1,1,1,2,iImplBlock),&
-             MAT(1,1,1,1,1,4,iImplBlock),&
-             MAT(1,1,1,1,1,6,iImplBlock))
+             MAT(1,1,1,1,1,Stencil1_,iImplBlock),&
+             MAT(1,1,1,1,1,Stencil2_,iImplBlock),&
+             MAT(1,1,1,1,1,Stencil4_,iImplBlock),&
+             MAT(1,1,1,1,1,Stencil6_,iImplBlock))
 
         call Uhepta(.true., nIJK, nVarSemi, nI, nI*nJ,&
              PrecVec_I(nwIJK*(iImplBlock-1)+1),&
-             MAT(1,1,1,1,1,3,iImplBlock),&
-             MAT(1,1,1,1,1,5,iImplBlock),&
-             MAT(1,1,1,1,1,7,iImplBlock))
+             MAT(1,1,1,1,1,Stencil3_,iImplBlock),&
+             MAT(1,1,1,1,1,Stencil5_,iImplBlock),&
+             MAT(1,1,1,1,1,Stencil7_,iImplBlock))
      end if
   end do
 
@@ -266,15 +273,15 @@ subroutine impl_matvec_prec(qx,qy,n)
         if(PrecondSide=='right') &
              call Lhepta(nIJK, nVarSemi, nI, nI*nJ, &
              qy(nwIJK*(implBLK-1)+1) ,&
-             MAT(1,1,1,1,1,1,implBLK),&   ! Main diagonal
-             MAT(1,1,1,1,1,2,implBLK),&   ! -i
-             MAT(1,1,1,1,1,4,implBLK),&   ! -j
-             MAT(1,1,1,1,1,6,implBLK))    ! -k
+             MAT(1,1,1,1,1,Stencil1_,implBLK),&   ! Main diagonal
+             MAT(1,1,1,1,1,Stencil2_,implBLK),&   ! -i
+             MAT(1,1,1,1,1,Stencil4_,implBLK),&   ! -j
+             MAT(1,1,1,1,1,Stencil6_,implBLK))    ! -k
         call Uhepta(.true.,nIJK, nVarSemi, nI, nI*nJ, &
              qy(nwIJK*(implBLK-1)+1) ,  &
-             MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
-             MAT(1,1,1,1,1,5,implBLK),  &   ! +j 
-             MAT(1,1,1,1,1,7,implBLK))      ! +k
+             MAT(1,1,1,1,1,Stencil3_,implBLK),  &   ! +i diagonal
+             MAT(1,1,1,1,1,Stencil5_,implBLK),  &   ! +j 
+             MAT(1,1,1,1,1,Stencil7_,implBLK))      ! +k
      end do
   end if
 
@@ -289,30 +296,30 @@ subroutine impl_matvec_prec(qx,qy,n)
      do implBLK = 1, nImplBLK
         call multiply_dilu(nIJK, nVarSemi, nI, nI*nJ, &
              qy(nwIJK*(implBLK-1)+1),&
-             MAT(1,1,1,1,1,1,implBLK),&
-             MAT(1,1,1,1,1,2,implBLK),&
-             MAT(1,1,1,1,1,3,implBLK),&
-             MAT(1,1,1,1,1,4,implBLK),&
-             MAT(1,1,1,1,1,5,implBLK),&
-             MAT(1,1,1,1,1,6,implBLK),&
-             MAT(1,1,1,1,1,7,implBLK))
+             MAT(1,1,1,1,1,Stencil1_,implBLK),&
+             MAT(1,1,1,1,1,Stencil2_,implBLK),&
+             MAT(1,1,1,1,1,Stencil3_,implBLK),&
+             MAT(1,1,1,1,1,Stencil4_,implBLK),&
+             MAT(1,1,1,1,1,Stencil5_,implBLK),&
+             MAT(1,1,1,1,1,Stencil6_,implBLK),&
+             MAT(1,1,1,1,1,Stencil7_,implBLK))
      end do
   elseif(PrecondSide /= 'right')then
      do implBLK = 1, nImplBLK
         call Lhepta(nIJK, nVarSemi, nI, nI*nJ,&
              qy(nwIJK*(implBLK-1)+1) ,&
-             MAT(1,1,1,1,1,1,implBLK),&   ! Main diagonal
-             MAT(1,1,1,1,1,2,implBLK),&   ! -i
-             MAT(1,1,1,1,1,4,implBLK),&   ! -j
-             MAT(1,1,1,1,1,6,implBLK))    ! -k
+             MAT(1,1,1,1,1,Stencil1_,implBLK),&   ! Main diagonal
+             MAT(1,1,1,1,1,Stencil2_,implBLK),&   ! -i
+             MAT(1,1,1,1,1,Stencil4_,implBLK),&   ! -j
+             MAT(1,1,1,1,1,Stencil6_,implBLK))    ! -k
      end do
      if(PrecondSide == 'left') then
         do implBLK = 1, nImplBLK
            call Uhepta(.true., nIJK, nVarSemi, nI, nI*nJ,&
                 qy(nwIJK*(implBLK-1)+1),   &
-                MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
-                MAT(1,1,1,1,1,5,implBLK),  &   ! +j
-                MAT(1,1,1,1,1,7,implBLK))      ! +k
+                MAT(1,1,1,1,1,Stencil3_,implBLK),  &   ! +i diagonal
+                MAT(1,1,1,1,1,Stencil5_,implBLK),  &   ! +j
+                MAT(1,1,1,1,1,Stencil7_,implBLK))      ! +k
         end do
      end if
   end if
@@ -373,48 +380,48 @@ contains
     do j=1,nIJK
        do i=1,nVarSemi
           do k=1,nVarSemi
-             qy(i,j)=qy(i,j)+JAC(i,k,j,1)*qx(k,j)
+             qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil1_)*qx(k,j)
           end do
        end do
        if(j>1)then
           do i=1,nVarSemi
              do k=1,nVarSemi
-                qy(i,j)=qy(i,j)+JAC(i,k,j,2)*qx(k,j-1)
+                qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil2_)*qx(k,j-1)
              end do
           end do
        end if
        if(j<nIJK)then
           do i=1,nVarSemi
              do k=1,nVarSemi
-                qy(i,j)=qy(i,j)+JAC(i,k,j,3)*qx(k,j+1)
+                qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil3_)*qx(k,j+1)
              end do
           end do
        end if
        if(j>nI)then
           do i=1,nVarSemi
              do k=1,nVarSemi
-                qy(i,j)=qy(i,j)+JAC(i,k,j,4)*qx(k,j-nI)
+                qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil4_)*qx(k,j-nI)
              end do
           end do
        end if
        if(j<=nIJK-nI)then
           do i=1,nVarSemi
              do k=1,nVarSemi
-                qy(i,j)=qy(i,j)+JAC(i,k,j,5)*qx(k,j+nI)
+                qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil5_)*qx(k,j+nI)
              end do
           end do
        end if
        if(j>nI*nJ)then
           do i=1,nVarSemi
              do k=1,nVarSemi
-                qy(i,j)=qy(i,j)+JAC(i,k,j,6)*qx(k,j-nI*nJ)
+                qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil6_)*qx(k,j-nI*nJ)
              end do
           end do
        end if
        if(j<=nIJK-nI*nJ)then
           do i=1,nVarSemi
              do k=1,nVarSemi
-                qy(i,j)=qy(i,j)+JAC(i,k,j,7)*qx(k,j+nI*nJ)
+                qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil7_)*qx(k,j+nI*nJ)
              end do
           end do
        end if

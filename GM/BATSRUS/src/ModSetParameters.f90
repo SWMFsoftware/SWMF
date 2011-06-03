@@ -2290,7 +2290,8 @@ contains
   !=========================================================================
   subroutine correct_parameters
 
-    use ModWaves, ONLY: UseAlfvenWaves,UseWavePressure
+    use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
+    use ModImplHypre, ONLY: IsHypreAvailable
 
     ! option and module parameters
     character (len=40) :: Name
@@ -2647,6 +2648,21 @@ contains
           call stop_mpi('Correct PARAM.in')
        end if
     end if
+
+    if(PrecondType == "HYPRE")then
+       if(.not.IsHypreAvailable)call  stop_mpi(NameSub// &
+            ' empty HYPRE module! Use Config.pl -hypre')
+       if(.not.UseSemiImplicit)call stop_mpi(NameSub// &
+            ' HYPRE preconditioner only works with semi-implicit scheme')
+       
+       if(KrylovType == 'CG')then
+          if(iProc == 0) write(*,'(a)') NameSub// &
+               ' WARNING: HYPRE preconditioner does not work with CG scheme'//&
+               ', switching to GMRES'
+          KrylovType = 'GMRES'
+       end if
+
+    endif
 
     if(nKrylovVector > KrylovMatvecMax)then
        if(iProc==0)then

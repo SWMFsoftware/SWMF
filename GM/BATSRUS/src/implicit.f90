@@ -90,6 +90,7 @@ subroutine advance_impl
        Uhepta, Lhepta, multiply_dilu
   use ModMpi
   use ModEnergy, ONLY: calc_old_pressure, calc_old_energy
+  use ModImplHypre, ONLY: hypre_preconditioner, hypre_initialize
 
   implicit none
 
@@ -267,6 +268,8 @@ subroutine advance_impl
      end do
   end if
 
+  if(PrecondType=='HYPRE') call hypre_initialize
+
   ! For nVarSemi = 1,  loop through all semi-implicit variables one-by-one
   ! For nVarSemi = nw, do all (semi-)implicit variables together
   do iVarSemi = 1, nw, nVarSemi
@@ -277,7 +280,7 @@ subroutine advance_impl
         call set_semi_impl_range
      end if
 
-     ! Initialize right hand side and dw. This uses ImplOld_VCB for BDF2 scheme.
+     ! Initialize right hand side and dw. Uses ImplOld_VCB for BDF2 scheme.
      call impl_newton_init
 
      ! Save previous timestep for 3 level scheme
@@ -483,7 +486,9 @@ contains
     !----------------------------------------------------------------------
     ! Precondition matrix if required
     if(JacobianType=='prec'.and.(NewtonIter==1.or.NewMatrix))then
-       if(PrecondType == 'JACOBI') then
+       if(PrecondType == 'HYPRE')then
+          call hypre_preconditioner(nImpl, rhs)
+       elseif(PrecondType == 'JACOBI') then
           n = 0
           do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; 
              do iVar = 1, nVarSemi
@@ -498,13 +503,13 @@ contains
           do implBLK=1,nImplBLK
              ! Preconditioning: MAT --> LU
              call prehepta(nIJK, nVarSemi, nI, nI*nJ, PrecondParam, &
-                  MAT(1,1,1,1,1,1,implBLK),&
-                  MAT(1,1,1,1,1,2,implBLK),&
-                  MAT(1,1,1,1,1,3,implBLK),&
-                  MAT(1,1,1,1,1,4,implBLK),&
-                  MAT(1,1,1,1,1,5,implBLK),&
-                  MAT(1,1,1,1,1,6,implBLK),&
-                  MAT(1,1,1,1,1,7,implBLK))
+                  MAT(1,1,1,1,1,Stencil1_,implBLK),&
+                  MAT(1,1,1,1,1,Stencil2_,implBLK),&
+                  MAT(1,1,1,1,1,Stencil3_,implBLK),&
+                  MAT(1,1,1,1,1,Stencil4_,implBLK),&
+                  MAT(1,1,1,1,1,Stencil5_,implBLK),&
+                  MAT(1,1,1,1,1,Stencil6_,implBLK),&
+                  MAT(1,1,1,1,1,Stencil7_,implBLK))
 
              if(KrylovType == 'CG') CYCLE
 
@@ -513,26 +518,26 @@ contains
              if(PrecondType == 'DILU')then
                 call multiply_dilu(nIJK, nVarSemi, nI, nI*nJ, &
                      rhs(nwIJK*(implBLK-1)+1),&
-                     MAT(1,1,1,1,1,1,implBLK),&
-                     MAT(1,1,1,1,1,2,implBLK),&
-                     MAT(1,1,1,1,1,3,implBLK),&
-                     MAT(1,1,1,1,1,4,implBLK),&
-                     MAT(1,1,1,1,1,5,implBLK),&
-                     MAT(1,1,1,1,1,6,implBLK),&
-                     MAT(1,1,1,1,1,7,implBLK))
+                     MAT(1,1,1,1,1,Stencil1_,implBLK),&
+                     MAT(1,1,1,1,1,Stencil2_,implBLK),&
+                     MAT(1,1,1,1,1,Stencil3_,implBLK),&
+                     MAT(1,1,1,1,1,Stencil4_,implBLK),&
+                     MAT(1,1,1,1,1,Stencil5_,implBLK),&
+                     MAT(1,1,1,1,1,Stencil6_,implBLK),&
+                     MAT(1,1,1,1,1,Stencil7_,implBLK))
              elseif(PrecondSide /= 'right')then
                 call Lhepta(nIJK, nVarSemi, nI, nI*nJ, &
                      rhs(nwIJK*(implBLK-1)+1),&
-                     MAT(1,1,1,1,1,1,implBLK),&
-                     MAT(1,1,1,1,1,2,implBLK),&
-                     MAT(1,1,1,1,1,4,implBLK),&
-                     MAT(1,1,1,1,1,6,implBLK))
+                     MAT(1,1,1,1,1,Stencil1_,implBLK),&
+                     MAT(1,1,1,1,1,Stencil2_,implBLK),&
+                     MAT(1,1,1,1,1,Stencil4_,implBLK),&
+                     MAT(1,1,1,1,1,Stencil6_,implBLK))
                 if(PrecondSide=='left') &
                      call Uhepta(.true., nIJK, nVarSemi, nI, nI*nJ,&
                      rhs(nwIJK*(implBLK-1)+1),  &
-                     MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
-                     MAT(1,1,1,1,1,5,implBLK),  &   ! +j
-                     MAT(1,1,1,1,1,7,implBLK))      ! +k
+                     MAT(1,1,1,1,1,Stencil3_,implBLK),  &   ! +i diagonal
+                     MAT(1,1,1,1,1,Stencil5_,implBLK),  &   ! +j
+                     MAT(1,1,1,1,1,Stencil7_,implBLK))      ! +k
              end if
 
              ! Initial guess x --> P_R^{-1}.x where P_R^{-1} = I, U, LU for
@@ -631,15 +636,15 @@ contains
           if(PrecondSide=='right') &
                call Lhepta(nIJK, nVarSemi, nI, nI*nJ,&
                dw(nwIJK*(implBLK-1)+1) ,&
-               MAT(1,1,1,1,1,1,implBLK),&   ! Main diagonal
-               MAT(1,1,1,1,1,2,implBLK),&   ! -i
-               MAT(1,1,1,1,1,4,implBLK),&   ! -j
-               MAT(1,1,1,1,1,6,implBLK))    ! -k
+               MAT(1,1,1,1,1,Stencil1_,implBLK),&   ! Main diagonal
+               MAT(1,1,1,1,1,Stencil2_,implBLK),&   ! -i
+               MAT(1,1,1,1,1,Stencil4_,implBLK),&   ! -j
+               MAT(1,1,1,1,1,Stencil6_,implBLK))    ! -k
           call Uhepta(.true., nIJK, nVarSemi, nI, nI*nJ,&
                dw(nwIJK*(implBLK-1)+1),   &
-               MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
-               MAT(1,1,1,1,1,5,implBLK),  &   ! +j
-               MAT(1,1,1,1,1,7,implBLK))      ! +k
+               MAT(1,1,1,1,1,Stencil3_,implBLK),  &   ! +i diagonal
+               MAT(1,1,1,1,1,Stencil5_,implBLK),  &   ! +j
+               MAT(1,1,1,1,1,Stencil7_,implBLK))      ! +k
        end do
        if(DoTestMe.and.nImplBLK>0)&
             write(*,*)NameSub,': final     dw(test)=',dw(implVARtest)
