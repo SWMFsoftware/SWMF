@@ -267,6 +267,10 @@ subroutine initialize_gitm(TimeIn)
      call init_aerosol
   endif
 
+ if (   .not. (index(cPlanet,"Mars") == 0)  ) then 
+     call init_isochem
+  endif
+
   if (.not. DoRestart) then
 
      Potential = 0.0
