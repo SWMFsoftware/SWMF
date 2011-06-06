@@ -539,14 +539,8 @@ contains
     end if
 
     ! Central difference with averaging in orthogonal direction
-    iR = i+1; iL = i-1; 
-    jR = j+1; jL = j-1; 
-    kR = k+1; kL = k-1; 
-
+    iR = i+1; iL = i-1
     Ax = -0.25*InvDx; Bx = 0.0; Cx = +0.25*InvDx
-    Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
-    Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
-
     if(i==1)then
        if(NeiLeast(iBlock)==-1 &
             .or. (iDir==y_ .and. &
@@ -571,51 +565,69 @@ contains
        end if
     end if
 
-    if(j==1)then
-       if(NeiLsouth(iBlock)==-1 &
-            .or. (iDir==x_ .and. &
-            (i==1    .and. BlkNeighborLev(-1,-1,0, iBlock)==-1) .or. &
-            (i==nI+1 .and. BlkNeighborLev( 1,-1,0, iBlock)==-1)) &
-            .or. (iDir==z_ .and. &
-            (k==1    .and. BlkNeighborLev( 0,-1,-1, iBlock)==-1) .or. &
-            (k==nK+1 .and. BlkNeighborLev( 0,-1, 1, iBlock)==-1))&
-            )then
-          jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
-       end if
-    elseif(j==nJ)then
-       if(NeiLnorth(iBlock)==-1 &
-            .or. (iDir==x_ .and. &
-            (i==1    .and. BlkNeighborLev(-1, 1,0, iBlock)==-1) .or. &
-            (i==nI+1 .and. BlkNeighborLev( 1, 1,0, iBlock)==-1)) &
-            .or. (iDir==z_ .and. &
-            (k==1    .and. BlkNeighborLev( 0, 1,-1, iBlock)==-1) .or. &
-            (k==nK+1 .and. BlkNeighborLev( 0, 1, 1, iBlock)==-1))&
-            )then
-          jL = j-1; jR = j-2; Ay=-InvDy; By=0.75*InvDy; Cy=0.25*InvDy
+    ! y direction
+    if(nJ == 1)then
+       ! 1D
+       jR = j; jL = j
+       Ay = 0.0; By = 0.0; Cy = 0.0
+    else
+       jR = j+1; jL = j-1
+       Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
+       if(j==1)then
+          if(NeiLsouth(iBlock)==-1 &
+               .or. (iDir==x_ .and. &
+               (i==1    .and. BlkNeighborLev(-1,-1,0, iBlock)==-1) .or. &
+               (i==nI+1 .and. BlkNeighborLev( 1,-1,0, iBlock)==-1)) &
+               .or. (iDir==z_ .and. &
+               (k==1    .and. BlkNeighborLev( 0,-1,-1, iBlock)==-1) .or. &
+               (k==nK+1 .and. BlkNeighborLev( 0,-1, 1, iBlock)==-1))&
+               )then
+             jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
+          end if
+       elseif(j==nJ)then
+          if(NeiLnorth(iBlock)==-1 &
+               .or. (iDir==x_ .and. &
+               (i==1    .and. BlkNeighborLev(-1, 1,0, iBlock)==-1) .or. &
+               (i==nI+1 .and. BlkNeighborLev( 1, 1,0, iBlock)==-1)) &
+               .or. (iDir==z_ .and. &
+               (k==1    .and. BlkNeighborLev( 0, 1,-1, iBlock)==-1) .or. &
+               (k==nK+1 .and. BlkNeighborLev( 0, 1, 1, iBlock)==-1))&
+               )then
+             jL = j-1; jR = j-2; Ay=-InvDy; By=0.75*InvDy; Cy=0.25*InvDy
+          end if
        end if
     end if
 
-    if(k==1)then
-       if(NeiLbot(iBlock)==-1 &
-            .or. (iDir==x_ .and. &
-            (i==1    .and. BlkNeighborLev(-1,0,-1, iBlock)==-1) .or. &
-            (i==nI+1 .and. BlkNeighborLev( 1,0,-1, iBlock)==-1)) &
-            .or. (iDir==y_ .and. &
-            (j==1    .and. BlkNeighborLev( 0,-1,-1, iBlock)==-1) .or. &
-            (j==nJ+1 .and. BlkNeighborLev( 0, 1,-1, iBlock)==-1))&
-            )then
-          kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
-       end if
-    elseif(k==nK)then
-       if(NeiLtop(iBlock)==-1 &
-            .or. (iDir==x_ .and. &
-            (i==1    .and. BlkNeighborLev(-1,0, 1, iBlock)==-1) .or. &
-            (i==nI+1 .and. BlkNeighborLev( 1,0, 1, iBlock)==-1)) &
-            .or. (iDir==y_ .and. &
-            (j==1    .and. BlkNeighborLev( 0,-1,1, iBlock)==-1) .or. &
-            (j==nJ+1 .and. BlkNeighborLev( 0, 1,1, iBlock)==-1))&
-            )then
-          kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
+    ! z direction
+    if(nK == 1)then
+       ! 1D or 2D
+       kR = k; kL = k
+       Az = 0.0; Bz = 0.0; Cz = 0.0
+    else
+       kR = k+1; kL = k-1
+       Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
+       if(k==1)then
+          if(NeiLbot(iBlock)==-1 &
+               .or. (iDir==x_ .and. &
+               (i==1    .and. BlkNeighborLev(-1,0,-1, iBlock)==-1) .or. &
+               (i==nI+1 .and. BlkNeighborLev( 1,0,-1, iBlock)==-1)) &
+               .or. (iDir==y_ .and. &
+               (j==1    .and. BlkNeighborLev( 0,-1,-1, iBlock)==-1) .or. &
+               (j==nJ+1 .and. BlkNeighborLev( 0, 1,-1, iBlock)==-1))&
+               )then
+             kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
+          end if
+       elseif(k==nK)then
+          if(NeiLtop(iBlock)==-1 &
+               .or. (iDir==x_ .and. &
+               (i==1    .and. BlkNeighborLev(-1,0, 1, iBlock)==-1) .or. &
+               (i==nI+1 .and. BlkNeighborLev( 1,0, 1, iBlock)==-1)) &
+               .or. (iDir==y_ .and. &
+               (j==1    .and. BlkNeighborLev( 0,-1,1, iBlock)==-1) .or. &
+               (j==nJ+1 .and. BlkNeighborLev( 0, 1,1, iBlock)==-1))&
+               )then
+             kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
+          end if
        end if
     end if
 
@@ -643,13 +655,6 @@ contains
   contains
     !==========================================================================
     subroutine calc_cartesian_j
-
-      if(nJ == 1) then
-         Ay = 0.; By = 0.; Cy = 0.; jR = j; jL = j
-      end if
-      if(nK == 1) then
-         Az = 0.; Bz = 0.; Cz = 0.; kR = k; kL = k
-      end if
 
       select case(iDir)
       case(x_)

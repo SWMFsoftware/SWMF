@@ -42,13 +42,7 @@ contains
 
     ! Central difference
     iR = i+1; iL = i-1;
-    jR = j+1; jL = j-1;
-    kR = k+1; kL = k-1;
-
     Ax = -InvDx2; Bx = 0.0; Cx = +InvDx2
-    Ay = -InvDy2; By = 0.0; Cy = +InvDy2
-    Az = -InvDz2; Bz = 0.0; Cz = +InvDz2
-
     ! Avoid the ghost cells at resolution changes by using
     ! second-order one-sided difference
     if(i==1 .and. NeiLeast(iBlock)==1)then
@@ -57,16 +51,34 @@ contains
        iL = i-1; iR = i-2; Ax =-4.0*InvDx2; Bx = 3.0*InvDx2; Cx = InvDx2
     end if
 
-    if(j==1 .and. NeiLsouth(iBlock)==1)then
-       jL = j+1; jR = j+2; Ay = 4.0*InvDy2; By =-3.0*InvDy2; Cy =-InvDy2
-    elseif(j==nJ .and. NeiLnorth(iBlock)==1)then
-       jL = j-1; jR = j-2; Ay =-4.0*InvDy2; By = 3.0*InvDy2; Cy = InvDy2
+    ! For y direction
+    if(nJ == 1)then
+       ! 1D
+       jR = j; jL = j
+       Ay = 0.0; By = 0.0; Cy = 0.0
+    else
+       jR = j+1; jL = j-1;
+       Ay = -InvDy2; By = 0.0; Cy = +InvDy2
+       if(j==1 .and. NeiLsouth(iBlock)==1)then
+          jL = j+1; jR = j+2; Ay = 4.0*InvDy2; By =-3.0*InvDy2; Cy =-InvDy2
+       elseif(j==nJ .and. NeiLnorth(iBlock)==1)then
+          jL = j-1; jR = j-2; Ay =-4.0*InvDy2; By = 3.0*InvDy2; Cy = InvDy2
+       end if
     end if
 
-    if(k==1 .and. NeiLbot(iBlock)==1)then
-       kL = k+1; kR = k+2; Az = 4.0*InvDz2; Bz =-3.0*InvDz2; Cz =-InvDz2
-    elseif(k==nK .and. NeiLtop(iBlock)==1)then
-       kL = k-1; kR = k-2; Az =-4.0*InvDz2; Bz = 3.0*InvDz2; Cz = InvDz2
+    ! For z direction
+    if(nK == 1)then
+       ! 1D or 2D
+       kR = k; kL = k
+       Az = 0.0; Bz = 0.0; Cz = 0.0
+    else
+       kR = k+1; kL = k-1
+       Az = -InvDz2; Bz = 0.0; Cz = +InvDz2
+       if(k==1 .and. NeiLbot(iBlock)==1)then
+          kL = k+1; kR = k+2; Az = 4.0*InvDz2; Bz =-3.0*InvDz2; Cz =-InvDz2
+       elseif(k==nK .and. NeiLtop(iBlock)==1)then
+          kL = k-1; kR = k-2; Az =-4.0*InvDz2; Bz = 3.0*InvDz2; Cz = InvDz2
+       end if
     end if
 
     ! Use first-order one-sided difference near the body if needed.
@@ -93,45 +105,51 @@ contains
           end if
        end if
 
-       if(.not.True_Cell(i,jL,k,iBlock).and..not.True_Cell(i,jR,k,iBlock))then
-          Current_D = 0.0
-          RETURN
-       elseif(.not.True_Cell(i,jL,k,iBlock))then
-          Ay = 0.0
-          if(jR==j+2)then
-             By =-InvDy2; Cy = InvDy2
-          elseif(jR==j-2)then
-             By = InvDy2; Cy =-InvDy2
-          else ! jR==j+1
-             By =-2.0*InvDy2; Cy = 2.0*InvDy2
-          end if
-       elseif(.not.True_Cell(i,jR,k,iBlock))then
-          Cy = 0.0
-          if(jL==j+1)then
-             Ay = 2.0*InvDy2; By =-2.0*InvDy2
-          else ! jL==j-1
-             Ay =-2.0*InvDy2; By = 2.0*InvDy2
+       if(nJ > 1)then
+       ! 2D or 3D
+          if(.not.True_Cell(i,jL,k,iBlock).and..not.True_Cell(i,jR,k,iBlock))then
+             Current_D = 0.0
+             RETURN
+          elseif(.not.True_Cell(i,jL,k,iBlock))then
+             Ay = 0.0
+             if(jR==j+2)then
+                By =-InvDy2; Cy = InvDy2
+             elseif(jR==j-2)then
+                By = InvDy2; Cy =-InvDy2
+             else ! jR==j+1
+                By =-2.0*InvDy2; Cy = 2.0*InvDy2
+             end if
+          elseif(.not.True_Cell(i,jR,k,iBlock))then
+             Cy = 0.0
+             if(jL==j+1)then
+                Ay = 2.0*InvDy2; By =-2.0*InvDy2
+             else ! jL==j-1
+                Ay =-2.0*InvDy2; By = 2.0*InvDy2
+             end if
           end if
        end if
 
-       if(.not.True_Cell(i,j,kL,iBlock).and..not.True_Cell(i,j,kR,iBlock))then
-          Current_D = 0.0
-          RETURN
-       elseif(.not.True_Cell(i,j,kL,iBlock))then
-          Az = 0.0
-          if(kR==k+2)then
-             Bz =-InvDz2; Cz = InvDz2
-          elseif(kR==k-2)then
-             Bz = InvDz2; Cz =-InvDz2
-          else ! kR==k+1
-             Bz =-2.0*InvDz2; Cz = 2.0*InvDz2
-          end if
-       elseif(.not.True_Cell(i,j,kR,iBlock))then
-          Cz = 0.0
-          if(kL==k+1)then
-             Az = 2.0*InvDz2; Bz =-2.0*InvDz2
-          else ! kL==k-1
-             Az =-2.0*InvDz2; Bz = 2.0*InvDz2
+       if(nK > 1)then
+          ! 3D
+          if(.not.True_Cell(i,j,kL,iBlock).and..not.True_Cell(i,j,kR,iBlock))then
+             Current_D = 0.0
+             RETURN
+          elseif(.not.True_Cell(i,j,kL,iBlock))then
+             Az = 0.0
+             if(kR==k+2)then
+                Bz =-InvDz2; Cz = InvDz2
+             elseif(kR==k-2)then
+                Bz = InvDz2; Cz =-InvDz2
+             else ! kR==k+1
+                Bz =-2.0*InvDz2; Cz = 2.0*InvDz2
+             end if
+          elseif(.not.True_Cell(i,j,kR,iBlock))then
+             Cz = 0.0
+             if(kL==k+1)then
+                Az = 2.0*InvDz2; Bz =-2.0*InvDz2
+             else ! kL==k-1
+                Az =-2.0*InvDz2; Bz = 2.0*InvDz2
+             end if
           end if
        end if
     end if
