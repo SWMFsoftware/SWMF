@@ -53,9 +53,6 @@ subroutine CRCM_set_parameters(NameAction)
      case('#TIMESIMULATION')
         call read_var('TimeSimulation',time)
      
-     case default
-        call CON_stop(NameSub//' invalid command='//NameCommand)
-
      end select
   enddo
 

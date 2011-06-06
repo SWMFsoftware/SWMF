@@ -4,7 +4,7 @@ Module ModImSat
   logical :: DoWriteSats  = .false.
   logical :: IsFirstWrite = .true.
   integer :: nImSats = 0, iStartIter = 0
-  real    :: DtSatOut = 60.0 !write sat output every minute
+  real    :: DtSatOut = 1.0 !write sat output every minute
   real,               allocatable :: SatLoc_3I(:,:,:), SatFlux_II(:,:)
   real,               allocatable :: BfieldEq2_G(:,:),SatVar_I(:)
   real,               allocatable :: LonGrid_G(:), Flux_G(:,:,:,:)
@@ -47,7 +47,6 @@ contains
     integer,parameter  :: iSpeciesOut=1 !only save H+ flux
     character(len=8)  :: NameChannel
     !-------------------------------------------------------------------------
-    
     ! Allocate array for satellite flux
     
     if(.not. allocated(SatFlux_II))  allocate(SatFlux_II(nEnergy,nAngle))
@@ -115,7 +114,6 @@ contains
 
     ! Collect variables.
 
-
     ! Get satellite location in generalized coordinates.
     ! and interpolate flux to satellite location
     SatLat=SatLoc_3I(1,2,iSatIn)
@@ -173,7 +171,6 @@ contains
     endif
     ! Deallocate Flux_G after last satellite to save memory
     if(iSatIn == nImSats) deallocate(Flux_G)
-    
     ! Format output
     if (SatLoc_3I(3,2,iSatIn) == 3 .and. SatLat <= maxval(LatGrid_I)) then
        SatVar_I(:)=0.0

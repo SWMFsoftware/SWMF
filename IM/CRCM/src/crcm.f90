@@ -1,4 +1,4 @@
-
+ 
 subroutine crcm_run(delta_t)
   use ModConst,       ONLY: cLightSpeed, cElectronCharge
   use ModCrcmInitialize
@@ -16,6 +16,8 @@ subroutine crcm_run(delta_t)
   use ModImTime
   use ModTimeConvert, ONLY: time_real_to_int
   use ModImSat,       ONLY: nImSats,write_im_sat, DoWriteSats, DtSatOut
+  use ModCrcmGrid,    ONLY: iProc,nProc,iComm,nLonPar,nLonPar_P,nLonBefore_P
+  use ModMpi
   implicit none
 
 
@@ -26,6 +28,18 @@ subroutine crcm_run(delta_t)
   real vl(nspec,0:np,nt,nm,nk),vp(nspec,np,nt,nm,nk),fb(nspec,nt,nm,nk),rc
   integer iLat, iLon, iSpecies, iSat
   logical, save :: IsFirstCall =.true.
+  
+  !Vars for mpi passing
+  integer ::iSendCount,iM,iK,iLon1,iError,iEnergy,iPit,iRecvLower,iRecvUpper,iPe
+  integer,allocatable :: iRecieveCount_P(:),iDisplacement_P(:)
+  real :: BufferSend_C(np,nt),BufferRecv_C(np,nt)
+  integer,allocatable :: iBufferSend_I(:),iBufferRecv_I(:)
+  integer :: iStatus_I(MPI_STATUS_SIZE)
+
+  real,   allocatable :: ekevSEND_IIII(:,:,:,:),ekevRECV_IIII(:,:,:,:)
+  real,   allocatable :: sinaSEND_III(:,:,:),sinaRECV_III(:,:,:)
+  real,   allocatable :: F2SEND_IIIII(:,:,:,:,:),f2RECV_IIIII(:,:,:,:,:)
+
   !----------------------------------------------------------------------------
 
   if (dt==0) then
@@ -42,9 +56,12 @@ subroutine crcm_run(delta_t)
   
   ! do field line integration and determine vel, ekev, momentum (pp), etc.
   rc=(re_m+Hiono*1000.)/re_m        ! ionosphere distance in RE`
+
+  call timing_start('crcm_fieldpara')
   call fieldpara(Time,dt,cLightSpeed,cElectronCharge,rc,re_m,xlat,xmlt,phi,xk,&
                  dipmom)
-  
+  call timing_stop('crcm_fieldpara')
+
   !set boundary density and temperature inside iba
   if (.not. DoMultiFluidGMCoupling) then
      ! When not Multifluid we get the total density from Rho_MHD as follows:
@@ -55,7 +72,7 @@ subroutine crcm_run(delta_t)
      ! FactorTotalDens = sum(m_i*dfactor_i)
      FactorTotalDens = sum(dFactor_I(1:nspec-1)*amu_I(1:nspec-1))
      do iSpecies = 1, nspec
-        do iLon=1,nt
+        do iLon=MinLonPar,MaxLonPar
            do iLat=1,irm(iLon) 
               if (iLat < iLatMin) then
                  !Inside MHD boundary set den and temp to value at boundary
@@ -83,7 +100,7 @@ subroutine crcm_run(delta_t)
      !Multifluid Case
      !Set Ion density and temperature
      do iSpecies = 1, nspec-1
-        do iLon=1,nt
+        do iLon=MinLonPar,MaxLonPar
            do iLat=1,irm(iLon) 
               if (iLat < iLatMin) then
                  !Inside MHD boundary set den and temp to value at boundary
@@ -110,7 +127,7 @@ subroutine crcm_run(delta_t)
         end do
      end do
      !Set Electron density and temperature
-     do iLon=1,nt
+     do iLon=MinLonPar,MaxLonPar
         do iLat=1,irm(iLon) 
            ! Density set by quasineutrality
            Den_IC(nspec,iLat,iLon)  = sum(Den_IC(1:nspec-1,iLat,iLon))
@@ -122,7 +139,10 @@ subroutine crcm_run(delta_t)
      end do
     !call CON_STOP('CRCM not set to use multifluid')
   endif
-
+  ! Bcast DoWriteSats on firstcall
+  if (IsFirstCall .and. nProc > 1) then
+     call MPI_bcast(DoWriteSats,1,MPI_LOGICAL,0,iComm,iError)
+  endif
 
   ! setup initial distribution
   if (IsFirstCall .and. .not.IsRestart) then
@@ -134,52 +154,209 @@ subroutine crcm_run(delta_t)
      IsFirstCall=.false.
   endif
 
+  
+
   ! calculate boundary flux (fb) at the CRCM outer boundary at the equator
   call boundaryIM(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
-  
+
   ! calculate the drift velocity
+  call timing_start('crcm_driftV')
   call driftV(nspec,np,nt,nm,nk,irm,re_m,Hiono,dipmom,dphi,xlat, &
        dlat,ekev,pot,vl,vp) 
-  
+  call timing_stop('crcm_driftV')
+
   ! calculate the depreciation factor, achar, due to charge exchange loss
+  call timing_start('crcm_ceparaIM')
   call ceparaIM(nspec,np,nt,nm,nk,irm,dt,vel,ekev,Have,achar)
-  
+  call timing_stop('crcm_ceparaIM')
+
   ! Calculate the strong diffusion lifetime for electrons
+  call timing_start('crcm_StDiTime')
   call StDiTime(dt,vel,ftv,rc,re_m,dipmom,iba)
+  call timing_stop('crcm_StDiTime')
+
 
   ! time loop
   do n=1,nstep
+     call timing_start('crcm_driftIM')
      call driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
           fb,f2,ib0)
+     call timing_stop('crcm_driftIM')
+
+     call timing_start('crcm_charexchange')
      call charexchangeIM(np,nt,nm,nk,nspec,iba,achar,f2)
+     call timing_stop('crcm_charexchange')
+
+     call timing_start('crcm_lossconeIM')
      call lossconeIM(np,nt,nm,nk,nspec,iba,alscone,f2)
-     call StrongDiff(iba)                               
+     call timing_stop('crcm_lossconeIM')
+
+     call timing_start('crcm_StrongDiff')
+     call StrongDiff(iba)        
+     call timing_stop('crcm_StrongDiff')                       
+     
      Time = Time+dt
      ! Update CurrentTime and iCurrentTime_I
      CurrentTime = StartTime+Time
      call time_real_to_int(CurrentTime,iCurrentTime_I)
- enddo
-  
-  ! Calculate CRCM output: flux, fac, phot
+  enddo
+
+  call timing_start('crcm_output')
   call crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
        sinA,energy,sinAo,delE,dmu,amu_I,xjac,pp,xmm, &
        dmm,dk,xlat,dphi,re_m,Hiono,flux,FAC_C,phot,Pressure_IC)
-  ! Write output
-  if (DoSavePlot.and.&
-       (floor((Time+1.0e-5)/DtOutput))/=floor((Time+1.0e-5-delta_t)/DtOutput))&
-       then
-     call Crcm_plot(np,nt,xo,yo,Pressure_IC,phot,Den_IC,bo,ftv,pot,FAC_C,Time,dt)
-     if (DoSaveFlux) call Crcm_plot_fls(rc,flux,time)
+  call timing_stop('crcm_output')
+  
+  ! When nProc >1 consolodate: phot, Pressure_IC, fac and iba on iProc 0
+    if (nProc>1) then    
+     if (.not.allocated(iRecieveCount_P)) &
+          allocate(iRecieveCount_P(nProc), iDisplacement_P(nProc))       
+     !Gather to root
+     iSendCount = np*nLonPar
+     iRecieveCount_P=np*nLonPar_P
+     iDisplacement_P = np*nLonBefore_P
+     call MPI_GATHERV(FAC_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          FAC_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+          0, iComm, iError)
+
+     do iSpecies=1,nspec
+        BufferSend_C(:,:)=0.0
+        BufferSend_C(:,:)=Pressure_IC(iSpecies,:,:)
+        call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
+             MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
+             0, iComm, iError)
+        if (iProc==0) Pressure_IC(iSpecies,:,:)=BufferRecv_C(:,:)
+        
+        BufferSend_C(:,:)=0.0
+        BufferSend_C(:,:)=phot(iSpecies,:,:)
+        call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
+             MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
+             0, iComm, iError)
+        if (iProc==0) phot(iSpecies,:,:)=BufferRecv_C(:,:)
+
+        BufferSend_C(:,:)=0.0
+        BufferSend_C(:,:)=Den_IC(iSpecies,:,:)
+        call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
+             MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
+             0, iComm, iError)
+        if (iProc==0) Den_IC(iSpecies,:,:)=BufferRecv_C(:,:)
+     enddo
+
+     !call MPI_GATHERV(iba(MinLonPar:MaxLonPar),nLonPar, MPI_INTEGER, &
+     !     iba, iRecieveCount1D_P, iDisplacement1D_P, MPI_INTEGER, &
+     !     0, iComm, iError)
+     
+     
+     do iPe=1,nProc-1
+        !send iba to root proc
+        if (iProc == iPe) then
+           call MPI_send(iba(MinLonPar:MaxLonPar),nLonPar,MPI_INTEGER,0,&
+                1,iComm,iError)
+        endif
+        !recieve at root
+        if (iProc ==0) then
+           iRecvLower=nLonBefore_P(iPe)+1
+           iRecvUpper=nLonBefore_P(iPe)+nLonPar_P(iPe)
+           call MPI_recv(iba(iRecvLower:iRecvUpper),nLonPar_P(iPe),&
+                MPI_INTEGER,iPe,1,iComm,iStatus_I,iError)
+        endif
+     end do
   endif
-  ! Write Sat Output
-  if(DoWriteSats .and. DoSavePlot .and. &
-       (floor((Time+1.0e-5)/DtSatOut))/=floor((Time+1.0e-5-delta_t)/DtSatOut))&
-       then
+  ! On processor O, gather info and save plots
+  ! When time to write output, consolodate xo,yo,flux,pot,ftv, bo, and irm 
+  ! on iProc 0
+  if (nProc>1 .and. DoSavePlot  .and.&
+       (floor((Time+1.0e-5)/DtOutput))/=&
+       floor((Time+1.0e-5-delta_t)/DtOutput)) then
+     
+!     call MPI_GATHERV(pot(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+!          pot, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+!          0, iComm, iError)
+     call MPI_GATHERV(ftv(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          ftv, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+          0, iComm, iError)
+     call MPI_GATHERV(xo(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          xo, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+          0, iComm, iError)
+     call MPI_GATHERV(yo(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          yo, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+          0, iComm, iError)
+     call MPI_GATHERV(bo(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          bo, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+          0, iComm, iError)
+!     call MPI_GATHERV(irm(MinLonPar:MaxLonPar), nLonPar, MPI_INTEGER, &
+!          irm, nLonPar_P, nLonBefore_P, MPI_INTEGER, 0, iComm, iError)
+     do iPe=1,nProc-1
+        !send irm to root proc
+        if (iProc == iPe) then
+           call MPI_send(irm(MinLonPar:MaxLonPar),nLonPar,MPI_INTEGER,0,&
+                2,iComm,iError)
+        endif
+        !recieve at root
+        if (iProc ==0) then
+           iRecvLower=nLonBefore_P(iPe)+1
+           iRecvUpper=nLonBefore_P(iPe)+nLonPar_P(iPe)
+           call MPI_recv(irm(iRecvLower:iRecvUpper),nLonPar_P(iPe),&
+                MPI_INTEGER,iPe,2,iComm,iStatus_I,iError)
+        endif
+     end do
+  elseif (nProc > 1 .and. DoWriteSats .and. &
+       (floor((Time+1.0e-5)/DtSatOut))/=&
+       floor((Time+1.0e-5-delta_t)/DtSatOut)) then
+     call MPI_GATHERV(bo(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          bo, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+          0, iComm, iError)     
+  endif
+
+
+  if (nProc>1 .and. ((DoSavePlot  .and.&
+       (floor((Time+1.0e-5)/DtOutput))/=&
+       floor((Time+1.0e-5-delta_t)/DtOutput)) .or.&
+       ((floor((Time+1.0e-5)/DtSatOut))/=&
+       floor((Time+1.0e-5-delta_t)/DtSatOut).and.DoWriteSats))) then
+     do  iSpecies=1,nspec
+        do iEnergy=1,neng
+           do iPit=1,nPit
+              BufferSend_C(:,:)=flux(iSpecies,:,:,iEnergy,iPit)
+              call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar),iSendCount, &
+                   MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P, &
+                   MPI_REAL, 0, iComm, iError)
+              if (iProc==0) flux(iSpecies,:,:,iEnergy,iPit)=BufferRecv_C(:,:)
+           enddo
+        enddo
+     enddo
+  endif
+  
+  !Gather to root
+  !    iSendCount = np*nLonPar
+  !    iRecieveCount_P=np*nLonPar_P
+  !    iDisplacement_P = np*nLonBefore_P
+  !    call MPI_GATHERV(ftv(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+  !         ftv, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+  !            0, iComm, iError)
+  if (iProc == 0) then
+     if (DoSavePlot.and.&
+          (floor((Time+1.0e-5)/DtOutput))/=&
+          floor((Time+1.0e-5-delta_t)/DtOutput)) then
+        call timing_start('crcm_plot')
+        call Crcm_plot(np,nt,xo,yo,Pressure_IC,phot,Den_IC,bo,ftv,pot,&
+             FAC_C,Time,dt)
+        call timing_stop('crcm_plot')
+
+        if (DoSaveFlux) call Crcm_plot_fls(rc,flux,time)
+     endif
+     ! Write Sat Output
+     if(DoWriteSats .and. DoSavePlot .and. &
+          (floor((Time+1.0e-5)/DtSatOut))/=&
+          floor((Time+1.0e-5-delta_t)/DtSatOut))then
         do iSat=1,nImSats
+           call timing_start('crcm_write_im_sat')
            call write_im_sat(iSat,np,nt,neng,npit,flux)
+           call timing_stop('crcm_write_im_sat')
         enddo
      endif
-
+  endif
+  
 end subroutine Crcm_run
 
 !-----------------------------------------------------------------------------
@@ -199,14 +376,68 @@ subroutine crcm_init
   use ModCrcmInitialize
   use ModCrcmRestart, ONLY: IsRestart, crcm_read_restart
   use ModImTime
+  use ModCrcmGrid,    ONLY: iProcLeft, iProcRight, iLonLeft, iLonRight
   use ModTimeConvert, ONLY: time_int_to_real,time_real_to_int
+  use ModMpi
 
   implicit none
 
-  integer i,n,k
+  integer i,n,k,iPe, iError
   
   real rw,rsi,rs1
   real xjac1,sqrtm
+
+  ! Set up proc distribution
+  if (iProc < mod(nt,nProc))then
+     nLonPar=(nt+nProc-1)/nProc
+  else
+     nLonPar=nt/nProc
+  endif
+  
+  !Define neighbors and ghost cell indicies
+  iProcLeft=iProc-1
+  iLonLeft=MinLonPar-1
+  if (iProcLeft < 0) then 
+     iProcLeft=nProc-1
+     iLonLeft = nt
+  endif
+  iProcRight=iProc+1
+  iLonRight=MaxLonPar+1
+  if (iProcRight == nProc) then
+     iProcRight=0
+     iLonRight=1
+  endif
+
+  
+  if (.not.allocated(nLonBefore_P)) allocate(nLonBefore_P(0:nProc-1))
+  if (.not.allocated(nLonPar_P))    allocate(nLonPar_P(0:nProc-1))
+  call MPI_allgather(nLonPar,1,MPI_INTEGER,nLonPar_P,1,MPI_INTEGER,iComm,iError)
+  nLonBefore_P(0) = 0
+  do iPe = 1, nProc - 1
+     nLonBefore_P(iPe) = sum(nLonPar_P(0:iPe-1))
+  end do
+
+  if (iProc == 0) then
+     MinLonPar=1
+     MaxLonPar=nLonPar
+  else
+     MinLonPar=sum(nLonPar_P(0:iProc-1))+1
+     MaxLonPar=minLonPar+nLonPar-1
+  endif
+
+  !Define and iLonMidnightiProcMidnight, needed for setting iw2 in fieldpara
+  iLonMidnight=nt/2
+  if (nProc>1) then
+     PROCLIST: do iPe=0,nProc-1
+        if (nLonBefore_P(iPe)<iLonMidnight .and. &
+             nLonBefore_P(iPe)+nLonPar_P(iPe)>=iLonMidnight)then
+           iProcMidnight=iPe
+        endif
+     enddo PROCLIST
+  else
+     iProcMidnight=0
+  endif
+  ! Set start time
 
   call time_int_to_real(iStartTime_I,CurrentTime)
   StartTime=CurrentTime
@@ -288,11 +519,12 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
   Use ModGmCrcm, ONLY: Den_IC, Temp_IC
   use ModCrcm,   ONLY: f2
   use ModCrcmInitialize,   ONLY: IsEmptyInitial
-
+  use ModCrcmGrid,ONLY: nm,nk,MinLonPar,MaxLonPar
   implicit none
 
   integer,parameter :: np1=51,nt1=48,nspec1=1  
-  integer,parameter :: nm=35,nk=28 ! dimension of CRCM magnetic moment and K
+  !integer,parameter :: nm=35,nk=28 ! dimension of CRCM magnetic moment and K
+ 
   integer nspec,np,nt,iba(nt),ib0(nt),n,j,i,k,m
   real amu_I(nspec),vel(nspec,np,nt,nm,nk)
   real xjac(nspec,np,nm),pi,xmass,chmass,f21,vtchm
@@ -310,7 +542,7 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
      do n=1,nspec
         xmass=amu_I(n)*1.673e-27
         chmass=1.6e-19/xmass
-        do j=1,nt
+        do j=MinLonPar,MaxLonPar
            do i=1,iba(j)
               f21=Den_IC(n,i,j)/(2.*pi*xmass*Temp_IC(n,i,j)*1.6e-19)**1.5
               do k=1,nm
@@ -337,6 +569,7 @@ subroutine boundaryIM(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
   ! Input: nspec,np,nt,nm,nk,iba,irm,amu,xjac,Den_IC,Temp_IC,vel
   ! Output: fb
   Use ModGmCrcm, ONLY: Den_IC, Temp_IC
+  use ModCrcm,       ONLY: MinLonPar,MaxLonPar
   implicit none
 
   integer nspec,np,nt,nm,nk,iba(nt),irm(nt),j,n,k,m,ib1
@@ -348,7 +581,7 @@ subroutine boundaryIM(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
   do n=1,nspec
      xmass=amu_I(n)*1.673e-27
      chmass=1.6e-19/xmass
-     do j=1,nt
+     do j=MinLonPar,MaxLonPar
         ib1=iba(j)+1
         if (ib1.gt.irm(j)) ib1=irm(j)
         fb1=Den_IC(n,ib1,j)/(2.*pi*xmass*Temp_IC(n,ib1,j)*1.6e-19)**1.5
@@ -373,6 +606,7 @@ subroutine ceparaIM(nspec,np,nt,nm,nk,irm,dt,vel,ekev,Have,achar)
   ! Input: irm,nspec,np,nt,nm,nk,dt,vel,ekev,Have     ! Have: bounce-ave [H]
   ! Output: achar
   use ModCrcmPlanet,  ONLY: a0_I,a1_I,a2_I,a3_I,a4_I
+  use ModCrcm,       ONLY: MinLonPar,MaxLonPar
   
   implicit none
 
@@ -381,7 +615,7 @@ subroutine ceparaIM(nspec,np,nt,nm,nk,irm,dt,vel,ekev,Have,achar)
   real achar(nspec,np,nt,nm,nk),dt,Havedt,x,d,sigma,alpha
 
   do n=1,nspec-1
-     do j=1,nt
+     do j=MinLonPar,MaxLonPar
         do i=1,irm(j)
            do m=1,nk
               Havedt=Have(i,j,m)*dt
@@ -409,13 +643,18 @@ subroutine driftV(nspec,np,nt,nm,nk,irm,re_m,Hiono,dipmom,dphi,xlat, &
   !
   ! Input: re_m,Hiono,dipmom,dphi,xlat,dlat,ekev,pot,nspec,np,nt,nm,nk,irm
   ! Output: vl,vp
-
+  use ModCrcmGrid, ONLY: iProc,nProc,iComm,MinLonPar,MaxLonPar, &
+       iProcLeft, iLonLeft, iProcRight, iLonRight
+  use ModMpi 
   implicit none
 
   integer nspec,np,nt,nm,nk,irm(nt),n,i,ii,j,k,m,i0,i2,j0,j2,icharge
   real kfactor,xlat(np),xlatr(np),dlat(np),ekev(np,nt,nm,nk),pot(np,nt)
   real ksai,ksai1,xlat1,sf0,sf2,dlat2,re_m,Hiono,dipmom,dphi,pi,dphi2,cor
   real ham(np,nt),vl(nspec,0:np,nt,nm,nk),vp(nspec,np,nt,nm,nk)
+
+  ! MPI status variable
+  integer :: iStatus_I(MPI_STATUS_SIZE), iError
 
   pi=acos(-1.)
   dphi2=dphi*2.
@@ -436,6 +675,29 @@ subroutine driftV(nspec,np,nt,nm,nk,irm,re_m,Hiono,dipmom,dphi,xlat, &
            ! ham: Hamiltonian/q
            ham(1:np,1:nt)=icharge*ekev(1:np,1:nt,k,m)*1000.+pot(1:np,1:nt)
 
+           ! When nProc>1 exchange ghost cell info for ham and irm
+           if (nProc >1) then
+              !send to neigboring Procs
+              call MPI_send(ham(1:np,MaxLonPar),np,MPI_REAL,iProcRight,&
+                   1,iComm,iError)
+              call MPI_send(ham(1:np,MinLonPar),np,MPI_REAL,iProcLeft,&
+                   2,iComm,iError)
+              call MPI_send(irm(MaxLonPar),1,MPI_INTEGER,iProcRight,&
+                   3,iComm,iError)
+              call MPI_send(irm(MinLonPar),1,MPI_INTEGER,iProcLeft,&
+                   4,iComm,iError)
+              !recieve from neigboring Procs
+              call MPI_recv(ham(1:np,iLonLeft),np,MPI_REAL,iProcLeft,&
+                   1,iComm,iStatus_I,iError)
+              call MPI_recv(ham(1:np,iLonRight),np,MPI_REAL,iProcRight,&
+                   2,iComm,iStatus_I,iError)
+              call MPI_recv(irm(iLonLeft),1,MPI_INTEGER,iProcLeft,&
+                   3,iComm,iStatus_I,iError)
+              call MPI_recv(irm(iLonRight),1,MPI_INTEGER,iProcRight,&
+                   4,iComm,iStatus_I,iError)
+              
+           endif
+
            ! calculate drift velocities vl and vp
            iloop: do i=0,np
               ii=i
@@ -443,13 +705,13 @@ subroutine driftV(nspec,np,nt,nm,nk,irm,re_m,Hiono,dipmom,dphi,xlat, &
               if (i.ge.1) ksai=kfactor*sin(2.*xlatr(i))
               if (i.lt.np) xlat1=0.5*(xlatr(ii)+xlatr(i+1))    ! xlat(i+0.5)
               ksai1=kfactor*sin(2.*xlat1)                   ! ksai at i+0.5
-              jloop: do j=1,nt
+              jloop: do j=MinLonPar,MaxLonPar
                  j0=j-1
                  if (j0.lt.1) j0=j0+nt
                  j2=j+1
                  if (j2.gt.nt) j2=j2-nt
 
-                 ! calculate vl
+                 ! calculate vl 
                  if (irm(j0).gt.i.and.irm(j2).gt.i) then
                     sf0=0.5*ham(ii,j0)+0.5*ham(i+1,j0)
                     sf2=0.5*ham(ii,j2)+0.5*ham(i+1,j2)
@@ -491,7 +753,9 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
   !
   ! Input: iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp,fb 
   ! Input/Output: f2,ib0
-
+  use ModCrcmGrid, ONLY: iProc,nProc,iComm,MinLonPar,MaxLonPar, &
+       iProcLeft, iLonLeft, iProcRight, iLonRight
+  use ModMpi
   implicit none
 
   integer nk,iw2(nk),nspec,np,nt,nm,iba(nt),ib0(nt)
@@ -501,14 +765,31 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
   real f2d(np,nt),cmax,cl1,cp1,cmx,dt1,fb0(nt),fb1(nt),fo_log,fb_log,f_log
   real slope,cl(np,nt),cp(np,nt),fal(0:np,nt),fap(np,nt),fupl(0:np,nt),fupp(np,nt)
   logical :: UseUpwind=.false.
+
+  ! MPI status variable
+  integer :: iStatus_I(MPI_STATUS_SIZE)
+  integer :: iError
+  real, allocatable :: cmax_P(:)
+  
+  if (.not.allocated(cmax_P) .and. nProc>1) allocate(cmax_P(nProc))
+  
+  ! When nProc>1 pass iba from neighboring procs
+  if (nProc >1) then
+     !send to neigboring Procs
+     call MPI_send(iba(MinLonPar),1,MPI_INTEGER,iProcLeft,&
+          1,iComm,iError)
+     !recieve from neigboring Procs
+     call MPI_recv(iba(iLonRight),1,MPI_INTEGER,iProcRight,&
+          1,iComm,iStatus_I,iError)
+  endif
+
   nloop: do n=1,nspec
      mloop: do m=1,nk
         kloop: do k=1,iw2(m)
            f2d(1:np,1:nt)=f2(n,1:np,1:nt,k,m)         ! initial f2
-
            ! find nrun and new dt (dt1)
            cmax=0.
-           do j=1,nt
+           do j=MinLonPar,MaxLonPar
               j1=j+1
               if (j1.gt.nt) j1=j1-nt
               ibaj=max(iba(j),iba(j1))
@@ -519,10 +800,17 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
                  cmax=max(cmx,cmax)
               enddo
            enddo
+           
+           !get same cmax on all procs
+           if (nProc > 1) then
+              call MPI_allgather(cmax,1,MPI_REAL,cmax_P,1,MPI_REAL,iComm,iError)
+              cmax=maxval(cmax_P)
+           endif
+           
            nrun=ifix(cmax/0.50)+1     ! nrun to limit the Courant number
            dt1=dt/nrun                ! new dt
            ! Setup boundary fluxes and Courant numbers
-           do j=1,nt
+           do j=MinLonPar,MaxLonPar
               ib=iba(j)
               ibo=ib0(j)
               fb0(j)=f2d(1,j)                   ! psd at inner boundary
@@ -547,9 +835,69 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
            ! run drift nrun times
            do nn=1,nrun
               UseUpwind=.false.
+              ! When nProc>1, pass fb0, fb1, and f2d
+              !send to neigboring Procs
+             if (nProc>1) then
+                 !send f2d ghostcells
+                 call MPI_send(f2d(1:np,MaxLonPar),np,MPI_REAL,iProcRight,&
+                      3,iComm,iError)
+                 call MPI_send(f2d(1:np,MinLonPar:MinLonPar+1),2*np,MPI_REAL,&
+                      iProcLeft,4,iComm,iError)
+                 !recieve f2d ghostcells from neigboring Procs
+                 call MPI_recv(f2d(1:np,iLonLeft),np,MPI_REAL,iProcLeft,&
+                      3,iComm,iStatus_I,iError)
+                 call MPI_recv(f2d(1:np,iLonRight:iLonRight+1),2*np,MPI_REAL,&
+                      iProcRight,4,iComm,iStatus_I,iError)
+
+                 !send fb0 ghostcells
+                 call MPI_send(fb0(MinLonPar:MinLonPar+1),2,MPI_REAL,iProcLeft,&
+                      5,iComm,iError)
+                 call MPI_send(fb0(MaxLonPar),1,MPI_REAL,iProcRight,&
+                      6,iComm,iError)
+                 !recieve fb0 from neigboring Procs
+                 call MPI_recv(fb0(iLonRight:iLonRight+1),2,MPI_REAL,&
+                      iProcRight,5,iComm,iStatus_I,iError)
+                 call MPI_recv(fb0(iLonLeft),1,MPI_REAL,iProcLeft,&
+                      6,iComm,iStatus_I,iError)
+
+                 !send fb1 ghostcells
+                 call MPI_send(fb1(MinLonPar:MinLonPar+1),2,MPI_REAL,iProcLeft,&
+                      7,iComm,iError)
+                 call MPI_send(fb1(MaxLonPar),1,MPI_REAL,iProcRight,&
+                      8,iComm,iError)
+                 !recieve fb1 from neigboring Procs
+                 call MPI_recv(fb1(iLonRight:iLonRight+1),2,MPI_REAL,&
+                      iProcRight,7,iComm,iStatus_I,iError)
+                 call MPI_recv(fb1(iLonLeft),1,MPI_REAL,iProcLeft,&
+                      8,iComm,iStatus_I,iError)
+              endif
               call FLS_2D(np,nt,iba,fb0,fb1,cl,cp,f2d,fal,fap,fupl,fupp)
               fal(0,1:nt)=f2d(1,1:nt)
-              jloop: do j=1,nt
+              ! When nProc>1 pass needed ghost cell info for fap,fupp and cp
+              if (nProc>1) then
+                 !send fap ghostcells
+                 call MPI_send(fap(:,MaxLonPar),np,MPI_REAL,iProcRight,&
+                      9,iComm,iError)
+                 !recieve fap from neigboring Procs
+                 call MPI_recv(fap(:,iLonLeft),np,MPI_REAL,iProcLeft,&
+                      9,iComm,iStatus_I,iError)
+
+                 !send fupp ghostcells
+                 call MPI_send(fupp(:,MaxLonPar),np,MPI_REAL,iProcRight,&
+                      10,iComm,iError)
+                 !recieve fupp from neigboring Procs
+                 call MPI_recv(fupp(:,iLonLeft),np,MPI_REAL,iProcLeft,&
+                      10,iComm,iStatus_I,iError)
+
+                 !send cp ghostcells
+                 call MPI_send(cp(:,MaxLonPar),np,MPI_REAL,iProcRight,&
+                      11,iComm,iError)
+                 !recieve cp from neigboring Procs
+                 call MPI_recv(cp(:,iLonLeft),np,MPI_REAL,iProcLeft,&
+                      11,iComm,iStatus_I,iError)
+              endif
+
+              jloop: do j=MinLonPar,MaxLonPar
                  j_1=j-1
                  if (j_1.lt.1) j_1=j_1+nt
                  iloop: do i=1,iba(j)
@@ -568,14 +916,15 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
                     endif
                  enddo iloop
               enddo jloop
+
               ! When regular scheme fails, try again with upwind scheme before 
               ! returning an error
               if (UseUpwind) then
                  fupl(0,1:nt)=f2d(1,1:nt)
-                 do j=1,nt
+                 do j=MinLonPar,MaxLonPar
                     j_1=j-1
                     if (j_1.lt.1) j_1=j_1+nt
-                    do i=1,iba(j)
+                    iLoopUpwind: do i=1,iba(j)
                        f2d(i,j)=f2d(i,j)+dt1/dlat(i)* &
                         (vl(n,i-1,j,k,m)*fupl(i-1,j)-vl(n,i,j,k,m)*fupl(i,j))+ &
                         cp(i,j_1)*fupp(i,j_1)-cp(i,j)*fupp(i,j)
@@ -585,12 +934,20 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
                           else
                              !write(*,*)'IM ERROR: f2d < 0 in drift ',n,i,j,k,m
                              !call CON_STOP('CRCM dies in driftIM')
+                             !write(*,*)'IM WARNING: f2d < 0 in drift ',n,i,j,k,m
+                             !write(*,*)'IM WARNING: upwind scheme failed, setting f2d(i,j)=0.0'
+                             !write(*,*)'IM WARNING: repeated failure may need to be examined'
+                             ! should now have f2d(i,j)=0. but didnt before
+
                              write(*,*)'IM WARNING: f2d < 0 in drift ',n,i,j,k,m
-                             write(*,*)'IM WARNING: upwind scheme failed, setting f2d(i,j)=0.0'
+                             write(*,*)'IM WARNING: upwind scheme failed, making iba(j)=i'
                              write(*,*)'IM WARNING: repeated failure may need to be examined'
+                             f2d(i,j)=0.0
+                             iba(j)=i
+                             exit iLoopUpwind
                           endif
                        endif
-                    enddo
+                    enddo iLoopUpwind
                  enddo
               endif
            enddo
@@ -598,6 +955,8 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
         enddo kloop
      enddo mloop
   enddo nloop
+
+
   ! Update ib0
   ib0(1:nt)=iba(1:nt)
 
@@ -611,14 +970,14 @@ subroutine charexchangeIM(np,nt,nm,nk,nspec,iba,achar,f2)
   !
   ! Input: np,nt,nm,nk,nspec,achar   ! charge exchange depreciation of H+ 
   ! Input/Output: f2
-
+  use ModCrcm,       ONLY: MinLonPar,MaxLonPar
   implicit none
 
   integer np,nt,nm,nk,nspec,iba(nt),n,i,j
   real achar(nspec,np,nt,nm,nk),f2(nspec,np,nt,nm,nk)
 
   do n=1,nspec-1             
-     do j=1,nt
+     do j=MinLonPar,MaxLonPar
         do i=1,iba(j)
            f2(n,i,j,1:nm,1:nk)=f2(n,i,j,1:nm,1:nk)*achar(n,i,j,1:nm,1:nk)
         enddo
@@ -633,7 +992,7 @@ end subroutine charexchangeIM
 !*****************************************************************************
 subroutine StDiTime(dt,vel,volume,rc,re_m,xme,iba)
   use ModCrcm,       ONLY: SDtime
-  use ModCrcmGrid,   ONLY: np,nt,nm,nk, xlatr
+  use ModCrcmGrid,   ONLY: np,nt,nm,nk, xlatr,MinLonPar,MaxLonPar
   use ModCrcmPlanet, ONLY: nspec
   real vel(nspec,np,nt,nm,nk),volume(np,nt)
   integer iba(nt)
@@ -642,7 +1001,7 @@ subroutine StDiTime(dt,vel,volume,rc,re_m,xme,iba)
   eb=0.25                         ! fraction of back scatter e-   
   xmer3=xme/(rc*re_m)**3
   
-  do j=1,nt
+  do j=MinLonPar,MaxLonPar
      do i=1,iba(j)
         !              xlat2=xlati(i)*xlati(i)!- from M.-Ch., Aug 1 2007  
         !              Bi=xmer3*sqrt(3.*xlat2+1.)     
@@ -669,12 +1028,12 @@ end subroutine StDiTime
 !***********************************************************************        
 subroutine StrongDiff(iba)                               
   use ModCrcm,       ONLY: SDtime,f2
-  use ModCrcmGrid,   ONLY: np,nt,nm,nk
+  use ModCrcmGrid,   ONLY: np,nt,nm,nk,MinLonPar,MaxLonPar
   use ModCrcmPlanet, ONLY: nspec  
   implicit none
   integer iba(nt),i,j,k,m
   
-  do j=1,nt
+  do j=MinLonPar,MaxLonPar
      do i=2,iba(j)
         do m=1,nk
            do k=1,nm
@@ -696,14 +1055,14 @@ subroutine lossconeIM(np,nt,nm,nk,nspec,iba,alscone,f2)
   ! 
   ! Input: np,nt,nm,nk,nspec,iba,alscone
   ! Input/Output: f2
-
+  use ModCrcm,       ONLY: MinLonPar,MaxLonPar
   implicit none
 
   integer np,nt,nm,nk,nspec,iba(nt),n,i,j,k,m
   real alscone(nspec,np,nt,nm,nk),f2(nspec,np,nt,nm,nk)
 
   do n=1,nspec
-     do j=1,nt
+     do j=MinLonPar,MaxLonPar
         do i=1,iba(j)
            do k=1,nm
               do m=1,nk
@@ -731,6 +1090,9 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
   Use ModGmCrcm, ONLY: Den_IC, Temp_IC
   use ModConst,   ONLY: cProtonMass
   use ModNumConst,ONLY: cPi, cDegToRad
+  use ModCrcmGrid,ONLY: iProc,nProc,iComm,MinLonPar,MaxLonPar,&
+       iProcLeft, iLonLeft, iProcRight, iLonRight
+  use ModMpi
   implicit none
 
   integer np,nt,nm,nk,nspec,neng,npit,iba(nt),i,j,k,m,n,j1,j_1
@@ -743,7 +1105,8 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
   real flux(nspec,np,nt,neng,npit),detadi,detadj,dwkdi,dwkdj
   real fac(np,nt),phot(nspec,np,nt),Pressure_IC(nspec,np,nt)
   real Pressure1
-
+  integer :: iStatus_I(MPI_STATUS_SIZE), iError
+  logical, parameter :: DoCalcFac=.false.
   flux=0.
   fac=0.
   phot=0.
@@ -759,7 +1122,7 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
   ! Calculate CRCM ion density (m^-3), Den_IC, and flux (cm^-2 s^-1 keV^-1 sr^-1)
   ! at fixed energy & pitch-angle grids 
   aloge=log10(energy)
-  jloop1: do j=1,nt
+  jloop1: do j=MinLonPar,MaxLonPar
      iloop1: do i=1,iba(j)
         ftv1=ftv(i,j)     ! ftv1: flux tube volume in m^3/Wb
         Pressure1=0.0
@@ -797,7 +1160,7 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
   enddo jloop1
 
   ! Calculate pressure of the 'hot' ring current, phot, and temperature, Temp_IC
-  jloop2: do j=1,nt
+  jloop2: do j=MinLonPar,MaxLonPar
      iloop2: do i=1,iba(j)
 !!!! calculate pitch-angle averaged flux
         do n=1,nspec
@@ -820,28 +1183,60 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
      enddo iloop2
   enddo jloop2
 
-  ! Calculate field aligned current, fac
-  jloop3: do j=1,nt
-     j1=j+1
-     j_1=j-1
-     if (j1.gt.nt) j1=j1-nt          !! periodic boundary condition
-     if (j_1.lt.1) j_1=j_1+nt        !!
-     iloop3: do i=2,iba(j)-1
+  if (DoCalcFac) then
+     ! Calculate field aligned current, fac
+     ! First get ghost cell info for eta and ekev when nProc>1
+     if (nProc>1) then
+        !send ekev ghostcells
         do k=1,nm
            do m=1,nk
-              dwkdi=(ekev(i+1,j,k,m)-ekev(i-1,j,k,m))/(xlatr(i+1)-xlatr(i-1))
-              dwkdj=(ekev(i,j1,k,m)-ekev(i,j_1,k,m))/(2.*dphi)
+              call MPI_send(ekev(:,MaxLonPar,k,m),np,MPI_REAL,iProcRight,&
+                   1,iComm,iError)
+              call MPI_send(ekev(:,MinLonPar,k,m),np,MPI_REAL,iProcLeft,&
+                   2,iComm,iError)
+              !recieve ekev from neigboring Procs
+              call MPI_recv(ekev(:,iLonLeft,k,m),np,MPI_REAL,iProcLeft,&
+                   1,iComm,iStatus_I,iError)
+              call MPI_recv(ekev(:,iLonRight,k,m),np,MPI_REAL,iProcRight,&
+                   2,iComm,iStatus_I,iError)
               do n=1,nspec
-                 detadi=(eta(n,i+1,j,k,m)-eta(n,i-1,j,k,m))/(xlatr(i+1)-xlatr(i-1))
-                 detadj=(eta(n,i,j1,k,m)-eta(n,i,j_1,k,m))/(2.*dphi)
-                 fac(i,j)=fac(i,j)+(detadi*dwkdj-detadj*dwkdi)
+                 !send eta ghostcells
+                 call MPI_send(eta(n,:,MaxLonPar,k,m),np,MPI_REAL,iProcRight,&
+                      1,iComm,iError)
+                 call MPI_send(eta(n,:,MinLonPar,k,m),np,MPI_REAL,iProcLeft,&
+                      2,iComm,iError)
+                 !recieve eta from neigboring Procs
+                 call MPI_recv(eta(n,:,iLonLeft,k,m),np,MPI_REAL,iProcLeft,&
+                      1,iComm,iStatus_I,iError)
+                 call MPI_recv(eta(n,:,iLonRight,k,m),np,MPI_REAL,iProcRight,&
+                      2,iComm,iStatus_I,iError)
               enddo
            enddo
         enddo
-        fac(i,j)=1.6e-16*fac(i,j)/cos(xlatr(i))/rion**2    ! fac in Amp/m^2
-     enddo iloop3
-  enddo jloop3
-
+     endif
+     jloop3: do j=MinLonPar,MaxLonPar
+        j1=j+1
+        j_1=j-1
+        if (j1.gt.nt) j1=j1-nt          !! periodic boundary condition
+        if (j_1.lt.1) j_1=j_1+nt        !!
+        iloop3: do i=2,iba(j)-1
+           do k=1,nm
+              do m=1,nk
+                 dwkdi=(ekev(i+1,j,k,m)-ekev(i-1,j,k,m))/(xlatr(i+1)-xlatr(i-1))
+                 dwkdj=(ekev(i,j1,k,m)-ekev(i,j_1,k,m))/(2.*dphi)
+                 do n=1,nspec
+                    detadi=(eta(n,i+1,j,k,m)-eta(n,i-1,j,k,m))/(xlatr(i+1)-xlatr(i-1))
+                    detadj=(eta(n,i,j1,k,m)-eta(n,i,j_1,k,m))/(2.*dphi)
+                    fac(i,j)=fac(i,j)+(detadi*dwkdj-detadj*dwkdi)
+                 enddo
+              enddo
+           enddo
+           fac(i,j)=1.6e-16*fac(i,j)/cos(xlatr(i))/rion**2    ! fac in Amp/m^2
+        enddo iloop3
+     enddo jloop3
+  else
+     fac(:,:)=0.0
+  endif
 end subroutine crcm_output
 
 
@@ -854,7 +1249,7 @@ subroutine FLS_2D(np,nt,iba,fb0,fb1,cl,cp,f2d,fal,fap,fupl,fupp)
   !  Input: np,nt,iba,fb0,fb1,cl,cp,f2d
   !  Output: fal,fap
   use ModCrcm, ONLY: UseMcLimiter, BetaLimiter
-
+  use ModCrcm,       ONLY: MinLonPar,MaxLonPar
   implicit none
 
   integer np,nt,iba(nt),i,j,j_1,j1,j2,ib
@@ -866,13 +1261,13 @@ subroutine FLS_2D(np,nt,iba,fb0,fb1,cl,cp,f2d,fal,fap,fupl,fupp)
 
   ! Set up boundary condition
   fwbc(0,1:nt)=fb0(1:nt)
-  do j=1,nt
+  do j=MinLonPar,MaxLonPar
      ib=iba(j)
      fwbc(ib+1:np+2,j)=fb1(j)
   enddo
 
   ! find fal and fap
-  jloop: do j=1,nt
+  jloop: do j=MinLonPar,MaxLonPar
      j_1=j-1
      j1=j+1
      j2=j+2

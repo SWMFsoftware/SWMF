@@ -564,6 +564,20 @@ contains
        end if
     end if
 
+
+        !Broadcast variables inside IM
+    if(n_proc(IM_)>1 .and. is_proc(IM_)) then
+       nSize = iSize*jSize*nIntegral
+       call MPI_bcast(nVarLine,1,MPI_INTEGER,0,i_comm(IM_),iError)
+       call MPI_bcast(nPointLine,1,MPI_INTEGER,0,i_comm(IM_),iError)
+       call MPI_bcast(Integral_IIV,nSize,MPI_REAL,0,i_comm(IM_),iError)
+       if (.not. allocated(BufferLine_VI))&
+            allocate(BufferLine_VI(nVarLine, nPointLine))
+       call MPI_bcast(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,0,&
+            i_comm(IM_),iError)
+    endif
+      
+
     !\
     ! Transfer satellite names from GM to IM
     !/   
@@ -591,22 +605,38 @@ contains
                1,i_comm(),iStatus_I,iError)
        endif
     end if
-    
+ 
+!    ! Broadcast SatPos info in IM
+!    if(nShareSats>0 .and. n_proc(IM_)>1 .and. is_proc(IM_)) then
+!       call MPI_bcast(nShareSats,1,MPI_INTEGER,0,i_comm(IM_),iError)
+!       nSize = nShareSats*100
+!       call MPI_bcast(NameSat_I,nSize,MPI_BYTE,0,i_comm(IM_),iError)
+!       nSize = 3*2*nShareSats
+!       call MPI_bcast(SatPos_DII,nSize,MPI_REAL,0,i_comm(IM_),iError)
+!    endif
+
     if(DoTest)write(*,*)NameSub,', variables transferred',&
          ', iProc:',iProcWorld
+
+
+
        
     !\
     ! Put variables into IM
     !/
-    if(is_proc0(IM_))then
+    if(is_proc(IM_)) then
        call IM_put_from_gm_crcm(Integral_IIV,iSize,jSize,nIntegral,&
             BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
+    endif
+
+    if(is_proc0(IM_))then
        if(nShareSats > 0) &
             call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
        if(DoTest) &
             write(*,*)'IM got from GM: IM iProc, Buffer(1,1)=',&
             iProcWorld,Integral_IIV(1,1,:)
     end if
+    
 
     !\
     ! Deallocate buffer to save memory

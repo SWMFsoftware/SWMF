@@ -1,5 +1,7 @@
 Module ModFieldTrace
-  use ModCrcmGrid,ONLY: ir=>np, ip=>nt, iw=>nm , ik=>nk, neng, energy, UseExpandedGrid
+  use ModCrcmGrid,ONLY: ir=>np, ip=>nt, iw=>nm , ik=>nk, neng, energy, &
+       UseExpandedGrid,MinLonPar,MaxLonPar,iProc,iComm,iProcMidnight,nProc,&
+       iLonMidnight,nLonPar,nLonPar_P,nLonBefore_P
   use ModCrcmPlanet,ONLY: nspec, amu_I
   implicit none
   real, allocatable :: &
@@ -42,7 +44,7 @@ contains
          ndst,nimf,nsw,js,iyear,iday,imod
     use ModNumConst, ONLY: pi => cPi, cDegToRad
     use ModCrcmInitialize, ONLY: w=>xmm
-
+    use ModMpi
     ! uncomment when T04 Tracing fixed
     ! common/geopack/aa(10),sps,cps,bb(3),ps,cc(11),kk(2),dd(8)
     ! external tsyndipoleSM,MHD_B
@@ -71,6 +73,7 @@ contains
     real :: R_12,R_24,xmltr,xBoundary(ip),MajorAxis,MinorAxis,&
             MajorAxis2,MinorAxis2, sin2, Req2, xo1,xc, xCenter,rell2
     real, parameter :: LengthMax = 50.0
+    integer :: iError
     !--------------------------------------------------------------------------
     ekev=0.0
     
@@ -119,8 +122,8 @@ contains
 !       endif
 !    endif
     !  Start field line tracing.  
-    call timing_start('rbe_trace')
-    LONGITUDE: do j=1,ip
+    call timing_start('crcm_trace')
+    LONGITUDE: do j=MinLonPar,MaxLonPar
        irm(j)=ir
        LATITUDE: do i=1,ir
           iout=0
@@ -161,7 +164,11 @@ contains
           !yo(i,j)=ya(ieq)
           !if (iout.ge.1) gridoc(i,j)=0.
           !if (iout.eq.0) gridoc(i,j)=1.
-
+!          if (j==25)then
+!             write(*,*) '!!!i,j',i,j
+!             write(*,*) 'npf1,xmlt1,irm(j)',npf1,xmlt1,irm(j)
+!             if (i==51) call con_stop('')
+!          endif
           if (npf1.eq.0) then             ! open field line
              irm(j)=i-1
              exit LATITUDE                   ! do next j                 
@@ -246,7 +253,7 @@ contains
 
 
           ! Field line integration using Taylor expansion method
-          call timing_start('rbe_taylor')
+          call timing_start('crcm_taylor')
           sumBn(0:nTaylor)=0.
           sumhBn(0:nTaylor)=0.
           do m=im2-1,1,-1 !im2 = middle of field line
@@ -322,7 +329,7 @@ contains
              h3(m)=ss2/ss1
           enddo
 
-          call timing_stop('rbe_taylor')
+          call timing_stop('crcm_taylor')
 
           si3(im2)=0.               ! equatorially mirroring
           tya3(im2)=tya3(im2-1)
@@ -348,7 +355,7 @@ contains
     enddo LONGITUDE                              ! end of j loop
 
     ! Fill in volumes and coordinates for open (?) field lines
-    do j = 1, ip
+    do j = MinLonPar,MaxLonPar
        do i=irm(j)+1,ir
           volume(i,j)=volume(irm(j),j)
           xo(i,j)=xo(irm(j),j)
@@ -356,7 +363,7 @@ contains
        enddo
     end do
 
-    call timing_stop('rbe_trace')
+    call timing_stop('crcm_trace')
 
     ! Peridic boundary condition
     !do i=1,ir        
@@ -372,7 +379,7 @@ contains
        xmass=1.673e-27*amu_I(n)
        c2mo=c*c*xmass
        c4mo2=c2mo*c2mo
-       do j=1,ip
+       do j=MinLonPar,MaxLonPar
           do i=1,irm(j)
              ro2=2.*ro(i,j)*re
              do m=1,ik
@@ -402,18 +409,23 @@ contains
     enddo
 
     ! Reduce irm by 1 for convenience in calculating vl at i=irm+0.5
-    do j=1,ip
+    do j=MinLonPar,MaxLonPar
        irm(j)=irm(j)-1
     enddo
     
     ! Find iba
     if (UseEllipse) then
        R_24=rb                 ! boundary distance at midnight
-       do j=1,ip
+       do j=MinLonPar,MaxLonPar
           imax=irm(j)
           xmltr=xmlto(imax,j)*pi/12.
           xBoundary(j)=-ro(imax,j)*cos(xmltr)
        enddo
+       !When nProc>1 gather xBoundary to all procs
+       if (nProc>1) &
+            call MPI_ALLGATHERV(xBoundary(MinLonPar:MaxLonPar),nLonPar, &
+            MPI_REAL, xBoundary, nLonPar_P, nLonBefore_P, MPI_REAL, iComm, &
+            iError)
        R_12=0.95*maxval(xBoundary)    ! boundary distance at noon
        MajorAxis=0.5*(R_12+R_24)      ! major axis
        MinorAxis=min(R_12,R_24)       ! minor axis
@@ -445,7 +457,7 @@ contains
        enddo
     else
        !use circle
-       do j=1,ip
+       do j=MinLonPar,MaxLonPar
           do i=1,irm(j)
              x1(i)=ro(i,j)
           enddo
@@ -454,16 +466,23 @@ contains
        enddo
     endif
 
-    ! Find iw2(m)
-    do m=1,ik
-       iw2(m)=iw
-       find_iw2: do k=1,iw
-          if (ekev(irm(1),1,k,m).gt.energy(neng)) then
-             iw2(m)=k
-             exit find_iw2
-          endif
-       enddo find_iw2
-    enddo
+    ! Find iw2(m) (max invariant grid that fits in output energy grid)
+    ! Set for midnight
+    if (iProc==iProcMidnight) then
+       do m=1,ik
+          iw2(m)=iw
+          find_iw2: do k=1,iw
+             !if (ekev(irm(1),1,k,m).gt.energy(neng)) then
+             if (ekev(irm(iLonMidnight),iLonMidnight,k,m).gt.energy(neng)) then
+                iw2(m)=k
+                exit find_iw2
+             endif
+          enddo find_iw2
+       enddo
+    endif
+    ! When nProc>1 broadcast iw2 to all processors
+    ! For somereason this bcast fails for 2 procs but works for >2procs...
+    if (nProc>1) call MPI_bcast(iw2,ik,MPI_INTEGER,iProcMidnight,iComm,iError)
 
   end subroutine fieldpara
 
@@ -779,16 +798,20 @@ contains
 
     if (.not. UseDipole) then
        ro1=sqrt(sum(StateIntegral_IIV(iLat,iLon,1:2)**2.0))
-       !if (iLat==23 .and. iLon==3 )
-       !write(*,*) 'Lat,Lon,iLat,iLon,iLineIndex_II(iLon,iLat)',Lat*180.0/cPi,Lon*180.0/cPi,&
-       !     iLat,iLon,iLineIndex_II(iLon,iLat)
-       !write(*,*) 'ro1,StateIntegral_IIV(iLat,iLon,1:2),maxval(RadialDist_I(1:nAlt))',&
-       !     ro1,StateIntegral_IIV(iLat,iLon,1:2),maxval(RadialDist_I(1:nAlt))
-
        xmlt1=&
-            (atan2(-StateIntegral_IIV(iLat,iLon,2),-StateIntegral_IIV(iLat,iLon,1))&
-            )&
+            (atan2(-StateIntegral_IIV(iLat,iLon,2),&
+            -StateIntegral_IIV(iLat,iLon,1)))&
             *12./cPi   ! mlt in hr
+
+!       if (iLon==25 .and. .not.UseDipole) then
+!                    write(*,*) '!!! iLat,iLon,iLineIndex_II(iLon,iLat),iPoint',iLat,iLon,iLineIndex_II(iLon,iLat),iPoint
+!          write(*,*) '!!! StateIntegral_IIV(iLat,iLon,2),-StateIntegral_IIV(iLat,iLon,1),Lon,xmlt1',&
+!               StateIntegral_IIV(iLat,iLon,2),-StateIntegral_IIV(iLat,iLon,1),Lon,xmlt1
+!          call con_stop('')
+!       endif
+
+
+
        if (xmlt1 < 0.) xmlt1=xmlt1+24.
        bo1=StateIntegral_IIV(iLat,iLon,3)
     endif

@@ -27,6 +27,11 @@ Module ModCrcmGrid
 
   logical, parameter :: UseExpandedGrid =.false.
 
+  ! Define MPI parameters affecting grid
+  integer :: iProc, nProc, iComm, nLonPar, MinLonPar, MaxLonPar
+  integer, allocatable :: nLonPar_P(:),nLonBefore_P(:)
+  integer ::iProcLeft, iProcRight, iLonLeft, iLonRight
+  integer :: iProcMidnight, iLonMidnight
 end Module ModCrcmGrid
 
 

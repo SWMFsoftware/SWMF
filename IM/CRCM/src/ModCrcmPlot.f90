@@ -151,7 +151,6 @@ contains
     logical, save :: IsFirstCall = .true.
     !--------------------------------------------------------------------------
     nprint=ifix(time/DtOutput)
-
     do n=1,nSpecies
        if (IsFirstCall .and. .not. IsRestart) then
           if (n==1) &

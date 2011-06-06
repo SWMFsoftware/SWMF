@@ -14,7 +14,7 @@ subroutine IM_set_param(CompInfo, TypeAction)
   use CON_coupler, ONLY: Couple_CC, GM_, IM_, IE_
   use ModGmCrcm,  ONLY: UseGm
   use ModIeCrcm,  ONLY: UseIE
-
+  use ModCrcmGrid, ONLY: iProc,nProc,iComm
   implicit none
 
   character (len=*), intent(in)     :: TypeAction ! which action to perform
@@ -24,8 +24,6 @@ subroutine IM_set_param(CompInfo, TypeAction)
   integer :: iError
   character (len=100) :: NameCommand
   logical             :: UseStrict=.true.
-
-  integer :: iProc, nProc, iComm
 
   !------------------------------------------------------------------------
   UseGm = Couple_CC(GM_, IM_) % DoThis
@@ -44,7 +42,7 @@ subroutine IM_set_param(CompInfo, TypeAction)
           Version=1.0)
   case('MPI')
      call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
-     if(nProc>1)call CON_stop('IM_ERROR this version can run on 1 PE only!')
+     !if(nProc>1)call CON_stop('IM_ERROR this version can run on 1 PE only!')
   case('STDOUT')
      !iUnitOut=STDOUT_
      !StringPrefix='RB:'
@@ -144,7 +142,7 @@ end subroutine IM_init_session
 
 subroutine IM_run(TimeSimulation,TimeSimulationLimit)
 
-  use ModCrcm,    ONLY: Time, dt, dtmax
+  use ModCrcm,    ONLY: Time, dt, dtmax,iProc
 
   implicit none
 
@@ -155,7 +153,7 @@ subroutine IM_run(TimeSimulation,TimeSimulationLimit)
   character(len=*), parameter :: NameSub='IM_run'
 
   !------------------------------------------------------------------------
-  
+
   if (.not. IsInitiallized) then
      call crcm_init
      IsInitiallized = .true.
@@ -202,9 +200,10 @@ end subroutine IM_save_restart
 subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
             BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
   use ModGmCRCM
-  use ModCrcmGrid,  ONLY: nLat => np, nLon => nt
+  use ModCrcmGrid,  ONLY: nLat => np, nLon => nt, iProc, nProc
   use ModCrcmPlanet,ONLY: rEarth => re_m
   use ModTsyInput,  ONLY: xnswa,vswa,bxw,byw,bzw,nsw,iyear,iday,UseSmooth
+  use ModIoUnit, ONLY: UnitTmp_
 !  use ModPrerunField,ONLY: DoWritePrerun, save_prerun
   implicit none
 
@@ -222,6 +221,7 @@ subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub='IM_put_from_gm_crcm'
   logical,save :: IsFirstCall = .true.
+  character(len=100) :: NameOut
   !-------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -264,12 +264,34 @@ subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   endif
 
   StateLine_VI      = BufferLine_VI
-  StateIntegral_IIV = Integral_IIV
+  StateIntegral_IIV(:,:,:) = Integral_IIV(:,:,:)
   nPoint    = nPointLine
   nIntegral = nIntegralIn
   !Convert Units
   StateLine_VI(2,:) = StateLine_VI(2,:) / rEarth ! m --> Earth Radii
   StateLine_VI(3,:) = StateLine_VI(3,:) / rEarth ! m --> Earth Radii
+  
+!  if (nProc == 1) then
+!     write(NameOut,"(a,i2.2)") 'StateIntegral1_0_iproc_',iProc
+!     open(UnitTmp_,FILE=NameOut)
+!     do iLat =1,nLat
+!        write(UnitTmp_,"(100es18.10)")StateIntegral_IIV(iLat,1:nLon,1)
+!     enddo
+!     close(UnitTmp_)
+!     write(*,*)'!!! iProc, StateIntegral_IIV(21,25)',iProc, StateIntegral_IIV(21,25,1)
+!     write(*,*) '!!! iSizeIn,jSizeIn',iSizeIn,jSizeIn
+!     call con_stop('')
+!  else
+!     write(NameOut,"(a,i2.2)") 'StateIntegral1_iproc_',iProc
+!     open(UnitTmp_,FILE=NameOut)
+!     do iLat =1,nLat
+!        write(UnitTmp_,"(100es18.10)")StateIntegral_IIV(iLat,1:nLon,1)
+!     enddo
+!     close(UnitTmp_)
+!     write(*,*)'!!! iProc, StateIntegral_IIV(21,25)',iProc, StateIntegral_IIV(21,25,1)
+!     write(*,*) '!!! iSizeIn,jSizeIn',iSizeIn,jSizeIn
+!     call con_stop('')
+!  endif
 
 
   !Solar wind values
@@ -596,8 +618,15 @@ subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 end subroutine IM_put_from_ie
 !==============================================================================
 subroutine IM_put_from_ie_complete
+  use ModCrcmGrid,  ONLY: np,nt,iComm
+  use ModIeCrcm,    ONLY: Pot
+  use ModMpi
   implicit none
-
+  integer:: iError,nsize
+  !----------------------------------------------------------------------------
+  ! Bcast  potential to all procs
+  nsize=np*nt
+  call MPI_bcast(pot,nsize,MPI_REAL,0,iComm,iError)
   return
 end subroutine IM_put_from_ie_complete
 !==============================================================================
