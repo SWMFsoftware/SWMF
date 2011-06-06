@@ -1106,7 +1106,7 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
   real fac(np,nt),phot(nspec,np,nt),Pressure_IC(nspec,np,nt)
   real Pressure1
   integer :: iStatus_I(MPI_STATUS_SIZE), iError
-  logical, parameter :: DoCalcFac=.false.
+  logical, parameter :: DoCalcFac=.true.
   flux=0.
   fac=0.
   phot=0.
