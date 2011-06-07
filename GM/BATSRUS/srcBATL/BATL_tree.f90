@@ -25,6 +25,39 @@ module BATL_tree
   public:: show_tree
   public:: test_tree
 
+
+  ! DoStrictAmr :  true if we want the program to stop because we can not
+  ! refine/coarsen all the blocks we want
+  logical,public :: DoStrictAmr = .true.
+
+  ! nDesiredRefine and nDesiredCoarsen set the number of blocks that we
+  ! want refined/coarsen by percentage of with DoSoftAmrCrit = .true.
+  ! nNodeRefine and nNodeCoarsen set the number of blocks that will be
+  ! refined/coarsen or the program with stop. Usually associated with 
+  ! criteria
+  ! nNodeSort is the numbner of nodes in the sorted ranking list iRank_A
+  integer,public :: nDesiredRefine,nNodeRefine, &
+       nDesiredCoarsen, nNodeCoarsen, nNodeSort
+
+  ! Max differens in in Criteria rang for saying that is the same criteia
+  ! level 
+  real, public,parameter :: diffRange = 1.0e-6
+
+  ! We can also specify the percentage of blocks we want to refine. For doing
+  ! this we need to sort them into a priority list iRank_A. This priority list
+  ! can also be used for refining/coarsening blocks to the point where we 
+  ! to the point where we have no more blocks available, and not stopping 
+  ! the program ( used with BATL_tree )
+  ! Rank_A store the criteria values for iRank_A
+  integer,public, allocatable :: iRank_A(:)
+  real,public, allocatable :: Rank_A(:)
+
+  ! Maximun number of try to refine/coarsen the grid based on iRank_A
+  integer, public :: iMaxTryAmr = 100
+
+  ! Input paramiter
+  integer, public :: MaxTotalBlock
+
   integer, public, parameter :: nChild = 2**nDimAmr
 
   ! Global tree information
@@ -192,6 +225,9 @@ contains
          iProcNew_A, iNodeNew_A, &
          iNode_B, Unused_B, Unused_BP, &
          iNodeNei_IIIB, DiLevelNei_IIIB)
+
+    if(allocated(iRank_A)) deallocate(iRank_A)
+
 
     MaxNode = 0
     iNodeNew = 0
@@ -364,7 +400,7 @@ contains
   subroutine adapt_tree
 
     use BATL_size, ONLY: iRatio, jRatio, kRatio
-    use BATL_mpi, ONLY: iComm, nProc
+    use BATL_mpi, ONLY: iComm, nProc,iProc
     use ModMpi, ONLY: MPI_allreduce, MPI_INTEGER, MPI_MAX
 
     ! All processors can request some status changes in iStatusNew_A.
@@ -380,8 +416,11 @@ contains
     integer:: iSide, iSideMin, iSideMax
     integer:: jSide, jSideMin, jSideMax
     integer:: kSide, kSideMin, kSideMax
-
-    logical, parameter :: DoTest = .false., DoTestNei = .false.
+    integer:: iTryAmr, iRank, nRefine
+    real   :: nRefineDiff = 0.0, FracSibling=1.0
+    real, save :: nRefineDiffOld=0.0
+    logical, parameter :: DoTest = .false., DoTestNei = .false. 
+    integer, allocatable :: iInitialiStatusNew_A(:)
     !------------------------------------------------------------------------
 
     ! Collect the local status requests into a global request
@@ -391,169 +430,257 @@ contains
        iStatusNew_A = iStatusAll_A
     end if
 
-    ! Check max and min levels and coarsening of all siblings
-    iLevelMin = nLevel
-    iLevelMax = 1
-    do iMorton = 1, nNodeUsed
-       iNode   = iNodeMorton_I(iMorton)
+    ! storing the initall list that will not be chenged by the 
+    ! proper nesting
+    if(.not.DoStrictAmr) then
+       allocate(iInitialiStatusNew_A(MaxNode))
+       iInitialiStatusNew_A = iStatusNew_A
+    end if
 
-       iLevel    = iTree_IA(Level_,iNode)
-       iLevelMin = min(iLevelMin, iLevel)
+    nRefineDiffOld =  0.0!nRefineDiff
+    BLOCKTRY: do iTryAmr=1,iMaxTryAmr
 
-       ! Check MaxLevel_ of node to see if it can be refined 
-       if(iStatusNew_A(iNode) == Refine_)then
-          if(iLevel >= iTree_IA(MaxLevel_,iNode))then
+
+
+       ! Check max and min levels and coarsening of all siblings
+       iLevelMin = nLevel
+       iLevelMax = 1
+       do iMorton = 1, nNodeUsed
+          iNode   = iNodeMorton_I(iMorton)
+
+          iLevel    = iTree_IA(Level_,iNode)
+          iLevelMin = min(iLevelMin, iLevel)
+
+          ! Check MaxLevel_ of node to see if it can be refined 
+          if(iStatusNew_A(iNode) == Refine_)then
+             if(iLevel >= iTree_IA(MaxLevel_,iNode))then
+                iStatusNew_A(iNode) = Unset_
+                CYCLE
+             end if
+             iLevelMax = max(iLevelMax, iLevel)
+          end if
+
+          ! Only nodes to be coarsened need further checking
+          if(iStatusNew_A(iNode) /= Coarsen_) CYCLE
+
+          ! Check MinLevel_ of node to see if it can be coarsened
+          if(iLevel <= iTree_IA(MinLevel_,iNode))then
              iStatusNew_A(iNode) = Unset_
              CYCLE
           end if
           iLevelMax = max(iLevelMax, iLevel)
-       end if
 
-       ! Only nodes to be coarsened need further checking
-       if(iStatusNew_A(iNode) /= Coarsen_) CYCLE
+          ! Check if all siblings want to be coarsened
+          iNodeParent = iTree_IA(Parent_,iNode)
+          iNodeChild_I = iTree_IA(Child1_:ChildLast_,iNodeParent)
+          if(.not.all(iStatusNew_A(iNodeChild_I) == Coarsen_))then
+             ! Cancel coarsening requests for all siblings
+             where(iStatusNew_A(iNodeChild_I) == Coarsen_) &
+                  iStatusNew_A(iNodeChild_I) = Unset_
+          end if
 
-       ! Check MinLevel_ of node to see if it can be coarsened
-       if(iLevel <= iTree_IA(MinLevel_,iNode))then
+       end do
+
+       ! Check proper nesting. Go down level by level. No need to 
+       ! check base level. Changes in the requests will be applied 
+       ! to all siblings immediately
+       do iLevel = iLevelMax, max(iLevelMin, 1), -1
+
+          ! Parallel processing of nodes (blocks)
+          BLOCKLOOP: do iBlock = 1, nBlock
+
+             if(Unused_B(iBlock)) CYCLE BLOCKLOOP
+             iNode = iNode_B(iBlock)
+             if(iTree_IA(Level_,iNode) /= iLevel) CYCLE BLOCKLOOP
+
+             ! Calculate requested level
+             if(iStatusNew_A(iNode) == Refine_)then
+                iLevelNew = iLevel + 1
+             elseif(iStatusNew_A(iNode) == Coarsen_)then
+                iLevelNew = iLevel - 1
+             else
+                CYCLE
+             end if
+
+             ! Check neighbors around this corner of the parent block
+
+             ! Loop from 0 to 1 or from 2 to 3 in the side index 
+             ! depending on which side this node
+             ! is relative to its parent. If there is no refinement in some 
+             ! direction, then loop from 0 to 3 (and skip 2).
+
+             if(iRatio==1)then
+                iSideMin = 0; iSideMax = 3
+             else
+                iSideMin = 2*modulo(iTree_IA(Coord1_,iNode)-1, 2)
+                iSideMax = iSideMin + 1
+             end if
+             if(nDim < 2)then
+                ! 1D, no neighbors in j direction
+                jSideMin = 1; jSideMax = 1
+             elseif(jRatio == 1)then
+                ! 2D or 3D but no AMR, check neighbors in both directions
+                jSideMin = 0; jSideMax = 3
+             else
+                ! 2D or 3D and AMR: check only the directions 
+                ! corresponding to the corner occupied by this child
+                jSideMin = 2*modulo(iTree_IA(Coord2_,iNode)-1, 2)
+                jSideMax = jSideMin + 1
+             end if
+             if(nDim < 3)then
+                ! 1 or 2D
+                kSideMin = 1; kSideMax = 1
+             elseif(kRatio == 1)then
+                ! 3D but but no AMR, check neighbors in both directions
+                kSideMin = 0; kSideMax = 3
+             else
+                ! 3D and AMR, check only the directions
+                ! corresponding to the corner occupied by this child
+                kSideMin = 2*modulo(iTree_IA(Coord3_,iNode)-1, 2)
+                kSideMax = kSideMin + 1
+             end if
+
+             ! Loop through the at most seven neighbors
+             do kSide = kSideMin, kSideMax
+                if(kRatio == 1 .and. kSide == 2) CYCLE
+                do jSide = jSideMin, jSideMax
+                   if(jRatio == 1 .and. jSide == 2) CYCLE
+                   do iSide = iSideMin, iSideMax
+                      if(iRatio == 1 .and. iSide == 2) CYCLE
+
+                      jNode = iNodeNei_IIIB(iSide,jSide,kSide,iBlock)
+
+                      ! Don't check the node itself
+                      if(iNode == jNode) CYCLE
+
+                      ! Don't check if neighbor is outside the domain
+                      if(jNode == Unset_) CYCLE
+
+                      ! Get the current and requested level for the neighbor node
+                      jLevel = iTree_IA(Level_,jNode)
+
+                      jLevelNew = jLevel
+                      if(iStatusNew_A(jNode) == Refine_)  jLevelNew = jLevel + 1
+                      if(iStatusNew_A(jNode) == Coarsen_) jLevelNew = jLevel - 1
+
+                      ! Fix levels if difference is too much
+                      if(iLevelNew >= jLevelNew + 2)then
+
+                         if(jLevel > 0)then
+                            jNodeParent = iTree_IA(Parent_,jNode) 
+                            jNodeChild_I= iTree_IA(Child1_:ChildLast_,jNodeParent)
+
+                            ! Neighbor and its siblings cannot be coarsened
+                            iStatusNew_A(jNodeChild_I) = &
+                                 max(iStatusNew_A(jNodeChild_I), DontCoarsen_)
+                         endif
+
+                         ! If neighbow was coarser it has to be refined
+                         if(jLevel < iLevel) iStatusNew_A(jNode) = Refine_
+
+                      elseif(iLevelNew <= jLevelNew - 2)then
+                         ! Cannot coarsen this node
+                         iNodeParent = iTree_IA(Parent_,iNode)
+                         iStatusNew_A(iTree_IA(Child1_:ChildLast_,iNodeParent)) &
+                              = DontCoarsen_
+
+                         CYCLE BLOCKLOOP
+                      end if
+
+                   end do ! iSide
+                end do ! jSide
+             end do ! kSide
+          end do BLOCKLOOP
+
+          ! Collect the local status requests into a global request
+          if(nProc > 1)then
+             call MPI_allreduce(iStatusNew_A, iStatusAll_A, nNode, MPI_INTEGER, &
+                  MPI_MAX, iComm, iError)
+             iStatusNew_A = iStatusAll_A
+          end if
+
+       end do ! levels
+
+       ! all blocks marked for refinment shoud be refined if true
+       if(DoStrictAmr) EXIT BLOCKTRY
+
+       ! Estimate the difference between the number of block we can 
+       ! use and how many we want to use after refinment.
+       nRefineDiff = (nNodeUsed +count(iStatusNew_A == Refine_)*(nChild-1)) &
+            - min(nProc*MaxBlock,MaxTotalBlock) 
+
+       nRefineDiffOld = nRefineDiff 
+
+       !if(iProc ==0) &
+       !     write (*,'(a10,f16.6,2(i6))') "Pre :", &
+       !     nRefineDiff ,min(nProc*MaxBlock,MaxTotalBlock),&
+       !     (nNodeUsed +count(iStatusNew_A == Refine_)*(nChild-1))
+
+       ! we have space for all the new blocks that will be generated if true
+       if(nRefineDiff < 0) EXIT BLOCKTRY
+
+       ! Number of blocks we want to remove from the refinment list. Increase
+       ! with the number of interations
+       nRefineDiff = (iTryAmr-1)*(nChild-1) + nRefineDiff 
+
+       ! Reset iStatusNew_A to its inital setings
+       iStatusNew_A = iInitialiStatusNew_A 
+
+       !if(iProc == 0) write(*,'(a20, f16.6)') &
+       ! "nRefineDiffOld = ",nRefineDiffOld
+       !if(iProc == 0) write(*,'(a20, f16.6)') &
+       ! "nRefineDiff = ",nRefineDiff
+
+       ! When FracSibling = 1.0 we say that every refinemnet block will only
+       ! result in that addinianl nChild-1 new blocks are used.
+       FracSibling = 1.0
+       nRefine = 0
+       ! remove blocks for refinment as thay follow in the 
+       ! sorted list iRank_A
+       BLOCKRM:do iRank = nNodeSort-nDesiredRefine, nNodeSort
+          iNode = iRank_A(iRank)
+
+          ! have reach max level, have no inpact ignore
+          iLevel    = iTree_IA(Level_,iNode)
+          if(iLevel >= iTree_IA(MaxLevel_,iNode)) CYCLE BLOCKRM
+
+          ! Remove the block and predict how many bocks we have
+          ! removed from the future grid
+          if(iStatusNew_A(iNode) == Refine_ ) then
+             iStatusNew_A(iNode) = Unset_
+             nRefineDiff = nRefineDiff - FracSibling*(nChild-1)
+             nRefine = nRefine + 1
+          end if
+
+          ! by estimate we have removed all blocks needed form
+          ! refinment list
+          if(nRefineDiff < 0) EXIT BLOCKRM
+       end do BLOCKRM
+
+
+       ! make sure that the refinment list starts at a point that have
+       ! a jump in criteria larger then diffRan
+       nRefine = min(iRank-1,nNodeSort)
+       do iRank= nNodeSort-nDesiredRefine+1, nNodeSort
+          iNode = iRank_A(iRank)
+          if((Rank_A(iRank)-Rank_A(nRefine)) >=  diffRange ) CYCLE BLOCKTRY
           iStatusNew_A(iNode) = Unset_
-          CYCLE
-       end if
-       iLevelMax = max(iLevelMax, iLevel)
+       end do
 
-       ! Check if all siblings want to be coarsened
-       iNodeParent = iTree_IA(Parent_,iNode)
-       iNodeChild_I = iTree_IA(Child1_:ChildLast_,iNodeParent)
-       if(.not.all(iStatusNew_A(iNodeChild_I) == Coarsen_))then
-          ! Cancel coarsening requests for all siblings
-          where(iStatusNew_A(iNodeChild_I) == Coarsen_) &
-               iStatusNew_A(iNodeChild_I) = Unset_
-       end if
+    end do BLOCKTRY
 
-    end do
+    !if(iProc==0 ) then
+    !   print *, "Rank refine   -1:+1 : ", Rank_A(max(1,nNodeSort-nDesiredRefine): min(nNodeSort,nNodeSort-nDesiredRefine+2))
+    !   print *, "Rank coursen  -1:+1 : ", Rank_A(max(1,nDesiredCoarsen-1): min(nDesiredCoarsen+1,nNodeSort))
+    !end if
 
-    ! Check proper nesting. Go down level by level. No need to check base level
-    ! Changes in the requests will be applied to all siblings immediately
-    do iLevel = iLevelMax, max(iLevelMin, 1), -1
-
-       ! Parallel processing of nodes (blocks)
-       BLOCKLOOP: do iBlock = 1, nBlock
-
-          if(Unused_B(iBlock)) CYCLE BLOCKLOOP
-          iNode = iNode_B(iBlock)
-          if(iTree_IA(Level_,iNode) /= iLevel) CYCLE BLOCKLOOP
-
-          ! Calculate requested level
-          if(iStatusNew_A(iNode) == Refine_)then
-             iLevelNew = iLevel + 1
-          elseif(iStatusNew_A(iNode) == Coarsen_)then
-             iLevelNew = iLevel - 1
-          else
-             CYCLE
-          end if
-
-          ! Check neighbors around this corner of the parent block
-
-          ! Loop from 0 to 1 or from 2 to 3 in the side index 
-          ! depending on which side this node
-          ! is relative to its parent. If there is no refinement in some 
-          ! direction, then loop from 0 to 3 (and skip 2).
-
-          if(iRatio==1)then
-             iSideMin = 0; iSideMax = 3
-          else
-             iSideMin = 2*modulo(iTree_IA(Coord1_,iNode)-1, 2)
-             iSideMax = iSideMin + 1
-          end if
-          if(nDim < 2)then
-             ! 1D, no neighbors in j direction
-             jSideMin = 1; jSideMax = 1
-          elseif(jRatio == 1)then
-             ! 2D or 3D but no AMR, check neighbors in both directions
-             jSideMin = 0; jSideMax = 3
-          else
-             ! 2D or 3D and AMR: check only the directions 
-             ! corresponding to the corner occupied by this child
-             jSideMin = 2*modulo(iTree_IA(Coord2_,iNode)-1, 2)
-             jSideMax = jSideMin + 1
-          end if
-          if(nDim < 3)then
-             ! 1 or 2D
-             kSideMin = 1; kSideMax = 1
-          elseif(kRatio == 1)then
-             ! 3D but but no AMR, check neighbors in both directions
-             kSideMin = 0; kSideMax = 3
-          else
-             ! 3D and AMR, check only the directions
-             ! corresponding to the corner occupied by this child
-             kSideMin = 2*modulo(iTree_IA(Coord3_,iNode)-1, 2)
-             kSideMax = kSideMin + 1
-          end if
-
-          ! Loop through the at most seven neighbors
-          do kSide = kSideMin, kSideMax
-             if(kRatio == 1 .and. kSide == 2) CYCLE
-             do jSide = jSideMin, jSideMax
-                if(jRatio == 1 .and. jSide == 2) CYCLE
-                do iSide = iSideMin, iSideMax
-                   if(iRatio == 1 .and. iSide == 2) CYCLE
-
-                   jNode = iNodeNei_IIIB(iSide,jSide,kSide,iBlock)
-
-                   ! Don't check the node itself
-                   if(iNode == jNode) CYCLE
-
-                   ! Don't check if neighbor is outside the domain
-                   if(jNode == Unset_) CYCLE
-
-                   ! Get the current and requested level for the neighbor node
-                   jLevel = iTree_IA(Level_,jNode)
-
-                   jLevelNew = jLevel
-                   if(iStatusNew_A(jNode) == Refine_)  jLevelNew = jLevel + 1
-                   if(iStatusNew_A(jNode) == Coarsen_) jLevelNew = jLevel - 1
-
-                   ! Fix levels if difference is too much
-                   if(iLevelNew >= jLevelNew + 2)then
-
-                      if(jLevel > 0)then
-                         jNodeParent = iTree_IA(Parent_,jNode) 
-                         jNodeChild_I= iTree_IA(Child1_:ChildLast_,jNodeParent)
-
-                         ! Neighbor and its siblings cannot be coarsened
-                         iStatusNew_A(jNodeChild_I) = &
-                              max(iStatusNew_A(jNodeChild_I), DontCoarsen_)
-                      endif
-
-                      ! If neighbow was coarser it has to be refined
-                      if(jLevel < iLevel) iStatusNew_A(jNode) = Refine_
-
-                   elseif(iLevelNew <= jLevelNew - 2)then
-                      ! Cannot coarsen this node
-                      iNodeParent = iTree_IA(Parent_,iNode)
-                      iStatusNew_A(iTree_IA(Child1_:ChildLast_,iNodeParent)) &
-                           = DontCoarsen_
-                      
-                      CYCLE BLOCKLOOP
-                   end if
-
-                end do ! iSide
-             end do ! jSide
-          end do ! kSide
-       end do BLOCKLOOP
-
-       ! Collect the local status requests into a global request
-       if(nProc > 1)then
-          call MPI_allreduce(iStatusNew_A, iStatusAll_A, nNode, MPI_INTEGER, &
-               MPI_MAX, iComm, iError)
-          iStatusNew_A = iStatusAll_A
-       end if
-
-    end do ! levels
+    if(.not.DoStrictAmr) deallocate(iInitialiStatusNew_A)
 
     nNodeUsedNow = nNodeUsed
 
     IsNewTree          = .false.
     IsNewDecomposition = .false.
-    
+
     ! Coarsen first to reduce number of nodes and used blocks
     do iMorton = 1, nNodeUsedNow
        iNode   = iNodeMorton_I(iMorton)
@@ -562,7 +689,7 @@ contains
        if(iStatus /= Coarsen_) CYCLE
        IsNewTree          = .true.
        IsNewDecomposition = .true.
-       
+
        iNodeParent = iTree_IA(Parent_,iNode)
 
        ! Coarsen the parent node based on the request stored in the first child
