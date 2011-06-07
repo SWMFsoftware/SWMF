@@ -1157,7 +1157,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DoAutoRefine',automatic_refinement)
            if (automatic_refinement) then
               if(UseBatl) then
-                 call read_amr_criteria("#AMRLIMIT")
+                 call read_amr_criteria("#AMR")
               else
                  call read_var('PercentCoarsen',percentCoarsen)
                  call read_var('PercentRefine' ,percentRefine)
@@ -1166,7 +1166,7 @@ subroutine MH_set_parameters(TypeAction)
            end if
         end if
 
-     case("#AMRLIMIT", "#AMRTYPE", "#AMRCRIT")
+     case("#AMRLIMIT", "#AMRTYPE", "#AMRERRORCRIT")
         if(.not. UseBatl) call stop_mpi(NameSub// &
              ' BATL is required for command='//NameCommand)
         call read_amr_criteria(NameCommand)
