@@ -335,12 +335,13 @@ subroutine MH_set_parameters(TypeAction)
         end if
         
      case("#BATLTEST")
-        UseBatl = .true.
         call read_var('UseBatlTest', UseBatlTest)
-        if(UseBatlTest) BetaProlong = 1.0
-        if(nGI /= 2 .or. nGJ /= 2 .or. nGK /= 2) call stop_mpi(NameSub// &
-             ' ERROR: nGI..nGK must be 2 in srcBATL/BATL_size.f90')
-        
+        if(UseBatlTest)then
+           UseBatl = .true.
+           BetaProlong = 1.0
+           if(nGI /= 2 .or. nGJ /= 2 .or. nGK /= 2) call stop_mpi(NameSub// &
+                ' ERROR: nGI..nGK must be 2 in srcBATL/BATL_size.f90')
+        end if
      case("#COMPONENT")
         call read_var('NameComp', NameCompRead)
         if(NameThisComp /= NameCompRead)then
@@ -2656,9 +2657,13 @@ contains
     if(PrecondType == "HYPRE")then
        if(.not.IsHypreAvailable)call  stop_mpi(NameSub// &
             ' empty HYPRE module! Use Config.pl -hypre')
+
        if(.not.UseSemiImplicit)call stop_mpi(NameSub// &
             ' HYPRE preconditioner only works with semi-implicit scheme')
-       
+
+       if(.not.UseBatl)call stop_mpi(NameSub// &
+            ' HYPRE preconditioner only works BATL.')
+
        if(KrylovType == 'CG')then
           if(iProc == 0) write(*,'(a)') NameSub// &
                ' WARNING: HYPRE preconditioner does not work with CG scheme'//&
