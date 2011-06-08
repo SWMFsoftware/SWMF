@@ -333,6 +333,14 @@ subroutine MH_set_parameters(TypeAction)
            if(nGI /= 2 .or. nGJ /= 2 .or. nGK /= 2) call stop_mpi(NameSub// &
                 ' ERROR: nGI..nGK must be 2 in srcBATL/BATL_size.f90')
         end if
+        
+     case("#BATLTEST")
+        UseBatl = .true.
+        call read_var('UseBatlTest', UseBatlTest)
+        if(UseBatlTest) BetaProlong = 1.0
+        if(nGI /= 2 .or. nGJ /= 2 .or. nGK /= 2) call stop_mpi(NameSub// &
+             ' ERROR: nGI..nGK must be 2 in srcBATL/BATL_size.f90')
+        
      case("#COMPONENT")
         call read_var('NameComp', NameCompRead)
         if(NameThisComp /= NameCompRead)then
@@ -1175,10 +1183,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoAmr',automatic_refinement)
         call read_var('DnAmr',dn_refine)
         call read_var('DtAmr',dt_refine)
-
-     case("#BATLTEST")
-        call read_var('UseBatlTest', UseBatlTest)
-        if(UseBatlTest) BetaProlong = 1.0
 
      case("#AMRCRITERIA")
         call read_var('nRefineCrit',nRefineCrit)
