@@ -817,6 +817,9 @@ contains
 
   real function irradiance_t(TimeSi)
     real,intent(in)::TimeSi
+
+    if (TimeSi > tPulse) UseLaserHeating = .false.
+
     !----------------------
     !irradiance_t = IrradianceSi *&
     !     max(0.0, min(1.0,       &
