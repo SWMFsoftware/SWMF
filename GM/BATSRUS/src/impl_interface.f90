@@ -618,7 +618,7 @@ subroutine get_semi_impl_jacobian
   end do
 
   if(PrecondType == 'HYPRE')then
-     if(nStepLast < 0 .or. n_step - nStepLast > DnInitHypreAmg)then
+     if(nStepLast < 0 .or. n_step - nStepLast >= DnInitHypreAmg)then
         DoInitHypreAmg = .true.
         nStepLast = n_step
      end if
