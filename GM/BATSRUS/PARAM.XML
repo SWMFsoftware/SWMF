@@ -2027,6 +2027,7 @@ The default value is 1.E-12 for 8 byte reals and 1.E-6 for 4 byte reals.
 	</parameter>
 	<parameter name="TypePrecond" type="string" input="select"
 							case="upper">
+		<option name="HYPRE" />
 		<option name="MBILU" default="T" />
 		<option name="BILU"  />
 		<option name="DILU"  />
@@ -2035,19 +2036,30 @@ The default value is 1.E-12 for 8 byte reals and 1.E-6 for 4 byte reals.
 	</parameter>
 	<parameter name="PrecondParam" type="real" min="-1" max="1" 
 		default="0.5" if="$TypePrecond eq 'MBILU'"/>
+	<parameter name="DnInitHypreAmg" type="integer" min="1"
+		default="1"   if="$TypePrecond eq 'HYPRE'"/>
 #PRECONDITIONER
 symmetric       TypePrecondSide (left, symmetric, right)
 MBILU           TypePrecond (MBILU, BILU, DILU, GS, or JACOBI)
 0.5             GustafssonPar (0 to 1, read for MBILU preconditioner only)
 
-Default parameters are shown. 
+#PRECONDITIONER
+left		TypePrecondSide
+HYPRE		TypePrecond
+4		DnInitHypreAmg (1 or more, read for HYPRE preconditioner)
 
 TypePrecondSide can be left, right or symmetric. There seems to be little
 difference between these in terms of performance. Right preconditioning 
-does not affect the normalization of the residual. The Jacobi and DILU
+does not affect the normalization of the residual. The Jacobi, DILU and HYPRE
 preconditioners are implemented to always use left preconditioning. 
 
-The TypePrecond parameter can be set to JACOBI, GS, DILU, BILU or MBILU.
+The TypePrecond parameter can be set to JACOBI, GS, DILU, BILU or MBILU
+or HYPRE. The HYPRE preconditioner can only be used if the HYPRE library
+has been checked out into the util/ directory and Config.pl -hypre has 
+been set. HYPRE preconditioning only works with BATL switched on, 
+only with BiCGSTAB or GMRES schemes, only with the semi-implicit scheme
+solving for 1 variable at a time (split), and only on uniform grids for now.
+
 The simplest Jacobi preconditioner is mainly useful for code development 
 purposes. The Gauss-Seidel (GS) preconditioner gives better performance
 than Jacobi, however, the other choices are usually more efficient.
@@ -2066,6 +2078,16 @@ Setting a positive GustafssonPar up to 1 results in the modified (MBILU)
 preconditioner. The maximum 1 corresponds to the full Gustafsson modification.
 The default 0.5 value seems to be optimal for matrices resulting from 
 hyperbolic (advection) type problems.
+
+The DnInitHypreAmg parameter is only read for the HYPRE preconditioner.
+The Algebraic Multi-Grid (AMG) solver is reinitialized every DnInitHypreAmg
+time steps. Setting it to 1 gives the minimum number of Krylov iterations,
+but the time spent on setting up the AMG may become substantial. Setting it
+to a larger value will reduce the time spent on AMG setup, but it will 
+increase the number of Krylov iterations. The optimal value depends on the
+problem as well as on the number of processors.
+
+Default parameters are shown by the first example.
 </command>
 
 <command name="KRYLOV">
