@@ -135,20 +135,20 @@ contains
        else
           Eta_GB = 0.0
        end if
-    end if
 
-    if(UseSemiImplicit .and. TypeSemiImplicit == 'resistivity')then
-       ! The following will ensure that the explicit evaluation of the
-       ! resistive diffusion is switched off
-       UseResistiveFlux = .false.
+       if(UseSemiImplicit .and. TypeSemiImplicit == 'resistivity')then
+          ! The following will ensure that the explicit evaluation of the
+          ! resistive diffusion is switched off
+          UseResistiveFlux = .false.
 
-       allocate( &
-            FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
-            Eta_DFDB(MaxDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
+          allocate( &
+               FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
+               Eta_DFDB(MaxDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
 
-       if(.not.(IsCartesian.or.IsRzGeometry)) &
-            call stop_mpi(NameSub//': semi-implicit resistivity not '// &
-            'yet implemented for non-cartesian')
+          if(.not.(IsCartesian.or.IsRzGeometry)) &
+               call stop_mpi(NameSub//': semi-implicit resistivity not '// &
+               'yet implemented for non-cartesian')
+       end if
     end if
 
   end subroutine init_mod_resistivity
