@@ -552,20 +552,23 @@ end subroutine get_semi_impl_matvec
 subroutine get_semi_impl_jacobian
 
   use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, &
-       PrecondType, &
+       PrecondType, DnInitHypreAmg, &
        UseSplitSemiImplicit, iVarSemi, &
        nStencil, MAT, ImplCoeff, DconsDsemi_VCB !!!, wnrm
   use ModRadDiffusion,   ONLY: add_jacobian_rad_diff
   use ModHeatConduction, ONLY: add_jacobian_heat_cond
   use ModResistivity,    ONLY: add_jacobian_resistivity
-  use ModMain, ONLY: nI, nJ, nK, Dt
+  use ModMain, ONLY: nI, nJ, nK, Dt, n_step
   use ModGeometry, ONLY: vInv_CB
-  use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix
+  use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix, &
+       DoInitHypreAmg
 
   implicit none
 
   integer :: iImplBlock, iBlock, i, j, k, iStencil, iVar, jVar
   real    :: Coeff
+
+  integer:: nStepLast = -1
 
   character(len=*), parameter:: NameSub = 'get_semi_impl_jacobian'
   !---------------------------------------------------------------------------
@@ -614,7 +617,13 @@ subroutine get_semi_impl_jacobian
 
   end do
 
-  if(PrecondType == 'HYPRE')call hypre_set_matrix
+  if(PrecondType == 'HYPRE')then
+     if(nStepLast < 0 .or. n_step - nStepLast > DnInitHypreAmg)then
+        DoInitHypreAmg = .true.
+        nStepLast = n_step
+     end if
+     call hypre_set_matrix
+  end if
 
 end subroutine get_semi_impl_jacobian
 

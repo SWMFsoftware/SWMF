@@ -106,6 +106,7 @@ module ModImplicit
   real               :: PrecondParam  = -0.5
   character (len=10) :: PrecondSide   = 'symmetric'
   character (len=10) :: PrecondType   = 'MBILU'
+  integer            :: DnInitHypreAmg= 1
 
   ! Krylov scheme parameters
   character (len=10) :: KrylovType     ='GMRES'
@@ -276,6 +277,7 @@ contains
        case('HYPRE')
           PrecondSide = 'left'
           UseNoOverlap = .false.
+          call read_var('DnInitHypreAmg', DnInitHypreAmg)
        case('JACOBI')
           PrecondParam = Jacobi_
           PrecondSide  = 'left'
