@@ -460,9 +460,9 @@ contains
 
   subroutine get_resistivity_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
-    use BATL_lib,        ONLY: store_face_flux
+    use BATL_lib,        ONLY: store_face_flux, IsRzGeometry, CellSize_DB
     use ModFaceGradient, ONLY: get_face_curl
-    use ModGeometry,     ONLY: vInv_CB
+    use ModGeometry,     ONLY: vInv_CB, y_BLK
     use ModImplicit,     ONLY: nVarSemi, FluxImpl_VXB, FluxImpl_VYB, &
          FluxImpl_VZB
     use ModNumConst,     ONLY: i_DD
@@ -474,7 +474,7 @@ contains
     logical, intent(in) :: IsLinear
 
     integer :: iDim, i, j, k, Di, Dj, Dk
-    real :: Current_D(MaxDim)
+    real :: Current_D(MaxDim), Jx, InvDy2
     logical :: IsNewBlock
     !--------------------------------------------------------------------------
 
@@ -515,6 +515,25 @@ contains
        end do; end do; end do
     end do
 
+    if(IsRzGeometry)then
+       InvDy2 = 0.5/CellSize_DB(y_,iBlock)
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          ! Jx = Dbz/Dy - Dby/Dz (Jz = Dbphi/Dr in rz-geometry)
+          ! Note that set_block_field3 has already been called so that we can
+          ! use central difference.
+          Jx = ( StateImpl_VG(BzImpl_,i,j+1,k) &
+               - StateImpl_VG(BzImpl_,i,j-1,k) )*InvDy2
+
+          ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
+          Jx = Jx + StateImpl_VG(BzImpl_,i,j,k)/y_BLK(i,j,k,iBlock)
+
+          ! in rz-geonetry: Rhs[Bphi] = -eta*Jz / radius
+          Rhs_VC(BzImpl_,i,j,k) = Rhs_VC(BzImpl_,i,j,k) &
+               - Eta_GB(i,j,k,iBlock)*Jx/y_BLK(i,j,k,iBlock)
+       end do; end do; end do
+    end if
+
   end subroutine get_resistivity_rhs
 
   !============================================================================
@@ -523,10 +542,8 @@ contains
 
     use BATL_lib,        ONLY: CellSize_DB
     use ModGeometry,     ONLY: vInv_CB
-    use ModImplicit,     ONLY: nVarSemi, UseNoOverlap
+    use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap
     use ModNumConst,     ONLY: i_DD
-
-    integer, parameter:: nStencil = 2*nDim + 1
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
