@@ -13,7 +13,7 @@ subroutine clean_divb
   use ModSize
   use ModNumConst
   use ModDivbCleanup
-  use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, unusedblk
+  use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, unusedblk, UseBatl
   use ModAdvance,ONLY: nVar,State_VGB, Bx_, By_, Bz_, P_,tmp1_BLK,tmp2_BLK,&
        Residual_GB=>tmp1_blk,Dir_GB=>tmp2_blk
   use ModAdvance,ONLY:tmp3_blk=>divB1_GB
@@ -22,6 +22,7 @@ subroutine clean_divb
   use ModParallel, ONLY : NOBLK, neiLEV
   use ModPhysics,ONLY:gm1
   use ModMpi
+  use BATL_lib, ONLY: message_pass_cell_scalar, message_pass_cell
   implicit none
 
   integer::i,j,k,iBlock
@@ -39,7 +40,7 @@ subroutine clean_divb
 
   real::DirDotDir,DirDotDirInv
   !DirDotDirInv=1/(Dir.A.Dir)
- 
+
   real::Tolerance=cTiny
   integer:: iError
   integer::Iteration                        
@@ -49,8 +50,8 @@ subroutine clean_divb
   !multiplied by the cell volume
   !While calculating the magnetic field, we use vInv*vDotGrad Phi
   !While calculating the sum V_i grad^2 Phi, we use vInv vDotGrad^2 Phi 
-  
-  
+
+
   logical::oktest,oktest_me
 
   integer :: iLastGrid=-100, iLastDecomposition=-100
@@ -69,14 +70,20 @@ subroutine clean_divb
   Iteration=1                                
 
   do 
-     call message_pass_cells8(.true.,.true.,.true.,nVar,State_VGB)    
+     if(UseBatl) then
+        call message_pass_cell(nVar, State_VGB, nWidthIn=1, &
+             DoSendCornerIn=.false., nProlongOrderIn=1, DoRestrictFaceIn=.true.)
+     else
+        call message_pass_cells8(.true.,.true.,.true.,nVar,State_VGB)    
+     end if
+
      !Get the ghostcell values for MF 
      DivBInt=cZero;DivBTemp=cZero
      do iBlock=1,nBlock
         Residual_GB(:,:,:,iBlock)=cZero
         if(Iteration==1) Dir_GB(:,:,:,iBlock)=cZero 
         !Initialize the vector "Dir"
-        
+
         if(unusedBLK(iBlock))CYCLE
         call div_3d_b1(iBlock,&
              State_VGB(Bx_,:,:,:,iBlock),&
@@ -137,7 +144,14 @@ subroutine clean_divb
            end do;end do;end do
         end if
      end do
-     call message_pass_cells(.true.,.true.,.true.,tmp2_blk)
+
+     if(UseBatl) then
+        call message_pass_cell_scalar(tmp2_blk, nWidthIn=1, DoSendCornerIn=.false. ,&
+             nProlongOrderIn=1, DoRestrictFaceIn=.true.)
+     else
+        call message_pass_cells(.true.,.true.,.true.,tmp2_blk)
+     end if
+
      !Calculate Dir.A.Dir
      DirDotDir=cZero
      do iBlock=1,nBlock
@@ -156,7 +170,7 @@ subroutine clean_divb
      end if
 
      if(oktest .and. iProc==0) write(*,*)'Effective diffusion coefficient = ',&
-                DirDotDirInv*DivBInt(ResDotM1DotRes_)
+          DirDotDirInv*DivBInt(ResDotM1DotRes_)
      ! If iterations are not used, the diffusion coefficient 
      ! should be less than 1, to ensure the convergence in the r.M^{-1}.r norm
      if(nCleanDivb==0)DirDotDirInv = &
@@ -165,7 +179,7 @@ subroutine clean_divb
      do iBlock=1,nBlock
         if (unusedBLK(iBlock)) CYCLE
         call v_grad_phi(Dir_GB,iBlock)
-       
+
         State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock) = &
              State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)-&
              vDotGradX_C*vInv_CB(:,:,:,iBlock)*DirDotDirInv
@@ -191,7 +205,7 @@ subroutine clean_divb
 contains
   !=============================================================================
   subroutine init_divb_cleanup
-!    use ModAdvance,ONLY: DivB1_GB
+    !    use ModAdvance,ONLY: DivB1_GB
     implicit none
 
     integer::i,j,k,iBlock,iError,iLimit
@@ -205,9 +219,13 @@ contains
     end do
 
 
-
-    call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
-!tmp1 is equal to the inverse of the volume, including the ghostcells 
+    if(UseBatl) then
+       call message_pass_cell_scalar(tmp1_blk,DoSendCornerIn=.false. ,&
+            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
+    else
+       call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
+       !tmp1 is equal to the inverse of the volume, including the ghostcells 
+    end if
 
     do iBlock=1,nBlock
        if (unusedBLK(iBlock)) CYCLE
@@ -280,7 +298,14 @@ contains
           end if
           tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=Prec_CB(:,:,:,iBlock)
        end do
-       call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
+
+       if(UseBatl) then
+          call message_pass_cell_scalar(tmp1_blk,DoSendCornerIn=.false. ,&
+               nProlongOrderIn=1, DoRestrictFaceIn=.true.)
+       else
+          call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
+       end if
+
        do iBlock=1,nBlock
           if (unusedBLK(iBlock)) CYCLE
 
@@ -292,11 +317,11 @@ contains
           end do;end do; end do
        end do
     end do
- 
+
     !With the preconditioner, defined in the manner like this
     !the upper estimate of the spectral radius fo the matrix
     !||Prec^{1/2}.A.Prec^1/2 is 2, according to the Frobenius inequality 
-    
+
     !Herewith Prec is also denoted as M^{-1}
     !Calculate the divB diffusion coefficient =2/||M^(-1/2).A.M^(-1/2)||
     !For the grid, which is at least partially uniform cartesian,
@@ -319,8 +344,15 @@ contains
        end if
        tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(:,:,:,iBlock))
     end do
-!    if(iProc==0)write(*,*)' Cleanup Initialization second message pass'
-    call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
+    !    if(iProc==0)write(*,*)' Cleanup Initialization second message pass'
+
+    if(UseBatl) then
+       call message_pass_cell_scalar(tmp1_blk,DoSendCornerIn=.false. ,&
+            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
+    else
+       call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
+    end if
+
     !Now the elements of diag(Prec_CB)^{1/2} are in tmp1_blk
 
     do iBlock=1,nBlock
@@ -345,9 +377,20 @@ contains
        end do;end do; end do
     end do
     !In tmp1,tmp2 and divB1 are the estimates of gradX, gradY,gradZ correspondenyly
-    call message_pass_cells(.false.,.true.,.true.,tmp1_BLK)
-    call message_pass_cells(.false.,.true.,.true.,tmp2_BLK)
-    call message_pass_cells(.false.,.true.,.true.,tmp3_BLK)
+
+    if(UseBatl) then
+       call message_pass_cell_scalar(tmp1_blk,DoSendCornerIn=.false. ,&
+            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
+       call message_pass_cell_scalar(tmp2_blk,DoSendCornerIn=.false. ,&
+            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
+       call message_pass_cell_scalar(tmp3_blk,DoSendCornerIn=.false. ,&
+            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
+    else
+       call message_pass_cells(.false.,.true.,.true.,tmp1_BLK)
+       call message_pass_cells(.false.,.true.,.true.,tmp2_BLK)
+       call message_pass_cells(.false.,.true.,.true.,tmp3_BLK)
+    end if
+
     EstimateForMAMNorm=cZero
     do iBlock=1,nBlock
        if(unusedBLK(iBlock))CYCLE
@@ -373,7 +416,7 @@ contains
        divb_diffcoeff = 2/EstimateForMAMNorm
     end if
     if(iProc==0)write(*,*)"Divb diffusion coefficient is: ",divb_diffcoeff
-    
+
     !Compute 1/sum(M_i)
     OneDotMDotOne=cZero
     do iBlock=1,nBlock
@@ -394,9 +437,9 @@ contains
        OneDotMDotOneInv=cOne/OneDotMDotOne
     end if
     if(iProc==0)write(*,*)' init_divb_cleanup finishes with OneDotMDotOneInv=',OneDotMDotOneInv
-!    write(*,*)'Maxval loc and minval loc of Prec_CB=', &
-!         maxval(Prec_CB(:,:,:,1:nBlock)), maxloc(Prec_CB(:,:,:,1:nBlock)), &
-!         minval(Prec_CB(:,:,:,1:nBlock)), minloc(Prec_CB(:,:,:,1:nBlock)) 
+    !    write(*,*)'Maxval loc and minval loc of Prec_CB=', &
+    !         maxval(Prec_CB(:,:,:,1:nBlock)), maxloc(Prec_CB(:,:,:,1:nBlock)), &
+    !         minval(Prec_CB(:,:,:,1:nBlock)), minloc(Prec_CB(:,:,:,1:nBlock)) 
   end subroutine init_divb_cleanup
   !============================================================================                         
   subroutine v_grad_phi(Phi_GB,iBlock)
@@ -404,32 +447,32 @@ contains
     real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK),intent(inout)::Phi_GB
     vDotGradX_C=cZero;vDotGradY_C=cZero;vDotGradZ_C=cZero
 !!! Apply continuous solution at east and west
-!    if (NeiLev(East_,iBlock)==NOBLK)&
-!         Phi_GB(0   ,1:nJ,1:nK,iBlock) = Phi_GB(1 ,1:nJ,1:nK,iBlock)
-!    if (NeiLev(West_,iBlock)==NOBLK)&
-!         Phi_GB(nI+1,1:nJ,1:nK,iBlock) = Phi_GB(nI,1:nJ,1:nK,iBlock)
+    !    if (NeiLev(East_,iBlock)==NOBLK)&
+    !         Phi_GB(0   ,1:nJ,1:nK,iBlock) = Phi_GB(1 ,1:nJ,1:nK,iBlock)
+    !    if (NeiLev(West_,iBlock)==NOBLK)&
+    !         Phi_GB(nI+1,1:nJ,1:nK,iBlock) = Phi_GB(nI,1:nJ,1:nK,iBlock)
 !!! Apply shearing at north and south
-!    if (NeiLev(South_,iBlock)==NOBLK)&
-!         Phi_GB(1:nI,0   ,1:nK,iBlock) = Phi_GB(0:nI-1,2 ,1:nK,iBlock)
-!    if (NeiLev(North_,iBlock)==NOBLK)&
-!         Phi_GB(1:nI,nJ+1,1:nK,iBlock) = Phi_GB(2:nI+1,nJ-1,1:nK,iBlock)
+    !    if (NeiLev(South_,iBlock)==NOBLK)&
+    !         Phi_GB(1:nI,0   ,1:nK,iBlock) = Phi_GB(0:nI-1,2 ,1:nK,iBlock)
+    !    if (NeiLev(North_,iBlock)==NOBLK)&
+    !         Phi_GB(1:nI,nJ+1,1:nK,iBlock) = Phi_GB(2:nI+1,nJ-1,1:nK,iBlock)
 !!! Apply translation invariant solution at bottom and top
-!    if (NeiLev(Bot_,iBlock)==NOBLK)&
-!         Phi_GB(1:nI,1:nJ,0   ,iBlock) = Phi_GB(1:nI,1:nJ,1 ,iBlock)
-!    if (NeiLev(Top_,iBlock)==NOBLK)&
-!         Phi_GB(1:nI,1:nJ,nK+1,iBlock) = Phi_GB(1:nI,1:nJ,nK,iBlock)
-     if (NeiLev(East_,iBlock)==NOBLK)&
-          Phi_GB(0   ,1:nJ,1:nK,iBlock)=-BoundaryCoef*Phi_GB(1 ,1:nJ,1:nK,iBlock)
-     if (NeiLev(West_,iBlock)==NOBLK)&
-          Phi_GB(nI+1,1:nJ,1:nK,iBlock)=-BoundaryCoef*Phi_GB(nI,1:nJ,1:nK,iBlock)
-     if (NeiLev(South_,iBlock)==NOBLK)&
-          Phi_GB(1:nI,0   ,1:nK,iBlock)=-BoundaryCoef*Phi_GB(1:nI,1 ,1:nK,iBlock)
-     if (NeiLev(North_,iBlock)==NOBLK)&
-          Phi_GB(1:nI,nJ+1,1:nK,iBlock)=-BoundaryCoef*Phi_GB(1:nI,nJ,1:nK,iBlock)
-     if (NeiLev(Bot_,iBlock)==NOBLK)&
-          Phi_GB(1:nI,1:nJ,0   ,iBlock)=-BoundaryCoef*Phi_GB(1:nI,1:nJ,1 ,iBlock)
-     if (NeiLev(Top_,iBlock)==NOBLK)&
-          Phi_GB(1:nI,1:nJ,nK+1,iBlock)=-BoundaryCoef*Phi_GB(1:nI,1:nJ,nK,iBlock)
+    !    if (NeiLev(Bot_,iBlock)==NOBLK)&
+    !         Phi_GB(1:nI,1:nJ,0   ,iBlock) = Phi_GB(1:nI,1:nJ,1 ,iBlock)
+    !    if (NeiLev(Top_,iBlock)==NOBLK)&
+    !         Phi_GB(1:nI,1:nJ,nK+1,iBlock) = Phi_GB(1:nI,1:nJ,nK,iBlock)
+    if (NeiLev(East_,iBlock)==NOBLK)&
+         Phi_GB(0   ,1:nJ,1:nK,iBlock)=-BoundaryCoef*Phi_GB(1 ,1:nJ,1:nK,iBlock)
+    if (NeiLev(West_,iBlock)==NOBLK)&
+         Phi_GB(nI+1,1:nJ,1:nK,iBlock)=-BoundaryCoef*Phi_GB(nI,1:nJ,1:nK,iBlock)
+    if (NeiLev(South_,iBlock)==NOBLK)&
+         Phi_GB(1:nI,0   ,1:nK,iBlock)=-BoundaryCoef*Phi_GB(1:nI,1 ,1:nK,iBlock)
+    if (NeiLev(North_,iBlock)==NOBLK)&
+         Phi_GB(1:nI,nJ+1,1:nK,iBlock)=-BoundaryCoef*Phi_GB(1:nI,nJ,1:nK,iBlock)
+    if (NeiLev(Bot_,iBlock)==NOBLK)&
+         Phi_GB(1:nI,1:nJ,0   ,iBlock)=-BoundaryCoef*Phi_GB(1:nI,1:nJ,1 ,iBlock)
+    if (NeiLev(Top_,iBlock)==NOBLK)&
+         Phi_GB(1:nI,1:nJ,nK+1,iBlock)=-BoundaryCoef*Phi_GB(1:nI,1:nJ,nK,iBlock)
     if(body_blk(iBlock))then
        do k=1,nK;do j=1,nJ;do i=1,nI
           if(.not.true_cell(i,j,k,iBlock))CYCLE

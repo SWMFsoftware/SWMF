@@ -76,6 +76,9 @@ subroutine ray_trace_fast
   use ModMessagePass, ONLY: message_pass_dir
   use ModRaytrace
   use ModMpi
+
+  use BATL_lib, ONLY: message_pass_node
+
   implicit none
 
   ! Iteration parameters
@@ -188,9 +191,15 @@ subroutine ray_trace_fast
   end do ! iBLK
 
   ! Average node values between shared faces
-  call pass_and_average_nodes(.true.,bb_x)
-  call pass_and_average_nodes(.true.,bb_y)
-  call pass_and_average_nodes(.true.,bb_z)
+  if(UseBatl)then
+     call message_pass_node(1,bb_x)
+     call message_pass_node(1,bb_y)
+     call message_pass_node(1,bb_z)
+  else
+     call pass_and_average_nodes(.true.,bb_x)
+     call pass_and_average_nodes(.true.,bb_y)
+     call pass_and_average_nodes(.true.,bb_z)
+  end if
 
   if(oktest_me)write(*,*)'rayface normalized B'
   if(oktime.and.iProc==0)then

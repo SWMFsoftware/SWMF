@@ -494,12 +494,14 @@ end subroutine proj_gradient
 !=============================================================================
 ! Calculate boundary values for phi for dimensions idimmin..idimmax
 subroutine proj_boundphi(phi,idimmin,idimmax)
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK,prolong_order
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK,prolong_order, UseBatl
   use ModMain, ONLY : UseConstrainB                   !^CFG IF CONSTRAINB
   use ModGeometry, ONLY : body_BLK, true_cell
   use ModParallel, ONLY : NOBLK,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModMessagePass, ONLY: message_pass_dir
   use ModProject
+  use BATL_lib, ONLY: message_pass_cell_scalar
+
   implicit none
 
   ! Arguments
@@ -511,9 +513,13 @@ subroutine proj_boundphi(phi,idimmin,idimmax)
   integer :: iBLK
 
   !---------------------------------------------------------------------------
-
-  call message_pass_dir(idimmin,idimmax,1,.false.,prolong_order,1,phi,&
-       restrictface=.true.)
+  if(UseBatl)then
+     call message_pass_cell_scalar(Phi,nWidthIn=1, nProlongOrderIn=1, &
+          DoSendCornerIn=.false., DoRestrictFaceIn = .true.)
+  else
+     call message_pass_dir(idimmin,idimmax,1,.false.,prolong_order,1,phi,&
+          restrictface=.true.)
+  end if
 
   do iBLK=1,nBlock
      if(unusedBLK(iBLK))CYCLE

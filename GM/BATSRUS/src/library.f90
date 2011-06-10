@@ -1432,6 +1432,9 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   use ModGeometry, ONLY : UseCovariant         
   use ModGeometry, ONLY : XyzMin_D, XyzMax_D
   use ModNumConst
+  use ModMain,  ONLY: UseBatl
+  use BATL_lib, ONLY: MaxDim, find_grid_block
+
   implicit none
 
   real, intent(in) :: x,y,z
@@ -1443,8 +1446,23 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   real,dimension(3) :: Xyz_D,DXyz_D,XyzCorner_D,XyzCenter_D
   integer,dimension(3)::IjkRoot_D
   logical,dimension(3):: IsLowerThanCenter_D
+
+
+  ! Variables for BATL
+  integer:: iCell_D(MaxDim)
+
   character(len=*), parameter:: NameSub = 'xyz_to_peblk'
   !----------------------------------------------------------------------
+
+  if(UseBatl)then
+
+     call find_grid_block( (/x,y,z/), iPe, iBlock, iCell_D)
+     iCell = iCell_D(1)
+     jCell = iCell_D(2)
+     kCell = iCell_D(3)
+
+     RETURN
+  end if
 
   nullify(Octree % ptr)
 
