@@ -27,6 +27,9 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
   real :: dPotential
   integer :: nCellsPad, n
 
+  nTimesBig=0
+  nTimesTotal=0
+
   iError = 0
   open(UnitTmp_, file=AMIE_FileName, status='old',form='UNFORMATTED',iostat=iError)
   if (iError.ne.0) then
@@ -158,9 +161,9 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
      stop
   endif
 
-  AMIE_iDebugLevel = 0
+  AMIE_iDebugLevel = 2
 
-  energyfluxconvert = .true.
+  energyfluxconvert = .false.
 
   do iField=1,nfields
      if (IsBinary) then
@@ -187,7 +190,8 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
          (index(Fields(iField),"odel") < 1)) then
         if (index(Fields(iField),"w/m2") > 0) energyfluxconvert = .true.
         iEFlux_ = iField
-        if (AMIE_iDebugLevel > 1) write(*,*) "<--- Energy Flux Found", iEFlux_
+        if (AMIE_iDebugLevel > 1) write(*,*) "<--- Energy Flux Found", iEFlux_, &
+             Fields(iField)
      endif
 
   enddo
@@ -243,6 +247,9 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
      AMIE_AveE(:,1:AMIE_nLats,iTime,iBLK)      = AllData(:,1:AMIE_nLats,iAveE_)
 
      ! Need to convert from W/m^2 to erg/cm2/s
+
+     write(*,*) "convert eflux ? ",energyfluxconvert
+
      if (energyfluxconvert) then
         AMIE_EFlux(:,1:AMIE_nLats,iTime,iBLK)     = &
              AllData(:,1:AMIE_nLats,iEFlux_) / (1.0e-7 * 100.0 * 100.0)
@@ -306,9 +313,12 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
 
   enddo
 
-  if (nTimesBig > nTimesTotal*0.1) &
-       AMIE_EFlux(:,:,:,iBLK) = &
-       AMIE_EFlux(:,:,:,iBLK) * (1.0e-7 * 100.0 * 100.0)
+  if (nTimesBig > nTimesTotal*0.1) then
+     AMIE_EFlux(:,:,:,iBLK) = &
+          AMIE_EFlux(:,:,:,iBLK) * (1.0e-7 * 100.0 * 100.0)
+     write(*,*) "nTimesBig is rather large, so I think that we need to "
+     write(*,*) "convert the eflux data to w/m2."
+  endif
 
   do iTime=1,AMIE_ntimes
      do j=1, AMIE_nLats+nCellsPad
