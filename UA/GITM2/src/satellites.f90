@@ -24,9 +24,12 @@ subroutine read_satellites(iError)
 
   iError = 0
   nSatLines = 0
+  nSatPos = 0
   iSatCurrentIndex = 0
 
   do iSat = 1, nSats
+
+     if (iDebugLevel > 2) write(*,*) "Reading Satellite File : ",cSatFileName(iSat), iSat
 
      open(unit=iSatUnit,file=cSatFileName(iSat),status="old",iostat = iError)
 
@@ -76,8 +79,9 @@ subroutine read_satellites(iError)
               else
                  nSatPos(iSat,nSatLines(iSat)) = &
                       nSatPos(iSat,nSatLines(iSat)) + 1
-                 SatPos(iSat,:,nSatPos(iSat,nSatLines(iSat)),nSatLines(iSat))=&
-                      Pos
+                 SatPos(iSat,1,nSatPos(iSat,nSatLines(iSat)),nSatLines(iSat))=Pos(1)
+                 SatPos(iSat,2,nSatPos(iSat,nSatLines(iSat)),nSatLines(iSat))=Pos(2)
+                 SatPos(iSat,3,nSatPos(iSat,nSatLines(iSat)),nSatLines(iSat))=Pos(3)
                  SatTime(iSat,nSatLines(iSat)) = NewTime
               endif
            else
