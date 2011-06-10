@@ -1492,7 +1492,7 @@ subroutine calc_chemistry(iBlock)
                    Neutrals(iN_2P_)
 
               NeutralSources(iN_2D_) = NeutralSources(iN_2D_) + Reaction
-!              NeutralLosses(iN_2P_)  = NeutralLosses(iN_2P_)  + Reaction
+              NeutralLosses(iN_2P_)  = NeutralLosses(iN_2P_)  + Reaction
 
               Emission(iE10400_) = Emission(iE10400_) + Reaction
 

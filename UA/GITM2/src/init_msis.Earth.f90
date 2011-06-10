@@ -193,7 +193,7 @@ subroutine init_msis
               NDensityS(iLon,iLat,iAlt,iHe_,iBlock)         = msis_dens(7)
               NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)       = msis_dens(8)
               NDensityS(iLon,iLat,iAlt,iN_2P_,iBlock)       = &
-                   NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)/100.0
+                   NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)/10000.0
               NDensityS(iLon,iLat,iAlt,iN_2D_,iBlock)       = &
                    NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)/100.0
               NDensityS(iLon,iLat,iAlt,iO_1D_,iBlock)       = &
