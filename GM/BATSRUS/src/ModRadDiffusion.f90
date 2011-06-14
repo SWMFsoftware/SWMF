@@ -47,6 +47,8 @@ module ModRadDiffusion
   logical, public :: IsNewBlockRadDiffusion = .true.
   logical, public :: IsNewTimestepRadDiffusion = .true.
 
+  ! Local variables --------------
+
   ! Parameters for radiation flux limiter
   logical          :: UseRadFluxLimiter  = .false.
   character(len=20):: TypeRadFluxLimiter = 'larsen'
@@ -437,7 +439,7 @@ contains
 
   subroutine get_impl_rad_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
-     use BATL_size,  ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_size,  ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,  ONLY: State_VGB, UseElectronPressure, nWave, WaveFirst_, &
          WaveLast_
     use ModConst,    ONLY: cBoltzmann
@@ -1427,16 +1429,19 @@ contains
     use ModGeometry, ONLY: vInv_CB, dx_BLK, dy_BLK, dz_BLK, &
          fAx_BLK, fAy_BLK, fAz_BLK
     use ModImplicit, ONLY: TypeSemiImplicit, iTeImpl, UseFullImplicit, &
-         UseSemiImplicit, nVarSemi, nStencil, UseNoOverlap
-    use ModMain,     ONLY: nI, nJ, nK
+         UseSemiImplicit, nVarSemi, nStencil, Stencil1_, Stencil2_, &
+         Stencil3_, Stencil4_, Stencil5_, Stencil6_, Stencil7_, UseNoOverlap
+    use ModMain,     ONLY: nI, nJ, nK, TypeBc_I
     use ModNumConst, ONLY: i_DD
+    use BATL_lib,    ONLY:  DiLevelNei_IIIB, Unset_, CellSize_DB
+    use ModPhysics,  ONLY: InvClight
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax, iPoint
     real :: DiffLeft, DiffRight, RelaxCoef, PlanckWeight
-    real :: Dxyz_D(MaxDim), Area_D(MaxDim), Coeff
+    real :: Dxyz_D(MaxDim), Area_D(MaxDim), Coeff0, Coeff
     !--------------------------------------------------------------------------
 
     if(UseSemiImplicit)then
@@ -1517,6 +1522,120 @@ contains
           end do
        end do; end do; end do
     end do
+
+    ! For now the boundary conditions are only applied when
+    ! the block edges are not neglected (e.g. for HYPRE preconditioner)
+    if(UseNoOverLap) RETURN
+
+    ! Apply boundary conditions
+    if(DiLevelNei_IIIB(-1,0,0,iBlock) == Unset_)then
+       select case(TypeBc_I(1))
+       case('float','outflow')
+          Coeff0 = 2*InvClight/CellSize_DB(1,iBlock)
+          do iDiff = iDiffRadMin, iDiffRadMax
+             iVar = iDiff_I(iDiff)
+             do k = 1, nK; do j = 1, nJ
+                ! Taken from ModRadDiffusion::set_rad_outflow_bc
+                Coeff = Coeff0*DiffSemiCoef_VGB(iDiff,1,j,k,iBlock)
+                Jacobian_VVCI(iVar,iVar,1,j,k,Stencil1_) = &
+                     Jacobian_VVCI(iVar,iVar,1,j,k,Stencil1_) &
+                     + (Coeff - 0.5)/(Coeff + 0.5) &
+                     *Jacobian_VVCI(iVar,iVar,1,j,k,Stencil2_)
+             end do; end do
+          end do
+       end select
+    end if
+
+    if(DiLevelNei_IIIB(+1,0,0,iBlock) == Unset_)then
+       select case(TypeBc_I(2))
+       case('float','outflow')
+          Coeff0 = 2*InvClight/CellSize_DB(1,iBlock)
+          do iDiff = iDiffRadMin, iDiffRadMax
+             iVar = iDiff_I(iDiff)
+             do k = 1, nK; do j = 1, nJ
+                ! Taken from ModRadDiffusion::set_rad_outflow_bc
+                Coeff = Coeff0*DiffSemiCoef_VGB(iDiffRadMin,nI,j,k,iBlock)
+
+                Jacobian_VVCI(iVar,iVar,nI,j,k,Stencil1_) = &
+                     Jacobian_VVCI(iVar,iVar,nI,j,k,Stencil1_) &
+                     + (Coeff - 0.5)/(Coeff + 0.5) &
+                     *Jacobian_VVCI(iVar,iVar,nI,j,k,Stencil3_)
+             end do; end do
+          end do
+       end select
+    end if
+
+    if(nJ > 1)then
+       if(DiLevelNei_IIIB(0,-1,0,iBlock) == Unset_)then
+          select case(TypeBc_I(3))
+          case('float','outflow')
+             Coeff0 = 2*InvClight/CellSize_DB(2,iBlock)
+             do iDiff = iDiffRadMin, iDiffRadMax
+                iVar = iDiff_I(iDiff)
+                do k = 1, nK; do i = 1, nI
+                   Coeff = Coeff0*DiffSemiCoef_VGB(iDiffRadMin,i,1,k,iBlock)
+                   Jacobian_VVCI(iVar,iVar,i,1,k,Stencil1_) = &
+                        Jacobian_VVCI(iVar,iVar,i,1,k,Stencil1_) &
+                        + (Coeff - 0.5)/(Coeff + 0.5) &
+                        *Jacobian_VVCI(iVar,iVar,i,1,k,Stencil4_)
+                end do; end do
+             end do
+          end select
+       end if
+
+       if(DiLevelNei_IIIB(0,+1,0,iBlock) == Unset_)then
+          select case(TypeBc_I(4))
+          case('float','outflow')
+             Coeff0 = 2*InvClight/CellSize_DB(2,iBlock)
+             do iDiff = iDiffRadMin, iDiffRadMax
+                iVar = iDiff_I(iDiff)
+                do k = 1, nK; do i = 1, nI
+                   Coeff = Coeff0*DiffSemiCoef_VGB(iDiffRadMin,i,nJ,k,iBlock)
+                   Jacobian_VVCI(iVar,iVar,i,nJ,k,Stencil1_) = &
+                        Jacobian_VVCI(iVar,iVar,i,nJ,k,Stencil1_) &
+                        +(Coeff - 0.5)/(Coeff + 0.5) &
+                        *Jacobian_VVCI(iVar,iVar,i,nJ,k,Stencil5_)
+                end do; end do
+             end do
+          end select
+       end if
+    end if
+
+    if(nK > 1)then
+       if(DiLevelNei_IIIB(0,0,-1,iBlock) == Unset_)then
+          select case(TypeBc_I(5))
+          case('float','outflow')
+             Coeff0 = 2*InvClight/CellSize_DB(3,iBlock)
+             do iDiff = iDiffRadMin, iDiffRadMax
+                iVar = iDiff_I(iDiff)
+                do j = 1, nJ; do i = 1, nI
+                   Coeff = Coeff0*DiffSemiCoef_VGB(iDiffRadMin,i,j,1,iBlock)
+                   Jacobian_VVCI(iVar,iVar,i,j,1,Stencil1_) = &
+                        Jacobian_VVCI(iVar,iVar,i,j,1,Stencil1_) &
+                        + (Coeff - 0.5)/(Coeff + 0.5) &
+                        *Jacobian_VVCI(iVar,iVar,i,j,1,Stencil6_)
+                end do; end do
+             end do
+          end select
+       end if
+
+       if(DiLevelNei_IIIB(0,0,+1,iBlock) == Unset_)then
+          select case(TypeBc_I(6))
+          case('float','outflow')
+             Coeff0 = 2*InvClight/CellSize_DB(3,iBlock)
+             do iDiff = iDiffRadMin, iDiffRadMax
+                iVar = iDiff_I(iDiff)
+                do j = 1, nJ; do i = 1, nI
+                   Coeff = Coeff0*DiffSemiCoef_VGB(iDiffRadMin,i,j,nK,iBlock)
+                   Jacobian_VVCI(iVar,iVar,i,j,nK,Stencil1_) = &
+                        Jacobian_VVCI(iVar,iVar,i,j,nK,Stencil1_) &
+                        +(Coeff - 0.5)/(Coeff + 0.5) &
+                        *Jacobian_VVCI(iVar,iVar,i,j,nK,Stencil7_)
+                end do; end do
+             end do
+          end select
+       end if
+    end if
 
   end subroutine add_jacobian_rad_diff
 
