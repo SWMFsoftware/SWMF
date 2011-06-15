@@ -47,7 +47,8 @@ module CRASH_ModMultiGroup
 
   public:: read_opacity_parameters
   public:: get_energy_g_from_temperature, get_temperature_from_energy_g
-  public:: get_planck_g_from_temperature
+  public:: get_planck_g_from_temperature 
+  public:: planck_opacity_integral, ross_opacity_integral
 
   integer,parameter :: nptspg = 30
 
@@ -129,6 +130,32 @@ contains
 
   end subroutine read_opacity_parameters
   !======================================================================
+  real function planck_opacity_integral(TeInK, OpacityPlanck_I)
+    real, intent(in) :: TeInK    !Temperature in K
+    real, intent(in) :: OpacityPlanck_I(nGroup)
+    
+    real :: Weight_I(nGroup)
+    integer:: iGroup
+    !---------------
+    do iGroup = 1, nGroup
+       call get_planck_g_from_temperature(iGroup=iGroup, TeIn=TeInK, EgSI=Weight_I(iGroup))
+    end do
+    planck_opacity_integral = sum(OpacityPlanck_I*Weight_I)/sum(Weight_I)
+  end function planck_opacity_integral
+  !===================================
+  real function ross_opacity_integral(TeInK, OpacityRoss_I)
+    real, intent(in) :: TeInK    !Temperature in K
+    real, intent(in) :: OpacityRoss_I(nGroup)
+    
+    real :: Weight_I(nGroup)
+    integer:: iGroup
+    !---------------
+    do iGroup = 1, nGroup
+       call get_planck_g_from_temperature(iGroup=iGroup, TeIn=TeInK, CgSI=Weight_I(iGroup))
+    end do
+    ross_opacity_integral =sum(Weight_I)/sum(Weight_I/OpacityRoss_I)
+  end function ross_opacity_integral
+  !===================================
   subroutine get_planck_g_from_temperature(iGroup, TeIn, EgSI, CgSI)
     !\
     !Input parameters
