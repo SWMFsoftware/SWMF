@@ -543,7 +543,7 @@ SC/BATSRUS/src/Makefile:
 		SC/BATSRUS/srcInterface/SC_put_from_mh.f90
 	cd SC/BATSRUS/srcInterface/; perl -i -pe \
 	's/SC/LC/' SC_get_for_mh_with_xyz.f90; perl -i -pe \
-	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
+	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/' \
 		SC_wrapper.f90 SC_get_for_sp.f90 \
 		SC_get_for_mh.f90 SC_get_for_mh_with_xyz.f90 SC_put_from_mh.f90; \
 		perl -i -pe 's/OH/IH/' SC_get_for_mh.f90 SC_put_from_mh.f90
@@ -600,7 +600,7 @@ LC/BATSRUS/src/Makefile:
 	cp -f IH/BATSRUS_share/src/IH_put_from_mh.f90 \
 		LC/BATSRUS/srcInterface/LC_put_from_mh.f90
 	cd LC/BATSRUS/srcInterface/; perl -i -pe \
-	's/IH/LC/g;s/BATSRUS/LC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
+	's/IH/LC/g;s/BATSRUS/LC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/' \
 	LC_wrapper.f90 LC_get_for_sp.f90 LC_get_for_mh.f90 LC_put_from_mh.f90;\
 		perl -i -pe 's/OH/SC/' LC_get_for_mh.f90 LC_put_from_mh.f90
 	cd LC/BATSRUS/src; rm -f main.f90
