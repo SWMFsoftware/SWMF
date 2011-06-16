@@ -203,10 +203,11 @@ subroutine get_potential(iBlock)
 
   integer, intent(in) :: iBlock
 
-  integer :: iError, iLat, iLon, iAlt
+  integer :: iError, iLat, iLon, iAlt, iC
   logical :: IsFirstTime = .true.
   logical :: IsFirstPotential(nBlocksMax) = .true.
   logical :: IsFirstAurora(nBlocksMax) = .true.
+  real    :: mP, dis
 
   real, dimension(-1:nLons+2,-1:nLats+2) :: TempPotential, Grid, Dynamo
 
@@ -257,6 +258,8 @@ subroutine get_potential(iBlock)
         if (iDebugLevel > 1 .and. iAlt == 1) &
              write(*,*) "==> Getting IE potential"
 
+        TempPotential = 0.0
+
         call start_timing("getpotential")
         call IO_GetPotential(TempPotential, iError)
         call end_timing("getpotential")
@@ -268,16 +271,26 @@ subroutine get_potential(iBlock)
         endif
 
         if (UseDynamo) then
+           dynamo = 0.0
            call get_dynamo_potential( &
                 MLongitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), &
                 MLatitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), dynamo)
            do iLon = -1,nLons+2
               do iLat = -1,nLats+2 
-                 if (abs(dynamo(iLon,iLat)) > 0) &
-                      TempPotential(iLon,iLat) = dynamo(iLon,iLat)
+                 if (abs(MLatitude(iLon, iLat, iAlt, iBlock)) < DynamoHighLatBoundary-2.0) then
+                    dis= (DynamoHighLatBoundary - 2.0 - &
+                          abs(MLatitude(iLon, iLat, iAlt, iBlock)))/10.0
+                    if (dis > 1.0) then
+                       TempPotential(iLon,iLat) = dynamo(iLon,iLat)
+                    else
+                       TempPotential(iLon,iLat) = &
+                            (1.0-dis) * TempPotential(iLon,iLat) + &
+                            dis * dynamo(iLon,iLat)
+                    endif
+                 endif
               enddo
            enddo
-!           TempPotential = TempPotential + dynamo
+
         endif
 
         Potential(:,:,iAlt,iBlock) = TempPotential
@@ -399,18 +412,18 @@ subroutine get_dynamo_potential(lons, lats, pot)
 
         IsFound = .false.
 
-        if (abs(LatIn) <= DynamoHighLatBoundary) then
+        if (abs(LatIn) <= MagLatMC(nMagLons,nMagLats)) then
 
            iM = 1
            do while (iM < nMagLons+1)
-              iL = 2
+              iL = 1
               do while (iL < nMagLats)
 
                  !\
                  ! Check to see if the point is within the current cell
                  !/
                  
-                 if (LatIn <  MagLatMC(iM,iL+1) .and. &
+                 if ( LatIn <  MagLatMC(iM,iL+1) .and. &
                       LatIn >= MagLatMC(iM,iL) .and. &
                       LonIn <  MagLonMC(iM+1,iL) .and. &
                       LonIn >= MagLonMC(iM,iL)) then
@@ -418,7 +431,7 @@ subroutine get_dynamo_potential(lons, lats, pot)
                     dM=  (LonIn            -MagLonMC(iM,iL)) / &
                          (MagLonMC(iM+1,iL)-MagLonMC(iM,iL))
 
-                    dL=(LatIn        -MagLatMC(iM,iL))/&
+                    dL=  (LatIn        -MagLatMC(iM,iL))/&
                          (MagLatMC(iM,iL+1)-MagLatMC(iM,iL))
 
                     pot(iLon, iLat) = &
@@ -456,14 +469,18 @@ subroutine get_dynamo_potential(lons, lats, pot)
                  pot(iLon, iLat) = sum(DynamoPotentialMC(:, 0)) / (nMagLons+1)
               endif
 
+              write(*,*) "Inside the low latitude, but can't find the point!"
+              write(*,*) LatIn, LonIn
+
            endif
 
         endif
 
         if (.not.IsFound) then 
-           if (iDebugLevel > 4) &
+!           if (iDebugLevel > 4) &
+           if (abs(LatIn) < MagLatMC(nMagLons, nMagLats)) &
                 write(*,*) "=====> Could not find point : ", &
-                LatIn, lats(iLon, iLat), LonIn, lons(iLon, iLat)
+                LatIn, LonIn, DynamoHighLatBoundary, MagLatMC(nMagLons, nMagLats)
            pot(iLon,iLat) = 0.0
         endif
 
