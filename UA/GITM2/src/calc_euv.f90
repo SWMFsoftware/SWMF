@@ -565,9 +565,16 @@ subroutine Set_Euv(iError)
   
   logical :: NotDone = .true.
   integer ::  i, iline, ioerror, nline, nILine = 1
+  cline = ' '
 
   open(unit = iInputUnit_, file=cEUVFile, IOSTAT = iError)
 
+   if (iError /= 0) then
+     write(*,*) "Error in opening EUV file  Is this set?"
+     write(*,*) "Code : ",iError,cEUVFile
+     call stop_gitm("Stopping in calc_euv")
+  endif
+     
   iline = 1
 
   do while (NotDone)
