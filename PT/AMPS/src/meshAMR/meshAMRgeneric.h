@@ -380,7 +380,7 @@ public:
     #endif
 
     #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
-    Thread=-1,ParallelLoadMeasure=0;
+    Thread=0,ParallelLoadMeasure=0;
     #endif
   }
 
@@ -539,7 +539,7 @@ public:
   char* GetAssociatedDataBufferPointer() {return NULL;}
 
   //place holder for print function that outputs the general tree node/blocks values into a file
-  void PrintData(FILE* fout,int DataSetNumber) {}
+  void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int ThisThread) {}
   void PrintVariableList(FILE* fout) {}
 
 protected:
@@ -785,6 +785,7 @@ public:
 
   //when the mesh is modified -> create the new space filling curve
   bool meshModifiedFlag_CreateNewSpaceFillingCurve;
+  bool meshModifiedFlag_CountMeshElements;
 
   //deallocate blocks of the nodes that are not on the  bottom of the tree
   bool DeallocateUnusedBlocks;
@@ -824,6 +825,10 @@ public:
 
   //the list of the nodes that "belongs" to each processor
   cTreeNodeAMR<cBlockAMR> **ParallelNodesDistributionList;
+
+  #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+  cTreeNodeAMR<cBlockAMR> **DomainBoundaryLayerNodesList;
+  #endif
 
   //the list of the descriptors of all internal boundaries installed into the mesh
   #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
@@ -875,7 +880,7 @@ public:
 
   //set the mesh name
   void setMeshName(const char *str) {
-    meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true;
+    meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
 
     sprintf(MeshName,"%s",str);
     generateMeshSignature();
@@ -890,7 +895,7 @@ public:
     time_t TimeValue=time(0);
     tm *ct=localtime(&TimeValue);
 
-    meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true;
+    meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
 
     sprintf(mname,"noname.%i-%i-%i.AMR.mesh",ct->tm_mon+1,ct->tm_mday,ct->tm_year+1900);
     setMeshName(mname);
@@ -1073,7 +1078,7 @@ public:
     rootTree=treeNodes.newElement();
 
 
-    meshNodesNumber=0,meshBlocksNumber=0,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshMaximumRefinmentLevel=0;
+    meshNodesNumber=0,meshBlocksNumber=0,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true,meshMaximumRefinmentLevel=0;
     rootTree->upNode=NULL;
     rootTree->block=rootBlock;
     for (i=0;i<(1<<_MESH_DIMENSION_);i++) rootTree->downNode[i]=NULL; 
@@ -1181,12 +1186,17 @@ public:
 
     ParallelNodesDistributionList=new cTreeNodeAMR<cBlockAMR>*[nTotalThreads];
 
+    #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+    DomainBoundaryLayerNodesList=new cTreeNodeAMR<cBlockAMR>*[nTotalThreads];
+    #endif
+
     ParallelSendRecvMap=new bool*[nTotalThreads];
     ParallelSendRecvMap[0]=new bool [nTotalThreads*nTotalThreads];
 
 
     for (int thread=0;thread<nTotalThreads;thread++) {
       ParallelNodesDistributionList[thread]=NULL;
+      DomainBoundaryLayerNodesList[thread]=NULL;
 
       ParallelSendRecvMap[thread]=ParallelSendRecvMap[0]+thread*nTotalThreads;
       for (i=0;i<nTotalThreads;i++) ParallelSendRecvMap[thread][i]=false;
@@ -1194,6 +1204,10 @@ public:
 #else
     ParallelNodesDistributionList=new cTreeNodeAMR<cBlockAMR>*[1];
     ParallelNodesDistributionList[0]=NULL;
+
+    #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+    DomainBoundaryLayerNodesList=NULL;
+    #endif
 #endif
 
   }  
@@ -1216,7 +1230,7 @@ public:
      //set up the tree and the root block
      rootBlock=NULL;
      rootTree=NULL;
-     meshNodesNumber=0,meshBlocksNumber=0,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshMaximumRefinmentLevel=0;
+     meshNodesNumber=0,meshBlocksNumber=0,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true,meshMaximumRefinmentLevel=0;
      AllowBlockAllocation=true;
      DeallocateUnusedBlocks=true;
 
@@ -1227,6 +1241,10 @@ public:
      MeshName[0]='\0',MeshSignature=0;
      blockList=NULL;
      ParallelNodesDistributionList=NULL;
+
+     #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+     DomainBoundaryLayerNodesList=NULL;
+     #endif
   }
 
   //register the 'internal boundary' (the surface determining cut cells)
@@ -1325,7 +1343,7 @@ public:
   }
 
 
-  /*
+/*
   void reconnectDownTreeNode(cTreeNodeAMR<cBlockAMR> *startNode) {
     cTreeNodeAMR<cBlockAMR> *neibNode,*neibDownNode; 
 
@@ -1381,7 +1399,7 @@ public:
 */
 
 
-
+/*
   cTreeNodeAMR<cBlockAMR> *getNeibNode_2D(int i,int j,cTreeNodeAMR<cBlockAMR>* startNode) {
     double x[3]={0.0,0.0,0.0};
 
@@ -1390,6 +1408,7 @@ public:
 
     return findTreeNode(x,startNode); 
   }
+  */
 
   cTreeNodeAMR<cBlockAMR> *getNeibNode(int i,int j,int k,cTreeNodeAMR<cBlockAMR>* startNode) {
     return startNode->GetNeibNode(i,j,k);
@@ -1409,6 +1428,7 @@ public:
   }
  
 
+  /*
  void collectNeibNodeMap_1D(cTreeNodeAMR<cBlockAMR> *startNode,cCornerNode *newCornerNodeMap[1+2*(_BLOCK_CELLS_X_+_GHOST_CELLS_X_)][1+2*(_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_)][1+2*(_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_)]) {
    int i,j,nface,iDownBlock,iNeib,iOffset;
    cTreeNodeAMR<cBlockAMR> *neibNode,*downNode;
@@ -1620,8 +1640,100 @@ exit(__LINE__,__FILE__,"update as in 3D collect");
   }
 }
 
+*/
 
 
+void GetMeshTreeStatistics(cTreeNodeAMR<cBlockAMR> *startNode=NULL) {
+  static long int nAllocatedBlocks=0,nAllocatedBoundaryLayerBlocks=0,*nBlocksPerProcessor=NULL,nAllocatedBlocksUpperTreeBranches=0;
+  int thread;
+
+  if (startNode==NULL) {
+    startNode=rootTree;
+    nBlocksPerProcessor=new long int [nTotalThreads];
+
+    for (thread=0;thread<nTotalThreads;thread++) nAllocatedBlocks=0,nBlocksPerProcessor[thread]=0;
+    nAllocatedBlocks=0,*nBlocksPerProcessor=NULL,nAllocatedBlocksUpperTreeBranches=0,nAllocatedBoundaryLayerBlocks=0;
+  }
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+
+#if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+    if ((startNode->Thread<0)||(startNode->Thread>=nTotalThreads)) exit(__LINE__,__FILE__,"Error: the thread number is out of range");
+
+    if (startNode->block!=NULL) {
+      nAllocatedBlocks++;
+      if (startNode->Thread!=ThisThread) nAllocatedBoundaryLayerBlocks++;
+    }
+
+
+    nBlocksPerProcessor[startNode->Thread]++;
+#else
+    if (startNode->block!=NULL) nAllocatedBlocks++;
+    nBlocksPerProcessor[0]++;
+#endif
+
+  }
+  else {
+    if (startNode->block!=NULL) nAllocatedBlocksUpperTreeBranches++;
+
+    for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) GetMeshTreeStatistics(startNode->downNode[nDownNode]);
+  }
+
+  if (startNode==rootTree) {
+#if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+    long int *buffer=new long int [nTotalThreads];
+    int i;
+    MPI_Status status;
+
+    //compare the blocks distribution over the processors
+    if (ThisThread==0) {
+      for (thread=1;thread<nTotalThreads;thread++) {
+        MPI_Recv(buffer,nTotalThreads,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
+
+        for (i=0;i<nTotalThreads;i++) if (buffer[i]!=nBlocksPerProcessor[i]) exit(__LINE__,__FILE__,"Error: The blocks distribution on different processors is not the same");
+       }
+    }
+    else MPI_Send(nBlocksPerProcessor,nTotalThreads,MPI_LONG,0,0,MPI_COMM_WORLD);
+
+
+
+    //output the collected information
+    if (ThisThread==0) cout << "Tree distribution statistical data:\nThread\t|nTotal Allocated Blocks\t|nAllocated Blocks Upper Tree Branches\t|nAllocated Blocks Domain Boundary Layer\t|nTotal Nodes Per Thread\n";
+
+    for (thread=0;thread<nTotalThreads;thread++) {
+      if (ThisThread!=0) {
+        if (ThisThread==thread) {
+          MPI_Send(&nAllocatedBlocks,1,MPI_LONG,0,0,MPI_COMM_WORLD);
+          MPI_Send(&nAllocatedBoundaryLayerBlocks,1,MPI_LONG,0,0,MPI_COMM_WORLD);
+          MPI_Send(&nAllocatedBlocksUpperTreeBranches,1,MPI_LONG,0,0,MPI_COMM_WORLD);
+        }
+      }
+      else {
+        if (thread!=0) {
+          MPI_Recv(&nAllocatedBlocks,1,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
+          MPI_Recv(&nAllocatedBoundaryLayerBlocks,1,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
+          MPI_Recv(&nAllocatedBlocksUpperTreeBranches,1,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
+        }
+
+        cout << thread << "\t" << nAllocatedBlocks << "\t\t\t\t\t" << nAllocatedBlocksUpperTreeBranches << "\t\t\t\t\t" << nAllocatedBoundaryLayerBlocks << "\t\t\t\t\t" << nBlocksPerProcessor[thread] <<  endl;
+      }
+    }
+
+    delete [] buffer;
+    delete [] nBlocksPerProcessor;
+
+    nBlocksPerProcessor=NULL;
+#else
+    int NodesBoundaryLayer;
+
+    cout << "Tree distribution statistical data:\nThread\t\nTotal Allocated Blocks\tnAllocated Blocks Upper Tree Branches\tnTotal Nodes Per Thread\tnNodes in the Boundary Layer\n";
+    for (i=0;i<nTotalThreads;i++) if (i!=thread) NodesBoundaryLayer+=nBlocksPerProcessor[i];
+    cout << thread << "\t" << nAllocatedBlocks << "\t" << nAllocatedBlocksUpperTreeBranches << "\t" << nBlocksPerProcessor[thread] << "\t" << NodesBoundaryLayer << endl;
+#endif
+
+  }
+
+}
 	
 
 void checkMeshConsistency(cTreeNodeAMR<cBlockAMR> *startNode) {
@@ -2234,7 +2346,7 @@ static long int nCallCounter=0;
 
   //the block cannot be allocated twice AND the block's allocation must be permitted
   if ((AllowBlockAllocation==false)||(startNode->block!=NULL)) return;
-  meshModifiedFlag=true;
+  meshModifiedFlag=true,meshModifiedFlag_CountMeshElements=true;
 
 
   //collect all nodes that can intersect 'startNode'
@@ -2571,7 +2683,7 @@ void DeallocateBlock(cTreeNodeAMR<cBlockAMR> *startNode) {
 
   //the block cannot be deallocated twice
   if (startNode->block==NULL) return;
-  meshModifiedFlag=true;
+  meshModifiedFlag=true,meshModifiedFlag_CountMeshElements=true;
 
 #if _MESH_DIMENSION_ == 3
   static const int iCornerMin=-_GHOST_CELLS_X_,iCornerMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
@@ -2635,7 +2747,7 @@ cout << __LINE__ << endl;
   if (upNode==NULL) return false;
 
   //reset the mesh modified flag 
-  meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true;
+  meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
 
   //check if the neib nodes need to be removed first
   //1. check the face neibbours
@@ -2966,7 +3078,7 @@ cout << __LINE__ << endl;
 
 
    if (startNode->RefinmentLevel>=_MAX_REFINMENT_LEVEL_) return false;
-   meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true;
+   meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
 
    //create the daugher blocks
    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) { //there is no daugher blocks
@@ -3238,7 +3350,7 @@ cout << __LINE__ << endl;
 
 
   if ((startNode->RefinmentLevel>=_MAX_REFINMENT_LEVEL_)||(startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_)) return false;
-  meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true;
+  meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
 
   //create the daugher blocks
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) { //there is no daugher blocks
@@ -3535,12 +3647,23 @@ cout << __LINE__ << endl;
 
 
   void countMeshElements(cTreeNodeAMR<cBlockAMR> *startNode,int level) {
-    static long int nDownNodes,nodeno,nd,iMax,jMax,kMax;
+    static long int nDownNodes,nd,iMax,jMax,kMax;
     int i,j,k;
     
     if (startNode==rootTree) {
-      meshBlocksNumber=0,meshNodesNumber=0,nodeno=1,meshMaximumRefinmentLevel=0;
+      meshBlocksNumber=0,meshNodesNumber=0,meshMaximumRefinmentLevel=0;
       resetNodeProcessedFlag();
+
+
+      //the procedure is developed only for the case where the domain is covered by the layer of boundary blocks
+#if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+      //do nothing
+#else
+      exit(__LINE__,__FILE__,"The procedure is implemented only for the case _AMR_PARALLEL_DATA_EXCHANGE_MODE_ = _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_");
+#endif
+
+
+
 
       #if _MESH_DIMENSION_ == 1
       iMax=1+_BLOCK_CELLS_X_,jMax=1,kMax=1; 
@@ -3557,46 +3680,64 @@ cout << __LINE__ << endl;
     if (level>meshMaximumRefinmentLevel) meshMaximumRefinmentLevel=level;
 
     //count the number of blocks on the mesh 
-    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) meshBlocksNumber++; 
+    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      meshBlocksNumber++;
 
-    //count the mesh nodes associated with the block
-    if (startNode->block!=NULL) {
-      cBlockAMR *block=startNode->block;
-      cCornerNode *ndptr;
+#if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+      MPI_Bcast(&meshNodesNumber,1,MPI_LONG,0,MPI_COMM_WORLD);
+#endif
 
-      for (k=0;k<kMax;k++) for (j=0;j<jMax;j++) for (i=0;i<iMax;i++) {
-        nd=getCornerNodeLocalNumber(i,j,k);
-        if ((ndptr=block->GetCornerNode(nd))==NULL) continue;
+      //count the mesh nodes associated with the block
+      if (startNode->block!=NULL) {
+        cBlockAMR *block=startNode->block;
+        cCornerNode *ndptr;
+
+        for (k=0;k<kMax;k++) for (j=0;j<jMax;j++) for (i=0;i<iMax;i++) {
+          nd=getCornerNodeLocalNumber(i,j,k);
+          if ((ndptr=block->GetCornerNode(nd))==NULL) continue;
  
-        if (ndptr->nodeDescriptor.nodeProcessedFlag==_AMR_FALSE_) {
-          ndptr->nodeDescriptor.nodeProcessedFlag=_AMR_TRUE_;
-          ndptr->nodeDescriptor.nodeno=nodeno;
+          if (ndptr->nodeDescriptor.nodeProcessedFlag==_AMR_FALSE_) {
+            ndptr->nodeDescriptor.nodeProcessedFlag=_AMR_TRUE_;
+            ndptr->nodeDescriptor.nodeno=(++meshNodesNumber);
+          }
 
-          nodeno++;
-          meshNodesNumber++;
+          if (ndptr->nodeDescriptor.maxRefinmentLevel<level) ndptr->nodeDescriptor.maxRefinmentLevel=level;
         }
-
-        if (ndptr->nodeDescriptor.maxRefinmentLevel<level) ndptr->nodeDescriptor.maxRefinmentLevel=level;
       }
+
+#if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+      if ((nTotalThreads!=0)&&(startNode->Thread!=0)) {
+        if (ThisThread==0) {
+          MPI_Status status;
+
+          MPI_Recv(&meshNodesNumber,1,MPI_LONG,startNode->Thread,0,MPI_COMM_WORLD,&status);
+        }
+        else MPI_Send(&meshNodesNumber,1,MPI_LONG,0,0,MPI_COMM_WORLD);
+      }
+#endif
+
+    }
+    else {
+      //cout the nodes in the downNodes
+      for (i=0;i<nDownNodes;i++) if (startNode->downNode[i]!=NULL) countMeshElements(startNode->downNode[i],level+1);
     }
 
-    //cout the nodes in the downNodes 
-    for (i=0;i<nDownNodes;i++) if (startNode->downNode[i]!=NULL) countMeshElements(startNode->downNode[i],level+1);
-
-
     //reset the 'meshModifiedFlag'
-    meshModifiedFlag=false;
+    if (startNode==rootTree) {
+      meshModifiedFlag_CountMeshElements=false;
+      MPI_Bcast(&meshNodesNumber,1,MPI_LONG,0,MPI_COMM_WORLD);
+    }
   } 
 
 
   long int getMeshNodesNumber() {
-    if (meshModifiedFlag==true) countMeshElements(rootTree,0); 
+    if (meshModifiedFlag_CountMeshElements==true) countMeshElements(rootTree,0);
 
     return meshNodesNumber;
   }  
 
   int getMeshMaxRefinmentLevel() {
-    if (meshModifiedFlag==true) countMeshElements(rootTree,0);
+    if (meshModifiedFlag_CountMeshElements==true) countMeshElements(rootTree,0);
 
     return meshMaximumRefinmentLevel;
   } 
@@ -3867,10 +4008,10 @@ cout << __LINE__ << endl;
   //if printCoordinateVector == true  -> print the coordinate vector, else -> printf the connectovity list  
   void outputMeshTECPLOT_BlockCornerNode(cTreeNodeAMR<cBlockAMR> *startNode,FILE* fout,bool printCoordinateVector,bool PrintMeshData,int DataSetNumber) {
     int isubBlock,jsubBlock,ksubBlock,isubBlockMax,jsubBlockMax,ksubBlockMax;
-    int iNode,jNode,kNode,nd,idim,nnode,nBasicBlockNodes;  
+    int iNode=0,jNode=0,kNode=0,nd,idim,nnode,nBasicBlockNodes;
 
-    static long int nGlobalNodeNumber=-1;
-    static CMPI_channel pipe;
+    static CMPI_channel pipe(1000000);
+    static long int nGlobalNodeNumber=0;
 
 
     if (startNode==rootTree) {
@@ -3880,123 +4021,283 @@ cout << __LINE__ << endl;
       else pipe.openSend(0);
     }
 
+
+//##########################   DEBUG #######################
+    static long int nMPIops=0;
+//##########################  END DEBUG ####################
+
+
+
+
   
-    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) { //the node is on the bottom of the tree -> printf the node
-      cBlockAMR *block=startNode->block;
-      cCornerNode *cornerNode;
-
-      //get the limits for the number of the sub-blocks in the block
-      #if _MESH_DIMENSION_ == 1
-      isubBlockMax=_BLOCK_CELLS_X_; 
-      jsubBlockMax=1,ksubBlockMax=1;
-      nBasicBlockNodes=2; 
-      static int nodeOutputOrder_I[2]={0,1};
-      static int nodeOutputOrder_J[2]={0,0};
-      static int nodeOutputOrder_K[2]={0,0};
-
-      #elif _MESH_DIMENSION_ == 2
-      isubBlockMax=_BLOCK_CELLS_X_;
-      jsubBlockMax=_BLOCK_CELLS_Y_; 
-      ksubBlockMax=1;
-      nBasicBlockNodes=4; 
-      static int nodeOutputOrder_I[4]={0,1,1,0};
-      static int nodeOutputOrder_J[4]={0,0,1,1};
-      static int nodeOutputOrder_K[4]={0,0,0,0};
-      #else
-      isubBlockMax=_BLOCK_CELLS_X_;
-      jsubBlockMax=_BLOCK_CELLS_Y_;
-      ksubBlockMax=_BLOCK_CELLS_Z_;
-      nBasicBlockNodes=8;
-      static int nodeOutputOrder_I[8]={0,1,1,0,0,1,1,0};
-      static int nodeOutputOrder_J[8]={0,0,1,1,0,0,1,1};
-      static int nodeOutputOrder_K[8]={0,0,0,0,1,1,1,1};
-      #endif
+    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      if ((ThisThread==0)||(startNode->Thread==ThisThread)) { //the node is on the bottom of the tree -> printf the node
+        cBlockAMR *block=startNode->block;
+        cCornerNode *cornerNode;
 
 
-      for (ksubBlock=0;ksubBlock<ksubBlockMax;ksubBlock++) for (jsubBlock=0;jsubBlock<jsubBlockMax;jsubBlock++) for (isubBlock=0;isubBlock<isubBlockMax;isubBlock++) { 
-        for (nnode=0;nnode<nBasicBlockNodes;nnode++) {
-          iNode=nodeOutputOrder_I[nnode]+isubBlock;
-          jNode=nodeOutputOrder_J[nnode]+jsubBlock;
-          kNode=nodeOutputOrder_K[nnode]+ksubBlock;
+        //get the limits for the number of the sub-blocks in the block
+#if _MESH_DIMENSION_ == 1
+        isubBlockMax=_BLOCK_CELLS_X_;
+        jsubBlockMax=1,ksubBlockMax=1;
+        nBasicBlockNodes=2;
+        static int nodeOutputOrder_I[2]={0,1};
+        static int nodeOutputOrder_J[2]={0,0};
+        static int nodeOutputOrder_K[2]={0,0};
+ #elif _MESH_DIMENSION_ == 2
+        isubBlockMax=_BLOCK_CELLS_X_;
+        jsubBlockMax=_BLOCK_CELLS_Y_;
+        ksubBlockMax=1;
+        nBasicBlockNodes=4;
+        static int nodeOutputOrder_I[4]={0,1,1,0};
+        static int nodeOutputOrder_J[4]={0,0,1,1};
+        static int nodeOutputOrder_K[4]={0,0,0,0};
+#else
+        isubBlockMax=_BLOCK_CELLS_X_;
+        jsubBlockMax=_BLOCK_CELLS_Y_;
+        ksubBlockMax=_BLOCK_CELLS_Z_;
+        nBasicBlockNodes=8;
+        static int nodeOutputOrder_I[8]={0,1,1,0,0,1,1,0};
+        static int nodeOutputOrder_J[8]={0,0,1,1,0,0,1,1};
+        static int nodeOutputOrder_K[8]={0,0,0,0,1,1,1,1};
+#endif
 
-          nd=getCornerNodeLocalNumber(iNode,jNode,kNode);
-          cornerNode=block->GetCornerNode(nd);
+
+        for (ksubBlock=0;ksubBlock<ksubBlockMax;ksubBlock++) for (jsubBlock=0;jsubBlock<jsubBlockMax;jsubBlock++) for (isubBlock=0;isubBlock<isubBlockMax;isubBlock++) {
+          for (nnode=0;nnode<nBasicBlockNodes;nnode++) {
+            iNode=nodeOutputOrder_I[nnode]+isubBlock;
+            jNode=nodeOutputOrder_J[nnode]+jsubBlock;
+            kNode=nodeOutputOrder_K[nnode]+ksubBlock;
+
+            nd=getCornerNodeLocalNumber(iNode,jNode,kNode);
+            cornerNode=(block!=NULL) ? block->GetCornerNode(nd) : NULL;
 
 
 //############  DEBUG ################
 
+            /*
 if (cornerNode->Temp_ID==43276) {
   cout << __LINE__ << endl;
 }
 
+*/
 
 //############ ENS DEBUG ##############
 
 
 
-          if (printCoordinateVector==true) {
-            if ((cornerNode->nodeDescriptor.nodeProcessedFlag==_AMR_FALSE_)&&(cornerNode->nodeDescriptor.maxRefinmentLevel==startNode->RefinmentLevel)) {
-              cornerNode->nodeDescriptor.nodeProcessedFlag=_AMR_TRUE_;
-              cornerNode->nodeDescriptor.nodeno=nGlobalNodeNumber++;
-
-              for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(fout,"%e  ",((fabs(cornerNode->GetX()[idim])>EPS) ? cornerNode->GetX()[idim] : 0.0));
-              fprintf(fout,"%i  %i  %ld ",cornerNode->nodeDescriptor.maxRefinmentLevel, ((startNode->block->GetGhostFlag()==_GHOST_BLOCK_) ? 1 : 0),cornerNode->Temp_ID);
-
-              #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
-              fprintf(fout,"%i ",startNode->Thread);
-              #endif
-
-              //print the data stared in the block's nodes
-              if ((PrintMeshData==true)&&((startNode->Thread==ThisThread)||(ThisThread==0))) {
-
-                //print the data stared in the corner nodes
-                cornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
-
-                //print the data stored in the 'center' nodes
-                #if  _AMR_CENTER_NODE_ == _ON_AMR_MESH_
-                const int nMaxCenterInterpolationCoefficients=8;
-                cCenterNode *tempCenterNode,*CenterNodeInterpolationStencil[nMaxCenterInterpolationCoefficients];
-                double CenterNodeInterpolationCoefficients[nMaxCenterInterpolationCoefficients],xCenterNode[3];
-                int centerNodeInterpolationStencilLength;
-
-                fprintf(fout,"  ");
-                cornerNode->GetX(xCenterNode);
-                tempCenterNode=CenterNodes.newElement();
-
-                if (GetCenterNodesInterpolationCoefficients==NULL) {
-                  centerNodeInterpolationStencilLength=CenterNodesInterpolationCoefficients_3D_linear(xCenterNode,CenterNodeInterpolationCoefficients,CenterNodeInterpolationStencil,startNode,nMaxCenterInterpolationCoefficients);
-                }
-                else {
-                  centerNodeInterpolationStencilLength=GetCenterNodesInterpolationCoefficients(xCenterNode,CenterNodeInterpolationCoefficients,CenterNodeInterpolationStencil,startNode,nMaxCenterInterpolationCoefficients);
-                }
-
-                if (centerNodeInterpolationStencilLength==-1) exit(__LINE__,__FILE__,"Errror in interpolation of the 'center' node's data");
+            if (printCoordinateVector==true) {
+//              bool printflag=false;
+              double xNode[3];
+              long int MaxRefinmentLevel=0,NodeTempID=0;
 
 
-                tempCenterNode->Interpolate(CenterNodeInterpolationStencil,CenterNodeInterpolationCoefficients,centerNodeInterpolationStencilLength);
-                tempCenterNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
-                #endif
+              /*
+              if (cornerNode!=NULL) if ((cornerNode->nodeDescriptor.nodeProcessedFlag==_AMR_FALSE_)&&(cornerNode->nodeDescriptor.maxRefinmentLevel==startNode->RefinmentLevel)) printflag=true;
 
-                CenterNodes.deleteElement(tempCenterNode);
-
-                //print data stored by the tree node (startNode)
-                startNode->block->PrintData(fout,DataSetNumber);
-
+              if (startNode->Thread!=0) {
+                if (ThisThread==startNode->Thread) pipe.send(printflag);
+                else if (ThisThread==0) pipe.recv(printflag,startNode->Thread);
+                else exit(__LINE__,__FILE__,"Error: something is wrong");
               }
 
-              //finish the line
-              fprintf(fout,"\n");         
+
+*/
+
+              if (true) { //(printflag==true) {
+
+                /*
+                if (cornerNode!=NULL) {
+                  cornerNode->nodeDescriptor.nodeProcessedFlag=_AMR_TRUE_;
+                  cornerNode->nodeDescriptor.nodeno=nGlobalNodeNumber++;
+                }
+                */
+
+                if (ThisThread==0) {
+                  startNode->GetCornerNodePosition(xNode,iNode,jNode,kNode);
+                  for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(fout,"%e  ",((fabs(xNode[idim])>EPS) ? xNode[idim] : 0.0));
+                }
+
+                if (cornerNode!=NULL) MaxRefinmentLevel=cornerNode->nodeDescriptor.maxRefinmentLevel,NodeTempID=cornerNode->Temp_ID;
+
+#if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+                if (true) { //(nTotalThreads!=1) {
+                  if (ThisThread!=0) {
+                    if (startNode->Thread==ThisThread) {
+                      pipe.send(MaxRefinmentLevel);
+                      pipe.send(NodeTempID);
+
+//##########################   DEBUG #######################
+nMPIops++;
+//##########################  END DEBUG ####################
+
+                    }
+                  }
+                  else { //the root processor
+                    if (startNode->Thread!=0) {
+                      pipe.recv(MaxRefinmentLevel,startNode->Thread);
+                      pipe.recv(NodeTempID,startNode->Thread);
+
+//##########################   DEBUG #######################
+nMPIops++;
+//##########################  END DEBUG ####################
+
+
+                    }
+
+                    fprintf(fout,"%ld  %ld %i  ",MaxRefinmentLevel,NodeTempID,startNode->Thread);
+                  }
+                }
+#else
+                for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(fout,"%e  ",((fabs(cornerNode->GetX()[idim])>EPS) ? cornerNode->GetX()[idim] : 0.0));
+                fprintf(fout,"%i  %i  %ld ",cornerNode->nodeDescriptor.maxRefinmentLevel, ((startNode->block->GetGhostFlag()==_GHOST_BLOCK_) ? 1 : 0),cornerNode->Temp_ID);
+#endif
+
+
+
+                //print the data stared in the block's nodes
+                if ((PrintMeshData==true)&&((startNode->Thread==ThisThread)||(ThisThread==0))) {
+
+
+                  //print the data stared in the corner nodes
+#if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+                  if (true) { //(nTotalThreads!=1) {
+                    if (ThisThread==ThisThread) {
+                      if (startNode->Thread!=0) {
+                        cornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                      }
+                    }
+                    else { //the root processor
+                      if (startNode->Thread!=0) {
+                        cCornerNode *tempCornerNode=CornerNodes.newElement();
+
+                        tempCornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                        CornerNodes.deleteElement(tempCornerNode);
+                      }
+                      else cornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                    }
+                  }
+
+
+                  if (cornerNode!=NULL) cornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+#else
+                  cornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+#endif
+
+
+                  //print the data stored in the 'center' nodes
+                  #if  _AMR_CENTER_NODE_ == _ON_AMR_MESH_
+                  const int nMaxCenterInterpolationCoefficients=8;
+                  cCenterNode *tempCenterNode,*CenterNodeInterpolationStencil[nMaxCenterInterpolationCoefficients];
+                  double CenterNodeInterpolationCoefficients[nMaxCenterInterpolationCoefficients],xCenterNode[3];
+                  int centerNodeInterpolationStencilLength;
+
+                  fprintf(fout,"  ");
+                  cornerNode->GetX(xCenterNode);
+                  tempCenterNode=CenterNodes.newElement();
+
+                  if (GetCenterNodesInterpolationCoefficients==NULL) {
+                    centerNodeInterpolationStencilLength=CenterNodesInterpolationCoefficients_3D_linear(xCenterNode,CenterNodeInterpolationCoefficients,CenterNodeInterpolationStencil,startNode,nMaxCenterInterpolationCoefficients);
+                  }
+                  else {
+                    centerNodeInterpolationStencilLength=GetCenterNodesInterpolationCoefficients(xCenterNode,CenterNodeInterpolationCoefficients,CenterNodeInterpolationStencil,startNode,nMaxCenterInterpolationCoefficients);
+                  }
+
+                  if (centerNodeInterpolationStencilLength==-1) exit(__LINE__,__FILE__,"Errror in interpolation of the 'center' node's data");
+
+
+                  tempCenterNode->Interpolate(CenterNodeInterpolationStencil,CenterNodeInterpolationCoefficients,centerNodeInterpolationStencilLength);
+                  tempCenterNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                  #endif
+
+                  CenterNodes.deleteElement(tempCenterNode);
+
+                  //print data stored by the tree node (startNode)
+#if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+                  if (true) { //(nTotalThreads!=1) {
+                    if (ThisThread!=0) {
+                      if (startNode->Thread==ThisThread) {
+                        startNode->block->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                      }
+                    }
+                    else { //the root processor
+                      if (startNode->Thread!=0) {
+                        cBlockAMR *tempBlock=blocks.newElement();
+
+                        startNode->block->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                        blocks.deleteElement(tempBlock);
+                      }
+                      else startNode->block->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                    }
+                  }
+
+
+                  if (cornerNode!=NULL) cornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+#else
+                  startNode->block->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+#endif
+                }
+
+                //finish the line
+                if (ThisThread==0) fprintf(fout,"\n");
+
+                /*
+                //update the nodes counter
+                if (startNode->Thread!=0) {
+                  if (ThisThread==startNode->Thread) {
+                    pipe.send(nGlobalNodeNumber);
+                    pipe.flush();
+                  }
+                  else if (ThisThread==0) {
+                    pipe.recv(nGlobalNodeNumber,startNode->Thread);
+                  }
+                }
+                */
 
 
 
 
+              }
+            }
+            else {
 
+
+              /*
+              long int nodeno=-1;
+
+              if (startNode->Thread==ThisThread) nodeno=cornerNode->nodeDescriptor.nodeno;
+
+
+              if (startNode->Thread!=0) {
+                if (startNode->Thread==ThisThread) pipe.send(nodeno);
+                else if (ThisThread==0) pipe.recv(nodeno,startNode->Thread);
+              }
+*/
+
+              if (ThisThread==0) {
+                fprintf(fout,"%ld ",nGlobalNodeNumber);
+                nGlobalNodeNumber++;
+              }
             }
           }
-          else fprintf(fout,"%ld ",cornerNode->nodeDescriptor.nodeno);
+
+          if (printCoordinateVector==false) if (ThisThread==0) fprintf(fout,"\n");
         }
 
-        if (printCoordinateVector==false) fprintf(fout,"\n");
+        /*
+        //update the nodes counter
+        if (startNode->Thread!=0) {
+          if (ThisThread==startNode->Thread) {
+            pipe.send(nGlobalNodeNumber);
+            pipe.flush();
+          }
+          else if (ThisThread==0) {
+            pipe.recv(nGlobalNodeNumber,startNode->Thread);
+          }
+        }
+        */
+
+
       }
     }
     else {
@@ -4005,80 +4306,378 @@ if (cornerNode->Temp_ID==43276) {
 
 
     if (startNode==rootTree) {
-      nGlobalNodeNumber=1;
-
       if (ThisThread==0) pipe.closeRecvAll();
       else pipe.closeSend();
+
+      MPI_Barrier(MPI_COMM_WORLD);
     }
 
   } 
  
+/*
+   void outputMeshTECPLOT_BlockCornerNode(cTreeNodeAMR<cBlockAMR> *startNode,FILE* fout,bool printCoordinateVector,bool PrintMeshData,int DataSetNumber) {
+    int isubBlock,jsubBlock,ksubBlock,isubBlockMax,jsubBlockMax,ksubBlockMax;
+    int iNode=0,jNode=0,kNode=0,nd,idim,nnode,nBasicBlockNodes;
 
+    static CMPI_channel pipe(1000000);
+    static long int nGlobalNodeNumber=0;
+
+
+    if (startNode==rootTree) {
+      nGlobalNodeNumber=1;
+
+      if (ThisThread==0) pipe.openRecvAll();
+      else pipe.openSend(0);
+    }
+
+
+//##########################   DEBUG #######################
+    static long int nMPIops=0;
+//##########################  END DEBUG ####################
+
+
+
+
+
+    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      if ((ThisThread==0)||(startNode->block!=NULL)){ //the node is on the bottom of the tree -> printf the node
+        cBlockAMR *block=startNode->block;
+        cCornerNode *cornerNode;
+
+        if (startNode->Thread!=0) {
+          if (ThisThread==0) MPI_Send(&nGlobalNodeNumber,1,MPI_LONG,startNode->Thread,0,MPI_COMM_WORLD);
+          else if (ThisThread==startNode->Thread) {
+            MPI_Status status;
+
+            MPI_Recv(&nGlobalNodeNumber,1,MPI_LONG,0,0,MPI_COMM_WORLD,&status);
+          }
+        }
+
+        //get the limits for the number of the sub-blocks in the block
+#if _MESH_DIMENSION_ == 1
+        isubBlockMax=_BLOCK_CELLS_X_;
+        jsubBlockMax=1,ksubBlockMax=1;
+        nBasicBlockNodes=2;
+        static int nodeOutputOrder_I[2]={0,1};
+        static int nodeOutputOrder_J[2]={0,0};
+        static int nodeOutputOrder_K[2]={0,0};
+ #elif _MESH_DIMENSION_ == 2
+        isubBlockMax=_BLOCK_CELLS_X_;
+        jsubBlockMax=_BLOCK_CELLS_Y_;
+        ksubBlockMax=1;
+        nBasicBlockNodes=4;
+        static int nodeOutputOrder_I[4]={0,1,1,0};
+        static int nodeOutputOrder_J[4]={0,0,1,1};
+        static int nodeOutputOrder_K[4]={0,0,0,0};
+#else
+        isubBlockMax=_BLOCK_CELLS_X_;
+        jsubBlockMax=_BLOCK_CELLS_Y_;
+        ksubBlockMax=_BLOCK_CELLS_Z_;
+        nBasicBlockNodes=8;
+        static int nodeOutputOrder_I[8]={0,1,1,0,0,1,1,0};
+        static int nodeOutputOrder_J[8]={0,0,1,1,0,0,1,1};
+        static int nodeOutputOrder_K[8]={0,0,0,0,1,1,1,1};
+#endif
+
+
+        for (ksubBlock=0;ksubBlock<ksubBlockMax;ksubBlock++) for (jsubBlock=0;jsubBlock<jsubBlockMax;jsubBlock++) for (isubBlock=0;isubBlock<isubBlockMax;isubBlock++) {
+          for (nnode=0;nnode<nBasicBlockNodes;nnode++) {
+            iNode=nodeOutputOrder_I[nnode]+isubBlock;
+            jNode=nodeOutputOrder_J[nnode]+jsubBlock;
+            kNode=nodeOutputOrder_K[nnode]+ksubBlock;
+
+            nd=getCornerNodeLocalNumber(iNode,jNode,kNode);
+            cornerNode=(block!=NULL) ? block->GetCornerNode(nd) : NULL;
+
+
+//############  DEBUG ################
+
+
+
+//############ ENS DEBUG ##############
+
+
+
+            if (printCoordinateVector==true) {
+              bool printflag=false;
+              double xNode[3];
+              long int MaxRefinmentLevel=0,NodeTempID=0;
+
+              if (cornerNode!=NULL) if ((cornerNode->nodeDescriptor.nodeProcessedFlag==_AMR_FALSE_)&&(cornerNode->nodeDescriptor.maxRefinmentLevel==startNode->RefinmentLevel)) printflag=true;
+
+              if (startNode->Thread!=0) {
+                if (ThisThread==startNode->Thread) pipe.send(printflag);
+                else if (ThisThread==0) pipe.recv(printflag,startNode->Thread);
+                else exit(__LINE__,__FILE__,"Error: something is wrong");
+              }
+
+
+
+              if (printflag==true) {
+                if (cornerNode!=NULL) {
+                  cornerNode->nodeDescriptor.nodeProcessedFlag=_AMR_TRUE_;
+                  cornerNode->nodeDescriptor.nodeno=nGlobalNodeNumber++;
+                }
+
+                if (ThisThread==0) {
+                  startNode->GetCornerNodePosition(xNode,iNode,jNode,kNode);
+                  for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(fout,"%e  ",((fabs(xNode[idim])>EPS) ? xNode[idim] : 0.0));
+                }
+
+                if (cornerNode!=NULL) MaxRefinmentLevel=cornerNode->nodeDescriptor.maxRefinmentLevel,NodeTempID=cornerNode->Temp_ID;
+
+#if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+                if (true) { //(nTotalThreads!=1) {
+                  if (ThisThread!=0) {
+                    if (startNode->Thread==ThisThread) {
+                      pipe.send(MaxRefinmentLevel);
+                      pipe.send(NodeTempID);
+
+//##########################   DEBUG #######################
+nMPIops++;
+//##########################  END DEBUG ####################
+
+                    }
+                  }
+                  else { //the root processor
+                    if (startNode->Thread!=0) {
+                      pipe.recv(MaxRefinmentLevel,startNode->Thread);
+                      pipe.recv(NodeTempID,startNode->Thread);
+
+//##########################   DEBUG #######################
+nMPIops++;
+//##########################  END DEBUG ####################
+
+
+                    }
+
+                    fprintf(fout,"%ld  %ld %i  ",MaxRefinmentLevel,NodeTempID,startNode->Thread);
+                  }
+                }
+#else
+                for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(fout,"%e  ",((fabs(cornerNode->GetX()[idim])>EPS) ? cornerNode->GetX()[idim] : 0.0));
+                fprintf(fout,"%i  %i  %ld ",cornerNode->nodeDescriptor.maxRefinmentLevel, ((startNode->block->GetGhostFlag()==_GHOST_BLOCK_) ? 1 : 0),cornerNode->Temp_ID);
+#endif
+
+
+
+                //print the data stared in the block's nodes
+                if ((PrintMeshData==true)&&((startNode->Thread==ThisThread)||(ThisThread==0))) {
+
+
+                  //print the data stared in the corner nodes
+#if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+                  if (true) { //(nTotalThreads!=1) {
+                    if (ThisThread==ThisThread) {
+                      if (startNode->Thread!=0) {
+                        cornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                      }
+                    }
+                    else { //the root processor
+                      if (startNode->Thread!=0) {
+                        cCornerNode *tempCornerNode=CornerNodes.newElement();
+
+                        tempCornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                        CornerNodes.deleteElement(tempCornerNode);
+                      }
+                      else cornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                    }
+                  }
+
+
+                  if (cornerNode!=NULL) cornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+#else
+                  cornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+#endif
+
+
+                  //print the data stored in the 'center' nodes
+                  #if  _AMR_CENTER_NODE_ == _ON_AMR_MESH_
+                  const int nMaxCenterInterpolationCoefficients=8;
+                  cCenterNode *tempCenterNode,*CenterNodeInterpolationStencil[nMaxCenterInterpolationCoefficients];
+                  double CenterNodeInterpolationCoefficients[nMaxCenterInterpolationCoefficients],xCenterNode[3];
+                  int centerNodeInterpolationStencilLength;
+
+                  fprintf(fout,"  ");
+                  cornerNode->GetX(xCenterNode);
+                  tempCenterNode=CenterNodes.newElement();
+
+                  if (GetCenterNodesInterpolationCoefficients==NULL) {
+                    centerNodeInterpolationStencilLength=CenterNodesInterpolationCoefficients_3D_linear(xCenterNode,CenterNodeInterpolationCoefficients,CenterNodeInterpolationStencil,startNode,nMaxCenterInterpolationCoefficients);
+                  }
+                  else {
+                    centerNodeInterpolationStencilLength=GetCenterNodesInterpolationCoefficients(xCenterNode,CenterNodeInterpolationCoefficients,CenterNodeInterpolationStencil,startNode,nMaxCenterInterpolationCoefficients);
+                  }
+
+                  if (centerNodeInterpolationStencilLength==-1) exit(__LINE__,__FILE__,"Errror in interpolation of the 'center' node's data");
+
+
+                  tempCenterNode->Interpolate(CenterNodeInterpolationStencil,CenterNodeInterpolationCoefficients,centerNodeInterpolationStencilLength);
+                  tempCenterNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                  #endif
+
+                  CenterNodes.deleteElement(tempCenterNode);
+
+                  //print data stored by the tree node (startNode)
+#if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+                  if (true) { //(nTotalThreads!=1) {
+                    if (ThisThread!=0) {
+                      if (startNode->Thread==ThisThread) {
+                        startNode->block->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                      }
+                    }
+                    else { //the root processor
+                      if (startNode->Thread!=0) {
+                        cBlockAMR *tempBlock=blocks.newElement();
+
+                        startNode->block->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                        blocks.deleteElement(tempBlock);
+                      }
+                      else startNode->block->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+                    }
+                  }
+
+
+                  if (cornerNode!=NULL) cornerNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+#else
+                  startNode->block->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
+#endif
+                }
+
+                //finish the line
+                if (ThisThread==0) fprintf(fout,"\n");
+
+
+
+
+
+
+              }
+            }
+            else {
+              long int nodeno=-1;
+
+              if (startNode->Thread==ThisThread) nodeno=cornerNode->nodeDescriptor.nodeno;
+
+
+              if (startNode->Thread!=0) {
+                if (startNode->Thread==ThisThread) pipe.send(nodeno);
+                else if (ThisThread==0) pipe.recv(nodeno,startNode->Thread);
+              }
+
+
+              if (ThisThread==0) fprintf(fout,"%ld ",nodeno);
+            }
+          }
+
+          if (printCoordinateVector==false) if (ThisThread==0) fprintf(fout,"\n");
+        }
+
+        //update the nodes counter
+        if (startNode->Thread!=0) {
+          if (ThisThread==startNode->Thread) {
+            pipe.send(nGlobalNodeNumber);
+            pipe.flush();
+          }
+          else if (ThisThread==0) {
+            pipe.recv(nGlobalNodeNumber,startNode->Thread);
+          }
+        }
+
+      }
+    }
+    else {
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) outputMeshTECPLOT_BlockCornerNode(startNode->downNode[nDownNode],fout,printCoordinateVector,PrintMeshData,DataSetNumber);
+    }
+
+
+    if (startNode==rootTree) {
+      if (ThisThread==0) pipe.closeRecvAll();
+      else pipe.closeSend();
+
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+  }
+
+
+ */
 
   void outputMeshTECPLOTinternal(const char *fname,const bool PrintMeshData, int DataSetNumber) {
-    FILE *fout;
+    FILE *fout=NULL;
 
-    //cout the number of the elements of the mesh
-    if (meshModifiedFlag==true) countMeshElements(rootTree,0);
 
-    fout=fopen(fname,"w");
+    //the procedure is developed only for the case where the domain is covered by the layer of boundary blocks
+#if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+    //do nothing
+#else
+    exit(__LINE__,__FILE__,"The procedure is implemented only for the case _AMR_PARALLEL_DATA_EXCHANGE_MODE_ = _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_");
+#endif
 
-    #if _MESH_DIMENSION_ == 1 
-    fprintf(fout,"VARIABLES=\"X\", \"Maximum Refinment Level\"");
 
-    exit(__LINE__,__FILE__,"not implemented");
+    //Count the number of the elements of the mesh
+    if (meshModifiedFlag_CountMeshElements==true) countMeshElements(rootTree,0);
 
-    if (PrintMeshData==true) {
-      CornerNodes.elementStackList[0][0]->PrintVariableList(fout);
+    if (ThisThread==0) {
+      fout=fopen(fname,"w");
 
-      #if  _AMR_CENTER_NODE_ == _ON_AMR_MESH_
-      CenterNodes.elementStackList[0][0]->PrintVariableList(fout);
+#if _MESH_DIMENSION_ == 1
+      fprintf(fout,"VARIABLES=\"X\", \"Maximum Refinment Level\"");
+
+      exit(__LINE__,__FILE__,"not implemented");
+
+      if (PrintMeshData==true) {
+        CornerNodes.elementStackList[0][0]->PrintVariableList(fout);
+
+        #if  _AMR_CENTER_NODE_ == _ON_AMR_MESH_
+        CenterNodes.elementStackList[0][0]->PrintVariableList(fout);
+        #endif
+
+        rootTree->block->PrintVariableList(fout);
+      }
+
+      fprintf(fout,"\n");
+
+#elif _MESH_DIMENSION_ == 2
+      fprintf(fout,"VARIABLES=\"X\", \"Y\", \"Maximum Refinment Level\", \"Temp_ID\"");
+
+      #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+      fprintf(fout,", \"Thread\"");
       #endif
 
-      rootTree->block->PrintVariableList(fout);
-    }
+      if (PrintMeshData==true) {
+        CornerNodes.elementStackList[0][0]->PrintVariableList(fout,DataSetNumber);
 
-    fprintf(fout,"\n");
+        #if  _AMR_CENTER_NODE_ == _ON_AMR_MESH_
+        CenterNodes.elementStackList[0][0]->PrintVariableList(fout,DataSetNumber);
+        #endif
 
-    #elif _MESH_DIMENSION_ == 2  
-    fprintf(fout,"VARIABLES=\"X\", \"Y\", \"Maximum Refinment Level\", \"Ghost cells indicator\", \"Temp_ID\"");
+        rootTree->block->PrintVariableList(fout);
+      }
 
-    #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
-    fprintf(fout,", \"Thread\"");
-    #endif
+//      fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",meshNodesNumber,meshBlocksNumber*_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_); 4*meshBlocksNumber*_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_
+      fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",4*meshBlocksNumber*_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_,meshBlocksNumber*_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_);
+      #else
+      fprintf(fout,"VARIABLES=\"X\", \"Y\", \"Z\", \"Maximum Refinment Level\", \"Ghost cells indicator\", \"Temp_ID\"");
 
-    if (PrintMeshData==true) {
-      CornerNodes.elementStackList[0][0]->PrintVariableList(fout,DataSetNumber);
-
-      #if  _AMR_CENTER_NODE_ == _ON_AMR_MESH_
-      CenterNodes.elementStackList[0][0]->PrintVariableList(fout,DataSetNumber);
+      #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+      fprintf(fout,", \"Thread\"");
       #endif
 
-      rootTree->block->PrintVariableList(fout);
+
+      if (PrintMeshData==true) {
+        CornerNodes.elementStackList[0][0]->PrintVariableList(fout,DataSetNumber);
+
+        #if  _AMR_CENTER_NODE_ == _ON_AMR_MESH_
+        CenterNodes.elementStackList[0][0]->PrintVariableList(fout,DataSetNumber);
+        #endif
+
+        rootTree->block->PrintVariableList(fout);
+      }
+
+      fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEBRICK\n",meshNodesNumber,meshBlocksNumber*_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_);
+#endif
     }
-
-    fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",meshNodesNumber,meshBlocksNumber*_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_);
-    #else
-    fprintf(fout,"VARIABLES=\"X\", \"Y\", \"Z\", \"Maximum Refinment Level\", \"Ghost cells indicator\", \"Temp_ID\"");
-
-    #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
-    fprintf(fout,", \"Thread\"");
-    #endif
-
-
-    if (PrintMeshData==true) {
-      CornerNodes.elementStackList[0][0]->PrintVariableList(fout,DataSetNumber);
-
-      #if  _AMR_CENTER_NODE_ == _ON_AMR_MESH_
-      CenterNodes.elementStackList[0][0]->PrintVariableList(fout,DataSetNumber);
-      #endif
-
-      rootTree->block->PrintVariableList(fout);
-    }
-
-    fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEBRICK\n",meshNodesNumber,meshBlocksNumber*_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_);
-    #endif
-
 
     //print the node's list
     resetNodeProcessedFlag(false);
@@ -4090,7 +4689,7 @@ if (cornerNode->Temp_ID==43276) {
     #endif
 
     //close the output file 
-    fclose(fout);
+    if (ThisThread==0) fclose(fout);
   }
 
 
@@ -4164,7 +4763,7 @@ if (cornerNode->Temp_ID==43276) {
     FILE *fout;
 
     //cout the number of the elements of the mesh
-    if (meshModifiedFlag==true) countMeshElements(rootTree,0);
+    if (meshModifiedFlag_CountMeshElements==true) countMeshElements(rootTree,0);
 
     fout=fopen(fname,"w");
 
@@ -4467,11 +5066,7 @@ if (cornerNode->Temp_ID==43276) {
     if (MeshFileName!=NULL) sprintf(fname,"%s",MeshFileName);
     else getMeshName(fname);
  
-    //create the TECPLOT file of the mesh
-    char fnameTECPLOT[STRING_LENGTH];
-  
-    sprintf(fnameTECPLOT,"%s.dat",fname);
-    outputMeshTECPLOT(fnameTECPLOT);
+
 
     //the 'global' parameters of the mesh is saved in the file by the root processor only 
     if (ThisThread==0) {
@@ -4588,13 +5183,6 @@ if (cornerNode->Temp_ID==43276) {
     fread(marker,sizeof(char),STRING_LENGTH,fout);
     if (strcmp("AMR-MESH-FILE-MARKER:END",marker)!=0) exit(__LINE__,__FILE__,"SectionMarker in the mesh file is wrong");
     fclose(fout);
-
-
-    //create the TECPLOT file of the mesh
-    char fnameTECPLOT[STRING_LENGTH];
-
-    sprintf(fnameTECPLOT,"%s.dat",MeshFileName);
-    outputMeshTECPLOTinternalNoBlocks(fnameTECPLOT);
   }
 
   //create the memory allocation report
@@ -4807,7 +5395,126 @@ if (cornerNode->Temp_ID==43276) {
     }
   }
 
-  //collect into a list all nodes that "blongs" to this processor
+  //collect into a list all nodes that "belongs" to this processor
+  void InitDomainBoundaryLayer(cTreeNodeAMR<cBlockAMR>* startNode) {
+    long int i,neibThread,nCounter=0;
+    cTreeNodeAMR<cBlockAMR> *node,*prev,*next,*neibNode,*tNode;
+    bool found;
+
+    node=ParallelNodesDistributionList[ThisThread];
+
+    while (node!=NULL) {
+
+#if _MESH_DIMENSION_ == 1
+//cTreeNodeAMR *neibNodeFace[2];
+      exit(__LINE__,__FILE__,"not implemented");
+#elif _MESH_DIMENSION_ == 2
+      for (i=0;i<4*2;i++) if ((neibNode=node->neibNodeFace[i])!=NULL) if ((neibThread=neibNode->Thread)!=ThisThread) {
+        //check if the node is not in the list already
+        found=false,tNode=DomainBoundaryLayerNodesList[neibThread];
+
+        while (tNode!=NULL) {
+          if (tNode==neibNode) {
+            found=true;
+            break;
+          }
+
+          tNode=tNode->nextNodeThisThread;
+        }
+
+        if (found==true) continue;
+
+        nCounter++;
+        prev=neibNode->prevNodeThisThread;
+        next=neibNode->nextNodeThisThread;
+
+        if (prev!=NULL) prev->nextNodeThisThread=next;
+        if (next!=NULL) next->prevNodeThisThread=prev;
+
+        neibNode->prevNodeThisThread=NULL;
+        neibNode->nextNodeThisThread=DomainBoundaryLayerNodesList[neibThread];
+
+        if (DomainBoundaryLayerNodesList[neibThread]!=NULL) DomainBoundaryLayerNodesList[neibThread]->prevNodeThisThread=neibNode;
+        DomainBoundaryLayerNodesList[neibThread]=neibNode;
+      }
+
+      for (i=0;i<4;i++) if ((neibNode=node->neibNodeCorner[i])!=NULL) if ((neibThread=neibNode->Thread)!=ThisThread) {
+        //check if the node is not in the list already
+        found=false,tNode=DomainBoundaryLayerNodesList[neibThread];
+
+        while (tNode!=NULL) {
+          if (tNode==neibNode) {
+            found=true;
+            break;
+          }
+
+          tNode=tNode->nextNodeThisThread;
+        }
+
+        if (found==true) continue;
+
+        nCounter++;
+        prev=neibNode->prevNodeThisThread;
+        next=neibNode->nextNodeThisThread;
+
+        if (prev!=NULL) prev->nextNodeThisThread=next;
+        if (next!=NULL) next->prevNodeThisThread=prev;
+
+        neibNode->prevNodeThisThread=NULL;
+        neibNode->nextNodeThisThread=DomainBoundaryLayerNodesList[neibThread];
+
+        if (DomainBoundaryLayerNodesList[neibThread]!=NULL) DomainBoundaryLayerNodesList[neibThread]->prevNodeThisThread=neibNode;
+        DomainBoundaryLayerNodesList[neibThread]=neibNode;
+      }
+
+
+#elif _MESH_DIMENSION_ == 3
+//cTreeNodeAMR *neibNodeFace[6*4],*neibNodeCorner[8],*neibNodeEdge[12*2];
+exit(__LINE__,__FILE__,"not implemented");
+#endif
+
+
+
+      node=node->nextNodeThisThread;
+    }
+
+
+    long int *buffer=new long int [nTotalThreads];
+    int thread;
+
+    buffer[0]=nCounter;
+    MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_COMM_WORLD);
+
+    if (ThisThread==0) {
+      cout << "The length of the domain's boundary nodes list:\nThread\tThe number of the domain's boundary nodes\n";
+
+      for (thread=0;thread<nTotalThreads;thread++) cout << thread << "\t" << buffer[thread] << endl;
+    }
+
+    delete [] buffer;
+
+
+    //test the real length of the list (check the consisntency of the lists)
+    long int nTest;
+
+    for (thread=0;thread<nTotalThreads;thread++) {
+      nTest=0;
+      node=DomainBoundaryLayerNodesList[thread];
+
+      if (node!=NULL) if (node->prevNodeThisThread!=NULL) exit(__LINE__,__FILE__,"Error: the list is not consistent");
+
+      while (node!=NULL) {
+        nTest++;
+        if (nTest>nCounter) exit(__LINE__,__FILE__,"Error: the list is locked-up somewhere");
+
+        node=node->nextNodeThisThread;
+      }
+    }
+
+  }
+
+
+  /*
   void InitLocalNodesList(cTreeNodeAMR<cBlockAMR>* startNode=NULL) {
     int thread;
 
@@ -4825,8 +5532,20 @@ if (cornerNode->Temp_ID==43276) {
       ParallelNodesDistributionList[thread]=startNode;
     }
     else for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) InitLocalNodesList(startNode->downNode[nDownNode]);
+
+
+#if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+    if (startNode==rootTree) InitDomainBoundaryLayer(rootTree);
+#elif _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__GHOST_CELLS_
+    //do nothing
+#else
+    exit(__LINE__,__FILE__,"Error: wrong option");
+#endif
+
+
   }
 
+*/
 
   void InitCellMeasure_ResetToZero(cTreeNodeAMR<cBlockAMR>* startNode) {
 #if _AMR_CENTER_NODE_ == _ON_AMR_MESH_
@@ -5238,6 +5957,40 @@ if (cornerNode->Temp_ID==43276) {
         else MPI_Gather(&nAllocatedBlocks,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_COMM_WORLD);
 
         MPI_Barrier(MPI_COMM_WORLD);
+
+        //allocate the domain's boundary blocks
+#if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+        cTreeNodeAMR<cBlockAMR> *node;
+
+        nAllocatedBlocks=0;
+
+        for (thread=0;thread<nTotalThreads;thread++) {
+          node=DomainBoundaryLayerNodesList[thread];
+
+          while (node!=NULL) {
+            nAllocatedBlocks++;
+            if (node->block==NULL) AllocateBlock(node);
+
+            node=node->nextNodeThisThread;
+          }
+        }
+
+        if (ThisThread==0) {
+          buffer=new long int [nTotalThreads];
+          buffer[0]=nAllocatedBlocks;
+
+          MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_COMM_WORLD);
+
+          cout << "Blocks Allocation Report:\n Thread\tAllocated Domain's Boundary Blocks\n";
+          for (thread=0;thread<nTotalThreads;thread++) cout << thread << "\t" << buffer[thread] << endl;
+
+          delete [] buffer;
+        }
+        else MPI_Gather(&nAllocatedBlocks,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_COMM_WORLD);
+
+        MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
       }
     }
 
@@ -5341,7 +6094,14 @@ if (cornerNode->Temp_ID==43276) {
     int nCurrentProcessorBalancing=0;
     CMPI_channel pipe(100000);
 
-    for (i=0;i<nTotalThreads;i++) ParallelNodesDistributionList[i]=NULL;
+    for (i=0;i<nTotalThreads;i++) {
+      ParallelNodesDistributionList[i]=NULL;
+
+      //deallocate the boundary layer
+#if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+      if (DomainBoundaryLayerNodesList[i]!=NULL) exit(__LINE__,__FILE__,"not implemented");
+#endif
+    }
 
     pipe.openBcast(0);
 
@@ -5437,6 +6197,14 @@ if (cornerNode->Temp_ID==43276) {
         node=node->nextNodeThisThread;
       }
     }
+
+    //create the list of boundary layer, allocated and init the corresponding blocks
+#if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+    InitDomainBoundaryLayer(rootTree);
+
+    if (blocks.usedElements()!=0)  exit(__LINE__,__FILE__,"not implemented"); //the blocks are not exists -> simply create the boundary layer list
+
+#endif
 
   }
 
