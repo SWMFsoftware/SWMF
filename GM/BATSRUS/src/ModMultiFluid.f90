@@ -8,7 +8,7 @@ module ModMultiFluid
   ! Convenient parameters for the ion fluids
   logical, parameter :: UseMultiIon = IonLast_ > IonFirst_
 
-  ! Logical for multifluid with neutral fluds
+  ! Logical for multifluid with neutral fluids
   logical, parameter :: UseNeutralFluid = nFluid > 1 .and. nFluid > IonLast_
 
   integer, parameter :: nIonFluid   = IonLast_ - IonFirst_ + 1
@@ -44,6 +44,18 @@ module ModMultiFluid
        iEnergy= nVar+1
 
   character (len=20) :: NameFluid = ''
+
+  ! Variables for setting fluid boundary condition separately from MHD variables.
+  logical :: IsFullyCoupledfluid = .true. , DoOhNeutralBc
+  real    :: RhoBcFactor_I(nFluid) = 1.0, uBcFactor_I(nFluid) = 1.
+
+  real    :: RhoNeutralsISW=0.0, RhoNeutralsISW_dim=0.0 , &
+             PNeutralsISW=0.0  , PNeutralsISW_dim=0.0  , &
+             UxNeutralsISW=0.0 , UxNeutralsISW_dim=0.0 , &
+             UyNeutralsISW=0.0 , UyNeutralsISW_dim=0.0 , &
+             UzNeutralsISW=0.0 , UzNeutralsISW_dim=0.0 , &
+             TNeutralsISW=0.0  , TNeutralsISW_dim=0.0  , &
+             mProtonMass
 
 contains
 

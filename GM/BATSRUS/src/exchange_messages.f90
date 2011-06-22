@@ -141,7 +141,7 @@ subroutine exchange_messages
      if (unusedBLK(iBlock)) CYCLE
      if (far_field_BCs_BLK(iBlock)) &                        
           call set_outer_BCs(iBlock,time_simulation,.false.) 
-     if(time_loop.and.any(TypeBc_I=='coronatoih'))&
+     if(time_loop.and. ( any(TypeBc_I=='coronatoih') .or. any(TypeBc_I=='buffergrid')))&
           call fill_in_from_buffer(iBlock)
      call calc_energy_ghost(iBlock)
   end do
@@ -191,7 +191,7 @@ subroutine exchange_messages_adjoint
      call calc_energy_ghost_adjoint(iBlock)
      if (far_field_BCs_BLK(iBlock)) &                        
           call set_outer_BCs_adjoint (iBlock,time_simulation,.false.) 
-     if(time_loop.and.any(TypeBc_I=='coronatoih'))&
+     if(time_loop.and. (any(TypeBc_I=='coronatoih') .or. any(TypeBc_I=='buffergrid')))&
           call stop_mpi(NameSub // ' Not supported!')
   end do
   

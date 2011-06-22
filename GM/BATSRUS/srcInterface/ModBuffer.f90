@@ -6,7 +6,7 @@ module ModBuffer
        bilinear_interpolation, DomainDecompositionType, is_proc0, &
        init_decomposition, get_root_decomposition, complete_grid, &
        set_standard_grid_descriptor, bcast_decomposition
-  use CON_coupler,         ONLY: SC_
+  use CON_coupler,         ONLY: SC_, IH_
   implicit none
   save
 
@@ -19,8 +19,8 @@ module ModBuffer
        LocalBufferDD
   type(GridDescriptorType)::LocalBufferGD
 
-  integer:: SourceID_ = SC_
-
+  integer:: SourceID_ = SC_, TargetID_ = IH_
+  
   integer::nVarBuff=-1
   logical::DoInit =.true.
   real,dimension(:),allocatable::Buffer_V
@@ -68,48 +68,38 @@ end module ModBuffer
 subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   use ModBuffer
   use ModMain,       ONLY: nDim, R_, Phi_, Theta_, x_, y_, z_,&
-       TypeCoordSystem, Time_Simulation
-  use ModAdvance,    ONLY: UseElectronPressure
+                           TypeCoordSystem, Time_Simulation
+  use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, Bx_, Bz_, p_, &
-       WaveFirst_, WaveLast_, Pe_
-  use CON_coupler,   ONLY: Grid_C
+                           WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, &
+                           UseMultiSpecies
+  use CON_coupler,   ONLY: Grid_C, DoCoupleVar_V, iVar_V, nVarCouple,&
+                           Mhd_, ElectronPressure_, AnisoPressure_, Wave_, &
+                           MultiFluid_, MultiSpecie_, &
+                           RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, &
+                           BxCouple_, BzCouple_, PeCouple_, PparCouple_, &
+                           WaveFirstCouple_, WaveLastCouple_
   use CON_axes,      ONLY: transform_matrix, transform_velocity
   use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
   use ModPhysics,    ONLY: UnitEnergyDens_
+  use ModMultiFluid, ONLY: IsFullyCoupledFluid
   implicit none
 
-  integer,intent(in)::nVar
-  real,intent(in)::XyzTarget_D(nDim)
+  integer,intent(in)              :: nVar
+  real,intent(in)                 :: XyzTarget_D(nDim)
   real,dimension(nVar),intent(out)::State_V
-  real,dimension(nDim)::Sph_D
+  real,dimension(nDim)            ::Sph_D
 
   character (len=3) :: TypeCoordSource
   real, save        :: SourceTarget_DD(nDim, nDim)
   real              :: TimeSimulationLast = -1.0
   real              :: XyzSource_D(nDim)
 
-  ! logicals and buffer indices for waves and electron pressure
-  logical :: UseWave, UsePeInBuffer
-  integer :: iBuffWaveFirst, iBuffWaveLast, iBuffPe
-
-  !Misc
-  integer:: UBound_I(2)
   !---------------------------------------------------------------------------
-
-  !Set nVarBuff
   if(DoInit)then
      DoInit = .false.
-     UBound_I=ubound_vector(NameBuffer)
-     nVarBuff = UBound_I(1)
-     allocate(Buffer_V(nVarBuff))
+     allocate(Buffer_V(nVarCouple))
   end if
-
-  UseWave = nVarBuff>=10
-  iBuffWaveFirst = 8
-  iBuffWaveLast  = 8 + WaveLast_ - WaveFirst_
-
-  UsePeInBuffer = nVarBuff/=2*(nVarBuff/2)
-  iBuffPe = nVarBuff - 1
 
   TypeCoordSource = Grid_C(SourceID_) % TypeCoord
 
@@ -133,45 +123,59 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   ! Get the target state from the spherical buffer grid
   Buffer_V=point_state_v(&
        NameBuffer,&
-       nVarBuff,&
+       nVarCouple,&
        nDim,    &
        Sph_D,   &
        LocalBufferGD,&
        bilinear_interpolation)
 
-  State_V(Rho_) = Buffer_V(Rho_)
+  State_V(Rho_) = Buffer_V(iVar_V(RhoCouple_))
   !Transform to primitive variables
-  State_V(Ux_:Uz_) = Buffer_V(rhoUx_:rhoUz_)/Buffer_V(rho_)
-  State_V(Bx_:Bz_) = Buffer_V(Bx_:Bz_)
+  State_V(Ux_:Uz_) = &
+       Buffer_V(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_))&
+       /Buffer_V(iVar_V(RhoCouple_))
+  State_V(Bx_:Bz_) = Buffer_V(iVar_V(BxCouple_):iVar_V(BzCouple_))
 
   ! Transform vector variables from SC to IH
   if(TypeCoordSource /= TypeCoordSystem)then
      State_V(Ux_:Uz_) = transform_velocity(Time_Simulation,&
           State_V(Ux_:Uz_), XyzSource_D * No2Si_V(UnitX_), &
           TypeCoordSource, TypeCoordSystem)
-     State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), SourceTarget_DD)
+     if(DoCoupleVar_V(Mhd_)) &
+          State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), SourceTarget_DD)
   end if
 
   !Convert from SI units to normalized units
   State_V(rho_)      = State_V(rho_)   *Si2No_V(UnitRho_)
   State_V(Ux_:Uz_)   = State_V(Ux_:Uz_)*Si2No_V(UnitU_)
-  State_V(Bx_:Bz_)   = State_V(Bx_:Bz_)*Si2No_V(UnitB_)
+  if(DoCoupleVar_V(Mhd_)) &
+       State_V(Bx_:Bz_)   = State_V(Bx_:Bz_)*Si2No_V(UnitB_)
 
-  if(UseWave) State_V(WaveFirst_:WaveLast_) = &
-       Buffer_V(iBuffWaveFirst:iBuffWaveLast)*Si2No_V(UnitEnergyDens_)
+  if(DoCoupleVar_V(Wave_))State_V(WaveFirst_:WaveLast_) = &
+       Buffer_V(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_)) &
+       *Si2No_V(UnitEnergyDens_)
 
-  if(UsePeInBuffer)then
-     State_V(Pe_) = Buffer_V(iBuffPe)*Si2No_V(UnitP_)
-     State_V(p_)  = Buffer_V(nVarBuff)*Si2No_V(UnitP_)
-  else
-     if(UseElectronPressure)then
-        State_V(Pe_) = 0.5*Buffer_V(nVarBuff)*Si2No_V(UnitP_)
-        State_V(p_)  = State_V(Pe_)
-     else
-        State_V(p_)  = Buffer_V(nVarBuff)*Si2No_V(UnitP_)
-     end if
+  State_V(p_)  = Buffer_V(iVar_V(PCouple_))*Si2No_V(UnitP_)
+  if(DoCoupleVar_V(ElectronPressure_))then
+     State_V(Pe_) = Buffer_V(iVar_V(PeCouple_))*Si2No_V(UnitP_)
+  else if(UseElectronPressure)then
+     State_V(Pe_) = 0.5*State_V(p_)
+     State_V(p_)  = State_V(Pe_)
   end if
 
+  if(DoCoupleVar_V(AnisoPressure_))then
+     State_V(Ppar_) = Buffer_V(iVar_V(PparCouple_))*Si2No_V(UnitP_)
+  else if(UseAnisoPressure)then
+     State_V(Ppar_) = Buffer_V(iVar_V(PCouple_))*Si2No_V(UnitP_)
+  end if
+
+  if( .not. DoCoupleVar_V(MultiFluid_)  .and. nFluid > 1 .or. &
+      .not. DoCoupleVar_V(MultiSpecie_) .and. UseMultiSpecies)then
+     ! Values for neutrals / ions should be prescribed in set_BCs.f90
+     IsFullyCoupledFluid = .false.
+  else
+     IsFullyCoupledFluid = .true.
+  end if
 end subroutine get_from_spher_buffer_grid
           
   

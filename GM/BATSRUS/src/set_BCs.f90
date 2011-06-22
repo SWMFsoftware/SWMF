@@ -737,7 +737,16 @@ contains
 
        end if
 
-    case('coronatoih')    !Only for nVar=8
+    case('coronatoih','buffergrid')
+       ! REVISION: June  2011 - R. Oran - generalized.   
+       ! Inner boundary conditions derived from coupling to another component using
+       ! a buffer grid. Can be used to couple any two  BATSRUS components with any
+       ! number of variables.
+       ! Note: the case 'coronatoih' is kept for backwoards compatability.
+
+       ! Both components may or may not include electron pressure, anisotropic
+       ! pressure, alfven waves, multifluid / species.
+       ! Coupling flags for these options are set in CON_couple_all.f90.
 
        !Get interpolated values from buffer grid:
        call get_from_spher_buffer_grid(&
@@ -745,6 +754,46 @@ contains
 
        VarsGhostFace_V = FaceState_V
        if(UseB0)VarsGhostFace_V(Bx_:Bz_)=VarsGhostFace_V(Bx_:Bz_) - B0Face_D
+
+       if(.not. IsFullyCoupledFluid .and. nFluid > 1) then
+          ! Only variable associated with the main MHD plasma are coupled through the
+          ! buffer grid. BC's for fluids must be specified somehow.
+
+          if (DoOhNeutralBc) then   
+            
+             ! Get face_bcs for neutrals in the outerheliosphere
+             ! (based on M. Opher)
+             ! Pop I is going through the inner BCs
+        
+             ! PopII leaves the domain at a supersonic velocity
+             ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
+             ! For the transient case of inward flow, use a fraction of ions
+
+             ! Pop III has the velocity and temperature of the ions at inner
+             !boundary,  the density is taken to be a fraction of the ions
+
+             VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
+                  VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
+
+             do iFluid = 3,nFluid
+                if(sum(VarsTrueFace_V(iRhoUx_I(iFluid):iRhoUx_I(iFluid)) * &
+                     FaceCoords_D) <= 0.0)then
+                   VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
+                        VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
+                else
+                   VarsGhostFace_V(iRho_I(iFluid)) = VarsGhostFace_V(Rho_) * &
+                        RhoBcFactor_I(iFluid)
+                   VarsGhostFace_V(iP_I(iFluid)) = VarsGhostFace_V(p_) *  &
+                        RhoBcFactor_I(iFluid)
+                   VarsGhostFace_V(iRhoUx_I(iFluid):iRhoUz_I(iFluid)) = &
+                        VarsGhostFace_V(Ux_:Uz_) *uBcFactor_I(iFluid)
+                end if
+             end do
+
+          else 
+             call CON_stop('ERROR in TypeBcs: multifluid is used but BCs not specified.')
+          end if
+       end if
 
        !^CFG IF SECONDBODY BEGIN
     case('Body2Orbit')

@@ -60,7 +60,12 @@ subroutine MH_set_parameters(TypeAction)
   use ModResistivity, ONLY: UseResistivity, &            !^CFG IF DISSFLUX
        read_resistivity_param, init_mod_resistivity      !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I,ChargeIon_I,nIonFluid, iFluid, &
-       DoConserveNeutrals
+       DoConserveNeutrals, DoOhNeutralBc, &
+       uBcFactor_I, RhoBcFactor_I, RhoNeutralsISW, RhoNeutralsISW_dim, &
+       PNeutralsISW, PNeutralsISW_dim, UxNeutralsISW, UxNeutralsISW_dim, &
+       UyNeutralsISW, UyNeutralsISW_dim, UzNeutralsISW, UzNeutralsISW_dim, &
+       TNeutralsISW, TNeutralsISW_dim, mProtonMass
+
   use ModMultiIon, ONLY: multi_ion_set_parameters
   use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
        read_solar_wind_file, normalize_solar_wind_data
@@ -1951,6 +1956,24 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('rBuffMax',  rBuffMax)
         call read_var('nThetaBuff',nThetaBuff)
         call read_var('nPhiBuff',  nPhiBuff)
+
+
+        ! OUTERHELIOSPHERE SPECIFIC COMMANDS
+
+     case("#OHNEUTRALS")
+        call read_var('RhoNeutralsISW_dim' ,RhoNeutralsISW_dim)
+        call read_var('TNeutralsISW_dim' ,TNeutralsISW_dim)
+        call read_var('UxNeutralsISW_dim' ,UxNeutralsISW_dim)
+        call read_var('UyNeutralsISW_dim' ,UyNeutralsISW_dim)
+        call read_var('UzNeutralsISW_dim' ,UzNeutralsISW_dim)
+        call read_var('mProtonMass',mProtonMass)
+
+     case("#OHBOUNDARY")
+        call read_var('DoOhNeutralBc',DoOhNeutralBc)
+        do iFluid = 2,nFluid
+           call read_var('RhoBcFactor', RhoBcFactor_I(iFluid))
+           call read_var('uBcFactor'  , uBcFactor_I(iFluid))
+        end do
 
         !CORONA SPECIFIC COMMANDS
 
