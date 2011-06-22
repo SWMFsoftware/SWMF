@@ -52,6 +52,10 @@ module ModImplicit
   ! Named indices for semi-implicit variables
   integer :: iTeImpl=0, iTrImplFirst=0, iTrImplLast=0, iEradImpl=0
 
+  ! Increase accurary of radiation solver by switching to third order
+  ! interpolation at the resolution change
+  logical, public :: UseAccurateRadiation = .false.
+
   ! Shall we zero out contribution from ghost cells
   logical :: UseNoOverlap = .true.
 
@@ -365,7 +369,7 @@ contains
 
     if(UseSemiImplicit)then
        if(TypeSemiImplicit == 'parcond' .or. &
-            TypeSemiImplicit == 'resistivity')then
+            TypeSemiImplicit == 'resistivity' .or. UseAccurateRadiation)then
           allocate( &
                FluxImpl_VXB(nVarSemi,nJ,nK,2,MaxBlock), &
                FluxImpl_VYB(nVarSemi,nI,nK,2,MaxBlock), &

@@ -23,6 +23,7 @@ module ModRadDiffusion
   ! 2. In the split semi-implicit scheme all variables
   !    use the point-implicit energy exchange!
 
+  use ModImplicit,   ONLY: UseAccurateRadiation
   use ModVarIndexes, ONLY: p_, nWave
   use BATL_size, ONLY: nDim, MaxDim
 
@@ -111,6 +112,8 @@ module ModRadDiffusion
 
   logical :: UseTemperature
 
+  real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
+
 contains
 
   subroutine read_rad_diffusion_param(NameCommand)
@@ -147,6 +150,9 @@ contains
        call read_var('UseHeatFluxLimiter', UseHeatFluxLimiter)
        call read_var('HeatFluxLimiter', HeatFluxLimiter)
 
+    case("#ACCURATERADIATION")
+       call read_var('UseAccurateRadiation', UseAccurateRadiation)
+
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
@@ -163,7 +169,7 @@ contains
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock
     use ModImplicit,    ONLY: UseFullImplicit, &
          UseSemiImplicit, UseSplitSemiImplicit, TypeSemiImplicit, &
-         iEradImpl, iTeImpl, iTrImplFirst, iTrImplLast
+         nVarSemi, iEradImpl, iTeImpl, iTrImplFirst, iTrImplLast
     use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_, &
          cRadiationNo
     use ModVarIndexes,  ONLY: nVar, nWave, WaveFirst_
@@ -194,7 +200,7 @@ contains
        iDiff_I(1) = WaveFirst_
        nRelax = 1
     end if
-       
+
     if(UseSemiImplicit)then
 
        allocate(Erad_WG(nWave,-1:nI+2,-1:nJ+2,-1:nK+2))
@@ -284,6 +290,9 @@ contains
 
        allocate(DiffSemiCoef_VGB(nDiff,-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock))
        DiffSemiCoef_VGB = 0.0
+
+       if(UseAccurateRadiation) &
+            allocate(FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim))
 
        if(TypeSemiImplicit=='radiation' .or. TypeSemiImplicit=='radcond')then
           allocate(PlanckWeight_WCB(nWave,nI,nJ,nK,MaxBlock))
@@ -439,7 +448,8 @@ contains
 
   subroutine get_impl_rad_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
-    use BATL_size,  ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_lib,    ONLY: message_pass_cell
+    use BATL_size,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,  ONLY: State_VGB, UseElectronPressure, nWave, WaveFirst_, &
          WaveLast_
     use ModConst,    ONLY: cBoltzmann
@@ -679,6 +689,25 @@ contains
 
     end do
 
+    if(UseAccurateRadiation)then
+       call message_pass_cell(nDiff, DiffSemiCoef_VGB)
+
+       do iImplBlock = 1, nImplBLK
+          iBlock = impl2iBLK(iImplBlock)
+
+          do iDim = 1, nDim
+             Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
+             do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
+
+                DiffCoef_VFDB(:,i,j,k,iDim,iBlock) = &
+                     0.5*( DiffSemiCoef_VGB(:,i-Di,j-Dj,k-Dk,iBlock) &
+                     +     DiffSemiCoef_VGB(:,i,j,k,iBlock) )
+             end do; end do; end do
+          end do
+       end do
+
+       RETURN
+    end if
 
     ! Message pass to fill in ghost cells 
     call message_pass_dir(iDirMin=1,iDirMax=3,Width=1, &
@@ -1070,101 +1099,165 @@ contains
 
   subroutine get_rad_diffusion_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
-    use ModGeometry, ONLY: vInv_CB
-    use ModImplicit, ONLY: nVarSemi, iTeImpl
+    use BATL_lib,        ONLY: store_face_flux, IsCartesian, CellFace_DB, &
+         CellFace_DFB, CellSize_DB
+    use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModFaceGradient, ONLY: set_block_field3
+    use ModGeometry,     ONLY: vInv_CB
+    use ModImplicit,     ONLY: nVarSemi, iTeImpl, FluxImpl_VXB, FluxImpl_VYB, &
+         FluxImpl_VZB
     use ModLinearSolver, ONLY: pDotADotPPe, UsePDotADotP
-    use ModMain,     ONLY: nI, nJ, nK
-    use ModParallel, ONLY: NeiLev, NOBLK
+    use ModMain,         ONLY: nI, nJ, nK
+    use ModParallel,     ONLY: NeiLev, NOBLK
+    use ModNumConst,     ONLY: i_DD
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,-1:nI+2,-1:nJ+2,-1:nK+2)
     real, intent(out)   :: Rhs_VC(nVarSemi,nI,nJ,nK)
     logical, intent(in) :: IsLinear
 
-    real :: Te, EnergyExchange
-    integer :: i, j, k, iDiff, iRelax, iPoint, iVar
+    real :: InvDcoord_D(MaxDim)
+    real :: Area, EnergyExchange
+    integer :: iDim, i, j, k, Di, Dj, Dk, iDiff, iRelax, iPoint, iVar
+
+    real :: StateImpl1_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real :: StateImpl_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+
+    integer, parameter:: &
+         jMin = 1 - 2*min(1,nJ-1), jMax = nJ + 2*min(1,nJ-1), &
+         kMin = 1 - 2*min(1,nK-1), kMax = nK + 2*min(1,nK-1)
 
     character(len=*), parameter :: NameSub='get_rad_diffusion_rhs'
     !--------------------------------------------------------------------------
 
-    if(NeiLev(1,iBlock)==1) call correct_left_ghostcell(1,0,0,1,nJ,1,nK)
-    if(NeiLev(2,iBlock)==1) call correct_right_ghostcell(1,nI+1,nI+1,1,nJ,1,nK)
-    if(nJ > 1)then
-       if(NeiLev(3,iBlock)==1) &
-            call correct_left_ghostcell(2,1,nI,0,0,1,nK)
-       if(NeiLev(4,iBlock)==1) &
-            call correct_right_ghostcell(2,1,nI,nJ+1,nJ+1,1,nK)
-    end if
-    if(nK > 1)then
-       if(NeiLev(5,iBlock)==1) &
-            call correct_left_ghostcell(3,1,nI,1,nJ,0,0)
-       if(NeiLev(6,iBlock)==1) &
-            call correct_right_ghostcell(3,1,nI,1,nJ,nK+1,nK+1)
-    end if
+    if(UseAccurateRadiation)then
 
-    Rhs_VC = 0.0
+       InvDcoord_D = 1.0/CellSize_DB(:,iBlock)
 
-    if(nDim == 1)then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          do iDiff = iDiffMin, iDiffMax
-             iVar = iDiff_I(iDiff)
-             Rhs_VC(iVar,i,j,k) = &
-                  vInv_CB(i,j,k,iBlock) * ( &
-                  + DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)* &
-                  (   StateImpl_VG(iVar,i+1,j,k)   &
-                  -   StateImpl_VG(iVar,i  ,j,k))  &
-                  - DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
-                  (   StateImpl_VG(iVar,i  ,j,k)   &
-                  -   StateImpl_VG(iVar,i-1,j,k)) )
+       do iDiff = iDiffMin, iDiffMax
+          iVar = iDiff_I(iDiff)
+
+          do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+             StateImpl_G(i,j,k) = StateImpl_VG(iVar,i,j,k)
+          end do; end do; end do
+
+          call set_block_field3(iBlock, 1, StateImpl1_G, StateImpl_G)
+
+          do iDim = 1, nDim
+             if(IsCartesian) Area = CellFace_DB(iDim,iBlock)
+             Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+             do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
+                if(.not.IsCartesian) Area = CellFace_DFB(iDim,i,j,k,iBlock)
+
+                FluxImpl_VFD(iVar,i,j,k,iDim) = &
+                     -Area*DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock) &
+                     *(StateImpl_G(i,j,k) - StateImpl_G(i-Di,j-Dj,k-Dk)) &
+                     *InvDcoord_D(iDim)
+             end do; end do; end do
           end do
-       end do; end do; end do
-    elseif(nDim == 2)then
-       ! No flux from Z direction
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          do iDiff = iDiffMin, iDiffMax
-             iVar = iDiff_I(iDiff)
-             Rhs_VC(iVar,i,j,k) = &
-                  vInv_CB(i,j,k,iBlock) * ( &
-                  + DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)* &
-                  (   StateImpl_VG(iVar,i+1,j,k)   &
-                  -   StateImpl_VG(iVar,i  ,j,k))  &
-                  - DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
-                  (   StateImpl_VG(iVar,i  ,j,k)   &
-                  -   StateImpl_VG(iVar,i-1,j,k))  &
-                  + DiffCoef_VFDB(iDiff,i,j+1,k,2,iBlock)* &
-                  (   StateImpl_VG(iVar,i,j+1,k)   &
-                  -   StateImpl_VG(iVar,i,j  ,k))  &
-                  - DiffCoef_VFDB(iDiff,i,j  ,k,2,iBlock)* &
-                  (   StateImpl_VG(iVar,i,j  ,k)   &
-                  -   StateImpl_VG(iVar,i,j-1,k)) )
-          end do
-       end do; end do; end do
+       end do
+
+       ! Store the fluxes at resolution changes for restoring conservation
+       call store_face_flux(iBlock, nVarSemi, FluxImpl_VFD, &
+            FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
+
+       Rhs_VC = 0.0
+
+       do iDim = 1, nDim
+          Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do iDiff = iDiffMin, iDiffMax
+                iVar = iDiff_I(iDiff)
+                Rhs_VC(iVar,i,j,k) = Rhs_VC(iVar,i,j,k)-vInv_CB(i,j,k,iBlock) &
+                     *(FluxImpl_VFD(iVar,i+Di,j+Dj,k+Dk,iDim) &
+                     - FluxImpl_VFD(iVar,i,j,k,iDim))
+             end do
+          end do; end do; end do
+       end do
+
     else
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          do iDiff = iDiffMin, iDiffMax
-             iVar = iDiff_I(iDiff)
-             Rhs_VC(iVar,i,j,k) = &
-                  vInv_CB(i,j,k,iBlock) * ( &
-                  DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)*   &
-                  (   StateImpl_VG(iVar,i+1,j,k)   &
-                  -   StateImpl_VG(iVar,i  ,j,k))  &
-                  - DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
-                  (   StateImpl_VG(iVar,i  ,j,k)   &
-                  -   StateImpl_VG(iVar,i-1,j,k))  &
-                  + DiffCoef_VFDB(iDiff,i,j+1,k,2,iBlock)* &
-                  (   StateImpl_VG(iVar,i,j+1,k)   &
-                  -   StateImpl_VG(iVar,i,j  ,k))  &
-                  - DiffCoef_VFDB(iDiff,i,j  ,k,2,iBlock)* &
-                  (   StateImpl_VG(iVar,i,j  ,k)   &
-                  -   StateImpl_VG(iVar,i,j-1,k))  &
-                  + DiffCoef_VFDB(iDiff,i,j,k+1,3,iBlock)* &
-                  (   StateImpl_VG(iVar,i,j,k+1)   &
-                  -   StateImpl_VG(iVar,i,j,k  ))  &
-                  - DiffCoef_VFDB(iDiff,i,j,k  ,3,iBlock)* &
-                  (   StateImpl_VG(iVar,i,j,k  )   &
-                  -   StateImpl_VG(iVar,i,j,k-1)) )
-          end do
-       end do; end do; end do
+
+       if(NeiLev(1,iBlock)==1) call correct_left_ghostcell(1,0,0,1,nJ,1,nK)
+       if(NeiLev(2,iBlock)==1) &
+            call correct_right_ghostcell(1,nI+1,nI+1,1,nJ,1,nK)
+       if(nJ > 1)then
+          if(NeiLev(3,iBlock)==1) &
+               call correct_left_ghostcell(2,1,nI,0,0,1,nK)
+          if(NeiLev(4,iBlock)==1) &
+               call correct_right_ghostcell(2,1,nI,nJ+1,nJ+1,1,nK)
+       end if
+       if(nK > 1)then
+          if(NeiLev(5,iBlock)==1) &
+               call correct_left_ghostcell(3,1,nI,1,nJ,0,0)
+          if(NeiLev(6,iBlock)==1) &
+               call correct_right_ghostcell(3,1,nI,1,nJ,nK+1,nK+1)
+       end if
+
+       Rhs_VC = 0.0
+
+       if(nDim == 1)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do iDiff = iDiffMin, iDiffMax
+                iVar = iDiff_I(iDiff)
+                Rhs_VC(iVar,i,j,k) = &
+                     vInv_CB(i,j,k,iBlock) * ( &
+                     + DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)* &
+                     (   StateImpl_VG(iVar,i+1,j,k)   &
+                     -   StateImpl_VG(iVar,i  ,j,k))  &
+                     - DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
+                     (   StateImpl_VG(iVar,i  ,j,k)   &
+                     -   StateImpl_VG(iVar,i-1,j,k)) )
+             end do
+          end do; end do; end do
+       elseif(nDim == 2)then
+          ! No flux from Z direction
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do iDiff = iDiffMin, iDiffMax
+                iVar = iDiff_I(iDiff)
+                Rhs_VC(iVar,i,j,k) = &
+                     vInv_CB(i,j,k,iBlock) * ( &
+                     + DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)* &
+                     (   StateImpl_VG(iVar,i+1,j,k)   &
+                     -   StateImpl_VG(iVar,i  ,j,k))  &
+                     - DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
+                     (   StateImpl_VG(iVar,i  ,j,k)   &
+                     -   StateImpl_VG(iVar,i-1,j,k))  &
+                     + DiffCoef_VFDB(iDiff,i,j+1,k,2,iBlock)* &
+                     (   StateImpl_VG(iVar,i,j+1,k)   &
+                     -   StateImpl_VG(iVar,i,j  ,k))  &
+                     - DiffCoef_VFDB(iDiff,i,j  ,k,2,iBlock)* &
+                     (   StateImpl_VG(iVar,i,j  ,k)   &
+                     -   StateImpl_VG(iVar,i,j-1,k)) )
+             end do
+          end do; end do; end do
+       else
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do iDiff = iDiffMin, iDiffMax
+                iVar = iDiff_I(iDiff)
+                Rhs_VC(iVar,i,j,k) = &
+                     vInv_CB(i,j,k,iBlock) * ( &
+                     DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)*   &
+                     (   StateImpl_VG(iVar,i+1,j,k)   &
+                     -   StateImpl_VG(iVar,i  ,j,k))  &
+                     - DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
+                     (   StateImpl_VG(iVar,i  ,j,k)   &
+                     -   StateImpl_VG(iVar,i-1,j,k))  &
+                     + DiffCoef_VFDB(iDiff,i,j+1,k,2,iBlock)* &
+                     (   StateImpl_VG(iVar,i,j+1,k)   &
+                     -   StateImpl_VG(iVar,i,j  ,k))  &
+                     - DiffCoef_VFDB(iDiff,i,j  ,k,2,iBlock)* &
+                     (   StateImpl_VG(iVar,i,j  ,k)   &
+                     -   StateImpl_VG(iVar,i,j-1,k))  &
+                     + DiffCoef_VFDB(iDiff,i,j,k+1,3,iBlock)* &
+                     (   StateImpl_VG(iVar,i,j,k+1)   &
+                     -   StateImpl_VG(iVar,i,j,k  ))  &
+                     - DiffCoef_VFDB(iDiff,i,j,k  ,3,iBlock)* &
+                     (   StateImpl_VG(iVar,i,j,k  )   &
+                     -   StateImpl_VG(iVar,i,j,k-1)) )
+             end do
+          end do; end do; end do
+
+       end if
 
     end if
 
@@ -1426,6 +1519,8 @@ contains
 
   subroutine add_jacobian_rad_diff(iBlock, Jacobian_VVCI)
 
+    use BATL_lib,    ONLY: IsCartesian, DiLevelNei_IIIB, Unset_, CellSize_DB, &
+         CellFace_DB, CellFace_DFB
     use ModGeometry, ONLY: vInv_CB, dx_BLK, dy_BLK, dz_BLK, &
          fAx_BLK, fAy_BLK, fAz_BLK
     use ModImplicit, ONLY: TypeSemiImplicit, iTeImpl, UseFullImplicit, &
@@ -1433,7 +1528,6 @@ contains
          Stencil3_, Stencil4_, Stencil5_, Stencil6_, Stencil7_, UseNoOverlap
     use ModMain,     ONLY: nI, nJ, nK, TypeBc_I
     use ModNumConst, ONLY: i_DD
-    use BATL_lib,    ONLY:  DiLevelNei_IIIB, Unset_, CellSize_DB
     use ModPhysics,  ONLY: InvClight
 
     integer, intent(in) :: iBlock
@@ -1441,6 +1535,7 @@ contains
 
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax, iPoint
     real :: DiffLeft, DiffRight, RelaxCoef, PlanckWeight
+    real :: InvDcoord_D(MaxDim), AreaLeft, AreaRight
     real :: Dxyz_D(MaxDim), Area_D(MaxDim), Coeff0, Coeff
     !--------------------------------------------------------------------------
 
@@ -1489,39 +1584,88 @@ contains
     ! are not calculated by the general algorithm, these are for the diffusion
     ! operators the same as the semi-implicit jacobian.
 
-    Coeff = 1.0
-    Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
-    Area_D = (/fAx_BLK(iBlock), fAy_BLK(iBlock), fAz_BLK(iBlock)/)
-    do iDim = 1, nDim
-       if(UseFullImplicit) Coeff = -Area_D(iDim)/Dxyz_D(iDim)
-       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          do iDiff = iDiffMin, iDiffMax
-             iVar = iDiff_I(iDiff)
+    if(UseAccurateRadiation)then
 
-             DiffLeft = Coeff*vInv_CB(i,j,k,iBlock) &
-                  *DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock)
-             DiffRight = Coeff*vInv_CB(i,j,k,iBlock) &
-                  *DiffCoef_VFDB(iDiff,i+Di,j+Dj,k+Dk,iDim,iBlock)
-             Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
-                  Jacobian_VVCI(iVar,iVar,i,j,k,1) - (DiffLeft + DiffRight)
-
-             if(UseNoOverlap)then
-                if(  iDim==1.and.i==1  .or. &
-                     iDim==2.and.j==1  .or. &
-                     iDim==3.and.k==1 )       DiffLeft = 0.0
-                if(  iDim==1.and.i==nI .or. &
-                     iDim==2.and.j==nJ .or. &
-                     iDim==3.and.k==nK)       DiffRight = 0.0
+       Coeff = 1.0; if(UseFullImplicit) Coeff = -1.0
+       InvDcoord_D = 1/CellSize_DB(:,iBlock)
+       do iDim = 1, nDim
+          if(IsCartesian)then
+             AreaLeft  = CellFace_DB(iDim,iBlock)
+             AreaRight = CellFace_DB(iDim,iBlock)
+          end if
+          Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(.not.IsCartesian)then ! rz-geometry only
+                AreaLeft  = CellFace_DFB(iDim,i,j,k,iBlock)
+                AreaRight = CellFace_DFB(iDim,i+Di,j+Dj,k+Dk,iBlock)
              end if
+             do iDiff = iDiffMin, iDiffMax
+                iVar = iDiff_I(iDiff)
 
-             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) = &
-                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) + DiffLeft
-             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
-                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) + DiffRight
-          end do
-       end do; end do; end do
-    end do
+                DiffLeft = Coeff*vInv_CB(i,j,k,iBlock)*AreaLeft &
+                     *DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock) &
+                     *InvDcoord_D(iDim)
+                DiffRight = Coeff*vInv_CB(i,j,k,iBlock)*AreaRight &
+                     *DiffCoef_VFDB(iDiff,i+Di,j+Dj,k+Dk,iDim,iBlock) &
+                     *InvDcoord_D(iDim)
+
+                Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
+                     Jacobian_VVCI(iVar,iVar,i,j,k,1) - (DiffLeft + DiffRight)
+
+                if(UseNoOverlap)then
+                   if(  iDim==1.and.i==1  .or. &
+                        iDim==2.and.j==1  .or. &
+                        iDim==3.and.k==1 )       DiffLeft = 0.0
+                   if(  iDim==1.and.i==nI .or. &
+                        iDim==2.and.j==nJ .or. &
+                        iDim==3.and.k==nK)       DiffRight = 0.0
+                end if
+
+                Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) = &
+                     Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) + DiffLeft
+                Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
+                     Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) + DiffRight
+             end do
+          end do; end do; end do
+       end do
+
+    else
+
+       Coeff = 1.0
+       Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
+       Area_D = (/fAx_BLK(iBlock), fAy_BLK(iBlock), fAz_BLK(iBlock)/)
+       do iDim = 1, nDim
+          if(UseFullImplicit) Coeff = -Area_D(iDim)/Dxyz_D(iDim)
+          Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             do iDiff = iDiffMin, iDiffMax
+                iVar = iDiff_I(iDiff)
+
+                DiffLeft = Coeff*vInv_CB(i,j,k,iBlock) &
+                     *DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock)
+                DiffRight = Coeff*vInv_CB(i,j,k,iBlock) &
+                     *DiffCoef_VFDB(iDiff,i+Di,j+Dj,k+Dk,iDim,iBlock)
+                Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
+                     Jacobian_VVCI(iVar,iVar,i,j,k,1) - (DiffLeft + DiffRight)
+
+                if(UseNoOverlap)then
+                   if(  iDim==1.and.i==1  .or. &
+                        iDim==2.and.j==1  .or. &
+                        iDim==3.and.k==1 )       DiffLeft = 0.0
+                   if(  iDim==1.and.i==nI .or. &
+                        iDim==2.and.j==nJ .or. &
+                        iDim==3.and.k==nK)       DiffRight = 0.0
+                end if
+
+                Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) = &
+                     Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) + DiffLeft
+                Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
+                     Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) + DiffRight
+             end do
+          end do; end do; end do
+       end do
+
+    end if
 
     ! For now the boundary conditions are only applied when
     ! the block edges are not neglected (e.g. for HYPRE preconditioner)

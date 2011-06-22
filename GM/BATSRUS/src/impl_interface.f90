@@ -305,7 +305,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModProcMH, ONLY: iProc
   use ModImplicit, ONLY: StateSemi_VGB, nw, nVarSemi, nImplBlk, impl2iblk, &
        TypeSemiImplicit, iVarSemiMin, iVarSemiMax, nVarSemi, &
-       FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
+       FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB, UseAccurateRadiation
   use ModLinearSolver, ONLY: UsePDotADotP
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
@@ -338,9 +338,14 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   ! Message pass to fill in ghost cells 
   select case(TypeSemiImplicit)
   case('radiation', 'radcond', 'cond')
-     call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, SendCorners=.false.,&
-          ProlongOrder=1, nVar=nVarSemi, Sol_VGB=StateSemi_VGB, &
-          restrictface=.true.)
+     if(UseAccurateRadiation)then
+        call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=2, &
+             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+     else
+        call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, &
+             SendCorners=.false., ProlongOrder=1, nVar=nVarSemi, &
+             Sol_VGB=StateSemi_VGB, restrictface=.true.)
+     end if
   case('parcond','resistivity')
      call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=2, &
           nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
@@ -371,7 +376,8 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
      end select
   end do
 
-  if(TypeSemiImplicit == 'parcond' .or. TypeSemiImplicit == 'resistivity')then
+  if(TypeSemiImplicit == 'parcond' .or. TypeSemiImplicit == 'resistivity' &
+       .or. UseAccurateRadiation)then
      call message_pass_face(nVarSemi, FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
 
      do iImplBlock = 1, nImplBLK
@@ -404,7 +410,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
        nImplBlk, impl2iblk, &
        TypeSemiImplicit, UseSplitSemiImplicit, &
        iVarSemiMin, iVarSemiMax, iVarSemi, nVarSemi, &
-       ImplCoeff, DconsDsemi_VCB, KrylovType
+       ImplCoeff, DconsDsemi_VCB, KrylovType, UseAccurateRadiation
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
@@ -443,15 +449,22 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   select case(TypeSemiImplicit)
   case('radiation', 'radcond', 'cond')
 
-     !\
-     ! Initialize the computation of (p \cdot A \cdot P) form
-     UsePDotADotP = KrylovType == 'CG'
+     if(UseAccurateRadiation)then
+        UsePDotADotP = .false.
 
-     pDotADotPPe = 0.0
+        call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=2, &
+             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+     else
+        !\
+        ! Initialize the computation of (p \cdot A \cdot P) form
+        UsePDotADotP = KrylovType == 'CG'
 
-     call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, SendCorners=.false.,&
-          ProlongOrder=1, nVar=nVarSemi, Sol_VGB=StateSemi_VGB, &
-          restrictface=.true.)
+        pDotADotPPe = 0.0
+
+        call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, &
+             SendCorners=.false., ProlongOrder=1, nVar=nVarSemi, &
+             Sol_VGB=StateSemi_VGB, restrictface=.true.)
+     end if
   case('parcond','resistivity')
      call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=2, &
           nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
@@ -505,7 +518,8 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
   end do
 
-  if(TypeSemiImplicit == 'parcond' .or. TypeSemiImplicit == 'resistivity')then
+  if(TypeSemiImplicit == 'parcond' .or. TypeSemiImplicit == 'resistivity' &
+       .or. UseAccurateRadiation)then
      call message_pass_face(nVarSemi, FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
 
      do iImplBlock = 1, nImplBLK
