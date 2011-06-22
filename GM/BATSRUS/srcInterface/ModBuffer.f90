@@ -74,7 +74,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
                            WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, &
                            UseMultiSpecies
   use CON_coupler,   ONLY: Grid_C, DoCoupleVar_V, iVar_V, nVarCouple,&
-                           Mhd_, ElectronPressure_, AnisoPressure_, Wave_, &
+                           Bfield_, ElectronPressure_, AnisoPressure_, Wave_,&
                            MultiFluid_, MultiSpecie_, &
                            RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, &
                            BxCouple_, BzCouple_, PeCouple_, PparCouple_, &
@@ -141,14 +141,14 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
      State_V(Ux_:Uz_) = transform_velocity(Time_Simulation,&
           State_V(Ux_:Uz_), XyzSource_D * No2Si_V(UnitX_), &
           TypeCoordSource, TypeCoordSystem)
-     if(DoCoupleVar_V(Mhd_)) &
+     if(DoCoupleVar_V(Bfield_)) &
           State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), SourceTarget_DD)
   end if
 
   !Convert from SI units to normalized units
   State_V(rho_)      = State_V(rho_)   *Si2No_V(UnitRho_)
   State_V(Ux_:Uz_)   = State_V(Ux_:Uz_)*Si2No_V(UnitU_)
-  if(DoCoupleVar_V(Mhd_)) &
+  if(DoCoupleVar_V(Bfield_)) &
        State_V(Bx_:Bz_)   = State_V(Bx_:Bz_)*Si2No_V(UnitB_)
 
   if(DoCoupleVar_V(Wave_))State_V(WaveFirst_:WaveLast_) = &
