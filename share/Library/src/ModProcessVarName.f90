@@ -96,14 +96,15 @@ module ModProcessVarName
   ! -------------------------------------------------------------------------
 contains
 
-  subroutine process_var_name(nVarName, NameVar_V, nDensity, nSpeed)
+  subroutine process_var_name(nVarName, NameVar_V,  &
+       nDensity, nSpeed, nP, nPpar, nWave, nMaterial)
 
     use ModUtilities,  ONLY: lower_case
 
     integer,intent(in)                :: nVarName
     character(len=*), intent(inout)   :: NameVar_V(nVarName)
-    integer,intent(out)               :: nDensity, nSpeed 
-
+    integer,intent(out)               :: nDensity, nSpeed, nP, nPpar
+    integer,intent(out)               :: nWave, nMaterial
    ! DESCRIPTION:
     ! ------------
     ! 1. Creates standard names and a dictionary for each standard name.
@@ -136,7 +137,9 @@ contains
 
     character(len=*), parameter:: NameSub = 'process_var_name'
     ! ------------------------------------------------------------------------
-    nDistinctSubstanceVar_I(:) = 1
+    nDistinctSubstanceVar_I(:) = 0
+    nWave = 0
+    nMaterial = 0
 
     ! create standard names and dictionary arrays
     allocate(SubstanceStandardName_II(nSubstance, nVarPerSubstance))
@@ -163,11 +166,9 @@ contains
        do iVar = 1, nVarPerSubstance 
           call find_substance_replace_name
           if(IsFoundVar) then
-             ! Count how many distinct densities and velocities are present
-             if(iSubstanceFound /= Main_) then
-                nDistinctSubstanceVar_I(iVar) = &
-                     nDistinctSubstanceVar_I(iVar) +1 
-             end if
+             ! Count how many distinct substance variables are present
+             nDistinctSubstanceVar_I(iVar) = &
+                  nDistinctSubstanceVar_I(iVar) +1 
              CYCLE NAMELOOP
           end if
        end do
@@ -175,9 +176,14 @@ contains
        ! variable name may correspond to numbered wave/material
        ! These names are created  in BATSRUS:MH_set_parameters 
        ! and need not be changed
-       if ( (lge(NameVarIn, 'i01') .and. lle(NameVarIn, 'i99')) .or. &
-            (lge(NameVarIn, 'm01') .and. lle(NameVarIn, 'm99')) ) then          
-          !Do nothing
+       if (lge(NameVarIn, 'i01') .and. lle(NameVarIn, 'i99')) then
+          nWave = nWave + 1
+          IsFoundVar = .true.
+          CYCLE NAMELOOP
+       end if
+       
+       if (lge(NameVarIn, 'm01') .and. lle(NameVarIn, 'm99')) then          
+          nMaterial = nMaterial + 1
           IsFoundVar = .true.
           CYCLE NAMELOOP
        end if
@@ -195,7 +201,9 @@ contains
    
     nDensity = nDistinctSubstanceVar_I(Rho_)
     nSpeed   = nDistinctSubstanceVar_I(RhoUx_)
-      
+    nP       = nDistinctSubstanceVar_I(P_)
+    nPpar    = nDistinctSubstanceVar_I(Ppar_)
+
     deallocate(Dictionary_III)
     deallocate(SubstanceStandardName_II)
 
