@@ -737,17 +737,18 @@ contains
 
        end if
 
-    case('coronatoih','buffergrid')
+    case('buffergrid')
        ! REVISION: June  2011 - R. Oran - generalized.   
-       ! Inner boundary conditions derived from coupling to another component using
-       ! a buffer grid. Can be used to couple any two  BATSRUS components with any
-       ! number of variables.
-       ! Note: the case 'coronatoih' is kept for backwoards compatability.
-
-       ! Both components may or may not include electron pressure, anisotropic
-       ! pressure, alfven waves, multifluid / species.
+       ! Inner boundary conditions based on coupling to another BATSRUS
+       ! component through a buffer grid. 
+       
+       ! Allows specifying boundary conditions for additional variables
+       ! that were not passed through the buffer.
        ! Coupling flags for these options are set in CON_couple_all.f90.
 
+       ! Note: the older case 'coronatoih' is redirected to here for
+       ! backwards compatability.
+    
        !Get interpolated values from buffer grid:
        call get_from_spher_buffer_grid(&
             FaceCoords_D,nVar,FaceState_V)
@@ -756,11 +757,10 @@ contains
        if(UseB0)VarsGhostFace_V(Bx_:Bz_)=VarsGhostFace_V(Bx_:Bz_) - B0Face_D
 
        if(.not. IsFullyCoupledFluid .and. nFluid > 1) then
-          ! Only variable associated with the main MHD plasma are coupled through the
-          ! buffer grid. BC's for fluids must be specified somehow.
+          ! Only variable associated with the main MHD plasma are passed
+          ! through the buffer grid. BC's for fluids must be specified somehow.
 
           if (DoOhNeutralBc) then   
-            
              ! Get face_bcs for neutrals in the outerheliosphere
              ! (based on M. Opher)
              ! Pop I is going through the inner BCs
@@ -791,7 +791,9 @@ contains
              end do
 
           else 
-             call CON_stop('ERROR in TypeBcs: multifluid is used but BCs not specified.')
+             ! If this component is multyfluid and coupled to a single-fluid,
+             ! stop with an error
+             call CON_stop(NameSub//': BCs for multifluid must be specified.')
           end if
        end if
 
