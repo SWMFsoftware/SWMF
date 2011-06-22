@@ -225,7 +225,7 @@ box                  NameArea
 20.
 
 #INNERBOUNDARY
-coronatoih
+buffergrid
 
 #HELIOBUFFERGRID
 7.5
