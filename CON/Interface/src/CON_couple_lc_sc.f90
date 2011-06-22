@@ -57,9 +57,6 @@ module CON_couple_lc_sc
   integer :: nGenRGridLc
   real    :: DeltaGen
 
-  ! Number of variables to be coupled
-  integer :: nVarCouple
-
 contains
   !===============================================================!
   subroutine couple_lc_sc_init

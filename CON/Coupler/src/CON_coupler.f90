@@ -22,9 +22,11 @@ module CON_coupler
   use ModUtilities, ONLY: check_allocate
   implicit none
 
+  SAVE
+
   !PUBLIC TYPES:
   public :: CoordSystemType ! Extend grid descriptor type with coordinate info
-  integer, parameter :: lTypeCoord=3
+  integer, parameter :: lTypeCoord    = 3
   integer, parameter :: lTypeGeometry = 15
   integer, parameter :: lNameVar      = 200
 
@@ -41,7 +43,7 @@ module CON_coupler
   !PUBLIC DATA MEMBERS:
   public :: Grid_C          ! Store the coordinate information for components
 
-  type(CoordSystemType), target, save :: Grid_C(MaxComp+3)
+  type(CoordSystemType), target :: Grid_C(MaxComp+3)
 
   public :: Couple_CC           ! Frequency of couplings
 
@@ -58,9 +60,9 @@ module CON_coupler
 
   public :: iCompCoupleOrder_II ! The order of couplings
 
+  ! This is the default order based on the propagation of information
+  ! from component to component
   integer :: iCompCoupleOrder_II(2,MaxCouple) = reshape ( (/&
-       ! This is the default order based on the propagation of information
-       ! from component to component
        LC_, SC_, &
        SC_, LC_, &
        SC_, IH_, & 
@@ -92,17 +94,65 @@ module CON_coupler
 
   logical :: DoCoupleOnTime_C(MaxComp) = .true.
 
+  integer, public :: iCompSourceCouple, iCompTargetCouple
+
+  ! no. of variables to be coupled by any pair of source and target components
+  integer, public :: nVarCouple, nVarCouple_CC(MaxComp,MaxComp)
+
+  ! no. of state variable groups for which coupling is implemented
+  integer,parameter,public     :: nCoupleVarGroup = 7
+
+  ! named indices for variable groups for coupling
+  integer,parameter,public :: &
+       Mhd_               = 1, &
+       AnisoPressure_     = 2, &
+       ElectronPressure_  = 3, &
+       Wave_              = 4, &
+       MultiFluid_        = 5, &
+       MultiSpecie_       = 6, &
+       Material_          = 7
+
+  logical, public :: &
+       DoCoupleVar_V(nCoupleVarGroup) = .false. , &
+       DoCoupleVar_VCC(nCoupleVarGroup,MaxComp,MaxComp) = .false.
+
+  ! no. of variable indices known to the coupler
+  integer,parameter, public  :: nVarIndexCouple = 12
+
+  ! Fixed indices for mapping actual variable indices
+  integer,parameter,public ::     &
+       RhoCouple_           = 1,  &
+       RhoUxCouple_         = 2,  &
+       RhoUzCouple_         = 3,  &
+       BxCouple_            = 4,  &
+       BzCouple_            = 5,  &
+       PCouple_             = 6,  &
+       PeCouple_            = 7,  &
+       PparCouple_          = 8,  &
+       WaveFirstCouple_     = 9,  &
+       WaveLastCouple_      = 10, &
+       MaterialFirstCouple_ = 11, &
+       MaterialLastCouple_  = 12
+
+  ! vector storing the actual values of variable indices inside a
+  ! coupled component 
+  integer, public  :: &
+       iVar_V(nVarIndexCouple) = 0, &
+       iVar_VCC(nVarIndexCouple,MaxComp, MaxComp) = 0
+
   !PUBLIC MEMBER FUNCTIONS:
-  public :: set_coord_system      !Sets coordinate information for a component
-  public :: gen_to_stretched      !\ Transform generalized coordinates to
-  public :: stretched_to_gen      !  stretched ones and vice versa for 
-                                  !/  non-uniform structured grid
+  public :: set_coord_system    ! Sets coordinate information for a component
+  public :: gen_to_stretched    ! Transform generalized coordinates to
+  public :: stretched_to_gen    ! stretched ones and vice versa for 
+  !                               non-uniform structured grid
 
-  public :: init_coupler          !Initializes grids and router
-  public :: set_router            !Presets the router indexes
-  public :: couple_comp           !Couple two components via global message pass
+  public :: init_coupler        ! Initializes grids and router
+  public :: set_router          ! Presets the router indexes
+  public :: couple_comp         ! Couple two components via global message pass
 
-  public :: check_couple_symm     !Check if coupling is symmetric
+  public :: check_couple_symm   ! Check if coupling is symmetric
+  public :: set_couple_var_info ! Determine which variables to couple and
+  !                               find their indices in each component.
 
   !REVISION HISTORY:
   ! 07/22/03 Gabor Toth <gtoth@umich.edu> - initial prototype 
@@ -117,6 +167,9 @@ module CON_coupler
   ! 08/10/04 I.Sokolov - to avoid an inproper use of init_coord_system_all
   !                      which destroys the Grid_C structure. 
   ! 01/30/10 G. Toth - added nVar and NameVar to Grid_C
+  ! 04/07/11 R. Oran - added subroutine set_couple_var_info for determining
+  !                    which variables should be coupled and finding their
+  !                    indices in the source and target components.
   !EOP
 
   character(len=*), parameter, private :: NameMod='CON_coupler'
@@ -134,6 +187,8 @@ contains
        NameVar,       &! variable names
        iProc0In,      &
        iCommIn) 
+
+    use ModUtilities, ONLY: lower_case
 
     character(len=*), parameter :: NameSub='set_coord_system'
 
@@ -156,7 +211,7 @@ contains
     integer :: iProc0, iComm, iError
     logical :: IsRoot
     type(CoordSystemType), pointer :: ThisGrid
-    logical, save:: DoInit=.true.
+    logical :: DoInit=.true.
     !-------------------------------------------------------------!
     if(DoInit)call init_coord_system_all
     if(present(iProc0In).and.present(iCommIn))then
@@ -191,7 +246,10 @@ contains
 
     if(present(NameVar))then
        ! Broadcast list of variable names
-       if(IsRoot) ThisGrid%NameVar = NameVar
+       if(IsRoot) then
+          ThisGrid%NameVar = NameVar
+          call lower_case(ThisGrid%NameVar)
+       end if
        call MPI_bcast(ThisGrid%NameVar, lNameVar, MPI_CHARACTER, &
             iProc0, iComm, iError)
     end if
@@ -336,7 +394,7 @@ contains
     !   (which for the stretched grids are usually
     !   nothing but the grid point index)
     !EOP
-    
+
     real:: OneIfExtrapolate = 1.0
     !------------------------------!
     if(present(DoExtrapolate))then
@@ -465,8 +523,388 @@ contains
     if(DoTest)&
          call test_global_message_pass(GridID)
   end subroutine set_grid_descriptor
+  !========================================================================== 
+  subroutine set_couple_var_info(iCompSource, iCompTarget)
+
+    ! Determine coupling flags and variable indices used for accesing
+    ! the buffer grid data. 
+
+    ! Handle coupling of any two sets of variables  
+    ! with a minimal no. of assumptions about variable indices. 
+    ! Allows coupling two components with/without: 
+    ! Ppar, Pe, multi/single fluid/specie, waves. 
+
+    ! REVISION HISTORY:    
+    ! Feb 2011 - R. Oran - initial version.
+
+    use ModProcessVarName,  ONLY: process_var_name, nVarMax
+    use ModUtilities,       ONLY: split_string, join_string
+
+    integer,intent(in)             :: iCompSource, iCompTarget
+    character(len=1500)            :: NameVarSource, NameVarTarget
+    character(len=15),allocatable  :: NameVarSource_V(:), NameVarTarget_V(:)
+    character(len=15)              :: NameList_V(nVarMax)
+    logical,allocatable            :: IsFoundVarSource_V(:)
+    integer      :: nVarSource, nVarTarget, iVarSource, iVarTarget
+    integer      :: nDensitySource, nDensityTarget, nDensityCouple
+    integer      :: nSpeedSource, nSpeedTarget, nSpeedCouple
+    integer      :: nPSource, nPTarget, nPCouple
+    integer      :: nPparSource, nPparTarget, nPparCouple
+    integer      :: nWaveSource, nWaveTarget, nWaveCouple 
+    integer      :: nMaterialSource, nMaterialTarget, nMaterialCouple      
+    logical      :: DoTest, DoTestMe
+
+    character(len=*), parameter    :: NameSub = NameMod//'::set_couple_var_info'
+    !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    if (DoTest .and. i_proc() == 0 ) write(*,*) NameSub, ' started.'
+
+    iCompSourceCouple = iCompSource
+    iCompTargetCouple = iCompTarget
+
+    ! The following coupling flags are set to true if both source and target
+    ! have the relevant state variables, see below. 
+    ! NOTE: If both components have multiple densities, all species/fluids state
+    ! variables should be coupled, hence a further check is made to ensure that
+    ! the fluids/species in both components are identical.        
+
+    DoCoupleVar_V = .false.
+    ! The elements of DoCoupleVar_V will be set to true if:
+    ! Mhd_               :  Both have a magnetic field.
+    ! AnisoPressure_     :  Both use anisotropic pressure.
+    ! ElectronPressure_  :  Both use electron pressure.
+    ! Wave_              :  Both use the same # of waves.
+    ! MultiFluid_        :  Both use the same neutral fluids
+    ! MultiSpecie_       :  Both use the same species     
+    ! Material_          :  Both use the same # of materials
+
+    nDensitySource  = 0 ; nDensityTarget  = 0 ; nDensityCouple  = 0
+    nSpeedSource    = 0 ; nSpeedTarget    = 0 ; nSpeedCouple    = 0
+    nPSource        = 0 ; nPTarget        = 0 ; nPCouple        = 0
+    nPparSource     = 0 ; nPpartarget     = 0 ; nPparCouple     = 0
+    nWaveSource     = 0 ; nWaveTarget     = 0 ; nWaveCouple     = 0
+    nMaterialSource = 0 ; nMaterialTarget = 0 ; nMaterialCouple = 0
+
+    !\        
+    ! process variable names
+    !/                                                  
+    ! Here the external subroutine process_var_names is called, which will cast  
+    ! the variable names in the source and target components into a            
+    ! standardized form.                                         
+    ! Variable names are defined in equation modules  and often different names
+    ! are given to the same physical quantity. This is especially relevant to
+    ! multi fluid/specie models.                                              
+    ! The subroutine also returns the number of distinct densities and speeds,
+    ! pressure (total and parallel), number of waves and material.
+    ! See description inside the subroutine for more details.            
+
+    NameVarSource = ' '//Grid_C(iCompSource)%NameVar
+    NameVarTarget = ' '//Grid_C(iCompTarget)%NameVar
+
+    ! Separate NameVar(Source/Target) into a string arrays of variable names. 
+    call split_string(NameVarSource, nVarMax, NameList_V, nVarSource)
+    allocate(NameVarSource_V(nVarSource))
+    NameVarSource_V(1:nVarSource) = NameList_V(1:nVarSource)
+    NameList_V = ''
+
+    call split_string(NameVarTarget, nVarMax, NameList_V, nVarTarget)
+    allocate(NameVarTarget_V(nVarTarget))
+    NameVarTarget_V(1:nVarTarget) = NameList_V(1:nVarTarget)
+
+    ! process source variable names                
+    if (DoTest) then
+       write(*,*) NameComp_I(iCompSource), ':  variable names for I/O:'
+       write(*,*) trim(NameVarSource)
+    end if
+    call process_var_name(nVarSource, NameVarSource_V, &
+         nDensitySource, nSpeedSource, nPSource, nPparSource, &
+         nWaveSource, nMaterialSource)
+    call join_string(nVarSource, NameVarSource_V,NameVarSource)
+    if(DoTest) then
+       write(*,*) NameComp_I(iCompSource), ':  variable names used by coupler:'
+       write(*,*) trim(NameVarSource)
+       write(*,*) ' '
+    end if
+
+    ! process target variable names       
+    if(DoTest) then
+       write(*,*) NameComp_I(iCompTarget), ': variable names for I/O:'
+       write(*,*) trim(NameVarTarget)
+    end if
+    call process_var_name(nVarTarget, NameVarTarget_V, &
+         nDensityTarget, nSpeedTarget, nPTarget, nPparTarget, &
+         nWaveTarget, nMaterialTarget)
+    call join_string(nVarTarget, NameVarTarget_V,NameVarTarget)
+    if (DoTest) then
+       write(*,*) NameComp_I(iCompTarget), ': variabale names used by coupler:'
+       write(*,*) trim(NameVarTarget)
+       write(*,*) ' '
+    end if
+
+    !\                                                          
+    ! Get info required for coupling, depending on which variables are present 
+    !/                                                 
+    ! Logical array to report whether a variable name in the source is treated
+    ! by any of the cases below and thus it can be handeled by the coupler.
+    ! For brevity, all elements are initialized to .true.
+    ! An element will be set to .false. if the variable name is not found.
+    allocate(IsFoundVarSource_V(nVarSource))
+    IsFoundVarSource_V = .true.
+
+    do iVarSource = 1, nVarSource
+
+       select case(NameVarSource_V(iVarSource))
+
+       case('Rho', 'P', 'Ew','EInt', 'hyp', 'My', 'Mz', 'By', 'Bz')
+          ! Do nothing.
+          ! Rho, P assumed to always be present
+          ! ew, EInt, hyp : internal variables, not to be coupled.      
+          ! By, Bz, My, Mz already covered by other cases.       
+
+       case('Mx')
+          ! Check that My and Mz immediately follow Mx 
+          if ( NameVarSource_V(iVarSource + 1) /= 'My' .and. &
+               NameVarSource_V(iVarSource + 2) /= 'Mz') then
+             write(*,*) 'Error in ModEquation for ', NameComp_I(iCompSource)
+             write(*,*) 'X, Y and Z Momenta must have consecutive indices!'
+             call CON_stop(NameSub)
+          end if
+
+       case('Bx')
+          if(index(NameVarTarget,' Bx ') > 0) then
+             DoCoupleVar_V(Mhd_) = .true.
+             ! Check that By and Bz immediately follow Bx 
+             if ( NameVarSource_V(iVarSource + 1) /= 'By' .and. &
+                  NameVarSource_V(iVarSource + 2) /= 'Bz') then
+                write(*,*) 'Error in ModEquation for ', NameComp_I(iCompSource)
+                write(*,*) 'Bx, By and Bz must have consecutive indices!'
+                call CON_stop('ERROR in'//NameSub)
+             end if
+          end if
+
+       case('Pe')
+          DoCoupleVar_V(ElectronPressure_) = index(NameVarTarget, ' Pe ') > 0
+
+       case('Ppar')
+          DoCoupleVar_V(AnisoPressure_) = index(NameVarTarget,' Ppar ') > 0
+
+       case('i01')
+          ! Enumerated names for waves                                     
+          ! Coupling components with and without waves is allowed.             
+          ! If waves are present in both source and target, they should have 
+          ! the same number. Otherwise a CON_stop is issued.                
+
+          if(nWaveSource == nWaveTarget)then
+             nWaveCouple  = nWaveSource
+             DoCoupleVar_V(Wave_) = .true.
+          else if (nWaveTarget == 0) then
+             if(i_proc()==0) &
+                  write(*,*) 'Coupling components with and without waves!!!'
+          else
+             write(*,*) 'SWMF error found by ',NameSub
+             write(*,*) 'Cannot couple components with different nWave>0!'
+             call CON_stop('Change nWave using Config.pl and recompile.')
+          end if
+
+       case('m01')
+          ! Verify that target uses the same # of materials.
+          ! Otherwise stop with error.                                       
+          if(nMaterialSource == nMaterialTarget)then
+             DoCoupleVar_V(Material_) = .true.
+             nMaterialCouple = nMaterialSource
+          else
+             write(*,*) 'SWMF error found by ',NameSub
+             write(*,*) 'Cannot couple components with different nMaterial!'
+             call CON_stop('Change nMaterial and recompile.')
+          end if
+
+       case default
+          ! The only variable names that are left are associated with either:
+          !   - a neutral/ionized fluid other than the main (M)HD component.
+          !   - additional waves.                 
+          !   - additional materials.         
+
+          if(nDensitySource == 1 .and. &
+               nWaveSource < 1 .and. nMaterialSource < 1) then
+             ! Source variable name is unknown, stop.                        
+             write(*,*) 'SWMF error found in ', NameSub
+             write(*,*) 'Coupling of variable ', NameVarSource_V(iVarSource)
+             write(*,*) ' used by ', NameComp_I(iCompSource), &
+                  ' component is undefined!'
+             call CON_stop(NameSub//' check variable names!')
+          end if
+
+          ! Report status of this variable as not found.   
+          ! This will be corrected for waves and materials after looping over
+          ! all names is complete.                            
+          IsFoundVarSource_V(iVarSource) = .false.
+       end select
+    end do
+
+    ! Correct "found" status for waves and materials  
+    if (nWaveSource >= 1) &
+         IsFoundVarSource_V(WaveFirstCouple_:WaveLastCouple_) = .true.
+    if (nMaterialSource >= 1) &
+         IsFoundVarSource_V(MaterialFirstCouple_:MaterialLastCouple_) = .true.
+
+    !\                                                    
+    ! Check multi fluid/specie variables.
+    !/
+    if ( nDensitySource == nDensityTarget .and. &
+         nSpeedSource == nSpeedTarget .and. nDensitySource >1) then
+
+       ! Verify that the same specie/fluid variables are present in both
+       ! source and target.                               
+       SOURCELOOP: do iVarSource = 1,nVarSource
+
+          ! Only check varaiables that were not yet accounted for. 
+          if(IsFoundVarSource_V(iVarSource)) CYCLE
+
+          ! Look up source variable name in the target
+          do iVarTarget = 1, nVarTarget
+             if (NameVarSource_V(iVarSource) == NameVarTarget_V(iVarTarget)) then
+                IsFoundVarSource_V(iVarSource) = .true.
+                CYCLE SOURCELOOP
+             end if
+          end do
+
+          if(.not. IsFoundVarSource_V(iVarSource)) then
+             ! At least one fluids/specie name does not match 
+             write(*,*) 'SWMF error found in ', NameSub
+             write(*,*) 'Coupled components with unmatching densities/speeds:'
+             write(*,*) 'Component ', NameComp_I(iCompSource),' uses '// &
+                  NameVarSource_V(iVarSource)
+             write(*,*) 'Component ', NameComp_I(iCompTarget), 'does not.'
+             call CON_stop('Check state variable in ModEquation and recompile!')
+          end if
+       end do SOURCELOOP
+
+       if(nSpeedSource > 1) then
+          DoCoupleVar_V(MultiFluid_) = .true.
+       else
+          DoCoupleVar_V(MultiSpecie_) = .true.
+       end if
+    end if
+    if(nDensitySource /= nDensityTarget .or. &
+         nSpeedSource /= nSpeedTarget) then
+       if( (nDensitySource == 1 .and. nSpeedSource == 1) .or. &
+            (nDensityTarget == 1 .and. nSpeedTarget == 1) ) then
+          ! Coupling multi<-> single fluid is allowed.        
+          ! In this case the additional fluid variables are not coupled, and
+          ! their boundary conditions should be implemented separately. 
+          DoCoupleVar_V(MultiFluid_) = .false.
+          DoCoupleVar_V(MultiSpecie_)   = .false.
+       else
+          ! Both components have differing # of multiple densities or speeds 
+          write(*,*) 'SWMF error found in ', NameSub
+          write(*,*) 'Coupled SWMF components use different # of fluids/species!'
+          call CON_stop('Check variable names in ModEquation and recompile!')
+       end if
+    end if
+
+    ! calculate  indices and # of variables transfered to buffer grid             
+    nDensityCouple = min(nDensitySource, nDensityTarget)
+    nSpeedCouple   = min(nSpeedSource,   nSpeedTarget)
+    nPCouple       = min(nPSource,       nPTarget)
+    nPparCouple    = min(nPparSource,    nPparTarget)
+
+    iVar_V(RhoCouple_) = 1 
+    iVar_V(RhoUxCouple_) = 2
+    iVar_V(RhoUzCouple_) = 4
+    nVarCouple = 4
+
+    iVar_V(PCouple_) = nVarCouple + 1
+    nVarCouple = nVarCouple + 1
+
+    if (DoCoupleVar_V(Mhd_)) then
+       iVar_V(BxCouple_) = nVarCouple + 1
+       iVar_V(BzCouple_) = nVarCouple + 3
+       nVarCouple = nVarCouple + 3
+    end if
+
+    if (DoCoupleVar_V(AnisoPressure_)) then      
+       nVarCouple = nVarCouple + 1
+       iVar_V(PparCouple_) = nVarCouple
+    end if
+
+    if (DoCoupleVar_V(ElectronPressure_)) then
+       nVarCouple = nVarCouple + 1
+       iVar_V(PeCouple_) = nVarCouple
+    end if
+
+    if (DoCoupleVar_V(Wave_)) then
+       iVar_V(WaveFirstCouple_) = nVarCouple + 1
+       iVar_V(WaveLastCouple_)  = iVar_V(WaveFirstCouple_) + nWaveSource
+       nVarCouple = iVar_V(WaveLastCouple_)
+    end if
+
+    if (DoCoupleVar_V( Material_)) then
+       iVar_V(MaterialFirstCouple_) = nVarCouple + 1
+       iVar_V(MaterialLastCouple_)  = &
+            iVar_V(MaterialFirstCouple_) + nMaterialSource
+       nVarCouple = iVar_V(MaterialLastCouple_)
+    end if
+
+    if (nVarCouple >  nVarSource) then
+       write(*,*) 'SWMF Error: # of coupled variables exceeds nVarSource'
+       call CON_stop(NameSub)
+    end if
+
+    ! Store coupling info to avoid recalculation at next coupling time
+    DoCoupleVar_VCC(:,iCompSource, iCompTarget) = DoCoupleVar_V
+    DoCoupleVar_VCC(:,iCompTarget, iCompSource) = DoCoupleVar_V
+
+    iVar_VCC(:,iCompSource, iCompTarget) = iVar_V
+    iVar_VCC(:,iCompTarget, iCompSource) = iVar_V
+
+    nVarCouple_CC(iCompSource,iCompTarget) = nVarCouple
+    nVarCouple_CC(iCompTarget,iCompSource) = nVarCouple
 
 
+    if( i_proc() ==0) then !<<<<<<<< change to if(DoTest) ??                  
+       write(*,*) '---------------------------------------------'
+       write(*,*) NameSub,':'
+       write(*,*) 'Source: ', NameComp_I(iCompSource)
+       write(*,*) 'Target: ', NameComp_I(iCompTarget)
+       write(*,*) 'nDensity(Source/Target/Couple):'
+       write(*,*) nDensitySource, nDensityTarget,nDensityCouple
+       write(*,*) 'nSpeed(Source/Target/Couple):'
+       write(*,*) nSpeedSource, nSpeedTarget,nSpeedCouple
+       write(*,*) 'nP(Source/Target/Couple):'
+       write(*,*) nPSource, nPTarget,nPCouple
+       write(*,*) 'nPpar(Source/Target/Couple):'
+       write(*,*) nPparSource, nPparTarget,nPparCouple
+       write(*,*) '---------------------------------------------'
+       write(*,*) NameSub,' for:'
+       write(*,*) 'Source: ', NameComp_I(iCompSource)
+       write(*,*) 'Target: ', NameComp_I(iCompTarget)
+       write(*,*) 'Coupling flags:'
+       write(*,*) 'MHD: ',     DoCoupleVar_V(Mhd_)
+       write(*,*) 'Pe: ',      DoCoupleVar_V(ElectronPressure_)
+       write(*,*) 'Ppar: ',    DoCoupleVar_V(AnisoPressure_)
+       write(*,*) 'Waves: ',   DoCoupleVar_V(Wave_)
+       write(*,*) 'Neutrals: ',DoCoupleVar_V(MultiFluid_)
+       write(*,*) 'Ions: ',    DoCoupleVar_V(MultiSpecie_)
+       write(*,*) '---------------------------------------------'
+       write(*,*) 'Coupled variable indices in source component:'
+       write(*,*) 'Rho: ',  iVar_V(RhoCouple_)
+       write(*,*) 'RhoUx: ',iVar_V(RhoUxCouple_)
+       write(*,*) 'RhoUz: ',iVar_V(RhoUzCouple_)
+       write(*,*) 'Bx: ',   iVar_V(BxCouple_)
+       write(*,*) 'Bz: ',   iVar_V(BzCouple_)
+       write(*,*) 'P: ',    iVar_V(PCouple_)
+       write(*,*) 'Pe: ',   iVar_V(PeCouple_)
+       write(*,*) 'Ppar: ', iVar_V(PparCouple_)
+       write(*,*) 'WaveFirst: ',iVar_V(WaveFirstCouple_)
+       write(*,*) 'WaveLast: ', iVar_V(WaveLastCouple_)
+       write(*,*) 'nVarCouple: ',nVarCouple
+       write(*,*) '---------------------------------------------'
+
+    end if
+
+    deallocate(NameVarSource_V, NameVarTarget_V, IsFoundVarSource_V)
+
+  end subroutine set_couple_var_info
   !=======================================================================
   !IROUTINE: init_coupler - initializes coupler between two components
   subroutine init_coupler(  &    

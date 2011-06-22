@@ -14,7 +14,9 @@ module CON_couple_all
 
   !USES:
   use CON_comp_param
-  use CON_world, ONLY: use_comp, is_proc, i_proc
+  use CON_world,   ONLY: use_comp, is_proc, i_proc
+  use CON_coupler, ONLY: iVar_V, iVar_VCC, nVarCouple, nVarCouple_CC, &
+                         DoCoupleVar_V, DoCoupleVar_VCC
   !^CMP IF GM BEGIN
   use CON_couple_ih_gm        !^CMP IF IH
   use CON_couple_gm_ie        !^CMP IF IE
@@ -79,7 +81,7 @@ contains
     !                                                     ^CMP END IE
     !                                                     ^CMP IF IH BEGIN
     if(use_comp(IH_).and.use_comp(SC_))call couple_ih_sc_init  !^CMP IF SC
-    if(use_comp(IH_).and.use_comp(OH_))call couple_oh_ih_init  !^CMP IF OH
+    if(use_comp(IH_).and.use_comp(OH_))call couple_ih_oh_init  !^CMP IF OH
     !                                                     ^CMP END IH
     !                                                     ^CMP IF SC BEGIN
     if(use_comp(LC_).and.use_comp(SC_))call couple_lc_sc_init  !!^CMP IF LC
@@ -131,7 +133,12 @@ contains
          NameComp_I(iCompSource),' --> ',NameComp_I(iCompTarget)
 
 
-    call timing_start(NameComp_I(iCompSource)//'_'//NameComp_I(iCompTarget)//'_couple')
+    call timing_start(NameComp_I(iCompSource)// &
+         '_'//NameComp_I(iCompTarget)//'_couple')
+
+    iVar_V        = iVar_VCC(:,iCompSource,iCompTarget)
+    nVarCouple    = nVarCouple_CC(iCompSource,iCompTarget)
+    DoCoupleVar_V = DoCoupleVar_VCC(:,iCompSource,iCompTarget)
 
     select case(iCompSource)
     case(LC_)                                 !^CMP IF LC BEGIN

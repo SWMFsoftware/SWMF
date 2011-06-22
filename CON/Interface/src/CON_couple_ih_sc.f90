@@ -63,30 +63,9 @@ module CON_couple_ih_sc
   integer :: nGenRGridSc
   real    :: DeltaGen
 
-  ! Number of variables to be coupled
-  integer :: nVarCouple
-
 contains
   !===============================================================!
   subroutine couple_ih_sc_init
-
-    ! Number of waves in different models
-    integer :: nWave, nWaveSc, nWaveIh
-
-    ! send-receive electron pressure ? (value=0 then no, value=1 then yes)
-    integer :: nElectronPressure
-
-    interface
-       integer function SC_n_wave()
-         implicit none
-       end function SC_n_wave
-    end interface
-
-    interface
-       integer function IH_n_wave()
-         implicit none
-       end function IH_n_wave
-    end interface
 
     interface
        subroutine IH_set_buffer_grid(Dd)
@@ -96,31 +75,13 @@ contains
               intent(out)::Dd
        end subroutine IH_set_buffer_grid
     end interface
-
     !--------------------------------------------------------------------------
-
     if(.not.DoInitialize)return
     DoInitialize=.false.
     
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
-    if(is_proc0(IH_))nWaveIh = IH_n_wave()
-    call MPI_BCAST(nWaveIh,1,MPI_INTEGER,i_proc0(IH_),i_comm(),iError)
-
-    if(is_proc0(SC_))nWaveSc = SC_n_wave()
-    call MPI_BCAST(nWaveSc,1,MPI_INTEGER,i_proc0(SC_),i_comm(),iError)
-
-    if(nWaveIh==nWaveSc .and. nWaveSc>=2)then
-       nWave = nWaveSc
-    else
-       nWave = 0
-    end if
-
-    nElectronPressure = 0
-    if(index(Grid_C(IH_)%NameVar,' Pe') > 0 .and. &
-         index(Grid_C(SC_)%NameVar,' Pe') > 0) nElectronPressure = 1
-
-    nVarCouple = 8 + nWave + nElectronPressure
+    call set_couple_var_info(SC_,IH_)
 
     IsSphericalSc = index(Grid_C(SC_) % TypeGeometry,'spherical') > 0 
     UseLogRSc     = index(Grid_C(SC_) % TypeGeometry,'lnr'      ) > 0
@@ -351,14 +312,26 @@ contains
   subroutine IH_get_for_sc_and_transform(&
        nPartial,iGetStart,Get,w,State_V,nVar)
 
-    integer,intent(in)::nPartial,iGetStart,nVar
-    type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::w
-    real,dimension(nVar),intent(out)::State_V
-    real,dimension(nVar+3)::State3_V
-    integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7
-    integer::BuffX_,BuffZ_
+    integer,intent(in)              :: nPartial,iGetStart,nVar
+    type(IndexPtrType),intent(in)   :: Get
+    type(WeightPtrType),intent(in)  :: w
+    real,dimension(nVar),intent(out):: State_V
+    real,dimension(nVar+3)          :: State3_V
+
+    ! variable indices in buffer
+    integer   :: iRhoCouple, &
+                 iRhoUxCouple,     &
+                 iRhoUzCouple,     &
+                 iBxCouple,        &
+                 iBzCouple
+    integer :: BuffX_,BuffZ_
     !------------------------------------------------------------
+    ! get variable indices in buffer
+    iRhoCouple       = iVar_V(RhoCouple_)
+    iRhoUxCouple     = iVar_V(RhoUxCouple_)
+    iRhoUzCouple     = iVar_V(RhoUzCouple_)
+    iBxCouple        = iVar_V(BxCouple_)
+    iBzCouple        = iVar_V(BzCouple_)
 
     BuffX_ = nVarCouple + 1
     BuffZ_ = nVarCouple + 3
@@ -368,13 +341,14 @@ contains
     State_V=State3_V(1:nVar)
 
     !Transform velocity
-    State_V(RhoUx_:RhoUz_)=State_V(Rho_)*&
+    State_V(iRhoUxCouple:iRhoUzCouple)=State_V(iRhoCouple)*&
          transform_velocity(tNow,&
-         State_V(RhoUx_:RhoUz_)/State_V(Rho_),&
-         State3_V(BuffX_:BuffZ_)/State_V(Rho_),&
+         State_V(iRhoUxCouple:iRhoUzCouple)/State_V(iRhoCouple),&
+         State3_V(BuffX_:BuffZ_)/State_V(iRhoCouple),&
          Grid_C(IH_)%TypeCoord,Grid_C(SC_)%TypeCoord)
     
-    State_V(Bx_:Bz_)=matmul(IhToSc_DD,State_V(Bx_:Bz_))
+    State_V(iBxCouple:iBzCouple) = &
+         matmul(IhToSc_DD,State_V(iBxCouple:iBzCouple))
 
   end subroutine IH_get_for_sc_and_transform
 

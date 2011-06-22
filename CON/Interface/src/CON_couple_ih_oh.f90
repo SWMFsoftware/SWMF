@@ -24,7 +24,7 @@ module CON_couple_ih_oh
   private !except
   !
   !PUBLIC MEMBER FUNCTIONS:
-  public:: couple_oh_ih_init
+  public:: couple_ih_oh_init
   public:: couple_ih_oh,couple_oh_ih
 
   !REVISION HISTORY:
@@ -63,30 +63,9 @@ module CON_couple_ih_oh
   integer :: nGenRGridIh
   real    :: DeltaGen
 
-  ! Number of variables to be coupled
-  integer :: nVarCouple
-
 contains
   !===============================================================!
-  subroutine couple_oh_ih_init
-
-    ! Number of waves in different models
-    integer :: nWave, nWaveOh, nWaveIh
-
-    ! send-receive electron pressure ? (value=0 then no, value=1 then yes)
-    integer :: nElectronPressure
-
-    interface
-       integer function IH_n_wave()
-         implicit none
-       end function IH_n_wave
-    end interface
-
-    interface
-       integer function OH_n_wave()
-         implicit none
-       end function OH_n_wave
-    end interface
+  subroutine couple_ih_oh_init
 
     interface
        subroutine OH_set_buffer_grid(Dd)
@@ -98,29 +77,12 @@ contains
     end interface
 
     !--------------------------------------------------------------------------
-
     if(.not.DoInitialize)return
     DoInitialize=.false.
     
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
-    if(is_proc0(IH_))nWaveIh = IH_n_wave()
-    call MPI_BCAST(nWaveIh,1,MPI_INTEGER,i_proc0(IH_),i_comm(),iError)
-
-    if(is_proc0(OH_))nWaveOh = OH_n_wave()
-    call MPI_BCAST(nWaveOh,1,MPI_INTEGER,i_proc0(OH_),i_comm(),iError)
-
-    if(nWaveIh==nWaveOh .and. nWaveIh>=2)then
-       nWave = nWaveIh
-    else
-       nWave = 0
-    end if
-
-    nElectronPressure = 0
-    if(index(Grid_C(OH_)%NameVar,' Pe') > 0 .and. &
-         index(Grid_C(IH_)%NameVar,' Pe') > 0) nElectronPressure = 1
-
-    nVarCouple = 8 + nWave + nElectronPressure
+    call set_couple_var_info(IH_,OH_)
 
     IsSphericalIh = index(Grid_C(IH_) % TypeGeometry,'spherical') > 0 
     UseLogRIh     = index(Grid_C(IH_) % TypeGeometry,'lnr'      ) > 0
@@ -160,7 +122,7 @@ contains
          nVar = nVarCouple, &
          NameBuffer='OH_from_ih')  !Version for the first order in time
 
-  end subroutine couple_oh_ih_init
+  end subroutine couple_ih_oh_init
   !===============================================================!
   !BOP
   !IROUTINE: couple_oh_ih - get OH solution at IJ outer ghostpoints
@@ -351,14 +313,25 @@ contains
   subroutine OH_get_for_ih_and_transform(&
        nPartial,iGetStart,Get,w,State_V,nVar)
 
-    integer,intent(in)::nPartial,iGetStart,nVar
-    type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::w
-    real,dimension(nVar),intent(out)::State_V
-    real,dimension(nVar+3)::State3_V
-    integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7
+    integer,intent(in)              :: nPartial,iGetStart,nVar
+    type(IndexPtrType),intent(in)   :: Get
+    type(WeightPtrType),intent(in)  :: w
+    real,dimension(nVar),intent(out):: State_V
+    real,dimension(nVar+3)          :: State3_V
+
+    ! State variable indices in buffer
+    integer :: iRhoCouple, &
+         iRhoUxCouple, &
+         iRhoUzCouple, &
+         iBxCouple,    &
+         iBzCouple 
     integer::BuffX_,BuffZ_
     !------------------------------------------------------------
+    iRhoCouple   = iVar_V(RhoCouple_)
+    iRhoUxCouple = iVar_V(RhoUxCouple_)
+    iRhoUzCouple = iVar_V(RhoUzCouple_)
+    iBxCouple    = iVar_V(BxCouple_)
+    iBzCouple    = iVar_V(BzCouple_)
 
     BuffX_ = nVarCouple + 1
     BuffZ_ = nVarCouple + 3
@@ -368,13 +341,14 @@ contains
     State_V=State3_V(1:nVar)
 
     !Transform velocity
-    State_V(RhoUx_:RhoUz_)=State_V(Rho_)*&
+    State_V(iRhoUxCouple:iRhoUzCouple)=State_V(iRhoCouple)*&
          transform_velocity(tNow,&
-         State_V(RhoUx_:RhoUz_)/State_V(Rho_),&
-         State3_V(BuffX_:BuffZ_)/State_V(Rho_),&
+         State_V(iRhoUxCouple:iRhoUzCouple)/State_V(iRhoCouple),&
+         State3_V(BuffX_:BuffZ_)/State_V(iRhoCouple),&
          Grid_C(OH_)%TypeCoord,Grid_C(IH_)%TypeCoord)
     
-    State_V(Bx_:Bz_)=matmul(OhToIh_DD,State_V(Bx_:Bz_))
+    State_V(iBxCouple:iBzCouple) = &
+         matmul(OhToIh_DD,State_V(iBxCouple:iBzCouple))
 
   end subroutine OH_get_for_ih_and_transform
 
