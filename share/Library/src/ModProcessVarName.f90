@@ -85,7 +85,7 @@ module ModProcessVarName
        'Bz  ', &
        'Pe  ', &
        'Ew  ', &
-       'EInt', &
+       'Eint', &
        'Hyp ' /)
 
   ! Array storing standarized variable names for all species / fluids
