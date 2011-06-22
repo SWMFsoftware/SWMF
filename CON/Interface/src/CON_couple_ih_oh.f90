@@ -320,12 +320,14 @@ contains
     real,dimension(nVar+3)          :: State3_V
 
     ! State variable indices in buffer
-    integer :: iRhoCouple, &
+    integer :: &
+         iRhoCouple,   &
          iRhoUxCouple, &
          iRhoUzCouple, &
          iBxCouple,    &
-         iBzCouple 
-    integer::BuffX_,BuffZ_
+         iBzCouple
+         
+    integer :: BuffX_,BuffZ_
     !------------------------------------------------------------
     iRhoCouple   = iVar_V(RhoCouple_)
     iRhoUxCouple = iVar_V(RhoUxCouple_)
@@ -341,12 +343,14 @@ contains
     State_V=State3_V(1:nVar)
 
     !Transform velocity
+    ! NOTE: This transformation will only work for a single fluid
     State_V(iRhoUxCouple:iRhoUzCouple)=State_V(iRhoCouple)*&
          transform_velocity(tNow,&
          State_V(iRhoUxCouple:iRhoUzCouple)/State_V(iRhoCouple),&
          State3_V(BuffX_:BuffZ_)/State_V(iRhoCouple),&
          Grid_C(OH_)%TypeCoord,Grid_C(IH_)%TypeCoord)
     
+    ! Transform magnetic field
     State_V(iBxCouple:iBzCouple) = &
          matmul(OhToIh_DD,State_V(iBxCouple:iBzCouple))
 

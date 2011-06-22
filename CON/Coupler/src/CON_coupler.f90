@@ -104,7 +104,7 @@ module CON_coupler
 
   ! named indices for variable groups for coupling
   integer,parameter,public :: &
-       Mhd_               = 1, &
+       Bfield_               = 1, &
        AnisoPressure_     = 2, &
        ElectronPressure_  = 3, &
        Wave_              = 4, &
@@ -570,7 +570,7 @@ contains
 
     DoCoupleVar_V = .false.
     ! The elements of DoCoupleVar_V will be set to true if:
-    ! Mhd_               :  Both have a magnetic field.
+    ! Bfield_               :  Both have a magnetic field.
     ! AnisoPressure_     :  Both use anisotropic pressure.
     ! ElectronPressure_  :  Both use electron pressure.
     ! Wave_              :  Both use the same # of waves.
@@ -655,7 +655,7 @@ contains
 
        select case(NameVarSource_V(iVarSource))
 
-       case('Rho', 'P', 'Ew','EInt', 'hyp', 'My', 'Mz', 'By', 'Bz')
+       case('Rho', 'P', 'Ew','Eint', 'Hyp', 'My', 'Mz', 'By', 'Bz')
           ! Do nothing.
           ! Rho, P assumed to always be present
           ! ew, EInt, hyp : internal variables, not to be coupled.      
@@ -672,7 +672,7 @@ contains
 
        case('Bx')
           if(index(NameVarTarget,' Bx ') > 0) then
-             DoCoupleVar_V(Mhd_) = .true.
+             DoCoupleVar_V(Bfield_) = .true.
              ! Check that By and Bz immediately follow Bx 
              if ( NameVarSource_V(iVarSource + 1) /= 'By' .and. &
                   NameVarSource_V(iVarSource + 2) /= 'Bz') then
@@ -703,7 +703,7 @@ contains
           else
              write(*,*) 'SWMF error found by ',NameSub
              write(*,*) 'Cannot couple components with different nWave>0!'
-             call CON_stop('Change nWave using Config.pl and recompile.')
+             call CON_stop(NameSub//': change nWave (use Config.pl).')
           end if
 
        case('m01')
@@ -715,7 +715,7 @@ contains
           else
              write(*,*) 'SWMF error found by ',NameSub
              write(*,*) 'Cannot couple components with different nMaterial!'
-             call CON_stop('Change nMaterial and recompile.')
+             call CON_stop(NameSub//': change nMaterial (use Config.pl).')
           end if
 
        case default
@@ -775,7 +775,7 @@ contains
              write(*,*) 'Component ', NameComp_I(iCompSource),' uses '// &
                   NameVarSource_V(iVarSource)
              write(*,*) 'Component ', NameComp_I(iCompTarget), 'does not.'
-             call CON_stop('Check state variable in ModEquation and recompile!')
+             call CON_stop(NameSub//': check ModEquation and recompile!')
           end if
        end do SOURCELOOP
 
@@ -798,7 +798,7 @@ contains
           ! Both components have differing # of multiple densities or speeds 
           write(*,*) 'SWMF error found in ', NameSub
           write(*,*) 'Coupled SWMF components use different # of fluids/species!'
-          call CON_stop('Check variable names in ModEquation and recompile!')
+          call CON_stop(NameSub//': check ModEquation and recompile!')
        end if
     end if
 
@@ -816,7 +816,7 @@ contains
     iVar_V(PCouple_) = nVarCouple + 1
     nVarCouple = nVarCouple + 1
 
-    if (DoCoupleVar_V(Mhd_)) then
+    if (DoCoupleVar_V(Bfield_)) then
        iVar_V(BxCouple_) = nVarCouple + 1
        iVar_V(BzCouple_) = nVarCouple + 3
        nVarCouple = nVarCouple + 3
@@ -847,7 +847,7 @@ contains
 
     if (nVarCouple >  nVarSource) then
        write(*,*) 'SWMF Error: # of coupled variables exceeds nVarSource'
-       call CON_stop(NameSub)
+       call CON_stop(NameSub//' error in calculating nVarCouple')
     end if
 
     ! Store coupling info to avoid recalculation at next coupling time
@@ -876,25 +876,25 @@ contains
        write(*,*) nPparSource, nPparTarget,nPparCouple
        write(*,*) '---------------------------------------------'
        write(*,*) NameSub,' for:'
-       write(*,*) 'Source: ', NameComp_I(iCompSource)
-       write(*,*) 'Target: ', NameComp_I(iCompTarget)
+       write(*,*) 'Source: ',         NameComp_I(iCompSource)
+       write(*,*) 'Target: ',         NameComp_I(iCompTarget)
        write(*,*) 'Coupling flags:'
-       write(*,*) 'MHD: ',     DoCoupleVar_V(Mhd_)
-       write(*,*) 'Pe: ',      DoCoupleVar_V(ElectronPressure_)
-       write(*,*) 'Ppar: ',    DoCoupleVar_V(AnisoPressure_)
-       write(*,*) 'Waves: ',   DoCoupleVar_V(Wave_)
-       write(*,*) 'Neutrals: ',DoCoupleVar_V(MultiFluid_)
-       write(*,*) 'Ions: ',    DoCoupleVar_V(MultiSpecie_)
+       write(*,*) 'Magnetic field: ', DoCoupleVar_V(Bfield_)
+       write(*,*) 'Pe: ',             DoCoupleVar_V(ElectronPressure_)
+       write(*,*) 'Ppar: ',           DoCoupleVar_V(AnisoPressure_)
+       write(*,*) 'Waves: ',          DoCoupleVar_V(Wave_)
+       write(*,*) 'Neutrals: ',       DoCoupleVar_V(MultiFluid_)
+       write(*,*) 'Ions: ',           DoCoupleVar_V(MultiSpecie_)
        write(*,*) '---------------------------------------------'
        write(*,*) 'Coupled variable indices in source component:'
-       write(*,*) 'Rho: ',  iVar_V(RhoCouple_)
-       write(*,*) 'RhoUx: ',iVar_V(RhoUxCouple_)
-       write(*,*) 'RhoUz: ',iVar_V(RhoUzCouple_)
-       write(*,*) 'Bx: ',   iVar_V(BxCouple_)
-       write(*,*) 'Bz: ',   iVar_V(BzCouple_)
-       write(*,*) 'P: ',    iVar_V(PCouple_)
-       write(*,*) 'Pe: ',   iVar_V(PeCouple_)
-       write(*,*) 'Ppar: ', iVar_V(PparCouple_)
+       write(*,*) 'Rho: ',      iVar_V(RhoCouple_)
+       write(*,*) 'RhoUx: ',    iVar_V(RhoUxCouple_)
+       write(*,*) 'RhoUz: ',    iVar_V(RhoUzCouple_)
+       write(*,*) 'Bx: ',       iVar_V(BxCouple_)
+       write(*,*) 'Bz: ',       iVar_V(BzCouple_)
+       write(*,*) 'P: ',        iVar_V(PCouple_)
+       write(*,*) 'Pe: ',       iVar_V(PeCouple_)
+       write(*,*) 'Ppar: ',     iVar_V(PparCouple_)
        write(*,*) 'WaveFirst: ',iVar_V(WaveFirstCouple_)
        write(*,*) 'WaveLast: ', iVar_V(WaveLastCouple_)
        write(*,*) 'nVarCouple: ',nVarCouple
