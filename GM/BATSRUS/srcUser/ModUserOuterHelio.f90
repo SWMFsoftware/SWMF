@@ -137,13 +137,7 @@ module ModUser
   ! neutrals variables
   !/
 
-  real :: TNeutralsISW_dim=0.0, &
-       RhoNeutralsISW=0.0, RhoNeutralsISW_dim=0.0 , &
-       PNeutralsISW=0.0  , PNeutralsISW_dim=0.0  , &
-       UxNeutralsISW=0.0 , UxNeutralsISW_dim=0.0 , &
-       UyNeutralsISW=0.0 , UyNeutralsISW_dim=0.0 , &
-       UzNeutralsISW=0.0 , UzNeutralsISW_dim=0.0 ,  &
-       mNeutralsmp, mNeutrals
+  real :: mNeutralsmp, mNeutrals
 
   real, dimension(0:1) :: &
        RhoNeutralsISW_t,  &
@@ -213,14 +207,6 @@ contains
           call read_var('VLISW_Bx_dim' ,VLISW_Bx_dim)
           call read_var('VLISW_By_dim' ,VLISW_By_dim)
           call read_var('VLISW_Bz_dim' ,VLISW_Bz_dim)
-       case("#NEUTRALS")
-          call read_var('RhoNeutralsISW_dim' ,RhoNeutralsISW_dim)
-          call read_var('TNeutralsISW_dim' ,TNeutralsISW_dim)
-          call read_var('UxNeutralsISW_dim' ,UxNeutralsISW_dim)
-          call read_var('UyNeutralsISW_dim' ,UyNeutralsISW_dim)
-          call read_var('UzNeutralsISW_dim' ,UzNeutralsISW_dim)
-          call read_var('mNeutralsmp',mNeutralsmp)
-          ! This is a flag to define how many population of Neutrals to run
        case("#SOURCES")
           call read_var('UseIonSource', UseSource_I(Ion_))
           call read_var('UseNeuSource', UseSource_I(Neu_))
