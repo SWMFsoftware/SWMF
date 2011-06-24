@@ -12,7 +12,8 @@ program process_var_name_test
   use ModUtilities,       ONLY: lower_case
   implicit none
 
-  integer  :: nDensity, nSpeed, nP, nPpar, nWave, nMaterial, nVar, iVar
+  integer  :: nDensity, nSpeed, nP, nPpar, nVar, iVar
+  integer  :: nWaveName, nMaterialName
   character(len=15),allocatable :: NameVarFixed_V(:)
   ! ----------------------------------------------------------
   nVar = size(NameVar_V,1)
@@ -29,7 +30,7 @@ program process_var_name_test
   end do
 
   call process_var_name(nVar, NameVarFixed_V, &
-       nDensity, nSpeed, nP, nPpar, nWave, nMaterial)
+       nDensity, nSpeed, nP, nPpar, nWaveName, nMaterialName)
 
   write(*,*) 'Original  Standardized  nDensity=',nDensity,'nSpeed=',nSpeed
   write(*,*) '--------  ------------'
