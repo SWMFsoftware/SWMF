@@ -137,7 +137,7 @@ module ModUser
   ! neutrals variables
   !/
 
-  real :: mNeutralsmp, mNeutrals
+  real :: mNeutrals
 
   real, dimension(0:1) :: &
        RhoNeutralsISW_t,  &
@@ -153,12 +153,6 @@ module ModUser
   real :: MachPop3Limit    = 1.5
   real :: MachPop4Limit    = 2.0
   real :: rPop3Limit       = 50.0   ! [AU] it is all Pop3 out to rPop3Limit
-
-  ! Various factors in initial and boundary conditions
-  real :: RhoNeuFactor = 1.0,   uNeuFactor = 1.0
-  real :: RhoNe2Factor = 1.e-3, uNe2Factor = 1.0
-  real :: RhoNe3Factor = 0.01,  uNe3Factor = 1.0
-  real :: RhoNe4Factor = 1.0,  uNe4Factor = 1.0
 
   integer :: iFluidProduced_C(nI, nJ, nK)
 
@@ -220,15 +214,15 @@ contains
           call read_var('MachPop3Limit',    MachPop3Limit)
           call read_var('rPop3Limit',       rPop3Limit)
           call read_var('MachPop4Limit',    MachPop4Limit)
-       case("#FACTORS")
-          call read_var('RhoNeuFactor', RhoNeuFactor)
-          call read_var('uNeuFactor'  , uNeuFactor)
-          call read_var('RhoNe2Factor', RhoNe2Factor)
-          call read_var('uNe2Factor'  , uNe2Factor)
-          call read_var('RhoNe3Factor', RhoNe3Factor)
-          call read_var('uNe3Factor'  , uNe3Factor)
-          call read_var('RhoNe4Factor', RhoNe4Factor)
-          call read_var('uNe4Factor'  , uNe4Factor)
+      ! case("#FACTORS")
+      !    call read_var('RhoNeuFactor', RhoNeuFactor)
+      !    call read_var('uNeuFactor'  , uNeuFactor)
+      !    call read_var('RhoNe2Factor', RhoNe2Factor)
+      !    call read_var('uNe2Factor'  , uNe2Factor)
+      !    call read_var('RhoNe3Factor', RhoNe3Factor)
+      !    call read_var('uNe3Factor'  , uNe3Factor)
+      !    call read_var('RhoNe4Factor', RhoNe4Factor)
+      !    call read_var('uNe4Factor'  , uNe4Factor)
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
@@ -362,9 +356,10 @@ contains
     ! For the transient case when it flows inward, we use a fraction of ions
 
     if( sum(VarsTrueFace_V(Ne2Ux_:Ne2Uz_)*FaceCoords_D) > 0.0)then
-       VarsGhostFace_V(Ne2Rho_)       = VarsGhostFace_V(Rho_)    *RhoNe2Factor
-       VarsGhostFace_V(Ne2P_)         = VarsGhostFace_V(p_)      *RhoNe2Factor
-       VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe2Factor
+       VarsGhostFace_V(Ne2Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(3)
+       VarsGhostFace_V(Ne2P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(3)
+       VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
+            uBcFactor_I(3)
     else
        VarsGhostFace_V(Ne2Rho_:Ne2P_) = VarsTrueFace_V(Ne2Rho_:Ne2P_)
     end if
@@ -373,9 +368,10 @@ contains
     ! the density is taken to be a fraction of the ions
 
     if( sum(VarsTrueFace_V(Ne3Ux_:Ne3Uz_)*FaceCoords_D) > 0.0)then
-       VarsGhostFace_V(Ne3Rho_)       = VarsGhostFace_V(Rho_)    *RhoNe3Factor
-       VarsGhostFace_V(Ne3P_)         = VarsGhostFace_V(p_)      *RhoNe3Factor
-       VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe3Factor
+       VarsGhostFace_V(Ne3Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(4)
+       VarsGhostFace_V(Ne3P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(4)
+       VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
+            uBcFactor_I(4)
     else
        VarsGhostFace_V(Ne3Rho_:Ne3P_) = VarsTrueFace_V(Ne3Rho_:Ne3P_)
     end if
@@ -383,9 +379,10 @@ contains
     ! Pop IV 
 
     if( sum(VarsTrueFace_V(Ne4Ux_:Ne4Uz_)*FaceCoords_D) > 0.0)then
-       VarsGhostFace_V(Ne4Rho_)       = VarsGhostFace_V(Rho_)    *RhoNe4Factor
-       VarsGhostFace_V(Ne4P_)         = VarsGhostFace_V(p_)      *RhoNe4Factor
-       VarsGhostFace_V(Ne4Ux_:Ne4Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe4Factor
+       VarsGhostFace_V(Ne4Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(5)
+       VarsGhostFace_V(Ne4P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(5)
+       VarsGhostFace_V(Ne4Ux_:Ne4Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
+            uBcFactor_I(5)
     else
        VarsGhostFace_V(Ne4Rho_:Ne4P_) = VarsTrueFace_V(Ne4Rho_:Ne4P_)
     end if
@@ -694,13 +691,14 @@ contains
 
        if( UnusedBlk(iBlock) ) CYCLE
 
-       State_VGB(Ne2Rho_,:,:,:,iBlock) = RhoNe2Factor * &
+       State_VGB(Ne2Rho_,:,:,:,iBlock) = RhoBcFactor_I(3) * &
             State_VGB(Rho_,:,:,:,iBlock)
 
-       State_VGB(Ne2RhoUx_:Ne2RhoUz_,:,:,:,iBlock) = RhoNe2Factor*uNe2Factor* &
+       State_VGB(Ne2RhoUx_:Ne2RhoUz_,:,:,:,iBlock) = &
+            RhoBcFactor_I(3)*uBcFactor_I(3)* &
             State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)
 
-       State_VGB(Ne2P_,:,:,:,iBlock) = RhoNe2Factor * &
+       State_VGB(Ne2P_,:,:,:,iBlock) = RhoBcFactor_I(3) * &
             State_VGB(p_,:,:,:,iBlock)
 
        call calc_energy(-1, nI+2, -1, nJ+2, -1, nK+2, iBlock, Ne2_, Ne2_)
@@ -856,7 +854,7 @@ contains
     UxNeutralsISW  = UxNeutralsISW_dim*Io2No_V(UnitU_)
     UyNeutralsISW  = UyNeutralsISW_dim*Io2No_V(UnitU_)
     UzNeutralsISW  = UzNeutralsISW_dim*Io2No_V(UnitU_)
-    mNeutrals    = mNeutralsmp*cProtonMass
+    mNeutrals    = mProtonMass*cProtonMass
 
     !merav
     !write(*,*) 'PNeutralsISW',PNeutralsISW
@@ -1007,9 +1005,7 @@ contains
     endif
 
     !  calculating some constants cBoltzmann is J/K 
-
     cth = 2.0*cBoltzmann/mNeutrals
-
 
     ! Figure out which neutral population is produced at this point
     if(.not.IsPointImplPerturbed) call select_region(iBlock) 
