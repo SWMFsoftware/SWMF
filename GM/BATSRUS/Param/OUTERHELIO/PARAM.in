@@ -211,6 +211,25 @@ F                       UseUserB0
 F                       UseUserInitSession
 F                       UseUserUpdateStates
 
+#OHBOUNDARY
+T
+0.05		RhoNeuFactor
+1.0		uNeuFactor
+1.E-2		RhoNe2Factor
+0.2		uNe2Factor
+1.E-2		RhoNe3Factor
+1.0		uNe3Factor
+1.E-3		RhoNe4Factor
+0.1		uNe4Factor
+
+#OHNEUTRALS
+0.18		RhoNeutralsISW_dim
+6519.0		TNeutralsISW_dim
+26.3		UxNeutralsISW_dim
+0.0		UyNeutralsISW_dim
+-2.3		UzNeutralsISW_dim
+1.0		mNeutralsmp
+
 #USERINPUTBEGIN --------------------------------------------------------
 
 #SOLARWINDH
@@ -232,24 +251,6 @@ F                       UseUserUpdateStates
 0.3093            VLISW_Bx_dim
 -0.080            VLISW_By_dim
 -0.2988           VLISW_Bz_dim
-
-#NEUTRALS
-0.18		RhoNeutralsISW_dim
-6519.0		TNeutralsISW_dim
-26.3		UxNeutralsISW_dim
-0.0		UyNeutralsISW_dim
--2.3		UzNeutralsISW_dim
-1.0		mNeutralsmp
-
-#FACTORS
-0.05		RhoNeuFactor
-1.0		uNeuFactor
-1.E-2		RhoNe2Factor
-0.2		uNe2Factor
-1.E-2		RhoNe3Factor
-1.0		uNe3Factor
-1.E-3		RhoNe4Factor
-0.1		uNe4Factor
 
 #REGIONS
 6.E5		TempPop1LimitDim
