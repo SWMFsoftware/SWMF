@@ -1,0 +1,23 @@
+#!/bin/sh
+#PBS -V
+#PBS -A crash_flux
+#PBS -q flux
+#PBS -N CRASH
+#PBS -l procs=256,qos=crash_flux
+#PBS -l walltime=8:00:00
+
+# cd to job submission directory
+cd $PBS_O_WORKDIR
+
+# Check compiler versions
+which ifort
+which mpif90
+
+# get queue status
+qstat -u $USER -n
+
+# look at what else is running
+#resinfo.pl -n crash
+
+# run job on all PEs
+mpirun ./CRASH.exe > runlog_`date +%y%m%d%H%M`
