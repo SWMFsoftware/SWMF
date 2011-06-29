@@ -205,7 +205,7 @@ contains
        UsePointImplicit_B = UsePointImplicit
 
        ! For implicit scheme it is better to use unsplit dB0/dt evaluation
-       DoSplitDb0Dt = .not.UseImplicit
+!!!       DoSplitDb0Dt = .not.UseImplicit
 
        if(UsePartImplicit  .and. UseFullImplicit) call stop_mpi(&
             'Only one of UsePartImplicit and UseFullImplicit can be true')
