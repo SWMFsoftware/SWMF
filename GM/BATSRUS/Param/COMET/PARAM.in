@@ -103,7 +103,7 @@ T                       UseUserUpdateStates
 T               	UsePointImplicit
 1.0             	BetaPointImpl	
 T			IsAssymetric	
-F			DoNormalizeCell 
+T			DoNormalizeCell 
 
 #STARTTIME
 2001                    StartTime_i(1)=year
@@ -137,9 +137,9 @@ sphere                     NameArea
   1.0e-4                   rSphere
 
 #TESTXYZ
--.0032                  xTest           (X coordinate of cell for testing)
-.004                  yTest           (Y coordinate of cell for testing)
-.001                  zTest           (Z coordinate of cell for testing)
+-.0030                xTest           (X coordinate of cell for testing)
+.0038                  yTest           (Y coordinate of cell for testing)
+.0011                  zTest           (Z coordinate of cell for testing)
 
 #PROGRESS
 10                     dnProgress1 (frequency of short reports to STDOUT)
