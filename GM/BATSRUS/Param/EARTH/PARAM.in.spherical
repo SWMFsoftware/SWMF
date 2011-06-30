@@ -16,7 +16,7 @@ F			DoTimeAccurate
 00			iSecond
 
 #RAYTRACE
-T			UseAccurateIntegral
+T			UseRaytrace
 T			UseAccurateTrace
 0.1			DtExchangeRay
 1			DnRaytrace

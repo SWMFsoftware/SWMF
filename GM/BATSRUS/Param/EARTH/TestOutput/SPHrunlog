@@ -3,14 +3,13 @@
           for 3D Heliospheric Flows
  University of Michigan, 1995-2007
 
- BATSRUS version 9.00 is running as GM on    4 PE(s)
+ BATSRUS version 9.00 is running as GM on      4 PE(s)
 
  EQUATIONS:   MHD
  USER MODULE: DEFAULT EMPTY ROUTINES 1.00
 
 ModReadParam::read_file: read and broadcast nLine= 181 lines of text
  ----- Starting Session  1  ------
- init_mod_restart_file: setting TypeRestartOutFile = one
  GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
 
 #DESCRIPTION
@@ -27,7 +26,7 @@ F			DoTimeAccurate
 00			iSecond
 
 #RAYTRACE
-T			UseAccurateIntegral
+T			UseAccurateIntegral		UseRaytrace
 T			UseAccurateTrace
 0.1			DtExchangeRay
 1			DnRaytrace
@@ -143,7 +142,9 @@ imf19980504.dat         NameSolarWindFile
 #RUN	######################################################################
  GM_set_parameters: CHECK iSession = 1
   
+init_mod_advance allocated arrays
 init_mod_geometry allocated arrays
+init_mod_nodes allocated arrays
 init_mod_raytrace allocated arrays
  read_solar_wind_file reading imf19980504.dat
  read_solar_wind_file read  4919  points from imf19980504.dat
@@ -229,21 +230,21 @@ init_mod_raytrace allocated arrays
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   1.08    100.00         1         1
+BATSRUS                   0.42    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     1.08    100.00         1         1
-load_balance              0.24     22.70         1         1
-exch_msgs                 0.04      4.10         1         1
+setup                     0.42    100.00         1         1
+load_balance              0.05     12.47         1         1
+exch_msgs                 0.02      4.05         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
-Speed is 197727.8 c/s/p after      2.8 s at N =      10
-saved ifile= 3 type=x=0_ray    at n_step=     20
-saved ifile= 4 type=y=0_ray    at n_step=     20
-saved ifile= 5 type=z=0_ray    at n_step=     20
-saved ifile= 6 type=x=0_mhd    at n_step=     20
-saved ifile= 7 type=y=0_mhd    at n_step=     20
-saved ifile= 8 type=z=0_mhd    at n_step=     20
-Speed is 190717.9 c/s/p after     15.4 s at N =      20
+Speed is 354804.6 c/s/p after      1.6 s at N =      10
+saved ifile= 5 type=x=0_ray    at n_step=     20
+saved ifile= 6 type=y=0_ray    at n_step=     20
+saved ifile= 7 type=z=0_ray    at n_step=     20
+saved ifile= 8 type=x=0_mhd    at n_step=     20
+saved ifile= 9 type=y=0_mhd    at n_step=     20
+saved ifile=10 type=z=0_mhd    at n_step=     20
+Speed is 350124.4 c/s/p after      7.8 s at N =      20
  ----- End of Session    1  ------
  ----- Starting Session  2  ------
  GM_set_parameters: READ iSession = 2  iLine= 134  nLine = 1000
@@ -269,15 +270,15 @@ T			UseBorisCorrection
 #RUN	######################################################################
  GM_set_parameters: CHECK iSession = 2
   
-Speed is  77084.8 c/s/p after     21.5 s at N =      30
-saved ifile= 3 type=x=0_ray    at n_step=     40
-saved ifile= 4 type=y=0_ray    at n_step=     40
-saved ifile= 5 type=z=0_ray    at n_step=     40
-saved ifile= 6 type=x=0_mhd    at n_step=     40
-saved ifile= 7 type=y=0_mhd    at n_step=     40
-saved ifile= 8 type=z=0_mhd    at n_step=     40
-Speed is  81567.3 c/s/p after     37.1 s at N =      40
-Speed is  80013.7 c/s/p after     43.2 s at N =      50
+Speed is 134386.9 c/s/p after     11.2 s at N =      30
+saved ifile= 5 type=x=0_ray    at n_step=     40
+saved ifile= 6 type=y=0_ray    at n_step=     40
+saved ifile= 7 type=z=0_ray    at n_step=     40
+saved ifile= 8 type=x=0_mhd    at n_step=     40
+saved ifile= 9 type=y=0_mhd    at n_step=     40
+saved ifile=10 type=z=0_mhd    at n_step=     40
+Speed is 139946.7 c/s/p after     19.3 s at N =      40
+Speed is 142644.2 c/s/p after     22.7 s at N =      50
  ----- End of Session    2  ------
  ----- Starting Session  3  ------
  GM_set_parameters: READ iSession = 3  iLine= 154  nLine = 1000
@@ -314,210 +315,250 @@ init_mod_implicit allocated arrays
  select_stepping: nBlockExplALL, nBlockImplALL= 248 96
  krylov at iter= 51
  GMRES tol,iter:   1.0000000000000000E-03 100
- initial rnrm:  28.2565394134800023
- 1  matvecs,  ||rn||/||r0|| =   0.7214913299854631
- 2  matvecs,  ||rn||/||r0|| =   0.3700350258676285
- 3  matvecs,  ||rn||/||r0|| =   0.2192437041806400
- 4  matvecs,  ||rn||/||r0|| =   0.1535311022453433
- 5  matvecs,  ||rn||/||r0|| =   0.1057274919285151
- 6  matvecs,  ||rn||/||r0|| =   7.0423384561843314E-02
- 7  matvecs,  ||rn||/||r0|| =   4.8387367817413693E-02
- 8  matvecs,  ||rn||/||r0|| =   3.5465330467125196E-02
- 9  matvecs,  ||rn||/||r0|| =   2.7406651019595475E-02
- 10  matvecs,  ||rn||/||r0|| =   2.1640074793999521E-02
- 11  matvecs,  ||rn||/||r0|| =   1.6373685174100368E-02
- 12  matvecs,  ||rn||/||r0|| =   1.2963434457879510E-02
- 13  matvecs,  ||rn||/||r0|| =   1.0233303473156636E-02
- 14  matvecs,  ||rn||/||r0|| =   8.1430852722655152E-03
- 15  matvecs,  ||rn||/||r0|| =   6.6432882396618041E-03
- 16  matvecs,  ||rn||/||r0|| =   5.2708817769777667E-03
- 17  matvecs,  ||rn||/||r0|| =   4.0907230017155566E-03
- 18  matvecs,  ||rn||/||r0|| =   3.2055020626921937E-03
- 19  matvecs,  ||rn||/||r0|| =   2.5356493560610856E-03
- 20  matvecs,  ||rn||/||r0|| =   2.0352275253759985E-03
- 21  matvecs,  ||rn||/||r0|| =   1.6004095186081440E-03
- 22  matvecs,  ||rn||/||r0|| =   1.2592286526380201E-03
- 23  matvecs,  ||rn||/||r0|| =   9.8962490874791279E-04
- GM_advance_impl: After KrylovMatVec,info,KrylovError= 23 0   9.8962490874791257E-04
+ initial rnrm:  28.2565394147396525
+ 1  matvecs,  ||rn||/||r0|| =   0.7214913299344273
+ 2  matvecs,  ||rn||/||r0|| =   0.3700350258693690
+ 3  matvecs,  ||rn||/||r0|| =   0.2192437041539620
+ 4  matvecs,  ||rn||/||r0|| =   0.1535311022399238
+ 5  matvecs,  ||rn||/||r0|| =   0.1057274919009338
+ 6  matvecs,  ||rn||/||r0|| =   7.0423384562678562E-02
+ 7  matvecs,  ||rn||/||r0|| =   4.8387367820436560E-02
+ 8  matvecs,  ||rn||/||r0|| =   3.5465330476067473E-02
+ 9  matvecs,  ||rn||/||r0|| =   2.7406651020359996E-02
+ 10  matvecs,  ||rn||/||r0|| =   2.1640074798585738E-02
+ 11  matvecs,  ||rn||/||r0|| =   1.6373685170679154E-02
+ 12  matvecs,  ||rn||/||r0|| =   1.2963434469968112E-02
+ 13  matvecs,  ||rn||/||r0|| =   1.0233303479354392E-02
+ 14  matvecs,  ||rn||/||r0|| =   8.1430852563962632E-03
+ 15  matvecs,  ||rn||/||r0|| =   6.6432882267377803E-03
+ 16  matvecs,  ||rn||/||r0|| =   5.2708817533797100E-03
+ 17  matvecs,  ||rn||/||r0|| =   4.0907229848795535E-03
+ 18  matvecs,  ||rn||/||r0|| =   3.2055020567268357E-03
+ 19  matvecs,  ||rn||/||r0|| =   2.5356493529115373E-03
+ 20  matvecs,  ||rn||/||r0|| =   2.0352275237739284E-03
+ 21  matvecs,  ||rn||/||r0|| =   1.6004095165697821E-03
+ 22  matvecs,  ||rn||/||r0|| =   1.2592286502894087E-03
+ 23  matvecs,  ||rn||/||r0|| =   9.8962490874769768E-04
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 23 0   9.8962490874769790E-04
+ pRhoRelativeMin is at i,j,k,iBlock,iProc =  2 1 4 10 3
+ x,y,z =  -0.6115713563236607  -3.0044574145421898E-02   2.7267353965707373
+ RhoOld,pOld=  10.3458726553428537   2.4326196636534347E-04
+ RhoNew,pNew=  10.3455233343144162   2.2108788467157386E-04
+ pRhoRelativeMin=   0.9088469026824053
  select_stepping: nBlockExplALL, nBlockImplALL= 248 96
  krylov at iter= 52
  GMRES tol,iter:   1.0000000000000000E-03 100
- initial rnrm:  25.3478884777106153
- 1  matvecs,  ||rn||/||r0|| =   0.6037743763270386
- 2  matvecs,  ||rn||/||r0|| =   0.2813006641283040
- 3  matvecs,  ||rn||/||r0|| =   0.1662608468571819
- 4  matvecs,  ||rn||/||r0|| =   0.1112569231948805
- 5  matvecs,  ||rn||/||r0|| =   6.2919474869669159E-02
- 6  matvecs,  ||rn||/||r0|| =   3.8016927345977926E-02
- 7  matvecs,  ||rn||/||r0|| =   2.5207849921315317E-02
- 8  matvecs,  ||rn||/||r0|| =   1.7193633866975880E-02
- 9  matvecs,  ||rn||/||r0|| =   1.1389077361629618E-02
- 10  matvecs,  ||rn||/||r0|| =   7.6177286155204860E-03
- 11  matvecs,  ||rn||/||r0|| =   5.4507981210581138E-03
- 12  matvecs,  ||rn||/||r0|| =   4.0867077984172830E-03
- 13  matvecs,  ||rn||/||r0|| =   3.0432495922993129E-03
- 14  matvecs,  ||rn||/||r0|| =   2.2568713489109801E-03
- 15  matvecs,  ||rn||/||r0|| =   1.6688495756138296E-03
- 16  matvecs,  ||rn||/||r0|| =   1.2006160564888351E-03
- 17  matvecs,  ||rn||/||r0|| =   9.1046945495989518E-04
- GM_advance_impl: After KrylovMatVec,info,KrylovError= 17 0   9.1046945495989507E-04
+ initial rnrm:  25.3477707478538683
+ 1  matvecs,  ||rn||/||r0|| =   0.6037768968829648
+ 2  matvecs,  ||rn||/||r0|| =   0.2813023855447166
+ 3  matvecs,  ||rn||/||r0|| =   0.1662619263793575
+ 4  matvecs,  ||rn||/||r0|| =   0.1112576270214901
+ 5  matvecs,  ||rn||/||r0|| =   6.2919905667629908E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.8017175768563477E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.5208043188410550E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.7193782048472141E-02
+ 9  matvecs,  ||rn||/||r0|| =   1.1389185041244115E-02
+ 10  matvecs,  ||rn||/||r0|| =   7.6177929939933407E-03
+ 11  matvecs,  ||rn||/||r0|| =   5.4508349519595796E-03
+ 12  matvecs,  ||rn||/||r0|| =   4.0867309390487886E-03
+ 13  matvecs,  ||rn||/||r0|| =   3.0432632317367279E-03
+ 14  matvecs,  ||rn||/||r0|| =   2.2568811709810189E-03
+ 15  matvecs,  ||rn||/||r0|| =   1.6688557230055173E-03
+ 16  matvecs,  ||rn||/||r0|| =   1.2006191198491206E-03
+ 17  matvecs,  ||rn||/||r0|| =   9.1047191605893340E-04
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 17 0   9.1047191605893340E-04
+ pRhoRelativeMin is at i,j,k,iBlock,iProc =  2 3 7 4 3
+ x,y,z =  -1.3642172079858486  -2.2760589060469387   0.8766272804690870
+ RhoOld,pOld=  11.3510140912159674   2.4084433615097038E-04
+ RhoNew,pNew=  11.4116884435340538   2.0872242732594259E-04
+ pRhoRelativeMin=   0.8666279251636935
  select_stepping: nBlockExplALL, nBlockImplALL= 248 96
  krylov at iter= 53
  GMRES tol,iter:   1.0000000000000000E-03 100
- initial rnrm:  25.0168985654532676
- 1  matvecs,  ||rn||/||r0|| =   0.5584081852803814
- 2  matvecs,  ||rn||/||r0|| =   0.2508142042838621
- 3  matvecs,  ||rn||/||r0|| =   0.1535161936868675
- 4  matvecs,  ||rn||/||r0|| =   0.1017333494452052
- 5  matvecs,  ||rn||/||r0|| =   5.9447219952803887E-02
- 6  matvecs,  ||rn||/||r0|| =   3.2994851087636931E-02
- 7  matvecs,  ||rn||/||r0|| =   2.1685628297417044E-02
- 8  matvecs,  ||rn||/||r0|| =   1.3865252910242390E-02
- 9  matvecs,  ||rn||/||r0|| =   8.7404445812814847E-03
- 10  matvecs,  ||rn||/||r0|| =   5.5392535871596690E-03
- 11  matvecs,  ||rn||/||r0|| =   3.8325859561320250E-03
- 12  matvecs,  ||rn||/||r0|| =   2.7697750308416148E-03
- 13  matvecs,  ||rn||/||r0|| =   2.0985394357630758E-03
- 14  matvecs,  ||rn||/||r0|| =   1.5891516942623455E-03
- 15  matvecs,  ||rn||/||r0|| =   1.1713023968833683E-03
- 16  matvecs,  ||rn||/||r0|| =   8.2346601358104267E-04
- GM_advance_impl: After KrylovMatVec,info,KrylovError= 16 0   8.2346601358104267E-04
+ initial rnrm:  25.0167683057712082
+ 1  matvecs,  ||rn||/||r0|| =   0.5584112031740756
+ 2  matvecs,  ||rn||/||r0|| =   0.2508159279955162
+ 3  matvecs,  ||rn||/||r0|| =   0.1535173060840530
+ 4  matvecs,  ||rn||/||r0|| =   0.1017339424511126
+ 5  matvecs,  ||rn||/||r0|| =   5.9447745397657709E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.2995169282624748E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.1685868949838011E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.3865407792986114E-02
+ 9  matvecs,  ||rn||/||r0|| =   8.7405506585273279E-03
+ 10  matvecs,  ||rn||/||r0|| =   5.5393202303580143E-03
+ 11  matvecs,  ||rn||/||r0|| =   3.8326264759430606E-03
+ 12  matvecs,  ||rn||/||r0|| =   2.7697963927956443E-03
+ 13  matvecs,  ||rn||/||r0|| =   2.0985540322208383E-03
+ 14  matvecs,  ||rn||/||r0|| =   1.5891628783457803E-03
+ 15  matvecs,  ||rn||/||r0|| =   1.1713116121510820E-03
+ 16  matvecs,  ||rn||/||r0|| =   8.2347315261906324E-04
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 16 0   8.2347315261906324E-04
+ pRhoRelativeMin is at i,j,k,iBlock,iProc =  1 7 3 15 1
+ x,y,z =  -0.3669146441416446  -2.4735376103306645  -0.6920100093126190
+ RhoOld,pOld=  13.0419755194562086   2.2930493917624247E-04
+ RhoNew,pNew=  13.1462971949185263   1.8235104747495873E-04
+ pRhoRelativeMin=   0.7952338407102725
  select_stepping: nBlockExplALL, nBlockImplALL= 248 96
  krylov at iter= 54
  GMRES tol,iter:   1.0000000000000000E-03 100
- initial rnrm:  26.5930142821909570
- 1  matvecs,  ||rn||/||r0|| =   0.5634867459240059
- 2  matvecs,  ||rn||/||r0|| =   0.2223296347682744
- 3  matvecs,  ||rn||/||r0|| =   0.1313445759210411
- 4  matvecs,  ||rn||/||r0|| =   8.1566816804823875E-02
- 5  matvecs,  ||rn||/||r0|| =   5.0684626340707917E-02
- 6  matvecs,  ||rn||/||r0|| =   2.7207842704466145E-02
- 7  matvecs,  ||rn||/||r0|| =   1.7601742046280195E-02
- 8  matvecs,  ||rn||/||r0|| =   1.1005132415315222E-02
- 9  matvecs,  ||rn||/||r0|| =   6.9194030882107488E-03
- 10  matvecs,  ||rn||/||r0|| =   4.6115539385106060E-03
- 11  matvecs,  ||rn||/||r0|| =   3.2604561954010939E-03
- 12  matvecs,  ||rn||/||r0|| =   2.4005335413192276E-03
- 13  matvecs,  ||rn||/||r0|| =   1.8489482427230398E-03
- 14  matvecs,  ||rn||/||r0|| =   1.3989072386463100E-03
- 15  matvecs,  ||rn||/||r0|| =   1.0395226793291324E-03
- 16  matvecs,  ||rn||/||r0|| =   7.5072594527722525E-04
- GM_advance_impl: After KrylovMatVec,info,KrylovError= 16 0   7.5072594527722525E-04
+ initial rnrm:  26.5929039974288628
+ 1  matvecs,  ||rn||/||r0|| =   0.5634891705565198
+ 2  matvecs,  ||rn||/||r0|| =   0.2223307994311379
+ 3  matvecs,  ||rn||/||r0|| =   0.1313453646683223
+ 4  matvecs,  ||rn||/||r0|| =   8.1567210094272619E-02
+ 5  matvecs,  ||rn||/||r0|| =   5.0685014060711381E-02
+ 6  matvecs,  ||rn||/||r0|| =   2.7208148831108048E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.7602007211080711E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.1005280727011100E-02
+ 9  matvecs,  ||rn||/||r0|| =   6.9194851551369037E-03
+ 10  matvecs,  ||rn||/||r0|| =   4.6116100940464351E-03
+ 11  matvecs,  ||rn||/||r0|| =   3.2604930544843547E-03
+ 12  matvecs,  ||rn||/||r0|| =   2.4005546457889905E-03
+ 13  matvecs,  ||rn||/||r0|| =   1.8489621562995801E-03
+ 14  matvecs,  ||rn||/||r0|| =   1.3989183396367528E-03
+ 15  matvecs,  ||rn||/||r0|| =   1.0395329364115426E-03
+ 16  matvecs,  ||rn||/||r0|| =   7.5073366350052466E-04
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 16 0   7.5073366350052477E-04
+ pRhoRelativeMin is at i,j,k,iBlock,iProc =  1 7 3 15 1
+ x,y,z =  -0.3669146441416446  -2.4735376103306645  -0.6920100093126190
+ RhoOld,pOld=  13.1462971949185263   1.8235104747495873E-04
+ RhoNew,pNew=  13.2491146150281871   1.2922141853645777E-04
+ pRhoRelativeMin=   0.7086409446274392
  select_stepping: nBlockExplALL, nBlockImplALL= 248 96
  krylov at iter= 55
  GMRES tol,iter:   1.0000000000000000E-03 100
- initial rnrm:  28.2765745919390987
- 1  matvecs,  ||rn||/||r0|| =   0.5736500833836006
- 2  matvecs,  ||rn||/||r0|| =   0.2016310465108645
- 3  matvecs,  ||rn||/||r0|| =   0.1135338264652686
- 4  matvecs,  ||rn||/||r0|| =   6.5718988692824679E-02
- 5  matvecs,  ||rn||/||r0|| =   4.0984335655587630E-02
- 6  matvecs,  ||rn||/||r0|| =   2.2207561174982265E-02
- 7  matvecs,  ||rn||/||r0|| =   1.3720228577524573E-02
- 8  matvecs,  ||rn||/||r0|| =   8.2789335003476475E-03
- 9  matvecs,  ||rn||/||r0|| =   5.1595399930666613E-03
- 10  matvecs,  ||rn||/||r0|| =   3.4161293034317085E-03
- 11  matvecs,  ||rn||/||r0|| =   2.3481298312556919E-03
- 12  matvecs,  ||rn||/||r0|| =   1.6885817243965815E-03
- 13  matvecs,  ||rn||/||r0|| =   1.2797310890351994E-03
- 14  matvecs,  ||rn||/||r0|| =   9.4400911164658054E-04
- GM_advance_impl: After KrylovMatVec,info,KrylovError= 14 0   9.4400911164658054E-04
+ initial rnrm:  28.2764818910850835
+ 1  matvecs,  ||rn||/||r0|| =   0.5736519080141405
+ 2  matvecs,  ||rn||/||r0|| =   0.2016318042639650
+ 3  matvecs,  ||rn||/||r0|| =   0.1135343604474508
+ 4  matvecs,  ||rn||/||r0|| =   6.5719252951029011E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.0984551932934876E-02
+ 6  matvecs,  ||rn||/||r0|| =   2.2207780304085396E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.3720418153626027E-02
+ 8  matvecs,  ||rn||/||r0|| =   8.2790299024532339E-03
+ 9  matvecs,  ||rn||/||r0|| =   5.1595834564787816E-03
+ 10  matvecs,  ||rn||/||r0|| =   3.4161564178195941E-03
+ 11  matvecs,  ||rn||/||r0|| =   2.3481422635781421E-03
+ 12  matvecs,  ||rn||/||r0|| =   1.6885959670434501E-03
+ 13  matvecs,  ||rn||/||r0|| =   1.2797418961176623E-03
+ 14  matvecs,  ||rn||/||r0|| =   9.4401539191933952E-04
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 14 0   9.4401539191933963E-04
+ pRhoRelativeMin is at i,j,k,iBlock,iProc =  1 7 3 15 1
+ x,y,z =  -0.3669146441416446  -2.4735376103306645  -0.6920100093126190
+ RhoOld,pOld=  13.2491146150281871   1.2922141853645777E-04
+ RhoNew,pNew=  13.3505747899002749   7.2718268970991574E-05
+ pRhoRelativeMin=   0.5627416088957053
  select_stepping: nBlockExplALL, nBlockImplALL= 250 94
  load_balance finished: nBlockMoved= 8
  krylov at iter= 56
  GMRES tol,iter:   1.0000000000000000E-03 100
- initial rnrm:  28.0158242653487761
- 1  matvecs,  ||rn||/||r0|| =   0.5694502388220773
- 2  matvecs,  ||rn||/||r0|| =   0.1812902082135479
- 3  matvecs,  ||rn||/||r0|| =   9.7919748805750856E-02
- 4  matvecs,  ||rn||/||r0|| =   5.3049975772518174E-02
- 5  matvecs,  ||rn||/||r0|| =   3.2334622153984062E-02
- 6  matvecs,  ||rn||/||r0|| =   1.7870281982612750E-02
- 7  matvecs,  ||rn||/||r0|| =   1.0465837198675268E-02
- 8  matvecs,  ||rn||/||r0|| =   6.1196504727035238E-03
- 9  matvecs,  ||rn||/||r0|| =   3.8064550104744892E-03
- 10  matvecs,  ||rn||/||r0|| =   2.4531387936409152E-03
- 11  matvecs,  ||rn||/||r0|| =   1.6586637602821256E-03
- 12  matvecs,  ||rn||/||r0|| =   1.1850957711597393E-03
- 13  matvecs,  ||rn||/||r0|| =   8.6354622116141500E-04
- GM_advance_impl: After KrylovMatVec,info,KrylovError= 13 0   8.6354622116141500E-04
+ initial rnrm:  28.0157514520199946
+ 1  matvecs,  ||rn||/||r0|| =   0.5694515936108935
+ 2  matvecs,  ||rn||/||r0|| =   0.1812907007355402
+ 3  matvecs,  ||rn||/||r0|| =   9.7920151785668430E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.3050162063486700E-02
+ 5  matvecs,  ||rn||/||r0|| =   3.2334742826674333E-02
+ 6  matvecs,  ||rn||/||r0|| =   1.7870359388744952E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.0465846138478707E-02
+ 8  matvecs,  ||rn||/||r0|| =   6.1195802371385296E-03
+ 9  matvecs,  ||rn||/||r0|| =   3.8064049542947858E-03
+ 10  matvecs,  ||rn||/||r0|| =   2.4531191421043731E-03
+ 11  matvecs,  ||rn||/||r0|| =   1.6586547199967821E-03
+ 12  matvecs,  ||rn||/||r0|| =   1.1851011026663607E-03
+ 13  matvecs,  ||rn||/||r0|| =   8.6355870395150793E-04
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 13 0   8.6355870395150782E-04
+ pRhoRelativeMin is at i,j,k,iBlock,iProc =  1 7 3 15 1
+ x,y,z =  -0.3669146441416446  -2.4735376103306645  -0.6920100093126190
+ RhoOld,pOld=  13.3505747899002749   7.2718268970991141E-05
+ RhoNew,pNew=  13.4459209990802169   1.7843748963150205E-05
+ pRhoRelativeMin=   0.2453819269304726
  select_stepping: nBlockExplALL, nBlockImplALL= 292 52
  load_balance finished: nBlockMoved= 12
  krylov at iter= 57
  GMRES tol,iter:   1.0000000000000000E-03 100
- initial rnrm:  15.8206172761189734
- 1  matvecs,  ||rn||/||r0|| =   0.6037947817971248
- 2  matvecs,  ||rn||/||r0|| =   0.1748283240574995
- 3  matvecs,  ||rn||/||r0|| =   9.2675471235761170E-02
- 4  matvecs,  ||rn||/||r0|| =   4.5777766274281137E-02
- 5  matvecs,  ||rn||/||r0|| =   2.5708709568236190E-02
- 6  matvecs,  ||rn||/||r0|| =   1.2713342520979977E-02
- 7  matvecs,  ||rn||/||r0|| =   6.5872602724568437E-03
- 8  matvecs,  ||rn||/||r0|| =   3.5845602736027239E-03
- 9  matvecs,  ||rn||/||r0|| =   2.2401524827409865E-03
- 10  matvecs,  ||rn||/||r0|| =   1.4632311515492570E-03
- 11  matvecs,  ||rn||/||r0|| =   9.9496613017411033E-04
- GM_advance_impl: After KrylovMatVec,info,KrylovError= 11 0   9.9496613017411033E-04
+ initial rnrm:  15.8206620993002858
+ 1  matvecs,  ||rn||/||r0|| =   0.6037940370412642
+ 2  matvecs,  ||rn||/||r0|| =   0.1748281542075156
+ 3  matvecs,  ||rn||/||r0|| =   9.2675406823009038E-02
+ 4  matvecs,  ||rn||/||r0|| =   4.5777681809012830E-02
+ 5  matvecs,  ||rn||/||r0|| =   2.5708663124448645E-02
+ 6  matvecs,  ||rn||/||r0|| =   1.2713373067287204E-02
+ 7  matvecs,  ||rn||/||r0|| =   6.5872164993784317E-03
+ 8  matvecs,  ||rn||/||r0|| =   3.5844952268114191E-03
+ 9  matvecs,  ||rn||/||r0|| =   2.2401101048976886E-03
+ 10  matvecs,  ||rn||/||r0|| =   1.4632186190178908E-03
+ 11  matvecs,  ||rn||/||r0|| =   9.9496590697415919E-04
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 11 0   9.9496590697415940E-04
  pRhoRelativeMin is at i,j,k,iBlock,iProc =  1 4 1 1 0
  x,y,z =   2.2792267255396457   0.8155203625710538  -0.9337797334556893
- RhoOld,pOld=  13.3504784751408589   4.7402799130243436E-04
- RhoNew,pNew=  13.3850089015026796   4.4131218672898597E-04
- pRhoRelativeMin=   0.9309833909099782
+ RhoOld,pOld=  13.3504791868658508   4.7408383344620803E-04
+ RhoNew,pNew=  13.3850098865227540   4.4136771322098365E-04
+ pRhoRelativeMin=   0.9309908545343035
  select_stepping: nBlockExplALL, nBlockImplALL= 280 64
  load_balance finished: nBlockMoved= 8
  krylov at iter= 58
  GMRES tol,iter:   1.0000000000000000E-03 100
- initial rnrm:  15.8298743863637146
- 1  matvecs,  ||rn||/||r0|| =   0.5114003076075806
- 2  matvecs,  ||rn||/||r0|| =   0.1192447578888984
- 3  matvecs,  ||rn||/||r0|| =   6.1806805466562878E-02
- 4  matvecs,  ||rn||/||r0|| =   2.6397138652413232E-02
- 5  matvecs,  ||rn||/||r0|| =   1.2552476036220580E-02
- 6  matvecs,  ||rn||/||r0|| =   5.4994344807966812E-03
- 7  matvecs,  ||rn||/||r0|| =   2.6604872374525008E-03
- 8  matvecs,  ||rn||/||r0|| =   1.4505235100582331E-03
- 9  matvecs,  ||rn||/||r0|| =   9.1826062287307219E-04
- GM_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   9.1826062287307208E-04
+ initial rnrm:  15.8298831470418264
+ 1  matvecs,  ||rn||/||r0|| =   0.5114003322694576
+ 2  matvecs,  ||rn||/||r0|| =   0.1192448155240467
+ 3  matvecs,  ||rn||/||r0|| =   6.1806892652552139E-02
+ 4  matvecs,  ||rn||/||r0|| =   2.6397190399757343E-02
+ 5  matvecs,  ||rn||/||r0|| =   1.2552488292056501E-02
+ 6  matvecs,  ||rn||/||r0|| =   5.4994711141612817E-03
+ 7  matvecs,  ||rn||/||r0|| =   2.6604560380343186E-03
+ 8  matvecs,  ||rn||/||r0|| =   1.4504919575946396E-03
+ 9  matvecs,  ||rn||/||r0|| =   9.1824107448595796E-04
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   9.1824107448595796E-04
  pRhoRelativeMin is at i,j,k,iBlock,iProc =  1 4 1 1 0
  x,y,z =   2.2792267255396457   0.8155203625710538  -0.9337797334556893
- RhoOld,pOld=  13.3850089015026796   4.4131218672898597E-04
- RhoNew,pNew=  13.4196822055198481   4.1545031681886074E-04
- pRhoRelativeMin=   0.9413977889398117
+ RhoOld,pOld=  13.3850098865227540   4.4136771322098365E-04
+ RhoNew,pNew=  13.4196834300554304   4.1550547189365169E-04
+ pRhoRelativeMin=   0.9414043199068726
  select_stepping: nBlockExplALL, nBlockImplALL= 278 66
  krylov at iter= 59
  GMRES tol,iter:   1.0000000000000000E-03 100
- initial rnrm:  16.2046875127123364
- 1  matvecs,  ||rn||/||r0|| =   0.5025403511103205
- 2  matvecs,  ||rn||/||r0|| =   0.1169449851170316
- 3  matvecs,  ||rn||/||r0|| =   6.0491344575229040E-02
- 4  matvecs,  ||rn||/||r0|| =   2.6150830161477186E-02
- 5  matvecs,  ||rn||/||r0|| =   1.2455014953957611E-02
- 6  matvecs,  ||rn||/||r0|| =   5.6985999920645273E-03
- 7  matvecs,  ||rn||/||r0|| =   2.7654022151210938E-03
- 8  matvecs,  ||rn||/||r0|| =   1.5038385404541308E-03
- 9  matvecs,  ||rn||/||r0|| =   9.4361286223375285E-04
- GM_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   9.4361286223375296E-04
+ initial rnrm:  16.2047455998372030
+ 1  matvecs,  ||rn||/||r0|| =   0.5025393437803751
+ 2  matvecs,  ||rn||/||r0|| =   0.1169447502169185
+ 3  matvecs,  ||rn||/||r0|| =   6.0491295252993939E-02
+ 4  matvecs,  ||rn||/||r0|| =   2.6150845312973549E-02
+ 5  matvecs,  ||rn||/||r0|| =   1.2454990471038986E-02
+ 6  matvecs,  ||rn||/||r0|| =   5.6986051539789223E-03
+ 7  matvecs,  ||rn||/||r0|| =   2.7653429455296238E-03
+ 8  matvecs,  ||rn||/||r0|| =   1.5037899382121897E-03
+ 9  matvecs,  ||rn||/||r0|| =   9.4358443357314551E-04
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   9.4358443357314551E-04
+ pRhoRelativeMin is at i,j,k,iBlock,iProc =  2 3 4 18 2
+ x,y,z =  -0.1487789289188363   0.5939587785536178   2.7267353965707373
+ RhoOld,pOld=  10.7697217673931593   2.9156279963466966E-04
+ RhoNew,pNew=  10.7874703861942116   2.6402305229297524E-04
+ pRhoRelativeMin=   0.9055443719973812
  select_stepping: nBlockExplALL, nBlockImplALL= 264 80
  krylov at iter= 60
  GMRES tol,iter:   1.0000000000000000E-03 100
- initial rnrm:  17.3868929786935595
- 1  matvecs,  ||rn||/||r0|| =   0.4706501766782044
- 2  matvecs,  ||rn||/||r0|| =   0.1082750929328710
- 3  matvecs,  ||rn||/||r0|| =   5.5509099001807852E-02
- 4  matvecs,  ||rn||/||r0|| =   2.4448691739594269E-02
- 5  matvecs,  ||rn||/||r0|| =   1.1624018148936103E-02
- 6  matvecs,  ||rn||/||r0|| =   5.5873095401990083E-03
- 7  matvecs,  ||rn||/||r0|| =   2.7453430301499189E-03
- 8  matvecs,  ||rn||/||r0|| =   1.4917652527678175E-03
- 9  matvecs,  ||rn||/||r0|| =   9.2305598258048073E-04
- GM_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   9.2305598258048062E-04
-saved ifile= 3 type=x=0_ray    at n_step=     60 time=   0:00:00 h:m:s
-saved ifile= 4 type=y=0_ray    at n_step=     60 time=   0:00:00 h:m:s
-saved ifile= 5 type=z=0_ray    at n_step=     60 time=   0:00:00 h:m:s
-saved ifile= 6 type=x=0_mhd    at n_step=     60 time=   0:00:00 h:m:s
-saved ifile= 7 type=y=0_mhd    at n_step=     60 time=   0:00:00 h:m:s
-saved ifile= 8 type=z=0_mhd    at n_step=     60 time=   0:00:00 h:m:s
-Speed is  14731.2 c/s/p after     98.3 s at N =      60 (7.0473E-01 s)
+ initial rnrm:  17.3868851745330772
+ 1  matvecs,  ||rn||/||r0|| =   0.4706504430561324
+ 2  matvecs,  ||rn||/||r0|| =   0.1082752030083178
+ 3  matvecs,  ||rn||/||r0|| =   5.5509253869041549E-02
+ 4  matvecs,  ||rn||/||r0|| =   2.4448772157261114E-02
+ 5  matvecs,  ||rn||/||r0|| =   1.1624019994297805E-02
+ 6  matvecs,  ||rn||/||r0|| =   5.5873173241052301E-03
+ 7  matvecs,  ||rn||/||r0|| =   2.7452745323197432E-03
+ 8  matvecs,  ||rn||/||r0|| =   1.4917108156770886E-03
+ 9  matvecs,  ||rn||/||r0|| =   9.2302016296703449E-04
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   9.2302016296703460E-04
+ pRhoRelativeMin is at i,j,k,iBlock,iProc =  2 4 4 18 2
+ x,y,z =  -0.2062806586581386   0.5765158195355147   2.7267353965707373
+ RhoOld,pOld=  10.7233729819974197   2.5567354899728133E-04
+ RhoNew,pNew=  10.7382110378130129   2.1739838890916458E-04
+ pRhoRelativeMin=   0.8502967544424248
+saved ifile= 5 type=x=0_ray    at n_step=     60 time=   0:00:00 h:m:s
+saved ifile= 6 type=y=0_ray    at n_step=     60 time=   0:00:00 h:m:s
+saved ifile= 7 type=z=0_ray    at n_step=     60 time=   0:00:00 h:m:s
+saved ifile= 8 type=x=0_mhd    at n_step=     60 time=   0:00:00 h:m:s
+saved ifile= 9 type=y=0_mhd    at n_step=     60 time=   0:00:00 h:m:s
+saved ifile=10 type=z=0_mhd    at n_step=     60 time=   0:00:00 h:m:s
+Speed is  31714.6 c/s/p after     46.1 s at N =      60 (7.0473E-01 s)
 
     Finished Numerical Simulation
     -----------------------------
@@ -529,66 +570,40 @@ Speed is  14731.2 c/s/p after     98.3 s at N =      60 (7.0473E-01 s)
 SORTED TIMING from step       0 to      60    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                  98.30    100.00         1         1
+BATSRUS                  46.11    100.00         1         1
 -------------------------------------------------------------------------------
-advance                  63.57     64.67        60        60
-ray_trace                28.42     28.91       pRhoRelativeMin is at i,j,k,iBlock,iProc =  1 7 3 15 1
- x,y,z =  -0.3669146441416445  -2.4735376103306645  -0.6920100093126190
- RhoOld,pOld=  13.0419755326426579   2.2932834910675999E-04
- RhoNew,pNew=  13.1462972532356250   1.8241427561837588E-04
- pRhoRelativeMin=   0.7954283730244618
- pRhoRelativeMin is at i,j,k,iBlock,iProc =  1 7 3 15 1
- x,y,z =  -0.3669146441416445  -2.4735376103306645  -0.6920100093126190
- RhoOld,pOld=  13.1462972532356250   1.8241427561837588E-04
- RhoNew,pNew=  13.2491147621536172   1.2933348744099439E-04
- pRhoRelativeMin=   0.7090096814109527
- pRhoRelativeMin is at i,j,k,iBlock,iProc =  1 7 3 15 1
- x,y,z =  -0.3669146441416445  -2.4735376103306645  -0.6920100093126190
- RhoOld,pOld=  13.2491147621536172   1.2933348744099439E-04
- RhoNew,pNew=  13.3505750458256234   7.2883485839130360E-05
- pRhoRelativeMin=   0.5635314355254039
- pRhoRelativeMin is at i,j,k,iBlock,iProc =  1 7 3 15 1
- x,y,z =  -0.3669146441416445  -2.4735376103306645  -0.6920100093126190
- RhoOld,pOld=  13.3505750458256234   7.2883485839130360E-05
- RhoNew,pNew=  13.4459216708323783   1.8061283654621698E-05
- pRhoRelativeMin=   0.2478103708498090
- pRhoRelativeMin is at i,j,k,iBlock,iProc =  2 3 4 18 2
- x,y,z =  -0.1487789289188363   0.5939587785536178   2.7267353965707373
- RhoOld,pOld=  10.7697217512686532   2.9136735711274026E-04
- RhoNew,pNew=  10.7874703855237719   2.6380999904679239E-04
- pRhoRelativeMin=   0.9054205716830354
- pRhoRelativeMin is at i,j,k,iBlock,iProc =  2 4 4 18 2
- x,y,z =  -0.2062806586581386   0.5765158195355147   2.7267353965707373
- RhoOld,pOld=  10.7233729185143698   2.5547857174633946E-04
- RhoNew,pNew=  10.7382108980957867   2.1718032034747769E-04
- pRhoRelativeMin=   0.8500921187359405
-   3         3
-krylov solver            25.16     25.60        10        10
-impl_matvec              15.43     15.70        10       137
-calc_fluxes              14.27     14.51        80     11596
-advance_expl             11.90     12.10        30       167
-get_residual              9.92     10.09        20       157
-matvec_free               9.42      9.59        10       137
-exch_msgs                 5.87      5.97        95       282
-impl_jacobian             5.61      5.71        10        10
-calc_facevalues           4.45      4.53        80     11596
-save_logfile              3.49      3.55        60        60
-calc_sources              3.46      3.52        80     11596
-update_states             2.56      2.60        80     11596
-update_b0                 1.76      1.79        10        10
-update_check              1.56      1.59        50        80
-set_bcs                   0.98      1.00        80      6401
-barrier-expl2             0.70      0.72        80       257
-save_plot                 0.64      0.65         3        18
-calc_face_bfo             0.50      0.51        60      2400
-expl2impl                 0.43      0.44        30       167
-impl2expl                 0.38      0.39        30      3626
-update_B0                 0.20      0.20        10        10
-barrier-expl1             0.16      0.17        80       257
-calc_fluxes_bfo           0.15      0.15        60      2400
-nonconservative           0.14      0.14        60        60
-load_balance              0.08      0.08        10        10
-send_cons_flux            0.07      0.07        80       257
+advance                  29.83     64.69        60        60
+ray_trace                13.86     30.06         3         3
+calc_fluxes               9.50     20.59        80     11596
+krylov solver             9.19     19.93        10        10
+advance_expl              7.27     15.77        30       167
+impl_matvec               7.17     15.56        10       137
+get_residual              5.60     12.15        20       157
+matvec_free               5.23     11.34        10       137
+impl_jacobian             2.86      6.20        10        10
+calc_facevalues           2.08      4.51        80     11596
+exch_msgs                 1.92      4.16        95       282
+calc_sources              1.85      4.00        80     11596
+update_states             1.79      3.88        80     11596
+barrier-expl2             1.41      3.06        80       257
+save_logfile              1.30      2.82        60        60
+update_b0                 0.74      1.60         9         9
+update_check              0.63      1.36        50        80
+set_bcs                   0.41      0.89        80      6401
+save_plot                 0.32      0.70         3        18
+calc_face_bfo             0.25      0.54        60      2400
+impl2expl                 0.12      0.26        30      3626
+expl2impl                 0.12      0.25        30       167
+calc_fluxes_bfo           0.10      0.22        60      2400
+barrier-expl1             0.07      0.15        80       257
+nonconservative           0.04      0.09        60        60
+send_cons_flux            0.03      0.07        80       257
+load_balance              0.02      0.05        10        10
 barrier                   0.00      0.00         3         9
 -------------------------------------------------------------------------------
+clean_mod_advance deallocated arrays
+clean_mod_implicit deallocated arrays
+clean_mod_geometry deallocated arrays
+clean_mod_nodes deallocated arrays
+clean_mod_raytrace deallocated arrays
  error report: no errors...
