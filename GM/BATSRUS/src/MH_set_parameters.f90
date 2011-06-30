@@ -20,7 +20,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
   use ModBlockData, ONLY: clean_block_data
   use ModBatlInterface, ONLY: UseBatlTest
-  use BATL_lib, ONLY: read_amr_criteria, &
+  use BATL_lib, ONLY: read_amr_criteria, DoCritAmr, DoAutoAmr, DoStrictAmr,&
        nDimBatl => nDim, BetaProlong
   use BATL_size, ONLY: nGI, nGJ, nGK
   use ModAMR
@@ -29,7 +29,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModIO
   use CON_planet,       ONLY: read_planet_var, check_planet_var, NamePlanet
   use ModPlanetConst
-  use CON_axes,         ONLY: init_axes
+  use CON_axes,         ONLY: init_axes,get_axes
   use ModUtilities,     ONLY: check_dir, fix_dir_name, DoFlush, split_string
 
   use CON_planet,       ONLY: get_planet
@@ -81,7 +81,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModTimeStepControl, ONLY: read_time_step_control_param
   use ModLaserHeating,    ONLY: read_laser_heating_param
   use ModIoUnit, ONLY: io_unit_new
-
+  
   !CORONA SPECIFIC PARAMETERS
   use EEE_ModMain, ONLY: EEE_set_parameters
   use ModMagnetogram, ONLY: set_parameters_magnetogram, &
@@ -98,7 +98,7 @@ subroutine MH_set_parameters(TypeAction)
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
-  
+
   ! Arguments
 
   ! TypeAction determines if we read or check parameters
@@ -135,7 +135,7 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Variables for #LIMITGENCOORD1 or #LIMITRADIUS
   real :: Coord1Min = -1.0, Coord1Max = -1.0
-  
+
   ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
   character(len=lStringLine):: NameArea='all'
   integer :: nLevelArea=0
@@ -177,7 +177,7 @@ subroutine MH_set_parameters(TypeAction)
      call read_mag_input_file
      DoReadMagnetometerFile = .false.
   end if
-  
+
   select case(TypeAction)
   case('CHECK')
      if(iProc==0)write(*,*) NameSub,': CHECK iSession =',iSession
@@ -209,12 +209,20 @@ subroutine MH_set_parameters(TypeAction)
 
      ! In standalone mode set and obtain GM specific parameters 
      ! in CON_planet and CON_axes
+
+     if(NameThisComp == 'GM') then
+        ! Initialize axes
+        call init_axes(StartTime)
+        call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
+        call get_planet(DipoleStrengthOut = DipoleStrengthSi)
+     end if
+
      if(IsStandAlone .and. NameThisComp=='GM') then
         ! Check and set some planet variables (e.g. DoUpdateB0)
         call check_planet_var(iProc==0, time_accurate)
 
-        ! Initialize axes
-        call init_axes(StartTime)
+!!$        ! Initialize axes
+!!$        call init_axes(StartTime)
 
         if(body1)then
            call get_planet(UseRotationOut = UseRotatingBc)
@@ -226,9 +234,14 @@ subroutine MH_set_parameters(TypeAction)
         if(DipoleStrengthSi == 0.0)then
            DoUpdateB0 = .false.
            Dt_UpdateB0 = -1.0
+
+           UseB0 = .false. !!!
         else
            call get_planet( &
                 DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
+        
+           write(*,*)'!!! DoUpdateB0 =',DoUpdateB0
+        
         end if
 
      end if
@@ -255,6 +268,20 @@ subroutine MH_set_parameters(TypeAction)
 
      call set_physics_constants
 
+!!$     if(IsStandAlone .and. NameThisComp=='GM') then
+!!$
+!!$        ! Obtain some planet parameters
+!!$        if(DipoleStrengthSi == 0.0)then
+!!$           DoUpdateB0 = .false.
+!!$           Dt_UpdateB0 = -1.0
+!!$        else
+!!$           call get_planet( &
+!!$                DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
+!!$
+!!$        end if
+!!$
+!!$     end if
+
      ! Normalization of solar wind data requires normalization in set_physics
      if (DoReadSolarwindFile) call normalize_solar_wind_data
 
@@ -267,13 +294,13 @@ subroutine MH_set_parameters(TypeAction)
 
      if(UseMagnetogram)then
         if(i_line_command("#MAGNETOGRAM") > 0)then
-          call read_magnetogram_file(NamePlotDir)
+           call read_magnetogram_file(NamePlotDir)
         elseif(i_line_command("#READPOTENTIALFIELD") > 0)then
            call read_potential_field(NamePlotDir)
         end if
      end if
 
-    
+
      if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
           call set_empirical_model(NameModelSW, BodyTDim_I(IonFirst_))
 
@@ -338,7 +365,7 @@ subroutine MH_set_parameters(TypeAction)
            if(nGI /= 2 .or. nGJ /= 2 .or. nGK /= 2) call stop_mpi(NameSub// &
                 ' ERROR: nGI..nGK must be 2 in srcBATL/BATL_size.f90')
         end if
-        
+
      case("#BATLTEST")
         call read_var('UseBatlTest', UseBatlTest)
         if(UseBatlTest)then
@@ -805,8 +832,8 @@ subroutine MH_set_parameters(TypeAction)
               if(index(plot_string,'idl_ascii') > 0) &
                    TypeIdlFile_I(iFile) = 'ascii'
            elseif(index(plot_string, 'hdf') > 0) then
-           		plot_form(ifile)='hdf'
-           		call read_var('DxSavePlot',plot_dx(1,ifile))
+              plot_form(ifile)='hdf'
+              call read_var('DxSavePlot',plot_dx(1,ifile))
            elseif(index(plot_string,'tec')>0)then 
               plot_form(ifile)='tec'
               plot_dx(1,ifile)=0.
@@ -1012,7 +1039,7 @@ subroutine MH_set_parameters(TypeAction)
            ! Convert to center and size information
            Area_I(nArea)%Center_D = 0.5*   (XyzStartArea_D + XyzEndArea_D)
            Area_I(nArea)%Size_D   = 0.5*abs(XyzEndArea_D - XyzStartArea_D)
- 
+
            ! Overwrite name with brick
            if(NameArea == "box_gen")then
               Area_I(nArea)%Name = "brick_gen"
@@ -1089,7 +1116,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('xStretch', xStretchArea)
            call read_var('yStretch', yStretchArea)
            call read_var('zStretch', zStretchArea)
-           
+
            ! Stretch the x, y, z sizes
            Area_I(nArea)%Size_D(1) = Area_I(nArea)%Size_D(1)*xStretchArea
            Area_I(nArea)%Size_D(2) = Area_I(nArea)%Size_D(2)*yStretchArea
@@ -1169,11 +1196,14 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
      case("#AMR")
-        call read_var('DnRefine',dn_refine)
-        if (dn_refine > 0)then
+        call read_var('DnRefine',DnAmr)
+        DoAmr = DnAmr > 0
+        DtAmr = -1.0
+        if (DoAmr)then
            call read_var('DoAutoRefine',automatic_refinement)
            if (automatic_refinement) then
               if(UseBatl) then
+!!! call stop_mpi('Use #DOAMR and #AMRTYPE with BATL"')
                  call read_amr_criteria("#AMR")
               else
                  call read_var('PercentCoarsen',percentCoarsen)
@@ -1187,13 +1217,21 @@ subroutine MH_set_parameters(TypeAction)
         if(.not. UseBatl) call stop_mpi(NameSub// &
              ' BATL is required for command='//NameCommand)
         call read_amr_criteria(NameCommand)
+        if(NameCommand == "#AMRERRORCRIT" ) &
+             automatic_refinement = DoAutoAmr ! for now
 
      case("#DOAMR")
-        call read_var('DoAmr',automatic_refinement)
-        call read_var('DnAmr',dn_refine)
-        call read_var('DtAmr',dt_refine)
+        call read_var('DoAmr',DoAmr) !!!
+        if(DoAmr) then
+           call read_var('DnAmr',DnAmr)
+           call read_var('DtAmr',DtAmr)
+           call read_var('IsStrictAmr'  ,DoStrictAmr)
+        end if
 
      case("#AMRCRITERIA")
+        DoCritAmr = .true.
+        DoAutoAmr = .true.
+        automatic_refinement = DoAutoAmr ! for now
         call read_var('nRefineCrit',nRefineCrit)
         if(nRefineCrit<0 .or. nRefineCrit>3)&
              call stop_mpi(NameSub//' ERROR: nRefineCrit must be 0, 1, 2 or 3')
@@ -1202,7 +1240,7 @@ subroutine MH_set_parameters(TypeAction)
            if(UseBatl)then
               call read_var('CoarsenLimit', CoarsenLimit_I(i))
               call read_var('RefineLimit',  RefineLimit_I(i))
-              
+
 
            end if
            if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
@@ -1538,7 +1576,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoMultiFluidIMCoupling', DoMultiFluidIMCoupling)
 
         !^CFG END RCM
-        
+
      case("#RBSATCOUPLING")
         call read_var('DoRbSatTrace',DoRbSatTrace)
      case("#USERFLAGS", "#USER_FLAGS")
@@ -1621,9 +1659,9 @@ subroutine MH_set_parameters(TypeAction)
         DoReadMagnetometerFile = .true.
         save_magnetometer_data = .true.
         call read_var('MagInputFile', MagInputFile)
-        
+
         if (iProc==0) call check_dir(NamePlotDir)
-        
+
         call read_var('DnOutput', dn_output(magfile_))
         call read_var('DtOutput', dt_output(magfile_)) 
         nFile = max(nFile, magfile_) 
@@ -1887,7 +1925,7 @@ subroutine MH_set_parameters(TypeAction)
                    ' ERROR: cannot handle coordinate system '&
                    //TypeCoordSystem)
            end select
-       case('SC','LC')
+        case('SC','LC')
            select case(TypeCoordSystem)
            case('HGR','HGC')
               UseRotatingFrame = .true.
@@ -2137,7 +2175,7 @@ contains
        UseRotatingFrame  = .false.
        UseRotatingBc     = .true.;  TypeCoordSystem   = 'GSM'
     end select
-    
+
     !Do not set B0 field in IH and OH
     if(NameThisComp/='IH'.and.NameThisComp/='OH')then
        UseB0=UseB
@@ -2185,7 +2223,8 @@ contains
     percentRefine  = 0.
     maxTotalBlocks = nBLK*nProc
 
-    dn_refine=-1
+    DnAmr=-1
+    DoAmr=.false.
     automatic_refinement = .false.
 
     nOrder = 2
@@ -2533,7 +2572,7 @@ contains
     !^CFG END IMPLICIT
 
     !Check for magnetogram
-  
+
     if(UseEmpiricalSW.and..not.UseMagnetogram)&
          call stop_mpi(&
          'Empirical Solar Wind model requires magnetogram')
@@ -3180,9 +3219,9 @@ contains
          (UseTvdResChange .or. UseAccurateResChange))
     DoLimitMomentum = boris_correction .and. DoOneCoarserLayer
 
-    !!! momentum limiting fails for multiion: to be debugged
+!!! momentum limiting fails for multiion: to be debugged
     if(UseMultiIon)DoLimitMomentum = .false.
-    !!!
+!!!
 
     if(UseConstrainB) then          !^CFG IF CONSTRAINB BEGIN
        jMinFaceX=0; jMaxFaceX=nJ+1
