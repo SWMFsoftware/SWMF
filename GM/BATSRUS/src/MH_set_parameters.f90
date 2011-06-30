@@ -236,9 +236,6 @@ subroutine MH_set_parameters(TypeAction)
         else
            call get_planet( &
                 DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
-        
-           write(*,*)'!!! DoUpdateB0 =',DoUpdateB0
-        
         end if
 
      end if
