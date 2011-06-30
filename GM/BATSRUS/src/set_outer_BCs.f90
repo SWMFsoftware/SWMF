@@ -658,12 +658,17 @@ subroutine BC_fixed_B
   use ModSetOuterBC
   use ModVarIndexes
   use ModAdvance, ONLY : State_VGB,B0_DGB
+  use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
+  character(len=*), parameter:: NameSub = 'BC_fixed_B'
+  logical :: DoTest, DoTestMe
   ! Set q_B=q-q_B0 in ghost cells
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
   State_VGB(Bx_:Bz_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)= &
        State_VGB(Bx_:Bz_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)&
        - B0_DGB(:,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)
- 
+
   State_VGB(Bx_:Bz_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)= &
        State_VGB(Bx_:Bz_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)&
        - B0_DGB(:,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)
@@ -683,7 +688,12 @@ subroutine BC_solar_wind(time_now)
   use ModPhysics, ONLY: LowDensityRatio
   use ModNumConst, ONLY: cTiny
   use ModSolarwind, ONLY: get_solar_wind_point
+  use ModMain,         ONLY: UseB0
+  use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
   implicit none
+
+  character(len=*), parameter:: NameSub = 'BC_solar_wind'
+  logical :: DoTest, DoTestMe
 
   ! Current simulation time in seconds
   real, intent(in) :: time_now 
@@ -693,8 +703,17 @@ subroutine BC_solar_wind(time_now)
   real :: x, y, z
   ! Varying solar wind parameters
   real :: SolarWind_V(nVar)
+
   !-----------------------------------------------------------------------
-  
+
+  !call set_oktest(NameSub, DoTest, DoTestMe)
+
+!!$  if(iBLK == BlkTest) then
+!!$     print *, "Pre :: State_VGB(Bx_:Bz_ ...", State_VGB(Bx_:Bz_,iTest,jTest,jTest,iBLK)
+!!$     print *, "Pre :: B0_DGB(:,...         ", B0_DGB(:,iTest,jTest,jTest,iBLK)
+!!$     print *, " ranges :: ", kmin1g, kmax1g , jmin1g, jmax2g, imin1g, imax2g
+!!$  end if
+
   do k = kmin1g, kmax1g 
      z = z_BLK(1,1,k,iBLK)
      do j = jmin1g, jmax2g
@@ -716,12 +735,17 @@ subroutine BC_solar_wind(time_now)
                 State_VGB(iUz_I, i,j,k,iBLK)*State_VGB(iRho_I,i,j,k,iBLK)
 
            ! Subtract B0:   B1 = B - B0
-           State_VGB(Bx_:Bz_,i,j,k,iBLK)    = &
+           if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBLK)    = &
                 State_VGB(Bx_:Bz_,i,j,k,iBLK) - B0_DGB(:,i,j,k,iBLK)
         end do
      end do
   end do
-  
+
+!!$  if(iBLK == BlkTest) then
+!!$     print *, "Post :: State_VGB(Bx_:Bz_ ..", State_VGB(Bx_:Bz_,iTest,jTest,jTest,iBLK)
+!!$     print *, "Post :: B0_DGB(:,...        ", B0_DGB(:,iTest,jTest,jTest,iBLK)
+!!$  end if
+
 end subroutine BC_solar_wind
 
 !==========================================================================  
@@ -936,7 +960,7 @@ subroutine set_radiation_outflow_bc_adjoint(iVarFirst, iVarLast, iSide)
         call user_material_properties(State_VGB(:,i,j,kmin1p,iBLK), &
              i, j, kmin1p, iBLK, OpacityRosselandOut_W=OpacityRosselandSi_W)
         ! TODO: return linearization of OpacityRosselandSi_W
-        
+
         do iVar = iVarFirst, iVarLast
            iWave = iVar - iVarFirst + 1
            Coef = 2/sqrt( (3*OpacityRosselandSi_W(iWave) &
