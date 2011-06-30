@@ -110,6 +110,8 @@ subroutine impl_jacobian(implBLK,JAC)
      B0_DFD(:,1:nI+1,1:nJ  ,1:nK  ,x_)=B0_DX(:,1:nI+1,1:nJ,1:nK)
      B0_DFD(:,1:nI  ,1:nJ+1,1:nK  ,y_)=B0_DY(:,1:nI,1:nJ+1,1:nK)
      B0_DFD(:,1:nI  ,1:nJ  ,1:nK+1,z_)=B0_DZ(:,1:nI,1:nJ,1:nK+1)
+  else
+     B0_DFD =0.0
   end if
 
   if(UseHallResist)call impl_init_hall
