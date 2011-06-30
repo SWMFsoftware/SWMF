@@ -11,7 +11,7 @@ subroutine BATS_setup
   use ModIO
   use ModHdf5, ONLY : hdf5_setup
   use ModAMR, ONLY : &
-       dn_refine, initial_refine_levels, nRefineLevelIC, nRefineLevel,&
+       DnAmr, initial_refine_levels, nRefineLevelIC, nRefineLevel,&
        automatic_refinement
   use ModAdvance, ONLY : iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
   use ModNumConst
@@ -378,7 +378,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModProcMH
   use ModMain
   use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
-  use ModAmr, ONLY: dn_refine
+  use ModAmr, ONLY: DnAmr, DoAmr
   use ModPhysics, ONLY : No2Si_V, UnitT_, TauWaveParticle, TauInstability
   use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure, State_VGB
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
@@ -491,13 +491,14 @@ subroutine BATS_advance(TimeSimulationLimit)
   if (DoUpdateB0) then
      ! Unsplit dB0/dt term is added every time step
      ! Split dB0/dt term is added at the dt_updateB0 frequency
+
      if (.not.DoSplitDb0Dt .or. &
           int(Time_Simulation/dt_UpdateB0) >  &
           int((Time_Simulation - Dt*No2Si_V(UnitT_))/dt_UpdateB0)) &
           call update_b0
   end if
 
-  if ( dn_refine > 0 .and. mod(n_step,dn_refine)==0 )then
+  if ( DoAmr .and. mod(n_step,DnAmr)==0 )then
 
      !\
      ! Output time before AMR.

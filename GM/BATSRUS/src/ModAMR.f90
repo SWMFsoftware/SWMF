@@ -49,7 +49,7 @@ module ModAMR
   integer            :: nRefineCrit, MaxTotalBlocks
   real               :: PercentCoarsen, PercentRefine
   character (len=20) :: RefineCrit(3), TypeTransient_I(3)
-  real               :: CoarsenLimit_I(4), RefineLimit_I(4)
+  real               :: CoarsenLimit_I(4)=-1.0, RefineLimit_I(4)=-1.0
 
   ! Refine for criterion n only if it is above RefineCritMin_I(n)
   real               :: RefineCritMin_I(3) = (/-1.0,-1.0,-1.0/)
@@ -60,11 +60,12 @@ module ModAMR
   ! Refinement parameters.
   !/
   integer :: initial_refine_levels, nRefineLevelIC, nRefineLevel
-  integer :: dn_refine
+  integer :: DnAmr = -1
   integer :: min_block_level, max_block_level
   real    :: min_cell_dx, max_cell_dx
-  real    :: dt_refine
+  real    :: DtAmr = -1.0
   logical :: automatic_refinement, fix_body_level
+  logical :: DoAmr = .false.
 
 
   !\
