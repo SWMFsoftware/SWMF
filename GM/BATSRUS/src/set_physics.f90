@@ -189,14 +189,14 @@ subroutine set_physics_constants
   end if
 
   if(.not.UseElectronPressure .and. IsMhd) then
-      BodyP_I(1)  = BodyP_I(1)*(1 + ElectronPressureRatio)
-      PolarP_I(1) = PolarP_I(1)*(1 + ElectronPressureRatio)
-   end if
+     BodyP_I(1)  = BodyP_I(1)*(1 + ElectronPressureRatio)
+     PolarP_I(1) = PolarP_I(1)*(1 + ElectronPressureRatio)
+  end if
 
   !^CFG IF SECONDBODY BEGIN
   RhoBody2= RhoDimBody2 *Io2No_V(UnitN_)*MassIon_I(1)
   pBody2  = RhoBody2 * TDimBody2*Io2No_V(UnitTemperature_)
-   !^CFG END SECONDBODY
+  !^CFG END SECONDBODY
 
 
   ! Here the arrays of the FACE VALUE are formed
@@ -246,9 +246,9 @@ subroutine set_physics_constants
      FaceState_VI(P_,   East_:Top_) = SW_p
 
      if(UseElectronPressure) FaceState_VI(Pe_, East_:Top_) = SW_p
-     
+
      if(UseAnisoPressure) FaceState_VI(Ppar_, East_:Top_) = SW_p
-  
+
      if (UseMultiSpecies) then
         FaceState_VI(SpeciesFirst_, East_:Top_) = &
              SW_rho*(1 - LowDensityRatio * (SpeciesLast_-SpeciesFirst_))
@@ -316,10 +316,10 @@ subroutine set_physics_constants
   ! for reporting them in write_progress.
 
   ! Nondimensionalize dipole strength.
-  if(NameThisComp == 'GM') then
-     call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
-     call get_planet(DipoleStrengthOut = DipoleStrengthSi)
-  end if
+!!$  if(NameThisComp == 'GM') then
+!!$     call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
+!!$     call get_planet(DipoleStrengthOut = DipoleStrengthSi)
+!!$  end if
   Bdp  = DipoleStrengthSi*Si2No_V(UnitB_)
 
   !^CFG IF SECONDBODY BEGIN
