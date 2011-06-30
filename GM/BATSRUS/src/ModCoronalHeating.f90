@@ -763,6 +763,7 @@ contains
 
   subroutine get_heat_function(i, j, k, iBlock, HeatFunction)
 
+    use ModMain, ONLY: UseB0
     use ModAdvance, ONLY: State_VGB, B0_DGB, Bx_, Bz_
     use ModGeometry, ONLY: r_BLK, z_BLK
 
@@ -771,8 +772,13 @@ contains
 
     real :: Bmagnitude, B_D(3)
     !--------------------------------------------------------------------------
-    
-    B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+
+    if(UseB0) then
+       B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    else
+       B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    end if
+
     Bmagnitude = sqrt(sum(B_D**2))
 
     if(DtUpdateFlux <= 0.0)then
