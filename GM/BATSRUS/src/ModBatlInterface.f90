@@ -144,21 +144,25 @@ contains
 
     use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_, Unused_B
     use ModEnergy, ONLY: calc_energy_cell
-
+    use ModMain, ONLY : BLKtest
+    logical :: oktest, oktest_me
+    
     integer:: iBlock
     !-------------------------------------------------------------------------
 
-    do iBlock = 1, nBlock
+     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
+       
+       if(iAmrChange_B(iBlock) < AmrMoved_) CYCLE !! SHOULD WORK
+
        ! The following two calls are needed for all blocks, because neighbors 
        ! can change and that changes true_cell info for the ghost cells
        ! and the resolution change too
+       
        call calc_other_soln_vars(iBlock)
        call fix_soln_block(iBlock)
-
-       ! The energy only needed for newly refined or coarsened blocks.
-       if(iAmrChange_B(iBlock) <= AmrMoved_) CYCLE
        call calc_energy_cell(iBlock)
+  
     end do
 
   end subroutine set_batsrus_state
