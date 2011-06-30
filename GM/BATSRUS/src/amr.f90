@@ -33,6 +33,7 @@ subroutine amr(DoMessagePass)
 
   real :: refine_criteria(4, nBLK)
   !----------------------------------------------------------------------------
+
   call set_oktest(NameSub, DoTest, DoTestMe)
   if(UseBatl)then
      ! Do message passing with second order accurate ghost cells
@@ -40,7 +41,7 @@ subroutine amr(DoMessagePass)
      if(DoTestMe)write(*,*)NameSub,' starts 2nd order accurate message passing'
 
      if(DoMessagePass)then
-        if(.not.useBatlTest) UsePlotMessageOptions = .true.
+        if(.not.UseBatlTest) UsePlotMessageOptions = .true.
         call exchange_messages
      end if
      if(automatic_refinement) then
@@ -62,13 +63,10 @@ subroutine amr(DoMessagePass)
 
      else
         call specify_refinement(DoRefine_B)
-        call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, DoTestIn=DoTestMe,Used_GB=true_cell)
+        call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, &
+             DoTestIn=DoTestMe,Used_GB=true_cell)
         call set_batsrus_grid
 
-        !if(iProc == 0 .and. lVerbose>0) then
-        !   call write_prefix; write(iUnitOut,*) &
-        !        'specify_refinement,  new number of blocks = ', nBlockALL
-        !end if
      end if
 
      if(iProc==0 .and. lVerbose>0)then
@@ -88,6 +86,7 @@ subroutine amr(DoMessagePass)
         call write_prefix; write(iUnitOut,*) '|'
      end if
 
+
      ! Fix energy and other variables in moved/refined/coarsened blocks
      call set_batsrus_state
 
@@ -99,14 +98,26 @@ subroutine amr(DoMessagePass)
         ! redo message passing
         UsePlotMessageOptions = .false.
         call exchange_messages
+
+
      end if
+     if(UseB0)then
+        ! Correct B0 face at newly created and removed resolution changes
+        do iBlock=1,nBlock
+           if (unusedBLK(iBlock)) CYCLE
+           call set_b0_source(iBlock)
+        end do
+     end if
+     ! Reset divb (it is undefined in newly created/moved blocks)
+     if(UseB)DivB1_GB=-7.70
+
+
      RETURN !!! TODO: iTypeAdvance, B0, ModBlockData...
   end if
 
   ! Ensure ghostcells are up to date.
   ! UsePlotMessageOptions = .true. !!! this would be useful
   call exchange_messages
-
   if (automatic_refinement) then
      ! Physics based refinement.
      call amr_physics
