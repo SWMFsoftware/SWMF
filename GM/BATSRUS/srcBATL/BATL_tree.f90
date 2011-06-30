@@ -606,7 +606,8 @@ contains
 
        ! Estimate the difference between the number of block we can 
        ! use and how many we want to use after refinment.
-       nRefineDiff = (nNodeUsed +count(iStatusNew_A == Refine_)*(nChild-1)) &
+       nRefineDiff = (nNodeUsed - count(iStatusNew_A == Coarsen_) + &
+            count(iStatusNew_A == Refine_)*(nChild-1)) &
             - min(nProc*MaxBlock,MaxTotalBlock) 
 
        nRefineDiffOld = nRefineDiff 
@@ -669,6 +670,11 @@ contains
 
     end do BLOCKTRY
 
+!!$    if(iProc==0 ) print *, "Num. refine/coursen = ", &
+!!$         count(iStatusNew_A == Refine_),&
+!!$         count(iStatusNew_A == Coarsen_)
+    
+    
     !if(iProc==0 ) then
     !   print *, "Rank refine   -1:+1 : ", Rank_A(max(1,nNodeSort-nDesiredRefine): min(nNodeSort,nNodeSort-nDesiredRefine+2))
     !   print *, "Rank coursen  -1:+1 : ", Rank_A(max(1,nDesiredCoarsen-1): min(nDesiredCoarsen+1,nNodeSort))

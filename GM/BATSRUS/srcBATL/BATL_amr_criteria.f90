@@ -43,12 +43,15 @@ module BATL_amr_criteria
   ! amr by percentage.
   logical,public :: &
        DoSortAmrCrit = .true.,&
-       DoSoftAmrCrit = .false. 
+       DoSoftAmrCrit = .false. ,&
+       DoAutoAmr     = .false.
+  
        !DoStrictAmr = .true. ,& !--- Moved to BATL_tree
 
   ! Try to make geometric dependence for refinement/coarsening
   logical,public :: &
-       DoGeometryAmr = .false.
+       DoGeometryAmr = .false. ,&
+       DoCritAmr     = .false.
 
   !--- Moved to BATL_tree
   ! nDesiredRefine and nDesiredCoarsen set the number of blocks that we
@@ -125,11 +128,11 @@ contains
 
     nAmrCritUsed = nIntCrit + nExtCritUsed
     nAmrCrit = nIntCrit + nExtCrit
-    
-    !if(iProc == 0) &
-    !     write(*,'(a50,4(i5))') &
-    !     " nAmrCrit, nIntCrit, nExtCrit, nAmrCritUsed =", &
-    !     nAmrCrit, nIntCrit, nExtCrit, nAmrCritUsed
+
+!!$    if(iProc == 0) &
+!!$         write(*,'(a50,4(i5))') &
+!!$         " nAmrCrit, nIntCrit, nExtCrit, nAmrCritUsed =", &
+!!$         nAmrCrit, nIntCrit, nExtCrit, nAmrCritUsed
 
     !------------ Collect all criteria external and internals -------------
 
@@ -150,7 +153,7 @@ contains
     end if
 
     AmrCrit_IB = 0.0
-    
+
     ! add external criteria into the list of all criteria
     if(present(CritExt_IB)) then
        do iBlock = 1, nBlock
@@ -164,6 +167,8 @@ contains
        do iCrit=1,nExtCrit
           RefineCritAll_I(nIntCrit+iCrit)  = RefineCritExt_I(iCrit)
           CoarsenCritAll_I(nIntCrit+iCrit) = CoarsenCritExt_I(iCrit)
+          !print *,"iCrit ext :", iCrit, size(RefineCritExt_I)
+          !print *," RefineCritExt_I(iCrit) : ",RefineCritExt_I(iCrit)
        end do
     end if
 
@@ -365,6 +370,9 @@ contains
        ! form the top and one that goes form bottom so it do not need to go 
        ! though the whole list of elements
 
+       !print *," iCrit =", iCrit
+       !print *," RefineCritAll_I(iCrit) : ", RefineCritAll_I(iCrit),size(RefineCritAll_I)
+       !print *," CoarsenCritAll_I(iCrit): ",CoarsenCritAll_I(iCrit),size(CoarsenCritAll_I) 
        ! Only if Criterias is in use
        if(RefineCritAll_I(iCrit) > -0.5 .and. CoarsenCritAll_I(iCrit) > -0.5) then
           do iSort = nNodeSort,1,-1
@@ -704,10 +712,10 @@ contains
        if(Unused_B(iBlock)) CYCLE
        DoCoarsen = .true.
 
-       if(iproc==0)&
-            write(*,'(2(f16.6),a8,4(f16.6))') &
-            AmrCrit_IB(1:2,iBlock), " :: ", &
-            RefineCritAll_I(1:2), CoarsenCritAll_I(1:2)
+       !if(iproc==0)&
+       !     write(*,'(2(f16.6),a8,4(f16.6))') &
+       !     AmrCrit_IB(1:2,iBlock), " :: ", &
+       !     RefineCritAll_I(1:2), CoarsenCritAll_I(1:2)
    
        do iCrit = 1, nAmrCritUsed
 
@@ -768,31 +776,36 @@ contains
           call read_var('CoarsenCrit',CoarsenCrit_I(iCrit))
           call read_var('RefineCrit',RefineCrit_I(iCrit))
        end do
-    case("#AMRTYPE")
-       call read_var('TypeAmr',TypeAmr)
-       select case(TypeAmr)
-       case("geometry")
-          DoGeometryAmr = .true.
-       case("criteria")
-          DoGeometryAmr = .false.
-       case("combined")
-          DoGeometryAmr = .true.
-       case default
-          call CON_stop(NameSub//': unknown TypeAmr='//TypeAmr)
-       end select
-       call read_var('IsStrictAmr'  ,DoStrictAmr)
-       !call read_var('IsSoftAmrCrit',DoSoftAmrCrit)
-    case("#AMRL") ! compatibilety with old system with BATSRUS amr options
+       DoCritAmr = .true.
+       DoAutoAmr = .true.
+    case("#AMR") ! compatibilety with old system with BATSRUS amr options
        call read_var('PercentCoarsen', PercentCoarsen)
        call read_var('PercentRefine' , PercentRefine)
        call read_var('MaxTotalBlock',  MaxTotalBlock) 
        DoSortAmrCrit = PercentCoarsen > 0.0 .or. PercentRefine > 0.0       
+       !case("#AMRTYPE")
+       !   call read_var('DoAutoAmr', DoAutoAmr)
+       !   call read_var('TypeAmr',TypeAmr)
+       !   select case(TypeAmr)
+       !   case("geometry")
+       !      DoGeometryAmr = .true.
+       !   case("criteria")
+       !      DoGeometryAmr = .false.
+       !   case("combined")
+       !      DoGeometryAmr = .true.
+       !   case default
+       !      call CON_stop(NameSub//': unknown TypeAmr='//TypeAmr)
+       !!   end select
+       !   call read_var('IsStrictAmr'  ,DoStrictAmr)
+       !call read_var('IsSoftAmrCrit',DoSoftAmrCrit)
     case("#AMRLIMIT")
        call read_var('PercentCoarsen', PercentCoarsen)
        call read_var('PercentRefine' , PercentRefine)
        call read_var('MaxTotalBlock',  MaxTotalBlock) 
        call read_var('DiffCriteriaLevel',  DeltaCritera)
        DoSortAmrCrit = PercentCoarsen > 0.0 .or. PercentRefine > 0.0
+    case default
+       call stop_mpi(NameSub//'incorect PARAM.in!')
     end select
   end subroutine read_amr_criteria
 
@@ -803,7 +816,7 @@ contains
     if(.not.allocated(CoarsenCrit_I)) RETURN
     deallocate(CoarsenCrit_I, RefineCrit_I, iVarCrit_I)
     deallocate(CoarsenCritAll_I, RefineCritAll_I)
-    deallocate(AmrCrit_IB)
+    if(allocated(AmrCrit_IB)) deallocate(AmrCrit_IB)
     if(allocated(iNode_I)) deallocate(iNode_I)
     nAmrCrit     = 0
     nAmrCritUsed = 0
@@ -899,7 +912,7 @@ contains
              do i = MinI,MaxI
                 do iVar=1,nVar
                    TestState_VGB(iVar,i,j,k,iBlock) = &
-                        dexp(0.1*real(i*(iNode_B(iBlock)+1)))
+                        dexp(0.1*(i*(iNode_B(iBlock)+1)))
                 end do
              end do
           end do
@@ -962,10 +975,10 @@ contains
              do j = MinJ, MaxJ
                 do i = MinI,MaxI
                    TestState_VGB(1,i,j,k,iBlock) = &
-                        dexp(0.1*real(i*(35-iNode_B(iBlock)+1)))
+                        dexp(0.1*(i*(35-iNode_B(iBlock)+1)))
 
                    TestState_VGB(2,i,j,k,iBlock) = &
-                        dexp(0.1*real(i*(iNode_B(iBlock)+1)))
+                        dexp(0.1*(i*(iNode_B(iBlock)+1)))
                 end do
              end do
           end do
@@ -1031,7 +1044,7 @@ contains
                 !do iVar=1,nVar
                 !print *,rand()
                 TestState_VGB(2,i,j,k,iBlock) = &
-                        dexp(0.1*real(i*(iNode_B(iBlock)+1)))
+                        dexp(0.1*(i*(iNode_B(iBlock)+1)))
                 !end do
              end do
           end do
@@ -1081,7 +1094,7 @@ contains
              do i = MinI,MaxI
                 do iVar=1,nVar
                    TestState_VGB(iVar,i,j,k,iBlock) = &
-                        dexp(0.1*real(i*(iNode_B(iBlock)+1)))
+                        dexp(0.1*(i*(iNode_B(iBlock)+1)))
                 end do
              end do
           end do
