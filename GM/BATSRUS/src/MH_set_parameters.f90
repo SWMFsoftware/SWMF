@@ -221,9 +221,6 @@ subroutine MH_set_parameters(TypeAction)
         ! Check and set some planet variables (e.g. DoUpdateB0)
         call check_planet_var(iProc==0, time_accurate)
 
-!!$        ! Initialize axes
-!!$        call init_axes(StartTime)
-
         if(body1)then
            call get_planet(UseRotationOut = UseRotatingBc)
         else
@@ -231,7 +228,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
         ! Obtain some planet parameters
-        if(DipoleStrengthSi == 0.0)then
+        if(DipoleStrengthSi == 0.0 .and. .not. UseUserB0 )then
            DoUpdateB0 = .false.
            Dt_UpdateB0 = -1.0
 
@@ -267,20 +264,6 @@ subroutine MH_set_parameters(TypeAction)
      if (DoReadSolarwindFile) call read_solar_wind_file
 
      call set_physics_constants
-
-!!$     if(IsStandAlone .and. NameThisComp=='GM') then
-!!$
-!!$        ! Obtain some planet parameters
-!!$        if(DipoleStrengthSi == 0.0)then
-!!$           DoUpdateB0 = .false.
-!!$           Dt_UpdateB0 = -1.0
-!!$        else
-!!$           call get_planet( &
-!!$                DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
-!!$
-!!$        end if
-!!$
-!!$     end if
 
      ! Normalization of solar wind data requires normalization in set_physics
      if (DoReadSolarwindFile) call normalize_solar_wind_data
