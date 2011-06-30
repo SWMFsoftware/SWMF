@@ -41,9 +41,11 @@ subroutine amr_physics
   !--------------------------------------------------------------------
   ! Compute and gather criteria for each block
   !
+  refine_criteria = 0.0
   call amr_criteria(refine_criteria)
   call MPI_ALLGATHER(refine_criteria, 4*nBLK, MPI_REAL, &
        refine_criteria_list, 4*nBLK, MPI_REAL, iComm, iError)
+
 
   !--------------------------------------------------------------------
   ! Sort gathered criteria
