@@ -655,15 +655,17 @@ end subroutine BC_fixed_adjoint
 
 !==========================================================================  
 subroutine BC_fixed_B
-  use ModSetOuterBC
-  use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB,B0_DGB
-  use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
-  character(len=*), parameter:: NameSub = 'BC_fixed_B'
-  logical :: DoTest, DoTestMe
-  ! Set q_B=q-q_B0 in ghost cells
 
-  call set_oktest(NameSub, DoTest, DoTestMe)
+  ! Set B = B - B0 in ghost cells
+
+  use ModSetOuterBC
+  use ModVarIndexes, ONLY: Bx_, Bz_
+  use ModAdvance,    ONLY: State_VGB,B0_DGB
+  use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
+  
+  !character(len=*), parameter:: NameSub = 'BC_fixed_B'
+  !logical :: DoTest, DoTestMe
+  !call set_oktest(NameSub, DoTest, DoTestMe)
 
   State_VGB(Bx_:Bz_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)= &
        State_VGB(Bx_:Bz_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)&
@@ -679,21 +681,20 @@ end subroutine BC_fixed_B
 
 subroutine BC_solar_wind(time_now)
 
-  use ModGeometry,ONLY:x_BLK, z_BLK,y_BLK, x2
   use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB, B0_DGB
   use ModSetOuterBC
+  use ModGeometry,   ONLY:x_BLK, z_BLK,y_BLK, x2
+  use ModAdvance,    ONLY: State_VGB, B0_DGB
   use ModMultiFluid, ONLY: &
        iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
-  use ModPhysics, ONLY: LowDensityRatio
-  use ModNumConst, ONLY: cTiny
-  use ModSolarwind, ONLY: get_solar_wind_point
-  use ModMain,         ONLY: UseB0
-  use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
+  use ModPhysics,    ONLY: LowDensityRatio
+  use ModSolarwind,  ONLY: get_solar_wind_point
+  use ModMain,       ONLY: UseB0
+  
   implicit none
 
-  character(len=*), parameter:: NameSub = 'BC_solar_wind'
-  logical :: DoTest, DoTestMe
+  !character(len=*), parameter:: NameSub = 'BC_solar_wind'
+  !logical :: DoTest, DoTestMe
 
   ! Current simulation time in seconds
   real, intent(in) :: time_now 
@@ -707,12 +708,6 @@ subroutine BC_solar_wind(time_now)
   !-----------------------------------------------------------------------
 
   !call set_oktest(NameSub, DoTest, DoTestMe)
-
-!!$  if(iBLK == BlkTest) then
-!!$     print *, "Pre :: State_VGB(Bx_:Bz_ ...", State_VGB(Bx_:Bz_,iTest,jTest,jTest,iBLK)
-!!$     print *, "Pre :: B0_DGB(:,...         ", B0_DGB(:,iTest,jTest,jTest,iBLK)
-!!$     print *, " ranges :: ", kmin1g, kmax1g , jmin1g, jmax2g, imin1g, imax2g
-!!$  end if
 
   do k = kmin1g, kmax1g 
      z = z_BLK(1,1,k,iBLK)
@@ -740,11 +735,6 @@ subroutine BC_solar_wind(time_now)
         end do
      end do
   end do
-
-!!$  if(iBLK == BlkTest) then
-!!$     print *, "Post :: State_VGB(Bx_:Bz_ ..", State_VGB(Bx_:Bz_,iTest,jTest,jTest,iBLK)
-!!$     print *, "Post :: B0_DGB(:,...        ", B0_DGB(:,iTest,jTest,jTest,iBLK)
-!!$  end if
 
 end subroutine BC_solar_wind
 
