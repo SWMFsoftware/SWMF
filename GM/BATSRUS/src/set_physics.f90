@@ -316,10 +316,6 @@ subroutine set_physics_constants
   ! for reporting them in write_progress.
 
   ! Nondimensionalize dipole strength.
-!!$  if(NameThisComp == 'GM') then
-!!$     call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
-!!$     call get_planet(DipoleStrengthOut = DipoleStrengthSi)
-!!$  end if
   Bdp  = DipoleStrengthSi*Si2No_V(UnitB_)
 
   !^CFG IF SECONDBODY BEGIN
