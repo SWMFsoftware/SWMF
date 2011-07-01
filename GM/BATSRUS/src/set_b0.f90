@@ -222,54 +222,6 @@ contains
 end subroutine set_b0_source
 
 !============================================================================
-subroutine calc_db0_dt(dTime)
-
-  ! Calculate dB0/dt for true cells in used blocks
-
-  use ModMain
-  use ModAdvance, ONLY: B0_DGB, Db0Dt_CDB
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
-  use ModPhysics, ONLY: No2Si_V, UnitT_
-  implicit none
-
-  real, intent(in) :: dTime
-
-  real :: B0_D(3), TimeSimulationOrig
-  integer :: i,j,k,iBlock
-  logical :: DoTest, DoTestMe
-  !--------------------------------------------------------------------------
-
-  call set_oktest('calc_db0_dt', DoTest, DoTestMe)
-  if(DoTestMe)write(*,*)'calc_db0_dt starting, Dtime=',Dtime
-
-  if(.not.allocated(Db0Dt_CDB))allocate(Db0Dt_CDB(nI,nJ,nK,3,MaxBlock))
-
-  ! If time step is zero, so are the source terms and we may return
-  if(Dtime <= 0.0)then
-     Db0Dt_CDB = 0.0
-     RETURN
-  end if
-
-  ! Increase simulation time and to what it will be at the end of the time step
-  TimeSimulationOrig = Time_Simulation
-  Time_Simulation = Time_Simulation + dTime*No2Si_V(UnitT_)
-
-  ! Calculate dB0dt
-  do iBlock=1,nBlock
-     if(unusedBLK(iBlock))CYCLE
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        call get_b0(&
-             x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock),z_BLK(i,j,k,iBlock),B0_D)
-        Db0Dt_CDB(i,j,k,x_,iBlock)=(B0_D(x_)-B0_DGB(x_,i,j,k,iBlock))/dTime
-        Db0Dt_CDB(i,j,k,y_,iBlock)=(B0_D(y_)-B0_DGB(y_,i,j,k,iBlock))/dTime
-        Db0Dt_CDB(i,j,k,z_,iBlock)=(B0_D(z_)-B0_DGB(z_,i,j,k,iBlock))/dTime
-     end do; end do; end do
-  end do
-  ! Reset time, date and dipole tilt
-  Time_Simulation = TimeSimulationOrig
-
-end subroutine calc_db0_dt
-!============================================================================
 subroutine set_b0_matrix(iBlock)
 
   ! Calculate the elements of the B0 Source term
@@ -623,7 +575,7 @@ end subroutine add_b0_body2
 
 subroutine update_b0
 
-  use ModMain,          ONLY: DoSplitDb0Dt, nBlock, unusedBLK, &
+  use ModMain,          ONLY: nBlock, unusedBLK, &
        time_simulation, NameThisComp
   use ModPhysics,       ONLY: ThetaTilt
   use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, B0_DGB
@@ -661,32 +613,28 @@ subroutine update_b0
   do iBlock=1,nBlock
      if(unusedBLK(iBlock)) CYCLE
 
-     if(DoSplitDb0Dt)then
-        ! Save total magnetic field into Bx_BLK,By_BLK,Bz_BLK
-        State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
-             + B0_DGB(:,:,:,:,iBlock)
-     end if
+     ! Save total magnetic field into Bx_BLK,By_BLK,Bz_BLK
+     State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
+          + B0_DGB(:,:,:,:,iBlock)
 
      call set_b0(iBlock)
 
-     if(DoSplitDb0Dt)then
-        ! Split total B again using new B0
-        State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
-             - B0_DGB(:,:,:,:,iBlock)
+     ! Split total B again using new B0
+     State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
+          - B0_DGB(:,:,:,:,iBlock)
        
-        ! Set B1 to 0 inside bodies
-        if(Body_BLK(iBlock))then
-           where(.not.true_cell(:,:,:,iBlock))
-              State_VGB(Bx_,:,:,:,iBlock)=0.0
-              State_VGB(By_,:,:,:,iBlock)=0.0
-              State_VGB(Bz_,:,:,:,iBlock)=0.0
-           end where
-        end if
-
-        ! Recalculate energy
-        call calc_energy_ghost(iBlock)
-
+     ! Set B1 to 0 inside bodies
+     if(Body_BLK(iBlock))then
+        where(.not.true_cell(:,:,:,iBlock))
+           State_VGB(Bx_,:,:,:,iBlock)=0.0
+           State_VGB(By_,:,:,:,iBlock)=0.0
+           State_VGB(Bz_,:,:,:,iBlock)=0.0
+        end where
      end if
+
+     ! Recalculate energy
+     call calc_energy_ghost(iBlock)
+
   end do
   call timing_stop(NameSub)
 end subroutine update_b0

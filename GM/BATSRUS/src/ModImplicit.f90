@@ -185,7 +185,6 @@ contains
   subroutine read_implicit_param(NameCommand)
 
     use ModReadParam,     ONLY: read_var
-    use ModMain,          ONLY: DoSplitDb0Dt
     use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
     use ModLinearSolver,  ONLY: &
          Jacobi_, BlockJacobi_, GaussSeidel_, Dilu_, Bilu_
@@ -203,9 +202,6 @@ contains
 
        UseImplicit = UseFullImplicit .or. UsePartImplicit
        UsePointImplicit_B = UsePointImplicit
-
-       ! For implicit scheme it is better to use unsplit dB0/dt evaluation
-!!!       DoSplitDb0Dt = .not.UseImplicit
 
        if(UsePartImplicit  .and. UseFullImplicit) call stop_mpi(&
             'Only one of UsePartImplicit and UseFullImplicit can be true')

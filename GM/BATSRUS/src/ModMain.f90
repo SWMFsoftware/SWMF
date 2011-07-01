@@ -81,9 +81,8 @@ Module ModMain
   !/
   ! Intrinsic field B0 may or may not be used if UseB is true.
   logical :: UseB0        = UseB
-  real    :: Dt_UpdateB0  = 0.0001
   logical :: DoUpdateB0   = UseB
-  logical :: DoSplitDb0Dt = .true.
+  real    :: Dt_UpdateB0  = 0.0001
 
   !\
   ! Coronal magnetic field (magnetogram + EE generator)

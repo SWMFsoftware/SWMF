@@ -86,9 +86,6 @@ module ModAdvance
 
   real, allocatable :: time_BLK(:,:,:,:)
 
-  ! Array for storing dB0/dt derivatives
-  real, allocatable :: Db0Dt_CDB(:,:,:,:,:)
-
   ! Arrays for the total electric field
   real, allocatable :: Ex_CB(:,:,:,:)
   real, allocatable :: Ey_CB(:,:,:,:)

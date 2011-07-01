@@ -430,13 +430,6 @@ subroutine BATS_advance(TimeSimulationLimit)
   ! Calculate time step dt
   if (time_accurate) call set_global_timestep(TimeSimulationLimit)
 
-  ! Calculate unsplit dB0Dt term for every time step
-  if(DoUpdateB0 .and. .not.DoSplitDb0Dt)then
-     call timing_start('update_B0')
-     call calc_db0_dt(dt)
-     call timing_stop('update_B0')
-  end if
-
   call timing_start('advance')
 
   if(UseNonConservative .and. nConservCrit > 0)&
@@ -489,11 +482,9 @@ subroutine BATS_advance(TimeSimulationLimit)
        iProc,n_step,Time_Simulation
 
   if (DoUpdateB0) then
-     ! Unsplit dB0/dt term is added every time step
-     ! Split dB0/dt term is added at the dt_updateB0 frequency
+     ! dB0/dt term is added at the dt_updateB0 frequency
 
-     if (.not.DoSplitDb0Dt .or. &
-          int(Time_Simulation/dt_UpdateB0) >  &
+     if ( int(Time_Simulation/dt_UpdateB0) >  &
           int((Time_Simulation - Dt*No2Si_V(UnitT_))/dt_UpdateB0)) &
           call update_b0
   end if
