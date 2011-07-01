@@ -36,12 +36,13 @@ module BATL_lib
   public:: iComm, nProc, iProc          
 
   ! Inherited from BATL_tree
-  public:: nNode, nNodeUsed
+  public:: nNode, nNodeUsed, nRoot_D
+  public:: MaxLevel, MaxCoord_I
   public:: Unused_B, Unused_BP
   public:: iNode_B, iMortonNode_A, iNodeMorton_I
   public:: DiLevelNei_IIIB, iNodeNei_IIIB
-  public:: iStatusNew_A, Refine_, Coarsen_
-  public:: iTree_IA, MinLevel_, MaxLevel_, Unset_, Block_, Proc_
+  public:: iStatusNew_A, Refine_, Coarsen_, Unset_
+  public:: iTree_IA,  Level_, MinLevel_, MaxLevel_, Block_, Proc_, Coord0_, Coord1_
   public:: write_tree_file, read_tree_file
   public:: IsNewDecomposition, IsNewTree
 

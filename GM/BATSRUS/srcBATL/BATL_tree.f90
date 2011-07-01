@@ -149,15 +149,12 @@ module BATL_tree
   ! Number of levels below root in level (that has occured at any time)
   integer, public :: nLevel = 0
 
-  ! Local variables -----------------------------------------------
-  character(len=*), parameter:: NameMod = "BATL_tree"
-
   ! Deepest AMR level relative to root nodes (limited by 32 bit integers)
-  integer, parameter :: MaxLevel = 30
+  integer, parameter, public :: MaxLevel = 30
 
   ! The maximum integer coordinate for a given level below root nodes
   ! Implied do loop was not understooed by the pgf90 compiler, so list them
-  integer, parameter :: MaxCoord_I(0:MaxLevel) = &
+  integer, parameter, public :: MaxCoord_I(0:MaxLevel) = &
        (/ 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, &
        16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, &
        4194304, 8388608, 16777216, 33554432, 67108864, 134217728, &
@@ -165,6 +162,9 @@ module BATL_tree
 
   ! The number of root nodes in all dimensions, and altogether
   integer, public :: nRoot_D(MaxDim) = 0, nRoot = 0
+
+  ! Local variables -----------------------------------------------
+  character(len=*), parameter:: NameMod = "BATL_tree"
 
   ! Maximum number of nodes including unused and skipped ones
   integer :: MaxNode = 0
