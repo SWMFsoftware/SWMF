@@ -2558,12 +2558,145 @@ void collectNeibCenterNodes_3D_deleteTreeNode(cTreeNodeAMR<cBlockAMR> *startNode
   
 //===================================================================
 
+
+class cFraction {
+public:
+  long int Nominator,Denominator;
+
+  cFraction () {
+    Nominator=0.0,Denominator=1.0;
+  }
+
+  void Simplify() {
+    long int r;
+
+    r=Nominator/Denominator;
+
+    if (Nominator==r*Denominator) Nominator=r,Denominator=1;
+  }
+
+
+
+  cFraction operator + (cFraction op2) {
+    cFraction temp;
+
+    temp.Nominator=Nominator*op2.Denominator+op2.Nominator*Denominator;
+    temp.Denominator=Denominator*op2.Denominator;
+
+    if (temp.Nominator%temp.Denominator==0) {
+      temp.Nominator/=temp.Denominator;
+      temp.Denominator=1;
+    }
+
+    return temp;
+  }
+
+  cFraction operator + (int op2) {
+    cFraction temp;
+
+    temp.Nominator=Nominator+op2*Denominator;
+
+    if (temp.Nominator%temp.Denominator==0) {
+      temp.Nominator/=temp.Denominator;
+      temp.Denominator=1;
+    }
+
+    return temp;
+  }
+
+  cFraction operator - (cFraction op2) {
+    cFraction temp;
+
+    temp.Nominator=Nominator*op2.Denominator-op2.Nominator*Denominator;
+    temp.Denominator=Denominator*op2.Denominator;
+
+    if (temp.Nominator%temp.Denominator==0) {
+      temp.Nominator/=temp.Denominator;
+      temp.Denominator=1;
+    }
+
+    return temp;
+  }
+
+  cFraction operator = (cFraction op2) {
+    Nominator=op2.Nominator;
+    Denominator=op2.Denominator;
+
+    return *this;
+  }
+
+  cFraction operator += (int op2) {
+    Nominator+=op2*Denominator;
+
+    return *this;
+  }
+
+  cFraction operator -= (int op2) {
+    Nominator-=op2*Denominator;
+
+    return *this;
+  }
+
+  cFraction operator = (int op2) {
+    Nominator=op2;
+    Denominator=1;
+
+    return *this;
+  }
+
+  cFraction operator * (int op) {
+    cFraction temp;
+
+    temp.Nominator=Nominator*op;
+    temp.Denominator=Denominator;
+    return temp;
+  }
+
+  cFraction operator / (int op) {
+    cFraction temp;
+
+    temp.Nominator=Nominator;
+    temp.Denominator=Denominator*op;
+
+    if (temp.Nominator%temp.Denominator==0) {
+      temp.Nominator/=temp.Denominator;
+      temp.Denominator=1;
+    }
+
+    return temp;
+  }
+
+  cFraction operator /= (int op) {
+    Denominator*=op;
+
+    if (Nominator%Denominator==0) {
+      Nominator/=Denominator;
+      Denominator=1;
+    }
+
+    return *this;
+  }
+
+
+  friend bool operator >= (const cFraction& op1, const int& op2) {
+    return (op1.Nominator>=op2*op1.Denominator) ? true : false;
+  }
+
+  friend bool operator <= (const cFraction& op1, const int& op2) {
+    return (op1.Nominator<=op2*op1.Denominator) ? true : false;
+  }
+
+};
+
+
 struct cNeibDescriptor {
-  int iOffset,jOffset,kOffset,rLevelStep;
+//  int iOffset,jOffset,kOffset,rLevelStep;
+
+  cFraction iOffset,jOffset,kOffset,BlockSize;
   cTreeNodeAMR<cBlockAMR>* node;
 };
 
-void AddNodeNeighborList(cTreeNodeAMR<cBlockAMR>* neibNode,cNeibDescriptor *NeibList,int& nNeibListCounter, int nNeibListMax, int iOffset, int jOffset, int kOffset,int startNodeRefinmentLevel) {
+void AddNodeNeighborList(cTreeNodeAMR<cBlockAMR>* neibNode,cNeibDescriptor *NeibList,int& nNeibListCounter, int nNeibListMax, cFraction iOffset, cFraction jOffset, cFraction kOffset,cFraction BlockSize) {
   cTreeNodeAMR<cBlockAMR>* downNode;
 
 
@@ -2591,20 +2724,20 @@ void AddNodeNeighborList(cTreeNodeAMR<cBlockAMR>* neibNode,cNeibDescriptor *Neib
 
     nIntersection=0;
 
-    if (iOffset==0) nIntersection++;
-    if ((iOffset<0)&&(iOffset+(_BLOCK_CELLS_X_+_GHOST_CELLS_X_)*(1<<(startNodeRefinmentLevel-neibNode->RefinmentLevel+1))>=-2*_GHOST_CELLS_X_)) nIntersection++;
-    if ((iOffset>0)&&(iOffset-_GHOST_CELLS_X_*(1<<(startNodeRefinmentLevel-neibNode->RefinmentLevel+1))<=2*(_BLOCK_CELLS_X_+_GHOST_CELLS_X_))) nIntersection++;
+    if (iOffset.Nominator==0) nIntersection++;
+    if ((iOffset.Nominator<0)&&(iOffset+BlockSize*(_BLOCK_CELLS_X_+_GHOST_CELLS_X_)>=-_GHOST_CELLS_X_)) nIntersection++;
+    if ((iOffset.Nominator>0)&&(iOffset-BlockSize*_GHOST_CELLS_X_<=_BLOCK_CELLS_X_+_GHOST_CELLS_X_)) nIntersection++;
 
     if (_MESH_DIMENSION_>1) {
-      if (jOffset==0) nIntersection++;
-      if ((jOffset<0)&&(jOffset+(_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_)*(1<<(startNodeRefinmentLevel-neibNode->RefinmentLevel+1))>=-2*_GHOST_CELLS_Y_)) nIntersection++;
-      if ((jOffset>0)&&(jOffset-_GHOST_CELLS_Y_*(1<<(startNodeRefinmentLevel-neibNode->RefinmentLevel+1))<=2*(_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_))) nIntersection++;
+      if (jOffset.Nominator==0) nIntersection++;
+      if ((jOffset.Nominator<0)&&(jOffset+BlockSize*(_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_)>=-_GHOST_CELLS_Y_)) nIntersection++;
+      if ((jOffset.Nominator>0)&&(jOffset-BlockSize*_GHOST_CELLS_Y_<=_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_)) nIntersection++;
     } else nIntersection++;
 
     if (_MESH_DIMENSION_>2) {
-      if (kOffset==0) nIntersection++;
-      if ((kOffset<0)&&(kOffset+(_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_)*(1<<(startNodeRefinmentLevel-neibNode->RefinmentLevel+1))>=-2*_GHOST_CELLS_Z_)) nIntersection++;
-      if ((kOffset>0)&&(kOffset-_GHOST_CELLS_Z_*(1<<(startNodeRefinmentLevel-neibNode->RefinmentLevel+1))<=2*(_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_))) nIntersection++;
+      if (kOffset.Nominator==0) nIntersection++;
+      if ((kOffset.Nominator<0)&&(kOffset+BlockSize*(_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_)>=-_GHOST_CELLS_Z_)) nIntersection++;
+      if ((kOffset.Nominator>0)&&(kOffset-BlockSize*_GHOST_CELLS_Z_<=_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_)) nIntersection++;
     } else nIntersection++;
 
     if ((nIntersection==3)&&(neibNode->block!=NULL)) {
@@ -2621,7 +2754,7 @@ void AddNodeNeighborList(cTreeNodeAMR<cBlockAMR>* neibNode,cNeibDescriptor *Neib
         NeibList[nNeibListCounter].iOffset=iOffset;
         NeibList[nNeibListCounter].jOffset=jOffset;
         NeibList[nNeibListCounter].kOffset=kOffset;
-        NeibList[nNeibListCounter].rLevelStep=(1<<(startNodeRefinmentLevel-neibNode->RefinmentLevel+1));
+        NeibList[nNeibListCounter].BlockSize=BlockSize;
         NeibList[nNeibListCounter].node=neibNode;
         ++nNeibListCounter;
         if (nNeibListCounter>=nNeibListMax) exit(__LINE__,__FILE__,"Error: nNeibListCounter exeeds nNeibListMax -> inxrease the value of nNeibListMax");
@@ -2630,7 +2763,9 @@ void AddNodeNeighborList(cTreeNodeAMR<cBlockAMR>* neibNode,cNeibDescriptor *Neib
   }
   else {
     int nDownNode,iDownNode,jDownNode,kDownNode;
-    int iDownOffset=0,jDownOffset=0,kDownOffset=0;
+    cFraction iDownOffset,jDownOffset,kDownOffset;
+
+    BlockSize/=2;
 
 #if _MESH_DIMENSION_ == 3
     static const int iDownNodeMax=2,jDownNodeMax=2,kDownNodeMax=2;
@@ -2644,13 +2779,13 @@ void AddNodeNeighborList(cTreeNodeAMR<cBlockAMR>* neibNode,cNeibDescriptor *Neib
       nDownNode=iDownNode+2*(jDownNode+2*kDownNode);
 
       if ((downNode=neibNode->downNode[nDownNode])!=NULL) {
-        if (downNode->RefinmentLevel>startNodeRefinmentLevel+1) exit(__LINE__,__FILE__,"Error: some of the nodes can be missed -> the procedure needs to be rewritten!!!!!");
+//        if (downNode->RefinmentLevel>startNodeRefinmentLevel+1) exit(__LINE__,__FILE__,"Error: some of the nodes can be missed -> the procedure needs to be rewritten!!!!!");
 
-        iDownOffset=iOffset+iDownNode*_BLOCK_CELLS_X_*(1<<(1+startNodeRefinmentLevel-downNode->RefinmentLevel));
-        if (_MESH_DIMENSION_>1) jDownOffset=jOffset+jDownNode*_BLOCK_CELLS_Y_*(1<<(1+startNodeRefinmentLevel-downNode->RefinmentLevel));
-        if (_MESH_DIMENSION_>2) kDownOffset=kOffset+kDownNode*_BLOCK_CELLS_Z_*(1<<(1+startNodeRefinmentLevel-downNode->RefinmentLevel));
+        iDownOffset=iOffset+BlockSize*(iDownNode*_BLOCK_CELLS_X_);
+        if (_MESH_DIMENSION_>1) jDownOffset=jOffset+BlockSize*(jDownNode*_BLOCK_CELLS_Y_);
+        if (_MESH_DIMENSION_>2) kDownOffset=kOffset+BlockSize*(kDownNode*_BLOCK_CELLS_Z_);
 
-        AddNodeNeighborList(downNode,NeibList,nNeibListCounter,nNeibListMax,iDownOffset,jDownOffset,kDownOffset,startNodeRefinmentLevel);
+        AddNodeNeighborList(downNode,NeibList,nNeibListCounter,nNeibListMax,iDownOffset,jDownOffset,kDownOffset,BlockSize);
       }
     }
   }
@@ -2697,9 +2832,12 @@ if (startNode->Temp_ID==2140) {
 
 
   cTreeNodeAMR<cBlockAMR> *t,*searchNode=startNode;
-  int nConditionsMet,iSearchOffset=0,jSearchOffset=0,kSearchOffset=0;
+  int nConditionsMet,SearchNodeSize=1; //,iSearchOffset=0,jSearchOffset=0,kSearchOffset=0;
+  cFraction iOffset,jOffset,kOffset,iSearchOffset,jSearchOffset,kSearchOffset;
 
-  ioffset=0,joffset=0,koffset=0;
+  iOffset=0;
+  jOffset=0;
+  kOffset=0;
 
   //define the search node
   while (searchNode->upNode!=NULL) {
@@ -2716,14 +2854,19 @@ if (startNode->Temp_ID==2140) {
 
     //determine the downNode coordinates
     for (k=0;k<((_MESH_DIMENSION_==3) ? 2 : 1);k++) for (j=0;j<((_MESH_DIMENSION_>1) ? 2 : 1);j++) for (i=0;i<2;i++) if (searchNode->downNode[i+2*(j+2*k)]==t) {
-      ioffset-=i*_BLOCK_CELLS_X_*(1<<(startNode->RefinmentLevel-searchNode->RefinmentLevel));
-      if (_MESH_DIMENSION_>1) joffset-=j*_BLOCK_CELLS_Y_*(1<<(startNode->RefinmentLevel-searchNode->RefinmentLevel));
-      if (_MESH_DIMENSION_>2) koffset-=k*_BLOCK_CELLS_Z_*(1<<(startNode->RefinmentLevel-searchNode->RefinmentLevel));
+      iOffset-=i*_BLOCK_CELLS_X_*SearchNodeSize;
+      if (_MESH_DIMENSION_>1) jOffset-=j*_BLOCK_CELLS_Y_*SearchNodeSize;
+      if (_MESH_DIMENSION_>2) kOffset-=k*_BLOCK_CELLS_Z_*SearchNodeSize;
     }
+
+    SearchNodeSize*=2;
   }
 
 
   double xSearchNode[_MESH_DIMENSION_];
+  cFraction SearchStartBlockSize;
+
+  SearchStartBlockSize=SearchNodeSize;
 
 #if _MESH_DIMENSION_ == 3
   static const int iSearchMin=-1,iSearchMax=1,jSearchMin=-1,jSearchMax=1,kSearchMin=-1,kSearchMax=1;
@@ -2736,23 +2879,23 @@ if (startNode->Temp_ID==2140) {
   for (k=kSearchMin;k<=kSearchMax;k++) {
     if (_MESH_DIMENSION_==3) {
       xSearchNode[2]=searchNode->xmin[2]+(searchNode->xmax[2]-searchNode->xmin[2])*(0.5+k);
-      kSearchOffset=koffset+_BLOCK_CELLS_Z_*k*(1<<(1+startNode->RefinmentLevel-searchNode->RefinmentLevel));
+      kSearchOffset=kOffset+_BLOCK_CELLS_Z_*k*SearchNodeSize;
     }
 
     for (j=jSearchMin;j<=jSearchMax;j++) {
       if (_MESH_DIMENSION_>=2) {
         xSearchNode[1]=searchNode->xmin[1]+(searchNode->xmax[1]-searchNode->xmin[1])*(0.5+j);
-        jSearchOffset=joffset+_BLOCK_CELLS_Y_*j*(1<<(1+startNode->RefinmentLevel-searchNode->RefinmentLevel));
+        jSearchOffset=jOffset+_BLOCK_CELLS_Y_*j*SearchNodeSize;
       }
 
       for (i=iSearchMin;i<=iSearchMax;i++) {
         xSearchNode[0]=searchNode->xmin[0]+(searchNode->xmax[0]-searchNode->xmin[0])*(0.5+i);
-        iSearchOffset=ioffset+_BLOCK_CELLS_X_*i*(1<<(1+startNode->RefinmentLevel-searchNode->RefinmentLevel));
+        iSearchOffset=iOffset+_BLOCK_CELLS_X_*i*SearchNodeSize;
 
         t=findTreeNodeLimitedResolutionLevel(xSearchNode,searchNode->RefinmentLevel,searchNode);
         if (t==NULL) continue;
 
-        AddNodeNeighborList(t,NeibList,nNeibListCounter,nNeibListMax,iSearchOffset,jSearchOffset,kSearchOffset,startNode->RefinmentLevel);
+        AddNodeNeighborList(t,NeibList,nNeibListCounter,nNeibListMax,iSearchOffset,jSearchOffset,kSearchOffset,SearchStartBlockSize);
       }
     }
   }
@@ -2956,28 +3099,33 @@ if (startNode->Temp_ID==2140) {
 #endif
 
   long int nd;
-  cCornerNode *CornerNodeMap[1+2*(iCornerMax-iCornerMin)][1+2*(jCornerMax-jCornerMin)][1+2*(kCornerMax-kCornerMin)],*ptrCornerNode;
+  cCornerNode *CornerNodeMap[1+iCornerMax-iCornerMin][1+jCornerMax-jCornerMin][1+kCornerMax-kCornerMin],*ptrCornerNode;
 
-  for (k=0;k<1+2*(kCornerMax-kCornerMin);k++) for (j=0;j<1+2*(jCornerMax-jCornerMin);j++) for (i=0;i<1+2*(iCornerMax-iCornerMin);i++) CornerNodeMap[i][j][k]=NULL;
+  for (k=0;k<1+kCornerMax-kCornerMin;k++) for (j=0;j<1+jCornerMax-jCornerMin;j++) for (i=0;i<1+iCornerMax-iCornerMin;i++) CornerNodeMap[i][j][k]=NULL;
 
 
   for (nlist=0;nlist<nNeibListCounter;nlist++) {
     neibptr=NeibList+nlist;
 
     for (k=kCornerMin;k<=kCornerMax;k++) {
-      koffset=neibptr->kOffset+k*neibptr->rLevelStep;
+      kOffset=neibptr->kOffset+neibptr->BlockSize*k;
 
-      if ((koffset>=2*kCornerMin)&&(koffset<=2*kCornerMax)&&(koffset==2*(koffset/2))) for (j=jCornerMin;j<=jCornerMax;j++) {
-        joffset=neibptr->jOffset+j*neibptr->rLevelStep;
+      if ((kOffset>=kCornerMin)&&(kOffset<=kCornerMax)&&(kOffset.Nominator%kOffset.Denominator==0)) for (j=jCornerMin;j<=jCornerMax;j++) {
+        jOffset=neibptr->jOffset+neibptr->BlockSize*j;
 
-        if ((joffset>=2*jCornerMin)&&(joffset<=2*jCornerMax)&&(joffset==2*(joffset/2))) for (i=iCornerMin;i<=iCornerMax;i++) {
-          ioffset=neibptr->iOffset+i*neibptr->rLevelStep;
-          if ((ioffset>=2*iCornerMin)&&(ioffset<=2*iCornerMax)&&(ioffset==2*(ioffset/2))) {
+        if ((jOffset>=jCornerMin)&&(jOffset<=jCornerMax)&&(jOffset.Nominator%jOffset.Denominator==0)) for (i=iCornerMin;i<=iCornerMax;i++) {
+          iOffset=neibptr->iOffset+neibptr->BlockSize*i;
+
+          if ((iOffset>=iCornerMin)&&(iOffset<=iCornerMax)&&(iOffset.Nominator%iOffset.Denominator==0)) {
             ptrCornerNode=neibptr->node->block->GetCornerNode(getCornerNodeLocalNumber(i,j,k));
 
-            if ((CornerNodeMap[ioffset-2*iCornerMin][joffset-2*jCornerMin][koffset-2*kCornerMin]!=NULL)&&(CornerNodeMap[ioffset-2*iCornerMin][joffset-2*jCornerMin][koffset-2*kCornerMin]!=ptrCornerNode)) exit(__LINE__,__FILE__,"Error: redifinition of the node");
+            ioffset=iOffset.Nominator/iOffset.Denominator;
+            joffset=jOffset.Nominator/jOffset.Denominator;
+            koffset=kOffset.Nominator/kOffset.Denominator;
 
-            CornerNodeMap[ioffset-2*iCornerMin][joffset-2*jCornerMin][koffset-2*kCornerMin]=ptrCornerNode;
+            if ((CornerNodeMap[ioffset-iCornerMin][joffset-jCornerMin][koffset-kCornerMin]!=NULL)&&(CornerNodeMap[ioffset-iCornerMin][joffset-jCornerMin][koffset-kCornerMin]!=ptrCornerNode)) exit(__LINE__,__FILE__,"Error: redifinition of the node");
+
+            CornerNodeMap[ioffset-iCornerMin][joffset-jCornerMin][koffset-kCornerMin]=ptrCornerNode;
           }
         }
       }
@@ -2989,7 +3137,7 @@ if (startNode->Temp_ID==2140) {
 
   for (k=kCornerMin;k<=kCornerMax;k++) for (j=jCornerMin;j<=jCornerMax;j++) for (i=iCornerMin;i<=iCornerMax;i++) {
     nd=getCornerNodeLocalNumber(i,j,k);
-    ptrCornerNode=CornerNodeMap[2*(i-iCornerMin)][2*(j-jCornerMin)][2*(k-kCornerMin)];
+    ptrCornerNode=CornerNodeMap[i-iCornerMin][j-jCornerMin][k-kCornerMin];
 
     if (ptrCornerNode==NULL) {
       //generate the coordinates ofthe new node
@@ -3049,13 +3197,13 @@ if ((fabs(x[0]+225)<EPS)&&(fabs(x[1]+225)<EPS)&&(fabs(x[2]+12.5)<EPS)) {
     if (neibptr->node->RefinmentLevel!=startNode->RefinmentLevel) continue;
 
     for (k=kCenterMin;k<=kCenterMax;k++) {
-      koffset=neibptr->kOffset/2+k;
+      koffset=neibptr->kOffset.Nominator/neibptr->kOffset.Denominator+k;
 
       if ((koffset>=kCenterMin)&&(koffset<=kCenterMax)) for (j=jCenterMin;j<=jCenterMax;j++) {
-        joffset=neibptr->jOffset/2+j;
+        joffset=neibptr->jOffset.Nominator/neibptr->jOffset.Denominator+j;
 
         if ((joffset>=jCenterMin)&&(joffset<=jCenterMax)) for (i=kCenterMin;i<=kCenterMax;i++) {
-          ioffset=neibptr->iOffset/2+i;
+          ioffset=neibptr->iOffset.Nominator/neibptr->iOffset.Denominator+i;
 
           if ((ioffset>=iCenterMin)&&(ioffset<=iCenterMax)) {
             ptrCenterNode=neibptr->node->block->GetCenterNode(getCenterNodeLocalNumber(i,j,k));
