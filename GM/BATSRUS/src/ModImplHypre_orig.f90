@@ -13,7 +13,9 @@ module ModImplHypre
 
   SAVE
 
-  private
+  private ! except
+
+  public:: hypre_read_param
   public:: hypre_initialize
   public:: hypre_set_matrix_block
   public:: hypre_set_matrix
@@ -61,11 +63,32 @@ module ModImplHypre
 
   real, allocatable:: Value_I(:) ! matrix elements for 1 block
 
-  logical, parameter:: UseBlockPart = .true.
-  !!! logical, parameter:: UseBlockPart = .false. 
+  ! BoomerAMG parameters (the defaults are optimal for high res. 1D CRASH)
+  integer:: iVerboseAmg        = 0    ! 0..3
+  integer:: MaxRowElementsAmg  = 0    ! 2, 4 or 6 (2*nDim)
+  integer:: iCoarsenAmg        =10    ! 0,1,3,6,7,8,9,10,11,21,22
+  integer:: iRelaxAmg          = 6    ! 0..6,8,9,15..18
+  integer:: iInterpolateAmg    = 6    ! 0..14
+  real::    StrongThresholdAmg = 0.0  ! 0.25 for 2D, 0.5-0.6 for 3D
+  real::    TruncFactorAmg     = 0.0  ! 0..1 ?
+  logical:: UseBlockPart       = .false.
 
 contains
+  !==========================================================================
+  subroutine hypre_read_param
 
+    use ModReadParam, ONLY: read_var
+
+    call read_var('iVerboseAmg',        iVerboseAmg)
+    call read_var('MaxRowElementsAmg',  MaxRowElementsAmg)
+    call read_var('iCoarsenAmg',        iCoarsenAmg)
+    call read_var('iRelaxAmg',          iRelaxAmg)
+    call read_var('iInterpolateAmg',    iInterpolateAmg)
+    call read_var('StrongThresholdAmg', StrongThresholdAmg)
+    call read_var('TruncFactorAmg',     TruncFactorAmg)
+    call read_var('UseBlockPart',       UseBlockPart)
+
+  end subroutine hypre_read_param
   !==========================================================================
   subroutine hypre_initialize
 
@@ -408,19 +431,32 @@ contains
     if(DoTestMe)write(*,*) NameSub,' HYPRE_BoomerAMGCreate done'
 
     ! Set BoomerAMG parameters
+
+    ! As a preconditioner always do one sweep
     call HYPRE_BoomerAMGSetMaxIter(i8Precond, 1, iError)
-    call HYPRE_BoomerAMGSetTol(i8Precond, 0.0, iError)
+    call HYPRE_BoomerAMGSetTol(i8Precond,   0.0, iError)
 
-    ! Print AMG solution info
-    iPrintLevel = 0
-    if(DoTest)iPrintLevel =2
-    call HYPRE_BoomerAMGSetPrintLevel(i8Precond, iPrintLevel, iError)
-    call HYPRE_BoomerAMGSetCoarsenType(i8Precond, 6, iError)
+    ! These parameters are adjustables with the #HYPRE command
+    call HYPRE_BoomerAMGSetPrintLevel(   i8Precond, iVerboseAmg, iError)
+    call HYPRE_BoomerAMGSetPMaxElmts(    i8Precond, MaxRowElementsAmg, iError)
+    call HYPRE_BoomerAMGSetCoarsenType(  i8Precond, iCoarsenAmg, iError)
+    call HYPRE_BoomerAMGSetRelaxType(    i8Precond, iRelaxAmg, iError)
+    call HYPRE_BoomerAMGSetInterpType(   i8Precond, iInterpolateAmg, iError)
+    call HYPRE_BoomerAMGSetStrongThrshld(i8Precond, StrongThresholdAmg, iError)
+    call HYPRE_BoomerAMGSetTruncFactor(  i8Precond, TruncFactorAmg, iError)
 
-    ! Sym G.S./Jacobi hybrid
-    call HYPRE_BoomerAMGSetRelaxType(i8Precond, 6, iError)
-    call HYPRE_BoomerAMGSetNumSweeps(i8Precond, 1, iError)
-    if(DoTestMe)write(*,*) NameSub,' HYPRE_BoomerAMGSetNumSweeps done'
+    if(DoTestMe)write(*,*) NameSub,' HYPRE_BoomerAMGSetTruncFactor done'
+
+!    ! Print AMG solution info
+!    iPrintLevel = 0
+!    if(DoTest)iPrintLevel =2
+!    call HYPRE_BoomerAMGSetPrintLevel(i8Precond, iPrintLevel, iError)
+!    call HYPRE_BoomerAMGSetCoarsenType(i8Precond, 6, iError)
+!    call HYPRE_BoomerAMGSetRelaxType(i8Precond, 6, iError)
+!    call HYPRE_BoomerAMGSetNumSweeps(i8Precond, 1, iError)
+!    call HYPRE_BoomerAMGSetPMaxElmts(i8Precond, 2*nDim, iError) !!!
+!    call HYPRE_BoomerAMGSetInterpType(i8Precond, 6, iError) !!!
+
 
     if(DoTestMe)write(*,*) NameSub,' finished'
 

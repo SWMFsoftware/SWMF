@@ -13,6 +13,7 @@ subroutine MH_set_parameters(TypeAction)
        read_grid_file, set_fake_grid_file, NameGridFile, IsRzGeometry
   use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
+  use ModImplHypre, ONLY: hypre_read_param              !^CFG IF IMPLICIT
   use ModAdjoint, ONLY : read_adjoint_parameters, &     !ADJOINT SPECIFIC
        init_mod_adjoint, DoAdjoint                      !ADJOINT SPECIFIC
   use ModPhysics
@@ -508,7 +509,10 @@ subroutine MH_set_parameters(TypeAction)
           "#IMPLENERGY", "#IMPLICITENERGY", &
           "#NEWTON", "#JACOBIAN", "#PRECONDITIONER", &
           "#KRYLOV", "#KRYLOVSIZE")
-        call read_implicit_param(NameCommand)           !^CFG END IMPLICIT
+        call read_implicit_param(NameCommand)           
+
+     case("#HYPRE")
+        call hypre_read_param                           !^CFG END IMPLICIT
 
      case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &      !^CFG IF DISSFLUX BEGIN
           "#RESISTIVITYREGION", "#RESISTIVEREGION")

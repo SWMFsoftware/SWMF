@@ -6,6 +6,7 @@ module ModImplHypre
   implicit none
 
   private
+  public:: hypre_read_param
   public:: hypre_initialize
   public:: hypre_set_matrix_block
   public:: hypre_set_matrix
@@ -15,6 +16,13 @@ module ModImplHypre
   logical, public:: DoInitHypreAmg = .false.
 
 contains
+
+  !==========================================================================
+  subroutine hypre_read_param
+
+    call stop_mpi('hypre_read_param: empty! Use Config.pl -hypre')
+
+  end subroutine hypre_read_param
 
   !==========================================================================
   subroutine hypre_initialize
