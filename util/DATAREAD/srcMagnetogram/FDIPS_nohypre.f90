@@ -36,3 +36,9 @@ contains
   end subroutine hypre_preconditioner
 
 end module ModHypre
+!============================================================
+subroutine read_hypre_param
+
+  call CON_stop('FDIPS is compiled without HYPRE')
+
+end subroutine read_hypre_param

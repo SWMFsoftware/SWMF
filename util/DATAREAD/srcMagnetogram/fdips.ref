@@ -1,4 +1,36 @@
-ModReadParam::read_file: read and broadcast nLine=  32 lines of text
+ModReadParam::read_file: read and broadcast nLine=  49 lines of text
+
+#MAGNETOGRAM
+fitsfile.dat		NameFileIn
+T			UseCosTheta
+3500.0			BrMax
+
+#GRID
+20			nR
+20			nTheta		nThetaAll
+20			nPhi		nPhiAll
+
+#TIMING
+F			UseTiming
+
+#PARALLEL
+2			nProcTheta
+2			nProcPhi
+
+#SOLVER
+BICGSTAB		NameSolver
+ILU			NamePreconditioner
+1e-10			Tolerance
+
+#OUTPUT
+field			TypeOutput
+fdips_field.out		NameFileField
+ascii			TypeFileField
+
+#OUTPUT
+potential		TypeOutput
+fdips_potential.out	NameFilePotential
+real8			TypeFilePotential
  nCarringtonRotation, nTheta0, nPhi0:  1200 180 360
  nThetaLgr =  10 nThetaSml =  10
  nPhiLgr   =  10 nPhiSml   =  10

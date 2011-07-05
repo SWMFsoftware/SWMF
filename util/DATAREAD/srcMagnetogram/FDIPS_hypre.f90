@@ -9,6 +9,7 @@ module ModHypre
   public:: hypre_initialize
   public:: hypre_solver
   public:: hypre_preconditioner
+  public:: hypre_read_param
 
   ! These are defined in HYPREf.h (Fortran header file)
   integer, parameter:: HYPRE_STRUCT = 1111, HYPRE_PARCSR = 5555
@@ -17,7 +18,7 @@ module ModHypre
   integer, parameter:: HYPRE_SSTRUCT_VARIABLE_CELL = 0
 
   ! We can use a single part with many boxes or many parts with local cell indexes
-  logical:: UseSinglePart = .false.
+  logical:: UseSinglePart = .true.
 
   integer, parameter:: nDim = 3
   integer, parameter:: nStencil = 2*nDim+1
@@ -50,7 +51,30 @@ module ModHypre
   integer          :: nValue     ! number of matrix elements for 1 box
   real, allocatable:: Value_I(:) ! matrix elements
 
+  integer:: iVerboseAmg        = 0    ! 0..3
+  integer:: MaxRowElementsAmg  = 0    ! 2, 4 or 6 (2*nDim)
+  integer:: iCoarsenAmg        = 6    ! 0,1,3,6,7,8,9,10,11,21,22
+  integer:: iRelaxAmg          = 6    ! 0..6,8,9,15..18
+  integer:: iInterpolateAmg    = 0    ! 0..14
+  real::    StrongThresholdAmg = 0.25 ! 0.25 for 2D, 0.5-0.6 for 3D
+  real::    TruncFactorAmg     = 0.0  ! ?
+  
 contains
+  !==========================================================================
+  subroutine hypre_read_param
+
+    use ModReadParam, ONLY: read_var
+
+    call read_var('iVerboseAmg',        iVerboseAmg)
+    call read_var('MaxRowElementsAmg',  MaxRowElementsAmg)
+    call read_var('iCoarsenAmg',        iCoarsenAmg)
+    call read_var('iRelaxAmg',          iRelaxAmg)
+    call read_var('iInterpolateAmg',    iInterpolateAmg)  
+    call read_var('StrongThresholdAmg', StrongThresholdAmg)
+    call read_var('TruncFactorAmg',     TruncFactorAmg)   
+    call read_var('UseSinglePart',      UseSinglePart)
+
+  end subroutine hypre_read_param
 
   !==========================================================================
   subroutine hypre_initialize
@@ -98,22 +122,28 @@ contains
     end do
 
     if(UseSinglePart)then
+
+       ! This solution does not work, because not implemented for CSR storage.
+       !nPeriod_D = (/0,0,nPhiAll/)
+       !call HYPRE_SStructGridSetPeriodic(i8Grid, &
+       !     iPart, nPeriod_D, iError )
+
        ! Setup periodic boundaries in Phi direction
        iLowerBc_D = (/  1,         1,    0 /)
        iUpperBc_D = (/ nR, nThetaAll,    0 /)
        jLowerBc_D = (/  1,         1, nPhiAll /)
        jUpperBc_D = (/ nR, nThetaAll, nPhiAll /)
-
+       
        call HYPRE_SStructGridSetNeighborPart( i8Grid, &
             iPart, iLowerBc_D, iUpperBc_D, &
             iPart, jLowerBc_D, jUpperBc_D, &
             iIndexMap_D, iIndexDir_D, iError)
-
+       
        iLowerBc_D = (/  1,         1, nPhiAll+1 /)
        iUpperBc_D = (/ nR, nThetaAll, nPhiAll+1 /)
        jLowerBc_D = (/  1,         1,         1 /)
        jUpperBc_D = (/ nR, nThetaAll,         1 /)
-
+       
        call HYPRE_SStructGridSetNeighborPart( i8Grid, &
             iPart, iLowerBc_D, iUpperBc_D, &
             iPart, jLowerBc_D, jUpperBc_D, &
@@ -298,14 +328,16 @@ contains
        ! Set BoomerAMG parameters
        call HYPRE_BoomerAMGSetMaxIter(i8Precond, 1, iError)
        call HYPRE_BoomerAMGSetTol(i8Precond, 0.0, iError)
-
-       ! Print AMG solution info
-       call HYPRE_BoomerAMGSetPrintLevel(i8Precond, 2, iError)
-       call HYPRE_BoomerAMGSetCoarsenType(i8Precond, 6, iError)
-
-       ! Sym G.S./Jacobi hybrid
-       call HYPRE_BoomerAMGSetRelaxType(i8Precond, 6, iError)
        call HYPRE_BoomerAMGSetNumSweeps(i8Precond, 1, iError)
+
+       ! Adjustable parameters
+       call HYPRE_BoomerAMGSetPrintLevel(   i8Precond, iVerboseAmg, iError)
+       call HYPRE_BoomerAMGSetPMaxElmts(    i8Precond, MaxRowElementsAmg, iError)
+       call HYPRE_BoomerAMGSetCoarsenType(  i8Precond, iCoarsenAmg, iError)
+       call HYPRE_BoomerAMGSetRelaxType(    i8Precond, iRelaxAmg, iError)
+       call HYPRE_BoomerAMGSetInterpType(   i8Precond, iInterpolateAmg, iError)
+       call HYPRE_BoomerAMGSetStrongThrshld(i8Precond, StrongThresholdAmg, iError)
+       call HYPRE_BoomerAMGSetTruncFactor(  i8Precond, TruncFactorAmg, iError)
 
        if(UsePreconditioner)then
           ! Setup AMG preconditioner for Krylov solver
@@ -556,4 +588,12 @@ contains
   end subroutine hypre_preconditioner
 
 end module ModHypre
+!============================================================
+subroutine read_hypre_param
 
+  ! This is here to avoid circular dependencies
+
+  use ModHypre, ONLY: hypre_read_param
+  call hypre_read_param
+
+end subroutine read_hypre_param

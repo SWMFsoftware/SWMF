@@ -12,11 +12,28 @@ T			UseCosTheta
 #TIMING
 F			UseTiming
 
+TEST
+-1
+
 #PARALLEL
 2			nProcTheta
 2			nProcPhi
 
 #SOLVER
+BiCGSTAB		NameSolver
+ILU			NamePreconditioner
+1e-10			Tolerance
+
+HYPRE
+3			iVerboseAmg
+6			MaxRowElementsAmg
+10			iCoarsenAmg
+6			iRelaxAmg
+6			iInterpolateAmg
+0.5			StrongThresholdAmg
+0.3			TruncFactorAmg
+T			UseSinglePart
+
 BiCGSTAB		NameSolver
 ILU			NamePreconditioner
 1e-10			Tolerance
