@@ -99,6 +99,7 @@ contains
     !-----------------------------------------------------------------------
     call read_file('FDIPS.in')
     call read_init
+    if(iProc==0) call read_echo_set(.true.)
 
     ! Default decomposition
     nProcTheta = nProc
@@ -141,6 +142,8 @@ contains
                index(NamePreconditioner,'MG') > 0
           UsePreconditioner = NameSolver == 'BICGSTAB' .and. &
                NamePreconditioner /= 'NONE'
+       case("#HYPRE")
+          call read_hypre_param
        case("#OUTPUT")
           call read_var('TypeOutput', TypeOutput, IsLowerCase=.true.)
           select case(TypeOutput)
