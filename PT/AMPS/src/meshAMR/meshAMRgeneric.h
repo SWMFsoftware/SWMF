@@ -2840,14 +2840,47 @@ if (startNode->Temp_ID==2140) {
   kOffset=0;
 
   //define the search node
-  while (searchNode->upNode!=NULL) {
+
+  //1. determine ht enumebr of the resolution levels up where to start the search
+  static int StartSearchLevelOffset=-1;
+
+  if (StartSearchLevelOffset==-1) {
+    int TotalOffset_X_=0,TotalOffset_Y_=0,TotalOffset_Z_=0,nIntersections;
+
+    for (nIntersections=0,StartSearchLevelOffset=1;StartSearchLevelOffset<=_MAX_REFINMENT_LEVEL_;nIntersections=0,StartSearchLevelOffset++) {
+      TotalOffset_X_-=_BLOCK_CELLS_X_*(1<<StartSearchLevelOffset);
+      if (TotalOffset_X_+(_BLOCK_CELLS_X_+_GHOST_CELLS_X_)*(1<<StartSearchLevelOffset)>=-_GHOST_CELLS_X_) nIntersections++;
+
+      if (_MESH_DIMENSION_>1) {
+        TotalOffset_Y_-=_BLOCK_CELLS_Y_*(1<<StartSearchLevelOffset);
+        if (TotalOffset_Y_+(_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_)*(1<<StartSearchLevelOffset)>=-_GHOST_CELLS_Y_) nIntersections++;
+      }
+
+      if (_MESH_DIMENSION_>2) {
+        TotalOffset_Z_-=_BLOCK_CELLS_Z_*(1<<StartSearchLevelOffset);
+        if (TotalOffset_Z_+(_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_)*(1<<StartSearchLevelOffset)>=-_GHOST_CELLS_Z_) nIntersections++;
+      }
+
+      if (nIntersections==0) {
+        if (StartSearchLevelOffset>1) StartSearchLevelOffset--;
+        break;
+      }
+    }
+  }
+
+  //determine the node to start the search
+//  while (searchNode->upNode!=NULL) {
+
+  for (int nSearchLevelUp=0;(nSearchLevelUp<StartSearchLevelOffset)&&(searchNode->upNode!=NULL);nSearchLevelUp++) {
     nConditionsMet=0;
 
+    /*
     if (_BLOCK_CELLS_X_*(1<<(startNode->RefinmentLevel-searchNode->RefinmentLevel))>_BLOCK_CELLS_X_+6*_GHOST_CELLS_X_) nConditionsMet++;
     if ((_MESH_DIMENSION_<2)||(_BLOCK_CELLS_Y_*(1<<(startNode->RefinmentLevel-searchNode->RefinmentLevel))>_BLOCK_CELLS_Y_+6*_GHOST_CELLS_Y_)) nConditionsMet++;
     if ((_MESH_DIMENSION_<3)||(_BLOCK_CELLS_Z_*(1<<(startNode->RefinmentLevel-searchNode->RefinmentLevel))>_BLOCK_CELLS_Z_+6*_GHOST_CELLS_Z_)) nConditionsMet++;
 
     if (nConditionsMet==3) break;
+*/
 
     t=searchNode;
     searchNode=searchNode->upNode;
@@ -5531,7 +5564,7 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
 
     if (startNode==rootTree) {
       nGlobalNodeNumber=1;
-      ResetAMRnodeProcessingFlag(rootTree);
+      ResetAMRnodeProcessingFlag();
       resetNodeProcessedFlag();
 
       if ((ConnectivityListMode!=_AMR_CONNECTIVITY_LIST_MODE_INTERNAL_BLOCK_)&&(ConnectivityListMode!=_AMR_CONNECTIVITY_LIST_MODE_GLOBAL_NODE_NUMBER_)) exit(__LINE__,__FILE__,"Error: unknown option");
@@ -7508,11 +7541,27 @@ nMPIops++;
     }
   }
 
+  /*
   void ResetAMRnodeProcessingFlag(cTreeNodeAMR<cBlockAMR>* startNode) {
     startNode->nodeDescriptor.NodeProcessingFlag=_AMR_FALSE_;
 
     if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
       for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) ResetAMRnodeProcessingFlag(startNode->downNode[nDownNode]);
+    }
+  }
+  */
+  void ResetAMRnodeProcessingFlag() {
+    long int nMemoryBank,nTotalMemoryBanks,nnode;
+    cTreeNodeAMR<cBlockAMR>* TreeNode;
+
+    nTotalMemoryBanks=treeNodes.dataBufferListPointer;
+
+    for (nMemoryBank=0;nMemoryBank<nTotalMemoryBanks;nMemoryBank++) {
+      TreeNode=treeNodes.dataBufferList[nMemoryBank];
+
+      for (nnode=0;nnode<_STACK_DEFAULT_BUFFER_BUNK_SIZE_;nnode++) {
+        (TreeNode+nnode)->nodeDescriptor.NodeProcessingFlag=_AMR_FALSE_;
+      }
     }
   }
 
@@ -7653,7 +7702,7 @@ if (TmpAllocationCounter==2437) {
     cTreeNodeAMR<cBlockAMR> *TreeNode=NULL;
     int iStart=0,iIncrement=-1,jStart=0,jIncrement=-1;
 
-    ResetAMRnodeProcessingFlag(rootTree);
+    ResetAMRnodeProcessingFlag();
     *startNodeFillingCurve=NULL;
 
 #if _MESH_DIMENSION_ == 1
