@@ -197,8 +197,9 @@ on_error,2
 filetypes=filenames
 npictinfiles=intarr(n_elements(filenames))
 for ifile=0,n_elements(filenames)-1 do begin
-    if   strpos(filenames(ifile),'.log') gt 0 $
-      or strpos(filenames(ifile),'.sat') gt 0 then begin
+    l = strlen(filenames(ifile)) - 4
+    if   strpos(filenames(ifile),'.log') eq l $
+      or strpos(filenames(ifile),'.sat') eq l then begin
         filetypes(ifile)    = 'log'
         npictinfiles(ifile) = 1
     endif else begin
