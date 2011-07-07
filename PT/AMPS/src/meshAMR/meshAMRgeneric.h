@@ -207,6 +207,11 @@ public:
   //the pointers to members of the list of the nodes that "belongs" to this processor (or some other lists)
   cTreeNodeAMR *nextNodeThisThread,*prevNodeThisThread;
 
+  //the pointers to the previous and the next nodes in the list of node's that has intersection with the surfaces of the computational domain
+  #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
+  cTreeNodeAMR *DomainSurfaceBoundaryList_Prev, *DomainSurfaceBoundaryList_Next;
+  #endif
+
 
   double xmin[_MESH_DIMENSION_],xmax[_MESH_DIMENSION_];
   int RefinmentLevel;
@@ -377,6 +382,7 @@ public:
 
     #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
     InternalBoundaryDescriptorList=NULL;
+    DomainSurfaceBoundaryList_Prev=NULL,DomainSurfaceBoundaryList_Next=NULL;
     #endif
 
     #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
@@ -543,7 +549,7 @@ public:
 
        res=GetNeibCorner(i+2*(j+2*k));
      } else if (code==2) { //edge node
-       int nedge;
+       int nedge=-1;
 
        if (i==-1) {
          if (j!=0) nedge=(j==-1) ? 8 : 11;
@@ -559,7 +565,7 @@ public:
 
        res=GetNeibEdge(nedge,0);
      } else if (code==1) { //face node
-       int nface;
+       int nface=-1;
 
        if (i==-1) nface=0;
        else if (i==1) nface=1;
@@ -969,6 +975,7 @@ public:
   //the list of the descriptors of all internal boundaries installed into the mesh
   #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
   list<cInternalBoundaryConditionsDescriptor> InternalBoundaryList;
+  cTreeNodeAMR<cBlockAMR>* DomainSurfaceBoundaryList;
   #endif
 
   //generate the mesh signeture: the signature contained the time of the mesh creeation, the user name and the computer name where the lesh is created
@@ -1111,7 +1118,7 @@ public:
     //if ((x[0]<startNode->xmin[0])||(startNode->xmax[0]<x[0])) return -1;
     dx=dxRootBlock[0]/(1<<startNode->RefinmentLevel)/double(_BLOCK_CELLS_X_);
     dx2=dx/2.0;
-    i=(x[0]-dx2-startNode->xmin[0])/dx;
+    i=(int)((x[0]-dx2-startNode->xmin[0])/dx);
 
     if (fabs(startNode->xmin[0]+dx2+dx*i-x[0])>EPS) {
       i++;
@@ -1122,7 +1129,7 @@ public:
       //if ((x[1]<startNode->xmin[1])||(startNode->xmax[1]<x[1])) return -1;
       dx=dxRootBlock[1]/(1<<startNode->RefinmentLevel)/double(_BLOCK_CELLS_Y_);
       dx2=dx/2.0;
-      j=(x[1]-dx2-startNode->xmin[1])/dx;
+      j=(int)((x[1]-dx2-startNode->xmin[1])/dx);
 
       if (fabs(startNode->xmin[1]+dx2+dx*j-x[1])>EPS) {
         j++;
@@ -1135,7 +1142,7 @@ public:
       //if ((x[2]<startNode->xmin[2])||(startNode->xmax[2]<x[2])) return -1;
       dx=dxRootBlock[2]/(1<<startNode->RefinmentLevel)/double(_BLOCK_CELLS_Z_);
       dx2=dx/2.0;
-      k=(x[2]-dx2-startNode->xmin[2])/dx;
+      k=(int)((x[2]-dx2-startNode->xmin[2])/dx);
 
       if (fabs(startNode->xmin[2]+dx2+dx*k-x[2])>EPS) {
         k++;
@@ -1299,6 +1306,9 @@ public:
       rootTree->InternalBoundaryDescriptorList=newDescriptor;
     }
 
+    //add the 'rootTree' to the list of the boundary nodes
+    DomainSurfaceBoundaryList=rootTree;
+
     #endif
 
     //init the MPI variables
@@ -1380,6 +1390,10 @@ public:
 
      #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
      DomainBoundaryLayerNodesList=NULL;
+     #endif
+
+     #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
+     DomainSurfaceBoundaryList=NULL;
      #endif
   }
 
@@ -2704,11 +2718,11 @@ void AddNodeNeighborList(cTreeNodeAMR<cBlockAMR>* neibNode,cNeibDescriptor *Neib
 
 //==================   DEBUG ===============
 
-
+/*
   if (neibNode->Temp_ID==7021) {
     cout << __LINE__ << endl;
   }
-
+*/
 
   //===============  END DEBUG ============
 
@@ -3657,6 +3671,17 @@ if (newCenterNode->Temp_ID==88861) {
       InternalBoundaryDescriptors.deleteElement(downNode->InternalBoundaryDescriptorList);
       downNode->InternalBoundaryDescriptorList=nextDescriptor;
     }
+
+    downNode->InternalBoundaryDescriptorList=NULL;
+
+    cTreeNodeAMR<cBlockAMR> *next,*prev;
+    next=downNode->DomainSurfaceBoundaryList_Next,prev=downNode->DomainSurfaceBoundaryList_Prev;
+    if (next!=NULL) next->DomainSurfaceBoundaryList_Prev=prev;
+    if (prev!=NULL) prev->DomainSurfaceBoundaryList_Next=next;
+
+    if (DomainSurfaceBoundaryList==downNode) DomainSurfaceBoundaryList=next;
+
+    downNode->DomainSurfaceBoundaryList_Next=NULL,downNode->DomainSurfaceBoundaryList_Prev=NULL;
     #endif
 
     //remove the node
@@ -4031,6 +4056,7 @@ cout << __LINE__ << endl;
        #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
        cInternalBoundaryConditionsDescriptor *InternalBoundaryDescriptor,*newDescriptor;
        int IntersectionCode=-1;
+       bool SurfaceBoundaryListAdded=false;
 
        for (InternalBoundaryDescriptor=startNode->InternalBoundaryDescriptorList;InternalBoundaryDescriptor!=NULL;InternalBoundaryDescriptor=InternalBoundaryDescriptor->nextInternalBCelement) {
          switch(InternalBoundaryDescriptor->BondaryType) {
@@ -4067,6 +4093,13 @@ cout << __LINE__ << endl;
            //add the descriptor to newTreeNode
            newDescriptor->nextInternalBCelement=newTreeNode->InternalBoundaryDescriptorList;
            newTreeNode->InternalBoundaryDescriptorList=newDescriptor;
+
+           //add newTreeNode to the lsit of nodes that intersect the surface boundary of the computational domain
+           if (SurfaceBoundaryListAdded==false) {
+             newTreeNode->DomainSurfaceBoundaryList_Prev=NULL,newTreeNode->DomainSurfaceBoundaryList_Next=DomainSurfaceBoundaryList;
+             DomainSurfaceBoundaryList=newTreeNode;
+           }
+
 
            break;
          default:
@@ -4692,6 +4725,30 @@ cout << __LINE__ << endl;
 
      //deallocate the block of 'startNode'
      if (DeallocateUnusedBlocks==true) DeallocateBlock(startNode);
+
+     //remove 'startNode' from the list of nodes that intersects the surface of the computational domain
+     if (startNode->InternalBoundaryDescriptorList!=NULL) {
+       cInternalBoundaryConditionsDescriptor *InternalBoundaryDescriptor,*nextDesecriptor;
+
+       for (InternalBoundaryDescriptor=startNode->InternalBoundaryDescriptorList;InternalBoundaryDescriptor!=NULL;InternalBoundaryDescriptor=nextDesecriptor) {
+         nextDesecriptor=InternalBoundaryDescriptor->nextInternalBCelement;
+         InternalBoundaryDescriptors.deleteElement(InternalBoundaryDescriptor);
+       }
+
+       startNode->InternalBoundaryDescriptorList=NULL;
+
+       cTreeNodeAMR<cBlockAMR> *next,*prev;
+
+       next=startNode->DomainSurfaceBoundaryList_Next,prev=startNode->DomainSurfaceBoundaryList_Prev;
+       if (next!=NULL) next->DomainSurfaceBoundaryList_Prev=prev;
+       if (prev!=NULL) prev->DomainSurfaceBoundaryList_Next=next;
+
+       if (DomainSurfaceBoundaryList==startNode) DomainSurfaceBoundaryList=next;
+
+       startNode->DomainSurfaceBoundaryList_Next=NULL,startNode->DomainSurfaceBoundaryList_Prev=NULL;
+     }
+
+
   }
 
   return true;
@@ -4858,8 +4915,8 @@ cout << __LINE__ << endl;
   void countMeshElements(cTreeNodeAMR<cBlockAMR> *startNode,int level) {
     static long int nDownNodes,nd;
     int i,j,k;
-    cBlockAMR *block;
-    cCornerNode *ndptr;
+    cBlockAMR *block=NULL;
+    cCornerNode *ndptr=NULL;
     
     static int SendRequest,*SendRequestVector=NULL;
     static long int *BlockNodeGlabalNumber=NULL;
@@ -5220,6 +5277,8 @@ if (CallsCounter==83) {
         if (startNode->InternalBoundaryDescriptorList!=NULL) {
           cInternalBoundaryConditionsDescriptor *SurfaceDescriptor;
           double (*SurfaceLocalResolution)(double*);
+
+          SurfaceLocalResolution=NULL;
 
           for (SurfaceDescriptor=startNode->InternalBoundaryDescriptorList;SurfaceDescriptor!=NULL;SurfaceDescriptor=SurfaceDescriptor->nextInternalBCelement) {
             if (SurfaceDescriptor->BondaryType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) SurfaceLocalResolution=((cInternalSphericalData*)SurfaceDescriptor->BoundaryElement)->localResolution;
@@ -6490,6 +6549,52 @@ nMPIops++;
 #endif
 
 
+#if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
+    //save the list of nodes that intersect surfaces of the computational domain
+    countingNumber=treeNodes.GetEntryCountingNumber(startNode->DomainSurfaceBoundaryList_Next);
+    fwrite(&countingNumber,sizeof(long int),1,fout);
+
+    countingNumber=treeNodes.GetEntryCountingNumber(startNode->DomainSurfaceBoundaryList_Prev);
+    fwrite(&countingNumber,sizeof(long int),1,fout);
+
+    //save the list of the boundary surface's descriptors
+    int InternalSurfaceBoundaryPresentFlag=(startNode->InternalBoundaryDescriptorList==NULL) ? false : true;
+    cInternalBoundaryConditionsDescriptor *SurfaceDescriptor;
+    list<cInternalBoundaryConditionsDescriptor>::iterator ptrDescriptorList,ptrDescriptorListEnd;
+
+    fwrite(&InternalSurfaceBoundaryPresentFlag,sizeof(int),1,fout);
+
+    if (InternalSurfaceBoundaryPresentFlag==true) {
+      bool found;
+
+      for (SurfaceDescriptor=startNode->InternalBoundaryDescriptorList;SurfaceDescriptor!=NULL;SurfaceDescriptor=SurfaceDescriptor->nextInternalBCelement) {
+        ptrDescriptorListEnd=InternalBoundaryList.end();
+        found=false;
+
+        //save the marker for the beginig of the new record
+        fwrite(&InternalSurfaceBoundaryPresentFlag,sizeof(int),1,fout);
+
+        //find the counting number for the intersected surface
+        for (countingNumber=0,ptrDescriptorList=InternalBoundaryList.begin();ptrDescriptorList!=ptrDescriptorListEnd;countingNumber++,ptrDescriptorList++) {
+          if (ptrDescriptorList->BoundaryElement==SurfaceDescriptor->BoundaryElement) {
+            found=true;
+            fwrite(SurfaceDescriptor,sizeof(cInternalBoundaryConditionsDescriptor),1,fout);
+            fwrite(&countingNumber,sizeof(long int),1,fout);
+            break;
+          }
+        }
+
+        if (found==false) exit(__LINE__,__FILE__,"Error: cannot find the interesected surface data");
+      }
+
+      InternalSurfaceBoundaryPresentFlag=false;
+      fwrite(&InternalSurfaceBoundaryPresentFlag,sizeof(int),1,fout);
+    }
+
+
+
+#endif
+
 
     /*
     //save the blocks' information
@@ -6598,6 +6703,50 @@ nMPIops++;
     fread(&startNode->Thread,sizeof(int),1,fout);
 #endif
 
+    //save the list of nodes that intersect surfaces of the computational domain
+#if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
+    fread(&countingNumber,sizeof(long int),1,fout);
+    startNode->DomainSurfaceBoundaryList_Next=treeNodes.GetEntryPointer(countingNumber);
+
+    fread(&countingNumber,sizeof(long int),1,fout);
+    startNode->DomainSurfaceBoundaryList_Prev=treeNodes.GetEntryPointer(countingNumber);
+
+    //read the list of the boundary surface's descriptors
+    int InternalSurfaceBoundaryPresentFlag;
+    cInternalBoundaryConditionsDescriptor *SurfaceDescriptor;
+    list<cInternalBoundaryConditionsDescriptor>::iterator ptrDescriptorList,ptrDescriptorListEnd;
+
+    fread(&InternalSurfaceBoundaryPresentFlag,sizeof(int),1,fout);
+
+    if (InternalSurfaceBoundaryPresentFlag==true) {
+//      int i;
+
+      ptrDescriptorListEnd=InternalBoundaryList.end();
+      fread(&InternalSurfaceBoundaryPresentFlag,sizeof(int),1,fout);
+
+      while (InternalSurfaceBoundaryPresentFlag==true) {
+        SurfaceDescriptor=InternalBoundaryDescriptors.newElement();
+
+        fread(SurfaceDescriptor,sizeof(cInternalBoundaryConditionsDescriptor),1,fout);
+        fread(&countingNumber,sizeof(long int),1,fout);
+
+        for (i=0,SurfaceDescriptor->BoundaryElement=NULL,ptrDescriptorList=InternalBoundaryList.begin();ptrDescriptorList!=ptrDescriptorListEnd;i++,ptrDescriptorList++) {
+          if (i==countingNumber) {
+            SurfaceDescriptor->BoundaryElement=ptrDescriptorList->BoundaryElement;
+            break;
+          }
+        }
+
+        if (SurfaceDescriptor->BoundaryElement==NULL) exit(__LINE__,__FILE__,"Error: cannot find approproate surface element");
+
+        SurfaceDescriptor->nextInternalBCelement=startNode->InternalBoundaryDescriptorList;
+        startNode->InternalBoundaryDescriptorList=SurfaceDescriptor;
+
+        fread(&InternalSurfaceBoundaryPresentFlag,sizeof(int),1,fout);
+      }
+    }
+#endif
+
     /*
     //save the blocks' information
     bool BlockExist;
@@ -6686,6 +6835,17 @@ nMPIops++;
       fwrite("AMR-MESH-FILE-MARKER:MESH-TREE",sizeof(char),STRING_LENGTH,fout);
       saveTreeStructure(rootTree,fout);
 
+
+      //save the list of nodes that intersect surfaces of the computational domain
+#if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
+      fwrite("AMR-MESH-FILE-MARKER:BOUNDARY_NODES",sizeof(char),STRING_LENGTH,fout);
+      countingNumber=treeNodes.GetEntryCountingNumber(DomainSurfaceBoundaryList);
+      fwrite(&countingNumber,sizeof(long int),1,fout);
+#endif
+
+
+
+
     /*
     //save corner block nodes
     fwrite("AMR-MESH-FILE-MARKER:CORNER-BLOCK-NODES",sizeof(char),STRING_LENGTH,fout);
@@ -6747,6 +6907,15 @@ nMPIops++;
     fread(marker,sizeof(char),STRING_LENGTH,fout);
     if (strcmp("AMR-MESH-FILE-MARKER:MESH-TREE",marker)!=0) exit(__LINE__,__FILE__,"SectionMarker in the mesh file is wrong"); 
     readTreeStructure(rootTree,fout);
+
+
+    //read the list of nodes that intersect surfaces of the computational domain
+#if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
+    fread(marker,sizeof(char),STRING_LENGTH,fout);
+    if (strcmp("AMR-MESH-FILE-MARKER:BOUNDARY_NODES",marker)!=0) exit(__LINE__,__FILE__,"SectionMarker in the mesh file is wrong");
+    fread(&countingNumber,sizeof(long int),1,fout);
+    DomainSurfaceBoundaryList=treeNodes.GetEntryPointer(countingNumber);
+#endif
 
     /*
     //read corner block nodes
