@@ -72,18 +72,19 @@ if($Table =~ /test/i){
 		 "-borisfull");                           #^CFG IF BORISCORR 
     &execute($testbatsrus,"-ta -Conservative=r6",         #^CFG IF SIMPLEBORIS
 		 "-borissimple");                         #^CFG IF SIMPLEBORIS
-    &execute($testbatsrus,"-Inner=float,reflect"); 
+    &execute($testbatsrus,"-Inner=float"); 
+    &execute($testbatsrus,"-Inner=reflect"); 
 
     &execute($testbatsrus,"-Limiter=mc -Resist=hall");
     &execute($testbatsrus,"-Limiter=mc3 -hlld -Message=dir");
     &execute($testbatsrus,"-ta -Stage=2 -partimpl05 -Limiter=mc3",
-	     "-hall -logsatmove -Reschange=accurate");
+	     "-hall -logsatmove -Reschange=accurate -Length=tiny_ta");
 
-    &execute($testbatsrus,"-ta -Stage=2 -constrain");     #^CFG IF CONSTRAINB
-    &execute($testbatsrus,"-ta -Stage=2 -project");       #^CFG IF PROJECTION
-    &execute($testbatsrus,"-ta -Stage=2 -diffuse");       #^CFG IF DIVBDIFFUSE
+    &execute($testbatsrus,"-ta -Stage=2 -constrain -Length=tiny_ta");     #^CFG IF CONSTRAINB
+    &execute($testbatsrus,"-ta -Stage=2 -project -Length=tiny_ta");       #^CFG IF PROJECTION
+    &execute($testbatsrus,"-ta -Stage=2 -diffuse -Length=tiny_ta");       #^CFG IF DIVBDIFFUSE
 
-    &execute($testbatsrus,"-ta -Stage=2 -partimpl05");    #^CFG IF IMPLICIT
+    &execute($testbatsrus,"-ta -Stage=2 -partimpl05 -Length=tiny_ta");    #^CFG IF IMPLICIT
 
     &execute($testbatsrus,"-Limiter=mc3 -hlld",
 		"-Restart=saveone -Length=restartsave");
@@ -97,7 +98,7 @@ if($Table =~ /test/i){
     &execute($testbatsrus,"-ta -Conservative=r6 -hlld",
 		"-Restart=read -Length=restartread");
 
-    &execute($testbatsrus,"-ta -Corotation=ideal,updateb0");
+    &execute($testbatsrus,"-ta -Corotation=ideal,updateb0 -Length=tiny_ta");
 
     &execute($testbatsrus,"-Plottype=ray -Logtype=ray -nsturning_1nT_tilt");  #^CFG IF RAYTRACE
 

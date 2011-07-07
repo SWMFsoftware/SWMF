@@ -1,7 +1,7 @@
 #TESTXYZ
--20.0			xTest
- 5.0			yTest
- 5.0			zTest
+-20.1			xTest
+ 4.9			yTest
+ 4.9			zTest
 
 #SAVELOGFILE
 T			DoSaveLogfile
