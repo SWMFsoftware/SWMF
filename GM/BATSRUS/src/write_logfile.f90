@@ -366,11 +366,12 @@ contains
   !============================================================================
   subroutine set_log_var
 
-    use ModMain,      ONLY: x_, y_, z_
+    use ModMain,      ONLY: x_, y_, z_, UseBatl
     use ModUser,      ONLY: user_get_log_var
     use ModUtilities, ONLY: lower_case
     use ModCurrent,   ONLY: get_current
     use ModWaves,     ONLY: UseWavePressure
+    use BATL_lib, ONLY: message_pass_cell_scalar, message_pass_cell
 
     ! Local variables
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
@@ -465,7 +466,7 @@ contains
        do iBLK = 1, nBlock
           if(unusedBLK(iBLK))cycle
 
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          do k=1,nK; do j=1,nJ; do i=1,nI
              ! Calculate radial current
              call get_current(i,j,k,iBlk,Current_D)
              tmp1_BLK(i,j,k,iBLK) = ( &
@@ -473,7 +474,17 @@ contains
                   Current_D(y_)*y_BLK(i,j,k,iBLK)+ &
                   Current_D(z_)*z_BLK(i,j,k,iBLK) ) / r_BLK(i,j,k,iBLK)
           end do; end do; end do
+       end do
 
+       if(UseBatl) then
+          call message_pass_cell_scalar(tmp1_BLK, nWidthIn=1, DoSendCornerIn=.true. ,&
+               nProlongOrderIn=2, DoRestrictFaceIn=.false.)
+       else
+          call message_pass_cells(.true.,.false.,.true.,tmp1_BLK)
+       end if
+
+       do iBLK = 1, nBlock
+          if(unusedBLK(iBLK))cycle
           !now modify tmp1 according to the case we want
           select case(NameLogVar)
           case('jin')
@@ -490,7 +501,7 @@ contains
           qval = calc_sphere('minval',180,rCurrents,tmp1_BLK)
           if(nProc>1)then
              call MPI_allreduce(qval, qval_all, 1, MPI_REAL, MPI_MIN, &
-             iComm, iError)
+                  iComm, iError)
              ! Divide by nProc so that adding up the processors can work
              LogVar_I(iVarTot) = qval_all/nProc
           else
@@ -500,7 +511,7 @@ contains
           qval = calc_sphere('maxval',180,rCurrents,tmp1_BLK)
           if(nProc>1)then
              call MPI_allreduce(qval, qval_all, 1, MPI_REAL, MPI_MAX, &
-             iComm, iError)
+                  iComm, iError)
              ! Divide by nProc so that adding up the processors can work
              LogVar_I(iVarTot) = qval_all/nProc
           else
@@ -705,10 +716,10 @@ contains
              if(unusedBLK(iBLK)) CYCLE
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
                 tmp1_BLK(i,j,k,iBLK) = &
-               (State_VGB(iRhoUx,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-               +State_VGB(iRhoUy,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-               +State_VGB(iRhoUz,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
-               )/R_BLK(i,j,k,iBLK)
+                     (State_VGB(iRhoUx,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                     +State_VGB(iRhoUy,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                     +State_VGB(iRhoUz,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                     )/R_BLK(i,j,k,iBLK)
              end do; end do; end do
           end do
           LogVar_I(iVarTot) = calc_sphere('integrate',360, r, tmp1_BLK)
@@ -743,7 +754,7 @@ contains
                      ) / R_BLK(i,j,k,iBLK)
              end do; end do; end do
           end do
- 
+
           LogVar_I(iVarTot) = calc_sphere('integrate',360, r, tmp1_BLK)
        end do
     case('b2flx')
@@ -787,10 +798,10 @@ contains
                 bDotU = FullB_DG(x_,i,j,k)*RhoUx +&
                      FullB_DG(y_,i,j,k)*RhoUy + FullB_DG(z_,i,j,k)*RhoUz
                 tmp1_BLK(i,j,k,iBLk) = ( &
-                  ( bDotb*rhoUx - bDotU*FullB_DG(x_,i,j,k))*X_BLK(i,j,k,iBLk)+&
-                  ( bDotb*rhoUy - bDotU*FullB_DG(y_,i,j,k))*Y_BLK(i,j,k,iBLk)+&
-                  ( bDotb*rhoUz - bDotU*FullB_DG(z_,i,j,k))*Z_BLK(i,j,k,iBLk) &
-                  ) / (State_VGB(iRho,i,j,k,iBLk)*R_BLK(i,j,k,iBLk))
+                     ( bDotb*rhoUx - bDotU*FullB_DG(x_,i,j,k))*X_BLK(i,j,k,iBLk)+&
+                     ( bDotb*rhoUy - bDotU*FullB_DG(y_,i,j,k))*Y_BLK(i,j,k,iBLk)+&
+                     ( bDotb*rhoUz - bDotU*FullB_DG(z_,i,j,k))*Z_BLK(i,j,k,iBLk) &
+                     ) / (State_VGB(iRho,i,j,k,iBLk)*R_BLK(i,j,k,iBLk))
              end do; end do; end do
           end do
           LogVar_I(iVarTot) = calc_sphere('integrate',360, r,tmp1_BLK)
