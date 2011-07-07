@@ -228,6 +228,15 @@ contains
     if(nProlongOrder == 2 .and. nCoarseLayer>1) call CON_stop(NameSub// &
          ' cannot use 2nd order prolongation nCoarseLayer > 1')
 
+    if(nProlongOrder < 1 .or. nProlongOrder > 2) call CON_stop(NameSub// &
+         ' only nProlongOrder = 1 or 2 is implemented ')
+    
+    if(nWidth < 1 .or. nWidth > nG) call CON_stop(NameSub// &
+         ' nWidth do not contain the ghost cells or too many')
+
+    if(nCoarseLayer < 1 .or.  nCoarseLayer > 2 ) all CON_stop(NameSub// &
+         ' nCoarseLayer are only defined for value or 1 or 2 ')
+
     UseMin =.false.
     UseMax =.false.
 
