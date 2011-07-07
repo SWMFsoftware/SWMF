@@ -92,7 +92,7 @@ module BATL_amr_criteria
 
   ! The max differens in the criteia to say thay have the same value,
   ! taking care of numerical fluctations
-  real :: DeltaCritera = 0.0
+  real :: DeltaCritera = 1.0e-8
 
   ! Converting index form running block and proc number to node numbers
   integer, allocatable :: iNode_I(:)
