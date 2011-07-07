@@ -79,7 +79,7 @@ our $Hypre;                 # True if HYPRE lib is enabled
 # This string should be added into Makefile.conf when HDF5 is enabled
 my $Hdf5Definition = "
 # HDF5 library definitions
-HDFLIB = -lHDF5PLOT
+HDFLIB = -L\${LIBDIR} -lHDF5PLOT
 ";             	    
 
 # This string should be added into Makefile.conf when HYPRE is enabled
