@@ -234,7 +234,7 @@ contains
     if(nWidth < 1 .or. nWidth > nG) call CON_stop(NameSub// &
          ' nWidth do not contain the ghost cells or too many')
 
-    if(nCoarseLayer < 1 .or.  nCoarseLayer > 2 ) all CON_stop(NameSub// &
+    if(nCoarseLayer < 1 .or.  nCoarseLayer > 2 ) call CON_stop(NameSub// &
          ' nCoarseLayer are only defined for value or 1 or 2 ')
 
     UseMin =.false.
