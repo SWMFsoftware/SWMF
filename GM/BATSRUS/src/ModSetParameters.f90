@@ -82,7 +82,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModTimeStepControl, ONLY: read_time_step_control_param
   use ModLaserHeating,    ONLY: read_laser_heating_param
   use ModIoUnit, ONLY: io_unit_new
-  
+
   !CORONA SPECIFIC PARAMETERS
   use EEE_ModMain, ONLY: EEE_set_parameters
   use ModMagnetogram, ONLY: set_parameters_magnetogram, &
@@ -347,11 +347,14 @@ subroutine MH_set_parameters(TypeAction)
                 ' ERROR: nGI..nGK must be 2 in srcBATL/BATL_size.f90')
         end if
 
+     case("#BATLPROLONG")
+        call read_var('BetaProlong',BetaProlong )
+
+        
      case("#BATLTEST")
         call read_var('UseBatlTest', UseBatlTest)
         if(UseBatlTest)then
            UseBatl = .true.
-           BetaProlong = 1.0
            if(nGI /= 2 .or. nGJ /= 2 .or. nGK /= 2) call stop_mpi(NameSub// &
                 ' ERROR: nGI..nGK must be 2 in srcBATL/BATL_size.f90')
         end if
@@ -1187,7 +1190,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DoAutoRefine',automatic_refinement)
            if (automatic_refinement) then
               if(UseBatl) then
-!!! call stop_mpi('Use #DOAMR and #AMRTYPE with BATL"')
+                 !!$ call stop_mpi('Use #DOAMR and #AMRTYPE with BATL"')
                  call read_amr_criteria("#AMR")
               else
                  call read_var('PercentCoarsen',percentCoarsen)
@@ -1385,6 +1388,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseDivbDiffusion',UseDivbDiffusion)!^CFG IF DIVBDIFFUSE
         call read_var('UseProjection'   ,UseProjection)  !^CFG IF PROJECTION
         call read_var('UseConstrainB'   ,UseConstrainB)  !^CFG IF CONSTRAINB
+        if(UseBatl .and. UseConstrainB) &
+             call stop_mpi('"UseConstrainB not suported with BATL"')
 
         !^CFG IF CONSTRAINB BEGIN
         if (UseProjection.and.UseConstrainB.and.iProc==0) &
@@ -2700,6 +2705,17 @@ contains
           write(*,'(a)')'Part implicit scheme with ImplCritType=dt'
           write(*,'(a)')'requires time accurate run with fixed time step'
           call stop_mpi('Correct PARAM.in')
+       end if
+    end if
+
+    if(UseBatl) UseAccurateTrace = .true.
+         
+    
+    if(UseBatlTest)then
+       if(nOrder == 1)then
+          BetaProlong = 0.0
+       else
+          BetaProlong = 1.0
        end if
     end if
 
