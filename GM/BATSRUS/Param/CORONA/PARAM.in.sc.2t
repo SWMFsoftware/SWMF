@@ -1,6 +1,10 @@
 #ECHO
 T			DoEcho
 
+
+#BATLTEST
+T
+
 #COMPONENT
 SC
 

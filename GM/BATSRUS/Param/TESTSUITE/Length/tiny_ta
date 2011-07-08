@@ -26,7 +26,7 @@ Cfl
 
 #BEGIN_COMP GM ################################################################
 
-#AMR
+AMR
 30                      dnRefine
 T                       DoAutomaticRefinement 
 10.                     percentCoarsen
@@ -34,19 +34,19 @@ T                       DoAutomaticRefinement
 99999                   maxBlockALL
 
 
-DOAMR
+#DOAMR
 T                       DoAmr
 30                      dnAmr
 -1                      dtAmr
 F                       IsStrictAmr
 
-AMRLIMIT
+#AMRLIMIT
 40.                     percentCoarsen
 30.                     percentRefine
 999999                  MaxBlcokALL
 1e-8                 DiffCriteriaLevel
 
-AMRCRITERIA
+#AMRCRITERIA
 3                       nRefineCric (number of refinement criteria: 1,2 or 3)
 curlB                   TypeRefine
 -1                    CoarsenLimit  ! Only if UseBatl is true

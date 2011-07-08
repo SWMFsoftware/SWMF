@@ -13,7 +13,7 @@ module BATL_amr
   public test_amr
 
   ! Parameter of slope limiter used by prolongation
-  real, public:: BetaProlong = 1.5
+  real, public:: BetaProlong = 1.0
 
   ! Status change due to AMR is registered in this 
   integer, public, allocatable:: iAmrChange_B(:)

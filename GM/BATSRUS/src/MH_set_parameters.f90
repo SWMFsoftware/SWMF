@@ -1388,8 +1388,12 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseDivbDiffusion',UseDivbDiffusion)!^CFG IF DIVBDIFFUSE
         call read_var('UseProjection'   ,UseProjection)  !^CFG IF PROJECTION
         call read_var('UseConstrainB'   ,UseConstrainB)  !^CFG IF CONSTRAINB
-        if(UseBatl .and. UseConstrainB) &
-             call stop_mpi('"UseConstrainB not suported with BATL"')
+        if(UseConstrainB) then
+           UseBatl     = .false.
+           UseBatlTest = .false.
+        end if
+        !if(UseBatl .and. UseConstrainB) &
+        !     call stop_mpi('"UseConstrainB not suported with BATL"')
 
         !^CFG IF CONSTRAINB BEGIN
         if (UseProjection.and.UseConstrainB.and.iProc==0) &
@@ -1666,12 +1670,16 @@ subroutine MH_set_parameters(TypeAction)
      case("#GRIDGEOMETRY", "#COVARIANTGEOMETRY")
         if(.not.is_first_session())CYCLE READPARAM
         UseCovariant=.true.
-        call read_var('TypeGeometry', TypeGeometry)
+        call read_var('TypeGeometry', TypeGeometry, IsLowerCase=.true.)
         ! need to read in the general grid file      
         if(TypeGeometry == 'spherical_genr') then
            call read_var('NameGridFile',NameGridFile)
            call read_grid_file(NameGridFile)
         end if
+
+        ! BATL cannot handle spherical/cylindrical grids yet
+        if(TypeGeometry /= 'rz' .and. TypeGeometry /= 'cartesian') &
+             UseBatl = .false.
 
      case("#GRIDSYMMETRY")
         nMirror_D = 1
@@ -2141,6 +2149,10 @@ contains
 
   subroutine set_defaults
 
+    ! SWMF coupling does not work yet. Also fast ray tracing.
+    ! For non-cartesian grid the #GRIDGEOMETRY command switches BATL off.
+    UseBatl = IsStandAlone
+
     !\
     ! Default plot and restart directories depend on NameThisComp
     !/
@@ -2357,6 +2369,7 @@ contains
     real               :: Version
     logical            :: IsOn
 
+    real    :: BetaProlongOrig = 0.0
     logical :: IsFirstCheck = .true.
     integer :: iArea
     !---------------------------------------------------------------------
@@ -2710,13 +2723,11 @@ contains
 
     if(UseBatl) UseAccurateTrace = .true.
          
-    
-    if(UseBatlTest)then
-       if(nOrder == 1)then
-          BetaProlong = 0.0
-       else
-          BetaProlong = 1.0
-       end if
+    if(nOrder == 1)then
+       BetaProlongOrig = BetaProlong    
+       BetaProlong = 0.0
+    else
+       BetaProlong = max(BetaProlong, BetaProlongOrig)
     end if
 
     if(PrecondType == "HYPRE")then

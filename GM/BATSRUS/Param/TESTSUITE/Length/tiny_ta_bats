@@ -1,38 +1,52 @@
+
+#INCLUDE
+Boris
+
+#SCHEME
+1			nOrder
+#INCLUDE
+Solver
+
+#INCLUDE
+Stage
+#INCLUDE
+Cfl
+
 #END_COMP GM ##################################################################
 
 #STOP
-10
+25
 -1.0
 
 #RUN ##########################################################################
 
 #STOP
-20
+50
 -1.0
 
 #BEGIN_COMP GM ################################################################
 
-AMR
-15                      dnRefine
+#AMR
+30                      dnRefine
 T                       DoAutomaticRefinement 
 10.                     percentCoarsen
 30.                     percentRefine
 99999                   maxBlockALL
 
 
-#DOAMR
+DOAMR
 T                       DoAmr
-15                      dnAmr
+30                      dnAmr
 -1                      dtAmr
 F                       IsStrictAmr
 
-#AMRLIMIT
+AMRLIMIT
 40.                     percentCoarsen
-40.                     percentRefine
+30.                     percentRefine
 999999                  MaxBlcokALL
 1e-8                 DiffCriteriaLevel
 
-#AMRCRITERIA
+AMRCRITERIA
 3                       nRefineCric (number of refinement criteria: 1,2 or 3)
 curlB                   TypeRefine
 -1                    CoarsenLimit  ! Only if UseBatl is true
@@ -43,5 +57,19 @@ gradlogP
 Rcurrents
 -1
 -1
+
+
+#SCHEME
+#INCLUDE
+Order
+#INCLUDE
+Solver
+#INCLUDE
+Limiter
+
+#INCLUDE
+Stage
+#INCLUDE
+Cfl
 
 #END
