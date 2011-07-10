@@ -27,37 +27,35 @@ Cfl
 #BEGIN_COMP GM ################################################################
 
 AMR
-30                      dnRefine
+30                      DnRefine
 T                       DoAutomaticRefinement 
-10.                     percentCoarsen
-30.                     percentRefine
-99999                   maxBlockALL
-
+10.                     PercentCoarsen
+30.                     PercentRefine
+99999                   MaxBlockAll
 
 #DOAMR
 T                       DoAmr
-30                      dnAmr
--1                      dtAmr
+30                      DnAmr
+-1                      DtAmr
 F                       IsStrictAmr
 
 #AMRLIMIT
-40.                     percentCoarsen
-80.                     percentRefine
-999999                  MaxBlcokALL
-1e-8                 DiffCriteriaLevel
+40.                     PercentCoarsen
+80.                     PercentRefine
+999999                  MaxBlockAll
+1e-8                    DiffCriteriaLevel
 
 #AMRCRITERIA
-3                       nRefineCric (number of refinement criteria: 1,2 or 3)
+3                       nRefineCrit (number of refinement criteria: 1,2 or 3)
 curlB                   TypeRefine
--1                    CoarsenLimit  ! Only if UseBatl is true
--1                       RefineLimit   ! Only if UseBatl is true
-gradlogP
--1
--1
-Rcurrents
--1
--1
-
+-1.0                    CoarsenLimit  ! Only if UseBatl is true
+-1.0                    RefineLimit   ! Only if UseBatl is true
+gradlogP		TypeRefine
+-1.0                    CoarsenLimit  ! Only if UseBatl is true
+-1.0                    RefineLimit   ! Only if UseBatl is true
+Rcurrents		TypeRefine
+-1.0                    CoarsenLimit  ! Only if UseBatl is true
+-1.0                    RefineLimit   ! Only if UseBatl is true
 
 #SCHEME
 #INCLUDE
