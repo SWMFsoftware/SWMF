@@ -191,7 +191,9 @@ contains
 
     ! Store tree size and maximum number of blocks/processor
     MaxBlock = MaxBlockIn
-    MaxNode  = ceiling(nProc*MaxBlock*(1 + 1.0/(nChild - 1)))
+
+    ! During AMR we may need extra nodes. So use 2/(nChild-1) instead of 1/...
+    MaxNode  = ceiling(nProc*MaxBlock*(1 + 2.0/(nChild - 1)))
 
     IsNewDecomposition = .false.
     IsNewTree = .false.
