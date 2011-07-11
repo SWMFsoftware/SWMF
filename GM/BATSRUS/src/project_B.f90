@@ -500,7 +500,7 @@ subroutine proj_boundphi(phi,idimmin,idimmax)
   use ModParallel, ONLY : NOBLK,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModMessagePass, ONLY: message_pass_dir
   use ModProject
-  use BATL_lib, ONLY: message_pass_cell_scalar
+  use BATL_lib, ONLY: message_pass_cell
 
   implicit none
 
@@ -514,7 +514,7 @@ subroutine proj_boundphi(phi,idimmin,idimmax)
 
   !---------------------------------------------------------------------------
   if(UseBatl)then
-     call message_pass_cell_scalar(Phi,nWidthIn=1, nProlongOrderIn=1, &
+     call message_pass_cell(1,Phi,nWidthIn=1, nProlongOrderIn=1, &
           DoSendCornerIn=.false., DoRestrictFaceIn = .true.)
   else
      call message_pass_dir(idimmin,idimmax,1,.false.,prolong_order,1,phi,&
