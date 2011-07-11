@@ -140,8 +140,8 @@ module BATL_tree
        CoarsenNew_  =  4, & ! parent block to be coarsened
        Coarsened_   =  5    ! coarsened parent block
 
-  ! Number of total and used nodes (leaves of the node tree)
-  integer, public :: nNode = 0, nNodeUsed = 0
+  ! Number of maximum, total and used nodes (leaves of the node tree)
+  integer, public :: MaxNode, nNode = 0, nNodeUsed = 0
 
   ! Ordering along the Morton-Hilbert space filling curve
   integer, public, allocatable :: iNodeMorton_I(:), iMortonNode_A(:)
@@ -166,8 +166,6 @@ module BATL_tree
   ! Local variables -----------------------------------------------
   character(len=*), parameter:: NameMod = "BATL_tree"
 
-  ! Maximum number of nodes including unused and skipped ones
-  integer :: MaxNode = 0
   integer :: iNodeNew = 0
 
   ! The index along the Morton curve is global so that it can be used by the 
