@@ -196,7 +196,7 @@ contains
 
     use BATL_lib, ONLY: init_mpi, init_batl, init_grid_batl, &
          iProc, iComm, MaxDim, MaxBlock, nBlock, Unused_B, Xyz_DGB, &
-         iTree_IA, MaxLevel_
+         iTree_IA, MaxLevel_, BetaProlong
 
     use ModReadParam, ONLY: read_file, read_init, &
          read_line, read_command, read_var
@@ -298,6 +298,9 @@ contains
                = exact_density(Xyz_DGB(1:nDim,i,j,k,iBlock))
        end do; end do; end do
     end do
+
+    ! Set BetaProlong to 1.5
+    BetaProlong = 1.5
 
     if(iProc==0)then
        call timing_active(.true.)
