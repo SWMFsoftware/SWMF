@@ -805,7 +805,7 @@ contains
        call read_var('DiffCriteriaLevel',  DeltaCritera)
        DoSortAmrCrit = PercentCoarsen > 0.0 .or. PercentRefine > 0.0
     case default
-       call stop_mpi(NameSub//'incorect PARAM.in!')
+       call CON_stop(NameSub//'incorect PARAM.in!')
     end select
   end subroutine read_amr_criteria
 
