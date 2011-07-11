@@ -20,6 +20,10 @@ module BATL_amr
   integer, public, parameter  :: AmrRemoved_ = -1, &
        AmrUnchanged_ = 0, AmrMoved_ = 1, AmrRefined_ = 2, AmrCoarsened_ = 3
 
+  ! Private data for test_amr
+  integer, parameter:: nExtraData   = 2
+  real,  allocatable:: ExtraData_IB(:,:)
+
 contains
 
   !===========================================================================
@@ -39,7 +43,8 @@ contains
 
   !===========================================================================
 
-  subroutine do_amr(nVar, State_VGB, Dt_B, Used_GB, DoTestIn)
+  subroutine do_amr(nVar, State_VGB, Dt_B, Used_GB, DoTestIn, &
+       nExtraData, pack_extra_data, unpack_extra_data)
 
     use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nI, nJ, nK, nIJK, iRatio, jRatio, kRatio
@@ -75,6 +80,36 @@ contains
     ! Write debug info if true
     logical, optional:: DoTestIn
 
+    ! Size of extra data to send and receive for moved blocks
+    integer, intent(in), optional:: nExtraData
+
+    ! Optional methods to send extra information
+    interface
+       subroutine pack_extra_data(iBlock, nBuffer, Buffer_I)
+
+         ! Pack extra data into Buffer_I
+         
+         integer, intent(in) :: iBlock            ! block index
+         integer, intent(in) :: nBuffer           ! size of buffer
+         real,    intent(out):: Buffer_I(nBuffer) ! buffer
+
+       end subroutine pack_extra_data
+
+       subroutine unpack_extra_data(iBlock, nBuffer, Buffer_I)
+
+         ! Unpack extra data from Buffer_I
+
+         integer, intent(in) :: iBlock            ! block index
+         integer, intent(in) :: nBuffer           ! size of buffer
+         real,    intent(in) :: Buffer_I(nBuffer) ! buffer
+
+       end subroutine unpack_extra_data
+    end interface
+
+    optional:: pack_extra_data, unpack_extra_data
+
+    ! Local variables
+
     ! Dynamic arrays
     real,    allocatable :: Buffer_I(:), StateP_VG(:,:,:,:)
     real,    allocatable :: SlopeL_V(:), SlopeR_V(:), Slope_V(:)
@@ -98,7 +133,7 @@ contains
     integer:: iTry
     logical:: DoTryAgain
     logical:: UseMask
-    integer:: nVarBuffer
+    integer:: nVarBuffer, nBuffer
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATL_AMR::do_amr'
@@ -107,6 +142,15 @@ contains
     if(present(DoTestIn)) DoTest = DoTestIn
 
     if(DoTest)write(*,*) NameSub,' starting'
+
+    if( (present(nExtraData) .neqv. present(pack_extra_data)) .or. &
+        (present(nExtraData) .neqv. present(unpack_extra_data)) )then
+       write(*,*) NameSub,&
+            ' present(nExtraData, pack_extra_data, unpack_extra_data)=', &
+            present(nExtraData), present(pack_extra_data), &
+            present(unpack_extra_data)
+       call CON_stop(NameSub//' the extra data arguments are inconsistent')
+    end if
 
     ! Simple logical
     UseMask = present(Used_GB)    
@@ -123,17 +167,14 @@ contains
     ! Small arrays are allocated once 
     if(.not.allocated(iBlockAvailable_P)) &
          allocate(iBlockAvailable_P(0:nProc-1))
-    !Moved to init_amr
-    !if(.not.allocated(iAmrChange_B)) &
-    !      allocate(iAmrChange_B(MaxBlock))
-
-
-    ! Initialize iAmrChange_B
-    !iAmrChange_B = AmrUnchanged_
 
     ! nVar dependent arrays are allocated and deallocated every call
     ! Buffer_I +1 for Dt_B and +1 for DoCheckMask header information
-    allocate(Buffer_I(nVarBuffer*nIJK+2), &
+
+    nBuffer = nVarBuffer*nIJK + 2
+    if(present(nExtraData)) nBuffer = nBuffer + nExtraData
+
+    allocate(Buffer_I(nBuffer), &
          StateP_VG(nVarBuffer,iMinP:iMaxP,jMinP:jMaxP,kMinP:kMaxP), &
          SlopeL_V(nVar), SlopeR_V(nVar), Slope_V(nVar))
 
@@ -337,7 +378,11 @@ contains
          Buffer_I(iBuffer) = Dt_B(iBlockSend)
       end if
 
-      ! Put more things into buffer here if necessary !!!
+      if(present(pack_extra_data))then
+         call pack_extra_data(iBlockSend, nExtraData, Buffer_I(iBuffer+1))
+         iBuffer = iBuffer + nExtraData
+      end if
+
       call MPI_send(Buffer_I, iBuffer, MPI_REAL, iProcRecv, 1, iComm, iError)
 
     end subroutine send_block
@@ -350,7 +395,8 @@ contains
       !------------------------------------------------------------------------
 
       iBuffer = nIJK*nVar
-      if(present(Dt_B))  iBuffer = iBuffer + 1
+      if(present(Dt_B))       iBuffer = iBuffer + 1
+      if(present(nExtraData)) iBuffer = iBuffer + nExtraData
       call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
            iStatus_I, iError)
 
@@ -360,7 +406,13 @@ contains
          iBuffer = iBuffer + nVar
       end do; end do; end do
 
-      if(present(Dt_B)) Dt_B(iBlockRecv) = Buffer_I(iBuffer+1)
+      if(present(Dt_B)) then
+         Dt_B(iBlockRecv) = Buffer_I(iBuffer+1)
+         iBuffer = iBuffer + 1
+      end if
+
+      if(present(unpack_extra_data)) &
+           call unpack_extra_data(iBlockRecv, nExtraData, Buffer_I(iBuffer+1))
 
     end subroutine recv_block
 
@@ -804,7 +856,7 @@ contains
          CellSize_DB
     use BATL_geometry, ONLY: init_geometry
 
-    integer, parameter:: MaxBlockTest            = 100
+    integer, parameter:: MaxBlockTest = 100
     integer, parameter:: nRootTest_D(MaxDim)     = (/3,3,3/)
     logical, parameter:: IsPeriodicTest_D(MaxDim)= .true.
     real, parameter:: DomainMin_D(MaxDim) = (/ 1.0, 10.0, 100.0 /)
@@ -842,7 +894,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        State_VGB(:,:,:,:,iBlock) = Xyz_DGB(1:nDim,:,:,:,iBlock)
-       ! set the time step to the cells size in the first AMR direction
+       ! set the time step to the cell size in the first AMR direction
        iDim = iDimAmr_D(1)
        Dt_B(iBlock) = DomainSize_D(iDim) / (nIjk_D(iDim)*nRootTest_D(iDim))
     end do
@@ -881,10 +933,10 @@ contains
     call check_state
 
     ! tests with mask
-    if(DoTestMe) write(*,*) 'test masked cells'
+    if(DoTestMe) write(*,*) 'test masked cells and extra data'
 
     allocate(Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlockTest),&
-         TestState_VC(nVar,nI,nJ,nK))
+         TestState_VC(nVar,nI,nJ,nK), ExtraData_IB(nExtraData,MaxBlockTest))
 
     Used_GB = .true.
 
@@ -894,6 +946,9 @@ contains
        ! set the time step to the cells size in the first AMR direction
        iDim = iDimAmr_D(1)
        Dt_B(iBlock) = DomainSize_D(iDim) / (nIjk_D(iDim)*nRootTest_D(iDim))
+       ! Set extra data
+       ExtraData_IB(:,iBlock) = &
+            (/ real(iNode_B(iBlock)), Xyz_DGB(1,1,1,1,iBlock) /)
     end do
 
     call refine_tree_node(1)
@@ -906,8 +961,14 @@ contains
        Used_GB((MinI+MaxI)/2,(MinJ+MaxJ)/2,(MinK+MaxK)/2,iBlock)     = .false.
     end if
 
-    call do_amr(nVar, State_VGB, Dt_B, Used_GB=Used_GB)
+    call do_amr(nVar, State_VGB, Dt_B, Used_GB=Used_GB, &
+         nExtraData=nExtraData, &
+         pack_extra_data=test_pack, &
+         unpack_extra_data=test_unpack)
+
     call move_tree
+
+    call check_extra_data
 
     ! Nodes that needs special care in the testing
     allocate(iEffectedNode_A(nNode)) 
@@ -919,16 +980,16 @@ contains
     iChild = Child1_
     iEffectedNode_A(iTree_IA(iChild,1))                 = 0
     iChild = iChild + 1
-    ! As masked cell is on the corner of the childe nodes
-    ! it will also effect the neighboring cell in i-direction
-    ! The running "iChild" cunter is using the morton indexing
+    ! As masked cell is on the corner of the child nodes
+    ! it will also affect the neighboring cell in i-direction
+    ! The running "iChild" counter is using the Morton indexing
     ! to give the right neighbor independent of which directions
     ! are refined.
     if(iRatio == 2) then
        iEffectedNode_A(iTree_IA(iChild,1))              = 1
        iChild = iChild + 1
     end if
-    ! Neoghbor in j direction
+    ! Neighbor in j direction
     if(jRatio == 2) then
        iEffectedNode_A(iTree_IA(iChild,1))              = 2
        iChild = iChild + iRatio
@@ -967,18 +1028,38 @@ contains
     call coarsen_tree_node(1)
     call distribute_tree(.false.)
 
-    call do_amr(nVar, State_VGB, Dt_B,Used_GB=Used_GB)
+    call do_amr(nVar, State_VGB, Dt_B, Used_GB=Used_GB, &
+         nExtraData=nExtraData, &
+         pack_extra_data=test_pack, &
+         unpack_extra_data=test_unpack)
+
     call move_tree
+
+    call check_extra_data
 
     call check_state_mask
 
 
-    deallocate(State_VGB, Dt_B,Used_GB, iEffectedNode_A,TestState_VC)
+    deallocate(State_VGB, Dt_B,Used_GB, iEffectedNode_A, TestState_VC, &
+         ExtraData_IB)
 
     call clean_grid
     call clean_tree
 
   contains
+    !==========================================================================
+    subroutine check_extra_data
+
+      do iBlock = 1, nBlock
+         if(iAmrChange_B(iBlock) /= AmrMoved_) CYCLE
+         if(  abs(ExtraData_IB(1,iBlock) - iNode_B(iBlock)) > 1e-6 .or. &
+              abs(ExtraData_IB(2,iBlock) -  Xyz_DGB(1,1,1,1,iBlock)) > 1e-6) &
+              write(*,*) NameSub,' error for iProc,iBlock,ExtraData,iNode,x=',&
+              iProc, iBlock, ExtraData_IB(:,iBlock), &
+              iNode_B(iBlock), Xyz_DGB(1,1,1,1,iBlock)
+      end do
+
+    end subroutine check_extra_data
     !==========================================================================
     subroutine check_state
 
@@ -1314,6 +1395,35 @@ contains
     !========================================================================
 
   end subroutine test_amr
+
+  !==========================================================================
+  subroutine test_pack(iBlock, nBuffer, Buffer_I)
+
+    integer, intent(in) :: iBlock
+    integer, intent(in) :: nBuffer
+    real,    intent(out):: Buffer_I(nBuffer)
+    !-----------------------------------------------------------------------
+
+    if(nBuffer /= nExtraData)write(*,*)'ERROR in test_pack: ', &
+         'nBuffer, nExtraData=', nBuffer, nExtraData
+
+    Buffer_I = ExtraData_IB(:,iBlock)
+
+  end subroutine test_pack
+  !==========================================================================
+  subroutine test_unpack(iBlock, nBuffer, Buffer_I)
+
+    integer, intent(in) :: iBlock
+    integer, intent(in) :: nBuffer
+    real,    intent(in) :: Buffer_I(nBuffer)
+    !-----------------------------------------------------------------------
+
+    if(nBuffer /= nExtraData)write(*,*)'ERROR in test_unpack: ', &
+         'nBuffer, nExtraData=', nBuffer, nExtraData
+
+    ExtraData_IB(:,iBlock) = Buffer_I
+
+  end subroutine test_unpack
 
 end module BATL_amr
 
