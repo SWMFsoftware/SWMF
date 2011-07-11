@@ -199,12 +199,36 @@ STOP
 
 #BEGIN_COMP GM ################################################################
 
-#AMR
+AMR
 30                      DnRefine
 T                       DoAutoRefine 
 10.                     PercentCoarsen
 30.                     PercentRefine
 800                     MaxTotalBlocks
+
+#DOAMR
+T                       DoAmr
+30                      dnAmr
+-1                      dtAmr
+F                       IsStrictAmr
+
+#AMRLIMIT
+10.                     percentCoarsen
+30.                     percentRefine
+600                     MaxBlcokALL
+1.e-8                   DiffCriteriaLevel
+
+#AMRCRITERIA
+3                       nRefineCric)
+curlB                   TypeRefine
+-1                      CoarsenLimit
+-1                      RefineLimit
+gradlogP                TypeRefine
+-1 	                CoarsenLimit
+-1         	        RefineLimit
+Rcurrents               TypeRefine
+-1             		CoarsenLimit
+-1             		RefineLimit
 
 #SCHEME
 2			nOrder
