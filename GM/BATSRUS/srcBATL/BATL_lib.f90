@@ -36,7 +36,7 @@ module BATL_lib
   public:: iComm, nProc, iProc          
 
   ! Inherited from BATL_tree
-  public:: nNode, nNodeUsed, nRoot_D
+  public:: MaxNode, nNode, nNodeUsed, nRoot_D
   public:: MaxLevel, MaxCoord_I
   public:: Unused_B, Unused_BP
   public:: iNode_B, iMortonNode_A, iNodeMorton_I
@@ -173,7 +173,7 @@ contains
   !============================================================================
 
   subroutine regrid_batl(nVar, State_VGB, Dt_B, DoRefine_B, DoCoarsen_B, &
-       DoBalanceEachLevelIn, DoTestIn, Used_GB)
+       DoBalanceEachLevelIn, iTypeNode_A, Used_GB, DoTestIn)
 
     integer, intent(in)   :: nVar                         ! number of variables
     real,    intent(inout):: &                            ! state variables
@@ -184,9 +184,10 @@ contains
     logical, intent(in), optional:: DoRefine_B(MaxBlock)  ! request to refine
     logical, intent(in), optional:: DoCoarsen_B(MaxBlock) ! request to coarsen
     logical, intent(in), optional:: DoBalanceEachLevelIn  ! balance per level?
-    logical, intent(in), optional:: DoTestIn	              ! print test info
+    integer, intent(in), optional:: iTypeNode_A(MaxNode)  ! balance node types
     logical, intent(in), optional:: &
-         Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+         Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)  ! used cells
+    logical, intent(in), optional:: DoTestIn              ! print test info
 
     ! Refine, coarsen and load balance the blocks containing the nVar 
     ! state variables in State_VGB. Use second order accurate conservative
@@ -259,15 +260,19 @@ contains
     if(DoTest)write(*,*) NameSub, &
          ' call distribute_tree with DoBalanceEachLevel=', DoBalanceEachLevel
 
-    if(DoBalanceEachLevel)then
+    if(present(iTypeNode_A))then
+       call distribute_tree(DoMove=.false., iTypeNode_A=iTypeNode_A)
+    elseif(DoBalanceEachLevel)then
        call distribute_tree(DoMove=.false., iTypeNode_A=iTree_IA(Level_,:)+1)
     else
        call distribute_tree(DoMove=.false.)
     end if
 
+    ! Initialize iAmrChange
     iAmrChange_B = AmrUnchanged_
+
     ! No grid changes, no need for do_amr
-    ! IsNewTree  == .true. also imply IsNewDecomposition == .true.
+    ! IsNewTree  == .true. also implies IsNewDecomposition == .true.
     if(.not.IsNewDecomposition) RETURN
 
     ! Coarsen, refine and load balance the flow variables, and set Dt_B.
