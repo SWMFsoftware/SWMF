@@ -11,6 +11,7 @@
 
 
 #include "meshAMRdef.h"
+#include "mpichannel.h"
 
 //=======================================================================
 //the descriptor of the internal boundary conditions
@@ -61,7 +62,7 @@ public:
   typedef void (*fPrintTitle)(FILE*);
   fPrintTitle PrintTitle;
 
-  typedef void (*fPrintDataStateVector)(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalSphericalData *Sphere,int spec);
+  typedef void (*fPrintDataStateVector)(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalSphericalData *Sphere,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads);
   fPrintDataStateVector PrintDataStateVector;
 
   typedef double (*fLocalResolution)(double *);
@@ -208,33 +209,42 @@ public:
 
   void PrintSurfaceData(const char *fname,int nDataSet, bool PrintStateVectorFlag=true) {
     long int iZenith,iAzimuthal;
-    FILE *fout;
+    FILE *fout=NULL;
     double x[3];
 
-    fout=fopen(fname,"w");
+    CMPI_channel pipe(1000000);
+    int ThisThread=0,nTotalThreads=1;
+    MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
+    MPI_Comm_size(MPI_COMM_WORLD,&nTotalThreads);
 
-    //print the output file title
-    if (PrintTitle!=NULL) {
-      PrintTitle(fout);
-      fprintf(fout,"\n");
+    if (ThisThread==0) {
+      fout=fopen(fname,"w");
+      pipe.openRecvAll();
+
+      //print the output file title
+      if (PrintTitle!=NULL) {
+        PrintTitle(fout);
+        fprintf(fout,"\n");
+      }
+
+      //print the variable list
+      fprintf(fout,"VARIABLES=\"X\", \"Y\", \"Z\"");
+      if (PrintStateVectorFlag==true) {
+        if (PrintVariableList==NULL) exit(__LINE__,__FILE__,"Error: PrintVariableList is not defined");
+        PrintVariableList(fout);
+      }
+
+      //print the number of variables and blocks
+      fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",2+(nZenithSurfaceElements-1)*nAzimuthalSurfaceElements,nZenithSurfaceElements*nAzimuthalSurfaceElements);
     }
-
-    //print the variable list
-    fprintf(fout,"VARIABLES=\"X\", \"Y\", \"Z\"");
-    if (PrintStateVectorFlag==true) {
-      if (PrintVariableList==NULL) exit(__LINE__,__FILE__,"Error: PrintVariableList is not defined");
-      PrintVariableList(fout);
-    }
-
-    //print the number of variables and blocks
-    fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",2+(nZenithSurfaceElements-1)*nAzimuthalSurfaceElements,nZenithSurfaceElements*nAzimuthalSurfaceElements);
+    else pipe.openSend(0);
 
     //interpolate and print the state vector
     long int InterpolationList[nAzimuthalSurfaceElements],InterpolationListLength=0;
 
     for (iZenith=0;iZenith<nZenithSurfaceElements+1;iZenith++) for (iAzimuthal=0;iAzimuthal<nAzimuthalSurfaceElements;iAzimuthal++) {
       GetSurfaceCoordinate(x,iZenith,iAzimuthal);
-      fprintf(fout,"%e %e %e ",x[0],x[1],x[2]);
+      if (ThisThread==0) fprintf(fout,"%e %e %e ",x[0],x[1],x[2]);
 
       if (PrintStateVectorFlag==true) {
         if (PrintDataStateVector==NULL) exit(__LINE__,__FILE__,"Error: PrintDataStateVector is not defined");
@@ -259,32 +269,38 @@ public:
         }
 
 
-        PrintDataStateVector(fout,iZenith,iAzimuthal,InterpolationList,InterpolationListLength,this,nDataSet);
+        PrintDataStateVector(fout,iZenith,iAzimuthal,InterpolationList,InterpolationListLength,this,nDataSet,&pipe,ThisThread,nTotalThreads);
       }
 
-      fprintf(fout,"\n");
+      if (ThisThread==0) fprintf(fout,"\n");
 
       //only one point is printed for azimuthal angle of iAzimuthal==0, nAzimuthalSurfaceElements
       if ((iZenith==0)||(iZenith==nZenithSurfaceElements)) break;
     }
 
+    //close the pipe
+    if (ThisThread==0) pipe.closeRecvAll();
+    else pipe.closeSend();
+
     //print the connectivity list
     long int iAzimuthalMax,iAzimuthalMin;
     long int nd0,nd1,nd2,nd3;
 
-    for (iZenith=0;iZenith<nZenithSurfaceElements;iZenith++) for (iAzimuthal=0;iAzimuthal<nAzimuthalSurfaceElements;iAzimuthal++) {
-      iAzimuthalMax=(iAzimuthal+1!=nAzimuthalSurfaceElements) ? iAzimuthal+1 : 0;
-      iAzimuthalMin=iAzimuthal;
+    if (ThisThread==0) {
+      for (iZenith=0;iZenith<nZenithSurfaceElements;iZenith++) for (iAzimuthal=0;iAzimuthal<nAzimuthalSurfaceElements;iAzimuthal++) {
+        iAzimuthalMax=(iAzimuthal+1!=nAzimuthalSurfaceElements) ? iAzimuthal+1 : 0;
+        iAzimuthalMin=iAzimuthal;
 
-      nd0=(iZenith!=0) ? 2+iAzimuthalMin+(iZenith-1)*nAzimuthalSurfaceElements : 1; //iZenithMin,iAzimuthalMin
-      nd1=(iZenith!=nZenithSurfaceElements-1) ? 2+iAzimuthalMin+iZenith*nAzimuthalSurfaceElements : 2+(nZenithSurfaceElements-1)*nAzimuthalSurfaceElements; //iZenithMax,iAzimuthalMin
-      nd2=(iZenith!=nZenithSurfaceElements-1) ? 2+iAzimuthalMax+iZenith*nAzimuthalSurfaceElements : 2+(nZenithSurfaceElements-1)*nAzimuthalSurfaceElements; //iZenithMax,iAzimuthalMax
-      nd3=(iZenith!=0) ? 2+iAzimuthalMax+(iZenith-1)*nAzimuthalSurfaceElements : 1; //iZenithMin,iAzimuthalMax
+        nd0=(iZenith!=0) ? 2+iAzimuthalMin+(iZenith-1)*nAzimuthalSurfaceElements : 1; //iZenithMin,iAzimuthalMin
+        nd1=(iZenith!=nZenithSurfaceElements-1) ? 2+iAzimuthalMin+iZenith*nAzimuthalSurfaceElements : 2+(nZenithSurfaceElements-1)*nAzimuthalSurfaceElements; //iZenithMax,iAzimuthalMin
+        nd2=(iZenith!=nZenithSurfaceElements-1) ? 2+iAzimuthalMax+iZenith*nAzimuthalSurfaceElements : 2+(nZenithSurfaceElements-1)*nAzimuthalSurfaceElements; //iZenithMax,iAzimuthalMax
+        nd3=(iZenith!=0) ? 2+iAzimuthalMax+(iZenith-1)*nAzimuthalSurfaceElements : 1; //iZenithMin,iAzimuthalMax
 
-      fprintf(fout,"%ld %ld %ld %ld\n",nd0,nd1,nd2,nd3);
+        fprintf(fout,"%ld %ld %ld %ld\n",nd0,nd1,nd2,nd3);
+      }
+
+      fclose(fout);
     }
-
-    fclose(fout);
   }
 
 

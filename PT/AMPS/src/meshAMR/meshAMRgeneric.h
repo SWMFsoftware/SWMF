@@ -164,7 +164,7 @@ public:
   double Measure;
 
   void cleanDataBuffer() {
-    Measure=0.0;
+    Measure=-1.0;
 
     cBasicNode::cleanDataBuffer();
   }
@@ -253,12 +253,14 @@ public:
       norm[0]=(nface==0) ? -1.0 : 1.0;
       norm[1]=0.0,norm[2]=0.0;
       break;
+
     case 2: case 3:
-      norm[2]=(nface==2) ? -1.0 : 1.0;
+      norm[1]=(nface==2) ? -1.0 : 1.0;
       norm[0]=0.0,norm[2]=0.0;
       break;
+
     case 4: case 5:
-      norm[3]=(nface==4) ? -1.0 : 1.0;
+      norm[2]=(nface==4) ? -1.0 : 1.0;
       norm[0]=0.0,norm[1]=0.0;
       break;
     default:
@@ -2286,7 +2288,7 @@ if (AllowBlockAllocation==true) {
               else if ((neibCenterNode==NULL)||(startCenterNode==NULL)) exit(__LINE__,__FILE__,"Error: one of the nodes is not defined");
               else {
                 if (startCenterNode!=neibCenterNode) {
-                	long int nd;
+//                	long int nd;
                 	int iii[3]={0,0,0},idim;
 
                 	//recalculate the position of the neibBlock
@@ -5090,7 +5092,7 @@ if (CallsCounter==83) {
         if (startNode->block!=NULL) SendRequest=true;
 
         if (SendRequest==false) {
-          for (int nd=0;nd<8;nd++) if ((neibNode=startNode->GetNeibCorner(nd))!=NULL) if (neibNode->block!=NULL) {
+          for (nd=0;nd<8;nd++) if ((neibNode=startNode->GetNeibCorner(nd))!=NULL) if (neibNode->block!=NULL) {
             SendRequest=true;
             break;
           }
@@ -5413,7 +5415,7 @@ checkMeshConsistency(rootTree);
     	    if ((nd=getCenterNodeLocalNumber(iProbeIndex,jProbeIndex,kProbeIndex))==-1) continue;
     	    cell=cellNode->block->GetCenterNode(nd);
 
-    	    if (cell!=NULL) if (cell->Measure!=0.0) {
+    	    if (cell!=NULL) if (cell->Measure>0.0) {
     	      //calculate the interpolation weight
     	      InterpolationWeight=1.0;
 
@@ -5503,7 +5505,7 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
         if ((nd=getCenterNodeLocalNumber(iProbeIndex,jProbeIndex,0))==-1) continue;
         cell=cellNode->block->GetCenterNode(nd);
 
-        if (cell!=NULL) if (cell->Measure!=0.0) {
+        if (cell!=NULL) if (cell->Measure>0.0) {
           //calculate the interpolation weight
           InterpolationWeight=1.0;
 
@@ -5581,7 +5583,7 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
         nd=getCenterNodeLocalNumber(i+ioffset,j+joffset,k+koffset);
           ptr=startNode->block->GetCenterNode(nd);
 
-        if (ptr!=NULL) if (ptr->Measure!=0.0) {
+        if (ptr!=NULL) if (ptr->Measure>0.0) {
           CoefficientsList[counter]=c;
           InterpolationStencil[counter]=ptr;
           counter+=1;
@@ -5709,12 +5711,12 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
 
 
 //====================================== DEBUG ===================
-/*
-              if (_MESH_DIMENSION_==3) if ((fabs(xNode[0]+100.0)<EPS)&&(fabs(xNode[1]+500.0)<EPS)&&(fabs(xNode[2]+00.0)<EPS)) {
+
+              if (_MESH_DIMENSION_==3) if ((fabs(xNode[0]+300.0)<EPS)&&(fabs(xNode[1]-1000.0)<EPS)&&(fabs(xNode[2]+00.0)<EPS)) {
   cout << __LINE__ << endl;
 }
 
-*/
+
 //=========================== END DEBUG ====================
 
 
@@ -6636,6 +6638,8 @@ nMPIops++;
     #endif
     */
 
+    startNode->cleanDataBuffer();
+
     //read the tree node's pointers
     fread(&countingNumber,sizeof(long int),1,fout);
     startNode->upNode=treeNodes.GetEntryPointer(countingNumber);
@@ -7368,7 +7372,7 @@ nMPIops++;
        for (k=kMin;k<kMax;k++) for (j=jMin;j<jMax;j++) for (i=iMin;i<iMax;i++) {
          nd=getCenterNodeLocalNumber(i,j,k);
 
-         if ((centerNode=startNode->block->GetCenterNode(nd))!=NULL) centerNode->Measure=0.0;
+         if ((centerNode=startNode->block->GetCenterNode(nd))!=NULL) centerNode->Measure=-1.0;
        }
     }
 #endif
@@ -7439,7 +7443,7 @@ nMPIops++;
        }
 #endif
 
-       if (IntersectionCode==_AMR_BLOCK_OUTSIDE_DOMAIN_) Measure=0.0;
+       if (IntersectionCode==_AMR_BLOCK_OUTSIDE_DOMAIN_) Measure=-1.0;
 
        for (k=kMin;k<kMax;k++) {
          if (_MESH_DIMENSION_>2) xCellMin[2]=xNodeMin[2]+k*dz,xCellMax[2]=xNodeMin[2]+(k+1)*dz;
@@ -7460,7 +7464,7 @@ nMPIops++;
                  int BoundarySurfaceCounter;
                  cInternalBoundaryConditionsDescriptor *bc;
 
-                 if (centerNode->Measure==0.0) {
+                 if (centerNode->Measure<0.0) {
                    for (BoundarySurfaceCounter=0,bc=startNode->InternalBoundaryDescriptorList;bc!=NULL;bc=bc->nextInternalBCelement,BoundarySurfaceCounter++) {
                      if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
                        int cellIntersectionStatus;
