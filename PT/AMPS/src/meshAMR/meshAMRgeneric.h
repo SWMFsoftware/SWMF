@@ -1157,24 +1157,48 @@ public:
   }
 
   //find the index of the cell where the point 'x' is located
-  long int fingCellIndex(double *x,int &i,int &j,int &k,cTreeNodeAMR<cBlockAMR>* startNode) {
+  long int fingCellIndex(double *x,int &i,int &j,int &k,cTreeNodeAMR<cBlockAMR>* startNode,bool ExitFlag=true) {
     double dx;
 
-    if ((x[0]<startNode->xmin[0])||(startNode->xmax[0]<x[0])) exit(__LINE__,__FILE__,"x is outside of the block");
+    if ((x[0]<startNode->xmin[0])||(startNode->xmax[0]<x[0])) {
+      cout << "Error: a point is out pf the box!!!!!!" << endl;
+      for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
+
+      if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
+      else return -1;
+    }
+
     dx=dxRootBlock[0]/(1<<startNode->RefinmentLevel)/double(_BLOCK_CELLS_X_);
     i=(int)((x[0]-startNode->xmin[0])/dx);
+    if (i==_BLOCK_CELLS_X_) i=_BLOCK_CELLS_X_-1;
 
     if (_MESH_DIMENSION_>=2) {
-      if ((x[1]<startNode->xmin[1])||(startNode->xmax[1]<x[1])) exit(__LINE__,__FILE__,"x is outside of the block");
+      if ((x[1]<startNode->xmin[1])||(startNode->xmax[1]<x[1])) {
+        cout << "Error: a point is out pf the box!!!!!!" << endl;
+        for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
+
+        if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
+        else return -1;
+      }
+
       dx=dxRootBlock[1]/(1<<startNode->RefinmentLevel)/double(_BLOCK_CELLS_Y_);
       j=(int)((x[1]-startNode->xmin[1])/dx);
+      if (j==_BLOCK_CELLS_Y_) j=_BLOCK_CELLS_Y_-1;
     }
     else j=0;
 
     if (_MESH_DIMENSION_==3) {
-      if ((x[2]<startNode->xmin[2])||(startNode->xmax[2]<x[2])) exit(__LINE__,__FILE__,"x is outside of the block");
+      if ((x[2]<startNode->xmin[2])||(startNode->xmax[2]<x[2])) {
+        cout << "Error: a point is out pf the box!!!!!!" << endl;
+        for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
+
+        if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
+        else return -1;
+      }
+
       dx=dxRootBlock[2]/(1<<startNode->RefinmentLevel)/double(_BLOCK_CELLS_Z_);
       k=(int)((x[2]-startNode->xmin[2])/dx);
+      if (k==_BLOCK_CELLS_Z_) k=_BLOCK_CELLS_Z_-1;
     }
     else k=0;
 
@@ -1461,6 +1485,9 @@ public:
       else res=(startNode->upNode!=NULL) ? findTreeNode(x,startNode->upNode) : NULL;
     }
 
+#if  _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+    if (res!=NULL) for (register int idim=0;idim<_MESH_DIMENSION_;idim++) if ((x[idim]<res->xmin[idim])||(res->xmax[idim]<x[idim])) exit(__LINE__,__FILE__,"Error: did'nt find the tree node");
+#endif
     return res;
   }
 

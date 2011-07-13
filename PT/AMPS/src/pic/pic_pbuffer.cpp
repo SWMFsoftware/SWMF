@@ -12,6 +12,7 @@ PIC::ParticleBuffer::byte *PIC::ParticleBuffer::ParticleDataBuffer=NULL;
 long int PIC::ParticleBuffer::MaxNPart=0;
 long int PIC::ParticleBuffer::NAllPart=0;
 long int PIC::ParticleBuffer::FirstPBufferParticle=-1;
+int PIC::ParticleBuffer::_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_=-1;
 
 //==========================================================
 //init the buffer
@@ -21,6 +22,19 @@ void PIC::ParticleBuffer::Init(long int BufrerLength) {
   if (sizeof(byte)!=1) exit(__LINE__,__FILE__,"The size of 'byte' is diferent from 1");
   if (BufrerLength<=0) exit(__LINE__,__FILE__,"BufrerLength is less that zero");
 
+  //reserve the space for additional 'particle's variables'
+
+  //the individual particle's weight corection
+#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+  _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_=ParticleDataLength;
+  ParticleDataLength+=sizeof(double);
+#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+  //do nothing
+#else
+  exit(__LINE__,__FILE__,"Error: unknown option");
+#endif
+
+  //allocate the memory for the buffer
   MaxNPart=BufrerLength;
   ParticleDataBuffer=(PIC::ParticleBuffer::byte*) malloc(ParticleDataLength*MaxNPart);
 
@@ -43,6 +57,47 @@ PIC::ParticleBuffer::byte *PIC::ParticleBuffer::GetParticleDataPointer(long int 
   return ParticleDataBuffer+ptr*ParticleDataLength;
 }
 
+//==========================================================
+//get the idividual particle weight correction
+double PIC::ParticleBuffer::GetIndividualStatWeightCorrection(long int ptr) {
+#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+  return *((double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_));
+#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+  return 1;
+#else
+  exit(__LINE__,__FILE__,"Error: unknown option");
+#endif
+}
+
+double PIC::ParticleBuffer::GetIndividualStatWeightCorrection(byte *ParticleDataStart) {
+#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+  return *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_));
+#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+  return 1;
+#else
+  exit(__LINE__,__FILE__,"Error: unknown option");
+#endif
+}
+
+void PIC::ParticleBuffer::SetIndividualStatWeightCorrection(double WeightCorrectionFactor,long int ptr) {
+#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+  *((double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
+#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+  //do nothing
+#else
+  exit(__LINE__,__FILE__,"Error: unknown option");
+#endif
+}
+
+void PIC::ParticleBuffer::SetIndividualStatWeightCorrection(double WeightCorrectionFactor,byte *ParticleDataStart) {
+#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+  *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
+#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+  //do nothing
+#else
+  exit(__LINE__,__FILE__,"Error: unknown option");
+#endif
+}
 //==========================================================
 //get the particle position
 double *PIC::ParticleBuffer::GetX(long int ptr) {

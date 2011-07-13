@@ -58,7 +58,7 @@
 
 //the maximum value of the size of the variable that contains the block's refinment level
 #define _MAX_REFINMENT_LEVEL_BITS_ 5
-#define _MAX_REFINMENT_LEVEL_  8
+#define _MAX_REFINMENT_LEVEL_  10
 
 
 //save additional information when the mesh generator is used in the debugger mode

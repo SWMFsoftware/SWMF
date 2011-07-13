@@ -185,7 +185,7 @@ void PIC::BC::InternalBoundary::Sphere::switchSamplingBuffers() {
 //====================================================
 //particle-spherical surface interaction
 //specular reflection of the particle velocity vector on the surface of the sphere
-void PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction_SpecularReflection(int spec,long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor)  {
+int PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction_SpecularReflection(int spec,long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor)  {
    double radiusSphere,*x0Sphere,l[3],r,vNorm,c;
    cInternalSphericalData *Sphere;
    cSurfaceDataSphere *SurfaceData;
@@ -240,7 +240,7 @@ void PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction_SpecularReflec
 
 
    SampleData[sampledFluxDownRelativeOffset]+=startNode->block->GetLocalParticleWeight(spec)/startNode->block->GetLocalTimeStep(spec)/Sphere->GetSurfaceElementArea(nZenithElement,nAzimuthalElement);
-
+   return _PARTICLE_REJECTED_ON_THE_FACE_;
 }
 
 

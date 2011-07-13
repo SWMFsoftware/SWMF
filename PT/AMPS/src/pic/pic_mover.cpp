@@ -151,6 +151,20 @@ nCallCounter++;
 //#######  DEBUG #########
 double xpinit[3];
 for (idim=0;idim<3;idim++) xpinit[idim]=x[idim];
+
+//=====================  DEBUG =========================
+
+
+/*
+if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1737.0E3) {
+  cout << __FILE__ << __LINE__ << endl;
+}
+
+*/
+//===================== END DEBUG ==================
+
+
+
 //####### END DEBUG #########
 
   while (dtTotal>0.0) {
@@ -199,6 +213,8 @@ for (idim=0;idim<3;idim++) xpinit[idim]=x[idim];
         b=2.0*(v[0]*dx+v[1]*dy+v[2]*dz);
         c=dx*dx+dy*dy+dz*dz-radiusSphere*radiusSphere;
 
+        if (c<=0.0) continue;
+
         d=b*b-4.0*a*c;
 
         if (d<0.0) {
@@ -210,8 +226,13 @@ for (idim=0;idim<3;idim++) xpinit[idim]=x[idim];
 
         sqrt_d=sqrt(d);
         dtTemp=-(b+sqrt_d)/(2.0*a);
+//        if ((dtTemp>0.0)&&(dtTemp*dtTemp*a<PIC::Mesh::mesh.EPS*PIC::Mesh::mesh.EPS)) dtTemp=-1.0;
+
         dt1=-2.0*c/(b+sqrt_d);
-        if ((dtTemp<0.0)||((dt1>0.0)&&(dt1<dtTemp))) dtTemp=dt1;
+        if ((dtTemp<0.0)||((dt1>0.0)&&(dt1<dtTemp))) {
+          dtTemp=dt1;
+//          if ((dtTemp>0.0)&&(dtTemp*dtTemp*a<PIC::Mesh::mesh.EPS*PIC::Mesh::mesh.EPS)) dtTemp=-1.0;
+        }
 
         if ((0.0<dtTemp)&&(dtTemp<dtMin)) {
           dtMin=dtTemp,InternalBoundaryDescriptor_dtMin=InternalBoundaryDescriptor;
@@ -228,13 +249,27 @@ for (idim=0;idim<3;idim++) xpinit[idim]=x[idim];
     //advance the particle's position
     for (idim=0;idim<DIM;idim++) x[idim]+=dtMin*v[idim];
 
+#if _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ == _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ON_
+    double accl[3];
+    int spec;
+
+    spec=PIC::ParticleBuffer::GetI(ParticleData);
+    TotalParticleAcceleration(accl,spec,ptr,x,v,startNode);
+    for (idim=0;idim<DIM;idim++) v[idim]+=dtMin*accl[idim];
+
+#endif
+
     //adjust the particle moving time
     dtTotal-=dtMin;
 
     //interaction with the faces of the block and internal surfaces
     if (ParticleIntersectionCode==_INTERNAL_SPHERE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
+      int code;
+
       lastInternalBoundaryDescriptor=InternalBoundaryDescriptor_dtMin;
-      PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction(spec,ptr,x,v,dtTotal,startNode,InternalBoundaryDescriptor_dtMin);
+      code=PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction(spec,ptr,x,v,dtTotal,startNode,InternalBoundaryDescriptor_dtMin);
+
+      if (code==_PARTICLE_DELETED_ON_THE_FACE_) return _PARTICLE_LEFT_THE_DOMAIN_;
     }
     else if (ParticleIntersectionCode==_BLOCK_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
       iNeibNode[0]=0,iNeibNode[1]=0,iNeibNode[2]=0;
@@ -271,11 +306,11 @@ for (idim=0;idim<3;idim++) xpinit[idim]=x[idim];
 
       //move the particle's position exactly to the block's face
       for (idim=0;idim<DIM;idim++) {
-        if (x[idim]<=xminBlock[idim]) x[idim]=xminBlock[idim]*(1.0+1.0E-8);
-        if (x[idim]>=xmaxBlock[idim]) x[idim]=xmaxBlock[idim]*(1.0-1.0E-8);
+        if (x[idim]<=xminBlock[idim]) x[idim]=xminBlock[idim]+PIC::Mesh::mesh.EPS;
+        if (x[idim]>=xmaxBlock[idim]) x[idim]=xmaxBlock[idim]-PIC::Mesh::mesh.EPS;
       }
 
-      x[neibNodeDirection]=(iNeibNode[neibNodeDirection]==-1) ? xmaxBlock[neibNodeDirection] : xminBlock[neibNodeDirection];
+//      x[neibNodeDirection]=(iNeibNode[neibNodeDirection]==-1) ? xmaxBlock[neibNodeDirection] : xminBlock[neibNodeDirection];
 
       //reserve the place for particle's cloning
 
@@ -297,7 +332,7 @@ for (idim=0;idim<3;idim++) xpinit[idim]=x[idim];
 
   PIC::Mesh::cDataCenterNode *cell;
 
-  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,startNode))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
+  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
   cell=startNode->block->GetCenterNode(LocalCellNumber);
 
 
@@ -306,6 +341,20 @@ for (idim=0;idim<3;idim++) xpinit[idim]=x[idim];
 
   if (cell->tempParticleMovingList!=-1) PIC::ParticleBuffer::SetPrev(ptr,cell->tempParticleMovingList);
   cell->tempParticleMovingList=ptr;
+
+
+
+  //=====================  DEBUG =========================
+
+
+  if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1737.0E3) {
+    cout << __FILE__ << __LINE__ << endl;
+  }
+
+  //===================== END DEBUG ==================
+
+
+
 
   return _PARTICLE_MOTION_FINISHED_;
 }
@@ -358,6 +407,19 @@ if (ptr==1212) {
   //advance the particle positions
   #if DIM == 3
   for (idim=0;idim<DIM;idim++) x[idim]+=dt*v[idim];
+
+  //first order trajectory integration
+#if _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ == _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ON_
+  double accl[3];
+  int spec;
+
+  spec=PIC::ParticleBuffer::GetI(ParticleData);
+  TotalParticleAcceleration(accl,spec,ptr,x,v,startNode);
+  for (idim=0;idim<DIM;idim++) v[idim]+=dt*accl[idim];
+
+#endif
+
+
   #else
   exit(__LINE__,__FILE__,"not implemented");
   #endif
@@ -387,7 +449,7 @@ if (ptr==1212) {
 
   PIC::Mesh::cDataCenterNode *cell;
 
-  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,newNode))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
+  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,newNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
   cell=newNode->block->GetCenterNode(LocalCellNumber);
 
   PIC::ParticleBuffer::SetV(v,ParticleData);
@@ -398,6 +460,18 @@ if (ptr==1212) {
 
   if (cell->tempParticleMovingList!=-1) PIC::ParticleBuffer::SetPrev(ptr,cell->tempParticleMovingList);
   cell->tempParticleMovingList=ptr;
+
+
+  //=====================  DEBUG =========================
+
+
+  if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1737.0E3) {
+    cout << __FILE__ << __LINE__ << endl;
+  }
+
+  //===================== END DEBUG ==================
+
+
 
   return _PARTICLE_MOTION_FINISHED_;
 }

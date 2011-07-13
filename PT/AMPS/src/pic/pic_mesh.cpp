@@ -142,17 +142,17 @@ void PIC::Mesh::SetLocalParticleWeight(double weight,int spec,cDataBlockAMR* blo
 //==============================================================
 //flush and switch the sampling buffers in 'center' nodes
 void PIC::Mesh::flushCompletedSamplingBuffer(cDataCenterNode* node) {
-  register int i,length=PIC::Mesh::sampleSetDataLength;
-  register char *ptr;
+  register int i,length=PIC::Mesh::sampleSetDataLength/sizeof(double);
+  register double *ptr;
 
-  for (i=0,ptr=node->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;i<length;i++,ptr++) *ptr=0;
+  for (i=0,ptr=(double*)(node->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset);i<length;i++,ptr++) *ptr=0.0;
 }
 
 void PIC::Mesh::flushCollectingSamplingBuffer(cDataCenterNode* node) {
-  register int i,length=PIC::Mesh::sampleSetDataLength;
-  register char *ptr;
+  register int i,length=PIC::Mesh::sampleSetDataLength/sizeof(double);
+  register double *ptr;
 
-  for (i=0,ptr=node->GetAssociatedDataBufferPointer()+PIC::Mesh::collectingCellSampleDataPointerOffset;i<length;i++,ptr++) *ptr=0;
+  for (i=0,ptr=(double*)(node->GetAssociatedDataBufferPointer()+PIC::Mesh::collectingCellSampleDataPointerOffset);i<length;i++,ptr++) *ptr=0.0;
 }
 
 void PIC::Mesh::switchSamplingBuffers() {

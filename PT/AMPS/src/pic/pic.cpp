@@ -60,13 +60,28 @@ void PIC::Sampling() {
               s=PIC::ParticleBuffer::GetI(ParticleData);
               v=PIC::ParticleBuffer::GetV(ParticleData);
 
+
+
+//=====================  DEBUG =========================
+
+double *x;
+x=PIC::ParticleBuffer::GetX(ParticleData);
+if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1500.0E3) {
+  cout << __FILE__ << __LINE__ << endl;
+}
+
+//===================== END DEBUG ==================
+
+
+
+
               LocalParticleWeight=block->GetLocalParticleWeight(s);
 
               //make a correction in the weight if individual particle weight is used
 #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_  == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
               //do nothing
 #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ ==  _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-              exit(__LINE__,__FILE__,"not implemented");
+              LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
 #else
               exit(__LINE__,__FILE__,"Error: unknown option");
 #endif

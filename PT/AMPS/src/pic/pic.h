@@ -46,6 +46,8 @@ using namespace std;
 
 
 
+
+
 namespace PIC {
 
   //Global constants of the PIC solver
@@ -316,11 +318,11 @@ namespace PIC {
         if (associatedDataPointer==NULL) exit(__LINE__,__FILE__,"Error: The associated data buffer is not initialized");
         #endif
 
-        double InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0,InterpolatedBulkVelocity[3]={0.0,0.0,0.0},InterpolatedBulk2Velocity[3]={0.0,0.0,0.0};
+        double InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0.0,InterpolatedBulkVelocity[3]={0.0,0.0,0.0},InterpolatedBulk2Velocity[3]={0.0,0.0,0.0};
         double pWeight;
 
         for (s=0;s<PIC::nTotalSpecies;s++) {
-          InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0;
+          InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0.0;
           for (idim=0;idim<3;idim++) InterpolatedBulkVelocity[idim]=0.0,InterpolatedBulk2Velocity[idim]=0.0;
 
           //interpolate the sampled data
@@ -543,6 +545,9 @@ namespace PIC {
     #define _PIC_PARTICLE_DATA_VELOCITY_OFFSET_  (_PIC_PARTICLE_DATA_PREV_OFFSET_ + sizeof(long int))
     #define _PIC_PARTICLE_DATA_POSITION_OFFSET_  (_PIC_PARTICLE_DATA_VELOCITY_OFFSET_+ 3*sizeof(double))
 
+    //the offset for the variable that contains the 'particle weight correction'
+    extern int _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_;
+
     //the total length of a data allocated for a particle
     extern long int ParticleDataLength;
 
@@ -588,6 +593,11 @@ namespace PIC {
     void SetPrev(long int,byte*);
     void SetNext(long int,byte*);
 
+    double GetIndividualStatWeightCorrection(long int);
+    double GetIndividualStatWeightCorrection(byte*);
+    void SetIndividualStatWeightCorrection(double,long int);
+    void SetIndividualStatWeightCorrection(double,byte*);
+
     //the particle buffer procedure
     void Init(long int);
     long int GetMaxNPart();
@@ -622,7 +632,7 @@ namespace PIC {
     #define _PARTICLE_LEFT_THE_DOMAIN_       2
     #define _PARTICLE_MOTION_FINISHED_       3
 
-
+#include "userParticleAcceleratinFunction.h"
 
     typedef int (*fSpeciesDependentParticleMover) (long int,double,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*);
 
@@ -751,8 +761,8 @@ namespace PIC {
         void flushCollectingSamplingBuffer(cInternalSphericalData* Sphere);
 
         //particle-spherical surface interaction
-        typedef void (*fParticleSphereInteraction)(int spec,long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
-        void ParticleSphereInteraction_SpecularReflection(int spec,long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
+        typedef int (*fParticleSphereInteraction)(int spec,long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
+        int ParticleSphereInteraction_SpecularReflection(int spec,long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
         extern fParticleSphereInteraction ParticleSphereInteraction;
 
         //Sampling of the particles data
