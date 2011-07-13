@@ -101,7 +101,7 @@ contains
   !============================================================================
 
   subroutine set_amr_criteria(nVar, State_VGB, nInCritExtUsed, CritExt_IB, &
-       CoarsenCritExt_I, RefineCritExt_I)
+       CoarsenCritExt_I, RefineCritExt_I, Used_GB)
 
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
          MaxBlock,nBlock
@@ -115,6 +115,8 @@ contains
     real, intent(in), optional :: CritExt_IB(nExtCrit, nBlock)
     real, intent(in), optional :: CoarsenCritExt_I(nExtCrit),&
          RefineCritExt_I(nExtCrit)
+    logical, intent(in), optional:: &
+         Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     integer :: iCrit, iBlock
     !-----------------------------------------------------------------------
@@ -174,7 +176,7 @@ contains
 
     ! Estimation of the numerical error
     if(nIntCrit > 0) &
-         call calc_error_criteria(nVar, State_VGB )
+         call calc_error_criteria(nVar, State_VGB, Used_GB=Used_GB)
 
     if(DoSortAmrCrit .or. .not.DoStrictAmr) then
        ! we make a amr priority list
@@ -568,8 +570,7 @@ contains
   ! together with there refinements criteria. This will be then used
   ! in addition to the error estimate described earlier.
 
-  subroutine calc_error_criteria(nVar, State_VGB )!, & 
-      ! nCritExt, CritExt_IB, CoarsenCritExt_I, RefineCritExt_I)
+  subroutine calc_error_criteria(nVar, State_VGB,Used_GB )
 
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
 	 nI, nJ, nK, MaxDim, nDim, MaxBlock, nBlock
@@ -579,6 +580,8 @@ contains
     integer,  intent(in)   :: nVar
     real,    intent(in) :: &                            ! state variables
          State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    logical, intent(in), optional:: &
+         Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)  ! used cells
     !integer, intent(in), optional :: nCritExt ! num of external criteria
     !real, intent(inout), optional :: CritExt_IB(:,:)
     !real, intent(in),    optional :: CoarsenCritExt_I(:), RefineCritExt_I(:)
@@ -597,7 +600,7 @@ contains
 
     if(nIntCrit > nVar) &
          call CON_stop("calc_error_criteria :: More criteria then variables")
-    
+
 
     nAmrCrit = nIntCrit + nExtCrit
     if(nAmrCrit /= nAmrCritOld) then
@@ -612,76 +615,155 @@ contains
        AmrCrit_IB = 0.0
        nBlockOld=nBlock
     end if
-    
+
     nAmrCritOld=nAmrCrit
 
-    ! Calculate error estimates (1..nIntCrit)
-    BLOCK: do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
+    if(.not.present(Used_GB)) then
 
-       ! Check refinement first
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          ! Only variables indexed in iVarCrit_I will decide the refinement
-          do iCrit = 1, nIntCrit 
-             iVar = iVarCrit_I(iCrit)
+       ! Calculate error estimates (1..nIntCrit)
+       BLOCK: do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
 
-             Numerator = abs( &
-                  State_VGB(iVar,i-2,j,k,iBlock)   - &
-                  2.0*State_VGB(iVar,i,j,k,iBlock) + &
-                  State_VGB(iVar,i+2,j,k,iBlock) )
-             Denominator = (&
-                  abs(State_VGB(iVar,i+2,j,k,iBlock) - &
-                  State_VGB(iVar,i,j,k,iBlock)) + &
-                  abs(State_VGB(iVar,i,j,k,iBlock) - &
-                  State_VGB(iVar,i-2,j,k,iBlock))) + &
-                  cAmrWavefilter * (&
-                  abs(State_VGB(iVar,i+2,j,k,iBlock)) + &
-                  abs(2.0*State_VGB(iVar,i,j,k,iBlock)) + &
-                  abs(State_VGB(iVar,i-2,j,k,iBlock))) 
-             Crit_D(1) = (Numerator/max(Denominator,cEpsilon)) 
+          ! Check refinement first
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             ! Only variables indexed in iVarCrit_I will decide the refinement
+             do iCrit = 1, nIntCrit 
+                iVar = iVarCrit_I(iCrit)
 
-             if(nDim >= 2) then
-                Numerator =  abs( &
-                     State_VGB(iVar,i,j-2,k,iBlock)   - &
-                     2.0*State_VGB(iVar,i,j,k,iBlock) + &
-                     State_VGB(iVar,i,j+2,k,iBlock) )
-                Denominator = (&
-                     abs(State_VGB(iVar,i,j+2,k,iBlock) - &
-                     State_VGB(iVar,i,j,k,iBlock)) + &
-                     abs(State_VGB(iVar,i,j,k,iBlock) - &
-                     State_VGB(iVar,i,j-2,k,iBlock))) + &
-                     cAmrWavefilter * (&
-                     abs(State_VGB(iVar,i,j+2,k,iBlock)) + &
-                     abs(2.0*State_VGB(iVar,i,j,k,iBlock)) + &
-                     abs(State_VGB(iVar,i,j-2,k,iBlock)))
-                Crit_D(2) = (Numerator/max(Denominator,cEpsilon))
-             end if
-
-             if(nDim >= 3) then
                 Numerator = abs( &
-                     State_VGB(iVar,i,j,k-2,iBlock)   - &
+                     State_VGB(iVar,i-2,j,k,iBlock)   - &
                      2.0*State_VGB(iVar,i,j,k,iBlock) + &
-                     State_VGB(iVar,i,j,k+2,iBlock))
+                     State_VGB(iVar,i+2,j,k,iBlock) )
                 Denominator = (&
-                     abs(State_VGB(iVar,i,j,k+2,iBlock) - &
+                     abs(State_VGB(iVar,i+2,j,k,iBlock) - &
                      State_VGB(iVar,i,j,k,iBlock)) + &
                      abs(State_VGB(iVar,i,j,k,iBlock) - &
-                     State_VGB(iVar,i,j,k-2,iBlock)) + &
+                     State_VGB(iVar,i-2,j,k,iBlock))) + &
                      cAmrWavefilter * (&
-                     abs(State_VGB(iVar,i,j,k+2,iBlock)) + &
+                     abs(State_VGB(iVar,i+2,j,k,iBlock)) + &
                      abs(2.0*State_VGB(iVar,i,j,k,iBlock)) + &
-                     abs(State_VGB(iVar,i,j,k-2,iBlock))))
-                Crit_D(3) = (Numerator/max(Denominator,cEpsilon))
-             end if
+                     abs(State_VGB(iVar,i-2,j,k,iBlock))) 
+                Crit_D(1) = (Numerator/max(Denominator,cEpsilon)) 
 
-             Crit = sqrt(sum(Crit_D**2))/nDim
-             if( Crit >  AmrCrit_IB(iCrit,iBlock)) &
-                  AmrCrit_IB(iCrit,iBlock) = Crit
+                if(nDim >= 2) then
+                   Numerator =  abs( &
+                        State_VGB(iVar,i,j-2,k,iBlock)   - &
+                        2.0*State_VGB(iVar,i,j,k,iBlock) + &
+                        State_VGB(iVar,i,j+2,k,iBlock) )
+                   Denominator = (&
+                        abs(State_VGB(iVar,i,j+2,k,iBlock) - &
+                        State_VGB(iVar,i,j,k,iBlock)) + &
+                        abs(State_VGB(iVar,i,j,k,iBlock) - &
+                        State_VGB(iVar,i,j-2,k,iBlock))) + &
+                        cAmrWavefilter * (&
+                        abs(State_VGB(iVar,i,j+2,k,iBlock)) + &
+                        abs(2.0*State_VGB(iVar,i,j,k,iBlock)) + &
+                        abs(State_VGB(iVar,i,j-2,k,iBlock)))
+                   Crit_D(2) = (Numerator/max(Denominator,cEpsilon))
+                end if
 
-          end do !end nVar
-       end do; end do; end do
+                if(nDim >= 3) then
+                   Numerator = abs( &
+                        State_VGB(iVar,i,j,k-2,iBlock)   - &
+                        2.0*State_VGB(iVar,i,j,k,iBlock) + &
+                        State_VGB(iVar,i,j,k+2,iBlock))
+                   Denominator = (&
+                        abs(State_VGB(iVar,i,j,k+2,iBlock) - &
+                        State_VGB(iVar,i,j,k,iBlock)) + &
+                        abs(State_VGB(iVar,i,j,k,iBlock) - &
+                        State_VGB(iVar,i,j,k-2,iBlock)) + &
+                        cAmrWavefilter * (&
+                        abs(State_VGB(iVar,i,j,k+2,iBlock)) + &
+                        abs(2.0*State_VGB(iVar,i,j,k,iBlock)) + &
+                        abs(State_VGB(iVar,i,j,k-2,iBlock))))
+                   Crit_D(3) = (Numerator/max(Denominator,cEpsilon))
+                end if
 
-    end do BLOCK
+                Crit = sqrt(sum(Crit_D**2))/nDim
+                if( Crit >  AmrCrit_IB(iCrit,iBlock)) &
+                     AmrCrit_IB(iCrit,iBlock) = Crit
+
+             end do !end nVar
+          end do; end do; end do
+
+       end do BLOCK
+
+    else
+       ! Calculate error estimates (1..nIntCrit)
+       MASKBLOCK: do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+
+          ! Check refinement first
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             ! Only variables indexed in iVarCrit_I will decide the refinement
+             do iCrit = 1, nIntCrit 
+                iVar = iVarCrit_I(iCrit)
+
+                if(any(Used_GB((i-2):(i+2),(j-2):(j+2),(k-2):(k+2),iBlock)))then
+
+                   Numerator = abs( &
+                        State_VGB(iVar,i-2,j,k,iBlock)   - &
+                        2.0*State_VGB(iVar,i,j,k,iBlock) + &
+                        State_VGB(iVar,i+2,j,k,iBlock) )
+                   Denominator = (&
+                        abs(State_VGB(iVar,i+2,j,k,iBlock) - &
+                        State_VGB(iVar,i,j,k,iBlock)) + &
+                        abs(State_VGB(iVar,i,j,k,iBlock) - &
+                        State_VGB(iVar,i-2,j,k,iBlock))) + &
+                        cAmrWavefilter * (&
+                        abs(State_VGB(iVar,i+2,j,k,iBlock)) + &
+                        abs(2.0*State_VGB(iVar,i,j,k,iBlock)) + &
+                        abs(State_VGB(iVar,i-2,j,k,iBlock))) 
+                   Crit_D(1) = (Numerator/max(Denominator,cEpsilon)) 
+
+                   if(nDim >= 2) then
+                      Numerator =  abs( &
+                           State_VGB(iVar,i,j-2,k,iBlock)   - &
+                           2.0*State_VGB(iVar,i,j,k,iBlock) + &
+                           State_VGB(iVar,i,j+2,k,iBlock) )
+                      Denominator = (&
+                           abs(State_VGB(iVar,i,j+2,k,iBlock) - &
+                           State_VGB(iVar,i,j,k,iBlock)) + &
+                           abs(State_VGB(iVar,i,j,k,iBlock) - &
+                           State_VGB(iVar,i,j-2,k,iBlock))) + &
+                           cAmrWavefilter * (&
+                           abs(State_VGB(iVar,i,j+2,k,iBlock)) + &
+                           abs(2.0*State_VGB(iVar,i,j,k,iBlock)) + &
+                           abs(State_VGB(iVar,i,j-2,k,iBlock)))
+                      Crit_D(2) = (Numerator/max(Denominator,cEpsilon))
+                   end if
+
+                   if(nDim >= 3) then
+                      Numerator = abs( &
+                           State_VGB(iVar,i,j,k-2,iBlock)   - &
+                           2.0*State_VGB(iVar,i,j,k,iBlock) + &
+                           State_VGB(iVar,i,j,k+2,iBlock))
+                      Denominator = (&
+                           abs(State_VGB(iVar,i,j,k+2,iBlock) - &
+                           State_VGB(iVar,i,j,k,iBlock)) + &
+                           abs(State_VGB(iVar,i,j,k,iBlock) - &
+                           State_VGB(iVar,i,j,k-2,iBlock)) + &
+                           cAmrWavefilter * (&
+                           abs(State_VGB(iVar,i,j,k+2,iBlock)) + &
+                           abs(2.0*State_VGB(iVar,i,j,k,iBlock)) + &
+                           abs(State_VGB(iVar,i,j,k-2,iBlock))))
+                      Crit_D(3) = (Numerator/max(Denominator,cEpsilon))
+                   end if
+                   Crit = sqrt(sum(Crit_D**2))/nDim 
+                else
+                   Crit = 0.0
+                   
+                end if
+
+                if( Crit >  AmrCrit_IB(iCrit,iBlock)) &
+                     AmrCrit_IB(iCrit,iBlock) = Crit
+
+             end do !end nVar
+          end do; end do; end do
+
+       end do MASKBLOCK
+
+    end if
 
     ! Fill in thresholds
     do iCrit=1,nIntCrit
@@ -856,6 +938,7 @@ contains
     real, allocatable :: Criterias_IB(:,:),AllCriterias_IBP(:,:,:)
     real, allocatable :: PreCriterias_IB(:,:)
     real, allocatable :: RefineLevel_I(:), CoursenLevel_I(:)
+    logical, allocatable :: Used_GB(:,:,:,:)
 
     integer :: nCritExt = 4
     integer, allocatable :: iA_I(:)
@@ -960,6 +1043,50 @@ contains
        end if
     end do
 
+
+
+    !--------------------- internal with masked body -------
+    nIntCrit = 1
+
+    allocate(Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    Used_GB = .true.
+
+    Used_GB(:,:,:,10) = .false.
+    CoarsenCrit_I = -1.0
+    RefineCrit_I  =  1.0
+    TestState_VGB = 1.0
+    iVarCrit_I(nIntCrit)=1
+
+    CoarsenCrit_I = -1.0
+    RefineCrit_I  = 1.0
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       do k = MinK, MaxK
+          do j = MinJ, MaxJ
+             do i = MinI,MaxI
+                do iVar=1,nVar
+                   TestState_VGB(iVar,i,j,k,iBlock) = &
+                        dexp(0.1*(i*(iNode_B(iBlock)+1)))
+                end do
+             end do
+          end do
+       end do
+    end do
+
+
+    call set_amr_criteria(nVar,TestState_VGB,Used_GB=Used_GB)
+
+    if(iRank_A(1) /= 10) &
+         write(*,*) " ERROR in ",NameSub, " Internal test masked body"
+
+    do iNode = 3, nNode-1
+       if(iRank_A(iNode-1) > iRank_A(iNode)) then
+          write(*,*) " ERROR in ",NameSub, " Internal test masked body"
+       end if
+    end do
+
+    deallocate(Used_GB)
 
     !-------------------- internal x 2 -------------------
 
