@@ -22,7 +22,7 @@ subroutine clean_divb
   use ModParallel, ONLY : NOBLK, neiLEV
   use ModPhysics,ONLY:gm1
   use ModMpi
-  use BATL_lib, ONLY: message_pass_cell_scalar, message_pass_cell
+  use BATL_lib, ONLY: message_pass_cell
   implicit none
 
   integer::i,j,k,iBlock
@@ -146,7 +146,7 @@ subroutine clean_divb
      end do
 
      if(UseBatl) then
-        call message_pass_cell_scalar(tmp2_blk, nWidthIn=1, DoSendCornerIn=.false. ,&
+        call message_pass_cell(1,tmp2_blk, nWidthIn=1, DoSendCornerIn=.false. ,&
              nProlongOrderIn=1, DoRestrictFaceIn=.true.)
      else
         call message_pass_cells(.true.,.true.,.true.,tmp2_blk)
@@ -220,7 +220,7 @@ contains
 
 
     if(UseBatl) then
-       call message_pass_cell_scalar(tmp1_blk,DoSendCornerIn=.false. ,&
+       call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
             nProlongOrderIn=1, DoRestrictFaceIn=.true.)
     else
        call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
@@ -300,7 +300,7 @@ contains
        end do
 
        if(UseBatl) then
-          call message_pass_cell_scalar(tmp1_blk,DoSendCornerIn=.false. ,&
+          call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
                nProlongOrderIn=1, DoRestrictFaceIn=.true.)
        else
           call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
@@ -347,7 +347,7 @@ contains
     !    if(iProc==0)write(*,*)' Cleanup Initialization second message pass'
 
     if(UseBatl) then
-       call message_pass_cell_scalar(tmp1_blk,DoSendCornerIn=.false. ,&
+       call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
             nProlongOrderIn=1, DoRestrictFaceIn=.true.)
     else
        call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
@@ -379,11 +379,11 @@ contains
     !In tmp1,tmp2 and divB1 are the estimates of gradX, gradY,gradZ correspondenyly
 
     if(UseBatl) then
-       call message_pass_cell_scalar(tmp1_blk,DoSendCornerIn=.false. ,&
+       call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
             nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-       call message_pass_cell_scalar(tmp2_blk,DoSendCornerIn=.false. ,&
+       call message_pass_cell(1,tmp2_blk,DoSendCornerIn=.false. ,&
             nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-       call message_pass_cell_scalar(tmp3_blk,DoSendCornerIn=.false. ,&
+       call message_pass_cell(1,tmp3_blk,DoSendCornerIn=.false. ,&
             nProlongOrderIn=1, DoRestrictFaceIn=.true.)
     else
        call message_pass_cells(.false.,.true.,.true.,tmp1_BLK)
