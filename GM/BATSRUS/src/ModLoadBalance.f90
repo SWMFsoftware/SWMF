@@ -81,6 +81,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 !!! load balance depending on block types. Pass block types!
 !     call regrid_batl(nVar, State_VGB, Used_GB=true_cell)
 !     call set_batsrus_grid
+
+     ! After load balancing skipped blocks are unused.
+     UnusedBlock_BP = iTypeAdvance_BP == SkippedBlock_
      call find_test_cell
      RETURN
   end if
