@@ -1392,8 +1392,6 @@ subroutine MH_set_parameters(TypeAction)
            UseBatl     = .false.
            UseBatlTest = .false.
         end if
-        !if(UseBatl .and. UseConstrainB) &
-        !     call stop_mpi('"UseConstrainB not suported with BATL"')
 
         !^CFG IF CONSTRAINB BEGIN
         if (UseProjection.and.UseConstrainB.and.iProc==0) &
@@ -2720,8 +2718,6 @@ contains
           call stop_mpi('Correct PARAM.in')
        end if
     end if
-
-    if(UseBatl) UseAccurateTrace = .true.
          
     if(nOrder == 1)then
        BetaProlongOrig = BetaProlong    
