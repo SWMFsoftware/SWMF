@@ -10,19 +10,24 @@ end subroutine ray_pass
 !=============================================================================
 subroutine ray_pass_new
 
-  use ModMain, ONLY : nblockMax,unusedBLK
+  use ModMain, ONLY : nBlock,unusedBLK
   use ModParallel, ONLY : neiLEV
-  use ModRaytrace
+  use ModRaytrace, ONLY: RayFace
+  use BATL_lib, ONLY: message_pass_node
+
   implicit none
 
   integer :: i,j, iBLK, iface
 
-  do i=1,3; do j=1,2
-     call pass_and_max_nodes(.false.,rayface(i,j,:,:,:,:))
-!!$     call pass_and_max_nodes(.true.,rayface(i,j,:,:,:,:))
-  end do; end do
+!  do i=1,3; do j=1,2
 
-  do iBLK=1,nBlockMax
+!!     call pass_and_max_nodes(.false.,rayface(i,j,:,:,:,:))
+!!$     call pass_and_max_nodes(.true.,rayface(i,j,:,:,:,:))
+!  end do; end do
+
+  call message_pass_node(6, RayFace, 'max')
+
+  do iBLK=1,nBlock
      if(unusedBLK(iBLK))cycle
      do iface=1,6
         if(neiLEV(iface,iBLK)==1)call prolong_ray_after_pass(iface,iBLK)
@@ -173,7 +178,9 @@ subroutine ray_pass_old
   !           _s subface    (one quarter of a face)
 
   use ModProcMH
-  use ModMain, ONLY : nblockMax,okdebug,unusedBLK,optimize_message_pass
+  use ModMain, ONLY : nblockMax,okdebug,unusedBLK,optimize_message_pass,&
+       UseBatl
+  use BATL_lib, ONLY: iNode_B, iTree_IA, Coord0_
   use ModRaytrace
   use ModAMR, ONLY : child2subface
   use ModParallel, ONLY : NOBLK,neiLEV,neiBLK,neiPE,BLKneighborCHILD
@@ -271,6 +278,9 @@ contains
 
     integer, intent(in):: ifacemin,ifacemax
     logical, intent(in):: do_equal,do_restricted,do_prolonged
+
+    ! BATL related
+    integer:: iNode, iDim, iSideFace
     !------------------------------------------------------------------------
 
     if(oktest)write(*,*)&
@@ -426,8 +436,31 @@ contains
              neiP=neiPE(1,iface,iBLK)
              neiB=neiBLK(1,iface,iBLK)
              ! Subface index =1,2,3, or 4 with respect to the coarse neighbor
-             ichild=BLKneighborCHILD(0,0,0,1,iBLK)
-             isubface=child2subface(ichild,iface)
+             if(UseBatl)then
+                ! iSubFace = iSubFace_IA(iFace,iNode_B(iBlk))
+                iNode = iNode_B(iBlk)
+                iSubFace = 0
+                do iDim = 1, nDim
+                   iSideFace = modulo(iTree_IA(Coord0_+iDim,iNode) - 1,2)
+
+                   if(iDim == (iFace+1)/2) CYCLE
+
+                   if(iSubFace == 0) then
+                      iSubFace = iSideFace + 1
+                   else
+                      iSubFace = iSubFace + 2*iSideFace
+                   end if
+
+                end do
+
+                ! Swap subface 2 and 3 for iFace = 1..4 for BATSRUS tradition...
+                if(iFace <= 4 .and. iSubFace >= 2 .and. iSubFace <= 3) &
+                     iSubFace = 5 - iSubFace
+
+             else
+                ichild=BLKneighborCHILD(0,0,0,1,iBLK)
+                isubface=child2subface(ichild,iface)
+             end if
 
              if(neiP==iProc)then
                 ! Local copy into appropriate subface
