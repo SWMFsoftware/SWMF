@@ -63,9 +63,11 @@ contains
 
     use ModMain, ONLY: iNewGrid, iNewDecomposition
 
-    use BATL_lib, ONLY: iProc, CellSize_DB, CoordMin_DB, &
-         iNodeNei_IIIB, DiLevelNei_IIIB, iTree_IA, Block_, Proc_, Unset_, &
-         IsRzGeometry, CellFace_DFB, nI, nJ, nK, IsNewDecomposition, IsNewTree
+    use BATL_lib, ONLY: iProc, nDim, nI, nJ, nK, &
+         CellSize_DB, CoordMin_DB, &
+         iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB, &
+         iTree_IA, Block_, Proc_, Unset_, &
+         IsRzGeometry, CellFace_DFB, IsNewDecomposition, IsNewTree
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, XyzStart_BLK, &
          FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &
          FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B
@@ -79,7 +81,7 @@ contains
 
     ! Convert from BATL to BATSRUS ordering of subfaces. 
     integer, parameter:: iOrder_I(4) = (/1,3,2,4/)
-    integer:: iNodeNei_I(4)
+    integer:: iNodeNei, iNodeNei_I(4)
     !-------------------------------------------------------------------------
     BLKneighborLEV(:,:,:,iBlock) = DiLevelNei_IIIB(:,:,:,iBlock)
 
@@ -101,63 +103,97 @@ contains
     ! ModFaceValue::correct_monotone_restrict and
     ! ModConserveFlux::apply_cons_flux
 
-    if( DiLevelNei_IIIB(-1,0,0,iBlock) /= Unset_ )then
-       iNodeNei_I = pack(iNodeNei_IIIB(0,1:2,1:2,iBlock),.true.)
-       iNodeNei_I = iNodeNei_I(iOrder_I)
-       neiBeast(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
-       neiPeast(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
-    else
+    select case(DiLevelNei_IIIB(-1,0,0,iBlock))
+    case(Unset_)
        neiBeast(:,iBlock)  = Unset_
        neiPeast(:,iBlock)  = Unset_
-    end if
-
-    if( DiLevelNei_IIIB(+1,0,0,iBlock) /= Unset_ )then
-       iNodeNei_I = pack(iNodeNei_IIIB(3,1:2,1:2,iBlock),.true.)
+    case(-1)
+       iNodeNei_I = pack(iNodeNei_IIIB(0,1:2,1:2,iBlock),.true.)
        iNodeNei_I = iNodeNei_I(iOrder_I)
-       neiBwest(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
-       neiPwest(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
-    else
+       if(nDim < 3) where(iNodeNei_I == Unset_) iNodeNei_I = iNode_B(iBlock)
+       neiBeast(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       neiPeast(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
+    case default
+       iNodeNei = iNodeNei_IIIB(0,1,1,iBlock)
+       neiBeast(:,iBlock)  = iTree_IA(Block_,iNodeNei)
+       neiPeast(:,iBlock)  = iTree_IA(Proc_,iNodeNei)
+    end select
+
+    select case(DiLevelNei_IIIB(+1,0,0,iBlock))
+    case(Unset_)
        neiBwest(:,iBlock)  = Unset_
        neiPwest(:,iBlock)  = Unset_
-    end if
-       
-    if( DiLevelNei_IIIB(0,-1,0,iBlock) /= Unset_ )then
-       iNodeNei_I = pack(iNodeNei_IIIB(1:2,0,1:2,iBlock),.true.)
+    case(-1)
+       iNodeNei_I = pack(iNodeNei_IIIB(3,1:2,1:2,iBlock),.true.)
        iNodeNei_I = iNodeNei_I(iOrder_I)
-       neiBsouth(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
-       neiPsouth(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
-    else
+       if(nDim < 3) where(iNodeNei_I == Unset_) iNodeNei_I = iNode_B(iBlock)
+       neiBwest(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       neiPwest(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
+    case default
+       iNodeNei = iNodeNei_IIIB(3,1,1,iBlock)
+       neiBwest(:,iBlock)  = iTree_IA(Block_,iNodeNei)
+       neiPwest(:,iBlock)  = iTree_IA(Proc_,iNodeNei)
+    end select
+
+    select case(DiLevelNei_IIIB(0,-1,0,iBlock))
+    case(Unset_)
        neiBsouth(:,iBlock)  = Unset_
        neiPsouth(:,iBlock)  = Unset_
-    end if
-
-    if( DiLevelNei_IIIB(0,+1,0,iBlock) /= Unset_ )then
-       iNodeNei_I = pack(iNodeNei_IIIB(1:2,3,1:2,iBlock),.true.)
+    case(-1)
+       iNodeNei_I = pack(iNodeNei_IIIB(1:2,0,1:2,iBlock),.true.)
        iNodeNei_I = iNodeNei_I(iOrder_I)
-       neiBnorth(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
-       neiPnorth(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
-    else
+       if(nDim < 3) where(iNodeNei_I == Unset_) iNodeNei_I = iNode_B(iBlock)
+       neiBsouth(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       neiPsouth(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
+    case default
+       iNodeNei = iNodeNei_IIIB(1,0,1,iBlock)
+       neiBsouth(:,iBlock)  = iTree_IA(Block_,iNodeNei)
+       neiPsouth(:,iBlock)  = iTree_IA(Proc_,iNodeNei)
+    end select
+
+    select case(DiLevelNei_IIIB(0,+1,0,iBlock))
+    case(Unset_)
        neiBnorth(:,iBlock)  = Unset_
        neiPnorth(:,iBlock)  = Unset_
-    end if
+    case(-1)
+       iNodeNei_I = pack(iNodeNei_IIIB(1:2,3,1:2,iBlock),.true.)
+       iNodeNei_I = iNodeNei_I(iOrder_I)
+       if(nDim < 3) where(iNodeNei_I == Unset_) iNodeNei_I = iNode_B(iBlock)
+       neiBnorth(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       neiPnorth(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
+    case default
+       iNodeNei = iNodeNei_IIIB(1,3,1,iBlock)
+       neiBnorth(:,iBlock)  = iTree_IA(Block_,iNodeNei)
+       neiPnorth(:,iBlock)  = iTree_IA(Proc_,iNodeNei)
+    end select
 
-    if( DiLevelNei_IIIB(0,0,-1,iBlock) /= Unset_ )then
+    select case(DiLevelNei_IIIB(0,0,-1,iBlock))
+    case(Unset_ )
+       neiBbot(:,iBlock)  = Unset_
+       neiPbot(:,iBlock)  = Unset_
+    case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(1:2,1:2,0,iBlock),.true.)
        neiBbot(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
        neiPbot(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
-    else
-       neiBbot(:,iBlock)  = Unset_
-       neiPbot(:,iBlock)  = Unset_
-    end if
+    case default
+       iNodeNei = iNodeNei_IIIB(1,1,0,iBlock)
+       neiBbot(:,iBlock)  = iTree_IA(Block_,iNodeNei)
+       neiPbot(:,iBlock)  = iTree_IA(Proc_,iNodeNei)
+    end select
 
-    if( DiLevelNei_IIIB(0,0,+1,iBlock) /= Unset_ )then
+    select case(DiLevelNei_IIIB(0,0,+1,iBlock))
+    case(Unset_)
+       neiBtop(:,iBlock)  = Unset_
+       neiPtop(:,iBlock)  = Unset_
+    case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(1:2,1:2,3,iBlock),.true.)
        neiBtop(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
        neiPtop(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
-    else
-       neiBtop(:,iBlock)  = Unset_
-       neiPtop(:,iBlock)  = Unset_
-    end if
+    case default
+       iNodeNei = iNodeNei_IIIB(1,1,3,iBlock)
+       neiBtop(:,iBlock)  = iTree_IA(Block_,iNodeNei)
+       neiPtop(:,iBlock)  = iTree_IA(Proc_,iNodeNei)
+    end select
 
     ! neiBLK and neiPE are used in ray_pass, constrain_B, ModPartSteady
     neiBLK(:,1,iBlock) = neiBeast(:,iBlock)
