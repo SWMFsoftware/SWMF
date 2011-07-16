@@ -173,7 +173,8 @@ contains
   !============================================================================
 
   subroutine regrid_batl(nVar, State_VGB, Dt_B, DoRefine_B, DoCoarsen_B, &
-       DoBalanceEachLevelIn, iTypeNode_A, Used_GB, DoTestIn)
+       DoBalanceEachLevelIn, iTypeNode_A, Used_GB, DoTestIn, &
+       nExtraData, pack_extra_data, unpack_extra_data)
 
     integer, intent(in)   :: nVar                         ! number of variables
     real,    intent(inout):: &                            ! state variables
@@ -188,6 +189,30 @@ contains
     logical, intent(in), optional:: &
          Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)  ! used cells
     logical, intent(in), optional:: DoTestIn              ! print test info
+    integer, intent(in), optional:: nExtraData            ! size of extra data
+        ! Optional methods to send extra information
+    interface
+       subroutine pack_extra_data(iBlock, nBuffer, Buffer_I)
+
+         ! Pack extra data into Buffer_I
+         
+         integer, intent(in) :: iBlock            ! block index
+         integer, intent(in) :: nBuffer           ! size of buffer
+         real,    intent(out):: Buffer_I(nBuffer) ! buffer
+
+       end subroutine pack_extra_data
+
+       subroutine unpack_extra_data(iBlock, nBuffer, Buffer_I)
+
+         ! Unpack extra data from Buffer_I
+
+         integer, intent(in) :: iBlock            ! block index
+         integer, intent(in) :: nBuffer           ! size of buffer
+         real,    intent(in) :: Buffer_I(nBuffer) ! buffer
+
+       end subroutine unpack_extra_data
+    end interface
+    optional:: pack_extra_data, unpack_extra_data
 
     ! Refine, coarsen and load balance the blocks containing the nVar 
     ! state variables in State_VGB. Use second order accurate conservative
@@ -277,7 +302,9 @@ contains
 
     ! Coarsen, refine and load balance the flow variables, and set Dt_B.
     if(DoTest)write(*,*) NameSub,' call do_amr'
-    call do_amr(nVar, State_VGB, Dt_B, DoTestIn=DoTestIn, Used_GB=Used_GB)
+    call do_amr(nVar, State_VGB, Dt_B, DoTestIn=DoTestIn, Used_GB=Used_GB, &
+         nExtraData=nExtraData, pack_extra_data=pack_extra_data, &
+         unpack_extra_data=unpack_extra_data)
 
     ! Finalize the tree information
     if(DoTest)write(*,*) NameSub,' call move_tree'
