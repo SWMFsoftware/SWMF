@@ -13,8 +13,8 @@ subroutine amr(DoMessagePass)
   use ModMpi
 
   use ModParallel,      ONLY: UsePlotMessageOptions
-  use BATL_lib,         ONLY: regrid_batl, set_amr_criteria, Unused_B, iNode_B, &
-       iStatusNew_A, Refine_, Coarsen_
+  use BATL_lib,         ONLY: regrid_batl, set_amr_criteria, &
+       Unused_B, iNode_B, iStatusNew_A, Refine_, Coarsen_
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
   use ModUser,          ONLY: user_amr_criteria
   use ModBatlInterface, ONLY: useBatlTest
@@ -55,7 +55,8 @@ subroutine amr(DoMessagePass)
            call set_amr_criteria(nVar, State_VGB)
         end if
 
-        call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe,Used_GB=true_cell)
+        call regrid_batl(nVar, State_VGB, Dt_BLK, &
+             DoTestIn=DoTestMe, Used_GB=true_cell)
 
         call set_batsrus_grid
 
@@ -64,7 +65,7 @@ subroutine amr(DoMessagePass)
      else
         call specify_refinement(DoRefine_B)
         call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, &
-             DoTestIn=DoTestMe,Used_GB=true_cell)
+             DoTestIn=DoTestMe, Used_GB=true_cell)
         call set_batsrus_grid
 
      end if
