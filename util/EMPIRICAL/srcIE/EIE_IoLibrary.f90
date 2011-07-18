@@ -60,6 +60,16 @@ end subroutine IO_SetSWV
 
 !----------------------------------------------------------------------
 
+subroutine IO_SetSWN(SWNIn)
+!  use ModKind
+  use ModEIE_Interface
+  implicit none
+  real, intent(in) :: SWNIn
+  IOr_NeedSWN = SWNIn
+end subroutine IO_SetSWN
+
+!----------------------------------------------------------------------
+
 subroutine IO_SetHPI(HPIIn)
 !  use ModKind
   use ModEIE_Interface
@@ -275,7 +285,8 @@ end subroutine IO_GetPotential
 
 subroutine IO_GetNonGridBasedPotential(PotentialOut, iError)
 
-  use EIE_ModWeimer, only: WeiEpot96
+  use EIE_ModWeimer, only: WeiEpot96, get_tilt
+  use w05sc, only: setmodel, epotval
 
   use ModEIE_Interface
   use ModErrors
@@ -293,7 +304,7 @@ subroutine IO_GetNonGridBasedPotential(PotentialOut, iError)
 
   integer :: iMLT, iLat
 
-  real    :: Potential, ETheta, EPhi, MLT, Lat
+  real    :: Potential, ETheta, EPhi, MLT, Lat, tilt, hr
 
   iError = 0
 
@@ -317,6 +328,22 @@ subroutine IO_GetNonGridBasedPotential(PotentialOut, iError)
         iError = ecIMFByNotSet_
         return
      endif
+  endif
+
+  if (index(EIE_NameOfEFieldModel,'weimer05') > 0) then
+     if (IOr_NeedSWV < -1000.0) then
+        iError = ecSWVNotSet_
+        return
+     endif
+     iChange = 1
+  endif
+
+  if (index(EIE_NameOfEFieldModel,'weimer01') > 0) then
+     if (IOr_NeedSWV < -1000.0) then
+        iError = ecSWVNotSet_
+        return
+     endif
+     iChange = 1
   endif
 
   if (index(EIE_NameOfEFieldModel,'weimer96') > 0) then
@@ -376,6 +403,22 @@ subroutine IO_GetNonGridBasedPotential(PotentialOut, iError)
         else
            iHemisphere = -1
            if (Lat < 0.0) Lat = abs(Lat)
+        endif
+
+        if (index(EIE_NameOfEFieldModel,'weimer05') > 0) then
+           if (abs(lat) >= 45.0) then 
+              hr = float(iHour) + float(iMinute)/60.0
+              tilt = get_tilt (iYear,iMonth,iDay,hr)
+              call setmodel(IOr_NeedIMFBy,IOr_NeedIMFBz,tilt, &
+                   IOr_NeedSWV,IOr_NeedSWN,'epot')
+              call epotval(lat,mlt,0.0,Potential)
+              Potential = Potential * 1000.0
+              iChange = 0
+           else
+              Potential = 0.0
+              ETheta = 0.0
+              EPhi = 0.0
+           endif
         endif
 
         if (index(EIE_NameOfEFieldModel,'weimer96') > 0) then

@@ -29,6 +29,8 @@ subroutine EIE_set_inputs(StringInputLines)
            call read_in_string(EIE_NameOfAuroralModel)
            call read_in_string(EIE_NameOfSolarModel)
 
+           write(*,*) "efield : ",EIE_NameOfEFieldModel
+
            if (index(EIE_NameOfAuroralModel,'IHP') > 0) &
                 EIE_NameOfAuroralModel = 'ihp'
            if (index(EIE_NameOfAuroralModel,'PEM') > 0) &
@@ -44,15 +46,22 @@ subroutine EIE_set_inputs(StringInputLines)
            if (index(EIE_NameOfEFieldModel,'WEIMER01') > 0) &
                 EIE_NameOfEFieldModel = 'weimer01'
 
-           if (index(EIE_NameOfEFieldModel,'weimer') > 0 .and. &
-                index(EIE_NameOfEFieldModel,'01') == 0) &
-                EIE_NameOfEFieldModel = 'weimer96'
-           if (index(EIE_NameOfEFieldModel,'Weimer') > 0 .and. &
-                index(EIE_NameOfEFieldModel,'01') == 0) &
-                EIE_NameOfEFieldModel = 'weimer96'
-           if (index(EIE_NameOfEFieldModel,'WEIMER') > 0 .and. &
-                index(EIE_NameOfEFieldModel,'01') == 0) &
-                EIE_NameOfEFieldModel = 'weimer96'
+           if (index(EIE_NameOfEFieldModel,'weimer05') > 0) &
+                EIE_NameOfEFieldModel = 'weimer05'
+           if (index(EIE_NameOfEFieldModel,'Weimer05') > 0) &
+                EIE_NameOfEFieldModel = 'weimer05'
+           if (index(EIE_NameOfEFieldModel,'WEIMER05') > 0) &
+                EIE_NameOfEFieldModel = 'weimer05'
+
+!           if (index(EIE_NameOfEFieldModel,'weimer') > 0 .and. &
+!                index(EIE_NameOfEFieldModel,'01') == 0) &
+!                EIE_NameOfEFieldModel = 'weimer96'
+!           if (index(EIE_NameOfEFieldModel,'Weimer') > 0 .and. &
+!                index(EIE_NameOfEFieldModel,'01') == 0) &
+!                EIE_NameOfEFieldModel = 'weimer96'
+!           if (index(EIE_NameOfEFieldModel,'WEIMER') > 0 .and. &
+!                index(EIE_NameOfEFieldModel,'01') == 0) &
+!                EIE_NameOfEFieldModel = 'weimer96'
 
            if (index(EIE_NameOfEFieldModel,'weimer96') > 0) &
                 EIE_NameOfEFieldModel = 'weimer96'

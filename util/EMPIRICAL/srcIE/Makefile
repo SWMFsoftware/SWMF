@@ -18,6 +18,7 @@ OBJECTS = \
 	ModEIEFiles.o\
 	ED_ModInterface.o\
 	ED_ModIons.o\
+	ModWeimer05.o\
 	ModWeimer.o\
 	AMIE_Library.o\
 	EIE_End.o\

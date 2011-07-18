@@ -26,6 +26,7 @@ module ModEIE_Interface
   real :: IOr_NeedIMFBz   = -1.0e32
   real :: IOr_NeedIMFBy   = -1.0e32 
   real :: IOr_NeedSWV     = -1.0e32 
+  real :: IOr_NeedSWN     = -1.0e32 
   real :: IOr_NeedHPI     = -1.0e32 
   real :: IOr_NeedHPINorm = -1.0e32 
   real :: IOr_NeedKp      = -1.0e32 

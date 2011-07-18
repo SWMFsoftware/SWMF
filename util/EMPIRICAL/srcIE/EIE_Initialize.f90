@@ -6,6 +6,7 @@ subroutine EIE_Initialize(iOutputError)
   use ModIoUnit, only : UnitTmp_
 
   use EIE_ModWeimer, only: readcoef96, readcoef01
+  use read_data,only: read_potential,read_schatable,read_bndy
 
   implicit none
 
@@ -64,6 +65,19 @@ subroutine EIE_Initialize(iOutputError)
      endif
      call ReadCoef01(UnitTmp_)
      close(UnitTmp_)
+  endif
+
+  if (index(EIE_NameOfEFieldModel,'weimer05') > 0) then
+     IsFound_EFieldModel = .true.
+     inFileName = 'W05scEpot.dat'
+     call merge_str(EIE_NameOfModelDir, inFileName)
+     call read_potential(inFileName)
+     inFileName = 'SCHAtable.dat'
+     call merge_str(EIE_NameOfModelDir, inFileName)
+     call read_schatable(inFileName)
+     inFileName = 'W05scBndy.dat'
+     call merge_str(EIE_NameOfModelDir, inFileName)
+     call read_bndy(inFileName)
   endif
 
 !  if (index(EIE_NameOfEFieldModel,'samie') > 0) then
