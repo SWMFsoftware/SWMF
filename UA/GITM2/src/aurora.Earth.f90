@@ -22,7 +22,7 @@ subroutine aurora(iBlock)
   logical :: IsFirstTime(nBlocksMax) = .true.
 
   real :: f1, f2, f3, f4, f5, power
-  real :: de1, de2, de3, de4, de5, detotal
+  real :: de1, de2, de3, de4, de5, detotal, h
 
   if (IsFirstTime(iBlock)) then
      IsFirstTime(iBlock) = .false.
@@ -62,6 +62,11 @@ subroutine aurora(iBlock)
         eflx_ergs = ElectronEnergyFlux(j,i) !/ (1.0e-7 * 100.0 * 100.0)
         av_kev    = ElectronAverageEnergy(j,i)
 
+        !p = 40.0 * eflx_ergs**0.5 * av_kev / (16.0 + av_kev**2)
+        !h = 0.45 * av_kev**0.85 * p
+        !write(*,*) "eflux, avee: ", eflx_ergs, av_kev
+        !write(*,*) "hall, ped : ", h, p
+             
         ! For diffuse auroral models
 
         ED_Flux = 0.0
@@ -79,8 +84,9 @@ subroutine aurora(iBlock)
            avee = av_kev * 1000.0        ! keV -> eV
            eflux = eflx_ergs * 6.242e11  ! ergs/cm2/s -> eV/cm2/s
 
-           power = eflux * Element_Charge * 100.0 * 100.0 * &    ! (eV/cm2/s -> J/m2/s)
-                dLatDist_FB(j, i, nAlts, iBlock) * dLonDist_FB(j, i, nAlts, iBlock)
+           power = eflux * Element_Charge*100.0*100.0 * & !(eV/cm2/s -> J/m2/s)
+                dLatDist_FB(j, i, nAlts, iBlock) * &
+                dLonDist_FB(j, i, nAlts, iBlock)
 
            if (latitude(i,iBlock) < 0.0) then
               HemisphericPowerSouth = HemisphericPowerSouth + power
@@ -92,18 +98,19 @@ subroutine aurora(iBlock)
            ! a= sqrt(27.0/(2.0*3.14159)) * eflux /(avee**2.5)
            ! The eflux/avee gives the number flux, which is what is the code
            ! needs.
-           a = (eflux/avee) * 2*sqrt(1 / (pi*(avee/2)**3))
+!           a = (eflux/avee) * 2*sqrt(1 / (pi*(avee/2)**3))
+           a = (eflux/avee)* (2**0.5) * ((3/(avee*pi))**(3.0/2.0)) * pi
 
            do n=1,ED_N_Energies
               ! I think that this is wrong
-              ! ED_flux(n) = &
-              !     a*sqrt(ed_energies(n))*exp(-1.5*ed_energies(n)/avee)/pi
+              ED_flux(n) = &
+                   a*sqrt(ed_energies(n))*exp(-1.5*ed_energies(n)/avee)/pi
 
               ! Pat Newell says that while the ratio of the total energy flux
               ! to the number flux is 3kT/2, in reality, it is 2kT, since
               ! the distribution is skewed.
-              ED_flux(n) = &
-                   a*sqrt(ed_energies(n))*exp(-2.0*ed_energies(n)/avee)
+!              ED_flux(n) = &
+!                   a*sqrt(ed_energies(n))*exp(-2.0*ed_energies(n)/avee)
 
            enddo
 
