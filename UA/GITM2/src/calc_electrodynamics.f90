@@ -68,8 +68,10 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   external :: matvec_gitm
 
- if(Debug)write(*,*)'DBG: entered UA_calc_electrodynamics: ',DipoleStrength, UseDynamo, Is1D
-
+  if (Debug) &
+       write(*,*)'DBG: entered UA_calc_electrodynamics: ',&
+       DipoleStrength, UseDynamo, Is1D
+  
   if (DipoleStrength == 0) return
 
   if (.not. UseDynamo .or. Is1D) return
@@ -299,8 +301,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         enddo
      enddo
   end if
-
-  if (.not. UseDynamo .or. Is1D) return
 
   !\
   ! Magnetic grid is defined as:
@@ -1582,3 +1582,72 @@ end subroutine matvec_gitm
 
 
 
+
+subroutine UA_calc_electrodynamics_1d
+
+  use ModGITM
+  use ModInputs
+  use ModConstants
+  use ModElectrodynamics
+  use ModLinearSolver
+
+  implicit none
+
+  integer :: iBlock, k
+
+  real :: q2
+
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: &
+       e_density, Vi, Ve, MeVen, MeVei, MiVin, VeOe, ViOi
+
+  call report("UA_calc_electrodynamics_1d",1)
+  call start_timing("calc_electrodyn_1d")
+
+  q2 = Element_Charge * Element_Charge
+
+  do iBlock = 1, nBlocks
+
+     call calc_physics(iBlock)
+     call calc_rates(iBlock)
+     call calc_collisions(iBlock)
+     call get_potential(iBlock)
+     call calc_efield(iBlock)
+
+     e_density = IDensityS(:,:,:,ie_,iBlock)  
+
+     Vi = Collisions(:,:,:,iVIN_)
+     Ve = Collisions(:,:,:,iVEN_) ! + Collisions(:,:,:,iVEI_)
+
+     MeVen = Mass_Electron * Collisions(:,:,:,iVEN_)
+     MeVei = Mass_Electron * Collisions(:,:,:,iVEI_)
+     MiVin = MeanIonMass * Collisions(:,:,:,iVIN_)
+
+     VeOe = Ve**2 + e_gyro**2
+     ViOi = Vi**2 + i_gyro**2
+
+     Sigma_0 = q2 * E_Density / (1.0/MeVen + 1.0/MiVin)
+
+     Sigma_Pedersen = ((1.0/MeVen) * (Ve*Ve/VeOe) + &
+          (1.0/MiVin) * (Vi*Vi/ViOi)) * E_Density * q2
+
+     Sigma_Hall = ((1.0/MeVen) * (Ve*e_gyro/VeOe) - &
+          (1.0/MiVin) * (Vi*i_gyro/ViOi)) * E_Density * q2
+
+     PedersenConductance(:,:,iBlock) = 0.0
+     HallConductance(:,:,iBlock)     = 0.0
+
+     do k=1,nAlts
+        PedersenConductance(:,:,iBlock) = PedersenConductance(:,:,iBlock) + &
+             Sigma_Pedersen(:,:,k)*dAlt_GB(:,:,k,iBlock)
+        HallConductance(:,:,iBlock)     = HallConductance(:,:,iBlock)     + &
+             Sigma_Hall(:,:,k)    *dAlt_GB(:,:,k,iBlock)
+     enddo
+
+     write(*,*) "Hall, Pedersen : ", &
+          HallConductance(1,1,iBlock), PedersenConductance(1,1,iBlock)
+
+  enddo
+
+  call end_timing("calc_electrodyn_1d")
+
+end subroutine UA_calc_electrodynamics_1d
