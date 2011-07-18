@@ -17,7 +17,7 @@ subroutine calc_ion_v(iBlock)
 
   real, dimension(1:nLons, 1:nLats, 1:nAlts, 3) ::           &
                   PressureGradient, Force, BLocal, &
-                  ForceCrossB
+                  ForceCrossB, ForcePerp
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2):: Pressure_G
   !---------------------------------------------------------------------------
@@ -76,6 +76,12 @@ subroutine calc_ion_v(iBlock)
 
   ForceDotB = sum(Force * BLocal, dim=4)
 
+  do iDir = 1, 3
+     ForcePerp(:,:,:,iDir) = Force(:,:,:,iDir) - &
+          Force(:,:,:,iDir) * B0(1:nLons,1:nLats,1:nAlts,iDir,iBlock) / &
+          B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)
+  enddo
+
   VIParallel = 0.0
   VNParallel = 0.0
 
@@ -115,7 +121,7 @@ subroutine calc_ion_v(iBlock)
 
   ! Let's limit the Parallel Flow to something reasonable...
 
-  MaxVParallel = 50.0
+  MaxVParallel = 100.0
 
   if (UseNeutralDrag) then
      VIParallel = min( UDotB + MaxVParallel, VIParallel)
@@ -141,7 +147,7 @@ subroutine calc_ion_v(iBlock)
      IVelocity(1:nLons,1:nLats,1:nAlts,iDir, iBlock) = &
           VIParallel*BLocal(:,:,:,iDir)/&
           B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock) + &
-          ( RhoNu * Force(:,:,:,iDir) &
+          ( RhoNu * ForcePerp(:,:,:,iDir) &
           + Nie * ForceCrossB(:,:,:,iDir) &
           ) / (RhoNu**2 + Nie**2 * B02)
   enddo
