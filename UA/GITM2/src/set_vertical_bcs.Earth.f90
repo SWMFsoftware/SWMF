@@ -35,7 +35,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   integer :: iSpecies, iAlt
   real    :: InvScaleHeightS, InvScaleHgt, Alt, Lst, Ap = 4.0, dn, dt
   logical :: IsFirstTime = .true., UseMsisBCs = .false.
-  real    :: HP
+  real    :: HP, v(2)
   integer :: ierror
 
   integer, dimension(25) :: sw
@@ -62,14 +62,18 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 
         call msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
              F107A,F107,AP,LogNS(iAlt,:), Temp(iAlt), &
-             LogRho(iAlt))
+             LogRho(iAlt),v)
+
+        vel_gd(iAlt,iEast_) = v(iEast_)
+        vel_gd(iAlt,iNorth_) = v(iNorth_)
 
      enddo
+  else
+     ! Don't Let the winds blow
+     Vel_GD(-1:0,iEast_)  = 0.0
+     Vel_GD(-1:0,iNorth_) = 0.0
   endif
 
-  ! Don't Let the winds blow
-  Vel_GD(-1:0,iEast_)  = 0.0
-  Vel_GD(-1:0,iNorth_) = 0.0
   Vel_GD(-1:0,iUp_)    = 0.0
   VertVel(-1:0,:)      = 0.0
 

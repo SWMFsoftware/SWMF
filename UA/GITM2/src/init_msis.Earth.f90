@@ -89,9 +89,12 @@ subroutine init_msis
 
   real, dimension(25) :: sw
 
-  integer :: iBlock, iAlt, iLat, iLon, iSpecies
-  real :: geo_lat, geo_lon, geo_alt, geo_lst,m,k
+  integer :: iBlock, iAlt, iLat, iLon, iSpecies, iyd
+  real :: geo_lat, geo_lon, geo_alt, geo_lst,m,k, ut
   real, dimension(7)  :: ap = 10.0
+
+  real(4) :: hwm_utime, hwm_alt, hwm_lat, hwm_lon, hwm_lst
+  real(4) :: hwm_f107a, hwm_f107, hwm_ap(2), qw(2)
 
   call report("init_msis",1)
 
@@ -163,6 +166,8 @@ subroutine init_msis
   !              22 - ALL TN3 VAR           23 - TURBO SCALE HEIGHT VAR
 
   ! Initialize data
+
+  iyd = iTimeArray(1)*1000 + iJulianDay
 
   do iBlock = 1, nBlocks
      do iAlt = -1, nAlts+2
@@ -236,6 +241,23 @@ subroutine init_msis
               NDensity(iLon,iLat,iAlt,iBlock) = &
                    sum(NDensityS(iLon,iLat,iAlt,1:nSpecies,iBlock))
 
+              hwm_utime = utime
+              hwm_alt = geo_alt
+              hwm_lat = geo_lat
+              hwm_lon = geo_lon
+              hwm_lst = geo_lst
+              hwm_f107a = f107a
+              hwm_f107 = f107
+              hwm_ap(1) = -1.0
+              hwm_ap(2) = -1.0
+              
+              call HWM07(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
+                   hwm_f107a,hwm_f107,hwm_ap,qw)
+
+              ! qw is north&east
+              Velocity(iLon,iLat,iAlt,iEast_,iBlock) = qw(2)
+              Velocity(iLon,iLat,iAlt,iNorth_,iBlock) = qw(1)
+
            enddo
         enddo
      enddo
@@ -262,22 +284,28 @@ end subroutine init_msis
 !--------------------------------------------------------------
 
 subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
-     F107A,F107,AP,LogNS, Temp, LogRho)
+     F107A,F107,AP,LogNS, Temp, LogRho, v)
 
+  use ModTime, only : iTimeArray
   use ModPlanet
 
-   use EUA_ModMsis90, ONLY: gtd6
+  use EUA_ModMsis90, ONLY: gtd6
 
   implicit none
 
   integer, intent(in) :: iJulianDay
   real, intent(in) :: uTime, Alt, Lat, Lon, LST, f107a, f107
   real, intent(in):: ap
-  real, intent(out) :: LogNS(nSpecies), Temp, LogRho
+  real, intent(out) :: LogNS(nSpecies), Temp, LogRho, v(2)
 
   real :: msis_temp(2)
   real :: msis_dens(8)
   real :: AP_I(7), ffactor, no
+  integer :: iyd
+
+  real(4) :: hwm_utime, hwm_alt, hwm_lat, hwm_lon, hwm_lst
+  real(4) :: hwm_f107a, hwm_f107, hwm_ap(2), qw(2)
+
   !----------------------------------------------------------------------------
   AP_I = AP
   CALL GTD6(iJulianDay,uTime,Alt,Lat,Lon,LST, &
@@ -296,6 +324,24 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
 
   Temp        = msis_temp(2)
   LogRho      = alog(msis_dens(6))
+
+  iyd = iTimeArray(1)*1000 + iJulianDay
+  hwm_utime = utime
+  hwm_alt = alt
+  hwm_lat = lat
+  hwm_lon = lon
+  hwm_lst = lst
+  hwm_f107a = f107a
+  hwm_f107 = f107
+  hwm_ap(1) = -1.0
+  hwm_ap(2) = -1.0
+
+  call HWM07(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
+       hwm_f107a,hwm_f107,hwm_ap,qw)
+
+  ! qw is north&east
+  V(1) = qw(2)
+  V(2) = qw(1)
 
 end subroutine msis_bcs
 

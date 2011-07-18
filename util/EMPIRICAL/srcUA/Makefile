@@ -8,6 +8,7 @@ MY_LIB = ${LIBDIR}/libEMPIRICALUA.a
 
 OBJECTS =\
 	ModIri90.o\
+	ModHwm.o\
         ModMsis90.o
 
 LIB:
