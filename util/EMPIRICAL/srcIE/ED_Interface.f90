@@ -125,7 +125,7 @@ subroutine ED_Get_Energies(energies)
   ! Now we want to figure out what energies we are going to use:
 
   ED_Max_Energy = 5.0e5
-  ED_Min_Energy = 1.0
+  ED_Min_Energy = 10.0
 
   de = (alog10(ED_Max_Energy) - alog10(ED_Min_Energy))/(spectra_levels-1)
 
