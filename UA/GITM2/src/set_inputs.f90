@@ -351,6 +351,17 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
+        case ("#IE")
+           call read_in_string(PotentialModel, iError)
+           call read_in_string(AuroralModel, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #IE:'
+              write(*,*) '#IE'
+              write(*,*) 'PotentialModel  (string)'
+              write(*,*) 'AuroralModel    (string)'
+              IsDone = .true.
+           endif
+
         case ("#LIMITER")
            call read_in_string(TypeLimiter, iError)
            if (iError /= 0) then
