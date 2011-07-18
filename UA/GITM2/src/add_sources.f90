@@ -14,13 +14,14 @@ subroutine add_sources
 
   call report("add_sources",2)
 
-  if (UseDynamo .and. .not. Is1D) then
-     if (floor((tSimulation-dt)/DtPotential) /= &
-          floor((tsimulation)/DtPotential) .or. IsFirstTime) then
-        ! The iLon and iLat are dummy variables...
-        call UA_calc_electrodynamics(iLon,iLat)
-        IsFirstTime = .false.
+  if (floor((tSimulation-dt)/DtPotential) /= &
+       floor((tsimulation)/DtPotential) .or. IsFirstTime) then
+     if (UseDynamo .and. .not. Is1D) then
+        call UA_calc_electrodynamics
+     else
+        call UA_calc_electrodynamics_1d
      endif
+     IsFirstTime = .false.
   endif
 
   do iBlock = 1, nBlocks
@@ -47,9 +48,7 @@ subroutine add_sources
            + AuroralHeating + JouleHeating) + &
           Conduction + ChemicalHeatingRate
 
-
-
-      !-------------------------------------------
+     !-------------------------------------------
      ! This is an example of a user output:
  
      UserData3D(:,:,:,1,iBlock) = 0.0
