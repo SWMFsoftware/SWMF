@@ -29,7 +29,7 @@ subroutine init_get_potential
   if (index(cAMIEFileNorth,"none") > 0) then
 
      Lines(1) = "#BACKGROUND"
-     Lines(2) = "UA/DataIn/"
+     Lines(2) = "EIE/"
 
      UseHPI = .true.
      call get_IMF_Bz(CurrentTime, bz, iError)
@@ -39,11 +39,11 @@ subroutine init_get_potential
         write(*,*) "Setting potential to Millstone HPI."
         Lines(3) = "millstone_hpi"    ! Change to "zero" if you want
      else
-        write(*,*) "Setting potential to Weimer [1996]."
-        Lines(3) = "weimer96"    ! Change to "zero" if you want
+        write(*,*) "Setting potential to ",PotentialModel
+        Lines(3) = PotentialModel    ! Change to "zero" if you want
         UseIMF = .true.
      endif
-     Lines(4) = "ihp"
+     Lines(4) = AuroralModel
      Lines(5) = "idontknow"
      Lines(6) = ""
 
@@ -112,7 +112,7 @@ subroutine set_indices
 
   implicit none
 
-  real :: temp, by, bz, vx
+  real :: temp, by, bz, vx, den
   integer :: iError
   iError = 0
 
@@ -150,6 +150,10 @@ subroutine set_indices
      endif
 
      if (iDebugLevel > 1) write(*,*) "==> Solar Wind Velocity : ",vx
+
+     call get_SW_N(CurrentTime, den, iError)
+     if (iError /= 0) den = 5.0
+     call IO_SetSWN(den)
 
 !!!     call get_kp(CurrentTime, temp, iError)
 !!!     call IO_Setkp(temp)
@@ -203,7 +207,7 @@ subroutine get_potential(iBlock)
 
   integer, intent(in) :: iBlock
 
-  integer :: iError, iLat, iLon, iAlt, iC
+  integer :: iError, iLat, iLon, iAlt
   logical :: IsFirstTime = .true.
   logical :: IsFirstPotential(nBlocksMax) = .true.
   logical :: IsFirstAurora(nBlocksMax) = .true.
@@ -477,10 +481,10 @@ subroutine get_dynamo_potential(lons, lats, pot)
         endif
 
         if (.not.IsFound) then 
-!           if (iDebugLevel > 4) &
            if (abs(LatIn) < MagLatMC(nMagLons, nMagLats)) &
                 write(*,*) "=====> Could not find point : ", &
-                LatIn, LonIn, DynamoHighLatBoundary, MagLatMC(nMagLons, nMagLats)
+                LatIn, LonIn, DynamoHighLatBoundary, &
+                MagLatMC(nMagLons, nMagLats)
            pot(iLon,iLat) = 0.0
         endif
 
