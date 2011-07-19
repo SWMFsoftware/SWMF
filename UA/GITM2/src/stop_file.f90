@@ -20,6 +20,8 @@ subroutine check_stop
 
   call report("check_stop",2)
 
+  call start_timing("check_stop")
+
   EndTimeLocal = EndTime
 
   inquire(file="GITM.STOP",EXIST=IsThere)
@@ -39,6 +41,8 @@ subroutine check_stop
        1, MPI_DOUBLE_PRECISION, MPI_MIN, iCommGITM, iError)
 
   call check_start
+
+  call end_timing("check_stop")
 
 end subroutine check_stop
 
