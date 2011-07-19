@@ -77,17 +77,30 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
 
            ! dk(iAlt) = 0.0
 
-           tempold(iAlt) = Quantity(iLon, iLat, iAlt)
-           one_2kb(iAlt) = &
-                1.0 + beta(iAlt)*(&
-                (1+f)*Diff(iLon,iLat,iAlt) + &
-                (1-f*f)/(f*(1+f))*dk(iAlt))
+             tempold(iAlt) = Quantity(iLon, iLat, iAlt)
+           ! the following three coefficients are rewritten by Ercha
+           ! one_2kb(iAlt) = &
+           !     1.0 + beta(iAlt)*(&
+           !     (1+f)*Diff(iLon,iLat,iAlt) + &
+           !     (1-f*f)/(f*(1+f))*dk(iAlt))
 
-           a(iAlt) = -beta(iAlt) * &
-                (f*Diff(iLon,iLat,iAlt) - dk(iAlt)/(f+1))
+           ! a(iAlt) = -beta(iAlt) * &
+           !     (f*Diff(iLon,iLat,iAlt) - dk(iAlt)/(f+1))
 
-           c(iAlt) = -beta(iAlt) * &
-                (Diff(iLon,iLat,iAlt) + dk(iAlt)/(f*(f+1)))
+           ! c(iAlt) = -beta(iAlt) * &
+           !     (Diff(iLon,iLat,iAlt) + dk(iAlt)/(f*(f+1)))
+             one_2kb(iAlt) = &
+                 1.0 + beta(iAlt)*(&
+                 (2*Diff(iLon,iLat,iAlt)/f) + &
+                 (4*(1-f*f)/(f*f*(1+f)*(1+f))*dk(iAlt)))
+
+             a(iAlt) = -beta(iAlt) * &
+                 (2*Diff(iLon,iLat,iAlt)/(1+f) - &
+                  4*dk(iAlt)/((f+1)*(f+1)))
+             
+             c(iAlt) = -beta(iAlt) * &
+                 (2*Diff(iLon,iLat,iAlt)/(f*(1+f)) + &
+                  4*dk(iAlt)/(f*f*(1+f)*(1+f)))     
 
            b(iAlt) = one_2kb(iAlt)
 
