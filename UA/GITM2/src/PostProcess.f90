@@ -190,9 +190,10 @@ program PostProcess
                     cBlock = ".sat"
                  endif
 
-                 write(*,*) "Reading File : ",FileName(1:iStart)//cBlock
+                 !write(*,*) "Reading File : ",FileName(1:iStart)//cBlock
 
-                 if (IsFirstTime .or. .not.IsEnd) then
+                 if (IsFirstTime .or. .not.IsEnd .or. iBlock > 1) then
+                    !write(*,*) "Opening File!!!!"
                     open(iInputUnitD_, file=FileName(1:iStart)//cBlock, &
                          status="old", form="unformatted")
                     IsFirstTime = .false.
@@ -256,7 +257,7 @@ program PostProcess
                     enddo
                  enddo
 
-                 if (.not. IsEnd) close(iInputUnitD_)
+                 if (.not. IsEnd .or. nBlocksLat > 1) close(iInputUnitD_)
 
                  iBlock = iBlock + 1
 
