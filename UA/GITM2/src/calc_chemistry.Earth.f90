@@ -61,8 +61,8 @@ subroutine calc_chemistry(iBlock)
   UseIonConstituent     = .true.
 
 !  UseNeutralConstituent(iO_1D_) = .false.
-!  UseIonConstituent(iO_2PP_) = .false.
-!  UseIonConstituent(iO_2DP_) = .false.
+  UseIonConstituent(iO_2PP_) = .false.
+  UseIonConstituent(iO_2DP_) = .false.
 !  
 !  UseNeutralConstituent(iN_4S_) = .false.
 !  UseNeutralConstituent(iN_2D_) = .false.
