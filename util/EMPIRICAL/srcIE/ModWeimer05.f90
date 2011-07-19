@@ -71,23 +71,23 @@ subroutine read_potential(infile)
     read(lu,"(6e20.9)") schfits(:,i)
   enddo
 
-  write(6,"(/,'read_potential: Opened file ',a)") infile
-  write(6,"('ab=',28i3)") ab
-  write(6,"('csize=',i4,' d1=',i4,' d2=',i4)") csize,d1_pot,d2_pot
-  write(6,"('alschfits min,max=',2e12.4)") minval(alschfits),maxval(alschfits)
+!  write(6,"(/,'read_potential: Opened file ',a)") infile
+!  write(6,"('ab=',28i3)") ab
+!  write(6,"('csize=',i4,' d1=',i4,' d2=',i4)") csize,d1_pot,d2_pot
+!  write(6,"('alschfits min,max=',2e12.4)") minval(alschfits),maxval(alschfits)
 ! do i=1,csize
 !   write(6,"('i=',i3,' alschfits(:,i)=',/,(6e20.9))") i,alschfits(:,i)
 ! enddo
 ! write(6,"('ex_pot=',2f10.3)") ex_pot
-  write(6,"('ls=',28i3)") ls
-  write(6,"('maxl_pot,maxm_pot=',2i4)") maxl_pot,maxm_pot
-  write(6,"('ms=',28i3)") ms
-  write(6,"('schfits min,max=',2e12.4)") minval(schfits),maxval(schfits)
+!  write(6,"('ls=',28i3)") ls
+!  write(6,"('maxl_pot,maxm_pot=',2i4)") maxl_pot,maxm_pot
+!  write(6,"('ms=',28i3)") ms
+!  write(6,"('schfits min,max=',2e12.4)") minval(schfits),maxval(schfits)
 ! do i=1,csize 
 !   write(6,"('i=',i3,' schfits(:,i)=',/,(6e20.9))") i,schfits(:,i)
 ! enddo
   close(lu)
-  write(6,"('read_potential: Closed file ',a)") infile
+!  write(6,"('read_potential: Closed file ',a)") infile
 end subroutine read_potential
 !-----------------------------------------------------------------------
 subroutine read_schatable(infile)
