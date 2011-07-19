@@ -17,7 +17,7 @@ subroutine add_sources
   if (floor((tSimulation-dt)/DtPotential) /= &
        floor((tsimulation)/DtPotential) .or. IsFirstTime) then
      if (UseDynamo .and. .not. Is1D) then
-        call UA_calc_electrodynamics
+        call UA_calc_electrodynamics(iLon, iLat)
      else
         call UA_calc_electrodynamics_1d
      endif
