@@ -170,7 +170,7 @@ module ModInputs
   Real :: BetaPointImpl         = 1.0
 
   logical :: UseDynamo              = .false.
-  real    :: DynamoHighLatBoundary  = 90.0
+  real    :: DynamoHighLatBoundary  = 65.0
   integer :: nItersMax              = 500
   real    :: MaxResidual            = 1.0
 
