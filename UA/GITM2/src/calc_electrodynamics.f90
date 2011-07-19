@@ -1643,9 +1643,6 @@ subroutine UA_calc_electrodynamics_1d
              Sigma_Hall(:,:,k)    *dAlt_GB(:,:,k,iBlock)
      enddo
 
-     write(*,*) "Hall, Pedersen : ", &
-          HallConductance(1,1,iBlock), PedersenConductance(1,1,iBlock)
-
   enddo
 
   call end_timing("calc_electrodyn_1d")
