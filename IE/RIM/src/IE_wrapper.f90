@@ -759,19 +759,107 @@ end subroutine IE_put_from_im_complete
 
 !==============================================================================
 
-subroutine IE_get_for_ps(Buffer_IIV, iSize, jSize, nVar)
+subroutine IE_get_for_ps(Buffer_IIV,iSize,jSize,tSimulation,FieldModel)
+
+use ModRIM, ONLY: PotentialAll
+use ModSizeRim, ONLY: nLats, nLonsall
+use ModParamRIM, ONLY: NameEFieldModel
 
   implicit none
   character (len=*),parameter :: NameSub='IE_get_for_ps'
 
-  integer, intent(in)           :: iSize, jSize, nVar
-  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+  character(len=100) :: FieldModel
 
-  !NOTE: The Buffer variables must be collected to i_proc0(IE_) before return.
+  integer, intent(out)          :: iSize, jSize
+  real, intent(out)             :: Buffer_IIV(nLats+2,nLonsAll+1)
+  real, intent(in)              :: tSimulation
+  real                          :: tSimulationTmp
 
-  write(*,*) NameSub,' -- called but not yet implemented.'
+  iSize = nLats
+  jSize = nLonsall
 
-end subroutine IE_get_for_ps
+  ! Make sure that the most recent result is provided
+  tSimulationTmp = tSimulation
+  call IE_run(tSimulationTmp,tSimulation)
+
+  Buffer_IIV(:,:) = PotentialAll(:,:)
+
+  FieldModel = NameEFieldModel
+
+end subroutine IE_get_for_PS
+
+!==============================================================================
+subroutine IE_put_from_PS(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
+
+  use CON_router,   ONLY: IndexPtrType, WeightPtrType
+  use ModRIM
+
+  implicit none
+  character(len=*), parameter   :: NameSub='IE_put_from_PS'
+  integer,intent(in)            :: nPoint, iPointStart, nVar
+  real, intent(in)              :: Buff_V(nVar)
+  type(IndexPtrType),intent(in) :: Index
+  type(WeightPtrType),intent(in):: Weight
+  logical,intent(in)            :: DoAdd
+  integer :: iBlock,iLat,iLon, iLM
+  !---------------------------------------------------------------------------
+  if(nPoint>1)then
+     write(*,*)NameSub,': nPoint,iPointStart,Weight=',&
+          nPoint,iPointStart,Weight % Weight_I
+     call CON_stop(NameSub//': should be called with 1 point')
+  end if
+  if(DoAdd)then
+     write(*,*)NameSub,': nPoint,iPointStart,Weight=',&
+          nPoint,iPointStart,Weight % Weight_I
+     write(*,*)NameSub,': WARNING DoAdd is true'
+  end if
+
+  iLat = Index % iCB_II(1,iPointStart)
+  iLon = Index % iCB_II(2,iPointStart)
+
+!  if(iLat<1.or.iLat>nLats+2.or.iLon<0.or.iLon>nLonsAll+1)then
+!     write(*,*)'iLat,iLon,DoAdd=',iLat,nLats,iLon,nLonsAll+1,DoAdd
+!     call CON_stop('IE_put_from_im: index out of range')
+!  end if
+
+  if ( iLat >= 1 .and. iLat <= nLats+2 .and. &
+       iLon >= 0 .and. iLon <=nLonsAll+1) then
+     iLM = nLats+2 - iLat + 1
+     if(DoAdd)then
+        InnerMagJrAll(iLat,iLon)    = InnerMagJrAll(iLat,iLon)    + Buff_V(1)
+        InnerMagEFluxAll(iLat,iLon) = InnerMagEFluxAll(iLat,iLon) + Buff_V(2)
+        InnerMagAveEAll(iLat,iLon)  = InnerMagAveEAll(iLat,iLon)  + Buff_V(3)
+!        if (iLat < nLats/2) then
+!           InnerMagJrAll(iLM,iLon)    = InnerMagJrAll(iLM,iLon)    + Buff_V(1)
+!           InnerMagEFluxAll(iLM,iLon) = InnerMagEFluxAll(iLM,iLon) + Buff_V(2)
+!           InnerMagAveEAll(iLM,iLon)  = InnerMagAveEAll(iLM,iLon)  + Buff_V(3)
+!        endif
+     else
+        InnerMagJrAll(iLat,iLon)    = Buff_V(1)
+        InnerMagEFluxAll(iLat,iLon) = Buff_V(2)
+        InnerMagAveEAll(iLat,iLon)  = Buff_V(3)
+!        if (iLat < nLats/2) then
+!           InnerMagJrAll(iLM,iLon)    = Buff_V(1)
+!           InnerMagEFluxAll(iLM,iLon) = Buff_V(2)
+!           InnerMagAveEAll(iLM,iLon)  = Buff_V(3)
+!        endif
+     end if
+  endif
+
+  IsNewInput = .true.
+
+end subroutine IE_put_from_PS
+
+!==============================================================================
+
+subroutine IE_put_from_ps_complete
+
+  write(*,*)"Don't know what IE_put_from_im_complete is really supposed to do."
+  write(*,*)"I think that it is"
+  write(*,*)"Supposed to be applying periodic boundaries...?"
+
+end subroutine IE_put_from_ps_complete
+
 !==============================================================================
 
 subroutine initialize_ie_ua_buffers(iOutputError)
