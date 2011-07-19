@@ -41,6 +41,7 @@ module ModParamRIM
   real    :: MaxRho          = 3.0e-20
 
   character (len=7) :: TypeImCouple = 'north'
+  character (len=7) :: TypePSCouple = 'north'
 
   !\
   ! Krylov solver (GMRES) parameters
