@@ -35,11 +35,11 @@ subroutine init_get_potential
      call get_IMF_Bz(CurrentTime, bz, iError)
      call IO_SetIMFBz(bz)
      if (iError /= 0) then
-        write(*,*) "Can not find IMF Bz."
-        write(*,*) "Setting potential to Millstone HPI."
+!        write(*,*) "Can not find IMF Bz."
+!        write(*,*) "Setting potential to Millstone HPI."
         Lines(3) = "millstone_hpi"    ! Change to "zero" if you want
      else
-        write(*,*) "Setting potential to ",PotentialModel
+!        write(*,*) "Setting potential to ",PotentialModel
         Lines(3) = PotentialModel    ! Change to "zero" if you want
         UseIMF = .true.
      endif
