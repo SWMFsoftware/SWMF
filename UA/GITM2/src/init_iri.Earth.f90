@@ -137,7 +137,7 @@ subroutine init_iri
               !             utime/3600.+25.,geo_alt,nzkm
 
               ! zero out densities that are not set below
-              IRIDensity(iLon,iLat,iAlt,:,iBlock) = 0.0
+              IRIDensity(iLon,iLat,iAlt,:,iBlock) = 1.0
 
               call iri90 (jf,jmag,geo_lat,geo_lon,-f107,-iJulianDay, &
                    utime/3600.+25.,geo_alt,nzkm,'UA/DataIn/ccir.cofcnts', &
