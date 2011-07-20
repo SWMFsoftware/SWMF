@@ -623,7 +623,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
   use ModWaves, ONLY: UseWavePressure
   use ModLaserHeating, ONLY: LaserHeating_CB
-  use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit
+  use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit, calc_error_amr_criteria
   implicit none
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
@@ -1272,6 +1272,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
         ! GRID INFORMATION
      case('crit1')
+        call calc_error_amr_criteria(nVar, State_VGB)
         if(allocated(AmrCrit_IB) .and. nAmrCrit >= 1) &
              PlotVar(:,:,:,iVar) = AmrCrit_IB(1,iBlk)
      case('crit2')

@@ -18,12 +18,12 @@ module BATL_amr_criteria
   public clean_amr_criteria
   public read_amr_criteria
   public test_amr_criteria
-
+  public calc_error_amr_criteria
 
   ! Choosing with blocks we want to refine is based a list of criteria 
   ! and a set of upper (refine)  and lower (coarsen) limits. The criteria 
   ! can be can be external or be calculated internally by estimating the 
-  ! numerical errors (calc_error_criteria) based on the state variables.
+  ! numerical errors (calc_error_amr_criteria) based on the state variables.
   ! 
   integer, public            :: nAmrCrit = 0
   integer                    :: nAmrCritUsed = 0
@@ -75,7 +75,7 @@ module BATL_amr_criteria
 
   integer, allocatable:: iVarCrit_I(:) ! Index to variables
 
-  ! Parameters used by calc_error_criteria to estimate the errors
+  ! Parameters used by calc_error_amr_criteria to estimate the errors
   real :: cAmrWavefilter = 1.0e-2
   real, parameter :: cEpsilon = 1.0d-16 ! avoid zero in denominator
 
@@ -123,10 +123,6 @@ contains
     !-----------------------------------------------------------------------
     if(DoGeometryAmr) &
          call CON_stop("set_amr_criteria :: DoGeometryAmr not implemented")
-
-    if(.not.DoStrictAmr) &
-          DoSortAmrCrit = .true.
-    
 
     !-------------- Setting number of criteria we are working with ----------
     nExtCritUsed = 0
@@ -181,7 +177,7 @@ contains
 
     ! Estimation of the numerical error
     if(nIntCrit > 0) &
-         call calc_error_criteria(nVar, State_VGB, Used_GB=Used_GB)
+         call calc_error_amr_criteria(nVar, State_VGB, Used_GB=Used_GB)
 
     if(DoSortAmrCrit .or. .not.DoStrictAmr) then
        ! we make a amr priority list
@@ -575,7 +571,7 @@ contains
   ! together with there refinements criteria. This will be then used
   ! in addition to the error estimate described earlier.
 
-  subroutine calc_error_criteria(nVar, State_VGB,Used_GB )
+  subroutine calc_error_amr_criteria(nVar, State_VGB,Used_GB )
 
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
 	 nI, nJ, nK, MaxDim, nDim, MaxBlock, nBlock
@@ -601,10 +597,10 @@ contains
     Numerator   = 0.0
     Denominator = 0.0
 
-    !if(iproc == 0) write(*,*) "calc_error_criteria"
+    !if(iproc == 0) write(*,*) "calc_error_amr_criteria"
 
     if(nIntCrit > nVar) &
-         call CON_stop("calc_error_criteria :: More criteria then variables")
+         call CON_stop("calc_error_amr_criteria :: More criteria then variables")
 
 
     nAmrCrit = nIntCrit + nExtCrit
@@ -783,7 +779,7 @@ contains
        CoarsenCritAll_I(iCrit) = CoarsenCrit_I(iCrit)
     end do
 
-  end subroutine calc_error_criteria
+  end subroutine calc_error_amr_criteria
 
   !============================================================================
 
@@ -851,6 +847,7 @@ contains
     !cAmrWavefilter = 1.0e-2
     !nBlockOld      = 0
 
+    DoSortAmrCrit = .not. DoStrictAmr
     select case(NameCommand)
     case("#AMRERRORCRIT") 
        call read_var('AmrWavefilter',cAmrWavefilter)  
@@ -901,6 +898,7 @@ contains
     case default
        call CON_stop(NameSub//'incorect PARAM.in!')
     end select
+    DoStrictAmr = .not. DoSortAmrCrit 
   end subroutine read_amr_criteria
 
   !============================================================================
