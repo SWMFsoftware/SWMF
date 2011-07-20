@@ -8,7 +8,7 @@ subroutine check_stop
 
   use ModGITM
   use ModTime
-  use ModInputs, only: CPUTimeMax, iOutputUnit_
+  use ModInputs, only: CPUTimeMax, iOutputUnit_, DoCheckStopFile
   use ModMpi
   implicit none
 
@@ -17,6 +17,8 @@ subroutine check_stop
   real*8  :: EndTimeLocal
   logical :: IsThere
   integer :: iError
+
+  if (.not.DoCheckStopFile) return
 
   call report("check_stop",2)
 

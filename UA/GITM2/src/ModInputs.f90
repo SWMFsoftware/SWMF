@@ -203,6 +203,8 @@ module ModInputs
   logical :: UseNeutralChemistry = .true.
   logical :: UseIonAdvection     = .true.
 
+  logical :: DoCheckStopFile = .true.
+
   !\
   ! Methods for completing chemistry
   !/

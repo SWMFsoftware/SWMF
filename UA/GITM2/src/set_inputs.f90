@@ -859,6 +859,15 @@ subroutine set_inputs
               write(*,*) 'cEUVFile              (string)'
            endif
 
+        case ("#STOP_FILE")
+           call read_in_logical(DoCheckStopFile, iError)
+
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #STOP_FILE'
+              write(*,*) '#STOP_FILE'
+              write(*,*) 'DoCheckStopFile       (logical)'
+           endif
+
         case ("#GLOW")
            call read_in_logical(UseGlow, iError) 
            call read_in_real(dTGlow, iError)
