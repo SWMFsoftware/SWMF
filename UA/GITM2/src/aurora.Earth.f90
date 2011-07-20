@@ -104,7 +104,7 @@ subroutine aurora(iBlock)
            do n=1,ED_N_Energies
               ! I think that this is wrong
               ED_flux(n) = &
-                   a*sqrt(ed_energies(n))*exp(-1.5*ed_energies(n)/avee)/pi
+                   a*sqrt(ed_energies(n))*exp(-1.5*ed_energies(n)/avee)
 
               ! Pat Newell says that while the ratio of the total energy flux
               ! to the number flux is 3kT/2, in reality, it is 2kT, since
