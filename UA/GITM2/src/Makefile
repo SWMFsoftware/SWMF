@@ -30,6 +30,7 @@ MODULES = \
 	ModMagTrace.o\
 	ModChemistry.o\
 	ModGITMImplicit.o\
+	ModHwm.o\
 	ModUser.o
 
 OBJECTS = \
