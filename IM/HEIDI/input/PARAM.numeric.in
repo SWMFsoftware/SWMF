@@ -104,7 +104,7 @@ F 			UseWaves
 numeric     		TypeBCalc
 stretched_dipole2        TypeBField
 1.0 			StretchingFactorA
-1.0 			StretchingFactorB
+0.0 			StretchingFactorB
 
 #HGEOCORONALMODEL
 Rairden			 TypeHModel
