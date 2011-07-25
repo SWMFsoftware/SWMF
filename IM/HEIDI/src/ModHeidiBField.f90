@@ -525,20 +525,16 @@ contains
     !----------------------------------------------------------------------------------
     y = cos(Phi)
     z = sin(Phi)
-
+    
     asym_stretched_dipole_length = 0.0
     dLat   = (LatMax-LatMin)/(nPoint-1)
     Lat = LatMin
 
-    x(1) = sin(LatMin)
-
     do i = 1, nPoint
-       if ( i > 1 ) then 
-          x(i) = sin(Lat)
-          w(i) = cos(Lat)
-          Lat = Lat + dLat
-       end if
-
+       if ( i == 1 ) Lat = LatMin
+       x(i) = sin(Lat)
+       w(i) = cos(Lat)
+       
        t2 = w(i) ** 2
        t5 = (a + b * y) ** 2
        t6 = y ** 2
@@ -553,9 +549,12 @@ contains
        t33 = sqrt(t27 + t28 * t29 * t12)
 
        dSdLambda(i) = t33
+
+       Lat = Lat + dLat
     end do
 
-    do i = 1, nPoint
+    asym_stretched_dipole_length = asym_stretched_dipole_length + dSdLambda(1)
+    do i = 2, nPoint
        asym_stretched_dipole_length = asym_stretched_dipole_length + 0.5*(dSdLambda(i) + dSdLambda(i-1))*dLat
     end do
 
