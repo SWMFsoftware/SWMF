@@ -75,6 +75,7 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
   !\
   ! Start the loop over RC species
   !/
+    
   do S=1,NS
      ! Zero out F2
      do L=1,LO
@@ -94,14 +95,15 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
         if (ISTORM.eq.1) NameStormType='major'
         if (ISTORM.eq.2) NameStormType='moder'
         if (ISTORM.eq.3) NameStormType='tests'
-
+        
         if (S.eq.1) NameSpecies='_e' 
 	if (S.eq.2) NameSpecies='_h' 
-	if (S.eq.3) NameSpecies='_he' 
-	if (S.eq.4) NameSpecies='_o' 
+        if (S.eq.3) NameSpecies='_he' 
+        if (S.eq.4) NameSpecies='_o' 
         !\
         ! Loss cone distribution (INI=1)
         !/
+        
         if (INI(S).eq.1) then
            IBC=1
            if (Ab.gt.0.) then	! Maxwellian distribution
@@ -115,7 +117,6 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
                  end do	        ! L loop
               end do	        ! I loop
            else			! Read in from input file: 'cone.bcf'
-
               open(UNITTMP_,FILE=NameInputDirectory//'cone.bcf',STATUS='OLD')
               read (UNITTMP_,101) HEADER
               do K=2,KO
@@ -130,7 +131,6 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
                     !110	       CHI(I,J)=CHI(I,J)*CHI0
                  end do	! I loop
               end do	! J loop 
-
               do I=2,IO
                  do L=UPA(I),LO
                     do K=2,KO
@@ -146,11 +146,14 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
            ! Gaussian in R and PHI about some location (INI=2)
            ! Distribution from input files (INI=3)
            !/
+
         else if ((INI(S).eq.2).or.(INI(S).eq.3)) then
            ! Read in FI and NI from files
            NamePrefix='.in '
            open(UNITTMP_,file=NameStormType//trim(NameSpecies)//NamePrefix,STATUS='OLD')
            read(UNITTMP_,*) YEAR,DAY,R,AP,KP,ETOTAL,EFRACTN  !Replaces input.glo
+          
+
            read(UNITTMP_,101) HEADER
            read(UNITTMP_,101) HEADER
            do  Kin=1,11
@@ -165,6 +168,8 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
               read(UNITTMP_,*) (NI(II,KK),II=1,3)
            end do
            close(UNITTMP_)
+
+
            !\
            ! Determine parameters for specific initial condition
            !/
@@ -223,6 +228,7 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
            !\
            ! Gaussian in R for INI=2
            !/
+
            if (INI(S).eq.2) then
               do l=2,UPA(i)
                  do k=kg1,kg2
@@ -324,6 +330,8 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
            !\
            ! Read in F from a file: 'restart.bcf' (INI=5)
            !/
+
+        
         else if (INI(S).eq.5) then
            iUnit = io_unit_new()
            open(unit=iUnit,FILE='restart.bcf',STATUS='OLD')
@@ -439,6 +447,9 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
            !\
            ! Read in from a restart file (INI=7) 
            !/
+      
+
+ 
         else if (INI(S).eq.7) then
            NameFile       = trim(NameRestartInDir)//'restart'//trim(NameSpecies)//'.out'
            StringHeader   = &
@@ -481,6 +492,7 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
               end do
            end do
         end if
+
         !\
         ! Done with initial particle distribution set up
         !/
@@ -676,6 +688,7 @@ subroutine GEOSB
            FS2(1:7)=0.
            iUnitSopa = io_unit_new()
            open(UNIT=iUnitSopa,FILE=NameInputDirectory//trim(NameRun)//'_sopa.in',status='old')
+          write(*,*) 'SOPA',  iUnitSopa
            do I=1,3
               read(iUnitSopa,*) HEADER
            end do
@@ -690,6 +703,8 @@ subroutine GEOSB
         TEF2=0.
         iUnitMpa = io_unit_new()
         open(UNIT=iUnitMpa,FILE=NameInputDirectory//trim(NameRun)//'_mpa.in',status='old')
+        
+
         do I=1,3			! 3 lines of header material
            read(iUnitMpa,*) HEADER
         end do

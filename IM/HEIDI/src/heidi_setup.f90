@@ -19,7 +19,11 @@
 !======================================================================
 subroutine heidi_read
 
-  use ModHeidiIO
+  use ModHeidiSize,  ONLY: scalc, dt, dtmax, nS
+  use ModHeidiIO,    ONLY: iUnitStdout, year, month, day, ut, tmax, tint, time, &
+       ini, ibc, NameRun, TimeArray, iswb, isw, nStep, iB, ikp, ia,             &
+       NameInputDirectory, iLambe, lamgam, tlame, ippc, tppc, ppc, lambe,       &
+       write_prefix
   use ModHeidiMain,  ONLY: ithermfirst, Re, DipoleFactor
   use ModIoUnit,     ONLY: UNITTMP_
   use ModHeidiInput, ONLY: set_parameters,tSimulationMax
@@ -39,8 +43,6 @@ subroutine heidi_read
   call get_planet(RadiusPlanetOut = Re, DipoleStrengthOut = DipoleFactor)
   DipoleFactor = DipoleFactor*Re**3
 
-
-
   !Initialize scalc
   scalc = 0
 
@@ -52,7 +54,6 @@ subroutine heidi_read
 
   Dt = DTmax
   
-
   if (iProc==0) then
      call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT
      call write_prefix; write(iUnitStdOut,*)  'DT,TMAX,TINT,TIME',DT,TMAX,TINT,TIME
@@ -63,7 +64,7 @@ subroutine heidi_read
      call write_prefix; write(iUnitStdOut,*)  '(IBC(k),k=1,NS)',(IBC(k),k=1,NS)
      call write_prefix; write(iUnitStdOut,*)  'NAME=', NameRun
   endif
-
+  
   TimeArray(1) = year
   TimeArray(2) = month
   TimeArray(3) = day
@@ -86,6 +87,7 @@ subroutine heidi_read
   ! Read in MBI file
   !/
 
+  write(*,*) 'Read the _Le file'
   if (IKP.eq.4 .or. IA.eq.2) then  
      open(UNITTMP_,FILE=NameInputDirectory//trim(NameRun)//'_Le.dat',status='old')
      do I = 1, 3
@@ -107,6 +109,8 @@ subroutine heidi_read
   !\
   ! Read in PC Potential File
   !/
+  write(*,*) 'Read the _ppc file'
+
 
   if (IA.eq.4 .or. IA.eq.7 .or. IA.ge.10) then 
      open(UNITTMP_,FILE=NameInputDirectory//trim(NameRun)//'_ppc.dat',status='old')
@@ -131,11 +135,12 @@ end subroutine heidi_read
 !======================================================================
 subroutine CONSTANT(NKP)
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModIoUnit, ONLY : UNITTMP_
-  use ModProcIM, ONLY : iProc
+  use ModHeidiSize, ONLY: dt
+  use ModHeidiIO,   ONLY: iKp, NameInputDirectory, NameRun, nStep
+  use ModHeidiMain, ONLY: dayr, rkph, f107r, apr, rsunr, dkp, me, &
+       DipoleFactor, mP, q, pi, FluxFact
+  use ModIoUnit,    ONLY: UNITTMP_
+  use ModProcIM,    ONLY: iProc
 
   implicit none
 
@@ -146,6 +151,8 @@ subroutine CONSTANT(NKP)
   !\
   ! Read Kp history of the modeled storm
   !/
+
+  write(*,*) 'Read the _Kp file'
   if (IKP.ge.3) then
      open(UNITTMP_,FILE=NameInputDirectory//trim(NameRun)//'_kp.in',STATUS='OLD') 
      read(UNITTMP_,10) HEADER
@@ -155,6 +162,7 @@ subroutine CONSTANT(NKP)
      enddo
      close(UNITTMP_)
   end if
+
 
   KPT=-1./3./3600. ! model rate of decay of Kp in s-1
   DKP=KPT*DT*2.	   ! discrete step size of Kp
@@ -509,10 +517,12 @@ subroutine ARRAYS
      write(*,*) 'heidi_setup: ARRAYS---> get_IntegralI'
      call get_IntegralI(funi)
      
+     !write(*,*) 'funi   = ', funt(42,:, 7)
+
   end if
   
   
-!!$  if (TypeBCalc == 'numeric') then
+  if (TypeBCalc == 'numeric') then
 !!$       
 !!$ !   write(*,*) 'heidi_setup: ARRAYS---> get_B_field'
 !!$ !   call get_B_field(bFieldMagnitude_III)
@@ -536,55 +546,54 @@ subroutine ARRAYS
 !!$          VarIn_VII = bFieldMagnitude_III(nPointEq:nPointEq,:,:))
 !!$     TypePosition = 'rewind' 
 !!$     
-!!$
-!!$     NameFile = 'funi.out'
-!!$     StringHeader = 'Magnetic field in the equatorial plane'
-!!$     StringVarName = 'R MLT funi '
-!!$     TypePosition = 'rewind'
-!!$     
-!!$     
-!!$     do l = 1, lo
-!!$        call save_plot_file(NameFile, & 
-!!$             TypePositionIn = TypePosition,&
-!!$             TypeFileIn     = TypeFile,&
-!!$             StringHeaderIn = StringHeader, &
-!!$             nStepIn = 0, &
-!!$             TimeIn = 0.0, &
-!!$             ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
-!!$             NameVarIn = StringVarName, &
-!!$             nDimIn = 2, & 
-!!$             CoordMinIn_D = (/1.75, 0.0/),&
-!!$             CoordMaxIn_D = (/6.5, 24.0/),&
-!!$             VarIn_VII = funi(l:l,:,:))
-!!$        TypePosition = 'append' 
-!!$     end do
-!!$     
-!!$     NameFile = 'funt.out'
-!!$     StringHeader = 'Magnetic field in the equatorial plane'
-!!$     StringVarName = 'R MLT funt'
-!!$     TypePosition = 'rewind'
-!!$          
-!!$     do l = 1, lo
-!!$        call save_plot_file(NameFile, & 
-!!$             TypePositionIn = TypePosition,&
-!!$             TypeFileIn     = TypeFile,&
-!!$             StringHeaderIn = StringHeader, &
-!!$             nStepIn = 0, &
-!!$             TimeIn = 0.0, &
-!!$             ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
-!!$             NameVarIn = StringVarName, &
-!!$             nDimIn = 2, & 
-!!$             CoordMinIn_D = (/1.75, 0.0/),&
-!!$             CoordMaxIn_D = (/6.5, 24.0/),&
-!!$             VarIn_VII = funt(l:l,:,:))
-!!$        TypePosition = 'append' 
-!!$     end do
-!!$     
-!!$  end if
-!!$
-!!$
-!!$
-!!$STOP
+
+     NameFile = 'funi.out'
+     StringHeader = 'Magnetic field in the equatorial plane'
+     StringVarName = 'R MLT funi '
+     TypePosition = 'rewind'
+     
+     
+     do l = 1, lo
+        call save_plot_file(NameFile, & 
+             TypePositionIn = TypePosition,&
+             TypeFileIn     = TypeFile,&
+             StringHeaderIn = StringHeader, &
+             nStepIn = 0, &
+             TimeIn = 0.0, &
+             ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
+             NameVarIn = StringVarName, &
+             nDimIn = 2, & 
+             CoordMinIn_D = (/1.75, 0.0/),&
+             CoordMaxIn_D = (/6.5, 24.0/),&
+             VarIn_VII = funi(l:l,:,:))
+        TypePosition = 'append' 
+     end do
+     
+     NameFile = 'funt.out'
+     StringHeader = 'Magnetic field in the equatorial plane'
+     StringVarName = 'R MLT funt'
+     TypePosition = 'rewind'
+          
+     do l = 1, lo
+        call save_plot_file(NameFile, & 
+             TypePositionIn = TypePosition,&
+             TypeFileIn     = TypeFile,&
+             StringHeaderIn = StringHeader, &
+             nStepIn = 0, &
+             TimeIn = 0.0, &
+             ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
+             NameVarIn = StringVarName, &
+             nDimIn = 2, & 
+             CoordMinIn_D = (/1.75, 0.0/),&
+             CoordMaxIn_D = (/6.5, 24.0/),&
+             VarIn_VII = funt(l:l,:,:))
+        TypePosition = 'append' 
+     end do
+     
+  end if
+
+
+!stop
 
   !\
   ! Define conversion factors
@@ -831,9 +840,8 @@ subroutine GETSWIND
   iUnitSw1 = io_unit_new()
 
   T2 = TIME-1.
-
+  write(*,*) 'Read the _sw1 file'
   open(UNIT=iUnitSw1,FILE=NameInputDirectory//trim(NameRun)//'_sw1.in',status='old')
-
   ILold(1:JO)=ILMP(1:JO)
   if (T.eq.TIME) then
      T1=T2

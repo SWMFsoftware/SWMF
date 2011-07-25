@@ -16,7 +16,6 @@ subroutine PRESSURES
   use ModHeidiMain
   use ModHeidiWaves
   use ModHeidiCurrents
-  use ModHeidiBField
   implicit none
 
   integer :: I,J,K,L,I_1,I_2

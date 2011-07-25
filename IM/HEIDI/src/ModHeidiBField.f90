@@ -1,7 +1,7 @@
 module ModHeidiBField
 
   implicit none
-    
+
 contains
   !==================================================================================
   subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
@@ -42,13 +42,9 @@ contains
     ! Temp var; Should be removed
     real, dimension(nPoint, nR ,3) :: B_all
     real, dimension(2,nPoint,nR)   :: Coord
-
-
     !----------------------------------------------------------------------------------
-    
-
     select case(TypeBField)
-
+       
        !\
        ! Magnetic field from BATS_R_US code; only in the coupled mode.
        !/
@@ -60,7 +56,7 @@ contains
           call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
                RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
        else
-          
+
           write(*,*) 'REAL MHD------>Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt
           bFieldMagnitude_III = BHeidi_III
           RadialDistance_III  = RHeidi_III 
@@ -117,11 +113,10 @@ contains
                    GradBCrossB_VIII(1,iPoint,iR,iPhi) =  GradBCrossBSph_D(1)
                    GradBCrossB_VIII(2,iPoint,iR,iPhi) =  GradBCrossBSph_D(2) *  1./(Re*LZ(iR))
                    GradBCrossB_VIII(3,iPoint,iR,iPhi) =  GradBCrossBSph_D(3) * 1./(Re*LZ(iR)* cos(Lat))
-
                 end do
              end do
           end do
-
+          
           ! Write out values for testing; Should be removed
           do iPhi =1, 1
              do iR =1, nR
@@ -221,15 +216,12 @@ contains
        call  get_stretched_dipole(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
             RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII, dBdt_III)
        
-       
     case('stretched_dipole2')
        write(*,*) 'stretched_dipole2'
        call  get_asym_stretched_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,&
             RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
-      
     end select
     
-
     do iPhi =1, nPhi
        do iR =1, nR 
           do iPoint = 1, nPoint-1
@@ -238,7 +230,7 @@ contains
        end do
     end do
 
-   
+
   end subroutine initialize_b_field
   !==================================================================================
   subroutine find_mirror_points (nPoint, PitchAngle, bField_I, bMirror,iMirror_II)
@@ -264,7 +256,7 @@ contains
     iMaxB = j_I(1)
     bMax = bField_I(iMaxB)
 
-    PALossCone = asin(sqrt( bField_I(nPoint/2)/bMax))
+    PALossCone = asin(sqrt(bField_I(nPoint/2)/bMax))
 
     if (PitchAngle <= PALossCone) then
        bMirror = bMin/(sin(PALossCone))**2
@@ -313,14 +305,12 @@ contains
     iLast  = iMirror_I(2)
     SecondAdiabInv = 0.0
 
-
     if (iFirst > iLast) RETURN
 
     InvL = 1.0/L
     Coeff = InvL/sqrt(bMirror)
 
     DeltaS1 = abs((bMirror-bField_I(iFirst))*(dLength_I(iFirst-1))/(bField_I(iFirst-1)-bField_I(iFirst)))
-
 
     SecondAdiabInv= SecondAdiabInv + Coeff*(2./3.)*DeltaS1*sqrt(bMirror-bField_I(iFirst))
 
@@ -492,23 +482,23 @@ contains
 
     x(1) = sin(LatMin)
 
-    dSdTheta(1) = (sqrt(-dble((-9 * x(1) ** 4 * beta ** 2 + 9 * beta ** 2 * &
-         x(1) ** 2 + alpha ** 2 + 9 * x(1) ** 4 * y ** 2 * beta ** 2 - 9 * x(1) ** 4 * y **2 - &
-         9 * beta ** 2 * y ** 2 * x(1) ** 2 + 9 * y ** 2 * x(1) ** 2 - 6 * alpha ** 2 * & 
-         x(1) ** 2 + 9 * x(1) ** 4 * alpha ** 2) * (y ** 2 - y ** 2 * x(1) ** 2 + beta ** 2 - & 
+    dSdTheta(1) = (sqrt(-dble((-9.0 * x(1) ** 4 * beta ** 2 + 9.0 * beta ** 2 * &
+         x(1) ** 2 + alpha ** 2 + 9.0 * x(1) ** 4 * y ** 2 * beta ** 2 - 9.0 * x(1) ** 4 * y **2 - &
+         9.0 * beta ** 2 * y ** 2 * x(1) ** 2 + 9.0 * y ** 2 * x(1) ** 2 - 6.0 * alpha ** 2 * & 
+         x(1) ** 2 + 9.0 * x(1) ** 4 * alpha ** 2) * (y ** 2 - y ** 2 * x(1) ** 2 + beta ** 2 - & 
          beta ** 2 * y ** 2 - beta ** 2 * x(1) ** 2 + beta ** 2 * y ** 2 * x(1) ** 2 + &
-         alpha ** 2 * x(1) ** 2) ** 2 * (1 - x(1) ** 2) * L ** 2 / (-y ** 2 + beta ** 2 * &
+         alpha ** 2 * x(1) ** 2) ** 2 * (1.0 - x(1) ** 2) * L ** 2 / (-y ** 2 + beta ** 2 * &
          y ** 2 - beta ** 2) / alpha ** 2)))
 
     do i = 2, nPoint
        Lat = Lat + dLat
        x(i) = sin(Lat)
-       dSdTheta(i) = (sqrt(-dble((-9 * x(i) ** 4 * beta ** 2 + 9 * beta ** 2 * &
-            x(i) ** 2 + alpha ** 2 + 9 * x(i) ** 4 * y ** 2 * beta ** 2 - 9 * x(i) ** 4 * y **2 - &
-            9 * beta ** 2 * y ** 2 * x(i) ** 2 + 9 * y ** 2 * x(i) ** 2 - 6 * alpha ** 2 * & 
-            x(i) ** 2 + 9 * x(i) ** 4 * alpha ** 2) * (y ** 2 - y ** 2 * x(i) ** 2 + beta ** 2 - &
+       dSdTheta(i) = (sqrt(-dble((-9.0 * x(i) ** 4 * beta ** 2 + 9.0 * beta ** 2 * &
+            x(i) ** 2 + alpha ** 2 + 9.0 * x(i) ** 4 * y ** 2 * beta ** 2 - 9.0 * x(i) ** 4 * y **2 - &
+            9.0 * beta ** 2 * y ** 2 * x(i) ** 2 + 9.0 * y ** 2 * x(i) ** 2 - 6.0 * alpha ** 2 * & 
+            x(i) ** 2 + 9.0 * x(i) ** 4 * alpha ** 2) * (y ** 2 - y ** 2 * x(i) ** 2 + beta ** 2 - &
             beta ** 2 * y ** 2 - beta ** 2 * x(i) ** 2 + beta ** 2 * y ** 2 * x(i) ** 2 + &
-            alpha ** 2 * x(i) ** 2) ** 2 * (1 - x(i) ** 2) * L ** 2 / (-y ** 2 + beta ** 2 * &
+            alpha ** 2 * x(i) ** 2) ** 2 * (1.0 - x(i) ** 2) * L ** 2 / (-y ** 2 + beta ** 2 * &
             y ** 2 - beta ** 2) / alpha ** 2)))
 
        stretched_dipole_length = stretched_dipole_length + 0.5*(dSdTheta(i)+dSdTheta(i-1))*dLat
@@ -516,7 +506,7 @@ contains
     end do
   end function stretched_dipole_length
 
- !==================================================================================
+  !==================================================================================
 
   real function asym_stretched_dipole_length(L,LatMin,LatMax,Phi,a,b)
 
@@ -527,39 +517,42 @@ contains
     real               :: LatMin                  ! Minimum Latitude                                               
     real               :: LatMax                  ! Maximum Latitude
     real               :: dLat, dSdLambda(nPoint)
-    real               :: x(nPoint), y, Phi,Lat
+    real               :: x(nPoint), w(nPoint), y, z, Phi,Lat
     real               :: a, b              ! Stretching parameters
     integer            :: i
     ! Local variables
-    real :: t1, t2, t4, t7, t8, t11, t12, t14, t15, t26, t27, t28
+    real :: t2, t5, t6, t8, t9, t11, t12, t13, t27, t28, t29, t33
     !----------------------------------------------------------------------------------
     y = cos(Phi)
+    z = sin(Phi)
+
     asym_stretched_dipole_length = 0.0
     dLat   = (LatMax-LatMin)/(nPoint-1)
     Lat = LatMin
-    
+
     x(1) = sin(LatMin)
 
     do i = 1, nPoint
        if ( i > 1 ) then 
           x(i) = sin(Lat)
+          w(i) = cos(Lat)
           Lat = Lat + dLat
        end if
-       
-       t1 = x(i) ** 2
-       t2 = 0.10D1 - t1
-       t4 = t2 ** 2
-       t7 = (a + b * y) ** 2
-       t8 = y ** 2
-       t11 = (1.0 - t8) ** 2
-       t12 = t7 * t8 + t11
-       t14 = t4 * t12 + t11
-       t15 = sqrt(t14)
-       t26 = (-0.2D1 * L * t2 * t15 * x(i) - L * t4 * t2 / t15 * t12 * x(i)) ** 2
-       t27 = L ** 2
-       t28 = t4 ** 2
-       dSdLambda(i) = sqrt(t26 + t27 * t28 * t14)
 
+       t2 = w(i) ** 2
+       t5 = (a + b * y) ** 2
+       t6 = y ** 2
+       t8 = z ** 2
+       t9 = t5 * t6 + t8
+       t11 = x(i) ** 2
+       t12 = t2 * t9 + t11
+       t13 = sqrt(t12)
+       t27 = (-0.2D1 * L * w(i) * t13 * x(i) + L * t2 / t13 * (-w(i) * t9 * x(i) + x(i) * w(i))) ** 2
+       t28 = L ** 2
+       t29 = t2 ** 2
+       t33 = sqrt(t27 + t28 * t29 * t12)
+
+       dSdLambda(i) = t33
     end do
 
     do i = 1, nPoint
@@ -567,13 +560,9 @@ contains
     end do
 
   end function asym_stretched_dipole_length
-
-!==================================================================================
-
-
-
+  !==================================================================================
   real function asinh(x)              
-
+    
     implicit none
 
     real, intent(in) :: x
@@ -774,7 +763,7 @@ contains
     use ModHeidiInput,  ONLY: StretchingFactorA,StretchingFactorB
     use ModNumConst,    ONLY: cPi
     use ModHeidiMain,   ONLY: LZ, DipoleFactor
-  
+
     use ModCoordTransform, ONLY: rot_xyz_sph,xyz_to_sph
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
@@ -809,7 +798,7 @@ contains
 
     real::XyzSph_DD(3,3),bf(3),bSph(3),gradb_cart(3), gradb_sph(3), GradBCart(3),GradBSph(3),gradb1(3), GradBCart1(3)
     real ::GradientCart(3,nPoint,nR,nPhi), GradientSpherical(3,nPoint,nR,nPhi)  
-   
+
     real :: xc,yc,zc
     real, dimension(3)   :: Xyz_D, CartesianVector, CartesianVectorT2, SphericalVector,SphericalVectorT2,&
          Sph_D
@@ -858,12 +847,12 @@ contains
 
              r =  RadialDistance_III(iPoint,iR,iPhi)
 
-                         
+
              xc = r * cos(Lat) * cos(Phi_I(iPhi))
              yc = r * cos(Lat) * sin(Phi_I(iPhi))
              zc = r * sin(Lat)
 
-             
+
              ! \
              !  Magnetic field components for the uniformly stretched dipole in y and z.
              !/
@@ -1114,7 +1103,7 @@ contains
 
 
              dBdt_III(iPoint,iR,iPhi) = 0.0!dBdtTemp
-             
+
              mag = abs(DipoleFactor)*(sqrt(Br**2+Btheta**2+Bphi**2))
 
 
@@ -1122,54 +1111,23 @@ contains
              GradB_VIII(1,iPoint, iR, iPhi) = abs(DipoleFactor) * GradR
              GradB_VIII(2,iPoint, iR, iPhi) = abs(DipoleFactor) * GradTheta
              GradB_VIII(3,iPoint, iR, iPhi) = abs(DipoleFactor) * GradPhi               
-            
+
              ! drift Velocity components
              GradBCrossB_VIII(1,iPoint,iR,iPhi) = Vr * (abs(DipoleFactor))**3 
              GradBCrossB_VIII(2,iPoint,iR,iPhi) = 1./(L_I(iR))*Vtheta * (abs(DipoleFactor))**3
              GradBCrossB_VIII(3,iPoint,iR,iPhi) = 1./(L_I(iR)* cos(Lat)) *Vphi * (abs(DipoleFactor))**3 
 
              bFieldMagnitude_III(iPoint,iR,iPhi) = mag
-            
-             ! Length_III(iPoint,iR,iPhi)=dipole_length(L_I(ir),LatMin,Lat) 
-            
 
-            Length_III(iPoint,iR,iPhi) = asym_stretched_dipole_length&
+             Length_III(iPoint,iR,iPhi) = asym_stretched_dipole_length&
                   (L_I(iR), LatMin,Lat,Phi_I(iPhi), StretchingFactorA, StretchingFactorB)  
-             
-             !~~~~~~~~~~~~~~~~~~~~~~~~~
-!!$            
-!!$             Xyz_D(1) = xc
-!!$             Xyz_D(2) = yc
-!!$             Xyz_D(3) = zc
-!!$
-!!$             call xyz_to_sph(Xyz_D,Sph_D)
-!!$             
-!!$             XyzSph_DD = rot_xyz_sph(Sph_D)
-!!$ 
-!!$             SphericalVector(1) = GradB_VIII(1,iPoint, iR, iPhi)
-!!$             SphericalVector(2) = GradB_VIII(2,iPoint, iR, iPhi)
-!!$             SphericalVector(3) = GradB_VIII(3,iPoint, iR, iPhi)
-!!$             
-!!$             CartesianVector = matmul(XyzSph_DD,SphericalVector)
-!!$             
-!!$             SphericalVectorT2 = matmul(CartesianVector, XyzSph_DD)
-!!$
-!!$             GradientCart(1,iPoint,iR,iPhi) = CartesianVector(1)
-!!$             GradientCart(2,iPoint,iR,iPhi) = CartesianVector(2)
-!!$             GradientCart(3,iPoint,iR,iPhi) = CartesianVector(3)
-!!$             
-!!$             
-!!$             GradientSpherical(1,iPoint,iR,iPhi) = SphericalVectorT2(1)
-!!$             GradientSpherical(2,iPoint,iR,iPhi) = SphericalVectorT2(2)
-!!$             GradientSpherical(3,iPoint,iR,iPhi) = SphericalVectorT2(3)
-!!$             
              Lat = Lat + dLat 
-             
+
           end do
        end do
     end do
-    
- 
+
+
   end subroutine get_stretched_dipole
   !==================================================================================
   subroutine get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,bField_VIII,&
@@ -1208,7 +1166,7 @@ contains
     dd = 0.0
     do iPhi =1, nPhi
 
-     
+
        sigma = cos(Phi_I(iPhi))
        !\
        ! Calculate the maximum latitude for this case (from the equation of the field line).
@@ -1242,33 +1200,22 @@ contains
              cos2Phi = (cos(Phi_I(iPhi)))**2
              sin2Phi = (sin(Phi_I(iPhi)))**2             
 
-!!$             RadialDistance_III(iPoint,iR,iPhi) = Re*LZ(iR) * cos2Lat *&
-!!$                  sqrt( cos2Lat *(cos2Phi + beta**2 * sin2Phi) + alpha**2 *sin2Lat          )
-             
              RadialDistance_III(iPoint,iR,iPhi) = L_I(iR) * cos2Lat *&
                   sqrt( cos2Lat *(cos2Phi + beta**2 * sin2Phi) + alpha**2 *sin2Lat          )
-             
-
              rad =  RadialDistance_III(iPoint,iR,iPhi)
 
              x = rad * cos(Lat) * cos(Phi_I(iPhi))
              y = rad * cos(Lat) * sin(Phi_I(iPhi))
              z = rad * sin(Lat)
 
-
              r = (x**2 + (beta*y)**2 +(alpha*z)**2)
              a = (sqrt(r))**5
-
-
-
              ! \
              !  Magnetic field components for the uniformly stretched dipole in y and z.
              !/
              Bx = DipoleFactor * (3. * z * x * alpha)/a
              By = DipoleFactor * (3. * z * y * alpha)/a
              Bz = DipoleFactor * (2. * (z*alpha)**2 - x**2 -(y*beta)**2 )/(a * alpha)
-
-
              !\
              ! Components of gradient of B in cartesian coordinates.
              !/
@@ -1395,7 +1342,7 @@ contains
     use ModHeidiMain,      ONLY: LZ, Re, DipoleFactor
     use get_gradB_components
     use ModPlotFile,       ONLY: save_plot_file
-   
+
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
     integer, intent(in)    :: nPhi                                ! Number of points in the azimuthal direction
@@ -1417,9 +1364,9 @@ contains
     real                   :: GradBSph_D(3),GradBCrossBSph_D(3)
     complex                :: root(3)
     integer                :: nroot, i, iR, iPhi,iPoint 
-    real :: cos2Lat,sin2Lat,cos2Phi,sin2Phi
+    real                   :: cos2Lat,sin2Lat,cos2Phi,sin2Phi
 
-    character(LEN=500)  :: StringVarName, StringHeader, NameFile
+    character(len=500)  :: StringVarName, StringHeader, NameFile
     character(len=20)   :: TypePosition
     character(len=20)   :: TypeFile = 'ascii'
     real, dimension(nPoint, nR ,3) :: B_all
@@ -1427,20 +1374,20 @@ contains
     real :: t1, t2, t5, t6, t8, t10, t18, beta
     real, dimension(3)   :: Xyz_D
     real :: CosPhi2, SinPhi2
-    
-         !----------------------------------------------------------------------------------
-    
+
+    !----------------------------------------------------------------------------------
+
     a = StretchingFactorA
     b = StretchingFactorB
-    
+
     dd = 0.0
     do iPhi = 1, nPhi
        sigma   = cos(Phi_I(iPhi))
        CosPhi2 = (cos(Phi_I(iPhi)))**2
        SinPhi2 = (sin(Phi_I(iPhi)))**2
-       
+
        alpha = a + b * cos(Phi_I(iPhi)) 
-       
+
        !\
        ! Calculate the maximum latitude for this case (from the equation of the field line).
        ! Yields a cubic equation in latitude.
@@ -1476,13 +1423,13 @@ contains
 
              RadialDistance_III(iPoint,iR,iPhi) = L_I(iR) * cos2Lat *&
                   sqrt( cos2Lat *(alpha**2 * cos2Phi + sin2Phi) + sin2Lat)
-             
+
              rad =  RadialDistance_III(iPoint,iR,iPhi)
-             
+
              xc = rad * cos(Lat) * cos(Phi_I(iPhi))
              yc = rad * cos(Lat) * sin(Phi_I(iPhi))
              zc = rad * sin(Lat)
-             
+
              r = sqrt((xc*alpha)**2 + yc**2 + zc**2)  !Radial distance  in cartesian coordinates
              ! \
              !  Magnetic field components for the uniformly stretched dipole in y and z.
@@ -1490,7 +1437,7 @@ contains
              Bx = (1.0/alpha) * DipoleFactor * (3. * zc * xc * alpha )/r**5 
              By = DipoleFactor * (3. * zc * yc )/r**5
              Bz = DipoleFactor * (2. * zc**2 - (xc* alpha)**2 - yc**2 )/r**5
-             
+
              !\
              ! Components of gradient of B in cartesian coordinates.
              !/
@@ -1503,7 +1450,7 @@ contains
              call get_GradB2CrossB_x(xc, yc, zc, Vx)
              call get_GradB2CrossB_y(xc, yc, zc, Vy)
              call get_GradB2CrossB_z(xc, yc, zc, Vz)
-             
+
              dBdt_III(iPoint,iR,iPhi) = 0.0
 
              ! Magnetic field components in cartesian coordinates
@@ -1519,69 +1466,39 @@ contains
 
              ! Convert to spherical coordinates
              XyzSph_DD = rot_xyz_sph(Xyz_D)
-             
+
              GradBxyz_D(1) =  dBdx
              GradBxyz_D(2) =  dBdy
              GradBxyz_D(3) =  dBdz
-             
+
              GradBCrossBxyz_D(1) = Vx
              GradBCrossBxyz_D(2) = Vy
              GradBCrossBxyz_D(3) = Vz
-             
+
              GradBSph_D       = matmul(GradBxyz_D,       XyzSph_DD)
              GradBCrossBSph_D = matmul(GradBCrossBxyz_D, XyzSph_DD)
-             
+
              GradB_VIII(1,iPoint, iR, iPhi) = GradBSph_D(1)
              GradB_VIII(2,iPoint, iR, iPhi) = GradBSph_D(2)
              GradB_VIII(3,iPoint, iR, iPhi) = GradBSph_D(3)
-            
+
              GradBCrossB_VIII(1,iPoint,iR,iPhi) =  GradBCrossBSph_D(1) 
              GradBCrossB_VIII(2,iPoint,iR,iPhi) =  GradBCrossBSph_D(2) *  1./(L_I(iR))
              GradBCrossB_VIII(3,iPoint,iR,iPhi) =  GradBCrossBSph_D(3)  * 1./(L_I(iR)* cos(Lat))
-             
-             if (StretchingFactorB==0.0) then
-                Length_III(iPoint,iR,iPhi) = dipole_length(L_I(ir),LatMin,Lat) 
-             else
-                Length_III(iPoint,iR,iPhi) = asym_stretched_dipole_length&
-                     (L_I(iR), LatMin,Lat,Phi_I(iPhi), StretchingFactorA, StretchingFactorB)  
-             end if
 
-              Lat = Lat + dLat
-              
+             Length_III(iPoint,iR,iPhi) = asym_stretched_dipole_length&
+                  (L_I(iR), LatMin,Lat,Phi_I(iPhi), StretchingFactorA, StretchingFactorB)  
+             Lat = Lat + dLat
 
-              
-           B_all(iPoint, iR,1)   = Bx
-           B_all(iPoint, iR,2)   = By
-           B_all(iPoint, iR,3)   = Bz
-           Coord(1,iPoint, iR)   = xc/Re
-           Coord(2,iPoint, iR)   = zc/Re
+             B_all(iPoint, iR,1)   = Bx
+             B_all(iPoint, iR,2)   = By
+             B_all(iPoint, iR,3)   = Bz
+             Coord(1,iPoint, iR)   = xc/Re
+             Coord(2,iPoint, iR)   = zc/Re
 
-           end do
-        end do
-     end do
-
-          
-!!$
-!!$    NameFile = 'BField.out'
-!!$    StringHeader = 'Magnetic field'
-!!$    StringVarName = 'x  z  bx  by  bz 0LT'
-!!$    
-!!$    
-!!$
-!!$       call save_plot_file(NameFile, & 
-!!$            TypePositionIn = TypePosition,&
-!!$            TypeFileIn     = TypeFile,&
-!!$            StringHeaderIn = StringHeader, &
-!!$            nStepIn = 0, &
-!!$            TimeIn = 0.0, &
-!!$            NameVarIn = StringVarName, &
-!!$            nDimIn = 2, & 
-!!$            CoordIn_DII = Coord,&
-!!$            VarIn_IIV = B_all)
-!!$       TypePosition = 'rewind'  
-
-
-     !  STOP
+          end do
+       end do
+    end do
 
   end subroutine get_asym_stretched_field
   !=========================================================================================
@@ -1618,34 +1535,17 @@ contains
     PitchAngle = Pi/10.
 
     do iPoint = 101, nPoint,100
-
        call initialize_b_field(L_I(1), Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
             RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
-
        IntegralBAnalytic = second_adiab_invariant(cos(PitchAngle))
        IntegralHAnalytic = analytic_h(cos(PitchAngle))
        call find_mirror_points (iPoint,  PitchAngle, bFieldMagnitude_III, &
             bMirror,iMirror_I)
-
        call second_adiabatic_invariant(iPoint, iMirror_I, bMirror, bFieldMagnitude_III, Ds_I,L_I(1), SecondAdiabInv)
-
        Percent1 = 100*abs(IntegralBAnalytic - SecondAdiabInv)/IntegralBAnalytic
-
        call half_bounce_path_length(iPoint, iMirror_I, bMirror,  bFieldMagnitude_III, Ds_I,L_I(1), HalfPathLength,Sb)
-
-
        Percent2 = 200*abs(IntegralHAnalytic - HalfPathLength)/(IntegralHAnalytic+HalfPathLength)
-
-       !       write (2,*) iPoint, IntegralBAnalytic, SecondAdiabInv,IntegralHAnalytic,&
-       !            HalfPathLength ,Percent1, Percent2
-
-       !       write (*,*) iPoint, IntegralBAnalytic, SecondAdiabInv,IntegralHAnalytic,&
-       !            HalfPathLength ,Percent1, Percent2
-
-
     end do
-
-    !close(2)
 
   end subroutine test_general_b
   !==================================================================================

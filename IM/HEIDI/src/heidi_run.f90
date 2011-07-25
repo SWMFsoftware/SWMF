@@ -1,10 +1,11 @@
 subroutine heidi_run
   
-  use ModInit
+  use ModHeidiSize, ONLY: nS
+  use ModInit,      ONLY: i3, nSt, i2, nkp, lnc, xn, nPr, nibc
   use ModHeidiIO,   ONLY: isw, nStep,iwpi,ires,&
        write_prefix,iUnitStdOut, IsFramework
   use ModHeidiMain, ONLY: s,t,dt,scalc,IsBFieldNew
-  use ModProcIM, ONLY: iProc
+  use ModProcIM,    ONLY: iProc
   
   implicit none 
   !------------------------------------------------------------------------------
@@ -24,6 +25,7 @@ subroutine heidi_run
   call FCHECK(4)
   if (I3.eq.NST) call WRESULT(LNC,XN,1)
   call FCHECK(5)
+  
   do S = 1,NS
      if (SCALC(S).eq.1) then
         call LMPLOSS
@@ -33,7 +35,6 @@ subroutine heidi_run
         !/
         
         call FCHECK(5)
-
         call DRIFTR
         call FCHECK(6)
         call heidi_driftp
@@ -56,6 +57,7 @@ subroutine heidi_run
         call FCHECK(15)
         call DRIFTR
         call FCHECK(16)
+        
         call LLIMIT	  ! Truncates results below 1E-30
         call FCHECK(17)
         !\
@@ -91,8 +93,6 @@ subroutine heidi_run
   !\
   ! Update boundary condition
   !/
-!  if (mod(I3,NIBC).eq.0) call GEOSB
-!    call FCHECK(23)
 
   write(*,*) 'IM_RUN   i3, nibc', i3, nibc
   

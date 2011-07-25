@@ -15,35 +15,25 @@
 !	NE=no. of energy grids, NS=no. of species (e-, H+, He+, O+),
 !	NPA=no. of grids in equatorial pitch angle
 !***********************************************************************
-
 program heidi_main
 
   use ModHeidiIO 
   use ModInit
   use ModProcIM
   use ModHeidiMain
-
+  use ModHeidiDrifts, ONLY:j6, j18
   use CON_planet, ONLY: init_planet_const, set_planet_defaults, get_planet
- 
-
-  use  NeutralHydrogenModel
-
-
- implicit none 
-
+  
+  implicit none 
   logical :: IsUninitialized = .true.
-
-  !real :: HDensity(38)
   !---------------------------------------------------------------------------
-
-  !call zoennchen(0.0, 0.0, HDensity)
-
+  
   call MPI_INIT(iError)
   iComm= MPI_COMM_WORLD
 
   call MPI_COMM_RANK(iComm, iProc, iError)
   call MPI_COMM_SIZE(iComm, nProc, iError)   
-
+  
   IsFramework = .false.
   IsBFieldNew = .true.
   

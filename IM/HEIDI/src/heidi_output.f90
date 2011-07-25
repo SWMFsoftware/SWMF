@@ -1,5 +1,4 @@
 ! File name: heidi_output.f90
-!
 ! Contains: output routines for HEIDI
 !	ECFL
 !	WRESULT
@@ -10,11 +9,11 @@
 !=========================================================================
 subroutine ECFL
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModHeidiDrifts
-  use ModIoUnit, only : io_unit_new
+  use ModHeidiSize,   ONLY: nS, s, scalc, io, jo, ko, lo
+  use ModHeidiIO,     ONLY: NameOutputDir, NameRun, Kp
+  use ModHeidiMain,   ONLY: T, A, xne, lz, mlt, ekev, mu, RadToDeg
+  use ModHeidiDrifts, ONLY: edot, couli, coule, vR, P1, P2, mudot
+  use ModIoUnit,      ONLY: io_unit_new
 
   implicit none
 
@@ -219,21 +218,30 @@ end subroutine ECFL
 !	IRES(13) 'fun'  Restart output of all F2
 !	IRES(14) 'sal'	Continuous sources and losses of number/energy
 !	IRES(15) 'fbc'	Nightside boundary condition distribution
+!	IRES(16) 'ena'	Differential precipitation flux needed for ENA calc
 !=========================================================================
 
 subroutine WRESULT(LNC,XN,IFIR)
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModHeidiDrifts
-  use ModHeidiCurrents
-  use ModHeidiWaves
-  use ModHeidiDGCPM
-  use ModIoUnit, only : io_unit_new,UnitTmp_
-  use ModPlotFile, only: save_plot_file
-  use ModHeidiInput, only: DtSaveRestart,TypeFile, TypeConvection
-  use ModProcIM, only: iProc
+  use ModHeidiSize,     ONLY: nR, nS, nT, nE, lo, ko, jo, io,     &
+       nThetaCells, nPhiCells, s, scalc, dt
+  use ModHeidiMain,     ONLY: T, mlt, lz, xne, ener, upa, F2, we, &
+       wmu, lec, RadToDeg, mu, ekev, ffactor, cedr, fluxfact,     &
+       cidr, pi, phi, factor, q, ecof, me, re, funi, funt, v,     &
+       ebnd, mp, m1, fgeos, dl1
+  use ModHeidiIO,       ONLY: time, tint, iUnitStdout, iPa, ires, &
+       NameOutputDir, NameRun, Kp, ia, ifac, NameRestartOutDir,      &
+       iUnitSal, ninj, einj, kinj, nswb, uswb, write_prefix
+  use ModHeidiDrifts,   ONLY: coule, couli, Vr, P1, P2, edot, mudot, acharge
+  use ModHeidiCurrents, ONLY: etot, ntot, Dst, rnht, pper, ppar, &
+       anis, eden, jper, nspace, espace, lsh, ir, basepot, iphi, &
+       irad, jion1, fpot, jfac
+  use ModHeidiWaves,    ONLY: ernm, ernh
+  use ModHeidiDGCPM,    ONLY: vthetacells, vphicells, dendgcpm
+  use ModIoUnit,        ONLY: io_unit_new,UnitTmp_
+  use ModPlotFile,      ONLY: save_plot_file
+  use ModHeidiInput,    ONLY: DtSaveRestart,TypeFile, TypeConvection
+  use ModProcIM,        ONLY: iProc
 
   implicit none
 
@@ -258,7 +266,9 @@ subroutine WRESULT(LNC,XN,IFIR)
   integer           :: iUnitSal1,iUnitSal2,iUnitSal3,iUnitSal4
   character(LEN=500):: StringVarName, StringHeader, NameFile
   character(len=20) :: TypePosition
-  
+
+  real :: xEq, yEq, SinPitch
+
   save ntc
 
   data IPF/'_lpf.','_mpf.','_hpf.'/
@@ -266,6 +276,8 @@ subroutine WRESULT(LNC,XN,IFIR)
        2,11,21,31,41,51,61,70,75,79,82,83,84,85,86,87,88,89,90/
   data PAV,EV/2,20,42,5,19,31/
   !--------------------------------------------------------------------------
+
+
 
   !\
   ! Define parts of the output file names
@@ -294,7 +306,7 @@ subroutine WRESULT(LNC,XN,IFIR)
   call PRESSURES
   call write_prefix; write(iUnitStdOut,*) 'Calling CURRENTCALC'
   call CURRENTCALC  
-  
+    
 
   ! L counter offset in PAD outputs
   IFN=0
@@ -380,7 +392,6 @@ subroutine WRESULT(LNC,XN,IFIR)
         end do       
 
 
-
 !!$        do L=2,LO-1
 !!$           do K=2,KO
 !!$              do J=1,JO
@@ -449,9 +460,6 @@ subroutine WRESULT(LNC,XN,IFIR)
         !	end if	 
 
 
-
-
-
         ! Write equatorially trapped distribution (IRES(2), 'etf')
 	if (IRES(2).eq.1) then
            NameSuffix='_etf.'
@@ -489,7 +497,6 @@ subroutine WRESULT(LNC,XN,IFIR)
            write (iUnitOut,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//&
                 trim(NameRun)//trim(NameSpecies)//NameSuffix//NameStep
            
-          
            
            do I=2,IO			! Electron heating
               do J=1,JO
@@ -547,6 +554,9 @@ subroutine WRESULT(LNC,XN,IFIR)
            end do
            close(iUnitOut)
 	end if
+
+
+
 
         !.......Write the precipitation flux (IRES(4), '*pf')
 	if (IRES(4).eq.1) then	
@@ -620,6 +630,69 @@ subroutine WRESULT(LNC,XN,IFIR)
            end do
            close (UnitTmp_)
         end if
+        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        !.......Write the differential precip flux needed for ENA calculations(IRES(16), 'ena')
+	if (IRES(16).eq.1) then	
+    NameSuffix='_ena.'
+    
+    open(UNIT=UnitTmp_,file=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+         trim(NameSpecies)//NameSuffix//NameStep,STATUS='UNKNOWN')
+    write (UnitTmp_,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//&
+         trim(NameRun)//trim(NameSpecies)//NameSuffix//NameStep
+    write (UnitTmp_,*) 'Differential precipitation fluxes for ENA calculations'
+    
+    write(UnitTmp_,*) ' FLUX[1/cm2/s/ster/keV] '
+    
+    do i = 1, io
+       do j = 1, jo
+          do k = 1, ko
+             do l = 1, lo
+                if (IFAC.eq.1) then
+                   write(UnitTmp_,*)  F2(I,J,K,L,S)/FFACTOR(I,j,K,L)
+                else
+                   write(UnitTmp_,*)  F2(I,J,K,L,S)*FLUXFACT(S)*EKEV(K)/FFACTOR(I,j,K,L)  
+                end if
+             end do
+          end do
+       end do
+    end do
+    
+    close (UnitTmp_)
+    
+    open(UNIT=UnitTmp_,file=NameOutputDir//'Lshell.dat',STATUS='UNKNOWN')
+    write(UnitTmp_,*) ' L(Re)'
+    do i = 1, io
+        write(UnitTmp_,*) LZ(i)
+     end do
+     close (UnitTmp_)
+    
+     open(UNIT=UnitTmp_,file=NameOutputDir//'Phi.dat',STATUS='UNKNOWN')
+     write(UnitTmp_,*) ' Phi'
+     do j = 1, jo
+        write(UnitTmp_,*) Phi(j)
+     end do
+     close (UnitTmp_)
+    
+    open(UNIT=UnitTmp_,file=NameOutputDir//'ekev.dat',STATUS='UNKNOWN')
+    write(UnitTmp_,*) ' E (keV) '
+    do k = 1, ko
+       write(UnitTmp_,*) ekev(k)
+    end do
+    close (UnitTmp_)
+    
+    open(UNIT=UnitTmp_,file=NameOutputDir//'pa.dat',STATUS='UNKNOWN')
+    write(UnitTmp_,*) ' sin PA '
+    do l = 1, lo
+       SinPitch =  sin(acos(MU(L)))
+       write(UnitTmp_,*)  SinPitch     
+          
+    end do
+   close (UnitTmp_)      
+ end if
+ 
+ 
+ 
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         !..Write the particle & energy losses (IRES(6), 'los')
 	if (IRES(6).eq.1) then
@@ -762,6 +835,7 @@ subroutine WRESULT(LNC,XN,IFIR)
            close(iUnitOut)
 	end if
 
+
         !.......Print out the drift velocities (IRES(9), 'drf')
 	if (IRES(9).eq.1) then
            NameSuffix='_drf.'
@@ -856,13 +930,14 @@ subroutine WRESULT(LNC,XN,IFIR)
                     !TAUBO=4*LZ(I)*RE/V(K,S)*FUNT(MU(L))/3600.
 
 
-                    TAUCHE=-DT/ALOG(achar(I,J,K,L,S))/3600.
+                    TAUCHE=-DT/ALOG(acharge(I,J,K,L,S))/3600.
                     write(UnitTmp_,80) LZ(I),EBND(K),TAUBO,TAUCHE,TAUD
                  enddo
               enddo
            enddo
            close (UnitTmp_)
 	end if
+
 
         !.......Print out pressures, densities, and Dst (IRES(12), 'prs')
 	if (IRES(12).eq.1) then
@@ -959,12 +1034,11 @@ subroutine WRESULT(LNC,XN,IFIR)
  
  end if
 
-
 	if (IRES(13).eq.1) then
 
            !Save the restart file as an ascii file
            if(mod(T,DtSaveRestart)< 2*dt) then
-
+              
 
               NameFile       = trim(NameRestartOutDir)//'restart'//trim(NameSpecies)//'.out'
               StringHeader   = &
@@ -976,30 +1050,34 @@ subroutine WRESULT(LNC,XN,IFIR)
 
               f2(:,NT,:,:,:)=f2(:,1,:,:,:)
               
-              do L=1,NPA  
-                    do K=1,NE
-                       call save_plot_file(NameFile, &
-                            TypePositionIn = TypePosition,&
-                            TypeFileIn     = TypeFile,&
-                            StringHeaderIn = StringHeader, &
-                            nStepIn = ntc, &
-                            TimeIn = T, &
-                            ParamIn_I = (/EKEV(K), RadToDeg*acos(mu(L)),real(NE), real(NPA)/), &
-                            NameVarIn = StringVarName, &
-                            nDimIn = 2, &
-                            CoordMinIn_D = (/1.75, 0.0/),&
-                            CoordMaxIn_D = (/6.5, 24.0/),&
-                            VarIn_IIV = f2(:,:,K,L,S:S))
-                            TypePosition = 'append'
-                            !EXIT !!!  
-                       end do
-                    end do
+              
+!!$              do L=1,NPA  
+!!$                    do K=1,NE
+!!$
+!!$                       call save_plot_file(NameFile, &
+!!$                            TypePositionIn = TypePosition,&
+!!$                            TypeFileIn     = TypeFile,&
+!!$                            StringHeaderIn = StringHeader, &
+!!$                            nStepIn = ntc, &
+!!$                            TimeIn = T, &
+!!$                            ParamIn_I = (/EKEV(K), RadToDeg*acos(mu(L)),real(NE), real(NPA)/), &
+!!$                            NameVarIn = StringVarName, &
+!!$                            nDimIn = 2, &
+!!$                            CoordMinIn_D = (/1.75, 0.0/),&
+!!$                            CoordMaxIn_D = (/6.5, 24.0/),&
+!!$                            VarIn_IIV = f2(:,:,K,L,S:S))
+!!$                            TypePosition = 'append'
+!!$                            !EXIT !!!  
+!!$                       end do
+!!$                    end do
                  end if
               end if
 
+
+
               !.......Open file for source/loss continual output (IRES(14), 'sal')
               if (IRES(14).eq.1) then
-
+                 
                  iUnitSal1 = io_unit_new()
                  iUnitSal2 = io_unit_new()
                  iUnitSal3 = io_unit_new()
@@ -1009,18 +1087,21 @@ subroutine WRESULT(LNC,XN,IFIR)
                  if (S.eq.2) iUnitSal = iUnitSal2
                  if (S.eq.3) iUnitSal = iUnitSal3
                  if (S.eq.4) iUnitSal = iUnitSal4
-
+                 
                  close (iUnitSal)
                  NameSuffix='_sal.'
                  open (iUnitSal,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
                       trim(NameSpecies)//NameSuffix//NameStep,STATUS='UNKNOWN')
                  write (iUnitSal,*) 'Filename: '//trim(NameRun)//trim(NameOutputSpecies)//trim(NameSpecies)//NameSuffix//NameStep
                  write (iUnitSal,*) 'Sources and losses: continuous output'
+                                  
                  write (iUnitSal,71) T,KP
+                 
                  write (iUnitSal,74) 'T','LMP6','LMP12','RNS','RNL','RES','REL',   &
                       'ESN','ELN','ESE','ELE','ECN','ECE','ALN','ALE','CEN',   &
                       'CEE','DNT','DET'
               end if
+              
 
               !.......Print out nightside boundary condition (IRES(15), 'fbc')
               if (IRES(15).eq.1) then
@@ -1065,10 +1146,9 @@ subroutine WRESULT(LNC,XN,IFIR)
                  end do		! J loop
                  close (iUnitOut)
               end if
-
+              
            end if		! SCALC check
         end do		! S loop
-
 
 15      format(' EKEV \ T =',F8.0,2X,'Kp =',F6.2,10X)
 16      format('LSHELL\ T =',F8.0,2X,'Kp =',F6.2,10X)
@@ -1113,8 +1193,8 @@ subroutine WRESULT(LNC,XN,IFIR)
 
       subroutine PSRCLOSS(T)
 
-        use ModHeidiSize
-        use ModHeidiIO
+        use ModHeidiIO, ONLY: rns, rnl, esn, eln, ecn, aln, cen, &
+             res, rel, ese, ele, ece, ale, cee, iUnitSal, lmp
 
         implicit none
 

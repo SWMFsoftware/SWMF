@@ -1,8 +1,8 @@
 module NeutralHydrogenModel
 
   implicit none
-contains
 
+contains
   !===========================================================================================
   subroutine get_ostgaard_density(RadialDistance,  HDensity)
     !\
@@ -528,11 +528,6 @@ contains
        end do
     end do
  
-
-
-       write(*,*) 'Rho', RhoH_III(48,13,12)
-       STOP
-
   end subroutine get_interpolated_hodge_density
 
   !===========================================================================================
@@ -698,15 +693,13 @@ contains
                  end do
               end do
               
-              n_III(iPoint, iR, iPhi) = p * (RadialDistance_III(iPoint, iR, iPhi)) ** k * 1.e4  ! need the density in m^-3 NOT cm^-3!!!!
+              n_III(iPoint, iR, iPhi) = p * (RadialDistance_III(iPoint, iR, iPhi)) ** k * 1.0e6  ! need the density in m^-3 NOT cm^-3!!!!
               RhoH_III(iPoint,iR,iPhi) = sqrt(4. * cPi) * n_III(iPoint, iR, iPhi) * Z  
 
            end do
         end do
      end do
-     
-     
-
+ 
 
    end subroutine get_bailey_density
 

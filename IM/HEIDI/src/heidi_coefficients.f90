@@ -12,16 +12,16 @@ subroutine heidi_cepara
   use ModIoUnit,     ONLY: UNITTMP_
   use ModHeidiIO,    ONLY: NameInputDirectory
   use ModHeidiInput, ONLY: TypeBCalc
-  
+
   implicit none
 
   integer            :: I, K, L, LUP, ier, J
   real               :: x, y, fac, cosd 
-  real               :: RLAMBDA(71), PA(71), HDNS(NR,NT,NPA)
+  real               :: RLAMBDA(71), PA(71)
+  real               :: HDNS(NR,NT,NPA) = 0.0
   real               :: LH(20), HDNSIN(20,71)
   character(len=80)  :: TITLE
   external           :: cosd
-
 
   integer :: iR
   !---------------------------------------------------------------------
@@ -36,7 +36,7 @@ subroutine heidi_cepara
      s = s + sCalc(I)   ! S=0, no ions in calc, S>0, ions in calc
   end do
   if (s .ge. 1) then	! Only needed for ion charge exchange
-     
+
      select case(TypeBCalc)
 
      case('analytic')
@@ -60,14 +60,14 @@ subroutine heidi_cepara
               enddo
            end do
         end do
-        
+
      case('numeric')
-        
+
         if (IsBFieldNew) then 
            write(*,*) 'heidi_coefficients: heidi_cepara--->get_neutral_hydrogen'
            call get_neutral_hydrogen(NeutralHydrogen)
         end if
-        
+
         do L = 1, LO
            do j = 1, jo
               do I = 1, IO
@@ -76,42 +76,56 @@ subroutine heidi_cepara
            end do
         end do
      end select
-  
+
   end if
-  
-
-!stop
 
 
 
-3    format(A61,F5.2)
-4    format(2F7.3,2X,1PE12.5)
-     !\
-     ! Calculate charge exchange cross-section of species S with H
-     ! and then the charge exchange decay rate ACHAR
-     !/
-     
-     !\
-     ! H+ charge exchange
-     !/
-  
+3 format(A61,F5.2)
+4 format(2F7.3,2X,1PE12.5)
+  !\
+  ! Calculate charge exchange cross-section of species S with H
+  ! and then the charge exchange decay rate ACHARGE
+  !/
+
+  !\
+  ! H+ charge exchange
+  !/
+
   if (SCALC(2).eq.1) then
      do K = 2,KO
         X=ALOG10(EKEV(K))
         if (X.lt.-2.) X=-2.
         Y=-18.767-0.11017*X-3.8173e-2*X**2-0.1232*X**3-5.0488e-2*X**4
         !............10**Y is cross section of H+ in m2
-      
-       
-
+        
         do j = 1, jo
            do L=2,Lo
-              achar(2:io,j,k,l,2)=exp(-(10.**Y*V(K,2)*HDNS(2:io,j,L)*DT))
+              acharge(2:io,j,k,l,2)=exp(-(10.**Y*V(K,2)*HDNS(2:io,j,L)*DT))
            end do ! L loop
         end do    ! j loop
      end do	  ! K loop
-  
-!!$  
+
+!!$     open(unit=3, file='H+ChargeDecayRate_3PA_Phi90_E10keV_LAll.dat', status='unknown')
+!!$     write(3,*) 'Decay Rate due to H+ with H'
+!!$     write(3,*) '  Y'
+!!$
+!!$     do K = 27, 27
+!!$        do iR = 1, nR
+!!$           write(3,*) LZ(iR), acharge(iR,6,k,2,2),  acharge(iR,1,6,20,2),  acharge(iR,6,k,42,2)
+!!$        end do
+!!$     end do	  ! K loop
+!!$     close(3)
+!!$     open(unit=3, file='H+ChargeDecayRate_3PA_Phi0_E10keV_LAll.dat', status='unknown')
+!!$     write(3,*) 'Decay Rate due to H+ with H'
+!!$     write(3,*) '  Y'
+!!$
+!!$     do K = 27, 27
+!!$        do iR = 1, nR
+!!$           write(3,*) LZ(iR), acharge(iR,1,k,2,2),  acharge(iR,1,k,20,2),  acharge(iR,1,k,42,2)
+!!$        end do
+!!$     end do	  ! K loop
+!!$     close(3)
 !!$
 !!$ open(unit=3, file='H+ChargeDecayRate_3PA_Phi90_E107keV_LAll.dat', status='unknown')
 !!$  write(3,*) 'Decay Rate due to H+ with H'
@@ -119,7 +133,7 @@ subroutine heidi_cepara
 !!$  
 !!$  do K = 37, 37
 !!$     do iR = 1, nR
-!!$        write(3,*) LZ(iR), achar(iR,6,k,2,2),  achar(iR,1,6,20,2),  achar(iR,6,k,42,2)
+!!$        write(3,*) LZ(iR), acharge(iR,6,k,2,2),  acharge(iR,1,6,20,2),  acharge(iR,6,k,42,2)
 !!$     end do
 !!$  end do	  ! K loop
 !!$close(3)
@@ -131,7 +145,7 @@ subroutine heidi_cepara
 !!$  
 !!$  do K = 37, 37
 !!$     do iR = 1, nR
-!!$        write(3,*) LZ(iR), achar(iR,1,k,2,2),  achar(iR,1,k,20,2),  achar(iR,1,k,42,2)
+!!$        write(3,*) LZ(iR), acharge(iR,1,k,2,2),  acharge(iR,1,k,20,2),  acharge(iR,1,k,42,2)
 !!$     end do
 !!$  end do	  ! K loop
 !!$close(3)
@@ -143,12 +157,10 @@ subroutine heidi_cepara
 !!$  
 !!$  do K = 37, 37
 !!$     do iR = 1, nR
-!!$        write(3,*) LZ(iR), achar(iR,12,k,2,2),  achar(iR,12,k,20,2),  achar(iR,12,k,42,2)
+!!$        write(3,*) LZ(iR), acharge(iR,12,k,2,2),  acharge(iR,12,k,20,2),  acharge(iR,12,k,42,2)
 !!$     end do
 !!$  end do	  ! K loop
 !!$close(3)
-
-
 !!$
 !!$
 !!$open(unit=3, file='H+ChargeDecayRate_3PA_Phi180_Eall_L5Re.dat', status='unknown')
@@ -157,7 +169,7 @@ subroutine heidi_cepara
 !!$
 !!$do K = 1, ko
 !!$     do iR = 14, 14
-!!$        write(3,*) Ekev(k), achar(iR,12,k,2,2),  achar(iR,12,k,20,2),  achar(iR,12,k,42,2)
+!!$        write(3,*) Ekev(k), acharge(iR,12,k,2,2),  acharge(iR,12,k,20,2),  acharge(iR,12,k,42,2)
 !!$     end do
 !!$  end do	  ! K loop
 !!$close(3)
@@ -169,7 +181,7 @@ subroutine heidi_cepara
 !!$
 !!$do K = 1, ko
 !!$     do iR = 14, 14
-!!$        write(3,*) Ekev(k), achar(iR,1,k,2,2),  achar(iR,1,k,20,2),  achar(iR,1,k,42,2)
+!!$        write(3,*) Ekev(k), acharge(iR,1,k,2,2),  acharge(iR,1,k,20,2),  acharge(iR,1,k,42,2)
 !!$     end do
 !!$  end do	  ! K loop
 !!$close(3)
@@ -182,19 +194,13 @@ subroutine heidi_cepara
 !!$
 !!$do K = 1, ko
 !!$     do iR = 14, 14
-!!$        write(3,*) Ekev(k), achar(iR,6,k,2,2),  achar(iR,6,k,20,2),  achar(iR,6,k,42,2)
+!!$        write(3,*) Ekev(k), acharge(iR,6,k,2,2),  acharge(iR,6,k,20,2),  acharge(iR,6,k,42,2)
 !!$     end do
 !!$  end do	  ! K loop
 !!$close(3)
 !!$
 
-
-
-end if
-
-
-
-
+  end if
 
   !\
   ! He+ charge exchange
@@ -208,7 +214,7 @@ end if
         !..........10**Y is cross sect of He+ in m2
         do j = 1, jo
            do L=2,Lo
-              achar(2:io,j,K,L,3)=exp(-(10.**Y*V(K,3)*HDNS(2:io,j,L)*DT))
+              acharge(2:io,j,K,L,3)=exp(-(10.**Y*V(K,3)*HDNS(2:io,j,L)*DT))
            end do ! L loop
         end do    ! j loop
      end do	  ! K loop
@@ -227,19 +233,42 @@ end if
         ! 10**Y is cross sect of O+ in m2
         do j =1, jo
            do L=2,Lo
-              achar(2:io,j,k,l,4)=exp(-(10.**Y*V(K,4)*HDNS(2:io,j,L)*DT))
+              acharge(2:io,j,k,l,4)=exp(-(10.**Y*V(K,4)*HDNS(2:io,j,L)*DT))
            end do  ! L loop
         end do     ! j loop
      end do	   ! K loop
-     
-     !~~~~~~~~~~~
+
+  
+!!$     open(unit=3, file='O+ChargeDecayRate_3PA_Phi0_E10keV_LAll.dat', status='unknown')
+!!$     write(3,*) 'Decay Rate due to O+ with H'
+!!$     write(3,*) '  Y'
+!!$
+!!$     do K = 27, 27
+!!$        do iR = 1, nR
+!!$           write(3,*) LZ(iR), acharge(iR,1,k,2,4),  acharge(iR,1,k,20,4),  acharge(iR,1,k,42,4)
+!!$        end do
+!!$     end do	  ! K loop
+!!$     close(3)
+!!$
+!!$     open(unit=3, file='O+ChargeDecayRate_3PA_Phi90_E10keV_LAll.dat', status='unknown')
+!!$     write(3,*) 'Decay Rate due to O+ with H'
+!!$     write(3,*) '  Y'
+!!$
+!!$     do K = 27, 27
+!!$        do iR = 1, nR
+!!$           write(3,*) LZ(iR), acharge(iR,6,k,2,4),  acharge(iR,6,k,20,4),  acharge(iR,6,k,42,4)
+!!$        end do
+!!$     end do	  ! K loop
+!!$     close(3)
+!!$
+!!$
 !!$     open(unit=3, file='O+ChargeDecayRate_3PA_Phi0_E107keV_LAll.dat', status='unknown')
 !!$     write(3,*) 'Decay Rate due to O+ with H'
 !!$     write(3,*) '  Y'
 !!$     
 !!$     do K = 37, 37
 !!$        do iR = 1, nR
-!!$           write(3,*) LZ(iR), achar(iR,1,k,2,4),  achar(iR,1,k,20,4),  achar(iR,1,k,42,4)
+!!$           write(3,*) LZ(iR), acharge(iR,1,k,2,4),  acharge(iR,1,k,20,4),  acharge(iR,1,k,42,4)
 !!$        end do
 !!$     end do	  ! K loop
 !!$     close(3)
@@ -251,7 +280,7 @@ end if
 !!$     
 !!$     do K = 37, 37
 !!$        do iR = 1, nR
-!!$           write(3,*) LZ(iR), achar(iR,12,k,2,4),  achar(iR,12,k,20,4),  achar(iR,12,k,42,4)
+!!$           write(3,*) LZ(iR), acharge(iR,12,k,2,4),  acharge(iR,12,k,20,4),  acharge(iR,12,k,42,4)
 !!$        end do
 !!$     end do	  ! K loop
 !!$     close(3)
@@ -263,14 +292,10 @@ end if
 !!$     
 !!$     do K = 37, 37
 !!$        do iR = 1, nR
-!!$           write(3,*) LZ(iR), achar(iR,6,k,2,4),  achar(iR,6,k,20,4),  achar(iR,6,k,42,4)
+!!$           write(3,*) LZ(iR), acharge(iR,6,k,2,4),  acharge(iR,6,k,20,4),  acharge(iR,6,k,42,4)
 !!$        end do
 !!$     end do	  ! K loop
 !!$     close(3)
-!!$     
-!!$     
-!!$
-!!$ 
 !!$     
 !!$     open(unit=3, file='O+ChargeDecayRate_3PA_Phi180_Eall_L5Re.dat', status='unknown')
 !!$     write(3,*) 'Decay Rate due to O+ with H'
@@ -278,7 +303,7 @@ end if
 !!$     
 !!$     do K = 1, ko
 !!$        do iR = 14, 14
-!!$           write(3,*) Ekev(k), achar(iR,12,k,2,4),  achar(iR,12,k,20,4),  achar(iR,12,k,42,4)
+!!$           write(3,*) Ekev(k), acharge(iR,12,k,2,4),  acharge(iR,12,k,20,4),  acharge(iR,12,k,42,4)
 !!$        end do
 !!$     end do	  ! K loop
 !!$     close(3)
@@ -290,7 +315,7 @@ end if
 !!$     
 !!$     do K = 1, ko
 !!$        do iR = 14, 14
-!!$           write(3,*) Ekev(k), achar(iR,1,k,2,4),  achar(iR,1,k,20,4),  achar(iR,1,k,42,4)
+!!$           write(3,*) Ekev(k), acharge(iR,1,k,2,4),  acharge(iR,1,k,20,4),  acharge(iR,1,k,42,4)
 !!$        end do
 !!$     end do	  ! K loop
 !!$     close(3)
@@ -301,17 +326,13 @@ end if
 !!$     
 !!$     do K = 1, ko
 !!$        do iR = 14, 14
-!!$           write(3,*) Ekev(k), achar(iR,6,k,2,4),  achar(iR,6,k,20,4),  achar(iR,6,k,42,4)
+!!$           write(3,*) Ekev(k), acharge(iR,6,k,2,4),  acharge(iR,6,k,20,4),  acharge(iR,6,k,42,4)
 !!$        end do
 !!$     end do	  ! K loop
 !!$     close(3)
+!!$
 
-
-
-end if
-
-
-!STOP
+  end if
 
   !\
   ! Calculate the losses due to the collis with atmosphere
@@ -341,7 +362,7 @@ subroutine OTHERPARA
   use ModHeidiMain
   use ModHeidiDrifts
   use ModHeidiInput, ONLY: TypeBCalc
-    
+
   implicit none
 
   integer :: i,j,k,l,is,iss,ier
@@ -350,7 +371,7 @@ subroutine OTHERPARA
   real    :: erf
   real    :: COULDE(NE,NPA),COULDI(NE,NPA),AFIR,ASEC
   real    :: VF(NSTH),RA(NSTH),MUBOUN,TMAS(NSTH),TM1(NSTH)
-  
+
   external:: erf
 
 
@@ -361,6 +382,7 @@ subroutine OTHERPARA
   !\
   ! Parameters used in calculating drifts at boundaries
   !/
+
 
   C=1.44E-2*RE**2		! Constant of corotation, [C]=V*m
   ISS=-1			! sign of specie's charge
@@ -383,14 +405,14 @@ subroutine OTHERPARA
      if (MLT(J).ge.17.99) J18=J
   end do	! While J18 loop
 
-  
+
   if (TypeBCalc == 'numeric') then
      if (IsBFieldNew) then
         write(*,*) 'heidi_coefficients: OTHERPARA---> get_grad_curv_drift'
         call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
      end if
   end if
-  
+
   do i = 1, io      
      do L = 1, UPA(I)    ! Kp independent part of azimuthal drift
         do K = 1, KO
@@ -406,7 +428,7 @@ subroutine OTHERPARA
         end do
      end do
   end do
-  
+
   do i = 1, io 
      do L = UPA(I)+1, LO
         do K = 1, KO
@@ -421,7 +443,7 @@ subroutine OTHERPARA
         end do
      end do
   end do
-  
+
   do l = 1, lo
      do k = 1, ko
         do i = 1, IO
@@ -438,7 +460,7 @@ subroutine OTHERPARA
         end do	! I loop processing VR
      end do
   end do
-  
+
   !\
   ! We assume Te=Ti=1eV (kT=1eV)
   !/
@@ -578,6 +600,8 @@ subroutine OTHERPARA
   ILMP(1:JO)=IO
   LMP(1:JO)=LZ(IO)+DL1
 
+
+
 end subroutine OTHERPARA
 !======================================================================
 !                             MAGCONV
@@ -664,13 +688,12 @@ subroutine MAGCONV(I3,NST)
   integer :: edayplus
   real    :: univ_time
 
-  !real, dimension(nR,nT,nE,nPA) :: dEdt_IIII,VPhi_IIII,VR_IIII
-real :: ISS
+  real :: ISS
 
   !---------------------------------------------------------------------  
- 
- ! Initialize the field aligned current
- Jfac = 0.0
+
+  ! Initialize the field aligned current
+  Jfac = 0.0
 
 
   PHIPOFF=0.
@@ -725,12 +748,12 @@ real :: ISS
         call  get_grad_curv_drift(VPhi_IIII,VR_IIII)
      end if
   end if
-  
+
   ISS=-1			! sign of specie's charge
   if (S.ge.2) ISS=1
-  
+
   if (ABASE(IA+1).eq.1) then
-     
+     write(*,*) 'This is the Volland-Stern Potential'
      do J=1,JO   ! Fill in drift values
         do i=1,io
            do l =1, lo
@@ -745,6 +768,8 @@ real :: ISS
                  end select
               end do
            end do
+
+           !stop
            P1(I,J)=A*LAMGAM*LZ(I)**(LAMGAM+1.)*sin(PHI(J)+0.5*DPHI)*   &
                 DT/DPHI*(RE*RE/ME)
            BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*sin(phi(j))
@@ -796,7 +821,7 @@ real :: ISS
            end do
         end do
      end do
-     
+
      do J = 1, JO   ! Fill in azimuthal drift values
         SJ=sin(PHI(J)+0.5*DPHI)
         CJ=cos(PHI(J)+0.5*DPHI)
@@ -984,7 +1009,7 @@ real :: ISS
            P1(i,j)=P1(i,j)-EPR*DT/DPHI*RR**2*RE/ME
         end do
      end do
-     
+
      !\
      ! potdgcpm filled in from FPOT12
      !/
@@ -1299,7 +1324,7 @@ real :: ISS
      !	 enddo
      !	end do  ! End FPOT zeroing
      !/
-     
+
 
      if (AEPEN(IA+1).gt.1) then  !! >2 Prohibits inclusion of Epen
         do j=1,jo  ! transform FPOT to equatorial plane drifts
@@ -1318,6 +1343,7 @@ real :: ISS
                        VR(i,j,k,l) = VrConv(i,j,k,l)
                     case('numeric')
                        VR(i,j,k,l) = VrConv(i,j,k,l) + ISS*VR_IIII(i,j,k,l)*DT/DL1
+
                     end select
                  end do
               end do
@@ -1347,6 +1373,61 @@ real :: ISS
   end if
 
   call write_prefix; write(iUnitStdOut,*)'Done with MAGCONV'
+
+
+  write(*,*) 'ISS*DT/DL1', ISS*DT/DL1
+  stop
+
+  open(unit=3, file='DriftVsPA.dat')
+  do i =14,14
+     do j = 1,nT
+        do k =37, 37
+           do l =1, nPa
+              write(3,*) VPhi_IIII(i,j,k,l), P2(i,j,k,l), P1(i,j), Vr(i,j,k,l),&
+                   VR_IIII(i,j,k,l), VrConv(i,j,k,l), VR_IIII(i,j,k,l)+VrConv(i,j,k,l),&
+                   i, j, k, l, LZ(i),  Phi(j),  acos(mu(l))
+           end do
+        end do
+     end do
+  end do
+  close(3)
+
+  open(unit=3, file='DriftVsL.dat')
+
+  do j =1, nT
+     do k =37, 37
+        do l =2, 2
+           do i = 1, nR
+              write(3,*) VPhi_IIII(i,j,k,l), P2(i,j,k,l), P1(i,j), Vr(i,j,k,l),&
+                   VR_IIII(i,j,k,l), VrConv(i,j,k,l), VR_IIII(i,j,k,l)+VrConv(i,j,k,l),&
+                   i, j, k, l, LZ(i),  Phi(j),  acos(mu(l))
+           end do
+        end do
+     end do
+  end do
+
+  close(3)
+
+
+
+  open(unit=3, file='DriftVsPhi.dat')
+  write(3,*) 'drifts'
+  write(3,*) 'VPhi_IIII       P2       P1   VR  VrConv   VR_IIII+VrConv     i   j   k   l   lz      Phi pa'
+
+  do i =14, 14
+     do j =1, nT
+        do k =37, 37
+           do l =2, 2
+              write(3,*) VPhi_IIII(i,j,k,l), P2(i,j,k,l), P1(i,j),Vr(i,j,k,l),&
+                   VR_IIII(i,j,k,l), VrConv(i,j,k,l), VR_IIII(i,j,k,l)+VrConv(i,j,k,l),&
+                   i, j, k, l, LZ(i),  Phi(j),  acos(mu(l))
+
+           end do
+        end do
+     end do
+  end do
+  close(3)
+
 
 end subroutine MAGCONV
 

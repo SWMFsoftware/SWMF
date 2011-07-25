@@ -1,7 +1,8 @@
 subroutine heidi_init
 
+  use ModHeidiSize
   use ModHeidiMain,   ONLY: T, f107R
-  use ModHeidiDrifts, ONLY: j18,j6
+  use ModHeidiDrifts, ONLY: j18,j6, P2
   use ModProcIM,      ONLY: iProc
   use ModInit,        ONLY: nSt, nKp, nIBC, i2,nPr, xn, lnc, i3
   use ModHeidiIO
@@ -9,9 +10,11 @@ subroutine heidi_init
   implicit none
   !--------------------------------------------------------------------------
 
+
   if (iProc == 0) then
      call IonoHeidiInit(year,day,ut)
   endif
+
 
   if (.not. IsFramework) T = TIME
   if (iProc == 0) then
@@ -25,6 +28,7 @@ subroutine heidi_init
      call write_prefix; write(iUnitStdOut,*)'nSteps, nSteps in KP, nSteps IBC:',NST,NKP,NIBC
   end if
 
+
   call CONSTANT(NKP)
   I2=(NST-1)/NKP + 1
   I3 = NST
@@ -34,12 +38,16 @@ subroutine heidi_init
   call OTHERPARA
   call CURRENTSETUP
   call heidi_initial(LNC,XN,J6,J18)
+ 
   call THERMAL   ! Setup only
+ 
   call GEOSB
   if (iwpi.gt.0) then
      call WAPARA
      call ANISCH
   end if
+
+
 
   !Start the calculation
 

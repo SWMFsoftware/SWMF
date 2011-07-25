@@ -54,6 +54,7 @@ subroutine get_IntegralH(IntegralH_III)
      write(*,*) 'GET_INTEGRALH======>call initialize_b_field'
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
           RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
+
      do iPhi = 1, nT
         do iR =1, nR
            do iPitch =1, nPa
@@ -125,6 +126,7 @@ subroutine get_IntegralI(IntegralI_III)
      write(*,*) 'GET_INTEGRALI======>call initialize_b_field'
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
           RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
+     
      do iPhi = 1, nT
         do iR =1, nR
            do iPitch =1, nPa
@@ -133,11 +135,12 @@ subroutine get_IntegralI(IntegralI_III)
                    bMirror_I(iPitch),iMirror_I)
               call second_adiabatic_invariant(nPoint, iMirror_I(:), bMirror_I(iPitch), &
                    bFieldMagnitude_III(:,iR,iPhi),dLength_III(:,iR,iPhi), LZ(iR), SecondAdiabInv)
-              IntegralI_III(iPitch,iR,iPhi) = SecondAdiabInv           
+              IntegralI_III(iPitch,iR,iPhi) = SecondAdiabInv    
            end do
         end do
      end do
-  end select
+ 
+ end select
 
   IntegralI_III(1,:,:)   = IntegralI_III(2,:,:)
   IntegralI_III(nPa,:,:) = IntegralI_III(nPa-1,:,:)
@@ -270,26 +273,10 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
            NeutralHydrogen_III(iR,iPhi,1) = NeutralHydrogen_III(iR,iPhi,2)
            if (NeutralHydrogen_III(iR,iPhi,iPitch) < 0.0) &
                 NeutralHydrogen_III(iR,iPhi,iPitch) = NeutralHydrogen_III(iR,iPhi,iPitch-1)
-           !write(*,*) 'iR, iPhi, iPitch, NeutralHydrogen_III(iR,iPhi,iPitch)', &
-           !     iR, iPhi, iPitch, NeutralHydrogen_III(iR,iPhi,iPitch)
         end do
      end do
   end do
-
-
-!!$  
-!!$  do iPhi = 1, nT
-!!$     do iR = 1, nR
-!!$        do iPoint = 1, 101
-!!$           write(*,*) iPoint,iR,iPhi, Rho_III(iPoint,iR,iPhi)
-!!$        end do
-!!$     end do
-!!$  end do
-!!$  
-!!$stop
-
-!!$
-!!$ 
+ 
 !!$  NameFile = 'HGeo.out'
 !!$  StringHeader = 'Geocoronal hydrogen density in the equatorial plane'
 !!$  StringVarName = 'R MLT nH'
@@ -308,8 +295,6 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
 !!$          VarIn_VII = Rho_III(51:51,:,:))
 !!$     TypePosition = 'rewind' 
 !!$     
-!!$STOP
-
 !!$
 !!$ do iPitch = 1, nPA
 !!$    do iPhi = 1, nT
@@ -322,7 +307,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
 !!$     end do
 !!$  end do
 !!$
-!!$stop
+
 end subroutine get_neutral_hydrogen
 !============================================================
 subroutine get_B_field(bFieldMagnitude_III)
@@ -502,7 +487,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
      end do
   end do
 
-!!$  NameFile = 'EDOT88_off.out'                                                                 
+!!$  NameFile = 'EDOT88.out'                                                                 
 !!$  StringHeader = 'EDOT values'
 !!$  StringVarName = 'R MLT Edot E PA'                                                               
 !!$  TypePosition = 'rewind'                                                                 
@@ -525,7 +510,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
 !!$     end do
 !!$  end do
 !!$
-!!$  NameFile = 'EDOT60_off.out'                                                                 
+!!$  NameFile = 'EDOT60.out'                                                                 
 !!$  StringHeader = 'EDOT values'
 !!$  StringVarName = 'R MLT Edot E PA'                                                               
 !!$  TypePosition = 'rewind'                                                                 
@@ -548,7 +533,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
 !!$     end do
 !!$  end do
 !!$
-!!$  NameFile = 'EDOT30_off.out'                                                                 
+!!$  NameFile = 'EDOT30.out'                                                                 
 !!$  StringHeader = 'EDOT values'
 !!$  StringVarName = 'R MLT Edot E PA'                                                               
 !!$  TypePosition = 'rewind'                                                                 
@@ -571,7 +556,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
 !!$     end do
 !!$  end do
 !!$
-!!$  NameFile = 'MUDOT88_off.out'
+!!$  NameFile = 'MUDOT88.out'
 !!$  StringHeader = 'MUDOT values'
 !!$  StringVarName = 'R MLT Mudot E PA'
 !!$  TypePosition = 'rewind'
@@ -594,7 +579,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
 !!$     end do
 !!$  end do
 !!$
-!!$  NameFile = 'MUDOT60_off.out'
+!!$  NameFile = 'MUDOT60.out'
 !!$  StringHeader = 'EDOT values'
 !!$  StringVarName = 'R MLT Mudot E PA'
 !!$  TypePosition = 'rewind'
@@ -617,7 +602,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
 !!$     end do
 !!$  end do
 !!$
-!!$  NameFile = 'MUDOT30_off.out'
+!!$  NameFile = 'MUDOT30.out'
 !!$  StringHeader = 'EDOT values'
 !!$  StringVarName = 'R MLT Mudot E PA'
 !!$  TypePosition = 'rewind'
@@ -720,12 +705,14 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
   end do
 
 !!$   open(unit=3, file='DriftVsPA.dat')
+!!$ 
 !!$   do iR =14,14
 !!$      do iPhi = 1,nT
 !!$         do iE =37, 37
 !!$            do iPitch =1, nPa
-!!$               write(3,*)  VPhi_IIII(iR,iPhi,iE,iPitch),P2(iR,iPhi,iE,iPitch),VR_IIII(iR,iPhi,iE,iPitch),&
-!!$                  iR,iPhi,iE,iPitch, acos(mu(iPitch))
+!!$               write(3,*)  VPhi_IIII(iR,iPhi,iE,iPitch),P2(iR,iPhi,iE,iPitch),VrConv(iR,iPhi,iE,iPitch),&
+!!$                    VR_IIII(iR,iPhi,iE,iPitch)+VrConv(iR,iPhi,iE,iPitch),&
+!!$                    iR,iPhi,iE,iPitch, acos(mu(iPitch))
 !!$            end do
 !!$         end do
 !!$      end do
@@ -739,8 +726,10 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
 !!$            do iPitch =2, 2
 !!$               do iR =1, nR
 !!$  
-!!$               write(3,*)  VPhi_IIII(iR,iPhi,iE,iPitch),P2(iR,iPhi,iE,iPitch),VR_IIII(iR,iPhi,iE,iPitch),&
+!!$               write(3,*)  VPhi_IIII(iR,iPhi,iE,iPitch),P2(iR,iPhi,iE,iPitch),VrConv(iR,iPhi,iE,iPitch),&
+!!$                    VR_IIII(iR,iPhi,iE,iPitch)+VrConv(iR,iPhi,iE,iPitch),&
 !!$                   iR,iPhi,iE,iPitch, LZ(iR)
+!!$               
 !!$  
 !!$            end do
 !!$         end do
@@ -749,24 +738,23 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
 !!$  
 !!$   close(3)
 !!$
-!!$
-!!$
 !!$  open(unit=3, file='DriftVsPhi.dat')
+!!$  write(3,*) 'drifts'
+!!$  write(3,*) 'VPhi_IIII       P2       P1   VrConv   VR_IIII+VrConv           Phi'
 !!$  
 !!$   do iR =14, 14
 !!$      do iPhi =1, nT
 !!$         do iE =37, 37
-!!$            do iPitch =2, 2
-!!$               write(3,*)  VPhi_IIII(iR,iPhi,iE,iPitch),P2(iR,iPhi,iE,iPitch),VR_IIII(iR,iPhi,iE,iPitch),&
-!!$                    iR,iPhi,iE,iPitch, Phi(iPhi)
+!!$            do iPitch =5, 5
+!!$               write(3,*)  VPhi_IIII(iR,iPhi,iE,iPitch),P2(iR,iPhi,iE,iPitch),P1(iR,iPhi),&
+!!$                    VrConv(iR,iPhi,iE,iPitch),&
+!!$                    VR_IIII(iR,iPhi,iE,iPitch)+VrConv(iR,iPhi,iE,iPitch),&
+!!$                   Phi(iPhi)
 !!$  
 !!$            end do
 !!$         end do
 !!$      end do
 !!$   end do
 !!$   close(3)
-!!$
-!!$
-!!$STOP
 
 end subroutine get_grad_curv_drift

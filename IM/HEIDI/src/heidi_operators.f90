@@ -7,8 +7,8 @@
 !======================================================================
 subroutine LLIMIT
 
-  use ModHeidiSize
-  use ModHeidiMain
+  use ModHeidiSize, ONLY: lo, ko, jo, io, s
+  use ModHeidiMain, ONLY: F2, ffactor 
 
   implicit none
 
@@ -32,9 +32,9 @@ end subroutine LLIMIT
 !======================================================================
 subroutine FCHECK(MARK)
 
-  use ModHeidiSize
-  use ModHeidiMain
-  use ModHeidiIo, ONLY: write_prefix, iUnitStdOut
+  use ModHeidiSize, ONLY: io, lo, jo, ko, nS, sCalc
+  use ModHeidiMain, ONLY: F2, T, A
+  use ModHeidiIo,   ONLY: write_prefix, iUnitStdOut
 
   implicit none
 
@@ -52,7 +52,6 @@ subroutine FCHECK(MARK)
                  do i=2,io
                     if ((F2(I,J,K,L,m).lt.-1.E-10).or.   &   ! -1E-29
                          (F2(I,J,K,L,m)-F2(I,J,K,L,m).ne.0.)) then
-!                         (F2(I,J,K,L,m)-F2(I,J,K,L,m).ge.1e-12)) then
                       call write_prefix; write(iUnitStdOut,*) 'Bad F,T,I,J,K,L,MARK:',F2(I,J,K,L,m),   &
                             T,m,I,J,K,L,MARK,Ibad
 
@@ -92,10 +91,13 @@ end subroutine FCHECK
 !======================================================================
 subroutine DRIFTR
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModHeidiDrifts
+  use ModHeidiSize,   ONLY: nT, nE, nPa, nS, nR, s, dT, &
+       lo, jo, ko, io
+  use ModHeidiIO,     ONLY: tInj, time, ilmp, rns,      &
+       consl, res, rnl, rel, ib, fini, chi 
+  use ModHeidiMain,   ONLY: T, FGeos, conf1, conf2,     &
+       f2, we, wmu, dr, dphi, ekev, upa, ffactor
+  use ModHeidiDrifts, ONLY: Vr, j6, j18
 
   implicit none
 
@@ -108,7 +110,7 @@ subroutine DRIFTR
   save f01,f02
   !----------------------------------------------------------------------
   ! Initialize F to zero values
-  F = 0.0
+ ! F = 0.0 ! this might need to be removed
   
   
   !\
@@ -225,10 +227,10 @@ end subroutine DRIFTR
 !======================================================================
 subroutine heidi_driftp
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModHeidiDrifts
+  use ModHeidiSize,   ONLY: nT, io, ko, lo, jo, s
+  use ModHeidiIO,     ONLY: isw, ilmp, rns, consl, res, rnl, rel, ib, fini, chi
+  use ModHeidiMain,   ONLY: F2, we, wmu, dr, dphi, ekev, upa, ffactor
+  use ModHeidiDrifts, ONLY: P1, P2, J6, j18
 
   implicit none
 
@@ -237,9 +239,6 @@ subroutine heidi_driftp
   real    :: fup,RR,corr,x
   real    :: fbc
   !----------------------------------------------------------------------
-
- 
-
   do I=2,IO
      do K=2,KO
         do L=2,LO
@@ -322,10 +321,10 @@ end subroutine heidi_driftp
 !======================================================================
 subroutine DRECOUL
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModHeidiDrifts
+  use ModHeidiSize,   ONLY: nE, s, jo, lo, ko
+  use ModHeidiIO,     ONLY: ilmp, esn, consl, eln, ece, ecn, ese, ele, ib, fini, chi
+  use ModHeidiMain,   ONLY: f2, xne, de, we, wmu, dr, dphi, ekev, upa, ffactor
+  use ModHeidiDrifts, ONLY: edot, coule, couli, j6, j18
   
   implicit none
 
@@ -370,7 +369,7 @@ subroutine DRECOUL
               F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(K)*FBND(K)*DE(K)/WE(K)   &
                    +C(K-1)*FBND(K-1)*DE(K-1)/WE(K)
               
-              if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
+!              if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
            end do
 
            !\                 
@@ -428,7 +427,7 @@ subroutine DRECOUL
               do K=2,KO
                  F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
 
-                 if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
+                 if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0 ! this might need to be removed
               end do
            end do
         end if
@@ -444,10 +443,10 @@ end subroutine DRECOUL
 !======================================================================
 subroutine DRIFTMU
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModHeidiDrifts
+  use ModHeidiSize,   ONLY: nPa, jo, ko, lo, s
+  use ModHeidiIO,     ONLY: ilmp, ib, fini, chi
+  use ModHeidiMain,   ONLY: f2, upa, ekev, ffactor, dmu, wmu 
+  use ModHeidiDrifts, ONLY: j6, j18, mudot
 
   implicit none
 
@@ -507,11 +506,7 @@ subroutine DRIFTMU
             +C(L-1)*FBND(L-1)*DMU(L-1)/WMU(L)
         if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
         
-!!$       if (F2(I,J,K,L,S)<0.0) then
-!!$          write(*,*) 'i,j,k,l,F2(I,J,K,L,S)  aaaa',i,j,k,l,F2(I,J,K,L,S)
-!!$          STOP
-!!$       end if
-       
+
        
     end do	! third L loop
     
@@ -524,12 +519,7 @@ subroutine DRIFTMU
           F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
           
           if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
-          
-!!$          if (F2(I,J,K,L,S)<0.0) then
-!!$             write(*,*) 'i,j,k,l,F2(I,J,K,L,S)  bbbbb',i,j,k,l,F2(I,J,K,L,S)
-!!$             STOP
-!!$          end if
-          
+
           
        end do	! yet another L loop
     endif
@@ -544,26 +534,30 @@ end subroutine DRIFTMU
 !======================================================================
 subroutine heidi_charexchange
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModHeidiDrifts
+  use ModHeidiSize,   ONLY: s, lo, ko, jo, io
+  use ModHeidiIO,     ONLY: ilmp, cen, consl, cee, aln, ale, ib, fini, chi
+  use ModHeidiMain,   ONLY: f2, ffactor, we, wmu, dr, dphi, ekev, upa
+  use ModHeidiDrifts, ONLY: acharge, atlos, j6, j18
 
   implicit none
 
   integer :: i,j,k,l
-  real    :: FL,fbc,FN
+  real    :: FL ,fbc
+  real    :: FN = 0.0
   !---------------------------------------------------------------------- 
+ 
   if (S.ge.2) then
      do L=2,LO
         do K=2,KO
 	   do J=1,JO
               do I=2,ILMP(J)
-                 FN=AMAX1(F2(I,J,K,L,S)*achar(I,j,K,L,S),1.E-30*FFACTOR(I,j,K,L))
+                 FN=AMAX1(F2(I,J,K,L,S)*acharge(I,j,K,L,S),1.E-30*FFACTOR(I,j,K,L))
                  FL=F2(I,J,K,L,S)-FN
                  CEN=CEN+FL*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
                  CEE=CEE+FL*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
                  F2(I,J,K,L,S)=FN
+
+                ! write(*,*) i,j,k,l,s,fn,F2(I,J,K,L,S),acharge(I,j,K,L,S),FFACTOR(I,j,K,L)
               end do
 	   end do
         end do
@@ -603,11 +597,11 @@ end subroutine heidi_charexchange
 !======================================================================
 subroutine COULMU
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModHeidiDrifts
-  use ModHeidiWaves
+  use ModHeidiSize,   ONLY: nPa, jo, ko, lo, s
+  use ModHeidiIO,     ONLY: ilmp, ib, iwpi, fini, chi
+  use ModHeidiMain,   ONLY: F2, conmu1, conmu2, upa, xne, ekev, ffactor
+  use ModHeidiDrifts, ONLY: j6, j18, atai, atae, btai, btae, gtai, gtae
+  use ModHeidiWaves,  ONLY: ataw, gtaw
 
   implicit none
 

@@ -4,18 +4,18 @@ Module ModHeidiDrifts
   ! Mike Liemohn, March 2006
   !/
   
-  use ModHeidiSize
+  use ModHeidiSize, ONLY: nR, nT, NE, nPa, nS
   
   ! Define the atmospheric loss and charge exchange variables
   integer :: J6 = 0
   integer :: J18 = 0
-  real    :: ACHAR(NR,NT,NE,NPA,NS)
-  real    :: ATLOS(NR,NT,NE,NPA,NS)
+  real    :: ACHARGE(NR,NT,NE,NPA,NS)=0.0 
+  real    :: ATLOS(NR,NT,NE,NPA,NS) = 0.0
   
   ! Define the advection drift rate variables
   real :: VR(NR,NT,NE,NPA)  ! Radial drift
   real :: P1(NR,NT) 
-  real :: P2(NR,NT,NE,NPA) = 0.0
+  real :: P2(NR,NT,NE,NPA)= 0.0
   real :: EDOT(NR,NT,NE,NPA)
   real :: MUDOT(NR,NT,NE,NPA)
   real :: VrConv(NR,NT,NE,NPA) ! Convection velocity
