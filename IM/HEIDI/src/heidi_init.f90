@@ -1,11 +1,12 @@
 subroutine heidi_init
 
-  use ModHeidiSize
+  use ModHeidiSize,   ONLY: dT
   use ModHeidiMain,   ONLY: T, f107R
   use ModHeidiDrifts, ONLY: j18,j6, P2
   use ModProcIM,      ONLY: iProc
   use ModInit,        ONLY: nSt, nKp, nIBC, i2,nPr, xn, lnc, i3
-  use ModHeidiIO
+  use ModHeidiIO,     ONLY: write_prefix, time, iUnitStdout, tinj, iKp,&
+       F107, iwpi, tint, nStep, year, day, ut, IsFramework 
 
   implicit none
   !--------------------------------------------------------------------------
@@ -15,8 +16,7 @@ subroutine heidi_init
      call IonoHeidiInit(year,day,ut)
   endif
 
-
-  if (.not. IsFramework) T = TIME
+    if (.not. IsFramework) T = TIME
   if (iProc == 0) then
      call write_prefix; write(iUnitStdOut,*) 'TIME =',TIME
   end if
@@ -27,7 +27,6 @@ subroutine heidi_init
   if (iProc==0) then
      call write_prefix; write(iUnitStdOut,*)'nSteps, nSteps in KP, nSteps IBC:',NST,NKP,NIBC
   end if
-
 
   call CONSTANT(NKP)
   I2=(NST-1)/NKP + 1
@@ -47,8 +46,7 @@ subroutine heidi_init
      call ANISCH
   end if
 
-
-
+  
   !Start the calculation
 
   NPR=nint(TINT/DT/2.)
