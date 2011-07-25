@@ -769,7 +769,6 @@ subroutine MAGCONV(I3,NST)
               end do
            end do
 
-           !stop
            P1(I,J)=A*LAMGAM*LZ(I)**(LAMGAM+1.)*sin(PHI(J)+0.5*DPHI)*   &
                 DT/DPHI*(RE*RE/ME)
            BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*sin(phi(j))
@@ -1376,58 +1375,58 @@ subroutine MAGCONV(I3,NST)
 
 
   write(*,*) 'ISS*DT/DL1', ISS*DT/DL1
-  stop
+  
 
-  open(unit=3, file='DriftVsPA.dat')
-  do i =14,14
-     do j = 1,nT
-        do k =37, 37
-           do l =1, nPa
-              write(3,*) VPhi_IIII(i,j,k,l), P2(i,j,k,l), P1(i,j), Vr(i,j,k,l),&
-                   VR_IIII(i,j,k,l), VrConv(i,j,k,l), VR_IIII(i,j,k,l)+VrConv(i,j,k,l),&
-                   i, j, k, l, LZ(i),  Phi(j),  acos(mu(l))
-           end do
-        end do
-     end do
-  end do
-  close(3)
-
-  open(unit=3, file='DriftVsL.dat')
-
-  do j =1, nT
-     do k =37, 37
-        do l =2, 2
-           do i = 1, nR
-              write(3,*) VPhi_IIII(i,j,k,l), P2(i,j,k,l), P1(i,j), Vr(i,j,k,l),&
-                   VR_IIII(i,j,k,l), VrConv(i,j,k,l), VR_IIII(i,j,k,l)+VrConv(i,j,k,l),&
-                   i, j, k, l, LZ(i),  Phi(j),  acos(mu(l))
-           end do
-        end do
-     end do
-  end do
-
-  close(3)
-
-
-
-  open(unit=3, file='DriftVsPhi.dat')
-  write(3,*) 'drifts'
-  write(3,*) 'VPhi_IIII       P2       P1   VR  VrConv   VR_IIII+VrConv     i   j   k   l   lz      Phi pa'
-
-  do i =14, 14
-     do j =1, nT
-        do k =37, 37
-           do l =2, 2
-              write(3,*) VPhi_IIII(i,j,k,l), P2(i,j,k,l), P1(i,j),Vr(i,j,k,l),&
-                   VR_IIII(i,j,k,l), VrConv(i,j,k,l), VR_IIII(i,j,k,l)+VrConv(i,j,k,l),&
-                   i, j, k, l, LZ(i),  Phi(j),  acos(mu(l))
-
-           end do
-        end do
-     end do
-  end do
-  close(3)
-
+!!$  open(unit=3, file='DriftVsPA.dat')
+!!$  do i =14,14
+!!$     do j = 1,nT
+!!$        do k =37, 37
+!!$           do l =1, nPa
+!!$              write(3,*) VPhi_IIII(i,j,k,l), P2(i,j,k,l), P1(i,j), Vr(i,j,k,l),&
+!!$                   VR_IIII(i,j,k,l), VrConv(i,j,k,l), VR_IIII(i,j,k,l)+VrConv(i,j,k,l),&
+!!$                   i, j, k, l, LZ(i),  Phi(j),  acos(mu(l))
+!!$           end do
+!!$        end do
+!!$     end do
+!!$  end do
+!!$  close(3)
+!!$
+!!$  open(unit=3, file='DriftVsL.dat')
+!!$
+!!$  do j =1, nT
+!!$     do k =37, 37
+!!$        do l =2, 2
+!!$           do i = 1, nR
+!!$              write(3,*) VPhi_IIII(i,j,k,l), P2(i,j,k,l), P1(i,j), Vr(i,j,k,l),&
+!!$                   VR_IIII(i,j,k,l), VrConv(i,j,k,l), VR_IIII(i,j,k,l)+VrConv(i,j,k,l),&
+!!$                   i, j, k, l, LZ(i),  Phi(j),  acos(mu(l))
+!!$           end do
+!!$        end do
+!!$     end do
+!!$  end do
+!!$
+!!$  close(3)
+!!$
+!!$
+!!$
+!!$  open(unit=3, file='DriftVsPhi.dat')
+!!$  write(3,*) 'drifts'
+!!$  write(3,*) 'VPhi_IIII       P2       P1   VR  VrConv   VR_IIII+VrConv     i   j   k   l   lz      Phi pa'
+!!$
+!!$  do i =14, 14
+!!$     do j =1, nT
+!!$        do k =37, 37
+!!$           do l =2, 2
+!!$              write(3,*) VPhi_IIII(i,j,k,l), P2(i,j,k,l), P1(i,j),Vr(i,j,k,l),&
+!!$                   VR_IIII(i,j,k,l), VrConv(i,j,k,l), VR_IIII(i,j,k,l)+VrConv(i,j,k,l),&
+!!$                   i, j, k, l, LZ(i),  Phi(j),  acos(mu(l))
+!!$
+!!$           end do
+!!$        end do
+!!$     end do
+!!$  end do
+!!$  close(3)
+!!$
 
 end subroutine MAGCONV
 
