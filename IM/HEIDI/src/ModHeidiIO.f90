@@ -25,7 +25,7 @@ Module ModHeidiIO
   character(len=*),parameter :: NameRestartInDir   = "IM/restartIN/"
   character(len=*),parameter :: NameInputDirectory = "IM/input/"
 
-  integer :: INI(NS),IRES(15),ISTORM,IST,IBC(NS),IA
+  integer :: INI(NS),IRES(16),ISTORM,IST,IBC(NS),IA
   
   ! Define solar wind input variables
   ! Formerly: Common block CSWIND
