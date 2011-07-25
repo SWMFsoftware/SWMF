@@ -9,7 +9,7 @@
 0.0 			FracSecond
 
 #STOP
-80.0			tSimulationMax [sec]
+120.0			tSimulationMax [sec]
 
 #TIMESTEP
 20.                     TimeStep [sec] 
@@ -102,7 +102,7 @@ F 			UseWaves
 
 #BFIELD
 numeric     		TypeBCalc
-stretched_dipole        TypeBField
+stretched_dipole2        TypeBField
 1.0 			StretchingFactorA
 1.0 			StretchingFactorB
 
@@ -113,7 +113,7 @@ Solstice        	 TypeSeason
 90                       WhichSZA
 1.0 			 Ct
 
-#SAVERESTART
+SAVERESTART
 T			DoSaveRestart
 40.0			DtSaveRestart
 ascii			TypeFile
