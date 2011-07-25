@@ -71,6 +71,7 @@ module ModHeidiInput
   logical :: DoSaveContinuousSourcesLosses = .true.
   logical :: DoSaveNightsideBCDistribution = .true.
   logical :: DoSaveDifferentialNumberFlux = .false.
+  logical :: DoSaveFluxENA = .true.
   ! "#OUTPUTINFO"
   character(len=20) :: NameRunIn = 'test1'
   real :: nFrequency
@@ -305,6 +306,8 @@ contains
       if (DoSaveUnformatted)                            ires(13) = 1
       if (DoSaveContinuousSourcesLosses)                ires(14) = 1
       if (DoSaveNightsideBCDistribution)                ires(15) = 1
+      if (DoSaveFluxENA)                                ires(16) = 1
+      
       if (.not. DoSaveDifferentialNumberFlux)           ifac = 0
       if (DOSaveDifferentialNumberFlux)                 ifac = 1
       
