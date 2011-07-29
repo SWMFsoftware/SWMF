@@ -5,6 +5,8 @@
 
 #include "pic.h"
 
+long int PIC::Parallel::sendParticleCounter=0,PIC::Parallel::recvParticleCounter=0;
+
 //====================================================
 //Exchange particles between Processors
 void PIC::Parallel::ExchangeParticleData() {
@@ -29,6 +31,8 @@ void PIC::Parallel::ExchangeParticleData() {
   pipe.openSend(0);
   pipe.openRecv(0);
   pipeLastRecvThread=0;
+
+  sendParticleCounter=0,recvParticleCounter=0;
 
   //The signals
   int Signal;
@@ -85,6 +89,7 @@ void PIC::Parallel::ExchangeParticleData() {
               PIC::ParticleBuffer::PackParticleData(buffer,Particle);
               pipe.send(_NEW_PARTICLE_SIGNAL_);
               pipe.send(buffer,PIC::ParticleBuffer::ParticleDataLength);
+              sendParticleCounter++;
 
               NextParticle=PIC::ParticleBuffer::GetNext(Particle);
               PIC::ParticleBuffer::DeleteParticle(Particle);
@@ -122,6 +127,7 @@ void PIC::Parallel::ExchangeParticleData() {
          break;
        case _NEW_PARTICLE_SIGNAL_ :
          pipe.recv(buffer,PIC::ParticleBuffer::ParticleDataLength,From);
+         recvParticleCounter++;
 
          newParticle=PIC::ParticleBuffer::GetNewParticle(recvNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle);
          PIC::ParticleBuffer::UnPackParticleData(buffer,newParticle);

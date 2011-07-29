@@ -29,6 +29,11 @@ void PIC::Mover::MoveParticles() {
 
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
 
+  //sample the processor load
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+  double EndTime,StartTime=MPI_Wtime();
+#endif
+
   //move existing particles
   while (node!=NULL) {
 
@@ -50,6 +55,12 @@ void PIC::Mover::MoveParticles() {
           }
        }
     }
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    EndTime=MPI_Wtime();
+    node->ParallelLoadMeasure+=EndTime-StartTime;
+    StartTime=EndTime;
+#endif
 
     node=node->nextNodeThisThread;
   }
@@ -346,11 +357,12 @@ if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1737.0E3) {
 
   //=====================  DEBUG =========================
 
+  /*
 
   if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1737.0E3) {
     cout << __FILE__ << __LINE__ << endl;
   }
-
+*/
   //===================== END DEBUG ==================
 
 
@@ -465,10 +477,11 @@ if (ptr==1212) {
   //=====================  DEBUG =========================
 
 
+  /*
   if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1737.0E3) {
     cout << __FILE__ << __LINE__ << endl;
   }
-
+*/
   //===================== END DEBUG ==================
 
 

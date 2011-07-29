@@ -8,9 +8,10 @@
 
 //the list of blocks where the injection BCs are applied
 
-PIC::BC::fBlockInjectionBC PIC::BC::BlockInjectionBCindicatior=NULL;
+PIC::BC::fBlockInjectionIndicator PIC::BC::BlockInjectionBCindicatior=NULL;
 PIC::BC::fBlockInjectionBC PIC::BC::userDefinedBoundingBlockInjectionFunction=NULL;
 list<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* > PIC::BC::boundingBoxInjectionBlocksList;
+long int PIC::BC::nInjectedParticles=0;
 
 //====================================================
 //create the list of blocks where the injection BCs are applied
@@ -34,11 +35,28 @@ void PIC::BC::InitBoundingBoxInjectionBlockList(cTreeNodeAMR<PIC::Mesh::cDataBlo
 //the function controls the overall execution of the injection boundary conditions
 void PIC::BC::InjectionBoundaryConditions() {
 
+  nInjectedParticles=0;
+
   //model the particle injection through the face of the bounding box
   list<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* >::iterator end,nodeptr;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node;
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+  double EndTime,StartTime=MPI_Wtime();
+#endif
 
   for (nodeptr=boundingBoxInjectionBlocksList.begin(),end=boundingBoxInjectionBlocksList.end();nodeptr!=end;nodeptr++) {
-    if ((*nodeptr)->Thread==PIC::Mesh::mesh.ThisThread) userDefinedBoundingBlockInjectionFunction(*nodeptr);
+    node=*nodeptr;
+
+    if (node->Thread==PIC::Mesh::mesh.ThisThread) {
+      nInjectedParticles+=userDefinedBoundingBlockInjectionFunction(node);
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+      EndTime=MPI_Wtime();
+      node->ParallelLoadMeasure+=EndTime-StartTime;
+      StartTime=EndTime;
+#endif
+    }
   }
 
 }

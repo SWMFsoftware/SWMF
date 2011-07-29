@@ -182,3 +182,164 @@ void PIC::Mesh::buildMesh() {
   mesh.buildMesh();
 }
 
+
+
+void PIC::Mesh::cDataBlockAMR::sendBoundaryLayerBlockData(CMPI_channel *pipe) {
+  int iCell,jCell,kCell;
+  long int LocalCellNumber;
+  PIC::Mesh::cDataCenterNode *cell=NULL;
+
+  #if DIM == 3
+  static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=_BLOCK_CELLS_Z_;
+  #elif DIM == 2
+  static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=1;
+  #elif DIM == 1
+  static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=1,kCellMax=1;
+  #else
+  exit(__LINE__,__FILE__,"Error: the value of the parameter is not recognized");
+  #endif
+
+  for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
+    LocalCellNumber=getCenterNodeLocalNumber(iCell,jCell,kCell);
+    cell=GetCenterNode(LocalCellNumber);
+
+    pipe->send(cell->associatedDataPointer,cell->totalAssociatedDataLength);
+  }
+}
+
+void PIC::Mesh::cDataBlockAMR::sendMoveBlockAnotherProcessor(CMPI_channel *pipe) {
+  int iCell,jCell,kCell;
+  long int LocalCellNumber;
+  PIC::Mesh::cDataCenterNode *cell=NULL;
+
+  sendBoundaryLayerBlockData(pipe);
+
+  #if DIM == 3
+  static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=_BLOCK_CELLS_Z_;
+  #elif DIM == 2
+  static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=1;
+  #elif DIM == 1
+  static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=1,kCellMax=1;
+  #else
+  exit(__LINE__,__FILE__,"Error: the value of the parameter is not recognized");
+  #endif
+
+  //send all blocks' data when the blocks is moved to another processor
+  long int Particle,NextParticle;
+  char *buffer=new char[PIC::ParticleBuffer::ParticleDataLength];
+
+  const int _CENTRAL_NODE_NUMBER_SIGNAL_=1;
+  const int _NEW_PARTICLE_SIGNAL_=       2;
+  const int _END_COMMUNICATION_SIGNAL_=  3;
+
+  for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
+    LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+    cell=GetCenterNode(LocalCellNumber);
+    Particle=cell->FirstCellParticle;
+
+    if  (Particle!=-1) {
+      pipe->send(_CENTRAL_NODE_NUMBER_SIGNAL_);
+      pipe->send(LocalCellNumber);
+
+      while (Particle!=-1) {
+        PIC::ParticleBuffer::PackParticleData(buffer,Particle);
+        pipe->send(_NEW_PARTICLE_SIGNAL_);
+         pipe->send(buffer,PIC::ParticleBuffer::ParticleDataLength);
+
+        NextParticle=PIC::ParticleBuffer::GetNext(Particle);
+        PIC::ParticleBuffer::DeleteParticle(Particle);
+        Particle=NextParticle;
+      }
+
+      cell->FirstCellParticle=-1;
+    }
+  }
+
+  pipe->send(_END_COMMUNICATION_SIGNAL_);
+  delete [] buffer;
+}
+
+void PIC::Mesh::cDataBlockAMR::recvBoundaryLayerBlockData(CMPI_channel *pipe,int From) {
+  int iCell,jCell,kCell;
+  long int LocalCellNumber;
+  PIC::Mesh::cDataCenterNode *cell=NULL;
+
+  #if DIM == 3
+  static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=_BLOCK_CELLS_Z_;
+  #elif DIM == 2
+  static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=1;
+  #elif DIM == 1
+  static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=1,kCellMax=1;
+  #else
+  exit(__LINE__,__FILE__,"Error: the value of the parameter is not recognized");
+  #endif
+
+  for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
+    LocalCellNumber=getCenterNodeLocalNumber(iCell,jCell,kCell);
+    cell=GetCenterNode(LocalCellNumber);
+
+    pipe->recv(cell->associatedDataPointer,cell->totalAssociatedDataLength,From);
+
+
+
+
+//=========  DEBUG =========================
+
+    double *p=(double*)0x11f8d4f40;
+
+    p+=3;
+
+    if (PIC::Mesh::mesh.ThisThread==3) if (*p==80) {
+      cout << __FILE__ << __LINE__ << endl;
+    }
+
+//==========  END DEBUG =====================
+
+
+
+
+  }
+}
+
+//recieve all blocks' data when the blocks is moved to another processo
+void PIC::Mesh::cDataBlockAMR::recvMoveBlockAnotherProcessor(CMPI_channel *pipe,int From) {
+  long int LocalCellNumber;
+  PIC::Mesh::cDataCenterNode *cell=NULL;
+
+  recvBoundaryLayerBlockData(pipe,From);
+
+  long int Particle;
+
+  char *buffer=new char[PIC::ParticleBuffer::ParticleDataLength];
+
+  int Signal;
+  const int _CENTRAL_NODE_NUMBER_SIGNAL_=1;
+  const int _NEW_PARTICLE_SIGNAL_=       2;
+  const int _END_COMMUNICATION_SIGNAL_=  3;
+
+
+  pipe->recv(Signal,From);
+  LocalCellNumber=-1,cell=NULL;
+
+  while (Signal!=_END_COMMUNICATION_SIGNAL_) {
+    switch (Signal) {
+    case _CENTRAL_NODE_NUMBER_SIGNAL_ :
+      pipe->recv(LocalCellNumber,From);
+      cell=GetCenterNode(LocalCellNumber);
+      break;
+    case _NEW_PARTICLE_SIGNAL_ :
+      pipe->recv(buffer,PIC::ParticleBuffer::ParticleDataLength,From);
+
+      Particle=PIC::ParticleBuffer::GetNewParticle(cell->FirstCellParticle);
+      PIC::ParticleBuffer::UnPackParticleData(buffer,Particle);
+      break;
+    default :
+      exit(__LINE__,__FILE__,"Error: unknown option");
+    }
+
+    pipe->recv(Signal,From);
+  }
+
+  delete [] buffer;
+}
+

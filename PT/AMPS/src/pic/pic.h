@@ -71,6 +71,8 @@ namespace PIC {
 
   //the tags for the data exchenge between processors
   #define _PIC_SUBDOMAIN_BOUNDARY_LAYER_SAMPLING_DATA_EXCHANGE_TAG_   0
+  #define _PIC_DYNAMIC_BALANCE_SEND_RECV_MESH_NODE_EXCHANGE_TAG_     1
+
 
   //perform one time step
   void TimeStep();
@@ -141,6 +143,95 @@ namespace PIC {
 
   }
 
+  namespace ParticleBuffer {
+    typedef unsigned char byte;
+
+    //the set of parameters that determine the 'double' parameters of a particle
+    #define _PIC_PARTICLE_DATA_SPECIEDID_OFFSET_ 0
+    #define _PIC_PARTICLE_DATA_NEXT_OFFSET_ (_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_ + sizeof(unsigned char))
+    #define _PIC_PARTICLE_DATA_PREV_OFFSET_ (_PIC_PARTICLE_DATA_NEXT_OFFSET_ + sizeof(long int))
+    #define _PIC_PARTICLE_DATA_VELOCITY_OFFSET_  (_PIC_PARTICLE_DATA_PREV_OFFSET_ + sizeof(long int))
+    #define _PIC_PARTICLE_DATA_POSITION_OFFSET_  (_PIC_PARTICLE_DATA_VELOCITY_OFFSET_+ 3*sizeof(double))
+
+    //the offset for the variable that contains the 'particle weight correction'
+    extern int _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_;
+
+    //the total length of a data allocated for a particle
+    extern long int ParticleDataLength;
+
+    //The particle buffer's internal data
+    extern byte *ParticleDataBuffer;
+    extern long int MaxNPart,NAllPart,FirstPBufferParticle;
+
+    //Request additional data for a particle
+    void RequestDataStorage(long int &offset,int TotalDataLength);
+
+    //the basic data access functions for a particle
+    byte *GetParticleDataPointer(long int);
+
+    double *GetX(long int);
+    void GetX(double*,long int);
+    void SetX(double*,long int);
+
+    double *GetX(byte*);
+    void GetX(double*,byte*);
+    void SetX(double*,byte*);
+
+    double *GetV(long int);
+    void GetV(double*,long int);
+    void SetV(double*,long int);
+
+    double *GetV(byte*);
+    void GetV(double*,byte*);
+    void SetV(double*,byte*);
+
+    unsigned int GetI(byte*);
+    void SetI(unsigned int,byte*);
+
+    unsigned int GetI(long int);
+    void SetI(unsigned int,long int);
+
+    long int GetPrev(long int);
+    long int GetNext(long int);
+    void SetPrev(long int,long int);
+    void SetNext(long int,long int);
+
+    long int GetPrev(byte*);
+    long int GetNext(byte*);
+    void SetPrev(long int,byte*);
+    void SetNext(long int,byte*);
+
+    double GetIndividualStatWeightCorrection(long int);
+    double GetIndividualStatWeightCorrection(byte*);
+    void SetIndividualStatWeightCorrection(double,long int);
+    void SetIndividualStatWeightCorrection(double,byte*);
+
+    //the particle buffer procedure
+    void Init(long int);
+    long int GetMaxNPart();
+    long int GetAllPartNum();
+    long int GetParticleDataLength();
+
+    long int GetNewParticle();
+    long int GetNewParticle(long int&);
+
+    void DeleteParticle(long int);
+    void DeleteParticle(long int,long int&);
+
+    void CloneParticle(long int,long int);
+
+    void ExcludeParticleFromList(long int,long int&);
+
+    void SaveImageFile(int);
+    void LoadImageFile(int);
+
+    void PackParticleData(char*,long int);
+    void UnPackParticleData(char*,long int);
+
+    unsigned long GetChecksum();
+  }
+
+
   namespace Mesh {
 	  //the limiting size of the domain and the function controlling the local mesh resolution
 	  extern double xmin[3],xmax[3];
@@ -201,9 +292,9 @@ namespace PIC {
 
 	      FirstCellParticle=-1,tempParticleMovingList=-1;
 
-	      int i;
-	      char *ptr;
-	      for (i=0,ptr=associatedDataPointer;i<totalAssociatedDataLength;i++,ptr++) *ptr=0;
+	      int i,length=totalAssociatedDataLength/sizeof(double);
+	      double *ptr;
+	      for (i=0,ptr=(double*)associatedDataPointer;i<length;i++,ptr++) *ptr=0.0;
 	    }
 
 	    //init the buffers
@@ -389,6 +480,16 @@ namespace PIC {
 
 
       //exchenge of the data between processors
+      void sendBoundaryLayerBlockData(CMPI_channel *pipe);
+      void recvBoundaryLayerBlockData(CMPI_channel *pipe,int From);
+
+      //send the block to abother processor
+      void sendMoveBlockAnotherProcessor(CMPI_channel *pipe);
+      void recvMoveBlockAnotherProcessor(CMPI_channel *pipe,int From);
+
+
+//      void SendNodeData(CMPI_channel *pipe,int DataSetTag);
+      /*
       void SendNodeData(CMPI_channel *pipe,int DataSetTag) {
         int iCell,jCell,kCell;
         long int LocalCellNumber;
@@ -404,7 +505,7 @@ namespace PIC {
         exit(__LINE__,__FILE__,"Error: the value of the parameter is not recognized");
         #endif
 
-        if (DataSetTag==_PIC_SUBDOMAIN_BOUNDARY_LAYER_SAMPLING_DATA_EXCHANGE_TAG_) {
+        if ((DataSetTag==_PIC_SUBDOMAIN_BOUNDARY_LAYER_SAMPLING_DATA_EXCHANGE_TAG_)||(DataSetTag==_PIC_DYNAMIC_BALANCE_SEND_RECV_MESH_NODE_EXCHANGE_TAG_)) {
           for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
             LocalCellNumber=getCenterNodeLocalNumber(iCell,jCell,kCell);
             cell=GetCenterNode(LocalCellNumber);
@@ -414,8 +515,46 @@ namespace PIC {
 
         }
         else exit(__LINE__,__FILE__,"Error: unknown option");
-      }
 
+        //send all blocks' data when the blocks is moved to another processor
+        if (DataSetTag==_PIC_DYNAMIC_BALANCE_SEND_RECV_MESH_NODE_EXCHANGE_TAG_) {
+          int Signal;
+
+          const int _CENTRAL_NODE_NUMBER_SIGNAL_=1;
+          const int _NEW_PARTICLE_SIGNAL_=       2;
+          const int _END_COMMUNICATION_SIGNAL_=  3;
+
+          for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
+            LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+            Particle=sendNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;
+
+            if  (Particle!=-1) {
+              pipe.send(_CENTRAL_NODE_NUMBER_SIGNAL_);
+              pipe.send(LocalCellNumber);
+
+              while (Particle!=-1) {
+                PIC::ParticleBuffer::PackParticleData(buffer,Particle);
+                pipe.send(_NEW_PARTICLE_SIGNAL_);
+                pipe.send(buffer,PIC::ParticleBuffer::ParticleDataLength);
+
+                NextParticle=PIC::ParticleBuffer::GetNext(Particle);
+                PIC::ParticleBuffer::DeleteParticle(Particle);
+                Particle=NextParticle;
+              }
+
+              sendNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle=-1;
+            }
+          }
+
+          pipe.send(_END_COMMUNICATION_SIGNAL_);
+        }
+
+
+      }
+      */
+
+//      void RecvNodeData(CMPI_channel *pipe,int DataSetTag,int From);
+      /*
       void RecvNodeData(CMPI_channel *pipe,int DataSetTag,int From) {
         int iCell,jCell,kCell;
         long int LocalCellNumber;
@@ -442,14 +581,15 @@ namespace PIC {
         }
         else exit(__LINE__,__FILE__,"Error: unknown option");
       }
+      */
 
       //clean the sampling buffers
       void cleanDataBuffer() {
-        int i;
-        char *ptr;
+        int i,length=totalAssociatedDataLength/sizeof(double);
+        double *ptr;
 
         //clean the associated data buffers
-        for (i=0,ptr=associatedDataPointer;i<totalAssociatedDataLength;i++,ptr++) *ptr=0;
+        for (i=0,ptr=(double*)associatedDataPointer;i<length;i++,ptr++) *ptr=0.0;
 
         //clean the base class' data
         cBasicBlockAMR<cDataCornerNode,cDataCenterNode>cleanDataBuffer();
@@ -533,8 +673,45 @@ namespace PIC {
   }
 
 
+  //sample and output the particle's distribution function
+  namespace DistributionFunctionSample {
+    //the init flag
+    extern bool SamplingInitializedFlag;
+
+    //the modes for sampling of the v^2 and the absolute value of velocity
+    extern const int _LINEAR_SAMPLING_SCALE_,_LOGARITHMIC_SAMPLING_SCALE_;
+    extern int v2SamplingMode,speedSamplingMode;
+
+    //the range of the velocity scale and the number of nodes in the sample
+    extern double vMax,vMin;
+    extern long int nSampledFunctionPoints;
+    extern double dV,dV2,dSpeed;
+
+    //the sampling buffers
+    extern double **SamplingBuffer;
+
+    //sampling data offsets
+    extern int Sample_Velocity_Offset,Sample_Speed_Offset,Sample_V2_Offset,SampleDataLength;
+
+    //get the offset to the beginig of the sampling data for a particular samplePoint, spec,.....
+    long int GetSampleDataOffset(int spec,int nInterval);
+
+    //sampling  locations
+    extern double **SamplingLocations;
+    extern int nSamleLocations;
+    extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>** SampleNodes;
+    extern long int *SampleLocalCellNumber;
+
+    void Init(double ProbeLocations[][DIM],int nProbeLocations);
+
+    void SampleDistributionFnction(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* sampleNode);
+    void flushSamplingBuffers();
+
+    void printDistributionFunction(char *fname,int spec);
+  }
 
 
+  /*
   namespace ParticleBuffer {
     typedef unsigned char byte;
 
@@ -623,6 +800,7 @@ namespace PIC {
     unsigned long GetChecksum();
   }
 
+*/
 
   namespace Mover {
     //the return codes of the moving procedures
@@ -671,6 +849,12 @@ namespace PIC {
   }
 
   namespace Parallel {
+
+
+     //count the number of particles that were send and recieve by the thread
+     extern long int sendParticleCounter,recvParticleCounter;
+
+     //exchenge paricles between iterations
      void ExchangeParticleData();
   }
 
@@ -679,9 +863,14 @@ namespace PIC {
     //the list of blocks that are connected to the bounding box, where the injection boundary conditions are applied
     extern list<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* > boundingBoxInjectionBlocksList;
 
-    typedef bool (*fBlockInjectionBC)(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*);
-    extern fBlockInjectionBC BlockInjectionBCindicatior;
+    typedef bool (*fBlockInjectionIndicator)(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*);
+    extern fBlockInjectionIndicator BlockInjectionBCindicatior;
+
+    typedef long int (*fBlockInjectionBC)(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*);
     extern fBlockInjectionBC userDefinedBoundingBlockInjectionFunction;
+
+    //the numbe of injected particles
+    extern long int nInjectedParticles;
 
     void InitBoundingBoxInjectionBlockList(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=PIC::Mesh::mesh.rootTree);
 

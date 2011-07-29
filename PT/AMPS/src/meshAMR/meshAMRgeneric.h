@@ -3316,6 +3316,7 @@ if ((fabs(x[0]+225)<EPS)&&(fabs(x[1]+225)<EPS)&&(fabs(x[2]+12.5)<EPS)) {
 
       ptrCenterNode=CenterNodes.newElement();
       ptrCenterNode->SetX(x);
+      ptrCenterNode->Measure=-1.0;
     }
 
     startNode->block->SetCenterNode(ptrCenterNode,nd);
@@ -3367,7 +3368,11 @@ void DeallocateBlock(cTreeNodeAMR<cBlockAMR> *startNode) {
 
   for (k=kCenterMin;k<=kCenterMax;k++) for (j=jCenterMin;j<=jCenterMax;j++) for (i=iCenterMin;i<=iCenterMax;i++) {
     ptrCenterNode=startNode->block->GetCenterNode(getCenterNodeLocalNumber(i,j,k));
-    if (ptrCenterNode!=NULL) if (ptrCenterNode->decrementConnectionCounter()==0) CenterNodes.deleteElement(ptrCenterNode);
+
+    if (ptrCenterNode!=NULL) if (ptrCenterNode->decrementConnectionCounter()==0) {
+      ptrCenterNode->Measure=-1.0;
+      CenterNodes.deleteElement(ptrCenterNode);
+    }
   }
 #endif
 
@@ -5739,11 +5744,16 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
 
 //====================================== DEBUG ===================
 
+              /*
               if (_MESH_DIMENSION_==3) if ((fabs(xNode[0]+300.0)<EPS)&&(fabs(xNode[1]-1000.0)<EPS)&&(fabs(xNode[2]+00.0)<EPS)) {
-  cout << __LINE__ << endl;
+  cout << __FILE__ << __LINE__ << endl;
 }
 
+              if (startNode->Temp_ID==1116) {
+                cout << __FILE__ << __LINE__ << endl;
+              }
 
+*/
 //=========================== END DEBUG ====================
 
 
@@ -7179,6 +7189,7 @@ nMPIops++;
     cTreeNodeAMR<cBlockAMR> *node,*prev,*next,*neibNode,*tNode;
     bool found;
 
+    for (i=0;i<nTotalThreads;i++) DomainBoundaryLayerNodesList[i]=NULL;
     node=ParallelNodesDistributionList[ThisThread];
 
     while (node!=NULL) {
@@ -7330,7 +7341,26 @@ nMPIops++;
 
       while (node!=NULL) {
         nTest++;
-        if (nTest>nCounter) exit(__LINE__,__FILE__,"Error: the list is locked-up somewhere");
+        if (nTest>nCounter) { //the list is locked somewhere. find the lock up of the list
+          int i;
+          cTreeNodeAMR<cBlockAMR> *startSearch=DomainBoundaryLayerNodesList[thread];
+
+          for (i=0;i<nCounter;i++) {
+            node=startSearch->nextNodeThisThread;
+
+            while (node!=NULL) {
+              if (node==startSearch) {
+                cout << "Error: have found a repearting node in the list. nodeid=" << node->Temp_ID << endl;
+              }
+
+              node=node->nextNodeThisThread;
+            }
+
+            startSearch=startSearch->nextNodeThisThread;
+          }
+
+          exit(__LINE__,__FILE__,"Error: the list is locked-up somewhere");
+        }
 
         node=node->nextNodeThisThread;
       }
@@ -7653,12 +7683,15 @@ nMPIops++;
 
 
   //The MPI routines used in the mesh
-  double CalculateTotalParallelLoadMeasure(cTreeNodeAMR<cBlockAMR>* startNode) {
+  double CalculateTotalParallelLoadMeasure(cTreeNodeAMR<cBlockAMR>* startNode,double *ThreadLoad=NULL) {
     double res=0.0;
     static CMPI_channel pipe(100000);
 
     if (startNode==rootTree) {
-      if (ThisThread==0) pipe.openRecvAll();
+      if (ThisThread==0) {
+        pipe.openRecvAll();
+        if (ThreadLoad!=NULL) for (int thread=0;thread<nTotalThreads;thread++) ThreadLoad[thread]=0.0;
+      }
       else pipe.openSend(0);
     }
 
@@ -7669,7 +7702,7 @@ nMPIops++;
       startNode->ParallelLoadMeasure=0.0;
       #endif
 
-      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) res+=CalculateTotalParallelLoadMeasure(startNode->downNode[nDownNode]);
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) res+=CalculateTotalParallelLoadMeasure(startNode->downNode[nDownNode],ThreadLoad);
     }
     else {
       #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
@@ -7678,9 +7711,12 @@ nMPIops++;
       if (ThisThread==0) {
         double t;
 
+        if (ThreadLoad!=NULL) ThreadLoad[0]+=res;
+
         for (int thread=1;thread<nTotalThreads;thread++) {
           pipe.recv(t,thread);
           res+=t;
+          if (ThreadLoad!=NULL) ThreadLoad[thread]+=t;
         }
 
         startNode->ParallelLoadMeasure=res;
@@ -7736,6 +7772,8 @@ nMPIops++;
     }
     else {
       startNode->nextNodeThisThread=(*DistributionList);
+      startNode->prevNodeThisThread=NULL;
+
       if (*DistributionList!=NULL) (*DistributionList)->prevNodeThisThread=startNode;
       *DistributionList=startNode;
     }
@@ -7761,6 +7799,21 @@ nMPIops++;
 
       for (nnode=0;nnode<_STACK_DEFAULT_BUFFER_BUNK_SIZE_;nnode++) {
         (TreeNode+nnode)->nodeDescriptor.NodeProcessingFlag=_AMR_FALSE_;
+      }
+    }
+  }
+
+  void ResetParallelLoadMeasure() {
+    long int nMemoryBank,nTotalMemoryBanks,nnode;
+    cTreeNodeAMR<cBlockAMR>* TreeNode;
+
+    nTotalMemoryBanks=treeNodes.dataBufferListPointer;
+
+    for (nMemoryBank=0;nMemoryBank<nTotalMemoryBanks;nMemoryBank++) {
+      TreeNode=treeNodes.dataBufferList[nMemoryBank];
+
+      for (nnode=0;nnode<_STACK_DEFAULT_BUFFER_BUNK_SIZE_;nnode++) {
+        (TreeNode+nnode)->ParallelLoadMeasure=0.0;
       }
     }
   }
@@ -7946,7 +7999,7 @@ if (TmpAllocationCounter==2437) {
     }
   }
 
-  void CreateNewParallelDistributionLists() {
+  void CreateNewParallelDistributionLists(int userDefinedCodeForSendingBlockData=-1) {
     double LoadMeasureNormal;
     long int nTotalBlocks,*nResolutionLevelBlocks=NULL;
     int i,nLevel;
@@ -7957,13 +8010,32 @@ if (TmpAllocationCounter==2437) {
     nResolutionLevelBlocks=new long int [_MAX_REFINMENT_LEVEL_+1];
     for (nLevel=0;nLevel<=_MAX_REFINMENT_LEVEL_;nLevel++) nResolutionLevelBlocks[nLevel]=0;
 
-    LoadMeasureNormal=CalculateTotalParallelLoadMeasure(rootTree)/nTotalThreads;
+    double *InitialProcessorLoad=new double[nTotalThreads];
+
+    LoadMeasureNormal=CalculateTotalParallelLoadMeasure(rootTree,InitialProcessorLoad)/nTotalThreads;
 
     if (LoadMeasureNormal<=0.0) {
       SetConstantParallelLoadMeasure(1.0,rootTree);
-      LoadMeasureNormal=CalculateTotalParallelLoadMeasure(rootTree)/nTotalThreads;
+      LoadMeasureNormal=CalculateTotalParallelLoadMeasure(rootTree,InitialProcessorLoad)/nTotalThreads;
     }
 
+    if (ThisThread==0) {
+      cTreeNodeAMR<cBlockAMR> *ptr;
+      long int nblocks;
+
+      cout << "Initial Cumulative Parallel Load Distribution\nThread\tLoad\tNormalized Load\tBlock's Number\n";
+
+      for (int t=0;t<nTotalThreads;t++) {
+        for (nblocks=0,ptr=ParallelNodesDistributionList[t];ptr!=NULL;ptr=ptr->nextNodeThisThread) nblocks++;
+
+        printf("%i\t%8.2e\t%8.2e\t%ld\n",t,InitialProcessorLoad[t],InitialProcessorLoad[t]/LoadMeasureNormal,nblocks);
+      }
+    }
+
+    delete [] InitialProcessorLoad;
+
+
+    //normalize the load
     nTotalBlocks=NormalizeParallelLoadMeasure(LoadMeasureNormal,nResolutionLevelBlocks,rootTree);
 
     //Recalculate the space filling curve if its needed
@@ -7994,13 +8066,23 @@ if (TmpAllocationCounter==2437) {
     cTreeNodeAMR<cBlockAMR>* CurveNode=startNodeFillingCurve;
     int nCurrentProcessorBalancing=0;
     CMPI_channel pipe(100000);
+    cTreeNodeAMR<cBlockAMR> *node;
 
     for (i=0;i<nTotalThreads;i++) {
       ParallelNodesDistributionList[i]=NULL;
 
       //deallocate the boundary layer
 #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
-      if (DomainBoundaryLayerNodesList[i]!=NULL) exit(__LINE__,__FILE__,"not implemented");
+      if (DomainBoundaryLayerNodesList[i]!=NULL) { //exit(__LINE__,__FILE__,"not implemented");
+        node=DomainBoundaryLayerNodesList[i];
+
+        while (node!=NULL) {
+          DeallocateBlock(node);
+          node=node->nextNodeThisThread;
+        }
+
+        DomainBoundaryLayerNodesList[i]=NULL;
+      }
 #endif
     }
 
@@ -8056,8 +8138,15 @@ if (TmpAllocationCounter==2437) {
 
       pipe.closeRecvAll();
 
-      cout << "Cumulative Parallel Load Distribution\nThread\tLoad\tNormalized Load\n";
-      for (t=0;t<nTotalThreads;t++) printf("%i\t%8.2e\t%8.2e\n",t,newCumulativeParallelLoadMeasure[t],nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure);
+      cout << "Cumulative Parallel Load Distribution\nThread\tLoad\tNormalized Load\tBlock's Number\n";
+
+      for (t=0;t<nTotalThreads;t++) {
+        long int nblocks;
+
+        for (nblocks=0,ptr=ParallelNodesDistributionList[t];ptr!=NULL;ptr=ptr->nextNodeThisThread) nblocks++;
+        printf("%i\t%8.2e\t%8.2e\t%ld\n",t,newCumulativeParallelLoadMeasure[t],nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure,nblocks);
+      }
+
       delete [] newCumulativeParallelLoadMeasure;
     }
     else {
@@ -8080,13 +8169,21 @@ if (TmpAllocationCounter==2437) {
 
     //check that all blocks are presented in the new blocks' distribution lists
     long int nDistributedNodes=0;
-    cTreeNodeAMR<cBlockAMR> *node;
+    //cTreeNodeAMR<cBlockAMR> *node;
+
+    ResetAMRnodeProcessingFlag();
 
     for (int thread=0;thread<nTotalThreads;thread++) {
       node=ParallelNodesDistributionList[thread];
 
       while (node!=NULL) {
         nDistributedNodes++;
+
+        if (node->nodeDescriptor.NodeProcessingFlag==_AMR_TRUE_) exit(__LINE__,__FILE__,"Error: the same node in present in the nodes' distribution list twice");
+        node->nodeDescriptor.NodeProcessingFlag=_AMR_TRUE_;
+
+        if ((node->nextNodeThisThread!=NULL)&&(node->nextNodeThisThread==node->prevNodeThisThread)) exit(__LINE__,__FILE__,"Error: prev==next");
+
         node=node->nextNodeThisThread;
       }
     }
@@ -8098,14 +8195,43 @@ if (TmpAllocationCounter==2437) {
     //clear the node's load sample
     SetConstantParallelLoadMeasure(0.0,rootTree);
 
+    //deallocate blocks from the subdomain boundary layer
+    node=DomainBoundaryLayerNodesList[ThisThread];
+
+    while (node!=NULL) {
+      DeallocateBlock(node);
+      node=node->nextNodeThisThread;
+    }
 
     //move the cells between processes according the new distribution
+    pipe.openSend(0);
+    pipe.openRecv(0);
+    int pipeLastRecvThread=0;
+
     for (int thread=0;thread<nTotalThreads;thread++) {
       node=ParallelNodesDistributionList[thread];
 
       while (node!=NULL) {
-        if ((node->Thread!=thread)&&(node->block!=NULL)&&((ThisThread==node->Thread)||(ThisThread==thread))) { //the block is moved from processor=node->Thread to processor=thread
-          exit(__LINE__,__FILE__,"blocks' exchange is not implemented");
+        if ((userDefinedCodeForSendingBlockData!=-1)&&(node->Thread!=thread)&&((ThisThread==node->Thread)||(ThisThread==thread))) { //the block is moved from processor=node->Thread to processor=thread
+//          exit(__LINE__,__FILE__,"blocks' exchange is not implemented"); //userDefinedCodeForSendingBlockData
+
+          if (ThisThread==thread) { //the block is moved to processor 'thread'
+            if (pipeLastRecvThread!=node->Thread) {
+              pipe.RedirectRecvBuffer(node->Thread);
+              pipeLastRecvThread=node->Thread;
+            }
+
+            AllocateBlock(node);
+            InitCellMeasure(node);
+            node->block->recvMoveBlockAnotherProcessor(&pipe,node->Thread);
+          }
+          else { //the block is moved out from the processor
+            if (pipe.sendThread!=thread) pipe.RedirectSendBuffer(thread);
+
+            node->block->sendMoveBlockAnotherProcessor(&pipe);
+            DeallocateBlock(node);
+          }
+
         }
 
         //update the node's thread
@@ -8113,6 +8239,9 @@ if (TmpAllocationCounter==2437) {
         node=node->nextNodeThisThread;
       }
     }
+
+    pipe.closeSend();
+    pipe.closeRecv(pipeLastRecvThread);
 
     //create the Send/Recv flags vectors
     for (int thread=0;thread<nTotalThreads;thread++) for (i=0;i<nTotalThreads;i++) ParallelSendRecvMap[thread][i]=false;
@@ -8171,15 +8300,30 @@ if (TmpAllocationCounter==2437) {
 
     //create the list of boundary layer, allocated and init the corresponding blocks
 #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+    for (i=0;i<nTotalThreads;i++) DomainBoundaryLayerNodesList[i]=NULL;
+
     InitDomainBoundaryLayer(rootTree);
 
-    if (blocks.usedElements()!=0)  exit(__LINE__,__FILE__,"not implemented"); //the blocks are not exists -> simply create the boundary layer list
+    //allocate blocks from the subdomain boundary layer
+    for (i=0;i<nTotalThreads;i++) if (i!=ThisThread) {
+      node=DomainBoundaryLayerNodesList[i];
+
+      while (node!=NULL) {
+        AllocateBlock(node);
+        node=node->nextNodeThisThread;
+      }
+    }
+
+    //exchenge data from the boundary layer blocks
+    if (blocks.usedElements()!=0) ParallelBlockDataExchange();
+
+ //   if (blocks.usedElements()!=0)  exit(__LINE__,__FILE__,"not implemented"); //the blocks are not exists -> simply create the boundary layer list
 
 #endif
 
   }
 
-  void ParallelBlockDataExchange(int DataSetTag) {
+  void ParallelBlockDataExchange() {
     int From,To,i,pipeLastRecvThread;
     CMPI_channel pipe(100000);
 
@@ -8326,7 +8470,7 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
             pipe.send((char*)(&nodeid),sizeof(nodeid));
 
             //send the data
-            sendNode->block->SendNodeData(&pipe,DataSetTag);
+            sendNode->block->sendBoundaryLayerBlockData(&pipe);
           }
 
 #if _MESH_DIMENSION_ == 2
@@ -8344,7 +8488,7 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
            pipe.send((char*)(&nodeid),sizeof(nodeid));
 
            //send the data
-           sendNode->block->SendNodeData(&pipe,DataSetTag);
+           sendNode->block->sendBoundaryLayerBlockData(&pipe);
          }
 
 
@@ -8359,7 +8503,7 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
            pipe.send((char*)(&nodeid),sizeof(nodeid));
 
            //send the data
-           sendNode->block->SendNodeData(&pipe,DataSetTag);
+           sendNode->block->sendBoundaryLayerBlockData(&pipe);
          }
 #endif
 //         recvNode=recvNode->nextNodeThisThread;
@@ -8383,7 +8527,52 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
           pipe.recv((char*)(&nodeid),sizeof(nodeid),From);
           recvNode=findAMRnodeWithID(nodeid);
 
-          if (recvNode->block==NULL) exit(__LINE__,__FILE__,"Error: the node is not allocated");
+          if (recvNode->block==NULL) {
+            //chack the consistence ofthe mesh: 1. weather the 'recvNode' have neiborous block from 'ThisThread' and 2. weather 'recvNode' is in the DomainBoundaryLayerNodesList[From]
+            bool found=false;
+            cTreeNodeAMR<cBlockAMR> *searchNode;
+
+            cout << "Error: the node is not allocated:" << endl;
+
+            for (i=0;i<(1<<_MESH_DIMENSION_);i++) if (recvNode->neibNodeCorner[i]!=NULL) if (recvNode->neibNodeCorner[i]->Thread==ThisThread) {
+              found=true;
+              cout << "'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+            }
+
+#ifdef _AMR_ParallelBlockDataExchange_SEND_FACES_
+           for (i=0;i<_MESH_DIMENSION_*(1<<_MESH_DIMENSION_);i++) if (recvNode->neibNodeFace[i]!=NULL) if (recvNode->neibNodeFace[i]->Thread==ThisThread) {
+             found=true;
+             cout << "'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+           }
+#endif
+
+#if _MESH_DIMENSION_ == 3
+           for (i=0;i<12*2;i++) if (recvNode->neibNodeEdge[i]!=NULL) if (recvNode->neibNodeEdge[i]->Thread==ThisThread) {
+             found=true;
+             cout << "'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+           }
+#endif
+
+           if (found==false) cout << "'recvNode' doesn't have neibours at ThisThread (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+
+           //2. check if the 'recvNode' in the list 'DomainBoundaryLayerNodesList[From]'
+           found=false;
+           searchNode=DomainBoundaryLayerNodesList[From];
+
+           while (searchNode!=NULL) {
+             if (searchNode==recvNode) {
+               found=true;
+               cout << "recvNode in the 'DomainBoundaryLayerNodesList[From]' (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+             }
+
+             searchNode=searchNode->nextNodeThisThread;
+           }
+
+           if (found==false) cout << "'recvNode' is not in 'DomainBoundaryLayerNodesList[From]' (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+
+
+            exit(__LINE__,__FILE__,"Error: the node is not allocated");
+          }
 
 
 //================  DEBUG ========================
@@ -8399,7 +8588,7 @@ if (ThisThread==2) if (pow(recvNode->xmin[0]+250.0,2)+pow(recvNode->xmin[1]+500.
 
 
 
-          recvNode->block->RecvNodeData(&pipe,DataSetTag,From);
+          recvNode->block->recvBoundaryLayerBlockData(&pipe,From);
           pipe.recv(Signal,From);
         }
 

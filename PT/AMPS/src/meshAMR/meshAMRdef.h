@@ -446,6 +446,9 @@ public:
 	    char** tmpDataList=new char*[cAMRstack <T>::dataBufferListSize+_STACK_DEFAULT_BUFFER_LIST_SIZE_];
 	    char*** tmpStackList=new char**[cAMRstack <T>::dataBufferListSize+_STACK_DEFAULT_BUFFER_LIST_SIZE_];
 
+	    cAMRstack <T>::MemoryAllocation+=sizeof(char*)*(cAMRstack <T>::dataBufferListSize+_STACK_DEFAULT_BUFFER_LIST_SIZE_);
+	    cAMRstack <T>::MemoryAllocation+=sizeof(char**)*(cAMRstack <T>::dataBufferListSize+_STACK_DEFAULT_BUFFER_LIST_SIZE_);
+
 	    //copy the content of the old lists to the new ones
 	    if (associatedDataBufferList!=NULL) for (;i<cAMRstack <T>::dataBufferListSize;i++) tmpDataList[i]=associatedDataBufferList[i],tmpStackList[i]=associatedDataStackList[i];
 	    for (j=0;j<_STACK_DEFAULT_BUFFER_LIST_SIZE_;j++,i++) tmpDataList[i]=NULL,tmpStackList[i]=NULL;
@@ -453,6 +456,8 @@ public:
 	    if (associatedDataBufferList!=NULL) {
 	      delete [] associatedDataBufferList;
 	      delete [] associatedDataStackList;
+
+	      cAMRstack <T>::MemoryAllocation-=(sizeof(char*)+sizeof(char**))*cAMRstack <T>::dataBufferListSize;
 	    }
 
 	    associatedDataBufferList=tmpDataList;
@@ -464,6 +469,8 @@ public:
 
 	  associatedDataBufferList[cAMRstack <T>::dataBufferListPointer]=new char[_STACK_DEFAULT_BUFFER_BUNK_SIZE_*offset];
 	  associatedDataStackList[cAMRstack <T>::dataBufferListPointer]=new char*[_STACK_DEFAULT_BUFFER_BUNK_SIZE_];
+
+	  cAMRstack <T>::MemoryAllocation+=(offset*sizeof(char)+sizeof(char*))*_STACK_DEFAULT_BUFFER_BUNK_SIZE_;
 
 	  for (i=0;i<_STACK_DEFAULT_BUFFER_BUNK_SIZE_;i++) associatedDataStackList[cAMRstack <T>::dataBufferListPointer][i]=associatedDataBufferList[cAMRstack <T>::dataBufferListPointer]+i*offset;
 	}
@@ -497,20 +504,45 @@ public:
     res->Temp_ID=cAMRstack <T>::Temp_ID_counter++;
     #endif
 
+
+
+
+//================   DEBUG =========================
+/*
+
+    int t;
+    MPI_Comm_rank(MPI_COMM_WORLD,&t);
+
+    if (t==3) if ((res->Temp_ID==2708279)||(res->Temp_ID==536172)) {
+      cout << __FILE__ << __LINE__ << endl;
+    }
+*/
+//================ END DEBUG =======================
+
+
     return res;
   }
 
 
   void clear() {
+    T t;
+    long int offset=t.AssociatedDataLength();
+
     if (associatedDataBufferList!=NULL) {
       for (int i=0;i<cAMRstack <T>::dataBufferListPointer;i++) {
         delete [] associatedDataBufferList[i];
         delete [] associatedDataStackList[i];
+
+        cAMRstack <T>::MemoryAllocation-=(sizeof(char)*offset+sizeof(char*))*_STACK_DEFAULT_BUFFER_BUNK_SIZE_;
       }
 
       delete [] associatedDataBufferList;
       delete [] associatedDataStackList;
+
+      cAMRstack <T>::MemoryAllocation-=(sizeof(char*)+sizeof(char**))*cAMRstack <T>::dataBufferListSize;
     }
+
+    associatedDataBufferList=NULL,associatedDataStackList=NULL;
 
     cAMRstack <T>::clear();
   }
@@ -535,6 +567,8 @@ public:
    }
 
    void deleteElement(T* delElement) {
+
+
 	 if (delElement->AssociatedDataLength()!=0) {
        long int elementStackBank,offset;
        long int localElementStackPointer=cAMRstack<T>::elementStackPointer-1;
@@ -545,7 +579,22 @@ public:
        associatedDataStackList[elementStackBank][offset]=delElement->GetAssociatedDataBufferPointer();
 	 }
 
+
+
+
 	 cAMRstack<T>::deleteElement(delElement);
+	 delElement->SetAssociatedDataBufferPointer(NULL);
+   }
+
+   //save and load the allocation of the stack
+   void saveAllocationParameters(FILE *fout) {
+     cAMRstack<T>::saveAllocationParameters(fout);
+   }
+
+   void readAllocationParameters(FILE *fout) {
+     cAMRstack<T>::readAllocationParameters(fout);
+
+     if (cAMRstack<T>::dataBufferListPointer!=0) cAMRstack<T>::exit(__LINE__,__FILE__,"not implemented");
    }
 
 };
