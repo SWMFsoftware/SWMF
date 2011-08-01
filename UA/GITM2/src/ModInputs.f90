@@ -90,7 +90,7 @@ module ModInputs
 
   logical :: UseTopography = .false.
 
-  real :: AltMinIono=95.0 ! in km
+  real :: AltMinIono=80.0 ! in km
 
   real :: TempMax = 1000.0
   real :: TempMin =  200.0
