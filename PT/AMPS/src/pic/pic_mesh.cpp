@@ -19,7 +19,7 @@ int PIC::Mesh::cDataCenterNode::totalAssociatedDataLength=0;
 int PIC::Mesh::completedCellSampleDataPointerOffset=0,PIC::Mesh::collectingCellSampleDataPointerOffset=0;
 
 int PIC::Mesh::sampledParticleWeghtRelativeOffset=0,PIC::Mesh::sampledParticleNumberRelativeOffset=0,PIC::Mesh::sampledParticleNumberDensityRelativeOffset=0;
-int PIC::Mesh::sampledParticleVelocityRelativeOffset=0,PIC::Mesh::sampledParticleVelocity2RelativeOffset=0;
+int PIC::Mesh::sampledParticleVelocityRelativeOffset=0,PIC::Mesh::sampledParticleVelocity2RelativeOffset=0,PIC::Mesh::sampledParticleSpeedRelativeOffset=0;
 int PIC::Mesh::sampledExternalDataRelativeOffset=0;
 int PIC::Mesh::sampleSetDataLength=0;
 
@@ -62,22 +62,25 @@ void PIC::Mesh::initCellSamplingDataBuffer() {
   //set up the offsets for 'center node' sampled data
   long int offset=0;
 
-  PIC::Mesh::sampledParticleWeghtRelativeOffset=offset;
+  sampledParticleWeghtRelativeOffset=offset;
   offset+=sizeof(double)*PIC::nTotalSpecies;
 
-  PIC::Mesh::sampledParticleNumberRelativeOffset=offset;
+  sampledParticleNumberRelativeOffset=offset;
   offset+=sizeof(double)*PIC::nTotalSpecies;
 
-  PIC::Mesh::sampledParticleNumberDensityRelativeOffset=offset;
+  sampledParticleNumberDensityRelativeOffset=offset;
   offset+=sizeof(double)*PIC::nTotalSpecies;
 
-  PIC::Mesh::sampledParticleVelocityRelativeOffset=offset;
+  sampledParticleVelocityRelativeOffset=offset;
   offset+=3*sizeof(double)*PIC::nTotalSpecies;
 
-  PIC::Mesh::sampledParticleVelocity2RelativeOffset=offset;
+  sampledParticleVelocity2RelativeOffset=offset;
   offset+=3*sizeof(double)*PIC::nTotalSpecies;
 
-  PIC::Mesh::sampledExternalDataRelativeOffset=offset;
+  sampledParticleSpeedRelativeOffset=offset;
+  offset+=sizeof(double)*PIC::nTotalSpecies;
+
+  sampledExternalDataRelativeOffset=offset;
 
   if (PIC::Mesh::ExternalSamplingProcedureDefinedFlag==true) {
     exit(__LINE__,__FILE__,"not implemented");

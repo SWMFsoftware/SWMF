@@ -146,7 +146,7 @@ void PIC::Sampling() {
   PIC::Mesh::cDataCenterNode *cell;
   PIC::Mesh::cDataBlockAMR *block;
   char *SamplingData;
-  double *v,LocalParticleWeight;
+  double *v,LocalParticleWeight,Speed2,v2;
 
   //parallel efficientcy measure
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
@@ -184,6 +184,9 @@ void PIC::Sampling() {
               TreeNodeTotalParticleNumber++;
 #endif
 
+              Speed2=0.0;
+
+
               ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
               s=PIC::ParticleBuffer::GetI(ParticleData);
               v=PIC::ParticleBuffer::GetV(ParticleData);
@@ -214,9 +217,14 @@ if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1500.0E3) {
               *(s+(double*)(SamplingData+PIC::Mesh::sampledParticleNumberDensityRelativeOffset))+=LocalParticleWeight/cell->Measure;
 
               for (idim=0;idim<3;idim++) {
+                v2=v[idim]*v[idim];
+                Speed2+=v2;
+
                 *(3*s+idim+(double*)(SamplingData+PIC::Mesh::sampledParticleVelocityRelativeOffset))+=v[idim]*LocalParticleWeight;
-                *(3*s+idim+(double*)(SamplingData+PIC::Mesh::sampledParticleVelocity2RelativeOffset))+=v[idim]*v[idim]*LocalParticleWeight;
+                *(3*s+idim+(double*)(SamplingData+PIC::Mesh::sampledParticleVelocity2RelativeOffset))+=v2*LocalParticleWeight;
               }
+
+              *(s+(double*)(SamplingData+PIC::Mesh::sampledParticleSpeedRelativeOffset))+=sqrt(Speed2)*LocalParticleWeight;
 
               ptr=PIC::ParticleBuffer::GetNext(ParticleData);
             }

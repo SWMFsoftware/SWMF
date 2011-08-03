@@ -31,6 +31,7 @@ void PIC::BC::InitBoundingBoxInjectionBlockList(cTreeNodeAMR<PIC::Mesh::cDataBlo
     for (int i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) InitBoundingBoxInjectionBlockList(downNode);
   }
 }
+
 //====================================================
 //the function controls the overall execution of the injection boundary conditions
 void PIC::BC::InjectionBoundaryConditions() {
@@ -61,5 +62,31 @@ void PIC::BC::InjectionBoundaryConditions() {
 
 }
 
+//====================================================
+//calculate the rate of injection of particles with the Maxwellian distribution
+double PIC::BC::CalculateInjectionRate_MaxwellianDistribution(double NumberDesnity,double Temp,double *BulkVelocity,double *ExternalNormal,int spec) {
+  double res=0.0,vNorm,beta,vv,sc,cc,aa;
+  int idim;
+
+  for (vv=0.0,vNorm=0.0,idim=0;idim<DIM;idim++) vv+=BulkVelocity[idim]*BulkVelocity[idim],vNorm+=BulkVelocity[idim]*ExternalNormal[idim];
+
+  beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*Temp));
+  vv=sqrt(vv);
+  sc=vv*beta;
+
+  if ((sc>10.0)&&(vNorm<0.0)) res=fabs(vNorm)*NumberDesnity;
+  else if ((sc>10.0)&&(vNorm>0.0)) res=0.0;
+  else {
+    if (vv>1.0E-6) {
+      cc=-vNorm/vv;
+      aa=(exp(-sc*sc*cc*cc)+sqrtPi*sc*cc*(1.0+erf(sc*cc)))/(2.0*sqrtPi);
+    }
+    else aa=1.0/(2.0*sqrtPi);
+
+    res=fabs(aa)*NumberDesnity/beta;
+  }
+
+  return res;
+}
 
 

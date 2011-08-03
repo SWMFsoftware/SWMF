@@ -43,7 +43,7 @@ using namespace std;
 
 //the maximum length of the strings
 #define _MAX_STRING_LENGTH_PIC_  500
-
+#define Kbol 1.3806503E-23
 
 
 
@@ -257,7 +257,7 @@ namespace PIC {
 	    //4. particle pow(velocity[3],2)
 	  //b. sampling data requested for involved physical models and external species
     extern int sampledParticleWeghtRelativeOffset,sampledParticleNumberRelativeOffset,sampledParticleNumberDensityRelativeOffset;
-    extern int sampledParticleVelocityRelativeOffset,sampledParticleVelocity2RelativeOffset;
+    extern int sampledParticleVelocityRelativeOffset,sampledParticleVelocity2RelativeOffset,sampledParticleSpeedRelativeOffset;
     extern int sampledExternalDataRelativeOffset;
     extern int sampleSetDataLength;
 
@@ -357,11 +357,57 @@ namespace PIC {
           TotalWeight=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset)));
           SampledData=3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocityRelativeOffset);
 
-          if (TotalWeight!=0.0) for (idim=0;idim<DIM;idim++) v[idim]=SampledData[idim]/TotalWeight/PIC::LastSampleLength;
+          if (TotalWeight>0.0) for (idim=0;idim<DIM;idim++) v[idim]=SampledData[idim]/TotalWeight/PIC::LastSampleLength;
           else for (idim=0;idim<DIM;idim++) v[idim]=0.0;
         }
         else for (idim=0;idim<DIM;idim++) v[idim]=0.0;
+      }
 
+      void GetBulkVelocitySquared(double *v2,int s) {
+        int idim;
+        double TotalWeight,*SampledData;
+
+        #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
+        if ((s<0)||(s>=PIC::nTotalSpecies)) exit(__LINE__,__FILE__,"Error: 's' is out of the range");
+        #endif
+
+        if (PIC::LastSampleLength!=0) {
+          TotalWeight=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset)));
+          SampledData=3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocity2RelativeOffset);
+
+          if (TotalWeight>0.0) for (idim=0;idim<DIM;idim++) v2[idim]=SampledData[idim]/TotalWeight/PIC::LastSampleLength;
+          else for (idim=0;idim<DIM;idim++) v2[idim]=0.0;
+        }
+        else for (idim=0;idim<DIM;idim++) v2[idim]=0.0;
+      }
+
+      double GetMeanParticleSpeed(int s) {
+        double TotalWeight,*SampledData,res=0.0;
+
+        #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
+        if ((s<0)||(s>=PIC::nTotalSpecies)) exit(__LINE__,__FILE__,"Error: 's' is out of the range");
+        #endif
+
+        if (PIC::LastSampleLength!=0) {
+          TotalWeight=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset)));
+          SampledData=s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset);
+
+          if (TotalWeight>0.0) res=(*SampledData)/TotalWeight/PIC::LastSampleLength;
+        }
+
+        return res;
+      }
+
+      double GetTranslationalTemperature(int s) {
+        int idim;
+        double res=0.0,v[3]={0.0,0.0,0.0},v2[3]={0.0,0.0,0.0};
+
+        GetBulkVelocity(v,s);
+        GetBulkVelocitySquared(v2,s);
+
+        for (idim=0;idim<3;idim++) res+=v2[idim]-v[idim]*v[idim];
+
+        return PIC::MolecularData::GetMass(s)*res/(3.0*Kbol);
       }
 
 
@@ -370,13 +416,15 @@ namespace PIC {
         int idim;
 
         struct cOutputData {
-          double NumberDesnity,ParticleNumber,v[3];
+          double NumberDesnity,ParticleNumber,v[3],MeanParticleSpeed,TranslationalTemeprature;
         } OutputData;
 
         if (pipe->ThisThread==CenterNodeThread) {
           OutputData.NumberDesnity=GetNumberDensity(DataSetNumber);
           OutputData.ParticleNumber=GetParticleNumber(DataSetNumber);
           GetBulkVelocity(OutputData.v,DataSetNumber);
+          OutputData.MeanParticleSpeed=GetMeanParticleSpeed(DataSetNumber);
+          OutputData.TranslationalTemeprature=GetTranslationalTemperature(DataSetNumber);
         }
 
 
@@ -384,7 +432,8 @@ namespace PIC {
           if (CenterNodeThread!=0) pipe->recv((char*)&OutputData,sizeof(OutputData),CenterNodeThread);
 
           fprintf(fout,"%e  %e ",OutputData.NumberDesnity,OutputData.ParticleNumber);
-          for (idim=0;idim<DIM;idim++) fprintf(fout," %e ",OutputData.v[idim]);
+          for (idim=0;idim<DIM;idim++) fprintf(fout,"%e ",OutputData.v[idim]);
+          fprintf(fout,"%e %e ",OutputData.MeanParticleSpeed,OutputData.TranslationalTemeprature);
         }
         else pipe->send((char*)&OutputData,sizeof(OutputData));
       }
@@ -397,8 +446,9 @@ namespace PIC {
       }
 
       void PrintVariableList(FILE* fout,int DataSetNumber) {
-       fprintf(fout,", \"Number Density\", \"Particle Number\" ");
+       fprintf(fout,", \"Number Density\", \"Particle Number\"");
        for (int idim=0;idim<DIM;idim++) fprintf(fout,", \"V%i\"",idim);
+       fprintf(fout,", \"Speed\", \"Translational Temperature\"");
       }
 
       void Interpolate(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients) {
@@ -410,10 +460,11 @@ namespace PIC {
         #endif
 
         double InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0.0,InterpolatedBulkVelocity[3]={0.0,0.0,0.0},InterpolatedBulk2Velocity[3]={0.0,0.0,0.0};
+        double InterpolatedParticleSpeed=0.0;
         double pWeight;
 
         for (s=0;s<PIC::nTotalSpecies;s++) {
-          InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0.0;
+          InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0.0,InterpolatedParticleSpeed=0.0;
           for (idim=0;idim<3;idim++) InterpolatedBulkVelocity[idim]=0.0,InterpolatedBulk2Velocity[idim]=0.0;
 
           //interpolate the sampled data
@@ -425,21 +476,27 @@ namespace PIC {
             InterpolatedParticleNumber+=c*InterpolationList[i]->GetParticleNumber(s);
             InterpolatedParticleNumberDeinsity+=c*InterpolationList[i]->GetNumberDensity(s);
 
+
             for (idim=0;idim<3;idim++) {
               InterpolatedBulkVelocity[idim]+=c*(*(idim+3*s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocityRelativeOffset)));
               InterpolatedBulk2Velocity[idim]+=c*(*(idim+3*s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocity2RelativeOffset)));
             }
+
+            InterpolatedParticleSpeed+=c*(*(s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset)));
           }
 
           //stored the interpolated data in the associated data buffer
           *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNumberRelativeOffset))=InterpolatedParticleNumber;
           *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset))=InterpolatedParticleWeight;
           *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNumberDensityRelativeOffset))=InterpolatedParticleNumberDeinsity;
+          *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset))=InterpolatedParticleSpeed;
 
           for (i=0;i<3;i++) {
             *(i+3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocityRelativeOffset))=InterpolatedBulkVelocity[i];
             *(i+3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocity2RelativeOffset))=InterpolatedBulk2Velocity[i];
           }
+
+          *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset))=InterpolatedParticleSpeed;
 
         }
       }
@@ -710,6 +767,12 @@ namespace PIC {
     void printDistributionFunction(char *fname,int spec);
   }
 
+  //procedures for distribution of particle velocities
+  namespace Distribution {
+    void MaxwellianVelocityDistribution(double *v,double *BulkFlowVelocity,double Temp,int spec);
+    void InjectMaxwellianDistribution(double *v,double *BulkFlowVelocity,double Temp,double *ExternalNormal,int spec);
+  }
+
 
   /*
   namespace ParticleBuffer {
@@ -876,6 +939,9 @@ namespace PIC {
 
     //model the particle injection for the current time step
     void InjectionBoundaryConditions();
+
+    //calculate of the injection rate of particles distributed with Maxwellian distribution
+    double CalculateInjectionRate_MaxwellianDistribution(double NumberDesnity,double Temp,double *BulkVelocity,double *ExternalNormal,int spec);
 
 
     namespace InternalBoundary {
