@@ -254,6 +254,9 @@ subroutine set_inputs
               if (UseWACCMTides) UseMSISOnly = .true.
            endif
 
+        case ("#DAMPING")
+           call read_in_logical(UseDamping,iError)
+
         case ("#GRAVITYWAVE")
            call read_in_logical(UseGravityWave,iError)
 
@@ -348,17 +351,6 @@ subroutine set_inputs
               write(*,*) '#AMIEFILES'
               write(*,*) 'cAMIEFileNorth  (string)'
               write(*,*) 'cAMIEFileSouth  (string)'
-              IsDone = .true.
-           endif
-
-        case ("#IE")
-           call read_in_string(PotentialModel, iError)
-           call read_in_string(AuroralModel, iError)
-           if (iError /= 0) then
-              write(*,*) 'Incorrect format for #IE:'
-              write(*,*) '#IE'
-              write(*,*) 'PotentialModel  (string)'
-              write(*,*) 'AuroralModel    (string)'
               IsDone = .true.
            endif
 
@@ -851,21 +843,12 @@ subroutine set_inputs
            call read_in_logical(UseEUVData, iError)
            call read_in_string(cEUVFile, iError)
            
-           if (UseEUVData) call Set_Euv(iError)
+           if (UseEUVData) call Set_Euv(cEUVFile,iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #EUV_DATA'
               write(*,*) '#EUV_DATA'
               write(*,*) 'UseEUVData            (logical)'
               write(*,*) 'cEUVFile              (string)'
-           endif
-
-        case ("#STOP_FILE")
-           call read_in_logical(DoCheckStopFile, iError)
-
-           if (iError /= 0) then
-              write(*,*) 'Incorrect format for #STOP_FILE'
-              write(*,*) '#STOP_FILE'
-              write(*,*) 'DoCheckStopFile       (logical)'
            endif
 
         case ("#GLOW")

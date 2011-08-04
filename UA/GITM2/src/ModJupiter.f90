@@ -79,6 +79,9 @@ module ModPlanet
   real, parameter :: DaysPerYear = 670.0
   real, parameter :: SecondsPerYear = DaysPerYear * Rotation_Period
 
+  !Used as a damping term in Vertical solver.
+  real, dimension(nAlts) :: VertTau = 1.0e9 
+
   logical :: IsEarth = .false.
   character (len=10) :: cPlanet = "Mars"
 

@@ -141,6 +141,7 @@ module ModInputs
   logical :: UseEddyInSolver = .false.
   logical :: UseNeutralFrictionInSolver = .false.
   real    :: MaximumVerticalVelocity = 1000.0
+  logical :: UseDamping = .false.
 
 !! EddyVelocity Terms
   logical :: UseBoquehoAndBlelly = .false.

@@ -107,6 +107,9 @@ module ModPlanet
  real, parameter :: SunOrbit_D = 100.46435
  real, parameter :: SunOrbit_E = 129597740.63
 
+  !Used as a damping term in Vertical solver.
+  real, dimension(nAlts) :: VertTau = 1.0e9 
+
 
   logical :: IsEarth = .true.
   logical :: IsMars = .false.

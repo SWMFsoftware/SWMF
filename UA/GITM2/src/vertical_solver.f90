@@ -118,7 +118,7 @@ subroutine advance_vertical_1stage( &
   real, dimension(1:nAlts,3) :: GradVel_CD, DiffVel_CD
 
   real, dimension(1:nAlts,nSpecies)    :: GradLogNS, DiffLogNS, &
-       GradVertVel, DiffVertVel, DivVertVel,tau
+       GradVertVel, DiffVertVel, DivVertVel
   real, dimension(1:nAlts,nIonsAdvect) :: GradLogINS, DiffLogINS
   real :: NewSumRho, NewLogSumRho, rat, ed
 
@@ -231,11 +231,16 @@ subroutine advance_vertical_1stage( &
         NuSP = 0.0
      endif
 
-     do iSpecies=1,nSpecies
+     if (UseDamping) then
+        VertTau(iAlt) = &
+             15 - (1 - exp(-1.0*altitude_G(ialt)/1000.0/40.0))*5.0
+     endif
 
+     do iSpecies=1,nSpecies
+        !The tau term was added as a vertical wind damping term
         ! Version of vertical velocity with grad(p) and g here :
-        Tau(ialt,iSpecies) = 15 -(1 - exp(-1.0*altitude_G(ialt)/1000.0/40.0))*5.0
- 
+
+       
         NewVertVel(iAlt, iSpecies) = VertVel(iAlt, iSpecies) - Dt * &
              (VertVel(iAlt,iSpecies)*GradVertVel(iAlt,iSpecies) &
              - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
@@ -244,8 +249,7 @@ subroutine advance_vertical_1stage( &
              Mass(iSpecies) + &
              GradTemp(iAlt) * Boltzmanns_Constant / Mass(iSpecies) &
              - Gravity_G(iAlt)) &
-             + Dt * DiffVertVel(iAlt,iSpecies)  - VertVel(ialt,iSpecies)/tau(ialt,iSpecies)
-
+             + Dt * DiffVertVel(iAlt,iSpecies) - VertVel(ialt,iSpecies)/VertTau(ialt)
 
         if (UseCoriolis) then
            NewVertVel(iAlt,ispecies) = NewVertVel(iAlt,ispecies) + Dt * ( &
