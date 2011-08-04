@@ -118,7 +118,7 @@ subroutine advance_vertical_1stage( &
   real, dimension(1:nAlts,3) :: GradVel_CD, DiffVel_CD
 
   real, dimension(1:nAlts,nSpecies)    :: GradLogNS, DiffLogNS, &
-       GradVertVel, DiffVertVel, DivVertVel
+       GradVertVel, DiffVertVel, DivVertVel,tau
   real, dimension(1:nAlts,nIonsAdvect) :: GradLogINS, DiffLogINS
   real :: NewSumRho, NewLogSumRho, rat, ed
 
@@ -234,7 +234,8 @@ subroutine advance_vertical_1stage( &
      do iSpecies=1,nSpecies
 
         ! Version of vertical velocity with grad(p) and g here :
-
+        Tau(ialt,iSpecies) = 15 -(1 - exp(-1.0*altitude_G(ialt)/1000.0/40.0))*5.0
+ 
         NewVertVel(iAlt, iSpecies) = VertVel(iAlt, iSpecies) - Dt * &
              (VertVel(iAlt,iSpecies)*GradVertVel(iAlt,iSpecies) &
              - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
@@ -243,7 +244,8 @@ subroutine advance_vertical_1stage( &
              Mass(iSpecies) + &
              GradTemp(iAlt) * Boltzmanns_Constant / Mass(iSpecies) &
              - Gravity_G(iAlt)) &
-             + Dt * DiffVertVel(iAlt,iSpecies) 
+             + Dt * DiffVertVel(iAlt,iSpecies)  - VertVel(ialt,iSpecies)/tau(ialt,iSpecies)
+
 
         if (UseCoriolis) then
            NewVertVel(iAlt,ispecies) = NewVertVel(iAlt,ispecies) + Dt * ( &
