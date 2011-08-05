@@ -26,7 +26,6 @@ cAMRheap<cInternalSphericalData> PIC::BC::InternalBoundary::Sphere::InternalSphe
 PIC::BC::InternalBoundary::Sphere::fPrintVariableList PIC::BC::InternalBoundary::Sphere::PrintUserDefinedVariableList=NULL;
 PIC::BC::InternalBoundary::Sphere::fPrintTitle PIC::BC::InternalBoundary::Sphere::PrintUserDefinedTitle=NULL;
 PIC::BC::InternalBoundary::Sphere::fPrintDataStateVector PIC::BC::InternalBoundary::Sphere::PrintUserDefinedDataStateVector=NULL;
-PIC::BC::InternalBoundary::Sphere::fParticleSphereInteraction PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction=PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction_SpecularReflection;
 PIC::BC::InternalBoundary::Sphere::fSampleParticleData PIC::BC::InternalBoundary::Sphere::SampleParticleData=NULL;
 
 
@@ -185,21 +184,23 @@ void PIC::BC::InternalBoundary::Sphere::switchSamplingBuffers() {
 //====================================================
 //particle-spherical surface interaction
 //specular reflection of the particle velocity vector on the surface of the sphere
-int PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction_SpecularReflection(int spec,long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor)  {
+int PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction_SpecularReflection(int spec,long int ptr,double *x,double *v,double &dtTotal,void *NodeDataPointer,void* SphereDataPointer)  {
    double radiusSphere,*x0Sphere,l[3],r,vNorm,c;
    cInternalSphericalData *Sphere;
+   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*startNode;
    cSurfaceDataSphere *SurfaceData;
    int idim;
 
-   #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-   if (sphereDescriptor->BondaryType!=_INTERNAL_BOUNDARY_TYPE_SPHERE_) exit(__LINE__,__FILE__,"Error: wrong boundary type");
-   #endif
+
+   Sphere=(cInternalSphericalData*)SphereDataPointer;
+   startNode=(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)NodeDataPointer;
+
 
    #if DIM != 3
    exit(__LINE__,__FILE__,"Error: wrong dimension");
    #endif
 
-   Sphere=(cInternalSphericalData*)sphereDescriptor->BoundaryElement;
+
    Sphere->GetSphereGeometricalParameters(x0Sphere,radiusSphere);
 
    for (r=0.0,idim=0;idim<DIM;idim++) {

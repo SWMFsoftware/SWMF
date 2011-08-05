@@ -873,7 +873,7 @@ namespace PIC {
     #define _PARTICLE_LEFT_THE_DOMAIN_       2
     #define _PARTICLE_MOTION_FINISHED_       3
 
-#include "userParticleAcceleratinFunction.h"
+    #include "ParticleAcceleration.PIC.h"
 
     typedef int (*fSpeciesDependentParticleMover) (long int,double,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*);
 
@@ -1016,9 +1016,9 @@ namespace PIC {
         void flushCollectingSamplingBuffer(cInternalSphericalData* Sphere);
 
         //particle-spherical surface interaction
-        typedef int (*fParticleSphereInteraction)(int spec,long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
-        int ParticleSphereInteraction_SpecularReflection(int spec,long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
-        extern fParticleSphereInteraction ParticleSphereInteraction;
+        typedef int (*fParticleSphereInteraction)(int spec,long int ptr,double *x,double *v,double &dtTotal, void* NodeDataPointer,void *SphereDataPointer);
+        int ParticleSphereInteraction_SpecularReflection(int spec,long int ptr,double *x,double *v,double &dtTotal, void* NodeDataPointer,void *SphereDataPointer);
+
 
         //Sampling of the particles data
         typedef void (*fSampleParticleData)(long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
