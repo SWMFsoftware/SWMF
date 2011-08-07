@@ -278,7 +278,11 @@ if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1737.0E3) {
       int code;
 
       lastInternalBoundaryDescriptor=InternalBoundaryDescriptor_dtMin;
-      code=PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction(spec,ptr,x,v,dtTotal,startNode,InternalBoundaryDescriptor_dtMin);
+      code=((cInternalSphericalData*)(InternalBoundaryDescriptor_dtMin->BoundaryElement))->ParticleSphereInteraction(spec,ptr,x,v,dtTotal,(void*)startNode,InternalBoundaryDescriptor_dtMin->BoundaryElement);
+
+
+//      code=PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction(spec,ptr,x,v,dtTotal,startNode,InternalBoundaryDescriptor_dtMin);
+
 
       if (code==_PARTICLE_DELETED_ON_THE_FACE_) return _PARTICLE_LEFT_THE_DOMAIN_;
     }

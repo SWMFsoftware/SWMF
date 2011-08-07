@@ -169,6 +169,7 @@ namespace PIC {
     //the basic data access functions for a particle
     byte *GetParticleDataPointer(long int);
 
+    /*
     double *GetX(long int);
     void GetX(double*,long int);
     void SetX(double*,long int);
@@ -205,6 +206,180 @@ namespace PIC {
     double GetIndividualStatWeightCorrection(byte*);
     void SetIndividualStatWeightCorrection(double,long int);
     void SetIndividualStatWeightCorrection(double,byte*);
+    */
+
+    //==========================================================
+    //get the idividual particle weight correction
+    inline double GetIndividualStatWeightCorrection(long int ptr) {
+    #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+      return *((double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_));
+    #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+      return 1;
+    #else
+      exit(__LINE__,__FILE__,"Error: unknown option");
+    #endif
+    }
+
+    inline double GetIndividualStatWeightCorrection(byte *ParticleDataStart) {
+    #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+      return *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_));
+    #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+      return 1;
+    #else
+      exit(__LINE__,__FILE__,"Error: unknown option");
+    #endif
+    }
+
+    inline void SetIndividualStatWeightCorrection(double WeightCorrectionFactor,long int ptr) {
+    #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+      *((double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
+    #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+      //do nothing
+    #else
+      exit(__LINE__,__FILE__,"Error: unknown option");
+    #endif
+    }
+
+    inline void SetIndividualStatWeightCorrection(double WeightCorrectionFactor,byte *ParticleDataStart) {
+    #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+      *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
+    #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+      //do nothing
+    #else
+      exit(__LINE__,__FILE__,"Error: unknown option");
+    #endif
+    }
+    //==========================================================
+    //get the particle position
+    inline double *GetX(long int ptr) {
+      return (double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
+    }
+
+    inline double *GetX(byte *ParticleDataStart) {
+      return (double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
+    }
+
+    inline void GetX(double* x,long int ptr) {
+      register double *xptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
+      register int idim;
+
+      for (idim=0;idim<DIM;idim++) x[idim]=xptr[idim];
+    }
+
+    inline void GetX(double* x,byte *ParticleDataStart) {
+      register double *xptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
+      register int idim;
+
+      for (idim=0;idim<DIM;idim++) x[idim]=xptr[idim];
+    }
+
+    inline void SetX(double* x,long int ptr) {
+      register double *xptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
+      register int idim;
+
+      for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
+    }
+
+    inline void SetX(double* x,byte *ParticleDataStart) {
+      register double *xptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
+      register int idim;
+
+      for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
+    }
+
+    //==========================================================
+    //get the particle velocity
+    inline double *GetV(long int ptr) {
+      return (double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
+    }
+
+    inline double *GetV(byte *ParticleDataStart) {
+      return (double*) (ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
+    }
+
+    inline void GetV(double* v,long int ptr) {
+      register double *vptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
+      register int idim;
+
+      for (idim=0;idim<DIM;idim++) v[idim]=vptr[idim];
+    }
+
+    inline void GetV(double* v,byte *ParticleDataStart) {
+      register double *vptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
+      register int idim;
+
+      for (idim=0;idim<DIM;idim++) v[idim]=vptr[idim];
+    }
+
+    inline void SetV(double* v,long int ptr) {
+      register double *vptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
+      register int idim;
+
+      for (idim=0;idim<DIM;idim++) vptr[idim]=v[idim];
+    }
+
+    inline void SetV(double* v,byte *ParticleDataStart) {
+      register double *vptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
+      register int idim;
+
+      for (idim=0;idim<DIM;idim++) vptr[idim]=v[idim];
+    }
+
+
+    //==========================================================
+    //get the particle's species ID
+
+    inline unsigned int GetI(byte* ParticleDataStart) {
+      return *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_));
+    }
+
+    inline unsigned int GetI(long int ptr) {
+      return *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_));
+    }
+
+    inline void SetI(unsigned int spec,byte* ParticleDataStart) {
+      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=spec;
+    }
+
+    inline void SetI(unsigned int spec,long int ptr) {
+      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=spec;
+    }
+
+    //==========================================================
+    //get/set prev
+    inline long int GetPrev(long int ptr) {
+      return *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_PREV_OFFSET_));
+    }
+
+    inline long int GetPrev(byte* ParticleDataStart) {
+      return *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_PREV_OFFSET_));
+    }
+
+    inline void SetPrev(long int prev,long int ptr) {
+      *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_PREV_OFFSET_))=prev;
+    }
+
+    inline void SetPrev(long int prev,byte* ParticleDataStart) {
+      *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_PREV_OFFSET_))=prev;
+    }
+
+    //get/set next
+    inline long int GetNext(long int ptr) {
+      return *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_NEXT_OFFSET_));
+    }
+
+    inline long int GetNext(byte* ParticleDataStart) {
+      return *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_NEXT_OFFSET_));
+    }
+
+    inline void SetNext(long int next,long int ptr) {
+      *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_NEXT_OFFSET_))=next;
+    }
+
+    inline void SetNext(long int next,byte* ParticleDataStart) {
+      *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_NEXT_OFFSET_))=next;
+    }
+    //========================================================
 
     //the particle buffer procedure
     void Init(long int);
@@ -970,6 +1145,7 @@ namespace PIC {
         //4. surface number density
 
         //the spherical body as a internal body
+        /*
         class cSurfaceDataSphere  {
         public:
           unsigned int faceat;
@@ -979,6 +1155,7 @@ namespace PIC {
             faceat=-1,SamplingBuffer=NULL;
           }
         };
+        */
 
 
 
@@ -987,7 +1164,7 @@ namespace PIC {
         void Init(long int *RequestedSamplingSetDataLength,long int *UserDefinedSampleDataRelativeOffset);
 
         cInternalBoundaryConditionsDescriptor RegisterInternalSphere();
-        cSurfaceDataSphere* GetSphereSurfaceData(cInternalBoundaryConditionsDescriptor);
+//        cSurfaceDataSphere* GetSphereSurfaceData(cInternalBoundaryConditionsDescriptor);
         double* GetCompletedSamplingBuffer(cInternalBoundaryConditionsDescriptor);
         double* GetCollectingSamplingBuffer(cInternalBoundaryConditionsDescriptor);
 

@@ -60,6 +60,57 @@ void PIC::BC::InjectionBoundaryConditions() {
     }
   }
 
+
+  //particle injection from the internal surface
+#ifndef _INTERNAL_BOUNDARY_MODE_
+  exit(__LINE__,__FILE__,"Error: macroscopic variable '_INTERNAL_BOUNDARY_MODE_' is not defined. It souvle be defined in 'meshAMRdef.h'");
+#endif
+
+#if  _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
+  //reset the processing flag in the internal surface boundaries
+  list<cInternalBoundaryConditionsDescriptor>::iterator descriptor;
+
+  for (descriptor=PIC::Mesh::mesh.InternalBoundaryList.begin();descriptor!=PIC::Mesh::mesh.InternalBoundaryList.end();descriptor++) {
+    switch (descriptor->BondaryType) {
+    case _INTERNAL_BOUNDARY_TYPE_SPHERE_:
+      ((cInternalSphericalData*)(descriptor->BoundaryElement))->ProcessedBCflag=false;
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
+    }
+  }
+
+  //go through the blocks on the currect processor and execute the boundary condition procesure
+  cInternalBoundaryConditionsDescriptor *bc;
+  cInternalSphericalData *Sphere;
+
+  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) if ((bc=node->InternalBoundaryDescriptorList)!=NULL) {
+    for (;bc!=NULL;bc=bc->nextInternalBCelement) {
+      switch (bc->BondaryType) {
+      case _INTERNAL_BOUNDARY_TYPE_SPHERE_:
+        Sphere=(cInternalSphericalData*)(bc->BoundaryElement);
+
+        if (Sphere->ProcessedBCflag==false) {
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+          StartTime=MPI_Wtime();
+#endif
+
+          Sphere->ProcessedBCflag=true;
+          if (Sphere->InjectionBoundaryCondition!=NULL) nInjectedParticles+=Sphere->InjectionBoundaryCondition((void*)Sphere);
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+          node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
+#endif
+        }
+
+        break;
+      default:
+        exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
+      }
+    }
+  }
+
+#endif
 }
 
 //====================================================

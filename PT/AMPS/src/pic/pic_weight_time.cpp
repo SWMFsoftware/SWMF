@@ -42,14 +42,42 @@ double PIC::ParticleWeightTimeStep::GetMaximumBlockInjectionRate(int spec,cTreeN
 //====================================================
 //set particle's local weight (the weight is constant  across the domain)
 void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  static double ConstantWeightValue;
+  static double GlobalParticleWeight=0.0;
+  double GlobalTimeStep,ParticleInjectionRate;
 
-  if (startNode==PIC::Mesh::mesh.rootTree) ConstantWeightValue=GetMaximumBlockInjectionRate(spec)/maxReferenceInjectedParticleNumber;
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    //injection rate from the boundariees of the box
+    ParticleInjectionRate=GetMaximumBlockInjectionRate(spec);
+
+
+    //injection rate from the internal surfaces
+    list<cInternalBoundaryConditionsDescriptor>::iterator descriptor;
+    cInternalSphericalData *Sphere;
+
+    for (descriptor=PIC::Mesh::mesh.InternalBoundaryList.begin();descriptor!=PIC::Mesh::mesh.InternalBoundaryList.end();descriptor++) {
+      switch (descriptor->BondaryType) {
+      case _INTERNAL_BOUNDARY_TYPE_SPHERE_:
+        Sphere=(cInternalSphericalData*)descriptor->BoundaryElement;
+        ParticleInjectionRate+=Sphere->InjectionRate(spec,(void*)Sphere);
+        break;
+      default:
+        exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
+      }
+    }
+
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+    GlobalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+#else
+exit(__LINE__,__FILE__,"The mode is not implemented");
+#endif
+
+    GlobalParticleWeight=ParticleInjectionRate*GlobalTimeStep/maxReferenceInjectedParticleNumber;
+  }
 
 
 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-    startNode->block->SetLocalParticleWeight(ConstantWeightValue,spec);
+    startNode->block->SetLocalParticleWeight(GlobalParticleWeight,spec);
   }
   else {
     int i;

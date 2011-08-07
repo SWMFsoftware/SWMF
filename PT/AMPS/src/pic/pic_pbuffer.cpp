@@ -57,6 +57,9 @@ PIC::ParticleBuffer::byte *PIC::ParticleBuffer::GetParticleDataPointer(long int 
   return ParticleDataBuffer+ptr*ParticleDataLength;
 }
 
+
+/*
+
 //==========================================================
 //get the idividual particle weight correction
 double PIC::ParticleBuffer::GetIndividualStatWeightCorrection(long int ptr) {
@@ -229,6 +232,7 @@ void PIC::ParticleBuffer::SetNext(long int next,byte* ParticleDataStart) {
   *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_NEXT_OFFSET_))=next;
 }
 
+*/
 
 //==========================================================
 //the functions that controls the particle buffer

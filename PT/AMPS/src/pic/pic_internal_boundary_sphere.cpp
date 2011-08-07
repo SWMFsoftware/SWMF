@@ -88,7 +88,7 @@ void PIC::BC::InternalBoundary::Sphere::Init() {
 cInternalBoundaryConditionsDescriptor PIC::BC::InternalBoundary::Sphere::RegisterInternalSphere() {
   cInternalSphericalData *newSphere;
   cInternalBoundaryConditionsDescriptor SphereDescriptor;
-  cSurfaceDataSphere* SurfaceData;
+//  cSurfaceDataSphere* SurfaceData;
 
 
 
@@ -96,8 +96,8 @@ cInternalBoundaryConditionsDescriptor PIC::BC::InternalBoundary::Sphere::Registe
 
   //set the new sphere
   newSphere=InternalSpheres.newElement();
-  SurfaceData=(cSurfaceDataSphere*)malloc(sizeof(cSurfaceDataSphere));
-  newSphere->SetSurfaceDataPointer((void*)SurfaceData);
+//  SurfaceData=(cSurfaceDataSphere*)malloc(sizeof(cSurfaceDataSphere));
+//  newSphere->SetSurfaceDataPointer((void*)SurfaceData);
 
   //set up the output functions
   newSphere->PrintVariableList=PrintDefaultVariableList;
@@ -112,10 +112,10 @@ cInternalBoundaryConditionsDescriptor PIC::BC::InternalBoundary::Sphere::Registe
   sBufferTotalLength=2*TotalSurfaceElementNumber*TotalSampleSetLength;
 
 
-  SurfaceData->faceat=0;
-  SurfaceData->SamplingBuffer=new double [sBufferTotalLength];
+  newSphere->faceat=0;
+  newSphere->SamplingBuffer=new double [sBufferTotalLength];
 
-  for (i=0,sBuffer=SurfaceData->SamplingBuffer;i<sBufferTotalLength;i++) sBuffer[i]=0.0;
+  for (i=0,sBuffer=newSphere->SamplingBuffer;i<sBufferTotalLength;i++) sBuffer[i]=0.0;
 
   //set the descriptor
   SphereDescriptor.BoundaryElement=(void*)newSphere;
@@ -133,7 +133,8 @@ void PIC::BC::InternalBoundary::Sphere::flushCollectingSamplingBuffer(cInternalS
   long int offset,i,nSurfaceElement,nSurfaceElementsMax;
   double *SamplingBuffer;
 
-  SamplingBuffer=((cSurfaceDataSphere*)Sphere->GetSurfaceDataPointer())->SamplingBuffer;
+//  SamplingBuffer=((cSurfaceDataSphere*)Sphere->GetSurfaceDataPointer())->SamplingBuffer;
+  SamplingBuffer=Sphere->SamplingBuffer;
   nSurfaceElementsMax=Sphere->GetTotalSurfaceElementsNumber();
 
   for (nSurfaceElement=0;nSurfaceElement<nSurfaceElementsMax;nSurfaceElement++) {
@@ -145,18 +146,27 @@ void PIC::BC::InternalBoundary::Sphere::flushCollectingSamplingBuffer(cInternalS
 
 //====================================================
 //get access to the internal data of the sphere
+/*
 PIC::BC::InternalBoundary::Sphere::cSurfaceDataSphere* PIC::BC::InternalBoundary::Sphere::GetSphereSurfaceData(cInternalBoundaryConditionsDescriptor Descriptor) {
   if (Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_SPHERE_) exit(__LINE__,__FILE__,"Error: wrong boundary type");
 
   return (cSurfaceDataSphere*)(((cInternalSphericalData*)Descriptor.BoundaryElement)->GetSurfaceDataPointer());
 
 }
+*/
 
 double* PIC::BC::InternalBoundary::Sphere::GetCompletedSamplingBuffer(cInternalBoundaryConditionsDescriptor Descriptor) {
-  return GetSphereSurfaceData(Descriptor)->SamplingBuffer+completedCellSampleDataPointerOffset;
+//  return GetSphereSurfaceData(Descriptor)->SamplingBuffer+completedCellSampleDataPointerOffset;
+
+
+  return ((cInternalSphericalData*)Descriptor.BoundaryElement)->SamplingBuffer+completedCellSampleDataPointerOffset;
 }
+
+
 double* PIC::BC::InternalBoundary::Sphere::GetCollectingSamplingBuffer(cInternalBoundaryConditionsDescriptor Descriptor) {
-  return GetSphereSurfaceData(Descriptor)->SamplingBuffer+collectingCellSampleDataPointerOffset;
+//  return GetSphereSurfaceData(Descriptor)->SamplingBuffer+collectingCellSampleDataPointerOffset;
+
+  return ((cInternalSphericalData*)Descriptor.BoundaryElement)->SamplingBuffer+collectingCellSampleDataPointerOffset;
 }
 
 //====================================================
@@ -188,7 +198,7 @@ int PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction_SpecularReflect
    double radiusSphere,*x0Sphere,l[3],r,vNorm,c;
    cInternalSphericalData *Sphere;
    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*startNode;
-   cSurfaceDataSphere *SurfaceData;
+//   cSurfaceDataSphere *SurfaceData;
    int idim;
 
 
@@ -217,8 +227,8 @@ int PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction_SpecularReflect
 
    Sphere->GetSurfaceElementProjectionIndex(x,nZenithElement,nAzimuthalElement);
    nSurfaceElement=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
-   SurfaceData=(cSurfaceDataSphere*)Sphere->GetSurfaceDataPointer();
-   SampleData=SurfaceData->SamplingBuffer+collectingSpecieSamplingDataOffset(spec,nSurfaceElement);
+//   SurfaceData=Sphere->SamplingBuffer;
+   SampleData=Sphere->SamplingBuffer+collectingSpecieSamplingDataOffset(spec,nSurfaceElement);
 
 
 ///###########  DEBUG #############
@@ -257,12 +267,12 @@ void PIC::BC::InternalBoundary::Sphere::PrintDefaultTitle(FILE* fout) {
 void PIC::BC::InternalBoundary::Sphere::PrintDefaultDataStateVector(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalSphericalData *Sphere,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads) {
   int nInterpolationElement,nSurfaceElement;
   double InterpolationNormalization=0.0,InterpolationCoefficient;
-  cSurfaceDataSphere *SurfaceData;
+//  cSurfaceDataSphere *SurfaceData;
   double *SampleData;
 
   double FluxDown=0.0;
 
-  SurfaceData=(cSurfaceDataSphere*)Sphere->GetSurfaceDataPointer();
+//  SurfaceData=(cSurfaceDataSphere*)Sphere->GetSurfaceDataPointer();
 
 
   for (nInterpolationElement=0;nInterpolationElement<SurfaceElementsInterpolationListLength;nInterpolationElement++) {
@@ -282,7 +292,7 @@ if (nSurfaceElement==311) {
 
 
 
-    SampleData=SurfaceData->SamplingBuffer+completeSpecieSamplingDataOffset(spec,nSurfaceElement);
+    SampleData=Sphere->SamplingBuffer+completeSpecieSamplingDataOffset(spec,nSurfaceElement);
     InterpolationCoefficient=Sphere->GetSurfaceElementArea(nSurfaceElement);
 
     FluxDown+=SampleData[sampledFluxDownRelativeOffset]*InterpolationCoefficient;
