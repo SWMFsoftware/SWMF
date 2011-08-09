@@ -45,9 +45,9 @@ extern double _MESH_AMR_XMAX_[3],_MESH_AMR_XMIN_[3];
 class cBasicNode : public cAMRexit {
 public:
   //the place holder for the structure that contained the associated data
-  int AssociatedDataLength() {return 0;}
+  inline int AssociatedDataLength() {return 0;}
   void SetAssociatedDataBufferPointer(char* ptr) {}
-  char* GetAssociatedDataBufferPointer() {return NULL;}
+  inline char* GetAssociatedDataBufferPointer() {return NULL;}
 
   //placeholder for the printing procedured
   void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int ThisThread) {}
@@ -1161,7 +1161,7 @@ public:
     double dx;
 
     if ((x[0]<startNode->xmin[0])||(startNode->xmax[0]<x[0])) {
-      cout << "Error: a point is out pf the box!!!!!!" << endl;
+      cout << "Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
       for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
 
       if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
@@ -1174,7 +1174,7 @@ public:
 
     if (_MESH_DIMENSION_>=2) {
       if ((x[1]<startNode->xmin[1])||(startNode->xmax[1]<x[1])) {
-        cout << "Error: a point is out pf the box!!!!!!" << endl;
+        cout << "Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
         for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
 
         if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
@@ -1189,7 +1189,7 @@ public:
 
     if (_MESH_DIMENSION_==3) {
       if ((x[2]<startNode->xmin[2])||(startNode->xmax[2]<x[2])) {
-        cout << "Error: a point is out pf the box!!!!!!" << endl;
+        cout << "Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
         for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
 
         if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
@@ -1451,6 +1451,10 @@ public:
     double blockBasedCoordinates[3]={0.0,0.0,0.0};
     int i,j=0,k=0;
 
+    static long int SearchLevel=0;
+    if (SearchLevel>_MAX_REFINMENT_LEVEL_) exit(__LINE__,__FILE__,"Error: the search is too deep");
+
+
     if (startNode==NULL) startNode=rootTree;
 
     blockBasedCoordinates[0]=(x[0]-startNode->xmin[0])/dxRootBlock[0]*(1<<startNode->RefinmentLevel);
@@ -1481,8 +1485,10 @@ public:
 
       t=startNode->GetNeibNode(i,j,k);
 
+      SearchLevel++;
       if (t!=NULL) res=findTreeNode(x,t);
       else res=(startNode->upNode!=NULL) ? findTreeNode(x,startNode->upNode) : NULL;
+      SearchLevel--;
     }
 
 #if  _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
