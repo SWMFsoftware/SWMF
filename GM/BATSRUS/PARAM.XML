@@ -3659,6 +3659,87 @@ both.  If both are set, the final one in the session will set the values
 for AMR.
 </command>
 
+<command name="DOAMR">
+	 <parameter name="DoAmr" type="logical" default="F" />
+	 <parameter name="DnAmr" type="integer" min="-1" default="-1" />
+	 <parameter name="DtAmr" type="real" min="-1.0" default="-1.0" />
+	 <parameter name="IsStrictAmr" type="logical" default="T" />
+
+ONLY with BATL
+
+#DOAMR
+T                       DoAmr
+1                       DnAmr
+-1                      DtAmr
+T                       IsStrictAmr
+
+DoAmr is telling if you do AMR based on criteria decided during the simulation 
+every DnAmr step or DtAmr intervals. DtAmr is not implemented by 7 Aug 2011.
+For both DtAmr and DnAmr negative numbers will be ignored. IsStrictAmr if TRUE
+we demand that the number of cells indicated by criteria or percentage 
+should be refined or coarsened, else it will tray to refine the number
+of blocks indicated but if the max number of blocks is reached it will reduce to 
+a numbers that is lower then max blocks. 
+</command>
+
+<command name="AMRERRORCRIT">
+	 <parameter name="AmrWaveFilter" type="real" min="0.0" default="1.0e-2" />
+	 <parameter name="nCrit" type="integer" min="1" />
+	 <parameter name="iVar"  type="integer" min="1" />
+	 <parameter name="CoarsenCrit" type="real" min="-1.0" default="-1.0" />
+	 <parameter name="RefineCrit" type="real" min="-1.0" default="-1.0" />
+
+ONLY with BATL
+
+#AMRERRORCRIT
+1.0e-2                  AmrWaveFilter
+1                       nCrit
+5                       iVar
+0.025                   CoarsenCrit
+0.2                     RefineCrit
+
+
+This functionality the relations between the second and first derivative to 
+approximate the numerical error, see comments in code :
+
+                               d^2 U
+                              -------
+                               dx^2 
+    E  =  ----------------------------------------------
+           1     dU        1
+          ---  ------  + ------ cAmrWavefilter*<U> + cEpsilon 
+          DX     dx       DX^2
+
+AmrWaveFilter gives a relative error in regards to the mean value of the solution.
+nCrit gives the number of criteria and iVar is the index in the state matrix of the 
+variable, where CoarsenCrit gives the upper limit for values that should 
+be suggested for coarsening and RefineCrit gives the lower value of blocks we want to
+refine. Criteria are assumed to be positive, negative numbers will be ignored.
+To avoid uneserary calculation if you want to only do AMRERRORCRIT, not combine it with 
+AMRCRITERIA you should set  nRefineCrit in #AMRCRITERIA to zero. A factor of minimum four
+looks like it works best to avoid oscillations of blocks between coursing and refining.
+</command>
+
+<command name="AMRLIMIT"> 
+	 <parameter name="PercentCoarsen" type="real" min="0.0" default="0.0" />
+	 <parameter name="PercentRefine" type="real" min="0.0" default="0.0" />
+	 <parameter name="DiffCriteriaLevel" type="real" min="0.0" default="1e-8" />
+
+ONLY with BATL
+
+
+#AMRLIMIT
+40.                     PercentCoarsen
+30.                     PercentRefine
+999999                  MaxBlockAll
+1e-8                    DiffCriteriaLevel
+
+Setting up percentage refinement and coarsening using the criteria given by
+AMRERRORCRIT and/or AMRCRITERIA. MaxBlockAll set max for total number of 
+blocks if both _nProc and MaxBlock are set. DiffCriteriaLevel give the deviation
+of the criteria that should have the same AMR treatment. 
+</command>
+
 <command name="AMR">
 	<parameter name="DnRefine" type="integer" min="-1" default="-1" />
 	<if expr="$DnRefine>0">
@@ -3672,6 +3753,8 @@ for AMR.
 				min="1" default="99999" />
 		</if>
 	</if>
+
+
 #AMR
 2001			DnRefine
 T			DoAutoRefine   ! read if DnRefine is positive
