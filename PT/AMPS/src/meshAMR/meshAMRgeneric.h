@@ -456,7 +456,7 @@ public:
 #endif
   }
 
-  cTreeNodeAMR *GetNeibFace(int nface,int iFace,int jFace) {
+  inline cTreeNodeAMR *GetNeibFace(int nface,int iFace,int jFace) {
     cTreeNodeAMR* res;
 
 #if _MESH_DIMENSION_ == 1
@@ -470,7 +470,7 @@ public:
     return res;
   }
 
-  void SetNeibFace(cTreeNodeAMR* neibNode,int nface,int iFace,int jFace) {
+  inline void SetNeibFace(cTreeNodeAMR* neibNode,int nface,int iFace,int jFace) {
 
 #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
     //check if the neibNode is an upper branch
@@ -486,7 +486,7 @@ public:
 #endif
   }
 
-  cTreeNodeAMR *GetNeibEdge(int nedge,int iEdge) {
+  inline cTreeNodeAMR *GetNeibEdge(int nedge,int iEdge) {
     cTreeNodeAMR *res;
 
 #if _MESH_DIMENSION_ == 1
@@ -500,7 +500,7 @@ public:
     return res;
   }
 
-  void SetNeibEdge(cTreeNodeAMR* neibNode,int nedge,int iEdge) {
+  inline void SetNeibEdge(cTreeNodeAMR* neibNode,int nedge,int iEdge) {
 
 #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
     //check if the neibNode is an upper branch
@@ -516,7 +516,7 @@ public:
 #endif
   }
 
-  cTreeNodeAMR *GetNeibNode(int i,int j,int k) {
+  inline cTreeNodeAMR *GetNeibNode(int i,int j,int k) {
     cTreeNodeAMR *res=NULL;
 
 #if _MESH_DIMENSION_ == 1
@@ -1445,7 +1445,7 @@ public:
     #endif
   }
 
-
+/*
   cTreeNodeAMR<cBlockAMR>* findTreeNode(double *x,cTreeNodeAMR<cBlockAMR>  *startNode=NULL) {
     cTreeNodeAMR<cBlockAMR> *res=NULL,*t=NULL;
     double blockBasedCoordinates[3]={0.0,0.0,0.0};
@@ -1466,9 +1466,9 @@ public:
       if (_MESH_DIMENSION_>1) j=(blockBasedCoordinates[1]<0.5) ? 0 : 1;
       if (_MESH_DIMENSION_>2) k=(blockBasedCoordinates[2]<0.5) ? 0 : 1;
 
-      t=startNode->downNode[i+2*(j+2*k)]; 
+      t=startNode->downNode[i+2*(j+2*k)];
 
-      res=(t!=NULL) ? findTreeNode(x,t) : startNode; 
+      res=(t!=NULL) ? findTreeNode(x,t) : startNode;
     }
     else {
       if (blockBasedCoordinates[0]<0.0) i=-1;
@@ -1489,6 +1489,81 @@ public:
       if (t!=NULL) res=findTreeNode(x,t);
       else res=(startNode->upNode!=NULL) ? findTreeNode(x,startNode->upNode) : NULL;
       SearchLevel--;
+    }
+
+#if  _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+    if (res!=NULL) for (register int idim=0;idim<_MESH_DIMENSION_;idim++) if ((x[idim]<res->xmin[idim])||(res->xmax[idim]<x[idim])) exit(__LINE__,__FILE__,"Error: did'nt find the tree node");
+#endif
+    return res;
+  }
+  */
+
+  //a fast version of the function above
+  cTreeNodeAMR<cBlockAMR>* findTreeNode(double *x,cTreeNodeAMR<cBlockAMR>  *startNode=NULL) {
+    cTreeNodeAMR<cBlockAMR> *res=NULL,*t=NULL;
+    double blockBasedCoordinates[3]={0.0,0.0,0.0};
+    int i,j=0,k=0;
+
+    if (startNode==NULL) startNode=rootTree;
+
+Start:
+    blockBasedCoordinates[0]=(x[0]-startNode->xmin[0])/dxRootBlock[0]*(1<<startNode->RefinmentLevel);
+
+#if _MESH_DIMENSION_ > 1
+    blockBasedCoordinates[1]=(x[1]-startNode->xmin[1])/dxRootBlock[1]*(1<<startNode->RefinmentLevel);
+#endif
+
+#if _MESH_DIMENSION_ > 2
+    blockBasedCoordinates[2]=(x[2]-startNode->xmin[2])/dxRootBlock[2]*(1<<startNode->RefinmentLevel);
+#endif
+
+    if ((0.0<=blockBasedCoordinates[0])&&(blockBasedCoordinates[0]<=1.0)&&(0.0<=blockBasedCoordinates[1])&&(blockBasedCoordinates[1]<=1.0)&&(0.0<=blockBasedCoordinates[2])&&(blockBasedCoordinates[2]<=1.0)) {
+      i=(blockBasedCoordinates[0]<0.5) ? 0 : 1;
+
+#if _MESH_DIMENSION_ > 1
+      j=(blockBasedCoordinates[1]<0.5) ? 0 : 1;
+#endif
+
+#if _MESH_DIMENSION_ > 2
+      k=(blockBasedCoordinates[2]<0.5) ? 0 : 1;
+#endif
+
+      t=startNode->downNode[i+2*(j+2*k)]; 
+
+      if (t!=NULL) {
+        startNode=t;
+        goto Start;
+      }
+      else res=startNode;
+    }
+    else {
+      if (blockBasedCoordinates[0]<0.0) i=-1;
+      else if (blockBasedCoordinates[0]>1.0) i=1;
+      else i=0;
+
+      if (blockBasedCoordinates[1]<0.0) j=-1;
+      else if (blockBasedCoordinates[1]>1.0) j=1;
+      else j=0;
+
+      if (blockBasedCoordinates[2]<0.0) k=-1;
+      else if (blockBasedCoordinates[2]>1.0) k=1;
+      else k=0;
+
+      t=startNode->GetNeibNode(i,j,k);
+
+
+      if (t!=NULL) {
+        startNode=t;
+        goto Start;
+      }
+      else {
+        if ((t=startNode->upNode)!=NULL) {
+          startNode=t;
+          goto Start;
+        }
+        else res=NULL;
+      }
+
     }
 
 #if  _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
@@ -7348,7 +7423,6 @@ nMPIops++;
       while (node!=NULL) {
         nTest++;
         if (nTest>nCounter) { //the list is locked somewhere. find the lock up of the list
-          int i;
           cTreeNodeAMR<cBlockAMR> *startSearch=DomainBoundaryLayerNodesList[thread];
 
           for (i=0;i<nCounter;i++) {
