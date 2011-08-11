@@ -1204,16 +1204,12 @@ contains
        DoRay_I = (.not.Unused_I)
     end do
 
-    if(DoVerbose .and. iProc==0 .and. DoLaserRayTest)then
+    if(DoLaserRayTest .and. iProc==0)then
+       !L=50 for the test;L*cos(10)**2 = 48.49; xbeam=-96
        write(*,*)' '
        write(*,*)'maximum X position of ray=',PosXHold
        write(*,*)' '
-    endif
-
-    if(DoLaserRayTest) then
-       !L=50 for the test;L*cos(10)**2 = 48.49; xbeam=-96
-       if (abs(48.49 - abs(PosXHold)) > 0.25 ) &
-            write(*,*)'***Ray turning error', PosXHold
+       if(abs(48.49 - abs(PosXHold)) > 0.25) write(*,*)'*** Ray turning error'
     end if
 
   end subroutine get_energy_source
