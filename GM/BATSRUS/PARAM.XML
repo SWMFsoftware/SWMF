@@ -3701,7 +3701,7 @@ ONLY with BATL
 
 This functionality the relations between the second and first derivative to 
 approximate the numerical error, see comments in code :
-
+\begin{verbatim}
                                d^2 U
                               -------
                                dx^2 
@@ -3709,15 +3709,18 @@ approximate the numerical error, see comments in code :
            1     dU        1
           ---  ------  + ------ cAmrWavefilter*<U> + cEpsilon 
           DX     dx       DX^2
+\end{verbatim}
+AmrWaveFilter gives a relative error in regards to the mean value of the
+solution. nCrit gives the number of criteria and iVar is the index in the
+state matrix of the  variable, where CoarsenCrit gives the upper limit for
+values that should  be suggested for coarsening and RefineCrit gives the lower
+value of blocks we want to refine. Criteria are assumed to be positive,
+negative numbers will be ignored. To avoid uneserary calculation if you want
+to only do AMRERRORCRIT, not combine it with  AMRCRITERIA you should set 
+nRefineCrit in #AMRCRITERIA to zero. A factor of minimum four looks like it
+works best to avoid oscillations of blocks between coursing and refining.
 
-AmrWaveFilter gives a relative error in regards to the mean value of the solution.
-nCrit gives the number of criteria and iVar is the index in the state matrix of the 
-variable, where CoarsenCrit gives the upper limit for values that should 
-be suggested for coarsening and RefineCrit gives the lower value of blocks we want to
-refine. Criteria are assumed to be positive, negative numbers will be ignored.
-To avoid uneserary calculation if you want to only do AMRERRORCRIT, not combine it with 
-AMRCRITERIA you should set  nRefineCrit in #AMRCRITERIA to zero. A factor of minimum four
-looks like it works best to avoid oscillations of blocks between coursing and refining.
+Current implementation might not work properly with first order ghost cells.
 </command>
 
 <command name="AMRLIMIT"> 
