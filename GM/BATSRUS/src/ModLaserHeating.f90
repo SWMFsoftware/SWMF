@@ -1254,8 +1254,7 @@ contains
           do k=1, nK; do j=1, nJ; do i=1, nI
              State_VGB(Rho_,i,j,k,iBlock) = &
                   (x_BLK(i,j,k,iBlock) + 0.5*dx_BLK(iBlock) - x1) &
-                  / dx_BLK(iBlock) &
-                  *1.33*133.6/133.0*Si2No_V(UnitRho_)
+                  *2.0*1.33*133.6/133.0*Si2No_V(UnitRho_)
           end do; end do; end do
        end do
        ! numerator 133.6 is the critical density
