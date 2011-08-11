@@ -1231,7 +1231,7 @@ contains
     use ModPhysics,  ONLY: inv_gm1, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin, g
     use ModVarIndexes, ONLY: Pe_
-    use ModGeometry, ONLY: vInv_CB
+    use ModGeometry, ONLY: vInv_CB, x1, x_BLK, dx_BLK
     use ModUser, ONLY: user_material_properties
     use ModEnergy, ONLY: calc_energy_cell
     use BATL_lib, ONLY: message_pass_cell
@@ -1252,13 +1252,12 @@ contains
        do iBlock = 1, nBlock
           if(unusedBLK(iBlock)) CYCLE
           do k=1, nK; do j=1, nJ; do i=1, nI
-             State_VGB(Rho_,i,j,k,iBlock) = (4.0 * real(iBlock - 1 - &
-                  (34 * aint(real(iBlock-1)/34.0))) + real(i)) &
-                  * 1.33 * 133.6/133.0  * Si2No_V(UnitRho_)
+             State_VGB(Rho_,i,j,k,iBlock) = &
+                  (x_BLK(i,j,k,iBlock) + 0.5*dx_BLK(iBlock) - x1) &
+                  / dx_BLK(iBlock) &
+                  *1.33*133.6/133.0*Si2No_V(UnitRho_)
           end do; end do; end do
        end do
-       ! 4 is the number of cells/block
-       ! 34 is the number of blocks in the x direction
        ! numerator 133.6 is the critical density
        ! denominator 133.0 is the distance (number of cells)
        ! to the critical surface if the multiplicative factor is 1.0
