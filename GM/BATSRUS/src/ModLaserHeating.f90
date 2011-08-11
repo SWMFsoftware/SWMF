@@ -125,6 +125,8 @@ module ModLaserHeating
   real, allocatable, dimension(:,:):: XyzRay_DI, SlopeRay_DI 
   real, allocatable, dimension(:)  :: Amplitude_I
 
+  logical :: DoLaserRayTest  = .false.
+
 contains
   !==========================================================================
   subroutine calc_absorption(NAtomicSI, ZAverage, TeSI, RhoSI, Absorption)
@@ -143,20 +145,28 @@ contains
     Dens2DensCr = min(1.0, RhoSI/DensityCrSi)
     !calculate the effective collision frequency
     !write(*,*)'RhoSi=',RhoSi,' Dens2DensCr=',Dens2DensCr
-    AveragedElectronSpeed = sqrt(8.0*cBoltzmann &
-         *TeSi/(cPi*cElectronMass))
-    !write(*,*)'TeSi=',TeSi,' AverageElectronSpeed=',AveragedElectronSpeed
-    CollisionCrossSection = &
-         cPi*2.0/3.0*(cElectronCharge**2/(4.0*cPi*cEps*(cBoltzmann*TeSi) ) )**2
-    !write(*,*)'Collision Cross Section =', CollisionCrossSection
-    EffectiveCollisionRate = CollisionCrossSection* &
-         (NatomicSi*ZAverage**2)*AveragedElectronSpeed*CoulombLog 
-    !write(*,*)'NAtomicSi=',NAtomicSi, &
-    !          ' EffectiveCollisionRate=',EffectiveCollisionRate
 
-!!!!!!*** multiply by a scale factor for the laser package test*****
-    !Absorption = 1.0e-4*EffectiveCollisionRate/cLightSpeed*Dens2DensCr/&
-    !     sqrt(1 - Dens2DensCr/(1 + (EffectiveCollisionRate/Omega)**2) )
+    if(DoLaserRayTest)then
+
+       !for the laser package test; set EffectiveCollisionRate to a constant
+       !the intergal (Kruer p. 51) assumes EffectiveCollisionRate/omega << 1.0
+       EffectiveCollisionRate = 2.0e+12
+
+    else
+
+       AveragedElectronSpeed = sqrt(8.0*cBoltzmann &
+            *TeSi/(cPi*cElectronMass))
+       !write(*,*)'TeSi=',TeSi,' AverageElectronSpeed=',AveragedElectronSpeed
+       CollisionCrossSection = cPi*2.0/3.0 &
+            *(cElectronCharge**2/(4.0*cPi*cEps*(cBoltzmann*TeSi)))**2
+       !write(*,*)'Collision Cross Section =', CollisionCrossSection
+       EffectiveCollisionRate = CollisionCrossSection* &
+            (NatomicSi*ZAverage**2)*AveragedElectronSpeed*CoulombLog 
+       !write(*,*)'NAtomicSi=',NAtomicSi, &
+       !          ' EffectiveCollisionRate=',EffectiveCollisionRate
+
+    end if
+
     Absorption = EffectiveCollisionRate/cLightSpeed*Dens2DensCr/&
          sqrt(1 - Dens2DensCr/(1 + (EffectiveCollisionRate/Omega)**2) )
     !write(*,*)'Dimensional absorption=', Absorption
@@ -826,14 +836,16 @@ contains
     !     (TimeSi/tRaise)**3,     &
     !     (tPulse -TimeSi)/tDecay))
 
-!!$    !no temporal profile
-!!$    irradiance_t = IrradianceSi 
-
-    !top hat profile
-    irradiance_t = IrradianceSi * &
-         max(0.0, min(1.0,        &
-         (TimeSi/tRaise),         &
-         (tPulse - TimeSi)/tDecay))
+    if(DoLaserRayTest)then
+       !no temporal profile
+       irradiance_t = IrradianceSi
+    else
+       !top hat profile
+       irradiance_t = IrradianceSi * &
+            max(0.0, min(1.0,        &
+            (TimeSi/tRaise),         &
+            (tPulse - TimeSi)/tDecay))
+    end if
 
   end function irradiance_t
 
@@ -892,6 +904,7 @@ contains
        BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
 
 !!$       do iRay = -nRayPerBeam, nRayPerBeam
+       ! The following is conform the H2D strategy for following rays
        do iRay = 1, nRayPerBeam  !just for beams pointed at the symmetry axix
 
           !We neglect exp(-2.25)\approx0.1 and chose the beam margin
@@ -903,59 +916,63 @@ contains
           !Do not include rays with the starting point 
           !being otside the computational domain:
           if(abs(yPlane) >= y2)CYCLE
-          nRayTotal = nRayTotal +1
+          !nRayTotal = nRayTotal + 1
 
-          !flat spatial profile
-          !without radial dependence
+          if(yPlane > 0)then
+             nRayTotal = nRayTotal + 1
+             if(DoLaserRayTest)then
+                !flat spatial profile
+                !without radial dependence or yCrCentral dependence
+                Amplitude_I(nRayTotal) = BeamAmplitude
+
+             else
+                !flat spatial profile
+                !without radial dependence
 !!$          Amplitude_I(nRayTotal) = BeamAmplitude * &
 !!$               abs(yCrCentral)
 
 !!$          !flat spatial profile
 !!$          Amplitude_I(nRayTotal) = BeamAmplitude * &
 !!$               abs( yCrCentral + rDistance/CosTheta)
-!!$ 
 
 !!$          !gaussian profile
 !!$          Amplitude_I(nRayTotal) = BeamAmplitude * &
 !!$               exp(-(rDistance/rBeam)**2) *   &
 !!$               abs( yCrCentral + rDistance/CosTheta)
 
-          !use supergaussian spaital profile; make the supergaussian 
-          !order an adjustable parameter
-!!$          Amplitude_I(nRayTotal) = BeamAmplitude * &
-!!$               exp(-(abs(rDistance)/rBeam)**4.2) *   &
-!!$               abs( yCrCentral + rDistance/CosTheta)
+                !use supergaussian spaital profile; make the supergaussian
+                !order an adjustable parameter
+                !without radial dependence
+                Amplitude_I(nRayTotal) = BeamAmplitude * &
+                     exp(-(abs(rDistance)/rBeam)**4.2) *   &
+                     abs(yCrCentral)
+             end if
 
-          !use supergaussian spaital profile; make the supergaussian 
-          !order an adjustable parameter
-          !without radial dependence
-          Amplitude_I(nRayTotal) = BeamAmplitude * &
-               exp(-(abs(rDistance)/rBeam)**4.2) *   &
-               abs(yCrCentral)
-
-
-          if(yPlane > 0)then
+             !if(yPlane > 0)then
 
              XyzRay_DI(:, nRayTotal) = (/xPlane, yPlane, 0.0/)
              SlopeRay_DI(:, nRayTotal) = &
                   (/CosTheta, SinTheta, 0.0/)
 
-          else
+             !else
 
-             XyzRay_DI(:, nRayTotal) = (/xPlane, -yPlane, 0.0/)
-             SlopeRay_DI(:, nRayTotal) = &
-                  (/CosTheta, -SinTheta, 0.0/)
+             !currently not using rays with negative yplane
+
+             !XyzRay_DI(:, nRayTotal) = (/xPlane, -yPlane, 0.0/)
+             !SlopeRay_DI(:, nRayTotal) = &
+             !     (/CosTheta, -SinTheta, 0.0/)
 
           end if
+
           !if(iProc==0)write(*,*)'XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)', XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)
        end do
     end do
   end subroutine rz_beam_rays
 
-  !=============================================================================
+  !============================================================================
   subroutine read_laser_heating_param(NameCommand)
 
-    use ModReadparam
+    use ModReadParam
 
     character(len=*), intent(in) :: NameCommand
 
@@ -1014,6 +1031,8 @@ contains
             BeamParam_II(yCr_, nBeam))
        call read_var('AmplitudeRel', &
             BeamParam_II(AmplitudeRel_, nBeam))
+    case('#LASERRAYTEST')
+       call read_var('DoLaserRayTest', DoLaserRayTest)
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
@@ -1084,7 +1103,7 @@ contains
 
     integer:: iRay, iBlock, iCell, nCell
     integer:: iCell_II(0:nDim,2**nDim), iCell_D(MaxDim), i, j, k
-    real::    Weight_I(2**nDim), Weight
+    real::    Weight_I(2**nDim), Weight, PosXHold
     !-----------------------------------------------------------------------
     if(DoInit) then
        call init_laser_package
@@ -1102,6 +1121,8 @@ contains
     EnergyDeposition_I          = 0.0
     LaserHeating_CB             = 0.0
 
+    if(DoLaserRayTest) PosXHold = Position_DI(1,1)
+
     Unused_I = .false.; IsBehindCr_I = .false.
     DeltaS_I = DeltaS
     iStep = 0
@@ -1110,6 +1131,11 @@ contains
        !Propagate each of rays through the distance of DeltaS
        call ray_path(get_density_and_absorption, nRay, Unused_I, Slope_DI, &
             DeltaS_I, Tolerance, DensityCrSi, Intensity_I, IsBehindCr_I)
+
+       if (DoLaserRayTest) then
+          if (Position_DI(1,1) > PosXHold) PosXHold = Position_DI(1,1)
+       end if
+
 !!$       if(DoVerbose .and. iProc==0)then
 !!$          NameFile=''
 !!$          write(NameFile,'(a,i4.4)')'Rays_n',iStep+1
@@ -1119,7 +1145,7 @@ contains
 !!$             if(Unused_I(iRay)) CYCLE
 !!$             write(UnitTmp_,*)iRay,Position_DI(1:2,iRay), Slope_DI(:,iRay), &
 !!$                  DeltaS_I(iRay),Density_I(iRay), AbsorptionCoeff_I(iRay), &
-!!$                  GradDensity_DI(:,iRay), EnergyDeposition_I(iRay)
+!!$                  GradDensity_DI(:,iRay), EnergyDeposition_I(iRay), PosXHold
 !!$          end do
 !!$          close(UnitTmp_)
 !!$       end if
@@ -1136,6 +1162,7 @@ contains
 !!$          write(*,*)'MinumumStep=',minval(DeltaS_I,MASK=.not.Unused_I)
 !!$          write(*,*)'MaximumStep=',maxval(DeltaS_I,MASK=.not.unused_I)
 !!$          write(*,*)'Min DeltaSNew_I=',minval(DeltaSNew_I,MASK=.not.Unused_I)
+!!$          write(*,*)'PosXHold=',PosXHold
 !!$       end if
 
        ! Save EnergyDeposition_I to LaserHeating_CB 
@@ -1177,6 +1204,18 @@ contains
        DoRay_I = (.not.Unused_I)
     end do
 
+    if(DoVerbose .and. iProc==0 .and. DoLaserRayTest)then
+       write(*,*)' '
+       write(*,*)'maximum X position of ray=',PosXHold
+       write(*,*)' '
+    endif
+
+    if(DoLaserRayTest) then
+       !L=50 for the test;L*cos(10)**2 = 48.49; xbeam=-96
+       if (abs(48.49 - abs(PosXHold)) > 0.25 ) &
+            write(*,*)'***Ray turning error', PosXHold
+    end if
+
   end subroutine get_energy_source
 
   !===========================================================================
@@ -1186,7 +1225,7 @@ contains
 
     use ModSize, ONLY: nI, nJ, nK, MaxBlock
     use ModPhysics, ONLY: Si2No_V, UnitEnergydens_, UnitX_, UnitT_
-    use ModMain, ONLY: Time_Simulation, dt, UnusedBLK
+    use ModMain, ONLY: Time_Simulation, dt, nBlock, UnusedBLK
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, UseElectronPressure
     use ModPhysics,  ONLY: inv_gm1, No2Si_V, &
@@ -1198,7 +1237,7 @@ contains
     use BATL_lib, ONLY: message_pass_cell
     use ModConst, ONLY: cKToKev
 
-    real:: Irradiance, EInternalSi, PressureSi,TeSi
+    real:: Irradiance, EInternalSi, PressureSi, TeSi, TotEnergyDep
     integer :: iBlock, i, j, k, iP
     logical,parameter :: UseExtraEInt = ExtraEInt_ > 1
 
@@ -1208,6 +1247,24 @@ contains
 !!$       write(*,*)'Start ',NameSub
 !!$    endif
     call timing_start(NameSub)
+
+    if(DoLaserRayTest)then
+       do iBlock = 1, nBlock
+          if(unusedBLK(iBlock)) CYCLE
+          do k=1, nK; do j=1, nJ; do i=1, nI
+             State_VGB(Rho_,i,j,k,iBlock) = (4.0 * real(iBlock - 1 - &
+                  (34 * aint(real(iBlock-1)/34.0))) + real(i)) &
+                  * 1.33 * 133.6/133.0  * Si2No_V(UnitRho_)
+          end do; end do; end do
+       end do
+       ! 4 is the number of cells/block
+       ! 34 is the number of blocks in the x direction
+       ! numerator 133.6 is the critical density
+       ! denominator 133.0 is the distance (number of cells)
+       ! to the critical surface if the multiplicative factor is 1.0
+       ! need at least 2% change in density/zone to reflect a zero
+       ! degree ray
+    end if
 
     Irradiance = irradiance_t(Time_Simulation) * &
          Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_) * dt
@@ -1310,12 +1367,25 @@ contains
        call calc_energy_cell(iBlock)
     end do
 
+    If(DoLaserRayTest) then
+       !this only works for a 1-ray single processor test
+       TotEnergyDep = sum(LaserHeating_CB) * Irradiance * &
+            No2Si_V(UnitEnergyDens_)
+       ! for a linear density profile the absorbed energy is  &
+       ! = 1 - exp[-(32.0/15.0 * EffectiveCollisionRate * L * &
+       ! costheta**5)/cLightSpeed]
+       if (abs(5.61e+9 - TotEnergyDep) > 1.5e+8 ) &
+            write(*,*)'***Energy deposition error***'
+       if (iProc==0 .and. DoVerbose .and. DoLaserRayTest) &
+            write(*,*)'Total Enegy deposition =',TotEnergyDep
+    endif
+
     call timing_stop(NameSub)
 
-!!$    if (iProc==0 .and. DoVerbose) then
-!!$       write(*,*)'End ',NameSub
-!!$    endif
-!!!!
+    if (iProc==0 .and. DoVerbose) then
+       write(*,*)'End ',NameSub
+    endif
+
 !!!call stop_mpi('end of first call to add_laser_heating')
 
   end subroutine add_laser_heating
