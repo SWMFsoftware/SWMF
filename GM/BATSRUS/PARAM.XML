@@ -3707,7 +3707,7 @@ approximate the numerical error, see comments in code :
                                dx^2 
     E  =  ----------------------------------------------
            1     dU        1
-          ---  ------  + ------ cAmrWavefilter*<U> + cEpsilon 
+          ---  ------  + ------ cAmrWavefilter*U  + cEpsilon 
           DX     dx       DX^2
 \end{verbatim}
 AmrWaveFilter gives a relative error in regards to the mean value of the
