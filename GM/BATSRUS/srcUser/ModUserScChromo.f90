@@ -40,7 +40,7 @@ module ModUser
   logical :: UseWaveDissipation = .false.
   real    :: DissipationScaleFactorSi  ! unit = m*T^0.5
   real    :: DissipationScaleFactor
-  real    :: LminIo , LmaxIo, WaveRatio
+  real    :: LmaxIo , Lratio
 
   ! variables for magnetic (unsigned flux) heating
   logical :: DoMagneticHeating = .false.
@@ -53,8 +53,8 @@ module ModUser
   real       :: WaveDissip_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)      = 1.e-30
   real       :: WaveDissipPlus_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)  = 1.e-30
   real       :: WaveDissipMinus_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock) = 1.e-30
-  real       :: DissipLength_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)    = 1.e-30
-  integer    :: IsCounter_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)       = 0
+  real       :: DissipLengthMin_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)    = 1.e-30
+  real       :: DissipLengthMax_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)    = 1.e-30
   
   ! Input parameters for two-temperature effects
   real :: TeFraction, TiFraction
@@ -107,9 +107,8 @@ contains
        case("#WAVEDISSIPATION")
           call read_var('UseWaveDissipation', UseWaveDissipation)
           if(UseWaveDissipation) then 
-             call read_var('LminIo', LminIo)
              call read_var('LmaxIo', LmaxIo)
-             call read_var('WaveRatio', WaveRatio)
+             call read_var('Lratio', Lratio)
           end if
 
        case("#WAVEBOUNDARY")
@@ -463,21 +462,25 @@ contains
 
     integer :: i, j, k, iBlock, iWave
     real    :: WaveEnergyPlus, WaveEnergyMinus, TemperatureSi, FullB_D(3), FullB
-    real    :: CoronalHeating, RadiativeCooling, MagneticHeating
+    real    :: CoronalHeating, RadiativeCooling, MagneticHeating, WavePressure
 
     ! varaibles for wave dissipation
     real    :: LocalDissipationFactor, Lmin, Lmax
     real    :: WaveDissipationPlus, WaveDissipationMinus, CounterWaveDissipRate
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
-    !-------------------------------------------------------------------------- 
-
+    !------------------------------------------------------------------------- 
     iBlock = globalBlk
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(r_BLK(i,j,k,iBlock) < rBody) CYCLE
 
+       !\
+       ! Calculate coronal heating due to wave dissipation
+       !/         
        if(UseWaveDissipation)then
+          CoronalHeating =  0.0
+
           if(UseB0)then
              FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
           else
@@ -487,44 +490,36 @@ contains
 
           WaveEnergyPlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
           WaveEnergyMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+          WavePressure = (WaveEnergyPlus + WaveEnergyMinus)/2.
 
-          !\                                                             
-          ! Calculate Local Dissipation factor, dimensions: length/sqrt(density/B)  
-          !/ 
-          ! Local dissipation factor: 
-          ! Assumed to vary depending on density and magnetic field
-
-          Lmin = LminIo*Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+          ! Local dissipation length: 
+          ! Assumed to depend on the magnetic field
+          ! Lmin - used for counter propogating wave dissipation
+          ! Lmax - used for Kolmogorov dissipation
           Lmax = LmaxIo*Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
-          LocalDissipationFactor = 1./(Lmax * &
-               sqrt(State_VGB(Rho_,i,j,k,iBlock)/FullB))
+          if (Lratio > 0.0)  Lmin = Lmax/Lratio
 
-          !\                                                                        
-          ! Calculate coronal heating due to wave dissipation
-          !/                                                                                       
-          CoronalHeating =  0.0
+          ! store for plotting
+          DissipLengthMax_GB(i,j,k,iBlock) = Lmax/sqrt(FullB)
+          DissipLengthMin_GB(i,j,k,iBlock) = Lmin/sqrt(FullB)
 
-          if(WaveEnergyPlus <= WaveEnergyMinus/WaveRatio .or. &
-             WaveEnergyMinus <= WaveEnergyPlus/WaveRatio )  then
-             ! Dissipate waves in "coronal hole"
-             WaveDissipationPlus = LocalDissipationFactor * &
-                  WaveEnergyPlus**(3./2.)
-             WaveDissipationMinus = LocalDissipationFactor * &
-                  WaveEnergyMinus**(3./2.)
-             DissipLength_GB(i,j,k,iBlock) = Lmax/sqrt(FullB)
-             IsCounter_GB(i,j,k,iBlock) = 0
-          else
-             ! Dissipate counter propagating waves
-             CounterWaveDissipRate = LocalDissipationFactor *(Lmax/Lmin)* &
-                  sqrt(2.*WaveEnergyPlus*WaveEnergyMinus/&
-                  (WaveEnergyPlus + WaveEnergyMinus))
+          ! Local Dissipation factor, dimensions length/sqrt(density/B)  
+          LocalDissipationFactor = &
+               sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/Lmax
 
-             WaveDissipationPlus  = CounterWaveDissipRate* WaveEnergyPlus
-             WaveDissipationMinus = CounterWaveDissipRate* WaveEnergyMinus
-             DissipLength_GB(i,j,k,iBlock) = Lmin/sqrt(FullB)
-             IsCounter_GB(i,j,k,iBlock) = 1
+          ! Wave dissipation:
+          ! This is the sum of a Kolmogorov dissipation of each wave polarity by itself,
+          ! and dissipation due to counter propagating waves
+          ! Note the use of Lratio > 1, which in effect makes the dissipation length of counter
+          ! propagating waves smaller than the Kolmogorov length.
 
-          end if
+          WaveDissipationPlus =  LocalDissipationFactor * &
+               (1. + Lratio*sqrt(WaveEnergyMinus/WavePressure)) * &
+               WaveEnergyPlus**1.5
+
+          WaveDissipationMinus =  LocalDissipationFactor * &
+               (1. +  Lratio*sqrt(WaveEnergyPlus/WavePressure)) * &
+               WaveEnergyMinus**1.5
 
           CoronalHeating = WaveDissipationPlus + WaveDissipationMinus
 
@@ -664,7 +659,6 @@ contains
     select case(NameVar)
 
     case('disstot')
-
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
 
           PlotVar_G(i,j,k) = max(1e-30,WaveDissip_GB(i,j,k,iBlock) * &
@@ -672,9 +666,7 @@ contains
 
        end do; end do ; end do
 
-
     case('dissplus')
-
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
 
           PlotVar_G(i,j,k) = max(1e-30,WaveDissipPlus_GB(i,j,k,iBlock) * &
@@ -682,9 +674,7 @@ contains
 
        end do; end do ; end do
 
-
     case('dissminus')
-
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
 
           PlotVar_G(i,j,k) = max(1e-30,WaveDissipMinus_GB(i,j,k,iBlock) * &
@@ -692,21 +682,19 @@ contains
 
        end do; end do ; end do
 
-
-    case('disslen')
-
+    case('lmin')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
 
-          PlotVar_G(i,j,k) = max(1e-30,DissipLength_GB(i,j,k,iBlock) * &
+          PlotVar_G(i,j,k) = max(1e-30,DissipLengthMin_GB(i,j,k,iBlock) * &
                No2Si_V(UnitX_))
 
        end do; end do ; end do
 
-    case('iscounter')
-
+    case('lmax')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
 
-          PlotVar_G(i,j,k) = IsCounter_GB(i,j,k,iBlock)
+          PlotVar_G(i,j,k) = max(1e-30,DissipLengthMax_GB(i,j,k,iBlock) * &
+               No2Si_V(UnitX_))
 
        end do; end do ; end do
 
@@ -915,9 +903,9 @@ contains
 
     if(FullBr > 0.0)then
        VarsGhostFace_V(WaveFirst_) = Ewave
-       VarsGhostFace_V(WaveLast_) = 1.e-12
+       VarsGhostFace_V(WaveLast_) = 0.0
     else
-       VarsGhostFace_V(WaveFirst_) = 1e-12 !VarsTrueFace_V(WaveFirst_)
+       VarsGhostFace_V(WaveFirst_) = 0.0 !VarsTrueFace_V(WaveFirst_)
        VarsGhostFace_V(WaveLast_) = Ewave
     end if
 
