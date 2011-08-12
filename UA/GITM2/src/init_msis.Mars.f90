@@ -58,7 +58,7 @@ subroutine init_msis
   use ModPlanet
   use ModGITM
   use ModEUV
-  use ModInputs, only: iDebugLevel, iInputUnit_,iCharLen_
+  use ModInputs, only: iDebugLevel, iInputUnit_,iCharLen_, DoRestart
 
   implicit none
 
@@ -73,6 +73,7 @@ subroutine init_msis
   real :: ralt, invAltDiff, altFind, altdiff, LogElectronDensity,dalt(nspeciestotal),alttemp(nInAlts)
   real, dimension(nInitialAlts) :: tempalt,LogInitialDensity,InitialEDensity,InitialAlt
 
+  if (DoRestart) return
 
   do iBlock = 1, nBlocks
      write(*,*) "init_msis"
@@ -162,6 +163,7 @@ subroutine init_msis
 
            do iAlt = -1, nalts + 2
               alttemp = newalt
+
               altFind = altitude_GB(iLon,iLat,iAlt,iBlock)/1000.0
               where(altfind - alttemp .lt. 0) alttemp = -1.0e9
 
@@ -204,6 +206,7 @@ subroutine init_msis
               endif
 
            enddo
+
 
            !           NDensityS(iLon,iLat,-1:nAlts + 2,1:nSpeciesTotal,iBlock) =  1.0
 
