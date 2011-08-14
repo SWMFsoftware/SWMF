@@ -18,8 +18,10 @@ subroutine write_plot_common(ifile)
   use ModParallel, ONLY: proc_dims
   use ModMpi
   use ModUtilities, ONLY: lower_case, split_string
-  use BATL_lib, ONLY: message_pass_node
-
+  use BATL_lib, ONLY: message_pass_node,&
+       calc_error_amr_criteria
+  use ModAdvance, ONLY : State_VGB
+  use ModMultiFluid, ONLY: extract_fluid_name
   implicit none
 
   ! Arguments
@@ -72,6 +74,10 @@ subroutine write_plot_common(ifile)
   integer :: iTime_I(7)
 
   character(len=*), parameter :: NameSub = 'write_plot_common'
+
+  character (len=10)  :: String, NamePlotVar
+  ! make sure we only calculate the criterias ones.
+  logical :: DoRecalcCrit
 
   logical :: oktest,oktest_me
   !---------------------------------------------------------------------------
@@ -202,6 +208,26 @@ subroutine write_plot_common(ifile)
   nPEcells=0; nPEcellsN=0; nPEcellsS=0
   nBLKcells=0; nBLKcellsN=0; nBLKcellsS=0
   !! END IDL
+
+
+  if(UseBATL) then
+     ! To plot the criteias used for AMR we need to 
+     ! recalulate them for the existing grid.
+     do iVar = 1, nPlotVar
+        NamePlotVar = plotvarnames(iVar)
+        call lower_case(NamePlotVar)
+        String = NamePlotVar
+        call extract_fluid_name(String)
+        DoRecalcCrit = .true.
+        select case(String)
+        case("crit1","crit2","crit3","crit4","crit5","crit6",&
+             "crit7","crit8","crit9")
+           if(DoRecalcCrit) &
+                call calc_error_amr_criteria(nVar, State_VGB)
+           DoRecalcCrit = .false.
+        end select
+     end do
+  end if
 
   ! Compute the plot variables and write them to the disk
   PlotVarBlk=0.
@@ -383,7 +409,7 @@ subroutine write_plot_common(ifile)
      ! For spherical plots there are two files for north and south hemispheres
      ! For other cases, EXIT when i=2
      do i = 1, 2
-        
+
         if (i == 2 .and. .not. IsSphPlot) EXIT
 
         if(IsSphPlot)then
@@ -411,7 +437,7 @@ subroutine write_plot_common(ifile)
            call get_date_time(iTime_I)
            write(unit_tmp,*) iTime_I(1:7),' year mo dy hr mn sc msc'        
            write(unit_tmp,'(2(1pe13.5),a)') thetaTilt*cRadToDeg, 0.0,  &
-                                            ' thetatilt[deg] phitilt[deg]'
+                ' thetatilt[deg] phitilt[deg]'
            if (IsSphPlot) then
               write(unit_tmp,'(es13.5,a)')rplot,' rplot'
               if (i==1) write(unit_tmp,'(a)')'Northern Hemisphere'
@@ -623,7 +649,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
   use ModWaves, ONLY: UseWavePressure
   use ModLaserHeating, ONLY: LaserHeating_CB
-  use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit, calc_error_amr_criteria
+  use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit
   implicit none
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
@@ -1272,7 +1298,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
         ! GRID INFORMATION
      case('crit1')
-        call calc_error_amr_criteria(nVar, State_VGB)
+        !call calc_error_amr_criteria(nVar, State_VGB)
         if(allocated(AmrCrit_IB) .and. nAmrCrit >= 1) &
              PlotVar(:,:,:,iVar) = AmrCrit_IB(1,iBlk)
      case('crit2')
