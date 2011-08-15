@@ -1098,12 +1098,12 @@ contains
   !===========================================================================
   subroutine get_energy_source
 
-    use BATL_lib, ONLY: nDim, MaxDim, nIJK_D, interpolate_grid
+    use BATL_lib, ONLY: nDim, MaxDim, nIJK_D, interpolate_grid, CoordMin_D
     integer:: iStep
 
     integer:: iRay, iBlock, iCell, nCell
     integer:: iCell_II(0:nDim,2**nDim), iCell_D(MaxDim), i, j, k
-    real::    Weight_I(2**nDim), Weight, PosXHold
+    real::    Weight_I(2**nDim), Weight, PosXHold, TurningPoint
     !-----------------------------------------------------------------------
     if(DoInit) then
        call init_laser_package
@@ -1206,10 +1206,12 @@ contains
 
     if(DoLaserRayTest .and. iProc==0)then
        !L=50 for the test;L*cos(10)**2 = 48.49; xbeam=-96
+       TurningPoint = CoordMin_D(1) + 50.0*cos(cPi*10.0/180.0)**2
        write(*,*)' '
-       write(*,*)'maximum X position of ray=',PosXHold
+       write(*,*)'maximum X position of ray = ', PosXHold
+       write(*,*)'Analytical turning point = ', TurningPoint
        write(*,*)' '
-       if(abs(48.49 - abs(PosXHold)) > 0.25) write(*,*)'*** Ray turning error'
+       if(abs(TurningPoint-PosXHold) > 0.25) write(*,*)'*** Ray turning error'
     end if
 
   end subroutine get_energy_source
@@ -1248,16 +1250,12 @@ contains
        do iBlock = 1, nBlock
           if(unusedBLK(iBlock)) CYCLE
           do k=1, nK; do j=1, nJ; do i=1, nI
-             State_VGB(Rho_,i,j,k,iBlock) = &
-                  (x_BLK(i,j,k,iBlock) + 0.5*dx_BLK(iBlock) - x1) &
-                  *2.0*1.33*133.6/133.0*Si2No_V(UnitRho_)
+             ! numerator 133.6 is the critical density
+             ! denominator 50.0 is the distance to the critical surface
+             State_VGB(Rho_,i,j,k,iBlock) = (x_BLK(i,j,k,iBlock) - x1) &
+                  *133.6/50.0*Si2No_V(UnitRho_)
           end do; end do; end do
        end do
-       ! numerator 133.6 is the critical density
-       ! denominator 133.0 is the distance (number of cells)
-       ! to the critical surface if the multiplicative factor is 1.0
-       ! need at least 2% change in density/zone to reflect a zero
-       ! degree ray
     end if
 
     Irradiance = irradiance_t(Time_Simulation) * &
