@@ -924,6 +924,20 @@ subroutine MH_set_parameters(TypeAction)
            plot_type(iFile) = plot_area//'_'//plot_var
         end do
 
+     case("#SAVEPLOTNAME")
+        call read_var('IsPlotName_n',IsPlotName_n)
+        call read_var('IsPlotName_t',IsPlotName_t)
+        call read_var('IsPlotName_e',IsPlotName_e)
+        ! Will set only _n true when not time accurate automatically.
+        ! Set _n true if both _t and _e are false.
+        if(.not.IsPlotName_t .and. .not.IsPlotName_e) IsPlotName_n=.true.
+
+     case("#SAVELOGNAME")
+        call read_var('IsLogName_n',IsLogName_n)
+        call read_var('IsLogName_e',IsLogName_e)
+        ! Set _n true if _e is false.
+        if(.not.IsLogName_e) IsLogName_n=.true.
+
      case("#SAVEPLOTSAMR")
         call read_var('DoSavePlotsAmr',save_plots_amr)
 

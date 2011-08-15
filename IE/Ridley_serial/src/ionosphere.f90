@@ -606,10 +606,17 @@ subroutine ionosphere_write_output(iFile, iBlock)
      write(textNandT,'(a,i7.7)') "N=",nSolve
 
   else
-     write(NameFile,'(a,3i2.2,"_",3i2.2,"_",i3.3,"_b",i1,a)') &
-          trim(NameIonoDir)//"it",&
-          mod(time_array(1),100),time_array(2:7),&
-          iBlock,IO_ext
+     if(IsPlotName_e)then
+        write(NameFile,'(a,i4.4,2i2.2,"-",3i2.2,"-",i3.3,"_b",i1,a)') &
+             trim(NameIonoDir)//"i_e",&
+             time_array(1:7),&
+             iBlock,IO_ext
+     else
+        write(NameFile,'(a,3i2.2,"_",3i2.2,"_",i3.3,"_b",i1,a)') &
+             trim(NameIonoDir)//"it",&
+             mod(time_array(1),100),time_array(2:7),&
+             iBlock,IO_ext
+     end if
 
      write(textNandT,'(a,i7.7,a,i4.4,a,i2.2,a,i2.2)') &
           "N=",nSolve," T=", &
@@ -970,8 +977,13 @@ subroutine IE_save_logfile
   if(IsFirstTime) then
      IsFirstTime = .false.
      unitlog = io_unit_new()
-     write(NameFile,'(a,3i2.2,"_",3i2.2,a)') trim(NameIonoDir)//"IE_t", &
-          mod(time_array(1),100),time_array(2:6),".log"
+     if(IsLogName_e)then
+        write(NameFile,'(a,i4.4,2i2.2,"-",3i2.2,a)') trim(NameIonoDir)//"IE_e", &
+             time_array(1:6),".log"
+     else
+        write(NameFile,'(a,3i2.2,"_",3i2.2,a)') trim(NameIonoDir)//"IE_t", &
+             mod(time_array(1),100),time_array(2:6),".log"
+     end if
 
      open(unitlog,file=NameFile,status="replace")
      write(unitlog,fmt="(a)")  'Ridley Ionosphere Model, [deg] and [kV]'

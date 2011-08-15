@@ -123,6 +123,20 @@ Module ModIO
   character(len=10), dimension(nPlotVarMax) :: &
        NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I
 
+  ! Plot file name string logicals.
+  !  One of the three must be true
+  !  Time accurate flag can override
+  logical :: IsPlotName_n = .true.   !  true if time accurate false
+  logical :: IsPlotName_t = .true.   ! false if time accurate false
+  logical :: IsPlotName_e = .false.  ! false if time accurate false
+
+  ! Log file name string logicals.
+  !  One of the two must be true
+  !  Time accurate flag false will automatically set IsLogName_n true
+  !     when file is opened.
+  logical :: IsLogName_n = .true.
+  logical :: IsLogName_e = .false.
+
 contains
 
   !===========================================================================

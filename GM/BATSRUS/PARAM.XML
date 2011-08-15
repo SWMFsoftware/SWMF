@@ -3220,6 +3220,33 @@ The IDL output from line of sight integration is always in ASCII format.
 
 </command>
 
+<command name="SAVEPLOTNAME">
+	<parameter name="IsPlotName_n" type="logical" default="T" />
+	<parameter name="IsPlotName_t" type="logical" default="T" />
+	<parameter name="IsPlotName_e" type="logical" default="F" />
+#SAVEPLOTNAME
+T			IsPlotName_n
+T			IsPlotName_t
+F			IsPlotName_e
+
+Plot files are named with the preferred set of substrings.
+     _n is interation number, ie. _n0000127
+     _t is simulation time, ie. _t00000010
+     _e is event time, ie. _e20000321-104510-000
+</command>
+
+<command name="SAVELOGNAME">
+	<parameter name="IsLogName_n" type="logical" default="T" />
+	<parameter name="IsLogName_e" type="logical" default="F" />
+#SAVELOGNAME
+T			IsLogName_n
+F			IsLogName_e
+
+Log files are named with the preferred set of substrings.
+     _n is interation number, ie. _n000000
+     _e is event time, ie. _e20000321-104500
+</command>
+
 <command name="SAVEBINARY">
 	<parameter name="DoSaveBinary" type="logical" default="T" />
 #SAVEBINARY

@@ -25,7 +25,13 @@ module IE_ModIo
   integer             :: dn_output(MaxFile)=-1, dn_magoutput = -1
   real                :: dt_output(MaxFile)=-1.0, dt_magoutput = -1.0
   integer             :: t_output_last(MaxFile)=-1, t_magoutput_last = -1
-  
+
+  ! Plot file name string logicals.
+  logical :: IsPlotName_e = .false.
+
+  ! Log file name string logicals.
+  logical :: IsLogName_e = .false.
+
 contains
 
   !===========================================================================

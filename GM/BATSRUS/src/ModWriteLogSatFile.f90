@@ -44,6 +44,10 @@ subroutine write_logfile(iSatIn,iFile)
   integer :: loc(5)
   integer :: iTime_I(7) ! integer time: year,month,day,hour,minute,sec,msec
   integer :: iError
+
+  ! Event date for filename
+  character (len=80) :: format
+  character (len=19) :: eventDateTime
   !---------------------------------------------------------------------------
   call set_oktest('write_logfile',DoTest,DoTestMe)
 
@@ -155,13 +159,23 @@ subroutine write_logfile(iSatIn,iFile)
      if (iSatIn==0) then
         if(unit_log<0)then
            unit_log = io_unit_new()
-           if(n_step < 1000000)then
-              write(filename,'(a,i6.6,a)')&
-                   trim(NamePlotDir)//'log_n',n_step,'.log'
-           else
-              write(filename,'(a,i8.8,a)')&
-                   trim(NamePlotDir)//'log_n',n_step,'.log'
+           filename = trim(NamePlotDir) // 'log'
+           if(IsLogName_e)then
+              ! Event date added to log file name
+              write(format,*)'(i4.4,2i2.2,"-",3i2.2)'
+              call get_date_time(iTime_I)
+              write(eventDateTime ,format) iTime_I(1:6)
+              filename = trim(filename) // '_e' // trim(eventDateTime)
            end if
+           if(IsLogName_n .or. .not.time_accurate)then
+              if(n_step < 1000000)then
+                 write(filename,'(a,i6.6)') trim(filename)//'_n',n_step
+              else
+                 write(filename,'(a,i8.8)') trim(filename)//'_n',n_step
+              end if
+           end if
+           filename = trim(filename) // '.log'
+
            open(unit_log,file=filename,status="replace")
            if (index(NameAll,'pnt')>0 .or. index(NameAll,'test')>0) then
    	      if (coord_test) then

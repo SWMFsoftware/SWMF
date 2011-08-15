@@ -151,6 +151,10 @@ contains
                      ' from plot_string='//plot_string)
              end if
           end do
+       case("#SAVEPLOTNAME")
+          call read_var('IsPlotName_e',IsPlotName_e)
+       case("#SAVELOGNAME")
+          call read_var('IsLogName_e',IsLogName_e)
        case("#IONOSPHERE")
           call read_var('iConductanceModel',conductance_model)
           call read_var('UseFullCurrent' ,UseFullCurrent)

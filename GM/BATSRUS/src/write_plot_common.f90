@@ -18,8 +18,7 @@ subroutine write_plot_common(ifile)
   use ModParallel, ONLY: proc_dims
   use ModMpi
   use ModUtilities, ONLY: lower_case, split_string
-  use BATL_lib, ONLY: message_pass_node,&
-       calc_error_amr_criteria
+  use BATL_lib, ONLY: message_pass_node, calc_error_amr_criteria
   use ModAdvance, ONLY : State_VGB
   use ModMultiFluid, ONLY: extract_fluid_name
   implicit none
@@ -79,6 +78,10 @@ subroutine write_plot_common(ifile)
   ! make sure we only calculate the criterias ones.
   logical :: DoRecalcCrit
 
+  ! Event date for filename
+  character (len=80) :: format
+  character (len=19) :: eventDateTime
+
   logical :: oktest,oktest_me
   !---------------------------------------------------------------------------
 
@@ -129,14 +132,27 @@ subroutine write_plot_common(ifile)
      write(NameSnapshot, '(a,i2)') trim(NameSnapshot), iFile - Plot_
   end if
 
-  ! For time accurate runs the file name will contain the StringDateOrTime
-  if(time_accurate)then
-     call get_time_string
-     NameSnapshot = trim(NameSnapshot) // "_t" // StringDateOrTime
+  if(.not.time_accurate)then
+     ! Add time step information
+     write(NameSnapshot,'(a,i7.7)') trim(NameSnapshot)//"_n", n_step
+  else
+     if(IsPlotName_e)then
+        ! Event date
+        write(format,*)'(i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)'
+        call get_date_time(iTime_I)
+        write(eventDateTime ,format) iTime_I
+        NameSnapshot = trim(NameSnapshot) // "_e" // trim(eventDateTime)
+     end if
+     if(IsPlotName_n)then
+        ! The file name will contain the StringDateOrTime
+        call get_time_string
+        NameSnapshot = trim(NameSnapshot) // "_t" // StringDateOrTime
+     end if
+     if(IsPlotName_n)then
+        ! Add time step information
+        write(NameSnapshot,'(a,i7.7)') trim(NameSnapshot)//"_n", n_step
+     end if
   end if
-
-  ! Add time step information
-  write(NameSnapshot,'(a,i7.7)') trim(NameSnapshot)//"_n", n_step
 
   ! String containing the processor index and file extension
   if(nProc < 10000) then
@@ -208,7 +224,6 @@ subroutine write_plot_common(ifile)
   nPEcells=0; nPEcellsN=0; nPEcellsS=0
   nBLKcells=0; nBLKcellsN=0; nBLKcellsS=0
   !! END IDL
-
 
   if(UseBATL) then
      ! To plot the criteias used for AMR we need to 
