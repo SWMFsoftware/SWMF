@@ -2,7 +2,7 @@
 module ModSources
 
   use ModSizeGitm
-  use ModPlanet, only: nSpecies,nSpeciesTotal
+  use ModPlanet, only: nSpecies,nSpeciesTotal,nIons
 
   !\
   ! Sources for neutral temperature

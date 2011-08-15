@@ -207,12 +207,12 @@ subroutine calc_planet_sources(iBlock)
      
      SubsurfaceTemp(1:nLons,1:nLats,iBlock) = SubsurfaceTemp(1:nLons,1:nLats,iBlock)+&
           dSubsurfaceTemp(1:nLons,1:nLats,iBlock)*DtLTERadiation
-     
+
      do iLat = 1, nLats
         do iLon = 1, nLons
 
            !     Mars GITM ground temperature (on its grid) -------------------
-           if (minval(Altitude_GB(:,:,0,iBlock)) .lt. 0) then
+           if (minval(Altitude_GB(:,:,0,iBlock)) .lt. 0 .or. UseTopography) then
 
               Temperature(iLon,iLat,0,iBlock)=SurfaceTemp(iLon,iLat,iBlock)/&
                    TempUnit(iLon,iLat,0)
@@ -255,6 +255,78 @@ end subroutine calc_planet_sources
 !
 !---------------------------------------------------------+
 
+subroutine init_topography
+
+  use ModGITM
+  use ModInputs
+
+  implicit None
+  
+!  real, intent(out) :: altzero2(nLons,nLats,nBlocks)
+
+  integer, parameter :: nMOLALons = 1440 , nMOLALats = 720 !1/4 degree resolution
+  
+  real, dimension(nMolaLons,nMOLALats, 3) :: SurfaceAltitude
+  integer :: ilon, ilat, iilon, iilat, jlon, jlat, iBlock
+  real :: rlat, rlon,latfind,lonfind
+
+
+  open(unit=iInputUnit_, file='DataIn/Mars_MOLA_topo.dat', action='read', status="old")
+  if (iDebugLevel > 4) write(*,*) "=====> Reading Topography"
+  
+  do iLat = 1, nMOLALats
+     do iLon = 1, nMOLALons
+        
+        read(iInputUnit_,*) SurfaceAltitude(iLon,iLat,iNorth_), &
+             SurfaceAltitude(iLon,iLat,iEast_), &
+             SurfaceAltitude(iLon,iLat,iUp_)
+
+     enddo
+  enddo
+  close(iInputUnit_)
+  
+  do iBlock = 1, nBlocks
+     do iLon = 1, nLons
+        do iLat = 1, nLats
+           
+           LonFind = Longitude(iLon,iBlock)*180/pi
+           LatFind = latitude(iLat,iBlock)*180/pi
+           
+           do jLon = 1, nMOLALons-1
+              
+              if (SurfaceAltitude(jLon,1,iEast_) <= LonFind .and. &
+                   SurfaceAltitude(jLon+1,1,iEast_) >= LonFind) then
+                 iiLon = jLon
+                rLon = 1.0 - (LonFind -  SurfaceAltitude(jLon,1,iEast_))/ &
+                      (SurfaceAltitude(jLon+1,1,iEast_)-SurfaceAltitude(jLon,1,iEast_))
+
+              endif
+           enddo
+           
+           do jLat = 1, nMOLALats-1
+              
+              if (SurfaceAltitude(1,jLat,iNorth_) <= LatFind .and. &
+                   SurfaceAltitude(1,jLat+1,iNorth_) >= LatFind) then
+                 iiLat = jLat
+                 rLat = 1.0 - (LatFind -  SurfaceAltitude(1,jLat,iNorth_))/ &
+                      (SurfaceAltitude(1,jLat+1,iNorth_)-SurfaceAltitude(1,jLat,iNorth_))
+              endif
+           enddo
+           
+           altzero(iLon,iLat,iBlock) =  (rLon)*(rLat)*SurfaceAltitude(iiLon,iiLat,iUp_) + &
+                (1-rLon)*(  rLat)*SurfaceAltitude(iiLon +1,iiLat,iUp_) + &
+                (rLon)*(1-rLat)*SurfaceAltitude(iiLon,iiLat+1,iUp_) + &
+                (1-rLon)*(1-rLat)*SurfaceAltitude(iiLon+1,iiLat+1,iUp_) 
+
+        enddo
+     enddo
+     
+  enddo
+
+end subroutine init_topography
+!---------------------------------------------------------+
+!
+!---------------------------------------------------------+
 !------------------------------------------------------------------
 subroutine calc_radcooling(iBlock)
 
@@ -1238,7 +1310,7 @@ end subroutine init_isochem
     real :: fluxvd(LL_LAYERS),HEATING(LL_LAYERS),TOTAL(LL_LAYERS)
     real :: fluxid(LL_LAYERS),GREENHOUSE(LL_LAYERS),XLTECORRECTION(LL_LAYERS)
 
-    integer :: ngwv(L_NSPECTV)
+    integer :: ngwv(L_NSPECTV),ialt
 
     !C  IR
 
@@ -1268,7 +1340,6 @@ end subroutine init_isochem
     P(1:nAlts) = &
          Pressure(iLon,iLat,1:nAlts,iBlock)*0.01
 
-
     !C              RADIATIVE CALCULATIONS.
 
     !C  Fill the new radiation code variables.
@@ -1288,7 +1359,8 @@ end subroutine init_isochem
     !C     Fill cumulative dust optical depth arrays (cum. dust optical
     !C     depth from the top of the lower atmosphere to the bottom of level K).
 
-
+!write(*,*) plev(l_levels),l_levels
+!stop
     CALL DUSTPROFILE(PLEV(L_LEVELS),PTROP,PLEV,TAUCUM,TAUREF,L_LEVELS)
 
 
@@ -1330,7 +1402,7 @@ end subroutine init_isochem
 !!$             ENDIF
 
        !C  Get the optical depth (due to all sources) in the optical.
-
+!write(*,*) ilon,ilat
        call optcv(DTAUV,TAUV,TAUCUMV,TLEV,PLEV,L_LAYERS,&
             L_LEVELS,L_NLAYRAD,L_NLEVRAD,WBARV,COSBV,&
             TAUREF,TMID,PMID,NGWV,QH2O)
@@ -1340,7 +1412,7 @@ end subroutine init_isochem
        call sfluxv(DTAUV,TAUV,TAUCUMV,ALS,WBARV,COSBV,&
             AVECOSSZA(iLon,iLat,iBlock),NFLUXTOPV,FMNETV,&
             fluxupv,fluxdnv,diffvt,ngwv,&
-            L_LAYERS,L_LEVELS,L_NLAYRAD,L_NLEVRAD)
+            L_LAYERS,L_LEVELS,L_NLAYRAD,L_NLEVRAD,ilon,ilat)
 
        !C  If the sun is down, no solar flux, nor downward flux. . .
 
@@ -1370,12 +1442,14 @@ end subroutine init_isochem
     call optci(DTAUI,TAUCUMI,TLEV,PLEV,L_LAYERS,&
          L_LEVELS,L_NLAYRAD,L_NLEVRAD,QextREF,COSBI,WBARI,&
          TAUREF,TMID,PMID,NGWI,QH2O)
-
+!if (ilon .eq. 9 .and. ilat .eq. 9) stop
     !C  Calculate the fluxes in the IR.
 
     call sfluxi(PLEV,TLEV,DTAUI,TAUCUMI,ALBI,L_LAYERS,L_LEVELS,&
          L_NLAYRAD,L_NLEVRAD,COSBI,WBARI,NFLUXTOPI,FMNETI,&
          FLUXUPI,FLUXDNI,NGWI)
+!write(*,*) fmneti
+!stop
 
     do L=2,l_nlayrad
        L1=L-1
@@ -1406,10 +1480,17 @@ end subroutine init_isochem
        fluxvd(L1)  = FMNETV(L)-FMNETV(L-1)
        HEATING(L1) = fluxvd(L-1)*(-gravity_GB(iLon,iLat,L_NLAYRAD-L1,iBlock))/&
             (HeatCapacityCO2*100.0*(PLEV(2*L+1)-PLEV(2*L-1)))
+!if (iproc .eq. 21 .and. ilon .eq. 1 .and. ilat .eq. 4) then
+!   write(*,*)"LATM: ", fluxvd(l1),fmnetv(l)
+!endif
+
        GREENHOUSE(L1) = fluxid(L-1)*(-gravity_GB(iLon,iLat,L_NLAYRAD-L1,iBlock))/&
             (HeatCapacityCO2*100.0*(PLEV(2*L+1)-PLEV(2*L-1)))
+
        TOTAL(L1)=(HEATING(L1)/XLTECORRECTION(L1))+&
             GREENHOUSE(L1)*COOLCORRECTION(L1)
+
+
 
        !Buffer region, Lopez-Valverde found a buffer needed for appropriate cooling rates
        !near the top of the atmosphere
@@ -1429,7 +1510,7 @@ end subroutine init_isochem
             2.0*PI/Pd*(SubsurfaceTemp(iLon,iLat,iBlock)-SurfaceTemp(iLon,iLat,iBlock))
 
     end do
-
+!stop
     fir(iLon,iLat,iBlock) = fluxdni(L_NLAYRAD)
     fvis(iLon,iLat,iBlock) = fluxdnv(L_NLAYRAD)
     Tbot(iLon,iLat,iBlock) = T(1)
@@ -1452,9 +1533,10 @@ end subroutine init_isochem
     !C  mid-points.  PLEV and TLEV are the pressures and temperatures at
     !C  the GCM layer boundaries, i.e. at GCM levels.
 
+!!!!!!Why is altmin and altbot different? !!!!!!!!!!!!!!!!!!!1
 
     use ModPlanet
-
+    use ModGITM, only: iproc
     implicit none
 
     integer :: K, L, NK,L_LEVELS,L_LAYERS
@@ -1468,13 +1550,27 @@ end subroutine init_isochem
     !C======================================================================C
 
     PBOT = PBOT*0.01 !convert bottom pressure to mbars
-
+!altmin = 2429.59375
     ! Calculate boundary altitudes
-    ALTBOUND(0)=ALTMIN
-    ALTBOUND(1)=ALTMID(1) + (ALTMID(1)-ALTMIN)
-    DO L=2,L_LAYERS+1
-       ALTBOUND(L)=ALTMID(L) + (ALTMID(L)-ALTBOUND(L-1))
-    END DO
+    
+!if (altmid(1) .gt. 0) then
+!     ALTBOUND(0)=(ALTMIN+altmid(1))/2.
+!  else
+!     ALTBound(0) = Altmid(1) - (altmid(2) - altmid(1))/2.
+!  endif
+ALTBOUND(0) = altbot
+
+!write(*,*) altbound(0)
+!   write(*,*) altmid(1)
+    do L = 1, L_Layers+1
+       altbound(L) = (altmid(l) + altmid(l+1)) /2.
+!       write(*,*) "alts: ",altbound(l), altmid(l),altmid(l+1)
+    enddo
+!    ALTBOUND(1)=ALTMID(1) + (ALTMID(1)-ALTMIN)
+ !    DO L=2,L_LAYERS+1
+!       ALTBOUND(L)=ALTMID(L) + (ALTMID(L)-ALTBOUND(L-1))
+!       write(*,*) altbound(l),altmid(l), altbound(l-1)
+!    END DO
 
     !C  Fill the new radiation code variables.
     !C  PLEV and TLEV are the pressure and tempertures on a vertical grid
@@ -1484,29 +1580,62 @@ end subroutine init_isochem
     ALTLEVELS(1) = ALTBOUND(L_LAYERS+1)
     ALTLEVELS(2) = ALTMID(L_LAYERS+1)
     ALTLEVELS(3) = ALTBOUND(L_LAYERS) 
+    ALTLEVELS(L_LEVELS+1) = (ALTBOUND(0)+Altmin)/2.
+    
     PLEV(1) = EXP(DLOG(P(L_LAYERS+1)) + (DLOG(P(L_LAYERS+2))-&
          DLOG(P(L_LAYERS+1)))*&
          (ALTLEVELS(1)-ALTLEVELS(2))/&
          (ALTLEVELS(0)-ALTLEVELS(2)))
     PLEV(2) = P(L_LAYERS+1)
-    DO K=4,L_LEVELS,2
+    PLEV(L_LEVELS) = pbot
+    PLEV(L_LEVELS+1) = pbot
+   DO K=4,L_LEVELS-1,2
        NK=L_LAYERS -(K/2 - 2)
        PLEV(K) = P(NK)
        ALTLEVELS(K) = ALTMID(NK)
        ALTLEVELS(K+1) = ALTBOUND(NK-1)
-    END DO
 
+!       write(*,*) k,nk,altbound(nk-1)
+!write(*,*) plev(k),k
+!write(*,*) altmid(nk),altbound(nk),altlevels(k)-altlevels(k+1)
+!if (iproc .eq. 21) write(*,*) k,nk,plev(k),P(nk),pbot
+!write(*,*) 
+    END DO
+ 
+!write(*,*) l_levels,l_layers
+!if (iproc .eq. 21) stop
+!!!!!!!!!!!!!!!!!! This is the issue (maybe) !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!stop
     DO K=3,L_LEVELS-2,2
        PLEV(K) = EXP(DLOG(PLEV(K+1)) + (DLOG(PLEV(K-1))-DLOG(PLEV(K+1)))*&
             (ALTLEVELS(K)-ALTLEVELS(K+1))/&
             (ALTLEVELS(K-1)-ALTLEVELS(K+1)))
+!write(*,*) altlevels(k),k
+!write(*,*) plev(k),k
     END DO
 
-    PLEV(L_LEVELS) = EXP(DLOG(PBOT) + (DLOG(PLEV(L_LEVELS-1))-DLOG(PBOT))*&
-         (ALTMIN-ALTBOT)/(ALTLEVELS(L_LEVELS-1)-ALTBOT))
-
+!    if (altbot .gt. altmin) then
+       PLEV(L_LEVELS) = PBOT!EXP(DLOG(PBOT) - (DLOG(PLEV(L_LEVELS-1))-DLOG(PBOT))*&
+!            (ALTBOT-ALTMIN)/(altbot-ALTLEVELS(L_LEVELS-1)))
+!    else
+!       PLEV(L_LEVELS) = EXP(DLOG(PBOT) + (DLOG(PLEV(L_LEVELS-1))-DLOG(PBOT))*&
+!            (ALTBOT-ALTMIN)/(ALTLEVELS(L_LEVELS-1)-ALTBOT))
+!    endif
     PLEV(L_LEVELS+1) = PLEV(L_LEVELS)
 
+    
+!    if (plev(l_levels) .lt. plev(l_levels -1)) then
+!       write(*,*) "p: ",altbot,altmin,pbot,altbound(0),altmid(0),altmid(1)
+!       do l = 1,l_levels+1
+          !if (plev(l) .lt. plev(l-1)) then
+!          write(*,*) l,plev(l),pbot,altlevels(l),altbot
+!
+!       enddo
+!          stop
+!    endif
+
+
+!stop
     TLEV(1) = T(L_LAYERS+1) + (T(L_LAYERS+2)-T(L_LAYERS+1))*&
          DLOG(PLEV(1)/PLEV(2))/&
          DLOG(P(L_LAYERS+2)/PLEV(2))
@@ -1663,6 +1792,7 @@ end subroutine init_isochem
 
     END DO
 
+
     TAUREF(L_LEVELS+1) = 0.0D0
 
 
@@ -1761,7 +1891,7 @@ end subroutine init_isochem
 !!$C
 !!$C----------------------------------------------------------------------C
     use ModPlanet
-
+    use ModGITM, only: iproc
     implicit none
 
     integer :: L_LAYERS,L_LEVELS,L_NLAYRAD,L_NLEVRAD
@@ -1819,7 +1949,10 @@ end subroutine init_isochem
     do K=2,L_LEVELS
        DPR(k) = PLEV(K)-PLEV(K-1)
        U(k)   = Cmk*DPR(k)
-
+!       if (u(k) .lt. 0) then
+!          write(*,*) k,plev(k),plev(k-1)
+!          stop
+!       endif
        call tpindex(PMID(K),TMID(K),QH2O(K),pfgasref,tgasref,&
             LCOEF,MT(K),MP(K),NH2O(K),WRATIO(K))
 
@@ -1882,6 +2015,12 @@ end subroutine init_isochem
              TAUGSURF(NW,NG) = TAUGSURF(NW,NG) + TAUGAS
              DTAUKV(K,nw,ng) = TAUGAS + TAUCLD + TRAY(K,NW) +&
                   TAEROS(K,NW)
+!             if (u(k) .lt. 0) write(*,*) u(k),k,nw,ng
+!             if (dtaukv(k,nw,ng) .lt. -700000) then
+!                write(*,*) dtaukv(k,nw,ng),taugas,u(k),ans
+!                stop
+!endif
+            
           end do
           if(TAUGSURF(NW,NG) .LT. TLIMIT) THEN
              goto 10
@@ -1951,6 +2090,10 @@ end subroutine init_isochem
                (TRAY(K,NW) + QSCATV(NW)*TAUREFL)
           WBARV(L,nw,ng) = (QSCATV(NW)*TAUREFL + TRAY(K,NW)*0.9999)/&
                DTAUV(L,nw,ng)
+!          if (dtauv(l,nw,ng) .lt. -700000) then
+!             write(*,*) dtauv(l,nw,ng),dtaukv(k,nw,ng),l,nw,ng
+!             stop
+!             endif
        END DO
 
     END DO     ! NW spectral loop
@@ -2156,15 +2299,15 @@ end subroutine init_isochem
   SUBROUTINE SFLUXV(DTAUV,TAUV,TAUCUMV,RSFV,WBARV,COSBV,&
        UBAR0,NFLUXTOPV,FMNETV,&
        FLUXUPV,FLUXDNV,DIFFVT,NGWV,&
-       L_LAYERS,L_LEVELS,L_NLAYRAD,L_NLEVRAD)
+       L_LAYERS,L_LEVELS,L_NLAYRAD,L_NLEVRAD,ilon,ilat)
 
     !C  GCM2.0  Feb 2003
 
     use ModPlanet
-
+    use ModGITM, only: iproc
     implicit none
 
-    integer :: L_LAYERS,L_LEVELS,L_NLAYRAD,L_NLEVRAD
+    integer :: L_LAYERS,L_LEVELS,L_NLAYRAD,L_NLEVRAD,ilon,ilat
 
     real :: FMNETV(LL_NLAYRAD)
     real :: TAUCUMV(LL_LEVELS,L_NSPECTV,L_NGAUSS)
@@ -2254,6 +2397,7 @@ end subroutine init_isochem
                   (1.0-FZEROV(NW))
              FLUXDNV(L) = FLUXDNV(L) + FMDV(L)*GWEIGHT(NG)*&
                   (1.0-FZEROV(NW))
+
           END DO
 
           !C         THE DIFFUSE COMPONENT OF THE DOWNWARD SOLAR FLUX
@@ -2296,8 +2440,9 @@ end subroutine init_isochem
           FMNETV(L)=FMNETV(L)+( FMUPV(L)-FMDV(L) )*FZERO
           FLUXUPV(L) = FLUXUPV(L) + FMUPV(L)*FZERO
           FLUXDNV(L) = FLUXDNV(L) + FMDV(L)*FZERO
-       END DO
 
+
+       END DO
        !C       THE DIFFUSE COMPONENT OF THE DOWNWARD SOLAR FLUX
 
        DIFFVT = DIFFVT + DIFFV*FZERO
@@ -2356,6 +2501,7 @@ end subroutine init_isochem
 !!$C 
 
        use ModPlanet
+       use ModGITM, only: iProc
 
        implicit none
        integer :: L_LAYERS,L_LEVELS,L_NLAYRAD,L_NLEVRAD
@@ -2408,6 +2554,8 @@ end subroutine init_isochem
           TAUCUMP(K)   = TAU(L+1)
           TAUCUMP(K+1) = TAUCUMP(k)+(TAUCUM(K+1) - TAUCUM(k))*&
                (1.-WDEL(L)*CDEL(L)**2)
+
+
        END DO
 
        !C  Bottom layer
@@ -2419,7 +2567,9 @@ end subroutine init_isochem
        TAU(L+1)   = TAU(L)+DTAU(L)
        K          = 2*(L+1)
        TAUCUMP(K) = TAU(L+1)
-
+!       if  (iproc .eq. 21 .and. dtau(47) .lt. -700000) then
+!          write(*,*) "dtau: ",DTAU(47),DTDEL(47),WDEL(47),CDEL(47),l_nlayrad
+!       endif          
        !C     WE GO WITH THE QUADRATURE APPROACH HERE.  THE "SQRT(3)" factors
        !C     ARE THE UBARV TERM.
 
@@ -2478,6 +2628,9 @@ end subroutine init_isochem
           E2(L)     = EP-GAMA(L)*EM
           E3(L)     = GAMA(L)*EP+EM
           E4(L)     = GAMA(L)*EP-EM
+!          if (E2(L) .ne. e2(L)) then
+!             write(*,*) "e2: ",exptrm(L),taumax,lamda(l),dtau(l),iproc,l
+!          endif
        END DO
 
        CALL DSOLVER(NAYER,GAMA,CP,CM,CPM1,CMM1,E1,E2,E3,E4,BTOP,&
@@ -2595,7 +2748,10 @@ end subroutine init_isochem
 
        FMIDP(L) = XK1(L)*EP + GAMA(L)*XK2(L)*EM + CPMID
        FMIDM(L) = XK1(L)*EP*GAMA(L) + XK2(L)*EM + CMMID
-
+!if (iproc .eq. 21 .and. ilon .eq. 1 .and. ilat .eq. 4)
+!   if (fmidp(l) .ne. fmidp(l)) then
+!      write(*,*) fmidp(l),fmidm(l),ep, gama(l),xk2(l),em,cpmid
+!endif
        !C  Save the diffuse downward flux for TEMPGR calculations
 
        DIFFV = FMIDM(L)
@@ -2690,7 +2846,9 @@ end subroutine init_isochem
        BF(L) = E2(NL)-RSF*E4(NL)
        CF(L) = 0.0
        DF(L) = BSURF-CP(NL)+RSF*CM(NL)
-
+!if (BF(L) .ne. bf(L)) then
+!   write(*,*) "BF: ",bf(L),e2(Nl),rsf,e4(NL)
+!endif
        CALL DTRIDGL(L,AF,BF,CF,DF,XK)
 
        !C     ***UNMIX THE COEFFICIENTS****
@@ -2708,7 +2866,7 @@ end subroutine init_isochem
 
 !!!! next line added by ridley and pawlowski
           XK(2*N-1) = max(abs(XK(2*n-1)),1.0e-30)*sign(1.0,XK(2*n-1))
-
+         
 
           IF (ABS (XK2(N)/XK(2*N-1)) .LT. 1.E-30) XK2(N)=0.0
 
@@ -2741,18 +2899,24 @@ end subroutine init_isochem
 
           AS(L) = AF(L)/BF(L)
           DS(L) = DF(L)/BF(L)
-
+!          if (AS(L) .ne. AS(L) .or. ds(L) .ne. ds(l)) then 
+!             write(*,*) "ne: ", as(l),ds(l),BF(L)
+!endif
           DO I=2,L
              X         = 1./(BF(L+1-I) - CF(L+1-I)*AS(L+2-I))
              AS(L+1-I) = AF(L+1-I)*X
              DS(L+1-I) = (DF(L+1-I)-CF(L+1-I)*DS(L+2-I))*X
+!             if (ds(L+1-I) .ne. ds(L+1-I))then 
+!                write(*,*)"dtr: ",I, df(L+1-I),DF(L+1-I),DS(L+2-I),X,BF(L+1-I),cf(L+1-I),AS(L+2-I),af(L+1-I)
+!             endif
           END DO
 
           XK(1)=DS(1)
           DO I=2,L
              XKB   = XK(I-1)
              XK(I) = DS(I)-AS(I)*XKB
-          END DO
+
+END DO
 
 
         END SUBROUTINE DTRIDGL
@@ -2844,7 +3008,10 @@ end subroutine init_isochem
           do K=2,L_LEVELS
              DPR(k) = PLEV(K)-PLEV(K-1)
              U(k)   = Cmk*DPR(k)
-
+!             if (U(k) .lt. 0) then 
+!                write(*,*) u(k),dpr(k),plev(k), plev(k-1)
+ 
+!endif
              call tpindex(PMID(K),TMID(K),QH2O(K),pfgasref,tgasref,&
                   LCOEF,MT(K),MP(K),NH2O(K),WRATIO(K))
 
@@ -2856,7 +3023,7 @@ end subroutine init_isochem
                 TAEROS(K,NW) = TAUREF(K)*Qexti(NW)/Qrefv
              END DO
           end do
-
+!stop
           !C  TAUCLD = is cloud opacity, zero until further notice
 
           TAUCLD = 0.0
@@ -2906,7 +3073,10 @@ end subroutine init_isochem
                    TAUGAS          = U(k)*ANS
                    TAUGSURF(NW,NG) = TAUGSURF(NW,NG) + TAUGAS
                    DTAUKI(K,nw,ng) = TAUGAS+TAEROS(K,NW)+TAUCLD
-                end do
+!                   if (nw .eq. 3 .and. ng .eq. 15) then1
+!                      write(*,*) dtauki(k,nw,ng),taugas,u(k),ans
+!                   endif
+    end do
 
                 if(TAUGSURF(NW,NG) .LT. TLIMIT) THEN
                    goto 10
@@ -2918,7 +3088,7 @@ end subroutine init_isochem
 10           continue
 
           end do
-
+!stop
           !C  Now the full treatment for the layers, where besides the opacity
           !C  we need to calculate the scattering albedo and asymmetry factors
           !C  for each layer
@@ -3002,7 +3172,10 @@ end subroutine init_isochem
 
              END DO
           END DO
-
+!write(*,*) taucumi(:,3,15)
+!write(*,*) "dtauk: ",dtauki(:,3,15)
+!write(*,*) "dtaui: ",dtaui(:,3,15)
+!stop
 
         END SUBROUTINE OPTCI
 
@@ -3095,13 +3268,14 @@ end subroutine init_isochem
                 !C         WE CAN NOW SOLVE FOR THE COEFFICIENTS OF THE TWO STREAM
                 !C         CALL A SUBROUTINE THAT SOLVES  FOR THE FLUX TERMS
                 !C         WITHIN EACH INTERVAL AT THE MIDPOINT WAVENUMBER 
-
+!write(*,*) "before: ",taucumi(1,nw,ng),nw,ng
+!write(*,*) "before: ",taucumi(:,nw,ng)
                 CALL GFLUXI(NLEVRAD,TLEV,NW,DWNI(NW),DTAUI(1,NW,NG),&
                      TAUCUMI(1,NW,NG),&
                      WBARI(1,NW,NG),COSBI(1,NW,NG),RSFI,BTOP,&
                      BSURF,FTOPUP,FMUPI,FMDI,&
                      L_LAYERS,L_LEVELS,L_NLAYRAD,L_NLEVRAD)
-
+!if (ng .eq. 15 .and. nw .eq. 3) stop
                 !C         NOW CALCULATE THE CUMULATIVE IR NET FLUX
 
                 NFLUXTOPI = NFLUXTOPI+FTOPUP*DWNI(NW)*GWEIGHT(NG)*&
@@ -3110,13 +3284,24 @@ end subroutine init_isochem
                 DO L=1,L_NLEVRAD-1
 
                    !C           CORRECT FOR THE WAVENUMBER INTERVALS
-
+!if (l .eq. 45 .and. ng .eq.15 .and. nw .eq. 3) then 
+!stop
+!write(*,*) fmneti(l),fmupi(l),fmdi(l),dwni(nw),gweight(ng),fzeroi(nw)
+!endif
                    FMNETI(L)  = FMNETI(L)+(FMUPI(L)-FMDI(L))*DWNI(NW)*&
                         GWEIGHT(NG)*(1.0-FZEROI(NW))
                    FLUXUPI(L) = FLUXUPI(L) + FMUPI(L)*DWNI(NW)*GWEIGHT(NG)*&
                         (1.0-FZEROI(NW))
                    FLUXDNI(L) = FLUXDNI(L) + FMDI(L)*DWNI(NW)*GWEIGHT(NG)*&
                         (1.0-FZEROI(NW))
+!if (l .eq. 45 .and. ng .eq.15 .and. nw .eq. 3) then 
+!write(*,*) fmneti(l)
+!stop
+!endif
+!if (fmneti(l) .ne. fmneti(l)) then
+!   write(*,*) l,l_nlevrad-1,ng,l_ngauss-1,nw,l_nspecti
+!stop
+!endif
                 END DO
 
              END DO       !End NGAUSS LOOP
@@ -3152,6 +3337,7 @@ end subroutine init_isochem
                 FLUXUPI(L) = FLUXUPI(L) + FMUPI(L)*DWNI(NW)*FZERO
                 FLUXDNI(L) = FLUXDNI(L) + FMDI(L)*DWNI(NW)*FZERO
              END DO
+
 
 501          CONTINUE      !End Spectral Interval LOOP
 
@@ -3230,7 +3416,8 @@ end subroutine init_isochem
              !C======================================================================C
 
              !C     WE GO WITH THE HEMISPHERIC CONSTANT APPROACH IN THE INFRARED
-
+!write(*,*)"gflux :", taucum
+!stop
              IF (NLL .GT. NL) STOP 'PARAMETER NL TOO SMALL IN GLUFV'
 
              NLAYER = L_NLAYRAD
@@ -3320,6 +3507,11 @@ end subroutine init_isochem
 
                 FMIDP(L) = FMIDP(L)*PI
                 FMIDM(L) = FMIDM(L)*PI
+
+!if (l .eq. 45) then
+!   write(*,*) "in glux: ",fmidp(l),fmidm(l), taucum(2*l+1),taucum(2*l)
+
+!endif
              END DO
 
              !C     And now, for the special bottom layer

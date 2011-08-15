@@ -58,7 +58,7 @@ subroutine init_msis
   use ModPlanet
   use ModGITM
   use ModEUV
-  use ModInputs, only: iDebugLevel, iInputUnit_,iCharLen_, DoRestart
+  use ModInputs
 
   implicit none
 
@@ -74,18 +74,20 @@ subroutine init_msis
   real, dimension(nInitialAlts) :: tempalt,LogInitialDensity,InitialEDensity,InitialAlt
 
 
-  SurfaceAlbedo(:,:,iBlock) = 0.0
-  dSurfaceTemp(:,:,iBlock) = 0.0
-  dSubSurfaceTemp(:,:,iBlock) = 0.0
-  SurfaceTemp(:,:,iBlock) = 170.0
-  SubsurfaceTemp(:,:,iBlock) = 180.0
+  SurfaceAlbedo(:,:,:) = 0.0
+  dSurfaceTemp(:,:,:) = 0.0
+  dSubSurfaceTemp(:,:,:) = 0.0
+  SurfaceTemp(:,:,:) = 170.0
+  SubsurfaceTemp(:,:,:) = 180.0
   
-  do ilon = 1,nlons
-     do ilat = 1,nlats
-        jlat = nint((latitude(ilat,iblock)*180.0/pi+93.75)/7.5)
-        klon = nint((longitude(ilon,iblock)*180.0/pi+5.0)/10.0)
-        SurfaceAlbedo(ilon,ilat,iblock) = dummyalbedo(jlat,klon)
-        tinertia(ilon,ilat,iblock) = dummyti(jlat,klon)
+  do iblock = 1, nblocks
+     do ilon = 1,nlons
+        do ilat = 1,nlats
+           jlat = nint((latitude(ilat,iblock)*180.0/pi+93.75)/7.5)
+           klon = nint((longitude(ilon,iblock)*180.0/pi+5.0)/10.0)
+           SurfaceAlbedo(ilon,ilat,iblock) = dummyalbedo(jlat,klon)
+           tinertia(ilon,ilat,iblock) = dummyti(jlat,klon)
+        enddo
      enddo
   enddo
 
@@ -101,6 +103,7 @@ subroutine init_msis
 
      initialEDensity = 0.0
      initialAlt = 0.0
+
      open(iInputUnit_,file='DataIn/MarsInitialIonosphere.txt')
      do while (.not. Done) 
         read(iInputUnit_,*) cLine
@@ -124,6 +127,7 @@ subroutine init_msis
 
      enddo
      close(iInputUnit_)
+
      LogInitialDensity = log10(InitialEDensity) 
 
      do iLat = -1, nLats + 2
