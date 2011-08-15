@@ -2,6 +2,7 @@
 module ModPlanet
 
   use ModConstants
+  use ModSizeGITM, only: nAlts
 
   implicit none
 
@@ -108,8 +109,7 @@ module ModPlanet
  real, parameter :: SunOrbit_E = 129597740.63
 
   !Used as a damping term in Vertical solver.
-  real, dimension(nAlts) :: VertTau = 1.0e9 
-
+  real :: VertTau(nAlts)
 
   logical :: IsEarth = .true.
   logical :: IsMars = .false.
@@ -224,6 +224,8 @@ contains
     MassI(iHeP_) = Mass(iHe_)
     MassI(iNOP_) = Mass(iN_4S_) + Mass(iO_3P_)
     MassI(ie_) = Mass_Electron
+
+    VertTau = 1.0e9
 
     itime = 0
     itime(1) = iVernalYear
