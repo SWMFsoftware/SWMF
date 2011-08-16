@@ -40,14 +40,11 @@ module ModLaserHeating
 
 
   !Circular frequency, [rad/s]
-  real:: Omega = 3* &                 !Third harmonic
-       cTwoPi * cLightSpeed/(1.06e-6) !of the Nd Laser
+  real, parameter:: Omega = 3* &            !Third harmonic
+       cTwoPi * cLightSpeed/(1.06e-6)       !of the Nd Laser
 
   !Critical density
-
-  real:: DensityCrSI  = &
-       (3* &                                !For third harmonic
-       cTwoPi * cLightSpeed/(1.06e-6))**2 & !of the Nd Laser
+  real, parameter:: DensityCrSI  = Omega**2 &
        *cEps * cElectronMass/cElectronCharge**2 *&
        cAtomicMass * 9.0121823              !and for Beryllium
 
@@ -1099,11 +1096,15 @@ contains
   subroutine get_energy_source
 
     use BATL_lib, ONLY: nDim, MaxDim, nIJK_D, interpolate_grid, CoordMin_D
-    integer:: iStep
 
+    integer:: iStep
     integer:: iRay, iBlock, iCell, nCell
     integer:: iCell_II(0:nDim,2**nDim), iCell_D(MaxDim), i, j, k
-    real::    Weight_I(2**nDim), Weight, PosXHold, TurningPoint
+    real::    Weight_I(2**nDim), Weight
+
+    integer:: iError
+    real::    PosXHold, TurningPoint
+    real::    SumLaserHeatingPe, SumLaserHeating, SumLaserHeatingRef
     !-----------------------------------------------------------------------
     if(DoInit) then
        call init_laser_package
@@ -1204,14 +1205,31 @@ contains
        DoRay_I = (.not.Unused_I)
     end do
 
-    if(DoLaserRayTest .and. iProc==0)then
-       !L=50 for the test;L*cos(10)**2 = 48.49; xbeam=-96
-       TurningPoint = CoordMin_D(1) + 50.0*cos(cPi*10.0/180.0)**2
-       write(*,*)' '
-       write(*,*)'maximum X position of ray = ', PosXHold
-       write(*,*)'Analytical turning point = ', TurningPoint
-       write(*,*)' '
-       if(abs(TurningPoint-PosXHold) > 0.25) write(*,*)'*** Ray turning error'
+    if(DoLaserRayTest)then
+       !L=50 for the test
+       TurningPoint = CoordMin_D(1) &
+            + 50.0*cos(cDegToRad*BeamParam_II(SlopeDeg_,1))**2
+
+       ! Sum laser heating for all processors
+       SumLaserHeatingPe = sum(LaserHeating_CB)
+       call MPI_reduce(SumLaserHeatingPe, SumLaserHeating, 1,  MPI_REAL, &
+            MPI_SUM, 0, iComm, iError)
+
+       ! for a linear density profile the absorbed energy is
+       ! = 1 - exp[-(32.0/15.0 * EffectiveCollisionRate * L *
+       ! costheta**5)/cLightSpeed]
+       SumLaserHeatingRef = (1.0-exp(-32.0/15.0*50.0e-6*(2e12/cLightSpeed) &
+            *cos(cDegToRad*BeamParam_II(SlopeDeg_,1))**5))
+
+       if(iProc == 0)then
+          write(*,*)' '
+          write(*,*)'maximum X position of ray = ', PosXHold
+          write(*,*)'Analytical turning point = ', TurningPoint
+          write(*,*)' '
+          write(*,*)'sum laser heating = ', SumLaserHeating
+          write(*,*)'Analytical factional absorption = ', SumLaserHeatingRef
+          write(*,*)' '
+       end if
     end if
 
   end subroutine get_energy_source
@@ -1229,13 +1247,13 @@ contains
     use ModPhysics,  ONLY: inv_gm1, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin, g
     use ModVarIndexes, ONLY: Pe_
-    use ModGeometry, ONLY: vInv_CB, x1, x_BLK, dx_BLK
+    use ModGeometry, ONLY: vInv_CB, x1, x_BLK
     use ModUser, ONLY: user_material_properties
     use ModEnergy, ONLY: calc_energy_cell
     use BATL_lib, ONLY: message_pass_cell
     use ModConst, ONLY: cKToKev
 
-    real:: Irradiance, EInternalSi, PressureSi, TeSi, TotEnergyDep
+    real:: Irradiance, EInternalSi, PressureSi, TeSi
     integer :: iBlock, i, j, k, iP
     logical,parameter :: UseExtraEInt = ExtraEInt_ > 1
 
@@ -1250,10 +1268,11 @@ contains
        do iBlock = 1, nBlock
           if(unusedBLK(iBlock)) CYCLE
           do k=1, nK; do j=1, nJ; do i=1, nI
-             ! numerator 133.6 is the critical density
-             ! denominator 50.0 is the distance to the critical surface
-             State_VGB(Rho_,i,j,k,iBlock) = (x_BLK(i,j,k,iBlock) - x1) &
-                  *133.6/50.0*Si2No_V(UnitRho_)
+             ! Denominator 50.0 is the distance to the critical surface.
+             ! The beryllium is initially weakly ionized (Z=1), so that
+             ! the electron density is like the mass density a linear profile.
+             State_VGB(Rho_,i,j,k,iBlock) = (x_BLK(i,j,k,iBlock) - x1)/50.0 &
+                  *DensityCrSI*Si2No_V(UnitRho_)
           end do; end do; end do
        end do
     end if
@@ -1358,19 +1377,6 @@ contains
        end do; end do; end do
        call calc_energy_cell(iBlock)
     end do
-
-    If(DoLaserRayTest) then
-       !this only works for a 1-ray single processor test
-       TotEnergyDep = sum(LaserHeating_CB) * Irradiance * &
-            No2Si_V(UnitEnergyDens_)
-       ! for a linear density profile the absorbed energy is  &
-       ! = 1 - exp[-(32.0/15.0 * EffectiveCollisionRate * L * &
-       ! costheta**5)/cLightSpeed]
-       if (abs(5.61e+9 - TotEnergyDep) > 1.5e+8 ) &
-            write(*,*)'***Energy deposition error***'
-       if (iProc==0 .and. DoVerbose .and. DoLaserRayTest) &
-            write(*,*)'Total Enegy deposition =',TotEnergyDep
-    endif
 
     call timing_stop(NameSub)
 
