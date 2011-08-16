@@ -26,6 +26,7 @@ module ModGITM
 
   real, dimension(nLons, nBlocksMax) :: GradLonM_CB, GradLon0_CB, GradLonP_CB
   real, dimension(nLats, nBlocksMax) :: GradLatM_CB, GradLat0_CB, GradLatP_CB
+  real, dimension(nLons,nLats,nBlocksMax) :: Altzero
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax) :: &
        Rho, Temperature, InvScaleHeight, Pressure, &
