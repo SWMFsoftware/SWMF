@@ -38,7 +38,8 @@ contains
     ! Wrapper function for making it easy to pass scalar data to
     ! message_pass_cell
 
-    use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
+         nBlock
 
     ! Arguments
     real, optional, intent(inout) :: &
@@ -70,9 +71,11 @@ contains
          allocate(Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
     if(present(Float_GB)) then
-       Scalar_VGB(1,:,:,:,:) = Float_GB
+       Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock) = &
+            Float_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock)
     else if(present(Int_GB)) then
-       Scalar_VGB(1,:,:,:,:) = Int_GB
+       Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock) = &
+            Int_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock)
     else
        call CON_stop(NameSub//': no array argument was specified')
     end if
@@ -84,9 +87,11 @@ contains
          NameOperatorIn=NameOperatorIn)
 
     if(present(Float_GB)) then
-       Float_GB = Scalar_VGB(1,:,:,:,:)
+       Float_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock) = &
+            Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock)
     else if(present(Int_GB)) then
-       Int_GB = nint(Scalar_VGB(1,:,:,:,:))
+       Int_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock) = &
+            nint(Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock))
     end if
 
   end subroutine message_pass_cell_scalar

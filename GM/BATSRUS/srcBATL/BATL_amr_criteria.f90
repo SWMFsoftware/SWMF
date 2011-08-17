@@ -979,7 +979,7 @@ contains
 
     if(.not.UseAmrMask) RETURN
    
-    DoAmr_GB(:,:,:,iBlock) = .false.
+    DoAmr_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock) = .false.
     
     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
        do iAmrBox=1,nAmrBox

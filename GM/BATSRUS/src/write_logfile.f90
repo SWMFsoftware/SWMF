@@ -491,8 +491,9 @@ contains
        end do
 
        if(UseBatl) then
-          call message_pass_cell_scalar(tmp1_BLK, nWidthIn=1, DoSendCornerIn=.true. ,&
+           call message_pass_cell(1,tmp1_BLK, nWidthIn=1, DoSendCornerIn=.true. ,&
                nProlongOrderIn=2, DoRestrictFaceIn=.false.)
+          
        else
           call message_pass_cells(.true.,.false.,.true.,tmp1_BLK)
        end if
