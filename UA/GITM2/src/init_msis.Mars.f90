@@ -75,10 +75,7 @@ subroutine init_msis
 
 
   SurfaceAlbedo(:,:,:) = 0.0
-  dSurfaceTemp(:,:,:) = 0.0
-  dSubSurfaceTemp(:,:,:) = 0.0
-  SurfaceTemp(:,:,:) = 170.0
-  SubsurfaceTemp(:,:,:) = 180.0
+ 
   
   do iblock = 1, nblocks
      do ilon = 1,nlons
@@ -97,10 +94,14 @@ subroutine init_msis
      write(*,*) "init_msis"
      write(*,*) '==> Now Initializing Mars Background Composition', iBlock   
 
+     dSurfaceTemp(:,:,:) = 0.0
+     dSubSurfaceTemp(:,:,:) = 0.0
+     SurfaceTemp(:,:,:) = 170.0
+     SubsurfaceTemp(:,:,:) = 180.0
      !\
      ! Initializes the Planet with the same Chemistry as Above 
      !/
-
+     
      initialEDensity = 0.0
      initialAlt = 0.0
 
