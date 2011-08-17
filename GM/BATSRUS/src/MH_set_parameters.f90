@@ -1214,7 +1214,7 @@ subroutine MH_set_parameters(TypeAction)
            end if
         end if
 
-     case("#AMRLIMIT", "#AMRTYPE", "#AMRERRORCRIT")
+     case("#AMRLIMIT", "#AMRTYPE", "#AMRERRORCRIT","#AMRAREA")
         if(.not. UseBatl) call stop_mpi(NameSub// &
              ' BATL is required for command='//NameCommand)
         call read_amr_criteria(NameCommand)

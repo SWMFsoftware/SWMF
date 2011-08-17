@@ -244,7 +244,8 @@ contains
 
     ! Here we should fix B0 and other things
 
-    use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_, Unused_B
+    use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_, Unused_B,&
+         amrarea_amr_criteria
     use ModEnergy, ONLY: calc_energy_cell
     
     integer:: iBlock
@@ -252,7 +253,7 @@ contains
 
      do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       
+              
        ! If nothing happened to the block, no need to do anything
        if(iAmrChange_B(iBlock) < AmrMoved_) CYCLE
        
@@ -260,7 +261,7 @@ contains
        call calc_other_soln_vars(iBlock)
        call fix_soln_block(iBlock)
        call calc_energy_cell(iBlock)
-  
+       call amrarea_amr_criteria(iBlock)
     end do
 
   end subroutine set_batsrus_state

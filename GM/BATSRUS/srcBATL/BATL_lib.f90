@@ -65,7 +65,7 @@ module BATL_lib
   ! Inherited from BATL_amr_criteria
   public:: set_amr_criteria, clean_amr_criteria, read_amr_criteria
   public:: AmrCrit_IB, nAmrCrit, DoCritAmr, DoAutoAmr, DoStrictAmr
-  public:: calc_error_amr_criteria
+  public:: calc_error_amr_criteria, amrarea_amr_criteria
 
   ! Inherited from BATL_pass_cell
   public:: message_pass_cell

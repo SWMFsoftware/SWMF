@@ -19,6 +19,7 @@ module BATL_amr_criteria
   public read_amr_criteria
   public test_amr_criteria
   public calc_error_amr_criteria
+  public amrarea_amr_criteria
 
   ! Choosing with blocks we want to refine is based a list of criteria 
   ! and a set of upper (refine)  and lower (coarsen) limits. The criteria 
@@ -53,6 +54,9 @@ module BATL_amr_criteria
   logical,public :: &
        DoGeometryAmr = .false. ,&
        DoCritAmr     = .false.
+
+  ! Activate recalculation of error criteia if plotted
+  ! logical,public :: DoPlotCriteria = .false. 
 
   !--- Moved to BATL_tree
   ! nDesiredRefine and nDesiredCoarsen set the number of blocks that we
@@ -98,6 +102,15 @@ module BATL_amr_criteria
   ! Converting index form running block and proc number to node numbers
   integer, allocatable :: iNode_I(:)
 
+  ! Maksing of areas which we do not want to use for deciding refinment.
+  ! It will not hinder areas to be refinded if blocks neighbirs need to
+  ! be refined.
+  logical, allocatable :: DoAmr_GB (:,:,:,:)
+  logical :: UseAmrMask = .false.
+  ! Gemetric cordinates for areas where we want dto do AMR, only rectagular
+  ! AmrBox_DII([x,y,z],[min,max],[nAmrBox])
+  integer :: nAmrBox=0
+  real,allocatable :: AmrBox_DII(:,:,:)
 contains
   !============================================================================
 
@@ -123,6 +136,7 @@ contains
     !-----------------------------------------------------------------------
     if(DoGeometryAmr) &
          call CON_stop("set_amr_criteria :: DoGeometryAmr not implemented")
+
 
     !-------------- Setting number of criteria we are working with ----------
     nExtCritUsed = 0
@@ -587,7 +601,7 @@ contains
     !real, intent(inout), optional :: CritExt_IB(:,:)
     !real, intent(in),    optional :: CoarsenCritExt_I(:), RefineCritExt_I(:)
 
-    real :: Crit, Crit_D(MaxDim)
+    real :: Crit, Crit_D(MaxDim), invnDim
     real :: Numerator, Denominator
     integer:: iBlock, iCrit, i, j, k, iVar
     ! number of blocks set out for refining and coarsning
@@ -596,11 +610,24 @@ contains
     Crit_D    = 0.0
     Numerator   = 0.0
     Denominator = 0.0
+    invnDim = 1.0/nDim
 
     !if(iproc == 0) write(*,*) "calc_error_amr_criteria"
 
     if(nIntCrit > nVar) &
          call CON_stop("calc_error_amr_criteria :: More criteria then variables")
+
+    !--------------- initilizing AMR masking ----------------------------
+    if(UseAmrMask .and. .not.allocated(DoAmr_GB)) then
+
+       allocate(DoAmr_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       DoAmr_GB = .false.
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          
+          call amrarea_amr_criteria(iBlock)
+       end do
+    end if
 
 
     nAmrCrit = nIntCrit + nExtCrit
@@ -628,14 +655,21 @@ contains
           ! Check refinement first
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              ! Only variables indexed in iVarCrit_I will decide the refinement
+
+             if(UseAmrMask) then
+                if(.not.DoAmr_GB(i,j,k,iBlock) ) CYCLE
+             end if
+
              do iCrit = 1, nIntCrit 
                 iVar = iVarCrit_I(iCrit)
+
+                Crit_D =0.0
 
                 Numerator = abs( &
                      State_VGB(iVar,i-2,j,k,iBlock)   - &
                      2.0*State_VGB(iVar,i,j,k,iBlock) + &
                      State_VGB(iVar,i+2,j,k,iBlock) )
-                Denominator = (&
+                Denominator =  (&
                      abs(State_VGB(iVar,i+2,j,k,iBlock) - &
                      State_VGB(iVar,i,j,k,iBlock)) + &
                      abs(State_VGB(iVar,i,j,k,iBlock) - &
@@ -645,7 +679,7 @@ contains
                      abs(2.0*State_VGB(iVar,i,j,k,iBlock)) + &
                      abs(State_VGB(iVar,i-2,j,k,iBlock))) 
                 Crit_D(1) = (Numerator/max(Denominator,cEpsilon)) 
-
+                Crit = Crit_D(1)**2
                 if(nDim >= 2) then
                    Numerator =  abs( &
                         State_VGB(iVar,i,j-2,k,iBlock)   - &
@@ -661,6 +695,7 @@ contains
                         abs(2.0*State_VGB(iVar,i,j,k,iBlock)) + &
                         abs(State_VGB(iVar,i,j-2,k,iBlock)))
                    Crit_D(2) = (Numerator/max(Denominator,cEpsilon))
+                   Crit = Crit + Crit_D(2)**2
                 end if
 
                 if(nDim >= 3) then
@@ -678,9 +713,14 @@ contains
                         abs(2.0*State_VGB(iVar,i,j,k,iBlock)) + &
                         abs(State_VGB(iVar,i,j,k-2,iBlock))))
                    Crit_D(3) = (Numerator/max(Denominator,cEpsilon))
+                   Crit = Crit + Crit_D(3)**2
                 end if
 
-                Crit = sqrt(sum(Crit_D**2))/nDim
+
+                !Crit = (sum(Crit_D(1:nDim)**2))*invnDim
+                Crit = Crit *invnDim
+                !AmrCrit_IB(iCrit,iBlock) = &
+                !     max(AmrCrit_IB(iCrit,iBlock),Crit)
                 if( Crit >  AmrCrit_IB(iCrit,iBlock)) &
                      AmrCrit_IB(iCrit,iBlock) = Crit
 
@@ -697,21 +737,25 @@ contains
           ! Check refinement first
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              ! Only variables indexed in iVarCrit_I will decide the refinement
+
+             ! if the area surrounding the point contain a masked body
+             ! the error will be to big and we do geometry based amr. 
+             if(nDim == 1) then
+                if(.not.all(Used_GB((i-2):(i+2),j, k,iBlock))) CYCLE
+             end if
+             if(nDim == 2) then
+                if(.not.all(Used_GB((i-2):(i+2),(j-2):(j+2),k,iBlock))) CYCLE
+             end if
+             if(nDim == 3) then
+                if(.not.all(Used_GB((i-2):(i+2),(j-2):(j+2),(k-2):(k+2),iBlock))) CYCLE
+             end if
+
+             if(UseAmrMask) then
+                if(.not.DoAmr_GB(i,j,k,iBlock) ) CYCLE
+             end if
+
              do iCrit = 1, nIntCrit 
                 iVar = iVarCrit_I(iCrit)
-
-
-                ! if the area surrounding the point contain a masked body
-                ! the error will be to big and we do geometry based amr. 
-                if(nDim == 1) then
-                   if(.not.all(Used_GB((i-2):(i+2),j, k,iBlock))) CYCLE
-                end if
-                if(nDim == 2) then
-                   if(.not.all(Used_GB((i-2):(i+2),(j-2):(j+2),k,iBlock))) CYCLE
-                end if
-                if(nDim == 3) then
-                   if(.not.all(Used_GB((i-2):(i+2),(j-2):(j+2),(k-2):(k+2),iBlock))) CYCLE
-                end if
 
                 Numerator = abs( &
                      State_VGB(iVar,i-2,j,k,iBlock)   - &
@@ -761,7 +805,8 @@ contains
                         abs(State_VGB(iVar,i,j,k-2,iBlock))))
                    Crit_D(3) = (Numerator/max(Denominator,cEpsilon))
                 end if
-                Crit = sqrt(sum(Crit_D**2))/nDim 
+                Crit = (sum(Crit_D(1:nDim)**2))*invnDim
+                !Crit = sqrt(sum(Crit_D**2))/nDim 
 
                 if( Crit >  AmrCrit_IB(iCrit,iBlock)) &
                      AmrCrit_IB(iCrit,iBlock) = Crit
@@ -772,6 +817,10 @@ contains
        end do MASKBLOCK
 
     end if
+
+    !print *," criteria range :: ",minval(AmrCrit_IB(1,1:nBlock)),&
+    !     maxval(AmrCrit_IB(1,1:nBlock)), sum(AmrCrit_IB(1,1:nBlock))/nBlock
+
 
     ! Fill in thresholds
     do iCrit=1,nIntCrit
@@ -834,12 +883,18 @@ contains
   subroutine  read_amr_criteria(NameCommand)
 
     use ModReadParam, ONLY: read_var
-    use BATL_tree, ONLY: MaxTotalBlock
-
+    use BATL_tree, ONLY: MaxTotalBlock, Unused_B
+    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
+         MaxBlock,nBlock
     character(len=*), intent(in) :: NameCommand
     character (len=20) :: TypeAmr
-    integer :: iCrit
+    integer :: iCrit,iBlock,iAmrBox
     character(len=*), parameter:: NameSub='BATL_tree::read_amr_criteria'
+
+    logical :: DoAmr
+    integer :: DnAmr
+    real    :: DtAmr
+    real    :: tmp
     !-------------------------------------------------------------------------
     !nCrit          = 0
     !nAmrCrit       = 0
@@ -874,36 +929,84 @@ contains
        call read_var('PercentRefine' , PercentRefine)
        call read_var('MaxTotalBlock',  MaxTotalBlock) 
        DoSortAmrCrit = PercentCoarsen > 0.0 .or. PercentRefine > 0.0       
-       !case("#AMRTYPE")
-       !   call read_var('DoAutoAmr', DoAutoAmr)
-       !   call read_var('TypeAmr',TypeAmr)
-       !   select case(TypeAmr)
-       !   case("geometry")
-       !      DoGeometryAmr = .true.
-       !   case("criteria")
-       !      DoGeometryAmr = .false.
-       !   case("combined")
-       !      DoGeometryAmr = .true.
-       !   case default
-       !      call CON_stop(NameSub//': unknown TypeAmr='//TypeAmr)
-       !!   end select
-       !   call read_var('IsStrictAmr'  ,DoStrictAmr)
-       !call read_var('IsSoftAmrCrit',DoSoftAmrCrit)
     case("#AMRLIMIT")
        call read_var('PercentCoarsen', PercentCoarsen)
        call read_var('PercentRefine' , PercentRefine)
        call read_var('MaxTotalBlock',  MaxTotalBlock) 
        call read_var('DiffCriteriaLevel',  DeltaCritera)
        DoSortAmrCrit = PercentCoarsen > 0.0 .or. PercentRefine > 0.0
-    case default
+    case("#DOAMR") 
+       call read_var('DoAmr',DoAmr) !!!
+        if(DoAmr) then
+           call read_var('DnAmr',DnAmr)
+           call read_var('DtAmr',DtAmr)
+           call read_var('IsStrictAmr'  ,DoStrictAmr)
+        end if
+        if(.not. DoStrictAmr) DoSortAmrCrit = .true.
+     case("#AMRAREA")
+        UseAmrMask = .true.
+        call read_var('nAmrBox', nAmrBox)
+        if(nAmrBox > 0) then
+           allocate(AmrBox_DII(2,3,nAmrBox))
+           do iAmrBox=1,nAmrBox
+              call read_var('minX',AmrBox_DII(1,1,iAmrBox))
+              call read_var('maxX',AmrBox_DII(2,1,iAmrBox))
+              call read_var('minY',AmrBox_DII(1,2,iAmrBox))
+              call read_var('maxY',AmrBox_DII(2,2,iAmrBox))
+              call read_var('minZ',AmrBox_DII(1,3,iAmrBox))
+              call read_var('maxZ',AmrBox_DII(2,3,iAmrBox))
+           end do
+
+          end if
+     case default
        call CON_stop(NameSub//'incorect PARAM.in!')
     end select
+
     DoStrictAmr = .not. DoSortAmrCrit 
+
   end subroutine read_amr_criteria
+
+  !============================================================================
+  subroutine amrarea_amr_criteria(iBlock)
+
+    use BATL_grid, ONLY : Xyz_DGB
+    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,nDim
+    integer, intent(in) :: iBlock
+
+    integer :: i,j,k,iDim,iAmrBox
+    logical :: IsAmrCell
+    !--------------------------------------------------------
+
+    if(.not.UseAmrMask) RETURN
+   
+    DoAmr_GB(:,:,:,iBlock) = .false.
+    
+    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+       do iAmrBox=1,nAmrBox
+          IsAmrCell = .true.
+          do idim=1,nDim
+             if(Xyz_DGB(iDim,i,j,k,iBlock) <  AmrBox_DII(1,iDim,iAmrBox) .or. &
+                  Xyz_DGB(iDim,i,j,k,iBlock) >  AmrBox_DII(2,iDim,iAmrBox)) then
+                IsAmrCell = .false.
+             end if
+          end do
+          if(IsAmrCell) DoAmr_GB(i,j,k,iBlock) = IsAmrCell
+       end do
+    end do; end do; end do
+
+    !print *, "sum XYZ", sum(Xyz_DGB(:,:,:,:,iBlock))
+
+
+  end subroutine amrarea_amr_criteria
 
   !============================================================================
 
   subroutine clean_amr_criteria
+
+    if(allocated(DoAmr_GB))&
+         deallocate(DoAmr_GB)
+    if(allocated(AmrBox_DII))&
+         deallocate(AmrBox_DII)
 
     if(.not.allocated(CoarsenCrit_I)) RETURN
     deallocate(CoarsenCrit_I, RefineCrit_I, iVarCrit_I)
@@ -915,6 +1018,7 @@ contains
     nAmrCritOld  = 0
     nIntCrit     = 0
     nBlockOld = 0
+  
 
   end subroutine clean_amr_criteria
 
