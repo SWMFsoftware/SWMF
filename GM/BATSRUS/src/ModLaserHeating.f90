@@ -128,7 +128,7 @@ contains
   !==========================================================================
   subroutine calc_absorption(NAtomicSI, ZAverage, TeSI, RhoSI, Absorption)
     !The subroutine calculates the absorption coefficient, Absorption [m-1],
-    ! at the circular frequency, omega and convert then to the domiensionless
+    ! at the circular frequency, omega and convert then to the dimensionless
     !form
 
     real,intent(in):: NAtomicSI, ZAverage, TeSI, RhoSI
@@ -145,10 +145,9 @@ contains
 
     if(DoLaserRayTest)then
 
-       !for the laser package test; set EffectiveCollisionRate to a constant
-       !the intergal (Kruer p. 51) assumes EffectiveCollisionRate/omega << 1.0
-       EffectiveCollisionRate = 2.0e+12
-
+       ! Set EffectiveCollisionRate proportional to the density. Kruer p. 51
+       ! assumes EffectiveCollisionRate at the critical density / omega << 1.0
+       EffectiveCollisionRate = 2.0e+12*Dens2DensCr
     else
 
        AveragedElectronSpeed = sqrt(8.0*cBoltzmann &
@@ -169,8 +168,6 @@ contains
     !write(*,*)'Dimensional absorption=', Absorption
     !Convert to the dimensionless form:
     Absorption =  Absorption*No2Si_V(UnitX_)
-    !write(*,*)'Dimensionless absorption=', Absorption
-    !call CON_stop
 
   end subroutine calc_absorption
 
@@ -234,16 +231,9 @@ contains
                NAtomicOut=NAtomicSI,              &
                TeOut=TeSI,                        &
                AverageIonChargeOut=zAverage)
-!!$          if (iProc==0) then
-!!$             write(*,*)'TeSI user_material_properties',i,j,k,iBlock,TeSI
-!!$          endif
-          !call Con_Stop
 
           ! Increase Z for weakly ionized plasma to 1
           zAverage = max(zAverage, 1.0)
-
-          !write(*,*)'zAverage after call to user_material_properties',zAverage 
-          !call Con_Stop
 
           ! Rho*Z in SI units
           RhoZSi = State_VGB(rho_,i,j,k,iBlock)*ZAverage*No2Si_V(UnitRho_)
@@ -255,9 +245,6 @@ contains
                TeSI       = TeSi, &
                RhoSI      = RhoZSi,&
                Absorption = Absorption)
-
-          !write(*,*)'Dimensionless absorption=', Absorption
-          !call CON_stop
 
           ! Interpolate density*Z
           RayValue_VI(RhoZ_,iRay) = RayValue_VI(RhoZ_,iRay) &
@@ -281,11 +268,9 @@ contains
                - State_VGB(Rho_,i,j-1,k,iBlock) ) &
                * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(2,iBlock)
 
-!!$          write(*,*)'!!! i,j,k,iBlock,Weight,Rho+,Rho-,RayValue=',&
-!!$               i,j,k,iBlock,Weight,State_VGB(Rho_,i,j+1,k,iBlock),&
-!!$               State_VGB(Rho_,i,j-1,k,iBlock),RayValue_VI(GradYRhoZ_,iRay),&
-!!$               CellSize_DB(1,iBlock),CellSize_DB(2,iBlock),&
-!!$               CellSize_DB(3,iBlock)
+          !write(*,*)'!!! i,j,k,iBlock,Weight,Rho+,Rho-,RayValue=',&
+          !i,j,k,iBlock,Weight,State_VGB(Rho_,i,j+1,k,iBlock),&
+          !State_VGB(Rho_,i,j-1,k,iBlock),RayValue_VI(GradYRhoZ_,iRay)
 
           ! Interpolate (Z gradient of Rho)*Z
           RayValue_VI(GradZRhoZ_,iRay) = RayValue_VI(GradZRhoZ_,iRay) &
@@ -478,11 +463,11 @@ contains
           TypeBoundaryDown_D(iDim) = trim(TypeBc_I(2*iDim-1))
           TypeBoundaryUp_D(iDim)   = trim(TypeBc_I(2*iDim))
        end do
-!!$       if(iProc==0)then
-!!$          write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D
-!!$          write(*,*)'TypeBoundaryUp_D=',TypeBoundaryUp_D
-!!$          write(*,*)'StepMin=',StepMin
-!!$       end if
+       !if(iProc==0)then
+       !   write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D
+       !   write(*,*)'TypeBoundaryUp_D=',TypeBoundaryUp_D
+       !   write(*,*)'StepMin=',StepMin
+       !end if
 
     end if
 
@@ -823,11 +808,12 @@ contains
   !============================================================================
 
   real function irradiance_t(TimeSi)
+
     real,intent(in)::TimeSi
+    !----------------------
 
     if (TimeSi > tPulse) UseLaserHeating = .false.
 
-    !----------------------
     !irradiance_t = IrradianceSi *&
     !     max(0.0, min(1.0,       &
     !     (TimeSi/tRaise)**3,     &
@@ -1146,7 +1132,7 @@ contains
 !!$             if(Unused_I(iRay)) CYCLE
 !!$             write(UnitTmp_,*)iRay,Position_DI(1:2,iRay), Slope_DI(:,iRay), &
 !!$                  DeltaS_I(iRay),Density_I(iRay), AbsorptionCoeff_I(iRay), &
-!!$                  GradDensity_DI(:,iRay), EnergyDeposition_I(iRay), PosXHold
+!!$                  GradDensity_DI(:,iRay), EnergyDeposition_I(iRay)
 !!$          end do
 !!$          close(UnitTmp_)
 !!$       end if
@@ -1163,7 +1149,6 @@ contains
 !!$          write(*,*)'MinumumStep=',minval(DeltaS_I,MASK=.not.Unused_I)
 !!$          write(*,*)'MaximumStep=',maxval(DeltaS_I,MASK=.not.unused_I)
 !!$          write(*,*)'Min DeltaSNew_I=',minval(DeltaSNew_I,MASK=.not.Unused_I)
-!!$          write(*,*)'PosXHold=',PosXHold
 !!$       end if
 
        ! Save EnergyDeposition_I to LaserHeating_CB 
@@ -1216,10 +1201,10 @@ contains
             MPI_SUM, 0, iComm, iError)
 
        ! for a linear density profile the absorbed energy is
-       ! = 1 - exp[-(32.0/15.0 * EffectiveCollisionRate * L *
-       ! costheta**5)/cLightSpeed]
-       SumLaserHeatingRef = (1.0-exp(-32.0/15.0*50.0e-6*(2e12/cLightSpeed) &
-            *cos(cDegToRad*BeamParam_II(SlopeDeg_,1))**5))
+       ! = 1 - exp[-(32.0/15.0 * EffectiveCollisionRate at the critical density
+       ! * L * costheta**5)/cLightSpeed]
+       SumLaserHeatingRef = 1.0-exp(-32.0/15.0*50.0e-6*(2e12/cLightSpeed) &
+            *cos(cDegToRad*BeamParam_II(SlopeDeg_,1))**5)
 
        if(iProc == 0)then
           write(*,*)' '
@@ -1227,7 +1212,7 @@ contains
           write(*,*)'Analytical turning point = ', TurningPoint
           write(*,*)' '
           write(*,*)'sum laser heating = ', SumLaserHeating
-          write(*,*)'Analytical factional absorption = ', SumLaserHeatingRef
+          write(*,*)'Analytical fractional absorption = ', SumLaserHeatingRef
           write(*,*)' '
        end if
     end if
@@ -1243,7 +1228,7 @@ contains
     use ModPhysics, ONLY: Si2No_V, UnitEnergydens_, UnitX_, UnitT_
     use ModMain, ONLY: Time_Simulation, dt, nBlock, UnusedBLK
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
-         UseNonConservative, IsConserv_CB, UseElectronPressure
+         UseNonConservative, UseElectronPressure
     use ModPhysics,  ONLY: inv_gm1, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin, g
     use ModVarIndexes, ONLY: Pe_
@@ -1251,7 +1236,6 @@ contains
     use ModUser, ONLY: user_material_properties
     use ModEnergy, ONLY: calc_energy_cell
     use BATL_lib, ONLY: message_pass_cell
-    use ModConst, ONLY: cKToKev
 
     real:: Irradiance, EInternalSi, PressureSi, TeSi
     integer :: iBlock, i, j, k, iP
@@ -1279,22 +1263,6 @@ contains
 
     Irradiance = irradiance_t(Time_Simulation) * &
          Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_) * dt
-
-!!$     if(iProc==0 .and. DoVerbose) then
-!!$        write(*,*)'Time_Simulation, time step', &
-!!$             Time_Simulation,dt/Si2No_V(UnitT_)
-!!$     endif
-
-    ! Don't trace the rays if the energy is too small; make the limit 
-    ! an adjustable parameter
-!!$    if (Irradiance < 0.1 ) then
-!!$       call timing_stop(NameSub)
-!!$       if(iProc==0)write(*,*)'raytrace not performed; irradiance = ',Irradiance
-!!$       if(iProc==0)write(*,*)'time step =',dt/Si2No_V(UnitT_)
-!!$       if(iProc==0)write(*,*)'End ',NameSub 
-!!$       return
-!!$    endif
-
 
     ! Make sure that the density is up-to-date in the ghost cells
     call message_pass_cell(nVar, State_VGB)
@@ -1346,25 +1314,12 @@ contains
 
              ! Single temperature: determine p^n+1 = EOS( rho^n+1, Eint^n+1)
              ! Two temperature:   determine Pe^n+1 = EOS( rho^n+1, Eint^n+1)
-
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  EinternalIn=EinternalSi, PressureOut=PressureSi, &
-                  TeOut=TeSi)
-
-!!$              if (iProc==0) then
-!!$                 Write(*,*)'PressureSi,PSi*Si2No_V before adding laser energy'&
-!!$                     , PressureSi,PressureSi*Si2No_V(UnitP_)
-!!$              endif
+                  EinternalIn=EinternalSi, PressureOut=PressureSi)
 
              ! Set normalized pressure (electron pressure for two temperature)
              State_VGB(iP,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
-
-!!$             if (iProc==0) then
-!!$                Write(*,*)'PressureSi,PSi*Si2No_V'&
-!!$                     , PressureSi,PressureSi*Si2No_V(UnitP_)
-!!$               !write(*,*)'TeSi,cKTokev,TeSi*cKTokev',TeSi,cKTokev,TeSi*cKToKev
-!!$             endif
 
              ! Set ExtraEint^n+1 = Eint^n+1 - p^n+1/(g -1)
              State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
@@ -1380,11 +1335,7 @@ contains
 
     call timing_stop(NameSub)
 
-    if (iProc==0 .and. DoVerbose) then
-       write(*,*)'End ',NameSub
-    endif
-
-!!!call stop_mpi('end of first call to add_laser_heating')
+    if(iProc==0 .and. DoVerbose) write(*,*)'End ',NameSub
 
   end subroutine add_laser_heating
 
