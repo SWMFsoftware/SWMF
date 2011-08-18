@@ -58,7 +58,6 @@ subroutine calc_ion_v(iBlock)
   BLocal = B0(1:nLons,1:nLats,1:nAlts,1:3,iBlock)
   B02 = B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)**2
 
-  
   if (UseExB) then
      do iDir = 1, 3
         Force(:,:,:,iDir) = Force(:,:,:,iDir) + &
@@ -86,8 +85,24 @@ subroutine calc_ion_v(iBlock)
   VIParallel = 0.0
   VNParallel = 0.0
 
-  if (maxval(BLocal) <= 0.0) then
-     IVelocity(1:nLons,1:nLats,1:nAlts,:,iBlock) = 0
+  if (maxval(blocal) == 0) then
+
+     IVelocity(1:nLons,1:nLats,1:nAlts,iUp_,iBlock) = &
+          Velocity(1:nLons,1:nLats,1:nAlts,iUp_,iBlock) + &
+          (Gravity_GB(1:nLons, 1:nLats, 1:nAlts, iBlock) - &
+          (PressureGradient(1:nLons,1:nLats,1:nAlts,iUp_) / IRho) / &
+          Collisions(1:nLons,1:nLats,1:nAlts,iVIN_))
+
+     IVelocity(1:nLons,1:nLats,1:nAlts,iEast_,iBlock) = &
+          Velocity(1:nLons,1:nLats,1:nAlts,iEast_,iBlock) - &
+          (PressureGradient(1:nLons,1:nLats,1:nAlts,iEast_) / IRho) / &
+          Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)
+
+     IVelocity(1:nLons,1:nLats,1:nAlts,iNorth_,iBlock) = &
+          Velocity(1:nLons,1:nLats,1:nAlts,iNorth_,iBlock) - &
+          (PressureGradient(1:nLons,1:nLats,1:nAlts,iNorth_) / IRho) / &
+          Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)
+         
   else
 
   UDotB = sum(Velocity(1:nLons,1:nLats,1:nAlts,:,iBlock) * BLocal, dim=4)/ &
@@ -156,7 +171,9 @@ subroutine calc_ion_v(iBlock)
           + Nie * ForceCrossB(:,:,:,iDir) &
           ) / (RhoNu**2 + Nie**2 * B02)
   enddo
+
 endif
+
   IVelocity(:,:,:,:,iBlock) = min( 3000.0, IVelocity(:,:,:,:,iBlock))
   IVelocity(:,:,:,:,iBlock) = max(-3000.0, IVelocity(:,:,:,:,iBlock))
 
