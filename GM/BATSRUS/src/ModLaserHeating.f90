@@ -192,6 +192,7 @@ contains
 
     real:: Weight_I(2**nDim), Weight
     real:: NatomicSi, TeSI, Zaverage, RhoZSi, Absorption
+    real:: ZaverageL, ZaverageR
 
     ! Variables interpolated to ray positions
     integer, parameter:: GradXRhoZ_=1, GradYRhoZ_=2, GradZRhoZ_=3, RhoZ_=4, &
@@ -254,30 +255,57 @@ contains
           RayValue_VI(Absorption_,iRay) = RayValue_VI(Absorption_,iRay) &
                + Weight * Absorption
 
-          ! Interpolate (X gradient of Rho)*Z
+          ! If speed is an issue in the following lines, we can always
+          ! calculate Zaverage a-priori and store it in tmp1_BLK
+
+          ! Interpolate (X gradient of Rho*Z)
+          call user_material_properties( &
+               State_V=State_VGB(:,i+1,j,k,iBlock), &
+               AverageIonChargeOut=ZaverageR)
+          call user_material_properties( &
+               State_V=State_VGB(:,i-1,j,k,iBlock), &
+               AverageIonChargeOut=ZaverageL)
+          ZaverageR = max(ZaverageR,1.0)
+          ZaverageL = max(ZaverageL,1.0)
           RayValue_VI(GradXRhoZ_,iRay) = RayValue_VI(GradXRhoZ_,iRay) &
-               + Weight * zAverage *            &
-               ( State_VGB(Rho_,i+1,j,k,iBlock) &
-               - State_VGB(Rho_,i-1,j,k,iBlock) ) &
+               + Weight * &
+               ( ZaverageR*State_VGB(Rho_,i+1,j,k,iBlock) &
+               - ZaverageL*State_VGB(Rho_,i-1,j,k,iBlock) ) &
                * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(1,iBlock)
 
-          ! Interpolate (Y gradient of Rho)*Z
-          RayValue_VI(GradYRhoZ_,iRay) = RayValue_VI(GradYRhoZ_,iRay) &
-               + Weight * zAverage *            &
-               ( State_VGB(Rho_,i,j+1,k,iBlock) &
-               - State_VGB(Rho_,i,j-1,k,iBlock) ) &
-               * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(2,iBlock)
+          ! Interpolate (Y gradient of Rho*Z)
+          if(nDim > 1)then
+             call user_material_properties( &
+                  State_V=State_VGB(:,i,j+1,k,iBlock), &
+                  AverageIonChargeOut=ZaverageR)
+             call user_material_properties( &
+                  State_V=State_VGB(:,i,j-1,k,iBlock), &
+                  AverageIonChargeOut=ZaverageL)
+             ZaverageR = max(ZaverageR,1.0)
+             ZaverageL = max(ZaverageL,1.0)
+             RayValue_VI(GradYRhoZ_,iRay) = RayValue_VI(GradYRhoZ_,iRay) &
+                  + Weight * &
+                  ( ZaverageR*State_VGB(Rho_,i,j+1,k,iBlock) &
+                  - ZaverageL*State_VGB(Rho_,i,j-1,k,iBlock) ) &
+                  * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(2,iBlock)
+          end if
 
-          !write(*,*)'!!! i,j,k,iBlock,Weight,Rho+,Rho-,RayValue=',&
-          !i,j,k,iBlock,Weight,State_VGB(Rho_,i,j+1,k,iBlock),&
-          !State_VGB(Rho_,i,j-1,k,iBlock),RayValue_VI(GradYRhoZ_,iRay)
-
-          ! Interpolate (Z gradient of Rho)*Z
-          RayValue_VI(GradZRhoZ_,iRay) = RayValue_VI(GradZRhoZ_,iRay) &
-               + Weight * zAverage *            &
-               ( State_VGB(Rho_,i,j,k+1,iBlock) &
-               - State_VGB(Rho_,i,j,k-1,iBlock) ) &
-               * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(3,iBlock)
+          ! Interpolate (Z gradient of Rho*Z)
+          if(nDim==3)then
+             call user_material_properties( &
+                  State_V=State_VGB(:,i,j,k+1,iBlock), &
+                  AverageIonChargeOut=ZaverageR)
+             call user_material_properties( &
+                  State_V=State_VGB(:,i,j,k-1,iBlock), &
+                  AverageIonChargeOut=ZaverageL)
+             ZaverageR = max(ZaverageR,1.0)
+             ZaverageL = max(ZaverageL,1.0)
+             RayValue_VI(GradZRhoZ_,iRay) = RayValue_VI(GradZRhoZ_,iRay) &
+                  + Weight * &
+                  ( ZaverageR*State_VGB(Rho_,i,j,k+1,iBlock) &
+                  - ZaverageL*State_VGB(Rho_,i,j,k-1,iBlock) ) &
+                  * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(3,iBlock)
+          end if
 
           ! Use the interpolated cell size to set the ray step size
           RayValue_VI(CellSize_,iRay) = RayValue_VI(CellSize_,iRay) &
@@ -304,7 +332,7 @@ contains
 
   end subroutine get_density_and_absorption
 
-  !=============================================================================
+  !============================================================================
 
   subroutine ray_path(get_plasma_density, nRay, UnusedRay_I, Slope_DI, &
        DeltaS_I, ToleranceInit, DensityCr, Intensity_I, IsBehindCr_I)
