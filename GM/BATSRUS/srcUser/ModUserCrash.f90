@@ -3261,6 +3261,7 @@ contains
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_
     use ModAMR,      ONLY: RefineCritMin_I, CoarsenCritMax
+    use ModMain,     ONLY: UseLaserHeating
     use ModPhysics,  ONLY: Io2No_V, UnitRho_, UnitU_
     use ModGeometry, ONLY: x_BLK, dx_BLK, MinDxValue
 
@@ -3309,6 +3310,14 @@ contains
     end do; end do; end do
 
     UserCriteria = 1.0
+
+    if(UseLaserHeating)then
+       ! Refine all beryllium to the right of x = -5 micron
+       if(any(maxloc(State_VGB(LevelXe_:LevelMax, &
+            iMin:iMax,jMin:jMax,kMin:kMax,iBlock),1)-1 == Be_) &
+            .and. x_BLK(nI,nJ,nK,iBlock)+0.5*dx_BLK(iBlock) > -5.0) RETURN
+    end if
+
     if(any(IsXe_G(iMin:iMax,jMin:jMax,kMin:kMax)) .and. &
          .not. all(IsXe_G(iMin:iMax,jMin:jMax,kMin:kMax))) RETURN
 
