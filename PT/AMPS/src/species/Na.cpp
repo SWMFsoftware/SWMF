@@ -6,6 +6,26 @@
 #ifndef _Na_PAHYSICAL_PARAMETERS_
 #define _Na_PAHYSICAL_PARAMETERS_
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <vector>
+#include <string>
+#include <list>
+#include <math.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <time.h>
+#include <iostream>
+#include <iostream>
+#include <fstream>
+#include <time.h>
+
+#include <sys/time.h>
+#include <sys/resource.h>
+
+#include "Na.h"
+
 //the solar dariation pressure as a function of heliocentric distrance and velocty
 //taken from Combi-1997-icarus.pdf
 
