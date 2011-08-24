@@ -5,7 +5,7 @@ subroutine amr(DoMessagePass)
        unusedBLK,lVerbose,UseB,UseB0, UseBatl, Dt_BLK, nTrueCellsALL
   use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK,true_cell
   use ModAMR, ONLY : automatic_refinement, RefineLimit_I, CoarsenLimit_I, &
-       nRefineCrit
+       nRefineCrit, DoProfileAmr
   use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
        nVar, State_VGB
   use ModBlockData, ONLY: clean_block_data
@@ -42,26 +42,37 @@ subroutine amr(DoMessagePass)
 
      if(DoMessagePass)then
         if(.not.UseBatlTest) UsePlotMessageOptions = .true.
+        if(DoProfileAmr) call timing_start('BATL_AMR_exchange_messages')
         call exchange_messages
+        if(DoProfileAmr) call timing_stop('BATL_AMR_exchange_messages')
      end if
      if(automatic_refinement) then
 
         if(nRefineCrit > 0)then
            refine_criteria = 0.0
            call amr_criteria(refine_criteria)
+           if(DoProfileAmr) call timing_start('set_amr_criteria')
            call set_amr_criteria(nVar, State_VGB,&
                 nRefineCrit,refine_criteria,CoarsenLimit_I, RefineLimit_I)
+           if(DoProfileAmr) call timing_stop('set_amr_criteria')
         else
+           if(DoProfileAmr) call timing_start('set_amr_criteria')
            call set_amr_criteria(nVar, State_VGB)
+           if(DoProfileAmr) call timing_stop('set_amr_criteria')
         end if
-
+        
+        if(DoProfileAmr) call timing_start('regrid_batl')
         call regrid_batl(nVar, State_VGB, Dt_BLK, &
              DoTestIn=DoTestMe, Used_GB=true_cell)
+        if(DoProfileAmr) call timing_stop('regrid_batl')
 
+        if(DoProfileAmr) call timing_start('set_batsrus_grid')
         call set_batsrus_grid
-
+        if(DoProfileAmr) call timing_stop('set_batsrus_grid')
+   
+        if(DoProfileAmr) call timing_start('count_true_cells')
         call count_true_cells
-
+        if(DoProfileAmr) call timing_stop('count_true_cells')
      else
         call specify_refinement(DoRefine_B)
         call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, &
@@ -87,19 +98,23 @@ subroutine amr(DoMessagePass)
         call write_prefix; write(iUnitOut,*) '|'
      end if
 
-
+     if(DoProfileAmr) call timing_start('set_batsrus_state')
      ! Fix energy and other variables in moved/refined/coarsened blocks
      call set_batsrus_state
+     if(DoProfileAmr) call timing_stop('set_batsrus_state')
 
      if(DoMessagePass)then
         ! Update iTypeAdvance, and redo load balancing if necessary
         ! Load balance: move coords, data, and there are new blocks
+        if(DoProfileAmr) call timing_start('load_balance')
         call load_balance(.true.,.true.,.true.)
-
+        if(DoProfileAmr) call timing_stop('load_balance')
         ! redo message passing
         UsePlotMessageOptions = .false.
-        call exchange_messages
-
+        if(DoProfileAmr) call timing_start('BATL_AMR_exchange_messages')
+       call exchange_messages
+        if(DoProfileAmr) call timing_stop('BATL_AMR_exchange_messages')
+        
 
      end if
      if(UseB0)then

@@ -66,7 +66,7 @@ module ModAMR
   real    :: DtAmr = -1.0
   logical :: automatic_refinement, fix_body_level
   logical :: DoAmr = .false.
-
+  logical :: DoProfileAmr = .false.
 
   !\
   ! Variables controlling grid resolution in different areas

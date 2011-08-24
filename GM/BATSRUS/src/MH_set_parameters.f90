@@ -1195,6 +1195,9 @@ subroutine MH_set_parameters(TypeAction)
         else
            call set_levels
         end if
+     
+     case("#DOAMRPROFILE")
+        call read_var('DoAmrPofile',DoProfileAmr)
 
      case("#AMR")
         call read_var('DnRefine',DnAmr)
