@@ -564,7 +564,7 @@ subroutine Set_Euv(iError)
   real, dimension(6+Num_Wavelengths_High) :: temp
   
   logical :: NotDone = .true.
-  integer ::  i, iline, ioerror, nline, nILine = 1
+  integer ::  i, iline, ioerror, nline, nILine = 1,iErrortemp = 0
   cline = ' '
 
   open(unit = iInputUnit_, file=cEUVFile, IOSTAT = iError)
@@ -610,7 +610,8 @@ subroutine Set_Euv(iError)
   iline = 1
   read(iInputUnit_,*,iostat=iError) temp
 
-  do while (iError .eq. 0)
+  iErrortemp = 0
+  do while (iErrortemp .eq. 0)
      
      TimeArray(1:6) = temp(1:6)
      TimeArray(7) = 0
@@ -618,7 +619,7 @@ subroutine Set_Euv(iError)
      SeeFlux(:,iline) = temp(7:6+Num_WaveLengths_High)
      iline = iline + 1
 
-     read(iInputUnit_,*,iostat=iError) temp
+     read(iInputUnit_,*,iostat=iErrortemp) temp
   enddo
 
   close(iInputUnit_)
