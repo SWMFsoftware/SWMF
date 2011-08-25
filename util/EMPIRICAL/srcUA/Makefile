@@ -10,8 +10,6 @@ OBJECTS =\
 	ModIri90.o\
         ModMsis90.o
 
-#	ModHwm.o\
-
 LIB:
 	make ${MY_LIB}
 	@echo
