@@ -39,7 +39,7 @@ subroutine write_plot_common(ifile)
   real, allocatable :: PlotVarNodes_VNB(:,:,:,:,:)
   real, allocatable :: PlotXYZNodes_NBI(:,:,:,:,:)
 
-  character (len=10) :: plotvarnames(nplotvarmax)=''
+  character (len=10) :: plotvarnames(nplotvarmax) = ''
   integer :: nplotvar
 
   ! True for spherical plots
@@ -74,9 +74,7 @@ subroutine write_plot_common(ifile)
 
   character(len=*), parameter :: NameSub = 'write_plot_common'
 
-  character (len=10)  :: String, NamePlotVar
-  ! make sure we only calculate the criterias ones.
-  logical :: DoRecalcCrit
+  character(len=10) :: NamePlotVar
 
   ! Event date for filename
   character (len=80) :: format
@@ -143,7 +141,7 @@ subroutine write_plot_common(ifile)
         write(eventDateTime ,format) iTime_I
         NameSnapshot = trim(NameSnapshot) // "_e" // trim(eventDateTime)
      end if
-     if(IsPlotName_n)then
+     if(IsPlotName_t)then
         ! The file name will contain the StringDateOrTime
         call get_time_string
         NameSnapshot = trim(NameSnapshot) // "_t" // StringDateOrTime
@@ -226,21 +224,14 @@ subroutine write_plot_common(ifile)
   !! END IDL
 
   if(UseBATL) then
-     ! To plot the criteias used for AMR we need to 
+     ! To plot the criteria used for AMR we need to 
      ! recalulate them for the existing grid.
      do iVar = 1, nPlotVar
         NamePlotVar = plotvarnames(iVar)
-        call lower_case(NamePlotVar)
-        String = NamePlotVar
-        call extract_fluid_name(String)
-        DoRecalcCrit = .true.
-        select case(String)
-        case("crit1","crit2","crit3","crit4","crit5","crit6",&
-             "crit7","crit8","crit9")
-           if(DoRecalcCrit) &
-                call calc_error_amr_criteria(nVar, State_VGB)
-           DoRecalcCrit = .false.
-        end select
+        if(NamePlotVar(1:4) == 'crit') then
+           call calc_error_amr_criteria(nVar, State_VGB)
+           EXIT
+        end if
      end do
   end if
 
