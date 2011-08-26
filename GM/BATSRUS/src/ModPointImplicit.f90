@@ -159,11 +159,14 @@ contains
           else 
              EpsPointImpl   = 1.e-9
           end if
-          EpsPointImpl_V = 1.e-12
        else
-          EpsPointImpl   = 1.e-3
-          EpsPointImpl_V = 1.e-6
+          if(IsAsymmetric)then
+             EpsPointImpl   = 1.e-3
+          else
+             EpsPointImpl   = 1.e-4
+          end if
        end if
+       EpsPointImpl_V = EpsPointImpl
 
        ! This call should allocate and set the iVarPointImpl_I index array,
        ! set IsPointImplMatrixSet=.true. if the dS/dU matrix is analytic,
