@@ -881,10 +881,10 @@ contains
 
   subroutine rz_beam_rays
 
-    use ModGeometry, ONLY: TypeGeometry, y2
+    use ModGeometry, ONLY: TypeGeometry, y2, minDXvalue
     use ModConst,    ONLY: cDegToRad 
 
-    real:: CosTheta, SinTheta,  yCrCentral, yPlaneCentral, yPlane
+    real:: CosTheta, SinTheta,  yCrCentral, yPlane
     real:: rDistance, BeamAmplitude
     integer:: iRay, iBeam
 
@@ -910,8 +910,6 @@ contains
        ! Transform yCr to dimensionless
        yCrCentral =  BeamParam_II(yCr_, iBeam)
 
-       yPlaneCentral = yCrCentral + xPlane*SinTheta/CosTheta
-
        BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
 
 !!$       do iRay = -nRayPerBeam, nRayPerBeam
@@ -922,58 +920,73 @@ contains
           !to be at 1.5 rBeam from the central ray:
 
           rDistance = iRay * rBeam * 1.5 /nRayPerBeam 
-          yPlane = yPlaneCentral + rDistance/CosTheta
+          
+          ! Maps rDistance to laser-entry plane, applies shift set
+          ! by yBeam in the PARAM.in file
+          yPlane = yCrCentral + (rDistance + xPlane*sinTheta/cosTheta)
 
-          !Do not include rays with the starting point 
-          !being otside the computational domain:
-          if(abs(yPlane) >= y2)CYCLE
+          !Dealing with rays starting outside the computational domain on laser-entry plane:
+          ! Substracting minDXvalue from y2 so that the rays do not start on domain boundary
+          if(abs(yPlane) >= y2)then
+          	!Do not let rays begin in target past drive surface
+          	if(sinTheta < 0.0 .and. &
+          	 xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta) < 0.0)then
+          		xPlane = xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta)
+          		yPlane = y2 - (minDXvalue)
+          	else	
+          		CYCLE
+          	endif
+          endif
+
+
+          if(yPlane <= 0.0)then
+          	!Do not let rays begin in target past drive surface
+          	if(xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta) < 0.0)then
+          		xPlane = xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta)
+          		yPlane = minDXvalue
+          	else	
+          		CYCLE
+          	endif
+          endif
+          
+          
           !nRayTotal = nRayTotal + 1
 
-          if(yPlane > 0)then
-             nRayTotal = nRayTotal + 1
-             if(DoLaserRayTest)then
-                !flat spatial profile
-                !without radial dependence or yCrCentral dependence
-                Amplitude_I(nRayTotal) = BeamAmplitude
+           nRayTotal = nRayTotal + 1
+           if(DoLaserRayTest)then
+              !flat spatial profile
+              !without radial dependence or yCrCentral dependence
+              Amplitude_I(nRayTotal) = BeamAmplitude
 
-             else
-                !flat spatial profile
-                !without radial dependence
-!!$          Amplitude_I(nRayTotal) = BeamAmplitude * &
-!!$               abs(yCrCentral)
+           else
+              !flat spatial profile
+              !without radial dependence
+!!$        Amplitude_I(nRayTotal) = BeamAmplitude * &
+!!$                   abs(yCrCentral + rDistance)
 
-!!$          !flat spatial profile
-!!$          Amplitude_I(nRayTotal) = BeamAmplitude * &
-!!$               abs( yCrCentral + rDistance/CosTheta)
+!!$        !flat spatial profile
+!!$        Amplitude_I(nRayTotal) = BeamAmplitude * &
+!!$             abs( yCrCentral + rDistance)
 
-!!$          !gaussian profile
-!!$          Amplitude_I(nRayTotal) = BeamAmplitude * &
-!!$               exp(-(rDistance/rBeam)**2) *   &
-!!$               abs( yCrCentral + rDistance/CosTheta)
+!!$        !gaussian profile
+!!$        Amplitude_I(nRayTotal) = BeamAmplitude * &
+!!$             exp(-(rDistance/rBeam)**2) *   &
+!!$             abs( yCrCentral + rDistance)
 
-                !use supergaussian spaital profile; make the supergaussian
-                !order an adjustable parameter
-                !without radial dependence
-                Amplitude_I(nRayTotal) = BeamAmplitude * &
-                     exp(-(abs(rDistance)/rBeam)**4.2) *   &
-                     abs(yCrCentral)
-             end if
+              !use supergaussian spaital profile; make the supergaussian
+              !order an adjustable parameter
+              !without radial dependence
+              Amplitude_I(nRayTotal) = BeamAmplitude * &
+                   exp(-(abs(rDistance)/rBeam)**4.2) * &
+                   abs(yCrCentral + rDistance)
+           end if
 
-             !if(yPlane > 0)then
+           !if(yPlane > 0)then
 
-             XyzRay_DI(:, nRayTotal) = (/xPlane, yPlane, 0.0/)
-             SlopeRay_DI(:, nRayTotal) = &
-                  (/CosTheta, SinTheta, 0.0/)
+           XyzRay_DI(:, nRayTotal) = (/xPlane, yPlane, 0.0/)
+           SlopeRay_DI(:, nRayTotal) = &
+                (/CosTheta, SinTheta, 0.0/)
 
-             !else
-
-             !currently not using rays with negative yplane
-
-             !XyzRay_DI(:, nRayTotal) = (/xPlane, -yPlane, 0.0/)
-             !SlopeRay_DI(:, nRayTotal) = &
-             !     (/CosTheta, -SinTheta, 0.0/)
-
-          end if
 
           !if(iProc==0)write(*,*)'XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)', XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)
        end do
