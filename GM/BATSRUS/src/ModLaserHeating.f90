@@ -863,6 +863,7 @@ contains
   !============================================================================
   subroutine get_rays
 
+    !--------------------------------------------------------------------------
     select case(TypeBeam)
     case('rz','RZ')
        call rz_beam_rays
@@ -881,13 +882,13 @@ contains
 
   subroutine rz_beam_rays
 
-    use ModGeometry, ONLY: TypeGeometry, y2, minDXvalue
+    use ModGeometry, ONLY: TypeGeometry, y2
     use ModConst,    ONLY: cDegToRad 
 
-    real:: CosTheta, SinTheta,  yCrCentral, yPlane
+    real:: CosTheta, SinTheta,  yCrCentral, yPlaneCentral, yPlane
     real:: rDistance, BeamAmplitude
-    integer:: iRay, iBeam
-
+    integer:: iRay, iBeam, iRayStart, iRayStop
+    !--------------------------------------------------------------------------
 
     if(TypeGeometry/='rz')call CON_stop(&
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
@@ -910,83 +911,71 @@ contains
        ! Transform yCr to dimensionless
        yCrCentral =  BeamParam_II(yCr_, iBeam)
 
+       yPlaneCentral = yCrCentral + xPlane*SinTheta/CosTheta
+
        BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
 
-!!$       do iRay = -nRayPerBeam, nRayPerBeam
-       ! The following is conform the H2D strategy for following rays
-       do iRay = 1, nRayPerBeam  !just for beams pointed at the symmetry axix
+       if(DoLaserRayTest)then
+          iRayStart = 1
+          iRayStop  = 1
+       else
+          iRayStart =-nRayPerBeam
+          iRayStop  = nRayPerBeam
+       end if
 
+       do iRay = iRayStart, iRayStop
           !We neglect exp(-2.25)\approx0.1 and chose the beam margin
           !to be at 1.5 rBeam from the central ray:
 
           rDistance = iRay * rBeam * 1.5 /nRayPerBeam 
-          
-          ! Maps rDistance to laser-entry plane, applies shift set
-          ! by yBeam in the PARAM.in file
-          yPlane = yCrCentral + (rDistance + xPlane*sinTheta/cosTheta)
+          yPlane = yPlaneCentral + rDistance/CosTheta
 
-          !Dealing with rays starting outside the computational domain on laser-entry plane:
-          ! Substracting minDXvalue from y2 so that the rays do not start on domain boundary
-          if(abs(yPlane) >= y2)then
-          	!Do not let rays begin in target past drive surface
-          	if(sinTheta < 0.0 .and. &
-          	 xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta) < 0.0)then
-          		xPlane = xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta)
-          		yPlane = y2 - (minDXvalue)
-          	else	
-          		CYCLE
-          	endif
-          endif
+          !Do not include rays with the starting point 
+          !being otside the computational domain:
+          if(abs(yPlane) >= y2)CYCLE
+          nRayTotal = nRayTotal + 1
 
+          if(DoLaserRayTest)then
+             !flat spatial profile
+             !without radial dependence or yCrCentral dependence
+             Amplitude_I(nRayTotal) = BeamAmplitude
 
-          if(yPlane <= 0.0)then
-          	!Do not let rays begin in target past drive surface
-          	if(xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta) < 0.0)then
-          		xPlane = xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta)
-          		yPlane = minDXvalue
-          	else	
-          		CYCLE
-          	endif
-          endif
-          
-          
-          !nRayTotal = nRayTotal + 1
+          else
+             !flat spatial profile without radial dependence:
+             !Amplitude_I(nRayTotal) = BeamAmplitude * &
+             !     abs(yCrCentral)
 
-           nRayTotal = nRayTotal + 1
-           if(DoLaserRayTest)then
-              !flat spatial profile
-              !without radial dependence or yCrCentral dependence
-              Amplitude_I(nRayTotal) = BeamAmplitude
+             !flat spatial profile:
+             !Amplitude_I(nRayTotal) = BeamAmplitude * &
+             !     abs( yCrCentral + rDistance/CosTheta)
 
-           else
-              !flat spatial profile
-              !without radial dependence
-!!$        Amplitude_I(nRayTotal) = BeamAmplitude * &
-!!$                   abs(yCrCentral + rDistance)
+             !gaussian profile:
+             !Amplitude_I(nRayTotal) = BeamAmplitude * &
+             !     exp(-(rDistance/rBeam)**2) *   &
+             !     abs( yCrCentral + rDistance/CosTheta)
 
-!!$        !flat spatial profile
-!!$        Amplitude_I(nRayTotal) = BeamAmplitude * &
-!!$             abs( yCrCentral + rDistance)
+             !use supergaussian spatial profile; make the supergaussian
+             !order an adjustable parameter
+             !without radial dependence
+             ! THIS FORMULA SHOULD BE CHECKED IF IT IS THE SAME AS IN H2D !
+             Amplitude_I(nRayTotal) = BeamAmplitude * &
+                  exp(-(abs(rDistance)/rBeam)**4.2) *   &
+                  abs(yCrCentral)
+          end if
 
-!!$        !gaussian profile
-!!$        Amplitude_I(nRayTotal) = BeamAmplitude * &
-!!$             exp(-(rDistance/rBeam)**2) *   &
-!!$             abs( yCrCentral + rDistance)
+          if(yPlane > 0)then
 
-              !use supergaussian spaital profile; make the supergaussian
-              !order an adjustable parameter
-              !without radial dependence
-              Amplitude_I(nRayTotal) = BeamAmplitude * &
-                   exp(-(abs(rDistance)/rBeam)**4.2) * &
-                   abs(yCrCentral + rDistance)
-           end if
+             XyzRay_DI(:, nRayTotal) = (/xPlane, yPlane, 0.0/)
+             SlopeRay_DI(:, nRayTotal) = &
+                  (/CosTheta, SinTheta, 0.0/)
 
-           !if(yPlane > 0)then
+          else
 
-           XyzRay_DI(:, nRayTotal) = (/xPlane, yPlane, 0.0/)
-           SlopeRay_DI(:, nRayTotal) = &
-                (/CosTheta, SinTheta, 0.0/)
+             XyzRay_DI(:, nRayTotal) = (/xPlane, -yPlane, 0.0/)
+             SlopeRay_DI(:, nRayTotal) = &
+                  (/CosTheta, -SinTheta, 0.0/)
 
+          end if
 
           !if(iProc==0)write(*,*)'XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)', XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)
        end do
