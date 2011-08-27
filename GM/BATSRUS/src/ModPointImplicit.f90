@@ -152,20 +152,32 @@ contains
     if(.not.allocated(iVarPointImpl_I))then
 
        ! Set default perturbation parameters
+       !
+       ! Perturbation_V = abs(State_V)*EpsPointImpl + EpsPointImpl_V
+
        allocate(EpsPointImpl_V(nVar))
        if(nByteReal == 8)then
+          ! Precision of 8-byte arithmetic is roughly P = 1e-12
           if(IsAsymmetric)then
+             ! Optimal value is the square root of P for 1-sided derivative
              EpsPointImpl   = 1.e-6
           else 
+             ! Optimal value is the 2/3 power of P for 1-sided derivative
              EpsPointImpl   = 1.e-9
           end if
        else
+          ! Precision of 8-byte arithmetic is roughly P = 1e-6
           if(IsAsymmetric)then
+             ! Optimal value is the square root of P for 1-sided derivative
              EpsPointImpl   = 1.e-3
           else
+             ! Optimal value is the 2/3 power of P for 1-sided derivative
              EpsPointImpl   = 1.e-4
           end if
        end if
+       ! Set the smallest value for the perturbation. This divides the
+       ! difference of the source terms Spert - Sorig, so it cannot be
+       ! too small otherwise the error in the source term becomes large.
        EpsPointImpl_V = EpsPointImpl
 
        ! This call should allocate and set the iVarPointImpl_I index array,
@@ -174,8 +186,8 @@ contains
 
        call init_point_implicit
 
-       if(.not.allocated(iVarPointImpl_I)) call stop_mpi( &
-            'calc_user_sources did not set iVarPointImpl_I')
+       if(.not.allocated(iVarPointImpl_I)) call stop_mpi( NameSub // &
+            ': init_point_implicit did not set iVarPointImpl_I')
 
        nVarPointImpl = size(iVarPointImpl_I)
 
