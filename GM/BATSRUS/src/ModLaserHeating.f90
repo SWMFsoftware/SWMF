@@ -867,6 +867,8 @@ contains
     select case(TypeBeam)
     case('rz','RZ')
        call rz_beam_rays
+    case('rz2','RZ2')
+       call rz2_beam_rays
     case('2d','2D','3d', '3D')
        call stop_mpi('TypeBeam='//TypeBeam//' is not yet implemented')
     case default
@@ -983,6 +985,123 @@ contains
   end subroutine rz_beam_rays
 
   !============================================================================
+
+  subroutine rz2_beam_rays
+
+    use ModGeometry, ONLY: TypeGeometry, y2, minDXvalue
+    use ModConst,    ONLY: cDegToRad 
+
+    real:: CosTheta, SinTheta,  yCrCentral, yPlane
+    real:: rDistance, BeamAmplitude
+    integer:: iRay, iBeam
+
+
+    if(TypeGeometry/='rz')call CON_stop(&
+         'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
+
+    ! Allocation is excessive, nRayTotal is not yet known:
+
+    allocate(  XyzRay_DI(3, nBeam * (2 * nRayPerBeam +1)))
+    allocate(SLopeRay_DI(3, nBeam * (2 * nRayPerBeam +1)))
+    allocate(Amplitude_I(nBeam * (2 * nRayPerBeam +1)))
+
+    nRayTotal = 0
+    do iBeam = 1, nBeam
+       cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
+
+       !Positive direction of the slope is taken for the beams
+       !converging to the axis:
+
+       sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
+
+       ! Transform yCr to dimensionless
+       yCrCentral =  BeamParam_II(yCr_, iBeam)
+
+       BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
+
+!!$       do iRay = -nRayPerBeam, nRayPerBeam
+       ! The following is conform the H2D strategy for following rays
+       do iRay = 1, nRayPerBeam  !just for beams pointed at the symmetry axix
+
+          !We neglect exp(-2.25)\approx0.1 and chose the beam margin
+          !to be at 1.5 rBeam from the central ray:
+
+          rDistance = iRay * rBeam * 1.5 /nRayPerBeam 
+          
+          ! Maps rDistance to laser-entry plane, applies shift set
+          ! by yBeam in the PARAM.in file
+          yPlane = yCrCentral + (rDistance + xPlane*sinTheta/cosTheta)
+
+          !Dealing with rays starting outside the computational domain on laser-entry plane:
+          ! Substracting minDXvalue from y2 so that the rays do not start on domain boundary
+          if(abs(yPlane) >= y2)then
+          	!Do not let rays begin in target past drive surface
+          	if(sinTheta < 0.0 .and. &
+          	 xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta) < 0.0)then
+          		xPlane = xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta)
+          		yPlane = y2 - (minDXvalue)
+          	else	
+          		CYCLE
+          	endif
+          endif
+
+
+          if(yPlane <= 0.0)then
+          	!Do not let rays begin in target past drive surface
+          	if(xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta) < 0.0)then
+          		xPlane = xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta)
+          		yPlane = minDXvalue
+          	else	
+          		CYCLE
+          	endif
+          endif
+          
+          
+          !nRayTotal = nRayTotal + 1
+
+           nRayTotal = nRayTotal + 1
+           if(DoLaserRayTest)then
+              !flat spatial profile
+              !without radial dependence or yCrCentral dependence
+              Amplitude_I(nRayTotal) = BeamAmplitude
+
+           else
+              !flat spatial profile
+              !without radial dependence
+!!$        Amplitude_I(nRayTotal) = BeamAmplitude * &
+!!$                   abs(yCrCentral + rDistance)
+
+!!$        !flat spatial profile
+!!$        Amplitude_I(nRayTotal) = BeamAmplitude * &
+!!$             abs( yCrCentral + rDistance)
+
+!!$        !gaussian profile
+!!$        Amplitude_I(nRayTotal) = BeamAmplitude * &
+!!$             exp(-(rDistance/rBeam)**2) *   &
+!!$             abs( yCrCentral + rDistance)
+
+              !use supergaussian spaital profile; make the supergaussian
+              !order an adjustable parameter
+              !without radial dependence
+              Amplitude_I(nRayTotal) = BeamAmplitude * &
+                   exp(-(abs(rDistance)/rBeam)**4.2) * &
+                   abs(yCrCentral + rDistance)
+           end if
+
+           !if(yPlane > 0)then
+
+           XyzRay_DI(:, nRayTotal) = (/xPlane, yPlane, 0.0/)
+           SlopeRay_DI(:, nRayTotal) = &
+                (/CosTheta, SinTheta, 0.0/)
+
+
+          !if(iProc==0)write(*,*)'XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)', XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)
+       end do
+    end do
+  end subroutine rz2_beam_rays
+
+  !============================================================================
+
   subroutine read_laser_heating_param(NameCommand)
 
     use ModReadParam
