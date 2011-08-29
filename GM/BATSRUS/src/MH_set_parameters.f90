@@ -2080,7 +2080,8 @@ subroutine MH_set_parameters(TypeAction)
      case('#SPECTRUM')
         call read_spectrum
 
-     case("#LASERPULSE", "#LASERBEAM", "#LASERBEAMS", "#LASERRAYTEST")
+     case("#LASERPULSE", "#LASERBEAM", "#LASERBEAMS", "#LASERBEAMPROFILE", &
+          "#LASERRAYTEST")
         call read_laser_heating_param(NameCommand)
 
      case("#CME", "#ARCH", "#TD99FLUXROPE", "#GL98FLUXROPE", "#SHEARFLOW")

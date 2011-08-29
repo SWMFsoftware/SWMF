@@ -115,6 +115,8 @@ module ModLaserHeating
 
   real   :: BeamParam_II(3,192)
 
+  real   :: SuperGaussianOrder = 4.2
+
   !Named indexes:
   integer, parameter:: SlopeDeg_ = 1, yCr_ = 2, AmplitudeRel_ = 3
 
@@ -885,7 +887,7 @@ contains
   subroutine rz_beam_rays
 
     use ModGeometry, ONLY: TypeGeometry, y2
-    use ModConst,    ONLY: cDegToRad 
+    use ModConst,    ONLY: cDegToRad, cTwoPi
 
     real:: CosTheta, SinTheta,  yCrCentral, yPlaneCentral, yPlane
     real:: rDistance, BeamAmplitude
@@ -894,6 +896,9 @@ contains
 
     if(TypeGeometry/='rz')call CON_stop(&
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
+
+    ! A computational wedge of one radian in the ignorable direction is used
+    IrradianceSi = IrradianceSi/cTwoPi
 
     ! Allocation is excessive, nRayTotal is not yet known:
 
@@ -938,50 +943,25 @@ contains
           nRayTotal = nRayTotal + 1
 
           if(DoLaserRayTest)then
-             !flat spatial profile
-             !without radial dependence or yCrCentral dependence
              Amplitude_I(nRayTotal) = BeamAmplitude
-
           else
-             !flat spatial profile without radial dependence:
-             !Amplitude_I(nRayTotal) = BeamAmplitude * &
-             !     abs(yCrCentral)
-
-             !flat spatial profile:
-             !Amplitude_I(nRayTotal) = BeamAmplitude * &
-             !     abs( yCrCentral + rDistance/CosTheta)
-
-             !gaussian profile:
-             !Amplitude_I(nRayTotal) = BeamAmplitude * &
-             !     exp(-(rDistance/rBeam)**2) *   &
-             !     abs( yCrCentral + rDistance/CosTheta)
-
-             !use supergaussian spatial profile; make the supergaussian
-             !order an adjustable parameter
-             !without radial dependence
-             ! THIS FORMULA SHOULD BE CHECKED IF IT IS THE SAME AS IN H2D !
-             Amplitude_I(nRayTotal) = BeamAmplitude * &
-                  exp(-(abs(rDistance)/rBeam)**4.2) *   &
-                  abs(yCrCentral)
+             ! supergaussian spatial profile
+             Amplitude_I(nRayTotal) = BeamAmplitude &
+                  *exp(-(abs(rDistance)/rBeam)**SuperGaussianOrder) &
+                  *abs(yCrCentral + rDistance/CosTheta)
           end if
 
           if(yPlane > 0)then
-
-             XyzRay_DI(:, nRayTotal) = (/xPlane, yPlane, 0.0/)
-             SlopeRay_DI(:, nRayTotal) = &
-                  (/CosTheta, SinTheta, 0.0/)
-
+             XyzRay_DI(:,nRayTotal) = (/xPlane, yPlane, 0.0/)
+             SlopeRay_DI(:,nRayTotal) = (/CosTheta, SinTheta, 0.0/)
           else
-
-             XyzRay_DI(:, nRayTotal) = (/xPlane, -yPlane, 0.0/)
-             SlopeRay_DI(:, nRayTotal) = &
-                  (/CosTheta, -SinTheta, 0.0/)
-
+             XyzRay_DI(:,nRayTotal) = (/xPlane, -yPlane, 0.0/)
+             SlopeRay_DI(:,nRayTotal) = (/CosTheta, -SinTheta, 0.0/)
           end if
 
-          !if(iProc==0)write(*,*)'XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)', XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)
-       end do
-    end do
+       end do ! iRay
+    end do ! iBeam
+
   end subroutine rz_beam_rays
 
   !============================================================================
@@ -1163,6 +1143,10 @@ contains
             BeamParam_II(yCr_, nBeam))
        call read_var('AmplitudeRel', &
             BeamParam_II(AmplitudeRel_, nBeam))
+
+    case('#LASERBEAMPROFILE')
+       call read_var('SuperGaussianOrder', SuperGaussianOrder)
+
     case('#LASERRAYTEST')
        call read_var('DoLaserRayTest', DoLaserRayTest)
     case default
