@@ -514,6 +514,8 @@ contains
   !===========================================================================
   subroutine impl_init_hall
 
+    ! Calculate cell centered currents to be used by getflux
+
     use ModHallResist, ONLY: HallJ_CD, IonMassPerCharge_G, &
          BxPerN_G, ByPerN_G, BzPerN_G, set_ion_mass_per_charge
 
@@ -525,8 +527,14 @@ contains
 
     real :: InvDx2, InvDy2, InvDz2, InvN_G(0:nI+1,0:nJ+1,0:nK+1)
 
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub='impl_init_hall'
     !----------------------------------------------------------------------
-    ! Calculate cell centered currents to be used by getflux
+    if(iProc == PROCtest.and.implBLK==implBLKtest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest = .false.; DoTestMe = .false.
+    end if
     
     call set_ion_mass_per_charge(iBlk)
 
@@ -580,7 +588,9 @@ contains
                +InvDx2*(Impl_VGB(By_,i+1,j,k,implBLK)-Impl_VGB(By_,i-1,j,k,implBLK)) &
                -InvDy2*(Impl_VGB(Bx_,i,j+1,k,implBLK)-Impl_VGB(Bx_,i,j-1,k,implBLK))
        end do; end do; end do
+
     end if                                    
+    if(DoTestMe) write(*,*) NameSub,' HallJ_CD=',HallJ_CD(iTest,jTest,kTest,:)
 
     do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
        HallFactor_G(i,j,k) = hall_factor(0,i,j,k,iBlk)
