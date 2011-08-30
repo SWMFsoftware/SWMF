@@ -886,6 +886,7 @@ contains
 
   subroutine rz_beam_rays
 
+    use BATL_lib,    ONLY: CoordMin_D, CoordMax_D
     use ModGeometry, ONLY: TypeGeometry, y2
     use ModConst,    ONLY: cDegToRad, cTwoPi
 
@@ -898,7 +899,7 @@ contains
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
 
     ! A computational wedge of one radian in the ignorable direction is used
-    IrradianceSi = IrradianceSi/cTwoPi
+    IrradianceSi = IrradianceSi*(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
 
     ! Allocation is excessive, nRayTotal is not yet known:
 
@@ -968,16 +969,21 @@ contains
 
   subroutine rz2_beam_rays
 
+    use BATL_lib,    ONLY: CoordMin_D, CoordMax_D
     use ModGeometry, ONLY: TypeGeometry, y2, minDXvalue
-    use ModConst,    ONLY: cDegToRad 
+    use ModConst,    ONLY: cDegToRad, cTwoPi
 
     real:: CosTheta, SinTheta,  yCrCentral, yPlane
     real:: rDistance, BeamAmplitude
     integer:: iRay, iBeam
 
+    !--------------------------------------------------------------------------
 
     if(TypeGeometry/='rz')call CON_stop(&
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
+
+    ! A computational wedge of one radian in the ignorable direction is used
+    IrradianceSi = IrradianceSi*(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
 
     ! Allocation is excessive, nRayTotal is not yet known:
 
@@ -1007,7 +1013,7 @@ contains
           !to be at 1.5 rBeam from the central ray:
 
           rDistance = iRay * rBeam * 1.5 /nRayPerBeam 
-          
+
           ! Maps rDistance to laser-entry plane, applies shift set
           ! by yBeam in the PARAM.in file
           yPlane = yCrCentral + (rDistance + xPlane*sinTheta/cosTheta)
@@ -1015,67 +1021,42 @@ contains
           !Dealing with rays starting outside the computational domain on laser-entry plane:
           ! Substracting minDXvalue from y2 so that the rays do not start on domain boundary
           if(abs(yPlane) >= y2)then
-          	!Do not let rays begin in target past drive surface
-          	if(sinTheta < 0.0 .and. &
-          	 xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta) < 0.0)then
-          		xPlane = xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta)
-          		yPlane = y2 - (minDXvalue)
-          	else	
-          		CYCLE
-          	endif
+             !Do not let rays begin in target past drive surface
+             if(sinTheta < 0.0 .and. &
+                  xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta) < 0.0)then
+                xPlane = xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta)
+                yPlane = y2 - (minDXvalue)
+             else	
+                CYCLE
+             endif
           endif
 
 
           if(yPlane <= 0.0)then
-          	!Do not let rays begin in target past drive surface
-          	if(xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta) < 0.0)then
-          		xPlane = xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta)
-          		yPlane = minDXvalue
-          	else	
-          		CYCLE
-          	endif
+             !Do not let rays begin in target past drive surface
+             if(xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta) < 0.0)then
+                xPlane = xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta)
+                yPlane = minDXvalue
+             else	
+                CYCLE
+             endif
           endif
-          
-          
-          !nRayTotal = nRayTotal + 1
 
-           nRayTotal = nRayTotal + 1
-           if(DoLaserRayTest)then
-              !flat spatial profile
-              !without radial dependence or yCrCentral dependence
-              Amplitude_I(nRayTotal) = BeamAmplitude
+          nRayTotal = nRayTotal + 1
 
-           else
-              !flat spatial profile
-              !without radial dependence
-!!$        Amplitude_I(nRayTotal) = BeamAmplitude * &
-!!$                   abs(yCrCentral + rDistance)
+          if(DoLaserRayTest)then
+             Amplitude_I(nRayTotal) = BeamAmplitude
+          else
+             ! supergaussian spatial profile
+             Amplitude_I(nRayTotal) = BeamAmplitude &
+                  *exp(-(abs(rDistance)/rBeam)**SuperGaussianOrder) &
+                  *abs(yCrCentral + rDistance)
+          end if
 
-!!$        !flat spatial profile
-!!$        Amplitude_I(nRayTotal) = BeamAmplitude * &
-!!$             abs( yCrCentral + rDistance)
+          XyzRay_DI(:, nRayTotal) = (/xPlane, yPlane, 0.0/)
+          SlopeRay_DI(:, nRayTotal) = &
+               (/CosTheta, SinTheta, 0.0/)
 
-!!$        !gaussian profile
-!!$        Amplitude_I(nRayTotal) = BeamAmplitude * &
-!!$             exp(-(rDistance/rBeam)**2) *   &
-!!$             abs( yCrCentral + rDistance)
-
-              !use supergaussian spaital profile; make the supergaussian
-              !order an adjustable parameter
-              !without radial dependence
-              Amplitude_I(nRayTotal) = BeamAmplitude * &
-                   exp(-(abs(rDistance)/rBeam)**4.2) * &
-                   abs(yCrCentral + rDistance)
-           end if
-
-           !if(yPlane > 0)then
-
-           XyzRay_DI(:, nRayTotal) = (/xPlane, yPlane, 0.0/)
-           SlopeRay_DI(:, nRayTotal) = &
-                (/CosTheta, SinTheta, 0.0/)
-
-
-          !if(iProc==0)write(*,*)'XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)', XyzRay_DI(:,nRayTotal), SlopeRay_DI(:,nRayTotal),Amplitude_I(nRayTotal)
        end do
     end do
   end subroutine rz2_beam_rays
