@@ -175,7 +175,7 @@ contains
   !============================================================================
 
   subroutine regrid_batl(nVar, State_VGB, Dt_B, DoRefine_B, DoCoarsen_B, &
-       DoBalanceEachLevelIn, iTypeNode_A, Used_GB, DoTestIn, &
+       DoBalanceEachLevelIn, iTypeNode_A, Used_GB, DoBalanceOnlyIn, DoTestIn, &
        nExtraData, pack_extra_data, unpack_extra_data)
 
     integer, intent(in)   :: nVar                         ! number of variables
@@ -190,6 +190,7 @@ contains
     integer, intent(in), optional:: iTypeNode_A(MaxNode)  ! balance node types
     logical, intent(in), optional:: &
          Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)  ! used cells
+    logical, intent(in), optional:: DoBalanceOnlyIn       ! balance with ghosts
     logical, intent(in), optional:: DoTestIn              ! print test info
     integer, intent(in), optional:: nExtraData            ! size of extra data
         ! Optional methods to send extra information
@@ -219,7 +220,20 @@ contains
     ! Refine, coarsen and load balance the blocks containing the nVar 
     ! state variables in State_VGB. Use second order accurate conservative
     ! restriction and prolongation operators. Load balance by Morton ordering.
-    ! If DoBalanceEachLevelIn is true, balance each AMR level independently.
+    !
+    ! If iTypeNode_A is present, it contains positive integers corresponding
+    ! to different block types, and each block type is balanced.
+    !
+    ! If DoBalanceEachLevelIn is true, balance each AMR level independently.  
+    !
+    ! If DoBalnceOnlyIn is true, no AMR is performed, the blocks are simply
+    ! moved among the processors together with ghost cells.
+    !
+    ! The Used_GB array can describe unused cells (e.g. inside an internal
+    ! boundary) which cannot be used for prolongation or restriction. 
+    !
+    ! The nExtraData, pack_extra_data and unpack_extra_data arguments
+    ! allow sending nExtraData real numbers together with the blocks.
     !
     ! Refinement and coarsening is primarily based on the iStatusNew_A array 
     ! (available via the BATL_lib module) that is indexed by nodes 
@@ -304,8 +318,12 @@ contains
 
     ! Coarsen, refine and load balance the flow variables, and set Dt_B.
     if(DoTest)write(*,*) NameSub,' call do_amr'
-    call do_amr(nVar, State_VGB, Dt_B, DoTestIn=DoTestIn, Used_GB=Used_GB, &
-         nExtraData=nExtraData, pack_extra_data=pack_extra_data, &
+    call do_amr(nVar, State_VGB, Dt_B, &
+         Used_GB=Used_GB, &
+         DoBalanceOnlyIn=DoBalanceOnlyIn, &
+         DoTestIn=DoTestIn, &
+         nExtraData=nExtraData, &
+         pack_extra_data=pack_extra_data, &
          unpack_extra_data=unpack_extra_data)
 
     ! Finalize the tree information

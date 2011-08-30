@@ -43,7 +43,7 @@ contains
 
   !===========================================================================
 
-  subroutine do_amr(nVar, State_VGB, Dt_B, Used_GB, DoTestIn, &
+  subroutine do_amr(nVar, State_VGB, Dt_B, Used_GB, DoBalanceOnlyIn, DoTestIn,&
        nExtraData, pack_extra_data, unpack_extra_data)
 
     use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -78,7 +78,10 @@ contains
          Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Write debug info if true
-    logical, optional:: DoTestIn
+    logical, intent(in), optional:: DoTestIn
+
+    ! Move blocks around (no AMR) together with ghost cells
+    logical, intent(in), optional:: DoBalanceOnlyIn
 
     ! Size of extra data to send and receive for moved blocks
     integer, intent(in), optional:: nExtraData
@@ -88,7 +91,7 @@ contains
        subroutine pack_extra_data(iBlock, nBuffer, Buffer_I)
 
          ! Pack extra data into Buffer_I
-         
+
          integer, intent(in) :: iBlock            ! block index
          integer, intent(in) :: nBuffer           ! size of buffer
          real,    intent(out):: Buffer_I(nBuffer) ! buffer
@@ -109,6 +112,9 @@ contains
     optional:: pack_extra_data, unpack_extra_data
 
     ! Local variables
+
+    ! Number of physical+ghost cells per block
+    integer, parameter:: nIJKG = (MaxI-MinI+1)*(MaxJ-MinJ+1)*(MaxK-MinK+1)
 
     ! Dynamic arrays
     real,    allocatable :: Buffer_I(:), StateP_VG(:,:,:,:)
@@ -135,16 +141,19 @@ contains
     logical:: UseMask
     integer:: nVarBuffer, nBuffer
 
-    logical:: DoTest
+    logical:: DoTest, DoBalanceOnly
     character(len=*), parameter:: NameSub = 'BATL_AMR::do_amr'
     !-------------------------------------------------------------------------
     DoTest = .false.
     if(present(DoTestIn)) DoTest = DoTestIn
 
+    DoBalanceOnly = .false.
+    if(present(DoBalanceOnlyIn)) DoBalanceOnly = DoBalanceOnlyIn
+
     if(DoTest)write(*,*) NameSub,' starting'
 
     if( (present(nExtraData) .neqv. present(pack_extra_data)) .or. &
-        (present(nExtraData) .neqv. present(unpack_extra_data)) )then
+         (present(nExtraData) .neqv. present(unpack_extra_data)) )then
        write(*,*) NameSub,&
             ' present(nExtraData, pack_extra_data, unpack_extra_data)=', &
             present(nExtraData), present(pack_extra_data), &
@@ -155,28 +164,37 @@ contains
     ! Simple logical
     UseMask = present(Used_GB)    
 
-    ! If UseMask is true we will have one extra variable in StatP_VG
-    ! containing a "boolean" represented as .true. = 1.0 and .false. = 0.0
-    ! The masked cells cannot be used for 2nd order prolongation
-    if(UseMask) then
-       nVarBuffer = nVar+1
-    else
-       nVarBuffer = nVar
-    end if
-
     ! Small arrays are allocated once 
     if(.not.allocated(iBlockAvailable_P)) &
          allocate(iBlockAvailable_P(0:nProc-1))
 
-    ! nVar dependent arrays are allocated and deallocated every call
-    ! Buffer_I +1 for Dt_B and +1 for DoCheckMask header information
+    if(DoBalanceOnly)then
+       ! Include ghost cells, add 1 for Dt_B
+       nBuffer = nVar*nIJKG + 1
+       if(present(nExtraData)) nBuffer = nBuffer + nExtraData
+       allocate(Buffer_I(nBuffer))
+    else
 
-    nBuffer = nVarBuffer*nIJK + 2
-    if(present(nExtraData)) nBuffer = nBuffer + nExtraData
+       ! If UseMask is true we will have one extra variable in StatP_VG
+       ! containing a "boolean" represented as .true. = 1.0 and .false. = 0.0
+       ! The masked cells cannot be used for 2nd order prolongation
+       if(UseMask) then
+          nVarBuffer = nVar+1
+       else
+          nVarBuffer = nVar
+       end if
 
-    allocate(Buffer_I(nBuffer), &
-         StateP_VG(nVarBuffer,iMinP:iMaxP,jMinP:jMaxP,kMinP:kMaxP), &
-         SlopeL_V(nVar), SlopeR_V(nVar), Slope_V(nVar))
+       ! nVar dependent arrays are allocated and deallocated every call
+       ! Buffer_I +1 for Dt_B and +1 for DoCheckMask header information
+
+       nBuffer = nVarBuffer*nIJK + 2
+       if(present(nExtraData)) nBuffer = nBuffer + nExtraData
+
+       allocate(Buffer_I(nBuffer), &
+            StateP_VG(nVarBuffer,iMinP:iMaxP,jMinP:jMaxP,kMinP:kMaxP), &
+            SlopeL_V(nVar), SlopeR_V(nVar), Slope_V(nVar))
+
+    end if
 
     ! Set iBlockAvailable_P to first available block
     iBlockAvailable_P = -1
@@ -193,35 +211,37 @@ contains
        DoTryAgain = .false.
 
        ! Coarsen and move blocks
-       do iNodeRecv = 1, nNode
-          if(iTree_IA(Status_,iNodeRecv) /= CoarsenNew_) CYCLE
+       if(.not.DoBalanceOnly)then
+          do iNodeRecv = 1, nNode
+             if(iTree_IA(Status_,iNodeRecv) /= CoarsenNew_) CYCLE
 
-          if(DoTest) write(*,*)NameSub,' CoarsenNew iNode=',iNodeRecv
+             if(DoTest) write(*,*)NameSub,' CoarsenNew iNode=',iNodeRecv
 
-          iProcRecv  = iProcNew_A(iNodeRecv)
-          if(iBlockAvailable_P(iProcRecv) > MaxBlock)then
-             ! Continue with other nodes and then try again
-             DoTryAgain = .true.
-             CYCLE
-          end if
+             iProcRecv  = iProcNew_A(iNodeRecv)
+             if(iBlockAvailable_P(iProcRecv) > MaxBlock)then
+                ! Continue with other nodes and then try again
+                DoTryAgain = .true.
+                CYCLE
+             end if
 
-          iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrCoarsened_)
+             iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrCoarsened_)
 
-          do iChild = Child1_, ChildLast_
-             iNodeSend = iTree_IA(iChild,iNodeRecv)
+             do iChild = Child1_, ChildLast_
+                iNodeSend = iTree_IA(iChild,iNodeRecv)
 
-             iProcSend  = iTree_IA(Proc_,iNodeSend)
-             iBlockSend = iTree_IA(Block_,iNodeSend)
+                iProcSend  = iTree_IA(Proc_,iNodeSend)
+                iBlockSend = iTree_IA(Block_,iNodeSend)
 
-             if(iProc == iProcSend) call send_coarsened_block
-             if(iProc == iProcRecv) call recv_coarsened_block
+                if(iProc == iProcSend) call send_coarsened_block
+                if(iProc == iProcRecv) call recv_coarsened_block
 
-             call make_block_available(iNodeSend, iBlockSend, iProcSend)
+                call make_block_available(iNodeSend, iBlockSend, iProcSend)
+             end do
+
+             ! This parent block was successfully coarsened
+             iTree_IA(Status_,iNodeRecv) = Coarsened_
           end do
-
-          ! This parent block was successfully coarsened
-          iTree_IA(Status_,iNodeRecv) = Coarsened_
-       end do
+       end if
 
        ! Move blocks
        do iNodeSend = 1, nNode
@@ -252,42 +272,44 @@ contains
           call make_block_available(iNodeSend, iBlockSend, iProcSend)
        end do
 
-       ! Prolong and move blocks
-       LOOPNODE: do iNodeSend = 1, nNode
+       if(.not.DoBalanceOnly)then
+          ! Prolong and move blocks
+          LOOPNODE: do iNodeSend = 1, nNode
 
-          if(iTree_IA(Status_,iNodeSend) /= Refine_) CYCLE
+             if(iTree_IA(Status_,iNodeSend) /= Refine_) CYCLE
 
-          iProcSend  = iTree_IA(Proc_,iNodeSend)
-          iBlockSend = iTree_IA(Block_,iNodeSend)
+             iProcSend  = iTree_IA(Proc_,iNodeSend)
+             iBlockSend = iTree_IA(Block_,iNodeSend)
 
-          if(DoTest) write(*,*)NameSub,' Refine iNode=',iNodeSend
+             if(DoTest) write(*,*)NameSub,' Refine iNode=',iNodeSend
 
-          do iChild = Child1_, ChildLast_
-             iNodeRecv = iTree_IA(iChild,iNodeSend)
+             do iChild = Child1_, ChildLast_
+                iNodeRecv = iTree_IA(iChild,iNodeSend)
 
-             ! Check if this child has been created already
-             if(iTree_IA(Status_,iNodeRecv) == Refined_) CYCLE
+                ! Check if this child has been created already
+                if(iTree_IA(Status_,iNodeRecv) == Refined_) CYCLE
 
-             ! Check if there is a free block available
-             iProcRecv  = iProcNew_A(iNodeRecv)
+                ! Check if there is a free block available
+                iProcRecv  = iProcNew_A(iNodeRecv)
 
-             if(iBlockAvailable_P(iProcRecv) > MaxBlock)then
-                ! Continue with other nodes and then try again
-                DoTryAgain = .true.
-                CYCLE LOOPNODE
-             end if
+                if(iBlockAvailable_P(iProcRecv) > MaxBlock)then
+                   ! Continue with other nodes and then try again
+                   DoTryAgain = .true.
+                   CYCLE LOOPNODE
+                end if
 
-             iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrRefined_)
+                iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrRefined_)
 
-             if(iProc == iProcSend) call send_refined_block
-             if(iProc == iProcRecv) call recv_refined_block
+                if(iProc == iProcSend) call send_refined_block
+                if(iProc == iProcRecv) call recv_refined_block
 
-             ! This child block was successfully refined
-             iTree_IA(Status_,iNodeRecv) = Refined_
-          end do
-          call make_block_available(iNodeSend, iBlockSend, iProcSend)
+                ! This child block was successfully refined
+                iTree_IA(Status_,iNodeRecv) = Refined_
+             end do
+             call make_block_available(iNodeSend, iBlockSend, iProcSend)
 
-       end do LOOPNODE
+          end do LOOPNODE
+       end if
 
        !if(iProc==0)then
        !   write(*,*)'!!! Number of tries=', iTry
@@ -304,7 +326,11 @@ contains
 
     if(DoTryAgain) call CON_stop(NameSub//': could not fit blocks')
 
-    deallocate(Buffer_I, StateP_VG, SlopeL_V, SlopeR_V, Slope_V)
+    if(DoBalanceOnly)then
+       deallocate(Buffer_I)
+    else
+       deallocate(Buffer_I, StateP_VG, SlopeL_V, SlopeR_V, Slope_V)
+    end if
 
   contains
 
@@ -368,10 +394,17 @@ contains
       !------------------------------------------------------------------------
 
       iBuffer = 0
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         Buffer_I(iBuffer+1:iBuffer+nVar) = State_VGB(:,i,j,k,iBlockSend)
-         iBuffer = iBuffer + nVar
-      end do; end do; end do
+      if(DoBalanceOnly)then
+         do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+            Buffer_I(iBuffer+1:iBuffer+nVar) = State_VGB(:,i,j,k,iBlockSend)
+            iBuffer = iBuffer + nVar
+         end do; end do; end do
+      else
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            Buffer_I(iBuffer+1:iBuffer+nVar) = State_VGB(:,i,j,k,iBlockSend)
+            iBuffer = iBuffer + nVar
+         end do; end do; end do
+      end if
 
       if(present(Dt_B))then
          iBuffer = iBuffer + 1
@@ -394,17 +427,28 @@ contains
       integer:: iBuffer, i, j, k
       !------------------------------------------------------------------------
 
-      iBuffer = nIJK*nVar
+      if(DoBalanceOnly)then
+         iBuffer = nIJKG*nVar
+      else
+         iBuffer = nIJK*nVar
+      end if
       if(present(Dt_B))       iBuffer = iBuffer + 1
       if(present(nExtraData)) iBuffer = iBuffer + nExtraData
       call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
            iStatus_I, iError)
 
       iBuffer = 0
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         State_VGB(:,i,j,k,iBlockRecv) = Buffer_I(iBuffer+1:iBuffer+nVar)
-         iBuffer = iBuffer + nVar
-      end do; end do; end do
+      if(DoBalanceOnly)then
+         do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+            State_VGB(:,i,j,k,iBlockRecv) = Buffer_I(iBuffer+1:iBuffer+nVar)
+            iBuffer = iBuffer + nVar
+         end do; end do; end do
+      else
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            State_VGB(:,i,j,k,iBlockRecv) = Buffer_I(iBuffer+1:iBuffer+nVar)
+            iBuffer = iBuffer + nVar
+         end do; end do; end do
+      end if
 
       if(present(Dt_B)) then
          Dt_B(iBlockRecv) = Buffer_I(iBuffer+1)
