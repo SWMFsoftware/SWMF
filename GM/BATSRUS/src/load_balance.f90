@@ -1,5 +1,243 @@
 !^CFG COPYRIGHT UM
+
+module ModLoadBalance
+
+  use ModProcMH, ONLY: iProc
+  use ModMain, ONLY: UseConstrainB, UseB0, UseGravity, UseRotatingFrame, UseIM
+  use BATL_size, ONLY: nI, nJ, nK, nIJK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+
+  use ModBlockData, ONLY: get_block_data, put_block_data, &
+       n_block_data, use_block_data, set_block_data, clean_block_data
+  use ModImplicit, ONLY: UseBDF2, n_prev, ImplOld_VCB, nW  !^CFG IF IMPLICIT
+  use ModCT, ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK        !^CFG IF CONSTRAINB
+  use ModRaytrace, ONLY: ray                               !^CFG IF RCM
+  use ModAdvance, ONLY: nVar, fbody_x_BLK, fbody_y_BLK, fbody_z_BLK
+  use ModB0, ONLY: B0_DGB
+  use ModIo, ONLY: log_vars
+
+  implicit none
+
+  private ! except
+
+  public:: init_load_balance
+  public:: pack_load_balance
+  public:: unpack_load_balance
+
+  ! Upper estimate on the size of buffer to be sent or received
+  integer, public:: nBuffer
+
+  ! This could be public, so one can tell if we need to recalculate stuff
+  logical, parameter :: DoMoveExtraData = .false.
+
+  ! Local variables
+
+  ! Number of scalars passed in the buffer
+  integer, parameter :: nScalarData = 1
+
+  logical:: DoSendRay
+
+contains
+  !============================================================================
+  subroutine init_load_balance
+
+    ! To be replaced with BATL_size variable !!!
+    integer, parameter :: nCellGhost=(nI+4)*(nJ+4)*(nK+4)
+
+    !------------------------------------------------------------------------
+    DoSendRay = UseIM .or. index(log_vars, 'status') > 0  !!! to be improved
+
+    nBuffer = nScalarData
+    if(UseConstrainB) nBuffer = nBuffer + 3*nCellGhost
+    if(DoSendRay) &
+         nBuffer = nBuffer + 6*nIJK
+    if(UseBDF2 .and. n_prev > 0) &
+         nBuffer = nBuffer + nVar*nIJK
+    if(DoMoveExtraData)then
+       if(UseB0) &
+            nBuffer = nBuffer + 3*nCellGhost
+       if(UseGravity .or. UseRotatingFrame) &
+            nBuffer = nBuffer + 3*nIJK
+    end if
+
+!!! to be finished
+!    if(nDynamicData > 0) &
+!         nBuffer = nBuffer + 3*nVar*nIJK
+
+    if(iProc==0)then
+       write(*,*)'!!! UseConstrainB, DoSendRay, UseBDF2, n_prev=',&
+            UseConstrainB, DoSendRay, UseBDF2, n_prev
+       if(DoMoveExtraData) &
+            write(*,*)'!!! UseB0, UseGravity, UseRotatingFrame=',&
+            UseB0, UseGravity, UseRotatingFrame
+       write(*,*)'!!! nBuffer =', nBuffer
+    end if
+    
+  end subroutine init_load_balance
+
+  !============================================================================
+  subroutine pack_load_balance(iBlock, nBuffer, Buffer_I)
+
+    integer, intent(in) :: iBlock
+    integer, intent(in) :: nBuffer
+    real,    intent(out):: Buffer_I(nBuffer)
+
+    integer:: i, j, k, i1, i2, iVar, iData, nDynamicData
+
+    character(len=*), parameter:: NameSub = 'pack_load_balance'
+    !------------------------------------------------------------------------
+
+    ! Amount of user defined data for this block
+    nDynamicData = 0
+    if(use_block_data(iBlock)) nDynamicData = n_block_data(iBlock)
+    Buffer_I(1)  = real(nDynamicData)
+
+    iData = nScalarData
+
+    if (UseConstrainB) then                      !^CFG IF CONSTRAINB BEGIN
+
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          iData = iData+1
+          Buffer_I(iData) = Bxface_BLK(i,j,k,iBlock)
+          iData = iData+1
+          Buffer_I(iData) = Byface_BLK(i,j,k,iBlock)
+          iData = iData+1
+          Buffer_I(iData) = Bzface_BLK(i,j,k,iBlock)
+       end do; end do; end do
+
+    endif                                         !^CFG END CONSTRAINB
+
+    if(DoMoveExtraData)then
+       if(UseB0)then
+          ! B0*Cell
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+             Buffer_I(iData+1:iData+3) = B0_DGB(:,i,j,k,iBlock)
+             iData = iData+3
+          end do; end do; end do
+       end if
+       ! fbody*
+       if(UseGravity .or. UseRotatingFrame)then
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             iData = iData+1
+             Buffer_I(iData) = fBody_x_BLK(i,j,k,iBlock)
+             iData = iData+1
+             Buffer_I(iData) = fBody_y_BLK(i,j,k,iBlock)
+             iData = iData+1
+             Buffer_I(iData) = fBody_z_BLK(i,j,k,iBlock)
+          end do; end do; end do
+       end if
+
+    end if ! DoMoveExtraData
+
+    if(UseBDF2 .and. n_prev > 0)then             !^CFG IF IMPLICIT BEGIN
+       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nw; iData = iData+1
+          Buffer_I(iData) = ImplOld_VCB(iVar,i,j,k,iBlock)
+       end do; end do; end do; end do
+    end if                                       !^CFG END IMPLICIT
+
+    if(DoSendRay)then                            !^CFG IF RCM BEGIN
+       do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
+          iData = iData+1
+          Buffer_I(iData) = ray(i1,i2,i,j,k,iBlock)
+       end do; end do; end do; end do; end do
+    end if                                       !^CFG END RCM
+
+    if(nDynamicData > 0)then
+       call get_block_data(iBlock, nDynamicData, &
+            Buffer_I(iData+1:iData+nDynamicData))
+       iData = iData + nDynamicData
+    endif
+
+    if(iData > nBuffer)then
+       write(*,*)'ERROR in load_balance: iData=',iData,&
+            ' > nBuffer=',nBuffer
+       call CON_stop(NameSub//'load_balnce: increase nBuffer')
+    end if
+
+  end subroutine pack_load_balance
+
+  !==========================================================================
+
+  subroutine unpack_load_balance(iBlock, nBuffer, Buffer_I)
+
+    integer, intent(in):: iBlock
+    integer, intent(in):: nBuffer
+    real,    intent(in):: Buffer_I(nBuffer)
+
+    integer:: i, j, k, i1, i2, iVar, iData, nDynamicData
+
+    character(len=*), parameter:: NameSub = 'unpack_load_balance'
+    !------------------------------------------------------------------------
+
+    ! Amount of user defined data for this block
+    nDynamicData = nint(Buffer_I(1))
+
+    ! Read rest of the blockData buffer
+    iData = nScalarData
+
+    if (UseConstrainB) then                      !^CFG IF CONSTRAINB BEGIN
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          iData = iData+1
+          Bxface_BLK(i,j,k,iBlock) = Buffer_I(iData) 
+          iData = iData+1
+          Byface_BLK(i,j,k,iBlock) = Buffer_I(iData)
+          iData = iData+1
+          Bzface_BLK(i,j,k,iBlock) = Buffer_I(iData)
+       end do; end do; end do
+    end if                                      !^CFG END CONSTRAINB
+
+    if(DoMoveExtraData)then
+       if(UseB0)then
+          ! B0*Cell
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+             B0_DGB(:,i,j,k,iBlock) = Buffer_I(iData+1:iData+3)
+             iData = iData+3
+          end do; end do; end do
+       end if
+       ! fbody*
+       if(UseGravity .or. UseRotatingFrame)then
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             iData = iData+1
+             fBody_x_BLK(i,j,k,iBlock) = Buffer_I(iData)
+             iData = iData+1
+             fBody_y_BLK(i,j,k,iBlock) = Buffer_I(iData)
+             iData = iData+1
+             fBody_z_BLK(i,j,k,iBlock) = Buffer_I(iData)
+          end do; end do; end do
+       end if
+
+    end if ! DoMoveExtraData
+
+    if(UseBDF2 .and. n_prev > 0)then            !^CFG IF IMPLICIT BEGIN
+       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nw
+          iData = iData+1
+          ImplOld_VCB(iVar,i,j,k,iBlock) = Buffer_I(iData)
+       end do; end do; end do; end do
+    end if                                      !^CFG END IMPLICIT
+
+    if(DoSendRay)then                           !^CFG IF RCM BEGIN
+       do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
+          iData = iData+1
+          ray(i1,i2,i,j,k,iBlock) = Buffer_I(iData)
+       end do; end do; end do; end do; end do
+    end if                                      !^CFG END RCM
+
+    !if(nDynamicData > 0)then
+    !   call put_block_data(iBlock, nDynamicData, &
+    !        Buffer_I(iData+1:iData+nDynamicData))
+    !   call set_block_data(iBlock)
+    !end if
+
+  end subroutine unpack_load_balance
+  !===========================================================================
+
+end module ModLoadBalance
+!=============================================================================
+
 subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
+
+  use ModLoadBalance, ONLY: nBuffer, &
+       init_load_balance, pack_load_balance, unpack_load_balance
+
   use ModProcMH
   use ModMain
   use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
@@ -16,8 +254,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModEnergy, ONLY: calc_energy_ghost
   use ModConserveFlux, ONLY: init_cons_flux
 
-  use BATL_lib, ONLY: regrid_batl
-  use ModBatlInterface, ONLY: set_batsrus_grid
+  use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, Used_,&
+       regrid_batl
+  use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
   
   implicit none
 
@@ -74,17 +313,95 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   logical :: DoTest, DoTestMe
 
   logical :: DoFixVar_B(MaxBlock)
+  
+  ! BATL related variables
+  integer:: iNode
+  integer, allocatable:: iTypeAdvance_A(:), iTypeBalance_A(:)
 
   !---------------------------------------------------------------------------
   if(UseBatl)then
-     call select_stepping(DoMoveCoord)       !^CFG IF IMPLICIT
-!!! load balance depending on block types. Pass block types!
-!     call regrid_batl(nVar, State_VGB, Used_GB=true_cell)
-!     call set_batsrus_grid
 
-     ! After load balancing skipped blocks are unused.
+     call select_stepping(DoMoveCoord)       !^CFG IF IMPLICIT
+
+     if (nProc==1 .or. index(test_string,'NOLOADBALANCE')>0) then
+
+        ! When load balancing is done Skipped and Unused blocks coincide 
+        UnusedBlock_BP = iTypeAdvance_BP == SkippedBlock_
+
+        call find_test_cell
+        RETURN
+     end if
+
+     ! If the coordinates are known then include the body block info into
+     ! iTypeAdvance_B and _BP by changing the sign to negative for body blocks
+     if(DoMoveCoord)then
+!!! If there was a IsTrueBlock_BP array there was no need for MPI_ALLGATHER
+        where(.not. True_BLK(1:nBlock)) &
+             iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
+
+        ! Update iTypeAdvance_BP
+        call MPI_ALLGATHER(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
+             iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
+     end if
+
+     ! Set the transformation from iTypeAdvance to iType
+     iType_I = 1
+     iType_I(SkippedBlock_) = 0
+     if(UsePartSteady)then
+        iType_I(SteadyBoundBlock_) = 2
+        iType_I(ExplBlock_)        = 2
+        iType_I(-SteadyBoundBlock_) = 3
+        iType_I(-ExplBlock_)        = 3
+     elseif(UsePartImplicit)then                !^CFG IF IMPLICIT
+        iType_I( ImplBlock_) = 2                !^CFG IF IMPLICIT
+        iType_I(-ImplBlock_) = 2                !^CFG IF IMPLICIT
+     else
+        iType_I(-ExplBlock_) = 2
+     endif
+     nType = maxval(iType_I)
+
+     allocate(iTypeAdvance_A(nNode), iTypeBalance_A(MaxNode))
+
+     do iNode = 1, nNode
+        if(iTree_IA(Status_,iNode) /= Used_) CYCLE
+        iTypeAdvance_A(iNode) = &
+             iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode))
+        iTypeBalance_A(iNode) = iType_I(iTypeAdvance_A(iNode))
+     end do
+
+     ! load balance depending on block types
+     if(DoMoveData)then
+        call init_load_balance
+        call regrid_batl(nVar, State_VGB, Dt_BLK,  &
+             iTypeNode_A=iTypeBalance_A,           &
+             DoBalanceOnlyIn=.true.,               &
+             nExtraData=nBuffer,                   &
+             pack_extra_data=pack_load_balance,    &
+             unpack_extra_data=unpack_load_balance )
+        call set_batsrus_grid
+        call set_batsrus_state
+     else
+        call regrid_batl(nVar, State_VGB, Dt_BLK, Used_GB=true_cell, &
+             iTypeNode_A=iTypeBalance_A)
+        call set_batsrus_grid
+     end if
+
+     ! restore iTypeAdvance_B and _BP with positive values
+     iTypeAdvance_BP = SkippedBlock_
+     do iNode = 1, nNode
+        if(iTree_IA(Status_,iNode) /= Used_) CYCLE
+        iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode)) = &
+             abs(iTypeAdvance_A(iNode))
+     end do
+     iTypeAdvance_B  = iTypeAdvance_BP(:,iProc)
+
+     ! When load balancing is done Skipped and Unused blocks coincide 
      UnusedBlock_BP = iTypeAdvance_BP == SkippedBlock_
+
      call find_test_cell
+
+     deallocate(iTypeAdvance_A, iTypeBalance_A)
+
      RETURN
   end if
 
@@ -783,7 +1100,7 @@ subroutine select_stepping(DoPartSelect)
   !---------------------------------------------------------------------------
   call set_oktest('select_stepping',oktest,oktest_me)
 
-  if(oktest)then
+  if(oktest_me)then
      write(*,*) 'select_stepping starting with iProc ',&
           'UseFullImplicit, UsePartImplicit, DoPartSelect=',&
           iProc, UseFullImplicit, UsePartImplicit, DoPartSelect
@@ -883,7 +1200,7 @@ subroutine select_stepping(DoPartSelect)
      end if
 
   end if
-  if(oktest)then
+  if(oktest_me)then
      write(*,*)'select_stepping finished with ',&
           'iProc,nBlockExpl, nBlockImpl, nBlockSkipped=', iProc, &
           count(iTypeAdvance_B == ExplBlock_),&
