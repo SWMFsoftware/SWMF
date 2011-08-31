@@ -63,14 +63,14 @@ contains
 !    if(nDynamicData > 0) &
 !         nBuffer = nBuffer + 3*nVar*nIJK
 
-    if(iProc==0)then
-       write(*,*)'!!! UseConstrainB, DoSendRay, UseBDF2, n_prev=',&
-            UseConstrainB, DoSendRay, UseBDF2, n_prev
-       if(DoMoveExtraData) &
-            write(*,*)'!!! UseB0, UseGravity, UseRotatingFrame=',&
-            UseB0, UseGravity, UseRotatingFrame
-       write(*,*)'!!! nBuffer =', nBuffer
-    end if
+!!!    if(iProc==0)then
+!!!       write(*,*)'!!! UseConstrainB, DoSendRay, UseBDF2, n_prev=',&
+!!!            UseConstrainB, DoSendRay, UseBDF2, n_prev
+!!!       if(DoMoveExtraData) &
+!!!            write(*,*)'!!! UseB0, UseGravity, UseRotatingFrame=',&
+!!!            UseB0, UseGravity, UseRotatingFrame
+!!!       write(*,*)'!!! nBuffer =', nBuffer
+!!!    end if
     
   end subroutine init_load_balance
 

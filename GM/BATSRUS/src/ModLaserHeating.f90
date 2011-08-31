@@ -80,7 +80,7 @@ module ModLaserHeating
   real:: IrradianceSi = 3.8e12 ![J/s] !This is the power; rename?
 
   !Beam geometry: 'rz', '2d', '3d'
-  character(LEN=2):: TypeBeam='unknown'
+  character(LEN=3):: TypeBeam='unknown'
   !\
   ! Geometry of the 'rz'-beam:
   !/
@@ -457,12 +457,12 @@ contains
 
 
     real :: HalfDeltaS                        ! DeltaS halved
-    real :: DielPerm, DielPermHalfBack, Dens2DensCr, Dens2DensCr1, Dens2DensCr2
+    real :: DielPerm, DielPermHalfBack, Dens2DensCr
     real :: Coef, Curv, Curv1
     real :: LCosAl ! L*cos(Alpha),   
     ! where L is inverse grad of \epsilon, Alpha is the incidence angle
     real :: GradDielPermSqr, GradEpsDotSlope
-    real :: ParabLen, GradDielPerm
+    real :: ParabLen
     real, save :: &
          Tolerance=0.1, ToleranceSqr=1.0e-2, DensityCrInv=1, StepMin=1
 
@@ -1342,24 +1342,23 @@ contains
     use ModPhysics, ONLY: Si2No_V, UnitEnergydens_, UnitX_, UnitT_
     use ModMain, ONLY: Time_Simulation, dt, nBlock, UnusedBLK
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
-         UseNonConservative, UseElectronPressure
-    use ModPhysics,  ONLY: inv_gm1, No2Si_V, &
-         UnitP_, UnitEnergyDens_, ExtraEintMin, g
+         UseNonConservative, UseElectronPressure, UseIdealEos
+    use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, &
+         UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModVarIndexes, ONLY: Pe_
-    use ModGeometry, ONLY: vInv_CB, x1, x_BLK
+    use ModGeometry, ONLY: x1, x_BLK
     use ModUser, ONLY: user_material_properties
     use ModEnergy, ONLY: calc_energy_cell
-    use BATL_lib, ONLY: message_pass_cell
+    use BATL_lib, ONLY: message_pass_cell, CellVolume_GB
 
-    real:: Irradiance, EInternalSi, PressureSi, TeSi
+    real:: Irradiance, EInternalSi, PressureSi
     integer :: iBlock, i, j, k, iP
-    logical,parameter :: UseExtraEInt = ExtraEInt_ > 1
 
     character(len=*), parameter:: NameSub = 'add_laser_heating'
     !--------------------------------------------------------------------------
-!!$    if (iProc==0 .and. DoVerbose) then
-!!$       write(*,*)'Start ',NameSub
-!!$    endif
+
+    if(iProc==0 .and. DoVerbose) write(*,*)'Start ',NameSub
+
     call timing_start(NameSub)
 
     if(DoLaserRayTest)then
@@ -1393,7 +1392,13 @@ contains
        if(UnusedBLK(iBlock))CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(UseExtraEInt)then
+          LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
+               *Irradiance/CellVolume_GB(i,j,k,iBlock)
+
+          if(UseIdealEos)then
+             State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+                  + gm1*LaserHeating_CB(i,j,k,iBlock)
+          else
              ! Single temperature:
              !   From update_states_MHD, we obtained p^*, e^* with ideal gamma
              !   and ExtraEInt^* with pure advection.
@@ -1404,27 +1409,10 @@ contains
              !   and ExtraEInt^* with pure advection.
              !   Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
              !   Electron internal energy Eint^n+1 = Pe^*/(g-1) + ExtraEInt^*
-             EinternalSi = No2Si_V(UnitEnergyDens_)*&
-                  (inv_gm1*State_VGB(iP,i,j,k,iBlock) + &
-                  State_VGB(ExtraEint_,i,j,k,iBlock) + &
-                  LaserHeating_CB(i,j,k,iBlock) * Irradiance)
-
-             if (iProc==0 .and. DoVerbose) then
-                if (LaserHeating_CB(i,j,k,iBlock) * Irradiance *&
-                     No2Si_V(UnitEnergyDens_)/EinternalSi > 0.1 ) then
-                   write(*,*)'Laser energy depostion greater that 10%'
-                   write(*,*)'Time_Simulation, time step:', &
-                        Time_Simulation,dt/Si2No_V(UnitT_)
-                   write(*,*)'!!i,j,k,iBlock,EinternalSi,LH_CB,Irr,LH_CB*Irr ', &
-                        i,j,k,iBlock,EinternalSi,LaserHeating_CB(i,j,k,iBlock), &
-                        Irradiance, LaserHeating_CB(i,j,k,iBlock) * Irradiance *&
-                        No2Si_V(UnitEnergyDens_)
-                endif
-                if (LaserHeating_CB(i,j,k,iBlock) * Irradiance *&
-                     No2Si_V(UnitEnergyDens_)/EinternalSi > 0.2 ) then
-                   write(*,*)'***WARNING*** Laser dep > 20%'
-                endif
-             endif
+             EinternalSi = No2Si_V(UnitEnergyDens_) &
+                  *(inv_gm1*State_VGB(iP,i,j,k,iBlock) &
+                  + State_VGB(ExtraEint_,i,j,k,iBlock) &
+                  + LaserHeating_CB(i,j,k,iBlock))
 
              ! Single temperature: determine p^n+1 = EOS( rho^n+1, Eint^n+1)
              ! Two temperature:   determine Pe^n+1 = EOS( rho^n+1, Eint^n+1)
@@ -1439,11 +1427,9 @@ contains
              State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                   Si2No_V(UnitEnergyDens_)*EinternalSi &
                   - inv_gm1*State_VGB(iP,i,j,k,iBlock))
-          else
-             State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock)+ &
-                  LaserHeating_CB(i,j,k,iBlock) * Irradiance * (g - 1)
           end if
        end do; end do; end do
+
        call calc_energy_cell(iBlock)
     end do
 
