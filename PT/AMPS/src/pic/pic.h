@@ -17,6 +17,8 @@
 #include <iostream>
 #include <iostream>
 #include <fstream>
+#include <signal.h>
+
 
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -44,6 +46,7 @@ using namespace std;
 //the maximum length of the strings
 #define _MAX_STRING_LENGTH_PIC_  500
 #define Kbol 1.3806503E-23
+#define ElectronCharge 1.602176565E-19
 
 
 
@@ -73,6 +76,8 @@ namespace PIC {
   #define _PIC_SUBDOMAIN_BOUNDARY_LAYER_SAMPLING_DATA_EXCHANGE_TAG_   0
   #define _PIC_DYNAMIC_BALANCE_SEND_RECV_MESH_NODE_EXCHANGE_TAG_     1
 
+  //handle run time signals and exeptions
+  void SignalHandler(int);
 
   //perform one time step
   void TimeStep();
@@ -168,6 +173,9 @@ namespace PIC {
 
     //the basic data access functions for a particle
     byte *GetParticleDataPointer(long int);
+
+    //check the total particles number
+    void CheckParticleList();
 
     /*
     double *GetX(long int);
@@ -277,12 +285,36 @@ namespace PIC {
       register double *xptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
       register int idim;
 
+//=====================  DEBUG ================
+
+
+      if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]+10<pow(2439.0e3,2)) {
+        double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+
+        cout << pow(2439.0e3,2)- r*r << "   "  << 2439.0e3-r << __FILE__ << "@" << __LINE__ << endl;
+
+      }
+
+//=================   END DEBUG =============
+
       for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
     }
 
     inline void SetX(double* x,byte *ParticleDataStart) {
       register double *xptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
       register int idim;
+
+      //=====================  DEBUG ================
+
+
+            if ((x[0]*x[0]+x[1]*x[1]+x[2]*x[2])+10<pow(2439.0e3,2)) {
+              double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+
+              cout << pow(2439.0e3,2)- r*r << "   "  << 2439.0e3-r   << __FILE__ << "@" << __LINE__ << endl;
+
+            }
+
+      //=================   END DEBUG =============
 
       for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
     }
@@ -337,12 +369,12 @@ namespace PIC {
       return *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_));
     }
 
-    inline void SetI(unsigned int spec,byte* ParticleDataStart) {
-      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=spec;
+    inline void SetI(int spec,byte* ParticleDataStart) {
+      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=(unsigned char)spec;
     }
 
-    inline void SetI(unsigned int spec,long int ptr) {
-      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=spec;
+    inline void SetI(int spec,long int ptr) {
+      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=(unsigned char)spec;
     }
 
     //==========================================================
@@ -408,6 +440,8 @@ namespace PIC {
 
 
   namespace Mesh {
+    class cDataCenterNode;
+
 	  //the limiting size of the domain and the function controlling the local mesh resolution
 	  extern double xmin[3],xmax[3];
 
@@ -438,6 +472,14 @@ namespace PIC {
 
 
 
+    //user defiend functions for printing the 'center node' data into an output file
+    typedef void (*fPrintVariableListCenterNode)(FILE* fout,int DataSetNumber);
+    typedef void (*fPrintDataCenterNode)(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,cDataCenterNode *CenterNode);
+    typedef void (*fInterpolateCenterNode)(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,cDataCenterNode *CenterNode);
+
+    extern list<fPrintVariableListCenterNode> PrintVariableListCenterNode;
+    extern list<fPrintDataCenterNode> PrintDataCenterNode;
+    extern list<fInterpolateCenterNode> InterpolateCenterNode;
 
     //the class defining the 'central node' that contains the sampling data
     class cDataCenterNode : public cBasicCenterNode {
@@ -449,7 +491,7 @@ namespace PIC {
 
 	    char *associatedDataPointer;
 
-	    int AssociatedDataLength() {
+	    inline int AssociatedDataLength() {
               return totalAssociatedDataLength;
             }
 
@@ -457,7 +499,7 @@ namespace PIC {
               associatedDataPointer=ptr;
             }
 
-	    char* GetAssociatedDataBufferPointer() {
+	    inline char* GetAssociatedDataBufferPointer() {
               return associatedDataPointer;
             }
 
@@ -611,6 +653,11 @@ namespace PIC {
           fprintf(fout,"%e %e ",OutputData.MeanParticleSpeed,OutputData.TranslationalTemeprature);
         }
         else pipe->send((char*)&OutputData,sizeof(OutputData));
+
+        //print the user defind 'center node' data
+        list<fPrintDataCenterNode>::iterator fptr;
+
+        for (fptr=PrintDataCenterNode.begin();fptr!=PrintDataCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber,pipe,CenterNodeThread,this);
       }
 
       void PrintFileDescriptior(FILE* fout,int DataSetNumber) {
@@ -624,6 +671,10 @@ namespace PIC {
        fprintf(fout,", \"Number Density\", \"Particle Number\"");
        for (int idim=0;idim<DIM;idim++) fprintf(fout,", \"V%i\"",idim);
        fprintf(fout,", \"Speed\", \"Translational Temperature\"");
+
+       //print the user defind 'center node' data
+       list<fPrintVariableListCenterNode>::iterator fptr;
+       for (fptr=PrintVariableListCenterNode.begin();fptr!=PrintVariableListCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber);
       }
 
       void Interpolate(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients) {
@@ -674,6 +725,11 @@ namespace PIC {
           *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset))=InterpolatedParticleSpeed;
 
         }
+
+        //print the user defind 'center node' data
+        list<fInterpolateCenterNode>::iterator fptr;
+
+        for (fptr=InterpolateCenterNode.begin();fptr!=InterpolateCenterNode.end();fptr++) (*fptr)(InterpolationList,InterpolationCoeficients,nInterpolationCoeficients,this);
       }
     };
 
@@ -1048,19 +1104,24 @@ namespace PIC {
     #define _PARTICLE_LEFT_THE_DOMAIN_       2
     #define _PARTICLE_MOTION_FINISHED_       3
 
-    #include "ParticleAcceleration.PIC.h"
-
+    typedef void (*fTotalParticleAcceleration)(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
     typedef int (*fSpeciesDependentParticleMover) (long int,double,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*);
+    typedef int (*fSpeciesDependentParticleMover_BoundaryInjection) (long int,double,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,bool);
+
 
     //the vector containing the species specific particle moving procedures
     extern fSpeciesDependentParticleMover *MoveParticleTimeStep;
+    extern fTotalParticleAcceleration TotalParticleAcceleration;
+    extern fSpeciesDependentParticleMover_BoundaryInjection *MoveParticleBoundaryInjection;
 
     void Init();
     void MoveParticles();
 
     int UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
     int UniformWeight_UniformTimeStep_noForce_TraceTrajectory(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+    int UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,bool FirstBoundaryFlag);
 
+    void TotalParticleAcceleration_default(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
   }
 
 
@@ -1094,6 +1155,77 @@ namespace PIC {
 
      //exchenge paricles between iterations
      void ExchangeParticleData();
+  }
+
+  namespace ICES {
+
+     extern char locationICES[_MAX_STRING_LENGTH_PIC_]; //location of the data and the dace cases
+
+     void Init();
+     void SetLocationICES(const char*);
+
+     //the offsets for the plasma parameters loaded with ICES
+     extern int ElectricFieldOffset,MagneticFieldOffset,PlasmaPressureOffset,PlasmaNumberDensityOffset,PlasmaTemperatureOffset,PlasmaBulkVelocityOffset;
+
+     //create the trajectory file
+     void createCellCenterCoordinateList();
+
+
+     //retrive the SWMF data file
+     struct cDataNodeSWMF {
+       double swNumberDensity,swTemperature,swPressure,E[3],B[3],swVel[3];
+     };
+
+     void retriveSWMFdata(const char *DataFile);
+     void readSWMFdata(const double MeanIonMass); //MeanIonMass -> the mean ion mass of the plasma flow in [amu]
+     void PrintVariableListSWMF(FILE* fout,int DataSetNumber);
+     void PrintDataSWMF(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+     void InterpolateSWMF(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+
+     //calculate the values of the located parameters
+     inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       register int idim;
+       register double *offset=(double*)(ElectricFieldOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+       for (idim=0;idim<3;idim++) E[idim]=offset[idim];
+     }
+
+     inline void GetBackgroundMagneticField(double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       register int idim;
+       register double *offset=(double*)(MagneticFieldOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+       for (idim=0;idim<3;idim++) B[idim]=offset[idim];
+     }
+
+     inline void GetBackgroundPlasmaVelocity(double *vel,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       register int idim;
+       register double *offset=(double*)(PlasmaBulkVelocityOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+       for (idim=0;idim<3;idim++) vel[idim]=offset[idim];
+     }
+
+     inline double GetBackgroundPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       return *((double*)(PlasmaPressureOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+     }
+
+     inline double GetBackgroundPlasmaNumberDensity(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       return *((double*)(PlasmaNumberDensityOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+     }
+
+     inline double GetBackgroundPlasmaTemperature(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       return *((double*)(PlasmaTemperatureOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+     }
+
+     inline void GetBackgroundFieldsVector(double *E,double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       register int idim;
+       register char *offset=node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer();
+
+       double *e=(double*)(offset+ElectricFieldOffset);
+       double *b=(double*)(offset+MagneticFieldOffset);
+
+       for (idim=0;idim<3;idim++) B[idim]=b[idim],E[idim]=e[idim];
+     }
+
   }
 
   namespace BC {
