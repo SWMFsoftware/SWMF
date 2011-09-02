@@ -944,10 +944,11 @@ contains
          refine_tree_node, distribute_tree, clean_tree, Unused_B, iNode_B, &
          nNode, show_tree, iStatusNew_A, &
          Coarsen_, Unset_, adapt_tree, move_tree, distribute_tree
-    use BATL_grid, ONLY: init_grid, create_grid, clean_grid
+    use BATL_grid, ONLY: init_grid, create_grid, clean_grid, CellSize_DB
     use BATL_geometry, ONLY: init_geometry
     use BATL_amr, ONLY: do_amr, init_amr
-    use BATL_size, ONLY: MaxDim, nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_size, ONLY: MaxDim, nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
+         nINode, nJNode, nKNode 
     ! For Random generation
     integer :: jSeed
     logical :: IsFirst
@@ -1071,8 +1072,71 @@ contains
        end if
     end do
 
+    !--------------------- internal with masked cells --------
+    nIntCrit = 1
+
+    CoarsenCrit_I = -1.0
+    RefineCrit_I  =  1.0
+    TestState_VGB = 1.0
+    iVarCrit_I(nIntCrit)=1
+
+    CoarsenCrit_I = -1.0
+    RefineCrit_I  = 1.0
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       do k = MinK, MaxK
+          do j = MinJ, MaxJ
+             do i = MinI,MaxI
+                do iVar=1,nVar
+                   TestState_VGB(iVar,i,j,k,iBlock) = &
+                        dexp(0.1*(i*(iNode_B(iBlock)+1)))
+                end do
+             end do
+          end do
+       end do
+    end do
+
+    UseAmrMask = .true.
+    nAmrBox = 1
+    allocate(AmrBox_DII(3,2,nAmrBox))
+    AmrBox_DII(1,1,1) = DomainMin_D(1) 
+    AmrBox_DII(1,2,1) = DomainMin_D(1) +  CellSize_DB(1,1)*max(nINode-1,1)
+    AmrBox_DII(2,1,1) = DomainMin_D(2) 
+    AmrBox_DII(2,2,1) = DomainMin_D(2) +  CellSize_DB(2,1)*max(nJNode-1,1)
+    AmrBox_DII(3,1,1) = DomainMin_D(3) 
+    AmrBox_DII(3,2,1) = DomainMin_D(3) +  CellSize_DB(3,1)*max(nKNode-1,1)
 
 
+
+    
+
+    call set_amr_criteria(nVar,TestState_VGB)
+
+   do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       if( iNode_B(iBlock) == 1) then
+          if( AmrCrit_IB(1,iBlock)  == 0.0) &
+               write (*,*) " ERROR in ",NameSub, " in  Internal test masked cells", &
+               " AmrCrit_IB of Node == 1 shoud be none zero"
+       else
+           if( AmrCrit_IB(1,iBlock)  /= 0.0) &
+               write (*,*) " ERROR in ",NameSub, " in  Internal test masked cells", &
+               " AmrCrit_IB of Node /= 1 shoud be zero"
+        end if
+     end do
+
+!!$   ! Using any becouse of the ghost cells
+!!$    do iBlock = 1, nBlock
+!!$       if(Unused_B(iBlock)) CYCLE
+!!$       write(*,*) iNode_B(iBlock), &
+!!$            any(DoAmr_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock))
+!!$    end do
+!!$
+
+    UseAmrMask = .false.
+    deallocate(AmrBox_DII)
+    deallocate(DoAmr_GB)
     !--------------------- internal with masked body -------
     nIntCrit = 1
 
