@@ -146,6 +146,7 @@ contains
           end if
 
        case('#ADVECTSPHERE')
+          UserProblem = 'AdvectSphere'
           call read_var('DoInitSphere',      DoInitSphere     )
           call read_var('NumDensBackgrndIo', NumDensBackgrndIo)
           call read_var('pBackgrndIo',       pBackgrndIo      )
@@ -256,6 +257,8 @@ contains
        if (UseUserInputUnitX) then
           ! Convert rSphereIn to normalized units (needed for OH)
           rSphere = rSphereIn*Input2SiUnitX*Si2No_V(UnitX_)
+       else
+          rSphere = rSphereIn
        end if
        !\                                                                      
        ! Start filling in cells (including ghost cells)                       
@@ -263,9 +266,10 @@ contains
        if (DoInitSphere) then
           do k= 1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn
              rCell = R_BLK(i,j,k,iBlock)
-             if (rCell .le. rSphere)then
+             if (rCell <= rSphere)then
                 ! inside the sphere                                           
-                State_VGB(rho_,i,j,k,iBlock) =RhoBackgrndNo + &
+                ! State_VGB(rho_,i,j,k,iBlock) = RhoMaxNo ! for tophat
+                State_VGB(rho_,i,j,k,iBlock) = RhoBackgrndNo + &
                      (RhoMaxNo - RhoBackgrndNo)*(cos(0.5*cPi*rCell/rSphere))**2
              else
                 ! in background flow                                         
