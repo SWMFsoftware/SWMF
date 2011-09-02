@@ -5740,6 +5740,23 @@ X axis. The yBeam has to do with the Y coordinate of the initial positions.
 The AmplitudeRel gives the relative intensity of the beam.
 </command>
 
+<command name="LASERBEAMPROFILE"
+         <parameter name="SuperGaussianOrder" type="real"/>
+
+#LASERBEAMPROFILE
+4.2             SuperGaussianOrder
+
+This command is used for CRASH applications and it requires a CRASH related
+user file. This command should be used together with the  #LASERPULSE command.
+
+The SuperGaussianOrder parameter determines the profile of each laser beam.
+The irradiance profile of the beam is of the form
+exp[ - (r / rBeam)**SuperGaussianOrder],
+where r is the distance to the titled central ray of the beam and rBeam is
+defined by the #LASERBEAMS command. The default value for SuperGaussianOrder
+is 4.2
+</command>
+
 <command name="MASSLOADING">
 	<parameter name="UseMassLoading" type="logical" default="F"/>	
 	<parameter name="DoAccelerateMassLoading" type="logical" default="F"/>
