@@ -1161,8 +1161,14 @@ public:
     double dx;
 
     if ((x[0]<startNode->xmin[0])||(startNode->xmax[0]<x[0])) {
+      int idim=0;
+      dx=0.0; //add the place for break point for debbuger purposes
+
       cout << "Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
-      for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
+      for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << "idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
+
+      exit(__LINE__,__FILE__);
+
 
       if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
       else return -1;
@@ -1499,7 +1505,7 @@ public:
   */
 
   //a fast version of the function above
-  cTreeNodeAMR<cBlockAMR>* findTreeNode(double *x,cTreeNodeAMR<cBlockAMR>  *startNode=NULL) {
+  inline cTreeNodeAMR<cBlockAMR>* findTreeNode(double *x,cTreeNodeAMR<cBlockAMR>  *startNode=NULL) {
     cTreeNodeAMR<cBlockAMR> *res=NULL,*t=NULL;
     double blockBasedCoordinates[3]={0.0,0.0,0.0};
     int i,j=0,k=0;
@@ -2025,8 +2031,8 @@ void checkMeshConsistency(cTreeNodeAMR<cBlockAMR> *startNode) {
   //check the 'xmax' and 'xmin' value of the node
   if (startNode!=rootTree) {
     double *xminUpNode,*xmaxUpNode,*xmin,*xmax;
-    int kDownBlock,jDownBlock,iDownBlock;
-    bool flag;
+//    int kDownBlock,jDownBlock,iDownBlock;
+//    bool flag;
 
     flag=false;
     xminUpNode=startNode->upNode->xmin,xmaxUpNode=startNode->upNode->xmax;
@@ -2236,8 +2242,8 @@ if (AllowBlockAllocation==true) {
      }  
 
      //check if the nodes that the block shares with its neibours the have the same coordinates points to the same location in physical memory
-     int ioffset,joffset,koffset,iNeibNode,jNeibNode,kNeibNode,iDownNode,jDownNode,kDownNode;
-     cTreeNodeAMR<cBlockAMR> *upNode,*downNode;
+     int ioffset,joffset,koffset/*,iNeibNode*/,jNeibNode,kNeibNode,iDownNode,jDownNode,kDownNode;
+     cTreeNodeAMR<cBlockAMR> *upNode; //,*downNode;
      double *xStartNode,*xNeibNode; 
      long int ndStartNode,ndNeibNode;
      int iiDownCornerNode=0,jjDownCornerNode=0,kkDownCornerNode=0;
@@ -2248,13 +2254,13 @@ if (AllowBlockAllocation==true) {
      static const int iiMin=-_GHOST_CELLS_X_,iiMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
      static const int jjMin=-_GHOST_CELLS_Y_,jjMax=_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;
      static const int kkMin=0,kkMax=0;
-     static const int iDownNodeMax=2,jDownNodeMax=2,kDownNodeMax=0;
+//     static const int iDownNodeMax=2,jDownNodeMax=2,kDownNodeMax=0;
      static const int iNeibNodeMin=-1,iNeibNodeMax=1,jNeibNodeMin=-1,jNeibNodeMax=1,kNeibNodeMin=0,kNeibNodeMax=0;
      #else 
      static const int iiMin=-_GHOST_CELLS_X_,iiMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
      static const int jjMin=-_GHOST_CELLS_Y_,jjMax=_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;
      static const int kkMin=-_GHOST_CELLS_Z_,kkMax=_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_;
-     static const int iDownNodeMax=2,jDownNodeMax=2,kDownNodeMax=2;
+//     static const int iDownNodeMax=2,jDownNodeMax=2,kDownNodeMax=2;
      static const int iNeibNodeMin=-1,iNeibNodeMax=1,jNeibNodeMin=-1,jNeibNodeMax=1,kNeibNodeMin=-1,kNeibNodeMax=1;
      #endif 
 
@@ -2297,7 +2303,7 @@ if (AllowBlockAllocation==true) {
               ndStartNode=getCornerNodeLocalNumber(ii+ioffset,jj+joffset,kk+koffset);
               xStartNode=startNode->block->GetCornerNode(ndStartNode)->GetX();
 
-              for (iDownNode=0;iDownNode<iDownNodeMax;iDownNode++) for (jDownNode=0;jDownNode<jDownNodeMax;jDownNode++)  for (kDownNode=0;kDownNode<kDownNodeMax;kDownNode++) {
+              for (iDownNode=0;iDownNode<=iDownNodeMax;iDownNode++) for (jDownNode=0;jDownNode<=jDownNodeMax;jDownNode++)  for (kDownNode=0;kDownNode<=kDownNodeMax;kDownNode++) {
                 downNode=upNode->downNode[iDownNode+2*(jDownNode+2*kDownNode)];
 
                 if (downNode->block==NULL) continue;
@@ -2956,7 +2962,7 @@ if (startNode->Temp_ID==2140) {
 
 
   cTreeNodeAMR<cBlockAMR> *t,*searchNode=startNode;
-  int nConditionsMet,SearchNodeSize=1; //,iSearchOffset=0,jSearchOffset=0,kSearchOffset=0;
+  int SearchNodeSize=1; //,nConditionsMet; //nConditionsMet,iSearchOffset=0,jSearchOffset=0,kSearchOffset=0;
   cFraction iOffset,jOffset,kOffset,iSearchOffset,jSearchOffset,kSearchOffset;
 
   iOffset=0;
@@ -2996,7 +3002,7 @@ if (startNode->Temp_ID==2140) {
 //  while (searchNode->upNode!=NULL) {
 
   for (int nSearchLevelUp=0;(nSearchLevelUp<StartSearchLevelOffset)&&(searchNode->upNode!=NULL);nSearchLevelUp++) {
-    nConditionsMet=0;
+//    nConditionsMet=0;
 
     /*
     if (_BLOCK_CELLS_X_*(1<<(startNode->RefinmentLevel-searchNode->RefinmentLevel))>_BLOCK_CELLS_X_+6*_GHOST_CELLS_X_) nConditionsMet++;
@@ -4608,7 +4614,7 @@ cout << __LINE__ << endl;
 
 
      for (nDownNode=0;nDownNode<8;nDownNode++) {
-       register int iFace,jFace,nUpFace,nd;
+       int iFace,jFace,nUpFace; //,nd;
 
        downNode=startNode->downNode[nDownNode];
 
@@ -4722,14 +4728,14 @@ cout << __LINE__ << endl;
      static const int ExternalNodesEdgeConnectionMap_upNode_List_Length=3;
 
      for (nDownNode=0;nDownNode<8;nDownNode++) {
-       register int nUpEdge,iEdge,nedge,nNeibEdge;
+       int /*nUpEdge,*/ iEdge,nedge,nNeibEdge;
 
        downNode=startNode->downNode[nDownNode];
 
        for (nList=0;nList<ExternalNodesEdgeConnectionMap_upNode_List_Length;nList++) {
          nedge=ExternalNodesEdgeConnectionMap_upNode_List[nDownNode][nList];
 
-         nUpEdge=ExternalNodesEdgeConnectionMap_upNode[nDownNode][nedge].nUpEdge;
+//         nUpEdge=ExternalNodesEdgeConnectionMap_upNode[nDownNode][nedge].nUpEdge;
          iEdge=ExternalNodesEdgeConnectionMap_upNode[nDownNode][nedge].iEdge;
          nNeibEdge=ExternalNodesEdgeConnectionMap_upNode[nDownNode][nedge].nNeibEdge;
 
@@ -5171,7 +5177,7 @@ if (CallsCounter==83) {
         #endif
 
 
-        long int nd;
+//        long int nd;
         int ksubBlock,jsubBlock,isubBlock,iNode,jNode,kNode,nnode;
 
         for (ksubBlock=0;ksubBlock<ksubBlockMax;ksubBlock++) for (jsubBlock=0;jsubBlock<jsubBlockMax;jsubBlock++) for (isubBlock=0;isubBlock<isubBlockMax;isubBlock++) {
@@ -5842,6 +5848,16 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
               if (PrintMeshData==true) { //print the data stored on the mesh
                 //print basic parameters
                 long int MaxRefinmentLevel,NodeTempID;
+
+
+//=========================   DEBUG ==============================
+
+                if (cornerNode!=NULL) if (cornerNode->Temp_ID==58786) {
+                  cout << __FILE__ << __LINE__ << endl;
+                }
+
+//========================= END DEBUG =========================
+
 
                 if (ThisThread!=0) {
                   MaxRefinmentLevel=cornerNode->nodeDescriptor.maxRefinmentLevel,NodeTempID=cornerNode->Temp_ID;
@@ -7601,7 +7617,7 @@ nMPIops++;
                  int BoundarySurfaceCounter;
                  cInternalBoundaryConditionsDescriptor *bc;
 
-                 if (centerNode->Measure<0.0) {
+                 if (centerNode->Measure<=0.0) {
                    for (BoundarySurfaceCounter=0,bc=startNode->InternalBoundaryDescriptorList;bc!=NULL;bc=bc->nextInternalBCelement,BoundarySurfaceCounter++) {
                      if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
                        int cellIntersectionStatus;
@@ -7656,7 +7672,9 @@ nMPIops++;
       //compare bits
       unsigned char ComparisonMask=0;
 
-      for (i=0;i<nbits;i++) ComparisonMask+=(1<<i);
+//      for (i=0;i<nbits;i++) ComparisonMask+=(1<<i); substituted by the following
+      for (i=0;i<nbits;i++) ComparisonMask=(unsigned char)(ComparisonMask|(1<<i));
+
       if ((id[nbytes]&ComparisonMask)!=(ID.id[nbytes]&ComparisonMask)) return false;
 
       return true;
@@ -7735,19 +7753,19 @@ nMPIops++;
       i=nDownNode;
 
       //save the coordinates
-      if (k==1) mask=mask|1<<bitOffset;
+      if (k==1) mask=(unsigned char)(mask|(1<<bitOffset));
       if (--bitOffset==-1) {
         node.id[byteOffset]=mask;
         mask=0,bitOffset=7,byteOffset--;
       }
 
-      if (j==1) mask=mask|1<<bitOffset;
+      if (j==1) mask=(unsigned char)(mask|(1<<bitOffset));
       if (--bitOffset==-1) {
         node.id[byteOffset]=mask;
         mask=0,bitOffset=7,byteOffset--;
       }
 
-      if (i==1) mask=mask|1<<bitOffset;
+      if (i==1) mask=(unsigned char)(mask|(1<<bitOffset));
       if (--bitOffset==-1) {
         node.id[byteOffset]=mask;
         mask=0,bitOffset=7,byteOffset--;
@@ -8090,7 +8108,7 @@ if (TmpAllocationCounter==2437) {
     nResolutionLevelBlocks=new long int [_MAX_REFINMENT_LEVEL_+1];
     for (nLevel=0;nLevel<=_MAX_REFINMENT_LEVEL_;nLevel++) nResolutionLevelBlocks[nLevel]=0;
 
-    double *InitialProcessorLoad=new double[nTotalThreads];
+    double InitialProcessorLoad[nTotalThreads];
 
     LoadMeasureNormal=CalculateTotalParallelLoadMeasure(rootTree,InitialProcessorLoad)/nTotalThreads;
 
@@ -8112,7 +8130,7 @@ if (TmpAllocationCounter==2437) {
       }
     }
 
-    delete [] InitialProcessorLoad;
+
 
 
     //normalize the load
@@ -8275,6 +8293,7 @@ if (TmpAllocationCounter==2437) {
     //clear the node's load sample
     SetConstantParallelLoadMeasure(0.0,rootTree);
 
+    /*
     //deallocate blocks from the subdomain boundary layer
     node=DomainBoundaryLayerNodesList[ThisThread];
 
@@ -8282,6 +8301,7 @@ if (TmpAllocationCounter==2437) {
       DeallocateBlock(node);
       node=node->nextNodeThisThread;
     }
+    */
 
     //move the cells between processes according the new distribution
     pipe.openSend(0);
@@ -8318,6 +8338,13 @@ if (TmpAllocationCounter==2437) {
         node->Thread=thread;
         node=node->nextNodeThisThread;
       }
+
+      pipe.flush();
+
+#if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
+      MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
     }
 
     pipe.closeSend();
@@ -8401,6 +8428,63 @@ if (TmpAllocationCounter==2437) {
 
 #endif
 
+#if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+
+//================  DEBUG ==================================
+
+    //check the volume of local cells
+
+    /*
+    node=ParallelNodesDistributionList[ThisThread];
+    while (node!=NULL) {
+      int i,j,k,di,dj,dk,idim;
+      long int LocalCellNumber;
+      double r,rmin=0.0,rmax=0.0,rprobe[3]={0.0,0.0,0.0};
+      cCenterNode *cell;
+
+      if (node->Temp_ID==782) {
+        cout << __FILE__ << "@" << __LINE__ << endl;
+      }
+
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+         for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+            for (i=0;i<_BLOCK_CELLS_X_;i++) if (node->block!= NULL){
+              LocalCellNumber=getCenterNodeLocalNumber(i,j,k);
+              cell=node->block->GetCenterNode(LocalCellNumber);
+              rmin=-1,rmax=-1;
+
+              if (cell->Measure<=0.0) {
+                for (dk=0;dk<=((DIM==3) ? 1 : 0);dk++) for (dj=0;dj<=((DIM>1) ? 1 : 0);dj++) for (di=0;di<=1;di++) {
+                  node->GetCornerNodePosition(rprobe,i+di,j+dj,k+dk);
+
+                  for (idim=0,r=0.0;idim<DIM;idim++) r+=pow(rprobe[idim],2);
+                  r=sqrt(r);
+
+                  if ((rmin<0.0)||(rmin>r)) rmin=r;
+                  if ((rmax<0.0)||(rmax<r)) rmax=r;
+                }
+
+                if ((rmin<2439.0e3)&&(rmax>2439.0e3)) {
+                  cout << "Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << r << endl;
+                }
+
+
+                InitCellMeasure(node);
+
+              }
+
+
+            }
+         }
+      }
+
+      node=node->nextNodeThisThread;
+    }
+    */
+//==============   END DEBUG =================================
   }
 
   void ParallelBlockDataExchange() {
