@@ -34,6 +34,10 @@ module ModBlockData
 
   public test_block_data
 
+  ! Maximum number of reals associated with a block. 
+  ! This has to be set in ModUser so that load_balance.f90 knows about it.
+  integer, public:: MaxBlockData = 0
+
   ! These arrays can be initialized
   integer :: nData_B(MaxBlock) = -1        ! Number of data elements
   integer :: iData_B(MaxBlock) = -1        ! Current position for put/get

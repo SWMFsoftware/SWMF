@@ -6,7 +6,7 @@ module ModLoadBalance
   use ModMain, ONLY: UseConstrainB, UseB0, UseGravity, UseRotatingFrame, UseIM
   use BATL_size, ONLY: nI, nJ, nK, nIJK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
-  use ModBlockData, ONLY: get_block_data, put_block_data, &
+  use ModBlockData, ONLY: MaxBlockData, get_block_data, put_block_data, &
        n_block_data, use_block_data, set_block_data, clean_block_data
   use ModImplicit, ONLY: UseBDF2, n_prev, ImplOld_VCB, nW  !^CFG IF IMPLICIT
   use ModCT, ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK        !^CFG IF CONSTRAINB
@@ -58,19 +58,8 @@ contains
        if(UseGravity .or. UseRotatingFrame) &
             nBuffer = nBuffer + 3*nIJK
     end if
-
-!!! to be finished
-!    if(nDynamicData > 0) &
-!         nBuffer = nBuffer + 3*nVar*nIJK
-
-!!!    if(iProc==0)then
-!!!       write(*,*)'!!! UseConstrainB, DoSendRay, UseBDF2, n_prev=',&
-!!!            UseConstrainB, DoSendRay, UseBDF2, n_prev
-!!!       if(DoMoveExtraData) &
-!!!            write(*,*)'!!! UseB0, UseGravity, UseRotatingFrame=',&
-!!!            UseB0, UseGravity, UseRotatingFrame
-!!!       write(*,*)'!!! nBuffer =', nBuffer
-!!!    end if
+    if(MaxBlockData > 0) &
+         nBuffer = nBuffer + MaxBlockData
     
   end subroutine init_load_balance
 
@@ -89,6 +78,12 @@ contains
     ! Amount of user defined data for this block
     nDynamicData = 0
     if(use_block_data(iBlock)) nDynamicData = n_block_data(iBlock)
+    if(nDynamicData > MaxBlockData)then
+       write(*,*)NameSub,' ERROR: iBlock, nDynamicData=', iBlock, nDynamicData
+       write(*,*)NameSub,' MaxBlockData=',MaxBlockData,' is too small!'
+       call stop_mpi(NameSub//': MaxBlockData has to be set in ModUser')
+    end if
+
     Buffer_I(1)  = real(nDynamicData)
 
     iData = nScalarData
@@ -221,11 +216,11 @@ contains
        end do; end do; end do; end do; end do
     end if                                      !^CFG END RCM
 
-    !if(nDynamicData > 0)then
-    !   call put_block_data(iBlock, nDynamicData, &
-    !        Buffer_I(iData+1:iData+nDynamicData))
-    !   call set_block_data(iBlock)
-    !end if
+    if(nDynamicData > 0)then
+       call put_block_data(iBlock, nDynamicData, &
+            Buffer_I(iData+1:iData+nDynamicData))
+       call set_block_data(iBlock)
+    end if
 
   end subroutine unpack_load_balance
   !===========================================================================

@@ -522,7 +522,8 @@ contains
          vInv_CB, Rmin_BLK
     use ModProcMH,   ONLY: iProc
     use ModPhysics
-    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
+    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data, &
+         MaxBlockData
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit
 
     ! Variables required by this user subroutine
@@ -563,18 +564,20 @@ contains
     ! Compute Titan ionospheric source terms.
     !/
 
+    MaxBlockData = (1 + MaxNuSpecies + 3*MaxSpecies)*nIJK
+
     if(iBlock /= iBlockLast)then
        iBlockLast = iBlock
        if(use_block_data(iBlock))then
           call get_block_data(iBlock, nI, nJ, nK, Nu_C)
-          call get_block_data(iBlock, MaxNuSpecies, nI, nJ, nK, NumDenNeutral_VC)
+          call get_block_data(iBlock,MaxNuSpecies,nI, nJ, nK, NumDenNeutral_VC)
           call get_block_data(iBlock, MaxSpecies, nI, nJ, nK, PhotoIonRate_VC)
           call get_block_data(iBlock, MaxSpecies, nI, nJ, nK, ImpactIonRate_VC)
           call get_block_data(iBlock, MaxSpecies, nI, nJ, nK, RecombRate_VC)
        else
           call titan_input(iBlock)
           call put_block_data(iBlock, nI, nJ, nK, Nu_C)
-          call put_block_data(iBlock, MaxNuSpecies, nI, nJ, nK, NumDenNeutral_VC)
+          call put_block_data(iBlock,MaxNuSpecies,nI, nJ, nK, NumDenNeutral_VC)
           call put_block_data(iBlock, MaxSpecies, nI, nJ, nK, PhotoIonRate_VC)
           call put_block_data(iBlock, MaxSpecies, nI, nJ, nK, ImpactIonRate_VC)
           call put_block_data(iBlock, MaxSpecies, nI, nJ, nK, RecombRate_VC)

@@ -53,19 +53,22 @@ contains
 
   end subroutine user_read_inputs
 
-  !============================================================
+  !===========================================================================
 
   subroutine user_calc_sources
 
     use ModVarIndexes
+    use BATL_size,  ONLY: nI, nJ, nK, nIJK
     use ModAdvance, ONLY: State_VGB, Source_VC, Energy_
     use ModProcMH,   ONLY: iProc
-    use ModMain, ONLY: PROCTEST,GLOBALBLK,BLKTEST, nI, nJ,nK,iTest,jTest,kTest 
-    use ModPhysics, ONLY: Rbody, inv_gm1, gm1, No2Si_V, Si2No_V, No2Io_V, Io2No_V,UnitN_, UnitT_,UnitTemperature_,&
+    use ModMain, ONLY: GlobalBlk, ProcTest, BlkTest, iTest, jTest, kTest 
+    use ModPhysics, ONLY: Rbody, inv_gm1, gm1, &
+         No2Si_V, Si2No_V, No2Io_V, Io2No_V,UnitN_, UnitT_,UnitTemperature_,&
          UnitX_, UnitRhoU_, UnitU_
     use ModProcMH,   ONLY: iProc
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, R_BLK, vInv_CB 
-    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
+    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data, &
+         MaxBlockData
 
     character (len=*), parameter :: Name='user_calc_sources'
 
@@ -74,20 +77,25 @@ contains
 
     ! to convert from eV to Kelvins 1eV=1.1604e+4 K
     real,parameter::kTn_dim = 180 !in K
-    real, parameter::ne_hot=0.2!density of hot electron that cause imapact ionization
-    real::kappa !electron impact rate from Burger only for electron of Te=12.5eV
+    ! density of hot electron that cause imapact ionization
+    real, parameter::ne_hot=0.2 
+    ! electron impact rate from Burger only for electron of Te=12.5eV
+    real::kappa 
     !real,parameter:: PhotoIonRate_H2O=9.1e-9 !Solarmax condition
     !real,parameter::PhotoIonRate_H2O=3.6e-9 !Solarmin condition
     real,parameter::PhotoIonRate_H2O=3.6e-7 !Solarmin condition test
-    real, parameter:: sigma_exchange=8.1e-16!cross section for charge exchange in cm2
+
+    ! cross section for charge exchange in cm2
+    real, parameter:: sigma_exchange=8.1e-16
     real::kTi, kTi_dim, kTn,rhotimeU,rhotimeU_Si ,nion 
     real::inv_rho, inv_rho2, uu2, U_Si, U_No, Rho_No
     real::totalNumRho, totalSourceNumRho
-    real:: RhoDot,RhoNumDot, RhoDotPhoto,RhoDotImpact,RhoDotRecomb,RhoDotchargeX, RhoDotL, RhoNumDotL, RhoDotLx, RhoNumDotLx
-    real:: ReactionRate_H2O_dim, ReactionRate_H2O,ImpactRate_dim, RecombRate_dim, RecombRate 
+    real:: RhoDot,RhoNumDot, RhoDotPhoto,RhoDotImpact,RhoDotRecomb, &
+         RhoDotchargeX, RhoDotL, RhoNumDotL, RhoDotLx, RhoNumDotLx
+    real:: ReactionRate_H2O_dim, ReactionRate_H2O,ImpactRate_dim, &
+         RecombRate_dim, RecombRate 
     real:: Nu_C,Nu_C_dim, Nu_exchange!Collision frequency
     real,parameter::nu0=5.4745e-10!this is in cm^3/s
-
 
     !------------------------------------------------------------------
     iBlock = globalBLK
@@ -100,6 +108,8 @@ contains
 !!$    write(*,*)' Source_VC(Energy)=',Source_VC(Energy_,iTest,jTest,kTest)
 !!$    write(*,*)' Source_VC(P)=',Source_VC(p_,iTest,jTest,kTest)
 
+    ! Max number of reals saved in ModBlockData (NumDensNeutral is not saved!)
+    MaxBlockData = nIJK
 
     !put the interpolated data in ModBlockData     
     if(iBlock /= iBlockLast)then       

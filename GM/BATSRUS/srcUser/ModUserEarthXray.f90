@@ -2,13 +2,9 @@
 ! will only work with the normalization type set to "solarwind".  You 
 ! should set this in the PARAM.in file.
 
-
-
 !========================================================================
-Module ModUser
-  use ModNumConst, ONLY: cHalf,cTwo,cThree,&
-       cFour,cE1,cHundred,cHundredth,cZero,&
-       cOne,cTiny
+module ModUser
+  use ModNumConst, ONLY: cTiny
   use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK,MaxBlock
   use ModVarIndexes, ONLY: nVar
   use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, n_step
@@ -39,14 +35,18 @@ contains
   !=====================================================================
   subroutine user_init_session
 
-  use ModVarIndexes
-  use ModPhysics, ONLY: FaceState_VI, CellState_VI, SW_rho, BodyRho_I
-  use ModNumConst, ONLY: cTiny
-  use ModSize, ONLY: east_, west_, south_, north_, bot_, top_
-  use ModMain, ONLY: body1_
-  integer :: iBoundary
+    use ModVarIndexes
+    use ModPhysics, ONLY: FaceState_VI, CellState_VI, SW_rho, BodyRho_I
+    use ModSize, ONLY: east_, west_, south_, north_, bot_, top_
+    use ModMain, ONLY: body1_
+    use BATL_size, ONLY: nIJK
+    use ModBlockData, ONLY: MaxBlockData
+    integer :: iBoundary
 
     !-------------------------------------------------------------------
+
+    ! Maximum numer of reals stored as extra block data
+    MaxBlockData = MaxSumMhdVar*nIJK
 
     !\
     ! We are using this routine to initialize the arrays that control the
@@ -82,9 +82,7 @@ contains
     use ModGeometry, ONLY: r_BLK
     use ModAdvance,  ONLY: State_VGB, rhoion_, rhosw_
     use ModPhysics,  ONLY: BodyRho_I, sw_rho, rBody
-    use ModNumConst, ONLY: cTiny
     use ModBlockData,ONLY: put_block_data
-    implicit none
 
     integer :: iBlock,iBlockLast = -1
 
@@ -163,7 +161,6 @@ contains
     use ModMain,    ONLY: nStage, time_simulation, dt
     use ModBlockData,ONLY: get_block_data, put_block_data, use_block_data
 
-    implicit none
     integer,intent(in):: iStage,iBlock
     integer :: iBlockLast = -1
 
@@ -258,8 +255,6 @@ contains
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, GLOBALBLK
     use ModProcMH,   ONLY: iProc
     use ModBlockData,ONLY: get_block_data, put_block_data, use_block_data
-
-    implicit none
 
     integer,          intent(in) :: iBlock
     character(len=*), intent(in) :: NameVar
@@ -378,7 +373,6 @@ contains
     end if
           
   end subroutine user_set_plot_var
-
 
 end module ModUser
 
