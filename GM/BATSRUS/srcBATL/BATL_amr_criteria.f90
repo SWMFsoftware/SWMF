@@ -47,8 +47,8 @@ module BATL_amr_criteria
        DoSortAmrCrit = .true.,&
        DoSoftAmrCrit = .false. ,&
        DoAutoAmr     = .false.
-  
-       !DoStrictAmr = .true. ,& !--- Moved to BATL_tree
+
+  !DoStrictAmr = .true. ,& !--- Moved to BATL_tree
 
   ! Try to make geometric dependence for refinement/coarsening
   logical,public :: &
@@ -67,7 +67,7 @@ module BATL_amr_criteria
   !integer,public :: nDesiredRefine,nNodeRefine, &
   !     nDesiredCoarsen, nNodeCoarsen
 
-  
+
   ! Local variables
 
   ! Percentage with want refined and coarsen
@@ -83,9 +83,9 @@ module BATL_amr_criteria
   real :: cAmrWavefilter = 1.0e-2
   real, parameter :: cEpsilon = 1.0d-16 ! avoid zero in denominator
 
-  integer :: nExtCrit = 4 ! Number of External criteria, from BATSRUS
+  integer :: nExtCrit = 4 ! Number of External criteria, =4 from BATSRUS
   integer :: nExtCritUsed = 0 ! Number of External criteria actually used, 
-                              !4 :symmetry (BATSRUS)
+  !4 :symmetry (BATSRUS)
   integer :: nIntCrit = 0 ! Number of internal criteria, 2nd order err estimate
   integer :: nAmrCritOld = 0, nBlockOld = 0
 
@@ -181,7 +181,7 @@ contains
        end do
 
        ! add external refinement and coarsening thresholds to internals
-       do iCrit=1,nExtCrit
+       do iCrit = 1, nExtCrit
           RefineCritAll_I(nIntCrit+iCrit)  = RefineCritExt_I(iCrit)
           CoarsenCritAll_I(nIntCrit+iCrit) = CoarsenCritExt_I(iCrit)
           !print *,"iCrit ext :", iCrit, size(RefineCritExt_I)
@@ -773,7 +773,7 @@ contains
        !     write(*,'(2(f16.6),a8,4(f16.6))') &
        !     AmrCrit_IB(1:2,iBlock), " :: ", &
        !     RefineCritAll_I(1:2), CoarsenCritAll_I(1:2)
-   
+
        do iCrit = 1, nAmrCritUsed
 
           ! Decide refinement based on normalized error factor for each
@@ -855,28 +855,28 @@ contains
        DoSortAmrCrit = PercentCoarsen > 0.0 .or. PercentRefine > 0.0
     case("#DOAMR") 
        call read_var('DoAmr',DoAmr) !!!
-        if(DoAmr) then
-           call read_var('DnAmr',DnAmr)
-           call read_var('DtAmr',DtAmr)
-           call read_var('IsStrictAmr'  ,DoStrictAmr)
-        end if
-        if(.not. DoStrictAmr) DoSortAmrCrit = .true.
-     case("#AMRAREA")
-        UseAmrMask = .true.
-        call read_var('nAmrBox', nAmrBox)
-        if(nAmrBox > 0) then
-           allocate(AmrBox_DII(3,2,nAmrBox))
-           do iAmrBox=1,nAmrBox
-              call read_var('minX',AmrBox_DII(1,1,iAmrBox))
-              call read_var('maxX',AmrBox_DII(1,2,iAmrBox))
-              call read_var('minY',AmrBox_DII(2,1,iAmrBox))
-              call read_var('maxY',AmrBox_DII(2,2,iAmrBox))
-              call read_var('minZ',AmrBox_DII(3,1,iAmrBox))
-              call read_var('maxZ',AmrBox_DII(3,2,iAmrBox))
-           end do
+       if(DoAmr) then
+          call read_var('DnAmr',DnAmr)
+          call read_var('DtAmr',DtAmr)
+          call read_var('IsStrictAmr'  ,DoStrictAmr)
+       end if
+       if(.not. DoStrictAmr) DoSortAmrCrit = .true.
+    case("#AMRAREA")
+       UseAmrMask = .true.
+       call read_var('nAmrBox', nAmrBox)
+       if(nAmrBox > 0) then
+          allocate(AmrBox_DII(3,2,nAmrBox))
+          do iAmrBox=1,nAmrBox
+             call read_var('minX',AmrBox_DII(1,1,iAmrBox))
+             call read_var('maxX',AmrBox_DII(1,2,iAmrBox))
+             call read_var('minY',AmrBox_DII(2,1,iAmrBox))
+             call read_var('maxY',AmrBox_DII(2,2,iAmrBox))
+             call read_var('minZ',AmrBox_DII(3,1,iAmrBox))
+             call read_var('maxZ',AmrBox_DII(3,2,iAmrBox))
+          end do
 
-          end if
-     case default
+       end if
+    case default
        call CON_stop(NameSub//'incorect PARAM.in!')
     end select
 
@@ -910,7 +910,7 @@ contains
           end if
        end do
     end do; end do; end do
-    
+
   end subroutine restrict_amr_criteria
 
   !============================================================================
@@ -932,7 +932,7 @@ contains
     nAmrCritOld  = 0
     nIntCrit     = 0
     nBlockOld = 0
-  
+
 
   end subroutine clean_amr_criteria
 
@@ -948,7 +948,7 @@ contains
     use BATL_geometry, ONLY: init_geometry
     use BATL_amr, ONLY: do_amr, init_amr
     use BATL_size, ONLY: MaxDim, nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
-         nINode, nJNode, nKNode 
+         nI, nJ, nK 
     ! For Random generation
     integer :: jSeed
     logical :: IsFirst
@@ -1014,9 +1014,6 @@ contains
     TestState_VGB = 1.0
     iVarCrit_I(nIntCrit)=1
 
-    CoarsenCrit_I = -1.0
-    RefineCrit_I  = 1.0
-
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        do k = MinK, MaxK
@@ -1053,7 +1050,6 @@ contains
     Criterias_IB = 0.0
     RefineLevel_I =  1.0
     CoursenLevel_I = -1.0
-    nExtCrit = 4 
     nCritExt = 1
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) then
@@ -1068,7 +1064,7 @@ contains
 
     do iNode = 2, nNode-1
        if(iRank_A(iNode-1)>iRank_A(iNode)) then
-          write(*,*) " ERROR in ",NameSub, "Externa=Intenal test"
+          write(*,*) " ERROR in ",NameSub, " External=Intenal test"
        end if
     end do
 
@@ -1079,9 +1075,6 @@ contains
     RefineCrit_I  =  1.0
     TestState_VGB = 1.0
     iVarCrit_I(nIntCrit)=1
-
-    CoarsenCrit_I = -1.0
-    RefineCrit_I  = 1.0
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -1101,30 +1094,28 @@ contains
     nAmrBox = 1
     allocate(AmrBox_DII(3,2,nAmrBox))
     AmrBox_DII(1,1,1) = DomainMin_D(1) 
-    AmrBox_DII(1,2,1) = DomainMin_D(1) +  CellSize_DB(1,1)*max(nINode-1,1)
+    AmrBox_DII(1,2,1) = DomainMin_D(1) + CellSize_DB(1,1)*nI
     AmrBox_DII(2,1,1) = DomainMin_D(2) 
-    AmrBox_DII(2,2,1) = DomainMin_D(2) +  CellSize_DB(2,1)*max(nJNode-1,1)
+    AmrBox_DII(2,2,1) = DomainMin_D(2) + CellSize_DB(2,1)*nJ
     AmrBox_DII(3,1,1) = DomainMin_D(3) 
-    AmrBox_DII(3,2,1) = DomainMin_D(3) +  CellSize_DB(3,1)*max(nKNode-1,1)
-
-
-
-    
+    AmrBox_DII(3,2,1) = DomainMin_D(3) + CellSize_DB(3,1)*nK
 
     call set_amr_criteria(nVar,TestState_VGB)
 
-   do iBlock = 1, nBlock
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        if( iNode_B(iBlock) == 1) then
           if( AmrCrit_IB(1,iBlock)  == 0.0) &
-               write (*,*) " ERROR in ",NameSub, " in  Internal test masked cells", &
+               write (*,*) " ERROR in ",NameSub, &
+               " in  Internal test masked cells", &
                " AmrCrit_IB of Node == 1 shoud be none zero"
        else
-           if( AmrCrit_IB(1,iBlock)  /= 0.0) &
-               write (*,*) " ERROR in ",NameSub, " in  Internal test masked cells", &
+          if( AmrCrit_IB(1,iBlock)  /= 0.0) &
+               write (*,*) " ERROR in ",NameSub, &
+               " in  Internal test masked cells", &
                " AmrCrit_IB of Node /= 1 shoud be zero"
-        end if
-     end do
+       end if
+    end do
 
 !!$   ! Using any becouse of the ghost cells
 !!$    do iBlock = 1, nBlock
@@ -1147,9 +1138,6 @@ contains
     RefineCrit_I  =  1.0
     TestState_VGB = 1.0
     iVarCrit_I(nIntCrit)=1
-
-    CoarsenCrit_I = -1.0
-    RefineCrit_I  = 1.0
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -1213,7 +1201,6 @@ contains
     if(iRatio > 1 .and. jRatio > 1 .and. kRatio >1 ) then
 
        nCritExt = 0
-       nExtCrit = 4 
        nIntCrit = 2
        iVarCrit_I(1:nIntCrit)=(/ 1,2 /)
        do iBlock=1,nBlock
@@ -1277,7 +1264,6 @@ contains
 
     PercentRefine  = 30.0
     PercentCoarsen = 10.0
-    nExtCrit = 4 
     nCritExt = 1
     nIntCrit = 1
 
@@ -1317,7 +1303,6 @@ contains
     Criterias_IB = 0.0
     RefineLevel_I =  1.0
     CoursenLevel_I = -1.0
-    nExtCrit = 4 
     nCritExt = 0
     nIntCrit = 1
     iStatusNew_A = Unset_
@@ -1407,4 +1392,4 @@ contains
 
   end subroutine test_amr_criteria
 
-  end module BATL_amr_criteria
+end module BATL_amr_criteria
