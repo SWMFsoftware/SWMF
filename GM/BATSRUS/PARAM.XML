@@ -5752,7 +5752,7 @@ user file. This command should be used together with the  #LASERPULSE command.
 The SuperGaussianOrder parameter determines the profile of each laser beam.
 The irradiance profile of the beam is of the form
 exp[ - (r / rBeam)**SuperGaussianOrder],
-where r is the distance to the titled central ray of the beam and rBeam is
+where r is the distance to the tilted central ray of the beam and rBeam is
 defined by the #LASERBEAMS command. The default value for SuperGaussianOrder
 is 4.2
 </command>

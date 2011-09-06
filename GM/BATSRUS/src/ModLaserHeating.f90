@@ -1338,7 +1338,7 @@ contains
 
     ! Calculate the source terms due to laser heating
 
-    use ModSize, ONLY: nI, nJ, nK, MaxBlock
+    use ModSize, ONLY: nI, nJ, nK
     use ModPhysics, ONLY: Si2No_V, UnitEnergydens_, UnitX_, UnitT_
     use ModMain, ONLY: Time_Simulation, dt, nBlock, UnusedBLK
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
@@ -1388,7 +1388,7 @@ contains
     if(UseNonConservative) &
          call stop_mpi(NameSub//' does not work with non-conservative')
 
-    do iBlock = 1, MaxBlock
+    do iBlock = 1, nBlock
        if(UnusedBLK(iBlock))CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
