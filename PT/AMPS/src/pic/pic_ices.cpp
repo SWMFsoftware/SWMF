@@ -124,60 +124,95 @@ void PIC::ICES::retriveSWMFdata(const char *DataFile) {
   system(command);
 
   MPI_Barrier(MPI_COMM_WORLD);
+
+  if (PIC::Mesh::mesh.ThisThread==0) {
+    printf("Combine individual trajectory files into a single file\n");
+
+    FILE *fout;
+    int thread;
+    char fname[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],str1[_MAX_STRING_LENGTH_PIC_];
+    CiFileOperations fin;
+
+    fout=fopen("icesCellCenterCoordinates.MHD.dat","w");
+
+    for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
+      sprintf(fname,"icesCellCenterCoordinates.thread=%i.MHD.dat",thread);
+      fin.openfile(fname);
+
+      while (fin.eof()==false) {
+        if (fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_)==false)  {
+          break;
+        }
+
+        fin.CutInputStr(str1,str);
+
+        if ((strcmp("#VARIABLES",str1)==0)||(strcmp("#START",str1)==0)) {
+          if (thread==0) fprintf(fout,"%s %s\n",str1,str);
+        }
+        else fprintf(fout,"%s %s\n",str1,str);
+      }
+
+      fin.closefile();
+
+
+    }
+
+    fclose(fout);
+  }
+
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
   if (PIC::Mesh::mesh.ThisThread==0) printf("ICES done\n");
 }
 
 //====================================================
 //read and parse the data file from SWMF
-void PIC::ICES::readSWMFdata(const double MeanIonMass) {
+void PIC::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   cDataNodeSWMF dataSWMF;
-  CiFileOperations ices;
-  int status,idim;
+  static CiFileOperations ices;
   long int nd;
+  int status,idim,i,j,k;
   char *offset;
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+
   PIC::Mesh::cDataCenterNode *CenterNode;
   char str[_MAX_STRING_LENGTH_PIC_],str1[_MAX_STRING_LENGTH_PIC_],*endptr;
 
-  sprintf(str,"icesCellCenterCoordinates.thread=%i.MHD.dat",PIC::Mesh::mesh.ThisThread);
-  ices.openfile(str);
 
-  ices.GetInputStr(str,sizeof(str));
-  ices.GetInputStr(str,sizeof(str));
-
-  PIC::Mesh::mesh.resetNodeProcessedFlag();
-
-  //read the data file
 #if DIM == 3
-  const long int ndMax=(2*_GHOST_CELLS_X_+_BLOCK_CELLS_X_)*(2*_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_)*(2*_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_);
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
 #elif DIM == 2
-  const long int ndMax=(2*_GHOST_CELLS_X_+_BLOCK_CELLS_X_)*(2*_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_);
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  const int kMin=0,kMax=0;
 #elif DIM == 1
-  const long int ndMax=(2*_GHOST_CELLS_X_+_BLOCK_CELLS_X_)
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=0,jMax=0;
+  const int kMin=0,kMax=0;
 #endif
 
-  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
-    for (nd=0;nd<ndMax;nd++) {
-      CenterNode=node->block->GetCenterNode(nd);
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    ices.openfile("icesCellCenterCoordinates.MHD.dat");
 
-      if (CenterNode!=NULL) if (CenterNode->nodeDescriptor.nodeProcessedFlag==_AMR_FALSE_) {
-        CenterNode->nodeDescriptor.nodeProcessedFlag=_AMR_TRUE_;
+    ices.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+    ices.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+  }
 
-        //the read section
-        ices.GetInputStr(str,sizeof(str));
+  //read the data file
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+      //the read section
+      ices.GetInputStr(str,sizeof(str));
+      ices.CutInputStr(str1,str);
+      ices.CutInputStr(str1,str);
+      ices.CutInputStr(str1,str);
+      ices.CutInputStr(str1,str);
 
-        ices.CutInputStr(str1,str);
-        ices.CutInputStr(str1,str);
-        ices.CutInputStr(str1,str);
-        ices.CutInputStr(str1,str);
+      status=strtol(str1,&endptr,10);
 
-        status=strtol(str1,&endptr,10);
-
-        if (status!=0) {
-          ices.error("the point is not found");
-          exit(__LINE__,__FILE__,"Error: the extracted point is not found");
-        }
-
+      if (status==0) {
         //read the row data
         ices.CutInputStr(str1,str);
         dataSWMF.swNumberDensity=strtod(str1,&endptr);
@@ -194,7 +229,10 @@ void PIC::ICES::readSWMFdata(const double MeanIonMass) {
 
         ices.CutInputStr(str1,str);
         dataSWMF.swPressure=strtod(str1,&endptr);
+      }
 
+
+      if (startNode->block!=NULL) {
         //calculation of other plasma parameters
         /* ---------- calculation equations
             pV=NkT
@@ -202,6 +240,8 @@ void PIC::ICES::readSWMFdata(const double MeanIonMass) {
             p=2*n*k*T assuming quasi neutrality ni=ne=n and Ti=Te=T
             T=p/(2*n*T)
         ---------- end of calculation equations */
+
+
 
         dataSWMF.swNumberDensity/=MeanIonMass; // MHD output in [amu/m^3], mi = mean ion mass
         dataSWMF.swTemperature=dataSWMF.swPressure/(2.0*dataSWMF.swNumberDensity*Kbol);
@@ -211,7 +251,17 @@ void PIC::ICES::readSWMFdata(const double MeanIonMass) {
         dataSWMF.E[2]=-(dataSWMF.swVel[0]*dataSWMF.B[1]-dataSWMF.swVel[1]*dataSWMF.B[0]);
 
         //save the data on the mesh node
+        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        CenterNode=startNode->block->GetCenterNode(nd);
+
+        if (CenterNode==NULL) continue;
+
         offset=CenterNode->GetAssociatedDataBufferPointer();
+
+        if (status!=0) { //check the status of the reading
+          ices.error("the point is not found");
+          exit(__LINE__,__FILE__,"Error: the extracted point is not found");
+        }
 
         for (idim=0;idim<3;idim++) {
           *(idim+(double*)(offset+ElectricFieldOffset))=dataSWMF.E[idim];
@@ -222,13 +272,16 @@ void PIC::ICES::readSWMFdata(const double MeanIonMass) {
         *(double*)(offset+PlasmaPressureOffset)=dataSWMF.swPressure;
         *(double*)(offset+PlasmaNumberDensityOffset)=dataSWMF.swNumberDensity;
         *(double*)(offset+PlasmaTemperatureOffset)=dataSWMF.swTemperature;
-
-
       }
     }
   }
+  else {
+    int nDownNode;
 
-  ices.closefile();
+    for (nDownNode=0;nDownNode<(1<<DIM);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) readSWMFdata(MeanIonMass,startNode->downNode[nDownNode]);
+  }
+
+  if (startNode==PIC::Mesh::mesh.rootTree) ices.closefile();
 }
 
 //====================================================
@@ -342,48 +395,96 @@ void PIC::ICES::InterpolateSWMF(PIC::Mesh::cDataCenterNode** InterpolationList,d
   }
 }
 
-
-
 //====================================================
-void PIC::ICES::createCellCenterCoordinateList() {
-  FILE *fout;
-  char fname[_MAX_STRING_LENGTH_PIC_];
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
-  long int nd;
-  PIC::Mesh::cDataCenterNode *CenterNode;
-  double *x;
-  int idim;
+//the total number of cells on the mesh
+long int PIC::ICES::getTotalCellNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  long int res=0;
+  int nDownNode;
+  bool flag=false;
 
-  //generate the total file name and open the file
-  sprintf(fname,"icesCellCenterCoordinates.thread=%i",PIC::Mesh::mesh.ThisThread);
-  fout=fopen(fname,"w");
-  PIC::Mesh::mesh.resetNodeProcessedFlag();
-
-  fprintf(fout,"#START\n");
-
-  //output the cell's coordinates
-
-#if DIM == 3
-  const long int ndMax=(2*_GHOST_CELLS_X_+_BLOCK_CELLS_X_)*(2*_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_)*(2*_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_);
-#elif DIM == 2
-  const long int ndMax=(2*_GHOST_CELLS_X_+_BLOCK_CELLS_X_)*(2*_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_);
-#elif DIM == 1
-  const long int ndMax=(2*_GHOST_CELLS_X_+_BLOCK_CELLS_X_)
-#endif
-
-  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
-    for (nd=0;nd<ndMax;nd++) {
-      CenterNode=node->block->GetCenterNode(nd);
-
-      if (CenterNode!=NULL) if (CenterNode->nodeDescriptor.nodeProcessedFlag==_AMR_FALSE_) {
-        CenterNode->nodeDescriptor.nodeProcessedFlag=_AMR_TRUE_;
-        x=CenterNode->GetX();
-
-        for (idim=0;idim<DIM;idim++) fprintf(fout,"%e ",x[idim]);
-        fprintf(fout,"\n");
-      }
-    }
+  for (nDownNode=0;nDownNode<(1<<DIM);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) {
+    res+=getTotalCellNumber(startNode->downNode[nDownNode]);
+    flag=true;
   }
 
-  fclose(fout);
+  if (flag==false) res=1;
+
+  return res;
+}
+
+//====================================================
+void PIC::ICES::createCellCenterCoordinateList(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  static FILE *fout;
+  char fname[_MAX_STRING_LENGTH_PIC_];
+  double x[3]={0.0,0.0,0.0},*xNodeMin,*xNodeMax;
+  int idim,i,j,k;
+
+  static long int nTotalCellNumber,startCellNumber,stopCellNumber,CellCounter;
+
+#if DIM == 3
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+#elif DIM == 2
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  const int kMin=0,kMax=0;
+#elif DIM == 1
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=0,jMax=0;
+  const int kMin=0,kMax=0;
+#endif
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    //generate the total file name and open the file
+    sprintf(fname,"icesCellCenterCoordinates.thread=%i",PIC::Mesh::mesh.ThisThread);
+    fout=fopen(fname,"w");
+    PIC::Mesh::mesh.resetNodeProcessedFlag();
+
+    fprintf(fout,"#START\n");
+
+    //determine the limits of the cells that are printed
+    long int nCellPerProcessor;
+
+    nTotalCellNumber=getTotalCellNumber(PIC::Mesh::mesh.rootTree);
+    nCellPerProcessor=nTotalCellNumber/PIC::Mesh::mesh.nTotalThreads;
+
+    startCellNumber=PIC::Mesh::mesh.ThisThread*nCellPerProcessor;
+    stopCellNumber=startCellNumber+nCellPerProcessor-1;
+    CellCounter=0;
+
+    if (PIC::Mesh::mesh.ThisThread==PIC::Mesh::mesh.nTotalThreads-1) stopCellNumber=nTotalCellNumber-1;
+  }
+
+  //output the cell's coordinates
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    if ((startCellNumber<=CellCounter)&&(CellCounter<=stopCellNumber)) {
+      xNodeMin=startNode->xmin;
+      xNodeMax=startNode->xmax;
+
+      for (k=kMin;k<=kMax;k++) {
+        if (DIM==3) x[2]=xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k);
+
+        for (j=jMin;j<=jMax;j++) {
+          if (DIM>=2) x[1]=xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j);
+
+          for (i=iMin;i<=iMax;i++) {
+            x[0]=xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i);
+
+            for (idim=0;idim<DIM;idim++) fprintf(fout,"%15.10e ",x[idim]);
+            fprintf(fout,"\n");
+          }
+        }
+      }
+    }
+
+    CellCounter++;
+  }
+  else {
+    int nDownNode;
+
+    for (nDownNode=0;nDownNode<(1<<DIM);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) createCellCenterCoordinateList(startNode->downNode[nDownNode]);
+  }
+
+  if (startNode==PIC::Mesh::mesh.rootTree) fclose(fout);
 }
