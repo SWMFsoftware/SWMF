@@ -1302,11 +1302,12 @@ the proper calculation of line-of-sight plots.
 <command name="COORDSYSTEM" alias="COORDINATESYSTEM" multiple="T">
 	<parameter name="TypeCoordSystem" type="string" input="select">
 		<option name="GSM" default="$NameComp eq 'GM'"/>
+		<option name="GSE"                            />
 		<option name="HGR" default="$NameComp eq 'SC'"/>
 		<option name="HGR" default="$NameComp eq 'LC'"/>
 		<option name="HGI" default="$NameComp eq 'IH'"/>
 		<option name="HGI" default="$NameComp eq 'OH'"/>
-		<option name="HGC" 		               />
+		<option name="HGC" 		              />
 	</parameter>
 
 #COORDSYSTEM
@@ -1316,14 +1317,16 @@ TypeCoordSystem defines the coordinate system for the component.
 The coordinate systems are defined in share/Library/src/CON_axes.
 Here we provide general suggestions.
 
-For GM (Global Magnetopshere) currently only one coordinate system 
-is available: "GSM" which is aligned with the (moving) magnetic axis.
-In the future the essentially inertial "GSE" system should also be an option 
-(necessary for Uranus and Neptune).
+For GM (Global Magnetopshere) the default coordinate system is "GSM" 
+with the X axis pointing towards the Sun, and the (moving) 
+magnetic axis contained in the X-Z plane. The inertial forces are
+neglected. The essentially inertial "GSE" system is also available,
+but it is not fully tested. 
 
-For SC (Solar Corona) and LC (Lower Corona) one should always use the corotating HGR 
-system to get an accurate solution even for complicated active regions. 
-Using an inertial frame would result in huge numerical errors near the Sub.
+For SC (Solar Corona) and LC (Lower Corona) one should always use the 
+corotating HGR system to get an accurate solution even for complicated active 
+regions. 
+Using an inertial frame would result in huge numerical errors near the Sun.
 
 For time accurate IH solutions (e.g. CME propagation)
 one should use the inertial HGI system so the grid can be refined
@@ -1337,8 +1340,10 @@ switched to HGI. The necessary transformation of the velocity
 
 For quiet steady state IH solutions the HGR system can be used.
 Note however that the corotating systems may not work well if the IH
-domain is extended way beyond 1AU. In this case the inertial HGI
-system should be used even for obtaining the initial state.
+domain is extended way beyond 1AU, becasue the boundary
+condition can become inflow type at the corners of a Cartesian domain.
+In this case the inertial HGI system should be used in time accurate mode
+even for obtaining the initial state.
 
 For OH one should always use the inertial HGI system. A rotating frame
 would have extremeley fast rotational speeds.
@@ -1348,7 +1353,7 @@ using the #ROTATEHGR and #ROTATEHGI commands of the SWMF. This can be used to
 align the interesting plane of the simulation with the grid.
 
 The default is component dependent: 
-"GSM" for GM, "HGI" for IH and OH, and "HGR" for SC.
+"GSM" for GM, "HGR" for SC and LC, and "HGI" for IH and OH.
 </command>
 
 <command name="GRIDGEOMETRY" alias="COVARIANTGEOMETRY" if="$_IsFirstSession">
@@ -5740,7 +5745,7 @@ X axis. The yBeam has to do with the Y coordinate of the initial positions.
 The AmplitudeRel gives the relative intensity of the beam.
 </command>
 
-<command name="LASERBEAMPROFILE"
+<command name="LASERBEAMPROFILE">
          <parameter name="SuperGaussianOrder" type="real"/>
 
 #LASERBEAMPROFILE

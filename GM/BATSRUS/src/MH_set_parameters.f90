@@ -1919,9 +1919,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
         select case(NameThisComp)
         case('GM')
-           if(TypeCoordSystem /= 'GSM')call stop_mpi(NameSub// &
-                ' ERROR: cannot handle coordinate system '&
-                //TypeCoordSystem)
+           if(TypeCoordSystem /= 'GSM' .and. TypeCoordSystem /= 'GSE') &
+                call stop_mpi(NameSub// &
+                ' ERROR: cannot handle coordinate system '//TypeCoordSystem)
         case('IH','OH')
            select case(TypeCoordSystem)
            case('HGI')
