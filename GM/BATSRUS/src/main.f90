@@ -293,10 +293,10 @@ contains
     ! Try to estimate the remaining length of the run
     if(UseTiming .and. iProc==0 &
          .and. dn_progress2>0 .and. mod(n_step,dn_progress2) == 0)then
-       write(*,*)
        nIterExpect = nITER-iteration_number
-       if(time_accurate .and. Dt>0.0)then
-          nIterExpectTime = (t_max-time_simulation)/Dt*Si2No_V(UnitT_)
+       if(time_accurate .and. Dt > 0.0 .and. t_max > 0.0)then
+          nIterExpectTime = min( real(huge(1)), &
+               (t_max - time_simulation)/Dt*Si2No_V(UnitT_) )
           if(nIterExpect < 0)then
              nIterExpect = nIterExpectTime
           else if(nIterExpectTime > 0)then
