@@ -22,11 +22,10 @@ module ModUser
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
-       'Chromosphere - solar wind model with Alfven waves - Oran, van der Holst'
-
+       'Chromosphere to solar wind model with Alfven waves - Oran, van der Holst'
 
   ! Input parameters for chromospheric inner BC's
-  logical :: UseChromoBc = .true.
+  logical :: UseChromoBc = .true., UseFloatUpar = .false., UseExtrapolatedEwave = .true.
   real    :: WaveDeltaU = 0.0
   real    :: nChromoSi = 0.0, tChromoSi = 0.0
   real    :: nChromo = 0.0, RhoChromo = 0.0, tChromo = 0.0
@@ -53,8 +52,8 @@ module ModUser
   real       :: WaveDissip_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)      = 1.e-30
   real       :: WaveDissipPlus_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)  = 1.e-30
   real       :: WaveDissipMinus_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock) = 1.e-30
-  real       :: DissipLengthMin_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)    = 1.e-30
-  real       :: DissipLengthMax_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)    = 1.e-30
+  real       :: DissipLengthMin_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock) = 1.e-30
+  real       :: DissipLengthMax_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock) = 1.e-30
   
   ! Input parameters for two-temperature effects
   real :: TeFraction, TiFraction
@@ -69,6 +68,7 @@ contains
     use ModProcMH,    ONLY: iProc
     use ModReadParam, ONLY: read_line, read_command, read_var
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
+    use ModPhysics,   ONLY: DipoleStrengthSi
 
     character (len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
@@ -85,13 +85,36 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
 
        select case(NameCommand)
-
+          
+       ! This commans is used when the inner boundary is the chromosphere   
        case("#CHROMOBC")
           call read_var('UseChromoBc',UseChromoBc)
           if(UseChromoBc) then
              call read_var('WaveDeltaU', WaveDeltaU)
              call read_var('nChromoSi', nChromoSi)
              call read_var('tChromoSi', tChromoSi)
+             call read_var('UseFloatUpar',UseFloatUpar)
+             call read_var('UseExtrapolatedEwave',UseExtrapolatedEwave)
+          end if
+
+       ! This command is used when the inner boundary is the coronal base
+       ! Replaces WSA - based wave boundary conditions
+       case("#CORONAWAVEBC")
+          call read_var('UseScaledWaveBcs', UseScaledWaveBcs)
+          if (UseScaledWaveBcs) then
+             if (UseChromoBc) call CON_stop('ERROR in '//NameSub//'- conflicting wave BCs')
+             call read_var('WaveEnergyFactor', WaveEnergyFactor)
+             call read_var('WaveEnergyPower',  WaveEnergyPower)
+             call read_var('ExpFactorInvMin',  ExpFactorInvMin)
+          end if
+
+       case('#SOLARDIPOLE')
+          call read_var('DipoleStrengthSi',DipoleStrengthSi)
+       case("#WAVEDISSIPATION")
+          call read_var('UseWaveDissipation', UseWaveDissipation)
+          if(UseWaveDissipation) then 
+             call read_var('LmaxIo', LmaxIo)
+             call read_var('Lratio', Lratio)
           end if
 
        case('#MAGHEATING')
@@ -103,22 +126,6 @@ contains
        case("#PARKERIC")
           call read_var('nCoronaSi', nCoronaSi)
           call read_var('tCoronaSi', tCoronaSi)
-
-       case("#WAVEDISSIPATION")
-          call read_var('UseWaveDissipation', UseWaveDissipation)
-          if(UseWaveDissipation) then 
-             call read_var('LmaxIo', LmaxIo)
-             call read_var('Lratio', Lratio)
-          end if
-
-       case("#WAVEBOUNDARY")
-          call read_var('UseScaledWaveBcs', UseScaledWaveBcs)
-          if (UseScaledWaveBcs) then
-             if (UseChromoBc) call CON_stop('ERROR in '//NameSub//'- conflicting wave BCs')
-             call read_var('WaveEnergyFactor', WaveEnergyFactor)
-             call read_var('WaveEnergyPower',  WaveEnergyPower)
-             call read_var('ExpFactorInvMin',  ExpFactorInvMin)
-          end if
          
        case('#ELECTRONHEATING')
           ! Steven Cranmer his electron heating fraction (Apj 2009)
@@ -264,17 +271,15 @@ contains
 
   end subroutine get_plasma_parameters_base
   !============================================================================
-  subroutine get_wave_energy_base(Btot, Ewave)
+  subroutine get_wave_energy_base(FullB, Ewave)
 
     ! Provides the distribution of the total Alfven wave energy density
     ! at the lower boundary
 
     use ModPhysics,    ONLY: Si2No_V, UnitU_
 
-    real, intent(in) :: Btot
+    real, intent(in) :: FullB
     real, intent(out):: Ewave
-
-    real :: RhoBase, Tbase
 
     character (len=*), parameter :: NameSub = 'get_wave_energy_base'
     !--------------------------------------------------------------------------
@@ -286,7 +291,7 @@ contains
 
     else if(UseScaledWaveBcs)then
       
-       Ewave = WaveEnergyFactor*(Btot)**WaveEnergyPower
+       Ewave = WaveEnergyFactor*(FullB)**WaveEnergyPower
 
     end if
 
@@ -425,14 +430,14 @@ contains
           if (Br >= 0.0) then
              State_VGB(WaveFirst_,i,j,k,iBlock) =  &
                   State_VGB(rho_,i,j,k,iBlock)*(WaveDeltaU*Si2No_V(UnitU_))**2
-             State_VGB(WaveLast_,i,j,k,iBlock) = 1e-12
+             State_VGB(WaveLast_,i,j,k,iBlock) = 1e-30
           else
              State_VGB(WaveLast_,i,j,k,iBlock) =  &
                   State_VGB(rho_,i,j,k,iBlock)*(WaveDeltaU*Si2No_V(UnitU_))**2
-             State_VGB(WaveFirst_,i,j,k,iBlock) = 1e-12
+             State_VGB(WaveFirst_,i,j,k,iBlock) = 1e-30
           end if
        else
-          State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 1e-12
+          State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 1e-30
        end if
 
     end do; end do; end do
@@ -446,6 +451,133 @@ contains
     call update_states_MHD(iStage, iBlock)
 
   end subroutine user_update_states
+  !============================================================================
+  subroutine write_ghost_and_boundary
+
+    ! output ghost cells and true cells values for blocks that cross the
+    ! inner boundary, in a meridional plane close to the x=0 plane
+
+    ! ------ SPHERICAL GRID ONLY ------------
+
+    use ModProcMH,     ONLY: iProc
+    use ModIoUnit,     ONLY: UNITTMP_
+    use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, rho_, p_, Bx_, Bz_
+    use ModMain,       ONLY: iteration_number, unusedBLK, nBlock
+    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, r_BLK
+    use ModAdvance,    ONLY: State_VGB
+
+    integer            :: iBLK, i ,j ,k
+    real               :: x, y, z, r, x_D(3)
+    real               :: IPlus, IMinus, B, Br, rho, p, Qplus, Qminus
+    character(len=40)  :: FileNameTec 
+    character(len=11)  :: NameStage
+    character(len=7)   :: NameProc
+
+    character(len=*),parameter   :: NameSub='write_ghost_and_boundary'
+    !-------------------------------------------------------------------
+    write(NameStage,'(i5.5)') iteration_number
+    write(NameProc, '(i4.4)') iProc
+    FileNameTec = &
+         'SC/IO2/Boundary_n_'//trim(NameStage)//'_p'//trim(NameProc)//'.txt'
+    open(UNITTMP_, file=FileNameTec, form='formatted', access='sequential', &
+         status = 'replace')
+    write(*,*) 'Writing ', FileNameTec
+      
+    ! choose a single plane (more conditions inside loop)
+    j = 4
+    k = 1
+    do iBLK = 1, nBlock
+       ! Only choose blocks that cross the boundary
+       if ( minval(r_BLK(:,:,:,iBLK)) <= 1. .and. &
+            maxval(r_BLK(:,:,:,iBLK)) > 1.) then
+
+          ! Advance in the r direction
+          do i=-1,nI+2
+
+             x=x_BLK(i,j,k,iBLK)
+             ! Extract data in the x=0 plane only
+             if (abs(X) > 0.1) CYCLE
+             
+             y = y_BLK(i,j,k,iBLK)
+             z = z_BLK(i,j,k,iBLK)
+             r = r_BLK(i,j,k,iBLK)
+             x_D = (/x,y,z/)
+             
+             Iplus = State_VGB(WaveFirst_,i,j,k,iBLK)
+             Iminus = State_VGB(WaveLast_,i,j,k,iBLK)
+             Qplus = WaveDissipPlus_GB(i,j,k,iBLK)
+             Qminus = WaveDissipMinus_GB(i,j,k,iBLK)
+             B = sum(State_VGB(Bx_:Bz_,i,j,k,iBLK)**2)
+             Br = sum(x_D*State_VGB(Bx_:Bz_,i,j,k,iBLK))
+             rho = State_VGB(rho_,i,j,k,iBLK)
+             p = State_VGB(p_,i,j,k,iBLK)
+
+             ! write to file
+             write(UNITTMP_, '(17e12.5)') real(i),real(j),real(k),&
+                  real(iBLK), real(iProc),&
+                  x, y, z, r, Iplus, Iminus, Qplus, Qminus, B, Br,  rho, p
+          end do
+
+       end if
+    end do
+    close(UNITTMP_)
+
+  end subroutine write_ghost_and_boundary
+  !============================================================================
+  subroutine write_b0
+
+    ! output b0 components in all cells
+
+    use ModProcMH,     ONLY: iProc
+    use ModIoUnit,     ONLY: UNITTMP_
+    use ModMain,       ONLY: iteration_number, unusedBLK, nBlock
+    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, r_BLK
+    use ModAdvance,    ONLY: B0_DGB
+
+    integer            :: iBlock, i ,j ,k
+    real               :: x, y, z, r
+    real               :: B0_x, B0_y, B0_z
+    character(len=40)  :: FileNameTec 
+    character(len=11)  :: NameStage
+    character(len=7)   :: NameProc
+
+    character(len=*),parameter   :: NameSub='write_b0'
+    !-------------------------------------------------------------------
+    write(NameStage,'(i5.5)') iteration_number
+    write(NameProc, '(i4.4)') iProc
+    FileNameTec = &
+         'SC/IO2/B0_n_'//trim(NameStage)//'_p'//trim(NameProc)//'.txt'
+    open(UNITTMP_, file=FileNameTec, form='formatted', access='sequential', &
+         status = 'replace')
+    write(*,*) 'Writing ', FileNameTec
+      
+    ! choose a single plane (more conditions inside loop)
+    j = 4
+    do iBlock = 1, nBlock
+       ! Advance in the r direction
+       do k=-1,nK+2 ; do i=-1,nI+2
+
+          x=x_BLK(i,j,k,iBlock)
+          ! Extract data in the x=0 plane only
+          if (abs(X) > 0.1) CYCLE
+             
+          y = y_BLK(i,j,k,iBlock)
+          z = z_BLK(i,j,k,iBlock)
+          r = r_BLK(i,j,k,iBlock)
+             
+          B0_x = B0_DGB(1,i,j,k,iBlock)
+          B0_y = B0_DGB(2,i,j,k,iBlock)
+          B0_z = B0_DGB(3,i,j,k,iBlock)
+
+          ! write to file
+          write(UNITTMP_, '(17e12.5)') real(i),real(j),real(k),&
+               real(iBlock), real(iProc),&
+               x, y, z, r, B0_x, B0_y, B0_z
+       end do; end do
+    end do
+    close(UNITTMP_)
+
+  end subroutine write_b0
   !============================================================================
   subroutine user_calc_sources
 
@@ -584,6 +716,12 @@ contains
     ! Define log variable to be saved::
     !/
     select case(TypeVar)
+    case('bcs')
+       call write_ghost_and_boundary
+
+    case('b0cells')
+       call write_b0
+
     case('eint')
        do iBlock = 1, nBlock
           if(unusedBLK(iBlock)) CYCLE
@@ -612,6 +750,81 @@ contains
        end do
        VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
 
+    case('b')
+       do iBlock = 1, nBlock
+          if(unusedBLK(iBlock)) CYCLE
+          if(UseB0)then
+             tmp1_BLK(:,:,:,iBlock) = &
+                  sqrt(sum((B0_DGB(:,:,:,:,iBlock) + State_VGB(Bx_:Bz_,:,:,:,iBlock))**2))
+          else
+             tmp1_BLK(:,:,:,iBlock) = sqrt(sum(State_VGB(Bx_:Bz_,:,:,:,iBlock)**2))
+          end if
+       end do
+       VarValue = integrate_BLK(1,tmp1_BLK)
+
+    case('b0')
+       do iBlock = 1, nBlock
+          if(unusedBLK(iBlock)) CYCLE
+          if(UseB0)then
+             tmp1_BLK(:,:,:,iBlock) = & 
+                  sqrt(sum(B0_DGB(:,:,:,:,iBlock)**2)) 
+          else
+             tmp1_BLK(:,:,:,iBlock) = -7777.
+          end if
+       end do
+       VarValue = integrate_BLK(1,tmp1_BLK)
+
+    case('b1')
+       do iBlock = 1, nBlock
+          if(unusedBLK(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = &
+               sqrt(sum(State_VGB(Bx_:Bz_,:,:,:,iBlock)**2))
+       end do
+       VarValue = integrate_BLK(1,tmp1_BLK)
+
+    case('bx0')
+       do iBlock = 1, nBlock
+          if(unusedBLK(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = B0_DGB(1,:,:,:,iBlock)
+       end do
+       VarValue = integrate_BLK(1,tmp1_BLK)
+
+    case('by0')
+       do iBlock = 1, nBlock
+          if(unusedBLK(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = B0_DGB(2,:,:,:,iBlock)
+       end do
+       VarValue = integrate_BLK(1,tmp1_BLK)
+
+    case('bz0')
+       do iBlock = 1, nBlock
+          if(unusedBLK(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = B0_DGB(3,:,:,:,iBlock)
+       end do
+       VarValue = integrate_BLK(1,tmp1_BLK)
+
+    case('bx1')
+       do iBlock = 1, nBlock
+          if(unusedBLK(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock)
+       end do
+       VarValue = integrate_BLK(1,tmp1_BLK)
+
+    case('by1')
+       do iBlock = 1, nBlock
+          if(unusedBLK(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = State_VGB(By_,:,:,:,iBlock)
+       end do
+       VarValue = integrate_BLK(1,tmp1_BLK)
+
+    case('bz1')
+       do iBlock = 1, nBlock
+          if(unusedBLK(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock)
+       end do
+       VarValue = integrate_BLK(1,tmp1_BLK)
+
+       
     case('vol')
        tmp1_BLK(:,:,:,iBlock) = 1.0
        VarValue = integrate_BLK(1,tmp1_BLK)
@@ -685,16 +898,16 @@ contains
     case('lmin')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
 
-          PlotVar_G(i,j,k) = max(1e-30,DissipLengthMin_GB(i,j,k,iBlock) * &
-               No2Si_V(UnitX_))
+          PlotVar_G(i,j,k) = DissipLengthMin_GB(i,j,k,iBlock) * &
+               No2Si_V(UnitX_)
 
        end do; end do ; end do
 
     case('lmax')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
 
-          PlotVar_G(i,j,k) = max(1e-30,DissipLengthMax_GB(i,j,k,iBlock) * &
-               No2Si_V(UnitX_))
+          PlotVar_G(i,j,k) = DissipLengthMax_GB(i,j,k,iBlock) * &
+               No2Si_V(UnitX_)
 
        end do; end do ; end do
 
@@ -716,6 +929,30 @@ contains
 
        end do; end do ; end do
 
+    case('bx0')
+
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+
+          PlotVar_G(i,j,k) = B0_DGB(1,i,j,k,iBlock)
+
+       end do; end do ; end do
+
+    case('by0')
+
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+
+          PlotVar_G(i,j,k) = B0_DGB(2,i,j,k,iBlock)
+
+       end do; end do ; end do
+
+    case('bz0')
+
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+
+          PlotVar_G(i,j,k) = B0_DGB(3,i,j,k,iBlock)
+
+       end do; end do ; end do
+
     case('te')
        NameIdlUnit = 'K'
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
@@ -733,34 +970,6 @@ contains
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
           PlotVar_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
                /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
-       end do; end do; end do
-
-    case('deltabperb')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-          if(UseB0)then
-             FullB = sqrt(sum((B0_DGB(:,i,j,k,iBlock) &
-                  + State_VGB(Bx_:Bz_,i,j,k,iBlock))**2))
-          else
-             FullB = sqrt(sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2))
-          end if
-          Ewave = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-          PlotVar_G(i,j,k) = sqrt(Ewave)/max(FullB, cTolerance)
-       end do; end do; end do
-
-    case('beta')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-          if(UseB0)then
-             FullB2 = sum((B0_DGB(:,i,j,k,iBlock) &
-                  + State_VGB(Bx_:Bz_,i,j,k,iBlock))**2)
-          else
-             FullB2 = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
-          end if
-          if(UseElectronPressure)then
-             p = State_VGB(p_,i,j,k,iBlock) + State_VGB(Pe_,i,j,k,iBlock)
-          else
-             p = State_VGB(p_,i,j,k,iBlock)
-          end if
-          PlotVar_G(i,j,k) = 2.0*p/max(FullB2, cTolerance)
        end do; end do; end do
 
     case default
@@ -823,30 +1032,125 @@ contains
   !============================================================================
   subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
 
-    ! Fill one layer of ghost cells with the temperature for heat conduction
+    ! Fill ghost cells inside body for spherical grid - this subroutine only 
+    ! modifies ghost cells in the r direction
+    
+    use ModAdvance,    ONLY: State_VGB, B0_DGB
+    use ModSize,       ONLY: nJ, nK
+    use ModMain,       ONLY: East_, UseB0
+    use ModGeometry,   ONLY: TypeGeometry, x_BLK, y_BLK, z_BLK, r_BLK
+    use ModVarIndexes, ONLY: Rho_, p_, WaveFirst_, WaveLast_, &
+                             Bx_, Bz_, Ux_, Uz_
+    use ModMultiFluid, ONLY: MassIon_I
 
-    use ModAdvance,    ONLY: State_VGB
-    use ModMain,       ONLY: East_
-    use ModVarIndexes, ONLY: Rho_, p_
- 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
-    !--------------------------------------------------------------------------
+    integer :: i,j,k
+    real    :: x, y, z, r, r_D(3), rUnit_DG(3,3), bUnit_DG(3,3), U_DG(3,3)
+    real    :: FullBr, FullB, FullB_D(3), Br1_D(3), Bt1_D(3),Ewave
 
-    if(iSide /= East_) call CON_stop('Wrong iSide in user_set_outerBCs')
+    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
+    !-------------------------------------------------------------------------- 
+    if(iSide /= East_ .or. TypeGeometry(1:9) /='spherical') &
+         call CON_stop('Wrong iSide in user_set_outerBCs')
 
     IsFound = .true.
 
     if (UseChromoBc) then
 
-       State_VGB(Rho_,-1:0,:,:,iBlock) = RhoChromo
-       State_VGB(p_,-1:0,:,:,iBlock) = 2.*nChromo*tChromo
-       
+       ! Extrapolate density around fixed RhoChromo value
+
+       State_VGB(Rho_,0,:,:,iBlock) = &
+            2.*RhoChromo - State_VGB(rho_,1,:,:,iBlock)
+       State_VGB(Rho_,-1,:,:,iBlock) = &
+            2.*State_VGB(Rho_,0,:,:,iBlock)  - State_VGB(rho_,1,:,:,iBlock)
+       State_VGB(p_,-1:0,:,:,iBlock) = & 
+            2.*State_VGB(Rho_,-1:0,:,:,iBlock)/MassIon_I(1)*tChromo
+
+       do k = -1,nK+2 ; do j = -1,nJ+2
+
+          ! Update B1 in ghost cells (r direction only
+          ! Reflect normal component, float tangential component 
+          do i= 1,0,-1
+             x = x_BLK(i,j,k,iBlock)
+             y = y_BLK(i,j,k,iBlock)
+             z = z_BLK(i,j,k,iBlock)
+             r = r_BLK(i,j,k,iBlock)
+             r_D = (/x,y,z/)
+             rUnit_DG(:,i) = r_D/r             
+
+             Br1_D = rUnit_DG(:,i) * &
+                  sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*rUnit_DG(:,i))
+             Bt1_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) - Br1_D
+             State_VGB(Bx_:Bz_, i-1,j,k,iBlock) = Bt1_D - Br1_D
+          end do
+
+          ! Full magnetic field
+          do i = -1,1
+             FullB_D = B0_DGB(:,i,j,k,iBlock) + &
+                  State_VGB(Bx_:Bz_,i,j,k,iBlock)
+             FullB = sqrt(sum(FullB_D**2))
+             FullBr = sum(rUnit_DG(:,i)*FullB_D)
+             bUnit_DG(:,i) = FullB_D / FullB
+          end do
+
+          ! Float U || B,  reflect U perpendicular to B
+          ! (U_L + U_R)/2 = (U_R.bUnit_R)*(bUnit_L+bUnit_R)/2
+          do i = 0,-1,-1
+             U_DG(:,i+1) = State_VGB(Ux_:Uz_,i+1,j,k,iBlock)
+             U_DG(:,i) = -U_DG(:,i+1) + & 
+                  sum(U_DG(:,i+1)*bUnit_DG(:,i+1))* &
+                  (bUnit_DG(:,i)+bUnit_DG(:,i+1))
+             State_VGB(Ux_:Uz_,i,j,k,iBlock) = U_DG(:,i)
+          end do
+
+          ! set wave energy in ghost cells in the r direction
+          call get_wave_energy_base(FullB, Ewave)
+          
+          if (UseExtrapolatedEwave) then
+             if(FullBr > 0.0)then
+                State_VGB(WaveFirst_,0,j,k,iBlock) = &
+                     2.*Ewave - State_VGB(WaveFirst_,1,j,k,iBlock)
+                State_VGB(WaveFirst_,-1,j,k,iBlock) = &
+                     2.*State_VGB(WaveFirst_,0,j,k,iBlock) - &
+                     State_VGB(WaveFirst_,1,j,k,iBlock)
+          
+                State_VGB(WaveLast_,0,j,k,iBlock) = &
+                     2.*State_VGB(WaveLast_,1,j,k,iBlock) - &
+                     State_VGB(WaveLast_,2,j,k,iBlock)
+                State_VGB(WaveLast_,-1,j,k,iBlock) = &
+                     2.*State_VGB(WaveLast_,0,j,k,iBlock) - & 
+                     State_VGB(WaveLast_,1,j,k,iBlock)
+             else
+                State_VGB(WaveLast_,0,j,k,iBlock) = &
+                     2.*Ewave - State_VGB(WaveLast_,1,j,k,iBlock)
+                State_VGB(WaveLast_,-1,j,k,iBlock) = &
+                     2.*State_VGB(WaveLast_,0,j,k,iBlock) - & 
+                     State_VGB(WaveLast_,1,j,k,iBlock)
+          
+                State_VGB(WaveFirst_,0,j,k,iBlock) = &
+                     2.*State_VGB(WaveFirst_,1,j,k,iBlock) - &
+                     State_VGB(WaveFirst_,2,j,k,iBlock)
+                State_VGB(WaveFirst_,-1,j,k,iBlock) = &
+                     2.*State_VGB(WaveFirst_,0,j,k,iBlock) - & 
+                     State_VGB(WaveFirst_,1,j,k,iBlock)
+             end if
+          else
+             ! Use fixed wave energy
+             if(FullBr > 0.0)then
+                State_VGB(WaveFirst_,-1:0,j,k,iBlock) = Ewave          
+                State_VGB(WaveLast_,-1:0,j,k,iBlock) = 0.0 
+             else
+                State_VGB(WaveFirst_,-1:0,j,k,iBlock) = Ewave          
+                State_VGB(WaveLast_,-1:0,j,k,iBlock) = 0.0 
+             end if
+          end if
+       end do; end do
+
     else
-       call CON_stop('User boundary conditions are not specified')
+       call CON_stop('BCs not specified. You must set UseChromoBcs to TRUE.')
     end if
 
   end subroutine user_set_outerbcs
@@ -865,52 +1169,78 @@ contains
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
-    real :: RhoBase, NumDensIon, NumDensElectron, Tbase, FullBr, B0tot
-    real :: Runit_D(3), U_D(3)
-    real :: B1_D(3), B1t_D(3), B1r_D(3), FullB_D(3), B0_D(3)
-    real :: Ewave
-
+    real :: RhoBase, NumDensIon, NumDensElectron, Tbase, FullBr, EwaveBase
+    real,dimension(3) :: U_D, B0_D, B1_D, B1t_D, B1r_D
+    real,dimension(3) :: bUnitGhost_D, bUnitTrue_D, rUnit_D
+    real,dimension(3) :: FullBGhost_D, FullBTrue_D
+   
     character (len=*), parameter :: NameSub = 'user_face_bcs'
     !--------------------------------------------------------------------------
+    ! Check that extrapolated wave inner BC's were not chosen - can only be performed
+    ! while using ghost-cells based BC's (see set_outerbc for a spherical grid)
+    if (UseExtrapolatedEwave) call CON_stop('UseExtrapolatedEwave=T but you are using face_bcs')
 
-    Runit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
+    rUnit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
 
-    U_D   = VarsTrueFace_V(Ux_:Uz_)
-    VarsGhostFace_V(Ux_:Uz_) = -U_D
-
+    !\
+    ! Magnetic field
+    !/
+    ! Float tangential B, reflect radial B
     if(UseB0)then
        B1_D  = VarsTrueFace_V(Bx_:Bz_)
-       B1r_D = sum(Runit_D*B1_D)*Runit_D
+       B1r_D = sum(rUnit_D*B1_D)*rUnit_D
        B1t_D = B1_D - B1r_D
-       VarsGhostFace_V(Bx_:Bz_) = B1t_D !- B1r_D
-       FullB_D = B0Face_D + B1t_D
-       B0tot = sqrt(sum(B0Face_D**2))
+       VarsGhostFace_V(Bx_:Bz_) = B1t_D
+       FullBGhost_D = B0Face_D + VarsGhostFace_V(Bx_:Bz_)
+       FullBTrue_D  = B0Face_D + VarsTrueFace_V(Bx_:Bz_)
     else
        call get_coronal_b0(FaceCoords_D(x_), FaceCoords_D(y_), &
             FaceCoords_D(z_), B0_D)
        B1_D  = VarsTrueFace_V(Bx_:Bz_) - B0_D
-       B1r_D = sum(Runit_D*B1_D)*Runit_D
+       B1r_D = sum(rUnit_D*B1_D)*rUnit_D
        B1t_D = B1_D - B1r_D
        VarsGhostFace_V(Bx_:Bz_) = B1t_D + B0_D
-       FullB_D = VarsGhostFace_V(Bx_:Bz_)
-       B0tot = sqrt(sum(B0_D**2))
- 
+       FullBGhost_D = VarsGhostFace_V(Bx_:Bz_)
+       FullBTrue_D  = VarsTrueFace_V(Bx_:Bz_)
     end if
-    FullBr = sum(Runit_D*FullB_D)
+    FullBr = sum(FullBGhost_D*rUnit_D)
+    
+    !\
+    ! Velocity
+    !/
+    U_D   = VarsTrueFace_V(Ux_:Uz_)
+    if (UseFloatUpar) then
+       ! Float U || B, reflect U perp to B
+       ! (U_L + U_R)/2 = (U_R*bUnit_R)bUnitFace
+       ! where bUnitFace = (bUnit_L + bUnit_R)/2 is the average B direction
+       bUnitGhost_D = FullBGhost_D/sqrt(sum(FullBGhost_D**2))
+       bUnitTrue_D = FullBTrue_D/sqrt(sum(FullBTrue_D**2))
 
-    ! Set Alfven waves energy density
-    call get_wave_energy_base(B0tot, Ewave)
+       VarsGhostFace_V(Ux_:Uz_) = -U_D + &
+            sum(U_D*bUnitTrue_D)*(bUnitGhost_D+bUnitTrue_D)
+    else
+       ! Reflect U
+       VarsGhostFace_V(Ux_:Uz_) = -U_D
+    end if
 
-    if(FullBr > 0.0)then
-       VarsGhostFace_V(WaveFirst_) = Ewave
+    !\
+    ! Fixed wave BC's
+    !/
+    call get_wave_energy_base(abs(FullBr), EwaveBase)
+
+    if (FullBr > 0. ) then
+       VarsGhostFace_V(WaveFirst_) = EwaveBase 
        VarsGhostFace_V(WaveLast_) = 0.0
     else
-       VarsGhostFace_V(WaveFirst_) = 0.0 !VarsTrueFace_V(WaveFirst_)
-       VarsGhostFace_V(WaveLast_) = Ewave
+       VarsGhostFace_V(WaveFirst_) = 0.0
+       VarsGhostFace_V(WaveLast_) = EwaveBase
     end if
-
+  
+    !\
+    ! Density and pressure
+    !/
     call get_plasma_parameters_base(FaceCoords_D, RhoBase, Tbase)
-   
+
     VarsGhostFace_V(Rho_) =  2.0*RhoBase - VarsTrueFace_V(Rho_)
     NumDensIon = VarsGhostFace_V(Rho_)/MassIon_I(1)
     NumDensElectron = NumDensIon*AverageIonCharge
