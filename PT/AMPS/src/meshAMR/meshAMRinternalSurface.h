@@ -13,6 +13,15 @@
 #include "meshAMRdef.h"
 #include "mpichannel.h"
 
+//include the user defined data for the internal boundaries
+#if _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ == _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ON_
+#define _LOAD_USER_DEFINITIONS_
+#endif
+
+#ifdef _LOAD_USER_DEFINITIONS_
+#include "UserDefinition.meshAMR.h"
+#endif
+
 //=======================================================================
 //the descriptor of the internal boundary conditions
 class cInternalBoundaryConditionsDescriptor {
@@ -40,10 +49,16 @@ public:
 };
 
 
-class cInternalSphericalData : public cAMRexit {
+//=======================================================================
+//the class describes the data that defines the spherical internal boundary; the class may contains the user defined data
+class cInternalSphericalData : public cAMRexit
+#if _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ == _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ON_
+, public cInternalSphericalData_UserDefined
+#endif
+{
 protected:
   double OriginPosition[3],Radius;
-  void *SurfaceData;
+//  void *SurfaceData;
 
   static long int nZenithSurfaceElements,nAzimuthalSurfaceElements;
   static double dAzimuthalAngle;
@@ -75,7 +90,9 @@ public:
 
   void cleanDataBuffer() {
     OriginPosition[0]=0.0,OriginPosition[1]=0.0,OriginPosition[2]=0.0;
-    Radius=0.0,SurfaceData=NULL;
+    Radius=0.0;
+
+//    ,SurfaceData=NULL;
 
     PrintVariableList=NULL,PrintDataStateVector=NULL,PrintTitle=NULL,localResolution=NULL;
 
@@ -84,7 +101,11 @@ public:
     #endif
   }
 
-  cInternalSphericalData () {
+  cInternalSphericalData ()
+#if _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ == _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ON_
+  : cInternalSphericalData_UserDefined()
+#endif
+  {
     cleanDataBuffer();
   }
 
@@ -93,8 +114,10 @@ public:
 
   }
 
+  /*
   void SetSurfaceDataPointer(void *DataPointer) {SurfaceData=DataPointer;}
   void *GetSurfaceDataPointer() {return SurfaceData;}
+*/
 
   void SetSphereGeometricalParameters(double *x0,double r) {
      for (int idim=0;idim<3;idim++) OriginPosition[idim]=x0[idim];
@@ -180,6 +203,9 @@ public:
 
 
     nAzimuthalElement=(long int)(AzimuthalAngle/dAzimuthalAngle);
+
+    if (nZenithElement==nZenithSurfaceElements) --nZenithElement;
+    if (nAzimuthalElement==nAzimuthalSurfaceElements) --nAzimuthalElement;
 
     #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
     if ((nZenithElement<0)||(nZenithElement>=nZenithSurfaceElements)||(nAzimuthalElement<0)||(nAzimuthalElement>=nAzimuthalSurfaceElements)) exit(__LINE__,__FILE__,"Error: 'nZenithElement' or 'nAzimuthalElement' are outside of the range ");
@@ -318,6 +344,11 @@ public:
 */
 
      //if all corners of the block are within the sphere -> the block is entirely within the sphere
+     int nCounterOutside=0,nCounterInside=0;
+     double R2,r;
+
+     R2=pow(Radius+EPS,2);
+
      for (nCounter=0,i=0;i<2;i++) {
        x[0]=((i==0) ? xBlockMin[0] : xBlockMax[0])-OriginPosition[0];
 
@@ -327,14 +358,24 @@ public:
          for (k=0;k<2;k++) {
            x[2]=((k==0) ? xBlockMin[2] : xBlockMax[2])-OriginPosition[2];
 
-           if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(Radius+EPS,2)) nCounter++;
-           else goto ExitLoops;
+
+//           cout << x[0]*x[0]+x[1]*x[1]+x[2]*x[2] << "   "  << pow(Radius+EPS,2) << endl;
+           r=x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
+
+
+           if (r<=R2) {
+             nCounterInside++;
+           }
+
+           else {
+             nCounterOutside++;
+           }
          }
        }
      }
 
-ExitLoops:
-     if (nCounter==8) return _AMR_BLOCK_OUTSIDE_DOMAIN_;
+
+     if (nCounterInside==8) return _AMR_BLOCK_OUTSIDE_DOMAIN_;
 
 
      //check if the sphere is entirely within the block
@@ -487,7 +528,7 @@ ExitLoops:
 
 
 
-     static const int nLevelMax=5;
+     static const int nLevelMax=6;
 
 
 
@@ -584,13 +625,27 @@ LevelProcessingDone:
 //return 0.0;
 //########  END DEBUG #####
 
+       /*
        x0[0]=0.5*(levelDataPtr->xSubBlockMin[0]+levelDataPtr->xSubBlockMax[0]);
        x0[1]=0.5*(levelDataPtr->xSubBlockMin[1]+levelDataPtr->xSubBlockMax[1]);
        x0[2]=levelDataPtr->xSubBlockMin[2];
+       */
+
+       double dii=0.5*(levelDataPtr->xSubBlockMax[0]-levelDataPtr->xSubBlockMin[0]);
+       double djj=0.5*(levelDataPtr->xSubBlockMax[1]-levelDataPtr->xSubBlockMin[1]);
+       int ii,jj;
+       bool IntersectionFound=false;
 
        l=levelDataPtr->xSubBlockMax[2]-levelDataPtr->xSubBlockMin[2];
 
        R2=Radius*Radius;
+
+       for (ii=0;ii<3;ii++) for (jj=0;jj<3;jj++) {
+
+         x0[0]=levelDataPtr->xSubBlockMin[0]+ii*dii;
+         x0[1]=levelDataPtr->xSubBlockMin[1]+jj*djj;
+         x0[2]=levelDataPtr->xSubBlockMin[2];
+
 
        a=l*l;
        b=2.0*l*(x0[2]-OriginPosition[2]);
@@ -599,7 +654,9 @@ LevelProcessingDone:
        d=b*b-4.0*a*c;
 
        if (d<=0.0) {
-         res=(levelDataPtr->xSubBlockMax[0]-levelDataPtr->xSubBlockMin[0])*(levelDataPtr->xSubBlockMax[1]-levelDataPtr->xSubBlockMin[1])*(levelDataPtr->xSubBlockMax[2]-levelDataPtr->xSubBlockMin[2]);
+         if (pow(x0[0]-OriginPosition[0],2)+pow(x0[1]-OriginPosition[1],2)+pow(x0[2]-OriginPosition[2]+l*0.5,2)>R2) res+=1;
+
+//         res=(levelDataPtr->xSubBlockMax[0]-levelDataPtr->xSubBlockMin[0])*(levelDataPtr->xSubBlockMax[1]-levelDataPtr->xSubBlockMin[1])*(levelDataPtr->xSubBlockMax[2]-levelDataPtr->xSubBlockMin[2]);
        }
        else {
          if (b<0.0) a*=-1.0,b*=-1.0,c*=-1.0;
@@ -607,6 +664,7 @@ LevelProcessingDone:
          sqrt_d=sqrt(d);
          t1=-(b+sqrt_d)/(2.0*a);
          t2=-2.0*c/(b+sqrt_d);
+         nSegments=0;
 
          SegmentSplittingTime[0]=0.0;
          if ((t1>0.0)&&(t1<1.0)) SegmentSplittingTime[nSegments++]=t1;
@@ -626,16 +684,36 @@ LevelProcessingDone:
          for (i=0;i<nSegments;i++) {
            t1=SegmentSplittingTime[i],t2=SegmentSplittingTime[i+1];
 
-           if (xy2+pow(x0[2]+l*0.5*(t1+t2),2)>R2) res+=t2-t1;
+           if (xy2+pow(x0[2]-OriginPosition[2]+l*0.5*(t1+t2),2)>R2) {
+             res+=t2-t1;
+             IntersectionFound=true;
+           }
+//           else {
+//             res+=EPS;
+//           }
          }
+
+
+         if (nSegments==0) if (xy2+pow(x0[2]-OriginPosition[2]+l*0.5,2)>R2) {
+           IntersectionFound=true;
+           res+=1;
+         }
+
+       }
+       }
+
+       res/=9.0;
+       if (IntersectionFound==false) res=1.0E-20;
 
          res*=(levelDataPtr->xSubBlockMax[0]-levelDataPtr->xSubBlockMin[0])*(levelDataPtr->xSubBlockMax[1]-levelDataPtr->xSubBlockMin[1])*(levelDataPtr->xSubBlockMax[2]-levelDataPtr->xSubBlockMin[2]);
 
          #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
-         if (res<0.0) exit(__LINE__,__FILE__,"Error: out of range");
+         if (res<0.0) {
+           exit(__LINE__,__FILE__,"Error: out of range");
+         }
          #endif
 
-       }
+
      }
 
      if (nLevel!=0) goto LevelProcessingDone;
