@@ -115,6 +115,9 @@ HDF5:
 	cp -f src/ModHdf5_orig.f90 src/ModHdf5.f90
 	cd ${DIR}/util/HDF5/src; make LIB
 
+HDF5F:
+	cp -f src/ModHdf5_F90.f90 src/ModHdf5.f90
+
 PIDL:
 	cd ${SHAREDIR}; make LIB
 	cd srcPostProc; make PIDL
@@ -188,7 +191,7 @@ rundir_rh:
 #       Run the default code on NP processors
 #
 
-NP=8
+NP=2
 
 mpirun: ${DEFAULT_TARGET}
 	cd ${RUNDIR}; mpirun -np ${NP} ./${DEFAULT_EXE}
@@ -271,5 +274,4 @@ dist:
 	mv tmp.tar.gz BATSRUS_v${VERSION}_`date +%Y%b%d_%H%M.tgz`
 	@echo ' '
 	@ls -l BATSRUS_v*.tgz
-
 include Makefile.test #^CFG IF TESTING
