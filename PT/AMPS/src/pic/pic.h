@@ -286,7 +286,7 @@ namespace PIC {
       register int idim;
 
 //=====================  DEBUG ================
-
+/*
 
       if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]+10<pow(2439.0e3,2)) {
         double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
@@ -294,7 +294,7 @@ namespace PIC {
         cout << pow(2439.0e3,2)- r*r << "   "  << 2439.0e3-r << __FILE__ << "@" << __LINE__ << endl;
 
       }
-
+*/
 //=================   END DEBUG =============
 
       for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
@@ -306,14 +306,14 @@ namespace PIC {
 
       //=====================  DEBUG ================
 
-
+/*
             if ((x[0]*x[0]+x[1]*x[1]+x[2]*x[2])+10<pow(2439.0e3,2)) {
               double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
 
               cout << pow(2439.0e3,2)- r*r << "   "  << 2439.0e3-r   << __FILE__ << "@" << __LINE__ << endl;
 
             }
-
+*/
       //=================   END DEBUG =============
 
       for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
@@ -601,6 +601,14 @@ namespace PIC {
       double GetMeanParticleSpeed(int s) {
         double TotalWeight,*SampledData,res=0.0;
 
+
+
+//==============================  DEBUGGER ===============
+//        return Measure;
+
+//============================== END DEBUGGER ============
+
+
         #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
         if ((s<0)||(s>=PIC::nTotalSpecies)) exit(__LINE__,__FILE__,"Error: 's' is out of the range");
         #endif
@@ -680,6 +688,14 @@ namespace PIC {
       void Interpolate(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients) {
         int i,s,idim;
         double c;
+
+
+
+        //==============================  DEBUGGER ===============
+                 if (nInterpolationCoeficients!=0) Measure=InterpolationList[0]->Measure;
+
+        //============================== END DEBUGGER ============
+
 
         #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
         if (associatedDataPointer==NULL) exit(__LINE__,__FILE__,"Error: The associated data buffer is not initialized");
@@ -1145,13 +1161,21 @@ namespace PIC {
 
     void initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
+    void copyLocalParticleWeightDistribution(int specTarget,int specSource,double ProportionaltyCoefficient=1.0);
+    void copyLocalTimeStepDistribution(int specTarger,int specSource,double ProportionaltyCoefficient=1.0);
+
   }
 
   namespace Parallel {
 
 
      //count the number of particles that were send and recieve by the thread
-     extern long int sendParticleCounter,recvParticleCounter;
+     extern long int sendParticleCounter,recvParticleCounter,IterationNumberAfterRebalancing;
+     extern double RebalancingTime,CumulativeLatency;
+
+     //the factor the trrigeres the emergency load rebalancing. The condition for the rebalancing:
+     //(PIC::Parallel::CumulativeLatency>PIC::Parallel::EmergencyLoadRebalancingFactor*PIC::Parallel::RebalancingTime)
+     extern double EmergencyLoadRebalancingFactor;
 
      //exchenge paricles between iterations
      void ExchangeParticleData();
@@ -1167,8 +1191,14 @@ namespace PIC {
      //the offsets for the plasma parameters loaded with ICES
      extern int ElectricFieldOffset,MagneticFieldOffset,PlasmaPressureOffset,PlasmaNumberDensityOffset,PlasmaTemperatureOffset,PlasmaBulkVelocityOffset;
 
+     //the offsets for parameters loaded from the DSMC model
+     extern int NeutralBullVelocityOffset,NeutralNumberDensityOffset,NeutralTemperatureOffset;
+
+     //calcualte the total number of cells in the mesh
+     long int getTotalCellNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
+
      //create the trajectory file
-     void createCellCenterCoordinateList();
+     void createCellCenterCoordinateList(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
 
      //retrive the SWMF data file
@@ -1176,11 +1206,21 @@ namespace PIC {
        double swNumberDensity,swTemperature,swPressure,E[3],B[3],swVel[3];
      };
 
+     struct cDataNodeDSMC {
+       double neutralNumberDensity,neutralTemperature,neutralVel[3];
+     };
+
      void retriveSWMFdata(const char *DataFile);
-     void readSWMFdata(const double MeanIonMass); //MeanIonMass -> the mean ion mass of the plasma flow in [amu]
-     void PrintVariableListSWMF(FILE* fout,int DataSetNumber);
-     void PrintDataSWMF(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
-     void InterpolateSWMF(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+     void retriveDSMCdata(const char *Case,const char *DataFile,const char *MeshFile);
+
+
+     void readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree); //MeanIonMass -> the mean ion mass of the plasma flow in [amu]
+     void readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+
+
+     void PrintVariableList(FILE* fout,int DataSetNumber);
+     void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+     void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
 
      //calculate the values of the located parameters
      inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
@@ -1226,6 +1266,61 @@ namespace PIC {
        for (idim=0;idim<3;idim++) B[idim]=b[idim],E[idim]=e[idim];
      }
 
+  }
+
+  namespace ChemicalReactions {
+
+    namespace PhotolyticReactions {
+      //the photolytic reactions: the model is initialized if _PIC_PHOTOLYTIC_REACTIONS_MODE_ = _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+      //the total photolytic lifetime of the species;
+      extern double *ConstantTotalLifeTime;
+
+      typedef double (*fTotalLifeTime)(double *x,int spec,long int ptr,bool &ReactionAllowedFlag);
+      extern fTotalLifeTime *TotalLifeTime;
+
+      typedef int (*fReactionProcessor)(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData);
+      extern fReactionProcessor *ReactionProcessorTable;
+
+      void Init();
+      void SetReactionProcessor(fReactionProcessor f,int spec);
+      void SetSpeciesTotalPhotolyticLifeTime(fTotalLifeTime f,int spec);
+
+      //The return codes of the photolytic model
+      #define _PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_      0
+      #define _PHOTOLYTIC_REACTION_OCCURES_                  1
+
+      #define _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_        2
+      #define _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_ 3
+
+      //the default function that returns the constant life time value
+      double TotalLifeTime_default(double *x,int spec,long int ptr,bool &ReactionAllowedFlag);
+
+      //the manager of the photolytic reaction module
+      //if the reaction has occured-> spes returns the species number of the transformed particles, TimeInterval return the time when the reaction had occured
+
+      inline int PhotolyticReaction(double *x,long int ptr,int &spec,double &TimeInterval) {
+        int code=_PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_;
+        register double p,lifetime,c;
+        bool flag;
+
+        lifetime=TotalLifeTime[spec](x,spec,ptr,flag);
+        if (flag==false) return _PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_;
+
+
+        c=exp(-TimeInterval/lifetime);
+        p=1.0-c; //the probability for reaction to occur
+
+        if (rnd()<p) {
+          //determine the time offset when the reaction had occured
+          TimeInterval=-lifetime*log(1.0+rnd()*(c-1.0));
+
+          return _PHOTOLYTIC_REACTION_OCCURES_;
+        }
+
+        return code;
+      }
+
+    }
   }
 
   namespace BC {
