@@ -42,3 +42,7 @@ $MaxImplBlock == 1
 	${COMPILE.f90}  ${Cflag0} impl_jacobian.f90
 	${COMPILE.f90}  ${Cflag0} impl_matvec.f90
 	${COMPILE.f90}  ${Cflag0} impl_newton.f90
+
+#Special rule to compile HDF5 code
+$Hdf5 eq "yes"
+	h5pfc  -DH5_USE_16_API ${Cflag2} ModHdf5.f90
