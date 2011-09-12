@@ -113,10 +113,6 @@ NOHDF5:
 
 HDF5:
 	cp -f src/ModHdf5_orig.f90 src/ModHdf5.f90
-	cd ${DIR}/util/HDF5/src; make LIB
-
-HDF5F:
-	cp -f src/ModHdf5_F90.f90 src/ModHdf5.f90
 
 PIDL:
 	cd ${SHAREDIR}; make LIB
