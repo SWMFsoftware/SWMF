@@ -76,12 +76,6 @@ our $NewGridSize;           # New grid size to be set in caller code
 our $Hdf5;                  # True if HDF5 is enabled
 our $Hypre;                 # True if HYPRE lib is enabled
 
-# This string should be added into Makefile.conf when HDF5 is enabled
-my $Hdf5Definition = "
-# HDF5 library definitions
-HDFLIB = -L\${LIBDIR} -lHDF5PLOT
-";             	    
-
 # This string should be added into Makefile.conf when HYPRE is enabled
 my $HypreDefinition = "
 # HYPRE library definitions
@@ -275,7 +269,7 @@ sub get_settings_{
 	  $Precision = lc($1) if /^\s*PRECISION\s*=.*(SINGLE|DOUBLE)PREC/;
           $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
 	  $Mpi   = "no"  if /^\s*MPILIB\s*=.*\-lNOMPI/;
-	  $Hdf5  = "yes" if /^\s*HDFLIB\s*=.*\-lHDF5.*/;
+	  $Hdf5  = "yes" if /^\s*LINK\.f90\s*=.*h5pfc/;
 	  $Hypre = "yes" if /^\s*HYPRELIB/;
           $Optimize = $1 if /^\s*OPT[0-5]\s*=\s*(-O[0-5])/;
       }
@@ -284,6 +278,10 @@ sub get_settings_{
 
     # Fix CompilerMpi definition if needed
     $CompilerMpi =~ s/\{COMPILE.f90\}\#\s*/\{CUSTOMPATH_MPI\}/;
+
+    # Remove the commented out name of the original linker when h5pfc is used
+    $CompilerMpi =~ s/h5pfc \#.*$/h5pfc/;
+
 }
 
 ##############################################################################
@@ -541,9 +539,8 @@ sub set_hdf5_{
 	@ARGV = ($MakefileConf);
 	while(<>){
 	    # Add/remove HDF5 related definitions
-	    $_ .= $Hdf5Definition if $Hdf5 eq "yes" and /-lNOMPI/;
-	    chop                  if $Hdf5 eq "no"  and /-lNOMPI/;
-	    $_ = ""               if $Hdf5 eq "no"  and /HDF5/i;
+	    s/^(LINK\.f90\s*=\s*\$\{CUSTOMPATH_F\})(.*)/$1h5pfc \#$2/ if $Hdf5 eq "yes";
+	    s/h5pfc \#(.*)/$1/                                        if $Hdf5 eq "no";
 	    print;
 	}
     }
@@ -588,6 +585,7 @@ sub create_makefile_rules{
 		    Compiler   => $Compiler,
 		    Mpi        => $Mpi,
 		    Debug      => $Debug,
+		    Hdf5       => $Hdf5,
 		    Machine    => $Machine,
 		    Precision  => $Precision);
 
