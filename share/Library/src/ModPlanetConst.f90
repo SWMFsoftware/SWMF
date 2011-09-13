@@ -169,6 +169,16 @@ contains
      IonoHeightPlanet_I(Earth_)          = 110000.0                ! [ m]
    
      !\                               
+     ! Moon (31)                         
+     !/                               
+     NamePlanet_I(Moon_)                 = 'MOON'
+
+     rPlanet_I(Moon_)                    = 1737.0e+3               ! [ m]
+     mPlanet_I(Moon_)                    = 7.3477e+22              ! [kg]
+     OrbitalPeriodPlanet_I(Moon_)        = 27.321582 * cDay        ! [ s]
+     RotationPeriodPlanet_I(Moon_)       = 27.321582 * cDay        ! [ s]
+
+     !\                               
      ! Mars (40)                         
      !/                               
      NamePlanet_I(Mars_)                 = 'MARS'
@@ -239,6 +249,20 @@ contains
      mPlanet_I(Europa_)                  = 4.80e22                 ! [kg]
      OrbitalPeriodPlanet_I(Europa_)      = 3.551 * cDay            ! [ s]
      RotationPeriodPlanet_I(Europa_)     = 3.551 * cDay            ! [ s]
+
+     iYearEquinoxPlanet_I(Europa_)       = 2000                    ! [yr]
+     iMonthEquinoxPlanet_I(Europa_)      =    1                    ! [mo]
+     iDayEquinoxPlanet_I(Europa_)        =    1                    ! [dy]
+     iHourEquinoxPlanet_I(Europa_)       =    0                    ! [hr]
+     iMinuteEquinoxPlanet_I(Europa_)     =    0                    ! [mn]
+     iSecondEquinoxPlanet_I(Europa_)     =    0                    ! [ s]
+     FracSecondEquinoxPlanet_I(Europa_)  =  0.0                    ! [ s]
+     TiltPlanet_I(Europa_)               =  0.0 * cDegToRad        ! [rad]
+
+     TypeBFieldPlanet_I(Europa_)         = "DIPOLE"                
+     DipoleStrengthPlanet_I(Europa_)     =    100.0e-9             ! [ T]
+     bAxisThetaPlanet_I(Europa_)         =  90.0 * cDegToRad       ! [rad]
+     bAxisPhiPlanet_I(Europa_)           =   0.0 * cDegToRad       ! [rad]
      
      !\
      ! Titan (61)
