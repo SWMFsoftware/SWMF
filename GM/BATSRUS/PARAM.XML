@@ -3994,14 +3994,18 @@ explicit or a BDF2 three-level implicit time discretization.
 Possible values for TypeFlux:
 \begin{verbatim}
  'Rusanov'     - Rusanov or Lax-Friedrichs flux     <!--^CFG IF RUSANOVFLUX-->
- 'Linde        - Linde's HLLEL flux                   <!--^CFG IF LINDEFLUX-->
+ 'Linde'       - Linde's HLLEL flux                   <!--^CFG IF LINDEFLUX-->
  'Sokolov'     - Sokolov's Local Artificial Wind flux <!--^CFG IF AWFLUX   -->
  'Roe'         - Roe's approximate Riemann flux (new) <!--^CFG IF ROEFLUX  -->
  'RoeOld'      - Roe's approximate Riemann flux (old) <!--^CFG IF ROEFLUX  -->
  'HLLD'        - Miyoshi and Kusano's HLLD flux       <!--^CFG IF HLLDFLUX -->
- 'Godunov'     - Godunov flux
+ 'Godunov'     - Godunov flux with exact Riemann solver
 \end{verbatim}
-The new and old Roe schemes differ in some details of the algorithm.
+The Godunov flux is only implemented for (multi-material) hydrodynamics.
+The Roe and HLLD schemes are implemented for ideal MHD only 
+(single fluid, non-relativistic, no Hall term).
+The new and old Roe schemes differ in some details of the algorithm,
+the new Roe scheme is somewhat more robust in magnetospheric applications.
 Possible values for TypeLimiter for spatially second order schemes:
 \begin{verbatim}
  'minmod'      - minmod limiter is the most robust and diffusive limiter
