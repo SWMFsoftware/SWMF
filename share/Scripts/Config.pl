@@ -83,6 +83,9 @@ HYPRELIB     = -L\${UTILDIR}/HYPRE/lib -lHYPRE
 HYPRESEARCH  = -I\${UTILDIR}/HYPRE/include
 ";             	    
 
+# The name of the parallel HDF5 Fortran compiler
+my $H5pfc = "h5pfc";
+
 # Default precision for installation
 my $DefaultPrecision = 'double';
 
@@ -269,7 +272,7 @@ sub get_settings_{
 	  $Precision = lc($1) if /^\s*PRECISION\s*=.*(SINGLE|DOUBLE)PREC/;
           $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
 	  $Mpi   = "no"  if /^\s*MPILIB\s*=.*\-lNOMPI/;
-	  $Hdf5  = "yes" if /^\s*LINK\.f90\s*=.*h5pfc/;
+	  $Hdf5  = "yes" if /^\s*LINK\.f90\s*=.*$H5pfc/;
 	  $Hypre = "yes" if /^\s*HYPRELIB/;
           $Optimize = $1 if /^\s*OPT[0-5]\s*=\s*(-O[0-5])/;
       }
@@ -280,7 +283,7 @@ sub get_settings_{
     $CompilerMpi =~ s/\{COMPILE.f90\}\#\s*/\{CUSTOMPATH_MPI\}/;
 
     # Remove the commented out name of the original linker when h5pfc is used
-    $CompilerMpi =~ s/h5pfc \#.*$/h5pfc/;
+    $CompilerMpi =~ s/$H5pfc \#.*$/$H5pfc/;
 
 }
 
@@ -492,7 +495,7 @@ sub set_hypre_{
 
     # Check if library is present
     if($NewHypre eq "yes" and not -d "util/HYPRE"){
-	print "cvs checkout HYPRE into util/\n";
+	print "Warning: util/HYPRE is missing. Use cd util; cvs co HYPRE/\n";
 	return;
     }
 
@@ -530,6 +533,12 @@ sub set_hypre_{
 
 sub set_hdf5_{
 
+    # Check if HDF5 module is loaded
+    if($NewHdf5 eq "yes" and not `which $H5pfc`){
+        print "Warning: $H5pfc is not in path. Load parallel hdf5 module!/\n";
+        return;
+    }
+
     # $Hdf5 will be $NewHdf5 after changes
     $Hdf5 = $NewHdf5;
 
@@ -539,13 +548,24 @@ sub set_hdf5_{
 	@ARGV = ($MakefileConf);
 	while(<>){
 	    # Add/remove HDF5 related definitions
-	    s/^(LINK\.f90\s*=\s*\$\{CUSTOMPATH_F\})(.*)/$1h5pfc \#$2/ if $Hdf5 eq "yes";
-	    s/h5pfc \#(.*)/$1/                                        if $Hdf5 eq "no";
+	    s/^(LINK\.f90\s*=\s*\$\{CUSTOMPATH_F\})(.*)/$1$H5pfc \#$2/ 
+		if $Hdf5 eq "yes";
+	    s/$H5pfc \#(.*)/$1/
+		if $Hdf5 eq "no";
 	    print;
 	}
     }
-    &shell_command("make HDF5") if $Hdf5 eq "yes";
-    &shell_command("make NOHDF5") if $Hdf5 eq "no";
+
+    my @files = glob("src/*Hdf5_orig.f90 ??/*/src/*Hdf5_orig.f90");
+    foreach my $file (@files){
+	my $outfile = $file;
+	$outfile =~ s/_orig//;
+	my $infile  = $file;
+	$infile =~ s/_orig/_empty/ if $Hdf5 eq "no";
+	print "set_hdf5_: cp $infile $outfile\n";
+	&shell_command("cp $infile $outfile");
+    }
+
 }
 
 ##############################################################################
