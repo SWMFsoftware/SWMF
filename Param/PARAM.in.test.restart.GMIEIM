@@ -58,6 +58,12 @@ F			DoCoupleOnTime
 #INCLUDE
 GM/restartIN/restart.H
 
+RAYTRACE
+T			UseAccurateIntegral
+T			UseAccurateTrace
+0.01			DtExchangeRay [sec]
+1			DnRaytrace
+
 #IM
 20.0                    TauImP
 F			DoImSatTrace 

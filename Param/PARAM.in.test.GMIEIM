@@ -44,6 +44,9 @@ IE			NameComp2
 
 #BEGIN_COMP GM ----------------------------------------
 
+#BATLTEST
+T			UseBatlTest
+
 #GRID
 1			nRootBlockX
 1			nRootBlockY
@@ -84,6 +87,12 @@ box			NameArea
 shell0			NameArea
 2.5			r1Shell
 3.5			r2Shell
+
+RAYTRACE
+T			UseAccurateIntegral
+T			UseAccurateTrace
+0.01			DtExchangeRay [sec]
+1			DnRaytrace
 
 #MAGNETOSPHERE
 T                       body1

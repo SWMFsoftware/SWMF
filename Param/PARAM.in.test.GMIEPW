@@ -40,6 +40,9 @@ F			UseRotation
 
 #BEGIN_COMP GM #############################################################
 
+#BATLTEST
+T			UseBatlTest
+
 #MAGNETOSPHERE
 T                       UseBody
 2.5                     rBody

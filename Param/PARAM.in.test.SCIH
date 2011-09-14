@@ -23,6 +23,9 @@ F			DoSaveRestart
 
 #BEGIN_COMP IH -------------------------------------------------------------
 
+#BATLTEST
+T			UseBatlTest
+
 #BODY
 T			UseBody
 20.0			rBody
@@ -120,6 +123,9 @@ IH			NameComp
 F			UseComp
 
 #BEGIN_COMP SC --------------------------------------------------------------
+
+#BATLTEST
+T			UseBatlTest
 
 #COORDSYSTEM
 HGR                     TypeCoordSystem

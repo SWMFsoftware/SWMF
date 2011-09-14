@@ -16,6 +16,9 @@ OH_fill_buffer_only
 
 #BEGIN_COMP IH --------------------------------------------------------------
 
+#BATLTEST
+T			UseBatlTest
+
 #COORDSYSTEM
 HGI                     TypeCoordSystem
 
@@ -140,6 +143,9 @@ F
 #END_COMP IH -----------------------------------------------------------------
 
 #BEGIN_COMP OH ---------------------------------------------------------------
+
+#BATLTEST
+T			UseBatlTest
 
 #COORDSYSTEM
 HGI
