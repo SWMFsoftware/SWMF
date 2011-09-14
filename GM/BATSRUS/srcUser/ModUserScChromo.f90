@@ -25,7 +25,7 @@ module ModUser
        'Chromosphere to solar wind model with Alfven waves - Oran, van der Holst'
 
   ! Input parameters for chromospheric inner BC's
-  logical :: UseChromoBc = .true., UseFloatUpar = .false., UseExtrapolatedEwave = .true.
+  logical :: UseChromoBc = .true., UseUparBc = .false., UseExtrapolatedEwave = .true.
   real    :: WaveDeltaU = 0.0
   real    :: nChromoSi = 0.0, tChromoSi = 0.0
   real    :: nChromo = 0.0, RhoChromo = 0.0, tChromo = 0.0
@@ -93,7 +93,7 @@ contains
              call read_var('WaveDeltaU', WaveDeltaU)
              call read_var('nChromoSi', nChromoSi)
              call read_var('tChromoSi', tChromoSi)
-             call read_var('UseFloatUpar',UseFloatUpar)
+             call read_var('UseUparBc',UseUparBc)
              call read_var('UseExtrapolatedEwave',UseExtrapolatedEwave)
           end if
 
@@ -1173,6 +1173,7 @@ contains
     real,dimension(3) :: U_D, B0_D, B1_D, B1t_D, B1r_D
     real,dimension(3) :: bUnitGhost_D, bUnitTrue_D, rUnit_D
     real,dimension(3) :: FullBGhost_D, FullBTrue_D
+    real              :: RhoTrue, RhoGhost, Ur
    
     character (len=*), parameter :: NameSub = 'user_face_bcs'
     !--------------------------------------------------------------------------
@@ -1196,7 +1197,7 @@ contains
     else
        call get_coronal_b0(FaceCoords_D(x_), FaceCoords_D(y_), &
             FaceCoords_D(z_), B0_D)
-       B1_D  = VarsTrueFace_V(Bx_:Bz_) - B0_D
+       B1_D  = VarsTrueFace_V(Bx_:Bz_) - B0_D 
        B1r_D = sum(rUnit_D*B1_D)*rUnit_D
        B1t_D = B1_D - B1r_D
        VarsGhostFace_V(Bx_:Bz_) = B1t_D + B0_D
@@ -1204,22 +1205,33 @@ contains
        FullBTrue_D  = VarsTrueFace_V(Bx_:Bz_)
     end if
     FullBr = sum(FullBGhost_D*rUnit_D)
-    
+
+    ! Density
+    call get_plasma_parameters_base(FaceCoords_D, RhoBase, Tbase)
+
+    VarsGhostFace_V(Rho_) =  2.0*RhoBase - VarsTrueFace_V(Rho_)
     !\
     ! Velocity
     !/
     U_D   = VarsTrueFace_V(Ux_:Uz_)
-    if (UseFloatUpar) then
+    if (UseUparBc) then
+       ! Conserve momentum along field lines
+       bUnitGhost_D = FullBGhost_D/sqrt(sum(FullBGhost_D**2))
+       bUnitTrue_D = FullBTrue_D/sqrt(sum(FullBTrue_D**2))
+       RhoTrue = VarsTrueFace_V(Rho_)
+       RhoGhost = VarsGhostFace_V(Rho_)
+
+       VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
+            sum(U_D*bUnitTrue_D)*bUnitGhost_D
+
        ! Float U || B, reflect U perp to B
        ! (U_L + U_R)/2 = (U_R*bUnit_R)bUnitFace
        ! where bUnitFace = (bUnit_L + bUnit_R)/2 is the average B direction
-       bUnitGhost_D = FullBGhost_D/sqrt(sum(FullBGhost_D**2))
-       bUnitTrue_D = FullBTrue_D/sqrt(sum(FullBTrue_D**2))
-
-       VarsGhostFace_V(Ux_:Uz_) = -U_D + &
-            sum(U_D*bUnitTrue_D)*(bUnitGhost_D+bUnitTrue_D)
+       !VarsGhostFace_V(Ux_:Uz_) = (-U_D*RhoTrue + &
+       !     RhoTrue*abs(sum(U_D*bUnitTrue_D))*(bUnitGhost_D+bUnitTrue_D))/RhoGhost
+       
     else
-       ! Reflect U
+       ! Reflect U - same as van der Holst, 2010, Cohen 2007
        VarsGhostFace_V(Ux_:Uz_) = -U_D
     end if
 
@@ -1237,11 +1249,8 @@ contains
     end if
   
     !\
-    ! Density and pressure
+    ! Pressure
     !/
-    call get_plasma_parameters_base(FaceCoords_D, RhoBase, Tbase)
-
-    VarsGhostFace_V(Rho_) =  2.0*RhoBase - VarsTrueFace_V(Rho_)
     NumDensIon = VarsGhostFace_V(Rho_)/MassIon_I(1)
     NumDensElectron = NumDensIon*AverageIonCharge
     if(UseElectronPressure)then
