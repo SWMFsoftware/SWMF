@@ -1167,7 +1167,7 @@ public:
       cout << "Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
       for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << "idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
 
-      exit(__LINE__,__FILE__);
+//      exit(__LINE__,__FILE__);
 
 
       if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
@@ -8099,18 +8099,18 @@ if (TmpAllocationCounter==2437) {
 
   void CreateNewParallelDistributionLists(int userDefinedCodeForSendingBlockData=-1) {
     double LoadMeasureNormal;
-    long int nTotalBlocks,*nResolutionLevelBlocks=NULL;
+    long int nTotalBlocks,nResolutionLevelBlocks[_MAX_REFINMENT_LEVEL_+1];
     int i,nLevel;
 
     static cTreeNodeAMR<cBlockAMR> *startNodeFillingCurve=NULL;
 
     //calculate and normalized the load measure
-    nResolutionLevelBlocks=new long int [_MAX_REFINMENT_LEVEL_+1];
     for (nLevel=0;nLevel<=_MAX_REFINMENT_LEVEL_;nLevel++) nResolutionLevelBlocks[nLevel]=0;
 
     double InitialProcessorLoad[nTotalThreads];
-
     LoadMeasureNormal=CalculateTotalParallelLoadMeasure(rootTree,InitialProcessorLoad)/nTotalThreads;
+
+    MPI_Bcast(&LoadMeasureNormal,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
     if (LoadMeasureNormal<=0.0) {
       SetConstantParallelLoadMeasure(1.0,rootTree);
@@ -8214,7 +8214,7 @@ if (TmpAllocationCounter==2437) {
       cAMRnodeID id,idtemp;
 
       //cumulutive load distribution
-      double *newCumulativeParallelLoadMeasure=new double [nTotalThreads];
+      double newCumulativeParallelLoadMeasure[nTotalThreads];
       double TotalParallelLoadMeasure=0.0;
 
       for (t=0;t<nTotalThreads;t++) newCumulativeParallelLoadMeasure[t]=0.0;
@@ -8245,7 +8245,6 @@ if (TmpAllocationCounter==2437) {
         printf("%i\t%8.2e\t%8.2e\t%ld\n",t,newCumulativeParallelLoadMeasure[t],nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure,nblocks);
       }
 
-      delete [] newCumulativeParallelLoadMeasure;
     }
     else {
       int t;
@@ -8288,7 +8287,7 @@ if (TmpAllocationCounter==2437) {
 
     if (nTotalBlocks!=nDistributedNodes) exit(__LINE__,__FILE__,"Error: some nodes were lost during the load rebalancing");
 
-    delete [] nResolutionLevelBlocks;
+//    delete [] nResolutionLevelBlocks;
 
     //clear the node's load sample
     SetConstantParallelLoadMeasure(0.0,rootTree);
@@ -8322,7 +8321,7 @@ if (TmpAllocationCounter==2437) {
             }
 
             AllocateBlock(node);
-            InitCellMeasure(node);
+//            InitCellMeasure(node);
             node->block->recvMoveBlockAnotherProcessor(&pipe,node->Thread);
           }
           else { //the block is moved out from the processor
@@ -8342,7 +8341,7 @@ if (TmpAllocationCounter==2437) {
       pipe.flush();
 
 #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
-      MPI_Barrier(MPI_COMM_WORLD);
+//      MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
     }
