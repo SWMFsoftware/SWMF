@@ -108,12 +108,6 @@ CRASH:
 NOMPI:
 	cd util/NOMPI/src; make LIB
 
-NOHDF5:
-	cp -f src/ModHdf5_empty.f90 src/ModHdf5.f90
-
-HDF5:
-	cp -f src/ModHdf5_orig.f90 src/ModHdf5.f90
-
 PIDL:
 	cd ${SHAREDIR}; make LIB
 	cd srcPostProc; make PIDL
