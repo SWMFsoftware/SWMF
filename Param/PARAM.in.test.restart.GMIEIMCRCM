@@ -42,6 +42,9 @@ IM			NameComp2
 
 #BEGIN_COMP GM ----------------------------------------
 
+#BATLTEST
+T			UseBatlTest
+
 #INCLUDE
 GM/restartIN/restart.H
 
