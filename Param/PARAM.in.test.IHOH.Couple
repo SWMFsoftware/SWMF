@@ -93,7 +93,7 @@ coupled
  2150.0                  zMax
 
 #GRIDLEVEL
-2                       nLevelArea
+1                       nLevelArea
 all                     NameArea
 
 #GRIDLEVEL
@@ -213,14 +213,14 @@ T
 20.		xMin
 
 #GRIDLEVEL
-2			nLevelArea
+3			nLevelArea
 all			NameArea
 
 #GRIDLEVEL
-7			nLevelArea (usually 11)
+3			nLevelArea (usually 11)
 initial			NameArea
 
-#GRIDRESOLUTION
+GRIDRESOLUTION
 0.65367                nLevel
 box                  NameArea
 -20.
