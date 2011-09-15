@@ -1,7 +1,7 @@
 !MHD grid in BATSRUS 
 module MH_domain_decomposition
 
-  use CON_grid_storage
+  use CON_grid_storage, ProcToolkit_ => Pe_
   use ModMain, ONLY: UseBatl
 
   implicit none
@@ -139,7 +139,7 @@ contains
                None_
           DomainDecomposition%iDecomposition_II(GlobalBlock_,iNode) = &
                iMortonNode_A(iNode)
-          DomainDecomposition%iDecomposition_II(PE_,iNode) = &
+          DomainDecomposition%iDecomposition_II(ProcToolkit_,iNode) = &
                iTree_IA(Proc_,iNode)
           DomainDecomposition%iDecomposition_II(PELast_,iNode) = &
                iTree_IA(Proc_,iNode)
@@ -235,10 +235,10 @@ contains
              DomainDecomposition% iDecomposition_II(FirstChild_,lOctree)=None_
              DomainDecomposition%iDecomposition_II(GlobalBlock_,lOctree) = &
                   octree % ptr % number
-             DomainDecomposition%iDecomposition_II(PE_,lOctree) = &
+             DomainDecomposition%iDecomposition_II(ProcToolkit_,lOctree) = &
                   octree % ptr % PE
              DomainDecomposition%iDecomposition_II(PELast_,lOctree)=&
-                  DomainDecomposition%iDecomposition_II(PE_,lOctree)
+                  octree % ptr % PE
              DomainDecomposition%iDecomposition_II(BLK_,lOctree) = &
                   octree % ptr % BLK
              DomainDecomposition%iDecomposition_II(LEV_,lOctree) = &
