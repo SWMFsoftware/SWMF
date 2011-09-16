@@ -144,10 +144,17 @@ contains
     write(iUnitOut, '(i7.7, i5.4, 5(i3.2), i4.3)', ADVANCE='NO') &
          n_step, iTime_I
 
-    if(DoCalcKp) write(iUnitOut, '(f5.2,100i2)', ADVANCE='NO') Kp, kIndex_I
+    !if(DoCalcDst) write(..., ADVANCE='NO') dst
 
-    write(iUnitOut, *) ! Add carriage return.
-
+    if(DoCalcKp)then
+       ! Write out KP with newline
+       ! Using ADVANE='NO' resulted in occasional newlines by pgf90
+       write(iUnitOut, '(f5.2,100i2)') Kp, kIndex_I
+    else
+       ! Add newline
+       write(iUnitOut, *)
+    end if
+ 
     call flush_unit(iUnitOut)
 
   end subroutine write_geoindices
