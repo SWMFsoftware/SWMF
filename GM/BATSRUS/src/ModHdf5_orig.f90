@@ -15,9 +15,8 @@ module ModHdf5
   character (len=80) :: filename
   integer :: plotFileNumber, checkpointFileNumber
 
-  logical:: hdf5_writeRestartFile
   !  integer:: hdf5_plotArrayBegin = 1, hdf5_plotArrayEnd
-  integer:: hdf5_currentBlockIdx = 1, localNumBlocks
+  integer:: localNumBlocks
 
   ! Constants used by the FLASH hdf5 IO package
 
@@ -107,7 +106,6 @@ contains
     if (iProc == 0) write (*,*) '------------------------------------'
 
     ! Setup this module to write a plotfile
-    hdf5_writeRestartFile = .false.
     call hdf5_setupGrid(iProc)
     call hdf5_setupIOVars(plotVarNames, nPlotVar)
     call hdf5_setupTree()
@@ -166,8 +164,6 @@ contains
 
     ! Allocate the storage array if it has not been allocated for
     ! this plotfile yet
-    if (hdf5_currentBlockIdx > MaxBlock) &
-         hdf5_currentBlockIdx = 1
 
     if (.not. allocated(unk)) then
        allocate(unk(nPlotVar, nI, nJ, nK, MaxBlock))
@@ -175,14 +171,13 @@ contains
 
     do iPlot = 1, nPlotVar
        do ii = 1, nI; do jj = 1, nJ; do kk = 1, nK
-          unk(iPlot, ii, jj, kk, hdf5_currentBlockIdx) = &
+          unk(iPlot, ii, jj, kk, iBLK) = &
                PlotVar(ii, jj, kk, iPlot)
 
 
        end do; end do; end do
     end do
 
-    hdf5_currentBlockIdx = hdf5_currentBlockIdx + 1
 
   end subroutine write_var_hdf5
 
@@ -255,11 +250,6 @@ contains
 
     ! If we are writing a restart file, fill in the unkown variable array
     !  here
-    if (hdf5_writeRestartFile) then
-       unk(:,:,:,:,:) = State_VGB(1:NUNK_VARS, 1:nI, 1:nJ, 1:nK, :) !Replaced NUNK_VARS with nVar because
-       !State_VGB is only allocated to nVar
-    end if
-
 
     if(localNumBlocks == 0) then
        call stop_mpi("io_writeData: localNumBlocks == 0")
@@ -580,7 +570,6 @@ contains
     ! spaces.
 
 
-    if (.not. hdf5_writeRestartFile) then
        do iVar = 1, nPlotVar
 
           io_plotVarStr(iVar) =  trim(plotVarNames(iVar)(1:4))
@@ -601,25 +590,6 @@ contains
           io_unklabels(iVar) = io_plotVarStr(iVar)
        end do
        io_nPlotVars = nPlotVar
-    else
-       io_nPlotVars = nVar + nFluid
-       do iVar = 1, io_nPlotVars
-          io_plotVarStr(iVar) = trim(NameVar_V(iVar))
-
-          labelLeng = len_trim(io_plotVarStr(iVar))
-          if (labelLeng .ne. 4) then
-             !        label(labelLeng:4) = 'P'
-             do iLen = labelLeng + 1, 4 
-                io_plotVarStr(iVar)(iLen:) = "_"
-             end do
-          end if
-          io_plotVarStr(iVar)(5:) = CHAR(0)
-
-
-          io_unklabels(iVar) = io_plotVarStr(iVar)
-       end do
-    end if
-
     ! Output of runtime parameters, scalars, and logfiles 
     ! is not implemented yet, so clear the corresponding variables
     io_numRealParms = 0
