@@ -2,6 +2,8 @@ module ModHdf5
 
   use ModIO, ONLY: NamePlotDir, MaxFile, nplotvarmax
   use ModMpi
+  use ModVarIndexes, ONLY : NameVar_V, nVar, nFluid
+
   use hdf5
   implicit none
 
@@ -75,7 +77,6 @@ module ModHdf5
   integer:: io_nPlotVars
   integer:: io_comm
 
-  integer:: NUNK_VARS
 
 contains
 
@@ -214,6 +215,7 @@ contains
     ! output file.
     use ModSize, only : MaxBlock, nI, nJ, nK
     use ModAdvance, only : State_VGB
+    use ModVarIndexes, ONLY : nVar !NameVar_V, nVar, nFluid
     use hdf5
     !---------------------------------------------------------------------  
 
@@ -403,15 +405,15 @@ contains
          localOffset, "block size", 3)
 
 
-    allocate(globalVarMin(NUNK_VARS)) !Replaced NUNK_VARS w/nVar
-    allocate(globalVarMax(NUNK_VARS)) !Replaced NUNK_VARS w/nVar
+    allocate(globalVarMin(nVar)) 
+    allocate(globalVarMax(nVar))
 
     !get the max and minimum variables
-    call hdf5_getVarExtrema(NUNK_VARS, globalVarMin, globalVarMax, 2) !Replaced NUNK_VARS w/nVar
+    call hdf5_getVarExtrema(nVar, globalVarMin, globalVarMax, 2)
 
     !store the unknowns
     allocate(unkBuf(nI, nJ, nK, MaxBlock))
-    do i = 1, NUNK_VARS 
+    do i = 1, nVar
 
 
        unkBuf(1:nI,1:nJ,1:nK,1:MaxBlock) = &
@@ -538,7 +540,6 @@ contains
     use BATL_lib, ONLY : nDim, nDimAmr, TypeGeometry, nI, nJ, nK
     use BATL_tree, ONLY : nInfo => ChildLast_, nNode
     use ModMain, ONLY : nBlockAll, Time_Simulation
-    use ModVarIndexes, ONLY : NameVar_V, nVar, nFluid
 
     ! Arguments
     character (len=10), intent(in), optional :: plotVarNames(nplotvarmax)
@@ -638,7 +639,6 @@ contains
     ! we need more MPI initialization for split file IO
     io_comm = MPI_COMM_WORLD 
 
-    NUNK_VARS = nVar !+ nFluid
 
   end subroutine hdf5_setupIOVars
 
