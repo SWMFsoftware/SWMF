@@ -1,0 +1,45 @@
+
+
+
+//the definition of the 'time step' mode
+#define _SINGLE_GLOBAL_TIME_STEP_              0
+#define _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_   1
+#define _SPECIES_DEPENDENT_LOCAL_TIME_STEP_    2
+
+
+//the definition of the 'particle weight' mode
+#define _SINGLE_GLOBAL_PARTICLE_WEIGHT_              0
+#define _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_   1
+#define _SPECIES_DEPENDENT_LOCAL_PARTICLE_WEIGHT_    2
+
+//the debugger mode of the solver 
+#define _PIC_DEBUGGER_MODE_ON_  1
+#define _PIC_DEBUGGER_MODE_OFF_ 0
+
+//the individuak particles's weight mode
+#define _INDIVIDUAL_PARTICLE_WEIGHT_ON_   1
+#define _INDIVIDUAL_PARTICLE_WEIGHT_OFF_  0
+
+//the mode for accouting for the particle's acceleration
+#define _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ON_    1
+#define _PARTICLE_TRAJECTORY_FORCE_INTEGRATION_MODE_OFF_   0
+
+//the modes of the sampling of the velocity/energy distribution functions
+#define _SAMPLING_DISTRIBUTION_FUNCTION_ON_    1
+#define _SAMPLING_DISTRIBUTION_FUNCTION_OFF_   0
+
+
+//the modes of the parallel dynamic load balancing
+#define _PIC_DYNAMIC_LOAD_BALANCING_OFF_              0
+#define _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_   1 
+#define _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_  2
+
+//the modes for the ICES
+#define _PIC_ICES_MODE_ON_   0
+#define _PIC_ICES_MODE_OFF_  1
+
+//the modes for modelling of photolytic reactions 
+#define _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_    0
+#define _PIC_PHOTOLYTIC_REACTIONS_MODE_OFF_   1
+
+
