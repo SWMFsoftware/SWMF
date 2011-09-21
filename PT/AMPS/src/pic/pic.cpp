@@ -20,11 +20,17 @@ void PIC::TimeStep() {
   PIC::Sampling();
   SamplingTime=MPI_Wtime()-StartTime;
 
+  //injection boundary conditions
+  PIC::BC::InjectionBoundaryConditions();
+
+
   //move existing particles
   PIC::Mover::MoveParticles();
 
-  //injection boundary conditions
-  PIC::BC::InjectionBoundaryConditions();
+  //check the consistence of the particles lists
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  PIC::ParticleBuffer::CheckParticleList();
+#endif
 
   IterationExecutionTime=MPI_Wtime()-StartTime;
 
@@ -52,6 +58,7 @@ void PIC::TimeStep() {
 
   nTotalIterations++;
   nInteractionsAfterRunStatisticExchange++;
+  PIC::Parallel::IterationNumberAfterRebalancing++;
 
   if (nInteractionsAfterRunStatisticExchange==nExchangeStatisticsIterationNumberSteps) { //collect and exchenge the statistical data of the run
     cExchangeStatisticData localRunStatisticData;
@@ -59,7 +66,6 @@ void PIC::TimeStep() {
     double Latency=MPI_Wtime();
     cExchangeStatisticData *ExchangeBuffer=NULL;
 
-    nInteractionsAfterRunStatisticExchange=0;
 
     MPI_Barrier(MPI_COMM_WORLD);
     Latency=MPI_Wtime()-Latency;
@@ -89,7 +95,7 @@ void PIC::TimeStep() {
 
       //output the data
       long int nTotalModelParticles=0,nTotalInjectedParticels=0;
-      double MinExecutionTime=localRunStatisticData.IterationExecutionTime,MaxExecutionTime=localRunStatisticData.IterationExecutionTime,MaxLatency=0.0;
+      double MinExecutionTime=localRunStatisticData.IterationExecutionTime,MaxExecutionTime=localRunStatisticData.IterationExecutionTime,MaxLatency=0.0,MeanLatency=0.0;
 
       printf("Thread, Total Particle's number, Total Interation Time, Iteration Execution Time, Particle Exchange Time, Latency, Send Particles, Recv Particles, nInjected Particls\n");
 
@@ -100,17 +106,20 @@ void PIC::TimeStep() {
 
         nTotalModelParticles+=ExchangeBuffer[thread].TotalParticlesNumber;
         nTotalInjectedParticels+=ExchangeBuffer[thread].nInjectedParticles;
-
+        MeanLatency+=ExchangeBuffer[thread].Latency;
 
         if (MinExecutionTime>ExchangeBuffer[thread].IterationExecutionTime) MinExecutionTime=ExchangeBuffer[thread].IterationExecutionTime;
         if (MaxExecutionTime<ExchangeBuffer[thread].IterationExecutionTime) MaxExecutionTime=ExchangeBuffer[thread].IterationExecutionTime;
         if (MaxLatency<ExchangeBuffer[thread].Latency) MaxLatency=ExchangeBuffer[thread].Latency;
       }
 
+      MeanLatency/=PIC::Mesh::mesh.nTotalThreads;
+      PIC::Parallel::CumulativeLatency+=MeanLatency*nInteractionsAfterRunStatisticExchange;
+
       printf("Total number of particles: %ld\n",nTotalModelParticles);
       printf("Total number of injected particles: %ld\n",nTotalInjectedParticels);
       printf("Iteration Execution Time: min=%e, max=%e\n",MinExecutionTime,MaxExecutionTime);
-      printf("Latency: max=%e\n",MaxLatency);
+      printf("Latency: max=%e,mean=%e;CumulativeLatency=%e,Iterations after rebalabcing=%ld,Rebalancing Time=%e\n",MaxLatency,MeanLatency,PIC::Parallel::CumulativeLatency,PIC::Parallel::IterationNumberAfterRebalancing,PIC::Parallel::RebalancingTime);
 
       //determine the new value for the interation number between exchanging of the run stat data
       if (localRunStatisticData.TotalInterationRunTime>0.0) {
@@ -131,7 +140,30 @@ void PIC::TimeStep() {
     }
 
 
+    //redistribute the processor load and check the mesh afterward
+    int EmergencyLoadRebalancingFlag=false;
+
+    if (PIC::Mesh::mesh.ThisThread==0) if (PIC::Parallel::CumulativeLatency>PIC::Parallel::EmergencyLoadRebalancingFactor*PIC::Parallel::RebalancingTime) EmergencyLoadRebalancingFlag=true;
+
+    MPI_Bcast(&EmergencyLoadRebalancingFlag,1,MPI_INT,0,MPI_COMM_WORLD);
+
+    if (EmergencyLoadRebalancingFlag==true) {
+      if (PIC::Mesh::mesh.ThisThread==0) printf("Load Rebalancing.....  begins\n");
+
+
+      MPI_Barrier(MPI_COMM_WORLD);
+      PIC::Parallel::RebalancingTime=MPI_Wtime();
+
+      PIC::Mesh::mesh.CreateNewParallelDistributionLists(_PIC_DYNAMIC_BALANCE_SEND_RECV_MESH_NODE_EXCHANGE_TAG_);
+      PIC::Parallel::IterationNumberAfterRebalancing=0,PIC::Parallel::CumulativeLatency=0.0;
+
+      MPI_Barrier(MPI_COMM_WORLD);
+      PIC::Parallel::RebalancingTime=MPI_Wtime()-PIC::Parallel::RebalancingTime;
+      if (PIC::Mesh::mesh.ThisThread==0) printf("Load Rebalancing.....  done\n");
+    }
+
     MPI_Barrier(MPI_COMM_WORLD);
+    nInteractionsAfterRunStatisticExchange=0;
   }
 
 }
@@ -139,7 +171,8 @@ void PIC::TimeStep() {
 //the general sampling procedure
 void PIC::Sampling() {
   int s,i,j,k,idim;
-  long int LocalCellNumber,ptr;
+  long int LocalCellNumber,ptr,ptrNext;
+
 
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
   PIC::ParticleBuffer::byte *ParticleData;
@@ -148,6 +181,33 @@ void PIC::Sampling() {
   char *SamplingData;
   double *v,LocalParticleWeight,Speed2,v2;
 
+  double *sampledVelocityOffset,*sampledVelocity2Offset;
+
+
+  //temporary buffer for sampled data
+  char  tempSamplingBuffer[PIC::Mesh::sampleSetDataLength]; //[320];
+
+//  double *tempSamplingBuffer=new double [PIC::Mesh::sampleSetDataLength];  //// (double*)alloca(sizeof(double)*PIC::Mesh::sampleSetDataLength);
+//  if (tempSamplingBuffer==NULL) exit(__LINE__,__FILE__,"Error: cannot allocate the buffer in teh stack");
+
+  //temporaty buffer to store the copy of the particle
+  char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];   /////[73]; //[PIC::ParticleBuffer::ParticleDataLength];
+
+
+  //global offsets
+
+  const int sampledParticleWeghtRelativeOffset=PIC::Mesh::sampledParticleWeghtRelativeOffset;
+  const int sampledParticleNumberRelativeOffset=PIC::Mesh::sampledParticleNumberRelativeOffset;
+  const int sampledParticleNumberDensityRelativeOffset=PIC::Mesh::sampledParticleNumberDensityRelativeOffset;
+  const int sampledParticleVelocityRelativeOffset=PIC::Mesh::sampledParticleVelocityRelativeOffset;
+  const int sampledParticleVelocity2RelativeOffset=PIC::Mesh::sampledParticleVelocity2RelativeOffset;
+  const int sampleSetDataLength=PIC::Mesh::sampleSetDataLength;
+  const int sampledParticleSpeedRelativeOffset=PIC::Mesh::sampledParticleSpeedRelativeOffset;
+  const int collectingCellSampleDataPointerOffset=PIC::Mesh::collectingCellSampleDataPointerOffset;
+  const int ParticleDataLength=PIC::ParticleBuffer::ParticleDataLength;
+
+
+
   //parallel efficientcy measure
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
   long int TreeNodeTotalParticleNumber;
@@ -155,9 +215,30 @@ void PIC::Sampling() {
   double TreeNodeProcessingTime;
 #endif
 
+
+  //the table of increments for accessing the cells in the block
+  static bool initTableFlag=false;
+  static int centerNodeIndex[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+  static int nTotalCenterNodes=-1;
+
+  int centerNodeIndexCounter;
+
+  if (initTableFlag==false) {
+    nTotalCenterNodes=0,initTableFlag=true;
+
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      centerNodeIndex[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+    }
+  }
+
   //go through the 'local nodes'
   while (node!=NULL) {
     block=node->block;
+
+
+
+
+
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
     TreeNodeTotalParticleNumber=0;
@@ -170,16 +251,54 @@ void PIC::Sampling() {
     if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::SampleDistributionFnction(node);
 #endif
 
+    /*
+    #pragma unroll(_BLOCK_CELLS_Z_)
     for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+
+       #pragma unroll(_BLOCK_CELLS_Y_)
        for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+
+          #pragma unroll(_BLOCK_CELLS_X_)
           for (i=0;i<_BLOCK_CELLS_X_;i++) {
             LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-            cell=block->GetCenterNode(LocalCellNumber);
-            SamplingData=cell->GetAssociatedDataBufferPointer()+PIC::Mesh::collectingCellSampleDataPointerOffset;
+  */
 
+    {
+      {
+        for (centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;centerNodeIndexCounter++) {
+            LocalCellNumber=centerNodeIndex[centerNodeIndexCounter];
+            cell=block->GetCenterNode(LocalCellNumber);
             ptr=cell->FirstCellParticle;
 
-            while (ptr!=-1) {
+            //===================    DEBUG ==============================
+
+//            if (cell->Temp_ID==56119) {
+//              cout << __LINE__ << __FILE__ << endl;
+//            }
+
+            //====================   END DEBUG ==========================
+
+
+            if (ptr!=-1) {
+
+            SamplingData=cell->GetAssociatedDataBufferPointer()+/*PIC::Mesh::*/collectingCellSampleDataPointerOffset;
+            memcpy((void*)tempSamplingBuffer,(void*)SamplingData,/*PIC::Mesh::*/sampleSetDataLength);
+
+            ptr=cell->FirstCellParticle;
+            ptrNext=ptr;
+
+            //===================    DEBUG ==============================
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+            if (cell->Measure<=0.0) {
+              cout << __FILE__<< __LINE__ << endl;
+              exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
+            }
+#endif
+            //===================   END DEBUG ==============================
+
+            while (ptrNext!=-1) {
+              ptr=ptrNext;
+
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
               TreeNodeTotalParticleNumber++;
 #endif
@@ -188,45 +307,80 @@ void PIC::Sampling() {
 
 
               ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
-              s=PIC::ParticleBuffer::GetI(ParticleData);
-              v=PIC::ParticleBuffer::GetV(ParticleData);
+
+              memcpy((void*)tempParticleData,(void*)ParticleData,/*PIC::ParticleBuffer::*/ParticleDataLength);
 
 
+              s=PIC::ParticleBuffer::GetI((PIC::ParticleBuffer::byte*)tempParticleData); ///ParticleData);
+              v=PIC::ParticleBuffer::GetV((PIC::ParticleBuffer::byte*)tempParticleData); ///ParticleData);
 
-//=====================  DEBUG =========================
-
-              /*
-double *x;
-x=PIC::ParticleBuffer::GetX(ParticleData);
-if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1500.0E3) {
-  cout << __FILE__ << __LINE__ << endl;
-}
-
-*/
-//===================== END DEBUG ==================
-
-
+              ptrNext=PIC::ParticleBuffer::GetNext((PIC::ParticleBuffer::byte*)tempParticleData);  //ParticleData);
 
 
               LocalParticleWeight=block->GetLocalParticleWeight(s);
-              LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+              LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection((PIC::ParticleBuffer::byte*)tempParticleData); //ParticleData);
 
+
+//              move sample memory into cash
+
+
+              /*
 
               *(s+(double*)(SamplingData+PIC::Mesh::sampledParticleWeghtRelativeOffset))+=LocalParticleWeight;
               *(s+(double*)(SamplingData+PIC::Mesh::sampledParticleNumberRelativeOffset))+=1;
               *(s+(double*)(SamplingData+PIC::Mesh::sampledParticleNumberDensityRelativeOffset))+=LocalParticleWeight/cell->Measure;
 
+
+              sampledVelocityOffset=3*s+(double*)(SamplingData+PIC::Mesh::sampledParticleVelocityRelativeOffset);
+              sampledVelocity2Offset=3*s+(double*)(SamplingData+PIC::Mesh::sampledParticleVelocity2RelativeOffset);
+
+              #pragma unroll(3)
               for (idim=0;idim<3;idim++) {
                 v2=v[idim]*v[idim];
                 Speed2+=v2;
 
-                *(3*s+idim+(double*)(SamplingData+PIC::Mesh::sampledParticleVelocityRelativeOffset))+=v[idim]*LocalParticleWeight;
-                *(3*s+idim+(double*)(SamplingData+PIC::Mesh::sampledParticleVelocity2RelativeOffset))+=v2*LocalParticleWeight;
+//                *(3*s+idim+(double*)(SamplingData+PIC::Mesh::sampledParticleVelocityRelativeOffset))+=v[idim]*LocalParticleWeight;
+//                *(3*s+idim+(double*)(SamplingData+PIC::Mesh::sampledParticleVelocity2RelativeOffset))+=v2*LocalParticleWeight;
+
+                *(idim+sampledVelocityOffset)+=v[idim]*LocalParticleWeight;
+                *(idim+sampledVelocity2Offset)+=v2*LocalParticleWeight;
+
               }
 
               *(s+(double*)(SamplingData+PIC::Mesh::sampledParticleSpeedRelativeOffset))+=sqrt(Speed2)*LocalParticleWeight;
 
-              ptr=PIC::ParticleBuffer::GetNext(ParticleData);
+           */
+
+
+
+              *(s+(double*)(tempSamplingBuffer+/*PIC::Mesh::*/sampledParticleWeghtRelativeOffset))+=LocalParticleWeight;
+              *(s+(double*)(tempSamplingBuffer+/*PIC::Mesh::*/sampledParticleNumberRelativeOffset))+=1;
+              *(s+(double*)(tempSamplingBuffer+/*PIC::Mesh::*/sampledParticleNumberDensityRelativeOffset))+=LocalParticleWeight/cell->Measure;
+
+
+              sampledVelocityOffset=3*s+(double*)(tempSamplingBuffer+/*PIC::Mesh::*/sampledParticleVelocityRelativeOffset);
+              sampledVelocity2Offset=3*s+(double*)(tempSamplingBuffer+/*PIC::Mesh::*/sampledParticleVelocity2RelativeOffset);
+
+              #pragma unroll(3)
+              for (idim=0;idim<3;idim++) {
+                v2=v[idim]*v[idim];
+                Speed2+=v2;
+
+//                *(3*s+idim+(double*)(SamplingData+PIC::Mesh::sampledParticleVelocityRelativeOffset))+=v[idim]*LocalParticleWeight;
+//                *(3*s+idim+(double*)(SamplingData+PIC::Mesh::sampledParticleVelocity2RelativeOffset))+=v2*LocalParticleWeight;
+
+                *(idim+sampledVelocityOffset)+=v[idim]*LocalParticleWeight;
+                *(idim+sampledVelocity2Offset)+=v2*LocalParticleWeight;
+
+              }
+
+              *(s+(double*)(tempSamplingBuffer+/*PIC::Mesh::*/sampledParticleSpeedRelativeOffset))+=sqrt(Speed2)*LocalParticleWeight;
+
+
+            }
+
+            memcpy((void*)SamplingData,(void*)tempSamplingBuffer,/*PIC::Mesh::*/sampleSetDataLength);
+
             }
           }
        }
@@ -384,8 +538,64 @@ if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1500.0E3) {
     //increment the output file number
     DataOutputFileNumber++;
 
-    //redistribute the processor load
-    PIC::Mesh::mesh.CreateNewParallelDistributionLists(_PIC_DYNAMIC_BALANCE_SEND_RECV_MESH_NODE_EXCHANGE_TAG_);
+    //redistribute the processor load and check the mesh afterward
+    if (PIC::Parallel::IterationNumberAfterRebalancing!=0) {
+      MPI_Barrier(MPI_COMM_WORLD);
+      PIC::Parallel::RebalancingTime=MPI_Wtime();
+
+      PIC::Mesh::mesh.CreateNewParallelDistributionLists(_PIC_DYNAMIC_BALANCE_SEND_RECV_MESH_NODE_EXCHANGE_TAG_);
+      PIC::Parallel::IterationNumberAfterRebalancing=0,PIC::Parallel::CumulativeLatency=0.0;
+
+      MPI_Barrier(MPI_COMM_WORLD);
+      PIC::Parallel::RebalancingTime=MPI_Wtime()-PIC::Parallel::RebalancingTime;
+    }
+
+//=====================  DEBUG   ========================
+    /*
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+    //output the data into a file to check the new cells' distribution
+    for (s=0;s<PIC::nTotalSpecies;s++) {
+      PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
+      sprintf(fname,"pic.%s.s=%i.out=%ld-redistributed-load-CompleteSample.dat",ChemSymbol,s,DataOutputFileNumber-1);
+
+      if (PIC::Mesh::mesh.ThisThread==0) {
+        printf("printing output file: %s.........",fname);
+        fflush(stdout);
+      }
+
+      PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
+
+      if (PIC::Mesh::mesh.ThisThread==0) {
+        printf("done.\n");
+        fflush(stdout);
+      }
+    }
+
+    PIC::Mesh::switchSamplingBuffers();
+
+    for (s=0;s<PIC::nTotalSpecies;s++) {
+      PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
+      sprintf(fname,"pic.%s.s=%i.out=%ld-redistributed-load-TempSample.dat",ChemSymbol,s,DataOutputFileNumber-1);
+
+      if (PIC::Mesh::mesh.ThisThread==0) {
+        printf("printing output file: %s.........",fname);
+        fflush(stdout);
+      }
+
+      PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
+
+      if (PIC::Mesh::mesh.ThisThread==0) {
+        printf("done.\n");
+        fflush(stdout);
+      }
+    }
+
+    PIC::Mesh::switchSamplingBuffers();
+#endif
+*/
+//=====================  END DEBUG ===========================
+
+
   }
 
 
@@ -394,6 +604,22 @@ if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1500.0E3) {
 
 }
 
+
+//====================================================
+//the run time signal and exeptions handler
+void PIC::SignalHandler(int sig) {
+  cout << "Signal is intersepted: thread=" << PIC::Mesh::mesh.ThisThread << endl;
+
+  switch(sig) {
+  case SIGFPE :
+    cout << "Signal=SIGFPE" << endl;
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: unknown signal");
+  }
+
+  exit(__LINE__,__FILE__,"Error: exit in the signal handler");
+}
 //====================================================
 //init the particle solver
 void PIC::Init() {
@@ -401,6 +627,21 @@ void PIC::Init() {
   //init MPI variables
   MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
   MPI_Comm_size(MPI_COMM_WORLD,&nTotalThreads);
+
+  //init sections of the particle solver
+
+  //set up the signal handler
+  signal(SIGFPE,SignalHandler);
+
+
+  //init ICES
+#if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
+#define _PIC_INIT_ICES_
+#endif
+
+#ifdef _PIC_INIT_ICES_
+  PIC::ICES::Init();
+#endif
 }
 
 
