@@ -268,22 +268,30 @@ namespace PIC {
     }
 
     inline void GetX(double* x,long int ptr) {
+      /*
       register double *xptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
       register int idim;
 
       for (idim=0;idim<DIM;idim++) x[idim]=xptr[idim];
+      */
+
+      memcpy(x,ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_,DIM*sizeof(double));
     }
 
     inline void GetX(double* x,byte *ParticleDataStart) {
+      /*
       register double *xptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
       register int idim;
 
       for (idim=0;idim<DIM;idim++) x[idim]=xptr[idim];
+      */
+
+      memcpy(x,ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_,DIM*sizeof(double));
     }
 
     inline void SetX(double* x,long int ptr) {
-      register double *xptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
-      register int idim;
+//      register double *xptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
+//      register int idim;
 
 //=====================  DEBUG ================
 /*
@@ -297,12 +305,14 @@ namespace PIC {
 */
 //=================   END DEBUG =============
 
-      for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
+//      for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
+
+      memcpy(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_,x,DIM*sizeof(double));
     }
 
     inline void SetX(double* x,byte *ParticleDataStart) {
-      register double *xptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
-      register int idim;
+//      register double *xptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
+//      register int idim;
 
       //=====================  DEBUG ================
 
@@ -316,7 +326,9 @@ namespace PIC {
 */
       //=================   END DEBUG =============
 
-      for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
+//      for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
+
+      memcpy(ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_,x,DIM*sizeof(double));
     }
 
     //==========================================================
@@ -330,31 +342,47 @@ namespace PIC {
     }
 
     inline void GetV(double* v,long int ptr) {
+      /*
       register double *vptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
       register int idim;
 
       for (idim=0;idim<DIM;idim++) v[idim]=vptr[idim];
+      */
+
+      memcpy(v,ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,DIM*sizeof(double));
     }
 
     inline void GetV(double* v,byte *ParticleDataStart) {
+      /*
       register double *vptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
       register int idim;
 
       for (idim=0;idim<DIM;idim++) v[idim]=vptr[idim];
+      */
+
+      memcpy(v,ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,DIM*sizeof(double));
     }
 
     inline void SetV(double* v,long int ptr) {
+      /*
       register double *vptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
       register int idim;
 
       for (idim=0;idim<DIM;idim++) vptr[idim]=v[idim];
+      */
+
+      memcpy(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,v,DIM*sizeof(double));
     }
 
     inline void SetV(double* v,byte *ParticleDataStart) {
+      /*
       register double *vptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
       register int idim;
 
       for (idim=0;idim<DIM;idim++) vptr[idim]=v[idim];
+      */
+
+      memcpy(ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,v,DIM*sizeof(double));
     }
 
 

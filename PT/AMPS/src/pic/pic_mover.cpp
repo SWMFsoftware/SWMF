@@ -213,6 +213,9 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
   bool MovingTimeFinished=false;
 
 
+#if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+  double xInit[3];
+#endif
   //=====================  DEBUG =========================
 
 
@@ -223,6 +226,10 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
 static long int nCallCounter=0;
 
 nCallCounter++;
+
+if ((nCallCounter==1057317)&&(PIC::Mesh::mesh.ThisThread==5)) {
+  cout << __FILE__ << "@" << __LINE__ << endl;
+}
 
 //########## END DEBUG ##########
 
@@ -276,7 +283,7 @@ if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1737.0E3) {
 
 */
 
-  if (nCallCounter==21641700) {
+  if ((nCallCounter==1057317)&&(PIC::Mesh::mesh.ThisThread==5)) {
     cout << __FILE__ << "@" << __LINE__ << endl;
   }
 //===================== END DEBUG ==================
@@ -288,6 +295,19 @@ if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1737.0E3) {
 //  while (dtTotal>0.0) {
   while (MovingTimeFinished==false) {
 MovingLoop:
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+    //check the consistency of the particle mover
+    int iTemp,jTemp,kTemp;
+
+    if (PIC::Mesh::mesh.fingCellIndex(x,iTemp,jTemp,kTemp,startNode,false)==-1) {
+      exit(__LINE__,__FILE__,"Error: the cell is not found");
+    }
+
+    if (startNode->block==NULL) exit(__LINE__,__FILE__,"Error: the block is not initialized");
+#endif
+
+
 
     xminBlock=startNode->xmin;
     xmaxBlock=startNode->xmax;
@@ -371,6 +391,7 @@ MovingLoop:
           x[0]=x0Sphere[0]+l*dx;
           x[1]=x0Sphere[1]+l*dy;
           x[2]=x0Sphere[2]+l*dz;
+          startNode=PIC::Mesh::mesh.findTreeNode(x,startNode);
 
           FirstBoundaryFlag=true;
 
@@ -417,7 +438,15 @@ MovingLoop:
 #endif
 
     //advance the particle's position
-    for (idim=0;idim<DIM;idim++) x[idim]+=dtMin*v[idim];
+    for (idim=0;idim<DIM;idim++) {
+
+#if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+      xInit[idim]=x[idim];
+#endif
+
+      x[idim]+=dtMin*v[idim];
+    }
+
     FirstBoundaryFlag=false;
 
 #if _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ == _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ON_
@@ -427,7 +456,17 @@ MovingLoop:
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
     //model the photolytic transformation
     if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTION_OCCURES_) {
-      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[spec](x,ptr,spec,ParticleData);
+      int specInit=spec;
+
+      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[spec](xInit,x,ptr,spec,ParticleData);
+
+      //adjust the value of the dtLeft to match the time step for the species 'spec'
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+      dtTotal*=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]/PIC::ParticleWeightTimeStep::GlobalTimeStep[specInit];
+#else
+      exit(__LINE__,__FILE__,"Error: not implemeted");
+#endif
+
 
       if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_) {
         PIC::ParticleBuffer::DeleteParticle(ptr);
@@ -445,6 +484,8 @@ MovingLoop:
     //interaction with the faces of the block and internal surfaces
     if (ParticleIntersectionCode==_INTERNAL_SPHERE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
       int code;
+
+      FirstBoundaryFlag=true;
 
       lastInternalBoundaryDescriptor=InternalBoundaryDescriptor_dtMin;
       code=((cInternalSphericalData*)(InternalBoundaryDescriptor_dtMin->BoundaryElement))->ParticleSphereInteraction(spec,ptr,x,v,dtTotal,(void*)startNode,InternalBoundaryDescriptor_dtMin->BoundaryElement);
@@ -664,6 +705,12 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
   //===================== END DEBUG ==================
 
 
+#if _INTERNAL_BOUNDARY_MODE_ ==  _INTERNAL_BOUNDARY_MODE_ON_
+  if (startNode->InternalBoundaryDescriptorList!=NULL) {
+   return UniformWeight_UniformTimeStep_noForce_TraceTrajectory(ptr,dt,startNode);
+  }
+#endif
+
 
   double dtLeft=0.0;
   double accl[3];
@@ -693,6 +740,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
     memcpy(xinit,x,3*sizeof(double));
 
     //Check if the startNode has cut cells
+    /*
 #if _INTERNAL_BOUNDARY_MODE_ ==  _INTERNAL_BOUNDARY_MODE_ON_
     if (startNode->InternalBoundaryDescriptorList!=NULL) {
       PIC::ParticleBuffer::SetV(v,ParticleData);
@@ -701,6 +749,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
      return UniformWeight_UniformTimeStep_noForce_TraceTrajectory(ptr,dt+dtLeft,startNode);
     }
 #endif
+*/
 
 
     //check the occurence of photolytic reactions
@@ -731,7 +780,16 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
     //model the photolytic transformation
     if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTION_OCCURES_) {
-      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[spec](x,ptr,spec,ParticleData);
+      int specInit=spec;
+
+      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[spec](xinit,x,ptr,spec,ParticleData);
+
+      //adjust the value of the dtLeft to match the time step for the species 'spec'
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+      dtLeft*=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]/PIC::ParticleWeightTimeStep::GlobalTimeStep[specInit];
+#else
+      exit(__LINE__,__FILE__,"Error: not implemeted");
+#endif
 
       if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_) {
         PIC::ParticleBuffer::DeleteParticle(ptr);
@@ -764,6 +822,8 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
      return UniformWeight_UniformTimeStep_noForce_TraceTrajectory(ptr,dt+dtLeft,startNode);
     }
     #endif
+
+    startNode=newNode;
   }
 
   //the particle is still within the computational domain:

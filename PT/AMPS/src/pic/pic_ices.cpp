@@ -17,6 +17,9 @@ int PIC::ICES::PlasmaNumberDensityOffset=-1;
 int PIC::ICES::PlasmaTemperatureOffset=-1;
 int PIC::ICES::PlasmaBulkVelocityOffset=-1;
 
+//offsets of the data loaded from the DSMC results
+int PIC::ICES::NeutralBullVelocityOffset=-1,PIC::ICES::NeutralNumberDensityOffset=-1,PIC::ICES::NeutralTemperatureOffset=-1;
+
 //====================================================
 void PIC::ICES::SetLocationICES(const char* loc) {
   sprintf(locationICES,"%s",loc);
@@ -56,6 +59,24 @@ void PIC::ICES::Init() {
     PlasmaBulkVelocityOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=3*sizeof(double);
   }
+#endif
+
+#if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
+  if (NeutralBullVelocityOffset==-1) {
+    NeutralBullVelocityOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=3*sizeof(double);
+  }
+
+  if (NeutralNumberDensityOffset==-1) {
+    NeutralNumberDensityOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=sizeof(double);
+  }
+
+  if (NeutralTemperatureOffset==-1) {
+    NeutralTemperatureOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=sizeof(double);
+  }
+#endif
 
 
   //register the file output functions
@@ -64,10 +85,10 @@ void PIC::ICES::Init() {
   PIC::Mesh::fInterpolateCenterNode t2;
 
 
-  PIC::Mesh::PrintVariableListCenterNode.push_back(t0=PrintVariableListSWMF);
-  PIC::Mesh::PrintDataCenterNode.push_back(t1=PrintDataSWMF);
-  PIC::Mesh::InterpolateCenterNode.push_back(t2=InterpolateSWMF);
-#endif
+  PIC::Mesh::PrintVariableListCenterNode.push_back(t0=PrintVariableList);
+  PIC::Mesh::PrintDataCenterNode.push_back(t1=PrintData);
+  PIC::Mesh::InterpolateCenterNode.push_back(t2=Interpolate);
+
 
 }
 
@@ -163,8 +184,66 @@ void PIC::ICES::retriveSWMFdata(const char *DataFile) {
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  if (PIC::Mesh::mesh.ThisThread==0) printf("ICES done\n");
+  if (PIC::Mesh::mesh.ThisThread==0) printf("ICES (SWMF) done\n");
 }
+
+
+//====================================================
+//retrive the data file from DSMC solver
+void PIC::ICES::retriveDSMCdata(const char *Case,const char *DataFile,const char *MeshFile) {
+  char command[_MAX_STRING_LENGTH_PIC_];
+
+  //start ICES
+  sprintf(command,"%s/DSMC/ices-dsmc -extractdatapoints -grid %s/Data/%s/DSMC/%s -testpointslist icesCellCenterCoordinates.thread=%i -datafile %s/Data/%s/DSMC/%s -dim 2 -symmetry cylindrical",locationICES,   locationICES,Case,MeshFile, PIC::Mesh::mesh.ThisThread,   locationICES,Case,DataFile);
+
+  if (PIC::Mesh::mesh.ThisThread==0) printf("ICES: retrive DSMC data \n Execute command: %s\n",command);
+  system(command);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  if (PIC::Mesh::mesh.ThisThread==0) {
+    printf("Combine individual trajectory files into a single file\n");
+
+    FILE *fout;
+    int thread;
+    char fname[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],str1[_MAX_STRING_LENGTH_PIC_];
+    CiFileOperations fin;
+
+    fout=fopen("icesCellCenterCoordinates.DSMC.dat","w");
+
+    for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
+      sprintf(fname,"icesCellCenterCoordinates.thread=%i.out",thread);
+      fin.openfile(fname);
+
+      while (fin.eof()==false) {
+        if (fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_)==false)  {
+          break;
+        }
+
+        fin.CutInputStr(str1,str);
+
+        if ((strcmp("#VARIABLES",str1)==0)||(strcmp("#START",str1)==0)) {
+          if (thread==0) fprintf(fout,"%s %s\n",str1,str);
+        }
+        else fprintf(fout,"%s %s\n",str1,str);
+      }
+
+      fin.closefile();
+
+
+    }
+
+    fclose(fout);
+  }
+
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  if (PIC::Mesh::mesh.ThisThread==0) printf("ICES (DSMC) done\n");
+
+}
+
+
 
 //====================================================
 //read and parse the data file from SWMF
@@ -285,24 +364,163 @@ void PIC::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cD
 }
 
 //====================================================
+//read and parse the data file from SWMF
+void PIC::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  cDataNodeDSMC dataDSMC;
+  static CiFileOperations ices;
+  long int nd;
+  int status,idim,i,j,k;
+  char *offset;
+
+  PIC::Mesh::cDataCenterNode *CenterNode;
+  char str[_MAX_STRING_LENGTH_PIC_],str1[_MAX_STRING_LENGTH_PIC_],*endptr;
+
+
+#if DIM == 3
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+#elif DIM == 2
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  const int kMin=0,kMax=0;
+#elif DIM == 1
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=0,jMax=0;
+  const int kMin=0,kMax=0;
+#endif
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    ices.openfile("icesCellCenterCoordinates.DSMC.dat");
+
+    ices.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+    ices.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+  }
+
+  //read the data file
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+      //the read section
+      ices.GetInputStr(str,sizeof(str));
+
+
+
+//=================  DEBUG ===========================
+/*
+      double xprobe=0.0;
+
+      ices.CutInputStr(str1,str);
+      xprobe+=pow(strtod(str1,&endptr),2);
+
+      ices.CutInputStr(str1,str);
+      xprobe+=pow(strtod(str1,&endptr),2);
+
+      ices.CutInputStr(str1,str);
+      xprobe+=pow(strtod(str1,&endptr),2);
+
+      xprobe=sqrt(xprobe);
+      if (xprobe<1.5e3) {
+        cout << __FILE__ << "@" << __LINE__ << endl;
+      }
+
+
+      ices.CutInputStr(str1,str);
+*/
+
+
+      ices.CutInputStr(str1,str);
+      ices.CutInputStr(str1,str);
+      ices.CutInputStr(str1,str);
+      ices.CutInputStr(str1,str);
+
+
+//=================  END DEBUG ===========================
+
+      status=strtol(str1,&endptr,10);
+
+      if (status==0) {
+        //read the row data
+        for (idim=0;idim<3;idim++) {
+          ices.CutInputStr(str1,str);
+          dataDSMC.neutralVel[idim]=strtod(str1,&endptr);
+        }
+
+        ices.CutInputStr(str1,str);
+        dataDSMC.neutralTemperature=strtod(str1,&endptr);
+
+        ices.CutInputStr(str1,str);
+        dataDSMC.neutralNumberDensity=strtod(str1,&endptr);
+      }
+
+
+      if (startNode->block!=NULL) {
+        //save the data on the mesh node
+        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        CenterNode=startNode->block->GetCenterNode(nd);
+
+        if (CenterNode==NULL) continue;
+
+        offset=CenterNode->GetAssociatedDataBufferPointer();
+
+        if (status!=0) { //check the status of the reading
+          ices.error("the point is not found");
+          exit(__LINE__,__FILE__,"Error: the extracted point is not found");
+        }
+
+        for (idim=0;idim<3;idim++) {
+          *(idim+(double*)(offset+NeutralBullVelocityOffset))=dataDSMC.neutralVel[idim];
+        }
+
+        *(double*)(offset+NeutralNumberDensityOffset)=dataDSMC.neutralNumberDensity;
+        *(double*)(offset+NeutralTemperatureOffset)=dataDSMC.neutralTemperature;
+      }
+    }
+  }
+  else {
+    int nDownNode;
+
+    for (nDownNode=0;nDownNode<(1<<DIM);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) readDSMCdata(startNode->downNode[nDownNode]);
+  }
+
+  if (startNode==PIC::Mesh::mesh.rootTree) ices.closefile();
+}
+
+//====================================================
 //output background parameters loaded with ICES from SWMF output
-void PIC::ICES::PrintVariableListSWMF(FILE* fout,int DataSetNumber) {
+void PIC::ICES::PrintVariableList(FILE* fout,int DataSetNumber) {
   int idim;
 
+#if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
   for (idim=0;idim<DIM;idim++) fprintf(fout,", \"E%i\"",idim);
   for (idim=0;idim<DIM;idim++) fprintf(fout,", \"B%i\"",idim);
   for (idim=0;idim<DIM;idim++) fprintf(fout,", \"PlasmaVel%i\"",idim);
 
   fprintf(fout,", \"Plasma Pressure\", \"Plasma Temperature\", \"Plasma number Desnity\"");
+#endif
+
+#if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
+  for (idim=0;idim<DIM;idim++) fprintf(fout,", \"NeutralVel%i\"",idim);
+  fprintf(fout,", \"Neutral number Desnity\", \"Neutral Temperature\"");
+#endif
+
 }
 
-void PIC::ICES::PrintDataSWMF(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
+void PIC::ICES::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
+
+#if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
   cDataNodeSWMF dataSWMF;
+#endif
+
+#if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
+  cDataNodeDSMC dataDSMC;
+#endif
+
 
   if (pipe->ThisThread==CenterNodeThread) {
     int idim;
     char *offset=CenterNode->GetAssociatedDataBufferPointer();
 
+#if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
     dataSWMF.swNumberDensity=*((double*)(PlasmaNumberDensityOffset+offset));
     dataSWMF.swPressure=*((double*)(PlasmaPressureOffset+offset));
     dataSWMF.swTemperature=*((double*)(PlasmaTemperatureOffset+offset));
@@ -312,10 +530,20 @@ void PIC::ICES::PrintDataSWMF(FILE* fout,int DataSetNumber,CMPI_channel *pipe,in
       dataSWMF.E[idim]=*(idim+(double*)(ElectricFieldOffset+offset));
       dataSWMF.swVel[idim]=*(idim+(double*)(PlasmaBulkVelocityOffset+offset));
     }
+#endif
+
+#if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
+    for (idim=0;idim<3;idim++) dataDSMC.neutralVel[idim]=*(idim+(double*)(offset+NeutralBullVelocityOffset));
+
+    dataDSMC.neutralNumberDensity=*(double*)(offset+NeutralNumberDensityOffset);
+    dataDSMC.neutralTemperature=*(double*)(offset+NeutralTemperatureOffset);
+#endif
+
   }
 
 
   if (pipe->ThisThread==0) {
+#if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
     if (CenterNodeThread!=0) pipe->recv((char*)&dataSWMF,sizeof(dataSWMF),CenterNodeThread);
 
     fprintf(fout,"%e  %e  %e  ",dataSWMF.E[0],dataSWMF.E[1],dataSWMF.E[2]);
@@ -323,11 +551,29 @@ void PIC::ICES::PrintDataSWMF(FILE* fout,int DataSetNumber,CMPI_channel *pipe,in
     fprintf(fout,"%e  %e  %e  ",dataSWMF.swVel[0],dataSWMF.swVel[1],dataSWMF.swVel[2]);
 
     fprintf(fout,"%e  %e  %e  ",dataSWMF.swPressure,dataSWMF.swTemperature,dataSWMF.swNumberDensity);
+#endif
+
+#if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
+    if (CenterNodeThread!=0) pipe->recv((char*)&dataDSMC,sizeof(dataDSMC),CenterNodeThread);
+
+    for (int idim=0;idim<DIM;idim++) fprintf(fout,"%e  ",dataDSMC.neutralVel[idim]);
+    fprintf(fout,"%e  %e  ",dataDSMC.neutralNumberDensity,dataDSMC.neutralTemperature);
+#endif
+
   }
-  else pipe->send((char*)&dataSWMF,sizeof(dataSWMF));
+  else {
+#if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
+    pipe->send((char*)&dataSWMF,sizeof(dataSWMF));
+#endif
+
+#if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
+    pipe->send((char*)&dataDSMC,sizeof(dataDSMC));
+#endif
+
+  }
 }
 
-void PIC::ICES::InterpolateSWMF(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
+void PIC::ICES::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
   int idim,i;
   double c;
   char *offset,*offsetCenterNode;
@@ -339,6 +585,7 @@ void PIC::ICES::InterpolateSWMF(PIC::Mesh::cDataCenterNode** InterpolationList,d
   //init the buffer of 'CenterNode'
   offsetCenterNode=CenterNode->GetAssociatedDataBufferPointer();
 
+#if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
   *((double*)(PlasmaNumberDensityOffset+offsetCenterNode))=0.0;
   *((double*)(PlasmaPressureOffset+offsetCenterNode))=0.0;
   *((double*)(PlasmaTemperatureOffset+offsetCenterNode))=0.0;
@@ -348,12 +595,23 @@ void PIC::ICES::InterpolateSWMF(PIC::Mesh::cDataCenterNode** InterpolationList,d
     *(idim+(double*)(ElectricFieldOffset+offsetCenterNode))=0.0;
     *(idim+(double*)(PlasmaBulkVelocityOffset+offsetCenterNode))=0.0;
   }
+#endif
+
+#if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
+  for (idim=0;idim<3;idim++) {
+    *(idim+(double*)(NeutralBullVelocityOffset+offsetCenterNode))=0.0;
+  }
+
+  *(double*)(NeutralNumberDensityOffset+offsetCenterNode)=0.0;
+  *(double*)(NeutralTemperatureOffset+offsetCenterNode)=0.0;
+#endif
 
   //interpolate the sampled data
   for (i=0;i<nInterpolationCoeficients;i++) {
     c=InterpolationCoeficients[i];
     offset=InterpolationList[i]->GetAssociatedDataBufferPointer();
 
+#if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
     *((double*)(PlasmaNumberDensityOffset+offsetCenterNode))+=c*(*((double*)(PlasmaNumberDensityOffset+offset)));
     *((double*)(PlasmaPressureOffset+offsetCenterNode))+=c*(*((double*)(PlasmaPressureOffset+offset)));
     *((double*)(PlasmaTemperatureOffset+offsetCenterNode))+=c*(*((double*)(PlasmaTemperatureOffset+offset)));
@@ -363,33 +621,16 @@ void PIC::ICES::InterpolateSWMF(PIC::Mesh::cDataCenterNode** InterpolationList,d
       *(idim+(double*)(ElectricFieldOffset+offsetCenterNode))+=c*(*(idim+(double*)(ElectricFieldOffset+offset)));
       *(idim+(double*)(PlasmaBulkVelocityOffset+offsetCenterNode))+=c*(*(idim+(double*)(PlasmaBulkVelocityOffset+offset)));
     }
+#endif
 
-//===================  DEBUG =========================
-/*
-    cDataNodeSWMF dataSWMF;
-
-    dataSWMF.swNumberDensity=*((double*)(PlasmaNumberDensityOffset+offset));
-    dataSWMF.swPressure=*((double*)(PlasmaPressureOffset+offset));
-    dataSWMF.swTemperature=*((double*)(PlasmaTemperatureOffset+offset));
-
+#if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
     for (idim=0;idim<3;idim++) {
-      dataSWMF.B[idim]=*(idim+(double*)(MagneticFieldOffset+offset));
-      dataSWMF.E[idim]=*(idim+(double*)(ElectricFieldOffset+offset));
-      dataSWMF.swVel[idim]=*(idim+(double*)(PlasmaBulkVelocityOffset+offset));
+      *(idim+(double*)(NeutralBullVelocityOffset+offsetCenterNode))+=c*(*(idim+(double*)(NeutralBullVelocityOffset+offset)));
     }
 
-
-    dataSWMF.swNumberDensity=*((double*)(PlasmaNumberDensityOffset+offsetCenterNode));
-    dataSWMF.swPressure=*((double*)(PlasmaPressureOffset+offsetCenterNode));
-    dataSWMF.swTemperature=*((double*)(PlasmaTemperatureOffset+offsetCenterNode));
-
-    for (idim=0;idim<3;idim++) {
-      dataSWMF.B[idim]=*(idim+(double*)(MagneticFieldOffset+offsetCenterNode));
-      dataSWMF.E[idim]=*(idim+(double*)(ElectricFieldOffset+offsetCenterNode));
-      dataSWMF.swVel[idim]=*(idim+(double*)(PlasmaBulkVelocityOffset+offsetCenterNode));
-    }
-*/
-//=================  END DEBUG =======================
+    *(double*)(NeutralNumberDensityOffset+offsetCenterNode)+=c*(*(double*)(NeutralNumberDensityOffset+offset));
+    *(double*)(NeutralTemperatureOffset+offsetCenterNode)+=c*(*(double*)(NeutralTemperatureOffset+offset));
+#endif
 
 
   }

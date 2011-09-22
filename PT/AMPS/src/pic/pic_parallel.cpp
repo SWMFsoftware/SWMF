@@ -5,7 +5,9 @@
 
 #include "pic.h"
 
-long int PIC::Parallel::sendParticleCounter=0,PIC::Parallel::recvParticleCounter=0;
+long int PIC::Parallel::sendParticleCounter=0,PIC::Parallel::recvParticleCounter=0,PIC::Parallel::IterationNumberAfterRebalancing=0;
+double PIC::Parallel::RebalancingTime=0.0,PIC::Parallel::CumulativeLatency=0.0;
+double PIC::Parallel::EmergencyLoadRebalancingFactor=3.0;
 
 //====================================================
 //Exchange particles between Processors

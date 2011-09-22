@@ -140,6 +140,7 @@ void PIC::TimeStep() {
     }
 
 
+#if _PIC_EMERGENCY_LOAD_REBALANCING_MODE_ == _PIC_MODE_ON_
     //redistribute the processor load and check the mesh afterward
     int EmergencyLoadRebalancingFlag=false;
 
@@ -161,6 +162,7 @@ void PIC::TimeStep() {
       PIC::Parallel::RebalancingTime=MPI_Wtime()-PIC::Parallel::RebalancingTime;
       if (PIC::Mesh::mesh.ThisThread==0) printf("Load Rebalancing.....  done\n");
     }
+#endif
 
     MPI_Barrier(MPI_COMM_WORLD);
     nInteractionsAfterRunStatisticExchange=0;
@@ -538,6 +540,7 @@ void PIC::Sampling() {
     //increment the output file number
     DataOutputFileNumber++;
 
+#if _PIC_SAMPLING_BREAK_LOAD_REBALANCING_MODE_ == _PIC_MODE_ON_
     //redistribute the processor load and check the mesh afterward
     if (PIC::Parallel::IterationNumberAfterRebalancing!=0) {
       MPI_Barrier(MPI_COMM_WORLD);
@@ -549,6 +552,7 @@ void PIC::Sampling() {
       MPI_Barrier(MPI_COMM_WORLD);
       PIC::Parallel::RebalancingTime=MPI_Wtime()-PIC::Parallel::RebalancingTime;
     }
+#endif
 
 //=====================  DEBUG   ========================
     /*

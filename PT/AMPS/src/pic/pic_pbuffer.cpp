@@ -403,3 +403,46 @@ unsigned long PIC::ParticleBuffer::GetChecksum() {
   return sum.checksum();
 }
 
+//==========================================================
+//check particle list -> calculate the number of particles stored in the lists and compare with the total number of particles stored in the particle buffer
+void PIC::ParticleBuffer::CheckParticleList() {
+  long int nTotalListParticles=0;
+  int i,j,k,LocalCellNumber;
+  long int ParticleList;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  PIC::Mesh::cDataCenterNode *cell;
+
+  for (int thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
+    node=(thread==PIC::Mesh::mesh.ThisThread) ? PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread] : PIC::Mesh::mesh.DomainBoundaryLayerNodesList[thread];
+
+    if (node==NULL) continue;
+
+    while (node!=NULL) {
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+         for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+            for (i=0;i<_BLOCK_CELLS_X_;i++) {
+              LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+              cell=node->block->GetCenterNode(LocalCellNumber);
+
+              if (cell!=NULL) {
+                if (cell->tempParticleMovingList!=-1) exit(__LINE__,__FILE__,"Error: the temp list is not empty");
+
+                ParticleList=node->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;
+
+                while (ParticleList!=-1) {
+                  ++nTotalListParticles;
+                  ParticleList=PIC::ParticleBuffer::GetNext(ParticleList);
+
+                  if (nTotalListParticles>NAllPart) exit(__LINE__,__FILE__,"Error: the list particles' number exeeds the total number of particles stored in the buffer");
+                }
+              }
+            }
+         }
+      }
+
+      node=node->nextNodeThisThread;
+    }
+  }
+
+  if (nTotalListParticles!=NAllPart) exit(__LINE__,__FILE__,"Error: the total number of particles stored in the lists is different from that stored in the particle buffer");
+}

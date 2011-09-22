@@ -17,6 +17,8 @@
 
 #define Pi 3.14159265358979323846264338327950288419716939937510582
 #define sqrtPi 1.7724538509055160272981674833411
+#define PiTimes2 6.28318530717958647692528676655900576839433879875021
+
 
 #define _ON_AMR_MESH_    1
 #define _OFF_AMR_MESH_   0
@@ -40,6 +42,14 @@
 #define _INTERNAL_BOUNDARY_MODE_OFF_ 1
 
 #define _INTERNAL_BOUNDARY_MODE_ _INTERNAL_BOUNDARY_MODE_ON_
+
+
+//allow user to add data to the definitions of the internal boundaries
+#define _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ON_     0
+#define _USED_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_OFF_    1
+
+#define _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ON_
+
 
 //the types of the internal boundaries
 #define _INTERNAL_BOUNDARY_TYPE_UNDEFINED_  0
@@ -166,6 +176,8 @@ void exit(const long int nline, const char* fname,const char* msg=NULL) {
   fclose(errorlog);
   ::exit(1);
 }
+
+virtual ~cAMRexit() { }
 };
 
 //the stack class to store the data structure of the mesh

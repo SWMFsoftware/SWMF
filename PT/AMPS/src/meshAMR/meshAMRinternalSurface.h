@@ -332,6 +332,7 @@ public:
 
    void PrintSurfaceMesh(const char *fname) {PrintSurfaceData(fname,0,false);}
 
+   //=======================================================================
    //intersection of a block with the sphere
    int BlockIntersection(double *xBlockMin,double *xBlockMax,double EPS) {
      int idim,i,j,k,nCounter;
@@ -344,11 +345,6 @@ public:
 */
 
      //if all corners of the block are within the sphere -> the block is entirely within the sphere
-     int nCounterOutside=0,nCounterInside=0;
-     double R2,r;
-
-     R2=pow(Radius+EPS,2);
-
      for (nCounter=0,i=0;i<2;i++) {
        x[0]=((i==0) ? xBlockMin[0] : xBlockMax[0])-OriginPosition[0];
 
@@ -360,24 +356,17 @@ public:
 
 
 //           cout << x[0]*x[0]+x[1]*x[1]+x[2]*x[2] << "   "  << pow(Radius+EPS,2) << endl;
-           r=x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
+           if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<=pow(Radius+EPS,2)) nCounter++;
 
-
-           if (r<=R2) {
-             nCounterInside++;
-           }
-
-           else {
-             nCounterOutside++;
-           }
          }
        }
      }
 
 
-     if (nCounterInside==8) return _AMR_BLOCK_OUTSIDE_DOMAIN_;
+     if (nCounter==8) return _AMR_BLOCK_OUTSIDE_DOMAIN_;
 
 
+     /*
      //check if the sphere is entirely within the block
      for (nCounter=0,idim=0;idim<3;idim++) {
        if ((OriginPosition[idim]+Radius<xBlockMax[idim]+EPS)&&(OriginPosition[idim]-Radius>xBlockMin[idim]-EPS)) nCounter++;
@@ -396,13 +385,15 @@ public:
      }
 
      if (nCounter==3) return _AMR_BLOCK_INTERSECT_DOMAIN_BOUNDARY_;
+     */
 
-/*
+
      //check if the sphere intersects the block
-     double r[3],x0[3],e0[3],e1[3],norm[3],lE0,lE1,lNorm,c;
+     double r[3],x0[3],e0[3],e1[3],norm[3],rE0,rE1,lE0,lE1,lNorm,c;
+     int nface;
 
      //the internal coordinated of the origin of the coordinate frame related to a face
-     static const int nX0[6][3]=  { {0,0,0},{1,0,0}, {0,0,0},{0,1,0}, {0,0,0},{0,0,1}};
+     static const int nX0face[6][3]=  { {0,0,0},{1,0,0}, {0,0,0},{0,1,0}, {0,0,0},{0,0,1}};
 
      //the internal coordinate of the nodes that determine the coordinate vectors related to the frame
      static const int nE0[6][3]=  { {0,1,0},{1,1,0}, {1,0,0},{1,1,0}, {1,0,0},{1,0,1}};
@@ -412,17 +403,20 @@ public:
      static const int nNorm[6][3]={ {1,0,0},{0,0,0}, {0,1,0},{0,0,0}, {0,0,1},{0,0,0}};
 
      for (nface=0;nface<6;nface++) {
-       for (idim=0,lNorm=0.0;idim<3;idim++) {
-         x0[idim]=(nX0[nface][idim]==0) ? xBlockMin[idim] : xBlockMax[idim];
+       for (idim=0,lNorm=0.0,lE0=0.0,lE1=0.0;idim<3;idim++) {
+         x0[idim]=(nX0face[nface][idim]==0) ? xBlockMin[idim] : xBlockMax[idim];
 
          e0[idim]=((nE0[nface][idim]==0) ? xBlockMin[idim] : xBlockMax[idim]) - x0[idim];
          e1[idim]=((nE1[nface][idim]==0) ? xBlockMin[idim] : xBlockMax[idim]) - x0[idim];
 
          norm[idim]=((nNorm[nface][idim]==0) ? xBlockMin[idim] : xBlockMax[idim]) - x0[idim];
+
+         lE0+=pow(e0[idim],2);
+         lE1+=pow(e1[idim],2);
          lNorm+=pow(norm[idim],2);
        }
 
-       for (c=0.0,idim=0,lNorm=sqrt(lNorm);idim<3;idim++) {
+       for (c=0.0,idim=0,lNorm=sqrt(lNorm),lE1=sqrt(lE1),lE0=sqrt(lE0);idim<3;idim++) {
          r[idim]=OriginPosition[idim]-x0[idim];
          norm[idim]/=lNorm;
 
@@ -431,36 +425,36 @@ public:
 
        //check the distance from the face to the point 'OriginPosition'
        if (fabs(c)<Radius+EPS) { //the distance betweenthe plane containing the face and the point 'OriginPosition' is less or equal 'Radius'
-         for (lE0=0.0,lE1=0.0,idim=0;idim<3;idim++) {
+         for (rE0=0.0,rE1=0.0,idim=0;idim<3;idim++) {
            r[idim]-=c*norm[idim];
 
-           lE0+=r[idim]*e0[idim];
-           lE1+=r[idim]*e1[idim];
+           e0[idim]/=lE0;
+           e1[idim]/=lE1;
+
+           rE0+=r[idim]*e0[idim];
+           rE1+=r[idim]*e1[idim];
          }
 
-         if ((-EPS<lE0)&&(lE0<1.0+EPS)&&(-EPS<lE1)&&(lE1<1.0+EPS)) return _AMR_BLOCK_INTERSECT_DOMAIN_BOUNDARY_;
+         if ((-EPS<rE0)&&(rE0<lE0+EPS)&&(-EPS<rE1)&&(rE1<lE1+EPS)) return _AMR_BLOCK_INTERSECT_DOMAIN_BOUNDARY_;
        }
 
      }
-*/
 
-/*
+
      //check the intersection between the sphere and each edge of the block
 
      //internal nodes of the block that determine the edge
-     static const int nX0[12][3]={ {0,0,0},{0,1,0},{0,1,1},{0,0,1}, {0,0,0},{1,0,0},{1,0,1},{0,0,1}, {0,0,0},{1,0,0},{1,1,0},{0,1,0}};
+     static const int nX0Edge[12][3]={ {0,0,0},{0,1,0},{0,1,1},{0,0,1}, {0,0,0},{1,0,0},{1,0,1},{0,0,1}, {0,0,0},{1,0,0},{1,1,0},{0,1,0}};
      static const int nX1[12][3]={ {1,0,0},{1,1,0},{1,1,1},{1,0,1}, {0,1,0},{1,1,0},{1,1,1},{0,1,1}, {0,0,1},{1,0,1},{1,1,1},{0,1,1}};
 
      int nedge;
-     double x0[3],l[2],dx[3],a=0.0,b=0.0,c=0.0,d,t1,t2,sqrt_d;
-     bool t1flag,t2flag;
+     double l[3],dx[3],a=0.0,b=0.0,d,t1,t2,sqrt_d,tEPS;
 
      for (nedge=0;nedge<12;nedge++) {
        a=0.0,b=0.0,c=0.0;
-       t1flag=true,t2flag=true;
 
        for (idim=0;idim<3;idim++) {
-         x0[idim]=(nX0[nedge][idim]==0) ? xBlockMin[idim] : xBlockMax[idim];
+         x0[idim]=(nX0Edge[nedge][idim]==0) ? xBlockMin[idim] : xBlockMax[idim];
          l[idim]=((nX1[nedge][idim]==0) ? xBlockMin[idim] : xBlockMax[idim]) - x0[idim];
 
          dx[idim]=x0[idim]-OriginPosition[idim];
@@ -483,18 +477,12 @@ public:
        t1=-(b+sqrt_d)/(2.0*a);
        t2=-2.0*c/(b+sqrt_d);
 
-       for (idim=0;idim<3;idim++) {
-         c=l[idim]*t1;
-         if ((-EPS>c)||(c>l[idim]+EPS)) t1flag=false;
+       tEPS=EPS/sqrt(l[0]*l[0]+l[1]*l[1]+l[2]*l[2]);
 
-         c=l[idim]*t2;
-         if ((-EPS>c)||(c>l[idim]+EPS)) t2flag=false;
-       }
-
-       if ((t1flag==true)||(t2flag==true)) return _AMR_BLOCK_INTERSECT_DOMAIN_BOUNDARY_;
+       if (((-tEPS<t1)&&(t1<1.0+tEPS)) || ((-tEPS<t2)&&(t2<1.0+tEPS))) return _AMR_BLOCK_INTERSECT_DOMAIN_BOUNDARY_;
      }
 
-*/
+
 
      /*
      //check is the center of the sphere is outside of the block but a point of the sphere is inside the block and when the sphere is not intersecting the edges of the block

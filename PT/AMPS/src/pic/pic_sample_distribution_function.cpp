@@ -35,9 +35,11 @@ void PIC::DistributionFunctionSample::Init(double ProbeLocations[][DIM],int nPro
   SamplingInitializedFlag=true;
 
   //get the lenfths of the sampling intervals
+  double t0,t1; //tempotary variables to satisfy intel c++ compiler
+
   dV=1.05*(vMax-vMin)/(nSampledFunctionPoints-1);
-  dSpeed=((speedSamplingMode==_LINEAR_SAMPLING_SCALE_) ? max(fabs(vMax),fabs(vMin))*sqrt(2.0) : log(max(fabs(vMax),fabs(vMin))*sqrt(2.0)))/(nSampledFunctionPoints-1);
-  dV2=((v2SamplingMode==_LINEAR_SAMPLING_SCALE_) ? max(vMax*vMax,vMin*vMin)*sqrt(2.0) : log(max(vMax*vMax,vMin*vMin)*sqrt(2.0)))/(nSampledFunctionPoints-1);
+  dSpeed=((speedSamplingMode==_LINEAR_SAMPLING_SCALE_) ? max((t0=fabs(vMax)),(t1=fabs(vMin)))*sqrt(2.0) : log(max((t0=fabs(vMax)),(t1=fabs(vMin)))*sqrt(2.0)))/(nSampledFunctionPoints-1);
+  dV2=((v2SamplingMode==_LINEAR_SAMPLING_SCALE_) ? max(t0=vMax*vMax,t1=vMin*vMin)*sqrt(2.0) : log(max(t0=vMax*vMax,t1=vMin*vMin)*sqrt(2.0)))/(nSampledFunctionPoints-1);
 
 
   Sample_Velocity_Offset=0;
@@ -123,7 +125,7 @@ void PIC::DistributionFunctionSample::SampleDistributionFnction(cTreeNodeAMR<PIC
         LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
 
         for (v2=0.0,idim=0;idim<DIM;idim++) {
-          i=(int)(v[idim]-vMin)/dV;
+          i=(int)((v[idim]-vMin)/dV);
           v2+=pow(v[idim],2);
           offset=GetSampleDataOffset(spec,Sample_Velocity_Offset+idim);
 

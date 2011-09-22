@@ -26,6 +26,11 @@ int PIC::Mesh::sampleSetDataLength=0;
 //the flag determines weather an external sampling procedure is used
 bool PIC::Mesh::ExternalSamplingProcedureDefinedFlag=false;
 
+//the user defined functions for output of the 'ceneter node' data into a data file
+list<PIC::Mesh::fPrintVariableListCenterNode> PIC::Mesh::PrintVariableListCenterNode;
+list<PIC::Mesh::fPrintDataCenterNode> PIC::Mesh::PrintDataCenterNode;
+list<PIC::Mesh::fInterpolateCenterNode> PIC::Mesh::InterpolateCenterNode;
+
 
 
 void PIC::Mesh::SetCellSamplingDataRequest() {
@@ -89,10 +94,10 @@ void PIC::Mesh::initCellSamplingDataBuffer() {
 
   PIC::Mesh::sampleSetDataLength=offset;
 
-  PIC::Mesh::completedCellSampleDataPointerOffset=0;
-  PIC::Mesh::collectingCellSampleDataPointerOffset=PIC::Mesh::sampleSetDataLength;
+  PIC::Mesh::completedCellSampleDataPointerOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+  PIC::Mesh::collectingCellSampleDataPointerOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+PIC::Mesh::sampleSetDataLength;
 
-  PIC::Mesh::cDataCenterNode::totalAssociatedDataLength=2*PIC::Mesh::sampleSetDataLength;
+  PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=2*PIC::Mesh::sampleSetDataLength;
 
 
 
@@ -207,6 +212,7 @@ void PIC::Mesh::cDataBlockAMR::sendBoundaryLayerBlockData(CMPI_channel *pipe) {
     cell=GetCenterNode(LocalCellNumber);
 
     pipe->send(cell->associatedDataPointer,cell->totalAssociatedDataLength);
+    pipe->send(cell->Measure);
   }
 }
 
@@ -282,12 +288,15 @@ void PIC::Mesh::cDataBlockAMR::recvBoundaryLayerBlockData(CMPI_channel *pipe,int
     cell=GetCenterNode(LocalCellNumber);
 
     pipe->recv(cell->associatedDataPointer,cell->totalAssociatedDataLength,From);
+    pipe->recv(cell->Measure,From);
+
 
 
 
 
 //=========  DEBUG =========================
 
+    /*
     double *p=(double*)0x11f8d4f40;
 
     p+=3;
@@ -295,6 +304,7 @@ void PIC::Mesh::cDataBlockAMR::recvBoundaryLayerBlockData(CMPI_channel *pipe,int
     if (PIC::Mesh::mesh.ThisThread==3) if (*p==80) {
       cout << __FILE__ << __LINE__ << endl;
     }
+    */
 
 //==========  END DEBUG =====================
 

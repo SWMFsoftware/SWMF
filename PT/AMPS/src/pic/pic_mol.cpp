@@ -33,10 +33,11 @@ void PIC::MolecularData::SetMass(double mass,int spec) {
   MolMass[spec]=mass;
 }
 
-
+/*
 extern double *MolMass;
 void SetMass(double,int);
 double GetMass(int);
+*/
 
 //==========================================================
 //get the counting number of the specie
