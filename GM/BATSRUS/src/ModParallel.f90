@@ -63,4 +63,6 @@ module ModParallel
   ! Use special options in exchange_messages if creating plot files
   logical :: UsePlotMessageOptions = .false.
 
+  ! used but mpi_allgatherv for replasing mpi_allgather
+  integer, allocatable :: nBlockMax_P(:), MaxBlockDisp_P(:)
 end module ModParallel

@@ -252,7 +252,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, Used_,&
        regrid_batl
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
-  
+  use ModParallel, ONLY:nBlockMax_P, MaxBlockDisp_P
   implicit none
 
   ! Load balance grid using Peano-Hilbert ordering of blocks
@@ -267,7 +267,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   ! The algorithm needs multiple tries if the actual number of blocks
   ! is very close to the maximum number of blocks and many blocks are moved
   integer, parameter :: MaxTry = 100
-  
+
   ! Set this logical to .false. to return to the previous version,
   ! which did not move the B0 and body force variables.
   ! There is another declaration in subroutine move_block! Change together!!!
@@ -308,12 +308,12 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   logical :: DoTest, DoTestMe
 
   logical :: DoFixVar_B(MaxBlock)
-  
+
   ! BATL related variables
   integer:: iNode
   integer, allocatable:: iTypeAdvance_A(:), iTypeBalance_A(:)
-
-  !---------------------------------------------------------------------------
+ 
+ !---------------------------------------------------------------------------
   if(UseBatl)then
 
      call select_stepping(DoMoveCoord)       !^CFG IF IMPLICIT
@@ -321,7 +321,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
      if (nProc==1 .or. index(test_string,'NOLOADBALANCE')>0) then
 
         ! When load balancing is done Skipped and Unused blocks coincide 
-        UnusedBlock_BP = iTypeAdvance_BP == SkippedBlock_
+        UnusedBlock_BP(1:nBlock,:) = iTypeAdvance_BP(1:nBlock,:) == SkippedBlock_
 
         call find_test_cell
         RETURN
@@ -335,8 +335,13 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
              iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
 
         ! Update iTypeAdvance_BP
-        call MPI_ALLGATHER(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
-             iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
+        nBlockMax_P(:) = nBlockMax
+        ! CHEATING, only indicate first index to circumvent the interface
+        ! and with seting displacement equal to MaxBlock we get same behavior as
+        ! mpi_allgather
+        call MPI_allgatherv(iTypeAdvance_B(1), nBlockMax, MPI_INTEGER, &
+             iTypeAdvance_BP(1,0), nBlockMax_P, MaxBlockDisp_P,&
+             MPI_INTEGER, iComm, iError)
      end if
 
      ! Set the transformation from iTypeAdvance to iType
@@ -382,16 +387,17 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
      end if
 
      ! restore iTypeAdvance_B and _BP with positive values
-     iTypeAdvance_BP = SkippedBlock_
+     iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
      do iNode = 1, nNode
         if(iTree_IA(Status_,iNode) /= Used_) CYCLE
         iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode)) = &
              abs(iTypeAdvance_A(iNode))
      end do
-     iTypeAdvance_B  = iTypeAdvance_BP(:,iProc)
+     iTypeAdvance_B(1:nBlock)  = iTypeAdvance_BP(1:nBlock,iProc)
 
      ! When load balancing is done Skipped and Unused blocks coincide 
-     UnusedBlock_BP = iTypeAdvance_BP == SkippedBlock_
+     UnusedBlock_BP(1:nBlock,:) = iTypeAdvance_BP(1:nBlock,:) == SkippedBlock_
+
 
      call find_test_cell
 
@@ -441,8 +447,13 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
           iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
 
      ! Update iTypeAdvance_BP
-     call MPI_ALLGATHER(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
-          iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
+     nBlockMax_P(:) = nBlockMax
+     ! CHEATING, only indicate first index to circumvent the interface
+     ! and with seting displacement equal to MaxBlock we get same behavior as
+     ! mpi_allgather
+     call MPI_allgatherv(iTypeAdvance_B(1), nBlockMax, MPI_INTEGER, &
+          iTypeAdvance_BP(1,0), nBlockMax_P, MaxBlockDisp_P,&
+          MPI_INTEGER, iComm, iError)
   end if
 
   ! Set the transformation from iTypeAdvance to iType
@@ -611,9 +622,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
           iTry, nBlockMax, nBlockMoved
 
      write(*,'(a,i4,3i6)')&
-       'load_balance finished: me, nBlock, nBlockUsed=',&
-       iProc, nBlock, count(.not.unusedBLK(1:nBlock)), &
-       count(iTypeAdvance_B /= SkippedBlock_)
+          'load_balance finished: me, nBlock, nBlockUsed=',&
+          iProc, nBlock, count(.not.unusedBLK(1:nBlock)), &
+          count(iTypeAdvance_B /= SkippedBlock_)
 
      if(nType > 1) then
         do iType = 1, nType
@@ -1085,6 +1096,7 @@ subroutine select_stepping(DoPartSelect)
   use ModIO,       ONLY : write_prefix, iUnitOut
   use ModB0,ONLY:set_b0_face
   use ModMpi
+  use ModParallel, ONLY:nBlockMax_P, MaxBlockDisp_P
   implicit none
 
   logical, intent(in) :: DoPartSelect
@@ -1130,7 +1142,7 @@ subroutine select_stepping(DoPartSelect)
      where(iTypeAdvance_BP(1:nBlockMax,:) == ImplBlock_) &
           iTypeAdvance_BP(1:nBlockMax,:) = ExplBlock_
      iTypeAdvance_B(1:nBlockMax) = iTypeAdvance_BP(1:nBlockMax,iProc)
-          
+
   else
      ! First set all blocks to be explicit
      where(iTypeAdvance_B(1:nBlockMax) /= SkippedBlock_) &
@@ -1182,11 +1194,16 @@ subroutine select_stepping(DoPartSelect)
      end select
 
      ! Gather global information
-     call MPI_ALLGATHER(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
-          iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
-
-     nBlockImplALL = count(iTypeAdvance_BP == ImplBlock_)
-     nBlockExplALL = count(iTypeAdvance_BP == ExplBlock_)
+     ! CHEATING, only indicate first index to circumvent the interface
+     ! and with seting displacement equal to MaxBlock we get same behavior as
+     ! mpi_allgather
+     nBlockMax_P(:) = nBlockMax
+     call MPI_allgatherv(iTypeAdvance_B(1), nBlockMax, MPI_INTEGER, &
+          iTypeAdvance_BP(1,0), nBlockMax_P, MaxBlockDisp_P,&
+          MPI_INTEGER, iComm, iError)
+     
+     nBlockImplALL = count(iTypeAdvance_BP(1:nBlockMax,:) == ImplBlock_)
+     nBlockExplALL = count(iTypeAdvance_BP(1:nBlockMax,:) == ExplBlock_)
 
      if(iProc==0.and.lVerbose>0)then
         call write_prefix; 

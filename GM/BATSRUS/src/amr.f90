@@ -18,6 +18,7 @@ subroutine amr(DoMessagePass)
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
   use ModUser,          ONLY: user_amr_criteria
   use ModBatlInterface, ONLY: useBatlTest
+  use ModParallel, ONLY:nBlockMax_P, MaxBlockDisp_P
   implicit none
 
   logical, intent(in) :: DoMessagePass
@@ -60,7 +61,7 @@ subroutine amr(DoMessagePass)
            call set_amr_criteria(nVar, State_VGB)
            if(DoProfileAmr) call timing_stop('set_amr_criteria')
         end if
-        
+
         if(DoProfileAmr) call timing_start('regrid_batl')
         call regrid_batl(nVar, State_VGB, Dt_BLK, &
              DoTestIn=DoTestMe, Used_GB=true_cell)
@@ -69,7 +70,7 @@ subroutine amr(DoMessagePass)
         if(DoProfileAmr) call timing_start('set_batsrus_grid')
         call set_batsrus_grid
         if(DoProfileAmr) call timing_stop('set_batsrus_grid')
-   
+
         if(DoProfileAmr) call timing_start('count_true_cells')
         call count_true_cells
         if(DoProfileAmr) call timing_stop('count_true_cells')
@@ -112,9 +113,9 @@ subroutine amr(DoMessagePass)
         ! redo message passing
         UsePlotMessageOptions = .false.
         if(DoProfileAmr) call timing_start('BATL_AMR_exchange_messages')
-       call exchange_messages
+        call exchange_messages
         if(DoProfileAmr) call timing_stop('BATL_AMR_exchange_messages')
-        
+
 
      end if
      if(UseB0)then
@@ -153,8 +154,13 @@ subroutine amr(DoMessagePass)
   call number_soln_blocks
 
   ! Update the global advance info
-  call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
-       iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
+  nBlockMax_P(:) = nBlockMax
+  ! CHEATING, only indicate first index to circumvent the interface
+  ! and with seting displacement equal to MaxBlock we get same behavior as
+  ! mpi_allgather
+  call MPI_allgatherv(iTypeAdvance_B(1), nBlockMax, MPI_INTEGER, &
+       iTypeAdvance_BP(1,0), nBlockMax_P, MaxBlockDisp_P,&
+       MPI_INTEGER, iComm, iError)
 
   ! Clean all dynamically stored block data
   call clean_block_data

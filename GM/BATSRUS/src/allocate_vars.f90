@@ -7,7 +7,7 @@ subroutine allocate_vars
   use ModMpi
   implicit none
 
-  integer :: iPE, iBLK, ierror
+  integer :: iPE, iBLK, ierror, jProc
   integer :: MaxBlockALL
 
   if(.not. UseBatl)then
@@ -103,5 +103,14 @@ subroutine allocate_vars
   !/  
   unusedBLK     = .true.
   unusedBlock_BP= .false.
+
+  !\  
+  ! allocate and Initialize for mpi_allgatherv
+  !/   
+  allocate(nBlockMax_P(nProc), MaxBlockDisp_P(nProc))
+  do jProc=0,nProc-1
+     MaxBlockDisp_P(jProc+1) = jProc*MaxBlock
+  end do
+  nBlockMax_P(:) =0
 
 end subroutine allocate_vars
