@@ -252,7 +252,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, Used_,&
        regrid_batl
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
-  use ModParallel, ONLY:nBlockMax_P, MaxBlockDisp_P
+
   implicit none
 
   ! Load balance grid using Peano-Hilbert ordering of blocks
