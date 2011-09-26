@@ -267,6 +267,7 @@ contains
     if(UseChromoBc) then
        RhoBase = RhoChromo
        TBase   = tChromo
+      
     end if
 
   end subroutine get_plasma_parameters_base
@@ -308,11 +309,12 @@ contains
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          BodyRho_I, BodyP_I, BodyNDim_I, UnitU_, UnitN_, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
-         WaveFirst_, WaveLast_
+         WaveFirst_, WaveLast_, Hyp_
 
     integer :: i, j, k, iBlock
     real :: x, y, z, r, Rho, NumDensIon, NumDensElectron
-    real :: RhoBase, Tbase, Ubase, B_D(3), r_D(3), Br
+    real :: RhoCorona, tCorona, uCorona, rCorona, TemperatureGradient
+    real :: B_D(3), r_D(3), Br
     ! variables for iterative Parker solution
     integer :: IterCount
     real :: Ur, Ur0, Ur1, del, rTransonic, Uescape, Usound
@@ -323,13 +325,14 @@ contains
 
     iBlock = globalBLK
 
+    State_VGB(Hyp_,:,:,:,iBlock) = 0.0
     ! Initially, density, electron and ion temperature are at coronal
     ! values starting from just above the boundary
-    RhoBase = nCoronaSi*Si2No_V(UnitN_)*MassIon_I(1)
-    Tbase   = tCoronaSi*Si2No_V(UnitTemperature_)
+    RhoCorona = nCoronaSi*Si2No_V(UnitN_)*MassIon_I(1)
+    tCorona   = tCoronaSi*Si2No_V(UnitTemperature_)
 
     ! normalize with isothermal sound speed.
-    Usound = sqrt(Tbase*(1.0+AverageIonCharge)/MassIon_I(1))
+    Usound = sqrt(tCorona*(1.0+AverageIonCharge)/MassIon_I(1))
     Uescape = sqrt(-GBody*2.0)/Usound
 
     !\
@@ -340,7 +343,7 @@ contains
     rTransonic = 0.25*Uescape**2
     if(.not.(rTransonic>exp(1.0))) call stop_mpi('sonic point inside Sun')
 
-    Ubase = rTransonic**2*exp(1.5 - 2.0*rTransonic)
+    uCorona = rTransonic**2*exp(1.5 - 2.0*rTransonic)
 
     do k = 1, nK ; do j = 1, nJ ; do i = 1, nI
        x = x_BLK(i,j,k,iBlock)
@@ -399,19 +402,28 @@ contains
           State_VGB(p_,  i,j,k,iBlock) = 2*tChromo*nChromoSi*Si2No_V(UnitN_)
        else
 
-          Rho = rBody**2*RhoBase*Ubase/(r**2*Ur)
+          Rho = rBody**2*RhoCorona*uCorona/(r**2*Ur)
           State_VGB(Rho_,i,j,k,iBlock) = Rho
 
           NumDensIon = Rho/MassIon_I(1)
           NumDensElectron = NumDensIon*AverageIonCharge
           
-          if(UseElectronPressure)then
-             State_VGB(p_,i,j,k,iBlock) = NumDensIon*Tbase
-             State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*Tbase
-          else
+          ! For initial condition - temperature profleincreases linearily
+          ! from chromospheric to coronal values. Here, rCorona is arbitrary
+          rCorona = 1.1
+          if (r < rCorona) then
+             TemperatureGradient = (tCorona - tChromo)/(rCorona - rBody)    
              State_VGB(p_,i,j,k,iBlock) = &
-                  (NumDensIon + NumDensElectron)*Tbase
-          end if
+                  (NumDensIon + NumDensElectron)*&
+                  (tChromo + TemperatureGradient*(r - rBody))
+          else
+              State_VGB(p_,i,j,k,iBlock) = &
+                  (NumDensIon + NumDensElectron)*tCorona
+           end if
+           if(UseElectronPressure)then
+              State_VGB(p_,i,j,k,iBlock) = NumDensIon*tCorona
+              State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tCorona
+           end if
        end if
 
        State_VGB(RhoUx_,i,j,k,iBlock) = Rho*Ur*x/r *Usound
@@ -446,10 +458,10 @@ contains
   !============================================================================
   subroutine user_update_states(iStage, iBlock)
 
-    integer, intent(in) :: iStage, iBlock
+    integer, intent(in) :: iStage, iBlock    
     !--------------------------------------------------------------------------
     call update_states_MHD(iStage, iBlock)
-
+    
   end subroutine user_update_states
   !============================================================================
   subroutine write_ghost_and_boundary
@@ -677,8 +689,6 @@ contains
 
              MagneticHeating = HeatFactorCoeff*HeatFactor*FullB
              CoronalHeating = CoronalHeating + MagneticHeating
-             ! for plotting
-             ! MagHeating_GB(i,j,k,iBlock) = MagneticHeating
           end if
        end if
 
@@ -848,7 +858,6 @@ contains
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, UnitX_
     use ModSize,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_, WaveFirst_, WaveLast_
-    use ModRadiativeCooling, ONLY: RadCooling_CB
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -908,24 +917,6 @@ contains
 
           PlotVar_G(i,j,k) = DissipLengthMax_GB(i,j,k,iBlock) * &
                No2Si_V(UnitX_)
-
-       end do; end do ; end do
-
-    case('radcool')
-
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
-          PlotVar_G(i,j,k) = max(1e-30,-RadCooling_CB(i,j,k,iBlock) * &
-               No2Si_V(UnitEnergyDens_))
-
-       end do; end do ; end do
-
-    case('magheat')
-
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-
-          !PlotVar_G(i,j,k) = max(1e-30,MagHeating_GB(i,j,k,iBlock) * &
-          !     No2Si_V(UnitEnergyDens_))
 
        end do; end do ; end do
 
@@ -1037,7 +1028,7 @@ contains
     
     use ModAdvance,    ONLY: State_VGB, B0_DGB
     use ModSize,       ONLY: nJ, nK
-    use ModMain,       ONLY: East_, UseB0
+    use ModMain,       ONLY: East_, UseB0, UseUSerInnerBcs
     use ModGeometry,   ONLY: TypeGeometry, x_BLK, y_BLK, z_BLK, r_BLK
     use ModVarIndexes, ONLY: Rho_, p_, WaveFirst_, WaveLast_, &
                              Bx_, Bz_, Ux_, Uz_
@@ -1061,7 +1052,6 @@ contains
     if (UseChromoBc) then
 
        ! Extrapolate density around fixed RhoChromo value
-
        State_VGB(Rho_,0,:,:,iBlock) = &
             2.*RhoChromo - State_VGB(rho_,1,:,:,iBlock)
        State_VGB(Rho_,-1,:,:,iBlock) = &
@@ -1069,89 +1059,96 @@ contains
        State_VGB(p_,-1:0,:,:,iBlock) = & 
             2.*State_VGB(Rho_,-1:0,:,:,iBlock)/MassIon_I(1)*tChromo
 
-       do k = -1,nK+2 ; do j = -1,nJ+2
-
-          ! Update B1 in ghost cells (r direction only
-          ! Reflect normal component, float tangential component 
-          do i= 1,0,-1
-             x = x_BLK(i,j,k,iBlock)
-             y = y_BLK(i,j,k,iBlock)
-             z = z_BLK(i,j,k,iBlock)
-             r = r_BLK(i,j,k,iBlock)
-             r_D = (/x,y,z/)
-             rUnit_DG(:,i) = r_D/r             
-
-             Br1_D = rUnit_DG(:,i) * &
-                  sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*rUnit_DG(:,i))
-             Bt1_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) - Br1_D
-             State_VGB(Bx_:Bz_, i-1,j,k,iBlock) = Bt1_D - Br1_D
-          end do
-
-          ! Full magnetic field
-          do i = -1,1
-             FullB_D = B0_DGB(:,i,j,k,iBlock) + &
-                  State_VGB(Bx_:Bz_,i,j,k,iBlock)
-             FullB = sqrt(sum(FullB_D**2))
-             FullBr = sum(rUnit_DG(:,i)*FullB_D)
-             bUnit_DG(:,i) = FullB_D / FullB
-          end do
-
-          ! Float U || B,  reflect U perpendicular to B
-          ! (U_L + U_R)/2 = (U_R.bUnit_R)*(bUnit_L+bUnit_R)/2
-          do i = 0,-1,-1
-             U_DG(:,i+1) = State_VGB(Ux_:Uz_,i+1,j,k,iBlock)
-             U_DG(:,i) = -U_DG(:,i+1) + & 
-                  sum(U_DG(:,i+1)*bUnit_DG(:,i+1))* &
-                  (bUnit_DG(:,i)+bUnit_DG(:,i+1))
-             State_VGB(Ux_:Uz_,i,j,k,iBlock) = U_DG(:,i)
-          end do
-
-          ! set wave energy in ghost cells in the r direction
-          call get_wave_energy_base(FullB, Ewave)
-          
-          if (UseExtrapolatedEwave) then
-             if(FullBr > 0.0)then
-                State_VGB(WaveFirst_,0,j,k,iBlock) = &
-                     2.*Ewave - State_VGB(WaveFirst_,1,j,k,iBlock)
-                State_VGB(WaveFirst_,-1,j,k,iBlock) = &
-                     2.*State_VGB(WaveFirst_,0,j,k,iBlock) - &
-                     State_VGB(WaveFirst_,1,j,k,iBlock)
-          
-                State_VGB(WaveLast_,0,j,k,iBlock) = &
-                     2.*State_VGB(WaveLast_,1,j,k,iBlock) - &
-                     State_VGB(WaveLast_,2,j,k,iBlock)
-                State_VGB(WaveLast_,-1,j,k,iBlock) = &
-                     2.*State_VGB(WaveLast_,0,j,k,iBlock) - & 
-                     State_VGB(WaveLast_,1,j,k,iBlock)
-             else
-                State_VGB(WaveLast_,0,j,k,iBlock) = &
-                     2.*Ewave - State_VGB(WaveLast_,1,j,k,iBlock)
-                State_VGB(WaveLast_,-1,j,k,iBlock) = &
-                     2.*State_VGB(WaveLast_,0,j,k,iBlock) - & 
-                     State_VGB(WaveLast_,1,j,k,iBlock)
-          
-                State_VGB(WaveFirst_,0,j,k,iBlock) = &
-                     2.*State_VGB(WaveFirst_,1,j,k,iBlock) - &
-                     State_VGB(WaveFirst_,2,j,k,iBlock)
-                State_VGB(WaveFirst_,-1,j,k,iBlock) = &
-                     2.*State_VGB(WaveFirst_,0,j,k,iBlock) - & 
-                     State_VGB(WaveFirst_,1,j,k,iBlock)
-             end if
-          else
-             ! Use fixed wave energy
-             if(FullBr > 0.0)then
-                State_VGB(WaveFirst_,-1:0,j,k,iBlock) = Ewave          
-                State_VGB(WaveLast_,-1:0,j,k,iBlock) = 0.0 
-             else
-                State_VGB(WaveFirst_,-1:0,j,k,iBlock) = Ewave          
-                State_VGB(WaveLast_,-1:0,j,k,iBlock) = 0.0 
-             end if
-          end if
-       end do; end do
-
-    else
-       call CON_stop('BCs not specified. You must set UseChromoBcs to TRUE.')
     end if
+    ! Safety
+    if (UseUserInnerBcs) RETURN
+
+    do k = -1,nK+2 ; do j = -1,nJ+2
+
+       ! Update B1 in ghost cells (r direction only
+       ! Reflect normal component, float tangential component 
+       do i= 1,0,-1
+          x = x_BLK(i,j,k,iBlock)
+          y = y_BLK(i,j,k,iBlock)
+          z = z_BLK(i,j,k,iBlock)
+          r = r_BLK(i,j,k,iBlock)
+          r_D = (/x,y,z/)
+          rUnit_DG(:,i) = r_D/r             
+          
+          Br1_D = rUnit_DG(:,i) * &
+               sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*rUnit_DG(:,i))
+          Bt1_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) - Br1_D
+          State_VGB(Bx_:Bz_, i-1,j,k,iBlock) = Bt1_D - Br1_D
+       end do
+
+       ! Full magnetic field
+       do i = -1,1
+          FullB_D = B0_DGB(:,i,j,k,iBlock) + &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          FullB = sqrt(sum(FullB_D**2))
+          FullBr = sum(rUnit_DG(:,i)*FullB_D)
+          bUnit_DG(:,i) = FullB_D / FullB
+       end do
+
+       !\
+       ! Velocity
+       !/
+       do i = 0,-1,-1
+          if (UseUparBc) then
+             ! Conserve momentum along field lines
+             U_DG(:,i+1) = State_VGB(Ux_:Uz_,i+1,j,k,iBlock)
+             U_DG(:,i) = &
+                  (State_VGB(Rho_,i+1,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock))* &
+                  sum(U_DG(:,i+1)*bUnit_DG(:,i+1))*bUnit_DG(:,i)
+             State_VGB(Ux_:Uz_,i,j,k,iBlock) = U_DG(:,i)
+          else
+             ! Reflect U - same as van der Holst, 2010, Cohen 2007
+             State_VGB(Ux_:Uz_,i,j,k,iBlock) = -U_DG(:,i+1)
+          end if
+       end do
+
+       ! set wave energy in ghost cells in the r direction
+       call get_wave_energy_base(FullB, Ewave)
+          
+       if (UseExtrapolatedEwave) then
+          if(FullBr > 0.0)then
+             State_VGB(WaveFirst_,0,j,k,iBlock) = &
+                  2.*Ewave - State_VGB(WaveFirst_,1,j,k,iBlock)
+             State_VGB(WaveFirst_,-1,j,k,iBlock) = &
+                  2.*State_VGB(WaveFirst_,0,j,k,iBlock) - &
+                  State_VGB(WaveFirst_,1,j,k,iBlock)
+             
+             State_VGB(WaveLast_,0,j,k,iBlock) = &
+                  2.*State_VGB(WaveLast_,1,j,k,iBlock) - &
+                  State_VGB(WaveLast_,2,j,k,iBlock)
+             State_VGB(WaveLast_,-1,j,k,iBlock) = &
+                  2.*State_VGB(WaveLast_,0,j,k,iBlock) - & 
+                  State_VGB(WaveLast_,1,j,k,iBlock)
+          else
+             State_VGB(WaveLast_,0,j,k,iBlock) = &
+                  2.*Ewave - State_VGB(WaveLast_,1,j,k,iBlock)
+             State_VGB(WaveLast_,-1,j,k,iBlock) = &
+                  2.*State_VGB(WaveLast_,0,j,k,iBlock) - & 
+                  State_VGB(WaveLast_,1,j,k,iBlock)
+             
+             State_VGB(WaveFirst_,0,j,k,iBlock) = &
+                  2.*State_VGB(WaveFirst_,1,j,k,iBlock) - &
+                  State_VGB(WaveFirst_,2,j,k,iBlock)
+             State_VGB(WaveFirst_,-1,j,k,iBlock) = &
+                  2.*State_VGB(WaveFirst_,0,j,k,iBlock) - & 
+                  State_VGB(WaveFirst_,1,j,k,iBlock)
+          end if
+       else
+          ! Use fixed wave energy
+          if(FullBr > 0.0)then
+             State_VGB(WaveFirst_,-1:0,j,k,iBlock) = Ewave          
+             State_VGB(WaveLast_,-1:0,j,k,iBlock) = 0.0 
+          else
+             State_VGB(WaveFirst_,-1:0,j,k,iBlock) = Ewave          
+             State_VGB(WaveLast_,-1:0,j,k,iBlock) = 0.0 
+          end if
+       end if
+    end do; end do
 
   end subroutine user_set_outerbcs
   !============================================================================
@@ -1165,7 +1162,7 @@ contains
     use ModPhysics,     ONLY: OmegaBody, AverageIonCharge, BodyRho_I, &
                               BodyTDim_I, Si2No_V, UnitTemperature_, UnitN_
     use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, &
-         WaveFirst_, WaveLast_, Pe_
+         WaveFirst_, WaveLast_, Pe_,Hyp_
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
@@ -1222,14 +1219,7 @@ contains
        RhoGhost = VarsGhostFace_V(Rho_)
 
        VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
-            sum(U_D*bUnitTrue_D)*bUnitGhost_D
-
-       ! Float U || B, reflect U perp to B
-       ! (U_L + U_R)/2 = (U_R*bUnit_R)bUnitFace
-       ! where bUnitFace = (bUnit_L + bUnit_R)/2 is the average B direction
-       !VarsGhostFace_V(Ux_:Uz_) = (-U_D*RhoTrue + &
-       !     RhoTrue*abs(sum(U_D*bUnitTrue_D))*(bUnitGhost_D+bUnitTrue_D))/RhoGhost
-       
+            sum(U_D*bUnitTrue_D)*bUnitGhost_D       
     else
        ! Reflect U - same as van der Holst, 2010, Cohen 2007
        VarsGhostFace_V(Ux_:Uz_) = -U_D
@@ -1265,6 +1255,7 @@ contains
        end if
     end if
 
+    VarsGhostFace_V(Hyp_) = 0.0
     !\
     ! Apply corotation if needed
     !/
