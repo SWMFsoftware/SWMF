@@ -31,8 +31,9 @@ contains
     call MPI_ALLREDUCE(nBlock, nBlockMax, 1, MPI_INTEGER, MPI_MAX, &
          iComm, iError)
 
-    UnusedBlk      = Unused_B
-    UnusedBlock_BP = Unused_BP
+
+    UnusedBlk(1:nBlockMax)      = Unused_B(1:nBlockMax)
+    UnusedBlock_BP(1:nBlockMax,:) = Unused_BP(1:nBlockMax,:)
 
     do iMorton = 1, nNodeUsed
        iNode = iNodeMorton_I(iMorton)
@@ -40,12 +41,12 @@ contains
        iProc_A(iMorton) = iTree_IA(Proc_,iNode)
     end do
 
-    where(Unused_BP)
-       iTypeAdvance_BP = SkippedBlock_
+    where(Unused_BP(1:nBlockMax,:))
+       iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
     elsewhere
-       iTypeAdvance_BP = ExplBlock_
+       iTypeAdvance_BP(1:nBlockMax,:) = ExplBlock_
     end where
-    iTypeAdvance_B = iTypeAdvance_BP(:,iProc)
+    iTypeAdvance_B(1:nBlock) = iTypeAdvance_BP(1:nBlock,iProc)
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
