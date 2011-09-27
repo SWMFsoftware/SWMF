@@ -35,7 +35,7 @@ module ModHdf5
 
   ! FLASH-formatted grid variables
   integer, allocatable :: gr_gid(:,:)
-  integer :: gr_globalOffset, gr_globalNumBlocks
+  integer :: iProcOffset!, gr_globalNumBlocks
 
   ! FLASH IO variables
   integer:: io_outputSplitNum
@@ -80,7 +80,7 @@ module ModHdf5
 
 contains
 
-  !=====================================================================
+  !i=====================================================================
   ! write_plot_hdf5
   !
   !   This subroutine is called by write_plot_common and handles setting
@@ -217,6 +217,7 @@ contains
     use ModAdvance, only : State_VGB
     use ModVarIndexes, ONLY : nVar !NameVar_V, nVar, nFluid
     use hdf5
+    use ModMain, ONLY : nBlockAll
     !---------------------------------------------------------------------  
 
     integer, intent(in) :: myPE, fileID
@@ -257,19 +258,19 @@ contains
        call stop_mpi("io_writeData: localNumBlocks == 0")
     end if
 
-    !Find our local offset for split-file IO
-    if (io_outputSplitNum > 1) then
-
-       call MPI_ALLREDUCE(gr_globalOffset, splitOffset, 1, MPI_INTEGER, &
-            MPI_MIN, io_comm, error)
-       localOffset = gr_globalOffset - splitOffset
-       !find number of blocks for a file
-       call MPI_ALLREDUCE(localNumBlocks, io_splitNumBlks, 1, MPI_INTEGER,&
-            MPI_SUM, io_comm, error)
-    else
-       localOffset = gr_globalOffset
-       io_splitNumBlks = gr_globalNumBlocks
-    end if
+!     !Find our local offset for split-file IO
+!     if (io_outputSplitNum > 1) then
+! 
+!        call MPI_ALLREDUCE(iProcOffset, splitOffset, 1, MPI_INTEGER, &
+!             MPI_MIN, io_comm, error)
+!        localOffset = iProcOffset - splitOffset
+!        !find number of blocks for a file
+!        call MPI_ALLREDUCE(localNumBlocks, io_splitNumBlks, 1, MPI_INTEGER,&
+!             MPI_SUM, io_comm, error)
+!    else
+!        localOffset = iProcOffset
+        io_splitNumBlks = nBlockAll !gr_globalNumBlocks
+!    end if
 
     ! 
     !  Creates a compound datatype to hold things like file format version, Crash version, File creation
@@ -318,23 +319,23 @@ contains
          io_numLogScalars, &
          io_logScalarNames, &
          io_logToIntScalarValues)
-
+    
     ! write the nodetype
     call writeHdf5Rank1Int(myPE, &
          fileID, &
          nodetype, &
          localNumBlocks, &
          io_splitNumBlks, &
-         localOffset, "node type")
+         iProcOffset, "node type")
 
-
+  
     ! write lrefine
     call writeHdf5Rank1Int(myPE, &
          fileID, &
          lrefine, &
          localNumBlocks, &
          io_splitNumBlks, &
-         localOffset, "refine level")
+         iProcOffset, "refine level")
 
 
     !data struct new to PM3.  which_child definitely
@@ -345,7 +346,7 @@ contains
          which_child, &
          localNumBlocks, &
          io_splitNumBlks, &
-         localOffset, "which child")
+         iProcOffset, "which child")
 
     ! Write bflags
     call writeHdf5Rank1Int(myPE, &
@@ -353,7 +354,7 @@ contains
          bflags(1,:), &
          localNumBlocks, &
          io_splitNumBlks, &
-         localOffset, "bflags")
+         iProcOffset, "bflags")
 
     sizeGid = shape(gr_gid)
     ! Write the global ID
@@ -362,7 +363,7 @@ contains
          gr_gid, &
          localNumBlocks, &
          io_splitNumBlks, &
-         localOffset, "gid", sizeGid(1))
+         iProcOffset, "gid", sizeGid(1))
 
 
     !write the processor number. 
@@ -370,13 +371,12 @@ contains
     do lb = 1, localnumblocks
        procnumber(lb) = mype
     end do
-
     call writehdf5rank1int(mype, &
          fileid,  & 
          procnumber,  & 
          localnumblocks,  & 
          io_splitnumblks,  & 
-         localoffset, "processor number")
+         iProcOffset, "processor number")
 
     deallocate(procnumber)
 
@@ -385,7 +385,7 @@ contains
          fileID, bnd_box, &   !See that io_comm is also taken care of
          localNumBlocks, &
          io_splitNumBlks, &
-         localOffset, "bounding box", 2, 3)
+         iProcOffset, "bounding box", 2, 3)
 
     !write the block center coordinates
     !(not to be confused with the cell coordinates)
@@ -394,7 +394,7 @@ contains
          coord,  & 
          localNumBlocks,  &   
          io_splitNumBlks,  & 
-         localOffset, "coordinates", 3)
+         iProcOffset, "coordinates", 3)
 
     !write the physical size of each block
     call writeHdf5Rank2Real(myPE, &
@@ -402,7 +402,7 @@ contains
          bsize,  & 
          localNumBlocks,  & 
          io_splitNumBlks,  & 
-         localOffset, "block size", 3)
+         iProcOffset, "block size", 3)
 
 
     allocate(globalVarMin(nVar)) 
@@ -430,7 +430,7 @@ contains
             io_unklabels(i), &
             localNumBlocks, &
             io_splitNumBlks,  & 
-            localOffset)
+            iProcOffset)
 
     end do
 
@@ -668,16 +668,15 @@ contains
     integer, allocatable :: localIdx_pe(:,:)
     !---------------------------------------------------------------------  
 
-    gr_globalNumBlocks = nBlockAll
+    !gr_globalNumBlocks = nBlockAll
 
-    allocate(blocksPerProc(nProc))
+    allocate(blocksPerProc(0:nProc-1))
     allocate(offsetPerProc(0:nProc-1))
     allocate(localIdx_pe(0:nProc-1, nBlockMax))
 
     ! Get the number of blocks local to this processor and the mapping
     ! from block index to output index (where unused blocks are skipped)
     call hdf5_getLocalBlks(localNumBlocks, localIdx)
-
     ! Collect results across all processors
     call MPI_Allgather(localNumBlocks, 1, MPI_INTEGER, blocksPerProc, &
          1, MPI_INTEGER, iComm, error)
@@ -685,14 +684,12 @@ contains
          nBlockMax, MPI_INTEGER, iComm, error)
 
     offsetPerProc(0) = 0
-    if (nProc > 1)&
-         offsetPerProc(1) = blocksPerProc(1)
-    if (nProc > 2) then
-       do i = 2, nProc-1
-          offsetPerProc(i) = offsetPerProc(i-2) + blocksPerProc(i-2)
+    if (nProc > 1) then
+       do i = 1, nProc-1
+          offsetPerProc(i) = offsetPerProc(i-1) + blocksPerProc(i-1)
        end do
     end if
-    gr_globalOffset = offsetPerProc(iProc)
+    iProcOffset = offsetPerProc(iProc)
 
     deallocate(blocksPerProc)
     gr_gid(:,:) = -32
@@ -809,34 +806,34 @@ contains
 
   !=====================================================================
 
-  subroutine hdf5_getBlkIndexLimits(blockId, blkLimits, blkLimitsGC, &
-       gridDataStruct)
-
-    ! Returns the index limits for a block, both with and without guard cells.
-
-    use ModSize
-
-    integer,intent(IN) :: blockId
-    integer, dimension(2,3), intent(OUT) :: blkLimits,blkLimitsGC
-    integer, optional, intent(IN) :: gridDataStruct
-
-    !---------------------------------------------------------------------
-
-    blkLimits(LOW,:) = 1
-    blkLimitsGC(LOW, :) = 1-gcn
-
-    blkLimits(HIGH, IAXIS) = nI
-    blkLimits(HIGH, JAXIS) = nJ
-    blkLimits(HIGH, KAXIS) = nK
-
-    blkLimitsGC(HIGH, IAXIS) = nI+gcn
-    blkLimitsGC(HIGH, JAXIS) = nJ+gcn
-    blkLimitsGC(HIGH, KAXIS) = nK+gcn
-
-  end subroutine hdf5_getBlkIndexLimits
-
-  !=====================================================================
-
+!   subroutine hdf5_getBlkIndexLimits(blockId, blkLimits, blkLimitsGC, &
+!        gridDataStruct)
+! 
+!     ! Returns the index limits for a block, both with and without guard cells.
+! 
+!     use ModSize
+! 
+!     integer,intent(IN) :: blockId
+!     integer, dimension(2,3), intent(OUT) :: blkLimits,blkLimitsGC
+!     integer, optional, intent(IN) :: gridDataStruct
+! 
+!     !---------------------------------------------------------------------
+! 
+!     blkLimits(LOW,:) = 1
+!     blkLimitsGC(LOW, :) = 1-gcn
+! 
+!     blkLimits(HIGH, IAXIS) = nI
+!     blkLimits(HIGH, JAXIS) = nJ
+!     blkLimits(HIGH, KAXIS) = nK
+! 
+!     blkLimitsGC(HIGH, IAXIS) = nI+gcn
+!     blkLimitsGC(HIGH, JAXIS) = nJ+gcn
+!     blkLimitsGC(HIGH, KAXIS) = nK+gcn
+! 
+!   end subroutine hdf5_getBlkIndexLimits
+! 
+!   !=====================================================================
+! 
   subroutine hdf5_getVarExtrema( &
        nvars, globalVarMin, globalVarMax, gridDataStruct)
 
@@ -895,27 +892,28 @@ contains
   subroutine H5InitFile(fileID, filename)
 
     use hdf5
-    use ModProcMH, Only : iComm
+    !use ModProcMH, Only : iComm
     character (len=80), intent(in) :: filename
     integer :: error, accTemplate
     integer, intent(inout) :: fileID
     !integer, intent(in) :: io_comm
     INTEGER :: mpierror       ! MPI error flag
     INTEGER :: info,dxpList
-    INTEGER :: mpi_size, mpi_rank
+    INTEGER :: mpi_size, mpi_rank, comm
 
     !Initalize currentBlock andplotArrayBegin for this file
 
     !    call h5open_f(error)                    
-
+    comm = MPI_COMM_WORLD
     info = MPI_INFO_NULL
-
+    CALL MPI_COMM_SIZE(comm, mpi_size, mpierror)
+    CALL MPI_COMM_RANK(comm, mpi_rank, mpierror)
     !create MPI info Object
 
 
     !Create file access propertty list
     call h5pcreate_f(H5P_FILE_ACCESS_F, accTemplate, error)
-    CALL h5pset_fapl_mpio_f(accTemplate, iComm, info, error)
+    CALL h5pset_fapl_mpio_f(accTemplate, comm, info, error)
     ! Create the file collectively.
 
     CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, fileID, error, access_prp = accTemplate)
@@ -1487,6 +1485,7 @@ contains
     call h5dclose_f(dataset, error)
     call h5tclose_f(simInfoType, error)
     call h5sclose_f(dataspace, error)
+
     if (error == -1) &
          call stop_mpi("error in subroutine writeHdf5Header. Error marker 9")
 
@@ -1519,6 +1518,7 @@ contains
        call h5tclose_f(stringTypeFour, error)
        call h5sclose_f(dataspace, error)
        call h5dclose_f(dataset, error)
+
        if (error == -1)& 
             call stop_mpi("error in subroutine writeHdf5Header. Error marker 13")
 
@@ -1970,6 +1970,7 @@ contains
     call h5pclose_f(plist_id, error)
     call h5sclose_f(dataspace, error)
     call h5dclose_f(dataset, error)
+
     if (error == -1)& 
          call stop_mpi("error in subroutine writeHdf5Rank1Int. Error marker 6")
 
@@ -2048,6 +2049,7 @@ contains
     call h5pclose_f(plist_id, error)
     call h5sclose_f(dataspace, error)
     call h5dclose_f(dataset, error)
+
     if (error == -1)& 
          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 6")
 
@@ -2126,6 +2128,7 @@ contains
     call h5pclose_f(plist_id, error)
     call h5sclose_f(dataspace, error)
     call h5dclose_f(dataset, error)
+
     if (error == -1)& 
          call stop_mpi("error in subroutine writeHdf5Rank2Int. Error marker 6")
 
@@ -2214,6 +2217,7 @@ contains
     call h5pclose_f(plist_id, error)
     call h5sclose_f(dataspace, error)
     call h5dclose_f(dataset, error)
+
     if (error == -1)& 
          call stop_mpi("error in subroutine writeHdf5Rank3Real. Error marker 6")
 
@@ -2239,7 +2243,7 @@ contains
     integer(HID_T) :: plist_id, memspace, datasetPlist
     integer :: rank, error
     integer(HSIZE_T) :: start4D(4), stride4D(4),  count4D(4)
-    integer(HSIZE_T) :: dimens4D(4),  dimens1D(1), dimens5d(5)
+    integer(HSIZE_T) :: dimens4D(4),  dimens1D(1)
 
     rank = 4
 
@@ -2322,12 +2326,6 @@ contains
     count4D(3) = dimens4D(3)
     count4D(4) = localNumBlocks
 
-    dimens5D(1) = 1
-    dimens5D(2) = nI
-    dimens5D(3) = nJ
-    dimens5D(4) = nK
-    dimens5D(5) = localNumBlocks
-
     call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start4D, count4D, error, &
          stride = stride4D)
     if (error == -1)&
@@ -2349,6 +2347,7 @@ contains
     call h5pclose_f(plist_id, error)
     call h5sclose_f(dataspace, error)
     call h5dclose_f(dataset, error)
+
     if (error == -1)&
          call stop_mpi("error in subroutine writeHdf5Unknowns. Error marker 12")
 
