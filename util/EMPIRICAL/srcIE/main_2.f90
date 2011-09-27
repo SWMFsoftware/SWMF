@@ -56,6 +56,7 @@ program GetEIE
   call IO_SetIMFBz( -5.0)
   call IO_SetIMFBy( 10.0)
   call IO_SetSWV  (400.0)
+  call IO_SetSWN  ( 10.0) 
   call IO_SetKp   (  3.0)
   call IO_SetNorth
 
