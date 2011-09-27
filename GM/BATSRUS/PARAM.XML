@@ -3280,6 +3280,7 @@ compiled in double precision to make results more accurate.
 		<option name="millisecond"/>
 		<option name="microsecond"/>
 		<option name="nanosecond"/>
+        <option name="timestep"/>
 	</parameter>
 #PLOTFILENAME
 hour			NameMaxTimeUnit
@@ -3314,7 +3315,7 @@ For NameMaxTimeUnit='yr' the last two digits of the year,
 and the month, day and hour are used. 
 For NameMaxTimeUnit='month' the month, day, hour, and minute are used.
 For NameMaxTimeUnit='day' the day, hour, minute and seconds are used.
-
+For NameMaxTimeUnit='timestep' only the timestep is used.
 
 The #PLOTFILENAME command and the NameMaxTimeUnit parameter are 
 saved into the restart header file so that the #PLOTFILENAME command does
