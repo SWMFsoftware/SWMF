@@ -107,9 +107,10 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Local variables
   integer :: ifile, i,j, iError
+  logical :: IsUninitialized      = .true.
   real :: local_root_dx
 
-  logical :: IsUninitialized      = .true.
+!  logical :: HdfUninitialized      = .true.
   logical :: DoReadSolarwindFile  = .false.
   logical :: DoReadSatelliteFiles = .false.
   logical :: DoReadMagnetometerFile=.false.
@@ -154,6 +155,8 @@ subroutine MH_set_parameters(TypeAction)
   integer :: iSession, iPlotFile, iVar
 
   character(len=10) :: NamePrimitive_V(nVar)
+  
+   
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
 
@@ -337,8 +340,9 @@ subroutine MH_set_parameters(TypeAction)
      end if
 
      if(.not.read_command(NameCommand)) CYCLE READPARAM
+!        write (*,*) 'SAVEPLOTNAME iFile=', iFile
 
-     select case(NameCommand)
+    select case(NameCommand)
 
      case("#BATL")
         call read_var('UseBatl', UseBatl)
@@ -666,7 +670,6 @@ subroutine MH_set_parameters(TypeAction)
              //' nPlotFile > MaxPlotFile .or. nFile > MaxFile')
 
         do iFile = Plot_ + 1, Plot_ + nPlotFile
-
            call read_var('StringPlot',plot_string)
 
            ! Plotting frequency
@@ -819,7 +822,13 @@ subroutine MH_set_parameters(TypeAction)
               if(index(plot_string,'idl_ascii') > 0) &
                    TypeIdlFile_I(iFile) = 'ascii'
            elseif(index(plot_string, 'hdf') > 0) then
-              plot_form(ifile)='hdf'
+              !With these values VisIt recognises the files as timesteps
+              !with the general defaults it does not. 
+              IsPlotName_n = .false.
+              IsPlotName_t = .true.
+              IsPlotName_e = .false.
+              NameMaxTimeUnit = 'timestep'
+              plot_form(iFile)='hdf'
               call read_var('DxSavePlot',plot_dx(1,ifile))
            elseif(index(plot_string,'tec')>0)then 
               plot_form(ifile)='tec'
@@ -923,14 +932,19 @@ subroutine MH_set_parameters(TypeAction)
 
            plot_type(iFile) = plot_area//'_'//plot_var
         end do
-
+   
      case("#SAVEPLOTNAME")
         call read_var('IsPlotName_n',IsPlotName_n)
         call read_var('IsPlotName_t',IsPlotName_t)
         call read_var('IsPlotName_e',IsPlotName_e)
         ! Will set only _n true when not time accurate automatically.
         ! Set _n true if both _t and _e are false.
-        if(.not.IsPlotName_t .and. .not.IsPlotName_e) IsPlotName_n=.true.
+        if(.not.IsPlotName_t .and. .not.IsPlotName_e)&
+            IsPlotName_n=.true.
+
+     case("#PLOTFILENAME")
+        call read_var('NameMaxTimeUnit', NameMaxTimeUnit)
+
 
      case("#SAVELOGNAME")
         call read_var('IsLogName_n',IsLogName_n)
@@ -943,10 +957,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#SAVEBINARY")
         call read_var('DoSaveBinary',save_binary)
-
-     case("#PLOTFILENAME")
-        call read_var('NameMaxTimeUnit', NameMaxTimeUnit)
-
+     
      case("#GRIDRESOLUTION","#GRIDLEVEL","#AREARESOLUTION","#AREALEVEL")
         if(index(NameCommand,"RESOLUTION")>0)then
            call read_var('AreaResolution', AreaResolution)
@@ -2097,7 +2108,6 @@ subroutine MH_set_parameters(TypeAction)
            if(UseStrict)call stop_mpi('Correct PARAM.in!')
         end if
      end select
-
   end do READPARAM
 
   ! end reading parameters
@@ -2162,9 +2172,10 @@ contains
   end subroutine set_namevar
 
   !===========================================================================
-
+    
+  
   subroutine set_defaults
-
+    
     ! SWMF coupling does not work yet. Also fast ray tracing.
     ! For non-cartesian grid the #GRIDGEOMETRY command switches BATL off.
     UseBatl = IsStandAlone
@@ -2371,6 +2382,7 @@ contains
        RefineCrit(3)  = 'Rcurrents'
 
     end select
+
 
   end subroutine set_defaults
 
