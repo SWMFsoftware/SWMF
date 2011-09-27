@@ -38,8 +38,7 @@ module ModHdf5
   integer :: iProcOffset!, gr_globalNumBlocks
 
   ! FLASH IO variables
-  integer:: io_outputSplitNum
-  integer:: io_splitNumBlks
+  !integer:: io_outputSplitNum
 
   character (len=20) :: io_flashRelease
   character (len=80) :: io_buildDate, io_buildDir, io_buildMachine, &
@@ -69,7 +68,7 @@ module ModHdf5
   character (len=80):: io_logParmNamesPrev(1)
 
   character (len=5) :: io_plotVarStr(nplotvarmax)
-  character (len=5) :: io_unklabels(nplotvarmax)
+!  character (len=5) :: io_unklabels(nplotvarmax)
 
 
   character(len=80):: io_geometry
@@ -217,7 +216,6 @@ contains
     use ModAdvance, only : State_VGB
     use ModVarIndexes, ONLY : nVar !NameVar_V, nVar, nFluid
     use hdf5
-    use ModMain, ONLY : nBlockAll
     !---------------------------------------------------------------------  
 
     integer, intent(in) :: myPE, fileID
@@ -265,11 +263,10 @@ contains
 !             MPI_MIN, io_comm, error)
 !        localOffset = iProcOffset - splitOffset
 !        !find number of blocks for a file
-!        call MPI_ALLREDUCE(localNumBlocks, io_splitNumBlks, 1, MPI_INTEGER,&
+!        call MPI_ALLREDUCE(localNumBlocks, nBlockAll, 1, MPI_INTEGER,&
 !             MPI_SUM, io_comm, error)
 !    else
 !        localOffset = iProcOffset
-        io_splitNumBlks = nBlockAll !gr_globalNumBlocks
 !    end if
 
     ! 
@@ -325,7 +322,6 @@ contains
          fileID, &
          nodetype, &
          localNumBlocks, &
-         io_splitNumBlks, &
          iProcOffset, "node type")
 
   
@@ -334,7 +330,6 @@ contains
          fileID, &
          lrefine, &
          localNumBlocks, &
-         io_splitNumBlks, &
          iProcOffset, "refine level")
 
 
@@ -345,7 +340,6 @@ contains
          fileID, &
          which_child, &
          localNumBlocks, &
-         io_splitNumBlks, &
          iProcOffset, "which child")
 
     ! Write bflags
@@ -353,7 +347,6 @@ contains
          fileID, &
          bflags(1,:), &
          localNumBlocks, &
-         io_splitNumBlks, &
          iProcOffset, "bflags")
 
     sizeGid = shape(gr_gid)
@@ -362,7 +355,6 @@ contains
          fileID, &
          gr_gid, &
          localNumBlocks, &
-         io_splitNumBlks, &
          iProcOffset, "gid", sizeGid(1))
 
 
@@ -375,7 +367,6 @@ contains
          fileid,  & 
          procnumber,  & 
          localnumblocks,  & 
-         io_splitnumblks,  & 
          iProcOffset, "processor number")
 
     deallocate(procnumber)
@@ -384,7 +375,6 @@ contains
     call writeHdf5Rank3Real(myPE, &
          fileID, bnd_box, &   !See that io_comm is also taken care of
          localNumBlocks, &
-         io_splitNumBlks, &
          iProcOffset, "bounding box", 2, 3)
 
     !write the block center coordinates
@@ -393,7 +383,6 @@ contains
          fileID,  & 
          coord,  & 
          localNumBlocks,  &   
-         io_splitNumBlks,  & 
          iProcOffset, "coordinates", 3)
 
     !write the physical size of each block
@@ -401,7 +390,6 @@ contains
          fileID,  & 
          bsize,  & 
          localNumBlocks,  & 
-         io_splitNumBlks,  & 
          iProcOffset, "block size", 3)
 
 
@@ -427,9 +415,8 @@ contains
             unkBuf, & 
             globalVarMin(i), &
             globalVarMax(i), &
-            io_unklabels(i), &
+            io_plotVarStr(i), &
             localNumBlocks, &
-            io_splitNumBlks,  & 
             iProcOffset)
 
     end do
@@ -562,7 +549,7 @@ contains
     io_cflags ='ccflags'
     io_fflags = 'fflags'
 
-    io_outputSplitNum = 1 ! file splitting not supported
+!    io_outputSplitNum = 1 ! file splitting not supported
 
     ! FLASH makes a distinction between plot var labels and unk var labels, but
     ! CRASH will treat both the same.  The Visit plugin needs 4 character variale names
@@ -588,7 +575,6 @@ contains
 
 
 
-          io_unklabels(iVar) = io_plotVarStr(iVar)
        end do
        io_nPlotVars = nPlotVar
     ! Output of runtime parameters, scalars, and logfiles 
@@ -615,7 +601,7 @@ contains
     io_intScalarNames(4) = 'dimensionality'
     io_intScalarValues(5) = nBlockAll
     io_intScalarNames(5) = 'globalnumblocks'
-    io_intScalarValues(6) = io_outputSplitNum-1
+    io_intScalarValues(6) =  0 !io_outputSplitNum-1
     io_intScalarNames(6) = 'splitnumblocks'
     io_intScalarValues(7) = 0
     io_intScalarNames(7) = 'splitnumparticles'
@@ -1901,9 +1887,9 @@ contains
 
   !======================================y===========================================================
   !Writes rank 1 integer data
-  subroutine writeHdf5Rank1Int(myPE, fileID, dataBuff, localNumBlocks, io_splitNumBlks,&
+  subroutine writeHdf5Rank1Int(myPE, fileID, dataBuff, localNumBlocks, &
        localOffset, description)
-
+    use ModMain, ONLY : nBlockAll
     use hdf5
     implicit none
 
@@ -1919,13 +1905,12 @@ contains
     integer(HID_T), intent(in) :: fileID
     integer, intent(in) :: myPE 
     integer, intent(in) :: localNumBlocks
-    integer, intent(in) :: io_splitNumBlks
     integer, intent(in) :: dataBuff(:)
     integer, intent(in) :: localOffset
     character (len=*), intent(in) :: description
     !Set the dimensions of the dataset
     rank = 1
-    dimens1D(1) = io_splitNumBlks
+    dimens1D(1) = nBlockAll
     call h5open_f(error)
     if (error == -1) &
          
@@ -1978,9 +1963,10 @@ contains
   !===========================================================================================
   ! Rank 2 Real
 
-  subroutine writeHdf5Rank2Real(myPE, fileID, dataBuff, localNumBlocks, io_splitNumBlks,&
+  subroutine writeHdf5Rank2Real(myPE, fileID, dataBuff, localNumBlocks,&
        localOffset, description, dimens)
 
+    use ModMain, ONLY : nBlockAll   
     use hdf5
     implicit none
 
@@ -1996,14 +1982,13 @@ contains
     integer(HID_T), intent(in) :: fileID
     integer, intent(in) :: myPE 
     integer, intent(in) :: localNumBlocks
-    integer, intent(in) :: io_splitNumBlks
     real, intent(in) :: dataBuff(:,:)
     integer, intent(in) :: localOffset
     character (len=*), intent(in) :: description
     !Set the dimensions of the dataset
     rank = 2
     dimens2D(1) = dimens
-    dimens2D(2) = io_splitNumBlks
+    dimens2D(2) = nBlockAll
     call h5open_f(error)
     if (error == -1) &
          
@@ -2057,9 +2042,9 @@ contains
 
   !============================================================================================
   !
-  subroutine writeHdf5Rank2Int(myPE, fileID, dataBuff, localNumBlocks, io_splitNumBlks,&
+  subroutine writeHdf5Rank2Int(myPE, fileID, dataBuff, localNumBlocks, &
        localOffset, description, dimens)
-
+    use ModMain, ONLY : nBlockAll
     use hdf5
     implicit none
 
@@ -2075,14 +2060,13 @@ contains
     integer(HID_T), intent(in) :: fileID
     integer, intent(in) :: myPE 
     integer, intent(in) :: localNumBlocks
-    integer, intent(in) :: io_splitNumBlks
     integer, intent(in) :: dataBuff(:,:)
     integer, intent(in) :: localOffset
     character (len=*), intent(in) :: description
     !Set the dimensions of the dataset
     rank = 2
     dimens2D(1) = dimens
-    dimens2D(2) = io_splitNumBlks
+    dimens2D(2) = nBlockAll
     call h5open_f(error)
     if (error == -1) &
          
@@ -2139,9 +2123,9 @@ contains
   !==================================================================================
   ! Writes rank 3 real
 
-  subroutine writeHdf5Rank3Real(myPE, fileID, dataBuff, localNumBlocks, io_splitNumBlks,&
+  subroutine writeHdf5Rank3Real(myPE, fileID, dataBuff, localNumBlocks, &
        localOffset, description, dimen1, dimen2)
-
+    use ModMain, ONLY : nBlockAll
     use hdf5
     implicit none
 
@@ -2157,7 +2141,6 @@ contains
     integer(HID_T), intent(in) :: fileID
     integer, intent(in) :: myPE 
     integer, intent(in) :: localNumBlocks
-    integer, intent(in) :: io_splitNumBlks
     real, intent(in) :: dataBuff(:,:,:)
     integer, intent(in) :: localOffset
     character (len=*), intent(in) :: description
@@ -2165,7 +2148,7 @@ contains
     rank = 3
     dimens3D(1) = dimen1
     dimens3D(2) = dimen2
-    dimens3D(3) = io_splitNumBlks
+    dimens3D(3) = nBlockAll
     call h5open_f(error)
     if (error == -1) &
          
@@ -2229,14 +2212,14 @@ contains
   ! !Writes Unknowns
   ! 
   subroutine writeHdf5Unknowns(myPE, fileID, nI, nJ, nK, unkBuf, globalVarMin, globalVarMax, &
-       io_unklabel, localNumBlocks, io_splitNumBlks, localOffset)
-
+       io_unklabel, localNumBlocks, localOffset)
+    use ModMain, ONLY : nBlockAll
     use hdf5
     implicit none
 
     integer(HID_T), intent(in) :: fileID, myPE
     integer, intent(in) :: localOffset
-    integer, intent(in) :: nI, nJ, nK, localNumBlocks, io_splitNumBlks
+    integer, intent(in) :: nI, nJ, nK, localNumBlocks 
     character (len=5), intent(in) :: io_unkLabel
     real, intent(in) :: globalVarMin, globalVarMax, unkBuf(nI,nJ,nK,localNumBlocks)
     integer(HID_T) :: dataset, dataspace, attribute, attributeSpace
@@ -2250,7 +2233,7 @@ contains
     dimens4D(1) = nI
     dimens4D(2) = nJ
     dimens4D(3) = nK
-    dimens4D(4) = io_splitNumBlks
+    dimens4D(4) = nBlockAll
 
     call h5screate_simple_f(rank, dimens4D, dataspace, error)
     call h5pcreate_f(H5P_DATASET_CREATE_F, datasetPlist, error)
