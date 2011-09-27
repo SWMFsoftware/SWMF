@@ -10,7 +10,7 @@ SHELL=/bin/sh
 
 COMPILE.f77     = ${CUSTOMPATH_F}ifort
 COMPILE.f90     = ${CUSTOMPATH_F}ifort
-LINK.f90	= ${CUSTOMPATH_F}mpif90
+LINK.f90	= ${CUSTOMPATH_MPI}mpif90
 AR = ar -rs
 
 SINGLEPREC =
