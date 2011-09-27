@@ -335,6 +335,10 @@ subroutine IO_GetNonGridBasedPotential(PotentialOut, iError)
         iError = ecSWVNotSet_
         return
      endif
+     if (IOr_NeedSWN < -1000.0) then
+        iError = ecSWNNotSet_
+        return
+     endif
      iChange = 1
   endif
 
@@ -419,7 +423,7 @@ subroutine IO_GetNonGridBasedPotential(PotentialOut, iError)
               ETheta = 0.0
               EPhi = 0.0
            endif
-        endif
+	endif
 
         if (index(EIE_NameOfEFieldModel,'weimer96') > 0) then
            if (abs(lat) >= 45.0) then 
