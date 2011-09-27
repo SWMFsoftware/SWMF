@@ -1564,7 +1564,7 @@ subroutine fill_edge_corner(Array_G)
   implicit none
   real, intent(inout) :: Array_G(0:nI+1,0:nJ+1,0:nK+1)
   !---------------------------------------------------------------------------
-  ! Edges in the K direction
+  ! Edges in the` K direction
   Array_G(0,0,:) = &
        Array_G(1,0,:)     + Array_G(0,1,:)     - Array_G(1,1,:)
   Array_G(nI+1,0,:) = &
@@ -1626,7 +1626,7 @@ end subroutine get_date_time
 subroutine get_time_string
 
   use ModIO,   ONLY: StringDateOrTime, NameMaxTimeUnit
-  use ModMain, ONLY: StartTime, Time_Simulation
+  use ModMain, ONLY: StartTime, Time_Simulation, n_step
   use ModTimeConvert, ONLY: TimeType, time_real_to_int
   implicit none
 
@@ -1666,6 +1666,8 @@ subroutine get_time_string
   case('nanosecond')
      if(Time_Simulation < 1e-6) &
           write(StringDateOrTime,'(f8.4)') Time_Simulation*1e9
+  case('timestep')
+     write(stringDateOrTime,'(i8)') n_step  
   case default
      ! Could not find unit
      StringDateOrTime = ''
