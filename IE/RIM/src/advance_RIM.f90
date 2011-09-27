@@ -31,7 +31,7 @@ subroutine advance_RIM
 
   if (maxval(Latitude) > HighLatBoundary .or. .not. DoSolve) then
      if (UseAmie) call get_AMIE_values(CurrentTime)
-     write(*,*) "Going into getpotential"
+     if (iDebugLevel > 1) write(*,*) "Going into getpotential"
      call IO_GetPotential(EmpiricalPotential, iError)
   endif
 
