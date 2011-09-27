@@ -43,6 +43,14 @@ subroutine set_imf
 
   if (iDebugLevel > 1) write(*,*) "==> Solar Wind Velocity : ",temp
 
+  call get_SW_N(CurrentTime, temp, iError)
+  call IO_SetSWN(temp)
+
+  if (iError /= 0) then
+    write(*,*) "Code Error in get_sw_n called from set_imf, part of RIM"
+    call stop_RIM("Stopping in set_imf, part of RIM")
+  endif
+
   call get_HPI(CurrentTime, temp, iError)
   call IO_SetHPI(temp)
 
