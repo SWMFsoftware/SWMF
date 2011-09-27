@@ -260,15 +260,22 @@ contains
           if (index(NameEFieldModel,'WEIMER01') > 0) &
                NameEFieldModel = 'weimer01'
 
-          if (index(NameEFieldModel,'weimer') > 0 .and. &
-               index(NameEFieldModel,'01') == 0) &
-               NameEFieldModel = 'weimer96'
-          if (index(NameEFieldModel,'Weimer') > 0 .and. &
-               index(NameEFieldModel,'01') == 0) &
-               NameEFieldModel = 'weimer96'
-          if (index(NameEFieldModel,'WEIMER') > 0 .and. &
-               index(NameEFieldModel,'01') == 0) &
-               NameEFieldModel = 'weimer96'
+          if (index(NameEFieldModel,'weimer05') > 0) &
+               NameEFieldModel = 'weimer05'
+          if (index(NameEFieldModel,'Weimer05') > 0) &
+               NameEFieldModel = 'weimer05'
+          if (index(NameEFieldModel,'WEIMER05') > 0) &
+               NameEFieldModel = 'weimer05'
+
+!          if (index(NameEFieldModel,'weimer') > 0 .and. &
+!               index(NameEFieldModel,'01') == 0) &
+!               NameEFieldModel = 'weimer05'
+!          if (index(NameEFieldModel,'Weimer') > 0 .and. &
+!               index(NameEFieldModel,'01') == 0) &
+!               NameEFieldModel = 'weimer05'
+!          if (index(NameEFieldModel,'WEIMER') > 0 .and. &
+!               index(NameEFieldModel,'01') == 0) &
+!               NameEFieldModel = 'weimer05'
 
           if (index(NameEFieldModel,'weimer96') > 0) &
                NameEFieldModel = 'weimer96'
