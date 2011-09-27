@@ -14,6 +14,7 @@ module ModErrors
   integer, parameter :: ecKpNotSet_        = 12
   integer, parameter :: ecEFieldModelNotFound_ = 13
   integer, parameter :: ecAuroralModelNotFound_ = 14
+  integer, parameter :: ecSWNNotSet_       = 15
 
   integer, parameter :: nErrorsMax = 1000
 
@@ -40,6 +41,7 @@ contains
          "The Selected Electric Field model is unknown"
     cErrorCodes(ecAuroralModelNotFound_) = &
          "The Selected Auroral model is unknown"
+    cErrorCodes(ecSWNNotSet_)       = "Solar Wind N has not been set"
 
   end subroutine set_error_codes
 
