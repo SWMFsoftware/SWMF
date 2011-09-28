@@ -427,14 +427,14 @@ contains
     if(nProc > 1)then
        call MPI_allreduce(iStatusNew_A, iStatusAll_A, nNode, MPI_INTEGER, &
             MPI_MAX, iComm, iError)
-       iStatusNew_A = iStatusAll_A
+       iStatusNew_A(1:nNode) = iStatusAll_A(1:nNode)
     end if
 
     ! storing the initall list that will not be chenged by the 
     ! proper nesting
     if(.not.DoStrictAmr) then
        allocate(iInitialiStatusNew_A(MaxNode))
-       iInitialiStatusNew_A = iStatusNew_A
+       iInitialiStatusNew_A(1:nNode) = iStatusNew_A(1:nNode)
     end if
 
     nRefineDiffOld =  0.0!nRefineDiff
@@ -596,14 +596,14 @@ contains
           if(nProc > 1)then
              call MPI_allreduce(iStatusNew_A, iStatusAll_A, nNode, MPI_INTEGER, &
                   MPI_MAX, iComm, iError)
-             iStatusNew_A = iStatusAll_A
-          end if
+             iStatusNew_A(1:nNode) = iStatusAll_A(1:nNode)
+          end if         
 
        end do ! levels
-
+      
        ! all blocks marked for refinment shoud be refined if true
        if(DoStrictAmr) EXIT BLOCKTRY
-
+      
        ! Estimate the difference between the number of block we can 
        ! use and how many we want to use after refinment.
        nRefineDiff = (nNodeUsed - count(iStatusNew_A == Coarsen_) + &
@@ -667,14 +667,13 @@ contains
           if((Rank_A(iRank)-Rank_A(nRefine)) >=  diffRange ) CYCLE BLOCKTRY
           iStatusNew_A(iNode) = Unset_
        end do
-
+      
     end do BLOCKTRY
 
 !!$    if(iProc==0 ) print *, "Num. refine/coursen = ", &
 !!$         count(iStatusNew_A == Refine_),&
 !!$         count(iStatusNew_A == Coarsen_)
-    
-    
+
     !if(iProc==0 ) then
     !   print *, "Rank refine   -1:+1 : ", Rank_A(max(1,nNodeSort-nDesiredRefine): min(nNodeSort,nNodeSort-nDesiredRefine+2))
     !   print *, "Rank coursen  -1:+1 : ", Rank_A(max(1,nDesiredCoarsen-1): min(nDesiredCoarsen+1,nNodeSort))
@@ -703,7 +702,7 @@ contains
 
        call coarsen_tree_node(iNodeParent)
     end do
-
+  
     ! Refine next
     do iMorton = 1, nNodeUsedNow
        iNode   = iNodeMorton_I(iMorton)
@@ -719,8 +718,8 @@ contains
        if(nNodeUsed > MaxBlock*nProc) EXIT
 
     end do
-
-    iStatusNew_A = Unset_
+  
+    iStatusNew_A(1:nNode) = Unset_
 
   end subroutine adapt_tree
   !==========================================================================
@@ -1098,7 +1097,7 @@ contains
     end do
 
     ! Reset iNodeNew_A
-    iNodeNew_A = Unset_
+    iNodeNew_A(1:nNode) = Unset_
 
   end subroutine compact_tree
 
@@ -1188,8 +1187,8 @@ contains
     ! - if iTypeNode_A is present, it contains block types 1, 2, .., nType
     !   each type is balanced separately. The total is also balanced.
 
-    use BATL_mpi, ONLY: nProc
-    
+    use BATL_mpi, ONLY: nProc, iProc
+
     ! Are nodes moved immediately or just assigned new processor/node
     logical, intent(in):: DoMove
 
@@ -1207,7 +1206,7 @@ contains
     if(DoMove)Unused_BP = .true.
 
     ! Initialize processor and block indexes
-    iProcNew_A = Unset_
+    iProcNew_A(1:nNode) = Unset_
 
     ! Set iNodeMorton_I and iMortonNode_A
     call order_tree
@@ -1216,7 +1215,7 @@ contains
     if(present(iTypeNode_A))then
 
        ! Find number of types and allocate arrays
-       nType = maxval(iTypeNode_A, MASK=iTree_IA(Status_,:)>=Used_)
+       nType = maxval(iTypeNode_A(1:nNode), MASK=iTree_IA(Status_,1:nNode)>=Used_)
     else
        nType = 1
     end if
@@ -1333,7 +1332,7 @@ contains
     integer:: iMorton, iNode, iNodeChild, iNodeParent, iChild, iBlock
     !-----------------------------------------------------------------------
     ! Update local Unused_B array
-    Unused_B = Unused_BP(:,iProc)
+    Unused_B(:) = Unused_BP(:,iProc)
 
     ! Update nBlock too as we loop through the used blocks
     nBlock = 0
@@ -1373,7 +1372,6 @@ contains
        end if
 
     end do
-
     ! Now that we removed children of coarsened blocks, compact the tree
     call compact_tree
 
@@ -1396,8 +1394,8 @@ contains
     nNode = nRoot
     iNode = 0
     iMorton = 0
-    iNodeMorton_I = Unset_
-    iMortonNode_A = Unset_
+    iNodeMorton_I(1:nNodeUsed) = Unset_
+    iMortonNode_A(1:nNodeUsed) = Unset_
     do kRoot = 1, nRoot_D(3)
        do jRoot = 1, nRoot_D(2)
           do iRoot = 1, nRoot_D(1)
