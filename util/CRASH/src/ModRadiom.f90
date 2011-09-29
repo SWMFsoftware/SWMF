@@ -1,13 +1,13 @@
- ! \
+!------- radiom.f90
+! \
 module M_RADIOM
   ! /
   ! The module solves the main equations of the non-LTE
   ! model
   !
-  !version: CRASH-2011.002b, M.Busquet
   use M_projE
   !Projects the radiation energy densities in user-defined groups 
-  !onto a refined grid
+  !onto a refined grid  
   implicit none
 
 
@@ -16,38 +16,38 @@ module M_RADIOM
   !/
   character(LEN=*),parameter :: author='M.Busquet' &
        ,wher='ARTEP,inc' &
-       ,version='CRASH-2011.002.b' &
+       ,version='CRASH-2011.005.f' &
        ,library='RADIOM' &
        ,dateModified='2011-08-09' 
   character(LEN=*),parameter :: &
-	collab='M.Klapisch & I.Sokolov' 
-	character(20),parameter :: &
-	credits='D.Fyfe & J.H.Gardner'
+       compiled='2011.09.02 13:38:10' &
+       ,collab='M.Klapisch & I.Sokolov' 
+  character(LEN=20),parameter :: &
+       credits='D.Fyfe & J.H.Gardner'
+  !  Flags :
+  logical,save :: notPrepUbar = .false.,dbgRadiom=.false.
+  !  Options :
+  logical,save :: jhg=.false.,sumMode=.false.,projMode=.true. &
+       ,doNew=.true.
+  real,save :: Auger=1,Auger_1oB=20d0,Auger_B=0,Gaunt=0.2 &
+       ,Auger_A=0,Auger_1oA=0
+  ! work arrays for "corrUbar" :
+  integer,parameter :: mxN=1+20*5 , mxu=1+10*5 ,mxGr=300
+  real :: QJ_1,QJ_2,dQJ ,corrUs(mxN),QJs(mxN)
+  logical,save :: setXubar=.true.
 
- !  Flags :
- logical,save :: notPrepUbar = .false.,dbgRadiom=.false.
+  real,parameter :: aSaha=6.02e21, b_CovR=1.34e13*0.2 ,one=1.0
 
- !  Options :
- logical,save :: jhg=.false.,sumMode=.false.,projMode=.true. &
-      ,doNew=.true.
 
- real,save :: Auger=1,Auger_1oB=20d0,Auger_B=0,Gaunt=0.2 &
-      ,Auger_A=0,Auger_1oA=0
- !\
- ! Working arrays for "corrUbar" :
- !/
- integer,parameter :: mxN=1+20*5 , mxu=1+10*5 ,mxGr=300
- real :: QJ_1,QJ_2,dQJ ,corrUs(mxN),QJs(mxN)
- logical,save :: setXubar=.true.
- !-------
+  !-------
 contains
   !-------
   subroutine printVersion()
-    
     write(*,*)'...................................'
     write(*,*)'library=',library
     write(*,*)'version=',version
     write(*,*)'modified on ',dateModified
+    write(*,*)'compiled on ',compiled
     write(*,*)'author=',author
     write(*,*)' at ',wher
     write(*,*)' in collaboration with : ',collab
@@ -56,12 +56,11 @@ contains
   end subroutine printVersion
   !-------
   subroutine setDbgRadiom(flag)
-
     logical,intent(IN) :: flag
     dbgRadiom=flag
     write(*,*)'- - flag  dbgRadiom  set to ',dbgRadiom
   end subroutine setDbgRadiom
- !-------
+  !-------
   subroutine xubar(Te_in,Ne_in ,ngr,grBound,EoB,ubar)
     !  find the center of C.S.distribution in normalized energy,  U=hnu/Te
     !  it uses a "non-overflow, non-sensitive for tails, algorithm" derived by G.Schurtz
@@ -71,36 +70,33 @@ contains
     !
     use M_projE	! ,only : mxOut
     use M_expTab
-
     real :: ubar
     integer,intent(IN) :: ngr
     real,intent(IN) :: Te_in,Ne_in
     real,intent(IN) :: grBound(0:ngr),EoB(ngr)
-    
-    real,parameter :: aSaha=6.02e21, b_CovR=1.34e13*0.2
+
     real,parameter :: A_LTE_limit=7.38905609	! =exp(2)
-    real,parameter :: smallR=1d-200,one=1,two=2
-    
+    real,parameter :: smallR=1d-200,two=2
+
     integer :: nfgp,nOut,ig
     real :: ts,at32s,QJ,betapm ,bu3
     real :: du,duu,s,rm,frad
     logical :: gotoLTE
-    real :: u,ey		! for 'exp_tab'
+    real :: u,ey		! for 'exp_tab'	 : u -> ey=exp(-u)
 
-    
     logical,save :: dbg=.false.,lastWasPrep=.false.
-    
+
     nfgp=ngr+1
     ts=sqrt(Te_in)
     at32s= aSaha*Te_in*ts/Ne_in
     if(at32s.le.A_LTE_limit) then
        ubar=log(at32s)	! thus Tz/Te will be  1
        return
-    endif
+    end if
     QJ=log(at32s)
     betapm= (b_CovR/Gaunt/aSaha)*at32s*Te_in**2        
-    
-    
+
+
     !	     --------
     if(notPrepUbar)then
        if(Efirst.ne.grBound(0) .or. Elast.ne.grBound(ngr) &
@@ -108,25 +104,25 @@ contains
           write(*,783) nbIn,ngr,Efirst,Elast,grBound(0),grBound(ngr)
 783       format(//,'-W- definition of groups changed : ngr :',i5,' -> ',i5 &
                ,' range:',1p,2e13.4,' -> ',2e13.4,//)
-          call CON_stop('stop: groups changed')
+          call CON_stop('-E- xubar: groups changed')
           call prep_projE(grBound,ngr)	
-       endif
+       end if
        lastWasPrep=.false.
     else 
        lastWasPrep=.true.
-    endif
+    end if
     call projSP_E(Te_in,EoB,nOut,gotoLTE)		! ,Uout,SPout
     !	     --------
-    
+
     if(gotoLTE) then
        ubar=QJ ! =log(at32s)		! thus Tz/Te will be  1
        return
-    endif
+    end if
 
     ! perform the "non overflow" alogrithm, u=including  jhg correction
     ubar=0
     s=one
-    if(nbOut.lt.2) stop ' stop : nbOut<2'
+    if(nbOut.lt.2) call CON_stop('-R- xubar : nbOut<2')
     duu=Uout(2)-Uout(1)
     do ig=2,nbOut+1
        u  = (Uout(ig)+Uout(ig-1))/two
@@ -146,36 +142,36 @@ contains
        duu=du
        ubar=(ubar+u*rm)/(one+rm)
        s=one+one/rm		! sumMode
-    enddo
+    end do
     ! 
     call CorrUbar(ubar,QJ)
- 	
+
   end subroutine xubar
+
   !===================
+
   subroutine xubar0(Te_in,Ne_in ,EoB,ubar)
     ! 
     ! same as "xubar" w/o check of Eground
     !
     use M_projE	! ,only : mxOut
     use M_expTab
-    
     real :: ubar
     integer :: ngr
     real,intent(IN) :: Te_in,Ne_in
     real,intent(IN) :: EoB(nbIn)
-    
-    real,parameter :: aSaha=6.02e21, b_CovR=1.34e13*0.2
+
     real,parameter :: A_LTE_limit=7.38905609	! =exp(2)
-    real,parameter :: smallR=1d-200,one=1,two=2
-    
+    real,parameter :: smallR=1d-200,two=2
+
     integer :: nfgp,nOut,ig
     real :: ts,at32s,QJ,betapm ,bu3
     real :: du,duu,s,rm,frad
     logical :: gotoLTE
-    real :: u,ey		! for 'exp_tab'
-    
+    real :: u,ey		! for 'exp_tab'  u -> ey=exp(-u), ex_u=1-ey
+
     logical,save :: dbg=.false.,lastWasPrep=.false.
-    
+
     ngr=nbIn
     nfgp=ngr+1
     ts=sqrt(Te_in)
@@ -183,7 +179,7 @@ contains
     if(at32s.le.A_LTE_limit) then
        ubar=log(at32s)	! thus Tz/Te will be  1
        return
-    endif
+    end if
     QJ=log(at32s)
     betapm= (b_CovR/Gaunt/aSaha)*at32s*Te_in**2        
     !	     --------
@@ -192,11 +188,11 @@ contains
     if(gotoLTE) then
        ubar=QJ ! =log(at32s)		! thus Tz/Te will be  1
        return
-    endif
+    end if
     ! perform the "non overflow" alogrithm, u=including  jhg correction
     ubar=0
     s=one
-    if(nbOut.lt.2) stop ' stop : nbOut<2'
+    if(nbOut.lt.2) call CON_stop('-E- xubar0 : nbOut<2')
     duu=Uout(2)-Uout(1)
     do ig=2,nbOut+1
        u  = (Uout(ig)+Uout(ig-1))/two
@@ -216,7 +212,7 @@ contains
        duu=du
        ubar=(ubar+u*rm)/(one+rm)
        s=one+one/rm		! sumMode
-    enddo
+    end do
     call CorrUbar(ubar,QJ)
   end subroutine xubar0
   !-------
@@ -267,93 +263,87 @@ contains
     real,dimension(ng),intent(IN) :: eg,bg
     real,dimension(0:ng),intent(IN) :: hnug
     real,intent(OUT) :: Tz
-    real,parameter :: aSaha=6.02e21, b_CovR=1.34e13*0.2 ,one=1d0
-    
+
     real,dimension(mxgr) :: EoB
     real,parameter :: smallB=1d-30
     integer :: ig
-    
+
     real :: at32s,ubar,QJ
-    real :: ubar1
-    
-    
+
     if(nbIn.le.0) then
        write(*,*)'-P- prep_projE not done before "calTE"'
-       call CON_stop('prep_projE')
-    endif
+       call CON_stop('-E- calTZ: prep_projE not done')
+    end if
     at32s=aSaha*te*sqrt(te)/Ne
     tz=te
     if(at32s <= one) return
-   
     if(ng.gt.0) then
        EOB(1:ng)=0.
        do ig=1,ng
-	  if(bg(ig) > smallB) EoB(ig)=eg(ig)/bg(ig)
+          if(bg(ig) >smallB) EoB(ig)=eg(ig)/bg(ig)
        end do
-
+       !	elseif(ng.lt.0) then
+       !  may use empirical fit ...
+       !	 return
     else
        write(*,*)'-E- CALTZ: ng=0, should use an artifical gridding ...'
        call CON_stop('-P- no Eg(:) in CALTZ')
-    endif
+    end if
     call xubar(te,ne,ng,hnug,EoB ,ubar)	! no more a function
     QJ=log(at32s)
     tz=te*ubar/QJ
-    ubar1=ubar	! for table
   end subroutine calTz
-  !==================
+  !-------
   subroutine calTz0(Te,Ne, Tz, eg,bg)
     !-
     !-     same as "calTZ" but w/o hnug(0:ng) & ubar1
     !
     !
     use M_projE,only : nbIn
-  
     real,intent(IN) :: Te,ne
     real,dimension(:),intent(IN) :: eg,bg
     real,intent(OUT) :: Tz
-    real,parameter :: aSaha=6.02e21, b_CovR=1.34e13*0.2 ,one=1d0
-    
+
     real,dimension(mxgr) :: EoB
     real,parameter :: smallB=1d-30
     integer :: ig
-    
+
     real :: at32s,ubar,QJ
     if(nbIn.le.0) then
        write(*,*)'-P- prep_projE not done before "caltz0"'
-       call CON_stop('prep_projE')
-    endif
+       call CON_stop('-P- calTZ: prep_projE not done')
+    end if
     at32s=aSaha*te*sqrt(te)/Ne
     tz=te
     if(at32s.le.one) return
     EOB(1:nbIn)=0.
     do ig=1,nbIn
        if(bg(ig).gt.smallB) EoB(ig)=eg(ig)/bg(ig)
-    enddo
+    end do
     call xubar0(te,ne,EoB ,ubar)	! no more a function
     QJ=log(at32s)
     tz=te*ubar/QJ
   end subroutine calTz0
-  !============
-  subroutine calte(TeOld,Tz,Ne, Tenew, hnug,eg,bg,ng)
+  !-------
+  subroutine calte(TeOld,Ne,Tz, Tenew, hnug,eg,bg,ng)
     use M_projE,only : nbIn
-    
+    implicit none
     real,intent(IN) :: TeOld,Tz,Ne
     real,intent(OUT) :: TeNew
     integer :: ng
     real,dimension(0:ng),intent(IN) :: hnug
     real,dimension(ng),intent(IN) :: eg,bg
-    real,parameter :: aSaha=6.02e21, b_CovR=1.34e13*0.2 ,one=1d0
-    
+
     real,dimension(mxgr) :: EoB
     real,parameter :: smallB=1d-30
     integer :: ig
-    
+
     real :: at32s,ubar,QJ
-    
+
     if(nbIn.le.0) then
        write(*,*)'-P- prep_projE not done before "calte"'
-       call CON_stop('prep_projE')
-    endif
+       call CON_stop('-P- calTE: prep_projE not done')
+    end if
     TeNew=TeOld
     if(Ne.le.one) return
     at32s=aSaha*TeOld*sqrt(TeOld)/Ne
@@ -362,48 +352,52 @@ contains
     EOB(1:ng)=0.
     do ig=1,ng
        if(bg(ig).gt.smallB) EoB(ig)=eg(ig)/bg(ig)
-    enddo
+    end do
     call xubar(TeOld,ne,ng,hnug,EoB,ubar)
     TeNew=Tz*QJ/ubar
   end subroutine calte
-  !================
-  subroutine calte0(TeOld,Tz,Ne, Tenew, eg,bg)
+  !-------
+  subroutine calte0(Te,Ne,Tz, eg,bg)
     use M_projE,only : nbIn
-    
-    real,intent(IN) :: TeOld,Tz,Ne
-    real,intent(OUT) :: TeNew
+    implicit none
+    real,intent(IN) :: Tz,Ne
+    real,intent(INOUT) :: Te
     real,dimension(:),intent(IN) :: eg,bg
-    real,parameter :: aSaha=6.02e21, b_CovR=1.34e13*0.2 ,one=1d0
-    
+    real,parameter :: zero=0
+
     real,dimension(mxgr) :: EoB
     real,parameter :: smallB=1d-30
     integer :: ig
-    
+
     real :: at32s,ubar,QJ
-    
+
     if(nbIn.le.0) then
        write(*,*)'-P- prep_projE not done before "calte0"'
-       call CON_stop('prep_projE')
-    endif
-    
-    TeNew=TeOld
+       call CON_stop('-P- calTE0: prep_projE not done')
+    end if
+
     if(Ne.le.one) return
-    at32s=aSaha*TeOld*sqrt(TeOld)/Ne
+    if(Te.le.0) then
+       at32s=aSaha*Tz*sqrt(Tz)/Ne
+    else
+       at32s=aSaha*Te*sqrt(Te)/Ne
+    end if
+    Te=Tz
     if(at32s.le.one) return
     QJ=log(at32s)
-    EOB(1:nbIn)=0.
+    EoB(1:nbIn)=0.
     do ig=1,nbIn
        if(bg(ig).gt.smallB) EoB(ig)=eg(ig)/bg(ig)
-    enddo
-    call xubar0(TeOld,ne,EoB,ubar)
-    TeNew=Tz*QJ/ubar
+    end do
+    call xubar0(Te,ne,EoB,ubar)
+    Te=Tz*QJ/ubar
+    return
   end subroutine calte0
-  !==============
+  !-------
   subroutine CorrUbar(ubar,QJ)
-    
+
     real, intent(IN) :: QJ
     real :: ubar,d
-    real,parameter :: one=1d0
     real, parameter :: QJ_limit=2.1
     integer :: iq
     !	
@@ -411,7 +405,7 @@ contains
     if(.not.notPrepUbar) call prepCorrUbar()
     ! 
     iq=int((QJ-QJ_1)/dQJ) +1
-    if(iq<=0 .or. QJ<=QJ_limit) then
+    if(iq <= 0 .or. QJ <= QJ_limit) then
        ubar=QJ
     elseif(iq.ge.mxN) then
        ubar=ubar*corrUs(mxN)
@@ -419,23 +413,22 @@ contains
        d=(QJ-QJs(iq))/dQJ
        d=(one-d)*corrUs(iq)+d*corrUs(iq+1)
        ubar=ubar*d
-    endif
+    end if
     ! 
   end subroutine CorrUbar
-  !============
+  !-------
   subroutine prepCorrUbar()
     !
     !  tabulate correction to UBAR (see corrUbar)
     !
     use M_projE,only : Umin,Umax	,nbIn,Efirst,Elast
-    
+
     real :: ubar,ne,te,at32s,qj,r,eg1
-    real,parameter :: zero=0,one=1,two=2
-    real,parameter :: aSaha=6.02e21, b_CovR=1.34e13*0.2 
+    real,parameter :: zero=0,two=2 
     real,dimension(0:mxN) :: Ugs
     real,dimension(mxN+1) :: EovB
     integer :: iq
-    !------------ 
+    ! 
     te=0.1
     r=(Umax/Umin)**(one/mxu)
     eg1=Umin*te
@@ -443,7 +436,7 @@ contains
        EovB(iq)=1	! 0 & 1 give same result
        Ugs(iq-1)=eg1
        eg1=eg1*r
-    enddo
+    end do
     Ugs(mxN)=eg1
     notPrepUbar=.false.
     setXubar=.true.
@@ -458,12 +451,13 @@ contains
        corrUs(iq)=qj/ubar
        QJs(iq)=qj
        qj=qj+dQJ
-    enddo
+    end do
     ! 
     setXubar=.false.
     notPrepUbar=.true.	
+
   end subroutine prepCorrUbar
- !-------
- ! \
+  !-------
+  ! \
 end module M_RADIOM
  ! /
