@@ -348,6 +348,13 @@ subroutine advance_impl
 
         call solve_linear_system
 
+        if(info /= 0 .and. info /= 3 .and. iProc == 0) then
+           write(*,*) 'ERROR in ',NameSub,': Krylov solver failed!'
+           write(*,*) 'info, KrylovEerror, KrylovErrorMax=', &
+                info, KrylovError, KrylovErrorMax
+           if(nVarSemi < nw)write(*,*)'Semi-implicit variable index is ',iVarSemi
+        end if
+
         ! Update w: Impl_VGB(k+1) = Impl_VGB(k) + coeff*dw  
         ! with coeff=1 or coeff<1 from backtracking (for steady state only) 
         ! based on reducing the residual 
@@ -481,7 +488,7 @@ contains
   !==========================================================================
   subroutine solve_linear_system
 
-    integer:: n, implBLK, i, j, k, iVar
+    integer:: n, implBLK, i, j, k, iVar, iError1 = -1
     real:: coef1, coef2
     !----------------------------------------------------------------------
     ! Precondition matrix if required
@@ -655,6 +662,10 @@ contains
 
     if(DoTestMe.and.info/=0)write(*,*) NameSub, &
          ' warning: no convergence, info:',info
+
+    if(info /= 0 .and. info /= 3 .and. iProc == 0) &
+         call error_report('Krylov solver failure, Krylov error', &
+         KrylovError, iError1, .true.)
 
   end subroutine solve_linear_system
   
