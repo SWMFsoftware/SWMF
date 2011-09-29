@@ -19,43 +19,6 @@
 !------- radiom.f90
 !-------
 ! \
-module M_expTab
-  ! /
-  !  tabulated exponential, 10 times faster that hard wired exp()
-  !-------
-  implicit none
-  integer,save :: nb_Exp=-1	! flag of preparation
-  integer,parameter :: ex_nb=15000
-  real,parameter :: ex_du=1e-2,ex_mm=1e-25 &
-       ,ex_min=1e-4,ex_max=ex_nb*ex_du &
-       ,ex_zero=0.,ex_one=1.
-  real,save :: ex_sdu,ex_c,ex_cm,ex_tab(0:ex_nb)
-  real :: ex_u,ex_y
-  integer :: ex_i
-  !-------
-contains
-  !-------
-  subroutine exp_tab8()
-    if(nb_exp.eq.ex_nb) return
-    nb_exp=ex_nb
-    do ex_i=0,ex_nb
-       ex_u=ex_i*ex_du
-       ex_tab(ex_i)=exp(-ex_u)
-    enddo
-    ex_sdu=ex_one/ex_du
-    ex_c=(ex_one-ex_tab(1))*ex_sdu
-    ex_cm=(ex_one/ex_tab(1)-ex_one)*ex_sdu
-    ex_y=0.
-    write(*,*)'.. tabulation of 1/exp(0..',ex_max,') is done.'
-  end subroutine exp_tab8
-  !-------
-  ! \
-end module M_expTab
-! /
-!-------
-!------- radiom.f90
-!-------
-! \
 MODULE M_projE
   ! /
   !  {U=hnu/Kte,Erad,Brad} will be projected on a working grid , with even log. spacing of U
@@ -91,7 +54,7 @@ contains
     nb=nbOut
     E(1:nb)=Eout(1:nbOut)
   end subroutine getEout
-  !============
+  !========
   subroutine prep_projE(Ein,nbE)	! ,nbO
     !  preparation of the projection coefficients 
     integer,intent(In) :: nbE
@@ -117,8 +80,9 @@ contains
     if(nbOut.gt.mxOut)then
        write(*,125) nbUout,nbOut
 125    format(// '-E- nbUout(=',i5,') should be LESS THAN nbout(=',i5,')',//)
-       call CON_stop('stop  nbUout .GT. nbOUT')
-    endif
+       call CON_stop('-R- : prep_projE  nbUout .GT. nbOUT')
+       ! stop '-R- : prep_projE  nbUout .GT. nbOUT'
+    end if
     if(dbg)write(*,*)'Ef,El=',Efirst,Elast,' nbO=',nbOut
     Eout(1)=Efirst
     first_ctrb(1)=0		!!
@@ -127,7 +91,7 @@ contains
        first_ctrb(n)=0	!!
        last_ctrb(n-1)=0
        Eout(n)=Eout(n-1)*rdu
-    enddo
+    end do
     ! 
     nOut=0
     out1=0
@@ -141,34 +105,36 @@ contains
             ,' Eout(',nOut,'+1)=',REAL(Eout(nOut+1))
 
        do while (Ein(nIn-1).ge.Eout(nOut+1)) 
-	  nOut = nOut+1
-          first_ctrb(nOut)=nIn
+          nOut = nOut+1
+          first_ctrb(nOut)=nIn	
           du=Eout(nOut+1)-Eout(nOut)
-       enddo
-       if(Ein(nIn).le.Eout(nOut)) cycle LOOP10
+       end do
+       if(Ein(nIn).le.Eout(nOut)) then
+          cycle LOOP10
+       end if
 2      b1=Ein(nIn-1).gt.Eout(nOut)
-       if(b1)then
-	  u1=Ein(nIn-1)
+       if(b1) then
+          u1=Ein(nIn-1)
        else
-	  u1=Eout(nout)
+          u1=Eout(nout)
           if(out1.eq.0) out1=nOut
-       endif
+       end if
        b2=Ein(nIn).lt.Eout(nOut+1)
        if(b2) then
-	  u2=Ein(nIn)
+          u2=Ein(nIn)
        else
-	  u2=Eout(nOut+1)
+          u2=Eout(nOut+1)
           out2=nOut
        end if
        nbContrib=nbContrib+1
        if(nbContrib.le.mxContrib) then
-	  to_ctrb(nbContrib)=nOut
+          to_ctrb(nbContrib)=nOut
           fr_ctrb(nbContrib)=nIn	! in group  [ Ein(nIn-1) : Ein(nIn) ]
-	  coef_ctrb(nbContrib)=(u2-u1)/du
+          coef_ctrb(nbContrib)=(u2-u1)/du
           if(dbg) write(*,*)'#',nbContrib,' fr,to=',nIn,nOut &
                ,' u1,u2=',REAL(u1),REAL(u2) &
                ,' du=',REAL(du),' C=',REAL(coef_ctrb(nbContrib))
-       endif
+       end if
        !
        !   Ein :	  |      |
        !   Eout:	    |..a   b
@@ -179,13 +145,13 @@ contains
        !   u1,u2           A  B..|
        !
        if(.not.b2)then	! input segment overlaps 
-	  if(nOut.ge.nbOut) exit LOOP10	! more than 1 output segment
+          if(nOut.ge.nbOut) exit LOOP10	! more than 1 output segment
           nOut=nOut+1
           first_ctrb(nOut)=nIn		!!
-	  du=Eout(nOut+1)-Eout(nOut)
+          du=Eout(nOut+1)-Eout(nOut)
           goto 2
        end if
-    enddo LOOP10
+    end do LOOP10
     ! 
 20  last_ctrb(nbIn)=nbContrib
     first_ctrb(nOut+1)=nIn		!!
@@ -195,17 +161,17 @@ contains
        call CON_stop('')
     else
        do n=1,nbContrib
-	  ctrb_to1(n)=0
+          ctrb_to1(n)=0
           ctrb_to2(n)=0
        end do
        do n=1,nbContrib
-	  ctrb_to2(to_ctrb(n))=n
+          ctrb_to2(to_ctrb(n))=n
        end do
        do n=nbContrib,1,-1
-	  ctrb_to1(to_ctrb(n))=n
+          ctrb_to1(to_ctrb(n))=n
        end do
     end if
-
+    ! 
     if(.not.dbg) return
     write(*,*)'- - found ',nbContrib,' contrib.'
     WRITE(*,401) 'to_ctrb=' &
@@ -229,20 +195,20 @@ contains
     do nIn=1,nbIn
        write(*,101) nIn,Ein(nIn-1),Ein(nIn)
        do nOut=last_ctrb(nIn-1)+1,last_ctrb(nIn)
-          fr=fr_ctrb(nOut)
-          to=to_ctrb(nOut)
-          c=coef_ctrb(nOut)
-          write(*,102) to,fr &
+  	  fr=fr_ctrb(nOut)
+  	  to=to_ctrb(nOut)
+  	  c=coef_ctrb(nOut)
+  	  write(*,102) to,fr &
                ,c &
                ,Ein(fr-1),Ein(fr),Eout(to),Eout(to+1) &
                ,nOut,nIn
-       enddo
+       end do
 102    format(' to,fr=',2i4,' c=',1p,e13.3 &
             ,' Ein=',2e13.3,'  Eout=',2e13.3,' #',i4,i5)
-    enddo
+    end do
     ! 
   end subroutine prep_projE
-  !=============
+  !======
   subroutine projSP_E(Te,SPin,nOut,gotoLTE)	! ,Uout,SPout
     real,intent(In) :: Te,SPin(nbIn)
     integer,intent(Out) :: nOut
@@ -256,7 +222,7 @@ contains
     if(nbIn.eq.0) then
        write(*,*)'-P- subroutine "prep_projE" has not been called'
        call CON_stop('')
-    endif
+    end if
     Ufirst=Efirst/Te
     Ulast=Elast/Te
     gotoLTE=.false.
@@ -264,13 +230,13 @@ contains
        write(*,*)'-- projSP_E --','  nbIn=',nbIn
        write(*,*)'Uf,Ul=',REAL(Ufirst),REAL(Ulast) &
             ,' Umin,max=',REAL(Umin),REAL(Umax)
-    endif
+    end if
     !
     ! special cases:  range of interest and group span dont overlap:
     if(Ulast.le.Umin) then
        if(dbg) then
           write(*,*)'  --- |  |'
-       endif
+       end if
        n1=2
        n2=1
        r=zero
@@ -279,12 +245,12 @@ contains
        gotoLTE=.true.
        if(dbg) then
           write(*,*)' |  |  ---'
-       endif
+       end if
        n1=nbContrib
        n2=nbContrib-1
        r=one
        goto 110
-    endif
+    end if
     !
     Uaft=max(Umin,Ulast)
     Uaft=min(Uaft,Umax)
@@ -314,7 +280,7 @@ contains
        else
           write(*,*)' uOut(:n1:)=',Eout(n1-1)/te,Eout(n1)/te &
                ,Eout(n1+1)/te
-       endif
+       end if
        if(n2==0) then
           write(*,*)' uOut(1)=',Eout(1)/te
        elseif(n2.eq.1) then
@@ -322,7 +288,7 @@ contains
        else
           write(*,*)' uOut(:n2:)=',Eout(n2-1)/te,Eout(n2)/te &
                ,Eout(n2+1)/te
-       endif
+       end if
     ENDIF
     ! 
     if(nBef.eq.0 .and. nAft.eq.0) then
@@ -330,6 +296,7 @@ contains
        n2=ctrb_to2(n2)
     elseif(nBef.eq.0)then
        n1=ctrb_to1(n1+1)
+       n1=max(n1,1)		! 110827
        n2=nbContrib
     elseif(nAft.eq.0) then
        n1=1
@@ -337,18 +304,18 @@ contains
     else
        n1=1
        n2=nbContrib
-    endif
+    end if
     !	
     IF(dbg) THEN
-       PRINT*,'Ufirst,Ulast=',Ufirst,Ulast
-       PRINT* &
-            ,' Ubef,Uaft=',Ubef,Uaft
-       PRINT* &
-            ,' lgdu,nBef,nAft=',REAL(lgdu),nBef,nAft
-       PRINT*,'n1,n2 {ctrb}=',n1,n2
-       PRINT*,'fr,to1=',fr_ctrb(n1),to_ctrb(n1) &
+       write(*,*)'Ufirst,Ulast=',Ufirst,Ulast
+       write(*,*) &
+            ' Ubef,Uaft=',Ubef,Uaft
+       write(*,*) &
+            ' lgdu,nBef,nAft=',REAL(lgdu),nBef,nAft
+       write(*,*)'n1,n2 {ctrb}=',n1,n2
+       write(*,*)'fr,to1=',fr_ctrb(n1),to_ctrb(n1) &
             ,' c=',coef_ctrb(n1)
-       PRINT*,'fr,to2=',fr_ctrb(n2),to_ctrb(n2) &
+       write(*,*)'fr,to2=',fr_ctrb(n2),to_ctrb(n2) &
             ,' c=',coef_ctrb(n2)
     ENDIF
     !c
@@ -356,33 +323,33 @@ contains
     if(Ulast.le.Umin) then	! very high temp.
        !c	|	|
        !c  |--|			   {Emin:Emax}/Te
-       PRINT*,'  --- |  |'
+       write(*,*)'  --- |  |'
     elseif(Ufirst.gt.Umax) then	! very low temp, go to LTE ?
        !c	|	|
        !c 		   |--|   {Emin:Emax}/Te
 
        gotoLTE=.true.
-       PRINT*,' |  |  ---'
+       write(*,*)' |  |  ---'
     elseif(Ufirst.ge.Umin .and. Ulast.le.Umax) then
        !c	|	|
        !c 	  |--|  	  {Emin:Emax}/Te : nBef>0, nAft>0
-       if(dbg)PRINT*,'  | --- |'
+       if(dbg)write(*,*)'  | --- |'
     elseif(Ufirst.le.Umin .and. Ulast.ge.Umax) then
        !c	|	|
        !c     |-----------|	  {Emin:Emax}/Te
-       if(dbg)PRINT*,' --|---|--'
+       if(dbg)write(*,*)' --|---|--'
     elseif(Ufirst.le.Umin) then
        !c	|	|
        !c     |-----|	     {Emin:Emax}/Te
-       if(dbg)PRINT*,' --|-  |  '
+       if(dbg)write(*,*)' --|-  |  '
     elseif(Ulast.ge.Umax) then
        !c	|	|
        !c            |-----|	  {Emin:Emax}/Te
-       if(dbg)PRINT*,'  |  -|--'
+       if(dbg)write(*,*)'  |  -|--'
     else
        write(*,*)'-P- can not distribute U over Umin..Umax'
-       stop '-P- 473'
-    endif
+       call CON_stop('-P- 473')
+    end if
     ! 
     IF(dbg)THEN
        write(*,*)'_______ projSP_E, w/ Te=',te
@@ -402,16 +369,16 @@ contains
           u=u/rdu
           SPout(n)=r
           Uout(n)=u
-       enddo
+       end do
        nOut=nOut+nBef
        if(nout.gt.mxout) goto 1100
     else
        Uout(1)=u
-    endif
+    end if
     ! 
     do n=nOut+1,min(mxOut,nbOut)
        SPout(n)=zero
-    enddo
+    end do
     u=Ubef
     Uout(nOut+1)=u
     if(n2.ge.n1) then
@@ -422,7 +389,8 @@ contains
           u=Eout(to)/te
           if(u.gt.Umin .or. to.ne.tt2) goto 201
           n1=ctr+1
-       enddo
+          write(*,*)'563 : n1,n2=',n1,n2
+       end do
 201    tt1=to_ctrb(n2)
        tt2=n2
        do ctr=tt2,n1,-1
@@ -430,12 +398,12 @@ contains
           u=Eout(to)/te
           if(u.gt.Umin .or. to.ne.tt1) goto 202
           n2=ctr
-       enddo
+       end do
        ! 
 202    if(nBef.eq.0) then
           to=to_ctrb(n1)
           Uout(1)=Eout(to)/te
-       endif
+       end if
        tt1=nOut+1-to_ctrb(n1)
        do ctr=n1,n2
           fr=fr_ctrb(ctr)
@@ -444,15 +412,15 @@ contains
           to=to+tt1
           if(to.ge.size(Uout)) then
              write(*,*)'to,size(Uout)=',to,size(Uout)
-             stop 'to > size(Uout)'
-          endif
+             call CON_stop('to > size(Uout)')
+          end if
           if(to.lt.size(Uout)) &
                Uout(to+1)=u
           c=coef_ctrb(ctr)
           SPout(to)=SPout(to)+c*SPin(fr)
-       enddo
+       end do
        nOut=to
-    endif
+    end if
     ! 
 
     !! ?? que doit-on faire quand  nOut=0 ???
@@ -464,8 +432,8 @@ contains
           nOut=nOut+1
           SPout(nOut)=zero
           Uout(nOut+1)=u
-       enddo
-    endif
+       end do
+    end if
     ! 
     return
     ! 
@@ -475,14 +443,14 @@ contains
        SPout(n)=r
        Uout(n)=u
        u=u*rdu
-    enddo
+    end do
     Uout(nOut+1)=u
     ! 
     return
 1100 write(*,*)'-R- nOut=',nOut,'  > mxOut=',mxOUt
-    stop '-1100-'
+    call CON_stop('- projSP_E, error=1100 -')
 1101 write(*,*)'-R- nbef=',nbef,'  > mxOut=',mxOUt
-    stop '-1101-'
+    call CON_stop('- projSP_E, error=1101 -')
   end subroutine projSP_E
   !-------
   subroutine projSP(Uin,SPin,nbIn)	! ,Uout,SPout,nbOut
@@ -499,7 +467,7 @@ contains
     !
     do nOut=1,nbOut
        SPout(nOut)=0
-    enddo
+    end do
     nOut=1
     du=Uout(nOut+1)-Uout(nOut)
     out1=0
@@ -512,7 +480,7 @@ contains
           goto 1
        elseif(Uin(nIn+1).le.Uout(nOut)) then
           cycle LOOP10 
-       endif
+       end if
 2      u1=max(Uin(nIn),Uout(nOut))
        u2=min(Uin(nIn+1),Uout(nOut+1))
        SPout(nOut)=SPout(nOut) + (u2-u1)/du * SPin(nIn)
@@ -525,14 +493,12 @@ contains
        !   u1,u2           A B   |
        if(u2.eq.Uout(nOut+1)) out2=nOut 
        if(u2.ne.Uin(nIn+1))then	! input segment overlaps 
-          if(nOut.ge.nbOut) goto 20	! more than 1 output segment
+          if(nOut.ge.nbOut) exit LOOP10	! more than 1 output segment
           nOut=nOut+1
           du=Uout(nOut+1)-Uout(nOut)
           goto 2
-       endif
-    enddo LOOP10
-    !
-20  continue
+       end if
+    end do LOOP10
     !
     IF(out1.ne.0 .and. out1.lt.nOut) THEN		! 080831
        if(SPout(out1).gt.0 .and. SPout(out1+1).gt.0) then
@@ -542,8 +508,8 @@ contains
           do nOut=out1-1,1,-1
              SPout(nOut)=SPout(nOut+1)*exp(r*  &
                   (log(Uout(nOut))-log(Uout(nOut+1))) )
-          enddo
-       endif
+          end do
+       end if
     ENDIF						! 080831
     ! 
     IF(out2.gt.1 .and. out2.le.nOut) THEN		! 080831
@@ -554,44 +520,24 @@ contains
           do nOut=out2+1,nbOut
              SPout(nOut)=SPout(nOut-1)*exp(r*  &
                   (log(Uout(nOut))-log(Uout(nOut-1))) )
-          enddo
-       endif
+          end do
+       end if
     ENDIF						! 080831
     ! 
     return
   end subroutine projSP
+  !-------
+  subroutine wr5(nom,val,nb)
+    character(LEN=*),intent(in)::nom
+    integer,intent(in)::nb
+    real,intent(in)::val(nb)
+
+    write(*,'(a,/,1p,(5e12.3))') nom,val(1:nb)
+
+  end subroutine wr5
   !-------
   ! \
 end MODULE M_projE
 ! /
 !------- radiom.f90
 
-!------- radiom.f90
-
-
-!-------
-! \ 
-!  tools
-! /
-!-------
-subroutine wr5(nom,val,nb)
-  implicit none
-  character nom*(*)
-  integer nb
-  real*8 val(nb)
-
-  write(*,1) nom,val
-1 format(a,/,1p,(5e12.3))
-  return
-end subroutine wr5
-!================
-subroutine w4r5(nom,val,nb)
-  implicit none
-  character nom*(*)
-  integer nb
-  real*4 val(nb)
-
-  write(*,1) nom,val
-1 format(a,/,1p,(5e12.3))
-  return
-end subroutine w4r5
