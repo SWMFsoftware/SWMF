@@ -109,7 +109,6 @@ uniform_dipole          TypeBField
 Rairden			 TypeHModel
 Solstice        	 TypeSeason
 80 			 WhichF107
-90                       WhichSZA
 1.0 			 Ct
 
 SAVERESTART

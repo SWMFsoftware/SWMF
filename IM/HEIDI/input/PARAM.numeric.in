@@ -110,7 +110,6 @@ stretched_dipole2        TypeBField
 Rairden			 TypeHModel
 Solstice        	 TypeSeason
 80 			 WhichF107
-90                       WhichSZA
 1.0 			 Ct
 
 SAVERESTART
