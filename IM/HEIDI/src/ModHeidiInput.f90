@@ -100,7 +100,6 @@ module ModHeidiInput
   character(len=20) :: TypeHModel = 'Rairden'
   character(len=20) :: TypeSeason = 'Equinox'
   character(len=20) :: WhichF107  = '80'
-  real              :: SolarZenithAngle   = 90.0
   real              :: Ct = 1.0
   ! GIPHT END DECLARATIONS
 
@@ -227,7 +226,6 @@ contains
           call read_var('TypeHModel',TypeHModel)
           call read_var('TypeSeason', TypeSeason)
           call read_var('WhichF107', WhichF107)
-          call read_var('SolarZenithAngle', SolarZenithAngle)
           call read_var('Ct', Ct)
           
           ! GIPHT END COMMANDS
