@@ -335,10 +335,10 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
              iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
 
         ! Update iTypeAdvance_BP
-        nBlockMax_P(:) = nBlockMax
-        ! CHEATING, only indicate first index to circumvent the interface
-        ! and with seting displacement equal to MaxBlock we get same behavior as
-        ! mpi_allgather
+        ! CHEATING: only indicate first index to circumvent ModMpiInterfaces.
+        ! Set displacement equal to MaxBlock so we get same behavior 
+        ! as MPI_allgather. Use nBlockMax for maximum receive data for speed!
+        nBlockMax_P = nBlockMax
         call MPI_allgatherv(iTypeAdvance_B(1), nBlockMax, MPI_INTEGER, &
              iTypeAdvance_BP(1,0), nBlockMax_P, MaxBlockDisp_P,&
              MPI_INTEGER, iComm, iError)
@@ -447,10 +447,10 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
           iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
 
      ! Update iTypeAdvance_BP
-     nBlockMax_P(:) = nBlockMax
-     ! CHEATING, only indicate first index to circumvent the interface
-     ! and with seting displacement equal to MaxBlock we get same behavior as
-     ! mpi_allgather
+     ! CHEATING: only indicate first index to circumvent ModMpiInterfaces.
+     ! Set displacement equal to MaxBlock so we get same behavior 
+     ! as MPI_allgather. Use nBlockMax for maximum receive data for speed!
+     nBlockMax_P = nBlockMax
      call MPI_allgatherv(iTypeAdvance_B(1), nBlockMax, MPI_INTEGER, &
           iTypeAdvance_BP(1,0), nBlockMax_P, MaxBlockDisp_P,&
           MPI_INTEGER, iComm, iError)
@@ -1194,10 +1194,10 @@ subroutine select_stepping(DoPartSelect)
      end select
 
      ! Gather global information
-     ! CHEATING, only indicate first index to circumvent the interface
-     ! and with seting displacement equal to MaxBlock we get same behavior as
-     ! mpi_allgather
-     nBlockMax_P(:) = nBlockMax
+     ! CHEATING: only indicate first index to circumvent ModMpiInterfaces.
+     ! Set displacement equal to MaxBlock so we get same behavior 
+     ! as MPI_allgather. Use nBlockMax for maximum receive data for speed!
+     nBlockMax_P = nBlockMax
      call MPI_allgatherv(iTypeAdvance_B(1), nBlockMax, MPI_INTEGER, &
           iTypeAdvance_BP(1,0), nBlockMax_P, MaxBlockDisp_P,&
           MPI_INTEGER, iComm, iError)

@@ -105,12 +105,15 @@ subroutine allocate_vars
   unusedBlock_BP= .false.
 
   !\  
-  ! allocate and Initialize for mpi_allgatherv
+  ! allocate and initialize the displacement and the maximum number
+  ! of received data for the special using mpi_allgatherv instead of
+  ! MPI_allgather. The displacement is always MaxBlock, the maximum
+  ! received data varies together with the value of nBlockMax.
   !/   
-  allocate(nBlockMax_P(nProc), MaxBlockDisp_P(nProc))
-  do jProc=0,nProc-1
-     MaxBlockDisp_P(jProc+1) = jProc*MaxBlock
+  allocate(nBlockMax_P(0:nProc-1), MaxBlockDisp_P(0:nProc-1))
+  do jProc = 0, nProc-1
+     MaxBlockDisp_P(jProc) = jProc*MaxBlock
   end do
-  nBlockMax_P(:) =0
+  nBlockMax_P = 0
 
 end subroutine allocate_vars
