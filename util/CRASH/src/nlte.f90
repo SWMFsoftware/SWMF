@@ -223,7 +223,8 @@ contains
           ee=Et_in
        end if
 
-       call getEcold(ro,Ecold,EEcold,Tcold)		! 110827
+       !Caclulate the cold equation of state.
+       call getEcold(ro,Ecold,Tcold)		! 110827
 
        if(dbg) write(*,*)'NLTE_EOS,inv : ee,Ecold=',ee,Ecold
        if(useLTE .or. (ee.le.Ecold)) then		! 110827
@@ -617,6 +618,8 @@ function zbrentEE(diff_func,x1,x2,xmin,tol,smallF,dLo,dHi ,EE_in ,te,tz)
   fc=fa
   TEold=-1
   TZold=-1
+  e = b - a
+  d = e
   LOOP11 : do iter=1,itmax
      if((fb*fc).gt.zero) then	! at iter#1 fb=fc
         c=a
@@ -635,23 +638,21 @@ function zbrentEE(diff_func,x1,x2,xmin,tol,smallF,dLo,dHi ,EE_in ,te,tz)
      !	 tol1=two*epsZbrent*abs(b)+half*tol	! original writing
      tol1=(abs(c)+abs(b))*epsZbrent	! proposed change
      xm=half*(c-b)	! note as tol1 is prop. to |b| ....
-     !?	 if(iter.ge.3)then
-     !?	  xt=abs(TZold-te)/(TZold+te) + abs(TEold-te)/(TEold+te)
-     !?	  xm=
-     !?	 end if
+
      TEold=te
      if(abs(xm).le.tol1)then
         zbrentEE=b
         return
-        !        elseif(fb.eq.zero) then		! mb
+        
      elseif(abs(fb).le.smallF) then		! mb
         zbrentEE=b			! mb
         return
-        !        elseif(fa.eq.zero) then		! mb
+    
      elseif(abs(fa).le.smallF) then		! mb
         zbrentEE=a			! mb
         return
      end if
+
      if(abs(e).ge.tol1 .and. abs(fa).gt.abs(fb)) then
         s=fb/fa
         if(a.eq.c) then
@@ -670,6 +671,7 @@ function zbrentEE(diff_func,x1,x2,xmin,tol,smallF,dLo,dHi ,EE_in ,te,tz)
         end if
         if(2*p .lt. min(3*xm*q-abs(tol1*q),abs(e*q))) then
            e=d
+
            d=p/q
         else
            d=xm
