@@ -59,13 +59,14 @@ contains
     !  preparation of the projection coefficients 
     integer,intent(In) :: nbE
     real,intent(In),dimension(0:nbE) :: Ein
-    real,parameter :: ten=10.d0
+    real,parameter :: ten=10.0
     real :: u1,u2,du
     integer :: n,nIn,nOut 
     logical :: b1,b2
     integer :: fr,to
     real :: c
     logical :: dbg
+    !------------
     dbg=dbgProj
     ! 
     if(dbg)write(*,*)'___ prep_projE ____  nbE=',nbE &
@@ -81,7 +82,6 @@ contains
        write(*,125) nbUout,nbOut
 125    format(// '-E- nbUout(=',i5,') should be LESS THAN nbout(=',i5,')',//)
        call CON_stop('-R- : prep_projE  nbUout .GT. nbOUT')
-       ! stop '-R- : prep_projE  nbUout .GT. nbOUT'
     end if
     if(dbg)write(*,*)'Ef,El=',Efirst,Elast,' nbO=',nbOut
     Eout(1)=Efirst
