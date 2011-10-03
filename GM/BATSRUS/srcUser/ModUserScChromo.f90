@@ -1207,6 +1207,10 @@ contains
     call get_plasma_parameters_base(FaceCoords_D, RhoBase, Tbase)
 
     VarsGhostFace_V(Rho_) =  2.0*RhoBase - VarsTrueFace_V(Rho_)
+
+    RhoTrue = VarsTrueFace_V(Rho_)
+    RhoGhost = VarsGhostFace_V(Rho_)
+
     !\
     ! Velocity
     !/
@@ -1215,8 +1219,6 @@ contains
        ! Conserve momentum along field lines
        bUnitGhost_D = FullBGhost_D/sqrt(sum(FullBGhost_D**2))
        bUnitTrue_D = FullBTrue_D/sqrt(sum(FullBTrue_D**2))
-       RhoTrue = VarsTrueFace_V(Rho_)
-       RhoGhost = VarsGhostFace_V(Rho_)
 
        VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
             sum(U_D*bUnitTrue_D)*bUnitGhost_D       
@@ -1231,11 +1233,11 @@ contains
     call get_wave_energy_base(abs(FullBr), EwaveBase)
 
     if (FullBr > 0. ) then
-       VarsGhostFace_V(WaveFirst_) = EwaveBase 
+       VarsGhostFace_V(WaveFirst_) = EwaveBase*RhoGhost/RhoBase
        VarsGhostFace_V(WaveLast_) = 0.0
     else
        VarsGhostFace_V(WaveFirst_) = 0.0
-       VarsGhostFace_V(WaveLast_) = EwaveBase
+       VarsGhostFace_V(WaveLast_) = EwaveBase*RhoGhost/RhoBase
     end if
   
     !\
