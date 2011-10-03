@@ -225,7 +225,7 @@ program testNLTE
 		NLTE_tz_outD=Tz_l
 		NLTE_cv_outD=cv_l
 		NLTE_zb_outD=zbar_l
-		write(*,*)' -> Ee,Te,Tz=',Ee_l,Te_L,Tz_l	! ,' Tz_new=',Tz_new
+		write(*,*)' -> Ee,Te,Tz=',Ee_l,Te_L,Tz_l	
 		write(*,*)' -> Zbar=',zbar_l,' Pe=',pe_l,' Cv=',Cv_l
         !\\\\\\\\\\\\\
         !============= Inverse EOS, Non-LTE , elec. only (i.e. code uses Te + Ti )
@@ -247,7 +247,7 @@ program testNLTE
 		NLTE_tz_outI=tz_l
 		NLTE_cv_outI=cv_l
 		NLTE_zb_outI=zbar_l
-		write(*,*)' -> EE,Te,Tz=',EE_l,Te_l,Tz_l,' Tz_new=',Tz_new
+		write(*,*)' -> EE,Te,Tz=',EE_l,Te_l,Tz_l 
 		write(*,*)' -> Zbar=',zbar_l,' Pe=',pe_l,' Cv=',Cv_l
 	
 	goto 296
