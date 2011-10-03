@@ -20,24 +20,32 @@ OBJECTS=\
 	ModAtomicMass.o \
 	ModAtomicNotation.o\
 	ModAtomicDataMix.o \
-	ModEos.o\
+	ModCaltz.o \
+	ModEos.o \
 	ModExcitation.o \
 	ModExcitationData.o \
+	ModExpTable.o \
 	ModPowerLawEos.o\
 	ModFermiGas.o\
 	ModHydrogenicModel.o \
         ModIonizPotential.o \
+	ModLocalProperties.o \
 	ModMolecularData.o \
 	ModPartition.o \
 	ModPlastic.o \
+	ModRadiom.o \
 	ModStatSum.o \
 	ModTransport.o \
+	eos_material.o \
+	nlte.o \
+	radiom.o \
+	voids.o \
 	${IOMIX}
 
 MPIRUN = 
 
 OBJECTS_EXE= test_ionization.o test_godunov.o test_Fermi.o test_absorption.o \
-	     save_eos_table.o test_opac_tables.o
+	     save_eos_table.o test_opac_tables.o testNLTE.o
 
 
 
@@ -170,7 +178,32 @@ EOS_for_Darwin:
 	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
 	${LINK.f90} -o EOS.exe save_eos_table.o Tmp_/*.o \
 		${Lflag1}    ; 
-	rm -rf Tmp_ 
+	rm -rf Tmp_
+
+testNLTE.o: ${LIBSHARE} ${MY_LIB}
+
+TEST_NLTE: DEPEND
+	   rm -f nlte.diff nlte.log
+	   make TEST_NLTE.exe
+	   ./TEST_NLTE.exe>nlte.log
+	   diff nlte.log ../doc/nlte.log>nlte.diff
+	   ls -l *.diff
+
+TEST_NLTE.exe: eos_material.o testNLTE.o 
+	@(if [ ${OS} = "Darwin" ];         then make TEST_NLTE_for_Darwin; \
+	else                                    make TEST_NLTE_general; fi)
+
+TEST_NLTE_general:
+	${LINK.f90} -o TEST_NLTE.exe  testNKTE.o \
+		-L${LIBDIR} -lCRASH  -lSHARE -lTIMING \
+		${Lflag1}	
+
+TEST_NLTE_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_ ;
+	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE}; 
+	${LINK.f90} -o TEST_NLTE.exe testNLTE.o Tmp_/*.o \
+		${Lflag1}    ; 
+	rm -rf Tmp_
 
 
 test_godunov.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
