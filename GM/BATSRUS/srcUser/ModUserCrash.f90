@@ -28,6 +28,7 @@ module ModUser
   use CRASH_ModEos, ONLY: MassMaterial_I => cAtomicMassCRASH_I, &
        Be_, Plastic_, Au_, Ay_
   use BATL_amr, ONLY: BetaProlong
+  use BATL_lib, ONLY: MaxLevel
 
   include 'user_module.h' !list of public methods
 
@@ -203,6 +204,10 @@ module ModUser
   real:: RhoMinAmrDim = 20.0   ! kg/m3
   real:: xMaxAmr      = 2500.0 ! microns
 
+  integer:: nLevelShock = MaxLevel
+  integer:: nLevelAuInterface = MaxLevel
+  integer:: nLevelBeryllium = MaxLevel
+
   ! Option to start with reduced radiation in the initial condition.
   real :: RadiationScaleFactor = 1.0
 
@@ -357,10 +362,17 @@ contains
           call read_var('TrkevBc1', TrkevBc1)
           call read_var('DistBc2', DistBc2)
           call read_var('TrkevBc2', TrkevBc2)
+
        case("#USERAMR")
           call read_var('RhoMinAmr',   RhoMinAmrDim)
           call read_var('xMaxAmr',     xMaxAmr)
           call read_var('BetaProlong', BetaProlong)
+
+       case("#AMRLEVEL")
+          call read_var('nLevelShock', nLevelShock)
+          call read_var('nLevelAuInterface', nLevelAuInterface)
+          call read_var('nLevelBeryllium', nLevelBeryllium)
+
        case("#PLASTIC")
           call read_var('TeMaxColdPlSi',  TeMaxColdPlSi)
 
@@ -3264,6 +3276,7 @@ contains
   !===========================================================================
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
+    use BATL_lib,    ONLY: iNode_B, iTree_IA, Level_
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_
     use ModAMR,      ONLY: RefineCritMin_I, CoarsenCritMax
@@ -3280,7 +3293,7 @@ contains
     logical:: IsXe_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     logical:: IsAu_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     real   :: RhoMin
-    integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
+    integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax, nLevel, iNode
     !------------------------------------------------------------------
 
     ! Location of sound wave edges and the tangential discontinuity
@@ -3296,6 +3309,9 @@ contains
 
     ! If block is beyond xMaxAmr, do not refine
     if(x_BLK(1,1,1,iBlock) >= xMaxAmr) RETURN
+
+    iNode = iNode_B(iBlock)
+    nLevel = iTree_IA(Level_,iNode)
 
     if( (dx_BLK(iBlock) - MinDxValue) > 1e-6)then
        iMin = 0; iMax = nI+1; jMin = 0; jMax = nJ+1; kMin = 0; kMax = nK+1
@@ -3321,11 +3337,13 @@ contains
        ! Refine all beryllium to the right of x = -5 micron
        if(any(maxloc(State_VGB(LevelXe_:LevelMax, &
             iMin:iMax,jMin:jMax,kMin:kMax,iBlock),1)-1 == Be_) &
-            .and. x_BLK(nI,nJ,nK,iBlock)+0.5*dx_BLK(iBlock) > -5.0) RETURN
+            .and. x_BLK(nI,nJ,nK,iBlock)+0.5*dx_BLK(iBlock) > -5.0 &
+            .and. nLevel<nLevelBeryllium) RETURN
     end if
 
     if(any(IsXe_G(iMin:iMax,jMin:jMax,kMin:kMax)) .and. &
-         .not. all(IsXe_G(iMin:iMax,jMin:jMax,kMin:kMax))) RETURN
+         .not. all(IsXe_G(iMin:iMax,jMin:jMax,kMin:kMax)) &
+         .and. nLevel<nLevelShock) RETURN
 
     if(UseAu)then
        ! If there is a Au interface anywhere in the block, refine
@@ -3341,13 +3359,15 @@ contains
        end do; end do; end do
 
        if(any(IsAu_G(iMin:iMax,jMin:jMax,kMin:kMax)) .and. &
-            .not. all(IsAu_G(iMin:iMax,jMin:jMax,kMin:kMax))) RETURN
+            .not. all(IsAu_G(iMin:iMax,jMin:jMax,kMin:kMax)) &
+            .and. nLevel<nLevelAuInterface) RETURN
     end if
 
     ! If Xe density exceeds RhoMin, refine
     RhoMin = RhoMinAmrDim*Io2No_V(UnitRho_)
     do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-       if(IsXe_G(i,j,k) .and. State_VGB(Rho_,i,j,k,iBlock) > RhoMin) RETURN
+       if(IsXe_G(i,j,k) .and. State_VGB(Rho_,i,j,k,iBlock) > RhoMin &
+            .and. nLevel<nLevelShock) RETURN
     end do; end do; end do
 
     ! No need to refine
