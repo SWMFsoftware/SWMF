@@ -61,8 +61,8 @@ subroutine calc_chemistry(iBlock)
   UseIonConstituent     = .true.
 
 !  UseNeutralConstituent(iO_1D_) = .false.
-  UseIonConstituent(iO_2PP_) = .false.
-  UseIonConstituent(iO_2DP_) = .false.
+!  UseIonConstituent(iO_2PP_) = .false.
+!  UseIonConstituent(iO_2DP_) = .false.
 !  
 !  UseNeutralConstituent(iN_4S_) = .false.
 !  UseNeutralConstituent(iN_2D_) = .false.
@@ -750,10 +750,25 @@ subroutine calc_chemistry(iBlock)
 
               ! Aurora
 
-              Reaction = AuroralIonRateS(iLon,iLat,iAlt,iO_3P_, iBlock) + &
-                  IonPrecipIonRateS(iLon,iLat,iAlt,iO_3P_, iBlock)
+              ! Aurora goes 0.4, 0.4, 0.2 into O(4S), O(2D) and O(2P) respectively
+              Reaction = 0.4 * AuroralIonRateS(iLon,iLat,iAlt,iO_3P_, iBlock) + &
+                   0.4 * IonPrecipIonRateS(iLon,iLat,iAlt,iO_3P_, iBlock)
 
               IonSources(iO_4SP_) = IonSources(iO_4SP_) + Reaction
+              NeutralLosses(iO_3P_)  = NeutralLosses(iO_3P_)  + Reaction
+
+              ! Aurora goes 0.4, 0.4, 0.2 into O(3P), O(2D) and O(2P) respectively
+              Reaction = 0.4 * AuroralIonRateS(iLon,iLat,iAlt,iO_3P_, iBlock) + &
+                   0.4 * IonPrecipIonRateS(iLon,iLat,iAlt,iO_3P_, iBlock)
+
+              IonSources(iO_2DP_) = IonSources(iO_2DP_) + Reaction
+              NeutralLosses(iO_3P_)  = NeutralLosses(iO_3P_)  + Reaction
+
+              ! Aurora goes 0.4, 0.4, 0.2 into O(3P), O(2D) and O(2P) respectively
+              Reaction = 0.2 * AuroralIonRateS(iLon,iLat,iAlt,iO_3P_, iBlock) + &
+                   0.2 * IonPrecipIonRateS(iLon,iLat,iAlt,iO_3P_, iBlock)
+
+              IonSources(iO_2PP_) = IonSources(iO_2PP_) + Reaction
               NeutralLosses(iO_3P_)  = NeutralLosses(iO_3P_)  + Reaction
 
               ! -----------

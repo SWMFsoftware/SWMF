@@ -109,7 +109,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 !     endif
 !  endif
 
-  do iSpecies=nSpecies, nSpeciesTotal
+  do iSpecies=nSpecies+1, nSpeciesTotal
      dn = (LogNS(2,iSpecies) - LogNS(1,iSpecies))
      LogNS(0,iSpecies) = LogNS(1,iSpecies) - dn
      LogNS(-1,iSpecies) = LogNS(0,iSpecies) - dn

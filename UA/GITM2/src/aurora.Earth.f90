@@ -211,9 +211,11 @@ subroutine aurora(iBlock)
 
            iED = 1
 
+           factor = 0.4
+
            do k = 1, nAlts
 
-              p = alog(Pressure(j,i,k,iBlock))
+              p = alog(Pressure(j,i,k,iBlock)*factor)
 
               IsDone = .false.
               IsTop = .false.
@@ -243,9 +245,9 @@ subroutine aurora(iBlock)
 
                  ! Decrease after top of model
                  AuroralBulkIonRate(j,i,k) = ED_Ion(ED_N_Alts) * &
-                      Pressure(j,i,k,iBlock) / exp(ED_grid(ED_N_Alts)) 
+                      factor*Pressure(j,i,k,iBlock) / exp(ED_grid(ED_N_Alts)) 
                  AuroralHeatingRate(j,i,k,iBlock) = ED_Heating(ED_N_Alts) * &
-                      Pressure(j,i,k,iBlock) / exp(ED_grid(ED_N_Alts))
+                      factor*Pressure(j,i,k,iBlock) / exp(ED_grid(ED_N_Alts))
 
               endif
 
