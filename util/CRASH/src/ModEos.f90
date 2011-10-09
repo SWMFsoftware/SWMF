@@ -232,14 +232,14 @@ module CRASH_ModEos
   real,dimension(Min_:Max_,0:nMaterialMax-1), parameter::&
        TeDefaultEos_II = reshape(&     ! original minimum
        (/1.0e-2, 1.0e+3, & !Xe_     1e-2
-         1.0e-3, 2.0e+3, & !Be_     1e-3
+         1.0e-3, 4.0e+3, & !Be_     1e-3
          1.0e-3, 1.0e+2, & !Plastic 1e-3
          1.0e-3, 1.0e+2, & !Au_     1e-3
          1.0e-3, 1.0e+2  & !Ay_     1e-3
          /), (/2,5/)),    &
        TeDefaultOpac_II = reshape(&     ! original minimum
        (/3.0e-2, 1.0e+3, & !Xe_     1e-2
-         3.0e-2, 2.0e+3, & !Be_     1e-3
+         3.0e-2, 4.0e+3, & !Be_     1e-3
          5.0e-2, 1.0e+2, & !Plastic 1e-3
          2.0e-1, 1.0e+2, & !Au_     1e-3
          5.0e-2, 1.0e+2  & !Ay_     1e-3
