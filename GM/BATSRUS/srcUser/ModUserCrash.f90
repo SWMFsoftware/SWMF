@@ -3279,7 +3279,8 @@ contains
     use BATL_lib,    ONLY: iNode_B, iTree_IA, Level_
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_
-    use ModAMR,      ONLY: RefineCritMin_I, CoarsenCritMax
+    use ModAMR,      ONLY: RefineCritMin_I, CoarsenCritMax, &
+         RefineLimit_I, CoarsenLimit_I
     use ModMain,     ONLY: UseLaserHeating
     use ModPhysics,  ONLY: Io2No_V, UnitRho_, UnitU_
     use ModGeometry, ONLY: x_BLK, dx_BLK, MinDxValue
@@ -3302,6 +3303,9 @@ contains
     ! Do not coarsen blocks near discontinuity    (crit=1.0)
     RefineCritMin_I = 0.5
     CoarsenCritMax  = 0.5
+
+    CoarsenLimit_I = 0.4
+    RefineLimit_I = 0.6
 
     IsFound = .true.
 
@@ -3337,13 +3341,17 @@ contains
        ! Refine all beryllium to the right of x = -5 micron
        if(any(maxloc(State_VGB(LevelXe_:LevelMax, &
             iMin:iMax,jMin:jMax,kMin:kMax,iBlock),1)-1 == Be_) &
-            .and. x_BLK(nI,nJ,nK,iBlock)+0.5*dx_BLK(iBlock) > -5.0 &
-            .and. nLevel<nLevelBeryllium) RETURN
+            .and. x_BLK(nI,nJ,nK,iBlock)+0.5*dx_BLK(iBlock) > -5.0)then
+          if(nLevel >= nLevelBeryllium) UserCriteria = 0.5
+          RETURN
+       end if
     end if
 
     if(any(IsXe_G(iMin:iMax,jMin:jMax,kMin:kMax)) .and. &
-         .not. all(IsXe_G(iMin:iMax,jMin:jMax,kMin:kMax)) &
-         .and. nLevel<nLevelShock) RETURN
+         .not. all(IsXe_G(iMin:iMax,jMin:jMax,kMin:kMax)))then
+       if(nLevel >= nLevelShock) UserCriteria = 0.5
+       RETURN
+    end if
 
     if(UseAu)then
        ! If there is a Au interface anywhere in the block, refine
@@ -3359,15 +3367,19 @@ contains
        end do; end do; end do
 
        if(any(IsAu_G(iMin:iMax,jMin:jMax,kMin:kMax)) .and. &
-            .not. all(IsAu_G(iMin:iMax,jMin:jMax,kMin:kMax)) &
-            .and. nLevel<nLevelAuInterface) RETURN
+            .not. all(IsAu_G(iMin:iMax,jMin:jMax,kMin:kMax)))then
+          if(nLevel >= nLevelAuInterface) UserCriteria = 0.5
+          RETURN
+       end if
     end if
 
     ! If Xe density exceeds RhoMin, refine
     RhoMin = RhoMinAmrDim*Io2No_V(UnitRho_)
     do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-       if(IsXe_G(i,j,k) .and. State_VGB(Rho_,i,j,k,iBlock) > RhoMin &
-            .and. nLevel<nLevelShock) RETURN
+       if(IsXe_G(i,j,k) .and. State_VGB(Rho_,i,j,k,iBlock) > RhoMin)then
+          if(nLevel >= nLevelShock) UserCriteria = 0.5
+          RETURN
+       end if
     end do; end do; end do
 
     ! No need to refine
