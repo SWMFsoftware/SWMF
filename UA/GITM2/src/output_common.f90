@@ -694,7 +694,7 @@ contains
   subroutine write_head_version
 
     write(iOutputUnit_,*) "VERSION"
-    write(iOutputUnit_,*) 2.4
+    write(iOutputUnit_,*) 3.0+PlanetNum
     write(iOutputUnit_,*) ""
 
   end subroutine write_head_version
@@ -1070,25 +1070,27 @@ subroutine output_3dglo(iBlock)
   integer, intent(in) :: iBlock
   integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon
 
-  do iAlt=-1,nAlts+2
-     iiAlt = max(min(iAlt,nAlts),1)
-     do iLat=-1,nLats+2
-        iiLat = min(max(iLat,1),nLats)
-        do iLon=-1,nLons+2
-           iiLon = min(max(iLon,1),nLons)
-              
-              write(iOutputUnit_) &
-                   Longitude(iLon,iBlock),               &
-                   Latitude(iLat,iBlock),                &
-                   Altitude_GB(iLon,iLat,iAlt,iBlock),   &
-                   vEmissionRate(iiLon,iiLat,iiAlt,i6300_,iBlock), &
-                   PhotoEFluxTotal(iiLon,iiLat,iiAlt,iBlock,1),    &
-                   PhotoEFluxTotal(iiLon,iiLat,iiAlt,iBlock,2)
-                   
-        enddo
-     enddo
-  enddo
+  return
 
+!  do iAlt=-1,nAlts+2
+!     iiAlt = max(min(iAlt,nAlts),1)
+!     do iLat=-1,nLats+2
+!        iiLat = min(max(iLat,1),nLats)
+!        do iLon=-1,nLons+2
+!           iiLon = min(max(iLon,1),nLons)
+!              
+!              write(iOutputUnit_) &
+!                   Longitude(iLon,iBlock),               &
+!                   Latitude(iLat,iBlock),                &
+!                   Altitude_GB(iLon,iLat,iAlt,iBlock),   &
+!                   vEmissionRate(iiLon,iiLat,iiAlt,i6300_,iBlock), &
+!                   PhotoEFluxTotal(iiLon,iiLat,iiAlt,iBlock,1),    &
+!                   PhotoEFluxTotal(iiLon,iiLat,iiAlt,iBlock,2)
+!                   
+!        enddo
+!     enddo
+!  enddo
+!
 end subroutine output_3dglo
 
 !----------------------------------------------------------------
@@ -1103,18 +1105,20 @@ subroutine output_1dglo
 
   integer :: iAlt, iLat, iLon, iiAlt
 
-  do iAlt=-1,nAlts+2
-     iiAlt = max(min(iAlt,nAlts),1)
- 
-     write(iOutputUnit_) &
-          Longitude(1,1),               &
-          Latitude(1,1),                &
-          Altitude_GB(1,1,iAlt,1),   &
-          vEmissionRate(1,1,iiAlt,i6300_,1), &
-          PhotoEFluxTotal(1,1,iiAlt,1,1),    &
-          PhotoEFluxTotal(1,1,iiAlt,1,2)
-                   
-  enddo
+!  do iAlt=-1,nAlts+2
+!     iiAlt = max(min(iAlt,nAlts),1)
+! 
+!     write(iOutputUnit_) &
+!          Longitude(1,1),               &
+!          Latitude(1,1),                &
+!          Altitude_GB(1,1,iAlt,1),   &
+!          vEmissionRate(1,1,iiAlt,i6300_,1), &
+!          PhotoEFluxTotal(1,1,iiAlt,1,1),    &
+!          PhotoEFluxTotal(1,1,iiAlt,1,2)
+!                   
+!  enddo
+
+  return
 
 end subroutine output_1dglo
 
