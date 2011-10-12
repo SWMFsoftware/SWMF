@@ -45,6 +45,7 @@ my $PlanetOrig;
 $Planet = "Earth" if $Install; # Default planet
 
 foreach (@Arguments){
+    if(/^-LV-426$/i)          {$Planet="LV-426";               next};
     if(/^-Titan$/i)           {$Planet="Titan";                next};
     if(/^-mars$/i)            {$Planet="Mars";                 next};
     if(/^-earth$/i)           {$Planet="Earth";                next};
@@ -170,6 +171,11 @@ sub set_planet{
           $nLat = 9;
           $nAlt = 50;
           $MaxBlock = 4;
+    }elsif($Planet eq 'LV-426'){
+          $nLon = 9;
+          $nLat = 9;
+          $nAlt = 100;
+          $MaxBlock = 4;
     }elsif($Planet eq 'Mars'){
           $nLon = 9;
           $nLat = 9;
@@ -210,6 +216,8 @@ sub print_help{
 -Titan      Configure GITM2 for Titan. This flag is case insensitive.
 
 -Mars       Configure GITM2 for Mars. This flag is case insensitive.
+
+-LV-426     Configure GITM2 for Testing. This flag is case insensitive.
 
 -Earth      Configure GITM2 for Earth. This flag is case insensitive.
 
