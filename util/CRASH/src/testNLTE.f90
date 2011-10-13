@@ -14,12 +14,12 @@
 program testNLTE
 
   use M_EOS,only : set_kBr
-  use M_expTab,only: exp_tab8
+  use CRASH_M_expTab,only: exp_tab8
   use M_localProperties,only : kBr_E,kBr_P ,zion,atoMass &
   ,ERGperEV,DYNEperEV,avogadro
   use M_RADIOM, only : prep_projE,prepCorrUbar &
   ,printVersion  !xx ,calTz0
-  use M_NLTE,only : nlte_EOS ,useLTE ,ng_rad,Erad,Brad  , set_RO_NI &
+  use CRASH_M_NLTE,only : nlte_EOS ,useLTE ,ng_rad,Erad,Brad  , set_RO_NI &
   ,useEElog,useZbrent
 
 
