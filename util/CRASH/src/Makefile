@@ -185,7 +185,7 @@ testNLTE.o: ${LIBSHARE} ${MY_LIB}
 TEST_NLTE: DEPEND
 	   rm -f nlte.diff nlte.log
 	   make TEST_NLTE.exe
-	   ./TEST_NLTE.exe>nlte.log
+	   ./TEST_NLTE.exe<fake.dat>nlte.log
 	   diff nlte.log ../doc/nlte.log>nlte.diff
 	   ls -l *.diff
 
