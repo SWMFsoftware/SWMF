@@ -284,6 +284,9 @@ subroutine crcm_run(delta_t)
      call MPI_GATHERV(bo(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
           bo, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
           0, iComm, iError)
+     call MPI_GATHERV(brad(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          bo, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+          0, iComm, iError)
 !     call MPI_GATHERV(irm(MinLonPar:MaxLonPar), nLonPar, MPI_INTEGER, &
 !          irm, nLonPar_P, nLonBefore_P, MPI_INTEGER, 0, iComm, iError)
      do iPe=1,nProc-1
