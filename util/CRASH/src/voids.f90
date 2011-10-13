@@ -18,7 +18,7 @@ contains
   end subroutine set_kBr
   !=======================
   subroutine setOptions(brent,EElog,caleos)
-    use M_NLTE,only : useZbrent,useEElog
+    use CRASH_M_NLTE,only : useZbrent,useEElog
     implicit none
     logical,optional,intent(IN) :: brent,EElog,caleos
     
@@ -47,7 +47,7 @@ subroutine setMethod
   !===================================================
   !Check the consitency of the input parameters
   call verify()
-return
+  return
 end
 
 

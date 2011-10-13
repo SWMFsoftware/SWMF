@@ -19,7 +19,7 @@
 !------- radiom.f90
 !-------
 ! \
-MODULE M_projE
+MODULE CRASH_M_projE
   ! /
   !  {U=hnu/Kte,Erad,Brad} will be projected on a working grid , with even log. spacing of U
   !
@@ -55,7 +55,7 @@ contains
     E(1:nb)=Eout(1:nbOut)
   end subroutine getEout
   !========
-  subroutine prep_projE(Ein,nbE)	! ,nbO
+  subroutine prep_projE(Ein,nbE)	
     !  preparation of the projection coefficients 
     integer,intent(In) :: nbE
     real,intent(In),dimension(0:nbE) :: Ein
@@ -537,7 +537,7 @@ contains
   end subroutine wr5
   !-------
   ! \
-end MODULE M_projE
+end MODULE CRASH_M_projE
 ! /
 !------- radiom.f90
 
