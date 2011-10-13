@@ -8,7 +8,8 @@
 !! /
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-module M_ZTF
+module CRASH_M_ZTF
+  !This module is used in this file only
   implicit none
   integer,save :: nbCold=0
   real,save,allocatable,dimension(:) :: ROcolds,EEcolds,TEcolds
@@ -17,6 +18,8 @@ module M_ZTF
   real,save :: zt		! shared variable between "ZTF_EOS_..." and ZTFdiff
   logical,save :: useCALEOS = .false. , setCALEOS=.false.
   character(16),save :: endianCALEOS='LITTLE_ENDIAN'
+  !===================Added October, 3rd, 2011=====================================
+  logical,save:: UseCRASHEos = .false.
   !------
 contains
   !------
@@ -244,6 +247,8 @@ contains
     !-  use  Brent algorithm
 20  c=a
     fc=fa
+    e = b - a
+    d = e
     LOOP11: do iter=1,itmax
        if((fb*fc).gt.zero) then	! at iter#1 fb=fc
           c=a
@@ -406,9 +411,9 @@ contains
   end SUBROUTINE ZTF_More
 
   !------
-end module M_ZTF
+end module CRASH_M_ZTF
 
-!------
+!===below are the interface routines 
 !------
 subroutine verify()	! check transmission of Z,A,...
   use M_localProperties
@@ -421,7 +426,7 @@ end subroutine verify
 subroutine setZTF(symb)
   use M_localProperties,only : atoNum,Atomass,roSolid &
        ,Efloor,TEfloor,Pcold
-  use M_ZTF
+  use CRASH_M_ZTF
   implicit none
   character*(*),optional,intent(IN) :: symb
 
@@ -444,7 +449,7 @@ subroutine setZTF(symb)
 end subroutine setZTF
 
 subroutine LTE_EOS_dir(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
-  use M_ZTF,only : ZTF_EOS_dir,useCALEOS,setCALEOS
+  use CRASH_M_ZTF,only : ZTF_EOS_dir,useCALEOS,setCALEOS
   use M_localProperties,only : atoNum,ro
   implicit none
   real,intent(IN) :: te
@@ -453,6 +458,8 @@ subroutine LTE_EOS_dir(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
 
   if(useCALEOS) then
      call CALEOS_dir(te,ro,Etot,Ptot,Zbar,Cv)
+!  elseif(UseCrashEos)then
+! 
   else
      call ZTF_EOS_dir(te,Etot,Ptot,Zbar,Cv)
   end if
@@ -462,7 +469,7 @@ end subroutine LTE_EOS_dir	! ro : in module M_localProperties
 !------
 subroutine LTE_EOS_inv(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
   use M_localProperties,only : ro
-  use M_ZTF,only : ZTF_EOS_inv,useCALEOS,setCALEOS
+  use CRASH_M_ZTF,only : ZTF_EOS_inv,useCALEOS,setCALEOS
   implicit none
   real,intent(IN) :: Etot
   real,intent(OUT) :: te,Ptot,Zbar,Cv
@@ -470,6 +477,7 @@ subroutine LTE_EOS_inv(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
   if(useCALEOS) then
      if(.not.setCALEOS) call inital()
      call ltesta(Etot,Ptot,ro,te,Zbar,CV,9)
+  ! elseif(UseCrashEos)then
   else
      call ZTF_EOS_inv(te,Etot,Ptot,Zbar,Cv)
   end if
@@ -478,7 +486,7 @@ end subroutine LTE_EOS_inv	! ro : in module M_localProperties
 
 !------
 subroutine getEcold(ro,EEcold,TEcold)
-  use M_ZTF,only : getEcoldZTF,useCALEOS,setCALEOS
+  use CRASH_M_ZTF,only : getEcoldZTF,useCALEOS,setCALEOS
   use M_localProperties,only : atoNum
 
   implicit none
@@ -489,10 +497,10 @@ subroutine getEcold(ro,EEcold,TEcold)
   if(useCALEOS) then
      if(.not.setCALEOS) call inital()
      call ltesta(EEcold,Pcold,ro,TEcold,Zcold,CVcold,1)
-     !x   	write(*,*)'lteSTA(cold, ro=',ro,') -> EE,P,Tcold=',EEcold,Pcold,TEcold
-     EEcold=0	
+     EEcold=0
+     !elseif(UseCrashEos)then
+     !call
   else
      call getEcoldZTF(atoNum,ro,EEcold,TEcold)
   end if
-  return
 end subroutine getEcold
