@@ -9,66 +9,78 @@ contains
   subroutine set_batsrus_grid
 
     use BATL_lib, ONLY: nNodeUsed, nBlock, MaxBlock, Unused_B, Unused_BP, &
-         iProc, iComm, iNodeMorton_I, iTree_IA, Block_, Proc_
-
+         iProc, iComm, iNodeMorton_I, iTree_IA, Block_, Proc_,&
+         IsNewDecomposition, IsNewTree
     use ModAmr, ONLY: UnusedBlock_BP
     use ModParallel, ONLY: iBlock_A, iProc_A
 
-    use ModMain, ONLY: nBlockAll, nBlockBats => nBlock, nBlockMax, UnusedBlk
+    use ModMain, ONLY: nBlockAll, nBlockBats => nBlock, nBlockMax, UnusedBlk, &
+         iNewGrid, iNewDecomposition
 
     use ModGeometry, ONLY: dx_BLK, MinDxValue, MaxDxValue
 
     use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_
     use ModMpi
+    use ModIO, ONLY: restart
 
     integer:: iBlock, iError, iMorton, iNode
     real   :: DxMin, DxMax
     !-------------------------------------------------------------------------
 
-    nBlockAll  = nNodeUsed
-    nBlockBats = nBlock
-    call MPI_ALLREDUCE(nBlock, nBlockMax, 1, MPI_INTEGER, MPI_MAX, &
-         iComm, iError)
+    ! Tell if the grid and/or the tree has changed
+    if(IsNewDecomposition) iNewDecomposition = mod(iNewDecomposition+1,10000)
+    if(IsNewTree) iNewGrid = mod( iNewGrid+1, 10000)
 
+    if( IsNewDecomposition .or. IsNewTree .or. restart) then
 
-    UnusedBlk(1:nBlockMax)      = Unused_B(1:nBlockMax)
-    UnusedBlock_BP(1:nBlockMax,:) = Unused_BP(1:nBlockMax,:)
+       ! If regrid_batl is not called in each time step, we say that the
+       ! grid/tree is not changed from the view of BATL
+       IsNewDecomposition = .false.
+       IsNewTree          = .false.
 
-    do iMorton = 1, nNodeUsed
-       iNode = iNodeMorton_I(iMorton)
-       iBlock_A(iMorton) = iTree_IA(Block_,iNode)
-       iProc_A(iMorton) = iTree_IA(Proc_,iNode)
-    end do
+       nBlockAll  = nNodeUsed
+       nBlockBats = nBlock
+       call MPI_ALLREDUCE(nBlock, nBlockMax, 1, MPI_INTEGER, MPI_MAX, &
+            iComm, iError)
 
-    where(Unused_BP(1:nBlockMax,:))
-       iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
-    elsewhere
-       iTypeAdvance_BP(1:nBlockMax,:) = ExplBlock_
-    end where
-    iTypeAdvance_B(1:nBlock) = iTypeAdvance_BP(1:nBlock,iProc)
+       UnusedBlk(1:nBlockMax)      = Unused_B(1:nBlockMax)
+       UnusedBlock_BP(1:nBlockMax,:) = Unused_BP(1:nBlockMax,:)
 
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
-       call set_batsrus_block(iBlock)
-    end do
+       do iMorton = 1, nNodeUsed
+          iNode = iNodeMorton_I(iMorton)
+          iBlock_A(iMorton) = iTree_IA(Block_,iNode)
+          iProc_A(iMorton) = iTree_IA(Proc_,iNode)
+       end do
 
-    DxMin = minval(dx_BLK, MASK=(.not.Unused_B))
-    DxMax = maxval(dx_BLK, MASK=(.not.Unused_B))
-    call MPI_allreduce(DxMin, minDXvalue,1,MPI_REAL,MPI_MIN,iComm,iError)
-    call MPI_allreduce(DxMax, maxDXvalue,1,MPI_REAL,MPI_MAX,iComm,iError)
+       where(Unused_BP(1:nBlockMax,:))
+          iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
+       elsewhere
+          iTypeAdvance_BP(1:nBlockMax,:) = ExplBlock_
+       end where
+       iTypeAdvance_B(1:nBlock) = iTypeAdvance_BP(1:nBlock,iProc)
+
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          call set_batsrus_block(iBlock)
+       end do
+
+       DxMin = minval(dx_BLK, MASK=(.not.Unused_B))
+       DxMax = maxval(dx_BLK, MASK=(.not.Unused_B))
+       call MPI_allreduce(DxMin, minDXvalue,1,MPI_REAL,MPI_MIN,iComm,iError)
+       call MPI_allreduce(DxMax, maxDXvalue,1,MPI_REAL,MPI_MAX,iComm,iError)
+
+    end if
 
   end subroutine set_batsrus_grid
   !===========================================================================
   subroutine set_batsrus_block(iBlock)
 
-    use ModMain, ONLY: iNewGrid, iNewDecomposition
-
     use BATL_lib, ONLY: iProc, nDim, nI, nJ, nK, &
          CellSize_DB, CoordMin_DB, &
          iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB, &
          iTree_IA, Block_, Proc_, Unset_, &
-         IsRzGeometry, CellFace_DFB, IsNewDecomposition, IsNewTree
+         IsRzGeometry, CellFace_DFB
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, XyzStart_BLK, &
          FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &
          FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B
@@ -231,13 +243,6 @@ contains
        FaceArea2MinK_B(iBlock) = 1e-30
     end if
 
-    ! Tell if the grid and/or the tree has changed
-    if(IsNewDecomposition) iNewDecomposition = mod(iNewDecomposition+1,10000)
-    if(IsNewTree) iNewGrid = mod( iNewGrid+1, 10000)
-    ! If regrid_batl is not called in each time step, we say that the
-    ! grid/tree is not changed from the view of BATL
-    IsNewDecomposition = .false.
-    IsNewTree          = .false.
 
   end subroutine set_batsrus_block
   !============================================================================

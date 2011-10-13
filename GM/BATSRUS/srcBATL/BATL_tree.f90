@@ -193,8 +193,8 @@ contains
     ! During AMR we may need extra nodes. So use 2/(nChild-1) instead of 1/...
     MaxNode  = ceiling(nProc*MaxBlock*(1 + 2.0/(nChild - 1)))
 
-    IsNewDecomposition = .false.
-    IsNewTree = .false.
+    IsNewDecomposition = .true.
+    IsNewTree = .true.
 
     ! Allocate and initialize all elements of tree as unset
     allocate(iTree_IA(nInfo, MaxNode));                 iTree_IA       = Unset_
