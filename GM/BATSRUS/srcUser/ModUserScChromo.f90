@@ -210,7 +210,7 @@ contains
          *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
 
 
-    if(.not.UseB0)UseMagnetogram=.false.
+!    if(.not.UseB0)UseMagnetogram=.false.
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -302,6 +302,7 @@ contains
 
     ! The isothermal parker wind solution is used as initial condition
 
+    use ModProcMH,     ONLY: iProc
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
     use ModMain,       ONLY: nI, nJ, nK, globalBLK, UseB0, unusedBLK
@@ -322,10 +323,8 @@ contains
     real, parameter :: Epsilon = 1.0e-6
     character (len=*), parameter :: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
-
     iBlock = globalBLK
 
-    State_VGB(Hyp_,:,:,:,iBlock) = 0.0
     ! Initially, density, electron and ion temperature are at coronal
     ! values starting from just above the boundary
     RhoCorona = nCoronaSi*Si2No_V(UnitN_)*MassIon_I(1)
@@ -345,6 +344,9 @@ contains
 
     uCorona = rTransonic**2*exp(1.5 - 2.0*rTransonic)
 
+    !\
+    ! Velocity
+    !/
     do k = 1, nK ; do j = 1, nJ ; do i = 1, nI
        x = x_BLK(i,j,k,iBlock)
        y = y_BLK(i,j,k,iBlock)
@@ -395,6 +397,10 @@ contains
           end do
        end if
 
+
+       !\
+       ! Density and Pressure
+       !/
        ! Set chromospheric initial condition inside the body, if needed
        if(UseChromoBc .and. r <= rBody)then
 
@@ -430,15 +436,23 @@ contains
        State_VGB(RhoUy_,i,j,k,iBlock) = Rho*Ur*y/r *Usound
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
 
+       !\
+       ! Magnetic Field
+       !/
        if(UseB0)then
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
+          Br = sum(B0_DGB(1:3,i,j,k,iBlock)*r_D)
        else
           call get_coronal_b0(x, y, z, B_D)
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = B_D
+          Br = sum(B_D*r_D)
        end if
+       State_VGB(Hyp_,:,:,:,iBlock) = 0.0
 
+       !\
+       ! Alfven Waves
+       !/
        if (UseChromoBc) then
-          Br = sum(B0_DGB(1:3,i,j,k,iBlock)*r_D)
           if (Br >= 0.0) then
              State_VGB(WaveFirst_,i,j,k,iBlock) =  &
                   State_VGB(rho_,i,j,k,iBlock)*(WaveDeltaU*Si2No_V(UnitU_))**2
