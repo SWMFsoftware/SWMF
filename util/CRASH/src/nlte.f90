@@ -24,7 +24,7 @@
 !
 !-----------
 ! \ 
-module M_NLTE
+module CRASH_M_NLTE
   ! /
   !This module solves the equation for the effective energy.
   !E_{eff} = E_{tot}^{NLTE} - (3/2) k_B x rho x Z^*(T_Z) * (T_e-T_z)
@@ -33,7 +33,7 @@ module M_NLTE
   !LTE equation of state with (rho, T_Z) being the input parameters for the 
   !latter.
   use M_RADIOM,only : caltz0,calte0,caltz,calte
-  use M_projE,only : mxOut
+  use CRASH_M_projE,only : mxOut
   use M_localProperties
   implicit none
 
@@ -477,7 +477,8 @@ contains
   !-------
 
   subroutine setErad(eg,bg,hnug,ng)
-    use M_projE,only : prep_projE
+    !Subroutine re-assigns 
+    use CRASH_M_projE,only : prep_projE
     implicit none
     integer,intent(IN) :: ng
     real,dimension(0:ng) :: hnug
@@ -488,7 +489,7 @@ contains
        call prep_projE(hnug,ng)
     end if
     ng_rad=ng
-    hnu_rad(1:ng_rad)=eg(1:ng)
+    hnu_rad(1:ng_rad)=hnug(1:ng)
     Erad(1:ng_rad)=eg(1:ng)
     Brad(1:ng_rad)=bg(1:ng)
     EoB(1:ng_Rad)=0
@@ -530,7 +531,7 @@ contains
 
   !-------
   ! \
-end module M_NLTE
+end module CRASH_M_NLTE
 ! /
 !-------
 
@@ -712,7 +713,7 @@ end function zbrentEE
 function rootEE(diff_func,x1,x2,xmin,tol,smallF,dLo,dHi ,EE_in ,te,tz)
   !
   use M_localProperties,only : Efloor  , ro,Ni
-  use M_NLTE,only : dbg,useEElog
+  use CRASH_M_NLTE,only : dbg,useEElog
   implicit none
   !
   real,intent(IN) :: EE_in
@@ -810,7 +811,7 @@ function EEdiff(Eeff ,EE_in ,te,Tz_new)
                                 ! it has to be set for the actual mode (2T or 1T) of the code
        ,Efloor,TEfloor	! lower limits of EOS  or of NLTE domain
   ! E < Efloor or T < TEfloor, LTE will be assumed
-  use M_NLTE , only : Erad,Brad,ng_rad  ,dbg	! radiative enegy density (for all groups) and Planckian function
+  use CRASH_M_NLTE , only : Erad,Brad,ng_rad  ,dbg	! radiative enegy density (for all groups) and Planckian function
   use M_radiom, only : caltz0
   ! the calling sequence have to fill them
   implicit none
@@ -853,7 +854,7 @@ function EEdiff_ln(lnEeff ,EE_in ,te,Tz_new)
 
   ! same as EEdiff, but the input arg. lnEeff is log(Eeff)
 
-  use M_expTab
+  use CRASH_M_expTab
   use M_localProperties,only : Ni &
        ,kBr_E,kBr_P &	! conversion factor T -> E [erg/g], or P [dyne], includes "ro"
                                 ! they have to be set for the current ro !
@@ -862,7 +863,7 @@ function EEdiff_ln(lnEeff ,EE_in ,te,Tz_new)
                                 ! it has to be set for the actual mode (2T or 1T) of the code
        ,Efloor,TEfloor	! lower limits of EOS  or of NLTE domain
   ! E < Efloor or T < TEfloor, LTE will be assumed
-  use M_NLTE , only : Erad,Brad,ng_rad  	! radiative enegy density (for all groups) and Planckian function
+  use CRASH_M_NLTE , only : Erad,Brad,ng_rad  	! radiative enegy density (for all groups) and Planckian function
   use M_radiom, only : caltz0
   ! the calling sequence have to fill them
   implicit none
