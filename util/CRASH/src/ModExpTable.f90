@@ -1,6 +1,6 @@
  !-------
  ! \
-module M_expTab
+module CRASH_M_expTab
   ! /
   !  tabulated exponential, 10 times faster that hard wired exp()
   !-------
@@ -17,7 +17,6 @@ module M_expTab
 contains
   !-------
   subroutine exp_tab8()
-    implicit none
     if(nb_exp.eq.ex_nb) return
     nb_exp=ex_nb
     do ex_i=0,ex_nb
@@ -28,11 +27,11 @@ contains
     ex_c=(ex_one-ex_tab(1))*ex_sdu
     ex_cm=(ex_one/ex_tab(1)-ex_one)*ex_sdu
     ex_y=0.
-    write(*,*)'.. tabulation of 1/exp(0..',ex_max,') is done.'
+    !$$! write(*,*)'.. tabulation of 1/exp(0..',ex_max,') is done.'
   end subroutine exp_tab8
  !-------
  ! \
-end module M_expTab
+end module CRASH_M_expTab
  ! /
  !-------
  
