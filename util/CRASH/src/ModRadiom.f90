@@ -5,7 +5,7 @@ module M_RADIOM
   ! The module solves the main equations of the non-LTE
   ! model
   !
-  use M_projE
+  use CRASH_M_projE
   !Projects the radiation energy densities in user-defined groups 
   !onto a refined grid  
   implicit none
@@ -68,8 +68,8 @@ contains
     !  Rn=
     !  ubar=lim(n=Max;UN/Rn)
     !
-    use M_projE	! ,only : mxOut
-    use M_expTab
+    use CRASH_M_projE	! ,only : mxOut
+    use CRASH_M_expTab
     real :: ubar
     integer,intent(IN) :: ngr
     real,intent(IN) :: Te_in,Ne_in
@@ -154,8 +154,8 @@ contains
     ! 
     ! same as "xubar" w/o check of Eground
     !
-    use M_projE	! ,only : mxOut
-    use M_expTab
+    use CRASH_M_projE	! ,only : mxOut
+    use CRASH_M_expTab
     real :: ubar
     integer :: ngr
     real,intent(IN) :: Te_in,Ne_in
@@ -255,7 +255,7 @@ contains
     !   hnug(0:ng)  are  the group boundaries, in same units than Te (usually eV)
     !
     !
-    use M_projE,only : nbIn
+    use CRASH_M_projE,only : nbIn
 
     !Inputs
     real,intent(IN) :: Te,ne
@@ -299,7 +299,7 @@ contains
     !-     same as "calTZ" but w/o hnug(0:ng) & ubar1
     !
     !
-    use M_projE,only : nbIn
+    use CRASH_M_projE,only : nbIn
     real,intent(IN) :: Te,ne
     real,dimension(:),intent(IN) :: eg,bg
     real,intent(OUT) :: Tz
@@ -326,7 +326,7 @@ contains
   end subroutine calTz0
   !-------
   subroutine calte(TeOld,Ne,Tz, Tenew, hnug,eg,bg,ng)
-    use M_projE,only : nbIn
+    use CRASH_M_projE,only : nbIn
     implicit none
     real,intent(IN) :: TeOld,Tz,Ne
     real,intent(OUT) :: TeNew
@@ -358,7 +358,7 @@ contains
   end subroutine calte
   !-------
   subroutine calte0(Te,Ne,Tz, eg,bg)
-    use M_projE,only : nbIn
+    use CRASH_M_projE,only : nbIn
     implicit none
     real,intent(IN) :: Tz,Ne
     real,intent(INOUT) :: Te
@@ -421,7 +421,7 @@ contains
     !
     !  tabulate correction to UBAR (see corrUbar)
     !
-    use M_projE,only : Umin,Umax	,nbIn,Efirst,Elast
+    use CRASH_M_projE,only : Umin,Umax	,nbIn,Efirst,Elast
 
     real :: ubar,ne,te,at32s,qj,r,eg1
     real,parameter :: zero=0,two=2 
