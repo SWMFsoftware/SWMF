@@ -447,7 +447,7 @@ contains
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = B_D
           Br = sum(B_D*r_D)
        end if
-       State_VGB(Hyp_,:,:,:,iBlock) = 0.0
+       if(Hyp_ > 1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
 
        !\
        ! Alfven Waves
@@ -1271,7 +1271,7 @@ contains
        end if
     end if
 
-    VarsGhostFace_V(Hyp_) = 0.0
+    if(Hyp_ > 1) VarsGhostFace_V(Hyp_) = 0.0
     !\
     ! Apply corotation if needed
     !/
