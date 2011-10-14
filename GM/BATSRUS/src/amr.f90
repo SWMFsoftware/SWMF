@@ -76,17 +76,9 @@ subroutine amr(DoMessagePass)
         call set_batsrus_grid
         if(DoProfileAmr) call timing_stop('amr::set_batsrus_grid')
 
-!!$        if(DoProfileAmr) call timing_start('amr::count_true_cells')
-!!$        call count_true_cells
-!!$        if(DoProfileAmr) call timing_stop('amr::count_true_cells')
-
-        if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) then
-           ! nothing has chenged, nothing to do
-           RETURN
-        else
-           iLastGrid          = iNewGrid
-           iLastDecomposition = iNewDecomposition
-        end if
+        ! If the grid has not changed there is nothing else to do
+        if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) &
+             RETURN
 
         if(DoProfileAmr) call timing_start('amr::count_true_cells')
         call count_true_cells
@@ -101,18 +93,16 @@ subroutine amr(DoMessagePass)
              DoTestIn=DoTestMe, Used_GB=true_cell)
         if(DoProfileAmr) call timing_stop('amr::regrid_batl')
 
-        if(DoProfileAmr) call timing_start('amr::count_true_cells')
+        if(DoProfileAmr) call timing_start('amr::set_batsrus_grid')
         call set_batsrus_grid
         if(DoProfileAmr) call timing_stop('amr::set_batsrus_grid')
 
-        if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) then
-           ! nothing has chenged, nothing to do
-           RETURN
-        else
-           iLastGrid          = iNewGrid
-           iLastDecomposition = iNewDecomposition
-        end if
+        ! If the grid has not changed there is nothing else to do
+        if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) &
+             RETURN
      end if
+     iLastGrid          = iNewGrid
+     iLastDecomposition = iNewDecomposition
 
      if(iProc==0 .and. lVerbose>0)then
         ! Write block/cell summary after AMR
@@ -150,19 +140,23 @@ subroutine amr(DoMessagePass)
 
 
      end if
-     if(DoProfileAmr) call timing_start('amr::set_b0_source___and_or___DivB1_GB')
      if(UseB0)then
         ! Correct B0 face at newly created and removed resolution changes
+        if(DoProfileAmr) call timing_start('amr::set_b0_source')
         do iBlock=1,nBlock
            if (unusedBLK(iBlock)) CYCLE
            call set_b0_source(iBlock)
         end do
+        if(DoProfileAmr) call timing_stop('amr::set_b0_source')
      end if
      ! Reset divb (it is undefined in newly created/moved blocks)
-     if(UseB)DivB1_GB=-7.70
-     if(DoProfileAmr) call timing_stop('amr::set_b0_source___and_or___DivB1_GB')
+     if(UseB)then
+        if(DoProfileAmr) call timing_start('amr::set_divb')
+        DivB1_GB=-7.70
+        if(DoProfileAmr) call timing_stop('amr::set_divb')
+     end if
 
-     RETURN !!! TODO: iTypeAdvance, B0, ModBlockData...
+     RETURN
   end if
 
   ! Ensure ghostcells are up to date.
