@@ -55,6 +55,8 @@ module ModUser
   real       :: DissipLengthMin_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock) = 1.e-30
   real       :: DissipLengthMax_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock) = 1.e-30
   
+  real :: DipoleTiltDeg = 0.0
+
   ! Input parameters for two-temperature effects
   real :: TeFraction, TiFraction
   real :: QeByQtotal = 0.0
@@ -110,6 +112,8 @@ contains
 
        case('#SOLARDIPOLE')
           call read_var('DipoleStrengthSi',DipoleStrengthSi)
+          call read_var('DipoleTiltDeg',DipoleTiltDeg)
+
        case("#WAVEDISSIPATION")
           call read_var('UseWaveDissipation', UseWaveDissipation)
           if(UseWaveDissipation) then 
@@ -164,9 +168,10 @@ contains
     use ModMultiFluid,     ONLY: MassIon_I
     use ModConst,          ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
                                  cElectronMass
-    use ModNumConst,       ONLY: cTwoPi
+    use ModNumConst,       ONLY: cTwoPi, cDegToRad
     use ModPhysics,        ONLY: ElectronTemperatureRatio, AverageIonCharge, &
-                                 Si2No_V, UnitTemperature_, UnitN_
+                                 Si2No_V, UnitTemperature_, UnitN_, &
+                                 SinThetaTilt, CosThetaTilt
 
     real            :: HeatCondParSi
     real, parameter :: CoulombLog = 20.0
@@ -186,6 +191,11 @@ contains
        nChromo = nChromoSi*Si2No_V(UnitN_)
        RhoChromo = nChromo*MassIon_I(1)
        tChromo = tChromoSi*Si2No_V(UnitTemperature_)
+    end if
+
+    if (.not. UseMagnetogram) then
+       SinThetaTilt = sin(cDegToRad*DipoleTiltDeg)
+       CosThetaTilt = cos(cDegToRad*DipoleTiltDeg)
     end if
 
     ! TeFraction is used for ideal EOS:
@@ -208,9 +218,6 @@ contains
     ! Note EtaPerpSi is divided by cMu.
     EtaPerpSi = sqrt(cElectronMass)*CoulombLog &
          *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
-
-
-!    if(.not.UseB0)UseMagnetogram=.false.
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -302,7 +309,6 @@ contains
 
     ! The isothermal parker wind solution is used as initial condition
 
-    use ModProcMH,     ONLY: iProc
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
     use ModMain,       ONLY: nI, nJ, nK, globalBLK, UseB0, unusedBLK
@@ -344,9 +350,6 @@ contains
 
     uCorona = rTransonic**2*exp(1.5 - 2.0*rTransonic)
 
-    !\
-    ! Velocity
-    !/
     do k = 1, nK ; do j = 1, nJ ; do i = 1, nI
        x = x_BLK(i,j,k,iBlock)
        y = y_BLK(i,j,k,iBlock)
@@ -397,10 +400,6 @@ contains
           end do
        end if
 
-
-       !\
-       ! Density and Pressure
-       !/
        ! Set chromospheric initial condition inside the body, if needed
        if(UseChromoBc .and. r <= rBody)then
 
@@ -436,22 +435,16 @@ contains
        State_VGB(RhoUy_,i,j,k,iBlock) = Rho*Ur*y/r *Usound
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
 
-       !\
-       ! Magnetic Field
-       !/
        if(UseB0)then
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
           Br = sum(B0_DGB(1:3,i,j,k,iBlock)*r_D)
        else
           call get_coronal_b0(x, y, z, B_D)
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = B_D
-          Br = sum(B_D*r_D)
+ 	  Br = sum(B_D*r_D)
        end if
-       if(Hyp_ > 1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
+       if(Hyp_>1) State_VGB(Hyp_,:,:,:,iBlock) = 0.0
 
-       !\
-       ! Alfven Waves
-       !/
        if (UseChromoBc) then
           if (Br >= 0.0) then
              State_VGB(WaveFirst_,i,j,k,iBlock) =  &
@@ -1271,7 +1264,7 @@ contains
        end if
     end if
 
-    if(Hyp_ > 1) VarsGhostFace_V(Hyp_) = 0.0
+    if(Hyp_>1) VarsGhostFace_V(Hyp_) = 0.0
     !\
     ! Apply corotation if needed
     !/
