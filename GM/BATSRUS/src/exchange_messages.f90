@@ -20,7 +20,7 @@ subroutine exchange_messages
 
   use BATL_lib, ONLY: message_pass_cell
   use ModBatlInterface, ONLY: UseBatlTest
-
+  use ModAMR, ONLY: DoProfileAmr
   use ModMpi
 
   implicit none
@@ -139,11 +139,22 @@ subroutine exchange_messages
 
   do iBlock = 1, nBlockMax
      if (unusedBLK(iBlock)) CYCLE
-     if (far_field_BCs_BLK(iBlock)) &                        
-          call set_outer_BCs(iBlock,time_simulation,.false.) 
-     if(time_loop.and. any(TypeBc_I=='buffergrid'))&
-          call fill_in_from_buffer(iBlock)
+
+     if (far_field_BCs_BLK(iBlock)) then
+        if(DoProfileAmr) call timing_start('set_outer_BCs')
+        call set_outer_BCs(iBlock,time_simulation,.false.) 
+        if(DoProfileAmr) call timing_stop('set_outer_BCs')
+     end if
+
+     if(time_loop.and. any(TypeBc_I=='buffergrid')) then
+        if(DoProfileAmr) call timing_start('fill_in_from_buffer')
+        call fill_in_from_buffer(iBlock)
+        if(DoProfileAmr) call timing_stop('fill_in_from_buffer')
+     end if
+
+     if(DoProfileAmr) call timing_start('calc_energy_ghost')
      call calc_energy_ghost(iBlock)
+     if(DoProfileAmr) call timing_stop('calc_energy_ghost')
   end do
 
   call timing_stop('exch_msgs')
