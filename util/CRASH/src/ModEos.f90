@@ -349,7 +349,7 @@ contains
        call read_var('Name material',Name)
        if(index(Name,':')>0)then
           call CON_stop(&
-               'The use of new mixtures to be with CRASH-created tables is to be tested')
+               'The use of new mixtures with CRASH-created tables is to be tested')
           NameMaterial_I(iMaterial) = Name(1:2)
           !Truncate symbols till the colon
           call split_string( Name(1:len_trim(Name)), &
