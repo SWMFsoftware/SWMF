@@ -53,6 +53,8 @@ subroutine BATS_setup
 
   call write_runtime_values
 
+  restart = .false.
+
 contains
   !===========================================================================
 
