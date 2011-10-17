@@ -45,7 +45,7 @@ program PROPACEOS
   character(len=80)  :: StringHeader  
   integer::iString, iRho, iTe
   character(LEN=13)::NameFile
-  character(LEN=2)::NameMaterial
+  character(LEN=2)::NameMaterial,NameMixture
   integer:: iMix
   character(LEN=30)::NameToRead
 
@@ -86,7 +86,7 @@ program PROPACEOS
   nZ_I = 0
 
   write(*,*)'Enter the name of element (e.g. Ar ) - note than Ar.prp should be present'
-  write(*,*)'or the chemical formula (e.g. C_ 1 H_ 1 ) - note than C_1H_1.prp should be present'
+  write(*,*)'or the chemical formula (e.g. Ay: C_ 1 H_ 1 ) - note than C_1H_1.prp should be present'
 
   read(*,'(a)')NameToRead
   if(len_trim(NameToRead)<=2)then
@@ -111,6 +111,10 @@ program PROPACEOS
      !/
      call split_string( trim(NameToRead), &
                MaxString,  NameVar_I, nMix)
+     NameToRead = NameVar_I(1)
+     NameMixture = NameToRead(1:2)
+     nMix = nMix-1
+     do iMix = 1,nMix; NameVar_I(iMix)=NameVar_I(iMix+1);end do
      if(2*(nMix/2)/=nMix)call CON_stop(&
           'For mixtures the formula should be enterd similarly to H_ 2 O_ 1') 
      nMix = nMix/2
@@ -141,7 +145,8 @@ program PROPACEOS
      end do
      AtomicMass = AtomicMass/sum(Concentration_I)
      Concentration_I = Concentration_I/sum(Concentration_I)
-     write(*,*)'Atomic weight =',AtomicMass     
+     NameMaterial = NameMixture
+     write(*,*)'Atomic weight =',AtomicMass, 'NameMixture=',NameMaterial     
   end if
   write(*,*)'NameFile=',trim(NameFile)
   open(11,file=NameFile,status='old')
