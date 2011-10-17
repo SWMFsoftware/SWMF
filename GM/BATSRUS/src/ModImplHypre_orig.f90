@@ -4,7 +4,8 @@ module ModImplHypre
   use BATL_size, ONLY: nDim, nI, nJ, nK, nIJK, nIJK_D
   use BATL_lib,  ONLY: iProc, nNode, nNodeUsed, iNode_B, iMortonNode_A, &
        iNodeNei_IIIB, DiLevelNei_IIIB, Unset_, iComm, &
-       nRoot_D, MaxCoord_I, IsPeriodic_D, iTree_IA, Coord0_, Coord1_, Level_
+       nRoot_D, MaxCoord_I, IsPeriodic_D, iTree_IA, &
+       Proc_, Coord0_, Coord1_, Level_
   use ModImplicit, ONLY: impl2iBlk, MAT, nImplBlock => nImplBlk, &
        nStencil, Stencil1_, Stencil2_, Stencil3_, Stencil4_, Stencil5_, &
        Stencil6_, Stencil7_
@@ -92,8 +93,8 @@ contains
   !==========================================================================
   subroutine hypre_initialize
 
-    integer:: nLevel = 0
-    integer:: iLevel, iNode
+    integer:: nLevel = 30
+    integer:: iLevel, DiLevel, iNode, jNode, iCoord_D(nDim), jCoord_D(nDim)
 
     integer:: iImplBlock, iBlock, iError, iPart, jPart, iPrintLevel
 
@@ -163,7 +164,7 @@ contains
           iBlock   = impl2iBlk(iImplBlock)
           iNode    = iNode_B(iBlock)
           iPart    = iTree_IA(Level_,iNode)
-          iLower_D = 1 + (iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
+          iLower_D = 1 +(iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
           iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
 
           if(DoTestMe)write(*,*)'iPart, iNode, iLower_D, iUpper_D=',&
@@ -391,12 +392,76 @@ contains
 
     ! Create the graph object
     call HYPRE_SStructGraphCreate(iComm, i8Grid, i8Graph, iError)
+    call HYPRE_SStructGraphSetObjectType(i8Graph, iObjectType, iError)
 
     ! Tell the graph which stencil to use for each variable on each part 
     do jPart = 0, nPart - 1
        call HYPRE_SStructGraphSetStencil(i8Graph, jPart, iVar, i8Stencil, &
             iError)
     end do
+
+    ! Add non-stencil entries to the graph at resolution changes
+
+    if(.not. UseBlockPart)then
+       do iImplBlock = 1, nImplBlock
+          iBlock = impl2iBlk(iImplBlock)
+          iNode  = iNode_B(iBlock)
+          iPart  = iTree_IA(Level_,iNode)
+
+          ! -I neighbor
+          DiLevel = DiLevelNei_IIIB(-1,0,0,iBlock)
+          if(abs(DiLevel) == 1)then
+             ! Neighbor node index and level
+             jNode = iNodeNei_IIIB(0,1,1,iBlock)
+
+             if(iProc == iTree_IA(Proc_,iNode) &
+                  .or. iProc == iTree_IA(Proc_,jNode))then
+
+                jPart = iTree_IA(Level_,jNode)
+
+                iCoord_D = (iTree_IA(Coord1_:Coord0_+nDim,iNode) - 1) &
+                     *nIjk_D(1:nDim)+1
+                jCoord_D = iTree_IA(Coord1_:Coord0_+nDim,jNode)*nIjk_D(1:nDim)
+
+                if(DoTestMe)then
+                   write(*,*)'-I iPart, jPart =', iPart, jPart
+                   write(*,*)'-I iNode, jNode =', iNode, jNode
+                   write(*,*)'-I iCoord,jCoord=', iCoord_D, jCoord_D
+                end if
+
+                call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
+                     iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
+             end if
+          end if
+
+          ! +I neighbor
+          DiLevel = DiLevelNei_IIIB(+1,0,0,iBlock)
+          if(abs(DiLevel) == 1)then
+             ! Neighbor node index and level
+             jNode = iNodeNei_IIIB(3,1,1,iBlock)
+
+             if(iProc == iTree_IA(Proc_,iNode) &
+                  .or. iProc == iTree_IA(Proc_,jNode))then
+
+                jPart = iTree_IA(Level_,jNode)
+
+                iCoord_D = iTree_IA(Coord1_:Coord0_+nDim,iNode)*nIjk_D(1:nDim)
+                jCoord_D = (iTree_IA(Coord1_:Coord0_+nDim,jNode)-1) &
+                     *nIjk_D(1:nDim)+1
+          
+                if(DoTestMe)then
+                   write(*,*)'+I iPart, jPart =', iPart, jPart
+                   write(*,*)'+I iNode, jNode =', iNode, jNode
+                   write(*,*)'+I iCoord,jCoord=', iCoord_D, jCoord_D
+                end if
+          
+                call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
+                     iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
+             end if
+          end if
+
+       end do
+    end if
 
     ! Assemble the graph
     call HYPRE_SStructGraphAssemble(i8Graph, iError)
@@ -468,17 +533,23 @@ contains
 
     ! Set the maxtrix elements corresponding to iImplBlock
 
-    use ModMain, ONLY: TypeBc_I
+    use ModMain, ONLY: TypeBc_I, ProcTest
 
     integer, intent(in):: iImplBlock
     real,    intent(inout):: Jacobian_CI(nI,nJ,nK,nStencil)
 
+    real   :: Jac
     integer:: iValue, i, j, k, iPart, iBlock, iError
+    integer:: DiLevel
 
     integer:: iNode
 
+    logical, parameter :: DoDebug = .false.
+
     !------------------------------------------------------------------------
     iBlock = impl2iblk(iImplBlock)
+
+    ! DoDebug = iProc == ProcTest
 
     if(TypeBc_I(1)=='reflect' .and. &
          DiLevelNei_IIIB(-1,0,0,iBlock) == Unset_)&
@@ -525,6 +596,8 @@ contains
 
     if(UseBlockPart)then
        iPart = iPart_I(iImplBlock)
+       call HYPRE_SStructMatrixSetBoxValues(i8A, iPart, iLower_D, iUpper_D, &
+            iVar, nStencil, iStencil_I, Value_I, iError)
     else
        iNode    = iNode_B(iBlock)
        iPart    = iTree_IA(Level_,iNode)
@@ -534,25 +607,61 @@ contains
        ! write(*,*)'!!! iPart, iProc, iBlock, iNode, iLower_D, iUpper_D=',&
        !     iPart, iProc, iBlock, iNode, iLower_D, iUpper_D, &
        !     maxval(Value_I), minval(Value_I)
+
+       call HYPRE_SStructMatrixSetBoxValues(i8A, iPart, iLower_D, iUpper_D, &
+            iVar, nStencil, iStencil_I, Value_I, iError)
+
+       ! check -I neighbor for resolution change
+       DiLevel = DiLevelNei_IIIB(-1,0,0,iBlock)
+       if( abs(DiLevel) == 1)then
+
+          Jac = Jacobian_CI(1,1,1,2)
+
+          call HYPRE_SStructMatrixSetValues(i8A, iPart, &
+                  iLower_D, iVar, 1, (/nStencil/), (/Jac/), iError)
+
+          if(DoDebug)write(*,*)'-I iProc, iPart, DiLevel, iCoord_D, Jac =', &
+               iProc, iPart, DiLevel, iLower_D, Jac
+       end if
+
+       ! check +I neighbor for resolution change
+       DiLevel = DiLevelNei_IIIB(+1,0,0,iBlock)
+       if(abs(DiLevel) == 1)then
+
+          Jac = Jacobian_CI(nI,1,1,3)
+
+          call HYPRE_SStructMatrixSetValues(i8A, iPart, &
+                  iUpper_D, iVar, 1, (/nStencil/), (/Jac/), iError)
+
+          if(DoDebug)write(*,*)'+I iProc, iPart, DiLevel, iCoord_D, Jac =', &
+               iProc, iPart, DiLevel, iUpper_D, Jac
+       end if
+
     end if
-    call HYPRE_SStructMatrixSetBoxValues(i8A, iPart, iLower_D, iUpper_D, &
-         iVar, nStencil, iStencil_I, Value_I, iError)
 
   end subroutine hypre_set_matrix_block
 
   !============================================================================
   subroutine hypre_set_matrix
 
+    use ModMain, ONLY: test_string
+
     integer:: iError
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub = 'hypre_setup_amg'
+    character(len=*), parameter:: NameSub = 'hypre_set_matrix'
     !-------------------------------------------------------------------------
     ! Assemble matrix
+    call set_oktest(NameSub, DoTest, DoTestMe)
     if(DoTestMe)write(*,*) NameSub,' starting with DoInitHypreAmg=', &
          DoInitHypreAmg
 
     call HYPRE_SStructMatrixAssemble(i8A, iError)
+
+    if(index(test_string,'HYPRE_PRINT_MATRIX') > 0)then
+       call HYPRE_SStructMatrixPrint("matrix.dat", i8A, 0, iError)
+       call stop_mpi('debug')
+    end if
 
     if(DoTestMe)write(*,*) NameSub,' HYPRE_SStructMatrixAssemble done'
 
@@ -588,6 +697,8 @@ contains
     character(len=*), parameter:: NameSub = 'hypre_preconditioner'
     !-------------------------------------------------------------------------
 
+    ! DoDebug = iProc == 1
+    
     if(DoDebug)write(*,*) NameSub,' starting n, maxval, minval, y_I(1)=', &
          n, maxval(y_I), minval(y_I), y_I(1)
 
