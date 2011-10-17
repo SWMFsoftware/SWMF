@@ -77,9 +77,15 @@ subroutine amr(DoMessagePass)
         if(DoProfileAmr) call timing_stop('amr::set_batsrus_grid')
 
         ! If the grid has not changed there is nothing else to do
-        if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) &
-             RETURN
-
+        if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) then
+           if(DoMessagePass)then
+              if(DoProfileAmr) call timing_start('amr::exchange_messages')
+              UsePlotMessageOptions = .false.
+              call exchange_messages
+              if(DoProfileAmr) call timing_stop('amr::exchange_messages')
+           end if
+           RETURN
+        end if
         if(DoProfileAmr) call timing_start('amr::count_true_cells')
         call count_true_cells
         if(DoProfileAmr) call timing_stop('amr::count_true_cells')
@@ -98,9 +104,17 @@ subroutine amr(DoMessagePass)
         if(DoProfileAmr) call timing_stop('amr::set_batsrus_grid')
 
         ! If the grid has not changed there is nothing else to do
-        if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) &
-             RETURN
+        if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) then
+           if(DoMessagePass)then
+              if(DoProfileAmr) call timing_start('amr::exchange_messages')
+              UsePlotMessageOptions = .false.
+              call exchange_messages
+              if(DoProfileAmr) call timing_stop('amr::exchange_messages')
+           end if
+           RETURN
+        end if
      end if
+
      iLastGrid          = iNewGrid
      iLastDecomposition = iNewDecomposition
 
