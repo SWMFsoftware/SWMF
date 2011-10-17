@@ -2176,10 +2176,6 @@ contains
   
   subroutine set_defaults
     
-    ! SWMF coupling does not work yet. Also fast ray tracing.
-    ! For non-cartesian grid the #GRIDGEOMETRY command switches BATL off.
-    UseBatl = IsStandAlone
-
     !\
     ! Default plot and restart directories depend on NameThisComp
     !/

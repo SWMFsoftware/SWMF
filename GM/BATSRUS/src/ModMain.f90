@@ -14,7 +14,7 @@ Module ModMain
   !\
   ! Version of BATSRUS
   !/
-  real, parameter :: CodeVersion = 9.00
+  real, parameter :: CodeVersion = 9.10
   real            :: CodeVersionRead = -1.0
 
   !\
@@ -23,8 +23,10 @@ Module ModMain
   ! In stand alone mode this variable is set to true
   logical             :: IsStandAlone = .false.
 
-  ! Shall we use the BATL library
-  logical :: UseBatl = .false.
+  ! Shall we use the BATL library. Note (10/17/2011):
+  !   for constrained transport scheme the #DIVB command and 
+  !   for non-cartesian grid the #GRIDGEOMETRY command set UseBatl=.false.
+  logical :: UseBatl = .true.
 
   ! In the SWMF the BATSRUS may run as GM, SC or IH component
   character (len=2)   :: NameThisComp='GM'
