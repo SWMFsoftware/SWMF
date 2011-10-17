@@ -9,6 +9,7 @@ program PROPACEOS
   use CRASH_ModPartition,ONLY: Population_II,iZMin_I
   use CRASH_ModTransport,ONLY: electron_heat_conductivity, te_ti_relaxation
   use CRASH_ModStatSum, ONLY: cZMin
+  use ModUtilities, ONLY: split_string
   implicit none
 
   integer,parameter::iUnit = 11, nDensity=201, nTemperature = 201
@@ -43,13 +44,18 @@ program PROPACEOS
 
   character(len=80)  :: StringHeader  
   integer::iString, iRho, iTe
-  character(LEN=6)::NameFile
+  character(LEN=13)::NameFile
   character(LEN=2)::NameMaterial
+  integer:: iMix
+  character(LEN=30)::NameToRead
+
+  integer, parameter:: MaxString = 200
+  character(LEN=20):: NameVar_I(MaxString)
   integer:: iMaterial
   real::AtomicMass
 
 
- !The columns in the EOS table
+  !The columns in the EOS table
   integer :: P_      =  1, &
              E_      =  2, &
              Pe_     =  3, &
@@ -80,20 +86,64 @@ program PROPACEOS
   nZ_I = 0
 
   write(*,*)'Enter the name of element (e.g. Ar ) - note than Ar.prp should be present'
+  write(*,*)'or the chemical formula (e.g. C_ 1 H_ 1 ) - note than C_1H_1.prp should be present'
 
-  read(*,'(a)')NameMaterial
-  if(len_trim(NameMaterial)==1)NameMaterial=trim(NameMaterial)//'_'
-  iMaterial = i_material(NameMaterial)
-  if(iMaterial>0)then
-     write(*,*)'iMaterial =', iMaterial
-     nZ_I(1) = iMaterial
-     AtomicMass = cAtomicMass_I(iMaterial)
-     write(*,*)'Atomic weight =',AtomicMass
+  read(*,'(a)')NameToRead
+  if(len_trim(NameToRead)<=2)then
+     NameMaterial=trim(NameToRead)
+     if(len_trim(NameMaterial)==1)NameMaterial=trim(NameMaterial)//'_'
+     iMaterial = i_material(NameMaterial)
+     if(iMaterial>0)then
+        write(*,*)'iMaterial =', iMaterial
+        nZ_I(1) = iMaterial
+        AtomicMass = cAtomicMass_I(iMaterial)
+        write(*,*)'Atomic weight =',AtomicMass
+        NameFile = NameMaterial//'.prp'
+        nMix = 1
+        iZMin_I = 0
+        Concentration_I = 0.0; Concentration_I(1) = 1.0
+     else
+        call CON_stop('The electron heat conductivity is not supported for mixtures')
+     end if
   else
-     call CON_stop('The electron heat conductivity is not supported for mixtures')
+     !\
+     ! MIXTURE
+     !/
+     call split_string( trim(NameToRead), &
+               MaxString,  NameVar_I, nMix)
+     if(2*(nMix/2)/=nMix)call CON_stop(&
+          'For mixtures the formula should be enterd similarly to H_ 2 O_ 1') 
+     nMix = nMix/2
+     NameFile='.prp'
+     iZMin_I = 0
+     Concentration_I = 0.0
+     AtomicMass = 0.0
+     do iMix=nMix,1,-1
+        read(NameVar_I(2*iMix),*)Concentration_I(iMix)
+        NameMaterial=trim(NameVar_I(2*iMix-1))
+        if(len_trim(NameMaterial)==1)NameMaterial=trim(NameMaterial)//'_'
+        iMaterial = i_material(NameMaterial)
+        if(iMaterial>0)then
+           write(*,*)'iMaterial =', iMaterial
+           nZ_I(iMix) = iMaterial
+           AtomicMass = AtomicMass + &
+                cAtomicMass_I(iMaterial)*&
+                Concentration_I(iMix)
+           NameToRead = trim(NameFile)
+           write(NameFile,'(a,i1,a)') NameMaterial,&
+                int(Concentration_I(iMix)),&
+                trim(NameToRead)
+ 
+        else
+           call CON_stop('Incorrect input for mixtures')
+        end if
+
+     end do
+     AtomicMass = AtomicMass/sum(Concentration_I)
+     Concentration_I = Concentration_I/sum(Concentration_I)
+     write(*,*)'Atomic weight =',AtomicMass     
   end if
-     
-  NameFile = NameMaterial//'.prp'
+  write(*,*)'NameFile=',trim(NameFile)
   open(11,file=NameFile,status='old')
   
   !Only prints out the header lines with the numbers. 
@@ -299,12 +349,9 @@ program PROPACEOS
         Z2PerA = Z2/AtomicMass
         Na     = Density_I(iRho)
         Te     = Temperature_I(iTe)
-        nMix = 1
-        iZMin_I = 0
-        Concentration_I = 0.0; Concentration_I(1) = 1.0
-
+ 
         !Concentration of neutrals is switched off at 2 eV 
-        Population_II(0,1) = max(0.0, min(1.0,2.0 - Te))
+        Population_II(0,1:nMix) = max(0.0, min(1.0,2.0 - Te))
         Value_VII(Cond_,  iTe, iRho) = electron_heat_conductivity()
         Value_VII(TeTi_,  iTe, iRho) = te_ti_relaxation()
 
