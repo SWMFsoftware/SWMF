@@ -116,7 +116,7 @@ program PROPACEOS
      nMix = nMix-1
      do iMix = 1,nMix; NameVar_I(iMix)=NameVar_I(iMix+1);end do
      if(2*(nMix/2)/=nMix)call CON_stop(&
-          'For mixtures the formula should be enterd similarly to H_ 2 O_ 1') 
+          'For mixtures the formula should be enterd similarly to Wa: H_ 2 O_ 1') 
      nMix = nMix/2
      NameFile='.prp'
      iZMin_I = 0
