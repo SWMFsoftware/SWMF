@@ -15,6 +15,13 @@ IOMIX=\
 	ModOpacityVoigt.o \
 	ModMultiGroup.o	
 
+NLTE=\
+	ModLocalProperties.o \
+	ModExpTable.o \
+	ModRadiom.o \
+	nlte.o \
+	radiom.o \
+	voids.o 
 
 OBJECTS=\
 	ModAtomicMass.o \
@@ -24,23 +31,18 @@ OBJECTS=\
 	ModEos.o \
 	ModExcitation.o \
 	ModExcitationData.o \
-	ModExpTable.o \
 	ModPowerLawEos.o\
 	ModFermiGas.o\
 	ModHydrogenicModel.o \
         ModIonizPotential.o \
-	ModLocalProperties.o \
 	ModMolecularData.o \
 	ModPartition.o \
 	ModPlastic.o \
-	ModRadiom.o \
 	ModStatSum.o \
 	ModTransport.o \
 	eos_material.o \
-	nlte.o \
-	radiom.o \
-	voids.o \
-	${IOMIX}
+	${IOMIX} \
+	${NLTE}
 
 MPIRUN = 
 

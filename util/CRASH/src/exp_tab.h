@@ -1,14 +1,15 @@
 !*** exp_tab.h ***
 !*
-!* IN : y , OUT: ey=exp(-Y) , Y=min(y,ex_max) ; 0 <= y 
+!* IN : u , OUT: ey=exp(-u) , u=min(u,ex_max) ; 0 <= u 
 !*
-! ey=exp(-y)	! pour verification
+! ey=exp(-u)	! pour verification
 ! ex_y=ex_one-ey
 !*		
-!c	ex_y=min(ex_max,max(ex_min,y))
-	ex_y=min(ex_max,max(ex_zero,u))
-	ex_u=ex_y*ex_sdu
-	ex_i=int(ex_u)
-!c	ex_u=frac(ex_u)
-	ex_u=ex_y -ex_i*ex_du
-	ey=ex_tab(ex_i)*(ex_one-ex_c*ex_u)
+
+	ex_u=min(ex_max, max(0.0, u))
+  
+	ex_i=int(ex_u*ex_sdu)
+
+	ex_u = ex_u -ex_i*ex_du
+
+	ey=ex_tab(ex_i)*(1.0 - ex_c*ex_u)
