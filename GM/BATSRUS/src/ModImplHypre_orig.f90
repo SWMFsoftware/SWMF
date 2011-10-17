@@ -40,7 +40,6 @@ module ModImplHypre
   ! These indexes are never out of the 1:nDim range
   integer, parameter:: Dim1_ = 1, Dim2_ = min(2,nDim), Dim3_=nDim
 
-  integer, allocatable:: iPart_I(:), iPart_A(:)
   integer:: nPart = 1 ! grid consists of one or more parts
   integer:: nVar  = 1 ! there is only one variable per grid cell
   integer:: iVar  = 0 ! index of the variable
@@ -72,7 +71,6 @@ module ModImplHypre
   integer:: iInterpolateAmg    = 6    ! 0..14
   real::    StrongThresholdAmg = 0.0  ! 0.25 for 2D, 0.5-0.6 for 3D
   real::    TruncFactorAmg     = 0.0  ! 0..1 ?
-  logical:: UseBlockPart       = .false.
 
 contains
   !==========================================================================
@@ -87,7 +85,6 @@ contains
     call read_var('iInterpolateAmg',    iInterpolateAmg)
     call read_var('StrongThresholdAmg', StrongThresholdAmg)
     call read_var('TruncFactorAmg',     TruncFactorAmg)
-    call read_var('UseBlockPart',       UseBlockPart)
 
   end subroutine hypre_read_param
   !==========================================================================
@@ -108,73 +105,33 @@ contains
 
     if(DoTestMe)write(*,*) NameSub,' starting'
 
-    ! Set the part index array indexed by implicit block index
-    if(UseBlockPart)then
-       allocate(iPart_I(nImplBlock), iPart_A(nNode), Value_I(nStencil*nIJK))
+    allocate(Value_I(nStencil*nIJK))
 
-       ! For now we assume that all used blocks are implicit...
-       ! Otherwise we could loop through iTypeBlock_A or something...
-       ! Note that parts are indexed from 0, not from 1 !
+    ! One part per level. We can possibly use MaxLevel (<=30), or count
+    ! the number of current levels (1-5 or so).
 
-       nPart = nNodeUsed
-       iPart_A = iMortonNode_A(1:nNode) - 1
-       do iImplBlock = 1, nImplBlock
-          iPart_I(iImplBlock) = iPart_A(iNode_B(impl2iBlk(iImplBlock)))
-       end do
+    ! Level indexes go from 0 to nLevel, hence the +1
+    nPart = nLevel + 1
 
-       ! part = local domain with local index space
-       iLower_D = 1
-       iUpper_D = nIJK_D(1:nDim)
+    ! Create an empty 3D grid object
+    call HYPRE_SStructGridCreate(iComm, nDim, nPart, i8Grid, iError)
 
-       if(DoTestMe)write(*,*)'nPart, iLower_D, iUpper_D=',&
-            nPart, iLower_D, iUpper_D
+    if(DoTestMe)write(*,*)'HYPRE_SStructGridCreate done'
 
-       ! Create an empty 3D grid object
-       call HYPRE_SStructGridCreate(iComm, nDim, nPart, i8Grid, iError)
+    ! Add each block as a local box in the corresponding part (level)
+    do iImplBlock = 1, nImplBlock
+       iBlock   = impl2iBlk(iImplBlock)
+       iNode    = iNode_B(iBlock)
+       iPart    = iTree_IA(Level_,iNode)
+       iLower_D = 1 + (iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
+       iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
 
-       if(DoTestMe)write(*,*)'HYPRE_SStructGridCreate done'
+       if(DoTestMe)write(*,*)'iPart, iNode, iLower_D, iUpper_D=',&
+            iPart, iNode, iLower_D, iUpper_D
 
-       ! Add local parts
-       do iImplBlock = 1, nImplBlock
-          iPart = iPart_I(iImplBlock)
-          call HYPRE_SStructGridSetExtents(i8Grid, iPart, iLower_D, iUpper_D, &
-               iError)
-       end do
-
-    else
-       allocate(Value_I(nStencil*nIJK))
-
-       ! One part per level. We can possibly use MaxLevel (<=30), or count
-       ! the number of current levels (1-5 or so).
-
-       ! Level indexes go from 0 to nLevel, hence the +1
-       nPart = nLevel + 1
-
-       ! Create an empty 3D grid object
-       call HYPRE_SStructGridCreate(iComm, nDim, nPart, i8Grid, iError)
-
-       if(DoTestMe)write(*,*)'HYPRE_SStructGridCreate done'
-
-       iLower_D = 1
-
-       ! Add each block as a local box in the corresponding part (level)
-
-       ! Add local parts
-       do iImplBlock = 1, nImplBlock
-          iBlock   = impl2iBlk(iImplBlock)
-          iNode    = iNode_B(iBlock)
-          iPart    = iTree_IA(Level_,iNode)
-          iLower_D = 1 +(iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
-          iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
-
-          if(DoTestMe)write(*,*)'iPart, iNode, iLower_D, iUpper_D=',&
-               iPart, iNode, iLower_D, iUpper_D
-
-          call HYPRE_SStructGridSetExtents(i8Grid, iPart, iLower_D, iUpper_D, &
-               iError)
-       end do
-
-    end if
+       call HYPRE_SStructGridSetExtents(i8Grid, iPart, iLower_D, iUpper_D, &
+            iError)
+    end do
 
     if(DoTestMe)write(*,*)'HYPRE_SStructGridSetExtents done'
 
@@ -186,187 +143,46 @@ contains
 
     if(DoTestMe)write(*,*)'HYPRE_SStructGridSetVariables done'
 
-    ! Setup connection between parts
-    if(UseBlockPart)then
-       do iImplBlock = 1, nImplBlock
-          iBlock = impl2iBlk(iImplBlock)
-          iPart  = iPart_I(iImplBlock)
+    ! For periodic boundaries the part is connected to itself
+    do iDim = 1, nDim
+       if(.not.IsPeriodic_D(iDim)) CYCLE
 
-          ! -I neighbor
-          if(DiLevelNei_IIIB(-1,0,0,iBlock) == 0)then
-             jPart = iPart_A(iNodeNei_IIIB(0,1,1,iBlock))
+       do iLevel = 0, nLevel
+          iPart = iLevel
+          iLower_D = 1
+          iUpper_D = MaxCoord_I(iLevel)*nRoot_D(1:nDim)*nIjk_D(1:nDim)
 
-             iLowerBc_D = 1;              iLowerBc_D(1) = 0
-             iUpperBc_D = nIJK_D(1:nDim); iUpperBc_D(1) = 0
-             jLowerBc_D = 1;              jLowerBc_D(1) = nI
-             jUpperBc_D = nIJK_D(1:nDim)
+          ! initialize boundary ranges
+          iLowerBc_D = iLower_D
+          iUpperBc_D = iUpper_D
+          jLowerBc_D = iLower_D
+          jUpperBc_D = iUpper_D
 
-             if(DoTestMe)then
-                write(*,*)'-I iPart, jPart =', iPart, jPart
-                write(*,*)'-I iLower,iUpper=',iLowerBc_D, iUpperBc_D
-                write(*,*)'-I jLower,jUpper=',jLowerBc_D, jUpperBc_D
-             end if
+          ! lower ghost cell connected to last cell
+          iLowerBc_D(iDim) = 0
+          iUpperBc_D(iDim) = 0
+          jLowerBc_D(iDim) = iUpper_D(iDim)
+          jUpperBc_D(iDim) = iUpper_D(iDim)
 
-             call HYPRE_SStructGridSetNeighborPart( i8Grid, &
-                  iPart, iLowerBc_D, iUpperBc_D, &
-                  jPart, jLowerBc_D, jUpperBc_D, &
-                  iIndexMap_D, iIndexDir_D, iError)
-          end if
+          call HYPRE_SStructGridSetNeighborPart( i8Grid, &
+               iPart, iLowerBc_D, iUpperBc_D, &
+               iPart, jLowerBc_D, jUpperBc_D, &
+               iIndexMap_D, iIndexDir_D, iError)
 
-          ! +I neighbor
-          if(DiLevelNei_IIIB(+1,0,0,iBlock) == 0)then
-             jPart = iPart_A(iNodeNei_IIIB(3,1,1,iBlock))
+          ! upper ghost cell connected to first cell
+          iLowerBc_D(iDim) = iUpper_D(iDim) + 1
+          iUpperBc_D(iDim) = iUpper_D(iDim) + 1
+          jLowerBc_D(iDim) = 1
+          jUpperBc_D(iDim) = 1
 
-             iLowerBc_D = 1;              iLowerBc_D(1) = nI+1
-             iUpperBc_D = nIJK_D(1:nDim); iUpperBc_D(1) = nI+1
-             jLowerBc_D = 1;              jLowerBc_D(1) = 1
-             jUpperBc_D = nIJK_D(1:nDim); jUpperBc_D(1) = 1
-
-             if(DoTestMe)then
-                write(*,*)'+I iPart, jPart =', iPart, jPart
-                write(*,*)'+I iLower,iUpper=',iLowerBc_D, iUpperBc_D
-                write(*,*)'+I jLower,jUpper=',jLowerBc_D, jUpperBc_D
-             end if
-
-             call HYPRE_SStructGridSetNeighborPart( i8Grid, &
-                  iPart, iLowerBc_D, iUpperBc_D, &
-                  jPart, jLowerBc_D, jUpperBc_D, &
-                  iIndexMap_D, iIndexDir_D, iError)
-          end if
-
-          if(nJ > 1)then
-             ! -J neighbor
-             if(DiLevelNei_IIIB(0,-1,0,iBlock) == 0)then
-                jPart = iPart_A(iNodeNei_IIIB(1,0,1,iBlock))
-
-                iLowerBc_D = 1;              iLowerBc_D(Dim2_) = 0
-                iUpperBc_D = nIJK_D(1:nDim); iUpperBc_D(Dim2_) = 0
-                jLowerBc_D = 1;              jLowerBc_D(Dim2_) = nJ
-                jUpperBc_D = nIJK_D(1:nDim)  
-
-                if(DoTestMe)then
-                   write(*,*)'-J iPart, jPart =', iPart, jPart
-                   write(*,*)'-J iLower,iUpper=',iLowerBc_D, iUpperBc_D
-                   write(*,*)'-J jLower,jUpper=',jLowerBc_D, jUpperBc_D
-                end if
-
-                call HYPRE_SStructGridSetNeighborPart( i8Grid, &
-                     iPart, iLowerBc_D, iUpperBc_D, &
-                     jPart, jLowerBc_D, jUpperBc_D, &
-                     iIndexMap_D, iIndexDir_D, iError)
-             end if
-
-             ! +J neighbor
-             if(DiLevelNei_IIIB(0,+1,0,iBlock) == 0)then
-                jPart = iPart_A(iNodeNei_IIIB(1,3,1,iBlock))
-
-                iLowerBc_D = 1;              iLowerBc_D(Dim2_) = nJ+1
-                iUpperBc_D = nIJK_D(1:nDim); iUpperBc_D(Dim2_) = nJ+1
-                jLowerBc_D = 1;              jLowerBc_D(Dim2_) = 1
-                jUpperBc_D = nIJK_D(1:nDim); jUpperBc_D(Dim2_) = 1
-
-                if(DoTestMe)then
-                   write(*,*)'+J iPart, jPart =', iPart, jPart
-                   write(*,*)'+J iLower,iUpper=',iLowerBc_D, iUpperBc_D
-                   write(*,*)'+J jLower,jUpper=',jLowerBc_D, jUpperBc_D
-                end if
-
-                call HYPRE_SStructGridSetNeighborPart( i8Grid, &
-                     iPart, iLowerBc_D, iUpperBc_D, &
-                     jPart, jLowerBc_D, jUpperBc_D, &
-                     iIndexMap_D, iIndexDir_D, iError)
-             end if
-
-          end if
-
-          if(nK > 1)then
-             ! -K neighbor
-             if(DiLevelNei_IIIB(0,0,-1,iBlock) == 0)then
-                jPart = iPart_A(iNodeNei_IIIB(1,1,0,iBlock))
-
-                iLowerBc_D = 1;              iLowerBc_D(Dim3_) = 0
-                iUpperBc_D = nIJK_D(1:nDim); iUpperBc_D(Dim3_) = 0
-                jLowerBc_D = 1;              jLowerBc_D(Dim3_) = nK
-                jUpperBc_D = nIJK_D(1:nDim)
-
-                if(DoTestMe)then
-                   write(*,*)'-K iPart, jPart =', iPart, jPart
-                   write(*,*)'-K iLower,iUpper=',iLowerBc_D, iUpperBc_D
-                   write(*,*)'-K jLower,jUpper=',jLowerBc_D, jUpperBc_D
-                end if
-
-                call HYPRE_SStructGridSetNeighborPart( i8Grid, &
-                     iPart, iLowerBc_D, iUpperBc_D, &
-                     jPart, jLowerBc_D, jUpperBc_D, &
-                     iIndexMap_D, iIndexDir_D, iError)
-             end if
-
-             ! +K neighbor
-             if(DiLevelNei_IIIB(0,0,+1,iBlock) == 0)then
-                jPart = iPart_A(iNodeNei_IIIB(1,1,3,iBlock))
-
-                iLowerBc_D = 1;              iLowerBc_D(Dim3_) = nK+1
-                iUpperBc_D = nIJK_D(1:nDim); iUpperBc_D(Dim3_) = nK+1
-                jLowerBc_D = 1;              jLowerBc_D(Dim3_) = 1
-                jUpperBc_D = nIJK_D(1:nDim); jUpperBc_D(Dim3_) = 1
-
-                if(DoTestMe)then
-                   write(*,*)'+K iPart, jPart =', iPart, jPart
-                   write(*,*)'+K iLower,iUpper=',iLowerBc_D, iUpperBc_D
-                   write(*,*)'+K jLower,jUpper=',jLowerBc_D, jUpperBc_D
-                end if
-
-                call HYPRE_SStructGridSetNeighborPart( i8Grid, &
-                     iPart, iLowerBc_D, iUpperBc_D, &
-                     jPart, jLowerBc_D, jUpperBc_D, &
-                     iIndexMap_D, iIndexDir_D, iError)
-             end if
-
-          end if
+          call HYPRE_SStructGridSetNeighborPart( i8Grid, &
+               iPart, iLowerBc_D, iUpperBc_D, &
+               iPart, jLowerBc_D, jUpperBc_D, &
+               iIndexMap_D, iIndexDir_D, iError)
 
        end do
-    else
-       ! Only periodic boundary conditions require neighbor info
-       do iDim = 1, nDim
-          if(.not.IsPeriodic_D(iDim)) CYCLE
+    end do
 
-          do iLevel = 0, nLevel
-             iPart = iLevel
-             iLower_D = 1
-             iUpper_D = MaxCoord_I(iLevel)*nRoot_D(1:nDim)*nIjk_D(1:nDim)
-
-             ! initialize boundary ranges
-             iLowerBc_D = iLower_D
-             iUpperBc_D = iUpper_D
-             jLowerBc_D = iLower_D
-             jUpperBc_D = iUpper_D
-
-             ! lower ghost cell connected to last cell
-             iLowerBc_D(iDim) = 0
-             iUpperBc_D(iDim) = 0
-             jLowerBc_D(iDim) = iUpper_D(iDim)
-             jUpperBc_D(iDim) = iUpper_D(iDim)
-
-             call HYPRE_SStructGridSetNeighborPart( i8Grid, &
-                  iPart, iLowerBc_D, iUpperBc_D, &
-                  iPart, jLowerBc_D, jUpperBc_D, &
-                  iIndexMap_D, iIndexDir_D, iError)
-          
-             ! upper ghost cell connected to first cell
-             iLowerBc_D(iDim) = iUpper_D(iDim) + 1
-             iUpperBc_D(iDim) = iUpper_D(iDim) + 1
-             jLowerBc_D(iDim) = 1
-             jUpperBc_D(iDim) = 1
-
-             call HYPRE_SStructGridSetNeighborPart( i8Grid, &
-                  iPart, iLowerBc_D, iUpperBc_D, &
-                  iPart, jLowerBc_D, jUpperBc_D, &
-                  iIndexMap_D, iIndexDir_D, iError)
-
-          end do
-       end do
-
-    end if
     if(DoTestMe)write(*,*)'HYPRE_SStructGridSetNeighborPart done'
 
     ! Assemble grid from all processors
@@ -402,66 +218,64 @@ contains
 
     ! Add non-stencil entries to the graph at resolution changes
 
-    if(.not. UseBlockPart)then
-       do iImplBlock = 1, nImplBlock
-          iBlock = impl2iBlk(iImplBlock)
-          iNode  = iNode_B(iBlock)
-          iPart  = iTree_IA(Level_,iNode)
+    do iImplBlock = 1, nImplBlock
+       iBlock = impl2iBlk(iImplBlock)
+       iNode  = iNode_B(iBlock)
+       iPart  = iTree_IA(Level_,iNode)
 
-          ! -I neighbor
-          DiLevel = DiLevelNei_IIIB(-1,0,0,iBlock)
-          if(abs(DiLevel) == 1)then
-             ! Neighbor node index and level
-             jNode = iNodeNei_IIIB(0,1,1,iBlock)
+       ! -I neighbor
+       DiLevel = DiLevelNei_IIIB(-1,0,0,iBlock)
+       if(abs(DiLevel) == 1)then
+          ! Neighbor node index and level
+          jNode = iNodeNei_IIIB(0,1,1,iBlock)
 
-             if(iProc == iTree_IA(Proc_,iNode) &
-                  .or. iProc == iTree_IA(Proc_,jNode))then
+          if(iProc == iTree_IA(Proc_,iNode) &
+               .or. iProc == iTree_IA(Proc_,jNode))then
 
-                jPart = iTree_IA(Level_,jNode)
+             jPart = iTree_IA(Level_,jNode)
 
-                iCoord_D = (iTree_IA(Coord1_:Coord0_+nDim,iNode) - 1) &
-                     *nIjk_D(1:nDim)+1
-                jCoord_D = iTree_IA(Coord1_:Coord0_+nDim,jNode)*nIjk_D(1:nDim)
+             iCoord_D = (iTree_IA(Coord1_:Coord0_+nDim,iNode) - 1) &
+                  *nIjk_D(1:nDim)+1
+             jCoord_D = iTree_IA(Coord1_:Coord0_+nDim,jNode)*nIjk_D(1:nDim)
 
-                if(DoTestMe)then
-                   write(*,*)'-I iPart, jPart =', iPart, jPart
-                   write(*,*)'-I iNode, jNode =', iNode, jNode
-                   write(*,*)'-I iCoord,jCoord=', iCoord_D, jCoord_D
-                end if
-
-                call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
-                     iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
+             if(DoTestMe)then
+                write(*,*)'-I iPart, jPart =', iPart, jPart
+                write(*,*)'-I iNode, jNode =', iNode, jNode
+                write(*,*)'-I iCoord,jCoord=', iCoord_D, jCoord_D
              end if
+
+             call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
+                  iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
           end if
+       end if
 
-          ! +I neighbor
-          DiLevel = DiLevelNei_IIIB(+1,0,0,iBlock)
-          if(abs(DiLevel) == 1)then
-             ! Neighbor node index and level
-             jNode = iNodeNei_IIIB(3,1,1,iBlock)
+       ! +I neighbor
+       DiLevel = DiLevelNei_IIIB(+1,0,0,iBlock)
+       if(abs(DiLevel) == 1)then
+          ! Neighbor node index and level
+          jNode = iNodeNei_IIIB(3,1,1,iBlock)
 
-             if(iProc == iTree_IA(Proc_,iNode) &
-                  .or. iProc == iTree_IA(Proc_,jNode))then
+          if(iProc == iTree_IA(Proc_,iNode) &
+               .or. iProc == iTree_IA(Proc_,jNode))then
 
-                jPart = iTree_IA(Level_,jNode)
+             jPart = iTree_IA(Level_,jNode)
 
-                iCoord_D = iTree_IA(Coord1_:Coord0_+nDim,iNode)*nIjk_D(1:nDim)
-                jCoord_D = (iTree_IA(Coord1_:Coord0_+nDim,jNode)-1) &
-                     *nIjk_D(1:nDim)+1
-          
-                if(DoTestMe)then
-                   write(*,*)'+I iPart, jPart =', iPart, jPart
-                   write(*,*)'+I iNode, jNode =', iNode, jNode
-                   write(*,*)'+I iCoord,jCoord=', iCoord_D, jCoord_D
-                end if
-          
-                call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
-                     iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
+             iCoord_D = iTree_IA(Coord1_:Coord0_+nDim,iNode)*nIjk_D(1:nDim)
+             jCoord_D = (iTree_IA(Coord1_:Coord0_+nDim,jNode)-1) &
+                  *nIjk_D(1:nDim)+1
+
+             if(DoTestMe)then
+                write(*,*)'+I iPart, jPart =', iPart, jPart
+                write(*,*)'+I iNode, jNode =', iNode, jNode
+                write(*,*)'+I iCoord,jCoord=', iCoord_D, jCoord_D
              end if
-          end if
 
-       end do
-    end if
+             call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
+                  iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
+          end if
+       end if
+
+    end do
 
     ! Assemble the graph
     call HYPRE_SStructGraphAssemble(i8Graph, iError)
@@ -509,19 +323,6 @@ contains
     call HYPRE_BoomerAMGSetInterpType(   i8Precond, iInterpolateAmg, iError)
     call HYPRE_BoomerAMGSetStrongThrshld(i8Precond, StrongThresholdAmg, iError)
     call HYPRE_BoomerAMGSetTruncFactor(  i8Precond, TruncFactorAmg, iError)
-
-    if(DoTestMe)write(*,*) NameSub,' HYPRE_BoomerAMGSetTruncFactor done'
-
-!    ! Print AMG solution info
-!    iPrintLevel = 0
-!    if(DoTest)iPrintLevel =2
-!    call HYPRE_BoomerAMGSetPrintLevel(i8Precond, iPrintLevel, iError)
-!    call HYPRE_BoomerAMGSetCoarsenType(i8Precond, 6, iError)
-!    call HYPRE_BoomerAMGSetRelaxType(i8Precond, 6, iError)
-!    call HYPRE_BoomerAMGSetNumSweeps(i8Precond, 1, iError)
-!    call HYPRE_BoomerAMGSetPMaxElmts(i8Precond, 2*nDim, iError) !!!
-!    call HYPRE_BoomerAMGSetInterpType(i8Precond, 6, iError) !!!
-
 
     if(DoTestMe)write(*,*) NameSub,' finished'
 
@@ -589,54 +390,47 @@ contains
     iValue = 0
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iStencil = 1, nStencil
        iValue = iValue + 1
-       
+
        Value_I(iValue) = Jacobian_CI(i,j,k,iStencil)
 
     end do; end do; end do; end do
 
-    if(UseBlockPart)then
-       iPart = iPart_I(iImplBlock)
-       call HYPRE_SStructMatrixSetBoxValues(i8A, iPart, iLower_D, iUpper_D, &
-            iVar, nStencil, iStencil_I, Value_I, iError)
-    else
-       iNode    = iNode_B(iBlock)
-       iPart    = iTree_IA(Level_,iNode)
-       iLower_D = 1 + (iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
-       iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
+    iNode    = iNode_B(iBlock)
+    iPart    = iTree_IA(Level_,iNode)
+    iLower_D = 1 + (iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
+    iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
 
-       ! write(*,*)'!!! iPart, iProc, iBlock, iNode, iLower_D, iUpper_D=',&
-       !     iPart, iProc, iBlock, iNode, iLower_D, iUpper_D, &
-       !     maxval(Value_I), minval(Value_I)
+    ! write(*,*)'!!! iPart, iProc, iBlock, iNode, iLower_D, iUpper_D=',&
+    !     iPart, iProc, iBlock, iNode, iLower_D, iUpper_D, &
+    !     maxval(Value_I), minval(Value_I)
 
-       call HYPRE_SStructMatrixSetBoxValues(i8A, iPart, iLower_D, iUpper_D, &
-            iVar, nStencil, iStencil_I, Value_I, iError)
+    call HYPRE_SStructMatrixSetBoxValues(i8A, iPart, iLower_D, iUpper_D, &
+         iVar, nStencil, iStencil_I, Value_I, iError)
 
-       ! check -I neighbor for resolution change
-       DiLevel = DiLevelNei_IIIB(-1,0,0,iBlock)
-       if( abs(DiLevel) == 1)then
+    ! check -I neighbor for resolution change
+    DiLevel = DiLevelNei_IIIB(-1,0,0,iBlock)
+    if( abs(DiLevel) == 1)then
 
-          Jac = Jacobian_CI(1,1,1,2)
+       Jac = Jacobian_CI(1,1,1,2)
 
-          call HYPRE_SStructMatrixSetValues(i8A, iPart, &
-                  iLower_D, iVar, 1, (/nStencil/), (/Jac/), iError)
+       call HYPRE_SStructMatrixSetValues(i8A, iPart, &
+            iLower_D, iVar, 1, (/nStencil/), (/Jac/), iError)
 
-          if(DoDebug)write(*,*)'-I iProc, iPart, DiLevel, iCoord_D, Jac =', &
-               iProc, iPart, DiLevel, iLower_D, Jac
-       end if
+       if(DoDebug)write(*,*)'-I iProc, iPart, DiLevel, iCoord_D, Jac =', &
+            iProc, iPart, DiLevel, iLower_D, Jac
+    end if
 
-       ! check +I neighbor for resolution change
-       DiLevel = DiLevelNei_IIIB(+1,0,0,iBlock)
-       if(abs(DiLevel) == 1)then
+    ! check +I neighbor for resolution change
+    DiLevel = DiLevelNei_IIIB(+1,0,0,iBlock)
+    if(abs(DiLevel) == 1)then
 
-          Jac = Jacobian_CI(nI,1,1,3)
+       Jac = Jacobian_CI(nI,1,1,3)
 
-          call HYPRE_SStructMatrixSetValues(i8A, iPart, &
-                  iUpper_D, iVar, 1, (/nStencil/), (/Jac/), iError)
+       call HYPRE_SStructMatrixSetValues(i8A, iPart, &
+            iUpper_D, iVar, 1, (/nStencil/), (/Jac/), iError)
 
-          if(DoDebug)write(*,*)'+I iProc, iPart, DiLevel, iCoord_D, Jac =', &
-               iProc, iPart, DiLevel, iUpper_D, Jac
-       end if
-
+       if(DoDebug)write(*,*)'+I iProc, iPart, DiLevel, iCoord_D, Jac =', &
+            iProc, iPart, DiLevel, iUpper_D, Jac
     end if
 
   end subroutine hypre_set_matrix_block
@@ -711,15 +505,11 @@ contains
     ! Set y_I as the RHS
     i = 1
     do iImplBlock = 1, nImplBlock
-       if(UseBlockPart)then
-          iPart = iPart_I(iImplBlock)
-       else
-          iBlock   = impl2iblk(iImplBlock)
-          iNode    = iNode_B(iBlock)
-          iPart    = iTree_IA(Level_,iNode)
-          iLower_D = 1 + (iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
-          iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
-       end if
+       iBlock   = impl2iblk(iImplBlock)
+       iNode    = iNode_B(iBlock)
+       iPart    = iTree_IA(Level_,iNode)
+       iLower_D = 1 + (iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
+       iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
 
        call HYPRE_SStructVectorSetBoxValues(i8B, iPart, iLower_D, iUpper_D, &
             iVar, y_I(i), iError)
@@ -754,15 +544,11 @@ contains
 
     i = 1
     do iImplBlock = 1, nImplBlock
-       if(UseBlockPart)then
-          iPart = iPart_I(iImplBlock)
-       else
-          iBlock   = impl2iblk(iImplBlock)
-          iNode    = iNode_B(iImplBlock)
-          iPart    = iTree_IA(Level_,iNode)
-          iLower_D = 1 + (iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
-          iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
-       end if
+       iBlock   = impl2iblk(iImplBlock)
+       iNode    = iNode_B(iImplBlock)
+       iPart    = iTree_IA(Level_,iNode)
+       iLower_D = 1 + (iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
+       iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
 
        call HYPRE_SStructVectorGetBoxValues(i8X, iPart, &
             iLower_D, iUpper_D, iVar, y_I(i), iError)
