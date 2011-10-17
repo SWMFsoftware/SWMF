@@ -38,7 +38,7 @@ contains
        ! grid/tree is not changed from the view of BATL
        IsNewDecomposition = .false.
        IsNewTree          = .false.
-
+    
        nBlockAll  = nNodeUsed
        nBlockBats = nBlock
        call MPI_ALLREDUCE(nBlock, nBlockMax, 1, MPI_INTEGER, MPI_MAX, &
@@ -65,8 +65,8 @@ contains
           call set_batsrus_block(iBlock)
        end do
 
-       DxMin = minval(dx_BLK, MASK=(.not.Unused_B))
-       DxMax = maxval(dx_BLK, MASK=(.not.Unused_B))
+       DxMin = minval(dx_BLK(1:nBlock), MASK=(.not.Unused_B(1:nBlock)))
+       DxMax = maxval(dx_BLK(1:nBlock), MASK=(.not.Unused_B(1:nBlock)))
        call MPI_allreduce(DxMin, minDXvalue,1,MPI_REAL,MPI_MIN,iComm,iError)
        call MPI_allreduce(DxMax, maxDXvalue,1,MPI_REAL,MPI_MAX,iComm,iError)
 
