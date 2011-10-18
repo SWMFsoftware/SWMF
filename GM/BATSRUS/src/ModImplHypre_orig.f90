@@ -1,11 +1,11 @@
 module ModImplHypre
 
   use ModKind,   ONLY: Int8_
-  use BATL_size, ONLY: nDim, nI, nJ, nK, nIJK, nIJK_D
+  use BATL_size, ONLY: nDim, nI, nJ, nK, nIJK, nIJK_D, iRatio, jRatio, kRatio
   use BATL_lib,  ONLY: iProc, nNode, nNodeUsed, iNode_B, iMortonNode_A, &
        iNodeNei_IIIB, DiLevelNei_IIIB, Unset_, iComm, &
        nRoot_D, MaxCoord_I, IsPeriodic_D, iTree_IA, &
-       Proc_, Coord0_, Coord1_, Level_
+       Proc_, Coord0_, Coord1_, Coord2_, Coord3_, Level_
   use ModImplicit, ONLY: impl2iBlk, MAT, nImplBlock => nImplBlk, &
        nStencil, Stencil1_, Stencil2_, Stencil3_, Stencil4_, Stencil5_, &
        Stencil6_, Stencil7_
@@ -26,6 +26,9 @@ module ModImplHypre
   logical, public:: DoInitHypreAmg = .true. ! set to false to reinitialize AMG
 
   ! local variables
+
+  integer, parameter:: CoordLast_ = Coord0_+nDim
+  integer, parameter:: nCell_D(nDim) = nIjk_D(1:nDim)
 
   ! This is defined in HYPREf.h (Fortran header file)                         
   integer, parameter:: HYPRE_PARCSR = 5555
@@ -91,9 +94,13 @@ contains
   subroutine hypre_initialize
 
     integer:: nLevel = 30
-    integer:: iLevel, DiLevel, iNode, jNode, iCoord_D(nDim), jCoord_D(nDim)
+    integer:: iLevel, DiLevel, iNode, jNode
+    integer:: iCoord_D(nDim), jCoord_D(nDim), iCoord0_D(nDim), jCoord0_D(nDim)
 
     integer:: iImplBlock, iBlock, iError, iPart, jPart, iPrintLevel
+
+    integer:: iReduce, jReduce, iSide, jSide, kSide, i, j, k
+    integer:: iSideMe, jSideMe, kSideMe, iSideMax, jSideMax, kSideMax
 
     logical:: DoTest, DoTestMe
 
@@ -123,8 +130,8 @@ contains
        iBlock   = impl2iBlk(iImplBlock)
        iNode    = iNode_B(iBlock)
        iPart    = iTree_IA(Level_,iNode)
-       iLower_D = 1 + (iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
-       iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
+       iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
+       iUpper_D = iLower_D - 1 + nCell_D
 
        if(DoTestMe)write(*,*)'iPart, iNode, iLower_D, iUpper_D=',&
             iPart, iNode, iLower_D, iUpper_D
@@ -150,7 +157,7 @@ contains
        do iLevel = 0, nLevel
           iPart = iLevel
           iLower_D = 1
-          iUpper_D = MaxCoord_I(iLevel)*nRoot_D(1:nDim)*nIjk_D(1:nDim)
+          iUpper_D = MaxCoord_I(iLevel)*nRoot_D(1:nDim)*nCell_D
 
           ! initialize boundary ranges
           iLowerBc_D = iLower_D
@@ -223,56 +230,65 @@ contains
        iNode  = iNode_B(iBlock)
        iPart  = iTree_IA(Level_,iNode)
 
+       ! Which side of the parent block
+       iSideMe = modulo(iTree_IA(Coord1_,iNode)-1,2) + 1
+       jSideMe = modulo(iTree_IA(Coord2_,iNode)-1,2) + 1
+       kSideMe = modulo(iTree_IA(Coord3_,iNode)-1,2) + 1
+
        ! -I neighbor
        DiLevel = DiLevelNei_IIIB(-1,0,0,iBlock)
        if(abs(DiLevel) == 1)then
-          ! Neighbor node index and level
-          jNode = iNodeNei_IIIB(0,1,1,iBlock)
+          call set_jpart_iratio_jratio
 
-          if(iProc == iTree_IA(Proc_,iNode) &
-               .or. iProc == iTree_IA(Proc_,jNode))then
+          ! Loop through neighboring node(s)
+          do kSide = 1, kSideMax; do jSide = 1, jSideMax
+             jNode = iNodeNei_IIIB(0,jSide,kSide,iBlock)
 
-             jPart = iTree_IA(Level_,jNode)
+             if(iProc /= iTree_IA(Proc_,iNode) &
+                  .and. iProc /= iTree_IA(Proc_,jNode)) CYCLE
 
-             iCoord_D = (iTree_IA(Coord1_:Coord0_+nDim,iNode) - 1) &
-                  *nIjk_D(1:nDim)+1
-             jCoord_D = iTree_IA(Coord1_:Coord0_+nDim,jNode)*nIjk_D(1:nDim)
+             ! Global cell index of the first cell of iNode
+             iCoord0_D = (iTree_IA(Coord1_:CoordLast_,iNode) - 1)*nCell_D + 1
 
-             if(DoTestMe)then
-                write(*,*)'-I iPart, jPart =', iPart, jPart
-                write(*,*)'-I iNode, jNode =', iNode, jNode
-                write(*,*)'-I iCoord,jCoord=', iCoord_D, jCoord_D
-             end if
+             ! Global cell index of the last cell of jNode
+             jCoord0_D = iTree_IA(Coord1_:CoordLast_,jNode)*nCell_D
 
-             call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
-                  iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
-          end if
+             ! Shift back to the lower corner in the J and K dimensions
+             if(nJ > 1) jCoord0_D(Dim2_) = jCoord0_D(Dim2_) - nJ + 1
+             if(nK > 1) jCoord0_D(Dim3_) = jCoord0_D(Dim3_) - nK + 1
+             
+             if(DoTestMe)write(*,*)'Connect -I direction'
+             call connect_i_direction
+
+          end do; end do
        end if
 
        ! +I neighbor
        DiLevel = DiLevelNei_IIIB(+1,0,0,iBlock)
        if(abs(DiLevel) == 1)then
-          ! Neighbor node index and level
-          jNode = iNodeNei_IIIB(3,1,1,iBlock)
+          call set_jpart_iratio_jratio
 
-          if(iProc == iTree_IA(Proc_,iNode) &
-               .or. iProc == iTree_IA(Proc_,jNode))then
+          ! Loop through neighboring node(s)
+          do kSide = 1, kSideMax; do jSide = 1, jSideMax
+             jNode = iNodeNei_IIIB(3,jSide,kSide,iBlock)
 
-             jPart = iTree_IA(Level_,jNode)
+             if(iProc /= iTree_IA(Proc_,iNode) &
+                  .and. iProc /= iTree_IA(Proc_,jNode)) CYCLE
 
-             iCoord_D = iTree_IA(Coord1_:Coord0_+nDim,iNode)*nIjk_D(1:nDim)
-             jCoord_D = (iTree_IA(Coord1_:Coord0_+nDim,jNode)-1) &
-                  *nIjk_D(1:nDim)+1
+             ! Global cell index of the last cell of iNode
+             iCoord0_D = iTree_IA(Coord1_:CoordLast_,iNode)*nCell_D
 
-             if(DoTestMe)then
-                write(*,*)'+I iPart, jPart =', iPart, jPart
-                write(*,*)'+I iNode, jNode =', iNode, jNode
-                write(*,*)'+I iCoord,jCoord=', iCoord_D, jCoord_D
-             end if
+             ! Global cell index of the first cell of jNode
+             jCoord0_D = (iTree_IA(Coord1_:CoordLast_,jNode) - 1)*nCell_D + 1
 
-             call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
-                  iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
-          end if
+             ! Shift back to the lower corner in the J and K dimensions
+             if(nJ > 1) iCoord0_D(Dim2_) = iCoord0_D(Dim2_) - nJ + 1
+             if(nK > 1) iCoord0_D(Dim3_) = iCoord0_D(Dim3_) - nK + 1
+
+             if(DoTestMe)write(*,*)'Connect +I direction'
+             call connect_i_direction
+
+          end do; end do
        end if
 
     end do
@@ -326,6 +342,72 @@ contains
 
     if(DoTestMe)write(*,*) NameSub,' finished'
 
+    contains
+      !========================================================================
+      subroutine set_jpart_iratio_jratio
+
+        if(DiLevel == 1)then
+           ! jNode is coarser than iNode
+           jPart  = iPart - 1
+           iReduce = 1
+           jReduce = 2
+           ! There are no subfaces
+           iSideMax = 1
+           jSideMax = 1
+           kSideMax = 1
+        else
+           ! jNode is finer than iNode
+           jPart  = iPart + 1
+           iReduce = 2
+           jReduce = 1
+           ! Set up ranges for the subfaces
+           iSideMax = iRatio
+           jSideMax = jRatio
+           kSideMax = kRatio
+        end if
+
+      end subroutine set_jpart_iratio_jratio
+      !========================================================================
+      subroutine connect_i_direction
+        
+        ! Shift to appropriate side
+        if(iReduce == 2)then
+           if(nJ>1) iCoord0_D(Dim2_) = iCoord0_D(Dim2_) + (jSide-1)*nJ/2
+           if(nK>1) iCoord0_D(Dim3_) = iCoord0_D(Dim3_) + (kSide-1)*nK/2
+        else
+           if(nJ>1) jCoord0_D(Dim2_) = jCoord0_D(Dim2_) + (jSideMe-1)*nJ/2
+           if(nK>1) jCoord0_D(Dim3_) = jCoord0_D(Dim3_) + (kSideMe-1)*nK/2
+        end if
+
+        if(DoTestMe)then
+           write(*,*)'iPart, jPart   =', iPart, jPart
+           write(*,*)'iNode, jNode   =', iNode, jNode
+           write(*,*)'iCoord0,jCoord0=', iCoord0_D, jCoord0_D
+        end if
+
+        iCoord_D = iCoord0_D
+        jCoord_D = jCoord0_D
+        do k = 1, nK
+           if(nK > 1) then
+              iCoord_D(Dim3_) = iCoord0_D(Dim3_) + (k - 1)/iReduce
+              jCoord_D(Dim3_) = jCoord0_D(Dim3_) + (k - 1)/jReduce
+           end if
+           do j = 1,nJ
+              if(nJ > 1) then
+                 iCoord_D(Dim2_) = iCoord0_D(Dim2_) + (j - 1)/iReduce
+                 jCoord_D(Dim2_) = jCoord0_D(Dim2_) + (j - 1)/jReduce
+              end if
+
+              if(DoTestMe)write(*,*)'iCoord,jCoord=',iCoord_D, jCoord_D
+              
+              call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
+                   iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
+
+           end do
+        end do
+
+      end subroutine connect_i_direction
+
   end subroutine hypre_initialize
 
   !===========================================================================
@@ -339,11 +421,17 @@ contains
     integer, intent(in):: iImplBlock
     real,    intent(inout):: Jacobian_CI(nI,nJ,nK,nStencil)
 
+    integer, parameter:: nStencilI = jRatio*kRatio
+    integer, parameter:: iStencilI_I(nStencilI) = &
+         (/ (iStencil, iStencil = nStencil, nStencil+nStencilI-1) /)
+    real:: JacI_I(nStencilI)
+
+
     real   :: Jac
     integer:: iValue, i, j, k, iPart, iBlock, iError
     integer:: DiLevel
 
-    integer:: iNode
+    integer:: iNode, iCoord_D(nDim)
 
     logical, parameter :: DoDebug = .false.
 
@@ -397,8 +485,8 @@ contains
 
     iNode    = iNode_B(iBlock)
     iPart    = iTree_IA(Level_,iNode)
-    iLower_D = 1 + (iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
-    iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
+    iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
+    iUpper_D = iLower_D - 1 + nCell_D
 
     ! write(*,*)'!!! iPart, iProc, iBlock, iNode, iLower_D, iUpper_D=',&
     !     iPart, iProc, iBlock, iNode, iLower_D, iUpper_D, &
@@ -409,28 +497,87 @@ contains
 
     ! check -I neighbor for resolution change
     DiLevel = DiLevelNei_IIIB(-1,0,0,iBlock)
-    if( abs(DiLevel) == 1)then
+    if( DiLevel == 1)then
 
-       Jac = Jacobian_CI(1,1,1,2)
+       if(DoDebug)write(*,*)'-I iProc, iPart, DiLevel=',iProc, iPart, DiLevel
 
-       call HYPRE_SStructMatrixSetValues(i8A, iPart, &
-            iLower_D, iVar, 1, (/nStencil/), (/Jac/), iError)
+       iCoord_D = iLower_D
+       do k = 1, nK
+          if(nK > 1)iCoord_D(Dim3_) = iLower_D(Dim3_) + k - 1
+          do j = 1, nJ
+             if(nJ > 1)iCoord_D(Dim2_) = iLower_D(Dim2_) + j - 1
+             Jac = Jacobian_CI(1,j,k,2)
 
-       if(DoDebug)write(*,*)'-I iProc, iPart, DiLevel, iCoord_D, Jac =', &
-            iProc, iPart, DiLevel, iLower_D, Jac
+             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
+                  iVar, 1, (/nStencil/), (/Jac/), iError)
+
+             if(DoDebug)write(*,*)'-I iCoord, Jac =', iCoord_D, Jac
+             
+          end do
+       end do
+
+    elseif( DiLevel == -1)then
+
+       if(DoDebug)write(*,*)'-I iProc, iPart, DiLevel=',iProc, iPart, DiLevel
+
+       iCoord_D = iLower_D
+       do k = 1, nK
+          if(nK > 1)iCoord_D(Dim3_) = iLower_D(Dim3_) + k - 1
+          do j = 1, nJ
+             if(nJ > 1)iCoord_D(Dim2_) = iLower_D(Dim2_) + j - 1
+             JacI_I = Jacobian_CI(1,j,k,2)/nStencilI
+
+             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
+                  iVar, nStencilI, (/iStencilI_I/), (/JacI_I/), iError)
+
+             if(DoDebug)write(*,*)'-I iCoord, JacI_I =', iCoord_D, JacI_I
+
+          end do
+       end do
+
     end if
 
     ! check +I neighbor for resolution change
     DiLevel = DiLevelNei_IIIB(+1,0,0,iBlock)
-    if(abs(DiLevel) == 1)then
+    if(DiLevel == 1)then
 
-       Jac = Jacobian_CI(nI,1,1,3)
+       if(DoDebug)write(*,*)'-I iProc, iPart, DiLevel=',iProc, iPart, DiLevel
 
-       call HYPRE_SStructMatrixSetValues(i8A, iPart, &
-            iUpper_D, iVar, 1, (/nStencil/), (/Jac/), iError)
+       iCoord_D = iUpper_D
+       do k = 1, nK
+          if(nK > 1)iCoord_D(Dim3_) = iUpper_D(Dim3_) + k - nK
+          do j = 1, nJ
+             if(nJ > 1)iCoord_D(Dim2_) = iUpper_D(Dim2_) + j - nJ
+                
+             Jac = Jacobian_CI(nI,j,k,3)
 
-       if(DoDebug)write(*,*)'+I iProc, iPart, DiLevel, iCoord_D, Jac =', &
-            iProc, iPart, DiLevel, iUpper_D, Jac
+             call HYPRE_SStructMatrixSetValues(i8A, iPart, &
+                  iCoord_D, iVar, 1, (/nStencil/), (/Jac/), iError)
+
+             if(DoDebug)write(*,*)'+I iCoord, Jac =', iCoord_D, Jac
+
+          end do
+       end do
+
+    elseif(DiLevel == -1)then
+       
+       if(DoDebug)write(*,*)'-I iProc, iPart, DiLevel =',iProc, iPart, DiLevel
+
+       iCoord_D = iUpper_D
+       do k = 1, nK
+          if(nK > 1)iCoord_D(Dim3_) = iUpper_D(Dim3_) + k - nK
+          do j = 1, nJ
+             if(nJ > 1)iCoord_D(Dim2_) = iUpper_D(Dim2_) + j - nJ
+
+             JacI_I = Jacobian_CI(nI,j,k,3)/nStencilI
+             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
+                  iVar, nStencilI, (/iStencilI_I/), (/JacI_I/), iError)
+
+             if(DoDebug)write(*,*)'+I iCoord, JacI_I =', iCoord_D, JacI_I
+
+          end do
+       end do
+
     end if
 
   end subroutine hypre_set_matrix_block
@@ -508,8 +655,8 @@ contains
        iBlock   = impl2iblk(iImplBlock)
        iNode    = iNode_B(iBlock)
        iPart    = iTree_IA(Level_,iNode)
-       iLower_D = 1 + (iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
-       iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
+       iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
+       iUpper_D = iLower_D - 1 + nCell_D
 
        call HYPRE_SStructVectorSetBoxValues(i8B, iPart, iLower_D, iUpper_D, &
             iVar, y_I(i), iError)
@@ -547,8 +694,8 @@ contains
        iBlock   = impl2iblk(iImplBlock)
        iNode    = iNode_B(iImplBlock)
        iPart    = iTree_IA(Level_,iNode)
-       iLower_D = 1 + (iTree_IA(Coord1_:Coord0_+nDim,iNode)-1)*nIjk_D(1:nDim)
-       iUpper_D = iLower_D - 1 + nIjk_D(1:nDim)
+       iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
+       iUpper_D = iLower_D - 1 + nCell_D
 
        call HYPRE_SStructVectorGetBoxValues(i8X, iPart, &
             iLower_D, iUpper_D, iVar, y_I(i), iError)
