@@ -540,21 +540,21 @@ test7_check:
 ### Test8: GM+IE+RCM with multifluid GM-IM coupling ###
 
 test8:  
-	@echo "test8_compile..." > test8_gm.diff
+	@echo "test8_compile..." > test8_gm_multi.diff
 	@echo "test8_compile..." > test8_ie.diff	
-	@echo "test8_compile..." > test8_im_rcm.diff
+	@echo "test8_compile..." > test8_im_rcm_multi.diff
 	make test8_compile
-	@echo "test8_rundir..." >> test8_gm.diff
+	@echo "test8_rundir..." >> test8_gm_multi.diff
 	@echo "test8_rundir..." >> test8_ie.diff
-	@echo "test8_rundir..." >> test8_im_rcm.diff
+	@echo "test8_rundir..." >> test8_im_rcm_multi.diff
 	make test8_rundir
-	@echo "test8_run..." >> test8_gm.diff
+	@echo "test8_run..." >> test8_gm_multi.diff
 	@echo "test8_run..." >> test8_ie.diff
-	@echo "test8_run..." >> test8_im_rcm.diff
+	@echo "test8_run..." >> test8_im_rcm_multi.diff
 	make test8_run
-	@echo "test8_check..." >> test8_gm.diff
+	@echo "test8_check..." >> test8_gm_multi.diff
 	@echo "test8_check..." >> test8_ie.diff
-	@echo "test8_check..." >> test8_im_rcm.diff
+	@echo "test8_check..." >> test8_im_rcm_multi.diff
 	make test8_check
 
 test8_compile:
@@ -577,7 +577,7 @@ test8_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test8/GM_log_n000001.log \
-		> test8_gm.diff)
+		> test8_gm_multi.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
 		output/test8/IE.log \
@@ -589,7 +589,7 @@ test8_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/IM/t10.txt \
 		${TESTDIR}/RESULTS/IM/t10.dat \
-		> test8_im_rcm.diff)
+		> test8_im_rcm_multi.diff)
 	ls -l test8*.diff
 
 
