@@ -15,7 +15,7 @@ program testNLTE
 
   use M_EOS,only : set_kBr
   use CRASH_M_expTab,only: exp_tab8
-  use M_localProperties,only : kBr_E,kBr_P ,zion,atoMass &
+  use CRASH_M_localProperties,only : kBr_E,kBr_P ,zion,atoMass &
   ,ERGperEV,DYNEperEV,avogadro
   use M_RADIOM, only : prep_projE,prepCorrUbar &
   ,printVersion  !xx ,calTz0

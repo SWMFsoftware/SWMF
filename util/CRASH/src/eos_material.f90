@@ -98,7 +98,7 @@ contains
   !------
   subroutine ZTF_EOS_dir(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
 
-    use M_localProperties,only : ro,atoNum,Atomass,kBr_E,kBr_P &
+    use CRASH_M_localProperties,only : ro,atoNum,Atomass,kBr_E,kBr_P &
          ,ERGperEV,DYNEperEV ,Pcold,Efloor,zion
     implicit none
     real,intent(IN) :: te
@@ -120,7 +120,7 @@ contains
   !------
   subroutine ZTF_EOS_inv(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
 
-    use M_localProperties,only : ro,atoNum,Atomass,kBr_E,kBr_P &
+    use CRASH_M_localProperties,only : ro,atoNum,Atomass,kBr_E,kBr_P &
          ,ERGperEV,DYNEperEV ,Pcold,Efloor,zion	! ,zt
     implicit none
     real,intent(IN) :: Etot
@@ -154,7 +154,7 @@ contains
 
   !------
   function ZTF_dif(z_est,t_est)
-    use M_localProperties,only : atoNum,AtoMass,ro,zion
+    use CRASH_M_localProperties,only : atoNum,AtoMass,ro,zion
     implicit none
     real :: z_est,ZTF_dif,z_new,t_est 
 
@@ -416,7 +416,7 @@ end module CRASH_M_ZTF
 !===below are the interface routines 
 !------
 subroutine verify()	! check transmission of Z,A,...
-  use M_localProperties
+  use CRASH_M_localProperties
   implicit none
   write(*,*)'verify: Z,A=',atonum,atomass,' roS=',roSolid
   if(atonum.gt.0  .and. atomass.gt.0) return
@@ -424,7 +424,7 @@ subroutine verify()	! check transmission of Z,A,...
 end subroutine verify
 !------
 subroutine setZTF(symb)
-  use M_localProperties,only : atoNum,Atomass,roSolid &
+  use CRASH_M_localProperties,only : atoNum,Atomass,roSolid &
        ,Efloor,TEfloor,Pcold
   use CRASH_M_ZTF
   implicit none
@@ -450,7 +450,7 @@ end subroutine setZTF
 
 subroutine LTE_EOS_dir(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
   use CRASH_M_ZTF,only : ZTF_EOS_dir,useCALEOS,setCALEOS
-  use M_localProperties,only : atoNum,ro
+  use CRASH_M_localProperties,only : atoNum,ro
   implicit none
   real,intent(IN) :: te
   real,intent(OUT) :: Etot,Ptot,Zbar,Cv
@@ -468,7 +468,7 @@ end subroutine LTE_EOS_dir	! ro : in module M_localProperties
 
 !------
 subroutine LTE_EOS_inv(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
-  use M_localProperties,only : ro
+  use CRASH_M_localProperties,only : ro
   use CRASH_M_ZTF,only : ZTF_EOS_inv,useCALEOS,setCALEOS
   implicit none
   real,intent(IN) :: Etot
@@ -487,7 +487,7 @@ end subroutine LTE_EOS_inv	! ro : in module M_localProperties
 !------
 subroutine getEcold(ro,EEcold,TEcold)
   use CRASH_M_ZTF,only : getEcoldZTF,useCALEOS,setCALEOS
-  use M_localProperties,only : atoNum
+  use CRASH_M_localProperties,only : atoNum
 
   implicit none
   real,intent(IN) :: ro

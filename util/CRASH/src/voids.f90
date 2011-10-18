@@ -2,7 +2,7 @@ module M_EOS
 contains
   !------
   subroutine set_kbR(ro,Natom)
-    use M_localProperties,only : kBr_E,kBr_P ,ERGperEV,DYNEperEV &
+    use CRASH_M_localProperties,only : kBr_E,kBr_P ,ERGperEV,DYNEperEV &
          ,avogadro,EVperK,Atomass,kB_ztf_E,kB_ztf_P	! ,ro,NI
     implicit none
     real,optional,intent(IN) :: ro,Natom

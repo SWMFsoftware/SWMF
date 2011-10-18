@@ -34,7 +34,7 @@ module CRASH_M_NLTE
   !latter.
   use M_RADIOM,only : caltz0,calte0,caltz,calte
   use CRASH_M_projE,only : mxOut
-  use M_localProperties
+  use CRASH_M_localProperties
   implicit none
 
   logical :: useLTE=.false.
@@ -119,7 +119,7 @@ contains
     ! 
     !   CALL SETERAD(Erad,Brad,hnuG,nbG)  has been set before.
     !
-    use M_localProperties,only : ro,Ni
+    use CRASH_M_localProperties,only : ro,Ni
     implicit none
     real,optional,intent(IN) :: Natom,ro_in 	! atomic density in   atom/cm3 
     real,optional,intent(IN) :: Te_in,Ee_in,Et_in,Pe_in,Pt_in 	! one and only one
@@ -329,7 +329,7 @@ contains
   subroutine correctEOS(zbar , Te,Tz &
        ,Ee,Pe,Cv)
     ! Te,Tz, kBro_E,kBro_P,Etot,Ptot : thorugh module variables
-    use M_localProperties,only : Zsmall
+    use CRASH_M_localProperties,only : Zsmall
     implicit none
     real,intent(IN) :: zbar,Te,Tz
     real,intent(INOUT) :: Ee
@@ -359,7 +359,7 @@ contains
     !
     ! at this time, bracket_EE cannot be use w/ EEdiff_ln, as well as internal handling, that as results forwarded to rootEE
     !
-    use M_localProperties,only : &
+    use CRASH_M_localProperties,only : &
          ro	&	  ! bulk density
          ,Ni		  ! atom density ( = avo*ro/atoMass)
     implicit none
@@ -547,7 +547,7 @@ function zbrentEE(diff_func,x1,x2,xmin,tol,smallF,dLo,dHi ,EE_in ,te,tz)
   !- or |value of function| < smallF		! not in the original Numerical Recipes subroutine
 
   !
-  use M_localProperties,only : ro,Ni
+  use CRASH_M_localProperties,only : ro,Ni
   implicit none
   !
   real,intent(IN) :: x1,x2,xmin,tol,smallF,EE_in ,dLo,dHi
@@ -712,7 +712,7 @@ end function zbrentEE
 !----------      ***  eediff.f90 ***
 function rootEE(diff_func,x1,x2,xmin,tol,smallF,dLo,dHi ,EE_in ,te,tz)
   !
-  use M_localProperties,only : Efloor  , ro,Ni
+  use CRASH_M_localProperties,only : Efloor  , ro,Ni
   use CRASH_M_NLTE,only : dbg,useEElog
   implicit none
   !
@@ -803,7 +803,7 @@ function EEdiff(Eeff ,EE_in ,te,Tz_new)
   !  3/2 * kBr_E * (Te-Tz).  kBr_E is the conversion factor from temperature to kinetic energy
   ! It may or may not include the bulk density, depending on the EOS in use.
 
-  use M_localProperties,only : Ni &
+  use CRASH_M_localProperties,only : Ni &
        ,kBr_E,kBr_P &	! conversion factor T -> E [erg/g], or P [dyne], includes "ro"
                                 ! they have to be set for the current ro !
        ,zion	&	! 0 for elec. only,  1 for elec.+ion.
@@ -855,7 +855,7 @@ function EEdiff_ln(lnEeff ,EE_in ,te,Tz_new)
   ! same as EEdiff, but the input arg. lnEeff is log(Eeff)
 
   use CRASH_M_expTab
-  use M_localProperties,only : Ni &
+  use CRASH_M_localProperties,only : Ni &
        ,kBr_E,kBr_P &	! conversion factor T -> E [erg/g], or P [dyne], includes "ro"
                                 ! they have to be set for the current ro !
        ,zion	&	! 0 for elec. only,  1 for elec.+ion.
@@ -873,7 +873,7 @@ function EEdiff_ln(lnEeff ,EE_in ,te,Tz_new)
   real:: Eeff
   real,parameter :: x_3o2=1.5d0
   real :: zbar,te,tz,ne,pe,cv,zp,Tz_new,EE_new
-  real :: y,ey
+  real :: y,ey    !for exp_tabm.h
   !
   y=-lnEeff
   include 'exp_tabm.h'
