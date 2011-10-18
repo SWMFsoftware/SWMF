@@ -6,12 +6,8 @@ T
 #TIMEACCURATE
 F			DoTimeAccurate
 
-#PROGRESS
-1			DnShowProgressShort
-100			DnShowProgressLong
-
 #DESCRIPTION
-Test for GM-IM-IE.
+Test for GM-IM-IE. MultifluidImcoupling
 
 #PLANET
 EARTH			NamePlanet
@@ -95,9 +91,6 @@ T                       body1
 2.8
 25000.0
 
-#TVDRESCHANGE
-T
-
 #TIMESTEPPING
 1			nStage
 0.80			CflExlp
@@ -113,6 +106,9 @@ float			TypeBC_I(top_)
 #INNERBOUNDARY
 ionosphere
 
+#MULTIFLUIDIM
+T
+
 #SCHEME
 1			nOrder
 Rusanov			TypeFlux
@@ -122,17 +118,6 @@ T
 RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-
-SATELLITE
-2
-MHD file RAY		StringSatellite
--1	              	DnOutput
-1.    			DtOutput
-midn_05.dat		NameTrajectoryFile
-MHD file RAY		StringSatellite
--1	              	DnOutput
-1.    			DtOutput
-noon_05.dat		NameTrajectoryFile
 
 #UPSTREAM_INPUT_FILE
 T                                                     UseUpstreamInputFile
@@ -212,11 +197,9 @@ F			DoCoupleOnTime
 20.0                    TauImP
 F			DoImSatTrace 
 
-#MULTIFLUIDIM
-T
 
 #SAVEPLOT
-4			nPlotFile
+3			nPlotFile
 idl x=0 FUL			StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
@@ -229,10 +212,6 @@ idl z=0 FUL			StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 -1.0			DxSavePlot
-tec sph MHD			stringPlot
--1			DnSaveplot
-10.0			DtSaveplot
-3.5			Radius
 
 #END_COMP GM   ----------------------------------------
 

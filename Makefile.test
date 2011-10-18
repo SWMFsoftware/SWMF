@@ -26,6 +26,7 @@ test_help:
 	@echo "    test4                      (run GM-IE-HEIDI test only)"
 	@echo "    test6                      (run GM-IE-CRCM test only)"
 	@echo "    test7                      (run IH-OH test only)"
+	@echo "    test8		      (run multifluid GM-IM coupling test only)"
 test:
 	@rm -f *.diff
 	-@(make test_share_library)
@@ -40,6 +41,7 @@ test:
 	-@(make test4)
 	-@(make test6)
 	-@(make test7)
+	-@(make test8)
 	-@(make test_check)
 
 test_check:
@@ -533,6 +535,63 @@ test7_check:
 		output/test7/OH_log_n000000.log \
 		> test7_oh.diff)
 	ls -l test7*.diff
+
+
+### Test8: GM+IE+RCM with multifluid GM-IM coupling ###
+
+test8:  
+	@echo "test8_compile..." > test8_gm.diff
+	@echo "test8_compile..." > test8_ie.diff	
+	@echo "test8_compile..." > test8_im_rcm.diff
+	make test8_compile
+	@echo "test8_rundir..." >> test8_gm.diff
+	@echo "test8_rundir..." >> test8_ie.diff
+	@echo "test8_rundir..." >> test8_im_rcm.diff
+	make test8_rundir
+	@echo "test8_run..." >> test8_gm.diff
+	@echo "test8_run..." >> test8_ie.diff
+	@echo "test8_run..." >> test8_im_rcm.diff
+	make test8_run
+	@echo "test8_check..." >> test8_gm.diff
+	@echo "test8_check..." >> test8_ie.diff
+	@echo "test8_check..." >> test8_im_rcm.diff
+	make test8_check
+
+test8_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
+	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=MhdIons
+	make SWMF PIDL
+
+test8_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.GMIERCM_Multi ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
+
+test8_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}/IM/plots/; cp 2d__max_t00000010.dat t10.txt
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
+
+test8_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
+		output/test8/GM_log_n000001.log \
+		> test8_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
+		output/test8/IE.log \
+		> test8_ie.diff) 
+	gunzip -c output/test8/IM_2d__max_t00000010.dat.gz \
+		> ${TESTDIR}/RESULTS/IM/t10.dat
+	cd ${TESTDIR}/RESULTS/IM;\
+		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t10.dat t10.txt
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
+		${TESTDIR}/RESULTS/IM/t10.txt \
+		${TESTDIR}/RESULTS/IM/t10.dat \
+		> test8_im_rcm.diff)
+	ls -l test8*.diff
+
 
 ### test_lc: Lower Corona test ###
 
