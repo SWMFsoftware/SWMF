@@ -567,8 +567,61 @@ contains
   !===========================================================================
 
   subroutine calc_energy_ghost(iBlock)
+    use ModVarIndexes, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, Bx_,By_, Bz_
+    
     integer, intent(in) :: iBlock
-    call calc_energy(-1,nI+2,-1,nJ+2,-1,nK+2,iBlock,1,nFluid)
+    integer i,j,k
+    !--------------------------------------------------------------------------
+
+    call limit_pressure(-1,nI+2,-1,nJ+2,-1,nK+2,iBlock,1,nFluid)
+
+    do iFluid = 1,nFluid
+
+       if(IsMhd .and. iFluid == 1) then
+          ! MHD energy
+          where(State_VGB(iRho_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock) <= 0.0)
+             Energy_GBI(-1:nI+2, -1:nJ+2, -1:nK+2, iBlock, iFluid) = 0.0
+          elsewhere
+             Energy_GBI(-1:nI+2, -1:nJ+2, -1:nK+2, iBlock, iFluid) = &                  
+                  inv_gm1*State_VGB(iP_I(iFluid),-1:nI+2,-1:nJ+2,-1:nK+2,iBlock) &                
+                  +0.5*((State_VGB(iRhoUx_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 + &    
+                  State_VGB(iRhoUy_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 + &           
+                  State_VGB(iRhoUz_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2)/&            
+                  State_VGB(iRho_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)) + &               
+                  0.5*(State_VGB(Bx_,-1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 +&           
+                  State_VGB(By_,-1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 +&                
+                  State_VGB(Bz_,-1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 )                 
+          end where
+       else
+          ! HD energy
+          where(State_VGB(iRho_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock) <= 0.0)
+             Energy_GBI(-1:nI+2, -1:nJ+2, -1:nK+2, iBlock, iFluid) = 0.0
+          elsewhere
+             Energy_GBI(-1:nI+2, -1:nJ+2, -1:nK+2, iBlock, iFluid) = &                  
+                  inv_gm1*State_VGB(iP_I(iFluid),-1:nI+2,-1:nJ+2,-1:nK+2,iBlock) &                
+                  +0.5*((State_VGB(iRhoUx_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 + &    
+                  State_VGB(iRhoUy_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 + &           
+                  State_VGB(iRhoUz_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2)/&            
+                  State_VGB(iRho_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock))               
+          end where
+       end if
+
+       if(nIonFluid == 1 .and. iFluid == 1)then
+          if(UseElectronPressure)then
+             Energy_GBI(-1:nI+2, -1:nJ+2, -1:nK+2, iBlock, iFluid) = & 
+                  Energy_GBI(-1:nI+2, -1:nJ+2, -1:nK+2, iBlock, iFluid) &
+                  + inv_gm1*State_VGB(Pe_,-1:nI+2, -1:nJ+2, -1:nK+2, iBlock)
+          end if
+          if(UseWavePressure)then
+             do k=-1, nK+2; do j=-1, nJ+2; do i=-1, nI+2
+                Energy_GBI(i,j,k,iBlock,iFluid) = &
+                     Energy_GBI(i,j,k,iBlock,iFluid) &
+                     + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+             end do; end do; end do
+          end if
+       end if
+    end do
+
   end subroutine calc_energy_ghost
 
   !ADJOINT SPECIFIC BEGIN
