@@ -1,22 +1,26 @@
 Begin session: 1
 
 #ECHO
-T
+T			DoEcho
 
 #TIMEACCURATE
 F			DoTimeAccurate
 
+#PROGRESS
+1			DnShowProgressShort
+100			DnShowProgressLong
+
 #DESCRIPTION
-Test for GM-IM-IE. MultifluidImcoupling
+Test for GM-IM-IE, multifluid GM-IM coupling	StringDescription
 
 #PLANET
 EARTH			NamePlanet
 
-#SAVERESTART
-F			DoSaveRestart
-
 #ROTATION
 F			UseRotation
+
+#SAVERESTART
+F			DoSaveRestart
 
 #STARTTIME
 2000			iYear
@@ -31,6 +35,7 @@ F			UseRotation
 IM                      NameComp
 F                       UseComp
 
+! In steady state mode coupling frequencies are given by DnCouple
 #COUPLE2
 GM			NameComp1
 IE			NameComp2
@@ -62,8 +67,7 @@ initial			NameArea
 8.0			Resolution
 all			NameArea
 
-! Far tail for wind satellite and inflow
-
+! Far tail and inflow
 #GRIDRESOLUTION
 2.0			Resolution
 box			NameArea
@@ -75,7 +79,6 @@ box			NameArea
   16.0			xMaxBox
 
 ! r currents resolution for the ionosphere
-
 #GRIDRESOLUTION
 1/4			Resolution
 shell0			NameArea
@@ -84,30 +87,30 @@ shell0			NameArea
 
 #MAGNETOSPHERE
 T                       body1
-2.5                     Rbody
+2.5                     rBody
 3.0                     Rcurrents
-28.0                   Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK
-25000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK
-2.8
-25000.0
+28.0                    BodyNDim_I(1)
+25000.0                	BodyTDim_I(1)
+2.8			BodyNDim_I(2)
+25000.0			BodyTDim_I(2)
+
+#MULTIFLUIDIM
+T			DoMultiFluidIMCoupling
 
 #TIMESTEPPING
 1			nStage
 0.80			CflExlp
 
 #OUTERBOUNDARY
-outflow			TypeBC_I(east_)
-vary			TypeBC_I(west_)
-float			TypeBC_I(south_)
-float			TypeBC_I(north_)
-float			TypeBC_I(bot_)
-float			TypeBC_I(top_)
+outflow			TypeBcEast
+vary			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
 
 #INNERBOUNDARY
-ionosphere
-
-#MULTIFLUIDIM
-T
+ionosphere		TypeBcInner
 
 #SCHEME
 1			nOrder
@@ -119,9 +122,14 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#UPSTREAM_INPUT_FILE
-T                                                     UseUpstreamInputFile
-GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat   NameUpstreamFile
+#SOLARWINDFILE
+T			UseSolarwindFile
+GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT_tilt.dat
+
+#MAGNETOMETER
+Param/magnetometer_location.dat
+-1			DnOutput
+5.0			DtOutput
 
 #END_COMP GM   ----------------------------------------
 
@@ -137,12 +145,17 @@ F			UseFakeRegion2
 
 #SAVEPLOT
 2			nPlotFile
-aur idl                 StringPlot
+min idl                 StringPlot
 2			DnSavePlot
 -1.0			DtSavePlot
 max tec                 StringPlot
 5			DnSavePlot
 -1.0			DtSavePlot
+
+#MAGNETOMETER
+Param/magnetometer_location.dat
+-1			DnOutput
+5.0			DtOutput
 
 #END_COMP IE   ----------------------------------------
 
@@ -154,21 +167,22 @@ End session: 1
 #RUN ############################################################
 Begin session: 2
 
+#TEST
+write_geoind_restart read_geoind_restart
+
 #TIMEACCURATE
-T	
+T			IsTimeAccurate
 
 #COMPONENT
 IM			NameComp
 T			UseComp
 
-#COUPLEORDER
-5			nCouple
-IE GM			NameSourceTarget
-IE IM			NameSourceTarget
-GM IE			NameSourceTarget
-GM IM			NameSourceTarget
-IM GM			NameSourceTarget
+! Fast coupling order is ONLY useful if GM and IE are not sharing processors! 
+! With fast coupling order restarts are not exact, but close.
+INCLUDE
+Param/CoupleOrderFast
 
+! In time accurate mode coupling frequencies are given by DtCouple
 #COUPLE2
 GM			NameComp1
 IE			NameComp2
@@ -194,21 +208,24 @@ F			DoCoupleOnTime
 #BEGIN_COMP GM ----------------------------------------
 
 #IM
-20.0                    TauImP
-F			DoImSatTrace 
+20.0                    TauCoupleIm
+F			DoImSatTrace
 
+#GEOMAGINDICES
+15			nSizeKpWindow
+5.0			DtOutput
 
 #SAVEPLOT
 3			nPlotFile
-idl x=0 FUL			StringPlot
+idl x=0 FUL		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.0			DxSavePlot
-idl y=0 FUL			StringPlot
+idl y=0 FUL		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 -1.0			DxSavePlot
-idl z=0 FUL			StringPlot
+idl z=0 FUL		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 -1.0			DxSavePlot
@@ -233,9 +250,11 @@ idl z=0 FUL			StringPlot
 
 #BEGIN_COMP IE ----------------------------------------
 
+#GEOMAGINDICES
+
 #SAVEPLOT
 2			nPlotFile
-aur idl                 StringPlot
+min idl                 StringPlot
 -1			DnSavePlot
 5.0			DtSavePlot
 max tec                 StringPlot
@@ -248,12 +267,26 @@ max tec                 StringPlot
 -1			MaxIter
 10.0			TimeMax
 
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+10.0			DtSaveRestart
+
 End session: 2
 #END ############################################################
-#IONOSPHERE
-5			iConductanceModel
-F			UseFullCurrent
-F			UseFakeRegion2
-150.0			F107Flux
-5.0			StarLightPedConductance
-0.25			PolarCapPedConductance
+
+! The 3rd session allows comparison of continuous run with restart
+
+#RUN ############################################################
+Begin session: 3
+
+
+#SAVERESTART
+F			DoSaveRestart
+
+#STOP
+-1			MaxIter
+20.0			TimeMax
+
+End session: 3
+#END ############################################################

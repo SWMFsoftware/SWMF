@@ -552,6 +552,10 @@ test8:
 	@echo "test8_run..." >> test8_ie.diff
 	@echo "test8_run..." >> test8_im_rcm_multi.diff
 	make test8_run
+	@echo "test8_restart..." >> test8_gm_multi.diff
+	@echo "test8_restart..." >> test8_ie.diff
+	@echo "test8_restart..." >> test8_im_rcm_multi.diff
+	make test8_restart
 	@echo "test8_check..." >> test8_gm_multi.diff
 	@echo "test8_check..." >> test8_ie.diff
 	@echo "test8_check..." >> test8_im_rcm_multi.diff
@@ -570,25 +574,47 @@ test8_rundir:
 
 test8_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}/IM/plots/; cp 2d__max_t00000010.dat t10.txt
+	cd ${TESTDIR}; ./Restart.pl
+
+test8_restart:
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIERCM_Multi PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}/IM/plots/; cp 2d__max_t00000020.dat t20.txt
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
+		mv runlog_restart RESULTS
 
 test8_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test8/GM_log_n000001.log \
 		> test8_gm_multi.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULTS/GM/GM_mag_n00000000.mag \
+		output/test8/GM_mag_n00000000.mag \
+		>> test8_gm_multi.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULTS/GM/geoindex_n00000005.log \
+		output/test8/GM_geoindex.log \
+		>> test8_gm_multi.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULTS/RESTART/GM/geoindex.txt \
+		output/test8/GM_restart_geoindex.txt \
+		>> test8_gm_multi.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
 		output/test8/IE.log \
 		> test8_ie.diff) 
-	gunzip -c output/test8/IM_2d__max_t00000010.dat.gz \
-		> ${TESTDIR}/RESULTS/IM/t10.dat
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=3e-5 \
+		${TESTDIR}/RESULTS/IE/IE_mag_t000321_104500.mag \
+		output/test8/IE.mag \
+		>> test8_ie.diff)
+	gunzip -c output/test8/IM_2d__max_t00000020.dat.gz \
+		> ${TESTDIR}/RESULTS/IM/t20.dat
 	cd ${TESTDIR}/RESULTS/IM;\
-		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t10.dat t10.txt
+		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t20.dat t20.txt
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
-		${TESTDIR}/RESULTS/IM/t10.txt \
-		${TESTDIR}/RESULTS/IM/t10.dat \
+		${TESTDIR}/RESULTS/IM/t20.txt \
+		${TESTDIR}/RESULTS/IM/t20.dat \
 		> test8_im_rcm_multi.diff)
 	ls -l test8*.diff
 
