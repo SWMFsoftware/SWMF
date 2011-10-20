@@ -291,6 +291,124 @@ contains
           end do; end do
        end if
 
+       ! Done with the block for 1D
+       if(nJ == 1) CYCLE
+
+       ! -J neighbor
+       DiLevel = DiLevelNei_IIIB(0,-1,0,iBlock)
+       if(abs(DiLevel) == 1)then
+          call set_jpart_iratio_jratio
+
+          ! Loop through neighboring node(s)
+          do kSide = 1, kSideMax; do iSide = 1, iSideMax
+             jNode = iNodeNei_IIIB(iSide,0,kSide,iBlock)
+
+             if(iProc /= iTree_IA(Proc_,iNode) &
+                  .and. iProc /= iTree_IA(Proc_,jNode)) CYCLE
+
+             ! Global cell index of the first cell of iNode
+             iCoord0_D = (iTree_IA(Coord1_:CoordLast_,iNode) - 1)*nCell_D + 1
+
+             ! Global cell index of the last cell of jNode
+             jCoord0_D = iTree_IA(Coord1_:CoordLast_,jNode)*nCell_D
+
+             ! Shift back to the lower corner in the I and K dimensions
+             jCoord0_D(Dim1_)          = jCoord0_D(Dim1_) - nI + 1
+             if(nK>1) jCoord0_D(Dim3_) = jCoord0_D(Dim3_) - nK + 1
+             
+             if(DoTestMe)write(*,*)'Connect -J direction'
+             call connect_j_direction
+
+          end do; end do
+       end if
+
+       ! +J neighbor
+       DiLevel = DiLevelNei_IIIB(0,+1,0,iBlock)
+       if(abs(DiLevel) == 1)then
+          call set_jpart_iratio_jratio
+
+          ! Loop through neighboring node(s)
+          do kSide = 1, kSideMax; do iSide = 1, jSideMax
+             jNode = iNodeNei_IIIB(iSide,3,kSide,iBlock)
+
+             if(iProc /= iTree_IA(Proc_,iNode) &
+                  .and. iProc /= iTree_IA(Proc_,jNode)) CYCLE
+
+             ! Global cell index of the last cell of iNode
+             iCoord0_D = iTree_IA(Coord1_:CoordLast_,iNode)*nCell_D
+
+             ! Global cell index of the first cell of jNode
+             jCoord0_D = (iTree_IA(Coord1_:CoordLast_,jNode) - 1)*nCell_D + 1
+
+             ! Shift back to the lower corner in the J and K dimensions
+             iCoord0_D(Dim1_)          = iCoord0_D(Dim1_) - nI + 1
+             if(nK>1) iCoord0_D(Dim3_) = iCoord0_D(Dim3_) - nK + 1
+
+             if(DoTestMe)write(*,*)'Connect +J direction'
+             call connect_j_direction
+
+          end do; end do
+       end if
+
+       ! Done with the block in 2D
+       if(nK == 1) CYCLE
+
+       ! -K neighbor
+       DiLevel = DiLevelNei_IIIB(0,0,-1,iBlock)
+       if(abs(DiLevel) == 1)then
+          call set_jpart_iratio_jratio
+
+          ! Loop through neighboring node(s)
+          do jSide = 1, jSideMax; do iSide = 1, iSideMax
+             jNode = iNodeNei_IIIB(iSide,jSide,0,iBlock)
+
+             if(iProc /= iTree_IA(Proc_,iNode) &
+                  .and. iProc /= iTree_IA(Proc_,jNode)) CYCLE
+
+             ! Global cell index of the first cell of iNode
+             iCoord0_D = (iTree_IA(Coord1_:CoordLast_,iNode) - 1)*nCell_D + 1
+
+             ! Global cell index of the last cell of jNode
+             jCoord0_D = iTree_IA(Coord1_:CoordLast_,jNode)*nCell_D
+
+             ! Shift back to the lower corner in the J and K dimensions
+             jCoord0_D(Dim1_) = jCoord0_D(Dim1_) - nI + 1
+             jCoord0_D(Dim2_) = jCoord0_D(Dim2_) - nJ + 1
+             
+             if(DoTestMe)write(*,*)'Connect -K direction'
+             call connect_k_direction
+
+          end do; end do
+       end if
+
+       ! +K neighbor
+       DiLevel = DiLevelNei_IIIB(0,0,+1,iBlock)
+       if(abs(DiLevel) == 1)then
+          call set_jpart_iratio_jratio
+
+          ! Loop through neighboring node(s)
+          do jSide = 1, jSideMax; do iSide = 1, iSideMax
+             jNode = iNodeNei_IIIB(iSide,jSide,3,iBlock)
+
+             if(iProc /= iTree_IA(Proc_,iNode) &
+                  .and. iProc /= iTree_IA(Proc_,jNode)) CYCLE
+
+             ! Global cell index of the last cell of iNode
+             iCoord0_D = iTree_IA(Coord1_:CoordLast_,iNode)*nCell_D
+
+             ! Global cell index of the first cell of jNode
+             jCoord0_D = (iTree_IA(Coord1_:CoordLast_,jNode) - 1)*nCell_D + 1
+
+             ! Shift back to the lower corner in the J and K dimensions
+             iCoord0_D(Dim1_) = iCoord0_D(Dim1_) - nI + 1
+             iCoord0_D(Dim2_) = iCoord0_D(Dim2_) - nJ + 1
+
+             if(DoTestMe)write(*,*)'Connect +K direction'
+             call connect_k_direction
+
+          end do; end do
+       end if
+
     end do
 
     ! Assemble the graph
@@ -348,7 +466,7 @@ contains
 
         if(DiLevel == 1)then
            ! jNode is coarser than iNode
-           jPart  = iPart - 1
+           jPart   = iPart - 1
            iReduce = 1
            jReduce = 2
            ! There are no subfaces
@@ -357,7 +475,7 @@ contains
            kSideMax = 1
         else
            ! jNode is finer than iNode
-           jPart  = iPart + 1
+           jPart   = iPart + 1
            iReduce = 2
            jReduce = 1
            ! Set up ranges for the subfaces
@@ -370,11 +488,13 @@ contains
       !========================================================================
       subroutine connect_i_direction
         
-        ! Shift to appropriate side
+        ! Shift index ranges to appropriate subface
         if(iReduce == 2)then
+           ! iNode is coarser than jNode: do current subface of iNode
            if(nJ>1) iCoord0_D(Dim2_) = iCoord0_D(Dim2_) + (jSide-1)*nJ/2
            if(nK>1) iCoord0_D(Dim3_) = iCoord0_D(Dim3_) + (kSide-1)*nK/2
         else
+           ! iNode is finer than jNode: do the corresponding subface of jNode
            if(nJ>1) jCoord0_D(Dim2_) = jCoord0_D(Dim2_) + (jSideMe-1)*nJ/2
            if(nK>1) jCoord0_D(Dim3_) = jCoord0_D(Dim3_) + (kSideMe-1)*nK/2
         end if
@@ -388,15 +508,50 @@ contains
         iCoord_D = iCoord0_D
         jCoord_D = jCoord0_D
         do k = 1, nK
-           if(nK > 1) then
-              iCoord_D(Dim3_) = iCoord0_D(Dim3_) + (k - 1)/iReduce
-              jCoord_D(Dim3_) = jCoord0_D(Dim3_) + (k - 1)/jReduce
-           end if
+           ! On the coarse side k index changes every second time only
+           if(nK>1) iCoord_D(Dim3_) = iCoord0_D(Dim3_) + (k - 1)/iReduce
+           if(nK>1) jCoord_D(Dim3_) = jCoord0_D(Dim3_) + (k - 1)/jReduce
            do j = 1,nJ
-              if(nJ > 1) then
-                 iCoord_D(Dim2_) = iCoord0_D(Dim2_) + (j - 1)/iReduce
-                 jCoord_D(Dim2_) = jCoord0_D(Dim2_) + (j - 1)/jReduce
-              end if
+              ! On the coarse side j index changes every second time only
+              if(nJ>1) iCoord_D(Dim2_) = iCoord0_D(Dim2_) + (j - 1)/iReduce
+              if(nJ>1) jCoord_D(Dim2_) = jCoord0_D(Dim2_) + (j - 1)/jReduce
+
+              if(DoTestMe)write(*,*)'iCoord,jCoord=',iCoord_D, jCoord_D
+
+              ! Add the connecting graph entry
+              call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
+                   iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
+
+           end do
+        end do
+
+      end subroutine connect_i_direction
+      !========================================================================
+      subroutine connect_j_direction
+        
+        ! Shift to appropriate side
+        if(iReduce == 2)then
+           iCoord0_D(Dim1_)          = iCoord0_D(Dim1_) + (iSide-1)*nI/2
+           if(nK>1) iCoord0_D(Dim3_) = iCoord0_D(Dim3_) + (kSide-1)*nK/2
+        else
+           jCoord0_D(Dim1_)          = jCoord0_D(Dim1_) + (iSideMe-1)*nI/2
+           if(nK>1) jCoord0_D(Dim3_) = jCoord0_D(Dim3_) + (kSideMe-1)*nK/2
+        end if
+
+        if(DoTestMe)then
+           write(*,*)'iPart, jPart   =', iPart, jPart
+           write(*,*)'iNode, jNode   =', iNode, jNode
+           write(*,*)'iCoord0,jCoord0=', iCoord0_D, jCoord0_D
+        end if
+
+        iCoord_D = iCoord0_D
+        jCoord_D = jCoord0_D
+        do k = 1, nK
+           if(nK>1) iCoord_D(Dim3_) = iCoord0_D(Dim3_) + (k - 1)/iReduce
+           if(nK>1) jCoord_D(Dim3_) = jCoord0_D(Dim3_) + (k - 1)/jReduce
+           do i = 1,nI
+              iCoord_D(Dim1_) = iCoord0_D(Dim1_) + (i - 1)/iReduce
+              jCoord_D(Dim1_) = jCoord0_D(Dim1_) + (i - 1)/jReduce
 
               if(DoTestMe)write(*,*)'iCoord,jCoord=',iCoord_D, jCoord_D
               
@@ -406,7 +561,43 @@ contains
            end do
         end do
 
-      end subroutine connect_i_direction
+      end subroutine connect_j_direction
+      !========================================================================
+      subroutine connect_k_direction
+        
+        ! Shift to appropriate side
+        if(iReduce == 2)then
+           iCoord0_D(Dim1_) = iCoord0_D(Dim1_) + (iSide-1)*nI/2
+           iCoord0_D(Dim2_) = iCoord0_D(Dim2_) + (jSide-1)*nJ/2
+        else
+           jCoord0_D(Dim1_) = jCoord0_D(Dim1_) + (iSideMe-1)*nI/2
+           jCoord0_D(Dim2_) = jCoord0_D(Dim2_) + (jSideMe-1)*nJ/2
+        end if
+
+        if(DoTestMe)then
+           write(*,*)'iPart, jPart   =', iPart, jPart
+           write(*,*)'iNode, jNode   =', iNode, jNode
+           write(*,*)'iCoord0,jCoord0=', iCoord0_D, jCoord0_D
+        end if
+
+        iCoord_D = iCoord0_D
+        jCoord_D = jCoord0_D
+        do j = 1,nJ
+           iCoord_D(Dim2_) = iCoord0_D(Dim2_) + (j - 1)/iReduce
+           jCoord_D(Dim2_) = jCoord0_D(Dim2_) + (j - 1)/jReduce
+           do i = 1,nI
+              iCoord_D(Dim1_) = iCoord0_D(Dim1_) + (i - 1)/iReduce
+              jCoord_D(Dim1_) = jCoord0_D(Dim1_) + (i - 1)/jReduce
+
+              if(DoTestMe)write(*,*)'iCoord,jCoord=',iCoord_D, jCoord_D
+              
+              call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
+                   iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
+
+           end do
+        end do
+
+      end subroutine connect_k_direction
 
   end subroutine hypre_initialize
 
@@ -421,20 +612,37 @@ contains
     integer, intent(in):: iImplBlock
     real,    intent(inout):: Jacobian_CI(nI,nJ,nK,nStencil)
 
+    ! Number of links connecting a coarse cell to a finer neighbor
+    ! in the I, J, and K directions, respectively
     integer, parameter:: nStencilI = jRatio*kRatio
+    integer, parameter:: nStencilJ = iRatio*kRatio
+    integer, parameter:: nStencilK = iRatio*jRatio
+
+    ! Index ranges for the extra connections at resolution changes
+    ! Note: extra shift is needed at edge/corner res. changes !
     integer, parameter:: iStencilI_I(nStencilI) = &
          (/ (iStencil, iStencil = nStencil, nStencil+nStencilI-1) /)
-    real:: JacI_I(nStencilI)
 
+    integer, parameter:: iStencilJ_I(nStencilJ) = &
+         (/ (iStencil, iStencil = nStencil, nStencil+nStencilJ-1) /)
 
+    integer, parameter:: iStencilK_I(nStencilK) = &
+         (/ (iStencil, iStencil = nStencil, nStencil+nStencilK-1) /)
+
+    ! Array of matrix elements for a coarse cell used by 
+    ! HYPRE_SStructMatrixSetValues (the values are actually equal)
+    real:: JacI_I(nStencilI), JacJ_I(nStencilJ), JacK_I(nStencilK)
+
+    ! Matrix element connecting a fine cell to a coarser cell
     real   :: Jac
+
     integer:: iValue, i, j, k, iPart, iBlock, iError
     integer:: DiLevel
 
+    ! Node index and global cell index
     integer:: iNode, iCoord_D(nDim)
 
     logical, parameter :: DoDebug = .false.
-
     !------------------------------------------------------------------------
     iBlock = impl2iblk(iImplBlock)
 
@@ -488,9 +696,9 @@ contains
     iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
     iUpper_D = iLower_D - 1 + nCell_D
 
-    ! write(*,*)'!!! iPart, iProc, iBlock, iNode, iLower_D, iUpper_D=',&
-    !     iPart, iProc, iBlock, iNode, iLower_D, iUpper_D, &
-    !     maxval(Value_I), minval(Value_I)
+    if(DoDebug)write(*,*)'iPart, iProc, iBlock, iNode, iLower_D, iUpper_D=',&
+         iPart, iProc, iBlock, iNode, iLower_D, iUpper_D, &
+         maxval(Value_I), minval(Value_I)
 
     call HYPRE_SStructMatrixSetBoxValues(i8A, iPart, iLower_D, iUpper_D, &
          iVar, nStencil, iStencil_I, Value_I, iError)
@@ -506,7 +714,8 @@ contains
           if(nK > 1)iCoord_D(Dim3_) = iLower_D(Dim3_) + k - 1
           do j = 1, nJ
              if(nJ > 1)iCoord_D(Dim2_) = iLower_D(Dim2_) + j - 1
-             Jac = Jacobian_CI(1,j,k,2)
+
+             Jac = Jacobian_CI(1,j,k,Stencil2_)
 
              call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
                   iVar, 1, (/nStencil/), (/Jac/), iError)
@@ -525,10 +734,11 @@ contains
           if(nK > 1)iCoord_D(Dim3_) = iLower_D(Dim3_) + k - 1
           do j = 1, nJ
              if(nJ > 1)iCoord_D(Dim2_) = iLower_D(Dim2_) + j - 1
-             JacI_I = Jacobian_CI(1,j,k,2)/nStencilI
+
+             JacI_I = Jacobian_CI(1,j,k,Stencil2_)/nStencilI
 
              call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                  iVar, nStencilI, (/iStencilI_I/), (/JacI_I/), iError)
+                  iVar, nStencilI, iStencilI_I, JacI_I, iError)
 
              if(DoDebug)write(*,*)'-I iCoord, JacI_I =', iCoord_D, JacI_I
 
@@ -541,7 +751,7 @@ contains
     DiLevel = DiLevelNei_IIIB(+1,0,0,iBlock)
     if(DiLevel == 1)then
 
-       if(DoDebug)write(*,*)'-I iProc, iPart, DiLevel=',iProc, iPart, DiLevel
+       if(DoDebug)write(*,*)'+I iProc, iPart, DiLevel=',iProc, iPart, DiLevel
 
        iCoord_D = iUpper_D
        do k = 1, nK
@@ -549,7 +759,7 @@ contains
           do j = 1, nJ
              if(nJ > 1)iCoord_D(Dim2_) = iUpper_D(Dim2_) + j - nJ
                 
-             Jac = Jacobian_CI(nI,j,k,3)
+             Jac = Jacobian_CI(nI,j,k,Stencil3_)
 
              call HYPRE_SStructMatrixSetValues(i8A, iPart, &
                   iCoord_D, iVar, 1, (/nStencil/), (/Jac/), iError)
@@ -561,7 +771,7 @@ contains
 
     elseif(DiLevel == -1)then
        
-       if(DoDebug)write(*,*)'-I iProc, iPart, DiLevel =',iProc, iPart, DiLevel
+       if(DoDebug)write(*,*)'+I iProc, iPart, DiLevel =',iProc, iPart, DiLevel
 
        iCoord_D = iUpper_D
        do k = 1, nK
@@ -569,11 +779,194 @@ contains
           do j = 1, nJ
              if(nJ > 1)iCoord_D(Dim2_) = iUpper_D(Dim2_) + j - nJ
 
-             JacI_I = Jacobian_CI(nI,j,k,3)/nStencilI
+             JacI_I = Jacobian_CI(nI,j,k,Stencil3_)/nStencilI
+
              call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                  iVar, nStencilI, (/iStencilI_I/), (/JacI_I/), iError)
+                  iVar, nStencilI, iStencilI_I, JacI_I, iError)
 
              if(DoDebug)write(*,*)'+I iCoord, JacI_I =', iCoord_D, JacI_I
+
+          end do
+       end do
+
+    end if
+
+    ! Done with block in 1D
+    if(nJ == 1) RETURN
+
+    ! check -J neighbor for resolution change
+    DiLevel = DiLevelNei_IIIB(0,-1,0,iBlock)
+    if( DiLevel == 1)then
+
+       if(DoDebug)write(*,*)'-J iProc, iPart, DiLevel=',iProc, iPart, DiLevel
+
+       iCoord_D = iLower_D
+       do k = 1, nK
+          if(nK > 1)iCoord_D(Dim3_) = iLower_D(Dim3_) + k - 1
+          do i = 1, nI
+             iCoord_D(Dim1_) = iLower_D(Dim1_) + i - 1
+
+             Jac = Jacobian_CI(i,1,k,Stencil4_)
+
+             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
+                  iVar, 1, (/nStencil/), (/Jac/), iError)
+
+             if(DoDebug)write(*,*)'-J iCoord, Jac =', iCoord_D, Jac
+             
+          end do
+       end do
+
+    elseif( DiLevel == -1)then
+
+       if(DoDebug)write(*,*)'-J iProc, iPart, DiLevel=',iProc, iPart, DiLevel
+
+       iCoord_D = iLower_D
+       do k = 1, nK
+          if(nK > 1)iCoord_D(Dim3_) = iLower_D(Dim3_) + k - 1
+          do i = 1, nI
+             iCoord_D(Dim1_) = iLower_D(Dim1_) + i - 1
+
+             JacJ_I = Jacobian_CI(i,1,k,Stencil4_)/nStencilJ
+
+             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
+                  iVar, nStencilJ, iStencilJ_I, JacJ_I, iError)
+
+             if(DoDebug)write(*,*)'-J iCoord, JacJ_I =', iCoord_D, JacJ_I
+
+          end do
+       end do
+
+    end if
+
+    ! check +J neighbor for resolution change
+    DiLevel = DiLevelNei_IIIB(0,+1,0,iBlock)
+    if(DiLevel == 1)then
+
+       if(DoDebug)write(*,*)'+J iProc, iPart, DiLevel=',iProc, iPart, DiLevel
+
+       iCoord_D = iUpper_D
+       do k = 1, nK
+          if(nK > 1)iCoord_D(Dim3_) = iUpper_D(Dim3_) + k - nK
+          do i = 1, nI
+             iCoord_D(Dim1_) = iUpper_D(Dim1_) + i - nI
+                
+             Jac = Jacobian_CI(i,nJ,k,Stencil5_)
+
+             call HYPRE_SStructMatrixSetValues(i8A, iPart, &
+                  iCoord_D, iVar, 1, (/nStencil/), (/Jac/), iError)
+
+             if(DoDebug)write(*,*)'+J iCoord, Jac =', iCoord_D, Jac
+
+          end do
+       end do
+
+    elseif(DiLevel == -1)then
+       
+       if(DoDebug)write(*,*)'+J iProc, iPart, DiLevel =',iProc, iPart, DiLevel
+
+       iCoord_D = iUpper_D
+       do k = 1, nK
+          if(nK > 1)iCoord_D(Dim3_) = iUpper_D(Dim3_) + k - nK
+          do i = 1, nI
+             iCoord_D(Dim1_) = iUpper_D(Dim1_) + i - nI
+
+             JacJ_I = Jacobian_CI(i,nJ,k,Stencil5_)/nStencilJ
+
+             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
+                  iVar, nStencilJ, iStencilJ_I, JacJ_I, iError)
+
+             if(DoDebug)write(*,*)'+J iCoord, JacJ_I =', iCoord_D, JacJ_I
+
+          end do
+       end do
+
+    end if
+
+    ! Done with block in 2D
+    if(nK == 1) RETURN
+
+    ! check -K neighbor for resolution change
+    DiLevel = DiLevelNei_IIIB(0,0,-1,iBlock)
+    if( DiLevel == 1)then
+
+       if(DoDebug)write(*,*)'-K iProc, iPart, DiLevel=',iProc, iPart, DiLevel
+
+       iCoord_D = iLower_D
+       do j = 1, nJ
+          iCoord_D(Dim2_) = iLower_D(Dim2_) + j - 1
+          do i = 1, nI
+             iCoord_D(Dim1_) = iLower_D(Dim1_) + i - 1
+
+             Jac = Jacobian_CI(i,j,1,Stencil6_)
+
+             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
+                  iVar, 1, (/nStencil/), (/Jac/), iError)
+
+             if(DoDebug)write(*,*)'-K iCoord, Jac =', iCoord_D, Jac
+             
+          end do
+       end do
+
+    elseif( DiLevel == -1)then
+
+       if(DoDebug)write(*,*)'-K iProc, iPart, DiLevel=',iProc, iPart, DiLevel
+
+       iCoord_D = iLower_D
+       do j = 1, nJ
+          iCoord_D(Dim2_) = iLower_D(Dim2_) + j - 1
+          do i = 1, nI
+             iCoord_D(Dim1_) = iLower_D(Dim1_) + i - 1
+
+             JacK_I = Jacobian_CI(i,j,1,Stencil6_)/nStencilK
+
+             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
+                  iVar, nStencilK, iStencilK_I, JacK_I, iError)
+
+             if(DoDebug)write(*,*)'-K iCoord, JacK_I =', iCoord_D, JacK_I
+
+          end do
+       end do
+
+    end if
+
+    ! check +K neighbor for resolution change
+    DiLevel = DiLevelNei_IIIB(0,0,+1,iBlock)
+    if(DiLevel == 1)then
+
+       if(DoDebug)write(*,*)'+K iProc, iPart, DiLevel=',iProc, iPart, DiLevel
+
+       iCoord_D = iUpper_D
+       do j = 1, nJ
+          iCoord_D(Dim2_) = iUpper_D(Dim2_) + j - nJ
+          do i = 1, nI
+             iCoord_D(Dim1_) = iUpper_D(Dim1_) + i - nI
+                
+             Jac = Jacobian_CI(i,j,nK,Stencil7_)
+
+             call HYPRE_SStructMatrixSetValues(i8A, iPart, &
+                  iCoord_D, iVar, 1, (/nStencil/), (/Jac/), iError)
+
+             if(DoDebug)write(*,*)'+K iCoord, Jac =', iCoord_D, Jac
+
+          end do
+       end do
+
+    elseif(DiLevel == -1)then
+       
+       if(DoDebug)write(*,*)'+K iProc, iPart, DiLevel =',iProc, iPart, DiLevel
+
+       iCoord_D = iUpper_D
+       do j = 1, nJ
+          iCoord_D(Dim2_) = iUpper_D(Dim2_) + j - nJ
+          do i = 1, nI
+             iCoord_D(Dim1_) = iUpper_D(Dim1_) + i - nI
+
+             JacK_I = Jacobian_CI(i,j,nK,Stencil7_)/nStencilK
+
+             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
+                  iVar, nStencilK, iStencilK_I, JacK_I, iError)
+
+             if(DoDebug)write(*,*)'+K iCoord, JacK_I =', iCoord_D, JacK_I
 
           end do
        end do
