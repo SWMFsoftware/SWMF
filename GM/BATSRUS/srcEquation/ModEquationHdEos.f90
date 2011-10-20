@@ -8,7 +8,7 @@ module ModVarIndexes
   save
 
   ! This equation module contains the standard MHD equations.
-  character (len=*), parameter :: NameEquation='HD'
+  character (len=*), parameter :: NameEquation='HD with EOS'
 
   integer, parameter :: nVar = 6
 
