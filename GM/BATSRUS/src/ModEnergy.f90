@@ -567,9 +567,7 @@ contains
   !===========================================================================
 
   subroutine calc_energy_ghost(iBlock)
-    use ModVarIndexes, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, Bx_,By_, Bz_
-    
-    integer, intent(in) :: iBlock
+     integer, intent(in) :: iBlock
     integer i,j,k
     !--------------------------------------------------------------------------
 
@@ -577,32 +575,34 @@ contains
 
     do iFluid = 1,nFluid
 
+       call select_fluid
+
        if(IsMhd .and. iFluid == 1) then
           ! MHD energy
-          where(State_VGB(iRho_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock) <= 0.0)
+          where(State_VGB(iRho, -1:nI+2, -1:nJ+2, -1:nK+2, iBlock) <= 0.0)
              Energy_GBI(-1:nI+2, -1:nJ+2, -1:nK+2, iBlock, iFluid) = 0.0
           elsewhere
              Energy_GBI(-1:nI+2, -1:nJ+2, -1:nK+2, iBlock, iFluid) = &                  
-                  inv_gm1*State_VGB(iP_I(iFluid),-1:nI+2,-1:nJ+2,-1:nK+2,iBlock) &                
-                  +0.5*((State_VGB(iRhoUx_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 + &    
-                  State_VGB(iRhoUy_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 + &           
-                  State_VGB(iRhoUz_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2)/&            
-                  State_VGB(iRho_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)) + &               
+                  inv_gm1*State_VGB(iP,-1:nI+2,-1:nJ+2,-1:nK+2,iBlock) &                
+                  +0.5*((State_VGB(iRhoUx, -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 + &    
+                  State_VGB(iRhoUy, -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 + &           
+                  State_VGB(iRhoUz, -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2)/&            
+                  State_VGB(iRho, -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)) + &               
                   0.5*(State_VGB(Bx_,-1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 +&           
                   State_VGB(By_,-1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 +&                
                   State_VGB(Bz_,-1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 )                 
           end where
        else
           ! HD energy
-          where(State_VGB(iRho_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock) <= 0.0)
+          where(State_VGB(iRho, -1:nI+2, -1:nJ+2, -1:nK+2, iBlock) <= 0.0)
              Energy_GBI(-1:nI+2, -1:nJ+2, -1:nK+2, iBlock, iFluid) = 0.0
           elsewhere
              Energy_GBI(-1:nI+2, -1:nJ+2, -1:nK+2, iBlock, iFluid) = &                  
-                  inv_gm1*State_VGB(iP_I(iFluid),-1:nI+2,-1:nJ+2,-1:nK+2,iBlock) &                
-                  +0.5*((State_VGB(iRhoUx_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 + &    
-                  State_VGB(iRhoUy_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 + &           
-                  State_VGB(iRhoUz_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2)/&            
-                  State_VGB(iRho_I(iFluid), -1:nI+2, -1:nJ+2, -1:nK+2, iBlock))               
+                  inv_gm1*State_VGB(iP,-1:nI+2,-1:nJ+2,-1:nK+2,iBlock) &                
+                  +0.5*((State_VGB(iRhoUx, -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 + &    
+                  State_VGB(iRhoUy, -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2 + &           
+                  State_VGB(iRhoUz, -1:nI+2, -1:nJ+2, -1:nK+2, iBlock)**2)/&            
+                  State_VGB(iRho, -1:nI+2, -1:nJ+2, -1:nK+2, iBlock))               
           end where
        end if
 
