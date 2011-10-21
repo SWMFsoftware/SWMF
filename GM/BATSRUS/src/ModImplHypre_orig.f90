@@ -18,6 +18,7 @@ module ModImplHypre
 
   public:: hypre_read_param
   public:: hypre_initialize
+  public:: hypre_finalize
   public:: hypre_set_matrix_block
   public:: hypre_set_matrix
   public:: hypre_preconditioner
@@ -75,6 +76,9 @@ module ModImplHypre
   real::    StrongThresholdAmg = 0.0  ! 0.25 for 2D, 0.5-0.6 for 3D
   real::    TruncFactorAmg     = 0.0  ! 0..1 ?
 
+  ! Check if the grid has changed
+  integer:: iLastDecomposition = -1
+
 contains
   !==========================================================================
   subroutine hypre_read_param
@@ -93,7 +97,9 @@ contains
   !==========================================================================
   subroutine hypre_initialize
 
-    integer:: nLevel = 30
+    use ModMain, ONLY: iNewDecomposition
+    use BATL_lib, ONLY: nLevel
+
     integer:: iLevel, DiLevel, iNode, jNode
     integer:: iCoord_D(nDim), jCoord_D(nDim), iCoord0_D(nDim), jCoord0_D(nDim)
 
@@ -104,15 +110,24 @@ contains
 
     logical:: DoTest, DoTestMe
 
+    logical, parameter:: DoDebug = .false.
+
     character(len=*), parameter:: NameSub = 'hypre_initialize'
     !-------------------------------------------------------------------------
-    if(allocated(Value_I)) RETURN !!! More conditions needed here !!!
+    ! Nothing to do if the grid has not changed
+    if(iNewDecomposition == iLastDecomposition) RETURN
 
     call set_oktest(NameSub,DoTest,DoTestMe)
 
     if(DoTestMe)write(*,*) NameSub,' starting'
 
-    allocate(Value_I(nStencil*nIJK))
+    if(iLastDecomposition == -1)then
+       allocate(Value_I(nStencil*nIJK))
+    else
+       ! This is not the first call, so destroy previously created HYPRE objects
+       call hypre_clean
+    end if
+    iLastDecomposition = iNewDecomposition
 
     ! One part per level. We can possibly use MaxLevel (<=30), or count
     ! the number of current levels (1-5 or so).
@@ -123,7 +138,7 @@ contains
     ! Create an empty 3D grid object
     call HYPRE_SStructGridCreate(iComm, nDim, nPart, i8Grid, iError)
 
-    if(DoTestMe)write(*,*)'HYPRE_SStructGridCreate done'
+    if(DoTestMe)write(*,*)'HYPRE_SStructGridCreate done with nPart=', nPart
 
     ! Add each block as a local box in the corresponding part (level)
     do iImplBlock = 1, nImplBlock
@@ -133,7 +148,7 @@ contains
        iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
        iUpper_D = iLower_D - 1 + nCell_D
 
-       if(DoTestMe)write(*,*)'iPart, iNode, iLower_D, iUpper_D=',&
+       if(DoDebug)write(*,*)'iPart, iNode, iLower_D, iUpper_D=',&
             iPart, iNode, iLower_D, iUpper_D
 
        call HYPRE_SStructGridSetExtents(i8Grid, iPart, iLower_D, iUpper_D, &
@@ -207,7 +222,6 @@ contains
     if(nK > 1) DiStencil_DI(Dim3_,Stencil7_) = +1
 
     call HYPRE_SStructStencilCreate(nDim, nStencil, i8Stencil, iError)
-
     do iStencil = 1, nStencil
        call HYPRE_SStructStencilSetEntry(i8Stencil, &
             iStencil-1, DiStencil_DI(1,iStencil), iVar, iError)
@@ -226,6 +240,7 @@ contains
     ! Add non-stencil entries to the graph at resolution changes
 
     do iImplBlock = 1, nImplBlock
+
        iBlock = impl2iBlk(iImplBlock)
        iNode  = iNode_B(iBlock)
        iPart  = iTree_IA(Level_,iNode)
@@ -256,8 +271,8 @@ contains
              ! Shift back to the lower corner in the J and K dimensions
              if(nJ > 1) jCoord0_D(Dim2_) = jCoord0_D(Dim2_) - nJ + 1
              if(nK > 1) jCoord0_D(Dim3_) = jCoord0_D(Dim3_) - nK + 1
-             
-             if(DoTestMe)write(*,*)'Connect -I direction'
+
+             if(DoDebug)write(*,*)'Connect -I direction'
              call connect_i_direction
 
           end do; end do
@@ -285,7 +300,7 @@ contains
              if(nJ > 1) iCoord0_D(Dim2_) = iCoord0_D(Dim2_) - nJ + 1
              if(nK > 1) iCoord0_D(Dim3_) = iCoord0_D(Dim3_) - nK + 1
 
-             if(DoTestMe)write(*,*)'Connect +I direction'
+             if(DoDebug)write(*,*)'Connect +I direction'
              call connect_i_direction
 
           end do; end do
@@ -315,8 +330,8 @@ contains
              ! Shift back to the lower corner in the I and K dimensions
              jCoord0_D(Dim1_)          = jCoord0_D(Dim1_) - nI + 1
              if(nK>1) jCoord0_D(Dim3_) = jCoord0_D(Dim3_) - nK + 1
-             
-             if(DoTestMe)write(*,*)'Connect -J direction'
+
+             if(DoDebug)write(*,*)'Connect -J direction'
              call connect_j_direction
 
           end do; end do
@@ -344,7 +359,7 @@ contains
              iCoord0_D(Dim1_)          = iCoord0_D(Dim1_) - nI + 1
              if(nK>1) iCoord0_D(Dim3_) = iCoord0_D(Dim3_) - nK + 1
 
-             if(DoTestMe)write(*,*)'Connect +J direction'
+             if(DoDebug)write(*,*)'Connect +J direction'
              call connect_j_direction
 
           end do; end do
@@ -374,8 +389,8 @@ contains
              ! Shift back to the lower corner in the J and K dimensions
              jCoord0_D(Dim1_) = jCoord0_D(Dim1_) - nI + 1
              jCoord0_D(Dim2_) = jCoord0_D(Dim2_) - nJ + 1
-             
-             if(DoTestMe)write(*,*)'Connect -K direction'
+
+             if(DoDebug)write(*,*)'Connect -K direction'
              call connect_k_direction
 
           end do; end do
@@ -403,7 +418,7 @@ contains
              iCoord0_D(Dim1_) = iCoord0_D(Dim1_) - nI + 1
              iCoord0_D(Dim2_) = iCoord0_D(Dim2_) - nJ + 1
 
-             if(DoTestMe)write(*,*)'Connect +K direction'
+             if(DoDebug)write(*,*)'Connect +K direction'
              call connect_k_direction
 
           end do; end do
@@ -460,144 +475,144 @@ contains
 
     if(DoTestMe)write(*,*) NameSub,' finished'
 
-    contains
-      !========================================================================
-      subroutine set_jpart_iratio_jratio
+  contains
+    !========================================================================
+    subroutine set_jpart_iratio_jratio
 
-        if(DiLevel == 1)then
-           ! jNode is coarser than iNode
-           jPart   = iPart - 1
-           iReduce = 1
-           jReduce = 2
-           ! There are no subfaces
-           iSideMax = 1
-           jSideMax = 1
-           kSideMax = 1
-        else
-           ! jNode is finer than iNode
-           jPart   = iPart + 1
-           iReduce = 2
-           jReduce = 1
-           ! Set up ranges for the subfaces
-           iSideMax = iRatio
-           jSideMax = jRatio
-           kSideMax = kRatio
-        end if
+      if(DiLevel == 1)then
+         ! jNode is coarser than iNode
+         jPart   = iPart - 1
+         iReduce = 1
+         jReduce = 2
+         ! There are no subfaces
+         iSideMax = 1
+         jSideMax = 1
+         kSideMax = 1
+      else
+         ! jNode is finer than iNode
+         jPart   = iPart + 1
+         iReduce = 2
+         jReduce = 1
+         ! Set up ranges for the subfaces
+         iSideMax = iRatio
+         jSideMax = jRatio
+         kSideMax = kRatio
+      end if
 
-      end subroutine set_jpart_iratio_jratio
-      !========================================================================
-      subroutine connect_i_direction
-        
-        ! Shift index ranges to appropriate subface
-        if(iReduce == 2)then
-           ! iNode is coarser than jNode: do current subface of iNode
-           if(nJ>1) iCoord0_D(Dim2_) = iCoord0_D(Dim2_) + (jSide-1)*nJ/2
-           if(nK>1) iCoord0_D(Dim3_) = iCoord0_D(Dim3_) + (kSide-1)*nK/2
-        else
-           ! iNode is finer than jNode: do the corresponding subface of jNode
-           if(nJ>1) jCoord0_D(Dim2_) = jCoord0_D(Dim2_) + (jSideMe-1)*nJ/2
-           if(nK>1) jCoord0_D(Dim3_) = jCoord0_D(Dim3_) + (kSideMe-1)*nK/2
-        end if
+    end subroutine set_jpart_iratio_jratio
+    !========================================================================
+    subroutine connect_i_direction
 
-        if(DoTestMe)then
-           write(*,*)'iPart, jPart   =', iPart, jPart
-           write(*,*)'iNode, jNode   =', iNode, jNode
-           write(*,*)'iCoord0,jCoord0=', iCoord0_D, jCoord0_D
-        end if
+      ! Shift index ranges to appropriate subface
+      if(iReduce == 2)then
+         ! iNode is coarser than jNode: do current subface of iNode
+         if(nJ>1) iCoord0_D(Dim2_) = iCoord0_D(Dim2_) + (jSide-1)*nJ/2
+         if(nK>1) iCoord0_D(Dim3_) = iCoord0_D(Dim3_) + (kSide-1)*nK/2
+      else
+         ! iNode is finer than jNode: do the corresponding subface of jNode
+         if(nJ>1) jCoord0_D(Dim2_) = jCoord0_D(Dim2_) + (jSideMe-1)*nJ/2
+         if(nK>1) jCoord0_D(Dim3_) = jCoord0_D(Dim3_) + (kSideMe-1)*nK/2
+      end if
 
-        iCoord_D = iCoord0_D
-        jCoord_D = jCoord0_D
-        do k = 1, nK
-           ! On the coarse side k index changes every second time only
-           if(nK>1) iCoord_D(Dim3_) = iCoord0_D(Dim3_) + (k - 1)/iReduce
-           if(nK>1) jCoord_D(Dim3_) = jCoord0_D(Dim3_) + (k - 1)/jReduce
-           do j = 1,nJ
-              ! On the coarse side j index changes every second time only
-              if(nJ>1) iCoord_D(Dim2_) = iCoord0_D(Dim2_) + (j - 1)/iReduce
-              if(nJ>1) jCoord_D(Dim2_) = jCoord0_D(Dim2_) + (j - 1)/jReduce
+      if(DoDebug)then
+         write(*,*)'iPart, jPart   =', iPart, jPart
+         write(*,*)'iNode, jNode   =', iNode, jNode
+         write(*,*)'iCoord0,jCoord0=', iCoord0_D, jCoord0_D
+      end if
 
-              if(DoTestMe)write(*,*)'iCoord,jCoord=',iCoord_D, jCoord_D
+      iCoord_D = iCoord0_D
+      jCoord_D = jCoord0_D
+      do k = 1, nK
+         ! On the coarse side k index changes every second time only
+         if(nK>1) iCoord_D(Dim3_) = iCoord0_D(Dim3_) + (k - 1)/iReduce
+         if(nK>1) jCoord_D(Dim3_) = jCoord0_D(Dim3_) + (k - 1)/jReduce
+         do j = 1,nJ
+            ! On the coarse side j index changes every second time only
+            if(nJ>1) iCoord_D(Dim2_) = iCoord0_D(Dim2_) + (j - 1)/iReduce
+            if(nJ>1) jCoord_D(Dim2_) = jCoord0_D(Dim2_) + (j - 1)/jReduce
 
-              ! Add the connecting graph entry
-              call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
-                   iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
+            if(DoDebug)write(*,*)'iCoord,jCoord=',iCoord_D, jCoord_D
 
-           end do
-        end do
+            ! Add the connecting graph entry
+            call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
+                 iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
 
-      end subroutine connect_i_direction
-      !========================================================================
-      subroutine connect_j_direction
-        
-        ! Shift to appropriate side
-        if(iReduce == 2)then
-           iCoord0_D(Dim1_)          = iCoord0_D(Dim1_) + (iSide-1)*nI/2
-           if(nK>1) iCoord0_D(Dim3_) = iCoord0_D(Dim3_) + (kSide-1)*nK/2
-        else
-           jCoord0_D(Dim1_)          = jCoord0_D(Dim1_) + (iSideMe-1)*nI/2
-           if(nK>1) jCoord0_D(Dim3_) = jCoord0_D(Dim3_) + (kSideMe-1)*nK/2
-        end if
+         end do
+      end do
 
-        if(DoTestMe)then
-           write(*,*)'iPart, jPart   =', iPart, jPart
-           write(*,*)'iNode, jNode   =', iNode, jNode
-           write(*,*)'iCoord0,jCoord0=', iCoord0_D, jCoord0_D
-        end if
+    end subroutine connect_i_direction
+    !========================================================================
+    subroutine connect_j_direction
 
-        iCoord_D = iCoord0_D
-        jCoord_D = jCoord0_D
-        do k = 1, nK
-           if(nK>1) iCoord_D(Dim3_) = iCoord0_D(Dim3_) + (k - 1)/iReduce
-           if(nK>1) jCoord_D(Dim3_) = jCoord0_D(Dim3_) + (k - 1)/jReduce
-           do i = 1,nI
-              iCoord_D(Dim1_) = iCoord0_D(Dim1_) + (i - 1)/iReduce
-              jCoord_D(Dim1_) = jCoord0_D(Dim1_) + (i - 1)/jReduce
+      ! Shift to appropriate side
+      if(iReduce == 2)then
+         iCoord0_D(Dim1_)          = iCoord0_D(Dim1_) + (iSide-1)*nI/2
+         if(nK>1) iCoord0_D(Dim3_) = iCoord0_D(Dim3_) + (kSide-1)*nK/2
+      else
+         jCoord0_D(Dim1_)          = jCoord0_D(Dim1_) + (iSideMe-1)*nI/2
+         if(nK>1) jCoord0_D(Dim3_) = jCoord0_D(Dim3_) + (kSideMe-1)*nK/2
+      end if
 
-              if(DoTestMe)write(*,*)'iCoord,jCoord=',iCoord_D, jCoord_D
-              
-              call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
-                   iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
+      if(DoDebug)then
+         write(*,*)'iPart, jPart   =', iPart, jPart
+         write(*,*)'iNode, jNode   =', iNode, jNode
+         write(*,*)'iCoord0,jCoord0=', iCoord0_D, jCoord0_D
+      end if
 
-           end do
-        end do
+      iCoord_D = iCoord0_D
+      jCoord_D = jCoord0_D
+      do k = 1, nK
+         if(nK>1) iCoord_D(Dim3_) = iCoord0_D(Dim3_) + (k - 1)/iReduce
+         if(nK>1) jCoord_D(Dim3_) = jCoord0_D(Dim3_) + (k - 1)/jReduce
+         do i = 1,nI
+            iCoord_D(Dim1_) = iCoord0_D(Dim1_) + (i - 1)/iReduce
+            jCoord_D(Dim1_) = jCoord0_D(Dim1_) + (i - 1)/jReduce
 
-      end subroutine connect_j_direction
-      !========================================================================
-      subroutine connect_k_direction
-        
-        ! Shift to appropriate side
-        if(iReduce == 2)then
-           iCoord0_D(Dim1_) = iCoord0_D(Dim1_) + (iSide-1)*nI/2
-           iCoord0_D(Dim2_) = iCoord0_D(Dim2_) + (jSide-1)*nJ/2
-        else
-           jCoord0_D(Dim1_) = jCoord0_D(Dim1_) + (iSideMe-1)*nI/2
-           jCoord0_D(Dim2_) = jCoord0_D(Dim2_) + (jSideMe-1)*nJ/2
-        end if
+            if(DoDebug)write(*,*)'iCoord,jCoord=',iCoord_D, jCoord_D
 
-        if(DoTestMe)then
-           write(*,*)'iPart, jPart   =', iPart, jPart
-           write(*,*)'iNode, jNode   =', iNode, jNode
-           write(*,*)'iCoord0,jCoord0=', iCoord0_D, jCoord0_D
-        end if
+            call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
+                 iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
 
-        iCoord_D = iCoord0_D
-        jCoord_D = jCoord0_D
-        do j = 1,nJ
-           iCoord_D(Dim2_) = iCoord0_D(Dim2_) + (j - 1)/iReduce
-           jCoord_D(Dim2_) = jCoord0_D(Dim2_) + (j - 1)/jReduce
-           do i = 1,nI
-              iCoord_D(Dim1_) = iCoord0_D(Dim1_) + (i - 1)/iReduce
-              jCoord_D(Dim1_) = jCoord0_D(Dim1_) + (i - 1)/jReduce
+         end do
+      end do
 
-              if(DoTestMe)write(*,*)'iCoord,jCoord=',iCoord_D, jCoord_D
-              
-              call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
-                   iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
+    end subroutine connect_j_direction
+    !========================================================================
+    subroutine connect_k_direction
 
-           end do
-        end do
+      ! Shift to appropriate side
+      if(iReduce == 2)then
+         iCoord0_D(Dim1_) = iCoord0_D(Dim1_) + (iSide-1)*nI/2
+         iCoord0_D(Dim2_) = iCoord0_D(Dim2_) + (jSide-1)*nJ/2
+      else
+         jCoord0_D(Dim1_) = jCoord0_D(Dim1_) + (iSideMe-1)*nI/2
+         jCoord0_D(Dim2_) = jCoord0_D(Dim2_) + (jSideMe-1)*nJ/2
+      end if
 
-      end subroutine connect_k_direction
+      if(DoDebug)then
+         write(*,*)'iPart, jPart   =', iPart, jPart
+         write(*,*)'iNode, jNode   =', iNode, jNode
+         write(*,*)'iCoord0,jCoord0=', iCoord0_D, jCoord0_D
+      end if
+
+      iCoord_D = iCoord0_D
+      jCoord_D = jCoord0_D
+      do j = 1,nJ
+         iCoord_D(Dim2_) = iCoord0_D(Dim2_) + (j - 1)/iReduce
+         jCoord_D(Dim2_) = jCoord0_D(Dim2_) + (j - 1)/jReduce
+         do i = 1,nI
+            iCoord_D(Dim1_) = iCoord0_D(Dim1_) + (i - 1)/iReduce
+            jCoord_D(Dim1_) = jCoord0_D(Dim1_) + (i - 1)/jReduce
+
+            if(DoDebug)write(*,*)'iCoord,jCoord=',iCoord_D, jCoord_D
+
+            call HYPRE_SStructGraphAddEntries(i8Graph, iPart, &
+                 iCoord_D, iVar, jPart, jCoord_D, iVar, iError)
+
+         end do
+      end do
+
+    end subroutine connect_k_direction
 
   end subroutine hypre_initialize
 
@@ -681,9 +696,10 @@ contains
     iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
     iUpper_D = iLower_D - 1 + nCell_D
 
-    if(DoDebug)write(*,*)'iPart, iProc, iBlock, iNode, iLower_D, iUpper_D=',&
-         iPart, iProc, iBlock, iNode, iLower_D, iUpper_D, &
-         maxval(Value_I), minval(Value_I)
+    if(DoDebug)write(*,*) &
+         'iPart, iImplBlk, iBlock, iNode, iLower, iUpper, maxval, maxloc=',&
+         iPart, iImplBlock, iBlock, iNode, iLower_D, iUpper_D, &
+         maxval(Value_I), maxloc(Value_I)
 
     call HYPRE_SStructMatrixSetBoxValues(i8A, iPart, iLower_D, iUpper_D, &
          iVar, nStencil, iStencil_I, Value_I, iError)
@@ -931,7 +947,7 @@ contains
     real, intent(inout):: y_I(n)
 
     integer:: i, iImplBlock, iPart, iError, iBlock, iNode
-    real, allocatable:: Value_I(:)
+    real, allocatable:: Zero_I(:)
 
     logical, parameter:: DoDebug = .false.
 
@@ -940,14 +956,14 @@ contains
 
     ! DoDebug = iProc == 1
     
-    if(DoDebug)write(*,*) NameSub,' starting n, maxval, minval, y_I(1)=', &
-         n, maxval(y_I), minval(y_I), y_I(1)
+    if(DoDebug)write(*,*) NameSub,' starting n, sum(y_I**)=', &
+         n, sum(y_I**2)
 
     ! Preconditioning: y'= AMG.y
 
     ! Set initial guess value to zero
-    allocate(Value_I(nIJK))
-    Value_I = 0.0
+    allocate(Zero_I(nIJK))
+    Zero_I = 0.0
 
     ! Set y_I as the RHS
     i = 1
@@ -962,11 +978,14 @@ contains
             iVar, y_I(i), iError)
 
        call HYPRE_SStructVectorSetBoxValues(i8X, iPart, iLower_D, iUpper_D, &
-            iVar, Value_I, iError)
+            iVar, Zero_I, iError)
+
+       if(DoDebug)write(*,*)'iImplBlock, iNode, iLower, iUpper, sum(y**2)=', &
+            iImplBlock, iNode, iLower_D, iUpper_D, sum(y_I(i:i+nIJK-1)**2)
 
        i = i + nIJK
     end do
-    deallocate(Value_I)
+    deallocate(Zero_I)
 
     if(DoDebug)write(*,*) NameSub,' set X=0'
 
@@ -992,7 +1011,7 @@ contains
     i = 1
     do iImplBlock = 1, nImplBlock
        iBlock   = impl2iblk(iImplBlock)
-       iNode    = iNode_B(iImplBlock)
+       iNode    = iNode_B(iBlock)
        iPart    = iTree_IA(Level_,iNode)
        iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
        iUpper_D = iLower_D - 1 + nCell_D
@@ -1000,12 +1019,41 @@ contains
        call HYPRE_SStructVectorGetBoxValues(i8X, iPart, &
             iLower_D, iUpper_D, iVar, y_I(i), iError)
 
+       if(DoDebug)write(*,*)'iImplBlock, iNode, iLower, iUpper, sum(y**2)=', &
+            iImplBlock, iNode, iLower_D, iUpper_D, sum(y_I(i:i+nIJK-1)**2)
+
        i = i + nIJK
     end do
 
     if(DoDebug)write(*,*) NameSub,' finished'
 
   end subroutine hypre_preconditioner
+
+  !================================================================================
+  subroutine hypre_clean
+
+    integer:: iError
+    !-----------------------------------------------------------------------------
+
+    call HYPRE_SStructGridDestroy(i8Grid, iError)
+    call HYPRE_SStructStencilDestroy(i8Stencil, iError)
+    call HYPRE_SStructGraphDestroy(i8Graph, iError)
+    call HYPRE_SStructMatrixDestroy(i8A, iError)
+    call HYPRE_SStructVectorDestroy(i8B, iError)
+    call HYPRE_SStructVectorDestroy(i8X, iError)
+    call HYPRE_BoomerAMGDestroy(i8Precond, iError)
+
+  end subroutine hypre_clean
+  !================================================================================
+  subroutine hypre_finalize
+
+    if(iLastDecomposition == -1) RETURN
+
+    call hypre_clean
+    deallocate(Value_I)
+    iLastDecomposition = -1
+
+  end subroutine hypre_finalize
 
 end module ModImplHypre
 

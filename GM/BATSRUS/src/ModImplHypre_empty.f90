@@ -8,6 +8,7 @@ module ModImplHypre
   private
   public:: hypre_read_param
   public:: hypre_initialize
+  public:: hypre_finalize
   public:: hypre_set_matrix_block
   public:: hypre_set_matrix
   public:: hypre_preconditioner
@@ -30,6 +31,13 @@ contains
     call stop_mpi('hypre_initialize: empty! Use Config.pl -hypre')
 
   end subroutine hypre_initialize
+
+  !==========================================================================
+  subroutine hypre_finalize
+
+    call stop_mpi('hypre_finalize: empty! Use Config.pl -hypre')
+
+  end subroutine hypre_finalize
 
   !===========================================================================
 
