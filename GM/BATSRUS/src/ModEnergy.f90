@@ -158,7 +158,7 @@ contains
 
   end subroutine calc_energy_or_pressure_adjoint
   !ADJOINT SPECIFIC END
-  
+
   !============================================================================
 
   subroutine calc_old_pressure(iBlock)
@@ -167,7 +167,7 @@ contains
     !
     !   P = (gamma-1)*(E - 0.5*rho*u^2 - 0.5*b1^2)
     !
-    
+
     integer, intent(in) :: iBlock
     integer :: i, j, k
     !--------------------------------------------------------------------------
@@ -196,7 +196,7 @@ contains
        end if
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
-       
+
        do k=1, nK; do j=1, nJ; do i=1, nI
           StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
                - gm1*0.5*sum(StateOld_VCB(Bx_:Bz_,i,j,k,iBlock)**2)
@@ -214,7 +214,7 @@ contains
     ! Calculate energy from pressure for the old state
     !
     !   E = P/(gamma-1) + 0.5*rho*u^2 + 0.5*b1^2
-    
+
     integer, intent(in) :: iBlock
     integer :: i, j, k
     !--------------------------------------------------------------------------
@@ -251,7 +251,7 @@ contains
              end do; end do; end do
           end if
        end if
-       
+
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
        ! Add magnetic energy for ion fluid
@@ -274,7 +274,7 @@ contains
     !
     !   P = (gamma-1)*(E - 0.5*rho*u^2 - 0.5*b1^2)
     !
-   
+
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
     integer :: i, j, k    
@@ -325,7 +325,7 @@ contains
 
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
          iBlock, iFluidMin, iFluidMax)
-    
+
     if(DoTestMe)then
        write(*,*)NameSub,':Energy_GBI=',Energy_GBI(iTest,jTest,kTest,iBlock,:)
        write(*,*)NameSub,':State_VGB=',State_VGB(:,iTest,jTest,kTest,iBlock)
@@ -335,7 +335,7 @@ contains
 
   !ADJOINT SPECIFIC BEGIN
   !===========================================================================
-  
+
   subroutine calc_pressure_adjoint(iMin, iMax, jMin, jMax, kMin, kMax, iBlock,&
        iFluidMin, iFluidMax)
 
@@ -345,7 +345,7 @@ contains
     !
 
     use ModAdjoint, ONLY: Adjoint_VGB, AdjEnergy_GBI
-   
+
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
 !!$    integer :: i, j, k, d  
@@ -380,7 +380,7 @@ contains
 !!$
 !!$       call stop_mpi(" in calc_pressure_adjoint: not yet implemented.")
 !!$    end do
-  
+
   end subroutine calc_pressure_adjoint
   !ADJOINT SPECIFIC END
 
@@ -407,12 +407,12 @@ contains
        ! Calculate thermal plus kinetic energy
        do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
           if (State_VGB(iRho,i,j,k,iBlock) <= 0.0)then
-             Energy_GBI(i, j, k, iBlock, iFluid) = 0.0
+             Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
           else
              Energy_GBI(i, j, k, iBlock, iFluid) = &
                   inv_gm1*State_VGB(iP,i,j,k,iBlock) &
-                  +0.5*(sum(State_VGB(iRhoUx:iRhoUz, i, j, k, iBlock)**2)/&
-                  State_VGB(iRho, i, j, k, iBlock))
+                  +0.5*(sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)/&
+                  State_VGB(iRho,i,j,k,iBlock))
           end if
        end do; end do; end do
 
@@ -432,13 +432,13 @@ contains
              end do; end do; end do
           end if
        end if
-       
+
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
        ! Add magnetic energy for ion fluid
        do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
-          Energy_GBI(i, j, k, iBlock, iFluid) = &
-               Energy_GBI(i, j, k, iBlock, iFluid) + &
+          Energy_GBI(i,j,k,iBlock, iFluid) = &
+               Energy_GBI(i,j,k,iBlock, iFluid) + &
                0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
 
@@ -505,7 +505,7 @@ contains
     integer, intent(in) :: iBlock
     call calc_pressure(1,nI,1,nJ,1,nK,iBlock,1,nFluid)
   end subroutine calc_pressure_cell
-  
+
   !ADJOINT SPECIFIC BEGIN
   !===========================================================================
   subroutine calc_pressure_cell_adjoint(iBlock)
@@ -566,10 +566,57 @@ contains
 
   !===========================================================================
 
-  subroutine calc_energy_ghost(iBlock)
-     integer, intent(in) :: iBlock
-    integer i,j,k
+  subroutine calc_energy_ghost(iBlock,DoResChengeOnlyIn)
+
+    use ModParallel, ONLY: BLKneighborLEV
+
+    integer, intent(in) :: iBlock
+    logical, optional, intent(in) :: DoResChengeOnlyIn
+
+    integer :: i,j,k
+    logical :: DoResChengeOnly
     !--------------------------------------------------------------------------
+
+    DoResChengeOnly =.false.
+    if(present(DoResChengeOnlyIn)) DoResChengeOnly = DoResChengeOnlyIn
+
+    if( DoResChengeOnly ) then
+       if( .not.any(abs(BLKneighborLEV(-1:1,-1:1,-1:1,iBlock)) == 1) ) RETURN
+    end if
+
+!!$    !------------------- for calculation on ghost cells only ----------------
+!!$    if( DoResChengeOnly ) then
+!!$       
+!!$       if( any(abs(BLKneighborLEV(-1,:,:,iBlock)) == 1) ) then
+!!$          !call limit_pressure(-1,0,-1,nJ+2,-1,nK+2,iBlock,1,nFluid)
+!!$          call calc_energy(-1,0,-1,nJ+2,-1,nK+2,iBlock,1,nFluid)
+!!$       end if
+!!$
+!!$       if( any(abs(BLKneighborLEV(1,:,:,iBlock)) == 1) ) then
+!!$          !call limit_pressure(nI+1,nI+2,-1,nJ+2,-1,nK+2,iBlock,1,nFluid)
+!!$          call calc_energy(nI+1,nI+2,-1,nJ+2,-1,nK+2,iBlock,1,nFluid)
+!!$       end if
+!!$
+!!$       if( any(abs(BLKneighborLEV(:,-1,:,iBlock)) == 1) ) then
+!!$          !call limit_pressure(-1,nI+2,-1,0,-1,nK+2,iBlock,1,nFluid)
+!!$          call calc_energy(-1,nI+2,-1,0,-1,nK+2,iBlock,1,nFluid)
+!!$       end if
+!!$
+!!$       if( any(abs(BLKneighborLEV(:,1,:,iBlock)) == 1) ) then
+!!$          !call limit_pressure(-1,nI+2,nJ+1,nJ+2,-1,nK+2,iBlock,1,nFluid)
+!!$          call calc_energy(-1,nI+2,nJ+1,nJ+2,-1,nK+2,iBlock,1,nFluid)
+!!$       end if
+!!$       if( any(abs(BLKneighborLEV(:,:,-1,iBlock)) == 1) ) then
+!!$          !call limit_pressure(-1,nI+2,-1,nJ+2,-1,0,iBlock,1,nFluid)
+!!$          call calc_energy(-1,nI+2,-1,nJ+2,-1,0,iBlock,1,nFluid)
+!!$       end if
+!!$       if( any(abs(BLKneighborLEV(:,:,1,iBlock)) == 1) ) then
+!!$          !call limit_pressure(-1,nI+2,-1,nJ+2,nK+1,nK+2,iBlock,1,nFluid)
+!!$          call calc_energy(-1,nI+2,-1,nJ+2,nK+1,nK+2,iBlock,1,nFluid)
+!!$       end if
+!!$
+!!$
+!!$    end if
 
     call limit_pressure(-1,nI+2,-1,nJ+2,-1,nK+2,iBlock,1,nFluid)
 
@@ -701,6 +748,129 @@ contains
     end do
 
   end subroutine limit_old_pressure
+  !^CFG IF PROJECTION BEGIN
+  !============================================================================
+  ! moved form file exchange_messages.f90 
+  subroutine correctP(iBlock)
+
+    ! Make pressure and energy consistent and maintain thermal energy ratio 
+    ! at a reasonable value (this also excludes negative pressure)
+
+    use ModProcMH
+    use ModMain, ONLY : nI,nJ,nK,Itest,Jtest,Ktest,BLKtest
+    use ModVarIndexes,ONLY:&
+         rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_,nVar
+    use ModAdvance, ONLY : State_VGB, Energy_GBI
+    use ModPhysics, ONLY : gm1, inv_gm1, Pratio_hi, Pratio_lo
+    use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, true_cell
+    implicit none
+
+    integer, intent(in) :: iBlock
+
+    integer :: i,j,k
+    real :: inv_dratio, qp, qe, qth, qratio, qd, qde, qpmin, &
+         qdesum, qdesumabs, qderelmax
+
+    real, dimension(1:nI,1:nJ,1:nK) :: P_old
+
+    integer :: ierror1=-1, ierror2=-1, ierror3=-1, loc(3)
+
+    logical :: oktest, oktest_me
+    !--------------------------------------------------------------------------
+
+    if(iBlock==BLKtest)then
+       call set_oktest('correctP',oktest,oktest_me)
+    else
+       oktest=.false.; oktest_me=.false.
+    end if
+
+    qpmin=1.
+    qdesum=0.
+    qdesumabs=0.
+    qderelmax=0.
+
+    P_old=State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)
+
+    inv_dratio=1./(Pratio_hi-Pratio_lo)
+
+    do k=1,nK; do j=1,nJ; do i=1,nI
+
+       if(.not.true_cell(i,j,k,iBlock))CYCLE
+
+       ! Pressure and total energy
+       qp=P_old(i,j,k)
+       qe=Energy_GBI(i,j,k,iBlock,1)
+
+       if(oktest_me.and.i==Itest.and.J==Jtest.and.K==Ktest)&
+            write(*,*)'CorrectP at me,BLK,i,j,k=',&
+            iProc,BLKtest,Itest,Jtest,Ktest, &
+            ', initial P,E=',qp,qe
+
+       ! Memorize smallest pressure
+       qpmin=min(qp,qpmin)
+
+       ! Thermal energy
+       qth=inv_gm1*qp
+
+       ! Deviation=extra total energy=qe-inv_gm1*qp-(rhoU**2/rho+B**2)/2
+       qd=qE-qth                                                         &
+            -0.5*(State_VGB(rhoUx_,i,j,k,iBlock)**2+                         &
+            State_VGB(rhoUy_,i,j,k,iBlock)**2+                               &
+            State_VGB(rhoUz_,i,j,k,iBlock)**2)/State_VGB(rho_,i,j,k,iBlock)      &
+            -0.5*(State_VGB(Bx_,i,j,k,iBlock)**2+                            &
+            State_VGB(By_,i,j,k,iBlock)**2+                                  &
+            State_VGB(Bz_,i,j,k,iBlock)**2)
+
+       ! Limited thermal/total energy ratio for correction
+       qratio=min(Pratio_hi,max(Pratio_lo,min(qth,qth+qd)/qe))
+
+       ! Total energy is modified by qde (=0 if qratio==Pratio_hi)
+       qde=qd*(Pratio_hi-qratio)*inv_dratio
+
+       ! Collect total energy change
+       qdesum   =qdesum   -qde
+       qdesumabs=qdesumabs+abs(qde)
+       qderelmax=max(qderelmax,qde/qe)
+
+       ! Pressure is modified
+       State_VGB(P_,i,j,k,iBlock)=gm1*(qth+qd-qde)
+
+       ! We should now have E=inv_gm1*P+(rhoU**2/rho+B**2)/2:
+       !
+       ! qp*inv_gm1+qd-qde + (rhoU**2/rho+B**2)/2 = qe-qde = E
+       !
+       ! Correct!
+
+       if(oktest_me.and.i==Itest.and.J==Jtest.and.K==Ktest)then
+          write(*,*)'qp,qth,qe,qd,qratio,qde=',qp,qth,qe,qd,qratio,qde
+          write(*,*)'CorrectP, final P=',State_VGB(P_,i,j,k,iBlock)
+       end if
+
+    end do; end do; end do
+
+    if(qpmin<0.)then
+       if(ierror1==-1)then
+          loc=minloc(P_old)
+          write(*,*)'Negative P at me,iBLK,I,J,K,x,y,z,val',&
+               iProc,iBlock,loc,&
+               x_BLK(loc(1),loc(2),loc(3),iBlock),&
+               y_BLK(loc(1),loc(2),loc(3),iBlock),&
+               z_BLK(loc(1),loc(2),loc(3),iBlock),&
+               P_old(loc(1),loc(2),loc(3))
+       end if
+       call error_report('Negative P in exchange msgs, min(P)', &
+            qpmin,ierror1,.true.)
+    end if
+    if(qderelmax>1.0E-3)then
+       call error_report('E change in exchange_msgs, dE',qdesum,ierror2,.false.)
+       call error_report('|E| change in exchange_msgs, d|E|',qdesumabs,ierror3,&
+            .false.)
+    end if
+
+    if(oktest_me)write(*,*)'CorrectP qpmin=',qpmin
+
+  end subroutine correctP
+  !^CFG END PROJECTION
 
 end module ModEnergy
 
