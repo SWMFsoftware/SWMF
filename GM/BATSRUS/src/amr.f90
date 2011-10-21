@@ -71,24 +71,6 @@ subroutine amr(DoMessagePass)
         call regrid_batl(nVar, State_VGB, Dt_BLK, &
              DoTestIn=DoTestMe, Used_GB=true_cell)
         if(DoProfileAmr) call timing_stop('amr::regrid_batl')
-
-        if(DoProfileAmr) call timing_start('amr::set_batsrus_grid')
-        call set_batsrus_grid
-        if(DoProfileAmr) call timing_stop('amr::set_batsrus_grid')
-
-        ! If the grid has not changed there is nothing else to do
-        if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) then
-           if(DoMessagePass)then
-              if(DoProfileAmr) call timing_start('amr::exchange_messages')
-              UsePlotMessageOptions = .false.
-              call exchange_messages
-              if(DoProfileAmr) call timing_stop('amr::exchange_messages')
-           end if
-           RETURN
-        end if
-        if(DoProfileAmr) call timing_start('amr::count_true_cells')
-        call count_true_cells
-        if(DoProfileAmr) call timing_stop('amr::count_true_cells')
      else
         if(DoProfileAmr) call timing_start('amr::specify_refinement')
         call specify_refinement(DoRefine_B)
@@ -98,22 +80,27 @@ subroutine amr(DoMessagePass)
         call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, &
              DoTestIn=DoTestMe, Used_GB=true_cell)
         if(DoProfileAmr) call timing_stop('amr::regrid_batl')
-
-        if(DoProfileAmr) call timing_start('amr::set_batsrus_grid')
-        call set_batsrus_grid
-        if(DoProfileAmr) call timing_stop('amr::set_batsrus_grid')
-
-        ! If the grid has not changed there is nothing else to do
-        if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) then
-           if(DoMessagePass)then
-              if(DoProfileAmr) call timing_start('amr::exchange_messages')
-              UsePlotMessageOptions = .false.
-              call exchange_messages
-              if(DoProfileAmr) call timing_stop('amr::exchange_messages')
-           end if
-           RETURN
-        end if
      end if
+        
+     if(DoProfileAmr) call timing_start('amr::set_batsrus_grid')
+     call set_batsrus_grid
+     if(DoProfileAmr) call timing_stop('amr::set_batsrus_grid')
+
+     ! If the grid has not changed only the message passing has to be redone
+     ! to reset ghost cells at resolution changes
+     if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) then
+        if(DoMessagePass)then
+           if(DoProfileAmr) call timing_start('amr::exchange_messages')
+           UsePlotMessageOptions = .false.
+           call exchange_messages
+           if(DoProfileAmr) call timing_stop('amr::exchange_messages')
+        end if
+        RETURN
+     end if
+
+     if(DoProfileAmr) call timing_start('amr::count_true_cells')
+     call count_true_cells
+     if(DoProfileAmr) call timing_stop('amr::count_true_cells')
 
      iLastGrid          = iNewGrid
      iLastDecomposition = iNewDecomposition
