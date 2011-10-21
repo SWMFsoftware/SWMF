@@ -612,29 +612,14 @@ contains
     integer, intent(in):: iImplBlock
     real,    intent(inout):: Jacobian_CI(nI,nJ,nK,nStencil)
 
-    ! Number of links connecting a coarse cell to a finer neighbor
-    ! in the I, J, and K directions, respectively
-    integer, parameter:: nStencilI = jRatio*kRatio
-    integer, parameter:: nStencilJ = iRatio*kRatio
-    integer, parameter:: nStencilK = iRatio*jRatio
-
-    ! Index ranges for the extra connections at resolution changes
-    ! Note: extra shift is needed at edge/corner res. changes !
-    integer, parameter:: iStencilI_I(nStencilI) = &
-         (/ (iStencil, iStencil = nStencil, nStencil+nStencilI-1) /)
-
-    integer, parameter:: iStencilJ_I(nStencilJ) = &
-         (/ (iStencil, iStencil = nStencil, nStencil+nStencilJ-1) /)
-
-    integer, parameter:: iStencilK_I(nStencilK) = &
-         (/ (iStencil, iStencil = nStencil, nStencil+nStencilK-1) /)
-
-    ! Array of matrix elements for a coarse cell used by 
-    ! HYPRE_SStructMatrixSetValues (the values are actually equal)
-    real:: JacI_I(nStencilI), JacJ_I(nStencilJ), JacK_I(nStencilK)
-
-    ! Matrix element connecting a fine cell to a coarser cell
+    ! Matrix element
     real   :: Jac
+
+    ! Index of next extra connection for every cell in the block
+    integer:: iStencilExtra_C(nI,nJ,nK)
+
+    ! Index of first connection and number of extra connection to a single cell
+    integer:: iStencilFirst, nStencilExtra
 
     integer:: iValue, i, j, k, iPart, iBlock, iError
     integer:: DiLevel
@@ -703,9 +688,16 @@ contains
     call HYPRE_SStructMatrixSetBoxValues(i8A, iPart, iLower_D, iUpper_D, &
          iVar, nStencil, iStencil_I, Value_I, iError)
 
+    ! Initialize index array for extra matrix elements at resolution changes
+    iStencilExtra_C = nStencil
+
     ! check -I neighbor for resolution change
     DiLevel = DiLevelNei_IIIB(-1,0,0,iBlock)
-    if( DiLevel == 1)then
+    if( abs(DiLevel) == 1)then
+
+       ! Number of connections per cell for coarser and finer neighbor
+       nStencilExtra = 1
+       if(DiLevel == -1) nStencilExtra = jRatio*kRatio
 
        if(DoDebug)write(*,*)'-I iProc, iPart, DiLevel=',iProc, iPart, DiLevel
 
@@ -715,76 +707,43 @@ contains
           do j = 1, nJ
              if(nJ > 1)iCoord_D(Dim2_) = iLower_D(Dim2_) + j - 1
 
-             Jac = Jacobian_CI(1,j,k,Stencil2_)
-
-             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                  iVar, 1, (/nStencil/), (/Jac/), iError)
+             Jac = Jacobian_CI(1,j,k,Stencil2_)/nStencilExtra
+             do iStencil = nStencil, nStencil + nStencilExtra - 1
+                call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
+                     iVar, 1, (/iStencil/), (/Jac/), iError)
+             end do
+             iStencilExtra_C(1,j,k) = iStencil
 
              if(DoDebug)write(*,*)'-I iCoord, Jac =', iCoord_D, Jac
              
           end do
        end do
-
-    elseif( DiLevel == -1)then
-
-       if(DoDebug)write(*,*)'-I iProc, iPart, DiLevel=',iProc, iPart, DiLevel
-
-       iCoord_D = iLower_D
-       do k = 1, nK
-          if(nK > 1)iCoord_D(Dim3_) = iLower_D(Dim3_) + k - 1
-          do j = 1, nJ
-             if(nJ > 1)iCoord_D(Dim2_) = iLower_D(Dim2_) + j - 1
-
-             JacI_I = Jacobian_CI(1,j,k,Stencil2_)/nStencilI
-
-             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                  iVar, nStencilI, iStencilI_I, JacI_I, iError)
-
-             if(DoDebug)write(*,*)'-I iCoord, JacI_I =', iCoord_D, JacI_I
-
-          end do
-       end do
-
     end if
 
     ! check +I neighbor for resolution change
     DiLevel = DiLevelNei_IIIB(+1,0,0,iBlock)
-    if(DiLevel == 1)then
+    if(abs(DiLevel) == 1)then
+
+       ! Number of connections per cell for coarser and finer neighbor
+       nStencilExtra = 1
+       if(DiLevel == -1) nStencilExtra = jRatio*kRatio
 
        if(DoDebug)write(*,*)'+I iProc, iPart, DiLevel=',iProc, iPart, DiLevel
 
        iCoord_D = iUpper_D
        do k = 1, nK
-          if(nK > 1)iCoord_D(Dim3_) = iUpper_D(Dim3_) + k - nK
+          if(nK > 1) iCoord_D(Dim3_) = iUpper_D(Dim3_) + k - nK
           do j = 1, nJ
-             if(nJ > 1)iCoord_D(Dim2_) = iUpper_D(Dim2_) + j - nJ
+             if(nJ > 1) iCoord_D(Dim2_) = iUpper_D(Dim2_) + j - nJ
                 
-             Jac = Jacobian_CI(nI,j,k,Stencil3_)
-
-             call HYPRE_SStructMatrixSetValues(i8A, iPart, &
-                  iCoord_D, iVar, 1, (/nStencil/), (/Jac/), iError)
+             Jac = Jacobian_CI(nI,j,k,Stencil3_)/nStencilExtra
+             do iStencil = nStencil, nStencil + nStencilExtra - 1
+                call HYPRE_SStructMatrixSetValues(i8A, iPart, &
+                     iCoord_D, iVar, 1, (/iStencil/), (/Jac/), iError)
+             end do
+             iStencilExtra_C(nI,j,k) = iStencil
 
              if(DoDebug)write(*,*)'+I iCoord, Jac =', iCoord_D, Jac
-
-          end do
-       end do
-
-    elseif(DiLevel == -1)then
-       
-       if(DoDebug)write(*,*)'+I iProc, iPart, DiLevel =',iProc, iPart, DiLevel
-
-       iCoord_D = iUpper_D
-       do k = 1, nK
-          if(nK > 1)iCoord_D(Dim3_) = iUpper_D(Dim3_) + k - nK
-          do j = 1, nJ
-             if(nJ > 1)iCoord_D(Dim2_) = iUpper_D(Dim2_) + j - nJ
-
-             JacI_I = Jacobian_CI(nI,j,k,Stencil3_)/nStencilI
-
-             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                  iVar, nStencilI, iStencilI_I, JacI_I, iError)
-
-             if(DoDebug)write(*,*)'+I iCoord, JacI_I =', iCoord_D, JacI_I
 
           end do
        end do
@@ -796,43 +755,30 @@ contains
 
     ! check -J neighbor for resolution change
     DiLevel = DiLevelNei_IIIB(0,-1,0,iBlock)
-    if( DiLevel == 1)then
+    if(abs(DiLevel) == 1)then
+
+       ! Number of connections per cell for coarser and finer neighbor
+       nStencilExtra = 1
+       if(DiLevel == -1) nStencilExtra = iRatio*kRatio
 
        if(DoDebug)write(*,*)'-J iProc, iPart, DiLevel=',iProc, iPart, DiLevel
 
        iCoord_D = iLower_D
        do k = 1, nK
-          if(nK > 1)iCoord_D(Dim3_) = iLower_D(Dim3_) + k - 1
+          if(nK > 1) iCoord_D(Dim3_) = iLower_D(Dim3_) + k - 1
           do i = 1, nI
              iCoord_D(Dim1_) = iLower_D(Dim1_) + i - 1
 
-             Jac = Jacobian_CI(i,1,k,Stencil4_)
-
-             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                  iVar, 1, (/nStencil/), (/Jac/), iError)
+             Jac = Jacobian_CI(i,1,k,Stencil4_)/nStencilExtra
+             iStencilFirst = iStencilExtra_C(i,1,k)
+             do iStencil = iStencilFirst, iStencilFirst + nStencilExtra - 1
+                call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
+                     iVar, 1, (/iStencil/), (/Jac/), iError)
+             end do
+             iStencilExtra_C(i,1,k) = iStencil
 
              if(DoDebug)write(*,*)'-J iCoord, Jac =', iCoord_D, Jac
              
-          end do
-       end do
-
-    elseif( DiLevel == -1)then
-
-       if(DoDebug)write(*,*)'-J iProc, iPart, DiLevel=',iProc, iPart, DiLevel
-
-       iCoord_D = iLower_D
-       do k = 1, nK
-          if(nK > 1)iCoord_D(Dim3_) = iLower_D(Dim3_) + k - 1
-          do i = 1, nI
-             iCoord_D(Dim1_) = iLower_D(Dim1_) + i - 1
-
-             JacJ_I = Jacobian_CI(i,1,k,Stencil4_)/nStencilJ
-
-             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                  iVar, nStencilJ, iStencilJ_I, JacJ_I, iError)
-
-             if(DoDebug)write(*,*)'-J iCoord, JacJ_I =', iCoord_D, JacJ_I
-
           end do
        end do
 
@@ -840,42 +786,29 @@ contains
 
     ! check +J neighbor for resolution change
     DiLevel = DiLevelNei_IIIB(0,+1,0,iBlock)
-    if(DiLevel == 1)then
+    if(abs(DiLevel) == 1)then
+
+       ! Number of connections per cell for coarser and finer neighbor
+       nStencilExtra = 1
+       if(DiLevel == -1) nStencilExtra = iRatio*kRatio
 
        if(DoDebug)write(*,*)'+J iProc, iPart, DiLevel=',iProc, iPart, DiLevel
 
        iCoord_D = iUpper_D
        do k = 1, nK
-          if(nK > 1)iCoord_D(Dim3_) = iUpper_D(Dim3_) + k - nK
+          if(nK > 1) iCoord_D(Dim3_) = iUpper_D(Dim3_) + k - nK
           do i = 1, nI
              iCoord_D(Dim1_) = iUpper_D(Dim1_) + i - nI
-                
-             Jac = Jacobian_CI(i,nJ,k,Stencil5_)
 
-             call HYPRE_SStructMatrixSetValues(i8A, iPart, &
-                  iCoord_D, iVar, 1, (/nStencil/), (/Jac/), iError)
+             Jac = Jacobian_CI(i,nJ,k,Stencil5_)/nStencilExtra
+             iStencilFirst = iStencilExtra_C(i,nJ,k)
+             do iStencil = iStencilFirst, iStencilFirst + nStencilExtra - 1
+                call HYPRE_SStructMatrixSetValues(i8A, iPart, &
+                     iCoord_D, iVar, 1, (/iStencil/), (/Jac/), iError)
+             end do
+             iStencilExtra_C(i,nJ,k) = iStencil
 
              if(DoDebug)write(*,*)'+J iCoord, Jac =', iCoord_D, Jac
-
-          end do
-       end do
-
-    elseif(DiLevel == -1)then
-       
-       if(DoDebug)write(*,*)'+J iProc, iPart, DiLevel =',iProc, iPart, DiLevel
-
-       iCoord_D = iUpper_D
-       do k = 1, nK
-          if(nK > 1)iCoord_D(Dim3_) = iUpper_D(Dim3_) + k - nK
-          do i = 1, nI
-             iCoord_D(Dim1_) = iUpper_D(Dim1_) + i - nI
-
-             JacJ_I = Jacobian_CI(i,nJ,k,Stencil5_)/nStencilJ
-
-             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                  iVar, nStencilJ, iStencilJ_I, JacJ_I, iError)
-
-             if(DoDebug)write(*,*)'+J iCoord, JacJ_I =', iCoord_D, JacJ_I
 
           end do
        end do
@@ -887,7 +820,11 @@ contains
 
     ! check -K neighbor for resolution change
     DiLevel = DiLevelNei_IIIB(0,0,-1,iBlock)
-    if( DiLevel == 1)then
+    if(abs(DiLevel) == 1)then
+
+       ! Number of connections per cell for coarser and finer neighbor
+       nStencilExtra = 1
+       if(DiLevel == -1) nStencilExtra = iRatio*jRatio
 
        if(DoDebug)write(*,*)'-K iProc, iPart, DiLevel=',iProc, iPart, DiLevel
 
@@ -897,33 +834,16 @@ contains
           do i = 1, nI
              iCoord_D(Dim1_) = iLower_D(Dim1_) + i - 1
 
-             Jac = Jacobian_CI(i,j,1,Stencil6_)
-
-             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                  iVar, 1, (/nStencil/), (/Jac/), iError)
+             Jac = Jacobian_CI(i,j,1,Stencil6_)/nStencilExtra
+             iStencilFirst = iStencilExtra_C(i,j,1)
+             do iStencil = iStencilFirst, iStencilFirst + nStencilExtra - 1
+                call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
+                     iVar, 1, (/iStencil/), (/Jac/), iError)
+             end do
+             iStencilExtra_C(i,j,1) = iStencil
 
              if(DoDebug)write(*,*)'-K iCoord, Jac =', iCoord_D, Jac
              
-          end do
-       end do
-
-    elseif( DiLevel == -1)then
-
-       if(DoDebug)write(*,*)'-K iProc, iPart, DiLevel=',iProc, iPart, DiLevel
-
-       iCoord_D = iLower_D
-       do j = 1, nJ
-          iCoord_D(Dim2_) = iLower_D(Dim2_) + j - 1
-          do i = 1, nI
-             iCoord_D(Dim1_) = iLower_D(Dim1_) + i - 1
-
-             JacK_I = Jacobian_CI(i,j,1,Stencil6_)/nStencilK
-
-             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                  iVar, nStencilK, iStencilK_I, JacK_I, iError)
-
-             if(DoDebug)write(*,*)'-K iCoord, JacK_I =', iCoord_D, JacK_I
-
           end do
        end do
 
@@ -931,7 +851,11 @@ contains
 
     ! check +K neighbor for resolution change
     DiLevel = DiLevelNei_IIIB(0,0,+1,iBlock)
-    if(DiLevel == 1)then
+    if(abs(DiLevel) == 1)then
+
+       ! Number of connections per cell for coarser and finer neighbor
+       nStencilExtra = 1
+       if(DiLevel == -1) nStencilExtra = iRatio*jRatio
 
        if(DoDebug)write(*,*)'+K iProc, iPart, DiLevel=',iProc, iPart, DiLevel
 
@@ -940,33 +864,16 @@ contains
           iCoord_D(Dim2_) = iUpper_D(Dim2_) + j - nJ
           do i = 1, nI
              iCoord_D(Dim1_) = iUpper_D(Dim1_) + i - nI
-                
-             Jac = Jacobian_CI(i,j,nK,Stencil7_)
 
-             call HYPRE_SStructMatrixSetValues(i8A, iPart, &
-                  iCoord_D, iVar, 1, (/nStencil/), (/Jac/), iError)
+             Jac = Jacobian_CI(i,j,nK,Stencil7_)/nStencilExtra
+             iStencilFirst = iStencilExtra_C(i,j,nK)
+             do iStencil = iStencilFirst, iStencilFirst + nStencilExtra - 1
+                call HYPRE_SStructMatrixSetValues(i8A, iPart, &
+                     iCoord_D, iVar, 1, (/iStencil/), (/Jac/), iError)
+             end do
+             iStencilExtra_C(i,j,nK) = iStencil
 
              if(DoDebug)write(*,*)'+K iCoord, Jac =', iCoord_D, Jac
-
-          end do
-       end do
-
-    elseif(DiLevel == -1)then
-       
-       if(DoDebug)write(*,*)'+K iProc, iPart, DiLevel =',iProc, iPart, DiLevel
-
-       iCoord_D = iUpper_D
-       do j = 1, nJ
-          iCoord_D(Dim2_) = iUpper_D(Dim2_) + j - nJ
-          do i = 1, nI
-             iCoord_D(Dim1_) = iUpper_D(Dim1_) + i - nI
-
-             JacK_I = Jacobian_CI(i,j,nK,Stencil7_)/nStencilK
-
-             call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                  iVar, nStencilK, iStencilK_I, JacK_I, iError)
-
-             if(DoDebug)write(*,*)'+K iCoord, JacK_I =', iCoord_D, JacK_I
 
           end do
        end do
