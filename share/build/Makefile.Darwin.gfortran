@@ -28,6 +28,9 @@ SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 DEBUGFLAG = -C -g -fbacktrace -ffpe-trap=invalid,zero,overflow
 DEBUG     = 
 
+## To profile the code with shark and view source code, set the DEBUG command below.
+#DEBUG     = -gstabs+
+
 OPT0 = -O0
 OPT1 = -O1
 OPT2 = -O2
