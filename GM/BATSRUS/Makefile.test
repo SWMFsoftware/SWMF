@@ -20,6 +20,7 @@ test:
 	-@(make test_corona)
 	-@(make test_coronasph)
 	-@(make test_corona_2t)
+	-@(make test_chromo)
 	-@(make test_outerhelio)
 	-@(make test_earthsph)
 	-@(make test_2bodyplot)
@@ -56,6 +57,7 @@ test_help:
 	@echo "    test_corona                (run Solar Corona test)"
 	@echo "    test_coronasph             (run spherical Solar Corona test)"
 	@echo "    test_corona_2t             (run 2T Solar Corona test)"
+	@echo "    test_chromo                (run Chromo - Solar Corona test)"
 	@echo "    test_earthsph              (run spherical Earth test)"
 	@echo "    test_eosgodunov            (run EOS/Godunov test)"
 	@echo "    test_fluxemergence         (run flux emergence test)"
@@ -681,6 +683,36 @@ test_corona_2t_check:
 		${TESTDIR}/RESULTS/SC/log_n000000.log > test_corona_2t.diff
 	ls -l test_corona_2t.diff
 
+### STANDALONE CHROMOSPHERE SOLAR CORONA TESTS ###
+
+test_chromo:
+	@echo "test_chromo_compile..." > test_chromo.diff
+	make test_chromo_compile
+	@echo "test_chromo_rundir..." >> test_chromo.diff
+	make test_chromo_rundir
+	@echo "test_chromo_run..." >> test_chromo.diff
+	make test_chromo_run
+	@echo "test_chromo_check..." >> test_chromo.diff
+	make test_chromo_check
+
+test_chromo_compile:
+	./Config.pl -u=ScChromo -e=MhdWaves -g=6,4,4,3000,1 -nWave=2
+	make BATSRUS
+
+test_chromo_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.sc.chromo PARAM.in
+
+test_chromo_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	
+test_chromo_check:
+	${SCRIPTDIR}/DiffNum.pl -t \
+		Param/CORONA/TestOutput/log_n000000.sc.chromo \
+		${TESTDIR}/RESULTS/SC/log_n000000.log > test_chromo.diff
+	ls -l test_chromo.diff
 
 ### STANDALONE OUTER HELIOSPHERE TESTS ###
 
