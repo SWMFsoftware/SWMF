@@ -443,7 +443,7 @@ contains
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = B_D
  	  Br = sum(B_D*r_D)
        end if
-       if(Hyp_>1) State_VGB(Hyp_,:,:,:,iBlock) = 0.0
+       if(Hyp_>1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
 
        if (UseChromoBc) then
           if (Br >= 0.0) then
