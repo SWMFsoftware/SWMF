@@ -108,7 +108,6 @@ OBJECTS = \
 	coarsen_grid.o\
 	covariant.o\
 	create_soln_blocks.o\
-	exchange_messages.o\
 	explicit.o\
 	find_neighbors.o\
 	fix_axis_cells.o\
@@ -165,7 +164,7 @@ MY_LIB  = libBATSRUS.a
 LIBBATL = ../srcBATL/libBATL.a
 
 LIB:	DEPEND
-	make ${MY_LIB}
+	$(MAKE) ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
@@ -187,7 +186,7 @@ ${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 EXE = ${BINDIR}/BATSRUS.exe
 
 BATSRUS:
-	make ${EXE}
+	$(MAKE) ${EXE}
 	@echo ' '
 	@echo Program BATSRUS has been brought up to date.
 	@echo ' '	
@@ -216,7 +215,7 @@ ${CRASH_OBJECT_EXE}: ${LIBSHARE} ${LIBTIMING} ${LIBCRASH} ${MY_LIB}
 CRASHEXE = ${BINDIR}/CRASH.exe
 
 CRASH:
-	make ${CRASHEXE}
+	$(MAKE) ${CRASHEXE}
 	@echo ' '
 	@echo Program CRASH has been brought up to date.
 	@echo ' '	
