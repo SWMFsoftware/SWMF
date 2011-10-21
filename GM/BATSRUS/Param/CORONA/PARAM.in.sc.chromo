@@ -1,6 +1,9 @@
 #ECHO
 T			DoEcho
 
+#BATL
+F
+
 #BATLTEST
 F
 
