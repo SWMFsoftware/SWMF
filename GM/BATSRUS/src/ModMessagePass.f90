@@ -5,7 +5,351 @@ module ModMessagePass
   implicit none
 
 contains
+  ! moved form file exchange_messages.f90 
+  subroutine exchange_messages(DoResChengeOnlyIn)
+    use ModProcMH
+    use ModMain, ONLY : nI, nJ, nK, gcn, nBlockMax, nBlock, unusedBLK, &
+         TypeBc_I, time_loop, UseB, &
+         UseConstrainB,&              !^CFG IF CONSTRAINB 
+         UseProjection,&              !^CFG IF PROJECTION
+         UseDivbDiffusion,&           !^CFG IF DIVBDIFFUSE
+         time_simulation,nOrder,prolong_order,optimize_message_pass, UseBatl
+    use ModVarIndexes
+    use ModAdvance, ONLY : State_VGB,divB1_GB
+    use ModParallel, ONLY : UsePlotMessageOptions
+    use ModGeometry, ONLY : far_field_BCs_BLK        
+    use ModMPCells, ONLY : DoOneCoarserLayer
+    use ModBoundaryCells,ONLY:SaveBoundaryCells
+    use ModPhysics, ONLY : ShockSlope
+    use ModFaceValue,ONLY: UseAccurateResChange
+    use ModEnergy,   ONLY: calc_energy_ghost, correctP
 
+    use BATL_lib, ONLY: message_pass_cell
+    use ModBatlInterface, ONLY: UseBatlTest
+    use ModAMR, ONLY: DoProfileAmr
+    use ModMpi
+
+    logical, optional, intent(in) :: DoResChengeOnlyIn
+
+    integer :: iBlock
+    logical :: oktest, oktest_me, oktime, oktime_me
+    logical :: DoRestrictFace, DoOneLayer, DoTwoCoarseLayers
+    logical :: DoCorners, DoFaces
+
+    integer :: nWidth, nCoarseLayer
+
+    !---------------------------------------------------------------------------
+
+    !!^CFG IF DEBUGGING BEGIN
+    ! call testmessage_pass_nodes
+    ! call time_message_passing
+    !!^CFG END DEBUGGING
+
+    DoRestrictFace = prolong_order==1
+    if(UseConstrainB) DoRestrictFace = .false.   !^CFG IF CONSTRAINB
+
+    DoTwoCoarseLayers = &
+         nOrder==2 .and. prolong_order==1 .and. .not. DoOneCoarserLayer
+
+    call set_oktest('exchange_messages',oktest,oktest_me)
+    call set_oktest('time_exchange',oktime,oktime_me)
+
+    call timing_start('exch_msgs')
+    ! Ensure that energy and pressure are consistent and positive in real cells
+    !if(prolong_order==2)then     !^CFG IF NOT PROJECTION
+    do iBlock = 1, nBlock
+       if (unusedBLK(iBlock)) CYCLE
+       if (far_field_BCs_BLK(iBlock).and.prolong_order==2)&
+            call set_outer_BCs(iBlock,time_simulation,.false.)        
+       if(UseConstrainB)call correctP(iBlock)   !^CFG IF CONSTRAINB
+       if(UseProjection)call correctP(iBlock)   !^CFG IF PROJECTION
+    end do
+    !end if                       !^CFG IF NOT PROJECTION
+    if(oktest)write(*,*)'Checked negative P, me=',iProc
+
+    if (UsePlotMessageOptions) then
+       if(UseBatl)then
+          if(UseBatlTest)then
+             call message_pass_cell(nVar, State_VGB, nProlongOrderIn=1)
+          else
+             call message_pass_cell(nVar, State_VGB)
+          end if
+          call fix_boundary_ghost_cells(DoRestrictFace)
+       else
+          if(oktest)write(*,*)'calling message_pass with plot options'
+          !                              Don't send just one layer
+          !                                      Don't send faces only
+          !                                               Don't monotone restrict
+          call message_pass_cells8(.false.,.false.,.false.,nVar, State_VGB)
+          if(UseB) call message_pass_cells(.false.,.false.,.false.,DivB1_GB)
+          if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
+       end if
+    elseif (optimize_message_pass=='all') then
+       if(oktest)write(*,*)'calling message_pass with corners: me,type=',&
+            iProc,optimize_message_pass
+       ! If ShockSlope is not zero then even the first order scheme needs 
+       ! two ghost cell layers to fill in the corner cells at the sheared BCs.
+       DoOneLayer = nOrder == 1 .and. ShockSlope == 0.0
+
+       if(UseBatl)then
+          nWidth = 2;       if(DoOneLayer)        nWidth = 1
+          nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
+          call message_pass_cell(nVar, State_VGB, &
+               nWidthIn=nWidth, nProlongOrderIn=1, &
+               nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace)
+          call fix_boundary_ghost_cells(DoRestrictFace)
+       else
+          call message_pass_cells8(DoOneLayer, .false., DoRestrictFace, &
+               nVar, State_VGB)
+          if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
+       end if
+    else
+       if(oktest)write(*,*)'calling message_pass: me,type=',&
+            iProc,optimize_message_pass
+
+       select case(optimize_message_pass)
+       case('max','dir','face','min')
+          ! Pass corners
+          call message_pass_dir(1,3,2,.true.,prolong_order,nVar,&
+               Sol_VGB=State_VGB, DoTwoCoarseLayers=DoTwoCoarseLayers, &
+               restrictface=DoRestrictFace)
+       case('opt')
+          ! Do not pass corners if not necessary
+          DoCorners = nOrder == 2 .and. UseAccurateResChange
+          call message_pass_dir(1,3,nOrder,DoCorners,prolong_order,nVar,&
+               Sol_VGB=State_VGB, DoTwoCoarseLayers=DoTwoCoarseLayers, &
+               restrictface=DoRestrictFace)
+       case('allopt')
+          ! Do not pass corners if not necessary
+          DoFaces = .not.(nOrder == 2 .and. UseAccurateResChange)
+          ! Pass one layer if possible
+          DoOneLayer = nOrder == 1
+          if(UseBatl)then
+             nWidth = 2;       if(DoOneLayer)        nWidth = 1
+             nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
+             call message_pass_cell(nVar, State_VGB, &
+                  nWidthIn=nWidth, nProlongOrderIn=1, nCoarseLayerIn=nCoarseLayer,&
+                  DoSendCornerIn=.not.DoFaces, DoRestrictFaceIn=DoRestrictFace)
+             call fix_boundary_ghost_cells(DoRestrictFace)
+          else
+             call message_pass_cells8(DoOneLayer,DoFaces,DoRestrictFace, &
+                  nVar, State_VGB)
+             if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
+          end if
+       case default
+          call stop_mpi('Unknown optimize_message_pass='//optimize_message_pass)
+       end select
+    end if
+
+    if(oktest)write(*,*)'Ensure that E and P consistent, me=',iProc
+
+    if(DoProfileAmr) call timing_start('E and P')
+    do iBlock = 1, nBlock
+       if (unusedBLK(iBlock)) CYCLE
+
+       if (far_field_BCs_BLK(iBlock)) then
+          !if(DoProfileAmr) call timing_start('set_outer_BCs')
+          call set_outer_BCs(iBlock,time_simulation,.false.) 
+          !if(DoProfileAmr) call timing_stop('set_outer_BCs')
+       end if
+
+       if(time_loop.and. any(TypeBc_I=='buffergrid')) then
+          !if(DoProfileAmr) call timing_start('fill_in_from_buffer')
+          call fill_in_from_buffer(iBlock)
+          !if(DoProfileAmr) call timing_stop('fill_in_from_buffer')
+       end if
+
+       !if(DoProfileAmr) call timing_start('calc_energy_ghost')
+       call calc_energy_ghost(iBlock,DoResChengeOnlyIn=DoResChengeOnlyIn)
+       !if(DoProfileAmr) call timing_stop('calc_energy_ghost')
+    end do
+
+    if(DoProfileAmr) call timing_stop('E and P')
+    call timing_stop('exch_msgs')
+    if(oktime)call timing_show('exch_msgs',1)
+
+    if(oktest)write(*,*)'exchange_messages finished, me=',iProc
+
+  end subroutine exchange_messages
+
+  !============================================================================!
+  ! moved form file exchange_messages.f90 
+  subroutine fill_in_from_buffer(iBlock)
+    use ModGeometry,ONLY:R_BLK,x_BLK,y_BLK,z_BLK
+    use ModMain,ONLY:nI,nJ,nK,gcn,rBuffMin,rBuffMax,nDim,x_,y_,z_
+    use ModAdvance,ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
+    use ModProcMH,ONLY:iProc
+    implicit none
+    integer,intent(in)::iBlock
+    integer::i,j,k
+    real::X_D(nDim)
+    logical::DoWrite=.true.
+    if(DoWrite)then
+       DoWrite=.false.
+       if(iProc==0)then
+          write(*,*)'Fill in the cells near the inner boundary from the buffer'
+       end if
+    end if
+
+    do k=1-gcn,nK+gcn
+       do j=1-gcn,nJ+gcn
+          do i=1-gcn,nI+gcn
+             if(R_BLK(i,j,k,iBlock)>rBuffMax.or.R_BLK(i,j,k,iBlock)<rBuffMin)&
+                  CYCLE
+             X_D(x_)=x_BLK(i,j,k,iBlock)
+             X_D(y_)=y_BLK(i,j,k,iBlock)
+             X_D(z_)=z_BLK(i,j,k,iBlock)
+             !Get interpolated values from buffer grid:
+             call get_from_spher_buffer_grid(&
+                  X_D,nVar,State_VGB(:,i,j,k,iBlock))
+             !Transform primitive variables to conservative ones:
+             State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
+                  State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
+                  State_VGB(rho_   ,i,j,k,iBlock)
+          end do
+       end do
+    end do
+  end subroutine fill_in_from_buffer
+
+
+  !^CFG IF DEBUGGING BEGIN
+  !============================================================================
+  ! moved form file exchange_messages.f90 
+  ! Test timing of various message passing options
+  subroutine time_message_passing
+    use ModProcMH
+    use ModMain, ONLY : nI,nJ,nK,gcn,nBlockMax,unusedBLK, &
+         UseConstrainB,&              !^CFG IF CONSTRAINB 
+         UseProjection,&              !^CFG IF PROJECTION
+         time_simulation,nOrder,prolong_order,optimize_message_pass
+    use ModVarIndexes
+    use ModAdvance, ONLY : &
+         State_VGB
+    use ModMpi
+    implicit none
+
+    integer :: iError
+    real*8 :: time_this
+    logical :: DoOneLayer, DoRestrictFace
+
+    !---------------------------------------------------------------------------
+
+    ! For first order, message pass cells can pass only one layer of ghost cells.
+    DoOneLayer = nOrder==1
+
+    DoRestrictFace = prolong_order==1
+    if(UseConstrainB) DoRestrictFace = .false.   !^CFG IF CONSTRAINB
+
+    if(iProc==0) &
+         write(*,*)' Timing message passing options ...', &
+         ' nOrder=',nOrder,' DoOneLayer=',DoOneLayer
+
+!!!
+    call message_pass_dir(1,3,2,.true.,prolong_order,nVar,&
+         Sol_VGB=State_VGB, restrictface=DoRestrictFace)
+
+    call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+    time_this=MPI_WTIME()
+    call message_pass_dir(1,3,2,.true.,prolong_order,nVar,&
+         Sol_VGB=State_VGB, restrictface=DoRestrictFace)
+
+    call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+    if(iProc==0) &
+         write(*,'(a,f8.5,a)')' dir-1,3,2,T  took',MPI_WTIME()-time_this,' sec'
+
+!!!
+    call message_pass_dir(1,3,nORDER,.false.,prolong_order,nVar,&
+         Sol_VGB=State_VGB,restrictface=DoRestrictFace)
+
+    call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+    time_this=MPI_WTIME()
+    call message_pass_dir(1,3,nORDER,.false.,prolong_order,nVar,&
+         Sol_VGB=State_VGB,restrictface=DoRestrictFace)
+
+    call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+    if(iProc==0) &
+         write(*,'(a,f8.5,a)')' dir-1,3,nORDER,F  took',MPI_WTIME()-time_this,' sec'
+
+!!!
+    call testmessage_pass_cells
+
+!!!
+    call message_pass_cells8(DoOneLayer, .false., DoRestrictFace,nVar, State_VGB)
+
+    call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+    time_this=MPI_WTIME()
+    call message_pass_cells8(DoOneLayer, .false., DoRestrictFace,nVar, State_VGB)
+
+    call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+    if(iProc==0) &
+         write(*,'(a,f8.5,a)')' 8state-DoOneLayer,F,T  took',MPI_WTIME()-time_this,' sec'
+
+!!!
+    call message_pass_cells8(DoOneLayer, .true., DoRestrictFace,nVar, State_VGB)
+
+    call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------  
+    time_this=MPI_WTIME()  
+    call message_pass_cells8(DoOneLayer, .true., DoRestrictFace,nVar, State_VGB)
+
+    call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+    if(iProc==0) &
+         write(*,'(a,f8.5,a)')' 8state-DoOneLayer,T,T  took',MPI_WTIME()-time_this,' sec'
+
+!!!
+    call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+    call MPI_Finalize(iError)
+    stop
+
+  end subroutine time_message_passing
+  !^CFG END DEBUGGING
+  !============================================================================
+
+  ! moved form file exchange_messages.f90 
+  subroutine exchange_messages_adjoint
+
+    use ModProcMH
+    use ModMain, ONLY : nI,nJ,nK,gcn,nBlockMax,unusedBLK, &
+         TypeBc_I,time_loop,&
+         time_simulation,nOrder,prolong_order,optimize_message_pass, UseBatl
+    use ModVarIndexes
+    use ModAdvance, ONLY : State_VGB, divB1_GB
+    use ModParallel, ONLY : UsePlotMessageOptions
+    use ModGeometry, ONLY : far_field_BCs_BLK        
+    use ModMpi
+    use ModMPCells, ONLY : DoOneCoarserLayer
+    use ModBoundaryCells,ONLY:SaveBoundaryCells
+    use ModPhysics, ONLY : ShockSlope
+    use ModFaceValue,ONLY: UseAccurateResChange
+    use ModEnergy,   ONLY: calc_energy_ghost_adjoint
+    use BATL_lib, ONLY: message_pass_cell
+    use ModAdjoint, ONLY : Adjoint_VGB
+
+    implicit none
+
+    integer :: iBlock
+    logical :: oktest, oktest_me, oktime, oktime_me
+    logical :: DoRestrictFace, DoOneLayer, DoTwoCoarseLayers
+    logical :: DoCorners, DoFaces
+    integer :: nWidth, nCoarseLayer
+
+    character (len=*), parameter :: NameSub = 'exchange_messages_adjoint'
+    !-------------------------------------------------------------------------
+
+    do iBlock = 1, nBlockMax
+       if (unusedBLK(iBlock)) CYCLE
+       call calc_energy_ghost_adjoint(iBlock)
+       if (far_field_BCs_BLK(iBlock)) &                        
+            call set_outer_BCs_adjoint (iBlock,time_simulation,.false.) 
+       if(time_loop.and. any(TypeBc_I=='buffergrid'))&
+            call stop_mpi(NameSub // ' Not supported!')
+    end do
+
+    ! Need to modify to send ghost info to procs (reverse mode) in an additive way
+    call stop_mpi(NameSub // ' needs reverse ghost message passing!')
+
+  end subroutine exchange_messages_adjoint
+
+  !============================================================================
   subroutine message_pass_dir(&
        idirmin,idirmax,width,sendcorners,prolongorder,nVar,sol_BLK,&
        Sol_VGB,restrictface,DoTwoCoarseLayers)
