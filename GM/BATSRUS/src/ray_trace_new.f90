@@ -19,6 +19,7 @@ subroutine ray_trace_accurate
   use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, r_BLK, true_cell, &
        XyzMax_D, XyzMin_D, x1, x2, y1, y2, z1, z2, UseCovariant
   use ModMessagePass, ONLY: message_pass_dir
+  use ModMessagePass, ONLY: exchange_messages
   use ModMpi
 
   implicit none
@@ -1996,6 +1997,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   use CON_line_extract,  ONLY: line_init, line_collect, line_clean
   use ModMessagePass,    ONLY: message_pass_dir
   use ModCoordTransform, ONLY: xyz_to_sph
+  use ModMessagePass, ONLY: exchange_messages
 
   implicit none
 

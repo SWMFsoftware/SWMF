@@ -91,6 +91,7 @@ subroutine advance_impl
   use ModMpi
   use ModEnergy, ONLY: calc_old_pressure, calc_old_energy
   use ModImplHypre, ONLY: hypre_preconditioner, hypre_initialize
+  use ModMessagePass, ONLY: exchange_messages
 
   implicit none
 

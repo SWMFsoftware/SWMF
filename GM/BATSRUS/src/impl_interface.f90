@@ -220,8 +220,9 @@ subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, Var_VCB, &
   use ModAdvance, ONLY : FluxType,time_BLK
   use ModGeometry, ONLY : true_cell
   use ModImplicit
-
+  use ModMessagePass, ONLY: exchange_messages
   use ModMpi
+
   implicit none
 
   logical, intent(in) :: IsLowOrder, DoCalcTimestep, DoSubtract

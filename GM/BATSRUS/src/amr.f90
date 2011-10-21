@@ -20,6 +20,7 @@ subroutine amr(DoMessagePass)
   use ModUser,          ONLY: user_amr_criteria
   use ModBatlInterface, ONLY: useBatlTest
   use ModParallel, ONLY:nBlockMax_P, MaxBlockDisp_P
+  use ModMessagePass, ONLY: exchange_messages
 
   implicit none
 
@@ -38,6 +39,7 @@ subroutine amr(DoMessagePass)
   integer, save :: iLastGrid=-1, iLastDecomposition=-1
 
   real :: refine_criteria(4, nBLK)
+
   !----------------------------------------------------------------------------
 
   call set_oktest(NameSub, DoTest, DoTestMe)
@@ -48,9 +50,10 @@ subroutine amr(DoMessagePass)
 
      if(DoMessagePass)then
         if(.not.UseBatlTest) UsePlotMessageOptions = .true.
-        if(DoProfileAmr) call timing_start('amr::exchange_messages')
+        if(DoProfileAmr) call timing_start('amr::exchange_true')
+        !call exchange_messages(DoResChengeOnlyIn=.false.)
         call exchange_messages
-        if(DoProfileAmr) call timing_stop('amr::exchange_messages')
+        if(DoProfileAmr) call timing_stop('amr::exchange_true')
      end if
      if(automatic_refinement) then
 
@@ -90,10 +93,10 @@ subroutine amr(DoMessagePass)
      ! to reset ghost cells at resolution changes
      if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) then
         if(DoMessagePass)then
-           if(DoProfileAmr) call timing_start('amr::exchange_messages')
+           if(DoProfileAmr) call timing_start('amr::exchange_noamr')
            UsePlotMessageOptions = .false.
-           call exchange_messages
-           if(DoProfileAmr) call timing_stop('amr::exchange_messages')
+           call exchange_messages(DoResChengeOnlyIn=.true.)
+           if(DoProfileAmr) call timing_stop('amr::exchange_noamr')
         end if
         RETURN
      end if
@@ -135,9 +138,9 @@ subroutine amr(DoMessagePass)
         if(DoProfileAmr) call timing_stop('amr::load_balance')
         ! redo message passing
         UsePlotMessageOptions = .false.
-        if(DoProfileAmr) call timing_start('amr::exchange_messages')
+        if(DoProfileAmr) call timing_start('amr::exchange_false')
         call exchange_messages
-        if(DoProfileAmr) call timing_stop('amr::exchange_messages')
+        if(DoProfileAmr) call timing_stop('amr::exchange_false')
 
 
      end if

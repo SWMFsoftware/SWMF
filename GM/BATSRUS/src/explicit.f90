@@ -18,8 +18,9 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
        nCorrectedFaceValues, CorrectedFlux_VXB, &
        CorrectedFlux_VYB, CorrectedFlux_VZB
   use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
-
+  use ModMessagePass, ONLY: exchange_messages
   use BATL_lib, ONLY: message_pass_face
+
   implicit none
 
   logical, intent(in) :: DoCalcTimestep
@@ -204,6 +205,7 @@ subroutine update_secondbody
   use ModMain,     ONLY: time_simulation,globalBLK,nBlock
   use ModConst,    ONLY: cTwoPi
   use ModPhysics,  ONLY: xBody2,yBody2,OrbitPeriod,PhaseBody2,DistanceBody2
+  use ModMessagePass, ONLY: exchange_messages
 
   implicit none
   !-------------------------------------------------------------------------
@@ -244,7 +246,8 @@ subroutine advance_expl_adjoint(DoCalcTimestep)
 
   use BATL_lib, ONLY: message_pass_face
   use ModAdjoint
-
+  use ModMessagePass, ONLY: exchange_messages,&
+       exchange_messages_adjoint
   implicit none
 
   logical, intent(in) :: DoCalcTimestep

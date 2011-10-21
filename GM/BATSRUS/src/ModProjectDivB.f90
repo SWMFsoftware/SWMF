@@ -17,6 +17,8 @@ subroutine project_B
   use ModProject
   use ModMain, ONLY : UseConstrainB                   !^CFG IF CONSTRAINB
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK  !^CFG IF CONSTRAINB
+  use ModMessagePass, ONLY: exchange_messages
+
   implicit none
 
   ! Local variables
