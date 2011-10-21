@@ -2041,7 +2041,7 @@ The default value is 1.E-12 for 8 byte reals and 1.E-6 for 4 byte reals.
 	</parameter>
 	<parameter name="PrecondParam" type="real" min="-1" max="1" 
 		default="0.5" if="$TypePrecond eq 'MBILU'"/>
-	<parameter name="DnInitHypreAmg" type="integer" min="1"
+	<parameter name="DnInitHypreAmg" type="integer" min="0"
 		default="1"   if="$TypePrecond eq 'HYPRE'"/>
 #PRECONDITIONER
 symmetric       TypePrecondSide (left, symmetric, right)
@@ -2051,7 +2051,7 @@ MBILU           TypePrecond (MBILU, BILU, DILU, GS, or JACOBI)
 #PRECONDITIONER
 left		TypePrecondSide
 HYPRE		TypePrecond
-4		DnInitHypreAmg (1 or more, read for HYPRE preconditioner)
+0		DnInitHypreAmg (0 or more, read for HYPRE preconditioner)
 
 TypePrecondSide can be left, right or symmetric. There seems to be little
 difference between these in terms of performance. Right preconditioning 
@@ -2061,9 +2061,9 @@ preconditioners are implemented to always use left preconditioning.
 The TypePrecond parameter can be set to JACOBI, GS, DILU, BILU or MBILU
 or HYPRE. The HYPRE preconditioner can only be used if the HYPRE library
 has been checked out into the util/ directory and Config.pl -hypre has 
-been set. HYPRE preconditioning only works with BATL switched on, 
-only with BiCGSTAB or GMRES schemes, only with the semi-implicit scheme
-solving for 1 variable at a time (split), and only on uniform grids for now.
+been set. The HYPRE preconditioning only works with BATL switched on, 
+only with BiCGSTAB or GMRES schemes, and only with the semi-implicit 
+scheme solving for 1 variable at a time (split). 
 
 The simplest Jacobi preconditioner is mainly useful for code development 
 purposes. The Gauss-Seidel (GS) preconditioner gives better performance
@@ -2086,7 +2086,7 @@ hyperbolic (advection) type problems.
 
 The DnInitHypreAmg parameter is only read for the HYPRE preconditioner.
 The Algebraic Multi-Grid (AMG) solver is reinitialized every DnInitHypreAmg
-time steps. Setting it to 1 gives the minimum number of Krylov iterations,
+time steps. Setting it to 0 gives the minimum number of Krylov iterations,
 but the time spent on setting up the AMG may become substantial. Setting it
 to a larger value will reduce the time spent on AMG setup, but it will 
 increase the number of Krylov iterations. The optimal value depends on the
