@@ -47,7 +47,7 @@ Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
 
 # RCM compilation flags
 # To allow RCM to compile as double precision, add PRECISION flag
-CFLAGS = ${CFLAG} -save
+CFLAGS = ${CFLAG} -fno-automatic
 
 Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${DEBUG}
