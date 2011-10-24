@@ -172,10 +172,15 @@ if($Uninstall){
 
 if($ShowCompiler){
     my @File= glob($MakefileConfOrig.'*');
-    print "List of known compilers for OS=$OS:\n";
+    print "List of Fortran compilers for OS=$OS:\n";
     foreach (@File){
 	next unless s/$MakefileConfOrig\.$OS\.//;
 	print "  $_\n";
+    }
+    print "List of C compilers:\n";
+    foreach (@File){
+        next unless s/$MakefileConfOrig\.(.*(cc|xlc))$/$1/;
+        print "  $_\n";
     }
     exit 0;
 }
