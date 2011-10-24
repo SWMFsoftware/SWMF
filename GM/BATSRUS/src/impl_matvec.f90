@@ -194,8 +194,9 @@ subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
 
   use ModImplicit, ONLY: JacobiPrec_I, MAT, nVarSemi, nI, nJ, nwIJK, nIJK, &
        nImplBlk, PrecondType, Stencil1_, Stencil2_, Stencil3_, Stencil4_, &
-       Stencil5_, Stencil6_, Stencil7_
+       Stencil5_, Stencil6_, Stencil7_, PrecondType
   use ModLinearSolver, ONLY: Lhepta, Uhepta, multiply_dilu
+  use ModImplHypre, ONLY: hypre_preconditioner
 
   implicit none
 
@@ -206,6 +207,11 @@ subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
   integer :: iImplBlock
   !-------------------------------------------------------------------------
   PrecVec_I = Vec_I
+
+  if(PrecondType == 'HYPRE')then
+     call hypre_preconditioner(n, PrecVec_I)
+     RETURN
+  end if
 
   do iImplBlock=1,nImplBLK
 

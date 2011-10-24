@@ -2062,8 +2062,8 @@ The TypePrecond parameter can be set to JACOBI, GS, DILU, BILU or MBILU
 or HYPRE. The HYPRE preconditioner can only be used if the HYPRE library
 has been checked out into the util/ directory and Config.pl -hypre has 
 been set. The HYPRE preconditioning only works with BATL switched on, 
-only with BiCGSTAB or GMRES schemes, and only with the semi-implicit 
-scheme solving for 1 variable at a time (split). 
+and only with the semi-implicit scheme solving for 1 variable at a time 
+(split semi-implicit scheme). 
 
 The simplest Jacobi preconditioner is mainly useful for code development 
 purposes. The Gauss-Seidel (GS) preconditioner gives better performance

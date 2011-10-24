@@ -236,7 +236,7 @@ subroutine MH_set_parameters(TypeAction)
            DoUpdateB0 = .false.
            Dt_UpdateB0 = -1.0
 
-           UseB0 = .false. !!!
+           UseB0 = .false.
         else
            call get_planet( &
                 DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
@@ -1236,7 +1236,7 @@ subroutine MH_set_parameters(TypeAction)
              automatic_refinement = DoAutoAmr ! for now
 
      case("#DOAMR")
-        call read_var('DoAmr',DoAmr) !!!
+        call read_var('DoAmr',DoAmr)
         if(DoAmr) then
            call read_var('DnAmr',DnAmr)
            call read_var('DtAmr',DtAmr)
@@ -2608,9 +2608,17 @@ contains
          call stop_mpi(&
          'The heating in the closed field region requires magnetogram')
 
+    ! Check algorithm at resolution changes
     if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
          call stop_mpi(NameSub// &
          'The prolongation order=2 requires message_pass_dir')
+
+    if(nOrder == 1)then
+       BetaProlongOrig = BetaProlong    
+       BetaProlong = 0.0
+    else
+       BetaProlong = max(BetaProlong, BetaProlongOrig)
+    end if
 
     if(nK == 1 .and. UseTvdResChange) then
        ! in 1D and 2D only accurate reschange is implemented
@@ -2745,13 +2753,6 @@ contains
        end if
     end if
          
-    if(nOrder == 1)then
-       BetaProlongOrig = BetaProlong    
-       BetaProlong = 0.0
-    else
-       BetaProlong = max(BetaProlong, BetaProlongOrig)
-    end if
-
     if(PrecondType == "HYPRE")then
        if(.not.IsHypreAvailable)call  stop_mpi(NameSub// &
             ' empty HYPRE module! Use Config.pl -hypre')
@@ -2761,13 +2762,6 @@ contains
 
        if(.not.UseBatl)call stop_mpi(NameSub// &
             ' HYPRE preconditioner only works BATL.')
-
-       if(KrylovType == 'CG')then
-          if(iProc == 0) write(*,'(a)') NameSub// &
-               ' WARNING: HYPRE preconditioner does not work with CG scheme'//&
-               ', switching to GMRES'
-          KrylovType = 'GMRES'
-       end if
 
     endif
 

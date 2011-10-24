@@ -386,6 +386,10 @@ contains
        PrecondParam = Bilu_
     end if
 
+    if(nVarSemi > 1 .and. PrecondType == 'HYPRE' .and. iProc==0) &
+       call stop_mpi( &
+       'HYPRE preconditioner requires split semi-implicit scheme!')
+
     ! Arrays for all implicit variables
     allocate(Impl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBLK))
     allocate(ImplOld_VCB(nw,nI,nJ,nK,nBLK))
