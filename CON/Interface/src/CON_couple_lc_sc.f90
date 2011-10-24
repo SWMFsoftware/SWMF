@@ -61,24 +61,6 @@ contains
   !===============================================================!
   subroutine couple_lc_sc_init
 
-    ! Number of waves in different models
-    integer :: nWave, nWaveSc, nWaveLc
-
-    ! send-receive electron pressure ? (value=0 then no, value=1 then yes)
-    integer :: nElectronPressure
-
-    interface
-       integer function SC_n_wave()
-         implicit none
-       end function SC_n_wave
-    end interface
-
-    interface
-       integer function LC_n_wave()
-         implicit none
-       end function LC_n_wave
-    end interface
-
     interface
        subroutine SC_set_buffer_grid(Dd)
          use CON_domain_decomposition
@@ -89,29 +71,12 @@ contains
     end interface
 
     !--------------------------------------------------------------------------
-
     if(.not.DoInitialize)return
     DoInitialize=.false.
     
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
-    if(is_proc0(LC_))nWaveLc = LC_n_wave()
-    call MPI_BCAST(nWaveLc,1,MPI_INTEGER,i_proc0(LC_),i_comm(),iError)
-
-    if(is_proc0(SC_))nWaveSc = SC_n_wave()
-    call MPI_BCAST(nWaveSc,1,MPI_INTEGER,i_proc0(SC_),i_comm(),iError)
-
-    if(nWaveLc==nWaveSc .and. nWaveSc>=2)then
-       nWave = nWaveSc
-    else
-       nWave = 0
-    end if
-
-    nElectronPressure = 0
-    if(index(Grid_C(LC_)%NameVar,' Pe') > 0 .and. &
-         index(Grid_C(SC_)%NameVar,' Pe') > 0) nElectronPressure = 1
-
-    nVarCouple = 8 + nWave + nElectronPressure
+    call set_couple_var_info(LC_,SC_)
 
     IsSphericalLc = index(Grid_C(LC_) % TypeGeometry,'spherical') > 0 
     UseLogRLc     = index(Grid_C(LC_) % TypeGeometry,'lnr'      ) > 0
@@ -347,10 +312,25 @@ contains
     type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
     real,dimension(nVar+3)::State3_V
-    integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7
-    integer::     BuffX_,BuffZ_
-    !------------------------------------------------------------
 
+    ! variable indices in buffer
+    integer  :: &
+         iRhoCouple,   &
+         iRhoUxCouple, &
+         iRhoUyCouple, &
+         iRhoUzCouple, &
+         iBxCouple,    &
+         iBzCouple
+
+    integer :: BuffX_, BuffZ_
+    !------------------------------------------------------------
+    ! get variable indices in buffer
+    iRhoCouple   = iVar_V(RhoCouple_)
+    iRhoUxCouple = iVar_V(RhoUxCouple_)
+    iRhoUzCouple = iVar_V(RhoUzCouple_)
+    iBxCouple = iVar_V(BxCouple_)
+    iBzCouple = iVar_V(BzCouple_)
+    
     BuffX_ = nVarCouple + 1
     BuffZ_ = nVarCouple + 3
 
@@ -359,13 +339,14 @@ contains
     State_V=State3_V(1:nVar)
 
     !Transform velocity
-    State_V(RhoUx_:RhoUz_)=State_V(Rho_)*&
+    State_V(iRhoUxCouple:iRhoUzCouple)=State_V(iRhoCouple)*&
          transform_velocity(tNow,&
-         State_V(RhoUx_:RhoUz_)/State_V(Rho_),&
-         State3_V(BuffX_:BuffZ_)/State_V(Rho_),&
+         State_V(iRhoUxCouple:iRhoUzCouple)/State_V(iRhoCouple),&
+         State3_V(BuffX_:BuffZ_)/State_V(iRhoCouple),&
          Grid_C(SC_)%TypeCoord,Grid_C(LC_)%TypeCoord)
     
-    State_V(Bx_:Bz_)=matmul(ScToLc_DD,State_V(Bx_:Bz_))
+    State_V(iBxCouple:iBzCouple) = &
+         matmul(ScToLc_DD,State_V(iBxCouple:iBzCouple))
 
   end subroutine SC_get_for_lc_and_transform
 
