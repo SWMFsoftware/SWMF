@@ -69,6 +69,16 @@ T	UseHyperbolicDivB
 400.0
 0.1
 
+#MAGNETOGRAM
+T                       UseMagnetogram
+1.0                     rMagnetogram
+2.5                     rSourceSurface
+0.0                     HeightInnerBc
+Param/CORONA/CR2077_GNG.dat     NameMagnetogramFile
+12                      nHeaderLine
+0.0                     PhiShift
+1.0                     UnitB
+
 #RADIATIVECOOLING
 T
 
@@ -85,7 +95,7 @@ T
 
 #USERINPUTBEGIN ------------------------
 
-#SOLARDIPOLE
+SOLARDIPOLE
 -2.836e-4
 30.
 
