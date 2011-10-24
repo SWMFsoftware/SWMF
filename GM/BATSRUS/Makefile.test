@@ -710,8 +710,8 @@ test_chromo_run:
 	
 test_chromo_check:
 	${SCRIPTDIR}/DiffNum.pl -t \
-		Param/CORONA/TestOutput/log_n000000.sc.chromo \
-		${TESTDIR}/RESULTS/SC/log_n000000.log > test_chromo.diff
+		Param/CORONA/TestOutput/log_n000001.sc.chromo \
+		${TESTDIR}/RESULTS/SC/log_n000001.log > test_chromo.diff
 	ls -l test_chromo.diff
 
 ### STANDALONE OUTER HELIOSPHERE TESTS ###
