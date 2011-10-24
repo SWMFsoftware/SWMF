@@ -319,7 +319,7 @@ contains
          WaveFirst_, WaveLast_, Hyp_
 
     integer :: i, j, k, iBlock
-    real :: x, y, z, r, Rho, NumDensIon, NumDensElectron
+    real :: x, y, z, r, Rho, NumDensIon, NumDensElectron, Temperature
     real :: RhoCorona, tCorona, uCorona, rCorona, TemperatureGradient
     real :: B_D(3), r_D(3), Br
     ! variables for iterative Parker solution
@@ -401,36 +401,44 @@ contains
        end if
 
        ! Set chromospheric initial condition inside the body, if needed
-       if(UseChromoBc .and. r <= rBody)then
+       if(UseChromoBc) then
+          if ( r <= rBody)then
 
-          State_VGB(rho_,i,j,k,iBlock) = RhoChromo
-          State_VGB(p_,  i,j,k,iBlock) = 2*tChromo*nChromoSi*Si2No_V(UnitN_)
-       else
-
-          Rho = rBody**2*RhoCorona*uCorona/(r**2*Ur)
-          State_VGB(Rho_,i,j,k,iBlock) = Rho
-
-          NumDensIon = Rho/MassIon_I(1)
-          NumDensElectron = NumDensIon*AverageIonCharge
-          
-          ! For initial condition - temperature profleincreases linearily
-          ! from chromospheric to coronal values. Here, rCorona is arbitrary
-          rCorona = 1.1
-          if (r < rCorona) then
-             TemperatureGradient = (tCorona - tChromo)/(rCorona - rBody)    
-             State_VGB(p_,i,j,k,iBlock) = &
-                  (NumDensIon + NumDensElectron)*&
-                  (tChromo + TemperatureGradient*(r - rBody))
+             Rho = RhoChromo
+             Temperature = tChromo
+             State_VGB(p_,  i,j,k,iBlock) = 2*tChromo*nChromoSi*Si2No_V(UnitN_)
           else
-              State_VGB(p_,i,j,k,iBlock) = &
-                  (NumDensIon + NumDensElectron)*tCorona
-           end if
-           if(UseElectronPressure)then
-              State_VGB(p_,i,j,k,iBlock) = NumDensIon*tCorona
-              State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tCorona
-           end if
+             ! Density jumps to coronal values right outside body,
+             ! then set according to constant mass flux
+             Rho = rBody**2*RhoCorona*uCorona/(r**2*Ur)
+          
+             ! Temperature increases linearily from chromospheric 
+             ! to coronal values at r=rCorona (for stability)
+             rCorona = 1.1
+             if (r < rCorona) then
+                TemperatureGradient = (tCorona - tChromo)/(rCorona - rBody)    
+                Temperature = &
+                     (tChromo + TemperatureGradient*(r - rBody))
+             else
+                Temperature = tCorona
+             end if
+          end if
+       else
+          Rho = rBody**2*RhoCorona*uCorona/(r**2*Ur)
+          Temperature = tCorona
        end if
+      
+       NumDensIon = Rho/MassIon_I(1)
+       NumDensElectron = NumDensIon*AverageIonCharge
+       State_VGB(p_,i,j,k,iBlock) = &
+            (NumDensIon + NumDensElectron)*Temperature
 
+       if(UseElectronPressure)then
+          State_VGB(p_,i,j,k,iBlock) = NumDensIon*tCorona
+          State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tCorona
+       end if
+      
+       State_VGB(Rho_,i,j,k,iBlock) = Rho
        State_VGB(RhoUx_,i,j,k,iBlock) = Rho*Ur*x/r *Usound
        State_VGB(RhoUy_,i,j,k,iBlock) = Rho*Ur*y/r *Usound
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
