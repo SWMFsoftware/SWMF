@@ -37,13 +37,13 @@ module ModUser
 
   ! Input parameters controling wave dissipation
   logical :: UseWaveDissipation = .false.
-  real    :: DissipationScaleFactorSi  ! unit = m*T^0.5
-  real    :: DissipationScaleFactor
-  real    :: LmaxIo , Lratio
+  real    :: DissipationScaleFactorSi = 0.0  ! unit = m*T^0.5
+  real    :: DissipationScaleFactor = 0.0
+  real    :: LmaxIo = 0.0, Lratio = 0.0
 
   ! variables for magnetic (unsigned flux) heating
   logical :: DoMagneticHeating = .false.
-  real    :: TempLimitSi, HeatFactorCoeff = 1.0
+  real    :: TempLimitSi = 0.0, HeatFactorCoeff = 1.0
 
   ! variables for Parker initial condition
   real    :: nCoronaSi = 0.0, tCoronaSi = 0.0
@@ -59,7 +59,7 @@ module ModUser
 
   ! Input parameters for two-temperature effects
   real :: TeFraction, TiFraction
-  real :: QeByQtotal = 0.0
+   real :: QeByQtotal = 0.0
   real :: EtaPerpSi
 
 contains 
@@ -403,10 +403,8 @@ contains
        ! Set chromospheric initial condition inside the body, if needed
        if(UseChromoBc) then
           if ( r <= rBody)then
-
              Rho = RhoChromo
              Temperature = tChromo
-             State_VGB(p_,  i,j,k,iBlock) = 2*tChromo*nChromoSi*Si2No_V(UnitN_)
           else
              ! Density jumps to coronal values right outside body,
              ! then set according to constant mass flux
