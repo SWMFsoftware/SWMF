@@ -37,13 +37,13 @@ module BATL_lib
 
   ! Inherited from BATL_tree
   public:: MaxNode, nNode, nNodeUsed, nRoot_D
-  public:: MaxLevel, MaxCoord_I
+  public:: MaxLevel, nLevel, MaxCoord_I
   public:: Unused_B, Unused_BP
   public:: iNode_B, iMortonNode_A, iNodeMorton_I
   public:: DiLevelNei_IIIB, iNodeNei_IIIB
   public:: iStatusNew_A, Refine_, Coarsen_, Unset_
   public:: iTree_IA, Status_,  Level_, MinLevel_, MaxLevel_, Block_, Proc_, &
-       Coord0_, Coord1_, Used_
+       Coord0_, Coord1_, Coord2_, Coord3_, Used_
   public:: write_tree_file, read_tree_file
   public:: IsNewDecomposition, IsNewTree
 
