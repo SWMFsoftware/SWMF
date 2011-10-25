@@ -178,18 +178,18 @@ Param/CORONA/GridChromo
 initial			NameArea
 
 #AMR
-20			DnRefine
+60			DnRefine
 F			DoAutomaticRefinement 
 
 #SAVEPLOT
 2			nPlotFiles
 x=0 VAR tec		StringPlot
-10			DnSavePlot
+20			DnSavePlot
 -1.			DtSavePlot
 rho ux uy uz bx by bz I01 I02 temp
 g rbody
 z=0 VAR tec		StringPlot
-10			DnSavePlot
+20			DnSavePlot
 -1.			DtSavePlot
 rho ux uy uz bx by bz I01 I02 temp
 g rbody
