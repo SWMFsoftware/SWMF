@@ -696,7 +696,7 @@ test_chromo:
 	make test_chromo_check
 
 test_chromo_compile:
-	./Config.pl -u=ScChromo -e=MhdWaves -g=6,4,4,3000,1 -nWave=2
+	./Config.pl -u=ScChromo -e=MhdWaves -g=6,4,4,5000,1 -nWave=2
 	make BATSRUS
 
 test_chromo_rundir:
