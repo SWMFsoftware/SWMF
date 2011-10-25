@@ -130,7 +130,7 @@ subroutine MH_set_parameters(TypeAction)
   integer :: qtotal, nIJKRead_D(3)
 
   integer            :: TimingDepth=-1
-  character (len=10) :: TimingStyle='cumm'
+  character (len=10) :: TimingStyle='cumu'
 
   ! Variables for checking/reading #STARTTIME command
   real (Real8_)         :: StartTimeCheck = -1.0_Real8_
