@@ -706,11 +706,9 @@ This command is only used in the restart header file.
 	</if>
 #TIMING
 T                       UseTiming      (rest of parameters read if true)
--2                      DnTiming       (-3 none, -2 final, -1 each session/AMR)
+-2                      DnTiming       (-3 none, -2 final, -1 each session)
 -1                      nDepthTiming   (-1 for arbitrary depth)
-tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
-
-The default values are shown.
+cumu                    TypeTimingReport   ('cumu', 'list', or 'tree')
 
 This command can only be used in stand alone mode. In the SWMF the
 #TIMING command should be issued for CON.
@@ -720,8 +718,7 @@ If UseTiming=.false., the execution is not timed.
 
 Dntiming determines the frequency of timing reports.
 If DnTiming .ge.  1, a timing report is produced every dn_timing step.
-If DnTiming .eq. -1, a timing report is shown at the end of each session,
-                   before each AMR, and at the end of the whole run.
+If DnTiming .eq. -1, a timing report is shown at the end of each session.
 If DnTiming .eq. -2, a timing report is shown at the end of the whole run.
 If DnTiming .eq. -3, no timing report is shown.
 
@@ -733,6 +730,8 @@ TypeTimingReport determines the format of the timing reports:
 'cumu' - cumulative list sorted by timings
 'list' - list based on caller and sorted by timings
 'tree' - tree based on calling sequence
+
+The default values are shown above.
 </command>
 
 </commandgroup>
