@@ -495,15 +495,6 @@ end subroutine BATS_setup
 
     if ( DoAmr .and. mod(n_step,DnAmr)==0 )then
 
-       !\
-       ! Output time before AMR.
-       !/
-       !if(IsStandAlone)then
-       !   Due to the ordering this reset and report does not work well
-       !   It may not be so important anyway to reset timing before the amr
-       !   if (dn_timing > -2) call timing_report
-       !   call timing_reset_all
-       !end if
        call timing_start(NameThisComp//'_amr')
        if(iProc==0 .and.lVerbose>0)then
           call write_prefix; write(iUnitOut,*) &
