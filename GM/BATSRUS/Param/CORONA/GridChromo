@@ -19,8 +19,12 @@ Param/CORONA/grid_TR.dat
 24.0			rMax
 
 #GRIDLEVEL
-4			nLevelArea
+3			nLevelArea
 all			NameArea
+
+#GRIDLEVEL
+4
+currentsheet
 
 #GRIDLEVEL
 5			nLevelArea
@@ -33,5 +37,5 @@ box_gen			NameArea
 76.0			LatMax
 
 #GRIDLEVEL
-4			nLevelArea
+3			nLevelArea
 initial 		NameArea
