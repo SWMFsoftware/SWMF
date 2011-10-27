@@ -13,9 +13,9 @@ subroutine amr(DoMessagePass)
   use ModIO, ONLY : write_prefix, iUnitOut
   use ModMpi
 
-  use ModParallel,      ONLY: UsePlotMessageOptions
   use BATL_lib,         ONLY: regrid_batl, set_amr_criteria, &
-       Unused_B, iNode_B, iStatusNew_A, Refine_, Coarsen_
+       Unused_B, iNode_B, iStatusNew_A, Refine_, Coarsen_,&
+       message_pass_cell
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
   use ModUser,          ONLY: user_amr_criteria
   use ModBatlInterface, ONLY: useBatlTest
@@ -49,10 +49,14 @@ subroutine amr(DoMessagePass)
      if(DoTestMe)write(*,*)NameSub,' starts 2nd order accurate message passing'
 
      if(DoMessagePass)then
-        if(.not.UseBatlTest) UsePlotMessageOptions = .true.
         if(DoProfileAmr) call timing_start('amr::exchange_true')
-        !call exchange_messages(DoResChengeOnlyIn=.false.)
-        call exchange_messages
+        if(UseBatlTest) then
+           call exchange_messages(UseOrder2In=.false.,&
+                DoResChengeOnlyIn=.true.)
+        else
+           call exchange_messages(UseOrder2In=.true.,&
+                DoResChengeOnlyIn=.true.)
+        end if
         if(DoProfileAmr) call timing_stop('amr::exchange_true')
      end if
      if(automatic_refinement) then
@@ -84,7 +88,7 @@ subroutine amr(DoMessagePass)
              DoTestIn=DoTestMe, Used_GB=true_cell)
         if(DoProfileAmr) call timing_stop('amr::regrid_batl')
      end if
-        
+
      if(DoProfileAmr) call timing_start('amr::set_batsrus_grid')
      call set_batsrus_grid
      if(DoProfileAmr) call timing_stop('amr::set_batsrus_grid')
@@ -94,8 +98,9 @@ subroutine amr(DoMessagePass)
      if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) then
         if(DoMessagePass)then
            if(DoProfileAmr) call timing_start('amr::exchange_noamr')
-           UsePlotMessageOptions = .false.
-           call exchange_messages(DoResChengeOnlyIn=.true.)
+           call exchange_messages(&
+                DoResChengeOnlyIn=.true. ,&
+                UseOrder2In=.false.)
            if(DoProfileAmr) call timing_stop('amr::exchange_noamr')
         end if
         RETURN
@@ -137,9 +142,8 @@ subroutine amr(DoMessagePass)
         call load_balance(.true.,.true.,.true.)
         if(DoProfileAmr) call timing_stop('amr::load_balance')
         ! redo message passing
-        UsePlotMessageOptions = .false.
         if(DoProfileAmr) call timing_start('amr::exchange_false')
-        call exchange_messages
+        call exchange_messages(UseOrder2In=.false.)
         if(DoProfileAmr) call timing_stop('amr::exchange_false')
 
 

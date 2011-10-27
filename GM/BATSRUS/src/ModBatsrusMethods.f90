@@ -1010,7 +1010,6 @@ end subroutine BATS_setup
 
     subroutine save_file
       use ModRestartFile, ONLY: write_restart_files
-      use ModParallel, ONLY : UsePlotMessageOptions
       use ModSatelliteFile, ONLY: &
            nSatellite, set_satellite_file_status, set_satellite_flags, &
            TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position
@@ -1063,9 +1062,7 @@ end subroutine BATS_setup
                call write_prefix; write(iUnitOut,*)&
                     ' Message passing for plot files ...'
             end if
-            UsePlotMessageOptions = .true.
-            call exchange_messages
-            UsePlotMessageOptions = .false.
+            call exchange_messages(UseOrder2In=.true.)
             DoExchangeAgain = .true.
          end if
 
