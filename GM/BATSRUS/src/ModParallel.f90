@@ -60,8 +60,6 @@ module ModParallel
   integer :: curr_nb_buff(0:nBLK)
   integer :: nb_buff_req(NUM_NB_BUFFS,0:nBLK)
 
-  ! Use special options in exchange_messages if creating plot files
-
   ! used by mpi_allgatherv for a more efficient replacment of mpi_allgather
   integer, allocatable :: nBlockMax_P(:), MaxBlockDisp_P(:)
 
