@@ -6,7 +6,7 @@ module ModMessagePass
 
 contains
   ! moved form file exchange_messages.f90 
-  subroutine exchange_messages(DoResChengeOnlyIn)
+  subroutine exchange_messages(DoResChengeOnlyIn,UseOrder2In)
     use ModProcMH
     use ModMain, ONLY : nI, nJ, nK, gcn, nBlockMax, nBlock, unusedBLK, &
          TypeBc_I, time_loop, UseB, &
@@ -16,7 +16,6 @@ contains
          time_simulation,nOrder,prolong_order,optimize_message_pass, UseBatl
     use ModVarIndexes
     use ModAdvance, ONLY : State_VGB,divB1_GB
-    use ModParallel, ONLY : UsePlotMessageOptions
     use ModGeometry, ONLY : far_field_BCs_BLK        
     use ModMPCells, ONLY : DoOneCoarserLayer
     use ModBoundaryCells,ONLY:SaveBoundaryCells
@@ -29,21 +28,31 @@ contains
     use ModAMR, ONLY: DoProfileAmr
     use ModMpi
 
-    logical, optional, intent(in) :: DoResChengeOnlyIn
+    logical, optional, intent(in) :: DoResChengeOnlyIn, &
+         UseOrder2In
 
     integer :: iBlock
     logical :: oktest, oktest_me, oktime, oktime_me
     logical :: DoRestrictFace, DoOneLayer, DoTwoCoarseLayers
     logical :: DoCorners, DoFaces
-
+    logical :: UseOrder2=.false.
     integer :: nWidth, nCoarseLayer
-
+    logical :: DoResChengeOnly
     !---------------------------------------------------------------------------
 
     !!^CFG IF DEBUGGING BEGIN
     ! call testmessage_pass_nodes
     ! call time_message_passing
     !!^CFG END DEBUGGING
+
+    DoResChengeOnly = .false.
+    if(present(DoResChengeOnlyIn)) &
+         DoResChengeOnly = DoResChengeOnlyIn
+
+    UseOrder2=.false.
+    if(present(UseOrder2In))&
+         UseOrder2 = UseOrder2In
+
 
     DoRestrictFace = prolong_order==1
     if(UseConstrainB) DoRestrictFace = .false.   !^CFG IF CONSTRAINB
@@ -57,24 +66,28 @@ contains
     call timing_start('exch_msgs')
     ! Ensure that energy and pressure are consistent and positive in real cells
     !if(prolong_order==2)then     !^CFG IF NOT PROJECTION
-    do iBlock = 1, nBlock
-       if (unusedBLK(iBlock)) CYCLE
-       if (far_field_BCs_BLK(iBlock).and.prolong_order==2)&
-            call set_outer_BCs(iBlock,time_simulation,.false.)        
-       if(UseConstrainB)call correctP(iBlock)   !^CFG IF CONSTRAINB
-       if(UseProjection)call correctP(iBlock)   !^CFG IF PROJECTION
-    end do
-    !end if                       !^CFG IF NOT PROJECTION
-    if(oktest)write(*,*)'Checked negative P, me=',iProc
+    if(.not.DoResChengeOnly) then
+       do iBlock = 1, nBlock
+          if (unusedBLK(iBlock)) CYCLE
+          if (far_field_BCs_BLK(iBlock).and.prolong_order==2)&
+               call set_outer_BCs(iBlock,time_simulation,.false.)        
+          if(UseConstrainB)call correctP(iBlock)   !^CFG IF CONSTRAINB
+          if(UseProjection)call correctP(iBlock)   !^CFG IF PROJECTION
+       end do
+       !end if                       !^CFG IF NOT PROJECTION
+       if(oktest)write(*,*)'Checked negative P, me=',iProc
+    end if
 
-    if (UsePlotMessageOptions) then
+    if (UseOrder2) then
        if(UseBatl)then
           if(UseBatlTest)then
-             call message_pass_cell(nVar, State_VGB, nProlongOrderIn=1)
+             call message_pass_cell(nVar, State_VGB, nProlongOrderIn=1,&
+                  DoResChengeOnlyIn=DoResChengeOnlyIn)
           else
-             call message_pass_cell(nVar, State_VGB)
+             call message_pass_cell(nVar, State_VGB,&
+                  DoResChengeOnlyIn=DoResChengeOnlyIn)
           end if
-          call fix_boundary_ghost_cells(DoRestrictFace)
+          if(.not.DoResChengeOnly) call fix_boundary_ghost_cells(DoRestrictFace)
        else
           if(oktest)write(*,*)'calling message_pass with plot options'
           !                              Don't send just one layer
@@ -96,8 +109,9 @@ contains
           nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
           call message_pass_cell(nVar, State_VGB, &
                nWidthIn=nWidth, nProlongOrderIn=1, &
-               nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace)
-          call fix_boundary_ghost_cells(DoRestrictFace)
+               nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&
+               DoResChengeOnlyIn=DoResChengeOnlyIn)
+          if(.not.DoResChengeOnly) call fix_boundary_ghost_cells(DoRestrictFace)
        else
           call message_pass_cells8(DoOneLayer, .false., DoRestrictFace, &
                nVar, State_VGB)
@@ -129,8 +143,9 @@ contains
              nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
              call message_pass_cell(nVar, State_VGB, &
                   nWidthIn=nWidth, nProlongOrderIn=1, nCoarseLayerIn=nCoarseLayer,&
-                  DoSendCornerIn=.not.DoFaces, DoRestrictFaceIn=DoRestrictFace)
-             call fix_boundary_ghost_cells(DoRestrictFace)
+                  DoSendCornerIn=.not.DoFaces, DoRestrictFaceIn=DoRestrictFace,&
+                  DoResChengeOnlyIn=DoResChengeOnlyIn)
+             if(.not.DoResChengeOnly) call fix_boundary_ghost_cells(DoRestrictFace)
           else
              call message_pass_cells8(DoOneLayer,DoFaces,DoRestrictFace, &
                   nVar, State_VGB)
@@ -144,27 +159,24 @@ contains
     if(oktest)write(*,*)'Ensure that E and P consistent, me=',iProc
 
     if(DoProfileAmr) call timing_start('E and P')
+
+    if(.not.DoResChengeOnly) then
+       do iBlock = 1, nBlock
+          if (unusedBLK(iBlock)) CYCLE
+
+          if (far_field_BCs_BLK(iBlock)) &
+               call set_outer_BCs(iBlock,time_simulation,.false.) 
+          if(time_loop.and. any(TypeBc_I=='buffergrid'))&
+               call fill_in_from_buffer(iBlock)
+       end do
+    end if
+
     do iBlock = 1, nBlock
-       if (unusedBLK(iBlock)) CYCLE
-
-       if (far_field_BCs_BLK(iBlock)) then
-          !if(DoProfileAmr) call timing_start('set_outer_BCs')
-          call set_outer_BCs(iBlock,time_simulation,.false.) 
-          !if(DoProfileAmr) call timing_stop('set_outer_BCs')
-       end if
-
-       if(time_loop.and. any(TypeBc_I=='buffergrid')) then
-          !if(DoProfileAmr) call timing_start('fill_in_from_buffer')
-          call fill_in_from_buffer(iBlock)
-          !if(DoProfileAmr) call timing_stop('fill_in_from_buffer')
-       end if
-
-       !if(DoProfileAmr) call timing_start('calc_energy_ghost')
        call calc_energy_ghost(iBlock,DoResChengeOnlyIn=DoResChengeOnlyIn)
-       !if(DoProfileAmr) call timing_stop('calc_energy_ghost')
     end do
 
     if(DoProfileAmr) call timing_stop('E and P')
+
     call timing_stop('exch_msgs')
     if(oktime)call timing_show('exch_msgs',1)
 
@@ -313,7 +325,6 @@ contains
          time_simulation,nOrder,prolong_order,optimize_message_pass, UseBatl
     use ModVarIndexes
     use ModAdvance, ONLY : State_VGB, divB1_GB
-    use ModParallel, ONLY : UsePlotMessageOptions
     use ModGeometry, ONLY : far_field_BCs_BLK        
     use ModMpi
     use ModMPCells, ONLY : DoOneCoarserLayer
