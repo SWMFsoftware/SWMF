@@ -34,7 +34,8 @@ contains
 
   subroutine message_pass_cell_scalar(Float_GB, Int_GB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
-       DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn)
+       DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
+       DoResChengeOnlyIn)
     ! Wrapper function for making it easy to pass scalar data to
     ! message_pass_cell
 
@@ -54,6 +55,7 @@ contains
     logical, optional, intent(in) :: DoSendCornerIn
     logical, optional, intent(in) :: DoRestrictFaceIn
     logical, optional, intent(in) :: DoTestIn
+    logical, optional, intent(in) :: DoResChengeOnlyIn
     real,    optional, intent(in) :: TimeOld_B(MaxBlock)
     real,    optional, intent(in) :: Time_B(MaxBlock)
     character(len=*), optional,intent(in) :: NameOperatorIn 
@@ -84,7 +86,7 @@ contains
          nProlongOrderIn=nProlongOrderIn, nCoarseLayerIn=nCoarseLayerIn, &
          DoSendCornerIn=DoSendCornerIn, DoRestrictFaceIn=DoRestrictFaceIn, &
          TimeOld_B=TimeOld_B, Time_B=Time_B, DoTestIn=DoTestIn, &
-         NameOperatorIn=NameOperatorIn)
+         NameOperatorIn=NameOperatorIn, DoResChengeOnlyIn=DoResChengeOnlyIn)
 
     if(present(Float_GB)) then
        Float_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock) = &
@@ -100,7 +102,8 @@ contains
 
   subroutine message_pass_cell(nVar, State_VGB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
-       DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn)
+       DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
+       DoResChengeOnlyIn)
 
     use BATL_size, ONLY: MaxBlock, &
          nBlock, nIjk_D, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -129,6 +132,7 @@ contains
     logical, optional, intent(in) :: DoSendCornerIn
     logical, optional, intent(in) :: DoRestrictFaceIn
     logical, optional, intent(in) :: DoTestIn
+    logical, optional, intent(in) :: DoResChengeOnlyIn
     real,    optional, intent(in) :: TimeOld_B(MaxBlock)
     real,    optional, intent(in) :: Time_B(MaxBlock)
     character(len=*), optional,intent(in) :: NameOperatorIn
@@ -166,6 +170,8 @@ contains
     integer :: iProlongStage  ! index for 2 stage scheme for 2nd order prolong
     integer :: iCountOnly     ! index for 2 stage scheme for count, sendrecv
     logical :: DoCountOnly    ! logical for count vs. sendrecv stages
+    logical :: DoResChengeOnly ! only exchange messenges where ther is a chenge in 
+                               ! resolution, default .false. 
 
     integer :: iSend, jSend, kSend, iRecv, jRecv, kRecv, iSide, jSide, kSide
     integer :: iDir, jDir, kDir
@@ -225,6 +231,10 @@ contains
 
     DoRestrictFace = .false.
     if(present(DoRestrictFaceIn)) DoRestrictFace = DoRestrictFaceIn
+
+    DoResChengeOnly =.false.
+    if(present(DoResChengeOnlyIn)) DoResChengeOnly = DoResChengeOnlyIn
+
 
     ! Check arguments for consistency
     if(nProlongOrder == 2 .and. DoRestrictFace) call CON_stop(NameSub// &
@@ -357,7 +367,8 @@ contains
                       if(iProlongStage == 2 .and. DiLevel == 0) CYCLE
 
                       if(DiLevel == 0)then
-                         call do_equal
+                         !call do_equal
+                         if(.not.DoResChengeOnly) call do_equal
                       elseif(DiLevel == 1)then
                          call do_restrict
                       elseif(DiLevel == -1)then
