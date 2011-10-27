@@ -14,8 +14,7 @@ subroutine amr(DoMessagePass)
   use ModMpi
 
   use BATL_lib,         ONLY: regrid_batl, set_amr_criteria, &
-       Unused_B, iNode_B, iStatusNew_A, Refine_, Coarsen_,&
-       message_pass_cell
+       Unused_B, iNode_B, iStatusNew_A, Refine_, Coarsen_
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
   use ModUser,          ONLY: user_amr_criteria
   use ModBatlInterface, ONLY: useBatlTest
@@ -50,13 +49,8 @@ subroutine amr(DoMessagePass)
 
      if(DoMessagePass)then
         if(DoProfileAmr) call timing_start('amr::exchange_true')
-        if(UseBatlTest) then
-           call exchange_messages(UseOrder2In=.false.,&
-                DoResChengeOnlyIn=.true.)
-        else
-           call exchange_messages(UseOrder2In=.true.,&
-                DoResChengeOnlyIn=.true.)
-        end if
+        call exchange_messages(UseOrder2In= .not.UseBatlTest,&
+             DoResChangeOnlyIn=.true.)
         if(DoProfileAmr) call timing_stop('amr::exchange_true')
      end if
      if(automatic_refinement) then
@@ -99,7 +93,7 @@ subroutine amr(DoMessagePass)
         if(DoMessagePass)then
            if(DoProfileAmr) call timing_start('amr::exchange_noamr')
            call exchange_messages(&
-                DoResChengeOnlyIn=.true. ,&
+                DoResChangeOnlyIn=.true. ,&
                 UseOrder2In=.false.)
            if(DoProfileAmr) call timing_stop('amr::exchange_noamr')
         end if

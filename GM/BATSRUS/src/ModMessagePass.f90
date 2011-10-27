@@ -6,7 +6,7 @@ module ModMessagePass
 
 contains
   ! moved form file exchange_messages.f90 
-  subroutine exchange_messages(DoResChengeOnlyIn,UseOrder2In)
+  subroutine exchange_messages(DoResChangeOnlyIn, UseOrder2In)
     use ModProcMH
     use ModMain, ONLY : nI, nJ, nK, gcn, nBlockMax, nBlock, unusedBLK, &
          TypeBc_I, time_loop, UseB, &
@@ -28,8 +28,7 @@ contains
     use ModAMR, ONLY: DoProfileAmr
     use ModMpi
 
-    logical, optional, intent(in) :: DoResChengeOnlyIn, &
-         UseOrder2In
+    logical, optional, intent(in) :: DoResChangeOnlyIn, UseOrder2In
 
     integer :: iBlock
     logical :: oktest, oktest_me, oktime, oktime_me
@@ -37,22 +36,19 @@ contains
     logical :: DoCorners, DoFaces
     logical :: UseOrder2=.false.
     integer :: nWidth, nCoarseLayer
-    logical :: DoResChengeOnly
-    !---------------------------------------------------------------------------
+    logical :: DoResChangeOnly
+    !--------------------------------------------------------------------------
 
     !!^CFG IF DEBUGGING BEGIN
     ! call testmessage_pass_nodes
     ! call time_message_passing
     !!^CFG END DEBUGGING
 
-    DoResChengeOnly = .false.
-    if(present(DoResChengeOnlyIn)) &
-         DoResChengeOnly = DoResChengeOnlyIn
+    DoResChangeOnly = .false.
+    if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
 
     UseOrder2=.false.
-    if(present(UseOrder2In))&
-         UseOrder2 = UseOrder2In
-
+    if(present(UseOrder2In)) UseOrder2 = UseOrder2In
 
     DoRestrictFace = prolong_order==1
     if(UseConstrainB) DoRestrictFace = .false.   !^CFG IF CONSTRAINB
@@ -66,7 +62,7 @@ contains
     call timing_start('exch_msgs')
     ! Ensure that energy and pressure are consistent and positive in real cells
     !if(prolong_order==2)then     !^CFG IF NOT PROJECTION
-    if(.not.DoResChengeOnly) then
+    if(.not.DoResChangeOnly) then
        do iBlock = 1, nBlock
           if (unusedBLK(iBlock)) CYCLE
           if (far_field_BCs_BLK(iBlock).and.prolong_order==2)&
@@ -82,17 +78,18 @@ contains
        if(UseBatl)then
           if(UseBatlTest)then
              call message_pass_cell(nVar, State_VGB, nProlongOrderIn=1,&
-                  DoResChengeOnlyIn=DoResChengeOnlyIn)
+                  DoResChangeOnlyIn=DoResChangeOnlyIn)
           else
              call message_pass_cell(nVar, State_VGB,&
-                  DoResChengeOnlyIn=DoResChengeOnlyIn)
+                  DoResChangeOnlyIn=DoResChangeOnlyIn)
           end if
-          if(.not.DoResChengeOnly) call fix_boundary_ghost_cells(DoRestrictFace)
+          if(.not.DoResChangeOnly) &
+               call fix_boundary_ghost_cells(DoRestrictFace)
        else
           if(oktest)write(*,*)'calling message_pass with plot options'
-          !                              Don't send just one layer
-          !                                      Don't send faces only
-          !                                               Don't monotone restrict
+          !                         Don't send just one layer
+          !                                Don't send faces only
+          !                                         Don't monotone restrict
           call message_pass_cells8(.false.,.false.,.false.,nVar, State_VGB)
           if(UseB) call message_pass_cells(.false.,.false.,.false.,DivB1_GB)
           if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
@@ -110,8 +107,9 @@ contains
           call message_pass_cell(nVar, State_VGB, &
                nWidthIn=nWidth, nProlongOrderIn=1, &
                nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&
-               DoResChengeOnlyIn=DoResChengeOnlyIn)
-          if(.not.DoResChengeOnly) call fix_boundary_ghost_cells(DoRestrictFace)
+               DoResChangeOnlyIn=DoResChangeOnlyIn)
+          if(.not.DoResChangeOnly) &
+               call fix_boundary_ghost_cells(DoRestrictFace)
        else
           call message_pass_cells8(DoOneLayer, .false., DoRestrictFace, &
                nVar, State_VGB)
@@ -142,17 +140,23 @@ contains
              nWidth = 2;       if(DoOneLayer)        nWidth = 1
              nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
              call message_pass_cell(nVar, State_VGB, &
-                  nWidthIn=nWidth, nProlongOrderIn=1, nCoarseLayerIn=nCoarseLayer,&
-                  DoSendCornerIn=.not.DoFaces, DoRestrictFaceIn=DoRestrictFace,&
-                  DoResChengeOnlyIn=DoResChengeOnlyIn)
-             if(.not.DoResChengeOnly) call fix_boundary_ghost_cells(DoRestrictFace)
+                  nWidthIn=nWidth, &
+                  nProlongOrderIn=1, &
+                  nCoarseLayerIn=nCoarseLayer,&
+                  DoSendCornerIn=.not.DoFaces, &
+                  DoRestrictFaceIn=DoRestrictFace,&
+                  DoResChangeOnlyIn=DoResChangeOnlyIn)
+             if(.not.DoResChangeOnly) &
+                  call fix_boundary_ghost_cells(DoRestrictFace)
           else
              call message_pass_cells8(DoOneLayer,DoFaces,DoRestrictFace, &
                   nVar, State_VGB)
-             if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
+             if(SaveBoundaryCells) &
+                  call fix_boundary_ghost_cells(DoRestrictFace)
           end if
        case default
-          call stop_mpi('Unknown optimize_message_pass='//optimize_message_pass)
+          call stop_mpi(&
+               'Unknown optimize_message_pass='//optimize_message_pass)
        end select
     end if
 
@@ -160,7 +164,7 @@ contains
 
     if(DoProfileAmr) call timing_start('E and P')
 
-    if(.not.DoResChengeOnly) then
+    if(.not.DoResChangeOnly) then
        do iBlock = 1, nBlock
           if (unusedBLK(iBlock)) CYCLE
 
@@ -172,7 +176,7 @@ contains
     end if
 
     do iBlock = 1, nBlock
-       call calc_energy_ghost(iBlock,DoResChengeOnlyIn=DoResChengeOnlyIn)
+       call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn)
     end do
 
     if(DoProfileAmr) call timing_stop('E and P')
@@ -184,7 +188,7 @@ contains
 
   end subroutine exchange_messages
 
-  !============================================================================!
+  !============================================================================
   ! moved form file exchange_messages.f90 
   subroutine fill_in_from_buffer(iBlock)
     use ModGeometry,ONLY:R_BLK,x_BLK,y_BLK,z_BLK

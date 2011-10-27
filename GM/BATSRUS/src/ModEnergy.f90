@@ -566,26 +566,26 @@ contains
 
   !===========================================================================
 
-  subroutine calc_energy_ghost(iBlock,DoResChengeOnlyIn)
+  subroutine calc_energy_ghost(iBlock,DoResChangeOnlyIn)
 
     use ModParallel, ONLY: BLKneighborLEV
 
     integer, intent(in) :: iBlock
-    logical, optional, intent(in) :: DoResChengeOnlyIn
+    logical, optional, intent(in) :: DoResChangeOnlyIn
 
     integer :: i,j,k
-    logical :: DoResChengeOnly
+    logical :: DoResChangeOnly
     !--------------------------------------------------------------------------
 
-    DoResChengeOnly =.false.
-    if(present(DoResChengeOnlyIn)) DoResChengeOnly = DoResChengeOnlyIn
+    DoResChangeOnly =.false.
+    if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
 
-    if( DoResChengeOnly ) then
+    if( DoResChangeOnly ) then
        if( .not.any(abs(BLKneighborLEV(-1:1,-1:1,-1:1,iBlock)) == 1) ) RETURN
     end if
 
 !!$    !------------------- for calculation on ghost cells only ----------------
-!!$    if( DoResChengeOnly ) then
+!!$    if( DoResChangeOnly ) then
 !!$       
 !!$       if( any(abs(BLKneighborLEV(-1,:,:,iBlock)) == 1) ) then
 !!$          !call limit_pressure(-1,0,-1,nJ+2,-1,nK+2,iBlock,1,nFluid)
