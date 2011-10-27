@@ -2,7 +2,7 @@ module ModHdf5
 
   use ModIO, ONLY: NamePlotDir, MaxFile, nplotvarmax
   use ModMpi
-  use ModVarIndexes, ONLY : NameVar_V, nVar, nFluid
+  use ModVarIndexes, ONLY : NameVar_V
 
   use hdf5
   implicit none
@@ -73,7 +73,6 @@ module ModHdf5
 
   character(len=80):: io_geometry
 
-  integer:: io_nPlotVars
   integer:: io_comm
 
 
@@ -126,7 +125,7 @@ contains
     end if
 
     if (iProc == 0) write (*,*) '  writing data'
-    call hdf5_writeData(iProc, nProc, fileID)
+    call hdf5_writeData(iProc, nProc, fileID, nPlotVar)
 
     if (iProc == 0) write (*,*) '  closing file'
     call h5garbage_collect_f(error)
@@ -207,19 +206,18 @@ contains
 
   !=====================================================================
 
-  subroutine hdf5_writeData(myPE, numProcs, fileID) 
+  subroutine hdf5_writeData(myPE, numProcs, fileID, nPlotVar) 
 
     ! Handles gathering any additional information needed for plotting
     ! and then calling the appropriate C functions to produce an hdf5
     ! output file.
     use ModSize, only : MaxBlock, nI, nJ, nK
     use ModAdvance, only : State_VGB
-    use ModVarIndexes, ONLY : nVar !NameVar_V, nVar, nFluid
     use hdf5
     !---------------------------------------------------------------------  
 
     integer, intent(in) :: myPE, fileID
-    integer, intent(in) :: numProcs
+    integer, intent(in) :: numProcs, nPlotVar
 
     character (len=80) :: buff
     character(len=16) :: numToStr  
@@ -278,7 +276,7 @@ contains
 
 
     ! write the header info
-    call writeHdf5Header(MyPE, io_nPlotVars, fileID, &  !removed io_geometry
+    call writeHdf5Header(MyPE, nPlotVar, fileID, &  !removed io_geometry
          io_plotVarStr, io_setupCall, io_fileCreationTime, io_flashRelease,&
          io_buildDate, io_buildDir, io_buildMachine, io_cflags, io_fflags, &
          io_setupTimeStamp, io_buildTimeStamp)
@@ -393,15 +391,16 @@ contains
          iProcOffset, "block size", 3)
 
 
-    allocate(globalVarMin(nVar)) 
-    allocate(globalVarMax(nVar))
+    allocate(globalVarMin(nPlotVar)) 
+    allocate(globalVarMax(nPlotVar))
 
     !get the max and minimum variables
-    call hdf5_getVarExtrema(nVar, globalVarMin, globalVarMax, 2)
+    call hdf5_getVarExtrema(nPlotVar, globalVarMin, globalVarMax, 2)
 
     !store the unknowns
     allocate(unkBuf(nI, nJ, nK, MaxBlock))
-    do i = 1, nVar
+
+    do i = 1, nPlotVar 
 
 
        unkBuf(1:nI,1:nJ,1:nK,1:MaxBlock) = &
@@ -576,7 +575,6 @@ contains
 
 
        end do
-       io_nPlotVars = nPlotVar
     ! Output of runtime parameters, scalars, and logfiles 
     ! is not implemented yet, so clear the corresponding variables
     io_numRealParms = 0
@@ -647,7 +645,7 @@ contains
 
     integer, intent(IN)  :: myPE
 
-    integer :: i, j, k, iNode, iBLK, iGid, error, idx, nUnused
+    integer :: i, j, k, iNode, iBLK, iGid, error, idx, nUnused, iChild
     integer :: bn, pe
     integer :: localIdx(nBlockMax)
     integer, allocatable :: blocksPerProc(:), offsetPerProc(:)
@@ -693,63 +691,70 @@ contains
        iNode = iNode_B(iBLK)
 
        ! Begin by filling in the neighbor cells for this cell
-
+        iGid = 1
        if (iNodeNei_IIIB(0, 1, 1, iBLK) > 0) then
           bn = iTree_IA(Block_, iNodeNei_IIIB(0, 1, 1, iBLK))
           pe = iTree_IA(Proc_, iNodeNei_IIIB(0, 1, 1, iBLK))
-          gr_gid(1, idx) = localIdx_pe(pe, bn) + offsetPerProc(pe)
+          gr_gid(iGid, idx) = localIdx_pe(pe, bn) + offsetPerProc(pe)
        end if
-
+        iGid = iGid + 1
        if (iNodeNei_IIIB(3, 1, 1, iBLK) > 0) then
           bn = iTree_IA(Block_, iNodeNei_IIIB(3, 1, 1, iBLK))
           pe = iTree_IA(Proc_, iNodeNei_IIIB(3, 1, 1, iBLK))
-          gr_gid(2, idx) = localIdx_pe(pe, bn) + offsetPerProc(pe)
+          gr_gid(iGid, idx) = localIdx_pe(pe, bn) + offsetPerProc(pe)
        end if
-
-       iGid = 3
+        iGid = iGid + 1
 
        if (nJ > 1) then
           if (iNodeNei_IIIB(1, 0, 1, iBLK) > 0) then
              bn = iTree_IA(Block_, iNodeNei_IIIB(1, 0, 1, iBLK))
              pe = iTree_IA(Proc_, iNodeNei_IIIB(1, 0, 1, iBLK))
-             gr_gid(3, idx) = localIdx_pe(pe, bn) + offsetPerProc(pe)
+             gr_gid(iGid, idx) = localIdx_pe(pe, bn) + offsetPerProc(pe)
           end if
+        iGid = iGid + 1
 
           if (iNodeNei_IIIB(1, 3, 1, iBLK) > 0) then
              bn = iTree_IA(Block_, iNodeNei_IIIB(1, 3, 1, iBLK))
              pe = iTree_IA(Proc_, iNodeNei_IIIB(1, 3, 1, iBLK))
-             gr_gid(4, idx) = localIdx_pe(pe, bn) + offsetPerProc(pe)
+             gr_gid(iGid, idx) = localIdx_pe(pe, bn) + offsetPerProc(pe)
           end if
+        iGid = iGid + 1
 
-          iGid = 5
        end if
 
        if (nK > 1) then
           if (iNodeNei_IIIB(1, 1, 0, iBLK) > 0) then
              bn = iTree_IA(Block_, iNodeNei_IIIB(1, 1, 0, iBLK))
              pe = iTree_IA(Proc_, iNodeNei_IIIB(1, 1, 0, iBLK))
-             gr_gid(5, idx) = localIdx_pe(pe, bn) + offsetPerProc(pe)
+             gr_gid(iGid, idx) = localIdx_pe(pe, bn) + offsetPerProc(pe)
           end if
+        iGid = iGid + 1
 
           if (iNodeNei_IIIB(1, 1, 3, iBLK) > 0) then
              bn = iTree_IA(Block_, iNodeNei_IIIB(1, 1, 3, iBLK))
              pe = iTree_IA(Proc_, iNodeNei_IIIB(1, 1, 3, iBLK))
-             gr_gid(6, idx) = localIdx_pe(pe, bn) + offsetPerProc(pe)
+             gr_gid(iGid, idx) = localIdx_pe(pe, bn) + offsetPerProc(pe)
           end if
+        iGid = iGid + 1
 
-          iGid = 7
        end if
 
        ! Store parent's node number and children's node numbers
-       do i = 0, 2**nDim
-          ! No AMR tree info stored yet...
-          !if (iTree_IA(Child0_+i, iNode) > 0) then
-          !  gr_gid(iGid, idx) = iTree_IA(Block_, iTree_IA(Child0_+i, iNode)) &
-          !    + offsetPerProc(iTree_IA(Proc_, iTree_IA(Child0_+i, iNode)))
-          !else
-          gr_gid(iGid, idx) = -1
-          !end if
+        if (iTree_IA(Parent_, iNode) > 0) then
+            gr_gid(iGid,idx) = iTree_IA(Parent_, iNode)
+        else
+            gr_gid(iGid,idx) = -1 
+        end if
+        
+        iGid = iGid+1
 
+
+       do iChild = Child1_, ChildLast_
+        if (iTree_IA(iChild, iNode) > 0) then
+            gr_gid(iGid,idx) = iTree_IA(iChild, iNode)
+        else
+            gr_gid(iGid,idx) = -1 
+        end if
           iGid = iGid+1
        end do
 
@@ -833,14 +838,14 @@ contains
     real, DIMENSION(nvars), INTENT(out) :: globalVarMin, globalVarMax
 
     real, allocatable  :: varMin(:), varMax(:)
-    integer  :: iBLK, i, j, k, iVar, error
+    integer  :: iBLK, i, j, k, iVar, error, state_VGB_size, iVarMax
     !--------------------------------------------------------------------------
 
     if (nvars > 0) then
 
        allocate(varMin(nvars))
        allocate(varMax(nvars))
-
+        
        varMin(:) = huge(varMin)
        varMax(:) = -huge(varMax)
 
@@ -1263,14 +1268,14 @@ contains
   !=========================================================================================
 
 
-  subroutine writeHdf5Header(MyPE, io_nPlotVars, fileID, &  !removed io_geometry
+  subroutine writeHdf5Header(MyPE, nPlotVar, fileID, &  !removed io_geometry
        io_plotVarStr, io_setupCall, io_fileCreationTime, io_flashRelease,&
        io_buildDate, io_buildDir, io_buildMachine, io_cflags, io_fflags, &
        io_setupTimeStamp, io_buildTimeStamp)
 
     use hdf5
     integer :: FileFormatVersion, ivar, iLen, labelLeng
-    integer :: error, MyPE, io_nPlotVars
+    integer :: error, MyPE, nPlotVar
     character (len=80), intent(in) :: io_fileCreationTime
     character (len=20), intent(in) :: io_flashRelease
     character (len=80), intent(in) :: io_buildDate
@@ -1281,7 +1286,7 @@ contains
     character (len=400), intent(in) :: io_setupCall
     character (len=80), intent(in) :: io_setupTimeStamp
     character (len=80), intent(in) :: io_buildTimeStamp
-    character (len=5), intent(in) :: io_plotVarStr(io_nPlotVars)
+    character (len=5), intent(in) :: io_plotVarStr(nPlotVar)
     integer(HID_T) ::  stringTypeFH, stringTypeTwenty, stringTypeEighty, stringTypeFour, FFVType
     integer(HID_T) :: SCType, FCTType, FRType,  BDType, BDirType, BMType, CFType, FFType 
     integer(HID_T) :: STSType, BTSType, FVType, stringTypeOne
@@ -1289,7 +1294,7 @@ contains
     integer(HID_T), intent(in) :: fileID
     integer(HSIZE_T) :: simInfoSize, dimens1D(1), dimens2D(2), intSize, sizeOne
     integer(HSIZE_T) :: sizeFH, sizeEighty, sizeFour, sizeTwenty, strOffset, intOffset, offset
-    character (len=5) :: UnknownNameArray(1,io_nPlotVars)
+    character (len=5) :: UnknownNameArray(1,nPlotVar)
     FileFormatVersion = 9
 
     call h5open_f(error)
@@ -1475,12 +1480,12 @@ contains
     if (error == -1) &
          call stop_mpi("error in subroutine writeHdf5Header. Error marker 9")
 
-    if (io_nPlotVars > 0) then
+    if (nPlotVar > 0) then
        rank = 2  
        dimens2D(1) = 1 
-       dimens2d(2) = io_nPlotVars
+       dimens2d(2) = nPlotVar
 
-       UnknownNameArray(1,1:io_nPlotVars) = io_plotVarStr(1:io_nPlotVars)
+       UnknownNameArray(1,1:nPlotVar) = io_plotVarStr(1:nPlotVar)
 
        sizeFour = 5
        call h5tcopy_f(H5T_NATIVE_CHARACTER, stringTypeFour, error)
