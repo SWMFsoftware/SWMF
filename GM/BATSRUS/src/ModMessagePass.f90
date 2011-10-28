@@ -164,18 +164,16 @@ contains
 
     if(DoProfileAmr) call timing_start('E and P')
 
-    if(.not.DoResChangeOnly) then
-       do iBlock = 1, nBlock
-          if (unusedBLK(iBlock)) CYCLE
+    do iBlock = 1, nBlock
+       if (unusedBLK(iBlock)) CYCLE
 
+       if(.not.DoResChangeOnly) then
           if (far_field_BCs_BLK(iBlock)) &
                call set_outer_BCs(iBlock,time_simulation,.false.) 
           if(time_loop.and. any(TypeBc_I=='buffergrid'))&
                call fill_in_from_buffer(iBlock)
-       end do
-    end if
+       end if
 
-    do iBlock = 1, nBlock
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn)
     end do
 
