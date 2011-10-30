@@ -1341,7 +1341,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#TIMESTEPCONTROL", "#CONTROLTIMESTEP", &
           "#CONTROLDECREASE", "#CONTROLINCREASE", &
-          "#CONTROLFACTOR", "#CONTROLVAR")
+          "#CONTROLFACTOR", "#CONTROLVAR", "#CONTROLINIT")
         call read_time_step_control_param(NameCommand)
 
      case("#UPDATECHECK")
@@ -3222,7 +3222,8 @@ contains
   subroutine set_extra_parameters
 
     use ModMultiFluid, ONLY: UseMultiIon
-
+    use ModTimeStepControl, ONLY: UseTimeStepControl,TimesStepControlInit
+    !--------------------------------------------------------------------------
     ! We need normalization for dt
     if(UseDtFixed)then
        if(.not.time_accurate)then
@@ -3240,6 +3241,17 @@ contains
           Dt = DtFixed
           Cfl=1.0
        end if
+    end if
+
+    if(UseTimeStepControl)then
+       ! Reduce initial time step / Cfl number. 
+       ! The original values are stored in DtFixedOrig and CflOrig
+       if(UseDtFixed)then
+          DtFixed = TimesStepControlInit*DtFixed
+       else
+          Cfl     = TimesStepControlInit*Cfl
+       end if
+       TimesStepControlInit = 1.0
     end if
 
     DoOneCoarserLayer = .not. (nOrder==2 .and. &

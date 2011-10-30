@@ -2,14 +2,17 @@ module ModTimeStepControl
 
   implicit none
 
+  SAVE
+
   private ! except
 
   public:: read_time_step_control_param
   public:: control_time_step
-  logical, public:: UseTimeStepControl = .false.
+  logical, public:: UseTimeStepControl   = .false.
+  real,    public:: TimesStepControlInit = 1.0
 
   ! Local variables
-  integer             :: nVarControl
+  integer             :: nVarControl = -1
   integer, allocatable:: iVarControl_I(:)
   real,    allocatable:: VarRatio_I(:)
 
@@ -44,6 +47,8 @@ contains
     select case(NameCommand)
     case("#CONTROLTIMESTEP", "#TIMESTEPCONTROL")
        call read_var('UseTimeStepControl', UseTimeStepControl)
+    case("#CONTROLINIT")
+       call read_var('TimesStepControlInit', TimesStepControlInit)
     case("#CONTROLDECREASE")
        call read_var('RejectStepLevel1' ,  RejectStepLevel1)
        call read_var('ReduceStepLevel1' ,  ReduceStepLevel1)

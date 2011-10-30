@@ -4138,6 +4138,18 @@ when the various thresholds are reached.
 The default is UseTimeStepControl false.
 </command>
 
+<command name="CONTROLINIT">
+	<parameter name="TimeStepControlInit" type="real" min="0" max="1"
+		   default="1"/>
+#CONTROLINIT
+0.01			UseTimeStepControl
+
+Set the initial reduction factor applied to the time step or Cfl number.
+The factor should be positive and it should typically not more than 1.
+
+The default value is 1, i.e. there is no initial reduction applied.
+</command>
+
 <command name="CONTROLVAR">
 	<parameter name="NameVarControl"  type="string" length="100" 
 			case="lower" default="rho p"/>
