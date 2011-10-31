@@ -23,8 +23,17 @@ int PIC::Mesh::sampledParticleVelocityRelativeOffset=0,PIC::Mesh::sampledParticl
 int PIC::Mesh::sampledExternalDataRelativeOffset=0;
 int PIC::Mesh::sampleSetDataLength=0;
 
-//the flag determines weather an external sampling procedure is used
-bool PIC::Mesh::ExternalSamplingProcedureDefinedFlag=false;
+//the mesh parameters
+double PIC::Mesh::xmin[3]={0.0,0.0,0.0},PIC::Mesh::xmax[3]={0.0,0.0,0.0};
+PIC::Mesh::fLocalMeshResolution PIC::Mesh::LocalMeshResolution=NULL;
+#if DIM == 3
+cMeshAMR3d<PIC::Mesh::cDataCornerNode,PIC::Mesh::cDataCenterNode,PIC::Mesh::cDataBlockAMR> PIC::Mesh::mesh;
+#elif DIM == 2
+cMeshAMR2d<PIC::Mesh::cDataCornerNode,PIC::Mesh::cDataCenterNode,PIC::Mesh::cDataBlockAMR>  PIC::Mesh::mesh;
+#else
+cMeshAMR1d<PIC::Mesh::cDataCornerNode,PIC::Mesh::cDataCenterNode,PIC::Mesh::cDataBlockAMR>  PIC::Mesh::mesh;
+#endif
+
 
 //the user defined functions for output of the 'ceneter node' data into a data file
 list<PIC::Mesh::fPrintVariableListCenterNode> PIC::Mesh::PrintVariableListCenterNode;
@@ -37,6 +46,126 @@ void PIC::Mesh::SetCellSamplingDataRequest() {
   exit(__LINE__,__FILE__,"not implemented yet");
 }
 
+void PIC::Mesh::cDataCenterNode::PrintVariableList(FILE* fout,int DataSetNumber) {
+ fprintf(fout,", \"Number Density\", \"Particle Number\"");
+ for (int idim=0;idim<DIM;idim++) fprintf(fout,", \"V%i\"",idim);
+ fprintf(fout,", \"Speed\", \"Translational Temperature\"");
+
+ //print the user defind 'center node' data
+ list<fPrintVariableListCenterNode>::iterator fptr;
+ for (fptr=PrintVariableListCenterNode.begin();fptr!=PrintVariableListCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber);
+
+ //print varialbes sampled by the user defined sampling procedures
+ if (PIC::IndividualModelSampling::PrintVariableList.size()!=0) {
+   for (unsigned int i=0;i<PIC::IndividualModelSampling::PrintVariableList.size();i++) PIC::IndividualModelSampling::PrintVariableList[i](fout,DataSetNumber);
+ }
+
+}
+
+void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread) {
+  int idim;
+
+  struct cOutputData {
+    double NumberDesnity,ParticleNumber,v[3],MeanParticleSpeed,TranslationalTemeprature;
+  } OutputData;
+
+  if (pipe->ThisThread==CenterNodeThread) {
+    OutputData.NumberDesnity=GetNumberDensity(DataSetNumber);
+    OutputData.ParticleNumber=GetParticleNumber(DataSetNumber);
+    GetBulkVelocity(OutputData.v,DataSetNumber);
+    OutputData.MeanParticleSpeed=GetMeanParticleSpeed(DataSetNumber);
+    OutputData.TranslationalTemeprature=GetTranslationalTemperature(DataSetNumber);
+  }
+
+
+  if (pipe->ThisThread==0) {
+    if (CenterNodeThread!=0) pipe->recv((char*)&OutputData,sizeof(OutputData),CenterNodeThread);
+
+    fprintf(fout,"%e  %e ",OutputData.NumberDesnity,OutputData.ParticleNumber);
+    for (idim=0;idim<DIM;idim++) fprintf(fout,"%e ",OutputData.v[idim]);
+    fprintf(fout,"%e %e ",OutputData.MeanParticleSpeed,OutputData.TranslationalTemeprature);
+  }
+  else pipe->send((char*)&OutputData,sizeof(OutputData));
+
+  //print the user defind 'center node' data
+  list<fPrintDataCenterNode>::iterator fptr;
+
+  for (fptr=PrintDataCenterNode.begin();fptr!=PrintDataCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber,pipe,CenterNodeThread,this);
+
+  //print data sampled by the user defined sampling functions
+  if (PIC::IndividualModelSampling::PrintSampledData.size()!=0) {
+    for (unsigned int i=0;i<PIC::IndividualModelSampling::PrintSampledData.size();i++) PIC::IndividualModelSampling::PrintSampledData[i](fout,DataSetNumber,pipe,CenterNodeThread,this);
+  }
+
+}
+
+void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients) {
+  int i,s,idim;
+  double c;
+
+
+
+  //==============================  DEBUGGER ===============
+           if (nInterpolationCoeficients!=0) Measure=InterpolationList[0]->Measure;
+
+  //============================== END DEBUGGER ============
+
+
+  #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
+  if (associatedDataPointer==NULL) exit(__LINE__,__FILE__,"Error: The associated data buffer is not initialized");
+  #endif
+
+  double InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0.0,InterpolatedBulkVelocity[3]={0.0,0.0,0.0},InterpolatedBulk2Velocity[3]={0.0,0.0,0.0};
+  double InterpolatedParticleSpeed=0.0;
+  double pWeight;
+
+  for (s=0;s<PIC::nTotalSpecies;s++) {
+    InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0.0,InterpolatedParticleSpeed=0.0;
+    for (idim=0;idim<3;idim++) InterpolatedBulkVelocity[idim]=0.0,InterpolatedBulk2Velocity[idim]=0.0;
+
+    //interpolate the sampled data
+    for (i=0;i<nInterpolationCoeficients;i++) {
+      pWeight=InterpolationList[i]->GetRealParticleNumber(s);
+      c=PIC::LastSampleLength*InterpolationCoeficients[i];
+
+      InterpolatedParticleWeight+=c*pWeight;
+      InterpolatedParticleNumber+=c*InterpolationList[i]->GetParticleNumber(s);
+      InterpolatedParticleNumberDeinsity+=c*InterpolationList[i]->GetNumberDensity(s);
+
+
+      for (idim=0;idim<3;idim++) {
+        InterpolatedBulkVelocity[idim]+=c*(*(idim+3*s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocityRelativeOffset)));
+        InterpolatedBulk2Velocity[idim]+=c*(*(idim+3*s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocity2RelativeOffset)));
+      }
+
+      InterpolatedParticleSpeed+=c*(*(s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset)));
+    }
+
+    //stored the interpolated data in the associated data buffer
+    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNumberRelativeOffset))=InterpolatedParticleNumber;
+    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset))=InterpolatedParticleWeight;
+    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNumberDensityRelativeOffset))=InterpolatedParticleNumberDeinsity;
+    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset))=InterpolatedParticleSpeed;
+
+    for (i=0;i<3;i++) {
+      *(i+3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocityRelativeOffset))=InterpolatedBulkVelocity[i];
+      *(i+3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocity2RelativeOffset))=InterpolatedBulk2Velocity[i];
+    }
+
+    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset))=InterpolatedParticleSpeed;
+
+  }
+
+  //print the user defind 'center node' data
+  list<fInterpolateCenterNode>::iterator fptr;
+
+  for (fptr=InterpolateCenterNode.begin();fptr!=InterpolateCenterNode.end();fptr++) (*fptr)(InterpolationList,InterpolationCoeficients,nInterpolationCoeficients,this);
+
+  //interpolate data sampled by user defiend sampling procedures
+  if (PIC::IndividualModelSampling::InterpolateCenterNodeData.size()!=0) {
+    for (unsigned int ifunc=0;ifunc<PIC::IndividualModelSampling::PrintVariableList.size();ifunc++) PIC::IndividualModelSampling::InterpolateCenterNodeData[ifunc](InterpolationList,InterpolationCoeficients,nInterpolationCoeficients,this);
+  }
+}
 
 void PIC::Mesh::initCellSamplingDataBuffer() {
 
@@ -85,11 +214,15 @@ void PIC::Mesh::initCellSamplingDataBuffer() {
   sampledParticleSpeedRelativeOffset=offset;
   offset+=sizeof(double)*PIC::nTotalSpecies;
 
+
+  //check if user defined sampling data is requested
   sampledExternalDataRelativeOffset=offset;
 
-  if (PIC::Mesh::ExternalSamplingProcedureDefinedFlag==true) {
-    exit(__LINE__,__FILE__,"not implemented");
+  if (PIC::IndividualModelSampling::RequestSamplingData.size()!=0) {
+    for (unsigned int i=0;i<PIC::IndividualModelSampling::RequestSamplingData.size();i++) offset+=PIC::IndividualModelSampling::RequestSamplingData[i](offset);
   }
+
+
 
 
   PIC::Mesh::sampleSetDataLength=offset;
@@ -214,6 +347,8 @@ void PIC::Mesh::cDataBlockAMR::sendBoundaryLayerBlockData(CMPI_channel *pipe) {
     pipe->send(cell->associatedDataPointer,cell->totalAssociatedDataLength);
     pipe->send(cell->Measure);
   }
+
+  pipe->send(associatedDataPointer,totalAssociatedDataLength);
 }
 
 void PIC::Mesh::cDataBlockAMR::sendMoveBlockAnotherProcessor(CMPI_channel *pipe) {
@@ -289,29 +424,9 @@ void PIC::Mesh::cDataBlockAMR::recvBoundaryLayerBlockData(CMPI_channel *pipe,int
 
     pipe->recv(cell->associatedDataPointer,cell->totalAssociatedDataLength,From);
     pipe->recv(cell->Measure,From);
-
-
-
-
-
-//=========  DEBUG =========================
-
-    /*
-    double *p=(double*)0x11f8d4f40;
-
-    p+=3;
-
-    if (PIC::Mesh::mesh.ThisThread==3) if (*p==80) {
-      cout << __FILE__ << __LINE__ << endl;
-    }
-    */
-
-//==========  END DEBUG =====================
-
-
-
-
   }
+
+  pipe->recv(associatedDataPointer,totalAssociatedDataLength,From);
 }
 
 //recieve all blocks' data when the blocks is moved to another processo

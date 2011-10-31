@@ -18,10 +18,17 @@ void PIC::Distribution::MaxwellianVelocityDistribution(double *v,double *BulkFlo
 
 //====================================================
 //Get the particle velocity that is injected with Maxwellian distribution
-void PIC::Distribution::InjectMaxwellianDistribution(double *v,double *BulkFlowVelocity,double Temp,double *ExternalNormal,int spec) {
+double PIC::Distribution::InjectMaxwellianDistribution(double *v,double *BulkFlowVelocity,double Temp,double *ExternalNormal,int spec,int WeightCorrectionMode) {
   int idim;
-  double sc,beta,v1[3],v2[3],v3[3]={0.0,0.0,0.0},u,c,a,c1;
+  double sc,beta,u,c,a,c1;
   register double dotProduct=0.0;
+
+  double ParticleWeightCorrection=1.0;
+
+#if DIM != 1
+  double v1[3],v2[3],v3[3]={0.0,0.0,0.0};
+#endif
+
 
   beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*Temp));
 
@@ -29,6 +36,7 @@ void PIC::Distribution::InjectMaxwellianDistribution(double *v,double *BulkFlowV
     dotProduct=0.0;
     for (idim=0;idim<DIM;idim++) dotProduct+=BulkFlowVelocity[idim]*ExternalNormal[idim];
     sc=beta*fabs(dotProduct);
+
     do {
       if (dotProduct<=0.0) {
         do u=-10.0+20.0*rnd(); while(u+sc<=0.0);
@@ -40,12 +48,15 @@ void PIC::Distribution::InjectMaxwellianDistribution(double *v,double *BulkFlowV
         c=0.5*(-sqrt(sc*sc+2.0)-sc);
         a=(u+sc)*exp(-u*u)/(c+sc)/exp(-c*c);
       }
+
+      if (WeightCorrectionMode==_PIC_DISTRIBUTION_WEIGHT_CORRECTION_MODE__INDIVIDUAL_PARTICLE_WEIGHT_) {
+        ParticleWeightCorrection=a;
+        break;
+      }
     }
     while (a<rnd());
 
 #if DIM == 1
-    exit(__LINE__,__FILE__,"not tested yet");
-
     v[0]=-(fabs(u+sc)/beta)*ExternalNormal[0];
 
     c=sqrt(-log(rnd()))/beta;
@@ -114,5 +125,6 @@ void PIC::Distribution::InjectMaxwellianDistribution(double *v,double *BulkFlowV
   }
   while (dotProduct>=0.0);
 
+  return ParticleWeightCorrection;
 }
 

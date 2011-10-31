@@ -17,5 +17,12 @@ double cInternalSphericalData::dCosZenithAngle=2.0/cInternalSphericalData::nZeni
 double cInternalSphericalData::dZenithAngle=Pi/cInternalSphericalData::nZenithSurfaceElements;
 #endif
 
+//the static data for the circle internal boundaries
+long int cInternalCircleData::nPolarSurfaceElements=30;
+#if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_AXIAL_SYMMETRY_
+double cInternalCircleData::dPolarAngle=Pi/nPolarSurfaceElements;
+#else
+double cInternalCircleData::dPolarAngle=2.0*Pi/nPolarSurfaceElements;
+#endif
 
 

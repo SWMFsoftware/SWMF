@@ -14,18 +14,30 @@ int PIC::SamplingMode=_RESTART_SAMPLING_MODE_;
 //====================================================
 //perform one time step
 void PIC::TimeStep() {
-   double ParticleExchangeTime,IterationExecutionTime,SamplingTime,StartTime=MPI_Wtime();
+   double ParticleMovingTime,InjectionBoundaryTime,ParticleExchangeTime,IterationExecutionTime,SamplingTime,StartTime=MPI_Wtime();
+
+   //Collect and exchange the run's statictic information
+   static const int nRunStatisticExchangeIterationsMin=5,nRunStatisticExchangeIterationsMax=500,nRunStatisticExchangeTime=120;
+   static long int nTotalIterations=0,nInteractionsAfterRunStatisticExchange=0;
+   static int nExchangeStatisticsIterationNumberSteps=10;
+
+   nTotalIterations++;
+   nInteractionsAfterRunStatisticExchange++;
+   PIC::Parallel::IterationNumberAfterRebalancing++;
 
   //sampling of the particle data
-  PIC::Sampling();
+  PIC::Sampling::Sampling();
   SamplingTime=MPI_Wtime()-StartTime;
 
   //injection boundary conditions
+  InjectionBoundaryTime=MPI_Wtime();
   PIC::BC::InjectionBoundaryConditions();
-
+  InjectionBoundaryTime=MPI_Wtime()-InjectionBoundaryTime;
 
   //move existing particles
+  ParticleMovingTime=MPI_Wtime();
   PIC::Mover::MoveParticles();
+  ParticleMovingTime=MPI_Wtime()-ParticleMovingTime;
 
   //check the consistence of the particles lists
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
@@ -40,46 +52,42 @@ void PIC::TimeStep() {
   ParticleExchangeTime=MPI_Wtime()-ParticleExchangeTime;
 
 
-  //Collect and exchange the run's statictic information
-  static const int nRunStatisticExchangeIterationsMin=5,nRunStatisticExchangeIterationsMax=500,nRunStatisticExchangeTime=120;
-  static long int nTotalIterations=0,nInteractionsAfterRunStatisticExchange=0;
-  static int nExchangeStatisticsIterationNumberSteps=10;
-
   struct cExchangeStatisticData {
     double TotalInterationRunTime;
     double IterationExecutionTime;
     long int TotalParticlesNumber;
     double ParticleExchangeTime;
     double SamplingTime;
+    double InjectionBoundaryTime;
+    double ParticleMovingTime;
     double Latency;
     long int recvParticleCounter,sendParticleCounter;
     long int nInjectedParticles;
   };
 
-  nTotalIterations++;
-  nInteractionsAfterRunStatisticExchange++;
-  PIC::Parallel::IterationNumberAfterRebalancing++;
+  struct cStatExchangeControlParameters {
+    int nExchangeStatisticsIterationNumberSteps;
+    bool WallTimeExeedsLimit;
+  };
+
 
   if (nInteractionsAfterRunStatisticExchange==nExchangeStatisticsIterationNumberSteps) { //collect and exchenge the statistical data of the run
     cExchangeStatisticData localRunStatisticData;
     int thread;
-    double Latency=MPI_Wtime();
     cExchangeStatisticData *ExchangeBuffer=NULL;
-
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    Latency=MPI_Wtime()-Latency;
-
 
     localRunStatisticData.TotalInterationRunTime=MPI_Wtime()-StartTime;
     localRunStatisticData.IterationExecutionTime=IterationExecutionTime;
     localRunStatisticData.TotalParticlesNumber=PIC::ParticleBuffer::NAllPart;
     localRunStatisticData.ParticleExchangeTime=ParticleExchangeTime;
     localRunStatisticData.SamplingTime=SamplingTime;
-    localRunStatisticData.Latency=Latency;
+    localRunStatisticData.ParticleMovingTime=ParticleMovingTime;
+    localRunStatisticData.InjectionBoundaryTime=InjectionBoundaryTime;
+    localRunStatisticData.Latency=PIC::Parallel::Latency;
     localRunStatisticData.recvParticleCounter=PIC::Parallel::recvParticleCounter;
     localRunStatisticData.sendParticleCounter=PIC::Parallel::sendParticleCounter;
     localRunStatisticData.nInjectedParticles=PIC::BC::nInjectedParticles;
+
 
     if (PIC::Mesh::mesh.ThisThread==0) {
       time_t TimeValue=time(NULL);
@@ -97,11 +105,28 @@ void PIC::TimeStep() {
       long int nTotalModelParticles=0,nTotalInjectedParticels=0;
       double MinExecutionTime=localRunStatisticData.IterationExecutionTime,MaxExecutionTime=localRunStatisticData.IterationExecutionTime,MaxLatency=0.0,MeanLatency=0.0;
 
-      printf("Thread, Total Particle's number, Total Interation Time, Iteration Execution Time, Particle Exchange Time, Latency, Send Particles, Recv Particles, nInjected Particls\n");
+      printf("Description:\n");
+      printf("1:\t Thread\n");
+      printf("2:\t Total Particle's number\n");
+      printf("3:\t Total Interation Time\n");
+      printf("4:\t Iteration Execution Time\n");
+      printf("5:\t Sampling Time\n");
+      printf("6:\t Injection Boundary Time\n");
+      printf("7:\t Particle Moving Time\n");
+      printf("8:\t Particle Exchange Time\n");
+      printf("9:\t Latency\n");
+      printf("10:\t Send Particles\n");
+      printf("11:\t Recv Particles\n");
+      printf("12:\t nInjected Particls\n");
+
+      printf("1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\n");
+
+//      printf("Thread, Total Particle's number, Total Interation Time, Iteration Execution Time, Sampling Time, Injection Boundary Time, Particle Moving Time, Particle Exchange Time, Latency, Send Particles, Recv Particles, nInjected Particls\n");
 
       for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
-        printf("%i\t %ld\t %e\t %e\t %e\t %e\t %ld\t %ld\t %ld\n",thread,ExchangeBuffer[thread].TotalParticlesNumber,ExchangeBuffer[thread].TotalInterationRunTime,
-            ExchangeBuffer[thread].IterationExecutionTime,ExchangeBuffer[thread].ParticleExchangeTime,ExchangeBuffer[thread].Latency,ExchangeBuffer[thread].sendParticleCounter,
+        printf("%i\t %ld\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t %ld\t %ld\t %ld\n",thread,ExchangeBuffer[thread].TotalParticlesNumber,ExchangeBuffer[thread].TotalInterationRunTime,
+            ExchangeBuffer[thread].IterationExecutionTime,ExchangeBuffer[thread].SamplingTime,ExchangeBuffer[thread].InjectionBoundaryTime,ExchangeBuffer[thread].ParticleMovingTime,
+            ExchangeBuffer[thread].ParticleExchangeTime,ExchangeBuffer[thread].Latency,ExchangeBuffer[thread].sendParticleCounter,
             ExchangeBuffer[thread].recvParticleCounter,ExchangeBuffer[thread].nInjectedParticles);
 
         nTotalModelParticles+=ExchangeBuffer[thread].TotalParticlesNumber;
@@ -121,6 +146,13 @@ void PIC::TimeStep() {
       printf("Iteration Execution Time: min=%e, max=%e\n",MinExecutionTime,MaxExecutionTime);
       printf("Latency: max=%e,mean=%e;CumulativeLatency=%e,Iterations after rebalabcing=%ld,Rebalancing Time=%e\n",MaxLatency,MeanLatency,PIC::Parallel::CumulativeLatency,PIC::Parallel::IterationNumberAfterRebalancing,PIC::Parallel::RebalancingTime);
 
+      //check the elapsed walltime for the alarm
+      if (PIC::Alarm::AlarmInitialized==true) {
+        if (MPI_Wtime()-PIC::Alarm::StartTime>PIC::Alarm::RequestedExecutionWallTime) PIC::Alarm::WallTimeExeedsLimit=true;
+        printf("Execution walltime: %e sec\n",MPI_Wtime()-PIC::Alarm::StartTime);
+      }
+
+
       //determine the new value for the interation number between exchanging of the run stat data
       if (localRunStatisticData.TotalInterationRunTime>0.0) {
         nExchangeStatisticsIterationNumberSteps=(int)(nRunStatisticExchangeTime/localRunStatisticData.TotalInterationRunTime);
@@ -129,19 +161,41 @@ void PIC::TimeStep() {
       }
       else nExchangeStatisticsIterationNumberSteps=nRunStatisticExchangeIterationsMin;
 
-      MPI_Bcast(&nExchangeStatisticsIterationNumberSteps,1,MPI_INT,0,MPI_COMM_WORLD);
+      cStatExchangeControlParameters StatExchangeControlParameters;
+      StatExchangeControlParameters.nExchangeStatisticsIterationNumberSteps=nExchangeStatisticsIterationNumberSteps;
+      StatExchangeControlParameters.WallTimeExeedsLimit=PIC::Alarm::WallTimeExeedsLimit;
+
+      MPI_Bcast(&StatExchangeControlParameters,sizeof(cStatExchangeControlParameters),MPI_CHAR,0,MPI_COMM_WORLD);
 
 
       delete [] ExchangeBuffer;
     }
     else {
+      cStatExchangeControlParameters StatExchangeControlParameters;
+
       MPI_Gather((char*)&localRunStatisticData,sizeof(cExchangeStatisticData),MPI_CHAR,(char*)ExchangeBuffer,sizeof(cExchangeStatisticData),MPI_CHAR,0,MPI_COMM_WORLD);
-      MPI_Bcast(&nExchangeStatisticsIterationNumberSteps,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&StatExchangeControlParameters,sizeof(cStatExchangeControlParameters),MPI_CHAR,0,MPI_COMM_WORLD);
+
+      nExchangeStatisticsIterationNumberSteps=StatExchangeControlParameters.nExchangeStatisticsIterationNumberSteps;
+      PIC::Alarm::WallTimeExeedsLimit=StatExchangeControlParameters.WallTimeExeedsLimit;
     }
 
+    //collect the run time execution statistics from individual models
+    if ((PIC::ExchangeExecutionStatisticsFunctions.size()!=0)&&(nInteractionsAfterRunStatisticExchange!=0)) {
+      CMPI_channel pipe(10000);
+      vector<PIC::fExchangeExecutionStatistics>::iterator fptr;
 
-#if _PIC_EMERGENCY_LOAD_REBALANCING_MODE_ == _PIC_MODE_ON_
+      if (PIC::Mesh::mesh.ThisThread==0) pipe.openRecvAll();
+      else pipe.openSend(0);
+
+      for (fptr=PIC::ExchangeExecutionStatisticsFunctions.begin();fptr!=PIC::ExchangeExecutionStatisticsFunctions.end();fptr++) (*fptr)(&pipe,nInteractionsAfterRunStatisticExchange);
+
+      if (PIC::Mesh::mesh.ThisThread==0) pipe.closeRecvAll();
+      else pipe.closeSend();
+    }
+
     //redistribute the processor load and check the mesh afterward
+#if _PIC_EMERGENCY_LOAD_REBALANCING_MODE_ == _PIC_MODE_ON_
     int EmergencyLoadRebalancingFlag=false;
 
     if (PIC::Mesh::mesh.ThisThread==0) if (PIC::Parallel::CumulativeLatency>PIC::Parallel::EmergencyLoadRebalancingFactor*PIC::Parallel::RebalancingTime) EmergencyLoadRebalancingFlag=true;
@@ -162,6 +216,10 @@ void PIC::TimeStep() {
       PIC::Parallel::RebalancingTime=MPI_Wtime()-PIC::Parallel::RebalancingTime;
       if (PIC::Mesh::mesh.ThisThread==0) printf("Load Rebalancing.....  done\n");
     }
+#elif _PIC_EMERGENCY_LOAD_REBALANCING_MODE_ == _PIC_MODE_OFF_
+    //do nothing
+#else
+    exit(__LINE__,__FILE__,"Error: the option is not recognized");
 #endif
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -171,7 +229,7 @@ void PIC::TimeStep() {
 }
 //====================================================
 //the general sampling procedure
-void PIC::Sampling() {
+void PIC::Sampling::Sampling() {
   int s,i,j,k,idim;
   long int LocalCellNumber,ptr,ptrNext;
 
@@ -228,11 +286,20 @@ void PIC::Sampling() {
   if (initTableFlag==false) {
     nTotalCenterNodes=0,initTableFlag=true;
 
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndex[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+      for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
+        for (i=0;i<_BLOCK_CELLS_X_;i++) {
+          centerNodeIndex[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        }
+
+        if (DIM==1) break;
+      }
+
+      if ((DIM==1)||(DIM==2)) break;
     }
   }
 
+#if _PIC_SAMPLE_PARTICLE_DATA_MODE_ == _PIC_SAMPLE_PARTICLE_DATA_MODE__BETWEEN_ITERATIONS_
   //go through the 'local nodes'
   while (node!=NULL) {
     block=node->block;
@@ -246,6 +313,10 @@ void PIC::Sampling() {
     TreeNodeTotalParticleNumber=0;
 #elif _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
     TreeNodeProcessingTime=MPI_Wtime();
+#elif _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_OFF_
+    //do nothing
+#else
+    exit(__LINE__,__FILE__,"Error: the otion is not recognized");
 #endif
 
     //sample the distrivution function
@@ -253,17 +324,7 @@ void PIC::Sampling() {
     if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::SampleDistributionFnction(node);
 #endif
 
-    /*
-    #pragma unroll(_BLOCK_CELLS_Z_)
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
 
-       #pragma unroll(_BLOCK_CELLS_Y_)
-       for (j=0;j<_BLOCK_CELLS_Y_;j++) {
-
-          #pragma unroll(_BLOCK_CELLS_X_)
-          for (i=0;i<_BLOCK_CELLS_X_;i++) {
-            LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-  */
 
     {
       {
@@ -305,13 +366,15 @@ void PIC::Sampling() {
               TreeNodeTotalParticleNumber++;
 #endif
 
-              Speed2=0.0;
+
 
 
               ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
 
               memcpy((void*)tempParticleData,(void*)ParticleData,/*PIC::ParticleBuffer::*/ParticleDataLength);
 
+
+              Speed2=0.0;
 
               s=PIC::ParticleBuffer::GetI((PIC::ParticleBuffer::byte*)tempParticleData); ///ParticleData);
               v=PIC::ParticleBuffer::GetV((PIC::ParticleBuffer::byte*)tempParticleData); ///ParticleData);
@@ -363,7 +426,6 @@ void PIC::Sampling() {
               sampledVelocityOffset=3*s+(double*)(tempSamplingBuffer+/*PIC::Mesh::*/sampledParticleVelocityRelativeOffset);
               sampledVelocity2Offset=3*s+(double*)(tempSamplingBuffer+/*PIC::Mesh::*/sampledParticleVelocity2RelativeOffset);
 
-              #pragma unroll(3)
               for (idim=0;idim<3;idim++) {
                 v2=v[idim]*v[idim];
                 Speed2+=v2;
@@ -399,12 +461,24 @@ void PIC::Sampling() {
 
     node=node->nextNodeThisThread;
   }
+#elif _PIC_SAMPLE_PARTICLE_DATA_MODE_ == _PIC_SAMPLE_PARTICLE_DATA_MODE__DURING_PARTICLE_MOTION_
+  //do nothing
+#else
+  exit(__LINE__,__FILE__,"Error: the option is not recognized");
+#endif
+
+  //sample user defined data
+  if (PIC::IndividualModelSampling::SamplingProcedure.size()!=0) {
+    int nfunc,nfuncTotal=PIC::IndividualModelSampling::SamplingProcedure.size();
+
+    for (nfunc=0;nfunc<nfuncTotal;nfunc++) PIC::IndividualModelSampling::SamplingProcedure[nfunc]();
+  }
 
   //Increment the sample length
   CollectingSampleCounter++;
 
   //Output the data flow file if needed
-  if (CollectingSampleCounter==RequiredSampleLength) {
+  if ((CollectingSampleCounter==RequiredSampleLength)||(PIC::Alarm::WallTimeExeedsLimit==true)) {
     //exchnge the sampling data
     PIC::Mesh::mesh.ParallelBlockDataExchange();
 
@@ -417,9 +491,17 @@ void PIC::Sampling() {
       for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
         block=node->block;
 
-        for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-          LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-          PIC::Mesh::flushCollectingSamplingBuffer(block->GetCenterNode(LocalCellNumber));
+        for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+          for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+            for (i=0;i<_BLOCK_CELLS_X_;i++) {
+              LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+              PIC::Mesh::flushCollectingSamplingBuffer(block->GetCenterNode(LocalCellNumber));
+            }
+
+            if (DIM==1) break;
+          }
+
+          if ((DIM==1)||(DIM==2)) break;
         }
       }
 
@@ -533,6 +615,9 @@ void PIC::Sampling() {
       pipe.closeRecvAll();
     }
 
+    //Finish the code execution if the walltime exeeds the limit
+    if (PIC::Alarm::WallTimeExeedsLimit==true) PIC::Alarm::FinishExecution();
+
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
     if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::flushSamplingBuffers();
 #endif
@@ -540,8 +625,8 @@ void PIC::Sampling() {
     //increment the output file number
     DataOutputFileNumber++;
 
-#if _PIC_SAMPLING_BREAK_LOAD_REBALANCING_MODE_ == _PIC_MODE_ON_
     //redistribute the processor load and check the mesh afterward
+#if _PIC_SAMPLING_BREAK_LOAD_REBALANCING_MODE_ == _PIC_MODE_ON_
     if (PIC::Parallel::IterationNumberAfterRebalancing!=0) {
       MPI_Barrier(MPI_COMM_WORLD);
       PIC::Parallel::RebalancingTime=MPI_Wtime();
@@ -552,7 +637,12 @@ void PIC::Sampling() {
       MPI_Barrier(MPI_COMM_WORLD);
       PIC::Parallel::RebalancingTime=MPI_Wtime()-PIC::Parallel::RebalancingTime;
     }
+#elif _PIC_SAMPLING_BREAK_LOAD_REBALANCING_MODE_ == _PIC_MODE_OFF_
+    //do nothing
+#else
+    exit(__LINE__,__FILE__,"Error: the option is not recognized");
 #endif
+
 
 //=====================  DEBUG   ========================
     /*

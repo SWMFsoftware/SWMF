@@ -12,6 +12,9 @@ PIC::ChemicalReactions::PhotolyticReactions::fTotalLifeTime *PIC::ChemicalReacti
 
 void PIC::ChemicalReactions::PhotolyticReactions::Init() {
 
+  //only one particle transformation model can be used
+  if (_PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_) exit(__LINE__,__FILE__,"Error: only one particle transformation model can be used");
+
   if (TotalLifeTime==NULL) {
     ConstantTotalLifeTime=new double [PIC::nTotalSpecies];
     ReactionProcessorTable=new fReactionProcessor[PIC::nTotalSpecies];

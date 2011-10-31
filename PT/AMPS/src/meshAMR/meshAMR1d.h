@@ -15,11 +15,11 @@
 
 #include "meshAMRgeneric.h"
 
-template <class cCornerNode,class cBlockAMR> 
-class cMeshAMR1d : public cMeshAMRgeneric<cCornerNode,cBlockAMR> {
+template <class cCornerNode,class cCenterNode,class cBlockAMR>
+class cMeshAMR1d : public cMeshAMRgeneric<cCornerNode,cCenterNode,cBlockAMR> {
 public:
 
-  cMeshAMR1d(double *xmin,double *xmax,double (*localResolutionFunction)(double*)) : cMeshAMRgeneric<cCornerNode,cBlockAMR> (xmin,xmax,localResolutionFunction) {
+  cMeshAMR1d() : cMeshAMRgeneric<cCornerNode,cCenterNode,cBlockAMR> () {
   } 
 
   

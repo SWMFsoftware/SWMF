@@ -114,8 +114,10 @@ cInternalBoundaryConditionsDescriptor PIC::BC::InternalBoundary::Sphere::Registe
 
   newSphere->faceat=0;
   newSphere->SamplingBuffer=new double [sBufferTotalLength];
+  newSphere->maxIntersectedNodeTimeStep=new double [PIC::nTotalSpecies];
 
   for (i=0,sBuffer=newSphere->SamplingBuffer;i<sBufferTotalLength;i++) sBuffer[i]=0.0;
+  for (i=0;i<PIC::nTotalSpecies;i++) newSphere->maxIntersectedNodeTimeStep[i]=-1.0;
 
   //set the descriptor
   SphereDescriptor.BoundaryElement=(void*)newSphere;
@@ -261,7 +263,7 @@ void PIC::BC::InternalBoundary::Sphere::PrintDefaultVariableList(FILE* fout) {
   fprintf(fout,", \"Flux Down\"");
 }
 void PIC::BC::InternalBoundary::Sphere::PrintDefaultTitle(FILE* fout) {
-  fprintf(fout,"SurfaceData");
+  fprintf(fout,"TITPLE=\"SurfaceData\"");
 }
 
 void PIC::BC::InternalBoundary::Sphere::PrintDefaultDataStateVector(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalSphericalData *Sphere,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads) {
@@ -301,7 +303,7 @@ if (nSurfaceElement==311) {
   }
 
 
-  FluxDown/=InterpolationNormalization;
+  FluxDown/=InterpolationNormalization*PIC::LastSampleLength;
 
 
 

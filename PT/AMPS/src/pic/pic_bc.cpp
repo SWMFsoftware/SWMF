@@ -75,6 +75,12 @@ void PIC::BC::InjectionBoundaryConditions() {
     case _INTERNAL_BOUNDARY_TYPE_SPHERE_:
       ((cInternalSphericalData*)(descriptor->BoundaryElement))->ProcessedBCflag=false;
       break;
+    case _INTERNAL_BOUNDARY_TYPE_CIRCLE_:
+      ((cInternalCircleData*)(descriptor->BoundaryElement))->ProcessedBCflag=false;
+      break;
+    case _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_:
+      ((cInternalSphere1DData*)(descriptor->BoundaryElement))->ProcessedBCflag=false;
+      break;
     default:
       exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
     }
@@ -83,6 +89,8 @@ void PIC::BC::InjectionBoundaryConditions() {
   //go through the blocks on the currect processor and execute the boundary condition procesure
   cInternalBoundaryConditionsDescriptor *bc;
   cInternalSphericalData *Sphere;
+  cInternalCircleData *Circle;
+  cInternalSphere1DData *Sphere1D;
 
   for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) if ((bc=node->InternalBoundaryDescriptorList)!=NULL) {
     for (;bc!=NULL;bc=bc->nextInternalBCelement) {
@@ -97,6 +105,40 @@ void PIC::BC::InjectionBoundaryConditions() {
 
           Sphere->ProcessedBCflag=true;
           if (Sphere->InjectionBoundaryCondition!=NULL) nInjectedParticles+=Sphere->InjectionBoundaryCondition((void*)Sphere);
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+          node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
+#endif
+        }
+
+        break;
+      case _INTERNAL_BOUNDARY_TYPE_CIRCLE_:
+        Circle=(cInternalCircleData*)(bc->BoundaryElement);
+
+        if (Circle->ProcessedBCflag==false) {
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+          StartTime=MPI_Wtime();
+#endif
+
+          Circle->ProcessedBCflag=true;
+          if (Circle->InjectionBoundaryCondition!=NULL) nInjectedParticles+=Circle->InjectionBoundaryCondition((void*)Circle);
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+          node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
+#endif
+        }
+
+        break;
+      case _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_:
+        Sphere1D=(cInternalSphere1DData*)(bc->BoundaryElement);
+
+        if (Sphere1D->ProcessedBCflag==false) {
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+          StartTime=MPI_Wtime();
+#endif
+
+          Sphere1D->ProcessedBCflag=true;
+          if (Sphere1D->InjectionBoundaryCondition!=NULL) nInjectedParticles+=Sphere1D->InjectionBoundaryCondition((void*)Sphere1D);
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
           node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;

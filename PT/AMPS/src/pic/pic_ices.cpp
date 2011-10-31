@@ -17,6 +17,8 @@ int PIC::ICES::PlasmaNumberDensityOffset=-1;
 int PIC::ICES::PlasmaTemperatureOffset=-1;
 int PIC::ICES::PlasmaBulkVelocityOffset=-1;
 
+int PIC::ICES::TotalAssociatedDataLength=0,PIC::ICES::AssociatedDataOffset=-1;
+
 //offsets of the data loaded from the DSMC results
 int PIC::ICES::NeutralBullVelocityOffset=-1,PIC::ICES::NeutralNumberDensityOffset=-1,PIC::ICES::NeutralTemperatureOffset=-1;
 
@@ -31,50 +33,77 @@ void PIC::ICES::Init() {
 #if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
   //init the plasma parameters
   if (ElectricFieldOffset==-1) {
+    if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
     ElectricFieldOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=3*sizeof(double);
+    TotalAssociatedDataLength+=3*sizeof(double);
   }
 
   if (MagneticFieldOffset==-1) {
+    if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
     MagneticFieldOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=3*sizeof(double);
+    TotalAssociatedDataLength+=3*sizeof(double);
   }
 
   if (PlasmaPressureOffset==-1) {
+    if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
     PlasmaPressureOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=sizeof(double);
+    TotalAssociatedDataLength+=sizeof(double);
   }
 
   if (PlasmaNumberDensityOffset==-1) {
+    if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
     PlasmaNumberDensityOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=sizeof(double);
+    TotalAssociatedDataLength+=sizeof(double);
   }
 
   if (PlasmaTemperatureOffset==-1) {
+    if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
     PlasmaTemperatureOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=sizeof(double);
+    TotalAssociatedDataLength+=sizeof(double);
   }
 
   if (PlasmaBulkVelocityOffset==-1) {
+    if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
     PlasmaBulkVelocityOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=3*sizeof(double);
+    TotalAssociatedDataLength+=3*sizeof(double);
   }
 #endif
 
 #if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
   if (NeutralBullVelocityOffset==-1) {
+    if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
     NeutralBullVelocityOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=3*sizeof(double);
+    TotalAssociatedDataLength+=3*sizeof(double);
   }
 
   if (NeutralNumberDensityOffset==-1) {
+    if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
     NeutralNumberDensityOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=sizeof(double);
+    TotalAssociatedDataLength+=sizeof(double);
   }
 
   if (NeutralTemperatureOffset==-1) {
+    if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
     NeutralTemperatureOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=sizeof(double);
+    TotalAssociatedDataLength+=sizeof(double);
   }
 #endif
 
@@ -402,39 +431,10 @@ void PIC::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) 
     for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
       //the read section
       ices.GetInputStr(str,sizeof(str));
-
-
-
-//=================  DEBUG ===========================
-/*
-      double xprobe=0.0;
-
-      ices.CutInputStr(str1,str);
-      xprobe+=pow(strtod(str1,&endptr),2);
-
-      ices.CutInputStr(str1,str);
-      xprobe+=pow(strtod(str1,&endptr),2);
-
-      ices.CutInputStr(str1,str);
-      xprobe+=pow(strtod(str1,&endptr),2);
-
-      xprobe=sqrt(xprobe);
-      if (xprobe<1.5e3) {
-        cout << __FILE__ << "@" << __LINE__ << endl;
-      }
-
-
-      ices.CutInputStr(str1,str);
-*/
-
-
       ices.CutInputStr(str1,str);
       ices.CutInputStr(str1,str);
       ices.CutInputStr(str1,str);
       ices.CutInputStr(str1,str);
-
-
-//=================  END DEBUG ===========================
 
       status=strtol(str1,&endptr,10);
 
@@ -491,15 +491,15 @@ void PIC::ICES::PrintVariableList(FILE* fout,int DataSetNumber) {
   int idim;
 
 #if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
-  for (idim=0;idim<DIM;idim++) fprintf(fout,", \"E%i\"",idim);
-  for (idim=0;idim<DIM;idim++) fprintf(fout,", \"B%i\"",idim);
-  for (idim=0;idim<DIM;idim++) fprintf(fout,", \"PlasmaVel%i\"",idim);
+  for (idim=0;idim<3;idim++) fprintf(fout,", \"E%i\"",idim);
+  for (idim=0;idim<3;idim++) fprintf(fout,", \"B%i\"",idim);
+  for (idim=0;idim<3;idim++) fprintf(fout,", \"PlasmaVel%i\"",idim);
 
   fprintf(fout,", \"Plasma Pressure\", \"Plasma Temperature\", \"Plasma number Desnity\"");
 #endif
 
 #if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
-  for (idim=0;idim<DIM;idim++) fprintf(fout,", \"NeutralVel%i\"",idim);
+  for (idim=0;idim<3;idim++) fprintf(fout,", \"NeutralVel%i\"",idim);
   fprintf(fout,", \"Neutral number Desnity\", \"Neutral Temperature\"");
 #endif
 
@@ -556,7 +556,7 @@ void PIC::ICES::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int Ce
 #if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
     if (CenterNodeThread!=0) pipe->recv((char*)&dataDSMC,sizeof(dataDSMC),CenterNodeThread);
 
-    for (int idim=0;idim<DIM;idim++) fprintf(fout,"%e  ",dataDSMC.neutralVel[idim]);
+    for (int idim=0;idim<3;idim++) fprintf(fout,"%e  ",dataDSMC.neutralVel[idim]);
     fprintf(fout,"%e  %e  ",dataDSMC.neutralNumberDensity,dataDSMC.neutralTemperature);
 #endif
 

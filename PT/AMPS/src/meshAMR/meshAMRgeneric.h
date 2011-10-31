@@ -29,6 +29,7 @@
 #include "meshAMRdef.h"
 #include "meshAMRinternalSurface.h"
 
+
 #include "specfunc.h"
 #include "mpichannel.h"
 
@@ -168,6 +169,10 @@ public:
 
     cBasicNode::cleanDataBuffer();
   }
+
+  //placeholder for the interpolation procedure
+  void Interpolate(cBasicCenterNode **InterpolationStencil,double *InterpolationCoefficients,int StencilLength) {}
+
 };
 
 
@@ -229,7 +234,7 @@ public:
   #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
   int Thread;
   double ParallelLoadMeasure;
-  cTreeNodeAMR* FillingCurveNextNode;
+  cTreeNodeAMR *FillingCurveNextNode,*FillingCurvePrevNode;
   #endif
 
 
@@ -242,12 +247,6 @@ public:
 
   //get the external (directed outward of the computational domain) normal
   void GetExternalNormal(double *norm,int nface) {
-    #if _MESH_DIMENSION_ == 1
-    exit(__LINE__,__FILE__,"not implemented");
-    #elif _MESH_DIMENSION_ == 2
-    exit(__LINE__,__FILE__,"not implemented");
-
-    #elif _MESH_DIMENSION_ == 3
     switch(nface) {
     case 0: case 1:
       norm[0]=(nface==0) ? -1.0 : 1.0;
@@ -266,8 +265,6 @@ public:
     default:
       exit(__LINE__,__FILE__,"Error: 'nface' is out of the range");
     }
-    #endif
-
   }
 
   double GetCharacteristicCellSize() {
@@ -328,7 +325,7 @@ public:
 
   double GetCellFaceSurfaceArea(int nface) {
     #if _MESH_DIMENSION_ == 1
-    exit(__LINE__,__FILE__,"not implemented");
+    const static double CellSurfaceAreaMultiplyer[1]={1.0,1.0};
     #elif _MESH_DIMENSION_ == 2
     const static double CellSurfaceAreaMultiplyer[4]={_BLOCK_CELLS_Y_,_BLOCK_CELLS_Y_,
                                                       _BLOCK_CELLS_X_,_BLOCK_CELLS_X_};
@@ -418,7 +415,7 @@ public:
     cTreeNodeAMR *res;
 
 #if _MESH_DIMENSION_ == 1
-    exit(__LINE__,__FILE__,"Error: out of range");
+//    exit(__LINE__,__FILE__,"Error: out of range");
     res=NULL;
 #else
     if ((nCornerNode<0)||(nCornerNode>=1<<_MESH_DIMENSION_)) exit(__LINE__,__FILE__,"Error: out of range");
@@ -449,7 +446,8 @@ public:
 
 
 #if _MESH_DIMENSION_ == 1
-    exit(__LINE__,__FILE__,"Error: out of range");
+//    exit(__LINE__,__FILE__,"Error: out of range");
+// do nothing
 #else
     if ((nCornerNode<0)||(nCornerNode>=1<<_MESH_DIMENSION_)) exit(__LINE__,__FILE__,"Error: out of range");
     neibNodeCorner[nCornerNode]=neibNode;
@@ -520,7 +518,10 @@ public:
     cTreeNodeAMR *res=NULL;
 
 #if _MESH_DIMENSION_ == 1
-     exit(__LINE__,__FILE__,"not implemented");
+    if (i==-1) res=neibNodeFace[0];
+    else if (i==1) res=neibNodeFace[1];
+    else if (i!=0) exit(__LINE__,__FILE__,"Error: out of range");
+
 #elif _MESH_DIMENSION_ == 2
      //determine weather the neibNode is a face or a corner node
      register int code=abs(i)+abs(j);
@@ -666,7 +667,7 @@ protected:
   cCornerNode *cornerNodes[1+_TOTAL_BLOCK_CELLS_X_];
 
   #if _AMR_CENTER_NODE_ == _ON_AMR_MESH_
-  exit(__LINE__,__FILE__,"not implemented yet");
+  cCenterNode *centerNodes[_TOTAL_BLOCK_CELLS_X_];
   #endif
 
   #elif _MESH_DIMENSION_ == 2
@@ -1241,7 +1242,15 @@ public:
     }
 
     for (idim=0;idim<_MESH_DIMENSION_;idim++) _MESH_AMR_XMAX_[idim]=xMax[idim],_MESH_AMR_XMIN_[idim]=xMin[idim]; 
- 
+
+    //check the correctness of the symmetry options
+#if _MESH_DIMENSION_ == 3
+    if (_AMR_SYMMETRY_MODE_!=_AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_) exit(__LINE__,__FILE__,"The symmetry mode and the mesh dimention are not consistent: only AMR_SYMMETRY_MODE = AMR_SYMMETRY_MODE_PLANAR_SYMMETRY is allowed for MESH_DIMENSION == 3");
+#else
+    exit(__LINE__,__FILE__,"Error: the option is not found");
+#endif
+
+
     //set the default value for the 'interpolation functions'
     GetCenterNodesInterpolationCoefficients=NULL;
     GetCornerNodesInterpolationCoefficients=NULL;
@@ -1266,6 +1275,7 @@ public:
 //    blockList=NULL;
 
     //set the corner nodes of the block
+    /*
     #if _MESH_DIMENSION_ == 1
     exit(__LINE__,__FILE__,"Adjust as in 3D");
     #elif _MESH_DIMENSION_ == 2
@@ -1275,6 +1285,7 @@ public:
     #else
     exit(__LINE__,__FILE__,"The wrong dimension");
     #endif
+    */
 
     AllocateBlock(rootTree);
     rootBlock=rootTree->block;
@@ -1435,9 +1446,9 @@ public:
     if (rootTree!=NULL) exit(__LINE__,__FILE__,"Error: all internal surface must be registered before initialization of the mesh");
 
     #if _MESH_DIMENSION_ == 1
-    exit(__LINE__,__FILE__,"Error: internal surfaces are not allowed in _MESH_DIMENSION_ == 1");
+    if (Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_1D_SPHERE_) exit(__LINE__,__FILE__,"Error: Attempted boundary type is not allowed for _MESH_DIMENSION_ == 1");
     #elif _MESH_DIMENSION_ == 2
-    exit(__LINE__,__FILE__,"not implemented");
+    if (Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_CIRCLE_) exit(__LINE__,__FILE__,"Error: Attempted boundary type is not allowed for _MESH_DIMENSION_ == 2");
     #elif _MESH_DIMENSION_ == 3
     if (Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_SPHERE_) exit(__LINE__,__FILE__,"Error: Attempted boundary type is not allowed for _MESH_DIMENSION_ == 3");
     #else
@@ -2059,7 +2070,7 @@ void checkMeshConsistency(cTreeNodeAMR<cBlockAMR> *startNode) {
   //check the tree node 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) { //&&(AllowBlockAllocation==true)) {
 
-    if (startNode->block==NULL) return;
+//    if (startNode->block==NULL) return;
 
     //check consistency of the nodes': connection though the corner nodes'
     for (int nd=0;nd<(1<<_MESH_DIMENSION_);nd++) {
@@ -2079,7 +2090,26 @@ void checkMeshConsistency(cTreeNodeAMR<cBlockAMR> *startNode) {
     }
 
     //check consistency of the nodes': connection though the faces
-#if _MESH_DIMENSION_ == 2
+#if _MESH_DIMENSION_ == 1
+    for (int nface=0;nface<2;nface++) {
+      int nfaceNeib;
+      bool found;
+
+      neibNode=startNode->GetNeibFace(nface,0,0);
+
+      if (neibNode!=NULL) {
+        found=false;
+        if ((neibNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_)||(abs(startNode->RefinmentLevel-neibNode->RefinmentLevel)>1)) exit(__LINE__,__FILE__,"Error: node's connection is not consistent");
+
+        for (nfaceNeib=0;nfaceNeib<2;nfaceNeib++) if (found==false) if (neibNode->GetNeibFace(nfaceNeib,0,0)==startNode) {
+          found=true;
+          break;
+        }
+
+        if (found==false) exit(__LINE__,__FILE__,"Error: node's connection is not consistent");
+      }
+    }
+#elif _MESH_DIMENSION_ == 2
     for (int nface=0;nface<4;nface++) for (int iFace=0;iFace<2;iFace++) {
       int nfaceNeib,iFaceNeib;
       bool found;
@@ -2145,7 +2175,7 @@ void checkMeshConsistency(cTreeNodeAMR<cBlockAMR> *startNode) {
 
 #endif
 
-if (AllowBlockAllocation==true) {
+if ((AllowBlockAllocation==true)&&(startNode->block!=NULL)) {
      //check the neibours 
      for (k=kMin;k<kMax;k++) for (j=jMin;j<jMax;j++) for (i=iMin;i<iMax;i++)  if ((neibNode=getNeibNode(i,j,k,startNode))!=NULL) {
        if (fabs(neibNode->RefinmentLevel-startNode->RefinmentLevel)>1) {
@@ -2249,7 +2279,11 @@ if (AllowBlockAllocation==true) {
      int iiDownCornerNode=0,jjDownCornerNode=0,kkDownCornerNode=0;
 
      #if _MESH_DIMENSION_ == 1
-     exit(__LINE__,__FILE__,"not implemented"); 
+     static const int iiMin=-_GHOST_CELLS_X_,iiMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
+     static const int jjMin=0,jjMax=0;
+     static const int kkMin=0,kkMax=0;
+//     static const int iDownNodeMax=2,jDownNodeMax=2,kDownNodeMax=0;
+     static const int iNeibNodeMin=-1,iNeibNodeMax=1,jNeibNodeMin=0,jNeibNodeMax=0,kNeibNodeMin=0,kNeibNodeMax=0;
      #elif _MESH_DIMENSION_ == 2 
      static const int iiMin=-_GHOST_CELLS_X_,iiMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
      static const int jjMin=-_GHOST_CELLS_Y_,jjMax=_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;
@@ -2414,7 +2448,10 @@ if (AllowBlockAllocation==true) {
                 	for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << startCenterNode->GetX()[idim] << "  ";
                 	cout << "; (i,j,k,nd)=";
                 	for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << iii[idim] << "  ";
-                	cout << nd << endl;
+                	cout << " Local node number=" <<  nd;
+                	cout << " Center node Temp_ID=" << startCenterNode->Temp_ID;
+                	cout << " Block Temp_ID=" << startNode->Temp_ID;
+                	cout << endl;
 
                 	//recalculate the indexes of the 'center nodes'
                 	nd=findCenterNodeIndex(neibCenterNode->GetX(),iii[0],iii[1],iii[2],neibNode);
@@ -2422,7 +2459,10 @@ if (AllowBlockAllocation==true) {
                 	for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << neibCenterNode->GetX()[idim] << "  ";
                 	cout << "; (i,j,k,nd)=";
                 	for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << iii[idim] << "  ";
-                	cout << nd << endl;
+                  cout << " Local node number=" <<  nd;
+                  cout << " Center node Temp_ID=" << neibCenterNode->Temp_ID;
+                  cout << " Block Temp_ID=" << neibNode->Temp_ID;
+                  cout << endl;
 
 
                 	exit(__LINE__,__FILE__,"Error: two different center nodes have found that has the same coordinate 'x'");
@@ -2900,9 +2940,9 @@ void AddNodeNeighborList(cTreeNodeAMR<cBlockAMR>* neibNode,cNeibDescriptor *Neib
 #if _MESH_DIMENSION_ == 3
     static const int iDownNodeMax=2,jDownNodeMax=2,kDownNodeMax=2;
 #elif _MESH_DIMENSION_ == 2
-    exit(__LINE__,__FILE__,"not implemented");
-#else
-    exit(__LINE__,__FILE__,"not implemented");
+    static const int iDownNodeMax=2,jDownNodeMax=2,kDownNodeMax=1;
+#elif _MESH_DIMENSION_ == 1
+    static const int iDownNodeMax=2,jDownNodeMax=1,kDownNodeMax=1;
 #endif
 
     for (kDownNode=0;kDownNode<kDownNodeMax;kDownNode++) for (jDownNode=0;jDownNode<jDownNodeMax;jDownNode++) for (iDownNode=0;iDownNode<iDownNodeMax;iDownNode++) {
@@ -2938,7 +2978,8 @@ static long int nCallCounter=0;
 
 ++nCallCounter;
 
-if (startNode->Temp_ID==2140) {
+if (startNode->Temp_ID==77) {
+// if (nCallCounter==34) {
   cout << __LINE__ << endl;
 }
 
@@ -3257,12 +3298,14 @@ if (startNode->Temp_ID==2140) {
   static const int iCornerMin=-_GHOST_CELLS_X_,iCornerMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
   static const int jCornerMin=-_GHOST_CELLS_Y_,jCornerMax=_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;
   static const int kCornerMin=0,kCornerMax=0;
-#else
-  exit(__LINE__,__FILE__,"not defined");
+#elif _MESH_DIMENSION_ == 1
+  static const int iCornerMin=-_GHOST_CELLS_X_,iCornerMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
+  static const int jCornerMin=0,jCornerMax=0;
+  static const int kCornerMin=0,kCornerMax=0;
 #endif
 
   long int nd;
-  cCornerNode *CornerNodeMap[1+iCornerMax-iCornerMin][1+jCornerMax-jCornerMin][1+kCornerMax-kCornerMin],*ptrCornerNode;
+  cCornerNode *CornerNodeMap[1+iCornerMax-iCornerMin][1+jCornerMax-jCornerMin][1+kCornerMax-kCornerMin],*ptrCornerNode=NULL;
 
   for (k=0;k<1+kCornerMax-kCornerMin;k++) for (j=0;j<1+jCornerMax-jCornerMin;j++) for (i=0;i<1+iCornerMax-iCornerMin;i++) CornerNodeMap[i][j][k]=NULL;
 
@@ -3289,6 +3332,20 @@ if (startNode->Temp_ID==2140) {
             if ((CornerNodeMap[ioffset-iCornerMin][joffset-jCornerMin][koffset-kCornerMin]!=NULL)&&(CornerNodeMap[ioffset-iCornerMin][joffset-jCornerMin][koffset-kCornerMin]!=ptrCornerNode)) exit(__LINE__,__FILE__,"Error: redifinition of the node");
 
             CornerNodeMap[ioffset-iCornerMin][joffset-jCornerMin][koffset-kCornerMin]=ptrCornerNode;
+
+#if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
+#if _CHECK_MESH_CONSISTANCY_ == _ON_AMR_MESH_
+            if (ptrCornerNode!=NULL) {
+              double *xprobe=ptrCornerNode->GetX();
+
+              if ((xprobe[0]+EPS<startNode->xmin[0]-dxBlock[0]*_GHOST_CELLS_X_)||(xprobe[0]-EPS>startNode->xmax[0]+dxBlock[0]*_GHOST_CELLS_X_)) exit(__LINE__,__FILE__,"Error: new node is outside of the block");
+              if (_MESH_DIMENSION_>=2) if ((xprobe[1]+EPS<startNode->xmin[1]-dxBlock[1]*_GHOST_CELLS_Y_)||(xprobe[1]-EPS>startNode->xmax[1]+dxBlock[1]*_GHOST_CELLS_Y_)) exit(__LINE__,__FILE__,"Error: new node is outside of the block");
+              if (_MESH_DIMENSION_==3) if ((xprobe[2]+EPS<startNode->xmin[2]-dxBlock[2]*_GHOST_CELLS_Z_)||(xprobe[2]-EPS>startNode->xmax[2]+dxBlock[2]*_GHOST_CELLS_Z_)) exit(__LINE__,__FILE__,"Error: new node is outside of the block");
+            }
+#endif
+#endif
+
+
           }
         }
       }
@@ -3347,8 +3404,10 @@ if ((fabs(x[0]+225)<EPS)&&(fabs(x[1]+225)<EPS)&&(fabs(x[2]+12.5)<EPS)) {
   static const int iCenterMin=-_GHOST_CELLS_X_,iCenterMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_-1;
   static const int jCenterMin=-_GHOST_CELLS_Y_,jCenterMax=_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_-1;
   static const int kCenterMin=0,kCenterMax=0;
-#else
-  exit(__LINE__,__FILE__,"not defined");
+#elif _MESH_DIMENSION_ == 1
+  static const int iCenterMin=-_GHOST_CELLS_X_,iCenterMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_-1;
+  static const int jCenterMin=0,jCenterMax=0;
+  static const int kCenterMin=0,kCenterMax=0;
 #endif
 
   cCenterNode *CenterNodeMap[1+iCenterMax-iCenterMin][1+jCenterMax-jCenterMin][1+kCenterMax-kCenterMin],*ptrCenterNode;
@@ -3365,7 +3424,7 @@ if ((fabs(x[0]+225)<EPS)&&(fabs(x[1]+225)<EPS)&&(fabs(x[2]+12.5)<EPS)) {
       if ((koffset>=kCenterMin)&&(koffset<=kCenterMax)) for (j=jCenterMin;j<=jCenterMax;j++) {
         joffset=neibptr->jOffset.Nominator/neibptr->jOffset.Denominator+j;
 
-        if ((joffset>=jCenterMin)&&(joffset<=jCenterMax)) for (i=kCenterMin;i<=kCenterMax;i++) {
+        if ((joffset>=jCenterMin)&&(joffset<=jCenterMax)) for (i=iCenterMin;i<=iCenterMax;i++) {
           ioffset=neibptr->iOffset.Nominator/neibptr->iOffset.Denominator+i;
 
           if ((ioffset>=iCenterMin)&&(ioffset<=iCenterMax)) {
@@ -3429,8 +3488,10 @@ void DeallocateBlock(cTreeNodeAMR<cBlockAMR> *startNode) {
   static const int iCornerMin=-_GHOST_CELLS_X_,iCornerMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
   static const int jCornerMin=-_GHOST_CELLS_Y_,jCornerMax=_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;
   static const int kCornerMin=0,kCornerMax=0;
-#else
-  exit(__LINE__,__FILE__,"not defined");
+#elif _MESH_DIMENSION_ == 1
+  static const int iCornerMin=-_GHOST_CELLS_X_,iCornerMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
+  static const int jCornerMin=0,jCornerMax=0;
+  static const int kCornerMin=0,kCornerMax=0;
 #endif
 
   for (k=kCornerMin;k<=kCornerMax;k++) for (j=jCornerMin;j<=jCornerMax;j++) for (i=iCornerMin;i<=iCornerMax;i++) {
@@ -3447,8 +3508,10 @@ void DeallocateBlock(cTreeNodeAMR<cBlockAMR> *startNode) {
   static const int iCenterMin=-_GHOST_CELLS_X_,iCenterMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_-1;
   static const int jCenterMin=-_GHOST_CELLS_Y_,jCenterMax=_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_-1;
   static const int kCenterMin=0,kCenterMax=0;
-#else
-  exit(__LINE__,__FILE__,"not defined");
+#elif _MESH_DIMENSION_ == 1
+  static const int iCenterMin=-_GHOST_CELLS_X_,iCenterMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_-1;
+  static const int jCenterMin=0,jCenterMax=0;
+  static const int kCenterMin=0,kCenterMax=0;
 #endif
 
   cCenterNode *ptrCenterNode;
@@ -4096,7 +4159,7 @@ bool splitTreeNode(cTreeNodeAMR<cBlockAMR> *startNode) {
 
 
 
-if (startNode->Temp_ID==44) {
+if (startNode->Temp_ID==15) {
 cout << __LINE__ << endl;
 }
 
@@ -4111,6 +4174,8 @@ cout << __LINE__ << endl;
 
     //check if the neibNodes need to be refined
     for (i=-1;i<2;i++) for (j=-1;j<2;j++) for (k=-1;k<2;k++) if ((neibNode=getNeibNode(i,j,k,startNode))!=NULL) if (neibNode->RefinmentLevel<startNode->RefinmentLevel) { //refine the neibNode
+      if (neibNode->RefinmentLevel<startNode->RefinmentLevel-1) exit(__LINE__,__FILE__,"Error: the mesh is not consistent");
+
       splitTreeNode(neibNode);
 
 
@@ -4183,6 +4248,12 @@ cout << __LINE__ << endl;
          switch(InternalBoundaryDescriptor->BondaryType) {
          case _INTERNAL_BOUNDARY_TYPE_SPHERE_:
            IntersectionCode=((cInternalSphericalData*)(InternalBoundaryDescriptor->BoundaryElement))->BlockIntersection(xmin,xmax,EPS);
+           break;
+         case _INTERNAL_BOUNDARY_TYPE_CIRCLE_:
+           IntersectionCode=((cInternalCircleData*)(InternalBoundaryDescriptor->BoundaryElement))->BlockIntersection(xmin,xmax,EPS);
+           break;
+         case _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_:
+           IntersectionCode=((cInternalSphere1DData*)(InternalBoundaryDescriptor->BoundaryElement))->BlockIntersection(xmin,xmax,EPS);
            break;
          default:
            exit(__LINE__,__FILE__,"Error: The internal boundary type is not recognized");
@@ -4272,17 +4343,46 @@ cout << __LINE__ << endl;
 
 
 #if _MESH_DIMENSION_ == 1
+     int nface,nUpFace,nDownNode;
+
+     //connect internal nodes
+     startNode->downNode[0]->SetNeibFace(startNode->downNode[1],1,0,0);
+     startNode->downNode[1]->SetNeibFace(startNode->downNode[0],0,0,0);
+
+     //connect external nodes
+     struct cExternalNodesFace {
+       int nUpFace;
+       int nNeibFace;
+     };
+
+     static const cExternalNodesFace ExternalNodesFaceConnectionMap_upNode[2][2]={
+       {{0,1},{-1,-1}},{{-1,-1},{1,0}} };
+
+     for (nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) {
+       //make connection through the faces
+       for (nface=0;nface<2*_MESH_DIMENSION_;nface++) if ((nUpFace=ExternalNodesFaceConnectionMap_upNode[nDownNode][nface].nUpFace)!=-1) {
+         neibNode=startNode->GetNeibFace(nUpFace,0,0);
+
+         startNode->downNode[nDownNode]->SetNeibFace(neibNode,nface,0,0);
+
+         //connect the neibNode to startNode->downNode
+         if (neibNode!=NULL) neibNode->SetNeibFace(startNode->downNode[nDownNode],ExternalNodesFaceConnectionMap_upNode[nDownNode][nface].nNeibFace,0,0);
+       }
+     }
 
 
      //check consistency of the node's reconnection
 #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
 #if _CHECK_MESH_CONSISTANCY_ == _ON_AMR_MESH_
 
-     exit(__LINE__,__FILE__,"not implemented");
+     for (register int nface=0;nface<2*_MESH_DIMENSION_;nface++) {
+       neibNode=startNode->GetNeibFace(nface,0,0);
+       if (neibNode!=NULL) if (neibNode->CheckNeibNode(startNode)==true) exit(__LINE__,__FILE__,"Error: the mesh is not consistent");
+     }
+
 #endif
 #endif
 
-     exit(__LINE__,__FILE__,"not implemented");
 #elif _MESH_DIMENSION_ == 2
      int nface,nNeibNode,nUpCornerNode,nUpFace,iFace,nd,nDownNode;
 //     cTreeNodeAMR<cBlockAMR> *neibNode;
@@ -4848,6 +4948,7 @@ cout << __LINE__ << endl;
      if (DeallocateUnusedBlocks==true) DeallocateBlock(startNode);
 
      //remove 'startNode' from the list of nodes that intersects the surface of the computational domain
+#if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
      if (startNode->InternalBoundaryDescriptorList!=NULL) {
        cInternalBoundaryConditionsDescriptor *InternalBoundaryDescriptor,*nextDesecriptor;
 
@@ -4868,6 +4969,8 @@ cout << __LINE__ << endl;
 
        startNode->DomainSurfaceBoundaryList_Next=NULL,startNode->DomainSurfaceBoundaryList_Prev=NULL;
      }
+#endif
+
 
 
   }
@@ -5203,9 +5306,34 @@ if (CallsCounter==83) {
         cTreeNodeAMR<cBlockAMR>* neibNode;
 
 #if _MESH_DIMENSION_ == 1
-        exit(__LINE__,__FILE__,"not implemented");
+        if (startNode->block!=NULL) SendRequest=true;
+
+        if (SendRequest==false) {
+          for (int nface=0;nface<2;nface++) if (SendRequest==false) {
+            if ((neibNode=startNode->GetNeibFace(nface,0,0))!=NULL) if (neibNode->block!=NULL) {
+              SendRequest=true;
+              break;
+            }
+          }
+        }
 #elif _MESH_DIMENSION_ == 2
-        exit(__LINE__,__FILE__,"not implemeted");
+        if (startNode->block!=NULL) SendRequest=true;
+
+        if (SendRequest==false) {
+          for (nd=0;nd<4;nd++) if ((neibNode=startNode->GetNeibCorner(nd))!=NULL) if (neibNode->block!=NULL) {
+            SendRequest=true;
+            break;
+          }
+        }
+
+        if (SendRequest==false) {
+          for (int nface=0;nface<4;nface++) if (SendRequest==false) {
+            for (int iFace=0;iFace<2;iFace++) if ((neibNode=startNode->GetNeibFace(nface,iFace,0))!=NULL) if (neibNode->block!=NULL) {
+              SendRequest=true;
+              break;
+            }
+          }
+        }
 #else
 
         if (startNode->block!=NULL) SendRequest=true;
@@ -5354,7 +5482,8 @@ if (CallsCounter==83) {
     double xProbe[3];
 
     #if _MESH_DIMENSION_ == 1 
-    exit(__LINE__,__FILE__,"not implemented");
+    static const double characteristicBlockSize_max=fabs(dxRootBlock[0]/_BLOCK_CELLS_X_);
+    static const double characteristicBlockSize_min=characteristicBlockSize_max/(1<<_MAX_REFINMENT_LEVEL_);
     #elif _MESH_DIMENSION_ == 2 
     static const double characteristicBlockSize_max=sqrt(pow(dxRootBlock[0]/_BLOCK_CELLS_X_,2)+pow(dxRootBlock[1]/_BLOCK_CELLS_Y_,2));
     static const double characteristicBlockSize_min=characteristicBlockSize_max/(1<<_MAX_REFINMENT_LEVEL_);
@@ -5403,6 +5532,8 @@ if (CallsCounter==83) {
 
           for (SurfaceDescriptor=startNode->InternalBoundaryDescriptorList;SurfaceDescriptor!=NULL;SurfaceDescriptor=SurfaceDescriptor->nextInternalBCelement) {
             if (SurfaceDescriptor->BondaryType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) SurfaceLocalResolution=((cInternalSphericalData*)SurfaceDescriptor->BoundaryElement)->localResolution;
+            else if (SurfaceDescriptor->BondaryType==_INTERNAL_BOUNDARY_TYPE_CIRCLE_) SurfaceLocalResolution=((cInternalCircleData*)SurfaceDescriptor->BoundaryElement)->localResolution;
+            else if (SurfaceDescriptor->BondaryType==_INTERNAL_BOUNDARY_TYPE_1D_SPHERE_) SurfaceLocalResolution=((cInternalSphere1DData*)SurfaceDescriptor->BoundaryElement)->localResolution;
             else exit(__LINE__,__FILE__,"Error: unknown boundary type");
 
             if (SurfaceLocalResolution!=NULL) {
@@ -5651,6 +5782,71 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
     return counter;
   }
 
+  int CenterNodesInterpolationCoefficients_1D_linear(double *x,double *CoefficientsList,cCenterNode **InterpolationStencil,cTreeNodeAMR<cBlockAMR>* startNode,int nMaxCoefficients) {
+
+    //if the length of the coefficient list is not enough -> exist with an error message
+    if (nMaxCoefficients<2) {
+    exit(__LINE__,__FILE__,"The length of the interpolation stencil is too short");
+      return -1;
+    }
+
+    //determine the local coordinates of the point
+    double xLocal[3]={0.0,0.0,0.0},xProbe[3]={0.0,0.0,0.0},dx,*xmin=startNode->xmin,*xmax=startNode->xmax;
+
+
+    if ((x[0]<xmin[0]-EPS)||(x[0]>xmax[0]+EPS)) {
+      exit(__LINE__,__FILE__,"The point is outside of the block");
+      return -1;
+    }
+
+    //determine the offset of the interpolating stencil related to the origin of the block
+    int counter,i,iProbeIndex;
+    long int nd;
+    cCenterNode *cell;
+    double InterpolationWeight,WeightNorm=0.0;
+    cTreeNodeAMR<cBlockAMR>* cellNode;
+
+    dx=0.1*(xmax[0]-xmin[0])/_BLOCK_CELLS_X_;
+
+    for (i=-1,counter=0;i<2;i+=2) {
+      xProbe[0]=x[0]+i*dx;
+
+      if ((cellNode=findTreeNode(xProbe,startNode))==NULL) continue;
+
+      //determine the indexes of the center node that corresponds to the point 'xProbe'
+      cellNode->ConvertGlobal2LocalCoordinates(xLocal,xProbe);
+
+        iProbeIndex=(xLocal[0]>=0.0) ? (int)(xLocal[0]*_BLOCK_CELLS_X_) : -1+(int)(xLocal[0]*_BLOCK_CELLS_X_);
+
+        if ((nd=getCenterNodeLocalNumber(iProbeIndex,0,0))==-1) continue;
+        cell=cellNode->block->GetCenterNode(nd);
+
+        if (cell!=NULL) if (cell->Measure>0.0) {
+          //calculate the interpolation weight
+          InterpolationWeight=1.0;
+
+          //update the interpolation stencil
+          CoefficientsList[counter]=InterpolationWeight;
+          InterpolationStencil[counter]=cell;
+          counter+=1;
+          WeightNorm+=InterpolationWeight;
+        }
+
+    }
+
+
+    #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
+    //do nothing
+    #elif  _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_OFF_
+    if (counter==0) exit(__LINE__,__FILE__,"There is no nodes defined");
+    #else
+    exit(__LINE__,__FILE__,"Error: the option is not defined");
+    #endif
+
+    if (counter!=0) for (i=0;i<counter;i++) CoefficientsList[i]/=WeightNorm;
+
+    return counter;
+  }
 
 
   /*
@@ -5908,7 +6104,7 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
 
                   if (GetCenterNodesInterpolationCoefficients==NULL) {
 #if _MESH_DIMENSION_ == 1
-                    exit(__LINE__,__FILE__,"not implmented");
+                    centerNodeInterpolationStencilLength=CenterNodesInterpolationCoefficients_1D_linear(xNode,CenterNodeInterpolationCoefficients,CenterNodeInterpolationStencil,startNode,nMaxCenterInterpolationCoefficients);
 #elif _MESH_DIMENSION_ == 2
                     centerNodeInterpolationStencilLength=CenterNodesInterpolationCoefficients_2D_linear(xNode,CenterNodeInterpolationCoefficients,CenterNodeInterpolationStencil,startNode,nMaxCenterInterpolationCoefficients);
 #elif _MESH_DIMENSION_ == 3
@@ -6341,17 +6537,21 @@ nMPIops++;
       fout=fopen(fname,"w");
 
 #if _MESH_DIMENSION_ == 1
-      fprintf(fout,"VARIABLES=\"X\", \"Maximum Refinment Level\"");
-
-      exit(__LINE__,__FILE__,"not implemented");
+      fprintf(fout,"VARIABLES=\"X\"");
 
       if (PrintMeshData==true) {
+        fprintf(fout,", \"Maximum Refinment Level\", \"Temp_ID\"");
+
+        #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+        fprintf(fout,", \"Thread\"");
+        #endif
+
         if (CornerNodes.usedElements()==0) exit(__LINE__,__FILE__,"Error: CornerNodes are not allocated");
-        CornerNodes.elementStackList[0][0]->PrintVariableList(fout);
+        CornerNodes.elementStackList[0][0]->PrintVariableList(fout,DataSetNumber);
 
         #if  _AMR_CENTER_NODE_ == _ON_AMR_MESH_
         if (CenterNodes.usedElements()==0) exit(__LINE__,__FILE__,"Error: CenterNodes are not allocated");
-        CenterNodes.elementStackList[0][0]->PrintVariableList(fout);
+        CenterNodes.elementStackList[0][0]->PrintVariableList(fout,DataSetNumber);
         #endif
 
         rootTree->block->PrintVariableList(fout);
@@ -6631,8 +6831,11 @@ nMPIops++;
 
     //save the node neighbors
 #if _MESH_DIMENSION_ == 1
-    cTreeNodeAMR *neibNodeFace[2];
-    exit(__LINE__,__FILE__,"writing of neibNodes is node implemeted");
+//    cTreeNodeAMR *neibNodeFace[2];
+    for (i=0;i<2;i++) {
+      countingNumber=treeNodes.GetEntryCountingNumber(startNode->neibNodeFace[i]);
+      fwrite(&countingNumber,sizeof(long int),1,fout);
+    }
 #elif _MESH_DIMENSION_ == 2
     for (i=0;i<4*2;i++) {
       countingNumber=treeNodes.GetEntryCountingNumber(startNode->neibNodeFace[i]);
@@ -6788,8 +6991,11 @@ nMPIops++;
 
     //read the node neighbors
 #if _MESH_DIMENSION_ == 1
-    cTreeNodeAMR *neibNodeFace[2];
-    exit(__LINE__,__FILE__,"writing of neibNodes is node implemeted");
+//    cTreeNodeAMR *neibNodeFace[2];
+    for (i=0;i<2;i++) {
+      fread(&countingNumber,sizeof(long int),1,fout);
+      startNode->neibNodeFace[i]=treeNodes.GetEntryPointer(countingNumber);
+    }
 #elif _MESH_DIMENSION_ == 2
     for (i=0;i<4*2;i++) {
       fread(&countingNumber,sizeof(long int),1,fout);
@@ -7199,7 +7405,9 @@ nMPIops++;
     bool found=false,ExternalFaceNodes[8]={false,false,false,false,false,false,false,false};
 
     #if _MESH_DIMENSION_ == 1
-    exit(__LINE__,__FILE__,"not implemented");
+    static const int nFaceNodes=1;
+    static const int FaceNodeMap[2*_MESH_DIMENSION_][nFaceNodes]={ {0}, {1}};
+    static const int iMax=2,jMax=1,kMax=1;
     #elif _MESH_DIMENSION_ == 2
     static const int nFaceNodes=2;
     static const int FaceNodeMap[2*_MESH_DIMENSION_][nFaceNodes]={ {0,2}, {1,3}, {0,1}, {2,3}};
@@ -7262,7 +7470,7 @@ nMPIops++;
     if (nface>=6) exit(__LINE__,__FILE__"Error: nface is out of the range");
 
     static const int nFaceNodes=4;
-    static const int FaceNodeMap[2*_MESH_DIMENSION_][nFaceNodes]={ {0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7}, {0,1,2,3}, {4,5,6,7}};
+    static const int FaceNodeMap[2*3][nFaceNodes]={ {0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7}, {0,1,2,3}, {4,5,6,7}};  //the array dimension: FaceNodeMap[2*_MESH_DIMENSION_][nFaceNodes]
     static const int CornerNodesMap[8][3]={ {0,0,0}, {1,0,0}, {0,1,0}, {1,1,0},   {0,0,1}, {1,0,1}, {0,1,1}, {1,1,1}};
 
     nd0=FaceNodeMap[nface][0];
@@ -7292,17 +7500,14 @@ nMPIops++;
     while (node!=NULL) {
 
 
-
-//================  DEBUG ========================
-
-      /*
- if (pow(node->xmin[0]+500.0,2)+pow(node->xmin[1]+1000.0,2)+pow(node->xmin[0]-500.0,2)<0.00001) {
-   cout << __LINE__ << endl;
-}
-*/
-//================ END DEBUG =====================
-
       //Add the corner nodes to the list
+#if _MESH_DIMENSION_ == 2
+#define _AMR_InitDomainBoundaryLayer_ADD_CORNER_NODES_
+#elif _MESH_DIMENSION_ == 3
+#define _AMR_InitDomainBoundaryLayer_ADD_CORNER_NODES_
+#endif
+
+#ifdef _AMR_InitDomainBoundaryLayer_ADD_CORNER_NODES_
       for (i=0;i<(1<<_MESH_DIMENSION_);i++) if ((neibNode=node->neibNodeCorner[i])!=NULL) if ((neibThread=neibNode->Thread)!=ThisThread) {
         //check if the node is not in the list already
         found=false,tNode=DomainBoundaryLayerNodesList[neibThread];
@@ -7331,16 +7536,17 @@ nMPIops++;
         if (DomainBoundaryLayerNodesList[neibThread]!=NULL) DomainBoundaryLayerNodesList[neibThread]->prevNodeThisThread=neibNode;
         DomainBoundaryLayerNodesList[neibThread]=neibNode;
       }
+#endif
 
 
       //Add faces to the list
-#if _MESH_DIMENSION_ == 2
-#define _AMR_InitDomainBoundaryLayer_ADD_FACES_
-#elif _MESH_DIMENSION_ == 3
-#define _AMR_InitDomainBoundaryLayer_ADD_FACES_
-#endif
+//#if _MESH_DIMENSION_ == 2
+//#define _AMR_InitDomainBoundaryLayer_ADD_FACES_
+//#elif _MESH_DIMENSION_ == 3
+//#define _AMR_InitDomainBoundaryLayer_ADD_FACES_
+//#endif
 
-#ifdef _AMR_InitDomainBoundaryLayer_ADD_FACES_
+//#ifdef _AMR_InitDomainBoundaryLayer_ADD_FACES_
       for (i=0;i<_MESH_DIMENSION_*(1<<_MESH_DIMENSION_);i++) if ((neibNode=node->neibNodeFace[i])!=NULL) if ((neibThread=neibNode->Thread)!=ThisThread) {
         //check if the node is not in the list already
         found=false,tNode=DomainBoundaryLayerNodesList[neibThread];
@@ -7370,7 +7576,7 @@ nMPIops++;
         DomainBoundaryLayerNodesList[neibThread]=neibNode;
       }
 
-#endif
+//#endif
 
 
       //Add edges to the list
@@ -7509,7 +7715,9 @@ nMPIops++;
     }
     else if (startNode->block!=NULL) {
 #if _MESH_DIMENSION_ == 1
-       exit(__LINE__,__FILE__,"not implemented");
+      static const int iMin=-_GHOST_CELLS_X_,iMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
+      static const int jMin=0,jMax=1;
+      static const int kMin=0,kMax=1;
 #elif _MESH_DIMENSION_ == 2
        static const int iMin=-_GHOST_CELLS_X_,iMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
        static const int jMin=-_GHOST_CELLS_Y_,jMax=_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;
@@ -7547,7 +7755,9 @@ nMPIops++;
 
 
 #if _MESH_DIMENSION_ == 1
-       exit(__LINE__,__FILE__,"not implemented");
+       static const int iMin=-_GHOST_CELLS_X_,iMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
+       static const int jMin=0,jMax=1;
+       static const int kMin=0,kMax=1;
 #elif _MESH_DIMENSION_ == 2
        static const int iMin=-_GHOST_CELLS_X_,iMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
        static const int jMin=-_GHOST_CELLS_Y_,jMax=_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;
@@ -7586,6 +7796,12 @@ nMPIops++;
             if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
               IntersectionCodeTemp=((cInternalSphericalData*)(bc->BoundaryElement))->BlockIntersection(xTotalMin,xTotalMax,EPS);
             }
+            else if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_CIRCLE_) {
+              IntersectionCodeTemp=((cInternalCircleData*)(bc->BoundaryElement))->BlockIntersection(xTotalMin,xTotalMax,EPS);
+            }
+            else if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_1D_SPHERE_) {
+              IntersectionCodeTemp=((cInternalSphere1DData*)(bc->BoundaryElement))->BlockIntersection(xTotalMin,xTotalMax,EPS);
+            }
             else exit(__LINE__,__FILE__,"Error: unknown boundary type");
 
             if (IntersectionCodeTemp==_AMR_BLOCK_OUTSIDE_DOMAIN_) IntersectionCode=_AMR_BLOCK_OUTSIDE_DOMAIN_;
@@ -7610,7 +7826,14 @@ nMPIops++;
 
              if ((centerNode=startNode->block->GetCenterNode(nd))!=NULL) {
                if ((IntersectionCode==_AMR_BLOCK_OUTSIDE_DOMAIN_)||(IntersectionCode==_AMR_BLOCK_INSIDE_DOMAIN_)) {
+                 //set the cell measure with the accounting for possible symmetry cases
+#if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
                  centerNode->Measure=Measure;
+#elif _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_SPHERICAL_SYMMETRY_
+                 centerNode->Measure=4.0*Pi/3.0*fabs(pow(fabs(xCellMax[0]),3)-pow(fabs(xCellMin[0]),3));
+#else
+                 exit(__LINE__,__FILE__,"Error: the option is not recognized");
+#endif
                }
                else {
 #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
@@ -7619,11 +7842,20 @@ nMPIops++;
 
                  if (centerNode->Measure<=0.0) {
                    for (BoundarySurfaceCounter=0,bc=startNode->InternalBoundaryDescriptorList;bc!=NULL;bc=bc->nextInternalBCelement,BoundarySurfaceCounter++) {
-                     if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
-                       int cellIntersectionStatus;
+                     int cellIntersectionStatus;
 
+                     if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
                        centerNode->Measure=((cInternalSphericalData*)(bc->BoundaryElement))->GetRemainedBlockVolume(xCellMin,xCellMax,EPS,&cellIntersectionStatus);
                      }
+                     else if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_CIRCLE_) {
+                       centerNode->Measure=((cInternalCircleData*)(bc->BoundaryElement))->GetRemainedBlockVolume(xCellMin,xCellMax,EPS,&cellIntersectionStatus);
+                     }
+                     else if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_1D_SPHERE_) {
+                       centerNode->Measure=((cInternalSphere1DData*)(bc->BoundaryElement))->GetRemainedBlockVolume(xCellMin,xCellMax,EPS,&cellIntersectionStatus);
+                     }
+                     else exit(__LINE__,__FILE__,"Error: unknown boundary type");
+
+
                    }
 
                    if (BoundarySurfaceCounter!=1) exit(__LINE__,__FILE__,"Error: only one internal surface is permitted for a cell");
@@ -8047,6 +8279,44 @@ if (TmpAllocationCounter==2437) {
 
   }
 
+
+  void CreateMortonSpaceFillingCurve(cTreeNodeAMR<cBlockAMR> **startNodeFillingCurve,cTreeNodeAMR<cBlockAMR>* upLevelNode) {
+    int nd;
+
+    if (upLevelNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
+      //there are levels down the tree - they should be inserted into the curve
+
+      //connect downNode's
+      for (nd=0;nd<(1<<_MESH_DIMENSION_)-1;nd++) upLevelNode->downNode[nd]->FillingCurveNextNode=upLevelNode->downNode[nd+1];
+      for (nd=1;nd<(1<<_MESH_DIMENSION_);nd++) upLevelNode->downNode[nd]->FillingCurvePrevNode=upLevelNode->downNode[nd-1];
+
+      //reconnect the nodes with the elements of the curve
+      cTreeNodeAMR<cBlockAMR>* t;
+
+      upLevelNode->downNode[0]->FillingCurvePrevNode=(t=upLevelNode->FillingCurvePrevNode);
+      if (t!=NULL) t->FillingCurveNextNode=upLevelNode->downNode[0];
+
+      upLevelNode->downNode[(1<<_MESH_DIMENSION_)-1]->FillingCurveNextNode=(t=upLevelNode->FillingCurveNextNode);
+      if (t!=NULL) t->FillingCurvePrevNode=upLevelNode->downNode[(1<<_MESH_DIMENSION_)-1];
+
+      upLevelNode->FillingCurveNextNode=NULL;
+      upLevelNode->FillingCurvePrevNode=NULL;
+
+      //update the start point of the curve
+      if (startNodeFillingCurve!=NULL) *startNodeFillingCurve=upLevelNode->downNode[0];
+
+      //insert into the curve nodes of higher levels
+      for (nd=0;nd<(1<<_MESH_DIMENSION_);nd++) {
+        CreateMortonSpaceFillingCurve(startNodeFillingCurve,upLevelNode->downNode[nd]);
+
+        //startNodeFillingCurve=NULL for other 'downNode's
+        startNodeFillingCurve=NULL;
+      }
+    }
+  }
+
+
+/*
   void CreateSpaceFillingCurve(cTreeNodeAMR<cBlockAMR> **startNodeFillingCurve,int UpperResolutionLevel) {
     int idim,i,j,k,iMax,jMax,kMax;
     double xProbe[3]={0.0,0.0,0.0},dxCurve[3]={0.0,0.0,0.0};
@@ -8057,7 +8327,7 @@ if (TmpAllocationCounter==2437) {
     *startNodeFillingCurve=NULL;
 
 #if _MESH_DIMENSION_ == 1
-    iMax=1<<nBalancingLevel,jMax=1,kMax=1
+    iMax=1<<UpperResolutionLevel,jMax=1,kMax=1;
 #elif _MESH_DIMENSION_ == 2
     iMax=1<<UpperResolutionLevel,jMax=1<<UpperResolutionLevel,kMax=1;
 #elif _MESH_DIMENSION_ == 3
@@ -8096,6 +8366,7 @@ if (TmpAllocationCounter==2437) {
       }
     }
   }
+*/
 
   void CreateNewParallelDistributionLists(int userDefinedCodeForSendingBlockData=-1) {
     double LoadMeasureNormal;
@@ -8138,10 +8409,18 @@ if (TmpAllocationCounter==2437) {
 
     //Recalculate the space filling curve if its needed
     if (meshModifiedFlag_CreateNewSpaceFillingCurve==true) {
-      long int nBalancingLevel,nBalancigElements,nBalancigElementsUpLevels;
+//      long int nBalancingLevel,nBalancigElements,nBalancigElementsUpLevels;
 
       meshModifiedFlag_CreateNewSpaceFillingCurve=false;
 
+      rootTree->FillingCurveNextNode=NULL;
+      rootTree->FillingCurvePrevNode=NULL;
+
+      startNodeFillingCurve=rootTree;
+
+      CreateMortonSpaceFillingCurve(&startNodeFillingCurve,rootTree);
+
+      /*
       for (nBalancingLevel=0;nBalancingLevel<=_MAX_REFINMENT_LEVEL_;nBalancingLevel++) {
         for (nBalancigElements=0,i=0;i<=nBalancingLevel;i++) nBalancigElements+=nResolutionLevelBlocks[i];
 
@@ -8156,6 +8435,7 @@ if (TmpAllocationCounter==2437) {
       if (nBalancingLevel>_MAX_REFINMENT_LEVEL_) nBalancingLevel=_MAX_REFINMENT_LEVEL_;
 
       CreateSpaceFillingCurve(&startNodeFillingCurve,nBalancingLevel);
+      */
     }
 
 
@@ -8184,6 +8464,97 @@ if (TmpAllocationCounter==2437) {
 #endif
     }
 
+    //redistribute the load on the root processor
+    double CumulativeThreadLoad[nTotalThreads];
+    cTreeNodeAMR<cBlockAMR>* ThreadStartNode[nTotalThreads];
+    int thread;
+
+    for (thread=0;thread<nTotalThreads;thread++) CumulativeThreadLoad[thread]=0.0,ThreadStartNode[thread]=NULL;
+
+    if (ThisThread==0) {
+      ThreadStartNode[0]=CurveNode;
+      nCurrentProcessorBalancing=0;
+
+      while (CurveNode!=NULL) {
+        CumulativeProcessorLoad+=CurveNode->ParallelLoadMeasure;
+        CumulativeThreadLoad[nCurrentProcessorBalancing]+=CurveNode->ParallelLoadMeasure;
+
+        //increment the processor number if needed
+        if ((CumulativeProcessorLoad>1.0+nCurrentProcessorBalancing)&&(nCurrentProcessorBalancing!=nTotalThreads-1)) {
+          nCurrentProcessorBalancing++;
+          ThreadStartNode[nCurrentProcessorBalancing]=CurveNode->FillingCurveNextNode;
+        }
+
+        CurveNode=CurveNode->FillingCurveNextNode;
+      }
+
+      //fine tuning of the processor's load
+      for (thread=0;thread<nTotalThreads;thread++) {
+         const double UpperLoadLimit=1.05;
+
+         if (CumulativeThreadLoad[thread]>UpperLoadLimit) for (int nLoadOptimizationPass=0;nLoadOptimizationPass<2;nLoadOptimizationPass++) {
+           //check if the load can be exchanged with one of the neighboring
+           int smallLoadNeighbour=-2;
+           double neibLoad=CumulativeThreadLoad[thread];
+
+           if (thread!=0) if (CumulativeThreadLoad[thread-1]<neibLoad) neibLoad=CumulativeThreadLoad[thread-1],smallLoadNeighbour=thread-1;
+           if (thread!=nTotalThreads-1) if (CumulativeThreadLoad[thread+1]<neibLoad) neibLoad=CumulativeThreadLoad[thread+1],smallLoadNeighbour=thread+1;
+
+           if (smallLoadNeighbour!=-1) {
+             //try to transfer some load to the neighboring processor
+             if (smallLoadNeighbour==thread-1) {
+               while (CumulativeThreadLoad[thread-1]+ThreadStartNode[thread]->ParallelLoadMeasure<max(1.0,CumulativeThreadLoad[thread]-ThreadStartNode[thread]->ParallelLoadMeasure)) {
+                 CumulativeThreadLoad[thread-1]+=ThreadStartNode[thread]->ParallelLoadMeasure;
+                 CumulativeThreadLoad[thread]-=ThreadStartNode[thread]->ParallelLoadMeasure;
+
+                 ThreadStartNode[thread]=ThreadStartNode[thread]->FillingCurveNextNode;
+               }
+             }
+             else if (smallLoadNeighbour==thread+1) {
+//               while (CumulativeThreadLoad[thread+1]+ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure<CumulativeThreadLoad[thread]-ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure) {
+               while (CumulativeThreadLoad[thread+1]+ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure<max(1.0,CumulativeThreadLoad[thread]-ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure)) {
+                 CumulativeThreadLoad[thread-1]+=ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure;
+                 CumulativeThreadLoad[thread]-=ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure;
+
+                 ThreadStartNode[thread+1]=ThreadStartNode[thread+1]->FillingCurvePrevNode;
+               }
+             }
+           }
+
+         }
+      }
+    }
+
+    //Exchange the load distribution
+    cTreeNodeAMR<cBlockAMR>* nextThreadStartNode=startNodeFillingCurve;
+
+    CurveNode=startNodeFillingCurve;
+    thread=-1;
+
+    pipe.openBcast(0);
+
+    while (CurveNode!=NULL) {
+      if (CurveNode==nextThreadStartNode) {
+        thread+=1;
+        nextThreadStartNode=(thread!=nTotalThreads-1) ? ThreadStartNode[thread+1] : NULL;
+      }
+
+      if (ThisThread==0) pipe.send(thread);
+      else pipe.recv(thread,0);
+
+      //add the node to the processor list
+      CurveNode->nextNodeThisThread=ParallelNodesDistributionList[thread];
+      CurveNode->prevNodeThisThread=NULL;
+
+      if (ParallelNodesDistributionList[thread]!=NULL) ParallelNodesDistributionList[thread]->prevNodeThisThread=CurveNode;
+      ParallelNodesDistributionList[thread]=CurveNode;
+
+      CurveNode=CurveNode->FillingCurveNextNode;
+    }
+
+    pipe.closeBcast();
+
+    /*
     pipe.openBcast(0);
 
     while (CurveNode!=NULL) {
@@ -8203,13 +8574,13 @@ if (TmpAllocationCounter==2437) {
     }
 
     pipe.closeBcast();
-
+*/
 
     //check if the nodes' distribution is the same on all processors
 
 
     if (ThisThread==0) {
-      int t,thread;
+      int t;
       cTreeNodeAMR<cBlockAMR> *ptr;
       cAMRnodeID id,idtemp;
 
@@ -8238,12 +8609,66 @@ if (TmpAllocationCounter==2437) {
 
       cout << "Cumulative Parallel Load Distribution\nThread\tLoad\tNormalized Load\tBlock's Number\n";
 
+      int minThreadBlockNumber=-1,maxThreadBlockNumber=-1;
+      double minLoadMeasure=-1.0,maxLoadMeasure=-1.0;
+      int minLoadThread=-1,maxLoadThread=-1;
+      double minBlockLoad=-1.0,maxBlockLoad=-1.0;
+      cTreeNodeAMR<cBlockAMR> *maxLoadBlock=NULL;
+
       for (t=0;t<nTotalThreads;t++) {
         long int nblocks;
 
-        for (nblocks=0,ptr=ParallelNodesDistributionList[t];ptr!=NULL;ptr=ptr->nextNodeThisThread) nblocks++;
+        for (nblocks=0,ptr=ParallelNodesDistributionList[t];ptr!=NULL;ptr=ptr->nextNodeThisThread) {
+          nblocks++;
+
+          if ((minBlockLoad<0.0)||(minBlockLoad>ptr->ParallelLoadMeasure)) minBlockLoad=ptr->ParallelLoadMeasure;
+          if ((maxBlockLoad<0.0)||(maxBlockLoad<ptr->ParallelLoadMeasure)) maxBlockLoad=ptr->ParallelLoadMeasure,maxLoadBlock=ptr;
+        }
+
         printf("%i\t%8.2e\t%8.2e\t%ld\n",t,newCumulativeParallelLoadMeasure[t],nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure,nblocks);
+
+        if ((minThreadBlockNumber==-1)||(minThreadBlockNumber>nblocks)) minThreadBlockNumber=nblocks;
+        if ((maxThreadBlockNumber==-1)||(maxThreadBlockNumber<nblocks)) maxThreadBlockNumber=nblocks;
+
+        if ((minLoadMeasure<0.0)||(minLoadMeasure>nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure)) {
+          minLoadMeasure=nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure;
+          minLoadThread=t;
+        }
+
+        if ((maxLoadThread<0.0)||(maxLoadThread<nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure)) {
+          maxLoadMeasure=nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure;
+          maxLoadThread=t;
+        }
       }
+
+      printf("Min number of blocks per processor: %i\nMax number of blocks per processor: %i\n",minThreadBlockNumber,maxThreadBlockNumber);
+      printf("Min processor load: %e, thread=%i\n",minLoadMeasure,minLoadThread);
+      printf("Max processor load: %e, thread=%i\n",maxLoadMeasure,maxLoadThread);
+      printf("Individual block load: min=%e, max=%e\n",minBlockLoad,maxBlockLoad);
+
+      printf("Parameters of the block with the maximum load\n");
+      printf("Block->Temp_ID=%ld\n",maxLoadBlock->Temp_ID);
+
+      //the position of the block's nodes
+      double middleX[3]={0.0,0.0,0.0},xnode[3];
+      int j,k,idim;
+
+      for (i=0;i<2;i++) for (j=0;j<((_MESH_DIMENSION_>1) ? 2 : 1);j++) for (k=0;k<((_MESH_DIMENSION_>2) ? 2 : 1);k++) {
+        maxLoadBlock->GetCornerNodePosition(xnode,i*_BLOCK_CELLS_X_,j*_BLOCK_CELLS_Y_,k*_BLOCK_CELLS_Z_);
+
+        printf("(i,j,k)=(%i,%i,%i): x=",i,j,k);
+        for (idim=0;idim<_MESH_DIMENSION_;idim++) {
+          printf("%e ",xnode[idim]);
+          middleX[idim]+=xnode[idim];
+        }
+
+        printf("\n");
+      }
+
+
+      printf("Middle block's coordinates=");
+      for (idim=0;idim<_MESH_DIMENSION_;idim++) printf("%e ",middleX[idim]/(1<<_MESH_DIMENSION_));
+      printf("\n\n");
 
     }
     else {
@@ -8270,7 +8695,7 @@ if (TmpAllocationCounter==2437) {
 
     ResetAMRnodeProcessingFlag();
 
-    for (int thread=0;thread<nTotalThreads;thread++) {
+    for (/*int*/ thread=0;thread<nTotalThreads;thread++) {
       node=ParallelNodesDistributionList[thread];
 
       while (node!=NULL) {
@@ -8307,7 +8732,7 @@ if (TmpAllocationCounter==2437) {
     pipe.openRecv(0);
     int pipeLastRecvThread=0;
 
-    for (int thread=0;thread<nTotalThreads;thread++) {
+    for (thread=0;thread<nTotalThreads;thread++) {
       node=ParallelNodesDistributionList[thread];
 
       while (node!=NULL) {
@@ -8350,21 +8775,23 @@ if (TmpAllocationCounter==2437) {
     pipe.closeRecv(pipeLastRecvThread);
 
     //create the Send/Recv flags vectors
-    for (int thread=0;thread<nTotalThreads;thread++) for (i=0;i<nTotalThreads;i++) ParallelSendRecvMap[thread][i]=false;
+    for (thread=0;thread<nTotalThreads;thread++) for (i=0;i<nTotalThreads;i++) ParallelSendRecvMap[thread][i]=false;
 
 
 
 
-    for (int thread=0;thread<nTotalThreads;thread++) {
+    for (thread=0;thread<nTotalThreads;thread++) {
       node=ParallelNodesDistributionList[thread];
 
       while (node!=NULL) {
         //search through the neighbors of the blocks
 #if _MESH_DIMENSION_ == 1
-
 //for (i=0;i<2;i++) neibNodeFace[i]=NULL;
+        for (i=0;i<2;i++) if (node->neibNodeFace[i]!=NULL) if (node->neibNodeFace[i]->Thread!=node->Thread) {
+          ParallelSendRecvMap[node->neibNodeFace[i]->Thread][node->Thread]=true;
+          ParallelSendRecvMap[node->Thread][node->neibNodeFace[i]->Thread]=true;
+        }
 
-      exit(__LINE__,__FILE__,"not implemented");
 #elif _MESH_DIMENSION_ == 2
        for (i=0;i<4*2;i++) if (node->neibNodeFace[i]!=NULL) if (node->neibNodeFace[i]->Thread!=node->Thread) {
          ParallelSendRecvMap[node->neibNodeFace[i]->Thread][node->Thread]=true;
@@ -8536,36 +8963,26 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
 //================ END DEBUG =====================
 
 
-
-
-          for (i=0;i<(1<<_MESH_DIMENSION_);i++) if ((sendNode=recvNode->neibNodeCorner[i])!=NULL) if (sendNode->Thread==From) sendNode->nodeDescriptor.NodeProcessingFlag=_AMR_FALSE_;
-
-
-         /*
-          //Search the send-list if the node is already there
-            for (found=false,k=0;k<SendNodeListCounter;k++) {
-              if (sendNode==SendNodeList[k]) {
-                found=true;
-                break;
-              }
-            }
-
-            //add the sendBlock to the send-list
-            if (found==true) {
-              if (SendNodeListCounter+1==SendNodelListCounterMax) exit(__LINE__,__FILE__,"Error: increase the value of SendNodelListCounterMax");
-              SendNodeList[SendNodeListCounter++]=sendNode;
-            }
-          }
-          */
-
-          //add face-neighbors into the send list
 #if _MESH_DIMENSION_ == 2
-#define _AMR_ParallelBlockDataExchange_SEND_FACES_
+#define _AMR_ParallelBlockDataExchange_SEND_CORNER_NODES_
 #elif _MESH_DIMENSION_ == 3
-#define _AMR_ParallelBlockDataExchange_SEND_FACES_
+#define _AMR_ParallelBlockDataExchange_SEND_CORNER_NODES_
 #endif
 
-#ifdef _AMR_ParallelBlockDataExchange_SEND_FACES_
+#ifdef _AMR_ParallelBlockDataExchange_SEND_CORNER_NODES_
+          for (i=0;i<(1<<_MESH_DIMENSION_);i++) if ((sendNode=recvNode->neibNodeCorner[i])!=NULL) if (sendNode->Thread==From) sendNode->nodeDescriptor.NodeProcessingFlag=_AMR_FALSE_;
+#endif
+
+
+
+          //add face-neighbors into the send list
+//#if _MESH_DIMENSION_ == 2
+//#define _AMR_ParallelBlockDataExchange_SEND_FACES_
+//#elif _MESH_DIMENSION_ == 3
+//#define _AMR_ParallelBlockDataExchange_SEND_FACES_
+//#endif
+
+//#ifdef _AMR_ParallelBlockDataExchange_SEND_FACES_
          for (i=0;i<_MESH_DIMENSION_*(1<<_MESH_DIMENSION_);i++) if ((sendNode=recvNode->neibNodeFace[i])!=NULL) if (sendNode->Thread==From) sendNode->nodeDescriptor.NodeProcessingFlag=_AMR_FALSE_;
          /*
            //Search the send-list if the node is already there
@@ -8583,7 +9000,7 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
            }
          }
          */
-#endif
+//#endif
 
 
          //add the edge-neighbors to the send list
@@ -8625,6 +9042,16 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
 
         //send the data
         for (recvNode=DomainBoundaryLayerNodesList[To];recvNode!=NULL;recvNode=recvNode->nextNodeThisThread) {
+
+
+#if _MESH_DIMENSION_ == 2
+#define _AMR_ParallelBlockDataExchange_SEND_CORNER_NODES_
+#elif _MESH_DIMENSION_ == 3
+#define _AMR_ParallelBlockDataExchange_SEND_CORNER_NODES_
+#endif
+
+#ifdef _AMR_ParallelBlockDataExchange_SEND_CORNER_NODES_
+
           for (i=0;i<(1<<_MESH_DIMENSION_);i++) if ((sendNode=recvNode->neibNodeCorner[i])!=NULL) if ((sendNode->Thread==From)&&(sendNode->nodeDescriptor.NodeProcessingFlag==_AMR_FALSE_)) {
             sendNode->nodeDescriptor.NodeProcessingFlag=_AMR_TRUE_;
             GetAMRnodeID(nodeid,sendNode);
@@ -8635,14 +9062,15 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
             //send the data
             sendNode->block->sendBoundaryLayerBlockData(&pipe);
           }
-
-#if _MESH_DIMENSION_ == 2
-#define _AMR_ParallelBlockDataExchange_SEND_FACES_
-#elif _MESH_DIMENSION_ == 3
-#define _AMR_ParallelBlockDataExchange_SEND_FACES_
 #endif
 
-#ifdef _AMR_ParallelBlockDataExchange_SEND_FACES_
+//#if _MESH_DIMENSION_ == 2
+//#define _AMR_ParallelBlockDataExchange_SEND_FACES_
+//#elif _MESH_DIMENSION_ == 3
+//#define _AMR_ParallelBlockDataExchange_SEND_FACES_
+//#endif
+
+//#ifdef _AMR_ParallelBlockDataExchange_SEND_FACES_
          for (i=0;i<_MESH_DIMENSION_*(1<<_MESH_DIMENSION_);i++) if ((sendNode=recvNode->neibNodeFace[i])!=NULL) if ((sendNode->Thread==From)&&(sendNode->nodeDescriptor.NodeProcessingFlag==_AMR_FALSE_)) {
            sendNode->nodeDescriptor.NodeProcessingFlag=_AMR_TRUE_;
            GetAMRnodeID(nodeid,sendNode);
@@ -8655,7 +9083,7 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
          }
 
 
-#endif
+//#endif
 
 #if _MESH_DIMENSION_ == 3
          for (i=0;i<12*2;i++) if ((sendNode=recvNode->neibNodeEdge[i])!=NULL) if ((sendNode->Thread==From)&&(sendNode->nodeDescriptor.NodeProcessingFlag==_AMR_FALSE_)) {
@@ -8697,17 +9125,19 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
 
             cout << "Error: the node is not allocated:" << endl;
 
+#ifdef _AMR_ParallelBlockDataExchange_SEND_CORNER_NODES_
             for (i=0;i<(1<<_MESH_DIMENSION_);i++) if (recvNode->neibNodeCorner[i]!=NULL) if (recvNode->neibNodeCorner[i]->Thread==ThisThread) {
               found=true;
               cout << "'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
             }
+#endif
 
-#ifdef _AMR_ParallelBlockDataExchange_SEND_FACES_
+//#ifdef _AMR_ParallelBlockDataExchange_SEND_FACES_
            for (i=0;i<_MESH_DIMENSION_*(1<<_MESH_DIMENSION_);i++) if (recvNode->neibNodeFace[i]!=NULL) if (recvNode->neibNodeFace[i]->Thread==ThisThread) {
              found=true;
              cout << "'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
            }
-#endif
+//#endif
 
 #if _MESH_DIMENSION_ == 3
            for (i=0;i<12*2;i++) if (recvNode->neibNodeEdge[i]!=NULL) if (recvNode->neibNodeEdge[i]->Thread==ThisThread) {

@@ -55,6 +55,14 @@
 #define _INTERNAL_BOUNDARY_TYPE_UNDEFINED_  0
 #define _INTERNAL_BOUNDARY_TYPE_SPHERE_     1
 #define _INTERNAL_BOUNDARY_TYPE_CIRCLE_     2
+#define _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_  3
+
+//the types of symmetries used with the mesh
+#define _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_    0
+#define _AMR_SYMMETRY_MODE_AXIAL_SYMMETRY_     1
+#define _AMR_SYMMETRY_MODE_SPHERICAL_SYMMETRY_ 2
+
+#define _AMR_SYMMETRY_MODE_ _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
 
 //Zenith angle distribution on the internal boundary sphere
 #define _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_UNIFORM_DISTRIBUTION_  0
@@ -70,7 +78,7 @@
 
 //the maximum value of the size of the variable that contains the block's refinment level
 #define _MAX_REFINMENT_LEVEL_BITS_ 5
-#define _MAX_REFINMENT_LEVEL_  10
+#define _MAX_REFINMENT_LEVEL_  15
 
 
 //save additional information when the mesh generator is used in the debugger mode
@@ -81,7 +89,7 @@
 
 
 //check the consistancy of the mesh on each level of refinments during creation of the mesh
-#define _CHECK_MESH_CONSISTANCY_ _OFF_AMR_MESH_
+#define _CHECK_MESH_CONSISTANCY_ _ON_AMR_MESH_
 
 
 //the number of bits reserved to store the counting number of the mesh elements

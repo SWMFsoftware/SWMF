@@ -90,14 +90,24 @@ void PIC::Parser::readMain(CiFileOperations& ifile) {
 
 	  PIC::MolecularData::ChemTable=new char* [PIC::nTotalSpecies];
 	  PIC::MolecularData::ChemTable[0]=new char[PIC::nTotalSpecies*_MAX_STRING_LENGTH_PIC_];
-	  for (spec=1;spec<PIC::nTotalSpecies;spec++) PIC::MolecularData::ChemTable[spec]=PIC::MolecularData::ChemTable[spec-1]+_MAX_STRING_LENGTH_PIC_;
+	  for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+	    PIC::MolecularData::ChemTable[spec]=PIC::MolecularData::ChemTable[0]+spec*_MAX_STRING_LENGTH_PIC_;
+	    PIC::MolecularData::ChemTable[spec][0]='\0';
+	  }
+
+    PIC::MolecularData::LoadingSpeciesList=new char* [PIC::nTotalSpecies];
+    PIC::MolecularData::LoadingSpeciesList[0]=new char[PIC::nTotalSpecies*_MAX_STRING_LENGTH_PIC_];
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+      PIC::MolecularData::LoadingSpeciesList[spec]=PIC::MolecularData::LoadingSpeciesList[0]+spec*_MAX_STRING_LENGTH_PIC_;
+      PIC::MolecularData::LoadingSpeciesList[spec][0]='\0';
+    }
 
 	  spec=0;
 
 	   while (str[0]!='\0') {
 	     ifile.CutInputStr(str1,str);
-	     for (i=0;str1[i]!='\0';i++) PIC::MolecularData::ChemTable[spec][i]=str1[i];
-	     PIC::MolecularData::ChemTable[spec][i]='\0';
+	     for (i=0;str1[i]!='\0';i++) PIC::MolecularData::LoadingSpeciesList[spec][i]=str1[i];
+	     PIC::MolecularData::LoadingSpeciesList[spec][i]='\0';
 
 	     spec+=1;
  	   }

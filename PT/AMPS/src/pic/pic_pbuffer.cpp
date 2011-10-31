@@ -412,22 +412,73 @@ void PIC::ParticleBuffer::CheckParticleList() {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   PIC::Mesh::cDataCenterNode *cell;
 
+
+  //the table of increments for accessing the cells in the block
+  static bool initTableFlag=false;
+  static int centerNodeIndexTable_Glabal[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+  static int nTotalCenterNodes=-1;
+
+  int centerNodeIndexCounter;
+
+  if (initTableFlag==false) {
+    nTotalCenterNodes=0,initTableFlag=true;
+
+#if DIM == 3
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+    }
+#elif DIM == 2
+    for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+    }
+#elif DIM == 1
+    for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+    }
+#endif
+  }
+
+  int centerNodeIndexTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+  PIC::Mesh::cDataBlockAMR block;
+
+  memcpy(centerNodeIndexTable,centerNodeIndexTable_Glabal,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(int));
+
+
+
+
   for (int thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
     node=(thread==PIC::Mesh::mesh.ThisThread) ? PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread] : PIC::Mesh::mesh.DomainBoundaryLayerNodesList[thread];
 
     if (node==NULL) continue;
 
+    //sample the processor load
+  #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    double EndTime,StartTime=MPI_Wtime();
+  #endif
+
+
     while (node!=NULL) {
+      /*
       for (k=0;k<_BLOCK_CELLS_Z_;k++) {
          for (j=0;j<_BLOCK_CELLS_Y_;j++) {
             for (i=0;i<_BLOCK_CELLS_X_;i++) {
               LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-              cell=node->block->GetCenterNode(LocalCellNumber);
+              */
+
+      memcpy(&block,node->block,sizeof(PIC::Mesh::cDataBlockAMR));
+
+      {
+        {
+          for (centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;centerNodeIndexCounter++) {
+              LocalCellNumber=centerNodeIndexTable[centerNodeIndexCounter];
+              cell=block.GetCenterNode(LocalCellNumber);
+
+//              cell=node->block->GetCenterNode(LocalCellNumber);
 
               if (cell!=NULL) {
                 if (cell->tempParticleMovingList!=-1) exit(__LINE__,__FILE__,"Error: the temp list is not empty");
 
-                ParticleList=node->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;
+                ParticleList=cell->FirstCellParticle;
 
                 while (ParticleList!=-1) {
                   ++nTotalListParticles;
@@ -437,8 +488,18 @@ void PIC::ParticleBuffer::CheckParticleList() {
                 }
               }
             }
+
+            if (DIM==1) break;
          }
+
+         if ((DIM==1)||(DIM==2)) break;
       }
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    EndTime=MPI_Wtime();
+    node->ParallelLoadMeasure+=EndTime-StartTime;
+    StartTime=EndTime;
+#endif
 
       node=node->nextNodeThisThread;
     }

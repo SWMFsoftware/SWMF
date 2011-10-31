@@ -8,6 +8,7 @@
 long int PIC::Parallel::sendParticleCounter=0,PIC::Parallel::recvParticleCounter=0,PIC::Parallel::IterationNumberAfterRebalancing=0;
 double PIC::Parallel::RebalancingTime=0.0,PIC::Parallel::CumulativeLatency=0.0;
 double PIC::Parallel::EmergencyLoadRebalancingFactor=3.0;
+double PIC::Parallel::Latency=0.0;
 
 //====================================================
 //Exchange particles between Processors
@@ -247,7 +248,9 @@ void PIC::Parallel::ExchangeParticleData() {
 
 
   //collect the data exchenge matrix
+  Latency=MPI_Wtime();
   MPI_Allgather(sendProcVector,PIC::Mesh::mesh.nTotalThreads,MPI_INT,exchangeProcMatrix,PIC::Mesh::mesh.nTotalThreads,MPI_INT,MPI_COMM_WORLD);
+  Latency=MPI_Wtime()-Latency;
 
   //extract the list of the processors that will send information to 'ThisThread'
   for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) if (exchangeProcMatrix[thread*PIC::Mesh::mesh.nTotalThreads+PIC::Mesh::mesh.ThisThread]!=0) recvProcList[nRecvProc++]=thread;

@@ -47,6 +47,8 @@ using namespace std;
 #define _MAX_STRING_LENGTH_PIC_  500
 #define Kbol 1.3806503E-23
 #define ElectronCharge 1.602176565E-19
+#define ElectronMass 9.10938291E-31
+#define ProtonMass 1.67262158E-27
 
 
 
@@ -81,10 +83,16 @@ namespace PIC {
 
   //perform one time step
   void TimeStep();
-  void Sampling();
+//  void Sampling();
 
   //init the particle solver
   void Init();
+
+  //the list of functions used to exchenge the execution statiscics
+  typedef void (*fExchangeExecutionStatistics) (CMPI_channel*,long int);
+  extern vector<fExchangeExecutionStatistics> ExchangeExecutionStatisticsFunctions;
+
+
 
   //structural elements of the solver
   namespace Parser {
@@ -93,6 +101,7 @@ namespace PIC {
     void readGeneral(CiFileOperations&);
 
   }
+
 
   namespace MolecularData {
 
@@ -134,7 +143,10 @@ namespace PIC {
     void SetElectricCharge(double,int);
 
     //get and set the species numbers and chemical symbols
-    extern char **ChemTable;
+    extern char **ChemTable; // <- The table of chemical symbols used in the simulation
+    extern char **LoadingSpeciesList; // <- the list of species that CAN BE locased in the simualtion
+
+
     int GetSpecieNumber(char*);
     void SetChemSymbol(char*,int);
     void GetChemSymbol(char*,int);
@@ -142,7 +154,7 @@ namespace PIC {
     namespace Parser {
       void InitChemTable(CiFileOperations&);
       int GetSpeciesNumber(int&,CiFileOperations&);
-      void SpeciesBlock(int,CiFileOperations&);
+      void SpeciesBlock(char*,int,CiFileOperations&);
       void run(CiFileOperations&);
     }
 
@@ -349,7 +361,7 @@ namespace PIC {
       for (idim=0;idim<DIM;idim++) v[idim]=vptr[idim];
       */
 
-      memcpy(v,ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,DIM*sizeof(double));
+      memcpy(v,ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,3*sizeof(double));
     }
 
     inline void GetV(double* v,byte *ParticleDataStart) {
@@ -360,7 +372,7 @@ namespace PIC {
       for (idim=0;idim<DIM;idim++) v[idim]=vptr[idim];
       */
 
-      memcpy(v,ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,DIM*sizeof(double));
+      memcpy(v,ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,3*sizeof(double));
     }
 
     inline void SetV(double* v,long int ptr) {
@@ -371,7 +383,7 @@ namespace PIC {
       for (idim=0;idim<DIM;idim++) vptr[idim]=v[idim];
       */
 
-      memcpy(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,v,DIM*sizeof(double));
+      memcpy(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,v,3*sizeof(double));
     }
 
     inline void SetV(double* v,byte *ParticleDataStart) {
@@ -382,7 +394,7 @@ namespace PIC {
       for (idim=0;idim<DIM;idim++) vptr[idim]=v[idim];
       */
 
-      memcpy(ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,v,DIM*sizeof(double));
+      memcpy(ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,v,3*sizeof(double));
     }
 
 
@@ -478,9 +490,6 @@ namespace PIC {
 
 	  //the offset of the sampled infomation that is stored in 'center nodes'
     extern int completedCellSampleDataPointerOffset,collectingCellSampleDataPointerOffset;
-
-    //the flag determines if 'external' sampling procedures are used
-    extern bool ExternalSamplingProcedureDefinedFlag;
 
 	  //the data and order that the data are saved in the associated data buffer of 'center nodes'
     //3. The offset of the data buffer for 'completed sample'
@@ -665,6 +674,8 @@ namespace PIC {
 
 
 	    //print the sampled data into a file
+      void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread);
+      /*
       void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread) {
         int idim;
 
@@ -694,7 +705,14 @@ namespace PIC {
         list<fPrintDataCenterNode>::iterator fptr;
 
         for (fptr=PrintDataCenterNode.begin();fptr!=PrintDataCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber,pipe,CenterNodeThread,this);
+
+        //print data sampled by the user defined sampling functions
+        if (PIC::IndividualModelSampling::PrintSampledData.size()!=0) {
+          for (unsigned int i=0;i<PIC::IndividualModelSampling::PrintSampledData.size();i++) PIC::IndividualModelSampling::PrintSampledData[i](fout,DataSetNumber,pipe,CenterNodeThread,this);
+        }
+
       }
+      */
 
       void PrintFileDescriptior(FILE* fout,int DataSetNumber) {
         char sym[_MAX_STRING_LENGTH_PIC_];
@@ -703,6 +721,9 @@ namespace PIC {
         fprintf(fout,"TITLE=\"specie=%s\"",sym);
       }
 
+
+      void PrintVariableList(FILE* fout,int DataSetNumber);
+      /*
       void PrintVariableList(FILE* fout,int DataSetNumber) {
        fprintf(fout,", \"Number Density\", \"Particle Number\"");
        for (int idim=0;idim<DIM;idim++) fprintf(fout,", \"V%i\"",idim);
@@ -711,8 +732,17 @@ namespace PIC {
        //print the user defind 'center node' data
        list<fPrintVariableListCenterNode>::iterator fptr;
        for (fptr=PrintVariableListCenterNode.begin();fptr!=PrintVariableListCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber);
-      }
 
+       //print varialbes sampled by the user defined sampling procedures
+       if (PIC::IndividualModelSampling::PrintVariableList.size()!=0) {
+         for (unsigned int i=0;i<PIC::IndividualModelSampling::PrintVariableList.size();i++) PIC::IndividualModelSampling::PrintVariableList[i](fout,DataSetNumber);
+       }
+
+      }
+      */
+
+      void Interpolate(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients);
+      /*
       void Interpolate(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients) {
         int i,s,idim;
         double c;
@@ -774,8 +804,16 @@ namespace PIC {
         list<fInterpolateCenterNode>::iterator fptr;
 
         for (fptr=InterpolateCenterNode.begin();fptr!=InterpolateCenterNode.end();fptr++) (*fptr)(InterpolationList,InterpolationCoeficients,nInterpolationCoeficients,this);
+
+        //interpolate data sampled by user defiend sampling procedures
+        if (PIC::IndividualModelSampling::InterpolateCenterNodeData.size()!=0) {
+          for (unsigned int i=0;i<PIC::IndividualModelSampling::PrintVariableList.size();i++) PIC::IndividualModelSampling::InterpolateCenterNodeData[i](fout,DataSetNumber);
+        }
       }
+
+      */
     };
+
 
     //the class that contains the run information for the cell's corners
     class cDataCornerNode : public cBasicCornerNode {
@@ -818,102 +856,6 @@ namespace PIC {
       //send the block to abother processor
       void sendMoveBlockAnotherProcessor(CMPI_channel *pipe);
       void recvMoveBlockAnotherProcessor(CMPI_channel *pipe,int From);
-
-
-//      void SendNodeData(CMPI_channel *pipe,int DataSetTag);
-      /*
-      void SendNodeData(CMPI_channel *pipe,int DataSetTag) {
-        int iCell,jCell,kCell;
-        long int LocalCellNumber;
-        PIC::Mesh::cDataCenterNode *cell=NULL;
-
-        #if DIM == 3
-        static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=_BLOCK_CELLS_Z_;
-        #elif DIM == 2
-        static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=1;
-        #elif DIM == 1
-        static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=1,kCellMax=1;
-        #else
-        exit(__LINE__,__FILE__,"Error: the value of the parameter is not recognized");
-        #endif
-
-        if ((DataSetTag==_PIC_SUBDOMAIN_BOUNDARY_LAYER_SAMPLING_DATA_EXCHANGE_TAG_)||(DataSetTag==_PIC_DYNAMIC_BALANCE_SEND_RECV_MESH_NODE_EXCHANGE_TAG_)) {
-          for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
-            LocalCellNumber=getCenterNodeLocalNumber(iCell,jCell,kCell);
-            cell=GetCenterNode(LocalCellNumber);
-
-            pipe->send(cell->associatedDataPointer,cell->totalAssociatedDataLength);
-          }
-
-        }
-        else exit(__LINE__,__FILE__,"Error: unknown option");
-
-        //send all blocks' data when the blocks is moved to another processor
-        if (DataSetTag==_PIC_DYNAMIC_BALANCE_SEND_RECV_MESH_NODE_EXCHANGE_TAG_) {
-          int Signal;
-
-          const int _CENTRAL_NODE_NUMBER_SIGNAL_=1;
-          const int _NEW_PARTICLE_SIGNAL_=       2;
-          const int _END_COMMUNICATION_SIGNAL_=  3;
-
-          for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
-            LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
-            Particle=sendNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;
-
-            if  (Particle!=-1) {
-              pipe.send(_CENTRAL_NODE_NUMBER_SIGNAL_);
-              pipe.send(LocalCellNumber);
-
-              while (Particle!=-1) {
-                PIC::ParticleBuffer::PackParticleData(buffer,Particle);
-                pipe.send(_NEW_PARTICLE_SIGNAL_);
-                pipe.send(buffer,PIC::ParticleBuffer::ParticleDataLength);
-
-                NextParticle=PIC::ParticleBuffer::GetNext(Particle);
-                PIC::ParticleBuffer::DeleteParticle(Particle);
-                Particle=NextParticle;
-              }
-
-              sendNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle=-1;
-            }
-          }
-
-          pipe.send(_END_COMMUNICATION_SIGNAL_);
-        }
-
-
-      }
-      */
-
-//      void RecvNodeData(CMPI_channel *pipe,int DataSetTag,int From);
-      /*
-      void RecvNodeData(CMPI_channel *pipe,int DataSetTag,int From) {
-        int iCell,jCell,kCell;
-        long int LocalCellNumber;
-        PIC::Mesh::cDataCenterNode *cell=NULL;
-
-        #if DIM == 3
-        static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=_BLOCK_CELLS_Z_;
-        #elif DIM == 2
-        static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=1;
-        #elif DIM == 1
-        static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=1,kCellMax=1;
-        #else
-        exit(__LINE__,__FILE__,"Error: the value of the parameter is not recognized");
-        #endif
-
-        if (DataSetTag==_PIC_SUBDOMAIN_BOUNDARY_LAYER_SAMPLING_DATA_EXCHANGE_TAG_) {
-          for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
-            LocalCellNumber=getCenterNodeLocalNumber(iCell,jCell,kCell);
-            cell=GetCenterNode(LocalCellNumber);
-
-            pipe->recv(cell->associatedDataPointer,cell->totalAssociatedDataLength,From);
-          }
-
-        }
-        else exit(__LINE__,__FILE__,"Error: unknown option");
-      }
-      */
 
       //clean the sampling buffers
       void cleanDataBuffer() {
@@ -971,8 +913,13 @@ namespace PIC {
     void SetCellSamplingDataRequest();
 
     //return time step and the particle's weights
-    double GetLocalTimeStep(int,cDataBlockAMR*);
-    void SetLocalTimeStep(double,int,cDataBlockAMR*);
+    inline double GetLocalTimeStep(int spec,cDataBlockAMR* block) {
+      return *(spec+(double*)(cDataBlockAMR::LocalTimeStepOffset+block->GetAssociatedDataBufferPointer()));
+    }
+
+    inline void SetLocalTimeStep(double dt,int spec,cDataBlockAMR* block) {
+      *(spec+(double*)(cDataBlockAMR::LocalTimeStepOffset+block->GetAssociatedDataBufferPointer()))=dt;
+    }
 
     double GetLocalParticleWeight(int,cDataBlockAMR*);
     void SetLocalParticleWeight(double,int,cDataBlockAMR*);
@@ -992,7 +939,7 @@ namespace PIC {
     #elif DIM == 2
     extern cMeshAMR2d<cDataCornerNode,cDataCenterNode,cDataBlockAMR > mesh;
     #else
-    exit(__LINE__,__FILE__,"Not implemented yet");
+    extern cMeshAMR1d<cDataCornerNode,cDataCenterNode,cDataBlockAMR > mesh;
     #endif
 
 
@@ -1004,6 +951,69 @@ namespace PIC {
 
   }
 
+  //sampling functions
+  namespace Sampling {
+
+    void Sampling();
+
+    //sample the particle data
+    inline void SampleParticleData(char* ParticleData,char *SamplingBuffer,PIC::Mesh::cDataBlockAMR *block,PIC::Mesh::cDataCenterNode *cell,double TimeStepFraction) {
+      double Speed2,*v,LocalParticleWeight,v2;
+      int s,idim;
+      double *sampledVelocityOffset,*sampledVelocity2Offset;
+
+
+      Speed2=0.0;
+
+      s=PIC::ParticleBuffer::GetI((PIC::ParticleBuffer::byte*)ParticleData);
+      v=PIC::ParticleBuffer::GetV((PIC::ParticleBuffer::byte*)ParticleData);
+
+      LocalParticleWeight=block->GetLocalParticleWeight(s);
+      LocalParticleWeight*=TimeStepFraction*PIC::ParticleBuffer::GetIndividualStatWeightCorrection((PIC::ParticleBuffer::byte*)ParticleData);
+
+      *(s+(double*)(SamplingBuffer+PIC::Mesh::sampledParticleWeghtRelativeOffset))+=LocalParticleWeight;
+      *(s+(double*)(SamplingBuffer+PIC::Mesh::sampledParticleNumberRelativeOffset))+=1;
+      *(s+(double*)(SamplingBuffer+PIC::Mesh::sampledParticleNumberDensityRelativeOffset))+=LocalParticleWeight/cell->Measure;
+
+
+      sampledVelocityOffset=3*s+(double*)(SamplingBuffer+PIC::Mesh::sampledParticleVelocityRelativeOffset);
+      sampledVelocity2Offset=3*s+(double*)(SamplingBuffer+PIC::Mesh::sampledParticleVelocity2RelativeOffset);
+
+      for (idim=0;idim<3;idim++) {
+        v2=v[idim]*v[idim];
+        Speed2+=v2;
+
+        *(idim+sampledVelocityOffset)+=v[idim]*LocalParticleWeight;
+        *(idim+sampledVelocity2Offset)+=v2*LocalParticleWeight;
+      }
+
+      *(s+(double*)(SamplingBuffer+PIC::Mesh::sampledParticleSpeedRelativeOffset))+=sqrt(Speed2)*LocalParticleWeight;
+
+    }
+  }
+
+  namespace IndividualModelSampling {
+
+    //reserve memory to store sampling data
+    typedef int (*fRequestSamplingData)(int);
+    extern vector<fRequestSamplingData> RequestSamplingData;
+
+    //the list of user defined sampling procedures
+    typedef void (*fSamplingProcedure)();
+    extern vector<fSamplingProcedure> SamplingProcedure;
+
+    //print the variable list
+    typedef void (*fPrintVariableList)(FILE* fout,int nDataSet);
+    extern vector<fPrintVariableList> PrintVariableList;
+
+    //interpolate center node data
+    typedef void (*fInterpolateCenterNodeData)(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode* cell);
+    extern vector<fInterpolateCenterNodeData> InterpolateCenterNodeData;
+
+    //print the sampled node data
+    typedef void (*fPrintSampledData)(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode* cell);
+    extern vector<fPrintSampledData> PrintSampledData;
+  }
 
   //sample and output the particle's distribution function
   namespace DistributionFunctionSample {
@@ -1044,8 +1054,17 @@ namespace PIC {
 
   //procedures for distribution of particle velocities
   namespace Distribution {
+
+    //the macroses defined the modes for generation of the particle parameters
+    //_PIC_DISTRIBUTION_WEIGHT_CORRECTION_MODE__NO_WEIGHT_CORRECTION_ -> the particle properties are generated with the requested distributuion, no weight correction are needed
+    //_PIC_DISTRIBUTION_WEIGHT_CORRECTION_MODE__INDIVIDUAL_PARTICLE_WEIGHT_ -> to recover the requasted distribution, a particle weght correction is needed
+
+    #define _PIC_DISTRIBUTION_WEIGHT_CORRECTION_MODE__NO_WEIGHT_CORRECTION_         0
+    #define _PIC_DISTRIBUTION_WEIGHT_CORRECTION_MODE__INDIVIDUAL_PARTICLE_WEIGHT_   1
+
+
     void MaxwellianVelocityDistribution(double *v,double *BulkFlowVelocity,double Temp,int spec);
-    void InjectMaxwellianDistribution(double *v,double *BulkFlowVelocity,double Temp,double *ExternalNormal,int spec);
+    double InjectMaxwellianDistribution(double *v,double *BulkFlowVelocity,double Temp,double *ExternalNormal,int spec,int WeightCorrectionMode=_PIC_DISTRIBUTION_WEIGHT_CORRECTION_MODE__NO_WEIGHT_CORRECTION_);
   }
 
 
@@ -1165,6 +1184,11 @@ namespace PIC {
     int UniformWeight_UniformTimeStep_noForce_TraceTrajectory(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
     int UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,bool FirstBoundaryFlag);
 
+    int UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+    int UniformWeight_UniformTimeStep_SecondOrder(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+    int UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,bool FirstBoundaryFlag);
+
+
     void TotalParticleAcceleration_default(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
   }
 
@@ -1207,6 +1231,28 @@ namespace PIC {
 
      //exchenge paricles between iterations
      void ExchangeParticleData();
+
+     //Latency of the run
+     extern double Latency;
+  }
+
+  namespace Alarm {
+    //finish the execution of the code at a particular value of the walltime
+    extern bool AlarmInitialized,WallTimeExeedsLimit;
+    extern double StartTime;
+    extern double RequestedExecutionWallTime;
+
+    inline void SetAlarm(double requestedWallTime) {
+      AlarmInitialized=true;
+      StartTime=MPI_Wtime();
+      RequestedExecutionWallTime=requestedWallTime;
+    }
+
+    inline void FinishExecution() {
+      MPI_Finalize();
+      printf("!!!!! Execution is finished by the alarm (PIC::Alarm) !!!!!!\n");
+      exit(__LINE__,__FILE__,"!!!!! Execution is finished by the alarm !!!!!!");
+    }
   }
 
   namespace ICES {
@@ -1215,6 +1261,9 @@ namespace PIC {
 
      void Init();
      void SetLocationICES(const char*);
+
+     //the total number of bytes used to store the ICES data vector; the offset of the data associated with the ICES data vector
+     extern int TotalAssociatedDataLength,AssociatedDataOffset;
 
      //the offsets for the plasma parameters loaded with ICES
      extern int ElectricFieldOffset,MagneticFieldOffset,PlasmaPressureOffset,PlasmaNumberDensityOffset,PlasmaTemperatureOffset,PlasmaBulkVelocityOffset;
@@ -1349,6 +1398,37 @@ namespace PIC {
       }
 
     }
+
+    namespace GenericParticleTranformation {
+      //contains functions that are used to describe transformations (changing of internal parameters of a particle) that are not due to chemical reactions
+      //dt <- can be limited by the function
+      typedef int (*fTransformationIndicator)(double *x,double *v,int spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double &dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+      extern fTransformationIndicator *TransformationIndicator;
+
+      typedef int (*fTransformationProcessor)(double *xInit,double *xFinal,double *v,int spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+      extern fTransformationProcessor *TransformationProcessor;
+
+      inline void Init() {
+        TransformationIndicator=new fTransformationIndicator[PIC::nTotalSpecies];
+        TransformationProcessor=new fTransformationProcessor[PIC::nTotalSpecies];
+
+        //only one transformation model can be used!!!
+        if (_PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_) exit(__LINE__,__FILE__,"Error: only one particle transformation model can be used");
+
+        for (int s=0;s<PIC::nTotalSpecies;s++) TransformationIndicator[s]=NULL,TransformationProcessor[s]=NULL;
+      }
+
+      inline void SetSpeciesModel(fTransformationIndicator Indicator, fTransformationProcessor Processor,int spec) {
+         if (TransformationIndicator==NULL) Init();
+
+         TransformationIndicator[spec]=Indicator;
+         TransformationProcessor[spec]=Processor;
+      }
+
+      #define _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_       0
+      #define _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_  1
+      #define _GENERIC_PARTICLE_TRANSFORMATION_CODE__PARTICLE_REMOVED_        2
+    }
   }
 
   namespace BC {
@@ -1456,9 +1536,155 @@ namespace PIC {
         typedef void (*fSampleParticleData)(long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
         void SampleDefaultParticleData(long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
         extern fSampleParticleData SampleParticleData;
-
-
       }
+
+      namespace Circle {
+        extern int completedCellSampleDataPointerOffset,collectingCellSampleDataPointerOffset;
+        extern int sampledFluxDownRelativeOffset,sampledFluxUpRelativeOffset;
+        extern int sampledMeanVelocityDownRelativeOffset,sampledMeanVelocityUpRelativeOffset;
+        extern int sampledMeanEnergyDownRelativeOffset,sampledMeanEnergyUpRelativeOffset;
+        extern int sampledSurfaceNumberDensityRelativeOffset;
+
+        extern long int TotalSampleSetLength;
+        extern long int *SpeciesSampleDataOffset;
+        extern long int *SpeciesSampleUserDefinedDataOffset;
+        extern long int TotalSurfaceElementNumber;
+
+        extern bool UserDefinedSamplingProcedureFlag;
+
+
+        extern cAMRheap<cInternalCircleData> InternalCircles;
+
+        //default sampling:
+        //1. particle flux Down/Up
+        //2. mean particles' velocity Down/Up
+        //3. mean particles' energy Down/Up
+        //4. surface number density
+
+        void Init();
+        void Init(long int *RequestedSamplingSetDataLength,long int *UserDefinedSampleDataRelativeOffset);
+
+        cInternalBoundaryConditionsDescriptor RegisterInternalCircle();
+        double* GetCompletedSamplingBuffer(cInternalBoundaryConditionsDescriptor);
+        double* GetCollectingSamplingBuffer(cInternalBoundaryConditionsDescriptor);
+
+        //the offset of the sampling data for a particular specie
+        int completeSpecieSamplingDataOffset(int spec,long int SurfaceElement);
+        int collectingSpecieSamplingDataOffset(int spec,long int SurfaceElement);
+        int SurfaceElementSamplingSetLength();
+        void switchSamplingBuffers();
+
+        //print the 'USER DEFINED' surface data
+        typedef void (*fPrintVariableList)(FILE*);
+        extern fPrintVariableList PrintUserDefinedVariableList;
+
+        typedef void (*fPrintTitle)(FILE*);
+        extern fPrintTitle PrintUserDefinedTitle;
+
+        typedef void (*fPrintDataStateVector)(FILE* fout,long int nPolarPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalCircleData *Circle,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads);
+        extern fPrintDataStateVector PrintUserDefinedDataStateVector;
+
+        //print default surface data (3D)
+        void PrintDefaultVariableList(FILE*);
+        void PrintDefaultTitle(FILE*);
+        void PrintDefaultDataStateVector(FILE* fout,long int nPolarPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalCircleData *Circle,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads);
+
+        //clear the sampling buffers
+        void flushCollectingSamplingBuffer(cInternalCircleData* Sphere);
+
+        //particle-spherical surface interaction
+        typedef int (*fParticleCircleInteraction)(int spec,long int ptr,double *x,double *v,double &dtTotal, void* NodeDataPointer,void *SphereDataPointer);
+        int ParticleCircleInteraction_SpecularReflection(int spec,long int ptr,double *x,double *v,double &dtTotal, void* NodeDataPointer,void *SphereDataPointer);
+
+
+        //Sampling of the particles data
+        typedef void (*fSampleParticleData)(long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
+        void SampleDefaultParticleData(long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
+        extern fSampleParticleData SampleParticleData;
+      }
+
+      namespace Sphere_1D {
+        extern int completedCellSampleDataPointerOffset,collectingCellSampleDataPointerOffset;
+        extern int sampledFluxDownRelativeOffset,sampledFluxUpRelativeOffset;
+        extern int sampledMeanVelocityDownRelativeOffset,sampledMeanVelocityUpRelativeOffset;
+        extern int sampledMeanEnergyDownRelativeOffset,sampledMeanEnergyUpRelativeOffset;
+        extern int sampledSurfaceNumberDensityRelativeOffset;
+
+        extern long int TotalSampleSetLength;
+        extern long int *SpeciesSampleDataOffset;
+        extern long int *SpeciesSampleUserDefinedDataOffset;
+        extern long int TotalSurfaceElementNumber;
+
+        extern bool UserDefinedSamplingProcedureFlag;
+
+
+        extern cAMRheap<cInternalSphere1DData> InternalSpheres;
+
+        //default sampling:
+        //1. particle flux Down/Up
+        //2. mean particles' velocity Down/Up
+        //3. mean particles' energy Down/Up
+        //4. surface number density
+
+        //the spherical body as a internal body
+        /*
+        class cSurfaceDataSphere  {
+        public:
+          unsigned int faceat;
+          double *SamplingBuffer;
+
+          cSurfaceDataSphere() {
+            faceat=-1,SamplingBuffer=NULL;
+          }
+        };
+        */
+
+
+
+
+        void Init();
+        void Init(long int *RequestedSamplingSetDataLength,long int *UserDefinedSampleDataRelativeOffset);
+
+        cInternalBoundaryConditionsDescriptor RegisterInternalSphere();
+//        cSurfaceDataSphere* GetSphereSurfaceData(cInternalBoundaryConditionsDescriptor);
+        double* GetCompletedSamplingBuffer(cInternalBoundaryConditionsDescriptor);
+        double* GetCollectingSamplingBuffer(cInternalBoundaryConditionsDescriptor);
+
+        //the offset of the sampling data for a particular specie
+        int completeSpecieSamplingDataOffset(int spec,long int SurfaceElement);
+        int collectingSpecieSamplingDataOffset(int spec,long int SurfaceElement);
+        int SurfaceElementSamplingSetLength();
+        void switchSamplingBuffers();
+
+        //print the 'USER DEFINED' surface data
+        typedef void (*fPrintVariableList)(FILE*);
+        extern fPrintVariableList PrintUserDefinedVariableList;
+
+        typedef void (*fPrintTitle)(FILE*);
+        extern fPrintTitle PrintUserDefinedTitle;
+
+        typedef void (*fPrintDataStateVector)(FILE* fout,cInternalSphere1DData *Sphere,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads);
+        extern fPrintDataStateVector PrintUserDefinedDataStateVector;
+
+        //print default surface data
+        void PrintDefaultVariableList(FILE*);
+        void PrintDefaultTitle(FILE*);
+        void PrintDefaultDataStateVector(FILE* fout,cInternalSphere1DData *Sphere,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads);
+
+        //clear the sampling buffers
+        void flushCollectingSamplingBuffer(cInternalSphericalData* Sphere);
+
+        //particle-spherical surface interaction
+        typedef int (*fParticleSphereInteraction)(int spec,long int ptr,double *x,double *v,double &dtTotal, void* NodeDataPointer,void *SphereDataPointer);
+        int ParticleSphereInteraction_SpecularReflection(int spec,long int ptr,double *x,double *v,double &dtTotal, void* NodeDataPointer,void *SphereDataPointer);
+
+
+        //Sampling of the particles data
+        typedef void (*fSampleParticleData)(long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
+        void SampleDefaultParticleData(long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
+        extern fSampleParticleData SampleParticleData;
+      }
+
 
     }
 

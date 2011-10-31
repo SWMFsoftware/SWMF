@@ -9,6 +9,7 @@
 double* PIC::MolecularData::MolMass=NULL;
 double* PIC::MolecularData::ElectricCharge=NULL;
 char** PIC::MolecularData::ChemTable=NULL;
+char** PIC::MolecularData::LoadingSpeciesList=NULL;
 int PIC::MolecularData::MolModelCode=_HS_MOL_MODEL_;
 bool PIC::MolecularData::ExternalSpeciesModelingFlag=_EXTERNAL_SPECIES_OFF_;
 bool PIC::MolecularData::UnimolecularReactionFlag=_UNIMOLECULAR_REACTIONS_OFF_;
