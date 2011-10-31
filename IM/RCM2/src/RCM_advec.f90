@@ -944,19 +944,19 @@ CONTAINS
                 end do
                 RCM_HpT(i,j) = vm(i,j)*RCM_Hppvgamma(i,j)/SUM(eeta(i,j,:))
                 RCM_OpT(i,j) = vm(i,j)*RCM_Oppvgamma(i,j)/SUM(eeta(i,j,:))           
-                MHD_HpP(i,j) = densityHp(i,j)*1.0E+6*temperatureHp(i,j)*1.6E-19 &
-                     / 1.0E-9 ![nPa]
-                MHD_OpP(i,j) = densityOp(i,j)*1.0E+6*temperatureOp(i,j)*1.6E-19 &
-                     / 1.0E-9 ![nPa]            
                 do k=1,kcsize
                    if (alamc(k) <= 0) cycle
                    RCM_n(i,j) = RCM_n(i,j) + eeta(i,j,k)*vm(i,j)**1.5/6.37E+21
                    RCM_T(i,j) = RCM_T(i,j) + eeta(i,j,k)
                 end do
                 RCM_T(i,j) = vm(i,j)*RCM_pvgamma(i,j)/SUM(eeta(i,j,:))
-                MHD_P(i,j) = density(i,j)*1.0E+6*temperature(i,j)*1.6E-19 &
-                     / 1.0E-9 ![nPa]          
              end if
+             MHD_HpP(i,j) = densityHp(i,j)*1.0E+6*temperatureHp(i,j)*1.6E-19 &
+                  / 1.0E-9 ![nPa]
+             MHD_OpP(i,j) = densityOp(i,j)*1.0E+6*temperatureOp(i,j)*1.6E-19 &
+                  / 1.0E-9 ![nPa]            
+             MHD_P(i,j) = density(i,j)*1.0E+6*temperature(i,j)*1.6E-19 &
+                  / 1.0E-9 ![nPa]          
           end do; end do
        end if
 
