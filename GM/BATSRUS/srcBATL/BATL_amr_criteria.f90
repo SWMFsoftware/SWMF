@@ -44,7 +44,7 @@ module BATL_amr_criteria
   ! refine/coarsen them as much as we can, this is the default behavior for
   ! amr by percentage.
   logical,public :: &
-       DoSortAmrCrit = .true.,&
+       DoSortAmrCrit = .false.,&
        DoSoftAmrCrit = .false. ,&
        DoAutoAmr     = .false.
 
