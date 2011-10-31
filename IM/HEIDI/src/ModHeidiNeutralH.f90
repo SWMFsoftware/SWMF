@@ -15,7 +15,7 @@ contains
 
     integer, intent(in)  :: nPoint                 ! number of points along the field line
     real   , intent(in)  :: RadialDistance_I(nPoint), L
-    real,    intent(out) :: RhoH_III(nPoint,nR,nT)
+    real,    intent(inout):: RhoH_III(nPoint,nR,nT)
     real                 :: RhoH_I(nPoint)          !interpolated density
     integer, parameter   :: nUniform =100           !number of points on new refined grid
     integer, parameter   :: nRairden = 82           !number of radial point in the Rairden hydrogen file
