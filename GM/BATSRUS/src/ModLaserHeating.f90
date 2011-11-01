@@ -878,8 +878,8 @@ contains
     end select
 
     !Normalize amplitudes:
-    Amplitude_I(1:nRayTotal) = Amplitude_I(1:nRayTotal)/&
-         sum(Amplitude_I(1:nRayTotal))
+    Amplitude_I(1:nRayTotal) = Amplitude_I(1:nRayTotal) / sum(Amplitude_I(:))
+
   end subroutine get_rays
 
   !===========================================================================
@@ -892,7 +892,7 @@ contains
 
     real:: CosTheta, SinTheta,  yCrCentral, yPlaneCentral, yPlane
     real:: rDistance, BeamAmplitude
-    integer:: iRay, iBeam, iRayStart, iRayStop
+    integer:: iRay, iBeam, iRayStart, iRayStop, nRayOutside, nRayAll
     !--------------------------------------------------------------------------
 
     if(TypeGeometry/='rz')call CON_stop(&
@@ -901,13 +901,22 @@ contains
     ! A computational wedge of one radian in the ignorable direction is used
     IrradianceSi = IrradianceSi*(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
 
-    ! Allocation is excessive, nRayTotal is not yet known:
-
-    allocate(  XyzRay_DI(3, nBeam * (2 * nRayPerBeam +1)))
-    allocate(SLopeRay_DI(3, nBeam * (2 * nRayPerBeam +1)))
-    allocate(Amplitude_I(nBeam * (2 * nRayPerBeam +1)))
+    if(DoLaserRayTest)then
+       iRayStart = 1
+       iRayStop  = 1
+    else
+       iRayStart =-nRayPerBeam
+       iRayStop  = nRayPerBeam
+    end if
 
     nRayTotal = 0
+    nRayOutside = nBeam*(iRayStop - iRayStart + 1) + 1
+
+    ! Allocation is excessive, nRayTotal is not yet known:
+    allocate(  XyzRay_DI(3, nBeam * (iRayStop - iRayStart + 1)))
+    allocate(SLopeRay_DI(3, nBeam * (iRayStop - iRayStart + 1)))
+    allocate(Amplitude_I(nBeam * (iRayStop - iRayStart + 1)))
+
     do iBeam = 1, nBeam
        cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
 
@@ -923,14 +932,6 @@ contains
 
        BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
 
-       if(DoLaserRayTest)then
-          iRayStart = 1
-          iRayStop  = 1
-       else
-          iRayStart =-nRayPerBeam
-          iRayStop  = nRayPerBeam
-       end if
-
        do iRay = iRayStart, iRayStop
           !We neglect exp(-2.25)\approx0.1 and chose the beam margin
           !to be at 1.5 rBeam from the central ray:
@@ -939,18 +940,25 @@ contains
           yPlane = yPlaneCentral + rDistance/CosTheta
 
           !Do not include rays with the starting point 
-          !being otside the computational domain:
-          if(abs(yPlane) >= y2)CYCLE
-          nRayTotal = nRayTotal + 1
+          !being outside the computational domain:
+          if(abs(yPlane) >= y2)then
+             nRayOutside = nRayOutside - 1
+             nRayAll = nRayOutside
+          else
+             nRayTotal = nRayTotal + 1
+             nRayAll = nRayTotal
+          end if
 
           if(DoLaserRayTest)then
-             Amplitude_I(nRayTotal) = BeamAmplitude
+             Amplitude_I(nRayAll) = BeamAmplitude
           else
              ! supergaussian spatial profile
-             Amplitude_I(nRayTotal) = BeamAmplitude &
+             Amplitude_I(nRayAll) = BeamAmplitude &
                   *exp(-(abs(rDistance)/rBeam)**SuperGaussianOrder) &
                   *abs(yCrCentral + rDistance/CosTheta)
           end if
+
+          if(abs(yPlane) >= y2) CYCLE
 
           if(yPlane > 0)then
              XyzRay_DI(:,nRayTotal) = (/xPlane, yPlane, 0.0/)
