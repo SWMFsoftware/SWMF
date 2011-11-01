@@ -66,7 +66,10 @@ module ModUser
   ! Variables used by the user problem AdvectSphere                           
   real      :: pBackgrndIo, uBackgrndIo, FlowAngle ! in XY plane         
   real      :: NumDensBackgrndIo, NumDensMaxIo
-  real      :: rSphere, rSphereIn, RhoBackgrndNo, RhoMaxNo, UxNo, UyNo
+  real      :: rSphere, rSphereIo, RhoBackgrndNo, RhoMaxNo, UxNo, UyNo
+  real      :: xSphereCenterInitIo, xSphereCenterInit
+  real      :: ySphereCenterInitIo, ySphereCenterInit
+  real      :: zSphereCenterInitIo, zSphereCenterInit
   logical   :: DoCalcAnalytic = .false., DoInitSphere = .false.
 
   ! Enable user units of length in input file
@@ -152,8 +155,11 @@ contains
           call read_var('pBackgrndIo',       pBackgrndIo      )
           call read_var('uBackgrndIo',       uBackgrndIo      )
           call read_var('FlowAngle',         FlowAngle        )
-          call read_var('rSphereIn',         rSphereIn        )
+          call read_var('rSphereIo',         rSphereIo        )
           call read_var('NumDensMaxIo',      NumDensMaxIo     )
+          call read_var('xSphereCenterInitIo', xSphereCenterInitIo)
+          call read_var('ySphereCenterInitIo', ySphereCenterInitIo)
+          call read_var('zSphereCenterInitIo', zSphereCenterInitIo)
 
        case('#ANALYTIC')
           call read_var('DoCalcAnalytic', DoCalcAnalytic)
@@ -183,7 +189,9 @@ contains
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
 
     real,dimension(nVar):: State_V,KxTemp_V,KyTemp_V
-    real                :: SinSlope, CosSlope, rCell, Input2SiUnitX, OmegaSun
+    real                :: SinSlope, CosSlope, Input2SiUnitX, OmegaSun
+    real                :: rFromSphereCenter, rSphereCenterInit
+    real                :: xCell, yCell, zCell
     integer             :: i, j, k, iBlock
 
     real :: RhoLeft, RhoRight, pLeft
@@ -255,22 +263,40 @@ contains
        RhoMaxNo       = NumDensMaxIo*Io2Si_V(UnitN_)* &
             cProtonMass*Si2No_V(UnitRho_)
        if (UseUserInputUnitX) then
-          ! Convert rSphereIn to normalized units (needed for OH)
-          rSphere = rSphereIn*Input2SiUnitX*Si2No_V(UnitX_)
+          rSphere = rSphereIo*Input2SiUnitX*Si2No_V(UnitX_)
+          xSphereCenterInit = xSphereCenterInitIo* &
+               Input2SiUnitX*Si2No_V(UnitX_)
+          ySphereCenterInit = ySphereCenterInitIo* &
+               Input2SiUnitX*Si2No_V(UnitX_)
+          zSphereCenterInit = zSphereCenterInitIo* &
+               Input2SiUnitX*Si2No_V(UnitX_)
        else
-          rSphere = rSphereIn
+          rSphere = rSphereIo
+          xSphereCenterInit = xSphereCenterInitIo
+          ySphereCenterInit = ySphereCenterInitIo
+          zSphereCenterInit = zSphereCenterInitIo
        end if
+       rSphereCenterInit = sqrt( &
+            xSphereCenterInit**2 + &
+            ySphereCenterInit**2 + &
+            zSphereCenterInit**2)
        !\                                                                      
        ! Start filling in cells (including ghost cells)                       
        !/                          
        if (DoInitSphere) then
           do k= 1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn
-             rCell = R_BLK(i,j,k,iBlock)
-             if (rCell <= rSphere)then
+             xCell = x_BLK(i,j,k,iBlock)
+             yCell = y_BLK(i,j,k,iBlock)
+             zCell = z_BLK(i,j,k,iBlock)
+             rFromSphereCenter = sqrt((xCell - xSphereCenterInit)**2 + &
+                                      (yCell - ySphereCenterInit)**2 + &
+                                      (zCell - zSphereCenterInit)**2)
+             if (rFromSphereCenter <= rSphere)then
                 ! inside the sphere                                           
                 ! State_VGB(rho_,i,j,k,iBlock) = RhoMaxNo ! for tophat
                 State_VGB(rho_,i,j,k,iBlock) = RhoBackgrndNo + &
-                     (RhoMaxNo - RhoBackgrndNo)*(cos(0.5*cPi*rCell/rSphere))**2
+                     (RhoMaxNo - RhoBackgrndNo)* &
+                     (cos(0.5*cPi*rFromSphereCenter/rSphere))**2
              else
                 ! in background flow                                         
                 State_VGB(rho_,i,j,k,iBlock) = RhoBackgrndNo
@@ -498,7 +524,8 @@ contains
       real,dimension(-1:nI+2,-1:nJ+2,-1:nK+2),intent(out)::RhoExact_G,&
            RhoError_G
       real    :: x, y, z, t
-      real    :: rFromCenter, xSphereCenter, ySphereCenter, rSphereCenter
+      real    :: xSphereCenter, ySphereCenter, zSphereCenter
+      real    :: rFromCenter, rSphereCenter
       real    :: PhiSphereCenterInertial, PhiSphereCenterRotating
       real    :: OmegaSun, phi
       integer :: i, j, k
@@ -515,12 +542,18 @@ contains
          z = z_BLK(i,j,k,iBlock)
 
          ! Find current location of sphere center
-         xSphereCenter = UxNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
-         ySphereCenter = UyNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
+         xSphereCenter = xSphereCenterInit + &
+              UxNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
+         ySphereCenter = ySphereCenterInit + &
+              UyNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
+         zSphereCenter = zSphereCenterInit 
 
          ! transform if rotating frame
          if (TypeCoordSystem =='HGC') then       
-            rSphereCenter = sqrt(xSphereCenter**2 + ySphereCenter**2)
+            rSphereCenter = sqrt( &
+                 xSphereCenter**2 + &
+                 ySphereCenter**2 + &
+                 zSphereCenter**2)
             PhiSphereCenterInertial = atan2(ySphereCenter, xSphereCenter)
             PhiSphereCenterRotating = PhiSphereCenterInertial - phi
 
