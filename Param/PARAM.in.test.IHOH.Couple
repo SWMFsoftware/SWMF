@@ -67,6 +67,9 @@ T		DoInitSphere
 0.0		FlowAngle (Deg, in xy plane from X )
 500.0		rSphere  (Rs)
 3.5e3		NumDensSphereIo
+0.0             xSphereCenterInitIo (Rs)
+0.0             ySphereCenterInitIo (Rs)
+0.0             zSphereCenterInitIo (Rs)
 
 #ANALYTIC
 T
@@ -195,6 +198,9 @@ F		DoInitSphere
 0.0		FlowAngle (Deg, in xy plane from X )
 500.0		rSphere (in solar radii!!)
 3.5e3		NumDensSphereIo
+0.0             xSphereCenterInitIo (Rs)
+0.0             ySphereCenterInitIo (Rs)
+0.0             zSphereCenterInitIo (Rs)
 
 #ANALYTIC
 T
