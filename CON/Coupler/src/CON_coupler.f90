@@ -554,10 +554,9 @@ contains
     integer      :: nMaterialSource, nMaterialTarget, nMaterialCouple      
     logical      :: DoTest, DoTestMe
 
-    character(len=*), parameter    :: NameSub = NameMod//'::set_couple_var_info'
+    character(len=*), parameter    :: NameSub =NameMod//'::set_couple_var_info'
     !------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-    if (DoTest .and. i_proc() == 0 ) write(*,*) NameSub, ' started.'
 
     iCompSourceCouple = iCompSource
     iCompTargetCouple = iCompTarget
@@ -612,7 +611,8 @@ contains
     NameVarTarget_V(1:nVarTarget) = NameList_V(1:nVarTarget)
 
     ! process source variable names                
-    if (DoTest) then
+    if (DoTestMe) then
+       write(*,*) ' '
        write(*,*) NameComp_I(iCompSource), ':  variable names for I/O:'
        write(*,*) trim(NameVarSource)
     end if
@@ -620,14 +620,15 @@ contains
          nDensitySource, nSpeedSource, nPSource, nPparSource, &
          nWaveSource, nMaterialSource)
     call join_string(nVarSource, NameVarSource_V,NameVarSource)
-    if(DoTest) then
+    if(DoTestMe) then
+       write(*,*) ' '
        write(*,*) NameComp_I(iCompSource), ':  variable names used by coupler:'
        write(*,*) trim(NameVarSource)
-       write(*,*) ' '
     end if
 
     ! process target variable names       
-    if(DoTest) then
+    if(DoTestMe) then
+       write(*,*) ' '
        write(*,*) NameComp_I(iCompTarget), ': variable names for I/O:'
        write(*,*) trim(NameVarTarget)
     end if
@@ -635,10 +636,10 @@ contains
          nDensityTarget, nSpeedTarget, nPTarget, nPparTarget, &
          nWaveTarget, nMaterialTarget)
     call join_string(nVarTarget, NameVarTarget_V,NameVarTarget)
-    if (DoTest) then
+    if (DoTestMe) then
+       write(*,*) ' '
        write(*,*) NameComp_I(iCompTarget), ': variabale names used by coupler:'
        write(*,*) trim(NameVarTarget)
-       write(*,*) ' '
     end if
 
     !\                                                          
@@ -861,11 +862,10 @@ contains
     nVarCouple_CC(iCompTarget,iCompSource) = nVarCouple
 
 
-    if( i_proc() ==0) then !<<<<<<<< change to if(DoTest) ??                  
+    if( i_proc() ==0 ) then
        write(*,*) '---------------------------------------------'
        write(*,*) NameSub,':'
-       write(*,*) 'Source: ', NameComp_I(iCompSource)
-       write(*,*) 'Target: ', NameComp_I(iCompTarget)
+       write(*,*) 'Coupling ', NameComp_I(iCompSource),' to ', NameComp_I(iCompTarget)
        write(*,*) 'nDensity(Source/Target/Couple):'
        write(*,*) nDensitySource, nDensityTarget,nDensityCouple
        write(*,*) 'nSpeed(Source/Target/Couple):'
@@ -875,9 +875,6 @@ contains
        write(*,*) 'nPpar(Source/Target/Couple):'
        write(*,*) nPparSource, nPparTarget,nPparCouple
        write(*,*) '---------------------------------------------'
-       write(*,*) NameSub,' for:'
-       write(*,*) 'Source: ',         NameComp_I(iCompSource)
-       write(*,*) 'Target: ',         NameComp_I(iCompTarget)
        write(*,*) 'Coupling flags:'
        write(*,*) 'Magnetic field: ', DoCoupleVar_V(Bfield_)
        write(*,*) 'Pe: ',             DoCoupleVar_V(ElectronPressure_)
@@ -886,7 +883,9 @@ contains
        write(*,*) 'Neutrals: ',       DoCoupleVar_V(MultiFluid_)
        write(*,*) 'Ions: ',           DoCoupleVar_V(MultiSpecie_)
        write(*,*) '---------------------------------------------'
-       write(*,*) 'Coupled variable indices in source component:'
+    end if
+    if(DoTestMe) then
+       write(*,*) 'Coupled variable indices in buffer grid:'
        write(*,*) 'Rho: ',      iVar_V(RhoCouple_)
        write(*,*) 'RhoUx: ',    iVar_V(RhoUxCouple_)
        write(*,*) 'RhoUz: ',    iVar_V(RhoUzCouple_)
