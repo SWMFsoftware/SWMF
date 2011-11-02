@@ -447,8 +447,7 @@ end subroutine BATS_setup
 
     if(UseIM)call apply_im_pressure         !^CFG IF RCM
 
-    if(UseAnisoPressure .and. (TauWaveParticle > -1.0 &
-         .or. TauInstability > -1.0)) call fix_anisotropy
+    if(UseAnisoPressure)call fix_anisotropy
 
     if(UseIE)call apply_iono_velocity
 
