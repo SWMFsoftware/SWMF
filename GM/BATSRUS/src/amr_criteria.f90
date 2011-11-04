@@ -8,6 +8,7 @@ subroutine amr_criteria(ref_criteria)
   use ModPhysics,  ONLY:UseSunEarth
   use ModConst
   use ModUser, ONLY: user_amr_criteria
+  use ModCurrent, ONLY: get_current
   implicit none
 
   real, intent(out) :: ref_criteria(4,nBLK)
@@ -20,6 +21,8 @@ subroutine amr_criteria(ref_criteria)
 
   real, dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn) :: outVAR,&
        Rho_G, RhoUx_G, RhoUy_G, RhoUz_G, Bx_G, By_G, Bz_G, P_G
+
+  real, dimension(3) :: Current_D
 
   ! initialize all criteria to zero
   ref_criteria = cZero
@@ -36,7 +39,7 @@ subroutine amr_criteria(ref_criteria)
      else
         RcritAMR = cZero
      end if
-    
+
      do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
         Rho_G(i,j,k)  = State_VGB(rho_,i,j,k,iBLK)
         RhoUx_G(i,j,k)= State_VGB(rhoUx_,i,j,k,iBLK)
@@ -86,31 +89,31 @@ subroutine amr_criteria(ref_criteria)
            if(UseB0)then
               outVAR = sqrt( &
                    ( -((RhoUy_G/Rho_G)* &
-                      (Bz_G+B0_DGB(z_,:,:,:,iBLK)) - &
-                      (RhoUz_G/Rho_G)* &
-                      (By_G+B0_DGB(y_,:,:,:,iBLK))) )**2 + &
+                   (Bz_G+B0_DGB(z_,:,:,:,iBLK)) - &
+                   (RhoUz_G/Rho_G)* &
+                   (By_G+B0_DGB(y_,:,:,:,iBLK))) )**2 + &
                    ( -((RhoUz_G/Rho_G)* &
-                      (Bx_G+B0_DGB(x_,:,:,:,iBLK)) - &
-                      (RhoUx_G/Rho_G)* &
-                      (Bz_G+B0_DGB(z_,:,:,:,iBLK))) )**2 + &
+                   (Bx_G+B0_DGB(x_,:,:,:,iBLK)) - &
+                   (RhoUx_G/Rho_G)* &
+                   (Bz_G+B0_DGB(z_,:,:,:,iBLK))) )**2 + &
                    ( -((RhoUx_G/Rho_G)* &
-                      (By_G+B0_DGB(y_,:,:,:,iBLK)) - &
-                      (RhoUy_G/Rho_G)* &
-                      (Bx_G+B0_DGB(x_,:,:,:,iBLK))) )**2 )
+                   (By_G+B0_DGB(y_,:,:,:,iBLK)) - &
+                   (RhoUy_G/Rho_G)* &
+                   (Bx_G+B0_DGB(x_,:,:,:,iBLK))) )**2 )
            else
               outVAR = sqrt( &
                    ( -((RhoUy_G/Rho_G)* &
-                      Bz_G - &
-                      (RhoUz_G/Rho_G)* &
-                      By_G) )**2 + &
+                   Bz_G - &
+                   (RhoUz_G/Rho_G)* &
+                   By_G) )**2 + &
                    ( -((RhoUz_G/Rho_G)* &
-                      Bx_G - &
-                      (RhoUx_G/Rho_G)* &
-                      Bz_G) )**2 + &
+                   Bx_G - &
+                   (RhoUx_G/Rho_G)* &
+                   Bz_G) )**2 + &
                    ( -((RhoUx_G/Rho_G)* &
-                      By_G - &
-                      (RhoUy_G/Rho_G)* &
-                      Bx_G) )**2 )
+                   By_G - &
+                   (RhoUy_G/Rho_G)* &
+                   Bx_G) )**2 )
            end if
            call grad1D(1, iBLK, outVAR, gradX_VAR,gradY_VAR,gradZ_VAR, "none",0)
            ref_criteria(iCrit,iBLK) = maxval(ds2*sqrt( &
@@ -141,6 +144,23 @@ subroutine amr_criteria(ref_criteria)
                 (gradY_Bz(1:nI,1:nJ,1:nK)-gradZ_By(1:nI,1:nJ,1:nK))**2 + &
                 (gradZ_Bx(1:nI,1:nJ,1:nK)-gradX_Bz(1:nI,1:nJ,1:nK))**2 + &
                 (gradX_By(1:nI,1:nJ,1:nK)-gradY_Bx(1:nI,1:nJ,1:nK))**2))
+        case('J2')
+           ref_criteria(iCrit,iBLK) = 0.0
+           do k=1,nK; do j=1,nJ; do i=1,nI
+              call  get_current(i, j, k, iBLK, Current_D)
+              ref_criteria(iCrit,iBLK) = max(ref_criteria(iCrit,iBLK),&
+                   sum(Current_D**2))
+           end do;end do;end do
+!!$         call grad1D(1, iBLK, Bx_G, &
+!!$                gradX_Bx,gradY_Bx,gradZ_Bx,"none",Bx_)
+!!$           call grad1D(1, iBLK, By_G, &
+!!$                gradX_By,gradY_By,gradZ_By, "none",By_)
+!!$           call grad1D(1, iBLK, Bz_G, &
+!!$                gradX_Bz,gradY_Bz,gradZ_Bz, "none",Bz_)
+!!$           ref_criteria(iCrit,iBLK) = maxval(( &
+!!$                (gradY_Bz(1:nI,1:nJ,1:nK)-gradZ_By(1:nI,1:nJ,1:nK))**2 + &
+!!$                (gradZ_Bx(1:nI,1:nJ,1:nK)-gradX_Bz(1:nI,1:nJ,1:nK))**2 + &
+!!$                (gradX_By(1:nI,1:nJ,1:nK)-gradY_Bx(1:nI,1:nJ,1:nK))**2))
         case('divU','divu','divV','divv')
            ! Divergence of velocity.
            call grad1D(1, iBLK, RhoUx_G/Rho_G, &
@@ -149,7 +169,7 @@ subroutine amr_criteria(ref_criteria)
                 gradX_Uy,gradY_Uy,gradZ_Uy, "none",Uy_)
            call grad1D(1, iBLK, RhoUz_G/Rho_G, &
                 gradX_Uz,gradY_Uz,gradZ_Uz, "none",Uz_)
-    
+
            ref_criteria(iCrit,iBLK) = maxval(ds2*abs( &
                 gradX_Ux(1:nI,1:nJ,1:nK) + &
                 gradY_Uy(1:nI,1:nJ,1:nK) + &
@@ -199,7 +219,7 @@ subroutine amr_criteria(ref_criteria)
                  ref_criteria(iCrit,iBLK) = userCriteria
               else            
                  write(*,*) 'User refinement criteria not found in user_amr_criteria:', &
-                            RefineCrit(iCrit)
+                      RefineCrit(iCrit)
                  call stop_mpi('Fix user_amr_criteria or PARAM.in!')
               end if
            else
@@ -219,18 +239,18 @@ contains
     real, dimension(1:nI,1:nJ,1:nK) :: scrARR
 
     real, dimension(1:nI, 1:nJ, 1:nK) :: RhoOld_C, RhoUxOld_C, &
-       RhoUyOld_C, RhoUzOld_C, BxOld_C, ByOld_C, BzOld_C, POld_C    
+         RhoUyOld_C, RhoUzOld_C, BxOld_C, ByOld_C, BzOld_C, POld_C    
 
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        RhoOld_C(i,j,k)  = StateOld_VCB(rho_,i,j,k,iBLK)
-        RhoUxOld_C(i,j,k)= StateOld_VCB(rhoUx_,i,j,k,iBLK)
-        RhoUyOld_C(i,j,k)= StateOld_VCB(rhoUy_,i,j,k,iBLK)
-        RhoUzOld_C(i,j,k)= StateOld_VCB(rhoUz_,i,j,k,iBLK)
-        BxOld_C(i,j,k)   = StateOld_VCB(Bx_,i,j,k,iBLK)
-        ByOld_C(i,j,k)   = StateOld_VCB(By_,i,j,k,iBLK)
-        BzOld_C(i,j,k)   = StateOld_VCB(Bz_,i,j,k,iBLK)
-        POld_C(i,j,k)    = StateOld_VCB(P_,i,j,k,iBLK)
-     end do; end do; end do
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       RhoOld_C(i,j,k)  = StateOld_VCB(rho_,i,j,k,iBLK)
+       RhoUxOld_C(i,j,k)= StateOld_VCB(rhoUx_,i,j,k,iBLK)
+       RhoUyOld_C(i,j,k)= StateOld_VCB(rhoUy_,i,j,k,iBLK)
+       RhoUzOld_C(i,j,k)= StateOld_VCB(rhoUz_,i,j,k,iBLK)
+       BxOld_C(i,j,k)   = StateOld_VCB(Bx_,i,j,k,iBLK)
+       ByOld_C(i,j,k)   = StateOld_VCB(By_,i,j,k,iBLK)
+       BzOld_C(i,j,k)   = StateOld_VCB(Bz_,i,j,k,iBLK)
+       POld_C(i,j,k)    = StateOld_VCB(P_,i,j,k,iBLK)
+    end do; end do; end do
     select case(TypeTransient_I(iCrit))
     case('P_dot','p_dot')
        !\
@@ -299,7 +319,7 @@ contains
             RhoUz_G(1:nI,1:nJ,1:nK)**2),sqrt(RhoUxOld_C(1:nI,1:nJ,1:nK)**2 + &
             RhoUyOld_C(1:nI,1:nJ,1:nK)**2 + RhoUzOld_C(1:nI,1:nJ,1:nK)**2))
        AMRsort = maxval(scrARR)
-       
+
        scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(Bx_G(1:nI,1:nJ,1:nK)**2           + &
             By_G(1:nI,1:nJ,1:nK)**2 + Bz_G(1:nI,1:nJ,1:nK)**2)      - &
             sqrt(BxOld_C(1:nI,1:nJ,1:nK)**2                                 + &
@@ -332,7 +352,7 @@ contains
     case default
        call stop_mpi('Unknown TypeTransient_I='//TypeTransient_I(iCrit))
     end select
-  
+
   end subroutine trace_transient
 end subroutine amr_criteria
 
