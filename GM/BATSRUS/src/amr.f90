@@ -57,7 +57,9 @@ subroutine amr(DoMessagePass)
 
         if(nRefineCrit > 0)then
            refine_criteria = 0.0
+           if(DoProfileAmr) call timing_start('amr::amr_criteria')
            call amr_criteria(refine_criteria)
+           if(DoProfileAmr) call timing_stop('amr::amr_criteria')
            if(DoProfileAmr) call timing_start('amr::set_amr_criteria')
            call set_amr_criteria(nVar, State_VGB,&
                 nRefineCrit,refine_criteria,CoarsenLimit_I, RefineLimit_I)
