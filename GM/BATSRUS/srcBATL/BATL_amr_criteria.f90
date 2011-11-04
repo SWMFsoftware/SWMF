@@ -828,18 +828,20 @@ contains
           if(Unused_B(iBlock)) CYCLE
           DoCoarsen = .true.
 
+             
           do iCrit = 1, nAmrCritUsed
 
              iVarCrit = iVarCrit_I(iCrit)
 
 
+             if(iTree_IA(Level_,iNode_B(iBlock)) > iLevelCrit_I(iCrit)) &
+                  CYCLE
+             
              if( AmrCrit_IB(iVarCrit,iBlock) >= RefineCritAll_I(iCrit) .and. &
                   iTree_IA(Level_,iNode_B(iBlock)) < iLevelCrit_I(iCrit)) then
                 iStatusNew_A(iNode_B(iBlock)) = Refine_
                 CYCLE BLOCK3
-             else if(AmrCrit_IB(iVarCrit,iBlock)  > CoarsenCritAll_I(iCrit) .and. &
-                iTree_IA(Level_,iNode_B(iBlock)) <= iLevelCrit_I(iCrit) .and. &
-                iTree_IA(Level_,iNode_B(iBlock)) > iLevelCrit_I(iCrit-1)) then
+             else if(AmrCrit_IB(iVarCrit,iBlock)  > CoarsenCritAll_I(iCrit)) then
                 DoCoarsen = .false.
              end if
 
