@@ -97,7 +97,7 @@ module BATL_amr_criteria
   integer :: nExtCritUsed = 0 ! Number of External criteria actually used, 
   !4 :symmetry (BATSRUS)
   integer :: nIntCrit = 0 ! Number of internal criteria, 2nd order err estimate
-  integer, save :: nAmrCritOld = 0, nBlockOld = 0
+  integer :: nAmrCritOld = 0, nBlockOld = 0
 
   ! How large the relative discrepancy in the Criteria for 
   ! symmetry points can be and still be refined in the same 
