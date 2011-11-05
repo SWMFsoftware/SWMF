@@ -4142,7 +4142,7 @@ The default is UseTimeStepControl false.
 	<parameter name="TimeStepControlInit" type="real" min="0" max="1"
 		   default="1"/>
 #CONTROLINIT
-0.01			UseTimeStepControl
+0.01			TimeStepControlInit
 
 Set the initial reduction factor applied to the time step or Cfl number.
 The factor should be positive and it should typically not more than 1.
