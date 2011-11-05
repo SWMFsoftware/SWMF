@@ -1276,13 +1276,12 @@ subroutine MH_set_parameters(TypeAction)
         DoCritAmr = .true.
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
-        call read_var('nRefineCrit',nRefineCrit)
+        call read_amr_criteria(NameCommand, &
+             CritNameIn_I=RefineCrit,&
+             nCritNameIn = nRefineCrit )
         if(nRefineCrit<0 .or. nRefineCrit>3)&
              call stop_mpi(NameSub//' ERROR: nRefineCrit must be 0, 1, 2 or 3')
-        do i=1,nRefineCrit
-           call read_var('TypeRefine',RefineCrit(i))
-        end do
-        call read_amr_criteria(NameCommand, CritNameIn_I=RefineCrit)   
+      
            
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)

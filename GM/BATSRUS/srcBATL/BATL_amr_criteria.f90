@@ -861,7 +861,7 @@ contains
   end subroutine apply_unsorted_criteria
 
   !============================================================================
-  subroutine  read_amr_criteria(NameCommand, CritNameIn_I)
+  subroutine  read_amr_criteria(NameCommand, CritNameIn_I, nCritNameIn)
 
     use ModReadParam, ONLY: read_var
     use BATL_tree, ONLY: MaxTotalBlock, Unused_B
@@ -874,7 +874,9 @@ contains
 
     ! Nameing table, to map the name to a index, number 3 comes form
     ! Max numbers of criterias in BATSRUS
-    character (len=20), optional, intent(in) :: CritNameIn_I(3)
+    character (len=20), optional, intent(inout) :: CritNameIn_I(3)
+    integer, optional, intent(inout) :: nCritNameIn
+    logical :: IsUniqueCritName
 
     character (len=20) :: CritName
     logical :: DoAmr
@@ -911,11 +913,12 @@ contains
        DoCritAmr = .true.
        DoAutoAmr = .true.
     case("#AMRMULTICRITERIA")
-       if(.not. present(CritNameIn_I))&
+       if(.not. present(CritNameIn_I) &
+            .and. .not. present(nCritNameIn))&
             call stop_mpi(NameCommand//' ERROR: Need a name table')
-       
+
        call read_var('nCrit', nIntCrit)
-       
+
        nAmrCrit = nIntCrit
        nAmrCritOld = nIntCrit
        ! deallocate,if they are already allocated
@@ -931,15 +934,34 @@ contains
             RefineCrit_I(nIntCrit),iVarCrit_I(nIntCrit))
        allocate(CoarsenCritAll_I(nIntCrit), RefineCritAll_I(nIntCrit))
        allocate(iLevelCrit_I(0:nIntCrit))
-       
+       nCritNameIn = 1
        iLevelCrit_I(0) = 0 ! Lowest level
+       CritNameIn_I = "NULL"
        do iCrit = 1, nIntCrit
+          IsUniqueCritName = .true.
           !find index of the criteria from its name
           call read_var('CritName',CritName)
+
+          ! Find out it the name has bin used before
           do iCritName=1,3
-             if(CritName == CritNameIn_I(iCritName)) &
-                  iVarCrit_I(iCrit) = iCritName 
+             if(CritName == CritNameIn_I(iCritName)) then
+                iVarCrit_I(iCrit) = iCritName
+                IsUniqueCritName = .false.
+                EXIT
+             end if
           end do
+          
+          ! Add it to the list if its unique
+          if(IsUniqueCritName) then
+             do iCritName=1,nCritNameIn
+                if(CritNameIn_I(iCritName) == "NULL" )then
+                   iVarCrit_I(iCrit) = iCritName
+                   CritNameIn_I(iCritName) = CritName 
+                end if
+             end do
+             nCritNameIn = iVarCrit_I(iCrit)
+          end if
+          
           call read_var('CoarsenCrit',CoarsenCrit_I(iCrit))
           call read_var('RefineCrit',RefineCrit_I(iCrit))
           call read_var('MaxLevelCrit',iLevelCrit_I(iCrit))
@@ -947,6 +969,13 @@ contains
        UseMultiCrit = .true.
        DoCritAmr = .true.
        DoAutoAmr = .true.      
+
+       !print *," nCritNameIn   = ", nCritNameIn
+       !print *," CritNameIn_I  = ", CritNameIn_I
+       !print *," iVarCrit_I    = ", iVarCrit_I
+       !print *," CoarsenCrit_I = ", CoarsenCrit_I
+       !print *," RefineCrit_I  = ", RefineCrit_I
+       !print *," iLevelCrit_I  = ", iLevelCrit_I
     case("#AMR") ! compatibilety with old system with BATSRUS amr options
        call read_var('PercentCoarsen', PercentCoarsen)
        call read_var('PercentRefine' , PercentRefine)
