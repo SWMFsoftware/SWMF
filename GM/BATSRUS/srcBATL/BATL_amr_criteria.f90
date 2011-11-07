@@ -21,60 +21,35 @@ module BATL_amr_criteria
   public calc_error_amr_criteria
   public restrict_amr_criteria
 
-  ! Choosing with blocks we want to refine is based a list of criteria 
+  ! Choosing with blocks we want to refine is based on a list of criteria 
   ! and a set of upper (refine)  and lower (coarsen) limits. The criteria 
-  ! can be can be external or be calculated internally by estimating the 
+  ! can be external or calculated internally by estimating the 
   ! numerical errors (calc_error_amr_criteria) based on the state variables.
   ! 
   integer, public            :: nAmrCrit = 0
   integer                    :: nAmrCritUsed = 0
   real, public, allocatable  :: AmrCrit_IB(:,:)
 
-  !--- Moved to BATL_tree
-  ! We can also specify the percentage of blocks we want to refine. For doing
-  ! this we need to sort them into a priority list iRank_A. This priority list
-  ! can also be used for refining/coarsening blocks to the point where we 
-  ! to the point where we have no more blocks available, and not stopping 
-  ! the program ( used with BATL_tree )
-  !integer,public, allocatable :: iRank_A(:) !--- Moved to BATL_tree
-
   ! DoSortAmrCrit : true/false for generating the priority list iRank_A
-  ! DoSoftAmrCrit : Standard behavior (false) is that criteria has to be 
+  ! DoSoftAmrCrit : standard behavior (false) is that criteria has to be 
   ! refined/coarsened or we will stop the program. If true we will 
   ! refine/coarsen them as much as we can, this is the default behavior for
   ! amr by percentage.
-  logical,public :: &
-       DoSortAmrCrit = .false.,&
-       DoSoftAmrCrit = .false. ,&
+  logical, public :: &
+       DoSortAmrCrit = .false., &
+       DoSoftAmrCrit = .false., &
        DoAutoAmr     = .false.
-
-
-  ! Can set multiple criterias for which level it should be refined to base
-  ! on external criteria
-  logical :: &
-       UseMultiCrit = .false.
-
-  !DoStrictAmr = .true. ,& !--- Moved to BATL_tree
 
   ! Try to make geometric dependence for refinement/coarsening
   logical,public :: &
-       DoGeometryAmr = .false. ,&
+       DoGeometryAmr = .false., &
        DoCritAmr     = .false.
 
-  ! Activate recalculation of error criteia if plotted
-  ! logical,public :: DoPlotCriteria = .false. 
-
-  !--- Moved to BATL_tree
-  ! nDesiredRefine and nDesiredCoarsen set the number of blocks that we
-  ! want refined/coarsen by percentage of with DoSoftAmrCrit = .true.
-  ! nNodeRefine and nNodeCoarsen set the number of blocks that will be
-  ! refined/coarsen or the program with stop. Usually associated with 
-  ! criteria
-  !integer,public :: nDesiredRefine,nNodeRefine, &
-  !     nDesiredCoarsen, nNodeCoarsen
-
-
   ! Local variables
+
+  ! Can set multiple criterias for which level it should be refined to base
+  ! on external criteria
+  logical :: UseMultiCrit = .false.
 
   ! Percentage with want refined and coarsen
   real ::  PercentRefine=0.0, PercentCoarsen=0.0
@@ -85,7 +60,7 @@ module BATL_amr_criteria
        CoarsenCritAll_I, RefineCritAll_I
 
   ! Gives the max level for a criteria
-  integer, allocatable:: iLevelCrit_I(:)
+  integer, allocatable:: MaxLevelCrit_I(:)
 
   integer, allocatable:: iVarCrit_I(:) ! Index to variables or criterias
 
@@ -834,34 +809,28 @@ contains
              iVarCrit = iVarCrit_I(iCrit)
 
 
-             if(iTree_IA(Level_,iNode_B(iBlock)) > iLevelCrit_I(iCrit)) &
+             if(iTree_IA(Level_,iNode_B(iBlock)) > MaxLevelCrit_I(iCrit)) &
                   CYCLE
              
-             if( AmrCrit_IB(iVarCrit,iBlock) >= RefineCritAll_I(iCrit) .and. &
-                  iTree_IA(Level_,iNode_B(iBlock)) < iLevelCrit_I(iCrit)) then
+             if(AmrCrit_IB(iVarCrit,iBlock) >= RefineCritAll_I(iCrit) .and. &
+                  iTree_IA(Level_,iNode_B(iBlock)) < MaxLevelCrit_I(iCrit))then
                 iStatusNew_A(iNode_B(iBlock)) = Refine_
                 CYCLE BLOCK3
-             else if(AmrCrit_IB(iVarCrit,iBlock)  > CoarsenCritAll_I(iCrit)) then
+             else if(AmrCrit_IB(iVarCrit,iBlock) > CoarsenCritAll_I(iCrit))then
                 DoCoarsen = .false.
              end if
 
           end do
 
-          if(DoCoarsen) then
-!!$                print *,"iBlock = ",iBlock, iCrit, "Level = ", iTree_IA(Level_,iNode_B(iBlock)),&
-!!$                     "Max level = ",iLevelCrit_I(iCrit), " ::::: ", &
-!!$                     AmrCrit_IB(iVarCrit,iBlock), " < ",&
-!!$                     RefineCritAll_I(iCrit) ,", ",&
-!!$                     CoarsenCritAll_I(iCrit)," >"
-             iStatusNew_A(iNode_B(iBlock)) =  Coarsen_ 
-          end if
+          if(DoCoarsen) iStatusNew_A(iNode_B(iBlock)) =  Coarsen_ 
+
        end do BLOCK3
     end if
 
   end subroutine apply_unsorted_criteria
 
   !============================================================================
-  subroutine  read_amr_criteria(NameCommand, CritNameIn_I, nCritNameIn)
+  subroutine  read_amr_criteria(NameCommand, nCritOut, NameCritOut_I)
 
     use ModReadParam, ONLY: read_var
     use BATL_tree, ONLY: MaxTotalBlock, Unused_B
@@ -872,10 +841,9 @@ contains
     integer :: iCrit,iBlock,iAmrBox,iCritName
     character(len=*), parameter:: NameSub='BATL_tree::read_amr_criteria'
 
-    ! Nameing table, to map the name to a index, number 3 comes form
-    ! Max numbers of criterias in BATSRUS
-    character (len=20), optional, intent(inout) :: CritNameIn_I(3)
-    integer, optional, intent(inout) :: nCritNameIn
+    ! Number and name of criteria to be used by BATSRUS (at most 3)
+    integer,           optional, intent(out):: nCritOut
+    character(len=20), optional, intent(out):: NameCritOut_I(3)
     logical :: IsUniqueCritName
 
     character (len=20) :: CritName
@@ -913,8 +881,8 @@ contains
        DoCritAmr = .true.
        DoAutoAmr = .true.
     case("#AMRMULTICRITERIA")
-       if(.not. present(CritNameIn_I) &
-            .and. .not. present(nCritNameIn))&
+       if(.not. present(NameCritOut_I) &
+            .and. .not. present(nCritOut))&
             call stop_mpi(NameCommand//' ERROR: Need a name table')
 
        call read_var('nCrit', nIntCrit)
@@ -927,24 +895,24 @@ contains
           deallocate(CoarsenCrit_I, &
                RefineCrit_I, iVarCrit_I)
        end if
-       if(allocated(iLevelCrit_I)) &
-            deallocate(iLevelCrit_I)
+       if(allocated(MaxLevelCrit_I)) &
+            deallocate(MaxLevelCrit_I)
        ! allocate all arrays
        allocate(CoarsenCrit_I(nIntCrit), &
             RefineCrit_I(nIntCrit),iVarCrit_I(nIntCrit))
        allocate(CoarsenCritAll_I(nIntCrit), RefineCritAll_I(nIntCrit))
-       allocate(iLevelCrit_I(0:nIntCrit))
-       nCritNameIn = 1
-       iLevelCrit_I(0) = 0 ! Lowest level
-       CritNameIn_I = "NULL"
+       allocate(MaxLevelCrit_I(0:nIntCrit))
+       nCritOut = 1
+       MaxLevelCrit_I(0) = 0 ! Lowest level
+       NameCritOut_I = "NULL"
        do iCrit = 1, nIntCrit
           IsUniqueCritName = .true.
           !find index of the criteria from its name
           call read_var('CritName',CritName)
 
           ! Find out it the name has bin used before
-          do iCritName=1,3
-             if(CritName == CritNameIn_I(iCritName)) then
+          do iCritName = 1, 3
+             if(CritName == NameCritOut_I(iCritName)) then
                 iVarCrit_I(iCrit) = iCritName
                 IsUniqueCritName = .false.
                 EXIT
@@ -953,29 +921,29 @@ contains
           
           ! Add it to the list if its unique
           if(IsUniqueCritName) then
-             do iCritName=1,nCritNameIn
-                if(CritNameIn_I(iCritName) == "NULL" )then
+             do iCritName = 1, nCritOut
+                if(NameCritOut_I(iCritName) == "NULL" )then
                    iVarCrit_I(iCrit) = iCritName
-                   CritNameIn_I(iCritName) = CritName 
+                   NameCritOut_I(iCritName) = CritName 
                 end if
              end do
-             nCritNameIn = iVarCrit_I(iCrit)
+             nCritOut = iVarCrit_I(iCrit)
           end if
           
           call read_var('CoarsenCrit',CoarsenCrit_I(iCrit))
           call read_var('RefineCrit',RefineCrit_I(iCrit))
-          call read_var('MaxLevelCrit',iLevelCrit_I(iCrit))
+          call read_var('MaxLevelCrit',MaxLevelCrit_I(iCrit))
        end do
        UseMultiCrit = .true.
        DoCritAmr = .true.
        DoAutoAmr = .true.      
 
-       !print *," nCritNameIn   = ", nCritNameIn
-       !print *," CritNameIn_I  = ", CritNameIn_I
+       !print *," nCritOut   = ", nCritOut
+       !print *," NameCritOut_I  = ", NameCritOut_I
        !print *," iVarCrit_I    = ", iVarCrit_I
        !print *," CoarsenCrit_I = ", CoarsenCrit_I
        !print *," RefineCrit_I  = ", RefineCrit_I
-       !print *," iLevelCrit_I  = ", iLevelCrit_I
+       !print *," MaxLevelCrit_I  = ", MaxLevelCrit_I
     case("#AMR") ! compatibilety with old system with BATSRUS amr options
        call read_var('PercentCoarsen', PercentCoarsen)
        call read_var('PercentRefine' , PercentRefine)
@@ -1061,8 +1029,7 @@ contains
     deallocate(CoarsenCritAll_I, RefineCritAll_I)
     if(allocated(AmrCrit_IB)) deallocate(AmrCrit_IB)
     if(allocated(iNode_I)) deallocate(iNode_I)
-    if(allocated(iLevelCrit_I)) &
-            deallocate(iLevelCrit_I)
+    if(allocated(MaxLevelCrit_I)) deallocate(MaxLevelCrit_I)
     nAmrCrit     = 0
     nAmrCritUsed = 0
     nAmrCritOld  = 0

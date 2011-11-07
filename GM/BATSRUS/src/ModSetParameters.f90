@@ -1270,19 +1270,17 @@ subroutine MH_set_parameters(TypeAction)
            end if
         end do
 
-     case("#AMRMULTICRITERIA")
-        if(.not. UseBatl) &
-             call stop_mpi(NameSub//' ERROR: #AMRMULTICRITERIA can ONLY be used with BATL')
+     case("#AMRCRITERIALEVEL")
+        if(.not. UseBatl) call stop_mpi(NameSub// &
+             ' ERROR: #AMRMULTICRITERIA can ONLY be used with BATL')
         DoCritAmr = .true.
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
         call read_amr_criteria(NameCommand, &
-             CritNameIn_I=RefineCrit,&
-             nCritNameIn = nRefineCrit )
-        if(nRefineCrit<0 .or. nRefineCrit>3)&
-             call stop_mpi(NameSub//' ERROR: nRefineCrit must be 0, 1, 2 or 3')
-      
-           
+             nCritOut=nRefineCrit, NameCritOut_I=RefineCrit)
+        if(nRefineCrit<0 .or. nRefineCrit>3)call stop_mpi(NameSub// &
+             ' ERROR: nRefineCrit must be 0, 1, 2 or 3')           
+
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
         nStage = nOrder
