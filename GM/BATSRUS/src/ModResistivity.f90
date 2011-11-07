@@ -274,12 +274,15 @@ contains
     integer, intent(in):: iBlock
 
     ! Variables needed for Joule heating
-    real :: Current_D(3), JouleHeating, HeatExchange
+    real :: Current_D(3), JouleHeating, HeatExchange, &
+         HeatExchangePeP, HeatExchangePePpar
 
     integer:: i, j, k
     !-----------------------------------------------------------------------
     JouleHeating = 0.0
     HeatExchange = 0.0
+    HeatExchangePeP = 0.0
+    HeatExchangePePpar = 0.0
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -299,29 +302,31 @@ contains
 
              ! Point-implicit correction for stability: H' = H/(1+dt*H)
              HeatExchange = HeatExchange / &
-                  (1 + Cfl*HeatExchange*time_BLK(i,j,k,iBlock)) &
+                  (1 + Cfl*HeatExchange*time_BLK(i,j,k,iBlock))
+
+             HeatExchangePeP = HeatExchange &
                   *(State_VGB(P_,i,j,k,iBlock) &
                   - State_VGB(Pe_,i,j,k,iBlock))
           end if
 
           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-               + JouleHeating + HeatExchange
+               + JouleHeating + HeatExchangePeP
 
           ! Heat exchange applies to ions too
-          Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) - HeatExchange
-
-          if(UseAnisoPressure) then
+          Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) - HeatExchangePeP
+          if(UseAnisoPressure)then
              ! Heat exchange for parallel ion pressure
-             Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) - HeatExchange
-
-             ! Relaxation term due to collisions
-             Source_VC(Ppar_,i,j,k)  = Source_VC(Ppar_,i,j,k)  &
-                  - Eta_GB(i,j,k,iBlock) &
-                  *State_VGB(Rho_,i,j,k,iBlock)/IonMassPerCharge**2 &
-                  *(State_VGB(Ppar_,i,j,k,iBlock) - State_VGB(p_,i,j,k,iBlock))
+             HeatExchangePePpar = HeatExchange &
+                  *(State_VGB(Ppar_,i,j,k,iBlock) &
+                  - State_VGB(Pe_,i,j,k,iBlock))
+             Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
+                  - HeatExchangePePpar 
           end if
        else
           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
+          ! the same amount of Joule heating applies on Ppar
+          if(UseAnisoPressure) &
+               Source_VC(Ppar_,i,j,k)  = Source_VC(Ppar_,i,j,k) + JouleHeating
        end if
 
        ! rz-geometrical source terms
