@@ -382,7 +382,7 @@ end subroutine BATS_setup
     use ModMain
     use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
     use ModAmr, ONLY: DnAmr, DoAmr
-    use ModPhysics, ONLY : No2Si_V, UnitT_, TauWaveParticle, TauInstability
+    use ModPhysics, ONLY : No2Si_V, UnitT_
     use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure, State_VGB
     use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
          part_steady_select, part_steady_switch
