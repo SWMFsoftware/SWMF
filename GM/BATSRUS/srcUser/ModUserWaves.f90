@@ -55,7 +55,7 @@ module ModUser
   integer   :: iPower_V(nVar)=1
   integer   :: iVar             
   logical   :: DoInitialize=.true.
-  real      :: Lx=25.6, Lz=12.8, Lambda0=0.5, Ay=0.1, Tp=0.5 , B0=1.0  
+  real      :: Lx=25.6, Ly=12.8, Lambda0=0.5, Az=0.1, Tp=0.5 , B0=1.0  
 
   ! The (rotated) unperturbed initial state with primitive variables
   real      :: PrimInit_V(nVar)
@@ -100,7 +100,7 @@ contains
        case('#USERPROBLEM')
           call read_var('UserProblem',UserProblem)
        case('#GEM')
-          call read_var('Amplitude',Ay)
+          call read_var('Amplitude',Az)
        case('#RT')
           UserProblem = 'RT'
           UseUserICs  = .true.
@@ -179,7 +179,7 @@ contains
     use ModMain,     ONLY: globalBLK, unusedBLK, TypeCoordSystem, GravitySi
     use ModGeometry, ONLY: x1, y1, y2, x_BLK, y_BLK, z_BLK, r_BLK
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, &
-         Bx_, By_, Bz_, rho_, p_, Pe_, UseElectronPressure
+         Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, UseElectronPressure, UseAnisoPressure
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, ShockRightState_V, &
          Si2No_V, Io2Si_V, Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
@@ -384,8 +384,8 @@ contains
        end do
 
     case('GEM')
-       ! write(*,*)'GEM problem set up'
-       State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(z_BLK(:,:,:,iBlock)/Lambda0)
+       !write(*,*)'GEM problem set up'
+       State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(y_BLK(:,:,:,iBlock)/Lambda0)
 
        ! Modify pressure(s) to balance magnetic pressure
        if(UseElectronPressure) then
@@ -397,20 +397,25 @@ contains
           State_VGB(p_,:,:,:,iBlock) = ShockLeftState_V(p_)*(1.0 &
                + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
                /(ShockLeftState_V(Pe_) + ShockLeftState_V(p_)))
-
        else
-          State_VGB(p_,:,:,:,iBlock)  = State_VGB(p_,:,:,:,iBlock) &
+          State_VGB(p_,:,:,:,iBlock)  = ShockLeftState_V(p_) &
                + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2)
        end if
 
+       if(UseAnisoPressure) &
+            ! parallel pressure
+            State_VGB(Ppar_,:,:,:,iBlock) = ShockLeftState_V(Ppar_)*(1.0 &
+               + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
+               /ShockLeftState_V(p_))
+       
        State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
 !!!set intial perturbation
        State_VGB(Bx_,:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock) &
-            - Ay* cPi/ Lz &
-            *cos(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*sin(cPi*z_BLK(:,:,:,iBlock)/Lz)
-       State_VGB(Bz_,:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock) &
-            + Ay* cTwoPi/ Lx &
-            *sin(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*cos(cPi*z_BLK(:,:,:,iBlock)/Lz)
+            - Az* cPi/ Ly &
+            *cos(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*sin(cPi*y_BLK(:,:,:,iBlock)/Ly)
+       State_VGB(By_,:,:,:,iBlock) = State_VGB(By_,:,:,:,iBlock) &
+            + Az* cTwoPi/ Lx &
+            *sin(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*cos(cPi*y_BLK(:,:,:,iBlock)/Ly)
 
     case default
        if(iProc==0) call stop_mpi( &
@@ -581,8 +586,8 @@ contains
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk
-    use ModAdvance,  ONLY: Bz_, State_VGB
-    use ModGeometry, ONLY: y2, y1, dx_BLK, dz_BLK, faz_BLK, z_BLK
+    use ModAdvance,  ONLY: By_, State_VGB
+    use ModGeometry, ONLY: z2, z1, dx_BLK, dy_BLK, fay_BLK, y_BLK
 
     real, intent(out)            :: VarValue
     character (len=*), intent(in):: TypeVar
@@ -591,26 +596,26 @@ contains
     character (len=*), parameter :: Name='user_get_log_var'
 
     integer :: k1, k2, iBlock
-    real:: z1, z2, dz1, dz2, HalfInvWidth, Flux
+    real:: y1, y2, dy1, dy2, HalfInvWidth, Flux
     !-------------------------------------------------------------------
-    HalfInvWidth = 0.5/(y2-y1)
+    HalfInvWidth = 0.5/(z2-z1)
     VarValue=0.0
     select case(TypeVar)
-    case('bzflux')
+    case('byflux')
        do iBlock = 1, nBlock
           if(unusedBlk(iBlock)) CYCLE
-          z1 = z_BLK(1,1,0,iBlock)
-          z2 = z_BLK(1,1,nK+1,iBlock)
+          y1 = y_BLK(1,0,1,iBlock)
+          y2 = y_BLK(1,nJ+1,1,iBlock)
 
-          if(z1*z2 > 0) CYCLE
-          k1 = -z1/dz_BLK(iBlock)
+          if(y1*y2 > 0) CYCLE
+          k1 = -y1/dy_BLK(iBlock)
           k2 = k1 + 1
-          dz1 = abs(z_BLK(1,1,k1,iBlock))/dz_BLK(iBlock)
-          dz2 = 1.0 - dz1
-          Flux = faz_BLK(iBlock)*HalfInvWidth* &
-               ( dz2*sum(abs(State_VGB(Bz_,1:nI,1:nJ,k1,iBlock))) &
-               + dz1*sum(abs(State_VGB(Bz_,1:nI,1:nJ,k2,iBlock))))
-          if(k1==0 .or. k2==nK+1) Flux = 0.5*Flux
+          dy1 = abs(y_BLK(1,k1,1,iBlock))/dy_BLK(iBlock)
+          dy2 = 1.0 - dy1
+          Flux = fay_BLK(iBlock)*HalfInvWidth* &
+               ( dy2*sum(abs(State_VGB(By_,1:nI,k1,1:nK,iBlock))) &
+               + dy1*sum(abs(State_VGB(By_,1:nI,k2,1:nK,iBlock))))
+          if(k1==0 .or. k2==nJ+1) Flux = 0.5*Flux
           VarValue = VarValue + Flux
        end do
     case default
