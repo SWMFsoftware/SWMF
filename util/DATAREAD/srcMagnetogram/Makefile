@@ -46,6 +46,7 @@ HYPRE: hypre.o ${LIBDIR}/libSHARE.a ${HYPRELIB}/libHYPRE.a
 HARMONICS:
 	make ${EXE}
 	@echo ${EXE} has been compiled.
+	ln -s ../../../bin/HARMONICS.exe HARMONICS.exe
 
 EXE = ${BINDIR}/HARMONICS.exe
 
