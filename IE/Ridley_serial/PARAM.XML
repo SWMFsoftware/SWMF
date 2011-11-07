@@ -93,14 +93,19 @@ The 'min' variable set includes:
   Theta [deg], Psi [deg], SigmaH [mhos], SigmaP [mhos], Jr [mA/$m^2$], Phi [kV]
 The 'max' variable set includes:
   X [Re], Y [Re], Z [Re], Theta [deg], Psi [deg], SigmaH [mhos], SigmaP [mhos],
-  E-Flux [W/m2], Ave-E [eV], Jr [mA/$m^2$], Phi [kV], Ex [mV/m], Ey [mV/m], Ez [mV/m],
-  Jx [microA/m2], Jy [microA/m2], Jz [microA/m2], Ux [km/s], Uy [km/s], Uz [km/s],
+  E-Flux [W/$m^2$], Ave-E [eV], Jr [mA/$m^2$], Phi [kV], Ex [mV/m], Ey [mV/m], Ez [mV/m],
+  Jx [microA/$m^2$], Jy [microA/$m^2$], Jz [microA/$m^2$], Ux [km/s], Uy [km/s], Uz [km/s],
+  JouleHeat [mW/$m^2$], IonNumFlux [/$cm^2$/s],
+  RT 1/B [1/T], RT Rho [amu/$cm^3$], RT P [Pa],
+  conjugate dLat [deg], conjugate dLon [deg]
 The 'uam' variable set includes:
   Theta [deg], Psi [deg], SigmaH [mhos], SigmaP [mhos], Jr [mA/$m^2$], Jr(NW) [mA/$m^2$],
-  E-Flux [W/m2], Ave-E [eV], Phi [kV]
+  E-Flux [W/$m^2$], Ave-E [eV], Phi [kV]
 The 'aur' variable set includes:
   Theta [deg], Psi [deg], SigmaH [mhos], SigmaP [mhos], Jr [mA/$m^2$], Phi [kV],
-  E-Flux [W/m2], Ave-E [eV], RT 1/B [1/T], RT Rho [amu/$cm^3$], RT P [Pa]
+  E-Flux [W/$m^2$], Ave-E [eV], RT 1/B [1/T], RT Rho [amu/$cm^3$], RT P [Pa],
+  JouleHeat [mW/$m^2$], IonNumFlux [/$cm^2$/s],
+  conjugate dLat [deg], conjugate dLon [deg]
 </command>
 
 <command name="SAVEPLOTNAME">

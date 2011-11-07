@@ -645,7 +645,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
         case(min_vars)
            write(iUnit, '(I5,a)')  6, ' nvars'
         case(all_vars)
-           write(iUnit, '(I5,a)') 22, ' nvars'
+           write(iUnit, '(I5,a)') 27, ' nvars'
         case(uam_vars)                             !^CFG  IF TIEGCM
            write(iUnit, '(I5,a)')  9, ' nvars'     !^CFG  IF TIEGCM
         case(aur_vars)
@@ -690,6 +690,11 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, '(I5,a)') 20, ' Uz [km/s]'
            write(iUnit, '(I5,a)') 21, ' JouleHeat [mW/m2]'
            write(iUnit, '(I5,a)') 22, ' IonNumFlux [/cm2/s]'
+           write(iUnit, '(I5,a)') 23, ' RT 1/B [1/T]'
+           write(iUnit, '(I5,a)') 24, ' RT Rho [amu/cm^3]'
+           write(iUnit, '(I5,a)') 25, ' RT P [Pa]'
+           write(iUnit, '(I5,a)') 26, ' conjugate dLat [deg]'
+           write(iUnit, '(I5,a)') 27, ' conjugate dLon [deg]'
          
         case(uam_vars)                                  !^CFG  IF TIEGCM BEGIN
            write(iUnit, '(I5,a)')  1, ' Theta [deg]'
@@ -761,14 +766,17 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, *)  'VARIABLES= "X [R]","Y [R]","Z [R]"'
            write(iUnit, *)  ' "Theta [deg]","Psi [deg]"'
            write(iUnit, *)  ' "SigmaH [S]","SigmaP [S]"'
-           write(iUnit, *)  ' "E-Flux [W/m2]"'
+           write(iUnit, *)  ' "E-Flux [W/m^2]"'
            write(iUnit, *)  ' "Ave-E [eV]"'
            write(iUnit, *)  ' "JR [`mA/m^2]","PHI [kV]"'
            write(iUnit, *)  ' "Ex [mV/m]","Ey [mV/m]","Ez [mV/m]"'
            write(iUnit, *)  ' "Jx [`mA/m^2]","Jy [`mA/m^2]","Jz [`mA/m^2]"'
            write(iUnit, *)  ' "Ux [km/s]","Uy [km/s]","Uz [km/s]"'
-           write(iUnit, *)  ' "JouleHeat [mW/m2]"'
-           write(iUnit, *)  ' "IonNumFlux [/cm2/s]"'
+           write(iUnit, *)  ' "JouleHeat [mW/m^2]"'
+           write(iUnit, *)  ' "IonNumFlux [/cm^2/s]"'
+           write(iUnit, *)  ' "RT 1/B [1/T]","RT Rho [amu/cm^3]","RT P [Pa]"'
+           write(iUnit, *)  ' "conjugate dLat [deg]"'
+           write(iUnit, *)  ' "conjugate dLon [deg]"'
 
         elseif (variables == uam_vars) then             !^CFG  IF TIEGCM BEGIN
            write(iUnit, *)  'VARIABLES= "Theta [deg]","Psi [deg]"'
@@ -780,11 +788,11 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, *)  'VARIABLES= "Theta [deg]","Psi [deg]"'
            write(iUnit, *)  ' "SigmaH [S]","SigmaP [S]"'
            write(iUnit, *)  ' "JR [`mA/m^2]","PHI [kV]"'
-           write(iUnit, *)  ' "E-Flux [W/m2]"'
+           write(iUnit, *)  ' "E-Flux [W/m^2]"'
            write(iUnit, *)  ' "Ave-E [eV]"'
            write(iUnit, *)  ' "RT 1/B [1/T]","RT Rho [amu/cm^3]","RT P [Pa]"'
-           write(iUnit, *)  ' "JouleHeat [mW/m2]"'
-           write(iUnit, *)  ' "IonNumFlux [/cm2/s]"'
+           write(iUnit, *)  ' "JouleHeat [mW/m^2]"'
+           write(iUnit, *)  ' "IonNumFlux [/cm^2/s]"'
            write(iUnit, *)  ' "conjugate dLat [deg]"'
            write(iUnit, *)  ' "conjugate dLon [deg]"'
 
@@ -825,7 +833,10 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    1.0e-03*IONO_NORTH_Ux(i,j),1.0e-03*IONO_NORTH_Uy(i,j), &
                    1.0e-03*IONO_NORTH_Uz(i,j),&
                    1.0e03*IONO_NORTH_Joule(i,j), &
-                   1.0e-04*IONO_NORTH_IonNumFlux(i,j)
+                   1.0e-04*IONO_NORTH_IonNumFlux(i,j), &
+                   IONO_NORTH_invB(i,j),IONO_NORTH_rho(i,j),IONO_NORTH_p(i,j), &
+                   IONO_NORTH_dLat(i,j), &
+                   IONO_NORTH_dLon(i,j)
            end do
         end do
 
@@ -905,7 +916,10 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    1.0e-03*IONO_SOUTH_Ux(i,j),1.0e-03*IONO_SOUTH_Uy(i,j), &
                    1.0e-03*IONO_SOUTH_Uz(i,j), &
                    1.0e03*IONO_SOUTH_Joule(i,j), &
-                   1.0e-04*IONO_SOUTH_IonNumFlux(i,j)
+                   1.0e-04*IONO_SOUTH_IonNumFlux(i,j), &
+                   IONO_SOUTH_invB(i,j),IONO_SOUTH_rho(i,j),IONO_SOUTH_p(i,j),&
+                   IONO_SOUTH_dLat(i,j), &
+                   IONO_SOUTH_dLon(i,j)
            end do
         end do
 
