@@ -808,7 +808,6 @@ contains
 
              iVarCrit = iVarCrit_I(iCrit)
 
-
              if(iTree_IA(Level_,iNode_B(iBlock)) > MaxLevelCrit_I(iCrit)) &
                   CYCLE
              
@@ -850,14 +849,7 @@ contains
     logical :: DoAmr
     integer :: DnAmr
     real    :: DtAmr
-    real    :: tmp
     !-------------------------------------------------------------------------
-    !nCrit          = 0
-    !nAmrCrit       = 0
-    !nAmrCritOld    = 0
-    !cAmrWavefilter = 1.0e-2
-    !nBlockOld      = 0
-
     DoSortAmrCrit = .not. DoStrictAmr
     select case(NameCommand)
     case("#AMRERRORCRIT") 
@@ -865,14 +857,14 @@ contains
        call read_var('nCrit', nIntCrit)
        nAmrCrit = nIntCrit
        nAmrCritOld = nIntCrit
-       if(allocated(CoarsenCrit_I)) then
-          deallocate(CoarsenCritAll_I, RefineCritAll_I)
-          deallocate(CoarsenCrit_I, &
-               RefineCrit_I, iVarCrit_I)
-       end if
+       if(allocated(CoarsenCrit_I)) deallocate( &
+            CoarsenCritAll_I, RefineCritAll_I, &
+            CoarsenCrit_I, RefineCrit_I, iVarCrit_I)
+       
        allocate(CoarsenCrit_I(nIntCrit), &
-            RefineCrit_I(nIntCrit),iVarCrit_I(nIntCrit))
-       allocate(CoarsenCritAll_I(nIntCrit), RefineCritAll_I(nIntCrit))
+            CoarsenCritAll_I(nIntCrit), RefineCritAll_I(nIntCrit), &
+            RefineCrit_I(nIntCrit), iVarCrit_I(nIntCrit))
+
        do iCrit = 1, nIntCrit
           call read_var('iVar',iVarCrit_I(iCrit))
           call read_var('CoarsenCrit',CoarsenCrit_I(iCrit))
@@ -880,30 +872,27 @@ contains
        end do
        DoCritAmr = .true.
        DoAutoAmr = .true.
-    case("#AMRMULTICRITERIA")
-       if(.not. present(NameCritOut_I) &
-            .and. .not. present(nCritOut))&
-            call stop_mpi(NameCommand//' ERROR: Need a name table')
+    case("#AMRCRITERIALEVEL")
+       if(.not. present(NameCritOut_I) .and. .not. present(nCritOut))&
+            call stop_mpi(NameCommand//': missing NameCritOut_I or nCritOut')
 
        call read_var('nCrit', nIntCrit)
 
        nAmrCrit = nIntCrit
        nAmrCritOld = nIntCrit
        ! deallocate,if they are already allocated
-       if(allocated(CoarsenCrit_I)) then
-          deallocate(CoarsenCritAll_I, RefineCritAll_I)
-          deallocate(CoarsenCrit_I, &
-               RefineCrit_I, iVarCrit_I)
-       end if
-       if(allocated(MaxLevelCrit_I)) &
-            deallocate(MaxLevelCrit_I)
+       if(allocated(CoarsenCrit_I)) deallocate( &
+            CoarsenCritAll_I, RefineCritAll_I, &
+            CoarsenCrit_I, RefineCrit_I, iVarCrit_I)
+
+       if(allocated(MaxLevelCrit_I)) deallocate(MaxLevelCrit_I)
        ! allocate all arrays
-       allocate(CoarsenCrit_I(nIntCrit), &
-            RefineCrit_I(nIntCrit),iVarCrit_I(nIntCrit))
-       allocate(CoarsenCritAll_I(nIntCrit), RefineCritAll_I(nIntCrit))
-       allocate(MaxLevelCrit_I(0:nIntCrit))
+       allocate(&
+            CoarsenCrit_I(nIntCrit), RefineCrit_I(nIntCrit), &
+            CoarsenCritAll_I(nIntCrit), RefineCritAll_I(nIntCrit), &
+            iVarCrit_I(nIntCrit), MaxLevelCrit_I(nIntCrit))
+
        nCritOut = 1
-       MaxLevelCrit_I(0) = 0 ! Lowest level
        NameCritOut_I = "NULL"
        do iCrit = 1, nIntCrit
           IsUniqueCritName = .true.
@@ -979,7 +968,7 @@ contains
 
        end if
     case default
-       call CON_stop(NameSub//'incorect PARAM.in!')
+       call CON_stop(NameSub//': unknown command '//NameCommand)
     end select
 
     DoStrictAmr = .not. DoSortAmrCrit 
