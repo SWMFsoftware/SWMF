@@ -11,6 +11,8 @@ contains
     use ModCrcmPlanet,ONLY: nspec
     use ModCrcmGrid,  ONLY: np,nt,nm,nk
     use ModCrcm,      ONLY: f2, phot, Pressure_IC, FAC_C
+    use ModFieldTrace,ONLY: iba
+    use ModGmCrcm,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
     use ModCrcmGrid,  ONLY: iProc,nProc,iComm
     use ModMpi
@@ -35,10 +37,12 @@ contains
 !    else
        !when only 1 proc is used then just read restart info
        open(unit=UnitTmp_,file='IM/restartIN/data.restart',status='old',form='unformatted')
-       read(UnitTmp_) f2             
-       read(UnitTmp_) phot             
+       read(UnitTmp_) f2  
+       read(UnitTmp_) Den_IC
+       read(UnitTmp_) phot
        read(UnitTmp_) Pressure_IC           
        read(UnitTmp_) FAC_C             
+       read(UnitTmp_) iba
        close(UnitTmp_)
 !    endif
 
@@ -51,6 +55,8 @@ contains
     use ModCrcmPlanet,ONLY: nspec
     use ModCrcmGrid,  ONLY: np,nt,nm,nk,MinLonPar,MaxLonPar
     use ModCrcm,      ONLY: f2,time, phot, Pressure_IC, FAC_C
+    use ModFieldTrace,ONLY: iba    
+    use ModGmCrcm,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
     use ModCrcmGrid,  ONLY: iProc,nProc,iComm,nLonPar,nLonPar_P,nLonBefore_P
     use ModMpi
@@ -103,30 +109,16 @@ contains
        enddo
     endif
 
-    if (nProc>1) then
-       !if nProc>1 only write out restart from proc 0
-       if(iProc==0) then
-          open(unit=UnitTmp_,file='IM/restartOUT/data.restart',form='unformatted')
-          write(UnitTmp_) f2
-          write(UnitTmp_) phot
-          write(UnitTmp_) Pressure_IC
-          write(UnitTmp_) FAC_C
-          close(UnitTmp_)
-
-          open(unit=UnitTmp_,file='IM/restartOUT/restart.H')
-          write(UnitTmp_,'(a)') '#TIMESIMULATION'
-          write(UnitTmp_,'(es15.8,a25)') time,'tSimulation'
-          close(UnitTmp_)
-       endif
-    else
-       !When nProc=1, write out restart
+    if(iProc==0) then
        open(unit=UnitTmp_,file='IM/restartOUT/data.restart',form='unformatted')
        write(UnitTmp_) f2
+       write(UnitTmp_) Den_IC
        write(UnitTmp_) phot
        write(UnitTmp_) Pressure_IC
        write(UnitTmp_) FAC_C
+       write(UnitTmp_) iba                
        close(UnitTmp_)
-       
+
        open(unit=UnitTmp_,file='IM/restartOUT/restart.H')
        write(UnitTmp_,'(a)') '#TIMESIMULATION'
        write(UnitTmp_,'(es15.8,a25)') time,'tSimulation'
