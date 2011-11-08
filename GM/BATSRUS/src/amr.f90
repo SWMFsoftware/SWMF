@@ -102,12 +102,15 @@ subroutine amr(DoMessagePass)
         RETURN
      end if
 
+     iLastGrid          = iNewGrid
+     iLastDecomposition = iNewDecomposition
+
      if(DoProfileAmr) call timing_start('amr::count_true_cells')
      call count_true_cells
      if(DoProfileAmr) call timing_stop('amr::count_true_cells')
 
-     iLastGrid          = iNewGrid
-     iLastDecomposition = iNewDecomposition
+     ! Clean all dynamically stored block data
+     call clean_block_data
 
      if(iProc==0 .and. lVerbose>0)then
         ! Write block/cell summary after AMR
@@ -141,22 +144,22 @@ subroutine amr(DoMessagePass)
         if(DoProfileAmr) call timing_start('amr::exchange_false')
         call exchange_messages(UseOrder2In=.false.)
         if(DoProfileAmr) call timing_stop('amr::exchange_false')
-
-
      end if
+
      if(UseB0)then
         ! Correct B0 face at newly created and removed resolution changes
         if(DoProfileAmr) call timing_start('amr::set_b0_source')
-        do iBlock=1,nBlock
+        do iBlock = 1, nBlock
            if (unusedBLK(iBlock)) CYCLE
            call set_b0_source(iBlock)
         end do
         if(DoProfileAmr) call timing_stop('amr::set_b0_source')
      end if
+
      ! Reset divb (it is undefined in newly created/moved blocks)
      if(UseB)then
         if(DoProfileAmr) call timing_start('amr::set_divb')
-        DivB1_GB=-7.70
+        DivB1_GB(:,:,:,1:nBlock) = -7.70
         if(DoProfileAmr) call timing_stop('amr::set_divb')
      end if
 
