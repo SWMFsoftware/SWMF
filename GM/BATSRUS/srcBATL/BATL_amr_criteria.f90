@@ -874,7 +874,7 @@ contains
        DoAutoAmr = .true.
     case("#AMRCRITERIALEVEL")
        if(.not. present(NameCritOut_I) .and. .not. present(nCritOut))&
-            call stop_mpi(NameCommand//': missing NameCritOut_I or nCritOut')
+            call CON_stop(NameCommand//': missing NameCritOut_I or nCritOut')
 
        call read_var('nCrit', nIntCrit)
 
