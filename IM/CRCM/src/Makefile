@@ -4,25 +4,26 @@ include ../Makefile.def
 SEARCH_EXTRA = -I${EMPIRICALGMDIR} -I${EMPIRICALIEDIR}
 
 include ../Makefile.conf
+include Makefile.DEPEND
 include Makefile.RULES
 
 OBJECTS = \
-	ModGrid.o\
-	ModPlanet.o\
 	ModCrcm.o\
+	ModCrcmPlot.o\
+	ModFieldTrace.o\
+	ModGmCRCM.o\
+	ModGrid.o\
+	ModIeCrcm.o\
+	ModImSat.o\
+	ModImTime.o\
 	ModInitialize.o\
+	ModPlanet.o\
 	ModRestart.o\
 	ModTsyInput.o\
-	ModGmCRCM.o\
-	ModIeCrcm.o\
-	ModFieldTrace.o\
-	ModCrcmPlot.o\
-	ModImTime.o\
-	ModImSat.o\
-	plot_fieldline.o\
-	trace_dipole.o\
+	crcm.o\
 	set_parameters.o\
-	crcm.o
+	plot_fieldline.o\
+	trace_dipole.o
 
 DEPEND:
 	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
@@ -35,7 +36,7 @@ DEPEND:
 
 MY_LIB = libCRCM.a
 
-LIB:
+LIB: DEPEND
 	make ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
