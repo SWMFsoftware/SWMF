@@ -7,7 +7,7 @@ my $Repeat  = ($r or $repeat);
 my $Concat  = ($c or $cat and not $Repeat);
 my $MakeMovie = ($m or $movie or $M or $MOVIE);
 my $KeepMovieOnly = ($M or $MOVIE);
-my $nThread = ($n or 1);
+my $nThread = ($n or 4);
 my $Rsync   = ($rsync or $sync);
 my $AllParam = ($param or $allparam);
 my $Pattern  = $p;
@@ -325,7 +325,7 @@ Usage:
 
    -M -MOVIE   Create movies from series of IDL files and remove IDL files.
 
-   -n=NTHREAD  Pass -n=NTHREAD option to pIDL for parallel execution.
+   -n=NTHREAD  Run pIDL in parallel using NTHREAD threads. The default is 4.
 
    -r=REPEAT   Repeat post processing every REPEAT seconds.
                Cannot be used with the DIR argument.
@@ -355,11 +355,11 @@ Examples:
 
 PostProc.pl
 
-   Post-process the plot files, create movies from IDL output (remove originals)
+   Post-process the plot files, create movies from IDL output,
    concatenate satellite, log, and magnetometer files, move output into a 
-   directory tree "RESULTS/run23", and run PostIDL.exe on 4 cores:
+   directory tree "RESULTS/run23", and run PostIDL.exe on 8 cores:
 
-PostProc.pl -M -cat -n=4 RESULTS/run23
+PostProc.pl -M -cat -n=8 RESULTS/run23
 
    Post-process the plot files, compress the ASCII files, rsync the results
    to another machine and print verbose info:
