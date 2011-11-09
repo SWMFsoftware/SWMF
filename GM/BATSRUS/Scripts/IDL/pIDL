@@ -8,7 +8,7 @@ my $KeepMovieOnly = ($M or $MOVIE);
 my $Verbose       = ($v or $V or $verbose or $VERBOSE);
 my $Quiet         = ($q or $quiet or $Q or $QUIET);
 my $Ccmc          = ($CCMC or $ccmc);
-my $nThread       = $n;
+my $nThread       = ($n or 4);
 
 use strict;
 
@@ -217,7 +217,7 @@ Usage:
    -k -keep    - keep the .h and .idl files. Default is to delete them.
    -m -movie   - create movie from the .out files and keep the .out files
    -M -MOVIE   - create movie from the .out files and delete the .out files
-   -n=NUMBER   - execute PostIDL.exe in parallel on NUMBER cores. Default is 1
+   -n=NUMBER   - execute PostIDL.exe in parallel on NUMBER cores. Default is 4.
    BASENAME    - the beginning of the filenames to be processed.
                  Default value is BASENAME='IO2/'
 
@@ -225,8 +225,8 @@ Examples:
    Process all files in the IO2/ directory and remove .idl files:
 pIDL
 
-   Do the same in parallel using 4 threads
-pIDL -n=4
+   Do the same in parallel using 8 threads
+pIDL -n=8
 
    Process all files in the IO2/ directory, create .outs movies and remove
    all the .h, .idl and .out files:
