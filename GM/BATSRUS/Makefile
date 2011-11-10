@@ -80,62 +80,62 @@ srcBATL/BATL_size.f90: srcBATL/BATL_size_orig.f90
 	perl -pi -e 's/nG\*/nG \!\*/' srcBATL/BATL_size.f90
 
 LIB:
-	cd srcBATL; make LIB
-	cd src; make LIB
-	cd srcInterface; make LIB
+	cd srcBATL; $(MAKE) LIB
+	cd src; $(MAKE) LIB
+	cd srcInterface; $(MAKE) LIB
 
 BATSRUS:
-	cd ${SHAREDIR}; make LIB
-	cd ${TIMINGDIR}; make LIB
-	cd ${MAGNETOGRAMDIR}; make LIB
-	cd ${DEMTDIR}; make LIB
-	cd ${EMPIRICALEEDIR}; make LIB
-	cd srcBATL; make LIB
-	cd src; make LIB
-	cd src; make BATSRUS
+	cd ${SHAREDIR}; $(MAKE) LIB
+	cd ${TIMINGDIR}; $(MAKE) LIB
+	cd ${MAGNETOGRAMDIR}; $(MAKE) LIB
+	cd ${DEMTDIR}; $(MAKE) LIB
+	cd ${EMPIRICALEEDIR}; $(MAKE) LIB
+	cd srcBATL; $(MAKE) LIB
+	cd src; $(MAKE) LIB
+	cd src; $(MAKE) BATSRUS
 
 CRASH:
-	cd ${SHAREDIR}; make LIB
-	cd ${TIMINGDIR}; make LIB
-	cd ${MAGNETOGRAMDIR}; make LIB
-	cd ${DEMTDIR}; make LIB
-	cd ${EMPIRICALEEDIR}; make LIB
-	cd ${CRASHDIR}; make LIB
-	cd srcBATL; make LIB
-	cd src; make LIB
-	cd src; make CRASH
+	cd ${SHAREDIR}; $(MAKE) LIB
+	cd ${TIMINGDIR}; $(MAKE) LIB
+	cd ${MAGNETOGRAMDIR}; $(MAKE) LIB
+	cd ${DEMTDIR}; $(MAKE) LIB
+	cd ${EMPIRICALEEDIR}; $(MAKE) LIB
+	cd ${CRASHDIR}; $(MAKE) LIB
+	cd srcBATL; $(MAKE) LIB
+	cd src; $(MAKE) LIB
+	cd src; $(MAKE) CRASH
 
 NOMPI:
-	cd util/NOMPI/src; make LIB
+	cd util/NOMPI/src; $(MAKE) LIB
 
 PIDL:
-	cd ${SHAREDIR}; make LIB
-	cd srcPostProc; make PIDL
+	cd ${SHAREDIR}; $(MAKE) LIB
+	cd srcPostProc; $(MAKE) PIDL
 	@echo ' '
 	@echo Program PostIDL has been brought up to date.
 	@echo ' '
 
 PSPH:
-	cd srcPostProc; make PSPH
+	cd srcPostProc; $(MAKE) PSPH
 	@echo ' '
 	@echo Program PostSPH has been brought up to date.
 	@echo ' '
 
 SNAPSHOT:
-	cd ${SHAREDIR}; make LIB
-	cd srcPostProc; make SNAPSHOT
+	cd ${SHAREDIR}; $(MAKE) LIB
+	cd srcPostProc; $(MAKE) SNAPSHOT
 	@echo ' '
 	@echo Program SNAPSHOT has been brought up to date.
 	@echo ' '
 
 EARTH_TRAJ:
-	cd srcPostProc; make EARTH_TRAJ
+	cd srcPostProc; $(MAKE) EARTH_TRAJ
 	@echo ' '
 	@echo Program EARTH_TRAJ has been brought up to date.
 	@echo ' '
 
 TIME_CONV:
-	cd srcPostProc; make TIME_CONV
+	cd srcPostProc; $(MAKE) TIME_CONV
 	@echo ' '
 	@echo Program TIME_CONV has been brought up to date.
 	@echo ' '
@@ -174,7 +174,7 @@ rundir:
 	fi);
 
 rundir_rh:
-	make rundir RUNDIR=run STANDALONE=YES GMDIR=`pwd`
+	$(MAKE) rundir RUNDIR=run STANDALONE=YES GMDIR=`pwd`
 	cd run; ln -s ${BINDIR}/CRASH.exe .; \
 	cp -f Param/CRASH/PARAM.in .                          
 #
@@ -196,13 +196,13 @@ nompirun: ${DEFAULT_TARGET}
 #	Create the documentation files      ^CFG IF NOT REMOVEDOCTEX BEGIN
 #	
 PDF:
-	@cd Doc/Tex; make cleanpdf; make PDF
+	@cd Doc/Tex; $(MAKE) cleanpdf; $(MAKE) PDF
 
 CLEAN1 = cleanpdf #				^CFG IF NOT MAKEPDF
 
 #	Create HTML documentation		^CFG IF DOCHTML BEGIN
 HTML:
-	@cd Doc/Tex; make cleanhtml; make HTML
+	@cd Doc/Tex; $(MAKE) cleanhtml; $(MAKE) HTML
 
 CLEAN2 = cleanhtml #				    ^CFG IF NOT MAKEHTML
 #						^CFG END DOCHTML
@@ -215,26 +215,26 @@ CLEAN2 = cleanhtml #				    ^CFG IF NOT MAKEHTML
 
 clean:
 	@touch ${INSTALLFILES}
-	cd src; make clean
-	cd srcBATL; make clean
-	cd srcInterface; make clean
-	cd srcPostProc;  make clean
-	@(if [ -d util  ]; then cd util;  make clean; fi);
-	@(if [ -d share ]; then cd share; make clean; fi);
+	cd src; $(MAKE) clean
+	cd srcBATL; $(MAKE) clean
+	cd srcInterface; $(MAKE) clean
+	cd srcPostProc;  $(MAKE) clean
+	@(if [ -d util  ]; then cd util;  $(MAKE) clean; fi);
+	@(if [ -d share ]; then cd share; $(MAKE) clean; fi);
 
 distclean: 
 	./Config.pl -uninstall
 
 allclean:
 	@touch ${INSTALLFILES}
-	cd src; make distclean
-	cd srcBATL; make distclean
-	cd srcInterface; make distclean
-	cd srcPostProc;  make distclean
-	cd srcTest; make distclean
+	cd src; $(MAKE) distclean
+	cd srcBATL; $(MAKE) distclean
+	cd srcInterface; $(MAKE) distclean
+	cd srcPostProc;  $(MAKE) distclean
+	cd srcTest; $(MAKE) distclean
 	@				#^CFG IF DOC BEGIN
 	@					#^CFG IF NOT REMOVEDOCTEX BEGIN
-	cd Doc/Tex; make clean ${CLEAN1} ${CLEAN2}
+	cd Doc/Tex; $(MAKE) clean ${CLEAN1} ${CLEAN2}
 	@					#^CFG END REMOVEDOCTEX
 	@				#^CFG END DOC
 

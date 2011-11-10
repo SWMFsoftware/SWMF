@@ -1,38 +1,38 @@
 #^CFG FILE TESTING
 
 ### TESTS FOR THE STAND-ALONE BATSRUS ###
-
+$
 # !!! NOTE: In the list below "test_func" should be the last test
 test: 
 	@rm -f *.diff
-	-@(make test_fluxemergence)
-	-@(make test_shocktube)
-	-@(make test_hallmhd)
-	-@(make test_twofluidmhd)
-	-@(make test_multifluid)
-	-@(make test_multiion)
-	-@(make test_mhdions)
-	-@(make test_mhdnoncons)
-	-@(make test_eosgodunov)
-	-@(make test_levelset)
-	-@(make test_hyades2d)
-	-@(make test_graydiffusion)
-	-@(make test_corona)
-	-@(make test_coronasph)
-	-@(make test_corona_2t)
-	-@(make test_chromo)
-	-@(make test_outerhelio)
-	-@(make test_earthsph)
-	-@(make test_2bodyplot)
-	-@(make test_titan)
-	-@(make test_mars)
-	-@(make test_marsfluids)
-	-@(make test_venus)
-	-@(make test_saturn)
-	-@(make test_comet)
-	-@(make test_magnetometer)
-	-@(make test_anisotropic)
-	-@(make test_func)
+	-@($(MAKE) test_fluxemergence)
+	-@($(MAKE) test_shocktube)
+	-@($(MAKE) test_hallmhd)
+	-@($(MAKE) test_twofluidmhd)
+	-@($(MAKE) test_multifluid)
+	-@($(MAKE) test_multiion)
+	-@($(MAKE) test_mhdions)
+	-@($(MAKE) test_mhdnoncons)
+	-@($(MAKE) test_eosgodunov)
+	-@($(MAKE) test_levelset)
+	-@($(MAKE) test_hyades2d)
+	-@($(MAKE) test_graydiffusion)
+	-@($(MAKE) test_corona)
+	-@($(MAKE) test_coronasph)
+	-@($(MAKE) test_corona_2t)
+	-@($(MAKE) test_chromo)
+	-@($(MAKE) test_outerhelio)
+	-@($(MAKE) test_earthsph)
+	-@($(MAKE) test_2bodyplot)
+	-@($(MAKE) test_titan)
+	-@($(MAKE) test_mars)
+	-@($(MAKE) test_marsfluids)
+	-@($(MAKE) test_venus)
+	-@($(MAKE) test_saturn)
+	-@($(MAKE) test_comet)
+	-@($(MAKE) test_magnetometer)
+	-@($(MAKE) test_anisotropic)
+	-@($(MAKE) test_func)
 	@ls -l *.diff
 
 # !!! NOTE: In the above list "test_func" should be the last test
@@ -87,24 +87,24 @@ test_help:
 
 test_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} STANDALONE=YES GMDIR=`pwd`
+	$(MAKE) rundir RUNDIR=${TESTDIR} STANDALONE=YES GMDIR=`pwd`
 
 ### FLUX EMERGENCE TEST ###
 
 test_fluxemergence:
 	@echo "test_fluxemergence_compile..." > test_fluxemergence.diff
-	make test_fluxemergence_compile
+	$(MAKE) test_fluxemergence_compile
 	@echo "test_fluxemergence_rundir..." >> test_fluxemergence.diff
-	make test_fluxemergence_rundir 
+	$(MAKE) test_fluxemergence_rundir 
 	@echo "test_fluxemergence_run..." >> test_fluxemergence.diff
-	make test_fluxemergence_run
+	$(MAKE) test_fluxemergence_run
 	@echo "test_fluxemergence_check..." >> test_fluxemergence.diff
-	make test_fluxemergence_check
+	$(MAKE) test_fluxemergence_check
 
 test_fluxemergence_compile:
 	./Config.pl -e=MhdEosRad -u=Ee -g=10,10,10,500,1
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_fluxemergence_rundir: test_rundir
 	cd ${TESTDIR}; cp ../data/FLUXEMERGENCE/*.dat* .
@@ -134,18 +134,18 @@ test_fluxemergence_check:
 
 test_shocktube:
 	@echo "test_shocktube_compile..." > test_shocktube.diff
-	make test_shocktube_compile
+	$(MAKE) test_shocktube_compile
 	@echo "test_shocktube_rundir..." >> test_shocktube.diff
-	make test_shocktube_rundir
+	$(MAKE) test_shocktube_rundir
 	@echo "test_shocktube_run..." >> test_shocktube.diff
-	make test_shocktube_run
+	$(MAKE) test_shocktube_run
 	@echo "test_shocktube_check..." >> test_shocktube.diff
-	make test_shocktube_check
+	$(MAKE) test_shocktube_check
 
 test_shocktube_compile:
 	./Config.pl -u=Default -e=MhdHyp -g=64,2,2,10,1
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_shocktube_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.hyp PARAM.in
@@ -164,18 +164,18 @@ test_shocktube_check:
 
 test_hallmhd:
 	@echo "test_hallmhd_compile..." > test_hallmhd.diff
-	make test_hallmhd_compile
+	$(MAKE) test_hallmhd_compile
 	@echo "test_hallmhd_rundir..." >> test_hallmhd.diff
-	make test_hallmhd_rundir
+	$(MAKE) test_hallmhd_rundir
 	@echo "test_hallmhd_run..." >> test_hallmhd.diff
-	make test_hallmhd_run
+	$(MAKE) test_hallmhd_run
 	@echo "test_hallmhd_check..." >> test_hallmhd.diff
-	make test_hallmhd_check
+	$(MAKE) test_hallmhd_check
 
 test_hallmhd_compile:
 	./Config.pl -u=Waves -e=Mhd -g=64,2,2,10,10
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_hallmhd_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.HallTest PARAM.in
@@ -194,18 +194,18 @@ test_hallmhd_check:
 
 test_twofluidmhd:
 	@echo "test_twofluidmhd_compile..." > test_twofluidmhd.diff
-	make test_twofluidmhd_compile
+	$(MAKE) test_twofluidmhd_compile
 	@echo "test_twofluidmhd_rundir..." >> test_twofluidmhd.diff
-	make test_twofluidmhd_rundir
+	$(MAKE) test_twofluidmhd_rundir
 	@echo "test_twofluidmhd_run..." >> test_twofluidmhd.diff
-	make test_twofluidmhd_run
+	$(MAKE) test_twofluidmhd_run
 	@echo "test_twofluidmhd_check..." >> test_twofluidmhd.diff
-	make test_twofluidmhd_check
+	$(MAKE) test_twofluidmhd_check
 
 test_twofluidmhd_compile:
 	./Config.pl -u=Waves -e=MhdHypPe -g=64,2,2,10,10
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_twofluidmhd_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.TwofluidTest PARAM.in
@@ -224,18 +224,18 @@ test_twofluidmhd_check:
 
 test_multifluid:
 	@echo "test_multifluid_compile..." > test_multifluid.diff
-	make test_multifluid_compile
+	$(MAKE) test_multifluid_compile
 	@echo "test_multifluid_rundir..." >> test_multifluid.diff
-	make test_multifluid_rundir
+	$(MAKE) test_multifluid_rundir
 	@echo "test_multifluid_run..." >> test_multifluid.diff
-	make test_multifluid_run
+	$(MAKE) test_multifluid_run
 	@echo "test_multifluid_check..." >> test_multifluid.diff
-	make test_multifluid_check
+	$(MAKE) test_multifluid_check
 
 test_multifluid_compile:
 	./Config.pl -u=Default -e=MhdHd -g=64,2,2,10,1
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_multifluid_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MULTIFLUID/PARAM.in .
@@ -253,18 +253,18 @@ test_multifluid_check:
 ### TEST MAGNETOMETER ###
 test_magnetometer:
 	@echo "test_magnetometer_compile..." >> test_magnetometer.diff
-	make test_magnetometer_compile
+	$(MAKE) test_magnetometer_compile
 	@echo "test_magnetometer_rundir..." >> test_magnetometer.diff
-	make test_magnetometer_rundir
+	$(MAKE) test_magnetometer_rundir
 	@echo "test_magnetometer_run..." >> test_magnetometer.diff
-	make test_magnetometer_run
+	$(MAKE) test_magnetometer_run
 	@echo "test_magnetometer_check..." >> test_magnetometer.diff
-	make test_magnetometer_check
+	$(MAKE) test_magnetometer_check
 
 test_magnetometer_compile:
 	./Config.pl -u=Default -e=Mhd -g=4,4,4,400,1
 	make
-	make PIDL
+	$(MAKE) PIDL
 	
 test_magnetometer_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MAGNETOMETER/PARAM.in PARAM.in
@@ -285,18 +285,18 @@ test_magnetometer_check:
 
 test_multiion:
 	@echo "test_multiion_compile..." > test_multiion.diff
-	make test_multiion_compile
+	$(MAKE) test_multiion_compile
 	@echo "test_multiion_rundir..." >> test_multiion.diff
-	make test_multiion_rundir
+	$(MAKE) test_multiion_rundir
 	@echo "test_multiion_run..." >> test_multiion.diff
-	make test_multiion_run
+	$(MAKE) test_multiion_run
 	@echo "test_multiion_check..." >> test_multiion.diff
-	make test_multiion_check
+	$(MAKE) test_multiion_check
 
 test_multiion_compile:
 	./Config.pl -u=Default -e=MultiIon -g=64,2,2,10,1
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_multiion_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MULTIION/PARAM.in .
@@ -315,18 +315,18 @@ test_multiion_check:
 
 test_mhdions:
 	@echo "test_mhdions_compile..." > test_mhdions.diff
-	make test_mhdions_compile
+	$(MAKE) test_mhdions_compile
 	@echo "test_mhdions_rundir..." >> test_mhdions.diff
-	make test_mhdions_rundir
+	$(MAKE) test_mhdions_rundir
 	@echo "test_mhdions_run..." >> test_mhdions.diff
-	make test_mhdions_run
+	$(MAKE) test_mhdions_run
 	@echo "test_mhdions_check..." >> test_mhdions.diff
-	make test_mhdions_check
+	$(MAKE) test_mhdions_check
 
 test_mhdions_compile:
 	./Config.pl -u=Default -e=MhdIons -g=64,2,2,40,1
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_mhdions_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MHDIONS/PARAM.in .
@@ -346,18 +346,18 @@ test_mhdions_check:
 
 test_mhdnoncons:
 	@echo "test_mhdnoncons_compile..." > test_mhdnoncons.diff
-	make test_mhdnoncons_compile
+	$(MAKE) test_mhdnoncons_compile
 	@echo "test_mhdnoncons_rundir..." >> test_mhdnoncons.diff
-	make test_mhdnoncons_rundir
+	$(MAKE) test_mhdnoncons_rundir
 	@echo "test_mhdnoncons_run..." >> test_mhdnoncons.diff
-	make test_mhdnoncons_run
+	$(MAKE) test_mhdnoncons_run
 	@echo "test_mhdnoncons_check..." >> test_mhdnoncons.diff
-	make test_mhdnoncons_check
+	$(MAKE) test_mhdnoncons_check
 
 test_mhdnoncons_compile:
 	./Config.pl -u=Default -e=MhdNonCons -g=64,2,2,40,1
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_mhdnoncons_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MHDNONCONS/PARAM.in .
@@ -379,18 +379,18 @@ test_mhdnoncons_check:
 
 test_eosgodunov:
 	@echo "test_eosgodunov_compile..." > test_eosgodunov.diff
-	make test_eosgodunov_compile
+	$(MAKE) test_eosgodunov_compile
 	@echo "test_eosgodunov_rundir..." >> test_eosgodunov.diff
-	make test_eosgodunov_rundir
+	$(MAKE) test_eosgodunov_rundir
 	@echo "test_eosgodunov_run..." >> test_eosgodunov.diff
-	make test_eosgodunov_run
+	$(MAKE) test_eosgodunov_run
 	@echo "test_eosgodunov_check..." >> test_eosgodunov.diff
-	make test_eosgodunov_check
+	$(MAKE) test_eosgodunov_check
 
 test_eosgodunov_compile:
 	./Config.pl -e=HdEos -u=Eos -g=10,1,1,100,1
-	make CRASH
-	make PIDL
+	$(MAKE) CRASH
+	$(MAKE) PIDL
 
 test_eosgodunov_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.eosgodunov PARAM.in; \
@@ -410,18 +410,18 @@ test_eosgodunov_check:
 
 test_levelset:
 	@echo "test_levelset_compile..." > test_levelset.diff
-	make test_levelset_compile
+	$(MAKE) test_levelset_compile
 	@echo "test_levelset_rundir..." >> test_levelset.diff
-	make test_levelset_rundir DEFAULT_EXE=CRASH.exe
+	$(MAKE) test_levelset_rundir DEFAULT_EXE=CRASH.exe
 	@echo "test_levelset_run..." >> test_levelset.diff
-	make test_levelset_run
+	$(MAKE) test_levelset_run
 	@echo "test_levelset_check..." >> test_levelset.diff
-	make test_levelset_check
+	$(MAKE) test_levelset_check
 
 test_levelset_compile:
 	./Config.pl -e=HdCrash -u=Crash -g=4,4,1,2000,1 -nMaterial=3
-	make CRASH
-	make PIDL
+	$(MAKE) CRASH
+	$(MAKE) PIDL
 
 test_levelset_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.levelset PARAM.in
@@ -441,20 +441,20 @@ test_levelset_check:
 
 test_hyades2d:
 	@echo "test_hyades2d_compile..." > test_hyades2d.diff
-	make test_hyades2d_compile
+	$(MAKE) test_hyades2d_compile
 	@echo "test_hyades2d_rundir..." >> test_hyades2d.diff
-	make test_hyades2d_rundir DEFAULT_EXE=CRASH.exe
+	$(MAKE) test_hyades2d_rundir DEFAULT_EXE=CRASH.exe
 	@echo "test_hyades2d_run..." >> test_hyades2d.diff
-	make test_hyades2d_run
+	$(MAKE) test_hyades2d_run
 	@echo "test_hyades2d_restart..." >> test_hyades2d.diff
-	make test_hyades2d_restart
+	$(MAKE) test_hyades2d_restart
 	@echo "test_hyades2d_check..." >> test_hyades2d.diff
-	make test_hyades2d_check
+	$(MAKE) test_hyades2d_check
 
 test_hyades2d_compile:
 	./Config.pl -e=HdRadCrash -u=Crash -g=10,10,1,200,200 -nMaterial=3
-	make CRASH
-	make PIDL
+	$(MAKE) CRASH
+	$(MAKE) PIDL
 
 test_hyades2d_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d PARAM.in
@@ -482,18 +482,18 @@ test_hyades2d_check:
 
 test_adjhyades2d:
 	@echo "test_adjhyades2d_compile..." > test_adjhyades2d.diff
-	make test_adjhyades2d_compile
+	$(MAKE) test_adjhyades2d_compile
 	@echo "test_adjhyades2d_rundir..." >> test_adjhyades2d.diff
-	make test_adjhyades2d_rundir DEFAULT_EXE=CRASH.exe
+	$(MAKE) test_adjhyades2d_rundir DEFAULT_EXE=CRASH.exe
 	@echo "test_adjhyades2d_run1..." >> test_adjhyades2d.diff
-	make test_adjhyades2d_run1
+	$(MAKE) test_adjhyades2d_run1
 	@echo "test_adjhyades2d_run2..." >> test_adjhyades2d.diff
-	make test_adjhyades2d_run2
+	$(MAKE) test_adjhyades2d_run2
 
 test_adjhyades2d_compile:
 	./Config.pl -e=HdRadCrash -u=Crash -g=10,10,1,200,200
-	make CRASH
-	make PIDL
+	$(MAKE) CRASH
+	$(MAKE) PIDL
 
 test_adjhyades2d_rundir: test_rundir
 	gunzip -c dataCRASH/input/hyades2d_1.1ns.out.gz \
@@ -516,18 +516,18 @@ test_adjhyades2d_run2:
 
 test_mixedcell:
 	@echo "test_mixedcell_compile..." > test_mixedcell.diff
-	make test_mixedcell_compile
+	$(MAKE) test_mixedcell_compile
 	@echo "test_mixedcell_rundir..." >> test_mixedcell.diff
-	make test_mixedcell_rundir DEFAULT_EXE=CRASH.exe
+	$(MAKE) test_mixedcell_rundir DEFAULT_EXE=CRASH.exe
 	@echo "test_mixedcell_run..." >> test_mixedcell.diff
-	make test_mixedcell_run
+	$(MAKE) test_mixedcell_run
 	@echo "test_mixedcell_check..." >> test_mixedcell.diff
-	make test_mixedcell_check
+	$(MAKE) test_mixedcell_check
 
 test_mixedcell_compile:
 	./Config.pl -e=HdCrash -u=Crash -g=4,4,2,2000,1 -nMaterial=3
-	make CRASH
-	make PIDL
+	$(MAKE) CRASH
+	$(MAKE) PIDL
 
 test_mixedcell_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.mixedcell PARAM.in
@@ -548,18 +548,18 @@ test_mixedcell_check:
 
 test_graydiffusion:
 	@echo "test_graydiffusion_compile..." > test_graydiffusion.diff
-	make test_graydiffusion_compile
+	$(MAKE) test_graydiffusion_compile
 	@echo "test_graydiffusion_rundir..." >> test_graydiffusion.diff
-	make test_graydiffusion_rundir
+	$(MAKE) test_graydiffusion_rundir
 	@echo "test_graydiffusion_run..." >> test_graydiffusion.diff
-	make test_graydiffusion_run
+	$(MAKE) test_graydiffusion_run
 	@echo "test_graydiffusion_check..." >> test_graydiffusion.diff
-	make test_graydiffusion_check
+	$(MAKE) test_graydiffusion_check
 
 test_graydiffusion_compile:
 	./Config.pl -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
-	make BATSRUS
-	make PIDL
+	$(MAKE) BATSRUS
+	$(MAKE) PIDL
 
 test_graydiffusion_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.graydiffusion PARAM.in
@@ -581,21 +581,21 @@ test_graydiffusion_check:
 
 test_corona:
 	@echo "test_corona_compile..." > test_corona.diff
-	make test_corona_compile
+	$(MAKE) test_corona_compile
 	@echo "test_corona_rundir..." >> test_corona.diff
-	make test_corona_rundir
+	$(MAKE) test_corona_rundir
 	@echo "test_corona_run..." >> test_corona.diff
-	make test_corona_run
+	$(MAKE) test_corona_run
 	@echo "test_corona_check..." >> test_corona.diff
-	make test_corona_check
+	$(MAKE) test_corona_check
 
 test_corona_compile:
 	./Config.pl -u=Sc -e=MhdCorona -g=4,4,4,3000,1
-	make BATSRUS PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_corona_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in .
 	cd ${TESTDIR}; cp Param/CORONA/CR1935_WSO.dat .
 
@@ -622,21 +622,21 @@ test_corona_check:
 
 test_coronasph:
 	@echo "test_coronasph_compile..." > test_coronasph.diff
-	make test_coronasph_compile
+	$(MAKE) test_coronasph_compile
 	@echo "test_coronasph_rundir..." >> test_coronasph.diff
-	make test_coronasph_rundir
+	$(MAKE) test_coronasph_rundir
 	@echo "test_coronasph_run..." >> test_coronasph.diff
-	make test_coronasph_run
+	$(MAKE) test_coronasph_run
 	@echo "test_coronasph_check..." >> test_coronasph.diff
-	make test_coronasph_check
+	$(MAKE) test_coronasph_check
 
 test_coronasph_compile:
 	./Config.pl -u=Sc -e=MhdCorona -g=4,4,4,3000,1
-	make BATSRUS PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_coronasph_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.spherical PARAM.in
 	cd ${TESTDIR}; cp Param/CORONA/CR1935_WSO.dat .
 
@@ -654,21 +654,21 @@ test_coronasph_check:
 
 test_corona_2t:
 	@echo "test_corona_2t_compile..." > test_corona_2t.diff
-	make test_corona_2t_compile
+	$(MAKE) test_corona_2t_compile
 	@echo "test_corona_2t_rundir..." >> test_corona_2t.diff
-	make test_corona_2t_rundir
+	$(MAKE) test_corona_2t_rundir
 	@echo "test_corona_2t_run..." >> test_corona_2t.diff
-	make test_corona_2t_run
+	$(MAKE) test_corona_2t_run
 	@echo "test_corona_2t_check..." >> test_corona_2t.diff
-	make test_corona_2t_check
+	$(MAKE) test_corona_2t_check
 
 test_corona_2t_compile:
 	./Config.pl -u=ScHeat -e=MhdWavesPe -g=4,4,4,3000,1
-	make BATSRUS PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_corona_2t_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.sc.2t PARAM.in
 	gunzip -c data/../../../SC/BATSRUS/data/input/CR2077_LDEM_moments.out.gz \
 		> ${TESTDIR}/CR2077_LDEM_moments.out
@@ -687,21 +687,21 @@ test_corona_2t_check:
 
 test_chromo:
 	@echo "test_chromo_compile..." > test_chromo.diff
-	make test_chromo_compile
+	$(MAKE) test_chromo_compile
 	@echo "test_chromo_rundir..." >> test_chromo.diff
-	make test_chromo_rundir
+	$(MAKE) test_chromo_rundir
 	@echo "test_chromo_run..." >> test_chromo.diff
-	make test_chromo_run
+	$(MAKE) test_chromo_run
 	@echo "test_chromo_check..." >> test_chromo.diff
-	make test_chromo_check
+	$(MAKE) test_chromo_check
 
 test_chromo_compile:
 	./Config.pl -u=ScChromo -e=MhdWaves -g=6,4,4,5000,1 -nWave=2
-	make BATSRUS
+	$(MAKE) BATSRUS
 
 test_chromo_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.sc.chromo PARAM.in
 
 test_chromo_run:
@@ -718,21 +718,21 @@ test_chromo_check:
 
 test_outerhelio:
 	@echo "test_outerhelio_compile..." > test_outerhelio.diff
-	make test_outerhelio_compile
+	$(MAKE) test_outerhelio_compile
 	@echo "test_outerhelio_rundir..." >> test_outerhelio.diff
-	make test_outerhelio_rundir
+	$(MAKE) test_outerhelio_rundir
 	@echo "test_outerhelio_run..." >> test_outerhelio.diff
-	make test_outerhelio_run
+	$(MAKE) test_outerhelio_run
 	@echo "test_outerhelio_check..." >> test_outerhelio.diff
-	make test_outerhelio_check
+	$(MAKE) test_outerhelio_check
 
 test_outerhelio_compile:
 	./Config.pl -u=OuterHelio -e=OuterHelio -g=4,4,4,3500,1
-	make BATSRUS PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_outerhelio_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in .
 
 test_outerhelio_run:
@@ -749,15 +749,15 @@ test_outerhelio_check:
 
 test_func:
 	@echo "test_func_compile..." > test_func.diff
-	make test_func_compile
+	$(MAKE) test_func_compile
 	@echo "test_func_run..." >> test_func.diff
-	make test_func_run
+	$(MAKE) test_func_run
 	@echo "test_func_check..." >> test_func.diff
-	make test_func_check
+	$(MAKE) test_func_check
 
 test_func_compile:
 	./Config.pl -u=Default -e=Mhd -g=8,8,8,720,70
-	make BATSRUS PIDL PSPH
+	$(MAKE) BATSRUS PIDL PSPH
 
 test_func_run: test_rundir
 	./TestSuite.pl -r='${MPIRUN} ' -d=${TESTDIR} func
@@ -772,23 +772,23 @@ test_func_check:
 ### TESTS FOR MODELING TITAN ###
 
 test_titan:
-	-@(make test_titan_start)
-	-@(make test_titan_restart)
+	-@($(MAKE) test_titan_start)
+	-@($(MAKE) test_titan_restart)
 
 test_titan_start:
 	@echo "test_titan_compile..." > test_titan.diff
-	make test_titan_compile
+	$(MAKE) test_titan_compile
 	@echo "test_titan_rundir..." >> test_titan.diff
-	make test_titan_rundir
+	$(MAKE) test_titan_rundir
 	@echo "test_titan_run..." >> test_titan.diff
-	make test_titan_run
+	$(MAKE) test_titan_run
 	@echo "test_titan_check..." >> test_titan.diff
-	make test_titan_check
+	$(MAKE) test_titan_check
 
 test_titan_compile:
 	./Config.pl -u=Titan -e=MhdTitan -g=6,6,6,1000,200
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_titan_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -808,11 +808,11 @@ test_titan_check:
 
 test_titan_restart:
 	@echo "test_titan_restart_save..." > test_titan_restart.diff
-	make test_titan_restart_save
+	$(MAKE) test_titan_restart_save
 	@echo "test_titan_restart_read..." >> test_titan_restart.diff
-	make test_titan_restart_read
+	$(MAKE) test_titan_restart_read
 	@echo "test_titan_restart_check..." >> test_titan_restart.diff
-	make test_titan_restart_check
+	$(MAKE) test_titan_restart_check
 
 test_titan_restart_save:
 	cd ${TESTDIR}; cp Param/TITAN/PARAM.in.restartsave PARAM.in
@@ -841,22 +841,22 @@ test_titan_restart_check:
 ### TESTS FOR MODELING MARS ###
 
 test_mars:
-	-@(make test_mars_start)
+	-@($(MAKE) test_mars_start)
 
 test_mars_start:
 	@echo "test_mars_compile..." > test_mars.diff
-	make test_mars_compile
+	$(MAKE) test_mars_compile
 	@echo "test_mars_rundir..." >> test_mars.diff
-	make test_mars_rundir
+	$(MAKE) test_mars_rundir
 	@echo "test_mars_run..." >> test_mars.diff
-	make test_mars_run
+	$(MAKE) test_mars_run
 	@echo "test_mars_check..." >> test_mars.diff
-	make test_mars_check
+	$(MAKE) test_mars_check
 
 test_mars_compile:
 	./Config.pl -u=Mars -e=MhdMars -g=6,6,6,1000,200
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_mars_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -877,23 +877,23 @@ test_mars_check:
 ### TESTS FOR MODELING MARSFLUIDS ###
 
 test_marsfluids:
-	-@(make test_marsfluids_start)
-	-@(make test_marsfluids_restart)
+	-@($(MAKE) test_marsfluids_start)
+	-@($(MAKE) test_marsfluids_restart)
 
 test_marsfluids_start:
 	@echo "test_marsfluids_compile..." > test_marsfluids.diff
-	make test_marsfluids_compile
+	$(MAKE) test_marsfluids_compile
 	@echo "test_marsfluids_rundir..." >> test_marsfluids.diff
-	make test_marsfluids_rundir
+	$(MAKE) test_marsfluids_rundir
 	@echo "test_marsfluids_run..." >> test_marsfluids.diff
-	make test_marsfluids_run
+	$(MAKE) test_marsfluids_run
 	@echo "test_marsfluids_check..." >> test_marsfluids.diff
-	make test_marsfluids_check
+	$(MAKE) test_marsfluids_check
 
 test_marsfluids_compile:
 	./Config.pl -u=MarsFluids -e=MhdMarsFluids -g=6,6,6,1000,200
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_marsfluids_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -912,11 +912,11 @@ test_marsfluids_check:
 
 test_marsfluids_restart:
 	@echo "test_marsfluids_restart_save..." > test_marsfluids_restart.diff
-	make test_marsfluids_restart_save
+	$(MAKE) test_marsfluids_restart_save
 	@echo "test_marsfluids_restart_read..." >> test_marsfluids_restart.diff
-	make test_marsfluids_restart_read
+	$(MAKE) test_marsfluids_restart_read
 	@echo "test_marsfluids_restart_check..." >> test_marsfluids_restart.diff
-	make test_marsfluids_restart_check
+	$(MAKE) test_marsfluids_restart_check
 
 
 test_marsfluids_restart_save:
@@ -947,23 +947,23 @@ test_marsfluids_restart_check:
 ### TESTS FOR MODELING VENUS ###
 
 test_venus:
-	-@(make test_venus_start)
-	-@(make test_venus_restart)
+	-@($(MAKE) test_venus_start)
+	-@($(MAKE) test_venus_restart)
 
 test_venus_start:
 	@echo "test_venus_compile..." > test_venus.diff
-	make test_venus_compile
+	$(MAKE) test_venus_compile
 	@echo "test_venus_rundir..." >> test_venus.diff
-	make test_venus_rundir
+	$(MAKE) test_venus_rundir
 	@echo "test_venus_run..." >> test_venus.diff
-	make test_venus_run
+	$(MAKE) test_venus_run
 	@echo "test_venus_check..." >> test_venus.diff
-	make test_venus_check
+	$(MAKE) test_venus_check
 
 test_venus_compile:
 	./Config.pl -u=Venus -e=MhdMars -g=6,6,6,1000,200
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_venus_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -982,11 +982,11 @@ test_venus_check:
 
 test_venus_restart:
 	@echo "test_venus_restart_save..." > test_venus_restart.diff
-	make test_venus_restart_save
+	$(MAKE) test_venus_restart_save
 	@echo "test_venus_restart_read..." >> test_venus_restart.diff
-	make test_venus_restart_read
+	$(MAKE) test_venus_restart_read
 	@echo "test_venus_restart_check..." >> test_venus_restart.diff
-	make test_venus_restart_check
+	$(MAKE) test_venus_restart_check
 
 test_venus_restart_save:
 	cd ${TESTDIR}; cp Param/VENUS/PARAM.in.restartsave PARAM.in
@@ -1015,22 +1015,22 @@ test_venus_restart_check:
 ### TESTS FOR MODELING SATURN ###
 
 test_saturn:
-	-@(make test_saturn_start)
+	-@($(MAKE) test_saturn_start)
 
 test_saturn_start:
 	@echo "test_saturn_compile..." > test_saturn.diff
-	make test_saturn_compile
+	$(MAKE) test_saturn_compile
 	@echo "test_saturn_rundir..." >> test_saturn.diff
-	make test_saturn_rundir
+	$(MAKE) test_saturn_rundir
 	@echo "test_saturn_run..." >> test_saturn.diff
-	make test_saturn_run
+	$(MAKE) test_saturn_run
 	@echo "test_saturn_check..." >> test_saturn.diff
-	make test_saturn_check
+	$(MAKE) test_saturn_check
 
 test_saturn_compile:
 	./Config.pl -u=Saturn -e=MhdHyp -g=8,8,8,720,1
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_saturn_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -1051,18 +1051,18 @@ test_saturn_check:
 
 test_comet:
 	@echo "test_comet_compile..." > test_comet.diff
-	make test_comet_compile
+	$(MAKE) test_comet_compile
 	@echo "test_comet_rundir..." >> test_comet.diff
-	make test_comet_rundir
+	$(MAKE) test_comet_rundir
 	@echo "test_comet_run..." >> test_comet.diff
-	make test_comet_run
+	$(MAKE) test_comet_run
 	@echo "test_comet_check..." >> test_comet.diff
-	make test_comet_check
+	$(MAKE) test_comet_check
 
 test_comet_compile:
 	./Config.pl -u=Comet6Sp -e=MhdComet -g=8,8,8,600,100
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_comet_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -1082,17 +1082,17 @@ test_comet_check:
 ### TESTS FOR MODELING EARTH WITH SPHERICAL GRID ###
 
 test_earthsph:
-	-@(make test_earthsph_start)
+	-@($(MAKE) test_earthsph_start)
 
 test_earthsph_start:
 	@echo "test_earthsph_compile..." > test_earthsph.diff
-	make test_earthsph_compile
+	$(MAKE) test_earthsph_compile
 	@echo "test_earthsph_rundir..." >> test_earthsph.diff
-	make test_earthsph_rundir
+	$(MAKE) test_earthsph_rundir
 	@echo "test_earthsph_run..." >> test_earthsph.diff
-	make test_earthsph_run
+	$(MAKE) test_earthsph_run
 	@echo "test_earthsph_check..." >> test_earthsph.diff
-	make test_earthsph_check
+	$(MAKE) test_earthsph_check
 
 test_earthsph_compile:
 	./Config.pl -e=Mhd -u=Default -g=8,8,8,600,300
@@ -1119,18 +1119,18 @@ test_earthsph_check:
 
 test_2bodyplot:
 	@echo "test_2bodyplot_compile..." > test_2bodyplot.diff
-	make test_2bodyplot_compile
+	$(MAKE) test_2bodyplot_compile
 	@echo "test_2bodyplot_rundir..." >> test_2bodyplot.diff
-	make test_2bodyplot_rundir
+	$(MAKE) test_2bodyplot_rundir
 	@echo "test_2bodyplot_run..." >> test_2bodyplot.diff
-	make test_2bodyplot_run
+	$(MAKE) test_2bodyplot_run
 	@echo "test_2bodyplot_check..." >> test_2bodyplot.diff
-	make test_2bodyplot_check
+	$(MAKE) test_2bodyplot_check
 
 test_2bodyplot_compile:
 	./Config.pl -e=Mhd -u=Default -g=8,8,8,600,300
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_2bodyplot_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -1171,18 +1171,18 @@ test_2bodyplot_check:
 
 test_anisotropic:
 	@echo "test_anisotropic_compile..." > test_anisotropic.diff
-	make test_anisotropic_compile
+	$(MAKE) test_anisotropic_compile
 	@echo "test_anisotropic_rundir..." >> test_anisotropic.diff
-	make test_anisotropic_rundir
+	$(MAKE) test_anisotropic_rundir
 	@echo "test_anisotropic_run..." >> test_anisotropic.diff
-	make test_anisotropic_run
+	$(MAKE) test_anisotropic_run
 	@echo "test_anisotropic_check..." >> test_anisotropic.diff
-	make test_anisotropic_check
+	$(MAKE) test_anisotropic_check
 
 test_anisotropic_compile:
 	./Config.pl -u=Waves -e=MhdAnisoP -g=100,2,2,100,1
 	make
-	make PIDL
+	$(MAKE) PIDL
 
 test_anisotropic_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/ANISOPRESSURE/PARAM.in.Alfven PARAM.in
