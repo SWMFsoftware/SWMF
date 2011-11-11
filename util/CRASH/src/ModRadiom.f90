@@ -16,7 +16,7 @@ module M_RADIOM
   !/
   character(LEN=*),parameter :: author='M.Busquet' &
        ,wher='ARTEP,inc' &
-       ,version='CRASH-2011.005.f' &
+       ,version='CRASH-2011.005.g' &
        ,library='RADIOM' &
        ,dateModified='2011-08-09' 
   character(LEN=*),parameter :: &
@@ -125,6 +125,9 @@ contains
     if(nbOut.lt.2) call CON_stop('-R- xubar : nbOut<2')
     duu=Uout(2)-Uout(1)
     do ig=2,nbOut+1
+       if(Uout(ig).le.0) then
+          exit		! 111003
+       end if
        u  = (Uout(ig)+Uout(ig-1))/two
        du = (Uout(ig)-Uout(ig-1))
        bu3=betapm*u**3
@@ -141,6 +144,10 @@ contains
        rm=max(rm,smallR)
        duu=du
        ubar=(ubar+u*rm)/(one+rm)
+       if(dbg)then
+          write(*,'(1p,a,i4,a,e13.4,a,5e13.4,a,2e13.4)') &
+               'group#',ig,' ubar=',ubar,' u,sp,frad,rm,s=',u,SPout(ig-1),frad,rm,s 
+       end if
        s=one+one/rm		! sumMode
     end do
     ! 
@@ -294,17 +301,16 @@ contains
     tz=te*ubar/QJ
   end subroutine calTz
   !-------
-  subroutine calTz0(Te,Ne, Tz, eg,bg)
+  subroutine calTz0(Te,Ne, Tz, EoB)
     !-
     !-     same as "calTZ" but w/o hnug(0:ng) & ubar1
     !
     !
     use CRASH_M_projE,only : nbIn
     real,intent(IN) :: Te,ne
-    real,dimension(:),intent(IN) :: eg,bg
+    real,dimension(:),intent(IN) :: EoB
     real,intent(OUT) :: Tz
 
-    real,dimension(mxgr) :: EoB
     real,parameter :: smallB=1d-30
     integer :: ig
 
@@ -316,10 +322,7 @@ contains
     at32s=aSaha*te*sqrt(te)/Ne
     tz=te
     if(at32s.le.one) return
-    EOB(1:nbIn)=0.
-    do ig=1,nbIn
-       if(bg(ig).gt.smallB) EoB(ig)=eg(ig)/bg(ig)
-    end do
+    ! this is already done in "setErad", should pass by arg ?
     call xubar0(te,ne,EoB ,ubar)	! no more a function
     QJ=log(at32s)
     tz=te*ubar/QJ
@@ -357,15 +360,14 @@ contains
     TeNew=Tz*QJ/ubar
   end subroutine calte
   !-------
-  subroutine calte0(Te,Ne,Tz, eg,bg)
+  subroutine calte0(Te,Ne,Tz, EoB)
     use CRASH_M_projE,only : nbIn
     implicit none
     real,intent(IN) :: Tz,Ne
     real,intent(INOUT) :: Te
-    real,dimension(:),intent(IN) :: eg,bg
+    real,dimension(:),intent(IN) :: EoB
     real,parameter :: zero=0
 
-    real,dimension(mxgr) :: EoB
     real,parameter :: smallB=1d-30
     integer :: ig
 
@@ -385,10 +387,6 @@ contains
     Te=Tz
     if(at32s.le.one) return
     QJ=log(at32s)
-    EoB(1:nbIn)=0.
-    do ig=1,nbIn
-       if(bg(ig).gt.smallB) EoB(ig)=eg(ig)/bg(ig)
-    end do
     call xubar0(Te,ne,EoB,ubar)
     Te=Tz*QJ/ubar
     return
