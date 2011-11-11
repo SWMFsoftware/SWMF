@@ -43,7 +43,7 @@ module ModUser
   ! Here you must define a user routine Version number and a 
   ! descriptive string.
   !/
-  real,              parameter :: VersionUserModule = 1.2
+  real,              parameter :: VersionUserModule = 1.3
   character (len=*), parameter :: NameUserModule = &
        'Waves and GEM, Yingjuan Ma'
 
@@ -55,7 +55,10 @@ module ModUser
   integer   :: iPower_V(nVar)=1
   integer   :: iVar             
   logical   :: DoInitialize=.true.
-  real      :: Lx=25.6, Ly=12.8, Lambda0=0.5, Az=0.1, Tp=0.5 , B0=1.0  
+
+  ! GEM challenge parameters
+  real      :: Lambda0=0.5, Az=0.1, Tp=0.5 , B0=1.0  
+  real      :: GemEps = 0.0
 
   ! The (rotated) unperturbed initial state with primitive variables
   real      :: PrimInit_V(nVar)
@@ -101,6 +104,8 @@ contains
           call read_var('UserProblem',UserProblem)
        case('#GEM')
           call read_var('Amplitude',Az)
+       case('#GEMPERTURB')
+          call read_var('GemEps',GemEps)
        case('#RT')
           UserProblem = 'RT'
           UseUserICs  = .true.
@@ -177,7 +182,7 @@ contains
   subroutine user_set_ics
 
     use ModMain,     ONLY: globalBLK, unusedBLK, TypeCoordSystem, GravitySi
-    use ModGeometry, ONLY: x1, y1, y2, x_BLK, y_BLK, z_BLK, r_BLK
+    use ModGeometry, ONLY: x1, x2, y1, y2, x_BLK, y_BLK, z_BLK, r_BLK
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, &
          Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, UseElectronPressure, UseAnisoPressure
     use ModProcMH,   ONLY: iProc
@@ -185,7 +190,7 @@ contains
          Si2No_V, Io2Si_V, Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
          rPlanetSi, rBody, UnitT_,OmegaBody
     use ModNumconst, ONLY: cHalfPi, cPi, cTwoPi, cDegToRad
-    use ModSize,     ONLY: nI, nJ, nK, gcn
+    use ModSize,     ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
 
     real,dimension(nVar):: State_V,KxTemp_V,KyTemp_V
@@ -195,6 +200,9 @@ contains
     integer             :: i, j, k, iBlock
 
     real :: RhoLeft, RhoRight, pLeft
+
+    ! GEM relatex variables
+    real:: x, y, Lx, Ly
 
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
@@ -284,7 +292,7 @@ contains
        ! Start filling in cells (including ghost cells)                       
        !/                          
        if (DoInitSphere) then
-          do k= 1-gcn,nK+gcn ; do j= 1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              xCell = x_BLK(i,j,k,iBlock)
              yCell = y_BLK(i,j,k,iBlock)
              zCell = z_BLK(i,j,k,iBlock)
@@ -407,15 +415,23 @@ contains
             State_VGB(Ppar_,:,:,:,iBlock) = ShockLeftState_V(Ppar_)*(1.0 &
                + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
                /ShockLeftState_V(p_))
-       
+
        State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
-!!!set intial perturbation
-       State_VGB(Bx_,:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock) &
-            - Az* cPi/ Ly &
-            *cos(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*sin(cPi*y_BLK(:,:,:,iBlock)/Ly)
-       State_VGB(By_,:,:,:,iBlock) = State_VGB(By_,:,:,:,iBlock) &
-            + Az* cTwoPi/ Lx &
-            *sin(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*cos(cPi*y_BLK(:,:,:,iBlock)/Ly)
+
+       ! Size of the box
+       Lx = x2 - x1
+       Ly = y2 - y1
+       !set intial perturbation
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          x = x_BLK(i,j,k,iBlock)
+          y = y_BLK(i,j,k,iBlock)
+          ! Apply perturbation on x
+          x = x + GemEps*(x-x1)*(x-x2)
+          State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) &
+               - Az* cPi/Ly *cos(cTwoPi*x/Lx) * sin(cPi*y/Ly) * (1+2*GemEps*x)
+          State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) &
+               + Az* cTwoPi/Lx * sin(cTwoPi*x/Lx) * cos(cPi*y/Ly)
+       end do; end do; end do
 
     case default
        if(iProc==0) call stop_mpi( &
