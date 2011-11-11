@@ -139,7 +139,7 @@ module CRASH_ModEos
                                    1.0, 0.0, 0.0, 0.0, 0.0, 0.0, &
                                    5.0/15, 2.0/15, 8.0/15,0.0,0.0,0.0/),(/6,5/))
 
-
+  public :: nZMix_II, cMix_II  !To calculate the average atomic number
   ! The logicals determine if we use or not tabulated EOS
   ! and opacities  
   
