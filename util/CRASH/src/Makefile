@@ -20,8 +20,7 @@ NLTE=\
 	ModExpTable.o \
 	ModRadiom.o \
 	nlte.o \
-	radiom.o \
-	voids.o 
+	radiom.o  
 
 OBJECTS=\
 	ModAtomicMass.o \
@@ -34,6 +33,7 @@ OBJECTS=\
 	ModPowerLawEos.o\
 	ModFermiGas.o\
 	ModHydrogenicModel.o \
+	ModInterfaceNLTE.o \
         ModIonizPotential.o \
 	ModMolecularData.o \
 	ModPartition.o \
