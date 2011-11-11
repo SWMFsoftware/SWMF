@@ -2447,7 +2447,8 @@ contains
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI
     use ModIo,          ONLY: restart
     use CRASH_ModMultiGroup, ONLY: set_multigroup
-    use CRASH_ModEos,        ONLY: NameMaterial_I, check_eos_table, &
+    use CRASH_ModEos,        ONLY: NameMaterial_I 
+    use CRASH_ModEosTable,   ONLY: check_eos_table, &
          check_opac_table
 
     integer:: iMaterial

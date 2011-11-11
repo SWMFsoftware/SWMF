@@ -2823,7 +2823,8 @@ contains
     use ModConst,       ONLY: cKevToK, cHPlanckEV
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI
     use CRASH_ModMultiGroup, ONLY: set_multigroup
-    use CRASH_ModEos,        ONLY: NameMaterial_I, check_eos_table
+    use CRASH_ModEos,        ONLY: NameMaterial_I
+    use CRASH_ModEosTable,   ONLY: check_eos_table
 
     integer:: iMaterial
     logical:: IsFirstTime = .true.
