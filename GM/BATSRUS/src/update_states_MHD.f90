@@ -395,6 +395,7 @@ subroutine fix_anisotropy
 
   integer:: i, j, k, iBlock
   !---------------------------------------------------------------------------
+  ! correct the parallel pressure to avoid negative perpendicular pressure
   ! pressure relaxation for anisotropic pressure in unstable regions with
   ! TauInstability and in other regions with TauWaveParticle
   do iBlock = 1, nBlock
@@ -405,6 +406,8 @@ subroutine fix_anisotropy
         ! Avoid Pperp < 0
         State_VGB(Ppar_,i,j,k,iBlock) = &
              min(3*State_VGB(p_,i,j,k,iBlock),State_VGB(Ppar_,i,j,k,iBlock)) 
+
+        if(TauInstability < 0.0 .and. TauWaveParticle < 0.0) CYCLE
 
         B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
         if(UseB0) B_D = B_D + B0_DGB(:,i,j,k,iBlock)
