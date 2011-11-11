@@ -3,7 +3,7 @@
 !
 ! initialisation:
 !	call exp_tab8()		! prepare tabulated exponentials
-!		call prepCorrUbar()	! or it will called automatically
+!	call prepCorrUbar()	! or it will be called automatically
 !	call prep_projE(hnuGr(0:nbGr),nbGR)
 !	call calTZ(Te_eV,Ne_cn3, Tz, hnuGr,Erad,Brad,ng)
 !  or
@@ -24,13 +24,48 @@ MODULE CRASH_M_projE
   !  {U=hnu/Kte,Erad,Brad} will be projected on a working grid , with even log. spacing of U
   !
   implicit none
+  !\
+  ! Minimal and maximal values for E/T_e ratio
+  !/
   real,parameter :: Umin=1d-2, Umax=1d2
+  !\
+  ! Number of grid points per a decimal order
+  !/ 
   real,parameter :: nbPerDec =25	! -> 100
+  !\
+  ! log10(uMax/uMin)
+  !/
   real,parameter :: nbDec =4
+  !\
+  ! Number of grid points for u=E/T_e
+  !/
   real,parameter :: nbUout =nbPerDec*nbDec	! =100
-  integer,parameter :: mxOut= 300	! = log(Elast/Efirst)/lgdu
-  real,save ::lgdu,rdu,Efirst,Elast,Eout(mxOut+1),Uout(mxOut+1),SPout(mxOut+1)
-  integer,save :: nbIn=0,nbOut=0,nbContrib=0,out1,out2
+
+  integer,parameter :: mxOut= 300	
+  !\
+  ! log(UMax/UMin)/nBOut  - set in prep_proj
+  !/
+  real,save         :: lgdu
+  !\
+  ! exp(lgdu)
+  real,save         :: rdu 
+
+  real,save         :: Efirst,Elast
+  real,save,dimension(mxOut+1) :: Eout,Uout,SPout
+
+  !\
+  ! Number of energy grouprs in the input 
+  ! file of radiation group energies
+  !/
+  integer,save :: nbIn=0
+
+  !\
+  ! Number of grid points in the internal grid
+  ! = log(Elast/Efirst)/lgdu+1
+  !/
+  integer,save :: nbOut=0
+
+  integer,save :: nbContrib=0,out1,out2
   integer,parameter :: mxIn=300,mxContrib=150000
   integer,save :: to_ctrb(mxContrib),fr_ctrb(mxContrib)
   integer,save :: last_ctrb(0:mxOut),first_ctrb(1:mxOut+1)
@@ -40,11 +75,14 @@ MODULE CRASH_M_projE
 
   !-------
 contains
-  !-------
+  !========
+  !\
+  !Set debug flags
+  !/
   subroutine setDbgPrep(flag)
     logical,intent(IN) :: flag
     dbgProj=flag
-    write(*,*)'- - flag  dbgProj  set to ',dbgProj
+    !write(*,*)'- - flag  dbgProj  set to ',dbgProj
   end subroutine setDbgPrep
   !========
   subroutine getEout(E,nb)
@@ -56,9 +94,15 @@ contains
   end subroutine getEout
   !========
   subroutine prep_projE(Ein,nbE)	
-    !  preparation of the projection coefficients 
+    !  Initialization of the projection coefficients 
+    !\
+    !Inputs
+    !/
+    !Number of energy groups
     integer,intent(In) :: nbE
+    !Photon eergies
     real,intent(In),dimension(0:nbE) :: Ein
+
     real,parameter :: ten=10.0
     real :: u1,u2,du
     integer :: n,nIn,nOut 
@@ -156,7 +200,7 @@ contains
 20  last_ctrb(nbIn)=nbContrib
     first_ctrb(nOut+1)=nIn		!!
 
-    if(nbContrib.gt.mxContrib) then
+    if(nbContrib.ge.mxContrib) then
        write(*,*)'-D- needs to increase "mxContrib" to ',nbContrib
        call CON_stop('')
     else
@@ -173,6 +217,9 @@ contains
     end if
     ! 
     if(.not.dbg) return
+    !\
+    !Print out the debug info
+    !/
     write(*,*)'- - found ',nbContrib,' contrib.'
     WRITE(*,401) 'to_ctrb=' &
          ,(to_ctrb(nIn),nIn=1,nbContrib)
@@ -213,7 +260,7 @@ contains
     real,intent(In) :: Te,SPin(nbIn)
     integer,intent(Out) :: nOut
     real :: Ufirst,Ulast ,uBef,uAft,c,r,u
-    integer :: n1,n2 ,ctr,fr,to,nBef,nAft,n,tt1,tt2
+    integer :: n1,n2,n3,ctr,fr,to,nBef,nAft,n,tt1,tt2
     real, parameter :: zero=0.d0,one=1.d0
     logical :: gotoLTE,dbg
 
@@ -293,7 +340,10 @@ contains
     ! 
     if(nBef.eq.0 .and. nAft.eq.0) then
        n1=ctrb_to1(n1+1)
-       n2=ctrb_to2(n2)
+       n3=ctrb_to2(n2)				! 111004
+       if(n3.eq.0) n3=ctrb_to2(max(1,n2-1))		! 111004
+       n2=n3						! 111004
+       if(dbg) write(*,*)'420 : n1,n2=',n1,n2,'   n3=',n3
     elseif(nBef.eq.0)then
        n1=ctrb_to1(n1+1)
        n1=max(n1,1)		! 110827
@@ -374,6 +424,9 @@ contains
        if(nout.gt.mxout) goto 1100
     else
        Uout(1)=u
+       r=SPin(1)			! 111003
+       SPout(1)=r			! 111003
+       if(dbg)write(*,*)'506. Uout(1)=',Uout(1),' SPout(1:2)=',SPout(1:2)
     end if
     ! 
     do n=nOut+1,min(mxOut,nbOut)
@@ -526,7 +579,7 @@ contains
     ! 
     return
   end subroutine projSP
-  !-------
+  !====================
   subroutine wr5(nom,val,nb)
     character(LEN=*),intent(in)::nom
     integer,intent(in)::nb
@@ -535,7 +588,7 @@ contains
     write(*,'(a,/,1p,(5e12.3))') nom,val(1:nb)
 
   end subroutine wr5
-  !-------
+  !===================
   ! \
 end MODULE CRASH_M_projE
 ! /

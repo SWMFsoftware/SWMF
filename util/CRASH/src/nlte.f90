@@ -10,6 +10,7 @@
 !	call prep_projE(hnuGr(0:nbGr),nbGR)	! using group. definition of the run
 !
 !  runtime:
+!       call set_kbr
 !	call nLTE_EOS(...
 !	call correctKnuJnu(...	! not yet implemented
 !
@@ -71,7 +72,8 @@ module CRASH_M_NLTE
   !  useLTE : .T. to save CPU (ex. for H at high temperature): forces LTE
   !
   integer,save :: ng_rad=-1
-  real,save,dimension(mxout) :: Erad,Brad,EoB
+  ! real,save,dimension(mxout) :: Erad,Brad
+  real,save,dimension(mxout) :: EoB
   real,save,dimension(0:mxout) :: hnu_rad
   ! parameter for LTE_EOS_dir  convergence on 'Zbar'
   real,save :: epsD=1d-5
@@ -99,7 +101,7 @@ contains
     !- Te    : electronic temperature in eV
     !
     TZeos=TZold
-    call caltz0(Te,Ne, Tz, Erad,Brad)	! Te,Ne, Erad,Brad from M_localProperties
+    call caltz0(Te,Ne, Tz, EoB)	! Te,Ne, Erad,Brad from M_localProperties
     Ez=max( Etot-kBr_E*(Te-Tz) , Efloor)
     !- waiting for using the real direct EOS
     call LTE_EOS_inv(tz,Ez,Pe,Zbar,Cv)	! ro : in module M_localProperties
@@ -140,7 +142,7 @@ contains
     real,parameter :: tol_EE=1d-6	! convergence param. for zbrentEE (linear function)
     real,external :: rootEE  ,EEdiff,EEdiff_ln
     logical :: inverse,direct,oneT,twoT
-    real :: Ecold,EEcold,Tcold
+    real :: Ecold,Tcold
 
     if(present(Natom)) then
        !	 if(NIgiven .or. ROgiven) goto 104
@@ -149,7 +151,7 @@ contains
        ro=(Ni/avogadro)*atoMass
     else
        if(.not.present(RO_in)) then
-          if(.not.ROgiven .and. .not.NIgiven) goto 102
+       !   if(.not.ROgiven .and. .not.NIgiven) goto 102
        end if
        !	 if(NIgiven .or. ROgiven) goto 104
        ro=RO_in
@@ -203,7 +205,7 @@ contains
 	  niter=0
           DIR:	  do while ( abs(d).gt.epsD .and. niter.lt.niterMax)
              Ne=Zbar*Ni
-             call calTz0(Te,Ne, Tz, Erad,Brad)
+             call calTz0(Te,Ne, Tz, EoB)
              if(dbg) write(*,*)'niter#',niter,' calTz0(Te=',te,' Ne=',ne,' -> Tz=',tz
              call LTE_EOS_dir(tz,Ee,Pe,Zbar,Cv)	! ro : in module M_localProperties	
              d=(Ne-Ni*zbar)/(Ne+Ni*zbar)
@@ -244,11 +246,6 @@ contains
 !!!
 !!!		 TAKE CARE OF   Te / Te+Ti ... if not in "LTE_EOS_inv"
 !!!
-	  ! if(zion.eq.0) then
-	  !  call LTE_EOS_inv(Te_out=tz, Etot=ee, ...
-	  ! else
-	  !  call LTE_EOS_inv(Te_out=tz, E_el=ee, ...
-	  ! end if
 
           Ne=Zbar*Ni
           if(Zbar.lt.0.1) then
@@ -258,7 +255,7 @@ contains
           end if
           !
           te=tz
-          call calTZ0(Te,Ne, Tz, Erad,Brad)
+          call calTZ0(Te,Ne, Tz, EoB)
           if(dbg) write(*,*)'calTZ : te,ne=',te,ne,'  -> tz=',tz
           Eeff=ee-x_3o2*kbR_E*(zbar+zion)*(Te-Tz)
           if(dbg) write(*,*)'ee=',ee,' -> Eeff=',Eeff,' Efloor=',Efloor
@@ -309,7 +306,7 @@ contains
     if(present(Pe_out)) Pe_out=pe
     if(present(Pt_out)) Pt_out=pe
     if(present(Cv_out)) Cv_out=Cv
-    call set_RO_Ni()	! reset ROgiven and NIgiven to .false.
+    ! call set_RO_Ni()	! reset ROgiven and NIgiven to .false.
     ! to make sure that "set_RO_NI" is called before NLTE_EOS if
     ! option arguments  "ro" and "Natom" are not used 
     return
@@ -476,13 +473,13 @@ contains
 
   !-------
 
-  subroutine setErad(eg,bg,hnug,ng)
+  subroutine setErad(eg_o_bg,hnug,ng)
     !Subroutine re-assigns 
     use CRASH_M_projE,only : prep_projE
     implicit none
     integer,intent(IN) :: ng
     real,dimension(0:ng) :: hnug
-    real,dimension(ng) :: eg,bg
+    real,dimension(ng) :: eg_o_bg
     integer :: i
 
     if(ng.ne.ng_rad) then
@@ -490,44 +487,38 @@ contains
     end if
     ng_rad=ng
     hnu_rad(1:ng_rad)=hnug(1:ng)
-    Erad(1:ng_rad)=eg(1:ng)
-    Brad(1:ng_rad)=bg(1:ng)
-    EoB(1:ng_Rad)=0
-    do i=1,ng_Rad
-       if(bg(i).gt.0) EoB(i)=eg(i)/bg(i)
-    end do
+    EoB(1:ng_Rad)=eg_o_bg(1:ng_Rad)
 
-    return
   end subroutine setErad
   !-------
 
-  subroutine set_RO_Ni(atoMass,RO_in,Natom)
+  !subroutine set_RO_Ni(atoMass,RO_in,Natom)
     !
     !  This routine can be used in place of passing argument RO or NI  to NLTE_EOS
     ! with no arguments, this routine will reset  NIgiven , ROgiven
-    implicit none
-    real,optional, intent(IN) :: RO_in,Natom,atoMass
+    ! implicit none
+    ! real,optional, intent(IN) :: RO_in,Natom,atoMass
 
-    NIgiven=.false.
-    ROgiven=.false.
+   ! NIgiven=.false.
+   ! ROgiven=.false.
 
-    if(present(Natom)) then
-       Ni=Natom
-       if(present(RO_in)) goto 102
-       ro=(Ni/avogadro)*atoMass
-       ROgiven=.true.
-    else
-       if(.not.present(RO_in)) goto 102
-       ro=RO_in
-       Ni=avogadro*(ro/atoMass)
-       NIgiven=.true.
-    end if
+    !if(present(Natom)) then
+    !   Ni=Natom
+    !   if(present(RO_in)) goto 102
+    !   ro=(Ni/avogadro)*atoMass
+    !   ROgiven=.true.
+    !else
+    !   if(.not.present(RO_in)) goto 102
+    !   ro=RO_in
+    !   Ni=avogadro*(ro/atoMass)
+    !   NIgiven=.true.
+    !end if
 
-    return
-102 if(.not.present(atoMass))return
-    write(*,*)'-P- set_RO_Ni require  Natom .xor. RO_in'
-    stop '-P- set_RO_Ni.102'
-  end subroutine set_RO_Ni
+    !return
+!102 if(.not.present(atoMass))return
+ !   write(*,*)'-P- set_RO_Ni require  Natom .xor. RO_in'
+  !  stop '-P- set_RO_Ni.102'
+  !end subroutine set_RO_Ni
 
   !-------
   ! \
@@ -811,7 +802,7 @@ function EEdiff(Eeff ,EE_in ,te,Tz_new)
                                 ! it has to be set for the actual mode (2T or 1T) of the code
        ,Efloor,TEfloor	! lower limits of EOS  or of NLTE domain
   ! E < Efloor or T < TEfloor, LTE will be assumed
-  use CRASH_M_NLTE , only : Erad,Brad,ng_rad  ,dbg	! radiative enegy density (for all groups) and Planckian function
+  use CRASH_M_NLTE , only : EoB,ng_rad  ,dbg	! radiative enegy density (for all groups) and Planckian function
   use M_radiom, only : caltz0
   ! the calling sequence have to fill them
   implicit none
@@ -836,7 +827,7 @@ function EEdiff(Eeff ,EE_in ,te,Tz_new)
   ne=zbar*Ni
   if(dbg) write(*,*)'ne,zbar,ni,te=',ne,zbar,ni,te
   if(ne.eq.0) stop '-P- EEdif: found  Ne=0'
-  call calTZ0(Te,Ne, Tz_new, Erad,Brad)
+  call calTZ0(Te,Ne, Tz_new, EoB)
   if(dbg) write(*,*)'EEdiff calls calTz, te,ne=',te,ne,' -> TZ_new=',tz_new
   zp=max(zbar,Zsmall)+zion
   EE_new=EE_in - x_3o2 * kBr_E * ( Te-Tz_new)*zp
@@ -863,7 +854,7 @@ function EEdiff_ln(lnEeff ,EE_in ,te,Tz_new)
                                 ! it has to be set for the actual mode (2T or 1T) of the code
        ,Efloor,TEfloor	! lower limits of EOS  or of NLTE domain
   ! E < Efloor or T < TEfloor, LTE will be assumed
-  use CRASH_M_NLTE , only : Erad,Brad,ng_rad  	! radiative enegy density (for all groups) and Planckian function
+  use CRASH_M_NLTE , only : EoB,ng_rad  	! radiative enegy density (for all groups) and Planckian function
   use M_radiom, only : caltz0
   ! the calling sequence have to fill them
   implicit none
@@ -894,7 +885,7 @@ function EEdiff_ln(lnEeff ,EE_in ,te,Tz_new)
   ne=zbar*Ni
   !xx		if(dbg) write(*,*)'ne,zbar,ni=',ne,zbar,ni
   if(ne.eq.0) stop 'EEdif_ln: NE=0'
-  call calTZ0(Te,Ne, Tz_new, Erad,Brad)
+  call calTZ0(Te,Ne, Tz_new, EoB)
   EE_new=EE_in - x_3o2 * kBr_E * ( Te-Tz_new)*zp
   EEdiff_ln=(EE_new-Eeff)/(abs(EE_new)+abs(Eeff))
   !
