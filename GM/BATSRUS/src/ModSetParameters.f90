@@ -1602,10 +1602,15 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('dLatSmoothIm', dLatSmoothIm)
 
      case("#MULTIFLUIDIM")
+        if(.not.is_first_session())CYCLE READPARAM
         ! couple GM and IM in multi-fluid (all, Hp, Op) mode                
         call read_var('DoMultiFluidIMCoupling', DoMultiFluidIMCoupling)
-
         !^CFG END RCM
+
+     case('#ANISOPRESSUREIM')
+        if(.not.is_first_session())CYCLE READPARAM
+        ! couple GM and IM in anisotropic pressure mode
+        call read_Var('DoAnisoPressureIMCoupling', DoAnisoPressureIMCoupling)
 
      case("#RBSATCOUPLING")
         call read_var('DoRbSatTrace',DoRbSatTrace)

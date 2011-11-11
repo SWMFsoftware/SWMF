@@ -10,9 +10,9 @@ contains
   subroutine crcm_read_restart
     use ModCrcmPlanet,ONLY: nspec
     use ModCrcmGrid,  ONLY: np,nt,nm,nk
-    use ModCrcm,      ONLY: f2, phot, Pressure_IC, FAC_C
+    use ModCrcm,      ONLY: f2, phot, Pressure_IC, FAC_C, Ppar_IC, Bmin_C
     use ModFieldTrace,ONLY: iba
-    use ModGmCrcm,    ONLY: Den_IC
+    use ModGmCrcm,    ONLY: Den_IC, DoAnisoPressureGMCoupling
     use ModIoUnit,    ONLY: UnitTmp_
     use ModCrcmGrid,  ONLY: iProc,nProc,iComm
     use ModMpi
@@ -43,6 +43,10 @@ contains
        read(UnitTmp_) Pressure_IC           
        read(UnitTmp_) FAC_C             
        read(UnitTmp_) iba
+       if(DoAnisoPressureGMCoupling)then
+          read(UnitTmp_) Ppar_IC
+          read(UnitTmp_) Bmin_C
+       end if
        close(UnitTmp_)
 !    endif
 
@@ -54,9 +58,9 @@ contains
   subroutine crcm_write_restart
     use ModCrcmPlanet,ONLY: nspec
     use ModCrcmGrid,  ONLY: np,nt,nm,nk,MinLonPar,MaxLonPar
-    use ModCrcm,      ONLY: f2,time, phot, Pressure_IC, FAC_C
+    use ModCrcm,      ONLY: f2,time, phot, Pressure_IC, FAC_C, Ppar_IC, Bmin_C
     use ModFieldTrace,ONLY: iba    
-    use ModGmCrcm,    ONLY: Den_IC
+    use ModGmCrcm,    ONLY: Den_IC, DoAnisoPressureGMCoupling
     use ModIoUnit,    ONLY: UnitTmp_
     use ModCrcmGrid,  ONLY: iProc,nProc,iComm,nLonPar,nLonPar_P,nLonBefore_P
     use ModMpi
@@ -107,6 +111,24 @@ contains
                0, iComm, iError)
           if (iProc==0) phot(iSpecies,:,:)=BufferRecv_C(:,:)
        enddo
+
+       ! gather Ppar and Bmin
+       if(DoAnisoPressureGMCoupling)then
+          do iSpecies=1,nspec
+             BufferSend_C(:,:)=0.0
+             BufferSend_C(:,:)=Ppar_IC(iSpecies,:,:)
+             call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
+                  MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
+                  0, iComm, iError)
+             if (iProc==0) Ppar_IC(iSpecies,:,:)=BufferRecv_C(:,:)
+          enddo
+          BufferSend_C(:,:)=0.0
+          BufferSend_C(:,:)=Bmin_C(:,:)
+          call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
+               MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
+               0, iComm, iError)
+          if (iProc==0) Bmin_C(:,:)=BufferRecv_C(:,:)
+       endif
     endif
 
     if(iProc==0) then
@@ -117,6 +139,10 @@ contains
        write(UnitTmp_) Pressure_IC
        write(UnitTmp_) FAC_C
        write(UnitTmp_) iba                
+       if(DoAnisoPressureGMCoupling)then
+          write(UnitTmp_) Ppar_IC
+          write(UnitTmp_) Bmin_C
+       end if
        close(UnitTmp_)
 
        open(unit=UnitTmp_,file='IM/restartOUT/restart.H')

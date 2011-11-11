@@ -73,6 +73,7 @@ Module ModMain
 
   logical :: UseRaytrace            = UseB
   logical :: DoMultiFluidIMCoupling = .false.
+  logical :: DoAnisoPressureIMCoupling = .false.
 
   ! Single space separated NameVar string containing all the variable
   ! names of NameVar_V (except for the fluid energies)

@@ -7,8 +7,8 @@ Module ModGmCrcm
 
   real, allocatable :: StateLine_VI(:,:),StateIntegral_IIV(:,:,:)
   integer :: iLineIndex_II(nLon,1:nLat),nPoint, nIntegral
-  integer, parameter :: AveDens_=4, AveP_=5,AveHpRho_=7,AveOpRho_=8,&
-                        AveHpP_=9,AveOpP_=10
+  integer, parameter :: AveDens_=4, AveP_=5, AvePpar_=7, AveHpRho_=7, &
+       AveOpRho_=8, AveHpP_=9, AveOpP_=10
   integer, parameter,dimension(nspec-1) :: AveDen_I = (/7,8/)
   integer, parameter,dimension(nspec-1) :: AveP_I   = (/9,10/)
 
@@ -20,5 +20,6 @@ Module ModGmCrcm
   logical :: UseGm                  = .true.
   logical :: DoneGmCoupling         = .false.
   logical :: DoMultiFluidGMCoupling = .false.
+  logical :: DoAnisoPressureGMCoupling      = .false.
 
 end Module ModGmCrcm

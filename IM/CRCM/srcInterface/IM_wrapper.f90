@@ -107,7 +107,9 @@ subroutine IM_set_grid
        Coord1_I=(90.0-xlat(1:np))*cDegToRad,     & ! colatitude in radians
        Coord2_I=phi,                             & ! longitude in radians
        Coord3_I=Radius_I,                        & ! radial size in meters
-       IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
+       IsPeriodic_D=(/.false.,.true./),          & ! periodic in longitude
+       nVar = 7,                                 & ! number of "fluid" vars
+       NameVar = 'p rho ppar Hpp Opp Hprho Oprho') ! names of "fluid" vars
 
 end subroutine IM_set_grid
 !==============================================================================
@@ -115,11 +117,11 @@ end subroutine IM_set_grid
 subroutine IM_init_session(iSession, TimeSimulation)
 
   use ModCrcmGrid,      ONLY: np, xlat
-  use ModCrcm,    ONLY: init_mod_crcm
-  use ModFieldTrace, ONLY: init_mod_field_trace
+  use ModCrcm,          ONLY: init_mod_crcm, Time
+  use ModFieldTrace,    ONLY: init_mod_field_trace
   use ModImTime
-  use ModTimeConvert, ONLY: time_real_to_int
-  use CON_physics, ONLY: get_time
+  use ModTimeConvert,   ONLY: time_real_to_int
+  use CON_physics,      ONLY: get_time
 
   implicit none
 
@@ -134,7 +136,8 @@ subroutine IM_init_session(iSession, TimeSimulation)
   call crcm_init
 
   call get_time(tStartOut = StartTime)
-  CurrentTime = StartTime + TimeSimulation
+  Time = TimeSimulation
+  CurrentTime = StartTime + Time  
   call time_real_to_int(StartTime, iStartTime_I)
 
 end subroutine IM_init_session
@@ -225,14 +228,15 @@ subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   !-------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-  if (nIntegralIn > 6) DoMultiFluidGMCoupling = .true.
-
-  if(DoMultiFluidGMCoupling)then
-     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
-          call CON_stop(NameSub//' invalid NameVar='//NameVar)
-  else
-     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p') &
-          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  DoMultiFluidGMCoupling = .false.
+  DoAnisoPressureGMCoupling = .false.
+ 
+  if(NameVar == 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')then
+     DoMultiFluidGMCoupling = .true.
+  elseif(NameVar == 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:ppar')then
+     DoAnisoPressureGMCoupling = .true.
+  elseif(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p')then
+       call CON_stop(NameSub//' invalid NameVar='//NameVar)
   end if
 
   if(nVarLine /= nVar) then
@@ -270,7 +274,22 @@ subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   !Convert Units
   StateLine_VI(2,:) = StateLine_VI(2,:) / rEarth ! m --> Earth Radii
   StateLine_VI(3,:) = StateLine_VI(3,:) / rEarth ! m --> Earth Radii
-  
+
+! for anisopressure coupling 
+!  if(DoTest)then
+!     write(NameOut,"(a,f6.1)") 'StateIntegral_t_',tSimulation
+!     open(UnitTmp_,FILE=NameOut)
+!     write(UnitTmp_,"(a)") 'IM_put_from_gm_crcm, StateIntegral_IIV, last index 1:5 and 7 '
+!     write(UnitTmp_,"(a)") 'Xeq Yeq Beq rho p ppar'
+!     do iLat =iSizeIn,1,-1
+!        do iLon =1,jSizeIn
+!        write(UnitTmp_,"(100es18.10)")StateIntegral_IIV(iLat,iLon,1:5), &
+!             StateIntegral_IIV(iLat,iLon,7)
+!        enddo
+!     enddo
+!     close(UnitTmp_)
+!  end if
+
 !  if (nProc == 1) then
 !     write(NameOut,"(a,i2.2)") 'StateIntegral1_0_iproc_',iProc
 !     open(UnitTmp_,FILE=NameOut)
@@ -407,13 +426,16 @@ end subroutine IM_put_sat_from_gm
 subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   !use CON_time, ONLY : get_time
-  use ModCrcmGrid,  ONLY: iSize=>np, jSize=>nt
-  use ModCrcm,      ONLY: Pressure_IC=>phot
-  use ModGmCrcm,    ONLY: Den_IC, iLatMin, DoMultiFluidGMCoupling
+  use ModCrcmGrid,  ONLY: iSize=>np, jSize=>nt, iProc
+  use ModCrcm,      ONLY: Pressure_IC=>phot, Ppar_IC, Bmin_C, Time
+  use ModGmCrcm,    ONLY: Den_IC, iLatMin, DoMultiFluidGMCoupling, &
+       DoAnisoPressureGMCoupling
   use ModFieldTrace,ONLY: iba
   use ModCrcmPlanet,ONLY: nspec,amu_I
   use ModNumConst,  ONLY: cRadToDeg
   use ModConst,     ONLY: cProtonMass
+  use ModIoUnit, ONLY: UnitTmp_
+
   implicit none
   character (len=*),parameter :: NameSub='IM_get_for_gm'
 
@@ -422,27 +444,31 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   character (len=*),intent(in)                       :: NameVar
 
   !LOCAL VARIABLES:
-!  real :: tSimulation
+  real :: tSimulation
 !  integer :: iTimeStart
-  integer, parameter :: pres_=1, dens_=2, Hpres_=3,Opres_=4,Hdens_=5,Odens_=6
+  integer, parameter :: pres_=1, dens_=2, parpres_=3, bmin_=4,&
+       Hpres_=3, Opres_=4, Hdens_=5, Odens_=6
 
   integer :: i,j,k
   logical :: DoTest, DoTestMe
+  character(len=100) :: NameOut
   !--------------------------------------------------------------------------
-  if(nVar > 2)DoMultiFluidGMCoupling = .true.
 
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
   if (DoTestMe) &
        write(*,*)NameSub,' starting with iSizeIn,jSizeIn,nVar,NameVar=',&
        iSizeIn,jSizeIn,nVar,NameVar
 
-  if(DoMultiFluidGMCoupling)then
-     if(NameVar /= 'p:rho:Hpp:Opp:Hprho:Oprho') &
-          call CON_stop(NameSub//' invalid NameVar='//NameVar)
-  else
-     if(NameVar /= 'p:rho') &
-          call CON_stop(NameSub//' invalid NameVar='//NameVar)
-  endif
+  DoMultiFluidGMCoupling = .false.
+  DoAnisoPressureGMCoupling = .false.
+
+  if(NameVar == 'p:rho:Hpp:Opp:Hprho:Oprho')then
+     DoMultiFluidGMCoupling = .true.
+  elseif(NameVar == 'p:rho:ppar:bmin')then
+     DoAnisoPressureGMCoupling = .true.
+  elseif(NameVar /= 'p:rho')then
+       call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  end if
 
 !  if(IsUninitialized)then
 !     if(DoTestMe)write(*,*) NameSub,' call RCM_advec(1...)'
@@ -468,20 +494,28 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      if( i<iLatMin .or.  i > iba(j) ) then
         Buffer_IIV(i,j,pres_) = -1.
         Buffer_IIV(i,j,dens_) = -1.
-     else
-        Buffer_IIV(i,j,pres_) = sum(Pressure_IC(:,i,j))
-        Buffer_IIV(i,j,dens_) = &
-             sum(Den_IC (1:nspec-1,i,j)*cProtonMass*amu_I(1:nspec-1))
-     end if
-     if(DoMultiFluidGMCoupling)then
-        !  Multifluid case
-        if( i<iLatMin .or.  i > iba(j)) then
+        if(DoAnisoPressureGMCoupling)then
+           Buffer_IIV(i,j,parpres_) = -1.
+           Buffer_IIV(i,j,bmin_) = -1.
+        end if
+        if(DoMultiFluidGMCoupling)then
+           !  Multifluid case
            Buffer_IIV(i,j,Hpres_) = -1.
            Buffer_IIV(i,j,Opres_) = -1.
            Buffer_IIV(i,j,Hdens_) = -1.
            Buffer_IIV(i,j,Odens_) = -1.
-        else
-           Buffer_IIV(i,j,Hpres_) = Pressure_IC(1,i,j)
+        end if
+     else
+        Buffer_IIV(i,j,pres_) = sum(Pressure_IC(:,i,j))*1e-9
+        Buffer_IIV(i,j,dens_) = &
+             sum(Den_IC (1:nspec-1,i,j)*cProtonMass*amu_I(1:nspec-1))
+        if(DoAnisoPressureGMCoupling)then
+           Buffer_IIV(i,j,parpres_) = sum(Ppar_IC(:,i,j))*1e-9
+           ! fill minimum B  
+           Buffer_IIV(i,j,bmin_) = Bmin_C(i,j)
+        end if
+        if(DoMultiFluidGMCoupling)then
+           Buffer_IIV(i,j,Hpres_) = Pressure_IC(1,i,j)  ! convert unit?
            Buffer_IIV(i,j,Hdens_) = &
                 Den_IC (1,i,j)*cProtonMass*amu_I(1)
            Buffer_IIV(i,j,Opres_) = Pressure_IC(2,i,j)
@@ -539,10 +573,34 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
            call CON_stop(NameSub // ' ERROR: Not a number found in IM Op density !')
         end if
      end if
+     
+     !aniso pressure
+     if(DoAnisoPressureGMCoupling)then
+        if(  .not. Buffer_IIV(i,j,parpres_) > 0 .and. &
+             .not. Buffer_IIV(i,j,parpres_) < 1) then
+           write(*,*)NameSub,': ERROR IN PRESSURE'
+           write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,parpres_)
+           call CON_stop(NameSub // ' ERROR: Not a number found in IM parallel pressure !')
+        end if
+     endif
   end do; end do
 
-  where(Buffer_IIV(:,:,pres_) > 0.0) &
-       Buffer_IIV(:,:,pres_) = Buffer_IIV(:,:,pres_) *1.0e-9
+  !for anisopressure IM coupling
+!  if(iProc == 0) then
+!     write(NameOut,"(a,f6.1,a)") 'IM_Buffer_IIV_t', Time, '.out'
+!     open(UnitTmp_,FILE=NameOut)
+!     write(UnitTmp_,"(a)") 'IM_get_for_GM, Buffer_IIV:'
+!     write(UnitTmp_,"(a)") ' '
+!     write(UnitTmp_,"(a)") ' '
+!     write(UnitTmp_,"(a)") ' '
+!     write(UnitTmp_,"(a)") 'p rho ppar bmin'
+!     do i = iSizeIn, 1, -1                                                                       
+!        do j =1,jSizeIn 
+!           write(UnitTmp_,"(4es18.10)")  Buffer_IIV(i,j,:)
+!        end do
+!     end do
+!     close(UnitTmp_)
+!  end if
 
   ! Units of rcm_mass_density are kg/m3
 !  where(Buffer_IIV(:,:,dens_) > 0.0) &

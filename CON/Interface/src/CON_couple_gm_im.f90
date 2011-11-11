@@ -43,7 +43,7 @@ module CON_couple_gm_im
   ! Number of satellites in GM that will also be traced in IM
   integer, save :: nShareSats
 
-  logical, save :: DoMultiFluidIMCoupling
+  logical, save :: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
 
 contains
 
@@ -54,14 +54,20 @@ contains
     !DESCRIPTION:
     ! Store IM grid size.
     !EOP
-    !------------------------------------------------------------------------
+    
+    use ModProcessVarName,  ONLY: process_var_name, nVarMax
+
+    character(len=1500) :: NameVar
+    character(len=15)   :: NameList_V(nVarMax)
+    integer :: nDensityGm, nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm
+    integer :: nDensityIm, nSpeedIm, nPIm, nPparIm, nWaveIm, nMaterialIm 
 
     ! MPI status variable
     integer :: iStatus_I(MPI_STATUS_SIZE)
 
     ! General error code
     integer :: iError
-    integer :: nFluid
+    !------------------------------------------------------------------------
 
     if(IsInitialized) RETURN
     IsInitialized = .true.
@@ -78,9 +84,18 @@ contains
     nCells_D = ncells_decomposition_d(IM_)
     iSize = nCells_D(1); jSize = nCells_D(2)
 
+    call process_var_name(Grid_C(GM_)%NameVar, nDensityGm, nSpeedGm, &
+         nPGm, nPparGm, nWaveGm, nMaterialGm)
+    call process_var_name(Grid_C(IM_)%NameVar, nDensityIm, nSpeedIm, &
+         nPIm, nPparIm, nWaveIm, nMaterialIm)
+
+    DoMultiFluidIMCoupling = nDensityGm > 1 .and. nDensityIm > 1
+    
+    DoAnisoPressureIMCoupling = nPparGm > 0 .and. nPparIm > 0 
+
     ! Set number of satellites shared between GM and IM for tracing.
     call GM_satinit_for_im(nShareSats)
-
+    
     ! Send number of satellites GM to IM
     if(iProc0Im /= iProc0Gm)then
        if(is_proc0(GM_)) &
@@ -90,33 +105,7 @@ contains
             call MPI_recv(nShareSats,1,MPI_INTEGER,iProc0Gm,&
             1,iCommWorld,iStatus_I,iError)
     end if
-
-    ! Get the logical variable between GM and IM coupling: if multifluid coupling
-    call GM_get_multi_for_im(DoMultiFluidIMCoupling)
-
-    ! Send DoMultiFluidIMCoupling from GM to IM
-    if(iProc0Im /= iProc0Gm)then
-       if(is_proc0(GM_)) then
-          if (DoMultiFluidIMCoupling) then
-             call MPI_send(2,1,MPI_INTEGER,iProc0Im,&
-                  2,iCommWorld,iError)
-          else
-             call MPI_send(1,1,MPI_INTEGER,iProc0Im,&
-                  2,iCommWorld,iError)
-          end if
-       end if
-       if(is_proc0(IM_)) then
-          call MPI_recv(nFluid,1,MPI_INTEGER,iProc0Gm,&
-               2,iCommWorld,iStatus_I,iError)
-          if (nFluid == 2) then
-             DoMultiFluidIMCoupling = .true.
-          else
-             DoMultiFluidIMCoupling = .false.
-          endif
-       end if
-    end if
-
-
+    
   end subroutine couple_gm_im_init
 
   !BOP =======================================================================
@@ -491,6 +480,9 @@ contains
     if(DoMultiFluidIMCoupling) then
        NameVar='vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp'
        nIntegral = 10
+    else if(DoAnisoPressureIMCoupling)then
+       NameVar='vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:ppar'
+       nIntegral = 7
     else
        NameVar='vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p'
        nIntegral = 6
@@ -521,6 +513,9 @@ contains
        allocate(BufferLine_VI(nVarLine, nPointLine))
        call GM_get_for_im_crcm(Integral_IIV, iSize, jSize, nIntegral, &
             BufferLine_VI, nVarLine, nPointLine, NameVar)
+       if(DoTest) &
+            write(*,*) 'GM_get_for_im_crcm: iProc, Integral_IIV(1,1,:)=',&
+            iProcWorld,Integral_IIV(1,1,:)
     end if
     !\
     ! If IM sat tracing is enabled, get sat locations from GM
@@ -627,14 +622,17 @@ contains
     if(is_proc(IM_)) then
        call IM_put_from_gm_crcm(Integral_IIV,iSize,jSize,nIntegral,&
             BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
+       if(DoTest) &
+            write(*,*) 'IM_put_from_gm_crcm: iProc, Integral_IIV(1,1,:)=',&
+            iProcWorld,Integral_IIV(1,1,:)
     endif
 
     if(is_proc0(IM_))then
        if(nShareSats > 0) &
             call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
-       if(DoTest) &
-            write(*,*)'IM got from GM: IM iProc, Buffer(1,1)=',&
-            iProcWorld,Integral_IIV(1,1,:)
+!       if(DoTest) &
+!            write(*,*)'IM got from GM: IM iProc, Buffer(1,1,:)=',&
+!            iProcWorld,Integral_IIV(1,1,:)
     end if
     
 
@@ -736,6 +734,9 @@ contains
      if(DoMultiFluidIMCoupling)then
         NameVar='p:rho:Hpp:Opp:Hprho:Oprho'
         nVarImGm=6
+     else if(DoAnisoPressureIMCoupling)then 
+        NameVar='p:rho:ppar:bmin'
+        nVarImGm=4
      else
         NameVar='p:rho'
         nVarImGm=2
@@ -755,6 +756,7 @@ contains
       !/
       if(is_proc(IM_)) &
            call IM_get_for_gm(Buffer_IIV,iSize,jSize,nVarImGm,NameVar)
+
       !\
       ! Transfer variables from IM to GM
       !/ 

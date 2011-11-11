@@ -10,7 +10,8 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   use CON_comp_param, ONLY: lNameVersion
   use ModImPressure                              ! Storage for IM pressure
   use ModNumConst
-  use ModMain, ONLY : n_step,time_simulation, DoMultiFluidIMCoupling
+  use ModMain, ONLY : n_step,time_simulation, DoMultiFluidIMCoupling, &
+       DoAnisoPressureIMCoupling
   use ModIoUnit, ONLY: UNITTMP_
   use ModProcMH, ONLY: iProc
   implicit none
@@ -22,7 +23,8 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   character(len=*), intent(in) :: NameVar
   character(len=lNameVersion) :: NameVersionIm
   integer :: nCells_D(2), iError, i,j
-  integer, parameter :: pres_=1, dens_=2, Hpres_=3,Opres_=4,Hdens_=5,Odens_=6
+  integer, parameter :: pres_=1, dens_=2, parpres_=3, bmin_=4, &
+       Hpres_=3,Opres_=4,Hdens_=5,Odens_=6
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
 
@@ -30,6 +32,9 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   if(DoMultiFluidIMCoupling)then
      if(NameVar /= 'p:rho:Hpp:Opp:Hprho:Oprho') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  else if(DoAnisoPressureIMCoupling)then
+     if(NameVar /= 'p:rho:ppar:bmin') &
           call CON_stop(NameSub//' invalid NameVar='//NameVar)
   else
      if(NameVar /= 'p:rho') &
@@ -44,8 +49,8 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      call CON_stop(NameSub//' SWMF_ERROR')
   end if
 
-  if(.not.allocated(RCM_lat))then
-     ! Allocate RCM_lat, RCM_lon, RCM_p, RCM_dens
+  if(.not.allocated(IM_lat))then
+     ! Allocate IM_lat, IM_lon, IM_p, IM_dens
      call im_pressure_init(iSizeIn, jSizeIn)
      ! Set up IM ionospheric grid and store.
      ! Latitude specification is module specific, we must set it up
@@ -56,29 +61,34 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
         ! RAM-SCB has an equatorial grid, pressure is mapped to 
         ! ionosphere by RAM using a constant, latitude based grid.
         do i=1, iSizeIn
-           RCM_lat(i) = (iSizeIn-i)*(35.0/iSizeIn)+45.0
+           IM_lat(i) = (iSizeIn-i)*(35.0/iSizeIn)+45.0
         end do
      else
         ! RCM uses a CoLat based grid, information is stored in 
         ! module grid information.
-        RCM_lat = (cHalfPi - Grid_C(IM_) % Coord1_I) * cRadToDeg
+        IM_lat = (cHalfPi - Grid_C(IM_) % Coord1_I) * cRadToDeg
      end if
-     RCM_lon = Grid_C(IM_)% Coord2_I              * cRadToDeg
+     IM_lon = Grid_C(IM_)% Coord2_I              * cRadToDeg
   end if
 
   ! Store IM variable for internal use
-  RCM_p    = Buffer_IIV(:,:,pres_)
-  RCM_dens = Buffer_IIV(:,:,dens_)
+  IM_p    = Buffer_IIV(:,:,pres_)
+  IM_dens = Buffer_IIV(:,:,dens_)
   iNewPIm  = iNewPIm + 1
-
 
   ! for multifluid                                               
   if(DoMultiFluidIMCoupling)then
-     RCM_Hpp = Buffer_IIV(:,:,Hpres_)
-     RCM_Opp = Buffer_IIV(:,:,Opres_)
-     RCM_Hpdens = Buffer_IIV(:,:,Hdens_)
-     RCM_Opdens = Buffer_IIV(:,:,Odens_)
+     IM_Hpp = Buffer_IIV(:,:,Hpres_)
+     IM_Opp = Buffer_IIV(:,:,Opres_)
+     IM_Hpdens = Buffer_IIV(:,:,Hdens_)
+     IM_Opdens = Buffer_IIV(:,:,Odens_)
   endif
+
+  ! for anisotropic pressure
+  if(DoAnisoPressureIMCoupling)then
+     IM_ppar = Buffer_IIV(:,:,parpres_)
+     IM_bmin = Buffer_IIV(:,:,bmin_)
+  end if
 
   if(DoTest)call write_IMvars_tec  ! TecPlot output
   if(DoTest)call write_IMvars_idl  ! IDL     output
@@ -98,12 +108,16 @@ contains
     write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
     if(DoMultiFluidIMCoupling)then
        write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&                
-            &"RCM pressure", "RCM density", &                                   
-            &"RCM Hp pressure", "RCM Hp density", &                             
-            &"RCM Op pressure", "RCM Op density"'
+            &"IM pressure", "IM density", &                                   
+            &"IM Hp pressure", "IM Hp density", &                             
+            &"IM Op pressure", "IM Op density"'
+    else if(DoAnisoPressureIMCoupling)then
+       write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&                
+            &"IM pressure", "IM density", &
+            &"IM parallel pressure", "IM minimum B"'
     else
        write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&                
-            &"RCM pressure", "RCM density"'
+            &"IM pressure", "IM density"'
     end if
     write(UNITTMP_,'(a,i4,a,i4,a)') &
          'ZONE T="IM Pressure", I=',jSizeIn+1,', J=',iSizeIn,', K=1, F=POINT'
@@ -112,12 +126,15 @@ contains
           j=j2; if(j2==jSizeIn+1) j=1
           lonShift=0.; if(j2==jSizeIn+1) lonShift=360.
           if(DoMultiFluidIMCoupling)then
-             write(UNITTMP_,'(2i4,8G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i), &
-                  RCM_p(i,j),RCM_dens(i,j), &
-                  RCM_Hpp(i,j),RCM_Hpdens(i,j),RCM_Opp(i,j), RCM_Opdens(i,j)
+             write(UNITTMP_,'(2i4,8G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
+                  IM_p(i,j),IM_dens(i,j), &
+                  IM_Hpp(i,j),IM_Hpdens(i,j),IM_Opp(i,j), IM_Opdens(i,j)
+          else if(DoAnisoPressureIMCoupling)then
+             write(UNITTMP_,'(2i4,6G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
+                  IM_p(i,j),IM_dens(i,j),IM_ppar(i,j),IM_bmin(i,j)
           else
-             write(UNITTMP_,'(2i4,4G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i), &
-                  RCM_p(i,j),RCM_dens(i,j)
+             write(UNITTMP_,'(2i4,4G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
+                  IM_p(i,j),IM_dens(i,j)
           endif
        end do
     end do
@@ -140,6 +157,8 @@ contains
     write(UNITTMP_,'(100(1pe13.5))')   0.0
     if(DoMultiFluidIMCoupling)then
        write(UNITTMP_,'(a79)')'Lon Lat p rho Hpp Hprho Opp Oprho nothing'
+    else if(DoAnisoPressureIMCoupling)then
+       write(UNITTMP_,'(a79)')'Lon Lat p rho ppar bmin nothing'
     else
        write(UNITTMP_,'(a79)')'Lon Lat p rho nothing'
     endif
@@ -147,11 +166,15 @@ contains
        do j=1,jSizeIn
           if(DoMultiFluidIMCoupling)then
              write(UNITTMP_,'(100(1pe18.10))') &
-                  RCM_lon(j),RCM_lat(i),RCM_p(i,j),RCM_dens(i,j), &
-                  RCM_Hpp(i,j), RCM_Hpdens(i,j), RCM_Opp(i,j), RCM_Opdens(i,j)
+                  IM_lon(j),IM_lat(i),IM_p(i,j),IM_dens(i,j), &
+                  IM_Hpp(i,j), IM_Hpdens(i,j), IM_Opp(i,j), IM_Opdens(i,j)
+          else if(DoAnisoPressureIMCoupling)then
+             write(UNITTMP_,'(100(1pe18.10))') &
+                  IM_lon(j),IM_lat(i),IM_p(i,j),IM_dens(i,j), &
+                  IM_ppar(i,j), IM_bmin(i,j)
           else
              write(UNITTMP_,'(100(1pe18.10))') &
-                  RCM_lon(j),RCM_lat(i),RCM_p(i,j),RCM_dens(i,j)
+                  IM_lon(j),IM_lat(i),IM_p(i,j),IM_dens(i,j)
           endif
        end do
     end do

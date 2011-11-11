@@ -8,7 +8,8 @@ module ModGmImCoupling
   use CON_coupler, ONLY: Grid_C, IM_, ncells_decomposition_d
 
   use ModProcMH
-  use ModMain, ONLY: nI,nJ,nK,n_step,nBlockMax,unusedBLK,DoMultiFluidIMCoupling
+  use ModMain, ONLY: nI,nJ,nK,n_step,nBlockMax,unusedBLK, &
+       DoMultiFluidIMCoupling,DoAnisoPressureIMCoupling
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModRaytrace, ONLY : ray,rayface
   use ModPhysics, ONLY: No2Si_V, Si2No_V, &
@@ -22,7 +23,7 @@ module ModGmImCoupling
   integer :: nCells_D(2), iSize,jSize
 
   ! Information about the IM grid ! 2D non-uniform regular grid only !!!
-  real, allocatable, dimension(:) :: RCM_lat, RCM_lon
+  real, allocatable, dimension(:) :: IM_lat, IM_lon
 
   integer :: i,j,k, i0,i1,i2, j0,j1,j2, n, iBLK
 
@@ -31,7 +32,7 @@ module ModGmImCoupling
   real, save, dimension(:,:), allocatable :: &
        MHD_SUM_vol, MHD_tmp, &
        MHD_SUM_rho, MHD_HpRho, MHD_OpRho, &
-       MHD_SUM_p, MHD_HpP, MHD_OpP, &
+       MHD_SUM_p, MHD_SUM_ppar, MHD_HpP, MHD_OpP, &
        MHD_Beq, &
        MHD_Xeq, &
        MHD_Yeq, &
@@ -73,11 +74,15 @@ contains
        if(allocated(MHD_OpRho))        deallocate(MHD_OpRho)
        if(allocated(MHD_OpP))          deallocate(MHD_OpP)
     end if
-    
+
+    if(DoAnisoPressureIMCoupling)then
+       if(allocated(MHD_SUM_ppar))       deallocate(MHD_SUM_ppar)
+    end if
+
     iSize = iSizeIn
     jSize = jSizeIn
 
-    if(.not.allocated(RCM_lat))then
+    if(.not.allocated(IM_lat))then
        nCells_D=ncells_decomposition_d(IM_)
        if(  iSize /= nCells_D(1) .or. &
             jSize /= nCells_D(2) ) then
@@ -85,10 +90,10 @@ contains
                iSize,jSize, nCells_D(1:2)
           call CON_stop(NameSub//' ERROR')
        end if
-       allocate(RCM_lat(iSize), RCM_lon(jSize))
+       allocate(IM_lat(iSize), IM_lon(jSize))
        ! Convert colat, lon to lat-lon in degrees
-       RCM_lat = 90.0 - Grid_C(IM_) % Coord1_I * cRadToDeg
-       RCM_lon =        Grid_C(IM_) % Coord2_I * cRadToDeg
+       IM_lat = 90.0 - Grid_C(IM_) % Coord1_I * cRadToDeg
+       IM_lon =        Grid_C(IM_) % Coord2_I * cRadToDeg
     end if
 
     ! Arrays needed for the field line integrals
@@ -122,6 +127,12 @@ contains
        MHD_Opp = 0.
     end if
     
+    if(DoAnisoPressureIMCoupling)then
+       allocate( MHD_SUM_ppar(isize,jsize), stat=iError )
+       call alloc_check(iError,"MHD_SUM_ppar")
+       MHD_SUM_ppar = 0.
+    end if
+
     allocate( MHD_Beq(isize,jsize), stat=iError )
     call alloc_check(iError,"MHD_Beq")
     MHD_Beq = 0.
@@ -163,19 +174,25 @@ contains
 
     OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
     write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
-    if(.not.DoMultiFluidIMCoupling)then
-       write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat", "Lat Boundary (I)"', &
-            ', "Xeq", "Yeq"', &
-            ', "Volume", "Volume**(-2/3)"', &
-            ', "MHD `r", "MHD p", "MHD T", "Beq"', &
-            ', "FluxError"'
-    else
+    if(DoMultiFluidIMCoupling)then
        write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat", "Lat Boundary (I)"', &
             ', "Xeq", "Yeq"', &
             ', "Volume", "Volume**(-2/3)"', &
             ', "MHD `r", "MHD p", "MHD T"', &
             ', "MHD Hp`r", "MHD Hp p", "MHD Hp T"', &
             ', "MHD Op`r", "MHD Op p", "MHD Op T", "Beq"', &
+            ', "FluxError"'
+    else if(DoAnisoPressureIMCoupling)then  
+       write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat", "Lat Boundary (I)"', &
+            ', "Xeq", "Yeq"', &
+            ', "Volume", "Volume**(-2/3)"', &
+            ', "MHD `r", "MHD p", "MHD ppar", "MHD T", "Beq"', &
+            ', "FluxError"'
+    else
+       write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat", "Lat Boundary (I)"', &
+            ', "Xeq", "Yeq"', &
+            ', "Volume", "Volume**(-2/3)"', &
+            ', "MHD `r", "MHD p", "MHD T", "Beq"', &
             ', "FluxError"'
     end if
     write(UNITTMP_,'(a,i3.3,a,i4,a,i4,a)') &
@@ -199,21 +216,28 @@ contains
                tmpV1 = (MHD_SUM_vol(i,j)/1.e9)
           tmpV2=0.; if(MHD_SUM_vol(i,j)>0.) &
                tmpV2 = (MHD_SUM_vol(i,j)/1.e9)**(-2./3.)
-          if(.not.DoMultiFluidIMCoupling)then
-             write(UNITTMP_,'(2i4,12G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i),&
-                  MHD_lat_boundary(j), &
-                  MHD_Xeq(i,j),MHD_Yeq(i,j), &
-                  tmpV1,tmpV2, &
-                  MHD_SUM_rho(i,j),MHD_SUM_p(i,j),tmpT,MHD_Beq(i,j), &
-                  MHD_Fluxerror(i,j)
-          else
-             write(UNITTMP_,'(2i4,18G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i),&
+          if(DoMultiFluidIMCoupling)then
+             write(UNITTMP_,'(2i4,18G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i),&
                   MHD_lat_boundary(j), &
                   MHD_Xeq(i,j),MHD_Yeq(i,j), &
                   tmpV1,tmpV2, &
                   MHD_SUM_rho(i,j),MHD_SUM_p(i,j),tmpT,&
                   MHD_Hprho(i,j), MHD_Hpp(i,j), tmpHpT, &
                   MHD_Oprho(i,j), MHD_Opp(i,j), tmpOpT,MHD_Beq(i,j), &
+                  MHD_Fluxerror(i,j)
+          else if(DoAnisoPressureIMCoupling)then
+             write(UNITTMP_,'(2i4,13G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i),&
+                  MHD_lat_boundary(j), &
+                  MHD_Xeq(i,j),MHD_Yeq(i,j), &
+                  tmpV1,tmpV2, &
+                  MHD_SUM_rho(i,j),MHD_SUM_p(i,j),MHD_SUM_ppar(i,j),tmpT,MHD_Beq(i,j), &
+                  MHD_Fluxerror(i,j)
+          else
+             write(UNITTMP_,'(2i4,12G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i),&
+                  MHD_lat_boundary(j), &
+                  MHD_Xeq(i,j),MHD_Yeq(i,j), &
+                  tmpV1,tmpV2, &
+                  MHD_SUM_rho(i,j),MHD_SUM_p(i,j),tmpT,MHD_Beq(i,j), &
                   MHD_Fluxerror(i,j)
           end if
        end do
@@ -242,23 +266,52 @@ contains
     write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,1,7
     write(UNITTMP_,'(3i4)')            jSize+1,iSize
     write(UNITTMP_,'(100(1pe13.5))')   0.0
-    write(UNITTMP_,'(a79)') 'Lon Lat Xeq Yeq vol rho p Beq FluxError nothing'
-    do i=isize,1,-1
-       do j=1,jsize
+    if(DoAnisoPressureIMCoupling)then
+       write(UNITTMP_,'(a79)') 'Lon Lat Xeq Yeq vol rho p ppar Beq FluxError nothing'
+       do i=isize,1,-1
+          do j=1,jsize
+             write(UNITTMP_,'(100(1pe18.10))') &
+                  IM_lon(j),       &
+                  IM_lat(i),       &
+                  MHD_Xeq(i,j),     &
+                  MHD_Yeq(i,j),     &
+                  MHD_SUM_vol(i,j), &
+                  MHD_SUM_rho(i,j), &
+                  MHD_SUM_p(i,j),   &
+                  MHD_SUM_ppar(i,j), &
+                  MHD_Beq(i,j),     &
+                  MHD_FluxError(i,j)
+          end do
           write(UNITTMP_,'(100(1pe18.10))') &
-               RCM_lon(j),       &
-               RCM_lat(i),       &
-               MHD_Xeq(i,j),     &
-               MHD_Yeq(i,j),     &
-               MHD_SUM_vol(i,j), &
-               MHD_SUM_rho(i,j), &
-               MHD_SUM_p(i,j),   &
-               MHD_Beq(i,j),     &
-               MHD_FluxError(i,j)
+               IM_lon(1)+360.0, &
+               IM_lat(i),       &
+               MHD_Xeq(i,1),     &
+               MHD_Yeq(i,1),     &
+               MHD_SUM_vol(i,1), &
+               MHD_SUM_rho(i,1), &
+               MHD_SUM_p(i,1),   &
+               MHD_SUM_ppar(i,1), &
+               MHD_Beq(i,1),     &
+               MHD_FluxError(i,1)               
        end do
-       write(UNITTMP_,'(100(1pe18.10))') &
-               RCM_lon(1)+360.0, &
-               RCM_lat(i),       &
+    else
+       write(UNITTMP_,'(a79)') 'Lon Lat Xeq Yeq vol rho p Beq FluxError nothing'
+       do i=isize,1,-1
+          do j=1,jsize
+             write(UNITTMP_,'(100(1pe18.10))') &
+                  IM_lon(j),       &
+                  IM_lat(i),       &
+                  MHD_Xeq(i,j),     &
+                  MHD_Yeq(i,j),     &
+                  MHD_SUM_vol(i,j), &
+                  MHD_SUM_rho(i,j), &
+                  MHD_SUM_p(i,j),   &
+                  MHD_Beq(i,j),     &
+                  MHD_FluxError(i,j)
+          end do
+          write(UNITTMP_,'(100(1pe18.10))') &
+               IM_lon(1)+360.0, &
+               IM_lat(i),       &
                MHD_Xeq(i,1),     &
                MHD_Yeq(i,1),     &
                MHD_SUM_vol(i,1), &
@@ -266,7 +319,8 @@ contains
                MHD_SUM_p(i,1),   &
                MHD_Beq(i,1),     &
                MHD_FluxError(i,1)               
-    end do
+       end do
+    end if
     CLOSE(UNITTMP_)
 
   end subroutine write_integrated_data_idl
@@ -276,19 +330,21 @@ contains
 
     integer :: iLoc_I(1),iEquator,iNorthPole
 
-    if(.not.DoMultiFluidIMCoupling)then
+    where(MHD_SUM_vol>0.)
+       MHD_SUM_p   = MHD_SUM_p/MHD_SUM_vol
+       MHD_SUM_rho = MHD_SUM_rho/MHD_SUM_vol
+    end where
+    if(DoMultiFluidIMCoupling)then
        where(MHD_SUM_vol>0.)
-          MHD_SUM_p   = MHD_SUM_p/MHD_SUM_vol
-          MHD_SUM_rho = MHD_SUM_rho/MHD_SUM_vol
-       end where
-    else
-       where(MHD_SUM_vol>0.)
-          MHD_SUM_p   = MHD_SUM_p/MHD_SUM_vol
-          MHD_SUM_rho = MHD_SUM_rho/MHD_SUM_vol
           MHD_Hprho = MHD_Hprho/MHD_SUM_vol
           MHD_Oprho = MHD_Oprho/MHD_SUM_vol
           MHD_Hpp   = MHD_Hpp/MHD_SUM_vol
           MHD_Opp   = MHD_Opp/MHD_SUM_vol
+       end where
+    end if
+    if(DoAnisoPressureIMCoupling)then
+       where(MHD_SUM_vol>0.)
+          MHD_SUM_ppar = MHD_SUM_ppar/MHD_SUM_vol
        end where
     end if
 
@@ -302,7 +358,7 @@ contains
     Ri=(6378.+100.)/6378.
     Factor = 2. * (Ri**4) / abs(Bdp)
     do i=1,isize
-       Colat = (90.0 - RCM_lat(i))*cDegToRad
+       Colat = (90.0 - IM_lat(i))*cDegToRad
        s2    = sin(colat)**2
        s6    = s2**3
        s8    = s6*s2
@@ -347,8 +403,8 @@ contains
              MHD_SUM_vol(i,:)=Vol
 
              ! Fix the grid inside Rbody
-             MHD_Xeq(i,:) = (Ri/s2)*cos(RCM_lon(:)*cDegToRad)
-             MHD_Yeq(i,:) = (Ri/s2)*sin(RCM_lon(:)*cDegToRad)
+             MHD_Xeq(i,:) = (Ri/s2)*cos(IM_lon(:)*cDegToRad)
+             MHD_Yeq(i,:) = (Ri/s2)*sin(IM_lon(:)*cDegToRad)
 
              ! Fix the equatorial B value
              MHD_Beq(i,:) = eqB
@@ -372,11 +428,11 @@ contains
     end do
 
     ! find index for latitude closest to equator
-    iLoc_I   = minloc(abs(RCM_lat))
+    iLoc_I   = minloc(abs(IM_lat))
     iEquator = iLoc_I(1)
 
     ! find index for latitude closest to north pole
-    iLoc_I = maxloc(RCM_lat)
+    iLoc_I = maxloc(IM_lat)
     iNorthPole = iLoc_I(1)
 
     iEquator = iEquator + sign(1, iNorthPole - iEquator) 
@@ -411,19 +467,17 @@ contains
        MHD_Beq    (1:i-1,j) = -1.
        MHD_Xeq    (1:i-1,j) = MHD_Xeq(i,j)
        MHD_Yeq    (1:i-1,j) = MHD_Yeq(i,j)
-       MHD_SUM_vol(1:i-1,j) = -1.
-    
-       if(.not.DoMultiFluidIMCoupling)then
-          MHD_SUM_rho(1:i-1,j) = -1.
-          MHD_SUM_p  (1:i-1,j) = -1.
-       else
-          MHD_SUM_rho(1:i-1,j) = -1.
-          MHD_SUM_p  (1:i-1,j) = -1.
+       MHD_SUM_vol(1:i-1,j) = -1.       
+       MHD_SUM_rho(1:i-1,j) = -1.
+       MHD_SUM_p  (1:i-1,j) = -1.
+       if(DoMultiFluidIMCoupling)then
           MHD_HpRho(1:i-1,j) = -1.
           MHD_OpRho(1:i-1,j) = -1.
           MHD_HpP  (1:i-1,j) = -1.
           MHD_OpP  (1:i-1,j) = -1.
        endif
+       if(DoAnisoPressureIMCoupling) &
+                   MHD_SUM_ppar(1:i-1,j) = -1.
     end do
 
     ! Dimensionalize values
@@ -432,35 +486,35 @@ contains
     ! used in RCM, so only the magnetic unit is converted to SI units.
     ! Similarly Xeq and Yeq (equatorial crossing coords) remain in 
     ! normalized units.
-    if(.not. DoMultiFluidIMCoupling)then
+    where(MHD_SUM_vol > 0.)
+       MHD_SUM_vol = MHD_SUM_vol / No2Si_V(UnitB_)
+       MHD_SUM_rho = MHD_SUM_rho * No2Si_V(UnitRho_)
+       MHD_SUM_p   = MHD_SUM_p   * No2Si_V(UnitP_)
+    elsewhere
+       MHD_SUM_vol = -1.
+       MHD_SUM_rho = -1.
+       MHD_SUM_p   = -1.
+    end where
+    if(DoMultiFluidIMCoupling)then
        where(MHD_SUM_vol > 0.)
-          MHD_SUM_vol = MHD_SUM_vol / No2Si_V(UnitB_)
-          MHD_SUM_rho = MHD_SUM_rho * No2Si_V(UnitRho_)
-          MHD_SUM_p   = MHD_SUM_p   * No2Si_V(UnitP_)
-       elsewhere
-          MHD_SUM_vol = -1.
-          MHD_SUM_rho = -1.
-          MHD_SUM_p   = -1.
-       end where
-    else
-       where(MHD_SUM_vol > 0.)
-          MHD_SUM_vol = MHD_SUM_vol / No2Si_V(UnitB_)
-          MHD_SUM_rho = MHD_SUM_rho * No2Si_V(UnitRho_)
-          MHD_SUM_p   = MHD_SUM_p   * No2Si_V(UnitP_)
           MHD_HpRho = MHD_HpRho * No2Si_V(UnitRho_)
           MHD_OpRho = MHD_OpRho * No2Si_V(UnitRho_)
           MHD_HpP   = MHD_HpP * No2Si_V(UnitP_)
           MHD_OpP   = MHD_OpP * No2Si_V(UnitP_)
        elsewhere
-          MHD_SUM_vol = -1.
-          MHD_SUM_rho = -1.
-          MHD_SUM_p   = -1.
           MHD_HpRho = -1.
           MHD_OpRho = -1.
           MHD_HpP   = -1.
           MHD_OpP   = -1.
        end where
-    endif
+    end if
+    if(DoAnisoPressureIMCoupling)then
+       where(MHD_SUM_vol > 0.)
+          MHD_SUM_ppar = MHD_SUM_ppar * No2Si_V(UnitP_)
+       elsewhere
+          MHD_SUM_ppar = -1.
+       end where
+    end if
 
     where(MHD_Beq > 0.)
        MHD_Beq = MHD_Beq * No2Si_V(UnitB_)
@@ -485,9 +539,9 @@ contains
                   *(MHD_Yeq(i,j+1)-MHD_Yeq(i+1,j+1)) &
                   -(MHD_Yeq(i+1,j)-MHD_Yeq(i+1,j+1)) &
                   *(MHD_Xeq(i,j+1)-MHD_Xeq(i+1,j+1))))/&
-                  (ABS(DipoleStrengthSi)*(SIN(Rcm_lat(i)*cDegToRad)**2 &
-                  -SIN(Rcm_lat(i+1)*cDegToRad)**2)* &
-                  (RCM_lon(j+1)-RCM_lon(j))*cDegToRad )- 1.0
+                  (ABS(DipoleStrengthSi)*(SIN(Im_lat(i)*cDegToRad)**2 &
+                  -SIN(Im_lat(i+1)*cDegToRad)**2)* &
+                  (IM_lon(j+1)-IM_lon(j))*cDegToRad )- 1.0
           ELSE
              MHD_Fluxerror (i,j) = 0.0
           END IF

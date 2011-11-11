@@ -8,9 +8,9 @@ subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, nPointL
   ! Do ray tracing for IM. 
   ! Provide total number of points along rays 
   ! and the number of variables to pass to IM
-  use ModGmImCoupling, ONLY: allocate_gm_im, RCM_lat, RCM_lon
+  use ModGmImCoupling, ONLY: allocate_gm_im, IM_lat, IM_lon
   use ModRayTrace, ONLY: DoExtractUnitSi
-  use ModMain, ONLY: DoMultiFluidIMCoupling
+  use ModMain, ONLY: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
   use CON_line_extract, ONLY: line_get
   implicit none
   integer, intent(in)           :: iSizeIn, jSizeIn
@@ -24,6 +24,9 @@ subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, nPointL
   if(DoMultiFluidIMCoupling)then
      if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
           call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  else if(DoAnisoPressureIMCoupling)then
+     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:ppar') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
   else
      if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p') &
           call CON_stop(NameSub//' invalid NameVar='//NameVar)
@@ -36,7 +39,7 @@ subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, nPointL
   Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
   DoExtractUnitSi = .true.
   
-  call integrate_ray_accurate(iSizeIn, jSizeIn, RCM_lat, RCM_lon, Radius, &
+  call integrate_ray_accurate(iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
        NameVar)
 
   call line_get(nVarLine, nPointLine)
@@ -55,17 +58,19 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
 
   use ModGeometry,ONLY: x2
   use ModProcMH,  ONLY: iProc
+  use ModIoUnit, ONLY: UNITTMP_
 
-  use ModMain, ONLY: Time_Simulation, DoMultiFluidIMCoupling
+  use ModMain, ONLY: Time_Simulation, DoMultiFluidIMCoupling, &
+       DoAnisoPressureIMCoupling
 
   use ModGmImCoupling, ONLY: &
-       RCM_lat, RCM_lon, &
+       IM_lat, IM_lon, &
        write_integrated_data_tec, write_integrated_data_idl, &
        MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p, NoValue,&
-       MHD_HpRho, MHD_OpRho, MHD_Hpp, MHD_Opp
+       MHD_SUM_ppar, MHD_HpRho, MHD_OpRho, MHD_Hpp, MHD_Opp
 
   use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
-       InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_,  &
+       InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, pparInvB_, &
        HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_,xEnd_, CLOSEDRAY
 
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_,&
@@ -96,10 +101,14 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
 
   integer :: iLat,iLon,iLine
   real    :: SolarWind_V(nVar)
+  character(len=100) :: NameOut
   !--------------------------------------------------------------------------
 
   if(DoMultiFluidIMCoupling)then
      if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  else if(DoAnisoPressureIMCoupling)then
+     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:ppar') &
           call CON_stop(NameSub//' invalid NameVar='//NameVar)
   else
      if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p') &
@@ -122,43 +131,44 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   MHD_Xeq     = RayResult_VII(Z0x_    ,:,:)
   MHD_Yeq     = RayResult_VII(Z0y_    ,:,:)
   MHD_Beq     = RayResult_VII(Z0b_    ,:,:)
-  if(.not.DoMultiFluidIMCoupling)then
-     MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
-     MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
-  else
-     MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
-     MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
+  MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
+  MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
+  
+  if(DoMultiFluidIMCoupling)then
      MHD_HpRho= RayResult_VII(HpRhoInvB_,:,:)
      MHD_OpRho= RayResult_VII(OpRhoInvB_,:,:)
      MHD_HpP= RayResult_VII(HpPInvB_,:,:)
      MHD_OpP= RayResult_VII(OpPInvB_,:,:)
   end if
   
+  if(DoAnisoPressureIMCoupling) &
+       MHD_SUM_ppar = RayResult_VII(pparInvB_,:,:)
+
   ! Put impossible values if the ray is not closed
-  if(.not.DoMultiFluidIMCoupling)then
+  where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+     MHD_Xeq     = NoValue
+     MHD_Yeq     = NoValue
+     MHD_SUM_vol = -1.0
+     MHD_SUM_rho = 0.0
+     MHD_SUM_p   = 0.0
+     MHD_Beq     = NoValue
+  end where
+
+  if(DoMultiFluidIMCoupling)then
      where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-        MHD_Xeq     = NoValue
-        MHD_Yeq     = NoValue
-        MHD_SUM_vol = -1.0
-        MHD_SUM_rho = 0.0
-        MHD_SUM_p   = 0.0
-        MHD_Beq     = NoValue
-     end where
-  else
-     where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-        MHD_Xeq     = NoValue
-        MHD_Yeq     = NoValue
-        MHD_SUM_vol = -1.0
-        MHD_SUM_rho = 0.0
-        MHD_SUM_p   = 0.0
         MHD_Hprho = 0.0
         MHD_Oprho = 0.0
         MHD_HpP   = 0.0
         MHD_OpP   = 0.0
-        MHD_Beq     = NoValue
      end where
   end if
-  
+
+  if(DoAnisoPressureIMCoupling)then
+     where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+        MHD_SUM_ppar = 0.0
+     end where
+  end if
+
   ! Put impossible value for volume when inside inner boundary
   where(MHD_SUM_vol == 0.0) MHD_SUM_vol = -1.0
 
@@ -225,8 +235,28 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
      Buffer_IIV(:,:,10)  = MHD_OpP / MHD_SUM_vol * No2Si_V(UnitP_)
   end if
 
+  ! ppar and HpRho share the same index in buffer_iiv for now
+  ! does not work for multifluid MHD with anisotropic pressure
+  if(DoAnisoPressureIMCoupling) &
+        Buffer_IIV(:,:,7)  = MHD_SUM_ppar / MHD_SUM_vol * No2Si_V(UnitP_)
 
   !^CFG END RAYTRACE
+
+  ! test only for anisop
+! if(iProc == 0 .and. DoTestIdl .and. DoAnisoPressureIMCoupling)then
+!    write(NameOut,"(a,f6.1)") 'GM_get_for_IM_t_', Time_Simulation
+!    open(UnitTmp_,FILE=NameOut)
+!    write(UnitTmp_,"(a)") 'GM_get_for_im_crcm, Buffer_IIV, last index 1:5 and 7 '
+!    write(UnitTmp_,"(a)") 'Xeq Yeq Beq rho p ppar'
+!    do iLat =iSizeIn,1,-1
+!       do iLon =1,jSizeIn
+!       write(UnitTmp_,"(100es18.10)") Buffer_IIV(iLat,iLon,1:5), &
+!            Buffer_IIV(iLat,iLon,7)
+!       enddo
+!    enddo
+!    close(UnitTmp_)
+! end if
+
 end subroutine GM_get_for_im_crcm
 
 !==========================================================================
@@ -439,7 +469,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
        allocate_gm_im, &
        process_integrated_data, DoTestTec, DoTestIdl, &
        write_integrated_data_tec, write_integrated_data_idl, &
-       RCM_lat, RCM_lon, &
+       IM_lat, IM_lon, &
        MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p, &
        NoValue, MHD_HpRho, MHD_OpRho, MHD_Hpp, MHD_Opp
 
@@ -477,10 +507,10 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   ! The RCM ionosphere radius in normalized units
   Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
   if(.not. DoMultiFluidIMCoupling)then
-     call integrate_ray_accurate(iSizeIn, jSizeIn, RCM_lat, RCM_lon, Radius, &
+     call integrate_ray_accurate(iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
           'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
   else
-     call integrate_ray_accurate(iSizeIn, jSizeIn, RCM_lat, RCM_lon, Radius, &
+     call integrate_ray_accurate(iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
           'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b,HpRhoInvB,OpRhoInvB,HppInvB,OppInvB')
      ! but not pass Rhoinvb, Pinvb to IM                                        
   end if
