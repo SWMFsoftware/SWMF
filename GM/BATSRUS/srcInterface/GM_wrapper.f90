@@ -79,7 +79,7 @@ subroutine GM_set_grid
   use MH_domain_decomposition
   use CON_coupler
   use CON_test_global_message_pass
-  use ModMain,ONLY:TypeCoordSystem
+  use ModMain,ONLY:TypeCoordSystem, NameVarCouple
   use ModPhysics,ONLY:No2Si_V, UnitX_
   use CON_comp_param,ONLY:GM_
 
@@ -93,7 +93,8 @@ subroutine GM_set_grid
   DoTest=.false.;DoTestMe=.false.
   if(done_dd_init(GM_))return
   call init_decomposition(GM_,GM_,3,.true.)
-  call set_coord_system(GM_,TypeCoordSystem,No2Si_V(UnitX_))
+  call set_coord_system(GM_,TypeCoordSystem,No2Si_V(UnitX_), &
+       NameVar = NameVarCouple)
   
   if(is_proc(GM_))then
      call init_decomposition(&
@@ -177,8 +178,8 @@ subroutine GM_print_variables(NameSource)
   case('IM')                             !^CFG IF RCM BEGIN
      do i=1,iSize
         do j=1,jSize
-           write(UNITTMP_,'(2i4,4G14.6)')j,i,RCM_lon(j),RCM_lat(i), &
-                RCM_dens(i,j),RCM_p(i,j)
+           write(UNITTMP_,'(2i4,4G14.6)')j,i,IM_lon(j),IM_lat(i), &
+                IM_dens(i,j),IM_p(i,j)
         end do
      end do                              !^CFG END RCM
   case('IE')
