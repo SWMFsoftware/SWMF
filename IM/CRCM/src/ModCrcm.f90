@@ -10,8 +10,9 @@ Module ModCrcm
   logical :: UseMcLimiter=.false.
   real    :: BetaLimiter = 1.5
   real, allocatable:: SDtime(:,:,:,:), f2(:,:,:,:,:)
-  real, allocatable:: phot(:,:,:), Pressure_IC(:,:,:)
+  real, allocatable:: phot(:,:,:), Ppar_IC(:,:,:), Pressure_IC(:,:,:)
   real, allocatable:: FAC_C(:,:)
+  real, allocatable:: Bmin_C(:,:)
 
 contains
 
@@ -23,9 +24,11 @@ contains
          SDtime(np,nt,nm,nk),      &
          f2(nspec,np1,nt1,nm,nk),  &
          phot(nspec,np,nt),        &
+         Ppar_IC(nspec,np,nt),        &
          Pressure_IC(nspec,np,nt), &
-         FAC_C(np,nt)              &
-    )
+         FAC_C(np,nt),             &
+         Bmin_C(np,nt)                & ! minimum B field along each field line, 
+        )                            ! passed from GM to IM, now as an output of IM
 
     ! Not clear why these need initialization !!!
     FAC_C = 0.0

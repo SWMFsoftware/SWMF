@@ -13,14 +13,14 @@ module ModCrcmPlot
 
 contains
   !============================================================================
-  subroutine Crcm_plot(nLat,nLon, X_C,Y_C,Pressure_IC,PressureHot_IC,Den_IC, &
-       Beq_C,Volume_C,Potential_C,FAC_C,Time,Dt)
+  subroutine Crcm_plot(nLat,nLon, X_C,Y_C,Pressure_IC,PressureHot_IC,PparHot_IC, &
+       Den_IC, Beq_C,Volume_C,Potential_C,FAC_C,Time,Dt)
 
     use ModIoUnit,     ONLY: UnitTmp_
     use ModPlotFile,   ONLY: save_plot_file
     use ModCrcmRestart, ONLY: IsRestart
     use ModCrcmPlanet,   ONLY: nspec,NamePlotVar,iPplot_I,iPhotplot_I,& 
-                               iNplot_I,Beq_,Vol_,Pot_,FAC_,nVar
+                               iPparhotplot_I, iNplot_I,Beq_,Vol_,Pot_,FAC_,nVar
     use ModCrcmGrid,   ONLY: PhiIono_C => phi, LatIono_C => xlatr
     use ModFieldTrace, ONLY: iba
     integer, intent(in) :: nLat, nLon
@@ -30,6 +30,7 @@ contains
                            Beq_C(nLat,nLon),Volume_C(nLat,nLon),   &
                            Potential_C(nLat,nLon), &
                            PressureHot_IC(nspec,nLat,nLon), &
+                           PparHot_IC(nspec,nLat,nLon), &
                            FAC_C(nLat,nLon)
     real, allocatable   :: Coord_DII(:,:,:), PlotState_IIV(:,:,:)
     real, allocatable   :: CoordIono_DII(:,:,:)
@@ -76,6 +77,8 @@ contains
             Pressure_IC(iSpecies,1:iba(iLon),iLon) 
        PlotState_IIV(1:iba(iLon),iLon,iPhotplot_I(iSpecies+1))= &
             PressureHot_IC(iSpecies,1:iba(iLon),iLon)
+       PlotState_IIV(1:iba(iLon),iLon,iPparhotplot_I(iSpecies+1))= &
+            PparHot_IC(iSpecies,1:iba(iLon),iLon)
        PlotState_IIV(1:iba(iLon),iLon,iNplot_I(iSpecies+1))= &
             Den_IC(iSpecies,1:iba(iLon),iLon)  
        PlotState_IIV(1:iba(iLon),iLon,iPplot_I(1))= &
@@ -83,6 +86,9 @@ contains
        PlotState_IIV(1:iba(iLon),iLon,iPhotplot_I(1))= &
             PlotState_IIV(1:iba(iLon),iLon,iPhotplot_I(1))&
             + PressureHot_IC(iSpecies,1:iba(iLon),iLon)
+       PlotState_IIV(1:iba(iLon),iLon,iPparhotplot_I(1))= &
+            PlotState_IIV(1:iba(iLon),iLon,iPparhotplot_I(1))&
+            + PparHot_IC(iSpecies,1:iba(iLon),iLon)
        PlotState_IIV(1:iba(iLon),iLon,iNplot_I(1))= &
             PlotState_IIV(1:iba(iLon),iLon,iNplot_I(1))+Den_IC(iSpecies,1:iba(iLon),iLon)  
     end do
@@ -98,6 +104,8 @@ contains
          PlotState_IIV(:,1,iPplot_I(1))
     PlotState_IIV(:,nLon+1,iPhotplot_I(1))= &
          PlotState_IIV(:,1,iPhotplot_I(1))
+    PlotState_IIV(:,nLon+1,iPparhotplot_I(1))= &
+         PlotState_IIV(:,1,iPparhotplot_I(1))
     PlotState_IIV(:,nLon+1,iNplot_I(1))= &
          PlotState_IIV(:,1,iNplot_I(1))
     do iSpecies = 1,nspec
@@ -105,6 +113,8 @@ contains
             PlotState_IIV(:,1,iPplot_I(iSpecies+1))
        PlotState_IIV(:,nLon+1,iPhotplot_I(iSpecies+1))= &
             PlotState_IIV(:,1,iPhotplot_I(iSpecies+1))
+       PlotState_IIV(:,nLon+1,iPparhotplot_I(iSpecies+1))= &
+            PlotState_IIV(:,1,iPparhotplot_I(iSpecies+1))
        PlotState_IIV(:,nLon+1,iNplot_I(iSpecies+1))= &
             PlotState_IIV(:,1,iNplot_I(iSpecies+1))  
     end do
