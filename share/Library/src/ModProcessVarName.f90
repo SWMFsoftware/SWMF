@@ -5,7 +5,13 @@ module ModProcessVarName
   implicit none
 
   private
-  public :: process_var_name, nVarMax
+  public:: process_var_name
+  public:: nVarMax
+
+  interface process_var_name
+     module procedure process_var_list, process_var_string
+  end interface
+  
 
   integer,parameter :: nVarMax = 100   ! maximum number of state variables
   integer,parameter :: nSubstance = 27 ! number of distinct fluids/species
@@ -96,7 +102,30 @@ module ModProcessVarName
   ! -------------------------------------------------------------------------
 contains
 
-  subroutine process_var_name(nVarName, NameVar_V,  &
+  subroutine process_var_string(NameVar,  &
+       nDensity, nSpeed, nP, nPpar, nWave, nMaterial)
+
+    use ModUtilities,  ONLY: split_string, join_string
+
+    character(len=*), intent(inout) :: NameVar
+    integer,intent(out)             :: nDensity, nSpeed, nP, nPpar
+    integer,intent(out)             :: nWave, nMaterial
+
+    integer :: nVarName
+    integer, parameter:: MaxNameVar = 100
+    character(len=20):: NameVar_V(MaxNameVar)
+    !-----------------------------------------------------------------------
+
+    call split_string(NameVar, MaxNameVar, NameVar_V, nVarName)
+
+    call process_var_list(nVarName, NameVar_V,  &
+         nDensity, nSpeed, nP, nPpar, nWave, nMaterial)
+
+    call join_string(nVarName, NameVar_V(1:nVarName), NameVar)
+
+  end subroutine process_var_string
+  !==========================================================================
+  subroutine process_var_list(nVarName, NameVar_V,  &
        nDensity, nSpeed, nP, nPpar, nWave, nMaterial)
 
     use ModUtilities,  ONLY: lower_case
@@ -105,7 +134,8 @@ contains
     character(len=*), intent(inout)   :: NameVar_V(nVarName)
     integer,intent(out)               :: nDensity, nSpeed, nP, nPpar
     integer,intent(out)               :: nWave, nMaterial
-   ! DESCRIPTION:
+
+    ! DESCRIPTION:
     ! ------------
     ! 1. Creates standard names and a dictionary for each standard name.
     ! The dictionary only contains the basic hydro quantities for 
@@ -234,7 +264,7 @@ contains
       end do
     end subroutine find_substance_replace_name
 
-  end subroutine process_var_name
+  end subroutine process_var_list
   ! =========================================================================  
   subroutine create_standard_name
 
