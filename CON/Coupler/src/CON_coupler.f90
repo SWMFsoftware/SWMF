@@ -486,7 +486,7 @@ contains
     logical, intent(in), optional :: IsPeriodic_D(:)
 
     integer, intent(in), optional :: nVar
-    character(len=lNameVar), intent(in), optional:: NameVar
+    character(len=*), intent(in), optional:: NameVar
 
     !DESCRIPTION: 
     ! Describe and broadcast non-octree grids
