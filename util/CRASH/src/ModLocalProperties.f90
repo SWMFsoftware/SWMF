@@ -37,20 +37,18 @@ module CRASH_M_localProperties
   real,parameter :: EVperK = 11604.1
 	
   ! flags set by CALL setRoNi
-  logical,save :: roGiven=.false.,niGiven=.false.
+  ! logical,save :: roGiven=.false.,niGiven=.false.
 
   real,parameter :: Zsmall=0.050
 
  !  Zsmall is a lower bound to be used in the  Eef eq. (see correctEOS and EEdiff)
 
- !------
 end module CRASH_M_localProperties
-
+!======================
 subroutine set_ZA(Z,A)
   use CRASH_M_localProperties,only : atoNum,atoMass
   implicit none
-  real :: Z,A
+  real,intent(in) :: Z,A
   atoNum=Z
   atoMass=A
-  return
 end subroutine set_ZA
