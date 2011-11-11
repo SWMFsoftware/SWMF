@@ -110,21 +110,25 @@ module ModRaytrace
   logical :: DoExtractState = .false., DoExtractUnitSi = .false.
 
   ! ----------- Variables for integrals along the ray -------------------
-  ! Named indexes
+  ! Named indexes  
   integer, parameter :: &
-       InvB_=1, Z0x_=2, Z0y_=3, Z0b_=4, RhoInvB_=5, pInvB_=6, &
+       InvB_=1, Z0x_=2, Z0y_=3, Z0b_=4, RhoInvB_=5, pInvB_=6, & 
+       pparinvB_ = 7, &
        HpRhoInvB_ = 7, OpRhoInvB_ = 8, HppInvB_ =9, OppInvB_=10, &
        xEnd_=11, yEnd_=12, zEnd_=13, Length_=14
 
   ! Number of integrals
   integer, parameter :: nRayIntegral = 14
 
+  ! Number of flow variables to be integrated
+  ! and number of variables for a local segment
+  integer :: nExtraIntegral, nLocalIntegral
+
   ! Flow variables to be integrated (rho and P) other than the magnetic field
   real, allocatable :: Extra_VGB(:,:,:,:,:)
-  real, allocatable :: ExtraMulti_VGB(:,:,:,:,:)
 
   ! Integrals for a local ray segment
-  real :: RayIntegral_V(InvB_:OppInvB_)
+  real, allocatable :: RayIntegral_V(:)
 
   ! Integrals added up for all the local ray segments
   ! The fist index corresponds to the variables (index 0 shows closed vs. open)
@@ -231,12 +235,28 @@ contains
 
   subroutine init_mod_raytrace
 
+    use ModMain, ONLY: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling   
+
     ! True if ray array is still to be initialized
     logical :: DoInitRay = .true.
 
-    ! Initialize ray array (write_logfile may use it before first ray tracing)
+    !------------------------------------------------------------------------
 
-    if(allocated(ray)) return
+    if(allocated(ray)) RETURN
+
+    ! Determine number of flow variable integrals
+    if(DoMultiFluidIMCoupling)then
+       nExtraIntegral = 6
+    else if(DoAnisoPressureIMCoupling)then
+       nExtraIntegral = 3
+    else
+       nExtraIntegral = 2
+    end if
+
+    ! Number of integrals for a local ray segment
+    nLocalIntegral = nExtraIntegral + 4
+
+    ! Initialize ray array (write_logfile may use it before first ray tracing)
     allocate(ray(3,2,nI+1,nJ+1,nK+1,nBLK))
     allocate(rayface(3,2,nI+1,nJ+1,nK+1,nBLK))
     allocate(rayend_ind(3,2,nI+1,nJ+1,nK+1,nBLK))
@@ -245,8 +265,9 @@ contains
     allocate(bb_y(1:nI+1,1:nJ+1,1:nK+1,nBLK))
     allocate(bb_z(1:nI+1,1:nJ+1,1:nK+1,nBLK))
     allocate(Bxyz_DGB(3,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
-    allocate(Extra_VGB(2,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
-    allocate(ExtraMulti_VGB(4,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
+    allocate(Extra_VGB(nExtraIntegral,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))  
+    allocate(RayIntegral_V(1:nLocalIntegral))
+
     if(DoInitRay)then
        ray       = 0.0
        DoInitRay = .false.
@@ -273,7 +294,7 @@ contains
     deallocate(bb_z)
     deallocate(Bxyz_DGB)
     deallocate(Extra_VGB)
-    deallocate(ExtraMulti_VGB)
+    deallocate(RayIntegral_V)
 
     if(iProc==0)then
        call write_prefix
