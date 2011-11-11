@@ -28,6 +28,7 @@ OBJECTS=\
 	ModAtomicDataMix.o \
 	ModCaltz.o \
 	ModEos.o \
+	ModEosTable.o \
 	ModExcitation.o \
 	ModExcitationData.o \
 	ModPowerLawEos.o\
