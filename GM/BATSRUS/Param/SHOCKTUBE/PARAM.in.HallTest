@@ -12,7 +12,7 @@ MHD                    NameEquation
 
 #USERMODULE
 Waves and GEM, Yingjuan Ma
- 1.20                  VersionUserModule
+ 1.30                  VersionUserModule
 
 #CHECKGRIDSIZE
       64                              nI
