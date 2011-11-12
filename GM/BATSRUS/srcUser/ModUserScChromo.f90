@@ -2,7 +2,7 @@
 !==============================================================================
 module ModUser
   use ModMain, ONLY: nI, nJ,nK
-  use ModSize, ONLY: MaxBlock
+
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -25,7 +25,8 @@ module ModUser
        'Chromosphere to solar wind model with Alfven waves - Oran, van der Holst'
 
   ! Input parameters for chromospheric inner BC's
-  logical :: UseChromoBc = .true., UseUparBc = .false., UseExtrapolatedEwave = .true.
+  logical :: UseChromoBc = .true., UseUparBc = .false., &
+             UseExtrapolatedEwave = .true.
   real    :: WaveDeltaU = 0.0
   real    :: nChromoSi = 0.0, tChromoSi = 0.0
   real    :: nChromo = 0.0, RhoChromo = 0.0, tChromo = 0.0
@@ -39,7 +40,7 @@ module ModUser
   logical :: UseWaveDissipation = .false.
   real    :: DissipationScaleFactorSi = 0.0  ! unit = m*T^0.5
   real    :: DissipationScaleFactor = 0.0
-  real    :: LmaxIo = 0.0, Lratio = 0.0
+  real    :: LkolIo = 0.0, Lkol, Lcp, Lratio = 0.0
 
   ! variables for magnetic (unsigned flux) heating
   logical :: DoMagneticHeating = .false.
@@ -47,20 +48,12 @@ module ModUser
 
   ! variables for Parker initial condition
   real    :: nCoronaSi = 0.0, tCoronaSi = 0.0
-
-  ! Global arrays for plotting
-  real       :: WaveDissip_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)      = 1.e-30
-  real       :: WaveDissipPlus_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)  = 1.e-30
-  real       :: WaveDissipMinus_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock) = 1.e-30
-  real       :: DissipLengthMin_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock) = 1.e-30
-  real       :: DissipLengthMax_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock) = 1.e-30
-  
-  real :: DipoleTiltDeg = 0.0
+  real    :: DipoleTiltDeg = 0.0
 
   ! Input parameters for two-temperature effects
-  real :: TeFraction, TiFraction
-   real :: QeByQtotal = 0.0
-  real :: EtaPerpSi
+  real    :: TeFraction, TiFraction
+  real    :: QeByQtotal = 0.0
+  real    :: EtaPerpSi
 
 contains 
  !============================================================================
@@ -117,7 +110,7 @@ contains
        case("#WAVEDISSIPATION")
           call read_var('UseWaveDissipation', UseWaveDissipation)
           if(UseWaveDissipation) then 
-             call read_var('LmaxIo', LmaxIo)
+             call read_var('LkolIo', LkolIo)
              call read_var('Lratio', Lratio)
           end if
 
@@ -158,19 +151,18 @@ contains
   !============================================================================
   subroutine user_init_session
 
-    use ModMain,           ONLY: UseB0, UseMagnetogram
+    use ModMain,           ONLY: UseB0, UseMagnetogram, UseUserPerturbation
     use ModProcMH,         ONLY: iProc
     use ModReadParam,      ONLY: i_session_read
     use ModIO,             ONLY: write_prefix, iUnitOut
     use ModWaves,          ONLY: UseWavePressure, UseAlfvenWaves
     use ModAdvance,        ONLY: UseElectronPressure
-    use ModCoronalHeating, ONLY: get_coronal_heat_factor, HeatFactor
     use ModMultiFluid,     ONLY: MassIon_I
     use ModConst,          ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
                                  cElectronMass
     use ModNumConst,       ONLY: cTwoPi, cDegToRad
     use ModPhysics,        ONLY: ElectronTemperatureRatio, AverageIonCharge, &
-                                 Si2No_V, UnitTemperature_, UnitN_, &
+                                 Si2No_V, UnitTemperature_, UnitN_, UnitX_, UnitB_, &
                                  SinThetaTilt, CosThetaTilt
 
     real            :: HeatCondParSi
@@ -192,6 +184,18 @@ contains
        RhoChromo = nChromo*MassIon_I(1)
        tChromo = tChromoSi*Si2No_V(UnitTemperature_)
     end if
+
+    if(UseWaveDissipation)then
+       ! Reference dissipation length: 
+       ! Lcp - used for counter propogating wave dissipation
+       ! Lkol - used for Kolmogorov dissipation
+       Lkol = LkolIo*Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+       if (Lratio > 0.0)  Lcp = Lkol/Lratio
+    end if
+
+    if (DoMagneticHeating .and. .not. UseUserPerturbation) &
+         call CON_stop('UseUserInitPerturbation must be set to T'// &
+         ' when using magnetic heating. Correct PARAM.in file')
 
     if (.not. UseMagnetogram) then
        SinThetaTilt = sin(cDegToRad*DipoleTiltDeg)
@@ -251,7 +255,7 @@ contains
     ! Chromospheric boundary conditions - uniform T and Rho from PARAM.in
 
     use ModLdem,             ONLY: get_ldem_moments, UseLdem
-    use ModPhysics,          ONLY: BodyRho_I, Si2No_V, UnitTemperature_, &
+    use ModPhysics,          ONLY: Si2No_V, UnitTemperature_, &
                                    UnitN_, AverageIonCharge
     use ModMultiFluid,       ONLY: MassIon_I
 
@@ -311,7 +315,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
-    use ModMain,       ONLY: nI, nJ, nK, globalBLK, UseB0, unusedBLK
+    use ModMain,       ONLY: globalBLK, UseB0, unusedBLK
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          BodyRho_I, BodyP_I, BodyNDim_I, UnitU_, UnitN_, AverageIonCharge
@@ -493,7 +497,7 @@ contains
 
     integer            :: iBLK, i ,j ,k
     real               :: x, y, z, r, x_D(3)
-    real               :: IPlus, IMinus, B, Br, rho, p, Qplus, Qminus
+    real               :: IPlus, IMinus, B, Br, rho, p
     character(len=40)  :: FileNameTec 
     character(len=11)  :: NameStage
     character(len=7)   :: NameProc
@@ -530,8 +534,6 @@ contains
              
              Iplus = State_VGB(WaveFirst_,i,j,k,iBLK)
              Iminus = State_VGB(WaveLast_,i,j,k,iBLK)
-             Qplus = WaveDissipPlus_GB(i,j,k,iBLK)
-             Qminus = WaveDissipMinus_GB(i,j,k,iBLK)
              B = sum(State_VGB(Bx_:Bz_,i,j,k,iBLK)**2)
              Br = sum(x_D*State_VGB(Bx_:Bz_,i,j,k,iBLK))
              rho = State_VGB(rho_,i,j,k,iBLK)
@@ -540,7 +542,7 @@ contains
              ! write to file
              write(UNITTMP_, '(17e12.5)') real(i),real(j),real(k),&
                   real(iBLK), real(iProc),&
-                  x, y, z, r, Iplus, Iminus, Qplus, Qminus, B, Br,  rho, p
+                  x, y, z, r, Iplus, Iminus, B, Br,  rho, p
           end do
 
        end if
@@ -609,21 +611,18 @@ contains
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
                                  B0_DGB
     use ModGeometry,       ONLY: r_BLK
-    use ModMain,           ONLY: nI, nJ, nK, GlobalBlk, UseB0
-    use ModPhysics,        ONLY: gm1, rBody, BodyRho_I, Si2No_V, UnitX_,&
-                                 UnitB_,  UnitTemperature_, No2Si_V
-    use ModVarIndexes,     ONLY: Rho_, Bx_, Bz_, Energy_, p_, Pe_, &
-                                 WaveFirst_, WaveLast_
+    use ModMain,           ONLY: GlobalBlk
+    use ModPhysics,        ONLY: gm1, rBody, UnitTemperature_, No2Si_V
+    use ModVarIndexes,     ONLY: Rho_, Energy_, p_, Pe_, WaveFirst_, WaveLast_
     use ModMultifluid,     ONLY: MassIon_I
     use ModCoronalHeating, ONLY: HeatFactor
 
-    integer :: i, j, k, iBlock, iWave
-    real    :: WaveEnergyPlus, WaveEnergyMinus, TemperatureSi, FullB_D(3), FullB
-    real    :: CoronalHeating, RadiativeCooling, MagneticHeating, WavePressure
+    integer :: i, j, k, iBlock
+    real    :: TemperatureSi, FullB
+    real    :: CoronalHeating, RadiativeCooling, MagneticHeating
 
     ! varaibles for wave dissipation
-    real    :: LocalDissipationFactor, Lmin, Lmax
-    real    :: WaveDissipationPlus, WaveDissipationMinus, CounterWaveDissipRate
+    real    :: WaveDissipationPlus, WaveDissipationMinus
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !------------------------------------------------------------------------- 
@@ -637,46 +636,9 @@ contains
        !/         
        if(UseWaveDissipation)then
           CoronalHeating =  0.0
-
-          if(UseB0)then
-             FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          else
-             FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          end if
-          FullB = sqrt(sum(FullB_D**2))
-
-          WaveEnergyPlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
-          WaveEnergyMinus = State_VGB(WaveLast_,i,j,k,iBlock)
-          WavePressure = (WaveEnergyPlus + WaveEnergyMinus)/2.
-
-          ! Local dissipation length: 
-          ! Assumed to depend on the magnetic field
-          ! Lmin - used for counter propogating wave dissipation
-          ! Lmax - used for Kolmogorov dissipation
-          Lmax = LmaxIo*Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
-          if (Lratio > 0.0)  Lmin = Lmax/Lratio
-
-          ! store for plotting
-          DissipLengthMax_GB(i,j,k,iBlock) = Lmax/sqrt(FullB)
-          DissipLengthMin_GB(i,j,k,iBlock) = Lmin/sqrt(FullB)
-
-          ! Local Dissipation factor, dimensions length/sqrt(density/B)  
-          LocalDissipationFactor = &
-               sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/Lmax
-
-          ! Wave dissipation:
-          ! This is the sum of a Kolmogorov dissipation of each wave polarity by itself,
-          ! and dissipation due to counter propagating waves
-          ! Note the use of Lratio > 1, which in effect makes the dissipation length of counter
-          ! propagating waves smaller than the Kolmogorov length.
-
-          WaveDissipationPlus =  LocalDissipationFactor * &
-               (1. + Lratio*sqrt(WaveEnergyMinus/WavePressure)) * &
-               WaveEnergyPlus**1.5
-
-          WaveDissipationMinus =  LocalDissipationFactor * &
-               (1. +  Lratio*sqrt(WaveEnergyPlus/WavePressure)) * &
-               WaveEnergyMinus**1.5
+          call calc_alfven_wave_dissipation(i, j, k, iBlock, &
+               WaveDissipationPlus,  &
+               WaveDissipationMinus) 
 
           CoronalHeating = WaveDissipationPlus + WaveDissipationMinus
 
@@ -685,13 +647,9 @@ contains
                - WaveDissipationPlus
           Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
                - WaveDissipationMinus
-
-          ! save for plotting
-          WaveDissip_GB(i,j,k,iBlock) = CoronalHeating
-          WaveDissipPlus_GB(i,j,k,iBlock)  = WaveDissipationPlus
-          WaveDissipMinus_GB(i,j,k,iBlock) = WaveDissipationMinus
        end if
       
+       
        ! Add magnetic heating if desired (due to Abbett 2007)
        if (DoMagneticHeating) then
           TemperatureSi = No2Si_V(UnitTemperature_)* MassIon_I(1)* &
@@ -718,6 +676,61 @@ contains
 
   end subroutine user_calc_sources
   !============================================================================
+  subroutine calc_alfven_wave_dissipation(i,j,k,iBlock, &
+       WaveDissipationPlus, WaveDissipationMinus, &
+       DissipationLengthKol, DissipationLengthCp )
+
+    use ModAdvance,        ONLY: State_VGB, B0_DGB
+    use ModMain,           ONLY: UseB0
+    use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, UnitB_
+    use ModVarIndexes,     ONLY: Rho_, Bx_, Bz_, WaveFirst_, WaveLast_
+
+    integer,intent(in)        :: i, j, k, iBlock
+    real,intent(out)          :: WaveDissipationPlus, WaveDissipationMinus
+    real,intent(out),optional :: DissipationLengthKol, DissipationLengthCp
+    
+    real    :: WaveEnergyPlus, WaveEnergyMinus, FullB_D(3), FullB
+    real    :: WavePressure, LocalDissipationFactor
+
+    character (len=*), parameter :: NameSub = 'calc_alfven_wave_dissipation'
+    !------------------------------------------------------------------------- 
+    if(UseB0)then
+       FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    else
+       FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    end if
+    FullB = sqrt(sum(FullB_D**2))
+    
+    ! Ouput dissipation lengths in units of length for plotting
+    if(present(DissipationLengthKol)) &
+         DissipationLengthKol = Lkol/sqrt(FullB)
+    if(present(DissipationLengthCp)) &
+         DissipationLengthCp = DissipationLengthKol/Lratio
+
+    ! Local Dissipation factor, dimensions length/sqrt(density/B)  
+    LocalDissipationFactor = &
+         sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/Lkol
+
+    WaveEnergyPlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
+    WaveEnergyMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+    WavePressure = (WaveEnergyPlus + WaveEnergyMinus)/2.
+    
+    ! Wave dissipation:
+    ! This is the sum of a Kolmogorov dissipation of each wave polarity by itself,
+    ! and dissipation due to counter propagating waves
+    ! Note the use of Lratio > 1, which in effect makes the dissipation length of counter
+    ! propagating waves smaller than the Kolmogorov length.
+    
+    WaveDissipationPlus =  LocalDissipationFactor * &
+         (1. + Lratio*sqrt(WaveEnergyMinus/WavePressure)) * &
+         WaveEnergyPlus**1.5
+    
+    WaveDissipationMinus =  LocalDissipationFactor * &
+         (1. +  Lratio*sqrt(WaveEnergyPlus/WavePressure)) * &
+         WaveEnergyMinus**1.5
+    
+  end subroutine calc_alfven_wave_dissipation
+  ! ===================================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK, B0_DGB, UseElectronPressure
@@ -869,7 +882,6 @@ contains
     use ModMain,       ONLY: UseB0
     use ModNumConst,   ONLY: cTolerance
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, UnitX_
-    use ModSize,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_, WaveFirst_, WaveLast_
 
     integer,          intent(in)   :: iBlock
@@ -884,76 +896,49 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k
-    real :: FullB, FullB2, p, Ewave
+    real    :: WaveDissipPlus,WaveDissipMinus,LengthKol,LengthCp
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
-
     IsFound = .true.
 
     select case(NameVar)
 
-    case('disstot')
+    case('disstot','dissplus','dissminus','lkol','lcp')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          call calc_alfven_wave_dissipation(i,j,k,iBlock,&
+               WaveDissipPlus, WaveDissipMinus,LengthKol,LengthCp)
 
-          PlotVar_G(i,j,k) = max(1e-30,WaveDissip_GB(i,j,k,iBlock) * &
-               No2Si_V(UnitEnergyDens_))
+          select case(NameVar)
+          case('dissplus')
+             PlotVar_G(i,j,k) = max(1e-30,WaveDissipPlus* &
+                  No2Si_V(UnitEnergyDens_))
+             NameIdlUnit = 'J/m3'
+             NameTecUnit = 'J/m3'
 
-       end do; end do ; end do
+          case('dissminus')
+             PlotVar_G(i,j,k) = max(1e-30,WaveDissipMinus* &
+                  No2Si_V(UnitEnergyDens_))
+             NameIdlUnit = 'J/m3'
+             NameTecUnit = 'J/m3'
 
-    case('dissplus')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          case('disstot')
+             PlotVar_G(i,j,k) = max(1e-30,&
+                  (WaveDissipPlus + WaveDissipMinus)* &
+                  No2Si_V(UnitEnergyDens_))
+             NameIdlUnit = 'J/m3'
+             NameTecUnit = 'J/m3'
 
-          PlotVar_G(i,j,k) = max(1e-30,WaveDissipPlus_GB(i,j,k,iBlock) * &
-               No2Si_V(UnitEnergyDens_))
+          case('lkol')
+             PlotVar_G(i,j,k) = LengthKol * No2Si_V(UnitX_)
+             NameIdlUnit = 'm'
+             NameTecUnit = 'm'
 
-       end do; end do ; end do
-
-    case('dissminus')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-
-          PlotVar_G(i,j,k) = max(1e-30,WaveDissipMinus_GB(i,j,k,iBlock) * &
-               No2Si_V(UnitEnergyDens_))
-
-       end do; end do ; end do
-
-    case('lmin')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-
-          PlotVar_G(i,j,k) = DissipLengthMin_GB(i,j,k,iBlock) * &
-               No2Si_V(UnitX_)
-
-       end do; end do ; end do
-
-    case('lmax')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-
-          PlotVar_G(i,j,k) = DissipLengthMax_GB(i,j,k,iBlock) * &
-               No2Si_V(UnitX_)
-
-       end do; end do ; end do
-
-    case('bx0')
-
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-
-          PlotVar_G(i,j,k) = B0_DGB(1,i,j,k,iBlock)
-
-       end do; end do ; end do
-
-    case('by0')
-
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-
-          PlotVar_G(i,j,k) = B0_DGB(2,i,j,k,iBlock)
-
-       end do; end do ; end do
-
-    case('bz0')
-
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-
-          PlotVar_G(i,j,k) = B0_DGB(3,i,j,k,iBlock)
+          case('lcp')
+             PlotVar_G(i,j,k) = LengthKol * No2Si_V(UnitX_)
+             NameIdlUnit = 'm'
+             NameTecUnit = 'm'
+          end select
 
        end do; end do ; end do
 
@@ -987,7 +972,6 @@ contains
   !============================================================================
   subroutine user_specify_refinement(iBlock, iArea, DoRefine)
 
-    use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
     use ModNumConst, ONLY: cTiny
@@ -1040,7 +1024,6 @@ contains
     ! modifies ghost cells in the r direction
     
     use ModAdvance,    ONLY: State_VGB, B0_DGB
-    use ModSize,       ONLY: nJ, nK
     use ModMain,       ONLY: East_, UseB0, UseUSerInnerBcs
     use ModGeometry,   ONLY: TypeGeometry, x_BLK, y_BLK, z_BLK, r_BLK
     use ModVarIndexes, ONLY: Rho_, p_, WaveFirst_, WaveLast_, &
@@ -1302,7 +1285,6 @@ contains
   subroutine user_set_resistivity(iBlock, Eta_G)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModMain,       ONLY: nI, nJ, nK
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitX_, UnitT_
     use ModVarIndexes, ONLY: Rho_, Pe_
 
