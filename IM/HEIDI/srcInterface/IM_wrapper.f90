@@ -126,7 +126,9 @@ subroutine IM_set_grid
        XyzMax_D=(/RadiusMax+0.0,cTwoPi/),  & ! max coordinates
        Coord1_I = LZ(1:nR)+0.0,            & ! radial coordinates
        Coord2_I = Phi(1:nT-1)+0.0,         & ! longitudinal coordinates
-       TypeCoord= 'SMG' )                    ! solar magnetic coord
+       TypeCoord= 'SMG',                   & ! solar magnetic coord
+       nVar = 2,                           & ! number of "fluid" vars                         
+       NameVar = "p rho")                    ! names of "fluid" vars
 
   if(DoTest)then
      write(*,*)NameSub,' NR = ', NR

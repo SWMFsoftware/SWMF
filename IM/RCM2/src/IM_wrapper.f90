@@ -228,7 +228,9 @@ subroutine IM_set_grid
        Coord1_I=real(colat(1:iSize,1)),          & ! colatitudes
        Coord2_I=real(aloct(1,1:jSize)),          & ! longitudes
        Coord3_I=Radius_I,                        & ! radial size in meters
-       IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
+       IsPeriodic_D=(/.false.,.true./),          & ! periodic in longitude
+       nVar = 7,                                 & ! number of "fluid" vars                     
+       NameVar = 'rho p Hprho Hpp Oprho Opp Pe')   ! names of "fluid" vars
 
 end subroutine IM_set_grid
 !==============================================================================
