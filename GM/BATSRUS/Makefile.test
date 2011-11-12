@@ -16,6 +16,7 @@ test:
 	-@($(MAKE) test_eosgodunov)
 	-@($(MAKE) test_levelset)
 	-@($(MAKE) test_hyades2d)
+	-@($(MAKE) test_laserpackage)
 	-@($(MAKE) test_graydiffusion)
 	-@($(MAKE) test_corona)
 	-@($(MAKE) test_coronasph)
@@ -65,6 +66,7 @@ test_help:
 	@echo "    test_graydiffusion         (run gray-diffusion set test)"
 	@echo "    test_hallmhd               (run Hall MHD test)"
 	@echo "    test_hyades2d              (run Hyades2D test)"
+	@echo "    test_laserpackage          (run CRASH laser package test)"
 	@echo "    test_adjhyades2d           (run Adjoint Hyades2D test)"
 	@echo "    test_levelset              (run levelset test)"
 	@echo "    test_magnetometer          (run magnetometer test)"
@@ -477,6 +479,37 @@ test_hyades2d_check:
 		Param/CRASH/TestOutput/log_hyades2d.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_hyades2d.diff
 	ls -l test_hyades2d.diff
+
+### LASER PACKAGE TEST ###
+
+test_laserpackage:
+	@echo "test_laserpackage_compile..." > test_laserpackage.diff
+	$(MAKE) test_laserpackage_compile
+	@echo "test_laserpackage_rundir..." >> test_laserpackage.diff
+	$(MAKE) test_laserpackage_rundir DEFAULT_EXE=CRASH.exe
+	@echo "test_laserpackage_run..." >> test_laserpackage.diff
+	$(MAKE) test_laserpackage_run
+	@echo "test_laserpackage_check..." >> test_laserpackage.diff
+	$(MAKE) test_laserpackage_check
+
+test_laserpackage_compile:
+	./Config.pl -e=Crash -u=Crash -g=8,8,1,200,200 -nMaterial=5 -nWave=30
+	$(MAKE) CRASH
+	$(MAKE) PIDL
+
+test_laserpackage_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.laserpackage PARAM.in
+	cd ${TESTDIR}; ln -s ../dataCRASH/LookupTables Tables
+
+test_laserpackage_run:
+	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test_laserpackage_check:
+	${SCRIPTDIR}/DiffNum.pl -t \
+		Param/CRASH/TestOutput/log_laserpackage.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_laserpackage.diff
+	ls -l test_laserpackage.diff
 
 ### ADJOINT HYADES2D TEST ###
 
