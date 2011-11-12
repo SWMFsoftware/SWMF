@@ -2,6 +2,8 @@
 module CRASH_ModAtomicNotation
   use CRASH_ModAtomicMass, ONLY: nMixMax
 
+  implicit none
+
   !Chemistry and spectroscopy
   !\
   ! The Mendeleev table
