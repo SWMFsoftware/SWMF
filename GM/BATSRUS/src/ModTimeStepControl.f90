@@ -180,8 +180,12 @@ contains
     if(DoTestMe)then
        write(*,*) NameSub,': RelativeChangeMin,Max,Factor=', &
             RelativeChangeMin, RelativeChangeMax, Factor
-       write(*,*) NameSub,': Dt, DtFixed, Cfl=',&
-            Dt*No2Si_V(UnitT_), DtFixed*No2Si_V(UnitT_), Cfl
+       if(UseDtFixed)then
+          write(*,*) NameSub,': Dt, DtFixed, Cfl=',&
+               Dt*No2Si_V(UnitT_), DtFixed*No2Si_V(UnitT_), Cfl
+       else
+          write(*,*) NameSub,': Dt, Cfl=', Dt*No2Si_V(UnitT_), Cfl
+       end if
     end if
 
   end subroutine control_time_step
