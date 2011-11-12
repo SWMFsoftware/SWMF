@@ -4,6 +4,9 @@ module CRASH_ModEosTable
   use ModLookupTable, ONLY: MaxTable
   use CRASH_ModMultiGroup, ONLY: nGroup, &
       OpacityPlanck_I, OpacityRosseland_I
+  use ModConst, ONLY: cAtomicMass, cEvToK, cEv, cBoltzmann
+
+  implicit none
 
   !The following subroutine:
   !1. Checks if the tables are available for these 
