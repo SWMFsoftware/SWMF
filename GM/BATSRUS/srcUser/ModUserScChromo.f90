@@ -913,31 +913,33 @@ contains
           case('dissplus')
              PlotVar_G(i,j,k) = max(1e-30,WaveDissipPlus* &
                   No2Si_V(UnitEnergyDens_))
-             NameIdlUnit = 'J/m3'
-             NameTecUnit = 'J/m3'
+             NameIdlUnit = '[J/m3]'
+             NameTecUnit = '[J/m3]'
 
           case('dissminus')
              PlotVar_G(i,j,k) = max(1e-30,WaveDissipMinus* &
                   No2Si_V(UnitEnergyDens_))
-             NameIdlUnit = 'J/m3'
-             NameTecUnit = 'J/m3'
+             NameIdlUnit = '[J/m3]'
+             NameTecUnit = '[J/m3]'
 
           case('disstot')
              PlotVar_G(i,j,k) = max(1e-30,&
                   (WaveDissipPlus + WaveDissipMinus)* &
                   No2Si_V(UnitEnergyDens_))
-             NameIdlUnit = 'J/m3'
-             NameTecUnit = 'J/m3'
+             NameIdlUnit = '[J/m3]'
+             NameTecUnit = '[J/m3]'
 
           case('lkol')
              PlotVar_G(i,j,k) = LengthKol * No2Si_V(UnitX_)
-             NameIdlUnit = 'm'
-             NameTecUnit = 'm'
+             NameIdlUnit = '[m]'
+             NameTecUnit = '[m]'
+             NameTecVar  = 'Lkol'
 
           case('lcp')
              PlotVar_G(i,j,k) = LengthKol * No2Si_V(UnitX_)
-             NameIdlUnit = 'm'
-             NameTecUnit = 'm'
+             NameIdlUnit = '[m]'
+             NameTecUnit = '[m]'
+             NameTecVar  = 'Lcp'
           end select
 
        end do; end do ; end do
