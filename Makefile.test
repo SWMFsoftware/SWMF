@@ -29,20 +29,20 @@ test_help:
 	@echo "    test8		      (run multifluid GM-IM coupling test only)"
 test:
 	@rm -f *.diff
-	-@(make test_share_library)
-	-@(make test_comp)
-	-@(make test_lc)
-	-@(make test_pw)
-	-@(make test_rb)
-	-@(make test_esmf)
-	-@(make test1)
-	-@(make test2)
-	-@(make test3)
-	-@(make test4)
-	-@(make test6)
-	-@(make test7)
-	-@(make test8)
-	-@(make test_check)
+	-@(${MAKE} test_share_library)
+	-@(${MAKE} test_comp)
+	-@(${MAKE} test_lc)
+	-@(${MAKE} test_pw)
+	-@(${MAKE} test_rb)
+	-@(${MAKE} test_esmf)
+	-@(${MAKE} test1)
+	-@(${MAKE} test2)
+	-@(${MAKE} test3)
+	-@(${MAKE} test4)
+	-@(${MAKE} test6)
+	-@(${MAKE} test7)
+	-@(${MAKE} test8)
+	-@(${MAKE} test_check)
 
 test_check:
 	-@ls -ltr share/Library/test/*.diff ??/*/*.diff *.diff > test_swmf.res
@@ -62,15 +62,15 @@ test_check:
 
 test_share_library:
 	rm -f share/Library/test/*.diff
-	cd share/Library/src; make LIB
-	cd share/Library/test; make test
+	cd share/Library/src; ${MAKE} LIB
+	cd share/Library/test; ${MAKE} test
 	ls -l share/Library/test/*.diff
 
 ### Component tests ###
 
 test_comp:
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
-		do ( cd $$i; make test; ); done
+		do ( cd $$i; ${MAKE} test; ); done
 	ls -ltr [A-Z][A-Z]/*/*.diff
 
 ### SWMF tests ###
@@ -80,22 +80,22 @@ test_comp:
 test_pw:
 	@echo "starting..." > test_pw.diff
 	@echo "test_pw_compile..." >> test_pw.diff
-	make test_pw_compile
+	${MAKE} test_pw_compile
 	@echo "test_pw_rundir..." >> test_pw.diff
-	make test_pw_rundir
+	${MAKE} test_pw_rundir
 	@echo "test_pw_run..." >> test_pw.diff
-	make test_pw_run
+	${MAKE} test_pw_run
 	@echo "test_pw_check..." >> test_pw.diff
 
-	make test_pw_check
+	${MAKE} test_pw_check
 
 test_pw_compile:
 	./Config.pl -v=Empty,PW/PWOM -o=PW:Earth
-	make SWMF PIDL
+	${MAKE} SWMF PIDL
 
 test_pw_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.PW ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.PW ${TESTDIR}/LAYOUT.in
 
@@ -115,22 +115,22 @@ test_pw_check:
 test_rb:
 	@echo "starting..." > test_rb.diff
 	@echo "test_rb_compile..." >> test_rb.diff
-	make test_rb_compile
+	${MAKE} test_rb_compile
 	@echo "test_rb_rundir..." >> test_rb.diff
-	make test_rb_rundir
+	${MAKE} test_rb_rundir
 	@echo "test_rb_run..." >> test_rb.diff
-	make test_rb_run
+	${MAKE} test_rb_run
 	@echo "test_rb_check..." >> test_rb.diff
-	make test_rb_check
+	${MAKE} test_rb_check
 
 test_rb_compile:
 	./Config.pl -v=Empty,RB/RBE,GM/BATSRUS
 	./Config.pl -g=GM:8,8,8,770,1 -o=GM:e=Mhd,u=Default
-	make SWMF PIDL
+	${MAKE} SWMF PIDL
 
 test_rb_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.RB ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.RB ${TESTDIR}/LAYOUT.in
 	cd ${TESTDIR}/RB/; ln -s ${RBDIR}/input/2002_296* .
@@ -153,28 +153,28 @@ test1:
 	@echo "test1_compile..." > test1_gm.diff
 	@echo "test1_compile..." > test1_ie.diff
 	@echo "test1_compile..." > test1_pw.diff
-	make test1_compile
+	${MAKE} test1_compile
 	@echo "test1_rundir..." >> test1_gm.diff
 	@echo "test1_rundir..." >> test1_ie.diff
 	@echo "test1_rundir..." >> test1_pw.diff
-	make test1_rundir
+	${MAKE} test1_rundir
 	@echo "test1_run..." >> test1_gm.diff
 	@echo "test1_run..." >> test1_ie.diff
 	@echo "test1_run..." >> test1_pw.diff
-	make test1_run
+	${MAKE} test1_run
 	@echo "test1_check..." >> test1_gm.diff
 	@echo "test1_check..." >> test1_ie.diff
 	@echo "test1_check..." >> test1_pw.diff
-	make test1_check
+	${MAKE} test1_check
 
 test1_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd,PW:Earth
-	make SWMF PIDL
+	${MAKE} SWMF PIDL
 
 test1_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.GMIEPW ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMIEPW ${TESTDIR}/LAYOUT.in
 
@@ -219,25 +219,25 @@ test1_check:
 test2:
 	@echo "test2_compile..." > test2_sc.diff
 	@echo "test2_compile..." > test2_ih.diff
-	make test2_compile
+	${MAKE} test2_compile
 	@echo "test2_rundir..." >> test2_sc.diff
 	@echo "test2_rundir..." >> test2_ih.diff
-	make test2_rundir
+	${MAKE} test2_rundir
 	@echo "test2_run..." >> test2_sc.diff
 	@echo "test2_run..." >> test2_ih.diff
-	make test2_run
+	${MAKE} test2_run
 	@echo "test2_check..." >> test2_sc.diff
 	@echo "test2_check..." >> test2_ih.diff
-	make test2_check
+	${MAKE} test2_check
 
 test2_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -g=SC:4,4,4,3000,1,IH:8,8,8,400,1
-	make SWMF PIDL EARTH_TRAJ
+	${MAKE} SWMF PIDL EARTH_TRAJ
 
 test2_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.SCIH ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
 	cd ${TESTDIR}/IH; cp Param/EARTH_TRAJ.in .; \
@@ -268,32 +268,32 @@ test3:
 	@echo "test3_compile..." > test3_gm.diff
 	@echo "test3_compile..." > test3_ie.diff
 	@echo "test3_compile..." > test3_im_rcm.diff
-	make test3_compile
+	${MAKE} test3_compile
 	@echo "test3_rundir..." >> test3_gm.diff
 	@echo "test3_rundir..." >> test3_ie.diff
 	@echo "test3_rundir..." >> test3_im_rcm.diff
-	make test3_rundir
+	${MAKE} test3_rundir
 	@echo "test3_run..." >> test3_gm.diff
 	@echo "test3_run..." >> test3_ie.diff
 	@echo "test3_run..." >> test3_im_rcm.diff
-	make test3_run
+	${MAKE} test3_run
 	@echo "test3_restart..." >> test3_gm.diff
 	@echo "test3_restart..." >> test3_ie.diff
 	@echo "test3_restart..." >> test3_im_rcm.diff
-	make test3_restart
+	${MAKE} test3_restart
 	@echo "test3_check..." >> test3_gm.diff
 	@echo "test3_check..." >> test3_ie.diff
 	@echo "test3_check..." >> test3_im_rcm.diff
-	make test3_check
+	${MAKE} test3_check
 
 test3_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
-	make SWMF PIDL
+	${MAKE} SWMF PIDL
 
 test3_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.GMIEIM ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
 
@@ -351,28 +351,28 @@ test4:
 	@echo "test4_compile..." > test4_gm.diff
 	@echo "test4_compile..." > test4_ie.diff
 	@echo "test4_compile..." > test4_im_heidi.diff
-	make test4_compile
+	${MAKE} test4_compile
 	@echo "test4_rundir..." >> test4_gm.diff
 	@echo "test4_rundir..." >> test4_ie.diff
 	@echo "test4_rundir..." >> test4_im_heidi.diff
-	make test4_rundir
+	${MAKE} test4_rundir
 	@echo "test4_run..." >> test4_gm.diff
 	@echo "test4_run..." >> test4_ie.diff
 	@echo "test4_run..." >> test4_im_heidi.diff
-	make test4_run
+	${MAKE} test4_run
 	@echo "test4_check..." >> test4_gm.diff
 	@echo "test4_check..." >> test4_ie.diff
 	@echo "test4_check..." >> test4_im_heidi.diff
-	make test4_check
+	${MAKE} test4_check
 
 test4_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/HEIDI
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
-	make SWMF PIDL
+	${MAKE} SWMF PIDL
 
 test4_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.GMIEHEIDI ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMIEHEIDI ${TESTDIR}/LAYOUT.in
 
@@ -398,23 +398,23 @@ test4_check:
 ### test5: Lower Corona test to be extended to LC+SC+IH###
 test5:
 	@echo "test5_compile..." > test5.diff
-	make test5_compile
+	${MAKE} test5_compile
 	@echo "test_rundir..." >> test5.diff
-	make test5_rundir
+	${MAKE} test5_rundir
 	@echo "test5_run..." >> test5.diff
-	make test5_run
+	${MAKE} test5_run
 	@echo "test5_check..." >> test5.diff
-	make test5_check
+	${MAKE} test5_check
 
 test5_compile:
 	./Config.pl -v=Empty,LC/BATSRUS
 	cd LC/BATSRUS; ./Config.pl -u=Lc -e=MhdWaves -setvar=nWave=2
 	./Config.pl -g=LC:6,4,4,3000,1
-	make SWMF PIDL
+	${MAKE} SWMF PIDL
 
 test5_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.LCSCIH ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.LC ${TESTDIR}/LAYOUT.in
 
@@ -435,32 +435,32 @@ test6:
 	@echo "test6_compile..." > test6_gm.diff
 	@echo "test6_compile..." > test6_ie.diff
 	@echo "test6_compile..." > test6_im_crcm.diff
-	make test6_compile
+	${MAKE} test6_compile
 	@echo "test6_rundir..." >> test6_gm.diff
 	@echo "test6_rundir..." >> test6_ie.diff
 	@echo "test6_rundir..." >> test6_im_crcm.diff
-	make test6_rundir
+	${MAKE} test6_rundir
 	@echo "test6_run..." >> test6_gm.diff
 	@echo "test6_run..." >> test6_ie.diff
 	@echo "test6_run..." >> test6_im_crcm.diff
-	make test6_run
+	${MAKE} test6_run
 	@echo "test6_restart..." >> test6_gm.diff
 	@echo "test6_restart..." >> test6_ie.diff
 	@echo "test6_restart..." >> test6_im_crcm.diff
-	make test6_restart
+	${MAKE} test6_restart
 	@echo "test6_check..." >> test6_gm.diff
 	@echo "test6_check..." >> test6_ie.diff
 	@echo "test6_check..." >> test6_im_crcm.diff
-	make test6_check
+	${MAKE} test6_check
 
 test6_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CRCM
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd,IM:EarthHO
-	make SWMF PIDL
+	${MAKE} SWMF PIDL
 
 test6_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.GMIEIMCRCM ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
 
@@ -498,26 +498,26 @@ test6_check:
 test7:
 	@echo "test7_compile..." > test7_ih.diff
 	@echo "test7_compile..." > test7_oh.diff
-	make test7_compile
+	${MAKE} test7_compile
 	@echo "test7_rundir..." >> test7_ih.diff
 	@echo "test7_rundir..." >> test7_oh.diff
-	make test7_rundir
+	${MAKE} test7_rundir
 	@echo "test7_run..." >> test7_ih.diff
 	@echo "test7_run..." >> test7_oh.diff
-	make test7_run
+	${MAKE} test7_run
 	@echo "test7_check..." >> test7_ih.diff
 	@echo "test7_check..." >> test7_oh.diff
-	make test7_check
+	${MAKE} test7_check
 
 test7_compile:
 	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
 	./Config.pl -g=IH:4,4,4,3000,1,OH:4,4,4,3000,1
 	./Config.pl -o=IH:u=Waves,e=Mhd -o=OH:u=Waves,e=Mhd
-	make SWMF PIDL
+	${MAKE} SWMF PIDL
 
 test7_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.IHOH.Couple ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.IHOH ${TESTDIR}/LAYOUT.in
 
@@ -543,32 +543,32 @@ test8:
 	@echo "test8_compile..." > test8_gm_multi.diff
 	@echo "test8_compile..." > test8_ie.diff	
 	@echo "test8_compile..." > test8_im_rcm_multi.diff
-	make test8_compile
+	${MAKE} test8_compile
 	@echo "test8_rundir..." >> test8_gm_multi.diff
 	@echo "test8_rundir..." >> test8_ie.diff
 	@echo "test8_rundir..." >> test8_im_rcm_multi.diff
-	make test8_rundir
+	${MAKE} test8_rundir
 	@echo "test8_run..." >> test8_gm_multi.diff
 	@echo "test8_run..." >> test8_ie.diff
 	@echo "test8_run..." >> test8_im_rcm_multi.diff
-	make test8_run
+	${MAKE} test8_run
 	@echo "test8_restart..." >> test8_gm_multi.diff
 	@echo "test8_restart..." >> test8_ie.diff
 	@echo "test8_restart..." >> test8_im_rcm_multi.diff
-	make test8_restart
+	${MAKE} test8_restart
 	@echo "test8_check..." >> test8_gm_multi.diff
 	@echo "test8_check..." >> test8_ie.diff
 	@echo "test8_check..." >> test8_im_rcm_multi.diff
-	make test8_check
+	${MAKE} test8_check
 
 test8_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=MhdIons
-	make SWMF PIDL
+	${MAKE} SWMF PIDL
 
 test8_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.GMIERCM_Multi ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
 
@@ -623,23 +623,23 @@ test8_check:
 
 test_lc:
 	@echo "test_lc_compile..." > test_lc.diff
-	make test_lc_compile
+	${MAKE} test_lc_compile
 	@echo "test_lc_rundir..." >> test_lc.diff
-	make test_lc_rundir
+	${MAKE} test_lc_rundir
 	@echo "test_lc_run..." >> test_lc.diff
-	make test_lc_run
+	${MAKE} test_lc_run
 	@echo "test_lc_check..." >> test_lc.diff
-	make test_lc_check
+	${MAKE} test_lc_check
 
 test_lc_compile:
 	./Config.pl -v=Empty,LC/BATSRUS
 	cd LC/BATSRUS; ./Config.pl -u=Lc -e=Mhd
 	./Config.pl -g=LC:6,4,4,3000,1
-	make SWMF PIDL
+	${MAKE} SWMF PIDL
 
 test_lc_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.LC ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.LC ${TESTDIR}/LAYOUT.in
 
@@ -658,20 +658,20 @@ test_lc_check:
 
 test_sc_waves:
 	@echo "test_sc_waves_compile..." > test_sc_waves.diff
-	make test_sc_waves_compile
+	${MAKE} test_sc_waves_compile
 	@echo "test_sc_rundir..." >> test_sc_waves.diff
-	make test_sc_waves_rundir
+	${MAKE} test_sc_waves_rundir
 
 test_sc_waves_compile:
 	rm -f SC/BATSRUS/src/Makefile
 	./Config.pl -v=Empty,SC/BATSRUS 
 	./Config.pl -o=SC:u=ScWaves,e=MhdWaves,nWave=40
 	./Config.pl -g=SC:4,4,4,2000,1
-	make
+	${MAKE}
 
 test_sc_waves_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.SC.waves ${TESTDIR}/PARAM.in
 	cp GM/BATSRUS/Param/CORONA/CR2077_MDI_180.dat ${TESTDIR}/CR2077_MDI_180.dat
 	cp Param/LAYOUT.in.test.SC ${TESTDIR}/LAYOUT.in
@@ -683,23 +683,23 @@ test_sc_waves_rundir:
 
 test_esmf:
 	@echo "test_esmf_compile..." > test_esmf.diff
-	make test_esmf_compile
+	${MAKE} test_esmf_compile
 	@echo "test_esmf_rundir..." >> test_esmf.diff
-	make test_esmf_rundir
+	${MAKE} test_esmf_rundir
 	@echo "test_esmf_run..." >> test_esmf.diff
-	make test_esmf_run
+	${MAKE} test_esmf_run
 	@echo "test_esmf_check..." >> test_esmf.diff
-	make test_esmf_check
+	${MAKE} test_esmf_check
 
 test_esmf_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
 	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=Mhd
-	make ESMF_SWMF
+	${MAKE} ESMF_SWMF
 
 test_esmf_rundir:
 	rm -rf ${TESTDIR};
-	make rundir RUNDIR=${TESTDIR}
-	cd ESMF/ESMF_SWMF; make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cd ESMF/ESMF_SWMF; ${MAKE} rundir RUNDIR=${TESTDIR}
 
 test_esmf_run: 
 	@cd ${TESTDIR}; rm -f PET*ESMF_LogFile
@@ -723,7 +723,7 @@ test_esmf_check:
 
 #### FOR CCMC ONLY #######################
 # CCMC instalation, compiling, and  PostIDL.exe	 generation
-# Use "Config.pl -install" before "make ccmc_compile" or "make test_ccmc"
+# Use "Config.pl -install" before "${MAKE} ccmc_compile" or "make test_ccmc"
 # Public version. Specific job scripts are to be substituted for generic mpirun
 #
 # This version of the test works only with the SWMF versions after May 2009 
@@ -732,27 +732,27 @@ test_esmf_check:
 
 test_ccmc:
 	@echo "test_ccmc_compile..." > test_ccmc.diff
-	make ccmc_compile
+	${MAKE} ccmc_compile
 	@echo "test_ccmc_rundir..." >> test_ccmc.diff
-	make test_ccmc_rundir
+	${MAKE} test_ccmc_rundir
 	@echo "test_ccmc_run..." >> test_ccmc.diff
-	make test_ccmc_run
+	${MAKE} test_ccmc_run
 	@echo "test_ccmc_restart_rundir..." >> test_ccmc.diff
-	make test_ccmc_restart_rundir
+	${MAKE} test_ccmc_restart_rundir
 	@echo "test_ccmc_run..." >> test_ccmc.diff
-	make test_ccmc_run
+	${MAKE} test_ccmc_run
 	@echo "test_ccmc_check..." >> test_ccmc.diff
-	make test_ccmc_check
+	${MAKE} test_ccmc_check
 
 ccmc_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
 	./Config.pl -g=GM:6,6,6,3800,1
 	cd GM/BATSRUS; Config.pl -u=CCMC
-	make SWMF PIDL
+	${MAKE} SWMF PIDL
 	
 test_ccmc_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp -r Param/CCMC ${TESTDIR}/Param_ccmc
 	cd ${TESTDIR}; \
 		cp -f Param_ccmc/LAYOUT.in_v8.01_init LAYOUT.in; \
@@ -792,28 +792,28 @@ test_ramscb:
 	@echo "test_ramscb_compile..." > test_ramscb_gm.diff
 	@echo "test_ramscb_compile..." > test_ramscb_ie.diff
 	@echo "test_ramscb_compile..." > test_ramscb_im.diff
-	make test_ramscb_compile
+	${MAKE} test_ramscb_compile
 	@echo "test_ramscb_rundir..." >> test_ramscb_gm.diff
 	@echo "test_ramscb_rundir..." >> test_ramscb_ie.diff
 	@echo "test_ramscb_rundir..." >> test_ramscb_im.diff
-	make test_ramscb_rundir
+	${MAKE} test_ramscb_rundir
 	@echo "test_ramscb_run..." >> test_ramscb_gm.diff
 	@echo "test_ramscb_run..." >> test_ramscb_ie.diff
 	@echo "test_ramscb_run..." >> test_ramscb_im.diff
-	make test_ramscb_run
+	${MAKE} test_ramscb_run
 	@echo "test_ramscb_check..." >> test_ramscb_gm.diff
 	@echo "test_ramscb_check..." >> test_ramscb_ie.diff
 	@echo "test_ramscb_check..." >> test_ramscb_im.diff
-	make test_ramscb_check
+	${MAKE} test_ramscb_check
 
 test_ramscb_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RAM_SCB
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
-	make SWMF PIDL
+	${MAKE} SWMF PIDL
 
 test_ramscb_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp ${IMDIR}/input/PARAM.in.test.gmieim.simple ${TESTDIR}/PARAM.in
 	cp ${IMDIR}/input/LAYOUT.in.test.gmieim.simple ${TESTDIR}/LAYOUT.in
 
