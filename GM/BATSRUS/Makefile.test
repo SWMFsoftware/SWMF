@@ -506,7 +506,7 @@ test_laserpackage_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_laserpackage_check:
-	${SCRIPTDIR}/DiffNum.pl -t \
+	${SCRIPTDIR}/DiffNum.pl -t -r=3e-4 \
 		Param/CRASH/TestOutput/log_laserpackage.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_laserpackage.diff
 	ls -l test_laserpackage.diff
