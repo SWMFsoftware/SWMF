@@ -902,8 +902,8 @@ contains
     IrradianceSi = IrradianceSi*(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
 
     if(DoLaserRayTest)then
-       iRayStart = 1
-       iRayStop  = 1
+       iRayStart = 0
+       iRayStop  = 0
     else
        iRayStart =-nRayPerBeam
        iRayStop  = nRayPerBeam
