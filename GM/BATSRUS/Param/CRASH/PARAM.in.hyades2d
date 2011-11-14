@@ -11,17 +11,20 @@ M(1:3) EInt		NameVarLimitRatio
 Param/CRASH/RZ.in
 
 #INCLUDE
+Param/CRASH/AMR1.in
+
+#INCLUDE
 Param/CRASH/GRAY.in
 
 #CHECKGRIDSIZE
-10			nI
-10			nJ
+4			nI
+4			nJ
 1			nK
 100			MinBlockALL
 
 #GRID
-30			nRootBlockX
-3			nRootBlockY
+50			nRootBlockX
+5			nRootBlockY
 1			nRootBlockZ
 -50.0			xMin
 4000.0			xMax
@@ -62,7 +65,7 @@ RAW			StringLogfile
 z=0 VAR idl		PlotString
 -1                      DnSavePlot
 1.0e-9                  DtSavePlot
-0.0			DxSavePlot
+-1.0			DxSavePlot
 rho ux uy uz Eint p Xe Be Pl level tekev trkev planck ross
 gamma
 
