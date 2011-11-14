@@ -18,7 +18,8 @@ my %WeightTest = (
 
     "CCHM:test2_sc"                       => "1.0",
     "CCHM:test2_ih"                       => "1.0",
-    "CCHM:test_lc"                        => "1.0",
+    "CCHM:test7_ih"                       => "1.0",
+    "CCHM:test7_oh"                       => "1.0",
     "CCHM:GM/BATSRUS/test_corona"         => "1.0",
     "CCHM:GM/BATSRUS/test_coronasph"      => "1.0",
     "CCHM:GM/BATSRUS/test_corona_2t"      => "1.0",
@@ -37,6 +38,9 @@ my %WeightTest = (
     "CWMM:test6_gm"                       => "1.0",
     "CWMM:test6_ie"                       => "1.0",
     "CWMM:test6_im_crcm"                  => "1.0",
+    "CWMM:test8_gm_multi"                 => "1.0",
+    "CWMM:test8_ie"                       => "1.0",
+    "CWMM:test8_im_rcm_multi"             => "1.0",
     "CWMM:test_pw"                        => "0.5",
     "CWMM:test_rb"                        => "0.5",
     "CWMM:GM/BATSRUS/test_earthsph"       => "0.1",
@@ -48,6 +52,7 @@ my %WeightTest = (
     "CRASH:GM/BATSRUS/test_eosgodunov"    => "1.0",
     "CRASH:GM/BATSRUS/test_graydiffusion" => "1.0", 
     "CRASH:GM/BATSRUS/test_hyades2d"      => "1.0",
+    "CRASH:GM/BATSRUS/test_laserpackage"  => "1.0",
     "CRASH:GM/BATSRUS/test_levelset"      => "1.0",
 
     );
