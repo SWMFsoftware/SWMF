@@ -17,12 +17,13 @@ contains
   subroutine user_update_states(iStage,iBlock)
     use ModVarIndexes
     use ModSize
-    use ModAdvance, ONLY: State_VGB
-    use ModMain,    ONLY: nStage
+    use ModAdvance,   ONLY: State_VGB
+    use ModMain,      ONLY: nStage
     use ModPhysics
-    use ModEnergy,  ONLY: calc_energy_cell
-    use CRASH_ModEos
+    use ModEnergy,    ONLY: calc_energy_cell
+    use CRASH_ModEos, ONLY: eos
     implicit none
+
     integer,intent(in):: iStage,iBlock
     integer:: i,j,k
     real:: PressureSI,EInternal,EInternalSI,RhoSI
