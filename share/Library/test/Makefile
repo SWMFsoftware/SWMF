@@ -17,6 +17,7 @@ help:
 	@echo "   test_geopack          - test CON_geopack"
 	@echo "   test_interpolate      - test ModInterpolate"
 	@echo "   test_io_unit          - test ModIoUnit"
+	@echo "   test_levelset         - test ModLevelset"
 	@echo "   test_line_extract     - test CON_line_extract"
 	@echo "   test_linear_advection - test ModLinearAdvection"
 	@echo "   test_linear_solver    - test ModLinearSolver"
@@ -47,6 +48,7 @@ test:   test_axes \
 	test_geopack \
 	test_io_unit \
 	test_interpolate \
+	test_levelset \
 	test_line_extract \
 	test_linear_advection \
 	test_linear_solver \
@@ -221,6 +223,31 @@ test_interpolate:
 	-@(diff test_interpolate.tmp test_interpolate.log \
 						>  test_interpolate.diff)
 	@ls -l test_interpolate.diff
+
+#######################################################################
+OBJ_LEVELSET = \
+	test_levelset.o \
+	../src/ModIoUnit.o \
+	../src/ModMpiInterfaces.o \
+	../src/ModUtilities.o \
+	../src/ModReadParam.o \
+	../src/ModPlotFile.o \
+	../src/ModLevelSet.o
+
+test_levelset_exe:
+	@(cd ../src; make ModLevelSet.o)
+	make test_levelset.o
+	${LINK.f90} -o test_levelset.exe ${OBJ_LEVELSET} ${Lflag1}
+
+test_levelset:
+	@echo test_levelset starting		>  test_levelset.diff
+	@make test_levelset_exe			>> test_levelset.diff
+	@echo ./test_levelset_exe		>> test_levelset.diff
+	-@(./test_levelset.exe > test_levelset.tmp)
+	-@gunzip -c test_levelset.ref.gz > test_levelset.ref
+	-@(${SCRIPTDIR}/DiffNum.pl \
+	    test_levelset.out test_levelset.ref >  test_levelset.diff)
+	@ls -l test_levelset.diff
 
 #######################################################################
 OBJ_RAY_TRACE = \
@@ -422,7 +449,8 @@ test_utilities:
 	@ls -l test_utilities.diff
 
 distclean: clean
-	rm -rf *.tmp *.diff test*.out test_process_var_name.log
+	rm -rf *.tmp *.diff test*.out test_levelset.ref \
+		test_process_var_name.log
 
 
 #######################################################################
