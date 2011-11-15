@@ -633,6 +633,16 @@ subroutine set_inputs
            call read_in_real(LatStart, iError)
            call read_in_real(LatEnd, iError)
            call read_in_real(LonStart, iError)
+           if (iError == 0) then 
+              call read_in_real(LonEnd, iError)
+              if (iError /= 0) then
+                 write(*,*) "You can now model part of the globe in"
+                 write(*,*) "longitude.  Include a LonEnd after the LonStart"
+                 write(*,*) "variable in #GRID."
+                 LonEnd = LonStart
+                 iError = 0
+              endif
+           endif
 
            if (nLats > 1 .and. LatEnd-LatStart < 1) iError=1
 
@@ -644,6 +654,7 @@ subroutine set_inputs
               write(*,*) 'LatStart     (real)'
               write(*,*) 'LatEnd       (real)'
               write(*,*) 'LonStart     (real)'
+              write(*,*) 'LonEnd       (real)'
               write(*,*) 'If LatStart and LatEnd are set to < -90 and'
               write(*,*) '> 90, respectively, then GITM does a whole'
               write(*,*) 'sphere.  If not, it models between the two.'
@@ -660,8 +671,10 @@ subroutine set_inputs
                  IsFullSphere = .false.
                  LatStart = LatStart * pi / 180.0
                  LatEnd   = LatEnd * pi / 180.0
-                 LonStart = LonStart * pi / 180.0
               endif
+
+              LonStart = LonStart * pi / 180.0
+              LonEnd   = LonEnd * pi / 180.0
 
            endif
 

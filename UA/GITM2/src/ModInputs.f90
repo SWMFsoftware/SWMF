@@ -107,6 +107,7 @@ module ModInputs
   logical :: UseGlow = .false.
 
   real    :: LonStart = 0.0
+  real    :: LonEnd   = 0.0
   real    :: LatStart = -pi/4.0
   real    :: LatEnd   =  pi/4.0
 

@@ -16,6 +16,8 @@ subroutine init_grid
   integer :: iBlock
 
   logical :: IsOk, IsDone, DoTouchSouth, DoTouchNorth
+  real :: range, lon0, dlFull, dlPart
+  integer :: iPoint(-1:nLons+2)
 
   call report("init_grid",1)
 
@@ -70,6 +72,21 @@ subroutine init_grid
         nBlocks = nBlocks + 1
         call UAM_ITER_next(r_iter,iBlock,IsDone)
      enddo
+
+     if (LonStart /= LonEnd) then
+
+        ! If we want to do just a small part of the globe in
+        ! longitude, then we can overwrite the longitude variable
+
+        do iBlock = 1, nBlocks
+           range = LonEnd-LonStart
+           dlFull = Longitude(2,iBlock)-Longitude(1,iBlock)
+           dlPart = dlFull/(2*pi)*range
+           iPoint = (Longitude(:,iBlock)-dlFull/2) / dlFull
+           Longitude(:,iBlock) = LonStart + iPoint*dlPart+dlPart/2.0
+        enddo
+
+     endif
 
   else
      nBlocks = 1
