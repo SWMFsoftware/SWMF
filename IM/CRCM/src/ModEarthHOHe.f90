@@ -25,12 +25,15 @@ Module ModCrcmPlanet
 
   !set plot parameters
   character(len=200), parameter :: & 
-       NamePlotVar='x y P[nP] HpP[nP] OpP[nP] HepP[nP] eP[nP] Phot[nP] '&
-       //'HpPhot[nP] OpPhot[nP] HepPhot[nP] ePhot[nP] N[/m3] HpN[/m3] '&
-       //'OpN[/m3] HepN[/m3] eN[/m3] Beq[T] Vol[m3/Wb] Pot[Volts] FAC[Amp/m2] g'
+       NamePlotVar='x y P[nP] HpP[nP] OpP[nP] HepP[nP] eP[nP] ' &
+       //'Phot[nP] HpPhot[nP] OpPhot[nP] HepPhot[nP] ePhot[nP] ' &
+       //'Pparhot[nP] HpPparhot[nP] OpPparhot[nP] HepPparhot[nP] ePparhot[nP] ' &
+       //'N[/m3] HpN[/m3] OpN[/m3] HepN[/m3] eN[/m3] ' &
+       //'Beq[T] Vol[m3/Wb] Pot[Volts] FAC[Amp/m2] g'
 
   integer, dimension(nspec+1) :: iPplot_I    =(/1,2,3,4,5/) 
   integer, dimension(nspec+1) :: iPhotplot_I =(/6,7,8,9,10/) 
-  integer, dimension(nspec+1) :: iNplot_I    =(/11,12,13,14,15/)
-  integer, parameter          :: Beq_=16,Vol_=17,Pot_=18, FAC_=19, nVar=19
+  integer, dimension(nspec+1) :: iPparhotplot_I =(/11,12,13,14,15/)
+  integer, dimension(nspec+1) :: iNplot_I    =(/16,17,18,19,20/)
+  integer, parameter          :: Beq_=21,Vol_=22,Pot_=23, FAC_=24, nVar=24
 end Module ModCrcmPlanet

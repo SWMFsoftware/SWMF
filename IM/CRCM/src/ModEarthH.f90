@@ -26,11 +26,12 @@ Module ModCrcmPlanet
   !set plot parameters
   character(len=200), parameter :: & 
        NamePlotVar='x y P[nP] HpP[nP] eP[nP] Phot[nP] '&
-       //'HpPhot[nP] ePhot[nP] N[/m3] HpN[/m3] '&
-       //'eN[/m3] Beq[T] Vol[m3/Wb] Pot[Volts] FAC[Amp/m2] g'
+       //'HpPhot[nP] ePhot[nP] Pparhot[nP] HpPparhot[nP] ePparhot[nP] '&
+       // 'N[/m3] HpN[/m3] eN[/m3] Beq[T] Vol[m3/Wb] Pot[Volts] FAC[Amp/m2] g'
 
   integer, dimension(nspec+1) :: iPplot_I    =(/1,2,3/) 
   integer, dimension(nspec+1) :: iPhotplot_I =(/4,5,6/) 
-  integer, dimension(nspec+1) :: iNplot_I    =(/7,8,9/)
-  integer, parameter          :: Beq_=10,Vol_=11,Pot_=12, FAC_=13, nVar=13
+  integer, dimension(nspec+1) :: iPparhotplot_I =(/7,8,9/)
+  integer, dimension(nspec+1) :: iNplot_I    =(/10,11,12/)
+  integer, parameter          :: Beq_=13,Vol_=14,Pot_=15, FAC_=16, nVar=16
 end Module ModCrcmPlanet
