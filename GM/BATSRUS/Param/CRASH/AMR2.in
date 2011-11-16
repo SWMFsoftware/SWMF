@@ -15,7 +15,13 @@
 2			MaxBlockLevel
 F			DoFixBodyLevel
 
-#AMR
+#DOAMR
+T                       DoAmr
+1                       DnAmr
+-1                      DtAmr
+T                       IsStrictAmr
+
+AMR
 1			DnRefine
 T			DoAutoRefine
 0.0			PercentCoarsen
