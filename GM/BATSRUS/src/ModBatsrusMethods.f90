@@ -202,6 +202,9 @@ contains
 
        call timing_stop('amr_ics')
     end if
+    ! nRefineLevelIC has done its work, reset to zero
+    nRefineLevelIC = 0
+
 
     !\
     ! Read initial data for solution blocks
