@@ -151,10 +151,10 @@ contains
        end do
 
        ! add external refinement and coarsening thresholds to internals
-          do iCrit = 1, nExtCritUsed
-             RefineCritAll_I(nIntCrit+iCrit)  = RefineCritExt_I(iCrit)
-             CoarsenCritAll_I(nIntCrit+iCrit) = CoarsenCritExt_I(iCrit)
-          end do
+       !   do iCrit = 1, nExtCritUsed
+       !      RefineCritAll_I(nIntCrit+iCrit)  = RefineCritExt_I(iCrit)
+       !      CoarsenCritAll_I(nIntCrit+iCrit) = CoarsenCritExt_I(iCrit)
+       !   end do
     end if
 
     ! Estimation of the numerical error
