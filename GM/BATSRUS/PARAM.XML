@@ -3714,47 +3714,6 @@ of blocks indicated but if the max number of blocks is reached it will reduce to
 a numbers that is lower then max blocks. 
 </command>
 
-<command name="AMRERRORCRIT">
-	 <parameter name="AmrWaveFilter" type="real" min="0.0" default="1.0e-2" />
-	 <parameter name="nCrit" type="integer" min="1" />
-	 <parameter name="iVar"  type="integer" min="1" />
-	 <parameter name="CoarsenCrit" type="real" min="-1.0" default="-1.0" />
-	 <parameter name="RefineCrit" type="real" min="-1.0" default="-1.0" />
-
-ONLY with BATL
-
-#AMRERRORCRIT
-1.0e-2                  AmrWaveFilter
-1                       nCrit
-5                       iVar
-0.025                   CoarsenCrit
-0.2                     RefineCrit
-
-
-This functionality the relations between the second and first derivative to 
-approximate the numerical error, see comments in code :
-\begin{verbatim}
-                               d^2 U
-                              -------
-                               dx^2 
-    E  =  ----------------------------------------------
-           1     dU        1
-          ---  ------  + ------ cAmrWavefilter*U  + cEpsilon 
-          DX     dx       DX^2
-\end{verbatim}
-AmrWaveFilter gives a relative error in regards to the mean value of the
-solution. nCrit gives the number of criteria and iVar is the index in the
-state matrix of the  variable, where CoarsenCrit gives the upper limit for
-values that should  be suggested for coarsening and RefineCrit gives the lower
-value of blocks we want to refine. Criteria are assumed to be positive,
-negative numbers will be ignored. To avoid uneserary calculation if you want
-to only do AMRERRORCRIT, not combine it with  AMRCRITERIA you should set 
-nRefineCrit in #AMRCRITERIA to zero. A factor of minimum four looks like it
-works best to avoid oscillations of blocks between coursing and refining.
-
-Current implementation might not work properly with first order ghost cells.
-</command>
-
 <command name="AMRLIMIT"> 
 	 <parameter name="PercentCoarsen" type="real" min="0.0" default="0.0" />
 	 <parameter name="PercentRefine" type="real" min="0.0" default="0.0" />
@@ -3867,6 +3826,9 @@ Default for DnRefine is -1, i.e. no run time refinement.
 			</if>
 		</if>
 	</for>
+
+If you are using BATL see "AMRCRITERIALEVEL" but ignore the MaxLevel parameter.
+
 #AMRCRITERIA
 3			nRefineCrit (number of refinement criteria: 1,2 or 3)
 gradlogP		TypeRefine
@@ -3953,6 +3915,212 @@ Example for InvD2Ray =
    3 - refine_profile = 0.0001 at distance Rsun/10 from the ray
 \end{verbatim}
 </command>
+<command name="AMRCRITERIALEVEL">
+	<parameter name="nRefineCrit" type="integer" min="0" max="inf"
+								default="0" />
+	<for from="1" to="$nRefineCrit">
+		<parameter name="TypeRefine" type="string" case="lower"
+		input="select">
+			<option name="grad T"		value="gradt"        />
+			<option name="grad P"		value="gradp"        />
+			<option name="grad log(Rho)"	value="gradlogrho"   />
+			<option name="grad log(p)" 	value="gradlogp"     />
+			<option name="grad E"		value="grade"	     />
+			<option name="curl U" 		value="curlu"        />
+			<option name="curl B"		value="curlB/curlb"  />
+			<option name="J2"		value="J2/j2"  />
+			<option name="div U"		value="divu"	     />
+			<option name="divB"		value="divb"	     />
+			<option name="rCurrents" value="rcurrents"	     />
+			<option name="error[.*]" value="error[.*]" />
+			<option name="transient[.*]" value="transient[.*]" />
+			<option name="User defined" value="user" />
+			<if expr="$TypeRefine =~ /transient[.*]/">
+				<option name='P_dot' value='p_dot'/>
+				<option name='T_dot' value='t_dot'/>
+				<option name='Rho_dot' 		default="T"
+						value='rho_dot'/>
+				<option name='RhoU_dot' 
+						value='rhou_dot'/>
+				<option name='Rho_2nd_1'
+						value='rho_2nd_1'/>
+				<option name='Rho_2nd_2'
+						value='rho_2nd_2'/>
+
+			</if>
+			<if expr="$TypeRefine =~ /error[.*]/">
+			</if>
+		</parameter>
+		<parameter name="CoarsenLimit" type="real" min="0" /> 
+		<parameter name="RefineLimit" type="real" min="0" />
+		<parameter name="MaxRefinmentLevel" type="integer" min="0"/>
+	</for>
+	<parameter name="AmrWaveFilter" type="real" 
+		   default="1.0e-8"/>
+	<parameter name="UseSunEarth" type="logical" 
+		   default="F"/>
+	           <if expr="$UseSunEarth">
+				<parameter name="xEarth"   type="real"/>
+				<parameter name="yEarth"   type="real"/>
+				<parameter name="zEarth"   type="real"/>
+				<parameter name="InvD2Ray" type="real"/>
+		   </if>
+
+ONLY with BATL
+
+\begin{verbatim}
+#AMRCRITERIALEVEL
+---------- >  nRefineCriteria 
+----------
+         ^
+         | 
+         |  A list of all criterias given for each criteria as:  
+         |            
+         |              TypeRefine 
+         |              CoarsenLimit
+         |              RefineLimit 
+         |              MaxLevel
+         |
+         |
+         |
+         |
+         |
+         |
+	 v
+----------
+---------- > if TypeRefine of type "error ..... " spesify AmrWaveFilter here
+---------- > if TypeRefine of type "transient ...." set UseSunEarth here
+----------
+         ^    if UseSunEarth is true set the
+         |    xEarth, yEarth, zEarth and InvD2Ray 
+         |    here at the end
+	 v
+----------
+\end{verbatim}
+
+Exsample of use:
+
+#AMRCRITERIALEVEL
+7                       nRefineCriteria 
+J2                      TypeRefine 
+0.1                     CoarsenLimit
+0.75                    RefineLimit
+1                       MaxLevel
+error Bx
+0.025
+0.1
+2
+J2
+16.0
+25.0
+1
+error Rho
+0.1
+0.2
+2
+transient P_dot
+1.0
+2.0
+1
+1.0e-2                  AmrWaveFilter
+T                       UseSunEarth   ! Only if 'Transient'
+0.00E+00                xEarth        ! Only if UseSunEarth
+2.56E+02                yEarth        ! Only if UseSunEarth
+0.00E+00                zEarth        ! Only if UseSunEarth
+5.00E-01                InvD2Ray      ! Only if UseSunEarth
+
+This command defines the criteria to select blocks for refinement or
+coarsening when the #AMR command is used with DoAutoRefine=T parameter. 
+Up to 3 criteria types (TypeRefine) can be used. But you can have mutiple 
+criterias for the same TypeRefine. Each criteria has it maximum of levels 
+it can refine to, given by MaxLevel. Refinement is done if ANY
+of the criteria demand it, and the block can be refined
+a block cannot be refined if the refinement level would exceed
+the maximum level or too many blocks would be created.
+
+Coarsening is done if ALL the criteria allow it and the block
+can be coarsened (a block cannot be coarsened if the block level
+is already at the minimum level, or too many blocks would be coarsened). 
+
+The default settings currently depend on the component used,
+but it is best to set the criteria explicitly if the #AMR command
+is used with DoAutoRefine=T, because the defaults may change, and 
+they are not optimal for most applications.
+
+If nRefineCrit is set to zero, the blocks are not ordered. 
+This can be used to refine or coarsen
+all the blocks limited by the minimum and maximum levels only
+(see commands #AMRLEVELS and #AMRRESOLUTION). If nRefineCrit is 1, 2, or 3
+then the criteria can be chosen from the following list:
+\begin{verbatim}
+  'gradT'		- gradient of temperature
+  'gradP'		- gradient of pressure
+  'gradlogrho'		- gradient of log(rho)
+  'gradlogP'		- gradient of log(P)
+  'gradE'		- gradient of electric field magnitude
+  'curlV','curlU' 	- magnitude of curl of velocity
+  'curlB'		- magnitude of current
+  'J2'                  - squer of current
+  'divU', 'divV'	- divergence of velocity
+  'divB'		- div B
+  'Rcurrents'		- refinement near Rcurrents value
+  'user'                - criteria defined in the user module
+\end{verbatim}
+All the names can also be spelled with all small case letters.\\
+
+\noindent
+For the TypeRefine "transient TypeTransient" we have the following posibileties for
+the TypeTransient
+\begin{verbatim}
+  'P_dot'
+  'T_dot'
+  'Rho_dot'
+  'RhoU_dot'
+  'B_dot'
+  'Rho_2nd_1'
+  'Rho_2nd_2'
+  'meanUB'
+\end{verbatim}
+Also, (xEarth,yEarth,zEarth) are the coordinates of the Earth. InvD2Ray is
+a factor that defines how close to the ray Sun-Earth to refine the grid.
+Note that the AMR occurs in a cylinder around the ray.
+Example for InvD2Ray =
+\begin{verbatim}
+   1 - refine_profile = 0.3679 at distance Rsun/10 from the ray
+   2 - refine_profile = 0.0183 at distance Rsun/10 from the ray
+   3 - refine_profile = 0.0001 at distance Rsun/10 from the ray
+\end{verbatim}
+
+
+\noindent
+For the TypeRefine error StatVarName we will base the numerical error estimate 
+on the state varable given by StatVarName. The error estimation is given bye
+relations between the second and first derivative to approximate the numerical 
+error, see comments in code :
+\begin{verbatim}
+                               d^2 U
+                              -------
+                               dx^2 
+    E  =  ----------------------------------------------
+           1     dU        1
+          ---  ------  + ------ cAmrWavefilter*U  + cEpsilon 
+          DX     dx       DX^2
+\end{verbatim}
+AmrWaveFilter gives a relative error in regards to the mean value of the
+solution. nCrit gives the number of criteria and iVar is the index in the
+state matrix of the  variable, where CoarsenCrit gives the upper limit for
+values that should  be suggested for coarsening and RefineCrit gives the lower
+value of blocks we want to refine. Criteria are assumed to be positive,
+negative numbers will be ignored. To avoid uneserary calculation if you want
+to only do AMRERRORCRIT, not combine it with  AMRCRITERIA you should set 
+nRefineCrit in #AMRCRITERIA to zero. A factor of minimum four looks like it
+works best to avoid oscillations of blocks between coursing and refining.
+
+Current implementation might not work properly with first order ghost cells.
+
+
+</command>
+
 </commandgroup>
 <commandgroup name="SCHEME PARAMETERS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

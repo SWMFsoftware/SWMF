@@ -110,7 +110,7 @@ subroutine MH_set_parameters(TypeAction)
   logical :: IsUninitialized      = .true.
   real :: local_root_dx
 
-!  logical :: HdfUninitialized      = .true.
+  !  logical :: HdfUninitialized      = .true.
   logical :: DoReadSolarwindFile  = .false.
   logical :: DoReadSatelliteFiles = .false.
   logical :: DoReadMagnetometerFile=.false.
@@ -155,8 +155,8 @@ subroutine MH_set_parameters(TypeAction)
   integer :: iSession, iPlotFile, iVar
 
   character(len=10) :: NamePrimitive_V(nVar)
-  
-   
+
+
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
 
@@ -340,9 +340,9 @@ subroutine MH_set_parameters(TypeAction)
      end if
 
      if(.not.read_command(NameCommand)) CYCLE READPARAM
-!        write (*,*) 'SAVEPLOTNAME iFile=', iFile
+     !        write (*,*) 'SAVEPLOTNAME iFile=', iFile
 
-    select case(NameCommand)
+     select case(NameCommand)
 
      case("#BATL")
         call read_var('UseBatl', UseBatl)
@@ -354,7 +354,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#BATLPROLONG")
         call read_var('BetaProlong',BetaProlong )
 
-        
+
      case("#BATLTEST")
         call read_var('UseBatlTest', UseBatlTest)
         if(UseBatlTest)then
@@ -932,7 +932,7 @@ subroutine MH_set_parameters(TypeAction)
 
            plot_type(iFile) = plot_area//'_'//plot_var
         end do
-   
+
      case("#SAVEPLOTNAME")
         call read_var('IsPlotName_n',IsPlotName_n)
         call read_var('IsPlotName_t',IsPlotName_t)
@@ -940,7 +940,7 @@ subroutine MH_set_parameters(TypeAction)
         ! Will set only _n true when not time accurate automatically.
         ! Set _n true if both _t and _e are false.
         if(.not.IsPlotName_t .and. .not.IsPlotName_e)&
-            IsPlotName_n=.true.
+             IsPlotName_n=.true.
 
      case("#PLOTFILENAME")
         call read_var('NameMaxTimeUnit', NameMaxTimeUnit)
@@ -957,7 +957,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#SAVEBINARY")
         call read_var('DoSaveBinary',save_binary)
-     
+
      case("#GRIDRESOLUTION","#GRIDLEVEL","#AREARESOLUTION","#AREALEVEL")
         if(index(NameCommand,"RESOLUTION")>0)then
            call read_var('AreaResolution', AreaResolution)
@@ -1206,7 +1206,7 @@ subroutine MH_set_parameters(TypeAction)
         else
            call set_levels
         end if
-     
+
      case("#DOAMRPROFILE")
         call read_var('DoAmrPofile',DoProfileAmr)
 
@@ -1218,7 +1218,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DoAutoRefine',automatic_refinement)
            if (automatic_refinement) then
               if(UseBatl) then
-                 !!$ call stop_mpi('Use #DOAMR and #AMRTYPE with BATL"')
+!!$ call stop_mpi('Use #DOAMR and #AMRTYPE with BATL"')
                  call read_amr_criteria("#AMR")
               else
                  call read_var('PercentCoarsen',percentCoarsen)
@@ -1228,12 +1228,10 @@ subroutine MH_set_parameters(TypeAction)
            end if
         end if
 
-     case("#AMRLIMIT", "#AMRTYPE", "#AMRERRORCRIT","#AMRAREA")
+     case("#AMRLIMIT", "#AMRTYPE","#AMRAREA")
         if(.not. UseBatl) call stop_mpi(NameSub// &
              ' BATL is required for command='//NameCommand)
         call read_amr_criteria(NameCommand)
-        if(NameCommand == "#AMRERRORCRIT" ) &
-             automatic_refinement = DoAutoAmr ! for now
 
      case("#DOAMR")
         call read_var('DoAmr',DoAmr)
@@ -1244,42 +1242,59 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
      case("#AMRCRITERIA")
+
         DoCritAmr = .true.
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
-        call read_var('nRefineCrit',nRefineCrit)
-        if(nRefineCrit<0 .or. nRefineCrit>3)&
-             call stop_mpi(NameSub//' ERROR: nRefineCrit must be 0, 1, 2 or 3')
-        do i=1,nRefineCrit
-           call read_var('TypeRefine',RefineCrit(i))
-           if(UseBatl)then
-              call read_var('CoarsenLimit', CoarsenLimit_I(i))
-              call read_var('RefineLimit',  RefineLimit_I(i))
-
-
-           end if
-           if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
-              call read_var('TypeTransient_I(i)',TypeTransient_I(i))
-              call read_var('UseSunEarth'       ,UseSunEarth)
-           end if
+        if(UseBatl) then
+           call read_amr_criteria(NameCommand, &
+                nCritOut=nRefineCrit, NameCritOut_I=RefineCrit,&
+                NameStatVarIn_V= NameVar_V,&
+                nStateVarIn = nVar,ReadExtraOut=UseSunEarth)
            if (UseSunEarth) then
               call read_var('xEarth'  ,xEarth)
               call read_var('yEarth'  ,yEarth)
               call read_var('zEarth'  ,zEarth)
               call read_var('InvD2Ray',InvD2Ray)
            end if
-        end do
+        else
+           call read_var('nRefineCrit',nRefineCrit)
+           if(nRefineCrit<0 .or. nRefineCrit>3)&
+                call stop_mpi(NameSub//' ERROR: nRefineCrit must be 0, 1, 2 or 3')
+           do i=1,nRefineCrit
+              call read_var('TypeRefine',RefineCrit(i))
+              if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
+                 call read_var('TypeTransient_I(i)',TypeTransient_I(i))
+                 call read_var('UseSunEarth'       ,UseSunEarth)
+              end if
+              if (UseSunEarth) then
+                 call read_var('xEarth'  ,xEarth)
+                 call read_var('yEarth'  ,yEarth)
+                 call read_var('zEarth'  ,zEarth)
+                 call read_var('InvD2Ray',InvD2Ray)
+              end if
+           end do
+        end if
 
      case("#AMRCRITERIALEVEL")
+
         if(.not. UseBatl) call stop_mpi(NameSub// &
              ' ERROR: #AMRMULTICRITERIA can ONLY be used with BATL')
         DoCritAmr = .true.
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
         call read_amr_criteria(NameCommand, &
-             nCritOut=nRefineCrit, NameCritOut_I=RefineCrit)
+             nCritOut=nRefineCrit, NameCritOut_I=RefineCrit,&
+             NameStatVarIn_V= NameVar_V,&
+             nStateVarIn = nVar,ReadExtraOut=UseSunEarth)
         if(nRefineCrit<0 .or. nRefineCrit>3)call stop_mpi(NameSub// &
-             ' ERROR: nRefineCrit must be 0, 1, 2 or 3')           
+             ' ERROR: nRefineCrit must be 0, 1, 2 or 3')
+        if (UseSunEarth) then
+           call read_var('xEarth'  ,xEarth)
+           call read_var('yEarth'  ,yEarth)
+           call read_var('zEarth'  ,zEarth)
+           call read_var('InvD2Ray',InvD2Ray)
+        end if
 
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
@@ -2188,10 +2203,10 @@ contains
   end subroutine set_namevar
 
   !===========================================================================
-    
-  
+
+
   subroutine set_defaults
-    
+
     !\
     ! Default plot and restart directories depend on NameThisComp
     !/
@@ -2768,7 +2783,7 @@ contains
           call stop_mpi('Correct PARAM.in')
        end if
     end if
-         
+
     if(PrecondType == "HYPRE")then
        if(.not.IsHypreAvailable)call  stop_mpi(NameSub// &
             ' empty HYPRE module! Use Config.pl -hypre')
