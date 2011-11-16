@@ -206,6 +206,9 @@ contains
 
     use ModPlotFile, ONLY: save_plot_file
     use ModReadParam, ONLY: read_file, read_init, read_line, read_command
+    use ModMpi
+
+    integer:: iProc, iError
 
     integer, parameter:: nI = 100, nJ = 50, nLevel = 5
     real, allocatable:: LevelSet_VC(:,:,:)
@@ -249,12 +252,15 @@ contains
 
     end do; end do
 
-    call save_plot_file('test_levelset.out', &
+    call MPI_COMM_RANK(MPI_COMM_WORLD, iProc, iError)
+    if(iProc==0) call save_plot_file('test_levelset.out', &
          NameVarIn = "x y Xe Be Pl Au Ay level nSegment", &
          ParamIn_I = (/ real(nSegment) /), &
          CoordMinIn_D = (/ 0.5, 0.5 /), &
          CoordMaxIn_D = (/ nI-0.5, nJ-0.5 /), &
          VarIn_VII    = LevelSet_VC)
+
+    deallocate(LevelSet_VC)
 
   end subroutine test_levelset
 

@@ -242,8 +242,8 @@ test_levelset_exe:
 test_levelset:
 	@echo test_levelset starting		>  test_levelset.diff
 	@make test_levelset_exe			>> test_levelset.diff
-	@echo ./test_levelset_exe		>> test_levelset.diff
-	-@(./test_levelset.exe > test_levelset.tmp)
+	@echo ${MPIRUN} ./test_levelset_exe	>> test_levelset.diff
+	-(${MPIRUN} ./test_levelset.exe > test_levelset.tmp)
 	-@gunzip -c test_levelset.ref.gz > test_levelset.ref
 	-@(${SCRIPTDIR}/DiffNum.pl \
 	    test_levelset.out test_levelset.ref >  test_levelset.diff)
