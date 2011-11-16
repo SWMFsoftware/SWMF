@@ -144,7 +144,7 @@ subroutine amr_criteria(ref_criteria)
                 (gradY_Bz(1:nI,1:nJ,1:nK)-gradZ_By(1:nI,1:nJ,1:nK))**2 + &
                 (gradZ_Bx(1:nI,1:nJ,1:nK)-gradX_Bz(1:nI,1:nJ,1:nK))**2 + &
                 (gradX_By(1:nI,1:nJ,1:nK)-gradY_Bx(1:nI,1:nJ,1:nK))**2))
-        case('J2')
+        case('J2','j2')
            ref_criteria(iCrit,iBLK) = 0.0
            do k=1,nK; do j=1,nJ; do i=1,nI
               call  get_current(i, j, k, iBLK, Current_D)
@@ -184,35 +184,11 @@ subroutine amr_criteria(ref_criteria)
                 abs(Rcurrents-R_BLK(1:nI,1:nJ,1:nK,iBLK))))**2)
            ref_criteria(iCrit,iBLK) = maxval(outVAR(1:nI,1:nJ,1:nK),&
                 MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
-        case('Transient','transient')	
-           xxx = cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
-           yyy = cHalf*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
-           zzz = cHalf*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
-           RR = sqrt(xxx**2+yyy**2+zzz**2 )
-           if (UseSunEarth) then
-              UseSwitchAMR = (RR.gt.RcritAMR)
-           else
-              UseSwitchAMR = (RR.gt.RcritAMR).and.(abs(zzz).le.dz_BLK(iBLK))
-           end if
-           if (UseSwitchAMR) then
-              !\
-              ! Use dynamic refinement if there is a transient event 
-              !/
-              call trace_transient(iCrit,iBLK,AMRsort_1)
-              ref_criteria(iCrit,iBLK) = AMRsort_1*ds2
-              !\              
-              ! Restrict the refinement to the particular ray Sun-Earth only
-              ! Only if UseSunEarth == .true.
-              !/
-              if (UseSunEarth) then
-                 call refine_sun_earth_cyl(iBLK,xxx,yyy,zzz,AMRsort_2)
-              else
-                 AMRsort_2 = cOne
-              end if
-              ref_criteria(iCrit,iBLK) = AMRsort_2*ref_criteria(iCrit,iBLK)
-           end if
         case default
-           if (UseUserAMR .or. index(RefineCrit(iCrit),'user')>0) then
+           ! WARNING if we do not find the criteria in the abou list we 
+           ! will search for it among 'transient' criteria
+
+           if (UseUserAMR .or. index(RefineCrit(iCrit),'user') > 0 ) then
               IsFound=.false.
               call user_amr_criteria(iBLK, userCriteria, RefineCrit(iCrit), IsFound)
               if (IsFound) then
@@ -223,15 +199,42 @@ subroutine amr_criteria(ref_criteria)
                  call stop_mpi('Fix user_amr_criteria or PARAM.in!')
               end if
            else
-              call stop_mpi('Unknown RefineCrit='//RefineCrit(iCrit))
+              xxx = cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
+              yyy = cHalf*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
+              zzz = cHalf*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
+              RR = sqrt(xxx**2+yyy**2+zzz**2 )
+              if (UseSunEarth) then
+                 UseSwitchAMR = (RR.gt.RcritAMR)
+              else
+                 UseSwitchAMR = (RR.gt.RcritAMR).and.(abs(zzz).le.dz_BLK(iBLK))
+              end if
+              if (UseSwitchAMR) then
+                 !\
+                 ! Use dynamic refinement if there is a transient event 
+                 !/
+                 call trace_transient(RefineCrit(iCrit),iCrit,iBLK,AMRsort_1)
+                 ref_criteria(iCrit,iBLK) = AMRsort_1*ds2
+                 !\              
+                 ! Restrict the refinement to the particular ray Sun-Earth only
+                 ! Only if UseSunEarth == .true.
+                 !/
+                 if (UseSunEarth) then
+                    call refine_sun_earth_cyl(iBLK,xxx,yyy,zzz,AMRsort_2)
+                 else
+                    AMRsort_2 = cOne
+                 end if
+                 ref_criteria(iCrit,iBLK) = AMRsort_2*ref_criteria(iCrit,iBLK)
+              end if
            end if
         end select
      end do ! iCrit
   end do ! iBLK
-contains
-  subroutine trace_transient(iCrit,iBLK,refine_crit)
-    use ModAMR,      ONLY:TypeTransient_I,nRefineCrit,RefineCrit
 
+contains
+  subroutine trace_transient(NameCrit,iCrit,iBLK,refine_crit)
+    use ModAMR,      ONLY:nRefineCrit,RefineCrit, nRefineLevelIC
+
+    character(len=*), intent(in) :: NameCrit
 
     integer, intent(in) :: iBLK,iCrit
     real, intent(out) :: refine_crit
@@ -241,17 +244,33 @@ contains
     real, dimension(1:nI, 1:nJ, 1:nK) :: RhoOld_C, RhoUxOld_C, &
          RhoUyOld_C, RhoUzOld_C, BxOld_C, ByOld_C, BzOld_C, POld_C    
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       RhoOld_C(i,j,k)  = StateOld_VCB(rho_,i,j,k,iBLK)
-       RhoUxOld_C(i,j,k)= StateOld_VCB(rhoUx_,i,j,k,iBLK)
-       RhoUyOld_C(i,j,k)= StateOld_VCB(rhoUy_,i,j,k,iBLK)
-       RhoUzOld_C(i,j,k)= StateOld_VCB(rhoUz_,i,j,k,iBLK)
-       BxOld_C(i,j,k)   = StateOld_VCB(Bx_,i,j,k,iBLK)
-       ByOld_C(i,j,k)   = StateOld_VCB(By_,i,j,k,iBLK)
-       BzOld_C(i,j,k)   = StateOld_VCB(Bz_,i,j,k,iBLK)
-       POld_C(i,j,k)    = StateOld_VCB(P_,i,j,k,iBLK)
-    end do; end do; end do
-    select case(TypeTransient_I(iCrit))
+    ! if we do a amr pysics refinmnet at startup we do not have any
+    ! old walue. Can be inporved in the future
+    if(nRefineLevelIC>0 ) then
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          RhoOld_C(i,j,k)  = State_VGB(rho_,i,j,k,iBLK)
+          RhoUxOld_C(i,j,k)= State_VGB(rhoUx_,i,j,k,iBLK)
+          RhoUyOld_C(i,j,k)= State_VGB(rhoUy_,i,j,k,iBLK)
+          RhoUzOld_C(i,j,k)= State_VGB(rhoUz_,i,j,k,iBLK)
+          BxOld_C(i,j,k)   = State_VGB(Bx_,i,j,k,iBLK)
+          ByOld_C(i,j,k)   = State_VGB(By_,i,j,k,iBLK)
+          BzOld_C(i,j,k)   = State_VGB(Bz_,i,j,k,iBLK)
+          POld_C(i,j,k)    = State_VGB(P_,i,j,k,iBLK)
+       end do; end do; end do
+    else
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          RhoOld_C(i,j,k)  = StateOld_VCB(rho_,i,j,k,iBLK)
+          RhoUxOld_C(i,j,k)= StateOld_VCB(rhoUx_,i,j,k,iBLK)
+          RhoUyOld_C(i,j,k)= StateOld_VCB(rhoUy_,i,j,k,iBLK)
+          RhoUzOld_C(i,j,k)= StateOld_VCB(rhoUz_,i,j,k,iBLK)
+          BxOld_C(i,j,k)   = StateOld_VCB(Bx_,i,j,k,iBLK)
+          ByOld_C(i,j,k)   = StateOld_VCB(By_,i,j,k,iBLK)
+          BzOld_C(i,j,k)   = StateOld_VCB(Bz_,i,j,k,iBLK)
+          POld_C(i,j,k)    = StateOld_VCB(P_,i,j,k,iBLK)
+       end do; end do; end do
+    end if
+
+    select case(NameCrit)
     case('P_dot','p_dot')
        !\
        ! refine_crit = abs(|p|-|p|_o)/max(|p|,|p|_o,cTiny)
@@ -309,7 +328,7 @@ contains
             Bz_G(1:nI,1:nJ,1:nK)**2),sqrt(BxOld_C(1:nI,1:nJ,1:nK)**2 + &
             ByOld_C(1:nI,1:nJ,1:nK)**2 + BzOld_C(1:nI,1:nJ,1:nK)**2))
        refine_crit = maxval(scrARR)
-    case('AK47')
+    case('meanUB') 
        scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2              + &
             RhoUy_G(1:nI,1:nJ,1:nK)**2 + RhoUz_G(1:nI,1:nJ,1:nK)**2)      - &
             sqrt(RhoUxOld_C(1:nI,1:nJ,1:nK)**2                                    + &
@@ -350,7 +369,7 @@ contains
             Rho_G(1:nI,1:nJ,1:nK)
        refine_crit = maxval(scrARR)
     case default
-       call stop_mpi('Unknown TypeTransient_I='//TypeTransient_I(iCrit))
+       call stop_mpi('Unknown RefineCrit='//NameCrit)
     end select
 
   end subroutine trace_transient
