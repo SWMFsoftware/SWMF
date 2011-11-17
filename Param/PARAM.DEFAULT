@@ -218,6 +218,19 @@ T                       DoAutoRefine
 30.                     PercentRefine
 800                     MaxTotalBlocks
 
+#AMRCRITERIA
+3                       nRefineCrit
+curlB                   TypeRefine
+-1.0                    CoarsenLimit
+-1.0                    RefineLimit
+gradlogP                TypeRefine
+-1.0                    CoarsenLimit
+-1.0                    RefineLimit
+Rcurrents               TypeRefine
+-1.0                    CoarsenLimit
+-1.0                    RefineLimit
+
+
 #SCHEME
 2			nOrder
 Rusanov			TypeFlux
