@@ -255,7 +255,7 @@ contains
     call MPI_COMM_RANK(MPI_COMM_WORLD, iProc, iError)
     if(iProc==0) call save_plot_file('test_levelset.out', &
          NameVarIn = "x y Xe Be Pl Au Ay level nSegment", &
-         ParamIn_I = (/ real(nSegment) /), &
+         ParamIn_I = (/ nSegment+0.0 /), &
          CoordMinIn_D = (/ 0.5, 0.5 /), &
          CoordMaxIn_D = (/ nI-0.5, nJ-0.5 /), &
          VarIn_VII    = LevelSet_VC)
