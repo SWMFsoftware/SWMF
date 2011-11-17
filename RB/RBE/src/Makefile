@@ -4,6 +4,7 @@ include ../Makefile.def
 SEARCH_EXTRA = -I${EMPIRICALGMDIR} -I${EMPIRICALIEDIR}
 
 include ../Makefile.conf
+include Makefile.DEPEND
 include Makefile.RULES
 
 OBJECTS = \
@@ -31,7 +32,7 @@ DEPEND:
 
 MY_LIB = libRBE.a
 
-LIB:
+LIB: DEPEND
 	make ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
