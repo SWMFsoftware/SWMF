@@ -6,17 +6,16 @@ module ModLaserHeating
   ! the plasa following the rules of geometrical optics. The laser energy is
   ! deposited near the critical density.
 
-  use ModProcMH, ONLY: iProc, nProc, iComm
-  use ModAdvance, ONLY: State_VGB
+  use BATL_lib,    ONLY: nDim
+  use ModProcMH,   ONLY: iProc, nProc, iComm
+  use ModAdvance,  ONLY: State_VGB
   use ModVarIndexes
   use ModConst
   use ModMpi
-
   use ModCoordTransform
-
   use ModPhysics,  ONLY: No2Si_V, Si2No_V, UnitRho_, UnitX_
   use ModMain,     ONLY: TypeBC_I, UseLaserHeating
-  use ModGeometry, ONLY: XyzMin_D, XyzMax_D, nDim
+  use ModGeometry, ONLY: XyzMin_D, XyzMax_D
   use ModIOUnit,   ONLY: UnitTmp_
 
   implicit none
@@ -80,7 +79,7 @@ module ModLaserHeating
   real:: IrradianceSi = 3.8e12 ![J/s] !This is the power; rename?
 
   !Beam geometry: 'rz', '2d', '3d'
-  character(LEN=3):: TypeBeam='unknown'
+  character(LEN=3):: TypeBeam='???'
   !\
   ! Geometry of the 'rz'-beam:
   !/
@@ -106,25 +105,29 @@ module ModLaserHeating
   !//slope (approximately +60 deg in the presented case))
   !/-----|
   !
-  !< This coordinate is xPlane
+  !< This coordinate is xStart
 
   integer:: nRayPerBeam
 
   integer:: nBeam = 0
-  real   :: rBeam = 1.0, xPlane = -60.0
+  real   :: rBeam = 1.0, xStart = -60.0
 
-  real   :: BeamParam_II(3,192)
+  !Named indexes:
+  integer, parameter:: MaxBeam = 20
+  integer, parameter:: SlopeDeg_ = 1, rCr_ = 2, PhiCr_ = 3, AmplitudeRel_ = 4
+  real   :: BeamParam_II(AmplitudeRel_,MaxBeam)
 
   real   :: SuperGaussianOrder = 4.2
 
-  !Named indexes:
-  integer, parameter:: SlopeDeg_ = 1, yCr_ = 2, AmplitudeRel_ = 3
 
-  integer:: nRayTotal = -1
+  integer:: nRayInside = -1, nRayOutside = -1, nRayTotal = -1
+
   real, allocatable, dimension(:,:):: XyzRay_DI, SlopeRay_DI 
   real, allocatable, dimension(:)  :: Amplitude_I
 
-  logical :: DoLaserRayTest  = .false.
+  logical:: Is3DBeamInRz = .false.
+
+  logical:: DoLaserRayTest  = .false.
 
 contains
   !==========================================================================
@@ -192,6 +195,7 @@ contains
     integer:: iRay, iBlock, iCell, nCell
     integer:: iCell_II(0:nDim,2**nDim), iCell_D(MaxDim), i, j, k
 
+    real:: Xyz_D(MaxDim), GradRhoZ_D(MaxDim)
     real:: Weight_I(2**nDim), Weight
     real:: NatomicSi, TeSI, Zaverage, RhoZSi, Absorption
     real:: ZaverageL, ZaverageR
@@ -201,12 +205,13 @@ contains
          Absorption_=5, CellSize_=6, nVarRay = CellSize_
     real, allocatable:: RayValue_VI(:,:), RayValueAll_VI(:,:)
 
-    integer::iError
+    integer:: iError
     !-----------------------------------------------------------------------
     if(.not.allocated(RayValue_VI)) &
          allocate(RayValue_VI(nVarRay,nRay), RayValueAll_VI(nVarRay,nRay))
 
     RayValue_VI = 0.0
+    GradRhoZ_D  = 0.0
     iCell_D     = 1 ! set the index for ignored dimensions
 
     ! Loop through the rays
@@ -214,8 +219,14 @@ contains
 
        if(Unused_I(iRay)) CYCLE
 
+       Xyz_D = Position_DI(:,iRay)
+       if(Is3DBeamInRz)then
+          Xyz_D(2) = sqrt(sum(Xyz_D(2:MaxDim)**2))
+          Xyz_D(3) = 0.0
+       end if
+
        ! Find the processor, block and grid cell containing the ray
-       call interpolate_grid(Position_DI(:,iRay), nCell, iCell_II, Weight_I)
+       call interpolate_grid(Xyz_D, nCell, iCell_II, Weight_I)
 
        do iCell = 1, nCell
 
@@ -269,8 +280,7 @@ contains
                AverageIonChargeOut=ZaverageL)
           ZaverageR = max(ZaverageR,1.0)
           ZaverageL = max(ZaverageL,1.0)
-          RayValue_VI(GradXRhoZ_,iRay) = RayValue_VI(GradXRhoZ_,iRay) &
-               + Weight * &
+          GradRhoZ_D(1) = &
                ( ZaverageR*State_VGB(Rho_,i+1,j,k,iBlock) &
                - ZaverageL*State_VGB(Rho_,i-1,j,k,iBlock) ) &
                * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(1,iBlock)
@@ -285,8 +295,7 @@ contains
                   AverageIonChargeOut=ZaverageL)
              ZaverageR = max(ZaverageR,1.0)
              ZaverageL = max(ZaverageL,1.0)
-             RayValue_VI(GradYRhoZ_,iRay) = RayValue_VI(GradYRhoZ_,iRay) &
-                  + Weight * &
+             GradRhoZ_D(2) = &
                   ( ZaverageR*State_VGB(Rho_,i,j+1,k,iBlock) &
                   - ZaverageL*State_VGB(Rho_,i,j-1,k,iBlock) ) &
                   * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(2,iBlock)
@@ -302,12 +311,20 @@ contains
                   AverageIonChargeOut=ZaverageL)
              ZaverageR = max(ZaverageR,1.0)
              ZaverageL = max(ZaverageL,1.0)
-             RayValue_VI(GradZRhoZ_,iRay) = RayValue_VI(GradZRhoZ_,iRay) &
-                  + Weight * &
+             GradRhoZ_D(3) = &
                   ( ZaverageR*State_VGB(Rho_,i,j,k+1,iBlock) &
                   - ZaverageL*State_VGB(Rho_,i,j,k-1,iBlock) ) &
                   * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(3,iBlock)
           end if
+
+          if(Is3DBeamInRz)then
+             GradRhoZ_D(3) = GradRhoZ_D(2)*Position_DI(3,iRay)/Xyz_D(2)
+             GradRhoZ_D(2) = GradRhoZ_D(2)*Position_DI(2,iRay)/Xyz_D(2)
+          end if
+
+          RayValue_VI(GradXRhoZ_:GradZRhoZ_,iRay) = &
+               RayValue_VI(GradXRhoZ_:GradZRhoZ_,iRay) &
+               + Weight*GradRhoZ_D
 
           ! Use the interpolated cell size to set the ray step size
           RayValue_VI(CellSize_,iRay) = RayValue_VI(CellSize_,iRay) &
@@ -475,10 +492,10 @@ contains
     if (IsNewEntry) then
        IsNewEntry = .false.
        allocate(DistanceToCritSurf_I(nRay))
-       DistanceToCritSurf_I = cZero
+       DistanceToCritSurf_I = 0.0
        allocate(IsOKRay_I(nRay))
        IsOKRay_I = .true.
-       DensityCrInv = cOne/DensityCr
+       DensityCrInv = 1.0/DensityCr
 
        !  minimum ten points between a vacuum and a critical surface and
        !  minimum 10 points over 1 rad of the curvature
@@ -506,8 +523,9 @@ contains
     !Start the predictor step of the GIRARD scheme: 
     do iRay = 1, nRay
        if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
+
        Position_DI(:,iRay) = Position_DI(:,iRay) + &
-            Slope_DI(:,iRay)*cHalf*DeltaS_I(iRay) 
+            Slope_DI(:,iRay)*0.5*DeltaS_I(iRay)
        ! Now Position_DI moved by 1/2 DeltaS !!!
        call check_bc
     end do
@@ -538,13 +556,15 @@ contains
        if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
 
 
-       HalfDeltaS = cHalf*DeltaS_I(iRay)
+       HalfDeltaS = 0.5*DeltaS_I(iRay)
        ! Original Position (at an integer point):
        PositionHalfBack_D = Position_DI(:,iRay) - Slope_DI(:,iRay)*HalfDeltaS
        Dens2DensCr = Density_I(iRay)*DensityCrInv
 
-       DielPerm = cOne - Dens2DensCr
+       DielPerm = 1.0 - Dens2DensCr
+
        GradDielPerm_D = -GradDensity_DI(:,iRay)*DensityCrInv
+
        GradDielPermSqr = sum(GradDielPerm_D**2)
 
        GradEpsDotSlope = sum(GradDielPerm_D*Slope_DI(:,iRay))
@@ -561,7 +581,7 @@ contains
           CYCLE
        end if
 
-       Curv = (cHalf*HalfDeltaS/DielPermHalfBack)**2* &
+       Curv = (0.5*HalfDeltaS/DielPermHalfBack)**2* &
             (GradDielPermSqr - GradEpsDotSlope**2)
        !The curvature squared characterizes the magnitude of
        !the tranverse gradient of the dielectric permittivity
@@ -576,10 +596,11 @@ contains
           !
           !
 
-          if (Curv .ge. ToleranceSqr) then
+          if (Curv >= ToleranceSqr) then
              DeltaS_I(iRay) = 0.99 * &
                   DeltaS_I(iRay)/(2*sqrt(Curv/ToleranceSqr))
              Position_DI(:,iRay) = PositionHalfBack_D
+
              if(UseLaserHeating)EnergyDeposition_I(iRay) = 0.0
              CYCLE
           end if
@@ -611,9 +632,9 @@ contains
              DistanceToCritSurf_I(iRay) = DielPermHalfBack  &
                   /sqrt(GradDielPermSqr)
              DeltaS_I(iRay) =  max(&
-                  cHalf*Tolerance*DistanceToCritSurf_I(iRay),&
-                  StepMin)
+                  0.5*Tolerance*DistanceToCritSurf_I(iRay), StepMin)
              Position_DI(:,iRay) = PositionHalfBack_D
+
              if(UseLaserHeating)EnergyDeposition_I(iRay) = 0.0
              CYCLE
           end if
@@ -687,7 +708,7 @@ contains
           ParabLen = sqrt(sum((2*StepX_D)**2) + sum(StepY_D**2))
           if(.not.UseLaserHeating)then
              Intensity_I(iRay) = Intensity_I(iRay)  &
-                  + ParabLen*(Dens2DensCr**2)*(cHalf - Dens2DensCr)**2
+                  + ParabLen*(Dens2DensCr**2)*(0.5 - Dens2DensCr)**2
           else
              EnergyDeposition_I(iRay) = Intensity_I(iRay) * &
                   ParabLen * AbsorptionCoeff_I(iRay)
@@ -710,8 +731,9 @@ contains
 
           ! Make a step using Boris' algorithm
 
-          Coef=cHalf*HalfDeltaS/(cOne - Dens2DensCr)
+          Coef=0.5*HalfDeltaS/(1.0 - Dens2DensCr)
           RelGradRefrInx_D = Coef*GradDielPerm_D    
+
           ! grad(n) = grad(eps(i+1/2))/(2*eps(i+1/2))
 
           Omega_D = cross_product(RelGradRefrInx_D, Slope_DI(:,iRay))
@@ -724,11 +746,13 @@ contains
 
           Curv1 = sum(Omega_D**2)
           Coef = 2/(1 + Curv1)
+
           Slope_DI(:,iRay) = Slope_DI(:,iRay) &
                + Coef*cross_product(Slope1_D, Omega_D)
 
           Position_DI(:,iRay) = Position_DI(:,iRay) &
                + Slope_DI(:,iRay)*HalfDeltaS
+
           if(UseLaserHeating)then
              EnergyDeposition_I(iRay) = Intensity_I(iRay) *  &
                   DeltaS_I(iRay) * AbsorptionCoeff_I(iRay)
@@ -744,7 +768,7 @@ contains
                   (1 - DeltaS_I(iRay) * AbsorptionCoeff_I(iRay)) 
           else
              Intensity_I(iRay) = Intensity_I(iRay) &
-                  + DeltaS_I(iRay)*(Dens2DensCr**2)*(cHalf - Dens2DensCr)**2
+                  + DeltaS_I(iRay)*(Dens2DensCr**2)*(0.5 - Dens2DensCr)**2
           end if
        end if
 
@@ -809,16 +833,32 @@ contains
     subroutine check_bc
 
       integer::iDim
+      real:: Radius, Runit_D(2:3)
       !--------------------------------------------------------------------
       do iDim = 1, nDim
-         if(Position_DI(iDim, iRay) < XyzMin_D(iDim))then
+         if(Is3DBeamInRz .and. iDim == 2)then
+            Radius = sqrt(sum(Position_DI(2:3,iRay)**2))
+            if(Radius > XyzMax_D(2))then
+               if(TypeBoundaryUp_D(2) == 'reflect')then
+                  Runit_D(2:3) = (/Position_DI(2,iRay),Position_DI(3,iRay)/) &
+                       /Radius
+                  Position_DI(2:3,iRay) = Position_DI(2:3,iRay) &
+                       - 2*(Radius - XyzMax_D(2))*Runit_D(2:3)
+                  Slope_DI(2:3,iRay) = Slope_DI(2:3,iRay) &
+                       - 2*sum(Runit_D(2:3)*Slope_DI(2:3,iRay))*Runit_D(2:3)
+               else
+                  UnusedRay_I(iRay) = .true.
+                  RETURN
+               end if
+            end if
+         else if(Position_DI(iDim, iRay) < XyzMin_D(iDim))then
             if(TypeBoundaryDown_D(iDim)=='reflect')then
                Position_DI(iDim, iRay) = &
                     2 * XyzMin_D(iDim) -  Position_DI(iDim, iRay)
                Slope_DI(iDim, iRay) = - Slope_DI(iDim, iRay)
             else
                UnusedRay_I(iRay) = .true.
-               return
+               RETURN
             end if
          else if(Position_DI(iDim, iRay) > XyzMax_D(iDim))then
             if(TypeBoundaryUp_D(iDim)=='reflect')then
@@ -827,7 +867,7 @@ contains
                Slope_DI(iDim, iRay) = - Slope_DI(iDim, iRay)
             else
                UnusedRay_I(iRay) = .true.
-               return
+               RETURN
             end if
          end if
       end do
@@ -865,34 +905,127 @@ contains
   !============================================================================
   subroutine get_rays
 
+    use BATL_lib,    ONLY: IsRzGeometry
+
     !--------------------------------------------------------------------------
+
+    Is3DBeamInRz = TypeBeam == '3d' .and. IsRzGeometry
+
+    if(DoLaserRayTest) nRayPerBeam = 1
+
+    nRayInside = 0
+    nRayOutside = 0
+    nRayTotal = nBeam*nRayPerBeam
+
+    ! Allocation is excessive, nRayInside is not yet known:
+    allocate(  XyzRay_DI(3,nRayTotal))
+    allocate(SLopeRay_DI(3,nRayTotal))
+    allocate(Amplitude_I(nRayTotal))
+
     select case(TypeBeam)
-    case('rz','RZ')
-       call rz_beam_rays
-    case('rz2','RZ2')
-       call rz2_beam_rays
-    case('2d','2D','3d', '3D')
-       call stop_mpi('TypeBeam='//TypeBeam//' is not yet implemented')
+    case('3d')
+       call init_beam_3d
+    case('rz')
+       call init_beam_rz
+    case('rz2')
+       call init_beam_rz2
     case default
        call stop_mpi('Unknown TypeBeam='//TypeBeam)
     end select
 
     !Normalize amplitudes:
-    Amplitude_I(1:nRayTotal) = Amplitude_I(1:nRayTotal) / sum(Amplitude_I(:))
+    Amplitude_I(1:nRayInside) = Amplitude_I(1:nRayInside) / sum(Amplitude_I(:))
 
   end subroutine get_rays
 
-  !===========================================================================
+  !============================================================================
 
-  subroutine rz_beam_rays
+  subroutine init_beam_3d
+
+    use BATL_lib,    ONLY: IsRzGeometry
+    use ModConst,    ONLY: cDegToRad
+    use ModGeometry, ONLY: y1, y2, z1, z2
+
+    real:: CosTheta, SinTheta, CosPhi, SinPhi
+    real:: rCr, PhiCr, yCrStart, zCrStart, yStart, zStart
+    real:: rDistance, BeamAmplitude
+    integer:: iRay, jRay, iBeam
+    logical:: IsInside
+    !--------------------------------------------------------------------------
+
+    do iBeam = 1, nBeam
+       cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
+
+       !Positive direction of the slope is taken for the beams
+       !converging to the axis:
+
+       sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
+
+       ! The central ray position (polar coordinates) in the x=0 plane
+       rCr   = BeamParam_II(rCr_,iBeam)
+       PhiCr = BeamParam_II(PhiCr_,iBeam)*cDegToRad
+
+       CosPhi = cos(PhiCr)
+       SinPhi = sin(PhiCr)
+
+       ! The central ray coordinates for the x=xStart plane
+       yCrStart = CosPhi*(rCr + xStart*SinTheta/CosTheta)
+       zCrStart = SinPhi*(rCr + xStart*SinTheta/CosTheta)
+
+       BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
+
+       do iRay = 1, nRayPerBeam
+
+          if(DoLaserRayTest)then
+             ! offset ray ray away from central ray for testing purpose
+             yStart = yCrStart
+             zStart = zCrStart + 3.0
+          else
+             yStart = yCrStart
+             zStart = zCrStart
+          end if
+
+          if(nDim == 3)then
+             IsInside = yStart >= y1 .and. yStart <= y2 &
+               .and. zStart >= z1 .and. zStart <= z2
+          elseif(IsRzGeometry)then
+             IsInside = yStart**2 + zStart**2 <= y2**2
+          end if
+
+          if(IsInside)then
+             nRayInside = nRayInside + 1
+             jRay = nRayInside
+          else
+             nRayOutside = nRayOutside + 1
+             jRay = nRayTotal + 1 - nRayOutside
+          end if
+
+          Amplitude_I(jRay) = BeamAmplitude
+
+          if(.not.IsInside) CYCLE
+
+          XyzRay_DI(:,nRayInside) = (/xStart, yStart, zStart/)
+          SlopeRay_DI(:,nRayInside) = &
+               (/CosTheta, SinTheta*CosPhi, SinTheta*SinPhi/)
+
+       end do ! iRay
+    end do ! iBeam
+
+  end subroutine init_beam_3d
+
+  !============================================================================
+
+  subroutine init_beam_rz
 
     use BATL_lib,    ONLY: CoordMin_D, CoordMax_D
     use ModGeometry, ONLY: TypeGeometry, y2
     use ModConst,    ONLY: cDegToRad, cTwoPi
 
-    real:: CosTheta, SinTheta,  yCrCentral, yPlaneCentral, yPlane
+    real:: CosTheta, SinTheta
+    real:: rCr, yCrStart, yStart
     real:: rDistance, BeamAmplitude
-    integer:: iRay, iBeam, iRayStart, iRayStop, nRayOutside, nRayAll
+    integer:: iRay, jRay, iBeam
+    logical:: IsInside
     !--------------------------------------------------------------------------
 
     if(TypeGeometry/='rz')call CON_stop(&
@@ -901,81 +1034,72 @@ contains
     ! A computational wedge of one radian in the ignorable direction is used
     IrradianceSi = IrradianceSi*(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
 
-    if(DoLaserRayTest)then
-       iRayStart = 0
-       iRayStop  = 0
-    else
-       iRayStart =-nRayPerBeam
-       iRayStop  = nRayPerBeam
-    end if
-
-    nRayTotal = 0
-    nRayOutside = nBeam*(iRayStop - iRayStart + 1) + 1
-
-    ! Allocation is excessive, nRayTotal is not yet known:
-    allocate(  XyzRay_DI(3, nBeam * (iRayStop - iRayStart + 1)))
-    allocate(SLopeRay_DI(3, nBeam * (iRayStop - iRayStart + 1)))
-    allocate(Amplitude_I(nBeam * (iRayStop - iRayStart + 1)))
-
     do iBeam = 1, nBeam
-       cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
+       cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
 
        !Positive direction of the slope is taken for the beams
        !converging to the axis:
 
-       sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
+       sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
 
-       ! Transform yCr to dimensionless
-       yCrCentral =  BeamParam_II(yCr_, iBeam)
+       ! The central ray position (polar coordinates) in the x=0 plane
+       rCr = BeamParam_II(rCr_,iBeam)
 
-       yPlaneCentral = yCrCentral + xPlane*SinTheta/CosTheta
+       yCrStart = rCr + xStart*SinTheta/CosTheta
 
        BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
 
-       do iRay = iRayStart, iRayStop
-          !We neglect exp(-2.25)\approx0.1 and chose the beam margin
-          !to be at 1.5 rBeam from the central ray:
+       do iRay = 1, nRayPerBeam
 
-          rDistance = iRay * rBeam * 1.5 /nRayPerBeam 
-          yPlane = yPlaneCentral + rDistance/CosTheta
-
-          !Do not include rays with the starting point 
-          !being outside the computational domain:
-          if(abs(yPlane) >= y2)then
-             nRayOutside = nRayOutside - 1
-             nRayAll = nRayOutside
+          if(nRayPerBeam == 1)then
+             rDistance = 0.0
           else
-             nRayTotal = nRayTotal + 1
-             nRayAll = nRayTotal
+             ! We neglect exp(-2.25)\approx0.1 and chose the beam margin
+             ! to be at 1.5 rBeam from the central ray:
+             ! rDistance is from -1.5*rBeam to 1.5*rBeam
+             rDistance = (iRay - 1 - nRayPerBeam/2)* rBeam * 1.5 &
+                  /(nRayPerBeam/2)
+          end if
+
+          yStart = yCrStart + rDistance/CosTheta
+
+          IsInside = abs(yStart) <= y2
+
+          if(IsInside)then
+             nRayInside = nRayInside + 1
+             jRay = nRayInside
+          else
+             nRayOutside = nRayOutside + 1
+             jRay = nRayTotal + 1 - nRayOutside
           end if
 
           if(DoLaserRayTest)then
-             Amplitude_I(nRayAll) = BeamAmplitude
+             Amplitude_I(jRay) = BeamAmplitude
           else
              ! supergaussian spatial profile
-             Amplitude_I(nRayAll) = BeamAmplitude &
+             Amplitude_I(jRay) = BeamAmplitude &
                   *exp(-(abs(rDistance)/rBeam)**SuperGaussianOrder) &
-                  *abs(yCrCentral + rDistance/CosTheta)
+                  *abs(rCr + rDistance/CosTheta)
           end if
 
-          if(abs(yPlane) >= y2) CYCLE
+          if(.not.IsInside) CYCLE
 
-          if(yPlane > 0)then
-             XyzRay_DI(:,nRayTotal) = (/xPlane, yPlane, 0.0/)
-             SlopeRay_DI(:,nRayTotal) = (/CosTheta, SinTheta, 0.0/)
+          if(yStart > 0)then
+             XyzRay_DI(:,nRayInside) = (/xStart, yStart, 0.0/)
+             SlopeRay_DI(:,nRayInside) = (/CosTheta, SinTheta, 0.0/)
           else
-             XyzRay_DI(:,nRayTotal) = (/xPlane, -yPlane, 0.0/)
-             SlopeRay_DI(:,nRayTotal) = (/CosTheta, -SinTheta, 0.0/)
+             XyzRay_DI(:,nRayInside) = (/xStart, -yStart, 0.0/)
+             SlopeRay_DI(:,nRayInside) = (/CosTheta, -SinTheta, 0.0/)
           end if
 
        end do ! iRay
     end do ! iBeam
 
-  end subroutine rz_beam_rays
+  end subroutine init_beam_rz
 
   !============================================================================
 
-  subroutine rz2_beam_rays
+  subroutine init_beam_rz2
 
     use BATL_lib,    ONLY: CoordMin_D, CoordMax_D
     use ModGeometry, ONLY: TypeGeometry, y2, minDXvalue
@@ -984,8 +1108,13 @@ contains
     real:: CosTheta, SinTheta,  yCrCentral, yPlane
     real:: rDistance, BeamAmplitude
     integer:: iRay, iBeam
-
+    integer:: nRayPerHalfBeam
     !--------------------------------------------------------------------------
+
+    ! Warning !!! There are two issues with the rz2 beam:
+    ! (1) beam profiles are not defined with beam coordinates
+    ! (2) rays at the outer r-boundary possibly start to the right of the
+    !     critical density or the immediate left
 
     if(TypeGeometry/='rz')call CON_stop(&
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
@@ -993,13 +1122,11 @@ contains
     ! A computational wedge of one radian in the ignorable direction is used
     IrradianceSi = IrradianceSi*(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
 
-    ! Allocation is excessive, nRayTotal is not yet known:
+    ! Allocation is excessive, nRayInside is not yet known:
 
-    allocate(  XyzRay_DI(3, nBeam * (2 * nRayPerBeam +1)))
-    allocate(SLopeRay_DI(3, nBeam * (2 * nRayPerBeam +1)))
-    allocate(Amplitude_I(nBeam * (2 * nRayPerBeam +1)))
+    nRayPerHalfBeam = (nRayPerBeam - 1)/2
 
-    nRayTotal = 0
+    nRayInside = 0
     do iBeam = 1, nBeam
        cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
 
@@ -1009,30 +1136,30 @@ contains
        sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
 
        ! Transform yCr to dimensionless
-       yCrCentral =  BeamParam_II(yCr_, iBeam)
+       yCrCentral =  BeamParam_II(rCr_, iBeam)
 
        BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
 
-!!$       do iRay = -nRayPerBeam, nRayPerBeam
+!!$       do iRay = -nRayPerHalfBeam, nRayPerHalfBeam
        ! The following is conform the H2D strategy for following rays
-       do iRay = 1, nRayPerBeam  !just for beams pointed at the symmetry axix
+       do iRay = 1, nRayPerHalfBeam  !just for beams pointed at the symmetry axix
 
           !We neglect exp(-2.25)\approx0.1 and chose the beam margin
           !to be at 1.5 rBeam from the central ray:
 
-          rDistance = iRay * rBeam * 1.5 /nRayPerBeam 
+          rDistance = iRay * rBeam * 1.5 /nRayPerHalfBeam 
 
           ! Maps rDistance to laser-entry plane, applies shift set
           ! by yBeam in the PARAM.in file
-          yPlane = yCrCentral + (rDistance + xPlane*sinTheta/cosTheta)
+          yPlane = yCrCentral + (rDistance + xStart*sinTheta/cosTheta)
 
           !Dealing with rays starting outside the computational domain on laser-entry plane:
           ! Substracting minDXvalue from y2 so that the rays do not start on domain boundary
           if(abs(yPlane) >= y2)then
              !Do not let rays begin in target past drive surface
              if(sinTheta < 0.0 .and. &
-                  xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta) < 0.0)then
-                xPlane = xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta)
+                  xStart + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta) < 0.0)then
+                xStart = xStart + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta)
                 yPlane = y2 - (minDXvalue)
              else	
                 CYCLE
@@ -1042,32 +1169,32 @@ contains
 
           if(yPlane <= 0.0)then
              !Do not let rays begin in target past drive surface
-             if(xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta) < 0.0)then
-                xPlane = xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta)
+             if(xStart + (yPlane+minDXvalue)*cosTheta/(-sinTheta) < 0.0)then
+                xStart = xStart + (yPlane+minDXvalue)*cosTheta/(-sinTheta)
                 yPlane = minDXvalue
              else	
                 CYCLE
              endif
           endif
 
-          nRayTotal = nRayTotal + 1
+          nRayInside = nRayInside + 1
 
           if(DoLaserRayTest)then
-             Amplitude_I(nRayTotal) = BeamAmplitude
+             Amplitude_I(nRayInside) = BeamAmplitude
           else
              ! supergaussian spatial profile
-             Amplitude_I(nRayTotal) = BeamAmplitude &
+             Amplitude_I(nRayInside) = BeamAmplitude &
                   *exp(-(abs(rDistance)/rBeam)**SuperGaussianOrder) &
                   *abs(yCrCentral + rDistance)
           end if
 
-          XyzRay_DI(:, nRayTotal) = (/xPlane, yPlane, 0.0/)
-          SlopeRay_DI(:, nRayTotal) = &
+          XyzRay_DI(:, nRayInside) = (/xStart, yPlane, 0.0/)
+          SlopeRay_DI(:, nRayInside) = &
                (/CosTheta, SinTheta, 0.0/)
 
        end do
     end do
-  end subroutine rz2_beam_rays
+  end subroutine init_beam_rz2
 
   !============================================================================
 
@@ -1079,36 +1206,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'read_laser_heating_param'
     !-------------------------------------------------------------------------
-    !Usage
-    !#LASERPULSE
-    !T                UseLaserHeating
-    !3.8e12           IrradianceSI
-    !1.1e-9           tPulse
-    !1.0e-10          tRaise
-    !1.0e-10          tDecay
-    !
-    !#LASERPOSITION
-    !30               nRayPerBeam
-    !438.0            rBeam
-    !-100.0           xPlane
-    !parallel         TypeConvergence
-    !
-    !#LASERBEAM
-    !10.0             SlopeDeg
-    !0.0              yBeam
-    !1.0              AmplitudeRel
-    !
-    !#LASERBEAM
-    !20.0             SlopeDeg
-    !200.0            yBeam
-    !0.7              AmplitudeRel
-    !
-    !#LASERBEAM
-    !30.0             SlopeDeg
-    !400.0            yBeam
-    !0.7              AmplitudeRel
-    !
-    !-------------
 
     select case(NameCommand)
     case("#LASERPULSE")
@@ -1119,19 +1216,32 @@ contains
           call read_var('tRaise'         , tRaise         )
           call read_var('tDecay'         , tDecay         )
        end if
+
     case('#LASERBEAMS')
-       call read_var('TypeBeam',    TypeBeam   )
-       call read_var('nRayPerBeam', nRayPerBeam)
+       call read_var('TypeBeam',    TypeBeam, IsLowerCase = .true.)
+       if(TypeBeam(1:2) == '3d')then
+          call read_var('nRayPerBeam', nRayPerBeam)
+       else
+          call read_var('nRayPerHalfBeam', nRayPerBeam)
+          nRayPerBeam = 2*nRayPerBeam + 1
+       end if
        call read_var('rBeam',       rBeam )
-       call read_var('xBeam',       xPlane )
+       call read_var('xBeam',       xStart )
+
     case('#LASERBEAM')
+       if(TypeBeam == '???') &
+            call stop_mpi(NameSub//': Set #LASERBEAMS before #LASERBEAM')
        nBeam = nBeam +1
-       call read_var('SlopeDeg', &
-            BeamParam_II(SlopeDeg_, nBeam))
-       call read_var('yBeam', &
-            BeamParam_II(yCr_, nBeam))
-       call read_var('AmplitudeRel', &
-            BeamParam_II(AmplitudeRel_, nBeam))
+       if(nBeam > MaxBeam) &
+            call stop_mpi(NameSub//': too many beams')
+       call read_var('SlopeDeg',   BeamParam_II(SlopeDeg_,nBeam))
+       call read_var('rCr',        BeamParam_II(rCr_,nBeam))
+       if(TypeBeam(1:2) == '3d')then
+          call read_var('PhiCr',   BeamParam_II(PhiCr_,nBeam))
+       else
+          BeamParam_II(PhiCr_,nBeam) = 0
+       end if
+       call read_var('AmplitudeRel', BeamParam_II(AmplitudeRel_,nBeam))
 
     case('#LASERBEAMPROFILE')
        call read_var('SuperGaussianOrder', SuperGaussianOrder)
@@ -1152,7 +1262,7 @@ contains
     !----------------------------------------------------------------------
     DoInit = .false.
     call get_rays
-    nRay = nRayTotal
+    nRay = nRayInside
 
     ! Allocate arrays for rays
     allocate(LaserHeating_CB(nI,nJ,nK,MaxBlock))
@@ -1165,27 +1275,27 @@ contains
        EnergyDeposition_I = 0.0
     end if
 
-    ! write(*,*)'nRay, nRayTotal=', nRay, nRayTotal
+    ! write(*,*)'nRay, nRayInside=', nRay, nRayInside
 
-    allocate(Position_DI(3,nRayTotal))
+    allocate(Position_DI(3,nRayInside))
 
-    allocate(DoRay_I(nRayTotal))
+    allocate(DoRay_I(nRayInside))
 
-    allocate(Slope_DI(3, nRayTotal))
-    allocate(Intensity_I(nRayTotal), DeltaS_I(nRayTotal))
-    allocate(Unused_I(nRayTotal), IsBehindCr_I(nRayTotal))
+    allocate(Slope_DI(3, nRayInside))
+    allocate(Intensity_I(nRayInside), DeltaS_I(nRayInside))
+    allocate(Unused_I(nRayInside), IsBehindCr_I(nRayInside))
 
     !Initialize all arrays:
-    Position_DI(:, 1:nRayTotal) = XyzRay_DI(:,   1:nRayTotal)
-    Slope_DI(:,    1:nRayTotal) = SlopeRay_DI(:, 1:nRayTotal)
-    Intensity_I(   1:nRayTotal) = Amplitude_I(   1:nRayTotal)
+    Position_DI(:, 1:nRayInside) = XyzRay_DI(:,   1:nRayInside)
+    Slope_DI(:,    1:nRayInside) = SlopeRay_DI(:, 1:nRayInside)
+    Intensity_I(   1:nRayInside) = Amplitude_I(   1:nRayInside)
     DoRay_I = .true.
 
     Unused_I = .false.; IsBehindCr_I = .false.
 
     DeltaS_I = DeltaS
 
-    call get_density_and_absorption(nRayTotal)
+    call get_density_and_absorption(nRayInside)
 
 !!$    if(DoVerbose .and. iProc==0)then
 !!$       NameFile='Rays_n0000'
@@ -1209,6 +1319,7 @@ contains
     integer:: iRay, iBlock, iCell, nCell
     integer:: iCell_II(0:nDim,2**nDim), iCell_D(MaxDim), i, j, k
     real::    Weight_I(2**nDim), Weight
+    reaL::    Xyz_D(MaxDim)
 
     integer:: iError
     real::    PosXHold, TurningPoint
@@ -1223,9 +1334,9 @@ contains
     end if
 
     !Initialize all arrays:
-    Position_DI(:, 1:nRayTotal) = XyzRay_DI(:,   1:nRayTotal)
-    Slope_DI(:,    1:nRayTotal) = SlopeRay_DI(:, 1:nRayTotal)
-    Intensity_I(   1:nRayTotal) = Amplitude_I(   1:nRayTotal)
+    Position_DI(:, 1:nRayInside) = XyzRay_DI(:,   1:nRayInside)
+    Slope_DI(:,    1:nRayInside) = SlopeRay_DI(:, 1:nRayInside)
+    Intensity_I(   1:nRayInside) = Amplitude_I(   1:nRayInside)
     DoRay_I                     = .true.
     EnergyDeposition_I          = 0.0
     LaserHeating_CB             = 0.0
@@ -1280,8 +1391,14 @@ contains
 
           if(.not.DoRay_I(iRay)) CYCLE
 
+          Xyz_D = Position_DI(:,iRay)
+          if(Is3DBeamInRz)then
+             Xyz_D(2) = sqrt(sum(Xyz_D(2:MaxDim)**2))
+             Xyz_D(3) = 0.0
+          end if
+
           ! Find the processor, block and grid cell containing the ray
-          call interpolate_grid(Position_DI(:,iRay), nCell, iCell_II, Weight_I)
+          call interpolate_grid(Xyz_D, nCell, iCell_II, Weight_I)
 
           do iCell = 1, nCell
 
