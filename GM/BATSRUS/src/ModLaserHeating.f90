@@ -838,12 +838,12 @@ contains
       do iDim = 1, nDim
          if(Is3DBeamInRz .and. iDim == 2)then
             Radius = sqrt(sum(Position_DI(2:3,iRay)**2))
-            if(Radius > XyzMax_D(2))then
-               if(TypeBoundaryUp_D(2) == 'reflect')then
+            if(Radius > XyzMax_D(iDim))then
+               if(TypeBoundaryUp_D(iDim) == 'reflect')then
                   Runit_D(2:3) = (/Position_DI(2,iRay),Position_DI(3,iRay)/) &
                        /Radius
                   Position_DI(2:3,iRay) = Position_DI(2:3,iRay) &
-                       - 2*(Radius - XyzMax_D(2))*Runit_D(2:3)
+                       - 2*(Radius - XyzMax_D(iDim))*Runit_D(2:3)
                   Slope_DI(2:3,iRay) = Slope_DI(2:3,iRay) &
                        - 2*sum(Runit_D(2:3)*Slope_DI(2:3,iRay))*Runit_D(2:3)
                else
@@ -948,7 +948,7 @@ contains
 
     real:: CosTheta, SinTheta, CosPhi, SinPhi
     real:: rCr, PhiCr, yCrStart, zCrStart, yStart, zStart
-    real:: rDistance, BeamAmplitude
+    real:: yDistance, zDistance, rDistance, BeamAmplitude
     integer:: iRay, jRay, iBeam
     logical:: IsInside
     !--------------------------------------------------------------------------
@@ -977,13 +977,17 @@ contains
        do iRay = 1, nRayPerBeam
 
           if(DoLaserRayTest)then
-             ! offset ray ray away from central ray for testing purpose
-             yStart = yCrStart
-             zStart = zCrStart + 3.0
+             ! offset ray away from central ray for testing purpose
+             yDistance = 0.0
+             zDistance = 3.0
           else
-             yStart = yCrStart
-             zStart = zCrStart
+             yDistance = 0.0
+             zDistance = 0.0
           end if
+
+          rDistance = sqrt(yDistance**2 + zDistance**2)
+          yStart = yCrStart + yDistance*CosPhi/CosTheta - zDistance*SinPhi
+          zStart = zCrStart + yDistance*SinPhi/CosTheta + zDistance*CosPhi
 
           if(nDim == 3)then
              IsInside = yStart >= y1 .and. yStart <= y2 &
@@ -1000,7 +1004,13 @@ contains
              jRay = nRayTotal + 1 - nRayOutside
           end if
 
-          Amplitude_I(jRay) = BeamAmplitude
+          if(DoLaserRayTest)then
+             Amplitude_I(jRay) = BeamAmplitude
+          else
+             ! supergaussian spatial profile
+             Amplitude_I(jRay) = BeamAmplitude &
+                  *exp(-(abs(rDistance)/rBeam)**SuperGaussianOrder)
+          end if
 
           if(.not.IsInside) CYCLE
 
@@ -1017,9 +1027,8 @@ contains
 
   subroutine init_beam_rz
 
-    use BATL_lib,    ONLY: CoordMin_D, CoordMax_D
     use ModGeometry, ONLY: TypeGeometry, y2
-    use ModConst,    ONLY: cDegToRad, cTwoPi
+    use ModConst,    ONLY: cDegToRad
 
     real:: CosTheta, SinTheta
     real:: rCr, yCrStart, yStart
@@ -1030,9 +1039,6 @@ contains
 
     if(TypeGeometry/='rz')call CON_stop(&
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
-
-    ! A computational wedge of one radian in the ignorable direction is used
-    IrradianceSi = IrradianceSi*(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
 
     do iBeam = 1, nBeam
        cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
@@ -1101,9 +1107,8 @@ contains
 
   subroutine init_beam_rz2
 
-    use BATL_lib,    ONLY: CoordMin_D, CoordMax_D
     use ModGeometry, ONLY: TypeGeometry, y2, minDXvalue
-    use ModConst,    ONLY: cDegToRad, cTwoPi
+    use ModConst,    ONLY: cDegToRad
 
     real:: CosTheta, SinTheta,  yCrCentral, yPlane
     real:: rDistance, BeamAmplitude
@@ -1118,11 +1123,6 @@ contains
 
     if(TypeGeometry/='rz')call CON_stop(&
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
-
-    ! A computational wedge of one radian in the ignorable direction is used
-    IrradianceSi = IrradianceSi*(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
-
-    ! Allocation is excessive, nRayInside is not yet known:
 
     nRayPerHalfBeam = (nRayPerBeam - 1)/2
 
@@ -1474,7 +1474,8 @@ contains
     use ModGeometry, ONLY: x1, x_BLK
     use ModUser, ONLY: user_material_properties
     use ModEnergy, ONLY: calc_energy_cell
-    use BATL_lib, ONLY: message_pass_cell, CellVolume_GB
+    use BATL_lib, ONLY: message_pass_cell, CellVolume_GB, CoordMin_D, &
+         CoordMax_D, IsRzGeometry
 
     real:: Irradiance, EInternalSi, PressureSi
     integer :: iBlock, i, j, k, iP
@@ -1517,8 +1518,16 @@ contains
        if(UnusedBLK(iBlock))CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
-               *Irradiance/CellVolume_GB(i,j,k,iBlock)
+          if(IsRzGeometry)then
+             ! A computational wedge of one radian in the ignorable direction
+             ! is used
+             LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
+                  *Irradiance/CellVolume_GB(i,j,k,iBlock) &
+                  *(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
+          else
+             LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
+                  *Irradiance/CellVolume_GB(i,j,k,iBlock)
+          end if
 
           if(UseIdealEos)then
              State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
