@@ -475,7 +475,7 @@ test_hyades2d_restart:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
 
 test_hyades2d_check:
-	${SCRIPTDIR}/DiffNum.pl -t \
+	${SCRIPTDIR}/DiffNum.pl -r=e-5 -t \
 		Param/CRASH/TestOutput/log_hyades2d.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_hyades2d.diff
 	ls -l test_hyades2d.diff
