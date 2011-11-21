@@ -9,6 +9,7 @@ subroutine amr_criteria(ref_criteria)
   use ModConst
   use ModUser, ONLY: user_amr_criteria
   use ModCurrent, ONLY: get_current
+  use BATL_lib, ONLY: DoAmr_B, UseAmrMask
   implicit none
 
   real, intent(out) :: ref_criteria(4,nBLK)
@@ -28,6 +29,14 @@ subroutine amr_criteria(ref_criteria)
   ref_criteria = cZero
   do iBLK=1,nBLK
      if (unusedBLK(iBLK)) CYCLE
+
+     
+     if(UseBatl) then
+        if(UseAmrMask) then
+           if(.not.DoAmr_B(iBLK)) CYCLE
+        end if
+     end if
+
      ! set 4th criteria to block radius, used in amr_physics to preserve symmetry
      ref_criteria(4,iBLK) = maxval(R_BLK(1:nI,1:nJ,1:nK,iBLK))
      ! Initialize values to use below for criteria
