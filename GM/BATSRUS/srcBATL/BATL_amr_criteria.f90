@@ -20,6 +20,7 @@ module BATL_amr_criteria
   public test_amr_criteria
   public calc_error_amr_criteria
   public restrict_amr_criteria
+  public init_amr_criteria
 
   ! Choosing with blocks we want to refine is based on a list of criteria 
   ! and a set of upper (refine)  and lower (coarsen) limits. The criteria 
@@ -84,13 +85,51 @@ module BATL_amr_criteria
   ! Maksing of areas which we do not want to use for deciding refinment.
   ! It will not hinder areas to be refinded if blocks neighbirs need to
   ! be refined.
-  logical, allocatable :: DoAmr_GB (:,:,:,:)
-  logical :: UseAmrMask = .false.
+  logical, public, allocatable :: DoAmr_GB (:,:,:,:)
+  logical, public, allocatable :: DoAmr_B (:)
+  logical, public :: UseAmrMask = .false.
   ! Gemetric cordinates for areas where we want dto do AMR, only rectagular
   ! AmrBox_DII([x,y,z],[min,max],[nAmrBox])
   integer :: nAmrBox=0
   real,allocatable :: AmrBox_DII(:,:,:)
 contains
+  !============================================================================
+
+  subroutine init_amr_criteria
+    
+    use BATL_size, ONLY: MaxBlock,MinI, MaxI,MinJ, MaxJ, MinK, MaxK, nDim
+    use BATL_tree, ONLY: Unused_B
+    use BATL_grid, ONLY: CoordMin_D, CoordMax_D
+    integer :: iBlock
+    !-------------------------------------------------------------------------
+  
+
+    if(UseAmrMask) then
+       if(allocated(DoAmr_GB)) deallocate(DoAmr_GB)
+       allocate(DoAmr_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       if(allocated(DoAmr_B)) deallocate(DoAmr_B)
+       allocate(DoAmr_B(MaxBlock))
+       DoAmr_GB = .false.
+       DoAmr_B  = .false.
+
+       ! Fill in for not used dimentions
+       if(nDim < 2) then
+          AmrBox_DII(2,1,:) = CoordMin_D(2)
+          AmrBox_DII(2,2,:) = CoordMax_D(2)  
+       end if
+
+       if(nDim < 3) then
+          AmrBox_DII(3,1,:) = CoordMin_D(3) 
+          AmrBox_DII(3,2,:) = CoordMax_D(3)
+       end if
+
+       do iBlock=1,MaxBlock
+          if(Unused_B(iBlock)) CYCLE
+          call restrict_amr_criteria(iBlock)
+       end do
+    end if
+
+  end subroutine init_amr_criteria
   !============================================================================
 
   subroutine set_amr_criteria(nVar, State_VGB, nInCritExtUsed, CritExt_IB, &
@@ -583,7 +622,8 @@ contains
     if(UseAmrMask .and. .not.allocated(DoAmr_GB)) then
 
        allocate(DoAmr_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-       DoAmr_GB = .false.
+       allocate(DoAmr_B(MaxBlock))
+       
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
 
@@ -594,6 +634,7 @@ contains
     ! Calculate error estimates (1..nIntCrit)
     BLOCK: do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
+       if(.not.DoAmr_B(iBlock)) CYCLE
 
        ! Check refinement first
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -705,6 +746,11 @@ contains
        BLOCK3:do iBlock = 1, nBlock
 
           if(Unused_B(iBlock)) CYCLE
+
+          if(UseAmrMask) then 
+             if(.not.DoAmr_B(iBlock)) CYCLE
+          end if
+
           DoCoarsen = .true.
 
              
@@ -741,7 +787,8 @@ contains
     use BATL_tree, ONLY: MaxTotalBlock, Unused_B,iTree_IA,MaxLevel_,&
          MaxLevel
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
-         MaxBlock,nBlock
+         MaxBlock,nBlock, MaxDim, nDim
+
     character(len=*), intent(in) :: NameCommand
     character (len=20) :: TypeAmr
     integer :: iCrit,iBlock,iAmrBox,iCritName,nCrit,iIntCrit,iStatVar
@@ -927,6 +974,8 @@ contains
        call read_var('MaxTotalBlock',  MaxTotalBlock) 
        DoSortAmrCrit = PercentCoarsen > 0.0 .or. PercentRefine > 0.0       
     case("#AMRLIMIT")
+       if(UseAmrMask) &
+            call CON_stop(NameCommand//' ERROR: AMR masking not supported')
        call read_var('PercentCoarsen', PercentCoarsen)
        call read_var('PercentRefine' , PercentRefine)
        call read_var('MaxTotalBlock',  MaxTotalBlock) 
@@ -941,15 +990,27 @@ contains
        end if
        if(.not. DoStrictAmr) DoSortAmrCrit = .true.
     case("#AMRAREA")
+       if(DoSortAmrCrit) &
+            call CON_stop(NameCommand//' ERROR: Sorting not supported')
+       print *," #AMRAREA :: ",MaxBlock
+       if(allocated(DoAmr_GB)) deallocate(DoAmr_GB)
+       allocate(DoAmr_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       if(allocated(DoAmr_B)) deallocate(DoAmr_B)
+       allocate(DoAmr_B(MaxBlock))
+       DoAmr_GB = .false.
+       DoAmr_B  = .false.
        UseAmrMask = .true.
+     
        call read_var('nAmrBox', nAmrBox)
        if(nAmrBox > 0) then
-          allocate(AmrBox_DII(3,2,nAmrBox))
+          allocate(AmrBox_DII(MaxDim,2,nAmrBox))
           do iAmrBox=1,nAmrBox
              call read_var('minX',AmrBox_DII(1,1,iAmrBox))
              call read_var('maxX',AmrBox_DII(1,2,iAmrBox))
+             if( nDim <  2) CYCLE 
              call read_var('minY',AmrBox_DII(2,1,iAmrBox))
              call read_var('maxY',AmrBox_DII(2,2,iAmrBox))
+             if( nDim <  3) CYCLE 
              call read_var('minZ',AmrBox_DII(3,1,iAmrBox))
              call read_var('maxZ',AmrBox_DII(3,2,iAmrBox))
           end do
@@ -978,22 +1039,22 @@ contains
     if(.not.UseAmrMask) RETURN
 
     DoAmr_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock) = .false.
-
-    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-       Xyz_D(1:nDim) = Xyz_DGB(1:nDim,i,j,k,iBlock)
+    !If any cell in the block is true, the hole block need to be tested
+    DoAmr_B(iBlock) = .false.
+    
+    BLOCK4:do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+       Xyz_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
        do iAmrBox=1,nAmrBox 
-          if(all(Xyz_D(1:nDim) > AmrBox_DII(1:nDim,1,iAmrBox)) .and. &
-               all(Xyz_D(1:nDim) < AmrBox_DII(1:nDim,2,iAmrBox))) then
+          if(all(Xyz_D > AmrBox_DII(1:nDim,1,iAmrBox)) .and. &
+               all(Xyz_D < AmrBox_DII(:,2,iAmrBox))) then
              DoAmr_GB(i,j,k,iBlock) = .true.
-             CYCLE
+             DoAmr_B(iBlock) = .true.
+             CYCLE BLOCK4
           end if
        end do
-    end do; end do; end do
-
-    
+    end do; end do; end do BLOCK4
 
   end subroutine restrict_amr_criteria
-
   !============================================================================
 
   subroutine clean_amr_criteria
@@ -1002,7 +1063,9 @@ contains
          deallocate(DoAmr_GB)
     if(allocated(AmrBox_DII))&
          deallocate(AmrBox_DII)
-
+    if(allocated(DoAmr_B))&
+         deallocate(DoAmr_B)
+    
     if(.not.allocated(CoarsenCrit_I)) RETURN
     deallocate(CoarsenCrit_I, RefineCrit_I, iVarCrit_I)
     deallocate(CoarsenCritAll_I, RefineCritAll_I)

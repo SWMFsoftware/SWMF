@@ -65,8 +65,8 @@ module BATL_lib
 
   ! Inherited from BATL_amr_criteria
   public:: set_amr_criteria, clean_amr_criteria, read_amr_criteria
-  public:: AmrCrit_IB, nAmrCrit, DoCritAmr, DoAutoAmr, DoStrictAmr
-  public:: calc_error_amr_criteria, restrict_amr_criteria
+  public:: AmrCrit_IB, DoAmr_B, nAmrCrit, DoCritAmr, DoAutoAmr, DoStrictAmr
+  public:: UseAmrMask, calc_error_amr_criteria, restrict_amr_criteria
 
   ! Inherited from BATL_pass_cell
   public:: message_pass_cell
@@ -130,6 +130,7 @@ contains
     call distribute_tree(.true.)
     call create_grid
     call init_amr
+    call init_amr_criteria
     IsBatlInitialized = .true.
 
   end subroutine init_batl
@@ -193,12 +194,12 @@ contains
     logical, intent(in), optional:: DoBalanceOnlyIn       ! balance with ghosts
     logical, intent(in), optional:: DoTestIn              ! print test info
     integer, intent(in), optional:: nExtraData            ! size of extra data
-        ! Optional methods to send extra information
+    ! Optional methods to send extra information
     interface
        subroutine pack_extra_data(iBlock, nBuffer, Buffer_I)
 
          ! Pack extra data into Buffer_I
-         
+
          integer, intent(in) :: iBlock            ! block index
          integer, intent(in) :: nBuffer           ! size of buffer
          real,    intent(out):: Buffer_I(nBuffer) ! buffer
@@ -310,7 +311,7 @@ contains
     end if
 
     ! Initialize iAmrChange
-    iAmrChange_B = AmrUnchanged_
+    iAmrChange_B(1:nBlock) = AmrUnchanged_
 
     ! No grid changes, no need for do_amr
     ! IsNewTree  == .true. also implies IsNewDecomposition == .true.
