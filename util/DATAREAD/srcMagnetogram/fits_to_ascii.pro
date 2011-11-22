@@ -95,7 +95,7 @@ free_lun, lun
 
 if not keyword_set(silent) then begin
     print,''
-    print,'Writing IDL file',FileIdl
+    print,'Writing IDL file ',FileIdl
     print,''
 endif
 
