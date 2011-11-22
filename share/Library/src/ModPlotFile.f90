@@ -356,7 +356,7 @@ contains
     real,             optional, intent(out):: ParamOut_I(:)  ! parameters
     real,             optional, intent(out):: CoordMinOut_D(:)
     real,             optional, intent(out):: CoordMaxOut_D(:)
-    real,             optional, intent(out):: CoordOut_DI(:,:) ! for 1D, 2D, 3D
+    real,             optional, intent(out):: CoordOut_DI(:,:) ! for 1D,2D,3D
     real,             optional, intent(out):: Coord1Out_I(:)
     real,             optional, intent(out):: Coord2Out_I(:)
     real,             optional, intent(out):: Coord3Out_I(:)
@@ -475,7 +475,6 @@ contains
 
     deallocate(Coord_ID, Var_IV)
 
-
   contains
 
     subroutine read_header
@@ -564,8 +563,10 @@ contains
     real,    parameter :: CoordMaxIn_D(nDimIn) = (/ 9.5,  0.5 /)
     real,    parameter :: ParamIn_I(nParamIn) = (/ 1.667, 2.5 /)
     character(len=*), parameter:: NameVarIn = "x y rho ux uy p gamma rbody"
-    real    :: CoordIn_DII(nDimIn, n1In, n2In), VarIn_VII(nVarIn, n1In, n2In)
-    real    :: CoordIn_DIII(nDimIn, n1In, 1, n2In), VarIn_VIII(nVarIn, n1In, 1, n2In)
+    real    :: CoordIn_DII(nDimIn, n1In, n2In)
+    real    :: VarIn_VII(nVarIn, n1In, n2In)
+    real    :: CoordIn_DIII(nDimIn, n1In, 1, n2In)
+    real    :: VarIn_VIII(nVarIn, n1In, 1, n2In)
     real    :: VarIn_IIV(n1In, n2In, nVarIn)
 
     ! Do tests with ascii/real8/real4 files, 
@@ -842,7 +843,7 @@ contains
 
      end do
 
- ! Test using defaults for 2D input array
+     ! Test using defaults for 2D input array
     NameFile = 'test_plot_file16.out'       
     call save_plot_file(NameFile, VarIn_VII=VarIn_VII, CoordIn_DII=CoordIn_DII)
 
@@ -870,7 +871,7 @@ contains
 
     ! Read header info
     call read_plot_file(NameFile, &
-         StringHeaderOut = StringHeaderOut, NameVarOut = NameVarOut, &         
+         StringHeaderOut = StringHeaderOut, NameVarOut = NameVarOut, & 
          nDimOut = nDimOut, nVarOut = nVarOut, nParamOut = nParamOut, &
          IsCartesianOut = IsCartesianOut, nOut_D = nOut_D)
 
