@@ -71,12 +71,12 @@ OBJ_TIME_CONVERT = \
 
 test_time_convert_exe:
 	@(cd ../src; make ModTimeConvert.o)
-	@${MAKE} test_time_convert.o
+	@make test_time_convert.o
 	${LINK.f90} -o test_time_convert.exe ${OBJ_TIME_CONVERT} ${Lflag2}
 
 test_time_convert:
 	@echo test_time_convert starting        > test_time_convert.diff
-	@${MAKE} test_time_convert_exe            >> test_time_convert.diff
+	@make test_time_convert_exe            >> test_time_convert.diff
 	@echo ./test_time_convert.exe          >> test_time_convert.diff
 	-@(./test_time_convert.exe > test_time_convert.tmp)
 	-@(diff test_time_convert.tmp test_time_convert.log \
@@ -91,13 +91,13 @@ OBJ_COORD_TRANSFORM = \
 
 test_coord_transform_exe:
 	@(cd ../src; make ModCoordTransform.o)
-	@${MAKE} test_coord_transform.o
+	@make test_coord_transform.o
 	${LINK.f90} -o test_coord_transform.exe ${OBJ_COORD_TRANSFORM} \
 		${Lflag2}
 
 test_coord_transform: 
 	@echo test_coord_transform starting     > test_coord_transform.diff
-	@${MAKE} test_coord_transform_exe         >> test_coord_transform.diff
+	@make test_coord_transform_exe         >> test_coord_transform.diff
 	@echo ./test_coord_transform.exe       >> test_coord_transform.diff
 	-@(./test_coord_transform.exe > test_coord_transform.tmp)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-12 \
@@ -112,12 +112,12 @@ OBJ_FREQ = \
 
 test_freq_exe:
 	@(cd ../src; make ModFreq.o)
-	@${MAKE} test_freq.o
+	@make test_freq.o
 	${LINK.f90} -o test_freq.exe ${OBJ_FREQ} ${Lflag2}
 
 test_freq:
 	@echo test_freq starting		>  test_freq.diff
-	@${MAKE} test_freq_exe			>> test_freq.diff
+	@make test_freq_exe			>> test_freq.diff
 	@echo './test_freq.exe'			>> test_freq.diff
 	-@(./test_freq.exe > test_freq.tmp)
 	-@(diff test_freq.tmp test_freq.log)	>  test_freq.diff
@@ -135,12 +135,12 @@ OBJ_LINEAR_SOLVER = \
 
 test_linear_solver_exe:
 	@(cd ../src; make blas.o lapack.o ModLinearSolver.o)
-	@${MAKE} test_linear_solver.o
+	@make test_linear_solver.o
 	${LINK.f90} -o test_linear_solver.exe ${OBJ_LINEAR_SOLVER} ${Lflag1}
 
 test_linear_solver:
 	@echo test_linear_solver starting 	>  test_linear_solver.diff
-	@${MAKE} test_linear_solver_exe		>> test_linear_solver.diff
+	@make test_linear_solver_exe		>> test_linear_solver.diff
 	@echo ./test_linear_solver.exe		>> test_linear_solver.diff
 	-@(./test_linear_solver.exe > test_linear_solver.tmp)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
@@ -155,13 +155,13 @@ OBJ_LINEAR_ADVECTION = \
 
 test_linear_advection_exe:
 	@(cd ../src; make ModLinearAdvection.o)
-	@${MAKE} test_linear_advection.o
+	@make test_linear_advection.o
 	${LINK.f90} -o test_linear_advection.exe ${OBJ_LINEAR_ADVECTION} \
 		${Lflag1}
 
 test_linear_advection:
 	@echo test_linear_advection starting	>  test_linear_advection.diff
-	@${MAKE} test_linear_advection_exe		>> test_linear_advection.diff
+	@make test_linear_advection_exe		>> test_linear_advection.diff
 	@echo ./test_linear_advection.exe	>> test_linear_advection.diff
 	-@(./test_linear_advection.exe)
 	-@(${SCRIPTDIR}/DiffNum.pl \
@@ -176,12 +176,12 @@ OBJ_SORT = \
 
 test_sort_exe:
 	@(cd ../src; make ModSort.o)
-	@${MAKE} test_sort.o
+	@make test_sort.o
 	${LINK.f90} -o test_sort.exe ${OBJ_SORT} ${Lflag2}
 
 test_sort:
 	@echo test_sort starting		>  test_sort.diff
-	@${MAKE} test_sort_exe			>> test_sort.diff
+	@make test_sort_exe			>> test_sort.diff
 	@echo ./test_sort.exe			>> test_sort.diff
 	-@(./test_sort.exe > test_sort.tmp)
 	-@(diff test_sort.tmp test_sort.log 	>  test_sort.diff)
@@ -194,12 +194,12 @@ OBJ_IO_UNIT = \
 
 test_io_unit_exe:
 	@(cd ../src; make ModIoUnit.o)
-	@${MAKE} test_io_unit.o
+	@make test_io_unit.o
 	${LINK.f90} -o test_io_unit.exe ${OBJ_IO_UNIT} ${Lflag2}
 
 test_io_unit:
 	@echo test_io_unit starting			>  test_io_unit.diff
-	@${MAKE} test_io_unit_exe				>> test_io_unit.diff
+	@make test_io_unit_exe				>> test_io_unit.diff
 	@echo ./test_io_unit.exe			>> test_io_unit.diff
 	-@(./test_io_unit.exe > test_io_unit.tmp)
 	-@(diff test_io_unit.tmp test_io_unit.log	>  test_io_unit.diff)
@@ -212,12 +212,12 @@ OBJ_INTERPOLATE = \
 
 test_interpolate_exe:
 	@(cd ../src; make ModInterpolate.o)
-	@${MAKE} test_interpolate.o
+	@make test_interpolate.o
 	${LINK.f90} -o test_interpolate.exe ${OBJ_INTERPOLATE} ${Lflag2}
 
 test_interpolate:
 	@echo test_interpolate starting		>  test_interpolate.diff
-	@${MAKE} test_interpolate_exe		>> test_interpolate.diff
+	@make test_interpolate_exe		>> test_interpolate.diff
 	@echo ./test_interpolate_exe		>> test_interpolate.diff
 	-@(./test_interpolate.exe > test_interpolate.tmp)
 	-@(diff test_interpolate.tmp test_interpolate.log \
@@ -241,7 +241,7 @@ test_levelset_exe:
 
 test_levelset:
 	@echo test_levelset starting		>  test_levelset.diff
-	@${MAKE} test_levelset_exe			>> test_levelset.diff
+	@make test_levelset_exe			>> test_levelset.diff
 	@echo ${MPIRUN} ./test_levelset_exe	>> test_levelset.diff
 	-(${MPIRUN} ./test_levelset.exe > test_levelset.tmp)
 	-@gunzip -c test_levelset.ref.gz > test_levelset.ref
@@ -257,13 +257,13 @@ OBJ_RAY_TRACE = \
 
 test_ray_trace_exe:
 	@(cd ../src; make CON_ray_trace.o)
-	@${MAKE} test_ray_trace.o
+	@make test_ray_trace.o
 	${LINK.f90} -o test_ray_trace.exe \
 		test_ray_trace.o ${OBJ_RAY_TRACE} ${Lflag1}
 
 test_ray_trace:
 	@echo test_ray_trace starting		>  test_ray_trace.diff
-	@${MAKE} test_ray_trace_exe		>> test_ray_trace.diff
+	@make test_ray_trace_exe		>> test_ray_trace.diff
 	@echo ./test_ray_trace.exe		>> test_ray_trace.diff
 	-@(./test_ray_trace.exe > test_ray_trace.tmp)
 	-@(diff -b test_ray_trace.tmp test_ray_trace.log \
@@ -280,12 +280,12 @@ OBJ_LINE_EXTRACT = \
 
 test_line_extract_exe: ${OBJ_LINE_EXTRACT}
 	@(cd ../src; make CON_line_extract.o)
-	@${MAKE} test_line_extract.o
+	@make test_line_extract.o
 	${LINK.f90} -o test_line_extract.exe ${OBJ_LINE_EXTRACT} ${Lflag1}
 
 test_line_extract:
 	@echo test_line_extract starting	>  test_line_extract.diff
-	@${MAKE} test_line_extract_exe		>> test_line_extract.diff
+	@make test_line_extract_exe		>> test_line_extract.diff
 	@echo ${MPIRUN} test_line_extract.exe	>> test_line_extract.diff
 	-@(${MPIRUN} test_line_extract.exe > test_line_extract.tmp)
 	-@(diff test_line_extract.tmp test_line_extract.log \
@@ -301,12 +301,12 @@ OBJ_GEOPACK = \
 
 test_geopack_exe:
 	@(cd ../src; make ModCoordTransform.o CON_geopack.o)
-	@${MAKE} test_geopack.o
+	@make test_geopack.o
 	${LINK.f90} -o test_geopack.exe ${OBJ_GEOPACK} ${Lflag2}
 
 test_geopack:
 	@echo test_geopack starting			>  test_geopack.diff
-	@${MAKE} test_geopack_exe				>> test_geopack.diff
+	@make test_geopack_exe				>> test_geopack.diff
 	@echo ./test_geopack.exe			>> test_geopack.diff
 	-@(./test_geopack.exe > test_geopack.tmp)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
@@ -333,12 +333,12 @@ OBJ_AXES = \
 
 test_axes_exe:
 	@(cd ../src; make CON_axes.o)
-	@${MAKE} test_axes.o
+	@make test_axes.o
 	${LINK.f90} -o test_axes.exe ${OBJ_AXES} ${Lflag1}
 
 test_axes: 
 	@echo test_axes starting			>  test_axes.diff
-	@${MAKE} test_axes_exe				>> test_axes.diff
+	@make test_axes_exe				>> test_axes.diff
 	@echo ./test_axes.exe				>> test_axes.diff
 	-@(./test_axes.exe > test_axes.tmp)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-12 \
@@ -364,12 +364,12 @@ OBJ_PLANET_FIELD = \
 
 test_planet_field_exe:
 	@(cd ../src; make CON_planet_field.o)
-	@${MAKE} test_planet_field.o
+	@make test_planet_field.o
 	${LINK.f90} -o test_planet_field.exe ${OBJ_PLANET_FIELD} ${Lflag1}
 
 test_planet_field: 
 	@echo test_planet_field starting	>  test_planet_field.diff
-	@${MAKE} test_planet_field_exe		>> test_planet_field.diff
+	@make test_planet_field_exe		>> test_planet_field.diff
 	@echo ./test_planet_field.exe 		>> test_planet_field.diff
 	-@(./test_planet_field.exe > test_planet_field.tmp)
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-6 \
@@ -388,12 +388,12 @@ OBJ_PLOT_FILE = \
 
 test_plot_file_exe:
 	@(cd ../src; make ModPlotFile.o)
-	@${MAKE} test_plot_file.o
+	@make test_plot_file.o
 	${LINK.f90} -o test_plot_file.exe ${OBJ_PLOT_FILE} ${Lflag1}
 
 test_plot_file:
 	@echo test_plot_file starting	>  test_plot_file.diff
-	@${MAKE} test_plot_file_exe	>> test_plot_file.diff
+	@make test_plot_file_exe	>> test_plot_file.diff
 	@echo ./test_plot_file.exe	>> test_plot_file.diff
 	-@(./test_plot_file.exe > test_plot_file.tmp)
 	-@(diff test_plot_file.tmp test_plot_file.log \
@@ -415,12 +415,12 @@ OBJ_LOOKUP_TABLE = \
 
 test_lookup_table_exe:
 	@(cd ../src; make ModLookupTable.o)
-	@${MAKE} test_lookup_table.o
+	@make test_lookup_table.o
 	${LINK.f90} -o test_lookup_table.exe ${OBJ_LOOKUP_TABLE} ${Lflag1}
 
 test_lookup_table:
 	@echo test_lookup_table starting	>  test_lookup_table.diff
-	@${MAKE} test_lookup_table_exe		>> test_lookup_table.diff
+	@make test_lookup_table_exe		>> test_lookup_table.diff
 	@echo ${MPIRUN} test_lookup_table.exe   >> test_lookup_table.diff
 	-@(${MPIRUN} test_lookup_table.exe > test_lookup_table.tmp)
 	-@(diff test_lookup_table.tmp test_lookup_table.log \
@@ -436,12 +436,12 @@ OBJ_UTILITIES = \
 
 test_utilities_exe:
 	@(cd ../src; make ModUtilities.o)
-	@${MAKE} test_utilities.o
+	@make test_utilities.o
 	${LINK.f90} -o test_utilities.exe ${OBJ_UTILITIES} ${Lflag1}
 
 test_utilities:
 	@echo test_utilities starting		>  test_utilities.diff
-	@${MAKE} test_utilities_exe		>> test_utilities.diff
+	@make test_utilities_exe		>> test_utilities.diff
 	@echo ./test_utilities.exe		>> test_utilities.diff
 	-@(./test_utilities.exe > test_utilities.tmp)
 	-@(diff test_utilities.tmp test_utilities.log \
@@ -461,12 +461,12 @@ OBJ_TRIANGULATE = \
 
 test_triangulate_exe:
 	@(cd ../src; make ModTriangulate.o)
-	@${MAKE} test_triangulate.o
+	@make test_triangulate.o
 	${LINK.f90} -o test_triangulate.exe ${OBJ_TRIANGULATE} ${Lflag2}
 
 test_triangulate:
 	@echo test_triangulate starting		>  test_triangulate.diff
-	@${MAKE} test_triangulate_exe		>> test_triangulate.diff
+	@make test_triangulate_exe		>> test_triangulate.diff
 	@echo ./test_triangulate_exe		>> test_triangulate.diff
 	-@(./test_triangulate.exe > test_triangulate.tmp)
 	-@(diff test_triangulate.tmp test_triangulate.log \
@@ -484,7 +484,7 @@ OBJ_PROCESS_VAR_NAME = \
 	../src/ModProcessVarName.o
 
 test_process_var_name:
-	@if [ -f ${DIR}/GM/BATSRUS ]; then	\
+	@if [ -d ${DIR}/GM/BATSRUS ]; then	\
 		make test_process_var_name1 BATSDIR=${DIR}/GM/BATSRUS;	\
 	else                                    \
 		make test_process_var_name1 BATSDIR=${GMDIR};	\
@@ -496,22 +496,22 @@ test_process_var_name1:
 	@(cd ../src; make LIB                > test_process_var_name.log 2>&1)
 	@cp ${BATSDIR}/src/ModExtraVariables.f90 .
 	@cp ${BATSDIR}/src/ModSingleFluid.f90 .
-	@${MAKE} ModSingleFluid.o ModExtraVariables.o \
+	@make ModSingleFluid.o ModExtraVariables.o \
 		>> test_process_var_name.log 2>&1
 	@for i in ${BATSDIR}/srcEquation/*.f90 ; do\
 		cp -f $${i} ModEquation.f90;\
 		perl -i -pe 's/call init_mhd_variables/ /' ModEquation.f90;\
 		echo working on $${i} >> test_process_var_name.tmp;\
 		echo working on $${i} >> test_process_var_name.log;\
-		${MAKE} test_process_var_name_exe;\
-		${MAKE} test_process_var_name_run;\
+		make test_process_var_name_exe;\
+		make test_process_var_name_run;\
 	done
-	@${MAKE} test_process_var_name_check
+	@make test_process_var_name_check
 	@rm -f ModEquation* ModExtraVariables* ModSingleFluid* 
 
 test_process_var_name_exe:
 	@rm -f test_process_var_name.o ModEquation.o
-	@${MAKE} ModEquation.o test_process_var_name.o \
+	@make ModEquation.o test_process_var_name.o \
 		>> test_process_var_name.log 2>&1
 	@${LINK.f90} -o test_process_var_name.exe ${OBJ_PROCESS_VAR_NAME} \
 		${Lflag1} >> test_process_var_name.log 2>&1
