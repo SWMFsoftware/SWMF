@@ -382,7 +382,7 @@ subroutine fix_anisotropy
 
   use ModVarIndexes, ONLY: Bx_, Bz_, Ppar_, p_
   use ModMain,    ONLY: nI, nJ, nK, nBlock, UnusedBlk, UseB0, &
-       time_accurate, Cfl
+       time_accurate, Cfl, dt
   use ModB0,      ONLY: B0_DGB
   use ModAdvance, ONLY: State_VGB, time_BLK
   use ModPhysics, ONLY: TauWaveParticle, TauInstability, rIsotropy
@@ -414,7 +414,11 @@ subroutine fix_anisotropy
         B2     = sum(B_D**2)
         Ppar   = State_VGB(Ppar_,i,j,k,iBlock)
         Pperp  = (3*State_VGB(p_,i,j,k,iBlock) - Ppar)/2.
-        DtCell = Cfl*time_BLK(i,j,k,iBlock)
+        if(.not. time_accurate)then
+           DtCell = Cfl*time_BLK(i,j,k,iBlock)
+        else
+           DtCell = dt
+        end if
 
         ! Check for firehose and mirror instabilities
         ! Limit anisotropy to instability criteria in unstable regions
@@ -437,6 +441,7 @@ subroutine fix_anisotropy
         else
            CYCLE
         end if
+
         State_VGB(Ppar_,i,j,k,iBlock)  = Ppar - 2./3.*Dp
      end do; end do; end do  
   end do
