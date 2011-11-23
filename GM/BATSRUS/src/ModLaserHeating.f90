@@ -121,6 +121,8 @@ module ModLaserHeating
 
 
   integer:: nRayInside = -1, nRayOutside = -1, nRayTotal = -1
+  integer:: nRayY = -1, nRayZ = -1, nRayR = -1, nRayPhi = -1
+  character(len=20):: TypeBeamCoordinates
 
   real, allocatable, dimension(:,:):: XyzRay_DI, SlopeRay_DI 
   real, allocatable, dimension(:)  :: Amplitude_I
@@ -951,7 +953,11 @@ contains
     real:: yDistance, zDistance, rDistance, BeamAmplitude
     integer:: iRay, jRay, iBeam
     logical:: IsInside
+    integer:: iRayR, iRayPhi, iRayY, iRayZ
+    real:: PhiRay, Amplitude
     !--------------------------------------------------------------------------
+
+    if(nDim == 3)call stop_mpi('for 3D, the beam definition needs to be fixed')
 
     do iBeam = 1, nBeam
        cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
@@ -981,19 +987,60 @@ contains
              yDistance = 0.0
              zDistance = 3.0
           else
-             yDistance = 0.0
-             zDistance = 0.0
+
+             ! We neglect exp(-2.25)\approx0.1 and chose the beam margin
+             ! to be at 1.5 rBeam from the central ray:
+             ! rDistance is from 0 to 1.5*rBeam
+
+             select case(TypeBeamCoordinates)
+             case('cartesian')
+                ! The following is exploited for the beam coordinates y and z:
+                ! range y = [-1.5*rBeam,1.5*rBeam]; range z = [0,1.5*rBeam]
+                ! Note that for each beam z=0 is a symmetry line
+                iRayY = (iRay - 1)/(nRayZ + 1) - nRayY
+                iRayZ = modulo(iRay - 1, nRayZ + 1)
+
+                yDistance = 1.5*rBeam*iRayY/nRayY
+                zDistance = 1.5*rBeam*iRayZ/nRayZ
+
+                rDistance = sqrt(yDistance**2 + zDistance**2)
+
+                Amplitude = BeamAmplitude
+                if(iRayZ == 0) Amplitude = 0.5*Amplitude
+
+             case('polar')
+                ! range r = (0,1.5*rBeam]; range phi = [0,pi]
+                iRayR = 1 + (iRay - 1)/(nRayPhi + 1)
+                iRayPhi = modulo(iRay - 1, nRayPhi + 1)
+
+                rDistance = rBeam*1.5*iRayR/nRayR
+                PhiRay = cPi*iRayPhi/nRayPhi
+
+                yDistance = rDistance*cos(PhiRay)
+                zDistance = rDistance*sin(PhiRay)
+
+                ! Multiply the amplitude by the radius since we do not
+                ! increase the number of rays with r
+                Amplitude = BeamAmplitude*abs(rDistance)
+                if(iRayPhi==0 .or. iRayPhi==nRayPhi) Amplitude = 0.5*Amplitude
+
+             end select
+
           end if
 
-          rDistance = sqrt(yDistance**2 + zDistance**2)
           yStart = yCrStart + yDistance*CosPhi/CosTheta - zDistance*SinPhi
           zStart = zCrStart + yDistance*SinPhi/CosTheta + zDistance*CosPhi
 
           if(nDim == 3)then
              IsInside = yStart >= y1 .and. yStart <= y2 &
-               .and. zStart >= z1 .and. zStart <= z2
+                  .and. zStart >= z1 .and. zStart <= z2
           elseif(IsRzGeometry)then
              IsInside = yStart**2 + zStart**2 <= y2**2
+          end if
+
+          if(rDistance > 1.5*rBeam .and. .not.DoLaserRayTest)then
+             Amplitude = 0.0
+             IsInside = .false.
           end if
 
           if(IsInside)then
@@ -1008,7 +1055,7 @@ contains
              Amplitude_I(jRay) = BeamAmplitude
           else
              ! supergaussian spatial profile
-             Amplitude_I(jRay) = BeamAmplitude &
+             Amplitude_I(jRay) = Amplitude &
                   *exp(-(abs(rDistance)/rBeam)**SuperGaussianOrder)
           end if
 
@@ -1220,7 +1267,22 @@ contains
     case('#LASERBEAMS')
        call read_var('TypeBeam',    TypeBeam, IsLowerCase = .true.)
        if(TypeBeam(1:2) == '3d')then
-          call read_var('nRayPerBeam', nRayPerBeam)
+          call read_var('TypeBeamCoordinates', TypeBeamCoordinates)
+          select case(TypeBeamCoordinates)
+          case('cartesian')
+             call read_var('nRayY', nRayY)
+             call read_var('nRayZ', nRayZ)
+             if(nRayY < 1) call stop_mpi('nRayY should be at least 1')
+             if(nRayZ < 1) call stop_mpi('nRayZ should be at least 1')
+             ! The following can probably be reduced by a factor pi/4
+             nRayPerBeam = (2*nRayY + 1)*(nRayZ + 1)
+          case('polar')
+             call read_var('nRayR',   nRayR)
+             call read_var('nRayPhi', nRayPhi)
+             if(nRayR < 1)   call stop_mpi('nRayR should be at least 1')
+             if(nRayPhi < 1) call stop_mpi('nRayPhi should be at least 1')
+             nRayPerBeam = nRayR*(nRayPhi + 1)
+          end select
        else
           call read_var('nRayPerHalfBeam', nRayPerBeam)
           nRayPerBeam = 2*nRayPerBeam + 1
