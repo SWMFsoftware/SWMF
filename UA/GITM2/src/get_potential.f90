@@ -348,11 +348,11 @@ subroutine get_potential(iBlock)
            do iLon=-1,nLons+2
               if (ElectronAverageEnergy(iLon,iLat) < 0.0) then
                  ElectronAverageEnergy(iLon,iLat) = 0.1
-                 write(*,*) "i,j Negative : ",iLon,iLat,&
+                 write(*,*) "ave e i,j Negative : ",iLon,iLat,&
                       ElectronAverageEnergy(iLon,iLat)
               endif
               if (ElectronAverageEnergy(iLon,iLat) > 100.0) then
-                 write(*,*) "i,j Positive : ",iLon,iLat,&
+                 write(*,*) "ave e i,j Positive : ",iLon,iLat,&
                       ElectronAverageEnergy(iLon,iLat)
                  ElectronAverageEnergy(iLon,iLat) = 0.1
               endif
