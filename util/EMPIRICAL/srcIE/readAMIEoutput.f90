@@ -19,10 +19,11 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
   integer, dimension(7) :: itime_i
 
   real*4, allocatable, dimension(:,:,:) :: AllData
+  real*4, allocatable, dimension(:) :: TempLats
   integer, parameter :: nFieldsMax = 100
   character (len=30), dimension(nFieldsMax) :: Fields
 
-  logical :: IsBinary, energyfluxconvert
+  logical :: IsBinary, energyfluxconvert, ReverseLats = .false.
 
   real :: dPotential
   integer :: nCellsPad, n
@@ -145,6 +146,21 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
   ! Extrapolate the latitude grid
   !/
 
+  if (AMIE_Lats(AMIE_nLats) > AMIE_Lats(1)) then
+     ! The AMIE data is in reverse order than what we want, so let's reverse it
+     if (allocated(TempLats)) deallocate(TempLats)
+     allocate(TempLats(AMIE_nLats+nCellsPad), stat=iError)
+     if (iError /= 0) then
+        write(*,*) "Error in allocating array TempLats in "
+        stop
+     endif
+     TempLats = AMIE_Lats
+     do i=1,AMIE_nLats
+        AMIE_Lats(i) = AMIE_Lats(AMIE_nLats+1-i)
+     enddo
+     ReverseLats = .true.
+  endif
+
   do i=AMIE_nLats+1,AMIE_nLats+nCellsPad
      AMIE_Lats(i) = AMIE_Lats(i-1) + &
           (AMIE_Lats(AMIE_nLats) - AMIE_Lats(AMIE_nLats-1))
@@ -161,7 +177,7 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
      stop
   endif
 
-  AMIE_iDebugLevel = 2
+  AMIE_iDebugLevel = 0
 
   energyfluxconvert = .false.
 
@@ -204,7 +220,13 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
         read(UnitTmp_) swv,bx,by,bz,aei,ae,au,al,dsti,dst,hpi,sjh,pot
 
         do iField=1,nfields
-           read(UnitTmp_) ((AllData(j,i,iField),j=1,AMIE_nMlts),i=1,AMIE_nLats)
+           if (ReverseLats) then 
+              read(UnitTmp_) &
+                   ((AllData(j,i,iField),j=1,AMIE_nMlts),i=AMIE_nLats,1,-1)
+           else
+              read(UnitTmp_) &
+                   ((AllData(j,i,iField),j=1,AMIE_nMlts),i=1,AMIE_nLats)
+           endif
         enddo
 
      else
@@ -213,7 +235,13 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
         read(UnitTmp_,*) swv,bx,by,bz,aei,ae,au,al,dsti,dst,hpi,sjh,pot
 
         do iField=1,nfields
-           read(UnitTmp_,*) ((AllData(j,i,iField),j=1,AMIE_nMlts),i=1,AMIE_nLats)
+           if (ReverseLats) then 
+              read(UnitTmp_,*) &
+                   ((AllData(j,i,iField),j=1,AMIE_nMlts),i=AMIE_nLats,1,-1)
+           else
+              read(UnitTmp_,*) &
+                   ((AllData(j,i,iField),j=1,AMIE_nMlts),i=1,AMIE_nLats)
+           endif
         enddo
 
      endif
@@ -248,14 +276,12 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
 
      ! Need to convert from W/m^2 to erg/cm2/s
 
-     write(*,*) "convert eflux ? ",energyfluxconvert
-
      if (energyfluxconvert) then
         AMIE_EFlux(:,1:AMIE_nLats,iTime,iBLK)     = &
              AllData(:,1:AMIE_nLats,iEFlux_) / (1.0e-7 * 100.0 * 100.0)
      else
-           AMIE_EFlux(:,1:AMIE_nLats,iTime,iBLK)     = & 
-                AllData(:,1:AMIE_nLats,iEFlux_)
+        AMIE_EFlux(:,1:AMIE_nLats,iTime,iBLK)     = & 
+             AllData(:,1:AMIE_nLats,iEFlux_)
      endif
 
      do i=1,AMIE_nMlts
