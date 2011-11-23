@@ -5817,6 +5817,7 @@ The default for UseHeatFluxLimiter is false.
 		<parameter name="tRaise" type="real" min="0"/>
 		<parameter name="tDecay" type="real" min="0"/>
 	</if>
+
 #LASERPULSE
 T		UseLaserHeating (rest of parameters are read if true)
 3.8e10		IrradianceSI [J/s]
@@ -5835,10 +5836,29 @@ parameters. The laser heating is switched off by default.
 <command name="LASERBEAMS">
 	<parameter name="TypeBeam" type="string" case="lower" input="select">
 		<option name="rz" default="T"/>
+		<option name="3d"            />
 	</parameter>
-	<parameter name="nRayPerbeam" type="integer" min="1" default="30"/>
+	<if expr="$TypeBeam =~ /rz/">
+	  <parameter name="nRayPerbeam" type="integer" min="1" default="30"/>
+	</if>
+	<if expr="$TypeBeam =~ /3d/">
+	  <parameter name="TypeBeamCoordinates" type="string"
+	  	     				case="lower" input="select">
+                <option name="polar"     default="T"/>
+                <option name="cartesian"            />
+	  </parameter>
+	  <if expr="$ypeBeamCoordinates =~ /polar/">
+	    <parameter name="nRayR" type="integer" min="1" default="900"/>
+	    <parameter name="nRayPhi" type="integer" min="1" default="4"/>
+	  </if>
+	  <if expr="$ypeBeamCoordinates =~ /cartesian/">
+	    <parameter name="nRayY" type="integer" min="1" default="50"/>
+	    <parameter name="nRayZ" type="integer" min="1" default="50"/>
+	  </if>
+	</if>
 	<parameter name="rBeam" type="real" min="0"/>
 	<parameter name="xBeam" type="real"/>
+
 #LASERBEAMS
 rz		TypeBeam
 30		nRayPerBeam
@@ -5848,10 +5868,23 @@ rz		TypeBeam
 This command is used for CRASH applications and it requires a CRASH related
 user file. This command should be used together with the  #LASERPULSE command.
 
-The TypeBeam determines the geometry of the beams. Only "rz" works right now.
-Each beam consists of 2*nRayPerBeam+1 rays. 
+The TypeBeam determines the geometry of the beams. Currently all beam
+definition are only available for rz-geoemrty.
+
+For TypeBeam=rz, each beam consists of 2*nRayPerBeam+1 rays. 
 The rays are parallel and are up to 1.5 rBeam away from the central ray.
 The xBeam determines the starting X position of the rays.
+
+For TypeBeam=3d in rz-geometry there is the option for a beam definition on
+a polar or cartesian grid (The grid is defined orthogonal to the initial ray
+propagation direction). On a polar grid the rays locations are defined on
+a uniform grid with nRayR rays in the radial direction from 0 to 1.5*rBeam and
+nRayPhi+1 rays in the angle direction from 0 to pi. Due to symmetry properties
+in the laser beams the angle from pi to 2*pi are not needed.
+On a cartesian grid the ray locations are defined on a 2*nRayY+1 by nRayZ+1
+uniform grid. The y-direction ranges from -1.5*rBeam to 1.5*rBeam. Due to
+symmetry in each beam the z-direction is limited between 0 and 1.5*rBeam.
+
 </command>
 
 <command name="LASERBEAM" multiple="T">
