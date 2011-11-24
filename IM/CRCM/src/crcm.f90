@@ -1202,7 +1202,7 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
            do k=1,neng
               do m=1,npit
                  Ppar_IC(n,i,j) = Ppar_IC(n,i,j) + flux(n,i,j,k,m) &
-                      *cosAo2(m)*dmu(m)*delEE(k)*pf(n)
+                      *cosAo2(m)*dmu(m)*delEE(k)*pf(n)*3.
               enddo
            enddo
         enddo
