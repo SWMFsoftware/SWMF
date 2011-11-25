@@ -122,7 +122,6 @@ module ModLaserHeating
 
   integer:: nRayInside = -1, nRayOutside = -1, nRayTotal = -1
   integer:: nRayY = -1, nRayZ = -1, nRayR = -1, nRayPhi = -1
-  character(len=20):: TypeBeamCoordinates
 
   real, allocatable, dimension(:,:):: XyzRay_DI, SlopeRay_DI 
   real, allocatable, dimension(:)  :: Amplitude_I
@@ -957,8 +956,6 @@ contains
     real:: PhiRay, Amplitude
     !--------------------------------------------------------------------------
 
-    if(nDim == 3)call stop_mpi('for 3D, the beam definition needs to be fixed')
-
     do iBeam = 1, nBeam
        cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
 
@@ -992,13 +989,12 @@ contains
              ! to be at 1.5 rBeam from the central ray:
              ! rDistance is from 0 to 1.5*rBeam
 
-             select case(TypeBeamCoordinates)
-             case('cartesian')
+             if(nDim == 3)then
                 ! The following is exploited for the beam coordinates y and z:
-                ! range y = [-1.5*rBeam,1.5*rBeam]; range z = [0,1.5*rBeam]
-                ! Note that for each beam z=0 is a symmetry line
-                iRayY = (iRay - 1)/(nRayZ + 1) - nRayY
-                iRayZ = modulo(iRay - 1, nRayZ + 1)
+                ! range y = [-1.5*rBeam,1.5*rBeam];
+                ! range z = [-1.5*rBeam,1.5*rBeam]
+                iRayY = (iRay - 1)/(2*nRayZ + 1) - nRayY
+                iRayZ = modulo(iRay - 1, 2*nRayZ + 1)
 
                 yDistance = 1.5*rBeam*iRayY/nRayY
                 zDistance = 1.5*rBeam*iRayZ/nRayZ
@@ -1006,9 +1002,7 @@ contains
                 rDistance = sqrt(yDistance**2 + zDistance**2)
 
                 Amplitude = BeamAmplitude
-                if(iRayZ == 0) Amplitude = 0.5*Amplitude
-
-             case('polar')
+             else
                 ! range r = (0,1.5*rBeam]; range phi = [0,pi]
                 iRayR = 1 + (iRay - 1)/(nRayPhi + 1)
                 iRayPhi = modulo(iRay - 1, nRayPhi + 1)
@@ -1024,7 +1018,7 @@ contains
                 Amplitude = BeamAmplitude*abs(rDistance)
                 if(iRayPhi==0 .or. iRayPhi==nRayPhi) Amplitude = 0.5*Amplitude
 
-             end select
+             end if
 
           end if
 
@@ -1267,28 +1261,26 @@ contains
     case('#LASERBEAMS')
        call read_var('TypeBeam',    TypeBeam, IsLowerCase = .true.)
        if(TypeBeam(1:2) == '3d')then
-          call read_var('TypeBeamCoordinates', TypeBeamCoordinates)
-          select case(TypeBeamCoordinates)
-          case('cartesian')
+          if(nDim == 3)then
              call read_var('nRayY', nRayY)
              call read_var('nRayZ', nRayZ)
              if(nRayY < 1) call stop_mpi('nRayY should be at least 1')
              if(nRayZ < 1) call stop_mpi('nRayZ should be at least 1')
              ! The following can probably be reduced by a factor pi/4
-             nRayPerBeam = (2*nRayY + 1)*(nRayZ + 1)
-          case('polar')
+             nRayPerBeam = (2*nRayY + 1)*(2*nRayZ + 1)
+          else
              call read_var('nRayR',   nRayR)
              call read_var('nRayPhi', nRayPhi)
              if(nRayR < 1)   call stop_mpi('nRayR should be at least 1')
              if(nRayPhi < 1) call stop_mpi('nRayPhi should be at least 1')
              nRayPerBeam = nRayR*(nRayPhi + 1)
-          end select
+          end if
        else
           call read_var('nRayPerHalfBeam', nRayPerBeam)
           nRayPerBeam = 2*nRayPerBeam + 1
        end if
-       call read_var('rBeam',       rBeam )
-       call read_var('xBeam',       xStart )
+       call read_var('rBeam', rBeam)
+       call read_var('xBeam', xStart)
 
     case('#LASERBEAM')
        if(TypeBeam == '???') &
@@ -1296,10 +1288,10 @@ contains
        nBeam = nBeam +1
        if(nBeam > MaxBeam) &
             call stop_mpi(NameSub//': too many beams')
-       call read_var('SlopeDeg',   BeamParam_II(SlopeDeg_,nBeam))
-       call read_var('rCr',        BeamParam_II(rCr_,nBeam))
+       call read_var('SlopeDeg', BeamParam_II(SlopeDeg_,nBeam))
+       call read_var('rCr',      BeamParam_II(rCr_,nBeam))
        if(nDim == 3)then
-          call read_var('PhiCr',   BeamParam_II(PhiCr_,nBeam))
+          call read_var('PhiCr', BeamParam_II(PhiCr_,nBeam))
        else
           BeamParam_II(PhiCr_,nBeam) = 0
        end if
