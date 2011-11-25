@@ -1462,60 +1462,9 @@ public:
     #endif
   }
 
+
+
 /*
-  cTreeNodeAMR<cBlockAMR>* findTreeNode(double *x,cTreeNodeAMR<cBlockAMR>  *startNode=NULL) {
-    cTreeNodeAMR<cBlockAMR> *res=NULL,*t=NULL;
-    double blockBasedCoordinates[3]={0.0,0.0,0.0};
-    int i,j=0,k=0;
-
-    static long int SearchLevel=0;
-    if (SearchLevel>_MAX_REFINMENT_LEVEL_) exit(__LINE__,__FILE__,"Error: the search is too deep");
-
-
-    if (startNode==NULL) startNode=rootTree;
-
-    blockBasedCoordinates[0]=(x[0]-startNode->xmin[0])/dxRootBlock[0]*(1<<startNode->RefinmentLevel);
-    if (_MESH_DIMENSION_>1) blockBasedCoordinates[1]=(x[1]-startNode->xmin[1])/dxRootBlock[1]*(1<<startNode->RefinmentLevel);
-    if (_MESH_DIMENSION_>2) blockBasedCoordinates[2]=(x[2]-startNode->xmin[2])/dxRootBlock[2]*(1<<startNode->RefinmentLevel);
-
-    if ((0.0<=blockBasedCoordinates[0])&&(blockBasedCoordinates[0]<=1.0)&&(0.0<=blockBasedCoordinates[1])&&(blockBasedCoordinates[1]<=1.0)&&(0.0<=blockBasedCoordinates[2])&&(blockBasedCoordinates[2]<=1.0)) {
-      i=(blockBasedCoordinates[0]<0.5) ? 0 : 1;
-      if (_MESH_DIMENSION_>1) j=(blockBasedCoordinates[1]<0.5) ? 0 : 1;
-      if (_MESH_DIMENSION_>2) k=(blockBasedCoordinates[2]<0.5) ? 0 : 1;
-
-      t=startNode->downNode[i+2*(j+2*k)];
-
-      res=(t!=NULL) ? findTreeNode(x,t) : startNode;
-    }
-    else {
-      if (blockBasedCoordinates[0]<0.0) i=-1;
-      else if (blockBasedCoordinates[0]>1.0) i=1;
-      else i=0;
-
-      if (blockBasedCoordinates[1]<0.0) j=-1;
-      else if (blockBasedCoordinates[1]>1.0) j=1;
-      else j=0;
-
-      if (blockBasedCoordinates[2]<0.0) k=-1;
-      else if (blockBasedCoordinates[2]>1.0) k=1;
-      else k=0;
-
-      t=startNode->GetNeibNode(i,j,k);
-
-      SearchLevel++;
-      if (t!=NULL) res=findTreeNode(x,t);
-      else res=(startNode->upNode!=NULL) ? findTreeNode(x,startNode->upNode) : NULL;
-      SearchLevel--;
-    }
-
-#if  _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
-    if (res!=NULL) for (register int idim=0;idim<_MESH_DIMENSION_;idim++) if ((x[idim]<res->xmin[idim])||(res->xmax[idim]<x[idim])) exit(__LINE__,__FILE__,"Error: did'nt find the tree node");
-#endif
-    return res;
-  }
-  */
-
-  //a fast version of the function above
   inline cTreeNodeAMR<cBlockAMR>* findTreeNode(double *x,cTreeNodeAMR<cBlockAMR>  *startNode=NULL) {
     cTreeNodeAMR<cBlockAMR> *res=NULL,*t=NULL;
     double blockBasedCoordinates[3]={0.0,0.0,0.0};
@@ -1545,7 +1494,7 @@ Start:
       k=(blockBasedCoordinates[2]<0.5) ? 0 : 1;
 #endif
 
-      t=startNode->downNode[i+2*(j+2*k)]; 
+      t=startNode->downNode[i+2*(j+2*k)];
 
       if (t!=NULL) {
         startNode=t;
@@ -1583,7 +1532,78 @@ Start:
 
     }
 
-#if  _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+#if  _AMR_DEBUG_MODE_ == _AMR_DEBUG_MODE_ON_
+    if (res!=NULL) for (register int idim=0;idim<_MESH_DIMENSION_;idim++) if ((x[idim]<res->xmin[idim])||(res->xmax[idim]<x[idim])) exit(__LINE__,__FILE__,"Error: did'nt find the tree node");
+#endif
+    return res;
+  }
+  */
+
+  inline cTreeNodeAMR<cBlockAMR>* findTreeNode(double *x,cTreeNodeAMR<cBlockAMR>  *startNode=NULL) {
+    cTreeNodeAMR<cBlockAMR> *res=NULL,*t=NULL;
+    int iState=0,jState=0,kState=0,i,j,k;
+    double xmin[3],xmax[3];
+
+
+    if (startNode==NULL) startNode=rootTree;
+
+Start:
+    memcpy(xmin,startNode->xmin,3*sizeof(double));
+    memcpy(xmax,startNode->xmax,3*sizeof(double));
+
+    if (x[0]<xmin[0]) iState=-1;
+    else if (x[0]>xmax[0]) iState=+1;
+    else iState=0;
+
+#if _MESH_DIMENSION_ > 1
+    if (x[1]<xmin[1]) jState=-1;
+    else if (x[1]>xmax[1]) jState=+1;
+    else jState=0;
+#endif
+
+#if _MESH_DIMENSION_ > 2
+    if (x[2]<xmin[2]) kState=-1;
+    else if (x[2]>xmax[2]) kState=+1;
+    else kState=0;
+#endif
+
+    if ((iState==0)&&(jState==0)&&(kState==0)) {
+      i=((x[0]-xmin[0])/dxRootBlock[0]*(1<<startNode->RefinmentLevel)<0.5) ? 0 : 1;
+
+#if _MESH_DIMENSION_ > 1
+      j=((x[1]-xmin[1])/dxRootBlock[1]*(1<<startNode->RefinmentLevel)<0.5) ? 0 : 1;
+#endif
+
+#if _MESH_DIMENSION_ > 2
+      k=((x[2]-xmin[2])/dxRootBlock[2]*(1<<startNode->RefinmentLevel)<0.5) ? 0 : 1;
+#endif
+
+      t=startNode->downNode[i+2*(j+2*k)]; 
+
+      if (t!=NULL) {
+        startNode=t;
+        goto Start;
+      }
+      else res=startNode;
+    }
+    else {
+      t=startNode->GetNeibNode(iState,jState,kState);
+
+      if (t!=NULL) {
+        startNode=t;
+        goto Start;
+      }
+      else {
+        if ((t=startNode->upNode)!=NULL) {
+          startNode=t;
+          goto Start;
+        }
+        else res=NULL;
+      }
+
+    }
+
+#if  _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
     if (res!=NULL) for (register int idim=0;idim<_MESH_DIMENSION_;idim++) if ((x[idim]<res->xmin[idim])||(res->xmax[idim]<x[idim])) exit(__LINE__,__FILE__,"Error: did'nt find the tree node");
 #endif
     return res;
