@@ -1298,7 +1298,7 @@ contains
             call stop_mpi(NameSub//': too many beams')
        call read_var('SlopeDeg',   BeamParam_II(SlopeDeg_,nBeam))
        call read_var('rCr',        BeamParam_II(rCr_,nBeam))
-       if(TypeBeam(1:2) == '3d')then
+       if(nDim == 3)then
           call read_var('PhiCr',   BeamParam_II(PhiCr_,nBeam))
        else
           BeamParam_II(PhiCr_,nBeam) = 0
