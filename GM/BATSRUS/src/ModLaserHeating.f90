@@ -994,7 +994,7 @@ contains
                 ! range y = [-1.5*rBeam,1.5*rBeam];
                 ! range z = [-1.5*rBeam,1.5*rBeam]
                 iRayY = (iRay - 1)/(2*nRayZ + 1) - nRayY
-                iRayZ = modulo(iRay - 1, 2*nRayZ + 1)
+                iRayZ = modulo(iRay - 1, 2*nRayZ + 1) - nRayZ
 
                 yDistance = 1.5*rBeam*iRayY/nRayY
                 zDistance = 1.5*rBeam*iRayZ/nRayZ
