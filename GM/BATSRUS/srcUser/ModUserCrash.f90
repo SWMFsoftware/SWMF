@@ -770,19 +770,11 @@ contains
       use ModVarIndexes,  ONLY: RhoUy_
       use ModGeometry,    ONLY: xMin=>x1, x2, y1, y2
 
-      real    :: XeLevInit = -92.5
-      real    :: PlLevInit = -92.5
-      real    :: xPl = 0.0                        ! [um]
       real    :: yPl                              ! [um]
-      real    :: Distance, DistanceBe, DistanceXe, DistancePl     ! [um]
-      real    :: DxPl
+      real    :: Distance, DistanceBe, DistancePl ! [um]
       real    :: Tr = 0.0259                      ! [eV?]
-
-
       real    :: xAu, xAy1, xAy2
-
       real    :: TrSi, EgSi
-
       integer :: iWave
       !---------------
 
@@ -796,11 +788,11 @@ contains
       xAy2 = 900. * 1.0e-6 * Si2No_V(UnitX_)
 
       ! Initialize level sets throughout the domain.
-      if ((x >= xmin).and.(x < 0.).and.(y < rInnerTube)) then
+      if ((x >= xmin).and.(x < 0.).and.(r < rInnerTube)) then
          ! Set material as Be.
 
          DistanceBe = abs(xBe - x)
-         DistancePl = abs(yPl - y)
+         DistancePl = abs(yPl - r)
          Distance = min(DistanceBe, DistancePl)
          State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
          State_VGB(LevelXe_,i,j,k,iBlock) = -DistanceBe
@@ -810,11 +802,11 @@ contains
 
          State_VGB(Rho_,i,j,k,iBlock) = 6.5e-3 * Si2No_V(UnitRho_)
 
-      elseif ((x >= 0.).and.(x < xBe).and.(y < rInnerTube)) then
+      elseif ((x >= 0.).and.(x < xBe).and.(r < rInnerTube)) then
          ! Set material as Be.
 
          DistanceBe = abs(xBe - x)
-         DistancePl = abs(yPl - y)
+         DistancePl = abs(yPl - r)
          Distance = min(DistanceBe, DistancePl)
          State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
          State_VGB(LevelXe_,i,j,k,iBlock) = -DistanceBe
@@ -827,11 +819,11 @@ contains
          State_VGB(Rho_,i,j,k,iBlock) = 1.85e+03 * Si2No_V(UnitRho_) 
 
 
-      elseif ((x >= xBe).and.(x < x2).and.(y < rInnerTube)) then
+      elseif ((x >= xBe).and.(x < x2).and.(r < rInnerTube)) then
          ! ...in Xe
 
          DistanceBe = abs(x - xBe)
-         DistancePl = abs(yPl - y)
+         DistancePl = abs(yPl - r)
          Distance = min(DistanceBe, DistancePl)
          State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
          State_VGB(LevelXe_,i,j,k,iBlock) =  Distance
@@ -865,10 +857,10 @@ contains
 
          State_VGB(Rho_,i,j,k,iBlock) = RhoDimInside * Si2No_V(UnitRho_)
 
-      elseif ((y >= rInnerTube).and.(y <= rOuterTube)) then
+      elseif ((r >= rInnerTube).and.(r <= rOuterTube)) then
 
          DistanceBe = abs(x - xBe)
-         DistancePl = y - yPl
+         DistancePl = r - yPl
          Distance = min(DistanceBe, DistancePl)
 
          if ((x >= xmin).and.(x < 0.)) then
@@ -924,7 +916,7 @@ contains
                  min( min(abs(DistancePl), abs(xAy2-x)), abs(x-xAy1) )
             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
             State_VGB(LevelAy_,i,j,k,iBlock) = &
-                 -min(abs(rOuterTube-y), abs(x-xAy1))
+                 -min(abs(rOuterTube-r), abs(x-xAy1))
 
             State_VGB(Rho_,i,j,k,iBlock) = 1.43e+03 * Si2No_V(UnitRho_)
 
@@ -933,19 +925,19 @@ contains
             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
             State_VGB(LevelPl_,i,j,k,iBlock) = &
-                 min(abs(DistancePl), sqrt((rOuterTube-y)**2 + (x-xAy2)**2))
+                 min(abs(DistancePl), sqrt((rOuterTube-r)**2 + (x-xAy2)**2))
             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
             State_VGB(LevelAy_,i,j,k,iBlock) = &
-                 -sqrt((rOuterTube-y)**2 + (x-xAy2)**2)
+                 -sqrt((rOuterTube-r)**2 + (x-xAy2)**2)
 
             State_VGB(Rho_,i,j,k,iBlock) = 1.43e+03 * Si2No_V(UnitRho_)
          endif
 
 
-      elseif (y > rOuterTube) then
+      elseif (r > rOuterTube) then
 
          DistanceBe = abs(x - xBe)
-         DistancePl = y - yPl
+         DistancePl = r - yPl
          Distance = min(DistanceBe, DistancePl)
 
          if ((x >= xmin).and.(x < 0.)) then
@@ -953,7 +945,7 @@ contains
             State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
             State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistancePl**2+DistanceBe**2)
             State_VGB(LevelPl_,i,j,k,iBlock) = &
-                 -min( (xAy2-x), sqrt((xAy1-x)**2 + (y-rOuterTube)**2) )
+                 -min( (xAy2-x), sqrt((xAy1-x)**2 + (r-rOuterTube)**2) )
             State_VGB(LevelAu_,i,j,k,iBlock) = -DistanceBe
             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
 
@@ -966,7 +958,7 @@ contains
             State_VGB(LevelBe_,i,j,k,iBlock) = DistanceBe
             State_VGB(LevelXe_,i,j,k,iBlock) = -sqrt(DistancePl**2+DistanceBe**2)
             State_VGB(LevelPl_,i,j,k,iBlock) =  &
-                 -min( (xAy2-x), sqrt((xAy1-x)**2 + (y-rOuterTube)**2) )
+                 -min( (xAy2-x), sqrt((xAy1-x)**2 + (r-rOuterTube)**2) )
             State_VGB(LevelAu_,i,j,k,iBlock) = -DistanceBe
             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
 
@@ -977,7 +969,7 @@ contains
             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
             State_VGB(LevelPl_,i,j,k,iBlock) =  &
-                 -min( xAy2-x, sqrt( (xAy1-x)**2 + (y-rOuterTube)**2 ) )
+                 -min( xAy2-x, sqrt( (xAy1-x)**2 + (r-rOuterTube)**2 ) )
             State_VGB(LevelAu_,i,j,k,iBlock) = &
                  min(abs(DistancePl), (xAu-x), (x-xBe) )
             State_VGB(LevelAy_,i,j,k,iBlock) = -(xAu-x)
@@ -989,11 +981,11 @@ contains
             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
             State_VGB(LevelPl_,i,j,k,iBlock) = &
-                 -sqrt( (xAy1-x)**2 + (y-rOuterTube)**2 )
+                 -sqrt( (xAy1-x)**2 + (r-rOuterTube)**2 )
             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
             State_VGB(LevelAy_,i,j,k,iBlock) = &
                  min( DistancePl, (x-xAu) , &  
-                 sqrt( (xAy1-x)**2 + (y-rOuterTube)**2 ) )
+                 sqrt( (xAy1-x)**2 + (r-rOuterTube)**2 ) )
 
             State_VGB(Rho_,i,j,k,iBlock) = 1.13e+03 * Si2No_V(UnitRho_)
 
@@ -1002,10 +994,10 @@ contains
             State_VGB(LevelBe_,i,j,k,iBlock) = -DistanceBe
             State_VGB(LevelXe_,i,j,k,iBlock) = -DistancePl
             State_VGB(LevelPl_,i,j,k,iBlock) = &
-                 -min( (xAy2-x), (y-rOuterTube) )
+                 -min( (xAy2-x), (r-rOuterTube) )
             State_VGB(LevelAu_,i,j,k,iBlock) = -(x-xAu)
             State_VGB(LevelAy_,i,j,k,iBlock) = &
-                 min(  (y-rOuterTube), (x-xAu) , (xAy2-x) )
+                 min(  (r-rOuterTube), (x-xAu) , (xAy2-x) )
 
 
             State_VGB(Rho_,i,j,k,iBlock) = 1.13e+03 * Si2No_V(UnitRho_)
@@ -1024,18 +1016,13 @@ contains
 
       endif
 
-
       TeSi = 2.1e6 *(0.025/180.) 
       Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
       Ti_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
 
-
-
       State_VGB(RhoUx_,i,j,k,iBlock) =  0.0
       State_VGB(RhoUy_,i,j,k,iBlock) =  0.0
       State_VGB(RhoUz_,i,j,k,iBlock) =  0.0
-
-
 
       if (nWave == 1) then
          ! Set small initial radiation-energy density everywhere.
@@ -1047,13 +1034,11 @@ contains
             call get_energy_g_from_temperature(iWave, TrSi,EgSI=EgSi)
             State_VGB(WaveFirst_+iWave-1,i,j,k,iBlock) = &
                  EgSi*Si2No_V(UnitEnergyDens_)
-
-
          enddo
       endif
 
-
     end subroutine unperturbed_5_materials
+
   end subroutine user_set_ics
 
   !============================================================================
