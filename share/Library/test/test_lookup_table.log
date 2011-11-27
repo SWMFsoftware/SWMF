@@ -1,4 +1,5 @@
  testing i_lookup_table
+ testing get_lookup_table
  testing make_lookup_table
  testing interpolate_lookup_table
  testing load_lookup_table
