@@ -1031,6 +1031,20 @@ sub param_error{
     print "Command description:\n$commandText{$realName}" if $Verbose;
 }
 ##############################################################################
+sub COMP::count_split{
+    # This subroutine can be used in the XML file to count the "words" 
+    # separater by white space in the argument String.
+    # Allow for "array syntax" using "word(30)" instead of 30 words.
+    my $String = $_[0];
+
+    # replace "word(\d\d)" with a simple "word" and count extra elements
+    my $nExtra = 0;
+    $nExtra += $1-1 while $String =~ s/\((\d+)\)//;
+
+    # return total number of words
+    return $nExtra + split(' ',$String);
+}
+##############################################################################
 #!QUOTE: \clearpage
 #BOP
 #!QUOTE: \section{share/Scripts: for SWMF and Physics Modules}
