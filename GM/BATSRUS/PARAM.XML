@@ -5249,12 +5249,16 @@ This default is backwards compatible with previous versions of the code.
 
 <command name="LOOKUPTABLE" multiple="T">
 	<parameter name="NameTable" type="string" length="100"/>
-	<parameter name="NameCommand" type="string" input="select">
+	<parameter name="NameCommand" type="string" case="lower" 
+	    input="select">
 		<option value="load" default="T"/>
 		<option value="save"/>
+		<option value="save param"/>
 		<option value="make"/>
+		<option value="make param"/>
+		<option value="param"/>
 	</parameter>
-	<if expr="$NameCommand =~ /load|save/i">
+	<if expr="$NameCommand =~ /load|save/">
 		<parameter name="NameFile" type="string" length="100"/>
 		<parameter name="TypeFile" type="string" input="select">
 			<option value="ascii" default="T"/>
@@ -5262,7 +5266,13 @@ This default is backwards compatible with previous versions of the code.
 			<option value="real8"/>
 		</parameter>
 	</if>
-	<if expr="$NameCommand =~ /make|save/i">
+	<if expr="$NameCommand =~ /param/">
+	        <parameter name="NameTableParam" type="string" length="100"/>
+		<for from="1" to="count_split($NameTableParam)">
+		     <parameter name="TableParam" type="real"/>
+		</for>
+	</if>
+	<if expr="$NameCommand =~ /make|save/">
 		<parameter name="StringDescription" type="string" 
 							  length="100"/>
 		<parameter name="NameVar"   type="string" length="100"/>
@@ -5276,9 +5286,13 @@ This default is backwards compatible with previous versions of the code.
 
 #LOOKUPTABLE
 p(rho,e)			NameTable
-save				NameCommand (load, save or make)
+save param			NameCommand (load, save, make, param)
 table1.out			NameFile (read this unless "make")
 ascii				TypeFile (read this unless "make")
+zXe zBe nPl			NameTableParam (if NameCommand has "param")
+54.0				TableParam number of protons in Xenon
+4.0				TableParam number of protons in Beryllium
+4.0				TableParam number of elements in plastic
 p(rho,e) for ionized plasma	Description (read this and rest unless "load")
 logrho logp pXe pBe pPl		NameVar  
 100				nIndex1
@@ -5289,12 +5303,14 @@ logrho logp pXe pBe pPl		NameVar
 100.0				Index2Max
 
 Tables are identified by the NameTable string that should be unique for 
-the table and must agree with the name used in the source code.
+the table and must agree with the name used in the ModUser module.
 The NameCommand tells if we should "load" the table from a file, 
 "make" the table using some algorithm defined in the ModUser module, 
-or make the table and then save it into a file.
-The file name and file type ("ascii", "real4" or "real8") are read for 
-commands "load" and "save". 
+or make the table and then "save" it into a file. The NameTableParam
+variable and the NameParam values of table parameters are read from the 
+input file and stored into the table if NameCommand contains "param".
+The file name and file type ("ascii", "real4" or "real8") are read when
+NameCommand contains "load" or "save". 
 The rest of the parameters are read for commands "make" or "save".
 The NameVar string contains the space separated list of the names of 
 the two indexes and the one or more returned value(s). If the index name starts
