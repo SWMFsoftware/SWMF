@@ -6512,20 +6512,6 @@ Te=TeTopTransitionRegion.
 
 Default value is DoExpandTransitionRegion = .false.
 </command>
-
-<command name="ALFVENWAVES">
-	 <parameter name="UseAlfvenWaves" type="logical" default="F"/>
-
-#ALFVENWAVES
-T                   UseAlfvenWaves
-
-This is the first of the command group to treat the "wave" state variables.
-If UseAlfvenWaves = .true. the waves are separated into two sets, one of them ('plus') propagate 
-parallel to the magnetic field, the second one ('minus') is for waves propagating anti-parallel 
-to the field. The propagation speed with respect to the background plasma is 
-$\pm V_A=\pm|B|/\sqrt{\rho}$.
-</command>
-
 </commandgroup>
 
 <commandgroup name="HELIOSPHERE SPECIFIC COMMANDS">
@@ -6576,6 +6562,38 @@ be similar to the grid resolution of the coarser of the SC(IH) and IH(OH) grids.
 This command can only be used in the first session by the IH(OH) component. 
 Default values are shown above.
 </command>
+</commandgroup>
+
+<commandgroup name="WAVE SPECIFIC COMMANDS">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!! WAVE SPECIFIC COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+<command name="ADVECTWAVES">
+	<parameter name="DoAdvectnWaves" type="logical" default="T"/>
+
+#ADVECTWAVES
+T                   DoAdvectWaves
+
+If DoAdvectWaves = .true. the waves are advected in the energy dimension.
+This term may be very small and it can be switched off for purposes of
+testing or comaparison with other codes that do not have this term.
+
+The default is false.
+</command>
+
+<command name="ALFVENWAVES">
+	<parameter name="UseAlfvenWaves" type="logical" default="F"/>
+
+#ALFVENWAVES
+T                   UseAlfvenWaves
+
+If UseAlfvenWaves = .true. the waves are separated into
+two sets, one of them ('plus') propagate parallel to the magnetic
+field, the second one ('minus') is for waves propagating anti-parallel
+to the field. The propagation speed with respect to the background
+plasma is $\pm V_A=\pm|B|/\sqrt{\rho}$.  </command>
+
 </commandgroup>
 
 <commandgroup name="SCRIPT COMMANDS">
