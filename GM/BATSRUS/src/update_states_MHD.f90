@@ -14,8 +14,9 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModMultiIon, ONLY: multi_ion_source_impl, multi_ion_init_point_impl, &
        multi_ion_set_restrict, multi_ion_update, DoRestrictMultiIon
   use ModEnergy
-  use ModWaves, ONLY: nWave, UseWavePressure, UseWavePressureLtd,&
-       WaveFirst_,WaveLast_, update_wave_group_advection
+  use ModWaves, ONLY: nWave, WaveFirst_,WaveLast_, &
+       UseWavePressure, UseWavePressureLtd, DoAdvectWaves, &
+       update_wave_group_advection
   use ModResistivity,   ONLY: UseResistivity, &          !^CFG IF DISSFLUX
        calc_resistivity_source                           !^CFG IF DISSFLUX
   use ModAdjoint, ONLY: DoAdjoint, AdjPreEnergyP_,&      ! ADJOINT SPECIFIC
@@ -185,7 +186,8 @@ contains
     end if
 
     if(UseWavePressure)then
-       if(iStage==nStage.and.nWave>2)call update_wave_group_advection(iBlock)
+       if(DoAdvectWaves .and. iStage==nStage .and. nWave>2)&
+            call update_wave_group_advection(iBlock)
        if(UseWavePressureLtd)then
           do k=1,nK;do j=1,nJ; do i=1,nI
              State_VGB(Ew_,i,j,k,iBlock)= &

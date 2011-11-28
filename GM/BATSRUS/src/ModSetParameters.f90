@@ -92,8 +92,7 @@ subroutine MH_set_parameters(TypeAction)
        init_coronal_heating, UseCoronalHeating, DoOpenClosedHeat
   use ModRadiativeCooling,ONLY: UseRadCooling,&
        read_modified_cooling, check_cooling_param, read_chromosphere
-  use ModWaves, ONLY: UseAlfvenWaves, check_waves, &
-       read_wave_pressure, read_frequency, read_spectrum
+  use ModWaves, ONLY: read_waves_param, check_waves
   use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
 
   implicit none
@@ -2110,17 +2109,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#TRANSITIONREGION")
         call read_modified_cooling
 
-     case("#ALFVENWAVES")
-        call read_var('UseAlfvenWaves', UseAlfvenWaves)
-
-     case("#WAVEPRESSURE")
-        call read_wave_pressure
-
-     case("#FREQUENCY")
-        call read_frequency
-
-     case('#SPECTRUM')
-        call read_spectrum
+     case("#ADVECTWAVES", "#ALFVENWAVES", "#WAVEPRESSURE", &
+          "#FREQUENCY", "#SPECTRUM")
+        call read_waves_param(NameCommand)
 
      case("#LASERPULSE", "#LASERBEAM", "#LASERBEAMS", "#LASERBEAMPROFILE", &
           "#LASERRAYTEST")

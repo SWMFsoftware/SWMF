@@ -32,7 +32,7 @@ contains
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
-    use ModWaves,       ONLY: UseAlfvenWaves,read_wave_pressure,read_frequency
+
     implicit none
 
     character (len=100) :: NameCommand
@@ -49,16 +49,6 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
 
        select case(NameCommand)
-
-       case("#ALFVENSPEED")
-          call read_var('UseAlfvenWaves', UseAlfvenWaves)
-
-       case("#WAVEPRESSURE")
-          call read_wave_pressure
-
-       case("#FREQUENCY")
-          call read_frequency
-
        case("#SPECTRUM")
           call read_var('LowestFreqNum',LowestFreqNum)
           call read_var('SpectrumWidth',SpectrumWidth)

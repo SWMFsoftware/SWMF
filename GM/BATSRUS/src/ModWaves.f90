@@ -1,9 +1,14 @@
 module ModWaves
+
   use ModAdvance,    Only: UseWavePressure
   use ModPhysics,    ONLY: GammaWave
   use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_
   use ModSize,       ONLY: nI, nJ, nK
+
   implicit none
+
+  logical:: DoAdvectWaves = .true.
+
   !
   ! Intended to simulate waves and wave turbulences. The wave propagate
   ! with respect to the background with some speed. The only implemented
@@ -25,8 +30,10 @@ module ModWaves
   real :: FreqMinSI = -1.0
   real :: FreqMaxSI = -1.0
 
-  !Centered frequency, for each bin
-  !The logarithmic grid is set by default. Can be reset in use_user_perturbation
+  ! Centered frequency, for each bin
+  ! The logarithmic grid is set by default. 
+  ! Can be reset in use_user_perturbation
+
   real, dimension(WaveFirst_:WaveLast_):: FrequencySi_W = -1.0
 
 
@@ -55,12 +62,13 @@ module ModWaves
 
   !Spectral functions: all functions are normalized by unity
 
-  real,dimension(WaveFirst_:WaveLast_):: Spectrum_W  = 1.0/nWave , &
+  real,dimension(WaveFirst_:WaveLast_):: &
+       Spectrum_W      = 1.0/nWave , &
        SpectrumPlus_W  = 2.0/nWave , &
        SpectrumMinus_W = 2.0/nWave
 
-  ! Set the defualt type of spectral function. Default may be changed by using
-  ! the $SPECTRUM command in PARM.in
+  ! Set the default type of spectral function. Default may be changed by using
+  ! the #SPECTRUM command in PARM.in
   character(LEN=10)::  NameSpectralFunction = 'uniform'
 
   !Parameters for different kinds of the specrral function
@@ -68,7 +76,7 @@ module ModWaves
   !real:: TRadSpectrum, EnergyMin
 
   !For power law: I\propto 1/f^{PowerIndex}, f> FreqStartSi
- 
+
   !This is the default power index the spectral function. 
   ! The power law can be set to a different value by the #SPECTRUM command.
   ! Note: PowerIndex is only used when NameSpectralFunction=='powerlaw'
@@ -79,19 +87,43 @@ module ModWaves
 
 
 contains
-  !============================================================================ 
-  subroutine read_spectrum
+  !============================================================================
+  subroutine read_waves_param(NameCommand)
 
-    ! Set type of spectral function, when #SPECTRUM command is used.
-    ! Default type is 'uniform', representing a uniform (gray) spectrum.
-    ! In this case the value of PowerIndex will not be used.
-    ! If NameSpectralFunction=='powerlaw', PowerIndex should be set to the right value.
-  
-    use ModReadParam,  ONLY: read_var
-    !--------------------------------------------------------------------------
-    call read_var('NameSpectralFunction',NameSpectralFunction)
-    call read_var('PowerIndex',PowerIndex)
-  end subroutine read_spectrum
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in):: NameCommand
+
+    character(len=*), parameter:: NameSub = 'read_waves_param'
+    !-------------------------------------------------------------------------
+    select case(NameCommand)
+    case("#ADVECTWAVES")
+       call read_var('DoAdvectWaves', DoAdvectWaves)
+    case("#ALFVENWAVES")
+       call read_var('UseAlfvenWaves', UseAlfvenWaves)
+    case("#SPECTRUM")
+ 
+       ! Set type of spectral function.
+       ! Default type is 'uniform', representing a uniform (gray) spectrum.
+       ! In this case the value of PowerIndex will not be used.
+       ! If NameSpectralFunction=='powerlaw', 
+       ! PowerIndex should be set to the right value.
+
+       call read_var('NameSpectralFunction',NameSpectralFunction)
+       if(NameSpectralFunction == "powerlaw") &
+            call read_var('PowerIndex',PowerIndex)
+
+    case("#WAVEPRESSURE")
+       call read_var('UseWavePressure'   ,UseWavePressure)
+       call read_var('UseWavePressureLtd',UseWavePressureLtd)
+    case("#FREQUENCY")
+       call read_var('FreqMinSI',FreqMinSI)
+       call read_var('FreqMaxSI',FreqMaxSI)
+    case default
+       call stop_mpi(NameSub//": unknown command="//trim(NameCommand))
+    end select
+
+  end subroutine read_waves_param
   !============================================================================
   subroutine check_waves
     integer:: iWave
@@ -131,7 +163,7 @@ contains
                FrequencySi_W(AlfvenWavePlusFirst_:AlfvenWavePlusLast_)
        else
 
-          FrequencySi_W(WaveFirst_) = FreqMinSi * exp( 0.50 * DeltaLogFrequency)
+          FrequencySi_W(WaveFirst_) = FreqMinSi * exp(0.5*DeltaLogFrequency)
 
           do iWave = WaveFirst_ + 1, WaveLast_
              FrequencySi_W(iWave) = FrequencySi_W(iWave - 1) * &
@@ -192,20 +224,6 @@ contains
     end select
   end subroutine check_waves
   !============================================================================
-  subroutine read_wave_pressure
-    use ModReadParam,  ONLY: read_var
-    !--------------------------------------------------------------------------
-    call read_var('UseWavePressure'   ,UseWavePressure)
-    call read_var('UseWavePressureLtd',UseWavePressureLtd)
-  end subroutine read_wave_pressure
-  !============================================================================
-  subroutine read_frequency
-    use ModReadParam, ONLY: read_var
-    !--------------------------------------------------------------------------
-    call read_var('FreqMinSI',FreqMinSI)
-    call read_var('FreqMaxSI',FreqMaxSI)
-  end subroutine read_frequency
-  !============================================================================
   subroutine set_wave_state(EWaveTotal, State_V, Xyz_D, B0_D)
     use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Ew_
     use ModMain, ONLY: nDim, UseB0
@@ -214,7 +232,7 @@ contains
 
     !Total energy density of waves
     real, intent(in)    :: EWaveTotal  
-   
+
     !WaveFirst_:WaveLast_ components of this vector are to be filled in:
     real, intent(inout) :: State_V(nVar)  
 
@@ -223,12 +241,10 @@ contains
     !parameters:
     real, intent(in), optional, dimension(nDim):: Xyz_D, B0_D
 
-
     real:: BTotal_D(nDim)
-    !--------------------------------------------------------!
-
+    !-------------------------------------------------------------------------
     if(UseAlfvenWaves)then
- 
+
        BTotal_D = State_V(Bx_:Bz_)
        if(UseB0) BTotal_D = BTotal_D + B0_D
 
@@ -238,18 +254,20 @@ contains
           State_V(WaveFirst_:WaveLast_) = EWaveTotal * SpectrumPlus_W
 
        else
-          
+
           State_V(WaveFirst_:WaveLast_) = EWaveTotal * SpectrumMinus_W
-       
+
        end if
     else
        State_V(WaveFirst_:WaveLast_) = EWaveTotal * Spectrum_W
     end if
     if( UseWavePressureLtd )&
          State_V(Ew_) = sum(State_V(WaveFirst_:WaveLast_))
-   
+
   end subroutine set_wave_state
+
   !============================================================================
+
   subroutine update_wave_group_advection(iBlock)
     use ModAdvance,           ONLY: State_VGB, time_blk
     use ModGeometry,          ONLY: true_cell, x_BLK, y_BLK, z_BLK
@@ -278,7 +296,7 @@ contains
     integer :: i,j,k
 
     logical :: IsNegativeEnergy
-    !---------------------------
+    !-------------------------------------------------------------------------
     if(DeltaLogFrequency<= 0.0                   &
          .or. (UseAlfvenWaves .and. nWaveHalf==1) &
          .or.((.not.UseAlfvenWaves ).and. nWave==1))RETURN
@@ -295,7 +313,7 @@ contains
           if(DivU_C(i,j,k)>0.0)then
 
              F2_I( 1:nWaveHalf) = &
-                  State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock)
+                  State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_,i,j,k,iBlock)
              F2_I(nWaveHalf+1)=F2_I(nWaveHalf)
              call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
                   BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
@@ -306,12 +324,12 @@ contains
 
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock)
-           
+
              F2_I(nWaveHalf+1) = F2_I(nWaveHalf)
              call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
                   BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
              if(IsNegativeEnergy)call write_and_stop
-               
+
              State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           else
@@ -319,11 +337,11 @@ contains
              F2_I( 1:nWaveHalf) = &
                   State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock)
              F2_I(0) = F2_I(1) 
-             
+
              call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
                   BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
              if(IsNegativeEnergy) call write_and_stop
-                
+
              State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
 
@@ -333,7 +351,7 @@ contains
              call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
                   BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
              if(IsNegativeEnergy) call write_and_stop
-               
+
              State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           end if
@@ -368,24 +386,25 @@ contains
 
        end do; end do; end do
     end if
-    contains
-      !====================
-      subroutine write_and_stop
-        use ModVarIndexes, ONLY: nVar, NameVar_V
-        integer:: iVar
-        !--------------
-        write(*,*) 'Negative energy density in xyz=',&
-             x_BLK(i, j, k, iBlock), y_BLK(i, j, k, iBlock), z_BLK(i, j, k, iBlock), &
-             ' ijk=', i, j, k, ' iBlock=',iBlock
-        write(*,*)'Var      State_VGB(iVar, i, j, k, iBlock)'
 
-        do iVar=1,nVar
-          write(*,*) NameVar_V(iVar), State_VGB(iVar, i, j, k, iBlock)
-        end do
+  contains
+    !=========================================================================
+    subroutine write_and_stop
+      use ModVarIndexes, ONLY: nVar, NameVar_V
+      integer:: iVar
+      !-----------------------------------------------------------------------
+      write(*,*) 'Negative energy density in xyz=',&
+           x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock), &
+           ' ijk=', i, j, k, ' iBlock=',iBlock
+      write(*,*)'Var      State_VGB(iVar,i,j,k,iBlock)'
 
-        call stop_mpi('Stopped')
-      end subroutine write_and_stop
+      do iVar=1,nVar
+         write(*,*) NameVar_V(iVar), State_VGB(iVar,i,j,k,iBlock)
+      end do
+
+      call stop_mpi('Stopped')
+    end subroutine write_and_stop
 
   end subroutine update_wave_group_advection
-  
+
 end module ModWaves
