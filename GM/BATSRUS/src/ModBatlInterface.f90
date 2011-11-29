@@ -253,6 +253,7 @@ contains
     use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_, Unused_B,&
          restrict_amr_criteria
     use ModEnergy, ONLY: calc_energy_cell
+     use ModResistivity,   ONLY: UseResistivity
     
     integer:: iBlock
     !-------------------------------------------------------------------------
@@ -268,7 +269,8 @@ contains
        call fix_soln_block(iBlock)
        call calc_energy_cell(iBlock)
        call restrict_amr_criteria(iBlock)
-    end do
+       if(UseResistivity) call set_resistivity(iBlock)
+    end do 
 
   end subroutine set_batsrus_state
   !============================================================================
