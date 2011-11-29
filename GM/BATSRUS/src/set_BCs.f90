@@ -529,9 +529,16 @@ contains
                   sign(cOne,FaceState_V(iP_I) - VarsTrueFace_V(iP_I))*&
                   min(abs(FaceState_V(iP_I) - VarsTrueFace_V(iP_I)),&
                   PressureJumpLimit*VarsTrueFace_V(iP_I))
+             if(UseAnisoPressure) &
+                  VarsGhostFace_V(Ppar_) = VarsTrueFace_V(Ppar_) + &
+                  sign(cOne,FaceState_V(Ppar_) - VarsTrueFace_V(Ppar_))*&
+                  min(abs(FaceState_V(Ppar_) - VarsTrueFace_V(Ppar_)),&
+                  PressureJumpLimit*VarsTrueFace_V(Ppar_))
           else
              ! Use floating BC for pressure (correct for zero radial velocity)
              VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I)
+             if(UseAnisoPressure) &
+                  VarsGhostFace_V(Ppar_) = VarsTrueFace_V(Ppar_)
           end if
 
           ! Change sign for velocities (plasma frozen into dipole field)
