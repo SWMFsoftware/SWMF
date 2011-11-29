@@ -559,6 +559,7 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
        No2Io_V, UnitU_, UnitX_, UnitRho_
   use ModRaytrace, ONLY : R_raytrace                !^CFG  IF RAYTRACE
   use ModNumConst, ONLY : cRadToDeg
+  use ModResistivity, ONLY: Eta0Si
   use ModIO
 
   implicit none
@@ -602,7 +603,7 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
      case('tilt')
         EqPar_I(iPar)=ThetaTilt*cRadToDeg
      case('eta')
-        EqPar_I(iPar)=0.
+        EqPar_I(iPar)=Eta0Si
      case('unitx')
         EqPar_I(iPar)=No2Io_V(UnitX_)
      case('unitrho')
