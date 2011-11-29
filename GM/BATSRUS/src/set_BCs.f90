@@ -3,7 +3,6 @@ subroutine set_BCs(TimeBcIn, DoResChangeOnlyIn)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModNumConst
   use ModGeometry, ONLY:&
        IsBoundaryCell_GI , IsBoundaryBlock_IB,true_cell,MinBoundary,MaxBoundary
   use ModBoundaryCells
@@ -337,7 +336,7 @@ contains
     use ModUtilities
     use ModBoundaryCells, ONLY: iBoundary_GB
     use ModFaceBC, ONLY:iBlockBc
-    implicit none
+    use ModNumConst, ONLY: cTwoPi
 
     ! indexes of the true and ghost cells on the two sides of the face
     integer, intent(in):: iTrue, jTrue, kTrue, iGhost, jGhost, kGhost
@@ -526,12 +525,12 @@ contains
           if(PressureJumpLimit > 0.0) then
              ! Use body pressures but limit jump
              VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I) + &
-                  sign(cOne,FaceState_V(iP_I) - VarsTrueFace_V(iP_I))*&
+                  sign(1.0, FaceState_V(iP_I) - VarsTrueFace_V(iP_I))*&
                   min(abs(FaceState_V(iP_I) - VarsTrueFace_V(iP_I)),&
                   PressureJumpLimit*VarsTrueFace_V(iP_I))
              if(UseAnisoPressure) &
                   VarsGhostFace_V(Ppar_) = VarsTrueFace_V(Ppar_) + &
-                  sign(cOne,FaceState_V(Ppar_) - VarsTrueFace_V(Ppar_))*&
+                  sign(1.0, FaceState_V(Ppar_) - VarsTrueFace_V(Ppar_))*&
                   min(abs(FaceState_V(Ppar_) - VarsTrueFace_V(Ppar_)),&
                   PressureJumpLimit*VarsTrueFace_V(Ppar_))
           else
@@ -810,9 +809,11 @@ contains
        VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0Face_D
 
        ! Setting velocity BCs to be the second body orbital velocity: 
-       VarsGhostFace_V(Ux_) = -(cTwoPi*yBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_) 
-       VarsGhostFace_V(Uy_) =  (cTwoPi*xBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
-       VarsGhostFace_V(Uz_) =  cZero
+       VarsGhostFace_V(Ux_) = &
+            -(cTwoPi*yBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_) 
+       VarsGhostFace_V(Uy_) = &
+            (cTwoPi*xBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
+       VarsGhostFace_V(Uz_) =  0.0
        !^CFG END SECONDBODY
 
     case default
