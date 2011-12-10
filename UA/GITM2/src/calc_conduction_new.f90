@@ -1,7 +1,7 @@
 subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
 
   use ModSizeGitm
-  use ModGITM, only: dAlt_GB, Latitude, Longitude, dt, Altitude_gb
+  use ModGITM, only: dAlt_GB, Latitude, Longitude, dt, Altitude_GB
   use ModConstants
 
   implicit none
@@ -9,17 +9,20 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
   integer, intent(in) :: iBlock
   real, intent(in) :: Quantity(nLons, nLats, -1:nAlts+2)
   real, intent(in) :: Diff(nLons, nLats, 0:nAlts+1)
-  real, intent(in) :: MulFac(nLons, nLats, nAlts)
+  real, intent(in) :: MulFac(nLons, nLats,-1:nAlts+2)
   real, intent(out) :: dTdt_cond(nLons, nLats, nAlts)
   real :: solution(nLons, nLats, 0:nAlts+1)
 
-  real :: beta(nAlts), dk(nAlts), tempold(nAlts), temp(0:nAlts+1)
-  real, dimension(nAlts) :: a,b,c,r,u, gam
-  real :: tempsave(0:nAlts+1), one_2kb(nAlts), bet
+  real :: beta(0:nAlts+1),  tempold(-1:nAlts+2), temp(0:nAlts+1)
+  real, dimension(nAlts+2) :: a,b,c,r,u, gam
+  real :: tempsave(0:nAlts+1), one_2kb(0:nAlts+1), bet
   integer :: iLon, iLat, iAlt, nIters
   real :: tolerance = 0.01, residual, maxresidual
+  real :: theta 
+  real :: F, dau, dal
 
-  real :: f, dau, dal
+  real :: eta(0:nAlts+1), betaP(0:nAlts+1), betaN(0:nAlts+1)
+  real :: zeta(0:nAlts+1), gammaP(0:nAlts+1), gammaN(0:nAlts+1)
 
   logical :: NewSolver = .true., UseDebug = .false.
 
@@ -51,75 +54,75 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
   !C-----------------------------------------------------------------------
 
 
-  !  write(*,*) "MaxTemp In : ", maxval(quantity)
+  !        write(*,*) "MaxTemp In : ", maxval(quantity)
+  !        write(*,*) ' Testing in Calc_Conduction'
+
+  theta = 1.0
 
   do iLon = 1, nLons
      do iLat = 1, nLats
 
-        do iAlt = 1, nAlts
+!!! First, Set the "Old Data"
+        do iAlt = -1, nAlts +2
+           tempold(iAlt) = Quantity(iLon, iLat, iAlt)
+        enddo 
 
-           ! F is defined as the ratio between the upper and lower 
-           ! grid spacing.
-           
+        do iAlt = 0, nAlts +1
+
            dau =Altitude_GB(iLon,iLat,iAlt+1,iBlock) - &
                 Altitude_GB(iLon,iLat,iAlt,iBlock)
+
            dal =Altitude_GB(iLon,iLat,iAlt,iBlock) - &
                 Altitude_GB(iLon,iLat,iAlt-1,iBlock)
-           f = dau/dal
 
-           ! Then we use dal (delta-altitude lower) in all of the eqns.
+           F = (dau + dal)/2.0
 
-           beta(iAlt) = (dt / MulFac(iLon, iLat, iAlt)) / dal**2
+!!!! Beta is now the Kt*Dt/(cp*rho) * (2.0/(dX+ + dX-))
 
-           dk(iAlt) =   Diff(iLon,iLat,iAlt+1) - &
-                      f*Diff(iLon,iLat,iAlt-1) - &
-                (1-f*f)*Diff(iLon,iLat,iAlt)
+           eta(iAlt) =          theta*(Dt*Diff(iLon,iLat,iAlt)) / MulFac(iLon, iLat, iAlt) / F
+           zeta(iAlt) = (1.0 - theta)*(Dt*Diff(iLon,iLat,iAlt)) / MulFac(iLon, iLat, iAlt) / F
 
-           ! dk(iAlt) = 0.0
+!           eta(iAlt) =          0.5*(Dt*Diff(iLon,iLat,iAlt)) / (F* MulFac(iLon, iLat, iAlt) )
+!           zeta(iAlt) =         0.5*(Dt*Diff(iLon,iLat,iAlt)) / (F*MulFac(iLon, iLat, iAlt) )
 
-             tempold(iAlt) = Quantity(iLon, iLat, iAlt)
-           ! the following three coefficients are rewritten by Ercha
-           ! one_2kb(iAlt) = &
-           !     1.0 + beta(iAlt)*(&
-           !     (1+f)*Diff(iLon,iLat,iAlt) + &
-           !     (1-f*f)/(f*(1+f))*dk(iAlt))
+           betaP(iAlt) =  eta(iAlt)/dau
+           betaN(iAlt) =  eta(iAlt)/dal
 
-           ! a(iAlt) = -beta(iAlt) * &
-           !     (f*Diff(iLon,iLat,iAlt) - dk(iAlt)/(f+1))
+           gammaP(iAlt) =  zeta(iAlt)/dau
+           gammaN(iAlt) =  zeta(iAlt)/dal
 
-           ! c(iAlt) = -beta(iAlt) * &
-           !     (Diff(iLon,iLat,iAlt) + dk(iAlt)/(f*(f+1)))
-             one_2kb(iAlt) = &
-                 1.0 + beta(iAlt)*(&
-                 (2*Diff(iLon,iLat,iAlt)/f) + &
-                 (4*(1-f*f)/(f*f*(1+f)*(1+f))*dk(iAlt)))
+           one_2kb(iAlt) = (1.0 + BetaP(iAlt) + BetaN(iAlt))
 
-             a(iAlt) = -beta(iAlt) * &
-                 (2*Diff(iLon,iLat,iAlt)/(1+f) - &
-                  4*dk(iAlt)/((f+1)*(f+1)))
-             
-             c(iAlt) = -beta(iAlt) * &
-                 (2*Diff(iLon,iLat,iAlt)/(f*(1+f)) + &
-                  4*dk(iAlt)/(f*f*(1+f)*(1+f)))     
+           a(iAlt) = -betaN(iAlt)
+
+           c(iAlt) = -betaP(iAlt)
 
            b(iAlt) = one_2kb(iAlt)
 
-           r(iAlt) = tempold(iAlt)
+           r(iAlt) = gammaP(iAlt)*tempold(iAlt+1) + &
+                    (1.0 - gammaP(iAlt) - gammaN(iAlt) )*tempold(iAlt) + &
+                     gammaN(iAlt)*tempold(iAlt-1)
 
         enddo
 
         ! Boundary Conditions:
-        r(1) = r(1) - a(1) * Quantity(iLon, iLat, 0)
-        a(1) = 0.0
 
-        b(nAlts) = b(nAlts) + c(nAlts)
-        c(nAlts) = 0.0
+        r(0) = tempold(0)
+        a(0) = 0.0
+        b(0) = 1.0
+        c(0) = 0.0
+
+        a(nAlts+1) = 0.0
+        b(nAlts+1) = 1.0
+        c(nAlts+1) = 0.0
+        r(nAlts+1) = tempold(nAlts+1)
 
         ! This solver comes out of Numerical Recipies, page 48.
 
-        bet = b(1)
-        u(1) = r(1)/bet
-        do iAlt = 2,nAlts
+        bet = b(0)
+        u(0) = r(0)/bet
+
+        do iAlt = 1,nAlts+1
            gam(iAlt) = c(iAlt-1)/bet
            bet = b(iAlt)-a(iAlt)*gam(iAlt)
           If (bet.eq.0.0) then
@@ -127,11 +130,11 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
            endif
            u(iAlt) = (r(iAlt)-a(iAlt)*u(iAlt-1))/bet
         enddo
-        Do iAlt = nAlts-1,1,-1
+        Do iAlt = nAlts,0,-1
            u(iAlt) = u(iAlt)-gam(iAlt+1)*u(iAlt+1)
         enddo
 
-        temp(1:nAlts) = u
+        temp(0:nAlts+1) = u(0:nAlts+1)
 
         dTdt_cond(iLon,iLat,1:nAlts) = temp(1:nAlts) - &
              Quantity(iLon,iLat,1:nAlts)
@@ -150,13 +153,8 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
 
            do iAlt = 1, nAlts
 
-              dk(iAlt) = ( &
-                   Diff(iLon,iLat,iAlt+1) - &
-                   Diff(iLon,iLat,iAlt-1))/2
-
               tempold(iAlt) = Quantity(iLon,iLat,iAlt) + &
-                   (dk(iAlt) * 0.5 * &
-                   (solution(iLon,iLat,iAlt+1)-solution(iLon,iLat,iAlt-1)) + &
+                   (0.5*(solution(iLon,iLat,iAlt+1)-solution(iLon,iLat,iAlt-1)) + &
                    Diff(iLon,iLat,iAlt)* &
                    (solution(iLon,iLat,iAlt+1) &
                    + solution(iLon,iLat,iAlt-1) &
