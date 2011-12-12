@@ -22,7 +22,6 @@ our $Verbose;
 our $Show;
 our $ShowGridSize;
 our $NewGridSize;
-our $Hdf5;
 
 &print_help if $Help;
 
@@ -49,9 +48,6 @@ my $nWave;
 my $nWaveNew;
 my $nMaterial;
 my $nMaterialNew;
-
-# HDF5 header file to modify
-my $NameHdf5File = "util/HDF5/src/Flash.h";
 
 # For SC/BATSRUS and IH/BATSRUS src/ is created during configuration of SWMF
 if(not -d $Src){exit 0};
@@ -202,24 +198,7 @@ sub set_grid_size{
 	s/\b(nK\s*=[^0-9]*)(\d+)/$1$nK/i;
 	print;
     }
-    
-    
-    # The HDF5 support is not yet functional, and changing
-    # a CVS controlled file is not a good idea. So it is commented out.
-    #if(-f $NameHdf5File){
-    #	# Determine the number of dimensions specified and write
-    #	# that value to the necessary HDF5 header files
-    #
-    #	@ARGV = ($NameHdf5File);
-    #	my $nDim = 0 + ($nI>1) + ($nJ>1) + ($nK>1);
-    #	while(<>){
-    #	    s/\b(NDIM\s*[^0-9]*)(\d+)/$1$nDim/i;
-    #	    print;
-    #	}
-    #
-    #	# Recompile the HDF5 library if it is currently enabled.
-    #	&shell_command("make HDF5") if $Hdf5 eq "yes";
-    #}
+
 }
 
 ##############################################################################
