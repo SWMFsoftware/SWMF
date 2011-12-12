@@ -27,13 +27,7 @@ module ModLookupTable
   integer, public, parameter:: MaxTable = 20 ! maximum number of tables
   integer, public :: nTable = 0     ! actual number of tables
 
-  ! private variables
-
-  interface interpolate_lookup_table
-     module procedure interpolate_with_known_arg   !Both arguments are known
-     module procedure interpolate_with_known_val   !Table value is given
-  end interface
-
+  public:: TableType
   type TableType
      character(len=100):: NameTable        ! unique name for identification
      character(len=4)  :: NameCommand      ! command: load, make, save
@@ -53,7 +47,14 @@ module ModLookupTable
   end type
 
   ! The array of tables
-  type(TableType), target :: Table_I(MaxTable)
+  type(TableType), public, target :: Table_I(MaxTable)
+
+  ! private variables
+
+  interface interpolate_lookup_table
+     module procedure interpolate_with_known_arg   !Both arguments are known
+     module procedure interpolate_with_known_val   !Table value is given
+  end interface
 
   ! Array for variable names
   integer, parameter:: MaxVar = 200
@@ -171,6 +172,8 @@ contains
     !
     ! The table maybe loaded
 
+    use ModIoUnit, ONLY: UnitTmp_
+
     integer, parameter:: MaxTableName = 20
 
     character(len=100):: NameCommand, NameTable, NameFile, TypeFile, &
@@ -179,7 +182,7 @@ contains
     type(TableType), pointer:: Ptr
 
     logical           :: DoReadTableParam
-    integer           :: nTableParam, iTableParam
+    integer           :: nTableParam, iTableParam, iError
     real, allocatable :: TableParam_I(:)
     character(len=100):: NameParam
 
@@ -191,6 +194,8 @@ contains
 
     DoReadTableParam = index(NameCommand, "para") > 0
     NameCommand = NameCommand(1:4)
+    ! If table is loaded, the table parameters are loaded too
+    if(NameCommand == "load") DoReadTableParam = .false.
 
     ! Expand name
     call check_braces(NameTable, NameTable_I, nTableName)
@@ -226,7 +231,7 @@ contains
 
           ! Read the parameters for this table
           select case(NameCommand)
-          case("load", "save")
+          case("load", "save", "use")
              call read_var('NameFile', NameFile)
              call check_braces(NameFile, NameFile_I, nFileName)
              if(nTableName /= nFileName)call CON_stop(NameSub // &
@@ -238,6 +243,19 @@ contains
           case default
              call CON_stop(NameSub//': unknown command='//Ptr%NameCommand)
           end select
+
+          if(NameCommand == "use")then
+             ! Check if table is already there or not
+             open(UnitTmp_, FILE=NameFile_I(iTableName), STATUS="old", &
+                  IOSTAT=iError)
+             if(iError == 0)then
+                close(UnitTmp_)
+                NameCommand = "load"
+                DoReadTableParam = .false.
+             else
+                NameCommand = "save"
+             end if
+          end if
 
           ! The table parameters have to be the same for all tables
           if(DoReadTableParam)then
@@ -253,9 +271,10 @@ contains
        end if
 
        if(NameCommand /= "para") Ptr%NameCommand = NameCommand
+
        if(NameCommand == "load" .or. NameCommand == "save")then
-          Ptr%NameFile    = NameFile_I(iTableName)
-          Ptr%TypeFile    = TypeFile
+          Ptr%NameFile = NameFile_I(iTableName)
+          Ptr%TypeFile = TypeFile
        end if
 
        ! Load table on all processors
@@ -644,15 +663,23 @@ contains
        
   end subroutine interpolate_with_known_val
   !===========================================================================
-  subroutine get_lookup_table(iTable, iParamIn, &
-       Param, nParam, Param_I, StringDescription)
+  subroutine get_lookup_table(iTable, &
+       iParamIn, Param, nParam, Param_I, nValue, nIndex_I, &
+       IndexMin_I, IndexMax_I, IsLogIndex_I, &
+       NameVar, StringDescription)
 
     integer,                    intent(in) :: iTable     ! table index
     integer,          optional, intent(in) :: iParamIn   ! index of a parameter
     real,             optional, intent(out):: Param      ! one parameter
     integer,          optional, intent(out):: nParam     ! number of parameters
     real,             optional, intent(out):: Param_I(:) ! array of parameters
-    character(LEN=*), optional, intent(out):: StringDescription ! description
+    integer,          optional, intent(out):: nValue     ! number of columns
+    integer,          optional, intent(out):: nIndex_I(2)! number of indexes
+    real,             optional, intent(out):: IndexMin_I(2)   ! minimum indexes
+    real,             optional, intent(out):: IndexMax_I(2)   ! maximum indexes
+    logical,          optional, intent(out):: IsLogIndex_I(2) ! is logarithmic
+    character(len=*), optional, intent(out):: NameVar         ! variable names
+    character(len=*), optional, intent(out):: StringDescription ! description
 
     ! Get various parameters of table iTable.
 
@@ -661,6 +688,12 @@ contains
     !------------------------------------------------------------------------
     Ptr => Table_I(iTable)
     if(present(StringDescription)) StringDescription = Ptr%StringDescription
+    if(present(NameVar))           NameVar           = Ptr%NameVar
+    if(present(nValue))            nValue            = Ptr%nValue
+    if(present(nIndex_I))          nIndex_I          = Ptr%nIndex_I
+    if(present(IndexMin_I))        IndexMin_I        = Ptr%IndexMin_I
+    if(present(IndexMax_I))        IndexMax_I        = Ptr%IndexMax_I
+    if(present(IsLogIndex_I))      IsLogIndex_I      = Ptr%IsLogIndex_I
     if(present(nParam))            nParam            = Ptr%nParam
     if(present(Param_I))then
        ! return an array of parameters
