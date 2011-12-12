@@ -111,9 +111,11 @@ contains
     use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitT_, UnitJ_
     use ModVarIndexes, ONLY: nVar
 
-    character(len=*), parameter :: &
-         NameSub = 'ModResistivity::init_mod_resistivity'
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub = 'init_mod_resistivity'
     !------------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
     Si2NoEta = Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
 
     Eta0       = Eta0Si       * Si2NoEta
@@ -149,6 +151,15 @@ contains
                call stop_mpi(NameSub//': semi-implicit resistivity not '// &
                'yet implemented for non-cartesian')
        end if
+
+       if(DoTestMe)then
+          write(*,*)NameSub, ': Si2NoEta = ',Si2NoEta
+          write(*,*)NameSub, ': Si2NoJ   = ',Si2No_V(UnitJ_)
+          write(*,*)NameSub, ': Eta0, Eta0Anom, EtaMaxAnom=', &
+               Eta0, Eta0Anom, EtaMaxAnom
+          write(*,*)NameSub, ': jCritInv = ', jCritInv
+       end if
+       
     end if
 
   end subroutine init_mod_resistivity
