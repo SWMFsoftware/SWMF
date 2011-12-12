@@ -26,7 +26,6 @@ clean:
 	cd EMPIRICAL/srcUA;           make clean
 	cd CRASH/src;                 make clean
 	cd CRASH/doc/Tex;	      make clean
-	cd HDF5/src;                  make clean
 
 distclean:
 	touch ${INSTALLFILE}
@@ -43,7 +42,6 @@ distclean:
 	cd EMPIRICAL/srcUA;           make distclean
 	cd CRASH/src;                 make distclean
 	cd CRASH/doc/Tex;             make distclean
-	cd HDF5/src;                  make distclean	
 	@(if [ -d HYPRE ]; then cd HYPRE;  make distclean; fi);
 	rm -f *~
 	rm -f ${INSTALLFILE}
