@@ -1,0 +1,3570 @@
+
+ BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2007
+
+ BATSRUS version 9.10 is running as GM on      2 PE(s)
+
+ EQUATIONS:   HD+Ionization+Levels+Radiation
+ USER MODULE: HYDRO + IONIZATION EQUILIBRIUM + LEVEL SETS 1.20
+
+ModReadParam::read_file: read and broadcast nLine= 249 lines of text
+ ----- Starting Session  1  ------
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
+
+#CODEVERSION
+ 9.10                        CodeVersion
+
+#BATL
+T                                UseBatl
+
+#USERMODULE
+HYDRO + IONIZATION EQUILIBRIUM + LEVEL SETS		NameUserModule
+ 1.20                  VersionUserModule
+
+#COMPONENT
+GM                              NameComp
+
+#PRECISION
+8                              nByteReal
+
+#EQUATION
+HD+Ionization+Levels+Radiation                    NameEquation
+      10                            nVar
+
+#CHECKGRIDSIZE
+       4                              nI
+       4                              nJ
+       1                              nK
+     442                     MinBlockALL
+
+#PLANET
+NONE                                                          NamePlanet
+
+#NEWRESTART
+F                         DoRestartBFace
+
+#RESTARTINFILE
+proc                             TypeRestartInFile
+
+#BLOCKLEVELSRELOADED
+
+#NSTEP
+      42                           nStep
+
+#STARTTIME
+    2000                           iYear
+       3                          iMonth
+      21                            iDay
+      10                           iHour
+      45                         iMinute
+       0                         iSecond
+
+#TIMESIMULATION
+ 2.000000024228580E-09       tSimulation
+
+#GRIDGEOMETRY
+rz                          TypeGeometry
+
+#VERTEXBASEDGRID
+F                     UseVertexBasedGrid
+
+#GRID
+      50                     nRootBlockX
+       5                     nRootBlockY
+       1                     nRootBlockZ
+-5.000000000000000E+01              xMin
+ 4.000000000000000E+03              xMax
+ 0.000000000000000E+00              yMin
+ 4.500000000000000E+02              yMax
+-5.000000000000000E-01              zMin
+ 5.000000000000000E-01              zMax
+
+#LIMITGENCOORD1
+-5.000000000000000E+01       XyzMin_D(1)		Coord1Min
+ 4.000000000000000E+03       XyzMax_D(1)		Coord1Max
+
+#COORDSYSTEM
+GSM                      TypeCoordSystem
+
+#SOLARWIND
+ 0.000000000000000E+00            SwNDim
+ 0.000000000000000E+00            SwTDim
+ 0.000000000000000E+00           SwUxDim
+ 0.000000000000000E+00           SwUyDim
+ 0.000000000000000E+00           SwUzDim
+ 0.000000000000000E+00          SwBxDdim		SwBxDim
+ 0.000000000000000E+00           SwByDim
+ 0.000000000000000E+00           SwBzDim
+
+#IOUNITS
+SI                            TypeIoUnit
+
+#NORMALIZATION
+READ		TypeNormalization
+ 1.000000000000000E-06        No2SiUnitX
+ 1.000000000000000E+03        No2SiUnitU
+ 1.000000000000000E+03      No2SiUnitRho
+
+#PLOTFILENAME
+nanosecond               NameMaxTimeUnit
+
+#UPDATECHECK
+F			DoUpdateCheck		UseUpdateCheck
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#LIMITER
+F			UseLogRhoLimiter
+F			UseLogPLimiter
+T			UseRhoRatioLimiter		UseScalarPerRhoLimiter
+EInt			NameVarLimitRatio
+
+#RESCHANGE
+T                       UseAccurateResChange
+
+#PLOTFILENAME
+nanosecond		NameMaxTimeUnit
+
+#LIMITER
+F			UseLogRhoLimiter
+F       	        UseLogPLimiter
+T               	UseRhoRatioLimiter		UseScalarPerRhoLimiter
+M(1:3) EInt		NameVarLimitRatio
+
+#GRIDGEOMETRY
+rz			TypeGeometry
+
+#OUTERBOUNDARY
+float			TypeBcXmin		TypeBcEast
+float			TypeBcXmax		TypeBcWest
+reflect			TypeBcYmin		TypeBcSouth
+float			TypeBcYmax		TypeBcNorth
+reflect			TypeBcZmin		TypeBcBottom
+reflect			TypeBcZmax		TypeBcTop
+
+#USERINPUTBEGIN  ----------------------
+
+#USERAMR
+20.0			 RhoMinAmr
+2500.0			 xMaxAmr
+1.0			 BetaProlong
+
+#USERINPUTEND    ----------------------
+
+#AMRINITPHYSICS
+2			nRefineLevelIC
+
+#AMRLEVELS
+0			MinBlockLevel
+1			MaxBlockLevel
+F			DoFixBodyLevel
+
+#DOAMR
+T                       DoAmr
+1                       DnAmr
+-1                      DtAmr
+T                       IsStrictAmr
+
+#AMRCRITERIA
+1			nRefineCrit		nCrit
+user			TypeRefine		CritName
+0.5			LimitCoarsen		CoarsenCrit
+0.5			LimitRefine		RefineCrit
+
+#LOOKUPTABLE
+Opacity(rho,T)          NameTable
+load                    NameCommand
+table_opacities.out     NameFile
+ascii                   TypeFile
+
+#SEMIIMPLICIT
+T                       UseSemiImplicit
+radiation               TypeSemiImplicit
+
+#KRYLOV
+cg			TypeKrylov
+nul			TypeInitKrylov
+1.0e-8			ErrorMaxKrylov
+900			MaxMatvecKrylov
+
+#PRECONDITIONER
+left			TypePrecondSide
+bilu			TypePrecond
+
+#RADIATION
+T                       UseGrayDiffusion		UseRadDiffusion
+T                       UseRadFluxLimiter
+larsen                  TypeRadFluxLimiter
+300.0			TradMinSi
+
+#TEST
+krylov			StringTest
+
+#USERINPUTBEGIN  ----------------------
+
+#USEEOSTABLE
+T		Use EOS table for Xe
+T		Use EOS table for Be
+T		Use EOS table for Pl
+
+#USERINPUTEND    ----------------------
+
+#LOOKUPTABLE
+{Xe Be Pl}_eos          NameTable
+load                    NameCommand
+{Xe Be Pl}_eos_CRASH.dat		NameFile
+real8                   TypeFile
+
+#LOOKUPTABLE
+Opacity(rho,T)          NameTable
+load                    NameCommand
+table_opacities.out     NameFile
+ascii                   TypeFile
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+2.0			LimiterBeta
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.0			DtSaveLogfile
+
+#SAVEPLOT
+1			nPlotfile		nPlotFile
+z=0 VAR idl		PlotString		StringPlot
+-1                      DnSavePlot
+2.10038e-9              DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz Eint p Xe Be Pl level tekev trkev planck ross		NameVars
+gamma		NamePars
+
+#STOP
+-1			MaxIteration
+3e-9			tSimulationMax
+ GM_set_parameters: CHECK iSession = 1
+  
+init_mod_advance allocated arrays
+init_mod_geometry allocated arrays
+ Only Extra and Outer boundary cells can be saved
+init_mod_nodes allocated arrays
+init_mod_implicit allocated arrays
+ user_init_session iTablePPerRho, Thermo, Opacity, Opacity_I, iTableSesame =  -1 -1 1 -1 -1 -1 -1 -1 -1
+     total blocks =  442
+ BATS_setup restarts at n_step,Time_Simulation= 42   2.0000000242285802E-09
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Physical Parameters
+    -------------------
+
+          I/O Unit type: SI            Normalization: READ
+
+          Gamma:         1.66666667
+
+          UseBody1: .false.
+
+          UseBody2: .false.
+
+          ClightFactor:  1.00000E+00, Clight:      2.99790E+05
+
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          2nd-order scheme with mc3 limiter
+              BetaLimiter = 2.00
+          Linde flux function
+          Time accurate calculation
+          Semi-implicit time stepping for radiation
+              nStage: 2
+              Cfl:    0.80
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =  2
+
+ After initial grid setup:
+   nBlockMax =  221  nBLK =  400
+   Total number of blocks used =  442
+   Total number of cells =  7072
+   Total number of true cells =  7072
+   Smallest cell dx:   10.1250000000000000   Largest cell dx:   20.2500000000000000
+
+ root blocks:       50       5       1
+ nIJK_D:             4       4       1
+ x:               -50.00000000   4000.00000000
+ y:                 0.00000000    450.00000000
+ z:                -0.50000000      0.50000000
+
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                   0.05    100.00         1         1
+-------------------------------------------------------------------------------
+setup                     0.05     99.93         1         1
+exch_msgs                 0.01     20.86         1         1
+read_restart_files        0.01     18.74         1         1
+batl_pass                 0.01     13.52         1         2
+wait_pass                 0.01     11.33         1         2
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+ krylov at iter= 1
+ CG rDotR0, rDotRMax=   8.1750000571886051E+08   8.1750000571886061E-08
+ CG nIter, rDotR= 1   1.5575247237696381E+07
+ CG nIter, rDotR= 2   2.4779261261317190E+06
+ CG nIter, rDotR= 3   1.0771498737197972E+06
+ CG nIter, rDotR= 4   4.3606069106235157E+05
+ CG nIter, rDotR= 5   1.0305243470414887E+05
+ CG nIter, rDotR= 6   4.7554782842998102E+04
+ CG nIter, rDotR= 7   3.0858915950484483E+04
+ CG nIter, rDotR= 8   1.7829313151441482E+04
+ CG nIter, rDotR= 9   1.3598302064896643E+04
+ CG nIter, rDotR= 10   2.0305832307271037E+04
+ CG nIter, rDotR= 11   2.4546891092118618E+04
+ CG nIter, rDotR= 12   2.7501771678146579E+04
+ CG nIter, rDotR= 13   3.0413355875618825E+04
+ CG nIter, rDotR= 14   2.2100964407268111E+04
+ CG nIter, rDotR= 15   1.4529251405104867E+04
+ CG nIter, rDotR= 16   1.2398425779401961E+04
+ CG nIter, rDotR= 17   9.1196881055432987E+03
+ CG nIter, rDotR= 18   8.5670826651896896E+03
+ CG nIter, rDotR= 19   5.9389823894567280E+03
+ CG nIter, rDotR= 20   3.4163901349098765E+03
+ CG nIter, rDotR= 21   3.9006233521660151E+03
+ CG nIter, rDotR= 22   3.7197684877811162E+03
+ CG nIter, rDotR= 23   2.1812242957670505E+03
+ CG nIter, rDotR= 24   1.9978757374896395E+03
+ CG nIter, rDotR= 25   1.2393395673410121E+03
+ CG nIter, rDotR= 26   7.9484901352396025E+02
+ CG nIter, rDotR= 27   6.0618444609064613E+02
+ CG nIter, rDotR= 28   4.7540242802582088E+02
+ CG nIter, rDotR= 29   2.0456389562747310E+02
+ CG nIter, rDotR= 30   1.4352548670303514E+02
+ CG nIter, rDotR= 31   1.0173214193959154E+02
+ CG nIter, rDotR= 32  54.8883294879957688
+ CG nIter, rDotR= 33  29.6539908371089638
+ CG nIter, rDotR= 34  21.1879878880908628
+ CG nIter, rDotR= 35  12.6084921535079975
+ CG nIter, rDotR= 36   6.3355860383364391
+ CG nIter, rDotR= 37   4.6187187784801171
+ CG nIter, rDotR= 38   2.2868404861758100
+ CG nIter, rDotR= 39   1.4035252802803306
+ CG nIter, rDotR= 40   0.8567565167102731
+ CG nIter, rDotR= 41   0.6496442396403819
+ CG nIter, rDotR= 42   0.2440864231848401
+ CG nIter, rDotR= 43   0.1473577068328779
+ CG nIter, rDotR= 44   0.1076123340485308
+ CG nIter, rDotR= 45   6.2747770934673000E-02
+ CG nIter, rDotR= 46   4.5233990274308120E-02
+ CG nIter, rDotR= 47   3.0746268666227063E-02
+ CG nIter, rDotR= 48   1.5314413935293491E-02
+ CG nIter, rDotR= 49   8.9497468221349363E-03
+ CG nIter, rDotR= 50   4.7045394383771165E-03
+ CG nIter, rDotR= 51   3.1238852107022758E-03
+ CG nIter, rDotR= 52   2.0024289961958278E-03
+ CG nIter, rDotR= 53   1.1312165172610270E-03
+ CG nIter, rDotR= 54   7.0823445320667257E-04
+ CG nIter, rDotR= 55   3.9037835306438202E-04
+ CG nIter, rDotR= 56   2.9294563758355357E-04
+ CG nIter, rDotR= 57   1.5520989554505213E-04
+ CG nIter, rDotR= 58   1.2985077396348018E-04
+ CG nIter, rDotR= 59   8.9702313041497661E-05
+ CG nIter, rDotR= 60   6.7548267541384023E-05
+ CG nIter, rDotR= 61   5.7317784426056093E-05
+ CG nIter, rDotR= 62   4.3955289520441951E-05
+ CG nIter, rDotR= 63   3.4723573872957895E-05
+ CG nIter, rDotR= 64   4.0173841285829185E-05
+ CG nIter, rDotR= 65   4.4989261127456591E-05
+ CG nIter, rDotR= 66   3.7657099881680647E-05
+ CG nIter, rDotR= 67   3.7429406625409861E-05
+ CG nIter, rDotR= 68   4.0750605530539753E-05
+ CG nIter, rDotR= 69   3.8784887011951716E-05
+ CG nIter, rDotR= 70   3.2383021847838722E-05
+ CG nIter, rDotR= 71   2.1510506048962638E-05
+ CG nIter, rDotR= 72   1.5716204128750365E-05
+ CG nIter, rDotR= 73   1.1453129423507605E-05
+ CG nIter, rDotR= 74   8.1089353077591438E-06
+ CG nIter, rDotR= 75   4.4066662886026531E-06
+ CG nIter, rDotR= 76   3.2547058078479718E-06
+ CG nIter, rDotR= 77   1.9487792200384848E-06
+ CG nIter, rDotR= 78   1.0855768025214660E-06
+ CG nIter, rDotR= 79   6.8757350480610539E-07
+ CG nIter, rDotR= 80   4.1163386674061748E-07
+ CG nIter, rDotR= 81   2.7171952330894544E-07
+ CG nIter, rDotR= 82   1.6427828743843285E-07
+ CG nIter, rDotR= 83   1.0402418315867920E-07
+ CG nIter, rDotR= 84   6.4143878804707666E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 85 0   8.8579602484248086E-09
+ |
+ |  AMR:  nBlockMax =  221  nBLK =  400
+ |  AMR:  Total number of blocks used =  442
+ |  AMR:  Total number of cells =  7072
+ |  AMR:  Total number of true cells =  7072
+ |  Smallest cell dx:   10.1250000000000000   Largest cell dx:   20.2500000000000000
+ |
+ krylov at iter= 2
+ CG rDotR0, rDotRMax=   2.5033569821500584E+08   2.5033569821500588E-08
+ CG nIter, rDotR= 1   1.1119928441699410E+07
+ CG nIter, rDotR= 2   3.3184208819367304E+06
+ CG nIter, rDotR= 3   1.1453425586790408E+06
+ CG nIter, rDotR= 4   4.2506351520555041E+05
+ CG nIter, rDotR= 5   9.9051275477082381E+04
+ CG nIter, rDotR= 6   5.0703506751567838E+04
+ CG nIter, rDotR= 7   2.9197325925542278E+04
+ CG nIter, rDotR= 8   9.2831393479799681E+03
+ CG nIter, rDotR= 9   5.7249998347829387E+03
+ CG nIter, rDotR= 10   4.4892026873457235E+03
+ CG nIter, rDotR= 11   3.3554834539225758E+03
+ CG nIter, rDotR= 12   2.5847461088465293E+03
+ CG nIter, rDotR= 13   2.5019181078868969E+03
+ CG nIter, rDotR= 14   2.3285398782041570E+03
+ CG nIter, rDotR= 15   2.0937250239784316E+03
+ CG nIter, rDotR= 16   1.8479040033453416E+03
+ CG nIter, rDotR= 17   1.5724450550396130E+03
+ CG nIter, rDotR= 18   1.5653378660856345E+03
+ CG nIter, rDotR= 19   1.0437992660374848E+03
+ CG nIter, rDotR= 20   9.3951844833516384E+02
+ CG nIter, rDotR= 21   1.2364426975256192E+03
+ CG nIter, rDotR= 22   1.0175458243624689E+03
+ CG nIter, rDotR= 23   7.7834416821810532E+02
+ CG nIter, rDotR= 24   6.4636932984175451E+02
+ CG nIter, rDotR= 25   4.2711386756938128E+02
+ CG nIter, rDotR= 26   3.6724960859259977E+02
+ CG nIter, rDotR= 27   3.8957517403868837E+02
+ CG nIter, rDotR= 28   2.7479389958076166E+02
+ CG nIter, rDotR= 29   1.8665935789404003E+02
+ CG nIter, rDotR= 30   1.4454659235142580E+02
+ CG nIter, rDotR= 31  93.7333299038115655
+ CG nIter, rDotR= 32  65.6304682317513794
+ CG nIter, rDotR= 33  53.9967212321606667
+ CG nIter, rDotR= 34  39.0230995424020719
+ CG nIter, rDotR= 35  19.7356943174689299
+ CG nIter, rDotR= 36  13.8946081717521466
+ CG nIter, rDotR= 37   8.6661097241884271
+ CG nIter, rDotR= 38   4.3280791317635510
+ CG nIter, rDotR= 39   2.7681750774600258
+ CG nIter, rDotR= 40   1.7694091477623057
+ CG nIter, rDotR= 41   1.1365782158393734
+ CG nIter, rDotR= 42   0.6964745126903519
+ CG nIter, rDotR= 43   0.4887363508416395
+ CG nIter, rDotR= 44   0.2938747091031746
+ CG nIter, rDotR= 45   0.2313743242188764
+ CG nIter, rDotR= 46   0.1343957377899287
+ CG nIter, rDotR= 47   6.5819894209727586E-02
+ CG nIter, rDotR= 48   3.6129542221250588E-02
+ CG nIter, rDotR= 49   2.4341666299758407E-02
+ CG nIter, rDotR= 50   1.5653677678728061E-02
+ CG nIter, rDotR= 51   1.0320374427142964E-02
+ CG nIter, rDotR= 52   6.1264668077350313E-03
+ CG nIter, rDotR= 53   3.8275461496904057E-03
+ CG nIter, rDotR= 54   2.0624131999169475E-03
+ CG nIter, rDotR= 55   1.2614426634553703E-03
+ CG nIter, rDotR= 56   9.2715231688373257E-04
+ CG nIter, rDotR= 57   6.5121324095706755E-04
+ CG nIter, rDotR= 58   3.9771067522340276E-04
+ CG nIter, rDotR= 59   2.7734153634989127E-04
+ CG nIter, rDotR= 60   1.6995239986988754E-04
+ CG nIter, rDotR= 61   8.7455286361105410E-05
+ CG nIter, rDotR= 62   5.8411696821811827E-05
+ CG nIter, rDotR= 63   3.5578483962568443E-05
+ CG nIter, rDotR= 64   2.4733432450507199E-05
+ CG nIter, rDotR= 65   1.5814782298393218E-05
+ CG nIter, rDotR= 66   1.1557058725221278E-05
+ CG nIter, rDotR= 67   7.3162416560671297E-06
+ CG nIter, rDotR= 68   4.7664854634510056E-06
+ CG nIter, rDotR= 69   3.8228045979735429E-06
+ CG nIter, rDotR= 70   2.9105792339114829E-06
+ CG nIter, rDotR= 71   2.2125298618630251E-06
+ CG nIter, rDotR= 72   2.4131371836165181E-06
+ CG nIter, rDotR= 73   2.2229246915079290E-06
+ CG nIter, rDotR= 74   2.3824288814739335E-06
+ CG nIter, rDotR= 75   2.3119834993563070E-06
+ CG nIter, rDotR= 76   2.1379193471714097E-06
+ CG nIter, rDotR= 77   1.7637992498482403E-06
+ CG nIter, rDotR= 78   1.8618375733715829E-06
+ CG nIter, rDotR= 79   1.8395920110062073E-06
+ CG nIter, rDotR= 80   1.5293836150509296E-06
+ CG nIter, rDotR= 81   1.1294638028106460E-06
+ CG nIter, rDotR= 82   8.2460571143645657E-07
+ CG nIter, rDotR= 83   6.0551777297646239E-07
+ CG nIter, rDotR= 84   3.6797176163083479E-07
+ CG nIter, rDotR= 85   2.8175764669443540E-07
+ CG nIter, rDotR= 86   1.7296112943674710E-07
+ CG nIter, rDotR= 87   1.2571970849460225E-07
+ CG nIter, rDotR= 88   9.0077938361834642E-08
+ CG nIter, rDotR= 89   5.7905519205285725E-08
+ CG nIter, rDotR= 90   3.0087918100497063E-08
+ CG nIter, rDotR= 91   2.1184237759982272E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 92 0   9.1990934037425176E-09
+ krylov at iter= 3
+ CG rDotR0, rDotRMax=   4.1051096842562109E+08   4.1051096842562114E-08
+ CG nIter, rDotR= 1   1.4674003161755601E+07
+ CG nIter, rDotR= 2   3.7628925026094695E+06
+ CG nIter, rDotR= 3   1.1228210869363556E+06
+ CG nIter, rDotR= 4   3.5951735741324752E+05
+ CG nIter, rDotR= 5   7.5963466763900185E+04
+ CG nIter, rDotR= 6   3.9156986355019886E+04
+ CG nIter, rDotR= 7   2.0379144709458291E+04
+ CG nIter, rDotR= 8   8.6617108479376038E+03
+ CG nIter, rDotR= 9   7.3023174553788958E+03
+ CG nIter, rDotR= 10   7.2942647981291393E+03
+ CG nIter, rDotR= 11   6.7157687905922085E+03
+ CG nIter, rDotR= 12   6.0606703390436887E+03
+ CG nIter, rDotR= 13   5.0040680204798100E+03
+ CG nIter, rDotR= 14   3.1511085442071189E+03
+ CG nIter, rDotR= 15   2.0373868871174293E+03
+ CG nIter, rDotR= 16   1.0960470218788439E+03
+ CG nIter, rDotR= 17   7.2124814752855946E+02
+ CG nIter, rDotR= 18   6.0492601720324274E+02
+ CG nIter, rDotR= 19   4.3482018168315699E+02
+ CG nIter, rDotR= 20   3.9599602111672755E+02
+ CG nIter, rDotR= 21   4.0611229240904032E+02
+ CG nIter, rDotR= 22   4.6215303636721518E+02
+ CG nIter, rDotR= 23   5.4708376097407995E+02
+ CG nIter, rDotR= 24   5.2866258428611116E+02
+ CG nIter, rDotR= 25   5.2789959208750486E+02
+ CG nIter, rDotR= 26   6.1768023523988859E+02
+ CG nIter, rDotR= 27   3.4252401508958059E+02
+ CG nIter, rDotR= 28   2.0951870352109316E+02
+ CG nIter, rDotR= 29   1.4174786248866027E+02
+ CG nIter, rDotR= 30  65.1116540033673346
+ CG nIter, rDotR= 31  45.2262410413053004
+ CG nIter, rDotR= 32  31.9622380875610048
+ CG nIter, rDotR= 33  15.7925971402501215
+ CG nIter, rDotR= 34   7.8018527155452313
+ CG nIter, rDotR= 35   5.5047648817280432
+ CG nIter, rDotR= 36   3.1291941335475766
+ CG nIter, rDotR= 37   2.0152219759541090
+ CG nIter, rDotR= 38   1.3460407793393805
+ CG nIter, rDotR= 39   0.7731171665004462
+ CG nIter, rDotR= 40   0.5142644811209148
+ CG nIter, rDotR= 41   0.3683564871747012
+ CG nIter, rDotR= 42   0.1906461536018427
+ CG nIter, rDotR= 43   0.1181530622894530
+ CG nIter, rDotR= 44   9.1115281679044771E-02
+ CG nIter, rDotR= 45   5.1824407216320589E-02
+ CG nIter, rDotR= 46   3.4723778090814533E-02
+ CG nIter, rDotR= 47   2.4514240807957260E-02
+ CG nIter, rDotR= 48   1.4422860084028589E-02
+ CG nIter, rDotR= 49   8.9297471783318805E-03
+ CG nIter, rDotR= 50   5.0752777573665050E-03
+ CG nIter, rDotR= 51   2.8769446882755214E-03
+ CG nIter, rDotR= 52   1.8427393106837009E-03
+ CG nIter, rDotR= 53   1.0886139946814561E-03
+ CG nIter, rDotR= 54   6.5844794049886200E-04
+ CG nIter, rDotR= 55   3.9043779795168741E-04
+ CG nIter, rDotR= 56   1.8959079148292570E-04
+ CG nIter, rDotR= 57   1.0496450603331197E-04
+ CG nIter, rDotR= 58   8.1939428110586386E-05
+ CG nIter, rDotR= 59   4.8523996823102810E-05
+ CG nIter, rDotR= 60   2.5794884318025742E-05
+ CG nIter, rDotR= 61   1.6070905225613859E-05
+ CG nIter, rDotR= 62   9.7065869763526805E-06
+ CG nIter, rDotR= 63   6.5864454776624160E-06
+ CG nIter, rDotR= 64   4.7350484178835784E-06
+ CG nIter, rDotR= 65   2.9714582823102588E-06
+ CG nIter, rDotR= 66   1.7642571001446411E-06
+ CG nIter, rDotR= 67   1.3244811053949858E-06
+ CG nIter, rDotR= 68   1.0745738793709651E-06
+ CG nIter, rDotR= 69   7.4710562381878363E-07
+ CG nIter, rDotR= 70   6.1326734285223408E-07
+ CG nIter, rDotR= 71   5.3957434079683563E-07
+ CG nIter, rDotR= 72   5.3491474412788998E-07
+ CG nIter, rDotR= 73   6.0824573865486823E-07
+ CG nIter, rDotR= 74   6.4739231514018248E-07
+ CG nIter, rDotR= 75   6.0123676372464189E-07
+ CG nIter, rDotR= 76   5.5739596017092184E-07
+ CG nIter, rDotR= 77   5.3915232193962615E-07
+ CG nIter, rDotR= 78   4.4348584914059930E-07
+ CG nIter, rDotR= 79   3.7149413791680969E-07
+ CG nIter, rDotR= 80   2.7846351618032835E-07
+ CG nIter, rDotR= 81   1.9628063181220986E-07
+ CG nIter, rDotR= 82   1.2645457405636797E-07
+ CG nIter, rDotR= 83   9.2838986847394449E-08
+ CG nIter, rDotR= 84   5.8968673103979662E-08
+ CG nIter, rDotR= 85   3.8102315401948305E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 86 0   9.6341477209343179E-09
+ krylov at iter= 4
+ CG rDotR0, rDotRMax=   4.7916507518745267E+08   4.7916507518745274E-08
+ CG nIter, rDotR= 1   1.3671790010626048E+07
+ CG nIter, rDotR= 2   3.3573031801885874E+06
+ CG nIter, rDotR= 3   7.3435940005163092E+05
+ CG nIter, rDotR= 4   2.2756771932612697E+05
+ CG nIter, rDotR= 5   6.5317622299809555E+04
+ CG nIter, rDotR= 6   2.8010610792285072E+04
+ CG nIter, rDotR= 7   1.1832198108135961E+04
+ CG nIter, rDotR= 8   6.2552654524230593E+03
+ CG nIter, rDotR= 9   5.6061291367348622E+03
+ CG nIter, rDotR= 10   5.8764059924044423E+03
+ CG nIter, rDotR= 11   6.1950697733255665E+03
+ CG nIter, rDotR= 12   4.4291964167634833E+03
+ CG nIter, rDotR= 13   3.7316589649388870E+03
+ CG nIter, rDotR= 14   3.5505081371097381E+03
+ CG nIter, rDotR= 15   1.9325959886822454E+03
+ CG nIter, rDotR= 16   1.2254591045381653E+03
+ CG nIter, rDotR= 17   1.4500909900715289E+03
+ CG nIter, rDotR= 18   1.1408897371799310E+03
+ CG nIter, rDotR= 19   7.4624186201367843E+02
+ CG nIter, rDotR= 20   9.9641598251049106E+02
+ CG nIter, rDotR= 21   1.0639776066595350E+03
+ CG nIter, rDotR= 22   9.1345177076729442E+02
+ CG nIter, rDotR= 23   1.0654164217241230E+03
+ CG nIter, rDotR= 24   1.1232240832695713E+03
+ CG nIter, rDotR= 25   8.2918437452357682E+02
+ CG nIter, rDotR= 26   6.1789073579469550E+02
+ CG nIter, rDotR= 27   3.8020972773333847E+02
+ CG nIter, rDotR= 28   1.8359720205755636E+02
+ CG nIter, rDotR= 29   1.0105612654824621E+02
+ CG nIter, rDotR= 30  85.4563698469072648
+ CG nIter, rDotR= 31  44.8777502569865447
+ CG nIter, rDotR= 32  18.6457649367524212
+ CG nIter, rDotR= 33  11.0445480531623854
+ CG nIter, rDotR= 34   8.8397592856104179
+ CG nIter, rDotR= 35   4.8292384098966901
+ CG nIter, rDotR= 36   3.3588670425573133
+ CG nIter, rDotR= 37   2.0196470932181763
+ CG nIter, rDotR= 38   1.1751173191201152
+ CG nIter, rDotR= 39   0.5665812388775688
+ CG nIter, rDotR= 40   0.3929351303156426
+ CG nIter, rDotR= 41   0.2955203659755707
+ CG nIter, rDotR= 42   0.1443963661578711
+ CG nIter, rDotR= 43   8.3769982171177468E-02
+ CG nIter, rDotR= 44   5.7485694848784415E-02
+ CG nIter, rDotR= 45   3.9779792768745770E-02
+ CG nIter, rDotR= 46   2.2728865786147769E-02
+ CG nIter, rDotR= 47   1.2621269244247340E-02
+ CG nIter, rDotR= 48   7.5584267814656847E-03
+ CG nIter, rDotR= 49   6.3569259153374962E-03
+ CG nIter, rDotR= 50   4.3731536606534142E-03
+ CG nIter, rDotR= 51   2.6964008835176235E-03
+ CG nIter, rDotR= 52   1.7299348721851169E-03
+ CG nIter, rDotR= 53   1.1966901802159670E-03
+ CG nIter, rDotR= 54   6.3992342682361067E-04
+ CG nIter, rDotR= 55   3.9946214033132165E-04
+ CG nIter, rDotR= 56   2.4790956813153329E-04
+ CG nIter, rDotR= 57   1.8242268578235320E-04
+ CG nIter, rDotR= 58   1.0624696081588436E-04
+ CG nIter, rDotR= 59   6.7639960399071028E-05
+ CG nIter, rDotR= 60   4.2091432434292389E-05
+ CG nIter, rDotR= 61   2.4400392778413333E-05
+ CG nIter, rDotR= 62   1.6150521639330092E-05
+ CG nIter, rDotR= 63   1.1918825717915865E-05
+ CG nIter, rDotR= 64   7.7292984578452199E-06
+ CG nIter, rDotR= 65   4.0197409680932670E-06
+ CG nIter, rDotR= 66   2.4092327005191365E-06
+ CG nIter, rDotR= 67   1.6919882712615064E-06
+ CG nIter, rDotR= 68   1.1050337261744290E-06
+ CG nIter, rDotR= 69   8.2058077355701972E-07
+ CG nIter, rDotR= 70   5.9739829856283355E-07
+ CG nIter, rDotR= 71   4.9946791579229717E-07
+ CG nIter, rDotR= 72   5.4723983786306274E-07
+ CG nIter, rDotR= 73   6.1833123318883644E-07
+ CG nIter, rDotR= 74   6.6566749962799222E-07
+ CG nIter, rDotR= 75   6.7092091448696851E-07
+ CG nIter, rDotR= 76   6.9875186355307267E-07
+ CG nIter, rDotR= 77   7.1543729918938985E-07
+ CG nIter, rDotR= 78   5.6893033766649349E-07
+ CG nIter, rDotR= 79   5.3753686895685114E-07
+ CG nIter, rDotR= 80   3.3586034750495449E-07
+ CG nIter, rDotR= 81   2.1368448467545738E-07
+ CG nIter, rDotR= 82   1.7869574554591504E-07
+ CG nIter, rDotR= 83   1.1369015727755464E-07
+ CG nIter, rDotR= 84   7.1380302177716120E-08
+ CG nIter, rDotR= 85   4.1872831684523809E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 86 0   9.3481051240646370E-09
+saved ifile= 5 type=z=0_var    at n_step=     46 time=   0:00:00 h:m:s
+ krylov at iter= 5
+ CG rDotR0, rDotRMax=   6.3327151593977058E+08   6.3327151593977064E-08
+ CG nIter, rDotR= 1   1.1725681634268943E+07
+ CG nIter, rDotR= 2   3.4319706085990723E+06
+ CG nIter, rDotR= 3   6.9312687358600367E+05
+ CG nIter, rDotR= 4   2.2304883845715941E+05
+ CG nIter, rDotR= 5   1.2238786902551785E+05
+ CG nIter, rDotR= 6   6.5969148145264218E+04
+ CG nIter, rDotR= 7   2.2694901860895861E+04
+ CG nIter, rDotR= 8   1.9427842877226689E+04
+ CG nIter, rDotR= 9   1.1910937879151896E+04
+ CG nIter, rDotR= 10   6.0969917446212012E+03
+ CG nIter, rDotR= 11   4.5864033473623622E+03
+ CG nIter, rDotR= 12   4.7781853552788671E+03
+ CG nIter, rDotR= 13   5.2673050465013011E+03
+ CG nIter, rDotR= 14   4.2791661259721232E+03
+ CG nIter, rDotR= 15   2.7738405931236744E+03
+ CG nIter, rDotR= 16   1.3554470018339377E+03
+ CG nIter, rDotR= 17   3.7385398996439051E+02
+ CG nIter, rDotR= 18   1.5529813822355916E+02
+ CG nIter, rDotR= 19   1.4657554399682695E+02
+ CG nIter, rDotR= 20   1.5842641466601066E+02
+ CG nIter, rDotR= 21   1.9036505863923770E+02
+ CG nIter, rDotR= 22   2.9558033249026118E+02
+ CG nIter, rDotR= 23   4.0122180644633141E+02
+ CG nIter, rDotR= 24   3.3748016423189716E+02
+ CG nIter, rDotR= 25   3.0027806479349937E+02
+ CG nIter, rDotR= 26   2.3316479171327262E+02
+ CG nIter, rDotR= 27   1.7751256287145912E+02
+ CG nIter, rDotR= 28   1.2415030179321288E+02
+ CG nIter, rDotR= 29  85.6480840177725469
+ CG nIter, rDotR= 30  74.5325813753881476
+ CG nIter, rDotR= 31  70.3975823487264876
+ CG nIter, rDotR= 32  47.0330564182718405
+ CG nIter, rDotR= 33  19.8720248563738018
+ CG nIter, rDotR= 34   9.4815358381781909
+ CG nIter, rDotR= 35   5.9088974988573835
+ CG nIter, rDotR= 36   4.7136636576856805
+ CG nIter, rDotR= 37   4.5127076854067250
+ CG nIter, rDotR= 38   3.1951580869952090
+ CG nIter, rDotR= 39   1.8515570892468798
+ CG nIter, rDotR= 40   0.9786285256182846
+ CG nIter, rDotR= 41   0.7237935242457123
+ CG nIter, rDotR= 42   0.2667772539564633
+ CG nIter, rDotR= 43   0.1477261979410864
+ CG nIter, rDotR= 44   9.0824328503836246E-02
+ CG nIter, rDotR= 45   4.9373945302279169E-02
+ CG nIter, rDotR= 46   2.8861193154988384E-02
+ CG nIter, rDotR= 47   2.4390207828368812E-02
+ CG nIter, rDotR= 48   1.7704296639739606E-02
+ CG nIter, rDotR= 49   1.0591448843762924E-02
+ CG nIter, rDotR= 50   6.0936182811696157E-03
+ CG nIter, rDotR= 51   3.8005013600927026E-03
+ CG nIter, rDotR= 52   2.2864208160868595E-03
+ CG nIter, rDotR= 53   1.7508487273142402E-03
+ CG nIter, rDotR= 54   1.0651119251327639E-03
+ CG nIter, rDotR= 55   7.3324557203013961E-04
+ CG nIter, rDotR= 56   4.8250629513140673E-04
+ CG nIter, rDotR= 57   2.3354906514805370E-04
+ CG nIter, rDotR= 58   1.6101189520783602E-04
+ CG nIter, rDotR= 59   1.0266348423389960E-04
+ CG nIter, rDotR= 60   6.9107067169381088E-05
+ CG nIter, rDotR= 61   5.0758667996351793E-05
+ CG nIter, rDotR= 62   3.5251845652984072E-05
+ CG nIter, rDotR= 63   2.0063759694944350E-05
+ CG nIter, rDotR= 64   1.5884102568083745E-05
+ CG nIter, rDotR= 65   1.6270746212125320E-05
+ CG nIter, rDotR= 66   1.2997755953008690E-05
+ CG nIter, rDotR= 67   1.1709561686966533E-05
+ CG nIter, rDotR= 68   1.0215622516091474E-05
+ CG nIter, rDotR= 69   1.2928936353582365E-05
+ CG nIter, rDotR= 70   1.8377254403977086E-05
+ CG nIter, rDotR= 71   1.8738298920115100E-05
+ CG nIter, rDotR= 72   1.8217930617343666E-05
+ CG nIter, rDotR= 73   1.5019330951948699E-05
+ CG nIter, rDotR= 74   1.1032772826598297E-05
+ CG nIter, rDotR= 75   9.2798803000419696E-06
+ CG nIter, rDotR= 76   8.0446432851435418E-06
+ CG nIter, rDotR= 77   4.7725877255430295E-06
+ CG nIter, rDotR= 78   2.7411960730268871E-06
+ CG nIter, rDotR= 79   2.3323424412272803E-06
+ CG nIter, rDotR= 80   1.9339234246855915E-06
+ CG nIter, rDotR= 81   9.9260711087043498E-07
+ CG nIter, rDotR= 82   6.8235803052850221E-07
+ CG nIter, rDotR= 83   3.7528144908292418E-07
+ CG nIter, rDotR= 84   1.7973130628744628E-07
+ CG nIter, rDotR= 85   1.2062965544760406E-07
+ CG nIter, rDotR= 86   6.9762169548441568E-08
+ CG nIter, rDotR= 87   4.7984713501511076E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 88 0   8.7047534722220359E-09
+ krylov at iter= 6
+ CG rDotR0, rDotRMax=   2.3236034321554682E+08   2.3236034321554685E-08
+ CG nIter, rDotR= 1   1.1161466695648164E+07
+ CG nIter, rDotR= 2   1.9624643362783543E+06
+ CG nIter, rDotR= 3   4.4647940768462530E+05
+ CG nIter, rDotR= 4   1.8941111031771469E+05
+ CG nIter, rDotR= 5   6.1750878421423731E+04
+ CG nIter, rDotR= 6   1.4108631191020635E+04
+ CG nIter, rDotR= 7   4.3484223167511900E+03
+ CG nIter, rDotR= 8   5.6548909313345866E+03
+ CG nIter, rDotR= 9   6.9836539906787866E+03
+ CG nIter, rDotR= 10   4.3761495296263201E+03
+ CG nIter, rDotR= 11   3.0050144157029831E+03
+ CG nIter, rDotR= 12   2.6195079798920196E+03
+ CG nIter, rDotR= 13   1.6277087667894489E+03
+ CG nIter, rDotR= 14   9.4447516264162971E+02
+ CG nIter, rDotR= 15   6.0630540230509894E+02
+ CG nIter, rDotR= 16   2.8395445762860669E+02
+ CG nIter, rDotR= 17   1.4963477027372767E+02
+ CG nIter, rDotR= 18   1.0282304902179310E+02
+ CG nIter, rDotR= 19  63.3058568528755146
+ CG nIter, rDotR= 20  33.9251149664471683
+ CG nIter, rDotR= 21  25.8538100563182915
+ CG nIter, rDotR= 22  26.9467730221252673
+ CG nIter, rDotR= 23  23.2034029544151217
+ CG nIter, rDotR= 24  30.0945646238660451
+ CG nIter, rDotR= 25  30.3224402855158637
+ CG nIter, rDotR= 26  42.5468249030443317
+ CG nIter, rDotR= 27  62.9590310185269360
+ CG nIter, rDotR= 28  49.0184911038799100
+ CG nIter, rDotR= 29  38.8477676574264947
+ CG nIter, rDotR= 30  40.9108498882157150
+ CG nIter, rDotR= 31  24.8352462247541936
+ CG nIter, rDotR= 32  17.6813594813085402
+ CG nIter, rDotR= 33  14.2656869103266359
+ CG nIter, rDotR= 34   8.1707683124711128
+ CG nIter, rDotR= 35   5.9599970810537615
+ CG nIter, rDotR= 36   4.4474689861760970
+ CG nIter, rDotR= 37   2.6553097655267908
+ CG nIter, rDotR= 38   1.5977694776926104
+ CG nIter, rDotR= 39   1.0343695185375075
+ CG nIter, rDotR= 40   0.5520742836969504
+ CG nIter, rDotR= 41   0.4032392688362880
+ CG nIter, rDotR= 42   0.2720551061992932
+ CG nIter, rDotR= 43   0.1884970944205849
+ CG nIter, rDotR= 44   0.1361371029261195
+ CG nIter, rDotR= 45   8.8647432189346106E-02
+ CG nIter, rDotR= 46   5.5297547149532993E-02
+ CG nIter, rDotR= 47   3.8083447363587410E-02
+ CG nIter, rDotR= 48   2.0716023278553070E-02
+ CG nIter, rDotR= 49   1.3547472051931768E-02
+ CG nIter, rDotR= 50   8.7241695645067611E-03
+ CG nIter, rDotR= 51   6.0405548980096970E-03
+ CG nIter, rDotR= 52   2.5669175336840771E-03
+ CG nIter, rDotR= 53   1.5533843983663756E-03
+ CG nIter, rDotR= 54   1.0613940046685138E-03
+ CG nIter, rDotR= 55   6.1699864560116975E-04
+ CG nIter, rDotR= 56   3.8100065985744683E-04
+ CG nIter, rDotR= 57   2.2121740127397998E-04
+ CG nIter, rDotR= 58   1.3633380832614095E-04
+ CG nIter, rDotR= 59   7.6652651392472145E-05
+ CG nIter, rDotR= 60   5.8580341251267476E-05
+ CG nIter, rDotR= 61   3.7404912178053357E-05
+ CG nIter, rDotR= 62   1.9507577172369812E-05
+ CG nIter, rDotR= 63   1.2684343214348820E-05
+ CG nIter, rDotR= 64   8.3202771033744379E-06
+ CG nIter, rDotR= 65   6.2927449861919396E-06
+ CG nIter, rDotR= 66   3.6560457258077166E-06
+ CG nIter, rDotR= 67   2.6855393337514963E-06
+ CG nIter, rDotR= 68   1.8205707502147626E-06
+ CG nIter, rDotR= 69   1.3031296240003165E-06
+ CG nIter, rDotR= 70   1.3074482739215980E-06
+ CG nIter, rDotR= 71   1.1419978625721546E-06
+ CG nIter, rDotR= 72   1.0450647615238813E-06
+ CG nIter, rDotR= 73   1.0177286636910060E-06
+ CG nIter, rDotR= 74   1.2530709526389697E-06
+ CG nIter, rDotR= 75   1.4426232148627525E-06
+ CG nIter, rDotR= 76   1.3776975135801406E-06
+ CG nIter, rDotR= 77   1.3239331534650065E-06
+ CG nIter, rDotR= 78   1.2922442327141985E-06
+ CG nIter, rDotR= 79   1.3235020599720830E-06
+ CG nIter, rDotR= 80   1.1837270321478562E-06
+ CG nIter, rDotR= 81   8.1434148880991027E-07
+ CG nIter, rDotR= 82   6.2485433946271864E-07
+ CG nIter, rDotR= 83   4.5654391409232219E-07
+ CG nIter, rDotR= 84   3.3983784868109986E-07
+ CG nIter, rDotR= 85   1.8254738809965063E-07
+ CG nIter, rDotR= 86   1.3424318678191195E-07
+ CG nIter, rDotR= 87   8.2189601967633517E-08
+ CG nIter, rDotR= 88   5.2771284333472703E-08
+ CG nIter, rDotR= 89   3.5561319222791366E-08
+ CG nIter, rDotR= 90   2.2422481264364103E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 91 0   9.8233774207842902E-09
+ krylov at iter= 7
+ CG rDotR0, rDotRMax=   7.0106631407770681E+08   7.0106631407770692E-08
+ CG nIter, rDotR= 1   2.0626834011325713E+07
+ CG nIter, rDotR= 2   2.8231765476364647E+06
+ CG nIter, rDotR= 3   4.5759723705788370E+05
+ CG nIter, rDotR= 4   2.9313631178145419E+05
+ CG nIter, rDotR= 5   8.0215002937114841E+04
+ CG nIter, rDotR= 6   2.5544950922218242E+04
+ CG nIter, rDotR= 7   1.2429781618445697E+04
+ CG nIter, rDotR= 8   1.2878040300380833E+04
+ CG nIter, rDotR= 9   4.8845921136325060E+03
+ CG nIter, rDotR= 10   3.4018167794290835E+03
+ CG nIter, rDotR= 11   3.1716477042381807E+03
+ CG nIter, rDotR= 12   2.8170724539974599E+03
+ CG nIter, rDotR= 13   2.6616941003991783E+03
+ CG nIter, rDotR= 14   1.6808745835327009E+03
+ CG nIter, rDotR= 15   6.5480261543625159E+02
+ CG nIter, rDotR= 16   3.3740528531903027E+02
+ CG nIter, rDotR= 17   2.4252863621962805E+02
+ CG nIter, rDotR= 18   1.4261383554036848E+02
+ CG nIter, rDotR= 19  87.9169100153008145
+ CG nIter, rDotR= 20  60.4315924128553306
+ CG nIter, rDotR= 21  31.5438232113970294
+ CG nIter, rDotR= 22  21.0753933150780846
+ CG nIter, rDotR= 23   9.6465560753052912
+ CG nIter, rDotR= 24   4.7372501210633269
+ CG nIter, rDotR= 25   4.4612330153321631
+ CG nIter, rDotR= 26   4.1778798170248468
+ CG nIter, rDotR= 27   5.1763031016409267
+ CG nIter, rDotR= 28   6.9731420787678022
+ CG nIter, rDotR= 29  10.4124308421322311
+ CG nIter, rDotR= 30  11.7006372307203783
+ CG nIter, rDotR= 31  12.9682852880823507
+ CG nIter, rDotR= 32  17.6310241404283659
+ CG nIter, rDotR= 33  21.9902252631227668
+ CG nIter, rDotR= 34  21.3425475627478285
+ CG nIter, rDotR= 35  35.0494347473600740
+ CG nIter, rDotR= 36  38.3686131393214040
+ CG nIter, rDotR= 37  33.4279875908471027
+ CG nIter, rDotR= 38  23.6686125216232703
+ CG nIter, rDotR= 39  19.1351208927085104
+ CG nIter, rDotR= 40  12.3898703034328594
+ CG nIter, rDotR= 41  10.1793217600243135
+ CG nIter, rDotR= 42   6.8141498483036322
+ CG nIter, rDotR= 43   5.6988685926604026
+ CG nIter, rDotR= 44   4.2677054430480315
+ CG nIter, rDotR= 45   2.8830752855770396
+ CG nIter, rDotR= 46   1.7491582248078883
+ CG nIter, rDotR= 47   0.9340831165930503
+ CG nIter, rDotR= 48   0.5972883124517835
+ CG nIter, rDotR= 49   0.3305232809729021
+ CG nIter, rDotR= 50   0.2120973132340627
+ CG nIter, rDotR= 51   0.1388607219496798
+ CG nIter, rDotR= 52   6.7026557983931714E-02
+ CG nIter, rDotR= 53   3.9173422620964300E-02
+ CG nIter, rDotR= 54   2.8511777958416012E-02
+ CG nIter, rDotR= 55   1.7843314296155391E-02
+ CG nIter, rDotR= 56   1.0351631982403665E-02
+ CG nIter, rDotR= 57   5.9673019854084089E-03
+ CG nIter, rDotR= 58   3.5546323620116926E-03
+ CG nIter, rDotR= 59   2.0528836164159961E-03
+ CG nIter, rDotR= 60   1.2250389753610210E-03
+ CG nIter, rDotR= 61   6.6226129051070309E-04
+ CG nIter, rDotR= 62   4.2115051432416151E-04
+ CG nIter, rDotR= 63   3.1792409362798208E-04
+ CG nIter, rDotR= 64   2.4358298505424699E-04
+ CG nIter, rDotR= 65   1.6336219603194140E-04
+ CG nIter, rDotR= 66   9.1434186712015632E-05
+ CG nIter, rDotR= 67   6.3934200548841749E-05
+ CG nIter, rDotR= 68   3.5533438262914078E-05
+ CG nIter, rDotR= 69   2.1198303577079656E-05
+ CG nIter, rDotR= 70   1.0095805108243090E-05
+ CG nIter, rDotR= 71   6.1368708690385025E-06
+ CG nIter, rDotR= 72   4.4698973658479755E-06
+ CG nIter, rDotR= 73   3.4544962553804268E-06
+ CG nIter, rDotR= 74   2.1079680123590776E-06
+ CG nIter, rDotR= 75   1.2944295218249164E-06
+ CG nIter, rDotR= 76   9.5149886945607985E-07
+ CG nIter, rDotR= 77   5.5603475228344869E-07
+ CG nIter, rDotR= 78   4.5551872785983419E-07
+ CG nIter, rDotR= 79   3.6862640655220177E-07
+ CG nIter, rDotR= 80   3.5488923233860840E-07
+ CG nIter, rDotR= 81   2.8892278214225008E-07
+ CG nIter, rDotR= 82   3.5044181955506449E-07
+ CG nIter, rDotR= 83   4.4693539695737580E-07
+ CG nIter, rDotR= 84   5.5458094355760334E-07
+ CG nIter, rDotR= 85   8.0336440037452762E-07
+ CG nIter, rDotR= 86   1.1786102629529023E-06
+ CG nIter, rDotR= 87   1.4413050401354149E-06
+ CG nIter, rDotR= 88   1.9866803443748665E-06
+ CG nIter, rDotR= 89   2.1693081068762807E-06
+ CG nIter, rDotR= 90   2.1201487712148201E-06
+ CG nIter, rDotR= 91   1.8560213963637951E-06
+ CG nIter, rDotR= 92   1.8901265829906802E-06
+ CG nIter, rDotR= 93   1.4251259698041303E-06
+ CG nIter, rDotR= 94   8.0120463036918070E-07
+ CG nIter, rDotR= 95   5.1723484954904294E-07
+ CG nIter, rDotR= 96   3.0788746496115788E-07
+ CG nIter, rDotR= 97   2.0228081972627407E-07
+ CG nIter, rDotR= 98   1.1787273685438742E-07
+ CG nIter, rDotR= 99   8.4527552964901622E-08
+ CG nIter, rDotR= 100   5.8350972785418767E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 101 0   9.1231433808947792E-09
+ krylov at iter= 8
+ CG rDotR0, rDotRMax=   2.4641308599690992E+08   2.4641308599690993E-08
+ CG nIter, rDotR= 1   1.2700852179011049E+07
+ CG nIter, rDotR= 2   1.8809878900074479E+06
+ CG nIter, rDotR= 3   6.8764555247385683E+05
+ CG nIter, rDotR= 4   2.6836036756967055E+05
+ CG nIter, rDotR= 5   5.2112932435725736E+04
+ CG nIter, rDotR= 6   1.5670227489813553E+04
+ CG nIter, rDotR= 7   1.1236905617411448E+04
+ CG nIter, rDotR= 8   7.3543159875047604E+03
+ CG nIter, rDotR= 9   3.9423176751060637E+03
+ CG nIter, rDotR= 10   3.0623858971803170E+03
+ CG nIter, rDotR= 11   1.9663322912244159E+03
+ CG nIter, rDotR= 12   1.1109337116223887E+03
+ CG nIter, rDotR= 13   1.0499656622116092E+03
+ CG nIter, rDotR= 14   5.8800237992413497E+02
+ CG nIter, rDotR= 15   3.8555184528914458E+02
+ CG nIter, rDotR= 16   3.0215604504646910E+02
+ CG nIter, rDotR= 17   2.4960497934878310E+02
+ CG nIter, rDotR= 18   1.7880266494632139E+02
+ CG nIter, rDotR= 19   1.5399228485482030E+02
+ CG nIter, rDotR= 20   1.1741268745834671E+02
+ CG nIter, rDotR= 21  97.8126507398384035
+ CG nIter, rDotR= 22  95.7945138779039951
+ CG nIter, rDotR= 23  72.8137924918964501
+ CG nIter, rDotR= 24  70.2845356517498772
+ CG nIter, rDotR= 25   1.0011919262360786E+02
+ CG nIter, rDotR= 26   1.0992829403390542E+02
+ CG nIter, rDotR= 27   1.1324822670992455E+02
+ CG nIter, rDotR= 28   1.3227663959579937E+02
+ CG nIter, rDotR= 29   1.1895273395315110E+02
+ CG nIter, rDotR= 30   1.1451221881368667E+02
+ CG nIter, rDotR= 31  93.2618456034249164
+ CG nIter, rDotR= 32  58.9495370426494247
+ CG nIter, rDotR= 33  49.4833602396282544
+ CG nIter, rDotR= 34  39.9071761784342982
+ CG nIter, rDotR= 35  20.3914841014123702
+ CG nIter, rDotR= 36  14.8899757370749537
+ CG nIter, rDotR= 37   9.3653034057331457
+ CG nIter, rDotR= 38   5.8709501127446986
+ CG nIter, rDotR= 39   3.2060048038469522
+ CG nIter, rDotR= 40   1.8275099054433985
+ CG nIter, rDotR= 41   1.0034738896800883
+ CG nIter, rDotR= 42   0.5951850282990898
+ CG nIter, rDotR= 43   0.4254185818787647
+ CG nIter, rDotR= 44   0.2510890673394348
+ CG nIter, rDotR= 45   0.1382681285935084
+ CG nIter, rDotR= 46   9.5107183662919981E-02
+ CG nIter, rDotR= 47   5.7119643144592155E-02
+ CG nIter, rDotR= 48   3.6639923743850743E-02
+ CG nIter, rDotR= 49   2.0044323572809608E-02
+ CG nIter, rDotR= 50   9.1573204916174291E-03
+ CG nIter, rDotR= 51   7.1826839558195698E-03
+ CG nIter, rDotR= 52   4.0285446598728328E-03
+ CG nIter, rDotR= 53   2.3020981439801106E-03
+ CG nIter, rDotR= 54   1.4685459889793497E-03
+ CG nIter, rDotR= 55   9.8746490091315025E-04
+ CG nIter, rDotR= 56   6.0965578575678480E-04
+ CG nIter, rDotR= 57   3.4571467456026551E-04
+ CG nIter, rDotR= 58   2.0907718737506545E-04
+ CG nIter, rDotR= 59   1.5330782990386377E-04
+ CG nIter, rDotR= 60   9.2413452685303818E-05
+ CG nIter, rDotR= 61   6.5424247123595380E-05
+ CG nIter, rDotR= 62   4.7695145817487130E-05
+ CG nIter, rDotR= 63   3.6034406694490863E-05
+ CG nIter, rDotR= 64   3.1039130442116207E-05
+ CG nIter, rDotR= 65   3.0786014259708709E-05
+ CG nIter, rDotR= 66   3.1762205736348963E-05
+ CG nIter, rDotR= 67   3.6994466991272961E-05
+ CG nIter, rDotR= 68   4.0621378248004691E-05
+ CG nIter, rDotR= 69   5.2639172355332001E-05
+ CG nIter, rDotR= 70   5.5934106968388076E-05
+ CG nIter, rDotR= 71   5.7510363025735934E-05
+ CG nIter, rDotR= 72   5.5621850794807823E-05
+ CG nIter, rDotR= 73   5.0287391100202383E-05
+ CG nIter, rDotR= 74   3.8443733295916072E-05
+ CG nIter, rDotR= 75   2.6546991553811307E-05
+ CG nIter, rDotR= 76   1.8968481847699506E-05
+ CG nIter, rDotR= 77   1.2408703824860500E-05
+ CG nIter, rDotR= 78   6.2339543936359489E-06
+ CG nIter, rDotR= 79   4.2124478352186782E-06
+ CG nIter, rDotR= 80   2.7395391001519380E-06
+ CG nIter, rDotR= 81   1.5301740167294298E-06
+ CG nIter, rDotR= 82   9.6000406645359784E-07
+ CG nIter, rDotR= 83   6.8019167521415263E-07
+ CG nIter, rDotR= 84   4.0385102730391513E-07
+ CG nIter, rDotR= 85   2.0840804018916917E-07
+ CG nIter, rDotR= 86   1.4288088023084277E-07
+ CG nIter, rDotR= 87   8.9808954411688729E-08
+ CG nIter, rDotR= 88   5.2379691600344005E-08
+ CG nIter, rDotR= 89   2.9953540857343638E-08
+ CG nIter, rDotR= 90   1.8040234805841083E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 91 0   8.5563631582868374E-09
+Speed is  29029.1 c/s/p after      1.1 s at N =      50 (2.2350E-09 s)
+ krylov at iter= 9
+ CG rDotR0, rDotRMax=   3.0793791531635022E+08   3.0793791531635029E-08
+ CG nIter, rDotR= 1   1.5156486119793037E+07
+ CG nIter, rDotR= 2   2.7005975263256198E+06
+ CG nIter, rDotR= 3   1.0449892411189405E+06
+ CG nIter, rDotR= 4   3.2323695765375998E+05
+ CG nIter, rDotR= 5   5.8597976226589977E+04
+ CG nIter, rDotR= 6   2.7531530774216990E+04
+ CG nIter, rDotR= 7   1.9156304883710010E+04
+ CG nIter, rDotR= 8   1.0478524930279382E+04
+ CG nIter, rDotR= 9   5.8304490901802747E+03
+ CG nIter, rDotR= 10   4.3884430256384621E+03
+ CG nIter, rDotR= 11   2.2741430329760001E+03
+ CG nIter, rDotR= 12   1.4161623034558638E+03
+ CG nIter, rDotR= 13   1.1122765317938008E+03
+ CG nIter, rDotR= 14   6.2194367214177657E+02
+ CG nIter, rDotR= 15   4.8816395967822098E+02
+ CG nIter, rDotR= 16   3.9125184827011367E+02
+ CG nIter, rDotR= 17   3.4072216484751141E+02
+ CG nIter, rDotR= 18   3.0349892727168589E+02
+ CG nIter, rDotR= 19   2.6915537402521676E+02
+ CG nIter, rDotR= 20   2.1772712287743150E+02
+ CG nIter, rDotR= 21   2.4246932205018004E+02
+ CG nIter, rDotR= 22   2.1676714857948141E+02
+ CG nIter, rDotR= 23   1.9087167227481504E+02
+ CG nIter, rDotR= 24   2.3222409608021667E+02
+ CG nIter, rDotR= 25   3.0196200284348674E+02
+ CG nIter, rDotR= 26   3.1369155106185997E+02
+ CG nIter, rDotR= 27   2.7432605934779212E+02
+ CG nIter, rDotR= 28   2.3900111185593894E+02
+ CG nIter, rDotR= 29   2.1366802421324073E+02
+ CG nIter, rDotR= 30   1.6940445533341097E+02
+ CG nIter, rDotR= 31   1.6849155140288619E+02
+ CG nIter, rDotR= 32   1.3424575919819742E+02
+ CG nIter, rDotR= 33  76.9052468840016985
+ CG nIter, rDotR= 34  67.6738108043855817
+ CG nIter, rDotR= 35  40.6118248939196747
+ CG nIter, rDotR= 36  23.2174475344950153
+ CG nIter, rDotR= 37  13.5470406597919872
+ CG nIter, rDotR= 38   9.3474281920373716
+ CG nIter, rDotR= 39   5.4911857566198501
+ CG nIter, rDotR= 40   3.2746880594392875
+ CG nIter, rDotR= 41   2.1113788050615754
+ CG nIter, rDotR= 42   1.2318177076962871
+ CG nIter, rDotR= 43   0.9842537661886134
+ CG nIter, rDotR= 44   0.5299221466897512
+ CG nIter, rDotR= 45   0.3242031875213630
+ CG nIter, rDotR= 46   0.2061845704325295
+ CG nIter, rDotR= 47   0.1165012621587318
+ CG nIter, rDotR= 48   6.3227712145664181E-02
+ CG nIter, rDotR= 49   3.9841048730002070E-02
+ CG nIter, rDotR= 50   3.0479622302168254E-02
+ CG nIter, rDotR= 51   1.3364595250752686E-02
+ CG nIter, rDotR= 52   7.9712704434006850E-03
+ CG nIter, rDotR= 53   6.9934526697942815E-03
+ CG nIter, rDotR= 54   3.6589179764118887E-03
+ CG nIter, rDotR= 55   2.4949094471859159E-03
+ CG nIter, rDotR= 56   1.5033856985033568E-03
+ CG nIter, rDotR= 57   8.6725741413569380E-04
+ CG nIter, rDotR= 58   4.7993375203647247E-04
+ CG nIter, rDotR= 59   3.1712145269768930E-04
+ CG nIter, rDotR= 60   2.1056318717334752E-04
+ CG nIter, rDotR= 61   1.0881199055780615E-04
+ CG nIter, rDotR= 62   7.0788600083392252E-05
+ CG nIter, rDotR= 63   5.2240388217069305E-05
+ CG nIter, rDotR= 64   3.0333414259341073E-05
+ CG nIter, rDotR= 65   1.8420254385244084E-05
+ CG nIter, rDotR= 66   1.2429235406179356E-05
+ CG nIter, rDotR= 67   6.3529549356402753E-06
+ CG nIter, rDotR= 68   3.8671608365745702E-06
+ CG nIter, rDotR= 69   2.0178881286897371E-06
+ CG nIter, rDotR= 70   1.3429933770701105E-06
+ CG nIter, rDotR= 71   7.5921205395197373E-07
+ CG nIter, rDotR= 72   4.7267605797700572E-07
+ CG nIter, rDotR= 73   2.7050329345521480E-07
+ CG nIter, rDotR= 74   2.0634860816124002E-07
+ CG nIter, rDotR= 75   1.5851738512946704E-07
+ CG nIter, rDotR= 76   1.1123717765022598E-07
+ CG nIter, rDotR= 77   7.3313601468663421E-08
+ CG nIter, rDotR= 78   6.5880640118765425E-08
+ CG nIter, rDotR= 79   5.7586424890763809E-08
+ CG nIter, rDotR= 80   5.7406554413175832E-08
+ CG nIter, rDotR= 81   6.7120628507937729E-08
+ CG nIter, rDotR= 82   7.4634980256197622E-08
+ CG nIter, rDotR= 83   8.2359138805508865E-08
+ CG nIter, rDotR= 84   1.0782376068087534E-07
+ CG nIter, rDotR= 85   1.1040392931343903E-07
+ CG nIter, rDotR= 86   9.5037324961096842E-08
+ CG nIter, rDotR= 87   1.0481137632475922E-07
+ CG nIter, rDotR= 88   8.2708733252522796E-08
+ CG nIter, rDotR= 89   6.4400035469758784E-08
+ CG nIter, rDotR= 90   4.5634759552871723E-08
+ CG nIter, rDotR= 91   3.0097964823667257E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 92 0   9.8863727875414090E-09
+ krylov at iter= 10
+ CG rDotR0, rDotRMax=   6.9941216497585237E+08   6.9941216497585250E-08
+ CG nIter, rDotR= 1   1.9300628640397638E+07
+ CG nIter, rDotR= 2   4.0508555006387290E+06
+ CG nIter, rDotR= 3   1.4075643167947934E+06
+ CG nIter, rDotR= 4   3.7649698403804947E+05
+ CG nIter, rDotR= 5   7.6373925725413501E+04
+ CG nIter, rDotR= 6   3.8764703228949205E+04
+ CG nIter, rDotR= 7   2.6981310832717452E+04
+ CG nIter, rDotR= 8   1.0540231913585887E+04
+ CG nIter, rDotR= 9   6.1727135355776682E+03
+ CG nIter, rDotR= 10   4.3168875888819093E+03
+ CG nIter, rDotR= 11   2.4460747480073951E+03
+ CG nIter, rDotR= 12   1.5922653952047649E+03
+ CG nIter, rDotR= 13   1.0033416875448232E+03
+ CG nIter, rDotR= 14   5.7189254493819999E+02
+ CG nIter, rDotR= 15   3.5026885780884561E+02
+ CG nIter, rDotR= 16   2.4359673476894045E+02
+ CG nIter, rDotR= 17   1.4538096488223417E+02
+ CG nIter, rDotR= 18   1.3060651878171424E+02
+ CG nIter, rDotR= 19  72.2353470633605497
+ CG nIter, rDotR= 20  55.0719526610716343
+ CG nIter, rDotR= 21  53.1947524766350384
+ CG nIter, rDotR= 22  37.8406513474613106
+ CG nIter, rDotR= 23  26.5050455249599324
+ CG nIter, rDotR= 24  27.3339836442314450
+ CG nIter, rDotR= 25  22.7109057829345389
+ CG nIter, rDotR= 26  23.0901429875410500
+ CG nIter, rDotR= 27  26.8128399883759840
+ CG nIter, rDotR= 28  27.8560887692177879
+ CG nIter, rDotR= 29  28.6781352456841461
+ CG nIter, rDotR= 30  28.8507580113592574
+ CG nIter, rDotR= 31  31.4639929696999765
+ CG nIter, rDotR= 32  30.1912703416393882
+ CG nIter, rDotR= 33  32.1140151715387603
+ CG nIter, rDotR= 34  24.5230721924472128
+ CG nIter, rDotR= 35  21.2033786576249383
+ CG nIter, rDotR= 36  14.9234444385727834
+ CG nIter, rDotR= 37  12.6609627277316470
+ CG nIter, rDotR= 38   7.6150795570319723
+ CG nIter, rDotR= 39   5.3957983485277961
+ CG nIter, rDotR= 40   3.0431688589878245
+ CG nIter, rDotR= 41   1.9522586276966825
+ CG nIter, rDotR= 42   1.1161841027591914
+ CG nIter, rDotR= 43   0.7796297125087565
+ CG nIter, rDotR= 44   0.4309183629828091
+ CG nIter, rDotR= 45   0.2915080834432375
+ CG nIter, rDotR= 46   0.1921595130106953
+ CG nIter, rDotR= 47   9.6728601554708207E-02
+ CG nIter, rDotR= 48   7.2703682234943792E-02
+ CG nIter, rDotR= 49   4.3102090184860706E-02
+ CG nIter, rDotR= 50   2.1659745233534772E-02
+ CG nIter, rDotR= 51   1.1669173415744307E-02
+ CG nIter, rDotR= 52   8.4818101779119155E-03
+ CG nIter, rDotR= 53   5.5292306023133619E-03
+ CG nIter, rDotR= 54   3.4043956718803393E-03
+ CG nIter, rDotR= 55   2.2836904142126708E-03
+ CG nIter, rDotR= 56   1.3192074201987939E-03
+ CG nIter, rDotR= 57   6.6751887201945846E-04
+ CG nIter, rDotR= 58   5.0812133926299383E-04
+ CG nIter, rDotR= 59   3.1425203829021187E-04
+ CG nIter, rDotR= 60   1.7114996657802652E-04
+ CG nIter, rDotR= 61   1.0627067026631159E-04
+ CG nIter, rDotR= 62   5.9328930276406457E-05
+ CG nIter, rDotR= 63   3.6813944558540177E-05
+ CG nIter, rDotR= 64   2.4415713064044605E-05
+ CG nIter, rDotR= 65   1.5183371792704105E-05
+ CG nIter, rDotR= 66   8.9468012725275567E-06
+ CG nIter, rDotR= 67   5.8191236820739418E-06
+ CG nIter, rDotR= 68   3.3533704176996235E-06
+ CG nIter, rDotR= 69   1.6233793363466340E-06
+ CG nIter, rDotR= 70   1.1520874864545317E-06
+ CG nIter, rDotR= 71   7.9265940831464423E-07
+ CG nIter, rDotR= 72   5.0850636918272301E-07
+ CG nIter, rDotR= 73   3.7685966490859620E-07
+ CG nIter, rDotR= 74   2.8561951189038728E-07
+ CG nIter, rDotR= 75   1.8066970427130431E-07
+ CG nIter, rDotR= 76   1.6299821509448269E-07
+ CG nIter, rDotR= 77   1.4448227614861434E-07
+ CG nIter, rDotR= 78   1.3291314656586096E-07
+ CG nIter, rDotR= 79   1.1659709799081012E-07
+ CG nIter, rDotR= 80   1.2140711934349381E-07
+ CG nIter, rDotR= 81   1.3936714671506204E-07
+ CG nIter, rDotR= 82   1.6670076319028467E-07
+ CG nIter, rDotR= 83   1.9882077888521409E-07
+ CG nIter, rDotR= 84   1.8677790388342617E-07
+ CG nIter, rDotR= 85   1.8647398716615947E-07
+ CG nIter, rDotR= 86   1.9728389288755303E-07
+ CG nIter, rDotR= 87   1.4948126793700741E-07
+ CG nIter, rDotR= 88   1.1249769106848331E-07
+ CG nIter, rDotR= 89   8.2710793295937174E-08
+ CG nIter, rDotR= 90   6.3458126096015968E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 91 0   9.5252642074104488E-09
+ krylov at iter= 11
+ CG rDotR0, rDotRMax=   2.7555250973959011E+08   2.7555250973959012E-08
+ CG nIter, rDotR= 1   1.3006001237706035E+07
+ CG nIter, rDotR= 2   3.7166515369539387E+06
+ CG nIter, rDotR= 3   9.9734290933392313E+05
+ CG nIter, rDotR= 4   2.6961618493940326E+05
+ CG nIter, rDotR= 5   6.8181102223455164E+04
+ CG nIter, rDotR= 6   3.1707837306975620E+04
+ CG nIter, rDotR= 7   1.5354018825366004E+04
+ CG nIter, rDotR= 8   8.0608342236210055E+03
+ CG nIter, rDotR= 9   5.7938880135784411E+03
+ CG nIter, rDotR= 10   3.3855453746917656E+03
+ CG nIter, rDotR= 11   3.0113849370685571E+03
+ CG nIter, rDotR= 12   2.0620839276297725E+03
+ CG nIter, rDotR= 13   1.7091089270233806E+03
+ CG nIter, rDotR= 14   1.4320328396239443E+03
+ CG nIter, rDotR= 15   1.8795959794265721E+03
+ CG nIter, rDotR= 16   1.5979778934203662E+03
+ CG nIter, rDotR= 17   1.8335713532393352E+03
+ CG nIter, rDotR= 18   1.7779093657267003E+03
+ CG nIter, rDotR= 19   1.6377734345629583E+03
+ CG nIter, rDotR= 20   1.8401795703377634E+03
+ CG nIter, rDotR= 21   2.0851849387422412E+03
+ CG nIter, rDotR= 22   1.6305047119699450E+03
+ CG nIter, rDotR= 23   1.4293614758509850E+03
+ CG nIter, rDotR= 24   1.2689995078138534E+03
+ CG nIter, rDotR= 25   1.0080589162934585E+03
+ CG nIter, rDotR= 26   7.7722517159421704E+02
+ CG nIter, rDotR= 27   5.8848553261662437E+02
+ CG nIter, rDotR= 28   4.7166536244210027E+02
+ CG nIter, rDotR= 29   3.2977844014621701E+02
+ CG nIter, rDotR= 30   1.8299130634570574E+02
+ CG nIter, rDotR= 31   1.5864355880782463E+02
+ CG nIter, rDotR= 32   1.0198734356985692E+02
+ CG nIter, rDotR= 33  65.3668348191267938
+ CG nIter, rDotR= 34  35.3109173176066804
+ CG nIter, rDotR= 35  24.0753296815042681
+ CG nIter, rDotR= 36  16.9171146429613835
+ CG nIter, rDotR= 37   9.3885173067752419
+ CG nIter, rDotR= 38   6.4079458117204204
+ CG nIter, rDotR= 39   3.1132070839702646
+ CG nIter, rDotR= 40   1.8473911335175890
+ CG nIter, rDotR= 41   1.0793912406764106
+ CG nIter, rDotR= 42   0.6098537582126885
+ CG nIter, rDotR= 43   0.3958401955174886
+ CG nIter, rDotR= 44   0.2447965438928763
+ CG nIter, rDotR= 45   0.1597014491167074
+ CG nIter, rDotR= 46   8.7138806171097788E-02
+ CG nIter, rDotR= 47   5.5464768153050736E-02
+ CG nIter, rDotR= 48   3.4606083124509968E-02
+ CG nIter, rDotR= 49   2.0700874188875278E-02
+ CG nIter, rDotR= 50   1.3357828843487860E-02
+ CG nIter, rDotR= 51   7.6564267940340686E-03
+ CG nIter, rDotR= 52   4.8966863551640500E-03
+ CG nIter, rDotR= 53   2.6082237241624780E-03
+ CG nIter, rDotR= 54   1.6553436819994494E-03
+ CG nIter, rDotR= 55   1.1889360860981133E-03
+ CG nIter, rDotR= 56   7.7008797744222441E-04
+ CG nIter, rDotR= 57   3.9306475550284571E-04
+ CG nIter, rDotR= 58   2.3297983318722014E-04
+ CG nIter, rDotR= 59   1.5219175203333270E-04
+ CG nIter, rDotR= 60   9.9669845148578492E-05
+ CG nIter, rDotR= 61   6.8460306915909007E-05
+ CG nIter, rDotR= 62   4.6792885590500145E-05
+ CG nIter, rDotR= 63   3.3369274621999788E-05
+ CG nIter, rDotR= 64   2.1191418426944881E-05
+ CG nIter, rDotR= 65   1.3556117976720488E-05
+ CG nIter, rDotR= 66   9.5760908573369072E-06
+ CG nIter, rDotR= 67   7.4280977392720124E-06
+ CG nIter, rDotR= 68   5.9578813524926770E-06
+ CG nIter, rDotR= 69   5.0368639585529354E-06
+ CG nIter, rDotR= 70   4.8010451354468330E-06
+ CG nIter, rDotR= 71   5.4637985221878300E-06
+ CG nIter, rDotR= 72   6.1144185931373611E-06
+ CG nIter, rDotR= 73   6.7810563979419518E-06
+ CG nIter, rDotR= 74   7.6088370562038042E-06
+ CG nIter, rDotR= 75   8.1933352703840814E-06
+ CG nIter, rDotR= 76   7.1735757365000454E-06
+ CG nIter, rDotR= 77   7.3820640123629548E-06
+ CG nIter, rDotR= 78   6.1535531998849012E-06
+ CG nIter, rDotR= 79   4.6792176672314270E-06
+ CG nIter, rDotR= 80   3.2393566138933778E-06
+ CG nIter, rDotR= 81   2.4816126661835962E-06
+ CG nIter, rDotR= 82   1.6802765080433259E-06
+ CG nIter, rDotR= 83   1.2719627912760873E-06
+ CG nIter, rDotR= 84   7.0522900128162045E-07
+ CG nIter, rDotR= 85   4.6785638966825578E-07
+ CG nIter, rDotR= 86   3.4359659010982883E-07
+ CG nIter, rDotR= 87   1.7928683806764824E-07
+ CG nIter, rDotR= 88   1.2171263475560344E-07
+ CG nIter, rDotR= 89   8.7483990749018763E-08
+ CG nIter, rDotR= 90   5.9013043916458247E-08
+ CG nIter, rDotR= 91   3.2643684113984697E-08
+ CG nIter, rDotR= 92   1.9320389607725892E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 93 0   8.3734755109497001E-09
+ krylov at iter= 12
+ CG rDotR0, rDotRMax=   3.8470128698785496E+08   3.8470128698785500E-08
+ CG nIter, rDotR= 1   1.8812266190895870E+07
+ CG nIter, rDotR= 2   3.3194167935966807E+06
+ CG nIter, rDotR= 3   5.8006535594693618E+05
+ CG nIter, rDotR= 4   1.6321008177525591E+05
+ CG nIter, rDotR= 5   5.4720636421936746E+04
+ CG nIter, rDotR= 6   2.4843810284824031E+04
+ CG nIter, rDotR= 7   1.1890075111133592E+04
+ CG nIter, rDotR= 8   5.4367756129642603E+03
+ CG nIter, rDotR= 9   2.7853648056277730E+03
+ CG nIter, rDotR= 10   1.7989063895616157E+03
+ CG nIter, rDotR= 11   1.9793261438379786E+03
+ CG nIter, rDotR= 12   1.3774616937393312E+03
+ CG nIter, rDotR= 13   9.4438128206159229E+02
+ CG nIter, rDotR= 14   5.8441142378061033E+02
+ CG nIter, rDotR= 15   3.1999523592408070E+02
+ CG nIter, rDotR= 16   2.7705257940756280E+02
+ CG nIter, rDotR= 17   2.2209058910624603E+02
+ CG nIter, rDotR= 18   1.0090222477539062E+02
+ CG nIter, rDotR= 19  41.4450778120867795
+ CG nIter, rDotR= 20  36.6849335331224324
+ CG nIter, rDotR= 21  21.1521603711328474
+ CG nIter, rDotR= 22  15.0254296257221647
+ CG nIter, rDotR= 23  10.9084461445688277
+ CG nIter, rDotR= 24   6.1846684017266007
+ CG nIter, rDotR= 25   3.7303724523129400
+ CG nIter, rDotR= 26   2.5386376279837002
+ CG nIter, rDotR= 27   2.1849465538757609
+ CG nIter, rDotR= 28   2.1602180627554857
+ CG nIter, rDotR= 29   2.2146900891184136
+ CG nIter, rDotR= 30   2.7407430105697794
+ CG nIter, rDotR= 31   3.0399748216953202
+ CG nIter, rDotR= 32   2.8676576976309884
+ CG nIter, rDotR= 33   3.4410214554643721
+ CG nIter, rDotR= 34   4.1182026195480317
+ CG nIter, rDotR= 35   2.7915136349022736
+ CG nIter, rDotR= 36   1.9364649621506123
+ CG nIter, rDotR= 37   1.8928417659665553
+ CG nIter, rDotR= 38   1.5090824873974769
+ CG nIter, rDotR= 39   1.0563068996806497
+ CG nIter, rDotR= 40   0.6498585513500448
+ CG nIter, rDotR= 41   0.3807479180245879
+ CG nIter, rDotR= 42   0.2317763958371456
+ CG nIter, rDotR= 43   0.1470765859887857
+ CG nIter, rDotR= 44   0.1016632886315414
+ CG nIter, rDotR= 45   6.4335071446754322E-02
+ CG nIter, rDotR= 46   5.3491399987912421E-02
+ CG nIter, rDotR= 47   3.1555826477776085E-02
+ CG nIter, rDotR= 48   1.8120984812986411E-02
+ CG nIter, rDotR= 49   1.3553101153027720E-02
+ CG nIter, rDotR= 50   8.7156904264085108E-03
+ CG nIter, rDotR= 51   6.0665863703679946E-03
+ CG nIter, rDotR= 52   3.4791482242220416E-03
+ CG nIter, rDotR= 53   2.0289819040255033E-03
+ CG nIter, rDotR= 54   1.2086294662097350E-03
+ CG nIter, rDotR= 55   8.5198860904271072E-04
+ CG nIter, rDotR= 56   5.7272309523790483E-04
+ CG nIter, rDotR= 57   3.1467189532128638E-04
+ CG nIter, rDotR= 58   1.7405668446153513E-04
+ CG nIter, rDotR= 59   1.1315860884806621E-04
+ CG nIter, rDotR= 60   5.6506507418966854E-05
+ CG nIter, rDotR= 61   3.1301772647354589E-05
+ CG nIter, rDotR= 62   1.9837001696474480E-05
+ CG nIter, rDotR= 63   1.2904648514585561E-05
+ CG nIter, rDotR= 64   6.8951166191338910E-06
+ CG nIter, rDotR= 65   4.7234576935925219E-06
+ CG nIter, rDotR= 66   2.6690098998398198E-06
+ CG nIter, rDotR= 67   1.7799829160542495E-06
+ CG nIter, rDotR= 68   1.2509207356753549E-06
+ CG nIter, rDotR= 69   9.1684243535561041E-07
+ CG nIter, rDotR= 70   6.2813119266857426E-07
+ CG nIter, rDotR= 71   5.1165972254862463E-07
+ CG nIter, rDotR= 72   4.5134090164263728E-07
+ CG nIter, rDotR= 73   5.1551218803368124E-07
+ CG nIter, rDotR= 74   5.5410427091096641E-07
+ CG nIter, rDotR= 75   6.4500386313613408E-07
+ CG nIter, rDotR= 76   6.1495228320297361E-07
+ CG nIter, rDotR= 77   6.8016398884017440E-07
+ CG nIter, rDotR= 78   6.6802143877942780E-07
+ CG nIter, rDotR= 79   5.4330318864343807E-07
+ CG nIter, rDotR= 80   5.1741715728432979E-07
+ CG nIter, rDotR= 81   4.8905026177048319E-07
+ CG nIter, rDotR= 82   3.4403647997773658E-07
+ CG nIter, rDotR= 83   1.9678652634482299E-07
+ CG nIter, rDotR= 84   1.3889256894660156E-07
+ CG nIter, rDotR= 85   1.1713063979403292E-07
+ CG nIter, rDotR= 86   7.1995937914940546E-08
+ CG nIter, rDotR= 87   4.2542448073695938E-08
+ CG nIter, rDotR= 88   2.4713762848226101E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 89 0   8.0150755035092213E-09
+ krylov at iter= 13
+ CG rDotR0, rDotRMax=   4.3015735130119872E+08   4.3015735130119876E-08
+ CG nIter, rDotR= 1   1.5307674079064075E+07
+ CG nIter, rDotR= 2   2.8131980570673193E+06
+ CG nIter, rDotR= 3   3.6421866329539090E+05
+ CG nIter, rDotR= 4   1.1922311400987413E+05
+ CG nIter, rDotR= 5   5.5557821233634982E+04
+ CG nIter, rDotR= 6   2.2780049412397580E+04
+ CG nIter, rDotR= 7   9.4059803690455901E+03
+ CG nIter, rDotR= 8   3.8510763697308425E+03
+ CG nIter, rDotR= 9   2.1778048703058607E+03
+ CG nIter, rDotR= 10   1.2957539936714468E+03
+ CG nIter, rDotR= 11   1.2740644630273498E+03
+ CG nIter, rDotR= 12   1.1550864499999061E+03
+ CG nIter, rDotR= 13   8.0342989738775373E+02
+ CG nIter, rDotR= 14   3.5124586973622905E+02
+ CG nIter, rDotR= 15   2.2056179594284308E+02
+ CG nIter, rDotR= 16   2.3724898831400358E+02
+ CG nIter, rDotR= 17   1.4000562971941568E+02
+ CG nIter, rDotR= 18  76.9173511408266535
+ CG nIter, rDotR= 19  45.5082130889969250
+ CG nIter, rDotR= 20  24.1258161842419447
+ CG nIter, rDotR= 21  15.3738319795010767
+ CG nIter, rDotR= 22  11.6258620036017817
+ CG nIter, rDotR= 23   8.2726838841180541
+ CG nIter, rDotR= 24   7.5968816503201273
+ CG nIter, rDotR= 25   5.7111496690719523
+ CG nIter, rDotR= 26   4.2524923516940749
+ CG nIter, rDotR= 27   5.9955515998881319
+ CG nIter, rDotR= 28   9.0230810449425665
+ CG nIter, rDotR= 29   8.1859363732474897
+ CG nIter, rDotR= 30   7.7233311767888866
+ CG nIter, rDotR= 31   7.9655326505476500
+ CG nIter, rDotR= 32   7.0993990142989087
+ CG nIter, rDotR= 33   6.1626908144663988
+ CG nIter, rDotR= 34   5.8951650118240835
+ CG nIter, rDotR= 35   3.3944329618074387
+ CG nIter, rDotR= 36   1.7795880511311406
+ CG nIter, rDotR= 37   1.3422425942393408
+ CG nIter, rDotR= 38   0.8861069388229035
+ CG nIter, rDotR= 39   0.5869579702530031
+ CG nIter, rDotR= 40   0.3388488685645355
+ CG nIter, rDotR= 41   0.3012625547516751
+ CG nIter, rDotR= 42   0.1505883347547093
+ CG nIter, rDotR= 43   0.1106375057285548
+ CG nIter, rDotR= 44   6.4927850824098798E-02
+ CG nIter, rDotR= 45   4.1954767776088718E-02
+ CG nIter, rDotR= 46   3.0003671021468014E-02
+ CG nIter, rDotR= 47   2.0825832757590958E-02
+ CG nIter, rDotR= 48   9.8749386857579485E-03
+ CG nIter, rDotR= 49   7.3377360729909198E-03
+ CG nIter, rDotR= 50   4.8465036374194092E-03
+ CG nIter, rDotR= 51   2.9073338747749662E-03
+ CG nIter, rDotR= 52   2.0348149158660651E-03
+ CG nIter, rDotR= 53   1.2289624333694110E-03
+ CG nIter, rDotR= 54   6.7481379218647616E-04
+ CG nIter, rDotR= 55   3.4348827777673307E-04
+ CG nIter, rDotR= 56   2.4902381918297559E-04
+ CG nIter, rDotR= 57   1.5693299862847961E-04
+ CG nIter, rDotR= 58   9.3012481474494534E-05
+ CG nIter, rDotR= 59   6.3858211980672881E-05
+ CG nIter, rDotR= 60   3.5905769075185944E-05
+ CG nIter, rDotR= 61   2.2728760098826247E-05
+ CG nIter, rDotR= 62   1.2722207010491444E-05
+ CG nIter, rDotR= 63   7.1980479235118517E-06
+ CG nIter, rDotR= 64   5.1472607289090159E-06
+ CG nIter, rDotR= 65   3.3250105080667864E-06
+ CG nIter, rDotR= 66   2.1083106229090345E-06
+ CG nIter, rDotR= 67   1.4670882191150968E-06
+ CG nIter, rDotR= 68   1.0125460120189565E-06
+ CG nIter, rDotR= 69   8.0537589046683167E-07
+ CG nIter, rDotR= 70   7.2613492382236605E-07
+ CG nIter, rDotR= 71   8.9013471520705265E-07
+ CG nIter, rDotR= 72   9.4179256418498284E-07
+ CG nIter, rDotR= 73   1.0369897794225342E-06
+ CG nIter, rDotR= 74   9.6408007597026528E-07
+ CG nIter, rDotR= 75   1.0033573997917386E-06
+ CG nIter, rDotR= 76   1.0135916604696103E-06
+ CG nIter, rDotR= 77   1.0679403392956029E-06
+ CG nIter, rDotR= 78   8.5902196082331866E-07
+ CG nIter, rDotR= 79   5.6267006113910044E-07
+ CG nIter, rDotR= 80   4.5428784370113262E-07
+ CG nIter, rDotR= 81   3.0470304104824624E-07
+ CG nIter, rDotR= 82   2.6501960550520885E-07
+ CG nIter, rDotR= 83   1.5006817046947391E-07
+ CG nIter, rDotR= 84   1.0456969508280744E-07
+ CG nIter, rDotR= 85   6.6470413266792762E-08
+ CG nIter, rDotR= 86   4.0286539623647659E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 87 0   9.6775697064058149E-09
+ |
+ |  AMR:  nBlockMax =  222  nBLK =  400
+ |  AMR:  Total number of blocks used =  439
+ |  AMR:  Total number of cells =  7024
+ |  AMR:  Total number of true cells =  7024
+ |  Smallest cell dx:   10.1250000000000000   Largest cell dx:   20.2500000000000000
+ |
+ krylov at iter= 14
+ CG rDotR0, rDotRMax=   3.9675970517300075E+08   3.9675970517300082E-08
+ CG nIter, rDotR= 1   1.1001374325525170E+07
+ CG nIter, rDotR= 2   1.8760905002252818E+06
+ CG nIter, rDotR= 3   2.5144274051952153E+05
+ CG nIter, rDotR= 4   1.2659525999999091E+05
+ CG nIter, rDotR= 5   4.4224105709979936E+04
+ CG nIter, rDotR= 6   2.0628960397481471E+04
+ CG nIter, rDotR= 7   6.6601914457434696E+03
+ CG nIter, rDotR= 8   4.2478161298562391E+03
+ CG nIter, rDotR= 9   2.0289375734638627E+03
+ CG nIter, rDotR= 10   1.4628200361917723E+03
+ CG nIter, rDotR= 11   1.6697799268359661E+03
+ CG nIter, rDotR= 12   1.6649674278360478E+03
+ CG nIter, rDotR= 13   1.1717203024956509E+03
+ CG nIter, rDotR= 14   5.8609634073855591E+02
+ CG nIter, rDotR= 15   3.7110191442133987E+02
+ CG nIter, rDotR= 16   2.6381252235946317E+02
+ CG nIter, rDotR= 17   2.4187967250429617E+02
+ CG nIter, rDotR= 18   1.5912231454635833E+02
+ CG nIter, rDotR= 19   1.3562360359961244E+02
+ CG nIter, rDotR= 20   1.3475723801142132E+02
+ CG nIter, rDotR= 21   1.3828182313689476E+02
+ CG nIter, rDotR= 22   1.3590618399546628E+02
+ CG nIter, rDotR= 23   1.8206128324579038E+02
+ CG nIter, rDotR= 24   2.7536744184835794E+02
+ CG nIter, rDotR= 25   1.8599652671914700E+02
+ CG nIter, rDotR= 26   1.3415079715480411E+02
+ CG nIter, rDotR= 27   1.0565095273003597E+02
+ CG nIter, rDotR= 28  82.5775750410316789
+ CG nIter, rDotR= 29  55.5021000309661758
+ CG nIter, rDotR= 30  35.8904128782156491
+ CG nIter, rDotR= 31  18.4284629888071478
+ CG nIter, rDotR= 32  12.1148334401311946
+ CG nIter, rDotR= 33   7.6311980892751157
+ CG nIter, rDotR= 34   4.2722128586599837
+ CG nIter, rDotR= 35   3.1047277932366226
+ CG nIter, rDotR= 36   2.2509522856954169
+ CG nIter, rDotR= 37   1.2540609267869143
+ CG nIter, rDotR= 38   1.0247616205944217
+ CG nIter, rDotR= 39   0.6488923494210717
+ CG nIter, rDotR= 40   0.3039535472296858
+ CG nIter, rDotR= 41   0.2365129404556562
+ CG nIter, rDotR= 42   0.2324752456151358
+ CG nIter, rDotR= 43   0.1125640045193584
+ CG nIter, rDotR= 44   6.3662171885793123E-02
+ CG nIter, rDotR= 45   4.7115019966873964E-02
+ CG nIter, rDotR= 46   2.6565595207133783E-02
+ CG nIter, rDotR= 47   1.5995383061882466E-02
+ CG nIter, rDotR= 48   1.0453423150906948E-02
+ CG nIter, rDotR= 49   5.9845616970302766E-03
+ CG nIter, rDotR= 50   3.1892556533715428E-03
+ CG nIter, rDotR= 51   1.8950410408793033E-03
+ CG nIter, rDotR= 52   1.0345301556354259E-03
+ CG nIter, rDotR= 53   7.0007020659530489E-04
+ CG nIter, rDotR= 54   4.0013072270387700E-04
+ CG nIter, rDotR= 55   2.4157055736409507E-04
+ CG nIter, rDotR= 56   1.9538297921733229E-04
+ CG nIter, rDotR= 57   1.1709872893857670E-04
+ CG nIter, rDotR= 58   6.3713716182916823E-05
+ CG nIter, rDotR= 59   4.1222542007110390E-05
+ CG nIter, rDotR= 60   2.8454096177670373E-05
+ CG nIter, rDotR= 61   2.2822732303633039E-05
+ CG nIter, rDotR= 62   1.8702313914206568E-05
+ CG nIter, rDotR= 63   1.1864139044510023E-05
+ CG nIter, rDotR= 64   1.0822514188363241E-05
+ CG nIter, rDotR= 65   8.7938739426476019E-06
+ CG nIter, rDotR= 66   8.4818421883696028E-06
+ CG nIter, rDotR= 67   8.6892746296683049E-06
+ CG nIter, rDotR= 68   8.5210923394180538E-06
+ CG nIter, rDotR= 69   9.2809767658298662E-06
+ CG nIter, rDotR= 70   1.0152802641649930E-05
+ CG nIter, rDotR= 71   8.2706781955285452E-06
+ CG nIter, rDotR= 72   8.2519166247885986E-06
+ CG nIter, rDotR= 73   8.5347146872559922E-06
+ CG nIter, rDotR= 74   6.0954739305875914E-06
+ CG nIter, rDotR= 75   4.0140252826155567E-06
+ CG nIter, rDotR= 76   3.6533265109816452E-06
+ CG nIter, rDotR= 77   2.4074642985732822E-06
+ CG nIter, rDotR= 78   1.1293298851948684E-06
+ CG nIter, rDotR= 79   8.8999332765151147E-07
+ CG nIter, rDotR= 80   6.0122920459483229E-07
+ CG nIter, rDotR= 81   3.3908572301250819E-07
+ CG nIter, rDotR= 82   1.9444206530418225E-07
+ CG nIter, rDotR= 83   1.2736745801166036E-07
+ CG nIter, rDotR= 84   6.4377640347938133E-08
+ CG nIter, rDotR= 85   4.1530113471467970E-08
+ CG nIter, rDotR= 86   2.8127531981090812E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 87 0   8.4198050125270541E-09
+ |
+ |  AMR:  nBlockMax =  222  nBLK =  400
+ |  AMR:  Total number of blocks used =  436
+ |  AMR:  Total number of cells =  6976
+ |  AMR:  Total number of true cells =  6976
+ |  Smallest cell dx:   10.1250000000000000   Largest cell dx:   20.2500000000000000
+ |
+ krylov at iter= 15
+ CG rDotR0, rDotRMax=   4.0005590606488800E+08   4.0005590606488801E-08
+ CG nIter, rDotR= 1   9.8823069919724818E+06
+ CG nIter, rDotR= 2   1.6708957152255818E+06
+ CG nIter, rDotR= 3   3.1747058434219495E+05
+ CG nIter, rDotR= 4   1.7578530286456988E+05
+ CG nIter, rDotR= 5   5.9720095380801169E+04
+ CG nIter, rDotR= 6   2.2226898400943814E+04
+ CG nIter, rDotR= 7   9.8008555541109708E+03
+ CG nIter, rDotR= 8   4.8007603911580854E+03
+ CG nIter, rDotR= 9   2.2361892394288216E+03
+ CG nIter, rDotR= 10   1.3433309777074141E+03
+ CG nIter, rDotR= 11   1.0564323077543477E+03
+ CG nIter, rDotR= 12   8.2718058419654710E+02
+ CG nIter, rDotR= 13   6.6044091804627681E+02
+ CG nIter, rDotR= 14   4.1393835183554444E+02
+ CG nIter, rDotR= 15   2.8559892443937093E+02
+ CG nIter, rDotR= 16   2.2617208830262325E+02
+ CG nIter, rDotR= 17   1.7364360371708329E+02
+ CG nIter, rDotR= 18   1.0647888663512231E+02
+ CG nIter, rDotR= 19   1.1060839521446955E+02
+ CG nIter, rDotR= 20  71.0468723649568403
+ CG nIter, rDotR= 21  57.7028173716079067
+ CG nIter, rDotR= 22  54.1932601476717153
+ CG nIter, rDotR= 23  49.0227087406963946
+ CG nIter, rDotR= 24  56.4732743024857484
+ CG nIter, rDotR= 25  67.1576761112600877
+ CG nIter, rDotR= 26  56.7766152748153274
+ CG nIter, rDotR= 27  49.0010673936133756
+ CG nIter, rDotR= 28  47.3386875104760563
+ CG nIter, rDotR= 29  39.0590576916866965
+ CG nIter, rDotR= 30  31.2247645166963643
+ CG nIter, rDotR= 31  19.5350505364164775
+ CG nIter, rDotR= 32  10.6453500503793350
+ CG nIter, rDotR= 33   8.9241926549068111
+ CG nIter, rDotR= 34   5.2698115797493958
+ CG nIter, rDotR= 35   3.1348323946971881
+ CG nIter, rDotR= 36   1.9401051440206567
+ CG nIter, rDotR= 37   1.3512567924826207
+ CG nIter, rDotR= 38   0.6722930146871484
+ CG nIter, rDotR= 39   0.4097525791870864
+ CG nIter, rDotR= 40   0.2418028159084911
+ CG nIter, rDotR= 41   0.1471475402167567
+ CG nIter, rDotR= 42   9.0781315512296665E-02
+ CG nIter, rDotR= 43   6.2701352303360103E-02
+ CG nIter, rDotR= 44   4.1965592843991505E-02
+ CG nIter, rDotR= 45   2.3209492435426620E-02
+ CG nIter, rDotR= 46   1.7224034223053141E-02
+ CG nIter, rDotR= 47   1.0303305797614641E-02
+ CG nIter, rDotR= 48   6.1431403125894058E-03
+ CG nIter, rDotR= 49   4.1419517022037904E-03
+ CG nIter, rDotR= 50   2.9396615382211422E-03
+ CG nIter, rDotR= 51   1.8315947740787950E-03
+ CG nIter, rDotR= 52   1.1542710458050493E-03
+ CG nIter, rDotR= 53   5.9183772826994251E-04
+ CG nIter, rDotR= 54   4.3998940005863369E-04
+ CG nIter, rDotR= 55   2.7949643082958225E-04
+ CG nIter, rDotR= 56   1.9910004032372948E-04
+ CG nIter, rDotR= 57   1.2453032076106680E-04
+ CG nIter, rDotR= 58   6.7261113722356773E-05
+ CG nIter, rDotR= 59   4.1415120198824834E-05
+ CG nIter, rDotR= 60   3.3969370836375875E-05
+ CG nIter, rDotR= 61   1.9173152126823062E-05
+ CG nIter, rDotR= 62   1.2792902065362891E-05
+ CG nIter, rDotR= 63   1.0239874944027716E-05
+ CG nIter, rDotR= 64   7.7772652430894351E-06
+ CG nIter, rDotR= 65   6.2268314993990197E-06
+ CG nIter, rDotR= 66   6.0009148341290275E-06
+ CG nIter, rDotR= 67   5.9353038412621436E-06
+ CG nIter, rDotR= 68   8.3798471477917867E-06
+ CG nIter, rDotR= 69   8.6226236527460531E-06
+ CG nIter, rDotR= 70   8.4273449133595862E-06
+ CG nIter, rDotR= 71   7.1988500310702871E-06
+ CG nIter, rDotR= 72   7.1716585272806079E-06
+ CG nIter, rDotR= 73   4.4338983057021032E-06
+ CG nIter, rDotR= 74   3.6811350323324251E-06
+ CG nIter, rDotR= 75   2.4582730600165230E-06
+ CG nIter, rDotR= 76   1.4664071837685343E-06
+ CG nIter, rDotR= 77   9.1533858221003445E-07
+ CG nIter, rDotR= 78   5.5806714280562641E-07
+ CG nIter, rDotR= 79   4.0984456753546259E-07
+ CG nIter, rDotR= 80   2.0149665630684935E-07
+ CG nIter, rDotR= 81   1.3033679845895648E-07
+ CG nIter, rDotR= 82   9.9964277350125800E-08
+ CG nIter, rDotR= 83   5.3828981971470619E-08
+ CG nIter, rDotR= 84   3.1481362145158622E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 85 0   8.8708740778955867E-09
+ |
+ |  AMR:  nBlockMax =  222  nBLK =  400
+ |  AMR:  Total number of blocks used =  442
+ |  AMR:  Total number of cells =  7072
+ |  AMR:  Total number of true cells =  7072
+ |  Smallest cell dx:   10.1250000000000000   Largest cell dx:   20.2500000000000000
+ |
+ krylov at iter= 16
+ CG rDotR0, rDotRMax=   4.4448778577723271E+08   4.4448778577723274E-08
+ CG nIter, rDotR= 1   1.2597874245547764E+07
+ CG nIter, rDotR= 2   1.7034716807779938E+06
+ CG nIter, rDotR= 3   5.4747262211663916E+05
+ CG nIter, rDotR= 4   2.7898415610585804E+05
+ CG nIter, rDotR= 5   6.7199107314914159E+04
+ CG nIter, rDotR= 6   2.9634395784223714E+04
+ CG nIter, rDotR= 7   1.4143531009019909E+04
+ CG nIter, rDotR= 8   7.5721271338145616E+03
+ CG nIter, rDotR= 9   2.8269732660177497E+03
+ CG nIter, rDotR= 10   2.6296584054508571E+03
+ CG nIter, rDotR= 11   2.1103310595976095E+03
+ CG nIter, rDotR= 12   1.6543187964467077E+03
+ CG nIter, rDotR= 13   1.6605777411316642E+03
+ CG nIter, rDotR= 14   1.1395473576724564E+03
+ CG nIter, rDotR= 15   6.9977512962223807E+02
+ CG nIter, rDotR= 16   5.1712364909856387E+02
+ CG nIter, rDotR= 17   2.9657101341947737E+02
+ CG nIter, rDotR= 18   1.9126888338167760E+02
+ CG nIter, rDotR= 19   1.6681074888918585E+02
+ CG nIter, rDotR= 20  73.2022345710854978
+ CG nIter, rDotR= 21  49.5439362179611393
+ CG nIter, rDotR= 22  32.4478727490646222
+ CG nIter, rDotR= 23  16.4057325940520364
+ CG nIter, rDotR= 24  12.7000669209179993
+ CG nIter, rDotR= 25  11.3450214015232014
+ CG nIter, rDotR= 26   7.0081708851532492
+ CG nIter, rDotR= 27   3.8331608212283763
+ CG nIter, rDotR= 28   2.6008979419743943
+ CG nIter, rDotR= 29   1.6264232442587883
+ CG nIter, rDotR= 30   1.1457401103585709
+ CG nIter, rDotR= 31   0.8869697522000497
+ CG nIter, rDotR= 32   0.8019449861918890
+ CG nIter, rDotR= 33   0.5822457152505275
+ CG nIter, rDotR= 34   0.6614241094942352
+ CG nIter, rDotR= 35   0.5775774935619338
+ CG nIter, rDotR= 36   0.5075152424887408
+ CG nIter, rDotR= 37   0.5411335278016550
+ CG nIter, rDotR= 38   0.5819354268190464
+ CG nIter, rDotR= 39   0.6038159833463335
+ CG nIter, rDotR= 40   0.3915949336601442
+ CG nIter, rDotR= 41   0.3634393969576974
+ CG nIter, rDotR= 42   0.2924644920752143
+ CG nIter, rDotR= 43   0.2021527533273645
+ CG nIter, rDotR= 44   0.1527881305690874
+ CG nIter, rDotR= 45   9.7463092024464987E-02
+ CG nIter, rDotR= 46   7.1793713981701174E-02
+ CG nIter, rDotR= 47   4.9365697572459948E-02
+ CG nIter, rDotR= 48   3.0937800359814391E-02
+ CG nIter, rDotR= 49   2.1185012063977268E-02
+ CG nIter, rDotR= 50   1.3686141234024196E-02
+ CG nIter, rDotR= 51   8.8768558899411203E-03
+ CG nIter, rDotR= 52   5.5141577436525592E-03
+ CG nIter, rDotR= 53   3.4422764405399159E-03
+ CG nIter, rDotR= 54   1.9443524064727100E-03
+ CG nIter, rDotR= 55   9.0871464979097995E-04
+ CG nIter, rDotR= 56   7.8380155449599208E-04
+ CG nIter, rDotR= 57   5.5704953216034552E-04
+ CG nIter, rDotR= 58   3.0906363128700080E-04
+ CG nIter, rDotR= 59   2.1271673864939122E-04
+ CG nIter, rDotR= 60   1.4432967910292405E-04
+ CG nIter, rDotR= 61   8.2791748025839160E-05
+ CG nIter, rDotR= 62   4.6596382218249536E-05
+ CG nIter, rDotR= 63   3.2870968877263346E-05
+ CG nIter, rDotR= 64   2.0244403848651025E-05
+ CG nIter, rDotR= 65   1.0842136923888205E-05
+ CG nIter, rDotR= 66   8.8584878689491568E-06
+ CG nIter, rDotR= 67   5.1956470169632511E-06
+ CG nIter, rDotR= 68   2.6408910142176834E-06
+ CG nIter, rDotR= 69   1.5744908695797934E-06
+ CG nIter, rDotR= 70   1.1734951064143089E-06
+ CG nIter, rDotR= 71   8.3590615679723514E-07
+ CG nIter, rDotR= 72   4.4924548216192379E-07
+ CG nIter, rDotR= 73   3.1247637398490289E-07
+ CG nIter, rDotR= 74   1.7604026592354489E-07
+ CG nIter, rDotR= 75   1.1957849067328147E-07
+ CG nIter, rDotR= 76   6.8700681602326897E-08
+ CG nIter, rDotR= 77   4.0446110928291927E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 78 0   9.5391234372166242E-09
+ krylov at iter= 17
+ CG rDotR0, rDotRMax=   3.8617909141683942E+08   3.8617909141683945E-08
+ CG nIter, rDotR= 1   1.2117325612996055E+07
+ CG nIter, rDotR= 2   2.3849608929402735E+06
+ CG nIter, rDotR= 3   8.5138922349798004E+05
+ CG nIter, rDotR= 4   3.3280011850572185E+05
+ CG nIter, rDotR= 5   8.4953485168300918E+04
+ CG nIter, rDotR= 6   4.1281427418319479E+04
+ CG nIter, rDotR= 7   2.2837762184965253E+04
+ CG nIter, rDotR= 8   9.7777466734339905E+03
+ CG nIter, rDotR= 9   4.3258207675081076E+03
+ CG nIter, rDotR= 10   3.6021225362140399E+03
+ CG nIter, rDotR= 11   2.1622209928554789E+03
+ CG nIter, rDotR= 12   1.6022677549074372E+03
+ CG nIter, rDotR= 13   1.3920267160421879E+03
+ CG nIter, rDotR= 14   8.5435089861552547E+02
+ CG nIter, rDotR= 15   4.9110570294536251E+02
+ CG nIter, rDotR= 16   3.8349081132975726E+02
+ CG nIter, rDotR= 17   2.2776556882439220E+02
+ CG nIter, rDotR= 18   2.8032025415716549E+02
+ CG nIter, rDotR= 19   2.9537267168487750E+02
+ CG nIter, rDotR= 20   2.6219596901975171E+02
+ CG nIter, rDotR= 21   2.8497268374784983E+02
+ CG nIter, rDotR= 22   2.6148679773881054E+02
+ CG nIter, rDotR= 23   2.0284431061759017E+02
+ CG nIter, rDotR= 24   2.2054799338937153E+02
+ CG nIter, rDotR= 25   2.1155875466871399E+02
+ CG nIter, rDotR= 26   1.4852616888496328E+02
+ CG nIter, rDotR= 27   1.2026803189394072E+02
+ CG nIter, rDotR= 28  69.6920648933023585
+ CG nIter, rDotR= 29  60.0067080821616017
+ CG nIter, rDotR= 30  34.4611172556691869
+ CG nIter, rDotR= 31  28.5429887360398524
+ CG nIter, rDotR= 32  18.2595944815175173
+ CG nIter, rDotR= 33  11.1478235333131614
+ CG nIter, rDotR= 34   7.2940675007215550
+ CG nIter, rDotR= 35   3.8965349752136613
+ CG nIter, rDotR= 36   2.5912941287189142
+ CG nIter, rDotR= 37   1.5971063002548069
+ CG nIter, rDotR= 38   1.0798617171261551
+ CG nIter, rDotR= 39   0.7467408779303981
+ CG nIter, rDotR= 40   0.4039749579040384
+ CG nIter, rDotR= 41   0.3192024806001744
+ CG nIter, rDotR= 42   0.1481466981745498
+ CG nIter, rDotR= 43   9.0363613339476442E-02
+ CG nIter, rDotR= 44   5.7191085291570534E-02
+ CG nIter, rDotR= 45   3.2547959008828571E-02
+ CG nIter, rDotR= 46   1.9783164271986082E-02
+ CG nIter, rDotR= 47   1.5317226882928551E-02
+ CG nIter, rDotR= 48   7.6413833228616669E-03
+ CG nIter, rDotR= 49   5.7815457645332717E-03
+ CG nIter, rDotR= 50   3.3349790201710155E-03
+ CG nIter, rDotR= 51   1.9192613063161407E-03
+ CG nIter, rDotR= 52   1.2855203326402433E-03
+ CG nIter, rDotR= 53   9.9255743662557882E-04
+ CG nIter, rDotR= 54   6.7190388644140732E-04
+ CG nIter, rDotR= 55   3.6292632072127025E-04
+ CG nIter, rDotR= 56   2.5587078480723938E-04
+ CG nIter, rDotR= 57   1.5919125191351518E-04
+ CG nIter, rDotR= 58   1.1252426776894072E-04
+ CG nIter, rDotR= 59   8.3385570238946627E-05
+ CG nIter, rDotR= 60   6.0320358811556379E-05
+ CG nIter, rDotR= 61   4.0882578723313032E-05
+ CG nIter, rDotR= 62   2.8184853623344312E-05
+ CG nIter, rDotR= 63   2.2853255073712118E-05
+ CG nIter, rDotR= 64   1.4322837317379597E-05
+ CG nIter, rDotR= 65   1.0711065739507304E-05
+ CG nIter, rDotR= 66   7.7082455592889280E-06
+ CG nIter, rDotR= 67   5.3817631798484664E-06
+ CG nIter, rDotR= 68   3.6879871749340647E-06
+ CG nIter, rDotR= 69   2.3654954765690860E-06
+ CG nIter, rDotR= 70   1.6305807644979355E-06
+ CG nIter, rDotR= 71   1.3262322889461912E-06
+ CG nIter, rDotR= 72   9.8838045376742166E-07
+ CG nIter, rDotR= 73   7.4213304042640926E-07
+ CG nIter, rDotR= 74   6.3288790448823092E-07
+ CG nIter, rDotR= 75   4.5167095190384851E-07
+ CG nIter, rDotR= 76   3.4818287883386608E-07
+ CG nIter, rDotR= 77   2.7612124560364854E-07
+ CG nIter, rDotR= 78   2.7657301406655325E-07
+ CG nIter, rDotR= 79   2.4905637478272283E-07
+ CG nIter, rDotR= 80   2.7128070511618406E-07
+ CG nIter, rDotR= 81   2.7518744543948602E-07
+ CG nIter, rDotR= 82   2.6608417474897471E-07
+ CG nIter, rDotR= 83   2.5009445394089504E-07
+ CG nIter, rDotR= 84   2.0479923550619275E-07
+ CG nIter, rDotR= 85   1.8195467178050231E-07
+ CG nIter, rDotR= 86   1.2826487547464112E-07
+ CG nIter, rDotR= 87   8.1748958805859621E-08
+ CG nIter, rDotR= 88   5.7977145732771889E-08
+ CG nIter, rDotR= 89   3.1721279011056079E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 90 0   9.0631875400456134E-09
+ krylov at iter= 18
+ CG rDotR0, rDotRMax=   5.9568001203761613E+08   5.9568001203761622E-08
+ CG nIter, rDotR= 1   1.6836413208369359E+07
+ CG nIter, rDotR= 2   3.5502351425470603E+06
+ CG nIter, rDotR= 3   1.2097112548115309E+06
+ CG nIter, rDotR= 4   3.9167695357369969E+05
+ CG nIter, rDotR= 5   8.7123388318990998E+04
+ CG nIter, rDotR= 6   4.5775452153436599E+04
+ CG nIter, rDotR= 7   2.3328975005358097E+04
+ CG nIter, rDotR= 8   9.9675090626700294E+03
+ CG nIter, rDotR= 9   4.0678414111263728E+03
+ CG nIter, rDotR= 10   3.5827701281132586E+03
+ CG nIter, rDotR= 11   1.8369811195072514E+03
+ CG nIter, rDotR= 12   1.4029711283920360E+03
+ CG nIter, rDotR= 13   1.5592489394186996E+03
+ CG nIter, rDotR= 14   1.1178569152811276E+03
+ CG nIter, rDotR= 15   9.3289664682948671E+02
+ CG nIter, rDotR= 16   6.9917045422231615E+02
+ CG nIter, rDotR= 17   5.3505655442746126E+02
+ CG nIter, rDotR= 18   5.6793424812569958E+02
+ CG nIter, rDotR= 19   4.8369554995228884E+02
+ CG nIter, rDotR= 20   3.8665223522516220E+02
+ CG nIter, rDotR= 21   3.8445743796971198E+02
+ CG nIter, rDotR= 22   2.7431415402100504E+02
+ CG nIter, rDotR= 23   2.4456282950246575E+02
+ CG nIter, rDotR= 24   2.4878919226285979E+02
+ CG nIter, rDotR= 25   2.4919034199713232E+02
+ CG nIter, rDotR= 26   2.3235204716739707E+02
+ CG nIter, rDotR= 27   2.0863009455759141E+02
+ CG nIter, rDotR= 28   1.3525958362051307E+02
+ CG nIter, rDotR= 29  90.7613046215054453
+ CG nIter, rDotR= 30  74.6191804671799730
+ CG nIter, rDotR= 31  55.0125270305790508
+ CG nIter, rDotR= 32  48.5179660228056235
+ CG nIter, rDotR= 33  37.8311242020106917
+ CG nIter, rDotR= 34  25.3267136024974100
+ CG nIter, rDotR= 35  18.1811160985354405
+ CG nIter, rDotR= 36   9.8869488333880202
+ CG nIter, rDotR= 37   7.5995838189269262
+ CG nIter, rDotR= 38   6.0377661649582848
+ CG nIter, rDotR= 39   3.6744167397655159
+ CG nIter, rDotR= 40   2.1229716946279904
+ CG nIter, rDotR= 41   1.3825371284302967
+ CG nIter, rDotR= 42   0.7811739701839280
+ CG nIter, rDotR= 43   0.3924529424814426
+ CG nIter, rDotR= 44   0.2756002858531597
+ CG nIter, rDotR= 45   0.1973096965825984
+ CG nIter, rDotR= 46   0.1247602108838867
+ CG nIter, rDotR= 47   9.2302017320552140E-02
+ CG nIter, rDotR= 48   5.5090339810963951E-02
+ CG nIter, rDotR= 49   3.6741974507966998E-02
+ CG nIter, rDotR= 50   2.0753648091049341E-02
+ CG nIter, rDotR= 51   1.3916392739708128E-02
+ CG nIter, rDotR= 52   9.2189398052028131E-03
+ CG nIter, rDotR= 53   5.5408246528814969E-03
+ CG nIter, rDotR= 54   3.4574583033147232E-03
+ CG nIter, rDotR= 55   1.7422006344831938E-03
+ CG nIter, rDotR= 56   1.3802978685784058E-03
+ CG nIter, rDotR= 57   6.2290602520753886E-04
+ CG nIter, rDotR= 58   5.1036648084826664E-04
+ CG nIter, rDotR= 59   3.2776875880051324E-04
+ CG nIter, rDotR= 60   2.2138050955187083E-04
+ CG nIter, rDotR= 61   1.2557798914780078E-04
+ CG nIter, rDotR= 62   8.3959588039429623E-05
+ CG nIter, rDotR= 63   5.7480804445014811E-05
+ CG nIter, rDotR= 64   3.2023721853160194E-05
+ CG nIter, rDotR= 65   1.7742295486031389E-05
+ CG nIter, rDotR= 66   1.1365376425853638E-05
+ CG nIter, rDotR= 67   6.8007063497888985E-06
+ CG nIter, rDotR= 68   4.2827609183100172E-06
+ CG nIter, rDotR= 69   2.6277551926549358E-06
+ CG nIter, rDotR= 70   1.7938191199736111E-06
+ CG nIter, rDotR= 71   1.0965720353534784E-06
+ CG nIter, rDotR= 72   6.4755676038045322E-07
+ CG nIter, rDotR= 73   3.9497459374397893E-07
+ CG nIter, rDotR= 74   3.5429608129710010E-07
+ CG nIter, rDotR= 75   2.2890249197998173E-07
+ CG nIter, rDotR= 76   1.4213648786030054E-07
+ CG nIter, rDotR= 77   1.0403693871928215E-07
+ CG nIter, rDotR= 78   7.9261557675077668E-08
+ CG nIter, rDotR= 79   5.1396781541828527E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 80 0   9.2888392757820704E-09
+Speed is  31269.9 c/s/p after      2.3 s at N =      60 (2.5280E-09 s)
+ krylov at iter= 19
+ CG rDotR0, rDotRMax=   3.7569832089902967E+08   3.7569832089902970E-08
+ CG nIter, rDotR= 1   1.5397132468221333E+07
+ CG nIter, rDotR= 2   3.5862033074783562E+06
+ CG nIter, rDotR= 3   9.8436473688969365E+05
+ CG nIter, rDotR= 4   3.0155218739032676E+05
+ CG nIter, rDotR= 5   7.7928423747252047E+04
+ CG nIter, rDotR= 6   5.0163047122140379E+04
+ CG nIter, rDotR= 7   2.4597398987976332E+04
+ CG nIter, rDotR= 8   1.0517654012395231E+04
+ CG nIter, rDotR= 9   5.3757877264422386E+03
+ CG nIter, rDotR= 10   2.7654339760448684E+03
+ CG nIter, rDotR= 11   1.5411786971898402E+03
+ CG nIter, rDotR= 12   1.2390028409685381E+03
+ CG nIter, rDotR= 13   9.6346305037213551E+02
+ CG nIter, rDotR= 14   9.2818148603392410E+02
+ CG nIter, rDotR= 15   8.5478086550497176E+02
+ CG nIter, rDotR= 16   5.0579642811580686E+02
+ CG nIter, rDotR= 17   3.4046223516309158E+02
+ CG nIter, rDotR= 18   4.1619568828046272E+02
+ CG nIter, rDotR= 19   3.7016577870427324E+02
+ CG nIter, rDotR= 20   4.6787236536068946E+02
+ CG nIter, rDotR= 21   6.3400710064546047E+02
+ CG nIter, rDotR= 22   6.9140978422136425E+02
+ CG nIter, rDotR= 23   6.3543530509174320E+02
+ CG nIter, rDotR= 24   5.3291024989727009E+02
+ CG nIter, rDotR= 25   4.0534634816984942E+02
+ CG nIter, rDotR= 26   3.4626840540732144E+02
+ CG nIter, rDotR= 27   2.9348602398189900E+02
+ CG nIter, rDotR= 28   2.5317773592525310E+02
+ CG nIter, rDotR= 29   2.1485789643249930E+02
+ CG nIter, rDotR= 30   1.1042699150032513E+02
+ CG nIter, rDotR= 31  60.7748384987258774
+ CG nIter, rDotR= 32  45.0844317610273819
+ CG nIter, rDotR= 33  25.3014008488917028
+ CG nIter, rDotR= 34  16.8861174079197234
+ CG nIter, rDotR= 35  11.5395071943634395
+ CG nIter, rDotR= 36   8.8561336545715559
+ CG nIter, rDotR= 37   4.7628906739540104
+ CG nIter, rDotR= 38   3.0768593996071987
+ CG nIter, rDotR= 39   1.9824951043645651
+ CG nIter, rDotR= 40   1.3691777701503636
+ CG nIter, rDotR= 41   0.8886333041605194
+ CG nIter, rDotR= 42   0.6415782187186448
+ CG nIter, rDotR= 43   0.4877124734296069
+ CG nIter, rDotR= 44   0.3182563334523212
+ CG nIter, rDotR= 45   0.1961786161230590
+ CG nIter, rDotR= 46   0.1215616200107097
+ CG nIter, rDotR= 47   9.6130279305472591E-02
+ CG nIter, rDotR= 48   5.7192200308274189E-02
+ CG nIter, rDotR= 49   4.6268163981897863E-02
+ CG nIter, rDotR= 50   3.3252441412540072E-02
+ CG nIter, rDotR= 51   2.4943200635285892E-02
+ CG nIter, rDotR= 52   1.5565186375575310E-02
+ CG nIter, rDotR= 53   8.1487075457547416E-03
+ CG nIter, rDotR= 54   5.7971880358235637E-03
+ CG nIter, rDotR= 55   3.9116410317365392E-03
+ CG nIter, rDotR= 56   2.5790342915541250E-03
+ CG nIter, rDotR= 57   1.6691242506540059E-03
+ CG nIter, rDotR= 58   1.2979300394724219E-03
+ CG nIter, rDotR= 59   6.8193568761400398E-04
+ CG nIter, rDotR= 60   3.5464906459004524E-04
+ CG nIter, rDotR= 61   2.8250427016162608E-04
+ CG nIter, rDotR= 62   1.9553307690086888E-04
+ CG nIter, rDotR= 63   1.1863293659832021E-04
+ CG nIter, rDotR= 64   6.9180648308835732E-05
+ CG nIter, rDotR= 65   5.5599390172977722E-05
+ CG nIter, rDotR= 66   3.2687692291246655E-05
+ CG nIter, rDotR= 67   1.9960685316483380E-05
+ CG nIter, rDotR= 68   1.4037286904859992E-05
+ CG nIter, rDotR= 69   9.0078406607915676E-06
+ CG nIter, rDotR= 70   6.8950377458982590E-06
+ CG nIter, rDotR= 71   5.9000076390584043E-06
+ CG nIter, rDotR= 72   5.3097775865689632E-06
+ CG nIter, rDotR= 73   5.2558261378927930E-06
+ CG nIter, rDotR= 74   5.4348299034564751E-06
+ CG nIter, rDotR= 75   5.2088427487859217E-06
+ CG nIter, rDotR= 76   5.5246124305077878E-06
+ CG nIter, rDotR= 77   6.9338375536224470E-06
+ CG nIter, rDotR= 78   6.5797346197168035E-06
+ CG nIter, rDotR= 79   8.1570530255152158E-06
+ CG nIter, rDotR= 80   8.5839068828351214E-06
+ CG nIter, rDotR= 81   6.7204131947215182E-06
+ CG nIter, rDotR= 82   4.7862676816981171E-06
+ CG nIter, rDotR= 83   3.6000293365470985E-06
+ CG nIter, rDotR= 84   2.3947644223840446E-06
+ CG nIter, rDotR= 85   1.5306847025385020E-06
+ CG nIter, rDotR= 86   1.0690038016316723E-06
+ CG nIter, rDotR= 87   5.7914997701916393E-07
+ CG nIter, rDotR= 88   3.8503036067923819E-07
+ CG nIter, rDotR= 89   1.8529734749961538E-07
+ CG nIter, rDotR= 90   1.1258116626074587E-07
+ CG nIter, rDotR= 91   7.8201690172255666E-08
+ CG nIter, rDotR= 92   4.5874349428818873E-08
+ CG nIter, rDotR= 93   2.9744872411013184E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 94 0   8.8978776182336154E-09
+ krylov at iter= 20
+ CG rDotR0, rDotRMax=   2.9663161312913871E+08   2.9663161312913873E-08
+ CG nIter, rDotR= 1   1.0097337398703899E+07
+ CG nIter, rDotR= 2   2.3591198562735631E+06
+ CG nIter, rDotR= 3   3.7589882769546763E+05
+ CG nIter, rDotR= 4   1.1589091355627794E+05
+ CG nIter, rDotR= 5   5.3889238206775444E+04
+ CG nIter, rDotR= 6   2.6256609064818960E+04
+ CG nIter, rDotR= 7   1.3336623106618681E+04
+ CG nIter, rDotR= 8   6.5565480294336185E+03
+ CG nIter, rDotR= 9   4.2163139838430325E+03
+ CG nIter, rDotR= 10   2.5702423539937599E+03
+ CG nIter, rDotR= 11   2.0279042706261951E+03
+ CG nIter, rDotR= 12   2.0734578078733257E+03
+ CG nIter, rDotR= 13   1.8232154765200112E+03
+ CG nIter, rDotR= 14   1.6262890208967276E+03
+ CG nIter, rDotR= 15   8.2806482847644952E+02
+ CG nIter, rDotR= 16   3.8099220430335373E+02
+ CG nIter, rDotR= 17   3.0204519977803221E+02
+ CG nIter, rDotR= 18   2.0269834575551670E+02
+ CG nIter, rDotR= 19   1.3576657063831905E+02
+ CG nIter, rDotR= 20   1.0387953690177355E+02
+ CG nIter, rDotR= 21  50.9112945392057838
+ CG nIter, rDotR= 22  34.4637515218200861
+ CG nIter, rDotR= 23  26.5101411808084251
+ CG nIter, rDotR= 24  29.2474973286879880
+ CG nIter, rDotR= 25  35.5022872522320867
+ CG nIter, rDotR= 26  41.9195423151571589
+ CG nIter, rDotR= 27  48.6196268129904041
+ CG nIter, rDotR= 28  61.7195548418271827
+ CG nIter, rDotR= 29  30.4078039901855774
+ CG nIter, rDotR= 30  23.2737459090084826
+ CG nIter, rDotR= 31  18.9771586310600284
+ CG nIter, rDotR= 32  12.8042788795159641
+ CG nIter, rDotR= 33   9.2723039663426299
+ CG nIter, rDotR= 34   7.0315943514102912
+ CG nIter, rDotR= 35   4.1513950820593370
+ CG nIter, rDotR= 36   2.0400549603845923
+ CG nIter, rDotR= 37   1.5604573953130427
+ CG nIter, rDotR= 38   1.0173153393882683
+ CG nIter, rDotR= 39   0.6671753794313474
+ CG nIter, rDotR= 40   0.4224381769816991
+ CG nIter, rDotR= 41   0.2792517761724106
+ CG nIter, rDotR= 42   0.1548577657097981
+ CG nIter, rDotR= 43   6.7053825350105484E-02
+ CG nIter, rDotR= 44   3.8991141573394131E-02
+ CG nIter, rDotR= 45   2.0937427135736954E-02
+ CG nIter, rDotR= 46   1.3157796267181929E-02
+ CG nIter, rDotR= 47   9.7380527682442534E-03
+ CG nIter, rDotR= 48   6.0665524810002347E-03
+ CG nIter, rDotR= 49   3.6486377765253841E-03
+ CG nIter, rDotR= 50   2.0601349807709245E-03
+ CG nIter, rDotR= 51   1.5291734182960616E-03
+ CG nIter, rDotR= 52   8.8166563293940370E-04
+ CG nIter, rDotR= 53   5.3328445272258856E-04
+ CG nIter, rDotR= 54   3.5282456321682166E-04
+ CG nIter, rDotR= 55   2.3604430429243175E-04
+ CG nIter, rDotR= 56   1.6921000244266352E-04
+ CG nIter, rDotR= 57   9.6624025170945557E-05
+ CG nIter, rDotR= 58   5.3521978629879056E-05
+ CG nIter, rDotR= 59   2.5256958592915407E-05
+ CG nIter, rDotR= 60   1.6793919576458708E-05
+ CG nIter, rDotR= 61   9.2325541621231915E-06
+ CG nIter, rDotR= 62   5.8937148516237616E-06
+ CG nIter, rDotR= 63   4.4446746512099681E-06
+ CG nIter, rDotR= 64   2.4897406045828548E-06
+ CG nIter, rDotR= 65   1.7889963254803721E-06
+ CG nIter, rDotR= 66   1.2344984324903785E-06
+ CG nIter, rDotR= 67   8.3716861405858744E-07
+ CG nIter, rDotR= 68   5.8718089181325729E-07
+ CG nIter, rDotR= 69   4.9214278836217415E-07
+ CG nIter, rDotR= 70   3.8448916320433125E-07
+ CG nIter, rDotR= 71   2.8809108610280624E-07
+ CG nIter, rDotR= 72   2.0442879315400949E-07
+ CG nIter, rDotR= 73   1.7583646122089022E-07
+ CG nIter, rDotR= 74   1.8090528993403968E-07
+ CG nIter, rDotR= 75   1.7466847007098427E-07
+ CG nIter, rDotR= 76   1.9282909786764954E-07
+ CG nIter, rDotR= 77   1.7948361397298309E-07
+ CG nIter, rDotR= 78   1.6782487180118148E-07
+ CG nIter, rDotR= 79   1.4857360443021696E-07
+ CG nIter, rDotR= 80   1.0030407566803381E-07
+ CG nIter, rDotR= 81   9.7389722851373592E-08
+ CG nIter, rDotR= 82   7.6510408304572758E-08
+ CG nIter, rDotR= 83   5.4475300374752740E-08
+ CG nIter, rDotR= 84   4.7399775784839810E-08
+ CG nIter, rDotR= 85   3.5079971106858634E-08
+ CG nIter, rDotR= 86   2.4840782792989754E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 87 0   9.1511130796266044E-09
+ krylov at iter= 21
+ CG rDotR0, rDotRMax=   5.1569134497927141E+08   5.1569134497927147E-08
+ CG nIter, rDotR= 1   8.6271254608729742E+06
+ CG nIter, rDotR= 2   2.1050842429904682E+06
+ CG nIter, rDotR= 3   2.7837417328414257E+05
+ CG nIter, rDotR= 4   9.4698556388788726E+04
+ CG nIter, rDotR= 5   4.8160281164291671E+04
+ CG nIter, rDotR= 6   2.4366396083874821E+04
+ CG nIter, rDotR= 7   9.6684088365907446E+03
+ CG nIter, rDotR= 8   4.9868896321488692E+03
+ CG nIter, rDotR= 9   3.1221650133838334E+03
+ CG nIter, rDotR= 10   1.2657477881052896E+03
+ CG nIter, rDotR= 11   7.8876857801568065E+02
+ CG nIter, rDotR= 12   6.9576207333359139E+02
+ CG nIter, rDotR= 13   6.1709640082818839E+02
+ CG nIter, rDotR= 14   4.0376930943753013E+02
+ CG nIter, rDotR= 15   1.9066053734591594E+02
+ CG nIter, rDotR= 16   1.0393204227490402E+02
+ CG nIter, rDotR= 17  73.2823391850675137
+ CG nIter, rDotR= 18  53.8817556690245851
+ CG nIter, rDotR= 19  42.0204649137018933
+ CG nIter, rDotR= 20  39.8599695077365084
+ CG nIter, rDotR= 21  18.7852994468986196
+ CG nIter, rDotR= 22  12.2438630397682822
+ CG nIter, rDotR= 23   8.4826106585771139
+ CG nIter, rDotR= 24   3.8593863343547516
+ CG nIter, rDotR= 25   2.3710189622787752
+ CG nIter, rDotR= 26   2.2683980919092304
+ CG nIter, rDotR= 27   1.9143413135620784
+ CG nIter, rDotR= 28   1.2349569150634165
+ CG nIter, rDotR= 29   1.0473586400323474
+ CG nIter, rDotR= 30   0.6925762800881046
+ CG nIter, rDotR= 31   0.4371567298909608
+ CG nIter, rDotR= 32   0.2914234577620374
+ CG nIter, rDotR= 33   0.2953835331631756
+ CG nIter, rDotR= 34   0.2370638054150939
+ CG nIter, rDotR= 35   0.2538207338423621
+ CG nIter, rDotR= 36   0.3225469628717101
+ CG nIter, rDotR= 37   0.3195901030978293
+ CG nIter, rDotR= 38   0.2435139825271668
+ CG nIter, rDotR= 39   0.2394559289155111
+ CG nIter, rDotR= 40   0.1986573996953133
+ CG nIter, rDotR= 41   0.1866760544709048
+ CG nIter, rDotR= 42   0.1328899853498610
+ CG nIter, rDotR= 43   8.5044923497990962E-02
+ CG nIter, rDotR= 44   7.9878258769447402E-02
+ CG nIter, rDotR= 45   4.9233738814897142E-02
+ CG nIter, rDotR= 46   3.3789357138881024E-02
+ CG nIter, rDotR= 47   2.8614776782715887E-02
+ CG nIter, rDotR= 48   1.7176787529704196E-02
+ CG nIter, rDotR= 49   8.5426077064663427E-03
+ CG nIter, rDotR= 50   5.9686487695151894E-03
+ CG nIter, rDotR= 51   4.0595567507497555E-03
+ CG nIter, rDotR= 52   1.8605781731293601E-03
+ CG nIter, rDotR= 53   1.1720993011733068E-03
+ CG nIter, rDotR= 54   1.0493969444500140E-03
+ CG nIter, rDotR= 55   6.3424131172167008E-04
+ CG nIter, rDotR= 56   4.3004270402478817E-04
+ CG nIter, rDotR= 57   3.2458329073225747E-04
+ CG nIter, rDotR= 58   1.2492766014294147E-04
+ CG nIter, rDotR= 59   6.9002191555354303E-05
+ CG nIter, rDotR= 60   4.8403659336996585E-05
+ CG nIter, rDotR= 61   2.8694553695599119E-05
+ CG nIter, rDotR= 62   1.7176940879482455E-05
+ CG nIter, rDotR= 63   1.5426205401016004E-05
+ CG nIter, rDotR= 64   8.3529321009966919E-06
+ CG nIter, rDotR= 65   5.3658246833433408E-06
+ CG nIter, rDotR= 66   3.3638918120559953E-06
+ CG nIter, rDotR= 67   1.9783311709030133E-06
+ CG nIter, rDotR= 68   1.1909196025482146E-06
+ CG nIter, rDotR= 69   7.9402279556814368E-07
+ CG nIter, rDotR= 70   5.0940340218390419E-07
+ CG nIter, rDotR= 71   3.1839507103819489E-07
+ CG nIter, rDotR= 72   2.0173790365424864E-07
+ CG nIter, rDotR= 73   1.2349805762838119E-07
+ CG nIter, rDotR= 74   5.7129362161062400E-08
+ CG nIter, rDotR= 75   5.1556025904998707E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 76 0   9.9987289464720345E-09
+ krylov at iter= 22
+ CG rDotR0, rDotRMax=   4.7499303705341733E+08   4.7499303705341740E-08
+ CG nIter, rDotR= 1   1.2126581021022543E+07
+ CG nIter, rDotR= 2   2.0920389047016839E+06
+ CG nIter, rDotR= 3   2.1047397943031046E+05
+ CG nIter, rDotR= 4   8.9187162277824973E+04
+ CG nIter, rDotR= 5   4.4450783131168748E+04
+ CG nIter, rDotR= 6   1.7766388581084109E+04
+ CG nIter, rDotR= 7   8.2111070884388955E+03
+ CG nIter, rDotR= 8   5.3944211524083257E+03
+ CG nIter, rDotR= 9   4.3037266670212530E+03
+ CG nIter, rDotR= 10   2.1954651222472098E+03
+ CG nIter, rDotR= 11   1.6880582014890635E+03
+ CG nIter, rDotR= 12   1.7952623761572834E+03
+ CG nIter, rDotR= 13   1.9771242835265148E+03
+ CG nIter, rDotR= 14   9.8997107839857529E+02
+ CG nIter, rDotR= 15   5.8283004100753283E+02
+ CG nIter, rDotR= 16   3.0984946765578746E+02
+ CG nIter, rDotR= 17   1.1038931189718609E+02
+ CG nIter, rDotR= 18  69.7182423017583517
+ CG nIter, rDotR= 19  58.5056874577689427
+ CG nIter, rDotR= 20  29.1353888750517100
+ CG nIter, rDotR= 21  14.9288444051925762
+ CG nIter, rDotR= 22  14.0072570943942480
+ CG nIter, rDotR= 23   7.6917612890311533
+ CG nIter, rDotR= 24   6.0265616407620204
+ CG nIter, rDotR= 25   9.2561477222552480
+ CG nIter, rDotR= 26  11.3281999975485927
+ CG nIter, rDotR= 27  13.6493392783847707
+ CG nIter, rDotR= 28  16.3048493669603118
+ CG nIter, rDotR= 29   9.1463384535837164
+ CG nIter, rDotR= 30   6.5768251033982343
+ CG nIter, rDotR= 31   4.6025546072023529
+ CG nIter, rDotR= 32   3.0073030208112099
+ CG nIter, rDotR= 33   2.6120171379928276
+ CG nIter, rDotR= 34   1.7058621656885187
+ CG nIter, rDotR= 35   1.1858403912718596
+ CG nIter, rDotR= 36   0.8455504510281895
+ CG nIter, rDotR= 37   0.5153334227194124
+ CG nIter, rDotR= 38   0.2893923684091681
+ CG nIter, rDotR= 39   0.1870382987456315
+ CG nIter, rDotR= 40   0.1150345230285356
+ CG nIter, rDotR= 41   7.7259432156461014E-02
+ CG nIter, rDotR= 42   4.0713434948491813E-02
+ CG nIter, rDotR= 43   2.6148457214575659E-02
+ CG nIter, rDotR= 44   1.5588127696722924E-02
+ CG nIter, rDotR= 45   9.3469690235500179E-03
+ CG nIter, rDotR= 46   5.9975983421424149E-03
+ CG nIter, rDotR= 47   4.6883768890963037E-03
+ CG nIter, rDotR= 48   3.0061219519188134E-03
+ CG nIter, rDotR= 49   1.9781654947545386E-03
+ CG nIter, rDotR= 50   1.3911635753462021E-03
+ CG nIter, rDotR= 51   9.4023869193835690E-04
+ CG nIter, rDotR= 52   4.3126105269002482E-04
+ CG nIter, rDotR= 53   2.7802024077347475E-04
+ CG nIter, rDotR= 54   1.7705661737358537E-04
+ CG nIter, rDotR= 55   8.8729151423516857E-05
+ CG nIter, rDotR= 56   7.1905228983996502E-05
+ CG nIter, rDotR= 57   4.3123651533140190E-05
+ CG nIter, rDotR= 58   2.5669618105655019E-05
+ CG nIter, rDotR= 59   1.3744887474797746E-05
+ CG nIter, rDotR= 60   8.4638459287619958E-06
+ CG nIter, rDotR= 61   5.0515878999578972E-06
+ CG nIter, rDotR= 62   3.2856398249858201E-06
+ CG nIter, rDotR= 63   2.1949942251987587E-06
+ CG nIter, rDotR= 64   1.3710911265360413E-06
+ CG nIter, rDotR= 65   1.0294935431557711E-06
+ CG nIter, rDotR= 66   6.8026497958351802E-07
+ CG nIter, rDotR= 67   4.2400932421489298E-07
+ CG nIter, rDotR= 68   3.3116792352766595E-07
+ CG nIter, rDotR= 69   3.1757487542799993E-07
+ CG nIter, rDotR= 70   2.9339252702003240E-07
+ CG nIter, rDotR= 71   3.1245438166329798E-07
+ CG nIter, rDotR= 72   3.9456065148822485E-07
+ CG nIter, rDotR= 73   3.6020748693082998E-07
+ CG nIter, rDotR= 74   3.1817994121782639E-07
+ CG nIter, rDotR= 75   2.9827944021349659E-07
+ CG nIter, rDotR= 76   2.2228377298162664E-07
+ CG nIter, rDotR= 77   1.6528964235604132E-07
+ CG nIter, rDotR= 78   1.4039960425965481E-07
+ CG nIter, rDotR= 79   9.5952707026538702E-08
+ CG nIter, rDotR= 80   6.8889159701013477E-08
+ CG nIter, rDotR= 81   4.9803239972244679E-08
+ CG nIter, rDotR= 82   3.2124843897073474E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 83 0   8.2238823994202625E-09
+ krylov at iter= 23
+ CG rDotR0, rDotRMax=   2.4164865652607515E+08   2.4164865652607517E-08
+ CG nIter, rDotR= 1   1.1777024557143722E+07
+ CG nIter, rDotR= 2   1.6534848617297241E+06
+ CG nIter, rDotR= 3   2.2988305675279026E+05
+ CG nIter, rDotR= 4   1.4560238379990213E+05
+ CG nIter, rDotR= 5   4.5886403959564348E+04
+ CG nIter, rDotR= 6   1.7910511555818728E+04
+ CG nIter, rDotR= 7   1.1170122037231718E+04
+ CG nIter, rDotR= 8   9.2612946803091854E+03
+ CG nIter, rDotR= 9   4.4228192479632571E+03
+ CG nIter, rDotR= 10   1.8659631954921736E+03
+ CG nIter, rDotR= 11   1.2846052672953538E+03
+ CG nIter, rDotR= 12   9.4910386262627071E+02
+ CG nIter, rDotR= 13   7.4691402014576556E+02
+ CG nIter, rDotR= 14   6.6227108105204582E+02
+ CG nIter, rDotR= 15   6.4968123376799167E+02
+ CG nIter, rDotR= 16   4.2060174389247129E+02
+ CG nIter, rDotR= 17   3.9255554447889614E+02
+ CG nIter, rDotR= 18   5.3118414777026589E+02
+ CG nIter, rDotR= 19   4.4410069543925374E+02
+ CG nIter, rDotR= 20   4.2311745201383883E+02
+ CG nIter, rDotR= 21   4.3715868006688339E+02
+ CG nIter, rDotR= 22   3.4130105594941062E+02
+ CG nIter, rDotR= 23   2.6760943514044061E+02
+ CG nIter, rDotR= 24   2.1592114184317367E+02
+ CG nIter, rDotR= 25   1.7650877704602553E+02
+ CG nIter, rDotR= 26   1.4331603725040139E+02
+ CG nIter, rDotR= 27  98.1408784261664806
+ CG nIter, rDotR= 28  54.1243756123257285
+ CG nIter, rDotR= 29  34.0792318846251732
+ CG nIter, rDotR= 30  19.8487800541016668
+ CG nIter, rDotR= 31  12.7641278762728998
+ CG nIter, rDotR= 32  11.0124660435570441
+ CG nIter, rDotR= 33   6.9500234110646533
+ CG nIter, rDotR= 34   4.7482003740166947
+ CG nIter, rDotR= 35   3.5729167711497234
+ CG nIter, rDotR= 36   2.0961293027061525
+ CG nIter, rDotR= 37   1.2794098739429156
+ CG nIter, rDotR= 38   0.7081515957266054
+ CG nIter, rDotR= 39   0.3942822464596314
+ CG nIter, rDotR= 40   0.2971015935027860
+ CG nIter, rDotR= 41   0.2219637931714092
+ CG nIter, rDotR= 42   0.1490463656137136
+ CG nIter, rDotR= 43   0.1149525974157012
+ CG nIter, rDotR= 44   6.8798853199132898E-02
+ CG nIter, rDotR= 45   4.5284008121973619E-02
+ CG nIter, rDotR= 46   2.4717724211757292E-02
+ CG nIter, rDotR= 47   1.6399303666454527E-02
+ CG nIter, rDotR= 48   8.3464178340444152E-03
+ CG nIter, rDotR= 49   5.6514369364233669E-03
+ CG nIter, rDotR= 50   4.4035482025902512E-03
+ CG nIter, rDotR= 51   2.8573864294133746E-03
+ CG nIter, rDotR= 52   2.2089225592606104E-03
+ CG nIter, rDotR= 53   1.3097786429151494E-03
+ CG nIter, rDotR= 54   7.9340486887237557E-04
+ CG nIter, rDotR= 55   4.6712319570989963E-04
+ CG nIter, rDotR= 56   2.5642712774684862E-04
+ CG nIter, rDotR= 57   1.6321380787328519E-04
+ CG nIter, rDotR= 58   1.1403780752017308E-04
+ CG nIter, rDotR= 59   7.4888875365930788E-05
+ CG nIter, rDotR= 60   5.9166036139676723E-05
+ CG nIter, rDotR= 61   4.2119208945397322E-05
+ CG nIter, rDotR= 62   2.3039879189052467E-05
+ CG nIter, rDotR= 63   1.6975808157216192E-05
+ CG nIter, rDotR= 64   1.2965449211437456E-05
+ CG nIter, rDotR= 65   8.5926357620266507E-06
+ CG nIter, rDotR= 66   9.3428148442104807E-06
+ CG nIter, rDotR= 67   8.9117982023596197E-06
+ CG nIter, rDotR= 68   8.4043834072754373E-06
+ CG nIter, rDotR= 69   9.5577097665312151E-06
+ CG nIter, rDotR= 70   9.4432902522050587E-06
+ CG nIter, rDotR= 71   8.1906685705585305E-06
+ CG nIter, rDotR= 72   7.4775519389103954E-06
+ CG nIter, rDotR= 73   6.5372250763720412E-06
+ CG nIter, rDotR= 74   5.3982950879469957E-06
+ CG nIter, rDotR= 75   4.9236757257705432E-06
+ CG nIter, rDotR= 76   3.9574641497898143E-06
+ CG nIter, rDotR= 77   2.1937218594563386E-06
+ CG nIter, rDotR= 78   1.6852086184810341E-06
+ CG nIter, rDotR= 79   1.0879815405605814E-06
+ CG nIter, rDotR= 80   5.3532239331061366E-07
+ CG nIter, rDotR= 81   3.5441811067440493E-07
+ CG nIter, rDotR= 82   2.7064504248853321E-07
+ CG nIter, rDotR= 83   1.4203334472651179E-07
+ CG nIter, rDotR= 84   7.8418047333540008E-08
+ CG nIter, rDotR= 85   6.7930838508597025E-08
+ CG nIter, rDotR= 86   2.9279930477171073E-08
+ CG nIter, rDotR= 87   1.9021041649639117E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 88 0   8.8720699197562915E-09
+ |
+ |  AMR:  nBlockMax =  222  nBLK =  400
+ |  AMR:  Total number of blocks used =  436
+ |  AMR:  Total number of cells =  6976
+ |  AMR:  Total number of true cells =  6976
+ |  Smallest cell dx:   10.1250000000000000   Largest cell dx:   20.2500000000000000
+ |
+ krylov at iter= 24
+ CG rDotR0, rDotRMax=   3.7604609863555741E+08   3.7604609863555744E-08
+ CG nIter, rDotR= 1   1.1665719247888017E+07
+ CG nIter, rDotR= 2   1.6473569565759604E+06
+ CG nIter, rDotR= 3   4.0053818387649360E+05
+ CG nIter, rDotR= 4   2.0267600479059425E+05
+ CG nIter, rDotR= 5   4.0348985022684341E+04
+ CG nIter, rDotR= 6   1.6150944950550207E+04
+ CG nIter, rDotR= 7   1.1297749161927579E+04
+ CG nIter, rDotR= 8   7.0996944077678190E+03
+ CG nIter, rDotR= 9   3.4470406906553262E+03
+ CG nIter, rDotR= 10   1.7848897356197183E+03
+ CG nIter, rDotR= 11   1.4333975463464390E+03
+ CG nIter, rDotR= 12   7.3694628339631083E+02
+ CG nIter, rDotR= 13   6.6704113944129722E+02
+ CG nIter, rDotR= 14   5.7560969864272863E+02
+ CG nIter, rDotR= 15   3.8713452146184824E+02
+ CG nIter, rDotR= 16   3.0957529923061941E+02
+ CG nIter, rDotR= 17   2.3818567280765672E+02
+ CG nIter, rDotR= 18   1.8971526854378931E+02
+ CG nIter, rDotR= 19   1.3823602742802220E+02
+ CG nIter, rDotR= 20   1.1067726024080078E+02
+ CG nIter, rDotR= 21   1.0584390729977969E+02
+ CG nIter, rDotR= 22   1.2284531669951134E+02
+ CG nIter, rDotR= 23   1.1477004299704015E+02
+ CG nIter, rDotR= 24   1.2398910956054830E+02
+ CG nIter, rDotR= 25   1.0756596027072541E+02
+ CG nIter, rDotR= 26   1.0537993117641882E+02
+ CG nIter, rDotR= 27  82.2567161111639251
+ CG nIter, rDotR= 28  81.8041496852825389
+ CG nIter, rDotR= 29  65.2769976633618825
+ CG nIter, rDotR= 30  49.4846350415343039
+ CG nIter, rDotR= 31  43.4930023785238191
+ CG nIter, rDotR= 32  28.4452350148461051
+ CG nIter, rDotR= 33  15.6287615535030184
+ CG nIter, rDotR= 34  12.5548369172625733
+ CG nIter, rDotR= 35   7.1270766812363187
+ CG nIter, rDotR= 36   4.2689623508693586
+ CG nIter, rDotR= 37   2.7684410751912520
+ CG nIter, rDotR= 38   1.9437333927451215
+ CG nIter, rDotR= 39   1.0059630139336901
+ CG nIter, rDotR= 40   0.6464746666528222
+ CG nIter, rDotR= 41   0.4559507749173665
+ CG nIter, rDotR= 42   0.2237072696646612
+ CG nIter, rDotR= 43   0.1429498374794502
+ CG nIter, rDotR= 44   7.9114850277076237E-02
+ CG nIter, rDotR= 45   4.4193385772282393E-02
+ CG nIter, rDotR= 46   2.9220838257519210E-02
+ CG nIter, rDotR= 47   2.1359452946521761E-02
+ CG nIter, rDotR= 48   1.1686578956496555E-02
+ CG nIter, rDotR= 49   7.0486337747200029E-03
+ CG nIter, rDotR= 50   5.5880572628216243E-03
+ CG nIter, rDotR= 51   2.6584139804841332E-03
+ CG nIter, rDotR= 52   1.7872605786241993E-03
+ CG nIter, rDotR= 53   9.2188789443440700E-04
+ CG nIter, rDotR= 54   5.3530113356124102E-04
+ CG nIter, rDotR= 55   3.2148979200674317E-04
+ CG nIter, rDotR= 56   2.0673853353904529E-04
+ CG nIter, rDotR= 57   1.4155214930369758E-04
+ CG nIter, rDotR= 58   9.2204824696498429E-05
+ CG nIter, rDotR= 59   5.4681620641409970E-05
+ CG nIter, rDotR= 60   3.4535728862585724E-05
+ CG nIter, rDotR= 61   2.3486914487743799E-05
+ CG nIter, rDotR= 62   1.2756446117669771E-05
+ CG nIter, rDotR= 63   9.4542796744804329E-06
+ CG nIter, rDotR= 64   6.8554945923662864E-06
+ CG nIter, rDotR= 65   4.4947392440474728E-06
+ CG nIter, rDotR= 66   4.3606712738816172E-06
+ CG nIter, rDotR= 67   3.8577151624555776E-06
+ CG nIter, rDotR= 68   3.7005430917803758E-06
+ CG nIter, rDotR= 69   4.9349513511434294E-06
+ CG nIter, rDotR= 70   3.8229482958851213E-06
+ CG nIter, rDotR= 71   3.9639317942645718E-06
+ CG nIter, rDotR= 72   4.1017813369644744E-06
+ CG nIter, rDotR= 73   3.9376183494823732E-06
+ CG nIter, rDotR= 74   3.2316197521856948E-06
+ CG nIter, rDotR= 75   3.4416583757291271E-06
+ CG nIter, rDotR= 76   2.6498529274694852E-06
+ CG nIter, rDotR= 77   1.4892326794586814E-06
+ CG nIter, rDotR= 78   1.2423872485921625E-06
+ CG nIter, rDotR= 79   8.3401097732331553E-07
+ CG nIter, rDotR= 80   4.6212786535482634E-07
+ CG nIter, rDotR= 81   3.5702923928116566E-07
+ CG nIter, rDotR= 82   2.4353475821804339E-07
+ CG nIter, rDotR= 83   1.3346323673886143E-07
+ CG nIter, rDotR= 84   9.2004983210073211E-08
+ CG nIter, rDotR= 85   5.8130125474457235E-08
+ CG nIter, rDotR= 86   3.4362786346416682E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 87 0   9.5592460936693771E-09
+ krylov at iter= 25
+ CG rDotR0, rDotRMax=   5.3132615341748571E+08   5.3132615341748575E-08
+ CG nIter, rDotR= 1   1.1453415976960000E+07
+ CG nIter, rDotR= 2   2.1557086333844429E+06
+ CG nIter, rDotR= 3   7.3869932600925677E+05
+ CG nIter, rDotR= 4   2.4904346706293226E+05
+ CG nIter, rDotR= 5   5.2346459293736232E+04
+ CG nIter, rDotR= 6   3.1899773821226197E+04
+ CG nIter, rDotR= 7   2.3427308591527213E+04
+ CG nIter, rDotR= 8   1.2197982584559426E+04
+ CG nIter, rDotR= 9   7.6214874914431066E+03
+ CG nIter, rDotR= 10   5.7010357033330129E+03
+ CG nIter, rDotR= 11   3.0644516353547847E+03
+ CG nIter, rDotR= 12   1.9579007573006490E+03
+ CG nIter, rDotR= 13   1.5970153935022815E+03
+ CG nIter, rDotR= 14   1.0659108086063047E+03
+ CG nIter, rDotR= 15   7.7505462416142109E+02
+ CG nIter, rDotR= 16   6.7262597249328792E+02
+ CG nIter, rDotR= 17   5.8215284625302979E+02
+ CG nIter, rDotR= 18   6.6187880320470776E+02
+ CG nIter, rDotR= 19   5.3772045427472744E+02
+ CG nIter, rDotR= 20   5.1864484032306029E+02
+ CG nIter, rDotR= 21   6.0325101112220864E+02
+ CG nIter, rDotR= 22   4.9495492183846238E+02
+ CG nIter, rDotR= 23   5.2025021057896026E+02
+ CG nIter, rDotR= 24   4.9615038635406006E+02
+ CG nIter, rDotR= 25   3.1654388506580636E+02
+ CG nIter, rDotR= 26   2.4946799226320411E+02
+ CG nIter, rDotR= 27   2.4942210329040304E+02
+ CG nIter, rDotR= 28   1.2079288680235886E+02
+ CG nIter, rDotR= 29  73.0234670535233192
+ CG nIter, rDotR= 30  54.6643064677499453
+ CG nIter, rDotR= 31  37.9475548781002843
+ CG nIter, rDotR= 32  21.4817645001218622
+ CG nIter, rDotR= 33  14.6579790793133977
+ CG nIter, rDotR= 34   9.8153872576971022
+ CG nIter, rDotR= 35   6.9974179773358669
+ CG nIter, rDotR= 36   4.1294434510616629
+ CG nIter, rDotR= 37   2.3632248899587962
+ CG nIter, rDotR= 38   1.4016952654558403
+ CG nIter, rDotR= 39   0.9009408120458241
+ CG nIter, rDotR= 40   0.5664338900505494
+ CG nIter, rDotR= 41   0.3975871801286548
+ CG nIter, rDotR= 42   0.2559572910659637
+ CG nIter, rDotR= 43   0.1947709905637084
+ CG nIter, rDotR= 44   0.1094866690151908
+ CG nIter, rDotR= 45   7.4326451533745244E-02
+ CG nIter, rDotR= 46   4.5734386024095020E-02
+ CG nIter, rDotR= 47   2.2685114196303910E-02
+ CG nIter, rDotR= 48   1.5389442033947405E-02
+ CG nIter, rDotR= 49   1.1707333051044275E-02
+ CG nIter, rDotR= 50   6.8819848509591164E-03
+ CG nIter, rDotR= 51   4.6662376141537428E-03
+ CG nIter, rDotR= 52   3.3115046204588885E-03
+ CG nIter, rDotR= 53   2.1672151060292727E-03
+ CG nIter, rDotR= 54   1.3354745970748023E-03
+ CG nIter, rDotR= 55   8.5525688396801596E-04
+ CG nIter, rDotR= 56   4.9071914540063991E-04
+ CG nIter, rDotR= 57   3.4850780515710225E-04
+ CG nIter, rDotR= 58   2.3529467770624454E-04
+ CG nIter, rDotR= 59   1.5073803960135066E-04
+ CG nIter, rDotR= 60   9.1655906599645253E-05
+ CG nIter, rDotR= 61   5.6364712334278563E-05
+ CG nIter, rDotR= 62   3.3964438138614530E-05
+ CG nIter, rDotR= 63   1.8761990338663248E-05
+ CG nIter, rDotR= 64   1.2311282460526361E-05
+ CG nIter, rDotR= 65   7.9797283638725868E-06
+ CG nIter, rDotR= 66   4.4610268487495150E-06
+ CG nIter, rDotR= 67   3.6699601969577305E-06
+ CG nIter, rDotR= 68   2.4771345411733451E-06
+ CG nIter, rDotR= 69   1.8460616418986449E-06
+ CG nIter, rDotR= 70   1.5111975316181353E-06
+ CG nIter, rDotR= 71   9.5065108115691652E-07
+ CG nIter, rDotR= 72   7.0845266720456312E-07
+ CG nIter, rDotR= 73   6.0647315923870529E-07
+ CG nIter, rDotR= 74   6.3048418081525813E-07
+ CG nIter, rDotR= 75   5.8480248926753326E-07
+ CG nIter, rDotR= 76   6.8342288812118025E-07
+ CG nIter, rDotR= 77   7.4239214791129096E-07
+ CG nIter, rDotR= 78   7.7400585000095912E-07
+ CG nIter, rDotR= 79   6.1781836448669449E-07
+ CG nIter, rDotR= 80   5.7894053805946676E-07
+ CG nIter, rDotR= 81   4.7353169048389470E-07
+ CG nIter, rDotR= 82   3.2403043273705424E-07
+ CG nIter, rDotR= 83   2.3038592709959393E-07
+ CG nIter, rDotR= 84   1.7244399409016635E-07
+ CG nIter, rDotR= 85   1.1032748424099431E-07
+ CG nIter, rDotR= 86   6.4112763755785212E-08
+ CG nIter, rDotR= 87   4.8164686690170592E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 88 0   9.5210264782296798E-09
+ krylov at iter= 26
+ CG rDotR0, rDotRMax=   2.6592175376510385E+08   2.6592175376510387E-08
+ CG nIter, rDotR= 1   1.2192525665819991E+07
+ CG nIter, rDotR= 2   2.9389404182621967E+06
+ CG nIter, rDotR= 3   9.3250536326821509E+05
+ CG nIter, rDotR= 4   2.3953357351616476E+05
+ CG nIter, rDotR= 5   4.9329393349600723E+04
+ CG nIter, rDotR= 6   2.7140511461188635E+04
+ CG nIter, rDotR= 7   1.7338590451114305E+04
+ CG nIter, rDotR= 8   7.4318491719746808E+03
+ CG nIter, rDotR= 9   4.4773494072276153E+03
+ CG nIter, rDotR= 10   2.9280326250529188E+03
+ CG nIter, rDotR= 11   1.9351020131657579E+03
+ CG nIter, rDotR= 12   1.2329316932188744E+03
+ CG nIter, rDotR= 13   9.9583130898145191E+02
+ CG nIter, rDotR= 14   6.9698809003419342E+02
+ CG nIter, rDotR= 15   5.4337899070650008E+02
+ CG nIter, rDotR= 16   4.7455106591270231E+02
+ CG nIter, rDotR= 17   4.3125228102075732E+02
+ CG nIter, rDotR= 18   5.2772227155550843E+02
+ CG nIter, rDotR= 19   4.3055241461164661E+02
+ CG nIter, rDotR= 20   4.3532751926417069E+02
+ CG nIter, rDotR= 21   4.7827487570153176E+02
+ CG nIter, rDotR= 22   3.8951241039757343E+02
+ CG nIter, rDotR= 23   3.7174424789486812E+02
+ CG nIter, rDotR= 24   3.1657132145646784E+02
+ CG nIter, rDotR= 25   2.0741351287286227E+02
+ CG nIter, rDotR= 26   1.7050745976462025E+02
+ CG nIter, rDotR= 27   1.4577958085243503E+02
+ CG nIter, rDotR= 28  88.6613543003031310
+ CG nIter, rDotR= 29  56.9332543835571698
+ CG nIter, rDotR= 30  48.9510252317019692
+ CG nIter, rDotR= 31  34.0773265309851752
+ CG nIter, rDotR= 32  21.9475332355800710
+ CG nIter, rDotR= 33  13.0513919847270259
+ CG nIter, rDotR= 34   9.0449881777281735
+ CG nIter, rDotR= 35   6.6504304003416363
+ CG nIter, rDotR= 36   4.3696770245200947
+ CG nIter, rDotR= 37   3.1268833690273374
+ CG nIter, rDotR= 38   1.7908626907587639
+ CG nIter, rDotR= 39   1.0136623721644120
+ CG nIter, rDotR= 40   0.6271326775476750
+ CG nIter, rDotR= 41   0.3932834834565779
+ CG nIter, rDotR= 42   0.2311440792781478
+ CG nIter, rDotR= 43   0.1562297384970063
+ CG nIter, rDotR= 44   8.6498943850782342E-02
+ CG nIter, rDotR= 45   6.6650892422752059E-02
+ CG nIter, rDotR= 46   3.9208880480501494E-02
+ CG nIter, rDotR= 47   2.0226919004613167E-02
+ CG nIter, rDotR= 48   1.3916835202890315E-02
+ CG nIter, rDotR= 49   1.0088271335422377E-02
+ CG nIter, rDotR= 50   5.4247677251606933E-03
+ CG nIter, rDotR= 51   3.0643757031788448E-03
+ CG nIter, rDotR= 52   2.1331359919022300E-03
+ CG nIter, rDotR= 53   1.0975691863786999E-03
+ CG nIter, rDotR= 54   7.9700294069973360E-04
+ CG nIter, rDotR= 55   5.7464280929559743E-04
+ CG nIter, rDotR= 56   3.4593571212469760E-04
+ CG nIter, rDotR= 57   1.6256362200236344E-04
+ CG nIter, rDotR= 58   1.1459903784457999E-04
+ CG nIter, rDotR= 59   6.4984497867237115E-05
+ CG nIter, rDotR= 60   3.8335803573684324E-05
+ CG nIter, rDotR= 61   2.4627317810439871E-05
+ CG nIter, rDotR= 62   1.7648230603211129E-05
+ CG nIter, rDotR= 63   9.4059222978285980E-06
+ CG nIter, rDotR= 64   7.5398576052140679E-06
+ CG nIter, rDotR= 65   5.0003971354871556E-06
+ CG nIter, rDotR= 66   3.4361973155520511E-06
+ CG nIter, rDotR= 67   3.2243222450746324E-06
+ CG nIter, rDotR= 68   2.5173663301959512E-06
+ CG nIter, rDotR= 69   2.0881763926934075E-06
+ CG nIter, rDotR= 70   2.0523738369495464E-06
+ CG nIter, rDotR= 71   2.2170841320194017E-06
+ CG nIter, rDotR= 72   2.1825093008617151E-06
+ CG nIter, rDotR= 73   2.1616454369155815E-06
+ CG nIter, rDotR= 74   2.4086892774624642E-06
+ CG nIter, rDotR= 75   1.7648938985930236E-06
+ CG nIter, rDotR= 76   1.9792851133884632E-06
+ CG nIter, rDotR= 77   1.5329094188414864E-06
+ CG nIter, rDotR= 78   1.3076876490144324E-06
+ CG nIter, rDotR= 79   1.0008114421858204E-06
+ CG nIter, rDotR= 80   6.4693041555255549E-07
+ CG nIter, rDotR= 81   4.1197398839369468E-07
+ CG nIter, rDotR= 82   2.6548211889661378E-07
+ CG nIter, rDotR= 83   1.6504962955791555E-07
+ CG nIter, rDotR= 84   1.0690345737347521E-07
+ CG nIter, rDotR= 85   5.9587859294374914E-08
+ CG nIter, rDotR= 86   4.0898737596373657E-08
+ CG nIter, rDotR= 87   2.4964218283121339E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 88 0   9.6890690847315665E-09
+ krylov at iter= 27
+ CG rDotR0, rDotRMax=   3.0432347228813279E+08   3.0432347228813284E-08
+ CG nIter, rDotR= 1   1.4094893415950591E+07
+ CG nIter, rDotR= 2   3.3274488197874026E+06
+ CG nIter, rDotR= 3   9.0802275859666697E+05
+ CG nIter, rDotR= 4   2.1844990655031777E+05
+ CG nIter, rDotR= 5   5.5099746961470468E+04
+ CG nIter, rDotR= 6   2.9814374643239840E+04
+ CG nIter, rDotR= 7   1.7586141846986069E+04
+ CG nIter, rDotR= 8   9.7730716361240993E+03
+ CG nIter, rDotR= 9   5.4960524929811336E+03
+ CG nIter, rDotR= 10   3.7990116717233113E+03
+ CG nIter, rDotR= 11   2.2037565923631601E+03
+ CG nIter, rDotR= 12   1.6325636625278721E+03
+ CG nIter, rDotR= 13   1.1446669096702424E+03
+ CG nIter, rDotR= 14   7.3689890966245298E+02
+ CG nIter, rDotR= 15   6.3610513903224046E+02
+ CG nIter, rDotR= 16   4.8860009614750362E+02
+ CG nIter, rDotR= 17   4.9916948678875804E+02
+ CG nIter, rDotR= 18   5.6599566822095505E+02
+ CG nIter, rDotR= 19   5.5438148731470585E+02
+ CG nIter, rDotR= 20   5.6956112025667221E+02
+ CG nIter, rDotR= 21   6.1936604142014744E+02
+ CG nIter, rDotR= 22   6.0189994726886880E+02
+ CG nIter, rDotR= 23   6.0096401611316571E+02
+ CG nIter, rDotR= 24   5.2232201987618703E+02
+ CG nIter, rDotR= 25   3.5931604866365262E+02
+ CG nIter, rDotR= 26   2.7114387878297197E+02
+ CG nIter, rDotR= 27   1.7217877316898489E+02
+ CG nIter, rDotR= 28   1.2426311622850920E+02
+ CG nIter, rDotR= 29  62.9343743047630682
+ CG nIter, rDotR= 30  44.1722083400738086
+ CG nIter, rDotR= 31  29.1586959793600897
+ CG nIter, rDotR= 32  17.4772521100861589
+ CG nIter, rDotR= 33  10.5165337971224062
+ CG nIter, rDotR= 34   7.5308125113683637
+ CG nIter, rDotR= 35   4.6962920521018603
+ CG nIter, rDotR= 36   3.3574373885153652
+ CG nIter, rDotR= 37   1.7437207075898822
+ CG nIter, rDotR= 38   1.0697943221369803
+ CG nIter, rDotR= 39   0.7256647423085583
+ CG nIter, rDotR= 40   0.4365609693528000
+ CG nIter, rDotR= 41   0.2822219526516179
+ CG nIter, rDotR= 42   0.1604549308340003
+ CG nIter, rDotR= 43   0.1103795734442886
+ CG nIter, rDotR= 44   6.0001847125431017E-02
+ CG nIter, rDotR= 45   3.8414790767389281E-02
+ CG nIter, rDotR= 46   2.7864764824538452E-02
+ CG nIter, rDotR= 47   1.6325797697153827E-02
+ CG nIter, rDotR= 48   1.1487991433190747E-02
+ CG nIter, rDotR= 49   5.4447879805016152E-03
+ CG nIter, rDotR= 50   4.1533706516429930E-03
+ CG nIter, rDotR= 51   2.3479263134982232E-03
+ CG nIter, rDotR= 52   1.6983452223990956E-03
+ CG nIter, rDotR= 53   9.3495958866486931E-04
+ CG nIter, rDotR= 54   7.3074258632527006E-04
+ CG nIter, rDotR= 55   4.7662654638049848E-04
+ CG nIter, rDotR= 56   2.6768961382378736E-04
+ CG nIter, rDotR= 57   2.2000816014125900E-04
+ CG nIter, rDotR= 58   1.3597220359748991E-04
+ CG nIter, rDotR= 59   8.9404001864318826E-05
+ CG nIter, rDotR= 60   5.7069706330937815E-05
+ CG nIter, rDotR= 61   4.3294030428860728E-05
+ CG nIter, rDotR= 62   3.4730515295317492E-05
+ CG nIter, rDotR= 63   2.5738980487243730E-05
+ CG nIter, rDotR= 64   2.1685678007754290E-05
+ CG nIter, rDotR= 65   1.9775003607027674E-05
+ CG nIter, rDotR= 66   1.7844130970771355E-05
+ CG nIter, rDotR= 67   1.5155622864258368E-05
+ CG nIter, rDotR= 68   1.9618742560555339E-05
+ CG nIter, rDotR= 69   2.2010319766125926E-05
+ CG nIter, rDotR= 70   1.5754987934560181E-05
+ CG nIter, rDotR= 71   1.6938453121268435E-05
+ CG nIter, rDotR= 72   1.4612113807943501E-05
+ CG nIter, rDotR= 73   1.4989776515972930E-05
+ CG nIter, rDotR= 74   1.1557305738391176E-05
+ CG nIter, rDotR= 75   9.2144795618448488E-06
+ CG nIter, rDotR= 76   7.2193782650835963E-06
+ CG nIter, rDotR= 77   5.1179807361908606E-06
+ CG nIter, rDotR= 78   3.3086754355802757E-06
+ CG nIter, rDotR= 79   2.3802630131889429E-06
+ CG nIter, rDotR= 80   1.7887959499653937E-06
+ CG nIter, rDotR= 81   9.9351272756090225E-07
+ CG nIter, rDotR= 82   5.7923105757027076E-07
+ CG nIter, rDotR= 83   4.2107713604643969E-07
+ CG nIter, rDotR= 84   2.5549131484045978E-07
+ CG nIter, rDotR= 85   1.5469651888239908E-07
+ CG nIter, rDotR= 86   9.4439391415549406E-08
+ CG nIter, rDotR= 87   6.0362704447814865E-08
+ CG nIter, rDotR= 88   3.6440582020518520E-08
+ CG nIter, rDotR= 89   2.0874752735562237E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 90 0   8.2821471936387097E-09
+ krylov at iter= 28
+ CG rDotR0, rDotRMax=   3.1372214292927557E+08   3.1372214292927558E-08
+ CG nIter, rDotR= 1   1.1242263229887286E+07
+ CG nIter, rDotR= 2   2.6137186105924370E+06
+ CG nIter, rDotR= 3   4.7951815448102815E+05
+ CG nIter, rDotR= 4   1.0168565790022205E+05
+ CG nIter, rDotR= 5   3.1544403505106933E+04
+ CG nIter, rDotR= 6   1.5282355741662743E+04
+ CG nIter, rDotR= 7   7.3648272236938801E+03
+ CG nIter, rDotR= 8   3.6881047250594884E+03
+ CG nIter, rDotR= 9   2.2783954885270218E+03
+ CG nIter, rDotR= 10   1.8022793207935656E+03
+ CG nIter, rDotR= 11   1.2761608889196621E+03
+ CG nIter, rDotR= 12   9.5711446924630638E+02
+ CG nIter, rDotR= 13   9.4606411134318739E+02
+ CG nIter, rDotR= 14   9.2742185253346656E+02
+ CG nIter, rDotR= 15   6.1845263891647448E+02
+ CG nIter, rDotR= 16   5.6313785565923536E+02
+ CG nIter, rDotR= 17   4.5989882454353881E+02
+ CG nIter, rDotR= 18   4.0283628161879881E+02
+ CG nIter, rDotR= 19   4.1142762045412877E+02
+ CG nIter, rDotR= 20   3.8293503070402619E+02
+ CG nIter, rDotR= 21   4.5730504849852491E+02
+ CG nIter, rDotR= 22   5.6177440185857643E+02
+ CG nIter, rDotR= 23   6.5506564944942454E+02
+ CG nIter, rDotR= 24   4.7681720089992848E+02
+ CG nIter, rDotR= 25   3.6501927687301128E+02
+ CG nIter, rDotR= 26   2.9472636363975869E+02
+ CG nIter, rDotR= 27   2.2195519563788579E+02
+ CG nIter, rDotR= 28   1.3543540221401437E+02
+ CG nIter, rDotR= 29  79.3482723967798620
+ CG nIter, rDotR= 30  53.0734226976593746
+ CG nIter, rDotR= 31  40.0474622496915771
+ CG nIter, rDotR= 32  23.7321506593630609
+ CG nIter, rDotR= 33  10.6308126469988178
+ CG nIter, rDotR= 34   7.4179649247511206
+ CG nIter, rDotR= 35   3.9633311486070180
+ CG nIter, rDotR= 36   2.2909337615387271
+ CG nIter, rDotR= 37   1.5542739256616265
+ CG nIter, rDotR= 38   1.0001380756927953
+ CG nIter, rDotR= 39   0.5811657407740359
+ CG nIter, rDotR= 40   0.4151396138193399
+ CG nIter, rDotR= 41   0.2750687189411575
+ CG nIter, rDotR= 42   0.1720122723284905
+ CG nIter, rDotR= 43   0.1004860856877050
+ CG nIter, rDotR= 44   5.6402210317577299E-02
+ CG nIter, rDotR= 45   4.2666536291185220E-02
+ CG nIter, rDotR= 46   2.8708275151752897E-02
+ CG nIter, rDotR= 47   1.5379276678497634E-02
+ CG nIter, rDotR= 48   1.0135266942066913E-02
+ CG nIter, rDotR= 49   6.4484085915967300E-03
+ CG nIter, rDotR= 50   4.6254040128305123E-03
+ CG nIter, rDotR= 51   2.2299454352529406E-03
+ CG nIter, rDotR= 52   1.6712543078006787E-03
+ CG nIter, rDotR= 53   9.1908810462852349E-04
+ CG nIter, rDotR= 54   4.3877578430176446E-04
+ CG nIter, rDotR= 55   2.6331851868380339E-04
+ CG nIter, rDotR= 56   1.7405709891090776E-04
+ CG nIter, rDotR= 57   9.6080073720856705E-05
+ CG nIter, rDotR= 58   5.6483797744336031E-05
+ CG nIter, rDotR= 59   3.4300420153447712E-05
+ CG nIter, rDotR= 60   2.7934272769441234E-05
+ CG nIter, rDotR= 61   1.6788133335183714E-05
+ CG nIter, rDotR= 62   1.1918017181953333E-05
+ CG nIter, rDotR= 63   9.7046782450476145E-06
+ CG nIter, rDotR= 64   1.0513839988224860E-05
+ CG nIter, rDotR= 65   1.0241253665147114E-05
+ CG nIter, rDotR= 66   9.7996602312656539E-06
+ CG nIter, rDotR= 67   1.3237320638064548E-05
+ CG nIter, rDotR= 68   1.3276765773738355E-05
+ CG nIter, rDotR= 69   1.5312806954084786E-05
+ CG nIter, rDotR= 70   1.6708589992745499E-05
+ CG nIter, rDotR= 71   1.4877604492162122E-05
+ CG nIter, rDotR= 72   1.1726283292652894E-05
+ CG nIter, rDotR= 73   8.1337929128888049E-06
+ CG nIter, rDotR= 74   6.7216286011404483E-06
+ CG nIter, rDotR= 75   4.5029217204878018E-06
+ CG nIter, rDotR= 76   2.6262299519341387E-06
+ CG nIter, rDotR= 77   1.9015706225670224E-06
+ CG nIter, rDotR= 78   1.3277064434742616E-06
+ CG nIter, rDotR= 79   8.6692712395888528E-07
+ CG nIter, rDotR= 80   4.9664556085958008E-07
+ CG nIter, rDotR= 81   3.2949018648397033E-07
+ CG nIter, rDotR= 82   1.9957899848181855E-07
+ CG nIter, rDotR= 83   1.1505157397203843E-07
+ CG nIter, rDotR= 84   7.2818521823622751E-08
+ CG nIter, rDotR= 85   4.5537945371687844E-08
+ CG nIter, rDotR= 86   2.7663264320231313E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 87 0   9.3902926378211815E-09
+Speed is  29890.9 c/s/p after      3.5 s at N =      70 (2.8200E-09 s)
+ krylov at iter= 29
+ CG rDotR0, rDotRMax=   3.7571684390796024E+08   3.7571684390796027E-08
+ CG nIter, rDotR= 1   1.1566060726875035E+07
+ CG nIter, rDotR= 2   2.1704169717509104E+06
+ CG nIter, rDotR= 3   2.4558252015851444E+05
+ CG nIter, rDotR= 4   7.2932018339507791E+04
+ CG nIter, rDotR= 5   3.3638528199160806E+04
+ CG nIter, rDotR= 6   2.0875325791886436E+04
+ CG nIter, rDotR= 7   7.1106093546756465E+03
+ CG nIter, rDotR= 8   5.1556281289125682E+03
+ CG nIter, rDotR= 9   3.5917256514057717E+03
+ CG nIter, rDotR= 10   1.6310304814035346E+03
+ CG nIter, rDotR= 11   9.6598892029935109E+02
+ CG nIter, rDotR= 12   7.8570477875539052E+02
+ CG nIter, rDotR= 13   6.2819564341562250E+02
+ CG nIter, rDotR= 14   5.7661495961378239E+02
+ CG nIter, rDotR= 15   5.4193429029965432E+02
+ CG nIter, rDotR= 16   7.3817236183159355E+02
+ CG nIter, rDotR= 17   8.3943672949676989E+02
+ CG nIter, rDotR= 18   9.4694978601700075E+02
+ CG nIter, rDotR= 19   8.7827233918340175E+02
+ CG nIter, rDotR= 20   7.2321147309342928E+02
+ CG nIter, rDotR= 21   7.0378269092136782E+02
+ CG nIter, rDotR= 22   7.0529410727426944E+02
+ CG nIter, rDotR= 23   5.9222748205002301E+02
+ CG nIter, rDotR= 24   4.5950563646447210E+02
+ CG nIter, rDotR= 25   5.0797900879082681E+02
+ CG nIter, rDotR= 26   4.3051450418762914E+02
+ CG nIter, rDotR= 27   2.7686920418080445E+02
+ CG nIter, rDotR= 28   1.7838001668353783E+02
+ CG nIter, rDotR= 29   1.3942200140026654E+02
+ CG nIter, rDotR= 30  75.0989917790393378
+ CG nIter, rDotR= 31  41.2368026362529179
+ CG nIter, rDotR= 32  31.8943702526881800
+ CG nIter, rDotR= 33  18.8766353492933519
+ CG nIter, rDotR= 34  12.9008855773137334
+ CG nIter, rDotR= 35   8.9734030800701614
+ CG nIter, rDotR= 36   5.3471624730183995
+ CG nIter, rDotR= 37   2.4764882236125318
+ CG nIter, rDotR= 38   1.7534521038135931
+ CG nIter, rDotR= 39   0.9051245241845358
+ CG nIter, rDotR= 40   0.5356122886954495
+ CG nIter, rDotR= 41   0.3253011655737481
+ CG nIter, rDotR= 42   0.1332763270722471
+ CG nIter, rDotR= 43   9.7741662760275572E-02
+ CG nIter, rDotR= 44   7.1809298295807927E-02
+ CG nIter, rDotR= 45   4.2696369585650353E-02
+ CG nIter, rDotR= 46   2.2818287550415352E-02
+ CG nIter, rDotR= 47   1.6667501342864006E-02
+ CG nIter, rDotR= 48   9.3362820376902706E-03
+ CG nIter, rDotR= 49   4.8378593889072457E-03
+ CG nIter, rDotR= 50   3.7058259496233945E-03
+ CG nIter, rDotR= 51   1.9360338871183486E-03
+ CG nIter, rDotR= 52   1.0532411298517232E-03
+ CG nIter, rDotR= 53   8.3340152421212065E-04
+ CG nIter, rDotR= 54   4.8842723690426611E-04
+ CG nIter, rDotR= 55   3.7095625574368733E-04
+ CG nIter, rDotR= 56   3.2790139599405234E-04
+ CG nIter, rDotR= 57   2.5317421919282697E-04
+ CG nIter, rDotR= 58   2.3353507873258246E-04
+ CG nIter, rDotR= 59   2.4535712973668063E-04
+ CG nIter, rDotR= 60   2.3889009399770015E-04
+ CG nIter, rDotR= 61   2.4732459900242095E-04
+ CG nIter, rDotR= 62   2.4470927038694462E-04
+ CG nIter, rDotR= 63   3.0104427412365318E-04
+ CG nIter, rDotR= 64   3.2924731318044410E-04
+ CG nIter, rDotR= 65   3.8137634654288938E-04
+ CG nIter, rDotR= 66   3.4142030465817385E-04
+ CG nIter, rDotR= 67   2.8541186275325670E-04
+ CG nIter, rDotR= 68   2.6129699966196215E-04
+ CG nIter, rDotR= 69   1.6885985021771732E-04
+ CG nIter, rDotR= 70   9.9153006635414336E-05
+ CG nIter, rDotR= 71   8.0471866475731140E-05
+ CG nIter, rDotR= 72   5.2906732616315992E-05
+ CG nIter, rDotR= 73   3.1360496745476524E-05
+ CG nIter, rDotR= 74   1.8398073240413763E-05
+ CG nIter, rDotR= 75   1.4832066967069691E-05
+ CG nIter, rDotR= 76   8.5072844723279401E-06
+ CG nIter, rDotR= 77   5.0173877996915625E-06
+ CG nIter, rDotR= 78   3.9532530716124036E-06
+ CG nIter, rDotR= 79   2.2046397404698362E-06
+ CG nIter, rDotR= 80   1.0575633820149749E-06
+ CG nIter, rDotR= 81   7.3670743925213869E-07
+ CG nIter, rDotR= 82   4.9327942016844086E-07
+ CG nIter, rDotR= 83   2.6981035533915064E-07
+ CG nIter, rDotR= 84   1.4269668124111722E-07
+ CG nIter, rDotR= 85   9.8367804132746727E-08
+ CG nIter, rDotR= 86   6.8115694113462685E-08
+ CG nIter, rDotR= 87   4.4576380815450037E-08
+ CG nIter, rDotR= 88   2.7839377143659186E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 89 0   8.6079438315716083E-09
+ krylov at iter= 30
+ CG rDotR0, rDotRMax=   3.7324035757807904E+08   3.7324035757807911E-08
+ CG nIter, rDotR= 1   9.3544435297898687E+06
+ CG nIter, rDotR= 2   1.6515770549158277E+06
+ CG nIter, rDotR= 3   2.2691350657026586E+05
+ CG nIter, rDotR= 4   6.5866966336098587E+04
+ CG nIter, rDotR= 5   3.8704880390627201E+04
+ CG nIter, rDotR= 6   1.5705242836132798E+04
+ CG nIter, rDotR= 7   6.8859289445994682E+03
+ CG nIter, rDotR= 8   4.8969305327230113E+03
+ CG nIter, rDotR= 9   2.4561153690485680E+03
+ CG nIter, rDotR= 10   1.0247932257769548E+03
+ CG nIter, rDotR= 11   6.3953637837324391E+02
+ CG nIter, rDotR= 12   4.3597619400573990E+02
+ CG nIter, rDotR= 13   3.8572785992295945E+02
+ CG nIter, rDotR= 14   3.8989643413276798E+02
+ CG nIter, rDotR= 15   2.6501333948724420E+02
+ CG nIter, rDotR= 16   2.7812661580231338E+02
+ CG nIter, rDotR= 17   1.8288447808140990E+02
+ CG nIter, rDotR= 18   1.1158106718490419E+02
+ CG nIter, rDotR= 19  89.5939039260301655
+ CG nIter, rDotR= 20  64.5709528469805036
+ CG nIter, rDotR= 21  84.9676989468956094
+ CG nIter, rDotR= 22   1.2343901996518129E+02
+ CG nIter, rDotR= 23   1.1762330389074837E+02
+ CG nIter, rDotR= 24   1.5142367070590007E+02
+ CG nIter, rDotR= 25   1.4963966648620868E+02
+ CG nIter, rDotR= 26   1.1956586566614899E+02
+ CG nIter, rDotR= 27  88.4502637879603668
+ CG nIter, rDotR= 28  77.2763800998120303
+ CG nIter, rDotR= 29  56.8494138022615871
+ CG nIter, rDotR= 30  41.0865695265521467
+ CG nIter, rDotR= 31  28.2845866568677877
+ CG nIter, rDotR= 32  15.1245113111733502
+ CG nIter, rDotR= 33   8.3170359753124572
+ CG nIter, rDotR= 34   5.8513658539855138
+ CG nIter, rDotR= 35   2.9817803661654900
+ CG nIter, rDotR= 36   1.8356713472304371
+ CG nIter, rDotR= 37   1.1095548133910123
+ CG nIter, rDotR= 38   0.6499436640527037
+ CG nIter, rDotR= 39   0.4663022567798393
+ CG nIter, rDotR= 40   0.3734660353039247
+ CG nIter, rDotR= 41   0.2541260821406249
+ CG nIter, rDotR= 42   0.1357445999463057
+ CG nIter, rDotR= 43   9.6556989503096977E-02
+ CG nIter, rDotR= 44   5.4248536360907373E-02
+ CG nIter, rDotR= 45   3.4850428894596747E-02
+ CG nIter, rDotR= 46   2.1915325410695616E-02
+ CG nIter, rDotR= 47   1.2606735159087262E-02
+ CG nIter, rDotR= 48   8.7989666613911555E-03
+ CG nIter, rDotR= 49   6.3496178470549185E-03
+ CG nIter, rDotR= 50   3.7210353128154356E-03
+ CG nIter, rDotR= 51   2.1941445314297764E-03
+ CG nIter, rDotR= 52   1.1988123197019731E-03
+ CG nIter, rDotR= 53   7.6567284399260628E-04
+ CG nIter, rDotR= 54   3.8776737532532395E-04
+ CG nIter, rDotR= 55   2.3298607035306652E-04
+ CG nIter, rDotR= 56   1.7511353915990695E-04
+ CG nIter, rDotR= 57   1.3336803430481122E-04
+ CG nIter, rDotR= 58   9.4233384057116408E-05
+ CG nIter, rDotR= 59   9.4122172887870555E-05
+ CG nIter, rDotR= 60   9.6387521622014907E-05
+ CG nIter, rDotR= 61   8.2534824573244353E-05
+ CG nIter, rDotR= 62   9.8248198531278980E-05
+ CG nIter, rDotR= 63   1.2760449465292725E-04
+ CG nIter, rDotR= 64   1.3133442192766526E-04
+ CG nIter, rDotR= 65   1.2619186843256699E-04
+ CG nIter, rDotR= 66   1.5141587238900542E-04
+ CG nIter, rDotR= 67   1.4215872287762083E-04
+ CG nIter, rDotR= 68   1.0449356076292049E-04
+ CG nIter, rDotR= 69   7.8270442862034013E-05
+ CG nIter, rDotR= 70   4.9490012148285872E-05
+ CG nIter, rDotR= 71   3.4156845527558900E-05
+ CG nIter, rDotR= 72   2.2539376959606920E-05
+ CG nIter, rDotR= 73   1.3656374246323496E-05
+ CG nIter, rDotR= 74   8.6457925697131398E-06
+ CG nIter, rDotR= 75   6.5773662391139199E-06
+ CG nIter, rDotR= 76   3.9682215303089006E-06
+ CG nIter, rDotR= 77   2.7464500678280091E-06
+ CG nIter, rDotR= 78   1.6508320897194134E-06
+ CG nIter, rDotR= 79   9.6248588431329264E-07
+ CG nIter, rDotR= 80   4.6639713916315225E-07
+ CG nIter, rDotR= 81   3.1943970049524066E-07
+ CG nIter, rDotR= 82   2.3194618406352036E-07
+ CG nIter, rDotR= 83   1.3517729572362385E-07
+ CG nIter, rDotR= 84   7.6236039605572432E-08
+ CG nIter, rDotR= 85   5.0918870993825636E-08
+ CG nIter, rDotR= 86   3.3356437102176196E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 87 0   9.4535631508221865E-09
+ |
+ |  AMR:  nBlockMax =  222  nBLK =  400
+ |  AMR:  Total number of blocks used =  433
+ |  AMR:  Total number of cells =  6928
+ |  AMR:  Total number of true cells =  6928
+ |  Smallest cell dx:   10.1250000000000000   Largest cell dx:   20.2500000000000000
+ |
+ krylov at iter= 31
+ CG rDotR0, rDotRMax=   4.7221519897831351E+08   4.7221519897831353E-08
+ CG nIter, rDotR= 1   7.4349273643644042E+06
+ CG nIter, rDotR= 2   1.3255671596686556E+06
+ CG nIter, rDotR= 3   2.4192142766971639E+05
+ CG nIter, rDotR= 4   1.1929460437791343E+05
+ CG nIter, rDotR= 5   5.4921956377340066E+04
+ CG nIter, rDotR= 6   2.0426524466155846E+04
+ CG nIter, rDotR= 7   1.4445137269663524E+04
+ CG nIter, rDotR= 8   7.5216042936642998E+03
+ CG nIter, rDotR= 9   3.6542553034080324E+03
+ CG nIter, rDotR= 10   1.7825235457601543E+03
+ CG nIter, rDotR= 11   7.8827200007022259E+02
+ CG nIter, rDotR= 12   4.1469782341960962E+02
+ CG nIter, rDotR= 13   2.5387229601207892E+02
+ CG nIter, rDotR= 14   1.2329828562054917E+02
+ CG nIter, rDotR= 15  99.3529764063016216
+ CG nIter, rDotR= 16  91.3790713741090315
+ CG nIter, rDotR= 17  60.4974629743816834
+ CG nIter, rDotR= 18  49.8813297846531398
+ CG nIter, rDotR= 19  27.6611794814865171
+ CG nIter, rDotR= 20  13.8557949538279708
+ CG nIter, rDotR= 21   9.3128007779847461
+ CG nIter, rDotR= 22   6.1817841589563400
+ CG nIter, rDotR= 23   3.2170530931109509
+ CG nIter, rDotR= 24   2.2854471109920595
+ CG nIter, rDotR= 25   1.6266758388942189
+ CG nIter, rDotR= 26   1.0955139398287113
+ CG nIter, rDotR= 27   0.7752638506884199
+ CG nIter, rDotR= 28   0.4634241222920396
+ CG nIter, rDotR= 29   0.2947584714312122
+ CG nIter, rDotR= 30   0.2440830674641738
+ CG nIter, rDotR= 31   0.2151689969374656
+ CG nIter, rDotR= 32   0.1931866640832795
+ CG nIter, rDotR= 33   0.3176186171594561
+ CG nIter, rDotR= 34   0.4524327359510768
+ CG nIter, rDotR= 35   0.4281192466678523
+ CG nIter, rDotR= 36   0.5308871583926831
+ CG nIter, rDotR= 37   0.5312459478075799
+ CG nIter, rDotR= 38   0.4142917686202602
+ CG nIter, rDotR= 39   0.3677425263101678
+ CG nIter, rDotR= 40   0.2395212769224113
+ CG nIter, rDotR= 41   0.2048934024521614
+ CG nIter, rDotR= 42   0.1432307104076820
+ CG nIter, rDotR= 43   0.1131348681504600
+ CG nIter, rDotR= 44   6.6102989643946120E-02
+ CG nIter, rDotR= 45   4.1764695702038716E-02
+ CG nIter, rDotR= 46   2.3976848274679018E-02
+ CG nIter, rDotR= 47   1.7851096326962627E-02
+ CG nIter, rDotR= 48   7.7949965578267798E-03
+ CG nIter, rDotR= 49   4.7860669323223819E-03
+ CG nIter, rDotR= 50   2.8377584087050534E-03
+ CG nIter, rDotR= 51   2.1933077224233388E-03
+ CG nIter, rDotR= 52   1.4188121168468592E-03
+ CG nIter, rDotR= 53   9.1134056102249816E-04
+ CG nIter, rDotR= 54   5.7244506353931572E-04
+ CG nIter, rDotR= 55   4.3994192917290849E-04
+ CG nIter, rDotR= 56   2.1181809957158108E-04
+ CG nIter, rDotR= 57   1.2946024229111658E-04
+ CG nIter, rDotR= 58   9.1001831882761751E-05
+ CG nIter, rDotR= 59   4.6395094238167663E-05
+ CG nIter, rDotR= 60   2.3411739107980172E-05
+ CG nIter, rDotR= 61   1.9286720361806411E-05
+ CG nIter, rDotR= 62   1.1717584409255694E-05
+ CG nIter, rDotR= 63   6.2514904268881649E-06
+ CG nIter, rDotR= 64   4.1679514832049092E-06
+ CG nIter, rDotR= 65   2.8706046024619960E-06
+ CG nIter, rDotR= 66   1.6933522456086104E-06
+ CG nIter, rDotR= 67   9.7149943473424627E-07
+ CG nIter, rDotR= 68   7.9256399737002062E-07
+ CG nIter, rDotR= 69   6.5495575337298639E-07
+ CG nIter, rDotR= 70   4.7707485606314007E-07
+ CG nIter, rDotR= 71   4.2907102077175550E-07
+ CG nIter, rDotR= 72   4.9070513300356241E-07
+ CG nIter, rDotR= 73   5.2521219457358672E-07
+ CG nIter, rDotR= 74   6.4044465360674709E-07
+ CG nIter, rDotR= 75   7.5494905664282827E-07
+ CG nIter, rDotR= 76   8.5156885417861725E-07
+ CG nIter, rDotR= 77   8.6179776584561331E-07
+ CG nIter, rDotR= 78   7.6928137755502086E-07
+ CG nIter, rDotR= 79   9.0876327658103640E-07
+ CG nIter, rDotR= 80   7.0132464053071080E-07
+ CG nIter, rDotR= 81   5.0255092475200890E-07
+ CG nIter, rDotR= 82   3.0990611138175979E-07
+ CG nIter, rDotR= 83   2.1914784043170397E-07
+ CG nIter, rDotR= 84   1.1118245504221441E-07
+ CG nIter, rDotR= 85   6.4391896453384700E-08
+ CG nIter, rDotR= 86   4.2182089565667600E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 87 0   9.4513547419681270E-09
+ |
+ |  AMR:  nBlockMax =  222  nBLK =  400
+ |  AMR:  Total number of blocks used =  436
+ |  AMR:  Total number of cells =  6976
+ |  AMR:  Total number of true cells =  6976
+ |  Smallest cell dx:   10.1250000000000000   Largest cell dx:   20.2500000000000000
+ |
+ krylov at iter= 32
+ CG rDotR0, rDotRMax=   2.1581027805663520E+08   2.1581027805663522E-08
+ CG nIter, rDotR= 1   1.0879511715611888E+07
+ CG nIter, rDotR= 2   1.5435533022651072E+06
+ CG nIter, rDotR= 3   3.4404554561430879E+05
+ CG nIter, rDotR= 4   1.9701438991466167E+05
+ CG nIter, rDotR= 5   6.2585166190674550E+04
+ CG nIter, rDotR= 6   2.5160619044216226E+04
+ CG nIter, rDotR= 7   1.5056553919584208E+04
+ CG nIter, rDotR= 8   5.8780618572564435E+03
+ CG nIter, rDotR= 9   2.4375056328160417E+03
+ CG nIter, rDotR= 10   1.3333138040489532E+03
+ CG nIter, rDotR= 11   1.0894104532881427E+03
+ CG nIter, rDotR= 12   8.1276780134353623E+02
+ CG nIter, rDotR= 13   6.6450049498466490E+02
+ CG nIter, rDotR= 14   5.9752687684113823E+02
+ CG nIter, rDotR= 15   5.8637678427341496E+02
+ CG nIter, rDotR= 16   3.0516587931395060E+02
+ CG nIter, rDotR= 17   1.6963385112970471E+02
+ CG nIter, rDotR= 18   1.1232594406071475E+02
+ CG nIter, rDotR= 19  61.5038759466549010
+ CG nIter, rDotR= 20  42.1355371418953553
+ CG nIter, rDotR= 21  36.0142552190154248
+ CG nIter, rDotR= 22  25.0067320603287087
+ CG nIter, rDotR= 23  14.5129039376247615
+ CG nIter, rDotR= 24  13.0193035388429763
+ CG nIter, rDotR= 25   9.2336109185052084
+ CG nIter, rDotR= 26   4.5359468448212876
+ CG nIter, rDotR= 27   4.6756209996737965
+ CG nIter, rDotR= 28   3.6194485786297452
+ CG nIter, rDotR= 29   3.2453065628835147
+ CG nIter, rDotR= 30   3.0693799483608695
+ CG nIter, rDotR= 31   3.3898960628649437
+ CG nIter, rDotR= 32   3.6102126431354944
+ CG nIter, rDotR= 33   3.9349547718523206
+ CG nIter, rDotR= 34   5.0003985509747819
+ CG nIter, rDotR= 35   4.9298745236463413
+ CG nIter, rDotR= 36   5.4746559678992135
+ CG nIter, rDotR= 37   4.8400539556551996
+ CG nIter, rDotR= 38   4.3298326457115728
+ CG nIter, rDotR= 39   2.7679568513178703
+ CG nIter, rDotR= 40   1.9627941611050408
+ CG nIter, rDotR= 41   1.7052214127781651
+ CG nIter, rDotR= 42   1.1209826490360140
+ CG nIter, rDotR= 43   0.7587082095241588
+ CG nIter, rDotR= 44   0.5255406305955169
+ CG nIter, rDotR= 45   0.3394762520730308
+ CG nIter, rDotR= 46   0.1860983113493162
+ CG nIter, rDotR= 47   0.1158683914706739
+ CG nIter, rDotR= 48   7.9604333750144973E-02
+ CG nIter, rDotR= 49   4.8901490169690295E-02
+ CG nIter, rDotR= 50   3.2144095451944958E-02
+ CG nIter, rDotR= 51   2.0367591018305674E-02
+ CG nIter, rDotR= 52   1.2595314938330536E-02
+ CG nIter, rDotR= 53   9.5096879099886289E-03
+ CG nIter, rDotR= 54   4.6104196219318170E-03
+ CG nIter, rDotR= 55   2.9285740954014283E-03
+ CG nIter, rDotR= 56   2.2318474812471731E-03
+ CG nIter, rDotR= 57   1.1952204444115977E-03
+ CG nIter, rDotR= 58   7.4781053613451017E-04
+ CG nIter, rDotR= 59   5.2818233280732345E-04
+ CG nIter, rDotR= 60   2.7971642975056337E-04
+ CG nIter, rDotR= 61   1.5079307381386648E-04
+ CG nIter, rDotR= 62   1.0099602592109278E-04
+ CG nIter, rDotR= 63   7.3463413187795730E-05
+ CG nIter, rDotR= 64   3.4529199840219514E-05
+ CG nIter, rDotR= 65   2.5732697779103595E-05
+ CG nIter, rDotR= 66   2.0713264532555267E-05
+ CG nIter, rDotR= 67   1.1185657542543238E-05
+ CG nIter, rDotR= 68   5.5787746713546840E-06
+ CG nIter, rDotR= 69   3.6739706924391259E-06
+ CG nIter, rDotR= 70   2.2382308988981824E-06
+ CG nIter, rDotR= 71   1.1798471475158862E-06
+ CG nIter, rDotR= 72   8.7989074131888632E-07
+ CG nIter, rDotR= 73   6.3308434543344316E-07
+ CG nIter, rDotR= 74   3.7812476484446535E-07
+ CG nIter, rDotR= 75   2.9402622619166160E-07
+ CG nIter, rDotR= 76   2.3260813630249286E-07
+ CG nIter, rDotR= 77   1.8071756368022574E-07
+ CG nIter, rDotR= 78   1.6755749460934739E-07
+ CG nIter, rDotR= 79   1.7816022992167141E-07
+ CG nIter, rDotR= 80   1.9139239822279382E-07
+ CG nIter, rDotR= 81   2.2403443382276589E-07
+ CG nIter, rDotR= 82   2.9065028041690732E-07
+ CG nIter, rDotR= 83   2.7075421633673451E-07
+ CG nIter, rDotR= 84   2.7564539244922813E-07
+ CG nIter, rDotR= 85   2.8214782763899041E-07
+ CG nIter, rDotR= 86   2.7693688089783656E-07
+ CG nIter, rDotR= 87   2.4205212591823513E-07
+ CG nIter, rDotR= 88   1.8167775119719315E-07
+ CG nIter, rDotR= 89   1.2890401807576351E-07
+ CG nIter, rDotR= 90   7.5959550646622552E-08
+ CG nIter, rDotR= 91   4.8856333787269235E-08
+ CG nIter, rDotR= 92   3.3088448134934117E-08
+ CG nIter, rDotR= 93   1.9115474514381878E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 94 0   9.4114487030534493E-09
+ krylov at iter= 33
+ CG rDotR0, rDotRMax=   2.7725353730919522E+08   2.7725353730919525E-08
+ CG nIter, rDotR= 1   1.1602696202969220E+07
+ CG nIter, rDotR= 2   1.8755189597694569E+06
+ CG nIter, rDotR= 3   5.7965637562820106E+05
+ CG nIter, rDotR= 4   2.6612338196086331E+05
+ CG nIter, rDotR= 5   7.1360407146751939E+04
+ CG nIter, rDotR= 6   3.5771922050100460E+04
+ CG nIter, rDotR= 7   2.0683586233744423E+04
+ CG nIter, rDotR= 8   8.2670475585064887E+03
+ CG nIter, rDotR= 9   3.6858083756251513E+03
+ CG nIter, rDotR= 10   2.2087944366311872E+03
+ CG nIter, rDotR= 11   1.4217639089163222E+03
+ CG nIter, rDotR= 12   8.4667902983828594E+02
+ CG nIter, rDotR= 13   7.0042650898639954E+02
+ CG nIter, rDotR= 14   6.5108285885036048E+02
+ CG nIter, rDotR= 15   4.3564416400703641E+02
+ CG nIter, rDotR= 16   2.6265962252971099E+02
+ CG nIter, rDotR= 17   2.2021618261553613E+02
+ CG nIter, rDotR= 18   2.0466311785611853E+02
+ CG nIter, rDotR= 19   1.7561146660730239E+02
+ CG nIter, rDotR= 20   2.5309018489271256E+02
+ CG nIter, rDotR= 21   2.8192477787017327E+02
+ CG nIter, rDotR= 22   2.8157364278417526E+02
+ CG nIter, rDotR= 23   2.9555554535554006E+02
+ CG nIter, rDotR= 24   2.4225681169220317E+02
+ CG nIter, rDotR= 25   2.0747178409657485E+02
+ CG nIter, rDotR= 26   2.0272739355737741E+02
+ CG nIter, rDotR= 27   1.6711716850356962E+02
+ CG nIter, rDotR= 28   1.4342735941268572E+02
+ CG nIter, rDotR= 29   1.0302667606491055E+02
+ CG nIter, rDotR= 30  52.5132346211610255
+ CG nIter, rDotR= 31  28.6922135877483662
+ CG nIter, rDotR= 32  21.8934095427639726
+ CG nIter, rDotR= 33  13.8160620165081003
+ CG nIter, rDotR= 34   8.9538988362251697
+ CG nIter, rDotR= 35   6.7924605787200907
+ CG nIter, rDotR= 36   3.7723039368000233
+ CG nIter, rDotR= 37   2.5041119565360650
+ CG nIter, rDotR= 38   1.3948423636440286
+ CG nIter, rDotR= 39   0.9333511259522287
+ CG nIter, rDotR= 40   0.6496630974742944
+ CG nIter, rDotR= 41   0.4041603356757739
+ CG nIter, rDotR= 42   0.2449337724970018
+ CG nIter, rDotR= 43   0.1619476808480232
+ CG nIter, rDotR= 44   8.8961053333685911E-02
+ CG nIter, rDotR= 45   5.0546416614356347E-02
+ CG nIter, rDotR= 46   3.2859041435572056E-02
+ CG nIter, rDotR= 47   2.5573488146615326E-02
+ CG nIter, rDotR= 48   1.7405910010629834E-02
+ CG nIter, rDotR= 49   1.3100078524320595E-02
+ CG nIter, rDotR= 50   9.1075508318433918E-03
+ CG nIter, rDotR= 51   6.3763109022199919E-03
+ CG nIter, rDotR= 52   4.3496690864185377E-03
+ CG nIter, rDotR= 53   2.3977893327260516E-03
+ CG nIter, rDotR= 54   1.9627156318664301E-03
+ CG nIter, rDotR= 55   1.4298038625497880E-03
+ CG nIter, rDotR= 56   8.5683475107424013E-04
+ CG nIter, rDotR= 57   7.2317333407364225E-04
+ CG nIter, rDotR= 58   4.5036346385647364E-04
+ CG nIter, rDotR= 59   2.8111673298381046E-04
+ CG nIter, rDotR= 60   2.0913635264327375E-04
+ CG nIter, rDotR= 61   1.3718220657572339E-04
+ CG nIter, rDotR= 62   7.9575012145025677E-05
+ CG nIter, rDotR= 63   4.3986752095999068E-05
+ CG nIter, rDotR= 64   3.5737365966300145E-05
+ CG nIter, rDotR= 65   2.1497755762272843E-05
+ CG nIter, rDotR= 66   1.4194353997985210E-05
+ CG nIter, rDotR= 67   9.8184461858379833E-06
+ CG nIter, rDotR= 68   6.7010415637204947E-06
+ CG nIter, rDotR= 69   5.1257255396735237E-06
+ CG nIter, rDotR= 70   4.3365800552390897E-06
+ CG nIter, rDotR= 71   4.1357962960085385E-06
+ CG nIter, rDotR= 72   3.9255663192459619E-06
+ CG nIter, rDotR= 73   4.4870750915104027E-06
+ CG nIter, rDotR= 74   4.0711196864409691E-06
+ CG nIter, rDotR= 75   4.5427291988657871E-06
+ CG nIter, rDotR= 76   5.6376314718235214E-06
+ CG nIter, rDotR= 77   5.9975715344415306E-06
+ CG nIter, rDotR= 78   6.0137627605511782E-06
+ CG nIter, rDotR= 79   5.8919558891733242E-06
+ CG nIter, rDotR= 80   3.7006745268389363E-06
+ CG nIter, rDotR= 81   2.7443381065224818E-06
+ CG nIter, rDotR= 82   1.4950799067787408E-06
+ CG nIter, rDotR= 83   9.7076290955097874E-07
+ CG nIter, rDotR= 84   7.2593530946651100E-07
+ CG nIter, rDotR= 85   4.4706013160227535E-07
+ CG nIter, rDotR= 86   2.8822782723607193E-07
+ CG nIter, rDotR= 87   1.8194430357726224E-07
+ CG nIter, rDotR= 88   1.1231025006232770E-07
+ CG nIter, rDotR= 89   5.8916460365573131E-08
+ CG nIter, rDotR= 90   3.4593636766312476E-08
+ CG nIter, rDotR= 91   1.9815170634545938E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 92 0   8.4539633434399596E-09
+ krylov at iter= 34
+ CG rDotR0, rDotRMax=   3.5493566122404832E+08   3.5493566122404838E-08
+ CG nIter, rDotR= 1   1.1775896680278147E+07
+ CG nIter, rDotR= 2   2.7114731618861682E+06
+ CG nIter, rDotR= 3   8.1156809909603826E+05
+ CG nIter, rDotR= 4   2.9384692954106769E+05
+ CG nIter, rDotR= 5   7.7210305397127871E+04
+ CG nIter, rDotR= 6   3.4817700459129010E+04
+ CG nIter, rDotR= 7   1.9997734022651948E+04
+ CG nIter, rDotR= 8   7.4953342078732467E+03
+ CG nIter, rDotR= 9   3.0363758447378741E+03
+ CG nIter, rDotR= 10   1.6683971071391009E+03
+ CG nIter, rDotR= 11   1.1056072808460829E+03
+ CG nIter, rDotR= 12   5.6121468229453694E+02
+ CG nIter, rDotR= 13   5.3042039527113536E+02
+ CG nIter, rDotR= 14   4.1191786218499675E+02
+ CG nIter, rDotR= 15   2.2009599992261295E+02
+ CG nIter, rDotR= 16   1.4530365142037238E+02
+ CG nIter, rDotR= 17   1.0145539442404936E+02
+ CG nIter, rDotR= 18  68.6238033342357312
+ CG nIter, rDotR= 19  47.9091543448492416
+ CG nIter, rDotR= 20  45.9844714524946028
+ CG nIter, rDotR= 21  34.9581063401448091
+ CG nIter, rDotR= 22  26.9701071969416226
+ CG nIter, rDotR= 23  29.6113434839426972
+ CG nIter, rDotR= 24  25.9022782824374147
+ CG nIter, rDotR= 25  31.6252518615729343
+ CG nIter, rDotR= 26  35.6057873783091381
+ CG nIter, rDotR= 27  38.7362446079563654
+ CG nIter, rDotR= 28  33.8702831524646797
+ CG nIter, rDotR= 29  32.1346006811662690
+ CG nIter, rDotR= 30  21.8973382326376687
+ CG nIter, rDotR= 31  21.9226360827216773
+ CG nIter, rDotR= 32  22.9134984477154511
+ CG nIter, rDotR= 33  15.4222082325963150
+ CG nIter, rDotR= 34  13.7954058061001970
+ CG nIter, rDotR= 35  10.1239437861409804
+ CG nIter, rDotR= 36   5.6152481757120576
+ CG nIter, rDotR= 37   4.9561105256406774
+ CG nIter, rDotR= 38   3.1379746503263348
+ CG nIter, rDotR= 39   2.3949278908435865
+ CG nIter, rDotR= 40   1.7996524539325174
+ CG nIter, rDotR= 41   1.1920446002048370
+ CG nIter, rDotR= 42   0.7037228946637849
+ CG nIter, rDotR= 43   0.5496959927890646
+ CG nIter, rDotR= 44   0.3697760879614884
+ CG nIter, rDotR= 45   0.2594324148559393
+ CG nIter, rDotR= 46   0.1873094085226216
+ CG nIter, rDotR= 47   0.1224660005619419
+ CG nIter, rDotR= 48   6.5614871371945882E-02
+ CG nIter, rDotR= 49   4.0094155937024568E-02
+ CG nIter, rDotR= 50   2.7914242647704767E-02
+ CG nIter, rDotR= 51   1.4988127188910206E-02
+ CG nIter, rDotR= 52   1.2319843184067935E-02
+ CG nIter, rDotR= 53   7.6085440515738069E-03
+ CG nIter, rDotR= 54   4.5194030300734246E-03
+ CG nIter, rDotR= 55   2.6094393907241599E-03
+ CG nIter, rDotR= 56   1.5311377434217405E-03
+ CG nIter, rDotR= 57   1.0188981761055126E-03
+ CG nIter, rDotR= 58   5.8763839074502512E-04
+ CG nIter, rDotR= 59   3.8996821610028218E-04
+ CG nIter, rDotR= 60   2.7895006337691356E-04
+ CG nIter, rDotR= 61   1.5018629607328060E-04
+ CG nIter, rDotR= 62   1.0494674599024352E-04
+ CG nIter, rDotR= 63   5.1257646906671176E-05
+ CG nIter, rDotR= 64   3.3724622033154088E-05
+ CG nIter, rDotR= 65   1.9610783678706317E-05
+ CG nIter, rDotR= 66   1.2281713888291031E-05
+ CG nIter, rDotR= 67   7.6758206711766135E-06
+ CG nIter, rDotR= 68   5.2700859577472325E-06
+ CG nIter, rDotR= 69   2.8233476426988479E-06
+ CG nIter, rDotR= 70   1.6005067595751189E-06
+ CG nIter, rDotR= 71   1.0843186236742880E-06
+ CG nIter, rDotR= 72   5.7790502127849047E-07
+ CG nIter, rDotR= 73   3.4172523916144990E-07
+ CG nIter, rDotR= 74   2.7575113923155453E-07
+ CG nIter, rDotR= 75   1.8656588217363159E-07
+ CG nIter, rDotR= 76   1.4663609713963529E-07
+ CG nIter, rDotR= 77   1.1012308733265742E-07
+ CG nIter, rDotR= 78   1.0054397707262103E-07
+ CG nIter, rDotR= 79   1.0821311721274333E-07
+ CG nIter, rDotR= 80   1.0722099154044622E-07
+ CG nIter, rDotR= 81   1.2425971454002710E-07
+ CG nIter, rDotR= 82   1.3894646794951211E-07
+ CG nIter, rDotR= 83   1.3578791033358623E-07
+ CG nIter, rDotR= 84   1.4539776117075533E-07
+ CG nIter, rDotR= 85   1.5077529723776653E-07
+ CG nIter, rDotR= 86   1.3742366938517046E-07
+ CG nIter, rDotR= 87   1.0581999236091568E-07
+ CG nIter, rDotR= 88   8.9651840946046893E-08
+ CG nIter, rDotR= 89   5.5365056756889462E-08
+ CG nIter, rDotR= 90   3.6679729682228200E-08
+ CG nIter, rDotR= 91   2.2776601870515789E-08
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 92 0   8.0106848643826602E-09
+ krylov at iter= 35
+ CG rDotR0, rDotRMax=   5.8307645886339784E+07   5.8307645886339789E-09
+ CG nIter, rDotR= 1   6.2059047945984441E+05
+ CG nIter, rDotR= 2   1.8485279487620501E+05
+ CG nIter, rDotR= 3   4.7142887596648339E+04
+ CG nIter, rDotR= 4   2.8972523536705947E+04
+ CG nIter, rDotR= 5   2.0283097228727594E+04
+ CG nIter, rDotR= 6   3.6523572648840185E+04
+ CG nIter, rDotR= 7   2.7247815597971261E+04
+ CG nIter, rDotR= 8   1.2905825607054632E+04
+ CG nIter, rDotR= 9   6.2865685911539340E+03
+ CG nIter, rDotR= 10   3.0723703688801229E+03
+ CG nIter, rDotR= 11   2.1470499032921066E+03
+ CG nIter, rDotR= 12   2.1897890853440367E+03
+ CG nIter, rDotR= 13   1.8760380597912138E+03
+ CG nIter, rDotR= 14   1.4845288613709970E+03
+ CG nIter, rDotR= 15   1.8264359103082272E+03
+ CG nIter, rDotR= 16   1.9793143122016686E+03
+ CG nIter, rDotR= 17   2.9596191708508532E+03
+ CG nIter, rDotR= 18   3.5815491929655050E+03
+ CG nIter, rDotR= 19   3.7972085667652914E+03
+ CG nIter, rDotR= 20   4.4968231150909041E+03
+ CG nIter, rDotR= 21   3.0661027357685061E+03
+ CG nIter, rDotR= 22   2.7862381358130260E+03
+ CG nIter, rDotR= 23   2.2585374202127236E+03
+ CG nIter, rDotR= 24   2.0638563581828189E+03
+ CG nIter, rDotR= 25   1.3301796394480568E+03
+ CG nIter, rDotR= 26   9.0843346053645462E+02
+ CG nIter, rDotR= 27   4.8829889258372646E+02
+ CG nIter, rDotR= 28   3.2558001716045294E+02
+ CG nIter, rDotR= 29   1.6962492679706440E+02
+ CG nIter, rDotR= 30  99.6505128349308791
+ CG nIter, rDotR= 31  70.0120189640717854
+ CG nIter, rDotR= 32  45.4404189915996994
+ CG nIter, rDotR= 33  28.1582471093507039
+ CG nIter, rDotR= 34  15.7235600382466032
+ CG nIter, rDotR= 35   8.6548654931162190
+ CG nIter, rDotR= 36   5.2595155515186063
+ CG nIter, rDotR= 37   3.7008890473423821
+ CG nIter, rDotR= 38   2.4766675573803489
+ CG nIter, rDotR= 39   1.7247431770190160
+ CG nIter, rDotR= 40   0.9787211369914490
+ CG nIter, rDotR= 41   0.5310826109908249
+ CG nIter, rDotR= 42   0.2628824203181186
+ CG nIter, rDotR= 43   0.1988016995687000
+ CG nIter, rDotR= 44   0.1116041078343607
+ CG nIter, rDotR= 45   7.5007330331937752E-02
+ CG nIter, rDotR= 46   5.0440173476946203E-02
+ CG nIter, rDotR= 47   2.4356953665266700E-02
+ CG nIter, rDotR= 48   1.3811174314418750E-02
+ CG nIter, rDotR= 49   1.0050921478497959E-02
+ CG nIter, rDotR= 50   6.2231598428340732E-03
+ CG nIter, rDotR= 51   3.2967931751276642E-03
+ CG nIter, rDotR= 52   2.1975198042905918E-03
+ CG nIter, rDotR= 53   1.0676569422575779E-03
+ CG nIter, rDotR= 54   6.0306617287083058E-04
+ CG nIter, rDotR= 55   3.3946422348240716E-04
+ CG nIter, rDotR= 56   2.2648582386643366E-04
+ CG nIter, rDotR= 57   1.5084349858477704E-04
+ CG nIter, rDotR= 58   1.0793214371068068E-04
+ CG nIter, rDotR= 59   5.2241735083874491E-05
+ CG nIter, rDotR= 60   2.8624274181982683E-05
+ CG nIter, rDotR= 61   1.7072195096573640E-05
+ CG nIter, rDotR= 62   1.1915241627613041E-05
+ CG nIter, rDotR= 63   7.0991425605635231E-06
+ CG nIter, rDotR= 64   4.7602001982041653E-06
+ CG nIter, rDotR= 65   2.3791373510017261E-06
+ CG nIter, rDotR= 66   1.2414000429110094E-06
+ CG nIter, rDotR= 67   8.0434426842124477E-07
+ CG nIter, rDotR= 68   4.5789311900598722E-07
+ CG nIter, rDotR= 69   2.4819117465905211E-07
+ CG nIter, rDotR= 70   1.5464948212618835E-07
+ CG nIter, rDotR= 71   1.2172386993826381E-07
+ CG nIter, rDotR= 72   5.5334101157442937E-08
+ CG nIter, rDotR= 73   3.2700081867085411E-08
+ CG nIter, rDotR= 74   2.3702781693961335E-08
+ CG nIter, rDotR= 75   1.3670728371057923E-08
+ CG nIter, rDotR= 76   9.5913640071907504E-09
+ CG nIter, rDotR= 77   6.8332307260323059E-09
+ CG nIter, rDotR= 78   4.8630003455471978E-09
+ GM_advance_impl: After KrylovMatVec,info,KrylovError= 79 0   9.1324940184410229E-09
+
+    Finished Numerical Simulation
+    -----------------------------
+   Simulated Time T =   0.30000E-08 (    0.000000 min,     0.000000 hrs)
+saved ifile= 1 type=restart    at n_step=     77 time=   0:00:00 h:m:s
+saved ifile= 5 type=z=0_var    at n_step=     77 time=   0:00:00 h:m:s
+
+    Finished Saving Output Files
+    ----------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to      77    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                   4.44    100.00         1         1
+-------------------------------------------------------------------------------
+advance                   4.14     93.12        35        35
+krylov solver             1.96     44.17        35        35
+matvec_free               1.49     33.52        35      3045
+calc_facevalues           0.67     15.17        35     15384
+batl_pass                 0.49     10.96       175      3296
+local_pass                0.42      9.54       175      6662
+exch_msgs                 0.31      6.94        70       175
+update_states             0.30      6.76        35     15384
+calc_fluxes               0.29      6.56        35     15384
+expl2impl                 0.23      5.11        35        35
+GM_amr                    0.18      4.00        35        35
+calc_face_bfo             0.15      3.34        35      4094
+save_plot                 0.10      2.35         2         2
+calc_sources              0.04      0.83        35     15384
+wait_pass                 0.03      0.67       175      3331
+send_cons_flux            0.03      0.66        35        70
+send_recv                 0.03      0.60        35        70
+save_logfile              0.02      0.43        35        35
+impl_jacobian             0.02      0.40        35        35
+buffer_to_state           0.02      0.35       175      3331
+calc_fluxes_bfo           0.01      0.23        35      4094
+barrier-expl1             0.01      0.17        35        70
+send_pass                 0.00      0.10       175      3331
+init_pass                 0.00      0.10       175      3296
+write_restart_files       0.00      0.06         1         1
+recv_pass                 0.00      0.06       175      3331
+-------------------------------------------------------------------------------
+clean_mod_advance deallocated arrays
+clean_mod_implicit deallocated arrays
+clean_mod_geometry deallocated arrays
+clean_mod_nodes deallocated arrays
+ error report: no errors...
