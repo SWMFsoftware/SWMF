@@ -1,39 +1,49 @@
 module CRASH_ModMultiGroup
-  use CRASH_ModIonMix
-  use CRASH_ModOpacityVoigt, ONLY : line_width, voigt_profile, UseVoigt
-  use CRASH_ModAtomicDataMix,ONLY : nMix, nZ_I, nMixMax
-  use CRASH_ModAtomicDataMix,ONLY : Concentration_I !(1:nMixMax)
-  use CRASH_ModAtomicDataMix,ONLY : IonizPotential_II !(1:nZMax,1:nMixMax)
-  use CRASH_ModAtomicMass,   ONLY : cAtomicMass_I !(1:nZMax)
-  use CRASH_ModPartition,    ONLY : Population_II !(0:nZMax,1:nMixMax)
-  use CRASH_ModExcitationData, ONLY:n_ground !(iZ,nZ)
-  use CRASH_ModExcitationData, ONLY:n_screened !(iZ,nZ)
-  use CRASH_ModExcitationData, ONLY:UseDeltaNEq0Transition,UseCoreElectron
-  use CRASH_ModExcitation,   ONLY : Partition_III !(nExcitation,0:nZMax  ,nMixMax)
-  use CRASH_ModExcitation,   ONLY : ExcitationEnergy_III !nExcitation,0:nZMax-1,nMixMax)
-  use CRASH_ModExcitation,   ONLY : IonizationPotentialLowering_I! (0:nZMax
-  use CRASH_ModExcitation,   ONLY : nExcitation_II!(0:nZMax,nMixMax)
-  use CRASH_ModPartition,   ONLY : Na, Te, zAv
-  use CRASH_ModPartition,   ONLY : iZMin_I !(1:nMixMax)
-  use CRASH_ModPartition,   ONLY : iZMax_I !(1:nMixMax)
-  use CRASH_ModFermiGas,    ONLY : LogGe
-  use ModConst
-  implicit none
-  SAVE
-  PRIVATE !Except
 
+  use CRASH_ModIonMix
+  use CRASH_ModOpacityVoigt,   ONLY:  &
+       line_width, voigt_profile, UseVoigt
+  use CRASH_ModAtomicDataMix,  ONLY:  &
+       nMix, nZ_I, nMixMax,           &
+       Concentration_I,               & ! (1:nMixMax)
+       IonizPotential_II                ! (1:nZMax,1:nMixMax)
+  use CRASH_ModAtomicMass, ONLY: &
+       cAtomicMass_I                    ! (1:nZMax)
+  use CRASH_ModPartition,      ONLY:  &
+       Population_II                    ! (0:nZMax,1:nMixMax)
+  use CRASH_ModExcitationData, ONLY:  &
+       UseDeltaNEq0Transition,        &
+       UseCoreElectron,               &
+       n_ground,  n_screened            ! (iZ,nZ)
+  use CRASH_ModExcitation, ONLY:      &
+       Partition_III,                 & ! (nExcitation,0:nZMax,nMixMax)
+       ExcitationEnergy_III,          & ! (nExcitation,0:nZMax-1,nMixMax)
+       IonizationPotentialLowering_I, & ! (0:nZMax)
+       nExcitation_II                   ! (0:nZMax,nMixMax)
+  use CRASH_ModPartition, ONLY: &
+       Na, Te, zAv, iZMin_I, iZMax_I    ! (1:nMixMax)
+  use CRASH_ModFermiGas, ONLY: &
+       LogGe
+  use ModConst
+
+  implicit none
+
+  SAVE
+
+  private !Except
 
   !Public members
   public :: meshhv !Creates the grid of photon energies
   public :: abscon !Calculates the absorption, emission, and scattering 
   public :: opacys !Calculates opacities
   public :: nGroup, OpacityPlanck_I, OpacityRosseland_I
+  public :: set_multigroup
 
   !For test:
-  public :: PhotonEnergy_I, AbsorptionCoefficient_I, nPhoton, set_multigroup,EnergyGroup_I
-  public :: OpacityPlanckTotal, OpacityRosselandTotal,ScatteringCoefficient_I
+  public :: PhotonEnergy_I, AbsorptionCoefficient_I, nPhoton, EnergyGroup_I
+  public :: OpacityPlanckTotal, OpacityRosselandTotal, ScatteringCoefficient_I
 
-  !       nPhotonMax  - photon energy mesh points                                    
+  !       nPhotonMax  - photon energy mesh points
   !       nGroupMax  - opacity groups     
   !       nfrqbb  - number of photon energy points near a line center   
   !       at which absorption coefficients will be computed  
@@ -129,33 +139,35 @@ contains
     call read_var('DoStateElimination',DoStateElimination)
 
   end subroutine read_opacity_parameters
-  !======================================================================
+  !============================================================================
   real function planck_opacity_integral(TeInK, OpacityPlanck_I)
     real, intent(in) :: TeInK    !Temperature in K
     real, intent(in) :: OpacityPlanck_I(nGroup)
     
     real :: Weight_I(nGroup)
     integer:: iGroup
-    !---------------
+    !------------------------------------------------------------------------
     do iGroup = 1, nGroup
-       call get_planck_g_from_temperature(iGroup=iGroup, TeIn=TeInK, EgSI=Weight_I(iGroup))
+       call get_planck_g_from_temperature(iGroup=iGroup, TeIn=TeInK, &
+            EgSI=Weight_I(iGroup))
     end do
     planck_opacity_integral = sum(OpacityPlanck_I*Weight_I)/sum(Weight_I)
   end function planck_opacity_integral
-  !===================================
+  !===========================================================================
   real function ross_opacity_integral(TeInK, OpacityRoss_I)
     real, intent(in) :: TeInK    !Temperature in K
     real, intent(in) :: OpacityRoss_I(nGroup)
     
     real :: Weight_I(nGroup)
     integer:: iGroup
-    !---------------
+    !-------------------------------------------------------------------------
     do iGroup = 1, nGroup
-       call get_planck_g_from_temperature(iGroup=iGroup, TeIn=TeInK, CgSI=Weight_I(iGroup))
+       call get_planck_g_from_temperature(iGroup=iGroup, TeIn=TeInK, &
+            CgSI=Weight_I(iGroup))
     end do
     ross_opacity_integral =sum(Weight_I)/sum(Weight_I/OpacityRoss_I)
   end function ross_opacity_integral
-  !===================================
+  !============================================================================
   subroutine get_planck_g_from_temperature(iGroup, TeIn, EgSI, CgSI)
     !\
     !Input parameters
@@ -166,19 +178,19 @@ contains
     !\
     !Output parameters
     !/
-    real, optional, intent(out) :: EgSI    !Radiation energy per group, J/m3
-    real, optional, intent(out) :: CgSI    !Radiation specific heat per group, J/(K.m3)
+    real, optional, intent(out) :: EgSI !Radiation energy per group, J/m3
+    real, optional, intent(out) :: CgSI !Radiation spec. heat/group, J/(K.m3)
     real :: xMin, xMax
-    !---------------------------------
+    !-------------------------------------------------------------------------
 
     xMin = EnergyGroup_I(iGroup - 1)/(TeIn * cKToEV)
     xMax = EnergyGroup_I(iGroup    )/(TeIn * cKToEV)
 
-    if(present(EgSI))EgSI = cNormG5*gint(5,xMin,xMax)*(    cRadiation*TeIn**4)
-    if(present(CgSI))CgSI = cNormG6*gint(6,xMin,xMax)*(4.0*cRadiation*TeIn**3)
+    if(present(EgSI))EgSI = cNormG5*gint(5,xMin,xMax)*(  cRadiation*TeIn**4)
+    if(present(CgSI))CgSI = cNormG6*gint(6,xMin,xMax)*(4*cRadiation*TeIn**3)
 
   end subroutine get_planck_g_from_temperature
-  !======================================================================
+  !============================================================================
   subroutine get_energy_g_from_temperature(iGroup, TgSIIn, EgSI, CgSI)
     !\
     !Input parameters
@@ -189,21 +201,21 @@ contains
     !\
     !Output parameters
     !/
-    real, optional, intent(out) :: EgSI    !Radiation energy per group, J/m3
-    real, optional, intent(out) :: CgSI    !Radiation specific heat per group, J/(K.m3)
+    real, optional, intent(out):: EgSI !Radiation energy per group, J/m3
+    real, optional, intent(out):: CgSI !Radiation spec. heat/group, J/(K.m3)
     real :: xMin, xMax, TgSI
-    !---------------------------------
+    !--------------------------------------------------------------------------
 
     TgSI = max(TGSIIn , TgMin_W(iGroup))
 
     xMin = EnergyGroup_I(iGroup - 1)/(TgSI * cKToEV)
     xMax = EnergyGroup_I(iGroup    )/(TgSI * cKToEV)
 
-    if(present(EgSI))EgSI = cNormG5 * gint(5,xMin,xMax) * (      cRadiation * TgSI**4)
-    if(present(CgSI))CgSI = cNormG6 * gint(6,xMin,xMax) * (4.0 * cRadiation * TgSI**3)
+    if(present(EgSI))EgSI = cNormG5*gint(5,xMin,xMax)*(  cRadiation * TgSI**4)
+    if(present(CgSI))CgSI = cNormG6*gint(6,xMin,xMax)*(4*cRadiation * TgSI**3)
 
   end subroutine get_energy_g_from_temperature
-  !======================================================================
+  !============================================================================
   subroutine get_temperature_from_energy_g(iGroup, EgSIIn, TgSIOut, CgSIOut)
     !\
     !Input parameters
@@ -214,9 +226,8 @@ contains
     !\
     !Output parameters
     !/
-    real, optional, intent(out) :: TgSIOut    !Radiation energy per group, J/m3
-    real, optional, intent(out) :: CgSIOut    !Radiation specific heat per group, J/(K.m3)
-
+    real, optional, intent(out):: TgSIOut !Radiation energy per group, J/m3
+    real, optional, intent(out):: CgSIOut !Radiation spec. heat/group, J/(K.m3)
 
     real :: xMin, xMax, FreqMin, FreqMax
     real :: TgSI, CgSI, ToleranceEg, DeltaEg, EgSI
@@ -225,8 +236,8 @@ contains
 
     integer, parameter :: nIter = 10
     integer :: iIter
-    !--------------------------------------------------
-    EgSI = max(EgSIIn, ERadMin)
+    !--------------------------------------------------------------------------
+    EgSI = max(EgSiIn, ERadMin)
 
     FreqMin = EnergyGroup_I(iGroup - 1) * cEVToK 
     FreqMax = EnergyGroup_I(iGroup    ) * cEVToK
@@ -234,9 +245,11 @@ contains
     !\
     !Approximation to start:
     !/
-    TgSI = sqrt(FreqMin*FreqMax)&
+    TgSi = sqrt(FreqMin*FreqMax)&
          /log(1.0 + cRadiation * FreqMin**2 * FreqMax**2 * cNormG5 * &
-         DeltaLogFrequency / EgSI)
+         log(FreqMax/FreqMin) / EgSI)
+
+    !   DeltaLogFrequency / EgSI)
 
 
     ToleranceEg = cTolerance * EgSI
@@ -247,8 +260,8 @@ contains
        xMin = FreqMin /TgSI
        xMax = FreqMax /TgSI
 
-       DeltaEg = EgSI -  cNormG5 * gint(5, xMin, xMax) * cRadiation * TgSI**4
-       CgSI    =         cNormG6 * gint(6,xMin,xMax) * (4.0 * cRadiation * TgSI**3) 
+       DeltaEg = EgSI - cNormG5 * gint(5, xMin, xMax)*   cRadiation*TgSI**4
+       CgSI    =        cNormG6 * gint(6, xMin, xMax)*(4*cRadiation*TgSI**3) 
        TgSI = TgSI + DeltaEg/CgSI
 
        iIter = iIter + 1
@@ -257,35 +270,76 @@ contains
 
     if(present(TgSIOut))TgSIOut = TgSI
     if(present(CgSIOut))CgSIOut = CgSI
+
   end subroutine get_temperature_from_energy_g
-  !======================================================================
-  subroutine set_multigroup(nGroupIn, FreqMinSI, FreqMaxSI)
-    !\
-    !Set the values of PHOTON ENERGY grid
-    !/
-    integer, intent(in) :: nGroupIn  !The number of photon energy groups
 
-    real,    intent(in) :: FreqMinSI, FreqMaxSI  !Min and max FREQUENCIES [Hz]
-    real:: elnmin,elnmax,elog
+  !===========================================================================
+
+  subroutine set_multigroup(nGroupIn, FreqMinSI, FreqMaxSI, EnergyEv_I)
+
+    ! Set the values of photon energy grid
+    ! Either provide minimum and maximum frequencies,
+    ! or minimum and maximum energies, 
+    ! or an array of nGroup+1 energies 
+
+    integer, optional, intent(in) :: nGroupIn ! Number of energy groups
+
+    real, optional, intent(in):: FreqMinSI ! Minimim frequency [Hz]
+    real, optional, intent(in):: FreqMaxSI ! Maximum frequency [Hz]
+
+    real, optional, intent(in):: EnergyEv_I(:) ! Energy limits [eV]
+
+    logical:: IsLogarithmicGrid
+
+    real:: eLogMin, eLogMax, eLog
     integer:: iGroup
-    !-----------------------
-    nGroup = nGroupIn
-    EnergyGroup_I(0) = FreqMinSI * cHPlanckEV !Photon energy
 
-    EnergyGroup_I(nGroup) = FreqMaxSI * cHPlanckEV  !Photon energy
+    character(len=*), parameter:: NameSub = 'set_multigroup'
+    !-------------------------------------------------------------------------
 
-    if ( nGroup <=1 ) return                              
-    elnmin = log( EnergyGroup_I(0) )                            
-    elnmax = log( EnergyGroup_I(nGroup) )                    
-    DeltaLogFrequency = ( elnmax-elnmin ) / nGroup                   
-    elog = elnmin                                        
-    do iGroup=1,nGroup-1                                  
-       elog = elog + DeltaLogFrequency                               
-       EnergyGroup_I(iGroup) = exp( elog )                         
-    end do
-    !\
-    !Set ERadMin and TgMin_W
-    ERadMin = (cRadiation * TRadMin**4) / nGroup
+    if(present(nGroupIn)) nGroup = nGroupIn
+
+    if(present(FreqMinSi)) EnergyGroup_I(0)      = FreqMinSI*cHPlanckEv 
+    if(present(FreqMaxSi)) EnergyGroup_I(nGroup) = FreqMaxSi*cHPlanckEv
+
+    IsLogarithmicGrid = .true.
+    if(present(EnergyEv_I))then
+       if(size(EnergyEv_I) == 2)then
+          EnergyGroup_I(0)      = EnergyEv_I(1)
+          EnergyGroup_I(nGroup) = EnergyEv_I(2)
+       else if(size(EnergyEv_I) == nGroup + 1)then
+          EnergyGroup_I(0:nGroup) = EnergyEv_I
+          IsLogarithmicGrid = .false.
+       else
+          write(*,*) NameSub//' ERROR: size(EnergyEv_I), nGroup=', &
+               size(EnergyEv_I), nGroup
+          call CON_stop(NameSub// &
+               ': size of EnergyEv_I should be 2 or nGroup+1')
+       end if
+    end if
+
+    if(IsLogarithmicGrid .and. nGroup > 1)then
+
+       ! Create a logarithmic energy grid
+       !eRatio = (EnergyGroup_I(nGroup)/EnergyGroup_I(0))**(1.0/nGroup)
+       !DeltaLogFrequency = log(eRatio)
+       !do iGroup = 1, nGroup-1
+       !   EnergyGroup_I(iGroup) = EnergyGroup_I(iGroup-1)*eRatio
+       !end do
+
+       eLogMin = log( EnergyGroup_I(0) )                            
+       eLogMax = log( EnergyGroup_I(nGroup) )                    
+       DeltaLogFrequency = (eLogMax - eLogMin)/nGroup                   
+       eLog = eLogMin
+       do iGroup=1, nGroup-1
+          eLog = eLog + DeltaLogFrequency
+          EnergyGroup_I(iGroup) = exp(eLog)
+       end do
+
+    end if
+
+    ! Set EradMin and TgMin_W
+    EradMin = cRadiation * TradMin**4 / nGroup
     do iGroup = 1, nGroup
        call get_temperature_from_energy_g(iGroup, ERadMin, TgMin_W(iGroup))
     end do
@@ -1162,16 +1216,14 @@ contains
        TRad = Te
     end if
 
-
-
     ! ... compute the Planck and Rosseland opacities for each photon        
     !     energy group                                                      
 
-    OpacityPlanckTotal = 0.0                                                                                                           
-    OpacityRosselandTotal = 0.0                                                        
+    OpacityPlanckTotal    = 0.0
+    OpacityRosselandTotal = 0.0
     do iGroup = 1, nGroup                                                 
-       XGroupMin = EnergyGroup_I(iGroup-1) / TRad                                
-       XGroupMax = EnergyGroup_I(iGroup  ) / TRad                                  
+       XGroupMin = EnergyGroup_I(iGroup-1) / TRad
+       XGroupMax = EnergyGroup_I(iGroup  ) / TRad
 
        call opacgp (OpacityPlanck_I(iGroup),OpacityRosseland_I(iGroup) )  
        if(UseAveragedRosselandOpacity)&
@@ -1186,15 +1238,16 @@ contains
              write(*,*)'LineCoreOpacity =', LineCoreOpacity
              call CON_stop('Negative contribution in opacbb')
           end if
-          OpacityPlanck_I(iGroup) = OpacityPlanck_I(iGroup) + LineCoreOpacity                                                            
+          OpacityPlanck_I(iGroup) = OpacityPlanck_I(iGroup) + LineCoreOpacity
        endif
-       OpacityPlanckTotal = OpacityPlanckTotal + gint(5,XGroupMin,XGroupMax) * OpacityPlanck_I(iGroup)                         
-       OpacityRosselandTotal  = OpacityRosselandTotal  + gint(6,XGroupMin,XGroupMax) / OpacityRosseland_I(iGroup)               
+       OpacityPlanckTotal = OpacityPlanckTotal + gint(5,XGroupMin,XGroupMax) &
+            * OpacityPlanck_I(iGroup)
+       OpacityRosselandTotal  = OpacityRosselandTotal  &
+            + gint(6,XGroupMin,XGroupMax) / OpacityRosseland_I(iGroup)
     end do
     ! ... compute the total opacities based on the group opacities         
-    OpacityPlanckTotal = OpacityPlanckTotal * cNormG5                                                                                 
-    OpacityRosselandTotal = 1.0/ (OpacityRosselandTotal * cNormG6)                                            
-
+    OpacityPlanckTotal = OpacityPlanckTotal * cNormG5
+    OpacityRosselandTotal = 1.0/ (OpacityRosselandTotal * cNormG6)
 
   contains
 
