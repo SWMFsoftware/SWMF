@@ -1,23 +1,24 @@
 !^CFG COPYRIGHT UM
 module CRASH_ModEos
+
   ! Equation Of State (EOS) for ionized plasma
   !
   ! Thermodynamic variables and other notations
   !
-  !        Rho - the mass density
-  !        E - internal energy of the unit of mass
-  !        e, i - electron, ion
-  !        V, vol - volume or volumetric
-  !        \left(\frac{\partial...}{\partial...}\right)_V - thermodynamical
-  !             derivative at constant volume
-  !        Te, Ti - electron and ion temperature
-  !        iMaterial - integer index of the material:
-  !        iMaterial=0 - xenon
-  !        iMaterial=1 - beryllium   
-  !        iMaterial=2 - plastic (or polyimide, if more than one plastic is used
-  !        iMaterial=3 - gold
-  !        iMaterial=4 - Acrylic (acronim is Ay_, as long as Ac and Ar are both in use.
-  !        iMaterial=90 - plasma with eos E=aT^4/4; p=aT^4/12; C_V=aT^3 
+  !    Rho - the mass density
+  !    E - internal energy of the unit of mass
+  !    e, i - electron, ion
+  !    V, vol - volume or volumetric
+  !    \left(\frac{\partial...}{\partial...}\right)_V - thermodynamical
+  !         derivative at constant volume
+  !    Te, Ti - electron and ion temperature
+  !    iMaterial - integer index of the material:
+  !    iMaterial=0 - xenon
+  !    iMaterial=1 - beryllium   
+  !    iMaterial=2 - plastic (or polyimide, if more than one plastic is used).
+  !    iMaterial=3 - gold
+  !    iMaterial=4 - Acrylic (acronym is Ay_, since Ac and Ar are both in use.
+  !    iMaterial=90 - plasma with eos E=aT^4/4; p=aT^4/12; C_V=aT^3 
   !
   ! In the initial CRASH treatment of materials,
   !
@@ -45,12 +46,14 @@ module CRASH_ModEos
   !    ionization. The model of eqs. 3.74 through 3.76 in the mentioned book 
   !    is acceptable. Alternatively, a more complex model using actual 
   !    ionization energies would be acceptable.
-  !!WARNING!!!
-  !Correction in this item. Since the ionization partition function is controlled
-  !by the electron temperature, the ionization energy as well as not mentioned
-  !excitation energy are both included to the ELECTRON ENERGY DENSITY. See detail
-  !in HEDP.pdf. To make this document go to util/CRASH/doc/Tex directory and
-  !make PDF
+  !
+  !    !!! WARNING!!! Correction in this item !!!
+  !
+  !     Since the ionization partition function is controlled by the 
+  !     electron temperature, the ionization energy as well as not mentioned
+  !     excitation energy are both included to the ELECTRON ENERGY DENSITY. 
+  !     See detail in util/CRASH/doc/HEDP.pdf. 
+  !     To make this document go to util/CRASH/doc/Tex directory and make PDF
   !
   ! 8. The materials that matter are
   !    - Beryllium
@@ -81,6 +84,8 @@ module CRASH_ModEos
 
   private !Except
 
+  public:: read_eos_parameters   ! Read parameters from input parameter file
+
   integer, public, parameter:: Xe_=0      ! Xenon
   integer, public, parameter:: Be_=1      ! Beryllium
   integer, public, parameter:: Plastic_=2 ! Polyimide (C_22 H_10 N_2 O_5)
@@ -105,21 +110,26 @@ module CRASH_ModEos
 
   ! test material with the EOS e \propto T^4, p \propto T^4
   integer, parameter:: Test_ = 90 
-  integer, public, parameter:: nMaterialMax = 5
-  integer           :: nZ_I(0:nMaterialMax-1)=&
-                                   (/54,&  !Xenon 
-                                      4,&  !Beryllium
-                                     -4,&  !Minus number of elements in polyimide
-                                     79,&  !Gold
-                                     -3/)  !Minus number of elements in acrylic
 
-  real, dimension(0:nMaterialMax-1),public :: cAtomicMassCRASH_I=&
-       (/cAtomicMass_I(54),          &!  Xe
-         cAtomicMass_I( 4),          &!  Be
-         (cAtomicMass_I(6) * 22.0 + cAtomicMass_I(1) * 10.0 + cAtomicMass_I(7) *  2.0 &
-         + cAtomicMass_I(8) *  5.0) / (22.0 + 10.0 + 2.0 +5.0),                          &!  Pl
-         cAtomicMass_I(79),          &!  Au
-         (cAtomicMass_I(6) * 5.0 + cAtomicMass_I(8) * 2.0 + cAtomicMass_I(1) * 8.0 ) / 15/) !Ay
+  ! Maximum and actual number of materials
+  integer, public, parameter:: nMaterialMax = 5
+  integer, public           :: nMaterialEos = -1
+
+  ! array of atomic numbers
+  integer:: nZ_I(0:nMaterialMax-1)=&
+       (/54,&  !Xenon 
+       4,   &  !Beryllium
+       -4,  &  !Minus number of elements in polyimide
+       79,  &  !Gold
+       -3/)    !Minus number of elements in acrylic
+
+  real, dimension(0:nMaterialMax-1), public :: cAtomicMassCRASH_I=&
+       (/cAtomicMass_I(54),                                            &!  Xe
+       cAtomicMass_I( 4),                                              &!  Be
+       (cAtomicMass_I(6)*22 + cAtomicMass_I(1)*10 + cAtomicMass_I(7)*2 &
+       + cAtomicMass_I(8)*5) / (22 + 10 + 2 + 5),                      &!  Pl
+       cAtomicMass_I(79),                                              &!  Au
+       (cAtomicMass_I(6)*5 + cAtomicMass_I(8)*2 + cAtomicMass_I(1)*8)/15/)!Ay
  
   character(LEN=2), public ::&
        NameMaterial_I(Xe_:Ay_) = (/'Xe','Be','Pl','Au','Ay'/)
@@ -147,10 +157,6 @@ module CRASH_ModEos
   
   logical, public, dimension(0:nMaterialMax-1) :: &
        UseEosTable_I = .false., UseOpacityTable_I = .false.
-  
-  !Subroutine which may be used to set/reset UseEosTable_I
-
-  public:: read_if_use_eos_table, read_if_use_opac_table, read_name_material
  
   !The columns in the EOS table
   integer,public :: P_      =  1, &
@@ -180,50 +186,76 @@ module CRASH_ModEos
   integer,public:: iTableOpac4Material_I(0:nMaterialMax-1) = -1 
 
   !\
-  ! Miscellaneous subroutnies (probably, redundant)
+  ! Miscellaneous subroutines (probably, redundant)
   !/
-  public:: read_eos_parameters, fix_hyades_state
+  public:: fix_hyades_state
 
 contains
-  subroutine read_name_material(nMaterial)
+  !============================================================================
+  subroutine read_eos_parameters(nMaterial, NameCommand)
+
+    use ModReadParam, ONLY: read_var
+
+    integer,          intent(in):: nMaterial
+    character(len=*), intent(in):: NameCommand
+
+    logical:: UseTable
+
+    character(len=*), parameter:: NameSub = 'read_eos_parameters'
+    !--------------------------------------------------------------------------
+    nMaterialEos = nMaterial
+
+    select case(NameCommand)
+    case("#EOS")
+       call read_var('UseFermiGas',       UseFermiGas      )
+       call read_var('LogGeMinBoltzmann', LogGeMinBoltzmann)
+       call read_var('LogGeMinFermi',     LogGeMinFermi    )
+    case("#EOSTABLE", "#USEEOSTABLE")
+       call read_var('UseEosTable', UseTable)
+       UseEosTable_I(0:nMaterial-1) = UseTable
+    case("#OPACITYTABLE", "#USEOPACTABLE")
+       call read_var('UseOpacityTable', UseTable)
+       UseOpacityTable_I(0:nMaterial-1) = UseTable
+    case("#NAMETABLE")
+       call read_name_material
+    case default
+       call CON_stop(NameSub//' unknown command='//NameCommand)
+    end select
+
+  end subroutine read_eos_parameters
+  !============================================================================
+  subroutine read_name_material
+
     use ModReadParam, ONLY: read_var
     use ModUtilities, ONLY: split_string
     use CRASH_ModAtomicNotation, ONLY: MaterialMin_, i_material,&
-                             nZMixStored_II, cMixStored_II
-    integer, intent(in) :: nMaterial
-    !-----------------------------------
-    !The use in the user_read_param
-    !case('#MATERIAL')
-    !call read_name_material(nMaterial)
-    !
-    !
-    !The use in the PARAM.in (within the user_input brackets)
-    !#MATERIAL
-    !Ar                             !2-symbol name of chemical element
-    !H_                             !2-symbol name of chemical element 
-    !N                              !Will be extended to N_
-    !Ay                             !The chemical formula for acrylic is stored
-    !Wa:H 2 O 1                     !The chemical formula will be used to make and save
-    !   or                          !the table Wa_eos as Wa_eos_CRASH.dat. Next time
-    !Wa                             !the use of Wa in the PARAM.in file is allowed, the 
-    !                               !atomic mass will be read from the table
-    !
+         nZMixStored_II, cMixStored_II
 
-    integer:: iMaterial,iMix
-    character(LEN=30)::Name
+    ! #MATERIAL
+    ! Ar            ! 2-symbol name of chemical element
+    ! H_            ! 2-symbol name of chemical element 
+    ! N             ! Will be extended to N_
+    ! Ay            ! The chemical formula for acrylic is stored
+    ! Wa:H 2 O 1    ! The chemical formula will be used to make and save
+    !    or         ! the table Wa_eos as Wa_eos_CRASH.dat. Next time
+    ! Wa            ! the use of Wa in the PARAM.in file is allowed, the 
+    !               ! atomic mass will be read from the table
+
+    integer:: iMaterial, iMix
+    character(LEN=30):: Name
 
     integer, parameter:: MaxString = 200
     character(LEN=20):: NameVar_I(MaxString)
-    !-----------------------
+    !------------------------------------------------------------------------
     cAtomicMassCRASH_I = -1.0
     nZ_I = 0
     cMix_II  = 0.0
     nZMix_II = 0
-    do iMaterial = 0, nMaterial-1
+    do iMaterial = 0, nMaterialEos-1
        call read_var('Name material',Name)
        if(index(Name,':')>0)then
-          call CON_stop(&
-               'The use of new mixtures with CRASH-created tables is to be tested')
+          call CON_stop('The use of new mixtures with CRASH-created '//&
+               'tables is to be tested')
           NameMaterial_I(iMaterial) = Name(1:2)
           !Truncate symbols till the colon
           call split_string( Name(1:len_trim(Name)), &
@@ -287,59 +319,16 @@ contains
        end if
     end do
   end subroutine read_name_material
-  !===============================
-  subroutine read_if_use_eos_table(nMaterial)
-    !Usage
-    !#USEEOSTABLE
-    !T                      Use Eos Table for Xe
-    !T                      Use Eos Table for Be
-    !T                      Use Eos Table for Pl
-    !T                      Use Eos Table for Au
-    !T                      Use Eos Table for Ay
-    use ModReadParam, ONLY: read_var
-    !--------------------
-    integer,intent(in) :: nMaterial !The number of materials
 
-    integer:: iMaterial
-    !------------------!
-    do iMaterial = 0, nMaterial-1
-       call read_var(&
-            'Use EOS table for '//NameMaterial_I(iMaterial),&
-            UseEosTable_I(iMaterial))
-    end do
-       
-  end subroutine read_if_use_eos_table
-  !===============================
-  subroutine read_if_use_opac_table(nMaterial)
-    !Usage
-    !#USEOPACTABLE
-    !T                      Use Opac Table for Xe
-    !T                      Use Opac Table for Be
-    !T                      Use Opac Table for Pl
-    !T                      Use Opac Table for Au
-    !T                      Use Opac Table for Ay
-    use ModReadParam, ONLY: read_var
-    !-------------------
-    integer, intent(in) :: nMaterial !The number of materials
-
-    integer:: iMaterial
-    !------------------!
-    do iMaterial = 0, nMaterial-1
-       call read_var(&
-            'Use Opac table for '//NameMaterial_I(iMaterial),&
-            UseOpacityTable_I(iMaterial))
-    end do
-       
-  end subroutine read_if_use_opac_table
-  !\
+  !============================================================================
   ! Beginning of EOS functions
-  !/
+  !
   !For two different kinds of input parameters for
   !to characterize the material (either the material number,
   !or the vector of their contents in a mixture) we apply
   !eos_material or eos_mixture. Both subroutine call eos_generic
   !and have very similar set of optional input and output parameters.
-  !=================================================================
+  !============================================================================
 
   subroutine eos_material(iMaterial,Rho,&
        TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
@@ -347,6 +336,7 @@ contains
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
        OpacityPlanckOut_I, OpacityRosselandOut_I,            &
        HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut, iError)
+
     use ModLookupTable, ONLY: interpolate_lookup_table
     ! Eos function for single material
 
@@ -712,40 +702,19 @@ contains
     if(present(z2AverageOut))z2AverageOut = Z2
     if(present(iError).and.zAv <= cZMin)iError=4
   end subroutine eos_generic
-  !====================
+  !===========================================================================
   !End of EOS functions
-  !=============================
-  !\
-  ! Miscellaneous subroutnies (probably, redundant)
-  !/
-  subroutine read_eos_parameters
-
-    ! Usage (with default values shown):
-    !
-    ! #EOS
-    ! T                     UseFermiGas
-    ! 4.0                   LogGeMinBoltzmann
-    ! 0.0                   LogGeMinFermi
-    ! 
-    ! Recommended value for the last parameter: -4.0
-
-    use ModReadParam, ONLY: read_var
-    !-----------------------------------------------------------------------
-    ! For now. But it should/could read other things
-    call read_var('UseFermiGas',         UseFermiGas      )
-    call read_var('LogGeMinBoltzmann',   LogGeMinBoltzmann)
-    call read_var('LogGeMinFermi',       LogGeMinFermi    )
-
-  end subroutine read_eos_parameters
-  !=========================
+  !===========================================================================
+  !============================================================================
   subroutine fix_hyades_state(iMaterial, StateCgs_V, PMinSi)
     use ModConst
-    integer,intent(in)         :: iMaterial
-    real   ,intent(inout)      :: StateCgs_V(4) !Rho[Cgs], P[Cgs], Te[KeV], Ti[Kev]
-    real, OPTIONAL, intent(in) :: PMinSi
+    integer,intent(in)   :: iMaterial
+    real   ,intent(inout):: StateCgs_V(4) !Rho[Cgs], P[Cgs], Te[KeV], Ti[Kev]
+
+    real, optional, intent(in) :: PMinSi
 
     real:: DensitySi, NAtomicSi, PressureSi, TeSi, TiSi
-    !---------------------------------
+    !--------------------------------------------------------------------------
     DensitySi  = 1.0e3 * StateCgs_V(1)
     NAtomicSi  = DensitySi/(cAtomicMassCRASH_I(iMaterial)*cAtomicMass)
     TeSi       = 1.0e3 * StateCgs_V(3) * ceVToK
@@ -762,4 +731,5 @@ contains
        end if
     end if
   end subroutine fix_hyades_state
+
 end module CRASH_ModEos
