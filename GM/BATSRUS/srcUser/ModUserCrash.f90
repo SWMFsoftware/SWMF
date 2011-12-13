@@ -7,7 +7,6 @@ module ModUser
   use ModUserEmpty,                                      &
        IMPLEMENTED1  => user_update_states,              &
        IMPLEMENTED2  => user_calc_sources,               &
-       IMPLEMENTED3  => user_set_outerbcs,               &
        IMPLEMENTED4  => user_read_inputs,                &
        IMPLEMENTED5  => user_set_plot_var,               &
        IMPLEMENTED6  => user_init_session,               &
@@ -181,10 +180,6 @@ module ModUser
   ! For comparison with SESAME
   integer:: iTableSesame = -1
 
-  ! Variables for the left and right boundary conditions
-  real :: DistBc1 = 200.0, TrkevBc1=0.0, EradBc1 = 0.0
-  real :: DistBc2 = 200.0, TrkevBc2=0.0, EradBc2 = 0.0
-
   ! Variables for some tests
   logical :: UseWave    = .false.
   real    :: xStartWave = -100.0
@@ -220,8 +215,7 @@ contains
   subroutine user_read_inputs
 
     use ModReadParam
-    use CRASH_ModEos,        ONLY: read_eos_parameters, NameMaterial_I, &
-         read_if_use_eos_table, read_if_use_opac_table,read_name_material
+    use CRASH_ModEos,        ONLY: read_eos_parameters, NameMaterial_I
     use CRASH_ModMultiGroup, ONLY: read_opacity_parameters
     use ModGeometry,         ONLY: TypeGeometry, UseCovariant
     use ModWaves,            ONLY: FreqMinSI, FreqMaxSI
@@ -309,8 +303,9 @@ contains
           else
              UseCovariant = .false. ; TypeGeometry = 'cartesian'
           end if
-       case("#EOS")
-          call read_eos_parameters
+       case("#EOS", "#MATERIAL", "#EOSTABLE", "#OPACITYTABLE", &
+            "#USEEOSTABLE", "#USEOPACTABLE")
+          call read_eos_parameters(nMaterial, NameCommand)
 
        case("#OPACITYSCALEFACTOR") ! UQ only
           do iMaterial = 0, nMaterial - 1
@@ -357,11 +352,6 @@ contains
              call read_var('xEndWave',   xEndWave)
              call read_var('DpWave',     DpWave)
           end if
-       case("#RADBOUNDARY")
-          call read_var('DistBc1', DistBc1)
-          call read_var('TrkevBc1', TrkevBc1)
-          call read_var('DistBc2', DistBc2)
-          call read_var('TrkevBc2', TrkevBc2)
 
        case("#USERAMR")
           call read_var('RhoMinAmr',   RhoMinAmrDim)
@@ -387,15 +377,6 @@ contains
           ! Multiply plastic pressure and negative Uy/Ur by AssFactor
           call read_var('AssFactor', AssFactor)
 
-       case('#MATERIAL')
-          call read_name_material(nMaterial)
-
-       case("#USEEOSTABLE")
-          call read_if_use_eos_table(nMaterial)
-
-       case("#USEOPACTABLE")
-          call read_if_use_opac_table(nMaterial)
-
        case("#MAXRESISTIVITY")
           ! Maximum allowed value of the inverse magnetic Reynolds number
           call read_var('MaxNormalizedResistivity', MaxNormalizedResistivity)
@@ -411,74 +392,6 @@ contains
     if(UseMixedCell) UseNonConsLevelSet = .false.
 
   end subroutine user_read_inputs
-  !============================================================================
-  subroutine user_set_outerbcs(iBlock, iSide, TypeBc, IsFound)
-
-    use ModSize, ONLY: nI, nJ, nK
-    use ModAdvance, ONLY: State_VGB, Erad_
-    use ModImplicit, ONLY: StateSemi_VGB
-    use ModGeometry, ONLY: dx_BLK
-
-    integer,          intent(in)  :: iBlock, iSide
-    character(len=20),intent(in)  :: TypeBc
-    logical,          intent(out) :: IsFound
-
-    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
-
-    real :: Dx
-    !-------------------------------------------------------------------
-    IsFound = iSide < 3
-    if(.not.IsFound) RETURN
-
-    ! Mixed boundary condition for Erad: 
-    ! assume a linear profile to a fixed value at some distance
-    Dx = dx_BLK(iBlock)
-
-    if(iSide == 1)then
-       if(TypeBc /= 'usersemi')then
-
-          ! Float for all variables
-
-          State_VGB(:, 0,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
-          State_VGB(:,-1,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
-
-          State_VGB(Erad_,0,:,:,iBlock) = &
-               ( (DistBc1 - 0.5*Dx)*State_VGB(Erad_,1,:,:,iBlock) &
-               + Dx*EradBc1 ) / (DistBc1 + 0.5*Dx)
-          State_VGB(Erad_,-1,:,:,iBlock) = &
-               2*State_VGB(Erad_,0,:,:,iBlock) &
-               - State_VGB(Erad_,1,:,:,iBlock)
-       else
-          StateSemi_VGB(1,0,:,:,iBlock) = &
-               ( (DistBc1 - 0.5*Dx)*StateSemi_VGB(1,1,:,:,iBlock) &
-               + Dx*EradBc1 ) / (DistBc1 + 0.5*Dx)
-          StateSemi_VGB(1,-1,:,:,iBlock) = &
-               2*StateSemi_VGB(1,0,:,:,iBlock) &
-               - StateSemi_VGB(1,1,:,:,iBlock)
-       end if
-    else
-       if(TypeBc /= 'usersemi')then
-          ! Float for all variables
-          State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
-          State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
-
-          State_VGB(Erad_,nI+1,:,:,iBlock) = &
-               ( (DistBc2 - 0.5*Dx)*State_VGB(Erad_,nI,:,:,iBlock) &
-               + Dx*EradBc2 ) / (DistBc2 + 0.5*Dx)
-          State_VGB(Erad_,nI+2,:,:,iBlock) = &
-               2*State_VGB(Erad_,nI+1,:,:,iBlock) &
-               - State_VGB(Erad_,nI  ,:,:,iBlock)
-       else
-          StateSemi_VGB(1,nI+1,:,:,iBlock) = &
-               ( (DistBc2 - 0.5*Dx)*StateSemi_VGB(1,nI,:,:,iBlock) &
-               + Dx*EradBc2 ) / (DistBc2 + 0.5*Dx)
-          StateSemi_VGB(1,nI+2,:,:,iBlock) = &
-               2*StateSemi_VGB(1,nI+1,:,:,iBlock) &
-               - StateSemi_VGB(1,nI  ,:,:,iBlock)
-       end if
-    end if
-
-  end subroutine user_set_outerbcs
 
   !============================================================================
   subroutine user_set_ics
@@ -2431,15 +2344,18 @@ contains
     use ModConst,       ONLY: cKevToK, cHPlanckEV
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI
     use ModIo,          ONLY: restart
-    use CRASH_ModMultiGroup, ONLY: set_multigroup
-    use CRASH_ModEos,        ONLY: NameMaterial_I 
-    use CRASH_ModEosTable,   ONLY: check_eos_table, &
-         check_opac_table
+    use CRASH_ModMultiGroup, ONLY: nGroup
+    use CRASH_ModEos,        ONLY: nMaterialEos, NameMaterial_I 
+    use CRASH_ModEosTable,   ONLY: check_eos_table, check_opac_table
 
     integer:: iMaterial
     logical:: IsFirstTime = .true.
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
+    
+    ! Pass number of materials and waves=groups to the CRASH EOS library
+    nMaterialEos = nMaterial
+    nGroup       = nWave
 
     ! The units always have to be reset, because set_physics sets them
     if(UseMixedCell) then
@@ -2450,15 +2366,16 @@ contains
        UnitUser_V(LevelXe_:LevelMax) = UnitUser_V(Rho_)*No2Io_V(UnitX_)
     end if
 
-    call check_eos_table(iComm = iComm, Save = .true.)
+
+    ! Create separate EOS table for each material
+!!!  Why is this done multiple times ???
+    call check_eos_table(iComm = iComm)
 
     ! The rest of the initialization should be done once
     if(.not.IsFirstTime) RETURN
     IsFirstTime = .false.
 
-    !\
     !Set the photon energy range
-    !/
     !First, check if the values of FreqMinSI and FreqSI are set:
 
     !If the frequency range IN HERZ has been alredy set, then skip
@@ -2475,23 +2392,21 @@ contains
     ! Read in Hyades output
     if(UseHyadesFile .and. .not. restart) call read_hyades_file
 
-    ! Now set the number of groups and the frequency range in ModMultiGroup:
-    call set_multigroup(nWave, FreqMinSI, FreqMaxSI)
+    ! create separate opacity lookup tables for each material
+    call check_opac_table(FreqMinSI, FreqMaxSI, iComm = iComm)
 
-    EradBc1 = cRadiationNo*(TrkevBc1*cKeVtoK*Si2No_V(UnitTemperature_))**4
-    EradBc2 = cRadiationNo*(TrkevBc2*cKeVtoK*Si2No_V(UnitTemperature_))**4
-
-    ! create table after call set_multigroup so that nGroup is known
-    call check_opac_table(iComm = iComm, Save = .true.)
-
+    ! these EOS tables (if used) combine multiple materials
     iTablePPerRho   = i_lookup_table('pPerRho(e/rho,rho)')
     iTableThermo    = i_lookup_table('Thermo(rho,p/rho)')
     iTableOpacity   = i_lookup_table('Opacity(rho,T)')
+
+    ! another form of opacity tables
     do iMaterial = 0, nMaterial - 1
        iTableOpacity_I(iMaterial) = &
             i_lookup_table('Opacity'//NameMaterial_I(iMaterial)//'(rho,T)')
     end do
 
+    ! SESAME gray opacity table
     iTableSesame = i_lookup_table('Sesame(rho,T)')
 
     if(iProc==0) write(*,*) NameSub, &
