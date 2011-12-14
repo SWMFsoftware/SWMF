@@ -581,12 +581,8 @@ contains
           end if
 
           OpacityPlanck_W = OpacityPlanckSi_W/Si2No_V(UnitX_)
-          if(nWave == 1)then
-             Planck_W(1) = cRadiationNo*Te**4
-          else
-             Planck_W = PlanckSi_W*Si2No_V(UnitEnergyDens_)
-          end if
-          Planck = cRadiationNo*Te**4
+          Planck_W = PlanckSi_W*Si2No_V(UnitEnergyDens_)
+          Planck   = cRadiationNo*Te**4
 
           select case(TypeSemiImplicit)
           case('radiation')

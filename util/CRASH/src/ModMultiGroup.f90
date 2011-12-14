@@ -183,6 +183,12 @@ contains
     real :: xMin, xMax
     !-------------------------------------------------------------------------
 
+    if(nGroup == 1)then
+       if(present(EgSI))EgSI = cRadiation*TeIn**4
+       if(present(CgSI))CgSI = 4*cRadiation*TeIn**3
+       RETURN
+    end if
+
     xMin = EnergyGroup_I(iGroup - 1)/(TeIn * cKToEV)
     xMax = EnergyGroup_I(iGroup    )/(TeIn * cKToEV)
 
@@ -248,9 +254,6 @@ contains
     TgSi = sqrt(FreqMin*FreqMax)&
          /log(1.0 + cRadiation * FreqMin**2 * FreqMax**2 * cNormG5 * &
          log(FreqMax/FreqMin) / EgSI)
-
-    !   DeltaLogFrequency / EgSI)
-
 
     ToleranceEg = cTolerance * EgSI
 
