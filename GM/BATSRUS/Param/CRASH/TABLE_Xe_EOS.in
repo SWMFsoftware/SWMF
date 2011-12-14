@@ -1,0 +1,15 @@
+#LOOKUPTABLE
+Xe_eos				NameTable
+use param			NameCommand
+Tables/Xe_eos_CRASH.dat		NameFile
+real8				TypeFile
+Mass				NameTablePaaram
+131.292				TableParam
+EOS(Te, Na) for Xe		StringDescription
+logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2
+201   	      	      	     	nIndex1
+1.0E-2				Index1Min [eV]
+1.0E+3				Index1Max [eV]
+201                     	nIndex2
+1.0E+24				Index2Min [m-3]
+1.0E+29				Index2Max [m-3]
