@@ -454,7 +454,7 @@ test_hyades2d:
 	$(MAKE) test_hyades2d_check
 
 test_hyades2d_compile:
-	./Config.pl -e=HdRadCrash -u=Crash -g=4,4,1,400,400 -nMaterial=3
+	./Config.pl -e=HdRadCrash -u=Crash -g=4,4,1,1000,1000 -nMaterial=3
 	$(MAKE) CRASH
 	$(MAKE) PIDL
 
