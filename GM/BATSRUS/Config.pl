@@ -217,7 +217,25 @@ sub set_equation{
 
     my $File = "$SrcEquation/ModEquation$Equation.f90";
     die "$ERROR File $File does not exist!\n" unless -f $File;
-    return if -f $EquationMod and not `diff $File $EquationMod`;
+
+    # Check if there is any change in the equation module
+    if(-f $EquationMod){
+	open(FILE1,$File); open(FILE2,$EquationMod);
+	my $IsSame = 1; my $line1; my $line2;
+	while($line1=<FILE1> and $line2=<FILE2>){
+	    # Ignore the nWave and nMaterial definitions
+	    next if $line1=~/nMaterial|nWave/ and $line2=~/nMaterial|nWave/;
+	    if($line1 ne $line2){
+		$IsSame = 0;
+		last;
+	    }
+	}
+	close(FILE1); close(FILE2);
+
+	# Do not overwrite the equation module if there are no differences
+	return if $IsSame;
+    }
+
     `cp $EquationMod $EquationModSafe` if -f $EquationMod; # save previous eq.
     print "cp $File $EquationMod\n" if $Verbose;
     `cp $File $EquationMod`;
