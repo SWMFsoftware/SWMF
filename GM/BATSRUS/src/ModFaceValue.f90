@@ -647,7 +647,6 @@ contains
          iMinFaceZ, iMaxFaceZ, jMinFaceZ, jMaxFaceZ
 
     use ModGeometry, ONLY : true_cell,body_BLK
-    use ModNumConst
     use ModPhysics, ONLY: GammaWave
     use ModPhysics, ONLY: c2LIGHT,inv_c2LIGHT  !^CFG IF BORISCORR BEGIN
     use ModB0                                  !^CFG END BORISCORR
@@ -661,8 +660,6 @@ contains
 
     use ModParallel, ONLY : &
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
-
-    implicit none
 
     logical, intent(in):: DoResChangeOnly
     integer, intent(in):: iBlock
@@ -1128,11 +1125,11 @@ contains
       ByFull = B0_DG(y_,i,j,k) + Primitive_VG(By_,i,j,k)
       BzFull = B0_DG(z_,i,j,k) + Primitive_VG(Bz_,i,j,k)
       B2Full = BxFull**2 + ByFull**2 + BzFull**2
-      RhoC2Inv  =cOne/(Primitive_VG(rho_,i,j,k)*c2LIGHT)
+      RhoC2Inv  = 1/(Primitive_VG(rho_,i,j,k)*c2LIGHT)
       uBC2Inv= (Primitive_VG(rhoUx_,i,j,k)*BxFull + &
            Primitive_VG(rhoUy_,i,j,k)*ByFull + &
            Primitive_VG(rhoUz_,i,j,k)*BzFull)*RhoC2Inv
-      Ga2Boris=cOne+B2Full*RhoC2Inv
+      Ga2Boris= 1 + B2Full*RhoC2Inv
 
       Primitive_VG(Ux_,i,j,k)= Primitive_VG(rhoUx_,i,j,k)*&
            Ga2Boris - BxFull*uBC2Inv
@@ -1215,16 +1212,13 @@ contains
     !==========================================================================
     subroutine calc_primitives_MHD
       use ModMultiFluid
+
       Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
-      ! TEMPORARY
-      !if (iBlock == 1) then
-      !   write(*,*)'(i,j,k): state = ',i,j,k,State_VGB(1,i,j,k,iBlock)
-      !end if
-      RhoInv=cOne/Primitive_VG(Rho_,i,j,k)
+      RhoInv = 1/Primitive_VG(Rho_,i,j,k)
       Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
       do iFluid = 2, nFluid
          call select_fluid
-         RhoInv=cOne/Primitive_VG(iRho,i,j,k)
+         RhoInv = 1/Primitive_VG(iRho,i,j,k)
          Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iRhoUx:iRhoUz,i,j,k)
       end do
 
@@ -1265,7 +1259,7 @@ contains
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
          ! Left face values
-         RhoInv=cOne/LeftState_VX(rho_,i,j,k)
+         RhoInv = 1/LeftState_VX(rho_,i,j,k)
          BxFull = B0_DX(x_,i,j,k) + LeftState_VX(Bx_,i,j,k)
          ByFull = B0_DX(y_,i,j,k) + LeftState_VX(By_,i,j,k)
          BzFull = B0_DX(z_,i,j,k) + LeftState_VX(Bz_,i,j,k)
@@ -1279,7 +1273,7 @@ contains
               LeftState_VX(Uz_,i,j,k)*BzFull)*RhoC2Inv
 
          ! gammaA^2 = 1/[1+BB/(rho c^2)]
-         Ga2Boris=cOne/(cOne+ B2Full*RhoC2Inv)
+         Ga2Boris= 1/(1 + B2Full*RhoC2Inv)
 
          LeftState_VX(Ux_,i,j,k) = &
               Ga2Boris * (LeftState_VX(Ux_,i,j,k)+uBC2Inv*BxFull)
@@ -1289,7 +1283,7 @@ contains
               Ga2Boris * (LeftState_VX(Uz_,i,j,k)+uBC2Inv*BzFull)
 
          ! Right face values
-         RhoInv=cOne/RightState_VX(rho_,i,j,k)
+         RhoInv = 1/RightState_VX(rho_,i,j,k)
          BxFull = B0_DX(x_,i,j,k) + RightState_VX(Bx_,i,j,k)
          ByFull = B0_DX(y_,i,j,k) + RightState_VX(By_,i,j,k)
          BzFull = B0_DX(z_,i,j,k) + RightState_VX(Bz_,i,j,k)
@@ -1303,7 +1297,7 @@ contains
               RightState_VX(Uz_,i,j,k)*BzFull)*RhoC2Inv
 
          ! gammaA^2 = 1/[1+BB/(rho c^2)]
-         Ga2Boris=cOne/(cOne+B2Full*RhoC2Inv)
+         Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
 
          RightState_VX(Ux_,i,j,k) = &
               Ga2Boris * (RightState_VX(Ux_,i,j,k)+uBC2Inv*BxFull)
@@ -1324,7 +1318,7 @@ contains
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
          ! Left face values
-         RhoInv=cOne/LeftState_VY(rho_,i,j,k)
+         RhoInv = 1/LeftState_VY(rho_,i,j,k)
          BxFull = B0_DY(x_,i,j,k) + LeftState_VY(Bx_,i,j,k)
          ByFull = B0_DY(y_,i,j,k) + LeftState_VY(By_,i,j,k)
          BzFull = B0_DY(z_,i,j,k) + LeftState_VY(Bz_,i,j,k)
@@ -1338,7 +1332,7 @@ contains
               LeftState_VY(Uz_,i,j,k)*BzFull)*RhoC2Inv
 
          ! gammaA^2 = 1/[1+BB/(rho c^2)]
-         Ga2Boris=cOne/(cOne+ B2Full*RhoC2Inv)
+         Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
 
          LeftState_VY(Ux_,i,j,k) = &
               Ga2Boris * (LeftState_VY(Ux_,i,j,k)+uBC2Inv*BxFull)
@@ -1348,7 +1342,7 @@ contains
               Ga2Boris * (LeftState_VY(Uz_,i,j,k)+uBC2Inv*BzFull)
 
          ! Right face values
-         RhoInv=cOne/RightState_VY(rho_,i,j,k) 
+         RhoInv = 1/RightState_VY(rho_,i,j,k) 
          BxFull = B0_DY(x_,i,j,k) + RightState_VY(Bx_,i,j,k)
          ByFull = B0_DY(y_,i,j,k) + RightState_VY(By_,i,j,k)
          BzFull = B0_DY(z_,i,j,k) + RightState_VY(Bz_,i,j,k)
@@ -1362,7 +1356,7 @@ contains
               RightState_VY(Uz_,i,j,k)*BzFull)*RhoC2Inv
 
          ! gammaA^2 = 1/[1+BB/(rho c^2)]
-         Ga2Boris=cOne/(cOne + B2Full*RhoC2Inv)
+         Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
 
          RightState_VY(Ux_,i,j,k) = &
               Ga2Boris * (RightState_VY(Ux_,i,j,k)+uBC2Inv*BxFull)
@@ -1385,7 +1379,7 @@ contains
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
          ! Left face values
-         RhoInv=cOne/LeftState_VZ(rho_,i,j,k)
+         RhoInv = 1/LeftState_VZ(rho_,i,j,k)
          BxFull = B0_DZ(x_,i,j,k) + LeftState_VZ(Bx_,i,j,k)
          ByFull = B0_DZ(y_,i,j,k) + LeftState_VZ(By_,i,j,k)
          BzFull = B0_DZ(z_,i,j,k) + LeftState_VZ(Bz_,i,j,k)
@@ -1399,7 +1393,7 @@ contains
               LeftState_VZ(Uz_,i,j,k)*BzFull)*RhoC2Inv
 
          ! gammaA^2 = 1/[1+BB/(rho c^2)]
-         Ga2Boris=cOne/(cOne + B2Full*RhoC2Inv)
+         Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
 
          LeftState_VZ(Ux_,i,j,k) = &
               Ga2Boris * (LeftState_VZ(Ux_,i,j,k)+uBC2Inv*BxFull)
@@ -1409,7 +1403,7 @@ contains
               Ga2Boris * (LeftState_VZ(Uz_,i,j,k)+uBC2Inv*BzFull)
 
          ! Right face values
-         RhoInv=cOne/RightState_VZ(rho_,i,j,k)
+         RhoInv = 1/RightState_VZ(rho_,i,j,k)
          BxFull = B0_DZ(x_,i,j,k) + RightState_VZ(Bx_,i,j,k)
          ByFull = B0_DZ(y_,i,j,k) + RightState_VZ(By_,i,j,k)
          BzFull = B0_DZ(z_,i,j,k) + RightState_VZ(Bz_,i,j,k)
@@ -1423,7 +1417,7 @@ contains
               RightState_VZ(Uz_,i,j,k)*BzFull)*RhoC2Inv
 
          ! gammaA^2 = 1/[1+BB/(rho c^2)]
-         Ga2Boris=cOne/(cOne + B2Full*RhoC2Inv)
+         Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
 
          RightState_VZ(Ux_,i,j,k) = &
               Ga2Boris * (RightState_VZ(Ux_,i,j,k)+uBC2Inv*BxFull)
@@ -1981,7 +1975,6 @@ contains
     use ModMain
     use ModVarIndexes
     use ModGeometry, ONLY : true_cell,body_BLK
-    use ModNumConst
     use ModPhysics, ONLY: c2LIGHT,inv_c2LIGHT  !^CFG IF BORISCORR BEGIN
     use ModB0                                  !^CFG END BORISCORR
     use ModAdvance, ONLY: State_VGB,&
@@ -1996,8 +1989,6 @@ contains
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
 
     use ModAdjoint
-
-    implicit none
 
     logical, intent(in):: DoResChangeOnly
     integer, intent(in):: iBlock
@@ -2351,16 +2342,13 @@ contains
     !==========================================================================
     subroutine calc_primitives_MHD
       use ModMultiFluid
+
       Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
-      ! TEMPORARY
-      !if (iBlock == 1) then
-      !   write(*,*)'(i,j,k): state = ',i,j,k,State_VGB(1,i,j,k,iBlock)
-      !end if
-      RhoInv=cOne/Primitive_VG(Rho_,i,j,k)
+      RhoInv = 1/Primitive_VG(Rho_,i,j,k)
       Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
       do iFluid = 2, nFluid
          call select_fluid
-         RhoInv=cOne/Primitive_VG(iRho,i,j,k)
+         RhoInv = 1/Primitive_VG(iRho,i,j,k)
          Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iRhoUx:iRhoUz,i,j,k)
       end do
       if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
@@ -2383,14 +2371,14 @@ contains
       real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2):: Primitive_VG_A
 
       Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
-      RhoInv=cOne/Primitive_VG(Rho_,i,j,k)
+      RhoInv = 1/Primitive_VG(Rho_,i,j,k)
       Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
 
       Primitive_VG_A = Primitive_VG   ! store in A
 
       do iFluid = 2, nFluid
          call select_fluid
-         RhoInv=cOne/Primitive_VG(iRho,i,j,k)
+         RhoInv = 1/Primitive_VG(iRho,i,j,k)
          Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iRhoUx:iRhoUz,i,j,k)
       end do
       if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
@@ -2422,11 +2410,12 @@ contains
 
       ! reset Primitive_VG
       Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
-      RhoInv=cOne/Primitive_VG(Rho_,i,j,k)
+      RhoInv = 1/Primitive_VG(Rho_,i,j,k)
       !Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)  
       AdjRhoInv = AdjRhoInv + dot_product(Primitive_VG(RhoUx_:RhoUz_,i,j,k),&
            AdjPrimitive_VG(RhoUx_:RhoUz_,i,j,k))
-      AdjPrimitive_VG(RhoUx_:RhoUz_,i,j,k) = AdjPrimitive_VG(RhoUx_:RhoUz_,i,j,k) &
+      AdjPrimitive_VG(RhoUx_:RhoUz_,i,j,k) = &
+           AdjPrimitive_VG(RhoUx_:RhoUz_,i,j,k) &
            + RhoInv*AdjPrimitive_VG(Ux_:Uz_,i,j,k)
 
 
@@ -2824,7 +2813,7 @@ contains
     ! the correction is not done if any of the finer block neighbors are unused
 
     use ModSize
-    use ModVarIndexes, ONLY: DefaultState_V, nVar, nFluid, &
+    use ModVarIndexes, ONLY: DefaultState_V, nVar, &
          iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
     use ModAMR,        ONLY: unusedBlock_BP
@@ -2832,13 +2821,10 @@ contains
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
          neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth, &
          neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth
-    use ModNumConst, ONLY: cTiny
 
     ! For debugging
     use ModProcMH, ONLY: iProc
     use ModMain, ONLY: VarTest, ProcTest, BlkTest, iTest, jTest, kTest
-
-    implicit none
 
     integer, intent(in) :: iBLK
     integer             :: i, j, k
@@ -2857,7 +2843,7 @@ contains
     if(DoTestMe)write(*,*)NameSub, ' state before: ',&
          State_VGB(VarTest, nI:nI+1, jTest, kTest, iBlk)
 
-    if(nFluid > 1 .and. .not.DoLimitMomentum)then
+    if(.not.DoLimitMomentum)then
        ! Convert momenta to velocities (that will be limited)
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           State_VGB(iRhoUx_I,i,j,k,iBLK)=State_VGB(iRhoUx_I,i,j,k,iBLK) &
@@ -2879,7 +2865,7 @@ contains
                   State_VGB(1:nVar,i,nJ+1,k,iBLK) + cThird*( &
                   State_VGB(1:nVar,i,nJ+1,k,iBLK) - &
                   State_VGB(1:nVar,i,nJ,k,iBLK))
-             where(DefaultState_V(1:nVar) > cTiny) &
+             where(DefaultState_V(1:nVar) > 0.0) &
                   State_VGB(1:nVar,i,nJ+1,k,iBLK) = &
                   max(State_VGB(1:nVar,i,nJ+1,k,iBLK), 1e-30)
           end do; end do
@@ -2895,7 +2881,7 @@ contains
                   State_VGB(1:nVar,i,0,k,iBLK) + cThird*( &
                   State_VGB(1:nVar,i,0,k,iBLK) - &
                   State_VGB(1:nVar,i,1,k,iBLK))
-             where(DefaultState_V(1:nVar) > cTiny) &
+             where(DefaultState_V(1:nVar) > 0.0) &
                   State_VGB(1:nVar,i,0,k,iBLK) = &
                   max(State_VGB(1:nVar,i,0,k,iBLK), 1e-30)
           end do; end do
@@ -2911,7 +2897,7 @@ contains
                   State_VGB(1:nVar,0,j,k,iBLK) + cThird*(&
                   State_VGB(1:nVar,0,j,k,iBLK) - &
                   State_VGB(1:nVar,1,j,k,iBLK))
-             where(DefaultState_V(1:nVar) > cTiny) &
+             where(DefaultState_V(1:nVar) > 0.0) &
                   State_VGB(1:nVar,0,j,k,iBLK) = &
                   max(State_VGB(1:nVar,0,j,k,iBLK), 1e-30)
           end do; end do
@@ -2927,7 +2913,7 @@ contains
                   State_VGB(1:nVar,nI+1,j,k,iBLK) + cThird*( &
                   State_VGB(1:nVar,nI+1,j,k,iBLK) - &
                   State_VGB(1:nVar,nI,  j,k,iBLK))
-             where(DefaultState_V(1:nVar)>cTiny) &
+             where(DefaultState_V(1:nVar) > 0.0) &
                   State_VGB(1:nVar,nI+1,j,k,iBLK) = &
                   max(State_VGB(1:nVar,nI+1,j,k,iBLK), 1e-30)
           end do; end do
@@ -2943,7 +2929,7 @@ contains
                   State_VGB(1:nVar,i,j,nK+1,iBLK) + cThird*(&
                   State_VGB(1:nVar,i,j,nK+1,iBLK) - &
                   State_VGB(1:nVar,i,j,nK,iBLK))
-             where(DefaultState_V(1:nVar) > cTiny) &
+             where(DefaultState_V(1:nVar) > 0.0) &
                   State_VGB(1:nVar,i,j,nK+1,iBLK) = &
                   max(State_VGB(1:nVar,i,j,nK+1,iBLK), 1e-30)
           end do; end do
@@ -2959,14 +2945,14 @@ contains
                   State_VGB(1:nVar,i,j,0,iBLK) + cThird*( &
                   State_VGB(1:nVar,i,j,0,iBLK) - &
                   State_VGB(1:nVar,i,j,1,iBLK))
-             where(DefaultState_V(1:nVar) > cTiny) &
+             where(DefaultState_V(1:nVar) > 0.0) &
                   State_VGB(1:nVar,i,j,0,iBLK) = &
                   max(State_VGB(1:nVar,i,j,0,iBLK), 1e-30)
           end do; end do
        end if
     end if
 
-    if(nFluid > 1 .and. .not.DoLimitMomentum)then
+    if(.not.DoLimitMomentum)then
        ! Convert velocities back to momenta
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           State_VGB(iRhoUx_I,i,j,k,iBLK)=State_VGB(iRhoUx_I,i,j,k,iBLK) &
