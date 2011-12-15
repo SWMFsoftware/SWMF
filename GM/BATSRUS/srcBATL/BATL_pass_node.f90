@@ -79,7 +79,7 @@ contains
     ! Variables related to recv and send buffers
     integer, allocatable, save:: iBufferS_P(:), nBufferS_P(:), nBufferR_P(:)
 
-    integer :: iBufferS, iBufferR
+    integer :: iBufferS, iBufferR, nBuffer
     integer :: MaxBufferS = -1, MaxBufferR = -1
     real, allocatable, save:: BufferR_I(:), BufferS_I(:)
 
@@ -204,70 +204,62 @@ contains
 
     end do ! iCountOnly
 
-    !call timing_start('recv_pass_node')
-
-    !write(*,*)'!!! iProc, total recv, send buffer=', &
-    !     iProc,sum(nBufferR_P), sum(nBufferS_P)
-
-    ! post requests
-    iRequestR = 0
-    iBufferR  = 1
-    do iProcSend = 0, nProc - 1
-       if(nBufferR_P(iProcSend) == 0) CYCLE
-       iRequestR = iRequestR + 1
-
-       call MPI_irecv(BufferR_I(iBufferR), nBufferR_P(iProcSend), &
-            MPI_REAL, iProcSend, 1, iComm, iRequestR_I(iRequestR), &
-            iError)
-
-       iBufferR  = iBufferR  + nBufferR_P(iProcSend)
-    end do
-
-    !call timing_stop('recv_pass_node')
-
-    if(UseRSend) then
-       !call timing_start('barrier_pass_node')
-       call barrier_mpi
-       !call timing_stop('barrier_pass_node')
-    end if
-
-    !call timing_start('send_pass_node')
-
-    ! post sends
-    iRequestS = 0
-    iBufferS  = 1
-    do iProcRecv = 0, nProc-1
-       if(nBufferS_P(iProcRecv) == 0) CYCLE
-       iRequestS = iRequestS + 1
-
-       !write(*,*)'!!! MPI_isend:iProcRecv,iProcSend,nBufferS=',&
-       !     iProcRecv,iProc,nBufferS_P(iProcRecv)
-
-       if(UseRSend)then
-          call MPI_rsend(BufferS_I(iBufferS), nBufferS_P(iProcRecv), &
-               MPI_REAL, iProcRecv, 1, iComm, iError)
-       else
-          call MPI_isend(BufferS_I(iBufferS), nBufferS_P(iProcRecv), &
-               MPI_REAL, iProcRecv, 1, iComm, iRequestS_I(iRequestS), &
+    if(nProc == 1)then
+       nBuffer = nBufferS_P(0)
+       if(nBuffer > 0) BufferR_I(1:nBuffer) = BufferS_I(1:nBuffer)
+    else
+       ! post requests
+       !call timing_start('recv_pass_node')
+       iRequestR = 0
+       iBufferR  = 1
+       do iProcSend = 0, nProc - 1
+          if(nBufferR_P(iProcSend) == 0) CYCLE
+          iRequestR = iRequestR + 1
+          call MPI_irecv(BufferR_I(iBufferR), nBufferR_P(iProcSend), &
+               MPI_REAL, iProcSend, 1, iComm, iRequestR_I(iRequestR), &
                iError)
+          iBufferR  = iBufferR  + nBufferR_P(iProcSend)
+       end do
+       !call timing_stop('recv_pass_node')
+
+       if(UseRSend) then
+          !call timing_start('barrier_pass_node')
+          call barrier_mpi
+          !call timing_stop('barrier_pass_node')
        end if
 
-       iBufferS  = iBufferS  + nBufferS_P(iProcRecv)
-    end do
+       ! post sends
+       !call timing_start('send_pass_node')
+       iRequestS = 0
+       iBufferS  = 1
+       do iProcRecv = 0, nProc-1
+          if(nBufferS_P(iProcRecv) == 0) CYCLE
+          iRequestS = iRequestS + 1
 
-    !call timing_stop('send_pass_node')
+          if(UseRSend)then
+             call MPI_rsend(BufferS_I(iBufferS), nBufferS_P(iProcRecv), &
+                  MPI_REAL, iProcRecv, 1, iComm, iError)
+          else
+             call MPI_isend(BufferS_I(iBufferS), nBufferS_P(iProcRecv), &
+                  MPI_REAL, iProcRecv, 1, iComm, iRequestS_I(iRequestS), &
+                  iError)
+          end if
 
-    !call timing_start('wait_pass_node')
+          iBufferS  = iBufferS  + nBufferS_P(iProcRecv)
+       end do
+       !call timing_stop('send_pass_node')
 
-    ! wait for all requests to be completed
-    if(iRequestR > 0) &
-         call MPI_waitall(iRequestR, iRequestR_I, iStatus_II, iError)
+       ! wait for all requests to be completed
+       !call timing_start('wait_pass_node')
+       if(iRequestR > 0) &
+            call MPI_waitall(iRequestR, iRequestR_I, iStatus_II, iError)
 
-    ! wait for all sends to be completed
-    if(.not.UseRSend .and. iRequestS > 0) &
-         call MPI_waitall(iRequestS, iRequestS_I, iStatus_II, iError)
+       ! wait for all sends to be completed
+       if(.not.UseRSend .and. iRequestS > 0) &
+            call MPI_waitall(iRequestS, iRequestS_I, iStatus_II, iError)
 
-    !call timing_stop('wait_pass_node')
+       !call timing_stop('wait_pass_node')
+    end if
 
     !call timing_start('buffer_pass_node')
     call buffer_to_state
