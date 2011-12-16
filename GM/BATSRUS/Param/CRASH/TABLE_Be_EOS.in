@@ -3,8 +3,8 @@ Be_eos				NameTable
 use param			NameCommand
 Tables/Be_eos_CRASH.dat		NameFile
 real8				TypeFile
-Mass				NameTablePaaram
-9.012182			TableParam
+Mass				NameTableParam
+9.012182			TableParam [amu]
 EOS(Te, Na) for Be		StringDescription
 logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2
 201	      	      	     	nIndex1
@@ -13,7 +13,3 @@ logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2
 201				nIndex2
 1.0E+23				Index2Min [m-3]
 2.0E+29				Index2Max [m-3]
-
-
-
-

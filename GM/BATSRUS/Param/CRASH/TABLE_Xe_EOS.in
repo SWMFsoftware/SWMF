@@ -3,8 +3,8 @@ Xe_eos				NameTable
 use param			NameCommand
 Tables/Xe_eos_CRASH.dat		NameFile
 real8				TypeFile
-Mass				NameTablePaaram
-131.292				TableParam
+Mass				NameTableParam
+131.292				TableParam [amu]
 EOS(Te, Na) for Xe		StringDescription
 logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2
 201   	      	      	     	nIndex1

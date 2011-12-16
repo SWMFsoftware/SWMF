@@ -1,0 +1,16 @@
+#LOOKUPTABLE
+Pl_opac					NameTable
+use param                    		NameCommand
+Tables/Pl_opac_CRASH.dat		NameFile
+real8					TypeFile
+EvMin EvMax				NameTableParam
+0.1					TableParam [eV]
+20000.0					TableParam [eV]
+Opacity(rho,Te) for Pl			StringDescription
+logrho logT Planck(30) Ross(30)		NameVar
+201					nIndex1
+1.62789127801646E-02    		Index1Min [kg/m3]
+2.44183691702469E+03    		Index1Max [kg/m3]
+201                     		nIndex2
+5.0E-2                  		Index2Min [eV]
+1.0E+2                  		Index2Max [eV]
