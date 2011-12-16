@@ -13,10 +13,10 @@ Param/CRASH/AMR1.in
 #INCLUDE
 Param/CRASH/MULTIGROUPCOND.in
 
-KRYLOV
+#KRYLOV
 cg			TypeKrylov
 nul			TypeInitKrylov
-1.0e-6			ErrorMaxKrylov
+1.0e-7			ErrorMaxKrylov
 900			MaxMatvecKrylov
 
 #PROGRESS
