@@ -248,12 +248,14 @@ Logical :: UseDustDistribution = .False.
 !   RPTAU   :  Reference Pressure optical depth;  6.1 mbar for now
   real, parameter :: RPTAU  = 6.1
 
-! Top of the shortwave calculatin for lower atmosphere radiation code(mbars)
-  real, parameter :: PRAD  = 1.0E-5 !0.001
+! Top of the shortwave calculation for lower atmosphere radiation code(mbars)
+  real, parameter :: PRAD  = 1.0E-6 !mb (~115 km)
 
-! Top of the longwave calculatin for lower atmosphere radiation code(PASCALS)
+! Top of the longwave calculation for lower atmosphere radiation code(PASCALS)
 ! and where radcool begins
-  real, parameter :: PLONG = 4.0E-1
+  real, parameter :: PLONG = 4.0E-1 ! Pa  (also 4.0  ubar)
+
+
 
 ! Ls Variables
 	  real, dimension(7) :: Ls_a

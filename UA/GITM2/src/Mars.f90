@@ -66,7 +66,7 @@ subroutine init_heating_efficiency
 
   implicit none
 
-  HeatingEfficiency_CB  = 0.19
+  HeatingEfficiency_CB  = 0.21
   eHeatingEfficiency_CB = 0.0
 
   call init_radcool
@@ -1407,9 +1407,6 @@ end subroutine init_isochem
        conrnu = conrnu_temp
     endif
 
-write(*,*) tautot,conrnu
-
-      
     
     CALL DUSTPROFILE(PLEV(L_LEVELS),PTROP,PLEV,TAUCUM,TAUREF,L_LEVELS,TauTot,ConrNU)
 
@@ -1544,8 +1541,14 @@ write(*,*) tautot,conrnu
 
        !Buffer region, Lopez-Valverde found a buffer needed for appropriate cooling rates
        !near the top of the atmosphere
-       !         TOTAL(1) = 0.0
-       !         TOTAL(2) = 0.0
+       TOTAL(1) = 0.0
+       TOTAL(2) = 0.0
+       GREENHOUSE(1) = 0.0
+       GREENHOUSE(2) = 0.0
+       !Buffer region, Bougher found a buffer needed for appropriate near-IR rates
+       !near the top of the atmosphere, since NLTE correction breaks down.
+       HEATING(1) = 0.0
+       HEATING(2) = 0.0 
 
        lowatmosradrate(iLon,iLat,L_NLAYRAD-L1,iBlock)=TOTAL(L1)
 
