@@ -544,7 +544,7 @@ subroutine calc_chemical_sources(iLon,iLat,iAlt,iBlock,IonSources, &
               ! -----------------------------------------------------------
               ! O + O2 + CO2 ==> stuff + CO2  
               ! -----------------------------------------------------------
-              Reaction = rtO_O_CO2 *Neutrals(iO_)*Neutrals(iO_)*Neutrals(iCO2_)
+              Reaction = rtO_O2_CO2 *Neutrals(iO_)*Neutrals(iO2_)*Neutrals(iCO2_)
 
               NeutralLosses(iO_) = NeutralLosses(iO_) + Reaction
               NeutralLosses(iO2_) = NeutralLosses(iO2_) + Reaction
