@@ -64,12 +64,12 @@ subroutine init_msis
 
   integer, parameter:: ninitialAlts = 25
   integer :: iBlock
-  integer :: iiLon,iiLat,iiAlt,iminiono,ialtlow(1)
-  integer :: iLon,iLat,iAlt, iSpecies, iIon, iError, jlat,klon
+  integer :: iiLon,iiLat,iiAlt,iminiono,ialtlow(1), TimeArray(7),ilatlow(1)
+  integer :: iLon,iLat,iAlt, iSpecies, iIon, iError, jlat,klon,iline
 
-  logical :: Done = .False.
+  logical :: Done = .False.,NotStarted = .True.
   character (len=iCharLen_) :: cLine
-  real :: inDensities(9),altlow,althigh
+  real :: inDensities(9),altlow,althigh,latlow,lathigh
   real :: ralt, invAltDiff, altFind, altdiff, LogElectronDensity,dalt(nspeciestotal),alttemp(nInAlts)
   real, dimension(nInitialAlts) :: tempalt,LogInitialDensity,InitialEDensity,InitialAlt
 
@@ -87,6 +87,9 @@ subroutine init_msis
         enddo
      enddo
   enddo
+
+  if (useDustDistribution) call read_dust 
+ 
 
   if (DoRestart) return
 
@@ -401,3 +404,172 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   call stop_gitm("I can not continue...")
 
 end subroutine msis_bcs
+
+subroutine read_dust
+  use ModPlanet
+  use ModInputs
+  use ModGITM
+
+  implicit none
+
+  integer :: iBlock
+  integer :: ialtlow(1), TimeArray(7),ilatlow(1)
+  integer :: iLon,iLat,iAlt, iError, jlat,klon,iline
+
+  logical :: Done = .False.,NotStarted = .True.
+  character (len=iCharLen_) :: cLine
+  real :: altlow,althigh,latlow,lathigh
+  real :: ralt, invAltDiff, altFind, altdiff,dalt(nspeciestotal),alttemp(nInAlts)
+  real :: DustLatitude(ndustlats),TempDust(ndustlats),Temp(ndustlats+6),tempconrath(ndustlats)
+  real :: rlat, invLatDiff, LatFind, Latdiff, Dust,templat(ndustlats),conrath
+
+  
+
+     
+     do iBlock = 1, nBlocks
+        open(unit=iInputUnit_,file=cDustFile)
+        notstarted = .True.
+        do while (notstarted)
+        read(iInputUnit_,'(a)',iostat=iError) cLine
+        if (iError .ne. 0) then
+           write(*,*) "Error reading Dust file"
+           write(*,*) "Does this file exist?"
+           call stop_GITM("In init_msis_Mars")
+        endif
+        if (cline(1:6) .eq. '#START')  notstarted = 0
+     enddo
+     
+     read(iInputUnit_,*,iostat=iError) DustLatitude
+
+     iline = 1
+     do while (iError .eq. 0)
+        read(iInputUnit_,*,iostat=iError) Temp
+        TimeArray(1:6) = temp(1:6)
+        TimeArray(7) = 0
+        call time_int_to_real(TimeArray,TimeDust(iLine))
+        TempDust = Temp(7:ndustlats+6)
+
+
+        do iLat = 1, nLats
+           latFind = Latitude(ilat,iBlock)*180/pi
+           templat = DustLatitude
+           where(LatFind - tempLat .lt. -0.00001) tempLat = -1.0e9
+           
+           ilatlow =  maxloc(tempLat)
+           
+           if (ilatlow(1) .eq. nDustLats) ialtlow = ialtlow - 1
+           
+           Latlow = DustLatitude(ilatlow(1))
+           LatHigh = DustLatitude(ilatlow(1)+1)
+           
+           invLatdiff = 1/(Lathigh - Latlow)
+           
+           if (LatFind .lt. DustLatitude(1)) then
+              
+              rlat = (latlow-latFind)*(TempDust(ilatlow(1) + 1)-TempDust(ilatlow(1))) * &
+                   invLatDiff
+              Dust = TempDust(ilat) - rlat
+              
+           else
+              if (LatFind .ge. DustLatitude(nDustLats)) then
+                 
+                 rlat = (LatFind-Lathigh)* &
+                      (TempDust(ilatlow(1) + 1) - TempDust(ilatlow(1))) * invLatDiff
+                 Dust = TempDust(ilatlow(1) + 1) + rlat
+                 
+              else
+                 rlat = (Lathigh - LatFind)*(TempDust(ilatlow(1) + 1) - &
+                      TempDust(ilatlow(1))) * invLatDiff
+                 Dust = TempDust(ilatlow(1) + 1) - rlat
+
+              endif
+           endif
+           HorizontalDustProfile(iline,iLat,iblock) = Dust
+
+        enddo
+
+        iline = iline + 1
+        
+     enddo
+
+     
+     nDustTimes = iline - 1
+     where (TempDust .lt. 0.2)
+        TempDust = 0.2
+     endwhere
+     
+     !Horizontal Conrath Parameter Distribution
+     close(iInputUnit_)
+     open(unit=iInputUnit_,file=cConrathFile)
+     notstarted = .True.
+     do while (notstarted)
+        read(iInputUnit_,'(a)',iostat=iError) cLine
+        if (iError .ne. 0) then
+           write(*,*) "Error reading Conrath file"
+           write(*,*) "Does this file exist?"
+           call stop_GITM("In init_msis_Mars")
+        endif
+        if (cline(1:6) .eq. '#START')  notstarted = 0
+     enddo
+     
+     read(iInputUnit_,*,iostat=iError) DustLatitude
+     
+     iline = 1
+     do while (iError .eq. 0)
+        read(iInputUnit_,*,iostat=iError) Temp
+        TimeArray(1:6) = temp(1:6)
+        TimeArray(7) = 0
+        call time_int_to_real(TimeArray,TimeConrath(iLine))
+        TempConrath = Temp(7:ndustlats+6)
+        
+        do iLat = 1, nLats
+           latFind = Latitude(ilat,iBlock)*180/pi
+           templat = DustLatitude
+           where(LatFind - tempLat .lt. -0.00001) tempLat = -1.0e9
+           
+           ilatlow =  maxloc(tempLat)
+           
+           if (ilatlow(1) .eq. nDustLats) ialtlow = ialtlow - 1
+           
+           Latlow = DustLatitude(ilatlow(1))
+           LatHigh = DustLatitude(ilatlow(1)+1)
+           
+           invLatdiff = 1/(Lathigh - Latlow)
+           
+           if (LatFind .lt. DustLatitude(1)) then
+              
+              rlat = (latlow-latFind)*(TempConrath(ilatlow(1) + 1)-TempConrath(ilatlow(1))) * &
+                   invLatDiff
+              Conrath = TempConrath(ilat) - rlat
+              
+           else
+              
+              if (LatFind .ge. DustLatitude(nDustLats)) then
+                 
+                 rlat = (LatFind-Lathigh)* &
+                      (TempConrath(ilatlow(1) + 1) - TempConrath(ilatlow(1))) * invLatDiff
+                 
+                 Conrath = TempConrath(ilatlow(1) + 1) + rlat
+                 
+              else
+                 rlat = (Lathigh - LatFind)*(TempConrath(ilatlow(1) + 1) - &
+                      TempConrath(ilatlow(1))) * invLatDiff
+                 Conrath = TempConrath(ilatlow(1) + 1) - rlat
+                 
+              endif
+           endif
+           HorizontalConrathProfile(iline,iLat,iblock) = Conrath
+           
+        enddo
+        
+        iline = iline + 1
+        
+     enddo
+     close(iInputUnit_)     
+     enddo
+     
+     nConrathTimes = iline - 1
+
+
+  
+end subroutine read_dust

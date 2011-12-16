@@ -164,9 +164,16 @@ module ModPlanet
   real , Dimension(nInAlts,nSpeciesTotal) :: InNDensityS 
   real , Dimension(nInAlts,nIons) :: InIDensityS
 
+  integer, parameter:: nDustLinesMax = 4000, nDustLats = 36
+  integer :: nDustTimes,nConrathTimes
+  real, dimension(nDustLinesMax) :: TimeDust,TimeConrath
+  real, dimension(nDustLinesMax,nLats,nBlocksMax) :: HorizontalDustProfile
+  real, dimension(nDustLinesMax,nLats,nBlocksMax) :: HorizontalConrathProfile
+
 
   real, dimension(nLons, nLats,nBlocksMax) :: &
-       fir,fvis,Tbot,TopL,Psurf,P125,iAltMinIono
+       fir,fvis,Tbot,TopL,Psurf,P125,iAltMinIono,DustDistribution,ConrathDistribution
+
 
 !################ Nelli, April 07 ##########################
 !Setting up parameters needed by the correlated k lower

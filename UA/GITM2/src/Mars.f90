@@ -1014,7 +1014,7 @@ end subroutine init_isochem
                  !  Determine if a CRITICAL LEVEL situation is occurring, and if it is
                  ! deposit all of the stress within the offending layer (the layer within
                  ! which the sign of the zonal wind speed is opposite the sign of the
-                 ! stress magnitude at the bottom of that layer
+                 ! stress magnitude at the bottom of that layer)
 
                  !  DIAGNOSE CRITICAL LEVEL OCCURRENCE BASED UPON EITHER LAYER MIDPOINT
                  !  ZONAL WIND (u(nl)) OR AVERAGE ZONAL WIND AT THE TOP OF THE LAYER
@@ -1265,6 +1265,7 @@ end subroutine init_isochem
     use ModPlanet
     use ModGITM
     use ModEUV, only: AveCosSza
+    use ModTime
 
     implicit none
     ! ----------------------------------------------------------------------
@@ -1288,7 +1289,7 @@ end subroutine init_isochem
     integer, intent(in) :: L_NLAYRAD, L_NLEVRAD, ilat,ilon
 
 
-
+    REAL :: DustTime(nDustTimes),ConrathTime(nConrathTimes),invDDiff
     REAL :: PLEV(LL_LEVELS+1), TLEV(LL_LEVELS)
     REAL :: PMID(LL_LEVELS), TMID(LL_LEVELS)
     REAL :: TAUREF(LL_LEVELS+1),TAUCUM(LL_LEVELS)
@@ -1304,13 +1305,13 @@ end subroutine init_isochem
     real :: TAUCUMV(LL_LEVELS,L_NSPECTV,L_NGAUSS)
     real :: COSBV(LL_NLAYRAD,L_NSPECTV,L_NGAUSS)
     real :: WBARV(LL_NLAYRAD,L_NSPECTV,L_NGAUSS)
-    real :: FMNETV(LL_NLAYRAD), diffvt
+    real :: FMNETV(LL_NLAYRAD), diffvt, tDiff(nDustTimes),ctDiff(nDustTimes),conrnu,tautot
     real :: fluxupv(LL_NLAYRAD), fluxdnv(LL_NLAYRAD), NFLUXTOPV
 
-    real :: fluxvd(LL_LAYERS),HEATING(LL_LAYERS),TOTAL(LL_LAYERS)
+    real :: fluxvd(LL_LAYERS),HEATING(LL_LAYERS),TOTAL(LL_LAYERS),rtime,conrathrtime
     real :: fluxid(LL_LAYERS),GREENHOUSE(LL_LAYERS),XLTECORRECTION(LL_LAYERS)
 
-    integer :: ngwv(L_NSPECTV),ialt
+    integer :: ngwv(L_NSPECTV),ialt,imin(1),cmin(1)
 
     !C  IR
 
@@ -1361,7 +1362,56 @@ end subroutine init_isochem
 
 !write(*,*) plev(l_levels),l_levels
 !stop
-    CALL DUSTPROFILE(PLEV(L_LEVELS),PTROP,PLEV,TAUCUM,TAUREF,L_LEVELS)
+
+     if (UseDustDistribution) then
+       DustTime(:) = 0
+       ConrathTime(:) = 0
+
+       do N = 1, nDustTimes
+          DustTime(N) = TimeDust(N)
+
+       enddo
+       do N = 1, nConrathTimes
+          ConrathTime(N) = TimeConrath(N)
+       enddo
+
+       tDiff = CurrentTime - DustTime
+       ctDiff = CurrentTime - ConrathTime
+       
+       where(tDiff .lt. 1) tDiff = 1e20
+       where(ctDiff .lt. 1) ctDiff = 1e20
+
+       iMin = minloc(tDiff)
+       cMin = minloc(ctDiff)
+
+       invDDiff = 1 / &
+            (DustTime(iMin(1)+1)-DustTime(imin(1)))
+       rtime = (CurrentTime - Dusttime(imin(1)))*(HorizontalDustProfile(imin(1) + 1,iLat,iBlock) - &
+            HorizontalDustProfile(imin(1),iLat,iBlock)) * invDDiff
+
+       invDDiff = 1 / &
+            (ConrathTime(cMin(1)+1)-ConrathTime(cmin(1)))
+       conrathrtime = (CurrentTime - Conrathtime(cmin(1)))*&
+            (HorizontalConrathProfile(cmin(1) + 1,iLat,iBlock) - &
+            HorizontalConrathProfile(cmin(1),iLat,iBlock)) * invDDiff
+
+
+       DustDistribution(iLon,iLat,iBlock) = HorizontalDustProfile(imin(1),iLat,iBlock) + rtime
+       ConrathDistribution(iLon,iLat,iBlock) = HorizontalConrathProfile(imin(1),iLat,iBlock) + conrathrtime
+
+       tautot = DustDistribution(ilon,ilat,iblock)
+       conrnu = ConrathDistribution(ilon,ilat,iblock)
+
+    else
+       tautot = tautot_temp
+       conrnu = conrnu_temp
+    endif
+
+write(*,*) tautot,conrnu
+
+      
+    
+    CALL DUSTPROFILE(PLEV(L_LEVELS),PTROP,PLEV,TAUCUM,TAUREF,L_LEVELS,TauTot,ConrNU)
 
 
     !C  Fill QPI with water information
@@ -1681,7 +1731,7 @@ ALTBOUND(0) = altbot
 
   ! ----------------------------------------------------------------------
 
-  subroutine dustprofile(PSF,PTROP,PLEV,TAUCUM,TAUREF,L_LEVELS)
+  subroutine dustprofile(PSF,PTROP,PLEV,TAUCUM,TAUREF,L_LEVELS,TauTot,ConrNU)
 
     !C Bob's updates 9/17/99 
     !C Reference the dust optical depth to PSF (The surface pressure, mbar),
@@ -1699,7 +1749,7 @@ ALTBOUND(0) = altbot
     external JSRCHGT
 
     INTEGER, PARAMETER :: NPDST = 100
-
+    real, INTENT(in) :: tautot,conrnu
     integer :: n, k, nstar,L_LEVELS
     REAL ::  QRDST(NPDST), PRDST(NPDST), TAUDST(NPDST)
     real ::  PSF, PTROP

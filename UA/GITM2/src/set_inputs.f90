@@ -257,6 +257,27 @@ subroutine set_inputs
         case ("#DAMPING")
            call read_in_logical(UseDamping,iError)
 
+        case ("#DUSTDATA")
+           call read_in_logical(UseDustDistribution,iError) 
+           call read_in_string(cDustFile,iError)
+           call read_in_string(cConrathFile,iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #DUSTDATA'
+              write(*,*) '#DUST'
+              write(*,*) 'cDustFile'
+              write(*,*) 'cConrathFile'
+           endif
+
+        case ("#DUST")
+           call read_in_real(tautot_temp,iError)
+           call read_in_real(Conrnu_temp,iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #DUST'
+              write(*,*) '#DUST'
+              write(*,*) 'TauTot'
+              write(*,*) 'Conrnu'
+           endif
+
         case ("#GRAVITYWAVE")
            call read_in_logical(UseGravityWave,iError)
 

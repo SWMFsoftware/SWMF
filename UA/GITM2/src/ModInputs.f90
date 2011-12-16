@@ -230,16 +230,23 @@ module ModInputs
   ! These are Mars Specific, but ignored by other codes:
   ! Some are modified in Planet.f90 (set_planet_defaults)
   real :: DtLTERadiation = 100.0*Rotation_Period
+
+!!!!!!!!!!!!!!! DUST
+Logical :: UseDustDistribution = .False.
 ! Setting the depth to which dust is mixed based on a reference dust opacity
-  real, parameter :: CONRNU = 0.03    ! Standard value  ~25km half-height
-!     real, parameter :: CONRNU = 0.003   ! ~50 km half-height
-!     real, parameter :: CONRNU = 0.5     ! ~10 km half-height
+!This can now be read in as a horizontal distribution, or as a constant value
+!using UAM.in
+  character (len=iCharLen_) :: cDustFile
+  character (len=iCharLen_) :: cConrathFile
+  real :: CONRNU_temp = 0.03    ! Standard value  ~25km half-height
+!     real :: CONRNU = 0.003   ! ~50 km half-height
+!     real  :: CONRNU = 0.5     ! ~10 km half-height
+! Global mean dust opacity
+  real :: TAUTOT_temp  = 0.3 !do not set to 0.0 or less
+!!!!!!!!!!!!!!!!!!!!!!
 
 !   RPTAU   :  Reference Pressure optical depth;  6.1 mbar for now
   real, parameter :: RPTAU  = 6.1
-
-! Global mean dust opacity
-  real, parameter :: TAUTOT  = 0.3 !do not set to 0.0 or less
 
 ! Top of the shortwave calculatin for lower atmosphere radiation code(mbars)
   real, parameter :: PRAD  = 1.0E-5 !0.001
