@@ -914,6 +914,22 @@ contains
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
                // TypeCoronalHeating)
        end select
+    case("#ACTIVEREGIONHEATING")
+       call read_var('UseArComponent', UseArComponent)
+       if(UseArComponent) then
+          call read_var('ArHeatFactorCgs', ArHeatFactorCgs)
+          call read_var('ArHeatB0', ArHeatB0)
+          call read_var('DeltaArHeatB0', DeltaArHeatB0)
+       endif
+    case("#LONGSCALEHEATING")
+       call read_var('DoChHeat', DoChHeat)
+       if(DoChHeat)then
+          call read_var('HeatChCgs', HeatChCgs)
+          call read_var('DecayLengthCh', DecayLengthCh)
+       end if
+    case default
+       call stop_mpi('Read_corona_heating: unknown command = ' &
+            // NameCommand)
     end select
 
   end subroutine read_corona_heating
