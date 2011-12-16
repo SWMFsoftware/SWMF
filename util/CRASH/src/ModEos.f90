@@ -216,7 +216,7 @@ contains
     case("#OPACITYTABLE", "#USEOPACTABLE")
        call read_var('UseOpacityTable', UseTable)
        UseOpacityTable_I(0:nMaterial-1) = UseTable
-    case("#NAMETABLE")
+    case("#MATERIAL")
        call read_name_material
     case default
        call CON_stop(NameSub//' unknown command='//NameCommand)
