@@ -63,9 +63,8 @@ subroutine crcm_run(delta_t)
                  dipmom)
   call timing_stop('crcm_fieldpara')
 
-  if(DoAnisoPressureGMCoupling) &
-       !Minimum B
-       Bmin_C = bo
+  ! get Bmin for anisotropic pressure coupling, needs to be passed to GM
+  if(DoAnisoPressureGMCoupling) Bmin_C = bo
 
   !set boundary density and temperature inside iba
   if (.not. DoMultiFluidGMCoupling) then
@@ -225,28 +224,24 @@ subroutine crcm_run(delta_t)
           0, iComm, iError)
 
      do iSpecies=1,nspec
-        BufferSend_C(:,:)=0.0
         BufferSend_C(:,:)=Pressure_IC(iSpecies,:,:)
         call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
              MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
              0, iComm, iError)
         if (iProc==0) Pressure_IC(iSpecies,:,:)=BufferRecv_C(:,:)
         
-        BufferSend_C(:,:)=0.0
         BufferSend_C(:,:)=phot(iSpecies,:,:)
         call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
              MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
              0, iComm, iError)
         if (iProc==0) phot(iSpecies,:,:)=BufferRecv_C(:,:)
 
-        BufferSend_C(:,:)=0.0
         BufferSend_C(:,:)=Ppar_IC(iSpecies,:,:)
         call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
              MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
              0, iComm, iError)
         if (iProc==0) Ppar_IC(iSpecies,:,:)=BufferRecv_C(:,:)
 
-        BufferSend_C(:,:)=0.0
         BufferSend_C(:,:)=Den_IC(iSpecies,:,:)
         call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
              MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
@@ -254,26 +249,17 @@ subroutine crcm_run(delta_t)
         if (iProc==0) Den_IC(iSpecies,:,:)=BufferRecv_C(:,:)
      enddo
 
-     !call MPI_GATHERV(iba(MinLonPar:MaxLonPar),nLonPar, MPI_INTEGER, &
-     !     iba, iRecieveCount1D_P, iDisplacement1D_P, MPI_INTEGER, &
-     !     0, iComm, iError)
-     
-     
-     do iPe=1,nProc-1
-        !send iba to root proc
-        if (iProc == iPe) then
-           call MPI_send(iba(MinLonPar:MaxLonPar),nLonPar,MPI_INTEGER,0,&
-                1,iComm,iError)
-        endif
-        !recieve at root
-        if (iProc ==0) then
-           iRecvLower=nLonBefore_P(iPe)+1
-           iRecvUpper=nLonBefore_P(iPe)+nLonPar_P(iPe)
-           call MPI_recv(iba(iRecvLower:iRecvUpper),nLonPar_P(iPe),&
-                MPI_INTEGER,iPe,1,iComm,iStatus_I,iError)
-        endif
-     end do
+     call MPI_GATHERV(iba(MinLonPar:MaxLonPar),nLonPar, MPI_INTEGER, &
+          iba, nLonPar_P, nLonBefore_P, MPI_INTEGER, &
+          0, iComm, iError)
+
+     if(DoAnisoPressureGMCoupling) &
+          call MPI_GATHERV(Bmin_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          Bmin_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+          0, iComm, iError)
   endif
+  
+  
   ! On processor O, gather info and save plots
   ! When time to write output, consolodate xo,yo,flux,pot,ftv, bo, and irm 
   ! on iProc 0
@@ -297,24 +283,10 @@ subroutine crcm_run(delta_t)
           bo, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
           0, iComm, iError)
      call MPI_GATHERV(brad(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
-          bo, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+          brad, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
           0, iComm, iError)
-!     call MPI_GATHERV(irm(MinLonPar:MaxLonPar), nLonPar, MPI_INTEGER, &
-!          irm, nLonPar_P, nLonBefore_P, MPI_INTEGER, 0, iComm, iError)
-     do iPe=1,nProc-1
-        !send irm to root proc
-        if (iProc == iPe) then
-           call MPI_send(irm(MinLonPar:MaxLonPar),nLonPar,MPI_INTEGER,0,&
-                2,iComm,iError)
-        endif
-        !recieve at root
-        if (iProc ==0) then
-           iRecvLower=nLonBefore_P(iPe)+1
-           iRecvUpper=nLonBefore_P(iPe)+nLonPar_P(iPe)
-           call MPI_recv(irm(iRecvLower:iRecvUpper),nLonPar_P(iPe),&
-                MPI_INTEGER,iPe,2,iComm,iStatus_I,iError)
-        endif
-     end do
+     call MPI_GATHERV(irm(MinLonPar:MaxLonPar), nLonPar, MPI_INTEGER, &
+          irm, nLonPar_P, nLonBefore_P, MPI_INTEGER, 0, iComm, iError)
   elseif (nProc > 1 .and. DoWriteSats .and. &
        (floor((Time+1.0e-5)/DtSatOut))/=&
        floor((Time+1.0e-5-delta_t)/DtSatOut)) then

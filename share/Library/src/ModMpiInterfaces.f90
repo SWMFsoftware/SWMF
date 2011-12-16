@@ -106,6 +106,7 @@ module ModMPiInterfaces
     mpi_bcast_r2, &
     mpi_bcast_r3, &
     mpi_bcast_r4, &
+    mpi_bcast_r5, &
     mpi_bcast_s0, &
     mpi_bcast_s1, &
     mpi_bcast_l0, &
@@ -1009,6 +1010,19 @@ contains
 
        call mpi_bcast(buffer, count, datatype, root, comm, ierror)
      end subroutine mpi_bcast_r4
+
+
+     subroutine mpi_bcast_r5(buffer, count, datatype, root, comm, ierror) 
+       real, intent(inout) :: buffer(:,:,:,:,:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: root
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_bcast
+
+       call mpi_bcast(buffer, count, datatype, root, comm, ierror)
+     end subroutine mpi_bcast_r5
 
 
      subroutine mpi_bcast_s0(buffer, count, datatype, root, comm, ierror) 

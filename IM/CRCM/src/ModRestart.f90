@@ -19,23 +19,9 @@ contains
 
     integer :: iError,iSend
     !--------------------------------------------------------------------------
-!    if (nProc>1) then
-!       ! When nProc>1, proc0 reads and then bcasts restart infor
-!       if (iProc == 0 ) then
-!          open(unit=UnitTmp_,file='IM/restartIN/data.restart',status='old',form='unformatted')
-!          read(UnitTmp_) f2             
-!          read(UnitTmp_) phot             
-!          read(UnitTmp_) Pressure_IC           
-!          read(UnitTmp_) FAC_C             
-!          close(UnitTmp_)
-!       endif
-!       !Bcast from proc 0 to all procs
-!       call MPI_bcast(f2,nspec*np*nt*nm*nk,MPI_REAL,0,iComm,iError)
-!       call MPI_bcast(phot,nspec*np*nt,MPI_REAL,0,iComm,iError)
-!       call MPI_bcast(Pressure_IC,nspec*np*nt,MPI_REAL,0,iComm,iError)
-!       call MPI_bcast(FAC_C,np*nt,MPI_REAL,0,iComm,iError)
-!    else
-       !when only 1 proc is used then just read restart info
+    !When nProc>1, proc0 reads and then bcasts restart infor
+    !when only 1 proc is used then just read restart info
+    if(iProc == 0)then
        open(unit=UnitTmp_,file='IM/restartIN/data.restart',status='old',form='unformatted')
        read(UnitTmp_) f2  
        read(UnitTmp_) Den_IC
@@ -43,13 +29,23 @@ contains
        read(UnitTmp_) Pressure_IC           
        read(UnitTmp_) FAC_C             
        read(UnitTmp_) iba
-       if(DoAnisoPressureGMCoupling)then
-          read(UnitTmp_) Ppar_IC
-          read(UnitTmp_) Bmin_C
-       end if
+       read(UnitTmp_) Ppar_IC
+       if(DoAnisoPressureGMCoupling) read(UnitTmp_) Bmin_C
        close(UnitTmp_)
-!    endif
+    end if
 
+    if(nProc>1)then
+       !Bcast from proc 0 to all procs
+       call MPI_bcast(f2,nspec*np*nt*nm*nk, MPI_REAL, 0, iComm, iError)
+       call MPI_bcast(Den_IC, nspec*np*nt, MPI_REAL, 0, iComm, iError)
+       call MPI_bcast(phot, nspec*np*nt, MPI_REAL, 0, iComm, iError)
+       call MPI_bcast(Pressure_IC, nspec*np*nt, MPI_REAL, 0, iComm, iError)
+       call MPI_bcast(FAC_C, np*nt, MPI_REAL, 0, iComm, iError)
+       call MPI_bcast(iba, nt, MPI_INTEGER, 0, iComm, iError)
+       call MPI_bcast(Ppar_IC, nspec*np*nt, MPI_REAL, 0, iComm, iError)
+       if(DoAnisoPressureGMCoupling) &
+          call MPI_bcast(Bmin_C, np*nt, MPI_REAL, 0, iComm, iError)
+    endif
 
   end subroutine crcm_read_restart
   
@@ -95,37 +91,42 @@ contains
             FAC_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
             0, iComm, iError)
 
-       !gather pressure and phot
+       !gather density and pressures
        do iSpecies=1,nspec
-          BufferSend_C(:,:)=0.0
+          BufferSend_C(:,:)=Den_IC(iSpecies,:,:)
+          call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
+               MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
+               0, iComm, iError)
+          if (iProc==0) Den_IC(iSpecies,:,:)=BufferRecv_C(:,:)
+
           BufferSend_C(:,:)=Pressure_IC(iSpecies,:,:)
           call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
                MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
                0, iComm, iError)
           if (iProc==0) Pressure_IC(iSpecies,:,:)=BufferRecv_C(:,:)
           
-          BufferSend_C(:,:)=0.0
           BufferSend_C(:,:)=phot(iSpecies,:,:)
           call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
                MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
                0, iComm, iError)
           if (iProc==0) phot(iSpecies,:,:)=BufferRecv_C(:,:)
-       enddo
 
-       ! gather Ppar and Bmin
-       if(DoAnisoPressureGMCoupling)then
-          do iSpecies=1,nspec
-             BufferSend_C(:,:)=0.0
-             BufferSend_C(:,:)=Ppar_IC(iSpecies,:,:)
-             call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
-                  MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
-                  0, iComm, iError)
-             if (iProc==0) Ppar_IC(iSpecies,:,:)=BufferRecv_C(:,:)
-          enddo
-          BufferSend_C(:,:)=0.0
-          BufferSend_C(:,:)=Bmin_C(:,:)
+          BufferSend_C(:,:)=Ppar_IC(iSpecies,:,:)
           call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
                MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
+               0, iComm, iError)
+          if (iProc==0) Ppar_IC(iSpecies,:,:)=BufferRecv_C(:,:)
+       enddo
+
+       !gather iba
+       call MPI_GATHERV(iba(MinLonPar:MaxLonPar), iSendCount, MPI_INTEGER, &
+            iba, nLonPar_P, nLonBefore_P, MPI_INTEGER, 0, iComm, iError)
+
+       !gather Bmin
+       if(DoAnisoPressureGMCoupling)then
+          BufferSend_C(:,:)=Bmin_C(:,:)
+          call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
+               MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P, MPI_REAL, &
                0, iComm, iError)
           if (iProc==0) Bmin_C(:,:)=BufferRecv_C(:,:)
        endif
@@ -139,10 +140,8 @@ contains
        write(UnitTmp_) Pressure_IC
        write(UnitTmp_) FAC_C
        write(UnitTmp_) iba                
-       if(DoAnisoPressureGMCoupling)then
-          write(UnitTmp_) Ppar_IC
-          write(UnitTmp_) Bmin_C
-       end if
+       write(UnitTmp_) Ppar_IC
+       if(DoAnisoPressureGMCoupling) write(UnitTmp_) Bmin_C
        close(UnitTmp_)
 
        open(unit=UnitTmp_,file='IM/restartOUT/restart.H')
