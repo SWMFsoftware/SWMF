@@ -462,7 +462,7 @@ test6_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.GMIEIMCRCM ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
+	cp Param/LAYOUT.in.test.GMIEIMCRCM ${TESTDIR}/LAYOUT.in
 
 test6_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
