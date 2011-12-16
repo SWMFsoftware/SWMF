@@ -75,7 +75,7 @@ T			UseUserICs
 T			UseUserSpecifyRefinement
 T			UseUserLogFiles
 F			UseUserWritePlot
-T			UseUserAMR
+F			UseUserAMR
 F			UseUserEchoInput
 F			UseUserB0
 T			UseUserInitSession
@@ -178,7 +178,7 @@ box_gen			NameArea
 360.0			LonMax
 65.0			LatMax
 
-#GRIDLEVEL
+GRIDLEVEL
 3			nLevelArea
 user			NameArea
 
@@ -196,7 +196,7 @@ T                       DoFixAxis
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
-#AMR
+AMR
 30			DnRefine
 F			DoAutomaticRefinement 
 
@@ -259,20 +259,7 @@ RAW                     StringLogfile
 #END_COMP LC ----------------------------------------------------------------
 
 #STOP
-100			MaxIteration
+200			MaxIteration
 -1.0			tSimulationMax
-
-#RUN ########################################################################
-
-#BEGIN_COMP LC --------------------------------------------------------------
-
-#AMR
--1                      DnRefine
-
-#END_COMP LC -----------------------------------------------------------------
-
-#STOP
-200
--1.0
 
 #END
