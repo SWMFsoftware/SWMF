@@ -196,13 +196,6 @@ T                       DoFixAxis
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
-#AMRCRITERIA
-3                       nRefineCrit (number of refinement criteria: 1,2 or 3)
-geometry                TypeRefine
-Va		        TypeRefine
-flux			TypeRefine
-
-
 #AMR
 30			DnRefine
 F			DoAutomaticRefinement 
