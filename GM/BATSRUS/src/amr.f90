@@ -50,7 +50,7 @@ subroutine amr(DoMessagePass)
      if(DoMessagePass)then
         if(DoProfileAmr) call timing_start('amr::exchange_true')
         call exchange_messages(UseOrder2In= .not.UseBatlTest,&
-             DoResChangeOnlyIn=.true.)
+             DoResChangeOnlyIn=.false.)
         if(DoProfileAmr) call timing_stop('amr::exchange_true')
      end if
      if(automatic_refinement) then
