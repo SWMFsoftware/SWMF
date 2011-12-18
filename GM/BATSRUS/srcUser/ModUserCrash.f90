@@ -2342,9 +2342,9 @@ contains
     use ModPhysics,     ONLY: cRadiationNo, Si2No_V, UnitTemperature_, &
          No2Io_V, UnitX_
     use ModConst,       ONLY: cKevToK, cHPlanckEV
-    use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI
+    use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI, DoAdvectWaves
     use ModIo,          ONLY: restart
-    use CRASH_ModMultiGroup, ONLY: nGroup
+    use CRASH_ModMultiGroup, ONLY: nGroup, IsLogMultiGroupGrid
     use CRASH_ModEos,        ONLY: nMaterialEos, NameMaterial_I 
     use CRASH_ModEosTable,   ONLY: check_eos_table, check_opac_table
 
@@ -2394,6 +2394,10 @@ contains
 
     ! create separate opacity lookup tables for each material
     call check_opac_table(FreqMinSI, FreqMaxSI, iComm = iComm)
+
+    ! The above call sets IsLogMultigroupGrid variable
+    ! If the energy grid is not logarithmic, do not advect waves
+    if(.not.IsLogMultigroupGrid) DoAdvectWaves = .false.
 
     ! these EOS tables (if used) combine multiple materials
     iTablePPerRho   = i_lookup_table('pPerRho(e/rho,rho)')
