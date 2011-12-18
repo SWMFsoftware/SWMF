@@ -38,6 +38,7 @@ module CRASH_ModMultiGroup
   public :: opacys !Calculates opacities
   public :: nGroup, OpacityPlanck_I, OpacityRosseland_I
   public :: set_multigroup
+  logical, public:: IsLogMultiGroupGrid = .true.
 
   !For test:
   public :: PhotonEnergy_I, AbsorptionCoefficient_I, nPhoton, EnergyGroup_I
@@ -292,8 +293,6 @@ contains
 
     real, optional, intent(in):: EnergyEv_I(:) ! Energy limits [eV]
 
-    logical:: IsLogarithmicGrid
-
     real:: eLogMin, eLogMax, eLog
     integer:: iGroup
 
@@ -305,14 +304,14 @@ contains
     if(present(FreqMinSi)) EnergyGroup_I(0)      = FreqMinSI*cHPlanckEv 
     if(present(FreqMaxSi)) EnergyGroup_I(nGroup) = FreqMaxSi*cHPlanckEv
 
-    IsLogarithmicGrid = .true.
+    IsLogMultiGroupGrid = .true.
     if(present(EnergyEv_I))then
        if(size(EnergyEv_I) == 2)then
           EnergyGroup_I(0)      = EnergyEv_I(1)
           EnergyGroup_I(nGroup) = EnergyEv_I(2)
        else if(size(EnergyEv_I) == nGroup + 1)then
           EnergyGroup_I(0:nGroup) = EnergyEv_I
-          IsLogarithmicGrid = .false.
+          IsLogMultiGroupGrid = .false.
        else
           write(*,*) NameSub//' ERROR: size(EnergyEv_I), nGroup=', &
                size(EnergyEv_I), nGroup
@@ -321,7 +320,7 @@ contains
        end if
     end if
 
-    if(IsLogarithmicGrid .and. nGroup > 1)then
+    if(IsLogMultiGroupGrid .and. nGroup > 1)then
 
        ! Create a logarithmic energy grid
        !eRatio = (EnergyGroup_I(nGroup)/EnergyGroup_I(0))**(1.0/nGroup)
