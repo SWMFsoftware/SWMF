@@ -167,6 +167,7 @@ contains
     do iBlock = 1, nBlock
        if (unusedBLK(iBlock)) CYCLE
 
+!!! If the following is always performed, then the CRASHTEST works as before
        if(.not.DoResChangeOnly) then
           if (far_field_BCs_BLK(iBlock)) &
                call set_outer_BCs(iBlock,time_simulation,.false.) 
