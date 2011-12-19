@@ -24,6 +24,7 @@ contains
     use ModEnergy,   ONLY: calc_energy_ghost, correctP
 
     use BATL_lib, ONLY: message_pass_cell
+    use ModParallel, ONLY: BLKneighborLEV ! we should use BATL:DiNeiLevel_IIIB
     use ModBatlInterface, ONLY: UseBatlTest
     use ModAMR, ONLY: DoProfileAmr
     use ModMpi
@@ -164,11 +165,14 @@ contains
 
     if(DoProfileAmr) call timing_start('E and P')
 
+    ! The corner ghost cells outside the domain can get updated
+    ! from the neighboring block. The outer boundary condition
+    ! has to be reapplied.
     do iBlock = 1, nBlock
        if (unusedBLK(iBlock)) CYCLE
 
-!!! If the following is always performed, then the CRASHTEST works as before
-       if(.not.DoResChangeOnly) then
+       if(.not.DoResChangeOnly &
+            .or. any(BLKneighborLEV(:,:,:,iBlock) == 1)) then
           if (far_field_BCs_BLK(iBlock)) &
                call set_outer_BCs(iBlock,time_simulation,.false.) 
           if(time_loop.and. any(TypeBc_I=='buffergrid'))&
