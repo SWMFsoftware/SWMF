@@ -40,19 +40,25 @@ my $ModPlanet = "ModPlanet.f90";
 my $Planet;
 my $PlanetOrig;
 
+my $NoFlush;
+
 &get_settings;
 
 $Planet = "Earth" if $Install; # Default planet
+$NoFlush = 0;
 
 foreach (@Arguments){
     if(/^-LV-426$/i)          {$Planet="LV-426";               next};
     if(/^-Titan$/i)           {$Planet="Titan";                next};
     if(/^-mars$/i)            {$Planet="Mars";                 next};
     if(/^-earth$/i)           {$Planet="Earth";                next};
+    if(/^-noflush$/i)         {$NoFlush=1     ;                next};
     if(/^-s$/)                {$Show=1;                        next};
 
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
+
+&modify_utilities if $NoFlush;
 
 &install_code if $Install;
 
@@ -65,6 +71,43 @@ foreach (@Arguments){
 print "Config.pl -g=$GridSize\n" if $ShowGridSize and not $Show;
 
 exit 0;
+
+############################################################################
+sub modify_utilities{
+
+    my $IsDone;
+    my $DoWrite;
+    my $line;
+
+    print "Altering ModUtilities.f90!\n";
+
+    system "mv share/Library/src/ModUtilities.F90 share/Library/src/ModUtilities.orig.F90";
+
+    open(OUTFILE,">share/Library/src/ModUtilities.f90");
+    open(INFILE, "<share/Library/src/ModUtilities.orig.F90");
+
+    while(<INFILE>) {
+
+	if (/subroutine flush_unit/) {
+	    print OUTFILE $_;
+	    $IsDone = 0;
+	    $DoWrite = 1;
+	    while (!$IsDone) {
+		$line = <INFILE>;
+		$DoWrite = 0 if ($line =~ /ifdef/);
+		print OUTFILE $line if ($DoWrite);
+		$DoWrite = 1 if ($line =~ /endif/);
+		$IsDone = 1 if ($line =~ /end subroutine/);
+	    }
+	} else {
+	    print OUTFILE $_;
+	}
+    }
+
+    close(OUTFILE);
+    close(INFILE);
+
+}
 
 ############################################################################
 sub get_settings{
