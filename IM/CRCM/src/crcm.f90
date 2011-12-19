@@ -34,6 +34,7 @@ subroutine crcm_run(delta_t)
   integer ::iSendCount,iM,iK,iLon1,iError,iEnergy,iPit,iRecvLower,iRecvUpper,iPe
   integer,allocatable :: iRecieveCount_P(:),iDisplacement_P(:)
   real :: BufferSend_C(np,nt),BufferRecv_C(np,nt)
+  integer :: BufferSend_I(nt),BufferRecv_I(nt)
   integer,allocatable :: iBufferSend_I(:),iBufferRecv_I(:)
   integer :: iStatus_I(MPI_STATUS_SIZE)
 
@@ -212,16 +213,18 @@ subroutine crcm_run(delta_t)
   call timing_stop('crcm_output')
   
   ! When nProc >1 consolodate: phot, Ppar_IC, Pressure_IC, fac and iba on iProc 0
-    if (nProc>1) then    
+  if (nProc>1) then    
      if (.not.allocated(iRecieveCount_P)) &
           allocate(iRecieveCount_P(nProc), iDisplacement_P(nProc))       
      !Gather to root
      iSendCount = np*nLonPar
      iRecieveCount_P=np*nLonPar_P
      iDisplacement_P = np*nLonBefore_P
-     call MPI_GATHERV(FAC_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
-          FAC_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+     BufferSend_C(:,:) = FAC_C(:,:) 
+     call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
           0, iComm, iError)
+     if (iProc==0) FAC_C(:,:)=BufferRecv_C(:,:)
 
      do iSpecies=1,nspec
         BufferSend_C(:,:)=Pressure_IC(iSpecies,:,:)
@@ -229,7 +232,7 @@ subroutine crcm_run(delta_t)
              MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
              0, iComm, iError)
         if (iProc==0) Pressure_IC(iSpecies,:,:)=BufferRecv_C(:,:)
-        
+
         BufferSend_C(:,:)=phot(iSpecies,:,:)
         call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
              MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
@@ -249,16 +252,21 @@ subroutine crcm_run(delta_t)
         if (iProc==0) Den_IC(iSpecies,:,:)=BufferRecv_C(:,:)
      enddo
 
-     call MPI_GATHERV(iba(MinLonPar:MaxLonPar),nLonPar, MPI_INTEGER, &
-          iba, nLonPar_P, nLonBefore_P, MPI_INTEGER, &
+     BufferSend_I(:) = iba(:)
+     call MPI_GATHERV(BufferSend_I(MinLonPar:MaxLonPar),nLonPar, MPI_INTEGER, &
+          BufferRecv_I, nLonPar_P, nLonBefore_P, MPI_INTEGER, &
           0, iComm, iError)
+     if (iProc==0) iba(:)=BufferRecv_I(:)
 
-     if(DoAnisoPressureGMCoupling) &
-          call MPI_GATHERV(Bmin_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
-          Bmin_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
-          0, iComm, iError)
+     if(DoAnisoPressureGMCoupling)then
+        BufferSend_C(:,:) = Bmin_C(:,:)
+        call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+             BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+             0, iComm, iError)
+        if (iProc==0) Bmin_C(:,:)=BufferRecv_C(:,:)
+     end if
+
   endif
-  
   
   ! On processor O, gather info and save plots
   ! When time to write output, consolodate xo,yo,flux,pot,ftv, bo, and irm 
@@ -270,29 +278,44 @@ subroutine crcm_run(delta_t)
 !     call MPI_GATHERV(pot(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
 !          pot, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
 !          0, iComm, iError)
-     call MPI_GATHERV(ftv(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
-          ftv, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+
+     BufferSend_C(:,:)=ftv(:,:)
+     call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
           0, iComm, iError)
-     call MPI_GATHERV(xo(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
-          xo, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+     if (iProc==0) ftv(:,:)=BufferRecv_C(:,:)
+     BufferSend_C(:,:)=xo(:,:)
+     call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
           0, iComm, iError)
-     call MPI_GATHERV(yo(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
-          yo, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+     if (iProc==0) xo(:,:)=BufferRecv_C(:,:)
+     BufferSend_C(:,:)=yo(:,:)
+     call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
           0, iComm, iError)
-     call MPI_GATHERV(bo(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
-          bo, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+     if (iProc==0) yo(:,:)=BufferRecv_C(:,:)
+     BufferSend_C(:,:)=bo(:,:)
+     call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
           0, iComm, iError)
-     call MPI_GATHERV(brad(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
-          brad, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+     if (iProc==0) bo(:,:)=BufferRecv_C(:,:)
+     BufferSend_C(:,:)=brad(:,:)
+     call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
           0, iComm, iError)
-     call MPI_GATHERV(irm(MinLonPar:MaxLonPar), nLonPar, MPI_INTEGER, &
-          irm, nLonPar_P, nLonBefore_P, MPI_INTEGER, 0, iComm, iError)
+     if (iProc==0) brad(:,:)=BufferRecv_C(:,:)
+     BufferSend_I(:)=irm(:)
+     call MPI_GATHERV(BufferSend_I(MinLonPar:MaxLonPar), nLonPar, MPI_INTEGER, &
+          BufferRecv_I, nLonPar_P, nLonBefore_P, MPI_INTEGER, 0, iComm, iError)
+     if (iProc==0) irm(:)=BufferRecv_I(:)
   elseif (nProc > 1 .and. DoWriteSats .and. &
        (floor((Time+1.0e-5)/DtSatOut))/=&
        floor((Time+1.0e-5-delta_t)/DtSatOut)) then
-     call MPI_GATHERV(bo(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
-          bo, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+     BufferSend_C(:,:)=bo(:,:)
+     call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
           0, iComm, iError)     
+     if (iProc==0) bo(:,:)=BufferRecv_C(:,:)
   endif
 
 

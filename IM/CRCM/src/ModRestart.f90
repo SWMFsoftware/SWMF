@@ -63,6 +63,7 @@ contains
 
     integer ::iSendCount, iSpecies, iM, iK, iError
     real :: BufferSend_C(np,nt),BufferRecv_C(np,nt)
+    integer :: BufferSend_I(nt),BufferRecv_I(nt)
     integer,allocatable :: iRecieveCount_P(:),iDisplacement_P(:)
     !--------------------------------------------------------------------------
 
@@ -87,9 +88,11 @@ contains
        enddo
        
        !gather FAC
-       call MPI_GATHERV(FAC_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
-            FAC_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+       BufferSend_C(:,:)=FAC_C(:,:)
+       call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+            BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
             0, iComm, iError)
+       if (iProc==0) FAC_C(:,:)=BufferRecv_C(:,:)
 
        !gather density and pressures
        do iSpecies=1,nspec
@@ -119,8 +122,10 @@ contains
        enddo
 
        !gather iba
-       call MPI_GATHERV(iba(MinLonPar:MaxLonPar), iSendCount, MPI_INTEGER, &
-            iba, nLonPar_P, nLonBefore_P, MPI_INTEGER, 0, iComm, iError)
+       BufferSend_I(:)=iba(:)
+       call MPI_GATHERV(BufferSend_I(MinLonPar:MaxLonPar), nLonPar, MPI_INTEGER, &
+            BufferRecv_I, nLonPar_P, nLonBefore_P, MPI_INTEGER, 0, iComm, iError)
+       if (iProc==0) iba(:)=BufferRecv_I(:)
 
        !gather Bmin
        if(DoAnisoPressureGMCoupling)then
