@@ -759,8 +759,8 @@ subroutine BATS_amr_refinement
 
   if(UseConstrainB)call b_face_fine_pass     !^CFG IF CONSTRAINB
 
-  ! Do AMR with message passing
-  call amr(.true.)
+  ! Do AMR without full initial message passing
+  call amr(.false.)
 
   !^CFG IF CONSTRAINB BEGIN
   if(UseConstrainB)then

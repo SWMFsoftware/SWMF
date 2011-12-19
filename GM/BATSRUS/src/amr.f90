@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-subroutine amr(DoMessagePass)
+subroutine amr(DoFullMessagePass)
   use ModProcMH
   use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,MaxBlock,&
        unusedBLK,lVerbose,UseB,UseB0, UseBatl, Dt_BLK, nTrueCellsALL, &
@@ -23,7 +23,7 @@ subroutine amr(DoMessagePass)
 
   implicit none
 
-  logical, intent(in) :: DoMessagePass
+  logical, intent(in) :: DoFullMessagePass
 
   logical:: IsFound
   real :: UserCriteria
@@ -47,12 +47,11 @@ subroutine amr(DoMessagePass)
 
      if(DoTestMe)write(*,*)NameSub,' starts 2nd order accurate message passing'
 
-     if(DoMessagePass)then
-        if(DoProfileAmr) call timing_start('amr::exchange_true')
-        call exchange_messages(UseOrder2In= .not.UseBatlTest,&
-             DoResChangeOnlyIn=.false.)
-        if(DoProfileAmr) call timing_stop('amr::exchange_true')
-     end if
+     if(DoProfileAmr) call timing_start('amr::exchange_true')
+     call exchange_messages(UseOrder2In= .not.UseBatlTest,&
+          DoResChangeOnlyIn=.not.DoFullMessagePass)
+     if(DoProfileAmr) call timing_stop('amr::exchange_true')
+
      if(automatic_refinement) then
 
         if(nRefineCrit > 0)then
@@ -92,13 +91,9 @@ subroutine amr(DoMessagePass)
      ! If the grid has not changed only the message passing has to be redone
      ! to reset ghost cells at resolution changes
      if(iNewGrid==iLastGrid .and. iNewDecomposition==iLastDecomposition) then
-        if(DoMessagePass)then
-           if(DoProfileAmr) call timing_start('amr::exchange_noamr')
-           call exchange_messages(&
-                DoResChangeOnlyIn=.true. ,&
-                UseOrder2In=.false.)
-           if(DoProfileAmr) call timing_stop('amr::exchange_noamr')
-        end if
+        if(DoProfileAmr) call timing_start('amr::exchange_noamr')
+        call exchange_messages(DoResChangeOnlyIn=.true., UseOrder2In=.false.)
+        if(DoProfileAmr) call timing_stop('amr::exchange_noamr')
         RETURN
      end if
 
@@ -134,17 +129,15 @@ subroutine amr(DoMessagePass)
      call set_batsrus_state
      if(DoProfileAmr) call timing_stop('amr::set_batsrus_state')
 
-     if(DoMessagePass)then
-        ! Update iTypeAdvance, and redo load balancing if necessary
-        ! Load balance: move coords, data, and there are new blocks
-        if(DoProfileAmr) call timing_start('amr::load_balance')
-        call load_balance(.true.,.true.,.true.)
-        if(DoProfileAmr) call timing_stop('amr::load_balance')
-        ! redo message passing
-        if(DoProfileAmr) call timing_start('amr::exchange_false')
-        call exchange_messages(UseOrder2In=.false.)
-        if(DoProfileAmr) call timing_stop('amr::exchange_false')
-     end if
+     ! Update iTypeAdvance, and redo load balancing if necessary
+     ! Load balance: move coords, data, and there are new blocks
+     if(DoProfileAmr) call timing_start('amr::load_balance')
+     call load_balance(.true.,.true.,.true.)
+     if(DoProfileAmr) call timing_stop('amr::load_balance')
+     ! redo message passing
+     if(DoProfileAmr) call timing_start('amr::exchange_false')
+     call exchange_messages(UseOrder2In=.false.)
+     if(DoProfileAmr) call timing_stop('amr::exchange_false')
 
      if(UseB0)then
         ! Correct B0 face at newly created and removed resolution changes
