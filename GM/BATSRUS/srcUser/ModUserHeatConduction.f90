@@ -1181,6 +1181,8 @@ contains
     if(present(NatomicOut)) NatomicOut = State_V(Rho_)*No2Si_V(UnitN_)
     if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = 0.0
     if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W = 1e16
+    if(present(PlanckOut_W)) &
+         PlanckOut_W = cRadiationNo*Te**4*No2Si_V(UnitEnergyDens_)
 
   end subroutine user_material_properties
 
