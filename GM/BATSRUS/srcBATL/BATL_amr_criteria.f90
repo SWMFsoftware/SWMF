@@ -634,7 +634,9 @@ contains
     ! Calculate error estimates (1..nIntCrit)
     BLOCK: do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       if(.not.DoAmr_B(iBlock)) CYCLE
+       if(UseAmrMask)then
+          if(.not.DoAmr_B(iBlock)) CYCLE
+       end if
 
        ! Check refinement first
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1046,7 +1048,7 @@ contains
        Xyz_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
        do iAmrBox=1,nAmrBox 
           if(all(Xyz_D > AmrBox_DII(1:nDim,1,iAmrBox)) .and. &
-               all(Xyz_D < AmrBox_DII(:,2,iAmrBox))) then
+               all(Xyz_D < AmrBox_DII(1:nDim,2,iAmrBox))) then
              DoAmr_GB(i,j,k,iBlock) = .true.
              DoAmr_B(iBlock) = .true.
              CYCLE BLOCK4
