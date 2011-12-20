@@ -498,6 +498,8 @@ contains
        nProc = 1
     end if
 
+    if(iProc == 0)write(*,*)NameSub,' is creating table ',Ptr%NameTable
+
     ! Allocate Value_VII array
     if(allocated(Ptr%Value_VII)) deallocate(Ptr%Value_VII)
     allocate(Value_VII(nValue, n1, n2), Ptr%Value_VII(nValue, n1, n2))
