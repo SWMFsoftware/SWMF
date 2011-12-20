@@ -165,16 +165,16 @@ contains
 
     if(DoProfileAmr) call timing_start('E and P')
 
-    ! The corner ghost cells outside the domain can get updated
-    ! from the neighboring block. The outer boundary condition
-    ! has to be reapplied.
     do iBlock = 1, nBlock
        if (unusedBLK(iBlock)) CYCLE
 
+       ! The corner ghost cells outside the domain are updated
+       ! from the ghost cells inside the domain, so the outer 
+       ! boundary condition have to be reapplied.
        if(.not.DoResChangeOnly &
-            .or. any(BLKneighborLEV(:,:,:,iBlock) == 1)) then
+            .or. any(abs(BLKneighborLEV(:,:,:,iBlock)) == 1) )then
           if (far_field_BCs_BLK(iBlock)) &
-               call set_outer_BCs(iBlock,time_simulation,.false.) 
+               call set_outer_BCs(iBlock, time_simulation, .false.) 
           if(time_loop.and. any(TypeBc_I=='buffergrid'))&
                call fill_in_from_buffer(iBlock)
        end if
