@@ -30,6 +30,9 @@ LIB:
 TESTDIR = run_test
 
 test:
+	echo "There is no test for CRCM"
+
+test_to_do:
 	@echo "test_compile..." > test.diff
 	make   test_compile
 	@echo "test_rundir..." >> test.diff
@@ -38,7 +41,6 @@ test:
 	make   test_run
 	@echo "test_check..."  >> test.diff
 	make   test_check
-
 
 test_compile:
 	make CRCM
@@ -49,17 +51,15 @@ test_rundir:
 
 test_run:
 	cd ${TESTDIR}; ./crcm.exe > runlog 
-#v10 > runlog
-
 
 test_check:
-#	gunzip -c data/output/2002f296_e.fls.standalone.gz \
-#		> ${TESTDIR}/RB/2002f296_e.fls.ref
-#	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
-#		${TESTDIR}/RB/plots/2002f296_e.fls \
-#		${TESTDIR}/RB/2002f296_e.fls.ref \
-#		> test.diff
-#	ls -l test.diff
+	gunzip -c data/output/2002f296_e.fls.standalone.gz \
+		> ${TESTDIR}/RB/2002f296_e.fls.ref
+	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+		${TESTDIR}/RB/plots/2002f296_e.fls \
+		${TESTDIR}/RB/2002f296_e.fls.ref \
+		> test.diff
+	ls -l test.diff
 
 clean:
 	@touch ${INSTALLFILES}
