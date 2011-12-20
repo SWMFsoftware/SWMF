@@ -8,11 +8,9 @@ MY_LIB = ${LIBDIR}/libINDICES.a
 include Makefile.DEPEND
 #include Makefile.RULES
 
-MODULES = \
-	ModIndicesInterfaces.o\
-	ModIndices.o
-
 OBJECTS = \
+	ModIndicesInterfaces.o\
+	ModIndices.o\
 	read_NGDC_indices.o\
 	read_SWPC_indices.o\
 	read_NOAAHPI_indices.o\
@@ -24,7 +22,7 @@ OBJECTS = \
 	IO_set_inputs.o
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl -I${SHAREDIR} ${MODULES}
+	@perl ${SCRIPTDIR}/depend.pl -I${SHAREDIR} ${OBJECTS}
 
 LIB:    DEPEND
 	make ${MY_LIB}
@@ -32,9 +30,9 @@ LIB:    DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${MODULES} ${OBJECTS}
+${MY_LIB}: ${OBJECTS}
 	rm -f ${MY_LIB}
-	${AR} ${MY_LIB} ${MODULES} ${OBJECTS}
+	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean
 	rm -f Makefile.DEPEND
