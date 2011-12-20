@@ -265,19 +265,24 @@ contains
             nPoint, nPointOut
        call CON_stop(NameSub//' ERROR: incorrect array size')
     end if
-
     if(present(DoSort))then
        if(DoSort)then
           allocate(iSorted_I(nPoint))
+          ! sort by line index (0) and then by length along line (1)
           Factor = 0.9/maxval(State_VI(1,1:nPoint))
           call sort_quick(nPoint, &
                State_VI(0,1:nPoint) + Factor*State_VI(1,1:nPoint), iSorted_I)
-          State_VI(:,1:nPoint) = State_VI(:,iSorted_I)
+          ! Apply sorting
+          Line_VI(:,1:nPoint) = State_VI(:,iSorted_I)
+          ! Copy back into State_VI so the sorting can be avoided next time.
+          State_VI(:,1:nPoint)= Line_VI(:,1:nPoint)
           deallocate(iSorted_I)
+       else
+          Line_VI(:,1:nPoint) = State_VI(:,1:nPoint)
        end if
+    else
+       Line_VI(:,1:nPoint) = State_VI(:,1:nPoint)
     end if
-
-    Line_VI(:,1:nPoint) = State_VI(:,1:nPoint)
 
     nPoint = 0
        
@@ -373,9 +378,9 @@ contains
           else
              Index = 2.0
           end if
-          if(State_VI(0,iPoint) /= Index) &
+          if(Result_VI(0,iPoint) /= Index) &
                write(*,*)NameSub,' line_get failed at iPoint=',iPoint, &
-               ' Index=',State_VI(0,iPoint),' should be ',Index
+               ' Index=',Result_VI(0,iPoint),' should be ',Index
 
           ! Test length
           if(Index == 1.0)then
@@ -383,9 +388,9 @@ contains
           else
              Length = 2.0*(iPoint - 2*nProc - 1)
           end if
-          if(State_VI(1,iPoint) /= real(Length)) &
+          if(Result_VI(1,iPoint) /= real(Length)) &
                write(*,*)NameSub,' line_get failed at iPoint=',iPoint, &
-               ' Length=',State_VI(1,iPoint),' should be ',Length
+               ' Length=',Result_VI(1,iPoint),' should be ',Length
 
           ! Test rest of the variables
           if(Index == 1.0)then
@@ -399,9 +404,9 @@ contains
              iProcFrom = nint(Length / 2.0)
              State_V =    (/70.0+iProcFrom, 80.0+iProcFrom, 90.0+iProcFrom/)
           end if
-          if(any(State_VI(2:nVar,iPoint) /= State_V)) &
+          if(any(Result_VI(2:nVar,iPoint) /= State_V)) &
                write(*,*)NameSub,' line_get failed at iPoint=',iPoint, &
-               ' State = ',State_VI(2:nVar,iPoint),' should be ',State_V
+               ' State = ',Result_VI(2:nVar,iPoint),' should be ',State_V
 
        end do
     end if
