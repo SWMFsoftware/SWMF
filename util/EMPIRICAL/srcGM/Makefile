@@ -5,18 +5,10 @@ include ../../../Makefile.conf
 
 MY_LIB = ${LIBDIR}/libEMPIRICALGM.a
 
-#include Makefile.DEPEND
 #include Makefile.RULES
 
 OBJECTS = \
         ModTsyganenko.o
-
-#	t96_01.o\
-#	t04_s.o
-
-
-#DEPEND:
-#	@perl ${SCRIPTDIR}/depend.pl -I${SHAREDIR} ${MODULES}
 
 .f.o:
 	${COMPILE.f77} ${CFLAGS} ${PRECISION} $<
@@ -27,9 +19,8 @@ LIB:
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${MODULES} ${OBJECTS}
+${MY_LIB}: ${OBJECTS}
 	rm -f ${MY_LIB}
-	${AR} ${MY_LIB} ${MODULES} ${OBJECTS}
+	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean
-	rm -f Makefile.DEPEND
