@@ -131,11 +131,11 @@ contains
     integer, optional, intent(in) :: nCoarseLayerIn
     logical, optional, intent(in) :: DoSendCornerIn
     logical, optional, intent(in) :: DoRestrictFaceIn
-    logical, optional, intent(in) :: DoTestIn
     logical, optional, intent(in) :: DoResChangeOnlyIn
+    character(len=*), optional,intent(in) :: NameOperatorIn
     real,    optional, intent(in) :: TimeOld_B(MaxBlock)
     real,    optional, intent(in) :: Time_B(MaxBlock)
-    character(len=*), optional,intent(in) :: NameOperatorIn
+    logical, optional, intent(in) :: DoTestIn
 
     ! Fill in the nVar variables in the ghost cells of State_VGB.
     !
@@ -149,29 +149,36 @@ contains
     ! DoRestrictFaceIn determines if restriction is applied to a single layer
     !     of ghost cells instead of two layers. Default is false.
     !     Only works with first order prolongation.
+    ! DoResChangeOnlyIn determines if only ghost cells next to resolution
+    !    changes are filled in.
+    ! NameOperatorIn is used for the minimum or the maximum at the fine
+    !    Grid to the course grid cell. If not given the average will be used
     ! TimeOld_B and Time_B are the simulation times associated with the
     !    ghost cells and physical cells of State_VGB, respectively. 
     !    If these arguments are present, the ghost cells are interpolated 
     !    in time. Default is a simple update with no temporal interpolation.
-    ! NameOperatorIn is used for the minimum or the maximum at the fine
-    !    Grid to the course grid cell. If not given the average will be used
+    ! DoTestIn determines if verbose information should be printed
 
     ! Local variables
 
     logical, parameter :: UseRSend = .false.
 
+    ! local variables corresponding to optional arguments
     integer :: nWidth
     integer :: nCoarseLayer
     integer :: nProlongOrder
     logical :: DoSendCorner
     logical :: DoRestrictFace
-    logical :: UseTime        ! use time interpolation/extrapolation
+    logical :: DoResChangeOnly
+    character(len=4) :: NameOperator
+    logical:: UseMin, UseMax  ! logicals for min and max operators
+    logical :: UseTime        ! true if Time_B and TimeOld_B are present
+    logical :: DoTest
 
+    ! Various indexes
     integer :: iProlongStage  ! index for 2 stage scheme for 2nd order prolong
     integer :: iCountOnly     ! index for 2 stage scheme for count, sendrecv
     logical :: DoCountOnly    ! logical for count vs. sendrecv stages
-    logical :: DoResChangeOnly ! only exchange messenges where ther is a chenge in 
-                               ! resolution, default .false. 
 
     integer :: iSend, jSend, kSend, iRecv, jRecv, kRecv, iSide, jSide, kSide
     integer :: iDir, jDir, kDir
@@ -202,12 +209,10 @@ contains
     integer, allocatable, save:: iRequestR_I(:), iRequestS_I(:), &
          iStatus_II(:,:)
 
+    ! Slopes for 2nd order prolongation
     real, allocatable:: Slope_VG(:,:,:,:)
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATL_pass_cell::message_pass_cell'
-    logical:: UseMin, UseMax
-    character(len=4) :: NameOperator
     !--------------------------------------------------------------------------
     DoTest = .false.; if(present(DoTestIn)) DoTest = DoTestIn
     if(DoTest)write(*,*)NameSub,' starting with nVar=',nVar
@@ -234,7 +239,6 @@ contains
 
     DoResChangeOnly =.false.
     if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
-
 
     ! Check arguments for consistency
     if(nProlongOrder == 2 .and. DoRestrictFace) call CON_stop(NameSub// &
@@ -270,6 +274,11 @@ contains
        call CON_stop(NameSub// &
             ': Time_B can not be used with '//trim(NameOperator))
     end if
+
+    if(DoTest)write(*,*) NameSub, &
+         ': Width, Prolong, Coarse, Corner, RestrictFace, ResChangeOnly=', &
+         nWidth, nProlongOrder, nCoarseLayer, DoSendCorner, &
+         DoRestrictFace, DoResChangeOnly
 
     ! Initialize logical for time interpolation/extrapolation
     UseTime = .false.
@@ -387,18 +396,12 @@ contains
 
        call timing_start('recv_pass')
 
-       !write(*,*)'!!! iProc, total recv, send buffer=', &
-       !     iProc,sum(nBufferR_P), sum(nBufferS_P)
-
        ! post requests
        iRequestR = 0
        iBufferR  = 1
        do iProcSend = 0, nProc - 1
           if(nBufferR_P(iProcSend) == 0) CYCLE
           iRequestR = iRequestR + 1
-
-          !write(*,*)'!!! MPI_irecv:iProcRecv,iProcSend,nBufferR=',&
-          !     iProc,iProcSend,nBufferR_P(iProcSend)
 
           call MPI_irecv(BufferR_I(iBufferR), nBufferR_P(iProcSend), &
                MPI_REAL, iProcSend, 1, iComm, iRequestR_I(iRequestR), &
@@ -423,9 +426,6 @@ contains
        do iProcRecv = 0, nProc-1
           if(nBufferS_P(iProcRecv) == 0) CYCLE
           iRequestS = iRequestS + 1
-
-          !write(*,*)'!!! MPI_isend:iProcRecv,iProcSend,nBufferS=',&
-          !     iProcRecv,iProc,nBufferS_P(iProcRecv)
 
           if(UseRSend)then
              call MPI_rsend(BufferS_I(iBufferS), nBufferS_P(iProcRecv), &
