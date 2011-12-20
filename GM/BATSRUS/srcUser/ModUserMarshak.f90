@@ -324,6 +324,9 @@ contains
     if(present(OpacityRosselandOut_W)) &
          OpacityRosselandOut_W = SpecificOpacity*Rho/No2Si_V(UnitX_)
 
+    if(present(PlanckOut_W)) &
+         PlanckOut_W = cRadiationNo*Temperature**4*No2Si_V(UnitEnergyDens_)
+
     if(present(HeatCondOut)) HeatCondOut = 0.0
     if(present(TeTiRelaxOut)) TeTiRelaxOut = 0.0
 

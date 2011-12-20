@@ -504,7 +504,7 @@ contains
 
     use ModAdvance,    ONLY: nWave
     use ModConst,      ONLY: cLightSpeed
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, &
+    use ModPhysics,    ONLY: cRadiationNo, No2Si_V, Si2No_V, &
          UnitTemperature_, UnitEnergyDens_, UnitT_, UnitU_, UnitX_, UnitP_
     use ModVarIndexes, ONLY: nVar, Rho_, p_
 
@@ -570,6 +570,9 @@ contains
 
     if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W = &
          cLightSpeed/(3.0*DiffusionRad*No2Si_V(UnitU_)*No2Si_V(UnitX_))
+
+    if(present(PlanckOut_W)) &
+         PlanckOut_W = cRadiationNo*Temperature**4*No2Si_V(UnitEnergyDens_)
 
     if(present(HeatCondOut)) HeatCondOut = 0.0
     if(present(TeTiRelaxOut)) TeTiRelaxOut = 0.0
