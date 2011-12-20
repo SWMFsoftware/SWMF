@@ -16,9 +16,9 @@ LIB:
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}:  ${MODULES}  ${OBJECTS}
+${MY_LIB}:  ${OBJECTS}
 	rm -f ${MY_LIB}
-	${AR} ${MY_LIB} ${OBJECTS} ${MODULES}
+	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean
 
