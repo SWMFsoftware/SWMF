@@ -17,6 +17,7 @@ module ModResistivity
   public:: init_mod_resistivity
   public:: spitzer_resistivity
   public:: anomalous_resistivity
+  public:: raeder_resistivity
   public:: mask_resistivity
   public:: calc_resistivity_source
   public:: get_impl_resistivity_state
