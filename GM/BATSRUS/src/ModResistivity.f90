@@ -40,6 +40,8 @@ module ModResistivity
   real               :: EtaMaxAnomSi=0.0, EtaMaxAnom
   real               :: jCritAnomSi=1.0, jCritInv
   real               :: Si2NoEta
+  real               :: EtaCoeff = 0.0
+  real               :: jInvbCrit = 0.0
 
   real:: rZeroResist = -1.0
   real:: rFullResist = 1e30
@@ -86,6 +88,9 @@ contains
              call read_var('Eta0AnomSi',   Eta0AnomSi)
              call read_var('EtaMaxAnomSi', EtaMaxAnomSi)
              call read_var('jCritAnomSi',  jCritAnomSi)
+          case('raeder')
+             call read_var('EtaCoeff', EtaCoeff)
+             call read_var('jInvbCrit', jInvbCrit)
           case default
              call stop_mpi(NameSub//': unknown TypeResistivity='&
                   //TypeResistivity)
@@ -270,6 +275,50 @@ contains
     end do; end do; end do
 
   end subroutine mask_resistivity
+
+  !===========================================================================
+  subroutine raeder_resistivity(iBlock, Eta_G)
+
+    ! Compute resistivity based on Raeder's formula
+    ! Eta = Alpha * j'^2    j' = |j|*gridspacing/(|B| + epsilon)
+    ! Eta = 0 if j' < jInvbCrit
+
+    use ModCurrent,  ONLY: get_current
+    use ModAdvance,  ONLY: State_VGB, B0_DGB
+    use ModVarIndexes, ONLY: Bx_, Bz_
+    !use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
+    use ModMain, ONLY: UseB0
+
+    integer, intent(in) :: iBlock
+    real,    intent(out):: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+
+    real :: Current_D(3), AbsJ, AbsB, JInvB, b_D(3)
+    integer :: i, j, k, l, m, n
+    !---------------------------------------------------------------------------
+    ! Compute |J| and |B|
+    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1;
+       call get_current(i,j,k,iBlock,Current_D)
+       AbsJ = sqrt(sum(current_D**2))
+       ! Calculate AbsB from the average of 26 neighboring cells and itself
+        AbsB = 0.0
+       do l=-1,1; do m=-1,1; do n=-1,1;
+          b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+          AbsB = AbsB + sqrt(sum(b_D**2))
+       end do; end do; end do
+       AbsB = AbsB/27.0  
+       ! Make J/B dimensionless by multiplying length scale 1Re
+       JInvB = min(AbsJ*1.0/(AbsB + 1e-8), 1.0) 
+
+       ! Compute reader resistivity
+       if(JInvB >= jInvbCrit)then
+          Eta_G(i,j,k) = EtaCoeff*(JInvB**2) 
+       else
+          Eta_G(i,j,k) = 0.0
+       end if
+    end do; end do; end do
+
+  end subroutine raeder_resistivity
 
   !===========================================================================
   subroutine calc_resistivity_source(iBlock)

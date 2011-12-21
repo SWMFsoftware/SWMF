@@ -20,6 +20,8 @@ subroutine set_resistivity(iBlock)
      call spitzer_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
   case('anomalous')
      call anomalous_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+  case('raeder')
+     call raeder_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
   case('user')
      call user_set_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
   case default
