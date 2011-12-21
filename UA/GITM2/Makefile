@@ -26,6 +26,11 @@ install: src/ModSize.f90
 #       General Housekeeping
 #
 
+NOMPI:
+	@echo "will make NOMPI"
+	@echo ${NOMPIDIR}
+	@cd ${NOMPIDIR}; make LIB
+
 GITM:
 	@cd ${SHAREDIR}; make LIB
 	@cd $(ABDIR);    make LIB
