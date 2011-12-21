@@ -1367,10 +1367,15 @@ pro polargrid2,nvector,vectors,x,w,xreg,wreg
      wreg(*,*,ivy)= -w(*,*,ivx)*sin(phi)+w(*,*,ivy)*cos(phi)
   endfor
 
-  ;Remove 2*pi jumps from phi
-  pi2=8*atan(1) & sz=size(phi) & nx2=sz(2)
-  for ix2=1,nx2-1 do while phi(1,ix2-1) gt phi(1,ix2) do $
-     phi(*,ix2)=phi(*,ix2)+pi2
+  ; Remove 2*pi jumps from phi (only works on a regular grid so check ndim)
+  sz=size(phi)
+  ndim = sz(0)
+  if ndim gt 1 then begin
+     nx2=sz(2)
+     pi2=8*atan(1)
+     for ix2=1,nx2-1 do while phi(1,ix2-1) gt phi(1,ix2) do $
+        phi(*,ix2)=phi(*,ix2)+pi2
+  endif
 
   xreg(*,*,1)=phi
 end
