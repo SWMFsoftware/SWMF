@@ -915,7 +915,7 @@ contains
   subroutine find_neighbor(iBlock)
 
     use BATL_size, ONLY: iRatio_D
-    use BATL_geometry, ONLY: IsCylindrical, IsSpherical, IsPeriodic_D
+    use BATL_geometry, ONLY: IsCylindricalAxis, IsSphericalAxis, IsPeriodic_D
 
     integer, intent(in):: iBlock
 
@@ -973,7 +973,7 @@ contains
              if(y > 1.0 .or. y < 0.0)then
                 if(IsPeriodic_D(2))then
                    y = modulo(y, 1.0)
-                elseif(IsSpherical)then
+                elseif(IsSphericalAxis)then
                    ! Push back theta and go around half way in phi
                    y = max(0.0, min(1.0, y))
                    z = modulo( z+0.5, 1.0)
@@ -1010,10 +1010,10 @@ contains
              if(x > 1.0 .or. x < 0.0)then
                 if(IsPeriodic_D(1))then
                    x = modulo(x, 1.0)
-                elseif(IsCylindrical .and. x < 0.0)then
+                elseif(IsCylindricalAxis .and. x < 0.0)then
                    ! Push back radius and go around half way in phi direction
                    x = 0.0
-                   z = modulo( z+0.5, 1.0)
+                   y = modulo( y+0.5, 1.0)
                 else
                    iNodeNei_IIIB(i,j,k,iBlock) = Unset_
                    DiLevelNei_IIIB(Di,Dj,Dk,iBlock) = Unset_
@@ -1680,7 +1680,7 @@ contains
          ' but status of next node is', iTree_IA(Status_, nNode+1), &
          ' instead of ', Unset_
     if(any(iTree_IA(Status_, 1:nNode) == Unset_)) &
-         write(*,*)'ERROR: compact_tree faild, nNode=', nNode, &
+         write(*,*)'ERROR: compact_tree failed, nNode=', nNode, &
          ' but iTree_IA(Status_, 1:nNode)=', &
          iTree_IA(Status_, 1:nNode),' contains unset=', Unset_
     call find_tree_node(CoordTest_D,iNode)
