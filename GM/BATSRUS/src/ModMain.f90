@@ -55,9 +55,11 @@ Module ModMain
   !/
   ! Dimensions of the buffer grid between SC and IH
   logical :: UseHelioBuffer3D = .false.
-  integer :: nPhiBuff = 90,   nThetaBuff = 45
-  real    :: rBuffMin = 19.0, rBuffMax = 21.0 
-
+  integer :: nPhiBuff = 90,   nThetaBuff = 45, nRBuff = 2
+  real    :: rBuffMin = 19.0, rBuffMax = 21.0, dSphBuff_D(3)
+  real    :: BufferMin_D(3), BufferMax_D(3)
+  real,allocatable :: BufferState_VG(:,:,:,:), rBuffer_I(:),PhiBuffer_I(:),ThetaBuffer_I(:)
+  
   logical :: UseIe = .false.
   logical :: UsePw = .false.
 
