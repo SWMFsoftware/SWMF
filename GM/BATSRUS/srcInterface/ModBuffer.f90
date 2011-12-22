@@ -78,7 +78,8 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
                            MultiFluid_, MultiSpecie_, &
                            RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, &
                            BxCouple_, BzCouple_, PeCouple_, PparCouple_, &
-                           WaveFirstCouple_, WaveLastCouple_
+                           WaveFirstCouple_, WaveLastCouple_, &
+                           UseGlobalMpiCoupler
   use CON_axes,      ONLY: transform_matrix, transform_velocity
   use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
   use ModPhysics,    ONLY: UnitEnergyDens_
@@ -121,13 +122,17 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
        Sph_D(R_),Sph_D(Phi_),Sph_D(Theta_))
 
   ! Get the target state from the spherical buffer grid
-  Buffer_V=point_state_v(&
-       NameBuffer,&
-       nVarCouple,&
-       nDim,    &
-       Sph_D,   &
-       LocalBufferGD,&
-       bilinear_interpolation)
+  if(UseGlobalMpiCoupler) then       
+     call interpolate_from_global_buffer(Sph_D, nVarCouple, Buffer_V)
+  else
+     Buffer_V=point_state_v(&
+          NameBuffer,&
+          nVarCouple,&
+          nDim,    &
+          Sph_D,   &
+          LocalBufferGD,&
+          bilinear_interpolation)
+  end if
 
   State_V(Rho_) = Buffer_V(iVar_V(RhoCouple_))
   !Transform to primitive variables
@@ -177,5 +182,60 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
      IsFullyCoupledFluid = .true.
   end if
 end subroutine get_from_spher_buffer_grid
+
+!===============================================================                       
+subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
+
+ ! DESCRIPTION
+  ! This subroutine is used to interpolate from  state varaibles defined on a
+  ! spherical buffer grid into the input point SphSource_D.
+  ! The buffer grid overlaps some part of the computational grid of a source component
+  ! that is coupled to this component.
+  ! The buffer grid  has the same coordinate system as the source component
+  ! (but may have a different grid resolution).
+  ! It is assumed that the buffer grid was filled with the state vector from the
+  ! source component at some earlier stage.
+
+  ! INPUT:
+  ! SphSource_D is associated with a point in the target component, and it
+  ! is assumed that is was already converted to the source coordinate system.
+ 
+  ! nVar is the number of state variables used in coupling the two components.
+
+  ! Implicit inputs to this subroutine are the buffer grid size, points and the 
+  ! state vector at each point (USEd from BATSRUS).
+
+  ! OUTPUT:
+  ! Buffer_V is the state vector resulting from the interpolation.
+
+  use ModInterpolate, ONLY: trilinear
+  use ModNumConst,    ONLY: cPi
+  use ModMain,        ONLY: BufferState_VG, rBuffer_I, PhiBuffer_I, ThetaBuffer_I,  &
+                            nRBuff, nPhiBuff, nThetaBuff, dSphBuff_D, Phi_
+ 
+  implicit none
+
+  ! Input and output variables
+  real,intent(in)    :: SphSource_D(3)
+  integer,intent(in) :: nVar
+  real,intent(out)   :: Buffer_V(nVar)
+
+  real    :: Sph_D(3)
+  logical :: DoTest, DoTestMe
+
+  character(len=*), parameter :: NameSub = 'interpolate_from_global_buffer'
+  !-------------------------------------------------------------                  
+  call CON_set_do_test(NameSub,DoTest, DoTestMe)
+
+  Sph_D = SphSource_D
+  ! Correct target point phi coordinate if needed
+  if (Sph_D(Phi_) > 2.*cPi) Sph_D(Phi_) = Sph_D(Phi_) - 2.*cPi
+
+  if(DoTest) write(*,*) NameSub, ' fr poimt: ',Sph_D
+
+  Buffer_V = trilinear(BufferState_VG, nVar, 1, nRBuff,1, nPhiBuff,1, nThetaBuff,&
+       Sph_D, rBuffer_I, PhiBuffer_I, ThetaBuffer_I, .TRUE.)
+       
+end subroutine interpolate_from_global_buffer
           
   
