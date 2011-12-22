@@ -190,5 +190,35 @@ subroutine IH_match_ibc
   character(len=*), parameter :: NameSub='IH_match_ibc'
 
   call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
-end subroutine IH_match_ibc
 
+end subroutine IH_match_ibc
+!===============================================================
+subroutine IH_set_buffer_grid_get_info(CompID_, &
+     nR, nPhi, nTheta, BufferMinMax_DI)
+
+  implicit none
+
+  integer, intent(in)     :: CompID_
+  integer, intent(out)    :: nR, nPhi, nTheta
+  real, intent(out)       :: BufferMinMax_DI(3,2)
+
+  character(len=*), parameter :: NameSub = 'IH_set_buffer_grid_get_info'
+  ! ---------------------------------------------------------------
+
+  call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+
+end subroutine IH_set_buffer_grid_get_info
+!===============================================================
+subroutine IH_save_global_buffer(nVar, nR, nPhi, nTheta, BufferIn_VG)
+
+  implicit none
+
+  integer,intent(in) :: nVar, nR, nPhi, nTheta
+  real,intent(in)    :: BufferIn_VG(nVar, nR, nPhi, nTheta)
+
+  character(len=*), parameter :: NameSub = 'IH_save_global_buffer'
+  !-------------------------------------------------------------
+
+ call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+
+end subroutine IH_save_global_buffer
