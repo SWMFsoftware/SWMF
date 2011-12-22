@@ -63,6 +63,13 @@ module CON_couple_ih_oh
   integer :: nGenRGridIh
   real    :: DeltaGen
 
+  ! Variables used by global MPI coupler
+  ! Communicator and logicals to simplify message passing and execution
+  logical       :: UseMe=.true., IsInitialized=.false.
+
+  ! Size and limits of the 3D spherical buffer grid
+  integer, save :: iSize, jSize, kSize, nCell_D(3)
+  real, save    :: BufferMinMaxIh_DI(3,2), BufferMinMaxOh_DI(3,2)
 contains
   !===============================================================!
   subroutine couple_ih_oh_init
@@ -77,6 +84,13 @@ contains
     end interface
 
     !--------------------------------------------------------------------------
+    ! REDIRECT to couple_ih_oh_init_global if needed
+    if(UseGlobalMpiCoupler_CC(IH_,OH_)) then
+       USeGlobalMpiCoupler = .TRUE.
+       call couple_ih_oh_init_global
+       RETURN
+    end if
+
     if(.not.DoInitialize)return
     DoInitialize=.false.
     
@@ -153,6 +167,12 @@ contains
     ! Last coupling time
     real :: TimeCouplingLast = -1.0
     !-------------------------------------------------------------------------
+    ! REDIRECT to couple_oh_ih_global if needed
+    if(UseGlobalMpiCoupler) then
+       call couple_oh_ih_global(TimeCoupling)
+       RETURN
+    end if
+
 
     if(.not.RouterOhIh%IsProc)return
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
@@ -384,6 +404,13 @@ contains
     character(LEN=21)::NameFile
     logical::DoneMatchIBC=.false.
 !EOP
+    ! --------------------------------------------------------
+    ! REDIRECT to couple_ih_oh_global if needed
+    if(UseGlobalMpiCoupler) then
+       call couple_ih_oh_global(TimeCoupling)
+       RETURN
+    end if
+
     if(.not.RouterIhBuff%IsProc)return
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
@@ -477,5 +504,300 @@ contains
     IsInterfacePoint=.true.
   end subroutine buffer_grid_point
   
+! =========================================================================
+!                   SUBROUTINES FOR GLOBAL MPI COUPLER
+! =========================================================================
+!DESCRIPTION:
+
+! Couple IH and OH components via a global buffer grid
+! The subroutines:
+!                CON_couple_ih_oh_init
+!                CON_couple_ih_oh
+!                CON_couple_oh_ih
+
+! redirect to the corresponding subroutines below, with the suffix "_global"
+! in case UseGlobalMpiCoupler =.TRUE.
+!
+
+  !REVISION HISTORY:
+  ! 07/25/2003 G.Toth <gtoth@umich.edu> - initial version as external
+  !                                       subroutines
+  ! 08/27/2003 G.Toth - combined into a module
+  ! 12/01/2004 G.Toth - the GM->IE coupling is rewritten for Jr(iSize,jSize)
+
+  ! 12/12/2011 R.Oran <oran@umich.edu> version for two BATSRUS components
+
+  ! ======================================================================= 
+  !IROUTINE: couple_ih_oh_init_global - initialize IH-OH couplings 
+  !INTERFACE:                                                          
+  subroutine couple_ih_oh_init_global
+
+    logical :: DoTest, DoTestMe
+    integer :: iCommWorld, iError, iStatus_I(MPI_STATUS_SIZE)
+    real    :: rBufferMinMaxOh_I(2), rBufferMinMaxIh_I(2)
+
+    character(len=*), parameter :: NameSub='couple_ih_oh_init_global'
+
+    !DESCRIPTION:                                      
+    ! This subroutine should be called from all PE-s
+    ! Share buffer grid info (set in OH) with IH.
+    ! Set buffer grid in both components.
+    ! Calculate union communicator 
+
+    !EOP                                                                      
+    !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    if(IsInitialized) RETURN
+    IsInitialized = .true.
+
+    if(DoTest) write(*,*) NameSub, ' started'
+
+    ! Determine which state variables should be coupled
+    call set_couple_var_info(IH_,OH_)
+    if(i_proc() == 0) write(*,*) 'Using global MPI coupler'
+
+    ! Set UseMe to .true. for the participating PE-s
+    UseMe = is_proc(IH_) .or. is_proc(OH_)
+
+    ! Set buffer grid location and size in OH, and retrieve them for coupler
+    if(is_proc(OH_)) then
+       call OH_set_buffer_grid_get_info(OH_,iSize, jSize, kSize, BufferMinMaxOh_DI)
+       if(DoTest .and. is_proc0(OH_)) &
+            write(*,*) 'In OH, rBuffMinMax: ',BufferMinMaxOh_DI(1,:)
+       ! Package info for passing via MPI                      
+       nCell_D = (/iSize,jSize,kSize/)
+       BufferMinMaxIh_DI = BufferMinMaxOh_DI
+
+       ! Convert units before passing to IH        
+       rBufferMinMaxOh_I = BufferMinMaxOh_DI(1,:)
+       rBufferMinMaxIh_I = rBufferMinMaxOh_I* &
+            Grid_C(OH_)%UnitX/Grid_C(IH_)%UnitX
+       BufferMinMaxIh_DI(1,:) = rBufferMinMaxIh_I
+    end if
+
+    ! MPI share buffer grid size            
+
+    ! Share with IH head node.    
+    !if(i_proc0(OH_) /= i_proc0(IH_))then
+    !   if(is_proc0(OH_)) then
+    !      call MPI_send(nCell_D, 3, MPI_INTEGER, i_proc0(IH_),&
+    !           1, iCommWorld, iError)
+    !  end if
+    !   if(is_proc0(IH_)) then
+    !      call MPI_recv(nCell_D, 3, MPI_INTEGER, i_proc0(OH_),&
+    !           1, iCommWorld, iStatus_I, iError)
+    !   end if
+    !end if
+
+   ! MPI share buffer grid limits
+
+    ! Share with IH head node.                         
+    !if(i_proc0(OH_) /= i_proc0(IH_))then
+    !   if(is_proc0(OH_)) &
+    !        call MPI_send(BufferMinMaxIh_DI, 6, MPI_REAL, i_proc0(IH_),&
+    !        1, iCommWorld, iError)
+    !   if(is_proc0(IH_))&
+    !        call MPI_recv(BufferMinMaxIh_DI, 6, MPI_REAL, i_proc0(OH_),&
+    !        1, iCommWorld, iStatus_I, iError)
+    !end if
+
+    ! Broadcast to all IH nodes.           
+    if(is_proc0(OH_)) &
+         call MPI_bcast(nCell_D, 3, MPI_INTEGER, 0, i_comm(IH_), iError)
+
+    if(is_proc0(OH_)) &
+         call MPI_bcast(BufferMinMaxIh_DI, 6, MPI_REAL, 0, i_comm(IH_), iError)
+
+    if(is_proc0(IH_) .and. DoTest) &
+         write(*,*) 'In IH, rBuffer Min/Max: ',BufferMinMaxIh_DI(1,:)
+
+  end subroutine couple_ih_oh_init_global
+
+  !BOP =======================================================================
+  !IROUTINE: couple_ih_oh_global - couple IH component to OH component                       
+ !INTERFACE:                                      
+  subroutine couple_ih_oh_global(tSimulation)
+
+    use ModMpi,    ONLY: MPI_reduce
+    use ModIoUnit, ONLY: io_unit_new
+
+    !INPUT ARGUMENTS:                                       
+    real, intent(in) :: tSimulation     ! simulation time at coupling  
+
+    !DESCRIPTION:                   
+    ! Couple between two components:     
+    !    Inner Heliosphere (IH)  source
+    !    Outer Heliosphere (OH)  target   
+    !                                                                 
+    ! The IH component sends the state variables to a buffer grid.  
+    ! OH uses the buffer grid to calculate the inner boundary conditions.
+
+    logical :: DoTest, DoTestMe
+    integer :: iProcWorld
+
+    ! Array to store state vector on all buffer grid points   
+    real, dimension(:,:,:,:), allocatable :: Buffer_VIII, BufferGlobal_VIII
+
+    ! MPI related variables
+    integer :: iError, nSize, iStatus_I(MPI_STATUS_SIZE)
+
+    ! Variable for output file
+    integer :: i,j,k, iFile
+    integer, save :: iCoupling = 0
+    character(len=24) :: NameFile
+
+    character (len=*), parameter :: NameSub='couple_ih_oh_global'
+    !-------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    iProcWorld = i_proc()
+
+    ! Exclude PEs which are not involved
+    if(.not.UseMe) RETURN
+
+    if(DoTest)write(*,*)NameSub,' starting, iProc=',iProcWorld
+    if(DoTest)write(*,*)NameSub,', iProc, IHi_iProc0, OHi_iProc0=', &
+         iProcWorld,i_proc0(IH_),i_proc0(OH_)
+
+    ! Allocate and intialize local buffer on IH processors
+    if(is_proc(IH_)) then
+       allocate(Buffer_VIII(nVarCouple,iSize,jSize,kSize), stat=iError)
+       Buffer_VIII = 0.0
+    end if
+
+    ! Allocate global buffer on all processors
+    allocate(BufferGlobal_VIII(nVarCouple,iSize,jSize,kSize), stat=iError)
+    BufferGlobal_VIII = 0.0
+
+    nSize = iSize*jSize*kSize*nVarCouple
+
+    ! Fill in state variables
+    if(is_proc(IH_)) then
+       call IH_get_for_global_buffer(iSize,jSize,kSize, &
+            BufferMinMaxIh_DI,Buffer_VIII)
+       ! Collect to the IH root PE                       
+       call MPI_reduce(Buffer_VIII, BufferGlobal_VIII, nSize, MPI_REAL,MPI_SUM,&
+            0, i_comm(IH_), iError)
+    end if
+
+    if(i_proc0(IH_) /= i_proc0(OH_))then
+       ! Pass state variables
+       if(is_proc0(IH_)) &
+            call MPI_send(BufferGlobal_VIII,nSize,MPI_REAL,i_Proc0(OH_),&
+            1,i_comm(),iError)
+       if(is_proc0(OH_)) &
+            call MPI_recv(BufferGlobal_VIII,nSize,MPI_REAL,i_Proc0(IH_),&
+            1,i_comm(),iStatus_I,iError)
+    end if
+
+    ! Broadcast variables inside OH
+    if(n_proc(OH_)>1 .and. is_proc(OH_)) &
+         call MPI_bcast(BufferGlobal_VIII,nSize,MPI_REAL,0,i_comm(OH_),iError)
+
+    if(DoTest)write(*,*)NameSub,', variables transferred',&
+         ', iProc:',iProcWorld
+
+    !\ 
+    ! Put variables into OH
+    !/
+    if(is_proc(OH_))then
+       call OH_save_global_buffer(nVarCouple, iSize, jSize, kSize,BufferGlobal_VIII)
+       if(DoTest) &
+            write(*,*)NameSub//' iProc, Buffer(1,1,1)=',&
+            iProcWorld,Buffer_VIII(:,1,1,1)
+    end if
+
+    !\                               
+    ! Deallocate buffer to save memory
+    !/
+    if(is_proc(IH_)) deallocate(Buffer_VIII)
+    deallocate(BufferGlobal_VIII)
+
+    if(DoTest)write(*,*)NameSub,', variables deallocated',&
+         ', iProc:',iProcWorld
+
+    if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld
+
+  end subroutine couple_ih_oh_global
+
+  !BOP =======================================================================
+  !IROUTINE: couple_oh_ih_global - couple OH to IH
+  !INTERFACE:
+  subroutine couple_oh_ih_global(tSimulation)
+
+    !INPUT ARGUMENT:                                   
+    real, intent(in) :: tSimulation
+
+    !DESCRIPTION:
+    ! Couple between two components: 
+    !    Outer Heliosphere (OH) source
+    !    Inner Heliosphere (IH) target
+    !                                 
+    ! Send state variable from OH to outer cells in IH.
+    !EOP
+
+    logical :: DoTest, DoTestMe
+    integer :: iProcWorld
+
+    ! Buffer for state variable to fill outer cells of IH                                      
+   real, dimension(:,:,:,:), allocatable :: Buffer_VIII
+
+    ! MPI related variables                        
+    integer :: iError, nSize, iStatus_I(MPI_STATUS_SIZE)
+
+    integer :: iBlock, iProcTo
+    character (len=*), parameter :: NameSub='couple_oh_ih_global'
+    !-------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+
+    iProcWorld = i_proc()
+
+    if(DoTest)write(*,*)NameSub,' starting iProc=',iProcWorld
+
+    ! Exclude PEs which are not involved
+    if(.not.UseMe) RETURN
+
+    if(DoTest)write(*,*)NameSub,' starting, iProc=',iProcWorld
+    if(DoTest)write(*,*)NameSub,', iProc, OHi_iProc0, i_proc0(IH_)=', &
+         iProcWorld,i_proc0(OH_),i_proc0(IH_)
+
+    !\                                                                            
+    ! Allocate buffers for the variables both in OH and IH 
+    !/                                                       
+    allocate(Buffer_VIII(nVarCouple,iSize, jSize, kSize), stat=iError)
+    call check_allocate(iError,NameSub)
+
+    !\                                                       
+    ! Get OH state variable for IH          
+    !/                             
+    if(is_proc(OH_)) &
+         call OH_get_for_mh(Buffer_VIII, iSize, jSize, kSize, nVarCouple)
+    !\                                                                            
+    ! Transfer variables from OH to IH
+    !/                                    
+    if(i_proc0(IH_) /= i_proc0(OH_))then
+       nSize = iSize*jSize*kSize*nVarCouple
+       if(is_proc0(OH_)) &
+            call MPI_send(Buffer_VIII, nSize, MPI_REAL, i_proc0(IH_),&
+            1, i_comm(), iError)
+       if(is_proc0(IH_)) &
+            call MPI_recv(Buffer_VIII, nSize, MPI_REAL, i_proc0(OH_),&
+            1,i_comm(), iStatus_I, iError)
+    end if
+    !\ 
+    ! Put variables into IH
+    !/
+    if(is_proc(IH_)) &
+         !call IH_put_from_mh(Buffer_VIII, iSize+1, jSize, kSize, nVarCouple)
+
+    !\         
+    ! Deallocate buffer to save memory
+    !/                                   
+    deallocate(Buffer_VIII)
+
+    if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld
+
+  end subroutine couple_oh_ih_global
+
 end module CON_couple_ih_oh
+
 

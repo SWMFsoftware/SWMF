@@ -16,7 +16,9 @@ module CON_couple_all
   use CON_comp_param
   use CON_world,   ONLY: use_comp, is_proc, i_proc
   use CON_coupler, ONLY: iVar_V, iVar_VCC, nVarCouple, nVarCouple_CC, &
-                         DoCoupleVar_V, DoCoupleVar_VCC
+                         DoCoupleVar_V, DoCoupleVar_VCC, &
+                         UseGlobalMpiCoupler_CC, UseGlobalMpiCoupler
+
   !^CMP IF GM BEGIN
   use CON_couple_ih_gm        !^CMP IF IH
   use CON_couple_gm_ie        !^CMP IF IE
@@ -110,6 +112,7 @@ contains
     !REVISION HISTORY:
     ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
     ! 03Jun08 - R. Oran <oran@umich.edu> add IH OH coupling
+    ! 22Dec11 - R. Oran   added capability to use global mpi coupler.
     !EOP
 
     character(len=*), parameter :: NameSub = NameMod//'::couple_two_comp'
@@ -139,6 +142,7 @@ contains
     iVar_V        = iVar_VCC(:,iCompSource,iCompTarget)
     nVarCouple    = nVarCouple_CC(iCompSource,iCompTarget)
     DoCoupleVar_V = DoCoupleVar_VCC(:,iCompSource,iCompTarget)
+    UseGlobalMpiCoupler = UseGlobalMpiCoupler_CC(iCompSource,iCompTarget)
 
     select case(iCompSource)
     case(LC_)                                 !^CMP IF LC BEGIN
