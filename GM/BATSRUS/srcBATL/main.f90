@@ -3,6 +3,7 @@ program BATL_test
   use BATL_amr,        ONLY: test_amr
   use BATL_mpi,        ONLY: init_mpi
   use BATL_tree,       ONLY: test_tree
+  use BATL_geometry,   ONLY: test_geometry
   use BATL_grid,       ONLY: test_grid
   use BATL_pass_cell,  ONLY: test_pass_cell
   use BATL_pass_node,  ONLY: test_pass_node
@@ -18,6 +19,7 @@ program BATL_test
   call init_mpi(MPI_COMM_WORLD)
 
   call test_tree
+  call test_geometry
   call test_grid
   call test_pass_cell
   call test_pass_face
