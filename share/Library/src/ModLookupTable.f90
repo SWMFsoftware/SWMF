@@ -498,7 +498,7 @@ contains
        nProc = 1
     end if
 
-    if(iProc == 0)write(*,*)NameSub,' is creating table ',Ptr%NameTable
+    if(iProc == 0)write(*,'(3a)')NameSub,' is creating table ',Ptr%NameTable
 
     ! Allocate Value_VII array
     if(allocated(Ptr%Value_VII)) deallocate(Ptr%Value_VII)
