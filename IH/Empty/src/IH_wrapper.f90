@@ -222,3 +222,13 @@ subroutine IH_save_global_buffer(nVar, nR, nPhi, nTheta, BufferIn_VG)
  call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 
 end subroutine IH_save_global_buffer
+!===============================================================
+subroutine IH_get_for_global_buffer(&
+     nR, nPhi,nTheta, BufferMinMax_DI, Buffer_VG)
+
+  character (len=*), parameter :: NameSub='IH_get_for_buffer_grid'
+  !-------------------------------------------------------------
+
+  call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+
+end subroutine IH_get_for_global_buffer
