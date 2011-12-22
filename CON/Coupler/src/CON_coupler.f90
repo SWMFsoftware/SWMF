@@ -142,7 +142,7 @@ module CON_coupler
 
 
   ! Control type of coupling for BATSRUS components
-  logical,public    :: UseGlobalMpiCoupler, UseGlobalMpiCoupler_CC(MaxComp,MaxComp)
+  logical,public    :: UseGlobalMpiCoupler = .false., UseGlobalMpiCoupler_CC(MaxComp,MaxComp) = .false.
   character(len=30) :: CouplerType
 
   !PUBLIC MEMBER FUNCTIONS:
