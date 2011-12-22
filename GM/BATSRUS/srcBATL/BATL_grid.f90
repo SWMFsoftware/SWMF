@@ -3,8 +3,7 @@ module BATL_grid
   use BATL_mpi, ONLY: iProc
   use BATL_size
   use BATL_tree
-  use BATL_geometry, ONLY: &
-       IsCartesian, IsRzGeometry, TypeGeometry, xyz_to_coord, IsPeriodic_D
+  use BATL_geometry
 
   implicit none
 
@@ -25,23 +24,29 @@ module BATL_grid
        CoordMax_D(MaxDim)         ! Max gen. coordinates of domain
 
   real, public, allocatable::   &
-       CoordMin_DB(:,:),        & ! Min gen. coordinates of a block domain
-       CoordMax_DB(:,:),        & ! Max gen. coordinates of a block domain
-       CellSize_DB(:,:),        & ! Cell size in gen. coordinates
-       CellFace_DB(:,:),        & ! Cell faces for Cartesian grids
-       CellFace_DFB(:,:,:,:,:), & ! Cell faces for general grids
-       CellVolume_B(:),         & ! Cell volume for Cartesian grids
-       CellVolume_GB(:,:,:,:),  & ! Cell volume for general grids
-       Xyz_DGB(:,:,:,:,:)         ! Cartesian cell centers coords
+       CoordMin_DB(:,:),        &    ! Min gen. coordinates of a block domain
+       CoordMax_DB(:,:),        &    ! Max gen. coordinates of a block domain
+       CellSize_DB(:,:),        &    ! Cell size in gen. coordinates
+       CellFace_DB(:,:),        &    ! Cell faces for Cartesian grids
+       CellFace_DFB(:,:,:,:,:), &    ! Cell faces for general grids
+       CellVolume_B(:),         &    ! Cell volume for Cartesian grids
+       CellVolume_GB(:,:,:,:),  &    ! Cell volume for general grids
+       Xyz_DGB(:,:,:,:,:),      &    ! Cartesian cell centers coords
+       FaceNormal_DDFB(:,:,:,:,:,:)  ! Normal face area vector
 
   ! Local variables
 
   logical :: DoInitializeGrid = .true.
-  
 
 contains
   !============================================================================
   subroutine init_grid(CoordMinIn_D, CoordMaxIn_D)
+
+    use ModNumConst, ONLY: cPi, cTwoPi, cDegToRad
+
+    ! The angular coordinate limits should be given in degrees.
+    ! The radial coordinate limits should be given as true radial values
+    ! even for logarithmic or strethed radial grids.
 
     real, intent(in):: CoordMinIn_D(nDim), CoordMaxIn_D(nDim)
     !-------------------------------------------------------------------------
@@ -55,6 +60,32 @@ contains
     CoordMin_D(1:nDim) = CoordMinIn_D
     CoordMax_D(1:nDim) = CoordMaxIn_D
 
+    ! Set special boundary conditions
+    if(IsCylindrical) IsCylindricalAxis = CoordMin_D(r_) == 0.0
+
+    if(IsSpherical) IsSphericalAxis = CoordMin_D(Theta_) < 0.01 &
+         .and.                        CoordMax_D(Theta_) > 179.99
+
+    ! Convert degrees to radians for the domain boundaries
+    if(IsCylindrical .or. IsSpherical)then
+       CoordMin_D(Phi_) = CoordMin_D(Phi_)*cDegToRad
+       CoordMax_D(Phi_) = CoordMax_D(Phi_)*cDegToRad
+    end if
+
+    if(IsSpherical)then
+       CoordMin_D(Theta_) = CoordMin_D(Theta_)*cDegToRad
+       CoordMax_D(Theta_) = CoordMax_D(Theta_)*cDegToRad
+    end if
+
+    ! Convert rMin, rMax to log(rMin) log(rMax) for logarithmic radius
+    if(IsLogRadius)then
+       CoordMin_D(r_) = log(CoordMin_D(r_))
+       CoordMax_D(r_) = log(CoordMax_D(r_))
+    elseif(IsGenRadius)then
+       call radius_to_gen(CoordMin_D(r_))
+       call radius_to_gen(CoordMax_D(r_))
+    end if
+
     allocate(CoordMin_DB(MaxDim,MaxBlock))
     allocate(CoordMax_DB(MaxDim,MaxBlock))
     allocate(CellSize_DB(MaxDim,MaxBlock))
@@ -66,6 +97,28 @@ contains
     allocate(CellVolume_B(MaxBlock))
     allocate(CellVolume_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(Xyz_DGB(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+
+    if(.not.IsCartesian .and. .not. IsRzGeometry) &
+         allocate(FaceNormal_DDFB(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
+
+    ! Periodicity in the radial direction is not possible at all
+    if(r_ > 0) IsPeriodic_D(r_) = .false.
+
+    if(Phi_ > 0)then
+       ! Enforce periodicity for cylindrical and spherical grids if
+       ! there is a full grid in the Phi direction. 
+       ! One can also have periodicity with a segment in Phi
+       if( abs(CoordMax_D(Phi_) - CoordMin_D(Phi_) - cTwoPi) < 1e-6 ) &
+            IsPeriodic_D(Phi_) = .true.
+    end if
+
+    ! There is a pi-periodicity at the poles of a spherical grid,
+    ! otherwise periodicity does not make sense
+    if(Theta_ > 0)then
+       IsPeriodic_D(Theta_) = &
+            abs(CoordMin_D(Theta_)) < 1e-6 .and. &
+            abs(CoordMax_D(Theta_) - cPi) < 1e-6
+    end if
 
   end subroutine init_grid
   !===========================================================================
@@ -98,7 +151,8 @@ contains
 
     character(len=*), parameter:: NameSub = 'create_grid_block'
 
-    real :: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
+    real :: PositionMin_D(MaxDim), PositionMax_D(MaxDim), Coord_D(MaxDim)
+    real :: r0, dr, rCell_I(MinI:MaxI), rFace_I(1:nI+1), Area
     integer :: iNode, i, j, k
     !----------------------------------------------------------------------
     if(present(iNodeIn))then
@@ -114,10 +168,12 @@ contains
     CellSize_DB(:,iBlock) = (CoordMax_DB(:,iBlock) - CoordMin_DB(:,iBlock)) &
          / nIjk_D
 
+    ! The cell volumes and face areas in generalized coordinates.
+    ! For Cartesian grid same as physical volume and area.
+    CellVolume_B(iBlock)  = product(CellSize_DB(:,iBlock))
+    CellFace_DB(:,iBlock) = CellVolume_B(iBlock) / CellSize_DB(:,iBlock)
+
     if(IsCartesian .or. IsRzGeometry)then
-       ! For RZ geometry this is true in generalized coordinate sense only
-       CellVolume_B(iBlock) = product(CellSize_DB(:,iBlock))
-       CellFace_DB(:,iBlock) = CellVolume_B(iBlock) / CellSize_DB(:,iBlock)
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           Xyz_DGB(:,i,j,k,iBlock) = CoordMin_DB(:,iBlock) + &
@@ -148,8 +204,71 @@ contains
           CellVolume_GB(:,:,:,iBlock) = CellVolume_B(iBlock)
        end if
     else
-       call CON_stop(NameSub//': '//TypeGeometry// &
-            ' geometry is not yet implemented')
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          Coord_D = CoordMin_DB(:,iBlock) + &
+               ( (/i, j, k/) - 0.5 ) * CellSize_DB(:,iBlock)
+          call coord_to_xyz(Coord_D, Xyz_DGB(:,i,j,k,iBlock))
+       end do; end do; end do
+
+       r0 = CoordMin_DB(1,iBlock)
+       Dr = CellSize_DB(1,iBlock)
+       do i = MinI, MaxI
+          rCell_I(i) = r0 + (i-0.5)*dr
+       end do
+       do i = 1, nI+1
+          rFace_I(i) =  r0 + (i-1)*dr
+       end do
+
+       if(IsCylindrical)then
+          
+          ! dV = r*dr*dphi*dz
+          do i = MinI, MaxI
+             ! NOTE: for ghost cells at the axis r can be negative
+             CellVolume_GB(i,:,:,iBlock) = rCell_I(i)*CellVolume_B(iBlock)
+          end do
+
+          ! dA_r = r_(i+1/2)*dphi*dz * (cos phi, sin phi, 0) = (x/r, y/r, 0)
+          if(nDim == 3) FaceNormal_DDFB(z_,r_,:,:,:,iBlock) = 0
+          do i = 1, nI+1
+             Area = rFace_I(i)*CellFace_DB(1,iBlock)
+             CellFace_DFB(r_,i,:,:,iBlock) = Area
+             if(Area > 0)then
+                do k = 1, nK; do j=1, nJ
+                   FaceNormal_DDFB(x_:y_,r_,i,j,k,iBlock) = &
+                        Area*Xyz_DGB(x_:y_,i,j,k,iBlock)/rCell_I(i)
+                end do; end do
+             else
+                FaceNormal_DDFB(x_:y_,r_,i,:,:,iBlock) = 0
+             end if
+          end do
+
+          ! dA_phi = dr*dz * (-sin phi, cos phi, 0) = dr*dz * (-y/r, x/r, 0)
+          if(nDim == 3)FaceNormal_DDFB(z_,Phi_,:,:,:,iBlock) = 0
+          do i = 1, nI
+             Area = CellFace_DB(2,iBlock)
+             CellFace_DFB(Phi_,i,:,:,iBlock) = Area
+             do k = 1, nK; do j=1, nJ+1
+                FaceNormal_DDFB(x_,Phi_,i,j,k,iBlock) = &
+                     -Area*Xyz_DGB(y_,i,j,k,iBlock)/rCell_I(i)
+                FaceNormal_DDFB(y_,Phi_,i,j,k,iBlock) = &
+                     +Area*Xyz_DGB(x_,i,j,k,iBlock)/rCell_I(i)
+             end do; end do
+          end do
+
+          if(nDim == 3)then
+             ! dA_z = r*dr*dphi * (0,0,1)
+             FaceNormal_DDFB(x_:y_,z_,:,:,:,iBlock) = 0
+             do i = 1, nI
+                Area = rCell_I(i)*CellFace_DB(z_,iBlock)
+                CellFace_DFB(z_,i,:,:,iBlock)    = Area
+                FaceNormal_DDFB(z_,z_,i,:,:,iBlock) = Area
+             end do
+          end if
+
+       else
+          call CON_stop(NameSub//': '//TypeGeometry// &
+               ' geometry is not yet implemented')
+       end if
     end if
 
   end subroutine create_grid_block
