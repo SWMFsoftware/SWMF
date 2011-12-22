@@ -1,0 +1,346 @@
+Parameter file for test7 - launch a blob in IH, advect to OH, calcualte error
+#ECHO
+T			DoEcho
+
+#STRICT
+F
+
+#SAVERESTART
+F
+
+#TIMEACCURATE
+T
+
+#TEST
+OH_fill_buffer_only
+
+#BEGIN_COMP IH --------------------------------------------------------------
+
+#BATL
+F
+
+#BATLTEST
+F
+
+#COORDSYSTEM
+HGI                     TypeCoordSystem
+
+#GRAVITY
+F                       UseGravity (rest of parameters read if true)
+0                       iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+
+#BODY
+T                       UseBody
+500.0                    rBody (Rs)
+1.00e3                  BodyNDim(1) [/cc] number density for ions
+1.00E5                  BodyTDim(1) [K] temperature for ions
+
+#BODY
+F
+
+#USERFLAGS
+F                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN -----------------------------------------------------------
+
+#USERPROBLEM
+AdvectSphere
+
+#USERINPUTUNITX
+T
+rSun
+
+#ADVECTSPHERE
+T		DoInitSphere
+1.0e3		NumDensBackgrndIo
+.00001	        pBackgrndIo
+20000.0		uBackgrndIo
+0.0		FlowAngle (Deg, in xy plane from X )
+400.0		rSphere  (Rs)
+3.5e3		NumDensSphereIo
+550.0		xSphereCenterInitIo
+0.0		ySphereCenterInitIo
+0.0		zSphereCenterInitIo
+
+#ANALYTIC
+T
+
+#USERINPUTEND -------------------------------------------------------------
+
+#OUTERBOUNDARY
+float
+float
+float
+float
+float
+float
+
+#GRIDGEOMETRY
+spherical
+
+#GRID
+1                     	nRootBlockX
+2                     	nRootBlockY
+1                     	nRootBlockZ
+-1290.0	                xMin
+ 2600.0                 xMax
+-1290.0                  yMin
+ 1290.0                  yMax
+-1290.0                  zMin
+ 1290.0                  zMax
+
+#LIMITRADIUS
+50.
+2580.
+
+#GRIDLEVEL
+3			nLevelIh
+initial
+
+#GRIDLEVEL
+1                       nLevelArea
+all                     NameArea
+
+#GRIDLEVEL
+3			nLevelIh
+box_gen
+50.0
+320.
+-40.
+2600.
+360.
+40.
+
+#GRIDLEVEL
+3			nLevelIh
+box_gen
+50.0
+0.
+-40.
+2600.
+40.
+40.
+
+#DIVB
+T
+F
+F
+F
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc
+2.0
+
+#SAVEINITIAL
+T
+
+#SAVEBINARY
+F
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+-1			DnSaveLogfile
+1.			DtSaveLogfile
+
+#SAVEPLOT
+1			nPlotFiles
+z=0 VAR idl
+-1
+350.			DtOutput
+-1.
+rho ux uy uz mach p rhoexact rhoerr
+g rbody
+
+#RESCHANGEBOUNDARY
+F
+
+#END_COMP IH -----------------------------------------------------------------
+
+#BEGIN_COMP OH ---------------------------------------------------------------
+
+#BATL
+F
+
+#BATLTEST
+F
+
+#COORDSYSTEM
+HGI
+
+#BODY
+T                       UseBody
+3.0                     rBody (AU)
+1.00e3                  BodyNDim(1) [/cc] number density for ions
+1.00E5                  BodyTDim(1) [K] temperature for ions
+
+#BODY
+F
+
+#GRAVITY
+F                       UseGravity (rest of parameters read if true)
+0                       iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+
+#USERFLAGS
+F                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#USERPROBLEM
+AdvectSphere
+
+#USERINPUTUNITX
+T
+rSun
+
+#ADVECTSPHERE
+F		DoInitSphere
+1.0e3		NumDensBackgrndIo
+.00001	        pBackgrndIo
+20000.0		uBackgrndIo
+0.0		FlowAngle (Deg, in xy plane from X )
+400.0		rSphere  (Rs)
+3.5e3		NumDensSphereIo
+550.0		xSphereCenterInitIo
+0.0		ySphereCenterInitIo
+0.0		zSphereCenterInitIo
+
+#ANALYTIC
+T
+
+#USERINPUTEND ----------------------------------------------------------
+
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-7.		xMin
+12.		xMin
+-7.		xMin
+7.		xMin
+-7.		xMin
+7.		xMin
+
+#GRIDLEVEL
+3			nLevelOh
+initial			NameArea
+
+#GRIDLEVEL
+1
+all
+
+#GRIDLEVEL
+3			nLevelOh
+box			NameArea
+0.
+-3.
+-3.
+12.
+3.
+3.
+
+#INNERBOUNDARY
+buffergrid
+
+#HELIOBUFFERGRID
+4.0	rBuffMin
+5.2	rBuffMax
+45	nThetaBuff
+90	nPhiBuff
+
+#OUTERBOUNDARY
+float      
+float    
+float
+float
+float
+float
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc
+2.0
+
+#TIMESTEPPING
+2                       nStage (1 or 2)
+0.80                    CflExpl
+
+#RESCHANGEBOUNDARY
+T
+
+#DIVB
+T
+F
+F
+F
+
+#SAVEBINARY
+F
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+z=0 VAR idl		StringPlot
+-1			DnOutput
+350.	        	DtOutput
+-1.
+rho ux uy uz mach p rhoexact rhoerr
+g rbody
+
+#END_COMP OH -----------------------------------------------------------
+
+#COUPLE1
+IH
+OH
+-1
+70. 	DtCouple
+
+#COUPLERTYPE
+IH
+OH
+MPI
+
+#STOP
+-1
+50000.0
+
+#END

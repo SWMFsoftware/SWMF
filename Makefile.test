@@ -518,7 +518,7 @@ test7_compile:
 test7_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.IHOH.Couple ${TESTDIR}/PARAM.in
+	cp Param/PARAM.in.test.IHOH.CoupleSphToXyz ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.IHOH ${TESTDIR}/LAYOUT.in
 
 test7_run:
@@ -528,11 +528,11 @@ test7_run:
 test7_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=2e-30\
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
-		output/test7/IH_log_n000000.log \
+		output/test7/Sph_IH_log_n000000.log \
 		> test7_ih.diff)
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=2e-30\
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
-		output/test7/OH_log_n000000.log \
+		output/test7/Xyz_OH_log_n000000.log \
 		> test7_oh.diff)
 	ls -l test7*.diff
 
