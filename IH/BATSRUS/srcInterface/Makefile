@@ -18,6 +18,7 @@ OBJECTS = \
 	IH_set_buffer_grid.o\
 	IH_get_for_gm.o\
 	IH_get_for_mh.o\
+	IH_get_for_global_buffer.o\
 	IH_get_for_mh_with_xyz.o\
 	IH_get_for_sp.o\
 	IH_put_from_mh.o\
