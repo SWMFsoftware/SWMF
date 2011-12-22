@@ -13,23 +13,26 @@ program advect
   real :: BlobCenter_D(nDim) = 0.0
 
   ! Maximum refinement level
-  integer, parameter :: MaxLevel = 3
+  integer:: MaxLevel = 3
 
   ! Final simulation time, frequency of plots
-  real, parameter :: TimeMax = 20.0, DtPlot = 1.0
+  real :: TimeMax = 20.0
+  real :: TimeStartLocalStep = 0.49999*20.0
+  real :: DtPlot = 1.0
 
   ! Advection velocity. Should be positive. For now set to 2
   real :: Velocity_D(nDim) = 2.0
 
   ! Spatial order of accuracy and beta parameter for the TVD limiter
-  integer, parameter :: nOrder = 2
-  real,    parameter :: BetaLimiter = 1.5 ! 1 <= Beta <= 2 for nOrder=2
+  integer :: nOrder = 2
+  real    :: BetaLimiter = 1.5 ! 1 <= Beta <= 2 for nOrder=2
+  logical :: DoLimitVolumeState = .false.
 
   ! Use fixed or local time stepping
   logical :: UseLocalStep = .false.
 
   ! Parameters for the explicit scheme
-  real, parameter :: Cfl = 0.8
+  real :: Cfl = 0.8
 
   ! Size of the computational domain
   real :: &
@@ -87,7 +90,7 @@ program advect
      if(DoTest)call barrier_mpi
 
      call timing_start('explicit')
-     UseLocalStep = (Time > 0.49999*TimeMax .and. nDimAmr == nDim)
+     UseLocalStep = (Time > TimeStartLocalStep .and. nDimAmr == nDim)
      if(UseLocalStep)then
         call advance_localstep
      else
@@ -159,7 +162,7 @@ contains
   !===========================================================================
   real function exact_density(Xyz_D)
 
-    use BATL_lib,    ONLY: IsRzGeometry
+    use BATL_lib,    ONLY: IsCartesian, IsRzGeometry, IsPeriodic_D
     use ModNumConst, ONLY: cHalfPi
 
     real, intent(in):: Xyz_D(nDim)
@@ -174,12 +177,14 @@ contains
     ! Move position back to initial point
     XyzShift_D = Xyz_D - Time*Velocity_D
 
-    DomainSize_D = DomainMax_D(1:nDim)-DomainMin_D(1:nDim)
-
-    ! Take periodicity into account
-    XyzShift_D = modulo(XyzShift_D - DomainMin_D(1:nDim), DomainSize_D) &
-         + DomainMin_D(1:nDim)
-
+    ! Take periodicity into account for Cartesian and RZ geometry only
+    if(IsCartesian .or. IsRzGeometry) then
+       DomainSize_D = DomainMax_D(1:nDim) - DomainMin_D(1:nDim)
+       where(IsPeriodic_D(1:nDim))
+          XyzShift_D = modulo(XyzShift_D - DomainMin_D(1:nDim), DomainSize_D) &
+               + DomainMin_D(1:nDim)
+       end where
+    end if
     r2 = sum((XyzShift_D - BlobCenter_D)**2)
 
     Rho = 1.0
@@ -227,6 +232,8 @@ contains
           end do
        case("#GRIDGEOMETRY")
           call read_var('TypeGeometry', TypeGeometry)
+       case("#AMR")
+          call read_var('MaxLevel', MaxLevel)
        case("#BLOB")
           call read_var('BlobRadius', BlobRadius)
           BlobRadius2 = BlobRadius**2
@@ -237,18 +244,33 @@ contains
           do iDim = 1, nDim
              call read_var('Velocity_D', Velocity_D(iDim))
           end do
+       case("#SCHEME")
+          call read_var('nOrder', nOrder)
+          if(nOrder > 1)then
+             call read_var('BetaLimiter', BetaLimiter)
+             call read_var('DoLimitVolumeState', DoLimitVolumeState)
+          end if
+       case("#TIMESTEP")
+          call read_var('Cfl', Cfl)
+       case("#LOCALSTEP")
+          call read_var('TimeStartLocalStep', TimeStartLocalStep)
+       case("#SAVEPLOT")
+          call read_var('DtPlot', DtPlot)
+       case("#STOP")
+          call read_var('TimeMax', TimeMax)
        case default
           call CON_stop(NameSub//' unknown command='//trim(NameCommand))
        end select
     end do READPARAM
 
+    ! Note that the periodicity will be fixed based on TypeGeometry
     call init_batl( &
          MaxBlockIn     = 8000, &          
          CoordMinIn_D   = DomainMin_D,  &
          CoordMaxIn_D   = DomainMax_D,  &
          nRootIn_D      = nRoot_D,      & 
          TypeGeometryIn = TypeGeometry, &
-         IsPeriodicIn_D = (/.true.,TypeGeometry /= 'rz',.true./) )
+         IsPeriodicIn_D = (/.true., .true., .true./) )
 
     ! Allow only MaxLevel levels of refinement
     iTree_IA(MaxLevel_,:) = MaxLevel
@@ -374,7 +396,7 @@ contains
 
     use BATL_lib, ONLY: MaxDim, nBlock, Unused_B, &
          iComm, nProc, iProc, iNode_B, &
-         TypeGeometry, CellVolume_B, CellSize_DB, Xyz_DGB, CoordMin_DB, &
+         TypeGeometry, CellVolume_GB, CellSize_DB, Xyz_DGB, CoordMin_DB, &
          CoordMax_DB
 
     use ModMpi,    ONLY: MPI_REAL, MPI_INTEGER, MPI_MIN, MPI_SUM, MPI_reduce
@@ -405,7 +427,7 @@ contains
              write(UnitTmp_) CellSize_DB(1,iBlock), &
                   Xyz_DGB(:,i,j,k,iBlock), State_VGB(:,i,j,k,iBlock), &
                   exact_density(Xyz_DGB(:,i,j,k,iBlock)), &
-                  CellVolume_B(iBlock), real(iNode_B(iBlock)), &
+                  CellVolume_GB(i,j,k,iBlock), real(iNode_B(iBlock)), &
                   real(iProc), real(iBlock)
           end do; end do; 
        end do
@@ -445,7 +467,7 @@ contains
        write(UnitTmp_,'(10es13.5)') 0.0            ! eqpar
        write(UnitTmp_,'(a)')        'rho exact volume node proc block none' 
        write(UnitTmp_,'(a)')        '1 1 1'        ! units
-       write(UnitTmp_,'(l8,a)')     .true.         ! save binary .idl files
+       write(UnitTmp_,'(l8,a)')     .true.,        ' IsBinary' 
        write(UnitTmp_,'(i8,a)')     nByteReal,     ' nByteReal'
        write(UnitTmp_,'(a)')        TypeGeometry
        write(UnitTmp_,'(a)')        'real4'        ! type of .out file
@@ -512,13 +534,17 @@ contains
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
+
        if(.not.IsPeriodic_D(1))then
+
           ! Min in dimension 1
           if(DiLevelNei_IIIB(-1,0,0,iBlock) == Unset_)then
+
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
                 State_VGB(1,i,j,k,iBlock) &
                      = exact_density(Xyz_DGB(1:nDim,i,j,k,iBlock))
              end do; end do; end do
+
           end if
           if(DiLevelNei_IIIB(+1,0,0,iBlock) == Unset_)then
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI
@@ -566,49 +592,92 @@ contains
   subroutine calc_face_values(iBlock)
 
     use ModNumConst, ONLY: i_DD
-    use BATL_lib, ONLY: IsCartesian, CellFace_DB, CellFace_DFB
+    use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
+         CellVolume_GB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB
 
     integer, intent(in):: iBlock
 
     real:: StateLeft_VFD( nVar,1:nI+1,1:nJ+1,1:nK+1,nDim)
     real:: StateRight_VFD(nVar,1:nI+1,1:nJ+1,1:nK+1,nDim)
     real:: Slope_VGD(nVar,0:nI+1,0:nJ+1,0:nK+1,nDim)
+    real:: State_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    real :: CellFace
+    real :: CellFace, FaceNormal_D(nDim), vFaceNormal, vInv
 
     integer :: iDim, i, j, k, Di, Dj, Dk
     !------------------------------------------------------------------------
 
-    if(nOrder==2)call limit_slope(State_VGB(:,:,:,:,iBlock), Slope_VGD)
-
-    do iDim = 1, nDim
-       Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-       if(nOrder==1)then
+    if(nOrder==1)then
+       do iDim = 1, nDim
+          Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
              StateLeft_VFD( :,i,j,k,iDim) = State_VGB(:,i-Di,j-Dj,k-Dk,iBlock)
              StateRight_VFD(:,i,j,k,iDim) = State_VGB(:,i,j,k,iBlock)
           end do; end do; end do
-       else
+       end do
+    else
+       State_VG = State_VGB(:,:,:,:,iBlock)
+       if(DoLimitVolumeState)then
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+             State_VG(:,i,j,k) = State_VG(:,i,j,k)*CellVolume_GB(i,j,k,iBlock)
+          end do; end do; end do
+       end if
+       call limit_slope(State_VG, Slope_VGD)
+
+       do iDim = 1, nDim
+          Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
-             StateLeft_VFD( :,i,j,k,iDim) = State_VGB(:,i-Di,j-Dj,k-Dk,iBlock)&
+             StateLeft_VFD( :,i,j,k,iDim) = State_VG(:,i-Di,j-Dj,k-Dk) &
                   + 0.5*Slope_VGD(:,i-Di,j-Dj,k-Dk,iDim)
-             StateRight_VFD(:,i,j,k,iDim) = State_VGB(:,i,j,k,iBlock) &
+             StateRight_VFD(:,i,j,k,iDim) = State_VG(:,i,j,k) &
                   - 0.5*Slope_VGD(:,i,j,k,iDim)
           end do; end do; end do
-          
-       end if
-    end do
 
-    ! Calculate upwinded fluxes (assume positive velocities)
-    do iDim = 1, nDim
-       if(IsCartesian) CellFace = CellFace_DB(iDim,iBlock)
-       Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-       do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
-          if(.not.IsCartesian)CellFace = CellFace_DFB(iDim,i,j,k,iBlock)
-          Flux_VFD(:,i,j,k,iDim) = &
-               CellFace*Velocity_D(iDim)*StateLeft_VFD(:,i,j,k,iDim)
-       end do; end do; end do
-    end do
+          if(DoLimitVolumeState)then
+             ! Divide by volume averaged over the face
+             ! Maybe some more accurate approximation is needed???
+             do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
+                vInv = 2/(CellVolume_GB(i-Di,j-Dj,k-Dk,iBlock) &
+                     +    CellVolume_GB(i,j,k,iBlock))
+
+                StateLeft_VFD( :,i,j,k,iDim)=vInv*StateLeft_VFD( :,i,j,k,iDim)
+                StateRight_VFD(:,i,j,k,iDim)=vInv*StateRight_VFD(:,i,j,k,iDim)
+             end do; end do; end do
+          end if
+
+       end do
+    end if
+
+    ! Calculate upwinded fluxes 
+    if(IsCartesian .or. IsRzGeometry)then
+       do iDim = 1, nDim
+          if(IsCartesian) CellFace = CellFace_DB(iDim,iBlock)
+          Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+          do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
+             if(IsRzGeometry) CellFace = CellFace_DFB(iDim,i,j,k,iBlock)
+             ! Here we assume positive velocities, so left state is used
+             Flux_VFD(:,i,j,k,iDim) = &
+                  CellFace*Velocity_D(iDim)*StateLeft_VFD(:,i,j,k,iDim)
+          end do; end do; end do
+       end do
+    else
+       do iDim = 1, nDim
+          Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+          do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
+             FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
+             vFaceNormal = sum(FaceNormal_D*Velocity_D)
+             ! Use flux from upwind direction
+             if(vFaceNormal > 0.0)then
+                Flux_VFD(:,i,j,k,iDim) = &
+                     vFaceNormal*StateLeft_VFD(:,i,j,k,iDim)
+             else
+                Flux_VFD(:,i,j,k,iDim) = &
+                     vFaceNormal*StateRight_VFD(:,i,j,k,iDim)
+             end if
+          end do; end do; end do
+       end do
+
+    end if
 
   end subroutine calc_face_values
   !===========================================================================
@@ -642,23 +711,44 @@ contains
   subroutine advance_explicit
 
     use BATL_lib, ONLY: message_pass_cell, nBlock, Unused_B, &
-         IsCartesian, CellSize_DB, CellVolume_B, CellVolume_GB, &
+         IsCartesian, IsRzGeometry, CellSize_DB, CellVolume_B, CellVolume_GB, &
+         FaceNormal_DDFB, &
          iComm, nProc, store_face_flux, apply_flux_correction
     use ModNumConst, ONLY: i_DD
     use ModMpi
 
     integer:: iStage, iDim, iBlock, i, j, k, Di, Dj, Dk, iError
-    real:: DtPe, DtStage, InvVolume
+    real:: DtInv, DtPe, DtStage, InvVolume, Flux
 
     logical, parameter:: DoTest = .false.
     character(len=*), parameter:: NameSub = 'advance_explicit'
     !--------------------------------------------------------------------------
-    Dt = 1e30
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
-       Dt = min( Dt, 1 / sum( Velocity_D/CellSize_DB(1:nDim,iBlock) ) ) 
-    end do
-    Dt = min( Cfl*Dt, TimeMax - Time)
+    DtInv = 0.0
+    if(IsCartesian .or. IsRzGeometry)then
+       ! Velocity is constant and positive so simply check cellsize per block
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          DtInv = max( DtInv, sum( Velocity_D/CellSize_DB(1:nDim,iBlock) ) )
+       end do
+    else
+       ! Cell width is estimated as Volume/FaceArea
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Flux = 0.0
+             do iDim = 1, nDim
+                Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+                Flux = Flux + max( &
+                     abs(sum(Velocity_D &
+                     *       FaceNormal_DDFB(:,iDim,i,j,k,iBlock))), &
+                     abs(sum(Velocity_D &
+                     *       FaceNormal_DDFB(:,iDim,i+Di,j+Dj,k+Dk,iBlock))))
+             end do
+             DtInv = max(DtInv, Flux/CellVolume_GB(i,j,k,iBlock))
+          end do; end do; end do
+       end do
+    end if
+    Dt = min( Cfl/DtInv, TimeMax - Time)
 
     if(nProc > 1)then
        DtPe = Dt
