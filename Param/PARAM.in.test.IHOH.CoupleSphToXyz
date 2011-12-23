@@ -272,11 +272,16 @@ box			NameArea
 #INNERBOUNDARY
 buffergrid
 
-#HELIOBUFFERGRID
+#BUFFERGRID
+2	nRBuff
+45	nPhiBuff
+90	nThetaBuff
 4.0	rBuffMin
 5.2	rBuffMax
-45	nThetaBuff
-90	nPhiBuff
+0.0	PhiBuffMin
+360.	PhiBuffMax
+0.0	ThetaBuffMin
+180.	ThetaBuffMax
 
 #OUTERBOUNDARY
 float      
