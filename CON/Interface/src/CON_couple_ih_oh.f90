@@ -536,7 +536,8 @@ contains
 
     logical :: DoTest, DoTestMe
     integer :: iCommWorld, iError, iStatus_I(MPI_STATUS_SIZE)
-    real    :: rBufferMinMaxOh_I(2), rBufferMinMaxIh_I(2)
+    real    :: rBufferMinIh, rBufferMaxIh
+    real    :: rBufferMinOh, rBufferMaxOh
 
     character(len=*), parameter :: NameSub='couple_ih_oh_init_global'
 
@@ -566,15 +567,20 @@ contains
        call OH_set_buffer_grid_get_info(OH_,iSize, jSize, kSize, BufferMinMaxOh_DI)
        if(DoTest .and. is_proc0(OH_)) &
             write(*,*) 'In OH, rBuffMinMax: ',BufferMinMaxOh_DI(1,:)
+     
+       ! Convert units before passing to IH
+       BufferMinMaxIh_DI = BufferMinMaxOh_DI        
+       rBufferMinOh = BufferMinMaxOh_DI(1,1)
+       rBufferMaxOh = BufferMinMaxOh_DI(1,2)
+       rBufferMinIh = rBufferMinOh* &
+            (Grid_C(OH_)%UnitX/Grid_C(IH_)%UnitX)
+       rBufferMaxIh = rBufferMaxOh* &
+            (Grid_C(OH_)%UnitX/Grid_C(IH_)%UnitX)
+     
        ! Package info for passing via MPI                      
        nCell_D = (/iSize,jSize,kSize/)
-       BufferMinMaxIh_DI = BufferMinMaxOh_DI
-
-       ! Convert units before passing to IH        
-       rBufferMinMaxOh_I = BufferMinMaxOh_DI(1,:)
-       rBufferMinMaxIh_I = rBufferMinMaxOh_I* &
-            Grid_C(OH_)%UnitX/Grid_C(IH_)%UnitX
-       BufferMinMaxIh_DI(1,:) = rBufferMinMaxIh_I
+       BufferMinMaxIh_DI(1,1) = rBufferMinIh
+       BufferMinMaxIh_DI(1,2) = rBufferMaxIh
     end if
 
     ! Share with IH head node.                         
@@ -604,7 +610,7 @@ contains
          call MPI_bcast(BufferMinMaxIh_DI, 6, MPI_REAL, 0, i_comm(IH_), iError)
       end if
 
-    if(is_proc0(IH_) .and. DoTest) &
+    !if(is_proc0(IH_) .and. DoTest) &
          write(*,*) 'In IH, rBuffer Min/Max: ',BufferMinMaxIh_DI(1,:)
 
   end subroutine couple_ih_oh_init_global
