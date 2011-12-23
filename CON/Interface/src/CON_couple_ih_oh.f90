@@ -577,38 +577,32 @@ contains
        BufferMinMaxIh_DI(1,:) = rBufferMinMaxIh_I
     end if
 
-    ! MPI share buffer grid size            
-
-    ! Share with IH head node.    
-    !if(i_proc0(OH_) /= i_proc0(IH_))then
-    !   if(is_proc0(OH_)) then
-    !      call MPI_send(nCell_D, 3, MPI_INTEGER, i_proc0(IH_),&
-    !           1, iCommWorld, iError)
-    !  end if
-    !   if(is_proc0(IH_)) then
-    !      call MPI_recv(nCell_D, 3, MPI_INTEGER, i_proc0(OH_),&
-    !           1, iCommWorld, iStatus_I, iError)
-    !   end if
-    !end if
-
-   ! MPI share buffer grid limits
-
     ! Share with IH head node.                         
-    !if(i_proc0(OH_) /= i_proc0(IH_))then
-    !   if(is_proc0(OH_)) &
-    !        call MPI_send(BufferMinMaxIh_DI, 6, MPI_REAL, i_proc0(IH_),&
-    !        1, iCommWorld, iError)
-    !   if(is_proc0(IH_))&
-    !        call MPI_recv(BufferMinMaxIh_DI, 6, MPI_REAL, i_proc0(OH_),&
-    !        1, iCommWorld, iStatus_I, iError)
-    !end if
+    if(i_proc0(OH_) /= i_proc0(IH_))then
+       ! MPI share buffer grid size            
+       if(is_proc0(OH_)) then
+          call MPI_send(nCell_D, 3, MPI_INTEGER, i_proc0(IH_),&
+               1, iCommWorld, iError)
+      end if
+       if(is_proc0(IH_)) then
+          call MPI_recv(nCell_D, 3, MPI_INTEGER, i_proc0(OH_),&
+               1, iCommWorld, iStatus_I, iError)
+       end if
+
+       ! MPI share buffer grid limits
+       if(is_proc0(OH_)) &
+            call MPI_send(BufferMinMaxIh_DI, 6, MPI_REAL, i_proc0(IH_),&
+            1, iCommWorld, iError)
+       if(is_proc0(IH_))&
+            call MPI_recv(BufferMinMaxIh_DI, 6, MPI_REAL, i_proc0(OH_),&
+            1, iCommWorld, iStatus_I, iError)
+    end if
 
     ! Broadcast to all IH nodes.           
-    if(is_proc0(OH_)) &
+    if(n_proc(IH_)>1 .and. is_proc(IH_)) then
          call MPI_bcast(nCell_D, 3, MPI_INTEGER, 0, i_comm(IH_), iError)
-
-    if(is_proc0(OH_)) &
          call MPI_bcast(BufferMinMaxIh_DI, 6, MPI_REAL, 0, i_comm(IH_), iError)
+      end if
 
     if(is_proc0(IH_) .and. DoTest) &
          write(*,*) 'In IH, rBuffer Min/Max: ',BufferMinMaxIh_DI(1,:)
