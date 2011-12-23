@@ -858,29 +858,29 @@ end function test_cell_value
 
 !=============================================================================
 
-subroutine xyz_to_spherical(x, y, z, r, Phi, Latitude)
+subroutine xyz_to_spherical(x, y, z, r, Phi, Colatitude)
 
   use ModNumConst, ONLY: cTwoPi
   implicit none
 
   real, intent(in)  :: x, y, z
-  real, intent(out) :: r, Phi, Latitude
+  real, intent(out) :: r, Phi, Colatitude
   !---------------------------------------------------------------------------
   r = sqrt(x**2 + y**2 + z**2)
 
   if(r == 0.0)then
      Phi      = 0.0
-     Latitude = 0.0
+     Colatitude = 0.0
      RETURN
   end if
 
-  ! get the phi(longitude relative to +x) and latitude (relative to equator)
+  ! get the phi(longitude relative to +x) and colatitude
   if (x == 0.0 .and. y == 0.0) then
      Phi = 0.0
   else
      Phi = modulo(atan2(y, x), cTwoPi)
   end if
-  Latitude = acos(z/R)
+  Colatitude = acos(z/R)
 
 end subroutine xyz_to_spherical
 
