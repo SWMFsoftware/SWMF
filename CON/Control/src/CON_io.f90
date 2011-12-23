@@ -445,7 +445,6 @@ contains
              RETURN
           end if
           call read_var('CouplerType', CouplerType)
-          write(*,*) 'CouplerType: ', CouplerType
           if(CouplerType(1:3) == 'MPI') &
                UseGlobalMpiCoupler_CC(iComp1,iComp2) = .TRUE.
           
