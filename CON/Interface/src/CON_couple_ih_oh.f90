@@ -85,8 +85,10 @@ contains
 
     !--------------------------------------------------------------------------
     ! REDIRECT to couple_ih_oh_init_global if needed
-    if(UseGlobalMpiCoupler_CC(IH_,OH_)) then
-       USeGlobalMpiCoupler = .TRUE.
+    if (UseGlobalMpiCoupler_CC(IH_,OH_) .or. UseGlobalMpiCoupler_CC(OH_,IH_) .or. &
+         index(Grid_C(IH_) % TypeGeometry,'spherical') > 0)then
+       UseGlobalMpiCoupler_CC(IH_,OH_) = .TRUE.
+       UseGlobalMpiCoupler_CC(OH_,IH_) = .TRUE.
        call couple_ih_oh_init_global
        RETURN
     end if
@@ -525,7 +527,7 @@ contains
   ! 08/27/2003 G.Toth - combined into a module
   ! 12/01/2004 G.Toth - the GM->IE coupling is rewritten for Jr(iSize,jSize)
 
-  ! 12/12/2011 R.Oran <oran@umich.edu> version for two BATSRUS components
+  ! 12/12/2011 R.Oran <oran@umich.edu> version for two BATSRUS components using a buffer grid
 
   ! ======================================================================= 
   !IROUTINE: couple_ih_oh_init_global - initialize IH-OH couplings 
@@ -549,7 +551,7 @@ contains
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     if(IsInitialized) RETURN
     IsInitialized = .true.
-
+    
     if(DoTest) write(*,*) NameSub, ' started'
 
     ! Determine which state variables should be coupled
@@ -747,6 +749,7 @@ contains
     integer :: iBlock, iProcTo
     character (len=*), parameter :: NameSub='couple_oh_ih_global'
     !-------------------------------------------------------------------------
+    call CON_stop(NameSub//' is not yet implemented. Correct #COUPLERTYPE command in PARAM.in file')
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     iProcWorld = i_proc()
@@ -760,7 +763,7 @@ contains
     if(DoTest)write(*,*)NameSub,', iProc, OHi_iProc0, i_proc0(IH_)=', &
          iProcWorld,i_proc0(OH_),i_proc0(IH_)
 
-    !\                                                                            
+    !\                                                                         
     ! Allocate buffers for the variables both in OH and IH 
     !/                                                       
     allocate(Buffer_VIII(nVarCouple,iSize, jSize, kSize), stat=iError)
