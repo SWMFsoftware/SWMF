@@ -2051,6 +2051,18 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nThetaBuff',nThetaBuff)
         call read_var('nPhiBuff',  nPhiBuff)
 
+     case("#BUFFERGRID")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('nRBuff',        nRBuff)
+        call read_var('nPhiBuff',      nPhiBuff)
+        call read_var('nThetaBuff',    nThetaBuff)
+        call read_var('rBuffMin',      BufferMin_D(R_))
+        call read_var('rBuffMax',      BufferMax_D(R_))
+        call read_var('PhiBuffMin',    BufferMin_D(Phi_))
+        call read_var('PhiBuffMax',    BufferMax_D(Phi_))
+        call read_var('ThetaBuffMin',  BufferMin_D(Theta_))
+        call read_var('ThetaBuffMax',  BufferMax_D(Theta_))
+
 
         ! OUTERHELIOSPHERE SPECIFIC COMMANDS
 
