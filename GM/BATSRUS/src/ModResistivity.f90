@@ -295,19 +295,19 @@ contains
 
     real :: Current_D(3), AbsJ, AbsB, JInvB, b_D(3)
     integer :: i, j, k, l, m, n
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     ! Compute |J| and |B|
-    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1;
+    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
        call get_current(i,j,k,iBlock,Current_D)
        AbsJ = sqrt(sum(current_D**2))
        ! Calculate AbsB from the average of 26 neighboring cells and itself
-        AbsB = 0.0
-       do l=-1,1; do m=-1,1; do n=-1,1;
-          b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+       AbsB = 0.0
+       do l=-1,1; do m=-1,1; do n=-1,1
+          b_D = State_VGB(Bx_:Bz_,i+l,j+m,k+n,iBlock)
+          if(UseB0) b_D = b_D + B0_DGB(:,i+l,j+m,k+n,iBlock)
           AbsB = AbsB + sqrt(sum(b_D**2))
        end do; end do; end do
-       AbsB = AbsB/27.0  
+       AbsB = AbsB/27.0
        ! Make J/B dimensionless by multiplying length scale 1Re
        JInvB = min(AbsJ*1.0/(AbsB + 1e-8), 1.0) 
 
