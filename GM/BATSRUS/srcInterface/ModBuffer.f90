@@ -209,8 +209,7 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
   ! Buffer_V is the state vector resulting from the interpolation.
 
   use ModInterpolate, ONLY: trilinear
-  use ModNumConst,    ONLY: cPi
-  use ModMain,        ONLY: BufferState_VG, rBuffer_I, PhiBuffer_I, ThetaBuffer_I,  &
+  use ModMain,        ONLY: BufferState_VG, rBuffer_I, PhiBuffer_I, ThetaBuffer_I,&
                             nRBuff, nPhiBuff, nThetaBuff, dSphBuff_D, Phi_
  
   implicit none
@@ -224,14 +223,14 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
   logical :: DoTest, DoTestMe
 
   character(len=*), parameter :: NameSub = 'interpolate_from_global_buffer'
-  !-------------------------------------------------------------                  
-  call CON_set_do_test(NameSub,DoTest, DoTestMe)
+  !-------------------------------------------------------------        
+  !  call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
   Sph_D = SphSource_D
   ! Correct target point phi coordinate if needed
-  if (Sph_D(Phi_) > 2.*cPi) Sph_D(Phi_) = Sph_D(Phi_) - 2.*cPi
+  !if (Sph_D(Phi_) > 2.*cPi) Sph_D(Phi_) = Sph_D(Phi_) - 2.*cPi
 
-  if(DoTest) write(*,*) NameSub, ' fr poimt: ',Sph_D
+  !if(DoTest) write(*,*) NameSub, ' fr poimt: ',Sph_D
 
   Buffer_V = trilinear(BufferState_VG, nVar, 1, nRBuff,1, nPhiBuff,1, nThetaBuff,&
        Sph_D, rBuffer_I, PhiBuffer_I, ThetaBuffer_I, .TRUE.)

@@ -82,6 +82,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModTimeStepControl, ONLY: read_time_step_control_param
   use ModLaserHeating,    ONLY: read_laser_heating_param
   use ModIoUnit, ONLY: io_unit_new
+  use ModNumConst, ONLY: cDegToRad
 
   !CORONA SPECIFIC PARAMETERS
   use EEE_ModMain, ONLY: EEE_set_parameters
@@ -2062,6 +2063,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('PhiBuffMax',    BufferMax_D(Phi_))
         call read_var('ThetaBuffMin',  BufferMin_D(Theta_))
         call read_var('ThetaBuffMax',  BufferMax_D(Theta_))
+        BufferMin_D(2:3) = BufferMin_D(2:3) * cDegToRad
+        BufferMax_D(2:3) = BufferMax_D(2:3) * cDegToRad
 
 
         ! OUTERHELIOSPHERE SPECIFIC COMMANDS
