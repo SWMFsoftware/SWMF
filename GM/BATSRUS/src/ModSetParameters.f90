@@ -2063,8 +2063,13 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('PhiBuffMax',    BufferMax_D(Phi_))
         call read_var('ThetaBuffMin',  BufferMin_D(Theta_))
         call read_var('ThetaBuffMax',  BufferMax_D(Theta_))
-        BufferMin_D(2:3) = BufferMin_D(2:3) * cDegToRad
-        BufferMax_D(2:3) = BufferMax_D(2:3) * cDegToRad
+        ! Update rBuffMin, rBuffMax 
+        ! in case #HELIOBUFFERGRID was not used
+        rBuffMin = BufferMin_D(R_)
+        rBuffMax = BufferMax_D(R_)
+        ! Convert degrees to radians
+        BufferMin_D(Phi_:Theta_) = BufferMin_D(Phi_:Theta_) * cDegToRad
+        BufferMax_D(Phi_:Theta_) = BufferMax_D(Phi_:Theta_) * cDegToRad
 
 
         ! OUTERHELIOSPHERE SPECIFIC COMMANDS

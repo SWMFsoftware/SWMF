@@ -573,17 +573,9 @@ contains
        BufferMinMaxIh_DI = BufferMinMaxOh_DI
        OhToIhUnitX = (Grid_C(OH_)%UnitX/Grid_C(IH_)%UnitX)
        BufferMinMaxIh_DI(1,:) = BufferMinMaxOh_DI(1,:)*OhToIhUnitX
-       !rBufferMinOh = BufferMinMaxOh_DI(1,1)
-       !rBufferMaxOh = BufferMinMaxOh_DI(1,2)
-       !rBufferMinIh = rBufferMinOh* &
-       !     (Grid_C(OH_)%UnitX/Grid_C(IH_)%UnitX)
-       !rBufferMaxIh = rBufferMaxOh* &
-       !     (Grid_C(OH_)%UnitX/Grid_C(IH_)%UnitX)
      
        ! Package info for passing via MPI                      
        nCell_D = (/iSize,jSize,kSize/)
-       !BufferMinMaxIh_DI(1,1) = rBufferMinIh
-       !BufferMinMaxIh_DI(1,2) = rBufferMaxIh
     end if
 
     ! Share with IH head node.                         
@@ -613,7 +605,7 @@ contains
          call MPI_bcast(BufferMinMaxIh_DI, 6, MPI_REAL, 0, i_comm(IH_), iError)
       end if
 
-    !if(is_proc0(IH_) .and. DoTest) &
+    if(is_proc0(IH_) .and. DoTest) &
          write(*,*) 'In IH, rBuffer Min/Max: ',BufferMinMaxIh_DI(1,:)
 
   end subroutine couple_ih_oh_init_global
@@ -707,7 +699,7 @@ contains
     if(is_proc(OH_))then
        call OH_save_global_buffer(nVarCouple, iSize, jSize, kSize,BufferGlobal_VIII)
        if(DoTest) &
-            write(*,*)NameSub//' iProc, Buffer(1,1,1)=',&
+            write(*,*)NameSub//' iProc, Buffer(:,1,1,1)=',&
             iProcWorld,Buffer_VIII(:,1,1,1)
     end if
 
