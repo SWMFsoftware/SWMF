@@ -302,7 +302,7 @@ contains
        AbsJ = sqrt(sum(current_D**2))
        ! Calculate AbsB from the average of 26 neighboring cells and itself
        AbsB = 0.0
-       do l=-1,1; do m=-1,1; do n=-1,1
+       do n=-1,1; do m=-1,1; do l=-1,1
           b_D = State_VGB(Bx_:Bz_,i+l,j+m,k+n,iBlock)
           if(UseB0) b_D = b_D + B0_DGB(:,i+l,j+m,k+n,iBlock)
           AbsB = AbsB + sqrt(sum(b_D**2))
