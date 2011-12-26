@@ -61,8 +61,9 @@ contains
     IsLogRadius   = index(TypeGeometry,'lnr')  > 0
     IsGenRadius   = index(TypeGeometry,'genr') > 0
 
+    r_ = -1; Phi_ = -1; Theta_ = -1
     if(IsRzGeometry)then
-       r_ = y_
+       r_ = 2
     elseif(IsCylindrical)then
        r_ = 1; Phi_ = 2
     elseif(IsSpherical)then
@@ -184,10 +185,11 @@ contains
     real:: Xyz_D(MaxDim), Coord_D(MaxDim), Good_D(MaxDim)
 
     logical:: DoTestMe
-    character(len=*), parameter :: NameSub = 'test_grid'
+    character(len=*), parameter :: NameSub = 'test_geometry'
     !--------------------------------------------------------------------------
     DoTestMe = iProc == 0
 
+    if(DoTestMe) write(*,*)'Starting ',NameSub
     if(DoTestMe) write(*,*)'Testing init_geometry for Cartesian'
     call init_geometry
 
