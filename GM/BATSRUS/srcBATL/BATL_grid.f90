@@ -130,8 +130,9 @@ contains
 
     deallocate(CoordMin_DB, CoordMax_DB, CellSize_DB, CellFace_DB, &
          CellVolume_B, Xyz_DGB)
-    if(allocated(CellFace_DFB)) deallocate(CellFace_DFB)
-    if(allocated(CellVolume_GB))deallocate(CellVolume_GB)
+    if(allocated(CellVolume_GB))   deallocate(CellVolume_GB)
+    if(allocated(CellFace_DFB))    deallocate(CellFace_DFB)
+    if(allocated(FaceNormal_DDFB)) deallocate(FaceNormal_DDFB)
 
     CoordMin_D =  0.0
     CoordMax_D = -1.0
@@ -152,7 +153,10 @@ contains
     character(len=*), parameter:: NameSub = 'create_grid_block'
 
     real :: PositionMin_D(MaxDim), PositionMax_D(MaxDim), Coord_D(MaxDim)
-    real :: r0, dr, rCell_I(MinI:MaxI), rFace_I(1:nI+1), Area
+    real :: rCell_I(MinI:MaxI), rFace_I(1:nI+1)
+    real :: Phi, SinPhi_I(MinJ:MaxJ), CosPhi_I(MinJ:MaxJ)
+    real :: SinPhiFace_I(nJ+1), CosPhiFace_I(nJ+1)
+    real :: Area
     integer :: iNode, i, j, k
     !----------------------------------------------------------------------
     if(present(iNodeIn))then
@@ -210,13 +214,22 @@ contains
           call coord_to_xyz(Coord_D, Xyz_DGB(:,i,j,k,iBlock))
        end do; end do; end do
 
-       r0 = CoordMin_DB(1,iBlock)
-       Dr = CellSize_DB(1,iBlock)
        do i = MinI, MaxI
-          rCell_I(i) = r0 + (i-0.5)*dr
+          rCell_I(i) = CoordMin_DB(1,iBlock) + (i-0.5)*CellSize_DB(1,iBlock)
        end do
        do i = 1, nI+1
-          rFace_I(i) =  r0 + (i-1)*dr
+          rFace_I(i) = CoordMin_DB(1,iBlock) + (i-1)*CellSize_DB(1,iBlock)
+       end do
+
+       do j = MinJ, MaxJ
+          Phi = CoordMin_DB(2,iBlock) + (j-0.5)*CellSize_DB(2,iBlock)
+          SinPhi_I(j) =  sin(Phi)
+          CosPhi_I(j) =  cos(Phi)
+       end do
+       do j = 1, nJ+1
+          Phi = CoordMin_DB(2,iBlock) + (j-1)*CellSize_DB(2,iBlock)
+          SinPhiFace_I(j) =  sin(Phi)
+          CosPhiFace_I(j) =  cos(Phi)
        end do
 
        if(IsCylindrical)then
@@ -227,15 +240,15 @@ contains
              CellVolume_GB(i,:,:,iBlock) = rCell_I(i)*CellVolume_B(iBlock)
           end do
 
-          ! dA_r = r_(i+1/2)*dphi*dz * (cos phi, sin phi, 0) = (x/r, y/r, 0)
+          ! dA_r = r_(i+1/2)*dphi*dz * (cos phi, sin phi, 0)
           if(nDim == 3) FaceNormal_DDFB(z_,r_,:,:,:,iBlock) = 0
           do i = 1, nI+1
              Area = rFace_I(i)*CellFace_DB(1,iBlock)
              CellFace_DFB(r_,i,:,:,iBlock) = Area
              if(Area > 0)then
                 do k = 1, nK; do j=1, nJ
-                   FaceNormal_DDFB(x_:y_,r_,i,j,k,iBlock) = &
-                        Area*Xyz_DGB(x_:y_,i,j,k,iBlock)/rCell_I(i)
+                   FaceNormal_DDFB(x_,r_,i,j,k,iBlock) = Area*CosPhi_I(j)
+                   FaceNormal_DDFB(y_,r_,i,j,k,iBlock) = Area*SinPhi_I(j)
                 end do; end do
              else
                 FaceNormal_DDFB(x_:y_,r_,i,:,:,iBlock) = 0
@@ -248,10 +261,8 @@ contains
              Area = CellFace_DB(2,iBlock)
              CellFace_DFB(Phi_,i,:,:,iBlock) = Area
              do k = 1, nK; do j=1, nJ+1
-                FaceNormal_DDFB(x_,Phi_,i,j,k,iBlock) = &
-                     -Area*Xyz_DGB(y_,i,j,k,iBlock)/rCell_I(i)
-                FaceNormal_DDFB(y_,Phi_,i,j,k,iBlock) = &
-                     +Area*Xyz_DGB(x_,i,j,k,iBlock)/rCell_I(i)
+                FaceNormal_DDFB(x_,Phi_,i,j,k,iBlock) = -Area*SinPhiFace_I(j)
+                FaceNormal_DDFB(y_,Phi_,i,j,k,iBlock) = +Area*CosPhiFace_I(j)
              end do; end do
           end do
 
@@ -292,6 +303,8 @@ contains
 
     ! Show grid information for block iBlock
 
+    integer:: iDim
+
     character(len=*), parameter:: NameSub = 'show_grid_block'
     !------------------------------------------------------------------------
     if(Unused_B(iBlock))then
@@ -308,6 +321,12 @@ contains
     else
        write(*,*)'CellFace(1, 1, 1)  =', CellFace_DFB(1:nDim,1,1,1,iBlock)
        write(*,*)'CellVolume(1, 1, 1)=', CellVolume_GB(1,1,1,iBlock)
+       if(.not.IsRzGeometry)then
+          do iDim = 1, nDim
+             write(*,*)'iDim, FaceNormal_DDFB(:,iDim)=', iDim, &
+                  FaceNormal_DDFB(:,iDim,1,1,1,iBlock)
+          end do
+       end if
     end if
     write(*,*)'Xyz( 1, 1, 1)=', Xyz_DGB(:, 1, 1, 1,iBlock)
     write(*,*)'Xyz(nI, 1, 1)=', Xyz_DGB(:,nI, 1, 1,iBlock)
@@ -613,8 +632,9 @@ contains
 
     real:: Tolerance
 
-    integer:: i, j, k, Di, Dj, iDim, iBlockOut, iProcOut, iCell_D(MaxDim)
-    real:: Radius, Xyz_D(MaxDim), Distance_D(MaxDim)
+    integer:: i, j, k, Di, Dj, Dk, iDim, iBlockOut, iProcOut, iCell_D(MaxDim)
+    real:: Radius, Phi, Xyz_D(MaxDim), Coord_D(MaxDim), Distance_D(MaxDim)
+    real:: Good, Good_D(MaxDim)
     real, allocatable:: CellVolumeCart_B(:), CellFaceCart_DB(:,:)
 
     logical:: DoTestMe
@@ -622,9 +642,11 @@ contains
     !-----------------------------------------------------------------------
     DoTestMe = iProc == 0
 
-    if(DoTestMe) write(*,*)'Testing init_grid'
-    if(DoTestMe) write(*,*)'nDimAmr, nIJK_D=', nDimAmr, nIJK_D
-
+    if(DoTestMe)then
+       write(*,*)'Starting ',NameSub
+       write(*,*)'Testing init_grid'
+       write(*,*)'nDimAmr, nIJK_D=', nDimAmr, nIJK_D
+    end if
     ! Set Cartesian grid geometry before initializing tree and grid
     call init_geometry( IsPeriodicIn_D = IsPeriodicTest_D(1:nDim) )
     call init_tree(MaxBlockTest)
@@ -819,6 +841,70 @@ contains
                 write(*,*)NameSub,' ERROR: incorrect face area=', &
                      CellFace_DFB(iDim,i,j,k,iBlock),' should be', &
                      Radius*CellFaceCart_DB(iDim,iBlock), &
+                     ' at iDim,i,j,k,iBlock,iProc=', &
+                     iDim, i, j, k, iBlock, iProc
+
+             end do; end do; end do
+          end do
+       end do
+    end if
+
+    if(nDim >= 2)then
+       if(DoTestMe) write(*,*)'Testing create_grid in cylindrical geometry'
+
+       ! Clean  grid
+       call clean_grid
+
+       ! Initialize cylindrical grid
+       call init_geometry(TypeGeometryIn = 'cylindrical')
+
+       DomainMin_D = (/1., 0., -0.5/)
+       DomainMax_D = (/3., 90., 0.5/)
+
+       call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
+       call create_grid
+       call show_grid
+
+       ! Check relative to generalized coordinate volumes and areas
+       Tolerance = 1e-6
+       do iBlock = 1, nBlock
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             Good = sqrt(sum(Xyz_DGB(1:2,i,j,k,iBlock)**2))*CellVolume_B(iBlock)
+             if(abs( CellVolume_GB(i,j,k,iBlock) - Good) < Tolerance) CYCLE
+             write(*,*)NameSub,' ERROR: incorrect cell volume=', &
+                  CellVolume_GB(i,j,k,iBlock),' should be', Good, &
+                  ' at i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
+          end do; end do; end do
+          do iDim = 1, nDim
+             Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+             do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
+                ! Calculate face center in generalized coordinates
+                Coord_D = CoordMin_DB(:,iBlock) + CellSize_DB(:,iBlock) &
+                     *(/i-0.5*(1+Di),j-0.5*(1+Dj),k-0.5*(1+Dk)/)
+
+                Good = CellFace_DB(iDim,iBlock)
+                if(iDim /= 2) Good = Good*Coord_D(1)
+                if(abs(CellFace_DFB(iDim,i,j,k,iBlock) - Good) > Tolerance) &
+                     write(*,*)NameSub,' ERROR: incorrect face area=', &
+                     CellFace_DFB(iDim,i,j,k,iBlock),' should be', Good, &
+                     ' at iDim,i,j,k,iBlock,iProc=', &
+                     iDim, i, j, k, iBlock, iProc
+
+                Phi = Coord_D(2)
+                if(iDim == 1)then
+                   Good_D = (/ cos(Phi), sin(Phi), 0.0 /)
+                elseif(iDim == 2)then
+                   Good_D = (/ -sin(Phi), cos(Phi), 0.0 /)
+                else
+                   Good_D = (/ 0.0, 0.0, 1.0 /)
+                end if
+                ! Multiply by area (for now)
+                Good_D = Good_D*CellFace_DFB(iDim,i,j,k,iBlock)
+
+                if(any( Tolerance < abs(FaceNormal_DDFB(:,iDim,i,j,k,iBlock) &
+                     - Good_D(1:nDim)))) &
+                     write(*,*)NameSub,' ERROR: incorrect face area=', &
+                     FaceNormal_DDFB(:,iDim,i,j,k,iBlock),' should be',Good_D,&
                      ' at iDim,i,j,k,iBlock,iProc=', &
                      iDim, i, j, k, iBlock, iProc
 
