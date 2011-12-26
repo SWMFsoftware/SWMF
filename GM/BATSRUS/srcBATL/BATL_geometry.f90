@@ -112,7 +112,7 @@ contains
   
   subroutine coord_to_xyz(CoordIn_D, XyzOut_D)
 
-    use ModCoordTransform, ONLY: atan2_check, sph_to_xyz
+    use ModCoordTransform, ONLY: sph_to_xyz
 
     real, intent(in) :: CoordIn_D(MaxDim)
     real, intent(out):: XyzOut_D(MaxDim)

@@ -676,17 +676,15 @@ contains
 
     ! Put Flux_VXB, Flux_VYB, Flux_VZB into State_VGB for the appropriate faces
 
-    use BATL_size, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         MaxBlock
+    use BATL_size, ONLY: nI, nJ, nK, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use BATL_tree, ONLY: DiLevelNei_IIIB
     use BATL_geometry, ONLY: IsCartesian
     use BATL_grid, ONLY: CellVolume_B, CellVolume_GB
 
     integer, intent(in):: iBlock, nVar, nG
-    real, intent(inout):: &
-         State_VG(nVar,1-nG:nI+nG,max(MinJ,1-nG):min(MaxJ,nJ+nG), &
-         max(MinK,1-nG):min(MaxK,nK+nG))
-!!!!         State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    ! The min and max functions are needed for 1D and 2D.
+    real, intent(inout):: State_VG(nVar, 1-nG:nI+nG, &
+         max(MinJ,1-nG):min(MaxJ,nJ+nG), max(MinK,1-nG):min(MaxK,nK+nG))
     real, intent(inout), optional:: &
          Flux_VXB(nVar,nJ,nK,2,MaxBlock), &
          Flux_VYB(nVar,nI,nK,2,MaxBlock), &

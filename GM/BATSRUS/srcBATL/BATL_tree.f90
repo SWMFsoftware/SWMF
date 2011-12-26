@@ -400,7 +400,7 @@ contains
   subroutine adapt_tree
 
     use BATL_size, ONLY: iRatio, jRatio, kRatio
-    use BATL_mpi, ONLY: iComm, nProc,iProc
+    use BATL_mpi, ONLY: iComm, nProc
     use ModMpi, ONLY: MPI_allreduce, MPI_INTEGER, MPI_MAX
 
     ! All processors can request some status changes in iStatusNew_A.
@@ -439,8 +439,6 @@ contains
 
     nRefineDiffOld =  0.0!nRefineDiff
     BLOCKTRY: do iTryAmr=1,iMaxTryAmr
-
-
 
        ! Check max and min levels and coarsening of all siblings
        iLevelMin = nLevel
@@ -612,11 +610,6 @@ contains
 
        nRefineDiffOld = nRefineDiff 
 
-       !if(iProc ==0) &
-       !     write (*,'(a10,f16.6,2(i6))') "Pre :", &
-       !     nRefineDiff ,min(nProc*MaxBlock,MaxTotalBlock),&
-       !     (nNodeUsed +count(iStatusNew_A == Refine_)*(nChild-1))
-
        ! we have space for all the new blocks that will be generated if true
        if(nRefineDiff < 0) EXIT BLOCKTRY
 
@@ -626,11 +619,6 @@ contains
 
        ! Reset iStatusNew_A to its inital setings
        iStatusNew_A = iInitialiStatusNew_A 
-
-       !if(iProc == 0) write(*,'(a20, f16.6)') &
-       ! "nRefineDiffOld = ",nRefineDiffOld
-       !if(iProc == 0) write(*,'(a20, f16.6)') &
-       ! "nRefineDiff = ",nRefineDiff
 
        ! When FracSibling = 1.0 we say that every refinemnet block will only
        ! result in that addinianl nChild-1 new blocks are used.
@@ -669,15 +657,6 @@ contains
        end do
       
     end do BLOCKTRY
-
-!!$    if(iProc==0 ) print *, "Num. refine/coursen = ", &
-!!$         count(iStatusNew_A == Refine_),&
-!!$         count(iStatusNew_A == Coarsen_)
-
-    !if(iProc==0 ) then
-    !   print *, "Rank refine   -1:+1 : ", Rank_A(max(1,nNodeSort-nDesiredRefine): min(nNodeSort,nNodeSort-nDesiredRefine+2))
-    !   print *, "Rank coursen  -1:+1 : ", Rank_A(max(1,nDesiredCoarsen-1): min(nDesiredCoarsen+1,nNodeSort))
-    !end if
 
     if(.not.DoStrictAmr) deallocate(iInitialiStatusNew_A)
 
