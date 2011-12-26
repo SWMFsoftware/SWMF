@@ -1496,6 +1496,7 @@ contains
 
     DoTestMe = iProc == 0
 
+    if(DoTestMe)write(*,*)'Starting ',NameSub
     if(DoTestMe)write(*,*)'Testing init_tree'
     call init_tree(MaxBlockTest)
     if(MaxBlock /= MaxBlockTest) &
@@ -1594,12 +1595,6 @@ contains
     if(any(abs(Weight_I - WeightGood_I(1:2**nDim)) > 1e-6)) &
          write(*,*)'ERROR: Test interpolate_tree failed, Weight_I=',&
          Weight_I,' instead of ', WeightGood_I
-
-    !if(DoTestme)then
-    !   write(*,*)'Distance    =', Distance_D(1:nDim)
-    !   write(*,*)'iNodeCell_II=', iNodeCell_II
-    !   write(*,*)'Weight_I,Sum=', Weight_I, sum(Weight_I)
-    !end if
 
     if(DoTestMe)write(*,*)'Testing distribute_tree 1st'
     call distribute_tree(.true.)

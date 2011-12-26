@@ -807,8 +807,8 @@ contains
     if(DoTestMe) write(*,*) 'Starting ',NameSub
 
     call init_tree(MaxBlockTest)
-    call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
     call init_geometry( IsPeriodicIn_D = IsPeriodicTest_D(1:nDim) )
+    call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
     call set_tree_root( nRootTest_D(1:nDim))
 
     call find_tree_node( (/0.5,0.5,0.5/), iNode)
@@ -858,7 +858,8 @@ contains
 
        NameOperator = NameOperator_I(iOp)
 
-       if(DoTestMe) write(*,*) NameSub,' testing for Operator: ',NameOperator
+       if(DoTestMe) write(*,*) 'testing message_pass_node with operator=', &
+            NameOperator
 
        select case(NameOperator)
        case("mean") 
