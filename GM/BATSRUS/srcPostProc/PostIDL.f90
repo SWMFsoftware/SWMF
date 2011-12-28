@@ -683,7 +683,7 @@ contains
     end if
 
     select case(TypeGeometry)
-    case('cylindrical')
+    case('cylindrical','cylindrical_lnr')
        XyzGen_D(1) = rCyl
        XyzGen_D(3) = Xyz_D(3)
 
@@ -700,6 +700,7 @@ contains
              XyzGen_D(1) = Xyz_D(1) + XyzMax(1)
           end select
        end if
+       if(TypeGeometry=='cylindrical_lnr') XyzGen_D(1) = log(XyzGen_D(1))
 
     case('spherical','spherical_lnr')
        XyzGen_D(1) = sqrt(rCyl**2 + Xyz_D(3)**2)
