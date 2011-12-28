@@ -153,10 +153,10 @@ contains
     character(len=*), parameter:: NameSub = 'create_grid_block'
 
     real :: PositionMin_D(MaxDim), PositionMax_D(MaxDim), Coord_D(MaxDim)
-    real :: rCell_I(MinI:MaxI), rFace_I(1:nI+1)
-    real :: Phi, SinPhi_I(MinJ:MaxJ), CosPhi_I(MinJ:MaxJ)
+    real :: rCell_I(MinI:MaxI), rFace_I(MinI:MaxI+1)
+    real :: SinPhi_I(MinJ:MaxJ), CosPhi_I(MinJ:MaxJ)
     real :: SinPhiFace_I(nJ+1), CosPhiFace_I(nJ+1)
-    real :: Area
+    real :: Area, Phi, Dphi, Dz
     integer :: iNode, i, j, k
     !----------------------------------------------------------------------
     if(present(iNodeIn))then
@@ -217,33 +217,41 @@ contains
        do i = MinI, MaxI
           rCell_I(i) = CoordMin_DB(1,iBlock) + (i-0.5)*CellSize_DB(1,iBlock)
        end do
-       do i = 1, nI+1
+       do i = MinI, MaxI+1
           rFace_I(i) = CoordMin_DB(1,iBlock) + (i-1)*CellSize_DB(1,iBlock)
        end do
+       if(IsLogRadius)then
+          rCell_I = exp(rCell_I)
+          rFace_I = exp(rFace_I)
+       end if
 
+       Dphi = CellSize_DB(2,iBlock)
        do j = MinJ, MaxJ
-          Phi = CoordMin_DB(2,iBlock) + (j-0.5)*CellSize_DB(2,iBlock)
+          Phi = CoordMin_DB(2,iBlock) + (j-0.5)*Dphi
           SinPhi_I(j) =  sin(Phi)
           CosPhi_I(j) =  cos(Phi)
        end do
        do j = 1, nJ+1
-          Phi = CoordMin_DB(2,iBlock) + (j-1)*CellSize_DB(2,iBlock)
+          Phi = CoordMin_DB(2,iBlock) + (j-1)*Dphi
           SinPhiFace_I(j) =  sin(Phi)
           CosPhiFace_I(j) =  cos(Phi)
        end do
+
+       Dz = CellSize_DB(3,iBlock)
 
        if(IsCylindrical)then
           
           ! dV = r*dr*dphi*dz
           do i = MinI, MaxI
-             ! NOTE: for ghost cells at the axis r can be negative
-             CellVolume_GB(i,:,:,iBlock) = rCell_I(i)*CellVolume_B(iBlock)
+             ! NOTE: for ghost cells beyond the axis r=0 can be negative
+             CellVolume_GB(i,:,:,iBlock) = &
+                  rCell_I(i)*(rFace_I(i+1)-rFace_I(i))*Dphi*Dz
           end do
 
           ! dA_r = r_(i+1/2)*dphi*dz * (cos phi, sin phi, 0)
           if(nDim == 3) FaceNormal_DDFB(z_,r_,:,:,:,iBlock) = 0
           do i = 1, nI+1
-             Area = rFace_I(i)*CellFace_DB(1,iBlock)
+             Area = rFace_I(i)*Dphi*Dz
              CellFace_DFB(r_,i,:,:,iBlock) = Area
              if(Area > 0)then
                 do k = 1, nK; do j=1, nJ
@@ -258,7 +266,7 @@ contains
           ! dA_phi = dr*dz * (-sin phi, cos phi, 0) = dr*dz * (-y/r, x/r, 0)
           if(nDim == 3)FaceNormal_DDFB(z_,Phi_,:,:,:,iBlock) = 0
           do i = 1, nI
-             Area = CellFace_DB(2,iBlock)
+             Area = (rFace_I(i+1)-rFace_I(i))*Dz
              CellFace_DFB(Phi_,i,:,:,iBlock) = Area
              do k = 1, nK; do j=1, nJ+1
                 FaceNormal_DDFB(x_,Phi_,i,j,k,iBlock) = -Area*SinPhiFace_I(j)
@@ -270,8 +278,8 @@ contains
              ! dA_z = r*dr*dphi * (0,0,1)
              FaceNormal_DDFB(x_:y_,z_,:,:,:,iBlock) = 0
              do i = 1, nI
-                Area = rCell_I(i)*CellFace_DB(z_,iBlock)
-                CellFace_DFB(z_,i,:,:,iBlock)    = Area
+                Area = rCell_I(i)*(rFace_I(i+1)-rFace_I(i))*Dphi
+                CellFace_DFB(z_,i,:,:,iBlock)       = Area
                 FaceNormal_DDFB(z_,z_,i,:,:,iBlock) = Area
              end do
           end if
