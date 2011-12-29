@@ -364,13 +364,13 @@ contains
               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
     else
-
        ! Spitzer form for collisional regime
        HeatCoef = HeatCondPar*Te**2.5
-       ! Artificial modified heat conduction for a smoother transition
-       ! region, Linker et al. (2001)
-       if(DoExtendTransitionRegion) HeatCoef = HeatCoef*extension_factor(TeSi)
     end if
+
+    ! Artificial modified heat conduction for a smoother transition
+    ! region, Linker et al. (2001)
+    if(DoExtendTransitionRegion) HeatCoef = HeatCoef*extension_factor(TeSi)
 
     if(DoWeakFieldConduction)then
        FractionFieldAligned = 0.5*(1.0+tanh((Bnorm-Bmodify)/DeltaBmodify))
@@ -677,11 +677,11 @@ contains
       else
          ! Spitzer form for collisional regime
          HeatCoef = HeatCondPar*Te**2.5
-         ! Artificial modified heat conduction for a smoother transition
-         ! region, Linker et al. (2001)
-         if(DoExtendTransitionRegion) &
-              HeatCoef = HeatCoef*extension_factor(TeSi)
       end if
+
+      ! Artificial modified heat conduction for a smoother transition
+      ! region, Linker et al. (2001)
+      if(DoExtendTransitionRegion) HeatCoef = HeatCoef*extension_factor(TeSi)
 
       if(UseHeatFluxRegion)then
          r = r_BLK(i,j,k,iBlock)
