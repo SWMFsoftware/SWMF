@@ -64,7 +64,8 @@ T		DoInitSphere
 1.0e3		NumDensBackgrndIo
 .00000001	pBackgrndIo
 60.0		uBackgrndIo
-0.0		FlowAngle (Deg, in xy plane from X )
+90.0		FlowAngleTheta (Deg)
+0.0		FlowAnglePhi (Deg)
 500.0		rSphere  (Rs)
 3.5e3		NumDensSphereIo
 0.0             xSphereCenterInitIo (Rs)
@@ -195,7 +196,8 @@ F		DoInitSphere
 1.0e3		NumDensBackgrndIo
 .00000001	pBackgrndIo
 60.0		uBackgrndIo
-0.0		FlowAngle (Deg, in xy plane from X )
+90.0		FlowAngleTheta (Deg)
+0.0		FlowAnglePhi   (Deg)
 500.0		rSphere (in solar radii!!)
 3.5e3		NumDensSphereIo
 0.0             xSphereCenterInitIo (Rs)

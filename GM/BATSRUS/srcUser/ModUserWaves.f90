@@ -67,9 +67,9 @@ module ModUser
   real      :: Velocity = 169.344
 
   ! Variables used by the user problem AdvectSphere                           
-  real      :: pBackgrndIo, uBackgrndIo, FlowAngle ! in XY plane         
+  real      :: pBackgrndIo, uBackgrndIo, FlowAngleTheta, FlowAnglePhi
   real      :: NumDensBackgrndIo, NumDensMaxIo
-  real      :: rSphere, rSphereIo, RhoBackgrndNo, RhoMaxNo, UxNo, UyNo
+  real      :: rSphere, rSphereIo, RhoBackgrndNo, RhoMaxNo, UxNo, UyNo, UzNo
   real      :: xSphereCenterInitIo, xSphereCenterInit
   real      :: ySphereCenterInitIo, ySphereCenterInit
   real      :: zSphereCenterInitIo, zSphereCenterInit
@@ -159,7 +159,8 @@ contains
           call read_var('NumDensBackgrndIo', NumDensBackgrndIo)
           call read_var('pBackgrndIo',       pBackgrndIo      )
           call read_var('uBackgrndIo',       uBackgrndIo      )
-          call read_var('FlowAngle',         FlowAngle        )
+          call read_var('FlowAngleTheta',    FlowAngleTheta   )
+          call read_var('FlowAnglePhi',      FlowAnglePhi     )
           call read_var('rSphereIo',         rSphereIo        )
           call read_var('NumDensMaxIo',      NumDensMaxIo     )
           call read_var('xSphereCenterInitIo', xSphereCenterInitIo)
@@ -256,16 +257,20 @@ contains
 
     case('AdvectSphere')
        DoAdvectSphere = .true.
-       ! This case describes an IC with uniform 1D flow of plasma in the XY
-       ! plane, with no density or pressure gradients and no magnetic field.
-       ! A sphere with higher density is embedded in the flow, positioned at
-       ! the origin. The density profiles within the sphere is given by:
+       ! This case describes an IC with uniform 1D flow of plasma in a fixed 
+       ! direction, with no density or pressure gradients and no magnetic field.
+       ! A sphere with higher density is embedded in the flow, initially at 
+       ! xSphereCenterInit,  ySphereCenterInit, zSphereCenterInit.
+       ! The density profile within the sphere is given by:
        ! rho = (RhoMax-RhoBackgrnd)* cos^2(pi*r/2 rSphere) + RhoBackgrnd
 
-       ! Convert to normalized units                                  
-       ! Flow angle is measured from the x axis                               
-       UxNo = uBackgrndIo*cos(cDegToRad*FlowAngle)*Io2No_V(UnitU_)
-       UyNo = uBackgrndIo*sin(cDegToRad*FlowAngle)*Io2No_V(UnitU_)
+       ! Convert to normalized units and separate flow components  
+       UxNo = uBackgrndIo*sin(cDegToRad*FlowAngleTheta)* &
+            cos(cDegToRad*FlowAnglePhi)*Io2No_V(UnitU_)
+       UyNo = uBackgrndIo*sin(cDegToRad*FlowAngleTheta)* &
+            sin(cDegToRad*FlowAnglePhi)*Io2No_V(UnitU_)
+       UzNo = uBackgrndIo*cos(cDegToRad*FlowAngleTheta)*Io2No_V(UnitU_)
+
        RhoBackgrndNo = NumDensBackgrndIo*Io2Si_V(UnitN_)* &
             cProtonMass*Si2No_V(UnitRho_) 
        RhoMaxNo       = NumDensMaxIo*Io2Si_V(UnitN_)* &
@@ -314,14 +319,14 @@ contains
           State_VGB(rho_,:,:,:,iBlock) = RhoBackgrndNo
        end if
        ! velocity                                                              
-       State_VGB(RhoUx_,:,:,:,iBlock) = UxNo*State_VGB(rho_,:,:,:,iBlock)
-       State_VGB(RhoUy_,:,:,:,iBlock) = UyNo*State_VGB(rho_,:,:,:,iBlock)
-       State_VGB(RhoUz_, :,:,:,iBlock) = 0.0
+       State_VGB(RhoUx_,:,:,:,iBlock) = UxNo*State_VGB(rho_,:,:,:,iBlock) 
+       State_VGB(RhoUy_,:,:,:,iBlock) = UyNo*State_VGB(rho_,:,:,:,iBlock) 
+       State_VGB(RhoUz_,:,:,:,iBlock) = UzNo*State_VGB(rho_,:,:,:,iBlock)
        State_VGB(Bx_:Bz_,:,:,:,iBlock) = 0.0
        State_VGB(p_,     :,:,:,iBlock) = pBackgrndIo*Io2No_V(UnitP_)
 
-       ! Transform to HGC frame - rho, p, spherically symmetric at origin, only velocity 
-       ! and/ or momentum should be transformed
+       ! Transform to HGC frame - initially aligned with HGI, only velocity 
+       ! and/ or momentum in X-Y plane hould be transformed
 
        if (TypeCoordSystem =='HGC') then
           OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
@@ -567,7 +572,8 @@ contains
               UxNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
          ySphereCenter = ySphereCenterInit + &
               UyNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
-         zSphereCenter = zSphereCenterInit 
+         zSphereCenter = zSphereCenterInit + &
+              UzNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
 
          ! transform if rotating frame
          if (TypeCoordSystem =='HGC') then       
@@ -584,7 +590,10 @@ contains
          end if
 
          ! Chcek if this cell is inside the sphere
-         rFromCenter = sqrt((x-xSphereCenter)**2 + (y-ySphereCenter)**2 + z**2)
+         rFromCenter = &
+              sqrt((x-xSphereCenter)**2 + &
+                   (y-ySphereCenter)**2 + &
+                   (z-zSphereCenter)**2)
          if (rFromCenter .le. rSphere) then
             RhoExact_G(i,j,k) = RhoBackgrndNo + (RhoMaxNo - RhoBackgrndNo)* &
                  cos(0.5*cPi*rFromCenter/rSphere)**2
@@ -779,19 +788,23 @@ contains
 
     if (DoAdvectSphere) then
 
-       ! Convert to normalized units                                  
-       ! Flow angle is measured from the x axis                               
-       UxNo = uBackgrndIo*cos(cDegToRad*FlowAngle)*Io2No_V(UnitU_)
-       UyNo = uBackgrndIo*sin(cDegToRad*FlowAngle)*Io2No_V(UnitU_)
+       ! Convert to normalized units and separate velocity components
+       UxNo = uBackgrndIo*sin(cDegToRad*FlowAngleTheta)* &
+            cos(cDegToRad*FlowAnglePhi)*Io2No_V(UnitU_)
+       UyNo = uBackgrndIo*sin(cDegToRad*FlowAngleTheta)* &
+            sin(cDegToRad*FlowAnglePhi)*Io2No_V(UnitU_)
+       UzNo = uBackgrndIo*cos(cDegToRad*FlowAngleTheta)*Io2No_V(UnitU_)
+
        RhoBackgrndNo = NumDensBackgrndIo*Io2Si_V(UnitN_)* &
-            cProtonMass*Si2No_V(UnitRho_) 
+            cProtonMass*Si2No_V(UnitRho_)
+
        !\                                                                      
        ! Start filling in cells (including ghost cells)                       
        !/                          
        State_VGB(rho_,:,:,:,iBlk) = RhoBackgrndNo
 
-       ! Transform to HGC frame - rho, p, spherically symmetric at origin, 
-       ! only velocity and/ or momentum should be transformed
+       ! Transform to HGC frame  
+       ! only velocity and/ or momentum in X-Y plane should be transformed
 
        if (TypeCoordSystem =='HGC') then
           OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
@@ -813,7 +826,7 @@ contains
 
 
           ! set the rest of state variables
-          State_VGB(RhoUz_, :,:,:,iBlk) = 0.0
+          State_VGB(RhoUz_, :,:,:,iBlk) = UzNo
           State_VGB(Bx_:Bz_,:,:,:,iBlk) = 0.0
           State_VGB(p_,     :,:,:,iBlk) = pBackgrndIo*Io2No_V(UnitP_)
 
