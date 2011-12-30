@@ -234,8 +234,8 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
   NormTheta = (Sph_D(Theta_) - BufferMin_D(Theta_))/dSphBuff_D(Theta_) + 0.5
 
   NormSph_D = (/NormR, NormPhi, NormTheta/)
-  Buffer_V = trilinear(BufferState_VG, nVar, 1, nRBuff,1, nPhiBuff, &
-       1, nThetaBuff, NormSph_D, DoExtrapolate=.TRUE.)
+  Buffer_V = trilinear(BufferState_VG, nVar, 1, nRBuff,0, nPhiBuff+1, &
+       0, nThetaBuff+1, NormSph_D, DoExtrapolate=.TRUE.)
 
 end subroutine interpolate_from_global_buffer
           

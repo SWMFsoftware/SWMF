@@ -655,17 +655,17 @@ contains
     if(DoTest)write(*,*)NameSub,', iProc, IHi_iProc0, OHi_iProc0=', &
          iProcWorld,i_proc0(IH_),i_proc0(OH_)
 
-    ! Allocate and intialize local buffer on IH processors
+    ! Allocate and intialize local buffer on IH processors, including ghost cells
     if(is_proc(IH_)) then
-       allocate(Buffer_VIII(nVarCouple,iSize,jSize,kSize), stat=iError)
+       allocate(Buffer_VIII(nVarCouple,iSize,0:jSize+1,0:kSize+1), stat=iError)
        Buffer_VIII = 0.0
     end if
 
     ! Allocate global buffer on all processors
-    allocate(BufferGlobal_VIII(nVarCouple,iSize,jSize,kSize), stat=iError)
+    allocate(BufferGlobal_VIII(nVarCouple,iSize,0:jSize+1,0:kSize+1), stat=iError)
     BufferGlobal_VIII = 0.0
 
-    nSize = iSize*jSize*kSize*nVarCouple
+    nSize = iSize*(jSize+2)*(kSize+2)*nVarCouple
 
     ! Fill in state variables
     if(is_proc(IH_)) then
