@@ -22,7 +22,7 @@ contains
     use ModCrcmPlanet,  ONLY: nSpecies=>nspec
     use ModCrcmGrid,    ONLY: LonGrid_I=>phi, LatGrid_I=>xlat, &
                               AngleGrid_I=>sinAo
-    use ModFieldTrace,  ONLY: BfieldEq_C => bo
+    use ModFieldTrace,  ONLY: BfieldEq_C => bo, iba
     use ModImTime,      ONLY: iCurrentTime_I
 
     implicit none
@@ -44,7 +44,7 @@ contains
                           LatSatGen,LonSatGen, AngSatGen
     real               :: SatB2, RatioBeqBsat
     integer            :: iSatLat, iSatLon, iSatAng, iAngle, iEnergy
-    integer,parameter  :: iSpeciesOut=1 !only save H+ flux
+    integer            :: iSpecies
     character(len=8)  :: NameChannel
     !-------------------------------------------------------------------------
     ! Allocate array for satellite flux
@@ -63,12 +63,17 @@ contains
     
     if(.not. allocated(Flux_G)) allocate(Flux_G(nLat,0:nLon+1,nEnergy,nAngle))
     if(iSatIn == 1) then
-       Flux_G(1:nLat,1:nLon,1:nEnergy,1:nAngle) = &
-            Flux_C(iSpeciesOut,1:nLat,1:nLon,1:nEnergy,1:nAngle) 
+       !sum flux over ion species and add ghost cells
+       Flux_G(:,:,:,:)=0.0
+       do iSpecies=1,nSpecies-1 
+          Flux_G(1:nLat,1:nLon,1:nEnergy,1:nAngle) = &
+               Flux_G(1:nLat,1:nLon,1:nEnergy,1:nAngle) &
+               + Flux_C(iSpecies,1:nLat,1:nLon,1:nEnergy,1:nAngle)
+       enddo
        Flux_G(1:nLat,nLon+1,1:nEnergy,1:nAngle) = &
-            Flux_C(iSpeciesOut,1:nLat,1,1:nEnergy,1:nAngle) 
+            Flux_G(1:nLat,1,1:nEnergy,1:nAngle)
        Flux_G(1:nLat,0,1:nEnergy,1:nAngle) = &
-            Flux_C(iSpeciesOut,1:nLat,nLon,1:nEnergy,1:nAngle) 
+            Flux_G(1:nLat,nLon,1:nEnergy,1:nAngle)
     endif
 
     ! Set BfieldEq^2 on first sat call
@@ -141,27 +146,36 @@ contains
        ! Beq must be minimum so ratio can not be larger than 1
        if (RatioBeqBsat > 1.0) RatioBeqBsat=1.0
 
-       !Interpolate solution to sat location
-       do iAngle=1,nAngle
-          !Get generallized sat pitch-angle
-          SatAng = AngleGrid_I(iAngle)*RatioBeqBsat
-          call locate1IM(AngleGrid_I, nAngle, SatAng, iSatAng)
-          ! Angle grid does not go all the way to zero, if angle falls below min
-          ! angle in grid then set it to min angle
-          if (iSatAng < 1) then 
-             iSatAng   = 1
-             AngSatGen = 1.0
-          else
-             AngSatGen =  iSatAng &
-            + (AngleGrid_I(iSatAng+1) - SatAng) &
-            / (AngleGrid_I(iSatAng+1)-AngleGrid_I(iSatAng))
-          endif
-          do iEnergy=1,nEnergy
-             SatFlux_II(iEnergy,iAngle) = &
-                  trilinear( Flux_G(:,:,iEnergy,:),1,nLat,0,nLon+1, &
-                  1,nAngle,(/ LatSatGen, LonSatGen, AngSatGen/) )
+       !check that sat is in iba domain
+       if (iSatLat >= iba(iSatLon) .or. iSatLat >= iba(iSatLon+1)) then
+          !treat as open
+          LatSatGen=-1.0
+          LonSatGen=-1.0
+          SatFlux_II(:,:) = 0.0
+          SatLoc_3I(3,2,iSatIn) = -1
+       else
+          !Interpolate solution to sat location
+          do iAngle=1,nAngle
+             !Get generallized sat pitch-angle
+             SatAng = AngleGrid_I(iAngle)*RatioBeqBsat
+             call locate1IM(AngleGrid_I, nAngle, SatAng, iSatAng)
+             ! Angle grid does not go all the way to zero, if angle falls below min
+             ! angle in grid then set it to min angle
+             if (iSatAng < 1) then 
+                iSatAng   = 1
+                AngSatGen = 1.0
+             else
+                AngSatGen =  iSatAng &
+                     + (AngleGrid_I(iSatAng+1) - SatAng) &
+                     / (AngleGrid_I(iSatAng+1)-AngleGrid_I(iSatAng))
+             endif
+             do iEnergy=1,nEnergy
+                SatFlux_II(iEnergy,iAngle) = &
+                     trilinear( Flux_G(:,:,iEnergy,:),1,nLat,0,nLon+1, &
+                     1,nAngle,(/ LatSatGen, LonSatGen, AngSatGen/) )
+             enddo
           enddo
-       enddo
+       endif
     else
        ! When satellite is on open field lines or outside domain 
        ! set flux to zero
