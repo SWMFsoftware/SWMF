@@ -49,7 +49,8 @@ module BATL_lib
 
   ! Inherited from BATL_geometry
   public:: TypeGeometry, IsCartesian, IsRzGeometry, IsSpherical, &
-       IsCylindrical, IsPeriodic_D, x_, y_, z_, r_, phi_, theta_
+       IsCylindrical, IsPeriodic_D, IsNodeBasedGrid, &
+       x_, y_, z_, r_, phi_, theta_
 
   ! Inherited from BATL_grid
   public:: CoordMin_D, CoordMax_D, CoordMin_DB, CoordMax_DB, CellSize_DB

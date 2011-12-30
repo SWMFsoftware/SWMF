@@ -200,8 +200,8 @@ contains
   subroutine initialize
 
     use BATL_lib, ONLY: init_mpi, init_batl, init_grid_batl, &
-         iProc, iComm, MaxDim, MaxBlock, nBlock, Unused_B, Xyz_DGB, &
-         iTree_IA, MaxLevel_, BetaProlong
+         iProc, MaxDim, MaxBlock, nBlock, Unused_B, Xyz_DGB, &
+         iTree_IA, MaxLevel_, BetaProlong, IsNodeBasedGrid
 
     use ModReadParam, ONLY: read_file, read_init, &
          read_line, read_command, read_var
@@ -216,8 +216,8 @@ contains
 
     call init_mpi
 
-    call read_file('PARAM.in', iComm)
-    call read_init('  ', iSessionIn=1)
+    call read_file('PARAM.in')
+    call read_init
     READPARAM: do
        if(.not.read_line(StringLine) ) EXIT READPARAM
        if(.not.read_command(NameCommand)) CYCLE READPARAM
@@ -232,6 +232,8 @@ contains
           end do
        case("#GRIDGEOMETRY")
           call read_var('TypeGeometry', TypeGeometry)
+       case("#GRIDTYPE")
+          call read_var('IsNodeBasedGrid', IsNodeBasedGrid)
        case("#AMR")
           call read_var('MaxLevel', MaxLevel)
        case("#BLOB")
