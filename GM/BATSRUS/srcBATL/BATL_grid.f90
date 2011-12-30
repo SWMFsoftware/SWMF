@@ -34,6 +34,8 @@ module BATL_grid
        Xyz_DGB(:,:,:,:,:),      &    ! Cartesian cell centers coords
        FaceNormal_DDFB(:,:,:,:,:,:)  ! Normal face area vector
 
+  logical, public:: IsNodeBasedGrid = .false.
+
   ! Local variables
 
   logical :: DoInitializeGrid = .true.
@@ -143,6 +145,8 @@ contains
 
   subroutine create_grid_block(iBlock, iNodeIn)
 
+    use ModCoordTransform, ONLY: cross_product
+
     ! Create geometrical information for block iBlock on the local PE
 
     integer, intent(in):: iBlock
@@ -153,10 +157,12 @@ contains
     character(len=*), parameter:: NameSub = 'create_grid_block'
 
     real :: PositionMin_D(MaxDim), PositionMax_D(MaxDim), Coord_D(MaxDim)
-    real :: rCell_I(MinI:MaxI), rFace_I(MinI:MaxI+1)
-    real :: SinPhi_I(MinJ:MaxJ), CosPhi_I(MinJ:MaxJ)
-    real :: SinPhiFace_I(nJ+1), CosPhiFace_I(nJ+1)
-    real :: Area, Phi, Dphi, Dz
+
+    real, allocatable, save:: &
+         rCell_I(:), rFace_I(:),  SinPhi_I(:), CosPhi_I(:), &
+         SinPhiFace_I(:), CosPhiFace_I(:), Xyz_DN(:,:,:,:)
+
+    real :: Area, Phi, Dphi, Dz, Xyz_D(MaxDim)
     integer :: iNode, i, j, k
     !----------------------------------------------------------------------
     if(present(iNodeIn))then
@@ -207,7 +213,120 @@ contains
           ! Also useful for Cartesian to keep code simple
           CellVolume_GB(:,:,:,iBlock) = CellVolume_B(iBlock)
        end if
+
+    elseif(IsNodeBasedGrid)then
+
+       if(.not.allocated(Xyz_DN))then
+          if(nDim == 2) allocate(Xyz_DN(3,MinI:MaxI+1,MinJ:MaxJ+1,1))
+          if(nDim == 3) allocate(Xyz_DN(3,MinI:MaxI+1,MinJ:MaxJ+1,MinK:MaxK+1))
+       end if
+
+       ! Calculate node positions in Cartesian space
+       do k = MinK, MaxK+1
+          if(nDim == 2 .and. k /= 1) CYCLE
+          do j = MinJ, MaxJ+1; do i = MinI, MaxI+1
+             Coord_D = CoordMin_DB(:,iBlock) + &
+                  ( (/i, j, k/) - 1 ) * CellSize_DB(:,iBlock)
+             call coord_to_xyz(Coord_D, Xyz_DN(:,i,j,k) )
+          end do; end do
+       end do
+
+       ! Calculate face area vectors
+       if(nDim == 2)then
+          ! Calculate face area vectors as 90 degree rotations of edge vectors
+          do j = 1, nJ; do i = 1, nI+1
+             FaceNormal_DDFB(x_,1,i,j,1,iBlock) = &
+                  Xyz_DN(2,i,j+1,1) - Xyz_DN(2,i,j,1)
+             FaceNormal_DDFB(y_,1,i,j,1,iBlock) = &
+                  Xyz_DN(1,i,j,1) - Xyz_DN(1,i,j+1,1)
+
+             CellFace_DFB(1,i,j,1,iBlock) = &
+                  sqrt(sum(FaceNormal_DDFB(:,1,i,j,1,iBlock)**2))
+
+          end do; end do
+          do j = 1, nJ+1; do i = 1, nI
+             FaceNormal_DDFB(x_,2,i,j,1,iBlock) = &
+                  Xyz_DN(2,i,j,1) - Xyz_DN(2,i+1,j,1)
+             FaceNormal_DDFB(y_,2,i,j,1,iBlock) = &
+                  Xyz_DN(1,i+1,j,1) - Xyz_DN(1,i,j,1)
+
+             CellFace_DFB(2,i,j,1,iBlock) = &
+                  sqrt(sum(FaceNormal_DDFB(:,2,i,j,1,iBlock)**2))
+
+          end do; end do
+       else
+          ! Calculate face area vectors as cross products of diagonals
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+             FaceNormal_DDFB(:,x_,i,j,k,iBlock) = 0.5*cross_product( &
+                  Xyz_DN(:,i,j+1,k+1) - Xyz_DN(:,i,j  ,k),           &
+                  Xyz_DN(:,i,j  ,k+1) - Xyz_DN(:,i,j+1,k)          )
+
+             CellFace_DFB(1,i,j,k,iBlock) = &
+                  sqrt(sum(FaceNormal_DDFB(:,1,i,j,k,iBlock)**2))
+
+          end do; end do; end do
+          do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+             FaceNormal_DDFB(:,y_,i,j,k,iBlock) = 0.5*cross_product( &
+                  Xyz_DN(:,i+1,j,k+1) - Xyz_DN(:,i,j,k  ),           &
+                  Xyz_DN(:,i+1,j,k  ) - Xyz_DN(:,i,j,k+1)          )
+
+             CellFace_DFB(2,i,j,k,iBlock) = &
+                  sqrt(sum(FaceNormal_DDFB(:,2,i,j,k,iBlock)**2))
+
+          end do; end do; end do
+          do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+             FaceNormal_DDFB(:,z_,i,j,k,iBlock) = 0.5*cross_product( &
+                  Xyz_DN(:,i+1,j+1,k) - Xyz_DN(:,i  ,j,k),           &
+                  Xyz_DN(:,i  ,j+1,k) - Xyz_DN(:,i+1,j,k)          )
+
+             CellFace_DFB(3,i,j,k,iBlock) = &
+                  sqrt(sum(FaceNormal_DDFB(:,3,i,j,k,iBlock)**2))
+
+          end do; end do; end do
+       end if
+
+       ! Calculate cell volumes
+       if(nDim == 2)then
+          ! Calculate cell volume as a sum of 2 triangle areas
+          ! Also calculate cell center as the center of mass
+          do j = MinJ, MaxJ; do i = MinI, MaxI
+             Xyz_D = 0.0
+             CellVolume_GB(i,j,1,iBlock) = &
+                  volume3(i,j, i+1,j, i+1,j+1) + &
+                  volume3(i,j, i+1,j+1, i,j+1)
+             Xyz_DGB(:,i,j,1,iBlock) = Xyz_D/CellVolume_GB(i,j,1,iBlock)
+          end do; end do
+       else
+          ! Calculate cell volume as a sum of 6 tetrahedra
+          ! The tips of the tetrahedra are at the min position of the cell
+          ! Also calculate cell center as the center of mass
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             Xyz_D = 0.0
+             CellVolume_GB(i,j,k,iBlock) = &
+                  volume4(i,j,k, i+1,j  ,k  , i+1,j+1,k  , i+1,j  ,k+1) + &
+                  volume4(i,j,k, i+1,j+1,k+1, i+1,j  ,k+1, i+1,j+1,k  ) + &
+                  volume4(i,j,k, i  ,j+1,k  , i  ,j+1,k+1, i+1,j+1,k  ) + &
+                  volume4(i,j,k, i+1,j+1,k+1, i+1,j+1,k  , i  ,j+1,k+1) + &
+                  volume4(i,j,k, i  ,j  ,k+1, i+1,j  ,k+1, i  ,j+1,k+1) + &
+                  volume4(i,j,k, i+1,j+1,k+1, i  ,j+1,k+1, i+1,j  ,k+1)
+             Xyz_DGB(:,i,j,k,iBlock) = Xyz_D/CellVolume_GB(i,j,k,iBlock)
+          end do; end do; end do
+       end if
+
+       ! Cell center positions based on generalized coordinates
+       !do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       !   Coord_D = CoordMin_DB(:,iBlock) + &
+       !        ( (/i, j, k/) - 0.5 ) * CellSize_DB(:,iBlock)
+       !   call coord_to_xyz(Coord_D, Xyz_DGB(:,i,j,k,iBlock))
+       !end do; end do; end do
+
     else
+
+       if(.not.allocated(rCell_I)) allocate( &
+            rCell_I(MinI:MaxI), rFace_I(MinI:MaxI+1), &
+            SinPhi_I(MinJ:MaxJ), CosPhi_I(MinJ:MaxJ), &
+            SinPhiFace_I(nJ+1), CosPhiFace_I(nJ+1) )
+
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           Coord_D = CoordMin_DB(:,iBlock) + &
                ( (/i, j, k/) - 0.5 ) * CellSize_DB(:,iBlock)
@@ -289,6 +408,49 @@ contains
                ' geometry is not yet implemented')
        end if
     end if
+
+  contains
+    !=========================================================================
+    real function volume3(i1,j1, i2,j2, i3,j3)
+
+      integer, intent(in):: i1,j1, i2,j2, i3,j3
+
+      real, parameter:: cThird = 1.0/3.0
+
+      real, dimension(2):: a_D, b_D, c_D
+      !----------------------------------------------------------------------
+      a_D = Xyz_DN(1:2,i1,j1,1)
+      b_D = Xyz_DN(1:2,i2,j2,1) - a_D
+      c_D = Xyz_DN(1:2,i3,j3,1) - a_D
+
+      volume3 = 0.5*( b_D(1)*c_D(2) - b_D(2)*c_D(1))
+
+      Xyz_D(1:2) = Xyz_D(1:2) + volume3*(a_D + cThird*(b_D + c_D))
+
+    end function volume3
+    !=========================================================================
+    real function volume4(i1,j1,k1, i2,j2,k2, i3,j3,k3, i4,j4,k4)
+
+      integer, intent(in):: i1,j1,k1, i2,j2,k2, i3,j3,k3, i4,j4,k4
+
+      ! Return the volume of the tetrahedron enclosed by the 4 nodes.
+      ! The volume can be negative for ghost cells.
+
+      real, parameter:: cSixth = 1.0/6.0
+
+      real, dimension(3):: a_D, b_D, c_D, d_D
+      !----------------------------------------------------------------------
+      a_D = Xyz_DN(:,i1,j1,k1)
+      b_D = Xyz_DN(:,i2,j2,k2) - a_D
+      c_D = Xyz_DN(:,i3,j3,k3) - a_D
+      d_D = Xyz_DN(:,i4,j4,k4) - a_D
+      
+      ! Triple product divided by 6
+      volume4 = cSixth*sum( b_D*cross_product(c_D, d_D) )
+
+      Xyz_D = Xyz_D + volume4*(a_D + 0.25*(b_D + c_D + d_D))
+
+    end function volume4
 
   end subroutine create_grid_block
 
