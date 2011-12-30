@@ -209,7 +209,7 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
   ! Buffer_V is the state vector resulting from the interpolation.
 
   use ModInterpolate, ONLY: trilinear
-  use ModMain,        ONLY: BufferState_VG, rBuffer_I, PhiBuffer_I, ThetaBuffer_I,&
+  use ModMain,        ONLY: BufferState_VG, R_, Theta_, Phi_, BufferMin_D,&
                             nRBuff, nPhiBuff, nThetaBuff, dSphBuff_D, Phi_
  
   implicit none
@@ -219,7 +219,7 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
   integer,intent(in) :: nVar
   real,intent(out)   :: Buffer_V(nVar)
 
-  real    :: Sph_D(3)
+  real    :: Sph_D(3),  NormR, NormPhi, NormTheta, NormSph_D(3)
   logical :: DoTest, DoTestMe
 
   character(len=*), parameter :: NameSub = 'interpolate_from_global_buffer'
@@ -227,14 +227,16 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
   !  call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
   Sph_D = SphSource_D
-  ! Correct target point phi coordinate if needed
-  !if (Sph_D(Phi_) > 2.*cPi) Sph_D(Phi_) = Sph_D(Phi_) - 2.*cPi
 
-  !if(DoTest) write(*,*) NameSub, ' fr poimt: ',Sph_D
+  ! Convert to normalized coordinates
+  NormR = (Sph_D(R_) - BufferMin_D(R_))/dSphBuff_D(R_) + 1
+  NormPhi   = (Sph_D(Phi_)   - BufferMin_D(Phi_))  /dSphBuff_D(Phi_)   + 0.5
+  NormTheta = (Sph_D(Theta_) - BufferMin_D(Theta_))/dSphBuff_D(Theta_) + 0.5
 
-  Buffer_V = trilinear(BufferState_VG, nVar, 1, nRBuff,1, nPhiBuff,1, nThetaBuff,&
-       Sph_D, rBuffer_I, PhiBuffer_I, ThetaBuffer_I, .TRUE.)
-       
+  NormSph_D = (/NormR, NormPhi, NormTheta/)
+  Buffer_V = trilinear(BufferState_VG, nVar, 1, nRBuff,1, nPhiBuff, &
+       1, nThetaBuff, NormSph_D, DoExtrapolate=.TRUE.)
+
 end subroutine interpolate_from_global_buffer
           
   
