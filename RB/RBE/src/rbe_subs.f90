@@ -312,7 +312,11 @@ subroutine rbe_run
        call rbe_save_result(.true. .and. IsStandAlone, .true.)
 
   open(unit=UnitTmp_,file='RB/rbe_swmf.log')
-  write(UnitTmp_,'(a8)') outname
+  if (UseSeparatePlotFiles) then
+     write(UnitTmp_,'(a8)') outnameSep
+  else
+     write(UnitTmp_,'(a8)') outname
+  endif
   write(UnitTmp_,*) 'istep, t(hour)   ',istep,t/3600. 
   close(UnitTmp_)
 
@@ -402,7 +406,13 @@ subroutine readInputData
   read(iUnit1,*) il,ie
   if (itype.eq.2) then
      iUnit2 = io_unit_new()
-     open(unit=iUnit2,file='RB/restartIN/'//outname//st2//'_c.f2',status='old',form='unformatted')
+     if(UseSeparatePlotFiles)then
+        !when using separateplotfiles you need to put the restart files with 
+        !the name restart_rbe_c.f2
+        open(unit=iUnit2,file='RB/restartIN/restart_rbe_c.f2',status='old',form='unformatted')
+     else
+        open(unit=iUnit2,file='RB/restartIN/'//outname//st2//'_c.f2',status='old',form='unformatted')
+     endif
      init=0              ! continuous run
   endif
 
@@ -2239,7 +2249,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
   ! Open files to write all the information for continous run        
   if (DoSaveRestart) then
      if(UseSeparatePlotFiles)then
-        open(unit=UnitTmp_,file='RB/restartOUT/'//outnameSep//st2//'_c.f2',form='unformatted')
+        open(unit=UnitTmp_,file='RB/restartOUT/restart_rbe_c.f2',form='unformatted')
      else
         open(unit=UnitTmp_,file='RB/restartOUT/'//outname//st2//'_c.f2',form='unformatted')
      end if

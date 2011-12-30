@@ -150,6 +150,17 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
 
      if (iLineIndex_II(iLon,iLat) == int(StateLine_VI(I_,iPoint)))then
         !when line index found, fill in output arrays
+
+        if (iAlt > np) then
+           write(*,*) 'RB:'//NameSub//': iAlt > np for Lat,Lon = ',Lat,Lon
+       write(*,*) 'RB:'//NameSub//': MaxRadius of Line within np points=',&
+                maxval(StateLine_VI(R_,iPoint-np:iPoint))
+           write(*,*) 'RB:'//NameSub//': Line too long! Setting Line to Open '
+           nAlt=0
+           return
+        endif
+
+
         Bfield_I(iAlt)     = StateLine_VI(B_,iPoint)
         FieldLength_I(iAlt)= StateLine_VI(S_,iPoint)
         RadialDist_I(iAlt) = StateLine_VI(R_,iPoint)
