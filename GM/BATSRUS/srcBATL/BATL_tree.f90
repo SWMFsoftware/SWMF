@@ -1166,7 +1166,7 @@ contains
     ! - if iTypeNode_A is present, it contains block types 1, 2, .., nType
     !   each type is balanced separately. The total is also balanced.
 
-    use BATL_mpi, ONLY: nProc, iProc
+    use BATL_mpi, ONLY: nProc
 
     ! Are nodes moved immediately or just assigned new processor/node
     logical, intent(in):: DoMove
@@ -1192,9 +1192,9 @@ contains
 
     ! Check if there are multiple node types that need separate balancing
     if(present(iTypeNode_A))then
-
        ! Find number of types and allocate arrays
-       nType = maxval(iTypeNode_A(1:nNode), MASK=iTree_IA(Status_,1:nNode)>=Used_)
+       nType = maxval(iTypeNode_A(1:nNode), &
+            MASK=iTree_IA(Status_,1:nNode)>=Used_)
     else
        nType = 1
     end if
@@ -1224,15 +1224,12 @@ contains
        nNodeType_I(1) = nNodeUsed
     end if
 
-    ! write(*,*)'nType, nNodeType_I=', nType, nNodeType_I
-
     ! Construct load balance table for various types
     do iType = 1, nType
        ! minimum number of blocks of type iType for each processor
        nBlockType_PI(:,iType) = nNodeType_I(iType)/nProc
 
-       ! The processors with extra blocks are filled in 
-       ! from nProc-1 backwards
+       ! The processors with extra blocks are filled in from nProc-1 backwards
        iProcStart = nProc - modulo(sum(nNodeType_I(1:iType)),nProc)
        iProcStop  = iProcStart + modulo(nNodeType_I(iType),nProc) - 1
        do iProcExtraBlock = iProcStart, iProcStop
@@ -1246,7 +1243,6 @@ contains
                + nBlockType_PI(iProcTo-1,iType)
        end do
 
-       ! write(*,*)'iType, nBlockType_PI=', iType, nBlockType_PI
     end do
 
     ! Distribute the nodes over the processors
@@ -1289,10 +1285,7 @@ contains
 
     end do
 
-    ! write(*,*)'iProcNew_A=', iProcNew_A(1:nNode)
-
-    deallocate(iNodeType_I, nNodeType_I, iProcType_I, iBlock_P, &
-         nBlockType_PI)
+    deallocate(iNodeType_I, nNodeType_I, iProcType_I, iBlock_P, nBlockType_PI)
 
     if(DoMove) call move_tree
 
@@ -1457,14 +1450,6 @@ contains
     write(*,*)'iNodeNei_IIIB(:,1,1,  First)=',   iNodeNei_IIIB(:,1,1,iBlock)
     write(*,*)'iNodeNei_IIIB(1,:,1,  First)=',   iNodeNei_IIIB(1,:,1,iBlock)
     write(*,*)'iNodeNei_IIIB(1,1,:,  First)=',   iNodeNei_IIIB(1,1,:,iBlock)
-
-!    iNode = iNodeMorton_I(nNodeUsed)
-!    write(*,*)'DiLevelNei_IIIA(:,0,0, Last)=', DiLevelNei_IIIA(:,0,0,iNode)
-!    write(*,*)'DiLevelNei_IIIA(0,:,0, Last)=', DiLevelNei_IIIA(0,:,0,iNode)
-!    write(*,*)'DiLevelNei_IIIA(0,0,:, Last)=', DiLevelNei_IIIA(0,0,:,iNode)
-!    write(*,*)'iNodeNei_IIIA(:,1,1,   Last)=',   iNodeNei_IIIA(:,1,1,iNode)
-!    write(*,*)'iNodeNei_IIIA(1,:,1,   Last)=',   iNodeNei_IIIA(1,:,1,iNode)
-!    write(*,*)'iNodeNei_IIIA(1,1,:,   Last)=',   iNodeNei_IIIA(1,1,:,iNode)
 
   end subroutine show_tree
 
