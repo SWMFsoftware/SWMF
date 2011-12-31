@@ -657,6 +657,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModWaves, ONLY: UseWavePressure
   use ModLaserHeating, ONLY: LaserHeating_CB
   use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit
+  use ModCurrent, ONLY: get_current
   implicit none
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
@@ -668,6 +669,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   character (len=10)  :: String, NamePlotVar, NameVar
 
   real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2) :: tmp1Var, tmp2Var
+  real, allocatable :: J_DG(:,:,:,:)
 
   integer :: iVar, itmp, jtmp, jVar, iIon
   integer :: i,j,k,l, ip1,im1,jp1,jm1,kp1,km1
@@ -678,10 +680,19 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   real ::FullB_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
 
   logical :: IsFound
-  
+
   logical :: DoTest,DoTestMe
+
+  ! ModCurrent with get_current calculate jx,jy and jz at the same time,
+  ! but we write them separately. DoCurrent used to make sure we only calculate
+  ! the currents ones per block
+  logical :: DoCurrent
+
   character(len=*), parameter:: NameSub='set_plotvar'
   !---------------------------------------------------------------------------
+
+  DoCurrent = .true.
+
   if(iBLK==BlkTest.and.iProc==ProcTest)then
      call set_oktest(NameSub,DoTest,DoTestMe)
   else
@@ -730,12 +741,12 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         ! If Body2 is used, then see if it is in block and use other those values
         if(UseBody2)then
            if( x_BLK(   0,   0,   0,iBLK)>(xBody2-rBody2) .and. &
-               x_BLK(nI+1,nJ+1,nK+1,iBLK)<(xBody2+rBody2) .and. &
-               y_BLK(   0,   0,   0,iBLK)>(yBody2-rBody2) .and. &
-               y_BLK(nI+1,nJ+1,nK+1,iBLK)<(yBody2+rBody2) .and. &
-               z_BLK(   0,   0,   0,iBLK)>(zBody2-rBody2) .and. &
-               z_BLK(nI+1,nJ+1,nK+1,iBLK)<(zBody2+rBody2) ) &
-               plotvar_inBody(iVar) = RhoBody2
+                x_BLK(nI+1,nJ+1,nK+1,iBLK)<(xBody2+rBody2) .and. &
+                y_BLK(   0,   0,   0,iBLK)>(yBody2-rBody2) .and. &
+                y_BLK(nI+1,nJ+1,nK+1,iBLK)<(yBody2+rBody2) .and. &
+                z_BLK(   0,   0,   0,iBLK)>(zBody2-rBody2) .and. &
+                z_BLK(nI+1,nJ+1,nK+1,iBLK)<(zBody2+rBody2) ) &
+                plotvar_inBody(iVar) = RhoBody2
         end if
      case('rhoux','mx')
         if (UseRotatingFrame) then
@@ -858,124 +869,31 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('pperp')
         PlotVar(:,:,:,iVar) = (3*State_VGB(iP,:,:,:,iBLK) & 
              -State_VGB(Ppar_,:,:,:,iBLK))/2.0
-     case('jx')
-        if(UseCovariant)then                       
-           call covar_curlb_plotvar(x_,iBLK,PlotVar(:,:,:,iVar))  
-        else                                       
-           if(true_BLK(iBLK))then                  
-              PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-                   (State_VGB(Bz_, 0:nI+1, 1:nJ+2, 0:nK+1,iBLK) &
-                   -State_VGB(Bz_, 0:nI+1,-1:nJ  , 0:nK+1,iBLK))/dy_BLK(iBLK)-&
-                   (State_VGB(By_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
-                   -State_VGB(By_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK))/dz_BLK(iBLK))
-           else
-              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
-                 if( .not.true_cell(i,j,k,iBLK) ) then
-                    PlotVar(i,j,k,iVar) = 0.0
-                    CYCLE
-                 end if
-                 
-                 ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
-                 if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
-                 if(.not.true_cell(im1,j,k,iBLK)) im1=i
-                 if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
-                 if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
-                 if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
-                 if(.not.true_cell(i,j,km1,iBLK)) km1=k
-                 if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
-                 
-                 xfactor=1.; yfactor=1.; zfactor=1.
-                 if((ip1-im1)==1) xfactor=2.
-                 if((jp1-jm1)==1) yfactor=2.
-                 if((kp1-km1)==1) zfactor=2.
-                 
-                 PlotVar(i,j,k,iVar)=0.5*(&
-                      (State_VGB(Bz_,i  ,jp1,k  ,iBLK) &
-                      -State_VGB(Bz_,i  ,jm1,k  ,iBLK))*yfactor/dy_BLK(iBLK) -&
-                      (State_VGB(By_,i  ,j  ,kp1,iBLK) &
-                      -State_VGB(By_,i  ,j  ,km1,iBLK))*zfactor/dz_BLK(iBLK))
-              end do; end do; end do
-           end if                            
-        end if
-     case('jy')
-        if(UseCovariant)then                  
-           call covar_curlb_plotvar(y_,iBLK,PlotVar(:,:,:,iVar))   
-        else                                 
-           if(true_BLK(iBLK))then            
-              PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-                   (State_VGB(Bx_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
-                   -State_VGB(Bx_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK))/dz_BLK(iBLK)-&
-                   (State_VGB(Bz_, 1:nI+2, 0:nJ+1, 0:nK+1,iBLK) &
-                   -State_VGB(Bz_,-1:nI  , 0:nJ+1, 0:nK+1,iBLK))/dx_BLK(iBLK))
-           else
-              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
-                 if( .not.true_cell(i,j,k,iBLK) ) then
-                    PlotVar(i,j,k,iVar) = 0.0
-                    CYCLE
-                 end if
-                 
-                 ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
-                 if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
-                 if(.not.true_cell(im1,j,k,iBLK)) im1=i
-                 if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
-                 if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
-                 if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
-                 if(.not.true_cell(i,j,km1,iBLK)) km1=k
-                 if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
-                 
-                 xfactor=1.; yfactor=1.; zfactor=1.
-                 if((ip1-im1)==1) xfactor=2.
-                 if((jp1-jm1)==1) yfactor=2.
-                 if((kp1-km1)==1) zfactor=2.
-                 
-                 PlotVar(i,j,k,iVar)=0.5*(&
-                      (State_VGB(Bx_,i  ,j  ,kp1,iBLK) &
-                      -State_VGB(Bx_,i  ,j  ,km1,iBLK))*zfactor/dz_BLK(iBLK)-&
-                      (State_VGB(Bz_,ip1,j  ,k  ,iBLK) &
-                      -State_VGB(Bz_,im1,j  ,k  ,iBLK))*xfactor/dx_BLK(iBLK))
-              end do; end do; end do
-           endif                                   
-        end if                                     
-     case('jz')
-        if(UseCovariant)then                       
-           call covar_curlb_plotvar(z_,iBLK,PlotVar(:,:,:,iVar))  
-        else                                       
-           if(true_BLK(iBLK))then                  
-              PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-                   (State_VGB(By_, 1:nI+2,0:nJ+1,0:nK+1,iBLK) &
-                   -State_VGB(By_,-1:nI  ,0:nJ+1,0:nK+1,iBLK))/dx_BLK(iBLK) - &
-                   (State_VGB(Bx_,0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
-                   -State_VGB(Bx_,0:nI+1,-1:nJ  ,0:nK+1,iBLK))/dy_BLK(iBLK))
-           else
-              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
-                 if( .not.true_cell(i,j,k,iBLK) ) then
-                    PlotVar(i,j,k,iVar) = 0.0
-                    CYCLE
-                 end if
-                 
-                 ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
-                 if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
-                 if(.not.true_cell(im1,j,k,iBLK)) im1=i
-                 if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
-                 if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
-                 if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
-                 if(.not.true_cell(i,j,km1,iBLK)) km1=k
-                 if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
+     case('jx','jy', 'jz')
 
-                 xfactor=1.; yfactor=1.; zfactor=1.
-                 if((ip1-im1)==1) xfactor=2.
-                 if((jp1-jm1)==1) yfactor=2.
-                 if((kp1-km1)==1) zfactor=2.
-                 
-                 PlotVar(i,j,k,iVar)=0.5*(&
-                      (State_VGB(By_,ip1,j  ,k  ,iBLK) &
-                      -State_VGB(By_,im1,j  ,k  ,iBLK))*xfactor/dx_BLK(iBLK)-&
-                      (State_VGB(Bx_,i  ,jp1,k  ,iBLK) &
-                      -State_VGB(Bx_,i  ,jm1,k  ,iBLK))*yfactor/dy_BLK(iBLK))
-              end do; end do; end do
-           end if                                  
-           continue
-        end if                                     
+        if(.not. allocated(J_DG))&
+             allocate(J_DG(1:3,-1:nI+2,-1:nJ+2,-1:nK+2))
+
+        ! Calculationg all the currents only ones per block
+        if(DoCurrent) then
+           do k=1,nK; do j=1,nJ; do i=1,nI
+              call  get_current(i, j, k, iBLK, J_DG(1:3,i,j,k))
+           end do;end do;end do
+           DoCurrent = .false.
+        end if
+
+        select case(String)
+        case('jx')
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
+                J_DG(1,0:nI+1,0:nJ+1,0:nK+1)
+        case('jy')
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
+                J_DG(2,0:nI+1,0:nJ+1,0:nK+1)
+        case('jz')
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
+                J_DG(3,0:nI+1,0:nJ+1,0:nK+1)
+        end select
+
      case('jxe','jye','jze','jxw','jyw','jzw', &
           'jxs','jys','jzs','jxn','jyn','jzn', &
           'jxb','jyb','jzb','jxt','jyt','jzt')
@@ -1026,10 +944,10 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
              State_VGB(iRho,:,:,:,iBLK)
      case('ez')
         PlotVar(:,:,:,iVar)= ( State_VGB(iRhoUy,:,:,:,iBLK)* &
-                FullB_DG(x_,:,:,:) &
-                -State_VGB(iRhoUx,:,:,:,iBLK)* &
-                FullB_DG(y_,:,:,:))/ &
-                State_VGB(iRho,:,:,:,iBLK) 
+             FullB_DG(x_,:,:,:) &
+             -State_VGB(iRhoUx,:,:,:,iBLK)* &
+             FullB_DG(y_,:,:,:))/ &
+             State_VGB(iRho,:,:,:,iBLK) 
      case('pvecx')
         PlotVar(:,:,:,iVar) = ( &
              ( FullB_DG(x_,:,:,:)**2  &
@@ -1047,8 +965,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('pvecy')
         PlotVar(:,:,:,iVar) = ( &
              (FullB_DG(x_,:,:,:)**2 + &
-              FullB_DG(y_,:,:,:)**2 + &
-              FullB_DG(z_,:,:,:)**2) * &
+             FullB_DG(y_,:,:,:)**2 + &
+             FullB_DG(z_,:,:,:)**2) * &
              State_VGB(iRhoUy,:,:,:,iBLK) &
              -(FullB_DG(x_,:,:,:)* &
              State_VGB(iRhoUx,:,:,:,iBLK) + &
@@ -1061,8 +979,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('pvecz')
         PlotVar(:,:,:,iVar) = ( &
              (FullB_DG(x_,:,:,:)**2 + &
-              FullB_DG(y_,:,:,:)**2 + &
-              FullB_DG(z_,:,:,:)**2) * &
+             FullB_DG(y_,:,:,:)**2 + &
+             FullB_DG(z_,:,:,:)**2) * &
              State_VGB(iRhoUz,:,:,:,iBLK) &
              -(FullB_DG(x_,:,:,:)* &
              State_VGB(iRhoUx,:,:,:,iBLK) + &
@@ -1127,7 +1045,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                 - State_VGB(Bx_, 0:nI+1,-1:nJ  ,0:nK+1,iBLK))/dy_BLK(iBLK)   &
                 ) * z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) )     
            continue
-        end if                                             
+        end if
      case('er')
         PlotVar(:,:,:,iVar)=( ( State_VGB(iRhoUz,:,:,:,iBLK)* &
              FullB_DG(y_,:,:,:) &
@@ -1176,8 +1094,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('divb','divb_cd','divb_ct')
         if(UseCovariant)&                            
              call stop_mpi('When UseCovariant=T use absdivb indstead of divb')
-                                                     
-        
+
+
         if(String == 'divb_cd' .or. (String == 'divb' &
              .and..not.UseConstrainB &               !^CFG IF CONSTRAINB
              ))then
@@ -1425,6 +1343,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         end if
      end select
   end do ! iVar
+
+  if(allocated(J_DG))deallocate(J_DG)
 end subroutine set_plotvar
 
 !==============================================================================
