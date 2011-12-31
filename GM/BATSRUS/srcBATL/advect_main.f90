@@ -398,12 +398,13 @@ contains
 
     use BATL_lib, ONLY: MaxDim, nBlock, Unused_B, &
          iComm, nProc, iProc, iNode_B, &
-         TypeGeometry, CellVolume_GB, CellSize_DB, Xyz_DGB, CoordMin_DB, &
-         CoordMax_DB
+         TypeGeometry, IsSpherical, Phi_, &
+         CellVolume_GB, CellSize_DB, Xyz_DGB, CoordMin_DB, CoordMax_DB
 
     use ModMpi,    ONLY: MPI_REAL, MPI_INTEGER, MPI_MIN, MPI_SUM, MPI_reduce
     use ModIoUnit, ONLY: UnitTmp_
     use ModKind,   ONLY: nByteReal
+    use ModNumConst, ONLY: cHalfPi, cDegToRad
 
     character(len=100):: NameSnapshot, NameFile
     real:: CellSizeMin_D(MaxDim), CellSizeMinAll_D(MaxDim), &
@@ -412,7 +413,7 @@ contains
     integer :: iDim, iBlock, i, j, k, iError
     integer :: nCell, nCellAll, nPlotDim
     !-----------------------------------------------------------------------
-    write(NameSnapshot,'(a,i7.7)') 'plots/cut_var_1_n',iStep
+    write(NameSnapshot,'(a,i7.7)') 'plots/z=0_var_1_n',iStep
 
     ! write data from all processors into separate files
     write(NameFile,'(a,i4.4,a)') trim(NameSnapshot)//'_pe',iProc,'.idl'
@@ -420,18 +421,29 @@ contains
     nCell = 0
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       if(CoordMin_DB(3,iBlock) > 1e-6) CYCLE
-       if(CoordMax_DB(3,iBlock) <-1e-6) CYCLE
+       if(IsSpherical)then
+          if(CoordMin_DB(2,iBlock) > cHalfPi) CYCLE
+          if(CoordMax_DB(2,iBlock) < cHalfPi) CYCLE
+       else
+          if(CoordMin_DB(3,iBlock) > 1e-6) CYCLE
+          if(CoordMax_DB(3,iBlock) <-1e-6) CYCLE
+       end if
        do k = 1, nK; 
-          if(abs(Xyz_DGB(3,1,1,k,iBlock)) > 0.51*CellSize_DB(3,iBlock)) CYCLE
-          do j = 1, nJ; do i = 1, nI
-             nCell = nCell + 1
-             write(UnitTmp_) CellSize_DB(1,iBlock), &
-                  Xyz_DGB(:,i,j,k,iBlock), State_VGB(:,i,j,k,iBlock), &
-                  exact_density(Xyz_DGB(:,i,j,k,iBlock)), &
-                  CellVolume_GB(i,j,k,iBlock), real(iNode_B(iBlock)), &
-                  real(iProc), real(iBlock)
-          end do; end do; 
+          if(.not. IsSpherical .and. &
+               abs(Xyz_DGB(3,1,1,k,iBlock)) > 0.51*CellSize_DB(3,iBlock)) CYCLE
+          do j = 1, nJ; 
+             if(IsSpherical)then
+                if(product(Xyz_DGB(3,1,j-1:j+1:2,1,iBlock)) > 0) CYCLE
+             end if
+             do i = 1, nI
+                nCell = nCell + 1
+                write(UnitTmp_) CellSize_DB(1,iBlock), &
+                     Xyz_DGB(:,i,j,k,iBlock), State_VGB(:,i,j,k,iBlock), &
+                     exact_density(Xyz_DGB(:,i,j,k,iBlock)), &
+                     CellVolume_GB(i,j,k,iBlock), real(iNode_B(iBlock)), &
+                     real(iProc), real(iBlock)
+             end do
+          end do
        end do
     end do
     close(UnitTmp_)
@@ -447,11 +459,27 @@ contains
 
     if(iProc == 0)then
        nPlotDim = min(2,nDim)
+
+       ! Initialize for ignored dimension
+
+       if(IsSpherical)then
+          ! Swap theta and phi to conform the r-lat-lon grid used in PostIDL
+          PlotMin_D(1) = DomainMin_D(1)
+          PlotMax_D(1) = DomainMax_D(1)
+          PlotMin_D(2) = DomainMin_D(Phi_)*cDegToRad
+          PlotMax_D(2) = DomainMax_D(Phi_)*cDegToRad
+          PlotMin_D(3) = -1e-10
+          PlotMax_D(3) = +1e-10
+          CellSizeMinAll_D = CellSizeMinAll_D( (/1,3,2/) )
+       else
+          PlotMin_D = -1e-10 
+          PlotMax_D = +1e-10
+          PlotMin_D(1:nPlotDim) = DomainMin_D(1:nPlotDim)
+          PlotMax_D(1:nPlotDim) = DomainMax_D(1:nPlotDim)
+       end if
+
        CellSizePlot_D = CellSizeMinAll_D
        CellSizePlot_D(1:nDimAmr) = -1.0
-
-       PlotMin_D = -1e-10; PlotMin_D(1:nPlotDim) = DomainMin_D(1:nPlotDim)
-       PlotMax_D = +1e-10; PlotMax_D(1:nPlotDim) = DomainMax_D(1:nPlotDim)
 
        NameFile = trim(NameSnapshot)//'.h'
        open(UnitTmp_,file=NameFile,status="replace")
