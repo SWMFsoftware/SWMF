@@ -1220,9 +1220,24 @@ contains
 
        VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
             sum(U_D*bUnitTrue_D)*bUnitGhost_D       
+
+       ! Apply corotation if needed
+       if(.not.UseRotatingFrame)then
+          VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) &
+               - OmegaBody*FaceCoords_D(y_)
+          VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
+               + OmegaBody*FaceCoords_D(x_)
+       end if
     else
        ! Reflect U - same as van der Holst, 2010, Cohen 2007
        VarsGhostFace_V(Ux_:Uz_) = -U_D
+       ! Apply corotation if needed
+       if(.not.UseRotatingFrame)then
+          VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) &
+               - 2.0*OmegaBody*FaceCoords_D(y_)
+          VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
+               + 2.0*OmegaBody*FaceCoords_D(x_)
+       end if
     end if
 
     !\
@@ -1256,15 +1271,7 @@ contains
     end if
 
     if(Hyp_>1) VarsGhostFace_V(Hyp_) = 0.0
-    !\
-    ! Apply corotation if needed
-    !/
-    if(.not.UseRotatingFrame)then
-       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) &
-            - 2.0*OmegaBody*FaceCoords_D(y_)
-       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
-            + 2.0*OmegaBody*FaceCoords_D(x_)
-    end if
+
   end subroutine user_face_bcs
   !============================================================================
   subroutine user_set_boundary_cells(iBLK)
