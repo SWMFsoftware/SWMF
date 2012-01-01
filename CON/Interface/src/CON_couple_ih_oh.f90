@@ -537,16 +537,14 @@ contains
     
     logical :: DoTest, DoTestMe
     integer :: iCommWorld, iError, iStatus_I(MPI_STATUS_SIZE)
-    !real    :: rBufferMinIh, rBufferMaxIh
-    !real    :: rBufferMinOh, rBufferMaxOh
     real    :: OhToIhUnitX
     character(len=*), parameter :: NameSub='couple_ih_oh_init_global'
 
     !DESCRIPTION:                                      
     ! This subroutine should be called from all PE-s
     ! Share buffer grid info (set in OH) with IH.
-    ! Set buffer grid in both components.
-    ! Calculate union communicator 
+    ! Set buffer grid in OH.
+    ! Calculate union communicator. 
 
     !EOP                                                                      
     !------------------------------------------------------------------------
@@ -611,12 +609,11 @@ contains
   end subroutine couple_ih_oh_init_global
 
   !BOP =======================================================================
-  !IROUTINE: couple_ih_oh_global - couple IH component to OH component                       
+  !IROUTINE: couple_ih_oh_global - couple IH component to OH component
  !INTERFACE:                                      
   subroutine couple_ih_oh_global(tSimulation)
 
     use ModMpi,    ONLY: MPI_reduce
-    use ModIoUnit, ONLY: io_unit_new
 
     !INPUT ARGUMENTS:                                       
     real, intent(in) :: tSimulation     ! simulation time at coupling  
@@ -641,7 +638,6 @@ contains
     ! Variable for output file
     integer :: i,j,k, iFile
     integer, save :: iCoupling = 0
-    character(len=24) :: NameFile
 
     character (len=*), parameter :: NameSub='couple_ih_oh_global'
     !-------------------------------------------------------------------------
@@ -667,7 +663,7 @@ contains
 
     nSize = iSize*(jSize+2)*(kSize+2)*nVarCouple
 
-    ! Fill in state variables
+    ! Fill in coupled state variables
     if(is_proc(IH_)) then
        call IH_get_for_global_buffer(iSize,jSize,kSize, &
             BufferMinMaxIh_DI,Buffer_VIII)
@@ -677,7 +673,7 @@ contains
     end if
 
     if(i_proc0(IH_) /= i_proc0(OH_))then
-       ! Pass state variables
+       ! Pass filled buffer to OH root PE
        if(is_proc0(IH_)) &
             call MPI_send(BufferGlobal_VIII,nSize,MPI_REAL,i_Proc0(OH_),&
             1,i_comm(),iError)
@@ -686,7 +682,7 @@ contains
             1,i_comm(),iStatus_I,iError)
     end if
 
-    ! Broadcast variables inside OH
+    ! Broadcast buffer to all OH processors
     if(n_proc(OH_)>1 .and. is_proc(OH_)) &
          call MPI_bcast(BufferGlobal_VIII,nSize,MPI_REAL,0,i_comm(OH_),iError)
 
@@ -694,7 +690,7 @@ contains
          ', iProc:',iProcWorld
 
     !\ 
-    ! Put variables into OH
+    ! Save buffer in OH for later use
     !/
     if(is_proc(OH_))then
        call OH_save_global_buffer(nVarCouple, iSize, jSize, kSize,BufferGlobal_VIII)
