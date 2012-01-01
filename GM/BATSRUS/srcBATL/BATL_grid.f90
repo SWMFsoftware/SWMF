@@ -154,17 +154,21 @@ contains
     ! In case iNode_B is not set, iNodeIn can provide the node info
     integer, optional, intent(in):: iNodeIn
 
-    character(len=*), parameter:: NameSub = 'create_grid_block'
-
     real :: PositionMin_D(MaxDim), PositionMax_D(MaxDim), Coord_D(MaxDim)
 
     real, allocatable, save:: &
-         rCell_I(:), rFace_I(:),  SinPhi_I(:), CosPhi_I(:), &
-         SinPhiFace_I(:), CosPhiFace_I(:), Xyz_DN(:,:,:,:)
+         rCell_I(:), rFace_I(:),  &
+         SinPhi_I(:), CosPhi_I(:), SinPhiFace_I(:), CosPhiFace_I(:), &
+         SinThetaFace_I(:), dCosTheta_I(:), &
+         Xyz_DN(:,:,:,:)
 
-    real :: Area, Phi, Dphi, Dz, Xyz_D(MaxDim)
+    real :: Area, Phi, Theta, Dphi, Dz, Dtheta, Xyz_D(MaxDim), d_D(MaxDim)
     integer :: iNode, i, j, k
-    !----------------------------------------------------------------------
+
+    real, parameter:: cThird = 1.0/3.0
+    
+    character(len=*), parameter:: NameSub = 'create_grid_block'
+    !-------------------------------------------------------------------------
     if(present(iNodeIn))then
        iNode = iNodeIn
     else
@@ -323,9 +327,7 @@ contains
     else
 
        if(.not.allocated(rCell_I)) allocate( &
-            rCell_I(MinI:MaxI), rFace_I(MinI:MaxI+1), &
-            SinPhi_I(MinJ:MaxJ), CosPhi_I(MinJ:MaxJ), &
-            SinPhiFace_I(nJ+1), CosPhiFace_I(nJ+1) )
+            rCell_I(MinI:MaxI), rFace_I(MinI:MaxI+1))
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           Coord_D = CoordMin_DB(:,iBlock) + &
@@ -342,24 +344,37 @@ contains
        if(IsLogRadius)then
           rCell_I = exp(rCell_I)
           rFace_I = exp(rFace_I)
+       elseif(IsGenRadius)then
+          do i = MinI, MaxI
+             call gen_to_radius(rCell_I(i))
+          end do
+          do i = MinI, MaxI+1
+             call gen_to_radius(rFace_I(i))
+          end do
        end if
 
-       Dphi = CellSize_DB(2,iBlock)
-       do j = MinJ, MaxJ
-          Phi = CoordMin_DB(2,iBlock) + (j-0.5)*Dphi
-          SinPhi_I(j) =  sin(Phi)
-          CosPhi_I(j) =  cos(Phi)
-       end do
-       do j = 1, nJ+1
-          Phi = CoordMin_DB(2,iBlock) + (j-1)*Dphi
-          SinPhiFace_I(j) =  sin(Phi)
-          CosPhiFace_I(j) =  cos(Phi)
-       end do
-
-       Dz = CellSize_DB(3,iBlock)
+       Dphi = CellSize_DB(Phi_,iBlock)
 
        if(IsCylindrical)then
+
+          if(.not.allocated(SinPhi_I)) allocate( &
+               SinPhi_I(MinJ:MaxJ), CosPhi_I(MinJ:MaxJ), &
+               SinPhiFace_I(nJ+1), CosPhiFace_I(nJ+1) )
           
+          do j = MinJ, MaxJ
+             Phi = CoordMin_DB(2,iBlock) + (j-0.5)*Dphi
+             SinPhi_I(j) =  sin(Phi)
+             CosPhi_I(j) =  cos(Phi)
+          end do
+
+          do j = 1, nJ+1
+             Phi = CoordMin_DB(2,iBlock) + (j-1)*Dphi
+             SinPhiFace_I(j) =  sin(Phi)
+             CosPhiFace_I(j) =  cos(Phi)
+          end do
+
+          Dz = CellSize_DB(3,iBlock)
+
           ! dV = r*dr*dphi*dz
           do i = MinI, MaxI
              ! NOTE: for ghost cells beyond the axis r=0 can be negative
@@ -402,6 +417,64 @@ contains
                 FaceNormal_DDFB(z_,z_,i,:,:,iBlock) = Area
              end do
           end if
+
+       elseif(IsSpherical)then
+
+          Dtheta = CellSize_DB(Theta_,iBlock)
+
+          if(.not.allocated(SinThetaFace_I)) &
+               allocate( SinThetaFace_I(nJ+1), dCosTheta_I(MinJ:MaxJ))
+
+          do j = 1, nJ+1
+             SinThetaFace_I(j) = sin(CoordMin_DB(Theta_,iBlock) + (j-1)*Dtheta)
+          end do
+
+          do j = MinJ, MaxJ
+             Theta = CoordMin_DB(Theta_,iBlock) + (j-1)*Dtheta
+             ! Note the sign change
+             dCosTheta_I(j) = cos(Theta) - cos(Theta+dTheta)
+          end do
+
+          ! dV = d(r^3)/3*dphi*d(cos theta)
+          do j = MinJ, MaxJ; do i = MinI, MaxI
+             ! NOTE: for ghost cells beyond the axis r=0 can be negative
+             CellVolume_GB(i,j,:,iBlock) = &
+                  cThird*(rFace_I(i+1)**3-rFace_I(i)**3)*Dphi*dCosTheta_I(j)
+          end do; end do
+
+          ! dA_r = r_(i+1/2)^2*dphi*d(cos theta)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+             ! Exact surface area
+             Area = rFace_I(i)**2*Dphi*dCosTheta_I(j)
+             CellFace_DFB(r_,i,j,k,iBlock) = Area
+
+             ! Orthogonal coordinate system
+             d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)
+             FaceNormal_DDFB(:,r_,i,j,k,iBlock) = Area*d_D/sqrt(sum(d_D**2))
+
+          end do; end do; end do
+
+          ! dA_theta = r_i*sin(theta)*dr*dphi
+          do k = 1, nK; do j=1, nJ+1; do i = 1, nI
+             Area = rCell_I(i)*SinThetaFace_I(j)*(rFace_I(i+1)-rFace_I(i))*Dphi
+             CellFace_DFB(Theta_,i,j,k,iBlock) = Area
+
+             ! Orthogonal coordinate system
+             d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)
+             FaceNormal_DDFB(:,Theta_,i,j,k,iBlock)= Area*d_D/sqrt(sum(d_D**2))
+
+          end do; end do; end do
+
+          ! dA_phi = r*dr*dtheta
+          do k = 1, nK+1; do j=1, nJ; do i = 1, nI
+             Area = rCell_I(i)*(rFace_I(i+1)-rFace_I(i))*Dtheta
+             CellFace_DFB(Phi_,i,j,k,iBlock) = Area
+
+             ! Orthogonal coordinate system
+             d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)
+             FaceNormal_DDFB(:,Phi_,i,j,k,iBlock)= Area*d_D/sqrt(sum(d_D**2))
+
+          end do; end do; end do
 
        else
           call CON_stop(NameSub//': '//TypeGeometry// &
@@ -1081,6 +1154,24 @@ contains
              end do; end do; end do
           end do
        end do
+    end if
+
+    if(nDim == 3)then
+       if(DoTestMe) write(*,*)'Testing create_grid in spherical geometry'
+
+       ! Clean  grid
+       call clean_grid
+
+       ! Initialize cylindrical grid
+       call init_geometry(TypeGeometryIn = 'spherical')
+
+       DomainMin_D = (/1.,  45.0,  0.0 /)
+       DomainMax_D = (/3., 135.0, 90.0/)
+
+       call init_grid( DomainMin_D, DomainMax_D )
+       call create_grid
+       call show_grid
+
     end if
 
     if(DoTestMe) write(*,*)'Testing clean_grid'
