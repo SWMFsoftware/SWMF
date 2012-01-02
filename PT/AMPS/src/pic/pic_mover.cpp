@@ -9,6 +9,7 @@
 PIC::Mover::fSpeciesDependentParticleMover *PIC::Mover::MoveParticleTimeStep=NULL;
 PIC::Mover::fTotalParticleAcceleration PIC::Mover::TotalParticleAcceleration=PIC::Mover::TotalParticleAcceleration_default;
 PIC::Mover::fSpeciesDependentParticleMover_BoundaryInjection *PIC::Mover::MoveParticleBoundaryInjection=NULL;
+PIC::Mover::fProcessOutsideDomainParticles PIC::Mover::ProcessOutsideDomainParticles=NULL;
 
 //====================================================
 //init the particle mover
@@ -519,7 +520,9 @@ int iTemp,jTemp,kTemp;
     //check if a photolytic reaction is possible and get the time interval before the transformation occures
     int PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(x,ptr,spec,dtMin);
 #elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
-    int GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator[spec](x,v,spec,ptr,ParticleData,dtMin,startNode);
+    bool TransformationTimeStepLimitFlag=false;
+
+    int GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator[spec](x,v,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode);
 #endif
 
     //advance the particle's position
@@ -545,7 +548,7 @@ int iTemp,jTemp,kTemp;
     if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTION_OCCURES_) {
       int specInit=spec;
 
-      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[spec](xInit,x,ptr,spec,ParticleData);
+      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xInit,x,ptr,spec,ParticleData);
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
@@ -566,7 +569,9 @@ int iTemp,jTemp,kTemp;
 #elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
    //model the generic particle transformation
    if (GenericParticleTransformationReturnCode==_GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_) {
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
      int specInit=spec;
+#endif
 
      GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationProcessor[spec](xInit,x,v,spec,ptr,ParticleData,dtMin,startNode);
 
@@ -967,9 +972,10 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
     if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTION_OCCURES_) dtLeft+=dtInit-dt;
 #elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
     int GenericParticleTransformationReturnCode;
+    bool TransformationTimeStepLimitFlag=false;
 
     dtLeft+=dt;
-    GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator[spec](x,v,spec,ptr,ParticleData,dt,startNode);
+    GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator[spec](x,v,spec,ptr,ParticleData,dt,TransformationTimeStepLimitFlag,startNode);
     dtLeft-=dt;
 #endif
 
@@ -987,7 +993,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
     if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTION_OCCURES_) {
       int specInit=spec;
 
-      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[spec](xinit,x,ptr,spec,ParticleData);
+      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xinit,x,ptr,spec,ParticleData);
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
@@ -1004,7 +1010,9 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
 #elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
     //model the generic particle transformation
     if (GenericParticleTransformationReturnCode==_GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_) {
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
       int specInit=spec;
+#endif
 
       GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationProcessor[spec](xinit,x,v,spec,ptr,ParticleData,dt,startNode);
 
@@ -1338,8 +1346,9 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode,*middleNode;
   double dtMin=-1.0,dtTemp,dtMinInit2,dtMinInit;
   PIC::ParticleBuffer::byte *ParticleData;
-  double vInit[3],xInit[3]={0.0,0.0,0.0},vMiddle[3],xMiddle[3],vFinal[3],xFinal[3],*xminBlock,*xmaxBlock;
-  int iNeibNode[3],neibNodeDirection,idim,nface_dtMin=-1;
+  double vInit[3],xInit[3]={0.0,0.0,0.0},vMiddle[3],xMiddle[3],vFinal[3],xFinal[3],xminBlock[3],xmaxBlock[3];
+  int idim;
+//  int iNeibNode[3],neibNodeDirection;
 
   long int LocalCellNumber;
   int i,j,k,spec;
@@ -1435,11 +1444,11 @@ MovingLoop:
     //===================== END DEBUG ==================
 
 
-    xminBlock=startNode->xmin;
-    xmaxBlock=startNode->xmax;
+    memcpy(xminBlock,startNode->xmin,DIM*sizeof(double));
+    memcpy(xmaxBlock,startNode->xmax,DIM*sizeof(double));
 
     MovingTimeFinished=true;
-    dtMin=dtTotal,nface_dtMin=-1;
+    dtMin=dtTotal;
     InternalBoundaryDescriptor_dtMin=NULL;
     ParticleIntersectionCode=_UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_;
 
@@ -1470,6 +1479,23 @@ MovingLoop:
     //in the case when a symmetry has to be considered, transfer the particle position and velcoty accordinly
 #if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
     middleNode=PIC::Mesh::mesh.findTreeNode(xMiddle,startNode);
+
+    if (middleNode==NULL) {
+      //the particle left the computational domain
+      int code=_PARTICLE_DELETED_ON_THE_FACE_;
+
+      //call the function that process particles that leaved the coputational domain
+      if (ProcessOutsideDomainParticles!=NULL) code=ProcessOutsideDomainParticles(ptr,startNode);
+
+      if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+        PIC::ParticleBuffer::DeleteParticle(ptr);
+        return _PARTICLE_LEFT_THE_DOMAIN_;
+      }
+      else {
+        exit(__LINE__,__FILE__,"Error: not implemented");
+      }
+    }
+
     TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode);
 #elif _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_SPHERICAL_SYMMETRY_
     exit(__LINE__,__FILE__,"not implemented");
@@ -1556,11 +1582,11 @@ MovingLoop:
     for (idim=0;idim<DIM;idim++) if (fabs(vMiddle[idim])>0.0) {
       //nface=0,2,4
       dtTemp=(xminBlock[idim]-xInit[idim])/vMiddle[idim];
-      if ((0.0<dtTemp)&&(dtTemp<dtMin)) dtMin=dtTemp,nface_dtMin=2*idim,ParticleIntersectionCode=_BLOCK_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_,MovingTimeFinished=false;
+      if ((0.0<dtTemp)&&(dtTemp<dtMin)) dtMin=dtTemp,ParticleIntersectionCode=_BLOCK_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_,MovingTimeFinished=false;
 
       //nface=1,3,5
       dtTemp=(xmaxBlock[idim]-xInit[idim])/vMiddle[idim];
-      if ((0.0<dtTemp)&&(dtTemp<dtMin)) dtMin=dtTemp,nface_dtMin=1+2*idim,ParticleIntersectionCode=_BLOCK_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_,MovingTimeFinished=false;
+      if ((0.0<dtTemp)&&(dtTemp<dtMin)) dtMin=dtTemp,ParticleIntersectionCode=_BLOCK_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_,MovingTimeFinished=false;
     }
 
 #else
@@ -1649,6 +1675,27 @@ MovingLoop:
     }
 
 
+    //check the possible photolytic reactions
+#if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+    //check if a photolytic reaction is possible and get the time interval before the transformation occures
+    int PhotolyticReactionsReturnCode;
+
+    dtTotal+=dtMin;
+    PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(xMiddle,ptr,spec,dtMin);
+    dtTotal-=dtMin;
+#elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
+    int GenericParticleTransformationReturnCode=_GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
+    bool TransformationTimeStepLimitFlag=false;
+
+    if (PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator!=NULL) if (PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator[spec]!=NULL) {
+      dtTotal+=dtMin;
+      GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator[spec](xMiddle,vMiddle,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode);
+      dtTotal-=dtMin;
+    }
+
+    if ((GenericParticleTransformationReturnCode!=_GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_)&&(TransformationTimeStepLimitFlag==true)) ParticleIntersectionCode=_UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_;
+#endif
+
 
     //adjust the particle moving time
     dtTotal-=dtMin;
@@ -1704,7 +1751,44 @@ MovingLoop:
 
       FirstBoundaryFlag=false;
 
+      //check if the particle is outside ofthe block - noth the particle outside of the block if its needed
+#if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
+      double EPS=PIC::Mesh::mesh.EPS;
 
+      for (idim=0;idim<DIM;idim++) {
+        if (xFinal[idim]<xminBlock[idim]+EPS) xFinal[idim]=xminBlock[idim]-EPS;
+        if (xFinal[idim]>xmaxBlock[idim]-EPS) xFinal[idim]=xmaxBlock[idim]+EPS;
+      }
+
+      newNode=PIC::Mesh::mesh.findTreeNode(xFinal,middleNode);
+#elif _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_SPHERICAL_SYMMETRY_
+exit(__LINE__,__FILE__,"Error: not implemented");
+#else
+      exit(__LINE__,__FILE__,"Error: the option is nor defined");
+#endif
+
+
+      if (newNode==NULL) {
+        //the particle left the computational domain
+        int code=_PARTICLE_DELETED_ON_THE_FACE_;
+
+        //call the function that process particles that leaved the coputational domain
+        if (ProcessOutsideDomainParticles!=NULL) code=ProcessOutsideDomainParticles(ptr,startNode);
+
+        if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+          PIC::ParticleBuffer::DeleteParticle(ptr);
+          return _PARTICLE_LEFT_THE_DOMAIN_;
+        }
+        else {
+          exit(__LINE__,__FILE__,"Error: not implemented");
+        }
+      }
+
+      memcpy(xminBlock,startNode->xmin,DIM*sizeof(double));
+      memcpy(xmaxBlock,startNode->xmax,DIM*sizeof(double));
+
+///////////////////////////////////////////////////////////////////
+/*
 
       iNeibNode[0]=0,iNeibNode[1]=0,iNeibNode[2]=0;
       neibNodeDirection=(int)(nface_dtMin/2);
@@ -1732,8 +1816,8 @@ MovingLoop:
         return _PARTICLE_LEFT_THE_DOMAIN_;
       }
 
-      xminBlock=newNode->xmin;
-      xmaxBlock=newNode->xmax;
+      memcpy(xminBlock,startNode->xmin,DIM*sizeof(double));
+      memcpy(xmaxBlock,startNode->xmax,DIM*sizeof(double));
 
       #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
       //check if the new particle coordiname is within the new block
@@ -1773,6 +1857,8 @@ MovingLoop:
       exit(__LINE__,__FILE__,"Error: the option is nor defined");
 #endif
 //      x[neibNodeDirection]=(iNeibNode[neibNodeDirection]==-1) ? xmaxBlock[neibNodeDirection] : xminBlock[neibNodeDirection];
+*/
+/////////////////////////////////////////////////////////
 
       //reserve the place for particle's cloning:
       //if a particle crossed a face, the time step and particle weight are changed
@@ -1815,6 +1901,49 @@ exit(__LINE__,__FILE__,"not implemented");
     else {
       exit(__LINE__,__FILE__,"Error: the option is nor defined");
     }
+
+
+
+#if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+    //model the photolytic transformation
+    if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTION_OCCURES_) {
+      int specInit=spec;
+
+      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xInit,xFinal,ptr,spec,ParticleData);
+
+      //adjust the value of the dtLeft to match the time step for the species 'spec'
+      dtTotal*=newNode->block->GetLocalTimeStep(spec)/newNode->block->GetLocalTimeStep(specInit);
+
+      if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_) {
+        PIC::ParticleBuffer::DeleteParticle(ptr);
+        return _PARTICLE_LEFT_THE_DOMAIN_;
+      }
+    }
+#elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
+    //model the generic particle transformation
+    if (GenericParticleTransformationReturnCode==_GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_) {
+      int specInit=spec;
+
+      GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationProcessor[spec](xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode);
+
+      if (GenericParticleTransformationReturnCode==_GENERIC_PARTICLE_TRANSFORMATION_CODE__PARTICLE_REMOVED_) {
+        PIC::ParticleBuffer::DeleteParticle(ptr);
+        return _PARTICLE_LEFT_THE_DOMAIN_;
+      }
+
+      //adjust the value of the dtLeft to match the time step for the species 'spec'
+      dtTotal*=newNode->block->GetLocalTimeStep(spec)/newNode->block->GetLocalTimeStep(specInit);
+
+
+
+    }
+
+
+#endif
+
+
+
+
 
     //adjust the value of 'startNode'
     startNode=newNode;
