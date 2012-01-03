@@ -540,7 +540,7 @@ SC/BATSRUS/src/Makefile:
 	cp -f IH/BATSRUS_share/src/IH_get_for_mh_with_xyz.f90 \
 		SC/BATSRUS/srcInterface/SC_get_for_mh_with_xyz.f90
 	cp -f IH/BATSRUS_share/src/IH_get_for_global_buffer.f90 \
-		SC/BATSRUS/srcInterface/SC_get_for_global_buffer2.f90
+		SC/BATSRUS/srcInterface/SC_get_for_global_buffer.f90
 	cp -f IH/BATSRUS_share/src/IH_put_from_mh.f90 \
 		SC/BATSRUS/srcInterface/SC_put_from_mh.f90
 	cd SC/BATSRUS/srcInterface/; perl -i -pe \
