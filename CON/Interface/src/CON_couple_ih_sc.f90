@@ -63,6 +63,15 @@ module CON_couple_ih_sc
   integer :: nGenRGridSc
   real    :: DeltaGen
 
+  ! Variables used by global MPI coupler
+  ! Communicator and logicals to simplify message passing and execution
+  logical       :: UseMe=.true., IsInitialized=.false.
+
+  ! Size and limits of the 3D spherical buffer grid
+  integer, save :: iSize, jSize, kSize, nCell_D(3)
+  real, save    :: BufferMinMaxSc_DI(3,2), BufferMinMaxIh_DI(3,2)
+
+
 contains
   !===============================================================!
   subroutine couple_ih_sc_init
@@ -76,6 +85,16 @@ contains
        end subroutine IH_set_buffer_grid
     end interface
     !--------------------------------------------------------------------------
+    ! REDIRECT to couple_ih_sc_init_global if needed
+    if (UseGlobalMpiCoupler_CC(SC_,IH_) .or. UseGlobalMpiCoupler_CC(IH_,SC_) .or. &
+         index(Grid_C(SC_) % TypeGeometry,'spherical') > 0)then
+       UseGlobalMpiCoupler_CC(SC_,IH_) = .TRUE.
+       UseGlobalMpiCoupler_CC(IH_,SC_) = .TRUE.
+       call couple_ih_sc_init_global
+       RETURN
+    end if
+
+
     if(.not.DoInitialize)return
     DoInitialize=.false.
     
@@ -152,6 +171,11 @@ contains
     ! Last coupling time
     real :: TimeCouplingLast = -1.0
     !-------------------------------------------------------------------------
+    ! REDIRECT to couple_ih_sc_global if needed
+    if(UseGlobalMpiCoupler) then
+       call couple_ih_sc_global(TimeCoupling)
+       RETURN
+    end if
 
     if(.not.RouterIhSc%IsProc)return
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
@@ -384,6 +408,13 @@ contains
     character(LEN=21)::NameFile
     logical::DoneMatchIBC=.false.
 !EOP
+    ! --------------------------------------------------------
+    ! REDIRECT to couple_sc_ih_global if needed
+    if(UseGlobalMpiCoupler) then
+       call couple_sc_ih_global(TimeCoupling)
+       RETURN
+    end if
+
     if(.not.RouterScBuff%IsProc)return
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
@@ -476,6 +507,294 @@ contains
 
     IsInterfacePoint=.true.
   end subroutine buffer_grid_point
+
+  ! =========================================================================
+  !                   SUBROUTINES FOR GLOBAL MPI COUPLER
+  ! =========================================================================
+  !DESCRIPTION:
+  
+  ! Couple SC and IH components via a global buffer grid
+  ! The subroutines:
+  !                CON_couple_ih_sc_init
+  !                CON_couple_sc_ih
+  !                CON_couple_ih_sc
+  
+  ! redirect to the corresponding subroutines below, with the suffix "_global"
+  ! in case UseGlobalMpiCoupler =.TRUE.
+  !
+
+  !REVISION HISTORY:
+  ! 07/25/2003 G.Toth <gtoth@umich.edu> - initial version as external
+  !                                       subroutines
+  ! 08/27/2003 G.Toth - combined into a module
+  ! 12/12/2011 R.Oran <oran@umich.edu> version for two BATSRUS components using
+  ! a global buffer grid
+
+  ! =======================================================================
+  !IROUTINE: couple_ih_sc_init_global - initialize SC-IH couplings
+  !INTERFACE:
+  subroutine couple_ih_sc_init_global
+ 
+
+    logical :: DoTest, DoTestMe
+    integer :: iCommWorld, iError, iStatus_I(MPI_STATUS_SIZE)
+    real    :: IHToScUnitX
+    character(len=*), parameter :: NameSub='couple_ih_sc_init_global'
+
+    !DESCRIPTION:
+    ! This subroutine should be called from all PE-s
+    ! Share buffer grid info (set in IH) with SC.
+    ! Set buffer grid in IH.
+    ! Calculate union communicator
+
+    !EOP
+    !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    if(IsInitialized) RETURN
+    IsInitialized = .true.
+    DoTEst=.true.
+    if(DoTest) write(*,*) NameSub, ' started'
+
+    if(i_proc() == 0) write(*,*) 'Using global MPI coupler'
+    ! Determine which state variables should be coupled
+    call set_couple_var_info(SC_,IH_)
+
+    ! Set UseMe to .true. for the participating PE-s
+    UseMe = is_proc(SC_) .or. is_proc(IH_)
+
+    ! Set buffer grid location and size in IH, and retrieve them for coupler
+    if(is_proc(IH_)) then
+       call IH_set_buffer_grid_get_info(IH_,iSize, jSize, kSize, BufferMinMaxIh_DI)
+       if(DoTest .and. is_proc0(IH_)) &
+            write(*,*) 'In IH, rBuffMinMax: ',BufferMinMaxIh_DI(1,:)
+
+       ! Convert units for radial coordinate  before passing to SC
+       BufferMinMaxSc_DI = BufferMinMaxIh_DI
+       IhToScUnitX = (Grid_C(IH_)%UnitX/Grid_C(SC_)%UnitX)
+       BufferMinMaxSc_DI(1,:) = BufferMinMaxIh_DI(1,:)*IhToScUnitX
+
+       ! Package info for passing via MPI
+       nCell_D = (/iSize,jSize,kSize/)
+    end if
+ 
+    ! Share with SC head node.
+    if(i_proc0(IH_) /= i_proc0(SC_))then
+       ! MPI share buffer grid size
+       if(is_proc0(IH_)) then
+          call MPI_send(nCell_D, 3, MPI_INTEGER, i_proc0(SC_),&
+               1, iCommWorld, iError)
+      end if
+       if(is_proc0(SC_)) then
+          call MPI_recv(nCell_D, 3, MPI_INTEGER, i_proc0(IH_),&
+               1, iCommWorld, iStatus_I, iError)
+       end if
+
+       ! MPI share buffer grid limits
+       if(is_proc0(IH_)) &
+            call MPI_send(BufferMinMaxSc_DI, 6, MPI_REAL, i_proc0(SC_),&
+            1, iCommWorld, iError)
+       if(is_proc0(SC_))&
+            call MPI_recv(BufferMinMaxSc_DI, 6, MPI_REAL, i_proc0(IH_),&
+            1, iCommWorld, iStatus_I, iError)
+    end if
+
+    ! Broadcast to all SC nodes.
+    if(n_proc(SC_)>1 .and. is_proc(SC_)) then
+         call MPI_bcast(nCell_D, 3, MPI_INTEGER, 0, i_comm(SC_), iError)
+         call MPI_bcast(BufferMinMaxSc_DI, 6, MPI_REAL, 0, i_comm(SC_), iError)
+      end if
+
+    if(is_proc0(SC_) .and. DoTest) &
+         write(*,*) 'In SC, rBuffer Min/Max: ',BufferMinMaxSc_DI(1,:)
+
+  end subroutine couple_ih_sc_init_global
+
+  !BOP =======================================================================
+  !IROUTINE: couple_sc_ih_global - couple SC component to IH component
+
+  !INTERFACE:
+  subroutine couple_sc_ih_global(tSimulation)
+    
+    use ModMpi,    ONLY: MPI_reduce
+
+    !INPUT ARGUMENTS:
+    real, intent(in) :: tSimulation     ! simulation time at coupling
+
+
+    !DESCRIPTION:
+    ! Couple between two components:
+    !    Solar Corona      (SC)  source
+    !    Inner Heliosphere (IH)  target
+    !
+    ! The SC component sends the state variables to a buffer grid.
+    ! IH uses the buffer grid to calculate the inner boundary conditions.
+
+    logical :: DoTest, DoTestMe
+    integer :: iProcWorld
+
+    ! Array to store state vector on all buffer grid points
+    real, dimension(:,:,:,:), allocatable :: Buffer_VIII, BufferGlobal_VIII
+
+    ! MPI related variables
+    integer :: iError, nSize, iStatus_I(MPI_STATUS_SIZE)
+
+    ! Variable for output file
+    integer :: i,j,k, iFile
+    integer, save :: iCoupling = 0
+
+    character (len=*), parameter :: NameSub='couple_sc_ih_global'
+    !-------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    iProcWorld = i_proc()
+
+    ! Exclude PEs which are not involved
+    if(.not.UseMe) RETURN
+
+    if(DoTest)write(*,*)NameSub,' starting, iProc=',iProcWorld
+    if(DoTest)write(*,*)NameSub,', iProc, SCi_iProc0, IHi_iProc0=', &
+         iProcWorld,i_proc0(SC_),i_proc0(IH_)
+
+    ! Allocate and intialize local buffer on SC processors, including ghost cells
+    if(is_proc(SC_)) then
+       allocate(Buffer_VIII(nVarCouple,iSize,0:jSize+1,0:kSize+1), stat=iError)
+       Buffer_VIII = 0.0
+    end if
+
+    ! Allocate global buffer on all processors
+   allocate(BufferGlobal_VIII(nVarCouple,iSize,0:jSize+1,0:kSize+1), stat=iError)
+    BufferGlobal_VIII = 0.0
+
+    nSize = iSize*(jSize+2)*(kSize+2)*nVarCouple
+
+    ! Fill in the coupled state variables
+    if(is_proc(SC_)) then
+       call SC_get_for_global_buffer(iSize,jSize,kSize, &
+            BufferMinMaxIh_DI,Buffer_VIII)
+       ! Collect to the SC root PE
+       call MPI_reduce(Buffer_VIII, BufferGlobal_VIII, nSize, MPI_REAL,MPI_SUM,&
+            0, i_comm(SC_), iError)
+    end if
+
+    if(i_proc0(SC_) /= i_proc0(IH_))then
+       ! Pass filled buffer to IH root PE
+       if(is_proc0(SC_)) &
+            call MPI_send(BufferGlobal_VIII,nSize,MPI_REAL,i_Proc0(IH_),&
+            1,i_comm(),iError)
+       if(is_proc0(IH_)) &
+            call MPI_recv(BufferGlobal_VIII,nSize,MPI_REAL,i_Proc0(SC_),&
+            1,i_comm(),iStatus_I,iError)
+    end if
+
+    ! Broadcast buffer to all IH processors
+    if(n_proc(IH_)>1 .and. is_proc(IH_)) &
+         call MPI_bcast(BufferGlobal_VIII,nSize,MPI_REAL,0,i_comm(IH_),iError)
+
+    if(DoTest)write(*,*)NameSub,', variables transferred',&
+         ', iProc:',iProcWorld
+
+    !\
+    ! Save buffer in IH for later use
+    !/
+    if(is_proc(IH_))then
+       call IH_save_global_buffer(nVarCouple, iSize, jSize, kSize,BufferGlobal_VIII)
+       if(DoTest) &
+            write(*,*)NameSub//' iProc, Buffer(:,1,1,1)=',&
+            iProcWorld,Buffer_VIII(:,1,1,1)
+    end if
+
+    !\
+    ! Deallocate buffer to save memory
+    !/
+    if(is_proc(SC_)) deallocate(Buffer_VIII)
+    deallocate(BufferGlobal_VIII)
+
+    if(DoTest)write(*,*)NameSub,', variables deallocated',&
+         ', iProc:',iProcWorld
+
+    if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld
+
+  end subroutine couple_sc_ih_global
+
+  !BOP =======================================================================
+  !IROUTINE: couple_ih_sc_global - couple IH to SC
+  !INTERFACE:
+  subroutine couple_ih_sc_global(tSimulation)
+
+    !INPUT ARGUMENT:
+    real, intent(in) :: tSimulation
+
+    !DESCRIPTION:
+    ! Couple between two components:
+    !    Inner Heliosphere (IH) source
+    !    Solar Corona      (SC) target
+    !
+    ! Send state variable from IH to outer cells in SC.
+    !EOP
+
+    logical :: DoTest, DoTestMe
+    integer :: iProcWorld
+
+    ! Buffer for state variable to fill outer cells of SC
+
+    real, dimension(:,:,:,:), allocatable :: Buffer_VIII
+
+    ! MPI related variables
+    integer :: iError, nSize, iStatus_I(MPI_STATUS_SIZE)
+
+    integer :: iBlock, iProcTo
+    character (len=*), parameter :: NameSub='couple_ih_sc_global'
+    !-------------------------------------------------------------------------
+    call CON_stop(NameSub//' is not yet implemented. Correct #COUPLERTYPE command.')
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+
+    iProcWorld = i_proc()
+
+    if(DoTest)write(*,*)NameSub,' starting iProc=',iProcWorld
+
+    ! Exclude PEs which are not involved
+    if(.not.UseMe) RETURN
+
+    if(DoTest)write(*,*)NameSub,' starting, iProc=',iProcWorld
+    if(DoTest)write(*,*)NameSub,', iProc, IHi_iProc0, i_proc0(SC_)=', &
+         iProcWorld,i_proc0(IH_),i_proc0(SC_)
+
+    !\
+    ! Allocate buffers for the variables both in SC and IH
+    !/
+    allocate(Buffer_VIII(nVarCouple,iSize, jSize, kSize), stat=iError)
+    !\
+    ! Get IH state variable for SC
+    !/
+    if(is_proc(IH_)) &
+         call IH_get_for_mh(Buffer_VIII, iSize, jSize, kSize, nVarCouple)
+
+    !\                                    
+    ! Transfer variables from IH to SC
+    !/
+    if(i_proc0(SC_) /= i_proc0(IH_))then
+       nSize = iSize*jSize*kSize*nVarCouple
+       if(is_proc0(IH_)) &
+            call MPI_send(Buffer_VIII, nSize, MPI_REAL, i_proc0(SC_),&
+            1, i_comm(), iError)
+       if(is_proc0(SC_)) &
+            call MPI_recv(Buffer_VIII, nSize, MPI_REAL, i_proc0(IH_),&
+            1,i_comm(), iStatus_I, iError)
+    end if
+    !\
+    ! Put variables into IH
+    !/
+    if(is_proc(SC_)) &
+         !call SC_put_from_mh(Buffer_VIII, iSize+1, jSize, kSize, nVarCouple)
+
+    !\
+    ! Deallocate buffer to save memory
+    !/
+    deallocate(Buffer_VIII)
+
+    if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld
+
+  end subroutine couple_ih_sc_global
+
   
 end module CON_couple_ih_sc
 
