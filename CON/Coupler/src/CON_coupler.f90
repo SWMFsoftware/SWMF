@@ -808,7 +808,7 @@ contains
        end if
     end if
 
-    ! calculate  indices and # of variables transfered to buffer grid             
+    ! calculate  indices and # of variables transfered to buffer grid
     nDensityCouple = min(nDensitySource, nDensityTarget)
     nSpeedCouple   = min(nSpeedSource,   nSpeedTarget)
     nPCouple       = min(nPSource,       nPTarget)
@@ -840,14 +840,14 @@ contains
 
     if (DoCoupleVar_V(Wave_)) then
        iVar_V(WaveFirstCouple_) = nVarCouple + 1
-       iVar_V(WaveLastCouple_)  = iVar_V(WaveFirstCouple_) + nWaveSource
+       iVar_V(WaveLastCouple_)  = nVarCouple + nWaveSource 
        nVarCouple = iVar_V(WaveLastCouple_)
     end if
 
     if (DoCoupleVar_V( Material_)) then
        iVar_V(MaterialFirstCouple_) = nVarCouple + 1
        iVar_V(MaterialLastCouple_)  = &
-            iVar_V(MaterialFirstCouple_) + nMaterialSource
+            nVarCouple + nMaterialSource
        nVarCouple = iVar_V(MaterialLastCouple_)
     end if
 
