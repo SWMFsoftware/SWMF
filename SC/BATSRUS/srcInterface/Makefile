@@ -13,6 +13,7 @@ OBJECTS = \
 	SC_get_for_mh.o\
 	SC_get_for_mh_with_xyz.o\
 	SC_get_for_sp.o\
+	SC_get_for_global_buffer.o\
 	SC_put_from_mh.o\
 	SC_wrapper.o\
 	update_lagrangian_grid.o\
