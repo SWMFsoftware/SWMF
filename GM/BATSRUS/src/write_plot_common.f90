@@ -871,8 +871,10 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
              -State_VGB(Ppar_,:,:,:,iBLK))/2.0
      case('jx','jy', 'jz')
 
-        if(.not. allocated(J_DG))&
-             allocate(J_DG(1:3,-1:nI+2,-1:nJ+2,-1:nK+2))
+        if(.not. allocated(J_DG))then
+           allocate(J_DG(1:3,-1:nI+2,-1:nJ+2,-1:nK+2))
+           J_DG = 0.0
+        end if
 
         ! Calculationg all the currents only ones per block
         if(DoCurrent) then
