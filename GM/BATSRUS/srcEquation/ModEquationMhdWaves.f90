@@ -2,10 +2,9 @@ module ModVarIndexes
 
   use ModSingleFluid
   use ModExtraVariables,        &
-       Redefine1 => Hyp_,       &
-       Redefine2 => nWave,      &
-       Redefine3 => WaveFirst_, &
-       Redefine4 => WaveLast_
+       Redefine1 => nWave,      &
+       Redefine2 => WaveFirst_, &
+       Redefine3 => WaveLast_
 
   implicit none
 
@@ -22,7 +21,7 @@ module ModVarIndexes
 
   ! Number of frequency bins in spectrum
   integer, parameter :: nWave =1
-  integer, parameter :: nVar = 9 + nWave
+  integer, parameter :: nVar = 8 + nWave
   
   ! Array of strings for plotting
   character(len=3)   :: NameWaveVar_I(nWave)
@@ -50,8 +49,7 @@ module ModVarIndexes
        Bx_        = 5,  &
        By_        = 6,  &
        Bz_        = 7,  &
-       Hyp_       = 8,  &
-       WaveFirst_ = 9,  &
+       WaveFirst_ = 8,  &
        WaveLast_  = WaveFirst_+nWave-1, &
        p_         = nVar, &
        Energy_    = nVar+1  
@@ -77,7 +75,6 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
-       0.0, & ! Hyp_
        (1.0, iWave=WaveFirst_,WaveLast_), & 
        1.0, & ! p_
        1.0 /) ! Energy_ 
@@ -91,14 +88,13 @@ module ModVarIndexes
        'Bx ', & ! Bx_
        'By ', & ! By_
        'Bz ', & ! Bz_
-       'Hyp', & ! Hyp_
        ('I??', iWave=1,nWave), & ! Waves to be reset
        'p  ', & ! p_
        'e  '/)  ! Energy_        
   
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVarPref = &
-       'rho mx my mz bx by bz hyp' 
+       'rho mx my mz bx by bz' 
      
   character(len=*), parameter :: NameConservativeVarSuff = &
        ' e'
@@ -109,7 +105,7 @@ module ModVarIndexes
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVarPref = &
-       'rho ux uy uz bx by bz hyp' 
+       'rho ux uy uz bx by bz' 
   character(len=*), parameter :: NamePrimitiveVarSuff = &
        ' p'
   character(len=4*nWave+len(NamePrimitiveVarPref)+len(NamePrimitiveVarSuff)) :: &
@@ -117,7 +113,7 @@ module ModVarIndexes
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTecPref = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "Hyp",'
+       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", '
 
   character(len=*), parameter :: NamePrimitiveVarTecSuff = &
        ' "p"'
